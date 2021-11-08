@@ -7,12 +7,15 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
+	"github.com/nginxinc/nginx-gateway-kubernetes/internal/implementation"
+	"github.com/nginxinc/nginx-gateway-kubernetes/internal/sdk"
 	"go.uber.org/zap"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
-	"sigs.k8s.io/gateway-api/pkg/client/clientset/gateway/versioned"
+	"sigs.k8s.io/controller-runtime/pkg/log"
+	rzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 )
 
 var (
@@ -51,40 +54,44 @@ func main() {
 			"error", err)
 	}
 
-	gatewayClient, err := versioned.NewForConfig(config)
+	log.SetLogger(rzap.New())
+
+	mgr, err := manager.New(config, manager.Options{})
 	if err != nil {
-		sugar.Fatalw("Failed to create a client for Gateway APIs",
+		sugar.Fatalw("Failed to create Manager",
 			"error", err)
 	}
 
-	gc, err := gatewayClient.GatewayV1alpha2().GatewayClasses().Get(context.TODO(), *gatewayClass, meta_v1.GetOptions{})
+	err = v1alpha2.AddToScheme(mgr.GetScheme())
 	if err != nil {
-		sugar.Fatalw("Failed to get the GatewayClass",
-			"name", *gatewayClass,
+		if err != nil {
+			sugar.Fatalw("Failed to add Gateway API scheme",
+				"error", err)
+		}
+	}
+
+	err = sdk.RegisterGatewayClassController(mgr, implementation.NewGatewayClassImplementation(sugar))
+	if err != nil {
+		sugar.Fatalw("Failed to register GatewayClassController",
 			"error", err)
 	}
 
-	if gc.Spec.ControllerName != "k8s-gateway.nginx.org/gateway" {
-		sugar.Fatalw("Wrong ControllerName in the GatewayClass resource",
-			"expected", "k8s-gateway.nginx.org/gateway",
-			"got", "gc.Spec.ControllerName")
-	}
+	sugar.Infow("Starting manager")
 
-	sugar.Infow("Gateway class info",
-		"name", gc.Name,
-		"creation timestamp", gc.CreationTimestamp)
-
+	ctx, cancel := context.WithCancel(context.Background())
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, os.Interrupt, syscall.SIGTERM)
 	go func() {
 		sugar.Infow("Terminating because of the signal",
 			"signal", <-signalChan)
 
+		cancel()
 		os.Exit(0)
 	}()
 
-	for {
-		sugar.Infow("Gateway is running")
-		time.Sleep(30 * time.Second)
+	err = mgr.Start(ctx)
+	if err != nil {
+		sugar.Fatalw("Failed to start Manager",
+			"error", err)
 	}
 }
