@@ -5,11 +5,21 @@ PREFIX = nginx-gateway
 GIT_COMMIT = $(shell git rev-parse HEAD)
 DATE = $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 
+TARGET ?= local
+
 KIND_KUBE_CONFIG_FOLDER = $${HOME}/.kube/kind
 
+export DOCKER_BUILDKIT = 1
+
 .PHONY: container
-container:
-	docker build --build-arg VERSION=$(VERSION) --build-arg GIT_COMMIT=$(GIT_COMMIT) --build-arg DATE=$(DATE) --target container -f build/Dockerfile -t $(PREFIX):$(TAG) .
+container: build
+	docker build --build-arg VERSION=$(VERSION) --build-arg GIT_COMMIT=$(GIT_COMMIT) --build-arg DATE=$(DATE) --target $(TARGET) -f build/Dockerfile -t $(PREFIX):$(TAG) .
+
+.PHONY: build
+build:
+ifeq (${TARGET},local)
+	CGO_ENABLED=0 GOOS=linux go build -trimpath -a -ldflags "-s -w -X main.version=${VERSION} -X main.commit=${GIT_COMMIT} -X main.date=${DATE}" -o gateway github.com/nginxinc/nginx-gateway-kubernetes/cmd/gateway
+endif
 
 .PHONY: deps
 deps:

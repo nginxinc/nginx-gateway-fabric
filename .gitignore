@@ -16,3 +16,6 @@
 
 # GoLand IDE
 .idea
+
+# Binary
+gateway
