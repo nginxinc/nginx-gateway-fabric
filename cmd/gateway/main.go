@@ -1,20 +1,16 @@
 package main
 
 import (
-	"context"
 	"flag"
 	"fmt"
 	"os"
-	"os/signal"
-	"syscall"
 
 	"github.com/nginxinc/nginx-gateway-kubernetes/internal/implementation"
-	"github.com/nginxinc/nginx-gateway-kubernetes/internal/sdk"
-	"go.uber.org/zap"
+	"github.com/nginxinc/nginx-gateway-kubernetes/pkg/sdk"
 	"k8s.io/client-go/rest"
-	"sigs.k8s.io/controller-runtime/pkg/log"
-	rzap "sigs.k8s.io/controller-runtime/pkg/log/zap"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 )
 
@@ -36,62 +32,44 @@ func main() {
 		os.Exit(1)
 	}
 
-	logger, err := zap.NewProduction()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to initialize logging: %v\n", err)
-		os.Exit(1)
-	}
-	sugar := logger.Sugar()
+	logger := zap.New()
 
-	sugar.Infow("Starting NGINX Gateway",
+	logger.Info("Starting NGINX Gateway",
 		"version", version,
 		"commit", commit,
 		"date", date)
 
 	config, err := rest.InClusterConfig()
 	if err != nil {
-		sugar.Fatalw("Failed to create InClusterConfig",
-			"error", err)
+		logger.Error(err, "Failed to create InClusterConfig")
+		os.Exit(1)
 	}
 
-	log.SetLogger(rzap.New())
-
-	mgr, err := manager.New(config, manager.Options{})
+	mgr, err := manager.New(config, manager.Options{
+		Logger: logger,
+	})
 	if err != nil {
-		sugar.Fatalw("Failed to create Manager",
-			"error", err)
+		logger.Error(err, "Failed to create Manager")
+		os.Exit(1)
 	}
 
 	err = v1alpha2.AddToScheme(mgr.GetScheme())
 	if err != nil {
-		if err != nil {
-			sugar.Fatalw("Failed to add Gateway API scheme",
-				"error", err)
-		}
+		logger.Error(err, "Failed to add Gateway API scheme")
+		os.Exit(1)
 	}
 
-	err = sdk.RegisterGatewayClassController(mgr, implementation.NewGatewayClassImplementation(sugar))
+	err = sdk.RegisterGatewayClassController(mgr, implementation.NewGatewayClassImplementation(logger))
 	if err != nil {
-		sugar.Fatalw("Failed to register GatewayClassController",
-			"error", err)
+		logger.Error(err, "Failed to register GatewayClassController")
+		os.Exit(1)
 	}
 
-	sugar.Infow("Starting manager")
+	logger.Info("Starting manager")
 
-	ctx, cancel := context.WithCancel(context.Background())
-	signalChan := make(chan os.Signal, 1)
-	signal.Notify(signalChan, os.Interrupt, syscall.SIGTERM)
-	go func() {
-		sugar.Infow("Terminating because of the signal",
-			"signal", <-signalChan)
-
-		cancel()
-		os.Exit(0)
-	}()
-
-	err = mgr.Start(ctx)
+	err = mgr.Start(signals.SetupSignalHandler())
 	if err != nil {
-		sugar.Fatalw("Failed to start Manager",
-			"error", err)
+		logger.Error(err, "Failed to start Manager")
+		os.Exit(1)
 	}
 }
