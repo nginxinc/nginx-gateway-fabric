@@ -1,0 +1,14 @@
+apiVersion: gateway.networking.k8s.io/v1alpha2
+kind: Gateway
+metadata:
+  name: gateway
+  namespace: nginx-gateway
+  labels:
+    domain: k8s-gateway.nginx.org
+spec:
+  gatewayClassName: nginx
+  listeners:
+  - name: my-listener
+    hostname: example.com
+    port: 8080
+    protocol: HTTP

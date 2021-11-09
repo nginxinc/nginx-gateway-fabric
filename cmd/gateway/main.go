@@ -1,17 +1,13 @@
 package main
 
 import (
-	"flag"
-	"fmt"
 	"os"
 
-	"github.com/nginxinc/nginx-gateway-kubernetes/internal/implementation"
-	"github.com/nginxinc/nginx-gateway-kubernetes/pkg/sdk"
-	"k8s.io/client-go/rest"
+	"github.com/nginxinc/nginx-gateway-kubernetes/internal/config"
+	"github.com/nginxinc/nginx-gateway-kubernetes/internal/controller"
+
+	flag "github.com/spf13/pflag"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
-	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 )
 
 var (
@@ -21,55 +17,31 @@ var (
 	date    string
 
 	// Command-line flags
-	gatewayClass = flag.String("gatewayclass", "", "Tha name of the GatewayClass resource")
+	gatewayCtlrName = flag.String("gateway-ctlr-name", "", "The name of the Gateway controller")
 )
 
 func main() {
 	flag.Parse()
 
-	if *gatewayClass == "" {
-		fmt.Fprintln(os.Stderr, "-gatewayclass argument must be set")
+	if *gatewayCtlrName == "" {
+		flag.PrintDefaults()
 		os.Exit(1)
 	}
 
 	logger := zap.New()
+	conf := config.Config{
+		GatewayCtlrName: *gatewayCtlrName,
+		Logger:          logger,
+	}
 
 	logger.Info("Starting NGINX Gateway",
 		"version", version,
 		"commit", commit,
 		"date", date)
 
-	config, err := rest.InClusterConfig()
+	err := controller.Start(conf)
 	if err != nil {
-		logger.Error(err, "Failed to create InClusterConfig")
-		os.Exit(1)
-	}
-
-	mgr, err := manager.New(config, manager.Options{
-		Logger: logger,
-	})
-	if err != nil {
-		logger.Error(err, "Failed to create Manager")
-		os.Exit(1)
-	}
-
-	err = v1alpha2.AddToScheme(mgr.GetScheme())
-	if err != nil {
-		logger.Error(err, "Failed to add Gateway API scheme")
-		os.Exit(1)
-	}
-
-	err = sdk.RegisterGatewayClassController(mgr, implementation.NewGatewayClassImplementation(logger))
-	if err != nil {
-		logger.Error(err, "Failed to register GatewayClassController")
-		os.Exit(1)
-	}
-
-	logger.Info("Starting manager")
-
-	err = mgr.Start(signals.SetupSignalHandler())
-	if err != nil {
-		logger.Error(err, "Failed to start Manager")
+		logger.Error(err, "Failed to start control loop")
 		os.Exit(1)
 	}
 }
