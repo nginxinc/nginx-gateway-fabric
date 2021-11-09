@@ -1,18 +1,17 @@
 package main
 
 import (
-	"context"
 	"flag"
 	"fmt"
 	"os"
-	"os/signal"
-	"syscall"
-	"time"
 
-	"go.uber.org/zap"
-	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"github.com/nginxinc/nginx-gateway-kubernetes/internal/implementation"
+	"github.com/nginxinc/nginx-gateway-kubernetes/pkg/sdk"
 	"k8s.io/client-go/rest"
-	"sigs.k8s.io/gateway-api/pkg/client/clientset/gateway/versioned"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
+	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 )
 
 var (
@@ -33,58 +32,44 @@ func main() {
 		os.Exit(1)
 	}
 
-	logger, err := zap.NewProduction()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to initialize logging: %v\n", err)
-		os.Exit(1)
-	}
-	sugar := logger.Sugar()
+	logger := zap.New()
 
-	sugar.Infow("Starting NGINX Gateway",
+	logger.Info("Starting NGINX Gateway",
 		"version", version,
 		"commit", commit,
 		"date", date)
 
 	config, err := rest.InClusterConfig()
 	if err != nil {
-		sugar.Fatalw("Failed to create InClusterConfig",
-			"error", err)
+		logger.Error(err, "Failed to create InClusterConfig")
+		os.Exit(1)
 	}
 
-	gatewayClient, err := versioned.NewForConfig(config)
+	mgr, err := manager.New(config, manager.Options{
+		Logger: logger,
+	})
 	if err != nil {
-		sugar.Fatalw("Failed to create a client for Gateway APIs",
-			"error", err)
+		logger.Error(err, "Failed to create Manager")
+		os.Exit(1)
 	}
 
-	gc, err := gatewayClient.GatewayV1alpha2().GatewayClasses().Get(context.TODO(), *gatewayClass, meta_v1.GetOptions{})
+	err = v1alpha2.AddToScheme(mgr.GetScheme())
 	if err != nil {
-		sugar.Fatalw("Failed to get the GatewayClass",
-			"name", *gatewayClass,
-			"error", err)
+		logger.Error(err, "Failed to add Gateway API scheme")
+		os.Exit(1)
 	}
 
-	if gc.Spec.ControllerName != "k8s-gateway.nginx.org/gateway" {
-		sugar.Fatalw("Wrong ControllerName in the GatewayClass resource",
-			"expected", "k8s-gateway.nginx.org/gateway",
-			"got", "gc.Spec.ControllerName")
+	err = sdk.RegisterGatewayClassController(mgr, implementation.NewGatewayClassImplementation(logger))
+	if err != nil {
+		logger.Error(err, "Failed to register GatewayClassController")
+		os.Exit(1)
 	}
 
-	sugar.Infow("Gateway class info",
-		"name", gc.Name,
-		"creation timestamp", gc.CreationTimestamp)
+	logger.Info("Starting manager")
 
-	signalChan := make(chan os.Signal, 1)
-	signal.Notify(signalChan, os.Interrupt, syscall.SIGTERM)
-	go func() {
-		sugar.Infow("Terminating because of the signal",
-			"signal", <-signalChan)
-
-		os.Exit(0)
-	}()
-
-	for {
-		sugar.Infow("Gateway is running")
-		time.Sleep(30 * time.Second)
+	err = mgr.Start(signals.SetupSignalHandler())
+	if err != nil {
+		logger.Error(err, "Failed to start Manager")
+		os.Exit(1)
 	}
 }

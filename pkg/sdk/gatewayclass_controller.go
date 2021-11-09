@@ -1,0 +1,59 @@
+package sdk
+
+import (
+	"github.com/go-logr/logr"
+	"golang.org/x/net/context"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/runtime"
+	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/gateway-api/apis/v1alpha2"
+)
+
+type gatewayClassReconciler struct {
+	client.Client
+	scheme *runtime.Scheme
+	impl   GatewayClassImpl
+}
+
+func RegisterGatewayClassController(mgr manager.Manager, impl GatewayClassImpl) error {
+	r := &gatewayClassReconciler{
+		impl:   impl,
+		Client: mgr.GetClient(),
+		scheme: mgr.GetScheme(),
+	}
+
+	return ctrl.NewControllerManagedBy(mgr).
+		For(&v1alpha2.GatewayClass{}).
+		Complete(r)
+}
+
+func (r *gatewayClassReconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
+	log := logr.FromContext(ctx).WithValues("gatewayclass", req.Name)
+	log.V(3).Info("reconciling GatewayClass")
+
+	var gc v1alpha2.GatewayClass
+	found := true
+
+	// we assume that the reconcile will only be called with the GatewayClass of the known name (like 'nginx')
+	// this is something that has to be configured on the Manager
+
+	err := r.Get(ctx, req.NamespacedName, &gc)
+	if err != nil {
+		if !apierrors.IsNotFound(err) {
+			log.Error(err, "fail to get GatewayClass")
+			return reconcile.Result{}, err
+		}
+		found = false
+	}
+
+	if !found {
+		r.impl.Remove(req.Name)
+		return reconcile.Result{}, nil
+	}
+
+	r.impl.Upsert(&gc)
+	return reconcile.Result{}, nil
+}

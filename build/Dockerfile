@@ -9,6 +9,8 @@ COPY go.mod go.sum /go/src/github.com/nginxinc/nginx-gateway-kubernetes
 RUN go mod download
 
 COPY cmd /go/src/github.com/nginxinc/nginx-gateway-kubernetes/cmd
+COPY internal /go/src/github.com/nginxinc/nginx-gateway-kubernetes/internal
+COPY pkg /go/src/github.com/nginxinc/nginx-gateway-kubernetes/pkg
 RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -a -ldflags "-s -w -X main.version=${VERSION} -X main.commit=${GIT_COMMIT} -X main.date=${DATE}" -o gateway .
 
 FROM scratch as common
