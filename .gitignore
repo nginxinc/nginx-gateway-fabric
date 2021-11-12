@@ -18,8 +18,9 @@
 *.swp
 *.swo
 
-# GoLand IDE
+# GoLand IDE and VSCode
 .idea
+.vscode
 
 # Binary and Artifacts
 build/.out
