@@ -3,4 +3,4 @@ kind: GatewayClass
 metadata:
   name: nginx
 spec:
-  controllerName: k8s-gateway.nginx.org/gateway
+  controllerName: k8s-gateway.nginx.org/nginx-gateway/gateway

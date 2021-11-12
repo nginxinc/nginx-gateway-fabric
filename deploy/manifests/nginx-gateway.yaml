@@ -18,6 +18,7 @@ rules:
   - gateway.networking.k8s.io
   resources:
   - gatewayclasses
+  - gateways
   verbs:
   - list
   - watch
@@ -66,7 +67,7 @@ spec:
         imagePullPolicy: IfNotPresent
         name: nginx-gateway
         args:
-        - -gatewayclass=nginx
+        - --gateway-ctlr-name=k8s-gateway.nginx.org/nginx-gateway/gateway
       - image: nginx:1.21.3
         imagePullPolicy: IfNotPresent
         name: nginx

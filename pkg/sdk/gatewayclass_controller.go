@@ -32,7 +32,7 @@ func RegisterGatewayClassController(mgr manager.Manager, impl GatewayClassImpl) 
 
 func (r *gatewayClassReconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
 	log := logr.FromContext(ctx).WithValues("gatewayclass", req.Name)
-	log.V(3).Info("reconciling GatewayClass")
+	log.V(3).Info("Reconciling GatewayClass")
 
 	var gc v1alpha2.GatewayClass
 	found := true
@@ -43,7 +43,7 @@ func (r *gatewayClassReconciler) Reconcile(ctx context.Context, req reconcile.Re
 	err := r.Get(ctx, req.NamespacedName, &gc)
 	if err != nil {
 		if !apierrors.IsNotFound(err) {
-			log.Error(err, "fail to get GatewayClass")
+			log.Error(err, "Failed to get GatewayClass")
 			return reconcile.Result{}, err
 		}
 		found = false
