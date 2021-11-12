@@ -37,6 +37,7 @@ func (impl *gatewayClassImplementation) Upsert(gc *v1alpha2.GatewayClass) {
 	impl.Logger().Info("Processing GatewayClass resource",
 		"name", gc.Name)
 }
+
 func (impl *gatewayClassImplementation) Remove(key string) {
 	impl.Logger().Info("GatewayClass resource was removed",
 		"name", key)
