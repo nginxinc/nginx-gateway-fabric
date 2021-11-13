@@ -29,9 +29,17 @@ If you'd like to use that Makefile to create a cluster, run:
    kubectl kustomize "github.com/kubernetes-sigs/gateway-api/config/crd?ref=v0.4.0" \
    | kubectl apply -f -
    ```
+1. Install NGINX Gateway CRDs:
+   ```
+   kubectl apply -f deploy/manifests/crds
+   ```
 1. Create the GatewayClass resource:
    ```
    kubectl apply -f deploy/manifests/gatewayclass.yaml 
+   ```
+1. Create the GatewayConfig resource:
+   ```
+   kubectl apply -f deploy/manifests/gatewayconfig.yaml
    ```
 1. Deploy the NGINX Gateway:
    

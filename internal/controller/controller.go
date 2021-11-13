@@ -6,6 +6,8 @@ import (
 	"github.com/nginxinc/nginx-gateway-kubernetes/internal/config"
 	gw "github.com/nginxinc/nginx-gateway-kubernetes/internal/implementations/gateway"
 	gc "github.com/nginxinc/nginx-gateway-kubernetes/internal/implementations/gatewayclass"
+	gcfg "github.com/nginxinc/nginx-gateway-kubernetes/internal/implementations/gatewayconfig"
+	nginxgwv1alpha1 "github.com/nginxinc/nginx-gateway-kubernetes/pkg/apis/v1alpha1"
 	"github.com/nginxinc/nginx-gateway-kubernetes/pkg/sdk"
 
 	"k8s.io/apimachinery/pkg/runtime"
@@ -20,6 +22,7 @@ var (
 
 func init() {
 	_ = gatewayv1alpha2.AddToScheme(scheme)
+	_ = nginxgwv1alpha1.AddToScheme(scheme)
 }
 
 func Start(conf config.Config) error {
@@ -40,7 +43,11 @@ func Start(conf config.Config) error {
 	}
 	err = sdk.RegisterGatewayClassController(mgr, gc.NewGatewayClassImplementation(conf))
 	if err != nil {
-		return fmt.Errorf("cannot reguster gatewayclass implementation: %w", err)
+		return fmt.Errorf("cannot register gatewayclass implementation: %w", err)
+	}
+	err = sdk.RegisterGatewayConfigController(mgr, gcfg.NewGatewayConfigImplementation(conf))
+	if err != nil {
+		return fmt.Errorf("cannot register gatewayconfig implementation: %w", err)
 	}
 
 	ctx := ctlr.SetupSignalHandler()
