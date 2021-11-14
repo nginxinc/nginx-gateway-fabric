@@ -10,6 +10,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
 
+const (
+	domain string = "k8s-gateway.nginx.org"
+)
+
 var (
 	// Set during go build
 	version string
@@ -17,21 +21,25 @@ var (
 	date    string
 
 	// Command-line flags
-	gatewayCtlrName = flag.String("gateway-ctlr-name", "", "The name of the Gateway controller")
+	gatewayCtlrName = flag.String("gateway-ctlr-name", "", "The name of the Gateway controller. The controller name should be of the form: DOMAIN/NAMESPACE/NAME. If omitted, DOMAIN will default to 'k8s-gateway.nginx.org'. If omitted, NAMESPACE will default to the current Pod namespace. NAME MUST be included.")
 )
 
 func main() {
 	flag.Parse()
 
-	if *gatewayCtlrName == "" {
-		flag.PrintDefaults()
-		os.Exit(1)
-	}
-
 	logger := zap.New()
 	conf := config.Config{
 		GatewayCtlrName: *gatewayCtlrName,
 		Logger:          logger,
+	}
+
+	valid := validateArguments(
+		logger,
+		GatewayControllerParam(true, "nginx-gateway" /* TODO dynamically set */, *gatewayCtlrName),
+	)
+	if !valid {
+		flag.PrintDefaults()
+		os.Exit(1)
 	}
 
 	logger.Info("Starting NGINX Gateway",
