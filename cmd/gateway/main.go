@@ -21,7 +21,7 @@ var (
 	date    string
 
 	// Command-line flags
-	gatewayCtlrName = flag.String("gateway-ctlr-name", "", "The name of the Gateway controller. The controller name should be of the form: DOMAIN/NAMESPACE/NAME. If omitted, DOMAIN will default to 'k8s-gateway.nginx.org'. If omitted, NAMESPACE will default to the current Pod namespace. NAME MUST be included.")
+	gatewayCtlrName = flag.String("gateway-ctlr-name", "", "The name of the Gateway controller. The controller name must be of the form: DOMAIN/NAMESPACE/NAME. The controller's domain is 'k8s-gateway.nginx.org'.")
 )
 
 func main() {
@@ -33,9 +33,9 @@ func main() {
 		Logger:          logger,
 	}
 
-	valid := validateArguments(
+	valid := ValidateArguments(
 		logger,
-		GatewayControllerParam(true, "nginx-gateway" /* TODO dynamically set */, *gatewayCtlrName),
+		GatewayControllerParam(true, domain, "nginx-gateway" /* TODO dynamically set */, *gatewayCtlrName),
 	)
 	if !valid {
 		flag.PrintDefaults()

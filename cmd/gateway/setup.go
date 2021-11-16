@@ -10,7 +10,7 @@ import (
 
 type Validator func() (bool, error)
 
-func GatewayControllerParam(required bool, namespace string, param string) Validator {
+func GatewayControllerParam(required bool, domain string, namespace string, param string) Validator {
 	return func() (bool, error) {
 		if required && len(param) == 0 {
 			return false, errors.New("gateway-ctlr-name must have a value")
@@ -18,26 +18,26 @@ func GatewayControllerParam(required bool, namespace string, param string) Valid
 
 		fields := strings.Split(param, "/")
 		l := len(fields)
-		if l > 3 {
-			return false, fmt.Errorf("unsupported path length")
+		if l > 3 || l < 3 {
+			return false, fmt.Errorf("unsupported path length, must be form DOMAIN/NAMESPACE/NAME")
 		}
 
-		switch len(fields) {
-		case 3:
-			if fields[0] != domain {
-				return false, fmt.Errorf("invalid domain: %s", domain)
-			}
-			fields = fields[1:]
-			fallthrough
-		case 2:
-			if fields[0] != namespace {
-				return false, fmt.Errorf("cannot cross namespace references: %s", namespace)
-			}
-			fields = fields[1:]
-			fallthrough
-		case 1:
-			if fields[0] == "" {
-				return false, fmt.Errorf("must provide a name")
+		for i := len(fields); i > 0; i-- {
+			switch i {
+			case 3:
+				if fields[0] != domain {
+					return false, fmt.Errorf("invalid domain: %s - %s", domain, param)
+				}
+				fields = fields[1:]
+			case 2:
+				if fields[0] != namespace {
+					return false, fmt.Errorf("cross namespace unsupported: %s - %s", namespace, param)
+				}
+				fields = fields[1:]
+			case 1:
+				if fields[0] == "" {
+					return false, fmt.Errorf("must provide a name: %s", param)
+				}
 			}
 		}
 
@@ -45,7 +45,7 @@ func GatewayControllerParam(required bool, namespace string, param string) Valid
 	}
 }
 
-func validateArguments(logger logr.Logger, validators ...Validator) bool {
+func ValidateArguments(logger logr.Logger, validators ...Validator) bool {
 	valid := true
 	for _, v := range validators {
 		if r, err := v(); !r {
