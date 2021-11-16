@@ -5,7 +5,7 @@ import (
 	"github.com/nginxinc/nginx-gateway-kubernetes/internal/config"
 	"github.com/nginxinc/nginx-gateway-kubernetes/pkg/sdk"
 
-	nginxgwv1alpha1 "github.com/nginxinc/nginx-gateway-kubernetes/pkg/apis/v1alpha1"
+	nginxgwv1alpha1 "github.com/nginxinc/nginx-gateway-kubernetes/pkg/apis/gateway/v1alpha1"
 )
 
 type gatewayConfigImplementation struct {
