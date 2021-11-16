@@ -71,7 +71,8 @@ lint: ## Run golangci-lint against code.
 
 .PHONY: unit-test
 unit-test:
-	go test ./... -coverprofile cover.out
+	go test ./... -race -coverprofile cover.out
+	go tool cover -html=cover.out -o cover.html
 
 .PHONY: dev-all
 dev-all: deps fmt vet lint unit-test

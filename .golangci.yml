@@ -36,7 +36,6 @@ linters:
     - errcheck
     - errorlint
     - gofmt
-    - gofumpt
     - goimports
     - gosec
     - gosimple

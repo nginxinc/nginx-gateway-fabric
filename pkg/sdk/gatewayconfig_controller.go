@@ -35,7 +35,7 @@ func (r *gatewayConfigReconciler) Reconcile(ctx context.Context, req reconcile.R
 	log := logr.FromContext(ctx).WithValues("gatewayconfig", req.Name)
 	log.V(3).Info("Reconciling GatewayConfig")
 
-	var found bool = true
+	found := true
 	var gcfg nginxgwv1alpha1.GatewayConfig
 	err := r.Get(ctx, req.NamespacedName, &gcfg)
 	if err != nil {
