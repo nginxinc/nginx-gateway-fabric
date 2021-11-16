@@ -1,5 +1,5 @@
-// Package specs defines Nginx Service Mesh specs API group
+// Package gateway defines the API group for NGINX Gateway configuration resources.
 package gateway
 
-// GroupName identifies the API Group Name for a circuit breaker.
+// GroupName identifies the API Group Name for NGINX Gateway configuration resources.
 const GroupName = "gateway.nginx.org"

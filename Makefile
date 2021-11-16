@@ -14,7 +14,7 @@ export DOCKER_BUILDKIT = 1
 
 .PHONY: container
 container: build
-	docker build --build-arg OUT_DIR=$(OUT_DIR) --build-arg VERSION=$(VERSION) --build-arg GIT_COMMIT=$(GIT_COMMIT) --build-arg DATE=$(DATE) --target $(TARGET) -f build/Dockerfile -t $(PREFIX):$(TAG) .
+	docker build --build-arg VERSION=$(VERSION) --build-arg GIT_COMMIT=$(GIT_COMMIT) --build-arg DATE=$(DATE) --target $(TARGET) -f build/Dockerfile -t $(PREFIX):$(TAG) .
 
 .PHONY: build
 build:
