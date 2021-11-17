@@ -6,8 +6,8 @@ import (
 	"context"
 	"time"
 
-	v1alpha1 "github.com/nginxinc/nginx-gateway-kubernetes/pkg/apis/v1alpha1"
-	scheme "github.com/nginxinc/nginx-gateway-kubernetes/pkg/client/clientset/versioned/scheme"
+	v1alpha1 "github.com/nginxinc/nginx-gateway-kubernetes/pkg/apis/gateway/v1alpha1"
+	scheme "github.com/nginxinc/nginx-gateway-kubernetes/pkg/client/gateway/clientset/versioned/scheme"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"

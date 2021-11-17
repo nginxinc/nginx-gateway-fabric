@@ -32,7 +32,8 @@ fi
 #                  k8s.io/kubernetes. The output-base is needed for the generators to output into the vendor dir
 #                  instead of the $GOPATH directly. For normal projects this can be dropped.
 bash "${CODEGEN_PKG}"/generate-groups.sh "deepcopy,client,informer,lister" \
-  github.com/nginxinc/nginx-gateway-kubernetes/pkg/client github.com/nginxinc/nginx-gateway-kubernetes/pkg/apis \
-  :v1alpha1 \
+  github.com/nginxinc/nginx-gateway-kubernetes/pkg/client \
+  github.com/nginxinc/nginx-gateway-kubernetes/pkg/apis \
+  gateway:v1alpha1 \
   --output-base "$(dirname "${BASH_SOURCE[0]}")/../../../.." \
   --go-header-file "${SCRIPT_ROOT}"/hack/boilerplate.go.txt

@@ -7,7 +7,7 @@ import (
 	gw "github.com/nginxinc/nginx-gateway-kubernetes/internal/implementations/gateway"
 	gc "github.com/nginxinc/nginx-gateway-kubernetes/internal/implementations/gatewayclass"
 	gcfg "github.com/nginxinc/nginx-gateway-kubernetes/internal/implementations/gatewayconfig"
-	nginxgwv1alpha1 "github.com/nginxinc/nginx-gateway-kubernetes/pkg/apis/v1alpha1"
+	nginxgwv1alpha1 "github.com/nginxinc/nginx-gateway-kubernetes/pkg/apis/gateway/v1alpha1"
 	"github.com/nginxinc/nginx-gateway-kubernetes/pkg/sdk"
 
 	"k8s.io/apimachinery/pkg/runtime"

@@ -1,7 +1,7 @@
 package sdk
 
 import (
-	nginxgwv1alpha1 "github.com/nginxinc/nginx-gateway-kubernetes/pkg/apis/v1alpha1"
+	nginxgwv1alpha1 "github.com/nginxinc/nginx-gateway-kubernetes/pkg/apis/gateway/v1alpha1"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 )
 
