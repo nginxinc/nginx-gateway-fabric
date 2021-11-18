@@ -8,7 +8,7 @@ require (
 	golang.org/x/net v0.0.0-20210520170846-37e1c6afe023
 	k8s.io/apimachinery v0.22.4
 	k8s.io/client-go v0.22.4
-	k8s.io/code-generator v0.22.2
+	k8s.io/code-generator v0.22.4
 	sigs.k8s.io/controller-runtime v0.10.3
 	sigs.k8s.io/controller-tools v0.7.0
 	sigs.k8s.io/gateway-api v0.4.0
