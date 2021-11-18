@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/nginxinc/nginx-gateway-kubernetes/internal/config"
@@ -11,7 +12,7 @@ import (
 )
 
 const (
-	domain string = "k8s-gateway.nginx.org"
+	domain string = "gateway.nginx.org"
 )
 
 var (
@@ -21,7 +22,11 @@ var (
 	date    string
 
 	// Command-line flags
-	gatewayCtlrName = flag.String("gateway-ctlr-name", "", "The name of the Gateway controller. The controller name must be of the form: DOMAIN/NAMESPACE/NAME. The controller's domain is 'k8s-gateway.nginx.org'.")
+	gatewayCtlrName = flag.String(
+		"gateway-ctlr-name",
+		"",
+		fmt.Sprintf("The name of the Gateway controller. The controller name must be of the form: DOMAIN/NAMESPACE/NAME. The controller's domain is '%s'.", domain),
+	)
 )
 
 func main() {
@@ -33,14 +38,10 @@ func main() {
 		Logger:          logger,
 	}
 
-	valid := ValidateArguments(
-		logger,
-		GatewayControllerParam(true, domain, "nginx-gateway" /* TODO dynamically set */, *gatewayCtlrName),
+	MustValidateArguments(
+		flag.CommandLine,
+		GatewayControllerParam(domain, "nginx-gateway" /* TODO dynamically set */),
 	)
-	if !valid {
-		flag.PrintDefaults()
-		os.Exit(1)
-	}
 
 	logger.Info("Starting NGINX Gateway",
 		"version", version,

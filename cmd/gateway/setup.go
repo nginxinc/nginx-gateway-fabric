@@ -3,57 +3,91 @@ package main
 import (
 	"errors"
 	"fmt"
+	"os"
 	"strings"
 
-	"github.com/go-logr/logr"
+	flag "github.com/spf13/pflag"
 )
 
-type Validator func() (bool, error)
+const (
+	errTmpl = "failed validation - flag: '--%s' reason: '%s'\n"
+)
 
-func GatewayControllerParam(required bool, domain string, namespace string, param string) Validator {
-	return func() (bool, error) {
-		if required && len(param) == 0 {
-			return false, errors.New("gateway-ctlr-name must have a value")
-		}
+type Validator func(*flag.FlagSet) error
+type ValidatorContext struct {
+	Key string
+	V   Validator
+}
 
-		fields := strings.Split(param, "/")
-		l := len(fields)
-		if l > 3 || l < 3 {
-			return false, fmt.Errorf("unsupported path length, must be form DOMAIN/NAMESPACE/NAME")
-		}
+func GatewayControllerParam(domain string, namespace string) ValidatorContext {
+	name := "gateway-ctlr-name"
+	return ValidatorContext{
+		name,
+		func(flagset *flag.FlagSet) error {
+			param, err := flagset.GetString(name)
+			if err != nil {
+				return err
+			}
 
-		for i := len(fields); i > 0; i-- {
-			switch i {
-			case 3:
-				if fields[0] != domain {
-					return false, fmt.Errorf("invalid domain: %s - %s", domain, param)
-				}
-				fields = fields[1:]
-			case 2:
-				if fields[0] != namespace {
-					return false, fmt.Errorf("cross namespace unsupported: %s - %s", namespace, param)
-				}
-				fields = fields[1:]
-			case 1:
-				if fields[0] == "" {
-					return false, fmt.Errorf("must provide a name: %s", param)
+			if len(param) == 0 {
+				return errors.New("flag must be set")
+			}
+
+			fields := strings.Split(param, "/")
+			l := len(fields)
+			if l != 3 {
+				return fmt.Errorf("unsupported path length, must be form DOMAIN/NAMESPACE/NAME")
+			}
+
+			for i := len(fields); i > 0; i-- {
+				switch i {
+				case 3:
+					if fields[0] != domain {
+						return fmt.Errorf("invalid domain: %s", fields[0])
+					}
+					fields = fields[1:]
+				case 2:
+					if fields[0] != namespace {
+						return fmt.Errorf("cross namespace unsupported: %s", fields[0])
+					}
+					fields = fields[1:]
+				case 1:
+					if fields[0] == "" {
+						return fmt.Errorf("must provide a name")
+					}
 				}
 			}
-		}
 
-		return true, nil
+			return nil
+		},
 	}
 }
 
-func ValidateArguments(logger logr.Logger, validators ...Validator) bool {
-	valid := true
+func ValidateArguments(flagset *flag.FlagSet, validators ...ValidatorContext) []string {
+	var msgs []string
 	for _, v := range validators {
-		if r, err := v(); !r {
-			logger.Error(err, "failed validation")
-			if valid {
-				valid = !valid
+		if flagset.Lookup(v.Key) != nil {
+			err := v.V(flagset)
+			if err != nil {
+				msgs = append(msgs, fmt.Sprintf(errTmpl, v.Key, err.Error()))
 			}
 		}
 	}
-	return valid
+
+	return msgs
+}
+
+func MustValidateArguments(flagset *flag.FlagSet, validators ...ValidatorContext) {
+	msgs := ValidateArguments(flagset, validators...)
+	if msgs != nil {
+		for i := range msgs {
+			fmt.Printf("%s", msgs[i])
+		}
+		fmt.Println("")
+
+		fmt.Printf("Usage of %s:\n", os.Args[0])
+		flag.PrintDefaults()
+
+		os.Exit(1)
+	}
 }
