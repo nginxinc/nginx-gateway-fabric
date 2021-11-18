@@ -1,0 +1,154 @@
+name: Continuous Integration
+
+on:
+  push:
+    branches:
+      - 'main'
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+    paths-ignore:
+      - '**.md'
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - reopened
+      - synchronize
+    paths-ignore:
+      - '**.md'
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  DOCKER_BUILDKIT: 1
+  GOLANGCI_TIMEOUT: 10m0s
+
+jobs:
+
+  vars:
+    name: Get variables
+    runs-on: ubuntu-20.04
+    outputs:
+      sha: ${{ steps.vars.outputs.sha }}
+      go_version: ${{ steps.vars.outputs.go_version }}
+      git_tag: ${{ steps.vars.outputs.git_tag }}
+      version: ${{ steps.vars.outputs.version }}
+      date: ${{ steps.vars.outputs.date }}
+    steps:
+      - name: Cancel Previous Runs
+        uses: styfle/cancel-workflow-action@0.9.1
+        with:
+          access_token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+      - name: Output Variables
+        id: vars
+        run: |
+          echo "::set-output name=sha::$(echo ${GITHUB_SHA} | cut -c1-7)"
+          echo "::set-output name=go_version::$(grep "go 1." go.mod | cut -d " " -f 2)"
+          echo "::set-output name=git_tag::$(echo ${GITHUB_REF/refs\/tags\//} | tr -d v)"
+          echo "::set-output name=version::$(grep "VERSION = " Makefile | cut -d " " -f 3)"
+          echo "::set-output name=date::$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+      - name: Lint Code
+        uses: golangci/golangci-lint-action@v2
+        with:
+          args: --timeout ${{ env.GOLANGCI_TIMEOUT }}
+
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-20.04
+    needs: vars
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+      - name: Setup Golang Environment
+        uses: actions/setup-go@v2
+        with:
+          go-version: ${{ needs.vars.outputs.go_version }}
+      - name: Run Tests
+        run: make unit-test
+      - name: Upload Coverage Report
+        uses: actions/upload-artifact@v2
+        with:
+          name: cover-${{ needs.vars.outputs.sha }}.html
+          path: ${{ github.workspace }}/cover.html
+        if: always()
+
+  binary:
+    name: Build Binary
+    runs-on: ubuntu-20.04
+    needs: [vars, lint]
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+      - name: Setup Golang Environment
+        uses: actions/setup-go@v2
+        with:
+          go-version: ${{ needs.vars.outputs.go_version }}
+      - name: Build Binary
+        run: make build
+      - name: Cache Artifacts
+        uses: actions/cache@v2.1.6
+        with:
+          path: ${{ github.workspace }}/build/.out/gateway
+          key: nginx-gateway-kubernetes-${{ github.run_id }}-${{ github.run_number }}
+
+  build:
+    name: Build Image
+    runs-on: ubuntu-20.04
+    needs: [vars, binary]
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+      - name: Fetch Cached Artifacts
+        uses: actions/cache@v2.1.6
+        with:
+          path: ${{ github.workspace }}/build/.out/gateway
+          key: nginx-gateway-kubernetes-${{ github.run_id }}-${{ github.run_number }}
+      - name: Docker Buildx
+        uses: docker/setup-buildx-action@v1
+      - name: Build Image Debian
+        uses: docker/build-push-action@v2
+        with:
+          file: build/Dockerfile
+          context: '.'
+          target: local
+          load: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          tags: nginx/nginx-gateway-kubernetes:${{ needs.vars.outputs.sha }}
+          build-args: |
+            VERSION=${{ needs.vars.outputs.version }}
+            GIT_COMMIT=${{ needs.vars.outputs.sha }}
+            DATE=${{ needs.vars.outputs.date }}
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@0.0.21
+        continue-on-error: true
+        with:
+          image-ref: nginx/nginx-gateway-kubernetes:${{ needs.vars.outputs.sha }}
+          format: 'template'
+          template: '@/contrib/sarif.tpl'
+          output: 'trivy-results-nginx-gateway-kubernetes.sarif'
+          ignore-unfixed: 'true'
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v1
+        continue-on-error: true
+        with:
+          sarif_file: 'trivy-results-nginx-gateway-kubernetes.sarif'
+      - name: Upload Scan Results
+        uses: actions/upload-artifact@v2
+        continue-on-error: true
+        with:
+          name: 'trivy-results-nginx-gateway-kubernetes.sarif'
+          path: 'trivy-results-nginx-gateway-kubernetes.sarif'
+        if: always()

@@ -35,7 +35,7 @@ func (r *gatewayReconciler) Reconcile(ctx context.Context, req reconcile.Request
 	log := logr.FromContext(ctx).WithValues("gateway", req.Name)
 	log.V(3).Info("Reconciling Gateway")
 
-	var found bool = true
+	found := true
 	var gw v1alpha2.Gateway
 	err := r.Get(ctx, req.NamespacedName, &gw)
 	if err != nil {

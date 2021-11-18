@@ -1,3 +1,4 @@
+[![FOSSA Status](https://app.fossa.com/api/projects/custom%2B5618%2Fgithub.com%2Fnginxinc%2Fnginx-gateway-kubernetes.svg?type=shield)](https://app.fossa.com/projects/custom%2B5618%2Fgithub.com%2Fnginxinc%2Fnginx-gateway-kubernetes?ref=badge_shield)
 # nginx-gateway-kubernetes
 
 NGINX Gateway is an open source project managed by NGINX, Inc. It implements a collection of resources that model service networking in Kubernetes.
