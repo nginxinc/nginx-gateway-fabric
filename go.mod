@@ -3,7 +3,7 @@ module github.com/nginxinc/nginx-gateway-kubernetes
 go 1.17
 
 require (
-	github.com/go-logr/logr v0.4.0
+	github.com/go-logr/logr v1.2.0
 	github.com/spf13/pflag v1.0.5
 	golang.org/x/net v0.0.0-20210520170846-37e1c6afe023
 	k8s.io/apimachinery v0.22.4
