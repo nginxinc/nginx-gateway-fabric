@@ -98,7 +98,7 @@ jobs:
       - name: Build Binary
         run: make build
       - name: Cache Artifacts
-        uses: actions/cache@v2.1.6
+        uses: actions/cache@v2.1.7
         with:
           path: ${{ github.workspace }}/build/.out/gateway
           key: nginx-gateway-kubernetes-${{ github.run_id }}-${{ github.run_number }}
@@ -111,7 +111,7 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v2
       - name: Fetch Cached Artifacts
-        uses: actions/cache@v2.1.6
+        uses: actions/cache@v2.1.7
         with:
           path: ${{ github.workspace }}/build/.out/gateway
           key: nginx-gateway-kubernetes-${{ github.run_id }}-${{ github.run_number }}
@@ -132,7 +132,7 @@ jobs:
             GIT_COMMIT=${{ needs.vars.outputs.sha }}
             DATE=${{ needs.vars.outputs.date }}
       - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@0.1.0
+        uses: aquasecurity/trivy-action@0.2.0
         continue-on-error: true
         with:
           image-ref: nginx/nginx-gateway-kubernetes:${{ needs.vars.outputs.sha }}
