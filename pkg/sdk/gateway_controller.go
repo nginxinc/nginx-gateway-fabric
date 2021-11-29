@@ -3,11 +3,11 @@ package sdk
 import (
 	"context"
 
-	"github.com/go-logr/logr"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctlr "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
@@ -32,7 +32,7 @@ func RegisterGatewayController(mgr manager.Manager, impl GatewayImpl) error {
 }
 
 func (r *gatewayReconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
-	log := logr.FromContext(ctx).WithValues("gateway", req.Name)
+	log := log.FromContext(ctx).WithValues("gateway", req.Name)
 	log.V(3).Info("Reconciling Gateway")
 
 	found := true

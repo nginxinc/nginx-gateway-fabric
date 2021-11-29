@@ -1,12 +1,12 @@
 package sdk
 
 import (
-	"github.com/go-logr/logr"
 	"golang.org/x/net/context"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
@@ -31,7 +31,7 @@ func RegisterGatewayClassController(mgr manager.Manager, impl GatewayClassImpl) 
 }
 
 func (r *gatewayClassReconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
-	log := logr.FromContext(ctx).WithValues("gatewayclass", req.Name)
+	log := log.FromContext(ctx).WithValues("gatewayclass", req.Name)
 	log.V(3).Info("Reconciling GatewayClass")
 
 	var gc v1alpha2.GatewayClass
