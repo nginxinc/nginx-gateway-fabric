@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/nginxinc/nginx-gateway-kubernetes/internal/config"
@@ -10,6 +11,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
 
+const (
+	domain string = "gateway.nginx.org"
+)
+
 var (
 	// Set during go build
 	version string
@@ -17,22 +22,26 @@ var (
 	date    string
 
 	// Command-line flags
-	gatewayCtlrName = flag.String("gateway-ctlr-name", "", "The name of the Gateway controller")
+	gatewayCtlrName = flag.String(
+		"gateway-ctlr-name",
+		"",
+		fmt.Sprintf("The name of the Gateway controller. The controller name must be of the form: DOMAIN/NAMESPACE/NAME. The controller's domain is '%s'.", domain),
+	)
 )
 
 func main() {
 	flag.Parse()
-
-	if *gatewayCtlrName == "" {
-		flag.PrintDefaults()
-		os.Exit(1)
-	}
 
 	logger := zap.New()
 	conf := config.Config{
 		GatewayCtlrName: *gatewayCtlrName,
 		Logger:          logger,
 	}
+
+	MustValidateArguments(
+		flag.CommandLine,
+		GatewayControllerParam(domain, "nginx-gateway" /* TODO dynamically set */),
+	)
 
 	logger.Info("Starting NGINX Gateway",
 		"version", version,
