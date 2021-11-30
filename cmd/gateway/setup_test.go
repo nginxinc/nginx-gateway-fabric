@@ -121,8 +121,35 @@ var _ = Describe("Main", func() {
 	}) // Generic Validator
 
 	Describe("CLI argument validation", func() {
+		type testCase struct {
+			Param    string
+			Domain   string
+			ExpError bool
+		}
+
 		var mockFlags *flag.FlagSet
 		var gatewayCtlrName string
+
+		tester := func(t testCase) {
+			err := mockFlags.Set(gatewayCtlrName, t.Param)
+			Expect(err).ToNot(HaveOccurred())
+
+			v := GatewayControllerParam(domain, t.Domain)
+			Expect(v.V).ToNot(BeNil())
+
+			err = v.V(mockFlags)
+			if t.ExpError {
+				Expect(err).To(HaveOccurred())
+			} else {
+				Expect(err).ToNot(HaveOccurred())
+			}
+		}
+		runner := func(table []testCase) {
+			for i := range table {
+				tester(table[i])
+			}
+		}
+
 		BeforeEach(func() {
 			domain = "k8s-gateway.nginx.org"
 			gatewayCtlrName = "gateway-ctlr-name"
@@ -136,97 +163,75 @@ var _ = Describe("Main", func() {
 			mockFlags = nil
 		})
 		It("should parse full gateway-ctlr-name", func() {
-			err := mockFlags.Set(gatewayCtlrName, "k8s-gateway.nginx.org/nginx-gateway/my-gateway")
-			Expect(err).ToNot(HaveOccurred())
-
-			v := GatewayControllerParam(domain, "nginx-gateway")
-			Expect(v.V).ToNot(BeNil())
-
-			err = v.V(mockFlags)
-			Expect(err).ToNot(HaveOccurred())
+			t := testCase{
+				"k8s-gateway.nginx.org/nginx-gateway/my-gateway",
+				"nginx-gateway",
+				false,
+			}
+			tester(t)
 		}) // should parse full gateway-ctlr-name
 
 		It("should fail with too many path elements", func() {
-			err := mockFlags.Set(gatewayCtlrName, "k8s-gateway.nginx.org/nginx-gateway/my-gateway/broken")
-			Expect(err).ToNot(HaveOccurred())
-
-			v := GatewayControllerParam(domain, "nginx-gateway")
-			Expect(v.V).ToNot(BeNil())
-
-			err = v.V(mockFlags)
-			Expect(err).To(HaveOccurred())
+			t := testCase{
+				"k8s-gateway.nginx.org/nginx-gateway/my-gateway/broken",
+				"nginx-gateway",
+				true,
+			}
+			tester(t)
 		}) // should fail with too many path elements
 
 		It("should fail with too few path elements", func() {
-			err := mockFlags.Set(gatewayCtlrName, "nginx-gateway/my-gateway")
-			Expect(err).ToNot(HaveOccurred())
+			table := []testCase{
+				{
+					Param:    "nginx-gateway/my-gateway",
+					Domain:   "nginx-gateway",
+					ExpError: true,
+				},
+				{
+					Param:    "my-gateway",
+					Domain:   "nginx-gateway",
+					ExpError: true,
+				},
+			}
 
-			v := GatewayControllerParam(domain, "nginx-gateway")
-			Expect(v.V).ToNot(BeNil())
-
-			err = v.V(mockFlags)
-			Expect(err).To(HaveOccurred())
-
-			err = mockFlags.Set(gatewayCtlrName, "my-gateway")
-			Expect(err).ToNot(HaveOccurred())
-
-			v = GatewayControllerParam(domain, "nginx-gateway")
-			Expect(v.V).ToNot(BeNil())
-
-			err = v.V(mockFlags)
-			Expect(err).To(HaveOccurred())
+			runner(table)
 		}) // should fail with too few path elements
 
 		It("should verify constraints", func() {
-			// bad domain
-			err := mockFlags.Set(gatewayCtlrName, "invalid-domain/nginx-gateway/my-gateway")
-			Expect(err).ToNot(HaveOccurred())
+			table := []testCase{
+				{
+					// bad domain
+					Param:    "invalid-domain/nginx-gateway/my-gateway",
+					Domain:   "nginx-gateway",
+					ExpError: true,
+				},
+				{
+					// bad domain
+					Param:    "/default/my-gateway",
+					Domain:   "nginx-gateway",
+					ExpError: true,
+				},
+				{
+					// bad namespace
+					Param:    "k8s-gateway.nginx.org/default/my-gateway",
+					Domain:   "nginx-gateway",
+					ExpError: true,
+				},
+				{
+					// bad namespace
+					Param:    "k8s-gateway.nginx.org//my-gateway",
+					Domain:   "nginx-gateway",
+					ExpError: true,
+				},
+				{
+					// bad name
+					Param:    "k8s-gateway.nginx.org/default/",
+					Domain:   "nginx-gateway",
+					ExpError: true,
+				},
+			}
 
-			v := GatewayControllerParam(domain, "nginx-gateway")
-			Expect(v.V).ToNot(BeNil())
-
-			err = v.V(mockFlags)
-			Expect(err).To(HaveOccurred())
-
-			// bad domain
-			err = mockFlags.Set(gatewayCtlrName, "/default/my-gateway")
-			Expect(err).ToNot(HaveOccurred())
-
-			v = GatewayControllerParam(domain, "nginx-gateway")
-			Expect(v.V).ToNot(BeNil())
-
-			err = v.V(mockFlags)
-			Expect(err).To(HaveOccurred())
-
-			// bad namespace
-			err = mockFlags.Set(gatewayCtlrName, "k8s-gateway.nginx.org/default/my-gateway")
-			Expect(err).ToNot(HaveOccurred())
-
-			v = GatewayControllerParam(domain, "nginx-gateway")
-			Expect(v.V).ToNot(BeNil())
-
-			err = v.V(mockFlags)
-			Expect(err).To(HaveOccurred())
-
-			// bad namespace
-			err = mockFlags.Set(gatewayCtlrName, "k8s-gateway.nginx.org//my-gateway")
-			Expect(err).ToNot(HaveOccurred())
-
-			v = GatewayControllerParam(domain, "nginx-gateway")
-			Expect(v.V).ToNot(BeNil())
-
-			err = v.V(mockFlags)
-			Expect(err).To(HaveOccurred())
-
-			// bad name
-			err = mockFlags.Set(gatewayCtlrName, "k8s-gateway.nginx.org/default/")
-			Expect(err).ToNot(HaveOccurred())
-
-			v = GatewayControllerParam(domain, "nginx-gateway")
-			Expect(v.V).ToNot(BeNil())
-
-			err = v.V(mockFlags)
-			Expect(err).To(HaveOccurred())
+			runner(table)
 		}) // should verify constraints
 	}) // CLI argument validation
 }) // end Main

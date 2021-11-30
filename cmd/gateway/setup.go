@@ -38,7 +38,7 @@ func GatewayControllerParam(domain string, namespace string) ValidatorContext {
 			fields := strings.Split(param, "/")
 			l := len(fields)
 			if l != 3 {
-				return fmt.Errorf("unsupported path length, must be form DOMAIN/NAMESPACE/NAME")
+				return errors.New("unsupported path length, must be form DOMAIN/NAMESPACE/NAME")
 			}
 
 			for i := len(fields); i > 0; i-- {
@@ -55,7 +55,7 @@ func GatewayControllerParam(domain string, namespace string) ValidatorContext {
 					fields = fields[1:]
 				case 1:
 					if fields[0] == "" {
-						return fmt.Errorf("must provide a name")
+						return errors.New("must provide a name")
 					}
 				}
 			}
@@ -83,11 +83,11 @@ func MustValidateArguments(flagset *flag.FlagSet, validators ...ValidatorContext
 	msgs := ValidateArguments(flagset, validators...)
 	if msgs != nil {
 		for i := range msgs {
-			fmt.Printf("%s", msgs[i])
+			fmt.Fprintf(os.Stderr, "%s", msgs[i])
 		}
-		fmt.Println("")
+		fmt.Fprintln(os.Stderr, "")
 
-		fmt.Printf("Usage of %s:\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "Usage of %s:\n", os.Args[0])
 		flag.PrintDefaults()
 
 		os.Exit(1)
