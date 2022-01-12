@@ -72,7 +72,7 @@ func TestHTTPRoutes(t *testing.T) {
 			Op: Upsert,
 			Host: &Host{
 				Value: "cafe.example.com",
-				Routes: []*PathRoute{
+				PathRouteGroups: []*PathRouteGroup{
 					{
 						Path: "/",
 						Routes: []Route{
@@ -120,7 +120,7 @@ func TestHTTPRoutes(t *testing.T) {
 			Op: Upsert,
 			Host: &Host{
 				Value: "cafe.example.com",
-				Routes: []*PathRoute{
+				PathRouteGroups: []*PathRouteGroup{
 					{
 						Path: "/",
 						Routes: []Route{
@@ -178,7 +178,7 @@ func TestHTTPRoutes(t *testing.T) {
 			Op: Upsert,
 			Host: &Host{
 				Value: "cafe.example.com",
-				Routes: []*PathRoute{
+				PathRouteGroups: []*PathRouteGroup{
 					{
 						Path: "/",
 						Routes: []Route{
@@ -214,7 +214,7 @@ func TestHTTPRoutes(t *testing.T) {
 			Op: Upsert,
 			Host: &Host{
 				Value: "cafe.example.com",
-				Routes: []*PathRoute{
+				PathRouteGroups: []*PathRouteGroup{
 					{
 						Path: "/",
 						Routes: []Route{
@@ -240,7 +240,7 @@ func TestHTTPRoutes(t *testing.T) {
 			Op: Delete,
 			Host: &Host{
 				Value: "cafe.example.com",
-				Routes: []*PathRoute{
+				PathRouteGroups: []*PathRouteGroup{
 					{
 						Path: "/",
 						Routes: []Route{

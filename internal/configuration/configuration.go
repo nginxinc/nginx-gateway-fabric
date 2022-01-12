@@ -11,6 +11,79 @@ import (
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 )
 
+// httpListener defines an HTTP Listener.
+type httpListener struct {
+	// hosts include all Hosts that belong to the listener.
+	hosts map[string]*Host
+	// httpRoutes include all HTTPRoute resources that belong to the listener.
+	httpRoutes map[string]*v1alpha2.HTTPRoute
+}
+
+// Host is the primary configuration unit of the internal representation.
+// It corresponds to an NGINX server block with server_name Value;
+// See https://nginx.org/en/docs/http/ngx_http_core_module.html#server
+type Host struct {
+	// Value is the host value (hostname).
+	Value      string
+	// PathRouteGroups include all PathRouteGroups that belong to the Host.
+	// We use a slice rather than a map to control the order of the routes.
+	PathRouteGroups []*PathRouteGroup
+}
+
+// PathRouteGroup represents a collection of Routes grouped by a path.
+// Among those Routes, there will be routing rules with additional matching criteria. For example, matching of headers.
+// The reason we group Routes by Path is how NGINX processes requests: its primary routing rule mechanism is a location block.
+// See https://nginx.org/en/docs/http/ngx_http_core_module.html#location
+type PathRouteGroup struct {
+	// Path is the path (URI).
+	Path string
+	// Routes include all Routes for that path.
+	// Routes are sorted based on the creation timestamp and namespace/name of the Route source to resolve conflicts among
+	// multiple same Routes.
+	// Sorting is stable so that the Routes retain the order of appearance of the corresponding matches in the corresponding
+	// HTTPRoute resources.
+	// The first "fired" Route will win in the NGINX configuration.
+	Routes []Route
+}
+
+// Route represents a Route, which corresponds to a Match in the HTTPRouteRule. If a rule doesn't define any matches,
+// that rule is for "/" path.
+type Route struct {
+	// MatchIdx is the index of the rule in the Rule.Matches or -1 if there are no matches.
+	MatchIdx int
+	// Rule is the corresponding Routing rule
+	Rule     *v1alpha2.HTTPRouteRule
+	// Source is the corresponding HTTPRoute resource.
+	Source   *v1alpha2.HTTPRoute
+}
+
+// Operation defines an operation to be performed for a Host.
+type Operation int
+
+const (
+	// Delete the config for the Host.
+	Delete Operation = iota
+	// Upsert the config for the Host.
+	Upsert
+)
+
+// Represents a change of the Host that needs to be reflected in the NGINX config.
+type Change struct {
+	// Op is the operation to be performed.
+	Op   Operation
+	// Host is a reference to the Host associated with the Change.
+	Host *Host
+}
+
+// Notification represents status information to be reported about an API resource.
+type Notification struct {
+	// Object is the API resource.
+	Object  runtime.Object
+	// status information - to be defined
+}
+
+// Configuration represents the configuration of the Gateway - a collection of routing rules ready to be transformed
+// into NGINX configuration.
 type Configuration struct {
 	// caches of valid resources
 	gatewayClass *v1alpha2.GatewayClass
@@ -21,53 +94,6 @@ type Configuration struct {
 	httpListeners map[string]*httpListener
 }
 
-type httpListener struct {
-	hosts map[string]*Host
-	// httpRoutes map[string]*v1alpha2.HTTPRoute - to quickly answer if a route is part of the listener
-}
-
-// corresponds to an NGINX server block with server_name Value;
-type Host struct {
-	Value  string
-	Routes []*PathRoute
-}
-
-// NGINX uses locations as a primary routing mechanism
-// Because of that, we will represent routing rules as two-layer structure
-// First layer - PathRoutes, each for its own path
-// Second layer - Routes for a particular path
-
-type PathRoute struct {
-	Path string
-	// sorted based on the creation timestamp and namespace/name of the source
-	// sorting must be stable to preserve the order in HTTPRoute
-	Routes []Route
-}
-
-type Route struct {
-	MatchIdx int // id of the rule in Rule.Matches or -1 if there are no matches
-	Rule     *v1alpha2.HTTPRouteRule
-	Source   *v1alpha2.HTTPRoute // where the Route comes from
-}
-
-type Operation int
-
-const (
-	Delete Operation = iota
-	Upsert
-)
-
-type Change struct {
-	Op   Operation
-	Host *Host
-}
-
-type Notification struct {
-	Object  runtime.Object
-	Reason  string
-	Message string
-}
-
 func NewConfiguration() *Configuration {
 	return &Configuration{
 		httpRoutes:    make(map[string]*v1alpha2.HTTPRoute),
@@ -75,7 +101,7 @@ func NewConfiguration() *Configuration {
 	}
 }
 
-func (c *Configuration) UpsertGatewayClass(gc *v1alpha2.GatewayClass) []Change {
+func (c *Configuration) UpsertGatewayClass(gc *v1alpha2.GatewayClass) ([]Change) {
 	// validate
 	err := validation.ValidateGatewayClass(gc)
 	if err != nil {
@@ -184,7 +210,7 @@ func (c *Configuration) updateListeners() []Change {
 func rebuildHTTPListener(listener *httpListener, httpRoutes map[string]*v1alpha2.HTTPRoute) (*httpListener, []Change) {
 	// (1) Build new hosts
 
-	pathRoutesForHost := make(map[string]map[string]*PathRoute)
+	pathRoutesForHost := make(map[string]map[string]*PathRouteGroup)
 
 	// for now, we take in all availble HTTPRoutes
 	for _, key := range getSortedKeysForHTTPRoutes(httpRoutes) {
@@ -194,7 +220,7 @@ func rebuildHTTPListener(listener *httpListener, httpRoutes map[string]*v1alpha2
 		for _, h := range hr.Spec.Hostnames {
 			pathRoutes, exist := pathRoutesForHost[string(h)]
 			if !exist {
-				pathRoutes = make(map[string]*PathRoute)
+				pathRoutes = make(map[string]*PathRouteGroup)
 				pathRoutesForHost[string(h)] = pathRoutes
 			}
 
@@ -204,7 +230,7 @@ func rebuildHTTPListener(listener *httpListener, httpRoutes map[string]*v1alpha2
 				if len(rule.Matches) == 0 {
 					pathRoute, exist := pathRoutes["/"]
 					if !exist {
-						pathRoute = &PathRoute{
+						pathRoute = &PathRouteGroup{
 							Path: "/",
 						}
 						pathRoutes["/"] = pathRoute
@@ -224,7 +250,7 @@ func rebuildHTTPListener(listener *httpListener, httpRoutes map[string]*v1alpha2
 
 						pathRoute, exist := pathRoutes[path]
 						if !exist {
-							pathRoute = &PathRoute{
+							pathRoute = &PathRouteGroup{
 								Path: path,
 							}
 							pathRoutes[path] = pathRoute
@@ -258,7 +284,7 @@ func rebuildHTTPListener(listener *httpListener, httpRoutes map[string]*v1alpha2
 			pathRoute := pathRoutes[path]
 			sortRoutes(pathRoute.Routes)
 
-			host.Routes = append(host.Routes, pathRoute)
+			host.PathRouteGroups = append(host.PathRouteGroups, pathRoute)
 		}
 
 		newHosts[h] = host
@@ -288,7 +314,7 @@ func rebuildHTTPListener(listener *httpListener, httpRoutes map[string]*v1alpha2
 			continue
 		}
 
-		if !arePathRoutesEqual(oldHost.Routes, newHosts[h].Routes) {
+		if !arePathRoutesEqual(oldHost.PathRouteGroups, newHosts[h].PathRouteGroups) {
 			updatedHosts = append(updatedHosts, h)
 		}
 	}
@@ -333,7 +359,7 @@ func rebuildHTTPListener(listener *httpListener, httpRoutes map[string]*v1alpha2
 	return newListener, changes
 }
 
-func arePathRoutesEqual(pathRoutes1, pathRoutes2 []*PathRoute) bool {
+func arePathRoutesEqual(pathRoutes1, pathRoutes2 []*PathRouteGroup) bool {
 	if len(pathRoutes1) != len(pathRoutes2) {
 		return false
 	}
@@ -385,7 +411,7 @@ func lessObjectMeta(meta1 *metav1.ObjectMeta, meta2 *metav1.ObjectMeta) bool {
 	return meta1.CreationTimestamp.Before(&meta2.CreationTimestamp)
 }
 
-func getSortedKeysForPathRoutes(pathRoutes map[string]*PathRoute) []string {
+func getSortedKeysForPathRoutes(pathRoutes map[string]*PathRouteGroup) []string {
 	var keys []string
 
 	for k := range pathRoutes {
