@@ -3,7 +3,6 @@ package state
 import (
 	"fmt"
 	"reflect"
-	"sort"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -14,9 +13,33 @@ import (
 // httpListener defines an HTTP Listener.
 type httpListener struct {
 	// hosts include all Hosts that belong to the listener.
-	hosts map[string]*Host
+	hosts hosts
 	// httpRoutes include all HTTPRoute resources that belong to the listener.
-	httpRoutes map[string]*v1alpha2.HTTPRoute
+	httpRoutes httpRoutes
+}
+
+type hosts map[string]*Host
+
+func (hs hosts) Keys() []string {
+	keys := make([]string, 0, len(hs))
+
+	for k := range hs {
+		keys = append(keys, k)
+	}
+
+	return keys
+}
+
+type httpRoutes map[string]*v1alpha2.HTTPRoute
+
+func (hrs httpRoutes) Keys() []string {
+	keys := make([]string, 0, len(hrs))
+
+	for k := range hrs {
+		keys = append(keys, k)
+	}
+
+	return keys
 }
 
 // Host is the primary configuration unit of the internal representation.
@@ -44,6 +67,18 @@ type PathRouteGroup struct {
 	// HTTPRoute resources.
 	// The first "fired" Route will win in the NGINX configuration.
 	Routes []Route
+}
+
+type pathRoutesForHosts map[string]*PathRouteGroup
+
+func (prs pathRoutesForHosts) Keys() []string {
+	keys := make([]string, 0, len(prs))
+
+	for k := range prs {
+		keys = append(keys, k)
+	}
+
+	return keys
 }
 
 // Route represents a Route, which corresponds to a Match in the HTTPRouteRule. If a rule doesn't define any matches,
@@ -149,7 +184,7 @@ func (c *Configuration) updateListeners() ([]Change, []StatusUpdate) {
 	listener := c.httpListeners["http"]
 
 	// TO-DO: optimize it so that we only update the status of the affected (changed) httpRoutes
-	for _, key := range getSortedKeysForHTTPRoutes(listener.httpRoutes) {
+	for _, key := range getSortedKeys(listener.httpRoutes) {
 		update := StatusUpdate{
 			Object: listener.httpRoutes[key],
 			Status: &v1alpha2.HTTPRouteStatus{
@@ -227,22 +262,22 @@ func createChanges(removedHosts []string, updatedHosts []string, addedHosts []st
 	return changes
 }
 
-func determineChangesInHosts(listener *httpListener, newHosts map[string]*Host) (removedHosts []string, updatedHosts []string, addedHosts []string) {
-	for _, h := range getSortedKeysForHosts(listener.hosts) {
+func determineChangesInHosts(listener *httpListener, newHosts hosts) (removedHosts []string, updatedHosts []string, addedHosts []string) {
+	for _, h := range getSortedKeys(listener.hosts) {
 		_, exists := newHosts[h]
 		if !exists {
 			removedHosts = append(removedHosts, h)
 		}
 	}
 
-	for _, h := range getSortedKeysForHosts(newHosts) {
+	for _, h := range getSortedKeys(newHosts) {
 		_, exists := listener.hosts[h]
 		if !exists {
 			addedHosts = append(addedHosts, h)
 		}
 	}
 
-	for _, h := range getSortedKeysForHosts(newHosts) {
+	for _, h := range getSortedKeys(newHosts) {
 		oldHost, exists := listener.hosts[h]
 		if !exists {
 			continue
@@ -255,7 +290,7 @@ func determineChangesInHosts(listener *httpListener, newHosts map[string]*Host) 
 	return removedHosts, updatedHosts, addedHosts
 }
 
-func buildHostsAndDetermineHTTPRoutes(pathRoutesForHosts map[string]map[string]*PathRouteGroup) (map[string]*Host, map[string]*v1alpha2.HTTPRoute) {
+func buildHostsAndDetermineHTTPRoutes(pathRoutesForHosts map[string]pathRoutesForHosts) (map[string]*Host, map[string]*v1alpha2.HTTPRoute) {
 	hosts := make(map[string]*Host)
 	routes := make(map[string]*v1alpha2.HTTPRoute)
 
@@ -269,7 +304,7 @@ func buildHostsAndDetermineHTTPRoutes(pathRoutesForHosts map[string]map[string]*
 		// See https://nginx.org/en/docs/http/ngx_http_core_module.html#location to learn how NGINX searches for
 		// a location.
 		// This comment is to be aware of that. However, it is not yet clear whether it is a problem.
-		for _, path := range getSortedKeysForPathRoutes(pathRoutes) {
+		for _, path := range getSortedKeys(pathRoutes) {
 			pathRoute := pathRoutes[path]
 
 			sortRoutes(pathRoute.Routes)
@@ -287,11 +322,11 @@ func buildHostsAndDetermineHTTPRoutes(pathRoutesForHosts map[string]map[string]*
 	return hosts, routes
 }
 
-func buildPathRoutesForHosts(httpRoutes map[string]*v1alpha2.HTTPRoute) map[string]map[string]*PathRouteGroup {
-	pathRoutesForHosts := make(map[string]map[string]*PathRouteGroup)
+func buildPathRoutesForHosts(httpRoutes httpRoutes) map[string]pathRoutesForHosts {
+	pathRoutesForHosts := make(map[string]pathRoutesForHosts)
 
 	// for now, we take in all available HTTPRoutes
-	for _, key := range getSortedKeysForHTTPRoutes(httpRoutes) {
+	for _, key := range getSortedKeys(httpRoutes) {
 		hr := httpRoutes[key]
 
 		// every hostname x every routing rule
@@ -392,58 +427,6 @@ func compareObjectMetas(meta1 *metav1.ObjectMeta, meta2 *metav1.ObjectMeta) bool
 	return meta1.Namespace == meta2.Namespace &&
 		meta1.Name == meta2.Name &&
 		meta1.Generation == meta2.Generation
-}
-
-func sortRoutes(routes []Route) {
-	// stable sort is used so that the order of matches (as defined in each HTTPRoute rule) is preserved
-	// this is important, because the winning match is the first match to win.
-	sort.SliceStable(routes, func(i, j int) bool {
-		return lessObjectMeta(&routes[i].Source.ObjectMeta, &routes[j].Source.ObjectMeta)
-	})
-}
-
-func lessObjectMeta(meta1 *metav1.ObjectMeta, meta2 *metav1.ObjectMeta) bool {
-	if meta1.CreationTimestamp.Equal(&meta2.CreationTimestamp) {
-		return getResourceKey(meta1) < getResourceKey(meta2)
-	}
-
-	return meta1.CreationTimestamp.Before(&meta2.CreationTimestamp)
-}
-
-func getSortedKeysForPathRoutes(pathRoutes map[string]*PathRouteGroup) []string {
-	var keys []string
-
-	for k := range pathRoutes {
-		keys = append(keys, k)
-	}
-
-	sort.Strings(keys)
-
-	return keys
-}
-
-func getSortedKeysForHTTPRoutes(httpRoutes map[string]*v1alpha2.HTTPRoute) []string {
-	var keys []string
-
-	for k := range httpRoutes {
-		keys = append(keys, k)
-	}
-
-	sort.Strings(keys)
-
-	return keys
-}
-
-func getSortedKeysForHosts(hosts map[string]*Host) []string {
-	var keys []string
-
-	for k := range hosts {
-		keys = append(keys, k)
-	}
-
-	sort.Strings(keys)
-
-	return keys
 }
 
 func getResourceKey(meta *metav1.ObjectMeta) string {
