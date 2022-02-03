@@ -180,9 +180,9 @@ func (c *Configuration) updateListeners() ([]Change, []StatusUpdate) {
 
 	c.httpListeners["http"], changes = rebuildHTTPListener(c.httpListeners["http"], c.httpRoutes)
 
-	var statusUpdates []StatusUpdate
-
 	listener := c.httpListeners["http"]
+
+	statusUpdates := make([]StatusUpdate, 0, len(listener.httpRoutes))
 
 	// TO-DO: optimize it so that we only update the status of the affected (changed) httpRoutes
 	// getSortedKeys is used to ensure predictable order for unit tests
@@ -304,6 +304,8 @@ func buildHostsAndDetermineHTTPRoutes(routeGroupsForHosts map[string]pathRoutesG
 		host := Host{
 			Value: h,
 		}
+
+		host.PathRouteGroups = make([]PathRouteGroup, 0, len(groups))
 
 		// getSortedKeys is used so that the order of locations in the NGINX config doesn't change on every config
 		// regeneration. However, that sorting will mess up the original order of the rules in the HTTPRoutes.
