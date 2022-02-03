@@ -18,7 +18,7 @@ type httpListener struct {
 	httpRoutes httpRoutes
 }
 
-type hosts map[string]*Host
+type hosts map[string]Host
 
 func (hs hosts) Keys() []string {
 	keys := make([]string, 0, len(hs))
@@ -50,7 +50,7 @@ type Host struct {
 	Value string
 	// PathRouteGroups include all PathRouteGroups that belong to the Host.
 	// We use a slice rather than a map to control the order of the routes.
-	PathRouteGroups []*PathRouteGroup
+	PathRouteGroups []PathRouteGroup
 }
 
 // PathRouteGroup represents a collection of Routes grouped by a path.
@@ -69,9 +69,9 @@ type PathRouteGroup struct {
 	Routes []Route
 }
 
-type pathRoutesForHosts map[string]*PathRouteGroup
+type pathRoutesGroups map[string]PathRouteGroup
 
-func (prs pathRoutesForHosts) Keys() []string {
+func (prs pathRoutesGroups) Keys() []string {
 	keys := make([]string, 0, len(prs))
 
 	for k := range prs {
@@ -107,7 +107,7 @@ type Change struct {
 	// Op is the operation to be performed.
 	Op Operation
 	// Host is a reference to the Host associated with the Change.
-	Host *Host
+	Host Host
 }
 
 // StatusUpdate represents an update to the status of a resource.
@@ -127,7 +127,7 @@ type Configuration struct {
 	httpRoutes httpRoutes
 
 	// internal representation of Gateway configuration
-	httpListeners map[string]*httpListener
+	httpListeners map[string]httpListener
 
 	gatewayCtlrName string
 	clock           Clock
@@ -138,13 +138,13 @@ type Configuration struct {
 func NewConfiguration(gatewayCtlrName string, clock Clock) *Configuration {
 	c := &Configuration{
 		httpRoutes:      make(httpRoutes),
-		httpListeners:   make(map[string]*httpListener),
+		httpListeners:   make(map[string]httpListener),
 		gatewayCtlrName: gatewayCtlrName,
 		clock:           clock,
 	}
 
 	// Until we process the GatewayClass and Gateway resources, we assume the "http" listener always exists.
-	c.httpListeners["http"] = &httpListener{
+	c.httpListeners["http"] = httpListener{
 		hosts: make(hosts),
 	}
 
@@ -216,8 +216,8 @@ func (c *Configuration) updateListeners() ([]Change, []StatusUpdate) {
 	return changes, statusUpdates
 }
 
-func rebuildHTTPListener(listener *httpListener, httpRoutes httpRoutes) (*httpListener, []Change) {
-	pathRoutesForHosts := buildPathRoutesForHosts(httpRoutes)
+func rebuildHTTPListener(listener httpListener, httpRoutes httpRoutes) (httpListener, []Change) {
+	pathRoutesForHosts := buildPathRoutesGroupsForHosts(httpRoutes)
 
 	newHosts, newHTTPRoutes := buildHostsAndDetermineHTTPRoutes(pathRoutesForHosts)
 
@@ -225,7 +225,7 @@ func rebuildHTTPListener(listener *httpListener, httpRoutes httpRoutes) (*httpLi
 
 	changes := createChanges(removedHosts, updatedHosts, addedHosts, listener.hosts, newHosts)
 
-	newListener := &httpListener{
+	newListener := httpListener{
 		hosts:      newHosts,
 		httpRoutes: newHTTPRoutes,
 	}
@@ -263,7 +263,7 @@ func createChanges(removedHosts []string, updatedHosts []string, addedHosts []st
 	return changes
 }
 
-func determineChangesInHosts(listener *httpListener, newHosts hosts) (removedHosts []string, updatedHosts []string, addedHosts []string) {
+func determineChangesInHosts(listener httpListener, newHosts hosts) (removedHosts []string, updatedHosts []string, addedHosts []string) {
 	for _, h := range getSortedKeys(listener.hosts) {
 		_, exists := newHosts[h]
 		if !exists {
@@ -291,28 +291,28 @@ func determineChangesInHosts(listener *httpListener, newHosts hosts) (removedHos
 	return removedHosts, updatedHosts, addedHosts
 }
 
-func buildHostsAndDetermineHTTPRoutes(pathRoutesForHosts map[string]pathRoutesForHosts) (hosts, httpRoutes) {
+func buildHostsAndDetermineHTTPRoutes(routeGroupsForHosts map[string]pathRoutesGroups) (hosts, httpRoutes) {
 	hosts := make(hosts)
 	routes := make(httpRoutes)
 
-	for h, pathRoutes := range pathRoutesForHosts {
-		host := &Host{
+	for h, groups := range routeGroupsForHosts {
+		host := Host{
 			Value: h,
 		}
 
-		// This sorting (getSortedKeysForPathRoutes) will mess up the original order of rules in the HTTPRoutes.
+		// This sorting (getSortedKeys) will mess up the original order of rules in the HTTPRoutes.
 		// The order of routes can be important when regexes are used
 		// See https://nginx.org/en/docs/http/ngx_http_core_module.html#location to learn how NGINX searches for
 		// a location.
 		// This comment is to be aware of that. However, it is not yet clear whether it is a problem.
-		for _, path := range getSortedKeys(pathRoutes) {
-			pathRoute := pathRoutes[path]
+		for _, path := range getSortedKeys(groups) {
+			group := groups[path]
 
-			sortRoutes(pathRoute.Routes)
+			sortRoutes(group.Routes)
 
-			host.PathRouteGroups = append(host.PathRouteGroups, pathRoute)
+			host.PathRouteGroups = append(host.PathRouteGroups, group)
 
-			for _, r := range pathRoute.Routes {
+			for _, r := range group.Routes {
 				key := getResourceKey(&r.Source.ObjectMeta)
 				routes[key] = r.Source
 			}
@@ -323,8 +323,8 @@ func buildHostsAndDetermineHTTPRoutes(pathRoutesForHosts map[string]pathRoutesFo
 	return hosts, routes
 }
 
-func buildPathRoutesForHosts(httpRoutes httpRoutes) map[string]pathRoutesForHosts {
-	pathRoutesForHosts := make(map[string]pathRoutesForHosts)
+func buildPathRoutesGroupsForHosts(httpRoutes httpRoutes) map[string]pathRoutesGroups {
+	routeGroupsForHosts := make(map[string]pathRoutesGroups)
 
 	// for now, we take in all available HTTPRoutes
 	for _, key := range getSortedKeys(httpRoutes) {
@@ -332,29 +332,30 @@ func buildPathRoutesForHosts(httpRoutes httpRoutes) map[string]pathRoutesForHost
 
 		// every hostname x every routing rule
 		for _, h := range hr.Spec.Hostnames {
-			pathRoutes, exist := pathRoutesForHosts[string(h)]
+			groups, exist := routeGroupsForHosts[string(h)]
 			if !exist {
-				pathRoutes = make(map[string]*PathRouteGroup)
-				pathRoutesForHosts[string(h)] = pathRoutes
+				groups = make(pathRoutesGroups)
+				routeGroupsForHosts[string(h)] = groups
 			}
 
 			for i := range hr.Spec.Rules {
 				rule := &hr.Spec.Rules[i]
 
 				if len(rule.Matches) == 0 {
-					pathRoute, exist := pathRoutes["/"]
+					group, exist := groups["/"]
 					if !exist {
-						pathRoute = &PathRouteGroup{
+						group = PathRouteGroup{
 							Path: "/",
 						}
-						pathRoutes["/"] = pathRoute
 					}
 
-					pathRoute.Routes = append(pathRoute.Routes, Route{
+					group.Routes = append(group.Routes, Route{
 						MatchIdx: -1,
 						RuleIdx:  i,
 						Source:   hr,
 					})
+
+					groups["/"] = group
 				} else {
 					for j, m := range rule.Matches {
 						path := "/"
@@ -362,29 +363,30 @@ func buildPathRoutesForHosts(httpRoutes httpRoutes) map[string]pathRoutesForHost
 							path = *m.Path.Value
 						}
 
-						pathRoute, exist := pathRoutes[path]
+						group, exist := groups[path]
 						if !exist {
-							pathRoute = &PathRouteGroup{
+							group = PathRouteGroup{
 								Path: path,
 							}
-							pathRoutes[path] = pathRoute
 						}
 
-						pathRoute.Routes = append(pathRoute.Routes, Route{
+						group.Routes = append(group.Routes, Route{
 							MatchIdx: j,
 							RuleIdx:  i,
 							Source:   hr,
 						})
+
+						groups[path] = group
 					}
 				}
 			}
 		}
 	}
 
-	return pathRoutesForHosts
+	return routeGroupsForHosts
 }
 
-func arePathRoutesEqual(pathRoutes1, pathRoutes2 []*PathRouteGroup) bool {
+func arePathRoutesEqual(pathRoutes1, pathRoutes2 []PathRouteGroup) bool {
 	if len(pathRoutes1) != len(pathRoutes2) {
 		return false
 	}

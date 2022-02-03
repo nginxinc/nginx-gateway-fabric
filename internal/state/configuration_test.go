@@ -66,9 +66,9 @@ var _ = Describe("Configuration", func() {
 				expectedChanges := []state.Change{
 					{
 						Op: state.Upsert,
-						Host: &state.Host{
+						Host: state.Host{
 							Value: "cafe.example.com",
-							PathRouteGroups: []*state.PathRouteGroup{
+							PathRouteGroups: []state.PathRouteGroup{
 								{
 									Path: "/",
 									Routes: []state.Route{
@@ -133,9 +133,9 @@ var _ = Describe("Configuration", func() {
 				expectedChanges := []state.Change{
 					{
 						Op: state.Upsert,
-						Host: &state.Host{
+						Host: state.Host{
 							Value: "cafe.example.com",
-							PathRouteGroups: []*state.PathRouteGroup{
+							PathRouteGroups: []state.PathRouteGroup{
 								{
 									Path: "/",
 									Routes: []state.Route{
@@ -194,9 +194,9 @@ var _ = Describe("Configuration", func() {
 				expectedChanges := []state.Change{
 					{
 						Op: state.Delete,
-						Host: &state.Host{
+						Host: state.Host{
 							Value: "cafe.example.com",
-							PathRouteGroups: []*state.PathRouteGroup{
+							PathRouteGroups: []state.PathRouteGroup{
 								{
 									Path: "/",
 									Routes: []state.Route{
@@ -287,9 +287,9 @@ var _ = Describe("Configuration", func() {
 				expectedChanges := []state.Change{
 					{
 						Op: state.Upsert,
-						Host: &state.Host{
+						Host: state.Host{
 							Value: "cafe.example.com",
-							PathRouteGroups: []*state.PathRouteGroup{
+							PathRouteGroups: []state.PathRouteGroup{
 								{
 									Path: "/",
 									Routes: []state.Route{
@@ -338,9 +338,9 @@ var _ = Describe("Configuration", func() {
 				expectedChanges := []state.Change{
 					{
 						Op: state.Upsert,
-						Host: &state.Host{
+						Host: state.Host{
 							Value: "cafe.example.com",
-							PathRouteGroups: []*state.PathRouteGroup{
+							PathRouteGroups: []state.PathRouteGroup{
 								{
 									Path: "/",
 									Routes: []state.Route{
@@ -421,9 +421,9 @@ var _ = Describe("Configuration", func() {
 				expectedChanges := []state.Change{
 					{
 						Op: state.Upsert,
-						Host: &state.Host{
+						Host: state.Host{
 							Value: "cafe.example.com",
-							PathRouteGroups: []*state.PathRouteGroup{
+							PathRouteGroups: []state.PathRouteGroup{
 								{
 									Path: "/",
 									Routes: []state.Route{
@@ -504,9 +504,9 @@ var _ = Describe("Configuration", func() {
 				expectedChanges := []state.Change{
 					{
 						Op: state.Upsert,
-						Host: &state.Host{
+						Host: state.Host{
 							Value: "cafe.example.com",
-							PathRouteGroups: []*state.PathRouteGroup{
+							PathRouteGroups: []state.PathRouteGroup{
 								{
 									Path: "/",
 									Routes: []state.Route{
@@ -555,9 +555,9 @@ var _ = Describe("Configuration", func() {
 				expectedChanges := []state.Change{
 					{
 						Op: state.Delete,
-						Host: &state.Host{
+						Host: state.Host{
 							Value: "cafe.example.com",
-							PathRouteGroups: []*state.PathRouteGroup{
+							PathRouteGroups: []state.PathRouteGroup{
 								{
 									Path: "/",
 									Routes: []state.Route{
@@ -637,9 +637,9 @@ var _ = Describe("Configuration", func() {
 				expectedChanges := []state.Change{
 					{
 						Op: state.Upsert,
-						Host: &state.Host{
+						Host: state.Host{
 							Value: "cafe.example.com",
-							PathRouteGroups: []*state.PathRouteGroup{
+							PathRouteGroups: []state.PathRouteGroup{
 								{
 									Path: "/",
 									Routes: []state.Route{
@@ -688,9 +688,9 @@ var _ = Describe("Configuration", func() {
 				expectedChanges := []state.Change{
 					{
 						Op: state.Upsert,
-						Host: &state.Host{
+						Host: state.Host{
 							Value: "cafe.example.com",
-							PathRouteGroups: []*state.PathRouteGroup{
+							PathRouteGroups: []state.PathRouteGroup{
 								{
 									Path: "/",
 									Routes: []state.Route{
@@ -766,9 +766,9 @@ var _ = Describe("Configuration", func() {
 				expectedChanges := []state.Change{
 					{
 						Op: state.Upsert,
-						Host: &state.Host{
+						Host: state.Host{
 							Value: "cafe.example.com",
-							PathRouteGroups: []*state.PathRouteGroup{
+							PathRouteGroups: []state.PathRouteGroup{
 								{
 									Path: "/",
 									Routes: []state.Route{
