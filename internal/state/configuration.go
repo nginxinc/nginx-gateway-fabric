@@ -124,7 +124,7 @@ type StatusUpdate struct {
 // into NGINX configuration.
 type Configuration struct {
 	// caches of valid resources
-	httpRoutes map[string]*v1alpha2.HTTPRoute
+	httpRoutes httpRoutes
 
 	// internal representation of Gateway configuration
 	httpListeners map[string]*httpListener
@@ -136,7 +136,7 @@ type Configuration struct {
 // NewConfiguration creates a Configuration.
 func NewConfiguration(gatewayCtlrName string, clock Clock) *Configuration {
 	c := &Configuration{
-		httpRoutes:      make(map[string]*v1alpha2.HTTPRoute),
+		httpRoutes:      make(httpRoutes),
 		httpListeners:   make(map[string]*httpListener),
 		gatewayCtlrName: gatewayCtlrName,
 		clock:           clock,
@@ -144,7 +144,7 @@ func NewConfiguration(gatewayCtlrName string, clock Clock) *Configuration {
 
 	// Until we process the GatewayClass and Gateway resources, we assume the "http" listener always exists.
 	c.httpListeners["http"] = &httpListener{
-		hosts: make(map[string]*Host),
+		hosts: make(hosts),
 	}
 
 	return c
@@ -215,7 +215,7 @@ func (c *Configuration) updateListeners() ([]Change, []StatusUpdate) {
 	return changes, statusUpdates
 }
 
-func rebuildHTTPListener(listener *httpListener, httpRoutes map[string]*v1alpha2.HTTPRoute) (*httpListener, []Change) {
+func rebuildHTTPListener(listener *httpListener, httpRoutes httpRoutes) (*httpListener, []Change) {
 	pathRoutesForHosts := buildPathRoutesForHosts(httpRoutes)
 
 	newHosts, newHTTPRoutes := buildHostsAndDetermineHTTPRoutes(pathRoutesForHosts)
@@ -232,7 +232,7 @@ func rebuildHTTPListener(listener *httpListener, httpRoutes map[string]*v1alpha2
 	return newListener, changes
 }
 
-func createChanges(removedHosts []string, updatedHosts []string, addedHosts []string, oldHosts map[string]*Host, newHosts map[string]*Host) []Change {
+func createChanges(removedHosts []string, updatedHosts []string, addedHosts []string, oldHosts hosts, newHosts hosts) []Change {
 	var changes []Change
 
 	for _, h := range removedHosts {
@@ -290,9 +290,9 @@ func determineChangesInHosts(listener *httpListener, newHosts hosts) (removedHos
 	return removedHosts, updatedHosts, addedHosts
 }
 
-func buildHostsAndDetermineHTTPRoutes(pathRoutesForHosts map[string]pathRoutesForHosts) (map[string]*Host, map[string]*v1alpha2.HTTPRoute) {
-	hosts := make(map[string]*Host)
-	routes := make(map[string]*v1alpha2.HTTPRoute)
+func buildHostsAndDetermineHTTPRoutes(pathRoutesForHosts map[string]pathRoutesForHosts) (hosts, httpRoutes) {
+	hosts := make(hosts)
+	routes := make(httpRoutes)
 
 	for h, pathRoutes := range pathRoutesForHosts {
 		host := &Host{
