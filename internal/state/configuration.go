@@ -267,6 +267,8 @@ func createChanges(removedHosts []string, updatedHosts []string, addedHosts []st
 func determineChangesInHosts(listener httpListener, newHosts hosts) (removedHosts []string, updatedHosts []string, addedHosts []string) {
 	// getSortedKeys is used to ensure predictable order for unit tests
 
+	// TO-DO: consider using a data structure for sets
+
 	for _, h := range getSortedKeys(listener.hosts) {
 		_, exists := newHosts[h]
 		if !exists {
