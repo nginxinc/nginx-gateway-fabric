@@ -134,6 +134,7 @@ type Configuration struct {
 }
 
 // NewConfiguration creates a Configuration.
+// It is expected that the client set gatewayCtlrName to a non-empty value.
 func NewConfiguration(gatewayCtlrName string, clock Clock) *Configuration {
 	c := &Configuration{
 		httpRoutes:      make(httpRoutes),
