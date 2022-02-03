@@ -185,6 +185,7 @@ func (c *Configuration) updateListeners() ([]Change, []StatusUpdate) {
 	listener := c.httpListeners["http"]
 
 	// TO-DO: optimize it so that we only update the status of the affected (changed) httpRoutes
+	// getSortedKeys is used to ensure predictable order for unit tests
 	for _, key := range getSortedKeys(listener.httpRoutes) {
 		update := StatusUpdate{
 			Object: listener.httpRoutes[key],
@@ -264,6 +265,8 @@ func createChanges(removedHosts []string, updatedHosts []string, addedHosts []st
 }
 
 func determineChangesInHosts(listener httpListener, newHosts hosts) (removedHosts []string, updatedHosts []string, addedHosts []string) {
+	// getSortedKeys is used to ensure predictable order for unit tests
+
 	for _, h := range getSortedKeys(listener.hosts) {
 		_, exists := newHosts[h]
 		if !exists {
@@ -300,11 +303,12 @@ func buildHostsAndDetermineHTTPRoutes(routeGroupsForHosts map[string]pathRoutesG
 			Value: h,
 		}
 
-		// This sorting (getSortedKeys) will mess up the original order of rules in the HTTPRoutes.
-		// The order of routes can be important when regexes are used
+		// getSortedKeys is used so that the order of locations in the NGINX config doesn't change on every config
+		// regeneration. However, that sorting will mess up the original order of the rules in the HTTPRoutes.
+		// The order can be important when regexes are used.
 		// See https://nginx.org/en/docs/http/ngx_http_core_module.html#location to learn how NGINX searches for
 		// a location.
-		// This comment is to be aware of that. However, it is not yet clear whether it is a problem.
+		// This comment is to be aware of a potential issue. However, it is not yet clear whether it is an issue.
 		for _, path := range getSortedKeys(groups) {
 			group := groups[path]
 
@@ -327,9 +331,7 @@ func buildPathRoutesGroupsForHosts(httpRoutes httpRoutes) map[string]pathRoutesG
 	routeGroupsForHosts := make(map[string]pathRoutesGroups)
 
 	// for now, we take in all available HTTPRoutes
-	for _, key := range getSortedKeys(httpRoutes) {
-		hr := httpRoutes[key]
-
+	for _, hr := range httpRoutes {
 		// every hostname x every routing rule
 		for _, h := range hr.Spec.Hostnames {
 			groups, exist := routeGroupsForHosts[string(h)]
