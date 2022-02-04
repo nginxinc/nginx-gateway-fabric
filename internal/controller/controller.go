@@ -38,8 +38,6 @@ func (c *MainController) Start(ctx context.Context) error {
 			}
 		}
 	}
-
-	return nil
 }
 
 func (c *MainController) handleEvent(event interface{}) error {

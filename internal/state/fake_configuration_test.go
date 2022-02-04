@@ -38,13 +38,13 @@ func TestUpsertHTTPRoute(t *testing.T) {
 func TestDeleteHTTPRoute(t *testing.T) {
 	conf := NewFakeConfiguration()
 
-	emtpy := types.NamespacedName{}
+	empty := types.NamespacedName{}
 	nsname1 := types.NamespacedName{Namespace: "test", Name: "route1"}
 	nsname2 := types.NamespacedName{Namespace: "test", Name: "route2"}
 
 	result := conf.GetArgOfDeleteHTTPRoute()
-	if result != emtpy {
-		t.Errorf("GetArgOfDeleteHTTPRoute() returned %v but expected %v", result, emtpy)
+	if result != empty {
+		t.Errorf("GetArgOfDeleteHTTPRoute() returned %v but expected %v", result, empty)
 	}
 
 	conf.DeleteHTTPRoute(nsname1)
