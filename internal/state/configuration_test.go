@@ -17,7 +17,7 @@ const gatewayCtlrName = v1alpha2.GatewayController("test-name")
 
 var _ = Describe("Configuration", func() {
 	Describe("Processing HTTPRoutes", func() {
-		var conf *state.Configuration
+		var conf state.Configuration
 
 		constTime := time.Now()
 

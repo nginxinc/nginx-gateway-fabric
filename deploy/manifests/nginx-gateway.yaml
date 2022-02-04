@@ -19,6 +19,7 @@ rules:
   resources:
   - gatewayclasses
   - gateways
+  - httproutes
   verbs:
   - list
   - watch
