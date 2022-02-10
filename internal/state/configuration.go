@@ -156,6 +156,8 @@ type StatusUpdate struct {
 	Status interface{}
 }
 
+//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . Configuration
+
 // Configuration represents the configuration of the Gateway - a collection of routing rules ready to be transformed
 // into NGINX configuration.
 // The methods of Configuration update its internal state and return changes and status updates that correspond to that

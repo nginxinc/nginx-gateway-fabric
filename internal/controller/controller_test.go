@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/nginxinc/nginx-gateway-kubernetes/internal/controller"
-	"github.com/nginxinc/nginx-gateway-kubernetes/internal/state"
+	"github.com/nginxinc/nginx-gateway-kubernetes/internal/state/statefakes"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -28,15 +28,15 @@ func (r *unsupportedResource) DeepCopyObject() runtime.Object {
 
 var _ = Describe("MainController", func() {
 	var ctrl *controller.MainController
-	var fakeConfig *state.FakeConfiguration
+	var fakeConf *statefakes.FakeConfiguration
 	var cancel context.CancelFunc
 	var eventCh chan interface{}
 	var errorCh chan error
 
 	BeforeEach(func() {
-		fakeConfig = state.NewFakeConfiguration()
+		fakeConf = &statefakes.FakeConfiguration{}
 		eventCh = make(chan interface{})
-		ctrl = controller.NewMainController(fakeConfig, eventCh)
+		ctrl = controller.NewMainController(fakeConf, eventCh)
 
 		var ctx context.Context
 
@@ -64,7 +64,8 @@ var _ = Describe("MainController", func() {
 				Resource: hr,
 			}
 
-			Eventually(fakeConfig.GetArgOfUpsertHTTPRoute).Should(Equal(hr))
+			Eventually(fakeConf.UpsertHTTPRouteCallCount()).Should(Equal(1))
+			Eventually(fakeConf.UpsertHTTPRouteArgsForCall(0)).Should(Equal(hr))
 		})
 
 		It("should process delete event", func() {
@@ -75,7 +76,8 @@ var _ = Describe("MainController", func() {
 				Type:           &v1alpha2.HTTPRoute{},
 			}
 
-			Eventually(fakeConfig.GetArgOfDeleteHTTPRoute).Should(Equal(nsname))
+			Eventually(fakeConf.DeleteHTTPRouteCallCount()).Should(Equal(1))
+			Eventually(fakeConf.DeleteHTTPRouteArgsForCall(0)).Should(Equal(nsname))
 		})
 	})
 
