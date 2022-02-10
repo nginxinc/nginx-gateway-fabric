@@ -3,6 +3,7 @@ package state
 import (
 	"fmt"
 	"reflect"
+	"strings"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -53,6 +54,21 @@ type Host struct {
 	PathRouteGroups []PathRouteGroup
 }
 
+// String returns a printable representation of a Host.
+func (h *Host) String() string {
+	var b strings.Builder
+
+	b.WriteString(fmt.Sprintf("Host: Value: %s\n", h.Value))
+	b.WriteString("PathRouteGroups:\n")
+
+	for _, g := range h.PathRouteGroups {
+		b.WriteString(g.String())
+		b.WriteByte('\n')
+	}
+
+	return b.String()
+}
+
 // PathRouteGroup represents a collection of Routes grouped by a path.
 // Among those Routes, there will be routing rules with additional matching criteria. For example, matching of headers.
 // The reason we group Routes by Path is how NGINX processes requests: its primary routing rule mechanism is a location block.
@@ -67,6 +83,21 @@ type PathRouteGroup struct {
 	// HTTPRoute resources.
 	// The first "fired" Route will win in the NGINX configuration.
 	Routes []Route
+}
+
+// String returns a printable representation of a PathRouteGroup.
+func (g *PathRouteGroup) String() string {
+	var b strings.Builder
+
+	b.WriteString(fmt.Sprintf("PathRouteGroup: Path: %s\n", g.Path))
+	b.WriteString("Routes:\n")
+
+	for _, r := range g.Routes {
+		b.WriteString(r.String())
+		b.WriteByte('\n')
+	}
+
+	return b.String()
 }
 
 type pathRoutesGroups map[string]PathRouteGroup
@@ -90,6 +121,11 @@ type Route struct {
 	RuleIdx int
 	// Source is the corresponding HTTPRoute resource.
 	Source *v1alpha2.HTTPRoute
+}
+
+// String returns a printable representation of a Route.
+func (r *Route) String() string {
+	return fmt.Sprintf("Route: Source: %s, RuleIdx: %d, MatchIdx: %d", getResourceKey(&r.Source.ObjectMeta), r.RuleIdx, r.MatchIdx)
 }
 
 // Operation defines an operation to be performed for a Host.
@@ -120,9 +156,21 @@ type StatusUpdate struct {
 	Status interface{}
 }
 
+//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . Configuration
+
 // Configuration represents the configuration of the Gateway - a collection of routing rules ready to be transformed
 // into NGINX configuration.
-type Configuration struct {
+// The methods of Configuration update its internal state and return changes and status updates that correspond to that
+// update of the internal state.
+type Configuration interface {
+	// UpsertHTTPRoute upserts an HTTPRoute into the Configuration.
+	UpsertHTTPRoute(httpRoute *v1alpha2.HTTPRoute) ([]Change, []StatusUpdate)
+	// DeleteHTTPRoute deletes an HTTPRoute from the Configuration.
+	DeleteHTTPRoute(nsname types.NamespacedName) ([]Change, []StatusUpdate)
+}
+
+// configurationImpl is an implementation of Configuration.
+type configurationImpl struct {
 	// caches of valid resources
 	httpRoutes httpRoutes
 
@@ -135,8 +183,8 @@ type Configuration struct {
 
 // NewConfiguration creates a Configuration.
 // It is expected that the client set gatewayCtlrName to a non-empty value.
-func NewConfiguration(gatewayCtlrName string, clock Clock) *Configuration {
-	c := &Configuration{
+func NewConfiguration(gatewayCtlrName string, clock Clock) Configuration {
+	c := &configurationImpl{
 		httpRoutes:      make(httpRoutes),
 		httpListeners:   make(map[string]httpListener),
 		gatewayCtlrName: gatewayCtlrName,
@@ -152,7 +200,7 @@ func NewConfiguration(gatewayCtlrName string, clock Clock) *Configuration {
 }
 
 // UpsertHTTPRoute upserts an HTTPRoute into the Configuration.
-func (c *Configuration) UpsertHTTPRoute(httpRoute *v1alpha2.HTTPRoute) ([]Change, []StatusUpdate) {
+func (c *configurationImpl) UpsertHTTPRoute(httpRoute *v1alpha2.HTTPRoute) ([]Change, []StatusUpdate) {
 	key := getResourceKey(&httpRoute.ObjectMeta)
 
 	oldHR, exist := c.httpRoutes[key]
@@ -167,13 +215,13 @@ func (c *Configuration) UpsertHTTPRoute(httpRoute *v1alpha2.HTTPRoute) ([]Change
 }
 
 // DeleteHTTPRoute deletes an HTTPRoute from the Configuration.
-func (c *Configuration) DeleteHTTPRoute(nsname types.NamespacedName) ([]Change, []StatusUpdate) {
+func (c *configurationImpl) DeleteHTTPRoute(nsname types.NamespacedName) ([]Change, []StatusUpdate) {
 	delete(c.httpRoutes, nsname.String())
 
 	return c.updateListeners()
 }
 
-func (c *Configuration) updateListeners() ([]Change, []StatusUpdate) {
+func (c *configurationImpl) updateListeners() ([]Change, []StatusUpdate) {
 	var changes []Change
 
 	// for now, we support only one listener

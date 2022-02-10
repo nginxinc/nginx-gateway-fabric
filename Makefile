@@ -22,6 +22,10 @@ ifeq (${TARGET},local)
 	CGO_ENABLED=0 GOOS=linux go build -trimpath -a -ldflags "-s -w -X main.version=${VERSION} -X main.commit=${GIT_COMMIT} -X main.date=${DATE}" -o $(OUT_DIR)/gateway github.com/nginxinc/nginx-gateway-kubernetes/cmd/gateway
 endif
 
+.PHONY: generate
+generate:
+	go generate ./...
+
 .PHONY: out_dir
 out_dir:
 	mkdir -p $(OUT_DIR)

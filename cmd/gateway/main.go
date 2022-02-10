@@ -5,14 +5,14 @@ import (
 	"os"
 
 	"github.com/nginxinc/nginx-gateway-kubernetes/internal/config"
-	"github.com/nginxinc/nginx-gateway-kubernetes/internal/controller"
+	"github.com/nginxinc/nginx-gateway-kubernetes/internal/manager"
 
 	flag "github.com/spf13/pflag"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
 
 const (
-	domain string = "gateway.nginx.org"
+	domain string = "k8s-gateway.nginx.org"
 )
 
 var (
@@ -48,7 +48,7 @@ func main() {
 		"commit", commit,
 		"date", date)
 
-	err := controller.Start(conf)
+	err := manager.Start(conf)
 	if err != nil {
 		logger.Error(err, "Failed to start control loop")
 		os.Exit(1)
