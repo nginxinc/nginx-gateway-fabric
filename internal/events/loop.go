@@ -43,6 +43,7 @@ func (el *EventLoop) Start(ctx context.Context) error {
 	}
 }
 
+// TO-DO: think about how to avoid using an interface{} here
 func (el *EventLoop) handleEvent(event interface{}) error {
 	var changes []state.Change
 	var updates []state.StatusUpdate
