@@ -11,6 +11,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 )
 
@@ -36,7 +37,7 @@ var _ = Describe("EventLoop", func() {
 	BeforeEach(func() {
 		fakeConf = &statefakes.FakeConfiguration{}
 		eventCh = make(chan interface{})
-		ctrl = events.NewEventLoop(fakeConf, eventCh)
+		ctrl = events.NewEventLoop(fakeConf, eventCh, zap.New())
 
 		var ctx context.Context
 
@@ -64,8 +65,10 @@ var _ = Describe("EventLoop", func() {
 				Resource: hr,
 			}
 
-			Eventually(fakeConf.UpsertHTTPRouteCallCount()).Should(Equal(1))
-			Eventually(fakeConf.UpsertHTTPRouteArgsForCall(0)).Should(Equal(hr))
+			Eventually(fakeConf.UpsertHTTPRouteCallCount).Should(Equal(1))
+			Eventually(func() *v1alpha2.HTTPRoute {
+				return fakeConf.UpsertHTTPRouteArgsForCall(0)
+			}).Should(Equal(hr))
 		})
 
 		It("should process delete event", func() {
@@ -76,8 +79,10 @@ var _ = Describe("EventLoop", func() {
 				Type:           &v1alpha2.HTTPRoute{},
 			}
 
-			Eventually(fakeConf.DeleteHTTPRouteCallCount()).Should(Equal(1))
-			Eventually(fakeConf.DeleteHTTPRouteArgsForCall(0)).Should(Equal(nsname))
+			Eventually(fakeConf.DeleteHTTPRouteCallCount).Should(Equal(1))
+			Eventually(func() types.NamespacedName {
+				return fakeConf.DeleteHTTPRouteArgsForCall(0)
+			}).Should(Equal(nsname))
 		})
 	})
 

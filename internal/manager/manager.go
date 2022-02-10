@@ -58,7 +58,7 @@ func Start(cfg config.Config) error {
 	}
 
 	conf := state.NewConfiguration(cfg.GatewayCtlrName, state.NewRealClock())
-	mainCtrl := events.NewEventLoop(conf, eventCh)
+	mainCtrl := events.NewEventLoop(conf, eventCh, cfg.Logger)
 
 	err = mgr.Add(mainCtrl)
 	if err != nil {

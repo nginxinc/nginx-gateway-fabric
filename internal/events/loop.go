@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/go-logr/logr"
 	"github.com/nginxinc/nginx-gateway-kubernetes/internal/state"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 )
@@ -12,13 +13,15 @@ import (
 type EventLoop struct {
 	conf    state.Configuration
 	eventCh <-chan interface{}
+	logger  logr.Logger
 }
 
 // NewEventLoop creates a new EventLoop.
-func NewEventLoop(conf state.Configuration, eventCh <-chan interface{}) *EventLoop {
+func NewEventLoop(conf state.Configuration, eventCh <-chan interface{}, logger logr.Logger) *EventLoop {
 	return &EventLoop{
 		conf:    conf,
 		eventCh: eventCh,
+		logger:  logger.WithName("eventLoop"),
 	}
 }
 
@@ -84,15 +87,21 @@ func (el *EventLoop) propagateDelete(e *DeleteEvent) ([]state.Change, []state.St
 }
 
 func (el *EventLoop) processChangesAndStatusUpdates(changes []state.Change, updates []state.StatusUpdate) {
-	// This code is temporary. We will remove it once we have a component that processes changes.
 	for _, c := range changes {
-		fmt.Println("Processing a change:")
+		el.logger.Info("Processing a change",
+			"host", c.Host.Value)
+
+		// This code is temporary. We will remove it once we have a component that processes changes.
 		fmt.Printf("%+v\n", c)
 	}
 
-	// This code is temporary. We will remove it once we have a component that updates statuses.
 	for _, u := range updates {
-		fmt.Println("Processing a status update:")
+		// TO-DO: in the next iteration, the update will include the namespace/name of the resource instead of
+		// runtime.Object, so it will be easy to get the resource namespace/name and include it in the log output
+		el.logger.Info("Processing a status update",
+			"gvk", u.Object.GetObjectKind().GroupVersionKind().String())
+
+		// This code is temporary. We will remove it once we have a component that updates statuses.
 		fmt.Printf("%+v\n", u)
 	}
 }
