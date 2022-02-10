@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/nginxinc/nginx-gateway-kubernetes/internal/config"
-	"github.com/nginxinc/nginx-gateway-kubernetes/internal/controller"
+	"github.com/nginxinc/nginx-gateway-kubernetes/internal/events"
 	gw "github.com/nginxinc/nginx-gateway-kubernetes/internal/implementations/gateway"
 	gc "github.com/nginxinc/nginx-gateway-kubernetes/internal/implementations/gatewayclass"
 	gcfg "github.com/nginxinc/nginx-gateway-kubernetes/internal/implementations/gatewayconfig"
@@ -58,7 +58,7 @@ func Start(cfg config.Config) error {
 	}
 
 	conf := state.NewConfiguration(cfg.GatewayCtlrName, state.NewRealClock())
-	mainCtrl := controller.NewMainController(conf, eventCh)
+	mainCtrl := events.NewEventLoop(conf, eventCh)
 
 	err = mgr.Add(mainCtrl)
 	if err != nil {

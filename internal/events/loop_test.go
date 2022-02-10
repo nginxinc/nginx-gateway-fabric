@@ -1,9 +1,9 @@
-package controller_test
+package events_test
 
 import (
 	"context"
 
-	"github.com/nginxinc/nginx-gateway-kubernetes/internal/controller"
+	"github.com/nginxinc/nginx-gateway-kubernetes/internal/events"
 	"github.com/nginxinc/nginx-gateway-kubernetes/internal/state/statefakes"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -26,8 +26,8 @@ func (r *unsupportedResource) DeepCopyObject() runtime.Object {
 	return nil
 }
 
-var _ = Describe("MainController", func() {
-	var ctrl *controller.MainController
+var _ = Describe("EventLoop", func() {
+	var ctrl *events.EventLoop
 	var fakeConf *statefakes.FakeConfiguration
 	var cancel context.CancelFunc
 	var eventCh chan interface{}
@@ -36,7 +36,7 @@ var _ = Describe("MainController", func() {
 	BeforeEach(func() {
 		fakeConf = &statefakes.FakeConfiguration{}
 		eventCh = make(chan interface{})
-		ctrl = controller.NewMainController(fakeConf, eventCh)
+		ctrl = events.NewEventLoop(fakeConf, eventCh)
 
 		var ctx context.Context
 
@@ -60,7 +60,7 @@ var _ = Describe("MainController", func() {
 		It("should process upsert event", func() {
 			hr := &v1alpha2.HTTPRoute{}
 
-			eventCh <- &controller.UpsertEvent{
+			eventCh <- &events.UpsertEvent{
 				Resource: hr,
 			}
 
@@ -71,7 +71,7 @@ var _ = Describe("MainController", func() {
 		It("should process delete event", func() {
 			nsname := types.NamespacedName{Namespace: "test", Name: "route"}
 
-			eventCh <- &controller.DeleteEvent{
+			eventCh <- &events.DeleteEvent{
 				NamespacedName: nsname,
 				Type:           &v1alpha2.HTTPRoute{},
 			}
@@ -97,11 +97,11 @@ var _ = Describe("MainController", func() {
 			Entry("should return error for an unknown event type",
 				&struct{}{}),
 			Entry("should return error for an unknown type of resource in upsert event",
-				&controller.UpsertEvent{
+				&events.UpsertEvent{
 					Resource: &unsupportedResource{},
 				}),
 			Entry("should return error for an unknown type of resource in delete event",
-				&controller.DeleteEvent{
+				&events.DeleteEvent{
 					Type: &unsupportedResource{},
 				}),
 		)

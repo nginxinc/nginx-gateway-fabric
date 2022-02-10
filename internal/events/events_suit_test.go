@@ -1,4 +1,4 @@
-package controller_test
+package events_test
 
 import (
 	. "github.com/onsi/ginkgo/v2"
@@ -9,5 +9,5 @@ import (
 
 func TestState(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Controller Suite")
+	RunSpecs(t, "Events Suite")
 }

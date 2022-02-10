@@ -3,7 +3,7 @@ package implementation
 import (
 	"github.com/go-logr/logr"
 	"github.com/nginxinc/nginx-gateway-kubernetes/internal/config"
-	"github.com/nginxinc/nginx-gateway-kubernetes/internal/controller"
+	"github.com/nginxinc/nginx-gateway-kubernetes/internal/events"
 	"github.com/nginxinc/nginx-gateway-kubernetes/pkg/sdk"
 	"k8s.io/apimachinery/pkg/types"
 
@@ -36,7 +36,7 @@ func (impl *httpRouteImplementation) Upsert(hr *v1alpha2.HTTPRoute) {
 		"namespace", hr.Namespace, "name", hr.Name,
 	)
 
-	impl.eventCh <- &controller.UpsertEvent{
+	impl.eventCh <- &events.UpsertEvent{
 		Resource: hr,
 	}
 }
@@ -46,7 +46,7 @@ func (impl *httpRouteImplementation) Remove(nsname types.NamespacedName) {
 		"namespace", nsname.Namespace, "name", nsname.Name,
 	)
 
-	impl.eventCh <- &controller.DeleteEvent{
+	impl.eventCh <- &events.DeleteEvent{
 		NamespacedName: nsname,
 		Type:           &v1alpha2.HTTPRoute{},
 	}
