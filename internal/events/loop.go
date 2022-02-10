@@ -91,7 +91,7 @@ func (el *EventLoop) processChangesAndStatusUpdates(changes []state.Change, upda
 		el.logger.Info("Processing a change",
 			"host", c.Host.Value)
 
-		// This code is temporary. We will remove it once we have a component that processes changes.
+		// TO-DO: This code is temporary. We will remove it once we have a component that processes changes.
 		fmt.Printf("%+v\n", c)
 	}
 
@@ -101,7 +101,7 @@ func (el *EventLoop) processChangesAndStatusUpdates(changes []state.Change, upda
 		el.logger.Info("Processing a status update",
 			"gvk", u.Object.GetObjectKind().GroupVersionKind().String())
 
-		// This code is temporary. We will remove it once we have a component that updates statuses.
+		// TO-DO: This code is temporary. We will remove it once we have a component that updates statuses.
 		fmt.Printf("%+v\n", u)
 	}
 }
