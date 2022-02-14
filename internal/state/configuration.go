@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 )
@@ -148,8 +147,8 @@ type Change struct {
 
 // StatusUpdate represents an update to the status of a resource.
 type StatusUpdate struct {
-	// Object is the resource.
-	Object runtime.Object
+	// NamespacedName is the NamespacedName of the resource.
+	NamespacedName types.NamespacedName
 	// Status is the status field of the resource
 	// The Status include only the new conditions. This means that the status reporter component will need to merge
 	// the new conditions with the existing conditions of the resource.
@@ -235,12 +234,16 @@ func (c *configurationImpl) updateListeners() ([]Change, []StatusUpdate) {
 	// TO-DO: optimize it so that we only update the status of the affected (changed) httpRoutes
 	// getSortedKeys is used to ensure predictable order for unit tests
 	for _, key := range getSortedKeys(listener.httpRoutes) {
+		route := listener.httpRoutes[key]
 		update := StatusUpdate{
-			Object: listener.httpRoutes[key],
+			NamespacedName: types.NamespacedName{Namespace: route.Namespace, Name: route.Name},
 			Status: &v1alpha2.HTTPRouteStatus{
 				RouteStatus: v1alpha2.RouteStatus{
 					Parents: []v1alpha2.RouteParentStatus{
 						{
+							ParentRef: v1alpha2.ParentRef{
+								Name: "fake", // TO-DO: report the parent ref properly
+							},
 							ControllerName: v1alpha2.GatewayController(c.gatewayCtlrName),
 							Conditions: []metav1.Condition{
 								{
