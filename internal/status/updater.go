@@ -56,6 +56,11 @@ func NewUpdater(client client.Client, logger logr.Logger) Updater {
 // ProcessStatusUpdates updates the statuses according to the provided updates.
 func (upd *updaterImpl) ProcessStatusUpdates(ctx context.Context, updates []state.StatusUpdate) error {
 	for _, u := range updates {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+		}
 
 		switch s := u.Status.(type) {
 		case *v1alpha2.HTTPRouteStatus:
