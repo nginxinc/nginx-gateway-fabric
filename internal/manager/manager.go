@@ -64,7 +64,7 @@ func Start(cfg config.Config) error {
 
 	err = mgr.Add(eventLoop)
 	if err != nil {
-		return fmt.Errorf("cannot register event loop")
+		return fmt.Errorf("cannot register event loop: %w", err)
 	}
 
 	ctx := ctlr.SetupSignalHandler()
