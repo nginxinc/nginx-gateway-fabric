@@ -146,4 +146,21 @@ var _ = Describe("Updater", func() {
 		err := updater.ProcessStatusUpdates(context.Background(), updates)
 		Expect(err).Should(HaveOccurred())
 	})
+
+	It("should not process updates with canceled context", func() {
+		updates := []state.StatusUpdate{
+			{
+				NamespacedName: types.NamespacedName{Namespace: "test", Name: "route1"},
+				Status:         "unsupported",
+			},
+		}
+
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel()
+
+		// because the ctx is canceled, ProcessStatusUpdates should return immediately without any error rather than
+		// returning an error because of the unsupported status type
+		err := updater.ProcessStatusUpdates(ctx, updates)
+		Expect(err).ShouldNot(HaveOccurred())
+	})
 })

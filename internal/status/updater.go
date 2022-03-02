@@ -58,7 +58,7 @@ func (upd *updaterImpl) ProcessStatusUpdates(ctx context.Context, updates []stat
 	for _, u := range updates {
 		select {
 		case <-ctx.Done():
-			return ctx.Err()
+			return nil
 		default:
 		}
 
