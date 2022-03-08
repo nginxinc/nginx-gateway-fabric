@@ -2,7 +2,6 @@ package events_test
 
 import (
 	"context"
-	"errors"
 
 	"github.com/nginxinc/nginx-gateway-kubernetes/internal/events"
 	"github.com/nginxinc/nginx-gateway-kubernetes/internal/state"
@@ -147,18 +146,5 @@ var _ = Describe("EventLoop", func() {
 					Type: &unsupportedResource{},
 				}),
 		)
-
-		It("should return error if status updater returns error", func() {
-			testError := errors.New("test")
-			fakeUpdater.ProcessStatusUpdatesReturns(testError)
-
-			eventCh <- &events.UpsertEvent{
-				Resource: &v1alpha2.HTTPRoute{},
-			}
-
-			var err error
-			Eventually(errorCh).Should(Receive(&err))
-			Expect(err).Should(Equal(testError))
-		})
 	})
 })

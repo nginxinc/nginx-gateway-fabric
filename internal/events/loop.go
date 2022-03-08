@@ -58,6 +58,7 @@ func (el *EventLoop) handleEvent(ctx context.Context, event interface{}) error {
 	case *DeleteEvent:
 		changes, updates, err = el.propagateDelete(e)
 	default:
+		// TO-DO: panic
 		return fmt.Errorf("unknown event type %T", e)
 	}
 
@@ -65,7 +66,8 @@ func (el *EventLoop) handleEvent(ctx context.Context, event interface{}) error {
 		return err
 	}
 
-	return el.processChangesAndStatusUpdates(ctx, changes, updates)
+	el.processChangesAndStatusUpdates(ctx, changes, updates)
+	return nil
 }
 
 func (el *EventLoop) propagateUpsert(e *UpsertEvent) ([]state.Change, []state.StatusUpdate, error) {
@@ -88,7 +90,7 @@ func (el *EventLoop) propagateDelete(e *DeleteEvent) ([]state.Change, []state.St
 	return nil, nil, fmt.Errorf("unknown resource type %T", e.Type)
 }
 
-func (el *EventLoop) processChangesAndStatusUpdates(ctx context.Context, changes []state.Change, updates []state.StatusUpdate) error {
+func (el *EventLoop) processChangesAndStatusUpdates(ctx context.Context, changes []state.Change, updates []state.StatusUpdate) {
 	for _, c := range changes {
 		el.logger.Info("Processing a change",
 			"host", c.Host.Value)
@@ -97,5 +99,5 @@ func (el *EventLoop) processChangesAndStatusUpdates(ctx context.Context, changes
 		fmt.Printf("%+v\n", c)
 	}
 
-	return el.statusUpdater.ProcessStatusUpdates(ctx, updates)
+	el.statusUpdater.ProcessStatusUpdates(ctx, updates)
 }

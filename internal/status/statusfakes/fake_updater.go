@@ -10,45 +10,33 @@ import (
 )
 
 type FakeUpdater struct {
-	ProcessStatusUpdatesStub        func(context.Context, []state.StatusUpdate) error
+	ProcessStatusUpdatesStub        func(context.Context, []state.StatusUpdate)
 	processStatusUpdatesMutex       sync.RWMutex
 	processStatusUpdatesArgsForCall []struct {
 		arg1 context.Context
 		arg2 []state.StatusUpdate
 	}
-	processStatusUpdatesReturns struct {
-		result1 error
-	}
-	processStatusUpdatesReturnsOnCall map[int]struct {
-		result1 error
-	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeUpdater) ProcessStatusUpdates(arg1 context.Context, arg2 []state.StatusUpdate) error {
+func (fake *FakeUpdater) ProcessStatusUpdates(arg1 context.Context, arg2 []state.StatusUpdate) {
 	var arg2Copy []state.StatusUpdate
 	if arg2 != nil {
 		arg2Copy = make([]state.StatusUpdate, len(arg2))
 		copy(arg2Copy, arg2)
 	}
 	fake.processStatusUpdatesMutex.Lock()
-	ret, specificReturn := fake.processStatusUpdatesReturnsOnCall[len(fake.processStatusUpdatesArgsForCall)]
 	fake.processStatusUpdatesArgsForCall = append(fake.processStatusUpdatesArgsForCall, struct {
 		arg1 context.Context
 		arg2 []state.StatusUpdate
 	}{arg1, arg2Copy})
 	stub := fake.ProcessStatusUpdatesStub
-	fakeReturns := fake.processStatusUpdatesReturns
 	fake.recordInvocation("ProcessStatusUpdates", []interface{}{arg1, arg2Copy})
 	fake.processStatusUpdatesMutex.Unlock()
 	if stub != nil {
-		return stub(arg1, arg2)
+		fake.ProcessStatusUpdatesStub(arg1, arg2)
 	}
-	if specificReturn {
-		return ret.result1
-	}
-	return fakeReturns.result1
 }
 
 func (fake *FakeUpdater) ProcessStatusUpdatesCallCount() int {
@@ -57,7 +45,7 @@ func (fake *FakeUpdater) ProcessStatusUpdatesCallCount() int {
 	return len(fake.processStatusUpdatesArgsForCall)
 }
 
-func (fake *FakeUpdater) ProcessStatusUpdatesCalls(stub func(context.Context, []state.StatusUpdate) error) {
+func (fake *FakeUpdater) ProcessStatusUpdatesCalls(stub func(context.Context, []state.StatusUpdate)) {
 	fake.processStatusUpdatesMutex.Lock()
 	defer fake.processStatusUpdatesMutex.Unlock()
 	fake.ProcessStatusUpdatesStub = stub
@@ -68,29 +56,6 @@ func (fake *FakeUpdater) ProcessStatusUpdatesArgsForCall(i int) (context.Context
 	defer fake.processStatusUpdatesMutex.RUnlock()
 	argsForCall := fake.processStatusUpdatesArgsForCall[i]
 	return argsForCall.arg1, argsForCall.arg2
-}
-
-func (fake *FakeUpdater) ProcessStatusUpdatesReturns(result1 error) {
-	fake.processStatusUpdatesMutex.Lock()
-	defer fake.processStatusUpdatesMutex.Unlock()
-	fake.ProcessStatusUpdatesStub = nil
-	fake.processStatusUpdatesReturns = struct {
-		result1 error
-	}{result1}
-}
-
-func (fake *FakeUpdater) ProcessStatusUpdatesReturnsOnCall(i int, result1 error) {
-	fake.processStatusUpdatesMutex.Lock()
-	defer fake.processStatusUpdatesMutex.Unlock()
-	fake.ProcessStatusUpdatesStub = nil
-	if fake.processStatusUpdatesReturnsOnCall == nil {
-		fake.processStatusUpdatesReturnsOnCall = make(map[int]struct {
-			result1 error
-		})
-	}
-	fake.processStatusUpdatesReturnsOnCall[i] = struct {
-		result1 error
-	}{result1}
 }
 
 func (fake *FakeUpdater) Invocations() map[string][][]interface{} {

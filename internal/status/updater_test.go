@@ -86,8 +86,7 @@ var _ = Describe("Updater", func() {
 				},
 			}
 
-			err := updater.ProcessStatusUpdates(context.Background(), updates)
-			Expect(err).Should(Not(HaveOccurred()))
+			updater.ProcessStatusUpdates(context.Background(), updates)
 		})
 
 		It("should have the updated status in the API server", func() {
@@ -135,7 +134,7 @@ var _ = Describe("Updater", func() {
 		})
 	})
 
-	It("should return error for unknown status type", func() {
+	It("should panic for unknown status type", func() {
 		updates := []state.StatusUpdate{
 			{
 				NamespacedName: types.NamespacedName{Namespace: "test", Name: "route1"},
@@ -143,8 +142,10 @@ var _ = Describe("Updater", func() {
 			},
 		}
 
-		err := updater.ProcessStatusUpdates(context.Background(), updates)
-		Expect(err).Should(HaveOccurred())
+		process := func() {
+			updater.ProcessStatusUpdates(context.Background(), updates)
+		}
+		Expect(process).Should(Panic())
 	})
 
 	It("should not process updates with canceled context", func() {
@@ -158,9 +159,8 @@ var _ = Describe("Updater", func() {
 		ctx, cancel := context.WithCancel(context.Background())
 		cancel()
 
-		// because the ctx is canceled, ProcessStatusUpdates should return immediately without any error rather than
-		// returning an error because of the unsupported status type
-		err := updater.ProcessStatusUpdates(ctx, updates)
-		Expect(err).ShouldNot(HaveOccurred())
+		// because the ctx is canceled, ProcessStatusUpdates should return immediately without panicking
+		// because of the unsupported status type
+		updater.ProcessStatusUpdates(ctx, updates)
 	})
 })

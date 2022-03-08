@@ -17,7 +17,7 @@ import (
 // Updater updates statuses of the Gateway API resources.
 type Updater interface {
 	// ProcessStatusUpdates updates the statuses according to the provided updates.
-	ProcessStatusUpdates(context.Context, []state.StatusUpdate) error
+	ProcessStatusUpdates(context.Context, []state.StatusUpdate)
 }
 
 // updaterImpl reports statuses for the Gateway API resources.
@@ -54,11 +54,11 @@ func NewUpdater(client client.Client, logger logr.Logger) Updater {
 }
 
 // ProcessStatusUpdates updates the statuses according to the provided updates.
-func (upd *updaterImpl) ProcessStatusUpdates(ctx context.Context, updates []state.StatusUpdate) error {
+func (upd *updaterImpl) ProcessStatusUpdates(ctx context.Context, updates []state.StatusUpdate) {
 	for _, u := range updates {
 		select {
 		case <-ctx.Done():
-			return nil
+			return
 		default:
 		}
 
@@ -77,11 +77,9 @@ func (upd *updaterImpl) ProcessStatusUpdates(ctx context.Context, updates []stat
 				route.Status = *s
 			})
 		default:
-			return fmt.Errorf("unknown status type %T", u.Status)
+			panic(fmt.Errorf("unknown status type %T", u.Status))
 		}
 	}
-
-	return nil
 }
 
 func (upd *updaterImpl) update(ctx context.Context, nsname types.NamespacedName, obj client.Object, statusSetter func(client.Object)) {
