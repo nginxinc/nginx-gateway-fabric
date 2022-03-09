@@ -93,7 +93,10 @@ func (upd *updaterImpl) update(ctx context.Context, nsname types.NamespacedName,
 	err := upd.client.Get(ctx, nsname, obj)
 	if err != nil {
 		if !apierrors.IsNotFound(err) {
-			upd.logger.Error(err, "Failed to get the recent version the resource when updating status")
+			upd.logger.Error(err, "Failed to get the recent version the resource when updating status",
+				"namespace", nsname.Namespace,
+				"name", nsname.Name,
+				"kind", obj.GetObjectKind().GroupVersionKind().Kind)
 		}
 		return
 	}
@@ -102,6 +105,9 @@ func (upd *updaterImpl) update(ctx context.Context, nsname types.NamespacedName,
 
 	err = upd.client.Status().Update(ctx, obj)
 	if err != nil {
-		upd.logger.Error(err, "Failed to update status")
+		upd.logger.Error(err, "Failed to update status",
+			"namespace", nsname.Namespace,
+			"name", nsname.Name,
+			"kind", obj.GetObjectKind().GroupVersionKind().Kind)
 	}
 }
