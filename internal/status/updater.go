@@ -40,6 +40,10 @@ type Updater interface {
 // Statuses are important part of the Gateway API, so we need to ensure that the Gateway always keep the resources
 // statuses up-to-date.
 // TO-DO: address limitation (3)
+//
+// (4) To support new resources, updaterImpl needs to be modified. Consider making updaterImpl extendable, so that it
+// goes along the Open-closed principle.
+// TO-DO: address limitation (4)
 type updaterImpl struct {
 	client client.Client
 	logger logr.Logger
