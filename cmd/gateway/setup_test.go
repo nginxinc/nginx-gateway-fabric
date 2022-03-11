@@ -19,7 +19,7 @@ func MockValidator(name string, called *int, succeed bool) ValidatorContext {
 			*called++
 
 			if !succeed {
-				return errors.New("Mock error")
+				return errors.New("mock error")
 			}
 			return nil
 		},

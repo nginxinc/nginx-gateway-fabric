@@ -6,22 +6,25 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/nginxinc/nginx-gateway-kubernetes/internal/state"
+	"github.com/nginxinc/nginx-gateway-kubernetes/internal/status"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 )
 
 // EventLoop is the main event loop of the Gateway.
 type EventLoop struct {
-	conf    state.Configuration
-	eventCh <-chan interface{}
-	logger  logr.Logger
+	conf          state.Configuration
+	eventCh       <-chan interface{}
+	logger        logr.Logger
+	statusUpdater status.Updater
 }
 
 // NewEventLoop creates a new EventLoop.
-func NewEventLoop(conf state.Configuration, eventCh <-chan interface{}, logger logr.Logger) *EventLoop {
+func NewEventLoop(conf state.Configuration, eventCh <-chan interface{}, statusUpdater status.Updater, logger logr.Logger) *EventLoop {
 	return &EventLoop{
-		conf:    conf,
-		eventCh: eventCh,
-		logger:  logger.WithName("eventLoop"),
+		conf:          conf,
+		eventCh:       eventCh,
+		statusUpdater: statusUpdater,
+		logger:        logger.WithName("eventLoop"),
 	}
 }
 
@@ -35,7 +38,7 @@ func (el *EventLoop) Start(ctx context.Context) error {
 		case <-ctx.Done():
 			return nil
 		case e := <-el.eventCh:
-			err := el.handleEvent(e)
+			err := el.handleEvent(ctx, e)
 			if err != nil {
 				return err
 			}
@@ -44,7 +47,7 @@ func (el *EventLoop) Start(ctx context.Context) error {
 }
 
 // TO-DO: think about how to avoid using an interface{} here
-func (el *EventLoop) handleEvent(event interface{}) error {
+func (el *EventLoop) handleEvent(ctx context.Context, event interface{}) error {
 	var changes []state.Change
 	var updates []state.StatusUpdate
 	var err error
@@ -55,6 +58,7 @@ func (el *EventLoop) handleEvent(event interface{}) error {
 	case *DeleteEvent:
 		changes, updates, err = el.propagateDelete(e)
 	default:
+		// TO-DO: panic
 		return fmt.Errorf("unknown event type %T", e)
 	}
 
@@ -62,8 +66,7 @@ func (el *EventLoop) handleEvent(event interface{}) error {
 		return err
 	}
 
-	el.processChangesAndStatusUpdates(changes, updates)
-
+	el.processChangesAndStatusUpdates(ctx, changes, updates)
 	return nil
 }
 
@@ -87,7 +90,7 @@ func (el *EventLoop) propagateDelete(e *DeleteEvent) ([]state.Change, []state.St
 	return nil, nil, fmt.Errorf("unknown resource type %T", e.Type)
 }
 
-func (el *EventLoop) processChangesAndStatusUpdates(changes []state.Change, updates []state.StatusUpdate) {
+func (el *EventLoop) processChangesAndStatusUpdates(ctx context.Context, changes []state.Change, updates []state.StatusUpdate) {
 	for _, c := range changes {
 		el.logger.Info("Processing a change",
 			"host", c.Host.Value)
@@ -96,13 +99,5 @@ func (el *EventLoop) processChangesAndStatusUpdates(changes []state.Change, upda
 		fmt.Printf("%+v\n", c)
 	}
 
-	for _, u := range updates {
-		// TO-DO: in the next iteration, the update will include the namespace/name of the resource instead of
-		// runtime.Object, so it will be easy to get the resource namespace/name and include it in the log output
-		el.logger.Info("Processing a status update",
-			"gvk", u.Object.GetObjectKind().GroupVersionKind().String())
-
-		// TO-DO: This code is temporary. We will remove it once we have a component that updates statuses.
-		fmt.Printf("%+v\n", u)
-	}
+	el.statusUpdater.ProcessStatusUpdates(ctx, updates)
 }

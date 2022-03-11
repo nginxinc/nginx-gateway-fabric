@@ -3,7 +3,7 @@ package state_test
 import (
 	"time"
 
-	"github.com/google/go-cmp/cmp"
+	"github.com/nginxinc/nginx-gateway-kubernetes/internal/helpers"
 	"github.com/nginxinc/nginx-gateway-kubernetes/internal/state"
 	. "github.com/onsi/ginkgo/v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -95,12 +95,15 @@ var _ = Describe("Configuration", func() {
 				}
 				expectedStatusUpdates := []state.StatusUpdate{
 					{
-						Object: hr,
+						NamespacedName: types.NamespacedName{Namespace: "test", Name: "route1"},
 						Status: &v1alpha2.HTTPRouteStatus{
 							RouteStatus: v1alpha2.RouteStatus{
 								Parents: []v1alpha2.RouteParentStatus{
 									{
 										ControllerName: gatewayCtlrName,
+										ParentRef: v1alpha2.ParentRef{
+											Name: "fake",
+										},
 										Conditions: []metav1.Condition{
 											{
 												Type:               string(v1alpha2.ConditionRouteAccepted),
@@ -119,8 +122,8 @@ var _ = Describe("Configuration", func() {
 				}
 
 				changes, statusUpdates := conf.UpsertHTTPRoute(hr)
-				Expect(diff(expectedChanges, changes)).To(BeEmpty())
-				Expect(diff(expectedStatusUpdates, statusUpdates)).To(BeEmpty())
+				Expect(helpers.Diff(expectedChanges, changes)).To(BeEmpty())
+				Expect(helpers.Diff(expectedStatusUpdates, statusUpdates)).To(BeEmpty())
 			})
 
 			It("should not generate changes and status updates for the updated HTTPRoute because it has the same generation as the old one", func() {
@@ -162,12 +165,15 @@ var _ = Describe("Configuration", func() {
 				}
 				expectedStatusUpdates := []state.StatusUpdate{
 					{
-						Object: updatedHRWithIncrementedGen,
+						NamespacedName: types.NamespacedName{Namespace: "test", Name: "route1"},
 						Status: &v1alpha2.HTTPRouteStatus{
 							RouteStatus: v1alpha2.RouteStatus{
 								Parents: []v1alpha2.RouteParentStatus{
 									{
 										ControllerName: gatewayCtlrName,
+										ParentRef: v1alpha2.ParentRef{
+											Name: "fake",
+										},
 										Conditions: []metav1.Condition{
 											{
 												Type:               string(v1alpha2.ConditionRouteAccepted),
@@ -186,8 +192,8 @@ var _ = Describe("Configuration", func() {
 				}
 
 				changes, statusUpdates := conf.UpsertHTTPRoute(updatedHRWithIncrementedGen)
-				Expect(diff(expectedChanges, changes)).To(BeEmpty())
-				Expect(diff(expectedStatusUpdates, statusUpdates)).To(BeEmpty())
+				Expect(helpers.Diff(expectedChanges, changes)).To(BeEmpty())
+				Expect(helpers.Diff(expectedStatusUpdates, statusUpdates)).To(BeEmpty())
 			})
 
 			It("should delete the host for the deleted HTTPRoute", func() {
@@ -223,7 +229,7 @@ var _ = Describe("Configuration", func() {
 				}
 
 				changes, statusUpdates := conf.DeleteHTTPRoute(types.NamespacedName{Namespace: "test", Name: "route1"})
-				Expect(diff(expectedChanges, changes)).To(BeEmpty())
+				Expect(helpers.Diff(expectedChanges, changes)).To(BeEmpty())
 				Expect(statusUpdates).To(BeEmpty())
 			})
 		})
@@ -306,12 +312,15 @@ var _ = Describe("Configuration", func() {
 				}
 				expectedStatusUpdates := []state.StatusUpdate{
 					{
-						Object: hr1,
+						NamespacedName: types.NamespacedName{Namespace: "test", Name: "route1"},
 						Status: &v1alpha2.HTTPRouteStatus{
 							RouteStatus: v1alpha2.RouteStatus{
 								Parents: []v1alpha2.RouteParentStatus{
 									{
 										ControllerName: gatewayCtlrName,
+										ParentRef: v1alpha2.ParentRef{
+											Name: "fake",
+										},
 										Conditions: []metav1.Condition{
 											{
 												Type:               string(v1alpha2.ConditionRouteAccepted),
@@ -330,8 +339,8 @@ var _ = Describe("Configuration", func() {
 				}
 
 				changes, statusUpdates := conf.UpsertHTTPRoute(hr1)
-				Expect(diff(expectedChanges, changes)).To(BeEmpty())
-				Expect(diff(expectedStatusUpdates, statusUpdates)).To(BeEmpty())
+				Expect(helpers.Diff(expectedChanges, changes)).To(BeEmpty())
+				Expect(helpers.Diff(expectedStatusUpdates, statusUpdates)).To(BeEmpty())
 			})
 
 			It("should upsert the same host and generate status updates for both HTTPRoutes after adding the second", func() {
@@ -367,12 +376,15 @@ var _ = Describe("Configuration", func() {
 				}
 				expectedStatusUpdates := []state.StatusUpdate{
 					{
-						Object: hr1,
+						NamespacedName: types.NamespacedName{Namespace: "test", Name: "route1"},
 						Status: &v1alpha2.HTTPRouteStatus{
 							RouteStatus: v1alpha2.RouteStatus{
 								Parents: []v1alpha2.RouteParentStatus{
 									{
 										ControllerName: gatewayCtlrName,
+										ParentRef: v1alpha2.ParentRef{
+											Name: "fake",
+										},
 										Conditions: []metav1.Condition{
 											{
 												Type:               string(v1alpha2.ConditionRouteAccepted),
@@ -389,12 +401,15 @@ var _ = Describe("Configuration", func() {
 						},
 					},
 					{
-						Object: hr2,
+						NamespacedName: types.NamespacedName{Namespace: "test", Name: "route2"},
 						Status: &v1alpha2.HTTPRouteStatus{
 							RouteStatus: v1alpha2.RouteStatus{
 								Parents: []v1alpha2.RouteParentStatus{
 									{
 										ControllerName: gatewayCtlrName,
+										ParentRef: v1alpha2.ParentRef{
+											Name: "fake",
+										},
 										Conditions: []metav1.Condition{
 											{
 												Type:               string(v1alpha2.ConditionRouteAccepted),
@@ -413,8 +428,8 @@ var _ = Describe("Configuration", func() {
 				}
 
 				changes, statusUpdates := conf.UpsertHTTPRoute(hr2)
-				Expect(diff(expectedChanges, changes)).To(BeEmpty())
-				Expect(diff(expectedStatusUpdates, statusUpdates)).To(BeEmpty())
+				Expect(helpers.Diff(expectedChanges, changes)).To(BeEmpty())
+				Expect(helpers.Diff(expectedStatusUpdates, statusUpdates)).To(BeEmpty())
 			})
 
 			It("should upsert the host and generate status updates for both HTTPRoutes after updating the second", func() {
@@ -450,12 +465,15 @@ var _ = Describe("Configuration", func() {
 				}
 				expectedStatusUpdates := []state.StatusUpdate{
 					{
-						Object: hr1,
+						NamespacedName: types.NamespacedName{Namespace: "test", Name: "route1"},
 						Status: &v1alpha2.HTTPRouteStatus{
 							RouteStatus: v1alpha2.RouteStatus{
 								Parents: []v1alpha2.RouteParentStatus{
 									{
 										ControllerName: gatewayCtlrName,
+										ParentRef: v1alpha2.ParentRef{
+											Name: "fake",
+										},
 										Conditions: []metav1.Condition{
 											{
 												Type:               string(v1alpha2.ConditionRouteAccepted),
@@ -472,12 +490,15 @@ var _ = Describe("Configuration", func() {
 						},
 					},
 					{
-						Object: hr2Updated,
+						NamespacedName: types.NamespacedName{Namespace: "test", Name: "route2"},
 						Status: &v1alpha2.HTTPRouteStatus{
 							RouteStatus: v1alpha2.RouteStatus{
 								Parents: []v1alpha2.RouteParentStatus{
 									{
 										ControllerName: gatewayCtlrName,
+										ParentRef: v1alpha2.ParentRef{
+											Name: "fake",
+										},
 										Conditions: []metav1.Condition{
 											{
 												Type:               string(v1alpha2.ConditionRouteAccepted),
@@ -496,8 +517,8 @@ var _ = Describe("Configuration", func() {
 				}
 
 				changes, statusUpdates := conf.UpsertHTTPRoute(hr2Updated)
-				Expect(diff(expectedChanges, changes)).To(BeEmpty())
-				Expect(diff(expectedStatusUpdates, statusUpdates)).To(BeEmpty())
+				Expect(helpers.Diff(expectedChanges, changes)).To(BeEmpty())
+				Expect(helpers.Diff(expectedStatusUpdates, statusUpdates)).To(BeEmpty())
 			})
 
 			It("should upsert the host and generate a status updates for the first HTTPRoute after deleting the second", func() {
@@ -523,12 +544,15 @@ var _ = Describe("Configuration", func() {
 				}
 				expectedStatusUpdates := []state.StatusUpdate{
 					{
-						Object: hr1,
+						NamespacedName: types.NamespacedName{Namespace: "test", Name: "route1"},
 						Status: &v1alpha2.HTTPRouteStatus{
 							RouteStatus: v1alpha2.RouteStatus{
 								Parents: []v1alpha2.RouteParentStatus{
 									{
 										ControllerName: gatewayCtlrName,
+										ParentRef: v1alpha2.ParentRef{
+											Name: "fake",
+										},
 										Conditions: []metav1.Condition{
 											{
 												Type:               string(v1alpha2.ConditionRouteAccepted),
@@ -547,8 +571,8 @@ var _ = Describe("Configuration", func() {
 				}
 
 				changes, statusUpdates := conf.DeleteHTTPRoute(types.NamespacedName{Namespace: "test", Name: "route2"})
-				Expect(diff(expectedChanges, changes)).To(BeEmpty())
-				Expect(diff(expectedStatusUpdates, statusUpdates)).To(BeEmpty())
+				Expect(helpers.Diff(expectedChanges, changes)).To(BeEmpty())
+				Expect(helpers.Diff(expectedStatusUpdates, statusUpdates)).To(BeEmpty())
 			})
 
 			It("should delete the host after deleting the first HTTPRoute", func() {
@@ -573,7 +597,7 @@ var _ = Describe("Configuration", func() {
 					},
 				}
 				changes, statusUpdates := conf.DeleteHTTPRoute(types.NamespacedName{Namespace: "test", Name: "route1"})
-				Expect(diff(expectedChanges, changes)).To(BeEmpty())
+				Expect(helpers.Diff(expectedChanges, changes)).To(BeEmpty())
 				Expect(statusUpdates).To(BeEmpty())
 			})
 		})
@@ -656,12 +680,15 @@ var _ = Describe("Configuration", func() {
 				}
 				expectedStatusUpdates := []state.StatusUpdate{
 					{
-						Object: hr1,
+						NamespacedName: types.NamespacedName{Namespace: "test", Name: "route1"},
 						Status: &v1alpha2.HTTPRouteStatus{
 							RouteStatus: v1alpha2.RouteStatus{
 								Parents: []v1alpha2.RouteParentStatus{
 									{
 										ControllerName: gatewayCtlrName,
+										ParentRef: v1alpha2.ParentRef{
+											Name: "fake",
+										},
 										Conditions: []metav1.Condition{
 											{
 												Type:               string(v1alpha2.ConditionRouteAccepted),
@@ -680,8 +707,8 @@ var _ = Describe("Configuration", func() {
 				}
 
 				changes, statusUpdates := conf.UpsertHTTPRoute(hr1)
-				Expect(diff(expectedChanges, changes)).To(BeEmpty())
-				Expect(diff(expectedStatusUpdates, statusUpdates)).To(BeEmpty())
+				Expect(helpers.Diff(expectedChanges, changes)).To(BeEmpty())
+				Expect(helpers.Diff(expectedStatusUpdates, statusUpdates)).To(BeEmpty())
 			})
 
 			It("should upsert the host (make the first HTTPRoute the winner for '/' rule) and generate status updates for both HTTPRoutes after adding the second", func() {
@@ -712,12 +739,15 @@ var _ = Describe("Configuration", func() {
 				}
 				expectedStatusUpdates := []state.StatusUpdate{
 					{
-						Object: hr1,
+						NamespacedName: types.NamespacedName{Namespace: "test", Name: "route1"},
 						Status: &v1alpha2.HTTPRouteStatus{
 							RouteStatus: v1alpha2.RouteStatus{
 								Parents: []v1alpha2.RouteParentStatus{
 									{
 										ControllerName: gatewayCtlrName,
+										ParentRef: v1alpha2.ParentRef{
+											Name: "fake",
+										},
 										Conditions: []metav1.Condition{
 											{
 												Type:               string(v1alpha2.ConditionRouteAccepted),
@@ -734,12 +764,15 @@ var _ = Describe("Configuration", func() {
 						},
 					},
 					{
-						Object: hr2,
+						NamespacedName: types.NamespacedName{Namespace: "test", Name: "route2"},
 						Status: &v1alpha2.HTTPRouteStatus{
 							RouteStatus: v1alpha2.RouteStatus{
 								Parents: []v1alpha2.RouteParentStatus{
 									{
 										ControllerName: gatewayCtlrName,
+										ParentRef: v1alpha2.ParentRef{
+											Name: "fake",
+										},
 										Conditions: []metav1.Condition{
 											{
 												Type:               string(v1alpha2.ConditionRouteAccepted),
@@ -758,8 +791,8 @@ var _ = Describe("Configuration", func() {
 				}
 
 				changes, statusUpdates := conf.UpsertHTTPRoute(hr2)
-				Expect(diff(expectedChanges, changes)).To(BeEmpty())
-				Expect(diff(expectedStatusUpdates, statusUpdates)).To(BeEmpty())
+				Expect(helpers.Diff(expectedChanges, changes)).To(BeEmpty())
+				Expect(helpers.Diff(expectedStatusUpdates, statusUpdates)).To(BeEmpty())
 			})
 
 			It("should upsert the host (make the second HTTPRoute the winner for '/' rule) and generate status updates for both HTTPRoutes after updating the first", func() {
@@ -790,12 +823,15 @@ var _ = Describe("Configuration", func() {
 				}
 				expectedStatusUpdates := []state.StatusUpdate{
 					{
-						Object: hr1Updated,
+						NamespacedName: types.NamespacedName{Namespace: "test", Name: "route1"},
 						Status: &v1alpha2.HTTPRouteStatus{
 							RouteStatus: v1alpha2.RouteStatus{
 								Parents: []v1alpha2.RouteParentStatus{
 									{
 										ControllerName: gatewayCtlrName,
+										ParentRef: v1alpha2.ParentRef{
+											Name: "fake",
+										},
 										Conditions: []metav1.Condition{
 											{
 												Type:               string(v1alpha2.ConditionRouteAccepted),
@@ -812,12 +848,15 @@ var _ = Describe("Configuration", func() {
 						},
 					},
 					{
-						Object: hr2,
+						NamespacedName: types.NamespacedName{Namespace: "test", Name: "route2"},
 						Status: &v1alpha2.HTTPRouteStatus{
 							RouteStatus: v1alpha2.RouteStatus{
 								Parents: []v1alpha2.RouteParentStatus{
 									{
 										ControllerName: gatewayCtlrName,
+										ParentRef: v1alpha2.ParentRef{
+											Name: "fake",
+										},
 										Conditions: []metav1.Condition{
 											{
 												Type:               string(v1alpha2.ConditionRouteAccepted),
@@ -836,24 +875,12 @@ var _ = Describe("Configuration", func() {
 				}
 
 				changes, statusUpdates := conf.UpsertHTTPRoute(hr1Updated)
-				Expect(diff(expectedChanges, changes)).To(BeEmpty())
-				Expect(diff(expectedStatusUpdates, statusUpdates)).To(BeEmpty())
+				Expect(helpers.Diff(expectedChanges, changes)).To(BeEmpty())
+				Expect(helpers.Diff(expectedStatusUpdates, statusUpdates)).To(BeEmpty())
 			})
 		})
 	})
 })
-
-// diff prints the diff between two structs.
-// It is useful when the structs are large. In such a case, without diff it will be difficult to pinpoint the difference
-// between the two structs.
-func diff(x, y interface{}) string {
-	r := cmp.Diff(x, y)
-
-	if r != "" {
-		return "(-want +got)\n" + r
-	}
-	return r
-}
 
 func getStringPointer(s string) *string {
 	return &s

@@ -2,6 +2,7 @@ package manager
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/nginxinc/nginx-gateway-kubernetes/internal/config"
 	"github.com/nginxinc/nginx-gateway-kubernetes/internal/events"
@@ -10,6 +11,7 @@ import (
 	gcfg "github.com/nginxinc/nginx-gateway-kubernetes/internal/implementations/gatewayconfig"
 	hr "github.com/nginxinc/nginx-gateway-kubernetes/internal/implementations/httproute"
 	"github.com/nginxinc/nginx-gateway-kubernetes/internal/state"
+	"github.com/nginxinc/nginx-gateway-kubernetes/internal/status"
 	nginxgwv1alpha1 "github.com/nginxinc/nginx-gateway-kubernetes/pkg/apis/gateway/v1alpha1"
 	"github.com/nginxinc/nginx-gateway-kubernetes/pkg/sdk"
 
@@ -18,6 +20,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 )
+
+// clusterTimeout is a timeout for connections to the Kubernetes API
+const clusterTimeout = 10 * time.Second
 
 var scheme = runtime.NewScheme()
 
@@ -35,7 +40,10 @@ func Start(cfg config.Config) error {
 
 	eventCh := make(chan interface{})
 
-	mgr, err := manager.New(ctlr.GetConfigOrDie(), options)
+	clusterCfg := ctlr.GetConfigOrDie()
+	clusterCfg.Timeout = clusterTimeout
+
+	mgr, err := manager.New(clusterCfg, options)
 	if err != nil {
 		return fmt.Errorf("cannot build runtime manager: %w", err)
 	}
@@ -58,11 +66,12 @@ func Start(cfg config.Config) error {
 	}
 
 	conf := state.NewConfiguration(cfg.GatewayCtlrName, state.NewRealClock())
-	mainCtrl := events.NewEventLoop(conf, eventCh, cfg.Logger)
+	reporter := status.NewUpdater(mgr.GetClient(), cfg.Logger)
+	eventLoop := events.NewEventLoop(conf, eventCh, reporter, cfg.Logger)
 
-	err = mgr.Add(mainCtrl)
+	err = mgr.Add(eventLoop)
 	if err != nil {
-		return fmt.Errorf("cannot register main controller")
+		return fmt.Errorf("cannot register event loop: %w", err)
 	}
 
 	ctx := ctlr.SetupSignalHandler()
