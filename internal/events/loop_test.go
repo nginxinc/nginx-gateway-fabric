@@ -126,6 +126,14 @@ var _ = Describe("EventLoop", func() {
 	})
 
 	Describe("Process Service events", func() {
+		AfterEach(func() {
+			cancel()
+
+			var err error
+			Eventually(errorCh).Should(Receive(&err))
+			Expect(err).To(BeNil())
+		})
+
 		It("should process upsert event", func() {
 			svc := &apiv1.Service{}
 
@@ -133,7 +141,7 @@ var _ = Describe("EventLoop", func() {
 				Resource: svc,
 			}
 
-			Eventually(fakeServiceStore.UpsertCallCount()).Should(Equal(1))
+			Eventually(fakeServiceStore.UpsertCallCount).Should(Equal(1))
 			Eventually(func() *apiv1.Service {
 				return fakeServiceStore.UpsertArgsForCall(0)
 			}).Should(Equal(svc))
@@ -147,7 +155,7 @@ var _ = Describe("EventLoop", func() {
 				Type:           &apiv1.Service{},
 			}
 
-			Eventually(fakeServiceStore.DeleteCallCount()).Should(Equal(1))
+			Eventually(fakeServiceStore.DeleteCallCount).Should(Equal(1))
 			Eventually(func() types.NamespacedName {
 				return fakeServiceStore.DeleteArgsForCall(0)
 			}).Should(Equal(nsname))

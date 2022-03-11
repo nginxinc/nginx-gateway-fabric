@@ -98,6 +98,7 @@ func (el *EventLoop) propagateDelete(e *DeleteEvent) ([]state.Change, []state.St
 	case *apiv1.Service:
 		el.serviceStore.Delete(e.NamespacedName)
 		// TO-DO: make sure the affected hosts are updated
+		return nil, nil, nil
 	}
 
 	// TO-DO: panic
