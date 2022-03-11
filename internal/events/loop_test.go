@@ -9,6 +9,7 @@ import (
 	"github.com/nginxinc/nginx-gateway-kubernetes/internal/status/statusfakes"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -33,6 +34,7 @@ var _ = Describe("EventLoop", func() {
 	var ctrl *events.EventLoop
 	var fakeConf *statefakes.FakeConfiguration
 	var fakeUpdater *statusfakes.FakeUpdater
+	var fakeServiceStore *statefakes.FakeServiceStore
 	var cancel context.CancelFunc
 	var eventCh chan interface{}
 	var errorCh chan error
@@ -41,7 +43,8 @@ var _ = Describe("EventLoop", func() {
 		fakeConf = &statefakes.FakeConfiguration{}
 		eventCh = make(chan interface{})
 		fakeUpdater = &statusfakes.FakeUpdater{}
-		ctrl = events.NewEventLoop(fakeConf, eventCh, fakeUpdater, zap.New())
+		fakeServiceStore = &statefakes.FakeServiceStore{}
+		ctrl = events.NewEventLoop(fakeConf, fakeServiceStore, eventCh, fakeUpdater, zap.New())
 
 		var ctx context.Context
 
@@ -119,6 +122,35 @@ var _ = Describe("EventLoop", func() {
 				_, updates := fakeUpdater.ProcessStatusUpdatesArgsForCall(0)
 				return updates
 			}).Should(Equal(fakeStatusUpdates))
+		})
+	})
+
+	Describe("Process Service events", func() {
+		It("should process upsert event", func() {
+			svc := &apiv1.Service{}
+
+			eventCh <- &events.UpsertEvent{
+				Resource: svc,
+			}
+
+			Eventually(fakeServiceStore.UpsertCallCount()).Should(Equal(1))
+			Eventually(func() *apiv1.Service {
+				return fakeServiceStore.UpsertArgsForCall(0)
+			}).Should(Equal(svc))
+		})
+
+		It("should process delete event", func() {
+			nsname := types.NamespacedName{Namespace: "test", Name: "service"}
+
+			eventCh <- &events.DeleteEvent{
+				NamespacedName: nsname,
+				Type:           &apiv1.Service{},
+			}
+
+			Eventually(fakeServiceStore.DeleteCallCount()).Should(Equal(1))
+			Eventually(func() types.NamespacedName {
+				return fakeServiceStore.DeleteArgsForCall(0)
+			}).Should(Equal(nsname))
 		})
 	})
 

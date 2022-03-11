@@ -15,6 +15,13 @@ metadata:
   name: nginx-gateway
 rules:
 - apiGroups:
+  - ""
+  resources:
+  - services
+  verbs:
+  - list
+  - watch
+- apiGroups:
   - gateway.networking.k8s.io
   resources:
   - gatewayclasses

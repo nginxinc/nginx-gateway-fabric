@@ -2,6 +2,7 @@ package sdk
 
 import (
 	nginxgwv1alpha1 "github.com/nginxinc/nginx-gateway-kubernetes/pkg/apis/gateway/v1alpha1"
+	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 )
@@ -25,4 +26,9 @@ type HTTPRouteImpl interface {
 	Upsert(config *v1alpha2.HTTPRoute)
 	// TO-DO: change other interfaces to use types.NamespacedName
 	Remove(types.NamespacedName)
+}
+
+type ServiceImpl interface {
+	Upsert(svc *apiv1.Service)
+	Remove(name types.NamespacedName)
 }
