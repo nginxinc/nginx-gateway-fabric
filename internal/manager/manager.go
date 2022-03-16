@@ -10,10 +10,12 @@ import (
 	gc "github.com/nginxinc/nginx-gateway-kubernetes/internal/implementations/gatewayclass"
 	gcfg "github.com/nginxinc/nginx-gateway-kubernetes/internal/implementations/gatewayconfig"
 	hr "github.com/nginxinc/nginx-gateway-kubernetes/internal/implementations/httproute"
+	svc "github.com/nginxinc/nginx-gateway-kubernetes/internal/implementations/service"
 	"github.com/nginxinc/nginx-gateway-kubernetes/internal/state"
 	"github.com/nginxinc/nginx-gateway-kubernetes/internal/status"
 	nginxgwv1alpha1 "github.com/nginxinc/nginx-gateway-kubernetes/pkg/apis/gateway/v1alpha1"
 	"github.com/nginxinc/nginx-gateway-kubernetes/pkg/sdk"
+	apiv1 "k8s.io/api/core/v1"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	ctlr "sigs.k8s.io/controller-runtime"
@@ -27,8 +29,10 @@ const clusterTimeout = 10 * time.Second
 var scheme = runtime.NewScheme()
 
 func init() {
+	// TO-DO: handle errors returned by the calls bellow
 	_ = gatewayv1alpha2.AddToScheme(scheme)
 	_ = nginxgwv1alpha1.AddToScheme(scheme)
+	_ = apiv1.AddToScheme(scheme)
 }
 
 func Start(cfg config.Config) error {
@@ -64,10 +68,15 @@ func Start(cfg config.Config) error {
 	if err != nil {
 		return fmt.Errorf("cannot register httproute implementation: %w", err)
 	}
+	err = sdk.RegisterServiceController(mgr, svc.NewServiceImplementation(cfg, eventCh))
+	if err != nil {
+		return fmt.Errorf("cannot register service implementation: %w", err)
+	}
 
 	conf := state.NewConfiguration(cfg.GatewayCtlrName, state.NewRealClock())
+	serviceStore := state.NewServiceStore()
 	reporter := status.NewUpdater(mgr.GetClient(), cfg.Logger)
-	eventLoop := events.NewEventLoop(conf, eventCh, reporter, cfg.Logger)
+	eventLoop := events.NewEventLoop(conf, serviceStore, eventCh, reporter, cfg.Logger)
 
 	err = mgr.Add(eventLoop)
 	if err != nil {
