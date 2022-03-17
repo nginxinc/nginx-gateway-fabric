@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/nginxinc/nginx-gateway-kubernetes/internal/events"
+	"github.com/nginxinc/nginx-gateway-kubernetes/internal/nginx/config/configfakes"
 	"github.com/nginxinc/nginx-gateway-kubernetes/internal/state"
 	"github.com/nginxinc/nginx-gateway-kubernetes/internal/state/statefakes"
 	"github.com/nginxinc/nginx-gateway-kubernetes/internal/status/statusfakes"
@@ -35,6 +36,7 @@ var _ = Describe("EventLoop", func() {
 	var fakeConf *statefakes.FakeConfiguration
 	var fakeUpdater *statusfakes.FakeUpdater
 	var fakeServiceStore *statefakes.FakeServiceStore
+	var fakeGenerator *configfakes.FakeGenerator
 	var cancel context.CancelFunc
 	var eventCh chan interface{}
 	var errorCh chan error
@@ -44,7 +46,8 @@ var _ = Describe("EventLoop", func() {
 		eventCh = make(chan interface{})
 		fakeUpdater = &statusfakes.FakeUpdater{}
 		fakeServiceStore = &statefakes.FakeServiceStore{}
-		ctrl = events.NewEventLoop(fakeConf, fakeServiceStore, eventCh, fakeUpdater, zap.New())
+		fakeGenerator = &configfakes.FakeGenerator{}
+		ctrl = events.NewEventLoop(fakeConf, fakeServiceStore, fakeGenerator, eventCh, fakeUpdater, zap.New())
 
 		var ctx context.Context
 
@@ -66,15 +69,19 @@ var _ = Describe("EventLoop", func() {
 		})
 
 		It("should process upsert event", func() {
+			fakeChanges := []state.Change{
+				{
+					Op:   state.Upsert,
+					Host: state.Host{},
+				},
+			}
 			fakeStatusUpdates := []state.StatusUpdate{
 				{
 					NamespacedName: types.NamespacedName{},
 					Status:         nil,
 				},
 			}
-			// for now, we pass nil, because we don't need to test how EventLoop processes changes yet. We will start
-			// testing once we have NGINX Configuration Manager component.
-			fakeConf.UpsertHTTPRouteReturns(nil, fakeStatusUpdates)
+			fakeConf.UpsertHTTPRouteReturns(fakeChanges, fakeStatusUpdates)
 
 			hr := &v1alpha2.HTTPRoute{}
 
@@ -87,23 +94,32 @@ var _ = Describe("EventLoop", func() {
 				return fakeConf.UpsertHTTPRouteArgsForCall(0)
 			}).Should(Equal(hr))
 
-			Eventually(fakeUpdater.ProcessStatusUpdatesCallCount()).Should(Equal(1))
+			Eventually(fakeUpdater.ProcessStatusUpdatesCallCount).Should(Equal(1))
 			Eventually(func() []state.StatusUpdate {
 				_, updates := fakeUpdater.ProcessStatusUpdatesArgsForCall(0)
 				return updates
 			}).Should(Equal(fakeStatusUpdates))
+
+			Eventually(fakeGenerator.GenerateForHostCallCount).Should(Equal(1))
+			Eventually(func() state.Host {
+				return fakeGenerator.GenerateForHostArgsForCall(0)
+			}).Should(Equal(fakeChanges[0].Host))
 		})
 
 		It("should process delete event", func() {
+			fakeChanges := []state.Change{
+				{
+					Op:   state.Delete,
+					Host: state.Host{},
+				},
+			}
 			fakeStatusUpdates := []state.StatusUpdate{
 				{
 					NamespacedName: types.NamespacedName{},
 					Status:         nil,
 				},
 			}
-			// for now, we pass nil, because we don't need to test how EventLoop processes changes yet. We will start
-			// testing once we have NGINX Configuration Manager component.
-			fakeConf.DeleteHTTPRouteReturns(nil, fakeStatusUpdates)
+			fakeConf.DeleteHTTPRouteReturns(fakeChanges, fakeStatusUpdates)
 
 			nsname := types.NamespacedName{Namespace: "test", Name: "route"}
 
@@ -117,11 +133,15 @@ var _ = Describe("EventLoop", func() {
 				return fakeConf.DeleteHTTPRouteArgsForCall(0)
 			}).Should(Equal(nsname))
 
-			Eventually(fakeUpdater.ProcessStatusUpdatesCallCount()).Should(Equal(1))
+			Eventually(fakeUpdater.ProcessStatusUpdatesCallCount).Should(Equal(1))
 			Eventually(func() []state.StatusUpdate {
 				_, updates := fakeUpdater.ProcessStatusUpdatesArgsForCall(0)
 				return updates
 			}).Should(Equal(fakeStatusUpdates))
+
+			// TO-DO:
+			// once we have a component that processes host deletion, ensure that
+			// its corresponding method is eventually called
 		})
 	})
 
