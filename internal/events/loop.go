@@ -6,6 +6,8 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/nginxinc/nginx-gateway-kubernetes/internal/nginx/config"
+	"github.com/nginxinc/nginx-gateway-kubernetes/internal/nginx/file"
+	"github.com/nginxinc/nginx-gateway-kubernetes/internal/nginx/runtime"
 	"github.com/nginxinc/nginx-gateway-kubernetes/internal/state"
 	"github.com/nginxinc/nginx-gateway-kubernetes/internal/status"
 	apiv1 "k8s.io/api/core/v1"
@@ -14,12 +16,14 @@ import (
 
 // EventLoop is the main event loop of the Gateway.
 type EventLoop struct {
-	conf          state.Configuration
-	serviceStore  state.ServiceStore
-	generator     config.Generator
-	eventCh       <-chan interface{}
-	logger        logr.Logger
-	statusUpdater status.Updater
+	conf            state.Configuration
+	serviceStore    state.ServiceStore
+	generator       config.Generator
+	eventCh         <-chan interface{}
+	logger          logr.Logger
+	statusUpdater   status.Updater
+	nginxFileMgr    file.Manager
+	nginxRuntimeMgr runtime.Manager
 }
 
 // NewEventLoop creates a new EventLoop.
@@ -30,14 +34,18 @@ func NewEventLoop(
 	eventCh <-chan interface{},
 	statusUpdater status.Updater,
 	logger logr.Logger,
+	nginxFileMgr file.Manager,
+	nginxRuntimeMgr runtime.Manager,
 ) *EventLoop {
 	return &EventLoop{
-		conf:          conf,
-		serviceStore:  serviceStore,
-		generator:     generator,
-		eventCh:       eventCh,
-		statusUpdater: statusUpdater,
-		logger:        logger.WithName("eventLoop"),
+		conf:            conf,
+		serviceStore:    serviceStore,
+		generator:       generator,
+		eventCh:         eventCh,
+		statusUpdater:   statusUpdater,
+		logger:          logger.WithName("eventLoop"),
+		nginxFileMgr:    nginxFileMgr,
+		nginxRuntimeMgr: nginxRuntimeMgr,
 	}
 }
 
@@ -118,14 +126,8 @@ func (el *EventLoop) processChangesAndStatusUpdates(ctx context.Context, changes
 		el.logger.Info("Processing a change",
 			"host", c.Host.Value)
 
-		// TO-DO: This code is temporary. We will remove it once we have a component that processes changes.
-		fmt.Printf("%+v\n", c)
-
 		if c.Op == state.Upsert {
 			cfg, warnings := el.generator.GenerateForHost(c.Host)
-			// TO-DO: for now, we only print the generated config, without writing it on the file system
-			// and reloading NGINX.
-			fmt.Println(string(cfg))
 
 			for obj, objWarnings := range warnings {
 				for _, w := range objWarnings {
@@ -137,6 +139,28 @@ func (el *EventLoop) processChangesAndStatusUpdates(ctx context.Context, changes
 						"warning", w)
 				}
 			}
+
+			el.logger.Info("Writing configuration",
+				"host", c.Host.Value)
+
+			err := el.nginxFileMgr.WriteServerConfig(c.Host.Value, cfg)
+			if err != nil {
+				el.logger.Error(err, "Failed to write configuration",
+					"host", c.Host.Value)
+			}
+		} else {
+			err := el.nginxFileMgr.DeleteServerConfig(c.Host.Value)
+			if err != nil {
+				el.logger.Error(err, "Failed to delete configuration",
+					"host", c.Host.Value)
+			}
+		}
+	}
+
+	if len(changes) > 0 {
+		err := el.nginxRuntimeMgr.Reload(ctx)
+		if err != nil {
+			el.logger.Error(err, "Failed to reload NGINX")
 		}
 	}
 
