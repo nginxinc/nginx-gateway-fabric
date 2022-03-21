@@ -98,7 +98,7 @@ jobs:
       - name: Build Binary
         run: make build
       - name: Cache Artifacts
-        uses: actions/cache@v2.1.7
+        uses: actions/cache@v3
         with:
           path: ${{ github.workspace }}/build/.out/gateway
           key: nginx-gateway-kubernetes-${{ github.run_id }}-${{ github.run_number }}
@@ -111,7 +111,7 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v2
       - name: Fetch Cached Artifacts
-        uses: actions/cache@v2.1.7
+        uses: actions/cache@v3
         with:
           path: ${{ github.workspace }}/build/.out/gateway
           key: nginx-gateway-kubernetes-${{ github.run_id }}-${{ github.run_number }}
