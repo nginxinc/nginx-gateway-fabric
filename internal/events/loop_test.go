@@ -101,9 +101,7 @@ var _ = Describe("EventLoop", func() {
 			}).Should(Equal(fakeStatusUpdates))
 
 			Eventually(fakeGenerator.GenerateForHostCallCount).Should(Equal(1))
-			Eventually(func() state.Host {
-				return fakeGenerator.GenerateForHostArgsForCall(0)
-			}).Should(Equal(fakeChanges[0].Host))
+			Expect(fakeGenerator.GenerateForHostArgsForCall(0)).Should(Equal(fakeChanges[0].Host))
 		})
 
 		It("should process delete event", func() {
