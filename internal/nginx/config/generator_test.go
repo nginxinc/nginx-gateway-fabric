@@ -247,12 +247,12 @@ func TestGetBackendAddress(t *testing.T) {
 
 		result := getBackendAddress(test.refs, test.parentNS, fakeServiceStore)
 		if result != test.expectedAddress {
-			t.Errorf("getBackendAddress() returned %s but expected %s for case %s", result, test.expectedAddress, test.msg)
+			t.Errorf("getBackendAddress() returned %s but expected %s for case %q", result, test.expectedAddress, test.msg)
 		}
 
 		callCount := fakeServiceStore.ResolveCallCount()
 		if callCount != test.expectedResolverCallCount {
-			t.Errorf("getBackendAddress() called fakeServiceStore.Resolve %d times but expected %d for case %s", callCount, test.expectedResolverCallCount, test.msg)
+			t.Errorf("getBackendAddress() called fakeServiceStore.Resolve %d times but expected %d for case %q", callCount, test.expectedResolverCallCount, test.msg)
 		}
 
 		if test.expectedResolverCallCount == 0 {
@@ -261,7 +261,7 @@ func TestGetBackendAddress(t *testing.T) {
 
 		nsname := fakeServiceStore.ResolveArgsForCall(0)
 		if nsname != test.expectedNsName {
-			t.Errorf("getBackendAddress() called fakeServiceStore.Resolve with %v but expected %v for case %s", nsname, test.expectedNsName, test.msg)
+			t.Errorf("getBackendAddress() called fakeServiceStore.Resolve with %v but expected %v for case %q", nsname, test.expectedNsName, test.msg)
 		}
 	}
 }
