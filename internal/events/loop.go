@@ -23,8 +23,14 @@ type EventLoop struct {
 }
 
 // NewEventLoop creates a new EventLoop.
-func NewEventLoop(conf state.Configuration, serviceStore state.ServiceStore, generator config.Generator,
-	eventCh <-chan interface{}, statusUpdater status.Updater, logger logr.Logger) *EventLoop {
+func NewEventLoop(
+	conf state.Configuration,
+	serviceStore state.ServiceStore,
+	generator config.Generator,
+	eventCh <-chan interface{},
+	statusUpdater status.Updater,
+	logger logr.Logger,
+) *EventLoop {
 	return &EventLoop{
 		conf:          conf,
 		serviceStore:  serviceStore,
