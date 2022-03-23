@@ -39,7 +39,7 @@ func (g *GeneratorImpl) GenerateForHost(host state.Host) []byte {
 }
 
 func generate(host state.Host, serviceStore state.ServiceStore) server {
-	var locs []location
+	locs := make([]location, 0, len(host.PathRouteGroups)) // TO-DO: expand with g.Routes
 
 	for _, g := range host.PathRouteGroups {
 		// number of routes in a group is always at least 1
