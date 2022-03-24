@@ -122,10 +122,21 @@ func (el *EventLoop) processChangesAndStatusUpdates(ctx context.Context, changes
 		fmt.Printf("%+v\n", c)
 
 		if c.Op == state.Upsert {
-			cfg := el.generator.GenerateForHost(c.Host)
+			cfg, warnings := el.generator.GenerateForHost(c.Host)
 			// TO-DO: for now, we only print the generated config, without writing it on the file system
 			// and reloading NGINX.
 			fmt.Println(string(cfg))
+
+			for obj, objWarnings := range warnings {
+				for _, w := range objWarnings {
+					// TO-DO: report warnings via Object status
+					el.logger.Info("got warning while generating config",
+						"kind", obj.GetObjectKind().GroupVersionKind().Kind,
+						"namespace", obj.GetNamespace(),
+						"name", obj.GetName(),
+						"warning", w)
+				}
+			}
 		}
 	}
 

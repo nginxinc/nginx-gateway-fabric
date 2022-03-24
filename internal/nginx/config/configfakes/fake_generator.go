@@ -9,22 +9,24 @@ import (
 )
 
 type FakeGenerator struct {
-	GenerateForHostStub        func(state.Host) []byte
+	GenerateForHostStub        func(state.Host) ([]byte, config.Warnings)
 	generateForHostMutex       sync.RWMutex
 	generateForHostArgsForCall []struct {
 		arg1 state.Host
 	}
 	generateForHostReturns struct {
 		result1 []byte
+		result2 config.Warnings
 	}
 	generateForHostReturnsOnCall map[int]struct {
 		result1 []byte
+		result2 config.Warnings
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeGenerator) GenerateForHost(arg1 state.Host) []byte {
+func (fake *FakeGenerator) GenerateForHost(arg1 state.Host) ([]byte, config.Warnings) {
 	fake.generateForHostMutex.Lock()
 	ret, specificReturn := fake.generateForHostReturnsOnCall[len(fake.generateForHostArgsForCall)]
 	fake.generateForHostArgsForCall = append(fake.generateForHostArgsForCall, struct {
@@ -38,9 +40,9 @@ func (fake *FakeGenerator) GenerateForHost(arg1 state.Host) []byte {
 		return stub(arg1)
 	}
 	if specificReturn {
-		return ret.result1
+		return ret.result1, ret.result2
 	}
-	return fakeReturns.result1
+	return fakeReturns.result1, fakeReturns.result2
 }
 
 func (fake *FakeGenerator) GenerateForHostCallCount() int {
@@ -49,7 +51,7 @@ func (fake *FakeGenerator) GenerateForHostCallCount() int {
 	return len(fake.generateForHostArgsForCall)
 }
 
-func (fake *FakeGenerator) GenerateForHostCalls(stub func(state.Host) []byte) {
+func (fake *FakeGenerator) GenerateForHostCalls(stub func(state.Host) ([]byte, config.Warnings)) {
 	fake.generateForHostMutex.Lock()
 	defer fake.generateForHostMutex.Unlock()
 	fake.GenerateForHostStub = stub
@@ -62,27 +64,30 @@ func (fake *FakeGenerator) GenerateForHostArgsForCall(i int) state.Host {
 	return argsForCall.arg1
 }
 
-func (fake *FakeGenerator) GenerateForHostReturns(result1 []byte) {
+func (fake *FakeGenerator) GenerateForHostReturns(result1 []byte, result2 config.Warnings) {
 	fake.generateForHostMutex.Lock()
 	defer fake.generateForHostMutex.Unlock()
 	fake.GenerateForHostStub = nil
 	fake.generateForHostReturns = struct {
 		result1 []byte
-	}{result1}
+		result2 config.Warnings
+	}{result1, result2}
 }
 
-func (fake *FakeGenerator) GenerateForHostReturnsOnCall(i int, result1 []byte) {
+func (fake *FakeGenerator) GenerateForHostReturnsOnCall(i int, result1 []byte, result2 config.Warnings) {
 	fake.generateForHostMutex.Lock()
 	defer fake.generateForHostMutex.Unlock()
 	fake.GenerateForHostStub = nil
 	if fake.generateForHostReturnsOnCall == nil {
 		fake.generateForHostReturnsOnCall = make(map[int]struct {
 			result1 []byte
+			result2 config.Warnings
 		})
 	}
 	fake.generateForHostReturnsOnCall[i] = struct {
 		result1 []byte
-	}{result1}
+		result2 config.Warnings
+	}{result1, result2}
 }
 
 func (fake *FakeGenerator) Invocations() map[string][][]interface{} {

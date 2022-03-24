@@ -18,10 +18,13 @@ func TestGenerateForHost(t *testing.T) {
 
 	host := state.Host{Value: "example.com"}
 
-	cfg := generator.GenerateForHost(host)
+	cfg, warnings := generator.GenerateForHost(host)
 
 	if len(cfg) == 0 {
 		t.Errorf("GenerateForHost() generated empty config")
+	}
+	if len(warnings) > 0 {
+		t.Errorf("GenerateForHost() returned unexpected warnings: %v", warnings)
 	}
 }
 
@@ -56,6 +59,16 @@ func TestGenerate(t *testing.T) {
 						},
 					},
 				},
+				{
+					Matches: []v1alpha2.HTTPRouteMatch{
+						{
+							Path: &v1alpha2.HTTPPathMatch{
+								Value: helpers.GetStringPointer("/test"),
+							},
+						},
+					},
+					BackendRefs: nil, // no backend refs will cause warnings
+				},
 			},
 		},
 	}
@@ -73,6 +86,16 @@ func TestGenerate(t *testing.T) {
 					},
 				},
 			},
+			{
+				Path: "/test",
+				Routes: []state.Route{
+					{
+						MatchIdx: 0,
+						RuleIdx:  1,
+						Source:   hr,
+					},
+				},
+			},
 		},
 	}
 
@@ -86,12 +109,23 @@ func TestGenerate(t *testing.T) {
 				Path:      "/",
 				ProxyPass: "http://10.0.0.1:80",
 			},
+			{
+				Path:      "/test",
+				ProxyPass: "http://" + nginx502Server,
+			},
 		},
 	}
+	expectedWarnings := Warnings{
+		hr: []string{"empty backend refs"},
+	}
 
-	result := generate(host, fakeServiceStore)
+	result, warnings := generate(host, fakeServiceStore)
+
 	if diff := cmp.Diff(expected, result); diff != "" {
 		t.Errorf("generate() mismatch (-want +got):\n%s", diff)
+	}
+	if diff := cmp.Diff(expectedWarnings, warnings); diff != "" {
+		t.Errorf("generate() mismatch on warnings (-want +got):\n%s", diff)
 	}
 }
 
@@ -140,6 +174,7 @@ func TestGetBackendAddress(t *testing.T) {
 		expectedResolverCallCount int
 		expectedNsName            types.NamespacedName
 		expectedAddress           string
+		expectErr                 bool
 		msg                       string
 	}{
 		{
@@ -150,6 +185,7 @@ func TestGetBackendAddress(t *testing.T) {
 			expectedResolverCallCount: 1,
 			expectedNsName:            types.NamespacedName{Namespace: "test", Name: "service1"},
 			expectedAddress:           "10.0.0.1:80",
+			expectErr:                 false,
 			msg:                       "normal case",
 		},
 		{
@@ -163,6 +199,7 @@ func TestGetBackendAddress(t *testing.T) {
 			expectedResolverCallCount: 1,
 			expectedNsName:            types.NamespacedName{Namespace: "test", Name: "service1"},
 			expectedAddress:           "10.0.0.1:80",
+			expectErr:                 false,
 			msg:                       "normal case with implicit namespace",
 		},
 		{
@@ -177,6 +214,7 @@ func TestGetBackendAddress(t *testing.T) {
 			expectedResolverCallCount: 1,
 			expectedNsName:            types.NamespacedName{Namespace: "test", Name: "service1"},
 			expectedAddress:           "10.0.0.1:80",
+			expectErr:                 false,
 			msg:                       "normal case with implicit service",
 		},
 		{
@@ -191,6 +229,7 @@ func TestGetBackendAddress(t *testing.T) {
 			expectedResolverCallCount: 1,
 			expectedNsName:            types.NamespacedName{Namespace: "test", Name: "service1"},
 			expectedAddress:           "10.0.0.1:80",
+			expectErr:                 false,
 			msg:                       "first backend ref is used",
 		},
 		{
@@ -204,6 +243,7 @@ func TestGetBackendAddress(t *testing.T) {
 			expectedResolverCallCount: 0,
 			expectedNsName:            types.NamespacedName{},
 			expectedAddress:           "",
+			expectErr:                 true,
 			msg:                       "not a service Kind",
 		},
 		{
@@ -214,6 +254,7 @@ func TestGetBackendAddress(t *testing.T) {
 			expectedResolverCallCount: 0,
 			expectedNsName:            types.NamespacedName{},
 			expectedAddress:           "",
+			expectErr:                 true,
 			msg:                       "no refs",
 		},
 		{
@@ -227,6 +268,7 @@ func TestGetBackendAddress(t *testing.T) {
 			expectedResolverCallCount: 1,
 			expectedNsName:            types.NamespacedName{Namespace: "test", Name: "service1"},
 			expectedAddress:           "",
+			expectErr:                 true,
 			msg:                       "no port",
 		},
 		{
@@ -237,6 +279,7 @@ func TestGetBackendAddress(t *testing.T) {
 			expectedResolverCallCount: 1,
 			expectedNsName:            types.NamespacedName{Namespace: "test", Name: "service1"},
 			expectedAddress:           "",
+			expectErr:                 true,
 			msg:                       "service doesn't exist",
 		},
 	}
@@ -245,9 +288,19 @@ func TestGetBackendAddress(t *testing.T) {
 		fakeServiceStore := &statefakes.FakeServiceStore{}
 		fakeServiceStore.ResolveReturns(test.storeAddress, test.storeErr)
 
-		result := getBackendAddress(test.refs, test.parentNS, fakeServiceStore)
+		result, err := getBackendAddress(test.refs, test.parentNS, fakeServiceStore)
 		if result != test.expectedAddress {
 			t.Errorf("getBackendAddress() returned %s but expected %s for case %q", result, test.expectedAddress, test.msg)
+		}
+
+		if test.expectErr {
+			if err == nil {
+				t.Errorf("getBackendAddress() didn't return any error for case %q", test.msg)
+			}
+		} else {
+			if err != nil {
+				t.Errorf("getBackendAddress() returned unexpected error %v for case %q", err, test.msg)
+			}
 		}
 
 		callCount := fakeServiceStore.ResolveCallCount()

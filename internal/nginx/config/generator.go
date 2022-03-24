@@ -1,6 +1,7 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/nginxinc/nginx-gateway-kubernetes/internal/state"
@@ -16,7 +17,7 @@ const nginx502Server = "unix:/var/lib/nginx/nginx-502-server.sock"
 // Generator generates NGINX configuration.
 type Generator interface {
 	// GenerateForHost generates configuration for a host.
-	GenerateForHost(host state.Host) []byte
+	GenerateForHost(host state.Host) ([]byte, Warnings)
 }
 
 // GeneratorImpl is an implementation of Generator
@@ -33,19 +34,24 @@ func NewGeneratorImpl(serviceStore state.ServiceStore) *GeneratorImpl {
 	}
 }
 
-func (g *GeneratorImpl) GenerateForHost(host state.Host) []byte {
-	server := generate(host, g.serviceStore)
-	return g.executor.ExecuteForServer(server)
+func (g *GeneratorImpl) GenerateForHost(host state.Host) ([]byte, Warnings) {
+	server, warnings := generate(host, g.serviceStore)
+	return g.executor.ExecuteForServer(server), warnings
 }
 
-func generate(host state.Host, serviceStore state.ServiceStore) server {
+func generate(host state.Host, serviceStore state.ServiceStore) (server, Warnings) {
+	warnings := newWarnings()
+
 	locs := make([]location, 0, len(host.PathRouteGroups)) // TO-DO: expand with g.Routes
 
 	for _, g := range host.PathRouteGroups {
 		// number of routes in a group is always at least 1
 		// otherwise, it is a bug in the state.Configuration code, so it is OK to panic here
 		r := g.Routes[0] // TO-DO: for now, we only handle the first route in case there are multiple routes
-		address := getBackendAddress(r.Source.Spec.Rules[r.RuleIdx].BackendRefs, r.Source.Namespace, serviceStore)
+		address, err := getBackendAddress(r.Source.Spec.Rules[r.RuleIdx].BackendRefs, r.Source.Namespace, serviceStore)
+		if err != nil {
+			warnings.AddWarning(r.Source, err.Error())
+		}
 
 		loc := location{
 			Path:      g.Path,
@@ -57,7 +63,7 @@ func generate(host state.Host, serviceStore state.ServiceStore) server {
 	return server{
 		ServerName: host.Value,
 		Locations:  locs,
-	}
+	}, warnings
 }
 
 func generateProxyPass(address string) string {
@@ -67,17 +73,17 @@ func generateProxyPass(address string) string {
 	return "http://" + address
 }
 
-func getBackendAddress(refs []v1alpha2.HTTPBackendRef, parentNS string, serviceStore state.ServiceStore) string {
+func getBackendAddress(refs []v1alpha2.HTTPBackendRef, parentNS string, serviceStore state.ServiceStore) (string, error) {
 	// TO-DO: make sure the warnings are generated and reported to the user fot the edge cases
 	if len(refs) == 0 {
-		return ""
+		return "", errors.New("empty backend refs")
 	}
 
 	// TO-DO: for now, we only support a single backend reference
 	ref := refs[0].BackendRef
 
 	if ref.Kind != nil && *ref.Kind != "Service" {
-		return ""
+		return "", fmt.Errorf("unsupported kind %s", *ref.Kind)
 	}
 
 	ns := parentNS
@@ -87,12 +93,12 @@ func getBackendAddress(refs []v1alpha2.HTTPBackendRef, parentNS string, serviceS
 
 	address, err := serviceStore.Resolve(types.NamespacedName{Namespace: ns, Name: string(ref.Name)})
 	if err != nil {
-		return ""
+		return "", fmt.Errorf("service %s/%s cannot be resolved: %w", ns, ref.Name, err)
 	}
 
 	if ref.Port == nil {
-		return ""
+		return "", errors.New("port is nil")
 	}
 
-	return fmt.Sprintf("%s:%d", address, *ref.Port)
+	return fmt.Sprintf("%s:%d", address, *ref.Port), nil
 }
