@@ -1,6 +1,6 @@
 VERSION = 0.0.1
 TAG = $(VERSION)
-PREFIX = nginx-gateway
+PREFIX ?= nginx-gateway
 
 GIT_COMMIT = $(shell git rev-parse HEAD)
 DATE = $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
