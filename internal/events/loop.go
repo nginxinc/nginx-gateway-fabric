@@ -5,10 +5,10 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
+	"github.com/nginxinc/nginx-gateway-kubernetes/internal/nginx/config"
 	"github.com/nginxinc/nginx-gateway-kubernetes/internal/state"
 	"github.com/nginxinc/nginx-gateway-kubernetes/internal/status"
 	apiv1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 )
 
@@ -16,17 +16,25 @@ import (
 type EventLoop struct {
 	conf          state.Configuration
 	serviceStore  state.ServiceStore
+	generator     config.Generator
 	eventCh       <-chan interface{}
 	logger        logr.Logger
 	statusUpdater status.Updater
 }
 
 // NewEventLoop creates a new EventLoop.
-func NewEventLoop(conf state.Configuration, serviceStore state.ServiceStore, eventCh <-chan interface{},
-	statusUpdater status.Updater, logger logr.Logger) *EventLoop {
+func NewEventLoop(
+	conf state.Configuration,
+	serviceStore state.ServiceStore,
+	generator config.Generator,
+	eventCh <-chan interface{},
+	statusUpdater status.Updater,
+	logger logr.Logger,
+) *EventLoop {
 	return &EventLoop{
 		conf:          conf,
 		serviceStore:  serviceStore,
+		generator:     generator,
 		eventCh:       eventCh,
 		statusUpdater: statusUpdater,
 		logger:        logger.WithName("eventLoop"),
@@ -114,38 +122,19 @@ func (el *EventLoop) processChangesAndStatusUpdates(ctx context.Context, changes
 		fmt.Printf("%+v\n", c)
 
 		if c.Op == state.Upsert {
-			// The code below resolves service backend refs into their cluster IPs
-			// TO-DO: this code will be removed once we have the component that generates NGINX config and
-			// uses the ServiceStore to resolve services.
-			for _, g := range c.Host.PathRouteGroups {
-				for _, r := range g.Routes {
-					for _, b := range r.Source.Spec.Rules[r.RuleIdx].BackendRefs {
-						if b.BackendRef.Kind == nil || *b.BackendRef.Kind == "Service" {
-							ns := r.Source.Namespace
-							if b.BackendRef.Namespace != nil {
-								ns = string(*b.BackendRef.Namespace)
-							}
+			cfg, warnings := el.generator.GenerateForHost(c.Host)
+			// TO-DO: for now, we only print the generated config, without writing it on the file system
+			// and reloading NGINX.
+			fmt.Println(string(cfg))
 
-							address, err := el.serviceStore.Resolve(types.NamespacedName{
-								Namespace: ns,
-								Name:      string(b.BackendRef.Name),
-							})
-
-							if err != nil {
-								fmt.Printf("Service %s/%s error: %v\n", ns, b.BackendRef.Name, err)
-								continue
-							}
-
-							var port int32 = 80
-							if b.BackendRef.Port != nil {
-								port = int32(*b.BackendRef.Port)
-							}
-
-							address = fmt.Sprintf("%s:%d", address, port)
-
-							fmt.Printf("Service %s/%s: %s\n", ns, b.BackendRef.Name, address)
-						}
-					}
+			for obj, objWarnings := range warnings {
+				for _, w := range objWarnings {
+					// TO-DO: report warnings via Object status
+					el.logger.Info("got warning while generating config",
+						"kind", obj.GetObjectKind().GroupVersionKind().Kind,
+						"namespace", obj.GetNamespace(),
+						"name", obj.GetName(),
+						"warning", w)
 				}
 			}
 		}

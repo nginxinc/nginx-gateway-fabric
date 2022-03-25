@@ -46,7 +46,7 @@ var _ = Describe("Configuration", func() {
 								Matches: []v1alpha2.HTTPRouteMatch{
 									{
 										Path: &v1alpha2.HTTPPathMatch{
-											Value: getStringPointer("/coffee"),
+											Value: helpers.GetStringPointer("/coffee"),
 										},
 									},
 								},
@@ -56,7 +56,7 @@ var _ = Describe("Configuration", func() {
 				}
 
 				updatedHRWithSameGen = hr.DeepCopy()
-				updatedHRWithSameGen.Spec.Rules[1].Matches[0].Path.Value = getStringPointer("/tea")
+				updatedHRWithSameGen.Spec.Rules[1].Matches[0].Path.Value = helpers.GetStringPointer("/tea")
 
 				updatedHRWithIncrementedGen = updatedHRWithSameGen.DeepCopy()
 				updatedHRWithIncrementedGen.Generation++
@@ -275,7 +275,7 @@ var _ = Describe("Configuration", func() {
 								Matches: []v1alpha2.HTTPRouteMatch{
 									{
 										Path: &v1alpha2.HTTPPathMatch{
-											Value: getStringPointer("/coffee"),
+											Value: helpers.GetStringPointer("/coffee"),
 										},
 									},
 								},
@@ -285,7 +285,7 @@ var _ = Describe("Configuration", func() {
 				}
 
 				hr2Updated = hr2.DeepCopy()
-				hr2Updated.Spec.Rules[0].Matches[0].Path.Value = getStringPointer("/tea")
+				hr2Updated.Spec.Rules[0].Matches[0].Path.Value = helpers.GetStringPointer("/tea")
 				hr2Updated.Generation++
 			})
 
@@ -643,7 +643,7 @@ var _ = Describe("Configuration", func() {
 								Matches: []v1alpha2.HTTPRouteMatch{
 									{
 										Path: &v1alpha2.HTTPPathMatch{
-											Value: getStringPointer("/"),
+											Value: helpers.GetStringPointer("/"),
 										},
 									},
 								},
@@ -881,7 +881,3 @@ var _ = Describe("Configuration", func() {
 		})
 	})
 })
-
-func getStringPointer(s string) *string {
-	return &s
-}
