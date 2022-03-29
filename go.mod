@@ -7,7 +7,7 @@ require (
 	github.com/google/go-cmp v0.5.6
 	github.com/maxbrunsfeld/counterfeiter/v6 v6.4.1
 	github.com/onsi/ginkgo v1.16.5
-	github.com/onsi/ginkgo/v2 v2.1.1
+	github.com/onsi/ginkgo/v2 v2.1.3
 	github.com/onsi/gomega v1.17.0
 	github.com/spf13/pflag v1.0.5
 	golang.org/x/net v0.0.0-20220127200216-cd36cc0744dd
