@@ -43,7 +43,7 @@ jobs:
         with:
           access_token: ${{ secrets.GITHUB_TOKEN }}
       - name: Checkout Repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Output Variables
         id: vars
         run: |
@@ -58,7 +58,7 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Lint Code
         uses: golangci/golangci-lint-action@v2
         with:
@@ -70,7 +70,7 @@ jobs:
     needs: vars
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Setup Golang Environment
         uses: actions/setup-go@v2
         with:
@@ -90,7 +90,7 @@ jobs:
     needs: [vars, lint]
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Setup Golang Environment
         uses: actions/setup-go@v2
         with:
@@ -109,7 +109,7 @@ jobs:
     needs: [vars, binary]
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Fetch Cached Artifacts
         uses: actions/cache@v3
         with:
