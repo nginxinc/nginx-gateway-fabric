@@ -8,9 +8,9 @@ require (
 	github.com/maxbrunsfeld/counterfeiter/v6 v6.4.1
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/ginkgo/v2 v2.1.3
-	github.com/onsi/gomega v1.17.0
+	github.com/onsi/gomega v1.19.0
 	github.com/spf13/pflag v1.0.5
-	golang.org/x/net v0.0.0-20220127200216-cd36cc0744dd
+	golang.org/x/net v0.0.0-20220225172249-27dd8689420f
 	k8s.io/api v0.24.0-alpha.4
 	k8s.io/apimachinery v0.24.0-alpha.4
 	k8s.io/client-go v0.24.0-alpha.4
