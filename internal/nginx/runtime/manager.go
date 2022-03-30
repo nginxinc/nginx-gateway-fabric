@@ -23,7 +23,7 @@ type Manager interface {
 type ManagerImpl struct{}
 
 // NewManagerImpl creates a new ManagerImpl.
-func NewManagerImpl() Manager {
+func NewManagerImpl() *ManagerImpl {
 	return &ManagerImpl{}
 }
 
