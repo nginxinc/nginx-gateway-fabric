@@ -202,6 +202,58 @@ var _ = Describe("EventLoop", func() {
 		})
 	})
 
+	Describe("Processing events common cases", func() {
+		AfterEach(func() {
+			cancel()
+
+			var err error
+			Eventually(errorCh).Should(Receive(&err))
+			Expect(err).To(BeNil())
+		})
+
+		It("should reload once in case of multiple changes", func() {
+			fakeChanges := []state.Change{
+				{
+					Op: state.Delete,
+					Host: state.Host{
+						Value: "one.example.com",
+					},
+				},
+				{
+					Op: state.Upsert,
+					Host: state.Host{
+						Value: "two.example.com",
+					},
+				},
+			}
+			fakeConf.DeleteHTTPRouteReturns(fakeChanges, nil)
+
+			fakeCfg := []byte("fake")
+			fakeGenerator.GenerateForHostReturns(fakeCfg, config.Warnings{})
+
+			nsname := types.NamespacedName{Namespace: "test", Name: "route"}
+
+			// the exact event doesn't matter. what matters is the generated changes return by DeleteHTTPRouteReturns
+			eventCh <- &events.DeleteEvent{
+				NamespacedName: nsname,
+				Type:           &v1alpha2.HTTPRoute{},
+			}
+
+			Eventually(fakeConf.DeleteHTTPRouteCallCount).Should(Equal(1))
+			Expect(fakeConf.DeleteHTTPRouteArgsForCall(0)).Should(Equal(nsname))
+
+			Eventually(fakeNginxFimeMgr.WriteServerConfigCallCount).Should(Equal(1))
+			host, cfg := fakeNginxFimeMgr.WriteServerConfigArgsForCall(0)
+			Expect(host).Should(Equal("two.example.com"))
+			Expect(cfg).Should(Equal(fakeCfg))
+
+			Eventually(fakeNginxFimeMgr.DeleteServerConfigCallCount).Should(Equal(1))
+			Expect(fakeNginxFimeMgr.DeleteServerConfigArgsForCall(0)).Should(Equal("one.example.com"))
+
+			Eventually(fakeNginxRuntimeMgr.ReloadCallCount).Should(Equal(1))
+		})
+	})
+
 	Describe("Edge cases", func() {
 		AfterEach(func() {
 			cancel()
