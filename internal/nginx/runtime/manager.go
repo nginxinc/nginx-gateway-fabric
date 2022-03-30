@@ -32,17 +32,17 @@ func (m *ManagerImpl) Reload(ctx context.Context) error {
 	// If the gateway container starts before NGINX container (which is possible), then it is possible that a reload can be attempted
 	// when NGINX is not running yet. Make sure to prevent this case, so we don't get an error.
 
-	// We find the NGINX master PID on every reload because it will change if the NGINX container is restarted.
-	pid, err := findMasterProcess(readProcDir, os.ReadFile)
+	// We find the main NGINX PID on every reload because it will change if the NGINX container is restarted.
+	pid, err := findMainProcess(readProcDir, os.ReadFile)
 	if err != nil {
-		return fmt.Errorf("failed to find NGINX master process: %w", err)
+		return fmt.Errorf("failed to find NGINX main process: %w", err)
 	}
 
-	// send HUP signal to the NGINX master process reload configuration
+	// send HUP signal to the NGINX main process reload configuration
 	// See https://nginx.org/en/docs/control.html
 	err = syscall.Kill(pid, syscall.SIGHUP)
 	if err != nil {
-		return fmt.Errorf("failed to send the HUP signal to NGINX master: %w", err)
+		return fmt.Errorf("failed to send the HUP signal to NGINX main: %w", err)
 	}
 
 	// FIXME(pleshakov)
@@ -65,7 +65,7 @@ func readProcDir() ([]os.DirEntry, error) {
 	return os.ReadDir("/proc")
 }
 
-func findMasterProcess(readProcDir func() ([]os.DirEntry, error), readFile func(string) ([]byte, error)) (int, error) {
+func findMainProcess(readProcDir func() ([]os.DirEntry, error), readFile func(string) ([]byte, error)) (int, error) {
 	procFolders, err := readProcDir()
 	if err != nil {
 		return 0, fmt.Errorf("unable to read process directory: %w", err)
@@ -88,5 +88,5 @@ func findMasterProcess(readProcDir func() ([]os.DirEntry, error), readFile func(
 		}
 	}
 
-	return 0, errors.New("NGINX master is not running")
+	return 0, errors.New("NGINX main process is not running")
 }

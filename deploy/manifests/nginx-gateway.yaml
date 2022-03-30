@@ -95,7 +95,7 @@ spec:
           runAsUser: 1001
           # FIXME(pleshakov) - figure out which capabilities are required
           # dropping ALL and adding only CAP_KILL doesn't work
-          # Note: CAP_KILL is needed for sending HUP signal to NGINX master
+          # Note: CAP_KILL is needed for sending HUP signal to NGINX main process
         args:
         - --gateway-ctlr-name=k8s-gateway.nginx.org/nginx-gateway/gateway
       - image: nginx:1.21.3

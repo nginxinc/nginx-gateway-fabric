@@ -18,7 +18,7 @@ func (*fakeEntry) IsDir() bool                { return false }
 func (*fakeEntry) Type() fs.FileMode          { return 0 }
 func (*fakeEntry) Info() (fs.FileInfo, error) { return nil, nil }
 
-func TestFindMasterProcess(t *testing.T) {
+func TestFindMainProcess(t *testing.T) {
 	readProcDir := func() ([]os.DirEntry, error) {
 		return []os.DirEntry{
 			&fakeEntry{name: "x"},
@@ -79,19 +79,19 @@ func TestFindMasterProcess(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		result, err := findMasterProcess(test.readProcDirFunc, test.readFileFunc)
+		result, err := findMainProcess(test.readProcDirFunc, test.readFileFunc)
 
 		if result != test.expected {
-			t.Errorf("findMasterProcess() returned %d but expected %d for case %q", result, test.expected, test.msg)
+			t.Errorf("findMainProcess() returned %d but expected %d for case %q", result, test.expected, test.msg)
 		}
 
 		if test.expectError {
 			if err == nil {
-				t.Errorf("findMasterProcess() didn't return error for case %q", test.msg)
+				t.Errorf("findMainProcess() didn't return error for case %q", test.msg)
 			}
 		} else {
 			if err != nil {
-				t.Errorf("findMasterProcess() returned unexpected error %v for case %q", err, test.msg)
+				t.Errorf("findMainProcess() returned unexpected error %v for case %q", err, test.msg)
 			}
 		}
 	}
