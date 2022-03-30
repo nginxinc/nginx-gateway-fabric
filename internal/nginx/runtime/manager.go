@@ -1,15 +1,18 @@
 package runtime
 
 import (
-	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
 )
+
+const pidFile = "/etc/nginx/nginx.pid"
+
+type readFileFunc func(string) ([]byte, error)
 
 //go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . Manager
 
@@ -33,7 +36,7 @@ func (m *ManagerImpl) Reload(ctx context.Context) error {
 	// when NGINX is not running yet. Make sure to prevent this case, so we don't get an error.
 
 	// We find the main NGINX PID on every reload because it will change if the NGINX container is restarted.
-	pid, err := findMainProcess(readProcDir, os.ReadFile)
+	pid, err := findMainProcess(os.ReadFile)
 	if err != nil {
 		return fmt.Errorf("failed to find NGINX main process: %w", err)
 	}
@@ -61,32 +64,16 @@ func (m *ManagerImpl) Reload(ctx context.Context) error {
 	return nil
 }
 
-func readProcDir() ([]os.DirEntry, error) {
-	return os.ReadDir("/proc")
-}
-
-func findMainProcess(readProcDir func() ([]os.DirEntry, error), readFile func(string) ([]byte, error)) (int, error) {
-	procFolders, err := readProcDir()
+func findMainProcess(readFile readFileFunc) (int, error) {
+	content, err := readFile(pidFile)
 	if err != nil {
-		return 0, fmt.Errorf("unable to read process directory: %w", err)
+		return 0, err
 	}
 
-	for _, folder := range procFolders {
-		pid, err := strconv.Atoi(folder.Name())
-		if err != nil {
-			continue
-		}
-
-		cmdlineFile := fmt.Sprintf("/proc/%v/cmdline", folder.Name())
-		content, err := readFile(cmdlineFile)
-		if err != nil {
-			return 0, fmt.Errorf("unable to read file %s: %w", cmdlineFile, err)
-		}
-
-		if bytes.HasPrefix(content, []byte("nginx: master process")) {
-			return pid, nil
-		}
+	pid, err := strconv.Atoi(strings.TrimSpace(string(content)))
+	if err != nil {
+		return 0, fmt.Errorf("invalid pid file content %q: %w", content, err)
 	}
 
-	return 0, errors.New("NGINX main process is not running")
+	return pid, nil
 }
