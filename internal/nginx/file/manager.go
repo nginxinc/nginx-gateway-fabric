@@ -21,8 +21,7 @@ type Manager interface {
 }
 
 // ManagerImpl is an implementation of Manager.
-type ManagerImpl struct {
-}
+type ManagerImpl struct{}
 
 // NewManagerImpl creates a new NewManagerImpl.
 func NewManagerImpl() *ManagerImpl {
