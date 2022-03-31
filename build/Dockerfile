@@ -11,14 +11,25 @@ RUN go mod download
 COPY cmd /go/src/github.com/nginxinc/nginx-gateway-kubernetes/cmd
 COPY internal /go/src/github.com/nginxinc/nginx-gateway-kubernetes/internal
 COPY pkg /go/src/github.com/nginxinc/nginx-gateway-kubernetes/pkg
-RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -a -ldflags "-s -w -X main.version=${VERSION} -X main.commit=${GIT_COMMIT} -X main.date=${DATE}" -o ./build/.out/gateway .
+RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -a -ldflags "-s -w -X main.version=${VERSION} -X main.commit=${GIT_COMMIT} -X main.date=${DATE}" -o gateway .
+
+FROM alpine:3.15 as capabilizer
+RUN apk add --no-cache libcap
+
+FROM capabilizer as local-capabilizer
+COPY ./build/.out/gateway /usr/bin/
+RUN setcap 'cap_kill=+ep' /usr/bin/gateway
+
+FROM capabilizer as container-capabilizer
+COPY --from=builder /go/src/github.com/nginxinc/nginx-gateway-kubernetes/cmd/gateway/gateway /usr/bin/
+RUN setcap 'cap_kill=+ep' /usr/bin/gateway
 
 FROM scratch as common
 USER 1001:1001
 ENTRYPOINT [ "/usr/bin/gateway" ]
 
 FROM common as container
-COPY --from=builder /go/src/github.com/nginxinc/nginx-gateway-kubernetes/cmd/gateway/gateway /usr/bin/
+COPY --from=container-capabilizer /usr/bin/gateway /usr/bin/
 
 FROM common as local
-COPY ./build/.out/gateway /usr/bin/
+COPY --from=local-capabilizer /usr/bin/gateway /usr/bin/

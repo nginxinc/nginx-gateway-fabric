@@ -72,14 +72,15 @@ spec:
       labels:
         app: nginx-gateway
     spec:
+      shareProcessNamespace: true
       serviceAccountName: nginx-gateway
       volumes:
       - name: nginx-config
         emptyDir: { }
       initContainers:
-      - image: busybox:1.34
+      - image: busybox:1.34 # FIXME(pleshakov): use gateway container to init the Config with proper main config
         name: nginx-config-initializer
-        command: [ 'sh', '-c', 'echo "events {} http { server { default_type text/plain; return 200 \"hello from \$hostname\n\"; } }" > /etc/nginx/nginx.conf' ]
+        command: [ 'sh', '-c', 'echo "events {}  pid /etc/nginx/nginx.pid; http { include /etc/nginx/conf.d/*.conf; server { default_type text/html; return 404; } }" > /etc/nginx/nginx.conf && mkdir /etc/nginx/conf.d && chown 1001:0 /etc/nginx/conf.d' ]
         volumeMounts:
         - name: nginx-config
           mountPath: /etc/nginx
@@ -87,6 +88,14 @@ spec:
       - image: nginx-gateway:0.0.1
         imagePullPolicy: IfNotPresent
         name: nginx-gateway
+        volumeMounts:
+        - name: nginx-config
+          mountPath: /etc/nginx
+        securityContext:
+          runAsUser: 1001
+          # FIXME(pleshakov) - figure out which capabilities are required
+          # dropping ALL and adding only CAP_KILL doesn't work
+          # Note: CAP_KILL is needed for sending HUP signal to NGINX main process
         args:
         - --gateway-ctlr-name=k8s-gateway.nginx.org/nginx-gateway/gateway
       - image: nginx:1.21.3
