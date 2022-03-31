@@ -86,6 +86,56 @@ You can deploy NGINX Kubernetes Gateway on an existing Kubernetes 1.16+ cluster.
    nginx-gateway-5d4f4c7db7-xk2kq   2/2     Running   0          112s
    ```
 
+## Expose NGINX Kubernetes Gateway
+
+You can gain access to NGINX Kubernetes Gateway by creating a `NodePort` Service or a `LoadBalancer` Service.
+
+### Create a NodePort Service
+
+Create a service with type `NodePort`:
+
+```
+kubectl apply -f deploy/manifests/service/nodeport.yaml
+```
+
+A `NodePort` service will randomly allocate one port on every node of the cluster. To access NGINX Kubernetes Gateway, use an IP address of any node in the cluster along with the allocated port.
+
+### Create a LoadBalancer Service
+
+Create a service with type `LoadBalancer` using the appropriate manifest for your cloud provider. 
+
+- For GCP or Azure:
+
+   ```
+   kubectl apply -f deploy/manifests/service/loadbalancer.yaml
+   ```
+
+   Lookup the public IP of the load balancer:
+   
+   ```
+   kubectl get svc nginx-gateway -n nginx-gateway
+   ``` 
+   
+   Use the public IP of the load balancer to access NGINX Kubernetes Gateway.
+   
+- For AWS:
+
+   ```
+   kubectl apply -f deploy/manifests/service/loadbalancer-aws-nlb.yaml
+   ```
+
+   In AWS, the NLB DNS name will be reported by Kubernetes in lieu of a public IP. To get the DNS name run:
+
+   ```
+   kubectl get svc nginx-gateway -n nginx-gateway
+   ``` 
+  
+   In general, you should rely on the NLB DNS name, however for testing purposes you can resolve the DNS name to get the IP address of the load balancer:
+
+   ```
+   nslookup <dns-name>
+   ```
+
 # Test NGINX Kubernetes Gateway
 
 To test the NGINX Kubernetes Gateway run:
