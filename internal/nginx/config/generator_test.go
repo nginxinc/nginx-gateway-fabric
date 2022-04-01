@@ -5,12 +5,13 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/nginxinc/nginx-gateway-kubernetes/internal/helpers"
-	"github.com/nginxinc/nginx-gateway-kubernetes/internal/state"
-	"github.com/nginxinc/nginx-gateway-kubernetes/internal/state/statefakes"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
+
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/helpers"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/statefakes"
 )
 
 func TestGenerateForHost(t *testing.T) {

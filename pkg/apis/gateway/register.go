@@ -1,5 +1,5 @@
-// Package gateway defines the API group for NGINX Gateway configuration resources.
+// Package gateway defines the API group for NGINX Kubernetes Gateway configuration resources.
 package gateway
 
-// GroupName identifies the API Group Name for NGINX Gateway configuration resources.
+// GroupName identifies the API Group Name for NGINX Kubernetes Gateway configuration resources.
 const GroupName = "gateway.nginx.org"

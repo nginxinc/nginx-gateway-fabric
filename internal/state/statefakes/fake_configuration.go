@@ -4,7 +4,7 @@ package statefakes
 import (
 	"sync"
 
-	"github.com/nginxinc/nginx-gateway-kubernetes/internal/state"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 )

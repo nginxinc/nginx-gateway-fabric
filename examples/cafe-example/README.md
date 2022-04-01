@@ -1,20 +1,20 @@
 # Example
 
-In this example we deploy NGINX Gateway, a simple web application, and then configure NGINX Gateway to route traffic to that application using `HTTPRoute` resources.
+In this example we deploy NGINX Kubernetes Gateway, a simple web application, and then configure NGINX Gateway to route traffic to that application using `HTTPRoute` resources.
 
 ## Running the Example
 
-## 1. Deploy NGINX Gateway
+## 1. Deploy NGINX Kubernetes Gateway
 
-1. Follow the [installation instructions](https://github.com/nginxinc/nginx-gateway-kubernetes/blob/main/README.md#run-nginx-gateway) to deploy NGINX Gateway.
+1. Follow the [installation instructions](https://github.com/nginxinc/nginx-kubernetes-gateway/blob/main/README.md#run-nginx-gateway) to deploy NGINX Gateway.
 
-1. Save the public IP address of NGINX Gateway into a shell variable:
+1. Save the public IP address of NGINX Kubernetes Gateway into a shell variable:
    
    ```
    GW_IP=XXX.YYY.ZZZ.III
    ```
 
-1. Save the port of NGINX Gateway:
+1. Save the port of NGINX Kubernetes Gateway:
    
    ```
    GW_PORT=<port number>

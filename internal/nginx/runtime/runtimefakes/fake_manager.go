@@ -5,7 +5,7 @@ import (
 	"context"
 	"sync"
 
-	"github.com/nginxinc/nginx-gateway-kubernetes/internal/nginx/runtime"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/runtime"
 )
 
 type FakeManager struct {

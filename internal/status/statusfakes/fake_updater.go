@@ -5,8 +5,8 @@ import (
 	"context"
 	"sync"
 
-	"github.com/nginxinc/nginx-gateway-kubernetes/internal/state"
-	"github.com/nginxinc/nginx-gateway-kubernetes/internal/status"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/status"
 )
 
 type FakeUpdater struct {

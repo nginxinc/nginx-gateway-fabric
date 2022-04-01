@@ -2,10 +2,10 @@ package gatewayconfig
 
 import (
 	"github.com/go-logr/logr"
-	"github.com/nginxinc/nginx-gateway-kubernetes/internal/config"
-	"github.com/nginxinc/nginx-gateway-kubernetes/pkg/sdk"
 
-	nginxgwv1alpha1 "github.com/nginxinc/nginx-gateway-kubernetes/pkg/apis/gateway/v1alpha1"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/config"
+	nginxgwv1alpha1 "github.com/nginxinc/nginx-kubernetes-gateway/pkg/apis/gateway/v1alpha1"
+	"github.com/nginxinc/nginx-kubernetes-gateway/pkg/sdk"
 )
 
 type gatewayConfigImplementation struct {

@@ -5,13 +5,14 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
-	"github.com/nginxinc/nginx-gateway-kubernetes/internal/nginx/config"
-	"github.com/nginxinc/nginx-gateway-kubernetes/internal/nginx/file"
-	"github.com/nginxinc/nginx-gateway-kubernetes/internal/nginx/runtime"
-	"github.com/nginxinc/nginx-gateway-kubernetes/internal/state"
-	"github.com/nginxinc/nginx-gateway-kubernetes/internal/status"
 	apiv1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
+
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/config"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/file"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/runtime"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/status"
 )
 
 // EventLoop is the main event loop of the Gateway.

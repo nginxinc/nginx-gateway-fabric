@@ -7,9 +7,9 @@ import (
 	sync "sync"
 	time "time"
 
-	versioned "github.com/nginxinc/nginx-gateway-kubernetes/pkg/client/gateway/clientset/versioned"
-	gateway "github.com/nginxinc/nginx-gateway-kubernetes/pkg/client/gateway/informers/externalversions/gateway"
-	internalinterfaces "github.com/nginxinc/nginx-gateway-kubernetes/pkg/client/gateway/informers/externalversions/internalinterfaces"
+	versioned "github.com/nginxinc/nginx-kubernetes-gateway/pkg/client/gateway/clientset/versioned"
+	gateway "github.com/nginxinc/nginx-kubernetes-gateway/pkg/client/gateway/informers/externalversions/gateway"
+	internalinterfaces "github.com/nginxinc/nginx-kubernetes-gateway/pkg/client/gateway/informers/externalversions/internalinterfaces"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"

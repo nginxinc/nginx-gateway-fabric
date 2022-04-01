@@ -3,8 +3,8 @@
 package gateway
 
 import (
-	v1alpha1 "github.com/nginxinc/nginx-gateway-kubernetes/pkg/client/gateway/informers/externalversions/gateway/v1alpha1"
-	internalinterfaces "github.com/nginxinc/nginx-gateway-kubernetes/pkg/client/gateway/informers/externalversions/internalinterfaces"
+	v1alpha1 "github.com/nginxinc/nginx-kubernetes-gateway/pkg/client/gateway/informers/externalversions/gateway/v1alpha1"
+	internalinterfaces "github.com/nginxinc/nginx-kubernetes-gateway/pkg/client/gateway/informers/externalversions/internalinterfaces"
 )
 
 // Interface provides access to each of this group's versions.

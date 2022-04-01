@@ -4,8 +4,8 @@ package configfakes
 import (
 	"sync"
 
-	"github.com/nginxinc/nginx-gateway-kubernetes/internal/nginx/config"
-	"github.com/nginxinc/nginx-gateway-kubernetes/internal/state"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/config"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state"
 )
 
 type FakeGenerator struct {

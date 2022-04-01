@@ -3,14 +3,14 @@ package state_test
 import (
 	"time"
 
-	"github.com/nginxinc/nginx-gateway-kubernetes/internal/helpers"
-	"github.com/nginxinc/nginx-gateway-kubernetes/internal/state"
 	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 
-	. "github.com/onsi/gomega"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/helpers"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state"
 )
 
 const gatewayCtlrName = v1alpha2.GatewayController("test-name")
