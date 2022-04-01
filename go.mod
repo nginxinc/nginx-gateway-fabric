@@ -1,4 +1,4 @@
-module github.com/nginxinc/nginx-gateway-kubernetes
+module github.com/nginxinc/nginx-kubernetes-gateway
 
 go 1.17
 
