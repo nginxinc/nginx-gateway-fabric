@@ -5,7 +5,7 @@ package versioned
 import (
 	"fmt"
 
-	gatewayv1alpha1 "github.com/nginxinc/nginx-gateway-kubernetes/pkg/client/clientset/versioned/typed/gateway/v1alpha1"
+	gatewayv1alpha1 "github.com/nginxinc/nginx-kubernetes-gateway/pkg/client/clientset/versioned/typed/gateway/v1alpha1"
 	discovery "k8s.io/client-go/discovery"
 	rest "k8s.io/client-go/rest"
 	flowcontrol "k8s.io/client-go/util/flowcontrol"

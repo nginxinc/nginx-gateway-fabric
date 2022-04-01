@@ -3,7 +3,7 @@ package main_test
 import (
 	"errors"
 
-	. "github.com/nginxinc/nginx-gateway-kubernetes/cmd/gateway"
+	. "github.com/nginxinc/nginx-kubernetes-gateway/cmd/gateway"
 	flag "github.com/spf13/pflag"
 
 	. "github.com/onsi/ginkgo"

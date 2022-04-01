@@ -3,7 +3,7 @@
 package v1alpha1
 
 import (
-	internalinterfaces "github.com/nginxinc/nginx-gateway-kubernetes/pkg/client/gateway/informers/externalversions/internalinterfaces"
+	internalinterfaces "github.com/nginxinc/nginx-kubernetes-gateway/pkg/client/gateway/informers/externalversions/internalinterfaces"
 )
 
 // Interface provides access to all the informers in this group version.

@@ -3,9 +3,6 @@ package status_test
 import (
 	"context"
 
-	"github.com/nginxinc/nginx-gateway-kubernetes/internal/helpers"
-	"github.com/nginxinc/nginx-gateway-kubernetes/internal/state"
-	"github.com/nginxinc/nginx-gateway-kubernetes/internal/status"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -16,6 +13,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/helpers"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/status"
 )
 
 var _ = Describe("Updater", func() {

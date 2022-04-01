@@ -3,14 +3,6 @@ package events_test
 import (
 	"context"
 
-	"github.com/nginxinc/nginx-gateway-kubernetes/internal/events"
-	"github.com/nginxinc/nginx-gateway-kubernetes/internal/nginx/config"
-	"github.com/nginxinc/nginx-gateway-kubernetes/internal/nginx/config/configfakes"
-	"github.com/nginxinc/nginx-gateway-kubernetes/internal/nginx/file/filefakes"
-	"github.com/nginxinc/nginx-gateway-kubernetes/internal/nginx/runtime/runtimefakes"
-	"github.com/nginxinc/nginx-gateway-kubernetes/internal/state"
-	"github.com/nginxinc/nginx-gateway-kubernetes/internal/state/statefakes"
-	"github.com/nginxinc/nginx-gateway-kubernetes/internal/status/statusfakes"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	apiv1 "k8s.io/api/core/v1"
@@ -20,6 +12,15 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
+
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/events"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/config"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/config/configfakes"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/file/filefakes"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/runtime/runtimefakes"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/statefakes"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/status/statusfakes"
 )
 
 type unsupportedResource struct {

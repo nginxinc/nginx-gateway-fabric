@@ -3,14 +3,14 @@ ARG VERSION
 ARG GIT_COMMIT
 ARG DATE
 
-WORKDIR /go/src/github.com/nginxinc/nginx-gateway-kubernetes/cmd/gateway
+WORKDIR /go/src/github.com/nginxinc/nginx-kubernetes-gateway/cmd/gateway
 
-COPY go.mod go.sum /go/src/github.com/nginxinc/nginx-gateway-kubernetes
+COPY go.mod go.sum /go/src/github.com/nginxinc/nginx-kubernetes-gateway
 RUN go mod download
 
-COPY cmd /go/src/github.com/nginxinc/nginx-gateway-kubernetes/cmd
-COPY internal /go/src/github.com/nginxinc/nginx-gateway-kubernetes/internal
-COPY pkg /go/src/github.com/nginxinc/nginx-gateway-kubernetes/pkg
+COPY cmd /go/src/github.com/nginxinc/nginx-kubernetes-gateway/cmd
+COPY internal /go/src/github.com/nginxinc/nginx-kubernetes-gateway/internal
+COPY pkg /go/src/github.com/nginxinc/nginx-kubernetes-gateway/pkg
 RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -a -ldflags "-s -w -X main.version=${VERSION} -X main.commit=${GIT_COMMIT} -X main.date=${DATE}" -o gateway .
 
 FROM alpine:3.15 as capabilizer
@@ -21,7 +21,7 @@ COPY ./build/.out/gateway /usr/bin/
 RUN setcap 'cap_kill=+ep' /usr/bin/gateway
 
 FROM capabilizer as container-capabilizer
-COPY --from=builder /go/src/github.com/nginxinc/nginx-gateway-kubernetes/cmd/gateway/gateway /usr/bin/
+COPY --from=builder /go/src/github.com/nginxinc/nginx-kubernetes-gateway/cmd/gateway/gateway /usr/bin/
 RUN setcap 'cap_kill=+ep' /usr/bin/gateway
 
 FROM scratch as common

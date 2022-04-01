@@ -1,11 +1,11 @@
 package implementation
 
 import (
-	"github.com/nginxinc/nginx-gateway-kubernetes/internal/config"
-	"github.com/nginxinc/nginx-gateway-kubernetes/pkg/sdk"
-
 	"github.com/go-logr/logr"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
+
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/config"
+	"github.com/nginxinc/nginx-kubernetes-gateway/pkg/sdk"
 )
 
 type gatewayClassImplementation struct {

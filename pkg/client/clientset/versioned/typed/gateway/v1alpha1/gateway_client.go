@@ -3,8 +3,8 @@
 package v1alpha1
 
 import (
-	v1alpha1 "github.com/nginxinc/nginx-gateway-kubernetes/pkg/apis/gateway/v1alpha1"
-	"github.com/nginxinc/nginx-gateway-kubernetes/pkg/client/clientset/versioned/scheme"
+	v1alpha1 "github.com/nginxinc/nginx-kubernetes-gateway/pkg/apis/gateway/v1alpha1"
+	"github.com/nginxinc/nginx-kubernetes-gateway/pkg/client/clientset/versioned/scheme"
 	rest "k8s.io/client-go/rest"
 )
 

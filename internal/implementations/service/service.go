@@ -2,11 +2,12 @@ package service
 
 import (
 	"github.com/go-logr/logr"
-	"github.com/nginxinc/nginx-gateway-kubernetes/internal/config"
-	"github.com/nginxinc/nginx-gateway-kubernetes/internal/events"
-	"github.com/nginxinc/nginx-gateway-kubernetes/pkg/sdk"
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
+
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/config"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/events"
+	"github.com/nginxinc/nginx-kubernetes-gateway/pkg/sdk"
 )
 
 type serviceImplementation struct {

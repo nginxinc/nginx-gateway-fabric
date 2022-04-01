@@ -1,4 +1,5 @@
 # Gateway Evaluation
+STATUS: Archived
 
 This document captures the design of the initial experimental work to implement the [Gateway API](https://gateway-api.sigs.k8s.io/) using the NGINX data plane. Throughout this document we will refer to this work as "Gateway evaluation".
 

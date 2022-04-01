@@ -1,11 +1,11 @@
 package v1alpha1
 
 import (
-	"github.com/nginxinc/nginx-gateway-kubernetes/pkg/apis/gateway"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+
+	"github.com/nginxinc/nginx-kubernetes-gateway/pkg/apis/gateway"
 )
 
 // SchemeGroupVersion is group version used to register these object.

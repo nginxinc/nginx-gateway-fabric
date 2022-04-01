@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/nginxinc/nginx-gateway-kubernetes/internal/config"
-	"github.com/nginxinc/nginx-gateway-kubernetes/internal/manager"
-
 	flag "github.com/spf13/pflag"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/config"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/manager"
 )
 
 const (
@@ -43,7 +43,7 @@ func main() {
 		GatewayControllerParam(domain, "nginx-gateway" /* TODO dynamically set */),
 	)
 
-	logger.Info("Starting NGINX Gateway",
+	logger.Info("Starting NGINX Kubernetes Gateway",
 		"version", version,
 		"commit", commit,
 		"date", date)
