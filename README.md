@@ -63,12 +63,6 @@ You can deploy NGINX Kubernetes Gateway on an existing Kubernetes 1.16+ cluster.
    ```
    kubectl apply -k "github.com/kubernetes-sigs/gateway-api/config/crd?ref=v0.4.2" 
    ```
-   
-1. Install the NGINX Kubernetes Gateway CRDs:
-
-   ```
-   kubectl apply -f deploy/manifests/crds
-   ```
 
 1. Deploy the NGINX Kubernetes Gateway:
 

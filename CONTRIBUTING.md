@@ -34,6 +34,7 @@ Follow our [Installation Instructions](README.md#run-nginx-gateway) to get the N
     * The internal code is found at `internal/`
     * Build files for Docker are found under `build/`
     * Deployment yaml files are found at `deploy/`
+    * External APIs, clients, and SDKs can be found under `pkg/`
 * We use [Go Modules](https://github.com/golang/go/wiki/Modules) for managing dependencies.
 * We use [Ginkgo](https://onsi.github.io/ginkgo/) and [Gomega](https://onsi.github.io/gomega/) for our BDD style unit tests. 
 
