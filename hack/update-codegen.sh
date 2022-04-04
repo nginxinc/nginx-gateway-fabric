@@ -31,8 +31,8 @@ fi
 # --output-base    because this script should also be able to run inside the vendor dir of
 #                  k8s.io/kubernetes. The output-base is needed for the generators to output into the vendor dir
 #                  instead of the $GOPATH directly. For normal projects this can be dropped.
-bash "${CODEGEN_PKG}"/generate-groups.sh "deepcopy,client,informer,lister" \
-  github.com/nginxinc/nginx-kubernetes-gateway/pkg/client \
+bash "${CODEGEN_PKG}"/generate-groups.sh "deepcopy" \
+  "" \
   github.com/nginxinc/nginx-kubernetes-gateway/pkg/apis \
   gateway:v1alpha1 \
   --output-base "$(dirname "${BASH_SOURCE[0]}")/../../../.." \
