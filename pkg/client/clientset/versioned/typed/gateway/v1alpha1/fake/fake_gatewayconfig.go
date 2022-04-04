@@ -83,7 +83,7 @@ func (c *FakeGatewayConfigs) Update(ctx context.Context, gatewayConfig *v1alpha1
 // Delete takes name of the gatewayConfig and deletes it. Returns an error if one occurs.
 func (c *FakeGatewayConfigs) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewRootDeleteAction(gatewayconfigsResource, name), &v1alpha1.GatewayConfig{})
+		Invokes(testing.NewRootDeleteActionWithOptions(gatewayconfigsResource, name, opts), &v1alpha1.GatewayConfig{})
 	return err
 }
 
