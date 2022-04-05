@@ -40,7 +40,7 @@ func main() {
 
 	MustValidateArguments(
 		flag.CommandLine,
-		GatewayControllerParam(domain, "nginx-gateway" /* TODO dynamically set */),
+		GatewayControllerParam(domain, "nginx-gateway" /* FIXME(f5yacobucci) dynamically set */),
 	)
 
 	logger.Info("Starting NGINX Kubernetes Gateway",

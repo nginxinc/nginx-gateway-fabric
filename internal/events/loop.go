@@ -68,7 +68,7 @@ func (el *EventLoop) Start(ctx context.Context) error {
 	}
 }
 
-// TO-DO: think about how to avoid using an interface{} here
+// FIXME(pleshakov): think about how to avoid using an interface{} here
 func (el *EventLoop) handleEvent(ctx context.Context, event interface{}) error {
 	var changes []state.Change
 	var updates []state.StatusUpdate
@@ -80,7 +80,7 @@ func (el *EventLoop) handleEvent(ctx context.Context, event interface{}) error {
 	case *DeleteEvent:
 		changes, updates, err = el.propagateDelete(e)
 	default:
-		// TO-DO: panic
+		// FIXME(pleshakov): panic because it is a coding error
 		return fmt.Errorf("unknown event type %T", e)
 	}
 
@@ -99,11 +99,11 @@ func (el *EventLoop) propagateUpsert(e *UpsertEvent) ([]state.Change, []state.St
 		return changes, statusUpdates, nil
 	case *apiv1.Service:
 		el.serviceStore.Upsert(r)
-		// TO-DO: make sure the affected hosts are updated
+		// FIXME(pleshakov): make sure the affected hosts are updated
 		return nil, nil, nil
 	}
 
-	// TO-DO: panic
+	// FIXME(pleshakov): panic because it is a coding error
 	return nil, nil, fmt.Errorf("unknown resource type %T", e.Resource)
 }
 
@@ -114,11 +114,11 @@ func (el *EventLoop) propagateDelete(e *DeleteEvent) ([]state.Change, []state.St
 		return changes, statusUpdates, nil
 	case *apiv1.Service:
 		el.serviceStore.Delete(e.NamespacedName)
-		// TO-DO: make sure the affected hosts are updated
+		// FIXME(pleshakov): make sure the affected hosts are updated
 		return nil, nil, nil
 	}
 
-	// TO-DO: panic
+	// FIXME(pleshakov): panic because it is a coding error
 	return nil, nil, fmt.Errorf("unknown resource type %T", e.Type)
 }
 
@@ -132,7 +132,7 @@ func (el *EventLoop) processChangesAndStatusUpdates(ctx context.Context, changes
 
 			for obj, objWarnings := range warnings {
 				for _, w := range objWarnings {
-					// TO-DO: report warnings via Object status
+					// FIXME(pleshakov): report warnings via Object status
 					el.logger.Info("got warning while generating config",
 						"kind", obj.GetObjectKind().GroupVersionKind().Kind,
 						"namespace", obj.GetNamespace(),

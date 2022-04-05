@@ -25,7 +25,7 @@ type GatewayConfigImpl interface {
 
 type HTTPRouteImpl interface {
 	Upsert(config *v1alpha2.HTTPRoute)
-	// TO-DO: change other interfaces to use types.NamespacedName
+	// FIXME(pleshakov): change other interfaces to use types.NamespacedName
 	Remove(types.NamespacedName)
 }
 

@@ -231,7 +231,7 @@ func (c *configurationImpl) updateListeners() ([]Change, []StatusUpdate) {
 
 	statusUpdates := make([]StatusUpdate, 0, len(listener.httpRoutes))
 
-	// TO-DO: optimize it so that we only update the status of the affected (changed) httpRoutes
+	// FIXME(pleshakov): optimize it so that we only update the status of the affected (changed) httpRoutes
 	// getSortedKeys is used to ensure predictable order for unit tests
 	for _, key := range getSortedKeys(listener.httpRoutes) {
 		route := listener.httpRoutes[key]
@@ -242,7 +242,7 @@ func (c *configurationImpl) updateListeners() ([]Change, []StatusUpdate) {
 					Parents: []v1alpha2.RouteParentStatus{
 						{
 							ParentRef: v1alpha2.ParentRef{
-								Name: "fake", // TO-DO: report the parent ref properly
+								Name: "fake", // FIXME(pleshakov): report the parent ref properly
 							},
 							ControllerName: v1alpha2.GatewayController(c.gatewayCtlrName),
 							Conditions: []metav1.Condition{
@@ -252,7 +252,7 @@ func (c *configurationImpl) updateListeners() ([]Change, []StatusUpdate) {
 									ObservedGeneration: listener.httpRoutes[key].Generation,
 									LastTransitionTime: metav1.NewTime(c.clock.Now()),
 									Reason:             string(v1alpha2.ConditionRouteAccepted),
-									Message:            "", // TO-DO: figure out a good message
+									Message:            "", // FIXME(pleshakov): figure out a good message
 								},
 							},
 						},
@@ -263,7 +263,7 @@ func (c *configurationImpl) updateListeners() ([]Change, []StatusUpdate) {
 		statusUpdates = append(statusUpdates, update)
 	}
 
-	// TO-DO: remove the accepted condition for the excluded (no longer handled) Routes
+	// FIXME(pleshakov): remove the accepted condition for the excluded (no longer handled) Routes
 
 	return changes, statusUpdates
 }
@@ -318,7 +318,7 @@ func createChanges(removedHosts []string, updatedHosts []string, addedHosts []st
 func determineChangesInHosts(listener httpListener, newHosts hosts) (removedHosts []string, updatedHosts []string, addedHosts []string) {
 	// getSortedKeys is used to ensure predictable order for unit tests
 
-	// TO-DO: consider using a data structure for sets
+	// FIXME(pleshakov): consider using a data structure for sets
 
 	for _, h := range getSortedKeys(listener.hosts) {
 		_, exists := newHosts[h]

@@ -15,7 +15,7 @@ type serviceImplementation struct {
 	eventCh chan<- interface{}
 }
 
-// TO-DO: serviceImplementation looks similar to httpRouteImplemenation
+// FIXME(pleshakov): serviceImplementation looks similar to httpRouteImplemenation
 // consider if it is possible to reduce the amount of code.
 
 // NewServiceImplementation creates a new ServiceImplementation.
