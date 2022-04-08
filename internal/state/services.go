@@ -17,7 +17,7 @@ type ServiceStore interface {
 	Delete(nsname types.NamespacedName)
 	// Resolve returns the cluster IP  the service specified by its namespace and name.
 	// If the service doesn't have a cluster IP or it doesn't exist, resolve will return an error.
-	// TO-DO: later, we will start using the Endpoints rather than cluster IPs.
+	// FIXME(pleshakov): later, we will start using the Endpoints rather than cluster IPs.
 	Resolve(nsname types.NamespacedName) (string, error)
 }
 

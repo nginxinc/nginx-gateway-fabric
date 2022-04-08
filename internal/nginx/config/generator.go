@@ -43,12 +43,12 @@ func (g *GeneratorImpl) GenerateForHost(host state.Host) ([]byte, Warnings) {
 func generate(host state.Host, serviceStore state.ServiceStore) (server, Warnings) {
 	warnings := newWarnings()
 
-	locs := make([]location, 0, len(host.PathRouteGroups)) // TO-DO: expand with g.Routes
+	locs := make([]location, 0, len(host.PathRouteGroups)) // FIXME(pleshakov): expand with g.Routes
 
 	for _, g := range host.PathRouteGroups {
 		// number of routes in a group is always at least 1
 		// otherwise, it is a bug in the state.Configuration code, so it is OK to panic here
-		r := g.Routes[0] // TO-DO: for now, we only handle the first route in case there are multiple routes
+		r := g.Routes[0] // FIXME(pleshakov): for now, we only handle the first route in case there are multiple routes
 		address, err := getBackendAddress(r.Source.Spec.Rules[r.RuleIdx].BackendRefs, r.Source.Namespace, serviceStore)
 		if err != nil {
 			warnings.AddWarning(r.Source, err.Error())
@@ -75,12 +75,11 @@ func generateProxyPass(address string) string {
 }
 
 func getBackendAddress(refs []v1alpha2.HTTPBackendRef, parentNS string, serviceStore state.ServiceStore) (string, error) {
-	// TO-DO: make sure the warnings are generated and reported to the user fot the edge cases
 	if len(refs) == 0 {
 		return "", errors.New("empty backend refs")
 	}
 
-	// TO-DO: for now, we only support a single backend reference
+	// FIXME(pleshakov): for now, we only support a single backend reference
 	ref := refs[0].BackendRef
 
 	if ref.Kind != nil && *ref.Kind != "Service" {

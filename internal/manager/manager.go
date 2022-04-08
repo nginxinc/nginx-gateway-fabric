@@ -28,7 +28,7 @@ const clusterTimeout = 10 * time.Second
 var scheme = runtime.NewScheme()
 
 func init() {
-	// TO-DO: handle errors returned by the calls bellow
+	// FIXME(pleshakov): handle errors returned by the calls bellow
 	_ = gatewayv1alpha2.AddToScheme(scheme)
 	_ = apiv1.AddToScheme(scheme)
 }

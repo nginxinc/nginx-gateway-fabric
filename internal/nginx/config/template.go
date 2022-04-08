@@ -20,8 +20,8 @@ var serverTemplate = `server {
 
 // templateExecutor generates NGINX configuration using a template.
 // Template parsing or executing errors can only occur if there is a bug in the template, so they are handled with panics.
-// TO-DO: for now, we only generate configuration with NGINX server.
-// We will also need to generate the main NGINX configuration file, upstreams.
+// For now, we only generate configuration with NGINX server, but in the future we will also need to generate
+// the main NGINX configuration file, upstreams.
 type templateExecutor struct {
 	serverTemplate *template.Template
 }
