@@ -78,7 +78,7 @@ jobs:
       - name: Run Tests
         run: make unit-test
       - name: Upload Coverage Report
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: cover-${{ needs.vars.outputs.sha }}.html
           path: ${{ github.workspace }}/cover.html
@@ -146,7 +146,7 @@ jobs:
         with:
           sarif_file: 'trivy-results-nginx-kubernetes-gateway.sarif'
       - name: Upload Scan Results
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         continue-on-error: true
         with:
           name: 'trivy-results-nginx-kubernetes-gateway.sarif'
