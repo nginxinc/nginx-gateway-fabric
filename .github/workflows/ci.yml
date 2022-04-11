@@ -56,11 +56,16 @@ jobs:
   lint:
     name: Lint
     runs-on: ubuntu-20.04
+    needs: vars
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v3
+      - name: Setup Golang Environment
+        uses: actions/setup-go@v3
+        with:
+          go-version: ${{ needs.vars.outputs.go_version }}
       - name: Lint Code
-        uses: golangci/golangci-lint-action@v2
+        uses: golangci/golangci-lint-action@v3.1.0
         with:
           args: --timeout ${{ env.GOLANGCI_TIMEOUT }}
 
