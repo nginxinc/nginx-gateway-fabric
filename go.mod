@@ -12,7 +12,7 @@ require (
 	github.com/spf13/pflag v1.0.5
 	golang.org/x/net v0.0.0-20220225172249-27dd8689420f
 	k8s.io/api v0.24.0-beta.0
-	k8s.io/apimachinery v0.24.0-beta.0
+	k8s.io/apimachinery v0.25.0-alpha.0
 	k8s.io/code-generator v0.23.5
 	sigs.k8s.io/controller-runtime v0.11.2
 	sigs.k8s.io/controller-tools v0.8.0
