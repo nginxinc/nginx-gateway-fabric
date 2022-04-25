@@ -1,9 +1,4 @@
 apiVersion: v1
-kind: Namespace
-metadata:
-  name: nginx-gateway
----
-apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: nginx-gateway
@@ -77,10 +72,13 @@ spec:
       volumes:
       - name: nginx-config
         emptyDir: { }
+      - name: nginx-modules
+        configMap:
+          name: njs-modules
       initContainers:
       - image: busybox:1.34 # FIXME(pleshakov): use gateway container to init the Config with proper main config
         name: nginx-config-initializer
-        command: [ 'sh', '-c', 'echo "events {}  pid /etc/nginx/nginx.pid; http { include /etc/nginx/conf.d/*.conf; server { default_type text/html; return 404; } }" > /etc/nginx/nginx.conf && mkdir /etc/nginx/conf.d && chown 1001:0 /etc/nginx/conf.d' ]
+        command: [ 'sh', '-c', 'echo "load_module /usr/lib/nginx/modules/ngx_http_js_module.so; events {}  pid /etc/nginx/nginx.pid; http { include /etc/nginx/conf.d/*.conf; js_import /usr/lib/nginx/modules/njs/httpmatches.js; server { default_type text/html; return 404; } }" > /etc/nginx/nginx.conf && mkdir /etc/nginx/conf.d && chown 1001:0 /etc/nginx/conf.d' ]
         volumeMounts:
         - name: nginx-config
           mountPath: /etc/nginx
@@ -107,3 +105,5 @@ spec:
         volumeMounts:
         - name: nginx-config
           mountPath: /etc/nginx
+        - name: nginx-modules
+          mountPath: /usr/lib/nginx/modules/njs

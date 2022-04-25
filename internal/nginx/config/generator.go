@@ -1,8 +1,10 @@
 package config
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
@@ -54,11 +56,31 @@ func generate(host state.Host, serviceStore state.ServiceStore) (server, Warning
 			warnings.AddWarning(r.Source, err.Error())
 		}
 
-		loc := location{
-			Path:      g.Path,
-			ProxyPass: generateProxyPass(address),
+		if matchLocationNeeded(r) {
+			path := createPathForMatch(g.Path, r.RuleIdx, r.MatchIdx)
+			// generate location block for this rule and match
+			mLoc := generateMatchLocation(path, address)
+			// generate the http_matches variable value
+			// we know a match exists here so we can safely access it from the source
+			match := r.Source.Spec.Rules[r.RuleIdx].Matches[r.MatchIdx]
+			b, err := json.Marshal(createHTTPMatch(match, path))
+			if err != nil {
+				// panic is safe here because we should never fail to marshal the match unless we constructed it incorrectly.
+				panic(fmt.Errorf("could not marshal http match: %w", err))
+			}
+
+			loc := location{
+				Path:         g.Path,
+				HTTPMatchVar: string(b),
+			}
+			locs = append(locs, loc, mLoc)
+		} else {
+			loc := location{
+				Path:      g.Path,
+				ProxyPass: generateProxyPass(address),
+			}
+			locs = append(locs, loc)
 		}
-		locs = append(locs, loc)
 	}
 
 	return server{
@@ -101,4 +123,89 @@ func getBackendAddress(refs []v1alpha2.HTTPBackendRef, parentNS string, serviceS
 	}
 
 	return fmt.Sprintf("%s:%d", address, *ref.Port), nil
+}
+
+func generateMatchLocation(path, address string) location {
+	return location{
+		Path:      path,
+		ProxyPass: generateProxyPass(address),
+		Internal:  true,
+	}
+}
+
+func createPathForMatch(path string, ruleIdx, matchIdx int) string {
+	return fmt.Sprintf("%s_rule%d_match%d", path, ruleIdx, matchIdx)
+}
+
+// httpMatch is an internal representation of an HTTPRouteMatch.
+// This struct is marshaled into a string and stored as a variable in the nginx location block for the route's path.
+// The NJS httpmatches module will lookup this variable on the request object and compare the request against the Method, Headers, and QueryParams contained in httpMatch.
+// If the request satisfies the httpMatch, the request will be redirected to the RedirectPath.
+type httpMatch struct {
+	// Method is the HTTPMethod of the HTTPRouteMatch.
+	Method v1alpha2.HTTPMethod `json:"method,omitempty"`
+	// Headers is a list of HTTPHeaders name value pairs with the format "{name}:{value}".
+	Headers []string `json:"headers,omitempty"`
+	// QueryParams is a list of HTTPQueryParams name value pairs with the format "{name}={value}".
+	QueryParams []string `json:"params,omitempty"`
+	// RedirectPath is the path to redirect the request to if the request satisfies the match conditions.
+	RedirectPath string `json:"path,omitempty"`
+}
+
+func createHTTPMatch(match v1alpha2.HTTPRouteMatch, redirectPath string) httpMatch {
+	hm := httpMatch{
+		RedirectPath: redirectPath,
+	}
+
+	if match.Method != nil {
+		hm.Method = *match.Method
+	}
+
+	if match.Headers != nil {
+		headers := make([]string, 0, len(match.Headers))
+
+		//FIXME(osborn): For now we only support type "Exact".
+		for _, h := range match.Headers {
+			if *h.Type == v1alpha2.HeaderMatchExact {
+				headers = append(headers, createHeaderKeyValString(h))
+			}
+		}
+		hm.Headers = headers
+	}
+
+	if match.QueryParams != nil {
+		params := make([]string, 0, len(match.QueryParams))
+
+		//FIXME(osborn): For now we only support type "Exact".
+		for _, p := range match.QueryParams {
+			if *p.Type == v1alpha2.QueryParamMatchExact {
+				params = append(params, createQueryParamKeyValString(p))
+			}
+		}
+		hm.QueryParams = params
+	}
+
+	return hm
+}
+
+// The name and values are delimited by "=". A name and value can always be recovered using strings.SplitN(arg,"=", 2).
+// Query Parameters are case sensitive so case is preserved.
+func createQueryParamKeyValString(p v1alpha2.HTTPQueryParamMatch) string {
+	return p.Name + "=" + p.Value
+}
+
+// The name and values are delimited by ":". A name and value can always be recovered using strings.Split(arg, ":").
+// Headers are not case sensitive so the case is lowered.
+func createHeaderKeyValString(h v1alpha2.HTTPHeaderMatch) string {
+	return strings.ToLower(string(h.Name) + ":" + h.Value)
+}
+
+// A match location is needed if there exists a match that specifies at least one of the following: Method, Headers, or QueryParams.
+func matchLocationNeeded(r state.Route) bool {
+	if r.MatchIdx != -1 {
+		match := r.Source.Spec.Rules[r.RuleIdx].Matches[r.MatchIdx]
+		return match.Method != nil || match.Headers != nil || match.QueryParams != nil
+	}
+
+	return false
 }

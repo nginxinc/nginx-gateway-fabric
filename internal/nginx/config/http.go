@@ -6,6 +6,8 @@ type server struct {
 }
 
 type location struct {
-	Path      string
-	ProxyPass string
+	Path         string
+	ProxyPass    string
+	HTTPMatchVar string
+	Internal     bool
 }

@@ -22,6 +22,15 @@ spec:
     - path:
         type: PathPrefix
         value: /coffee
+      method: GET
+      headers:
+        - name: X-Demo-Header # header names and values are case-insensitive
+          value: Demo-X1
+        - name: version
+          value: v1
+      queryParams:
+        - name: Great # query params and values are case-sensitive
+          value: Example
     backendRefs:
     - name: coffee
       port: 80

@@ -11,8 +11,20 @@ var serverTemplate = `server {
 
 	{{ range $l := .Locations }}
 	location {{ $l.Path }} {
+		{{ if $l.Internal }}
+		internal;
+		{{ end }}
+		
 		proxy_set_header Host $host;
-		proxy_pass {{ $l.ProxyPass }};
+
+		{{ if $l.HTTPMatchVar }}
+		set $http_matches {{ $l.HTTPMatchVar | printf "%q" }};
+		js_content httpmatches.redirect;
+		{{ end }}
+
+		{{ if $l.ProxyPass }}
+		proxy_pass {{ $l.ProxyPass }}$request_uri;
+		{{ end }}
 	}
 	{{ end }}
 }
