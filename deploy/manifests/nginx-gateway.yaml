@@ -72,7 +72,7 @@ spec:
       volumes:
       - name: nginx-config
         emptyDir: { }
-      - name: nginx-modules
+      - name: njs-modules
         configMap:
           name: njs-modules
       initContainers:
@@ -105,5 +105,5 @@ spec:
         volumeMounts:
         - name: nginx-config
           mountPath: /etc/nginx
-        - name: nginx-modules
+        - name: njs-modules
           mountPath: /usr/lib/nginx/modules/njs
