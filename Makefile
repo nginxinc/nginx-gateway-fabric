@@ -65,11 +65,11 @@ delete-kind-cluster:
 fmt: ## Run go fmt against code.
 	go fmt ./...
 
-.PHONY: fmt-njs
-fmt-njs: ## Run prettier against the njs httpmatches module.
+.PHONY: njs-fmt
+njs-fmt: ## Run prettier against the njs httpmatches module.
 	docker run --rm \
 		-v $(PWD)/internal/nginx/modules/:/njs-modules/ \
-		node:latest \
+		node:18 \
 		npx prettier --write njs-modules/ --config=njs-modules/.prettierrc
 
 .PHONY: vet
@@ -88,7 +88,7 @@ unit-test: njs-unit-test
 njs-unit-test: ## Run unit tests for the njs httpmatches module.
 	docker run --rm -w /src \
 		-v $(PWD)/internal/nginx/modules/:/src/njs-modules/ \
-		node:latest \
+		node:18 \
 		/bin/bash -c "npm install mocha@^8.2 esm chai && npx mocha -r esm njs-modules/httpmatches_test.js"
 
 .PHONY: dev-all
