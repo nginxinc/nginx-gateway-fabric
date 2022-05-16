@@ -57,7 +57,9 @@ func generate(host state.Host, serviceStore state.ServiceStore) (server, Warning
 		}
 
 		if matchLocationNeeded(r) {
-			path := createPathForMatch(g.Path, r.RuleIdx, r.MatchIdx)
+			// FIXME(osborn): route index is hardcoded to 0 for now.
+			// Once we support multiple routes we will need to change this to the index of the current route.
+			path := createPathForMatch(g.Path, 0)
 			// generate location block for this rule and match
 			mLoc := generateMatchLocation(path, address)
 			// generate the http_matches variable value
@@ -133,8 +135,8 @@ func generateMatchLocation(path, address string) location {
 	}
 }
 
-func createPathForMatch(path string, ruleIdx, matchIdx int) string {
-	return fmt.Sprintf("%s_rule%d_match%d", path, ruleIdx, matchIdx)
+func createPathForMatch(path string, routeIdx int) string {
+	return fmt.Sprintf("%s_route%d", path, routeIdx)
 }
 
 // httpMatch is an internal representation of an HTTPRouteMatch.

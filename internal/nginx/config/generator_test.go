@@ -174,12 +174,12 @@ func TestGenerate(t *testing.T) {
 		return string(b)
 	}
 
-	slashMatches := httpMatch{Method: v1alpha2.HTTPMethodPost, RedirectPath: "/_rule0_match0"}
+	slashMatches := httpMatch{Method: v1alpha2.HTTPMethodPost, RedirectPath: "/_route0"}
 	testMatches := httpMatch{
 		Method:       v1alpha2.HTTPMethodGet,
 		Headers:      []string{"version:v1", "test:foo", "my-header:my-value"},
 		QueryParams:  []string{"GrEat=EXAMPLE", "test=foo=bar"},
-		RedirectPath: "/test_rule1_match0",
+		RedirectPath: "/test_route0",
 	}
 
 	expected := server{
@@ -190,7 +190,7 @@ func TestGenerate(t *testing.T) {
 				HTTPMatchVar: expectedMatchString(slashMatches),
 			},
 			{
-				Path:      "/_rule0_match0",
+				Path:      "/_route0",
 				Internal:  true,
 				ProxyPass: "http://10.0.0.1:80",
 			},
@@ -199,7 +199,7 @@ func TestGenerate(t *testing.T) {
 				HTTPMatchVar: expectedMatchString(testMatches),
 			},
 			{
-				Path:      "/test_rule1_match0",
+				Path:      "/test_route0",
 				Internal:  true,
 				ProxyPass: "http://" + nginx502Server,
 			},
@@ -427,9 +427,9 @@ func TestGenerateMatchLocation(t *testing.T) {
 }
 
 func TestCreatePathForMatch(t *testing.T) {
-	expected := "/path_rule0_match0"
+	expected := "/path_route1"
 
-	result := createPathForMatch("/path", 0, 0)
+	result := createPathForMatch("/path", 1)
 	if result != expected {
 		t.Errorf("createPathForMatch() returned %q but expected %q", result, expected)
 	}
