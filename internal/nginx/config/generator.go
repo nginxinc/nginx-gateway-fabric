@@ -151,7 +151,7 @@ type httpMatch struct {
 	// QueryParams is a list of HTTPQueryParams name value pairs with the format "{name}={value}".
 	QueryParams []string `json:"params,omitempty"`
 	// RedirectPath is the path to redirect the request to if the request satisfies the match conditions.
-	RedirectPath string `json:"path,omitempty"`
+	RedirectPath string `json:"redirectPath,omitempty"`
 }
 
 func createHTTPMatch(match v1alpha2.HTTPRouteMatch, redirectPath string) httpMatch {

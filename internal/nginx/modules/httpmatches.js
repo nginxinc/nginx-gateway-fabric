@@ -74,10 +74,10 @@ function redirect(r) {
 
   // If we pass all the above checks then the request satisfies the http match conditions and we need to redirect to the path.
   // Make sure there is a path to redirect traffic to.
-  if (!match.path) {
+  if (!match.redirectPath) {
     r.error('no path defined in http match');
     r.return(404);
   }
 
-  r.internalRedirect(match.path);
+  r.internalRedirect(match.redirectPath);
 }

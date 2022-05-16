@@ -45,9 +45,9 @@ describe('redirect', function () {
     redirect.redirect(r);
     expect(r.testReturned).to.equal(404);
   });
-  it('redirects to the path if no conditions are defined in match', function () {
+  it('redirects to the redirectPath if no conditions are defined in match', function () {
     let matches = {
-      path: 'no-conditions',
+      redirectPath: 'no-conditions',
     };
     r.variables = {
       http_matches: JSON.stringify(matches),
@@ -59,7 +59,7 @@ describe('redirect', function () {
   it('returns 405 if method does not match', function () {
     let matches = {
       method: 'GET',
-      path: 'get-location',
+      redirectPath: 'get-location',
     };
     r.method = 'POST';
     r.variables = {
@@ -68,10 +68,10 @@ describe('redirect', function () {
     redirect.redirect(r);
     expect(r.testReturned).to.equal(405);
   });
-  it('redirects to match path if method matches', function () {
+  it('redirects to match redirectPath if method matches', function () {
     let matches = {
       method: 'GET',
-      path: 'get-location',
+      redirectPath: 'get-location',
     };
 
     r.variables = {
@@ -80,7 +80,7 @@ describe('redirect', function () {
     redirect.redirect(r);
     expect(r.testRedirectedTo).to.equal('get-location');
     matches.method = 'POST';
-    matches.path = 'post-location';
+    matches.redirectPath = 'post-location';
     r.method = 'POST';
     r.variables.http_matches = JSON.stringify(matches);
     redirect.redirect(r);
@@ -90,7 +90,7 @@ describe('redirect', function () {
     beforeEach(function () {
       let matches = {
         headers: ['header1:value1', 'header2:value2', 'header3:value3'],
-        path: '/headers',
+        redirectPath: '/headers',
       };
       r.variables = {
         http_matches: JSON.stringify(matches),
@@ -119,7 +119,7 @@ describe('redirect', function () {
       redirect.redirect(r);
       expect(r.testReturned).to.equal(404);
     });
-    it('redirects to path if all headers exist in request and all match', function () {
+    it('redirects to redirectPath if all headers exist in request and all match', function () {
       // r has all headers but not all values match
       r.headersIn = {
         header3: 'value3',
@@ -134,7 +134,7 @@ describe('redirect', function () {
     beforeEach(function () {
       let matches = {
         params: ['Arg1=value1', 'arg2=value2=SOME=other=value', 'arg3===value3&*1(*+'],
-        path: '/params',
+        redirectPath: '/params',
       };
       r.variables = {
         http_matches: JSON.stringify(matches),
@@ -163,7 +163,7 @@ describe('redirect', function () {
       redirect.redirect(r);
       expect(r.testReturned).to.equal(404);
     });
-    it('redirects to path if all args exist in request and all match', function () {
+    it('redirects to redirectPath if all args exist in request and all match', function () {
       // r has all headers but not all values match
       r.args = {
         Arg1: 'value1',
@@ -180,7 +180,7 @@ describe('redirect', function () {
         method: 'GET',
         headers: ['header1:value1', 'header2:value2'],
         params: ['Arg1=value1', 'arg2=value2=SOME=other=value'],
-        path: '/a-match',
+        redirectPath: '/a-match',
       };
       r.variables = {
         http_matches: JSON.stringify(matches),
@@ -226,7 +226,7 @@ describe('redirect', function () {
       redirect.redirect(r);
       expect(r.testReturned).to.equal(404);
     });
-    it('redirects to path if all conditions match', function () {
+    it('redirects to redirectPath if all conditions match', function () {
       r.method = 'GET';
       r.headersIn = {
         header1: 'value1',
