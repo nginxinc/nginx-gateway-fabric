@@ -142,7 +142,7 @@ func createPathForMatch(path string, routeIdx int) string {
 // httpMatch is an internal representation of an HTTPRouteMatch.
 // This struct is marshaled into a string and stored as a variable in the nginx location block for the route's path.
 // The NJS httpmatches module will lookup this variable on the request object and compare the request against the Method, Headers, and QueryParams contained in httpMatch.
-// If the request satisfies the httpMatch, the request will be redirected to the RedirectPath.
+// If the request satisfies the httpMatch, the request will be internally redirected to the location RedirectPath by NGINX.
 type httpMatch struct {
 	// Method is the HTTPMethod of the HTTPRouteMatch.
 	Method v1alpha2.HTTPMethod `json:"method,omitempty"`
