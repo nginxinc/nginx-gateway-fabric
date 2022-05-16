@@ -1,6 +1,7 @@
 package state_test
 
 import (
+	"testing"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -881,3 +882,88 @@ var _ = Describe("Configuration", func() {
 		})
 	})
 })
+
+func TestRouteGetMatch(t *testing.T) {
+	var hr = &v1alpha2.HTTPRoute{
+		Spec: v1alpha2.HTTPRouteSpec{
+			Rules: []v1alpha2.HTTPRouteRule{
+				{
+					Matches: []v1alpha2.HTTPRouteMatch{
+						{
+							Path: &v1alpha2.HTTPPathMatch{
+								Value: helpers.GetStringPointer("/path-1"),
+							},
+						},
+						{
+							Path: &v1alpha2.HTTPPathMatch{
+								Value: helpers.GetStringPointer("/path-2"),
+							},
+						},
+					},
+				},
+				{
+					Matches: []v1alpha2.HTTPRouteMatch{
+						{
+							Path: &v1alpha2.HTTPPathMatch{
+								Value: helpers.GetStringPointer("/path-3"),
+							},
+						},
+						{
+							Path: &v1alpha2.HTTPPathMatch{
+								Value: helpers.GetStringPointer("/path-4"),
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	tests := []struct {
+		name,
+		expPath string
+		route       state.Route
+		matchExists bool
+	}{
+		{
+			name:        "match does not exist",
+			expPath:     "",
+			route:       state.Route{MatchIdx: -1},
+			matchExists: false,
+		},
+		{
+			name:        "first match in first rule",
+			expPath:     "/path-1",
+			route:       state.Route{MatchIdx: 0, RuleIdx: 0, Source: hr},
+			matchExists: true,
+		},
+		{
+			name:        "second match in first rule",
+			expPath:     "/path-2",
+			route:       state.Route{MatchIdx: 1, RuleIdx: 0, Source: hr},
+			matchExists: true,
+		},
+		{
+			name:        "second match in second rule",
+			expPath:     "/path-4",
+			route:       state.Route{MatchIdx: 1, RuleIdx: 1, Source: hr},
+			matchExists: true,
+		},
+	}
+
+	for _, tc := range tests {
+		actual, exists := tc.route.GetMatch()
+		if !tc.matchExists {
+			if exists {
+				t.Errorf("route.GetMatch() incorrectly returned true (match exists) for test case: %q", tc.name)
+			}
+		} else {
+			if !exists {
+				t.Errorf("route.GetMatch() incorrectly returned false (match does not exist) for test case: %q", tc.name)
+			}
+			if *actual.Path.Value != tc.expPath {
+				t.Errorf("route.GetMatch() returned incorrect match with path: %s, expected path: %s for test case: %q", *actual.Path.Value, tc.expPath, tc.name)
+			}
+		}
+	}
+}

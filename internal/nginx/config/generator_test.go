@@ -472,89 +472,38 @@ func TestCreateHeaderKeyValString(t *testing.T) {
 
 func TestMatchLocationNeeded(t *testing.T) {
 	tests := []struct {
-		route    state.Route
+		match    v1alpha2.HTTPRouteMatch
 		expected bool
 		msg      string
 	}{
 		{
-			route: state.Route{
-				MatchIdx: -1,
-				RuleIdx:  0,
-				Source:   &v1alpha2.HTTPRoute{},
-			},
-			expected: false,
-			msg:      "no match defined",
-		},
-		{
-			route: state.Route{
-				MatchIdx: 0,
-				RuleIdx:  0,
-				Source: &v1alpha2.HTTPRoute{
-					Spec: v1alpha2.HTTPRouteSpec{
-						Rules: []v1alpha2.HTTPRouteRule{
-							{
-								Matches: []v1alpha2.HTTPRouteMatch{
-									{
-										Path: &v1alpha2.HTTPPathMatch{
-											Value: helpers.GetStringPointer("/path"),
-										},
-									},
-								},
-							},
-						},
-					},
+			match: v1alpha2.HTTPRouteMatch{
+				Path: &v1alpha2.HTTPPathMatch{
+					Value: helpers.GetStringPointer("/path"),
 				},
 			},
 			expected: false,
-			msg:      "only path defined in match",
+			msg:      "path only match",
 		},
 		{
-			route: state.Route{
-				MatchIdx: 0,
-				RuleIdx:  0,
-				Source: &v1alpha2.HTTPRoute{
-					Spec: v1alpha2.HTTPRouteSpec{
-						Rules: []v1alpha2.HTTPRouteRule{
-							{
-								Matches: []v1alpha2.HTTPRouteMatch{
-									{
-										Path: &v1alpha2.HTTPPathMatch{
-											Value: helpers.GetStringPointer("/path"),
-										},
-										Method: helpers.GetHTTPMethodPointer(v1alpha2.HTTPMethodGet),
-									},
-								},
-							},
-						},
-					},
+			match: v1alpha2.HTTPRouteMatch{
+				Path: &v1alpha2.HTTPPathMatch{
+					Value: helpers.GetStringPointer("/path"),
 				},
+				Method: helpers.GetHTTPMethodPointer(v1alpha2.HTTPMethodGet),
 			},
 			expected: true,
 			msg:      "method defined in match",
 		},
 		{
-			route: state.Route{
-				MatchIdx: 0,
-				RuleIdx:  0,
-				Source: &v1alpha2.HTTPRoute{
-					Spec: v1alpha2.HTTPRouteSpec{
-						Rules: []v1alpha2.HTTPRouteRule{
-							{
-								Matches: []v1alpha2.HTTPRouteMatch{
-									{
-										Path: &v1alpha2.HTTPPathMatch{
-											Value: helpers.GetStringPointer("/path"),
-										},
-										Headers: []v1alpha2.HTTPHeaderMatch{
-											{
-												Name:  "header",
-												Value: "val",
-											},
-										},
-									},
-								},
-							},
-						},
+			match: v1alpha2.HTTPRouteMatch{
+				Path: &v1alpha2.HTTPPathMatch{
+					Value: helpers.GetStringPointer("/path"),
+				},
+				Headers: []v1alpha2.HTTPHeaderMatch{
+					{
+						Name:  "header",
+						Value: "val",
 					},
 				},
 			},
@@ -562,72 +511,25 @@ func TestMatchLocationNeeded(t *testing.T) {
 			msg:      "headers defined in match",
 		},
 		{
-			route: state.Route{
-				MatchIdx: 0,
-				RuleIdx:  0,
-				Source: &v1alpha2.HTTPRoute{
-					Spec: v1alpha2.HTTPRouteSpec{
-						Rules: []v1alpha2.HTTPRouteRule{
-							{
-								Matches: []v1alpha2.HTTPRouteMatch{
-									{
-										Path: &v1alpha2.HTTPPathMatch{
-											Value: helpers.GetStringPointer("/path"),
-										},
-										QueryParams: []v1alpha2.HTTPQueryParamMatch{
-											{
-												Name:  "arg",
-												Value: "val",
-											},
-										},
-									},
-								},
-							},
-						},
+			match: v1alpha2.HTTPRouteMatch{
+
+				Path: &v1alpha2.HTTPPathMatch{
+					Value: helpers.GetStringPointer("/path"),
+				},
+				QueryParams: []v1alpha2.HTTPQueryParamMatch{
+					{
+						Name:  "arg",
+						Value: "val",
 					},
 				},
 			},
 			expected: true,
 			msg:      "query params defined in match",
 		},
-		{
-			route: state.Route{
-				MatchIdx: 1,
-				RuleIdx:  0,
-				Source: &v1alpha2.HTTPRoute{
-					Spec: v1alpha2.HTTPRouteSpec{
-						Rules: []v1alpha2.HTTPRouteRule{
-							{
-								Matches: []v1alpha2.HTTPRouteMatch{
-									{
-										Path: &v1alpha2.HTTPPathMatch{
-											Value: helpers.GetStringPointer("/"),
-										},
-									},
-									{
-										Path: &v1alpha2.HTTPPathMatch{
-											Value: helpers.GetStringPointer("/path"),
-										},
-										QueryParams: []v1alpha2.HTTPQueryParamMatch{
-											{
-												Name:  "arg",
-												Value: "val",
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-			expected: true,
-			msg:      "non-zero match index",
-		},
 	}
 
 	for _, tc := range tests {
-		result := matchLocationNeeded(tc.route)
+		result := matchLocationNeeded(tc.match)
 
 		if result != tc.expected {
 			t.Errorf("matchLocationNeeded() returned %t but expected %t for test case %q", result, tc.expected, tc.msg)

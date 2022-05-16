@@ -127,6 +127,15 @@ func (r *Route) String() string {
 	return fmt.Sprintf("Route: Source: %s, RuleIdx: %d, MatchIdx: %d", getResourceKey(&r.Source.ObjectMeta), r.RuleIdx, r.MatchIdx)
 }
 
+// GetMatch returns the HTTPRouteMatch of the Route and true if it exists.
+// If there is no Match defined on the Route, GetMatch returns an empty HTTPRouteMatch and false.
+func (r *Route) GetMatch() (v1alpha2.HTTPRouteMatch, bool) {
+	if r.MatchIdx == -1 {
+		return v1alpha2.HTTPRouteMatch{}, false
+	}
+	return r.Source.Spec.Rules[r.RuleIdx].Matches[r.MatchIdx], true
+}
+
 // Operation defines an operation to be performed for a Host.
 type Operation int
 

@@ -56,15 +56,14 @@ func generate(host state.Host, serviceStore state.ServiceStore) (server, Warning
 			warnings.AddWarning(r.Source, err.Error())
 		}
 
-		if matchLocationNeeded(r) {
+		match, exists := r.GetMatch()
+		if exists && matchLocationNeeded(match) {
 			// FIXME(osborn): route index is hardcoded to 0 for now.
 			// Once we support multiple routes we will need to change this to the index of the current route.
 			path := createPathForMatch(g.Path, 0)
 			// generate location block for this rule and match
 			mLoc := generateMatchLocation(path, address)
 			// generate the http_matches variable value
-			// we know a match exists here so we can safely access it from the source
-			match := r.Source.Spec.Rules[r.RuleIdx].Matches[r.MatchIdx]
 			b, err := json.Marshal(createHTTPMatch(match, path))
 			if err != nil {
 				// panic is safe here because we should never fail to marshal the match unless we constructed it incorrectly.
@@ -202,12 +201,7 @@ func createHeaderKeyValString(h v1alpha2.HTTPHeaderMatch) string {
 	return strings.ToLower(string(h.Name) + ":" + h.Value)
 }
 
-// A match location is needed if there exists a match that specifies at least one of the following: Method, Headers, or QueryParams.
-func matchLocationNeeded(r state.Route) bool {
-	if r.MatchIdx != -1 {
-		match := r.Source.Spec.Rules[r.RuleIdx].Matches[r.MatchIdx]
-		return match.Method != nil || match.Headers != nil || match.QueryParams != nil
-	}
-
-	return false
+// A match location is needed if the match specifies at least one of the following: Method, Headers, or QueryParams.
+func matchLocationNeeded(match v1alpha2.HTTPRouteMatch) bool {
+	return match.Method != nil || match.Headers != nil || match.QueryParams != nil
 }
