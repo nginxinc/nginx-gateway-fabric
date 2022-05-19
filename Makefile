@@ -92,4 +92,4 @@ njs-unit-test: ## Run unit tests for the njs httpmatches module.
 		/bin/bash -c "npm install mocha@^8.2 esm chai && npx mocha -r esm njs-modules/httpmatches_test.js"
 
 .PHONY: dev-all
-dev-all: deps fmt vet lint unit-test
+dev-all: deps fmt njs-fmt vet lint unit-test
