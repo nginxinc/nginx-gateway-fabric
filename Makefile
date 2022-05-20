@@ -70,7 +70,7 @@ njs-fmt: ## Run prettier against the njs httpmatches module.
 	docker run --rm \
 		-v $(PWD)/internal/nginx/modules/:/njs-modules/ \
 		node:18 \
-		npx prettier --write njs-modules/ --config=njs-modules/.prettierrc
+		npx prettier@2.6.2 --write njs-modules/ --config=njs-modules/.prettierrc
 
 .PHONY: vet
 vet: ## Run go vet against code.
