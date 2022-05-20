@@ -87,6 +87,7 @@ function redirect(r) {
   if (!match.redirectPath) {
     r.error('no path defined in http match');
     r.return(500);
+    return;
   }
 
   r.internalRedirect(match.redirectPath);
