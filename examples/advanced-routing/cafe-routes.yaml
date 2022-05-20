@@ -22,6 +22,12 @@ spec:
     - path:
         type: PathPrefix
         value: /coffee
+      method: POST
+      headers:
+        - name: X-Demo-Header # header names and values are case-insensitive
+          value: Demo-X1
+        - name: version
+          value: v1
     backendRefs:
     - name: coffee
       port: 80
@@ -38,6 +44,9 @@ spec:
     - path:
         type: PathPrefix
         value: /tea
+      queryParams:
+        - name: Great # query params and values are case-sensitive
+          value: Example
     backendRefs:
     - name: tea
       port: 80

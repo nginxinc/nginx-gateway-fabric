@@ -49,9 +49,10 @@ In this example we deploy NGINX Kubernetes Gateway, a simple web application, an
 
 To access the application, we will use `curl` to send requests to the `coffee` and `tea` services. 
 
-To get coffee we need to add the headers `x-demo-header:demo-x1` and `version:v1`, and the query parameter `Great=Example` to the request:
+To get coffee:
+
 ```
-curl --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/coffee?Great=Example -H "x-demo-header:demo-x1" -H "version:v1"
+curl --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/coffee
 Server address: 10.12.0.18:80
 Server name: coffee-7586895968-r26zn
 ```
