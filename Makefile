@@ -81,7 +81,7 @@ lint: ## Run golangci-lint against code.
 	docker run --pull always --rm -v $(shell pwd):/nginx-kubernetes-gateway -w /nginx-kubernetes-gateway -v $(shell go env GOCACHE):/cache/go -e GOCACHE=/cache/go -e GOLANGCI_LINT_CACHE=/cache/go -v $(shell go env GOPATH)/pkg:/go/pkg golangci/golangci-lint:latest golangci-lint --color always run
 
 .PHONY: unit-test
-unit-test: njs-unit-test
+unit-test: ## Run unit tests for the go code
 	go test ./... -race -coverprofile cover.out
 	go tool cover -html=cover.out -o cover.html
 
@@ -92,4 +92,4 @@ njs-unit-test: ## Run unit tests for the njs httpmatches module.
 		/bin/bash -c "npm install mocha@^8.2 esm chai && npx mocha -r esm njs-modules/httpmatches_test.js"
 
 .PHONY: dev-all
-dev-all: deps fmt njs-fmt vet lint unit-test
+dev-all: deps fmt njs-fmt vet lint unit-test njs-unit-test
