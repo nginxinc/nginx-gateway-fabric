@@ -36,38 +36,42 @@ func (r *unsupportedResource) DeepCopyObject() runtime.Object {
 }
 
 var _ = Describe("EventLoop", func() {
-	var ctrl *events.EventLoop
-	var fakeConf *statefakes.FakeConfiguration
-	var fakeUpdater *statusfakes.FakeUpdater
-	var fakeServiceStore *statefakes.FakeServiceStore
-	var fakeGenerator *configfakes.FakeGenerator
-	var fakeNginxFimeMgr *filefakes.FakeManager
-	var fakeNginxRuntimeMgr *runtimefakes.FakeManager
-	var cancel context.CancelFunc
-	var eventCh chan interface{}
-	var errorCh chan error
+	var (
+		fakeProcessor       *statefakes.FakeChangeProcessor
+		fakeServiceStore    *statefakes.FakeServiceStore
+		fakeGenerator       *configfakes.FakeGenerator
+		fakeNginxFimeMgr    *filefakes.FakeManager
+		fakeNginxRuntimeMgr *runtimefakes.FakeManager
+		fakeStatusUpdater   *statusfakes.FakeUpdater
+		cancel              context.CancelFunc
+		eventCh             chan interface{}
+		errorCh             chan error
+		start               func()
+	)
 
 	BeforeEach(func() {
-		fakeConf = &statefakes.FakeConfiguration{}
+		fakeProcessor = &statefakes.FakeChangeProcessor{}
 		eventCh = make(chan interface{})
-		fakeUpdater = &statusfakes.FakeUpdater{}
 		fakeServiceStore = &statefakes.FakeServiceStore{}
 		fakeGenerator = &configfakes.FakeGenerator{}
 		fakeNginxFimeMgr = &filefakes.FakeManager{}
 		fakeNginxRuntimeMgr = &runtimefakes.FakeManager{}
-		ctrl = events.NewEventLoop(fakeConf, fakeServiceStore, fakeGenerator, eventCh, fakeUpdater, zap.New(), fakeNginxFimeMgr, fakeNginxRuntimeMgr)
+		fakeStatusUpdater = &statusfakes.FakeUpdater{}
+		ctrl := events.NewEventLoop(fakeProcessor, fakeServiceStore, fakeGenerator, eventCh, zap.New(), fakeNginxFimeMgr, fakeNginxRuntimeMgr, fakeStatusUpdater)
 
 		var ctx context.Context
-
 		ctx, cancel = context.WithCancel(context.Background())
 		errorCh = make(chan error)
-
-		go func() {
+		start = func() {
 			errorCh <- ctrl.Start(ctx)
-		}()
+		}
 	})
 
-	Describe("Process HTTPRoute events", func() {
+	Describe("Process Gateway API resource events", func() {
+		BeforeEach(func() {
+			go start()
+		})
+
 		AfterEach(func() {
 			cancel()
 
@@ -76,97 +80,75 @@ var _ = Describe("EventLoop", func() {
 			Expect(err).To(BeNil())
 		})
 
-		It("should process upsert event", func() {
-			fakeChanges := []state.Change{
-				{
-					Op: state.Upsert,
-					Host: state.Host{
-						Value: "example.com",
-					},
-				},
-			}
-			fakeStatusUpdates := []state.StatusUpdate{
-				{
-					NamespacedName: types.NamespacedName{},
-					Status:         nil,
-				},
-			}
-			fakeConf.UpsertHTTPRouteReturns(fakeChanges, fakeStatusUpdates)
+		DescribeTable("Upsert events",
+			func(e *events.UpsertEvent) {
+				fakeConf := state.Configuration{}
+				changed := true
+				fakeStatuses := state.Statuses{}
+				fakeProcessor.ProcessReturns(changed, fakeConf, fakeStatuses)
 
-			fakeCfg := []byte("fake")
-			fakeGenerator.GenerateForHostReturns(fakeCfg, config.Warnings{})
+				fakeCfg := []byte("fake")
+				fakeGenerator.GenerateReturns(fakeCfg, config.Warnings{})
 
-			hr := &v1alpha2.HTTPRoute{}
+				eventCh <- e
 
-			eventCh <- &events.UpsertEvent{
-				Resource: hr,
-			}
+				Eventually(fakeProcessor.CaptureUpsertChangeCallCount).Should(Equal(1))
+				Expect(fakeProcessor.CaptureUpsertChangeArgsForCall(0)).Should(Equal(e.Resource))
+				Eventually(fakeProcessor.ProcessCallCount).Should(Equal(1))
 
-			Eventually(fakeConf.UpsertHTTPRouteCallCount).Should(Equal(1))
-			Eventually(func() *v1alpha2.HTTPRoute {
-				return fakeConf.UpsertHTTPRouteArgsForCall(0)
-			}).Should(Equal(hr))
+				Eventually(fakeGenerator.GenerateCallCount).Should(Equal(1))
+				Expect(fakeGenerator.GenerateArgsForCall(0)).Should(Equal(fakeConf))
 
-			Eventually(fakeUpdater.ProcessStatusUpdatesCallCount).Should(Equal(1))
-			Eventually(func() []state.StatusUpdate {
-				_, updates := fakeUpdater.ProcessStatusUpdatesArgsForCall(0)
-				return updates
-			}).Should(Equal(fakeStatusUpdates))
+				Eventually(fakeNginxFimeMgr.WriteHTTPServersConfigCallCount).Should(Equal(1))
+				name, cfg := fakeNginxFimeMgr.WriteHTTPServersConfigArgsForCall(0)
+				Expect(name).Should(Equal("http-servers"))
+				Expect(cfg).Should(Equal(fakeCfg))
 
-			Eventually(fakeGenerator.GenerateForHostCallCount).Should(Equal(1))
-			Expect(fakeGenerator.GenerateForHostArgsForCall(0)).Should(Equal(fakeChanges[0].Host))
+				Eventually(fakeNginxRuntimeMgr.ReloadCallCount).Should(Equal(1))
 
-			Eventually(fakeNginxFimeMgr.WriteServerConfigCallCount).Should(Equal(1))
-			host, cfg := fakeNginxFimeMgr.WriteServerConfigArgsForCall(0)
-			Expect(host).Should(Equal("example.com"))
-			Expect(cfg).Should(Equal(fakeCfg))
+				Eventually(fakeStatusUpdater.UpdateCallCount).Should(Equal(1))
+				_, statuses := fakeStatusUpdater.UpdateArgsForCall(0)
+				Expect(statuses).Should(Equal(fakeStatuses))
+			},
+			Entry("HTTPRoute", &events.UpsertEvent{Resource: &v1alpha2.HTTPRoute{}}),
+			Entry("Gateway", &events.UpsertEvent{Resource: &v1alpha2.Gateway{}}),
+		)
 
-			Eventually(fakeNginxRuntimeMgr.ReloadCallCount).Should(Equal(1))
-		})
+		DescribeTable("Delete events",
+			func(e *events.DeleteEvent) {
+				fakeConf := state.Configuration{}
+				changed := true
+				fakeProcessor.ProcessReturns(changed, fakeConf, state.Statuses{})
 
-		It("should process delete event", func() {
-			fakeChanges := []state.Change{
-				{
-					Op: state.Delete,
-					Host: state.Host{
-						Value: "example.com",
-					},
-				},
-			}
-			fakeStatusUpdates := []state.StatusUpdate{
-				{
-					NamespacedName: types.NamespacedName{},
-					Status:         nil,
-				},
-			}
-			fakeConf.DeleteHTTPRouteReturns(fakeChanges, fakeStatusUpdates)
+				fakeCfg := []byte("fake")
+				fakeGenerator.GenerateReturns(fakeCfg, config.Warnings{})
 
-			nsname := types.NamespacedName{Namespace: "test", Name: "route"}
+				eventCh <- e
 
-			eventCh <- &events.DeleteEvent{
-				NamespacedName: nsname,
-				Type:           &v1alpha2.HTTPRoute{},
-			}
+				Eventually(fakeProcessor.CaptureDeleteChangeCallCount).Should(Equal(1))
+				passedObj, passedNsName := fakeProcessor.CaptureDeleteChangeArgsForCall(0)
+				Expect(passedObj).Should(Equal(e.Type))
+				Expect(passedNsName).Should(Equal(e.NamespacedName))
 
-			Eventually(fakeConf.DeleteHTTPRouteCallCount).Should(Equal(1))
-			Eventually(func() types.NamespacedName {
-				return fakeConf.DeleteHTTPRouteArgsForCall(0)
-			}).Should(Equal(nsname))
+				Eventually(fakeProcessor.ProcessCallCount).Should(Equal(1))
 
-			Eventually(fakeUpdater.ProcessStatusUpdatesCallCount).Should(Equal(1))
-			Eventually(func() []state.StatusUpdate {
-				_, updates := fakeUpdater.ProcessStatusUpdatesArgsForCall(0)
-				return updates
-			}).Should(Equal(fakeStatusUpdates))
+				Eventually(fakeNginxFimeMgr.WriteHTTPServersConfigCallCount).Should(Equal(1))
+				name, cfg := fakeNginxFimeMgr.WriteHTTPServersConfigArgsForCall(0)
+				Expect(name).Should(Equal("http-servers"))
+				Expect(cfg).Should(Equal(fakeCfg))
 
-			Eventually(fakeNginxFimeMgr.DeleteServerConfigCallCount).Should(Equal(1))
-			Expect(fakeNginxFimeMgr.DeleteServerConfigArgsForCall(0)).Should(Equal("example.com"))
-
-			Eventually(fakeNginxRuntimeMgr.ReloadCallCount).Should(Equal(1))
-		})
+				Eventually(fakeNginxRuntimeMgr.ReloadCallCount).Should(Equal(1))
+			},
+			Entry("HTTPRoute", &events.DeleteEvent{Type: &v1alpha2.HTTPRoute{}, NamespacedName: types.NamespacedName{Namespace: "test", Name: "route"}}),
+			Entry("Gateway", &events.DeleteEvent{Type: &v1alpha2.Gateway{}, NamespacedName: types.NamespacedName{Namespace: "test", Name: "gateway"}}),
+		)
 	})
 
 	Describe("Process Service events", func() {
+		BeforeEach(func() {
+			go start()
+		})
+
 		AfterEach(func() {
 			cancel()
 
@@ -183,9 +165,9 @@ var _ = Describe("EventLoop", func() {
 			}
 
 			Eventually(fakeServiceStore.UpsertCallCount).Should(Equal(1))
-			Eventually(func() *apiv1.Service {
-				return fakeServiceStore.UpsertArgsForCall(0)
-			}).Should(Equal(svc))
+			Expect(fakeServiceStore.UpsertArgsForCall(0)).Should(Equal(svc))
+
+			Eventually(fakeProcessor.ProcessCallCount).Should(Equal(1))
 		})
 
 		It("should process delete event", func() {
@@ -197,61 +179,9 @@ var _ = Describe("EventLoop", func() {
 			}
 
 			Eventually(fakeServiceStore.DeleteCallCount).Should(Equal(1))
-			Eventually(func() types.NamespacedName {
-				return fakeServiceStore.DeleteArgsForCall(0)
-			}).Should(Equal(nsname))
-		})
-	})
+			Expect(fakeServiceStore.DeleteArgsForCall(0)).Should(Equal(nsname))
 
-	Describe("Processing events common cases", func() {
-		AfterEach(func() {
-			cancel()
-
-			var err error
-			Eventually(errorCh).Should(Receive(&err))
-			Expect(err).To(BeNil())
-		})
-
-		It("should reload once in case of multiple changes", func() {
-			fakeChanges := []state.Change{
-				{
-					Op: state.Delete,
-					Host: state.Host{
-						Value: "one.example.com",
-					},
-				},
-				{
-					Op: state.Upsert,
-					Host: state.Host{
-						Value: "two.example.com",
-					},
-				},
-			}
-			fakeConf.DeleteHTTPRouteReturns(fakeChanges, nil)
-
-			fakeCfg := []byte("fake")
-			fakeGenerator.GenerateForHostReturns(fakeCfg, config.Warnings{})
-
-			nsname := types.NamespacedName{Namespace: "test", Name: "route"}
-
-			// the exact event doesn't matter. what matters is the generated changes return by DeleteHTTPRouteReturns
-			eventCh <- &events.DeleteEvent{
-				NamespacedName: nsname,
-				Type:           &v1alpha2.HTTPRoute{},
-			}
-
-			Eventually(fakeConf.DeleteHTTPRouteCallCount).Should(Equal(1))
-			Expect(fakeConf.DeleteHTTPRouteArgsForCall(0)).Should(Equal(nsname))
-
-			Eventually(fakeNginxFimeMgr.WriteServerConfigCallCount).Should(Equal(1))
-			host, cfg := fakeNginxFimeMgr.WriteServerConfigArgsForCall(0)
-			Expect(host).Should(Equal("two.example.com"))
-			Expect(cfg).Should(Equal(fakeCfg))
-
-			Eventually(fakeNginxFimeMgr.DeleteServerConfigCallCount).Should(Equal(1))
-			Expect(fakeNginxFimeMgr.DeleteServerConfigArgsForCall(0)).Should(Equal("one.example.com"))
-
-			Eventually(fakeNginxRuntimeMgr.ReloadCallCount).Should(Equal(1))
+			Eventually(fakeProcessor.ProcessCallCount).Should(Equal(1))
 		})
 	})
 
@@ -262,19 +192,19 @@ var _ = Describe("EventLoop", func() {
 
 		DescribeTable("Edge cases for events",
 			func(e interface{}) {
-				eventCh <- e
+				go func() {
+					eventCh <- e
+				}()
 
-				var err error
-				Eventually(errorCh).Should(Receive(&err))
-				Expect(err).Should(HaveOccurred())
+				Expect(start).Should(Panic())
 			},
-			Entry("should return error for an unknown event type",
+			Entry("should panic for an unknown event type",
 				&struct{}{}),
-			Entry("should return error for an unknown type of resource in upsert event",
+			Entry("should panic for an unknown type of resource in upsert event",
 				&events.UpsertEvent{
 					Resource: &unsupportedResource{},
 				}),
-			Entry("should return error for an unknown type of resource in delete event",
+			Entry("should panic for an unknown type of resource in delete event",
 				&events.DeleteEvent{
 					Type: &unsupportedResource{},
 				}),

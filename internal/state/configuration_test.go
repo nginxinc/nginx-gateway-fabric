@@ -1,889 +1,410 @@
-package state_test
+package state
 
 import (
 	"testing"
 	"time"
 
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
+	"github.com/google/go-cmp/cmp"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/helpers"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state"
 )
 
-const gatewayCtlrName = v1alpha2.GatewayController("test-name")
-
-var _ = Describe("Configuration", func() {
-	Describe("Processing HTTPRoutes", func() {
-		var conf state.Configuration
-
-		constTime := time.Now()
-
-		BeforeEach(OncePerOrdered, func() {
-			conf = state.NewConfiguration(string(gatewayCtlrName), state.NewFakeClock(constTime))
-		})
-
-		Describe("Process one HTTPRoute with one host", Ordered, func() {
-			var hr, updatedHRWithSameGen, updatedHRWithIncrementedGen *v1alpha2.HTTPRoute
-
-			BeforeAll(func() {
-				hr = &v1alpha2.HTTPRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "test",
-						Name:      "route1",
-					},
-					Spec: v1alpha2.HTTPRouteSpec{
-						Hostnames: []v1alpha2.Hostname{
-							"cafe.example.com",
+func TestBuildConfiguration(t *testing.T) {
+	createRoute := func(name string, hostname string, paths ...string) *v1alpha2.HTTPRoute {
+		rules := make([]v1alpha2.HTTPRouteRule, 0, len(paths))
+		for _, p := range paths {
+			rules = append(rules, v1alpha2.HTTPRouteRule{
+				Matches: []v1alpha2.HTTPRouteMatch{
+					{
+						Path: &v1alpha2.HTTPPathMatch{
+							Value: helpers.GetStringPointer(p),
 						},
-						Rules: []v1alpha2.HTTPRouteRule{
+					},
+				},
+			})
+		}
+		return &v1alpha2.HTTPRoute{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: "test",
+				Name:      name,
+			},
+			Spec: v1alpha2.HTTPRouteSpec{
+				CommonRouteSpec: v1alpha2.CommonRouteSpec{
+					ParentRefs: []v1alpha2.ParentRef{
+						{
+							Namespace:   (*v1alpha2.Namespace)(helpers.GetStringPointer("test")),
+							Name:        "gateway",
+							SectionName: (*v1alpha2.SectionName)(helpers.GetStringPointer("listener-80-1")),
+						},
+					},
+				},
+				Hostnames: []v1alpha2.Hostname{
+					v1alpha2.Hostname(hostname),
+				},
+				Rules: rules,
+			},
+		}
+	}
+
+	hr1 := createRoute("hr-1", "foo.example.com", "/")
+
+	routeHR1 := &route{
+		Source: hr1,
+		ValidSectionNameRefs: map[string]struct{}{
+			"listener-80-1": {},
+		},
+		InvalidSectionNameRefs: map[string]struct{}{},
+	}
+
+	hr2 := createRoute("hr-2", "bar.example.com", "/")
+
+	routeHR2 := &route{
+		Source: hr2,
+		ValidSectionNameRefs: map[string]struct{}{
+			"listener-80-1": {},
+		},
+		InvalidSectionNameRefs: map[string]struct{}{},
+	}
+
+	hr3 := createRoute("hr-3", "foo.example.com", "/", "/third")
+
+	routeHR3 := &route{
+		Source: hr3,
+		ValidSectionNameRefs: map[string]struct{}{
+			"listener-80-1": {},
+		},
+		InvalidSectionNameRefs: map[string]struct{}{},
+	}
+
+	hr4 := createRoute("hr-4", "foo.example.com", "/fourth", "/")
+
+	routeHR4 := &route{
+		Source: hr4,
+		ValidSectionNameRefs: map[string]struct{}{
+			"listener-80-1": {},
+		},
+		InvalidSectionNameRefs: map[string]struct{}{},
+	}
+
+	tests := []struct {
+		graph    *graph
+		expected Configuration
+		msg      string
+	}{
+		{
+			graph: &graph{
+				Listeners: map[string]*listener{},
+				Routes:    map[types.NamespacedName]*route{},
+			},
+			expected: Configuration{
+				HTTPServers: []HTTPServer{},
+			},
+			msg: "empty graph",
+		},
+		{
+			graph: &graph{
+				Listeners: map[string]*listener{
+					"listener-80-1": {
+						Valid:             true,
+						Routes:            map[types.NamespacedName]*route{},
+						AcceptedHostnames: map[string]struct{}{},
+					},
+				},
+				Routes: map[types.NamespacedName]*route{},
+			},
+			expected: Configuration{
+				HTTPServers: []HTTPServer{},
+			},
+			msg: "listener with no routes",
+		},
+		{
+			graph: &graph{
+				Listeners: map[string]*listener{
+					"listener-80-1": {
+						Valid: true,
+						Routes: map[types.NamespacedName]*route{
+							{Namespace: "test", Name: "hr-1"}: routeHR1,
+							{Namespace: "test", Name: "hr-2"}: routeHR2,
+						},
+						AcceptedHostnames: map[string]struct{}{
+							"foo.example.com": {},
+							"bar.example.com": {},
+						},
+					},
+				},
+				Routes: map[types.NamespacedName]*route{
+					{Namespace: "test", Name: "hr-1"}: routeHR1,
+					{Namespace: "test", Name: "hr-2"}: routeHR2,
+				},
+			},
+			expected: Configuration{
+				HTTPServers: []HTTPServer{
+					{
+						Hostname: "bar.example.com",
+						PathRules: []PathRule{
 							{
-								// mo matches -> "/"
+								Path: "/",
+								MatchRules: []MatchRule{
+									{
+										MatchIdx: 0,
+										RuleIdx:  0,
+										Source:   hr2,
+									},
+								},
+							},
+						},
+					},
+					{
+						Hostname: "foo.example.com",
+						PathRules: []PathRule{
+							{
+								Path: "/",
+								MatchRules: []MatchRule{
+									{
+										MatchIdx: 0,
+										RuleIdx:  0,
+										Source:   hr1,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			msg: "one listener with two routes for different hostnames",
+		},
+		{
+			graph: &graph{
+				Listeners: map[string]*listener{
+					"listener-80-1": {
+						Valid: true,
+						Routes: map[types.NamespacedName]*route{
+							{Namespace: "test", Name: "hr-3"}: routeHR3,
+							{Namespace: "test", Name: "hr-4"}: routeHR4,
+						},
+						AcceptedHostnames: map[string]struct{}{
+							"foo.example.com": {},
+						},
+					},
+				},
+				Routes: map[types.NamespacedName]*route{
+					{Namespace: "test", Name: "hr-3"}: routeHR3,
+					{Namespace: "test", Name: "hr-4"}: routeHR4,
+				},
+			},
+			expected: Configuration{
+				HTTPServers: []HTTPServer{
+					{
+						Hostname: "foo.example.com",
+						PathRules: []PathRule{
+							{
+								Path: "/",
+								MatchRules: []MatchRule{
+									{
+										MatchIdx: 0,
+										RuleIdx:  0,
+										Source:   hr3,
+									},
+									{
+										MatchIdx: 0,
+										RuleIdx:  1,
+										Source:   hr4,
+									},
+								},
 							},
 							{
-								Matches: []v1alpha2.HTTPRouteMatch{
+								Path: "/fourth",
+								MatchRules: []MatchRule{
 									{
-										Path: &v1alpha2.HTTPPathMatch{
-											Value: helpers.GetStringPointer("/coffee"),
-										},
+										MatchIdx: 0,
+										RuleIdx:  0,
+										Source:   hr4,
 									},
 								},
 							},
-						},
-					},
-				}
-
-				updatedHRWithSameGen = hr.DeepCopy()
-				updatedHRWithSameGen.Spec.Rules[1].Matches[0].Path.Value = helpers.GetStringPointer("/tea")
-
-				updatedHRWithIncrementedGen = updatedHRWithSameGen.DeepCopy()
-				updatedHRWithIncrementedGen.Generation++
-			})
-
-			It("should upsert a host and generate a status update for the new HTTPRoute", func() {
-				expectedChanges := []state.Change{
-					{
-						Op: state.Upsert,
-						Host: state.Host{
-							Value: "cafe.example.com",
-							PathRouteGroups: []state.PathRouteGroup{
-								{
-									Path: "/",
-									Routes: []state.Route{
-										{
-											MatchIdx: -1,
-											RuleIdx:  0,
-											Source:   hr,
-										},
-									},
-								},
-								{
-									Path: "/coffee",
-									Routes: []state.Route{
-										{
-											MatchIdx: 0,
-											RuleIdx:  1,
-											Source:   hr,
-										},
-									},
-								},
-							},
-						},
-					},
-				}
-				expectedStatusUpdates := []state.StatusUpdate{
-					{
-						NamespacedName: types.NamespacedName{Namespace: "test", Name: "route1"},
-						Status: &v1alpha2.HTTPRouteStatus{
-							RouteStatus: v1alpha2.RouteStatus{
-								Parents: []v1alpha2.RouteParentStatus{
-									{
-										ControllerName: gatewayCtlrName,
-										ParentRef: v1alpha2.ParentRef{
-											Name: "fake",
-										},
-										Conditions: []metav1.Condition{
-											{
-												Type:               string(v1alpha2.ConditionRouteAccepted),
-												Status:             "True",
-												ObservedGeneration: hr.Generation,
-												LastTransitionTime: metav1.NewTime(constTime),
-												Reason:             string(v1alpha2.ConditionRouteAccepted),
-												Message:            "",
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-				}
-
-				changes, statusUpdates := conf.UpsertHTTPRoute(hr)
-				Expect(helpers.Diff(expectedChanges, changes)).To(BeEmpty())
-				Expect(helpers.Diff(expectedStatusUpdates, statusUpdates)).To(BeEmpty())
-			})
-
-			It("should not generate changes and status updates for the updated HTTPRoute because it has the same generation as the old one", func() {
-				changes, statusUpdates := conf.UpsertHTTPRoute(updatedHRWithSameGen)
-				Expect(changes).To(BeEmpty())
-				Expect(statusUpdates).To(BeEmpty())
-			})
-
-			It("should upsert the host changes and generate a status update for the updated HTTPRoute", func() {
-				expectedChanges := []state.Change{
-					{
-						Op: state.Upsert,
-						Host: state.Host{
-							Value: "cafe.example.com",
-							PathRouteGroups: []state.PathRouteGroup{
-								{
-									Path: "/",
-									Routes: []state.Route{
-										{
-											MatchIdx: -1,
-											RuleIdx:  0,
-											Source:   updatedHRWithIncrementedGen,
-										},
-									},
-								},
-								{
-									Path: "/tea",
-									Routes: []state.Route{
-										{
-											MatchIdx: 0,
-											RuleIdx:  1,
-											Source:   updatedHRWithIncrementedGen,
-										},
-									},
-								},
-							},
-						},
-					},
-				}
-				expectedStatusUpdates := []state.StatusUpdate{
-					{
-						NamespacedName: types.NamespacedName{Namespace: "test", Name: "route1"},
-						Status: &v1alpha2.HTTPRouteStatus{
-							RouteStatus: v1alpha2.RouteStatus{
-								Parents: []v1alpha2.RouteParentStatus{
-									{
-										ControllerName: gatewayCtlrName,
-										ParentRef: v1alpha2.ParentRef{
-											Name: "fake",
-										},
-										Conditions: []metav1.Condition{
-											{
-												Type:               string(v1alpha2.ConditionRouteAccepted),
-												Status:             "True",
-												ObservedGeneration: updatedHRWithIncrementedGen.Generation,
-												LastTransitionTime: metav1.NewTime(constTime),
-												Reason:             string(v1alpha2.ConditionRouteAccepted),
-												Message:            "",
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-				}
-
-				changes, statusUpdates := conf.UpsertHTTPRoute(updatedHRWithIncrementedGen)
-				Expect(helpers.Diff(expectedChanges, changes)).To(BeEmpty())
-				Expect(helpers.Diff(expectedStatusUpdates, statusUpdates)).To(BeEmpty())
-			})
-
-			It("should delete the host for the deleted HTTPRoute", func() {
-				expectedChanges := []state.Change{
-					{
-						Op: state.Delete,
-						Host: state.Host{
-							Value: "cafe.example.com",
-							PathRouteGroups: []state.PathRouteGroup{
-								{
-									Path: "/",
-									Routes: []state.Route{
-										{
-											MatchIdx: -1,
-											RuleIdx:  0,
-											Source:   updatedHRWithIncrementedGen,
-										},
-									},
-								},
-								{
-									Path: "/tea",
-									Routes: []state.Route{
-										{
-											MatchIdx: 0,
-											RuleIdx:  1,
-											Source:   updatedHRWithIncrementedGen,
-										},
-									},
-								},
-							},
-						},
-					},
-				}
-
-				changes, statusUpdates := conf.DeleteHTTPRoute(types.NamespacedName{Namespace: "test", Name: "route1"})
-				Expect(helpers.Diff(expectedChanges, changes)).To(BeEmpty())
-				Expect(statusUpdates).To(BeEmpty())
-			})
-		})
-
-		It("should allow removing an non-exiting HTTPRoute", func() {
-			changes, statusUpdates := conf.DeleteHTTPRoute(types.NamespacedName{Namespace: "test", Name: "some-route"})
-			Expect(changes).To(BeEmpty())
-			Expect(statusUpdates).To(BeEmpty())
-		})
-
-		Describe("Processing multiple HTTPRoutes for one host", Ordered, func() {
-			var hr1, hr2, hr2Updated *v1alpha2.HTTPRoute
-
-			BeforeAll(func() {
-				hr1 = &v1alpha2.HTTPRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "test",
-						Name:      "route1",
-					},
-					Spec: v1alpha2.HTTPRouteSpec{
-						Hostnames: []v1alpha2.Hostname{
-							"cafe.example.com",
-						},
-						Rules: []v1alpha2.HTTPRouteRule{
 							{
-								// mo matches -> "/"
-							},
-						},
-					},
-				}
-
-				hr2 = &v1alpha2.HTTPRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "test",
-						Name:      "route2",
-					},
-					Spec: v1alpha2.HTTPRouteSpec{
-						Hostnames: []v1alpha2.Hostname{
-							"cafe.example.com",
-						},
-						Rules: []v1alpha2.HTTPRouteRule{
-							{
-								Matches: []v1alpha2.HTTPRouteMatch{
+								Path: "/third",
+								MatchRules: []MatchRule{
 									{
-										Path: &v1alpha2.HTTPPathMatch{
-											Value: helpers.GetStringPointer("/coffee"),
-										},
+										MatchIdx: 0,
+										RuleIdx:  1,
+										Source:   hr3,
 									},
 								},
 							},
 						},
 					},
-				}
+				},
+			},
+			msg: "one listener with two routes with the same hostname with and without collisions",
+		},
+	}
 
-				hr2Updated = hr2.DeepCopy()
-				hr2Updated.Spec.Rules[0].Matches[0].Path.Value = helpers.GetStringPointer("/tea")
-				hr2Updated.Generation++
-			})
+	for _, test := range tests {
+		result := buildConfiguration(test.graph)
+		if diff := cmp.Diff(test.expected, result); diff != "" {
+			t.Errorf("buildConfiguration() %q mismatch (-want +got):\n%s", test.msg, diff)
+		}
+	}
+}
 
-			It("should upsert a host and generate a status update for the first HTTPRoute", func() {
-				expectedChanges := []state.Change{
-					{
-						Op: state.Upsert,
-						Host: state.Host{
-							Value: "cafe.example.com",
-							PathRouteGroups: []state.PathRouteGroup{
-								{
-									Path: "/",
-									Routes: []state.Route{
-										{
-											MatchIdx: -1,
-											RuleIdx:  0,
-											Source:   hr1,
-										},
-									},
-								},
-							},
-						},
-					},
-				}
-				expectedStatusUpdates := []state.StatusUpdate{
-					{
-						NamespacedName: types.NamespacedName{Namespace: "test", Name: "route1"},
-						Status: &v1alpha2.HTTPRouteStatus{
-							RouteStatus: v1alpha2.RouteStatus{
-								Parents: []v1alpha2.RouteParentStatus{
-									{
-										ControllerName: gatewayCtlrName,
-										ParentRef: v1alpha2.ParentRef{
-											Name: "fake",
-										},
-										Conditions: []metav1.Condition{
-											{
-												Type:               string(v1alpha2.ConditionRouteAccepted),
-												Status:             "True",
-												ObservedGeneration: hr1.Generation,
-												LastTransitionTime: metav1.NewTime(constTime),
-												Reason:             string(v1alpha2.ConditionRouteAccepted),
-												Message:            "",
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-				}
+func TestLessObjectMeta(t *testing.T) {
+	sooner := metav1.Now()
+	later := metav1.NewTime(sooner.Add(10 * time.Millisecond))
 
-				changes, statusUpdates := conf.UpsertHTTPRoute(hr1)
-				Expect(helpers.Diff(expectedChanges, changes)).To(BeEmpty())
-				Expect(helpers.Diff(expectedStatusUpdates, statusUpdates)).To(BeEmpty())
-			})
+	tests := []struct {
+		meta1, meta2 *metav1.ObjectMeta
+		expected     bool
+		msg          string
+	}{
+		{
+			meta1: &metav1.ObjectMeta{
+				CreationTimestamp: sooner,
+				Namespace:         "test",
+				Name:              "myname",
+			},
+			meta2: &metav1.ObjectMeta{
+				CreationTimestamp: sooner,
+				Namespace:         "test",
+				Name:              "myname",
+			},
+			expected: false,
+			msg:      "equal",
+		},
+		{
+			meta1: &metav1.ObjectMeta{
+				CreationTimestamp: sooner,
+				Namespace:         "test",
+				Name:              "myname",
+			},
+			meta2: &metav1.ObjectMeta{
+				CreationTimestamp: later,
+				Namespace:         "test",
+				Name:              "myname",
+			},
+			expected: true,
+			msg:      "less by timestamp",
+		},
+		{
+			meta1: &metav1.ObjectMeta{
+				CreationTimestamp: later,
+				Namespace:         "test",
+				Name:              "myname",
+			},
+			meta2: &metav1.ObjectMeta{
+				CreationTimestamp: sooner,
+				Namespace:         "test",
+				Name:              "myname",
+			},
+			expected: false,
+			msg:      "greater by timestamp",
+		},
+		{
+			meta1: &metav1.ObjectMeta{
+				CreationTimestamp: sooner,
+				Namespace:         "atest",
+				Name:              "myname",
+			},
+			meta2: &metav1.ObjectMeta{
+				CreationTimestamp: sooner,
+				Namespace:         "test",
+				Name:              "myname",
+			},
+			expected: true,
+			msg:      "less by namespace",
+		},
+		{
+			meta1: &metav1.ObjectMeta{
+				CreationTimestamp: sooner,
+				Namespace:         "test",
+				Name:              "myname",
+			},
+			meta2: &metav1.ObjectMeta{
+				CreationTimestamp: sooner,
+				Namespace:         "atest",
+				Name:              "myname",
+			},
+			expected: false,
+			msg:      "greater by namespace",
+		},
+		{
+			meta1: &metav1.ObjectMeta{
+				CreationTimestamp: sooner,
+				Namespace:         "test",
+				Name:              "amyname",
+			},
+			meta2: &metav1.ObjectMeta{
+				CreationTimestamp: sooner,
+				Namespace:         "test",
+				Name:              "myname",
+			},
+			expected: true,
+			msg:      "less by name",
+		},
+		{
+			meta1: &metav1.ObjectMeta{
+				CreationTimestamp: sooner,
+				Namespace:         "test",
+				Name:              "myname",
+			},
+			meta2: &metav1.ObjectMeta{
+				CreationTimestamp: sooner,
+				Namespace:         "test",
+				Name:              "amyname",
+			},
+			expected: false,
+			msg:      "greater by name",
+		},
+	}
 
-			It("should upsert the same host and generate status updates for both HTTPRoutes after adding the second", func() {
-				expectedChanges := []state.Change{
-					{
-						Op: state.Upsert,
-						Host: state.Host{
-							Value: "cafe.example.com",
-							PathRouteGroups: []state.PathRouteGroup{
-								{
-									Path: "/",
-									Routes: []state.Route{
-										{
-											MatchIdx: -1,
-											RuleIdx:  0,
-											Source:   hr1,
-										},
-									},
-								},
-								{
-									Path: "/coffee",
-									Routes: []state.Route{
-										{
-											MatchIdx: 0,
-											RuleIdx:  0,
-											Source:   hr2,
-										},
-									},
-								},
-							},
-						},
-					},
-				}
-				expectedStatusUpdates := []state.StatusUpdate{
-					{
-						NamespacedName: types.NamespacedName{Namespace: "test", Name: "route1"},
-						Status: &v1alpha2.HTTPRouteStatus{
-							RouteStatus: v1alpha2.RouteStatus{
-								Parents: []v1alpha2.RouteParentStatus{
-									{
-										ControllerName: gatewayCtlrName,
-										ParentRef: v1alpha2.ParentRef{
-											Name: "fake",
-										},
-										Conditions: []metav1.Condition{
-											{
-												Type:               string(v1alpha2.ConditionRouteAccepted),
-												Status:             "True",
-												ObservedGeneration: hr1.Generation,
-												LastTransitionTime: metav1.NewTime(constTime),
-												Reason:             string(v1alpha2.ConditionRouteAccepted),
-												Message:            "",
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-					{
-						NamespacedName: types.NamespacedName{Namespace: "test", Name: "route2"},
-						Status: &v1alpha2.HTTPRouteStatus{
-							RouteStatus: v1alpha2.RouteStatus{
-								Parents: []v1alpha2.RouteParentStatus{
-									{
-										ControllerName: gatewayCtlrName,
-										ParentRef: v1alpha2.ParentRef{
-											Name: "fake",
-										},
-										Conditions: []metav1.Condition{
-											{
-												Type:               string(v1alpha2.ConditionRouteAccepted),
-												Status:             "True",
-												ObservedGeneration: hr2.Generation,
-												LastTransitionTime: metav1.NewTime(constTime),
-												Reason:             string(v1alpha2.ConditionRouteAccepted),
-												Message:            "",
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-				}
+	for _, test := range tests {
+		result := lessObjectMeta(test.meta1, test.meta2)
+		if result != test.expected {
+			t.Errorf("lessObjectMeta() returned %v but expected %v for the case of %q", result, test.expected, test.msg)
+		}
+	}
+}
 
-				changes, statusUpdates := conf.UpsertHTTPRoute(hr2)
-				Expect(helpers.Diff(expectedChanges, changes)).To(BeEmpty())
-				Expect(helpers.Diff(expectedStatusUpdates, statusUpdates)).To(BeEmpty())
-			})
+func TestGetPath(t *testing.T) {
+	tests := []struct {
+		path     *v1alpha2.HTTPPathMatch
+		expected string
+		msg      string
+	}{
+		{
+			path:     &v1alpha2.HTTPPathMatch{Value: helpers.GetStringPointer("/abc")},
+			expected: "/abc",
+			msg:      "normal case",
+		},
+		{
+			path:     nil,
+			expected: "/",
+			msg:      "nil path",
+		},
+		{
+			path:     &v1alpha2.HTTPPathMatch{Value: nil},
+			expected: "/",
+			msg:      "nil value",
+		},
+		{
+			path:     &v1alpha2.HTTPPathMatch{Value: helpers.GetStringPointer("")},
+			expected: "/",
+			msg:      "empty value",
+		},
+	}
 
-			It("should upsert the host and generate status updates for both HTTPRoutes after updating the second", func() {
-				expectedChanges := []state.Change{
-					{
-						Op: state.Upsert,
-						Host: state.Host{
-							Value: "cafe.example.com",
-							PathRouteGroups: []state.PathRouteGroup{
-								{
-									Path: "/",
-									Routes: []state.Route{
-										{
-											MatchIdx: -1,
-											RuleIdx:  0,
-											Source:   hr1,
-										},
-									},
-								},
-								{
-									Path: "/tea",
-									Routes: []state.Route{
-										{
-											MatchIdx: 0,
-											RuleIdx:  0,
-											Source:   hr2Updated,
-										},
-									},
-								},
-							},
-						},
-					},
-				}
-				expectedStatusUpdates := []state.StatusUpdate{
-					{
-						NamespacedName: types.NamespacedName{Namespace: "test", Name: "route1"},
-						Status: &v1alpha2.HTTPRouteStatus{
-							RouteStatus: v1alpha2.RouteStatus{
-								Parents: []v1alpha2.RouteParentStatus{
-									{
-										ControllerName: gatewayCtlrName,
-										ParentRef: v1alpha2.ParentRef{
-											Name: "fake",
-										},
-										Conditions: []metav1.Condition{
-											{
-												Type:               string(v1alpha2.ConditionRouteAccepted),
-												Status:             "True",
-												ObservedGeneration: hr1.Generation,
-												LastTransitionTime: metav1.NewTime(constTime),
-												Reason:             string(v1alpha2.ConditionRouteAccepted),
-												Message:            "",
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-					{
-						NamespacedName: types.NamespacedName{Namespace: "test", Name: "route2"},
-						Status: &v1alpha2.HTTPRouteStatus{
-							RouteStatus: v1alpha2.RouteStatus{
-								Parents: []v1alpha2.RouteParentStatus{
-									{
-										ControllerName: gatewayCtlrName,
-										ParentRef: v1alpha2.ParentRef{
-											Name: "fake",
-										},
-										Conditions: []metav1.Condition{
-											{
-												Type:               string(v1alpha2.ConditionRouteAccepted),
-												Status:             "True",
-												ObservedGeneration: hr2Updated.Generation,
-												LastTransitionTime: metav1.NewTime(constTime),
-												Reason:             string(v1alpha2.ConditionRouteAccepted),
-												Message:            "",
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-				}
+	for _, test := range tests {
+		result := getPath(test.path)
+		if result != test.expected {
+			t.Errorf("getPath() returned %q but expected %q for the case of %q", result, test.expected, test.msg)
+		}
+	}
+}
 
-				changes, statusUpdates := conf.UpsertHTTPRoute(hr2Updated)
-				Expect(helpers.Diff(expectedChanges, changes)).To(BeEmpty())
-				Expect(helpers.Diff(expectedStatusUpdates, statusUpdates)).To(BeEmpty())
-			})
-
-			It("should upsert the host and generate a status updates for the first HTTPRoute after deleting the second", func() {
-				expectedChanges := []state.Change{
-					{
-						Op: state.Upsert,
-						Host: state.Host{
-							Value: "cafe.example.com",
-							PathRouteGroups: []state.PathRouteGroup{
-								{
-									Path: "/",
-									Routes: []state.Route{
-										{
-											MatchIdx: -1,
-											RuleIdx:  0,
-											Source:   hr1,
-										},
-									},
-								},
-							},
-						},
-					},
-				}
-				expectedStatusUpdates := []state.StatusUpdate{
-					{
-						NamespacedName: types.NamespacedName{Namespace: "test", Name: "route1"},
-						Status: &v1alpha2.HTTPRouteStatus{
-							RouteStatus: v1alpha2.RouteStatus{
-								Parents: []v1alpha2.RouteParentStatus{
-									{
-										ControllerName: gatewayCtlrName,
-										ParentRef: v1alpha2.ParentRef{
-											Name: "fake",
-										},
-										Conditions: []metav1.Condition{
-											{
-												Type:               string(v1alpha2.ConditionRouteAccepted),
-												Status:             "True",
-												ObservedGeneration: hr1.Generation,
-												LastTransitionTime: metav1.NewTime(constTime),
-												Reason:             string(v1alpha2.ConditionRouteAccepted),
-												Message:            "",
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-				}
-
-				changes, statusUpdates := conf.DeleteHTTPRoute(types.NamespacedName{Namespace: "test", Name: "route2"})
-				Expect(helpers.Diff(expectedChanges, changes)).To(BeEmpty())
-				Expect(helpers.Diff(expectedStatusUpdates, statusUpdates)).To(BeEmpty())
-			})
-
-			It("should delete the host after deleting the first HTTPRoute", func() {
-				expectedChanges := []state.Change{
-					{
-						Op: state.Delete,
-						Host: state.Host{
-							Value: "cafe.example.com",
-							PathRouteGroups: []state.PathRouteGroup{
-								{
-									Path: "/",
-									Routes: []state.Route{
-										{
-											MatchIdx: -1,
-											RuleIdx:  0,
-											Source:   hr1,
-										},
-									},
-								},
-							},
-						},
-					},
-				}
-				changes, statusUpdates := conf.DeleteHTTPRoute(types.NamespacedName{Namespace: "test", Name: "route1"})
-				Expect(helpers.Diff(expectedChanges, changes)).To(BeEmpty())
-				Expect(statusUpdates).To(BeEmpty())
-			})
-		})
-
-		Describe("Processing conflicting HTTPRoutes", Ordered, func() {
-			var earlier, later metav1.Time
-			var hr1, hr2, hr1Updated *v1alpha2.HTTPRoute
-
-			BeforeAll(func() {
-				earlier = metav1.Now()
-				later = metav1.NewTime(earlier.Add(1 * time.Second))
-
-				hr1 = &v1alpha2.HTTPRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace:         "test",
-						Name:              "route1",
-						CreationTimestamp: earlier,
-					},
-					Spec: v1alpha2.HTTPRouteSpec{
-						Hostnames: []v1alpha2.Hostname{
-							"cafe.example.com",
-						},
-						Rules: []v1alpha2.HTTPRouteRule{
-							{
-								// mo matches -> "/"
-							},
-						},
-					},
-				}
-
-				hr2 = &v1alpha2.HTTPRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace:         "test",
-						Name:              "route2",
-						CreationTimestamp: earlier,
-					},
-					Spec: v1alpha2.HTTPRouteSpec{
-						Hostnames: []v1alpha2.Hostname{
-							"cafe.example.com",
-						},
-						Rules: []v1alpha2.HTTPRouteRule{
-							{
-								Matches: []v1alpha2.HTTPRouteMatch{
-									{
-										Path: &v1alpha2.HTTPPathMatch{
-											Value: helpers.GetStringPointer("/"),
-										},
-									},
-								},
-							},
-						},
-					},
-				}
-
-				hr1Updated = hr1.DeepCopy()
-				hr1Updated.Generation++
-				hr1Updated.CreationTimestamp = later
-			})
-
-			It("should upsert a host and generate a status update for the first HTTPRoute", func() {
-				expectedChanges := []state.Change{
-					{
-						Op: state.Upsert,
-						Host: state.Host{
-							Value: "cafe.example.com",
-							PathRouteGroups: []state.PathRouteGroup{
-								{
-									Path: "/",
-									Routes: []state.Route{
-										{
-											MatchIdx: -1,
-											RuleIdx:  0,
-											Source:   hr1,
-										},
-									},
-								},
-							},
-						},
-					},
-				}
-				expectedStatusUpdates := []state.StatusUpdate{
-					{
-						NamespacedName: types.NamespacedName{Namespace: "test", Name: "route1"},
-						Status: &v1alpha2.HTTPRouteStatus{
-							RouteStatus: v1alpha2.RouteStatus{
-								Parents: []v1alpha2.RouteParentStatus{
-									{
-										ControllerName: gatewayCtlrName,
-										ParentRef: v1alpha2.ParentRef{
-											Name: "fake",
-										},
-										Conditions: []metav1.Condition{
-											{
-												Type:               string(v1alpha2.ConditionRouteAccepted),
-												Status:             "True",
-												ObservedGeneration: hr1.Generation,
-												LastTransitionTime: metav1.NewTime(constTime),
-												Reason:             string(v1alpha2.ConditionRouteAccepted),
-												Message:            "",
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-				}
-
-				changes, statusUpdates := conf.UpsertHTTPRoute(hr1)
-				Expect(helpers.Diff(expectedChanges, changes)).To(BeEmpty())
-				Expect(helpers.Diff(expectedStatusUpdates, statusUpdates)).To(BeEmpty())
-			})
-
-			It("should upsert the host (make the first HTTPRoute the winner for '/' rule) and generate status updates for both HTTPRoutes after adding the second", func() {
-				expectedChanges := []state.Change{
-					{
-						Op: state.Upsert,
-						Host: state.Host{
-							Value: "cafe.example.com",
-							PathRouteGroups: []state.PathRouteGroup{
-								{
-									Path: "/",
-									Routes: []state.Route{
-										{
-											MatchIdx: -1,
-											RuleIdx:  0,
-											Source:   hr1,
-										},
-										{
-											MatchIdx: 0,
-											RuleIdx:  0,
-											Source:   hr2,
-										},
-									},
-								},
-							},
-						},
-					},
-				}
-				expectedStatusUpdates := []state.StatusUpdate{
-					{
-						NamespacedName: types.NamespacedName{Namespace: "test", Name: "route1"},
-						Status: &v1alpha2.HTTPRouteStatus{
-							RouteStatus: v1alpha2.RouteStatus{
-								Parents: []v1alpha2.RouteParentStatus{
-									{
-										ControllerName: gatewayCtlrName,
-										ParentRef: v1alpha2.ParentRef{
-											Name: "fake",
-										},
-										Conditions: []metav1.Condition{
-											{
-												Type:               string(v1alpha2.ConditionRouteAccepted),
-												Status:             "True",
-												ObservedGeneration: hr1.Generation,
-												LastTransitionTime: metav1.NewTime(constTime),
-												Reason:             string(v1alpha2.ConditionRouteAccepted),
-												Message:            "",
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-					{
-						NamespacedName: types.NamespacedName{Namespace: "test", Name: "route2"},
-						Status: &v1alpha2.HTTPRouteStatus{
-							RouteStatus: v1alpha2.RouteStatus{
-								Parents: []v1alpha2.RouteParentStatus{
-									{
-										ControllerName: gatewayCtlrName,
-										ParentRef: v1alpha2.ParentRef{
-											Name: "fake",
-										},
-										Conditions: []metav1.Condition{
-											{
-												Type:               string(v1alpha2.ConditionRouteAccepted),
-												Status:             "True",
-												ObservedGeneration: hr2.Generation,
-												LastTransitionTime: metav1.NewTime(constTime),
-												Reason:             string(v1alpha2.ConditionRouteAccepted),
-												Message:            "",
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-				}
-
-				changes, statusUpdates := conf.UpsertHTTPRoute(hr2)
-				Expect(helpers.Diff(expectedChanges, changes)).To(BeEmpty())
-				Expect(helpers.Diff(expectedStatusUpdates, statusUpdates)).To(BeEmpty())
-			})
-
-			It("should upsert the host (make the second HTTPRoute the winner for '/' rule) and generate status updates for both HTTPRoutes after updating the first", func() {
-				expectedChanges := []state.Change{
-					{
-						Op: state.Upsert,
-						Host: state.Host{
-							Value: "cafe.example.com",
-							PathRouteGroups: []state.PathRouteGroup{
-								{
-									Path: "/",
-									Routes: []state.Route{
-										{
-											MatchIdx: 0,
-											RuleIdx:  0,
-											Source:   hr2,
-										},
-										{
-											MatchIdx: -1,
-											RuleIdx:  0,
-											Source:   hr1Updated,
-										},
-									},
-								},
-							},
-						},
-					},
-				}
-				expectedStatusUpdates := []state.StatusUpdate{
-					{
-						NamespacedName: types.NamespacedName{Namespace: "test", Name: "route1"},
-						Status: &v1alpha2.HTTPRouteStatus{
-							RouteStatus: v1alpha2.RouteStatus{
-								Parents: []v1alpha2.RouteParentStatus{
-									{
-										ControllerName: gatewayCtlrName,
-										ParentRef: v1alpha2.ParentRef{
-											Name: "fake",
-										},
-										Conditions: []metav1.Condition{
-											{
-												Type:               string(v1alpha2.ConditionRouteAccepted),
-												Status:             "True",
-												ObservedGeneration: hr1Updated.Generation,
-												LastTransitionTime: metav1.NewTime(constTime),
-												Reason:             string(v1alpha2.ConditionRouteAccepted),
-												Message:            "",
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-					{
-						NamespacedName: types.NamespacedName{Namespace: "test", Name: "route2"},
-						Status: &v1alpha2.HTTPRouteStatus{
-							RouteStatus: v1alpha2.RouteStatus{
-								Parents: []v1alpha2.RouteParentStatus{
-									{
-										ControllerName: gatewayCtlrName,
-										ParentRef: v1alpha2.ParentRef{
-											Name: "fake",
-										},
-										Conditions: []metav1.Condition{
-											{
-												Type:               string(v1alpha2.ConditionRouteAccepted),
-												Status:             "True",
-												ObservedGeneration: hr2.Generation,
-												LastTransitionTime: metav1.NewTime(constTime),
-												Reason:             string(v1alpha2.ConditionRouteAccepted),
-												Message:            "",
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-				}
-
-				changes, statusUpdates := conf.UpsertHTTPRoute(hr1Updated)
-				Expect(helpers.Diff(expectedChanges, changes)).To(BeEmpty())
-				Expect(helpers.Diff(expectedStatusUpdates, statusUpdates)).To(BeEmpty())
-			})
-		})
-	})
-})
-
-func TestRouteGetMatch(t *testing.T) {
+func TestMatchRuleGetMatch(t *testing.T) {
 	var hr = &v1alpha2.HTTPRoute{
 		Spec: v1alpha2.HTTPRouteSpec{
 			Rules: []v1alpha2.HTTPRouteRule{
@@ -922,47 +443,47 @@ func TestRouteGetMatch(t *testing.T) {
 	tests := []struct {
 		name,
 		expPath string
-		route       state.Route
+		rule        MatchRule
 		matchExists bool
 	}{
 		{
 			name:        "match does not exist",
 			expPath:     "",
-			route:       state.Route{MatchIdx: -1},
+			rule:        MatchRule{MatchIdx: -1},
 			matchExists: false,
 		},
 		{
 			name:        "first match in first rule",
 			expPath:     "/path-1",
-			route:       state.Route{MatchIdx: 0, RuleIdx: 0, Source: hr},
+			rule:        MatchRule{MatchIdx: 0, RuleIdx: 0, Source: hr},
 			matchExists: true,
 		},
 		{
 			name:        "second match in first rule",
 			expPath:     "/path-2",
-			route:       state.Route{MatchIdx: 1, RuleIdx: 0, Source: hr},
+			rule:        MatchRule{MatchIdx: 1, RuleIdx: 0, Source: hr},
 			matchExists: true,
 		},
 		{
 			name:        "second match in second rule",
 			expPath:     "/path-4",
-			route:       state.Route{MatchIdx: 1, RuleIdx: 1, Source: hr},
+			rule:        MatchRule{MatchIdx: 1, RuleIdx: 1, Source: hr},
 			matchExists: true,
 		},
 	}
 
 	for _, tc := range tests {
-		actual, exists := tc.route.GetMatch()
+		actual, exists := tc.rule.GetMatch()
 		if !tc.matchExists {
 			if exists {
-				t.Errorf("route.GetMatch() incorrectly returned true (match exists) for test case: %q", tc.name)
+				t.Errorf("rule.GetMatch() incorrectly returned true (match exists) for test case: %q", tc.name)
 			}
 		} else {
 			if !exists {
-				t.Errorf("route.GetMatch() incorrectly returned false (match does not exist) for test case: %q", tc.name)
+				t.Errorf("rule.GetMatch() incorrectly returned false (match does not exist) for test case: %q", tc.name)
 			}
 			if *actual.Path.Value != tc.expPath {
-				t.Errorf("route.GetMatch() returned incorrect match with path: %s, expected path: %s for test case: %q", *actual.Path.Value, tc.expPath, tc.name)
+				t.Errorf("rule.GetMatch() returned incorrect match with path: %s, expected path: %s for test case: %q", *actual.Path.Value, tc.expPath, tc.name)
 			}
 		}
 	}

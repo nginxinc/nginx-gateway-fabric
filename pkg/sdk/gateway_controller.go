@@ -47,7 +47,7 @@ func (r *gatewayReconciler) Reconcile(ctx context.Context, req reconcile.Request
 	}
 
 	if !found {
-		r.impl.Remove(req.Name)
+		r.impl.Remove(req.NamespacedName)
 		return reconcile.Result{}, nil
 	}
 

@@ -22,3 +22,11 @@ func (w Warnings) AddWarningf(obj client.Object, msgFmt string, args ...interfac
 func (w Warnings) AddWarning(obj client.Object, msg string) {
 	w[obj] = append(w[obj], msg)
 }
+
+// Add adds new Warnings to the map.
+// Warnings for the same object are merged.
+func (w Warnings) Add(warnings Warnings) {
+	for k, v := range warnings {
+		w[k] = append(w[k], v...)
+	}
+}

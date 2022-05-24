@@ -18,8 +18,8 @@ const nginx502Server = "unix:/var/lib/nginx/nginx-502-server.sock"
 
 // Generator generates NGINX configuration.
 type Generator interface {
-	// GenerateForHost generates configuration for a host.
-	GenerateForHost(host state.Host) ([]byte, Warnings)
+	// Generate generates NGINX configuration from internal representation.
+	Generate(configuration state.Configuration) ([]byte, Warnings)
 }
 
 // GeneratorImpl is an implementation of Generator
@@ -36,20 +36,32 @@ func NewGeneratorImpl(serviceStore state.ServiceStore) *GeneratorImpl {
 	}
 }
 
-func (g *GeneratorImpl) GenerateForHost(host state.Host) ([]byte, Warnings) {
-	server, warnings := generate(host, g.serviceStore)
-	return g.executor.ExecuteForServer(server), warnings
-}
-
-func generate(host state.Host, serviceStore state.ServiceStore) (server, Warnings) {
+func (g *GeneratorImpl) Generate(conf state.Configuration) ([]byte, Warnings) {
 	warnings := newWarnings()
 
-	locs := make([]location, 0, len(host.PathRouteGroups)) // FIXME(pleshakov): expand with g.Routes
+	servers := httpServers{
+		Servers: make([]server, 0, len(conf.HTTPServers)),
+	}
 
-	for _, g := range host.PathRouteGroups {
+	for _, s := range conf.HTTPServers {
+		cfg, warns := generate(s, g.serviceStore)
+
+		servers.Servers = append(servers.Servers, cfg)
+		warnings.Add(warns)
+	}
+
+	return g.executor.ExecuteForHTTPServers(servers), warnings
+}
+
+func generate(httpServer state.HTTPServer, serviceStore state.ServiceStore) (server, Warnings) {
+	warnings := newWarnings()
+
+	locs := make([]location, 0, len(httpServer.PathRules)) // FIXME(pleshakov): expand with rules.Routes
+
+	for _, rules := range httpServer.PathRules {
 		// number of routes in a group is always at least 1
 		// otherwise, it is a bug in the state.Configuration code, so it is OK to panic here
-		r := g.Routes[0] // FIXME(pleshakov): for now, we only handle the first route in case there are multiple routes
+		r := rules.MatchRules[0] // FIXME(pleshakov): for now, we only handle the first route in case there are multiple routes
 		address, err := getBackendAddress(r.Source.Spec.Rules[r.RuleIdx].BackendRefs, r.Source.Namespace, serviceStore)
 		if err != nil {
 			warnings.AddWarning(r.Source, err.Error())
@@ -59,7 +71,7 @@ func generate(host state.Host, serviceStore state.ServiceStore) (server, Warning
 		if exists && matchLocationNeeded(match) {
 			// FIXME(kate-osborn): route index is hardcoded to 0 for now.
 			// Once we support multiple routes we will need to change this to the index of the current route.
-			path := createPathForMatch(g.Path, 0)
+			path := createPathForMatch(rules.Path, 0)
 			// generate location block for this rule and match
 			mLoc := generateMatchLocation(path, address)
 			// generate the http_matches variable value
@@ -70,13 +82,13 @@ func generate(host state.Host, serviceStore state.ServiceStore) (server, Warning
 			}
 
 			loc := location{
-				Path:         g.Path,
+				Path:         rules.Path,
 				HTTPMatchVar: string(b),
 			}
 			locs = append(locs, loc, mLoc)
 		} else {
 			loc := location{
-				Path:      g.Path,
+				Path:      rules.Path,
 				ProxyPass: generateProxyPass(address),
 			}
 			locs = append(locs, loc)
@@ -84,7 +96,7 @@ func generate(host state.Host, serviceStore state.ServiceStore) (server, Warning
 	}
 
 	return server{
-		ServerName: host.Value,
+		ServerName: httpServer.Hostname,
 		Locations:  locs,
 	}, warnings
 }
@@ -168,7 +180,7 @@ func createHTTPMatch(match v1alpha2.HTTPRouteMatch, redirectPath string) httpMat
 	if match.Headers != nil {
 		headers := make([]string, 0, len(match.Headers))
 
-		//FIXME(kate-osborn): For now we only support type "Exact".
+		// FIXME(kate-osborn): For now we only support type "Exact".
 		for _, h := range match.Headers {
 			if *h.Type == v1alpha2.HeaderMatchExact {
 				headers = append(headers, createHeaderKeyValString(h))
@@ -180,7 +192,7 @@ func createHTTPMatch(match v1alpha2.HTTPRouteMatch, redirectPath string) httpMat
 	if match.QueryParams != nil {
 		params := make([]string, 0, len(match.QueryParams))
 
-		//FIXME(kate-osborn): For now we only support type "Exact".
+		// FIXME(kate-osborn): For now we only support type "Exact".
 		for _, p := range match.QueryParams {
 			if *p.Type == v1alpha2.QueryParamMatchExact {
 				params = append(params, createQueryParamKeyValString(p))
