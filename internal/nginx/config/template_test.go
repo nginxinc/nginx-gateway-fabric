@@ -8,17 +8,21 @@ import (
 func TestExecuteForServer(t *testing.T) {
 	executor := newTemplateExecutor()
 
-	server := server{
-		ServerName: "example.com",
-		Locations: []location{
+	servers := httpServers{
+		Servers: []server{
 			{
-				Path:      "/",
-				ProxyPass: "http://10.0.0.1",
+				ServerName: "example.com",
+				Locations: []location{
+					{
+						Path:      "/",
+						ProxyPass: "http://10.0.0.1",
+					},
+				},
 			},
 		},
 	}
 
-	cfg := executor.ExecuteForServer(server)
+	cfg := executor.ExecuteForHTTPServers(servers)
 	// we only do a sanity check here.
 	// the config generation logic is tested in the Generator tests.
 	if len(cfg) == 0 {
@@ -34,7 +38,7 @@ func TestNewTemplateExecutorPanics(t *testing.T) {
 		}
 	}()
 
-	serverTemplate = "{{ end }}" // invalid template
+	httpServersTemplate = "{{ end }}" // invalid template
 	newTemplateExecutor()
 }
 
@@ -51,7 +55,7 @@ func TestExecuteForServerPanics(t *testing.T) {
 		t.Fatalf("Failed to parse template: %v", err)
 	}
 
-	executor := &templateExecutor{serverTemplate: tmpl}
+	executor := &templateExecutor{httpServersTemplate: tmpl}
 
-	_ = executor.ExecuteForServer(server{})
+	_ = executor.ExecuteForHTTPServers(httpServers{})
 }

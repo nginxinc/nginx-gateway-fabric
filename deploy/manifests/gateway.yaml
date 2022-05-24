@@ -8,7 +8,6 @@ metadata:
 spec:
   gatewayClassName: nginx
   listeners:
-  - name: my-listener
-    hostname: example.com
-    port: 8080
+  - name: http
+    port: 80
     protocol: HTTP

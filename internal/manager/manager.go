@@ -12,6 +12,7 @@ import (
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/config"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/events"
+	gw "github.com/nginxinc/nginx-kubernetes-gateway/internal/implementations/gateway"
 	hr "github.com/nginxinc/nginx-kubernetes-gateway/internal/implementations/httproute"
 	svc "github.com/nginxinc/nginx-kubernetes-gateway/internal/implementations/service"
 	ngxcfg "github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/config"
@@ -50,6 +51,10 @@ func Start(cfg config.Config) error {
 		return fmt.Errorf("cannot build runtime manager: %w", err)
 	}
 
+	err = sdk.RegisterGatewayController(mgr, gw.NewGatewayImplementation(cfg, eventCh))
+	if err != nil {
+		return fmt.Errorf("cannot register gateway implementation: %w", err)
+	}
 	err = sdk.RegisterHTTPRouteController(mgr, hr.NewHTTPRouteImplementation(cfg, eventCh))
 	if err != nil {
 		return fmt.Errorf("cannot register httproute implementation: %w", err)
@@ -59,13 +64,13 @@ func Start(cfg config.Config) error {
 		return fmt.Errorf("cannot register service implementation: %w", err)
 	}
 
-	conf := state.NewConfiguration(cfg.GatewayCtlrName, state.NewRealClock())
+	processor := state.NewChangeProcessorImpl(cfg.GatewayNsName)
 	serviceStore := state.NewServiceStore()
-	reporter := status.NewUpdater(mgr.GetClient(), cfg.Logger)
 	configGenerator := ngxcfg.NewGeneratorImpl(serviceStore)
 	nginxFileMgr := file.NewManagerImpl()
 	nginxRuntimeMgr := ngxruntime.NewManagerImpl()
-	eventLoop := events.NewEventLoop(conf, serviceStore, configGenerator, eventCh, reporter, cfg.Logger, nginxFileMgr, nginxRuntimeMgr)
+	statusUpdater := status.NewUpdater(cfg.GatewayCtlrName, cfg.GatewayNsName, mgr.GetClient(), cfg.Logger, status.NewRealClock())
+	eventLoop := events.NewEventLoop(processor, serviceStore, configGenerator, eventCh, cfg.Logger, nginxFileMgr, nginxRuntimeMgr, statusUpdater)
 
 	err = mgr.Add(eventLoop)
 	if err != nil {

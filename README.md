@@ -34,7 +34,6 @@ Before you can build and run the NGINX Kubernetes Gateway, make sure you have th
 
    Set the `PREFIX` variable to the name of the registry you'd like to push the image to. By default, the image will be named `nginx-kubernetes-gateway:0.0.1`.
 
-
 1. Push the image to your container registry:
 
    ```
@@ -54,7 +53,6 @@ You can deploy NGINX Kubernetes Gateway on an existing Kubernetes 1.16+ cluster.
    ```
 
    Make sure to substitute the image name with the name of the image you built.
-
 
 1. Install the Gateway CRDs:
 
@@ -88,6 +86,11 @@ You can deploy NGINX Kubernetes Gateway on an existing Kubernetes 1.16+ cluster.
    kubectl get pods -n nginx-gateway
    NAME                             READY   STATUS    RESTARTS   AGE
    nginx-gateway-5d4f4c7db7-xk2kq   2/2     Running   0          112s
+   ```
+1. Create the Gateway resource:
+
+   ```
+   kubectl apply -f deploy/manifests/gateway.yaml
    ```
 
 ## Expose NGINX Kubernetes Gateway
