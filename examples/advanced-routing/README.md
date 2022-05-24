@@ -50,7 +50,7 @@ We will use `HTTPRoute` resources to route traffic to the cafe application based
 
 We will use `curl` to send requests to the `coffee` and `tea` services.
 
-To access coffee:
+### 4.1 Access coffee
 
 Send a `POST` request to the path `/coffee` with the headers `x-demo-header:demo-x1` and `version:v1`:
 
@@ -76,7 +76,7 @@ curl --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT
 
 NGINX Kubernetes Gateway returns a 405 since the request method does not match the method defined in the routing rule for `/coffee`.
 
-To access tea:
+### 4.2 Access tea
 
 Send a request to the path `/tea` with the query parameter `Great=Example`:
 
