@@ -24,7 +24,7 @@ func GatewayControllerParam(domain string, namespace string) ValidatorContext {
 	return ValidatorContext{
 		name,
 		func(flagset *flag.FlagSet) error {
-			// FIXME(yacobucci) this does not provide the same regex validation as
+			// FIXME(f5yacobucci) this does not provide the same regex validation as
 			// GatewayClass.ControllerName. provide equal and then specific validation
 			param, err := flagset.GetString(name)
 			if err != nil {

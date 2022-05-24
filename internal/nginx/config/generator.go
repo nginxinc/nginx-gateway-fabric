@@ -58,7 +58,7 @@ func generate(host state.Host, serviceStore state.ServiceStore) (server, Warning
 
 		match, exists := r.GetMatch()
 		if exists && matchLocationNeeded(match) {
-			// FIXME(osborn): route index is hardcoded to 0 for now.
+			// FIXME(kate-osborn): route index is hardcoded to 0 for now.
 			// Once we support multiple routes we will need to change this to the index of the current route.
 			path := createPathForMatch(g.Path, 0)
 			// generate location block for this rule and match
@@ -165,7 +165,7 @@ func createHTTPMatch(match v1alpha2.HTTPRouteMatch, redirectPath string) httpMat
 	if match.Headers != nil {
 		headers := make([]string, 0, len(match.Headers))
 
-		//FIXME(osborn): For now we only support type "Exact".
+		//FIXME(kate-osborn): For now we only support type "Exact".
 		for _, h := range match.Headers {
 			if *h.Type == v1alpha2.HeaderMatchExact {
 				headers = append(headers, createHeaderKeyValString(h))
@@ -177,7 +177,7 @@ func createHTTPMatch(match v1alpha2.HTTPRouteMatch, redirectPath string) httpMat
 	if match.QueryParams != nil {
 		params := make([]string, 0, len(match.QueryParams))
 
-		//FIXME(osborn): For now we only support type "Exact".
+		//FIXME(kate-osborn): For now we only support type "Exact".
 		for _, p := range match.QueryParams {
 			if *p.Type == v1alpha2.QueryParamMatchExact {
 				params = append(params, createQueryParamKeyValString(p))
