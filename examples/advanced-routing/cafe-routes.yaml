@@ -24,8 +24,8 @@ spec:
         value: /coffee
       method: POST
       headers:
-      - name: X-Demo-Header # header names and values are case-insensitive
-        value: Demo-X1
+      - name: X-Demo-Header # header names are case-insensitive
+        value: Demo-X1 # header values are case-sensitive
       - name: version
         value: v1
     backendRefs:
