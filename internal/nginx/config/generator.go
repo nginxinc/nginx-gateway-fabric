@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"strings"
-
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 
@@ -97,7 +95,11 @@ func generateProxyPass(address string) string {
 	return "http://" + address
 }
 
-func getBackendAddress(refs []v1alpha2.HTTPBackendRef, parentNS string, serviceStore state.ServiceStore) (string, error) {
+func getBackendAddress(
+	refs []v1alpha2.HTTPBackendRef,
+	parentNS string,
+	serviceStore state.ServiceStore,
+) (string, error) {
 	if len(refs) == 0 {
 		return "", errors.New("empty backend refs")
 	}
@@ -190,15 +192,16 @@ func createHTTPMatch(match v1alpha2.HTTPRouteMatch, redirectPath string) httpMat
 }
 
 // The name and values are delimited by "=". A name and value can always be recovered using strings.SplitN(arg,"=", 2).
-// Query Parameters are case sensitive so case is preserved.
+// Query Parameters are case-sensitive so case is preserved.
 func createQueryParamKeyValString(p v1alpha2.HTTPQueryParamMatch) string {
 	return p.Name + "=" + p.Value
 }
 
 // The name and values are delimited by ":". A name and value can always be recovered using strings.Split(arg, ":").
-// Headers are not case sensitive so the case is lowered.
+// Header names are case-insensitive while header values are case-sensitive (e.g. foo:bar == FOO:bar, but foo:bar != foo:BAR).
+// We preserve the case of the name here because NGINX allows us to lookup the header names in a case-insensitive manner.
 func createHeaderKeyValString(h v1alpha2.HTTPHeaderMatch) string {
-	return strings.ToLower(string(h.Name) + ":" + h.Value)
+	return string(h.Name) + ":" + h.Value
 }
 
 // A match location is needed if the match specifies at least one of the following: Method, Headers, or QueryParams.

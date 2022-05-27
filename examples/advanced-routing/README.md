@@ -60,10 +60,10 @@ Server address: 10.12.0.18:80
 Server name: coffee-7586895968-r26zn
 ```
 
-Header keys and values are case-insensitive, so we can also access coffee with the following request:
+Header keys are case-insensitive, so we can also access coffee with the following request:
 
 ```
-curl --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/coffee -X POST -H "X-DEMO-HEADER:DEMO-X1" -H "VERSION:V1"
+curl --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/coffee -X POST -H "X-DEMO-HEADER:demo-x1" -H "Version:v1"
 Server address: 10.12.0.18:80
 Server name: coffee-7586895968-r26zn
 ```
@@ -71,7 +71,7 @@ Server name: coffee-7586895968-r26zn
 Only `POST` requests to the path `/coffee` with the headers `x-demo-header:demo-x1` and `version:v1` will be able to access coffee.
 For example, try sending the following `GET` request:
 ```
-curl --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/coffee -H "X-DEMO-HEADER:DEMO-X1" -H "VERSION:V1"
+curl --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/coffee -H "x-demo-header:demo-x1" -H "version:v1"
 ```
 
 NGINX Kubernetes Gateway returns a 405 since the request method does not match the method defined in the routing rule for `/coffee`.

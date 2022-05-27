@@ -20,7 +20,7 @@ let r = {
   },
 };
 const testHeaderMatches = {
-  headers: ['header1:value1', 'header2:value2', 'header3:value3'],
+  headers: ['header1:VALUE1', 'header2:value2', 'header3:value3'],
   redirectPath: '/headers',
 };
 const testQueryParamMatches = {
@@ -105,7 +105,7 @@ describe('redirect', function () {
       requestModifier: (r) => {
         r.headersIn = {
           header3: 'value3',
-          header1: 'value1',
+          header1: 'VALUE1',
         };
       },
     },
@@ -116,8 +116,8 @@ describe('redirect', function () {
       requestModifier: (r) => {
         r.headersIn = {
           header3: 'value3',
-          header1: 'value1',
-          header2: 'not-value2',
+          header1: 'value1', // header values are case-sensitive so this is not equivalent to header1:VALUE1.
+          header2: 'value2',
         };
       },
     },
@@ -133,8 +133,8 @@ describe('redirect', function () {
       requestModifier: (r) => {
         r.headersIn = {
           header3: 'value3',
-          header1: 'value1',
-          header2: 'VALUE2', // header matching is case-insensitive. NGINX will lowercase the header name but not the value.
+          header1: 'VALUE1',
+          header2: 'value2',
         };
       },
     },

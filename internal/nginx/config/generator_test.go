@@ -72,7 +72,7 @@ func TestGenerate(t *testing.T) {
 							Headers: []v1alpha2.HTTPHeaderMatch{
 								{
 									Type:  helpers.GetHeaderMatchTypePointer(v1alpha2.HeaderMatchExact),
-									Name:  "vErsIon", // header names and values should be normalized to lowercase
+									Name:  "Version",
 									Value: "V1",
 								},
 								{
@@ -177,7 +177,7 @@ func TestGenerate(t *testing.T) {
 	slashMatches := httpMatch{Method: v1alpha2.HTTPMethodPost, RedirectPath: "/_route0"}
 	testMatches := httpMatch{
 		Method:       v1alpha2.HTTPMethodGet,
-		Headers:      []string{"version:v1", "test:foo", "my-header:my-value"},
+		Headers:      []string{"Version:V1", "test:foo", "my-header:my-value"},
 		QueryParams:  []string{"GrEat=EXAMPLE", "test=foo=bar"},
 		RedirectPath: "/test_route0",
 	}
@@ -283,10 +283,12 @@ func TestGetBackendAddress(t *testing.T) {
 			msg:                       "normal case",
 		},
 		{
-			refs: getModifiedRefs(func(refs []v1alpha2.HTTPBackendRef) []v1alpha2.HTTPBackendRef {
-				refs[0].BackendRef.Namespace = nil
-				return refs
-			}),
+			refs: getModifiedRefs(
+				func(refs []v1alpha2.HTTPBackendRef) []v1alpha2.HTTPBackendRef {
+					refs[0].BackendRef.Namespace = nil
+					return refs
+				},
+			),
 			parentNS:                  "test",
 			storeAddress:              "10.0.0.1",
 			storeErr:                  nil,
@@ -297,11 +299,13 @@ func TestGetBackendAddress(t *testing.T) {
 			msg:                       "normal case with implicit namespace",
 		},
 		{
-			refs: getModifiedRefs(func(refs []v1alpha2.HTTPBackendRef) []v1alpha2.HTTPBackendRef {
-				refs[0].BackendRef.Group = nil
-				refs[0].BackendRef.Kind = nil
-				return refs
-			}),
+			refs: getModifiedRefs(
+				func(refs []v1alpha2.HTTPBackendRef) []v1alpha2.HTTPBackendRef {
+					refs[0].BackendRef.Group = nil
+					refs[0].BackendRef.Kind = nil
+					return refs
+				},
+			),
 			parentNS:                  "test",
 			storeAddress:              "10.0.0.1",
 			storeErr:                  nil,
@@ -312,11 +316,13 @@ func TestGetBackendAddress(t *testing.T) {
 			msg:                       "normal case with implicit service",
 		},
 		{
-			refs: getModifiedRefs(func(refs []v1alpha2.HTTPBackendRef) []v1alpha2.HTTPBackendRef {
-				secondRef := refs[0].DeepCopy()
-				secondRef.Name = "service2"
-				return append(refs, *secondRef)
-			}),
+			refs: getModifiedRefs(
+				func(refs []v1alpha2.HTTPBackendRef) []v1alpha2.HTTPBackendRef {
+					secondRef := refs[0].DeepCopy()
+					secondRef.Name = "service2"
+					return append(refs, *secondRef)
+				},
+			),
 			parentNS:                  "test",
 			storeAddress:              "10.0.0.1",
 			storeErr:                  nil,
@@ -327,10 +333,12 @@ func TestGetBackendAddress(t *testing.T) {
 			msg:                       "first backend ref is used",
 		},
 		{
-			refs: getModifiedRefs(func(refs []v1alpha2.HTTPBackendRef) []v1alpha2.HTTPBackendRef {
-				refs[0].BackendRef.Kind = (*v1alpha2.Kind)(helpers.GetStringPointer("NotService"))
-				return refs
-			}),
+			refs: getModifiedRefs(
+				func(refs []v1alpha2.HTTPBackendRef) []v1alpha2.HTTPBackendRef {
+					refs[0].BackendRef.Kind = (*v1alpha2.Kind)(helpers.GetStringPointer("NotService"))
+					return refs
+				},
+			),
 			parentNS:                  "test",
 			storeAddress:              "10.0.0.1",
 			storeErr:                  nil,
@@ -352,10 +360,12 @@ func TestGetBackendAddress(t *testing.T) {
 			msg:                       "no refs",
 		},
 		{
-			refs: getModifiedRefs(func(refs []v1alpha2.HTTPBackendRef) []v1alpha2.HTTPBackendRef {
-				refs[0].BackendRef.Port = nil
-				return refs
-			}),
+			refs: getModifiedRefs(
+				func(refs []v1alpha2.HTTPBackendRef) []v1alpha2.HTTPBackendRef {
+					refs[0].BackendRef.Port = nil
+					return refs
+				},
+			),
 			parentNS:                  "test",
 			storeAddress:              "10.0.0.1",
 			storeErr:                  nil,
@@ -384,7 +394,12 @@ func TestGetBackendAddress(t *testing.T) {
 
 		result, err := getBackendAddress(test.refs, test.parentNS, fakeServiceStore)
 		if result != test.expectedAddress {
-			t.Errorf("getBackendAddress() returned %s but expected %s for case %q", result, test.expectedAddress, test.msg)
+			t.Errorf(
+				"getBackendAddress() returned %s but expected %s for case %q",
+				result,
+				test.expectedAddress,
+				test.msg,
+			)
 		}
 
 		if test.expectErr {
@@ -399,7 +414,12 @@ func TestGetBackendAddress(t *testing.T) {
 
 		callCount := fakeServiceStore.ResolveCallCount()
 		if callCount != test.expectedResolverCallCount {
-			t.Errorf("getBackendAddress() called fakeServiceStore.Resolve %d times but expected %d for case %q", callCount, test.expectedResolverCallCount, test.msg)
+			t.Errorf(
+				"getBackendAddress() called fakeServiceStore.Resolve %d times but expected %d for case %q",
+				callCount,
+				test.expectedResolverCallCount,
+				test.msg,
+			)
 		}
 
 		if test.expectedResolverCallCount == 0 {
@@ -408,7 +428,12 @@ func TestGetBackendAddress(t *testing.T) {
 
 		nsname := fakeServiceStore.ResolveArgsForCall(0)
 		if nsname != test.expectedNsName {
-			t.Errorf("getBackendAddress() called fakeServiceStore.Resolve with %v but expected %v for case %q", nsname, test.expectedNsName, test.msg)
+			t.Errorf(
+				"getBackendAddress() called fakeServiceStore.Resolve with %v but expected %v for case %q",
+				nsname,
+				test.expectedNsName,
+				test.msg,
+			)
 		}
 	}
 }
@@ -438,32 +463,38 @@ func TestCreatePathForMatch(t *testing.T) {
 func TestCreateArgKeyValString(t *testing.T) {
 	expected := "key=value"
 
-	result := createQueryParamKeyValString(v1alpha2.HTTPQueryParamMatch{
-		Name:  "key",
-		Value: "value",
-	})
+	result := createQueryParamKeyValString(
+		v1alpha2.HTTPQueryParamMatch{
+			Name:  "key",
+			Value: "value",
+		},
+	)
 	if result != expected {
 		t.Errorf("createQueryParamKeyValString() returned %q but expected %q", result, expected)
 	}
 
 	expected = "KeY=vaLUe=="
 
-	result = createQueryParamKeyValString(v1alpha2.HTTPQueryParamMatch{
-		Name:  "KeY",
-		Value: "vaLUe==",
-	})
+	result = createQueryParamKeyValString(
+		v1alpha2.HTTPQueryParamMatch{
+			Name:  "KeY",
+			Value: "vaLUe==",
+		},
+	)
 	if result != expected {
 		t.Errorf("createQueryParamKeyValString() returned %q but expected %q", result, expected)
 	}
 }
 
 func TestCreateHeaderKeyValString(t *testing.T) {
-	expected := "key:value"
+	expected := "kEy:vALUe"
 
-	result := createHeaderKeyValString(v1alpha2.HTTPHeaderMatch{
-		Name:  "kEy",
-		Value: "vALUe",
-	})
+	result := createHeaderKeyValString(
+		v1alpha2.HTTPHeaderMatch{
+			Name:  "kEy",
+			Value: "vALUe",
+		},
+	)
 
 	if result != expected {
 		t.Errorf("createHeaderKeyValString() returned %q but expected %q", result, expected)

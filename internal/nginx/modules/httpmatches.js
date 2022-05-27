@@ -12,8 +12,11 @@ function headersMatch(r, headers) {
       r.error('invalid header match: ' + h);
       throw 500;
     }
+    // Header names are compared in a case-insensitive manner, meaning header name "FOO" is equivalent to "foo".
+    // The NGINX request's headersIn object lookup is case-insensitive as well.
+    // This means that r.headersIn['FOO'] is equivalent to r.headersIn['foo'].
     let val = r.headersIn[kv[0]];
-    if (!val || val.toLowerCase() !== kv[1]) {
+    if (!val || val !== kv[1]) {
       r.warn('header: ' + h + ' does not exist in request');
       throw 404;
     }
