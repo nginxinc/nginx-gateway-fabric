@@ -17,7 +17,6 @@ function headersMatch(r, headers) {
     // This means that r.headersIn['FOO'] is equivalent to r.headersIn['foo'].
     let val = r.headersIn[kv[0]];
     if (!val || val !== kv[1]) {
-      r.warn('header: ' + h + ' does not exist in request');
       throw 404;
     }
   }
@@ -42,7 +41,6 @@ function paramsMatch(r, params) {
 
     const val = r.args[kv[0]];
     if (!val || val !== kv[1]) {
-      r.warn('query parameter ' + p + ' not in request URI');
       throw 404;
     }
   }
@@ -62,7 +60,6 @@ function redirect(r) {
   const match = JSON.parse(r.variables[matchesVariable]);
 
   if (match.method && match.method !== r.method) {
-    r.warn('request method: ' + r.method + ' does not match expected method: ' + match.method);
     r.return(405);
     return;
   }

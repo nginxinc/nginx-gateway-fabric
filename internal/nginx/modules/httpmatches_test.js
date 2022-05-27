@@ -15,9 +15,6 @@ let r = {
   error(msg) {
     console.log('\terror:', msg);
   },
-  warn(msg) {
-    console.log('\twarn:', msg);
-  },
 };
 const testHeaderMatches = {
   headers: ['header1:VALUE1', 'header2:value2', 'header3:value3'],
