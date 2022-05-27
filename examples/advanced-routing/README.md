@@ -52,7 +52,7 @@ We will use `curl` to send requests to the `coffee` and `tea` services.
 
 ### 4.1 Access coffee
 
-Send a `POST` request to the path `/coffee` with the headers `x-demo-header:demo-x1` and `version:v1`:
+Send a `POST` request to the path `/coffee` with the headers `X-Demo-Header:Demo-X1` and `version:v1`:
 
 ```
 curl --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/coffee -X POST -H "X-Demo-Header:Demo-X1" -H "version:v1"
