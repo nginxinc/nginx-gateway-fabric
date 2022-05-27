@@ -68,7 +68,7 @@ Server address: 10.12.0.18:80
 Server name: coffee-7586895968-r26zn
 ```
 
-Only `POST` requests to the path `/coffee` with the headers `x-demo-header:Demo-X1` and `version:v1` will be able to access coffee.
+Only `POST` requests to the path `/coffee` with the headers `X-Demo-Header:Demo-X1` and `version:v1` will be able to access coffee.
 For example, try sending the following `GET` request:
 ```
 curl --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/coffee -H "X-Demo-Header:Demo-X1" -H "version:v1"
