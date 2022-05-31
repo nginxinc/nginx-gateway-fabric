@@ -12,13 +12,14 @@ import (
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/config"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/events"
+	gw "github.com/nginxinc/nginx-kubernetes-gateway/internal/implementations/gateway"
 	hr "github.com/nginxinc/nginx-kubernetes-gateway/internal/implementations/httproute"
 	svc "github.com/nginxinc/nginx-kubernetes-gateway/internal/implementations/service"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/newstate"
 	ngxcfg "github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/config"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/file"
 	ngxruntime "github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/runtime"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/status"
 	"github.com/nginxinc/nginx-kubernetes-gateway/pkg/sdk"
 )
 
@@ -50,6 +51,10 @@ func Start(cfg config.Config) error {
 		return fmt.Errorf("cannot build runtime manager: %w", err)
 	}
 
+	err = sdk.RegisterGatewayController(mgr, gw.NewGatewayImplementation(cfg, eventCh))
+	if err != nil {
+		return fmt.Errorf("cannot register gateway implementation: %w", err)
+	}
 	err = sdk.RegisterHTTPRouteController(mgr, hr.NewHTTPRouteImplementation(cfg, eventCh))
 	if err != nil {
 		return fmt.Errorf("cannot register httproute implementation: %w", err)
@@ -59,13 +64,12 @@ func Start(cfg config.Config) error {
 		return fmt.Errorf("cannot register service implementation: %w", err)
 	}
 
-	conf := state.NewConfiguration(cfg.GatewayCtlrName, state.NewRealClock())
+	processor := newstate.NewChangeProcessorImpl(cfg.GatewayNsName)
 	serviceStore := state.NewServiceStore()
-	reporter := status.NewUpdater(mgr.GetClient(), cfg.Logger)
 	configGenerator := ngxcfg.NewGeneratorImpl(serviceStore)
 	nginxFileMgr := file.NewManagerImpl()
 	nginxRuntimeMgr := ngxruntime.NewManagerImpl()
-	eventLoop := events.NewEventLoop(conf, serviceStore, configGenerator, eventCh, reporter, cfg.Logger, nginxFileMgr, nginxRuntimeMgr)
+	eventLoop := events.NewEventLoop(processor, serviceStore, configGenerator, eventCh, cfg.Logger, nginxFileMgr, nginxRuntimeMgr)
 
 	err = mgr.Add(eventLoop)
 	if err != nil {

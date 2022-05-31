@@ -9,9 +9,27 @@ import (
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 )
 
+//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . ChangeProcessor
+
 // ChangeProcessor processes the changes to resources producing the internal representation of the Gateway configuration.
 // ChangeProcessor only supports one Gateway resource.
-type ChangeProcessor struct {
+type ChangeProcessor interface {
+	// CaptureUpsertChange captures an upsert change to a resource.
+	// It panics if the resource is of unsupported type or if the passed Gateway is different from the one this ChangeProcessor
+	// was created for.
+	CaptureUpsertChange(obj client.Object)
+	// CaptureDeleteChange captures a delete change to a resource.
+	// The method panics if the resource is of unsupported type or if the passed Gateway is different from the one this ChangeProcessor
+	// was created for.
+	CaptureDeleteChange(resourceType client.Object, nsname types.NamespacedName)
+	// Process processes any captured changes and produces an internal representation of the Gateway configuration and
+	// the status information about the processed resources.
+	// If no changes were captured, the changed return argument will be false and both the configuration and statuses
+	// will be empty.
+	Process() (changed bool, conf Configuration, statuses Statuses)
+}
+
+type ChangeProcessorImpl struct {
 	store    *store
 	changed  bool
 	gwNsName types.NamespacedName
@@ -19,18 +37,15 @@ type ChangeProcessor struct {
 	lock sync.Mutex
 }
 
-// NewChangeProcessor creates a new ChangeProcessor for the Gateway resource with the configured namespace name.
-func NewChangeProcessor(gwNsName types.NamespacedName) *ChangeProcessor {
-	return &ChangeProcessor{
+// NewChangeProcessorImpl creates a new ChangeProcessorImpl for the Gateway resource with the configured namespace name.
+func NewChangeProcessorImpl(gwNsName types.NamespacedName) *ChangeProcessorImpl {
+	return &ChangeProcessorImpl{
 		store:    newStore(),
 		gwNsName: gwNsName,
 	}
 }
 
-// CaptureUpsertChange captures an upsert change to a resource.
-// It panics if the resource is of unsupported type or if the passed Gateway is different from the one this ChangeProcessor
-// was created for.
-func (c *ChangeProcessor) CaptureUpsertChange(obj client.Object) {
+func (c *ChangeProcessorImpl) CaptureUpsertChange(obj client.Object) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
@@ -49,10 +64,7 @@ func (c *ChangeProcessor) CaptureUpsertChange(obj client.Object) {
 	}
 }
 
-// CaptureDeleteChange captures a delete change to a resource.
-// The method panics if the resource is of unsupported type or if the passed Gateway is different from the one this ChangeProcessor
-// was created for.
-func (c *ChangeProcessor) CaptureDeleteChange(resourceType client.Object, nsname types.NamespacedName) {
+func (c *ChangeProcessorImpl) CaptureDeleteChange(resourceType client.Object, nsname types.NamespacedName) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
@@ -71,11 +83,7 @@ func (c *ChangeProcessor) CaptureDeleteChange(resourceType client.Object, nsname
 	}
 }
 
-// Process processes any captured changes and produces an internal representation of the Gateway configuration and
-// the status information about the processed resources.
-// If no changes were captured, the changed return argument will be false and both the configuration and statuses
-// will be empty.
-func (c *ChangeProcessor) Process() (changed bool, conf Configuration, statuses Statuses) {
+func (c *ChangeProcessorImpl) Process() (changed bool, conf Configuration, statuses Statuses) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 

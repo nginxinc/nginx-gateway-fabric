@@ -11,22 +11,28 @@ import (
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/helpers"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/newstate"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/statefakes"
 )
 
 func TestGenerateForHost(t *testing.T) {
 	generator := NewGeneratorImpl(&statefakes.FakeServiceStore{})
 
-	host := state.Host{Value: "example.com"}
+	conf := newstate.Configuration{
+		HTTPServers: []newstate.HTTPServer{
+			{
+				Hostname: "example.com",
+			},
+		},
+	}
 
-	cfg, warnings := generator.GenerateForHost(host)
+	cfg, warnings := generator.Generate(conf)
 
 	if len(cfg) == 0 {
-		t.Errorf("GenerateForHost() generated empty config")
+		t.Errorf("Generate() generated empty config")
 	}
 	if len(warnings) > 0 {
-		t.Errorf("GenerateForHost() returned unexpected warnings: %v", warnings)
+		t.Errorf("Generate() returned unexpected warnings: %v", warnings)
 	}
 }
 
@@ -127,12 +133,12 @@ func TestGenerate(t *testing.T) {
 		},
 	}
 
-	host := state.Host{
-		Value: "example.com",
-		PathRouteGroups: []state.PathRouteGroup{
+	host := newstate.HTTPServer{
+		Hostname: "example.com",
+		PathRules: []newstate.PathRule{
 			{
 				Path: "/",
-				Routes: []state.Route{
+				MatchRules: []newstate.MatchRule{
 					{
 						MatchIdx: 0,
 						RuleIdx:  0,
@@ -142,7 +148,7 @@ func TestGenerate(t *testing.T) {
 			},
 			{
 				Path: "/test",
-				Routes: []state.Route{
+				MatchRules: []newstate.MatchRule{
 					{
 						MatchIdx: 0,
 						RuleIdx:  1,
@@ -152,7 +158,7 @@ func TestGenerate(t *testing.T) {
 			},
 			{
 				Path: "/path-only",
-				Routes: []state.Route{
+				MatchRules: []newstate.MatchRule{
 					{
 						MatchIdx: 0,
 						RuleIdx:  2,
