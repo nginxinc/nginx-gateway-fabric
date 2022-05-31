@@ -6,10 +6,11 @@ import (
 	"text/template"
 )
 
-var serverTemplate = `server {
-	server_name {{ .ServerName }};
+var httpServersTemplate = `{{ range $s := .Servers }}
+server {
+	server_name {{ $s.ServerName }};
 
-	{{ range $l := .Locations }}
+	{{ range $l := $s.Locations }}
 	location {{ $l.Path }} {
 		{{ if $l.Internal }}
 		internal;
@@ -28,31 +29,32 @@ var serverTemplate = `server {
 	}
 	{{ end }}
 }
+{{ end }}
 `
 
 // templateExecutor generates NGINX configuration using a template.
 // Template parsing or executing errors can only occur if there is a bug in the template, so they are handled with panics.
-// For now, we only generate configuration with NGINX server, but in the future we will also need to generate
-// the main NGINX configuration file, upstreams.
+// For now, we only generate configuration with NGINX http servers, but in the future we will also need to generate
+// the main NGINX configuration file, upstreams, stream servers.
 type templateExecutor struct {
-	serverTemplate *template.Template
+	httpServersTemplate *template.Template
 }
 
 func newTemplateExecutor() *templateExecutor {
-	t, err := template.New("server").Parse(serverTemplate)
+	t, err := template.New("server").Parse(httpServersTemplate)
 	if err != nil {
-		panic(fmt.Errorf("failed to parse server template: %w", err))
+		panic(fmt.Errorf("failed to parse http servers template: %w", err))
 	}
 
-	return &templateExecutor{serverTemplate: t}
+	return &templateExecutor{httpServersTemplate: t}
 }
 
-func (e *templateExecutor) ExecuteForServer(s server) []byte {
+func (e *templateExecutor) ExecuteForHTTPServers(servers httpServers) []byte {
 	var buf bytes.Buffer
 
-	err := e.serverTemplate.Execute(&buf, s)
+	err := e.httpServersTemplate.Execute(&buf, servers)
 	if err != nil {
-		panic(fmt.Errorf("failed to execute server template: %w", err))
+		panic(fmt.Errorf("failed to execute http servers template: %w", err))
 	}
 
 	return buf.Bytes()

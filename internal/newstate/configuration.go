@@ -42,6 +42,15 @@ type MatchRule struct {
 	Source *v1alpha2.HTTPRoute
 }
 
+// GetMatch returns the HTTPRouteMatch of the Route and true if it exists.
+// If there is no Match defined on the Route, GetMatch returns an empty HTTPRouteMatch and false.
+func (r *MatchRule) GetMatch() (v1alpha2.HTTPRouteMatch, bool) {
+	if r.MatchIdx == -1 {
+		return v1alpha2.HTTPRouteMatch{}, false
+	}
+	return r.Source.Spec.Rules[r.RuleIdx].Matches[r.MatchIdx], true
+}
+
 // buildConfiguration builds the Configuration from the graph.
 func buildConfiguration(graph *graph) Configuration {
 	// FIXME(pleshakov) For now we only handle paths with prefix matches. Handle exact and regex matches

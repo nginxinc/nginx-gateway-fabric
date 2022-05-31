@@ -16,7 +16,7 @@ var _ = Describe("ChangeProcessor", func() {
 	Describe("Normal cases of processing changes", func() {
 		var hr1, hr2 *v1alpha2.HTTPRoute
 		var gw *v1alpha2.Gateway
-		var processor *newstate.ChangeProcessor
+		var processor newstate.ChangeProcessor
 
 		BeforeEach(OncePerOrdered, func() {
 			createRoute := func(name string, hostname string) *v1alpha2.HTTPRoute {
@@ -73,7 +73,7 @@ var _ = Describe("ChangeProcessor", func() {
 				},
 			}
 
-			processor = newstate.NewChangeProcessor(types.NamespacedName{Namespace: "test", Name: "gateway"})
+			processor = newstate.NewChangeProcessorImpl(types.NamespacedName{Namespace: "test", Name: "gateway"})
 		})
 
 		Describe("Process resources", Ordered, func() {
@@ -304,10 +304,10 @@ var _ = Describe("ChangeProcessor", func() {
 	})
 
 	Describe("Edge cases with panic", func() {
-		var processor *newstate.ChangeProcessor
+		var processor newstate.ChangeProcessor
 
 		BeforeEach(func() {
-			processor = newstate.NewChangeProcessor(types.NamespacedName{Namespace: "test", Name: "gateway"})
+			processor = newstate.NewChangeProcessorImpl(types.NamespacedName{Namespace: "test", Name: "gateway"})
 		})
 
 		DescribeTable("CaptureUpsertChange must panic",

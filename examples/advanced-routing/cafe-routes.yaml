@@ -3,6 +3,10 @@ kind: HTTPRoute
 metadata:
   name: cafe
 spec:
+  parentRefs:
+  - name: gateway
+    namespace: nginx-gateway
+    sectionName: http
   hostnames:
   - "cafe.example.com"
   rules:
@@ -15,6 +19,10 @@ kind: HTTPRoute
 metadata:
   name: coffee
 spec:
+  parentRefs:
+  - name: gateway
+    namespace: nginx-gateway
+    sectionName: http
   hostnames:
   - "cafe.example.com"
   rules:
@@ -37,6 +45,10 @@ kind: HTTPRoute
 metadata:
   name: tea
 spec:
+  parentRefs:
+  - name: gateway
+    namespace: nginx-gateway
+    sectionName: http
   hostnames:
   - "cafe.example.com"
   rules:

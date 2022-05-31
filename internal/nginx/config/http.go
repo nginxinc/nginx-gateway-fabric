@@ -1,5 +1,9 @@
 package config
 
+type httpServers struct {
+	Servers []server
+}
+
 type server struct {
 	ServerName string
 	Locations  []location

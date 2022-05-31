@@ -15,7 +15,7 @@ type GatewayClassImpl interface {
 
 type GatewayImpl interface {
 	Upsert(*v1alpha2.Gateway)
-	Remove(string)
+	Remove(types.NamespacedName)
 }
 
 type GatewayConfigImpl interface {
