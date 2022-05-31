@@ -65,6 +65,13 @@ delete-kind-cluster:
 fmt: ## Run go fmt against code.
 	go fmt ./...
 
+.PHONY: njs-fmt
+njs-fmt: ## Run prettier against the njs httpmatches module.
+	docker run --rm \
+		-v $(PWD)/internal/nginx/modules/:/njs-modules/ \
+		node:18 \
+		npx prettier@2.6.2 --write njs-modules/ --config=njs-modules/.prettierrc
+
 .PHONY: vet
 vet: ## Run go vet against code.
 	go vet ./...
@@ -74,9 +81,15 @@ lint: ## Run golangci-lint against code.
 	docker run --pull always --rm -v $(shell pwd):/nginx-kubernetes-gateway -w /nginx-kubernetes-gateway -v $(shell go env GOCACHE):/cache/go -e GOCACHE=/cache/go -e GOLANGCI_LINT_CACHE=/cache/go -v $(shell go env GOPATH)/pkg:/go/pkg golangci/golangci-lint:latest golangci-lint --color always run
 
 .PHONY: unit-test
-unit-test:
+unit-test: ## Run unit tests for the go code
 	go test ./... -race -coverprofile cover.out
 	go tool cover -html=cover.out -o cover.html
 
+njs-unit-test: ## Run unit tests for the njs httpmatches module.
+	docker run --rm -w /src \
+		-v $(PWD)/internal/nginx/modules/:/src/njs-modules/ \
+		node:18 \
+		/bin/bash -c "npm install mocha@^8.2 esm chai && npx mocha -r esm njs-modules/httpmatches_test.js"
+
 .PHONY: dev-all
-dev-all: deps fmt vet lint unit-test
+dev-all: deps fmt njs-fmt vet lint unit-test njs-unit-test

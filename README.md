@@ -62,6 +62,18 @@ You can deploy NGINX Kubernetes Gateway on an existing Kubernetes 1.16+ cluster.
    kubectl apply -k "github.com/kubernetes-sigs/gateway-api/config/crd?ref=v0.4.2" 
    ```
 
+1. Create the nginx-gateway namespace:
+   
+    ```
+    kubectl apply -f deploy/manifests/namespace.yaml
+    ```
+
+1. Create the njs-modules configmap:
+
+    ```
+    kubectl create configmap njs-modules --from-file=internal/nginx/modules/httpmatches.js -n nginx-gateway  
+    ```
+
 1. Deploy the NGINX Kubernetes Gateway:
 
    Before deploying, make sure to update the Deployment spec in `nginx-gateway.yaml` to reference the image you built.

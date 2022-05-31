@@ -69,6 +69,27 @@ jobs:
         with:
           args: --timeout ${{ env.GOLANGCI_TIMEOUT }}
 
+  njs-lint:
+    name: NJS Lint
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+      - name: Run Prettier on NJS code
+        id: prettier-run
+        uses: rutajdash/prettier-cli-action@v1.0.0
+        with:
+          config_path: ${{ github.workspace }}/internal/nginx/modules/.prettierrc
+          file_pattern: ${{ github.workspace }}/internal/nginx/modules/*.js
+          prettier_version: 2.6.2
+      - name: Prettier Output
+        if: ${{ failure() }}
+        shell: bash
+        run: |
+          echo "The following files are not formatted:"
+          echo "${{steps.prettier-run.outputs.prettier_output}}"
+          echo "Run \"make njs-fmt\" locally to format the code"
+
   unit-tests:
     name: Unit Tests
     runs-on: ubuntu-20.04
@@ -88,6 +109,19 @@ jobs:
           name: cover-${{ needs.vars.outputs.sha }}.html
           path: ${{ github.workspace }}/cover.html
         if: always()
+
+  njs-unit-tests:
+    name: NJS Unit Tests
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+      - name: Setup Node.js Environment
+        uses: actions/setup-node@v3
+        with:
+          node_version: 18
+      - run: npm install mocha@^8.2 esm chai
+      - run: npx mocha -r esm ${{ github.workspace }}/internal/nginx/modules/httpmatches_test.js
 
   binary:
     name: Build Binary
