@@ -5,64 +5,59 @@ import (
 	"context"
 	"sync"
 
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/newstate"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/status"
 )
 
 type FakeUpdater struct {
-	ProcessStatusUpdatesStub        func(context.Context, []state.StatusUpdate)
-	processStatusUpdatesMutex       sync.RWMutex
-	processStatusUpdatesArgsForCall []struct {
+	UpdateStub        func(context.Context, newstate.Statuses)
+	updateMutex       sync.RWMutex
+	updateArgsForCall []struct {
 		arg1 context.Context
-		arg2 []state.StatusUpdate
+		arg2 newstate.Statuses
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeUpdater) ProcessStatusUpdates(arg1 context.Context, arg2 []state.StatusUpdate) {
-	var arg2Copy []state.StatusUpdate
-	if arg2 != nil {
-		arg2Copy = make([]state.StatusUpdate, len(arg2))
-		copy(arg2Copy, arg2)
-	}
-	fake.processStatusUpdatesMutex.Lock()
-	fake.processStatusUpdatesArgsForCall = append(fake.processStatusUpdatesArgsForCall, struct {
+func (fake *FakeUpdater) Update(arg1 context.Context, arg2 newstate.Statuses) {
+	fake.updateMutex.Lock()
+	fake.updateArgsForCall = append(fake.updateArgsForCall, struct {
 		arg1 context.Context
-		arg2 []state.StatusUpdate
-	}{arg1, arg2Copy})
-	stub := fake.ProcessStatusUpdatesStub
-	fake.recordInvocation("ProcessStatusUpdates", []interface{}{arg1, arg2Copy})
-	fake.processStatusUpdatesMutex.Unlock()
+		arg2 newstate.Statuses
+	}{arg1, arg2})
+	stub := fake.UpdateStub
+	fake.recordInvocation("Update", []interface{}{arg1, arg2})
+	fake.updateMutex.Unlock()
 	if stub != nil {
-		fake.ProcessStatusUpdatesStub(arg1, arg2)
+		fake.UpdateStub(arg1, arg2)
 	}
 }
 
-func (fake *FakeUpdater) ProcessStatusUpdatesCallCount() int {
-	fake.processStatusUpdatesMutex.RLock()
-	defer fake.processStatusUpdatesMutex.RUnlock()
-	return len(fake.processStatusUpdatesArgsForCall)
+func (fake *FakeUpdater) UpdateCallCount() int {
+	fake.updateMutex.RLock()
+	defer fake.updateMutex.RUnlock()
+	return len(fake.updateArgsForCall)
 }
 
-func (fake *FakeUpdater) ProcessStatusUpdatesCalls(stub func(context.Context, []state.StatusUpdate)) {
-	fake.processStatusUpdatesMutex.Lock()
-	defer fake.processStatusUpdatesMutex.Unlock()
-	fake.ProcessStatusUpdatesStub = stub
+func (fake *FakeUpdater) UpdateCalls(stub func(context.Context, newstate.Statuses)) {
+	fake.updateMutex.Lock()
+	defer fake.updateMutex.Unlock()
+	fake.UpdateStub = stub
 }
 
-func (fake *FakeUpdater) ProcessStatusUpdatesArgsForCall(i int) (context.Context, []state.StatusUpdate) {
-	fake.processStatusUpdatesMutex.RLock()
-	defer fake.processStatusUpdatesMutex.RUnlock()
-	argsForCall := fake.processStatusUpdatesArgsForCall[i]
+func (fake *FakeUpdater) UpdateArgsForCall(i int) (context.Context, newstate.Statuses) {
+	fake.updateMutex.RLock()
+	defer fake.updateMutex.RUnlock()
+	argsForCall := fake.updateArgsForCall[i]
 	return argsForCall.arg1, argsForCall.arg2
 }
 
 func (fake *FakeUpdater) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.processStatusUpdatesMutex.RLock()
-	defer fake.processStatusUpdatesMutex.RUnlock()
+	fake.updateMutex.RLock()
+	defer fake.updateMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

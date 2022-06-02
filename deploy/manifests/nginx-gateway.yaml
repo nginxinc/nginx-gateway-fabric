@@ -36,6 +36,7 @@ rules:
   - gateway.networking.k8s.io
   resources:
   - httproutes/status
+  - gateways/status
   verbs:
   - update
 ---
