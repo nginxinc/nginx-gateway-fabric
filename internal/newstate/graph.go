@@ -46,7 +46,14 @@ type graph struct {
 // buildGraph builds a graph from a store assuming that the Gateway resource has the gwNsName namespace and name.
 func buildGraph(store *store, gwNsName types.NamespacedName) *graph {
 	listeners := buildListeners(store.gw)
-	routes := buildRoutesAndBindToListeners(store.httpRoutes, gwNsName, listeners)
+
+	routes := make(map[types.NamespacedName]*route)
+	for _, ghr := range store.httpRoutes {
+		ignored, r := bindHTTPRouteToListeners(ghr, gwNsName, listeners)
+		if !ignored {
+			routes[getNamespacedName(ghr)] = r
+		}
+	}
 
 	return &graph{
 		Listeners: listeners,
@@ -54,72 +61,79 @@ func buildGraph(store *store, gwNsName types.NamespacedName) *graph {
 	}
 }
 
-func buildRoutesAndBindToListeners(
-	httpRoutes map[types.NamespacedName]*v1alpha2.HTTPRoute,
+// bindHTTPRouteToListeners tries to bind an HTTPRoute to listener.
+// There are three possibilities:
+// (1) HTTPRoute will be ignored.
+// (2) HTTPRoute will be processed but not bound.
+// (3) HTTPRoute will be processed and bound to a listener.
+func bindHTTPRouteToListeners(
+	ghr *v1alpha2.HTTPRoute,
 	gwNsName types.NamespacedName,
 	listeners map[string]*listener,
-) map[types.NamespacedName]*route {
-	routes := make(map[types.NamespacedName]*route)
+) (ignored bool, r *route) {
+	if len(ghr.Spec.ParentRefs) == 0 {
+		// ignore HTTPRoute without refs
+		return true, nil
+	}
 
-	for _, ghr := range httpRoutes {
-		if len(ghr.Spec.ParentRefs) == 0 {
-			// ignore HTTPRoute without refs
+	r = &route{
+		Source:                 ghr,
+		ValidSectionNameRefs:   make(map[string]struct{}),
+		InvalidSectionNameRefs: make(map[string]struct{}),
+	}
+
+	// FIXME (pleshakov) Handle the case when parent refs are duplicated
+
+	ignored = true
+
+	for _, p := range ghr.Spec.ParentRefs {
+		// Step 1 - Ensure the ref references the Gateway and has a non-empty section name
+
+		if ignoreParentRef(p, ghr.Namespace, gwNsName) {
 			continue
 		}
 
-		r := &route{
-			Source:                 ghr,
-			ValidSectionNameRefs:   make(map[string]struct{}),
-			InvalidSectionNameRefs: make(map[string]struct{}),
+		ignored = false
+
+		name := string(*p.SectionName)
+
+		// Step 2 - Find a listener
+
+		// FIXME(pleshakov)
+		// For now, let's do simple matching.
+		// However, we need to also support wildcard matching.
+		// More over, we need to handle cases when a Route host matches multiple HTTP listeners on the same port when
+		// sectionName is empty and only choose one listener.
+		// For example:
+		// - Route with host foo.example.com;
+		// - listener 1 for port 80 with hostname foo.example.com
+		// - listener 2 for port 80 with hostname *.example.com;
+		// In this case, the Route host foo.example.com should choose listener 2, as it is a more specific match.
+
+		l, exists := listeners[name]
+		if !exists {
+			r.InvalidSectionNameRefs[name] = struct{}{}
+			continue
 		}
 
-		// FIXME (pleshakov) Handle the case when parent refs are duplicated
+		accepted := findAcceptedHostnames(l.Source.Hostname, ghr.Spec.Hostnames)
 
-		for _, p := range ghr.Spec.ParentRefs {
-			// Step 1 - Ensure the ref references the Gateway and has a non-empty section name
-
-			if ignoreParentRef(p, ghr.Namespace, gwNsName) {
-				continue
+		if len(accepted) > 0 {
+			for _, h := range accepted {
+				l.AcceptedHostnames[h] = struct{}{}
 			}
-
-			name := string(*p.SectionName)
-
-			// when at least one parent ref references the Gateway, add the route to the graph
-			routes[getNamespacedName(ghr)] = r
-
-			// Step 2 - Find a listener
-
-			// FIXME(pleshakov)
-			// For now, let's do simple matching.
-			// However, we need to also support wildcard matching.
-			// More over, we need to handle cases when a Route host matches multiple HTTP listeners on the same port when
-			// sectionName is empty and only choose one listener.
-			// For example:
-			// - Route with host foo.example.com;
-			// - listener 1 for port 80 with hostname foo.example.com
-			// - listener 2 for port 80 with hostname *.example.com;
-			// In this case, the Route host foo.example.com should choose listener 2, as it is a more specific match.
-
-			l, exists := listeners[name]
-			if !exists {
-				r.InvalidSectionNameRefs[name] = struct{}{}
-				continue
-			}
-
-			accepted := findAcceptedHostnames(l.Source.Hostname, ghr.Spec.Hostnames)
-
-			if len(accepted) > 0 {
-				for _, h := range accepted {
-					l.AcceptedHostnames[h] = struct{}{}
-				}
-				r.ValidSectionNameRefs[name] = struct{}{}
-				l.Routes[getNamespacedName(ghr)] = r
-			} else {
-				r.InvalidSectionNameRefs[name] = struct{}{}
-			}
+			r.ValidSectionNameRefs[name] = struct{}{}
+			l.Routes[getNamespacedName(ghr)] = r
+		} else {
+			r.InvalidSectionNameRefs[name] = struct{}{}
 		}
 	}
-	return routes
+
+	if ignored {
+		return true, nil
+	}
+
+	return false, r
 }
 
 func findAcceptedHostnames(listenerHostname *v1alpha2.Hostname, routeHostnames []v1alpha2.Hostname) []string {
@@ -178,6 +192,7 @@ func buildListeners(gw *v1alpha2.Gateway) map[string]*listener {
 
 		h := getHostname(gl.Hostname)
 
+		// FIXME(pleshakov) This check will need to be done per each port once we support multiple ports.
 		if holder, exist := usedListenerHostnames[h]; exist {
 			valid = false
 			holder.Valid = false // all listeners for the same hostname become conflicted

@@ -1,14 +1,15 @@
 package newstate_test
 
 import (
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/helpers"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/newstate"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
+
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/helpers"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/newstate"
 )
 
 var _ = Describe("ChangeProcessor", func() {
@@ -76,14 +77,14 @@ var _ = Describe("ChangeProcessor", func() {
 		})
 
 		Describe("Process resources", Ordered, func() {
-			It("should return empty configuration", func() {
+			It("should return empty configuration and statuses when no upsert has occurred", func() {
 				changed, conf, statuses := processor.Process()
 				Expect(changed).To(BeFalse())
 				Expect(conf).To(BeZero())
 				Expect(statuses).To(BeZero())
 			})
 
-			It("should return empty configuration when the Gateway doesn't exist", func() {
+			It("should return empty configuration and updated statuses after upserting an HTTPRoute when the Gateway doesn't exist", func() {
 				processor.CaptureUpsertChange(hr1)
 
 				expectedConf := newstate.Configuration{HTTPServers: []newstate.HTTPServer{}}
@@ -104,7 +105,7 @@ var _ = Describe("ChangeProcessor", func() {
 				Expect(helpers.Diff(expectedStatuses, statuses)).To(BeEmpty())
 			})
 
-			It("should return non-empty configuration after the Gateway is upserted", func() {
+			It("should return updated configuration and statuses after the Gateway is upserted", func() {
 				processor.CaptureUpsertChange(gw)
 
 				expectedConf := newstate.Configuration{
@@ -148,7 +149,7 @@ var _ = Describe("ChangeProcessor", func() {
 				Expect(helpers.Diff(expectedStatuses, statuses)).To(BeEmpty())
 			})
 
-			It("should return no updated configuration after processing without capturing any changes", func() {
+			It("should return empty configuration and statuses after processing without capturing any changes", func() {
 				changed, conf, statuses := processor.Process()
 
 				Expect(changed).To(BeFalse())
@@ -156,7 +157,7 @@ var _ = Describe("ChangeProcessor", func() {
 				Expect(statuses).To(BeZero())
 			})
 
-			It("should return updated configuration after a second HTTPRoute is upserted", func() {
+			It("should return updated configuration and statuses after a second HTTPRoute is upserted", func() {
 				processor.CaptureUpsertChange(hr2)
 
 				expectedConf := newstate.Configuration{
@@ -220,7 +221,7 @@ var _ = Describe("ChangeProcessor", func() {
 				Expect(helpers.Diff(expectedStatuses, statuses)).To(BeEmpty())
 			})
 
-			It("should return updated configuration after deleting the second HTTPRoute", func() {
+			It("should return updated configuration and statuses after deleting the second HTTPRoute", func() {
 				processor.CaptureDeleteChange(&v1alpha2.HTTPRoute{}, types.NamespacedName{Namespace: "test", Name: "hr-2"})
 
 				expectedConf := newstate.Configuration{
@@ -264,7 +265,7 @@ var _ = Describe("ChangeProcessor", func() {
 				Expect(helpers.Diff(expectedStatuses, statuses)).To(BeEmpty())
 			})
 
-			It("should return empty configuration after deleting the Gateway", func() {
+			It("should return empty configuration and updated statuses after deleting the Gateway", func() {
 				processor.CaptureDeleteChange(&v1alpha2.Gateway{}, types.NamespacedName{Namespace: "test", Name: "gateway"})
 
 				expectedConf := newstate.Configuration{HTTPServers: []newstate.HTTPServer{}}
@@ -285,7 +286,7 @@ var _ = Describe("ChangeProcessor", func() {
 				Expect(helpers.Diff(expectedStatuses, statuses)).To(BeEmpty())
 			})
 
-			It("should return empty configuration after deleting the first HTTPRoute", func() {
+			It("should return empty configuration and statuses after deleting the first HTTPRoute", func() {
 				processor.CaptureDeleteChange(&v1alpha2.HTTPRoute{}, types.NamespacedName{Namespace: "test", Name: "hr-1"})
 
 				expectedConf := newstate.Configuration{HTTPServers: []newstate.HTTPServer{}}

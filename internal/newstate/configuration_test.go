@@ -5,10 +5,11 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/helpers"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
+
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/helpers"
 )
 
 func TestBuildConfiguration(t *testing.T) {

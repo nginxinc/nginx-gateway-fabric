@@ -4,44 +4,49 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/helpers"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
+
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/helpers"
 )
 
 func TestBuildGraph(t *testing.T) {
-	hr := &v1alpha2.HTTPRoute{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: "test",
-			Name:      "hr-1",
-		},
-		Spec: v1alpha2.HTTPRouteSpec{
-			CommonRouteSpec: v1alpha2.CommonRouteSpec{
-				ParentRefs: []v1alpha2.ParentRef{
-					{
-						Namespace:   (*v1alpha2.Namespace)(helpers.GetStringPointer("test")),
-						Name:        "gateway",
-						SectionName: (*v1alpha2.SectionName)(helpers.GetStringPointer("listener-80-1")),
+	createRoute := func(name string, gatewayName string) *v1alpha2.HTTPRoute {
+		return &v1alpha2.HTTPRoute{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: "test",
+				Name:      name,
+			},
+			Spec: v1alpha2.HTTPRouteSpec{
+				CommonRouteSpec: v1alpha2.CommonRouteSpec{
+					ParentRefs: []v1alpha2.ParentRef{
+						{
+							Namespace:   (*v1alpha2.Namespace)(helpers.GetStringPointer("test")),
+							Name:        v1alpha2.ObjectName(gatewayName),
+							SectionName: (*v1alpha2.SectionName)(helpers.GetStringPointer("listener-80-1")),
+						},
 					},
 				},
-			},
-			Hostnames: []v1alpha2.Hostname{
-				v1alpha2.Hostname("foo.example.com"),
-			},
-			Rules: []v1alpha2.HTTPRouteRule{
-				{
-					Matches: []v1alpha2.HTTPRouteMatch{
-						{
-							Path: &v1alpha2.HTTPPathMatch{
-								Value: helpers.GetStringPointer("/"),
+				Hostnames: []v1alpha2.Hostname{
+					v1alpha2.Hostname("foo.example.com"),
+				},
+				Rules: []v1alpha2.HTTPRouteRule{
+					{
+						Matches: []v1alpha2.HTTPRouteMatch{
+							{
+								Path: &v1alpha2.HTTPPathMatch{
+									Value: helpers.GetStringPointer("/"),
+								},
 							},
 						},
 					},
 				},
 			},
-		},
+		}
 	}
+	hr1 := createRoute("hr-1", "gateway")
+	hr2 := createRoute("hr-2", "wrong-gateway")
 
 	store := &store{
 		gw: &v1alpha2.Gateway{
@@ -61,14 +66,15 @@ func TestBuildGraph(t *testing.T) {
 			},
 		},
 		httpRoutes: map[types.NamespacedName]*v1alpha2.HTTPRoute{
-			{Namespace: "test", Name: "hr-1"}: hr,
+			{Namespace: "test", Name: "hr-1"}: hr1,
+			{Namespace: "test", Name: "hr-2"}: hr2,
 		},
 	}
 
 	gwNsName := types.NamespacedName{Namespace: "test", Name: "gateway"}
 
 	routeHR1 := &route{
-		Source: hr,
+		Source: hr1,
 		ValidSectionNameRefs: map[string]struct{}{
 			"listener-80-1": {},
 		},
@@ -228,7 +234,7 @@ func TestBuildListeners(t *testing.T) {
 	}
 }
 
-func TestBuildRoutesAndBindToListeners(t *testing.T) {
+func TestBindRouteToListeners(t *testing.T) {
 	createRoute := func(hostname string, parentRefs ...v1alpha2.ParentRef) *v1alpha2.HTTPRoute {
 		return &v1alpha2.HTTPRoute{
 			ObjectMeta: metav1.ObjectMeta{
@@ -283,60 +289,56 @@ func TestBuildRoutesAndBindToListeners(t *testing.T) {
 	}
 
 	tests := []struct {
-		httpRoutes        map[types.NamespacedName]*v1alpha2.HTTPRoute
+		httpRoute         *v1alpha2.HTTPRoute
 		gwNsName          types.NamespacedName
 		listeners         map[string]*listener
-		expectedRoutes    map[types.NamespacedName]*route
+		expectedIgnored   bool
+		expectedRoute     *route
 		expectedListeners map[string]*listener
 		msg               string
 	}{
 		{
-			httpRoutes: map[types.NamespacedName]*v1alpha2.HTTPRoute{
-				{Namespace: "test", Name: "hr-1"}: createRoute("foo.example.com"),
-			},
-			gwNsName: types.NamespacedName{Namespace: "test", Name: "gateway"},
+			httpRoute: createRoute("foo.example.com"),
+			gwNsName:  types.NamespacedName{Namespace: "test", Name: "gateway"},
 			listeners: map[string]*listener{
 				"listener-80-1": createListener(),
 			},
-			expectedRoutes: map[types.NamespacedName]*route{},
+			expectedIgnored: true,
+			expectedRoute:   nil,
 			expectedListeners: map[string]*listener{
 				"listener-80-1": createListener(),
 			},
 			msg: "HTTPRoute without parent refs",
 		},
 		{
-			httpRoutes: map[types.NamespacedName]*v1alpha2.HTTPRoute{
-				{Namespace: "test", Name: "hr-1"}: createRoute("foo.example.com", v1alpha2.ParentRef{
-					Namespace:   (*v1alpha2.Namespace)(helpers.GetStringPointer("test")),
-					Name:        "some-gateway", // wrong gateway
-					SectionName: (*v1alpha2.SectionName)(helpers.GetStringPointer("listener-1")),
-				}),
-			},
+			httpRoute: createRoute("foo.example.com", v1alpha2.ParentRef{
+				Namespace:   (*v1alpha2.Namespace)(helpers.GetStringPointer("test")),
+				Name:        "some-gateway", // wrong gateway
+				SectionName: (*v1alpha2.SectionName)(helpers.GetStringPointer("listener-1")),
+			}),
 			gwNsName: types.NamespacedName{Namespace: "test", Name: "gateway"},
 			listeners: map[string]*listener{
 				"listener-80-1": createListener(),
 			},
-			expectedRoutes: map[types.NamespacedName]*route{},
+			expectedIgnored: true,
+			expectedRoute:   nil,
 			expectedListeners: map[string]*listener{
 				"listener-80-1": createListener(),
 			},
 			msg: "HTTPRoute without good parent refs",
 		},
 		{
-			httpRoutes: map[types.NamespacedName]*v1alpha2.HTTPRoute{
-				{Namespace: "test", Name: "hr-1"}: hrNonExistingSectionName,
-			},
-			gwNsName: types.NamespacedName{Namespace: "test", Name: "gateway"},
+			httpRoute: hrNonExistingSectionName,
+			gwNsName:  types.NamespacedName{Namespace: "test", Name: "gateway"},
 			listeners: map[string]*listener{
 				"listener-80-1": createListener(),
 			},
-			expectedRoutes: map[types.NamespacedName]*route{
-				{Namespace: "test", Name: "hr-1"}: {
-					Source:               hrNonExistingSectionName,
-					ValidSectionNameRefs: map[string]struct{}{},
-					InvalidSectionNameRefs: map[string]struct{}{
-						"listener-80-2": {},
-					},
+			expectedIgnored: false,
+			expectedRoute: &route{
+				Source:               hrNonExistingSectionName,
+				ValidSectionNameRefs: map[string]struct{}{},
+				InvalidSectionNameRefs: map[string]struct{}{
+					"listener-80-2": {},
 				},
 			},
 			expectedListeners: map[string]*listener{
@@ -345,21 +347,18 @@ func TestBuildRoutesAndBindToListeners(t *testing.T) {
 			msg: "HTTPRoute with non-existing section name",
 		},
 		{
-			httpRoutes: map[types.NamespacedName]*v1alpha2.HTTPRoute{
-				{Namespace: "test", Name: "hr-1"}: hrFoo,
-			},
-			gwNsName: types.NamespacedName{Namespace: "test", Name: "gateway"},
+			httpRoute: hrFoo,
+			gwNsName:  types.NamespacedName{Namespace: "test", Name: "gateway"},
 			listeners: map[string]*listener{
 				"listener-80-1": createListener(),
 			},
-			expectedRoutes: map[types.NamespacedName]*route{
-				{Namespace: "test", Name: "hr-1"}: {
-					Source: hrFoo,
-					ValidSectionNameRefs: map[string]struct{}{
-						"listener-80-1": {},
-					},
-					InvalidSectionNameRefs: map[string]struct{}{},
+			expectedIgnored: false,
+			expectedRoute: &route{
+				Source: hrFoo,
+				ValidSectionNameRefs: map[string]struct{}{
+					"listener-80-1": {},
 				},
+				InvalidSectionNameRefs: map[string]struct{}{},
 			},
 			expectedListeners: map[string]*listener{
 				"listener-80-1": createModifiedListener(func(l *listener) {
@@ -380,20 +379,17 @@ func TestBuildRoutesAndBindToListeners(t *testing.T) {
 			msg: "HTTPRoute with one accepted hostname",
 		},
 		{
-			httpRoutes: map[types.NamespacedName]*v1alpha2.HTTPRoute{
-				{Namespace: "test", Name: "hr-1"}: hrBar,
-			},
-			gwNsName: types.NamespacedName{Namespace: "test", Name: "gateway"},
+			httpRoute: hrBar,
+			gwNsName:  types.NamespacedName{Namespace: "test", Name: "gateway"},
 			listeners: map[string]*listener{
 				"listener-80-1": createListener(),
 			},
-			expectedRoutes: map[types.NamespacedName]*route{
-				{Namespace: "test", Name: "hr-1"}: {
-					Source:               hrBar,
-					ValidSectionNameRefs: map[string]struct{}{},
-					InvalidSectionNameRefs: map[string]struct{}{
-						"listener-80-1": {},
-					},
+			expectedIgnored: false,
+			expectedRoute: &route{
+				Source:               hrBar,
+				ValidSectionNameRefs: map[string]struct{}{},
+				InvalidSectionNameRefs: map[string]struct{}{
+					"listener-80-1": {},
 				},
 			},
 			expectedListeners: map[string]*listener{
@@ -404,18 +400,22 @@ func TestBuildRoutesAndBindToListeners(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		routes := buildRoutesAndBindToListeners(test.httpRoutes, test.gwNsName, test.listeners)
-		if diff := cmp.Diff(test.expectedRoutes, routes); diff != "" {
-			t.Errorf("buildListeners() %q  mismatch on routes (-want +got):\n%s", test.msg, diff)
+		ignored, route := bindHTTPRouteToListeners(test.httpRoute, test.gwNsName, test.listeners)
+		if diff := cmp.Diff(test.expectedIgnored, ignored); diff != "" {
+			t.Errorf("bindHTTPRouteToListeners() %q  mismatch on ignored (-want +got):\n%s", test.msg, diff)
+		}
+		if diff := cmp.Diff(test.expectedRoute, route); diff != "" {
+			t.Errorf("bindHTTPRouteToListeners() %q  mismatch on route (-want +got):\n%s", test.msg, diff)
 		}
 		if diff := cmp.Diff(test.expectedListeners, test.listeners); diff != "" {
-			t.Errorf("buildListeners() %q  mismatch on listeners (-want +got):\n%s", test.msg, diff)
+			t.Errorf("bindHTTPRouteToListeners() %q  mismatch on listeners (-want +got):\n%s", test.msg, diff)
 		}
 	}
 }
 
 func TestFindAcceptedHostnames(t *testing.T) {
-	var listenerHostname v1alpha2.Hostname = "foo.example.com"
+	var listenerHostnameFoo v1alpha2.Hostname = "foo.example.com"
+	var listenerHostnameCafe v1alpha2.Hostname = "cafe.example.com"
 	routeHostnames := []v1alpha2.Hostname{"foo.example.com", "bar.example.com"}
 
 	tests := []struct {
@@ -425,22 +425,22 @@ func TestFindAcceptedHostnames(t *testing.T) {
 		msg              string
 	}{
 		{
-			listenerHostname: &listenerHostname,
+			listenerHostname: &listenerHostnameFoo,
 			routeHostnames:   routeHostnames,
 			expected:         []string{"foo.example.com"},
 			msg:              "one match",
+		},
+		{
+			listenerHostname: &listenerHostnameCafe,
+			routeHostnames:   routeHostnames,
+			expected:         nil,
+			msg:              "no match",
 		},
 		{
 			listenerHostname: nil,
 			routeHostnames:   routeHostnames,
 			expected:         []string{"foo.example.com", "bar.example.com"},
 			msg:              "nil listener hostname",
-		},
-		{
-			listenerHostname: nil,
-			routeHostnames:   routeHostnames,
-			expected:         []string{"foo.example.com", "bar.example.com"},
-			msg:              "empty listener hostname",
 		},
 	}
 
@@ -454,7 +454,7 @@ func TestFindAcceptedHostnames(t *testing.T) {
 }
 
 func TestIgnoreParentRef(t *testing.T) {
-	var namespace v1alpha2.Namespace = "test"
+	var gatewayNs v1alpha2.Namespace = "test"
 	var sectionName v1alpha2.SectionName = "first"
 	var emptySectionName v1alpha2.SectionName
 
@@ -467,12 +467,12 @@ func TestIgnoreParentRef(t *testing.T) {
 	}{
 		{
 			parentRef: v1alpha2.ParentRef{
-				Namespace:   &namespace,
+				Namespace:   &gatewayNs,
 				Name:        "gateway",
 				SectionName: &sectionName,
 			},
 			hrNamespace: "test2",
-			gwNsName:    types.NamespacedName{Namespace: "test", Name: "gateway"},
+			gwNsName:    types.NamespacedName{Namespace: string(gatewayNs), Name: "gateway"},
 			expected:    false,
 			msg:         "normal case",
 		},
@@ -482,13 +482,13 @@ func TestIgnoreParentRef(t *testing.T) {
 				SectionName: &sectionName,
 			},
 			hrNamespace: "test",
-			gwNsName:    types.NamespacedName{Namespace: "test", Name: "gateway"},
+			gwNsName:    types.NamespacedName{Namespace: string(gatewayNs), Name: "gateway"},
 			expected:    false,
 			msg:         "normal case with implicit namespace",
 		},
 		{
 			parentRef: v1alpha2.ParentRef{
-				Namespace:   &namespace,
+				Namespace:   &gatewayNs,
 				Name:        "gateway",
 				SectionName: &sectionName,
 			},
@@ -499,34 +499,34 @@ func TestIgnoreParentRef(t *testing.T) {
 		},
 		{
 			parentRef: v1alpha2.ParentRef{
-				Namespace:   &namespace,
+				Namespace:   &gatewayNs,
 				Name:        "gateway",
 				SectionName: &sectionName,
 			},
 			hrNamespace: "test2",
-			gwNsName:    types.NamespacedName{Namespace: "test", Name: "gateway2"},
+			gwNsName:    types.NamespacedName{Namespace: string(gatewayNs), Name: "gateway2"},
 			expected:    true,
 			msg:         "gateway name is different",
 		},
 		{
 			parentRef: v1alpha2.ParentRef{
-				Namespace:   &namespace,
+				Namespace:   &gatewayNs,
 				Name:        "gateway",
 				SectionName: nil,
 			},
 			hrNamespace: "test2",
-			gwNsName:    types.NamespacedName{Namespace: "test", Name: "gateway"},
+			gwNsName:    types.NamespacedName{Namespace: string(gatewayNs), Name: "gateway"},
 			expected:    true,
 			msg:         "section name is nil",
 		},
 		{
 			parentRef: v1alpha2.ParentRef{
-				Namespace:   &namespace,
+				Namespace:   &gatewayNs,
 				Name:        "gateway",
 				SectionName: &emptySectionName,
 			},
 			hrNamespace: "test2",
-			gwNsName:    types.NamespacedName{Namespace: "test", Name: "gateway"},
+			gwNsName:    types.NamespacedName{Namespace: string(gatewayNs), Name: "gateway"},
 			expected:    true,
 			msg:         "section name is empty",
 		},

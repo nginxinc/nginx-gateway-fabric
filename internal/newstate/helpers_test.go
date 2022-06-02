@@ -15,6 +15,6 @@ func TestGetNamespacedName(t *testing.T) {
 
 	result := getNamespacedName(obj)
 	if result != expected {
-		t.Errorf("getNamespacedName() returned %v but expected %v", result, expected)
+		t.Errorf("getNamespacedName() returned %#v but expected %#v", result, expected)
 	}
 }

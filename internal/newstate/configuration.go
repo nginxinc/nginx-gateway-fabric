@@ -65,8 +65,6 @@ func buildConfiguration(graph *graph) Configuration {
 
 			for i, rule := range r.Source.Spec.Rules {
 				for _, h := range hostnames {
-					// FIXME(pleshakov) Handle the case when the number of matches is 0 (create "/" path)
-
 					for j, m := range rule.Matches {
 						path := getPath(m.Path)
 

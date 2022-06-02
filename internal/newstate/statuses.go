@@ -2,12 +2,17 @@ package newstate
 
 import "k8s.io/apimachinery/pkg/types"
 
+// ListenerStatuses holds the statuses of listeners where the key is the name of a listener in the Gateway resource.
+type ListenerStatuses map[string]ListenerStatus
+
+// HTTPRouteStatuses holds the statuses of HTTPRoutes where the key is the namespaced name of an HTTPRoute.
+type HTTPRouteStatuses map[types.NamespacedName]HTTPRouteStatus
+
 // Statuses holds the status-related information about Gateway API resources.
 // It is assumed that only a singe Gateway resource is used.
 type Statuses struct {
-	// the key is the name of a listener in the Gateway resource.
-	ListenerStatuses  map[string]ListenerStatus
-	HTTPRouteStatuses map[types.NamespacedName]HTTPRouteStatus
+	ListenerStatuses  ListenerStatuses
+	HTTPRouteStatuses HTTPRouteStatuses
 }
 
 // ListenerStatus holds the status-related information about a listener in the Gateway resource.
@@ -18,10 +23,11 @@ type ListenerStatus struct {
 	AttachedRoutes int32
 }
 
-// HTTPRouteStatus holds the status-related information about an HTTPRoute.
+// ParentStatuses holds the statuses of parents where the key is the section name in a parentRef.
+type ParentStatuses map[string]ParentStatus
+
 type HTTPRouteStatus struct {
-	// the key is the section name in a parentRef.
-	ParentStatuses map[string]ParentStatus
+	ParentStatuses ParentStatuses
 }
 
 // ParentStatus holds status-related information related to how the HTTPRoute binds to a specific parentRef.
