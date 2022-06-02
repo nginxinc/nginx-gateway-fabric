@@ -14,9 +14,11 @@ import (
 
 var _ = Describe("ChangeProcessor", func() {
 	Describe("Normal cases of processing changes", func() {
-		var hr1, hr2 *v1alpha2.HTTPRoute
-		var gw *v1alpha2.Gateway
-		var processor newstate.ChangeProcessor
+		var (
+			hr1, hr1Updated, hr2 *v1alpha2.HTTPRoute
+			gw, gwUpdated        *v1alpha2.Gateway
+			processor            newstate.ChangeProcessor
+		)
 
 		BeforeEach(OncePerOrdered, func() {
 			createRoute := func(name string, hostname string) *v1alpha2.HTTPRoute {
@@ -54,6 +56,10 @@ var _ = Describe("ChangeProcessor", func() {
 			}
 
 			hr1 = createRoute("hr-1", "foo.example.com")
+
+			hr1Updated = hr1.DeepCopy()
+			hr1Updated.Generation++
+
 			hr2 = createRoute("hr-2", "bar.example.com")
 
 			gw = &v1alpha2.Gateway{
@@ -72,6 +78,9 @@ var _ = Describe("ChangeProcessor", func() {
 					},
 				},
 			}
+
+			gwUpdated = gw.DeepCopy()
+			gwUpdated.Generation++
 
 			processor = newstate.NewChangeProcessorImpl(types.NamespacedName{Namespace: "test", Name: "gateway"})
 		})
@@ -149,6 +158,116 @@ var _ = Describe("ChangeProcessor", func() {
 				Expect(helpers.Diff(expectedStatuses, statuses)).To(BeEmpty())
 			})
 
+			It("should return empty configuration and statuses after processing upserting the HTTPRoute without generation change", func() {
+				hr1UpdatedSameGen := hr1.DeepCopy()
+				// hr1UpdatedSameGen.Generation has not been changed
+				processor.CaptureUpsertChange(hr1UpdatedSameGen)
+
+				changed, conf, statuses := processor.Process()
+				Expect(changed).To(BeFalse())
+				Expect(conf).To(BeZero())
+				Expect(statuses).To(BeZero())
+			})
+
+			It("should return updated configuration and statuses after upserting the HTTPRoute with generation change", func() {
+				processor.CaptureUpsertChange(hr1Updated)
+
+				expectedConf := newstate.Configuration{
+					HTTPServers: []newstate.HTTPServer{
+						{
+							Hostname: "foo.example.com",
+							PathRules: []newstate.PathRule{
+								{
+									Path: "/",
+									MatchRules: []newstate.MatchRule{
+										{
+											MatchIdx: 0,
+											RuleIdx:  0,
+											Source:   hr1Updated,
+										},
+									},
+								},
+							},
+						},
+					},
+				}
+				expectedStatuses := newstate.Statuses{
+					ListenerStatuses: map[string]newstate.ListenerStatus{
+						"listener-80-1": {
+							Valid:          true,
+							AttachedRoutes: 1,
+						},
+					},
+					HTTPRouteStatuses: map[types.NamespacedName]newstate.HTTPRouteStatus{
+						{Namespace: "test", Name: "hr-1"}: {
+							ParentStatuses: map[string]newstate.ParentStatus{
+								"listener-80-1": {Attached: true},
+							},
+						},
+					},
+				}
+
+				changed, conf, statuses := processor.Process()
+				Expect(changed).To(BeTrue())
+				Expect(helpers.Diff(expectedConf, conf)).To(BeEmpty())
+				Expect(helpers.Diff(expectedStatuses, statuses)).To(BeEmpty())
+			})
+
+			It("should return empty configuration and statuses after processing upserting the Gateway without generation change", func() {
+				gwUpdatedSameGen := gw.DeepCopy()
+				// gwUpdatedSameGen.Generation has not been changed
+				processor.CaptureUpsertChange(gwUpdatedSameGen)
+
+				changed, conf, statuses := processor.Process()
+				Expect(changed).To(BeFalse())
+				Expect(conf).To(BeZero())
+				Expect(statuses).To(BeZero())
+			})
+
+			It("should return updated configuration and statuses after upserting the Gateway with generation change", func() {
+				processor.CaptureUpsertChange(gwUpdated)
+
+				expectedConf := newstate.Configuration{
+					HTTPServers: []newstate.HTTPServer{
+						{
+							Hostname: "foo.example.com",
+							PathRules: []newstate.PathRule{
+								{
+									Path: "/",
+									MatchRules: []newstate.MatchRule{
+										{
+											MatchIdx: 0,
+											RuleIdx:  0,
+											Source:   hr1Updated,
+										},
+									},
+								},
+							},
+						},
+					},
+				}
+				expectedStatuses := newstate.Statuses{
+					ListenerStatuses: map[string]newstate.ListenerStatus{
+						"listener-80-1": {
+							Valid:          true,
+							AttachedRoutes: 1,
+						},
+					},
+					HTTPRouteStatuses: map[types.NamespacedName]newstate.HTTPRouteStatus{
+						{Namespace: "test", Name: "hr-1"}: {
+							ParentStatuses: map[string]newstate.ParentStatus{
+								"listener-80-1": {Attached: true},
+							},
+						},
+					},
+				}
+
+				changed, conf, statuses := processor.Process()
+				Expect(changed).To(BeTrue())
+				Expect(helpers.Diff(expectedConf, conf)).To(BeEmpty())
+				Expect(helpers.Diff(expectedStatuses, statuses)).To(BeEmpty())
+			})
+
 			It("should return empty configuration and statuses after processing without capturing any changes", func() {
 				changed, conf, statuses := processor.Process()
 
@@ -186,7 +305,7 @@ var _ = Describe("ChangeProcessor", func() {
 										{
 											MatchIdx: 0,
 											RuleIdx:  0,
-											Source:   hr1,
+											Source:   hr1Updated,
 										},
 									},
 								},
@@ -235,7 +354,7 @@ var _ = Describe("ChangeProcessor", func() {
 										{
 											MatchIdx: 0,
 											RuleIdx:  0,
-											Source:   hr1,
+											Source:   hr1Updated,
 										},
 									},
 								},

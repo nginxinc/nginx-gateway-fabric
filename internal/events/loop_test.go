@@ -21,6 +21,7 @@ import (
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/file/filefakes"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/runtime/runtimefakes"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/statefakes"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/status/statusfakes"
 )
 
 type unsupportedResource struct {
@@ -42,6 +43,7 @@ var _ = Describe("EventLoop", func() {
 		fakeGenerator       *configfakes.FakeGenerator
 		fakeNginxFimeMgr    *filefakes.FakeManager
 		fakeNginxRuntimeMgr *runtimefakes.FakeManager
+		fakeStatusUpdater   *statusfakes.FakeUpdater
 		cancel              context.CancelFunc
 		eventCh             chan interface{}
 		errorCh             chan error
@@ -55,7 +57,8 @@ var _ = Describe("EventLoop", func() {
 		fakeGenerator = &configfakes.FakeGenerator{}
 		fakeNginxFimeMgr = &filefakes.FakeManager{}
 		fakeNginxRuntimeMgr = &runtimefakes.FakeManager{}
-		ctrl := events.NewEventLoop(fakeProcessor, fakeServiceStore, fakeGenerator, eventCh, zap.New(), fakeNginxFimeMgr, fakeNginxRuntimeMgr)
+		fakeStatusUpdater = &statusfakes.FakeUpdater{}
+		ctrl := events.NewEventLoop(fakeProcessor, fakeServiceStore, fakeGenerator, eventCh, zap.New(), fakeNginxFimeMgr, fakeNginxRuntimeMgr, fakeStatusUpdater)
 
 		var ctx context.Context
 		ctx, cancel = context.WithCancel(context.Background())
@@ -82,7 +85,8 @@ var _ = Describe("EventLoop", func() {
 			func(e *events.UpsertEvent) {
 				fakeConf := newstate.Configuration{}
 				changed := true
-				fakeProcessor.ProcessReturns(changed, fakeConf, newstate.Statuses{})
+				fakeStatuses := newstate.Statuses{}
+				fakeProcessor.ProcessReturns(changed, fakeConf, fakeStatuses)
 
 				fakeCfg := []byte("fake")
 				fakeGenerator.GenerateReturns(fakeCfg, config.Warnings{})
@@ -102,6 +106,10 @@ var _ = Describe("EventLoop", func() {
 				Expect(cfg).Should(Equal(fakeCfg))
 
 				Eventually(fakeNginxRuntimeMgr.ReloadCallCount).Should(Equal(1))
+
+				Eventually(fakeStatusUpdater.UpdateCallCount).Should(Equal(1))
+				_, statuses := fakeStatusUpdater.UpdateArgsForCall(0)
+				Expect(statuses).Should(Equal(fakeStatuses))
 			},
 			Entry("HTTPRoute", &events.UpsertEvent{Resource: &v1alpha2.HTTPRoute{}}),
 			Entry("Gateway", &events.UpsertEvent{Resource: &v1alpha2.Gateway{}}),

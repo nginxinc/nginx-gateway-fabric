@@ -13,6 +13,7 @@ import (
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/file"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/runtime"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/status"
 )
 
 // EventLoop is the main event loop of the Gateway.
@@ -24,6 +25,7 @@ type EventLoop struct {
 	logger          logr.Logger
 	nginxFileMgr    file.Manager
 	nginxRuntimeMgr runtime.Manager
+	statusUpdater   status.Updater
 }
 
 // NewEventLoop creates a new EventLoop.
@@ -35,6 +37,7 @@ func NewEventLoop(
 	logger logr.Logger,
 	nginxFileMgr file.Manager,
 	nginxRuntimeMgr runtime.Manager,
+	statusUpdater status.Updater,
 ) *EventLoop {
 	return &EventLoop{
 		processor:       processor,
@@ -44,6 +47,7 @@ func NewEventLoop(
 		logger:          logger.WithName("eventLoop"),
 		nginxFileMgr:    nginxFileMgr,
 		nginxRuntimeMgr: nginxRuntimeMgr,
+		statusUpdater:   statusUpdater,
 	}
 }
 
@@ -85,13 +89,7 @@ func (el *EventLoop) handleEvent(ctx context.Context, event interface{}) {
 		el.logger.Error(err, "Failed to update NGINX configuration")
 	}
 
-	// FIXME(pleshakov) Update resource statuses instead of printing to stdout
-	for name, s := range statuses.ListenerStatuses {
-		fmt.Printf("Listener %q, Statuses: %v\n", name, s)
-	}
-	for nsname, s := range statuses.HTTPRouteStatuses {
-		fmt.Printf("HTTPRoute %q, Statuses: %v\n", nsname, s)
-	}
+	el.statusUpdater.Update(ctx, statuses)
 }
 
 func (el *EventLoop) updateNginx(ctx context.Context, conf newstate.Configuration) error {

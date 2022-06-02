@@ -56,8 +56,17 @@ func (c *ChangeProcessorImpl) CaptureUpsertChange(obj client.Object) {
 		if o.Namespace != c.gwNsName.Namespace || o.Name != c.gwNsName.Name {
 			panic(fmt.Errorf("gateway resource must be %s/%s, got %s/%s", c.gwNsName.Namespace, c.gwNsName.Name, o.Namespace, o.Name))
 		}
+		// if the resource spec hasn't changed (its generation is the same), ignore the upsert
+		if c.store.gw != nil && c.store.gw.Generation == o.Generation {
+			c.changed = false
+		}
 		c.store.gw = o
 	case *v1alpha2.HTTPRoute:
+		// if the resource spec hasn't changed (its generation is the same), ignore the upsert
+		prev, exist := c.store.httpRoutes[getNamespacedName(obj)]
+		if exist && o.Generation == prev.Generation {
+			c.changed = false
+		}
 		c.store.httpRoutes[getNamespacedName(obj)] = o
 	default:
 		panic(fmt.Errorf("ChangeProcessor doesn't support %T", obj))

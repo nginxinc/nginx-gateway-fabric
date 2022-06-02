@@ -20,6 +20,7 @@ import (
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/file"
 	ngxruntime "github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/runtime"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/status"
 	"github.com/nginxinc/nginx-kubernetes-gateway/pkg/sdk"
 )
 
@@ -69,7 +70,8 @@ func Start(cfg config.Config) error {
 	configGenerator := ngxcfg.NewGeneratorImpl(serviceStore)
 	nginxFileMgr := file.NewManagerImpl()
 	nginxRuntimeMgr := ngxruntime.NewManagerImpl()
-	eventLoop := events.NewEventLoop(processor, serviceStore, configGenerator, eventCh, cfg.Logger, nginxFileMgr, nginxRuntimeMgr)
+	statusUpdater := status.NewUpdater(cfg.GatewayCtlrName, cfg.GatewayNsName, mgr.GetClient(), cfg.Logger, status.NewRealClock())
+	eventLoop := events.NewEventLoop(processor, serviceStore, configGenerator, eventCh, cfg.Logger, nginxFileMgr, nginxRuntimeMgr, statusUpdater)
 
 	err = mgr.Add(eventLoop)
 	if err != nil {
