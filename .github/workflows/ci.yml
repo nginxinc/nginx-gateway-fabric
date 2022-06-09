@@ -11,6 +11,7 @@ on:
   pull_request:
     branches:
       - main
+      - feature/listeners # TODO: remove before merging to main
     types:
       - opened
       - reopened
