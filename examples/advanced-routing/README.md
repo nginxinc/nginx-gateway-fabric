@@ -3,6 +3,10 @@
 In this example we will deploy NGINX Kubernetes Gateway and configure advanced routing rules for a simple cafe application. 
 We will use `HTTPRoute` resources to route traffic to the cafe application based on a combination of the request method, headers, and query parameters.
 
+The cafe application consists of four services: `coffee-v1-svc`, `coffee-v2-svc`, `tea-svc`, and `tea-post-svc`. In the next section we will create the following routing rules for the cafe application:
+- For the path `/coffee` route requests with the header `version` set to `v2` or with the query param `TEST` set to `v2` to `coffee-v2-svc`, and all other requests to `coffee-v1-svc`.
+- For the path `/tea` route POST requests to `tea-post-svc`, and all other requests, such as `GET` requests, to `tea-svc`.  
+
 ## Running the Example
 
 ## 1. Deploy NGINX Kubernetes Gateway
@@ -33,9 +37,11 @@ We will use `HTTPRoute` resources to route traffic to the cafe application based
 
    ```
    kubectl -n default get pods
-   NAME                      READY   STATUS    RESTARTS   AGE
-   coffee-6f4b79b975-2sb28   1/1     Running   0          12s
-   tea-6fb46d899f-fm7zr      1/1     Running   0          12s
+   NAME                         READY   STATUS    RESTARTS   AGE
+   coffee-v1-75869cf7ff-vlfpq   1/1     Running   0          17m
+   coffee-v2-67499ff985-2k6cc   1/1     Running   0          17m
+   tea-6fb46d899f-hjzwr         1/1     Running   0          17m
+   tea-post-648dfcdd6c-2rlqb    1/1     Running   0          17m
    ```
 
 ## 3. Configure Routing
@@ -48,51 +54,53 @@ We will use `HTTPRoute` resources to route traffic to the cafe application based
 
 ## 4. Test the Application
 
-We will use `curl` to send requests to the `coffee` and `tea` services.
+We will use `curl` to send requests to the `/coffee` and `/tea` endpoints of the cafe application.
 
 ### 4.1 Access coffee
 
-Send a `POST` request to the path `/coffee` with the headers `X-Demo-Header:Demo-X1` and `version:v1`:
+Send a request with the header `version:v2` and confirm that the response comes from `coffee-v2-svc`:
 
-```
-curl --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/coffee -X POST -H "X-Demo-Header:Demo-X1" -H "version:v1"
-Server address: 10.12.0.18:80
-Server name: coffee-7586895968-r26zn
-```
-
-Header keys are case-insensitive, so we can also access coffee with the following request:
-
-```
-curl --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/coffee -X POST -H "X-DEMO-HEADER:Demo-X1" -H "Version:v1"
-Server address: 10.12.0.18:80
-Server name: coffee-7586895968-r26zn
+```bash
+curl --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/coffee -H "version:v2"
+Server address: 10.116.2.67:8080
+Server name: coffee-v2-67499ff985-gw6vt
+...
 ```
 
-Only `POST` requests to the path `/coffee` with the headers `X-Demo-Header:Demo-X1` and `version:v1` will be able to access coffee.
-For example, try sending the following `GET` request:
-```
-curl --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/coffee -H "X-Demo-Header:Demo-X1" -H "version:v1"
+Send a request with the query parameter `TEST=v2` and confirm that the response comes from `coffee-v2-svc`:
+
+```bash
+curl --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/coffee?TEST=v2
+Server address: 10.116.2.67:8080
+Server name: coffee-v2-67499ff985-gw6vt
+...
 ```
 
-NGINX Kubernetes Gateway returns a 405 since the request method does not match the method defined in the routing rule for `/coffee`.
+Send a request without the header or the query parameter and confirm the response comes from `coffee-v1-svc`:
+
+```bash
+curl --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/coffee
+Server address: 10.116.2.70:8080
+Server name: coffee-v1-75869cf7ff-vlfpq
+...
+```
 
 ### 4.2 Access tea
 
-Send a request to the path `/tea` with the query parameter `Great=Example`:
+Send a POST request and confirm that the response comes from `tea-post-svc`:
 
+```bash
+curl --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/tea -X POST
+Server address: 10.116.2.72:8080
+Server name: tea-post-648dfcdd6c-2rlqb
+...
 ```
-curl --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/tea?Great=Example
-Server address: 10.12.0.19:80
-Server name: tea-7cd44fcb4d-xfw2x
-```
 
-Query parameters are case-sensitive, so the case must match what you specify in the `HTTPRoute` resource.
+Send a GET request and confirm that the response comes from `tea-svc`:
 
-Only requests to the path `/tea` with the query parameter `Great=Example` will be able to access tea. 
-For example, try sending the following request:
-
-```
+```bash
 curl --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/tea
+Server address: 10.116.3.30:8080
+Server name: tea-6fb46d899f-hjzwr
+...
 ```
-
-NGINX Kubernetes Gateway returns a 404 since the request does not satisfy the routing rule configured for `/tea`.

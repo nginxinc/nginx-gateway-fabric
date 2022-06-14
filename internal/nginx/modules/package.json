@@ -1,0 +1,17 @@
+{
+  "dependencies": {
+    "chai": "^4.3.6",
+    "esm": "^3.2.25",
+    "mocha": "^8.4.0"
+  },
+  "scripts": {
+    "format": "prettier -w src/ test/",
+    "lint": "prettier -c src/ test/",
+    "test": "c8 mocha -r esm",
+    "clean": "rm -rf node_modules coverage"
+  },
+  "devDependencies": {
+    "c8": "^7.11.3",
+    "prettier": "^2.6.2"
+  }
+}

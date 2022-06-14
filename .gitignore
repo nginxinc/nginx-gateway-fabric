@@ -25,3 +25,9 @@ cover.html
 
 # Binary and Artifacts
 build/.out
+
+# Node modules
+internal/nginx/modules/node_modules
+
+# JS test coverage
+internal/nginx/modules/coverage

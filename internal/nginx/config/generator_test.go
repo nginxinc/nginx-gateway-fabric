@@ -55,6 +55,12 @@ func TestGenerate(t *testing.T) {
 							},
 							Method: helpers.GetHTTPMethodPointer(v1alpha2.HTTPMethodPost),
 						},
+						{
+							Path: &v1alpha2.HTTPPathMatch{
+								Value: helpers.GetStringPointer("/"),
+							},
+							Method: helpers.GetHTTPMethodPointer(v1alpha2.HTTPMethodPatch),
+						},
 					},
 					BackendRefs: []v1alpha2.HTTPBackendRef{
 						{
@@ -114,7 +120,6 @@ func TestGenerate(t *testing.T) {
 							Path: &v1alpha2.HTTPPathMatch{
 								Value: helpers.GetStringPointer("/path-only"),
 							},
-							// matches that only have path specified will not generate an internal location block
 						},
 					},
 					BackendRefs: []v1alpha2.HTTPBackendRef{
@@ -141,6 +146,11 @@ func TestGenerate(t *testing.T) {
 				MatchRules: []state.MatchRule{
 					{
 						MatchIdx: 0,
+						RuleIdx:  0,
+						Source:   hr,
+					},
+					{
+						MatchIdx: 1,
 						RuleIdx:  0,
 						Source:   hr,
 					},
@@ -172,7 +182,7 @@ func TestGenerate(t *testing.T) {
 	fakeServiceStore := &statefakes.FakeServiceStore{}
 	fakeServiceStore.ResolveReturns("10.0.0.1", nil)
 
-	expectedMatchString := func(m httpMatch) string {
+	expectedMatchString := func(m []httpMatch) string {
 		b, err := json.Marshal(m)
 		if err != nil {
 			t.Errorf("error marshaling test match: %v", err)
@@ -180,29 +190,33 @@ func TestGenerate(t *testing.T) {
 		return string(b)
 	}
 
-	slashMatches := httpMatch{Method: v1alpha2.HTTPMethodPost, RedirectPath: "/_route0"}
-	testMatches := httpMatch{
-		Method:       v1alpha2.HTTPMethodGet,
-		Headers:      []string{"Version:V1", "test:foo", "my-header:my-value"},
-		QueryParams:  []string{"GrEat=EXAMPLE", "test=foo=bar"},
-		RedirectPath: "/test_route0",
+	slashMatches := []httpMatch{{Method: v1alpha2.HTTPMethodPost, RedirectPath: "/_route0"}, {Method: v1alpha2.HTTPMethodPatch, RedirectPath: "/_route1"}}
+	testMatches := []httpMatch{
+		{
+			Method:       v1alpha2.HTTPMethodGet,
+			Headers:      []string{"Version:V1", "test:foo", "my-header:my-value"},
+			QueryParams:  []string{"GrEat=EXAMPLE", "test=foo=bar"},
+			RedirectPath: "/test_route0",
+		},
 	}
+	pathMatches := []httpMatch{{Any: true, RedirectPath: "/path-only_route0"}}
 
 	expected := server{
 		ServerName: "example.com",
 		Locations: []location{
-			{
-				Path:         "/",
-				HTTPMatchVar: expectedMatchString(slashMatches),
-			},
 			{
 				Path:      "/_route0",
 				Internal:  true,
 				ProxyPass: "http://10.0.0.1:80",
 			},
 			{
-				Path:         "/test",
-				HTTPMatchVar: expectedMatchString(testMatches),
+				Path:      "/_route1",
+				Internal:  true,
+				ProxyPass: "http://10.0.0.1:80",
+			},
+			{
+				Path:         "/",
+				HTTPMatchVar: expectedMatchString(slashMatches),
 			},
 			{
 				Path:      "/test_route0",
@@ -210,8 +224,17 @@ func TestGenerate(t *testing.T) {
 				ProxyPass: "http://" + nginx502Server,
 			},
 			{
-				Path:      "/path-only",
+				Path:         "/test",
+				HTTPMatchVar: expectedMatchString(testMatches),
+			},
+			{
+				Path:      "/path-only_route0",
+				Internal:  true,
 				ProxyPass: "http://10.0.0.1:80",
+			},
+			{
+				Path:         "/path-only",
+				HTTPMatchVar: expectedMatchString(pathMatches),
 			},
 		},
 	}
@@ -519,7 +542,7 @@ func TestMatchLocationNeeded(t *testing.T) {
 					Value: helpers.GetStringPointer("/path"),
 				},
 			},
-			expected: false,
+			expected: true,
 			msg:      "path only match",
 		},
 		{
@@ -529,7 +552,7 @@ func TestMatchLocationNeeded(t *testing.T) {
 				},
 				Method: helpers.GetHTTPMethodPointer(v1alpha2.HTTPMethodGet),
 			},
-			expected: true,
+			expected: false,
 			msg:      "method defined in match",
 		},
 		{
@@ -544,7 +567,7 @@ func TestMatchLocationNeeded(t *testing.T) {
 					},
 				},
 			},
-			expected: true,
+			expected: false,
 			msg:      "headers defined in match",
 		},
 		{
@@ -560,22 +583,24 @@ func TestMatchLocationNeeded(t *testing.T) {
 					},
 				},
 			},
-			expected: true,
+			expected: false,
 			msg:      "query params defined in match",
 		},
 	}
 
 	for _, tc := range tests {
-		result := matchLocationNeeded(tc.match)
+		result := isPathOnlyMatch(tc.match)
 
 		if result != tc.expected {
-			t.Errorf("matchLocationNeeded() returned %t but expected %t for test case %q", result, tc.expected, tc.msg)
+			t.Errorf("isPathOnlyMatch() returned %t but expected %t for test case %q", result, tc.expected, tc.msg)
 		}
 	}
 }
 
 func TestCreateHTTPMatch(t *testing.T) {
 	testPath := "/internal_loc"
+
+	testPathMatch := v1alpha2.HTTPPathMatch{Value: helpers.GetStringPointer("/")}
 	testMethodMatch := helpers.GetHTTPMethodPointer(v1alpha2.HTTPMethodPut)
 	testHeaderMatches := []v1alpha2.HTTPHeaderMatch{
 		{
@@ -626,6 +651,7 @@ func TestCreateHTTPMatch(t *testing.T) {
 
 	expectedHeaders := []string{"header-1:val-1", "header-2:val-2", "header-3:val-3"}
 	expectedArgs := []string{"arg1=val1", "arg2=val2=another-val", "arg3===val3"}
+
 	tests := []struct {
 		match    v1alpha2.HTTPRouteMatch
 		expected httpMatch
@@ -633,6 +659,17 @@ func TestCreateHTTPMatch(t *testing.T) {
 	}{
 		{
 			match: v1alpha2.HTTPRouteMatch{
+				Path: &testPathMatch,
+			},
+			expected: httpMatch{
+				Any:          true,
+				RedirectPath: testPath,
+			},
+			msg: "path only match",
+		},
+		{
+			match: v1alpha2.HTTPRouteMatch{
+				Path:   &testPathMatch, // A path match with a method should not set the Any field to true
 				Method: testMethodMatch,
 			},
 			expected: httpMatch{
