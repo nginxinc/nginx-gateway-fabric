@@ -47,9 +47,17 @@ npm test
 
 #### Debug Unit Tests
 
-If you are using IntelliJ or VSCode for development it is really simple to debug unit tests.
+To debug on the command-line:
+- Set a breakpoint using the [debugger](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/debugger) statement.
+- Run the tests with the inspect argument:
 
-For IntelliJ:
+```bash
+mocha inspect -r esm
+```
+
+If you are using JetBrains or VSCode for development, you can debug the unit tests in your IDE.
+
+For JetBrains:
 - [Create a run/debug configuration for mocha](https://www.jetbrains.com/help/idea/run-debug-configuration-mocha.html).
 - Add `--require esm` to the `Extra Mocha Options` field in your run/debug configuration.
 
