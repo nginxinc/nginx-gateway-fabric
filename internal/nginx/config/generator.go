@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
@@ -193,11 +194,18 @@ func createHTTPMatch(match v1alpha2.HTTPRouteMatch, redirectPath string) httpMat
 
 	if match.Headers != nil {
 		headers := make([]string, 0, len(match.Headers))
+		headerNames := make(map[string]struct{})
 
 		// FIXME(kate-osborn): For now we only support type "Exact".
 		for _, h := range match.Headers {
 			if *h.Type == v1alpha2.HeaderMatchExact {
-				headers = append(headers, createHeaderKeyValString(h))
+				// duplicate header names are not permitted by the spec
+				// only configure the first entry for every header name (case-insensitive)
+				lowerName := strings.ToLower(string(h.Name))
+				if _, ok := headerNames[lowerName]; !ok {
+					headers = append(headers, createHeaderKeyValString(h))
+					headerNames[lowerName] = struct{}{}
+				}
 			}
 		}
 		hm.Headers = headers
