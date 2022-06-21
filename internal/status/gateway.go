@@ -13,7 +13,7 @@ import (
 // FIXME(pleshakov): Be compliant with in the Gateway API.
 // Currently, we only support simple valid/invalid status per each listener.
 // Extend support to cover more cases.
-func prepareGatewayStatus(statuses newstate.ListenerStatuses, clock Clock) v1alpha2.GatewayStatus {
+func prepareGatewayStatus(statuses newstate.ListenerStatuses, transitionTime metav1.Time) v1alpha2.GatewayStatus {
 	listenerStatuses := make([]v1alpha2.ListenerStatus, 0, len(statuses))
 
 	// FIXME(pleshakov) Maintain the order from the Gateway resource
@@ -41,7 +41,7 @@ func prepareGatewayStatus(statuses newstate.ListenerStatuses, clock Clock) v1alp
 			Status: metav1.ConditionStatus(status),
 			// FIXME(pleshakov) Set the observed generation to the last processed generation of the Gateway resource.
 			ObservedGeneration: 123,
-			LastTransitionTime: metav1.NewTime(clock.Now()),
+			LastTransitionTime: transitionTime,
 			Reason:             reason,
 			Message:            "", // FIXME(pleshakov) Come up with a good message
 		}

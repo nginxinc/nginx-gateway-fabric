@@ -88,7 +88,7 @@ func (upd *updaterImpl) Update(ctx context.Context, statuses newstate.Statuses) 
 
 	upd.update(ctx, upd.gwNsName, &v1alpha2.Gateway{}, func(object client.Object) {
 		gw := object.(*v1alpha2.Gateway)
-		gw.Status = prepareGatewayStatus(statuses.ListenerStatuses, upd.clock)
+		gw.Status = prepareGatewayStatus(statuses.ListenerStatuses, upd.clock.Now())
 	})
 
 	for nsname, rs := range statuses.HTTPRouteStatuses {
@@ -100,7 +100,7 @@ func (upd *updaterImpl) Update(ctx context.Context, statuses newstate.Statuses) 
 
 		upd.update(ctx, nsname, &v1alpha2.HTTPRoute{}, func(object client.Object) {
 			hr := object.(*v1alpha2.HTTPRoute)
-			hr.Status = prepareHTTPRouteStatus(rs, upd.gwNsName, upd.gatewayCtlrName, upd.clock)
+			hr.Status = prepareHTTPRouteStatus(rs, upd.gwNsName, upd.gatewayCtlrName, upd.clock.Now())
 		})
 	}
 }

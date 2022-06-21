@@ -18,7 +18,7 @@ func prepareHTTPRouteStatus(
 	status newstate.HTTPRouteStatus,
 	gwNsName types.NamespacedName,
 	gatewayCtlrName string,
-	clock Clock,
+	transitionTime metav1.Time,
 ) v1alpha2.HTTPRouteStatus {
 	parents := make([]v1alpha2.RouteParentStatus, 0, len(status.ParentStatuses))
 
@@ -56,7 +56,7 @@ func prepareHTTPRouteStatus(
 					Status: metav1.ConditionStatus(status),
 					// FIXME(pleshakov) Set the observed generation to the last processed generation of the HTTPRoute resource.
 					ObservedGeneration: 123,
-					LastTransitionTime: metav1.NewTime(clock.Now()),
+					LastTransitionTime: transitionTime,
 					Reason:             reason,
 					Message:            "", // FIXME(pleshakov): Figure out a good message
 				},
