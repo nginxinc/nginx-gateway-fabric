@@ -28,8 +28,7 @@ func TestPrepareHTTPRouteStatus(t *testing.T) {
 	gwNsName := types.NamespacedName{Namespace: "test", Name: "gateway"}
 	gatewayCtlrName := "test.example.com"
 
-	expectedTime := time.Now()
-	clock := NewFakeClock(expectedTime)
+	transitionTime := metav1.NewTime(time.Now())
 
 	expected := v1alpha2.HTTPRouteStatus{
 		RouteStatus: v1alpha2.RouteStatus{
@@ -46,7 +45,7 @@ func TestPrepareHTTPRouteStatus(t *testing.T) {
 							Type:               string(v1alpha2.ConditionRouteAccepted),
 							Status:             "True",
 							ObservedGeneration: 123,
-							LastTransitionTime: metav1.Time{Time: expectedTime},
+							LastTransitionTime: transitionTime,
 							Reason:             "Attached",
 						},
 					},
@@ -63,7 +62,7 @@ func TestPrepareHTTPRouteStatus(t *testing.T) {
 							Type:               string(v1alpha2.ConditionRouteAccepted),
 							Status:             "False",
 							ObservedGeneration: 123,
-							LastTransitionTime: metav1.Time{Time: expectedTime},
+							LastTransitionTime: transitionTime,
 							Reason:             "Not attached",
 						},
 					},
@@ -72,7 +71,7 @@ func TestPrepareHTTPRouteStatus(t *testing.T) {
 		},
 	}
 
-	result := prepareHTTPRouteStatus(status, gwNsName, gatewayCtlrName, clock)
+	result := prepareHTTPRouteStatus(status, gwNsName, gatewayCtlrName, transitionTime)
 	if diff := cmp.Diff(expected, result); diff != "" {
 		t.Errorf("prepareHTTPRouteStatus() mismatch (-want +got):\n%s", diff)
 	}

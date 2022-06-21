@@ -23,8 +23,7 @@ func TestPrepareGatewayStatus(t *testing.T) {
 		},
 	}
 
-	expectedTime := time.Now()
-	clock := NewFakeClock(expectedTime)
+	transitionTime := metav1.NewTime(time.Now())
 
 	expected := v1alpha2.GatewayStatus{
 		Listeners: []v1alpha2.ListenerStatus{
@@ -41,7 +40,7 @@ func TestPrepareGatewayStatus(t *testing.T) {
 						Type:               string(v1alpha2.ListenerConditionReady),
 						Status:             "False",
 						ObservedGeneration: 123,
-						LastTransitionTime: metav1.Time{Time: expectedTime},
+						LastTransitionTime: transitionTime,
 						Reason:             string(v1alpha2.ListenerReasonInvalid),
 					},
 				},
@@ -59,7 +58,7 @@ func TestPrepareGatewayStatus(t *testing.T) {
 						Type:               string(v1alpha2.ListenerConditionReady),
 						Status:             "True",
 						ObservedGeneration: 123,
-						LastTransitionTime: metav1.Time{Time: expectedTime},
+						LastTransitionTime: transitionTime,
 						Reason:             string(v1alpha2.ListenerReasonReady),
 					},
 				},
@@ -67,7 +66,7 @@ func TestPrepareGatewayStatus(t *testing.T) {
 		},
 	}
 
-	result := prepareGatewayStatus(statuses, clock)
+	result := prepareGatewayStatus(statuses, transitionTime)
 	if diff := cmp.Diff(expected, result); diff != "" {
 		t.Errorf("prepareGatewayStatus() mismatch (-want +got):\n%s", diff)
 	}

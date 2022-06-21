@@ -1,10 +1,14 @@
 package status
 
-import "time"
+import (
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
+
+//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . Clock
 
 // Clock returns the current local time.
 type Clock interface {
-	Now() time.Time
+	Now() metav1.Time
 }
 
 // Real clock returns the current local time.
@@ -17,21 +21,6 @@ func NewRealClock() *RealClock {
 }
 
 // Now returns the current local time.
-func (c *RealClock) Now() time.Time {
-	return time.Now()
-}
-
-// FakeClock allows you to control the returned time.
-type FakeClock struct {
-	time time.Time
-}
-
-// NewFakeClock creates a FakeClock. The clock will always return the specified time.
-func NewFakeClock(time time.Time) *FakeClock {
-	return &FakeClock{time: time}
-}
-
-// Now is a fake implementation of Now().
-func (c FakeClock) Now() time.Time {
-	return c.time
+func (c *RealClock) Now() metav1.Time {
+	return metav1.Now()
 }

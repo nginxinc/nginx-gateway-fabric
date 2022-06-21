@@ -18,6 +18,7 @@ import (
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/helpers"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/newstate"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/status"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/status/statusfakes"
 )
 
 var _ = Describe("Updater", func() {
@@ -25,7 +26,6 @@ var _ = Describe("Updater", func() {
 		updater         status.Updater
 		client          client.Client
 		fakeClockTime   metav1.Time
-		fakeClock       *status.FakeClock
 		gatewayCtrlName string
 		gwNsName        types.NamespacedName
 	)
@@ -43,7 +43,8 @@ var _ = Describe("Updater", func() {
 		// We need to remove it, because updating the status in the FakeClient and then getting the resource back
 		// involves encoding and decoding the resource to/from JSON, which removes the monotonic clock reading.
 		fakeClockTime = metav1.NewTime(time.Now()).Rfc3339Copy()
-		fakeClock = status.NewFakeClock(fakeClockTime.Time)
+		fakeClock := &statusfakes.FakeClock{}
+		fakeClock.NowReturns(fakeClockTime)
 
 		gatewayCtrlName = "test.example.com"
 		gwNsName = types.NamespacedName{Namespace: "test", Name: "gateway"}
