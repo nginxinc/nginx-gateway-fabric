@@ -41,7 +41,7 @@ func prepareGatewayStatus(statuses newstate.ListenerStatuses, transitionTime met
 
 		cond := metav1.Condition{
 			Type:   string(v1alpha2.ListenerConditionReady),
-			Status: metav1.ConditionStatus(status),
+			Status: status,
 			// FIXME(pleshakov) Set the observed generation to the last processed generation of the Gateway resource.
 			ObservedGeneration: 123,
 			LastTransitionTime: transitionTime,
