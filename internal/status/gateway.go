@@ -26,14 +26,17 @@ func prepareGatewayStatus(statuses newstate.ListenerStatuses, transitionTime met
 	for _, name := range names {
 		s := statuses[name]
 
-		var status, reason string
+		var (
+			status metav1.ConditionStatus
+			reason v1alpha2.ListenerConditionReason
+		)
 
 		if s.Valid {
-			status = "True"
-			reason = string(v1alpha2.ListenerReasonReady)
+			status = metav1.ConditionTrue
+			reason = v1alpha2.ListenerReasonReady
 		} else {
-			status = "False"
-			reason = string(v1alpha2.ListenerReasonInvalid)
+			status = metav1.ConditionFalse
+			reason = v1alpha2.ListenerReasonInvalid
 		}
 
 		cond := metav1.Condition{
@@ -42,7 +45,7 @@ func prepareGatewayStatus(statuses newstate.ListenerStatuses, transitionTime met
 			// FIXME(pleshakov) Set the observed generation to the last processed generation of the Gateway resource.
 			ObservedGeneration: 123,
 			LastTransitionTime: transitionTime,
-			Reason:             reason,
+			Reason:             string(reason),
 			Message:            "", // FIXME(pleshakov) Come up with a good message
 		}
 

@@ -43,10 +43,10 @@ func TestPrepareHTTPRouteStatus(t *testing.T) {
 					Conditions: []metav1.Condition{
 						{
 							Type:               string(v1alpha2.ConditionRouteAccepted),
-							Status:             "True",
+							Status:             metav1.ConditionTrue,
 							ObservedGeneration: 123,
 							LastTransitionTime: transitionTime,
-							Reason:             "Attached",
+							Reason:             "Accepted",
 						},
 					},
 				},
@@ -60,7 +60,7 @@ func TestPrepareHTTPRouteStatus(t *testing.T) {
 					Conditions: []metav1.Condition{
 						{
 							Type:               string(v1alpha2.ConditionRouteAccepted),
-							Status:             "False",
+							Status:             metav1.ConditionFalse,
 							ObservedGeneration: 123,
 							LastTransitionTime: transitionTime,
 							Reason:             "Not attached",
