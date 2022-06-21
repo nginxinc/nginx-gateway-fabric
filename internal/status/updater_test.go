@@ -127,10 +127,10 @@ var _ = Describe("Updater", func() {
 									Conditions: []metav1.Condition{
 										{
 											Type:               string(gatewayv1alpha2.ConditionRouteAccepted),
-											Status:             "True",
+											Status:             metav1.ConditionTrue,
 											ObservedGeneration: 123,
 											LastTransitionTime: fakeClockTime,
-											Reason:             "Attached",
+											Reason:             "Accepted",
 										},
 									},
 								},
@@ -199,7 +199,7 @@ var _ = Describe("Updater", func() {
 
 		It("should have the updated status of Gateway in the API server", func() {
 			latestGw := &v1alpha2.Gateway{}
-			expectedGw := createExpectedGw("True", string(v1alpha2.ListenerReasonReady))
+			expectedGw := createExpectedGw(metav1.ConditionTrue, string(v1alpha2.ListenerReasonReady))
 
 			err := client.Get(context.Background(), types.NamespacedName{Namespace: "test", Name: "gateway"}, latestGw)
 			Expect(err).Should(Not(HaveOccurred()))
@@ -229,7 +229,7 @@ var _ = Describe("Updater", func() {
 
 		It("should have the updated status of Gateway in the API server after updating with canceled context", func() {
 			latestGw := &v1alpha2.Gateway{}
-			expectedGw := createExpectedGw("False", string(v1alpha2.ListenerReasonInvalid))
+			expectedGw := createExpectedGw(metav1.ConditionFalse, string(v1alpha2.ListenerReasonInvalid))
 
 			err := client.Get(context.Background(), types.NamespacedName{Namespace: "test", Name: "gateway"}, latestGw)
 			Expect(err).Should(Not(HaveOccurred()))

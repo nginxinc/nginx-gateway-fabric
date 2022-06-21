@@ -38,7 +38,7 @@ func TestPrepareGatewayStatus(t *testing.T) {
 				Conditions: []metav1.Condition{
 					{
 						Type:               string(v1alpha2.ListenerConditionReady),
-						Status:             "False",
+						Status:             metav1.ConditionFalse,
 						ObservedGeneration: 123,
 						LastTransitionTime: transitionTime,
 						Reason:             string(v1alpha2.ListenerReasonInvalid),
@@ -56,7 +56,7 @@ func TestPrepareGatewayStatus(t *testing.T) {
 				Conditions: []metav1.Condition{
 					{
 						Type:               string(v1alpha2.ListenerConditionReady),
-						Status:             "True",
+						Status:             metav1.ConditionTrue,
 						ObservedGeneration: 123,
 						LastTransitionTime: transitionTime,
 						Reason:             string(v1alpha2.ListenerReasonReady),
