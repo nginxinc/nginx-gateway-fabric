@@ -92,5 +92,5 @@ r.warn(string)
 This project uses [prettier](https://prettier.io/) to lint and format the JavaScript code. To format the code run:
 
 ```bash
-npm format
+npm run format
 ```
