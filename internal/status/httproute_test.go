@@ -63,7 +63,7 @@ func TestPrepareHTTPRouteStatus(t *testing.T) {
 							Status:             metav1.ConditionFalse,
 							ObservedGeneration: 123,
 							LastTransitionTime: transitionTime,
-							Reason:             "Not attached",
+							Reason:             "NotAttached",
 						},
 					},
 				},

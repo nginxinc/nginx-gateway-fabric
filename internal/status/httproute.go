@@ -42,7 +42,7 @@ func prepareHTTPRouteStatus(
 			reason = "Accepted" // FIXME(pleshakov): use RouteReasonAccepted once we upgrade to v1beta1
 		} else {
 			status = metav1.ConditionFalse
-			reason = "Not attached" // FIXME(pleshakov): use a more specific message from the defined constants (available in v1beta1)
+			reason = "NotAttached" // FIXME(pleshakov): use a more specific message from the defined constants (available in v1beta1)
 		}
 
 		sectionName := name
