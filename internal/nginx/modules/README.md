@@ -52,7 +52,7 @@ To debug on the command-line:
 - Run the tests with the inspect argument:
 
 ```bash
-mocha inspect -r esm
+npx mocha inspect -r esm
 ```
 
 If you are using JetBrains or VSCode for development, you can debug the unit tests in your IDE.
