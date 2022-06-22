@@ -1,4 +1,4 @@
-package newstate
+package state
 
 import "k8s.io/apimachinery/pkg/types"
 

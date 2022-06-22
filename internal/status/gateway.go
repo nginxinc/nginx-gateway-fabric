@@ -6,14 +6,14 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/newstate"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state"
 )
 
 // prepareGatewayStatus prepares the status for a Gateway resource.
 // FIXME(pleshakov): Be compliant with in the Gateway API.
 // Currently, we only support simple valid/invalid status per each listener.
 // Extend support to cover more cases.
-func prepareGatewayStatus(statuses newstate.ListenerStatuses, transitionTime metav1.Time) v1alpha2.GatewayStatus {
+func prepareGatewayStatus(statuses state.ListenerStatuses, transitionTime metav1.Time) v1alpha2.GatewayStatus {
 	listenerStatuses := make([]v1alpha2.ListenerStatus, 0, len(statuses))
 
 	// FIXME(pleshakov) Maintain the order from the Gateway resource

@@ -8,7 +8,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/newstate"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state"
 )
 
@@ -20,7 +19,7 @@ const nginx502Server = "unix:/var/lib/nginx/nginx-502-server.sock"
 // Generator generates NGINX configuration.
 type Generator interface {
 	// Generate generates NGINX configuration from internal representation.
-	Generate(configuration newstate.Configuration) ([]byte, Warnings)
+	Generate(configuration state.Configuration) ([]byte, Warnings)
 }
 
 // GeneratorImpl is an implementation of Generator
@@ -37,7 +36,7 @@ func NewGeneratorImpl(serviceStore state.ServiceStore) *GeneratorImpl {
 	}
 }
 
-func (g *GeneratorImpl) Generate(conf newstate.Configuration) ([]byte, Warnings) {
+func (g *GeneratorImpl) Generate(conf state.Configuration) ([]byte, Warnings) {
 	warnings := newWarnings()
 
 	servers := httpServers{
@@ -54,7 +53,7 @@ func (g *GeneratorImpl) Generate(conf newstate.Configuration) ([]byte, Warnings)
 	return g.executor.ExecuteForHTTPServers(servers), warnings
 }
 
-func generate(httpServer newstate.HTTPServer, serviceStore state.ServiceStore) (server, Warnings) {
+func generate(httpServer state.HTTPServer, serviceStore state.ServiceStore) (server, Warnings) {
 	warnings := newWarnings()
 
 	locs := make([]location, 0, len(httpServer.PathRules)) // FIXME(pleshakov): expand with rules.Routes

@@ -10,12 +10,12 @@ import (
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/helpers"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/newstate"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state"
 )
 
 func TestPrepareHTTPRouteStatus(t *testing.T) {
-	status := newstate.HTTPRouteStatus{
-		ParentStatuses: map[string]newstate.ParentStatus{
+	status := state.HTTPRouteStatus{
+		ParentStatuses: map[string]state.ParentStatus{
 			"attached": {
 				Attached: true,
 			},

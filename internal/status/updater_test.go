@@ -16,7 +16,7 @@ import (
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/helpers"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/newstate"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/status"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/status/statusfakes"
 )
@@ -57,7 +57,7 @@ var _ = Describe("Updater", func() {
 			hr *v1alpha2.HTTPRoute
 			gw *v1alpha2.Gateway
 
-			createStatuses   func(bool, bool) newstate.Statuses
+			createStatuses   func(bool, bool) state.Statuses
 			createExpectedHR func() *v1alpha2.HTTPRoute
 			createExpectedGw func(metav1.ConditionStatus, string) *v1alpha2.Gateway
 		)
@@ -84,17 +84,17 @@ var _ = Describe("Updater", func() {
 				},
 			}
 
-			createStatuses = func(listenerValid, routeAttached bool) newstate.Statuses {
-				return newstate.Statuses{
-					ListenerStatuses: map[string]newstate.ListenerStatus{
+			createStatuses = func(listenerValid, routeAttached bool) state.Statuses {
+				return state.Statuses{
+					ListenerStatuses: map[string]state.ListenerStatus{
 						"http": {
 							Valid:          listenerValid,
 							AttachedRoutes: 1,
 						},
 					},
-					HTTPRouteStatuses: map[types.NamespacedName]newstate.HTTPRouteStatus{
+					HTTPRouteStatuses: map[types.NamespacedName]state.HTTPRouteStatus{
 						{Namespace: "test", Name: "route1"}: {
-							ParentStatuses: map[string]newstate.ParentStatus{
+							ParentStatuses: map[string]state.ParentStatus{
 								"http": {
 									Attached: routeAttached,
 								},

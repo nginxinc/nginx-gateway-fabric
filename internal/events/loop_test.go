@@ -14,12 +14,11 @@ import (
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/events"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/newstate"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/newstate/newstatefakes"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/config"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/config/configfakes"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/file/filefakes"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/runtime/runtimefakes"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/statefakes"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/status/statusfakes"
 )
@@ -38,7 +37,7 @@ func (r *unsupportedResource) DeepCopyObject() runtime.Object {
 
 var _ = Describe("EventLoop", func() {
 	var (
-		fakeProcessor       *newstatefakes.FakeChangeProcessor
+		fakeProcessor       *statefakes.FakeChangeProcessor
 		fakeServiceStore    *statefakes.FakeServiceStore
 		fakeGenerator       *configfakes.FakeGenerator
 		fakeNginxFimeMgr    *filefakes.FakeManager
@@ -51,7 +50,7 @@ var _ = Describe("EventLoop", func() {
 	)
 
 	BeforeEach(func() {
-		fakeProcessor = &newstatefakes.FakeChangeProcessor{}
+		fakeProcessor = &statefakes.FakeChangeProcessor{}
 		eventCh = make(chan interface{})
 		fakeServiceStore = &statefakes.FakeServiceStore{}
 		fakeGenerator = &configfakes.FakeGenerator{}
@@ -83,9 +82,9 @@ var _ = Describe("EventLoop", func() {
 
 		DescribeTable("Upsert events",
 			func(e *events.UpsertEvent) {
-				fakeConf := newstate.Configuration{}
+				fakeConf := state.Configuration{}
 				changed := true
-				fakeStatuses := newstate.Statuses{}
+				fakeStatuses := state.Statuses{}
 				fakeProcessor.ProcessReturns(changed, fakeConf, fakeStatuses)
 
 				fakeCfg := []byte("fake")
@@ -117,9 +116,9 @@ var _ = Describe("EventLoop", func() {
 
 		DescribeTable("Delete events",
 			func(e *events.DeleteEvent) {
-				fakeConf := newstate.Configuration{}
+				fakeConf := state.Configuration{}
 				changed := true
-				fakeProcessor.ProcessReturns(changed, fakeConf, newstate.Statuses{})
+				fakeProcessor.ProcessReturns(changed, fakeConf, state.Statuses{})
 
 				fakeCfg := []byte("fake")
 				fakeGenerator.GenerateReturns(fakeCfg, config.Warnings{})

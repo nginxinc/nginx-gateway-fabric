@@ -7,7 +7,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/newstate"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state"
 )
 
 // prepareHTTPRouteStatus prepares the status for an HTTPRoute resource.
@@ -15,7 +15,7 @@ import (
 // Currently, we only support simple attached/not attached status per each parentRef.
 // Extend support to cover more cases.
 func prepareHTTPRouteStatus(
-	status newstate.HTTPRouteStatus,
+	status state.HTTPRouteStatus,
 	gwNsName types.NamespacedName,
 	gatewayCtlrName string,
 	transitionTime metav1.Time,

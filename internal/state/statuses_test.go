@@ -1,4 +1,4 @@
-package newstate
+package state
 
 import (
 	"testing"

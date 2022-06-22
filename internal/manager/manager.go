@@ -15,7 +15,6 @@ import (
 	gw "github.com/nginxinc/nginx-kubernetes-gateway/internal/implementations/gateway"
 	hr "github.com/nginxinc/nginx-kubernetes-gateway/internal/implementations/httproute"
 	svc "github.com/nginxinc/nginx-kubernetes-gateway/internal/implementations/service"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/newstate"
 	ngxcfg "github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/config"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/file"
 	ngxruntime "github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/runtime"
@@ -65,7 +64,7 @@ func Start(cfg config.Config) error {
 		return fmt.Errorf("cannot register service implementation: %w", err)
 	}
 
-	processor := newstate.NewChangeProcessorImpl(cfg.GatewayNsName)
+	processor := state.NewChangeProcessorImpl(cfg.GatewayNsName)
 	serviceStore := state.NewServiceStore()
 	configGenerator := ngxcfg.NewGeneratorImpl(serviceStore)
 	nginxFileMgr := file.NewManagerImpl()

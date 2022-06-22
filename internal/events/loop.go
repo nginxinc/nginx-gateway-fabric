@@ -8,7 +8,6 @@ import (
 	apiv1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/newstate"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/config"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/file"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/runtime"
@@ -18,7 +17,7 @@ import (
 
 // EventLoop is the main event loop of the Gateway.
 type EventLoop struct {
-	processor       newstate.ChangeProcessor
+	processor       state.ChangeProcessor
 	serviceStore    state.ServiceStore
 	generator       config.Generator
 	eventCh         <-chan interface{}
@@ -30,7 +29,7 @@ type EventLoop struct {
 
 // NewEventLoop creates a new EventLoop.
 func NewEventLoop(
-	processor newstate.ChangeProcessor,
+	processor state.ChangeProcessor,
 	serviceStore state.ServiceStore,
 	generator config.Generator,
 	eventCh <-chan interface{},
@@ -92,7 +91,7 @@ func (el *EventLoop) handleEvent(ctx context.Context, event interface{}) {
 	el.statusUpdater.Update(ctx, statuses)
 }
 
-func (el *EventLoop) updateNginx(ctx context.Context, conf newstate.Configuration) error {
+func (el *EventLoop) updateNginx(ctx context.Context, conf state.Configuration) error {
 	cfg, warnings := el.generator.Generate(conf)
 
 	// For now, we keep all http servers in one config

@@ -1,4 +1,4 @@
-package newstate_test
+package state_test
 
 import (
 	"testing"

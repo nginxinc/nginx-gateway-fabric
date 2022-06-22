@@ -1,4 +1,4 @@
-package newstate_test
+package state_test
 
 import (
 	. "github.com/onsi/ginkgo/v2"
@@ -9,7 +9,7 @@ import (
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/helpers"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/newstate"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state"
 )
 
 var _ = Describe("ChangeProcessor", func() {
@@ -17,7 +17,7 @@ var _ = Describe("ChangeProcessor", func() {
 		var (
 			hr1, hr1Updated, hr2 *v1alpha2.HTTPRoute
 			gw, gwUpdated        *v1alpha2.Gateway
-			processor            newstate.ChangeProcessor
+			processor            state.ChangeProcessor
 		)
 
 		BeforeEach(OncePerOrdered, func() {
@@ -82,7 +82,7 @@ var _ = Describe("ChangeProcessor", func() {
 			gwUpdated = gw.DeepCopy()
 			gwUpdated.Generation++
 
-			processor = newstate.NewChangeProcessorImpl(types.NamespacedName{Namespace: "test", Name: "gateway"})
+			processor = state.NewChangeProcessorImpl(types.NamespacedName{Namespace: "test", Name: "gateway"})
 		})
 
 		Describe("Process resources", Ordered, func() {
@@ -96,12 +96,12 @@ var _ = Describe("ChangeProcessor", func() {
 			It("should return empty configuration and updated statuses after upserting an HTTPRoute when the Gateway doesn't exist", func() {
 				processor.CaptureUpsertChange(hr1)
 
-				expectedConf := newstate.Configuration{HTTPServers: []newstate.HTTPServer{}}
-				expectedStatuses := newstate.Statuses{
-					ListenerStatuses: map[string]newstate.ListenerStatus{},
-					HTTPRouteStatuses: map[types.NamespacedName]newstate.HTTPRouteStatus{
+				expectedConf := state.Configuration{HTTPServers: []state.HTTPServer{}}
+				expectedStatuses := state.Statuses{
+					ListenerStatuses: map[string]state.ListenerStatus{},
+					HTTPRouteStatuses: map[types.NamespacedName]state.HTTPRouteStatus{
 						{Namespace: "test", Name: "hr-1"}: {
-							ParentStatuses: map[string]newstate.ParentStatus{
+							ParentStatuses: map[string]state.ParentStatus{
 								"listener-80-1": {Attached: false},
 							},
 						},
@@ -117,14 +117,14 @@ var _ = Describe("ChangeProcessor", func() {
 			It("should return updated configuration and statuses after the Gateway is upserted", func() {
 				processor.CaptureUpsertChange(gw)
 
-				expectedConf := newstate.Configuration{
-					HTTPServers: []newstate.HTTPServer{
+				expectedConf := state.Configuration{
+					HTTPServers: []state.HTTPServer{
 						{
 							Hostname: "foo.example.com",
-							PathRules: []newstate.PathRule{
+							PathRules: []state.PathRule{
 								{
 									Path: "/",
-									MatchRules: []newstate.MatchRule{
+									MatchRules: []state.MatchRule{
 										{
 											MatchIdx: 0,
 											RuleIdx:  0,
@@ -136,16 +136,16 @@ var _ = Describe("ChangeProcessor", func() {
 						},
 					},
 				}
-				expectedStatuses := newstate.Statuses{
-					ListenerStatuses: map[string]newstate.ListenerStatus{
+				expectedStatuses := state.Statuses{
+					ListenerStatuses: map[string]state.ListenerStatus{
 						"listener-80-1": {
 							Valid:          true,
 							AttachedRoutes: 1,
 						},
 					},
-					HTTPRouteStatuses: map[types.NamespacedName]newstate.HTTPRouteStatus{
+					HTTPRouteStatuses: map[types.NamespacedName]state.HTTPRouteStatus{
 						{Namespace: "test", Name: "hr-1"}: {
-							ParentStatuses: map[string]newstate.ParentStatus{
+							ParentStatuses: map[string]state.ParentStatus{
 								"listener-80-1": {Attached: true},
 							},
 						},
@@ -172,14 +172,14 @@ var _ = Describe("ChangeProcessor", func() {
 			It("should return updated configuration and statuses after upserting the HTTPRoute with generation change", func() {
 				processor.CaptureUpsertChange(hr1Updated)
 
-				expectedConf := newstate.Configuration{
-					HTTPServers: []newstate.HTTPServer{
+				expectedConf := state.Configuration{
+					HTTPServers: []state.HTTPServer{
 						{
 							Hostname: "foo.example.com",
-							PathRules: []newstate.PathRule{
+							PathRules: []state.PathRule{
 								{
 									Path: "/",
-									MatchRules: []newstate.MatchRule{
+									MatchRules: []state.MatchRule{
 										{
 											MatchIdx: 0,
 											RuleIdx:  0,
@@ -191,16 +191,16 @@ var _ = Describe("ChangeProcessor", func() {
 						},
 					},
 				}
-				expectedStatuses := newstate.Statuses{
-					ListenerStatuses: map[string]newstate.ListenerStatus{
+				expectedStatuses := state.Statuses{
+					ListenerStatuses: map[string]state.ListenerStatus{
 						"listener-80-1": {
 							Valid:          true,
 							AttachedRoutes: 1,
 						},
 					},
-					HTTPRouteStatuses: map[types.NamespacedName]newstate.HTTPRouteStatus{
+					HTTPRouteStatuses: map[types.NamespacedName]state.HTTPRouteStatus{
 						{Namespace: "test", Name: "hr-1"}: {
-							ParentStatuses: map[string]newstate.ParentStatus{
+							ParentStatuses: map[string]state.ParentStatus{
 								"listener-80-1": {Attached: true},
 							},
 						},
@@ -227,14 +227,14 @@ var _ = Describe("ChangeProcessor", func() {
 			It("should return updated configuration and statuses after upserting the Gateway with generation change", func() {
 				processor.CaptureUpsertChange(gwUpdated)
 
-				expectedConf := newstate.Configuration{
-					HTTPServers: []newstate.HTTPServer{
+				expectedConf := state.Configuration{
+					HTTPServers: []state.HTTPServer{
 						{
 							Hostname: "foo.example.com",
-							PathRules: []newstate.PathRule{
+							PathRules: []state.PathRule{
 								{
 									Path: "/",
-									MatchRules: []newstate.MatchRule{
+									MatchRules: []state.MatchRule{
 										{
 											MatchIdx: 0,
 											RuleIdx:  0,
@@ -246,16 +246,16 @@ var _ = Describe("ChangeProcessor", func() {
 						},
 					},
 				}
-				expectedStatuses := newstate.Statuses{
-					ListenerStatuses: map[string]newstate.ListenerStatus{
+				expectedStatuses := state.Statuses{
+					ListenerStatuses: map[string]state.ListenerStatus{
 						"listener-80-1": {
 							Valid:          true,
 							AttachedRoutes: 1,
 						},
 					},
-					HTTPRouteStatuses: map[types.NamespacedName]newstate.HTTPRouteStatus{
+					HTTPRouteStatuses: map[types.NamespacedName]state.HTTPRouteStatus{
 						{Namespace: "test", Name: "hr-1"}: {
-							ParentStatuses: map[string]newstate.ParentStatus{
+							ParentStatuses: map[string]state.ParentStatus{
 								"listener-80-1": {Attached: true},
 							},
 						},
@@ -279,14 +279,14 @@ var _ = Describe("ChangeProcessor", func() {
 			It("should return updated configuration and statuses after a second HTTPRoute is upserted", func() {
 				processor.CaptureUpsertChange(hr2)
 
-				expectedConf := newstate.Configuration{
-					HTTPServers: []newstate.HTTPServer{
+				expectedConf := state.Configuration{
+					HTTPServers: []state.HTTPServer{
 						{
 							Hostname: "bar.example.com",
-							PathRules: []newstate.PathRule{
+							PathRules: []state.PathRule{
 								{
 									Path: "/",
-									MatchRules: []newstate.MatchRule{
+									MatchRules: []state.MatchRule{
 										{
 											MatchIdx: 0,
 											RuleIdx:  0,
@@ -298,10 +298,10 @@ var _ = Describe("ChangeProcessor", func() {
 						},
 						{
 							Hostname: "foo.example.com",
-							PathRules: []newstate.PathRule{
+							PathRules: []state.PathRule{
 								{
 									Path: "/",
-									MatchRules: []newstate.MatchRule{
+									MatchRules: []state.MatchRule{
 										{
 											MatchIdx: 0,
 											RuleIdx:  0,
@@ -313,21 +313,21 @@ var _ = Describe("ChangeProcessor", func() {
 						},
 					},
 				}
-				expectedStatuses := newstate.Statuses{
-					ListenerStatuses: map[string]newstate.ListenerStatus{
+				expectedStatuses := state.Statuses{
+					ListenerStatuses: map[string]state.ListenerStatus{
 						"listener-80-1": {
 							Valid:          true,
 							AttachedRoutes: 2,
 						},
 					},
-					HTTPRouteStatuses: map[types.NamespacedName]newstate.HTTPRouteStatus{
+					HTTPRouteStatuses: map[types.NamespacedName]state.HTTPRouteStatus{
 						{Namespace: "test", Name: "hr-1"}: {
-							ParentStatuses: map[string]newstate.ParentStatus{
+							ParentStatuses: map[string]state.ParentStatus{
 								"listener-80-1": {Attached: true},
 							},
 						},
 						{Namespace: "test", Name: "hr-2"}: {
-							ParentStatuses: map[string]newstate.ParentStatus{
+							ParentStatuses: map[string]state.ParentStatus{
 								"listener-80-1": {Attached: true},
 							},
 						},
@@ -343,14 +343,14 @@ var _ = Describe("ChangeProcessor", func() {
 			It("should return updated configuration and statuses after deleting the second HTTPRoute", func() {
 				processor.CaptureDeleteChange(&v1alpha2.HTTPRoute{}, types.NamespacedName{Namespace: "test", Name: "hr-2"})
 
-				expectedConf := newstate.Configuration{
-					HTTPServers: []newstate.HTTPServer{
+				expectedConf := state.Configuration{
+					HTTPServers: []state.HTTPServer{
 						{
 							Hostname: "foo.example.com",
-							PathRules: []newstate.PathRule{
+							PathRules: []state.PathRule{
 								{
 									Path: "/",
-									MatchRules: []newstate.MatchRule{
+									MatchRules: []state.MatchRule{
 										{
 											MatchIdx: 0,
 											RuleIdx:  0,
@@ -362,16 +362,16 @@ var _ = Describe("ChangeProcessor", func() {
 						},
 					},
 				}
-				expectedStatuses := newstate.Statuses{
-					ListenerStatuses: map[string]newstate.ListenerStatus{
+				expectedStatuses := state.Statuses{
+					ListenerStatuses: map[string]state.ListenerStatus{
 						"listener-80-1": {
 							Valid:          true,
 							AttachedRoutes: 1,
 						},
 					},
-					HTTPRouteStatuses: map[types.NamespacedName]newstate.HTTPRouteStatus{
+					HTTPRouteStatuses: map[types.NamespacedName]state.HTTPRouteStatus{
 						{Namespace: "test", Name: "hr-1"}: {
-							ParentStatuses: map[string]newstate.ParentStatus{
+							ParentStatuses: map[string]state.ParentStatus{
 								"listener-80-1": {Attached: true},
 							},
 						},
@@ -387,12 +387,12 @@ var _ = Describe("ChangeProcessor", func() {
 			It("should return empty configuration and updated statuses after deleting the Gateway", func() {
 				processor.CaptureDeleteChange(&v1alpha2.Gateway{}, types.NamespacedName{Namespace: "test", Name: "gateway"})
 
-				expectedConf := newstate.Configuration{HTTPServers: []newstate.HTTPServer{}}
-				expectedStatuses := newstate.Statuses{
-					ListenerStatuses: map[string]newstate.ListenerStatus{},
-					HTTPRouteStatuses: map[types.NamespacedName]newstate.HTTPRouteStatus{
+				expectedConf := state.Configuration{HTTPServers: []state.HTTPServer{}}
+				expectedStatuses := state.Statuses{
+					ListenerStatuses: map[string]state.ListenerStatus{},
+					HTTPRouteStatuses: map[types.NamespacedName]state.HTTPRouteStatus{
 						{Namespace: "test", Name: "hr-1"}: {
-							ParentStatuses: map[string]newstate.ParentStatus{
+							ParentStatuses: map[string]state.ParentStatus{
 								"listener-80-1": {Attached: false},
 							},
 						},
@@ -408,10 +408,10 @@ var _ = Describe("ChangeProcessor", func() {
 			It("should return empty configuration and statuses after deleting the first HTTPRoute", func() {
 				processor.CaptureDeleteChange(&v1alpha2.HTTPRoute{}, types.NamespacedName{Namespace: "test", Name: "hr-1"})
 
-				expectedConf := newstate.Configuration{HTTPServers: []newstate.HTTPServer{}}
-				expectedStatuses := newstate.Statuses{
-					ListenerStatuses:  map[string]newstate.ListenerStatus{},
-					HTTPRouteStatuses: map[types.NamespacedName]newstate.HTTPRouteStatus{},
+				expectedConf := state.Configuration{HTTPServers: []state.HTTPServer{}}
+				expectedStatuses := state.Statuses{
+					ListenerStatuses:  map[string]state.ListenerStatus{},
+					HTTPRouteStatuses: map[types.NamespacedName]state.HTTPRouteStatus{},
 				}
 
 				changed, conf, statuses := processor.Process()
@@ -423,10 +423,10 @@ var _ = Describe("ChangeProcessor", func() {
 	})
 
 	Describe("Edge cases with panic", func() {
-		var processor newstate.ChangeProcessor
+		var processor state.ChangeProcessor
 
 		BeforeEach(func() {
-			processor = newstate.NewChangeProcessorImpl(types.NamespacedName{Namespace: "test", Name: "gateway"})
+			processor = state.NewChangeProcessorImpl(types.NamespacedName{Namespace: "test", Name: "gateway"})
 		})
 
 		DescribeTable("CaptureUpsertChange must panic",

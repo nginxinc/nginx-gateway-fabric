@@ -8,11 +8,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/newstate"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state"
 )
 
 func TestPrepareGatewayStatus(t *testing.T) {
-	statuses := newstate.ListenerStatuses{
+	statuses := state.ListenerStatuses{
 		"valid-listener": {
 			Valid:          true,
 			AttachedRoutes: 2,

@@ -11,15 +11,15 @@ import (
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/helpers"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/newstate"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/statefakes"
 )
 
 func TestGenerateForHost(t *testing.T) {
 	generator := NewGeneratorImpl(&statefakes.FakeServiceStore{})
 
-	conf := newstate.Configuration{
-		HTTPServers: []newstate.HTTPServer{
+	conf := state.Configuration{
+		HTTPServers: []state.HTTPServer{
 			{
 				Hostname: "example.com",
 			},
@@ -133,12 +133,12 @@ func TestGenerate(t *testing.T) {
 		},
 	}
 
-	host := newstate.HTTPServer{
+	host := state.HTTPServer{
 		Hostname: "example.com",
-		PathRules: []newstate.PathRule{
+		PathRules: []state.PathRule{
 			{
 				Path: "/",
-				MatchRules: []newstate.MatchRule{
+				MatchRules: []state.MatchRule{
 					{
 						MatchIdx: 0,
 						RuleIdx:  0,
@@ -148,7 +148,7 @@ func TestGenerate(t *testing.T) {
 			},
 			{
 				Path: "/test",
-				MatchRules: []newstate.MatchRule{
+				MatchRules: []state.MatchRule{
 					{
 						MatchIdx: 0,
 						RuleIdx:  1,
@@ -158,7 +158,7 @@ func TestGenerate(t *testing.T) {
 			},
 			{
 				Path: "/path-only",
-				MatchRules: []newstate.MatchRule{
+				MatchRules: []state.MatchRule{
 					{
 						MatchIdx: 0,
 						RuleIdx:  2,
