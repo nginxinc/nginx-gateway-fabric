@@ -22,7 +22,7 @@ function redirect(r) {
   // If no matches are found, return 404.
   let match;
   try {
-    match = findMatch(r, matches);
+    match = findWinningMatch(r, matches);
   } catch (e) {
     r.error(e.message);
     r.return(HTTP_CODES.internalServerError);
@@ -75,10 +75,10 @@ function extractMatchesFromRequest(r) {
   return matches;
 }
 
-function findMatch(r, matches) {
+function findWinningMatch(r, matches) {
   for (let i = 0; i < matches.length; i++) {
     try {
-      let found = matchFound(r, matches[i]);
+      let found = testMatch(r, matches[i]);
       if (found) {
         return matches[i];
       }
@@ -90,7 +90,7 @@ function findMatch(r, matches) {
   return null;
 }
 
-function matchFound(r, match) {
+function testMatch(r, match) {
   // check for any
   if (match.any) {
     return true;
@@ -183,8 +183,8 @@ function paramsMatch(requestParams, params) {
 
 export default {
   redirect,
-  matchFound,
-  findMatch,
+  testMatch,
+  findWinningMatch,
   headersMatch,
   paramsMatch,
   extractMatchesFromRequest,

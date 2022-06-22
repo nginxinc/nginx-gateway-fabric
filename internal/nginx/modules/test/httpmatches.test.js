@@ -81,7 +81,7 @@ describe('extractMatchesFromRequest', () => {
   });
 });
 
-describe('matchFound', () => {
+describe('testMatch', () => {
   const tests = [
     {
       name: 'returns true if any is set to true',
@@ -154,16 +154,16 @@ describe('matchFound', () => {
   tests.forEach((test) => {
     it(test.name, () => {
       if (test.expectThrow) {
-        expect(() => hm.matchFound(test.request, test.match)).to.throw(test.errSubstring);
+        expect(() => hm.testMatch(test.request, test.match)).to.throw(test.errSubstring);
       } else {
-        const result = hm.matchFound(test.request, test.match);
+        const result = hm.testMatch(test.request, test.match);
         expect(result).to.equal(test.expected);
       }
     });
   });
 });
 
-describe('findMatch', () => {
+describe('findWinningMatch', () => {
   const headerMatch = { headers: ['header:value'] };
   const queryParamMatch = { params: ['key=value'] };
   const methodMatch = { method: 'POST' };
@@ -199,9 +199,9 @@ describe('findMatch', () => {
       };
 
       if (test.expectThrow) {
-        expect(() => hm.findMatch(test.request, test.matches)).to.throw(test.errSubstring);
+        expect(() => hm.findWinningMatch(test.request, test.matches)).to.throw(test.errSubstring);
       } else {
-        const result = hm.findMatch(test.request, test.matches);
+        const result = hm.findWinningMatch(test.request, test.matches);
         expect(result).to.equal(test.expected);
       }
     });
