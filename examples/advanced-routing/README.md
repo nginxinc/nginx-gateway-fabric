@@ -104,3 +104,18 @@ Server address: 10.116.3.30:8080
 Server name: tea-6fb46d899f-hjzwr
 ...
 ```
+
+The `/tea` endpoint has routing rules configured for GET and POST requests. If you send a request with a different method, NGINX Kubernetes Gateway will return a 404.
+
+Send a PUT request and confirm the 404 Not Found response:
+
+```bash
+curl --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/tea -X PUT
+<html>
+<head><title>404 Not Found</title></head>
+<body>
+<center><h1>404 Not Found</h1></center>
+<hr><center>nginx/1.21.3</center>
+</body>
+</html>
+```
