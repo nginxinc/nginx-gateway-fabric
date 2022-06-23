@@ -50,6 +50,10 @@ func (r *MatchRule) GetMatch() v1alpha2.HTTPRouteMatch {
 
 // buildConfiguration builds the Configuration from the graph.
 func buildConfiguration(graph *graph) Configuration {
+	if graph.GatewayClass == nil || !graph.GatewayClass.Valid {
+		return Configuration{}
+	}
+
 	// FIXME(pleshakov) For now we only handle paths with prefix matches. Handle exact and regex matches
 	pathRulesForHosts := make(map[string]map[string]PathRule)
 

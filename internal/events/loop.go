@@ -118,6 +118,8 @@ func (el *EventLoop) updateNginx(ctx context.Context, conf state.Configuration) 
 
 func (el *EventLoop) propagateUpsert(e *UpsertEvent) {
 	switch r := e.Resource.(type) {
+	case *v1alpha2.GatewayClass:
+		el.processor.CaptureUpsertChange(r)
 	case *v1alpha2.Gateway:
 		el.processor.CaptureUpsertChange(r)
 	case *v1alpha2.HTTPRoute:
@@ -132,6 +134,8 @@ func (el *EventLoop) propagateUpsert(e *UpsertEvent) {
 
 func (el *EventLoop) propagateDelete(e *DeleteEvent) {
 	switch e.Type.(type) {
+	case *v1alpha2.GatewayClass:
+		el.processor.CaptureDeleteChange(e.Type, e.NamespacedName)
 	case *v1alpha2.Gateway:
 		el.processor.CaptureDeleteChange(e.Type, e.NamespacedName)
 	case *v1alpha2.HTTPRoute:

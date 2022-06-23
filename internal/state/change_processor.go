@@ -30,18 +30,22 @@ type ChangeProcessor interface {
 }
 
 type ChangeProcessorImpl struct {
-	store    *store
-	changed  bool
-	gwNsName types.NamespacedName
+	store          *store
+	changed        bool
+	gwNsName       types.NamespacedName
+	controllerName string
+	gcName         string
 
 	lock sync.Mutex
 }
 
 // NewChangeProcessorImpl creates a new ChangeProcessorImpl for the Gateway resource with the configured namespace name.
-func NewChangeProcessorImpl(gwNsName types.NamespacedName) *ChangeProcessorImpl {
+func NewChangeProcessorImpl(gwNsName types.NamespacedName, controllerName string, gcName string) *ChangeProcessorImpl {
 	return &ChangeProcessorImpl{
-		store:    newStore(),
-		gwNsName: gwNsName,
+		store:          newStore(),
+		gwNsName:       gwNsName,
+		controllerName: controllerName,
+		gcName:         gcName,
 	}
 }
 
@@ -52,6 +56,15 @@ func (c *ChangeProcessorImpl) CaptureUpsertChange(obj client.Object) {
 	c.changed = true
 
 	switch o := obj.(type) {
+	case *v1alpha2.GatewayClass:
+		if o.Name != c.gcName {
+			panic(fmt.Errorf("gatewayclass resource must be %s, got %s", c.gcName, o.Name))
+		}
+		// if the resource spec hasn't changed (its generation is the same), ignore the upsert
+		if c.store.gc != nil && c.store.gc.Generation == o.Generation {
+			c.changed = false
+		}
+		c.store.gc = o
 	case *v1alpha2.Gateway:
 		if o.Namespace != c.gwNsName.Namespace || o.Name != c.gwNsName.Name {
 			panic(fmt.Errorf("gateway resource must be %s/%s, got %s/%s", c.gwNsName.Namespace, c.gwNsName.Name, o.Namespace, o.Name))
@@ -80,6 +93,11 @@ func (c *ChangeProcessorImpl) CaptureDeleteChange(resourceType client.Object, ns
 	c.changed = true
 
 	switch o := resourceType.(type) {
+	case *v1alpha2.GatewayClass:
+		if nsname.Name != c.gcName {
+			panic(fmt.Errorf("gatewayclass resource must be %s, got %s", c.gcName, nsname.Name))
+		}
+		c.store.gc = nil
 	case *v1alpha2.Gateway:
 		if nsname != c.gwNsName {
 			panic(fmt.Errorf("gateway resource must be %s/%s, got %s/%s", c.gwNsName.Namespace, c.gwNsName.Name, o.Namespace, o.Name))
@@ -102,7 +120,7 @@ func (c *ChangeProcessorImpl) Process() (changed bool, conf Configuration, statu
 
 	c.changed = false
 
-	graph := buildGraph(c.store, c.gwNsName)
+	graph := buildGraph(c.store, c.gwNsName, c.controllerName, c.gcName)
 
 	conf = buildConfiguration(graph)
 	statuses = buildStatuses(graph)

@@ -7,6 +7,7 @@ import (
 
 // store contains the resources that represent the state of the Gateway.
 type store struct {
+	gc         *v1alpha2.GatewayClass
 	gw         *v1alpha2.Gateway
 	httpRoutes map[types.NamespacedName]*v1alpha2.HTTPRoute
 }

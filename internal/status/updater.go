@@ -60,6 +60,7 @@ type Updater interface {
 type updaterImpl struct {
 	gatewayCtlrName string
 	gwNsName        types.NamespacedName
+	gcName          string
 	client          client.Client
 	logger          logr.Logger
 	clock           Clock
@@ -69,6 +70,7 @@ type updaterImpl struct {
 func NewUpdater(
 	gatewayCtlrName string,
 	gwNsName types.NamespacedName,
+	gcName string,
 	client client.Client,
 	logger logr.Logger,
 	clock Clock,
@@ -76,6 +78,7 @@ func NewUpdater(
 	return &updaterImpl{
 		gatewayCtlrName: gatewayCtlrName,
 		gwNsName:        gwNsName,
+		gcName:          gcName,
 		client:          client,
 		logger:          logger.WithName("statusUpdater"),
 		clock:           clock,
@@ -85,6 +88,13 @@ func NewUpdater(
 func (upd *updaterImpl) Update(ctx context.Context, statuses state.Statuses) {
 	// FIXME(pleshakov) Merge the new Conditions in the status with the existing Conditions
 	// FIXME(pleshakov) Skip the status update (API call) if the status hasn't changed.
+
+	if statuses.GatewayClassStatus != nil {
+		upd.update(ctx, types.NamespacedName{Name: upd.gcName}, &v1alpha2.GatewayClass{}, func(object client.Object) {
+			gc := object.(*v1alpha2.GatewayClass)
+			gc.Status = prepareGatewayClassStatus(*statuses.GatewayClassStatus, upd.clock.Now())
+		})
+	}
 
 	upd.update(ctx, upd.gwNsName, &v1alpha2.Gateway{}, func(object client.Object) {
 		gw := object.(*v1alpha2.Gateway)

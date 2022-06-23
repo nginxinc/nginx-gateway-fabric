@@ -37,9 +37,6 @@ func (r *gatewayClassReconciler) Reconcile(ctx context.Context, req reconcile.Re
 	var gc v1alpha2.GatewayClass
 	found := true
 
-	// we assume that the reconcile will only be called with the GatewayClass of the known name (like 'nginx')
-	// this is something that has to be configured on the Manager
-
 	err := r.Get(ctx, req.NamespacedName, &gc)
 	if err != nil {
 		if !apierrors.IsNotFound(err) {
@@ -50,7 +47,7 @@ func (r *gatewayClassReconciler) Reconcile(ctx context.Context, req reconcile.Re
 	}
 
 	if !found {
-		r.impl.Remove(req.Name)
+		r.impl.Remove(req.NamespacedName)
 		return reconcile.Result{}, nil
 	}
 

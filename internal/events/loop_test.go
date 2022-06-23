@@ -112,6 +112,7 @@ var _ = Describe("EventLoop", func() {
 			},
 			Entry("HTTPRoute", &events.UpsertEvent{Resource: &v1alpha2.HTTPRoute{}}),
 			Entry("Gateway", &events.UpsertEvent{Resource: &v1alpha2.Gateway{}}),
+			Entry("GatewayClass", &events.UpsertEvent{Resource: &v1alpha2.GatewayClass{}}),
 		)
 
 		DescribeTable("Delete events",
@@ -141,6 +142,7 @@ var _ = Describe("EventLoop", func() {
 			},
 			Entry("HTTPRoute", &events.DeleteEvent{Type: &v1alpha2.HTTPRoute{}, NamespacedName: types.NamespacedName{Namespace: "test", Name: "route"}}),
 			Entry("Gateway", &events.DeleteEvent{Type: &v1alpha2.Gateway{}, NamespacedName: types.NamespacedName{Namespace: "test", Name: "gateway"}}),
+			Entry("GatewayClass", &events.DeleteEvent{Type: &v1alpha2.GatewayClass{}, NamespacedName: types.NamespacedName{Name: "class"}}),
 		)
 	})
 

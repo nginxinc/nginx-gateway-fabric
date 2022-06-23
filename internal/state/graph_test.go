@@ -12,6 +12,10 @@ import (
 )
 
 func TestBuildGraph(t *testing.T) {
+	const (
+		gcName         = "my-class"
+		controllerName = "my.controller"
+	)
 	createRoute := func(name string, gatewayName string) *v1alpha2.HTTPRoute {
 		return &v1alpha2.HTTPRoute{
 			ObjectMeta: metav1.ObjectMeta{
@@ -29,7 +33,7 @@ func TestBuildGraph(t *testing.T) {
 					},
 				},
 				Hostnames: []v1alpha2.Hostname{
-					v1alpha2.Hostname("foo.example.com"),
+					"foo.example.com",
 				},
 				Rules: []v1alpha2.HTTPRouteRule{
 					{
@@ -49,12 +53,18 @@ func TestBuildGraph(t *testing.T) {
 	hr2 := createRoute("hr-2", "wrong-gateway")
 
 	store := &store{
+		gc: &v1alpha2.GatewayClass{
+			Spec: v1alpha2.GatewayClassSpec{
+				ControllerName: controllerName,
+			},
+		},
 		gw: &v1alpha2.Gateway{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: "test",
 				Name:      "gateway",
 			},
 			Spec: v1alpha2.GatewaySpec{
+				GatewayClassName: gcName,
 				Listeners: []v1alpha2.Listener{
 					{
 						Name:     "listener-80-1",
@@ -81,6 +91,10 @@ func TestBuildGraph(t *testing.T) {
 		InvalidSectionNameRefs: map[string]struct{}{},
 	}
 	expected := &graph{
+		GatewayClass: &gatewayClass{
+			Source: store.gc,
+			Valid:  true,
+		},
 		Listeners: map[string]*listener{
 			"listener-80-1": {
 				Source: store.gw.Spec.Listeners[0],
@@ -98,13 +112,67 @@ func TestBuildGraph(t *testing.T) {
 		},
 	}
 
-	result := buildGraph(store, gwNsName)
+	result := buildGraph(store, gwNsName, controllerName, gcName)
 	if diff := cmp.Diff(expected, result); diff != "" {
 		t.Errorf("buildGraph() mismatch (-want +got):\n%s", diff)
 	}
 }
 
+func TestBuildGatewayClass(t *testing.T) {
+	const controllerName = "my.controller"
+
+	validGC := &v1alpha2.GatewayClass{
+		Spec: v1alpha2.GatewayClassSpec{
+			ControllerName: "my.controller",
+		},
+	}
+	invalidGC := &v1alpha2.GatewayClass{
+		Spec: v1alpha2.GatewayClassSpec{
+			ControllerName: "wrong.controller",
+		},
+	}
+
+	tests := []struct {
+		gc       *v1alpha2.GatewayClass
+		expected *gatewayClass
+		msg      string
+	}{
+		{
+			gc:       nil,
+			expected: nil,
+			msg:      "no gatewayclass",
+		},
+		{
+			gc: validGC,
+			expected: &gatewayClass{
+				Source:   validGC,
+				Valid:    true,
+				ErrorMsg: "",
+			},
+			msg: "valid gatewayclass",
+		},
+		{
+			gc: invalidGC,
+			expected: &gatewayClass{
+				Source:   invalidGC,
+				Valid:    false,
+				ErrorMsg: "Spec.ControllerName must be my.controller got wrong.controller",
+			},
+			msg: "invalid gatewayclass",
+		},
+	}
+
+	for _, test := range tests {
+		result := buildGatewayClass(test.gc, controllerName)
+		if diff := cmp.Diff(test.expected, result); diff != "" {
+			t.Errorf("buildGatewayClass() '%s' mismatch (-want +got):\n%s", test.msg, diff)
+		}
+	}
+}
+
 func TestBuildListeners(t *testing.T) {
+	const gcName = "my-gateway-class"
+
 	listener801 := v1alpha2.Listener{
 		Name:     "listener-80-1",
 		Hostname: (*v1alpha2.Hostname)(helpers.GetStringPointer("foo.example.com")),
@@ -138,6 +206,7 @@ func TestBuildListeners(t *testing.T) {
 		{
 			gateway: &v1alpha2.Gateway{
 				Spec: v1alpha2.GatewaySpec{
+					GatewayClassName: gcName,
 					Listeners: []v1alpha2.Listener{
 						listener801,
 					},
@@ -156,6 +225,7 @@ func TestBuildListeners(t *testing.T) {
 		{
 			gateway: &v1alpha2.Gateway{
 				Spec: v1alpha2.GatewaySpec{
+					GatewayClassName: gcName,
 					Listeners: []v1alpha2.Listener{
 						listener802,
 					},
@@ -174,6 +244,7 @@ func TestBuildListeners(t *testing.T) {
 		{
 			gateway: &v1alpha2.Gateway{
 				Spec: v1alpha2.GatewaySpec{
+					GatewayClassName: gcName,
 					Listeners: []v1alpha2.Listener{
 						listener801, listener803,
 					},
@@ -198,6 +269,7 @@ func TestBuildListeners(t *testing.T) {
 		{
 			gateway: &v1alpha2.Gateway{
 				Spec: v1alpha2.GatewaySpec{
+					GatewayClassName: gcName,
 					Listeners: []v1alpha2.Listener{
 						listener801, listener804,
 					},
@@ -224,10 +296,22 @@ func TestBuildListeners(t *testing.T) {
 			expected: map[string]*listener{},
 			msg:      "no gateway",
 		},
+		{
+			gateway: &v1alpha2.Gateway{
+				Spec: v1alpha2.GatewaySpec{
+					GatewayClassName: "wrong-class",
+					Listeners: []v1alpha2.Listener{
+						listener801, listener804,
+					},
+				},
+			},
+			expected: map[string]*listener{},
+			msg:      "wrong gatewayclass",
+		},
 	}
 
 	for _, test := range tests {
-		result := buildListeners(test.gateway)
+		result := buildListeners(test.gateway, gcName)
 		if diff := cmp.Diff(test.expected, result); diff != "" {
 			t.Errorf("buildListeners() %q  mismatch (-want +got):\n%s", test.msg, diff)
 		}
@@ -611,5 +695,23 @@ func TestGetHostname(t *testing.T) {
 		if result != test.expected {
 			t.Errorf("getHostname() returned %q but expected %q for the case of %q", result, test.expected, test.msg)
 		}
+	}
+}
+
+func TestValidateGatewayClass(t *testing.T) {
+	gc := &v1alpha2.GatewayClass{
+		Spec: v1alpha2.GatewayClassSpec{
+			ControllerName: "test.controller",
+		},
+	}
+
+	err := validateGatewayClass(gc, "test.controller")
+	if err != nil {
+		t.Errorf("validateGatewayClass() returned unexpected error %v", err)
+	}
+
+	err = validateGatewayClass(gc, "unmatched.controller")
+	if err == nil {
+		t.Errorf("validateGatewayClass() didn't return an error")
 	}
 }

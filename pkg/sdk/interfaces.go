@@ -10,7 +10,7 @@ import (
 
 type GatewayClassImpl interface {
 	Upsert(gc *v1alpha2.GatewayClass)
-	Remove(key string)
+	Remove(nsname types.NamespacedName)
 }
 
 type GatewayImpl interface {
@@ -31,5 +31,5 @@ type HTTPRouteImpl interface {
 
 type ServiceImpl interface {
 	Upsert(svc *apiv1.Service)
-	Remove(name types.NamespacedName)
+	Remove(nsname types.NamespacedName)
 }
