@@ -69,7 +69,7 @@ You can deploy NGINX Kubernetes Gateway on an existing Kubernetes 1.16+ cluster.
 1. Create the njs-modules configmap:
 
     ```
-    kubectl create configmap njs-modules --from-file=internal/nginx/modules/httpmatches.js -n nginx-gateway  
+    kubectl create configmap njs-modules --from-file=internal/nginx/modules/src/httpmatches.js -n nginx-gateway  
     ```
 
 1. Deploy the NGINX Kubernetes Gateway:

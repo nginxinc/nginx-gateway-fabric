@@ -3,7 +3,6 @@ package state
 import (
 	"sort"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 )
 
@@ -33,8 +32,10 @@ type PathRule struct {
 }
 
 // MatchRule represents a routing rule. It corresponds directly to a Match in the HTTPRoute resource.
+// An HTTPRoute is guaranteed to have at least one rule with one match.
+// If no rule or match is specified by the user, the default rule {{path:{ type: "PathPrefix", value: "/"}}} is set by the schema.
 type MatchRule struct {
-	// MatchIdx is the index of the rule in the Rule.Matches or -1 if there are no matches.
+	// MatchIdx is the index of the rule in the Rule.Matches.
 	MatchIdx int
 	// RuleIdx is the index of the corresponding rule in the HTTPRoute.
 	RuleIdx int
@@ -42,13 +43,9 @@ type MatchRule struct {
 	Source *v1alpha2.HTTPRoute
 }
 
-// GetMatch returns the HTTPRouteMatch of the Route and true if it exists.
-// If there is no Match defined on the Route, GetMatch returns an empty HTTPRouteMatch and false.
-func (r *MatchRule) GetMatch() (v1alpha2.HTTPRouteMatch, bool) {
-	if r.MatchIdx == -1 {
-		return v1alpha2.HTTPRouteMatch{}, false
-	}
-	return r.Source.Spec.Rules[r.RuleIdx].Matches[r.MatchIdx], true
+// GetMatch returns the HTTPRouteMatch of the Route .
+func (r *MatchRule) GetMatch() v1alpha2.HTTPRouteMatch {
+	return r.Source.Spec.Rules[r.RuleIdx].Matches[r.MatchIdx]
 }
 
 // buildConfiguration builds the Configuration from the graph.
@@ -104,12 +101,7 @@ func buildConfiguration(graph *graph) Configuration {
 		}
 
 		for _, r := range rules {
-			// sort matches in every PathRule based on the Source timestamp and its namespace/name
-			// for conflict resolution of conflicting rules
-			// stable sort so that the order of matches within one HTTPRoute is preserved
-			sort.SliceStable(r.MatchRules, func(i, j int) bool {
-				return lessObjectMeta(&r.MatchRules[i].Source.ObjectMeta, &r.MatchRules[j].Source.ObjectMeta)
-			})
+			sortMatchRules(r.MatchRules)
 
 			s.PathRules = append(s.PathRules, r)
 		}
@@ -130,17 +122,6 @@ func buildConfiguration(graph *graph) Configuration {
 	return Configuration{
 		HTTPServers: httpServers,
 	}
-}
-
-func lessObjectMeta(meta1 *metav1.ObjectMeta, meta2 *metav1.ObjectMeta) bool {
-	if meta1.CreationTimestamp.Equal(&meta2.CreationTimestamp) {
-		if meta1.Namespace == meta2.Namespace {
-			return meta1.Name < meta2.Name
-		}
-		return meta1.Namespace < meta2.Namespace
-	}
-
-	return meta1.CreationTimestamp.Before(&meta2.CreationTimestamp)
 }
 
 func getPath(path *v1alpha2.HTTPPathMatch) string {

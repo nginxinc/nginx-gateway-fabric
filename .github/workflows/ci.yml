@@ -80,7 +80,7 @@ jobs:
         uses: rutajdash/prettier-cli-action@v1.0.0
         with:
           config_path: ${{ github.workspace }}/internal/nginx/modules/.prettierrc
-          file_pattern: ${{ github.workspace }}/internal/nginx/modules/*.js
+          file_pattern: ${{ github.workspace }}/internal/nginx/modules/**/*.js
           prettier_version: 2.6.2
       - name: Prettier Output
         if: ${{ failure() }}
@@ -119,9 +119,9 @@ jobs:
       - name: Setup Node.js Environment
         uses: actions/setup-node@v3
         with:
-          node_version: 18
+          node-version: 18
       - run: npm install mocha@^8.2 esm chai
-      - run: npx mocha -r esm ${{ github.workspace }}/internal/nginx/modules/httpmatches_test.js
+      - run: npx mocha -r esm ${{ github.workspace }}/internal/nginx/modules/test/httpmatches.test.js
 
   binary:
     name: Build Binary

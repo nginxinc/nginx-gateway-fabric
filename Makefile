@@ -67,10 +67,10 @@ fmt: ## Run go fmt against code.
 
 .PHONY: njs-fmt
 njs-fmt: ## Run prettier against the njs httpmatches module.
-	docker run --rm \
-		-v $(PWD)/internal/nginx/modules/:/njs-modules/ \
+	docker run --rm -w /modules \
+		-v $(PWD)/internal/nginx/modules/:/modules/ \
 		node:18 \
-		npx prettier@2.6.2 --write njs-modules/ --config=njs-modules/.prettierrc
+		/bin/bash -c "npm install && npm run format"
 
 .PHONY: vet
 vet: ## Run go vet against code.
@@ -86,10 +86,10 @@ unit-test: ## Run unit tests for the go code
 	go tool cover -html=cover.out -o cover.html
 
 njs-unit-test: ## Run unit tests for the njs httpmatches module.
-	docker run --rm -w /src \
-		-v $(PWD)/internal/nginx/modules/:/src/njs-modules/ \
+	docker run --rm -w /modules \
+		-v $(PWD)/internal/nginx/modules:/modules/ \
 		node:18 \
-		/bin/bash -c "npm install mocha@^8.2 esm chai && npx mocha -r esm njs-modules/httpmatches_test.js"
+		/bin/bash -c "npm install && npm test && npm run clean"
 
 .PHONY: dev-all
 dev-all: deps fmt njs-fmt vet lint unit-test njs-unit-test

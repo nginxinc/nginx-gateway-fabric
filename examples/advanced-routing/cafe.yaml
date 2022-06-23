@@ -1,19 +1,19 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: coffee
+  name: coffee-v1
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: coffee
+      app: coffee-v1
   template:
     metadata:
       labels:
-        app: coffee
+        app: coffee-v1
     spec:
       containers:
-      - name: coffee
+      - name: coffee-v1
         image: nginxdemos/nginx-hello:plain-text
         ports:
         - containerPort: 8080
@@ -21,7 +21,7 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: coffee
+  name: coffee-v1-svc
 spec:
   ports:
   - port: 80
@@ -29,7 +29,73 @@ spec:
     protocol: TCP
     name: http
   selector:
-    app: coffee
+    app: coffee-v1
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: coffee-v2
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: coffee-v2
+  template:
+    metadata:
+      labels:
+        app: coffee-v2
+    spec:
+      containers:
+      - name: coffee-v2
+        image: nginxdemos/nginx-hello:plain-text
+        ports:
+        - containerPort: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: coffee-v2-svc
+spec:
+  ports:
+  - port: 80
+    targetPort: 8080
+    protocol: TCP
+    name: http
+  selector:
+    app: coffee-v2
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tea-post
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: tea-post
+  template:
+    metadata:
+      labels:
+        app: tea-post
+    spec:
+      containers:
+      - name: tea-post
+        image: nginxdemos/nginx-hello:plain-text
+        ports:
+        - containerPort: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: tea-post-svc
+spec:
+  ports:
+  - port: 80
+    targetPort: 8080
+    protocol: TCP
+    name: http
+  selector:
+    app: tea-post
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -54,7 +120,7 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: tea
+  name: tea-svc
 spec:
   ports:
   - port: 80

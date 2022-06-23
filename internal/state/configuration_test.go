@@ -443,48 +443,29 @@ func TestMatchRuleGetMatch(t *testing.T) {
 	tests := []struct {
 		name,
 		expPath string
-		rule        MatchRule
-		matchExists bool
+		rule MatchRule
 	}{
 		{
-			name:        "match does not exist",
-			expPath:     "",
-			rule:        MatchRule{MatchIdx: -1},
-			matchExists: false,
+			name:    "first match in first rule",
+			expPath: "/path-1",
+			rule:    MatchRule{MatchIdx: 0, RuleIdx: 0, Source: hr},
 		},
 		{
-			name:        "first match in first rule",
-			expPath:     "/path-1",
-			rule:        MatchRule{MatchIdx: 0, RuleIdx: 0, Source: hr},
-			matchExists: true,
+			name:    "second match in first rule",
+			expPath: "/path-2",
+			rule:    MatchRule{MatchIdx: 1, RuleIdx: 0, Source: hr},
 		},
 		{
-			name:        "second match in first rule",
-			expPath:     "/path-2",
-			rule:        MatchRule{MatchIdx: 1, RuleIdx: 0, Source: hr},
-			matchExists: true,
-		},
-		{
-			name:        "second match in second rule",
-			expPath:     "/path-4",
-			rule:        MatchRule{MatchIdx: 1, RuleIdx: 1, Source: hr},
-			matchExists: true,
+			name:    "second match in second rule",
+			expPath: "/path-4",
+			rule:    MatchRule{MatchIdx: 1, RuleIdx: 1, Source: hr},
 		},
 	}
 
 	for _, tc := range tests {
-		actual, exists := tc.rule.GetMatch()
-		if !tc.matchExists {
-			if exists {
-				t.Errorf("rule.GetMatch() incorrectly returned true (match exists) for test case: %q", tc.name)
-			}
-		} else {
-			if !exists {
-				t.Errorf("rule.GetMatch() incorrectly returned false (match does not exist) for test case: %q", tc.name)
-			}
-			if *actual.Path.Value != tc.expPath {
-				t.Errorf("rule.GetMatch() returned incorrect match with path: %s, expected path: %s for test case: %q", *actual.Path.Value, tc.expPath, tc.name)
-			}
+		actual := tc.rule.GetMatch()
+		if *actual.Path.Value != tc.expPath {
+			t.Errorf("MatchRule.GetMatch() returned incorrect match with path: %s, expected path: %s for test case: %q", *actual.Path.Value, tc.expPath, tc.name)
 		}
 	}
 }
