@@ -54,10 +54,14 @@ func buildConfiguration(graph *graph) Configuration {
 		return Configuration{}
 	}
 
+	if graph.Gateway == nil {
+		return Configuration{}
+	}
+
 	// FIXME(pleshakov) For now we only handle paths with prefix matches. Handle exact and regex matches
 	pathRulesForHosts := make(map[string]map[string]PathRule)
 
-	for _, l := range graph.Listeners {
+	for _, l := range graph.Gateway.Listeners {
 		for _, r := range l.Routes {
 			var hostnames []string
 

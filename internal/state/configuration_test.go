@@ -2,7 +2,6 @@ package state
 
 import (
 	"testing"
-	"time"
 
 	"github.com/google/go-cmp/cmp"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -100,8 +99,11 @@ func TestBuildConfiguration(t *testing.T) {
 					Source: &v1alpha2.GatewayClass{},
 					Valid:  true,
 				},
-				Listeners: map[string]*listener{},
-				Routes:    map[types.NamespacedName]*route{},
+				Gateway: &gateway{
+					Source:    &v1alpha2.Gateway{},
+					Listeners: map[string]*listener{},
+				},
+				Routes: map[types.NamespacedName]*route{},
 			},
 			expected: Configuration{
 				HTTPServers: []HTTPServer{},
@@ -114,11 +116,14 @@ func TestBuildConfiguration(t *testing.T) {
 					Source: &v1alpha2.GatewayClass{},
 					Valid:  true,
 				},
-				Listeners: map[string]*listener{
-					"listener-80-1": {
-						Valid:             true,
-						Routes:            map[types.NamespacedName]*route{},
-						AcceptedHostnames: map[string]struct{}{},
+				Gateway: &gateway{
+					Source: &v1alpha2.Gateway{},
+					Listeners: map[string]*listener{
+						"listener-80-1": {
+							Valid:             true,
+							Routes:            map[types.NamespacedName]*route{},
+							AcceptedHostnames: map[string]struct{}{},
+						},
 					},
 				},
 				Routes: map[types.NamespacedName]*route{},
@@ -134,16 +139,19 @@ func TestBuildConfiguration(t *testing.T) {
 					Source: &v1alpha2.GatewayClass{},
 					Valid:  true,
 				},
-				Listeners: map[string]*listener{
-					"listener-80-1": {
-						Valid: true,
-						Routes: map[types.NamespacedName]*route{
-							{Namespace: "test", Name: "hr-1"}: routeHR1,
-							{Namespace: "test", Name: "hr-2"}: routeHR2,
-						},
-						AcceptedHostnames: map[string]struct{}{
-							"foo.example.com": {},
-							"bar.example.com": {},
+				Gateway: &gateway{
+					Source: &v1alpha2.Gateway{},
+					Listeners: map[string]*listener{
+						"listener-80-1": {
+							Valid: true,
+							Routes: map[types.NamespacedName]*route{
+								{Namespace: "test", Name: "hr-1"}: routeHR1,
+								{Namespace: "test", Name: "hr-2"}: routeHR2,
+							},
+							AcceptedHostnames: map[string]struct{}{
+								"foo.example.com": {},
+								"bar.example.com": {},
+							},
 						},
 					},
 				},
@@ -194,15 +202,18 @@ func TestBuildConfiguration(t *testing.T) {
 					Source: &v1alpha2.GatewayClass{},
 					Valid:  true,
 				},
-				Listeners: map[string]*listener{
-					"listener-80-1": {
-						Valid: true,
-						Routes: map[types.NamespacedName]*route{
-							{Namespace: "test", Name: "hr-3"}: routeHR3,
-							{Namespace: "test", Name: "hr-4"}: routeHR4,
-						},
-						AcceptedHostnames: map[string]struct{}{
-							"foo.example.com": {},
+				Gateway: &gateway{
+					Source: &v1alpha2.Gateway{},
+					Listeners: map[string]*listener{
+						"listener-80-1": {
+							Valid: true,
+							Routes: map[types.NamespacedName]*route{
+								{Namespace: "test", Name: "hr-3"}: routeHR3,
+								{Namespace: "test", Name: "hr-4"}: routeHR4,
+							},
+							AcceptedHostnames: map[string]struct{}{
+								"foo.example.com": {},
+							},
 						},
 					},
 				},
@@ -264,14 +275,17 @@ func TestBuildConfiguration(t *testing.T) {
 					Valid:    false,
 					ErrorMsg: "error",
 				},
-				Listeners: map[string]*listener{
-					"listener-80-1": {
-						Valid: true,
-						Routes: map[types.NamespacedName]*route{
-							{Namespace: "test", Name: "hr-1"}: routeHR1,
-						},
-						AcceptedHostnames: map[string]struct{}{
-							"foo.example.com": {},
+				Gateway: &gateway{
+					Source: &v1alpha2.Gateway{},
+					Listeners: map[string]*listener{
+						"listener-80-1": {
+							Valid: true,
+							Routes: map[types.NamespacedName]*route{
+								{Namespace: "test", Name: "hr-1"}: routeHR1,
+							},
+							AcceptedHostnames: map[string]struct{}{
+								"foo.example.com": {},
+							},
 						},
 					},
 				},
@@ -285,14 +299,17 @@ func TestBuildConfiguration(t *testing.T) {
 		{
 			graph: &graph{
 				GatewayClass: nil,
-				Listeners: map[string]*listener{
-					"listener-80-1": {
-						Valid: true,
-						Routes: map[types.NamespacedName]*route{
-							{Namespace: "test", Name: "hr-1"}: routeHR1,
-						},
-						AcceptedHostnames: map[string]struct{}{
-							"foo.example.com": {},
+				Gateway: &gateway{
+					Source: &v1alpha2.Gateway{},
+					Listeners: map[string]*listener{
+						"listener-80-1": {
+							Valid: true,
+							Routes: map[types.NamespacedName]*route{
+								{Namespace: "test", Name: "hr-1"}: routeHR1,
+							},
+							AcceptedHostnames: map[string]struct{}{
+								"foo.example.com": {},
+							},
 						},
 					},
 				},
@@ -303,129 +320,24 @@ func TestBuildConfiguration(t *testing.T) {
 			expected: Configuration{},
 			msg:      "missing gatewayclass",
 		},
+		{
+			graph: &graph{
+				GatewayClass: &gatewayClass{
+					Source: &v1alpha2.GatewayClass{},
+					Valid:  true,
+				},
+				Gateway: nil,
+				Routes:  map[types.NamespacedName]*route{},
+			},
+			expected: Configuration{},
+			msg:      "missing gateway",
+		},
 	}
 
 	for _, test := range tests {
 		result := buildConfiguration(test.graph)
 		if diff := cmp.Diff(test.expected, result); diff != "" {
 			t.Errorf("buildConfiguration() %q mismatch (-want +got):\n%s", test.msg, diff)
-		}
-	}
-}
-
-func TestLessObjectMeta(t *testing.T) {
-	sooner := metav1.Now()
-	later := metav1.NewTime(sooner.Add(10 * time.Millisecond))
-
-	tests := []struct {
-		meta1, meta2 *metav1.ObjectMeta
-		expected     bool
-		msg          string
-	}{
-		{
-			meta1: &metav1.ObjectMeta{
-				CreationTimestamp: sooner,
-				Namespace:         "test",
-				Name:              "myname",
-			},
-			meta2: &metav1.ObjectMeta{
-				CreationTimestamp: sooner,
-				Namespace:         "test",
-				Name:              "myname",
-			},
-			expected: false,
-			msg:      "equal",
-		},
-		{
-			meta1: &metav1.ObjectMeta{
-				CreationTimestamp: sooner,
-				Namespace:         "test",
-				Name:              "myname",
-			},
-			meta2: &metav1.ObjectMeta{
-				CreationTimestamp: later,
-				Namespace:         "test",
-				Name:              "myname",
-			},
-			expected: true,
-			msg:      "less by timestamp",
-		},
-		{
-			meta1: &metav1.ObjectMeta{
-				CreationTimestamp: later,
-				Namespace:         "test",
-				Name:              "myname",
-			},
-			meta2: &metav1.ObjectMeta{
-				CreationTimestamp: sooner,
-				Namespace:         "test",
-				Name:              "myname",
-			},
-			expected: false,
-			msg:      "greater by timestamp",
-		},
-		{
-			meta1: &metav1.ObjectMeta{
-				CreationTimestamp: sooner,
-				Namespace:         "atest",
-				Name:              "myname",
-			},
-			meta2: &metav1.ObjectMeta{
-				CreationTimestamp: sooner,
-				Namespace:         "test",
-				Name:              "myname",
-			},
-			expected: true,
-			msg:      "less by namespace",
-		},
-		{
-			meta1: &metav1.ObjectMeta{
-				CreationTimestamp: sooner,
-				Namespace:         "test",
-				Name:              "myname",
-			},
-			meta2: &metav1.ObjectMeta{
-				CreationTimestamp: sooner,
-				Namespace:         "atest",
-				Name:              "myname",
-			},
-			expected: false,
-			msg:      "greater by namespace",
-		},
-		{
-			meta1: &metav1.ObjectMeta{
-				CreationTimestamp: sooner,
-				Namespace:         "test",
-				Name:              "amyname",
-			},
-			meta2: &metav1.ObjectMeta{
-				CreationTimestamp: sooner,
-				Namespace:         "test",
-				Name:              "myname",
-			},
-			expected: true,
-			msg:      "less by name",
-		},
-		{
-			meta1: &metav1.ObjectMeta{
-				CreationTimestamp: sooner,
-				Namespace:         "test",
-				Name:              "myname",
-			},
-			meta2: &metav1.ObjectMeta{
-				CreationTimestamp: sooner,
-				Namespace:         "test",
-				Name:              "amyname",
-			},
-			expected: false,
-			msg:      "greater by name",
-		},
-	}
-
-	for _, test := range tests {
-		result := lessObjectMeta(test.meta1, test.meta2)
-		if result != test.expected {
-			t.Errorf("lessObjectMeta() returned %v but expected %v for the case of %q", result, test.expected, test.msg)
 		}
 	}
 }

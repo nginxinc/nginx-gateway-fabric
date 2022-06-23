@@ -29,6 +29,30 @@ func TestBuildStatuses(t *testing.T) {
 		},
 	}
 
+	routesAllRefsInvalid := map[types.NamespacedName]*route{
+		{Namespace: "test", Name: "hr-1"}: {
+			InvalidSectionNameRefs: map[string]struct{}{
+				"listener-80-2": {},
+				"listener-80-1": {},
+			},
+		},
+	}
+
+	gw := &v1alpha2.Gateway{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "test",
+			Name:      "gateway",
+		},
+	}
+
+	ignoredGw := &v1alpha2.Gateway{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace:  "test",
+			Name:       "ignored-gateway",
+			Generation: 1,
+		},
+	}
+
 	tests := []struct {
 		graph    *graph
 		expected Statuses
@@ -42,19 +66,31 @@ func TestBuildStatuses(t *testing.T) {
 					},
 					Valid: true,
 				},
-				Listeners: listeners,
-				Routes:    routes,
+				Gateway: &gateway{
+					Source:    gw,
+					Listeners: listeners,
+				},
+				IgnoredGateways: map[types.NamespacedName]*v1alpha2.Gateway{
+					{Namespace: "test", Name: "ignored-gateway"}: ignoredGw,
+				},
+				Routes: routes,
 			},
 			expected: Statuses{
 				GatewayClassStatus: &GatewayClassStatus{
 					Valid:              true,
 					ObservedGeneration: 1,
 				},
-				ListenerStatuses: map[string]ListenerStatus{
-					"listener-80-1": {
-						Valid:          true,
-						AttachedRoutes: 1,
+				GatewayStatus: &GatewayStatus{
+					NsName: types.NamespacedName{Namespace: "test", Name: "gateway"},
+					ListenerStatuses: map[string]ListenerStatus{
+						"listener-80-1": {
+							Valid:          true,
+							AttachedRoutes: 1,
+						},
 					},
+				},
+				IgnoredGatewayStatuses: map[types.NamespacedName]IgnoredGatewayStatus{
+					{Namespace: "test", Name: "ignored-gateway"}: {ObservedGeneration: 1},
 				},
 				HTTPRouteStatuses: map[types.NamespacedName]HTTPRouteStatus{
 					{Namespace: "test", Name: "hr-1"}: {
@@ -74,15 +110,28 @@ func TestBuildStatuses(t *testing.T) {
 		{
 			graph: &graph{
 				GatewayClass: nil,
-				Listeners:    listeners,
-				Routes:       routes,
+				Gateway: &gateway{
+					Source:    gw,
+					Listeners: listeners,
+				},
+				IgnoredGateways: map[types.NamespacedName]*v1alpha2.Gateway{
+					{Namespace: "test", Name: "ignored-gateway"}: ignoredGw,
+				},
+				Routes: routes,
 			},
 			expected: Statuses{
-				ListenerStatuses: map[string]ListenerStatus{
-					"listener-80-1": {
-						Valid:          false,
-						AttachedRoutes: 1,
+				GatewayClassStatus: nil,
+				GatewayStatus: &GatewayStatus{
+					NsName: types.NamespacedName{Namespace: "test", Name: "gateway"},
+					ListenerStatuses: map[string]ListenerStatus{
+						"listener-80-1": {
+							Valid:          false,
+							AttachedRoutes: 1,
+						},
 					},
+				},
+				IgnoredGatewayStatuses: map[types.NamespacedName]IgnoredGatewayStatus{
+					{Namespace: "test", Name: "ignored-gateway"}: {ObservedGeneration: 1},
 				},
 				HTTPRouteStatuses: map[types.NamespacedName]HTTPRouteStatus{
 					{Namespace: "test", Name: "hr-1"}: {
@@ -108,8 +157,14 @@ func TestBuildStatuses(t *testing.T) {
 					Valid:    false,
 					ErrorMsg: "error",
 				},
-				Listeners: listeners,
-				Routes:    routes,
+				Gateway: &gateway{
+					Source:    gw,
+					Listeners: listeners,
+				},
+				IgnoredGateways: map[types.NamespacedName]*v1alpha2.Gateway{
+					{Namespace: "test", Name: "ignored-gateway"}: ignoredGw,
+				},
+				Routes: routes,
 			},
 			expected: Statuses{
 				GatewayClassStatus: &GatewayClassStatus{
@@ -117,11 +172,17 @@ func TestBuildStatuses(t *testing.T) {
 					ErrorMsg:           "error",
 					ObservedGeneration: 1,
 				},
-				ListenerStatuses: map[string]ListenerStatus{
-					"listener-80-1": {
-						Valid:          false,
-						AttachedRoutes: 1,
+				GatewayStatus: &GatewayStatus{
+					NsName: types.NamespacedName{Namespace: "test", Name: "gateway"},
+					ListenerStatuses: map[string]ListenerStatus{
+						"listener-80-1": {
+							Valid:          false,
+							AttachedRoutes: 1,
+						},
 					},
+				},
+				IgnoredGatewayStatuses: map[types.NamespacedName]IgnoredGatewayStatus{
+					{Namespace: "test", Name: "ignored-gateway"}: {ObservedGeneration: 1},
 				},
 				HTTPRouteStatuses: map[types.NamespacedName]HTTPRouteStatus{
 					{Namespace: "test", Name: "hr-1"}: {
@@ -137,6 +198,40 @@ func TestBuildStatuses(t *testing.T) {
 				},
 			},
 			msg: "gatewayclass is not valid",
+		},
+		{
+			graph: &graph{
+				GatewayClass: &gatewayClass{
+					Source: &v1alpha2.GatewayClass{
+						ObjectMeta: metav1.ObjectMeta{Generation: 1},
+					},
+					Valid: true,
+				},
+				Gateway:         nil,
+				IgnoredGateways: nil,
+				Routes:          routesAllRefsInvalid,
+			},
+			expected: Statuses{
+				GatewayClassStatus: &GatewayClassStatus{
+					Valid:              true,
+					ObservedGeneration: 1,
+				},
+				GatewayStatus:          nil,
+				IgnoredGatewayStatuses: map[types.NamespacedName]IgnoredGatewayStatus{},
+				HTTPRouteStatuses: map[types.NamespacedName]HTTPRouteStatus{
+					{Namespace: "test", Name: "hr-1"}: {
+						ParentStatuses: map[string]ParentStatus{
+							"listener-80-1": {
+								Attached: false,
+							},
+							"listener-80-2": {
+								Attached: false,
+							},
+						},
+					},
+				},
+			},
+			msg: "gateway and ignored gateways don't exist",
 		},
 	}
 

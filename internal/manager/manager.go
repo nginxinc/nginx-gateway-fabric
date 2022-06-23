@@ -70,7 +70,6 @@ func Start(cfg config.Config) error {
 	}
 
 	processor := state.NewChangeProcessorImpl(state.ChangeProcessorConfig{
-		GatewayNsName:    cfg.GatewayNsName,
 		GatewayCtlrName:  cfg.GatewayCtlrName,
 		GatewayClassName: cfg.GatewayClassName,
 	})
@@ -79,7 +78,6 @@ func Start(cfg config.Config) error {
 	nginxFileMgr := file.NewManagerImpl()
 	nginxRuntimeMgr := ngxruntime.NewManagerImpl()
 	statusUpdater := status.NewUpdater(status.UpdaterConfig{
-		GatewayNsName:    cfg.GatewayNsName,
 		GatewayCtlrName:  cfg.GatewayCtlrName,
 		GatewayClassName: cfg.GatewayClassName,
 		Client:           mgr.GetClient(),

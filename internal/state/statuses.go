@@ -9,11 +9,25 @@ type ListenerStatuses map[string]ListenerStatus
 type HTTPRouteStatuses map[types.NamespacedName]HTTPRouteStatus
 
 // Statuses holds the status-related information about Gateway API resources.
-// It is assumed that only a singe Gateway resource is used.
 type Statuses struct {
-	GatewayClassStatus *GatewayClassStatus
-	ListenerStatuses   ListenerStatuses
-	HTTPRouteStatuses  HTTPRouteStatuses
+	GatewayClassStatus     *GatewayClassStatus
+	GatewayStatus          *GatewayStatus
+	IgnoredGatewayStatuses IgnoredGatewayStatuses
+	HTTPRouteStatuses      HTTPRouteStatuses
+}
+
+// GatewayStatus holds the status of the winning Gateway resource.
+type GatewayStatus struct {
+	NsName           types.NamespacedName
+	ListenerStatuses ListenerStatuses
+}
+
+// IgnoredGatewayStatuses holds the statuses of the ignored Gateway resources.
+type IgnoredGatewayStatuses map[types.NamespacedName]IgnoredGatewayStatus
+
+// IgnoredGatewayStatus holds the status of an ignored Gateway resource.
+type IgnoredGatewayStatus struct {
+	ObservedGeneration int64
 }
 
 // ListenerStatus holds the status-related information about a listener in the Gateway resource.
@@ -50,8 +64,8 @@ type GatewayClassStatus struct {
 // buildStatuses builds statuses from a graph.
 func buildStatuses(graph *graph) Statuses {
 	statuses := Statuses{
-		ListenerStatuses:  make(map[string]ListenerStatus),
-		HTTPRouteStatuses: make(map[types.NamespacedName]HTTPRouteStatus),
+		HTTPRouteStatuses:      make(map[types.NamespacedName]HTTPRouteStatus),
+		IgnoredGatewayStatuses: make(map[types.NamespacedName]IgnoredGatewayStatus),
 	}
 
 	if graph.GatewayClass != nil {
@@ -64,11 +78,24 @@ func buildStatuses(graph *graph) Statuses {
 
 	gcValidAndExist := graph.GatewayClass != nil && graph.GatewayClass.Valid
 
-	for name, l := range graph.Listeners {
-		statuses.ListenerStatuses[name] = ListenerStatus{
-			Valid:          l.Valid && gcValidAndExist,
-			AttachedRoutes: int32(len(l.Routes)),
+	if graph.Gateway != nil {
+		listenerStatuses := make(map[string]ListenerStatus)
+
+		for name, l := range graph.Gateway.Listeners {
+			listenerStatuses[name] = ListenerStatus{
+				Valid:          l.Valid && gcValidAndExist,
+				AttachedRoutes: int32(len(l.Routes)),
+			}
 		}
+
+		statuses.GatewayStatus = &GatewayStatus{
+			NsName:           getNamespacedName(graph.Gateway.Source),
+			ListenerStatuses: listenerStatuses,
+		}
+	}
+
+	for nsname, gw := range graph.IgnoredGateways {
+		statuses.IgnoredGatewayStatuses[nsname] = IgnoredGatewayStatus{ObservedGeneration: gw.Generation}
 	}
 
 	for nsname, r := range graph.Routes {
