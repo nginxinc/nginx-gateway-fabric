@@ -69,10 +69,20 @@ func generate(httpServer state.HTTPServer, serviceStore state.ServiceStore) (ser
 				warnings.AddWarning(r.Source, err.Error())
 			}
 
-			path := createPathForMatch(rule.Path, ruleIdx)
+			m := r.GetMatch()
 
-			locs = append(locs, generateMatchLocation(path, address))
-			matches = append(matches, createHTTPMatch(r.GetMatch(), path))
+			// handle case where the only route is a path-only match
+			// generate a standard location block without http_matches.
+			if len(rule.MatchRules) == 1 && isPathOnlyMatch(m) {
+				locs = append(locs, location{
+					Path:      rule.Path,
+					ProxyPass: generateProxyPass(address),
+				})
+			} else {
+				path := createPathForMatch(rule.Path, ruleIdx)
+				locs = append(locs, generateMatchLocation(path, address))
+				matches = append(matches, createHTTPMatch(m, path))
+			}
 		}
 
 		if len(matches) > 0 {

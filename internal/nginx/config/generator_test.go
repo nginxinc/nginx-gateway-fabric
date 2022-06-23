@@ -61,6 +61,11 @@ func TestGenerate(t *testing.T) {
 							},
 							Method: helpers.GetHTTPMethodPointer(v1alpha2.HTTPMethodPatch),
 						},
+						{
+							Path: &v1alpha2.HTTPPathMatch{
+								Value: helpers.GetStringPointer("/"), // should generate an "any" httpmatch since other matches exists for /
+							},
+						},
 					},
 					BackendRefs: []v1alpha2.HTTPBackendRef{
 						{
@@ -154,6 +159,11 @@ func TestGenerate(t *testing.T) {
 						RuleIdx:  0,
 						Source:   hr,
 					},
+					{
+						MatchIdx: 2,
+						RuleIdx:  0,
+						Source:   hr,
+					},
 				},
 			},
 			{
@@ -190,7 +200,11 @@ func TestGenerate(t *testing.T) {
 		return string(b)
 	}
 
-	slashMatches := []httpMatch{{Method: v1alpha2.HTTPMethodPost, RedirectPath: "/_route0"}, {Method: v1alpha2.HTTPMethodPatch, RedirectPath: "/_route1"}}
+	slashMatches := []httpMatch{
+		{Method: v1alpha2.HTTPMethodPost, RedirectPath: "/_route0"},
+		{Method: v1alpha2.HTTPMethodPatch, RedirectPath: "/_route1"},
+		{Any: true, RedirectPath: "/_route2"},
+	}
 	testMatches := []httpMatch{
 		{
 			Method:       v1alpha2.HTTPMethodGet,
@@ -199,7 +213,8 @@ func TestGenerate(t *testing.T) {
 			RedirectPath: "/test_route0",
 		},
 	}
-	pathMatches := []httpMatch{{Any: true, RedirectPath: "/path-only_route0"}}
+
+	const backendAddr = "http://10.0.0.1:80"
 
 	expected := server{
 		ServerName: "example.com",
@@ -207,12 +222,17 @@ func TestGenerate(t *testing.T) {
 			{
 				Path:      "/_route0",
 				Internal:  true,
-				ProxyPass: "http://10.0.0.1:80",
+				ProxyPass: backendAddr,
 			},
 			{
 				Path:      "/_route1",
 				Internal:  true,
-				ProxyPass: "http://10.0.0.1:80",
+				ProxyPass: backendAddr,
+			},
+			{
+				Path:      "/_route2",
+				Internal:  true,
+				ProxyPass: backendAddr,
 			},
 			{
 				Path:         "/",
@@ -228,13 +248,8 @@ func TestGenerate(t *testing.T) {
 				HTTPMatchVar: expectedMatchString(testMatches),
 			},
 			{
-				Path:      "/path-only_route0",
-				Internal:  true,
-				ProxyPass: "http://10.0.0.1:80",
-			},
-			{
-				Path:         "/path-only",
-				HTTPMatchVar: expectedMatchString(pathMatches),
+				Path:      "/path-only",
+				ProxyPass: backendAddr,
 			},
 		},
 	}
