@@ -129,8 +129,6 @@ function testMatch(r, match) {
   return true;
 }
 
-// FIXME(osborn): Need to add special handling for repeated headers.
-// Should follow guidance from https://www.rfc-editor.org/rfc/rfc7230.html#section-3.2.2.
 function headersMatch(requestHeaders, headers) {
   for (let i = 0; i < headers.length; i++) {
     const h = headers[i];
@@ -144,7 +142,13 @@ function headersMatch(requestHeaders, headers) {
     // This means that requestHeaders['FOO'] is equivalent to requestHeaders['foo'].
     let val = requestHeaders[kv[0]];
 
-    if (!val || val !== kv[1]) {
+    if (!val) {
+      return false;
+    }
+
+    // split on comma because nginx uses commas to delimit multiple header values
+    const values = val.split(',');
+    if (!values.includes(kv[1])) {
       return false;
     }
   }

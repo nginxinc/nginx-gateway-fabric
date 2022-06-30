@@ -253,6 +253,14 @@ describe('headersMatch', () => {
       },
       expected: true,
     },
+    {
+      name: 'returns true if request has multiple values for a header name and one value matches ',
+      headers: ['multiValueHeader:val3'],
+      requestHeaders: {
+        multiValueHeader: 'val1,val2,val3,val4,val5',
+      },
+      expected: true,
+    },
   ];
 
   tests.forEach((test) => {
