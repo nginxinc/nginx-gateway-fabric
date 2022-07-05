@@ -102,7 +102,13 @@ var _ = Describe("ChangeProcessor", func() {
 			gwUpdated = gw.DeepCopy()
 			gwUpdated.Generation++
 
-			processor = state.NewChangeProcessorImpl(types.NamespacedName{Namespace: "test", Name: "gateway"}, controllerName, gcName)
+			cfg := state.ChangeProcessorConfig{
+				GatewayNsName:    types.NamespacedName{Namespace: "test", Name: "gateway"},
+				GatewayCtlrName:  controllerName,
+				GatewayClassName: gcName,
+			}
+
+			processor = state.NewChangeProcessorImpl(cfg)
 		})
 
 		Describe("Process resources", Ordered, func() {
@@ -583,7 +589,12 @@ var _ = Describe("ChangeProcessor", func() {
 		var processor state.ChangeProcessor
 
 		BeforeEach(func() {
-			processor = state.NewChangeProcessorImpl(types.NamespacedName{Namespace: "test", Name: "gateway"}, "test.controller", "my-class")
+			cfg := state.ChangeProcessorConfig{
+				GatewayNsName:    types.NamespacedName{Namespace: "test", Name: "gateway"},
+				GatewayCtlrName:  "test.controller",
+				GatewayClassName: "my-class",
+			}
+			processor = state.NewChangeProcessorImpl(cfg)
 		})
 
 		DescribeTable("CaptureUpsertChange must panic",

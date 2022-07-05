@@ -29,23 +29,29 @@ type ChangeProcessor interface {
 	Process() (changed bool, conf Configuration, statuses Statuses)
 }
 
+// ChangeProcessorConfig holds configuration parameters for ChangeProcessorImpl.
+type ChangeProcessorConfig struct {
+	// GatewayNsName is the namespaced name of the Gateway resource.
+	GatewayNsName types.NamespacedName
+	// GatewayCtlrName is the name of the Gateway controller.
+	GatewayCtlrName string
+	// GatewayClassName is the name of the GatewayClass resource.
+	GatewayClassName string
+}
+
 type ChangeProcessorImpl struct {
-	store          *store
-	changed        bool
-	gwNsName       types.NamespacedName
-	controllerName string
-	gcName         string
+	store   *store
+	changed bool
+	cfg     ChangeProcessorConfig
 
 	lock sync.Mutex
 }
 
 // NewChangeProcessorImpl creates a new ChangeProcessorImpl for the Gateway resource with the configured namespace name.
-func NewChangeProcessorImpl(gwNsName types.NamespacedName, controllerName string, gcName string) *ChangeProcessorImpl {
+func NewChangeProcessorImpl(cfg ChangeProcessorConfig) *ChangeProcessorImpl {
 	return &ChangeProcessorImpl{
-		store:          newStore(),
-		gwNsName:       gwNsName,
-		controllerName: controllerName,
-		gcName:         gcName,
+		store: newStore(),
+		cfg:   cfg,
 	}
 }
 
@@ -57,8 +63,8 @@ func (c *ChangeProcessorImpl) CaptureUpsertChange(obj client.Object) {
 
 	switch o := obj.(type) {
 	case *v1alpha2.GatewayClass:
-		if o.Name != c.gcName {
-			panic(fmt.Errorf("gatewayclass resource must be %s, got %s", c.gcName, o.Name))
+		if o.Name != c.cfg.GatewayClassName {
+			panic(fmt.Errorf("gatewayclass resource must be %s, got %s", c.cfg.GatewayClassName, o.Name))
 		}
 		// if the resource spec hasn't changed (its generation is the same), ignore the upsert
 		if c.store.gc != nil && c.store.gc.Generation == o.Generation {
@@ -66,8 +72,8 @@ func (c *ChangeProcessorImpl) CaptureUpsertChange(obj client.Object) {
 		}
 		c.store.gc = o
 	case *v1alpha2.Gateway:
-		if o.Namespace != c.gwNsName.Namespace || o.Name != c.gwNsName.Name {
-			panic(fmt.Errorf("gateway resource must be %s/%s, got %s/%s", c.gwNsName.Namespace, c.gwNsName.Name, o.Namespace, o.Name))
+		if o.Namespace != c.cfg.GatewayNsName.Namespace || o.Name != c.cfg.GatewayNsName.Name {
+			panic(fmt.Errorf("gateway resource must be %s/%s, got %s/%s", c.cfg.GatewayNsName.Namespace, c.cfg.GatewayNsName.Name, o.Namespace, o.Name))
 		}
 		// if the resource spec hasn't changed (its generation is the same), ignore the upsert
 		if c.store.gw != nil && c.store.gw.Generation == o.Generation {
@@ -94,13 +100,13 @@ func (c *ChangeProcessorImpl) CaptureDeleteChange(resourceType client.Object, ns
 
 	switch o := resourceType.(type) {
 	case *v1alpha2.GatewayClass:
-		if nsname.Name != c.gcName {
-			panic(fmt.Errorf("gatewayclass resource must be %s, got %s", c.gcName, nsname.Name))
+		if nsname.Name != c.cfg.GatewayClassName {
+			panic(fmt.Errorf("gatewayclass resource must be %s, got %s", c.cfg.GatewayClassName, nsname.Name))
 		}
 		c.store.gc = nil
 	case *v1alpha2.Gateway:
-		if nsname != c.gwNsName {
-			panic(fmt.Errorf("gateway resource must be %s/%s, got %s/%s", c.gwNsName.Namespace, c.gwNsName.Name, o.Namespace, o.Name))
+		if nsname != c.cfg.GatewayNsName {
+			panic(fmt.Errorf("gateway resource must be %s/%s, got %s/%s", c.cfg.GatewayNsName.Namespace, c.cfg.GatewayNsName.Name, o.Namespace, o.Name))
 		}
 		c.store.gw = nil
 	case *v1alpha2.HTTPRoute:
@@ -120,7 +126,7 @@ func (c *ChangeProcessorImpl) Process() (changed bool, conf Configuration, statu
 
 	c.changed = false
 
-	graph := buildGraph(c.store, c.gwNsName, c.controllerName, c.gcName)
+	graph := buildGraph(c.store, c.cfg.GatewayNsName, c.cfg.GatewayCtlrName, c.cfg.GatewayClassName)
 
 	conf = buildConfiguration(graph)
 	statuses = buildStatuses(graph)

@@ -69,7 +69,11 @@ func Start(cfg config.Config) error {
 		return fmt.Errorf("cannot register service implementation: %w", err)
 	}
 
-	processor := state.NewChangeProcessorImpl(cfg.GatewayNsName, cfg.GatewayCtlrName, cfg.GatewayClassName)
+	processor := state.NewChangeProcessorImpl(state.ChangeProcessorConfig{
+		GatewayNsName:    cfg.GatewayNsName,
+		GatewayCtlrName:  cfg.GatewayCtlrName,
+		GatewayClassName: cfg.GatewayClassName,
+	})
 	serviceStore := state.NewServiceStore()
 	configGenerator := ngxcfg.NewGeneratorImpl(serviceStore)
 	nginxFileMgr := file.NewManagerImpl()
