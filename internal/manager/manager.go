@@ -78,7 +78,17 @@ func Start(cfg config.Config) error {
 	configGenerator := ngxcfg.NewGeneratorImpl(serviceStore)
 	nginxFileMgr := file.NewManagerImpl()
 	nginxRuntimeMgr := ngxruntime.NewManagerImpl()
-	statusUpdater := status.NewUpdater(cfg.GatewayCtlrName, cfg.GatewayNsName, cfg.GatewayClassName, mgr.GetClient(), cfg.Logger, status.NewRealClock())
+	statusUpdater := status.NewUpdater(status.UpdaterConfig{
+		GatewayNsName:    cfg.GatewayNsName,
+		GatewayCtlrName:  cfg.GatewayCtlrName,
+		GatewayClassName: cfg.GatewayClassName,
+		Client:           mgr.GetClient(),
+		// FIXME(pleshakov) Make sure each component:
+		// (1) Has a dedicated named logger.
+		// (2) Get it from the Manager (the WithName is done here for all components).
+		Logger: cfg.Logger.WithName("statusUpdater"),
+		Clock:  status.NewRealClock(),
+	})
 	eventLoop := events.NewEventLoop(processor, serviceStore, configGenerator, eventCh, cfg.Logger, nginxFileMgr, nginxRuntimeMgr, statusUpdater)
 
 	err = mgr.Add(eventLoop)

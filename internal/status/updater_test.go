@@ -51,7 +51,14 @@ var _ = Describe("Updater", func() {
 		gatewayCtrlName = "test.example.com"
 		gwNsName = types.NamespacedName{Namespace: "test", Name: "gateway"}
 
-		updater = status.NewUpdater(gatewayCtrlName, gwNsName, gcName, client, zap.New(), fakeClock)
+		updater = status.NewUpdater(status.UpdaterConfig{
+			GatewayNsName:    gwNsName,
+			GatewayCtlrName:  gatewayCtrlName,
+			GatewayClassName: gcName,
+			Client:           client,
+			Logger:           zap.New(),
+			Clock:            fakeClock,
+		})
 	})
 
 	Describe("Process status updates", Ordered, func() {
