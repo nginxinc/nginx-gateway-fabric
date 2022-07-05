@@ -181,8 +181,8 @@ var _ = Describe("Main", func() {
 
 			It("should fail with too many path elements", func() {
 				t := prepareTestCase(
-					"k8s-gateway.nginx.org/nginx-gateway/my-gateway",
-					expectSuccess)
+					"k8s-gateway.nginx.org/nginx-gateway/my-gateway/broken",
+					expectError)
 				tester(t)
 			}) // should fail with too many path elements
 
