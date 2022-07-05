@@ -106,58 +106,64 @@ var _ = Describe("ChangeProcessor", func() {
 		})
 
 		Describe("Process resources", Ordered, func() {
-			It("should return empty configuration and statuses when no upsert has occurred", func() {
-				changed, conf, statuses := processor.Process()
-				Expect(changed).To(BeFalse())
-				Expect(conf).To(BeZero())
-				Expect(statuses).To(BeZero())
+			When("no upsert has occurred", func() {
+				It("should return empty configuration and statuses", func() {
+					changed, conf, statuses := processor.Process()
+					Expect(changed).To(BeFalse())
+					Expect(conf).To(BeZero())
+					Expect(statuses).To(BeZero())
+				})
 			})
 
-			It("should return empty configuration and updated statuses after upserting an HTTPRoute when the Gateway and GatewayClass don't exist", func() {
-				processor.CaptureUpsertChange(hr1)
+			When("GatewayClass doesn't exist", func() {
+				When("Gateway doesn't exist", func() {
+					It("should return empty configuration and updated statuses after upserting an HTTPRoute", func() {
+						processor.CaptureUpsertChange(hr1)
 
-				expectedConf := state.Configuration{}
-				expectedStatuses := state.Statuses{
-					ListenerStatuses: map[string]state.ListenerStatus{},
-					HTTPRouteStatuses: map[types.NamespacedName]state.HTTPRouteStatus{
-						{Namespace: "test", Name: "hr-1"}: {
-							ParentStatuses: map[string]state.ParentStatus{
-								"listener-80-1": {Attached: false},
+						expectedConf := state.Configuration{}
+						expectedStatuses := state.Statuses{
+							ListenerStatuses: map[string]state.ListenerStatus{},
+							HTTPRouteStatuses: map[types.NamespacedName]state.HTTPRouteStatus{
+								{Namespace: "test", Name: "hr-1"}: {
+									ParentStatuses: map[string]state.ParentStatus{
+										"listener-80-1": {Attached: false},
+									},
+								},
+							},
+						}
+
+						changed, conf, statuses := processor.Process()
+						Expect(changed).To(BeTrue())
+						Expect(helpers.Diff(expectedConf, conf)).To(BeEmpty())
+						Expect(helpers.Diff(expectedStatuses, statuses)).To(BeEmpty())
+					})
+				})
+
+				It("should return empty configuration and updated statuses after upserting the Gateway", func() {
+					processor.CaptureUpsertChange(gw)
+
+					expectedConf := state.Configuration{}
+					expectedStatuses := state.Statuses{
+						ListenerStatuses: map[string]state.ListenerStatus{
+							"listener-80-1": {
+								Valid:          false,
+								AttachedRoutes: 1,
 							},
 						},
-					},
-				}
-
-				changed, conf, statuses := processor.Process()
-				Expect(changed).To(BeTrue())
-				Expect(helpers.Diff(expectedConf, conf)).To(BeEmpty())
-				Expect(helpers.Diff(expectedStatuses, statuses)).To(BeEmpty())
-			})
-
-			It("should return empty configuration and updated statuses after upserting the Gateway when the GatewayClass doesn't exist", func() {
-				processor.CaptureUpsertChange(gw)
-
-				expectedConf := state.Configuration{}
-				expectedStatuses := state.Statuses{
-					ListenerStatuses: map[string]state.ListenerStatus{
-						"listener-80-1": {
-							Valid:          false,
-							AttachedRoutes: 1,
-						},
-					},
-					HTTPRouteStatuses: map[types.NamespacedName]state.HTTPRouteStatus{
-						{Namespace: "test", Name: "hr-1"}: {
-							ParentStatuses: map[string]state.ParentStatus{
-								"listener-80-1": {Attached: false},
+						HTTPRouteStatuses: map[types.NamespacedName]state.HTTPRouteStatus{
+							{Namespace: "test", Name: "hr-1"}: {
+								ParentStatuses: map[string]state.ParentStatus{
+									"listener-80-1": {Attached: false},
+								},
 							},
 						},
-					},
-				}
+					}
 
-				changed, conf, statuses := processor.Process()
-				Expect(changed).To(BeTrue())
-				Expect(helpers.Diff(expectedConf, conf)).To(BeEmpty())
-				Expect(helpers.Diff(expectedStatuses, statuses)).To(BeEmpty())
+					changed, conf, statuses := processor.Process()
+					Expect(changed).To(BeTrue())
+					Expect(helpers.Diff(expectedConf, conf)).To(BeEmpty())
+					Expect(helpers.Diff(expectedStatuses, statuses)).To(BeEmpty())
+				})
 			})
 
 			It("should return updated configuration and statuses after the GatewayClass is upserted", func() {
