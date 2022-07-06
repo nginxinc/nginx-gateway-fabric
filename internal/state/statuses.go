@@ -11,8 +11,9 @@ type HTTPRouteStatuses map[types.NamespacedName]HTTPRouteStatus
 // Statuses holds the status-related information about Gateway API resources.
 // It is assumed that only a singe Gateway resource is used.
 type Statuses struct {
-	ListenerStatuses  ListenerStatuses
-	HTTPRouteStatuses HTTPRouteStatuses
+	GatewayClassStatus *GatewayClassStatus
+	ListenerStatuses   ListenerStatuses
+	HTTPRouteStatuses  HTTPRouteStatuses
 }
 
 // ListenerStatus holds the status-related information about a listener in the Gateway resource.
@@ -36,6 +37,16 @@ type ParentStatus struct {
 	Attached bool
 }
 
+// GatewayClassStatus holds status-related infortmation about the GatewayClass resource.
+type GatewayClassStatus struct {
+	// Valid shows if the resource is valid.
+	Valid bool
+	// ErrorMsg describe the error when the resource is invalid.
+	ErrorMsg string
+	// ObservedGeneration is the generation of the resource that was processed.
+	ObservedGeneration int64
+}
+
 // buildStatuses builds statuses from a graph.
 func buildStatuses(graph *graph) Statuses {
 	statuses := Statuses{
@@ -43,9 +54,19 @@ func buildStatuses(graph *graph) Statuses {
 		HTTPRouteStatuses: make(map[types.NamespacedName]HTTPRouteStatus),
 	}
 
+	if graph.GatewayClass != nil {
+		statuses.GatewayClassStatus = &GatewayClassStatus{
+			Valid:              graph.GatewayClass.Valid,
+			ErrorMsg:           graph.GatewayClass.ErrorMsg,
+			ObservedGeneration: graph.GatewayClass.Source.Generation,
+		}
+	}
+
+	gcValidAndExist := graph.GatewayClass != nil && graph.GatewayClass.Valid
+
 	for name, l := range graph.Listeners {
 		statuses.ListenerStatuses[name] = ListenerStatus{
-			Valid:          l.Valid,
+			Valid:          l.Valid && gcValidAndExist,
 			AttachedRoutes: int32(len(l.Routes)),
 		}
 	}
@@ -55,7 +76,7 @@ func buildStatuses(graph *graph) Statuses {
 
 		for ref := range r.ValidSectionNameRefs {
 			parentStatuses[ref] = ParentStatus{
-				Attached: true,
+				Attached: gcValidAndExist, // Attached only when GatewayClass is valid and exists
 			}
 		}
 		for ref := range r.InvalidSectionNameRefs {

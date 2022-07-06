@@ -1,6 +1,8 @@
 package state
 
 import (
+	"fmt"
+
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 )
@@ -34,9 +36,21 @@ type route struct {
 	InvalidSectionNameRefs map[string]struct{}
 }
 
+// gatewayClass represents the GatewayClass resource.
+type gatewayClass struct {
+	// Source is the source resource.
+	Source *v1alpha2.GatewayClass
+	// Valid shows whether the GatewayClass is valid.
+	Valid bool
+	// ErrorMsg explains the error when the resource is not valid.
+	ErrorMsg string
+}
+
 // graph is a graph-like representation of Gateway API resources.
 // It is assumed that the Gateway resource is a single resource.
 type graph struct {
+	// GatewayClass holds the GatewayClass resource.
+	GatewayClass *gatewayClass
 	// Listeners holds listeners keyed by their names in the Gateway resource.
 	Listeners map[string]*listener
 	// Routes holds route resources.
@@ -44,8 +58,10 @@ type graph struct {
 }
 
 // buildGraph builds a graph from a store assuming that the Gateway resource has the gwNsName namespace and name.
-func buildGraph(store *store, gwNsName types.NamespacedName) *graph {
-	listeners := buildListeners(store.gw)
+func buildGraph(store *store, gwNsName types.NamespacedName, controllerName string, gcName string) *graph {
+	gc := buildGatewayClass(store.gc, controllerName)
+
+	listeners := buildListeners(store.gw, gcName)
 
 	routes := make(map[types.NamespacedName]*route)
 	for _, ghr := range store.httpRoutes {
@@ -56,8 +72,28 @@ func buildGraph(store *store, gwNsName types.NamespacedName) *graph {
 	}
 
 	return &graph{
-		Listeners: listeners,
-		Routes:    routes,
+		GatewayClass: gc,
+		Listeners:    listeners,
+		Routes:       routes,
+	}
+}
+
+func buildGatewayClass(gc *v1alpha2.GatewayClass, controllerName string) *gatewayClass {
+	if gc == nil {
+		return nil
+	}
+
+	var errorMsg string
+
+	err := validateGatewayClass(gc, controllerName)
+	if err != nil {
+		errorMsg = err.Error()
+	}
+
+	return &gatewayClass{
+		Source:   gc,
+		Valid:    err == nil,
+		ErrorMsg: errorMsg,
 	}
 }
 
@@ -176,12 +212,11 @@ func ignoreParentRef(p v1alpha2.ParentRef, hrNamespace string, gwNsName types.Na
 	return false
 }
 
-func buildListeners(gw *v1alpha2.Gateway) map[string]*listener {
+func buildListeners(gw *v1alpha2.Gateway, gcName string) map[string]*listener {
 	// FIXME(pleshakov): For now we require that all HTTP listeners bind to port 80
-
 	listeners := make(map[string]*listener)
 
-	if gw == nil {
+	if gw == nil || string(gw.Spec.GatewayClassName) != gcName {
 		return listeners
 	}
 
@@ -222,4 +257,12 @@ func getHostname(h *v1alpha2.Hostname) string {
 		return ""
 	}
 	return string(*h)
+}
+
+func validateGatewayClass(gc *v1alpha2.GatewayClass, controllerName string) error {
+	if string(gc.Spec.ControllerName) != controllerName {
+		return fmt.Errorf("Spec.ControllerName must be %s got %s", controllerName, gc.Spec.ControllerName)
+	}
+
+	return nil
 }

@@ -11,4 +11,6 @@ type Config struct {
 	// GatewayNsName is the namespaced name of a Gateway resource that the Gateway will use.
 	// The Gateway will ignore all other Gateway resources.
 	GatewayNsName types.NamespacedName
+	// GatewayClassName is the name of the GatewayClass resource that the Gateway will use.
+	GatewayClassName string
 }

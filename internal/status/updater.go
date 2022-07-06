@@ -20,6 +20,22 @@ type Updater interface {
 	Update(context.Context, state.Statuses)
 }
 
+// UpdaterConfig holds configuration parameters for Updater.
+type UpdaterConfig struct {
+	// GatewayNsName is the namespaced name of the Gateway resource.
+	GatewayNsName types.NamespacedName
+	// GatewayCtlrName is the name of the Gateway controller.
+	GatewayCtlrName string
+	// GatewayClassName is the name of the GatewayClass resource.
+	GatewayClassName string
+	// Client is a Kubernetes API client.
+	Client client.Client
+	// Logger holds a logger to be used.
+	Logger logr.Logger
+	// Clock is used as a source of time for the LastTransitionTime field in Conditions in resource statuses.
+	Clock Clock
+}
+
 // updaterImpl updates statuses of the Gateway API resources.
 //
 // It has the following limitations:
@@ -58,27 +74,13 @@ type Updater interface {
 // goes along the Open-closed principle.
 // FIXME(pleshakov): address limitation (7)
 type updaterImpl struct {
-	gatewayCtlrName string
-	gwNsName        types.NamespacedName
-	client          client.Client
-	logger          logr.Logger
-	clock           Clock
+	cfg UpdaterConfig
 }
 
 // NewUpdater creates a new Updater.
-func NewUpdater(
-	gatewayCtlrName string,
-	gwNsName types.NamespacedName,
-	client client.Client,
-	logger logr.Logger,
-	clock Clock,
-) Updater {
+func NewUpdater(cfg UpdaterConfig) Updater {
 	return &updaterImpl{
-		gatewayCtlrName: gatewayCtlrName,
-		gwNsName:        gwNsName,
-		client:          client,
-		logger:          logger.WithName("statusUpdater"),
-		clock:           clock,
+		cfg: cfg,
 	}
 }
 
@@ -86,9 +88,16 @@ func (upd *updaterImpl) Update(ctx context.Context, statuses state.Statuses) {
 	// FIXME(pleshakov) Merge the new Conditions in the status with the existing Conditions
 	// FIXME(pleshakov) Skip the status update (API call) if the status hasn't changed.
 
-	upd.update(ctx, upd.gwNsName, &v1alpha2.Gateway{}, func(object client.Object) {
+	if statuses.GatewayClassStatus != nil {
+		upd.update(ctx, types.NamespacedName{Name: upd.cfg.GatewayClassName}, &v1alpha2.GatewayClass{}, func(object client.Object) {
+			gc := object.(*v1alpha2.GatewayClass)
+			gc.Status = prepareGatewayClassStatus(*statuses.GatewayClassStatus, upd.cfg.Clock.Now())
+		})
+	}
+
+	upd.update(ctx, upd.cfg.GatewayNsName, &v1alpha2.Gateway{}, func(object client.Object) {
 		gw := object.(*v1alpha2.Gateway)
-		gw.Status = prepareGatewayStatus(statuses.ListenerStatuses, upd.clock.Now())
+		gw.Status = prepareGatewayStatus(statuses.ListenerStatuses, upd.cfg.Clock.Now())
 	})
 
 	for nsname, rs := range statuses.HTTPRouteStatuses {
@@ -100,7 +109,7 @@ func (upd *updaterImpl) Update(ctx context.Context, statuses state.Statuses) {
 
 		upd.update(ctx, nsname, &v1alpha2.HTTPRoute{}, func(object client.Object) {
 			hr := object.(*v1alpha2.HTTPRoute)
-			hr.Status = prepareHTTPRouteStatus(rs, upd.gwNsName, upd.gatewayCtlrName, upd.clock.Now())
+			hr.Status = prepareHTTPRouteStatus(rs, upd.cfg.GatewayNsName, upd.cfg.GatewayCtlrName, upd.cfg.Clock.Now())
 		})
 	}
 }
@@ -113,10 +122,10 @@ func (upd *updaterImpl) update(ctx context.Context, nsname types.NamespacedName,
 	// Otherwise, the Update status API call can fail.
 	// Note: the default client uses a cache for reads, so we're not making an unnecessary API call here.
 	// the default is configurable in the Manager options.
-	err := upd.client.Get(ctx, nsname, obj)
+	err := upd.cfg.Client.Get(ctx, nsname, obj)
 	if err != nil {
 		if !apierrors.IsNotFound(err) {
-			upd.logger.Error(err, "Failed to get the recent version the resource when updating status",
+			upd.cfg.Logger.Error(err, "Failed to get the recent version the resource when updating status",
 				"namespace", nsname.Namespace,
 				"name", nsname.Name,
 				"kind", obj.GetObjectKind().GroupVersionKind().Kind)
@@ -126,9 +135,9 @@ func (upd *updaterImpl) update(ctx context.Context, nsname types.NamespacedName,
 
 	statusSetter(obj)
 
-	err = upd.client.Status().Update(ctx, obj)
+	err = upd.cfg.Client.Status().Update(ctx, obj)
 	if err != nil {
-		upd.logger.Error(err, "Failed to update status",
+		upd.cfg.Logger.Error(err, "Failed to update status",
 			"namespace", nsname.Namespace,
 			"name", nsname.Name,
 			"kind", obj.GetObjectKind().GroupVersionKind().Kind)

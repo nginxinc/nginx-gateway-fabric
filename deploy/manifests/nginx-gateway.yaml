@@ -37,6 +37,7 @@ rules:
   resources:
   - httproutes/status
   - gateways/status
+  - gatewayclasses/status
   verbs:
   - update
 ---
@@ -97,6 +98,7 @@ spec:
           # Note: CAP_KILL is needed for sending HUP signal to NGINX main process
         args:
         - --gateway-ctlr-name=k8s-gateway.nginx.org/nginx-gateway/gateway
+        - --gatewayclass=nginx
       - image: nginx:1.21.3
         imagePullPolicy: IfNotPresent
         name: nginx

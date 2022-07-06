@@ -13,6 +13,7 @@ import (
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/config"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/events"
 	gw "github.com/nginxinc/nginx-kubernetes-gateway/internal/implementations/gateway"
+	gc "github.com/nginxinc/nginx-kubernetes-gateway/internal/implementations/gatewayclass"
 	hr "github.com/nginxinc/nginx-kubernetes-gateway/internal/implementations/httproute"
 	svc "github.com/nginxinc/nginx-kubernetes-gateway/internal/implementations/service"
 	ngxcfg "github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/config"
@@ -51,6 +52,10 @@ func Start(cfg config.Config) error {
 		return fmt.Errorf("cannot build runtime manager: %w", err)
 	}
 
+	err = sdk.RegisterGatewayClassController(mgr, gc.NewGatewayClassImplementation(cfg, eventCh))
+	if err != nil {
+		return fmt.Errorf("cannot register gatewayclass implementation: %w", err)
+	}
 	err = sdk.RegisterGatewayController(mgr, gw.NewGatewayImplementation(cfg, eventCh))
 	if err != nil {
 		return fmt.Errorf("cannot register gateway implementation: %w", err)
@@ -64,12 +69,26 @@ func Start(cfg config.Config) error {
 		return fmt.Errorf("cannot register service implementation: %w", err)
 	}
 
-	processor := state.NewChangeProcessorImpl(cfg.GatewayNsName)
+	processor := state.NewChangeProcessorImpl(state.ChangeProcessorConfig{
+		GatewayNsName:    cfg.GatewayNsName,
+		GatewayCtlrName:  cfg.GatewayCtlrName,
+		GatewayClassName: cfg.GatewayClassName,
+	})
 	serviceStore := state.NewServiceStore()
 	configGenerator := ngxcfg.NewGeneratorImpl(serviceStore)
 	nginxFileMgr := file.NewManagerImpl()
 	nginxRuntimeMgr := ngxruntime.NewManagerImpl()
-	statusUpdater := status.NewUpdater(cfg.GatewayCtlrName, cfg.GatewayNsName, mgr.GetClient(), cfg.Logger, status.NewRealClock())
+	statusUpdater := status.NewUpdater(status.UpdaterConfig{
+		GatewayNsName:    cfg.GatewayNsName,
+		GatewayCtlrName:  cfg.GatewayCtlrName,
+		GatewayClassName: cfg.GatewayClassName,
+		Client:           mgr.GetClient(),
+		// FIXME(pleshakov) Make sure each component:
+		// (1) Has a dedicated named logger.
+		// (2) Get it from the Manager (the WithName is done here for all components).
+		Logger: cfg.Logger.WithName("statusUpdater"),
+		Clock:  status.NewRealClock(),
+	})
 	eventLoop := events.NewEventLoop(processor, serviceStore, configGenerator, eventCh, cfg.Logger, nginxFileMgr, nginxRuntimeMgr, statusUpdater)
 
 	err = mgr.Add(eventLoop)

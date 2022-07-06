@@ -22,6 +22,8 @@ import (
 )
 
 var _ = Describe("Updater", func() {
+	const gcName = "my-class"
+
 	var (
 		updater         status.Updater
 		client          client.Client
@@ -49,27 +51,35 @@ var _ = Describe("Updater", func() {
 		gatewayCtrlName = "test.example.com"
 		gwNsName = types.NamespacedName{Namespace: "test", Name: "gateway"}
 
-		updater = status.NewUpdater(gatewayCtrlName, gwNsName, client, zap.New(), fakeClock)
+		updater = status.NewUpdater(status.UpdaterConfig{
+			GatewayNsName:    gwNsName,
+			GatewayCtlrName:  gatewayCtrlName,
+			GatewayClassName: gcName,
+			Client:           client,
+			Logger:           zap.New(),
+			Clock:            fakeClock,
+		})
 	})
 
 	Describe("Process status updates", Ordered, func() {
 		var (
-			hr *v1alpha2.HTTPRoute
+			gc *v1alpha2.GatewayClass
 			gw *v1alpha2.Gateway
+			hr *v1alpha2.HTTPRoute
 
-			createStatuses   func(bool, bool) state.Statuses
-			createExpectedHR func() *v1alpha2.HTTPRoute
+			createStatuses   func(bool) state.Statuses
+			createExpectedGc func(metav1.ConditionStatus, string, string) *v1alpha2.GatewayClass
 			createExpectedGw func(metav1.ConditionStatus, string) *v1alpha2.Gateway
+			createExpectedHR func() *v1alpha2.HTTPRoute
 		)
 
 		BeforeAll(func() {
-			hr = &v1alpha2.HTTPRoute{
+			gc = &v1alpha2.GatewayClass{
 				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "test",
-					Name:      "route1",
+					Name: gcName,
 				},
 				TypeMeta: metav1.TypeMeta{
-					Kind:       "HTTPRoute",
+					Kind:       "GatewayClass",
 					APIVersion: "gateway.networking.k8s.io/v1alpha2",
 				},
 			}
@@ -83,12 +93,32 @@ var _ = Describe("Updater", func() {
 					APIVersion: "gateway.networking.k8s.io/v1alpha2",
 				},
 			}
+			hr = &v1alpha2.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "route1",
+				},
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "HTTPRoute",
+					APIVersion: "gateway.networking.k8s.io/v1alpha2",
+				},
+			}
 
-			createStatuses = func(listenerValid, routeAttached bool) state.Statuses {
+			createStatuses = func(valid bool) state.Statuses {
+				var gcErrorMsg string
+				if !valid {
+					gcErrorMsg = "error"
+				}
+
 				return state.Statuses{
+					GatewayClassStatus: &state.GatewayClassStatus{
+						Valid:              valid,
+						ErrorMsg:           gcErrorMsg,
+						ObservedGeneration: 1,
+					},
 					ListenerStatuses: map[string]state.ListenerStatus{
 						"http": {
-							Valid:          listenerValid,
+							Valid:          valid,
 							AttachedRoutes: 1,
 						},
 					},
@@ -96,7 +126,7 @@ var _ = Describe("Updater", func() {
 						{Namespace: "test", Name: "route1"}: {
 							ParentStatuses: map[string]state.ParentStatus{
 								"http": {
-									Attached: routeAttached,
+									Attached: valid,
 								},
 							},
 						},
@@ -104,71 +134,24 @@ var _ = Describe("Updater", func() {
 				}
 			}
 
-			createExpectedHR = func() *v1alpha2.HTTPRoute {
-				return &v1alpha2.HTTPRoute{
+			createExpectedGc = func(status metav1.ConditionStatus, reason string, msg string) *v1alpha2.GatewayClass {
+				return &v1alpha2.GatewayClass{
 					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "test",
-						Name:      "route1",
+						Name: gcName,
 					},
 					TypeMeta: metav1.TypeMeta{
-						Kind:       "HTTPRoute",
+						Kind:       "GatewayClass",
 						APIVersion: "gateway.networking.k8s.io/v1alpha2",
 					},
-					Status: gatewayv1alpha2.HTTPRouteStatus{
-						RouteStatus: gatewayv1alpha2.RouteStatus{
-							Parents: []gatewayv1alpha2.RouteParentStatus{
-								{
-									ControllerName: gatewayv1alpha2.GatewayController(gatewayCtrlName),
-									ParentRef: gatewayv1alpha2.ParentRef{
-										Namespace:   (*v1alpha2.Namespace)(helpers.GetStringPointer("test")),
-										Name:        "gateway",
-										SectionName: (*v1alpha2.SectionName)(helpers.GetStringPointer("http")),
-									},
-									Conditions: []metav1.Condition{
-										{
-											Type:               string(gatewayv1alpha2.ConditionRouteAccepted),
-											Status:             metav1.ConditionTrue,
-											ObservedGeneration: 123,
-											LastTransitionTime: fakeClockTime,
-											Reason:             "Accepted",
-										},
-									},
-								},
-							},
-						},
-					},
-				}
-			}
-
-			createExpectedGw = func(status metav1.ConditionStatus, reason string) *v1alpha2.Gateway {
-				return &v1alpha2.Gateway{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "test",
-						Name:      "gateway",
-					},
-					TypeMeta: metav1.TypeMeta{
-						Kind:       "Gateway",
-						APIVersion: "gateway.networking.k8s.io/v1alpha2",
-					},
-					Status: v1alpha2.GatewayStatus{
-						Listeners: []gatewayv1alpha2.ListenerStatus{
+					Status: v1alpha2.GatewayClassStatus{
+						Conditions: []metav1.Condition{
 							{
-								Name: "http",
-								SupportedKinds: []v1alpha2.RouteGroupKind{
-									{
-										Kind: "HTTPRoute",
-									},
-								},
-								AttachedRoutes: 1,
-								Conditions: []metav1.Condition{
-									{
-										Type:               string(v1alpha2.ListenerConditionReady),
-										Status:             status,
-										ObservedGeneration: 123,
-										LastTransitionTime: fakeClockTime,
-										Reason:             reason,
-									},
-								},
+								Type:               string(v1alpha2.GatewayClassConditionStatusAccepted),
+								Status:             status,
+								ObservedGeneration: 1,
+								LastTransitionTime: fakeClockTime,
+								Reason:             string(v1alpha2.GatewayClassReasonAccepted),
+								Message:            msg,
 							},
 						},
 					},
@@ -176,25 +159,97 @@ var _ = Describe("Updater", func() {
 			}
 		})
 
+		createExpectedGw = func(status metav1.ConditionStatus, reason string) *v1alpha2.Gateway {
+			return &v1alpha2.Gateway{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "gateway",
+				},
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "Gateway",
+					APIVersion: "gateway.networking.k8s.io/v1alpha2",
+				},
+				Status: v1alpha2.GatewayStatus{
+					Listeners: []gatewayv1alpha2.ListenerStatus{
+						{
+							Name: "http",
+							SupportedKinds: []v1alpha2.RouteGroupKind{
+								{
+									Kind: "HTTPRoute",
+								},
+							},
+							AttachedRoutes: 1,
+							Conditions: []metav1.Condition{
+								{
+									Type:               string(v1alpha2.ListenerConditionReady),
+									Status:             status,
+									ObservedGeneration: 123,
+									LastTransitionTime: fakeClockTime,
+									Reason:             reason,
+								},
+							},
+						},
+					},
+				},
+			}
+		}
+
+		createExpectedHR = func() *v1alpha2.HTTPRoute {
+			return &v1alpha2.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "route1",
+				},
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "HTTPRoute",
+					APIVersion: "gateway.networking.k8s.io/v1alpha2",
+				},
+				Status: gatewayv1alpha2.HTTPRouteStatus{
+					RouteStatus: gatewayv1alpha2.RouteStatus{
+						Parents: []gatewayv1alpha2.RouteParentStatus{
+							{
+								ControllerName: gatewayv1alpha2.GatewayController(gatewayCtrlName),
+								ParentRef: gatewayv1alpha2.ParentRef{
+									Namespace:   (*v1alpha2.Namespace)(helpers.GetStringPointer("test")),
+									Name:        "gateway",
+									SectionName: (*v1alpha2.SectionName)(helpers.GetStringPointer("http")),
+								},
+								Conditions: []metav1.Condition{
+									{
+										Type:               string(gatewayv1alpha2.ConditionRouteAccepted),
+										Status:             metav1.ConditionTrue,
+										ObservedGeneration: 123,
+										LastTransitionTime: fakeClockTime,
+										Reason:             "Accepted",
+									},
+								},
+							},
+						},
+					},
+				},
+			}
+		}
+
 		It("should create resources in the API server", func() {
-			Expect(client.Create(context.Background(), hr)).Should(Succeed())
+			Expect(client.Create(context.Background(), gc)).Should(Succeed())
 			Expect(client.Create(context.Background(), gw)).Should(Succeed())
+			Expect(client.Create(context.Background(), hr)).Should(Succeed())
 		})
 
 		It("should update statuses", func() {
-			updater.Update(context.Background(), createStatuses(true, true))
+			updater.Update(context.Background(), createStatuses(true))
 		})
 
-		It("should have the updated status of HTTPRoute in the API server", func() {
-			latestHR := &v1alpha2.HTTPRoute{}
-			expectedHR := createExpectedHR()
+		It("should have the updated status of GatewayClass in the API server", func() {
+			latestGc := &v1alpha2.GatewayClass{}
+			expectedGc := createExpectedGc(metav1.ConditionTrue, string(v1alpha2.GatewayClassConditionStatusAccepted), "GatewayClass has been accepted")
 
-			err := client.Get(context.Background(), types.NamespacedName{Namespace: "test", Name: "route1"}, latestHR)
+			err := client.Get(context.Background(), types.NamespacedName{Name: gcName}, latestGc)
 			Expect(err).Should(Not(HaveOccurred()))
 
-			expectedHR.ResourceVersion = latestHR.ResourceVersion // updating the status changes the ResourceVersion
+			expectedGc.ResourceVersion = latestGc.ResourceVersion // updating the status changes the ResourceVersion
 
-			Expect(helpers.Diff(expectedHR, latestHR)).To(BeEmpty())
+			Expect(helpers.Diff(expectedGc, latestGc)).To(BeEmpty())
 		})
 
 		It("should have the updated status of Gateway in the API server", func() {
@@ -209,13 +264,7 @@ var _ = Describe("Updater", func() {
 			Expect(helpers.Diff(expectedGw, latestGw)).To(BeEmpty())
 		})
 
-		It("should update statuses with canceled context - function normally returns", func() {
-			ctx, cancel := context.WithCancel(context.Background())
-			cancel()
-			updater.Update(ctx, createStatuses(false, false))
-		})
-
-		It("should not have the updated status of HTTPRoute in the API server after updating with canceled context", func() {
+		It("should have the updated status of HTTPRoute in the API server", func() {
 			latestHR := &v1alpha2.HTTPRoute{}
 			expectedHR := createExpectedHR()
 
@@ -225,6 +274,24 @@ var _ = Describe("Updater", func() {
 			expectedHR.ResourceVersion = latestHR.ResourceVersion
 
 			Expect(helpers.Diff(expectedHR, latestHR)).To(BeEmpty())
+		})
+
+		It("should update statuses with canceled context - function normally returns", func() {
+			ctx, cancel := context.WithCancel(context.Background())
+			cancel()
+			updater.Update(ctx, createStatuses(false))
+		})
+
+		It("should have the updated status of GatewayClass in the API server after updating with canceled context", func() {
+			latestGc := &v1alpha2.GatewayClass{}
+			expectedGc := createExpectedGc(metav1.ConditionFalse, string(v1alpha2.GatewayClassConditionStatusAccepted), "GatewayClass has been rejected: error")
+
+			err := client.Get(context.Background(), types.NamespacedName{Name: gcName}, latestGc)
+			Expect(err).Should(Not(HaveOccurred()))
+
+			expectedGc.ResourceVersion = latestGc.ResourceVersion
+
+			Expect(helpers.Diff(expectedGc, latestGc)).To(BeEmpty())
 		})
 
 		It("should have the updated status of Gateway in the API server after updating with canceled context", func() {
@@ -237,6 +304,19 @@ var _ = Describe("Updater", func() {
 			expectedGw.ResourceVersion = latestGw.ResourceVersion
 
 			Expect(helpers.Diff(expectedGw, latestGw)).To(BeEmpty())
+		})
+
+		It("should not have the updated status of HTTPRoute in the API server after updating with canceled context", func() {
+			latestHR := &v1alpha2.HTTPRoute{}
+			expectedHR := createExpectedHR()
+
+			err := client.Get(context.Background(), types.NamespacedName{Namespace: "test", Name: "route1"}, latestHR)
+			Expect(err).Should(Not(HaveOccurred()))
+
+			expectedHR.ResourceVersion = latestHR.ResourceVersion
+
+			// if the status was updated, we would see the route rejected (Accepted = false)
+			Expect(helpers.Diff(expectedHR, latestHR)).To(BeEmpty())
 		})
 	})
 })

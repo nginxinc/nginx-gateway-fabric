@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	flag "github.com/spf13/pflag"
+	"k8s.io/apimachinery/pkg/util/validation"
 )
 
 const (
@@ -58,6 +59,32 @@ func GatewayControllerParam(domain string, namespace string) ValidatorContext {
 						return errors.New("must provide a name")
 					}
 				}
+			}
+
+			return nil
+		},
+	}
+}
+
+func GatewayClassParam() ValidatorContext {
+	name := "gatewayclass"
+	return ValidatorContext{
+		name,
+		func(flagset *flag.FlagSet) error {
+			param, err := flagset.GetString(name)
+			if err != nil {
+				return err
+			}
+
+			if len(param) == 0 {
+				return errors.New("flag must be set")
+			}
+
+			// used by Kubernetes to validate resource names
+			messages := validation.IsDNS1123Subdomain(param)
+			if len(messages) > 0 {
+				msg := strings.Join(messages, "; ")
+				return fmt.Errorf("invalid format: %s", msg)
 			}
 
 			return nil

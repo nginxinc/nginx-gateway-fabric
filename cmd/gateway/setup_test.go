@@ -10,8 +10,6 @@ import (
 	. "github.com/nginxinc/nginx-kubernetes-gateway/cmd/gateway"
 )
 
-var domain string
-
 func MockValidator(name string, called *int, succeed bool) ValidatorContext {
 	return ValidatorContext{
 		name,
@@ -122,22 +120,25 @@ var _ = Describe("Main", func() {
 
 	Describe("CLI argument validation", func() {
 		type testCase struct {
-			Param    string
-			Domain   string
-			ExpError bool
+			Flag             string
+			Value            string
+			ValidatorContext ValidatorContext
+			ExpError         bool
 		}
 
+		const (
+			expectError   = true
+			expectSuccess = false
+		)
+
 		var mockFlags *flag.FlagSet
-		var gatewayCtlrName string
 
 		tester := func(t testCase) {
-			err := mockFlags.Set(gatewayCtlrName, t.Param)
+			err := mockFlags.Set(t.Flag, t.Value)
 			Expect(err).ToNot(HaveOccurred())
 
-			v := GatewayControllerParam(domain, t.Domain)
-			Expect(v.V).ToNot(BeNil())
+			err = t.ValidatorContext.V(mockFlags)
 
-			err = v.V(mockFlags)
 			if t.ExpError {
 				Expect(err).To(HaveOccurred())
 			} else {
@@ -150,88 +151,122 @@ var _ = Describe("Main", func() {
 			}
 		}
 
-		BeforeEach(func() {
-			domain = "k8s-gateway.nginx.org"
-			gatewayCtlrName = "gateway-ctlr-name"
-
-			mockFlags = flag.NewFlagSet("mock", flag.PanicOnError)
-			_ = mockFlags.String("gateway-ctlr-name", "", "mock gateway-ctlr-name")
-			err := mockFlags.Parse([]string{})
-			Expect(err).ToNot(HaveOccurred())
-		})
-		AfterEach(func() {
-			mockFlags = nil
-		})
-		It("should parse full gateway-ctlr-name", func() {
-			t := testCase{
-				"k8s-gateway.nginx.org/nginx-gateway/my-gateway",
-				"nginx-gateway",
-				false,
-			}
-			tester(t)
-		}) // should parse full gateway-ctlr-name
-
-		It("should fail with too many path elements", func() {
-			t := testCase{
-				"k8s-gateway.nginx.org/nginx-gateway/my-gateway/broken",
-				"nginx-gateway",
-				true,
-			}
-			tester(t)
-		}) // should fail with too many path elements
-
-		It("should fail with too few path elements", func() {
-			table := []testCase{
-				{
-					Param:    "nginx-gateway/my-gateway",
-					Domain:   "nginx-gateway",
-					ExpError: true,
-				},
-				{
-					Param:    "my-gateway",
-					Domain:   "nginx-gateway",
-					ExpError: true,
-				},
+		Describe("gateway-ctlr-name validation", func() {
+			prepareTestCase := func(value string, expError bool) testCase {
+				return testCase{
+					Flag:             "gateway-ctlr-name",
+					Value:            value,
+					ValidatorContext: GatewayControllerParam("k8s-gateway.nginx.org", "nginx-gateway"),
+					ExpError:         expError,
+				}
 			}
 
-			runner(table)
-		}) // should fail with too few path elements
+			BeforeEach(func() {
+				mockFlags = flag.NewFlagSet("mock", flag.PanicOnError)
+				_ = mockFlags.String("gateway-ctlr-name", "", "mock gateway-ctlr-name")
+				err := mockFlags.Parse([]string{})
+				Expect(err).ToNot(HaveOccurred())
+			})
+			AfterEach(func() {
+				mockFlags = nil
+			})
 
-		It("should verify constraints", func() {
-			table := []testCase{
-				{
-					// bad domain
-					Param:    "invalid-domain/nginx-gateway/my-gateway",
-					Domain:   "nginx-gateway",
-					ExpError: true,
-				},
-				{
-					// bad domain
-					Param:    "/default/my-gateway",
-					Domain:   "nginx-gateway",
-					ExpError: true,
-				},
-				{
-					// bad namespace
-					Param:    "k8s-gateway.nginx.org/default/my-gateway",
-					Domain:   "nginx-gateway",
-					ExpError: true,
-				},
-				{
-					// bad namespace
-					Param:    "k8s-gateway.nginx.org//my-gateway",
-					Domain:   "nginx-gateway",
-					ExpError: true,
-				},
-				{
-					// bad name
-					Param:    "k8s-gateway.nginx.org/default/",
-					Domain:   "nginx-gateway",
-					ExpError: true,
-				},
+			It("should parse full gateway-ctlr-name", func() {
+				t := prepareTestCase(
+					"k8s-gateway.nginx.org/nginx-gateway/my-gateway",
+					expectSuccess,
+				)
+				tester(t)
+			}) // should parse full gateway-ctlr-name
+
+			It("should fail with too many path elements", func() {
+				t := prepareTestCase(
+					"k8s-gateway.nginx.org/nginx-gateway/my-gateway/broken",
+					expectError)
+				tester(t)
+			}) // should fail with too many path elements
+
+			It("should fail with too few path elements", func() {
+				table := []testCase{
+					prepareTestCase(
+						"nginx-gateway/my-gateway",
+						expectError,
+					),
+					prepareTestCase(
+						"my-gateway",
+						expectError,
+					),
+				}
+
+				runner(table)
+			}) // should fail with too few path elements
+
+			It("should verify constraints", func() {
+				table := []testCase{
+					prepareTestCase(
+						// bad domain
+						"invalid-domain/nginx-gateway/my-gateway",
+						expectError,
+					),
+					prepareTestCase(
+						// bad domain
+						"/default/my-gateway",
+						expectError,
+					),
+					prepareTestCase(
+						// bad namespace
+						"k8s-gateway.nginx.org/default/my-gateway",
+						expectError),
+					prepareTestCase(
+						// bad namespace
+						"k8s-gateway.nginx.org//my-gateway",
+						expectError,
+					),
+					prepareTestCase(
+						// bad name
+						"k8s-gateway.nginx.org/default/",
+						expectError,
+					),
+				}
+
+				runner(table)
+			}) // should verify constraints
+		}) // gateway-ctlr-name validation
+
+		Describe("gatewayclass validation", func() {
+			prepareTestCase := func(value string, expError bool) testCase {
+				return testCase{
+					Flag:             "gatewayclass",
+					Value:            value,
+					ValidatorContext: GatewayClassParam(),
+					ExpError:         expError,
+				}
 			}
 
-			runner(table)
-		}) // should verify constraints
+			BeforeEach(func() {
+				mockFlags = flag.NewFlagSet("mock", flag.PanicOnError)
+				_ = mockFlags.String("gatewayclass", "", "mock gatewayclass")
+				err := mockFlags.Parse([]string{})
+				Expect(err).ToNot(HaveOccurred())
+			})
+			AfterEach(func() {
+				mockFlags = nil
+			})
+
+			It("should succeed on valid name", func() {
+				t := prepareTestCase(
+					"nginx",
+					expectSuccess,
+				)
+				tester(t)
+			}) // should succeed on valid name
+
+			It("should fail with invalid name", func() {
+				t := prepareTestCase(
+					"$nginx",
+					expectError)
+				tester(t)
+			}) // should fail with invalid name"
+		}) // gatewayclass validation
 	}) // CLI argument validation
 }) // end Main

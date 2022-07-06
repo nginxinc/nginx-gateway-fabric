@@ -96,16 +96,24 @@ func TestBuildConfiguration(t *testing.T) {
 	}{
 		{
 			graph: &graph{
+				GatewayClass: &gatewayClass{
+					Source: &v1alpha2.GatewayClass{},
+					Valid:  true,
+				},
 				Listeners: map[string]*listener{},
 				Routes:    map[types.NamespacedName]*route{},
 			},
 			expected: Configuration{
 				HTTPServers: []HTTPServer{},
 			},
-			msg: "empty graph",
+			msg: "no listeners and routes",
 		},
 		{
 			graph: &graph{
+				GatewayClass: &gatewayClass{
+					Source: &v1alpha2.GatewayClass{},
+					Valid:  true,
+				},
 				Listeners: map[string]*listener{
 					"listener-80-1": {
 						Valid:             true,
@@ -122,6 +130,10 @@ func TestBuildConfiguration(t *testing.T) {
 		},
 		{
 			graph: &graph{
+				GatewayClass: &gatewayClass{
+					Source: &v1alpha2.GatewayClass{},
+					Valid:  true,
+				},
 				Listeners: map[string]*listener{
 					"listener-80-1": {
 						Valid: true,
@@ -178,6 +190,10 @@ func TestBuildConfiguration(t *testing.T) {
 		},
 		{
 			graph: &graph{
+				GatewayClass: &gatewayClass{
+					Source: &v1alpha2.GatewayClass{},
+					Valid:  true,
+				},
 				Listeners: map[string]*listener{
 					"listener-80-1": {
 						Valid: true,
@@ -240,6 +256,52 @@ func TestBuildConfiguration(t *testing.T) {
 				},
 			},
 			msg: "one listener with two routes with the same hostname with and without collisions",
+		},
+		{
+			graph: &graph{
+				GatewayClass: &gatewayClass{
+					Source:   &v1alpha2.GatewayClass{},
+					Valid:    false,
+					ErrorMsg: "error",
+				},
+				Listeners: map[string]*listener{
+					"listener-80-1": {
+						Valid: true,
+						Routes: map[types.NamespacedName]*route{
+							{Namespace: "test", Name: "hr-1"}: routeHR1,
+						},
+						AcceptedHostnames: map[string]struct{}{
+							"foo.example.com": {},
+						},
+					},
+				},
+				Routes: map[types.NamespacedName]*route{
+					{Namespace: "test", Name: "hr-1"}: routeHR1,
+				},
+			},
+			expected: Configuration{},
+			msg:      "invalid gatewayclass",
+		},
+		{
+			graph: &graph{
+				GatewayClass: nil,
+				Listeners: map[string]*listener{
+					"listener-80-1": {
+						Valid: true,
+						Routes: map[types.NamespacedName]*route{
+							{Namespace: "test", Name: "hr-1"}: routeHR1,
+						},
+						AcceptedHostnames: map[string]struct{}{
+							"foo.example.com": {},
+						},
+					},
+				},
+				Routes: map[types.NamespacedName]*route{
+					{Namespace: "test", Name: "hr-1"}: routeHR1,
+				},
+			},
+			expected: Configuration{},
+			msg:      "missing gatewayclass",
 		},
 	}
 

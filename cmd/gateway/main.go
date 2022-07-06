@@ -28,6 +28,11 @@ var (
 		"",
 		fmt.Sprintf("The name of the Gateway controller. The controller name must be of the form: DOMAIN/NAMESPACE/NAME. The controller's domain is '%s'.", domain),
 	)
+
+	gatewayClassName = flag.String(
+		"gatewayclass",
+		"",
+		"The name of the GatewayClass resource. Every NGINX Gateway must have a unique corresponding GatewayClass resource")
 )
 
 func main() {
@@ -42,11 +47,13 @@ func main() {
 			Namespace: "nginx-gateway",
 			Name:      "gateway",
 		},
+		GatewayClassName: *gatewayClassName,
 	}
 
 	MustValidateArguments(
 		flag.CommandLine,
 		GatewayControllerParam(domain, "nginx-gateway" /* FIXME(f5yacobucci) dynamically set */),
+		GatewayClassParam(),
 	)
 
 	logger.Info("Starting NGINX Kubernetes Gateway",

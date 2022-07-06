@@ -14,13 +14,32 @@ import (
 
 var _ = Describe("ChangeProcessor", func() {
 	Describe("Normal cases of processing changes", func() {
+		const (
+			controllerName = "my.controller"
+			gcName         = "test-class"
+		)
+
 		var (
+			gc, gcUpdated        *v1alpha2.GatewayClass
 			hr1, hr1Updated, hr2 *v1alpha2.HTTPRoute
 			gw, gwUpdated        *v1alpha2.Gateway
 			processor            state.ChangeProcessor
 		)
 
 		BeforeEach(OncePerOrdered, func() {
+			gc = &v1alpha2.GatewayClass{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:       gcName,
+					Generation: 1,
+				},
+				Spec: v1alpha2.GatewayClassSpec{
+					ControllerName: controllerName,
+				},
+			}
+
+			gcUpdated = gc.DeepCopy()
+			gcUpdated.Generation++
+
 			createRoute := func(name string, hostname string) *v1alpha2.HTTPRoute {
 				return &v1alpha2.HTTPRoute{
 					ObjectMeta: metav1.ObjectMeta{
@@ -68,6 +87,7 @@ var _ = Describe("ChangeProcessor", func() {
 					Name:      "gateway",
 				},
 				Spec: v1alpha2.GatewaySpec{
+					GatewayClassName: gcName,
 					Listeners: []v1alpha2.Listener{
 						{
 							Name:     "listener-80-1",
@@ -82,40 +102,78 @@ var _ = Describe("ChangeProcessor", func() {
 			gwUpdated = gw.DeepCopy()
 			gwUpdated.Generation++
 
-			processor = state.NewChangeProcessorImpl(types.NamespacedName{Namespace: "test", Name: "gateway"})
+			cfg := state.ChangeProcessorConfig{
+				GatewayNsName:    types.NamespacedName{Namespace: "test", Name: "gateway"},
+				GatewayCtlrName:  controllerName,
+				GatewayClassName: gcName,
+			}
+
+			processor = state.NewChangeProcessorImpl(cfg)
 		})
 
 		Describe("Process resources", Ordered, func() {
-			It("should return empty configuration and statuses when no upsert has occurred", func() {
-				changed, conf, statuses := processor.Process()
-				Expect(changed).To(BeFalse())
-				Expect(conf).To(BeZero())
-				Expect(statuses).To(BeZero())
+			When("no upsert has occurred", func() {
+				It("should return empty configuration and statuses", func() {
+					changed, conf, statuses := processor.Process()
+					Expect(changed).To(BeFalse())
+					Expect(conf).To(BeZero())
+					Expect(statuses).To(BeZero())
+				})
 			})
 
-			It("should return empty configuration and updated statuses after upserting an HTTPRoute when the Gateway doesn't exist", func() {
-				processor.CaptureUpsertChange(hr1)
+			When("GatewayClass doesn't exist", func() {
+				When("Gateway doesn't exist", func() {
+					It("should return empty configuration and updated statuses after upserting an HTTPRoute", func() {
+						processor.CaptureUpsertChange(hr1)
 
-				expectedConf := state.Configuration{HTTPServers: []state.HTTPServer{}}
-				expectedStatuses := state.Statuses{
-					ListenerStatuses: map[string]state.ListenerStatus{},
-					HTTPRouteStatuses: map[types.NamespacedName]state.HTTPRouteStatus{
-						{Namespace: "test", Name: "hr-1"}: {
-							ParentStatuses: map[string]state.ParentStatus{
-								"listener-80-1": {Attached: false},
+						expectedConf := state.Configuration{}
+						expectedStatuses := state.Statuses{
+							ListenerStatuses: map[string]state.ListenerStatus{},
+							HTTPRouteStatuses: map[types.NamespacedName]state.HTTPRouteStatus{
+								{Namespace: "test", Name: "hr-1"}: {
+									ParentStatuses: map[string]state.ParentStatus{
+										"listener-80-1": {Attached: false},
+									},
+								},
+							},
+						}
+
+						changed, conf, statuses := processor.Process()
+						Expect(changed).To(BeTrue())
+						Expect(helpers.Diff(expectedConf, conf)).To(BeEmpty())
+						Expect(helpers.Diff(expectedStatuses, statuses)).To(BeEmpty())
+					})
+				})
+
+				It("should return empty configuration and updated statuses after upserting the Gateway", func() {
+					processor.CaptureUpsertChange(gw)
+
+					expectedConf := state.Configuration{}
+					expectedStatuses := state.Statuses{
+						ListenerStatuses: map[string]state.ListenerStatus{
+							"listener-80-1": {
+								Valid:          false,
+								AttachedRoutes: 1,
 							},
 						},
-					},
-				}
+						HTTPRouteStatuses: map[types.NamespacedName]state.HTTPRouteStatus{
+							{Namespace: "test", Name: "hr-1"}: {
+								ParentStatuses: map[string]state.ParentStatus{
+									"listener-80-1": {Attached: false},
+								},
+							},
+						},
+					}
 
-				changed, conf, statuses := processor.Process()
-				Expect(changed).To(BeTrue())
-				Expect(helpers.Diff(expectedConf, conf)).To(BeEmpty())
-				Expect(helpers.Diff(expectedStatuses, statuses)).To(BeEmpty())
+					changed, conf, statuses := processor.Process()
+					Expect(changed).To(BeTrue())
+					Expect(helpers.Diff(expectedConf, conf)).To(BeEmpty())
+					Expect(helpers.Diff(expectedStatuses, statuses)).To(BeEmpty())
+				})
 			})
 
-			It("should return updated configuration and statuses after the Gateway is upserted", func() {
-				processor.CaptureUpsertChange(gw)
+			It("should return updated configuration and statuses after the GatewayClass is upserted", func() {
+				processor.CaptureUpsertChange(gc)
 
 				expectedConf := state.Configuration{
 					HTTPServers: []state.HTTPServer{
@@ -137,6 +195,10 @@ var _ = Describe("ChangeProcessor", func() {
 					},
 				}
 				expectedStatuses := state.Statuses{
+					GatewayClassStatus: &state.GatewayClassStatus{
+						Valid:              true,
+						ObservedGeneration: gc.Generation,
+					},
 					ListenerStatuses: map[string]state.ListenerStatus{
 						"listener-80-1": {
 							Valid:          true,
@@ -192,6 +254,10 @@ var _ = Describe("ChangeProcessor", func() {
 					},
 				}
 				expectedStatuses := state.Statuses{
+					GatewayClassStatus: &state.GatewayClassStatus{
+						Valid:              true,
+						ObservedGeneration: gc.Generation,
+					},
 					ListenerStatuses: map[string]state.ListenerStatus{
 						"listener-80-1": {
 							Valid:          true,
@@ -247,6 +313,69 @@ var _ = Describe("ChangeProcessor", func() {
 					},
 				}
 				expectedStatuses := state.Statuses{
+					GatewayClassStatus: &state.GatewayClassStatus{
+						Valid:              true,
+						ObservedGeneration: gc.Generation,
+					},
+					ListenerStatuses: map[string]state.ListenerStatus{
+						"listener-80-1": {
+							Valid:          true,
+							AttachedRoutes: 1,
+						},
+					},
+					HTTPRouteStatuses: map[types.NamespacedName]state.HTTPRouteStatus{
+						{Namespace: "test", Name: "hr-1"}: {
+							ParentStatuses: map[string]state.ParentStatus{
+								"listener-80-1": {Attached: true},
+							},
+						},
+					},
+				}
+
+				changed, conf, statuses := processor.Process()
+				Expect(changed).To(BeTrue())
+				Expect(helpers.Diff(expectedConf, conf)).To(BeEmpty())
+				Expect(helpers.Diff(expectedStatuses, statuses)).To(BeEmpty())
+			})
+
+			It("should return empty configuration and statuses after processing upserting the GatewayClass without generation change", func() {
+				gcUpdatedSameGen := gc.DeepCopy()
+				// gcUpdatedSameGen.Generation has not been changed
+				processor.CaptureUpsertChange(gcUpdatedSameGen)
+
+				changed, conf, statuses := processor.Process()
+				Expect(changed).To(BeFalse())
+				Expect(conf).To(BeZero())
+				Expect(statuses).To(BeZero())
+			})
+
+			It("should return updated configuration and statuses after upserting the GatewayClass with generation change", func() {
+				processor.CaptureUpsertChange(gcUpdated)
+
+				expectedConf := state.Configuration{
+					HTTPServers: []state.HTTPServer{
+						{
+							Hostname: "foo.example.com",
+							PathRules: []state.PathRule{
+								{
+									Path: "/",
+									MatchRules: []state.MatchRule{
+										{
+											MatchIdx: 0,
+											RuleIdx:  0,
+											Source:   hr1Updated,
+										},
+									},
+								},
+							},
+						},
+					},
+				}
+				expectedStatuses := state.Statuses{
+					GatewayClassStatus: &state.GatewayClassStatus{
+						Valid:              true,
+						ObservedGeneration: gcUpdated.Generation,
+					},
 					ListenerStatuses: map[string]state.ListenerStatus{
 						"listener-80-1": {
 							Valid:          true,
@@ -314,6 +443,10 @@ var _ = Describe("ChangeProcessor", func() {
 					},
 				}
 				expectedStatuses := state.Statuses{
+					GatewayClassStatus: &state.GatewayClassStatus{
+						Valid:              true,
+						ObservedGeneration: gcUpdated.Generation,
+					},
 					ListenerStatuses: map[string]state.ListenerStatus{
 						"listener-80-1": {
 							Valid:          true,
@@ -363,6 +496,10 @@ var _ = Describe("ChangeProcessor", func() {
 					},
 				}
 				expectedStatuses := state.Statuses{
+					GatewayClassStatus: &state.GatewayClassStatus{
+						Valid:              true,
+						ObservedGeneration: gcUpdated.Generation,
+					},
 					ListenerStatuses: map[string]state.ListenerStatus{
 						"listener-80-1": {
 							Valid:          true,
@@ -384,10 +521,36 @@ var _ = Describe("ChangeProcessor", func() {
 				Expect(helpers.Diff(expectedStatuses, statuses)).To(BeEmpty())
 			})
 
+			It("should return empty configuration and updated statuses after deleting the GatewayClass", func() {
+				processor.CaptureDeleteChange(&v1alpha2.GatewayClass{}, types.NamespacedName{Name: gcName})
+
+				expectedConf := state.Configuration{}
+				expectedStatuses := state.Statuses{
+					ListenerStatuses: map[string]state.ListenerStatus{
+						"listener-80-1": {
+							Valid:          false,
+							AttachedRoutes: 1,
+						},
+					},
+					HTTPRouteStatuses: map[types.NamespacedName]state.HTTPRouteStatus{
+						{Namespace: "test", Name: "hr-1"}: {
+							ParentStatuses: map[string]state.ParentStatus{
+								"listener-80-1": {Attached: false},
+							},
+						},
+					},
+				}
+
+				changed, conf, statuses := processor.Process()
+				Expect(changed).To(BeTrue())
+				Expect(helpers.Diff(expectedConf, conf)).To(BeEmpty())
+				Expect(helpers.Diff(expectedStatuses, statuses)).To(BeEmpty())
+			})
+
 			It("should return empty configuration and updated statuses after deleting the Gateway", func() {
 				processor.CaptureDeleteChange(&v1alpha2.Gateway{}, types.NamespacedName{Namespace: "test", Name: "gateway"})
 
-				expectedConf := state.Configuration{HTTPServers: []state.HTTPServer{}}
+				expectedConf := state.Configuration{}
 				expectedStatuses := state.Statuses{
 					ListenerStatuses: map[string]state.ListenerStatus{},
 					HTTPRouteStatuses: map[types.NamespacedName]state.HTTPRouteStatus{
@@ -408,7 +571,7 @@ var _ = Describe("ChangeProcessor", func() {
 			It("should return empty configuration and statuses after deleting the first HTTPRoute", func() {
 				processor.CaptureDeleteChange(&v1alpha2.HTTPRoute{}, types.NamespacedName{Namespace: "test", Name: "hr-1"})
 
-				expectedConf := state.Configuration{HTTPServers: []state.HTTPServer{}}
+				expectedConf := state.Configuration{}
 				expectedStatuses := state.Statuses{
 					ListenerStatuses:  map[string]state.ListenerStatus{},
 					HTTPRouteStatuses: map[types.NamespacedName]state.HTTPRouteStatus{},
@@ -426,7 +589,12 @@ var _ = Describe("ChangeProcessor", func() {
 		var processor state.ChangeProcessor
 
 		BeforeEach(func() {
-			processor = state.NewChangeProcessorImpl(types.NamespacedName{Namespace: "test", Name: "gateway"})
+			cfg := state.ChangeProcessorConfig{
+				GatewayNsName:    types.NamespacedName{Namespace: "test", Name: "gateway"},
+				GatewayCtlrName:  "test.controller",
+				GatewayClassName: "my-class",
+			}
+			processor = state.NewChangeProcessorImpl(cfg)
 		})
 
 		DescribeTable("CaptureUpsertChange must panic",
@@ -437,7 +605,8 @@ var _ = Describe("ChangeProcessor", func() {
 				Expect(process).Should(Panic())
 			},
 			Entry("an unsupported resource", &v1alpha2.TCPRoute{ObjectMeta: metav1.ObjectMeta{Namespace: "test", Name: "tcp"}}),
-			Entry("a wrong gateway", &v1alpha2.Gateway{ObjectMeta: metav1.ObjectMeta{Namespace: "test", Name: "other-gateway"}}))
+			Entry("a wrong gateway", &v1alpha2.Gateway{ObjectMeta: metav1.ObjectMeta{Namespace: "test", Name: "other-gateway"}}),
+			Entry("a wrong gatewayclass", &v1alpha2.GatewayClass{ObjectMeta: metav1.ObjectMeta{Name: "wrong-class"}}))
 
 		DescribeTable("CaptureDeleteChange must panic",
 			func(resourceType client.Object, nsname types.NamespacedName) {
@@ -447,6 +616,7 @@ var _ = Describe("ChangeProcessor", func() {
 				Expect(process).Should(Panic())
 			},
 			Entry("an unsupported resource", &v1alpha2.TCPRoute{}, types.NamespacedName{Namespace: "test", Name: "tcp"}),
-			Entry("a wrong gateway", &v1alpha2.Gateway{}, types.NamespacedName{Namespace: "test", Name: "other-gateway"}))
+			Entry("a wrong gateway", &v1alpha2.Gateway{}, types.NamespacedName{Namespace: "test", Name: "other-gateway"}),
+			Entry("a wrong gatewayclass", &v1alpha2.GatewayClass{}, types.NamespacedName{Name: "wrong-class"}))
 	})
 })
