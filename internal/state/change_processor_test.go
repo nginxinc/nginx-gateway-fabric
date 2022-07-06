@@ -10,13 +10,15 @@ import (
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/helpers"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/statefakes"
 )
 
 var _ = Describe("ChangeProcessor", func() {
 	Describe("Normal cases of processing changes", func() {
 		const (
-			controllerName = "my.controller"
-			gcName         = "test-class"
+			controllerName  = "my.controller"
+			gcName          = "test-class"
+			certificatePath = "path/to/cert"
 		)
 
 		var (
@@ -24,6 +26,7 @@ var _ = Describe("ChangeProcessor", func() {
 			hr1, hr1Updated, hr2 *v1alpha2.HTTPRoute
 			gw1, gw1Updated, gw2 *v1alpha2.Gateway
 			processor            state.ChangeProcessor
+			fakeSecretMemoryMgr  *statefakes.FakeSecretMemoryManager
 		)
 
 		BeforeEach(OncePerOrdered, func() {
@@ -53,6 +56,11 @@ var _ = Describe("ChangeProcessor", func() {
 									Namespace:   (*v1alpha2.Namespace)(helpers.GetStringPointer("test")),
 									Name:        v1alpha2.ObjectName(gateway),
 									SectionName: (*v1alpha2.SectionName)(helpers.GetStringPointer("listener-80-1")),
+								},
+								{
+									Namespace:   (*v1alpha2.Namespace)(helpers.GetStringPointer("test")),
+									Name:        v1alpha2.ObjectName(gateway),
+									SectionName: (*v1alpha2.SectionName)(helpers.GetStringPointer("listener-443-1")),
 								},
 							},
 						},
@@ -97,6 +105,22 @@ var _ = Describe("ChangeProcessor", func() {
 								Port:     80,
 								Protocol: v1alpha2.HTTPProtocolType,
 							},
+							{
+								Name:     "listener-443-1",
+								Hostname: nil,
+								Port:     443,
+								Protocol: v1alpha2.HTTPSProtocolType,
+								TLS: &v1alpha2.GatewayTLSConfig{
+									Mode: helpers.GetTLSModePointer(v1alpha2.TLSModeTerminate),
+									CertificateRefs: []*v1alpha2.SecretObjectReference{
+										{
+											Kind:      (*v1alpha2.Kind)(helpers.GetStringPointer("Secret")),
+											Name:      "secret",
+											Namespace: (*v1alpha2.Namespace)(helpers.GetStringPointer("test")),
+										},
+									},
+								},
+							},
 						},
 					},
 				}
@@ -109,10 +133,15 @@ var _ = Describe("ChangeProcessor", func() {
 
 			gw2 = createGateway("gateway-2")
 
+			fakeSecretMemoryMgr = &statefakes.FakeSecretMemoryManager{}
+
 			processor = state.NewChangeProcessorImpl(state.ChangeProcessorConfig{
-				GatewayCtlrName:  controllerName,
-				GatewayClassName: gcName,
+				GatewayCtlrName:     controllerName,
+				GatewayClassName:    gcName,
+				SecretMemoryManager: fakeSecretMemoryMgr,
 			})
+
+			fakeSecretMemoryMgr.StoreReturns(certificatePath, nil)
 		})
 
 		Describe("Process resources", Ordered, func() {
@@ -124,7 +153,6 @@ var _ = Describe("ChangeProcessor", func() {
 					Expect(statuses).To(BeZero())
 				})
 			})
-
 			When("GatewayClass doesn't exist", func() {
 				When("Gateways don't exist", func() {
 					It("should return empty configuration and updated statuses after upserting the first HTTPRoute", func() {
@@ -155,13 +183,18 @@ var _ = Describe("ChangeProcessor", func() {
 									Valid:          false,
 									AttachedRoutes: 1,
 								},
+								"listener-443-1": {
+									Valid:          false,
+									AttachedRoutes: 1,
+								},
 							},
 						},
 						IgnoredGatewayStatuses: map[types.NamespacedName]state.IgnoredGatewayStatus{},
 						HTTPRouteStatuses: map[types.NamespacedName]state.HTTPRouteStatus{
 							{Namespace: "test", Name: "hr-1"}: {
 								ParentStatuses: map[string]state.ParentStatus{
-									"listener-80-1": {Attached: false},
+									"listener-80-1":  {Attached: false},
+									"listener-443-1": {Attached: false},
 								},
 							},
 						},
@@ -195,7 +228,26 @@ var _ = Describe("ChangeProcessor", func() {
 							},
 						},
 					},
+					HTTPSServers: []state.HTTPServer{
+						{
+							Hostname: "foo.example.com",
+							SSL:      &state.SSL{CertificatePath: certificatePath},
+							PathRules: []state.PathRule{
+								{
+									Path: "/",
+									MatchRules: []state.MatchRule{
+										{
+											MatchIdx: 0,
+											RuleIdx:  0,
+											Source:   hr1,
+										},
+									},
+								},
+							},
+						},
+					},
 				}
+
 				expectedStatuses := state.Statuses{
 					GatewayClassStatus: &state.GatewayClassStatus{
 						Valid:              true,
@@ -208,13 +260,18 @@ var _ = Describe("ChangeProcessor", func() {
 								Valid:          true,
 								AttachedRoutes: 1,
 							},
+							"listener-443-1": {
+								Valid:          true,
+								AttachedRoutes: 1,
+							},
 						},
 					},
 					IgnoredGatewayStatuses: map[types.NamespacedName]state.IgnoredGatewayStatus{},
 					HTTPRouteStatuses: map[types.NamespacedName]state.HTTPRouteStatus{
 						{Namespace: "test", Name: "hr-1"}: {
 							ParentStatuses: map[string]state.ParentStatus{
-								"listener-80-1": {Attached: true},
+								"listener-80-1":  {Attached: true},
+								"listener-443-1": {Attached: true},
 							},
 						},
 					},
@@ -258,6 +315,24 @@ var _ = Describe("ChangeProcessor", func() {
 							},
 						},
 					},
+					HTTPSServers: []state.HTTPServer{
+						{
+							Hostname: "foo.example.com",
+							SSL:      &state.SSL{CertificatePath: certificatePath},
+							PathRules: []state.PathRule{
+								{
+									Path: "/",
+									MatchRules: []state.MatchRule{
+										{
+											MatchIdx: 0,
+											RuleIdx:  0,
+											Source:   hr1Updated,
+										},
+									},
+								},
+							},
+						},
+					},
 				}
 				expectedStatuses := state.Statuses{
 					GatewayClassStatus: &state.GatewayClassStatus{
@@ -271,13 +346,18 @@ var _ = Describe("ChangeProcessor", func() {
 								Valid:          true,
 								AttachedRoutes: 1,
 							},
+							"listener-443-1": {
+								Valid:          true,
+								AttachedRoutes: 1,
+							},
 						},
 					},
 					IgnoredGatewayStatuses: map[types.NamespacedName]state.IgnoredGatewayStatus{},
 					HTTPRouteStatuses: map[types.NamespacedName]state.HTTPRouteStatus{
 						{Namespace: "test", Name: "hr-1"}: {
 							ParentStatuses: map[string]state.ParentStatus{
-								"listener-80-1": {Attached: true},
+								"listener-80-1":  {Attached: true},
+								"listener-443-1": {Attached: true},
 							},
 						},
 					},
@@ -321,6 +401,24 @@ var _ = Describe("ChangeProcessor", func() {
 							},
 						},
 					},
+					HTTPSServers: []state.HTTPServer{
+						{
+							Hostname: "foo.example.com",
+							SSL:      &state.SSL{CertificatePath: certificatePath},
+							PathRules: []state.PathRule{
+								{
+									Path: "/",
+									MatchRules: []state.MatchRule{
+										{
+											MatchIdx: 0,
+											RuleIdx:  0,
+											Source:   hr1Updated,
+										},
+									},
+								},
+							},
+						},
+					},
 				}
 				expectedStatuses := state.Statuses{
 					GatewayClassStatus: &state.GatewayClassStatus{
@@ -334,13 +432,18 @@ var _ = Describe("ChangeProcessor", func() {
 								Valid:          true,
 								AttachedRoutes: 1,
 							},
+							"listener-443-1": {
+								Valid:          true,
+								AttachedRoutes: 1,
+							},
 						},
 					},
 					IgnoredGatewayStatuses: map[types.NamespacedName]state.IgnoredGatewayStatus{},
 					HTTPRouteStatuses: map[types.NamespacedName]state.HTTPRouteStatus{
 						{Namespace: "test", Name: "hr-1"}: {
 							ParentStatuses: map[string]state.ParentStatus{
-								"listener-80-1": {Attached: true},
+								"listener-80-1":  {Attached: true},
+								"listener-443-1": {Attached: true},
 							},
 						},
 					},
@@ -384,6 +487,24 @@ var _ = Describe("ChangeProcessor", func() {
 							},
 						},
 					},
+					HTTPSServers: []state.HTTPServer{
+						{
+							Hostname: "foo.example.com",
+							SSL:      &state.SSL{CertificatePath: certificatePath},
+							PathRules: []state.PathRule{
+								{
+									Path: "/",
+									MatchRules: []state.MatchRule{
+										{
+											MatchIdx: 0,
+											RuleIdx:  0,
+											Source:   hr1Updated,
+										},
+									},
+								},
+							},
+						},
+					},
 				}
 				expectedStatuses := state.Statuses{
 					GatewayClassStatus: &state.GatewayClassStatus{
@@ -397,13 +518,18 @@ var _ = Describe("ChangeProcessor", func() {
 								Valid:          true,
 								AttachedRoutes: 1,
 							},
+							"listener-443-1": {
+								Valid:          true,
+								AttachedRoutes: 1,
+							},
 						},
 					},
 					IgnoredGatewayStatuses: map[types.NamespacedName]state.IgnoredGatewayStatus{},
 					HTTPRouteStatuses: map[types.NamespacedName]state.HTTPRouteStatus{
 						{Namespace: "test", Name: "hr-1"}: {
 							ParentStatuses: map[string]state.ParentStatus{
-								"listener-80-1": {Attached: true},
+								"listener-80-1":  {Attached: true},
+								"listener-443-1": {Attached: true},
 							},
 						},
 					},
@@ -444,6 +570,26 @@ var _ = Describe("ChangeProcessor", func() {
 							},
 						},
 					},
+					HTTPSServers: []state.HTTPServer{
+						{
+							Hostname: "foo.example.com",
+							PathRules: []state.PathRule{
+								{
+									Path: "/",
+									MatchRules: []state.MatchRule{
+										{
+											MatchIdx: 0,
+											RuleIdx:  0,
+											Source:   hr1Updated,
+										},
+									},
+								},
+							},
+							SSL: &state.SSL{
+								CertificatePath: certificatePath,
+							},
+						},
+					},
 				}
 				expectedStatuses := state.Statuses{
 					GatewayClassStatus: &state.GatewayClassStatus{
@@ -457,6 +603,10 @@ var _ = Describe("ChangeProcessor", func() {
 								Valid:          true,
 								AttachedRoutes: 1,
 							},
+							"listener-443-1": {
+								Valid:          true,
+								AttachedRoutes: 1,
+							},
 						},
 					},
 					IgnoredGatewayStatuses: map[types.NamespacedName]state.IgnoredGatewayStatus{
@@ -467,7 +617,8 @@ var _ = Describe("ChangeProcessor", func() {
 					HTTPRouteStatuses: map[types.NamespacedName]state.HTTPRouteStatus{
 						{Namespace: "test", Name: "hr-1"}: {
 							ParentStatuses: map[string]state.ParentStatus{
-								"listener-80-1": {Attached: true},
+								"listener-80-1":  {Attached: true},
+								"listener-443-1": {Attached: true},
 							},
 						},
 					},
@@ -500,6 +651,24 @@ var _ = Describe("ChangeProcessor", func() {
 							},
 						},
 					},
+					HTTPSServers: []state.HTTPServer{
+						{
+							Hostname: "foo.example.com",
+							SSL:      &state.SSL{CertificatePath: certificatePath},
+							PathRules: []state.PathRule{
+								{
+									Path: "/",
+									MatchRules: []state.MatchRule{
+										{
+											MatchIdx: 0,
+											RuleIdx:  0,
+											Source:   hr1Updated,
+										},
+									},
+								},
+							},
+						},
+					},
 				}
 				expectedStatuses := state.Statuses{
 					GatewayClassStatus: &state.GatewayClassStatus{
@@ -513,6 +682,10 @@ var _ = Describe("ChangeProcessor", func() {
 								Valid:          true,
 								AttachedRoutes: 1,
 							},
+							"listener-443-1": {
+								Valid:          true,
+								AttachedRoutes: 1,
+							},
 						},
 					},
 					IgnoredGatewayStatuses: map[types.NamespacedName]state.IgnoredGatewayStatus{
@@ -523,12 +696,14 @@ var _ = Describe("ChangeProcessor", func() {
 					HTTPRouteStatuses: map[types.NamespacedName]state.HTTPRouteStatus{
 						{Namespace: "test", Name: "hr-1"}: {
 							ParentStatuses: map[string]state.ParentStatus{
-								"listener-80-1": {Attached: true},
+								"listener-80-1":  {Attached: true},
+								"listener-443-1": {Attached: true},
 							},
 						},
 						{Namespace: "test", Name: "hr-2"}: {
 							ParentStatuses: map[string]state.ParentStatus{
-								"listener-80-1": {Attached: false},
+								"listener-80-1":  {Attached: false},
+								"listener-443-1": {Attached: false},
 							},
 						},
 					},
@@ -561,6 +736,24 @@ var _ = Describe("ChangeProcessor", func() {
 							},
 						},
 					},
+					HTTPSServers: []state.HTTPServer{
+						{
+							Hostname: "bar.example.com",
+							SSL:      &state.SSL{CertificatePath: certificatePath},
+							PathRules: []state.PathRule{
+								{
+									Path: "/",
+									MatchRules: []state.MatchRule{
+										{
+											MatchIdx: 0,
+											RuleIdx:  0,
+											Source:   hr2,
+										},
+									},
+								},
+							},
+						},
+					},
 				}
 				expectedStatuses := state.Statuses{
 					GatewayClassStatus: &state.GatewayClassStatus{
@@ -574,13 +767,18 @@ var _ = Describe("ChangeProcessor", func() {
 								Valid:          true,
 								AttachedRoutes: 1,
 							},
+							"listener-443-1": {
+								Valid:          true,
+								AttachedRoutes: 1,
+							},
 						},
 					},
 					IgnoredGatewayStatuses: map[types.NamespacedName]state.IgnoredGatewayStatus{},
 					HTTPRouteStatuses: map[types.NamespacedName]state.HTTPRouteStatus{
 						{Namespace: "test", Name: "hr-2"}: {
 							ParentStatuses: map[string]state.ParentStatus{
-								"listener-80-1": {Attached: true},
+								"listener-80-1":  {Attached: true},
+								"listener-443-1": {Attached: true},
 							},
 						},
 					},
@@ -596,7 +794,8 @@ var _ = Describe("ChangeProcessor", func() {
 				processor.CaptureDeleteChange(&v1alpha2.HTTPRoute{}, types.NamespacedName{Namespace: "test", Name: "hr-2"})
 
 				expectedConf := state.Configuration{
-					HTTPServers: []state.HTTPServer{},
+					HTTPServers:  []state.HTTPServer{},
+					HTTPSServers: []state.HTTPServer{},
 				}
 				expectedStatuses := state.Statuses{
 					GatewayClassStatus: &state.GatewayClassStatus{
@@ -607,6 +806,10 @@ var _ = Describe("ChangeProcessor", func() {
 						NsName: types.NamespacedName{Namespace: "test", Name: "gateway-2"},
 						ListenerStatuses: map[string]state.ListenerStatus{
 							"listener-80-1": {
+								Valid:          true,
+								AttachedRoutes: 0,
+							},
+							"listener-443-1": {
 								Valid:          true,
 								AttachedRoutes: 0,
 							},
@@ -631,6 +834,10 @@ var _ = Describe("ChangeProcessor", func() {
 						NsName: types.NamespacedName{Namespace: "test", Name: "gateway-2"},
 						ListenerStatuses: map[string]state.ListenerStatus{
 							"listener-80-1": {
+								Valid:          false,
+								AttachedRoutes: 0,
+							},
+							"listener-443-1": {
 								Valid:          false,
 								AttachedRoutes: 0,
 							},
@@ -680,13 +887,16 @@ var _ = Describe("ChangeProcessor", func() {
 
 	Describe("Edge cases with panic", func() {
 		var processor state.ChangeProcessor
+		var fakeSecretMemoryMgr *statefakes.FakeSecretMemoryManager
 
 		BeforeEach(func() {
-			cfg := state.ChangeProcessorConfig{
-				GatewayCtlrName:  "test.controller",
-				GatewayClassName: "my-class",
-			}
-			processor = state.NewChangeProcessorImpl(cfg)
+			fakeSecretMemoryMgr = &statefakes.FakeSecretMemoryManager{}
+
+			processor = state.NewChangeProcessorImpl(state.ChangeProcessorConfig{
+				GatewayCtlrName:     "test.controller",
+				GatewayClassName:    "my-class",
+				SecretMemoryManager: fakeSecretMemoryMgr,
+			})
 		})
 
 		DescribeTable("CaptureUpsertChange must panic",

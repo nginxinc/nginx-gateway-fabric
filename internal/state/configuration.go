@@ -1,6 +1,7 @@
 package state
 
 import (
+	"fmt"
 	"sort"
 
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
@@ -13,6 +14,9 @@ type Configuration struct {
 	// HTTPServers holds all HTTPServers.
 	// FIXME(pleshakov) We assume that all servers are HTTP and listen on port 80.
 	HTTPServers []HTTPServer
+	// HTTPSServers holds all HTTPSServers.
+	// FIXME(kate-osborn) We assume that all HTTPS servers listen on port 443.
+	HTTPSServers []HTTPServer
 }
 
 // HTTPServer is a virtual server.
@@ -21,6 +25,13 @@ type HTTPServer struct {
 	Hostname string
 	// PathRules is a collection of routing rules.
 	PathRules []PathRule
+	// SSL holds the SSL configuration options fo the server.
+	SSL *SSL
+}
+
+type SSL struct {
+	// CertificatePath is the path to the certificate file.
+	CertificatePath string
 }
 
 // PathRule represents routing rules that share a common path.
@@ -49,6 +60,7 @@ func (r *MatchRule) GetMatch() v1alpha2.HTTPRouteMatch {
 }
 
 // buildConfiguration builds the Configuration from the graph.
+// FIXME(pleshakov) For now we only handle paths with prefix matches. Handle exact and regex matches
 func buildConfiguration(graph *graph) Configuration {
 	if graph.GatewayClass == nil || !graph.GatewayClass.Valid {
 		return Configuration{}
@@ -58,54 +70,114 @@ func buildConfiguration(graph *graph) Configuration {
 		return Configuration{}
 	}
 
-	// FIXME(pleshakov) For now we only handle paths with prefix matches. Handle exact and regex matches
-	pathRulesForHosts := make(map[string]map[string]PathRule)
-
+	configBuilder := newConfigBuilder()
 	for _, l := range graph.Gateway.Listeners {
-		for _, r := range l.Routes {
-			var hostnames []string
+		configBuilder.upsertListener(l)
+	}
 
-			for _, h := range r.Source.Spec.Hostnames {
-				if _, exist := l.AcceptedHostnames[string(h)]; exist {
-					hostnames = append(hostnames, string(h))
-				}
+	return configBuilder.build()
+}
+
+type configBuilder struct {
+	http  *httpServerBuilder
+	https *httpServerBuilder
+}
+
+func newConfigBuilder() *configBuilder {
+	return &configBuilder{
+		http:  newHTTPServerBuilder(),
+		https: newHTTPServerBuilder(),
+	}
+}
+
+func (sb *configBuilder) upsertListener(l *listener) {
+	switch l.Source.Protocol {
+	case v1alpha2.HTTPProtocolType:
+		sb.http.upsertListener(l)
+	case v1alpha2.HTTPSProtocolType:
+		sb.https.upsertListener(l)
+	default:
+		panic(fmt.Sprintf("listener protocol %s not supported", l.Source.Protocol))
+	}
+}
+
+func (sb *configBuilder) build() Configuration {
+	return Configuration{
+		HTTPServers:  sb.http.build(),
+		HTTPSServers: sb.https.build(),
+	}
+}
+
+type httpServerBuilder struct {
+	rules            map[string]map[string]PathRule
+	listenersForHost map[string]*listener
+}
+
+func newHTTPServerBuilder() *httpServerBuilder {
+	return &httpServerBuilder{
+		rules:            make(map[string]map[string]PathRule),
+		listenersForHost: make(map[string]*listener),
+	}
+}
+
+func (p *httpServerBuilder) upsertListener(l *listener) {
+
+	for _, r := range l.Routes {
+		var hostnames []string
+
+		for _, h := range r.Source.Spec.Hostnames {
+			if _, exist := l.AcceptedHostnames[string(h)]; exist {
+				hostnames = append(hostnames, string(h))
 			}
+		}
 
+		for _, h := range hostnames {
+			p.listenersForHost[h] = l
+			if _, exist := p.rules[h]; !exist {
+				p.rules[h] = make(map[string]PathRule)
+			}
+		}
+
+		for i, rule := range r.Source.Spec.Rules {
 			for _, h := range hostnames {
-				if _, exist := pathRulesForHosts[h]; !exist {
-					pathRulesForHosts[h] = make(map[string]PathRule)
-				}
-			}
+				for j, m := range rule.Matches {
+					path := getPath(m.Path)
 
-			for i, rule := range r.Source.Spec.Rules {
-				for _, h := range hostnames {
-					for j, m := range rule.Matches {
-						path := getPath(m.Path)
-
-						rule, exist := pathRulesForHosts[h][path]
-						if !exist {
-							rule.Path = path
-						}
-
-						rule.MatchRules = append(rule.MatchRules, MatchRule{
-							MatchIdx: j,
-							RuleIdx:  i,
-							Source:   r.Source,
-						})
-
-						pathRulesForHosts[h][path] = rule
+					rule, exist := p.rules[h][path]
+					if !exist {
+						rule.Path = path
 					}
+
+					rule.MatchRules = append(rule.MatchRules, MatchRule{
+						MatchIdx: j,
+						RuleIdx:  i,
+						Source:   r.Source,
+					})
+
+					p.rules[h][path] = rule
 				}
 			}
 		}
 	}
+}
 
-	httpServers := make([]HTTPServer, 0, len(pathRulesForHosts))
+func (p *httpServerBuilder) build() []HTTPServer {
 
-	for h, rules := range pathRulesForHosts {
+	servers := make([]HTTPServer, 0, len(p.rules))
+
+	for h, rules := range p.rules {
 		s := HTTPServer{
 			Hostname:  h,
 			PathRules: make([]PathRule, 0, len(rules)),
+		}
+
+		l, ok := p.listenersForHost[h]
+		if !ok {
+			panic(fmt.Sprintf("no listener found for hostname: %s", h))
+		}
+
+		if l.SecretPath != "" {
+			s.SSL = &SSL{CertificatePath: l.SecretPath}
 		}
 
 		for _, r := range rules {
@@ -119,17 +191,15 @@ func buildConfiguration(graph *graph) Configuration {
 			return s.PathRules[i].Path < s.PathRules[j].Path
 		})
 
-		httpServers = append(httpServers, s)
+		servers = append(servers, s)
 	}
 
 	// sort servers for predictable order
-	sort.Slice(httpServers, func(i, j int) bool {
-		return httpServers[i].Hostname < httpServers[j].Hostname
+	sort.Slice(servers, func(i, j int) bool {
+		return servers[i].Hostname < servers[j].Hostname
 	})
 
-	return Configuration{
-		HTTPServers: httpServers,
-	}
+	return servers
 }
 
 func getPath(path *v1alpha2.HTTPPathMatch) string {

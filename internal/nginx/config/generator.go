@@ -40,11 +40,20 @@ func NewGeneratorImpl(serviceStore state.ServiceStore) *GeneratorImpl {
 func (g *GeneratorImpl) Generate(conf state.Configuration) ([]byte, Warnings) {
 	warnings := newWarnings()
 
+	confServers := append(conf.HTTPServers, conf.HTTPSServers...)
+
 	servers := httpServers{
-		Servers: make([]server, 0, len(conf.HTTPServers)),
+		// capacity is all the conf servers + default tls termination server
+		Servers: make([]server, 0, len(confServers)+1),
 	}
 
-	for _, s := range conf.HTTPServers {
+	if len(conf.HTTPSServers) > 0 {
+		defaultServer := generateDefaultTLSTerminationServer()
+
+		servers.Servers = append(servers.Servers, defaultServer)
+	}
+
+	for _, s := range confServers {
 		cfg, warns := generate(s, g.serviceStore)
 
 		servers.Servers = append(servers.Servers, cfg)
@@ -52,6 +61,10 @@ func (g *GeneratorImpl) Generate(conf state.Configuration) ([]byte, Warnings) {
 	}
 
 	return g.executor.ExecuteForHTTPServers(servers), warnings
+}
+
+func generateDefaultTLSTerminationServer() server {
+	return server{IsDefault: true}
 }
 
 func generate(httpServer state.HTTPServer, serviceStore state.ServiceStore) (server, Warnings) {
@@ -102,11 +115,17 @@ func generate(httpServer state.HTTPServer, serviceStore state.ServiceStore) (ser
 			locs = append(locs, pathLoc)
 		}
 	}
-
-	return server{
+	s := server{
 		ServerName: httpServer.Hostname,
 		Locations:  locs,
-	}, warnings
+	}
+	if httpServer.SSL != nil {
+		s.SSL = &ssl{
+			Certificate:    httpServer.SSL.CertificatePath,
+			CertificateKey: httpServer.SSL.CertificatePath,
+		}
+	}
+	return s, warnings
 }
 
 func generateProxyPass(address string) string {

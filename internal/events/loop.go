@@ -17,20 +17,24 @@ import (
 
 // EventLoop is the main event loop of the Gateway.
 type EventLoop struct {
-	processor       state.ChangeProcessor
-	serviceStore    state.ServiceStore
-	generator       config.Generator
-	eventCh         <-chan interface{}
-	logger          logr.Logger
-	nginxFileMgr    file.Manager
-	nginxRuntimeMgr runtime.Manager
-	statusUpdater   status.Updater
+	processor           state.ChangeProcessor
+	serviceStore        state.ServiceStore
+	secretStore         state.SecretStore
+	secretMemoryManager state.SecretMemoryManager
+	generator           config.Generator
+	eventCh             <-chan interface{}
+	logger              logr.Logger
+	nginxFileMgr        file.Manager
+	nginxRuntimeMgr     runtime.Manager
+	statusUpdater       status.Updater
 }
 
 // NewEventLoop creates a new EventLoop.
 func NewEventLoop(
 	processor state.ChangeProcessor,
 	serviceStore state.ServiceStore,
+	secretStore state.SecretStore,
+	secretMemoryManager state.SecretMemoryManager,
 	generator config.Generator,
 	eventCh <-chan interface{},
 	logger logr.Logger,
@@ -39,14 +43,16 @@ func NewEventLoop(
 	statusUpdater status.Updater,
 ) *EventLoop {
 	return &EventLoop{
-		processor:       processor,
-		serviceStore:    serviceStore,
-		generator:       generator,
-		eventCh:         eventCh,
-		logger:          logger.WithName("eventLoop"),
-		nginxFileMgr:    nginxFileMgr,
-		nginxRuntimeMgr: nginxRuntimeMgr,
-		statusUpdater:   statusUpdater,
+		processor:           processor,
+		serviceStore:        serviceStore,
+		secretStore:         secretStore,
+		secretMemoryManager: secretMemoryManager,
+		generator:           generator,
+		eventCh:             eventCh,
+		logger:              logger.WithName("eventLoop"),
+		nginxFileMgr:        nginxFileMgr,
+		nginxRuntimeMgr:     nginxRuntimeMgr,
+		statusUpdater:       statusUpdater,
 	}
 }
 
@@ -92,12 +98,20 @@ func (el *EventLoop) handleEvent(ctx context.Context, event interface{}) {
 }
 
 func (el *EventLoop) updateNginx(ctx context.Context, conf state.Configuration) error {
+	// Write all secrets (nuke and pave).
+	// This will remove all secrets in the secrets directory before writing the stored secrets.
+	// FIXME(kate-osborn): We may want to rethink this approach in the future and write and remove secrets individually.
+	err := el.secretMemoryManager.WriteAllStoredSecrets()
+	if err != nil {
+		return err
+	}
+
 	cfg, warnings := el.generator.Generate(conf)
 
 	// For now, we keep all http servers in one config
 	// We might rethink that. For example, we can write each server to its file
 	// or group servers in some way.
-	err := el.nginxFileMgr.WriteHTTPServersConfig("http-servers", cfg)
+	err = el.nginxFileMgr.WriteHTTPServersConfig("http-servers", cfg)
 	if err != nil {
 		return err
 	}
@@ -127,6 +141,9 @@ func (el *EventLoop) propagateUpsert(e *UpsertEvent) {
 	case *apiv1.Service:
 		// FIXME(pleshakov): make sure the affected hosts are updated
 		el.serviceStore.Upsert(r)
+	case *apiv1.Secret:
+		// FIXME(kate-osborn): need to handle certificate rotation
+		el.secretStore.Upsert(r)
 	default:
 		panic(fmt.Errorf("unknown resource type %T", e.Resource))
 	}
@@ -143,6 +160,9 @@ func (el *EventLoop) propagateDelete(e *DeleteEvent) {
 	case *apiv1.Service:
 		// FIXME(pleshakov): make sure the affected hosts are updated
 		el.serviceStore.Delete(e.NamespacedName)
+	case *apiv1.Secret:
+		// FIXME(kate-osborn): make sure that affected servers are updated
+		el.secretStore.Delete(e.NamespacedName)
 	default:
 		panic(fmt.Errorf("unknown resource type %T", e.Type))
 	}
