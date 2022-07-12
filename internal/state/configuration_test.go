@@ -152,6 +152,7 @@ func TestBuildConfiguration(t *testing.T) {
 		},
 	}
 
+	// nolint:gosec
 	secretPath := "/etc/nginx/secrets/secret"
 
 	tests := []struct {
