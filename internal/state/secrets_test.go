@@ -1,3 +1,4 @@
+// nolint:gosec
 package state_test
 
 import (
@@ -36,7 +37,6 @@ PpuwvuatqjO1208BjfE/cZHIg8Hw9mvW9x9C+IQMIMDE7b/g6OcK7LGTLwlFxvA8
 7WjEequnayIphMhKRXVf1N349eN98Ez38fOTHTPbdJjFA/PcC+Gyme+iGt5OQdFh
 yRE=
 -----END CERTIFICATE-----`)
-
 	key = []byte(`-----BEGIN RSA PRIVATE KEY-----
 MIIEowIBAAKCAQEAqeip+7MvNadI7if3MpPrwgJpbH47RTNprmTStCrXnKhtn41k
 G+ecUNWBQNlzksBwGL0ncCNo2a7lvKl1wi9q2+AmQhccKVRAq3MXY5t7XlYkV1bG
