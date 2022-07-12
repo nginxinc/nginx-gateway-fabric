@@ -18,6 +18,7 @@ import (
 // tlsSecretFileMode defines the default file mode for files with TLS Secrets.
 const tlsSecretFileMode = 0o600
 
+// SecretStore stores secrets.
 type SecretStore interface {
 	// Upsert upserts the secret into the store.
 	Upsert(secret *apiv1.Secret)
@@ -27,7 +28,7 @@ type SecretStore interface {
 	Get(nsname types.NamespacedName) *Secret
 }
 
-type secretStore struct {
+type SecretStoreImpl struct {
 	secrets map[types.NamespacedName]*Secret
 }
 
@@ -39,13 +40,13 @@ type Secret struct {
 	Valid bool
 }
 
-func NewSecretStore() *secretStore {
-	return &secretStore{
+func NewSecretStore() *SecretStoreImpl {
+	return &SecretStoreImpl{
 		secrets: make(map[types.NamespacedName]*Secret),
 	}
 }
 
-func (s secretStore) Upsert(secret *apiv1.Secret) {
+func (s SecretStoreImpl) Upsert(secret *apiv1.Secret) {
 	nsname := types.NamespacedName{
 		Namespace: secret.Namespace,
 		Name:      secret.Name,
@@ -55,11 +56,11 @@ func (s secretStore) Upsert(secret *apiv1.Secret) {
 	s.secrets[nsname] = &Secret{Secret: secret, Valid: valid}
 }
 
-func (s secretStore) Delete(nsname types.NamespacedName) {
+func (s SecretStoreImpl) Delete(nsname types.NamespacedName) {
 	delete(s.secrets, nsname)
 }
 
-func (s secretStore) Get(nsname types.NamespacedName) *Secret {
+func (s SecretStoreImpl) Get(nsname types.NamespacedName) *Secret {
 	return s.secrets[nsname]
 }
 
@@ -71,7 +72,7 @@ type SecretMemoryManager interface {
 	WriteAllStoredSecrets() error
 }
 
-type secretDiskMemoryManager struct {
+type SecretDiskMemoryManager struct {
 	storedSecrets   map[types.NamespacedName]storedSecret
 	secretCache     SecretStore
 	secretDirectory string
@@ -82,15 +83,15 @@ type storedSecret struct {
 	path   string
 }
 
-func NewSecretDiskMemoryManager(secretDirectory string, secretStore SecretStore) *secretDiskMemoryManager {
-	return &secretDiskMemoryManager{
+func NewSecretDiskMemoryManager(secretDirectory string, secretStore SecretStore) *SecretDiskMemoryManager {
+	return &SecretDiskMemoryManager{
 		storedSecrets:   make(map[types.NamespacedName]storedSecret),
 		secretCache:     secretStore,
 		secretDirectory: secretDirectory,
 	}
 }
 
-func (s *secretDiskMemoryManager) Store(nsname types.NamespacedName) (string, error) {
+func (s *SecretDiskMemoryManager) Store(nsname types.NamespacedName) (string, error) {
 	secret := s.secretCache.Get(nsname)
 	if secret == nil {
 		return "", fmt.Errorf("secret %s does not exist", nsname)
@@ -110,7 +111,7 @@ func (s *secretDiskMemoryManager) Store(nsname types.NamespacedName) (string, er
 	return ss.path, nil
 }
 
-func (s *secretDiskMemoryManager) WriteAllStoredSecrets() error {
+func (s *SecretDiskMemoryManager) WriteAllStoredSecrets() error {
 	// Remove all existing secrets from secrets directory
 	dir, err := ioutil.ReadDir(s.secretDirectory)
 	if err != nil {
