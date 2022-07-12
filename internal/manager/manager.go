@@ -29,6 +29,7 @@ import (
 const clusterTimeout = 10 * time.Second
 
 // secretsFolder is the folder that holds all the secrets for NGINX servers.
+// nolint:gosec
 const secretsFolder = "/etc/nginx/secrets"
 
 var scheme = runtime.NewScheme()
