@@ -641,7 +641,7 @@ func TestCreateHTTPMatch(t *testing.T) {
 		},
 	}
 
-	testDuplicateHeaders := make([]v1alpha2.HTTPHeaderMatch, 0, 5)
+	testDuplicateHeaders := make([]v1alpha2.HTTPHeaderMatch, 0, len(testHeaderMatches)+1)
 	duplicateHeaderMatch := v1alpha2.HTTPHeaderMatch{
 		Type:  helpers.GetHeaderMatchTypePointer(v1alpha2.HeaderMatchExact),
 		Name:  "HEADER-2", // header names are case-insensitive
@@ -673,6 +673,15 @@ func TestCreateHTTPMatch(t *testing.T) {
 			Value: "==val3",
 		},
 	}
+
+	testDuplicateQueryParams := make([]v1alpha2.HTTPQueryParamMatch, 0, len(testQueryParamMatches)+1)
+	duplicateQueryParamMatch := v1alpha2.HTTPQueryParamMatch{
+		Type:  helpers.GetQueryParamMatchTypePointer(v1alpha2.QueryParamMatchExact),
+		Name:  "ARG1", // query param names are case-insensitive
+		Value: "val2",
+	}
+	testDuplicateQueryParams = append(testDuplicateQueryParams, testQueryParamMatches...)
+	testDuplicateQueryParams = append(testDuplicateQueryParams, duplicateQueryParamMatch)
 
 	expectedHeaders := []string{"header-1:val-1", "header-2:val-2", "header-3:val-3"}
 	expectedArgs := []string{"arg1=val1", "arg2=val2=another-val", "arg3===val3"}
@@ -782,6 +791,16 @@ func TestCreateHTTPMatch(t *testing.T) {
 				RedirectPath: testPath,
 			},
 			msg: "duplicate header names",
+		},
+		{
+			match: v1alpha2.HTTPRouteMatch{
+				QueryParams: testDuplicateQueryParams,
+			},
+			expected: httpMatch{
+				QueryParams:  expectedArgs,
+				RedirectPath: testPath,
+			},
+			msg: "duplicate query param names",
 		},
 	}
 	for _, tc := range tests {

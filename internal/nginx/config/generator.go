@@ -199,8 +199,10 @@ func createHTTPMatch(match v1alpha2.HTTPRouteMatch, redirectPath string) httpMat
 		// FIXME(kate-osborn): For now we only support type "Exact".
 		for _, h := range match.Headers {
 			if *h.Type == v1alpha2.HeaderMatchExact {
-				// duplicate header names are not permitted by the spec
-				// only configure the first entry for every header name (case-insensitive)
+				// duplicate header names (case-insensitive) are not permitted by the spec
+				// However, HTTPRoute CRD validation only prevents case-sensitive duplicates.
+				// So we still need to handle case-insensitive duplicates: we will only configure the first entry
+				// for every header name (case-insensitive).
 				lowerName := strings.ToLower(string(h.Name))
 				if _, ok := headerNames[lowerName]; !ok {
 					headers = append(headers, createHeaderKeyValString(h))
@@ -213,11 +215,24 @@ func createHTTPMatch(match v1alpha2.HTTPRouteMatch, redirectPath string) httpMat
 
 	if match.QueryParams != nil {
 		params := make([]string, 0, len(match.QueryParams))
+		paramNames := make(map[string]struct{})
 
 		// FIXME(kate-osborn): For now we only support type "Exact".
 		for _, p := range match.QueryParams {
 			if *p.Type == v1alpha2.QueryParamMatchExact {
-				params = append(params, createQueryParamKeyValString(p))
+				// Duplicate param names (case-sensitive) are not permitted by the spec - HTTPRoute CRD validation
+				// enforces that. However, NGINX cannot distinguish between the cases. This means query strings
+				// '?myParam=1` and '?myparam=1' are the same to NGINX.
+				// Because of that, we will handle query param names as header names.
+				//
+				// Also be aware: if multiple params with the same name (case-insensitive) are present,
+				// NGINX will choose the value of the first param.
+				// For example '?myparam=1&myParam=2&myparam=3'  is the same as '?myparam=1'
+				lowerName := strings.ToLower(p.Name)
+				if _, ok := paramNames[lowerName]; !ok {
+					params = append(params, createQueryParamKeyValString(p))
+					paramNames[lowerName] = struct{}{}
+				}
 			}
 		}
 		hm.QueryParams = params
