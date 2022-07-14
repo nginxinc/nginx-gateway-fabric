@@ -25,12 +25,13 @@ import (
 	"github.com/nginxinc/nginx-kubernetes-gateway/pkg/sdk"
 )
 
-// clusterTimeout is a timeout for connections to the Kubernetes API
-const clusterTimeout = 10 * time.Second
-
-// secretsFolder is the folder that holds all the secrets for NGINX servers.
-// nolint:gosec
-const secretsFolder = "/etc/nginx/secrets"
+const (
+	// clusterTimeout is a timeout for connections to the Kubernetes API
+	clusterTimeout = 10 * time.Second
+	// secretsFolder is the folder that holds all the secrets for NGINX servers.
+	// nolint:gosec
+	secretsFolder = "/etc/nginx/secrets"
+)
 
 var scheme = runtime.NewScheme()
 
