@@ -156,7 +156,7 @@ var _ = Describe("SecretDiskMemoryManager", func() {
 	Describe("Manages secrets on disk", Ordered, func() {
 		testStore := func(s *apiv1.Secret, expPath string, expErr bool) {
 			nsname := types.NamespacedName{Namespace: s.Namespace, Name: s.Name}
-			actualPath, err := memMgr.Store(nsname)
+			actualPath, err := memMgr.Request(nsname)
 
 			if expErr {
 				Expect(err).To(HaveOccurred())

@@ -141,7 +141,7 @@ var _ = Describe("ChangeProcessor", func() {
 				SecretMemoryManager: fakeSecretMemoryMgr,
 			})
 
-			fakeSecretMemoryMgr.StoreReturns(certificatePath, nil)
+			fakeSecretMemoryMgr.RequestReturns(certificatePath, nil)
 		})
 
 		Describe("Process resources", Ordered, func() {

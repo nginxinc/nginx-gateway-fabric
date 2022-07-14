@@ -74,7 +74,7 @@ func (c *httpsListenerConfigurator) configure(gl v1alpha2.Listener) *listener {
 			Name:      string(gl.TLS.CertificateRefs[0].Name),
 		}
 
-		path, err = c.secretMemoryMgr.Store(nsname)
+		path, err = c.secretMemoryMgr.Request(nsname)
 		if err != nil {
 			valid = false
 		}

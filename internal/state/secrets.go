@@ -65,33 +65,33 @@ func (s SecretStoreImpl) Get(nsname types.NamespacedName) *Secret {
 }
 
 type SecretDiskMemoryManager interface {
-	// Store stores the secret in memory so that it can be written to disk before reloading NGINX.
-	// Returns the path to the secret and an error if the secret does not exist in the cache or the secret is invalid.
-	Store(nsname types.NamespacedName) (string, error)
-	// WriteAllStoredSecrets writes all stored secrets to disk.
+	// Request marks the secret as requested so that it can be written to disk before reloading NGINX.
+	// Returns the path to the secret and an error if the secret does not exist in the secret store or the secret is invalid.
+	Request(nsname types.NamespacedName) (string, error)
+	// WriteAllStoredSecrets writes all requested secrets to disk.
 	WriteAllStoredSecrets() error
 }
 
 type SecretDiskMemoryManagerImpl struct {
-	storedSecrets   map[types.NamespacedName]storedSecret
-	secretStore     SecretStore
-	secretDirectory string
+	requestedSecrets map[types.NamespacedName]requestedSecret
+	secretStore      SecretStore
+	secretDirectory  string
 }
 
-type storedSecret struct {
+type requestedSecret struct {
 	secret *apiv1.Secret
 	path   string
 }
 
 func NewSecretDiskMemoryManager(secretDirectory string, secretStore SecretStore) *SecretDiskMemoryManagerImpl {
 	return &SecretDiskMemoryManagerImpl{
-		storedSecrets:   make(map[types.NamespacedName]storedSecret),
-		secretStore:     secretStore,
-		secretDirectory: secretDirectory,
+		requestedSecrets: make(map[types.NamespacedName]requestedSecret),
+		secretStore:      secretStore,
+		secretDirectory:  secretDirectory,
 	}
 }
 
-func (s *SecretDiskMemoryManagerImpl) Store(nsname types.NamespacedName) (string, error) {
+func (s *SecretDiskMemoryManagerImpl) Request(nsname types.NamespacedName) (string, error) {
 	secret := s.secretStore.Get(nsname)
 	if secret == nil {
 		return "", fmt.Errorf("secret %s does not exist", nsname)
@@ -101,12 +101,12 @@ func (s *SecretDiskMemoryManagerImpl) Store(nsname types.NamespacedName) (string
 		return "", fmt.Errorf("secret %s is not valid; must be of type %s and contain a valid X509 key pair", nsname, apiv1.SecretTypeTLS)
 	}
 
-	ss := storedSecret{
+	ss := requestedSecret{
 		secret: secret.Secret,
 		path:   path.Join(s.secretDirectory, generateFilepathForSecret(nsname)),
 	}
 
-	s.storedSecrets[nsname] = ss
+	s.requestedSecrets[nsname] = ss
 
 	return ss.path, nil
 }
@@ -126,7 +126,7 @@ func (s *SecretDiskMemoryManagerImpl) WriteAllStoredSecrets() error {
 	}
 
 	// Write all secrets to secrets directory
-	for nsname, ss := range s.storedSecrets {
+	for nsname, ss := range s.requestedSecrets {
 
 		file, err := os.Create(ss.path)
 		if err != nil {
@@ -147,7 +147,7 @@ func (s *SecretDiskMemoryManagerImpl) WriteAllStoredSecrets() error {
 	}
 
 	// reset stored secrets
-	s.storedSecrets = make(map[types.NamespacedName]storedSecret)
+	s.requestedSecrets = make(map[types.NamespacedName]requestedSecret)
 
 	return nil
 }
