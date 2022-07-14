@@ -40,7 +40,7 @@ var _ = Describe("EventLoop", func() {
 		fakeProcessor           *statefakes.FakeChangeProcessor
 		fakeServiceStore        *statefakes.FakeServiceStore
 		fakeSecretStore         *statefakes.FakeSecretStore
-		fakeSecretMemoryManager *statefakes.FakeSecretMemoryManager
+		fakeSecretMemoryManager *statefakes.FakeSecretDiskMemoryManager
 		fakeGenerator           *configfakes.FakeGenerator
 		fakeNginxFimeMgr        *filefakes.FakeManager
 		fakeNginxRuntimeMgr     *runtimefakes.FakeManager
@@ -55,7 +55,7 @@ var _ = Describe("EventLoop", func() {
 		fakeProcessor = &statefakes.FakeChangeProcessor{}
 		eventCh = make(chan interface{})
 		fakeServiceStore = &statefakes.FakeServiceStore{}
-		fakeSecretMemoryManager = &statefakes.FakeSecretMemoryManager{}
+		fakeSecretMemoryManager = &statefakes.FakeSecretDiskMemoryManager{}
 		fakeSecretStore = &statefakes.FakeSecretStore{}
 		fakeGenerator = &configfakes.FakeGenerator{}
 		fakeNginxFimeMgr = &filefakes.FakeManager{}

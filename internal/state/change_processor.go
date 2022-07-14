@@ -38,7 +38,7 @@ type ChangeProcessorConfig struct {
 	// GatewayClassName is the name of the GatewayClass resource.
 	GatewayClassName string
 	// SecretMemoryManager is the secret memory manager.
-	SecretMemoryManager SecretMemoryManager
+	SecretMemoryManager SecretDiskMemoryManager
 }
 
 type ChangeProcessorImpl struct {

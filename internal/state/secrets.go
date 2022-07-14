@@ -13,7 +13,7 @@ import (
 )
 
 //go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . SecretStore
-//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . SecretMemoryManager
+//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . SecretDiskMemoryManager
 
 // tlsSecretFileMode defines the default file mode for files with TLS Secrets.
 const tlsSecretFileMode = 0o600
@@ -64,7 +64,7 @@ func (s SecretStoreImpl) Get(nsname types.NamespacedName) *Secret {
 	return s.secrets[nsname]
 }
 
-type SecretMemoryManager interface {
+type SecretDiskMemoryManager interface {
 	// Store stores the secret in memory so that it can be written to disk before reloading NGINX.
 	// Returns the path to the secret and an error if the secret does not exist in the cache or the secret is invalid.
 	Store(nsname types.NamespacedName) (string, error)
@@ -72,7 +72,7 @@ type SecretMemoryManager interface {
 	WriteAllStoredSecrets() error
 }
 
-type SecretDiskMemoryManager struct {
+type SecretDiskMemoryManagerImpl struct {
 	storedSecrets   map[types.NamespacedName]storedSecret
 	secretStore     SecretStore
 	secretDirectory string
@@ -83,15 +83,15 @@ type storedSecret struct {
 	path   string
 }
 
-func NewSecretDiskMemoryManager(secretDirectory string, secretStore SecretStore) *SecretDiskMemoryManager {
-	return &SecretDiskMemoryManager{
+func NewSecretDiskMemoryManager(secretDirectory string, secretStore SecretStore) *SecretDiskMemoryManagerImpl {
+	return &SecretDiskMemoryManagerImpl{
 		storedSecrets:   make(map[types.NamespacedName]storedSecret),
 		secretStore:     secretStore,
 		secretDirectory: secretDirectory,
 	}
 }
 
-func (s *SecretDiskMemoryManager) Store(nsname types.NamespacedName) (string, error) {
+func (s *SecretDiskMemoryManagerImpl) Store(nsname types.NamespacedName) (string, error) {
 	secret := s.secretStore.Get(nsname)
 	if secret == nil {
 		return "", fmt.Errorf("secret %s does not exist", nsname)
@@ -111,7 +111,7 @@ func (s *SecretDiskMemoryManager) Store(nsname types.NamespacedName) (string, er
 	return ss.path, nil
 }
 
-func (s *SecretDiskMemoryManager) WriteAllStoredSecrets() error {
+func (s *SecretDiskMemoryManagerImpl) WriteAllStoredSecrets() error {
 	// Remove all existing secrets from secrets directory
 	dir, err := ioutil.ReadDir(s.secretDirectory)
 	if err != nil {

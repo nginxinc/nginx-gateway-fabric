@@ -26,7 +26,7 @@ var _ = Describe("ChangeProcessor", func() {
 			hr1, hr1Updated, hr2 *v1alpha2.HTTPRoute
 			gw1, gw1Updated, gw2 *v1alpha2.Gateway
 			processor            state.ChangeProcessor
-			fakeSecretMemoryMgr  *statefakes.FakeSecretMemoryManager
+			fakeSecretMemoryMgr  *statefakes.FakeSecretDiskMemoryManager
 		)
 
 		BeforeEach(OncePerOrdered, func() {
@@ -133,7 +133,7 @@ var _ = Describe("ChangeProcessor", func() {
 
 			gw2 = createGateway("gateway-2")
 
-			fakeSecretMemoryMgr = &statefakes.FakeSecretMemoryManager{}
+			fakeSecretMemoryMgr = &statefakes.FakeSecretDiskMemoryManager{}
 
 			processor = state.NewChangeProcessorImpl(state.ChangeProcessorConfig{
 				GatewayCtlrName:     controllerName,
@@ -887,10 +887,10 @@ var _ = Describe("ChangeProcessor", func() {
 
 	Describe("Edge cases with panic", func() {
 		var processor state.ChangeProcessor
-		var fakeSecretMemoryMgr *statefakes.FakeSecretMemoryManager
+		var fakeSecretMemoryMgr *statefakes.FakeSecretDiskMemoryManager
 
 		BeforeEach(func() {
-			fakeSecretMemoryMgr = &statefakes.FakeSecretMemoryManager{}
+			fakeSecretMemoryMgr = &statefakes.FakeSecretDiskMemoryManager{}
 
 			processor = state.NewChangeProcessorImpl(state.ChangeProcessorConfig{
 				GatewayCtlrName:     "test.controller",

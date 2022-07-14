@@ -133,10 +133,10 @@ var (
 	}
 )
 
-var _ = Describe("SecretMemoryManager", func() {
+var _ = Describe("SecretDiskMemoryManager", func() {
 	var (
 		fakeStore     *statefakes.FakeSecretStore
-		memMgr        state.SecretMemoryManager
+		memMgr        state.SecretDiskMemoryManager
 		tmpSecretsDir string
 	)
 

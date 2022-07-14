@@ -59,7 +59,7 @@ func buildGraph(
 	store *store,
 	controllerName string,
 	gcName string,
-	secretMemoryMgr SecretMemoryManager,
+	secretMemoryMgr SecretDiskMemoryManager,
 ) *graph {
 	gc := buildGatewayClass(store.gc, controllerName)
 
@@ -141,7 +141,7 @@ func buildGatewayClass(gc *v1alpha2.GatewayClass, controllerName string) *gatewa
 	}
 }
 
-func buildListeners(gw *v1alpha2.Gateway, gcName string, secretMemoryMgr SecretMemoryManager) map[string]*listener {
+func buildListeners(gw *v1alpha2.Gateway, gcName string, secretMemoryMgr SecretDiskMemoryManager) map[string]*listener {
 	listeners := make(map[string]*listener)
 
 	if gw == nil || string(gw.Spec.GatewayClassName) != gcName {

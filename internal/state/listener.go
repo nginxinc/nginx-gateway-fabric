@@ -41,7 +41,7 @@ func (f *listenerConfiguratorFactory) getConfiguratorForListener(l v1alpha2.List
 	}
 }
 
-func newListenerConfiguratorFactory(gw *v1alpha2.Gateway, secretMemoryMgr SecretMemoryManager) *listenerConfiguratorFactory {
+func newListenerConfiguratorFactory(gw *v1alpha2.Gateway, secretMemoryMgr SecretDiskMemoryManager) *listenerConfiguratorFactory {
 	return &listenerConfiguratorFactory{
 		https: newHTTPSListenerConfigurator(gw, secretMemoryMgr),
 		http:  newHTTPListenerConfigurator(),
@@ -50,11 +50,11 @@ func newListenerConfiguratorFactory(gw *v1alpha2.Gateway, secretMemoryMgr Secret
 
 type httpsListenerConfigurator struct {
 	gateway         *v1alpha2.Gateway
-	secretMemoryMgr SecretMemoryManager
+	secretMemoryMgr SecretDiskMemoryManager
 	usedHostnames   map[string]*listener
 }
 
-func newHTTPSListenerConfigurator(gateway *v1alpha2.Gateway, secretMemoryMgr SecretMemoryManager) *httpsListenerConfigurator {
+func newHTTPSListenerConfigurator(gateway *v1alpha2.Gateway, secretMemoryMgr SecretDiskMemoryManager) *httpsListenerConfigurator {
 	return &httpsListenerConfigurator{
 		gateway:         gateway,
 		secretMemoryMgr: secretMemoryMgr,

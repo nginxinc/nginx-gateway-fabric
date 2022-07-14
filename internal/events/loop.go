@@ -24,7 +24,7 @@ type EventLoopConfig struct {
 	// SecretStore is the state SecretStore.
 	SecretStore state.SecretStore
 	// SecretMemoryManager is the state SecretMemoryManager.
-	SecretMemoryManager state.SecretMemoryManager
+	SecretMemoryManager state.SecretDiskMemoryManager
 	// Generator is the nginx config Generator.
 	Generator config.Generator
 	// EventCh is a read-only channel for events.
