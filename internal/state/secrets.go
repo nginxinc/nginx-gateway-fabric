@@ -174,5 +174,5 @@ func generateCertAndKeyFileContent(secret *apiv1.Secret) []byte {
 }
 
 func generateFilepathForSecret(nsname types.NamespacedName) string {
-	return nsname.Namespace + "-" + nsname.Name
+	return nsname.Namespace + "_" + nsname.Name
 }

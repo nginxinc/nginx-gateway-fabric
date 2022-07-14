@@ -174,14 +174,14 @@ var _ = Describe("SecretMemoryManager", func() {
 		})
 		It("should store a valid secret", func() {
 			fakeStore.GetReturns(&state.Secret{Secret: secret1, Valid: true})
-			expectedPath := path.Join(tmpSecretsDir, "test-secret1")
+			expectedPath := path.Join(tmpSecretsDir, "test_secret1")
 
 			testStore(secret1, expectedPath, false)
 		})
 
 		It("should store another valid secret", func() {
 			fakeStore.GetReturns(&state.Secret{Secret: secret2, Valid: true})
-			expectedPath := path.Join(tmpSecretsDir, "test-secret2")
+			expectedPath := path.Join(tmpSecretsDir, "test_secret2")
 
 			testStore(secret2, expectedPath, false)
 		})
@@ -196,7 +196,7 @@ var _ = Describe("SecretMemoryManager", func() {
 			err := memMgr.WriteAllStoredSecrets()
 			Expect(err).ToNot(HaveOccurred())
 
-			expectedFileNames := []string{"test-secret1", "test-secret2"}
+			expectedFileNames := []string{"test_secret1", "test_secret2"}
 
 			// read all files from directory
 			dir, err := ioutil.ReadDir(tmpSecretsDir)
@@ -210,7 +210,7 @@ var _ = Describe("SecretMemoryManager", func() {
 
 		It("should store secret after write", func() {
 			fakeStore.GetReturns(&state.Secret{Secret: secret3, Valid: true})
-			expectedPath := path.Join(tmpSecretsDir, "test-secret3")
+			expectedPath := path.Join(tmpSecretsDir, "test_secret3")
 
 			testStore(secret3, expectedPath, false)
 		})
@@ -225,7 +225,7 @@ var _ = Describe("SecretMemoryManager", func() {
 
 			// only the secrets stored after the last write should be written to disk.
 			Expect(dir).To(HaveLen(1))
-			Expect(dir[0].Name()).To(Equal("test-secret3"))
+			Expect(dir[0].Name()).To(Equal("test_secret3"))
 		})
 	})
 })

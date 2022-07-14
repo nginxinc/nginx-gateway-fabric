@@ -71,7 +71,7 @@ cpLlHMAqbLJ8WYGJCkhiWxyal6hYTyWY4cVkC0xtTl/hUE9IeNKo
 }
 
 var (
-	secretPath       = "/etc/nginx/secrets/test-secret"
+	secretPath       = "/etc/nginx/secrets/test_secret"
 	secretsDirectory = "/etc/nginx/secrets"
 )
 
