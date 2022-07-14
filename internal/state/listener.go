@@ -156,7 +156,7 @@ func validateHTTPSListener(listener v1alpha2.Listener, gwNsname string) bool {
 	// FIXME(kate-osborn):
 	// 1. For now we require that all HTTPS listeners bind to port 443
 	// 2. Only TLSModeTerminate is supported.
-	if listener.Port != 443 || listener.TLS == nil || *listener.TLS.Mode != v1alpha2.TLSModeTerminate || len(listener.TLS.CertificateRefs) <= 0 {
+	if listener.Port != 443 || listener.TLS == nil || *listener.TLS.Mode != v1alpha2.TLSModeTerminate || len(listener.TLS.CertificateRefs) == 0 {
 		return false
 	}
 
