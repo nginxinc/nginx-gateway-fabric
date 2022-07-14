@@ -7,13 +7,13 @@ import (
 )
 
 var httpServersTemplate = `{{ range $s := .Servers }}
-{{ if $s.IsDefault }}
+	{{ if $s.IsDefault }}
 server {
 	listen 443 ssl default_server;
 
 	ssl_reject_handshake on;
 }
-{{ else }}
+	{{ else }}
 server {
 	{{ if $s.SSL }}
 	listen 443 ssl;
@@ -42,7 +42,7 @@ server {
 	}
 	{{ end }}
 }
-{{ end }}
+	{{ end }}
 {{ end }}
 `
 
