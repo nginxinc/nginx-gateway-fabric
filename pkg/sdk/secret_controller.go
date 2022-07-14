@@ -10,7 +10,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -18,11 +17,6 @@ type secretReconciler struct {
 	client.Client
 	scheme *runtime.Scheme
 	impl   SecretImpl
-}
-
-var ignoredNamespaces = map[string]struct{}{
-	"kube-system": {},
-	"kube-public": {},
 }
 
 // RegisterSecretController registers the SecretController in the manager.
@@ -35,10 +29,6 @@ func RegisterSecretController(mgr manager.Manager, impl SecretImpl) error {
 
 	return ctlr.NewControllerManagedBy(mgr).
 		For(&apiv1.Secret{}).
-		WithEventFilter(predicate.NewPredicateFuncs(func(obj client.Object) bool {
-			_, isIgnoredNS := ignoredNamespaces[obj.GetNamespace()]
-			return !isIgnoredNS
-		})).
 		Complete(r)
 }
 
