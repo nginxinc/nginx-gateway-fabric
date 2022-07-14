@@ -74,7 +74,7 @@ type SecretMemoryManager interface {
 
 type SecretDiskMemoryManager struct {
 	storedSecrets   map[types.NamespacedName]storedSecret
-	secretCache     SecretStore
+	secretStore     SecretStore
 	secretDirectory string
 }
 
@@ -86,13 +86,13 @@ type storedSecret struct {
 func NewSecretDiskMemoryManager(secretDirectory string, secretStore SecretStore) *SecretDiskMemoryManager {
 	return &SecretDiskMemoryManager{
 		storedSecrets:   make(map[types.NamespacedName]storedSecret),
-		secretCache:     secretStore,
+		secretStore:     secretStore,
 		secretDirectory: secretDirectory,
 	}
 }
 
 func (s *SecretDiskMemoryManager) Store(nsname types.NamespacedName) (string, error) {
-	secret := s.secretCache.Get(nsname)
+	secret := s.secretStore.Get(nsname)
 	if secret == nil {
 		return "", fmt.Errorf("secret %s does not exist", nsname)
 	}
