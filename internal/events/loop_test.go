@@ -62,18 +62,18 @@ var _ = Describe("EventLoop", func() {
 		fakeNginxRuntimeMgr = &runtimefakes.FakeManager{}
 		fakeStatusUpdater = &statusfakes.FakeUpdater{}
 
-		ctrl := events.NewEventLoop(
-			fakeProcessor,
-			fakeServiceStore,
-			fakeSecretStore,
-			fakeSecretMemoryManager,
-			fakeGenerator,
-			eventCh,
-			zap.New(),
-			fakeNginxFimeMgr,
-			fakeNginxRuntimeMgr,
-			fakeStatusUpdater,
-		)
+		ctrl := events.NewEventLoop(events.EventLoopConfig{
+			Processor:           fakeProcessor,
+			ServiceStore:        fakeServiceStore,
+			SecretStore:         fakeSecretStore,
+			SecretMemoryManager: fakeSecretMemoryManager,
+			Generator:           fakeGenerator,
+			EventCh:             eventCh,
+			Logger:              zap.New(),
+			NginxFileMgr:        fakeNginxFimeMgr,
+			NginxRuntimeMgr:     fakeNginxRuntimeMgr,
+			StatusUpdater:       fakeStatusUpdater,
+		})
 
 		var ctx context.Context
 		ctx, cancel = context.WithCancel(context.Background())
