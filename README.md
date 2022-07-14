@@ -99,12 +99,6 @@ You can deploy NGINX Kubernetes Gateway on an existing Kubernetes 1.16+ cluster.
    kubectl apply -f deploy/manifests/gateway.yaml
    ```
 
-1. Create the default server secret:
-
-   ```
-   kubectl apply -f deploy/manifests/default-server-secret.yaml
-   ```
-
 ## Expose NGINX Kubernetes Gateway
 
 You can gain access to NGINX Kubernetes Gateway by creating a `NodePort` Service or a `LoadBalancer` Service.

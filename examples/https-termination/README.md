@@ -39,47 +39,33 @@ In this example we expand on the simple [cafe-example](../cafe-example) by addin
 
 ## 3. Configure HTTPS Termination and Routing
 
-HTTPS termination is configured at the gateway level with listeners. You created the following gateway resource in step 1:
+1. Create a secret with a TLS certificate and key:
+   ```
+   kubectl apply -f cafe-secret.yaml
+   ```
 
-```yaml
-apiVersion: gateway.networking.k8s.io/v1alpha2
-kind: Gateway
-metadata:
-  name: gateway
-  namespace: nginx-gateway
-  labels:
-    domain: k8s-gateway.nginx.org
-spec:
-  gatewayClassName: nginx
-  listeners:
-  - name: http
-    port: 80
-    protocol: HTTP
-  - name: https
-    port: 443
-    protocol: HTTPS
-    tls:
-      mode: Terminate
-      certificateRefs:
-      - kind: Secret
-        name: default-server-secret
-        namespace: nginx-gateway
-``` 
+   The TLS certificate and key in this secret which be used to terminate the TLS connections for the cafe application.
+   **Important**: This certificate and key are for demo purposes only. 
+   
+1. Create the `Gateway` resource:
+   ```
+   kubectl apply -f gateway.yaml
+   ```
 
-The `https` listener is configured to terminate TLS connections using the `default-server-secret` in the `nginx-gateway` namespace.
-To configure HTTPS termination for our cafe application, we will bind the `https` listener to our `HTTPRoutes` in [cafe-routes.yaml](./cafe-routes.yaml) using the [`parentRef`](https://gateway-api.sigs.k8s.io/v1alpha2/references/spec/#gateway.networking.k8s.io%2fv1alpha2.ParentReference) field:
-
-```yaml
-  parentRefs:
-  - name: gateway
-    namespace: nginx-gateway
-    sectionName: https
-```
+   This [gateway](./gateway.yaml) configures an `https` listener is to terminate TLS connections using the `cafe-secret` we created in the step 1. 
 
 1. Create the `HTTPRoute` resources:
-   
    ```
    kubectl apply -f cafe-routes.yaml
+   ```
+
+   To configure HTTPS termination for our cafe application, we will bind the `https` listener to our `HTTPRoutes` in [cafe-routes.yaml](./cafe-routes.yaml) using the [`parentRef`](https://gateway-api.sigs.k8s.io/v1alpha2/references/spec/#gateway.networking.k8s.io%2fv1alpha2.ParentReference) field:
+
+   ```yaml
+   parentRefs:
+   - name: gateway
+      namespace: nginx-gateway
+      sectionName: https
    ```
 
 ## 4. Test the Application
