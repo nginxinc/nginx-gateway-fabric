@@ -109,13 +109,13 @@ func (sb *configBuilder) build() Configuration {
 }
 
 type httpServerBuilder struct {
-	rules            map[string]map[string]PathRule
+	rulesPerHost     map[string]map[string]PathRule
 	listenersForHost map[string]*listener
 }
 
 func newHTTPServerBuilder() *httpServerBuilder {
 	return &httpServerBuilder{
-		rules:            make(map[string]map[string]PathRule),
+		rulesPerHost:     make(map[string]map[string]PathRule),
 		listenersForHost: make(map[string]*listener),
 	}
 }
@@ -133,8 +133,8 @@ func (p *httpServerBuilder) upsertListener(l *listener) {
 
 		for _, h := range hostnames {
 			p.listenersForHost[h] = l
-			if _, exist := p.rules[h]; !exist {
-				p.rules[h] = make(map[string]PathRule)
+			if _, exist := p.rulesPerHost[h]; !exist {
+				p.rulesPerHost[h] = make(map[string]PathRule)
 			}
 		}
 
@@ -143,7 +143,7 @@ func (p *httpServerBuilder) upsertListener(l *listener) {
 				for j, m := range rule.Matches {
 					path := getPath(m.Path)
 
-					rule, exist := p.rules[h][path]
+					rule, exist := p.rulesPerHost[h][path]
 					if !exist {
 						rule.Path = path
 					}
@@ -154,7 +154,7 @@ func (p *httpServerBuilder) upsertListener(l *listener) {
 						Source:   r.Source,
 					})
 
-					p.rules[h][path] = rule
+					p.rulesPerHost[h][path] = rule
 				}
 			}
 		}
@@ -163,9 +163,9 @@ func (p *httpServerBuilder) upsertListener(l *listener) {
 
 func (p *httpServerBuilder) build() []HTTPServer {
 
-	servers := make([]HTTPServer, 0, len(p.rules))
+	servers := make([]HTTPServer, 0, len(p.rulesPerHost))
 
-	for h, rules := range p.rules {
+	for h, rules := range p.rulesPerHost {
 		s := HTTPServer{
 			Hostname:  h,
 			PathRules: make([]PathRule, 0, len(rules)),
