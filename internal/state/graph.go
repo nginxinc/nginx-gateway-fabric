@@ -175,7 +175,7 @@ func bindHTTPRouteToListeners(
 
 	// FIXME (pleshakov) Handle the case when parent refs are duplicated
 
-	ignored = true
+	processed := false
 
 	for _, p := range ghr.Spec.ParentRefs {
 		// FIXME(pleshakov) Support empty section name
@@ -210,10 +210,11 @@ func bindHTTPRouteToListeners(
 			// - listener 2 for port 80 with hostname *.example.com;
 			// In this case, the Route host foo.example.com should choose listener 1, as it is a more specific match.
 
+			processed = true
+
 			l, exists := listeners[name]
 			if !exists {
 				r.InvalidSectionNameRefs[name] = struct{}{}
-				ignored = false
 				continue
 			}
 
@@ -229,7 +230,6 @@ func bindHTTPRouteToListeners(
 				r.InvalidSectionNameRefs[name] = struct{}{}
 			}
 
-			ignored = false
 			continue
 		}
 
@@ -240,7 +240,7 @@ func bindHTTPRouteToListeners(
 		if _, exist := ignoredGws[key]; exist {
 			r.InvalidSectionNameRefs[name] = struct{}{}
 
-			ignored = false
+			processed = true
 			continue
 		}
 
@@ -249,7 +249,7 @@ func bindHTTPRouteToListeners(
 		// Do nothing
 	}
 
-	if ignored {
+	if !processed {
 		return true, nil
 	}
 
