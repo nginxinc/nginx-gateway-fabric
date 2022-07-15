@@ -105,7 +105,7 @@ func buildGraph(store *store, controllerName string, gcName string) *graph {
 // be ignored. Note that the function will not take into the account any unrelated Gateway resources - the ones with the
 // different GatewayClassName field.
 func processGateways(gws map[types.NamespacedName]*v1alpha2.Gateway, gcName string) (winner *v1alpha2.Gateway, ignoredGateways map[types.NamespacedName]*v1alpha2.Gateway) {
-	var referencedGws []*v1alpha2.Gateway
+	referencedGws := make([]*v1alpha2.Gateway, 0, len(gws))
 
 	for _, gw := range gws {
 		if string(gw.Spec.GatewayClassName) != gcName {
