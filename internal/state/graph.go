@@ -208,7 +208,7 @@ func bindHTTPRouteToListeners(
 			// - Route with host foo.example.com;
 			// - listener 1 for port 80 with hostname foo.example.com
 			// - listener 2 for port 80 with hostname *.example.com;
-			// In this case, the Route host foo.example.com should choose listener 2, as it is a more specific match.
+			// In this case, the Route host foo.example.com should choose listener 1, as it is a more specific match.
 
 			l, exists := listeners[name]
 			if !exists {
