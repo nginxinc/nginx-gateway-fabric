@@ -619,7 +619,7 @@ func TestBuildListeners(t *testing.T) {
 					SecretPath:        secretPath,
 				},
 			},
-			msg: "collision",
+			msg: "collisions",
 		},
 		{
 			gateway:  nil,
