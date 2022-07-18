@@ -154,7 +154,7 @@ var _ = Describe("SecretDiskMemoryManager", func() {
 	})
 
 	Describe("Manages secrets on disk", Ordered, func() {
-		testStore := func(s *apiv1.Secret, expPath string, expErr bool) {
+		testRequest := func(s *apiv1.Secret, expPath string, expErr bool) {
 			nsname := types.NamespacedName{Namespace: s.Namespace, Name: s.Name}
 			actualPath, err := memMgr.Request(nsname)
 
@@ -170,30 +170,30 @@ var _ = Describe("SecretDiskMemoryManager", func() {
 		It("should return an error and empty path when secret does not exist", func() {
 			fakeStore.GetReturns(nil)
 
-			testStore(secret1, "", true)
+			testRequest(secret1, "", true)
 		})
-		It("should store a valid secret", func() {
+		It("request should return the file path for a valid secret", func() {
 			fakeStore.GetReturns(&state.Secret{Secret: secret1, Valid: true})
 			expectedPath := path.Join(tmpSecretsDir, "test_secret1")
 
-			testStore(secret1, expectedPath, false)
+			testRequest(secret1, expectedPath, false)
 		})
 
-		It("should store another valid secret", func() {
+		It("request should return the file path for another valid secret", func() {
 			fakeStore.GetReturns(&state.Secret{Secret: secret2, Valid: true})
 			expectedPath := path.Join(tmpSecretsDir, "test_secret2")
 
-			testStore(secret2, expectedPath, false)
+			testRequest(secret2, expectedPath, false)
 		})
 
-		It("should return an error and empty path when secret is invalid", func() {
+		It("request should return an error and empty path when secret is invalid", func() {
 			fakeStore.GetReturns(&state.Secret{Secret: invalidSecretType, Valid: false})
 
-			testStore(invalidSecretType, "", true)
+			testRequest(invalidSecretType, "", true)
 		})
 
-		It("should write all stored secrets", func() {
-			err := memMgr.WriteAllStoredSecrets()
+		It("should write all requested secrets", func() {
+			err := memMgr.WriteAllRequestedSecrets()
 			Expect(err).ToNot(HaveOccurred())
 
 			expectedFileNames := []string{"test_secret1", "test_secret2"}
@@ -208,15 +208,15 @@ var _ = Describe("SecretDiskMemoryManager", func() {
 			Expect(actualFilenames).To(ConsistOf(expectedFileNames))
 		})
 
-		It("should store secret after write", func() {
+		It("request should return the file path for secret after write", func() {
 			fakeStore.GetReturns(&state.Secret{Secret: secret3, Valid: true})
 			expectedPath := path.Join(tmpSecretsDir, "test_secret3")
 
-			testStore(secret3, expectedPath, false)
+			testRequest(secret3, expectedPath, false)
 		})
 
 		It("should write all stored secrets", func() {
-			err := memMgr.WriteAllStoredSecrets()
+			err := memMgr.WriteAllRequestedSecrets()
 			Expect(err).ToNot(HaveOccurred())
 
 			// read all files from directory
@@ -226,6 +226,19 @@ var _ = Describe("SecretDiskMemoryManager", func() {
 			// only the secrets stored after the last write should be written to disk.
 			Expect(dir).To(HaveLen(1))
 			Expect(dir[0].Name()).To(Equal("test_secret3"))
+		})
+		When("no secrets are requested", func() {
+			It("write all secrets should remove all existing secrets and write no additional secrets", func() {
+				err := memMgr.WriteAllRequestedSecrets()
+				Expect(err).ToNot(HaveOccurred())
+
+				// read all files from directory
+				dir, err := ioutil.ReadDir(tmpSecretsDir)
+				Expect(err).ToNot(HaveOccurred())
+
+				// no secrets should exist
+				Expect(dir).To(BeEmpty())
+			})
 		})
 	})
 })
@@ -253,6 +266,8 @@ var _ = Describe("SecretStore", func() {
 			actualSecret := store.Get(nsname)
 			if valid {
 				Expect(actualSecret.Valid).To(BeTrue())
+			} else {
+				Expect(actualSecret.Valid).To(BeFalse())
 			}
 			Expect(actualSecret.Secret).To(Equal(s))
 		}

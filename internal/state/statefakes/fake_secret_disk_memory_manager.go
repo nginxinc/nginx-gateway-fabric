@@ -22,14 +22,14 @@ type FakeSecretDiskMemoryManager struct {
 		result1 string
 		result2 error
 	}
-	WriteAllStoredSecretsStub        func() error
-	writeAllStoredSecretsMutex       sync.RWMutex
-	writeAllStoredSecretsArgsForCall []struct {
+	WriteAllRequestedSecretsStub        func() error
+	writeAllRequestedSecretsMutex       sync.RWMutex
+	writeAllRequestedSecretsArgsForCall []struct {
 	}
-	writeAllStoredSecretsReturns struct {
+	writeAllRequestedSecretsReturns struct {
 		result1 error
 	}
-	writeAllStoredSecretsReturnsOnCall map[int]struct {
+	writeAllRequestedSecretsReturnsOnCall map[int]struct {
 		result1 error
 	}
 	invocations      map[string][][]interface{}
@@ -100,15 +100,15 @@ func (fake *FakeSecretDiskMemoryManager) RequestReturnsOnCall(i int, result1 str
 	}{result1, result2}
 }
 
-func (fake *FakeSecretDiskMemoryManager) WriteAllStoredSecrets() error {
-	fake.writeAllStoredSecretsMutex.Lock()
-	ret, specificReturn := fake.writeAllStoredSecretsReturnsOnCall[len(fake.writeAllStoredSecretsArgsForCall)]
-	fake.writeAllStoredSecretsArgsForCall = append(fake.writeAllStoredSecretsArgsForCall, struct {
+func (fake *FakeSecretDiskMemoryManager) WriteAllRequestedSecrets() error {
+	fake.writeAllRequestedSecretsMutex.Lock()
+	ret, specificReturn := fake.writeAllRequestedSecretsReturnsOnCall[len(fake.writeAllRequestedSecretsArgsForCall)]
+	fake.writeAllRequestedSecretsArgsForCall = append(fake.writeAllRequestedSecretsArgsForCall, struct {
 	}{})
-	stub := fake.WriteAllStoredSecretsStub
-	fakeReturns := fake.writeAllStoredSecretsReturns
-	fake.recordInvocation("WriteAllStoredSecrets", []interface{}{})
-	fake.writeAllStoredSecretsMutex.Unlock()
+	stub := fake.WriteAllRequestedSecretsStub
+	fakeReturns := fake.writeAllRequestedSecretsReturns
+	fake.recordInvocation("WriteAllRequestedSecrets", []interface{}{})
+	fake.writeAllRequestedSecretsMutex.Unlock()
 	if stub != nil {
 		return stub()
 	}
@@ -118,37 +118,37 @@ func (fake *FakeSecretDiskMemoryManager) WriteAllStoredSecrets() error {
 	return fakeReturns.result1
 }
 
-func (fake *FakeSecretDiskMemoryManager) WriteAllStoredSecretsCallCount() int {
-	fake.writeAllStoredSecretsMutex.RLock()
-	defer fake.writeAllStoredSecretsMutex.RUnlock()
-	return len(fake.writeAllStoredSecretsArgsForCall)
+func (fake *FakeSecretDiskMemoryManager) WriteAllRequestedSecretsCallCount() int {
+	fake.writeAllRequestedSecretsMutex.RLock()
+	defer fake.writeAllRequestedSecretsMutex.RUnlock()
+	return len(fake.writeAllRequestedSecretsArgsForCall)
 }
 
-func (fake *FakeSecretDiskMemoryManager) WriteAllStoredSecretsCalls(stub func() error) {
-	fake.writeAllStoredSecretsMutex.Lock()
-	defer fake.writeAllStoredSecretsMutex.Unlock()
-	fake.WriteAllStoredSecretsStub = stub
+func (fake *FakeSecretDiskMemoryManager) WriteAllRequestedSecretsCalls(stub func() error) {
+	fake.writeAllRequestedSecretsMutex.Lock()
+	defer fake.writeAllRequestedSecretsMutex.Unlock()
+	fake.WriteAllRequestedSecretsStub = stub
 }
 
-func (fake *FakeSecretDiskMemoryManager) WriteAllStoredSecretsReturns(result1 error) {
-	fake.writeAllStoredSecretsMutex.Lock()
-	defer fake.writeAllStoredSecretsMutex.Unlock()
-	fake.WriteAllStoredSecretsStub = nil
-	fake.writeAllStoredSecretsReturns = struct {
+func (fake *FakeSecretDiskMemoryManager) WriteAllRequestedSecretsReturns(result1 error) {
+	fake.writeAllRequestedSecretsMutex.Lock()
+	defer fake.writeAllRequestedSecretsMutex.Unlock()
+	fake.WriteAllRequestedSecretsStub = nil
+	fake.writeAllRequestedSecretsReturns = struct {
 		result1 error
 	}{result1}
 }
 
-func (fake *FakeSecretDiskMemoryManager) WriteAllStoredSecretsReturnsOnCall(i int, result1 error) {
-	fake.writeAllStoredSecretsMutex.Lock()
-	defer fake.writeAllStoredSecretsMutex.Unlock()
-	fake.WriteAllStoredSecretsStub = nil
-	if fake.writeAllStoredSecretsReturnsOnCall == nil {
-		fake.writeAllStoredSecretsReturnsOnCall = make(map[int]struct {
+func (fake *FakeSecretDiskMemoryManager) WriteAllRequestedSecretsReturnsOnCall(i int, result1 error) {
+	fake.writeAllRequestedSecretsMutex.Lock()
+	defer fake.writeAllRequestedSecretsMutex.Unlock()
+	fake.WriteAllRequestedSecretsStub = nil
+	if fake.writeAllRequestedSecretsReturnsOnCall == nil {
+		fake.writeAllRequestedSecretsReturnsOnCall = make(map[int]struct {
 			result1 error
 		})
 	}
-	fake.writeAllStoredSecretsReturnsOnCall[i] = struct {
+	fake.writeAllRequestedSecretsReturnsOnCall[i] = struct {
 		result1 error
 	}{result1}
 }
@@ -158,8 +158,8 @@ func (fake *FakeSecretDiskMemoryManager) Invocations() map[string][][]interface{
 	defer fake.invocationsMutex.RUnlock()
 	fake.requestMutex.RLock()
 	defer fake.requestMutex.RUnlock()
-	fake.writeAllStoredSecretsMutex.RLock()
-	defer fake.writeAllStoredSecretsMutex.RUnlock()
+	fake.writeAllRequestedSecretsMutex.RLock()
+	defer fake.writeAllRequestedSecretsMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

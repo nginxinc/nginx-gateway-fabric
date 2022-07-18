@@ -92,9 +92,9 @@ func (el *EventLoop) handleEvent(ctx context.Context, event interface{}) {
 
 func (el *EventLoop) updateNginx(ctx context.Context, conf state.Configuration) error {
 	// Write all secrets (nuke and pave).
-	// This will remove all secrets in the secrets directory before writing the stored secrets.
+	// This will remove all secrets in the secrets directory before writing the requested secrets.
 	// FIXME(kate-osborn): We may want to rethink this approach in the future and write and remove secrets individually.
-	err := el.cfg.SecretMemoryManager.WriteAllStoredSecrets()
+	err := el.cfg.SecretMemoryManager.WriteAllRequestedSecrets()
 	if err != nil {
 		return err
 	}

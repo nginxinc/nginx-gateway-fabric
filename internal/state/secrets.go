@@ -68,8 +68,8 @@ type SecretDiskMemoryManager interface {
 	// Request marks the secret as requested so that it can be written to disk before reloading NGINX.
 	// Returns the path to the secret and an error if the secret does not exist in the secret store or the secret is invalid.
 	Request(nsname types.NamespacedName) (string, error)
-	// WriteAllStoredSecrets writes all requested secrets to disk.
-	WriteAllStoredSecrets() error
+	// WriteAllRequestedSecrets writes all requested secrets to disk.
+	WriteAllRequestedSecrets() error
 }
 
 type SecretDiskMemoryManagerImpl struct {
@@ -111,7 +111,7 @@ func (s *SecretDiskMemoryManagerImpl) Request(nsname types.NamespacedName) (stri
 	return ss.path, nil
 }
 
-func (s *SecretDiskMemoryManagerImpl) WriteAllStoredSecrets() error {
+func (s *SecretDiskMemoryManagerImpl) WriteAllRequestedSecrets() error {
 	// Remove all existing secrets from secrets directory
 	dir, err := ioutil.ReadDir(s.secretDirectory)
 	if err != nil {
