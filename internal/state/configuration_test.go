@@ -98,7 +98,7 @@ func TestBuildConfiguration(t *testing.T) {
 		InvalidSectionNameRefs: map[string]struct{}{},
 	}
 
-	httpsHR3 := createRoute("hr-3", "foo.example.com", "listener-443-1", "/", "/third")
+	httpsHR3 := createRoute("https-hr-3", "foo.example.com", "listener-443-1", "/", "/third")
 
 	httpsRouteHR3 := &route{
 		Source: httpsHR3,
@@ -108,20 +108,20 @@ func TestBuildConfiguration(t *testing.T) {
 		InvalidSectionNameRefs: map[string]struct{}{},
 	}
 
-	httpsHR4 := createRoute("hr-4", "foo.example.com", "listener-443-1", "/fourth", "/")
+	hr4 := createRoute("hr-4", "foo.example.com", "listener-80-1", "/fourth", "/")
 
-	httpsRouteHR4 := &route{
-		Source: httpsHR4,
+	routeHR4 := &route{
+		Source: hr4,
 		ValidSectionNameRefs: map[string]struct{}{
 			"listener-80-1": {},
 		},
 		InvalidSectionNameRefs: map[string]struct{}{},
 	}
 
-	hr4 := createRoute("hr-4", "foo.example.com", "listener-80-1", "/fourth", "/")
+	httpsHR4 := createRoute("https-hr-4", "foo.example.com", "listener-443-1", "/fourth", "/")
 
-	routeHR4 := &route{
-		Source: hr4,
+	httpsRouteHR4 := &route{
+		Source: httpsHR4,
 		ValidSectionNameRefs: map[string]struct{}{
 			"listener-80-1": {},
 		},
