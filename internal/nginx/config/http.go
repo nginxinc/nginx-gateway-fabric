@@ -5,10 +5,11 @@ type httpServers struct {
 }
 
 type server struct {
-	IsDefault  bool
-	ServerName string
-	SSL        *ssl
-	Locations  []location
+	IsDefaultHTTP bool
+	IsDefaultSSL  bool
+	ServerName    string
+	SSL           *ssl
+	Locations     []location
 }
 
 type location struct {

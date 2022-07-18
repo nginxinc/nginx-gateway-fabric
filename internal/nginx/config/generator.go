@@ -47,10 +47,16 @@ func (g *GeneratorImpl) Generate(conf state.Configuration) ([]byte, Warnings) {
 		Servers: make([]server, 0, len(confServers)+1),
 	}
 
-	if len(conf.HTTPSServers) > 0 {
-		defaultServer := generateDefaultTLSTerminationServer()
+	if len(conf.HTTPServers) > 0 {
+		defaultHTTPServer := generateDefaultHTTPServer()
 
-		servers.Servers = append(servers.Servers, defaultServer)
+		servers.Servers = append(servers.Servers, defaultHTTPServer)
+	}
+
+	if len(conf.HTTPSServers) > 0 {
+		defaultTLSTerminationServer := generateDefaultSSLServer()
+
+		servers.Servers = append(servers.Servers, defaultTLSTerminationServer)
 	}
 
 	for _, s := range confServers {
@@ -63,8 +69,12 @@ func (g *GeneratorImpl) Generate(conf state.Configuration) ([]byte, Warnings) {
 	return g.executor.ExecuteForHTTPServers(servers), warnings
 }
 
-func generateDefaultTLSTerminationServer() server {
-	return server{IsDefault: true}
+func generateDefaultSSLServer() server {
+	return server{IsDefaultSSL: true}
+}
+
+func generateDefaultHTTPServer() server {
+	return server{IsDefaultHTTP: true}
 }
 
 func generate(httpServer state.HTTPServer, serviceStore state.ServiceStore) (server, Warnings) {

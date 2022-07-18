@@ -20,11 +20,18 @@ func TestGenerateForHost(t *testing.T) {
 	generator := NewGeneratorImpl(&statefakes.FakeServiceStore{})
 
 	testcases := []struct {
-		conf          state.Configuration
-		expectDefault bool
-		msg           string
+		conf        state.Configuration
+		httpDefault bool
+		sslDefault  bool
+		msg         string
 	}{
 		{
+			conf:        state.Configuration{},
+			httpDefault: false,
+			sslDefault:  false,
+			msg:         "no servers",
+		},
+		{
 			conf: state.Configuration{
 				HTTPServers: []state.HTTPServer{
 					{
@@ -32,8 +39,9 @@ func TestGenerateForHost(t *testing.T) {
 					},
 				},
 			},
-			expectDefault: false,
-			msg:           "only HTTP servers",
+			httpDefault: true,
+			sslDefault:  false,
+			msg:         "only HTTP servers",
 		},
 		{
 			conf: state.Configuration{
@@ -43,8 +51,9 @@ func TestGenerateForHost(t *testing.T) {
 					},
 				},
 			},
-			expectDefault: true,
-			msg:           "only HTTPS servers",
+			httpDefault: false,
+			sslDefault:  true,
+			msg:         "only HTTPS servers",
 		},
 		{
 			conf: state.Configuration{
@@ -59,29 +68,39 @@ func TestGenerateForHost(t *testing.T) {
 					},
 				},
 			},
-			expectDefault: true,
-			msg:           "both HTTP and HTTPS servers",
+			httpDefault: true,
+			sslDefault:  true,
+			msg:         "both HTTP and HTTPS servers",
 		},
 	}
 
 	for _, tc := range testcases {
 		cfg, warnings := generator.Generate(tc.conf)
 
-		defaultExists := strings.Contains(string(cfg), "default")
+		defaultSSLExists := strings.Contains(string(cfg), "listen 443 ssl default_server")
+		defaultHTTPExists := strings.Contains(string(cfg), "listen 80 default_server")
 
-		if tc.expectDefault && !defaultExists {
-			t.Errorf("Generate() did not generate a config with a default TLS termination server")
+		if tc.sslDefault && !defaultSSLExists {
+			t.Errorf("Generate() did not generate a config with a default TLS termination server for test: %q", tc.msg)
 		}
 
-		if !tc.expectDefault && defaultExists {
-			t.Errorf("Generate() generated a config with a default TLS termination server")
+		if !tc.sslDefault && defaultSSLExists {
+			t.Errorf("Generate() generated a config with a default TLS termination server for test: %q", tc.msg)
+		}
+
+		if tc.httpDefault && !defaultHTTPExists {
+			t.Errorf("Generate() did not generate a config with a default http server for test: %q", tc.msg)
+		}
+
+		if !tc.httpDefault && defaultHTTPExists {
+			t.Errorf("Generate() generated a config with a default http server for test: %q", tc.msg)
 		}
 
 		if len(cfg) == 0 {
-			t.Errorf("Generate() generated empty config")
+			t.Errorf("Generate() generated empty config for test: %q", tc.msg)
 		}
 		if len(warnings) > 0 {
-			t.Errorf("Generate() returned unexpected warnings: %v", warnings)
+			t.Errorf("Generate() returned unexpected warnings: %v for test: %q", warnings, tc.msg)
 		}
 	}
 }
