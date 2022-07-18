@@ -55,6 +55,12 @@ func NewChangeProcessorImpl(cfg ChangeProcessorConfig) *ChangeProcessorImpl {
 	}
 }
 
+// FIXME(pleshakov)
+// Currently, changes (upserts/delete) trigger rebuilding of the configuration, even if the change doesn't change
+// the configuration or the statuses of the resources. For example, a change in a Gateway resource that doesn't
+// belong to the NGINX Gateway or an HTTPRoute that doesn't belong to any of the Gateways of the NGINX Gateway.
+// Find a way to ignore changes that don't affect the configuration and/or statuses of the resources.
+
 func (c *ChangeProcessorImpl) CaptureUpsertChange(obj client.Object) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
@@ -72,14 +78,12 @@ func (c *ChangeProcessorImpl) CaptureUpsertChange(obj client.Object) {
 		}
 		c.store.gc = o
 	case *v1alpha2.Gateway:
-		if o.Namespace != c.cfg.GatewayNsName.Namespace || o.Name != c.cfg.GatewayNsName.Name {
-			panic(fmt.Errorf("gateway resource must be %s/%s, got %s/%s", c.cfg.GatewayNsName.Namespace, c.cfg.GatewayNsName.Name, o.Namespace, o.Name))
-		}
 		// if the resource spec hasn't changed (its generation is the same), ignore the upsert
-		if c.store.gw != nil && c.store.gw.Generation == o.Generation {
+		prev, exist := c.store.gateways[getNamespacedName(obj)]
+		if exist && o.Generation == prev.Generation {
 			c.changed = false
 		}
-		c.store.gw = o
+		c.store.gateways[getNamespacedName(obj)] = o
 	case *v1alpha2.HTTPRoute:
 		// if the resource spec hasn't changed (its generation is the same), ignore the upsert
 		prev, exist := c.store.httpRoutes[getNamespacedName(obj)]
@@ -98,17 +102,14 @@ func (c *ChangeProcessorImpl) CaptureDeleteChange(resourceType client.Object, ns
 
 	c.changed = true
 
-	switch o := resourceType.(type) {
+	switch resourceType.(type) {
 	case *v1alpha2.GatewayClass:
 		if nsname.Name != c.cfg.GatewayClassName {
 			panic(fmt.Errorf("gatewayclass resource must be %s, got %s", c.cfg.GatewayClassName, nsname.Name))
 		}
 		c.store.gc = nil
 	case *v1alpha2.Gateway:
-		if nsname != c.cfg.GatewayNsName {
-			panic(fmt.Errorf("gateway resource must be %s/%s, got %s/%s", c.cfg.GatewayNsName.Namespace, c.cfg.GatewayNsName.Name, o.Namespace, o.Name))
-		}
-		c.store.gw = nil
+		delete(c.store.gateways, nsname)
 	case *v1alpha2.HTTPRoute:
 		delete(c.store.httpRoutes, nsname)
 	default:
@@ -126,7 +127,7 @@ func (c *ChangeProcessorImpl) Process() (changed bool, conf Configuration, statu
 
 	c.changed = false
 
-	graph := buildGraph(c.store, c.cfg.GatewayNsName, c.cfg.GatewayCtlrName, c.cfg.GatewayClassName)
+	graph := buildGraph(c.store, c.cfg.GatewayCtlrName, c.cfg.GatewayClassName)
 
 	conf = buildConfiguration(graph)
 	statuses = buildStatuses(graph)

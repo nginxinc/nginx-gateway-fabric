@@ -12,16 +12,17 @@ import (
 )
 
 func TestPrepareGatewayStatus(t *testing.T) {
-	statuses := state.ListenerStatuses{
-		"valid-listener": {
-			Valid:          true,
-			AttachedRoutes: 2,
-		},
-		"invalid-listener": {
-			Valid:          false,
-			AttachedRoutes: 1,
-		},
-	}
+	status := state.GatewayStatus{
+		ListenerStatuses: state.ListenerStatuses{
+			"valid-listener": {
+				Valid:          true,
+				AttachedRoutes: 2,
+			},
+			"invalid-listener": {
+				Valid:          false,
+				AttachedRoutes: 1,
+			},
+		}}
 
 	transitionTime := metav1.NewTime(time.Now())
 
@@ -66,8 +67,34 @@ func TestPrepareGatewayStatus(t *testing.T) {
 		},
 	}
 
-	result := prepareGatewayStatus(statuses, transitionTime)
+	result := prepareGatewayStatus(status, transitionTime)
 	if diff := cmp.Diff(expected, result); diff != "" {
 		t.Errorf("prepareGatewayStatus() mismatch (-want +got):\n%s", diff)
+	}
+}
+
+func TestPrepareIgnoredGatewayStatus(t *testing.T) {
+	status := state.IgnoredGatewayStatus{
+		ObservedGeneration: 1,
+	}
+
+	transitionTime := metav1.NewTime(time.Now())
+
+	expected := v1alpha2.GatewayStatus{
+		Conditions: []metav1.Condition{
+			{
+				Type:               string(v1alpha2.GatewayConditionReady),
+				Status:             metav1.ConditionFalse,
+				ObservedGeneration: status.ObservedGeneration,
+				LastTransitionTime: transitionTime,
+				Reason:             string(GetawayReasonGatewayConflict),
+				Message:            GatewayMessageGatewayConflict,
+			},
+		},
+	}
+
+	result := prepareIgnoredGatewayStatus(status, transitionTime)
+	if diff := cmp.Diff(expected, result); diff != "" {
+		t.Errorf("prepareIgnoredGatewayStatus() mismatch (-want +got):\n%s", diff)
 	}
 }

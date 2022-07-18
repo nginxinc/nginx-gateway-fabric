@@ -1,8 +1,6 @@
 package implementation
 
 import (
-	"fmt"
-
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
@@ -13,32 +11,22 @@ import (
 )
 
 type gatewayImplementation struct {
-	conf    config.Config
+	logger  logr.Logger
 	eventCh chan<- interface{}
 }
 
 func NewGatewayImplementation(conf config.Config, eventCh chan<- interface{}) sdk.GatewayImpl {
 	return &gatewayImplementation{
-		conf:    conf,
+		logger:  conf.Logger,
 		eventCh: eventCh,
 	}
 }
 
-func (impl *gatewayImplementation) Logger() logr.Logger {
-	return impl.conf.Logger
-}
+// FIXME(pleshakov) All Implementations (Gateway, HTTPRoute, ...) look similar. Consider writing a general-purpose
+// component to implement all implementations. This will avoid the duplication code and tests.
 
 func (impl *gatewayImplementation) Upsert(gw *v1alpha2.Gateway) {
-	if gw.Namespace != impl.conf.GatewayNsName.Namespace || gw.Name != impl.conf.GatewayNsName.Name {
-		msg := fmt.Sprintf("Gateway was upserted but ignored because this controller only supports the Gateway %s", impl.conf.GatewayNsName)
-		impl.Logger().Info(msg,
-			"namespace", gw.Namespace,
-			"name", gw.Name,
-		)
-		return
-	}
-
-	impl.Logger().Info("Gateway was upserted",
+	impl.logger.Info("Gateway was upserted",
 		"namespace", gw.Namespace,
 		"name", gw.Name,
 	)
@@ -49,16 +37,7 @@ func (impl *gatewayImplementation) Upsert(gw *v1alpha2.Gateway) {
 }
 
 func (impl *gatewayImplementation) Remove(nsname types.NamespacedName) {
-	if nsname != impl.conf.GatewayNsName {
-		msg := fmt.Sprintf("Gateway was removed but ignored because this controller only supports the Gateway %s", impl.conf.GatewayNsName)
-		impl.Logger().Info(msg,
-			"namespace", nsname.Namespace,
-			"name", nsname.Name,
-		)
-		return
-	}
-
-	impl.Logger().Info("Gateway was removed",
+	impl.logger.Info("Gateway was removed",
 		"namespace", nsname.Namespace,
 		"name", nsname.Name,
 	)

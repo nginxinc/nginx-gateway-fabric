@@ -5,7 +5,6 @@ import (
 	"os"
 
 	flag "github.com/spf13/pflag"
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/config"
@@ -40,13 +39,8 @@ func main() {
 
 	logger := zap.New()
 	conf := config.Config{
-		GatewayCtlrName: *gatewayCtlrName,
-		Logger:          logger,
-		// FIXME(pleshakov) Allow the cluster operator to customize this value
-		GatewayNsName: types.NamespacedName{
-			Namespace: "nginx-gateway",
-			Name:      "gateway",
-		},
+		GatewayCtlrName:  *gatewayCtlrName,
+		Logger:           logger,
 		GatewayClassName: *gatewayClassName,
 	}
 

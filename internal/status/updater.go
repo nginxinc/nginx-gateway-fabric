@@ -22,8 +22,6 @@ type Updater interface {
 
 // UpdaterConfig holds configuration parameters for Updater.
 type UpdaterConfig struct {
-	// GatewayNsName is the namespaced name of the Gateway resource.
-	GatewayNsName types.NamespacedName
 	// GatewayCtlrName is the name of the Gateway controller.
 	GatewayCtlrName string
 	// GatewayClassName is the name of the GatewayClass resource.
@@ -95,10 +93,25 @@ func (upd *updaterImpl) Update(ctx context.Context, statuses state.Statuses) {
 		})
 	}
 
-	upd.update(ctx, upd.cfg.GatewayNsName, &v1alpha2.Gateway{}, func(object client.Object) {
-		gw := object.(*v1alpha2.Gateway)
-		gw.Status = prepareGatewayStatus(statuses.ListenerStatuses, upd.cfg.Clock.Now())
-	})
+	if statuses.GatewayStatus != nil {
+		upd.update(ctx, statuses.GatewayStatus.NsName, &v1alpha2.Gateway{}, func(object client.Object) {
+			gw := object.(*v1alpha2.Gateway)
+			gw.Status = prepareGatewayStatus(*statuses.GatewayStatus, upd.cfg.Clock.Now())
+		})
+	}
+
+	for nsname, gs := range statuses.IgnoredGatewayStatuses {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
+
+		upd.update(ctx, nsname, &v1alpha2.Gateway{}, func(object client.Object) {
+			gw := object.(*v1alpha2.Gateway)
+			gw.Status = prepareIgnoredGatewayStatus(gs, upd.cfg.Clock.Now())
+		})
+	}
 
 	for nsname, rs := range statuses.HTTPRouteStatuses {
 		select {
@@ -109,7 +122,8 @@ func (upd *updaterImpl) Update(ctx context.Context, statuses state.Statuses) {
 
 		upd.update(ctx, nsname, &v1alpha2.HTTPRoute{}, func(object client.Object) {
 			hr := object.(*v1alpha2.HTTPRoute)
-			hr.Status = prepareHTTPRouteStatus(rs, upd.cfg.GatewayNsName, upd.cfg.GatewayCtlrName, upd.cfg.Clock.Now())
+			// statuses.GatewayStatus is never nil when len(statuses.HTTPRouteStatuses) > 0
+			hr.Status = prepareHTTPRouteStatus(rs, statuses.GatewayStatus.NsName, upd.cfg.GatewayCtlrName, upd.cfg.Clock.Now())
 		})
 	}
 }

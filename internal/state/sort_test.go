@@ -204,3 +204,120 @@ func TestSort(t *testing.T) {
 		t.Errorf("sortMatchRules() mismatch (-want +got):\n%s", diff)
 	}
 }
+
+func TestLessObjectMeta(t *testing.T) {
+	sooner := metav1.Now()
+	later := metav1.NewTime(sooner.Add(10 * time.Millisecond))
+
+	tests := []struct {
+		meta1, meta2 *metav1.ObjectMeta
+		expected     bool
+		msg          string
+	}{
+		{
+			meta1: &metav1.ObjectMeta{
+				CreationTimestamp: sooner,
+				Namespace:         "test",
+				Name:              "myname",
+			},
+			meta2: &metav1.ObjectMeta{
+				CreationTimestamp: sooner,
+				Namespace:         "test",
+				Name:              "myname",
+			},
+			expected: false,
+			msg:      "equal",
+		},
+		{
+			meta1: &metav1.ObjectMeta{
+				CreationTimestamp: sooner,
+				Namespace:         "test",
+				Name:              "myname",
+			},
+			meta2: &metav1.ObjectMeta{
+				CreationTimestamp: later,
+				Namespace:         "test",
+				Name:              "myname",
+			},
+			expected: true,
+			msg:      "less by timestamp",
+		},
+		{
+			meta1: &metav1.ObjectMeta{
+				CreationTimestamp: later,
+				Namespace:         "test",
+				Name:              "myname",
+			},
+			meta2: &metav1.ObjectMeta{
+				CreationTimestamp: sooner,
+				Namespace:         "test",
+				Name:              "myname",
+			},
+			expected: false,
+			msg:      "greater by timestamp",
+		},
+		{
+			meta1: &metav1.ObjectMeta{
+				CreationTimestamp: sooner,
+				Namespace:         "atest",
+				Name:              "myname",
+			},
+			meta2: &metav1.ObjectMeta{
+				CreationTimestamp: sooner,
+				Namespace:         "test",
+				Name:              "myname",
+			},
+			expected: true,
+			msg:      "less by namespace",
+		},
+		{
+			meta1: &metav1.ObjectMeta{
+				CreationTimestamp: sooner,
+				Namespace:         "test",
+				Name:              "myname",
+			},
+			meta2: &metav1.ObjectMeta{
+				CreationTimestamp: sooner,
+				Namespace:         "atest",
+				Name:              "myname",
+			},
+			expected: false,
+			msg:      "greater by namespace",
+		},
+		{
+			meta1: &metav1.ObjectMeta{
+				CreationTimestamp: sooner,
+				Namespace:         "test",
+				Name:              "amyname",
+			},
+			meta2: &metav1.ObjectMeta{
+				CreationTimestamp: sooner,
+				Namespace:         "test",
+				Name:              "myname",
+			},
+			expected: true,
+			msg:      "less by name",
+		},
+		{
+			meta1: &metav1.ObjectMeta{
+				CreationTimestamp: sooner,
+				Namespace:         "test",
+				Name:              "myname",
+			},
+			meta2: &metav1.ObjectMeta{
+				CreationTimestamp: sooner,
+				Namespace:         "test",
+				Name:              "amyname",
+			},
+			expected: false,
+			msg:      "greater by name",
+		},
+	}
+
+	for _, test := range tests {
+		result := lessObjectMeta(test.meta1, test.meta2)
+		if result != test.expected {
+			t.Errorf("lessObjectMeta() returned %v but expected %v for the case of %q", result, test.expected, test.msg)
+		}
+	}
+}

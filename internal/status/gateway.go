@@ -9,22 +9,32 @@ import (
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state"
 )
 
+const (
+	// GetawayReasonGatewayConflict indicates there are multiple Gateway resources for NGINX Gateway to choose from,
+	// and NGINX Gateway ignored the resource in question and picked another Gateway as the winner.
+	// NGINX Gateway will use this reason with GatewayConditionReady (false).
+	GetawayReasonGatewayConflict v1alpha2.GatewayConditionReason = "GatewayConflict"
+
+	// GatewayMessageGatewayConflict is message that describes GetawayReasonGatewayConflict.
+	GatewayMessageGatewayConflict = "The resource is ignored due to a conflicting Gateway resource"
+)
+
 // prepareGatewayStatus prepares the status for a Gateway resource.
 // FIXME(pleshakov): Be compliant with in the Gateway API.
 // Currently, we only support simple valid/invalid status per each listener.
 // Extend support to cover more cases.
-func prepareGatewayStatus(statuses state.ListenerStatuses, transitionTime metav1.Time) v1alpha2.GatewayStatus {
-	listenerStatuses := make([]v1alpha2.ListenerStatus, 0, len(statuses))
+func prepareGatewayStatus(gatewayStatus state.GatewayStatus, transitionTime metav1.Time) v1alpha2.GatewayStatus {
+	listenerStatuses := make([]v1alpha2.ListenerStatus, 0, len(gatewayStatus.ListenerStatuses))
 
 	// FIXME(pleshakov) Maintain the order from the Gateway resource
-	names := make([]string, 0, len(statuses))
-	for name := range statuses {
+	names := make([]string, 0, len(gatewayStatus.ListenerStatuses))
+	for name := range gatewayStatus.ListenerStatuses {
 		names = append(names, name)
 	}
 	sort.Strings(names)
 
 	for _, name := range names {
-		s := statuses[name]
+		s := gatewayStatus.ListenerStatuses[name]
 
 		var (
 			status metav1.ConditionStatus
@@ -64,5 +74,22 @@ func prepareGatewayStatus(statuses state.ListenerStatuses, transitionTime metav1
 	return v1alpha2.GatewayStatus{
 		Listeners:  listenerStatuses,
 		Conditions: nil, // FIXME(pleshakov) Create conditions for the Gateway resource.
+	}
+}
+
+// prepareIgnoredGatewayStatus prepares the status for an ignored Gateway resource.
+// TODO: is it reasonable to not set the listener statuses?
+func prepareIgnoredGatewayStatus(status state.IgnoredGatewayStatus, transitionTime metav1.Time) v1alpha2.GatewayStatus {
+	return v1alpha2.GatewayStatus{
+		Conditions: []metav1.Condition{
+			{
+				Type:               string(v1alpha2.GatewayConditionReady),
+				Status:             metav1.ConditionFalse,
+				ObservedGeneration: status.ObservedGeneration,
+				LastTransitionTime: transitionTime,
+				Reason:             string(GetawayReasonGatewayConflict),
+				Message:            GatewayMessageGatewayConflict,
+			},
+		},
 	}
 }
