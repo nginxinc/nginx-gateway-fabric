@@ -1127,7 +1127,7 @@ func TestValidateHTTPSListener(t *testing.T) {
 	for _, test := range tests {
 		result := validateHTTPSListener(test.l, gwNs)
 		if result != test.expected {
-			t.Errorf("validateListener() returned %v but expected %v for the case of %q", result, test.expected, test.msg)
+			t.Errorf("validateHTTPSListener() returned %v but expected %v for the case of %q", result, test.expected, test.msg)
 		}
 	}
 }
