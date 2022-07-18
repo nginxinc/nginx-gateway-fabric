@@ -181,8 +181,8 @@ func TestBuildConfiguration(t *testing.T) {
 				Routes: map[types.NamespacedName]*route{},
 			},
 			expected: Configuration{
-				HTTPServers:  []HTTPServer{},
-				HTTPSServers: []HTTPServer{},
+				HTTPServers: []VirtualServer{},
+				SSLServers:  []VirtualServer{},
 			},
 			msg: "no listeners and routes",
 		},
@@ -213,8 +213,8 @@ func TestBuildConfiguration(t *testing.T) {
 				Routes: map[types.NamespacedName]*route{},
 			},
 			expected: Configuration{
-				HTTPServers:  []HTTPServer{},
-				HTTPSServers: []HTTPServer{},
+				HTTPServers: []VirtualServer{},
+				SSLServers:  []VirtualServer{},
 			},
 			msg: "http and https listeners with no routes",
 		},
@@ -248,8 +248,8 @@ func TestBuildConfiguration(t *testing.T) {
 				},
 			},
 			expected: Configuration{
-				HTTPServers:  []HTTPServer{},
-				HTTPSServers: []HTTPServer{},
+				HTTPServers: []VirtualServer{},
+				SSLServers:  []VirtualServer{},
 			},
 			msg: "invalid listener",
 		},
@@ -297,7 +297,7 @@ func TestBuildConfiguration(t *testing.T) {
 				},
 			},
 			expected: Configuration{
-				HTTPServers: []HTTPServer{
+				HTTPServers: []VirtualServer{
 					{
 						Hostname: "bar.example.com",
 						PathRules: []PathRule{
@@ -329,7 +329,7 @@ func TestBuildConfiguration(t *testing.T) {
 						},
 					},
 				},
-				HTTPSServers: []HTTPServer{
+				SSLServers: []VirtualServer{
 					{
 						Hostname: "bar.example.com",
 						PathRules: []PathRule{
@@ -412,7 +412,7 @@ func TestBuildConfiguration(t *testing.T) {
 				},
 			},
 			expected: Configuration{
-				HTTPServers: []HTTPServer{
+				HTTPServers: []VirtualServer{
 					{
 						Hostname: "foo.example.com",
 						PathRules: []PathRule{
@@ -454,7 +454,7 @@ func TestBuildConfiguration(t *testing.T) {
 						},
 					},
 				},
-				HTTPSServers: []HTTPServer{
+				SSLServers: []VirtualServer{
 					{
 						Hostname: "foo.example.com",
 						SSL: &SSL{

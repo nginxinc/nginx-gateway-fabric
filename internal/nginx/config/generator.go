@@ -40,7 +40,7 @@ func NewGeneratorImpl(serviceStore state.ServiceStore) *GeneratorImpl {
 func (g *GeneratorImpl) Generate(conf state.Configuration) ([]byte, Warnings) {
 	warnings := newWarnings()
 
-	confServers := append(conf.HTTPServers, conf.HTTPSServers...)
+	confServers := append(conf.HTTPServers, conf.SSLServers...)
 
 	servers := httpServers{
 		// capacity is all the conf servers + default tls termination server
@@ -53,7 +53,7 @@ func (g *GeneratorImpl) Generate(conf state.Configuration) ([]byte, Warnings) {
 		servers.Servers = append(servers.Servers, defaultHTTPServer)
 	}
 
-	if len(conf.HTTPSServers) > 0 {
+	if len(conf.SSLServers) > 0 {
 		defaultTLSTerminationServer := generateDefaultSSLServer()
 
 		servers.Servers = append(servers.Servers, defaultTLSTerminationServer)
@@ -77,12 +77,12 @@ func generateDefaultHTTPServer() server {
 	return server{IsDefaultHTTP: true}
 }
 
-func generate(httpServer state.HTTPServer, serviceStore state.ServiceStore) (server, Warnings) {
+func generate(virtualServer state.VirtualServer, serviceStore state.ServiceStore) (server, Warnings) {
 	warnings := newWarnings()
 
-	locs := make([]location, 0, len(httpServer.PathRules)) // FIXME(pleshakov): expand with rule.Routes
+	locs := make([]location, 0, len(virtualServer.PathRules)) // FIXME(pleshakov): expand with rule.Routes
 
-	for _, rule := range httpServer.PathRules {
+	for _, rule := range virtualServer.PathRules {
 		matches := make([]httpMatch, 0, len(rule.MatchRules))
 
 		for ruleIdx, r := range rule.MatchRules {
@@ -126,13 +126,13 @@ func generate(httpServer state.HTTPServer, serviceStore state.ServiceStore) (ser
 		}
 	}
 	s := server{
-		ServerName: httpServer.Hostname,
+		ServerName: virtualServer.Hostname,
 		Locations:  locs,
 	}
-	if httpServer.SSL != nil {
+	if virtualServer.SSL != nil {
 		s.SSL = &ssl{
-			Certificate:    httpServer.SSL.CertificatePath,
-			CertificateKey: httpServer.SSL.CertificatePath,
+			Certificate:    virtualServer.SSL.CertificatePath,
+			CertificateKey: virtualServer.SSL.CertificatePath,
 		}
 	}
 	return s, warnings

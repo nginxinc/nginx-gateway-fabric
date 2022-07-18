@@ -33,7 +33,7 @@ func TestGenerateForHost(t *testing.T) {
 		},
 		{
 			conf: state.Configuration{
-				HTTPServers: []state.HTTPServer{
+				HTTPServers: []state.VirtualServer{
 					{
 						Hostname: "example.com",
 					},
@@ -45,7 +45,7 @@ func TestGenerateForHost(t *testing.T) {
 		},
 		{
 			conf: state.Configuration{
-				HTTPSServers: []state.HTTPServer{
+				SSLServers: []state.VirtualServer{
 					{
 						Hostname: "example.com",
 					},
@@ -57,12 +57,12 @@ func TestGenerateForHost(t *testing.T) {
 		},
 		{
 			conf: state.Configuration{
-				HTTPServers: []state.HTTPServer{
+				HTTPServers: []state.VirtualServer{
 					{
 						Hostname: "example.com",
 					},
 				},
-				HTTPSServers: []state.HTTPServer{
+				SSLServers: []state.VirtualServer{
 					{
 						Hostname: "example.com",
 					},
@@ -214,7 +214,7 @@ func TestGenerate(t *testing.T) {
 
 	certPath := "/etc/nginx/secrets/cert"
 
-	httpHost := state.HTTPServer{
+	httpHost := state.VirtualServer{
 		Hostname: "example.com",
 		PathRules: []state.PathRule{
 			{
@@ -336,7 +336,7 @@ func TestGenerate(t *testing.T) {
 	}
 
 	testcases := []struct {
-		host        state.HTTPServer
+		host        state.VirtualServer
 		expWarnings Warnings
 		expResult   server
 		msg         string

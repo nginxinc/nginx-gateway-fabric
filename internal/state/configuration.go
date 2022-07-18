@@ -13,14 +13,14 @@ import (
 type Configuration struct {
 	// HTTPServers holds all HTTPServers.
 	// FIXME(pleshakov) We assume that all servers are HTTP and listen on port 80.
-	HTTPServers []HTTPServer
-	// HTTPSServers holds all HTTPSServers.
-	// FIXME(kate-osborn) We assume that all HTTPS servers listen on port 443.
-	HTTPSServers []HTTPServer
+	HTTPServers []VirtualServer
+	// SSLServers holds all SSLServers.
+	// FIXME(kate-osborn) We assume that all SSL servers listen on port 443.
+	SSLServers []VirtualServer
 }
 
-// HTTPServer is a virtual server.
-type HTTPServer struct {
+// VirtualServer is a virtual server.
+type VirtualServer struct {
 	// Hostname is the hostname of the server.
 	Hostname string
 	// PathRules is a collection of routing rules.
@@ -83,48 +83,48 @@ func buildConfiguration(graph *graph) Configuration {
 }
 
 type configBuilder struct {
-	http  *httpServerBuilder
-	https *httpServerBuilder
+	http *virtualServerBuilder
+	ssl  *virtualServerBuilder
 }
 
 func newConfigBuilder() *configBuilder {
 	return &configBuilder{
-		http:  newHTTPServerBuilder(),
-		https: newHTTPServerBuilder(),
+		http: newHTTPServerBuilder(),
+		ssl:  newHTTPServerBuilder(),
 	}
 }
 
-func (sb *configBuilder) upsertListener(l *listener) {
+func (b *configBuilder) upsertListener(l *listener) {
 	switch l.Source.Protocol {
 	case v1alpha2.HTTPProtocolType:
-		sb.http.upsertListener(l)
+		b.http.upsertListener(l)
 	case v1alpha2.HTTPSProtocolType:
-		sb.https.upsertListener(l)
+		b.ssl.upsertListener(l)
 	default:
 		panic(fmt.Sprintf("listener protocol %s not supported", l.Source.Protocol))
 	}
 }
 
-func (sb *configBuilder) build() Configuration {
+func (b *configBuilder) build() Configuration {
 	return Configuration{
-		HTTPServers:  sb.http.build(),
-		HTTPSServers: sb.https.build(),
+		HTTPServers: b.http.build(),
+		SSLServers:  b.ssl.build(),
 	}
 }
 
-type httpServerBuilder struct {
+type virtualServerBuilder struct {
 	rulesPerHost     map[string]map[string]PathRule
 	listenersForHost map[string]*listener
 }
 
-func newHTTPServerBuilder() *httpServerBuilder {
-	return &httpServerBuilder{
+func newHTTPServerBuilder() *virtualServerBuilder {
+	return &virtualServerBuilder{
 		rulesPerHost:     make(map[string]map[string]PathRule),
 		listenersForHost: make(map[string]*listener),
 	}
 }
 
-func (p *httpServerBuilder) upsertListener(l *listener) {
+func (b *virtualServerBuilder) upsertListener(l *listener) {
 
 	for _, r := range l.Routes {
 		var hostnames []string
@@ -136,9 +136,9 @@ func (p *httpServerBuilder) upsertListener(l *listener) {
 		}
 
 		for _, h := range hostnames {
-			p.listenersForHost[h] = l
-			if _, exist := p.rulesPerHost[h]; !exist {
-				p.rulesPerHost[h] = make(map[string]PathRule)
+			b.listenersForHost[h] = l
+			if _, exist := b.rulesPerHost[h]; !exist {
+				b.rulesPerHost[h] = make(map[string]PathRule)
 			}
 		}
 
@@ -147,7 +147,7 @@ func (p *httpServerBuilder) upsertListener(l *listener) {
 				for j, m := range rule.Matches {
 					path := getPath(m.Path)
 
-					rule, exist := p.rulesPerHost[h][path]
+					rule, exist := b.rulesPerHost[h][path]
 					if !exist {
 						rule.Path = path
 					}
@@ -158,24 +158,24 @@ func (p *httpServerBuilder) upsertListener(l *listener) {
 						Source:   r.Source,
 					})
 
-					p.rulesPerHost[h][path] = rule
+					b.rulesPerHost[h][path] = rule
 				}
 			}
 		}
 	}
 }
 
-func (p *httpServerBuilder) build() []HTTPServer {
+func (b *virtualServerBuilder) build() []VirtualServer {
 
-	servers := make([]HTTPServer, 0, len(p.rulesPerHost))
+	servers := make([]VirtualServer, 0, len(b.rulesPerHost))
 
-	for h, rules := range p.rulesPerHost {
-		s := HTTPServer{
+	for h, rules := range b.rulesPerHost {
+		s := VirtualServer{
 			Hostname:  h,
 			PathRules: make([]PathRule, 0, len(rules)),
 		}
 
-		l, ok := p.listenersForHost[h]
+		l, ok := b.listenersForHost[h]
 		if !ok {
 			panic(fmt.Sprintf("no listener found for hostname: %s", h))
 		}

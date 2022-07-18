@@ -211,7 +211,7 @@ var _ = Describe("ChangeProcessor", func() {
 				processor.CaptureUpsertChange(gc)
 
 				expectedConf := state.Configuration{
-					HTTPServers: []state.HTTPServer{
+					HTTPServers: []state.VirtualServer{
 						{
 							Hostname: "foo.example.com",
 							PathRules: []state.PathRule{
@@ -228,7 +228,7 @@ var _ = Describe("ChangeProcessor", func() {
 							},
 						},
 					},
-					HTTPSServers: []state.HTTPServer{
+					SSLServers: []state.VirtualServer{
 						{
 							Hostname: "foo.example.com",
 							SSL:      &state.SSL{CertificatePath: certificatePath},
@@ -298,7 +298,7 @@ var _ = Describe("ChangeProcessor", func() {
 				processor.CaptureUpsertChange(hr1Updated)
 
 				expectedConf := state.Configuration{
-					HTTPServers: []state.HTTPServer{
+					HTTPServers: []state.VirtualServer{
 						{
 							Hostname: "foo.example.com",
 							PathRules: []state.PathRule{
@@ -315,7 +315,7 @@ var _ = Describe("ChangeProcessor", func() {
 							},
 						},
 					},
-					HTTPSServers: []state.HTTPServer{
+					SSLServers: []state.VirtualServer{
 						{
 							Hostname: "foo.example.com",
 							SSL:      &state.SSL{CertificatePath: certificatePath},
@@ -384,7 +384,7 @@ var _ = Describe("ChangeProcessor", func() {
 				processor.CaptureUpsertChange(gw1Updated)
 
 				expectedConf := state.Configuration{
-					HTTPServers: []state.HTTPServer{
+					HTTPServers: []state.VirtualServer{
 						{
 							Hostname: "foo.example.com",
 							PathRules: []state.PathRule{
@@ -401,7 +401,7 @@ var _ = Describe("ChangeProcessor", func() {
 							},
 						},
 					},
-					HTTPSServers: []state.HTTPServer{
+					SSLServers: []state.VirtualServer{
 						{
 							Hostname: "foo.example.com",
 							SSL:      &state.SSL{CertificatePath: certificatePath},
@@ -470,7 +470,7 @@ var _ = Describe("ChangeProcessor", func() {
 				processor.CaptureUpsertChange(gcUpdated)
 
 				expectedConf := state.Configuration{
-					HTTPServers: []state.HTTPServer{
+					HTTPServers: []state.VirtualServer{
 						{
 							Hostname: "foo.example.com",
 							PathRules: []state.PathRule{
@@ -487,7 +487,7 @@ var _ = Describe("ChangeProcessor", func() {
 							},
 						},
 					},
-					HTTPSServers: []state.HTTPServer{
+					SSLServers: []state.VirtualServer{
 						{
 							Hostname: "foo.example.com",
 							SSL:      &state.SSL{CertificatePath: certificatePath},
@@ -553,7 +553,7 @@ var _ = Describe("ChangeProcessor", func() {
 				processor.CaptureUpsertChange(gw2)
 
 				expectedConf := state.Configuration{
-					HTTPServers: []state.HTTPServer{
+					HTTPServers: []state.VirtualServer{
 						{
 							Hostname: "foo.example.com",
 							PathRules: []state.PathRule{
@@ -570,7 +570,7 @@ var _ = Describe("ChangeProcessor", func() {
 							},
 						},
 					},
-					HTTPSServers: []state.HTTPServer{
+					SSLServers: []state.VirtualServer{
 						{
 							Hostname: "foo.example.com",
 							PathRules: []state.PathRule{
@@ -634,7 +634,7 @@ var _ = Describe("ChangeProcessor", func() {
 				processor.CaptureUpsertChange(hr2)
 
 				expectedConf := state.Configuration{
-					HTTPServers: []state.HTTPServer{
+					HTTPServers: []state.VirtualServer{
 						{
 							Hostname: "foo.example.com",
 							PathRules: []state.PathRule{
@@ -651,7 +651,7 @@ var _ = Describe("ChangeProcessor", func() {
 							},
 						},
 					},
-					HTTPSServers: []state.HTTPServer{
+					SSLServers: []state.VirtualServer{
 						{
 							Hostname: "foo.example.com",
 							SSL:      &state.SSL{CertificatePath: certificatePath},
@@ -719,7 +719,7 @@ var _ = Describe("ChangeProcessor", func() {
 				processor.CaptureDeleteChange(&v1alpha2.Gateway{}, types.NamespacedName{Namespace: "test", Name: "gateway-1"})
 
 				expectedConf := state.Configuration{
-					HTTPServers: []state.HTTPServer{
+					HTTPServers: []state.VirtualServer{
 						{
 							Hostname: "bar.example.com",
 							PathRules: []state.PathRule{
@@ -736,7 +736,7 @@ var _ = Describe("ChangeProcessor", func() {
 							},
 						},
 					},
-					HTTPSServers: []state.HTTPServer{
+					SSLServers: []state.VirtualServer{
 						{
 							Hostname: "bar.example.com",
 							SSL:      &state.SSL{CertificatePath: certificatePath},
@@ -794,8 +794,8 @@ var _ = Describe("ChangeProcessor", func() {
 				processor.CaptureDeleteChange(&v1alpha2.HTTPRoute{}, types.NamespacedName{Namespace: "test", Name: "hr-2"})
 
 				expectedConf := state.Configuration{
-					HTTPServers:  []state.HTTPServer{},
-					HTTPSServers: []state.HTTPServer{},
+					HTTPServers: []state.VirtualServer{},
+					SSLServers:  []state.VirtualServer{},
 				}
 				expectedStatuses := state.Statuses{
 					GatewayClassStatus: &state.GatewayClassStatus{
