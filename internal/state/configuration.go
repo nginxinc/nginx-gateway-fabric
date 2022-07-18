@@ -71,8 +71,12 @@ func buildConfiguration(graph *graph) Configuration {
 	}
 
 	configBuilder := newConfigBuilder()
+
 	for _, l := range graph.Gateway.Listeners {
-		configBuilder.upsertListener(l)
+		// only upsert listeners that are valid
+		if l.Valid {
+			configBuilder.upsertListener(l)
+		}
 	}
 
 	return configBuilder.build()

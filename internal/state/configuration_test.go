@@ -152,6 +152,14 @@ func TestBuildConfiguration(t *testing.T) {
 		},
 	}
 
+	invalidListener := v1alpha2.Listener{
+		Name:     "invalid-listener",
+		Hostname: nil,
+		Port:     443,
+		Protocol: v1alpha2.HTTPSProtocolType,
+		TLS:      nil, // missing TLS config
+	}
+
 	// nolint:gosec
 	secretPath := "/etc/nginx/secrets/secret"
 
@@ -209,6 +217,41 @@ func TestBuildConfiguration(t *testing.T) {
 				HTTPSServers: []HTTPServer{},
 			},
 			msg: "http and https listeners with no routes",
+		},
+		{
+			graph: &graph{
+				GatewayClass: &gatewayClass{
+					Source: &v1alpha2.GatewayClass{},
+					Valid:  true,
+				},
+				Gateway: &gateway{
+					Source: &v1alpha2.Gateway{},
+					Listeners: map[string]*listener{
+						"invalid-listener": {
+							Source: invalidListener,
+							Valid:  false,
+							Routes: map[types.NamespacedName]*route{
+								{Namespace: "test", Name: "https-hr-1"}: httpsRouteHR1,
+								{Namespace: "test", Name: "https-hr-2"}: httpsRouteHR2,
+							},
+							AcceptedHostnames: map[string]struct{}{
+								"foo.example.com": {},
+								"bar.example.com": {},
+							},
+							SecretPath: "",
+						},
+					},
+				},
+				Routes: map[types.NamespacedName]*route{
+					{Namespace: "test", Name: "https-hr-1"}: httpsRouteHR1,
+					{Namespace: "test", Name: "https-hr-2"}: httpsRouteHR2,
+				},
+			},
+			expected: Configuration{
+				HTTPServers:  []HTTPServer{},
+				HTTPSServers: []HTTPServer{},
+			},
+			msg: "invalid listener",
 		},
 		{
 			graph: &graph{
