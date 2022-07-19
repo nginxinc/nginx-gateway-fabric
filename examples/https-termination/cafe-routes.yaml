@@ -5,7 +5,7 @@ metadata:
 spec:
   parentRefs:
   - name: gateway
-    namespace: nginx-gateway
+    namespace: default
     sectionName: https
   hostnames:
   - "cafe.example.com"
@@ -25,7 +25,7 @@ metadata:
 spec:
   parentRefs:
   - name: gateway
-    namespace: nginx-gateway
+    namespace: default
     sectionName: https
   hostnames:
   - "cafe.example.com"
