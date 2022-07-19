@@ -17,7 +17,7 @@ server {
 server {
 	listen 80 default_server;
 	
-	default_type text/html
+	default_type text/html;
 	return 404;
 }
 	{{ else }}
