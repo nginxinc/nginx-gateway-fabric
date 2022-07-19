@@ -54,9 +54,9 @@ func (g *GeneratorImpl) Generate(conf state.Configuration) ([]byte, Warnings) {
 	}
 
 	if len(conf.SSLServers) > 0 {
-		defaultTLSTerminationServer := generateDefaultSSLServer()
+		defaultSSLServer := generateDefaultSSLServer()
 
-		servers.Servers = append(servers.Servers, defaultTLSTerminationServer)
+		servers.Servers = append(servers.Servers, defaultSSLServer)
 	}
 
 	for _, s := range confServers {

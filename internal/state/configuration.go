@@ -89,8 +89,8 @@ type configBuilder struct {
 
 func newConfigBuilder() *configBuilder {
 	return &configBuilder{
-		http: newHTTPServerBuilder(),
-		ssl:  newHTTPServerBuilder(),
+		http: newVirtualServerBuilder(),
+		ssl:  newVirtualServerBuilder(),
 	}
 }
 
@@ -117,7 +117,7 @@ type virtualServerBuilder struct {
 	listenersForHost map[string]*listener
 }
 
-func newHTTPServerBuilder() *virtualServerBuilder {
+func newVirtualServerBuilder() *virtualServerBuilder {
 	return &virtualServerBuilder{
 		rulesPerHost:     make(map[string]map[string]PathRule),
 		listenersForHost: make(map[string]*listener),

@@ -44,7 +44,7 @@ In this example we expand on the simple [cafe-example](../cafe-example) by addin
    kubectl apply -f cafe-secret.yaml
    ```
 
-   The TLS certificate and key in this secret which be used to terminate the TLS connections for the cafe application.
+   The TLS certificate and key in this secret are used to terminate the TLS connections for the cafe application.
    **Important**: This certificate and key are for demo purposes only. 
    
 1. Create the `Gateway` resource:
@@ -64,8 +64,8 @@ In this example we expand on the simple [cafe-example](../cafe-example) by addin
    ```yaml
    parentRefs:
    - name: gateway
-      namespace: nginx-gateway
-      sectionName: https
+     namespace: default
+     sectionName: https
    ```
 
 ## 4. Test the Application
