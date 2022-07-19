@@ -1,4 +1,4 @@
-package secret_test
+package implementation_test
 
 import (
 	. "github.com/onsi/ginkgo/v2"

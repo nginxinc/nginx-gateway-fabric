@@ -15,7 +15,7 @@ import (
 	gw "github.com/nginxinc/nginx-kubernetes-gateway/internal/implementations/gateway"
 	gc "github.com/nginxinc/nginx-kubernetes-gateway/internal/implementations/gatewayclass"
 	hr "github.com/nginxinc/nginx-kubernetes-gateway/internal/implementations/httproute"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/implementations/secret"
+	secret "github.com/nginxinc/nginx-kubernetes-gateway/internal/implementations/secret"
 	svc "github.com/nginxinc/nginx-kubernetes-gateway/internal/implementations/service"
 	ngxcfg "github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/config"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/file"
