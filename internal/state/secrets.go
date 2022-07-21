@@ -90,6 +90,7 @@ type FileManager interface {
 	Write(file *os.File, contents []byte) error
 }
 
+// FIXME(kate-osborn): Is it necessary to make this concurrent-safe?
 type SecretDiskMemoryManagerImpl struct {
 	requestedSecrets map[types.NamespacedName]requestedSecret
 	secretStore      SecretStore
