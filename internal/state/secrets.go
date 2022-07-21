@@ -66,6 +66,7 @@ func (s SecretStoreImpl) Get(nsname types.NamespacedName) *Secret {
 	return s.secrets[nsname]
 }
 
+// SecretDiskMemoryManager manages secrets that are requested by Gateway resources.
 type SecretDiskMemoryManager interface {
 	// Request marks the secret as requested so that it can be written to disk before reloading NGINX.
 	// Returns the path to the secret and an error if the secret does not exist in the secret store or the secret is invalid.
