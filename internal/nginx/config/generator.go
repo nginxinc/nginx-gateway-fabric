@@ -43,8 +43,8 @@ func (g *GeneratorImpl) Generate(conf state.Configuration) ([]byte, Warnings) {
 	confServers := append(conf.HTTPServers, conf.SSLServers...)
 
 	servers := httpServers{
-		// capacity is all the conf servers + default tls termination server
-		Servers: make([]server, 0, len(confServers)+1),
+		// capacity is all the conf servers + default ssl & http servers
+		Servers: make([]server, 0, len(confServers)+2),
 	}
 
 	if len(conf.HTTPServers) > 0 {
