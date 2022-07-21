@@ -13,6 +13,7 @@ import (
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/statefakes"
 )
 
+// FIXME(kate-osborn): Consider refactoring these tests to reduce code duplication.
 var _ = Describe("ChangeProcessor", func() {
 	Describe("Normal cases of processing changes", func() {
 		const (
