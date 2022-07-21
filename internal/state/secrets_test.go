@@ -217,7 +217,7 @@ var _ = Describe("SecretDiskMemoryManager", func() {
 			testRequest(secret3, expectedPath, false)
 		})
 
-		It("should write all stored secrets", func() {
+		It("should write all requested secrets", func() {
 			err := memMgr.WriteAllRequestedSecrets()
 			Expect(err).ToNot(HaveOccurred())
 
