@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"crypto/tls"
 	"fmt"
-	"io/ioutil"
+	"io/fs"
 	"os"
 	"path"
 
@@ -14,6 +14,8 @@ import (
 
 //go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . SecretStore
 //go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . SecretDiskMemoryManager
+//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . FileManager
+//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 io/fs.FileInfo
 
 // tlsSecretFileMode defines the default file mode for files with TLS Secrets.
 const tlsSecretFileMode = 0o600
@@ -72,9 +74,25 @@ type SecretDiskMemoryManager interface {
 	WriteAllRequestedSecrets() error
 }
 
+// FileManager is an interface that exposes File I/O operations.
+// Used for unit testing.
+type FileManager interface {
+	// ReadDir returns the file info for the directory.
+	ReadDir(dirname string) ([]fs.FileInfo, error)
+	// Remove file with given name.
+	Remove(name string) error
+	// Create file at the provided filepath.
+	Create(name string) (*os.File, error)
+	// Chmod sets the mode of the file.
+	Chmod(file *os.File, mode os.FileMode) error
+	// Write writes contents to the file.
+	Write(file *os.File, contents []byte) error
+}
+
 type SecretDiskMemoryManagerImpl struct {
 	requestedSecrets map[types.NamespacedName]requestedSecret
 	secretStore      SecretStore
+	fileManager      FileManager
 	secretDirectory  string
 }
 
@@ -83,12 +101,30 @@ type requestedSecret struct {
 	path   string
 }
 
-func NewSecretDiskMemoryManager(secretDirectory string, secretStore SecretStore) *SecretDiskMemoryManagerImpl {
-	return &SecretDiskMemoryManagerImpl{
+// SecretDiskMemoryManagerOption is a function that modifies the configuration of the SecretDiskMemoryManager.
+type SecretDiskMemoryManagerOption func(*SecretDiskMemoryManagerImpl)
+
+// WithSecretFileManager sets the file manager of the SecretDiskMemoryManager.
+// Used to inject a fake fileManager for unit tests.
+func WithSecretFileManager(fileManager FileManager) SecretDiskMemoryManagerOption {
+	return func(mm *SecretDiskMemoryManagerImpl) {
+		mm.fileManager = fileManager
+	}
+}
+
+func NewSecretDiskMemoryManager(secretDirectory string, secretStore SecretStore, options ...SecretDiskMemoryManagerOption) *SecretDiskMemoryManagerImpl {
+	sm := &SecretDiskMemoryManagerImpl{
 		requestedSecrets: make(map[types.NamespacedName]requestedSecret),
 		secretStore:      secretStore,
 		secretDirectory:  secretDirectory,
+		fileManager:      newStdLibFileManager(),
 	}
+
+	for _, o := range options {
+		o(sm)
+	}
+
+	return sm
 }
 
 func (s *SecretDiskMemoryManagerImpl) Request(nsname types.NamespacedName) (string, error) {
@@ -113,14 +149,14 @@ func (s *SecretDiskMemoryManagerImpl) Request(nsname types.NamespacedName) (stri
 
 func (s *SecretDiskMemoryManagerImpl) WriteAllRequestedSecrets() error {
 	// Remove all existing secrets from secrets directory
-	dir, err := ioutil.ReadDir(s.secretDirectory)
+	dir, err := s.fileManager.ReadDir(s.secretDirectory)
 	if err != nil {
 		return fmt.Errorf("failed to remove all secrets from %s: %w", s.secretDirectory, err)
 	}
 
 	for _, d := range dir {
 		filepath := path.Join(s.secretDirectory, d.Name())
-		if err := os.Remove(filepath); err != nil {
+		if err := s.fileManager.Remove(filepath); err != nil {
 			return fmt.Errorf("failed to remove secret %s: %w", filepath, err)
 		}
 	}
@@ -128,22 +164,21 @@ func (s *SecretDiskMemoryManagerImpl) WriteAllRequestedSecrets() error {
 	// Write all secrets to secrets directory
 	for nsname, ss := range s.requestedSecrets {
 
-		file, err := os.Create(ss.path)
+		file, err := s.fileManager.Create(ss.path)
 		if err != nil {
 			return fmt.Errorf("failed to create file %s for secret %s: %w", ss.path, nsname, err)
 		}
 
-		if err = file.Chmod(tlsSecretFileMode); err != nil {
+		if err = s.fileManager.Chmod(file, tlsSecretFileMode); err != nil {
 			return fmt.Errorf("failed to change mode of file %s for secret %s: %w", ss.path, nsname, err)
 		}
 
 		contents := generateCertAndKeyFileContent(ss.secret)
 
-		_, err = file.Write(contents)
+		err = s.fileManager.Write(file, contents)
 		if err != nil {
 			return fmt.Errorf("failed to write secret %s to file %s: %w", nsname, ss.path, err)
 		}
-
 	}
 
 	// reset stored secrets
