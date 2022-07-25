@@ -243,7 +243,7 @@ var _ = Describe("SecretDiskMemoryManager", func() {
 			})
 		})
 	})
-	Describe("File Management Error Cases", func() {
+	Describe("Write all requested secrets", func() {
 		var (
 			fakeFileManager   *statefakes.FakeFileManager
 			fakeStore         *statefakes.FakeSecretStore
@@ -263,52 +263,38 @@ var _ = Describe("SecretDiskMemoryManager", func() {
 			Expect(err).ToNot(HaveOccurred())
 		})
 
-		Describe("Write all requested secrets", Ordered, func() {
-			It("returns an error when secret directory cannot be read from", func() {
-				errString := "read dir error"
-				fakeFileManager.ReadDirReturns(nil, errors.New(errString))
+		DescribeTable("error cases", Ordered,
+			func(e error, preparer func(e error)) {
+				preparer(e)
 
 				err := memMgr.WriteAllRequestedSecrets()
-				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring(errString))
-			})
-			It("returns an error when a file cannot be removed from the secrets directory", func() {
-				errString := "remove error"
-				fakeFileManager.ReadDirReturns(fakeFileInfoSlice, nil)
-				fakeFileManager.RemoveReturns(errors.New(errString))
-
-				err := memMgr.WriteAllRequestedSecrets()
-				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring(errString))
-			})
-			It("returns an error when file cannot be created", func() {
-				errString := "create error"
-				fakeFileManager.RemoveReturns(nil)
-				fakeFileManager.CreateReturns(nil, errors.New(errString))
-
-				err := memMgr.WriteAllRequestedSecrets()
-				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring(errString))
-			})
-			It("returns an error when it cannot change the mode of the file", func() {
-				errStr := "chmod error"
-				fakeFileManager.CreateReturns(&os.File{}, nil)
-				fakeFileManager.ChmodReturns(errors.New(errStr))
-
-				err := memMgr.WriteAllRequestedSecrets()
-				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring(errStr))
-			})
-			It("returns an error when file cannot be written to", func() {
-				errString := "write error"
-				fakeFileManager.ChmodReturns(nil)
-				fakeFileManager.WriteReturns(errors.New(errString))
-
-				err := memMgr.WriteAllRequestedSecrets()
-				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring(errString))
-			})
-		})
+				Expect(err).To(MatchError(e))
+			},
+			Entry("read directory error", errors.New("read dir"),
+				func(e error) {
+					fakeFileManager.ReadDirReturns(nil, e)
+				}),
+			Entry("remove file error", errors.New("remove file"),
+				func(e error) {
+					fakeFileManager.ReadDirReturns(fakeFileInfoSlice, nil)
+					fakeFileManager.RemoveReturns(e)
+				}),
+			Entry("create file error", errors.New("create error"),
+				func(e error) {
+					fakeFileManager.RemoveReturns(nil)
+					fakeFileManager.CreateReturns(nil, e)
+				}),
+			Entry("chmod error", errors.New("chmod"),
+				func(e error) {
+					fakeFileManager.CreateReturns(&os.File{}, nil)
+					fakeFileManager.ChmodReturns(e)
+				}),
+			Entry("write error", errors.New("write"),
+				func(e error) {
+					fakeFileManager.ChmodReturns(nil)
+					fakeFileManager.WriteReturns(e)
+				}),
+		)
 	})
 })
 
