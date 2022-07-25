@@ -243,6 +243,73 @@ var _ = Describe("SecretDiskMemoryManager", func() {
 			})
 		})
 	})
+	Describe("File Management Error Cases", func() {
+		var (
+			fakeFileManager   *statefakes.FakeFileManager
+			fakeStore         *statefakes.FakeSecretStore
+			fakeFileInfoSlice []fs.FileInfo
+			memMgr            state.SecretDiskMemoryManager
+		)
+
+		BeforeEach(OncePerOrdered, func() {
+			fakeFileManager = &statefakes.FakeFileManager{}
+			fakeStore = &statefakes.FakeSecretStore{}
+			fakeFileInfoSlice = []fs.FileInfo{&statefakes.FakeFileInfo{}}
+			memMgr = state.NewSecretDiskMemoryManager("", fakeStore, state.WithSecretFileManager(fakeFileManager))
+
+			// populate a requested secret
+			fakeStore.GetReturns(&state.Secret{Secret: secret1, Valid: true})
+			_, err := memMgr.Request(types.NamespacedName{Namespace: secret1.Namespace, Name: secret1.Name})
+			Expect(err).ToNot(HaveOccurred())
+		})
+
+		Describe("Write all requested secrets", Ordered, func() {
+			It("returns an error when secret directory cannot be read from", func() {
+				errString := "read dir error"
+				fakeFileManager.ReadDirReturns(nil, errors.New(errString))
+
+				err := memMgr.WriteAllRequestedSecrets()
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring(errString))
+			})
+			It("returns an error when a file cannot be removed from the secrets directory", func() {
+				errString := "remove error"
+				fakeFileManager.ReadDirReturns(fakeFileInfoSlice, nil)
+				fakeFileManager.RemoveReturns(errors.New(errString))
+
+				err := memMgr.WriteAllRequestedSecrets()
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring(errString))
+			})
+			It("returns an error when file cannot be created", func() {
+				errString := "create error"
+				fakeFileManager.RemoveReturns(nil)
+				fakeFileManager.CreateReturns(nil, errors.New(errString))
+
+				err := memMgr.WriteAllRequestedSecrets()
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring(errString))
+			})
+			It("returns an error when it cannot change the mode of the file", func() {
+				errStr := "chmod error"
+				fakeFileManager.CreateReturns(&os.File{}, nil)
+				fakeFileManager.ChmodReturns(errors.New(errStr))
+
+				err := memMgr.WriteAllRequestedSecrets()
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring(errStr))
+			})
+			It("returns an error when file cannot be written to", func() {
+				errString := "write error"
+				fakeFileManager.ChmodReturns(nil)
+				fakeFileManager.WriteReturns(errors.New(errString))
+
+				err := memMgr.WriteAllRequestedSecrets()
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring(errString))
+			})
+		})
+	})
 })
 
 var _ = Describe("SecretStore", func() {
@@ -329,73 +396,6 @@ var _ = Describe("SecretStore", func() {
 			nsname := types.NamespacedName{Namespace: "test", Name: "dne"}
 
 			store.Delete(nsname)
-		})
-	})
-	Describe("File Management Error Cases", func() {
-		var (
-			fakeFileManager   *statefakes.FakeFileManager
-			fakeStore         *statefakes.FakeSecretStore
-			fakeFileInfoSlice []fs.FileInfo
-			memMgr            state.SecretDiskMemoryManager
-		)
-
-		BeforeEach(OncePerOrdered, func() {
-			fakeFileManager = &statefakes.FakeFileManager{}
-			fakeStore = &statefakes.FakeSecretStore{}
-			fakeFileInfoSlice = []fs.FileInfo{&statefakes.FakeFileInfo{}}
-			memMgr = state.NewSecretDiskMemoryManager("", fakeStore, state.WithSecretFileManager(fakeFileManager))
-
-			// populate a requested secret
-			fakeStore.GetReturns(&state.Secret{Secret: secret1, Valid: true})
-			_, err := memMgr.Request(types.NamespacedName{Namespace: secret1.Namespace, Name: secret1.Name})
-			Expect(err).ToNot(HaveOccurred())
-		})
-
-		Describe("Write all requested secrets", Ordered, func() {
-			It("returns an error when secret directory cannot be read from", func() {
-				errString := "read dir error"
-				fakeFileManager.ReadDirReturns(nil, errors.New(errString))
-
-				err := memMgr.WriteAllRequestedSecrets()
-				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring(errString))
-			})
-			It("returns an error when a file cannot be removed from the secrets directory", func() {
-				errString := "remove error"
-				fakeFileManager.ReadDirReturns(fakeFileInfoSlice, nil)
-				fakeFileManager.RemoveReturns(errors.New(errString))
-
-				err := memMgr.WriteAllRequestedSecrets()
-				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring(errString))
-			})
-			It("returns an error when file cannot be created", func() {
-				errString := "create error"
-				fakeFileManager.RemoveReturns(nil)
-				fakeFileManager.CreateReturns(nil, errors.New(errString))
-
-				err := memMgr.WriteAllRequestedSecrets()
-				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring(errString))
-			})
-			It("returns an error when it cannot change the mode of the file", func() {
-				errStr := "chmod error"
-				fakeFileManager.CreateReturns(&os.File{}, nil)
-				fakeFileManager.ChmodReturns(errors.New(errStr))
-
-				err := memMgr.WriteAllRequestedSecrets()
-				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring(errStr))
-			})
-			It("returns an error when file cannot be written to", func() {
-				errString := "write error"
-				fakeFileManager.ChmodReturns(nil)
-				fakeFileManager.WriteReturns(errors.New(errString))
-
-				err := memMgr.WriteAllRequestedSecrets()
-				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring(errString))
-			})
 		})
 	})
 })
