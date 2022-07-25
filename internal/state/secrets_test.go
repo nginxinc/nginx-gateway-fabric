@@ -248,7 +248,7 @@ var _ = Describe("SecretDiskMemoryManager", func() {
 			fakeFileManager   *statefakes.FakeFileManager
 			fakeStore         *statefakes.FakeSecretStore
 			fakeFileInfoSlice []fs.FileInfo
-			memMgr            state.SecretDiskMemoryManager
+			memMgr            *state.SecretDiskMemoryManagerImpl
 		)
 
 		BeforeEach(OncePerOrdered, func() {
