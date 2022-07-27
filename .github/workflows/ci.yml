@@ -22,9 +22,9 @@ defaults:
   run:
     shell: bash
 
-env:
-  DOCKER_BUILDKIT: 1
-  GOLANGCI_TIMEOUT: 10m0s
+concurrency:
+  group: ${{ github.ref_name }}-ci
+  cancel-in-progress: true
 
 jobs:
 
@@ -38,10 +38,6 @@ jobs:
       version: ${{ steps.vars.outputs.version }}
       date: ${{ steps.vars.outputs.date }}
     steps:
-      - name: Cancel Previous Runs
-        uses: styfle/cancel-workflow-action@0.9.1
-        with:
-          access_token: ${{ secrets.GITHUB_TOKEN }}
       - name: Checkout Repository
         uses: actions/checkout@v3
       - name: Output Variables
@@ -52,43 +48,6 @@ jobs:
           echo "::set-output name=git_tag::$(echo ${GITHUB_REF/refs\/tags\//} | tr -d v)"
           echo "::set-output name=version::$(grep "VERSION = " Makefile | cut -d " " -f 3)"
           echo "::set-output name=date::$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
-
-  lint:
-    name: Lint
-    runs-on: ubuntu-20.04
-    needs: vars
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v3
-      - name: Setup Golang Environment
-        uses: actions/setup-go@v3
-        with:
-          go-version: ${{ needs.vars.outputs.go_version }}
-      - name: Lint Code
-        uses: golangci/golangci-lint-action@v3.2.0
-        with:
-          args: --timeout ${{ env.GOLANGCI_TIMEOUT }}
-
-  njs-lint:
-    name: NJS Lint
-    runs-on: ubuntu-20.04
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v2
-      - name: Run Prettier on NJS code
-        id: prettier-run
-        uses: rutajdash/prettier-cli-action@v1.0.0
-        with:
-          config_path: ${{ github.workspace }}/internal/nginx/modules/.prettierrc
-          file_pattern: ${{ github.workspace }}/internal/nginx/modules/**/*.js
-          prettier_version: 2.6.2
-      - name: Prettier Output
-        if: ${{ failure() }}
-        shell: bash
-        run: |
-          echo "The following files are not formatted:"
-          echo "${{steps.prettier-run.outputs.prettier_output}}"
-          echo "Run \"make njs-fmt\" locally to format the code"
 
   unit-tests:
     name: Unit Tests
@@ -126,7 +85,7 @@ jobs:
   binary:
     name: Build Binary
     runs-on: ubuntu-20.04
-    needs: [vars, lint]
+    needs: vars
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v3
