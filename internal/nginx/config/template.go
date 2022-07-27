@@ -22,15 +22,15 @@ server {
 }
 	{{ else }}
 server {
-	{{ if $s.SSL }}
+		{{ if $s.SSL }}
 	listen 443 ssl;
 	ssl_certificate {{ $s.SSL.Certificate }};
 	ssl_certificate_key {{ $s.SSL.CertificateKey }};
-	{{ end }}
+		{{ end }}
 
 	server_name {{ $s.ServerName }};
 
-	{{ range $l := $s.Locations }}
+		{{ range $l := $s.Locations }}
 	location {{ $l.Path }} {
 		{{ if $l.Internal }}
 		internal;
@@ -47,7 +47,7 @@ server {
 		proxy_pass {{ $l.ProxyPass }}$request_uri;
 		{{ end }}
 	}
-	{{ end }}
+		{{ end }}
 }
 	{{ end }}
 {{ end }}
