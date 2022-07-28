@@ -27,7 +27,7 @@ cover.html
 build/.out
 
 # Node modules
-internal/nginx/modules/node_modules
+node_modules/
 
 # JS test coverage
 internal/nginx/modules/coverage
