@@ -48,7 +48,7 @@ func prepareHTTPRouteStatus(
 		sectionName := name
 
 		p := v1alpha2.RouteParentStatus{
-			ParentRef: v1alpha2.ParentRef{
+			ParentRef: v1alpha2.ParentReference{
 				Namespace:   (*v1alpha2.Namespace)(&gwNsName.Namespace),
 				Name:        v1alpha2.ObjectName(gwNsName.Name),
 				SectionName: (*v1alpha2.SectionName)(&sectionName),
@@ -56,7 +56,7 @@ func prepareHTTPRouteStatus(
 			ControllerName: v1alpha2.GatewayController(gatewayCtlrName),
 			Conditions: []metav1.Condition{
 				{
-					Type:   string(v1alpha2.ConditionRouteAccepted),
+					Type:   string(v1alpha2.RouteConditionAccepted),
 					Status: status,
 					// FIXME(pleshakov) Set the observed generation to the last processed generation of the HTTPRoute resource.
 					ObservedGeneration: 123,

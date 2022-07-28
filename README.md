@@ -27,7 +27,7 @@ Before you can build and run the NGINX Kubernetes Gateway, make sure you have th
    ```
 
 1. Build the image:
- 
+
    ```
    make PREFIX=myregistry.example.com/nginx-kubernetes-gateway container
    ```
@@ -44,7 +44,7 @@ Before you can build and run the NGINX Kubernetes Gateway, make sure you have th
 
 ## Deploy NGINX Kubernetes Gateway
 
-You can deploy NGINX Kubernetes Gateway on an existing Kubernetes 1.16+ cluster. The following instructions walk through the steps for deploying on a [kind](https://kind.sigs.k8s.io/) cluster. 
+You can deploy NGINX Kubernetes Gateway on an existing Kubernetes 1.16+ cluster. The following instructions walk through the steps for deploying on a [kind](https://kind.sigs.k8s.io/) cluster.
 
 1. Load the NGINX Kubernetes Gateway image onto your kind cluster:
 
@@ -57,11 +57,11 @@ You can deploy NGINX Kubernetes Gateway on an existing Kubernetes 1.16+ cluster.
 1. Install the Gateway CRDs:
 
    ```
-   kubectl apply -k "github.com/kubernetes-sigs/gateway-api/config/crd?ref=v0.4.2" 
+   kubectl apply -k "github.com/kubernetes-sigs/gateway-api/config/crd?ref=v0.5.0"
    ```
 
 1. Create the nginx-gateway namespace:
-   
+
     ```
     kubectl apply -f deploy/manifests/namespace.yaml
     ```
@@ -69,7 +69,7 @@ You can deploy NGINX Kubernetes Gateway on an existing Kubernetes 1.16+ cluster.
 1. Create the njs-modules configmap:
 
     ```
-    kubectl create configmap njs-modules --from-file=internal/nginx/modules/src/httpmatches.js -n nginx-gateway  
+    kubectl create configmap njs-modules --from-file=internal/nginx/modules/src/httpmatches.js -n nginx-gateway
     ```
 
 1. Create the GatewayClass resource:
@@ -84,7 +84,7 @@ You can deploy NGINX Kubernetes Gateway on an existing Kubernetes 1.16+ cluster.
 
    ```
    kubectl apply -f deploy/manifests/nginx-gateway.yaml
-   ``` 
+   ```
 
 1. Confirm the NGINX Kubernetes Gateway is running in `nginx-gateway` namespace:
 
@@ -110,7 +110,7 @@ A `NodePort` service will randomly allocate one port on every node of the cluste
 
 ### Create a LoadBalancer Service
 
-Create a service with type `LoadBalancer` using the appropriate manifest for your cloud provider. 
+Create a service with type `LoadBalancer` using the appropriate manifest for your cloud provider.
 
 - For GCP or Azure:
 
@@ -119,13 +119,13 @@ Create a service with type `LoadBalancer` using the appropriate manifest for you
    ```
 
    Lookup the public IP of the load balancer:
-   
+
    ```
    kubectl get svc nginx-gateway -n nginx-gateway
-   ``` 
-   
+   ```
+
    Use the public IP of the load balancer to access NGINX Kubernetes Gateway.
-   
+
 - For AWS:
 
    ```
@@ -136,8 +136,8 @@ Create a service with type `LoadBalancer` using the appropriate manifest for you
 
    ```
    kubectl get svc nginx-gateway -n nginx-gateway
-   ``` 
-  
+   ```
+
    In general, you should rely on the NLB DNS name, however for testing purposes you can resolve the DNS name to get the IP address of the load balancer:
 
    ```

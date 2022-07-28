@@ -201,14 +201,14 @@ var _ = Describe("Updater", func() {
 							Parents: []gatewayv1alpha2.RouteParentStatus{
 								{
 									ControllerName: gatewayv1alpha2.GatewayController(gatewayCtrlName),
-									ParentRef: gatewayv1alpha2.ParentRef{
+									ParentRef: gatewayv1alpha2.ParentReference{
 										Namespace:   (*v1alpha2.Namespace)(helpers.GetStringPointer("test")),
 										Name:        "gateway",
 										SectionName: (*v1alpha2.SectionName)(helpers.GetStringPointer("http")),
 									},
 									Conditions: []metav1.Condition{
 										{
-											Type:               string(gatewayv1alpha2.ConditionRouteAccepted),
+											Type:               string(gatewayv1alpha2.RouteConditionAccepted),
 											Status:             metav1.ConditionTrue,
 											ObservedGeneration: 123,
 											LastTransitionTime: fakeClockTime,

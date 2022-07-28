@@ -52,7 +52,7 @@ var _ = Describe("ChangeProcessor", func() {
 					},
 					Spec: v1alpha2.HTTPRouteSpec{
 						CommonRouteSpec: v1alpha2.CommonRouteSpec{
-							ParentRefs: []v1alpha2.ParentRef{
+							ParentRefs: []v1alpha2.ParentReference{
 								{
 									Namespace:   (*v1alpha2.Namespace)(helpers.GetStringPointer("test")),
 									Name:        v1alpha2.ObjectName(gateway),
@@ -113,7 +113,7 @@ var _ = Describe("ChangeProcessor", func() {
 								Protocol: v1alpha2.HTTPSProtocolType,
 								TLS: &v1alpha2.GatewayTLSConfig{
 									Mode: helpers.GetTLSModePointer(v1alpha2.TLSModeTerminate),
-									CertificateRefs: []*v1alpha2.SecretObjectReference{
+									CertificateRefs: []v1alpha2.SecretObjectReference{
 										{
 											Kind:      (*v1alpha2.Kind)(helpers.GetStringPointer("Secret")),
 											Name:      "secret",

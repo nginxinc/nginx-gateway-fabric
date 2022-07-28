@@ -89,7 +89,7 @@ func TestBuildGraph(t *testing.T) {
 			},
 			Spec: v1alpha2.HTTPRouteSpec{
 				CommonRouteSpec: v1alpha2.CommonRouteSpec{
-					ParentRefs: []v1alpha2.ParentRef{
+					ParentRefs: []v1alpha2.ParentReference{
 						{
 							Namespace:   (*v1alpha2.Namespace)(helpers.GetStringPointer("test")),
 							Name:        v1alpha2.ObjectName(gatewayName),
@@ -141,7 +141,7 @@ func TestBuildGraph(t *testing.T) {
 						Port:     443,
 						TLS: &v1alpha2.GatewayTLSConfig{
 							Mode: helpers.GetTLSModePointer(v1alpha2.TLSModeTerminate),
-							CertificateRefs: []*v1alpha2.SecretObjectReference{
+							CertificateRefs: []v1alpha2.SecretObjectReference{
 								{
 									Kind:      (*v1alpha2.Kind)(helpers.GetStringPointer("Secret")),
 									Name:      "secret",
@@ -403,7 +403,7 @@ func TestBuildListeners(t *testing.T) {
 
 	gatewayTLSConfig := &v1alpha2.GatewayTLSConfig{
 		Mode: helpers.GetTLSModePointer(v1alpha2.TLSModeTerminate),
-		CertificateRefs: []*v1alpha2.SecretObjectReference{
+		CertificateRefs: []v1alpha2.SecretObjectReference{
 			{
 				Kind:      (*v1alpha2.Kind)(helpers.GetStringPointer("Secret")),
 				Name:      "secret",
@@ -414,7 +414,7 @@ func TestBuildListeners(t *testing.T) {
 
 	tlsConfigInvalidSecret := &v1alpha2.GatewayTLSConfig{
 		Mode: helpers.GetTLSModePointer(v1alpha2.TLSModeTerminate),
-		CertificateRefs: []*v1alpha2.SecretObjectReference{
+		CertificateRefs: []v1alpha2.SecretObjectReference{
 			{
 				Kind:      (*v1alpha2.Kind)(helpers.GetStringPointer("Secret")),
 				Name:      "does-not-exist",
@@ -699,7 +699,7 @@ func TestBuildListeners(t *testing.T) {
 }
 
 func TestBindRouteToListeners(t *testing.T) {
-	createRoute := func(hostname string, parentRefs ...v1alpha2.ParentRef) *v1alpha2.HTTPRoute {
+	createRoute := func(hostname string, parentRefs ...v1alpha2.ParentReference) *v1alpha2.HTTPRoute {
 		return &v1alpha2.HTTPRoute{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: "test",
@@ -716,35 +716,35 @@ func TestBindRouteToListeners(t *testing.T) {
 		}
 	}
 
-	hrNonExistingSectionName := createRoute("foo.example.com", v1alpha2.ParentRef{
+	hrNonExistingSectionName := createRoute("foo.example.com", v1alpha2.ParentReference{
 		Namespace:   (*v1alpha2.Namespace)(helpers.GetStringPointer("test")),
 		Name:        "gateway",
 		SectionName: (*v1alpha2.SectionName)(helpers.GetStringPointer("listener-80-2")),
 	})
 
-	hrEmptySectionName := createRoute("foo.example.com", v1alpha2.ParentRef{
+	hrEmptySectionName := createRoute("foo.example.com", v1alpha2.ParentReference{
 		Namespace: (*v1alpha2.Namespace)(helpers.GetStringPointer("test")),
 		Name:      "gateway",
 	})
 
-	hrIgnoredGateway := createRoute("foo.example.com", v1alpha2.ParentRef{
+	hrIgnoredGateway := createRoute("foo.example.com", v1alpha2.ParentReference{
 		Namespace:   (*v1alpha2.Namespace)(helpers.GetStringPointer("test")),
 		Name:        "ignored-gateway",
 		SectionName: (*v1alpha2.SectionName)(helpers.GetStringPointer("listener-80-1")),
 	})
 
-	hrFoo := createRoute("foo.example.com", v1alpha2.ParentRef{
+	hrFoo := createRoute("foo.example.com", v1alpha2.ParentReference{
 		Namespace:   (*v1alpha2.Namespace)(helpers.GetStringPointer("test")),
 		Name:        "gateway",
 		SectionName: (*v1alpha2.SectionName)(helpers.GetStringPointer("listener-80-1")),
 	})
 
-	hrFooImplicitNamespace := createRoute("foo.example.com", v1alpha2.ParentRef{
+	hrFooImplicitNamespace := createRoute("foo.example.com", v1alpha2.ParentReference{
 		Name:        "gateway",
 		SectionName: (*v1alpha2.SectionName)(helpers.GetStringPointer("listener-80-1")),
 	})
 
-	hrBar := createRoute("bar.example.com", v1alpha2.ParentRef{
+	hrBar := createRoute("bar.example.com", v1alpha2.ParentReference{
 		Namespace:   (*v1alpha2.Namespace)(helpers.GetStringPointer("test")),
 		Name:        "gateway",
 		SectionName: (*v1alpha2.SectionName)(helpers.GetStringPointer("listener-80-1")),
@@ -800,7 +800,7 @@ func TestBindRouteToListeners(t *testing.T) {
 			msg: "HTTPRoute without parent refs",
 		},
 		{
-			httpRoute: createRoute("foo.example.com", v1alpha2.ParentRef{
+			httpRoute: createRoute("foo.example.com", v1alpha2.ParentReference{
 				Namespace:   (*v1alpha2.Namespace)(helpers.GetStringPointer("test")),
 				Name:        "some-gateway", // wrong gateway
 				SectionName: (*v1alpha2.SectionName)(helpers.GetStringPointer("listener-1")),
@@ -1022,7 +1022,6 @@ func TestFindAcceptedHostnames(t *testing.T) {
 			t.Errorf("findAcceptedHostnames() %q  mismatch (-want +got):\n%s", test.msg, diff)
 		}
 	}
-
 }
 
 func TestGetHostname(t *testing.T) {
