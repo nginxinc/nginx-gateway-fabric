@@ -29,12 +29,10 @@ concurrency:
 jobs:
 
   vars:
-    name: Get variables
+    name: Checks and variables
     runs-on: ubuntu-20.04
     outputs:
       sha: ${{ steps.vars.outputs.sha }}
-      go_version: ${{ steps.vars.outputs.go_version }}
-      git_tag: ${{ steps.vars.outputs.git_tag }}
       version: ${{ steps.vars.outputs.version }}
       date: ${{ steps.vars.outputs.date }}
     steps:
@@ -44,10 +42,15 @@ jobs:
         id: vars
         run: |
           echo "::set-output name=sha::$(echo ${GITHUB_SHA} | cut -c1-7)"
-          echo "::set-output name=go_version::$(grep "go 1." go.mod | cut -d " " -f 2)"
-          echo "::set-output name=git_tag::$(echo ${GITHUB_REF/refs\/tags\//} | tr -d v)"
           echo "::set-output name=version::$(grep "VERSION = " Makefile | cut -d " " -f 3)"
           echo "::set-output name=date::$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+      - name: Setup Golang Environment
+        uses: actions/setup-go@v3
+        with:
+          go-version-file: go.mod
+      - name: Check if CRDs changed
+        run: |
+          make update-crds && git diff --name-only --exit-code deploy/manifests/crds/*
 
   unit-tests:
     name: Unit Tests
@@ -59,7 +62,7 @@ jobs:
       - name: Setup Golang Environment
         uses: actions/setup-go@v3
         with:
-          go-version: ${{ needs.vars.outputs.go_version }}
+          go-version-file: go.mod
       - name: Run Tests
         run: make unit-test
       - name: Upload Coverage Report
@@ -72,6 +75,7 @@ jobs:
   njs-unit-tests:
     name: NJS Unit Tests
     runs-on: ubuntu-20.04
+    needs: vars
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v3
@@ -92,7 +96,7 @@ jobs:
       - name: Setup Golang Environment
         uses: actions/setup-go@v3
         with:
-          go-version: ${{ needs.vars.outputs.go_version }}
+          go-version-file: go.mod
       - name: Build Binary
         run: make build
       - name: Cache Artifacts
