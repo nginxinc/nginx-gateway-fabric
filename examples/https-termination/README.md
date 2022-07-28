@@ -9,21 +9,21 @@ In this example we expand on the simple [cafe-example](../cafe-example) by addin
 1. Follow the [installation instructions](https://github.com/nginxinc/nginx-kubernetes-gateway/blob/main/README.md#run-nginx-gateway) to deploy NGINX Gateway.
 
 1. Save the public IP address of NGINX Kubernetes Gateway into a shell variable:
-   
+
    ```
    GW_IP=XXX.YYY.ZZZ.III
    ```
 
 1. Save the HTTPS port of NGINX Kubernetes Gateway:
-   
+
    ```
    GW_HTTPS_PORT=port
    ```
 
-## 2. Deploy the Cafe Application  
+## 2. Deploy the Cafe Application
 
 1. Create the coffee and the tea deployments and services:
-   
+
    ```
    kubectl apply -f cafe.yaml
    ```
@@ -45,21 +45,21 @@ In this example we expand on the simple [cafe-example](../cafe-example) by addin
    ```
 
    The TLS certificate and key in this secret are used to terminate the TLS connections for the cafe application.
-   **Important**: This certificate and key are for demo purposes only. 
-   
+   **Important**: This certificate and key are for demo purposes only.
+
 1. Create the `Gateway` resource:
    ```
    kubectl apply -f gateway.yaml
    ```
 
-   This [gateway](./gateway.yaml) configures an `https` listener is to terminate TLS connections using the `cafe-secret` we created in the step 1. 
+   This [gateway](./gateway.yaml) configures an `https` listener is to terminate TLS connections using the `cafe-secret` we created in the step 1.
 
 1. Create the `HTTPRoute` resources:
    ```
    kubectl apply -f cafe-routes.yaml
    ```
 
-   To configure HTTPS termination for our cafe application, we will bind the `https` listener to our `HTTPRoutes` in [cafe-routes.yaml](./cafe-routes.yaml) using the [`parentRef`](https://gateway-api.sigs.k8s.io/v1alpha2/references/spec/#gateway.networking.k8s.io%2fv1alpha2.ParentReference) field:
+   To configure HTTPS termination for our cafe application, we will bind the `https` listener to our `HTTPRoutes` in [cafe-routes.yaml](./cafe-routes.yaml) using the [`parentReference`](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.ParentReference) field:
 
    ```yaml
    parentRefs:

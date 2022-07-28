@@ -34,7 +34,7 @@ func TestPrepareHTTPRouteStatus(t *testing.T) {
 		RouteStatus: v1alpha2.RouteStatus{
 			Parents: []v1alpha2.RouteParentStatus{
 				{
-					ParentRef: v1alpha2.ParentRef{
+					ParentRef: v1alpha2.ParentReference{
 						Namespace:   (*v1alpha2.Namespace)(helpers.GetStringPointer("test")),
 						Name:        "gateway",
 						SectionName: (*v1alpha2.SectionName)(helpers.GetStringPointer("attached")),
@@ -42,7 +42,7 @@ func TestPrepareHTTPRouteStatus(t *testing.T) {
 					ControllerName: v1alpha2.GatewayController(gatewayCtlrName),
 					Conditions: []metav1.Condition{
 						{
-							Type:               string(v1alpha2.ConditionRouteAccepted),
+							Type:               string(v1alpha2.RouteConditionAccepted),
 							Status:             metav1.ConditionTrue,
 							ObservedGeneration: 123,
 							LastTransitionTime: transitionTime,
@@ -51,7 +51,7 @@ func TestPrepareHTTPRouteStatus(t *testing.T) {
 					},
 				},
 				{
-					ParentRef: v1alpha2.ParentRef{
+					ParentRef: v1alpha2.ParentReference{
 						Namespace:   (*v1alpha2.Namespace)(helpers.GetStringPointer("test")),
 						Name:        "gateway",
 						SectionName: (*v1alpha2.SectionName)(helpers.GetStringPointer("not-attached")),
@@ -59,7 +59,7 @@ func TestPrepareHTTPRouteStatus(t *testing.T) {
 					ControllerName: v1alpha2.GatewayController(gatewayCtlrName),
 					Conditions: []metav1.Condition{
 						{
-							Type:               string(v1alpha2.ConditionRouteAccepted),
+							Type:               string(v1alpha2.RouteConditionAccepted),
 							Status:             metav1.ConditionFalse,
 							ObservedGeneration: 123,
 							LastTransitionTime: transitionTime,

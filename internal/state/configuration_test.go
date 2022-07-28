@@ -32,7 +32,7 @@ func TestBuildConfiguration(t *testing.T) {
 			},
 			Spec: v1alpha2.HTTPRouteSpec{
 				CommonRouteSpec: v1alpha2.CommonRouteSpec{
-					ParentRefs: []v1alpha2.ParentRef{
+					ParentRefs: []v1alpha2.ParentReference{
 						{
 							Namespace:   (*v1alpha2.Namespace)(helpers.GetStringPointer("test")),
 							Name:        "gateway",
@@ -152,7 +152,7 @@ func TestBuildConfiguration(t *testing.T) {
 		Protocol: v1alpha2.HTTPSProtocolType,
 		TLS: &v1alpha2.GatewayTLSConfig{
 			Mode: helpers.GetTLSModePointer(v1alpha2.TLSModeTerminate),
-			CertificateRefs: []*v1alpha2.SecretObjectReference{
+			CertificateRefs: []v1alpha2.SecretObjectReference{
 				{
 					Kind:      (*v1alpha2.Kind)(helpers.GetStringPointer("Secret")),
 					Name:      "secret",
@@ -170,7 +170,7 @@ func TestBuildConfiguration(t *testing.T) {
 		Protocol: v1alpha2.HTTPSProtocolType,
 		TLS: &v1alpha2.GatewayTLSConfig{
 			Mode: helpers.GetTLSModePointer(v1alpha2.TLSModeTerminate),
-			CertificateRefs: []*v1alpha2.SecretObjectReference{
+			CertificateRefs: []v1alpha2.SecretObjectReference{
 				{
 					Kind:      (*v1alpha2.Kind)(helpers.GetStringPointer("Secret")),
 					Name:      "secret",
@@ -736,7 +736,7 @@ func TestGetPath(t *testing.T) {
 }
 
 func TestMatchRuleGetMatch(t *testing.T) {
-	var hr = &v1alpha2.HTTPRoute{
+	hr := &v1alpha2.HTTPRoute{
 		Spec: v1alpha2.HTTPRouteSpec{
 			Rules: []v1alpha2.HTTPRouteRule{
 				{

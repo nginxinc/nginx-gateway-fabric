@@ -72,7 +72,7 @@ func TestValidateHTTPSListener(t *testing.T) {
 				Protocol: v1alpha2.HTTPSProtocolType,
 				TLS: &v1alpha2.GatewayTLSConfig{
 					Mode:            helpers.GetTLSModePointer(v1alpha2.TLSModeTerminate),
-					CertificateRefs: []*v1alpha2.SecretObjectReference{validSecretRef},
+					CertificateRefs: []v1alpha2.SecretObjectReference{*validSecretRef},
 				},
 			},
 			expected: true,
@@ -84,7 +84,7 @@ func TestValidateHTTPSListener(t *testing.T) {
 				Protocol: v1alpha2.HTTPSProtocolType,
 				TLS: &v1alpha2.GatewayTLSConfig{
 					Mode:            helpers.GetTLSModePointer(v1alpha2.TLSModeTerminate),
-					CertificateRefs: []*v1alpha2.SecretObjectReference{validSecretRef},
+					CertificateRefs: []v1alpha2.SecretObjectReference{*validSecretRef},
 				},
 			},
 			expected: false,
@@ -107,7 +107,7 @@ func TestValidateHTTPSListener(t *testing.T) {
 				Protocol: v1alpha2.HTTPSProtocolType,
 				TLS: &v1alpha2.GatewayTLSConfig{
 					Mode:            helpers.GetTLSModePointer(v1alpha2.TLSModePassthrough),
-					CertificateRefs: []*v1alpha2.SecretObjectReference{validSecretRef},
+					CertificateRefs: []v1alpha2.SecretObjectReference{*validSecretRef},
 				},
 			},
 			expected: false,
@@ -119,7 +119,7 @@ func TestValidateHTTPSListener(t *testing.T) {
 				Protocol: v1alpha2.HTTPSProtocolType,
 				TLS: &v1alpha2.GatewayTLSConfig{
 					Mode:            helpers.GetTLSModePointer(v1alpha2.TLSModeTerminate),
-					CertificateRefs: []*v1alpha2.SecretObjectReference{invalidSecretRefType},
+					CertificateRefs: []v1alpha2.SecretObjectReference{*invalidSecretRefType},
 				},
 			},
 			expected: false,
@@ -131,7 +131,7 @@ func TestValidateHTTPSListener(t *testing.T) {
 				Protocol: v1alpha2.HTTPSProtocolType,
 				TLS: &v1alpha2.GatewayTLSConfig{
 					Mode:            helpers.GetTLSModePointer(v1alpha2.TLSModeTerminate),
-					CertificateRefs: []*v1alpha2.SecretObjectReference{invalidSecretRefTNamespace},
+					CertificateRefs: []v1alpha2.SecretObjectReference{*invalidSecretRefTNamespace},
 				},
 			},
 			expected: false,
