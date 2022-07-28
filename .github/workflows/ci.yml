@@ -83,8 +83,8 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: 18
-      - run: npm install mocha@^8.2 esm chai
-      - run: npx mocha -r esm ${{ github.workspace }}/internal/nginx/modules/test/httpmatches.test.js
+      - run: npm --prefix ${{ github.workspace }}/internal/nginx/modules install
+      - run: npm --prefix ${{ github.workspace }}/internal/nginx/modules test
 
   binary:
     name: Build Binary
