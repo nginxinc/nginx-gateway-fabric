@@ -136,7 +136,7 @@ jobs:
             name=nginx/nginx-kubernetes-gateway,enable=${{ !startsWith(github.ref, 'refs/tags') }}
           tags: |
             type=semver,pattern={{version}}
-            type=edge,branch=${GITHUB_REF##*/}
+            type=edge,event=branch,branch=${GITHUB_REF##*/}
           flavor: |
             latest=false
       - name: Build Image Debian
