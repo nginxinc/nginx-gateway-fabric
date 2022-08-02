@@ -5,6 +5,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+// EventBatch is a batch of events to be handled at once.
+// FIXME(pleshakov): think about how to avoid using an interface{} here
+type EventBatch []interface{}
+
 // UpsertEvent represents upserting a resource.
 type UpsertEvent struct {
 	// Resource is the resource that is being upserted.
