@@ -23,9 +23,6 @@ defaults:
   run:
     shell: bash
 
-env:
-  GITHUB_BRANCH: ${{ GITHUB_REF##*/ }}
-
 concurrency:
   group: ${{ github.ref_name }}-ci
   cancel-in-progress: true
@@ -139,7 +136,7 @@ jobs:
             name=nginx/nginx-kubernetes-gateway,enable=${{ !startsWith(github.ref, 'refs/tags') }}
           tags: |
             type=semver,pattern={{version}}
-            type=edge,event=branch,branch=${{ GITHUB_BRANCH }}
+            type=edge,event=branch,branch=${{ GITHUB_REF_NAME }}
           flavor: |
             latest=false
       - name: Build Image Debian
