@@ -26,6 +26,10 @@ server {
 	listen 443 ssl;
 	ssl_certificate {{ $s.SSL.Certificate }};
 	ssl_certificate_key {{ $s.SSL.CertificateKey }};
+
+	if ($ssl_server_name != $host) {
+		return 421;
+	}
 		{{ end }}
 
 	server_name {{ $s.ServerName }};
