@@ -35,17 +35,17 @@ type FakeFileManager struct {
 		result1 *os.File
 		result2 error
 	}
-	ReadDirStub        func(string) ([]fs.FileInfo, error)
+	ReadDirStub        func(string) ([]fs.DirEntry, error)
 	readDirMutex       sync.RWMutex
 	readDirArgsForCall []struct {
 		arg1 string
 	}
 	readDirReturns struct {
-		result1 []fs.FileInfo
+		result1 []fs.DirEntry
 		result2 error
 	}
 	readDirReturnsOnCall map[int]struct {
-		result1 []fs.FileInfo
+		result1 []fs.DirEntry
 		result2 error
 	}
 	RemoveStub        func(string) error
@@ -201,7 +201,7 @@ func (fake *FakeFileManager) CreateReturnsOnCall(i int, result1 *os.File, result
 	}{result1, result2}
 }
 
-func (fake *FakeFileManager) ReadDir(arg1 string) ([]fs.FileInfo, error) {
+func (fake *FakeFileManager) ReadDir(arg1 string) ([]fs.DirEntry, error) {
 	fake.readDirMutex.Lock()
 	ret, specificReturn := fake.readDirReturnsOnCall[len(fake.readDirArgsForCall)]
 	fake.readDirArgsForCall = append(fake.readDirArgsForCall, struct {
@@ -226,7 +226,7 @@ func (fake *FakeFileManager) ReadDirCallCount() int {
 	return len(fake.readDirArgsForCall)
 }
 
-func (fake *FakeFileManager) ReadDirCalls(stub func(string) ([]fs.FileInfo, error)) {
+func (fake *FakeFileManager) ReadDirCalls(stub func(string) ([]fs.DirEntry, error)) {
 	fake.readDirMutex.Lock()
 	defer fake.readDirMutex.Unlock()
 	fake.ReadDirStub = stub
@@ -239,28 +239,28 @@ func (fake *FakeFileManager) ReadDirArgsForCall(i int) string {
 	return argsForCall.arg1
 }
 
-func (fake *FakeFileManager) ReadDirReturns(result1 []fs.FileInfo, result2 error) {
+func (fake *FakeFileManager) ReadDirReturns(result1 []fs.DirEntry, result2 error) {
 	fake.readDirMutex.Lock()
 	defer fake.readDirMutex.Unlock()
 	fake.ReadDirStub = nil
 	fake.readDirReturns = struct {
-		result1 []fs.FileInfo
+		result1 []fs.DirEntry
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *FakeFileManager) ReadDirReturnsOnCall(i int, result1 []fs.FileInfo, result2 error) {
+func (fake *FakeFileManager) ReadDirReturnsOnCall(i int, result1 []fs.DirEntry, result2 error) {
 	fake.readDirMutex.Lock()
 	defer fake.readDirMutex.Unlock()
 	fake.ReadDirStub = nil
 	if fake.readDirReturnsOnCall == nil {
 		fake.readDirReturnsOnCall = make(map[int]struct {
-			result1 []fs.FileInfo
+			result1 []fs.DirEntry
 			result2 error
 		})
 	}
 	fake.readDirReturnsOnCall[i] = struct {
-		result1 []fs.FileInfo
+		result1 []fs.DirEntry
 		result2 error
 	}{result1, result2}
 }
