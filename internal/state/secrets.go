@@ -15,7 +15,7 @@ import (
 //go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . SecretStore
 //go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . SecretDiskMemoryManager
 //go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . FileManager
-//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 io/fs.FileInfo
+//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 io/fs.DirEntry
 
 // tlsSecretFileMode defines the default file mode for files with TLS Secrets.
 const tlsSecretFileMode = 0o600
@@ -78,8 +78,8 @@ type SecretDiskMemoryManager interface {
 // FileManager is an interface that exposes File I/O operations.
 // Used for unit testing.
 type FileManager interface {
-	// ReadDir returns the file info for the directory.
-	ReadDir(dirname string) ([]fs.FileInfo, error)
+	// ReadDir returns the directory entries for the directory.
+	ReadDir(dirname string) ([]fs.DirEntry, error)
 	// Remove file with given name.
 	Remove(name string) error
 	// Create file at the provided filepath.

@@ -2,7 +2,6 @@ package state
 
 import (
 	"io/fs"
-	"io/ioutil"
 	"os"
 )
 
@@ -12,8 +11,8 @@ func newStdLibFileManager() *stdLibFileManager {
 	return &stdLibFileManager{}
 }
 
-func (s *stdLibFileManager) ReadDir(dirname string) ([]fs.FileInfo, error) {
-	return ioutil.ReadDir(dirname)
+func (s *stdLibFileManager) ReadDir(dirname string) ([]fs.DirEntry, error) {
+	return os.ReadDir(dirname)
 }
 
 func (s *stdLibFileManager) Remove(name string) error {

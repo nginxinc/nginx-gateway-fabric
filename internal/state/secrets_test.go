@@ -4,7 +4,6 @@ package state_test
 import (
 	"errors"
 	"io/fs"
-	"io/ioutil"
 	"os"
 	"path"
 
@@ -201,7 +200,7 @@ var _ = Describe("SecretDiskMemoryManager", func() {
 			expectedFileNames := []string{"test_secret1", "test_secret2"}
 
 			// read all files from directory
-			dir, err := ioutil.ReadDir(tmpSecretsDir)
+			dir, err := os.ReadDir(tmpSecretsDir)
 			Expect(err).ToNot(HaveOccurred())
 
 			// test that the files exist that we expect
@@ -222,7 +221,7 @@ var _ = Describe("SecretDiskMemoryManager", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			// read all files from directory
-			dir, err := ioutil.ReadDir(tmpSecretsDir)
+			dir, err := os.ReadDir(tmpSecretsDir)
 			Expect(err).ToNot(HaveOccurred())
 
 			// only the secrets stored after the last write should be written to disk.
@@ -235,7 +234,7 @@ var _ = Describe("SecretDiskMemoryManager", func() {
 				Expect(err).ToNot(HaveOccurred())
 
 				// read all files from directory
-				dir, err := ioutil.ReadDir(tmpSecretsDir)
+				dir, err := os.ReadDir(tmpSecretsDir)
 				Expect(err).ToNot(HaveOccurred())
 
 				// no secrets should exist
@@ -245,16 +244,16 @@ var _ = Describe("SecretDiskMemoryManager", func() {
 	})
 	Describe("Write all requested secrets", func() {
 		var (
-			fakeFileManager   *statefakes.FakeFileManager
-			fakeStore         *statefakes.FakeSecretStore
-			fakeFileInfoSlice []fs.FileInfo
-			memMgr            *state.SecretDiskMemoryManagerImpl
+			fakeFileManager *statefakes.FakeFileManager
+			fakeStore       *statefakes.FakeSecretStore
+			fakeDirEntries  []fs.DirEntry
+			memMgr          *state.SecretDiskMemoryManagerImpl
 		)
 
 		BeforeEach(OncePerOrdered, func() {
 			fakeFileManager = &statefakes.FakeFileManager{}
 			fakeStore = &statefakes.FakeSecretStore{}
-			fakeFileInfoSlice = []fs.FileInfo{&statefakes.FakeFileInfo{}}
+			fakeDirEntries = []fs.DirEntry{&statefakes.FakeDirEntry{}}
 			memMgr = state.NewSecretDiskMemoryManager("", fakeStore, state.WithSecretFileManager(fakeFileManager))
 
 			// populate a requested secret
@@ -276,7 +275,7 @@ var _ = Describe("SecretDiskMemoryManager", func() {
 				}),
 			Entry("remove file error", errors.New("remove file"),
 				func(e error) {
-					fakeFileManager.ReadDirReturns(fakeFileInfoSlice, nil)
+					fakeFileManager.ReadDirReturns(fakeDirEntries, nil)
 					fakeFileManager.RemoveReturns(e)
 				}),
 			Entry("create file error", errors.New("create error"),
