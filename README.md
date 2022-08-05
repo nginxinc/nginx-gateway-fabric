@@ -154,23 +154,15 @@ make unit-test
 
 # Release Process for NGINX Kubernetes Gateway
 
-### NGINX Kubernetes Gateway will use semantic versioning for releases described in semver.org.. 
+### NGINX Kubernetes Gateway uses semantic versioning for its releases. For more information see https://semver.org.
 
-Given a version number MAJOR.MINOR.PATCH, increment the:
-
-- MAJOR version when you make incompatible API changes
-- MINOR version when you add functionality in a backwards compatible manner
-- PATCH version when you make backwards compatible bug fixes
-
-Note: While this project is using a beta version, it's important to point to this rule from https://semver.org/#spec-item-4.
-"Major version zero (0.y.z) is for initial development. Anything MAY change at any time. The public API SHOULD NOT be considered stable."
-
+Warning: Major version zero (0.y.z) is reserved for development, anything MAY change at any time. The public API is not stable."
 
 ### Steps to create a release.
 
-1. Create a release branch in the format release-X.Y from the main branch.
+1. Create a release branch from main, use the naming format: release-MAJOR.MINOR.
 
-2. Create a release candidate tag in the format vX.Y.Z-rc.n starting with n set to 1.
+2.  Create a release candidate tag, use the naming format: vMAJOR.MINOR.PATCH-rc.N (N must start from 1 and monotonically increase with each release candidate).
 
 3. Test the release candidate.
 
@@ -182,8 +174,8 @@ Note: While this project is using a beta version, it's important to point to thi
 
     - Once approved and merged, cherry-pick the commit into the release branch.
 
-    - Create a new release candidate tag from the release branch with n incremented in the tag name, vX.Y.Z-rc.n.
+    - Create a new release candidate tag, increment the release candidate number by 1.
 
-4. Iterate over the process in step 3 until all the tests pass on the release candidate tag then create the final release tag from the release branch in the format vX.Y.Z.  The docker image will automatically be pushed to ghcr.io/nginxinc/nginx-kubernetes-gateway:X.Y.Z with the release tag as the docker tag.
+4. Iterate over the process in step 3 until all the tests pass on the release candidate tag then create the final release tag from the release branch in the format vMAJOR.MINOR.PATCH.  The docker image will automatically be pushed to ghcr.io/nginxinc/nginx-kubernetes-gateway:MAJOR.MINOR.PATCH with the release tag as the docker tag.
 
 5. Update the Change log with the changes added in the release.  They can be found in the github release notes that was generated from the release branch.
