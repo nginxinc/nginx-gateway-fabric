@@ -2,6 +2,7 @@ package main
 
 import (
 	"io"
+	"runtime/debug"
 	"testing"
 
 	. "github.com/onsi/gomega"
@@ -581,4 +582,60 @@ func TestParseFlags(t *testing.T) {
 
 	g.Expect(flagKeys).Should(Equal(expectedKeys))
 	g.Expect(flagValues).Should(Equal(expectedValues))
+}
+
+func TestGetBuildInfo(t *testing.T) {
+	g := NewWithT(t)
+	stubBuildInfo := func() (info *debug.BuildInfo, ok bool) {
+		return &debug.BuildInfo{
+			Settings: []debug.BuildSetting{
+				{Key: "vcs.revision", Value: "abc123"},
+				{Key: "vcs.time", Value: "2024-07-30T12:34:56Z"},
+				{Key: "vcs.modified", Value: "true"},
+			},
+		}, true
+	}
+
+	buildInfo = stubBuildInfo
+
+	commitHash, commitTime, dirtyBuild := getBuildInfo()
+
+	g.Expect(commitHash).To(Equal("abc123"))
+	g.Expect(commitTime).To(Equal("2024-07-30T12:34:56Z"))
+	g.Expect(dirtyBuild).To(Equal("true"))
+}
+
+func TestGetBuildInfoNoBuildInfo(t *testing.T) {
+	g := NewWithT(t)
+	stubBuildInfo := func() (info *debug.BuildInfo, ok bool) {
+		return nil, false
+	}
+
+	buildInfo = stubBuildInfo
+
+	commitHash, commitTime, dirtyBuild := getBuildInfo()
+
+	g.Expect(commitHash).To(Equal("unknown"))
+	g.Expect(commitTime).To(Equal("unknown"))
+	g.Expect(dirtyBuild).To(Equal("unknown"))
+}
+
+func TestGetBuildInfoMissingValue(t *testing.T) {
+	g := NewWithT(t)
+	stubBuildInfo := func() (info *debug.BuildInfo, ok bool) {
+		return &debug.BuildInfo{
+			Settings: []debug.BuildSetting{
+				{Key: "vcs.time", Value: "2024-07-30T12:34:56Z"},
+				{Key: "vcs.modified", Value: "true"},
+			},
+		}, true
+	}
+
+	buildInfo = stubBuildInfo
+
+	commitHash, commitTime, dirtyBuild := getBuildInfo()
+
+	g.Expect(commitHash).To(Equal("unknown"))
+	g.Expect(commitTime).To(Equal("2024-07-30T12:34:56Z"))
+	g.Expect(dirtyBuild).To(Equal("true"))
 }

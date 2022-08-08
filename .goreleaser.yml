@@ -18,8 +18,6 @@ builds:
     ldflags:
       - -s -w
       - -X main.version={{.Version}}
-      - -X main.commit={{.Commit}}
-      - -X main.date={{.Date}}
       - -X main.telemetryReportPeriod=24h
       - -X main.telemetryEndpoint={{.Env.TELEMETRY_ENDPOINT}}
       - -X main.telemetryEndpointInsecure={{.Env.TELEMETRY_ENDPOINT_INSECURE}}
