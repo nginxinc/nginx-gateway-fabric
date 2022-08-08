@@ -20,18 +20,18 @@ func sortMatchRules(matchRules []MatchRule) {
 Returns true if rule1 has a higher priority than rule2.
 
 From the spec:
- Precedence must be given to the Rule with the largest number of (Continuing on ties):
- - Characters in a matching non-wildcard hostname.
- - Characters in a matching hostname.
- - Characters in a matching path.
- - Header matches.
- - Query param matches.
+Precedence must be given to the Rule with the largest number of (Continuing on ties):
+- Characters in a matching non-wildcard hostname.
+- Characters in a matching hostname.
+- Characters in a matching path.
+- Header matches.
+- Query param matches.
 
- If ties still exist across multiple Routes, matching precedence MUST be determined in order of the following criteria, continuing on ties:
- - The oldest Route based on creation timestamp.
- - The Route appearing first in alphabetical order by “{namespace}/{name}”.
+If ties still exist across multiple Routes, matching precedence MUST be determined in order of the following criteria, continuing on ties:
+- The oldest Route based on creation timestamp.
+- The Route appearing first in alphabetical order by “{namespace}/{name}”.
 
- If ties still exist within the Route that has been given precedence, matching precedence MUST be granted to the first matching rule meeting the above criteria.
+If ties still exist within the Route that has been given precedence, matching precedence MUST be granted to the first matching rule meeting the above criteria.
 
 higherPriority will determine precedence by comparing len(headers), len(query parameters), creation timestamp, and namespace name. The other criteria are handled by NGINX.
 */
