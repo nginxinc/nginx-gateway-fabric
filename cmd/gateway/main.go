@@ -5,12 +5,8 @@ import (
 	"os"
 )
 
-var (
-	// Set during go build
-	version string
-	commit  string
-	date    string
-)
+// Set during go build
+var version string
 
 func main() {
 	rootCmd := createRootCommand()

@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"runtime/debug"
 
 	"github.com/spf13/cobra"
 	"k8s.io/apimachinery/pkg/types"
@@ -124,10 +125,12 @@ func createStaticModeCommand() *cobra.Command {
 		Short: "Configure NGINX in the scope of a single Gateway resource",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			logger := zap.New()
+			commit, date, dirty := getBuildInfo()
 			logger.Info("Starting NGINX Kubernetes Gateway in static mode",
 				"version", version,
 				"commit", commit,
 				"date", date,
+				"dirty", dirty,
 			)
 
 			podIP := os.Getenv("POD_IP")
@@ -184,10 +187,12 @@ func createProvisionerModeCommand() *cobra.Command {
 		Hidden: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			logger := zap.New()
+			commit, date, dirty := getBuildInfo()
 			logger.Info("Starting NGINX Kubernetes Gateway Provisioner",
 				"version", version,
 				"commit", commit,
 				"date", date,
+				"dirty", dirty,
 			)
 
 			return provisioner.StartManager(provisioner.Config{
@@ -197,4 +202,27 @@ func createProvisionerModeCommand() *cobra.Command {
 			})
 		},
 	}
+}
+
+func getBuildInfo() (commitHash string, commitTime string, dirtyBuild bool) {
+	commitHash = "unknown"
+	commitTime = "unknown"
+	dirtyBuild = true
+
+	info, ok := debug.ReadBuildInfo()
+	if !ok {
+		return
+	}
+	for _, kv := range info.Settings {
+		switch kv.Key {
+		case "vcs.revision":
+			commitHash = kv.Value
+		case "vcs.time":
+			commitTime = kv.Value
+		case "vcs.modified":
+			dirtyBuild = kv.Value == "true"
+		}
+	}
+
+	return
 }

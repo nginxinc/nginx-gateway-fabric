@@ -10,7 +10,7 @@ TARGET ?= local ## The target of the build. Possible values: local and container
 KIND_KUBE_CONFIG_FOLDER = $${HOME}/.kube/kind ## The folder where the kind kubeconfig is stored
 OUT_DIR ?= $(shell pwd)/build/out ## The folder where the binary will be stored
 ARCH ?= amd64 ## The architecture of the image and/or binary. For example: amd64 or arm64
-override DOCKER_BUILD_OPTIONS += --build-arg VERSION=$(VERSION) --build-arg GIT_COMMIT=$(GIT_COMMIT) --build-arg DATE=$(DATE) ## The options for the docker build command. For example, --pull
+override DOCKER_BUILD_OPTIONS += --build-arg VERSION=$(VERSION) ## The options for the docker build command. For example, --pull
 
 .DEFAULT_GOAL := help
 
@@ -28,7 +28,7 @@ container: build ## Build the container
 build: ## Build the binary
 ifeq (${TARGET},local)
 	@go version || (code=$$?; printf "\033[0;31mError\033[0m: unable to build locally\n"; exit $$code)
-	CGO_ENABLED=0 GOOS=linux GOARCH=$(ARCH) go build -trimpath -a -ldflags "-s -w -X main.version=${VERSION} -X main.commit=${GIT_COMMIT} -X main.date=${DATE}" -o $(OUT_DIR)/gateway github.com/nginxinc/nginx-kubernetes-gateway/cmd/gateway
+	CGO_ENABLED=0 GOOS=linux GOARCH=$(ARCH) go build -trimpath -a -ldflags "-s -w -X main.version=${VERSION}" -o $(OUT_DIR)/gateway github.com/nginxinc/nginx-kubernetes-gateway/cmd/gateway
 endif
 
 .PHONY: build-goreleaser

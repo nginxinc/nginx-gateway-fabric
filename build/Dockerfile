@@ -1,8 +1,6 @@
 # syntax=docker/dockerfile:1.4
 FROM golang:1.20 as builder
 ARG VERSION
-ARG GIT_COMMIT
-ARG DATE
 
 WORKDIR /go/src/github.com/nginxinc/nginx-kubernetes-gateway/cmd/gateway
 
@@ -12,7 +10,7 @@ RUN go mod download
 COPY cmd /go/src/github.com/nginxinc/nginx-kubernetes-gateway/cmd
 COPY internal /go/src/github.com/nginxinc/nginx-kubernetes-gateway/internal
 COPY pkg /go/src/github.com/nginxinc/nginx-kubernetes-gateway/pkg
-RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -a -ldflags "-s -w -X main.version=${VERSION} -X main.commit=${GIT_COMMIT} -X main.date=${DATE}" -o gateway .
+RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -a -ldflags "-s -w -X main.version=${VERSION}" -o gateway .
 
 FROM alpine:3.18 as capabilizer
 RUN apk add --no-cache libcap
