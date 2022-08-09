@@ -89,7 +89,7 @@ func generate(virtualServer state.VirtualServer, serviceStore state.ServiceStore
 		}
 	}
 
-	if virtualServer.PathRules == nil {
+	if len(virtualServer.PathRules) == 0 {
 		// generate default "/" 404 location
 		s.Locations = []location{{Path: "/", Return: &returnVal{Code: statusNotFound}}}
 		return s, warnings

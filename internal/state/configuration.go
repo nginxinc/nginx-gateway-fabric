@@ -91,8 +91,8 @@ type configBuilder struct {
 
 func newConfigBuilder() *configBuilder {
 	return &configBuilder{
-		http: newVirtualServerBuilder(),
-		ssl:  newVirtualServerBuilder(),
+		http: newVirtualServerBuilder(v1alpha2.HTTPProtocolType),
+		ssl:  newVirtualServerBuilder(v1alpha2.HTTPSProtocolType),
 	}
 }
 
@@ -101,7 +101,6 @@ func (b *configBuilder) upsertListener(l *listener) {
 	case v1alpha2.HTTPProtocolType:
 		b.http.upsertListener(l)
 	case v1alpha2.HTTPSProtocolType:
-		b.ssl.listeners = append(b.ssl.listeners, l)
 		b.ssl.upsertListener(l)
 	default:
 		panic(fmt.Sprintf("listener protocol %s not supported", l.Source.Protocol))
@@ -110,19 +109,21 @@ func (b *configBuilder) upsertListener(l *listener) {
 
 func (b *configBuilder) build() Configuration {
 	return Configuration{
-		HTTPServers: b.http.buildHTTP(),
-		SSLServers:  b.ssl.buildSSL(),
+		HTTPServers: b.http.build(),
+		SSLServers:  b.ssl.build(),
 	}
 }
 
 type virtualServerBuilder struct {
+	protocolType     v1alpha2.ProtocolType
 	rulesPerHost     map[string]map[string]PathRule
 	listenersForHost map[string]*listener
 	listeners        []*listener
 }
 
-func newVirtualServerBuilder() *virtualServerBuilder {
+func newVirtualServerBuilder(protocolType v1alpha2.ProtocolType) *virtualServerBuilder {
 	return &virtualServerBuilder{
+		protocolType:     protocolType,
 		rulesPerHost:     make(map[string]map[string]PathRule),
 		listenersForHost: make(map[string]*listener),
 		listeners:        make([]*listener, 0),
@@ -130,6 +131,11 @@ func newVirtualServerBuilder() *virtualServerBuilder {
 }
 
 func (b *virtualServerBuilder) upsertListener(l *listener) {
+
+	if b.protocolType == v1alpha2.HTTPSProtocolType {
+		b.listeners = append(b.listeners, l)
+	}
+
 	for _, r := range l.Routes {
 		var hostnames []string
 
@@ -171,42 +177,9 @@ func (b *virtualServerBuilder) upsertListener(l *listener) {
 	}
 }
 
-func (b *virtualServerBuilder) buildSSL() []VirtualServer {
-	servers := make([]VirtualServer, 0, len(b.rulesPerHost)+len(b.listeners))
-
-	for _, l := range b.listeners {
-		hostname := getListenerHostname(l.Source.Hostname)
-		// generate a 404 ssl server block for listeners with no routes or listeners with wildcard (match-all) routes
-		// FIXME(kate-osborn): when we support regex hostnames (e.g. *.example.com) we will have to modify this check to catch regex hostnames.
-		if len(l.Routes) == 0 || hostname == wildcardHostname {
-			servers = append(servers, VirtualServer{
-				Hostname: hostname,
-				SSL:      &SSL{CertificatePath: l.SecretPath},
-			})
-		}
-	}
-
-	servers = append(servers, b.build()...)
-
-	sort.Slice(servers, func(i, j int) bool {
-		return servers[i].Hostname < servers[j].Hostname
-	})
-
-	return servers
-}
-
-func (b *virtualServerBuilder) buildHTTP() []VirtualServer {
-	servers := b.build()
-
-	sort.Slice(servers, func(i, j int) bool {
-		return servers[i].Hostname < servers[j].Hostname
-	})
-
-	return servers
-}
-
 func (b *virtualServerBuilder) build() []VirtualServer {
-	servers := make([]VirtualServer, 0, len(b.rulesPerHost))
+
+	servers := make([]VirtualServer, 0, len(b.rulesPerHost)+len(b.listeners))
 
 	for h, rules := range b.rulesPerHost {
 		s := VirtualServer{
@@ -236,6 +209,22 @@ func (b *virtualServerBuilder) build() []VirtualServer {
 
 		servers = append(servers, s)
 	}
+
+	for _, l := range b.listeners {
+		hostname := getListenerHostname(l.Source.Hostname)
+		// generate a 404 ssl server block for listeners with no routes or listeners with wildcard (match-all) routes
+		// FIXME(kate-osborn): when we support regex hostnames (e.g. *.example.com) we will have to modify this check to catch regex hostnames.
+		if len(l.Routes) == 0 || hostname == wildcardHostname {
+			servers = append(servers, VirtualServer{
+				Hostname: hostname,
+				SSL:      &SSL{CertificatePath: l.SecretPath},
+			})
+		}
+	}
+
+	sort.Slice(servers, func(i, j int) bool {
+		return servers[i].Hostname < servers[j].Hostname
+	})
 
 	return servers
 }
