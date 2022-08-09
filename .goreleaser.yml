@@ -1,0 +1,39 @@
+env:
+  - CGO_ENABLED=0
+
+builds:
+  - id: gateway
+    goos:
+      - linux
+    goarch:
+      - amd64
+      - arm64
+    flags:
+      - -trimpath
+    gcflags:
+      - all=-trimpath={{.Env.GOPATH}}
+    asmflags:
+      - all=-trimpath={{.Env.GOPATH}}
+    main: ./cmd/gateway/
+    binary: gateway
+
+changelog:
+  skip: true
+
+checksum:
+  name_template: 'checksums.txt'
+
+archives:
+  - id: gateway
+
+sboms:
+  - artifacts: archive
+
+release:
+  ids: [gateway]
+
+blobs:
+  - provider: azblob
+    bucket: '{{.Env.AZURE_BUCKET_NAME}}'
+    extra_files:
+      - glob: ./dist/**.sbom
