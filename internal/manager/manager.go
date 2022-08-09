@@ -115,10 +115,13 @@ func Start(cfg config.Config) error {
 		StatusUpdater:       statusUpdater,
 	})
 
+	firstBatchPreparer := events.NewFirstEventBatchPreparerImpl(mgr.GetCache(), cfg.GatewayClassName)
+
 	eventLoop := events.NewEventLoop(
 		eventCh,
 		cfg.Logger.WithName("eventLoop"),
-		eventHandler)
+		eventHandler,
+		firstBatchPreparer)
 
 	err = mgr.Add(eventLoop)
 	if err != nil {

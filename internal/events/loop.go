@@ -25,24 +25,27 @@ type EventLoop struct {
 	eventCh <-chan interface{}
 	logger  logr.Logger
 	handler EventHandler
+
+	preparer FirstEventBatchPreparer
 }
 
 // NewEventLoop creates a new EventLoop.
-func NewEventLoop(eventCh <-chan interface{}, logger logr.Logger, handler EventHandler) *EventLoop {
+func NewEventLoop(
+	eventCh <-chan interface{},
+	logger logr.Logger,
+	handler EventHandler,
+	preparer FirstEventBatchPreparer,
+) *EventLoop {
 	return &EventLoop{
-		eventCh: eventCh,
-		logger:  logger,
-		handler: handler,
+		eventCh:  eventCh,
+		logger:   logger,
+		handler:  handler,
+		preparer: preparer,
 	}
 }
 
 // Start starts the EventLoop.
 // This method will block until the EventLoop stops, which will happen after the ctx is closed.
-//
-// FIXME(pleshakov). Ensure that when the Gateway starts, the first time it generates configuration for NGINX,
-// it has a complete view of the cluster resources. For example, when the Gateway processes a Gateway resource
-// with a listener with TLS termination enabled (the listener references a TLS Secret), the Gateway knows about the secret.
-// This way the Gateway will not produce any incomplete transient configuration at the start.
 func (el *EventLoop) Start(ctx context.Context) error {
 	// The current batch.
 	var batch EventBatch
@@ -60,6 +63,28 @@ func (el *EventLoop) Start(ctx context.Context) error {
 
 		handlingDone <- struct{}{}
 	}
+
+	// Prepare the fist event batch, which includes the UpsertEvents for all relevant cluster resources.
+	// This is necessary so that the first time the EventHandler generates NGINX configuration, it derives it from
+	// a complete view of the cluster. Otherwise, the handler would generate incomplete configuration, which can lead
+	// to clients seeing transient 404 errors from NGINX and incorrect statuses of the resources updated by the Gateway.
+	//
+	// Note:
+	// After the handler goroutine handles the first batch, the loop will start receiving events from
+	// the controllers, which at the beginning will be UpsertEvents with the relevant cluster resources - i.e. they
+	// will be duplicates of the events in the first batch. This is OK, because it is expected that the EventHandler will
+	// not trigger any reconfiguration after receiving an upsert for an existing resource with the same Generation.
+
+	var err error
+	batch, err = el.preparer.Prepare(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to prepare the first batch: %w", err)
+	}
+
+	// Handle the first batch
+	go handle(ctx, batch)
+	batch = make([]interface{}, 0)
+	handling = true
 
 	// Note: at any point of time, no more than one batch is currently being handled.
 
