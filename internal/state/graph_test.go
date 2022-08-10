@@ -411,6 +411,17 @@ func TestBuildListeners(t *testing.T) {
 			},
 		},
 	}
+
+	tlsConfigInvalidSecret := &v1alpha2.GatewayTLSConfig{
+		Mode: helpers.GetTLSModePointer(v1alpha2.TLSModeTerminate),
+		CertificateRefs: []*v1alpha2.SecretObjectReference{
+			{
+				Kind:      (*v1alpha2.Kind)(helpers.GetStringPointer("Secret")),
+				Name:      "does-not-exist",
+				Namespace: (*v1alpha2.Namespace)(helpers.GetStringPointer("test")),
+			},
+		},
+	}
 	// https listeners
 	listener4431 := v1alpha2.Listener{
 		Name:     "listener-443-1",
@@ -438,6 +449,13 @@ func TestBuildListeners(t *testing.T) {
 		Hostname: (*v1alpha2.Hostname)(helpers.GetStringPointer("foo.example.com")),
 		Port:     443,
 		TLS:      nil, // invalid https listener; missing tls config
+		Protocol: v1alpha2.HTTPSProtocolType,
+	}
+	listener4435 := v1alpha2.Listener{
+		Name:     "listener-443-5",
+		Hostname: (*v1alpha2.Hostname)(helpers.GetStringPointer("foo.example.com")),
+		Port:     443,
+		TLS:      tlsConfigInvalidSecret, // invalid https listener; secret does not exist
 		Protocol: v1alpha2.HTTPSProtocolType,
 	}
 	tests := []struct {
@@ -534,6 +552,28 @@ func TestBuildListeners(t *testing.T) {
 				},
 			},
 			msg: "invalid https listener (tls config missing)",
+		},
+		{
+			gateway: &v1alpha2.Gateway{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+				},
+				Spec: v1alpha2.GatewaySpec{
+					GatewayClassName: gcName,
+					Listeners: []v1alpha2.Listener{
+						listener4435,
+					},
+				},
+			},
+			expected: map[string]*listener{
+				"listener-443-5": {
+					Source:            listener4435,
+					Valid:             false,
+					Routes:            map[types.NamespacedName]*route{},
+					AcceptedHostnames: map[string]struct{}{},
+				},
+			},
+			msg: "invalid https listener (secret does not exist)",
 		},
 		{
 			gateway: &v1alpha2.Gateway{

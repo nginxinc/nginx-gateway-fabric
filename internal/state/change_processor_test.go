@@ -246,6 +246,10 @@ var _ = Describe("ChangeProcessor", func() {
 								},
 							},
 						},
+						{
+							Hostname: "~^",
+							SSL:      &state.SSL{CertificatePath: certificatePath},
+						},
 					},
 				}
 
@@ -333,6 +337,10 @@ var _ = Describe("ChangeProcessor", func() {
 								},
 							},
 						},
+						{
+							Hostname: "~^",
+							SSL:      &state.SSL{CertificatePath: certificatePath},
+						},
 					},
 				}
 				expectedStatuses := state.Statuses{
@@ -418,6 +426,10 @@ var _ = Describe("ChangeProcessor", func() {
 									},
 								},
 							},
+						},
+						{
+							Hostname: "~^",
+							SSL:      &state.SSL{CertificatePath: certificatePath},
 						},
 					},
 				}
@@ -505,6 +517,10 @@ var _ = Describe("ChangeProcessor", func() {
 								},
 							},
 						},
+						{
+							Hostname: "~^",
+							SSL:      &state.SSL{CertificatePath: certificatePath},
+						},
 					},
 				}
 				expectedStatuses := state.Statuses{
@@ -590,6 +606,10 @@ var _ = Describe("ChangeProcessor", func() {
 								CertificatePath: certificatePath,
 							},
 						},
+						{
+							Hostname: "~^",
+							SSL:      &state.SSL{CertificatePath: certificatePath},
+						},
 					},
 				}
 				expectedStatuses := state.Statuses{
@@ -668,6 +688,10 @@ var _ = Describe("ChangeProcessor", func() {
 									},
 								},
 							},
+						},
+						{
+							Hostname: "~^",
+							SSL:      &state.SSL{CertificatePath: certificatePath},
 						},
 					},
 				}
@@ -754,6 +778,10 @@ var _ = Describe("ChangeProcessor", func() {
 								},
 							},
 						},
+						{
+							Hostname: "~^",
+							SSL:      &state.SSL{CertificatePath: certificatePath},
+						},
 					},
 				}
 				expectedStatuses := state.Statuses{
@@ -791,12 +819,17 @@ var _ = Describe("ChangeProcessor", func() {
 				Expect(helpers.Diff(expectedStatuses, statuses)).To(BeEmpty())
 			})
 
-			It("should return empty configuration and updated statuses after deleting the second HTTPRoute", func() {
+			It("should return configuration with default ssl server and updated statuses after deleting the second HTTPRoute", func() {
 				processor.CaptureDeleteChange(&v1alpha2.HTTPRoute{}, types.NamespacedName{Namespace: "test", Name: "hr-2"})
 
 				expectedConf := state.Configuration{
 					HTTPServers: []state.VirtualServer{},
-					SSLServers:  []state.VirtualServer{},
+					SSLServers: []state.VirtualServer{
+						{
+							Hostname: "~^",
+							SSL:      &state.SSL{CertificatePath: certificatePath},
+						},
+					},
 				}
 				expectedStatuses := state.Statuses{
 					GatewayClassStatus: &state.GatewayClassStatus{
