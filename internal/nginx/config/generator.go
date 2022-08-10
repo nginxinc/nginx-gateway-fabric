@@ -80,8 +80,22 @@ func generateDefaultHTTPServer() server {
 func generate(virtualServer state.VirtualServer, serviceStore state.ServiceStore) (server, Warnings) {
 	warnings := newWarnings()
 
-	locs := make([]location, 0, len(virtualServer.PathRules)) // FIXME(pleshakov): expand with rule.Routes
+	s := server{ServerName: virtualServer.Hostname}
 
+	if virtualServer.SSL != nil {
+		s.SSL = &ssl{
+			Certificate:    virtualServer.SSL.CertificatePath,
+			CertificateKey: virtualServer.SSL.CertificatePath,
+		}
+	}
+
+	if len(virtualServer.PathRules) == 0 {
+		// generate default "/" 404 location
+		s.Locations = []location{{Path: "/", Return: &returnVal{Code: statusNotFound}}}
+		return s, warnings
+	}
+
+	locs := make([]location, 0, len(virtualServer.PathRules)) // FIXME(pleshakov): expand with rule.Routes
 	for _, rule := range virtualServer.PathRules {
 		matches := make([]httpMatch, 0, len(rule.MatchRules))
 
@@ -125,16 +139,9 @@ func generate(virtualServer state.VirtualServer, serviceStore state.ServiceStore
 			locs = append(locs, pathLoc)
 		}
 	}
-	s := server{
-		ServerName: virtualServer.Hostname,
-		Locations:  locs,
-	}
-	if virtualServer.SSL != nil {
-		s.SSL = &ssl{
-			Certificate:    virtualServer.SSL.CertificatePath,
-			CertificateKey: virtualServer.SSL.CertificatePath,
-		}
-	}
+
+	s.Locations = locs
+
 	return s, warnings
 }
 

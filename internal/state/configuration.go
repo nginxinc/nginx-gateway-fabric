@@ -7,6 +7,8 @@ import (
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 )
 
+const wildcardHostname = "~^"
+
 // Configuration is an internal representation of Gateway configuration.
 // We can think of Configuration as an intermediate state between the Gateway API resources and the data plane (NGINX)
 // configuration.
@@ -89,8 +91,8 @@ type configBuilder struct {
 
 func newConfigBuilder() *configBuilder {
 	return &configBuilder{
-		http: newVirtualServerBuilder(),
-		ssl:  newVirtualServerBuilder(),
+		http: newVirtualServerBuilder(v1alpha2.HTTPProtocolType),
+		ssl:  newVirtualServerBuilder(v1alpha2.HTTPSProtocolType),
 	}
 }
 
@@ -113,18 +115,26 @@ func (b *configBuilder) build() Configuration {
 }
 
 type virtualServerBuilder struct {
+	protocolType     v1alpha2.ProtocolType
 	rulesPerHost     map[string]map[string]PathRule
 	listenersForHost map[string]*listener
+	listeners        []*listener
 }
 
-func newVirtualServerBuilder() *virtualServerBuilder {
+func newVirtualServerBuilder(protocolType v1alpha2.ProtocolType) *virtualServerBuilder {
 	return &virtualServerBuilder{
+		protocolType:     protocolType,
 		rulesPerHost:     make(map[string]map[string]PathRule),
 		listenersForHost: make(map[string]*listener),
+		listeners:        make([]*listener, 0),
 	}
 }
 
 func (b *virtualServerBuilder) upsertListener(l *listener) {
+
+	if b.protocolType == v1alpha2.HTTPSProtocolType {
+		b.listeners = append(b.listeners, l)
+	}
 
 	for _, r := range l.Routes {
 		var hostnames []string
@@ -137,6 +147,7 @@ func (b *virtualServerBuilder) upsertListener(l *listener) {
 
 		for _, h := range hostnames {
 			b.listenersForHost[h] = l
+
 			if _, exist := b.rulesPerHost[h]; !exist {
 				b.rulesPerHost[h] = make(map[string]PathRule)
 			}
@@ -144,6 +155,7 @@ func (b *virtualServerBuilder) upsertListener(l *listener) {
 
 		for i, rule := range r.Source.Spec.Rules {
 			for _, h := range hostnames {
+
 				for j, m := range rule.Matches {
 					path := getPath(m.Path)
 
@@ -167,7 +179,7 @@ func (b *virtualServerBuilder) upsertListener(l *listener) {
 
 func (b *virtualServerBuilder) build() []VirtualServer {
 
-	servers := make([]VirtualServer, 0, len(b.rulesPerHost))
+	servers := make([]VirtualServer, 0, len(b.rulesPerHost)+len(b.listeners))
 
 	for h, rules := range b.rulesPerHost {
 		s := VirtualServer{
@@ -198,12 +210,32 @@ func (b *virtualServerBuilder) build() []VirtualServer {
 		servers = append(servers, s)
 	}
 
-	// sort servers for predictable order
+	for _, l := range b.listeners {
+		hostname := getListenerHostname(l.Source.Hostname)
+		// generate a 404 ssl server block for listeners with no routes or listeners with wildcard (match-all) routes
+		// FIXME(kate-osborn): when we support regex hostnames (e.g. *.example.com) we will have to modify this check to catch regex hostnames.
+		if len(l.Routes) == 0 || hostname == wildcardHostname {
+			servers = append(servers, VirtualServer{
+				Hostname: hostname,
+				SSL:      &SSL{CertificatePath: l.SecretPath},
+			})
+		}
+	}
+
 	sort.Slice(servers, func(i, j int) bool {
 		return servers[i].Hostname < servers[j].Hostname
 	})
 
 	return servers
+}
+
+func getListenerHostname(h *v1alpha2.Hostname) string {
+	name := getHostname(h)
+	if name == "" {
+		return wildcardHostname
+	}
+
+	return name
 }
 
 func getPath(path *v1alpha2.HTTPPathMatch) string {
