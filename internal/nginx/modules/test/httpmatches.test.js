@@ -1,6 +1,5 @@
 import { default as hm } from '../src/httpmatches.js';
-
-let expect = require('chai').expect;
+import { expect } from 'chai';
 
 // Creates a NGINX HTTP Request Object for testing.
 // See documentation for all properties available: http://nginx.org/en/docs/njs/reference.html
