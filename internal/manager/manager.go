@@ -8,7 +8,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	ctlr "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/config"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/events"
@@ -37,7 +37,7 @@ var scheme = runtime.NewScheme()
 
 func init() {
 	// FIXME(pleshakov): handle errors returned by the calls bellow
-	_ = gatewayv1alpha2.AddToScheme(scheme)
+	_ = gatewayv1beta1.AddToScheme(scheme)
 	_ = apiv1.AddToScheme(scheme)
 }
 

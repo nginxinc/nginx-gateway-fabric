@@ -9,7 +9,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/gateway-api/apis/v1alpha2"
+	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/helpers"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state"
@@ -106,80 +106,80 @@ func TestGenerateForHost(t *testing.T) {
 }
 
 func TestGenerate(t *testing.T) {
-	hr := &v1alpha2.HTTPRoute{
+	hr := &v1beta1.HTTPRoute{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: "test",
 			Name:      "route1",
 		},
-		Spec: v1alpha2.HTTPRouteSpec{
-			Hostnames: []v1alpha2.Hostname{
+		Spec: v1beta1.HTTPRouteSpec{
+			Hostnames: []v1beta1.Hostname{
 				"cafe.example.com",
 			},
-			Rules: []v1alpha2.HTTPRouteRule{
+			Rules: []v1beta1.HTTPRouteRule{
 				{
-					Matches: []v1alpha2.HTTPRouteMatch{
+					Matches: []v1beta1.HTTPRouteMatch{
 						{
-							Path: &v1alpha2.HTTPPathMatch{
+							Path: &v1beta1.HTTPPathMatch{
 								Value: helpers.GetStringPointer("/"),
 							},
-							Method: helpers.GetHTTPMethodPointer(v1alpha2.HTTPMethodPost),
+							Method: helpers.GetHTTPMethodPointer(v1beta1.HTTPMethodPost),
 						},
 						{
-							Path: &v1alpha2.HTTPPathMatch{
+							Path: &v1beta1.HTTPPathMatch{
 								Value: helpers.GetStringPointer("/"),
 							},
-							Method: helpers.GetHTTPMethodPointer(v1alpha2.HTTPMethodPatch),
+							Method: helpers.GetHTTPMethodPointer(v1beta1.HTTPMethodPatch),
 						},
 						{
-							Path: &v1alpha2.HTTPPathMatch{
+							Path: &v1beta1.HTTPPathMatch{
 								Value: helpers.GetStringPointer("/"), // should generate an "any" httpmatch since other matches exists for /
 							},
 						},
 					},
-					BackendRefs: []v1alpha2.HTTPBackendRef{
+					BackendRefs: []v1beta1.HTTPBackendRef{
 						{
-							BackendRef: v1alpha2.BackendRef{
-								BackendObjectReference: v1alpha2.BackendObjectReference{
+							BackendRef: v1beta1.BackendRef{
+								BackendObjectReference: v1beta1.BackendObjectReference{
 									Name:      "service1",
-									Namespace: (*v1alpha2.Namespace)(helpers.GetStringPointer("test")),
-									Port:      (*v1alpha2.PortNumber)(helpers.GetInt32Pointer(80)),
+									Namespace: (*v1beta1.Namespace)(helpers.GetStringPointer("test")),
+									Port:      (*v1beta1.PortNumber)(helpers.GetInt32Pointer(80)),
 								},
 							},
 						},
 					},
 				},
 				{
-					Matches: []v1alpha2.HTTPRouteMatch{
+					Matches: []v1beta1.HTTPRouteMatch{
 						{
-							Path: &v1alpha2.HTTPPathMatch{
+							Path: &v1beta1.HTTPPathMatch{
 								Value: helpers.GetStringPointer("/test"),
 							},
-							Method: helpers.GetHTTPMethodPointer(v1alpha2.HTTPMethodGet),
-							Headers: []v1alpha2.HTTPHeaderMatch{
+							Method: helpers.GetHTTPMethodPointer(v1beta1.HTTPMethodGet),
+							Headers: []v1beta1.HTTPHeaderMatch{
 								{
-									Type:  helpers.GetHeaderMatchTypePointer(v1alpha2.HeaderMatchExact),
+									Type:  helpers.GetHeaderMatchTypePointer(v1beta1.HeaderMatchExact),
 									Name:  "Version",
 									Value: "V1",
 								},
 								{
-									Type:  helpers.GetHeaderMatchTypePointer(v1alpha2.HeaderMatchExact),
+									Type:  helpers.GetHeaderMatchTypePointer(v1beta1.HeaderMatchExact),
 									Name:  "test",
 									Value: "foo",
 								},
 								{
-									Type:  helpers.GetHeaderMatchTypePointer(v1alpha2.HeaderMatchExact),
+									Type:  helpers.GetHeaderMatchTypePointer(v1beta1.HeaderMatchExact),
 									Name:  "my-header",
 									Value: "my-value",
 								},
 							},
-							QueryParams: []v1alpha2.HTTPQueryParamMatch{
+							QueryParams: []v1beta1.HTTPQueryParamMatch{
 								{
-									Type:  helpers.GetQueryParamMatchTypePointer(v1alpha2.QueryParamMatchExact),
+									Type:  helpers.GetQueryParamMatchTypePointer(v1beta1.QueryParamMatchExact),
 									Name:  "GrEat", // query names and values should not be normalized to lowercase
 									Value: "EXAMPLE",
 								},
 								{
-									Type:  helpers.GetQueryParamMatchTypePointer(v1alpha2.QueryParamMatchExact),
+									Type:  helpers.GetQueryParamMatchTypePointer(v1beta1.QueryParamMatchExact),
 									Name:  "test",
 									Value: "foo=bar",
 								},
@@ -189,20 +189,20 @@ func TestGenerate(t *testing.T) {
 					BackendRefs: nil, // no backend refs will cause warnings
 				},
 				{
-					Matches: []v1alpha2.HTTPRouteMatch{
+					Matches: []v1beta1.HTTPRouteMatch{
 						{
-							Path: &v1alpha2.HTTPPathMatch{
+							Path: &v1beta1.HTTPPathMatch{
 								Value: helpers.GetStringPointer("/path-only"),
 							},
 						},
 					},
-					BackendRefs: []v1alpha2.HTTPBackendRef{
+					BackendRefs: []v1beta1.HTTPBackendRef{
 						{
-							BackendRef: v1alpha2.BackendRef{
-								BackendObjectReference: v1alpha2.BackendObjectReference{
+							BackendRef: v1beta1.BackendRef{
+								BackendObjectReference: v1beta1.BackendObjectReference{
 									Name:      "service2",
-									Namespace: (*v1alpha2.Namespace)(helpers.GetStringPointer("test")),
-									Port:      (*v1alpha2.PortNumber)(helpers.GetInt32Pointer(80)),
+									Namespace: (*v1beta1.Namespace)(helpers.GetStringPointer("test")),
+									Port:      (*v1beta1.PortNumber)(helpers.GetInt32Pointer(80)),
 								},
 							},
 						},
@@ -275,13 +275,13 @@ func TestGenerate(t *testing.T) {
 	}
 
 	slashMatches := []httpMatch{
-		{Method: v1alpha2.HTTPMethodPost, RedirectPath: "/_route0"},
-		{Method: v1alpha2.HTTPMethodPatch, RedirectPath: "/_route1"},
+		{Method: v1beta1.HTTPMethodPost, RedirectPath: "/_route0"},
+		{Method: v1beta1.HTTPMethodPatch, RedirectPath: "/_route1"},
 		{Any: true, RedirectPath: "/_route2"},
 	}
 	testMatches := []httpMatch{
 		{
-			Method:       v1alpha2.HTTPMethodGet,
+			Method:       v1beta1.HTTPMethodGet,
 			Headers:      []string{"Version:V1", "test:foo", "my-header:my-value"},
 			QueryParams:  []string{"GrEat=EXAMPLE", "test=foo=bar"},
 			RedirectPath: "/test_route0",
@@ -384,28 +384,28 @@ func TestGenerateProxyPass(t *testing.T) {
 }
 
 func TestGetBackendAddress(t *testing.T) {
-	getNormalRefs := func() []v1alpha2.HTTPBackendRef {
-		return []v1alpha2.HTTPBackendRef{
+	getNormalRefs := func() []v1beta1.HTTPBackendRef {
+		return []v1beta1.HTTPBackendRef{
 			{
-				BackendRef: v1alpha2.BackendRef{
-					BackendObjectReference: v1alpha2.BackendObjectReference{
-						Group:     (*v1alpha2.Group)(helpers.GetStringPointer("networking.k8s.io")),
-						Kind:      (*v1alpha2.Kind)(helpers.GetStringPointer("Service")),
+				BackendRef: v1beta1.BackendRef{
+					BackendObjectReference: v1beta1.BackendObjectReference{
+						Group:     (*v1beta1.Group)(helpers.GetStringPointer("networking.k8s.io")),
+						Kind:      (*v1beta1.Kind)(helpers.GetStringPointer("Service")),
 						Name:      "service1",
-						Namespace: (*v1alpha2.Namespace)(helpers.GetStringPointer("test")),
-						Port:      (*v1alpha2.PortNumber)(helpers.GetInt32Pointer(80)),
+						Namespace: (*v1beta1.Namespace)(helpers.GetStringPointer("test")),
+						Port:      (*v1beta1.PortNumber)(helpers.GetInt32Pointer(80)),
 					},
 				},
 			},
 		}
 	}
 
-	getModifiedRefs := func(mod func([]v1alpha2.HTTPBackendRef) []v1alpha2.HTTPBackendRef) []v1alpha2.HTTPBackendRef {
+	getModifiedRefs := func(mod func([]v1beta1.HTTPBackendRef) []v1beta1.HTTPBackendRef) []v1beta1.HTTPBackendRef {
 		return mod(getNormalRefs())
 	}
 
 	tests := []struct {
-		refs                      []v1alpha2.HTTPBackendRef
+		refs                      []v1beta1.HTTPBackendRef
 		parentNS                  string
 		storeAddress              string
 		storeErr                  error
@@ -428,7 +428,7 @@ func TestGetBackendAddress(t *testing.T) {
 		},
 		{
 			refs: getModifiedRefs(
-				func(refs []v1alpha2.HTTPBackendRef) []v1alpha2.HTTPBackendRef {
+				func(refs []v1beta1.HTTPBackendRef) []v1beta1.HTTPBackendRef {
 					refs[0].BackendRef.Namespace = nil
 					return refs
 				},
@@ -444,7 +444,7 @@ func TestGetBackendAddress(t *testing.T) {
 		},
 		{
 			refs: getModifiedRefs(
-				func(refs []v1alpha2.HTTPBackendRef) []v1alpha2.HTTPBackendRef {
+				func(refs []v1beta1.HTTPBackendRef) []v1beta1.HTTPBackendRef {
 					refs[0].BackendRef.Group = nil
 					refs[0].BackendRef.Kind = nil
 					return refs
@@ -461,7 +461,7 @@ func TestGetBackendAddress(t *testing.T) {
 		},
 		{
 			refs: getModifiedRefs(
-				func(refs []v1alpha2.HTTPBackendRef) []v1alpha2.HTTPBackendRef {
+				func(refs []v1beta1.HTTPBackendRef) []v1beta1.HTTPBackendRef {
 					secondRef := refs[0].DeepCopy()
 					secondRef.Name = "service2"
 					return append(refs, *secondRef)
@@ -478,8 +478,8 @@ func TestGetBackendAddress(t *testing.T) {
 		},
 		{
 			refs: getModifiedRefs(
-				func(refs []v1alpha2.HTTPBackendRef) []v1alpha2.HTTPBackendRef {
-					refs[0].BackendRef.Kind = (*v1alpha2.Kind)(helpers.GetStringPointer("NotService"))
+				func(refs []v1beta1.HTTPBackendRef) []v1beta1.HTTPBackendRef {
+					refs[0].BackendRef.Kind = (*v1beta1.Kind)(helpers.GetStringPointer("NotService"))
 					return refs
 				},
 			),
@@ -505,7 +505,7 @@ func TestGetBackendAddress(t *testing.T) {
 		},
 		{
 			refs: getModifiedRefs(
-				func(refs []v1alpha2.HTTPBackendRef) []v1alpha2.HTTPBackendRef {
+				func(refs []v1beta1.HTTPBackendRef) []v1beta1.HTTPBackendRef {
 					refs[0].BackendRef.Port = nil
 					return refs
 				},
@@ -608,7 +608,7 @@ func TestCreateArgKeyValString(t *testing.T) {
 	expected := "key=value"
 
 	result := createQueryParamKeyValString(
-		v1alpha2.HTTPQueryParamMatch{
+		v1beta1.HTTPQueryParamMatch{
 			Name:  "key",
 			Value: "value",
 		},
@@ -620,7 +620,7 @@ func TestCreateArgKeyValString(t *testing.T) {
 	expected = "KeY=vaLUe=="
 
 	result = createQueryParamKeyValString(
-		v1alpha2.HTTPQueryParamMatch{
+		v1beta1.HTTPQueryParamMatch{
 			Name:  "KeY",
 			Value: "vaLUe==",
 		},
@@ -634,7 +634,7 @@ func TestCreateHeaderKeyValString(t *testing.T) {
 	expected := "kEy:vALUe"
 
 	result := createHeaderKeyValString(
-		v1alpha2.HTTPHeaderMatch{
+		v1beta1.HTTPHeaderMatch{
 			Name:  "kEy",
 			Value: "vALUe",
 		},
@@ -647,13 +647,13 @@ func TestCreateHeaderKeyValString(t *testing.T) {
 
 func TestMatchLocationNeeded(t *testing.T) {
 	tests := []struct {
-		match    v1alpha2.HTTPRouteMatch
+		match    v1beta1.HTTPRouteMatch
 		expected bool
 		msg      string
 	}{
 		{
-			match: v1alpha2.HTTPRouteMatch{
-				Path: &v1alpha2.HTTPPathMatch{
+			match: v1beta1.HTTPRouteMatch{
+				Path: &v1beta1.HTTPPathMatch{
 					Value: helpers.GetStringPointer("/path"),
 				},
 			},
@@ -661,21 +661,21 @@ func TestMatchLocationNeeded(t *testing.T) {
 			msg:      "path only match",
 		},
 		{
-			match: v1alpha2.HTTPRouteMatch{
-				Path: &v1alpha2.HTTPPathMatch{
+			match: v1beta1.HTTPRouteMatch{
+				Path: &v1beta1.HTTPPathMatch{
 					Value: helpers.GetStringPointer("/path"),
 				},
-				Method: helpers.GetHTTPMethodPointer(v1alpha2.HTTPMethodGet),
+				Method: helpers.GetHTTPMethodPointer(v1beta1.HTTPMethodGet),
 			},
 			expected: false,
 			msg:      "method defined in match",
 		},
 		{
-			match: v1alpha2.HTTPRouteMatch{
-				Path: &v1alpha2.HTTPPathMatch{
+			match: v1beta1.HTTPRouteMatch{
+				Path: &v1beta1.HTTPPathMatch{
 					Value: helpers.GetStringPointer("/path"),
 				},
-				Headers: []v1alpha2.HTTPHeaderMatch{
+				Headers: []v1beta1.HTTPHeaderMatch{
 					{
 						Name:  "header",
 						Value: "val",
@@ -686,12 +686,11 @@ func TestMatchLocationNeeded(t *testing.T) {
 			msg:      "headers defined in match",
 		},
 		{
-			match: v1alpha2.HTTPRouteMatch{
-
-				Path: &v1alpha2.HTTPPathMatch{
+			match: v1beta1.HTTPRouteMatch{
+				Path: &v1beta1.HTTPPathMatch{
 					Value: helpers.GetStringPointer("/path"),
 				},
-				QueryParams: []v1alpha2.HTTPQueryParamMatch{
+				QueryParams: []v1beta1.HTTPQueryParamMatch{
 					{
 						Name:  "arg",
 						Value: "val",
@@ -715,60 +714,60 @@ func TestMatchLocationNeeded(t *testing.T) {
 func TestCreateHTTPMatch(t *testing.T) {
 	testPath := "/internal_loc"
 
-	testPathMatch := v1alpha2.HTTPPathMatch{Value: helpers.GetStringPointer("/")}
-	testMethodMatch := helpers.GetHTTPMethodPointer(v1alpha2.HTTPMethodPut)
-	testHeaderMatches := []v1alpha2.HTTPHeaderMatch{
+	testPathMatch := v1beta1.HTTPPathMatch{Value: helpers.GetStringPointer("/")}
+	testMethodMatch := helpers.GetHTTPMethodPointer(v1beta1.HTTPMethodPut)
+	testHeaderMatches := []v1beta1.HTTPHeaderMatch{
 		{
-			Type:  helpers.GetHeaderMatchTypePointer(v1alpha2.HeaderMatchExact),
+			Type:  helpers.GetHeaderMatchTypePointer(v1beta1.HeaderMatchExact),
 			Name:  "header-1",
 			Value: "val-1",
 		},
 		{
-			Type:  helpers.GetHeaderMatchTypePointer(v1alpha2.HeaderMatchExact),
+			Type:  helpers.GetHeaderMatchTypePointer(v1beta1.HeaderMatchExact),
 			Name:  "header-2",
 			Value: "val-2",
 		},
 		{
 			// regex type is not supported. This should not be added to the httpMatch headers.
-			Type:  helpers.GetHeaderMatchTypePointer(v1alpha2.HeaderMatchRegularExpression),
+			Type:  helpers.GetHeaderMatchTypePointer(v1beta1.HeaderMatchRegularExpression),
 			Name:  "ignore-this-header",
 			Value: "val",
 		},
 		{
-			Type:  helpers.GetHeaderMatchTypePointer(v1alpha2.HeaderMatchExact),
+			Type:  helpers.GetHeaderMatchTypePointer(v1beta1.HeaderMatchExact),
 			Name:  "header-3",
 			Value: "val-3",
 		},
 	}
 
-	testDuplicateHeaders := make([]v1alpha2.HTTPHeaderMatch, 0, 5)
-	duplicateHeaderMatch := v1alpha2.HTTPHeaderMatch{
-		Type:  helpers.GetHeaderMatchTypePointer(v1alpha2.HeaderMatchExact),
+	testDuplicateHeaders := make([]v1beta1.HTTPHeaderMatch, 0, 5)
+	duplicateHeaderMatch := v1beta1.HTTPHeaderMatch{
+		Type:  helpers.GetHeaderMatchTypePointer(v1beta1.HeaderMatchExact),
 		Name:  "HEADER-2", // header names are case-insensitive
 		Value: "val-2",
 	}
 	testDuplicateHeaders = append(testDuplicateHeaders, testHeaderMatches...)
 	testDuplicateHeaders = append(testDuplicateHeaders, duplicateHeaderMatch)
 
-	testQueryParamMatches := []v1alpha2.HTTPQueryParamMatch{
+	testQueryParamMatches := []v1beta1.HTTPQueryParamMatch{
 		{
-			Type:  helpers.GetQueryParamMatchTypePointer(v1alpha2.QueryParamMatchExact),
+			Type:  helpers.GetQueryParamMatchTypePointer(v1beta1.QueryParamMatchExact),
 			Name:  "arg1",
 			Value: "val1",
 		},
 		{
-			Type:  helpers.GetQueryParamMatchTypePointer(v1alpha2.QueryParamMatchExact),
+			Type:  helpers.GetQueryParamMatchTypePointer(v1beta1.QueryParamMatchExact),
 			Name:  "arg2",
 			Value: "val2=another-val",
 		},
 		{
 			// regex type is not supported. This should not be added to the httpMatch args
-			Type:  helpers.GetQueryParamMatchTypePointer(v1alpha2.QueryParamMatchRegularExpression),
+			Type:  helpers.GetQueryParamMatchTypePointer(v1beta1.QueryParamMatchRegularExpression),
 			Name:  "ignore-this-arg",
 			Value: "val",
 		},
 		{
-			Type:  helpers.GetQueryParamMatchTypePointer(v1alpha2.QueryParamMatchExact),
+			Type:  helpers.GetQueryParamMatchTypePointer(v1beta1.QueryParamMatchExact),
 			Name:  "arg3",
 			Value: "==val3",
 		},
@@ -778,12 +777,12 @@ func TestCreateHTTPMatch(t *testing.T) {
 	expectedArgs := []string{"arg1=val1", "arg2=val2=another-val", "arg3===val3"}
 
 	tests := []struct {
-		match    v1alpha2.HTTPRouteMatch
+		match    v1beta1.HTTPRouteMatch
 		expected httpMatch
 		msg      string
 	}{
 		{
-			match: v1alpha2.HTTPRouteMatch{
+			match: v1beta1.HTTPRouteMatch{
 				Path: &testPathMatch,
 			},
 			expected: httpMatch{
@@ -793,7 +792,7 @@ func TestCreateHTTPMatch(t *testing.T) {
 			msg: "path only match",
 		},
 		{
-			match: v1alpha2.HTTPRouteMatch{
+			match: v1beta1.HTTPRouteMatch{
 				Path:   &testPathMatch, // A path match with a method should not set the Any field to true
 				Method: testMethodMatch,
 			},
@@ -804,7 +803,7 @@ func TestCreateHTTPMatch(t *testing.T) {
 			msg: "method only match",
 		},
 		{
-			match: v1alpha2.HTTPRouteMatch{
+			match: v1beta1.HTTPRouteMatch{
 				Headers: testHeaderMatches,
 			},
 			expected: httpMatch{
@@ -814,7 +813,7 @@ func TestCreateHTTPMatch(t *testing.T) {
 			msg: "headers only match",
 		},
 		{
-			match: v1alpha2.HTTPRouteMatch{
+			match: v1beta1.HTTPRouteMatch{
 				QueryParams: testQueryParamMatches,
 			},
 			expected: httpMatch{
@@ -824,7 +823,7 @@ func TestCreateHTTPMatch(t *testing.T) {
 			msg: "query params only match",
 		},
 		{
-			match: v1alpha2.HTTPRouteMatch{
+			match: v1beta1.HTTPRouteMatch{
 				Method:      testMethodMatch,
 				QueryParams: testQueryParamMatches,
 			},
@@ -836,7 +835,7 @@ func TestCreateHTTPMatch(t *testing.T) {
 			msg: "method and query params match",
 		},
 		{
-			match: v1alpha2.HTTPRouteMatch{
+			match: v1beta1.HTTPRouteMatch{
 				Method:  testMethodMatch,
 				Headers: testHeaderMatches,
 			},
@@ -848,7 +847,7 @@ func TestCreateHTTPMatch(t *testing.T) {
 			msg: "method and headers match",
 		},
 		{
-			match: v1alpha2.HTTPRouteMatch{
+			match: v1beta1.HTTPRouteMatch{
 				QueryParams: testQueryParamMatches,
 				Headers:     testHeaderMatches,
 			},
@@ -860,7 +859,7 @@ func TestCreateHTTPMatch(t *testing.T) {
 			msg: "query params and headers match",
 		},
 		{
-			match: v1alpha2.HTTPRouteMatch{
+			match: v1beta1.HTTPRouteMatch{
 				Headers:     testHeaderMatches,
 				QueryParams: testQueryParamMatches,
 				Method:      testMethodMatch,
@@ -874,7 +873,7 @@ func TestCreateHTTPMatch(t *testing.T) {
 			msg: "method, headers, and query params match",
 		},
 		{
-			match: v1alpha2.HTTPRouteMatch{
+			match: v1beta1.HTTPRouteMatch{
 				Headers: testDuplicateHeaders,
 			},
 			expected: httpMatch{

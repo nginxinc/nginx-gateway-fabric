@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/gateway-api/apis/v1alpha2"
+	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state"
 )
@@ -102,7 +102,6 @@ func generate(virtualServer state.VirtualServer, serviceStore state.ServiceStore
 		for ruleIdx, r := range rule.MatchRules {
 
 			address, err := getBackendAddress(r.Source.Spec.Rules[r.RuleIdx].BackendRefs, r.Source.Namespace, serviceStore)
-
 			if err != nil {
 				warnings.AddWarning(r.Source, err.Error())
 			}
@@ -125,7 +124,6 @@ func generate(virtualServer state.VirtualServer, serviceStore state.ServiceStore
 
 		if len(matches) > 0 {
 			b, err := json.Marshal(matches)
-
 			if err != nil {
 				// panic is safe here because we should never fail to marshal the match unless we constructed it incorrectly.
 				panic(fmt.Errorf("could not marshal http match: %w", err))
@@ -153,7 +151,7 @@ func generateProxyPass(address string) string {
 }
 
 func getBackendAddress(
-	refs []v1alpha2.HTTPBackendRef,
+	refs []v1beta1.HTTPBackendRef,
 	parentNS string,
 	serviceStore state.ServiceStore,
 ) (string, error) {
@@ -205,7 +203,7 @@ type httpMatch struct {
 	// Any represents a match with no match conditions.
 	Any bool `json:"any,omitempty"`
 	// Method is the HTTPMethod of the HTTPRouteMatch.
-	Method v1alpha2.HTTPMethod `json:"method,omitempty"`
+	Method v1beta1.HTTPMethod `json:"method,omitempty"`
 	// Headers is a list of HTTPHeaders name value pairs with the format "{name}:{value}".
 	Headers []string `json:"headers,omitempty"`
 	// QueryParams is a list of HTTPQueryParams name value pairs with the format "{name}={value}".
@@ -214,7 +212,7 @@ type httpMatch struct {
 	RedirectPath string `json:"redirectPath,omitempty"`
 }
 
-func createHTTPMatch(match v1alpha2.HTTPRouteMatch, redirectPath string) httpMatch {
+func createHTTPMatch(match v1beta1.HTTPRouteMatch, redirectPath string) httpMatch {
 	hm := httpMatch{
 		RedirectPath: redirectPath,
 	}
@@ -234,7 +232,7 @@ func createHTTPMatch(match v1alpha2.HTTPRouteMatch, redirectPath string) httpMat
 
 		// FIXME(kate-osborn): For now we only support type "Exact".
 		for _, h := range match.Headers {
-			if *h.Type == v1alpha2.HeaderMatchExact {
+			if *h.Type == v1beta1.HeaderMatchExact {
 				// duplicate header names are not permitted by the spec
 				// only configure the first entry for every header name (case-insensitive)
 				lowerName := strings.ToLower(string(h.Name))
@@ -252,7 +250,7 @@ func createHTTPMatch(match v1alpha2.HTTPRouteMatch, redirectPath string) httpMat
 
 		// FIXME(kate-osborn): For now we only support type "Exact".
 		for _, p := range match.QueryParams {
-			if *p.Type == v1alpha2.QueryParamMatchExact {
+			if *p.Type == v1beta1.QueryParamMatchExact {
 				params = append(params, createQueryParamKeyValString(p))
 			}
 		}
@@ -264,17 +262,17 @@ func createHTTPMatch(match v1alpha2.HTTPRouteMatch, redirectPath string) httpMat
 
 // The name and values are delimited by "=". A name and value can always be recovered using strings.SplitN(arg,"=", 2).
 // Query Parameters are case-sensitive so case is preserved.
-func createQueryParamKeyValString(p v1alpha2.HTTPQueryParamMatch) string {
+func createQueryParamKeyValString(p v1beta1.HTTPQueryParamMatch) string {
 	return p.Name + "=" + p.Value
 }
 
 // The name and values are delimited by ":". A name and value can always be recovered using strings.Split(arg, ":").
 // Header names are case-insensitive while header values are case-sensitive (e.g. foo:bar == FOO:bar, but foo:bar != foo:BAR).
 // We preserve the case of the name here because NGINX allows us to lookup the header names in a case-insensitive manner.
-func createHeaderKeyValString(h v1alpha2.HTTPHeaderMatch) string {
+func createHeaderKeyValString(h v1beta1.HTTPHeaderMatch) string {
 	return string(h.Name) + ":" + h.Value
 }
 
-func isPathOnlyMatch(match v1alpha2.HTTPRouteMatch) bool {
+func isPathOnlyMatch(match v1beta1.HTTPRouteMatch) bool {
 	return match.Method == nil && match.Headers == nil && match.QueryParams == nil
 }

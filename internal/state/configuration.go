@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"sort"
 
-	"sigs.k8s.io/gateway-api/apis/v1alpha2"
+	"sigs.k8s.io/gateway-api/apis/v1beta1"
 )
 
 const wildcardHostname = "~^"
@@ -53,11 +53,11 @@ type MatchRule struct {
 	// RuleIdx is the index of the corresponding rule in the HTTPRoute.
 	RuleIdx int
 	// Source is the corresponding HTTPRoute resource.
-	Source *v1alpha2.HTTPRoute
+	Source *v1beta1.HTTPRoute
 }
 
 // GetMatch returns the HTTPRouteMatch of the Route .
-func (r *MatchRule) GetMatch() v1alpha2.HTTPRouteMatch {
+func (r *MatchRule) GetMatch() v1beta1.HTTPRouteMatch {
 	return r.Source.Spec.Rules[r.RuleIdx].Matches[r.MatchIdx]
 }
 
@@ -91,16 +91,16 @@ type configBuilder struct {
 
 func newConfigBuilder() *configBuilder {
 	return &configBuilder{
-		http: newVirtualServerBuilder(v1alpha2.HTTPProtocolType),
-		ssl:  newVirtualServerBuilder(v1alpha2.HTTPSProtocolType),
+		http: newVirtualServerBuilder(v1beta1.HTTPProtocolType),
+		ssl:  newVirtualServerBuilder(v1beta1.HTTPSProtocolType),
 	}
 }
 
 func (b *configBuilder) upsertListener(l *listener) {
 	switch l.Source.Protocol {
-	case v1alpha2.HTTPProtocolType:
+	case v1beta1.HTTPProtocolType:
 		b.http.upsertListener(l)
-	case v1alpha2.HTTPSProtocolType:
+	case v1beta1.HTTPSProtocolType:
 		b.ssl.upsertListener(l)
 	default:
 		panic(fmt.Sprintf("listener protocol %s not supported", l.Source.Protocol))
@@ -115,13 +115,13 @@ func (b *configBuilder) build() Configuration {
 }
 
 type virtualServerBuilder struct {
-	protocolType     v1alpha2.ProtocolType
+	protocolType     v1beta1.ProtocolType
 	rulesPerHost     map[string]map[string]PathRule
 	listenersForHost map[string]*listener
 	listeners        []*listener
 }
 
-func newVirtualServerBuilder(protocolType v1alpha2.ProtocolType) *virtualServerBuilder {
+func newVirtualServerBuilder(protocolType v1beta1.ProtocolType) *virtualServerBuilder {
 	return &virtualServerBuilder{
 		protocolType:     protocolType,
 		rulesPerHost:     make(map[string]map[string]PathRule),
@@ -131,8 +131,7 @@ func newVirtualServerBuilder(protocolType v1alpha2.ProtocolType) *virtualServerB
 }
 
 func (b *virtualServerBuilder) upsertListener(l *listener) {
-
-	if b.protocolType == v1alpha2.HTTPSProtocolType {
+	if b.protocolType == v1beta1.HTTPSProtocolType {
 		b.listeners = append(b.listeners, l)
 	}
 
@@ -155,7 +154,6 @@ func (b *virtualServerBuilder) upsertListener(l *listener) {
 
 		for i, rule := range r.Source.Spec.Rules {
 			for _, h := range hostnames {
-
 				for j, m := range rule.Matches {
 					path := getPath(m.Path)
 
@@ -178,7 +176,6 @@ func (b *virtualServerBuilder) upsertListener(l *listener) {
 }
 
 func (b *virtualServerBuilder) build() []VirtualServer {
-
 	servers := make([]VirtualServer, 0, len(b.rulesPerHost)+len(b.listeners))
 
 	for h, rules := range b.rulesPerHost {
@@ -229,7 +226,7 @@ func (b *virtualServerBuilder) build() []VirtualServer {
 	return servers
 }
 
-func getListenerHostname(h *v1alpha2.Hostname) string {
+func getListenerHostname(h *v1beta1.Hostname) string {
 	name := getHostname(h)
 	if name == "" {
 		return wildcardHostname
@@ -238,7 +235,7 @@ func getListenerHostname(h *v1alpha2.Hostname) string {
 	return name
 }
 
-func getPath(path *v1alpha2.HTTPPathMatch) string {
+func getPath(path *v1beta1.HTTPPathMatch) string {
 	if path == nil || path.Value == nil || *path.Value == "" {
 		return "/"
 	}

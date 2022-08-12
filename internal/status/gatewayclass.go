@@ -4,13 +4,13 @@ import (
 	"fmt"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/gateway-api/apis/v1alpha2"
+	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state"
 )
 
 // prepareGatewayClassStatus prepares the status for the GatewayClass resource.
-func prepareGatewayClassStatus(status state.GatewayClassStatus, transitionTime metav1.Time) v1alpha2.GatewayClassStatus {
+func prepareGatewayClassStatus(status state.GatewayClassStatus, transitionTime metav1.Time) v1beta1.GatewayClassStatus {
 	var (
 		condStatus metav1.ConditionStatus
 		msg        string
@@ -25,15 +25,15 @@ func prepareGatewayClassStatus(status state.GatewayClassStatus, transitionTime m
 	}
 
 	cond := metav1.Condition{
-		Type:               string(v1alpha2.GatewayClassConditionStatusAccepted),
+		Type:               string(v1beta1.GatewayClassConditionStatusAccepted),
 		Status:             condStatus,
 		ObservedGeneration: status.ObservedGeneration,
 		LastTransitionTime: transitionTime,
-		Reason:             string(v1alpha2.GatewayClassReasonAccepted),
+		Reason:             string(v1beta1.GatewayClassReasonAccepted),
 		Message:            msg,
 	}
 
-	return v1alpha2.GatewayClassStatus{
+	return v1beta1.GatewayClassStatus{
 		Conditions: []metav1.Condition{cond},
 	}
 }
