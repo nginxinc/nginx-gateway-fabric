@@ -6,7 +6,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/gateway-api/apis/v1alpha2"
+	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/helpers"
 )
@@ -17,16 +17,16 @@ func TestSort(t *testing.T) {
 	later := metav1.NewTime(earlier.Add(1 * time.Second))
 
 	// matches
-	pathOnlyMatch := v1alpha2.HTTPRouteMatch{
-		Path: &v1alpha2.HTTPPathMatch{
+	pathOnlyMatch := v1beta1.HTTPRouteMatch{
+		Path: &v1beta1.HTTPPathMatch{
 			Value: helpers.GetStringPointer("/path"), // path match only (low priority)
 		},
 	}
-	twoHeaderMatch := v1alpha2.HTTPRouteMatch{
-		Path: &v1alpha2.HTTPPathMatch{
+	twoHeaderMatch := v1beta1.HTTPRouteMatch{
+		Path: &v1beta1.HTTPPathMatch{
 			Value: helpers.GetStringPointer("/path"),
 		},
-		Headers: []v1alpha2.HTTPHeaderMatch{
+		Headers: []v1beta1.HTTPHeaderMatch{
 			{
 				Name:  "header1",
 				Value: "value1",
@@ -37,11 +37,11 @@ func TestSort(t *testing.T) {
 			},
 		},
 	}
-	threeHeaderMatch := v1alpha2.HTTPRouteMatch{
-		Path: &v1alpha2.HTTPPathMatch{
+	threeHeaderMatch := v1beta1.HTTPRouteMatch{
+		Path: &v1beta1.HTTPPathMatch{
 			Value: helpers.GetStringPointer("/path"),
 		},
-		Headers: []v1alpha2.HTTPHeaderMatch{
+		Headers: []v1beta1.HTTPHeaderMatch{
 			{
 				Name:  "header1",
 				Value: "value1",
@@ -56,11 +56,11 @@ func TestSort(t *testing.T) {
 			},
 		},
 	}
-	twoHeaderOneParamMatch := v1alpha2.HTTPRouteMatch{
-		Path: &v1alpha2.HTTPPathMatch{
+	twoHeaderOneParamMatch := v1beta1.HTTPRouteMatch{
+		Path: &v1beta1.HTTPPathMatch{
 			Value: helpers.GetStringPointer("/path"),
 		},
-		Headers: []v1alpha2.HTTPHeaderMatch{
+		Headers: []v1beta1.HTTPHeaderMatch{
 			{
 				Name:  "header1",
 				Value: "value1",
@@ -70,7 +70,7 @@ func TestSort(t *testing.T) {
 				Value: "value2",
 			},
 		},
-		QueryParams: []v1alpha2.HTTPQueryParamMatch{
+		QueryParams: []v1beta1.HTTPQueryParamMatch{
 			{
 				Name:  "key1",
 				Value: "value1",
@@ -78,22 +78,22 @@ func TestSort(t *testing.T) {
 		},
 	}
 
-	hr1 := v1alpha2.HTTPRoute{
+	hr1 := v1beta1.HTTPRoute{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:              "hr1",
 			Namespace:         "test",
 			CreationTimestamp: earlier,
 		},
-		Spec: v1alpha2.HTTPRouteSpec{
-			Rules: []v1alpha2.HTTPRouteRule{
+		Spec: v1beta1.HTTPRouteSpec{
+			Rules: []v1beta1.HTTPRouteRule{
 				{
-					Matches: []v1alpha2.HTTPRouteMatch{pathOnlyMatch},
+					Matches: []v1beta1.HTTPRouteMatch{pathOnlyMatch},
 				},
 				{
-					Matches: []v1alpha2.HTTPRouteMatch{twoHeaderMatch},
+					Matches: []v1beta1.HTTPRouteMatch{twoHeaderMatch},
 				},
 				{
-					Matches: []v1alpha2.HTTPRouteMatch{
+					Matches: []v1beta1.HTTPRouteMatch{
 						twoHeaderOneParamMatch, // tie decided on params
 						threeHeaderMatch,       // tie decided on headers
 					},
@@ -102,31 +102,31 @@ func TestSort(t *testing.T) {
 		},
 	}
 
-	hr2 := v1alpha2.HTTPRoute{
+	hr2 := v1beta1.HTTPRoute{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:              "hr2",
 			Namespace:         "test",
 			CreationTimestamp: later,
 		},
-		Spec: v1alpha2.HTTPRouteSpec{
-			Rules: []v1alpha2.HTTPRouteRule{
+		Spec: v1beta1.HTTPRouteSpec{
+			Rules: []v1beta1.HTTPRouteRule{
 				{
-					Matches: []v1alpha2.HTTPRouteMatch{twoHeaderMatch}, // tie decided on creation timestamp
+					Matches: []v1beta1.HTTPRouteMatch{twoHeaderMatch}, // tie decided on creation timestamp
 				},
 			},
 		},
 	}
 
-	hr3 := v1alpha2.HTTPRoute{
+	hr3 := v1beta1.HTTPRoute{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:              "hr3",
 			Namespace:         "a-test", // tie decided by namespace name
 			CreationTimestamp: later,
 		},
-		Spec: v1alpha2.HTTPRouteSpec{
-			Rules: []v1alpha2.HTTPRouteRule{
+		Spec: v1beta1.HTTPRouteSpec{
+			Rules: []v1beta1.HTTPRouteRule{
 				{
-					Matches: []v1alpha2.HTTPRouteMatch{twoHeaderMatch},
+					Matches: []v1beta1.HTTPRouteMatch{twoHeaderMatch},
 				},
 			},
 		},

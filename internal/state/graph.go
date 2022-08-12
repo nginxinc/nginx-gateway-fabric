@@ -5,13 +5,13 @@ import (
 	"sort"
 
 	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/gateway-api/apis/v1alpha2"
+	"sigs.k8s.io/gateway-api/apis/v1beta1"
 )
 
 // gateway represents the winning Gateway resource.
 type gateway struct {
 	// Source is the corresponding Gateway resource.
-	Source *v1alpha2.Gateway
+	Source *v1beta1.Gateway
 	// Listeners include the listeners of the Gateway.
 	Listeners map[string]*listener
 }
@@ -21,7 +21,7 @@ type route struct {
 	// Source is the source resource of the route.
 	// FIXME(pleshakov)
 	// For now, we assume that the source is only HTTPRoute. Later we can support more types - TLSRoute, TCPRoute and UDPRoute.
-	Source *v1alpha2.HTTPRoute
+	Source *v1beta1.HTTPRoute
 
 	// ValidSectionNameRefs includes the sectionNames from the parentRefs of the HTTPRoute that are valid -- i.e.
 	// the Gateway resource has a corresponding valid listener.
@@ -33,7 +33,7 @@ type route struct {
 // gatewayClass represents the GatewayClass resource.
 type gatewayClass struct {
 	// Source is the source resource.
-	Source *v1alpha2.GatewayClass
+	Source *v1beta1.GatewayClass
 	// Valid shows whether the GatewayClass is valid.
 	Valid bool
 	// ErrorMsg explains the error when the resource is not valid.
@@ -49,7 +49,7 @@ type graph struct {
 	// IgnoredGateways holds the ignored Gateway resources, which belong to the NGINX Gateway (based on the
 	// GatewayClassName field of the resource) but ignored. It doesn't hold the Gateway resources that do not belong to
 	// the NGINX Gateway.
-	IgnoredGateways map[types.NamespacedName]*v1alpha2.Gateway
+	IgnoredGateways map[types.NamespacedName]*v1beta1.Gateway
 	// Routes holds route resources.
 	Routes map[types.NamespacedName]*route
 }
@@ -94,8 +94,8 @@ func buildGraph(
 // processGateways determines which Gateway resource the NGINX Gateway will use (the winner) and which Gateway(s) will
 // be ignored. Note that the function will not take into the account any unrelated Gateway resources - the ones with the
 // different GatewayClassName field.
-func processGateways(gws map[types.NamespacedName]*v1alpha2.Gateway, gcName string) (winner *v1alpha2.Gateway, ignoredGateways map[types.NamespacedName]*v1alpha2.Gateway) {
-	referencedGws := make([]*v1alpha2.Gateway, 0, len(gws))
+func processGateways(gws map[types.NamespacedName]*v1beta1.Gateway, gcName string) (winner *v1beta1.Gateway, ignoredGateways map[types.NamespacedName]*v1beta1.Gateway) {
+	referencedGws := make([]*v1beta1.Gateway, 0, len(gws))
 
 	for _, gw := range gws {
 		if string(gw.Spec.GatewayClassName) != gcName {
@@ -113,7 +113,7 @@ func processGateways(gws map[types.NamespacedName]*v1alpha2.Gateway, gcName stri
 		return lessObjectMeta(&referencedGws[i].ObjectMeta, &referencedGws[j].ObjectMeta)
 	})
 
-	ignoredGws := make(map[types.NamespacedName]*v1alpha2.Gateway)
+	ignoredGws := make(map[types.NamespacedName]*v1beta1.Gateway)
 
 	for _, gw := range referencedGws[1:] {
 		ignoredGws[getNamespacedName(gw)] = gw
@@ -122,7 +122,7 @@ func processGateways(gws map[types.NamespacedName]*v1alpha2.Gateway, gcName stri
 	return referencedGws[0], ignoredGws
 }
 
-func buildGatewayClass(gc *v1alpha2.GatewayClass, controllerName string) *gatewayClass {
+func buildGatewayClass(gc *v1beta1.GatewayClass, controllerName string) *gatewayClass {
 	if gc == nil {
 		return nil
 	}
@@ -141,7 +141,7 @@ func buildGatewayClass(gc *v1alpha2.GatewayClass, controllerName string) *gatewa
 	}
 }
 
-func buildListeners(gw *v1alpha2.Gateway, gcName string, secretMemoryMgr SecretDiskMemoryManager) map[string]*listener {
+func buildListeners(gw *v1beta1.Gateway, gcName string, secretMemoryMgr SecretDiskMemoryManager) map[string]*listener {
 	listeners := make(map[string]*listener)
 
 	if gw == nil || string(gw.Spec.GatewayClassName) != gcName {
@@ -164,9 +164,9 @@ func buildListeners(gw *v1alpha2.Gateway, gcName string, secretMemoryMgr SecretD
 // (2) HTTPRoute will be processed but not bound.
 // (3) HTTPRoute will be processed and bound to a listener.
 func bindHTTPRouteToListeners(
-	ghr *v1alpha2.HTTPRoute,
-	gw *v1alpha2.Gateway,
-	ignoredGws map[types.NamespacedName]*v1alpha2.Gateway,
+	ghr *v1beta1.HTTPRoute,
+	gw *v1beta1.Gateway,
+	ignoredGws map[types.NamespacedName]*v1beta1.Gateway,
 	listeners map[string]*listener,
 ) (ignored bool, r *route) {
 	if len(ghr.Spec.ParentRefs) == 0 {
@@ -263,10 +263,10 @@ func bindHTTPRouteToListeners(
 	return false, r
 }
 
-func findAcceptedHostnames(listenerHostname *v1alpha2.Hostname, routeHostnames []v1alpha2.Hostname) []string {
+func findAcceptedHostnames(listenerHostname *v1beta1.Hostname, routeHostnames []v1beta1.Hostname) []string {
 	hostname := getHostname(listenerHostname)
 
-	match := func(h v1alpha2.Hostname) bool {
+	match := func(h v1beta1.Hostname) bool {
 		if hostname == "" {
 			return true
 		}
@@ -284,14 +284,14 @@ func findAcceptedHostnames(listenerHostname *v1alpha2.Hostname, routeHostnames [
 	return result
 }
 
-func getHostname(h *v1alpha2.Hostname) string {
+func getHostname(h *v1beta1.Hostname) string {
 	if h == nil {
 		return ""
 	}
 	return string(*h)
 }
 
-func validateGatewayClass(gc *v1alpha2.GatewayClass, controllerName string) error {
+func validateGatewayClass(gc *v1beta1.GatewayClass, controllerName string) error {
 	if string(gc.Spec.ControllerName) != controllerName {
 		return fmt.Errorf("Spec.ControllerName must be %s got %s", controllerName, gc.Spec.ControllerName)
 	}

@@ -8,7 +8,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/gateway-api/apis/v1alpha2"
+	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/helpers"
 )
@@ -81,30 +81,30 @@ func TestBuildGraph(t *testing.T) {
 		controllerName = "my.controller"
 	)
 
-	createRoute := func(name string, gatewayName string, listenerName string) *v1alpha2.HTTPRoute {
-		return &v1alpha2.HTTPRoute{
+	createRoute := func(name string, gatewayName string, listenerName string) *v1beta1.HTTPRoute {
+		return &v1beta1.HTTPRoute{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: "test",
 				Name:      name,
 			},
-			Spec: v1alpha2.HTTPRouteSpec{
-				CommonRouteSpec: v1alpha2.CommonRouteSpec{
-					ParentRefs: []v1alpha2.ParentReference{
+			Spec: v1beta1.HTTPRouteSpec{
+				CommonRouteSpec: v1beta1.CommonRouteSpec{
+					ParentRefs: []v1beta1.ParentReference{
 						{
-							Namespace:   (*v1alpha2.Namespace)(helpers.GetStringPointer("test")),
-							Name:        v1alpha2.ObjectName(gatewayName),
-							SectionName: (*v1alpha2.SectionName)(helpers.GetStringPointer(listenerName)),
+							Namespace:   (*v1beta1.Namespace)(helpers.GetStringPointer("test")),
+							Name:        v1beta1.ObjectName(gatewayName),
+							SectionName: (*v1beta1.SectionName)(helpers.GetStringPointer(listenerName)),
 						},
 					},
 				},
-				Hostnames: []v1alpha2.Hostname{
+				Hostnames: []v1beta1.Hostname{
 					"foo.example.com",
 				},
-				Rules: []v1alpha2.HTTPRouteRule{
+				Rules: []v1beta1.HTTPRouteRule{
 					{
-						Matches: []v1alpha2.HTTPRouteMatch{
+						Matches: []v1beta1.HTTPRouteMatch{
 							{
-								Path: &v1alpha2.HTTPPathMatch{
+								Path: &v1beta1.HTTPPathMatch{
 									Value: helpers.GetStringPointer("/"),
 								},
 							},
@@ -119,37 +119,37 @@ func TestBuildGraph(t *testing.T) {
 	hr2 := createRoute("hr-2", "wrong-gateway", "listener-80-1")
 	hr3 := createRoute("hr-3", "gateway-1", "listener-443-1") // https listener; should not conflict with hr1
 
-	createGateway := func(name string) *v1alpha2.Gateway {
-		return &v1alpha2.Gateway{
+	createGateway := func(name string) *v1beta1.Gateway {
+		return &v1beta1.Gateway{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: "test",
 				Name:      name,
 			},
-			Spec: v1alpha2.GatewaySpec{
+			Spec: v1beta1.GatewaySpec{
 				GatewayClassName: gcName,
-				Listeners: []v1alpha2.Listener{
+				Listeners: []v1beta1.Listener{
 					{
 						Name:     "listener-80-1",
 						Hostname: nil,
 						Port:     80,
-						Protocol: v1alpha2.HTTPProtocolType,
+						Protocol: v1beta1.HTTPProtocolType,
 					},
 
 					{
 						Name:     "listener-443-1",
 						Hostname: nil,
 						Port:     443,
-						TLS: &v1alpha2.GatewayTLSConfig{
-							Mode: helpers.GetTLSModePointer(v1alpha2.TLSModeTerminate),
-							CertificateRefs: []v1alpha2.SecretObjectReference{
+						TLS: &v1beta1.GatewayTLSConfig{
+							Mode: helpers.GetTLSModePointer(v1beta1.TLSModeTerminate),
+							CertificateRefs: []v1beta1.SecretObjectReference{
 								{
-									Kind:      (*v1alpha2.Kind)(helpers.GetStringPointer("Secret")),
+									Kind:      (*v1beta1.Kind)(helpers.GetStringPointer("Secret")),
 									Name:      "secret",
-									Namespace: (*v1alpha2.Namespace)(helpers.GetStringPointer("test")),
+									Namespace: (*v1beta1.Namespace)(helpers.GetStringPointer("test")),
 								},
 							},
 						},
-						Protocol: v1alpha2.HTTPSProtocolType,
+						Protocol: v1beta1.HTTPSProtocolType,
 					},
 				},
 			},
@@ -160,16 +160,16 @@ func TestBuildGraph(t *testing.T) {
 	gw2 := createGateway("gateway-2")
 
 	store := &store{
-		gc: &v1alpha2.GatewayClass{
-			Spec: v1alpha2.GatewayClassSpec{
+		gc: &v1beta1.GatewayClass{
+			Spec: v1beta1.GatewayClassSpec{
 				ControllerName: controllerName,
 			},
 		},
-		gateways: map[types.NamespacedName]*v1alpha2.Gateway{
+		gateways: map[types.NamespacedName]*v1beta1.Gateway{
 			{Namespace: "test", Name: "gateway-1"}: gw1,
 			{Namespace: "test", Name: "gateway-2"}: gw2,
 		},
-		httpRoutes: map[types.NamespacedName]*v1alpha2.HTTPRoute{
+		httpRoutes: map[types.NamespacedName]*v1beta1.HTTPRoute{
 			{Namespace: "test", Name: "hr-1"}: hr1,
 			{Namespace: "test", Name: "hr-2"}: hr2,
 			{Namespace: "test", Name: "hr-3"}: hr3,
@@ -223,7 +223,7 @@ func TestBuildGraph(t *testing.T) {
 				},
 			},
 		},
-		IgnoredGateways: map[types.NamespacedName]*v1alpha2.Gateway{
+		IgnoredGateways: map[types.NamespacedName]*v1beta1.Gateway{
 			{Namespace: "test", Name: "gateway-2"}: gw2,
 		},
 		Routes: map[types.NamespacedName]*route{
@@ -247,29 +247,29 @@ func TestBuildGraph(t *testing.T) {
 func TestProcessGateways(t *testing.T) {
 	const gcName = "test-gc"
 
-	winner := &v1alpha2.Gateway{
+	winner := &v1beta1.Gateway{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: "test",
 			Name:      "gateway-1",
 		},
-		Spec: v1alpha2.GatewaySpec{
+		Spec: v1beta1.GatewaySpec{
 			GatewayClassName: gcName,
 		},
 	}
-	loser := &v1alpha2.Gateway{
+	loser := &v1beta1.Gateway{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: "test",
 			Name:      "gateway-2",
 		},
-		Spec: v1alpha2.GatewaySpec{
+		Spec: v1beta1.GatewaySpec{
 			GatewayClassName: gcName,
 		},
 	}
 
 	tests := []struct {
-		gws                map[types.NamespacedName]*v1alpha2.Gateway
-		expectedWinner     *v1alpha2.Gateway
-		expectedIgnoredGws map[types.NamespacedName]*v1alpha2.Gateway
+		gws                map[types.NamespacedName]*v1beta1.Gateway
+		expectedWinner     *v1beta1.Gateway
+		expectedIgnoredGws map[types.NamespacedName]*v1beta1.Gateway
 		msg                string
 	}{
 		{
@@ -279,9 +279,9 @@ func TestProcessGateways(t *testing.T) {
 			msg:                "no gateways",
 		},
 		{
-			gws: map[types.NamespacedName]*v1alpha2.Gateway{
+			gws: map[types.NamespacedName]*v1beta1.Gateway{
 				{Namespace: "test", Name: "some-gateway"}: {
-					Spec: v1alpha2.GatewaySpec{GatewayClassName: "some-class"},
+					Spec: v1beta1.GatewaySpec{GatewayClassName: "some-class"},
 				},
 			},
 			expectedWinner:     nil,
@@ -289,20 +289,20 @@ func TestProcessGateways(t *testing.T) {
 			msg:                "unrelated gateway",
 		},
 		{
-			gws: map[types.NamespacedName]*v1alpha2.Gateway{
+			gws: map[types.NamespacedName]*v1beta1.Gateway{
 				{Namespace: "test", Name: "gateway"}: winner,
 			},
 			expectedWinner:     winner,
-			expectedIgnoredGws: map[types.NamespacedName]*v1alpha2.Gateway{},
+			expectedIgnoredGws: map[types.NamespacedName]*v1beta1.Gateway{},
 			msg:                "one gateway",
 		},
 		{
-			gws: map[types.NamespacedName]*v1alpha2.Gateway{
+			gws: map[types.NamespacedName]*v1beta1.Gateway{
 				{Namespace: "test", Name: "gateway-1"}: winner,
 				{Namespace: "test", Name: "gateway-2"}: loser,
 			},
 			expectedWinner: winner,
-			expectedIgnoredGws: map[types.NamespacedName]*v1alpha2.Gateway{
+			expectedIgnoredGws: map[types.NamespacedName]*v1beta1.Gateway{
 				{Namespace: "test", Name: "gateway-2"}: loser,
 			},
 			msg: "multiple gateways",
@@ -324,19 +324,19 @@ func TestProcessGateways(t *testing.T) {
 func TestBuildGatewayClass(t *testing.T) {
 	const controllerName = "my.controller"
 
-	validGC := &v1alpha2.GatewayClass{
-		Spec: v1alpha2.GatewayClassSpec{
+	validGC := &v1beta1.GatewayClass{
+		Spec: v1beta1.GatewayClassSpec{
 			ControllerName: "my.controller",
 		},
 	}
-	invalidGC := &v1alpha2.GatewayClass{
-		Spec: v1alpha2.GatewayClassSpec{
+	invalidGC := &v1beta1.GatewayClass{
+		Spec: v1beta1.GatewayClassSpec{
 			ControllerName: "wrong.controller",
 		},
 	}
 
 	tests := []struct {
-		gc       *v1alpha2.GatewayClass
+		gc       *v1beta1.GatewayClass
 		expected *gatewayClass
 		msg      string
 	}{
@@ -376,105 +376,105 @@ func TestBuildGatewayClass(t *testing.T) {
 func TestBuildListeners(t *testing.T) {
 	const gcName = "my-gateway-class"
 
-	listener801 := v1alpha2.Listener{
+	listener801 := v1beta1.Listener{
 		Name:     "listener-80-1",
-		Hostname: (*v1alpha2.Hostname)(helpers.GetStringPointer("foo.example.com")),
+		Hostname: (*v1beta1.Hostname)(helpers.GetStringPointer("foo.example.com")),
 		Port:     80,
-		Protocol: v1alpha2.HTTPProtocolType,
+		Protocol: v1beta1.HTTPProtocolType,
 	}
-	listener802 := v1alpha2.Listener{
+	listener802 := v1beta1.Listener{
 		Name:     "listener-80-2",
-		Hostname: (*v1alpha2.Hostname)(helpers.GetStringPointer("bar.example.com")),
+		Hostname: (*v1beta1.Hostname)(helpers.GetStringPointer("bar.example.com")),
 		Port:     80,
-		Protocol: v1alpha2.TCPProtocolType, // invalid protocol
+		Protocol: v1beta1.TCPProtocolType, // invalid protocol
 	}
-	listener803 := v1alpha2.Listener{
+	listener803 := v1beta1.Listener{
 		Name:     "listener-80-3",
-		Hostname: (*v1alpha2.Hostname)(helpers.GetStringPointer("bar.example.com")),
+		Hostname: (*v1beta1.Hostname)(helpers.GetStringPointer("bar.example.com")),
 		Port:     80,
-		Protocol: v1alpha2.HTTPProtocolType,
+		Protocol: v1beta1.HTTPProtocolType,
 	}
-	listener804 := v1alpha2.Listener{
+	listener804 := v1beta1.Listener{
 		Name:     "listener-80-4",
-		Hostname: (*v1alpha2.Hostname)(helpers.GetStringPointer("foo.example.com")),
+		Hostname: (*v1beta1.Hostname)(helpers.GetStringPointer("foo.example.com")),
 		Port:     80,
-		Protocol: v1alpha2.HTTPProtocolType,
+		Protocol: v1beta1.HTTPProtocolType,
 	}
 
-	gatewayTLSConfig := &v1alpha2.GatewayTLSConfig{
-		Mode: helpers.GetTLSModePointer(v1alpha2.TLSModeTerminate),
-		CertificateRefs: []v1alpha2.SecretObjectReference{
+	gatewayTLSConfig := &v1beta1.GatewayTLSConfig{
+		Mode: helpers.GetTLSModePointer(v1beta1.TLSModeTerminate),
+		CertificateRefs: []v1beta1.SecretObjectReference{
 			{
-				Kind:      (*v1alpha2.Kind)(helpers.GetStringPointer("Secret")),
+				Kind:      (*v1beta1.Kind)(helpers.GetStringPointer("Secret")),
 				Name:      "secret",
-				Namespace: (*v1alpha2.Namespace)(helpers.GetStringPointer("test")),
+				Namespace: (*v1beta1.Namespace)(helpers.GetStringPointer("test")),
 			},
 		},
 	}
 
-	tlsConfigInvalidSecret := &v1alpha2.GatewayTLSConfig{
-		Mode: helpers.GetTLSModePointer(v1alpha2.TLSModeTerminate),
-		CertificateRefs: []v1alpha2.SecretObjectReference{
+	tlsConfigInvalidSecret := &v1beta1.GatewayTLSConfig{
+		Mode: helpers.GetTLSModePointer(v1beta1.TLSModeTerminate),
+		CertificateRefs: []v1beta1.SecretObjectReference{
 			{
-				Kind:      (*v1alpha2.Kind)(helpers.GetStringPointer("Secret")),
+				Kind:      (*v1beta1.Kind)(helpers.GetStringPointer("Secret")),
 				Name:      "does-not-exist",
-				Namespace: (*v1alpha2.Namespace)(helpers.GetStringPointer("test")),
+				Namespace: (*v1beta1.Namespace)(helpers.GetStringPointer("test")),
 			},
 		},
 	}
 	// https listeners
-	listener4431 := v1alpha2.Listener{
+	listener4431 := v1beta1.Listener{
 		Name:     "listener-443-1",
-		Hostname: (*v1alpha2.Hostname)(helpers.GetStringPointer("foo.example.com")),
+		Hostname: (*v1beta1.Hostname)(helpers.GetStringPointer("foo.example.com")),
 		Port:     443,
 		TLS:      gatewayTLSConfig,
-		Protocol: v1alpha2.HTTPSProtocolType,
+		Protocol: v1beta1.HTTPSProtocolType,
 	}
-	listener4432 := v1alpha2.Listener{
+	listener4432 := v1beta1.Listener{
 		Name:     "listener-443-2",
-		Hostname: (*v1alpha2.Hostname)(helpers.GetStringPointer("bar.example.com")),
+		Hostname: (*v1beta1.Hostname)(helpers.GetStringPointer("bar.example.com")),
 		Port:     443,
 		TLS:      gatewayTLSConfig,
-		Protocol: v1alpha2.HTTPSProtocolType,
+		Protocol: v1beta1.HTTPSProtocolType,
 	}
-	listener4433 := v1alpha2.Listener{
+	listener4433 := v1beta1.Listener{
 		Name:     "listener-443-3",
-		Hostname: (*v1alpha2.Hostname)(helpers.GetStringPointer("foo.example.com")),
+		Hostname: (*v1beta1.Hostname)(helpers.GetStringPointer("foo.example.com")),
 		Port:     443,
 		TLS:      gatewayTLSConfig,
-		Protocol: v1alpha2.HTTPSProtocolType,
+		Protocol: v1beta1.HTTPSProtocolType,
 	}
-	listener4434 := v1alpha2.Listener{
+	listener4434 := v1beta1.Listener{
 		Name:     "listener-443-4",
-		Hostname: (*v1alpha2.Hostname)(helpers.GetStringPointer("foo.example.com")),
+		Hostname: (*v1beta1.Hostname)(helpers.GetStringPointer("foo.example.com")),
 		Port:     443,
 		TLS:      nil, // invalid https listener; missing tls config
-		Protocol: v1alpha2.HTTPSProtocolType,
+		Protocol: v1beta1.HTTPSProtocolType,
 	}
-	listener4435 := v1alpha2.Listener{
+	listener4435 := v1beta1.Listener{
 		Name:     "listener-443-5",
-		Hostname: (*v1alpha2.Hostname)(helpers.GetStringPointer("foo.example.com")),
+		Hostname: (*v1beta1.Hostname)(helpers.GetStringPointer("foo.example.com")),
 		Port:     443,
 		TLS:      tlsConfigInvalidSecret, // invalid https listener; secret does not exist
-		Protocol: v1alpha2.HTTPSProtocolType,
+		Protocol: v1beta1.HTTPSProtocolType,
 	}
 	tests := []struct {
-		gateway  *v1alpha2.Gateway
+		gateway  *v1beta1.Gateway
 		expected map[string]*listener
 		msg      string
 	}{
 		{
-			gateway: &v1alpha2.Gateway{
+			gateway: &v1beta1.Gateway{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test",
 				},
-				Spec: v1alpha2.GatewaySpec{
+				Spec: v1beta1.GatewaySpec{
 					GatewayClassName: gcName,
-					Listeners: []v1alpha2.Listener{
+					Listeners: []v1beta1.Listener{
 						listener801,
 					},
 				},
-				Status: v1alpha2.GatewayStatus{},
+				Status: v1beta1.GatewayStatus{},
 			},
 			expected: map[string]*listener{
 				"listener-80-1": {
@@ -487,13 +487,13 @@ func TestBuildListeners(t *testing.T) {
 			msg: "valid http listener",
 		},
 		{
-			gateway: &v1alpha2.Gateway{
+			gateway: &v1beta1.Gateway{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test",
 				},
-				Spec: v1alpha2.GatewaySpec{
+				Spec: v1beta1.GatewaySpec{
 					GatewayClassName: gcName,
-					Listeners: []v1alpha2.Listener{
+					Listeners: []v1beta1.Listener{
 						listener4431,
 					},
 				},
@@ -510,13 +510,13 @@ func TestBuildListeners(t *testing.T) {
 			msg: "valid https listener",
 		},
 		{
-			gateway: &v1alpha2.Gateway{
+			gateway: &v1beta1.Gateway{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test",
 				},
-				Spec: v1alpha2.GatewaySpec{
+				Spec: v1beta1.GatewaySpec{
 					GatewayClassName: gcName,
-					Listeners: []v1alpha2.Listener{
+					Listeners: []v1beta1.Listener{
 						listener802,
 					},
 				},
@@ -532,13 +532,13 @@ func TestBuildListeners(t *testing.T) {
 			msg: "invalid listener protocol",
 		},
 		{
-			gateway: &v1alpha2.Gateway{
+			gateway: &v1beta1.Gateway{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test",
 				},
-				Spec: v1alpha2.GatewaySpec{
+				Spec: v1beta1.GatewaySpec{
 					GatewayClassName: gcName,
-					Listeners: []v1alpha2.Listener{
+					Listeners: []v1beta1.Listener{
 						listener4434,
 					},
 				},
@@ -554,13 +554,13 @@ func TestBuildListeners(t *testing.T) {
 			msg: "invalid https listener (tls config missing)",
 		},
 		{
-			gateway: &v1alpha2.Gateway{
+			gateway: &v1beta1.Gateway{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test",
 				},
-				Spec: v1alpha2.GatewaySpec{
+				Spec: v1beta1.GatewaySpec{
 					GatewayClassName: gcName,
-					Listeners: []v1alpha2.Listener{
+					Listeners: []v1beta1.Listener{
 						listener4435,
 					},
 				},
@@ -576,13 +576,13 @@ func TestBuildListeners(t *testing.T) {
 			msg: "invalid https listener (secret does not exist)",
 		},
 		{
-			gateway: &v1alpha2.Gateway{
+			gateway: &v1beta1.Gateway{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test",
 				},
-				Spec: v1alpha2.GatewaySpec{
+				Spec: v1beta1.GatewaySpec{
 					GatewayClassName: gcName,
-					Listeners: []v1alpha2.Listener{
+					Listeners: []v1beta1.Listener{
 						listener801, listener803,
 						listener4431, listener4432,
 					},
@@ -619,13 +619,13 @@ func TestBuildListeners(t *testing.T) {
 			msg: "multiple valid http/https listeners",
 		},
 		{
-			gateway: &v1alpha2.Gateway{
+			gateway: &v1beta1.Gateway{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test",
 				},
-				Spec: v1alpha2.GatewaySpec{
+				Spec: v1beta1.GatewaySpec{
 					GatewayClassName: gcName,
-					Listeners: []v1alpha2.Listener{
+					Listeners: []v1beta1.Listener{
 						listener801, listener804,
 						listener4431, listener4433,
 					},
@@ -667,13 +667,13 @@ func TestBuildListeners(t *testing.T) {
 			msg:      "no gateway",
 		},
 		{
-			gateway: &v1alpha2.Gateway{
+			gateway: &v1beta1.Gateway{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test",
 				},
-				Spec: v1alpha2.GatewaySpec{
+				Spec: v1beta1.GatewaySpec{
 					GatewayClassName: "wrong-class",
-					Listeners: []v1alpha2.Listener{
+					Listeners: []v1beta1.Listener{
 						listener801, listener804,
 					},
 				},
@@ -699,62 +699,62 @@ func TestBuildListeners(t *testing.T) {
 }
 
 func TestBindRouteToListeners(t *testing.T) {
-	createRoute := func(hostname string, parentRefs ...v1alpha2.ParentReference) *v1alpha2.HTTPRoute {
-		return &v1alpha2.HTTPRoute{
+	createRoute := func(hostname string, parentRefs ...v1beta1.ParentReference) *v1beta1.HTTPRoute {
+		return &v1beta1.HTTPRoute{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: "test",
 				Name:      "hr-1",
 			},
-			Spec: v1alpha2.HTTPRouteSpec{
-				CommonRouteSpec: v1alpha2.CommonRouteSpec{
+			Spec: v1beta1.HTTPRouteSpec{
+				CommonRouteSpec: v1beta1.CommonRouteSpec{
 					ParentRefs: parentRefs,
 				},
-				Hostnames: []v1alpha2.Hostname{
-					v1alpha2.Hostname(hostname),
+				Hostnames: []v1beta1.Hostname{
+					v1beta1.Hostname(hostname),
 				},
 			},
 		}
 	}
 
-	hrNonExistingSectionName := createRoute("foo.example.com", v1alpha2.ParentReference{
-		Namespace:   (*v1alpha2.Namespace)(helpers.GetStringPointer("test")),
+	hrNonExistingSectionName := createRoute("foo.example.com", v1beta1.ParentReference{
+		Namespace:   (*v1beta1.Namespace)(helpers.GetStringPointer("test")),
 		Name:        "gateway",
-		SectionName: (*v1alpha2.SectionName)(helpers.GetStringPointer("listener-80-2")),
+		SectionName: (*v1beta1.SectionName)(helpers.GetStringPointer("listener-80-2")),
 	})
 
-	hrEmptySectionName := createRoute("foo.example.com", v1alpha2.ParentReference{
-		Namespace: (*v1alpha2.Namespace)(helpers.GetStringPointer("test")),
+	hrEmptySectionName := createRoute("foo.example.com", v1beta1.ParentReference{
+		Namespace: (*v1beta1.Namespace)(helpers.GetStringPointer("test")),
 		Name:      "gateway",
 	})
 
-	hrIgnoredGateway := createRoute("foo.example.com", v1alpha2.ParentReference{
-		Namespace:   (*v1alpha2.Namespace)(helpers.GetStringPointer("test")),
+	hrIgnoredGateway := createRoute("foo.example.com", v1beta1.ParentReference{
+		Namespace:   (*v1beta1.Namespace)(helpers.GetStringPointer("test")),
 		Name:        "ignored-gateway",
-		SectionName: (*v1alpha2.SectionName)(helpers.GetStringPointer("listener-80-1")),
+		SectionName: (*v1beta1.SectionName)(helpers.GetStringPointer("listener-80-1")),
 	})
 
-	hrFoo := createRoute("foo.example.com", v1alpha2.ParentReference{
-		Namespace:   (*v1alpha2.Namespace)(helpers.GetStringPointer("test")),
+	hrFoo := createRoute("foo.example.com", v1beta1.ParentReference{
+		Namespace:   (*v1beta1.Namespace)(helpers.GetStringPointer("test")),
 		Name:        "gateway",
-		SectionName: (*v1alpha2.SectionName)(helpers.GetStringPointer("listener-80-1")),
+		SectionName: (*v1beta1.SectionName)(helpers.GetStringPointer("listener-80-1")),
 	})
 
-	hrFooImplicitNamespace := createRoute("foo.example.com", v1alpha2.ParentReference{
+	hrFooImplicitNamespace := createRoute("foo.example.com", v1beta1.ParentReference{
 		Name:        "gateway",
-		SectionName: (*v1alpha2.SectionName)(helpers.GetStringPointer("listener-80-1")),
+		SectionName: (*v1beta1.SectionName)(helpers.GetStringPointer("listener-80-1")),
 	})
 
-	hrBar := createRoute("bar.example.com", v1alpha2.ParentReference{
-		Namespace:   (*v1alpha2.Namespace)(helpers.GetStringPointer("test")),
+	hrBar := createRoute("bar.example.com", v1beta1.ParentReference{
+		Namespace:   (*v1beta1.Namespace)(helpers.GetStringPointer("test")),
 		Name:        "gateway",
-		SectionName: (*v1alpha2.SectionName)(helpers.GetStringPointer("listener-80-1")),
+		SectionName: (*v1beta1.SectionName)(helpers.GetStringPointer("listener-80-1")),
 	})
 
 	// we create a new listener each time because the function under test can modify it
 	createListener := func() *listener {
 		return &listener{
-			Source: v1alpha2.Listener{
-				Hostname: (*v1alpha2.Hostname)(helpers.GetStringPointer("foo.example.com")),
+			Source: v1beta1.Listener{
+				Hostname: (*v1beta1.Hostname)(helpers.GetStringPointer("foo.example.com")),
 			},
 			Valid:             true,
 			Routes:            map[types.NamespacedName]*route{},
@@ -768,7 +768,7 @@ func TestBindRouteToListeners(t *testing.T) {
 		return l
 	}
 
-	gw := &v1alpha2.Gateway{
+	gw := &v1beta1.Gateway{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: "test",
 			Name:      "gateway",
@@ -776,9 +776,9 @@ func TestBindRouteToListeners(t *testing.T) {
 	}
 
 	tests := []struct {
-		httpRoute         *v1alpha2.HTTPRoute
-		gw                *v1alpha2.Gateway
-		ignoredGws        map[types.NamespacedName]*v1alpha2.Gateway
+		httpRoute         *v1beta1.HTTPRoute
+		gw                *v1beta1.Gateway
+		ignoredGws        map[types.NamespacedName]*v1beta1.Gateway
 		listeners         map[string]*listener
 		expectedIgnored   bool
 		expectedRoute     *route
@@ -800,10 +800,10 @@ func TestBindRouteToListeners(t *testing.T) {
 			msg: "HTTPRoute without parent refs",
 		},
 		{
-			httpRoute: createRoute("foo.example.com", v1alpha2.ParentReference{
-				Namespace:   (*v1alpha2.Namespace)(helpers.GetStringPointer("test")),
+			httpRoute: createRoute("foo.example.com", v1beta1.ParentReference{
+				Namespace:   (*v1beta1.Namespace)(helpers.GetStringPointer("test")),
 				Name:        "some-gateway", // wrong gateway
-				SectionName: (*v1alpha2.SectionName)(helpers.GetStringPointer("listener-1")),
+				SectionName: (*v1beta1.SectionName)(helpers.GetStringPointer("listener-1")),
 			}),
 			gw:         gw,
 			ignoredGws: nil,
@@ -940,7 +940,7 @@ func TestBindRouteToListeners(t *testing.T) {
 		{
 			httpRoute: hrIgnoredGateway,
 			gw:        gw,
-			ignoredGws: map[types.NamespacedName]*v1alpha2.Gateway{
+			ignoredGws: map[types.NamespacedName]*v1beta1.Gateway{
 				{Namespace: "test", Name: "ignored-gateway"}: {},
 			},
 			listeners: map[string]*listener{
@@ -986,13 +986,13 @@ func TestBindRouteToListeners(t *testing.T) {
 }
 
 func TestFindAcceptedHostnames(t *testing.T) {
-	var listenerHostnameFoo v1alpha2.Hostname = "foo.example.com"
-	var listenerHostnameCafe v1alpha2.Hostname = "cafe.example.com"
-	routeHostnames := []v1alpha2.Hostname{"foo.example.com", "bar.example.com"}
+	var listenerHostnameFoo v1beta1.Hostname = "foo.example.com"
+	var listenerHostnameCafe v1beta1.Hostname = "cafe.example.com"
+	routeHostnames := []v1beta1.Hostname{"foo.example.com", "bar.example.com"}
 
 	tests := []struct {
-		listenerHostname *v1alpha2.Hostname
-		routeHostnames   []v1alpha2.Hostname
+		listenerHostname *v1beta1.Hostname
+		routeHostnames   []v1beta1.Hostname
 		expected         []string
 		msg              string
 	}{
@@ -1025,11 +1025,11 @@ func TestFindAcceptedHostnames(t *testing.T) {
 }
 
 func TestGetHostname(t *testing.T) {
-	var emptyHostname v1alpha2.Hostname
-	var hostname v1alpha2.Hostname = "example.com"
+	var emptyHostname v1beta1.Hostname
+	var hostname v1beta1.Hostname = "example.com"
 
 	tests := []struct {
-		h        *v1alpha2.Hostname
+		h        *v1beta1.Hostname
 		expected string
 		msg      string
 	}{
@@ -1059,8 +1059,8 @@ func TestGetHostname(t *testing.T) {
 }
 
 func TestValidateGatewayClass(t *testing.T) {
-	gc := &v1alpha2.GatewayClass{
-		Spec: v1alpha2.GatewayClassSpec{
+	gc := &v1beta1.GatewayClass{
+		Spec: v1beta1.GatewayClassSpec{
 			ControllerName: "test.controller",
 		},
 	}

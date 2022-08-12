@@ -2,14 +2,14 @@ package state
 
 import (
 	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/gateway-api/apis/v1alpha2"
+	"sigs.k8s.io/gateway-api/apis/v1beta1"
 )
 
 // listener represents a listener of the Gateway resource.
 // FIXME(pleshakov) For now, we only support HTTP and HTTPS listeners.
 type listener struct {
 	// Source holds the source of the listener from the Gateway resource.
-	Source v1alpha2.Listener
+	Source v1beta1.Listener
 	// Valid shows whether the listener is valid.
 	Valid bool
 	// SecretPath is the path to the secret on disk.
@@ -22,7 +22,7 @@ type listener struct {
 }
 
 type listenerConfigurator interface {
-	configure(listener v1alpha2.Listener) *listener
+	configure(listener v1beta1.Listener) *listener
 }
 
 type listenerConfiguratorFactory struct {
@@ -30,18 +30,18 @@ type listenerConfiguratorFactory struct {
 	http  *httpListenerConfigurator
 }
 
-func (f *listenerConfiguratorFactory) getConfiguratorForListener(l v1alpha2.Listener) listenerConfigurator {
+func (f *listenerConfiguratorFactory) getConfiguratorForListener(l v1beta1.Listener) listenerConfigurator {
 	switch l.Protocol {
-	case v1alpha2.HTTPProtocolType:
+	case v1beta1.HTTPProtocolType:
 		return f.http
-	case v1alpha2.HTTPSProtocolType:
+	case v1beta1.HTTPSProtocolType:
 		return f.https
 	default:
 		return newInvalidProtocolListenerConfigurator()
 	}
 }
 
-func newListenerConfiguratorFactory(gw *v1alpha2.Gateway, secretMemoryMgr SecretDiskMemoryManager) *listenerConfiguratorFactory {
+func newListenerConfiguratorFactory(gw *v1beta1.Gateway, secretMemoryMgr SecretDiskMemoryManager) *listenerConfiguratorFactory {
 	return &listenerConfiguratorFactory{
 		https: newHTTPSListenerConfigurator(gw, secretMemoryMgr),
 		http:  newHTTPListenerConfigurator(),
@@ -49,12 +49,12 @@ func newListenerConfiguratorFactory(gw *v1alpha2.Gateway, secretMemoryMgr Secret
 }
 
 type httpsListenerConfigurator struct {
-	gateway         *v1alpha2.Gateway
+	gateway         *v1beta1.Gateway
 	secretMemoryMgr SecretDiskMemoryManager
 	usedHostnames   map[string]*listener
 }
 
-func newHTTPSListenerConfigurator(gateway *v1alpha2.Gateway, secretMemoryMgr SecretDiskMemoryManager) *httpsListenerConfigurator {
+func newHTTPSListenerConfigurator(gateway *v1beta1.Gateway, secretMemoryMgr SecretDiskMemoryManager) *httpsListenerConfigurator {
 	return &httpsListenerConfigurator{
 		gateway:         gateway,
 		secretMemoryMgr: secretMemoryMgr,
@@ -62,7 +62,7 @@ func newHTTPSListenerConfigurator(gateway *v1alpha2.Gateway, secretMemoryMgr Sec
 	}
 }
 
-func (c *httpsListenerConfigurator) configure(gl v1alpha2.Listener) *listener {
+func (c *httpsListenerConfigurator) configure(gl v1beta1.Listener) *listener {
 	var path string
 	var err error
 
@@ -110,7 +110,7 @@ func newHTTPListenerConfigurator() *httpListenerConfigurator {
 	}
 }
 
-func (c *httpListenerConfigurator) configure(gl v1alpha2.Listener) *listener {
+func (c *httpListenerConfigurator) configure(gl v1beta1.Listener) *listener {
 	valid := validateHTTPListener(gl)
 
 	h := getHostname(gl.Hostname)
@@ -138,7 +138,7 @@ func newInvalidProtocolListenerConfigurator() *invalidProtocolListenerConfigurat
 	return &invalidProtocolListenerConfigurator{}
 }
 
-func (c *invalidProtocolListenerConfigurator) configure(gl v1alpha2.Listener) *listener {
+func (c *invalidProtocolListenerConfigurator) configure(gl v1beta1.Listener) *listener {
 	return &listener{
 		Source:            gl,
 		Valid:             false,
@@ -147,16 +147,16 @@ func (c *invalidProtocolListenerConfigurator) configure(gl v1alpha2.Listener) *l
 	}
 }
 
-func validateHTTPListener(listener v1alpha2.Listener) bool {
+func validateHTTPListener(listener v1beta1.Listener) bool {
 	// FIXME(pleshakov): For now we require that all HTTP listeners bind to port 80
 	return listener.Port == 80
 }
 
-func validateHTTPSListener(listener v1alpha2.Listener, gwNsname string) bool {
+func validateHTTPSListener(listener v1beta1.Listener, gwNsname string) bool {
 	// FIXME(kate-osborn):
 	// 1. For now we require that all HTTPS listeners bind to port 443
 	// 2. Only TLSModeTerminate is supported.
-	if listener.Port != 443 || listener.TLS == nil || *listener.TLS.Mode != v1alpha2.TLSModeTerminate || len(listener.TLS.CertificateRefs) == 0 {
+	if listener.Port != 443 || listener.TLS == nil || *listener.TLS.Mode != v1beta1.TLSModeTerminate || len(listener.TLS.CertificateRefs) == 0 {
 		return false
 	}
 

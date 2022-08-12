@@ -6,7 +6,7 @@ import (
 
 	"github.com/go-logr/logr"
 	apiv1 "k8s.io/api/core/v1"
-	"sigs.k8s.io/gateway-api/apis/v1alpha2"
+	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/config"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/file"
@@ -125,11 +125,11 @@ func (el *EventLoop) updateNginx(ctx context.Context, conf state.Configuration) 
 
 func (el *EventLoop) propagateUpsert(e *UpsertEvent) {
 	switch r := e.Resource.(type) {
-	case *v1alpha2.GatewayClass:
+	case *v1beta1.GatewayClass:
 		el.cfg.Processor.CaptureUpsertChange(r)
-	case *v1alpha2.Gateway:
+	case *v1beta1.Gateway:
 		el.cfg.Processor.CaptureUpsertChange(r)
-	case *v1alpha2.HTTPRoute:
+	case *v1beta1.HTTPRoute:
 		el.cfg.Processor.CaptureUpsertChange(r)
 	case *apiv1.Service:
 		// FIXME(pleshakov): make sure the affected hosts are updated
@@ -144,11 +144,11 @@ func (el *EventLoop) propagateUpsert(e *UpsertEvent) {
 
 func (el *EventLoop) propagateDelete(e *DeleteEvent) {
 	switch e.Type.(type) {
-	case *v1alpha2.GatewayClass:
+	case *v1beta1.GatewayClass:
 		el.cfg.Processor.CaptureDeleteChange(e.Type, e.NamespacedName)
-	case *v1alpha2.Gateway:
+	case *v1beta1.Gateway:
 		el.cfg.Processor.CaptureDeleteChange(e.Type, e.NamespacedName)
-	case *v1alpha2.HTTPRoute:
+	case *v1beta1.HTTPRoute:
 		el.cfg.Processor.CaptureDeleteChange(e.Type, e.NamespacedName)
 	case *apiv1.Service:
 		// FIXME(pleshakov): make sure the affected hosts are updated
