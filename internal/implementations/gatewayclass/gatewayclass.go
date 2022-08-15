@@ -5,7 +5,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/gateway-api/apis/v1alpha2"
+	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/config"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/events"
@@ -26,7 +26,7 @@ func NewGatewayClassImplementation(conf config.Config, eventCh chan<- interface{
 	}
 }
 
-func (impl *gatewayClassImplementation) Upsert(gc *v1alpha2.GatewayClass) {
+func (impl *gatewayClassImplementation) Upsert(gc *v1beta1.GatewayClass) {
 	if gc.Name != impl.gatewayClassName {
 		msg := fmt.Sprintf("GatewayClass was upserted but ignored because this controller only supports the GatewayClass %s", impl.gatewayClassName)
 		impl.logger.Info(msg,
@@ -59,6 +59,6 @@ func (impl *gatewayClassImplementation) Remove(nsname types.NamespacedName) {
 
 	impl.eventCh <- &events.DeleteEvent{
 		NamespacedName: nsname,
-		Type:           &v1alpha2.GatewayClass{},
+		Type:           &v1beta1.GatewayClass{},
 	}
 }

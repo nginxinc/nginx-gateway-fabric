@@ -10,7 +10,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/gateway-api/apis/v1alpha2"
+	"sigs.k8s.io/gateway-api/apis/v1beta1"
 )
 
 type httpRouteReconciler struct {
@@ -28,7 +28,7 @@ func RegisterHTTPRouteController(mgr manager.Manager, impl HTTPRouteImpl) error 
 	}
 
 	return ctlr.NewControllerManagedBy(mgr).
-		For(&v1alpha2.HTTPRoute{}).
+		For(&v1beta1.HTTPRoute{}).
 		Complete(r)
 }
 
@@ -38,7 +38,7 @@ func (r *httpRouteReconciler) Reconcile(ctx context.Context, req reconcile.Reque
 	log.V(3).Info("Reconciling HTTPRoute")
 
 	found := true
-	var hr v1alpha2.HTTPRoute
+	var hr v1beta1.HTTPRoute
 	err := r.Get(ctx, req.NamespacedName, &hr)
 	if err != nil {
 		if !apierrors.IsNotFound(err) {

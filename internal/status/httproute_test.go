@@ -7,7 +7,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/gateway-api/apis/v1alpha2"
+	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/helpers"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state"
@@ -30,19 +30,19 @@ func TestPrepareHTTPRouteStatus(t *testing.T) {
 
 	transitionTime := metav1.NewTime(time.Now())
 
-	expected := v1alpha2.HTTPRouteStatus{
-		RouteStatus: v1alpha2.RouteStatus{
-			Parents: []v1alpha2.RouteParentStatus{
+	expected := v1beta1.HTTPRouteStatus{
+		RouteStatus: v1beta1.RouteStatus{
+			Parents: []v1beta1.RouteParentStatus{
 				{
-					ParentRef: v1alpha2.ParentRef{
-						Namespace:   (*v1alpha2.Namespace)(helpers.GetStringPointer("test")),
+					ParentRef: v1beta1.ParentReference{
+						Namespace:   (*v1beta1.Namespace)(helpers.GetStringPointer("test")),
 						Name:        "gateway",
-						SectionName: (*v1alpha2.SectionName)(helpers.GetStringPointer("attached")),
+						SectionName: (*v1beta1.SectionName)(helpers.GetStringPointer("attached")),
 					},
-					ControllerName: v1alpha2.GatewayController(gatewayCtlrName),
+					ControllerName: v1beta1.GatewayController(gatewayCtlrName),
 					Conditions: []metav1.Condition{
 						{
-							Type:               string(v1alpha2.ConditionRouteAccepted),
+							Type:               string(v1beta1.RouteConditionAccepted),
 							Status:             metav1.ConditionTrue,
 							ObservedGeneration: 123,
 							LastTransitionTime: transitionTime,
@@ -51,15 +51,15 @@ func TestPrepareHTTPRouteStatus(t *testing.T) {
 					},
 				},
 				{
-					ParentRef: v1alpha2.ParentRef{
-						Namespace:   (*v1alpha2.Namespace)(helpers.GetStringPointer("test")),
+					ParentRef: v1beta1.ParentReference{
+						Namespace:   (*v1beta1.Namespace)(helpers.GetStringPointer("test")),
 						Name:        "gateway",
-						SectionName: (*v1alpha2.SectionName)(helpers.GetStringPointer("not-attached")),
+						SectionName: (*v1beta1.SectionName)(helpers.GetStringPointer("not-attached")),
 					},
-					ControllerName: v1alpha2.GatewayController(gatewayCtlrName),
+					ControllerName: v1beta1.GatewayController(gatewayCtlrName),
 					Conditions: []metav1.Condition{
 						{
-							Type:               string(v1alpha2.ConditionRouteAccepted),
+							Type:               string(v1beta1.RouteConditionAccepted),
 							Status:             metav1.ConditionFalse,
 							ObservedGeneration: 123,
 							LastTransitionTime: transitionTime,

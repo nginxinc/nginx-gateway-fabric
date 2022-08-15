@@ -6,7 +6,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/gateway-api/apis/v1alpha2"
+	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state"
 )
@@ -22,15 +22,16 @@ func TestPrepareGatewayStatus(t *testing.T) {
 				Valid:          false,
 				AttachedRoutes: 1,
 			},
-		}}
+		},
+	}
 
 	transitionTime := metav1.NewTime(time.Now())
 
-	expected := v1alpha2.GatewayStatus{
-		Listeners: []v1alpha2.ListenerStatus{
+	expected := v1beta1.GatewayStatus{
+		Listeners: []v1beta1.ListenerStatus{
 			{
 				Name: "invalid-listener",
-				SupportedKinds: []v1alpha2.RouteGroupKind{
+				SupportedKinds: []v1beta1.RouteGroupKind{
 					{
 						Kind: "HTTPRoute",
 					},
@@ -38,17 +39,17 @@ func TestPrepareGatewayStatus(t *testing.T) {
 				AttachedRoutes: 1,
 				Conditions: []metav1.Condition{
 					{
-						Type:               string(v1alpha2.ListenerConditionReady),
+						Type:               string(v1beta1.ListenerConditionReady),
 						Status:             metav1.ConditionFalse,
 						ObservedGeneration: 123,
 						LastTransitionTime: transitionTime,
-						Reason:             string(v1alpha2.ListenerReasonInvalid),
+						Reason:             string(v1beta1.ListenerReasonInvalid),
 					},
 				},
 			},
 			{
 				Name: "valid-listener",
-				SupportedKinds: []v1alpha2.RouteGroupKind{
+				SupportedKinds: []v1beta1.RouteGroupKind{
 					{
 						Kind: "HTTPRoute",
 					},
@@ -56,11 +57,11 @@ func TestPrepareGatewayStatus(t *testing.T) {
 				AttachedRoutes: 2,
 				Conditions: []metav1.Condition{
 					{
-						Type:               string(v1alpha2.ListenerConditionReady),
+						Type:               string(v1beta1.ListenerConditionReady),
 						Status:             metav1.ConditionTrue,
 						ObservedGeneration: 123,
 						LastTransitionTime: transitionTime,
-						Reason:             string(v1alpha2.ListenerReasonReady),
+						Reason:             string(v1beta1.ListenerReasonReady),
 					},
 				},
 			},
@@ -80,10 +81,10 @@ func TestPrepareIgnoredGatewayStatus(t *testing.T) {
 
 	transitionTime := metav1.NewTime(time.Now())
 
-	expected := v1alpha2.GatewayStatus{
+	expected := v1beta1.GatewayStatus{
 		Conditions: []metav1.Condition{
 			{
-				Type:               string(v1alpha2.GatewayConditionReady),
+				Type:               string(v1beta1.GatewayConditionReady),
 				Status:             metav1.ConditionFalse,
 				ObservedGeneration: status.ObservedGeneration,
 				LastTransitionTime: transitionTime,

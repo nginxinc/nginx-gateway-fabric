@@ -2,7 +2,7 @@ package helpers
 
 import (
 	"github.com/google/go-cmp/cmp"
-	"sigs.k8s.io/gateway-api/apis/v1alpha2"
+	"sigs.k8s.io/gateway-api/apis/v1beta1"
 )
 
 // Diff prints the diff between two structs.
@@ -28,21 +28,21 @@ func GetInt32Pointer(i int32) *int32 {
 }
 
 // GetHTTPMethodPointer takes an HTTPMethod and returns a pointer to it. Useful in unit tests when initializing structs.
-func GetHTTPMethodPointer(m v1alpha2.HTTPMethod) *v1alpha2.HTTPMethod {
+func GetHTTPMethodPointer(m v1beta1.HTTPMethod) *v1beta1.HTTPMethod {
 	return &m
 }
 
 // GetHeaderMatchTypePointer takes an HeaderMatchType and returns a pointer to it. Useful in unit tests when initializing structs.
-func GetHeaderMatchTypePointer(t v1alpha2.HeaderMatchType) *v1alpha2.HeaderMatchType {
+func GetHeaderMatchTypePointer(t v1beta1.HeaderMatchType) *v1beta1.HeaderMatchType {
 	return &t
 }
 
 // GetQueryParamMatchTypePointer takes an QueryParamMatchType and returns a pointer to it. Useful in unit tests when initializing structs.
-func GetQueryParamMatchTypePointer(t v1alpha2.QueryParamMatchType) *v1alpha2.QueryParamMatchType {
+func GetQueryParamMatchTypePointer(t v1beta1.QueryParamMatchType) *v1beta1.QueryParamMatchType {
 	return &t
 }
 
 // GetTLSModePointer takes a TLSModeType and returns a pointer to it. Useful in unit tests when initializing structs.
-func GetTLSModePointer(t v1alpha2.TLSModeType) *v1alpha2.TLSModeType {
+func GetTLSModePointer(t v1beta1.TLSModeType) *v1beta1.TLSModeType {
 	return &t
 }

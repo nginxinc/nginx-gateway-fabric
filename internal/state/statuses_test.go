@@ -6,7 +6,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/gateway-api/apis/v1alpha2"
+	"sigs.k8s.io/gateway-api/apis/v1beta1"
 )
 
 func TestBuildStatuses(t *testing.T) {
@@ -14,7 +14,8 @@ func TestBuildStatuses(t *testing.T) {
 		"listener-80-1": {
 			Valid: true,
 			Routes: map[types.NamespacedName]*route{
-				{Namespace: "test", Name: "hr-1"}: {}},
+				{Namespace: "test", Name: "hr-1"}: {},
+			},
 		},
 	}
 
@@ -38,14 +39,14 @@ func TestBuildStatuses(t *testing.T) {
 		},
 	}
 
-	gw := &v1alpha2.Gateway{
+	gw := &v1beta1.Gateway{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: "test",
 			Name:      "gateway",
 		},
 	}
 
-	ignoredGw := &v1alpha2.Gateway{
+	ignoredGw := &v1beta1.Gateway{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:  "test",
 			Name:       "ignored-gateway",
@@ -61,7 +62,7 @@ func TestBuildStatuses(t *testing.T) {
 		{
 			graph: &graph{
 				GatewayClass: &gatewayClass{
-					Source: &v1alpha2.GatewayClass{
+					Source: &v1beta1.GatewayClass{
 						ObjectMeta: metav1.ObjectMeta{Generation: 1},
 					},
 					Valid: true,
@@ -70,7 +71,7 @@ func TestBuildStatuses(t *testing.T) {
 					Source:    gw,
 					Listeners: listeners,
 				},
-				IgnoredGateways: map[types.NamespacedName]*v1alpha2.Gateway{
+				IgnoredGateways: map[types.NamespacedName]*v1beta1.Gateway{
 					{Namespace: "test", Name: "ignored-gateway"}: ignoredGw,
 				},
 				Routes: routes,
@@ -114,7 +115,7 @@ func TestBuildStatuses(t *testing.T) {
 					Source:    gw,
 					Listeners: listeners,
 				},
-				IgnoredGateways: map[types.NamespacedName]*v1alpha2.Gateway{
+				IgnoredGateways: map[types.NamespacedName]*v1beta1.Gateway{
 					{Namespace: "test", Name: "ignored-gateway"}: ignoredGw,
 				},
 				Routes: routes,
@@ -151,7 +152,7 @@ func TestBuildStatuses(t *testing.T) {
 		{
 			graph: &graph{
 				GatewayClass: &gatewayClass{
-					Source: &v1alpha2.GatewayClass{
+					Source: &v1beta1.GatewayClass{
 						ObjectMeta: metav1.ObjectMeta{Generation: 1},
 					},
 					Valid:    false,
@@ -161,7 +162,7 @@ func TestBuildStatuses(t *testing.T) {
 					Source:    gw,
 					Listeners: listeners,
 				},
-				IgnoredGateways: map[types.NamespacedName]*v1alpha2.Gateway{
+				IgnoredGateways: map[types.NamespacedName]*v1beta1.Gateway{
 					{Namespace: "test", Name: "ignored-gateway"}: ignoredGw,
 				},
 				Routes: routes,
@@ -202,7 +203,7 @@ func TestBuildStatuses(t *testing.T) {
 		{
 			graph: &graph{
 				GatewayClass: &gatewayClass{
-					Source: &v1alpha2.GatewayClass{
+					Source: &v1beta1.GatewayClass{
 						ObjectMeta: metav1.ObjectMeta{Generation: 1},
 					},
 					Valid: true,

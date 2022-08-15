@@ -7,6 +7,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
+	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/helpers"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state"
@@ -23,20 +24,20 @@ var _ = Describe("ChangeProcessor", func() {
 		)
 
 		var (
-			gc, gcUpdated        *v1alpha2.GatewayClass
-			hr1, hr1Updated, hr2 *v1alpha2.HTTPRoute
-			gw1, gw1Updated, gw2 *v1alpha2.Gateway
+			gc, gcUpdated        *v1beta1.GatewayClass
+			hr1, hr1Updated, hr2 *v1beta1.HTTPRoute
+			gw1, gw1Updated, gw2 *v1beta1.Gateway
 			processor            state.ChangeProcessor
 			fakeSecretMemoryMgr  *statefakes.FakeSecretDiskMemoryManager
 		)
 
 		BeforeEach(OncePerOrdered, func() {
-			gc = &v1alpha2.GatewayClass{
+			gc = &v1beta1.GatewayClass{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:       gcName,
 					Generation: 1,
 				},
-				Spec: v1alpha2.GatewayClassSpec{
+				Spec: v1beta1.GatewayClassSpec{
 					ControllerName: controllerName,
 				},
 			}
@@ -44,35 +45,35 @@ var _ = Describe("ChangeProcessor", func() {
 			gcUpdated = gc.DeepCopy()
 			gcUpdated.Generation++
 
-			createRoute := func(name string, gateway string, hostname string) *v1alpha2.HTTPRoute {
-				return &v1alpha2.HTTPRoute{
+			createRoute := func(name string, gateway string, hostname string) *v1beta1.HTTPRoute {
+				return &v1beta1.HTTPRoute{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "test",
 						Name:      name,
 					},
-					Spec: v1alpha2.HTTPRouteSpec{
-						CommonRouteSpec: v1alpha2.CommonRouteSpec{
-							ParentRefs: []v1alpha2.ParentRef{
+					Spec: v1beta1.HTTPRouteSpec{
+						CommonRouteSpec: v1beta1.CommonRouteSpec{
+							ParentRefs: []v1beta1.ParentReference{
 								{
-									Namespace:   (*v1alpha2.Namespace)(helpers.GetStringPointer("test")),
-									Name:        v1alpha2.ObjectName(gateway),
-									SectionName: (*v1alpha2.SectionName)(helpers.GetStringPointer("listener-80-1")),
+									Namespace:   (*v1beta1.Namespace)(helpers.GetStringPointer("test")),
+									Name:        v1beta1.ObjectName(gateway),
+									SectionName: (*v1beta1.SectionName)(helpers.GetStringPointer("listener-80-1")),
 								},
 								{
-									Namespace:   (*v1alpha2.Namespace)(helpers.GetStringPointer("test")),
-									Name:        v1alpha2.ObjectName(gateway),
-									SectionName: (*v1alpha2.SectionName)(helpers.GetStringPointer("listener-443-1")),
+									Namespace:   (*v1beta1.Namespace)(helpers.GetStringPointer("test")),
+									Name:        v1beta1.ObjectName(gateway),
+									SectionName: (*v1beta1.SectionName)(helpers.GetStringPointer("listener-443-1")),
 								},
 							},
 						},
-						Hostnames: []v1alpha2.Hostname{
-							v1alpha2.Hostname(hostname),
+						Hostnames: []v1beta1.Hostname{
+							v1beta1.Hostname(hostname),
 						},
-						Rules: []v1alpha2.HTTPRouteRule{
+						Rules: []v1beta1.HTTPRouteRule{
 							{
-								Matches: []v1alpha2.HTTPRouteMatch{
+								Matches: []v1beta1.HTTPRouteMatch{
 									{
-										Path: &v1alpha2.HTTPPathMatch{
+										Path: &v1beta1.HTTPPathMatch{
 											Value: helpers.GetStringPointer("/"),
 										},
 									},
@@ -90,34 +91,34 @@ var _ = Describe("ChangeProcessor", func() {
 
 			hr2 = createRoute("hr-2", "gateway-2", "bar.example.com")
 
-			createGateway := func(name string) *v1alpha2.Gateway {
-				return &v1alpha2.Gateway{
+			createGateway := func(name string) *v1beta1.Gateway {
+				return &v1beta1.Gateway{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace:  "test",
 						Name:       name,
 						Generation: 1,
 					},
-					Spec: v1alpha2.GatewaySpec{
+					Spec: v1beta1.GatewaySpec{
 						GatewayClassName: gcName,
-						Listeners: []v1alpha2.Listener{
+						Listeners: []v1beta1.Listener{
 							{
 								Name:     "listener-80-1",
 								Hostname: nil,
 								Port:     80,
-								Protocol: v1alpha2.HTTPProtocolType,
+								Protocol: v1beta1.HTTPProtocolType,
 							},
 							{
 								Name:     "listener-443-1",
 								Hostname: nil,
 								Port:     443,
-								Protocol: v1alpha2.HTTPSProtocolType,
-								TLS: &v1alpha2.GatewayTLSConfig{
-									Mode: helpers.GetTLSModePointer(v1alpha2.TLSModeTerminate),
-									CertificateRefs: []*v1alpha2.SecretObjectReference{
+								Protocol: v1beta1.HTTPSProtocolType,
+								TLS: &v1beta1.GatewayTLSConfig{
+									Mode: helpers.GetTLSModePointer(v1beta1.TLSModeTerminate),
+									CertificateRefs: []v1beta1.SecretObjectReference{
 										{
-											Kind:      (*v1alpha2.Kind)(helpers.GetStringPointer("Secret")),
+											Kind:      (*v1beta1.Kind)(helpers.GetStringPointer("Secret")),
 											Name:      "secret",
-											Namespace: (*v1alpha2.Namespace)(helpers.GetStringPointer("test")),
+											Namespace: (*v1beta1.Namespace)(helpers.GetStringPointer("test")),
 										},
 									},
 								},
@@ -741,7 +742,7 @@ var _ = Describe("ChangeProcessor", func() {
 			})
 
 			It("should return updated configuration and statuses after deleting the first Gateway", func() {
-				processor.CaptureDeleteChange(&v1alpha2.Gateway{}, types.NamespacedName{Namespace: "test", Name: "gateway-1"})
+				processor.CaptureDeleteChange(&v1beta1.Gateway{}, types.NamespacedName{Namespace: "test", Name: "gateway-1"})
 
 				expectedConf := state.Configuration{
 					HTTPServers: []state.VirtualServer{
@@ -820,7 +821,7 @@ var _ = Describe("ChangeProcessor", func() {
 			})
 
 			It("should return configuration with default ssl server and updated statuses after deleting the second HTTPRoute", func() {
-				processor.CaptureDeleteChange(&v1alpha2.HTTPRoute{}, types.NamespacedName{Namespace: "test", Name: "hr-2"})
+				processor.CaptureDeleteChange(&v1beta1.HTTPRoute{}, types.NamespacedName{Namespace: "test", Name: "hr-2"})
 
 				expectedConf := state.Configuration{
 					HTTPServers: []state.VirtualServer{},
@@ -860,7 +861,7 @@ var _ = Describe("ChangeProcessor", func() {
 			})
 
 			It("should return empty configuration and updated statuses after deleting the GatewayClass", func() {
-				processor.CaptureDeleteChange(&v1alpha2.GatewayClass{}, types.NamespacedName{Name: gcName})
+				processor.CaptureDeleteChange(&v1beta1.GatewayClass{}, types.NamespacedName{Name: gcName})
 
 				expectedConf := state.Configuration{}
 				expectedStatuses := state.Statuses{
@@ -888,7 +889,7 @@ var _ = Describe("ChangeProcessor", func() {
 			})
 
 			It("should return empty configuration and empty statuses after deleting the second Gateway", func() {
-				processor.CaptureDeleteChange(&v1alpha2.Gateway{}, types.NamespacedName{Namespace: "test", Name: "gateway-2"})
+				processor.CaptureDeleteChange(&v1beta1.Gateway{}, types.NamespacedName{Namespace: "test", Name: "gateway-2"})
 
 				expectedConf := state.Configuration{}
 				expectedStatuses := state.Statuses{
@@ -903,7 +904,7 @@ var _ = Describe("ChangeProcessor", func() {
 			})
 
 			It("should return empty configuration and statuses after deleting the first HTTPRoute", func() {
-				processor.CaptureDeleteChange(&v1alpha2.HTTPRoute{}, types.NamespacedName{Namespace: "test", Name: "hr-1"})
+				processor.CaptureDeleteChange(&v1beta1.HTTPRoute{}, types.NamespacedName{Namespace: "test", Name: "hr-1"})
 
 				expectedConf := state.Configuration{}
 				expectedStatuses := state.Statuses{
@@ -941,7 +942,7 @@ var _ = Describe("ChangeProcessor", func() {
 				Expect(process).Should(Panic())
 			},
 			Entry("an unsupported resource", &v1alpha2.TCPRoute{ObjectMeta: metav1.ObjectMeta{Namespace: "test", Name: "tcp"}}),
-			Entry("a wrong gatewayclass", &v1alpha2.GatewayClass{ObjectMeta: metav1.ObjectMeta{Name: "wrong-class"}}))
+			Entry("a wrong gatewayclass", &v1beta1.GatewayClass{ObjectMeta: metav1.ObjectMeta{Name: "wrong-class"}}))
 
 		DescribeTable("CaptureDeleteChange must panic",
 			func(resourceType client.Object, nsname types.NamespacedName) {
@@ -951,6 +952,6 @@ var _ = Describe("ChangeProcessor", func() {
 				Expect(process).Should(Panic())
 			},
 			Entry("an unsupported resource", &v1alpha2.TCPRoute{}, types.NamespacedName{Namespace: "test", Name: "tcp"}),
-			Entry("a wrong gatewayclass", &v1alpha2.GatewayClass{}, types.NamespacedName{Name: "wrong-class"}))
+			Entry("a wrong gatewayclass", &v1beta1.GatewayClass{}, types.NamespacedName{Name: "wrong-class"}))
 	})
 })

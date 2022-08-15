@@ -4,12 +4,12 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"sigs.k8s.io/gateway-api/apis/v1alpha2"
+	"sigs.k8s.io/gateway-api/apis/v1beta1"
 )
 
 func TestAddWarningf(t *testing.T) {
 	warnings := newWarnings()
-	obj := &v1alpha2.HTTPRoute{}
+	obj := &v1beta1.HTTPRoute{}
 
 	expected := Warnings{
 		obj: []string{
@@ -28,7 +28,7 @@ func TestAddWarningf(t *testing.T) {
 
 func TestAddWarning(t *testing.T) {
 	warnings := newWarnings()
-	obj := &v1alpha2.HTTPRoute{}
+	obj := &v1beta1.HTTPRoute{}
 
 	expected := Warnings{
 		obj: []string{
@@ -46,9 +46,9 @@ func TestAddWarning(t *testing.T) {
 }
 
 func TestAdd(t *testing.T) {
-	obj1 := &v1alpha2.HTTPRoute{}
-	obj2 := &v1alpha2.HTTPRoute{}
-	obj3 := &v1alpha2.HTTPRoute{}
+	obj1 := &v1beta1.HTTPRoute{}
+	obj2 := &v1beta1.HTTPRoute{}
+	obj3 := &v1beta1.HTTPRoute{}
 
 	tests := []struct {
 		warnings      Warnings

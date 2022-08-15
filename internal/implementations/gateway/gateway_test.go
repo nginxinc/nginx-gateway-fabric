@@ -6,7 +6,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
-	"sigs.k8s.io/gateway-api/apis/v1alpha2"
+	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/config"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/events"
@@ -30,7 +30,7 @@ var _ = Describe("GatewayImplementation", func() {
 
 	Describe("Implementation processes Gateways", func() {
 		It("should process upsert", func() {
-			gc := &v1alpha2.Gateway{
+			gc := &v1beta1.Gateway{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test-add",
 					Name:      "gateway",
@@ -54,7 +54,7 @@ var _ = Describe("GatewayImplementation", func() {
 			Eventually(eventCh).Should(Receive(Equal(
 				&events.DeleteEvent{
 					NamespacedName: nsname,
-					Type:           &v1alpha2.Gateway{},
+					Type:           &v1beta1.Gateway{},
 				})))
 		})
 	})

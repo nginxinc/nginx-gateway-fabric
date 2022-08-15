@@ -11,7 +11,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
-	"sigs.k8s.io/gateway-api/apis/v1alpha2"
+	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/events"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/config"
@@ -126,9 +126,9 @@ var _ = Describe("EventLoop", func() {
 				_, statuses := fakeStatusUpdater.UpdateArgsForCall(0)
 				Expect(statuses).Should(Equal(fakeStatuses))
 			},
-			Entry("HTTPRoute", &events.UpsertEvent{Resource: &v1alpha2.HTTPRoute{}}),
-			Entry("Gateway", &events.UpsertEvent{Resource: &v1alpha2.Gateway{}}),
-			Entry("GatewayClass", &events.UpsertEvent{Resource: &v1alpha2.GatewayClass{}}),
+			Entry("HTTPRoute", &events.UpsertEvent{Resource: &v1beta1.HTTPRoute{}}),
+			Entry("Gateway", &events.UpsertEvent{Resource: &v1beta1.Gateway{}}),
+			Entry("GatewayClass", &events.UpsertEvent{Resource: &v1beta1.GatewayClass{}}),
 		)
 
 		DescribeTable("Delete events",
@@ -156,9 +156,9 @@ var _ = Describe("EventLoop", func() {
 
 				Eventually(fakeNginxRuntimeMgr.ReloadCallCount).Should(Equal(1))
 			},
-			Entry("HTTPRoute", &events.DeleteEvent{Type: &v1alpha2.HTTPRoute{}, NamespacedName: types.NamespacedName{Namespace: "test", Name: "route"}}),
-			Entry("Gateway", &events.DeleteEvent{Type: &v1alpha2.Gateway{}, NamespacedName: types.NamespacedName{Namespace: "test", Name: "gateway"}}),
-			Entry("GatewayClass", &events.DeleteEvent{Type: &v1alpha2.GatewayClass{}, NamespacedName: types.NamespacedName{Name: "class"}}),
+			Entry("HTTPRoute", &events.DeleteEvent{Type: &v1beta1.HTTPRoute{}, NamespacedName: types.NamespacedName{Namespace: "test", Name: "route"}}),
+			Entry("Gateway", &events.DeleteEvent{Type: &v1beta1.Gateway{}, NamespacedName: types.NamespacedName{Namespace: "test", Name: "gateway"}}),
+			Entry("GatewayClass", &events.DeleteEvent{Type: &v1beta1.GatewayClass{}, NamespacedName: types.NamespacedName{Name: "class"}}),
 		)
 	})
 

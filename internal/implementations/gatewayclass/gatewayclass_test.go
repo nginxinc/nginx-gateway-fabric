@@ -6,7 +6,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
-	"sigs.k8s.io/gateway-api/apis/v1alpha2"
+	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/config"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/events"
@@ -36,7 +36,7 @@ var _ = Describe("GatewayClassImplementation", func() {
 
 	Describe("Implementation processes GatewayClass", func() {
 		It("should process upsert", func() {
-			gc := &v1alpha2.GatewayClass{
+			gc := &v1beta1.GatewayClass{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: className,
 				},
@@ -59,14 +59,14 @@ var _ = Describe("GatewayClassImplementation", func() {
 			Eventually(eventCh).Should(Receive(Equal(
 				&events.DeleteEvent{
 					NamespacedName: nsname,
-					Type:           &v1alpha2.GatewayClass{},
+					Type:           &v1beta1.GatewayClass{},
 				})))
 		})
 	})
 
 	Describe("Implementation ignores unrelated GatewayClass", func() {
 		It("should ignore upsert", func() {
-			gc := &v1alpha2.GatewayClass{
+			gc := &v1beta1.GatewayClass{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: unrelatedClassName,
 				},

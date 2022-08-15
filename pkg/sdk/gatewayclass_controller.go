@@ -9,7 +9,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/gateway-api/apis/v1alpha2"
+	"sigs.k8s.io/gateway-api/apis/v1beta1"
 )
 
 type gatewayClassReconciler struct {
@@ -26,7 +26,7 @@ func RegisterGatewayClassController(mgr manager.Manager, impl GatewayClassImpl) 
 	}
 
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&v1alpha2.GatewayClass{}).
+		For(&v1beta1.GatewayClass{}).
 		Complete(r)
 }
 
@@ -34,7 +34,7 @@ func (r *gatewayClassReconciler) Reconcile(ctx context.Context, req reconcile.Re
 	log := log.FromContext(ctx).WithValues("gatewayclass", req.Name)
 	log.V(3).Info("Reconciling GatewayClass")
 
-	var gc v1alpha2.GatewayClass
+	var gc v1beta1.GatewayClass
 	found := true
 
 	err := r.Get(ctx, req.NamespacedName, &gc)

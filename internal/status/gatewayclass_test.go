@@ -6,7 +6,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/gateway-api/apis/v1alpha2"
+	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state"
 )
@@ -16,7 +16,7 @@ func TestPrepareGatewayClassStatus(t *testing.T) {
 
 	tests := []struct {
 		status   state.GatewayClassStatus
-		expected v1alpha2.GatewayClassStatus
+		expected v1beta1.GatewayClassStatus
 		msg      string
 	}{
 		{
@@ -24,14 +24,14 @@ func TestPrepareGatewayClassStatus(t *testing.T) {
 				Valid:              true,
 				ObservedGeneration: 1,
 			},
-			expected: v1alpha2.GatewayClassStatus{
+			expected: v1beta1.GatewayClassStatus{
 				Conditions: []metav1.Condition{
 					{
-						Type:               string(v1alpha2.GatewayClassConditionStatusAccepted),
+						Type:               string(v1beta1.GatewayClassConditionStatusAccepted),
 						Status:             metav1.ConditionTrue,
 						ObservedGeneration: 1,
 						LastTransitionTime: transitionTime,
-						Reason:             string(v1alpha2.GatewayClassReasonAccepted),
+						Reason:             string(v1beta1.GatewayClassReasonAccepted),
 						Message:            "GatewayClass has been accepted",
 					},
 				},
@@ -44,14 +44,14 @@ func TestPrepareGatewayClassStatus(t *testing.T) {
 				ErrorMsg:           "error",
 				ObservedGeneration: 2,
 			},
-			expected: v1alpha2.GatewayClassStatus{
+			expected: v1beta1.GatewayClassStatus{
 				Conditions: []metav1.Condition{
 					{
-						Type:               string(v1alpha2.GatewayClassConditionStatusAccepted),
+						Type:               string(v1beta1.GatewayClassConditionStatusAccepted),
 						Status:             metav1.ConditionFalse,
 						ObservedGeneration: 2,
 						LastTransitionTime: transitionTime,
-						Reason:             string(v1alpha2.GatewayClassReasonAccepted),
+						Reason:             string(v1beta1.GatewayClassReasonAccepted),
 						Message:            "GatewayClass has been rejected: error",
 					},
 				},

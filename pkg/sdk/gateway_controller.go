@@ -10,7 +10,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/gateway-api/apis/v1alpha2"
+	"sigs.k8s.io/gateway-api/apis/v1beta1"
 )
 
 type gatewayReconciler struct {
@@ -27,7 +27,7 @@ func RegisterGatewayController(mgr manager.Manager, impl GatewayImpl) error {
 	}
 
 	return ctlr.NewControllerManagedBy(mgr).
-		For(&v1alpha2.Gateway{}).
+		For(&v1beta1.Gateway{}).
 		Complete(r)
 }
 
@@ -36,7 +36,7 @@ func (r *gatewayReconciler) Reconcile(ctx context.Context, req reconcile.Request
 	log.V(3).Info("Reconciling Gateway")
 
 	found := true
-	var gw v1alpha2.Gateway
+	var gw v1beta1.Gateway
 	err := r.Get(ctx, req.NamespacedName, &gw)
 	if err != nil {
 		if !apierrors.IsNotFound(err) {
