@@ -77,11 +77,7 @@ var _ = Describe("EventLoop", func() {
 
 		eventCh <- e2
 		eventCh <- e3
-		// After the line above unblocks, the EventLoop has seen e3, but it might not have added it to the current batch yet.
-		// However, before we continue, we need to make sure the e3 is in the current batch (which makes the length of
-		// the current batch 2).
-		// Note: That's why we added CurrentEventBatchLen() to the EventLoop.
-		Eventually(eventLoop.CurrentEventBatchLen).Should(Equal(2))
+		// The event loop will add the e2 and e3 event to current batch before starting another handler goroutine.
 
 		fakeHandler.HandleEventBatchCalls(nil)
 
