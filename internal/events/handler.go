@@ -61,7 +61,6 @@ func NewEventHandlerImpl(cfg EventHandlerConfig) *EventHandlerImpl {
 }
 
 func (h *EventHandlerImpl) HandleEventBatch(ctx context.Context, batch EventBatch) {
-	h.cfg.Logger.Info("Handling events from the batch", "total", len(batch))
 
 	for _, event := range batch {
 		switch e := event.(type) {
@@ -76,18 +75,18 @@ func (h *EventHandlerImpl) HandleEventBatch(ctx context.Context, batch EventBatc
 
 	changed, conf, statuses := h.cfg.Processor.Process()
 	if !changed {
-		h.cfg.Logger.Info("Finished handling the batch with no resulting changes")
+		h.cfg.Logger.Info("Handling events didn't result into NGINX configuration changes")
 		return
 	}
 
 	err := h.updateNginx(ctx, conf)
 	if err != nil {
 		h.cfg.Logger.Error(err, "Failed to update NGINX configuration")
+	} else {
+		h.cfg.Logger.Info("NGINX configuration was successfully updated")
 	}
 
 	h.cfg.StatusUpdater.Update(ctx, statuses)
-
-	h.cfg.Logger.Info("Finished handling the batch")
 }
 
 func (h *EventHandlerImpl) updateNginx(ctx context.Context, conf state.Configuration) error {

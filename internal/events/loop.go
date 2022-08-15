@@ -52,7 +52,12 @@ func (el *EventLoop) Start(ctx context.Context) error {
 	handlingDone := make(chan struct{})
 
 	handle := func(ctx context.Context, batch EventBatch) {
+		el.logger.Info("Handling events from the batch", "total", len(batch))
+
 		el.handler.HandleEventBatch(ctx, batch)
+
+		el.logger.Info("Finished handling the batch")
+
 		handlingDone <- struct{}{}
 	}
 
