@@ -86,6 +86,8 @@ func (el *EventLoop) Start(ctx context.Context) error {
 			// Handle the current batch if no batch is being handled.
 			if !handling {
 				go handle(ctx, batch)
+				// FIXME(pleshakov): Making an entirely new, zero-length slice seems unnecessary and potentially inefficient.
+				// See https://github.com/nginxinc/nginx-kubernetes-gateway/pull/175#discussion_r946167207
 				batch = make([]interface{}, 0)
 				handling = true
 			}
