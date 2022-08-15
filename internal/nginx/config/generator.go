@@ -38,11 +38,17 @@ func NewGeneratorImpl(serviceStore state.ServiceStore) *GeneratorImpl {
 }
 
 func (g *GeneratorImpl) Generate(conf state.Configuration) ([]byte, Warnings) {
+	http, warnings := generate(conf, g.serviceStore)
+
+	return g.executor.ExecuteForHTTP(http), warnings
+}
+
+func generate(conf state.Configuration, serviceStore state.ServiceStore) (http, Warnings) {
 	warnings := newWarnings()
 
 	confServers := append(conf.HTTPServers, conf.SSLServers...)
 
-	servers := httpServers{
+	httpCfg := http{
 		// capacity is all the conf servers + default ssl & http servers
 		Servers: make([]server, 0, len(confServers)+2),
 	}
@@ -50,23 +56,25 @@ func (g *GeneratorImpl) Generate(conf state.Configuration) ([]byte, Warnings) {
 	if len(conf.HTTPServers) > 0 {
 		defaultHTTPServer := generateDefaultHTTPServer()
 
-		servers.Servers = append(servers.Servers, defaultHTTPServer)
+		httpCfg.Servers = append(httpCfg.Servers, defaultHTTPServer)
 	}
 
 	if len(conf.SSLServers) > 0 {
 		defaultSSLServer := generateDefaultSSLServer()
 
-		servers.Servers = append(servers.Servers, defaultSSLServer)
+		httpCfg.Servers = append(httpCfg.Servers, defaultSSLServer)
 	}
 
 	for _, s := range confServers {
-		cfg, warns := generate(s, g.serviceStore)
-
-		servers.Servers = append(servers.Servers, cfg)
-		warnings.Add(warns)
+		httpCfg.Servers = append(httpCfg.Servers, generateServer(s))
 	}
 
-	return g.executor.ExecuteForHTTPServers(servers), warnings
+	upstreams, warns := generateUpstreams(confServers, serviceStore)
+	warnings.Add(warns)
+
+	httpCfg.Upstreams = upstreams
+
+	return httpCfg, warnings
 }
 
 func generateDefaultSSLServer() server {
@@ -77,21 +85,16 @@ func generateDefaultHTTPServer() server {
 	return server{IsDefaultHTTP: true}
 }
 
-func generate(virtualServer state.VirtualServer, serviceStore state.ServiceStore) (server, Warnings) {
-	warnings := newWarnings()
-
+func generateServer(virtualServer state.VirtualServer) server {
 	locs := make([]location, 0, len(virtualServer.PathRules)) // FIXME(pleshakov): expand with rule.Routes
 
 	for _, rule := range virtualServer.PathRules {
+
 		matches := make([]httpMatch, 0, len(rule.MatchRules))
 
 		for ruleIdx, r := range rule.MatchRules {
 
-			address, err := getBackendAddress(r.Source.Spec.Rules[r.RuleIdx].BackendRefs, r.Source.Namespace, serviceStore)
-
-			if err != nil {
-				warnings.AddWarning(r.Source, err.Error())
-			}
+			upstreamName := generateUpstreamName(r)
 
 			m := r.GetMatch()
 
@@ -100,11 +103,11 @@ func generate(virtualServer state.VirtualServer, serviceStore state.ServiceStore
 			if len(rule.MatchRules) == 1 && isPathOnlyMatch(m) {
 				locs = append(locs, location{
 					Path:      rule.Path,
-					ProxyPass: generateProxyPass(address),
+					ProxyPass: generateProxyPass(upstreamName),
 				})
 			} else {
 				path := createPathForMatch(rule.Path, ruleIdx)
-				locs = append(locs, generateMatchLocation(path, address))
+				locs = append(locs, generateMatchLocation(path, upstreamName))
 				matches = append(matches, createHTTPMatch(m, path))
 			}
 		}
@@ -135,30 +138,81 @@ func generate(virtualServer state.VirtualServer, serviceStore state.ServiceStore
 			CertificateKey: virtualServer.SSL.CertificatePath,
 		}
 	}
-	return s, warnings
+
+	return s
 }
 
-func generateProxyPass(address string) string {
-	if address == "" {
-		return "http://" + nginx502Server
-	}
-	return "http://" + address
+func generateUpstreamName(rule state.MatchRule) string {
+	return fmt.Sprintf("%s_%s_rule%d", rule.Source.Namespace, rule.Source.Name, rule.RuleIdx)
 }
 
-func getBackendAddress(
-	refs []v1alpha2.HTTPBackendRef,
-	parentNS string,
-	serviceStore state.ServiceStore,
-) (string, error) {
-	if len(refs) == 0 {
-		return "", errors.New("empty backend refs")
+func generateUpstreams(virtualServers []state.VirtualServer, serviceStore state.ServiceStore) ([]upstream, Warnings) {
+	// FIXME(kate-osborn): This logic is required to prevent duplicate upstreams.
+	// We should decouple upstreams from virtual servers to avoid having to do this.
+	upstreamNameMap := make(map[string]struct{})
+
+	// populate map so we can use it to calculate capacity
+	for _, vs := range virtualServers {
+		for _, rule := range vs.PathRules {
+			for _, r := range rule.MatchRules {
+				upstreamNameMap[generateUpstreamName(r)] = struct{}{}
+			}
+		}
 	}
 
+	warnings := newWarnings()
+	upstreams := make([]upstream, 0, len(upstreamNameMap))
+
+	for _, vs := range virtualServers {
+		for _, rule := range vs.PathRules {
+			for _, r := range rule.MatchRules {
+				upstreamName := generateUpstreamName(r)
+
+				if _, exists := upstreamNameMap[upstreamName]; exists {
+					up, err := generateUpstream(
+						r.Source.Spec.Rules[r.RuleIdx].BackendRefs,
+						r.Source.Namespace,
+						serviceStore,
+						upstreamName,
+					)
+					// delete from map so we don't duplicate upstreams
+					delete(upstreamNameMap, upstreamName)
+
+					if err != nil {
+						warnings.AddWarning(r.Source, err.Error())
+					}
+
+					upstreams = append(upstreams, up)
+				}
+			}
+		}
+	}
+
+	return upstreams, warnings
+}
+
+func generateUpstream(backendRefs []v1alpha2.HTTPBackendRef, parentNS string, serviceStore state.ServiceStore, upstreamName string) (upstream, error) {
+	nginx502Upstream := upstream{
+		Name: upstreamName,
+		Servers: []upstreamServer{
+			{
+				Address: nginx502Server,
+			},
+		},
+	}
+
+	if len(backendRefs) == 0 {
+		return nginx502Upstream, errors.New("empty backend refs")
+	}
 	// FIXME(pleshakov): for now, we only support a single backend reference
-	ref := refs[0].BackendRef
+	ref := backendRefs[0].BackendRef
 
 	if ref.Kind != nil && *ref.Kind != "Service" {
-		return "", fmt.Errorf("unsupported kind %s", *ref.Kind)
+		return nginx502Upstream, errors.New("ref must be of kind service")
+	}
+
+	if ref.Port == nil {
+		return nginx502Upstream, errors.New("ref must contain port")
 	}
 
 	ns := parentNS
@@ -166,16 +220,38 @@ func getBackendAddress(
 		ns = string(*ref.Namespace)
 	}
 
-	address, err := serviceStore.Resolve(types.NamespacedName{Namespace: ns, Name: string(ref.Name)})
+	svcNsname := types.NamespacedName{
+		Namespace: ns,
+		Name:      string(ref.Name),
+	}
+
+	endpoints, err := serviceStore.Resolve(svcNsname, int32(*ref.Port))
+
 	if err != nil {
-		return "", fmt.Errorf("service %s/%s cannot be resolved: %w", ns, ref.Name, err)
+		return nginx502Upstream, err
 	}
 
-	if ref.Port == nil {
-		return "", errors.New("port is nil")
+	if len(endpoints) == 0 {
+		return nginx502Upstream, errors.New("no endpoints found for backend ref")
 	}
 
-	return fmt.Sprintf("%s:%d", address, *ref.Port), nil
+	upstreamServers := make([]upstreamServer, len(endpoints))
+	for idx, ep := range endpoints {
+		upstreamServers[idx] = upstreamServer{
+			Address: fmt.Sprintf("%s:%d", ep.Address, ep.Port),
+		}
+	}
+
+	upstream := upstream{
+		Name:    upstreamName,
+		Servers: upstreamServers,
+	}
+
+	return upstream, nil
+}
+
+func generateProxyPass(address string) string {
+	return "http://" + address
 }
 
 func generateMatchLocation(path, address string) location {

@@ -6,6 +6,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	apiv1 "k8s.io/api/core/v1"
+	discoveryV1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -42,7 +43,7 @@ var _ = Describe("EventLoop", func() {
 		fakeSecretStore         *statefakes.FakeSecretStore
 		fakeSecretMemoryManager *statefakes.FakeSecretDiskMemoryManager
 		fakeGenerator           *configfakes.FakeGenerator
-		fakeNginxFimeMgr        *filefakes.FakeManager
+		fakeNginxFileMgr        *filefakes.FakeManager
 		fakeNginxRuntimeMgr     *runtimefakes.FakeManager
 		fakeStatusUpdater       *statusfakes.FakeUpdater
 		cancel                  context.CancelFunc
@@ -58,7 +59,7 @@ var _ = Describe("EventLoop", func() {
 		fakeSecretMemoryManager = &statefakes.FakeSecretDiskMemoryManager{}
 		fakeSecretStore = &statefakes.FakeSecretStore{}
 		fakeGenerator = &configfakes.FakeGenerator{}
-		fakeNginxFimeMgr = &filefakes.FakeManager{}
+		fakeNginxFileMgr = &filefakes.FakeManager{}
 		fakeNginxRuntimeMgr = &runtimefakes.FakeManager{}
 		fakeStatusUpdater = &statusfakes.FakeUpdater{}
 
@@ -70,7 +71,7 @@ var _ = Describe("EventLoop", func() {
 			Generator:           fakeGenerator,
 			EventCh:             eventCh,
 			Logger:              zap.New(),
-			NginxFileMgr:        fakeNginxFimeMgr,
+			NginxFileMgr:        fakeNginxFileMgr,
 			NginxRuntimeMgr:     fakeNginxRuntimeMgr,
 			StatusUpdater:       fakeStatusUpdater,
 		})
@@ -115,8 +116,8 @@ var _ = Describe("EventLoop", func() {
 				Eventually(fakeGenerator.GenerateCallCount).Should(Equal(1))
 				Expect(fakeGenerator.GenerateArgsForCall(0)).Should(Equal(fakeConf))
 
-				Eventually(fakeNginxFimeMgr.WriteHTTPServersConfigCallCount).Should(Equal(1))
-				name, cfg := fakeNginxFimeMgr.WriteHTTPServersConfigArgsForCall(0)
+				Eventually(fakeNginxFileMgr.WriteHTTPConfigCallCount()).Should(Equal(1))
+				name, cfg := fakeNginxFileMgr.WriteHTTPConfigArgsForCall(0)
 				Expect(name).Should(Equal("http-servers"))
 				Expect(cfg).Should(Equal(fakeCfg))
 
@@ -125,10 +126,17 @@ var _ = Describe("EventLoop", func() {
 				Eventually(fakeStatusUpdater.UpdateCallCount).Should(Equal(1))
 				_, statuses := fakeStatusUpdater.UpdateArgsForCall(0)
 				Expect(statuses).Should(Equal(fakeStatuses))
+
+				if _, ok := e.Resource.(*apiv1.Service); ok {
+					Eventually(fakeServiceStore.UpsertCallCount).Should(Equal(1))
+					Expect(fakeServiceStore.UpsertArgsForCall(0)).Should(Equal(e.Resource))
+				}
 			},
 			Entry("HTTPRoute", &events.UpsertEvent{Resource: &v1alpha2.HTTPRoute{}}),
 			Entry("Gateway", &events.UpsertEvent{Resource: &v1alpha2.Gateway{}}),
 			Entry("GatewayClass", &events.UpsertEvent{Resource: &v1alpha2.GatewayClass{}}),
+			Entry("Service", &events.UpsertEvent{Resource: &apiv1.Service{}}),
+			Entry("EndpointSlice", &events.UpsertEvent{Resource: &discoveryV1.EndpointSlice{}}),
 		)
 
 		DescribeTable("Delete events",
@@ -149,60 +157,25 @@ var _ = Describe("EventLoop", func() {
 
 				Eventually(fakeProcessor.ProcessCallCount).Should(Equal(1))
 
-				Eventually(fakeNginxFimeMgr.WriteHTTPServersConfigCallCount).Should(Equal(1))
-				name, cfg := fakeNginxFimeMgr.WriteHTTPServersConfigArgsForCall(0)
+				Eventually(fakeNginxFileMgr.WriteHTTPConfigCallCount()).Should(Equal(1))
+				name, cfg := fakeNginxFileMgr.WriteHTTPConfigArgsForCall(0)
 				Expect(name).Should(Equal("http-servers"))
 				Expect(cfg).Should(Equal(fakeCfg))
 
 				Eventually(fakeNginxRuntimeMgr.ReloadCallCount).Should(Equal(1))
+
+				if _, ok := e.Type.(*apiv1.Service); ok {
+					Eventually(fakeServiceStore.DeleteCallCount).Should(Equal(1))
+					Expect(fakeServiceStore.DeleteArgsForCall(0)).Should(Equal(e.NamespacedName))
+				}
 			},
 			Entry("HTTPRoute", &events.DeleteEvent{Type: &v1alpha2.HTTPRoute{}, NamespacedName: types.NamespacedName{Namespace: "test", Name: "route"}}),
 			Entry("Gateway", &events.DeleteEvent{Type: &v1alpha2.Gateway{}, NamespacedName: types.NamespacedName{Namespace: "test", Name: "gateway"}}),
 			Entry("GatewayClass", &events.DeleteEvent{Type: &v1alpha2.GatewayClass{}, NamespacedName: types.NamespacedName{Name: "class"}}),
+			Entry("Service", &events.DeleteEvent{Type: &apiv1.Service{}, NamespacedName: types.NamespacedName{Namespace: "test", Name: "service"}}),
+			Entry("EndpointSlice", &events.DeleteEvent{Type: &discoveryV1.EndpointSlice{}, NamespacedName: types.NamespacedName{Namespace: "test", Name: "endpointslice"}}),
 		)
 	})
-
-	Describe("Process Service events", func() {
-		BeforeEach(func() {
-			go start()
-		})
-
-		AfterEach(func() {
-			cancel()
-
-			var err error
-			Eventually(errorCh).Should(Receive(&err))
-			Expect(err).To(BeNil())
-		})
-
-		It("should process upsert event", func() {
-			svc := &apiv1.Service{}
-
-			eventCh <- &events.UpsertEvent{
-				Resource: svc,
-			}
-
-			Eventually(fakeServiceStore.UpsertCallCount).Should(Equal(1))
-			Expect(fakeServiceStore.UpsertArgsForCall(0)).Should(Equal(svc))
-
-			Eventually(fakeProcessor.ProcessCallCount).Should(Equal(1))
-		})
-
-		It("should process delete event", func() {
-			nsname := types.NamespacedName{Namespace: "test", Name: "service"}
-
-			eventCh <- &events.DeleteEvent{
-				NamespacedName: nsname,
-				Type:           &apiv1.Service{},
-			}
-
-			Eventually(fakeServiceStore.DeleteCallCount).Should(Equal(1))
-			Expect(fakeServiceStore.DeleteArgsForCall(0)).Should(Equal(nsname))
-
-			Eventually(fakeProcessor.ProcessCallCount).Should(Equal(1))
-		})
-	})
-
 	Describe("Process Secret events", func() {
 		BeforeEach(func() {
 			go start()

@@ -1,7 +1,8 @@
 package config
 
-type httpServers struct {
-	Servers []server
+type http struct {
+	Servers   []server
+	Upstreams []upstream
 }
 
 type server struct {
@@ -22,4 +23,13 @@ type location struct {
 type ssl struct {
 	Certificate    string
 	CertificateKey string
+}
+
+type upstream struct {
+	Name    string
+	Servers []upstreamServer
+}
+
+type upstreamServer struct {
+	Address string
 }

@@ -2,6 +2,7 @@ package sdk
 
 import (
 	apiv1 "k8s.io/api/core/v1"
+	v1 "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 
@@ -37,4 +38,9 @@ type ServiceImpl interface {
 type SecretImpl interface {
 	Upsert(secret *apiv1.Secret)
 	Remove(name types.NamespacedName)
+}
+
+type EndpointSliceImpl interface {
+	Upsert(endpSlice *v1.EndpointSlice)
+	Remove(nsname types.NamespacedName)
 }

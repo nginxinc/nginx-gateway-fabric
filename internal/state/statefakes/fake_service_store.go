@@ -15,17 +15,18 @@ type FakeServiceStore struct {
 	deleteArgsForCall []struct {
 		arg1 types.NamespacedName
 	}
-	ResolveStub        func(types.NamespacedName) (string, error)
+	ResolveStub        func(types.NamespacedName, int32) ([]state.Endpoint, error)
 	resolveMutex       sync.RWMutex
 	resolveArgsForCall []struct {
 		arg1 types.NamespacedName
+		arg2 int32
 	}
 	resolveReturns struct {
-		result1 string
+		result1 []state.Endpoint
 		result2 error
 	}
 	resolveReturnsOnCall map[int]struct {
-		result1 string
+		result1 []state.Endpoint
 		result2 error
 	}
 	UpsertStub        func(*v1.Service)
@@ -69,18 +70,19 @@ func (fake *FakeServiceStore) DeleteArgsForCall(i int) types.NamespacedName {
 	return argsForCall.arg1
 }
 
-func (fake *FakeServiceStore) Resolve(arg1 types.NamespacedName) (string, error) {
+func (fake *FakeServiceStore) Resolve(arg1 types.NamespacedName, arg2 int32) ([]state.Endpoint, error) {
 	fake.resolveMutex.Lock()
 	ret, specificReturn := fake.resolveReturnsOnCall[len(fake.resolveArgsForCall)]
 	fake.resolveArgsForCall = append(fake.resolveArgsForCall, struct {
 		arg1 types.NamespacedName
-	}{arg1})
+		arg2 int32
+	}{arg1, arg2})
 	stub := fake.ResolveStub
 	fakeReturns := fake.resolveReturns
-	fake.recordInvocation("Resolve", []interface{}{arg1})
+	fake.recordInvocation("Resolve", []interface{}{arg1, arg2})
 	fake.resolveMutex.Unlock()
 	if stub != nil {
-		return stub(arg1)
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -94,41 +96,41 @@ func (fake *FakeServiceStore) ResolveCallCount() int {
 	return len(fake.resolveArgsForCall)
 }
 
-func (fake *FakeServiceStore) ResolveCalls(stub func(types.NamespacedName) (string, error)) {
+func (fake *FakeServiceStore) ResolveCalls(stub func(types.NamespacedName, int32) ([]state.Endpoint, error)) {
 	fake.resolveMutex.Lock()
 	defer fake.resolveMutex.Unlock()
 	fake.ResolveStub = stub
 }
 
-func (fake *FakeServiceStore) ResolveArgsForCall(i int) types.NamespacedName {
+func (fake *FakeServiceStore) ResolveArgsForCall(i int) (types.NamespacedName, int32) {
 	fake.resolveMutex.RLock()
 	defer fake.resolveMutex.RUnlock()
 	argsForCall := fake.resolveArgsForCall[i]
-	return argsForCall.arg1
+	return argsForCall.arg1, argsForCall.arg2
 }
 
-func (fake *FakeServiceStore) ResolveReturns(result1 string, result2 error) {
+func (fake *FakeServiceStore) ResolveReturns(result1 []state.Endpoint, result2 error) {
 	fake.resolveMutex.Lock()
 	defer fake.resolveMutex.Unlock()
 	fake.ResolveStub = nil
 	fake.resolveReturns = struct {
-		result1 string
+		result1 []state.Endpoint
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *FakeServiceStore) ResolveReturnsOnCall(i int, result1 string, result2 error) {
+func (fake *FakeServiceStore) ResolveReturnsOnCall(i int, result1 []state.Endpoint, result2 error) {
 	fake.resolveMutex.Lock()
 	defer fake.resolveMutex.Unlock()
 	fake.ResolveStub = nil
 	if fake.resolveReturnsOnCall == nil {
 		fake.resolveReturnsOnCall = make(map[int]struct {
-			result1 string
+			result1 []state.Endpoint
 			result2 error
 		})
 	}
 	fake.resolveReturnsOnCall[i] = struct {
-		result1 string
+		result1 []state.Endpoint
 		result2 error
 	}{result1, result2}
 }

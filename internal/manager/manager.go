@@ -5,6 +5,7 @@ import (
 	"time"
 
 	apiv1 "k8s.io/api/core/v1"
+	discoveryV1 "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctlr "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -12,11 +13,13 @@ import (
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/config"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/events"
+	endpointslice "github.com/nginxinc/nginx-kubernetes-gateway/internal/implementations/endpointslice"
 	gw "github.com/nginxinc/nginx-kubernetes-gateway/internal/implementations/gateway"
 	gc "github.com/nginxinc/nginx-kubernetes-gateway/internal/implementations/gatewayclass"
 	hr "github.com/nginxinc/nginx-kubernetes-gateway/internal/implementations/httproute"
 	secret "github.com/nginxinc/nginx-kubernetes-gateway/internal/implementations/secret"
 	svc "github.com/nginxinc/nginx-kubernetes-gateway/internal/implementations/service"
+
 	ngxcfg "github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/config"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/file"
 	ngxruntime "github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/runtime"
@@ -39,6 +42,7 @@ func init() {
 	// FIXME(pleshakov): handle errors returned by the calls bellow
 	_ = gatewayv1alpha2.AddToScheme(scheme)
 	_ = apiv1.AddToScheme(scheme)
+	_ = discoveryV1.AddToScheme(scheme)
 }
 
 func Start(cfg config.Config) error {
@@ -78,6 +82,10 @@ func Start(cfg config.Config) error {
 	if err != nil {
 		return fmt.Errorf("cannot register secret implementation: %w", err)
 	}
+	err = sdk.RegisterEndpointSliceController(mgr, endpointslice.NewEndpointSliceImplementation(cfg, eventCh))
+	if err != nil {
+		return fmt.Errorf("cannot register endpointslice implementation: %w", err)
+	}
 
 	secretStore := state.NewSecretStore()
 	secretMemoryMgr := state.NewSecretDiskMemoryManager(secretsFolder, secretStore)
@@ -88,7 +96,7 @@ func Start(cfg config.Config) error {
 		SecretMemoryManager: secretMemoryMgr,
 	})
 
-	serviceStore := state.NewServiceStore()
+	serviceStore := state.NewServiceStore(mgr.GetClient())
 	configGenerator := ngxcfg.NewGeneratorImpl(serviceStore)
 	nginxFileMgr := file.NewManagerImpl()
 	nginxRuntimeMgr := ngxruntime.NewManagerImpl()

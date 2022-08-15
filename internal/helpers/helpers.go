@@ -46,3 +46,8 @@ func GetQueryParamMatchTypePointer(t v1alpha2.QueryParamMatchType) *v1alpha2.Que
 func GetTLSModePointer(t v1alpha2.TLSModeType) *v1alpha2.TLSModeType {
 	return &t
 }
+
+// GetBoolPointer takes a bool and returns a pointer to it. Useful in unit tests when initializing structs.
+func GetBoolPointer(b bool) *bool {
+	return &b
+}

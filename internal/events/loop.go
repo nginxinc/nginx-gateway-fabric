@@ -6,6 +6,7 @@ import (
 
 	"github.com/go-logr/logr"
 	apiv1 "k8s.io/api/core/v1"
+	discoveryV1 "k8s.io/api/discovery/v1"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/config"
@@ -104,7 +105,7 @@ func (el *EventLoop) updateNginx(ctx context.Context, conf state.Configuration) 
 	// For now, we keep all http servers in one config
 	// We might rethink that. For example, we can write each server to its file
 	// or group servers in some way.
-	err = el.cfg.NginxFileMgr.WriteHTTPServersConfig("http-servers", cfg)
+	err = el.cfg.NginxFileMgr.WriteHTTPConfig("http-servers", cfg)
 	if err != nil {
 		return err
 	}
@@ -132,11 +133,13 @@ func (el *EventLoop) propagateUpsert(e *UpsertEvent) {
 	case *v1alpha2.HTTPRoute:
 		el.cfg.Processor.CaptureUpsertChange(r)
 	case *apiv1.Service:
-		// FIXME(pleshakov): make sure the affected hosts are updated
+		el.cfg.Processor.CaptureUpsertChange(r)
 		el.cfg.ServiceStore.Upsert(r)
 	case *apiv1.Secret:
 		// FIXME(kate-osborn): need to handle certificate rotation
 		el.cfg.SecretStore.Upsert(r)
+	case *discoveryV1.EndpointSlice:
+		el.cfg.Processor.CaptureUpsertChange(r)
 	default:
 		panic(fmt.Errorf("unknown resource type %T", e.Resource))
 	}
@@ -151,11 +154,13 @@ func (el *EventLoop) propagateDelete(e *DeleteEvent) {
 	case *v1alpha2.HTTPRoute:
 		el.cfg.Processor.CaptureDeleteChange(e.Type, e.NamespacedName)
 	case *apiv1.Service:
-		// FIXME(pleshakov): make sure the affected hosts are updated
+		el.cfg.Processor.CaptureDeleteChange(e.Type, e.NamespacedName)
 		el.cfg.ServiceStore.Delete(e.NamespacedName)
 	case *apiv1.Secret:
 		// FIXME(kate-osborn): make sure that affected servers are updated
 		el.cfg.SecretStore.Delete(e.NamespacedName)
+	case *discoveryV1.EndpointSlice:
+		el.cfg.Processor.CaptureDeleteChange(e.Type, e.NamespacedName)
 	default:
 		panic(fmt.Errorf("unknown resource type %T", e.Type))
 	}
