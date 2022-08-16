@@ -44,10 +44,14 @@ jobs:
             const latest_release_current_branch = releases.find(release => !release.draft && release.tag_name.startsWith("v" + ref.split("-")[1]))
 
             if (latest_release_current_branch === undefined){
-              latest_release = (await github.rest.repos.getLatestRelease({
-                owner: context.payload.repository.owner.login,
-                repo: context.payload.repository.name,
-              })).data.tag_name
+              try {
+                latest_release = (await github.rest.repos.getLatestRelease({
+                  owner: context.payload.repository.owner.login,
+                  repo: context.payload.repository.name,
+                })).data.tag_name
+              } catch (e) {
+                latest_release = "v0.0.0"
+              }
             } else {
               latest_release = latest_release_current_branch.tag_name
             }
@@ -72,7 +76,7 @@ jobs:
                 owner: context.payload.repository.owner.login,
                 repo: context.payload.repository.name,
                 tag_name: tagTo,
-                previous_tag_name: tagFrom,
+                previous_tag_name: semver.gt(tagFrom, '0.0.0') ? tagFrom : '',
                 target_commitish: branch,
               })).data.body
 
@@ -91,7 +95,7 @@ jobs:
               owner: context.payload.repository.owner.login,
               repo: context.payload.repository.name,
               tag_name: 'v' + version,
-              previous_tag_name: tagFrom,
+              previous_tag_name: semver.gt(tagFrom, '0.0.0') ? tagFrom : '',
               target_commitish: branch,
             }))
 

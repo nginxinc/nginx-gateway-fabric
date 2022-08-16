@@ -112,6 +112,32 @@ jobs:
           go-version-file: go.mod
           cache: true
 
+      - name: Publish release on tag
+        uses: actions/github-script@v6
+        continue-on-error: true
+        with:
+          github-token: ${{secrets.GITHUB_TOKEN}}
+          script: |
+              const ref = context.ref.split("/")[2]
+
+              const releases = (await github.rest.repos.listReleases({
+                owner: context.payload.repository.owner.login,
+                repo: context.payload.repository.name,
+                per_page: 100,
+              })).data
+
+              const draft_release = releases.find(release => release.draft && release.tag_name === ref)
+
+              const update = await github.rest.repos.updateRelease({
+                owner: context.payload.repository.owner.login,
+                repo: context.payload.repository.name,
+                release_id: draft_release.id,
+                draft: false
+              });
+              console.log(`Release published: ${update.data.html_url}`)
+              console.log(`Release notes: ${update.data.body}`)
+        if: startsWith(github.ref, 'refs/tags/')
+
       - name: Download Syft
         uses: anchore/sbom-action/download-syft@v0.11.0
 
