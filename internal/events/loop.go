@@ -54,14 +54,20 @@ func (el *EventLoop) Start(ctx context.Context) error {
 	// handlingDone is used to signal the completion of handling a batch.
 	handlingDone := make(chan struct{})
 
-	handle := func(ctx context.Context, batch EventBatch) {
-		el.logger.Info("Handling events from the batch", "total", len(batch))
+	handleAndResetBatch := func() {
+		go func(batch EventBatch) {
+			el.logger.Info("Handling events from the batch", "total", len(batch))
 
-		el.handler.HandleEventBatch(ctx, batch)
+			el.handler.HandleEventBatch(ctx, batch)
 
-		el.logger.Info("Finished handling the batch")
+			el.logger.Info("Finished handling the batch")
+			handlingDone <- struct{}{}
+		}(batch)
 
-		handlingDone <- struct{}{}
+		// FIXME(pleshakov): Making an entirely new buffer is inefficient and multiplies memory operations.
+		// Use a double-buffer approach - create two buffers and exchange them between the producer and consumer
+		// routines. NOTE: pass-by-reference, and reset buffer to length 0, but retain capacity.
+		batch = make([]interface{}, 0)
 	}
 
 	// Prepare the fist event batch, which includes the UpsertEvents for all relevant cluster resources.
@@ -82,8 +88,7 @@ func (el *EventLoop) Start(ctx context.Context) error {
 	}
 
 	// Handle the first batch
-	go handle(ctx, batch)
-	batch = make([]interface{}, 0)
+	handleAndResetBatch()
 	handling = true
 
 	// Note: at any point of time, no more than one batch is currently being handled.
@@ -110,11 +115,7 @@ func (el *EventLoop) Start(ctx context.Context) error {
 
 			// Handle the current batch if no batch is being handled.
 			if !handling {
-				go handle(ctx, batch)
-				// FIXME(pleshakov): Making an entirely new buffer is inefficient and multiplies memory operations.
-				// Use a double-buffer approach - create two buffers and exchange them between the producer and consumer
-				// routines. NOTE: pass-by-reference, and reset buffer to length 0, but retain capacity.
-				batch = make([]interface{}, 0)
+				handleAndResetBatch()
 				handling = true
 			}
 		case <-handlingDone:
@@ -122,8 +123,7 @@ func (el *EventLoop) Start(ctx context.Context) error {
 
 			// Handle the current batch if it has at least one event.
 			if len(batch) > 0 {
-				go handle(ctx, batch)
-				batch = make([]interface{}, 0)
+				handleAndResetBatch()
 				handling = true
 			}
 		}
