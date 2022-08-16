@@ -920,6 +920,133 @@ var _ = Describe("ChangeProcessor", func() {
 		})
 	})
 
+	Describe("Multiple captured changes", func() {
+		var (
+			processor                    *state.ChangeProcessorImpl
+			gcNsName, gwNsName, hrNsName types.NamespacedName
+			gc, gcUpdated                *v1beta1.GatewayClass
+			gw1, gw1Updated, gw2         *v1beta1.Gateway
+			hr1, hr1Updated, hr2         *v1beta1.HTTPRoute
+		)
+
+		BeforeEach(OncePerOrdered, func() {
+			fakeSecretMemoryMgr := &statefakes.FakeSecretDiskMemoryManager{}
+			processor = state.NewChangeProcessorImpl(state.ChangeProcessorConfig{
+				GatewayCtlrName:     "test.controller",
+				GatewayClassName:    "my-class",
+				SecretMemoryManager: fakeSecretMemoryMgr,
+			})
+
+			gcNsName = types.NamespacedName{Name: "my-class"}
+
+			gc = &v1beta1.GatewayClass{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: gcNsName.Name,
+				},
+				Spec: v1beta1.GatewayClassSpec{
+					ControllerName: "test.controller",
+				},
+			}
+
+			gcUpdated = gc.DeepCopy()
+			gcUpdated.Generation++
+
+			gwNsName = types.NamespacedName{Namespace: "test", Name: "gw-1"}
+
+			gw1 = &v1beta1.Gateway{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: gwNsName.Namespace,
+					Name:      gwNsName.Name,
+				},
+			}
+
+			gw1Updated = gw1.DeepCopy()
+			gw1Updated.Generation++
+
+			gw2 = gw1.DeepCopy()
+			gw2.Name = "gw-2"
+
+			hrNsName = types.NamespacedName{Namespace: "test", Name: "hr-1"}
+
+			hr1 = &v1beta1.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: hrNsName.Namespace,
+					Name:      hrNsName.Name,
+				},
+			}
+
+			hr1Updated = hr1.DeepCopy()
+			hr1Updated.Generation++
+
+			hr2 = hr1.DeepCopy()
+			hr2.Name = "hr-2"
+		})
+
+		Describe("Ensuring non-changing changes don't override previously changing changes", Ordered, func() {
+			// Changing change - a change that makes processor.Process() report changed
+			// Non-changing change - a change that doesn't do that
+
+			// Note: in this test, we deliberately don't fully inspect the returned configuration and statuses
+			// -- this is done in 'Normal cases of processing changes'
+
+			It("should report changed after multiple Upserts", func() {
+				processor.CaptureUpsertChange(gc)
+				processor.CaptureUpsertChange(gw1)
+				processor.CaptureUpsertChange(hr1)
+
+				changed, _, _ := processor.Process()
+				Expect(changed).To(BeTrue())
+			})
+
+			It("should report not changed after multiple Upserts of the resource with same generation", func() {
+				processor.CaptureUpsertChange(gc)
+				processor.CaptureUpsertChange(gw1)
+				processor.CaptureUpsertChange(hr1)
+
+				changed, _, _ := processor.Process()
+				Expect(changed).To(BeFalse())
+			})
+
+			It("should report changed after upserting updated resources followed by upserting same generations", func() {
+				// these are changing changes
+				processor.CaptureUpsertChange(gcUpdated)
+				processor.CaptureUpsertChange(gw1Updated)
+				processor.CaptureUpsertChange(hr1Updated)
+
+				// there are non-changing changes
+				processor.CaptureUpsertChange(gcUpdated)
+				processor.CaptureUpsertChange(gw1Updated)
+				processor.CaptureUpsertChange(hr1Updated)
+
+				changed, _, _ := processor.Process()
+				Expect(changed).To(BeTrue())
+			})
+
+			It("should report changed after upserting new resources", func() {
+				// we can't have a second GatewayClass, so we don't add it
+				processor.CaptureUpsertChange(gw2)
+				processor.CaptureUpsertChange(hr2)
+
+				changed, _, _ := processor.Process()
+				Expect(changed).To(BeTrue())
+			})
+
+			It("should report changed after deleting resources followed by upserting same generations of new resources", func() {
+				// these are changing changes
+				processor.CaptureDeleteChange(&v1beta1.GatewayClass{}, gcNsName)
+				processor.CaptureDeleteChange(&v1beta1.Gateway{}, gwNsName)
+				processor.CaptureDeleteChange(&v1beta1.HTTPRoute{}, hrNsName)
+
+				// these are non-changing changes
+				processor.CaptureUpsertChange(gw2)
+				processor.CaptureUpsertChange(hr2)
+
+				changed, _, _ := processor.Process()
+				Expect(changed).To(BeTrue())
+			})
+		})
+	})
+
 	Describe("Edge cases with panic", func() {
 		var processor state.ChangeProcessor
 		var fakeSecretMemoryMgr *statefakes.FakeSecretDiskMemoryManager
