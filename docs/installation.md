@@ -1,5 +1,10 @@
 # Installation
 
+## Prerequisites
+
+Before you can install the NGINX Kubernetes Gateway, make sure you have the following software installed on your machine:
+- [kubectl](https://kubernetes.io/docs/tasks/tools/)
+
 ## Deploy the Gateway
 
 You can deploy NGINX Kubernetes Gateway on an existing Kubernetes 1.16+ cluster. The following instructions walk through the steps for deploying on a [kind](https://kind.sigs.k8s.io/) cluster.
