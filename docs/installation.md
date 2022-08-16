@@ -81,7 +81,7 @@ Create a service with type `LoadBalancer` using the appropriate manifest for you
    kubectl apply -f deploy/manifests/service/loadbalancer.yaml
    ```
 
-   Lookup the public IP of the load balancer:
+   Lookup the public IP of the load balancer, which is reported in the `EXTERNAL-IP` column in the output of the following command:
 
    ```
    kubectl get svc nginx-gateway -n nginx-gateway
@@ -95,7 +95,7 @@ Create a service with type `LoadBalancer` using the appropriate manifest for you
    kubectl apply -f deploy/manifests/service/loadbalancer-aws-nlb.yaml
    ```
 
-   In AWS, the NLB DNS name will be reported by Kubernetes in lieu of a public IP. To get the DNS name run:
+   In AWS, the NLB DNS name will be reported by Kubernetes in lieu of a public IP in the `EXTERNAL-IP` column. To get the DNS name run:
 
    ```
    kubectl get svc nginx-gateway -n nginx-gateway
