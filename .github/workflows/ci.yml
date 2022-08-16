@@ -153,7 +153,7 @@ jobs:
           platforms: arm64
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v2
-        if: ${{ startsWith(github.ref, 'refs/tags') }}
+        if: ${{ github.event_name != 'pull_request' }}
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
@@ -168,7 +168,7 @@ jobs:
             type=semver,pattern={{version}}
             type=edge
             type=ref,event=pr
-            type=ref,event=branch,enable=${{ startsWith(github.ref, 'refs/heads/release') }}
+            type=ref,event=branch,suffix=-rc,enable=${{ startsWith(github.ref, 'refs/heads/release') }}
       - name: Build Docker Image
         uses: docker/build-push-action@v3
         with:
@@ -176,11 +176,13 @@ jobs:
           context: '.'
           target: goreleaser
           tags: ${{ steps.meta.outputs.tags }}
-          load: ${{ !startsWith(github.ref, 'refs/tags') }}
-          push: ${{ startsWith(github.ref, 'refs/tags') }}
-          platforms: ${{ startsWith(github.ref, 'refs/tags') && env.platforms || '' }}
+          load: ${{ github.event_name == 'pull_request' }}
+          push: ${{ github.event_name != 'pull_request' }}
+          platforms: ${{ github.event_name != 'pull_request' && env.platforms || '' }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          pull: true
+          no-cache: ${{ github.event_name != 'pull_request' }}
           build-args: |
             VERSION=${{ needs.vars.outputs.version }}
             GIT_COMMIT=${{ needs.vars.outputs.sha }}
