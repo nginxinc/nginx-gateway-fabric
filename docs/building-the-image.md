@@ -30,4 +30,4 @@ Before you can build the NGINX Kubernetes Gateway, make sure you have the follow
    docker push myregistry.example.com/nginx-kubernetes-gateway:0.0.1
    ```
 
-   Make sure to substitute `myregistry.example.com/nginx-kubernetes-gateway` with your private registry.
+   Make sure to substitute `myregistry.example.com/nginx-kubernetes-gateway` with your registry.
