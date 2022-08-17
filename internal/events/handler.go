@@ -20,6 +20,7 @@ import (
 // EventHandler handle events.
 type EventHandler interface {
 	// HandleEventBatch handles a batch of events.
+	// EventBatch can include duplicated events.
 	HandleEventBatch(ctx context.Context, batch EventBatch)
 }
 
