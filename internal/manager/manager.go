@@ -103,18 +103,22 @@ func Start(cfg config.Config) error {
 		Clock:  status.NewRealClock(),
 	})
 
-	eventLoop := events.NewEventLoop(events.EventLoopConfig{
+	eventHandler := events.NewEventHandlerImpl(events.EventHandlerConfig{
 		Processor:           processor,
 		ServiceStore:        serviceStore,
 		SecretStore:         secretStore,
 		SecretMemoryManager: secretMemoryMgr,
 		Generator:           configGenerator,
-		EventCh:             eventCh,
-		Logger:              cfg.Logger.WithName("eventLoop"),
+		Logger:              cfg.Logger.WithName("eventHandler"),
 		NginxFileMgr:        nginxFileMgr,
 		NginxRuntimeMgr:     nginxRuntimeMgr,
 		StatusUpdater:       statusUpdater,
 	})
+
+	eventLoop := events.NewEventLoop(
+		eventCh,
+		cfg.Logger.WithName("eventLoop"),
+		eventHandler)
 
 	err = mgr.Add(eventLoop)
 	if err != nil {
