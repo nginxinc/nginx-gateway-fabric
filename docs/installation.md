@@ -7,6 +7,8 @@ Before you can install the NGINX Kubernetes Gateway, make sure you have the foll
 
 ## Deploy the Gateway
 
+> Note: NGINX Kubernetes Gateway can only run in the `nginx-gateway` namespace. This limitation will be addressed in the future releases.
+
 You can deploy NGINX Kubernetes Gateway on an existing Kubernetes 1.16+ cluster. The following instructions walk through the steps for deploying on a [kind](https://kind.sigs.k8s.io/) cluster.
 
 1. Load the NGINX Kubernetes Gateway image onto your kind cluster:
