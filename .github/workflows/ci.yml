@@ -37,8 +37,6 @@ jobs:
     runs-on: ubuntu-20.04
     outputs:
       sha: ${{ steps.vars.outputs.sha }}
-      version: ${{ steps.vars.outputs.version }}
-      date: ${{ steps.vars.outputs.date }}
       go_path: ${{ steps.vars.outputs.go_path }}
     steps:
       - name: Checkout Repository
@@ -52,8 +50,6 @@ jobs:
         id: vars
         run: |
           echo "::set-output name=sha::$(echo ${GITHUB_SHA} | cut -c1-7)"
-          echo "::set-output name=version::$(grep "VERSION = " Makefile | cut -d " " -f 3)"
-          echo "::set-output name=date::$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
           echo "::set-output name=go_path::$(go env GOPATH)"
       - name: Check if go.mod and go.sum are up to date
         run: |
@@ -195,6 +191,7 @@ jobs:
             type=edge
             type=ref,event=pr
             type=ref,event=branch,suffix=-rc,enable=${{ startsWith(github.ref, 'refs/heads/release') }}
+
       - name: Build Docker Image
         uses: docker/build-push-action@v3
         with:
@@ -202,6 +199,7 @@ jobs:
           context: '.'
           target: goreleaser
           tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
           load: ${{ github.event_name == 'pull_request' }}
           push: ${{ github.event_name != 'pull_request' }}
           platforms: ${{ github.event_name != 'pull_request' && env.platforms || '' }}
@@ -209,10 +207,7 @@ jobs:
           cache-to: type=gha,mode=max
           pull: true
           no-cache: ${{ github.event_name != 'pull_request' }}
-          build-args: |
-            VERSION=${{ needs.vars.outputs.version }}
-            GIT_COMMIT=${{ needs.vars.outputs.sha }}
-            DATE=${{ needs.vars.outputs.date }}
+
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@0.6.2
         continue-on-error: true
