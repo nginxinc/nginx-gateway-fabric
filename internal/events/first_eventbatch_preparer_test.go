@@ -22,22 +22,18 @@ import (
 
 var _ = Describe("FirstEventBatchPreparer", func() {
 	var (
-		fakeReader *eventsfakes.FakeCachedReader
+		fakeReader *eventsfakes.FakeReader
 		preparer   *events.FirstEventBatchPreparerImpl
 	)
 
 	const gcName = "my-class"
 
 	BeforeEach(func() {
-		fakeReader = &eventsfakes.FakeCachedReader{}
+		fakeReader = &eventsfakes.FakeReader{}
 		preparer = events.NewFirstEventBatchPreparerImpl(fakeReader, gcName)
 	})
 
 	Describe("Normal cases", func() {
-		BeforeEach(func() {
-			fakeReader.WaitForCacheSyncReturns(true)
-		})
-
 		AfterEach(func() {
 			Expect(fakeReader.GetCallCount()).Should(Equal(1))
 			Expect(fakeReader.ListCallCount()).Should(Equal(4))
@@ -111,18 +107,8 @@ var _ = Describe("FirstEventBatchPreparer", func() {
 	})
 
 	Describe("Edge cases", func() {
-		It("should fail when cache is not synced", func() {
-			fakeReader.WaitForCacheSyncReturns(false)
-
-			batch, err := preparer.Prepare(context.Background())
-			Expect(batch).To(BeNil())
-			Expect(err).To(MatchError("cache is not synced"))
-		})
-
 		DescribeTable("CachedReader returns errors",
 			func(obj client.Object) {
-				fakeReader.WaitForCacheSyncReturns(true)
-
 				readerError := errors.New("test")
 
 				fakeReader.GetReturns(nil)

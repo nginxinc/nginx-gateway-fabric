@@ -2,7 +2,6 @@ package events
 
 import (
 	"context"
-	"fmt"
 
 	apiv1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -20,25 +19,23 @@ type FirstEventBatchPreparer interface {
 	Prepare(ctx context.Context) (EventBatch, error)
 }
 
-//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . CachedReader
+//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . Reader
 
-// CachedReader allows getting and listing resources from a cache.
-// This interface is introduced for testing to mock a subset of methods from
-// sigs.k8s.io/controller-runtime/pkg/cache.Cache.
-type CachedReader interface {
-	WaitForCacheSync(ctx context.Context) bool
-	Get(ctx context.Context, key client.ObjectKey, obj client.Object) error
-	List(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error
+// Reader allows getting and listing resources from a cache.
+// This interface is introduced for testing to mock the methods from
+// sigs.k8s.io/controller-runtime/pkg/client.Reader.
+type Reader interface {
+	client.Reader
 }
 
 // FirstEventBatchPreparerImpl is an implementation of FirstEventBatchPreparer.
 type FirstEventBatchPreparerImpl struct {
-	reader CachedReader
+	reader Reader
 	gcName string
 }
 
 // NewFirstEventBatchPreparerImpl creates a new FirstEventBatchPreparerImpl.
-func NewFirstEventBatchPreparerImpl(reader CachedReader, gcName string) *FirstEventBatchPreparerImpl {
+func NewFirstEventBatchPreparerImpl(reader Reader, gcName string) *FirstEventBatchPreparerImpl {
 	return &FirstEventBatchPreparerImpl{
 		reader: reader,
 		gcName: gcName,
@@ -46,11 +43,6 @@ func NewFirstEventBatchPreparerImpl(reader CachedReader, gcName string) *FirstEv
 }
 
 func (p *FirstEventBatchPreparerImpl) Prepare(ctx context.Context) (EventBatch, error) {
-	synced := p.reader.WaitForCacheSync(ctx)
-	if !synced {
-		return nil, fmt.Errorf("cache is not synced")
-	}
-
 	var gc v1beta1.GatewayClass
 	gcExist := true
 	err := p.reader.Get(ctx, types.NamespacedName{Name: p.gcName}, &gc)
