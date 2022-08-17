@@ -12,7 +12,7 @@ import (
 //go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . ChangeProcessor
 
 // ChangeProcessor processes the changes to resources producing the internal representation of the Gateway configuration.
-// ChangeProcessor only supports one Gateway resource.
+// ChangeProcessor only supports one GatewayClass resource.
 type ChangeProcessor interface {
 	// CaptureUpsertChange captures an upsert change to a resource.
 	// It panics if the resource is of unsupported type or if the passed Gateway is different from the one this ChangeProcessor
@@ -31,8 +31,6 @@ type ChangeProcessor interface {
 
 // ChangeProcessorConfig holds configuration parameters for ChangeProcessorImpl.
 type ChangeProcessorConfig struct {
-	// GatewayNsName is the namespaced name of the Gateway resource.
-	GatewayNsName types.NamespacedName
 	// GatewayCtlrName is the name of the Gateway controller.
 	GatewayCtlrName string
 	// GatewayClassName is the name of the GatewayClass resource.
@@ -41,6 +39,7 @@ type ChangeProcessorConfig struct {
 	SecretMemoryManager SecretDiskMemoryManager
 }
 
+// ChangeProcessorImpl is an implementation of ChangeProcessor.
 type ChangeProcessorImpl struct {
 	store *store
 	// storeChanged tells if the store is changed.

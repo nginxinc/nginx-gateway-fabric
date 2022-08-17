@@ -5,8 +5,10 @@ import (
 	"time"
 
 	apiv1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctlr "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
@@ -115,10 +117,24 @@ func Start(cfg config.Config) error {
 		StatusUpdater:       statusUpdater,
 	})
 
+	firstBatchPreparer := events.NewFirstEventBatchPreparerImpl(
+		mgr.GetCache(),
+		[]client.Object{
+			&gatewayv1beta1.GatewayClass{ObjectMeta: metav1.ObjectMeta{Name: cfg.GatewayClassName}},
+		},
+		[]client.ObjectList{
+			&apiv1.ServiceList{},
+			&apiv1.SecretList{},
+			&gatewayv1beta1.GatewayList{},
+			&gatewayv1beta1.HTTPRouteList{},
+		},
+	)
+
 	eventLoop := events.NewEventLoop(
 		eventCh,
 		cfg.Logger.WithName("eventLoop"),
-		eventHandler)
+		eventHandler,
+		firstBatchPreparer)
 
 	err = mgr.Add(eventLoop)
 	if err != nil {
