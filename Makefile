@@ -5,7 +5,7 @@ PREFIX ?= nginx-kubernetes-gateway
 GIT_COMMIT = $(shell git rev-parse HEAD)
 DATE = $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 
-TARGET ?= local
+TARGET ?= edge
 
 KIND_KUBE_CONFIG_FOLDER = $${HOME}/.kube/kind
 OUT_DIR=$(shell pwd)/build/.out

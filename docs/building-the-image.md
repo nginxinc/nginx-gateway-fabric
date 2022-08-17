@@ -22,12 +22,12 @@ Before you can build the NGINX Kubernetes Gateway, make sure you have the follow
    make PREFIX=myregistry.example.com/nginx-kubernetes-gateway container
    ```
 
-   Set the `PREFIX` variable to the name of the registry you'd like to push the image to. By default, the image will be named `nginx-kubernetes-gateway:0.0.1`.
+   Set the `PREFIX` variable to the name of the registry you'd like to push the image to. By default, the image will be named `nginx-kubernetes-gateway:edge`.
 
 1. Push the image to your container registry:
 
    ```
-   docker push myregistry.example.com/nginx-kubernetes-gateway:0.0.1
+   docker push myregistry.example.com/nginx-kubernetes-gateway:edge
    ```
 
    Make sure to substitute `myregistry.example.com/nginx-kubernetes-gateway` with your registry.

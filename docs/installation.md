@@ -14,7 +14,7 @@ You can deploy NGINX Kubernetes Gateway on an existing Kubernetes 1.16+ cluster.
 1. Load the NGINX Kubernetes Gateway image onto your kind cluster:
 
    ```
-   kind load docker-image nginx-kubernetes-gateway:0.0.1
+   kind load docker-image nginx-kubernetes-gateway:edge
    ```
 
    Make sure to substitute the image name with the name of the image you built.
