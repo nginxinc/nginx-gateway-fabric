@@ -8,9 +8,9 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	apiv1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -30,13 +30,18 @@ var _ = Describe("FirstEventBatchPreparer", func() {
 
 	BeforeEach(func() {
 		fakeReader = &eventsfakes.FakeReader{}
-		preparer = events.NewFirstEventBatchPreparerImpl(fakeReader, gcName)
+		preparer = events.NewFirstEventBatchPreparerImpl(
+			fakeReader,
+			[]client.Object{&v1beta1.GatewayClass{ObjectMeta: metav1.ObjectMeta{Name: gcName}}},
+			[]client.ObjectList{
+				&v1beta1.HTTPRouteList{},
+			})
 	})
 
 	Describe("Normal cases", func() {
 		AfterEach(func() {
 			Expect(fakeReader.GetCallCount()).Should(Equal(1))
-			Expect(fakeReader.ListCallCount()).Should(Equal(4))
+			Expect(fakeReader.ListCallCount()).Should(Equal(1))
 		})
 
 		It("should prepare zero events when resources don't exist", func() {
@@ -55,8 +60,6 @@ var _ = Describe("FirstEventBatchPreparer", func() {
 		})
 
 		It("should prepare one event for each resource type", func() {
-			const resourceName = "resource"
-
 			gatewayClass := v1beta1.GatewayClass{ObjectMeta: metav1.ObjectMeta{Name: gcName}}
 
 			fakeReader.GetCalls(func(ctx context.Context, name types.NamespacedName, object client.Object) error {
@@ -67,21 +70,12 @@ var _ = Describe("FirstEventBatchPreparer", func() {
 				return nil
 			})
 
-			service := apiv1.Service{ObjectMeta: metav1.ObjectMeta{Name: resourceName}}
-			secret := apiv1.Secret{ObjectMeta: metav1.ObjectMeta{Name: resourceName}}
-			gateway := v1beta1.Gateway{ObjectMeta: metav1.ObjectMeta{Name: resourceName}}
-			httpRoute := v1beta1.HTTPRoute{ObjectMeta: metav1.ObjectMeta{Name: resourceName}}
+			httpRoute := v1beta1.HTTPRoute{ObjectMeta: metav1.ObjectMeta{Name: "test"}}
 
 			fakeReader.ListCalls(func(ctx context.Context, list client.ObjectList, option ...client.ListOption) error {
 				Expect(option).To(BeEmpty())
 
 				switch typedList := list.(type) {
-				case *apiv1.ServiceList:
-					typedList.Items = append(typedList.Items, service)
-				case *apiv1.SecretList:
-					typedList.Items = append(typedList.Items, secret)
-				case *v1beta1.GatewayList:
-					typedList.Items = append(typedList.Items, gateway)
 				case *v1beta1.HTTPRouteList:
 					typedList.Items = append(typedList.Items, httpRoute)
 				default:
@@ -93,9 +87,6 @@ var _ = Describe("FirstEventBatchPreparer", func() {
 
 			expectedBatch := events.EventBatch{
 				&events.UpsertEvent{Resource: &gatewayClass},
-				&events.UpsertEvent{Resource: &service},
-				&events.UpsertEvent{Resource: &secret},
-				&events.UpsertEvent{Resource: &gateway},
 				&events.UpsertEvent{Resource: &httpRoute},
 			}
 
@@ -107,7 +98,42 @@ var _ = Describe("FirstEventBatchPreparer", func() {
 	})
 
 	Describe("Edge cases", func() {
-		DescribeTable("CachedReader returns errors",
+		Describe("EachListItem cases", func() {
+			BeforeEach(func() {
+				fakeReader.GetReturns(apierrors.NewNotFound(schema.GroupResource{}, "test"))
+				fakeReader.ListCalls(func(ctx context.Context, list client.ObjectList, option ...client.ListOption) error {
+					httpRoute := v1beta1.HTTPRoute{ObjectMeta: metav1.ObjectMeta{Name: "test"}}
+					typedList := list.(*v1beta1.HTTPRouteList)
+					typedList.Items = append(typedList.Items, httpRoute)
+
+					return nil
+				})
+			})
+
+			It("should return error if EachListItem passes a wrong object type", func() {
+				preparer.SetEachListItem(func(obj runtime.Object, fn func(runtime.Object) error) error {
+					return fn(&fakeRuntimeObject{})
+				})
+
+				batch, err := preparer.Prepare(context.Background())
+				Expect(batch).To(BeNil())
+				Expect(err).To(MatchError("cannot cast *events_test.fakeRuntimeObject to client.Object"))
+			})
+
+			It("should return error if EachListItem returns an error", func() {
+				testError := errors.New("test")
+
+				preparer.SetEachListItem(func(obj runtime.Object, fn func(runtime.Object) error) error {
+					return testError
+				})
+
+				batch, err := preparer.Prepare(context.Background())
+				Expect(batch).To(BeNil())
+				Expect(err).To(MatchError(testError))
+			})
+		})
+
+		DescribeTable("Reader returns errors",
 			func(obj client.Object) {
 				readerError := errors.New("test")
 
@@ -117,14 +143,8 @@ var _ = Describe("FirstEventBatchPreparer", func() {
 				switch obj.(type) {
 				case *v1beta1.GatewayClass:
 					fakeReader.GetReturns(readerError)
-				case *apiv1.Service:
-					fakeReader.ListReturnsOnCall(0, readerError)
-				case *apiv1.Secret:
-					fakeReader.ListReturnsOnCall(1, readerError)
-				case *v1beta1.Gateway:
-					fakeReader.ListReturnsOnCall(2, readerError)
 				case *v1beta1.HTTPRoute:
-					fakeReader.ListReturnsOnCall(3, readerError)
+					fakeReader.ListReturnsOnCall(0, readerError)
 				default:
 					Fail(fmt.Sprintf("Unknown type: %T", obj))
 				}
@@ -133,11 +153,18 @@ var _ = Describe("FirstEventBatchPreparer", func() {
 				Expect(batch).To(BeNil())
 				Expect(err).To(MatchError(readerError))
 			},
-			Entry("Service", &apiv1.Service{}),
-			Entry("Secret", &apiv1.Secret{}),
 			Entry("GatewayClass", &v1beta1.GatewayClass{}),
-			Entry("Gateway", &v1beta1.Gateway{}),
 			Entry("HTTPRoute", &v1beta1.HTTPRoute{}),
 		)
 	})
 })
+
+type fakeRuntimeObject struct{}
+
+func (f *fakeRuntimeObject) GetObjectKind() schema.ObjectKind {
+	return nil
+}
+
+func (f *fakeRuntimeObject) DeepCopyObject() runtime.Object {
+	return nil
+}

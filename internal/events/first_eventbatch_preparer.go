@@ -2,12 +2,13 @@ package events
 
 import (
 	"context"
+	"fmt"
 
-	apiv1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/gateway-api/apis/v1beta1"
 )
 
 //go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . FirstEventBatchPreparer
@@ -28,69 +29,82 @@ type Reader interface {
 	client.Reader
 }
 
+// EachListItemFunc lists each item of a client.ObjectList.
+// It is from k8s.io/apimachinery/pkg/api/meta.
+type EachListItemFunc func(obj runtime.Object, fn func(runtime.Object) error) error
+
 // FirstEventBatchPreparerImpl is an implementation of FirstEventBatchPreparer.
 type FirstEventBatchPreparerImpl struct {
-	reader Reader
-	gcName string
+	reader       Reader
+	objects      []client.Object
+	objectLists  []client.ObjectList
+	eachListItem EachListItemFunc
 }
 
 // NewFirstEventBatchPreparerImpl creates a new FirstEventBatchPreparerImpl.
-func NewFirstEventBatchPreparerImpl(reader Reader, gcName string) *FirstEventBatchPreparerImpl {
+// objects and objectList specify which resources will be included in the first batch.
+// For each object from objects, FirstEventBatchPreparerImpl will get the corresponding resource from the reader.
+// The object must specify its namespace (if any) and name.
+// For each list from objectLists, FirstEventBatchPreparerImpl will list the resources of the corresponding type from
+// the reader.
+func NewFirstEventBatchPreparerImpl(reader Reader, objects []client.Object, objectLists []client.ObjectList) *FirstEventBatchPreparerImpl {
 	return &FirstEventBatchPreparerImpl{
-		reader: reader,
-		gcName: gcName,
+		reader:       reader,
+		objects:      objects,
+		objectLists:  objectLists,
+		eachListItem: meta.EachListItem,
 	}
 }
 
+// SetEachListItem sets the EachListItemFunc function.
+// Used for unit testing.
+func (p *FirstEventBatchPreparerImpl) SetEachListItem(eachListItem EachListItemFunc) {
+	p.eachListItem = eachListItem
+}
+
 func (p *FirstEventBatchPreparerImpl) Prepare(ctx context.Context) (EventBatch, error) {
-	var gc v1beta1.GatewayClass
-	gcExist := true
-	err := p.reader.Get(ctx, types.NamespacedName{Name: p.gcName}, &gc)
-	if err != nil {
-		if apierrors.IsNotFound(err) {
-			gcExist = false
-		} else {
-			return nil, err
-		}
-	}
+	total := 0
 
-	var svcList apiv1.ServiceList
-	var secretList apiv1.SecretList
-	var gwList v1beta1.GatewayList
-	var hrList v1beta1.HTTPRouteList
-
-	objLists := []client.ObjectList{&svcList, &secretList, &gwList, &hrList}
-	for _, list := range objLists {
+	for _, list := range p.objectLists {
 		err := p.reader.List(ctx, list)
 		if err != nil {
 			return nil, err
 		}
+
+		total += meta.LenList(list)
 	}
 
-	gcCount := 0
-	if gcExist {
-		gcCount = 1
-	}
+	// If some of p.objects don't exist, they will not be added to the batch. In that case, the capacity will be greater
+	// than the length, but it is OK, because len(p.objects) is small.
+	batch := make([]interface{}, 0, total+len(p.objects))
 
-	batch := make([]interface{}, 0, gcCount+len(svcList.Items)+len(secretList.Items)+len(gwList.Items)+len(hrList.Items))
+	for _, obj := range p.objects {
+		key := types.NamespacedName{Namespace: obj.GetNamespace(), Name: obj.GetName()}
+
+		err := p.reader.Get(ctx, key, obj)
+		if err != nil {
+			if !apierrors.IsNotFound(err) {
+				return nil, err
+			}
+		} else {
+			batch = append(batch, &UpsertEvent{Resource: obj})
+		}
+	}
 
 	// Note: the order of the events doesn't matter.
 
-	if gcExist {
-		batch = append(batch, &UpsertEvent{Resource: &gc})
-	}
-
-	for i := range svcList.Items {
-		batch = append(batch, &UpsertEvent{Resource: &svcList.Items[i]})
-	}
-	for i := range secretList.Items {
-		batch = append(batch, &UpsertEvent{Resource: &secretList.Items[i]})
-	}
-	for i := range gwList.Items {
-		batch = append(batch, &UpsertEvent{Resource: &gwList.Items[i]})
-	}
-	for i := range hrList.Items {
-		batch = append(batch, &UpsertEvent{Resource: &hrList.Items[i]})
+	for _, list := range p.objectLists {
+		err := p.eachListItem(list, func(object runtime.Object) error {
+			clientObj, ok := object.(client.Object)
+			if !ok {
+				return fmt.Errorf("cannot cast %T to client.Object", object)
+			}
+			batch = append(batch, &UpsertEvent{Resource: clientObj})
+			return nil
+		})
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return batch, nil
