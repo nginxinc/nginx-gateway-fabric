@@ -6,7 +6,7 @@ In this example we deploy NGINX Kubernetes Gateway, a simple web application, an
 
 ## 1. Deploy NGINX Kubernetes Gateway
 
-1. Follow the [installation instructions](https://github.com/nginxinc/nginx-kubernetes-gateway/blob/main/README.md#run-nginx-gateway) to deploy NGINX Gateway.
+1. Follow the [installation instructions](/docs/installation.md) to deploy NGINX Gateway.
 
 1. Save the public IP address of NGINX Kubernetes Gateway into a shell variable:
    
