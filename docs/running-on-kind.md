@@ -1,6 +1,6 @@
 # Running on Kind
 
-This guide walks you through how to run NGINX Kubernetes Gateway on a [Kind](https://kind.sigs.k8s.io/) cluster.
+This guide walks you through how to run NGINX Kubernetes Gateway on a [kind](https://kind.sigs.k8s.io/) cluster.
 
 ## Prerequisites
 
@@ -9,7 +9,7 @@ This guide walks you through how to run NGINX Kubernetes Gateway on a [Kind](htt
 
 ## Prepare Cluster
 
-Create a cluster with Kind. You can follow their [instructions](https://kind.sigs.k8s.io/docs/user/quick-start/#creating-a-cluster), or run the following make command at the root of the repository:
+Create a cluster with `kind`. You can follow their [instructions](https://kind.sigs.k8s.io/docs/user/quick-start/#creating-a-cluster), or run the following make command at the root of the repository:
 
 ```
 make create-kind-cluster
