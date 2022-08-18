@@ -1,11 +1,11 @@
-VERSION = 0.0.1
+VERSION = edge
 TAG = $(VERSION)
 PREFIX ?= nginx-kubernetes-gateway
 
 GIT_COMMIT = $(shell git rev-parse HEAD)
 DATE = $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 
-TARGET ?= edge
+TARGET ?= local
 
 KIND_KUBE_CONFIG_FOLDER = $${HOME}/.kube/kind
 OUT_DIR=$(shell pwd)/build/.out
