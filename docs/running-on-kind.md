@@ -1,4 +1,4 @@
-# Running on Kind
+# Running on `kind`
 
 This guide walks you through how to run NGINX Kubernetes Gateway on a [kind](https://kind.sigs.k8s.io/) cluster.
 
