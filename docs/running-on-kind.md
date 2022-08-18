@@ -21,17 +21,13 @@ Follow the [installation](./installation.md) instructions to deploy NGINX Kubern
 
 ## Access NGINX Kubernetes Gateway
 
-For HTTP traffic, forward local port 8080 to port 80 of the nginx-gateway Pod:
+Forward local ports 8080 and 8443 to ports 80 and of the nginx-gateway Pod:
 
 ```
-kubectl -n nginx-gateway port-forward <pod-name> 8080:80
+kubectl -n nginx-gateway port-forward <pod-name> 8080:80 8443:443
 ```
 
-For HTTPS traffic, forward local port 8443 to port 443 of the nginx-gateway Pod:
-
-```
-kubectl -n nginx-gateway port-forward <pod-name>  8443:443
-```
+> Note: NGINX will not listen on any ports until you configure a [Gateway](https://gateway-api.sigs.k8s.io/api-types/gateway/#gateway) resource with a valid listener. 
 
 ## Use NGINX Kubernetes Gateway
 To get started, follow the tutorials in the [examples](../examples/) directory.
