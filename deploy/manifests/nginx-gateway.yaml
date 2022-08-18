@@ -86,8 +86,8 @@ spec:
         - name: nginx-config
           mountPath: /etc/nginx
       containers:
-      - image: nginx-kubernetes-gateway:edge
-        imagePullPolicy: IfNotPresent
+      - image: ghcr.io/nginxinc/nginx-kubernetes-gateway:edge
+        imagePullPolicy: Always
         name: nginx-gateway
         volumeMounts:
         - name: nginx-config

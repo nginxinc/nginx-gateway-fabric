@@ -1,23 +1,22 @@
 # Installation
 
+This guide walks you through how to install NGINX Kubernetes Gateway on a generic Kubernetes cluster.
+
 ## Prerequisites
 
-Before you can install the NGINX Kubernetes Gateway, make sure you have the following software installed on your machine:
 - [kubectl](https://kubernetes.io/docs/tasks/tools/)
+- Kubernetes 1.16+ cluster
 
-## Deploy the Gateway
+## Deploy NGINX Kubernetes Gateway
 
 > Note: NGINX Kubernetes Gateway can only run in the `nginx-gateway` namespace. This limitation will be addressed in the future releases.
 
-You can deploy NGINX Kubernetes Gateway on an existing Kubernetes 1.16+ cluster. The following instructions walk through the steps for deploying on a [kind](https://kind.sigs.k8s.io/) cluster.
-
-1. Load the NGINX Kubernetes Gateway image onto your kind cluster:
+1. Clone the repo and change into the `nginx-kubernetes-gateway` directory:
 
    ```
-   kind load docker-image nginx-kubernetes-gateway:edge
+   git clone https://github.com/nginxinc/nginx-kubernetes-gateway.git
+   cd nginx-kubernetes-gateway
    ```
-
-   Make sure to substitute the image name with the name of the image you built.
 
 1. Install the Gateway CRDs:
 
@@ -44,8 +43,6 @@ You can deploy NGINX Kubernetes Gateway on an existing Kubernetes 1.16+ cluster.
     ```
 
 1. Deploy the NGINX Kubernetes Gateway:
-
-   Before deploying, make sure to update the Deployment spec in `nginx-gateway.yaml` to reference the image you built.
 
    ```
    kubectl apply -f deploy/manifests/nginx-gateway.yaml
@@ -108,3 +105,7 @@ Create a service with type `LoadBalancer` using the appropriate manifest for you
    ```
    nslookup <dns-name>
    ```
+
+### Use NGINX Kubernetes Gateway
+
+To get started, follow the tutorials in the [examples](../examples/) directory.
