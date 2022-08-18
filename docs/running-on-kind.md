@@ -21,7 +21,7 @@ Follow the [installation](./installation.md) instructions to deploy NGINX Kubern
 
 ## Access NGINX Kubernetes Gateway
 
-Forward local ports 8080 and 8443 to ports 80 and of the nginx-gateway Pod:
+Forward local ports 8080 and 8443 to ports 80 and 443 of the nginx-gateway Pod:
 
 ```
 kubectl -n nginx-gateway port-forward <pod-name> 8080:80 8443:443
