@@ -3,7 +3,7 @@
 In this example we will deploy NGINX Kubernetes Gateway and configure advanced routing rules for a simple cafe application. 
 We will use `HTTPRoute` resources to route traffic to the cafe application based on a combination of the request method, headers, and query parameters.
 
-The cafe application consists of four services: `coffee-v1-svc`, `coffee-v2-svc`, `tea-svc`, and `tea-post-svc`. In the next section we will create the following routing rules for the cafe application:
+The cafe application consists of four Services: `coffee-v1-svc`, `coffee-v2-svc`, `tea-svc`, and `tea-post-svc`. In the next section we will create the following routing rules for the cafe application:
 - For the path `/coffee` route requests with the header `version` set to `v2` or with the query param `TEST` set to `v2` to `coffee-v2-svc`, and all other requests to `coffee-v1-svc`.
 - For the path `/tea` route POST requests to `tea-post-svc`, and all other requests, such as `GET` requests, to `tea-svc`.  
 
@@ -27,7 +27,7 @@ The cafe application consists of four services: `coffee-v1-svc`, `coffee-v2-svc`
 
 ## 2. Deploy the Cafe Application  
 
-1. Create the coffee and the tea deployments and services:
+1. Create the coffee and the tea Deployments and Services:
    
    ```
    kubectl apply -f cafe.yaml

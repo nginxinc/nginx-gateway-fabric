@@ -22,7 +22,7 @@ In this example we expand on the simple [cafe-example](../cafe-example) by addin
 
 ## 2. Deploy the Cafe Application
 
-1. Create the coffee and the tea deployments and services:
+1. Create the coffee and the tea Deployments and Services:
 
    ```
    kubectl apply -f cafe.yaml
@@ -39,12 +39,12 @@ In this example we expand on the simple [cafe-example](../cafe-example) by addin
 
 ## 3. Configure HTTPS Termination and Routing
 
-1. Create a secret with a TLS certificate and key:
+1. Create a Secret with a TLS certificate and key:
    ```
    kubectl apply -f cafe-secret.yaml
    ```
 
-   The TLS certificate and key in this secret are used to terminate the TLS connections for the cafe application.
+   The TLS certificate and key in this Secret are used to terminate the TLS connections for the cafe application.
    **Important**: This certificate and key are for demo purposes only.
 
 1. Create the `Gateway` resource:
@@ -70,7 +70,7 @@ In this example we expand on the simple [cafe-example](../cafe-example) by addin
 
 ## 4. Test the Application
 
-To access the application, we will use `curl` to send requests to the `coffee` and `tea` services.
+To access the application, we will use `curl` to send requests to the `coffee` and `tea` Services.
 Since our certificate is self-signed, we'll use curl's `--insecure` option to turn off certificate verification.
 
 To get coffee:

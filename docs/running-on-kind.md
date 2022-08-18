@@ -30,4 +30,4 @@ kubectl -n nginx-gateway port-forward <pod-name> 8080:80 8443:443
 > Note: NGINX will not listen on any ports until you configure a [Gateway](https://gateway-api.sigs.k8s.io/api-types/gateway/#gateway) resource with a valid listener. 
 
 ## Use NGINX Kubernetes Gateway
-To get started, follow the tutorials in the [examples](../examples/) directory.
+To get started, follow the tutorials in the [examples](../examples) directory.

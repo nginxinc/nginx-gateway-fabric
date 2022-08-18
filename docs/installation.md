@@ -24,13 +24,13 @@ This guide walks you through how to install NGINX Kubernetes Gateway on a generi
    kubectl apply -k "github.com/kubernetes-sigs/gateway-api/config/crd?ref=v0.5.0"
    ```
 
-1. Create the nginx-gateway namespace:
+1. Create the nginx-gateway Namespace:
 
     ```
     kubectl apply -f deploy/manifests/namespace.yaml
     ```
 
-1. Create the njs-modules configmap:
+1. Create the njs-modules ConfigMap:
 
     ```
     kubectl create configmap njs-modules --from-file=internal/nginx/modules/src/httpmatches.js -n nginx-gateway
@@ -62,17 +62,17 @@ You can gain access to NGINX Kubernetes Gateway by creating a `NodePort` Service
 
 ### Create a NodePort Service
 
-Create a service with type `NodePort`:
+Create a Service with type `NodePort`:
 
 ```
 kubectl apply -f deploy/manifests/service/nodeport.yaml
 ```
 
-A `NodePort` service will randomly allocate one port on every node of the cluster. To access NGINX Kubernetes Gateway, use an IP address of any node in the cluster along with the allocated port.
+A `NodePort` Service will randomly allocate one port on every Node of the cluster. To access NGINX Kubernetes Gateway, use an IP address of any Node in the cluster along with the allocated port.
 
 ### Create a LoadBalancer Service
 
-Create a service with type `LoadBalancer` using the appropriate manifest for your cloud provider.
+Create a Service with type `LoadBalancer` using the appropriate manifest for your cloud provider.
 
 - For GCP or Azure:
 
@@ -108,4 +108,4 @@ Create a service with type `LoadBalancer` using the appropriate manifest for you
 
 ### Use NGINX Kubernetes Gateway
 
-To get started, follow the tutorials in the [examples](../examples/) directory.
+To get started, follow the tutorials in the [examples](../examples) directory.

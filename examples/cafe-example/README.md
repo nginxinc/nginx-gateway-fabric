@@ -22,7 +22,7 @@ In this example we deploy NGINX Kubernetes Gateway, a simple web application, an
 
 ## 2. Deploy the Cafe Application  
 
-1. Create the coffee and the tea deployments and services:
+1. Create the coffee and the tea Deployments and Services:
    
    ```
    kubectl apply -f cafe.yaml
@@ -53,7 +53,7 @@ In this example we deploy NGINX Kubernetes Gateway, a simple web application, an
 
 ## 4. Test the Application
 
-To access the application, we will use `curl` to send requests to the `coffee` and `tea` services. 
+To access the application, we will use `curl` to send requests to the `coffee` and `tea` Services. 
 
 To get coffee:
 
