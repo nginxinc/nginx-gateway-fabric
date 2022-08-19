@@ -28,7 +28,7 @@ Note: it might be possible that NGINX Kubernetes Gateway will never support some
 
 Below we list the resources and the support status of their corresponding fields. 
 
-Note that we don't describe the meaning of each field. For that, please visit the [Gateway API documentation](https://gateway-api.sigs.k8s.io/references/spec/). 
+For a description of each field, visit the [Gateway API documentation](https://gateway-api.sigs.k8s.io/references/spec/). 
 
 ### GatewayClass 
 
