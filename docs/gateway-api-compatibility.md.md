@@ -20,7 +20,7 @@ This document describes which Gateway API resources NGINX Kubernetes Gateway sup
 The support status is described using the following words:
 - *Supported*. The resource or field is fully supported and conformant to the Gateway API specification.
 - *Partially supported*. The resource or field is supported partially or with limitations. It will become fully supported in future releases.
-- *Not supported*. The resource or field is not yet supported. It will become partially or fully supported in the future releases.
+- *Not supported*. The resource or field is not yet supported. It will become partially or fully supported in future releases.
 
 Note: it might be possible that NGINX Kubernetes Gateway will never support some resources and/or fields of the Gateway API. If that happens, that will be documented.
 
