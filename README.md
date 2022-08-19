@@ -24,7 +24,7 @@ The following table lists the software versions NGINX Kubernetes Gateway support
 
 ## Contacts
 
-We’d like to hear your feedback! If you have any suggestions or experience issues with our Gateway Controller, please create an issue or send a pull request on GitHub. You can contact us directly via kubernetes@nginx.com or on the [NGINX Community Slack](https://nginxcommunity.slack.com/channels/nginx-kubernetes-gateway).
+We’d like to hear your feedback! If you have any suggestions or experience issues with our Gateway Controller, please create an issue or send a pull request on GitHub. You can contact us directly via kubernetes@nginx.com or on the [NGINX Community Slack](https://nginxcommunity.slack.com/channels/nginx-kubernetes-gateway) in the `#nginx-kubernetes-gateway` channel.
 
 ## Contributing
 
