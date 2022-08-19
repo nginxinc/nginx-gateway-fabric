@@ -23,7 +23,7 @@ If you'd like to give us feedback or get involved, see the [README](https://gith
 COMPATIBILITY:
 - The Gateway API version: `0.5.0`
 - NGINX version: `1.21.3` 
-- Kubernetes version: `1.16+`
+- Kubernetes version: `1.19+`
 
 CONTAINER IMAGES:
 - Control plane: `ghcr.io/nginxinc/nginx-kubernetes-gateway:0.1.0`
