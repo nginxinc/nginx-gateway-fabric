@@ -14,6 +14,27 @@ NGINX Kubernetes Gateway is an open-source project that provides an implementati
 3. [Install](docs/installation.md) NGINX Kubernetes Gateway.
 4. Deploy various [examples](examples). 
 
+## NGINX Kubernetes Gateway Releases
+
+We publish NGINX Kubernetes Gateway releases on GitHub. See our [releases page](https://github.com/nginxinc/nginx-kubernetes-gateway/releases).
+
+The latest release is [0.1.0](https://github.com/nginxinc/kubernetes-ingress/releases/tag/v0.1.0).
+
+The edge version is useful for experimenting with new features that are not yet published in a release. To use, choose the *edge* version built from the [latest commit](https://github.com/nginxinc/nginx-kubernetes-gateway/commits/main) from the main branch.
+
+To use NGINX Kubernetes Gateway, you need to have access to:
+* An NGINX Kubernetes Gateway image.
+* Installation manifests.
+* Documentation and examples.
+
+It is important that the versions of those things above match.
+
+The table below summarizes the options regarding the images, manifests, documentation and examples and gives your links to the correct versions:
+
+| Version | Description | Image | Installation Manifests | Documentation and Examples |
+|-|-|-|-|-|
+| Latest release | For experimental use | Use the 0.1.0 image from [GitHub](https://github.com/nginxinc/nginx-kubernetes-gateway/pkgs/container/nginx-kubernetes-gateway) | [Manifests](https://github.com/nginxinc/nginx-kubernetes-gateway/tree/v0.1.0/deploy). | [Documentation](https://github.com/nginxinc/nginx-kubernetes-gateway/tree/v0.1.0/docs). [Examples](https://github.com/nginxinc/nginx-kubernetes-gateway/tree/v0.1.0/examples). |
+| Edge| For experimental use and latest features | Use the edge image from [GitHub](https://github.com/nginxinc/nginx-kubernetes-gateway/pkgs/container/nginx-kubernetes-gateway) | [Manifests](https://github.com/nginxinc/nginx-kubernetes-gateway/tree/main/deploy). | [Documentation](https://github.com/nginxinc/nginx-kubernetes-gateway/tree/main/docs). [Examples](https://github.com/nginxinc/nginx-kubernetes-gateway/tree/main/examples). |
 ## Technical Specifications
 
 The following table lists the software versions NGINX Kubernetes Gateway supports.
