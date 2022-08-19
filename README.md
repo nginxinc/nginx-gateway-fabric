@@ -41,7 +41,7 @@ The following table lists the software versions NGINX Kubernetes Gateway support
 
 | NGINX Kubernetes Gateway | Gateway API | Kubernetes | NGINX OSS |
 |-|-|-|-|
-| 0.1.0 | 0.5.0 | 1.19 | 1.21.3|
+| 0.1.0 | 0.5.0 | 1.19+ | 1.21.3|
 
 ## Contacts
 
