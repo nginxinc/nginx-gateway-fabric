@@ -10,7 +10,7 @@ NGINX Kubernetes Gateway is an open-source project that provides an implementati
 ## Getting Started
 
 1. [Quick Start on a kind cluster](docs/running-on-kind.md).
-2, [Build](docs/building-the-image.md) the NGINX Kubernetes Gateway container image.
+2. [Build](docs/building-the-image.md) the NGINX Kubernetes Gateway container image.
 3. [Install](docs/installation.md) NGINX Kubernetes Gateway.
 4. Deploy various [examples](examples). 
 
