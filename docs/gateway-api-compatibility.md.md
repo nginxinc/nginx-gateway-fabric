@@ -41,7 +41,8 @@ Fields:
 	* `controllerName` - supported.
 	* `parametersRef` - not supported.
 	* `description` - supported.
-* `status` - partially supported.
+* `status`
+	* `conditions` - partially supported.
 
 ### Gateway
 
@@ -65,7 +66,14 @@ Fields:
 		  * `options` - not supported.
 		* `allowedRoutes` - not supported. 
 	* `addresses` - not supported.
-* `status` - partially supported.
+* `status`
+  * `addresses` - not supported.
+  * `conditions` - not supported.
+  * `listeners`
+	* `name` - supported.
+	* `supportedKinds` - not supported.
+	* `attachedRoutes` - supported.
+	* `conditions` - partially supported.
 
 ### HTTPRoute
 
@@ -83,7 +91,11 @@ Fields:
 	  * `method` -  supported.
 	* `filters` - not supported.
 	* `backendRefs` - partially supported. Only a single backend ref. Backend ref `filters` are not supported. NGINX Kubernetes Gateway will use the IP of the Service as a backend, not the IPs of the corresponding Pods. Watching for Service updates is not supported.
-* `status` -  partially supported.
+* `status`
+  * `parents`
+	* `parentRef` - supported.
+	* `controllerName` - supported.
+	* `conditions` - partially supported.
 
 ### TLSRoute
 
