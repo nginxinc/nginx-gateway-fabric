@@ -5,7 +5,6 @@ This guide walks you through how to install NGINX Kubernetes Gateway on a generi
 ## Prerequisites
 
 - [kubectl](https://kubernetes.io/docs/tasks/tools/)
-- Kubernetes 1.16+ cluster
 
 ## Deploy NGINX Kubernetes Gateway
 
