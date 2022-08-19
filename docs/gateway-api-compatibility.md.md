@@ -88,7 +88,7 @@ Fields:
 	  * `queryParams` - partially supported. Only `Exact` type. 
 	  * `method` -  supported.
 	* `filters` - not supported.
-	* `backendRefs` - partially supported. Only a single backend ref. Backend ref `filters` are not supported. NGINX Kubernetes Gateway will use the IP of the Service as a backend, not the IPs of the corresponding Pods. Watching for Service updates is not supported.
+	* `backendRefs` - partially supported. Only a single backend ref without support for `weight`. Backend ref `filters` are not supported. NGINX Kubernetes Gateway will use the IP of the Service as a backend, not the IPs of the corresponding Pods. Watching for Service updates is not supported.
 * `status`
   * `parents`
 	* `parentRef` - supported.
