@@ -48,9 +48,7 @@ Fields:
 
 > Status: Partially supported.
 
-NGINX Kubernetes Gateway supports only a single Gateway resource: it select the Gateway resource among all resources that belong to
-NGINX Kubernetes Gateway (i.e. reference NGINX Kubernetes Gateway corresponding GatewayClass). In case of multiple Gateway resources, NGINX Kubernetes Gateway will use a
-deterministic conflict resolution strategy: it will choose the oldest resource by creation timestamp. If the timestamps are equal, NGINX Kubernetes Gateway will choose the resource that appears first in alphabetical order by “{namespace}/{name}”. We might support multiple Gateway resources. Please share your use case with us if you're interested in that support.
+NGINX Kubernetes Gateway supports only a single Gateway resource. The Gateway resource must reference NGINX Kubernetes Gateway's corresponding GatewayClass. In case of multiple Gateway resources created in the cluster, NGINX Kubernetes Gateway will use a deterministic conflict resolution strategy: it will choose the oldest resource by creation timestamp. If the timestamps are equal, NGINX Kubernetes Gateway will choose the resource that appears first in alphabetical order by “{namespace}/{name}”. We might support multiple Gateway resources. Please share your use case with us if you're interested in that support.
 
 Fields:
 * `spec`
