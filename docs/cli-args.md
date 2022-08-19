@@ -1,6 +1,6 @@
 # Command-line Arguments
 
-The table belows describes the command-line arguments of the `gateway` binary from the `nginx-kubernetes-gateway` container.
+The table below describes the command-line arguments of the `gateway` binary from the `nginx-kubernetes-gateway` container.
 
 | Name | Type | Description |
 |-|-|-|
