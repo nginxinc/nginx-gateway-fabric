@@ -21,8 +21,9 @@ NGINX Kubernetes Gateway is ready for experimental usage. We included the [docs]
 If you'd like to give us feedback or get involved, see the [README](https://github.com/nginxinc/nginx-kubernetes-gateway) to learn how.
 
 COMPATIBILITY:
-- The Gateway API version: `v1beta1`. 
+- The Gateway API version: `0.5.0`
 - NGINX version: `1.21.3` 
+- Kubernetes version: `1.16+`
 
 CONTAINER IMAGES:
 - Control plane: `ghcr.io/nginxinc/nginx-kubernetes-gateway:0.1.0`
