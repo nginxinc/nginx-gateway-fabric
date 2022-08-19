@@ -11,7 +11,7 @@ This is an initial release of NGINX Kubernetes Gateway project.
 The release includes:
 - A control plane agent (a Kubernetes controller) that updates date plane (NGINX) configuration based on the state of the resources in the cluster.
 - Support for NGINX as a data plane.
-- Kubernetes manifests for a Deployment with a single Pod with the control plane and date plane containers as well as Services to enable external connectivity to that Pod.
+- Kubernetes manifests for a Deployment with a single Pod with the control plane and data plane containers as well as Services to enable external connectivity to that Pod.
 - Support for a subset of features of GatewayClass, Gateway and HTTPRoute resources (see the [Gateway API Compatibility doc](https://github.com/nginxinc/nginx-kubernetes-gateway/blob/v0.1.0-rc.1/README.md)).
 
 We expect that the architecture of NGINX Kubernetes Gateway -- number of pods and containers and their interaction -- will change as the project evolves.
