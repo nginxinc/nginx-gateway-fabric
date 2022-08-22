@@ -13,7 +13,7 @@ For a list of supported Gateway API resources and features, see the [Gateway API
 
 1. [Quick Start on a kind cluster](docs/running-on-kind.md).
 2. [Install](docs/installation.md) NGINX Kubernetes Gateway.
-3. [Build](docs/building-the-image.md) an NGINX Kubernetes Gateway container image from source or use a pre-built image available on [GitHub Container Registry](https://github.com/nginxinc/nginx-kubernetes-gateway/pkgs/container/nginx-kubernetes-gateway)
+3. [Build](docs/building-the-image.md) an NGINX Kubernetes Gateway container image from source or use a pre-built image available on [GitHub Container Registry](https://github.com/nginxinc/nginx-kubernetes-gateway/pkgs/container/nginx-kubernetes-gateway).
 4. Deploy various [examples](examples). 
 
 ## NGINX Kubernetes Gateway Releases
