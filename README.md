@@ -4,14 +4,17 @@
 
 NGINX Kubernetes Gateway is an open-source project that provides an implementation of the [Gateway API](https://gateway-api.sigs.k8s.io/) using [NGINX](https://nginx.org/) as the data plane. The goal of this project is to implement the core Gateway APIs -- `Gateway`, `GatewayClass`, `HTTPRoute`, `TCPRoute`, `TLSRoute`, and `UDPRoute` -- to configure an HTTP or TCP/UDP load balancer, reverse-proxy, or API gateway for applications running on Kubernetes. NGINX Kubernetes Gateway is currently under development and supports a subset of the Gateway API.
 
+For a list of supported Gateway API resources and features, see the [Gateway API Compatibility](docs/gateway-api-compatibility.md.md) doc.
+
 > Warning: This project is actively in development (beta feature state) and should not be deployed in a production environment.
 > All APIs, SDKs, designs, and packages are subject to change.
 
 ## Getting Started
 
 1. [Quick Start on a kind cluster](docs/running-on-kind.md).
-2. [Build](docs/building-the-image.md) the NGINX Kubernetes Gateway container image.
-3. [Install](docs/installation.md) NGINX Kubernetes Gateway.
+2. [Install](docs/installation.md) NGINX Kubernetes Gateway.
+3. [Build](docs/building-the-image.md) a custom NGINX Kubernetes Gateway container image from source.
+    > Note: NGINX Kubernetes Gateway container images are also available on [GitHub Container Registry].(https://github.com/nginxinc/nginx-kubernetes-gateway/pkgs/container/nginx-kubernetes-gateway)
 4. Deploy various [examples](examples). 
 
 ## NGINX Kubernetes Gateway Releases
