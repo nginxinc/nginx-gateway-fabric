@@ -1,6 +1,6 @@
 # HTTPS Termination Example
 
-In this example we expand on the simple [cafe-example](../cafe-example) by adding HTTPS termination to our routes.
+In this example we expand on the simple [cafe-example](../cafe-example) by adding HTTPS termination to our routes and an HTTPS redirect from port 80 to 443.
 
 ## Running the Example
 
@@ -14,10 +14,11 @@ In this example we expand on the simple [cafe-example](../cafe-example) by addin
    GW_IP=XXX.YYY.ZZZ.III
    ```
 
-1. Save the HTTPS port of NGINX Kubernetes Gateway:
+1. Save the ports of NGINX Kubernetes Gateway:
 
    ```
-   GW_HTTPS_PORT=port
+   GW_HTTP_PORT=<http port number>
+   GW_HTTPS_PORT=<https port number>
    ```
 
 ## 2. Deploy the Cafe Application
@@ -52,26 +53,60 @@ In this example we expand on the simple [cafe-example](../cafe-example) by addin
    kubectl apply -f gateway.yaml
    ```
 
-   This [gateway](./gateway.yaml) configures an `https` listener is to terminate TLS connections using the `cafe-secret` we created in the step 1.
+   This [Gateway](./gateway.yaml) configures:
+   * `http` listener for HTTP traffic
+   * `https` listener for HTTPS traffic. It terminates TLS connections using the `cafe-secret` we created in the step 1.
 
 1. Create the `HTTPRoute` resources:
    ```
    kubectl apply -f cafe-routes.yaml
    ```
 
-   To configure HTTPS termination for our cafe application, we will bind the `https` listener to our `HTTPRoutes` in [cafe-routes.yaml](./cafe-routes.yaml) using the [`parentReference`](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.ParentReference) field:
+   To configure HTTPS termination for our cafe application, we will bind our `coffee` and `tea` HTTPRoutes to the `https` listener in [cafe-routes.yaml](./cafe-routes.yaml) using the [`parentReference`](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.ParentReference) field:
 
    ```yaml
    parentRefs:
    - name: gateway
-     namespace: default
      sectionName: https
+   ```
+
+   To configure an HTTPS redirect from port 80 to 443, we will bind the special `cafe-tls-redirect` HTTPRoute with a [`HTTPRequestRedirectFilter`](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.HTTPRequestRedirectFilter) to the `http` listener:
+
+   ```yaml
+   parentRefs:
+   - name: gateway
+     sectionName: http
    ```
 
 ## 4. Test the Application
 
-To access the application, we will use `curl` to send requests to the `coffee` and `tea` Services.
-Since our certificate is self-signed, we'll use curl's `--insecure` option to turn off certificate verification.
+To access the application, we will use `curl` to send requests to the `coffee` and `tea` Services. First, we will access the application over HTTP to test that the HTTPS redirect works. Then we will use HTTPS.
+
+### 4.1 Test HTTPS Redirect
+
+To test that NGINX sends an HTTPS redirect, we will send requests to the `coffee` and `tea` Services on HTTP port. We will use curl's `--include` option to print the response headers (we are interested in the `Location` header).
+
+To get a redirect for coffee:
+```
+curl --resolve cafe.example.com:$GW_HTTP_PORT:$GW_IP http://cafe.example.com:$GW_HTTP_PORT/coffee --include
+HTTP/1.1 302 Moved Temporarily
+...
+Location: https://cafe.example.com:443/coffee
+...
+```
+
+To get a redirect for tea:
+```
+curl --resolve cafe.example.com:$GW_HTTP_PORT:$GW_IP http://cafe.example.com:$GW_HTTP_PORT/tea --include
+HTTP/1.1 302 Moved Temporarily
+...
+Location: https://cafe.example.com:443/tea
+...
+```
+
+### 4.2 Access Coffee and Tea 
+
+Now we will access the application over HTTPS. Since our certificate is self-signed, we will use curl's `--insecure` option to turn off certificate verification.
 
 To get coffee:
 

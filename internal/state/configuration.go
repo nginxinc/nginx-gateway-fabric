@@ -61,6 +61,11 @@ func (r *MatchRule) GetMatch() v1beta1.HTTPRouteMatch {
 	return r.Source.Spec.Rules[r.RuleIdx].Matches[r.MatchIdx]
 }
 
+// GetFilters returns the filters for the MatchRule.
+func (r *MatchRule) GetFilters() []v1beta1.HTTPRouteFilter {
+	return r.Source.Spec.Rules[r.RuleIdx].Filters
+}
+
 // buildConfiguration builds the Configuration from the graph.
 // FIXME(pleshakov) For now we only handle paths with prefix matches. Handle exact and regex matches
 func buildConfiguration(graph *graph) Configuration {

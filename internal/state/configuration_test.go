@@ -801,6 +801,70 @@ func TestMatchRuleGetMatch(t *testing.T) {
 	}
 }
 
+func TestGetFilters(t *testing.T) {
+	hr := &v1beta1.HTTPRoute{
+		Spec: v1beta1.HTTPRouteSpec{
+			Rules: []v1beta1.HTTPRouteRule{
+				{
+					Filters: []v1beta1.HTTPRouteFilter{
+						{
+							Type: v1beta1.HTTPRouteFilterURLRewrite,
+						},
+					},
+					Matches: []v1beta1.HTTPRouteMatch{
+						{},
+						{},
+					},
+				},
+				{
+					// No filters
+					Matches: []v1beta1.HTTPRouteMatch{
+						{},
+						{},
+					},
+				},
+			},
+		},
+	}
+
+	tests := []struct {
+		name     string
+		expected []v1beta1.HTTPRouteFilter
+		rule     MatchRule
+	}{
+		{
+			name: "filters for first match in first rule",
+			expected: []v1beta1.HTTPRouteFilter{
+				{
+					Type: v1beta1.HTTPRouteFilterURLRewrite,
+				},
+			},
+			rule: MatchRule{MatchIdx: 0, RuleIdx: 0, Source: hr},
+		},
+		{
+			name: "filters for second match in first rule",
+			expected: []v1beta1.HTTPRouteFilter{
+				{
+					Type: v1beta1.HTTPRouteFilterURLRewrite,
+				},
+			},
+			rule: MatchRule{MatchIdx: 1, RuleIdx: 0, Source: hr},
+		},
+		{
+			name:     "filters for second match in second rule",
+			expected: nil,
+			rule:     MatchRule{MatchIdx: 1, RuleIdx: 1, Source: hr},
+		},
+	}
+
+	for _, tc := range tests {
+		actual := tc.rule.GetFilters()
+		if diff := cmp.Diff(tc.expected, actual); diff != "" {
+			t.Errorf("MatchRule.GetFilters() returned incorrect filters for test case: %q, diff (-want, +got):\n%s", tc.name, diff)
+		}
+	}
+}
+
 func TestGetListenerHostname(t *testing.T) {
 	var emptyHostname v1beta1.Hostname
 	var hostname v1beta1.Hostname = "example.com"
