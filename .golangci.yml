@@ -30,14 +30,17 @@ linters-settings:
       - name: unused-parameter
       - name: var-declaration
       - name: var-naming
+  gocyclo:
+    min-complexity: 15
 
 linters:
     enable:
     - asciicheck
-    - deadcode
     - errcheck
     - errorlint
+    - gocyclo
     - gofmt
+    - gofumpt
     - goimports
     - gosec
     - gosimple
@@ -50,12 +53,10 @@ linters:
     - predeclared
     - revive
     - staticcheck
-    - structcheck
     - typecheck
     - unconvert
     - unparam
     - unused
-    - varcheck
     - wastedassign
     disable-all: true
 issues:

@@ -57,7 +57,6 @@ var _ = Describe("ServiceStore", func() {
 
 			Expect(address).To(Equal("10.0.0.2"))
 			Expect(err).To(BeNil())
-
 		})
 
 		It("should delete the service", func() {
