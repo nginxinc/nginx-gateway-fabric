@@ -12,8 +12,7 @@ type Clock interface {
 }
 
 // Real clock returns the current local time.
-type RealClock struct {
-}
+type RealClock struct{}
 
 // NewRealClock creates a new RealClock.
 func NewRealClock() *RealClock {

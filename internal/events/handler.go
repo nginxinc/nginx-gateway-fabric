@@ -62,7 +62,6 @@ func NewEventHandlerImpl(cfg EventHandlerConfig) *EventHandlerImpl {
 }
 
 func (h *EventHandlerImpl) HandleEventBatch(ctx context.Context, batch EventBatch) {
-
 	for _, event := range batch {
 		switch e := event.(type) {
 		case *UpsertEvent:

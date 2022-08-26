@@ -309,7 +309,6 @@ var _ = Describe("SecretStore", func() {
 
 		validToInvalidSecret = secret1.DeepCopy()
 		validToInvalidSecret.Data[apiv1.TLSCertKey] = invalidCert
-
 	})
 	Describe("handles CRUD events on secrets", Ordered, func() {
 		testUpsert := func(s *apiv1.Secret, valid bool) {

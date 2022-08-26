@@ -121,7 +121,6 @@ var _ = Describe("EventHandler", func() {
 
 				// Check that a reconfig happened
 				expectReconfig(fakeConf, fakeCfg, fakeStatuses)
-
 			},
 			Entry("HTTPRoute upsert", &events.UpsertEvent{Resource: &v1beta1.HTTPRoute{}}),
 			Entry("Gateway upsert", &events.UpsertEvent{Resource: &v1beta1.Gateway{}}),

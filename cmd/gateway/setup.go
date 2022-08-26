@@ -14,11 +14,13 @@ const (
 	errTmpl = "failed validation - flag: '--%s' reason: '%s'\n"
 )
 
-type Validator func(*flag.FlagSet) error
-type ValidatorContext struct {
-	Key string
-	V   Validator
-}
+type (
+	Validator        func(*flag.FlagSet) error
+	ValidatorContext struct {
+		Key string
+		V   Validator
+	}
+)
 
 func GatewayControllerParam(domain string, namespace string) ValidatorContext {
 	name := "gateway-ctlr-name"
