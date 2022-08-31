@@ -1,8 +1,16 @@
-# Release Process for NGINX Kubernetes Gateway
+# Releases
 
-NGINX Kubernetes Gateway uses semantic versioning for its releases. For more information see https://semver.org.
+NGINX Kubernetes Gateway (NKG) uses semantic versioning for its releases. For more information see https://semver.org.
 
 Warning: Major version zero (0.y.z) is reserved for development, anything MAY change at any time. The public API is not stable.
+
+NKG, especially in its early stages, will release periodically on a feature set cadence. By feature set, we intend to mean 2 or 3 features as tracked by the repository's Github issues. We do this to remain agile and to expose features relatively quickly, but also to minimize the cost of many frequent releases and the associated process overhead.
+
+This means users can expect a release generally every 1 or 2 months, and can also track the progress of a release and its features by viewing our Github issues. Each issue scheduled for a release will be labelled with "proposal" and its scheduled release, the label will use the form vMAJOR.MINOR. Multiple issues may be written to describe one use-case and each will be labelled according to this process. Sub-issues should also link to their parent (the parent issue will list the links via mention notifications).
+
+Bugs and other issue types will use a similar format; once committed to a release they will be assigned the label of that release.
+
+When all labelled work is complete, the NKG team will begin our release process and publish artifacts accordingly.
 
 ### Steps to create a release.
 
