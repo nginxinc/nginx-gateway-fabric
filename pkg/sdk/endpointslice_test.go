@@ -1,0 +1,62 @@
+package sdk_test
+
+import (
+	"testing"
+
+	"github.com/google/go-cmp/cmp"
+	v1 "k8s.io/api/core/v1"
+	discoveryV1 "k8s.io/api/discovery/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/nginxinc/nginx-kubernetes-gateway/pkg/sdk"
+)
+
+func TestServiceNameIndexFunc(t *testing.T) {
+	testcases := []struct {
+		msg       string
+		obj       client.Object
+		expOutput []string
+	}{
+		{
+			msg: "normal case",
+			obj: &discoveryV1.EndpointSlice{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{sdk.KubernetesServiceNameLabel: "test-svc"},
+				},
+			},
+			expOutput: []string{"test-svc"},
+		},
+		{
+			msg:       "nil labels",
+			obj:       &discoveryV1.EndpointSlice{},
+			expOutput: nil,
+		},
+		{
+			msg: "no service-name label",
+			obj: &discoveryV1.EndpointSlice{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: make(map[string]string),
+				},
+			},
+			expOutput: nil,
+		},
+	}
+
+	for _, tc := range testcases {
+		output := sdk.ServiceNameIndexFunc(tc.obj)
+		if diff := cmp.Diff(tc.expOutput, output); diff != "" {
+			t.Errorf("ServiceNameIndexFunc() mismatch on %q (-want +got):\n%s", tc.msg, diff)
+		}
+	}
+}
+
+func TestServiceNameIndexFuncPanics(t *testing.T) {
+	defer func() {
+		if r := recover(); r == nil {
+			t.Errorf("ServiceNameIndexFunc() did not panic")
+		}
+	}()
+
+	sdk.ServiceNameIndexFunc(&v1.Namespace{})
+}

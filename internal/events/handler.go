@@ -6,6 +6,7 @@ import (
 
 	"github.com/go-logr/logr"
 	apiv1 "k8s.io/api/core/v1"
+	discoveryV1 "k8s.io/api/discovery/v1"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/config"
@@ -28,8 +29,6 @@ type EventHandler interface {
 type EventHandlerConfig struct {
 	// Processor is the state ChangeProcessor.
 	Processor state.ChangeProcessor
-	// ServiceStore is the state ServiceStore.
-	ServiceStore state.ServiceStore
 	// SecretStore is the state SecretStore.
 	SecretStore state.SecretStore
 	// SecretMemoryManager is the state SecretMemoryManager.
@@ -73,7 +72,7 @@ func (h *EventHandlerImpl) HandleEventBatch(ctx context.Context, batch EventBatc
 		}
 	}
 
-	changed, conf, statuses := h.cfg.Processor.Process()
+	changed, conf, statuses := h.cfg.Processor.Process(ctx)
 	if !changed {
 		h.cfg.Logger.Info("Handling events didn't result into NGINX configuration changes")
 		return
@@ -98,25 +97,14 @@ func (h *EventHandlerImpl) updateNginx(ctx context.Context, conf state.Configura
 		return err
 	}
 
-	cfg, warnings := h.cfg.Generator.Generate(conf)
+	cfg := h.cfg.Generator.Generate(conf)
 
-	// For now, we keep all http servers in one config
+	// For now, we keep all http servers and upstreams in one config file.
 	// We might rethink that. For example, we can write each server to its file
 	// or group servers in some way.
-	err = h.cfg.NginxFileMgr.WriteHTTPServersConfig("http-servers", cfg)
+	err = h.cfg.NginxFileMgr.WriteHTTPConfig("http", cfg)
 	if err != nil {
 		return err
-	}
-
-	for obj, objWarnings := range warnings {
-		for _, w := range objWarnings {
-			// FIXME(pleshakov): report warnings via Object status
-			h.cfg.Logger.Info("Got warning while generating config",
-				"kind", obj.GetObjectKind().GroupVersionKind().Kind,
-				"namespace", obj.GetNamespace(),
-				"name", obj.GetName(),
-				"warning", w)
-		}
 	}
 
 	return h.cfg.NginxRuntimeMgr.Reload(ctx)
@@ -131,11 +119,12 @@ func (h *EventHandlerImpl) propagateUpsert(e *UpsertEvent) {
 	case *v1beta1.HTTPRoute:
 		h.cfg.Processor.CaptureUpsertChange(r)
 	case *apiv1.Service:
-		// FIXME(pleshakov): make sure the affected hosts are updated
-		h.cfg.ServiceStore.Upsert(r)
+		h.cfg.Processor.CaptureUpsertChange(r)
 	case *apiv1.Secret:
 		// FIXME(kate-osborn): need to handle certificate rotation
 		h.cfg.SecretStore.Upsert(r)
+	case *discoveryV1.EndpointSlice:
+		h.cfg.Processor.CaptureUpsertChange(r)
 	default:
 		panic(fmt.Errorf("unknown resource type %T", e.Resource))
 	}
@@ -150,11 +139,12 @@ func (h *EventHandlerImpl) propagateDelete(e *DeleteEvent) {
 	case *v1beta1.HTTPRoute:
 		h.cfg.Processor.CaptureDeleteChange(e.Type, e.NamespacedName)
 	case *apiv1.Service:
-		// FIXME(pleshakov): make sure the affected hosts are updated
-		h.cfg.ServiceStore.Delete(e.NamespacedName)
+		h.cfg.Processor.CaptureDeleteChange(e.Type, e.NamespacedName)
 	case *apiv1.Secret:
 		// FIXME(kate-osborn): make sure that affected servers are updated
 		h.cfg.SecretStore.Delete(e.NamespacedName)
+	case *discoveryV1.EndpointSlice:
+		h.cfg.Processor.CaptureDeleteChange(e.Type, e.NamespacedName)
 	default:
 		panic(fmt.Errorf("unknown resource type %T", e.Type))
 	}

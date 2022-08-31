@@ -5,6 +5,7 @@ import (
 	"time"
 
 	apiv1 "k8s.io/api/core/v1"
+	discoveryV1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -15,6 +16,7 @@ import (
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/config"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/events"
+	endpointslice "github.com/nginxinc/nginx-kubernetes-gateway/internal/implementations/endpointslice"
 	gw "github.com/nginxinc/nginx-kubernetes-gateway/internal/implementations/gateway"
 	gc "github.com/nginxinc/nginx-kubernetes-gateway/internal/implementations/gatewayclass"
 	hr "github.com/nginxinc/nginx-kubernetes-gateway/internal/implementations/httproute"
@@ -24,6 +26,8 @@ import (
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/file"
 	ngxruntime "github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/runtime"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/relationship"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/resolver"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/status"
 	"github.com/nginxinc/nginx-kubernetes-gateway/pkg/sdk"
 )
@@ -41,6 +45,7 @@ var scheme = runtime.NewScheme()
 func init() {
 	utilruntime.Must(gatewayv1beta1.AddToScheme(scheme))
 	utilruntime.Must(apiv1.AddToScheme(scheme))
+	utilruntime.Must(discoveryV1.AddToScheme(scheme))
 }
 
 func Start(cfg config.Config) error {
@@ -81,17 +86,26 @@ func Start(cfg config.Config) error {
 		return fmt.Errorf("cannot register secret implementation: %w", err)
 	}
 
+	ctx := ctlr.SetupSignalHandler()
+
+	err = sdk.RegisterEndpointSliceController(ctx, mgr, endpointslice.NewEndpointSliceImplementation(cfg, eventCh))
+	if err != nil {
+		return fmt.Errorf("cannot register endpointslice implementation: %w", err)
+	}
+
 	secretStore := state.NewSecretStore()
 	secretMemoryMgr := state.NewSecretDiskMemoryManager(secretsFolder, secretStore)
 
 	processor := state.NewChangeProcessorImpl(state.ChangeProcessorConfig{
-		GatewayCtlrName:     cfg.GatewayCtlrName,
-		GatewayClassName:    cfg.GatewayClassName,
-		SecretMemoryManager: secretMemoryMgr,
+		GatewayCtlrName:      cfg.GatewayCtlrName,
+		GatewayClassName:     cfg.GatewayClassName,
+		SecretMemoryManager:  secretMemoryMgr,
+		ServiceResolver:      resolver.NewServiceResolverImpl(mgr.GetClient()),
+		RelationshipCapturer: relationship.NewCapturerImpl(),
+		Logger:               cfg.Logger.WithName("changeProcessor"),
 	})
 
-	serviceStore := state.NewServiceStore()
-	configGenerator := ngxcfg.NewGeneratorImpl(serviceStore)
+	configGenerator := ngxcfg.NewGeneratorImpl()
 	nginxFileMgr := file.NewManagerImpl()
 	nginxRuntimeMgr := ngxruntime.NewManagerImpl()
 	statusUpdater := status.NewUpdater(status.UpdaterConfig{
@@ -107,7 +121,6 @@ func Start(cfg config.Config) error {
 
 	eventHandler := events.NewEventHandlerImpl(events.EventHandlerConfig{
 		Processor:           processor,
-		ServiceStore:        serviceStore,
 		SecretStore:         secretStore,
 		SecretMemoryManager: secretMemoryMgr,
 		Generator:           configGenerator,
@@ -125,6 +138,7 @@ func Start(cfg config.Config) error {
 		[]client.ObjectList{
 			&apiv1.ServiceList{},
 			&apiv1.SecretList{},
+			&discoveryV1.EndpointSliceList{},
 			&gatewayv1beta1.GatewayList{},
 			&gatewayv1beta1.HTTPRouteList{},
 		},
@@ -140,8 +154,6 @@ func Start(cfg config.Config) error {
 	if err != nil {
 		return fmt.Errorf("cannot register event loop: %w", err)
 	}
-
-	ctx := ctlr.SetupSignalHandler()
 
 	logger.Info("Starting manager")
 	return mgr.Start(ctx)

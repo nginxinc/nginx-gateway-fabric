@@ -7,6 +7,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	apiv1 "k8s.io/api/core/v1"
+	discoveryV1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -15,7 +16,6 @@ import (
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/events"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/config"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/config/configfakes"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/file/filefakes"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/runtime/runtimefakes"
@@ -40,11 +40,10 @@ var _ = Describe("EventHandler", func() {
 	var (
 		handler                 *events.EventHandlerImpl
 		fakeProcessor           *statefakes.FakeChangeProcessor
-		fakeServiceStore        *statefakes.FakeServiceStore
 		fakeSecretStore         *statefakes.FakeSecretStore
 		fakeSecretMemoryManager *statefakes.FakeSecretDiskMemoryManager
 		fakeGenerator           *configfakes.FakeGenerator
-		fakeNginxFimeMgr        *filefakes.FakeManager
+		fakeNginxFileMgr        *filefakes.FakeManager
 		fakeNginxRuntimeMgr     *runtimefakes.FakeManager
 		fakeStatusUpdater       *statusfakes.FakeUpdater
 	)
@@ -55,9 +54,9 @@ var _ = Describe("EventHandler", func() {
 		Expect(fakeGenerator.GenerateCallCount()).Should(Equal(1))
 		Expect(fakeGenerator.GenerateArgsForCall(0)).Should(Equal(expectedConf))
 
-		Expect(fakeNginxFimeMgr.WriteHTTPServersConfigCallCount()).Should(Equal(1))
-		name, cfg := fakeNginxFimeMgr.WriteHTTPServersConfigArgsForCall(0)
-		Expect(name).Should(Equal("http-servers"))
+		Expect(fakeNginxFileMgr.WriteHTTPConfigCallCount()).Should(Equal(1))
+		name, cfg := fakeNginxFileMgr.WriteHTTPConfigArgsForCall(0)
+		Expect(name).Should(Equal("http"))
 		Expect(cfg).Should(Equal(expectedCfg))
 
 		Expect(fakeNginxRuntimeMgr.ReloadCallCount()).Should(Equal(1))
@@ -69,22 +68,20 @@ var _ = Describe("EventHandler", func() {
 
 	BeforeEach(func() {
 		fakeProcessor = &statefakes.FakeChangeProcessor{}
-		fakeServiceStore = &statefakes.FakeServiceStore{}
 		fakeSecretMemoryManager = &statefakes.FakeSecretDiskMemoryManager{}
 		fakeSecretStore = &statefakes.FakeSecretStore{}
 		fakeGenerator = &configfakes.FakeGenerator{}
-		fakeNginxFimeMgr = &filefakes.FakeManager{}
+		fakeNginxFileMgr = &filefakes.FakeManager{}
 		fakeNginxRuntimeMgr = &runtimefakes.FakeManager{}
 		fakeStatusUpdater = &statusfakes.FakeUpdater{}
 
 		handler = events.NewEventHandlerImpl(events.EventHandlerConfig{
 			Processor:           fakeProcessor,
-			ServiceStore:        fakeServiceStore,
 			SecretStore:         fakeSecretStore,
 			SecretMemoryManager: fakeSecretMemoryManager,
 			Generator:           fakeGenerator,
 			Logger:              zap.New(),
-			NginxFileMgr:        fakeNginxFimeMgr,
+			NginxFileMgr:        fakeNginxFileMgr,
 			NginxRuntimeMgr:     fakeNginxRuntimeMgr,
 			StatusUpdater:       fakeStatusUpdater,
 		})
@@ -99,7 +96,7 @@ var _ = Describe("EventHandler", func() {
 				fakeProcessor.ProcessReturns(changed, fakeConf, fakeStatuses)
 
 				fakeCfg := []byte("fake")
-				fakeGenerator.GenerateReturns(fakeCfg, config.Warnings{})
+				fakeGenerator.GenerateReturns(fakeCfg)
 
 				batch := []interface{}{e}
 
@@ -125,85 +122,58 @@ var _ = Describe("EventHandler", func() {
 			Entry("HTTPRoute upsert", &events.UpsertEvent{Resource: &v1beta1.HTTPRoute{}}),
 			Entry("Gateway upsert", &events.UpsertEvent{Resource: &v1beta1.Gateway{}}),
 			Entry("GatewayClass upsert", &events.UpsertEvent{Resource: &v1beta1.GatewayClass{}}),
+			Entry("Service upsert", &events.UpsertEvent{Resource: &apiv1.Service{}}),
+			Entry("EndpointSlice upsert", &events.UpsertEvent{Resource: &discoveryV1.EndpointSlice{}}),
+
 			Entry("HTTPRoute delete", &events.DeleteEvent{Type: &v1beta1.HTTPRoute{}, NamespacedName: types.NamespacedName{Namespace: "test", Name: "route"}}),
 			Entry("Gateway delete", &events.DeleteEvent{Type: &v1beta1.Gateway{}, NamespacedName: types.NamespacedName{Namespace: "test", Name: "gateway"}}),
 			Entry("GatewayClass delete", &events.DeleteEvent{Type: &v1beta1.GatewayClass{}, NamespacedName: types.NamespacedName{Name: "class"}}),
+			Entry("Service delete", &events.DeleteEvent{Type: &apiv1.Service{}, NamespacedName: types.NamespacedName{Namespace: "test", Name: "service"}}),
+			Entry("EndpointSlice deleted", &events.DeleteEvent{Type: &discoveryV1.EndpointSlice{}, NamespacedName: types.NamespacedName{Namespace: "test", Name: "endpointslice"}}),
 		)
 	})
 
-	Describe("Process Kubernetes resources events", func() {
+	Describe("Process Secret events", func() {
 		expectNoReconfig := func() {
 			Expect(fakeProcessor.ProcessCallCount()).Should(Equal(1))
 			Expect(fakeGenerator.GenerateCallCount()).Should(Equal(0))
-			Expect(fakeNginxFimeMgr.WriteHTTPServersConfigCallCount()).Should(Equal(0))
+			Expect(fakeNginxFileMgr.WriteHTTPConfigCallCount()).Should(Equal(0))
 			Expect(fakeNginxRuntimeMgr.ReloadCallCount()).Should(Equal(0))
 			Expect(fakeStatusUpdater.UpdateCallCount()).Should(Equal(0))
 		}
+		It("should process upsert event", func() {
+			secret := &apiv1.Secret{}
 
-		Describe("Process Service events", func() {
-			It("should process upsert event", func() {
-				svc := &apiv1.Service{}
+			batch := []interface{}{
+				&events.UpsertEvent{
+					Resource: secret,
+				},
+			}
 
-				batch := []interface{}{&events.UpsertEvent{
-					Resource: svc,
-				}}
+			handler.HandleEventBatch(context.TODO(), batch)
 
-				handler.HandleEventBatch(context.TODO(), batch)
+			Expect(fakeSecretStore.UpsertCallCount()).Should(Equal(1))
+			Expect(fakeSecretStore.UpsertArgsForCall(0)).Should(Equal(secret))
 
-				Expect(fakeServiceStore.UpsertCallCount()).Should(Equal(1))
-				Expect(fakeServiceStore.UpsertArgsForCall(0)).Should(Equal(svc))
-
-				expectNoReconfig()
-			})
-
-			It("should process delete event", func() {
-				nsname := types.NamespacedName{Namespace: "test", Name: "service"}
-
-				batch := []interface{}{&events.DeleteEvent{
-					NamespacedName: nsname,
-					Type:           &apiv1.Service{},
-				}}
-
-				handler.HandleEventBatch(context.TODO(), batch)
-
-				Expect(fakeServiceStore.DeleteCallCount()).Should(Equal(1))
-				Expect(fakeServiceStore.DeleteArgsForCall(0)).Should(Equal(nsname))
-
-				expectNoReconfig()
-			})
+			expectNoReconfig()
 		})
 
-		Describe("Process Secret events", func() {
-			It("should process upsert event", func() {
-				secret := &apiv1.Secret{}
+		It("should process delete event", func() {
+			nsname := types.NamespacedName{Namespace: "test", Name: "secret"}
 
-				batch := []interface{}{&events.UpsertEvent{
-					Resource: secret,
-				}}
-
-				handler.HandleEventBatch(context.TODO(), batch)
-
-				Expect(fakeSecretStore.UpsertCallCount()).Should(Equal(1))
-				Expect(fakeSecretStore.UpsertArgsForCall(0)).Should(Equal(secret))
-
-				expectNoReconfig()
-			})
-
-			It("should process delete event", func() {
-				nsname := types.NamespacedName{Namespace: "test", Name: "secret"}
-
-				batch := []interface{}{&events.DeleteEvent{
+			batch := []interface{}{
+				&events.DeleteEvent{
 					NamespacedName: nsname,
 					Type:           &apiv1.Secret{},
-				}}
+				},
+			}
 
-				handler.HandleEventBatch(context.TODO(), batch)
+			handler.HandleEventBatch(context.TODO(), batch)
 
-				Expect(fakeSecretStore.DeleteCallCount()).Should(Equal(1))
-				Expect(fakeSecretStore.DeleteArgsForCall(0)).Should(Equal(nsname))
+			Expect(fakeSecretStore.DeleteCallCount()).Should(Equal(1))
+			Expect(fakeSecretStore.DeleteArgsForCall(0)).Should(Equal(nsname))
 
-				expectNoReconfig()
-			})
+			expectNoReconfig()
 		})
 	})
 
@@ -218,6 +188,7 @@ var _ = Describe("EventHandler", func() {
 			&events.UpsertEvent{Resource: &v1beta1.Gateway{}},
 			&events.UpsertEvent{Resource: &v1beta1.GatewayClass{}},
 			&events.UpsertEvent{Resource: svc},
+			&events.UpsertEvent{Resource: &discoveryV1.EndpointSlice{}},
 			&events.UpsertEvent{Resource: secret},
 		}
 		deletes := []interface{}{
@@ -225,6 +196,7 @@ var _ = Describe("EventHandler", func() {
 			&events.DeleteEvent{Type: &v1beta1.Gateway{}, NamespacedName: types.NamespacedName{Namespace: "test", Name: "gateway"}},
 			&events.DeleteEvent{Type: &v1beta1.GatewayClass{}, NamespacedName: types.NamespacedName{Name: "class"}},
 			&events.DeleteEvent{Type: &apiv1.Service{}, NamespacedName: svcNsName},
+			&events.DeleteEvent{Type: &discoveryV1.EndpointSlice{}, NamespacedName: types.NamespacedName{Namespace: "test", Name: "endpointslice"}},
 			&events.DeleteEvent{Type: &apiv1.Secret{}, NamespacedName: secretNsName},
 		}
 
@@ -238,33 +210,26 @@ var _ = Describe("EventHandler", func() {
 		fakeProcessor.ProcessReturns(changed, fakeConf, fakeStatuses)
 
 		fakeCfg := []byte("fake")
-		fakeGenerator.GenerateReturns(fakeCfg, config.Warnings{})
+		fakeGenerator.GenerateReturns(fakeCfg)
 
 		handler.HandleEventBatch(context.TODO(), batch)
 
 		// Check that the events for Gateway API resources were captured
 
-		// 3, not 5, because the last 2 do not result into CaptureUpsertChange() call
-		Expect(fakeProcessor.CaptureUpsertChangeCallCount()).Should(Equal(3))
-		for i := 0; i < 3; i++ {
+		// 5, not 6, because secret upsert events do not result into CaptureUpsertChange() call
+		Expect(fakeProcessor.CaptureUpsertChangeCallCount()).Should(Equal(5))
+		for i := 0; i < 5; i++ {
 			Expect(fakeProcessor.CaptureUpsertChangeArgsForCall(i)).Should(Equal(upserts[i].(*events.UpsertEvent).Resource))
 		}
-		Expect(fakeProcessor.CaptureDeleteChangeCallCount()).Should(Equal(3))
 
-		// 3, not 5, because the last 2 do not result into CaptureDeleteChange() call
-		for i := 0; i < 3; i++ {
+		// 5, not 6, because secret delete events do not result into CaptureDeleteChange() call
+		Expect(fakeProcessor.CaptureDeleteChangeCallCount()).Should(Equal(5))
+		for i := 0; i < 5; i++ {
 			d := deletes[i].(*events.DeleteEvent)
 			passedObj, passedNsName := fakeProcessor.CaptureDeleteChangeArgsForCall(i)
 			Expect(passedObj).Should(Equal(d.Type))
 			Expect(passedNsName).Should(Equal(d.NamespacedName))
 		}
-
-		// Check Service-related expectations
-		Expect(fakeServiceStore.UpsertCallCount()).Should(Equal(1))
-		Expect(fakeServiceStore.UpsertArgsForCall(0)).Should(Equal(svc))
-
-		Expect(fakeServiceStore.DeleteCallCount()).Should(Equal(1))
-		Expect(fakeServiceStore.DeleteArgsForCall(0)).Should(Equal(svcNsName))
 
 		// Check Secret-related expectations
 		Expect(fakeSecretStore.UpsertCallCount()).Should(Equal(1))

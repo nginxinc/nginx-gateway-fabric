@@ -1,37 +1,154 @@
 package state_test
 
 import (
+	"context"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	apiv1 "k8s.io/api/core/v1"
+	discoveryV1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/helpers"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/relationship"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/relationship/relationshipfakes"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/statefakes"
+	"github.com/nginxinc/nginx-kubernetes-gateway/pkg/sdk"
 )
+
+const (
+	controllerName  = "my.controller"
+	gcName          = "test-class"
+	certificatePath = "path/to/cert"
+)
+
+func createRoute(name string, gateway string, hostname string, backendRefs ...v1beta1.HTTPBackendRef) *v1beta1.HTTPRoute {
+	return &v1beta1.HTTPRoute{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "test",
+			Name:      name,
+		},
+		Spec: v1beta1.HTTPRouteSpec{
+			CommonRouteSpec: v1beta1.CommonRouteSpec{
+				ParentRefs: []v1beta1.ParentReference{
+					{
+						Namespace:   (*v1beta1.Namespace)(helpers.GetStringPointer("test")),
+						Name:        v1beta1.ObjectName(gateway),
+						SectionName: (*v1beta1.SectionName)(helpers.GetStringPointer("listener-80-1")),
+					},
+					{
+						Namespace:   (*v1beta1.Namespace)(helpers.GetStringPointer("test")),
+						Name:        v1beta1.ObjectName(gateway),
+						SectionName: (*v1beta1.SectionName)(helpers.GetStringPointer("listener-443-1")),
+					},
+				},
+			},
+			Hostnames: []v1beta1.Hostname{
+				v1beta1.Hostname(hostname),
+			},
+			Rules: []v1beta1.HTTPRouteRule{
+				{
+					Matches: []v1beta1.HTTPRouteMatch{
+						{
+							Path: &v1beta1.HTTPPathMatch{
+								Value: helpers.GetStringPointer("/"),
+							},
+						},
+					},
+					BackendRefs: backendRefs,
+				},
+			},
+		},
+	}
+}
+
+func createGateway(name string) *v1beta1.Gateway {
+	return &v1beta1.Gateway{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace:  "test",
+			Name:       name,
+			Generation: 1,
+		},
+		Spec: v1beta1.GatewaySpec{
+			GatewayClassName: gcName,
+			Listeners: []v1beta1.Listener{
+				{
+					Name:     "listener-80-1",
+					Hostname: nil,
+					Port:     80,
+					Protocol: v1beta1.HTTPProtocolType,
+				},
+			},
+		},
+	}
+}
+
+func createGatewayWithTLSListener(name string) *v1beta1.Gateway {
+	gw := createGateway(name)
+
+	l := v1beta1.Listener{
+		Name:     "listener-443-1",
+		Hostname: nil,
+		Port:     443,
+		Protocol: v1beta1.HTTPSProtocolType,
+		TLS: &v1beta1.GatewayTLSConfig{
+			Mode: helpers.GetTLSModePointer(v1beta1.TLSModeTerminate),
+			CertificateRefs: []v1beta1.SecretObjectReference{
+				{
+					Kind:      (*v1beta1.Kind)(helpers.GetStringPointer("Secret")),
+					Name:      "secret",
+					Namespace: (*v1beta1.Namespace)(helpers.GetStringPointer("test")),
+				},
+			},
+		},
+	}
+	gw.Spec.Listeners = append(gw.Spec.Listeners, l)
+
+	return gw
+}
+
+func createRouteWithMultipleRules(name, gateway, hostname string, rules []v1beta1.HTTPRouteRule) *v1beta1.HTTPRoute {
+	hr := createRoute(name, gateway, hostname)
+	hr.Spec.Rules = rules
+
+	return hr
+}
+
+func createHTTPRule(path string, backendRefs ...v1beta1.HTTPBackendRef) v1beta1.HTTPRouteRule {
+	return v1beta1.HTTPRouteRule{
+		Matches: []v1beta1.HTTPRouteMatch{
+			{
+				Path: &v1beta1.HTTPPathMatch{
+					Value: &path,
+				},
+			},
+		},
+		BackendRefs: backendRefs,
+	}
+}
+
+func createBackendRef(kind *v1beta1.Kind, name v1beta1.ObjectName, namespace *v1beta1.Namespace) v1beta1.HTTPBackendRef {
+	return v1beta1.HTTPBackendRef{
+		BackendRef: v1beta1.BackendRef{
+			BackendObjectReference: v1beta1.BackendObjectReference{
+				Kind:      kind,
+				Name:      name,
+				Namespace: namespace,
+			},
+		},
+	}
+}
 
 // FIXME(kate-osborn): Consider refactoring these tests to reduce code duplication.
 var _ = Describe("ChangeProcessor", func() {
 	Describe("Normal cases of processing changes", func() {
-		const (
-			controllerName  = "my.controller"
-			gcName          = "test-class"
-			certificatePath = "path/to/cert"
-		)
-
 		var (
-			gc, gcUpdated        *v1beta1.GatewayClass
-			hr1, hr1Updated, hr2 *v1beta1.HTTPRoute
-			gw1, gw1Updated, gw2 *v1beta1.Gateway
-			processor            state.ChangeProcessor
-			fakeSecretMemoryMgr  *statefakes.FakeSecretDiskMemoryManager
-		)
-
-		BeforeEach(OncePerOrdered, func() {
 			gc = &v1beta1.GatewayClass{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:       gcName,
@@ -41,115 +158,51 @@ var _ = Describe("ChangeProcessor", func() {
 					ControllerName: controllerName,
 				},
 			}
+			processor           state.ChangeProcessor
+			fakeSecretMemoryMgr *statefakes.FakeSecretDiskMemoryManager
+		)
 
-			gcUpdated = gc.DeepCopy()
-			gcUpdated.Generation++
-
-			createRoute := func(name string, gateway string, hostname string) *v1beta1.HTTPRoute {
-				return &v1beta1.HTTPRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "test",
-						Name:      name,
-					},
-					Spec: v1beta1.HTTPRouteSpec{
-						CommonRouteSpec: v1beta1.CommonRouteSpec{
-							ParentRefs: []v1beta1.ParentReference{
-								{
-									Namespace:   (*v1beta1.Namespace)(helpers.GetStringPointer("test")),
-									Name:        v1beta1.ObjectName(gateway),
-									SectionName: (*v1beta1.SectionName)(helpers.GetStringPointer("listener-80-1")),
-								},
-								{
-									Namespace:   (*v1beta1.Namespace)(helpers.GetStringPointer("test")),
-									Name:        v1beta1.ObjectName(gateway),
-									SectionName: (*v1beta1.SectionName)(helpers.GetStringPointer("listener-443-1")),
-								},
-							},
-						},
-						Hostnames: []v1beta1.Hostname{
-							v1beta1.Hostname(hostname),
-						},
-						Rules: []v1beta1.HTTPRouteRule{
-							{
-								Matches: []v1beta1.HTTPRouteMatch{
-									{
-										Path: &v1beta1.HTTPPathMatch{
-											Value: helpers.GetStringPointer("/"),
-										},
-									},
-								},
-							},
-						},
-					},
-				}
-			}
-
-			hr1 = createRoute("hr-1", "gateway-1", "foo.example.com")
-
-			hr1Updated = hr1.DeepCopy()
-			hr1Updated.Generation++
-
-			hr2 = createRoute("hr-2", "gateway-2", "bar.example.com")
-
-			createGateway := func(name string) *v1beta1.Gateway {
-				return &v1beta1.Gateway{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace:  "test",
-						Name:       name,
-						Generation: 1,
-					},
-					Spec: v1beta1.GatewaySpec{
-						GatewayClassName: gcName,
-						Listeners: []v1beta1.Listener{
-							{
-								Name:     "listener-80-1",
-								Hostname: nil,
-								Port:     80,
-								Protocol: v1beta1.HTTPProtocolType,
-							},
-							{
-								Name:     "listener-443-1",
-								Hostname: nil,
-								Port:     443,
-								Protocol: v1beta1.HTTPSProtocolType,
-								TLS: &v1beta1.GatewayTLSConfig{
-									Mode: helpers.GetTLSModePointer(v1beta1.TLSModeTerminate),
-									CertificateRefs: []v1beta1.SecretObjectReference{
-										{
-											Kind:      (*v1beta1.Kind)(helpers.GetStringPointer("Secret")),
-											Name:      "secret",
-											Namespace: (*v1beta1.Namespace)(helpers.GetStringPointer("test")),
-										},
-									},
-								},
-							},
-						},
-					},
-				}
-			}
-
-			gw1 = createGateway("gateway-1")
-
-			gw1Updated = gw1.DeepCopy()
-			gw1Updated.Generation++
-
-			gw2 = createGateway("gateway-2")
-
+		BeforeEach(OncePerOrdered, func() {
 			fakeSecretMemoryMgr = &statefakes.FakeSecretDiskMemoryManager{}
 
 			processor = state.NewChangeProcessorImpl(state.ChangeProcessorConfig{
-				GatewayCtlrName:     controllerName,
-				GatewayClassName:    gcName,
-				SecretMemoryManager: fakeSecretMemoryMgr,
+				GatewayCtlrName:      controllerName,
+				GatewayClassName:     gcName,
+				SecretMemoryManager:  fakeSecretMemoryMgr,
+				RelationshipCapturer: relationship.NewCapturerImpl(),
+				Logger:               zap.New(),
 			})
 
 			fakeSecretMemoryMgr.RequestReturns(certificatePath, nil)
 		})
 
-		Describe("Process resources", Ordered, func() {
+		Describe("Process gateway resources", Ordered, func() {
+			var (
+				gcUpdated            *v1beta1.GatewayClass
+				hr1, hr1Updated, hr2 *v1beta1.HTTPRoute
+				gw1, gw1Updated, gw2 *v1beta1.Gateway
+			)
+			BeforeAll(func() {
+				gcUpdated = gc.DeepCopy()
+				gcUpdated.Generation++
+
+				hr1 = createRoute("hr-1", "gateway-1", "foo.example.com")
+
+				hr1Updated = hr1.DeepCopy()
+				hr1Updated.Generation++
+
+				hr2 = createRoute("hr-2", "gateway-2", "bar.example.com")
+
+				gw1 = createGatewayWithTLSListener("gateway-1")
+
+				gw1Updated = gw1.DeepCopy()
+				gw1Updated.Generation++
+
+				gw2 = createGatewayWithTLSListener("gateway-2")
+			})
 			When("no upsert has occurred", func() {
 				It("should return empty configuration and statuses", func() {
-					changed, conf, statuses := processor.Process()
+					changed, conf, statuses := processor.Process(context.TODO())
 					Expect(changed).To(BeFalse())
 					Expect(conf).To(BeZero())
 					Expect(statuses).To(BeZero())
@@ -166,7 +219,7 @@ var _ = Describe("ChangeProcessor", func() {
 							HTTPRouteStatuses:      map[types.NamespacedName]state.HTTPRouteStatus{},
 						}
 
-						changed, conf, statuses := processor.Process()
+						changed, conf, statuses := processor.Process(context.TODO())
 						Expect(changed).To(BeTrue())
 						Expect(helpers.Diff(expectedConf, conf)).To(BeEmpty())
 						Expect(helpers.Diff(expectedStatuses, statuses)).To(BeEmpty())
@@ -202,7 +255,7 @@ var _ = Describe("ChangeProcessor", func() {
 						},
 					}
 
-					changed, conf, statuses := processor.Process()
+					changed, conf, statuses := processor.Process(context.TODO())
 					Expect(changed).To(BeTrue())
 					Expect(helpers.Diff(expectedConf, conf)).To(BeEmpty())
 					Expect(helpers.Diff(expectedStatuses, statuses)).To(BeEmpty())
@@ -221,9 +274,10 @@ var _ = Describe("ChangeProcessor", func() {
 									Path: "/",
 									MatchRules: []state.MatchRule{
 										{
-											MatchIdx: 0,
-											RuleIdx:  0,
-											Source:   hr1,
+											MatchIdx:     0,
+											RuleIdx:      0,
+											UpstreamName: state.InvalidBackendRef,
+											Source:       hr1,
 										},
 									},
 								},
@@ -239,9 +293,10 @@ var _ = Describe("ChangeProcessor", func() {
 									Path: "/",
 									MatchRules: []state.MatchRule{
 										{
-											MatchIdx: 0,
-											RuleIdx:  0,
-											Source:   hr1,
+											MatchIdx:     0,
+											RuleIdx:      0,
+											UpstreamName: state.InvalidBackendRef,
+											Source:       hr1,
 										},
 									},
 								},
@@ -252,6 +307,7 @@ var _ = Describe("ChangeProcessor", func() {
 							SSL:      &state.SSL{CertificatePath: certificatePath},
 						},
 					},
+					Upstreams: []state.Upstream{},
 				}
 
 				expectedStatuses := state.Statuses{
@@ -283,7 +339,7 @@ var _ = Describe("ChangeProcessor", func() {
 					},
 				}
 
-				changed, conf, statuses := processor.Process()
+				changed, conf, statuses := processor.Process(context.TODO())
 				Expect(changed).To(BeTrue())
 				Expect(helpers.Diff(expectedConf, conf)).To(BeEmpty())
 				Expect(helpers.Diff(expectedStatuses, statuses)).To(BeEmpty())
@@ -294,7 +350,7 @@ var _ = Describe("ChangeProcessor", func() {
 				// hr1UpdatedSameGen.Generation has not been changed
 				processor.CaptureUpsertChange(hr1UpdatedSameGen)
 
-				changed, conf, statuses := processor.Process()
+				changed, conf, statuses := processor.Process(context.TODO())
 				Expect(changed).To(BeFalse())
 				Expect(conf).To(BeZero())
 				Expect(statuses).To(BeZero())
@@ -312,9 +368,10 @@ var _ = Describe("ChangeProcessor", func() {
 									Path: "/",
 									MatchRules: []state.MatchRule{
 										{
-											MatchIdx: 0,
-											RuleIdx:  0,
-											Source:   hr1Updated,
+											MatchIdx:     0,
+											RuleIdx:      0,
+											UpstreamName: state.InvalidBackendRef,
+											Source:       hr1Updated,
 										},
 									},
 								},
@@ -330,9 +387,10 @@ var _ = Describe("ChangeProcessor", func() {
 									Path: "/",
 									MatchRules: []state.MatchRule{
 										{
-											MatchIdx: 0,
-											RuleIdx:  0,
-											Source:   hr1Updated,
+											MatchIdx:     0,
+											RuleIdx:      0,
+											UpstreamName: state.InvalidBackendRef,
+											Source:       hr1Updated,
 										},
 									},
 								},
@@ -343,6 +401,7 @@ var _ = Describe("ChangeProcessor", func() {
 							SSL:      &state.SSL{CertificatePath: certificatePath},
 						},
 					},
+					Upstreams: []state.Upstream{},
 				}
 				expectedStatuses := state.Statuses{
 					GatewayClassStatus: &state.GatewayClassStatus{
@@ -373,7 +432,7 @@ var _ = Describe("ChangeProcessor", func() {
 					},
 				}
 
-				changed, conf, statuses := processor.Process()
+				changed, conf, statuses := processor.Process(context.TODO())
 				Expect(changed).To(BeTrue())
 				Expect(helpers.Diff(expectedConf, conf)).To(BeEmpty())
 				Expect(helpers.Diff(expectedStatuses, statuses)).To(BeEmpty())
@@ -384,7 +443,7 @@ var _ = Describe("ChangeProcessor", func() {
 				// gwUpdatedSameGen.Generation has not been changed
 				processor.CaptureUpsertChange(gwUpdatedSameGen)
 
-				changed, conf, statuses := processor.Process()
+				changed, conf, statuses := processor.Process(context.TODO())
 				Expect(changed).To(BeFalse())
 				Expect(conf).To(BeZero())
 				Expect(statuses).To(BeZero())
@@ -402,9 +461,10 @@ var _ = Describe("ChangeProcessor", func() {
 									Path: "/",
 									MatchRules: []state.MatchRule{
 										{
-											MatchIdx: 0,
-											RuleIdx:  0,
-											Source:   hr1Updated,
+											MatchIdx:     0,
+											RuleIdx:      0,
+											UpstreamName: state.InvalidBackendRef,
+											Source:       hr1Updated,
 										},
 									},
 								},
@@ -420,9 +480,10 @@ var _ = Describe("ChangeProcessor", func() {
 									Path: "/",
 									MatchRules: []state.MatchRule{
 										{
-											MatchIdx: 0,
-											RuleIdx:  0,
-											Source:   hr1Updated,
+											MatchIdx:     0,
+											RuleIdx:      0,
+											UpstreamName: state.InvalidBackendRef,
+											Source:       hr1Updated,
 										},
 									},
 								},
@@ -433,6 +494,7 @@ var _ = Describe("ChangeProcessor", func() {
 							SSL:      &state.SSL{CertificatePath: certificatePath},
 						},
 					},
+					Upstreams: []state.Upstream{},
 				}
 				expectedStatuses := state.Statuses{
 					GatewayClassStatus: &state.GatewayClassStatus{
@@ -463,7 +525,7 @@ var _ = Describe("ChangeProcessor", func() {
 					},
 				}
 
-				changed, conf, statuses := processor.Process()
+				changed, conf, statuses := processor.Process(context.TODO())
 				Expect(changed).To(BeTrue())
 				Expect(helpers.Diff(expectedConf, conf)).To(BeEmpty())
 				Expect(helpers.Diff(expectedStatuses, statuses)).To(BeEmpty())
@@ -474,7 +536,7 @@ var _ = Describe("ChangeProcessor", func() {
 				// gcUpdatedSameGen.Generation has not been changed
 				processor.CaptureUpsertChange(gcUpdatedSameGen)
 
-				changed, conf, statuses := processor.Process()
+				changed, conf, statuses := processor.Process(context.TODO())
 				Expect(changed).To(BeFalse())
 				Expect(conf).To(BeZero())
 				Expect(statuses).To(BeZero())
@@ -492,9 +554,10 @@ var _ = Describe("ChangeProcessor", func() {
 									Path: "/",
 									MatchRules: []state.MatchRule{
 										{
-											MatchIdx: 0,
-											RuleIdx:  0,
-											Source:   hr1Updated,
+											MatchIdx:     0,
+											RuleIdx:      0,
+											UpstreamName: state.InvalidBackendRef,
+											Source:       hr1Updated,
 										},
 									},
 								},
@@ -510,9 +573,10 @@ var _ = Describe("ChangeProcessor", func() {
 									Path: "/",
 									MatchRules: []state.MatchRule{
 										{
-											MatchIdx: 0,
-											RuleIdx:  0,
-											Source:   hr1Updated,
+											MatchIdx:     0,
+											RuleIdx:      0,
+											UpstreamName: state.InvalidBackendRef,
+											Source:       hr1Updated,
 										},
 									},
 								},
@@ -523,6 +587,7 @@ var _ = Describe("ChangeProcessor", func() {
 							SSL:      &state.SSL{CertificatePath: certificatePath},
 						},
 					},
+					Upstreams: []state.Upstream{},
 				}
 				expectedStatuses := state.Statuses{
 					GatewayClassStatus: &state.GatewayClassStatus{
@@ -553,14 +618,14 @@ var _ = Describe("ChangeProcessor", func() {
 					},
 				}
 
-				changed, conf, statuses := processor.Process()
+				changed, conf, statuses := processor.Process(context.TODO())
 				Expect(changed).To(BeTrue())
 				Expect(helpers.Diff(expectedConf, conf)).To(BeEmpty())
 				Expect(helpers.Diff(expectedStatuses, statuses)).To(BeEmpty())
 			})
 
 			It("should return empty configuration and statuses after processing without capturing any changes", func() {
-				changed, conf, statuses := processor.Process()
+				changed, conf, statuses := processor.Process(context.TODO())
 
 				Expect(changed).To(BeFalse())
 				Expect(conf).To(BeZero())
@@ -579,9 +644,10 @@ var _ = Describe("ChangeProcessor", func() {
 									Path: "/",
 									MatchRules: []state.MatchRule{
 										{
-											MatchIdx: 0,
-											RuleIdx:  0,
-											Source:   hr1Updated,
+											MatchIdx:     0,
+											RuleIdx:      0,
+											UpstreamName: state.InvalidBackendRef,
+											Source:       hr1Updated,
 										},
 									},
 								},
@@ -596,9 +662,10 @@ var _ = Describe("ChangeProcessor", func() {
 									Path: "/",
 									MatchRules: []state.MatchRule{
 										{
-											MatchIdx: 0,
-											RuleIdx:  0,
-											Source:   hr1Updated,
+											MatchIdx:     0,
+											RuleIdx:      0,
+											UpstreamName: state.InvalidBackendRef,
+											Source:       hr1Updated,
 										},
 									},
 								},
@@ -612,6 +679,7 @@ var _ = Describe("ChangeProcessor", func() {
 							SSL:      &state.SSL{CertificatePath: certificatePath},
 						},
 					},
+					Upstreams: []state.Upstream{},
 				}
 				expectedStatuses := state.Statuses{
 					GatewayClassStatus: &state.GatewayClassStatus{
@@ -646,7 +714,7 @@ var _ = Describe("ChangeProcessor", func() {
 					},
 				}
 
-				changed, conf, statuses := processor.Process()
+				changed, conf, statuses := processor.Process(context.TODO())
 				Expect(changed).To(BeTrue())
 				Expect(helpers.Diff(expectedConf, conf)).To(BeEmpty())
 				Expect(helpers.Diff(expectedStatuses, statuses)).To(BeEmpty())
@@ -664,9 +732,10 @@ var _ = Describe("ChangeProcessor", func() {
 									Path: "/",
 									MatchRules: []state.MatchRule{
 										{
-											MatchIdx: 0,
-											RuleIdx:  0,
-											Source:   hr1Updated,
+											MatchIdx:     0,
+											RuleIdx:      0,
+											UpstreamName: state.InvalidBackendRef,
+											Source:       hr1Updated,
 										},
 									},
 								},
@@ -682,9 +751,10 @@ var _ = Describe("ChangeProcessor", func() {
 									Path: "/",
 									MatchRules: []state.MatchRule{
 										{
-											MatchIdx: 0,
-											RuleIdx:  0,
-											Source:   hr1Updated,
+											MatchIdx:     0,
+											RuleIdx:      0,
+											UpstreamName: state.InvalidBackendRef,
+											Source:       hr1Updated,
 										},
 									},
 								},
@@ -695,6 +765,7 @@ var _ = Describe("ChangeProcessor", func() {
 							SSL:      &state.SSL{CertificatePath: certificatePath},
 						},
 					},
+					Upstreams: []state.Upstream{},
 				}
 				expectedStatuses := state.Statuses{
 					GatewayClassStatus: &state.GatewayClassStatus{
@@ -735,7 +806,7 @@ var _ = Describe("ChangeProcessor", func() {
 					},
 				}
 
-				changed, conf, statuses := processor.Process()
+				changed, conf, statuses := processor.Process(context.TODO())
 				Expect(changed).To(BeTrue())
 				Expect(helpers.Diff(expectedConf, conf)).To(BeEmpty())
 				Expect(helpers.Diff(expectedStatuses, statuses)).To(BeEmpty())
@@ -753,9 +824,10 @@ var _ = Describe("ChangeProcessor", func() {
 									Path: "/",
 									MatchRules: []state.MatchRule{
 										{
-											MatchIdx: 0,
-											RuleIdx:  0,
-											Source:   hr2,
+											MatchIdx:     0,
+											RuleIdx:      0,
+											UpstreamName: state.InvalidBackendRef,
+											Source:       hr2,
 										},
 									},
 								},
@@ -771,9 +843,10 @@ var _ = Describe("ChangeProcessor", func() {
 									Path: "/",
 									MatchRules: []state.MatchRule{
 										{
-											MatchIdx: 0,
-											RuleIdx:  0,
-											Source:   hr2,
+											MatchIdx:     0,
+											RuleIdx:      0,
+											UpstreamName: state.InvalidBackendRef,
+											Source:       hr2,
 										},
 									},
 								},
@@ -784,6 +857,7 @@ var _ = Describe("ChangeProcessor", func() {
 							SSL:      &state.SSL{CertificatePath: certificatePath},
 						},
 					},
+					Upstreams: []state.Upstream{},
 				}
 				expectedStatuses := state.Statuses{
 					GatewayClassStatus: &state.GatewayClassStatus{
@@ -814,7 +888,7 @@ var _ = Describe("ChangeProcessor", func() {
 					},
 				}
 
-				changed, conf, statuses := processor.Process()
+				changed, conf, statuses := processor.Process(context.TODO())
 				Expect(changed).To(BeTrue())
 				Expect(helpers.Diff(expectedConf, conf)).To(BeEmpty())
 				Expect(helpers.Diff(expectedStatuses, statuses)).To(BeEmpty())
@@ -831,6 +905,7 @@ var _ = Describe("ChangeProcessor", func() {
 							SSL:      &state.SSL{CertificatePath: certificatePath},
 						},
 					},
+					Upstreams: []state.Upstream{},
 				}
 				expectedStatuses := state.Statuses{
 					GatewayClassStatus: &state.GatewayClassStatus{
@@ -854,7 +929,7 @@ var _ = Describe("ChangeProcessor", func() {
 					HTTPRouteStatuses:      map[types.NamespacedName]state.HTTPRouteStatus{},
 				}
 
-				changed, conf, statuses := processor.Process()
+				changed, conf, statuses := processor.Process(context.TODO())
 				Expect(changed).To(BeTrue())
 				Expect(helpers.Diff(expectedConf, conf)).To(BeEmpty())
 				Expect(helpers.Diff(expectedStatuses, statuses)).To(BeEmpty())
@@ -882,7 +957,7 @@ var _ = Describe("ChangeProcessor", func() {
 					HTTPRouteStatuses:      map[types.NamespacedName]state.HTTPRouteStatus{},
 				}
 
-				changed, conf, statuses := processor.Process()
+				changed, conf, statuses := processor.Process(context.TODO())
 				Expect(changed).To(BeTrue())
 				Expect(helpers.Diff(expectedConf, conf)).To(BeEmpty())
 				Expect(helpers.Diff(expectedStatuses, statuses)).To(BeEmpty())
@@ -897,7 +972,7 @@ var _ = Describe("ChangeProcessor", func() {
 					HTTPRouteStatuses:      map[types.NamespacedName]state.HTTPRouteStatus{},
 				}
 
-				changed, conf, statuses := processor.Process()
+				changed, conf, statuses := processor.Process(context.TODO())
 				Expect(changed).To(BeTrue())
 				Expect(helpers.Diff(expectedConf, conf)).To(BeEmpty())
 				Expect(helpers.Diff(expectedStatuses, statuses)).To(BeEmpty())
@@ -912,29 +987,236 @@ var _ = Describe("ChangeProcessor", func() {
 					HTTPRouteStatuses:      map[types.NamespacedName]state.HTTPRouteStatus{},
 				}
 
-				changed, conf, statuses := processor.Process()
+				changed, conf, statuses := processor.Process(context.TODO())
 				Expect(changed).To(BeTrue())
 				Expect(helpers.Diff(expectedConf, conf)).To(BeEmpty())
 				Expect(helpers.Diff(expectedStatuses, statuses)).To(BeEmpty())
 			})
 		})
+		Describe("Process services and endpoints", Ordered, func() {
+			var (
+				hr1, hr2, hr3, hrInvalidBackendRef, hrMultipleRules                 *v1beta1.HTTPRoute
+				hr1svc, sharedSvc, bazSvc1, bazSvc2, bazSvc3, invalidSvc, notRefSvc *apiv1.Service
+				hr1slice1, hr1slice2, noRefSlice, missingSvcNameSlice               *discoveryV1.EndpointSlice
+			)
+
+			createSvc := func(name string) *apiv1.Service {
+				return &apiv1.Service{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "test",
+						Name:      name,
+					},
+				}
+			}
+
+			createEndpointSlice := func(name string, svcName string) *discoveryV1.EndpointSlice {
+				return &discoveryV1.EndpointSlice{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "test",
+						Name:      name,
+						Labels:    map[string]string{sdk.KubernetesServiceNameLabel: svcName},
+					},
+				}
+			}
+
+			BeforeAll(func() {
+				testNamespace := v1beta1.Namespace("test")
+				kindService := v1beta1.Kind("Service")
+				kindInvalid := v1beta1.Kind("Invalid")
+
+				// backend Refs
+				fooRef := createBackendRef(&kindService, "foo-svc", &testNamespace)
+				barRef := createBackendRef(&kindService, "bar-svc", nil) // nil namespace should inherit namespace from route
+				baz1Ref := createBackendRef(&kindService, "baz-svc-v1", &testNamespace)
+				baz2Ref := createBackendRef(&kindService, "baz-svc-v2", &testNamespace)
+				baz3Ref := createBackendRef(&kindService, "baz-svc-v3", &testNamespace)
+				invalidRef := createBackendRef(&kindInvalid, "bar-svc", &testNamespace) // invalid kind
+
+				// httproutes
+				hr1 = createRoute("hr1", "gw", "foo.example.com", fooRef)
+				hr2 = createRoute("hr2", "gw", "bar.example.com", barRef)
+				hr3 = createRoute("hr3", "gw", "bar.2.example.com", barRef) // shares backend ref with hr2
+				hrInvalidBackendRef = createRoute("hr-invalid", "gw", "invalid.example.com", invalidRef)
+				hrMultipleRules = createRouteWithMultipleRules(
+					"hr-multiple-rules",
+					"gw",
+					"mutli.example.com",
+					[]v1beta1.HTTPRouteRule{
+						createHTTPRule("/baz-v1", baz1Ref),
+						createHTTPRule("/baz-v2", baz2Ref),
+						createHTTPRule("/baz-v3", baz3Ref),
+					},
+				)
+
+				// services
+				hr1svc = createSvc("foo-svc")
+				sharedSvc = createSvc("bar-svc")  // shared between hr2 and hr3
+				invalidSvc = createSvc("invalid") // nsname matches invalid BackendRef
+				notRefSvc = createSvc("not-ref")
+				bazSvc1 = createSvc("baz-svc-v1")
+				bazSvc2 = createSvc("baz-svc-v2")
+				bazSvc3 = createSvc("baz-svc-v3")
+
+				// endpoint slices
+				hr1slice1 = createEndpointSlice("hr1-1", "foo-svc")
+				hr1slice2 = createEndpointSlice("hr1-2", "foo-svc")
+				noRefSlice = createEndpointSlice("no-ref", "no-ref")
+				missingSvcNameSlice = createEndpointSlice("missing-svc-name", "")
+			})
+
+			testProcessChangedVal := func(expChanged bool) {
+				changed, _, _ := processor.Process(context.TODO())
+				Expect(changed).To(Equal(expChanged))
+			}
+
+			testUpsertTriggersChange := func(obj client.Object, expChanged bool) {
+				processor.CaptureUpsertChange(obj)
+				testProcessChangedVal(expChanged)
+			}
+
+			testDeleteTriggersChange := func(obj client.Object, nsname types.NamespacedName, expChanged bool) {
+				processor.CaptureDeleteChange(obj, nsname)
+				testProcessChangedVal(expChanged)
+			}
+
+			It("add hr1", func() {
+				testUpsertTriggersChange(hr1, true)
+			})
+			It("add service for hr1", func() {
+				testUpsertTriggersChange(hr1svc, true)
+			})
+			It("add endpoint slice for hr1", func() {
+				testUpsertTriggersChange(hr1slice1, true)
+			})
+			It("update for service for hr1", func() {
+				testUpsertTriggersChange(hr1svc, true)
+			})
+			It("add second endpoint slice for hr1", func() {
+				testUpsertTriggersChange(hr1slice2, true)
+			})
+			It("add endpoint slice with missing svc name label", func() {
+				testUpsertTriggersChange(missingSvcNameSlice, false)
+			})
+			It("delete one endpoint slice for hr1", func() {
+				testDeleteTriggersChange(hr1slice1, types.NamespacedName{Namespace: hr1slice1.Namespace, Name: hr1slice1.Name}, true)
+			})
+			It("delete second endpoint slice for hr1", func() {
+				testDeleteTriggersChange(hr1slice2, types.NamespacedName{Namespace: hr1slice2.Namespace, Name: hr1slice2.Name}, true)
+			})
+			It("recreate second endpoint slice for hr1", func() {
+				testUpsertTriggersChange(hr1slice2, true)
+			})
+			It("delete hr1", func() {
+				testDeleteTriggersChange(hr1, types.NamespacedName{Namespace: hr1.Namespace, Name: hr1.Name}, true)
+			})
+			It("delete service for hr1", func() {
+				testDeleteTriggersChange(hr1svc, types.NamespacedName{Namespace: hr1svc.Namespace, Name: hr1svc.Name}, false)
+			})
+			It("delete second endpoint slice for hr1", func() {
+				testDeleteTriggersChange(hr1slice2, types.NamespacedName{Namespace: hr1slice2.Namespace, Name: hr1slice2.Name}, false)
+			})
+			It("add hr2", func() {
+				testUpsertTriggersChange(hr2, true)
+			})
+			It("add hr3 -- a route that shares a backend service with hr2", func() {
+				testUpsertTriggersChange(hr3, true)
+			})
+			It("add service referenced by both hr2 and hr3", func() {
+				testUpsertTriggersChange(sharedSvc, true)
+			})
+			It("delete hr2", func() {
+				testDeleteTriggersChange(hr2, types.NamespacedName{Namespace: hr2.Namespace, Name: hr2.Name}, true)
+			})
+			It("delete shared service", func() {
+				testDeleteTriggersChange(sharedSvc, types.NamespacedName{Namespace: sharedSvc.Namespace, Name: sharedSvc.Name}, true)
+			})
+			It("recreate shared service", func() {
+				testUpsertTriggersChange(sharedSvc, true)
+			})
+			It("delete hr3", func() {
+				testDeleteTriggersChange(hr3, types.NamespacedName{Namespace: hr3.Namespace, Name: hr3.Name}, true)
+			})
+			It("delete shared service", func() {
+				testDeleteTriggersChange(sharedSvc, types.NamespacedName{Namespace: sharedSvc.Namespace, Name: sharedSvc.Name}, false)
+			})
+			It("add service that is not referenced by any route", func() {
+				testUpsertTriggersChange(notRefSvc, false)
+			})
+			It("add route with an invalid backend ref type", func() {
+				testUpsertTriggersChange(hrInvalidBackendRef, true)
+			})
+			It("add service with a namespace name that matches invalid backend ref (should be ignored)", func() {
+				testUpsertTriggersChange(invalidSvc, false)
+			})
+			It("add endpoint slice that is not owned by a referenced service", func() {
+				testUpsertTriggersChange(noRefSlice, false)
+			})
+			It("delete endpoint slice that is not owned by a referenced service", func() {
+				testDeleteTriggersChange(noRefSlice, types.NamespacedName{Namespace: noRefSlice.Namespace, Name: noRefSlice.Name}, false)
+			})
+			When("processing a route with multiple rules and three unique backend services", func() {
+				It("adds route", func() {
+					testUpsertTriggersChange(hrMultipleRules, true)
+				})
+				It("adds one referenced service", func() {
+					testUpsertTriggersChange(bazSvc1, true)
+				})
+				It("adds second referenced service", func() {
+					testUpsertTriggersChange(bazSvc2, true)
+				})
+				It("deletes first referenced service", func() {
+					testDeleteTriggersChange(bazSvc1, types.NamespacedName{Namespace: bazSvc1.Namespace, Name: bazSvc1.Name}, true)
+				})
+				It("recreates first referenced service", func() {
+					testUpsertTriggersChange(bazSvc1, true)
+				})
+				It("adds third referenced service", func() {
+					testUpsertTriggersChange(bazSvc3, true)
+				})
+				It("updates third referenced service", func() {
+					testUpsertTriggersChange(bazSvc3, true)
+				})
+				It("deletes route with multiple services", func() {
+					testDeleteTriggersChange(hrMultipleRules, types.NamespacedName{Namespace: hrMultipleRules.Namespace, Name: hrMultipleRules.Name}, true)
+				})
+				It("deletes first service", func() {
+					testDeleteTriggersChange(bazSvc1, types.NamespacedName{Namespace: bazSvc1.Namespace, Name: bazSvc1.Name}, false)
+				})
+				It("deletes second service", func() {
+					testDeleteTriggersChange(bazSvc2, types.NamespacedName{Namespace: bazSvc2.Namespace, Name: bazSvc2.Name}, false)
+				})
+				It("deletes final service", func() {
+					testDeleteTriggersChange(bazSvc3, types.NamespacedName{Namespace: bazSvc3.Namespace, Name: bazSvc3.Name}, false)
+				})
+			})
+		})
 	})
 
-	Describe("Multiple captured changes", func() {
+	Describe("Ensuring non-changing changes don't override previously changing changes", func() {
+		// Note: in these tests, we deliberately don't fully inspect the returned configuration and statuses
+		// -- this is done in 'Normal cases of processing changes'
+
 		var (
-			processor                    *state.ChangeProcessorImpl
-			gcNsName, gwNsName, hrNsName types.NamespacedName
-			gc, gcUpdated                *v1beta1.GatewayClass
-			gw1, gw1Updated, gw2         *v1beta1.Gateway
-			hr1, hr1Updated, hr2         *v1beta1.HTTPRoute
+			processor                               *state.ChangeProcessorImpl
+			fakeRelationshipCapturer                *relationshipfakes.FakeCapturer
+			gcNsName, gwNsName, hrNsName, hr2NsName types.NamespacedName
+			svcNsName, sliceNsName                  types.NamespacedName
+			gc, gcUpdated                           *v1beta1.GatewayClass
+			gw1, gw1Updated, gw2                    *v1beta1.Gateway
+			hr1, hr1Updated, hr2                    *v1beta1.HTTPRoute
+			svc                                     *apiv1.Service
+			slice                                   *discoveryV1.EndpointSlice
 		)
 
 		BeforeEach(OncePerOrdered, func() {
 			fakeSecretMemoryMgr := &statefakes.FakeSecretDiskMemoryManager{}
+			fakeRelationshipCapturer = &relationshipfakes.FakeCapturer{}
+
 			processor = state.NewChangeProcessorImpl(state.ChangeProcessorConfig{
-				GatewayCtlrName:     "test.controller",
-				GatewayClassName:    "my-class",
-				SecretMemoryManager: fakeSecretMemoryMgr,
+				GatewayCtlrName:      "test.controller",
+				GatewayClassName:     "my-class",
+				SecretMemoryManager:  fakeSecretMemoryMgr,
+				RelationshipCapturer: fakeRelationshipCapturer,
 			})
 
 			gcNsName = types.NamespacedName{Name: "my-class"}
@@ -978,23 +1260,43 @@ var _ = Describe("ChangeProcessor", func() {
 			hr1Updated = hr1.DeepCopy()
 			hr1Updated.Generation++
 
+			hr2NsName := types.NamespacedName{Namespace: "test", Name: "hr-2"}
+
 			hr2 = hr1.DeepCopy()
-			hr2.Name = "hr-2"
+			hr2.Name = hr2NsName.Name
+
+			svcNsName = types.NamespacedName{Namespace: "test", Name: "svc"}
+
+			svc = &apiv1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: svcNsName.Namespace,
+					Name:      svcNsName.Name,
+				},
+			}
+
+			sliceNsName = types.NamespacedName{Namespace: "test", Name: "slice"}
+
+			slice = &discoveryV1.EndpointSlice{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: sliceNsName.Namespace,
+					Name:      sliceNsName.Name,
+				},
+			}
 		})
+		// Changing change - a change that makes processor.Process() report changed
+		// Non-changing change - a change that doesn't do that
+		// Related resource - a K8s resource that is related to a configured Gateway API resource
+		// Unrelated resource - a K8s resource that is not related to a configured Gateway API resource
 
-		Describe("Ensuring non-changing changes don't override previously changing changes", Ordered, func() {
-			// Changing change - a change that makes processor.Process() report changed
-			// Non-changing change - a change that doesn't do that
-
-			// Note: in this test, we deliberately don't fully inspect the returned configuration and statuses
-			// -- this is done in 'Normal cases of processing changes'
-
+		// Note: in these tests, we deliberately don't fully inspect the returned configuration and statuses
+		// -- this is done in 'Normal cases of processing changes'
+		Describe("Multiple Gateway API resource changes", Ordered, func() {
 			It("should report changed after multiple Upserts", func() {
 				processor.CaptureUpsertChange(gc)
 				processor.CaptureUpsertChange(gw1)
 				processor.CaptureUpsertChange(hr1)
 
-				changed, _, _ := processor.Process()
+				changed, _, _ := processor.Process(context.TODO())
 				Expect(changed).To(BeTrue())
 			})
 
@@ -1003,7 +1305,7 @@ var _ = Describe("ChangeProcessor", func() {
 				processor.CaptureUpsertChange(gw1)
 				processor.CaptureUpsertChange(hr1)
 
-				changed, _, _ := processor.Process()
+				changed, _, _ := processor.Process(context.TODO())
 				Expect(changed).To(BeFalse())
 			})
 
@@ -1018,7 +1320,7 @@ var _ = Describe("ChangeProcessor", func() {
 				processor.CaptureUpsertChange(gw1Updated)
 				processor.CaptureUpsertChange(hr1Updated)
 
-				changed, _, _ := processor.Process()
+				changed, _, _ := processor.Process(context.TODO())
 				Expect(changed).To(BeTrue())
 			})
 
@@ -1027,7 +1329,7 @@ var _ = Describe("ChangeProcessor", func() {
 				processor.CaptureUpsertChange(gw2)
 				processor.CaptureUpsertChange(hr2)
 
-				changed, _, _ := processor.Process()
+				changed, _, _ := processor.Process(context.TODO())
 				Expect(changed).To(BeTrue())
 			})
 
@@ -1041,23 +1343,167 @@ var _ = Describe("ChangeProcessor", func() {
 				processor.CaptureUpsertChange(gw2)
 				processor.CaptureUpsertChange(hr2)
 
-				changed, _, _ := processor.Process()
+				changed, _, _ := processor.Process(context.TODO())
 				Expect(changed).To(BeTrue())
 			})
+			It("should report changed after deleting resources", func() {
+				processor.CaptureDeleteChange(&v1beta1.HTTPRoute{}, hr2NsName)
+
+				changed, _, _ := processor.Process(context.TODO())
+				Expect(changed).To(BeTrue())
+			})
+		})
+		Describe("Multiple Kubernetes API resource changes", Ordered, func() {
+			It("should report changed after multiple Upserts of related resources", func() {
+				fakeRelationshipCapturer.ExistsReturns(true)
+				processor.CaptureUpsertChange(svc)
+				processor.CaptureUpsertChange(slice)
+
+				changed, _, _ := processor.Process(context.TODO())
+				Expect(changed).To(BeTrue())
+			})
+
+			It("should report not changed after multiple Upserts of unrelated resources", func() {
+				fakeRelationshipCapturer.ExistsReturns(false)
+				processor.CaptureUpsertChange(svc)
+				processor.CaptureUpsertChange(slice)
+
+				changed, _, _ := processor.Process(context.TODO())
+				Expect(changed).To(BeFalse())
+			})
+
+			It("should report changed after upserting related resources followed by upserting unrelated resources",
+				func() {
+					// these are changing changes
+					fakeRelationshipCapturer.ExistsReturns(true)
+					processor.CaptureUpsertChange(svc)
+					processor.CaptureUpsertChange(slice)
+
+					// there are non-changing changes
+					fakeRelationshipCapturer.ExistsReturns(false)
+					processor.CaptureUpsertChange(svc)
+					processor.CaptureUpsertChange(slice)
+
+					changed, _, _ := processor.Process(context.TODO())
+					Expect(changed).To(BeTrue())
+				})
+
+			It("should report changed after deleting related resources followed by upserting unrelated resources",
+				func() {
+					// these are changing changes
+					fakeRelationshipCapturer.ExistsReturns(true)
+					processor.CaptureDeleteChange(&apiv1.Service{}, svcNsName)
+					processor.CaptureDeleteChange(&discoveryV1.EndpointSlice{}, sliceNsName)
+
+					// these are non-changing changes
+					fakeRelationshipCapturer.ExistsReturns(false)
+					processor.CaptureUpsertChange(svc)
+					processor.CaptureUpsertChange(slice)
+
+					changed, _, _ := processor.Process(context.TODO())
+					Expect(changed).To(BeTrue())
+				})
+		})
+		Describe("Multiple Kubernetes API and Gateway API resource changes", Ordered, func() {
+			It("should report changed after multiple Upserts of new and related resources", func() {
+				// new Gateway API resources
+				fakeRelationshipCapturer.ExistsReturns(false)
+				processor.CaptureUpsertChange(gc)
+				processor.CaptureUpsertChange(gw1)
+				processor.CaptureUpsertChange(hr1)
+
+				// related Kubernetes API resources
+				fakeRelationshipCapturer.ExistsReturns(true)
+				processor.CaptureUpsertChange(svc)
+				processor.CaptureUpsertChange(slice)
+
+				changed, _, _ := processor.Process(context.TODO())
+				Expect(changed).To(BeTrue())
+			})
+
+			It("should report not changed after multiple Upserts of unrelated and unchanged resources", func() {
+				// unchanged Gateway API resources
+				fakeRelationshipCapturer.ExistsReturns(false)
+				processor.CaptureUpsertChange(gc)
+				processor.CaptureUpsertChange(gw1)
+				processor.CaptureUpsertChange(hr1)
+
+				// unrelated Kubernetes API resources
+				fakeRelationshipCapturer.ExistsReturns(false)
+				processor.CaptureUpsertChange(svc)
+				processor.CaptureUpsertChange(slice)
+
+				changed, _, _ := processor.Process(context.TODO())
+				Expect(changed).To(BeFalse())
+			})
+
+			It("should report changed after upserting related resources followed by upserting unchanged resources",
+				func() {
+					// these are changing changes
+					fakeRelationshipCapturer.ExistsReturns(true)
+					processor.CaptureUpsertChange(svc)
+					processor.CaptureUpsertChange(slice)
+
+					// these are non-changing changes
+					fakeRelationshipCapturer.ExistsReturns(false)
+					processor.CaptureUpsertChange(gc)
+					processor.CaptureUpsertChange(gw1)
+					processor.CaptureUpsertChange(hr1)
+
+					changed, _, _ := processor.Process(context.TODO())
+					Expect(changed).To(BeTrue())
+				})
+
+			It("should report changed after upserting changed resources followed by upserting unrelated resources",
+				func() {
+					// these are changing changes
+					fakeRelationshipCapturer.ExistsReturns(false)
+					processor.CaptureUpsertChange(gcUpdated)
+					processor.CaptureUpsertChange(gw1Updated)
+					processor.CaptureUpsertChange(hr1Updated)
+
+					// these are non-changing changes
+					processor.CaptureUpsertChange(svc)
+					processor.CaptureUpsertChange(slice)
+
+					changed, _, _ := processor.Process(context.TODO())
+					Expect(changed).To(BeTrue())
+				})
+			It("should report changed after upserting related resources followed by upserting unchanged resources",
+				func() {
+					// these are changing changes
+					fakeRelationshipCapturer.ExistsReturns(true)
+					processor.CaptureUpsertChange(svc)
+					processor.CaptureUpsertChange(slice)
+
+					// these are non-changing changes
+					fakeRelationshipCapturer.ExistsReturns(false)
+					processor.CaptureUpsertChange(gcUpdated)
+					processor.CaptureUpsertChange(gw1Updated)
+					processor.CaptureUpsertChange(hr1Updated)
+
+					changed, _, _ := processor.Process(context.TODO())
+					Expect(changed).To(BeTrue())
+				})
 		})
 	})
 
 	Describe("Edge cases with panic", func() {
-		var processor state.ChangeProcessor
-		var fakeSecretMemoryMgr *statefakes.FakeSecretDiskMemoryManager
+		var (
+			processor                state.ChangeProcessor
+			fakeSecretMemoryMgr      *statefakes.FakeSecretDiskMemoryManager
+			fakeRelationshipCapturer *relationshipfakes.FakeCapturer
+		)
 
 		BeforeEach(func() {
 			fakeSecretMemoryMgr = &statefakes.FakeSecretDiskMemoryManager{}
+			fakeRelationshipCapturer = &relationshipfakes.FakeCapturer{}
 
 			processor = state.NewChangeProcessorImpl(state.ChangeProcessorConfig{
-				GatewayCtlrName:     "test.controller",
-				GatewayClassName:    "my-class",
-				SecretMemoryManager: fakeSecretMemoryMgr,
+				GatewayCtlrName:      "test.controller",
+				GatewayClassName:     "my-class",
+				SecretMemoryManager:  fakeSecretMemoryMgr,
+				RelationshipCapturer: fakeRelationshipCapturer,
 			})
 		})
 

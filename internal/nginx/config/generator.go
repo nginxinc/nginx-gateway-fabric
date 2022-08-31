@@ -2,11 +2,9 @@ package config
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"strings"
 
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state"
@@ -20,53 +18,53 @@ const nginx502Server = "unix:/var/lib/nginx/nginx-502-server.sock"
 // Generator generates NGINX configuration.
 type Generator interface {
 	// Generate generates NGINX configuration from internal representation.
-	Generate(configuration state.Configuration) ([]byte, Warnings)
+	Generate(configuration state.Configuration) []byte
 }
 
 // GeneratorImpl is an implementation of Generator
 type GeneratorImpl struct {
-	executor     *templateExecutor
-	serviceStore state.ServiceStore
+	executor *templateExecutor
 }
 
 // NewGeneratorImpl creates a new GeneratorImpl.
-func NewGeneratorImpl(serviceStore state.ServiceStore) *GeneratorImpl {
+func NewGeneratorImpl() *GeneratorImpl {
 	return &GeneratorImpl{
-		executor:     newTemplateExecutor(),
-		serviceStore: serviceStore,
+		executor: newTemplateExecutor(),
 	}
 }
 
-func (g *GeneratorImpl) Generate(conf state.Configuration) ([]byte, Warnings) {
-	warnings := newWarnings()
+func (g *GeneratorImpl) Generate(conf state.Configuration) []byte {
+	httpServers := generateHTTPServers(conf)
 
+	httpUpstreams := generateHTTPUpstreams(conf.Upstreams)
+
+	retVal := append(g.executor.ExecuteForHTTPUpstreams(httpUpstreams), g.executor.ExecuteForHTTPServers(httpServers)...)
+
+	return retVal
+}
+
+func generateHTTPServers(conf state.Configuration) httpServers {
 	confServers := append(conf.HTTPServers, conf.SSLServers...)
 
-	servers := httpServers{
-		// capacity is all the conf servers + default ssl & http servers
-		Servers: make([]server, 0, len(confServers)+2),
-	}
+	servers := make([]server, 0, len(confServers)+2)
 
 	if len(conf.HTTPServers) > 0 {
 		defaultHTTPServer := generateDefaultHTTPServer()
 
-		servers.Servers = append(servers.Servers, defaultHTTPServer)
+		servers = append(servers, defaultHTTPServer)
 	}
 
 	if len(conf.SSLServers) > 0 {
 		defaultSSLServer := generateDefaultSSLServer()
 
-		servers.Servers = append(servers.Servers, defaultSSLServer)
+		servers = append(servers, defaultSSLServer)
 	}
 
 	for _, s := range confServers {
-		cfg, warns := generate(s, g.serviceStore)
-
-		servers.Servers = append(servers.Servers, cfg)
-		warnings.Add(warns)
+		servers = append(servers, generateServer(s))
 	}
 
-	return g.executor.ExecuteForHTTPServers(servers), warnings
+	return httpServers{Servers: servers}
 }
 
 func generateDefaultSSLServer() server {
@@ -77,9 +75,7 @@ func generateDefaultHTTPServer() server {
 	return server{IsDefaultHTTP: true}
 }
 
-func generate(virtualServer state.VirtualServer, serviceStore state.ServiceStore) (server, Warnings) {
-	warnings := newWarnings()
-
+func generateServer(virtualServer state.VirtualServer) server {
 	s := server{ServerName: virtualServer.Hostname}
 
 	listenerPort := 80
@@ -96,14 +92,14 @@ func generate(virtualServer state.VirtualServer, serviceStore state.ServiceStore
 	if len(virtualServer.PathRules) == 0 {
 		// generate default "/" 404 location
 		s.Locations = []location{{Path: "/", Return: &returnVal{Code: statusNotFound}}}
-		return s, warnings
+		return s
 	}
 
 	locs := make([]location, 0, len(virtualServer.PathRules)) // FIXME(pleshakov): expand with rule.Routes
 	for _, rule := range virtualServer.PathRules {
 		matches := make([]httpMatch, 0, len(rule.MatchRules))
 
-		for ruleIdx, r := range rule.MatchRules {
+		for matchRuleIdx, r := range rule.MatchRules {
 			m := r.GetMatch()
 
 			var loc location
@@ -115,7 +111,7 @@ func generate(virtualServer state.VirtualServer, serviceStore state.ServiceStore
 					Path: rule.Path,
 				}
 			} else {
-				path := createPathForMatch(rule.Path, ruleIdx)
+				path := createPathForMatch(rule.Path, matchRuleIdx)
 				loc = generateMatchLocation(path)
 				matches = append(matches, createHTTPMatch(m, path))
 			}
@@ -130,12 +126,7 @@ func generate(virtualServer state.VirtualServer, serviceStore state.ServiceStore
 			if r.Filters.RequestRedirect != nil {
 				loc.Return = generateReturnValForRedirectFilter(r.Filters.RequestRedirect, listenerPort)
 			} else {
-				address, err := getBackendAddress(r.Source.Spec.Rules[r.RuleIdx].BackendRefs, r.Source.Namespace, serviceStore)
-				if err != nil {
-					warnings.AddWarning(r.Source, err.Error())
-				}
-
-				loc.ProxyPass = generateProxyPass(address)
+				loc.ProxyPass = generateProxyPass(r.UpstreamName)
 			}
 
 			locs = append(locs, loc)
@@ -159,14 +150,7 @@ func generate(virtualServer state.VirtualServer, serviceStore state.ServiceStore
 
 	s.Locations = locs
 
-	return s, warnings
-}
-
-func generateProxyPass(address string) string {
-	if address == "" {
-		return "http://" + nginx502Server
-	}
-	return "http://" + address
+	return s
 }
 
 func generateReturnValForRedirectFilter(filter *v1beta1.HTTPRequestRedirectFilter, listenerPort int) *returnVal {
@@ -204,37 +188,58 @@ func generateReturnValForRedirectFilter(filter *v1beta1.HTTPRequestRedirectFilte
 	}
 }
 
-func getBackendAddress(
-	refs []v1beta1.HTTPBackendRef,
-	parentNS string,
-	serviceStore state.ServiceStore,
-) (string, error) {
-	if len(refs) == 0 {
-		return "", errors.New("empty backend refs")
+func generateHTTPUpstreams(upstreams []state.Upstream) httpUpstreams {
+	// capacity is the number of upstreams + 1 for the invalid backend ref upstream
+	ups := make([]upstream, 0, len(upstreams)+1)
+	for _, u := range upstreams {
+		ups = append(ups, generateUpstream(u))
 	}
 
-	// FIXME(pleshakov): for now, we only support a single backend reference
-	ref := refs[0].BackendRef
+	ups = append(ups, generateInvalidBackendRefUpstream())
 
-	if ref.Kind != nil && *ref.Kind != "Service" {
-		return "", fmt.Errorf("unsupported kind %s", *ref.Kind)
+	return httpUpstreams{
+		Upstreams: ups,
+	}
+}
+
+func generateUpstream(up state.Upstream) upstream {
+	if len(up.Endpoints) == 0 {
+		return upstream{
+			Name: up.Name,
+			Servers: []upstreamServer{
+				{
+					Address: nginx502Server,
+				},
+			},
+		}
 	}
 
-	ns := parentNS
-	if ref.Namespace != nil {
-		ns = string(*ref.Namespace)
+	upstreamServers := make([]upstreamServer, len(up.Endpoints))
+	for idx, ep := range up.Endpoints {
+		upstreamServers[idx] = upstreamServer{
+			Address: fmt.Sprintf("%s:%d", ep.Address, ep.Port),
+		}
 	}
 
-	address, err := serviceStore.Resolve(types.NamespacedName{Namespace: ns, Name: string(ref.Name)})
-	if err != nil {
-		return "", fmt.Errorf("service %s/%s cannot be resolved: %w", ns, ref.Name, err)
+	return upstream{
+		Name:    up.Name,
+		Servers: upstreamServers,
 	}
+}
 
-	if ref.Port == nil {
-		return "", errors.New("port is nil")
+func generateInvalidBackendRefUpstream() upstream {
+	return upstream{
+		Name: state.InvalidBackendRef,
+		Servers: []upstreamServer{
+			{
+				Address: nginx502Server,
+			},
+		},
 	}
+}
 
-	return fmt.Sprintf("%s:%d", address, *ref.Port), nil
+func generateProxyPass(address string) string {
+	return "http://" + address
 }
 
 func generateMatchLocation(path string) location {

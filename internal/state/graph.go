@@ -1,11 +1,17 @@
 package state
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"sort"
 
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
+
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/resolver"
 )
 
 // gateway represents the winning Gateway resource.
@@ -28,6 +34,8 @@ type route struct {
 	ValidSectionNameRefs map[string]struct{}
 	// ValidSectionNameRefs includes the sectionNames from the parentRefs of the HTTPRoute that are invalid.
 	InvalidSectionNameRefs map[string]struct{}
+	// BackendServices maps HTTPRouteRules to their backend Service.
+	BackendServices map[ruleIndex]backendService
 }
 
 // gatewayClass represents the GatewayClass resource.
@@ -37,6 +45,26 @@ type gatewayClass struct {
 	// Valid shows whether the GatewayClass is valid.
 	Valid bool
 	// ErrorMsg explains the error when the resource is not valid.
+	ErrorMsg string
+}
+
+// ruleIndex is the index of the HTTPRouteRule.
+type ruleIndex int
+
+type backendService struct {
+	// Name is the name of the Kubernetes Service.
+	Name string
+	// Namespace is the namespace of the Kubernetes Service.
+	Namespace string
+	// Port is the desired port of the Kubernetes Service.
+	Port int32
+}
+
+type backend struct {
+	// Endpoints are the endpoints for the backend.
+	Endpoints []resolver.Endpoint
+
+	// ErrorMsg explains the error when the backend is not valid
 	ErrorMsg string
 }
 
@@ -52,15 +80,19 @@ type graph struct {
 	IgnoredGateways map[types.NamespacedName]*v1beta1.Gateway
 	// Routes holds route resources.
 	Routes map[types.NamespacedName]*route
+	// Backends holds all the backend services referenced by http routes.
+	Backends map[backendService]backend
 }
 
 // buildGraph builds a graph from a store assuming that the Gateway resource has the gwNsName namespace and name.
 func buildGraph(
+	ctx context.Context,
 	store *store,
 	controllerName string,
 	gcName string,
 	secretMemoryMgr SecretDiskMemoryManager,
-) *graph {
+	serviceResolver resolver.ServiceResolver,
+) (*graph, Warnings) {
 	gc := buildGatewayClass(store.gc, controllerName)
 
 	gw, ignoredGws := processGateways(store.gateways, gcName)
@@ -71,14 +103,17 @@ func buildGraph(
 	for _, ghr := range store.httpRoutes {
 		ignored, r := bindHTTPRouteToListeners(ghr, gw, ignoredGws, listeners)
 		if !ignored {
-			routes[getNamespacedName(ghr)] = r
+			routes[client.ObjectKeyFromObject(ghr)] = r
 		}
 	}
+
+	backends, warnings := resolveBackends(ctx, routes, store.services, serviceResolver)
 
 	g := &graph{
 		GatewayClass:    gc,
 		Routes:          routes,
 		IgnoredGateways: ignoredGws,
+		Backends:        backends,
 	}
 
 	if gw != nil {
@@ -88,7 +123,93 @@ func buildGraph(
 		}
 	}
 
-	return g
+	return g, warnings
+}
+
+func resolveBackends(
+	ctx context.Context,
+	routes map[types.NamespacedName]*route,
+	services map[types.NamespacedName]*v1.Service,
+	serviceResolver resolver.ServiceResolver,
+) (map[backendService]backend, Warnings) {
+	warnings := newWarnings()
+	backends := make(map[backendService]backend)
+
+	for _, r := range routes {
+
+		backendServicesForRoute := make(map[ruleIndex]backendService)
+
+		for i, rule := range r.Source.Spec.Rules {
+
+			backendSvc, err := getBackendServiceFromRouteRule(rule, r.Source.Namespace)
+			backendServicesForRoute[ruleIndex(i)] = backendSvc
+
+			if err != nil {
+				warnings.AddWarningf(r.Source, "invalid backend ref for rule %d: %s", i, err.Error())
+
+				continue
+			}
+
+			if b, exists := backends[backendSvc]; exists {
+				if b.ErrorMsg != "" {
+					warnings.AddWarningf(r.Source, "cannot resolve backend ref for rule %d: %s", i, b.ErrorMsg)
+				}
+
+				continue
+			}
+
+			b := backend{}
+
+			svcName := types.NamespacedName{Namespace: backendSvc.Namespace, Name: backendSvc.Name}
+			svc, exists := services[svcName]
+
+			var svcErr error
+
+			if exists {
+				b.Endpoints, svcErr = serviceResolver.Resolve(ctx, svc, backendSvc.Port)
+			} else {
+				svcErr = fmt.Errorf("the Service %s does not exist", svcName)
+			}
+
+			if svcErr != nil {
+				b.ErrorMsg = svcErr.Error()
+
+				warnings.AddWarningf(r.Source, "cannot resolve backend ref for rule %d: %s", i, b.ErrorMsg)
+			}
+
+			backends[backendSvc] = b
+		}
+
+		r.BackendServices = backendServicesForRoute
+	}
+
+	return backends, warnings
+}
+
+func getBackendServiceFromRouteRule(rule v1beta1.HTTPRouteRule, routeNs string) (backendService, error) {
+	if len(rule.BackendRefs) == 0 {
+		return backendService{}, errors.New("no backend refs provided")
+	}
+
+	// FIXME(kate-osborn): Need to handle multiple backend refs per rule once we support the weight field.
+	ref := rule.BackendRefs[0]
+	if ref.Kind != nil && *ref.Kind != "Service" {
+		return backendService{}, fmt.Errorf("backend ref Kind must be Service; got %s", *ref.Kind)
+	}
+
+	if ref.Namespace != nil && string(*ref.Namespace) != routeNs {
+		return backendService{}, fmt.Errorf("cross-namespace routing is not permitted; namespace %s does not match the HTTPRoute namespace %s", *ref.Namespace, routeNs)
+	}
+
+	if ref.Port == nil {
+		return backendService{}, errors.New("port is missing")
+	}
+
+	return backendService{
+		Name:      string(ref.Name),
+		Namespace: routeNs,
+		Port:      int32(*ref.Port),
+	}, nil
 }
 
 // processGateways determines which Gateway resource the NGINX Gateway will use (the winner) and which Gateway(s) will
@@ -116,7 +237,7 @@ func processGateways(gws map[types.NamespacedName]*v1beta1.Gateway, gcName strin
 	ignoredGws := make(map[types.NamespacedName]*v1beta1.Gateway)
 
 	for _, gw := range referencedGws[1:] {
-		ignoredGws[getNamespacedName(gw)] = gw
+		ignoredGws[client.ObjectKeyFromObject(gw)] = gw
 	}
 
 	return referencedGws[0], ignoredGws
@@ -232,7 +353,7 @@ func bindHTTPRouteToListeners(
 					l.AcceptedHostnames[h] = struct{}{}
 				}
 				r.ValidSectionNameRefs[name] = struct{}{}
-				l.Routes[getNamespacedName(ghr)] = r
+				l.Routes[client.ObjectKeyFromObject(ghr)] = r
 			} else {
 				r.InvalidSectionNameRefs[name] = struct{}{}
 			}

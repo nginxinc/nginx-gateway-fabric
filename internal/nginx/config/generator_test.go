@@ -2,23 +2,60 @@ package config
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/helpers"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/statefakes"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/resolver"
 )
 
-func TestGenerateForHost(t *testing.T) {
-	generator := NewGeneratorImpl(&statefakes.FakeServiceStore{})
+func TestGenerate(t *testing.T) {
+	// Note: this test only verifies that Generate() returns a byte array with http upstreams and server blocks.
+	// It does not test the correctness of those blocks. That functionality is covered by other tests in this file.
+	generator := NewGeneratorImpl()
+
+	conf := state.Configuration{
+		HTTPServers: []state.VirtualServer{
+			{
+				Hostname: "example.com",
+			},
+		},
+		SSLServers: []state.VirtualServer{
+			{
+				Hostname: "example.com",
+			},
+		},
+		Upstreams: []state.Upstream{
+			{
+				Name:      "up",
+				Endpoints: nil,
+			},
+		},
+	}
+
+	cfg := string(generator.Generate(conf))
+
+	if !strings.Contains(cfg, "listen 80") {
+		t.Errorf("Generate() did not generate a config with an HTTP server; config: %s", cfg)
+	}
+
+	if !strings.Contains(cfg, "listen 443") {
+		t.Errorf("Generate() did not generate a config with an SSL server; config: %s", cfg)
+	}
+
+	if !strings.Contains(cfg, "upstream") {
+		t.Errorf("Generate() did not generate a config with an upstream block; config: %s", cfg)
+	}
+}
+
+func TestGenerateForDefaultServers(t *testing.T) {
+	generator := NewGeneratorImpl()
 
 	testcases := []struct {
 		conf        state.Configuration
@@ -76,7 +113,7 @@ func TestGenerateForHost(t *testing.T) {
 	}
 
 	for _, tc := range testcases {
-		cfg, warnings := generator.Generate(tc.conf)
+		cfg := generator.Generate(tc.conf)
 
 		defaultSSLExists := strings.Contains(string(cfg), "listen 443 ssl default_server")
 		defaultHTTPExists := strings.Contains(string(cfg), "listen 80 default_server")
@@ -100,13 +137,17 @@ func TestGenerateForHost(t *testing.T) {
 		if len(cfg) == 0 {
 			t.Errorf("Generate() generated empty config for test: %q", tc.msg)
 		}
-		if len(warnings) > 0 {
-			t.Errorf("Generate() returned unexpected warnings: %v for test: %q", warnings, tc.msg)
-		}
 	}
 }
 
-func TestGenerate(t *testing.T) {
+func TestGenerateHTTPServers(t *testing.T) {
+	const (
+		backendAddr = "http://10.0.0.1:80"
+		certPath    = "/etc/nginx/secrets/cert"
+		http        = false
+		https       = true
+	)
+
 	hr := &v1beta1.HTTPRoute{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: "test",
@@ -135,17 +176,6 @@ func TestGenerate(t *testing.T) {
 						{
 							Path: &v1beta1.HTTPPathMatch{
 								Value: helpers.GetStringPointer("/"), // should generate an "any" httpmatch since other matches exists for /
-							},
-						},
-					},
-					BackendRefs: []v1beta1.HTTPBackendRef{
-						{
-							BackendRef: v1beta1.BackendRef{
-								BackendObjectReference: v1beta1.BackendObjectReference{
-									Name:      "service1",
-									Namespace: (*v1beta1.Namespace)(helpers.GetStringPointer("test")),
-									Port:      (*v1beta1.PortNumber)(helpers.GetInt32Pointer(80)),
-								},
 							},
 						},
 					},
@@ -189,7 +219,6 @@ func TestGenerate(t *testing.T) {
 							},
 						},
 					},
-					BackendRefs: nil, // no backend refs will cause warnings
 				},
 				{
 					// A match with just path
@@ -197,17 +226,6 @@ func TestGenerate(t *testing.T) {
 						{
 							Path: &v1beta1.HTTPPathMatch{
 								Value: helpers.GetStringPointer("/path-only"),
-							},
-						},
-					},
-					BackendRefs: []v1beta1.HTTPBackendRef{
-						{
-							BackendRef: v1beta1.BackendRef{
-								BackendObjectReference: v1beta1.BackendObjectReference{
-									Name:      "service2",
-									Namespace: (*v1beta1.Namespace)(helpers.GetStringPointer("test")),
-									Port:      (*v1beta1.PortNumber)(helpers.GetInt32Pointer(80)),
-								},
 							},
 						},
 					},
@@ -238,8 +256,99 @@ func TestGenerate(t *testing.T) {
 		},
 	}
 
-	fakeServiceStore := &statefakes.FakeServiceStore{}
-	fakeServiceStore.ResolveReturns("10.0.0.1", nil)
+	cafePathRules := []state.PathRule{
+		{
+			Path: "/",
+			MatchRules: []state.MatchRule{
+				{
+					MatchIdx:     0,
+					RuleIdx:      0,
+					UpstreamName: "test_foo_80",
+					Source:       hr,
+				},
+				{
+					MatchIdx:     1,
+					RuleIdx:      0,
+					UpstreamName: "test_foo_80",
+					Source:       hr,
+				},
+				{
+					MatchIdx:     2,
+					RuleIdx:      0,
+					UpstreamName: "test_foo_80",
+					Source:       hr,
+				},
+			},
+		},
+		{
+			Path: "/test",
+			MatchRules: []state.MatchRule{
+				{
+					MatchIdx:     0,
+					RuleIdx:      1,
+					UpstreamName: "test_bar_80",
+					Source:       hr,
+				},
+			},
+		},
+		{
+			Path: "/path-only",
+			MatchRules: []state.MatchRule{
+				{
+					MatchIdx:     0,
+					RuleIdx:      2,
+					UpstreamName: "test_baz_80",
+					Source:       hr,
+				},
+			},
+		},
+		{
+			Path: "/redirect-implicit-port",
+			MatchRules: []state.MatchRule{
+				{
+					MatchIdx: 0,
+					RuleIdx:  3,
+					Source:   hr,
+					Filters: state.Filters{
+						RequestRedirect: &v1beta1.HTTPRequestRedirectFilter{
+							Hostname: (*v1beta1.PreciseHostname)(helpers.GetStringPointer("foo.example.com")),
+						},
+					},
+				},
+			},
+		},
+		{
+			Path: "/redirect-explicit-port",
+			MatchRules: []state.MatchRule{
+				{
+					MatchIdx: 0,
+					RuleIdx:  4,
+					Source:   hr,
+					Filters: state.Filters{
+						RequestRedirect: &v1beta1.HTTPRequestRedirectFilter{
+							Hostname: (*v1beta1.PreciseHostname)(helpers.GetStringPointer("bar.example.com")),
+							Port:     (*v1beta1.PortNumber)(helpers.GetInt32Pointer(8080)),
+						},
+					},
+				},
+			},
+		},
+	}
+
+	httpServers := []state.VirtualServer{
+		{
+			Hostname:  "cafe.example.com",
+			PathRules: cafePathRules,
+		},
+	}
+
+	sslServers := []state.VirtualServer{
+		{
+			Hostname:  "cafe.example.com",
+			SSL:       &state.SSL{CertificatePath: certPath},
+			PathRules: cafePathRules,
+		},
+	}
 
 	expectedMatchString := func(m []httpMatch) string {
 		b, err := json.Marshal(m)
@@ -263,196 +372,89 @@ func TestGenerate(t *testing.T) {
 		},
 	}
 
-	const (
-		backendAddr = "http://10.0.0.1:80"
-		certPath    = "/etc/nginx/secrets/cert"
-		http        = false
-		https       = true
-	)
-
-	getExpectedHost := func(isHTTPS bool) state.VirtualServer {
-		var ssl *state.SSL
-		if isHTTPS {
-			ssl = &state.SSL{CertificatePath: certPath}
-		}
-
-		return state.VirtualServer{
-			Hostname: "example.com",
-			SSL:      ssl,
-			PathRules: []state.PathRule{
-				{
-					Path: "/",
-					MatchRules: []state.MatchRule{
-						{
-							MatchIdx: 0,
-							RuleIdx:  0,
-							Source:   hr,
-						},
-						{
-							MatchIdx: 1,
-							RuleIdx:  0,
-							Source:   hr,
-						},
-						{
-							MatchIdx: 2,
-							RuleIdx:  0,
-							Source:   hr,
-						},
-					},
-				},
-				{
-					Path: "/test",
-					MatchRules: []state.MatchRule{
-						{
-							MatchIdx: 0,
-							RuleIdx:  1,
-							Source:   hr,
-						},
-					},
-				},
-				{
-					Path: "/path-only",
-					MatchRules: []state.MatchRule{
-						{
-							MatchIdx: 0,
-							RuleIdx:  2,
-							Source:   hr,
-						},
-					},
-				},
-				{
-					Path: "/redirect-implicit-port",
-					MatchRules: []state.MatchRule{
-						{
-							MatchIdx: 0,
-							RuleIdx:  3,
-							Source:   hr,
-							Filters: state.Filters{
-								RequestRedirect: &v1beta1.HTTPRequestRedirectFilter{
-									Hostname: (*v1beta1.PreciseHostname)(helpers.GetStringPointer("foo.example.com")),
-								},
-							},
-						},
-					},
-				},
-				{
-					Path: "/redirect-explicit-port",
-					MatchRules: []state.MatchRule{
-						{
-							MatchIdx: 0,
-							RuleIdx:  4,
-							Source:   hr,
-							Filters: state.Filters{
-								RequestRedirect: &v1beta1.HTTPRequestRedirectFilter{
-									Hostname: (*v1beta1.PreciseHostname)(helpers.GetStringPointer("bar.example.com")),
-									Port:     (*v1beta1.PortNumber)(helpers.GetInt32Pointer(8080)),
-								},
-							},
-						},
-					},
-				},
-			},
-		}
-	}
-
-	getExpectedHTTPServer := func(isHTTPS bool) server {
-		var sslCfg *ssl
+	getExpectedLocations := func(isHTTPS bool) []location {
 		port := 80
 		if isHTTPS {
-			sslCfg = &ssl{
-				Certificate:    certPath,
-				CertificateKey: certPath,
-			}
 			port = 443
 		}
 
-		return server{
-			ServerName: "example.com",
-			SSL:        sslCfg,
-			Locations: []location{
-				{
-					Path:      "/_route0",
-					Internal:  true,
-					ProxyPass: backendAddr,
+		return []location{
+			{
+				Path:      "/_route0",
+				Internal:  true,
+				ProxyPass: "http://test_foo_80",
+			},
+			{
+				Path:      "/_route1",
+				Internal:  true,
+				ProxyPass: "http://test_foo_80",
+			},
+			{
+				Path:      "/_route2",
+				Internal:  true,
+				ProxyPass: "http://test_foo_80",
+			},
+			{
+				Path:         "/",
+				HTTPMatchVar: expectedMatchString(slashMatches),
+			},
+			{
+				Path:      "/test_route0",
+				Internal:  true,
+				ProxyPass: "http://test_bar_80",
+			},
+			{
+				Path:         "/test",
+				HTTPMatchVar: expectedMatchString(testMatches),
+			},
+			{
+				Path:      "/path-only",
+				ProxyPass: "http://test_baz_80",
+			},
+			{
+				Path: "/redirect-implicit-port",
+				Return: &returnVal{
+					Code: 302,
+					URL:  fmt.Sprintf("$scheme://foo.example.com:%d$request_uri", port),
 				},
-				{
-					Path:      "/_route1",
-					Internal:  true,
-					ProxyPass: backendAddr,
-				},
-				{
-					Path:      "/_route2",
-					Internal:  true,
-					ProxyPass: backendAddr,
-				},
-				{
-					Path:         "/",
-					HTTPMatchVar: expectedMatchString(slashMatches),
-				},
-				{
-					Path:      "/test_route0",
-					Internal:  true,
-					ProxyPass: "http://" + nginx502Server,
-				},
-				{
-					Path:         "/test",
-					HTTPMatchVar: expectedMatchString(testMatches),
-				},
-				{
-					Path:      "/path-only",
-					ProxyPass: backendAddr,
-				},
-				{
-					Path: "/redirect-implicit-port",
-					Return: &returnVal{
-						Code: 302,
-						URL:  fmt.Sprintf("$scheme://foo.example.com:%d$request_uri", port),
-					},
-				},
-				{
-					Path: "/redirect-explicit-port",
-					Return: &returnVal{
-						Code: 302,
-						URL:  "$scheme://bar.example.com:8080$request_uri",
-					},
+			},
+			{
+				Path: "/redirect-explicit-port",
+				Return: &returnVal{
+					Code: 302,
+					URL:  "$scheme://bar.example.com:8080$request_uri",
 				},
 			},
 		}
 	}
 
-	expectedWarnings := Warnings{
-		hr: []string{"empty backend refs"},
-	}
-
-	testcases := []struct {
-		host        state.VirtualServer
-		expWarnings Warnings
-		expResult   server
-		msg         string
-	}{
+	expectedServers := []server{
 		{
-			host:        getExpectedHost(http),
-			expWarnings: expectedWarnings,
-			expResult:   getExpectedHTTPServer(http),
-			msg:         "http server",
+			IsDefaultHTTP: true,
 		},
 		{
-			host:        getExpectedHost(https),
-			expWarnings: expectedWarnings,
-			expResult:   getExpectedHTTPServer(https),
-			msg:         "https server",
+			IsDefaultSSL: true,
+		},
+		{
+			ServerName: "cafe.example.com",
+			Locations:  getExpectedLocations(false),
+		},
+		{
+			ServerName: "cafe.example.com",
+			SSL:        &ssl{Certificate: certPath, CertificateKey: certPath},
+			Locations:  getExpectedLocations(true),
 		},
 	}
 
-	for _, tc := range testcases {
-		result, warnings := generate(tc.host, fakeServiceStore)
+	conf := state.Configuration{
+		HTTPServers: httpServers,
+		SSLServers:  sslServers,
+	}
 
-		if diff := cmp.Diff(tc.expResult, result); diff != "" {
-			t.Errorf("generate() '%s' mismatch (-want +got):\n%s", tc.msg, diff)
-		}
-		if diff := cmp.Diff(tc.expWarnings, warnings); diff != "" {
-			t.Errorf("generate() '%s' mismatch on warnings (-want +got):\n%s", tc.msg, diff)
-		}
+	result := generateHTTPServers(conf)
+
+	if diff := cmp.Diff(expectedServers, result.Servers); diff != "" {
+		t.Errorf("generate() mismatch on servers (-want +got):\n%s", diff)
 	}
 }
 
@@ -463,12 +465,141 @@ func TestGenerateProxyPass(t *testing.T) {
 	if result != expected {
 		t.Errorf("generateProxyPass() returned %s but expected %s", result, expected)
 	}
+}
 
-	expected = "http://" + nginx502Server
+func TestGenerateHTTPUpstreams(t *testing.T) {
+	stateUpstreams := []state.Upstream{
+		{
+			Name: "up1",
+			Endpoints: []resolver.Endpoint{
+				{
+					Address: "10.0.0.0",
+					Port:    80,
+				},
+				{
+					Address: "10.0.0.1",
+					Port:    80,
+				},
+				{
+					Address: "10.0.0.2",
+					Port:    80,
+				},
+			},
+		},
+		{
+			Name: "up2",
+			Endpoints: []resolver.Endpoint{
+				{
+					Address: "11.0.0.0",
+					Port:    80,
+				},
+			},
+		},
+		{
+			Name:      "up3",
+			Endpoints: []resolver.Endpoint{},
+		},
+	}
 
-	result = generateProxyPass("")
-	if result != expected {
-		t.Errorf("generateProxyPass() returned %s but expected %s", result, expected)
+	expUpstreams := httpUpstreams{
+		Upstreams: []upstream{
+			{
+				Name: "up1",
+				Servers: []upstreamServer{
+					{
+						Address: "10.0.0.0:80",
+					},
+					{
+						Address: "10.0.0.1:80",
+					},
+					{
+						Address: "10.0.0.2:80",
+					},
+				},
+			},
+			{
+				Name: "up2",
+				Servers: []upstreamServer{
+					{
+						Address: "11.0.0.0:80",
+					},
+				},
+			},
+			{
+				Name: "up3",
+				Servers: []upstreamServer{
+					{
+						Address: nginx502Server,
+					},
+				},
+			},
+			{
+				Name: state.InvalidBackendRef,
+				Servers: []upstreamServer{
+					{
+						Address: nginx502Server,
+					},
+				},
+			},
+		},
+	}
+
+	result := generateHTTPUpstreams(stateUpstreams)
+	if diff := cmp.Diff(expUpstreams, result); diff != "" {
+		t.Errorf("generateHTTPUpstreams() mismatch (-want +got):\n%s", diff)
+	}
+}
+
+func TestGenerateUpstream(t *testing.T) {
+	tests := []struct {
+		stateUpstream    state.Upstream
+		expectedUpstream upstream
+		msg              string
+	}{
+		{
+			stateUpstream: state.Upstream{
+				Name:      "nil-endpoints",
+				Endpoints: nil,
+			},
+			expectedUpstream: upstream{Name: "nil-endpoints", Servers: []upstreamServer{{Address: nginx502Server}}},
+			msg:              "nil endpoints",
+		},
+		{
+			stateUpstream: state.Upstream{
+				Name:      "no-endpoints",
+				Endpoints: []resolver.Endpoint{},
+			},
+			expectedUpstream: upstream{Name: "no-endpoints", Servers: []upstreamServer{{Address: nginx502Server}}},
+			msg:              "no endpoints",
+		},
+		{
+			stateUpstream: state.Upstream{
+				Name: "multiple-endpoints",
+				Endpoints: []resolver.Endpoint{
+					{
+						Address: "10.0.0.1",
+						Port:    80,
+					},
+					{
+						Address: "10.0.0.2",
+						Port:    80,
+					},
+					{
+						Address: "10.0.0.3",
+						Port:    80,
+					},
+				},
+			},
+			expectedUpstream: upstream{Name: "multiple-endpoints", Servers: []upstreamServer{{Address: "10.0.0.1:80"}, {Address: "10.0.0.2:80"}, {Address: "10.0.0.3:80"}}},
+			msg:              "multiple endpoints",
+		},
+	}
+
+	for _, test := range tests {
+		result := generateUpstream(test.stateUpstream)
+		if diff := cmp.Diff(test.expectedUpstream, result); diff != "" {
+			t.Errorf("generateUpstream() %q mismatch (-want +got):\n%s", test.msg, diff)
+		}
 	}
 }
 
@@ -512,205 +643,6 @@ func TestGenerateReturnValForRedirectFilter(t *testing.T) {
 		result := generateReturnValForRedirectFilter(test.filter, listenerPort)
 		if diff := cmp.Diff(test.expected, result); diff != "" {
 			t.Errorf("generateReturnValForRedirectFilter() mismatch '%s' (-want +got):\n%s", test.msg, diff)
-		}
-	}
-}
-
-func TestGetBackendAddress(t *testing.T) {
-	getNormalRefs := func() []v1beta1.HTTPBackendRef {
-		return []v1beta1.HTTPBackendRef{
-			{
-				BackendRef: v1beta1.BackendRef{
-					BackendObjectReference: v1beta1.BackendObjectReference{
-						Group:     (*v1beta1.Group)(helpers.GetStringPointer("networking.k8s.io")),
-						Kind:      (*v1beta1.Kind)(helpers.GetStringPointer("Service")),
-						Name:      "service1",
-						Namespace: (*v1beta1.Namespace)(helpers.GetStringPointer("test")),
-						Port:      (*v1beta1.PortNumber)(helpers.GetInt32Pointer(80)),
-					},
-				},
-			},
-		}
-	}
-
-	getModifiedRefs := func(mod func([]v1beta1.HTTPBackendRef) []v1beta1.HTTPBackendRef) []v1beta1.HTTPBackendRef {
-		return mod(getNormalRefs())
-	}
-
-	tests := []struct {
-		refs                      []v1beta1.HTTPBackendRef
-		parentNS                  string
-		storeAddress              string
-		storeErr                  error
-		expectedResolverCallCount int
-		expectedNsName            types.NamespacedName
-		expectedAddress           string
-		expectErr                 bool
-		msg                       string
-	}{
-		{
-			refs:                      getNormalRefs(),
-			parentNS:                  "test",
-			storeAddress:              "10.0.0.1",
-			storeErr:                  nil,
-			expectedResolverCallCount: 1,
-			expectedNsName:            types.NamespacedName{Namespace: "test", Name: "service1"},
-			expectedAddress:           "10.0.0.1:80",
-			expectErr:                 false,
-			msg:                       "normal case",
-		},
-		{
-			refs: getModifiedRefs(
-				func(refs []v1beta1.HTTPBackendRef) []v1beta1.HTTPBackendRef {
-					refs[0].BackendRef.Namespace = nil
-					return refs
-				},
-			),
-			parentNS:                  "test",
-			storeAddress:              "10.0.0.1",
-			storeErr:                  nil,
-			expectedResolverCallCount: 1,
-			expectedNsName:            types.NamespacedName{Namespace: "test", Name: "service1"},
-			expectedAddress:           "10.0.0.1:80",
-			expectErr:                 false,
-			msg:                       "normal case with implicit namespace",
-		},
-		{
-			refs: getModifiedRefs(
-				func(refs []v1beta1.HTTPBackendRef) []v1beta1.HTTPBackendRef {
-					refs[0].BackendRef.Group = nil
-					refs[0].BackendRef.Kind = nil
-					return refs
-				},
-			),
-			parentNS:                  "test",
-			storeAddress:              "10.0.0.1",
-			storeErr:                  nil,
-			expectedResolverCallCount: 1,
-			expectedNsName:            types.NamespacedName{Namespace: "test", Name: "service1"},
-			expectedAddress:           "10.0.0.1:80",
-			expectErr:                 false,
-			msg:                       "normal case with implicit service",
-		},
-		{
-			refs: getModifiedRefs(
-				func(refs []v1beta1.HTTPBackendRef) []v1beta1.HTTPBackendRef {
-					secondRef := refs[0].DeepCopy()
-					secondRef.Name = "service2"
-					return append(refs, *secondRef)
-				},
-			),
-			parentNS:                  "test",
-			storeAddress:              "10.0.0.1",
-			storeErr:                  nil,
-			expectedResolverCallCount: 1,
-			expectedNsName:            types.NamespacedName{Namespace: "test", Name: "service1"},
-			expectedAddress:           "10.0.0.1:80",
-			expectErr:                 false,
-			msg:                       "first backend ref is used",
-		},
-		{
-			refs: getModifiedRefs(
-				func(refs []v1beta1.HTTPBackendRef) []v1beta1.HTTPBackendRef {
-					refs[0].BackendRef.Kind = (*v1beta1.Kind)(helpers.GetStringPointer("NotService"))
-					return refs
-				},
-			),
-			parentNS:                  "test",
-			storeAddress:              "10.0.0.1",
-			storeErr:                  nil,
-			expectedResolverCallCount: 0,
-			expectedNsName:            types.NamespacedName{},
-			expectedAddress:           "",
-			expectErr:                 true,
-			msg:                       "not a service Kind",
-		},
-		{
-			refs:                      nil,
-			parentNS:                  "test",
-			storeAddress:              "10.0.0.1",
-			storeErr:                  nil,
-			expectedResolverCallCount: 0,
-			expectedNsName:            types.NamespacedName{},
-			expectedAddress:           "",
-			expectErr:                 true,
-			msg:                       "no refs",
-		},
-		{
-			refs: getModifiedRefs(
-				func(refs []v1beta1.HTTPBackendRef) []v1beta1.HTTPBackendRef {
-					refs[0].BackendRef.Port = nil
-					return refs
-				},
-			),
-			parentNS:                  "test",
-			storeAddress:              "10.0.0.1",
-			storeErr:                  nil,
-			expectedResolverCallCount: 1,
-			expectedNsName:            types.NamespacedName{Namespace: "test", Name: "service1"},
-			expectedAddress:           "",
-			expectErr:                 true,
-			msg:                       "no port",
-		},
-		{
-			refs:                      getNormalRefs(),
-			parentNS:                  "test",
-			storeAddress:              "",
-			storeErr:                  errors.New(""),
-			expectedResolverCallCount: 1,
-			expectedNsName:            types.NamespacedName{Namespace: "test", Name: "service1"},
-			expectedAddress:           "",
-			expectErr:                 true,
-			msg:                       "service doesn't exist",
-		},
-	}
-
-	for _, test := range tests {
-		fakeServiceStore := &statefakes.FakeServiceStore{}
-		fakeServiceStore.ResolveReturns(test.storeAddress, test.storeErr)
-
-		result, err := getBackendAddress(test.refs, test.parentNS, fakeServiceStore)
-		if result != test.expectedAddress {
-			t.Errorf(
-				"getBackendAddress() returned %s but expected %s for case %q",
-				result,
-				test.expectedAddress,
-				test.msg,
-			)
-		}
-
-		if test.expectErr {
-			if err == nil {
-				t.Errorf("getBackendAddress() didn't return any error for case %q", test.msg)
-			}
-		} else {
-			if err != nil {
-				t.Errorf("getBackendAddress() returned unexpected error %v for case %q", err, test.msg)
-			}
-		}
-
-		callCount := fakeServiceStore.ResolveCallCount()
-		if callCount != test.expectedResolverCallCount {
-			t.Errorf(
-				"getBackendAddress() called fakeServiceStore.Resolve %d times but expected %d for case %q",
-				callCount,
-				test.expectedResolverCallCount,
-				test.msg,
-			)
-		}
-
-		if test.expectedResolverCallCount == 0 {
-			continue
-		}
-
-		nsname := fakeServiceStore.ResolveArgsForCall(0)
-		if nsname != test.expectedNsName {
-			t.Errorf(
-				"getBackendAddress() called fakeServiceStore.Resolve with %v but expected %v for case %q",
-				nsname,
-				test.expectedNsName,
-				test.msg,
-			)
 		}
 	}
 }

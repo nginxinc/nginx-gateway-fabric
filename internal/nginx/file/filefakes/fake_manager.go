@@ -8,38 +8,38 @@ import (
 )
 
 type FakeManager struct {
-	WriteHTTPServersConfigStub        func(string, []byte) error
-	writeHTTPServersConfigMutex       sync.RWMutex
-	writeHTTPServersConfigArgsForCall []struct {
+	WriteHTTPConfigStub        func(string, []byte) error
+	writeHTTPConfigMutex       sync.RWMutex
+	writeHTTPConfigArgsForCall []struct {
 		arg1 string
 		arg2 []byte
 	}
-	writeHTTPServersConfigReturns struct {
+	writeHTTPConfigReturns struct {
 		result1 error
 	}
-	writeHTTPServersConfigReturnsOnCall map[int]struct {
+	writeHTTPConfigReturnsOnCall map[int]struct {
 		result1 error
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeManager) WriteHTTPServersConfig(arg1 string, arg2 []byte) error {
+func (fake *FakeManager) WriteHTTPConfig(arg1 string, arg2 []byte) error {
 	var arg2Copy []byte
 	if arg2 != nil {
 		arg2Copy = make([]byte, len(arg2))
 		copy(arg2Copy, arg2)
 	}
-	fake.writeHTTPServersConfigMutex.Lock()
-	ret, specificReturn := fake.writeHTTPServersConfigReturnsOnCall[len(fake.writeHTTPServersConfigArgsForCall)]
-	fake.writeHTTPServersConfigArgsForCall = append(fake.writeHTTPServersConfigArgsForCall, struct {
+	fake.writeHTTPConfigMutex.Lock()
+	ret, specificReturn := fake.writeHTTPConfigReturnsOnCall[len(fake.writeHTTPConfigArgsForCall)]
+	fake.writeHTTPConfigArgsForCall = append(fake.writeHTTPConfigArgsForCall, struct {
 		arg1 string
 		arg2 []byte
 	}{arg1, arg2Copy})
-	stub := fake.WriteHTTPServersConfigStub
-	fakeReturns := fake.writeHTTPServersConfigReturns
-	fake.recordInvocation("WriteHTTPServersConfig", []interface{}{arg1, arg2Copy})
-	fake.writeHTTPServersConfigMutex.Unlock()
+	stub := fake.WriteHTTPConfigStub
+	fakeReturns := fake.writeHTTPConfigReturns
+	fake.recordInvocation("WriteHTTPConfig", []interface{}{arg1, arg2Copy})
+	fake.writeHTTPConfigMutex.Unlock()
 	if stub != nil {
 		return stub(arg1, arg2)
 	}
@@ -49,44 +49,44 @@ func (fake *FakeManager) WriteHTTPServersConfig(arg1 string, arg2 []byte) error 
 	return fakeReturns.result1
 }
 
-func (fake *FakeManager) WriteHTTPServersConfigCallCount() int {
-	fake.writeHTTPServersConfigMutex.RLock()
-	defer fake.writeHTTPServersConfigMutex.RUnlock()
-	return len(fake.writeHTTPServersConfigArgsForCall)
+func (fake *FakeManager) WriteHTTPConfigCallCount() int {
+	fake.writeHTTPConfigMutex.RLock()
+	defer fake.writeHTTPConfigMutex.RUnlock()
+	return len(fake.writeHTTPConfigArgsForCall)
 }
 
-func (fake *FakeManager) WriteHTTPServersConfigCalls(stub func(string, []byte) error) {
-	fake.writeHTTPServersConfigMutex.Lock()
-	defer fake.writeHTTPServersConfigMutex.Unlock()
-	fake.WriteHTTPServersConfigStub = stub
+func (fake *FakeManager) WriteHTTPConfigCalls(stub func(string, []byte) error) {
+	fake.writeHTTPConfigMutex.Lock()
+	defer fake.writeHTTPConfigMutex.Unlock()
+	fake.WriteHTTPConfigStub = stub
 }
 
-func (fake *FakeManager) WriteHTTPServersConfigArgsForCall(i int) (string, []byte) {
-	fake.writeHTTPServersConfigMutex.RLock()
-	defer fake.writeHTTPServersConfigMutex.RUnlock()
-	argsForCall := fake.writeHTTPServersConfigArgsForCall[i]
+func (fake *FakeManager) WriteHTTPConfigArgsForCall(i int) (string, []byte) {
+	fake.writeHTTPConfigMutex.RLock()
+	defer fake.writeHTTPConfigMutex.RUnlock()
+	argsForCall := fake.writeHTTPConfigArgsForCall[i]
 	return argsForCall.arg1, argsForCall.arg2
 }
 
-func (fake *FakeManager) WriteHTTPServersConfigReturns(result1 error) {
-	fake.writeHTTPServersConfigMutex.Lock()
-	defer fake.writeHTTPServersConfigMutex.Unlock()
-	fake.WriteHTTPServersConfigStub = nil
-	fake.writeHTTPServersConfigReturns = struct {
+func (fake *FakeManager) WriteHTTPConfigReturns(result1 error) {
+	fake.writeHTTPConfigMutex.Lock()
+	defer fake.writeHTTPConfigMutex.Unlock()
+	fake.WriteHTTPConfigStub = nil
+	fake.writeHTTPConfigReturns = struct {
 		result1 error
 	}{result1}
 }
 
-func (fake *FakeManager) WriteHTTPServersConfigReturnsOnCall(i int, result1 error) {
-	fake.writeHTTPServersConfigMutex.Lock()
-	defer fake.writeHTTPServersConfigMutex.Unlock()
-	fake.WriteHTTPServersConfigStub = nil
-	if fake.writeHTTPServersConfigReturnsOnCall == nil {
-		fake.writeHTTPServersConfigReturnsOnCall = make(map[int]struct {
+func (fake *FakeManager) WriteHTTPConfigReturnsOnCall(i int, result1 error) {
+	fake.writeHTTPConfigMutex.Lock()
+	defer fake.writeHTTPConfigMutex.Unlock()
+	fake.WriteHTTPConfigStub = nil
+	if fake.writeHTTPConfigReturnsOnCall == nil {
+		fake.writeHTTPConfigReturnsOnCall = make(map[int]struct {
 			result1 error
 		})
 	}
-	fake.writeHTTPServersConfigReturnsOnCall[i] = struct {
+	fake.writeHTTPConfigReturnsOnCall[i] = struct {
 		result1 error
 	}{result1}
 }
@@ -94,8 +94,8 @@ func (fake *FakeManager) WriteHTTPServersConfigReturnsOnCall(i int, result1 erro
 func (fake *FakeManager) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.writeHTTPServersConfigMutex.RLock()
-	defer fake.writeHTTPServersConfigMutex.RUnlock()
+	fake.writeHTTPConfigMutex.RLock()
+	defer fake.writeHTTPConfigMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value
