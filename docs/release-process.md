@@ -24,22 +24,60 @@ Example workflow (see issue process section for more detail [TBD]):
 
 ### Steps to create a release.
 
-1. Create a release branch from main, use the naming format: release-MAJOR.MINOR.
+NGINX Kubernetes Gateway is a trunk based development project; generally following a modified "Branch for release" pattern. Branches will be created as late as possible, often only when a patch is required and the release will first diverge from the main trunk. This results in tags created for planned releases, but branches for patch releases.
 
-2. Create a release candidate tag, use the naming format: vMAJOR.MINOR.PATCH-rc.N (N must start from 1 and monotonically increase with each release candidate).
+#### Planned releases
 
-3. Test the release candidate.
+1. When all committed items are complete within a milestone a release will be created.
 
-    If the tests fail
+1. Trunk merges are ceased for testing. Parallel development is free to continue on development branches (branching can occur here, but we will prefer tagging on trunk for planned releases).
+
+1. Trunk is tested using the "edge" container builds.
+
+  If tests fail:
+  
+    - Fix for issue is created.
+
+    - Open PR against main (trunk) branch.
+
+    - New commit and merge will create a new "edge" container.
+
+    - Repeat.
+
+1. Once tests have passed create a tag (in the form vMAJOR.MINOR.PATCH) on the main (trunk) commit SHA. The docker image will automatically be pushed to `ghcr.io/nginxinc/nginx-kubernetes-gateway:MAJOR.MINOR.PATCH` with the docker tag reflecting the planned release version.
+
+1. Update the changelog with the changes added in the release. They can be found in the github release notes that was generated from the release branch.
+
+#### Patch releases
+
+1. If no release branch exists.
+
+  1. Create a release branch from the planned release tag in main (for example, v0.2.0), use the naming format: release-MAJOR.MINOR.
+
+1. Reproduce and fix the bug in main first. This process helps ensure all issues remain fixed in trunk and aren't missed.
+
+  If the tests fail:
 
     - Create a fix for the error.
 
     - Open a PR with the fix against the main branch.
 
-    - Once approved and merged, cherry-pick the commit into the release branch.
+    - New commit and merge will create a new "edge" container.
 
-    - Create a new release candidate tag, increment the release candidate number by 1.
+    - Repeat.
 
-4. Iterate over the process in step 3 until all the tests pass on the release candidate tag then create the final release tag from the release branch in the format vMAJOR.MINOR.PATCH.  The docker image will automatically be pushed to ghcr.io/nginxinc/nginx-kubernetes-gateway:MAJOR.MINOR.PATCH with the release tag as the docker tag.
+1. Cherry-pick the commit from main to the release branch. Use the `-x` argument to preserve the cherry pick's origin commit.
 
-5. Update the changelog with the changes added in the release.  They can be found in the github release notes that was generated from the release branch.
+1. Test the release branch.
+
+  If the tests fail (this may occur because the trunk has diverged or a poor conflict resolution):
+
+    - Create a fix for the error.
+
+    - Open a PR with the fix against the release branch.
+
+    - Repeat.
+
+1. Once tests have passed create a tag (in the form vMAJOR.MINOR.PATCH) on the release branch commit SHA. The docker image will automatically be pushed to `ghcr.io/nginxinc/nginx-kubernetes-gateway:MAJOR.MINOR.PATCH` with the docker tag reflecting the planned release version.
+
+1. Update the changelog with the changes added in the release. They can be found in the github release notes that was generated from the release branch.
