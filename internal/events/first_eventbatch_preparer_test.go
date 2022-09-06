@@ -45,7 +45,7 @@ var _ = Describe("FirstEventBatchPreparer", func() {
 		})
 
 		It("should prepare zero events when resources don't exist", func() {
-			fakeReader.GetCalls(func(ctx context.Context, name types.NamespacedName, object client.Object) error {
+			fakeReader.GetCalls(func(ctx context.Context, name types.NamespacedName, object client.Object, opts ...client.GetOption) error {
 				Expect(name).Should(Equal(types.NamespacedName{Name: gcName}))
 				Expect(object).Should(BeAssignableToTypeOf(&v1beta1.GatewayClass{}))
 
@@ -62,7 +62,7 @@ var _ = Describe("FirstEventBatchPreparer", func() {
 		It("should prepare one event for each resource type", func() {
 			gatewayClass := v1beta1.GatewayClass{ObjectMeta: metav1.ObjectMeta{Name: gcName}}
 
-			fakeReader.GetCalls(func(ctx context.Context, name types.NamespacedName, object client.Object) error {
+			fakeReader.GetCalls(func(ctx context.Context, name types.NamespacedName, object client.Object, opts ...client.GetOption) error {
 				Expect(name).Should(Equal(types.NamespacedName{Name: gcName}))
 				Expect(object).Should(BeAssignableToTypeOf(&v1beta1.GatewayClass{}))
 
