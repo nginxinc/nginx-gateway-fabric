@@ -1,6 +1,6 @@
 # HTTPS Termination Example
 
-In this example we expand on the simple [cafe-example](../cafe-example) by adding HTTPS termination to our routes and an HTTPS redirect from port 80 to 443.
+In this example, we expand on the simple [cafe-example](../cafe-example) by adding HTTPS termination to our routes and an HTTPS redirect from port 80 to 443.
 
 ## Running the Example
 
@@ -55,7 +55,7 @@ In this example we expand on the simple [cafe-example](../cafe-example) by addin
 
    This [Gateway](./gateway.yaml) configures:
    * `http` listener for HTTP traffic
-   * `https` listener for HTTPS traffic. It terminates TLS connections using the `cafe-secret` we created in the step 1.
+   * `https` listener for HTTPS traffic. It terminates TLS connections using the `cafe-secret` we created in step 1.
 
 1. Create the `HTTPRoute` resources:
    ```
