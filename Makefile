@@ -60,7 +60,7 @@ update-crds: ## Update CRDs
 
 .PHONY: create-kind-cluster
 create-kind-cluster: ## Create a kind cluster
-	kind create cluster --image kindest/node:v1.24.2
+	kind create cluster --image kindest/node:v1.25.0
 	kind export kubeconfig --kubeconfig $(KIND_KUBE_CONFIG_FOLDER)/config
 
 .PHONY: delete-kind-cluster
