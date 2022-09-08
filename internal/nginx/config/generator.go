@@ -126,15 +126,10 @@ func generate(virtualServer state.VirtualServer, serviceStore state.ServiceStore
 			// If it doesn't work as expected, such situation is silently handled below in findFirstFilters.
 			// Consider reporting an error. But that should be done in a separate validation layer.
 
-			firstFilters := findFirstFilters(r.GetFilters(), supportedFilters)
-
-			loc.Return = generateReturnValForRedirectFilter(
-				firstFilters[v1beta1.HTTPRouteFilterRequestRedirect].RequestRedirect,
-				listenerPort,
-			)
-
-			// ProxyPass is mutually exclusive with Return
-			if loc.Return == nil {
+			// RequestRedirect and proxying are mutually exclusive.
+			if r.Filters.RequestRedirect != nil {
+				loc.Return = generateReturnValForRedirectFilter(r.Filters.RequestRedirect, listenerPort)
+			} else {
 				address, err := getBackendAddress(r.Source.Spec.Rules[r.RuleIdx].BackendRefs, r.Source.Namespace, serviceStore)
 				if err != nil {
 					warnings.AddWarning(r.Source, err.Error())
@@ -172,25 +167,6 @@ func generateProxyPass(address string) string {
 		return "http://" + nginx502Server
 	}
 	return "http://" + address
-}
-
-var supportedFilters = map[v1beta1.HTTPRouteFilterType]struct{}{
-	v1beta1.HTTPRouteFilterRequestRedirect: {},
-}
-
-func findFirstFilters(
-	filters []v1beta1.HTTPRouteFilter,
-	filterTypes map[v1beta1.HTTPRouteFilterType]struct{},
-) map[v1beta1.HTTPRouteFilterType]v1beta1.HTTPRouteFilter {
-
-	result := make(map[v1beta1.HTTPRouteFilterType]v1beta1.HTTPRouteFilter)
-	for i := len(filters) - 1; i >= 0; i-- {
-		if _, exist := filterTypes[filters[i].Type]; exist {
-			result[filters[i].Type] = filters[i]
-		}
-	}
-
-	return result
 }
 
 func generateReturnValForRedirectFilter(filter *v1beta1.HTTPRequestRedirectFilter, listenerPort int) *returnVal {

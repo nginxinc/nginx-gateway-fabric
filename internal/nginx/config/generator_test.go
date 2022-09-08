@@ -221,14 +221,7 @@ func TestGenerate(t *testing.T) {
 							},
 						},
 					},
-					Filters: []v1beta1.HTTPRouteFilter{
-						{
-							Type: v1beta1.HTTPRouteFilterRequestRedirect,
-							RequestRedirect: &v1beta1.HTTPRequestRedirectFilter{
-								Hostname: (*v1beta1.PreciseHostname)(helpers.GetStringPointer("foo.example.com")),
-							},
-						},
-					},
+					// redirect is set in the corresponding state.MatchRule
 				},
 				{
 					// A match with a redirect with explicit port
@@ -239,15 +232,7 @@ func TestGenerate(t *testing.T) {
 							},
 						},
 					},
-					Filters: []v1beta1.HTTPRouteFilter{
-						{
-							Type: v1beta1.HTTPRouteFilterRequestRedirect,
-							RequestRedirect: &v1beta1.HTTPRequestRedirectFilter{
-								Hostname: (*v1beta1.PreciseHostname)(helpers.GetStringPointer("bar.example.com")),
-								Port:     (*v1beta1.PortNumber)(helpers.GetInt32Pointer(8080)),
-							},
-						},
-					},
+					// redirect is set in the corresponding state.MatchRule
 				},
 			},
 		},
@@ -342,6 +327,11 @@ func TestGenerate(t *testing.T) {
 							MatchIdx: 0,
 							RuleIdx:  3,
 							Source:   hr,
+							Filters: state.Filters{
+								RequestRedirect: &v1beta1.HTTPRequestRedirectFilter{
+									Hostname: (*v1beta1.PreciseHostname)(helpers.GetStringPointer("foo.example.com")),
+								},
+							},
 						},
 					},
 				},
@@ -352,6 +342,12 @@ func TestGenerate(t *testing.T) {
 							MatchIdx: 0,
 							RuleIdx:  4,
 							Source:   hr,
+							Filters: state.Filters{
+								RequestRedirect: &v1beta1.HTTPRequestRedirectFilter{
+									Hostname: (*v1beta1.PreciseHostname)(helpers.GetStringPointer("bar.example.com")),
+									Port:     (*v1beta1.PortNumber)(helpers.GetInt32Pointer(8080)),
+								},
+							},
 						},
 					},
 				},
@@ -473,95 +469,6 @@ func TestGenerateProxyPass(t *testing.T) {
 	result = generateProxyPass("")
 	if result != expected {
 		t.Errorf("generateProxyPass() returned %s but expected %s", result, expected)
-	}
-}
-
-func TestFindFirstFilters(t *testing.T) {
-	oneType := map[v1beta1.HTTPRouteFilterType]struct{}{
-		v1beta1.HTTPRouteFilterRequestRedirect: {},
-	}
-
-	twoTypes := map[v1beta1.HTTPRouteFilterType]struct{}{
-		v1beta1.HTTPRouteFilterRequestRedirect: {},
-		v1beta1.HTTPRouteFilterURLRewrite:      {},
-	}
-
-	redirect1 := v1beta1.HTTPRouteFilter{
-		Type: v1beta1.HTTPRouteFilterRequestRedirect,
-		RequestRedirect: &v1beta1.HTTPRequestRedirectFilter{
-			Hostname: (*v1beta1.PreciseHostname)(helpers.GetStringPointer("foo.example.com")),
-		},
-	}
-	redirect2 := v1beta1.HTTPRouteFilter{
-		Type: v1beta1.HTTPRouteFilterRequestRedirect,
-		RequestRedirect: &v1beta1.HTTPRequestRedirectFilter{
-			Hostname: (*v1beta1.PreciseHostname)(helpers.GetStringPointer("bar.example.com")),
-		},
-	}
-	rewrite1 := v1beta1.HTTPRouteFilter{
-		Type: v1beta1.HTTPRouteFilterURLRewrite,
-		URLRewrite: &v1beta1.HTTPURLRewriteFilter{
-			Hostname: (*v1beta1.PreciseHostname)(helpers.GetStringPointer("foo.example.com")),
-		},
-	}
-	rewrite2 := v1beta1.HTTPRouteFilter{
-		Type: v1beta1.HTTPRouteFilterURLRewrite,
-		URLRewrite: &v1beta1.HTTPURLRewriteFilter{
-			Hostname: (*v1beta1.PreciseHostname)(helpers.GetStringPointer("bar.example.com")),
-		},
-	}
-
-	oneTypeFilters := []v1beta1.HTTPRouteFilter{redirect1, redirect2}
-
-	twoTypesFilters := []v1beta1.HTTPRouteFilter{
-		redirect1,
-		rewrite1,
-		rewrite2,
-		redirect2,
-	}
-
-	tests := []struct {
-		filters     []v1beta1.HTTPRouteFilter
-		filterTypes map[v1beta1.HTTPRouteFilterType]struct{}
-		expected    map[v1beta1.HTTPRouteFilterType]v1beta1.HTTPRouteFilter
-		msg         string
-	}{
-		{
-			filters:     []v1beta1.HTTPRouteFilter{},
-			filterTypes: twoTypes,
-			expected:    map[v1beta1.HTTPRouteFilterType]v1beta1.HTTPRouteFilter{},
-			msg:         "no filters",
-		},
-		{
-			filters:     oneTypeFilters,
-			filterTypes: oneType,
-			expected: map[v1beta1.HTTPRouteFilterType]v1beta1.HTTPRouteFilter{
-				v1beta1.HTTPRouteFilterRequestRedirect: redirect1,
-			},
-			msg: "only one type",
-		},
-		{
-			filters:     twoTypesFilters,
-			filterTypes: map[v1beta1.HTTPRouteFilterType]struct{}{},
-			expected:    map[v1beta1.HTTPRouteFilterType]v1beta1.HTTPRouteFilter{},
-			msg:         "no supported type",
-		},
-		{
-			filters:     twoTypesFilters,
-			filterTypes: twoTypes,
-			expected: map[v1beta1.HTTPRouteFilterType]v1beta1.HTTPRouteFilter{
-				v1beta1.HTTPRouteFilterRequestRedirect: redirect1,
-				v1beta1.HTTPRouteFilterURLRewrite:      rewrite1,
-			},
-			msg: "two types two filters",
-		},
-	}
-
-	for _, test := range tests {
-		result := findFirstFilters(test.filters, test.filterTypes)
-		if diff := cmp.Diff(test.expected, result); diff != "" {
-			t.Errorf("findFirstFilters() mismatch '%s' (-want +got):\n%s", test.msg, diff)
-		}
 	}
 }
 

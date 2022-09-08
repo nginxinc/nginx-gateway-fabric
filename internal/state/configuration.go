@@ -44,6 +44,11 @@ type PathRule struct {
 	MatchRules []MatchRule
 }
 
+// Filters hold the filters for a MatchRule.
+type Filters struct {
+	RequestRedirect *v1beta1.HTTPRequestRedirectFilter
+}
+
 // MatchRule represents a routing rule. It corresponds directly to a Match in the HTTPRoute resource.
 // An HTTPRoute is guaranteed to have at least one rule with one match.
 // If no rule or match is specified by the user, the default rule {{path:{ type: "PathPrefix", value: "/"}}} is set by the schema.
@@ -53,17 +58,16 @@ type MatchRule struct {
 	// RuleIdx is the index of the corresponding rule in the HTTPRoute.
 	RuleIdx int
 	// Source is the corresponding HTTPRoute resource.
+	// FIXME(pleshakov): Consider referencing only the parts neeeded for the config generation rather than
+	// the entire resource.
 	Source *v1beta1.HTTPRoute
+	// Filters holds the filters for the MatchRule.
+	Filters Filters
 }
 
 // GetMatch returns the HTTPRouteMatch of the Route .
 func (r *MatchRule) GetMatch() v1beta1.HTTPRouteMatch {
 	return r.Source.Spec.Rules[r.RuleIdx].Matches[r.MatchIdx]
-}
-
-// GetFilters returns the filters for the MatchRule.
-func (r *MatchRule) GetFilters() []v1beta1.HTTPRouteFilter {
-	return r.Source.Spec.Rules[r.RuleIdx].Filters
 }
 
 // buildConfiguration builds the Configuration from the graph.
@@ -158,6 +162,8 @@ func (b *virtualServerBuilder) upsertListener(l *listener) {
 		}
 
 		for i, rule := range r.Source.Spec.Rules {
+			filters := createFilters(rule.Filters)
+
 			for _, h := range hostnames {
 				for j, m := range rule.Matches {
 					path := getPath(m.Path)
@@ -171,6 +177,7 @@ func (b *virtualServerBuilder) upsertListener(l *listener) {
 						MatchIdx: j,
 						RuleIdx:  i,
 						Source:   r.Source,
+						Filters:  filters,
 					})
 
 					b.rulesPerHost[h][path] = rule
@@ -245,4 +252,19 @@ func getPath(path *v1beta1.HTTPPathMatch) string {
 		return "/"
 	}
 	return *path.Value
+}
+
+func createFilters(filters []v1beta1.HTTPRouteFilter) Filters {
+	var result Filters
+
+	for _, f := range filters {
+		switch f.Type {
+		case v1beta1.HTTPRouteFilterRequestRedirect:
+			result.RequestRedirect = f.RequestRedirect
+			// using the first filter
+			return result
+		}
+	}
+
+	return result
 }
