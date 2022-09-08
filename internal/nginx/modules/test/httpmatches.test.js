@@ -297,25 +297,81 @@ describe('paramsMatch', () => {
     {
       name: 'returns false if one of the params is missing from request',
       params: params,
-      requestParams: ['arg2=value2=SOME=other=value', 'arg3===value3&*1(*+'],
+      requestParams: {
+        // Arg1 is missing,
+        arg2: 'value2=SOME=other=value',
+        arg3: '==value3&*1(*+',
+      },
+      expected: false,
+    },
+    {
+      name: 'returns false if one of the params has an empty value',
+      params: params,
+      requestParams: {
+        Arg1: 'value1',
+        arg2: 'value2=SOME=other=value',
+        arg3: '', // empty value
+      },
       expected: false,
     },
     {
       name: 'returns false if one of the param values does not match',
       params: params,
-      requestParams: ['Arg1=not-value-1', 'arg2=value2=SOME=other=value', 'arg3===value3&*1(*+'],
+      requestParams: {
+        Arg1: 'Arg1=not-value-1', // this value does not match
+        arg2: 'value2=SOME=other=value',
+        arg3: '==value3&*1(*+',
+      },
       expected: false,
     },
     {
       name: 'returns false if the case of one param values does not match',
       params: params,
-      requestParams: ['Arg1=VALUE1', 'arg2=value2=SOME=other=value', 'arg3===value3&*1(*+'],
+      requestParams: {
+        Arg1: 'VALUE1', // this value is not the correct case
+        arg2: 'value2=SOME=other=value',
+        arg3: '==value3&*1(*+',
+      },
+      expected: false,
+    },
+    {
+      name: 'returns false if the case of one param name does not match',
+      params: params,
+      requestParams: {
+        Arg1: 'value1',
+        arg2: 'value2=SOME=other=value',
+        ARG3: '==value3&*1(*+', // this param name is not the correct case
+      },
       expected: false,
     },
     {
       name: 'returns true if all params match',
       params: params,
-      requestParams: params,
+      requestParams: {
+        Arg1: 'value1',
+        arg2: 'value2=SOME=other=value',
+        arg3: '==value3&*1(*+',
+      },
+      expected: true,
+    },
+    {
+      name: 'returns true if all params match with one param having multiple values',
+      params: params,
+      requestParams: {
+        Arg1: ['value1', 'value2'], // 'value1' wins
+        arg2: 'value2=SOME=other=value',
+        arg3: '==value3&*1(*+',
+      },
+      expected: true,
+    },
+    {
+      name: 'returns false if one param does not match because of multiple values',
+      params: params,
+      requestParams: {
+        Arg1: ['value2', 'value1'], // 'value2' wins but it does not match
+        arg2: 'value2=SOME=other=value',
+        arg3: '==value3&*1(*+',
+      },
       expected: false,
     },
   ];

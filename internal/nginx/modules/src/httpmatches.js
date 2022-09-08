@@ -175,9 +175,20 @@ function paramsMatch(requestParams, params) {
     // Divide string into key value using the index.
     let kv = [p.slice(0, idx), p.slice(idx + 1)];
 
-    const val = requestParams[kv[0]];
+    // val can either be a string or an array of strings.
+    // Also, the NGINX request's args object lookup is case-sensitive.
+    // For example, 'a=1&b=2&A=3&b=4' will be parsed into {a: "1", b: ["2", "4"], A: "3"}
+    let val = requestParams[kv[0]];
+    if (!val) {
+      return false;
+    }
 
-    if (!val || val !== kv[1]) {
+    // If val is an array, we will match against the first element in the array according to the Gateway API spec.
+    if (Array.isArray(val)) {
+      val = val[0];
+    }
+
+    if (val !== kv[1]) {
       return false;
     }
   }
