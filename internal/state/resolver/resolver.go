@@ -9,7 +9,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/nginxinc/nginx-kubernetes-gateway/pkg/sdk"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/manager/index"
 )
 
 //go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . ServiceResolver
@@ -51,7 +51,7 @@ func (e *ServiceResolverImpl) Resolve(ctx context.Context, svc *v1.Service, port
 	err := e.client.List(
 		ctx,
 		&endpointSliceList,
-		client.MatchingFields{sdk.KubernetesServiceNameIndexField: svc.Name},
+		client.MatchingFields{index.KubernetesServiceNameIndexField: svc.Name},
 		client.InNamespace(svc.Namespace),
 	)
 
@@ -116,7 +116,7 @@ func getServicePort(svc *v1.Service, port int32) (v1.ServicePort, error) {
 		}
 	}
 
-	return v1.ServicePort{}, fmt.Errorf("no matching port for Service %s and port %d", svc, port)
+	return v1.ServicePort{}, fmt.Errorf("no matching port for Service %s and port %d", svc.Name, port)
 }
 
 // getDefaultPort returns the default port for a ServicePort.

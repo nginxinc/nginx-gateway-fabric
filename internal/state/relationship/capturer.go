@@ -7,7 +7,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	"github.com/nginxinc/nginx-kubernetes-gateway/pkg/sdk"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/manager/index"
 )
 
 //go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . Capturer
@@ -56,7 +56,7 @@ func (c *CapturerImpl) Capture(obj client.Object) {
 	case *v1beta1.HTTPRoute:
 		c.upsertForRoute(o)
 	case *discoveryV1.EndpointSlice:
-		svcName := sdk.GetServiceNameFromEndpointSlice(o)
+		svcName := index.GetServiceNameFromEndpointSlice(o)
 		if svcName != "" {
 			c.endpointSliceOwners[client.ObjectKeyFromObject(o)] = types.NamespacedName{
 				Namespace: o.Namespace,

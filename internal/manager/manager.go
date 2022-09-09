@@ -12,16 +12,13 @@ import (
 	ctlr "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	k8spredicate "sigs.k8s.io/controller-runtime/pkg/predicate"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/config"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/events"
-	endpointslice "github.com/nginxinc/nginx-kubernetes-gateway/internal/implementations/endpointslice"
-	gw "github.com/nginxinc/nginx-kubernetes-gateway/internal/implementations/gateway"
-	gc "github.com/nginxinc/nginx-kubernetes-gateway/internal/implementations/gatewayclass"
-	hr "github.com/nginxinc/nginx-kubernetes-gateway/internal/implementations/httproute"
-	secret "github.com/nginxinc/nginx-kubernetes-gateway/internal/implementations/secret"
-	svc "github.com/nginxinc/nginx-kubernetes-gateway/internal/implementations/service"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/manager/index"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/manager/predicate"
 	ngxcfg "github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/config"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/file"
 	ngxruntime "github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/runtime"
@@ -29,7 +26,6 @@ import (
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/relationship"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/resolver"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/status"
-	"github.com/nginxinc/nginx-kubernetes-gateway/pkg/sdk"
 )
 
 const (
@@ -53,6 +49,7 @@ func Start(cfg config.Config) error {
 
 	options := manager.Options{
 		Scheme: scheme,
+		Logger: logger,
 	}
 
 	eventCh := make(chan interface{})
@@ -65,32 +62,40 @@ func Start(cfg config.Config) error {
 		return fmt.Errorf("cannot build runtime manager: %w", err)
 	}
 
-	err = sdk.RegisterGatewayClassController(mgr, gc.NewGatewayClassImplementation(cfg, eventCh))
-	if err != nil {
-		return fmt.Errorf("cannot register gatewayclass implementation: %w", err)
-	}
-	err = sdk.RegisterGatewayController(mgr, gw.NewGatewayImplementation(cfg, eventCh))
-	if err != nil {
-		return fmt.Errorf("cannot register gateway implementation: %w", err)
-	}
-	err = sdk.RegisterHTTPRouteController(mgr, hr.NewHTTPRouteImplementation(cfg, eventCh))
-	if err != nil {
-		return fmt.Errorf("cannot register httproute implementation: %w", err)
-	}
-	err = sdk.RegisterServiceController(mgr, svc.NewServiceImplementation(cfg, eventCh))
-	if err != nil {
-		return fmt.Errorf("cannot register service implementation: %w", err)
-	}
-	err = sdk.RegisterSecretController(mgr, secret.NewSecretImplementation(cfg, eventCh))
-	if err != nil {
-		return fmt.Errorf("cannot register secret implementation: %w", err)
+	controllerConfigs := []controllerConfig{
+		{
+			objectType:           &gatewayv1beta1.GatewayClass{},
+			namespacedNameFilter: createFilterForGatewayClass(cfg.GatewayClassName),
+		},
+		{
+			objectType: &gatewayv1beta1.Gateway{},
+		},
+		{
+			objectType: &gatewayv1beta1.HTTPRoute{},
+		},
+		{
+			objectType:     &apiv1.Service{},
+			k8sEventFilter: predicate.ServicePortsChangedPredicate{},
+		},
+		{
+			objectType: &apiv1.Secret{},
+		},
+		{
+			objectType:     &discoveryV1.EndpointSlice{},
+			k8sEventFilter: k8spredicate.GenerationChangedPredicate{},
+			fieldIndexes: map[string]client.IndexerFunc{
+				index.KubernetesServiceNameIndexField: index.ServiceNameIndexFunc,
+			},
+		},
 	}
 
 	ctx := ctlr.SetupSignalHandler()
 
-	err = sdk.RegisterEndpointSliceController(ctx, mgr, endpointslice.NewEndpointSliceImplementation(cfg, eventCh))
-	if err != nil {
-		return fmt.Errorf("cannot register endpointslice implementation: %w", err)
+	for _, cfg := range controllerConfigs {
+		err := registerController(ctx, mgr, eventCh, cfg)
+		if err != nil {
+			return fmt.Errorf("cannot register controller for %T: %w", cfg.objectType, err)
+		}
 	}
 
 	secretStore := state.NewSecretStore()

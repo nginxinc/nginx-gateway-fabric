@@ -1,4 +1,4 @@
-package sdk_test
+package index_test
 
 import (
 	"testing"
@@ -9,7 +9,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/nginxinc/nginx-kubernetes-gateway/pkg/sdk"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/manager/index"
 )
 
 func TestServiceNameIndexFunc(t *testing.T) {
@@ -22,7 +22,7 @@ func TestServiceNameIndexFunc(t *testing.T) {
 			msg: "normal case",
 			obj: &discoveryV1.EndpointSlice{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: map[string]string{sdk.KubernetesServiceNameLabel: "test-svc"},
+					Labels: map[string]string{index.KubernetesServiceNameLabel: "test-svc"},
 				},
 			},
 			expOutput: []string{"test-svc"},
@@ -44,7 +44,7 @@ func TestServiceNameIndexFunc(t *testing.T) {
 	}
 
 	for _, tc := range testcases {
-		output := sdk.ServiceNameIndexFunc(tc.obj)
+		output := index.ServiceNameIndexFunc(tc.obj)
 		if diff := cmp.Diff(tc.expOutput, output); diff != "" {
 			t.Errorf("ServiceNameIndexFunc() mismatch on %q (-want +got):\n%s", tc.msg, diff)
 		}
@@ -58,5 +58,5 @@ func TestServiceNameIndexFuncPanics(t *testing.T) {
 		}
 	}()
 
-	sdk.ServiceNameIndexFunc(&v1.Namespace{})
+	index.ServiceNameIndexFunc(&v1.Namespace{})
 }
