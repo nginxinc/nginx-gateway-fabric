@@ -7,6 +7,7 @@ import (
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	ctlr "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -14,11 +15,7 @@ import (
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/config"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/events"
-	gw "github.com/nginxinc/nginx-kubernetes-gateway/internal/implementations/gateway"
-	gc "github.com/nginxinc/nginx-kubernetes-gateway/internal/implementations/gatewayclass"
-	hr "github.com/nginxinc/nginx-kubernetes-gateway/internal/implementations/httproute"
-	secret "github.com/nginxinc/nginx-kubernetes-gateway/internal/implementations/secret"
-	svc "github.com/nginxinc/nginx-kubernetes-gateway/internal/implementations/service"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/implementations"
 	ngxcfg "github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/config"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/file"
 	ngxruntime "github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/runtime"
@@ -60,25 +57,54 @@ func Start(cfg config.Config) error {
 		return fmt.Errorf("cannot build runtime manager: %w", err)
 	}
 
-	err = sdk.RegisterGatewayClassController(mgr, gc.NewGatewayClassImplementation(cfg, eventCh))
+	// Register GatewayClass implementation
+	err = sdk.RegisterController(mgr,
+		implementations.NewImplementationWithFilter(&gatewayv1beta1.GatewayClass{}, cfg.Logger, eventCh, func(nsname types.NamespacedName) (bool, string) {
+			if nsname.Name == cfg.GatewayClassName {
+				return false, fmt.Sprintf("GatewayClass was upserted but ignored because this controller only supports the GatewayClass %s", cfg.GatewayClassName)
+			}
+			return true, ""
+		}),
+		&gatewayv1beta1.GatewayClass{},
+	)
 	if err != nil {
-		return fmt.Errorf("cannot register gatewayclass implementation: %w", err)
+		return fmt.Errorf("cannot register GatewayClass implementation: %w", err)
 	}
-	err = sdk.RegisterGatewayController(mgr, gw.NewGatewayImplementation(cfg, eventCh))
+
+	// Register Gateway implementation
+	err = sdk.RegisterController(mgr,
+		implementations.NewImplementation(&gatewayv1beta1.Gateway{}, cfg.Logger, eventCh),
+		&gatewayv1beta1.Gateway{},
+	)
 	if err != nil {
-		return fmt.Errorf("cannot register gateway implementation: %w", err)
+		return fmt.Errorf("cannot register Gateway implementation: %w", err)
 	}
-	err = sdk.RegisterHTTPRouteController(mgr, hr.NewHTTPRouteImplementation(cfg, eventCh))
+
+	// Register HTTPRoute implementation
+	err = sdk.RegisterController(mgr,
+		implementations.NewImplementation(&gatewayv1beta1.HTTPRoute{}, cfg.Logger, eventCh),
+		&gatewayv1beta1.HTTPRoute{},
+	)
 	if err != nil {
-		return fmt.Errorf("cannot register httproute implementation: %w", err)
+		return fmt.Errorf("cannot register HTTPRoute implementation: %w", err)
 	}
-	err = sdk.RegisterServiceController(mgr, svc.NewServiceImplementation(cfg, eventCh))
+
+	// Register Service implementation
+	err = sdk.RegisterController(mgr,
+		implementations.NewImplementation(&apiv1.Service{}, cfg.Logger, eventCh),
+		&apiv1.Service{},
+	)
 	if err != nil {
-		return fmt.Errorf("cannot register service implementation: %w", err)
+		return fmt.Errorf("cannot register Service implementation: %w", err)
 	}
-	err = sdk.RegisterSecretController(mgr, secret.NewSecretImplementation(cfg, eventCh))
+
+	// Register Secret implementation
+	err = sdk.RegisterController(mgr,
+		implementations.NewImplementation(&apiv1.Secret{}, cfg.Logger, eventCh),
+		&apiv1.Secret{},
+	)
 	if err != nil {
-		return fmt.Errorf("cannot register secret implementation: %w", err)
+		return fmt.Errorf("cannot register Secret implementation: %w", err)
 	}
 
 	secretStore := state.NewSecretStore()
