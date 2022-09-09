@@ -82,11 +82,15 @@ func generate(virtualServer state.VirtualServer, serviceStore state.ServiceStore
 
 	s := server{ServerName: virtualServer.Hostname}
 
+	listenerPort := 80
+
 	if virtualServer.SSL != nil {
 		s.SSL = &ssl{
 			Certificate:    virtualServer.SSL.CertificatePath,
 			CertificateKey: virtualServer.SSL.CertificatePath,
 		}
+
+		listenerPort = 443
 	}
 
 	if len(virtualServer.PathRules) == 0 {
@@ -100,26 +104,41 @@ func generate(virtualServer state.VirtualServer, serviceStore state.ServiceStore
 		matches := make([]httpMatch, 0, len(rule.MatchRules))
 
 		for ruleIdx, r := range rule.MatchRules {
-
-			address, err := getBackendAddress(r.Source.Spec.Rules[r.RuleIdx].BackendRefs, r.Source.Namespace, serviceStore)
-			if err != nil {
-				warnings.AddWarning(r.Source, err.Error())
-			}
-
 			m := r.GetMatch()
+
+			var loc location
 
 			// handle case where the only route is a path-only match
 			// generate a standard location block without http_matches.
 			if len(rule.MatchRules) == 1 && isPathOnlyMatch(m) {
-				locs = append(locs, location{
-					Path:      rule.Path,
-					ProxyPass: generateProxyPass(address),
-				})
+				loc = location{
+					Path: rule.Path,
+				}
 			} else {
 				path := createPathForMatch(rule.Path, ruleIdx)
-				locs = append(locs, generateMatchLocation(path, address))
+				loc = generateMatchLocation(path)
 				matches = append(matches, createHTTPMatch(m, path))
 			}
+
+			// FIXME(pleshakov): There could be a case when the filter has the type set but not the corresponding field.
+			// For example, type is v1beta1.HTTPRouteFilterRequestRedirect, but RequestRedirect field is nil.
+			// The validation webhook catches that.
+			// If it doesn't work as expected, such situation is silently handled below in findFirstFilters.
+			// Consider reporting an error. But that should be done in a separate validation layer.
+
+			// RequestRedirect and proxying are mutually exclusive.
+			if r.Filters.RequestRedirect != nil {
+				loc.Return = generateReturnValForRedirectFilter(r.Filters.RequestRedirect, listenerPort)
+			} else {
+				address, err := getBackendAddress(r.Source.Spec.Rules[r.RuleIdx].BackendRefs, r.Source.Namespace, serviceStore)
+				if err != nil {
+					warnings.AddWarning(r.Source, err.Error())
+				}
+
+				loc.ProxyPass = generateProxyPass(address)
+			}
+
+			locs = append(locs, loc)
 		}
 
 		if len(matches) > 0 {
@@ -148,6 +167,41 @@ func generateProxyPass(address string) string {
 		return "http://" + nginx502Server
 	}
 	return "http://" + address
+}
+
+func generateReturnValForRedirectFilter(filter *v1beta1.HTTPRequestRedirectFilter, listenerPort int) *returnVal {
+	if filter == nil {
+		return nil
+	}
+
+	hostname := "$host"
+	if filter.Hostname != nil {
+		hostname = string(*filter.Hostname)
+	}
+
+	// FIXME(pleshakov): Unknown values here must result in the implementation setting the Attached Condition for
+	// the Route to  `status: False`, with a Reason of `UnsupportedValue`. In that case, all routes of the Route will be
+	// ignored. NGINX will return 500. This should be implemented in the validation layer.
+	code := statusFound
+	if filter.StatusCode != nil {
+		code = statusCode(*filter.StatusCode)
+	}
+
+	port := listenerPort
+	if filter.Port != nil {
+		port = int(*filter.Port)
+	}
+
+	// FIXME(pleshakov): Same as the FIXME about StatusCode above.
+	scheme := "$scheme"
+	if filter.Scheme != nil {
+		scheme = *filter.Scheme
+	}
+
+	return &returnVal{
+		Code: code,
+		URL:  fmt.Sprintf("%s://%s:%d$request_uri", scheme, hostname, port),
+	}
 }
 
 func getBackendAddress(
@@ -183,11 +237,10 @@ func getBackendAddress(
 	return fmt.Sprintf("%s:%d", address, *ref.Port), nil
 }
 
-func generateMatchLocation(path, address string) location {
+func generateMatchLocation(path string) location {
 	return location{
-		Path:      path,
-		ProxyPass: generateProxyPass(address),
-		Internal:  true,
+		Path:     path,
+		Internal: true,
 	}
 }
 

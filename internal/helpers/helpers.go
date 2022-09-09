@@ -22,6 +22,11 @@ func GetStringPointer(s string) *string {
 	return &s
 }
 
+// GetIntPointer takes an int and returns a pointer to it. Useful in unit tests when initializing structs.
+func GetIntPointer(i int) *int {
+	return &i
+}
+
 // GetInt32Pointer takes an int32 and returns a pointer to it. Useful in unit tests when initializing structs.
 func GetInt32Pointer(i int32) *int32 {
 	return &i

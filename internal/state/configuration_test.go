@@ -48,6 +48,13 @@ func TestBuildConfiguration(t *testing.T) {
 		}
 	}
 
+	addFilters := func(hr *v1beta1.HTTPRoute, filters []v1beta1.HTTPRouteFilter) *v1beta1.HTTPRoute {
+		for i := range hr.Spec.Rules {
+			hr.Spec.Rules[i].Filters = filters
+		}
+		return hr
+	}
+
 	hr1 := createRoute("hr-1", "foo.example.com", "listener-80-1", "/")
 
 	routeHR1 := &route{
@@ -134,6 +141,26 @@ func TestBuildConfiguration(t *testing.T) {
 		Source: httpsHR5,
 		ValidSectionNameRefs: map[string]struct{}{
 			"listener-443-with-hostname": {},
+		},
+		InvalidSectionNameRefs: map[string]struct{}{},
+	}
+
+	redirect := v1beta1.HTTPRouteFilter{
+		Type: v1beta1.HTTPRouteFilterRequestRedirect,
+		RequestRedirect: &v1beta1.HTTPRequestRedirectFilter{
+			Hostname: (*v1beta1.PreciseHostname)(helpers.GetStringPointer("foo.example.com")),
+		},
+	}
+
+	hr6 := addFilters(
+		createRoute("hr-6", "foo.example.com", "listener-80-1", "/"),
+		[]v1beta1.HTTPRouteFilter{redirect},
+	)
+
+	routeHR6 := &route{
+		Source: hr6,
+		ValidSectionNameRefs: map[string]struct{}{
+			"listener-80-1": {},
 		},
 		InvalidSectionNameRefs: map[string]struct{}{},
 	}
@@ -689,6 +716,56 @@ func TestBuildConfiguration(t *testing.T) {
 			expected: Configuration{},
 			msg:      "missing gateway",
 		},
+		{
+			graph: &graph{
+				GatewayClass: &gatewayClass{
+					Source: &v1beta1.GatewayClass{},
+					Valid:  true,
+				},
+				Gateway: &gateway{
+					Source: &v1beta1.Gateway{},
+					Listeners: map[string]*listener{
+						"listener-80-1": {
+							Source: listener80,
+							Valid:  true,
+							Routes: map[types.NamespacedName]*route{
+								{Namespace: "test", Name: "hr-6"}: routeHR6,
+							},
+							AcceptedHostnames: map[string]struct{}{
+								"foo.example.com": {},
+							},
+						},
+					},
+				},
+				Routes: map[types.NamespacedName]*route{
+					{Namespace: "test", Name: "hr-6"}: routeHR6,
+				},
+			},
+			expected: Configuration{
+				HTTPServers: []VirtualServer{
+					{
+						Hostname: "foo.example.com",
+						PathRules: []PathRule{
+							{
+								Path: "/",
+								MatchRules: []MatchRule{
+									{
+										MatchIdx: 0,
+										RuleIdx:  0,
+										Source:   hr6,
+										Filters: Filters{
+											RequestRedirect: redirect.RequestRedirect,
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+				SSLServers: []VirtualServer{},
+			},
+			msg: "one http listener with one route with filters",
+		},
 	}
 
 	for _, test := range tests {
@@ -731,6 +808,59 @@ func TestGetPath(t *testing.T) {
 		result := getPath(test.path)
 		if result != test.expected {
 			t.Errorf("getPath() returned %q but expected %q for the case of %q", result, test.expected, test.msg)
+		}
+	}
+}
+
+func TestCreateFilters(t *testing.T) {
+	redirect1 := v1beta1.HTTPRouteFilter{
+		Type: v1beta1.HTTPRouteFilterRequestRedirect,
+		RequestRedirect: &v1beta1.HTTPRequestRedirectFilter{
+			Hostname: (*v1beta1.PreciseHostname)(helpers.GetStringPointer("foo.example.com")),
+		},
+	}
+	redirect2 := v1beta1.HTTPRouteFilter{
+		Type: v1beta1.HTTPRouteFilterRequestRedirect,
+		RequestRedirect: &v1beta1.HTTPRequestRedirectFilter{
+			Hostname: (*v1beta1.PreciseHostname)(helpers.GetStringPointer("bar.example.com")),
+		},
+	}
+
+	tests := []struct {
+		filters  []v1beta1.HTTPRouteFilter
+		expected Filters
+		msg      string
+	}{
+		{
+			filters:  []v1beta1.HTTPRouteFilter{},
+			expected: Filters{},
+			msg:      "no filters",
+		},
+		{
+			filters: []v1beta1.HTTPRouteFilter{
+				redirect1,
+			},
+			expected: Filters{
+				RequestRedirect: redirect1.RequestRedirect,
+			},
+			msg: "one filter",
+		},
+		{
+			filters: []v1beta1.HTTPRouteFilter{
+				redirect1,
+				redirect2,
+			},
+			expected: Filters{
+				RequestRedirect: redirect1.RequestRedirect,
+			},
+			msg: "two filters, first wins",
+		},
+	}
+
+	for _, test := range tests {
+		result := createFilters(test.filters)
+		if diff := cmp.Diff(test.expected, result); diff != "" {
+			t.Errorf("createFilters() %q mismatch (-want +got):\n%s", test.msg, diff)
 		}
 	}
 }

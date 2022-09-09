@@ -3,6 +3,7 @@ package config
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -117,6 +118,7 @@ func TestGenerate(t *testing.T) {
 			},
 			Rules: []v1beta1.HTTPRouteRule{
 				{
+					// matches with path and methods
 					Matches: []v1beta1.HTTPRouteMatch{
 						{
 							Path: &v1beta1.HTTPPathMatch{
@@ -149,6 +151,7 @@ func TestGenerate(t *testing.T) {
 					},
 				},
 				{
+					// A match with all possible fields set
 					Matches: []v1beta1.HTTPRouteMatch{
 						{
 							Path: &v1beta1.HTTPPathMatch{
@@ -189,6 +192,7 @@ func TestGenerate(t *testing.T) {
 					BackendRefs: nil, // no backend refs will cause warnings
 				},
 				{
+					// A match with just path
 					Matches: []v1beta1.HTTPRouteMatch{
 						{
 							Path: &v1beta1.HTTPPathMatch{
@@ -208,60 +212,31 @@ func TestGenerate(t *testing.T) {
 						},
 					},
 				},
-			},
-		},
-	}
-
-	certPath := "/etc/nginx/secrets/cert"
-
-	httpHost := state.VirtualServer{
-		Hostname: "example.com",
-		PathRules: []state.PathRule{
-			{
-				Path: "/",
-				MatchRules: []state.MatchRule{
-					{
-						MatchIdx: 0,
-						RuleIdx:  0,
-						Source:   hr,
+				{
+					// A match with a redirect with implicit port
+					Matches: []v1beta1.HTTPRouteMatch{
+						{
+							Path: &v1beta1.HTTPPathMatch{
+								Value: helpers.GetStringPointer("/redirect-implicit-port"),
+							},
+						},
 					},
-					{
-						MatchIdx: 1,
-						RuleIdx:  0,
-						Source:   hr,
-					},
-					{
-						MatchIdx: 2,
-						RuleIdx:  0,
-						Source:   hr,
-					},
+					// redirect is set in the corresponding state.MatchRule
 				},
-			},
-			{
-				Path: "/test",
-				MatchRules: []state.MatchRule{
-					{
-						MatchIdx: 0,
-						RuleIdx:  1,
-						Source:   hr,
+				{
+					// A match with a redirect with explicit port
+					Matches: []v1beta1.HTTPRouteMatch{
+						{
+							Path: &v1beta1.HTTPPathMatch{
+								Value: helpers.GetStringPointer("/redirect-explicit-port"),
+							},
+						},
 					},
-				},
-			},
-			{
-				Path: "/path-only",
-				MatchRules: []state.MatchRule{
-					{
-						MatchIdx: 0,
-						RuleIdx:  2,
-						Source:   hr,
-					},
+					// redirect is set in the corresponding state.MatchRule
 				},
 			},
 		},
 	}
-
-	httpsHost := httpHost
-	httpsHost.SSL = &state.SSL{CertificatePath: certPath}
 
 	fakeServiceStore := &statefakes.FakeServiceStore{}
 	fakeServiceStore.ResolveReturns("10.0.0.1", nil)
@@ -288,48 +263,162 @@ func TestGenerate(t *testing.T) {
 		},
 	}
 
-	const backendAddr = "http://10.0.0.1:80"
+	const (
+		backendAddr = "http://10.0.0.1:80"
+		certPath    = "/etc/nginx/secrets/cert"
+		http        = false
+		https       = true
+	)
 
-	expectedHTTPServer := server{
-		ServerName: "example.com",
-		Locations: []location{
-			{
-				Path:      "/_route0",
-				Internal:  true,
-				ProxyPass: backendAddr,
+	getExpectedHost := func(isHTTPS bool) state.VirtualServer {
+		var ssl *state.SSL
+		if isHTTPS {
+			ssl = &state.SSL{CertificatePath: certPath}
+		}
+
+		return state.VirtualServer{
+			Hostname: "example.com",
+			SSL:      ssl,
+			PathRules: []state.PathRule{
+				{
+					Path: "/",
+					MatchRules: []state.MatchRule{
+						{
+							MatchIdx: 0,
+							RuleIdx:  0,
+							Source:   hr,
+						},
+						{
+							MatchIdx: 1,
+							RuleIdx:  0,
+							Source:   hr,
+						},
+						{
+							MatchIdx: 2,
+							RuleIdx:  0,
+							Source:   hr,
+						},
+					},
+				},
+				{
+					Path: "/test",
+					MatchRules: []state.MatchRule{
+						{
+							MatchIdx: 0,
+							RuleIdx:  1,
+							Source:   hr,
+						},
+					},
+				},
+				{
+					Path: "/path-only",
+					MatchRules: []state.MatchRule{
+						{
+							MatchIdx: 0,
+							RuleIdx:  2,
+							Source:   hr,
+						},
+					},
+				},
+				{
+					Path: "/redirect-implicit-port",
+					MatchRules: []state.MatchRule{
+						{
+							MatchIdx: 0,
+							RuleIdx:  3,
+							Source:   hr,
+							Filters: state.Filters{
+								RequestRedirect: &v1beta1.HTTPRequestRedirectFilter{
+									Hostname: (*v1beta1.PreciseHostname)(helpers.GetStringPointer("foo.example.com")),
+								},
+							},
+						},
+					},
+				},
+				{
+					Path: "/redirect-explicit-port",
+					MatchRules: []state.MatchRule{
+						{
+							MatchIdx: 0,
+							RuleIdx:  4,
+							Source:   hr,
+							Filters: state.Filters{
+								RequestRedirect: &v1beta1.HTTPRequestRedirectFilter{
+									Hostname: (*v1beta1.PreciseHostname)(helpers.GetStringPointer("bar.example.com")),
+									Port:     (*v1beta1.PortNumber)(helpers.GetInt32Pointer(8080)),
+								},
+							},
+						},
+					},
+				},
 			},
-			{
-				Path:      "/_route1",
-				Internal:  true,
-				ProxyPass: backendAddr,
-			},
-			{
-				Path:      "/_route2",
-				Internal:  true,
-				ProxyPass: backendAddr,
-			},
-			{
-				Path:         "/",
-				HTTPMatchVar: expectedMatchString(slashMatches),
-			},
-			{
-				Path:      "/test_route0",
-				Internal:  true,
-				ProxyPass: "http://" + nginx502Server,
-			},
-			{
-				Path:         "/test",
-				HTTPMatchVar: expectedMatchString(testMatches),
-			},
-			{
-				Path:      "/path-only",
-				ProxyPass: backendAddr,
-			},
-		},
+		}
 	}
 
-	expectedHTTPSServer := expectedHTTPServer
-	expectedHTTPSServer.SSL = &ssl{Certificate: certPath, CertificateKey: certPath}
+	getExpectedHTTPServer := func(isHTTPS bool) server {
+		var sslCfg *ssl
+		port := 80
+		if isHTTPS {
+			sslCfg = &ssl{
+				Certificate:    certPath,
+				CertificateKey: certPath,
+			}
+			port = 443
+		}
+
+		return server{
+			ServerName: "example.com",
+			SSL:        sslCfg,
+			Locations: []location{
+				{
+					Path:      "/_route0",
+					Internal:  true,
+					ProxyPass: backendAddr,
+				},
+				{
+					Path:      "/_route1",
+					Internal:  true,
+					ProxyPass: backendAddr,
+				},
+				{
+					Path:      "/_route2",
+					Internal:  true,
+					ProxyPass: backendAddr,
+				},
+				{
+					Path:         "/",
+					HTTPMatchVar: expectedMatchString(slashMatches),
+				},
+				{
+					Path:      "/test_route0",
+					Internal:  true,
+					ProxyPass: "http://" + nginx502Server,
+				},
+				{
+					Path:         "/test",
+					HTTPMatchVar: expectedMatchString(testMatches),
+				},
+				{
+					Path:      "/path-only",
+					ProxyPass: backendAddr,
+				},
+				{
+					Path: "/redirect-implicit-port",
+					Return: &returnVal{
+						Code: 302,
+						URL:  fmt.Sprintf("$scheme://foo.example.com:%d$request_uri", port),
+					},
+				},
+				{
+					Path: "/redirect-explicit-port",
+					Return: &returnVal{
+						Code: 302,
+						URL:  "$scheme://bar.example.com:8080$request_uri",
+					},
+				},
+			},
+		}
+	}
 
 	expectedWarnings := Warnings{
 		hr: []string{"empty backend refs"},
@@ -342,15 +431,15 @@ func TestGenerate(t *testing.T) {
 		msg         string
 	}{
 		{
-			host:        httpHost,
+			host:        getExpectedHost(http),
 			expWarnings: expectedWarnings,
-			expResult:   expectedHTTPServer,
+			expResult:   getExpectedHTTPServer(http),
 			msg:         "http server",
 		},
 		{
-			host:        httpsHost,
+			host:        getExpectedHost(https),
 			expWarnings: expectedWarnings,
-			expResult:   expectedHTTPSServer,
+			expResult:   getExpectedHTTPServer(https),
 			msg:         "https server",
 		},
 	}
@@ -359,10 +448,10 @@ func TestGenerate(t *testing.T) {
 		result, warnings := generate(tc.host, fakeServiceStore)
 
 		if diff := cmp.Diff(tc.expResult, result); diff != "" {
-			t.Errorf("generate() mismatch (-want +got):\n%s", diff)
+			t.Errorf("generate() '%s' mismatch (-want +got):\n%s", tc.msg, diff)
 		}
 		if diff := cmp.Diff(tc.expWarnings, warnings); diff != "" {
-			t.Errorf("generate() mismatch on warnings (-want +got):\n%s", diff)
+			t.Errorf("generate() '%s' mismatch on warnings (-want +got):\n%s", tc.msg, diff)
 		}
 	}
 }
@@ -380,6 +469,50 @@ func TestGenerateProxyPass(t *testing.T) {
 	result = generateProxyPass("")
 	if result != expected {
 		t.Errorf("generateProxyPass() returned %s but expected %s", result, expected)
+	}
+}
+
+func TestGenerateReturnValForRedirectFilter(t *testing.T) {
+	const listenerPort = 123
+
+	tests := []struct {
+		filter   *v1beta1.HTTPRequestRedirectFilter
+		expected *returnVal
+		msg      string
+	}{
+		{
+			filter:   nil,
+			expected: nil,
+			msg:      "filter is nil",
+		},
+		{
+			filter: &v1beta1.HTTPRequestRedirectFilter{},
+			expected: &returnVal{
+				Code: statusFound,
+				URL:  "$scheme://$host:123$request_uri",
+			},
+			msg: "all fields are empty",
+		},
+		{
+			filter: &v1beta1.HTTPRequestRedirectFilter{
+				Scheme:     helpers.GetStringPointer("https"),
+				Hostname:   (*v1beta1.PreciseHostname)(helpers.GetStringPointer("foo.example.com")),
+				Port:       (*v1beta1.PortNumber)(helpers.GetInt32Pointer(2022)),
+				StatusCode: helpers.GetIntPointer(101),
+			},
+			expected: &returnVal{
+				Code: 101,
+				URL:  "https://foo.example.com:2022$request_uri",
+			},
+			msg: "all fields are set",
+		},
+	}
+
+	for _, test := range tests {
+		result := generateReturnValForRedirectFilter(test.filter, listenerPort)
+		if diff := cmp.Diff(test.expected, result); diff != "" {
+			t.Errorf("generateReturnValForRedirectFilter() mismatch '%s' (-want +got):\n%s", test.msg, diff)
+		}
 	}
 }
 
@@ -584,12 +717,11 @@ func TestGetBackendAddress(t *testing.T) {
 
 func TestGenerateMatchLocation(t *testing.T) {
 	expected := location{
-		Path:      "/path",
-		Internal:  true,
-		ProxyPass: "http://10.0.0.1:80",
+		Path:     "/path",
+		Internal: true,
 	}
 
-	result := generateMatchLocation("/path", "10.0.0.1:80")
+	result := generateMatchLocation("/path")
 	if result != expected {
 		t.Errorf("generateMatchLocation() returned %v but expected %v", result, expected)
 	}

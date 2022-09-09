@@ -22,6 +22,7 @@ type location struct {
 
 type returnVal struct {
 	Code statusCode
+	URL  string
 }
 
 type ssl struct {
@@ -31,4 +32,7 @@ type ssl struct {
 
 type statusCode int
 
-const statusNotFound statusCode = 404
+const (
+	statusFound    statusCode = 302
+	statusNotFound statusCode = 404
+)

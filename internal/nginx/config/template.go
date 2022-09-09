@@ -41,7 +41,7 @@ server {
 		{{ end }}
 
 		{{ if $l.Return }}
-		return {{ $l.Return.Code }};
+		return {{ $l.Return.Code }} {{ $l.Return.URL }};
 		{{ end }}
 
 		{{ if $l.HTTPMatchVar }}
