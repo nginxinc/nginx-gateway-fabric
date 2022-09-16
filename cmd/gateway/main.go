@@ -12,8 +12,7 @@ import (
 )
 
 const (
-	domain    string = "k8s-gateway.nginx.org"
-	namespace string = "nginx-gateway"
+	domain string = "k8s-gateway.nginx.org"
 )
 
 var (
@@ -26,13 +25,14 @@ var (
 	gatewayCtlrName = flag.String(
 		"gateway-ctlr-name",
 		"",
-		fmt.Sprintf("The name of the Gateway controller. The controller name must be of the form: DOMAIN/NAMESPACE/NAME. The controller's domain is '%s'; the namespace is '%s'", domain, namespace),
+		fmt.Sprintf("The name of the Gateway controller. The controller name must of the form DOMAIN/PATH. The controller's domain is '%s'", domain),
 	)
 
 	gatewayClassName = flag.String(
 		"gatewayclass",
 		"",
-		"The name of the GatewayClass resource. Every NGINX Gateway must have a unique corresponding GatewayClass resource")
+		"The name of the GatewayClass resource. Every NGINX Gateway must have a unique corresponding GatewayClass resource",
+	)
 )
 
 func main() {
@@ -47,7 +47,7 @@ func main() {
 
 	MustValidateArguments(
 		flag.CommandLine,
-		GatewayControllerParam(domain, namespace /* FIXME(f5yacobucci) dynamically set */),
+		GatewayControllerParam(domain),
 		GatewayClassParam(),
 	)
 

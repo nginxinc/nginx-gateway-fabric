@@ -156,7 +156,7 @@ var _ = Describe("Main", func() {
 				return testCase{
 					Flag:             "gateway-ctlr-name",
 					Value:            value,
-					ValidatorContext: GatewayControllerParam("k8s-gateway.nginx.org", "nginx-gateway"),
+					ValidatorContext: GatewayControllerParam("k8s-gateway.nginx.org"),
 					ExpError:         expError,
 				}
 			}
@@ -171,29 +171,32 @@ var _ = Describe("Main", func() {
 				mockFlags = nil
 			})
 
-			It("should parse full gateway-ctlr-name", func() {
-				t := prepareTestCase(
-					"k8s-gateway.nginx.org/nginx-gateway/my-gateway",
-					expectSuccess,
-				)
-				tester(t)
-			}) // should parse full gateway-ctlr-name
-
-			It("should fail with too many path elements", func() {
-				t := prepareTestCase(
-					"k8s-gateway.nginx.org/nginx-gateway/my-gateway/broken",
-					expectError)
-				tester(t)
-			}) // should fail with too many path elements
+			It("should parse valid gateway-ctlr-name", func() {
+				table := []testCase{
+					prepareTestCase(
+						"k8s-gateway.nginx.org/my-gateway",
+						expectSuccess,
+					),
+					prepareTestCase(
+						"k8s-gateway.nginx.org/nginx-gateway/my-gateway",
+						expectSuccess,
+					),
+					prepareTestCase(
+						"k8s-gateway.nginx.org/nginx-gateway/my-gateway/v1",
+						expectSuccess,
+					),
+				}
+				runner(table)
+			}) // should parse valid gateway-ctlr-name
 
 			It("should fail with too few path elements", func() {
 				table := []testCase{
 					prepareTestCase(
-						"nginx-gateway/my-gateway",
+						"k8s-gateway.nginx.org",
 						expectError,
 					),
 					prepareTestCase(
-						"my-gateway",
+						"k8s-gateway.nginx.org/",
 						expectError,
 					),
 				}
@@ -205,7 +208,7 @@ var _ = Describe("Main", func() {
 				table := []testCase{
 					prepareTestCase(
 						// bad domain
-						"invalid-domain/nginx-gateway/my-gateway",
+						"invalid-domain/my-gateway",
 						expectError,
 					),
 					prepareTestCase(
@@ -214,17 +217,8 @@ var _ = Describe("Main", func() {
 						expectError,
 					),
 					prepareTestCase(
-						// bad namespace
-						"k8s-gateway.nginx.org/default/my-gateway",
-						expectError),
-					prepareTestCase(
-						// bad namespace
-						"k8s-gateway.nginx.org//my-gateway",
-						expectError,
-					),
-					prepareTestCase(
 						// bad name
-						"k8s-gateway.nginx.org/default/",
+						"k8s-gateway.nginx.org/",
 						expectError,
 					),
 				}
@@ -266,7 +260,7 @@ var _ = Describe("Main", func() {
 					"$nginx",
 					expectError)
 				tester(t)
-			}) // should fail with invalid name"
+			}) // should fail with invalid name
 		}) // gatewayclass validation
 	}) // CLI argument validation
 }) // end Main

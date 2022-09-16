@@ -4,14 +4,19 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"regexp"
 	"strings"
 
 	flag "github.com/spf13/pflag"
 	"k8s.io/apimachinery/pkg/util/validation"
+
+	// Adding a dummy import here to remind us to check the controllerNameRegex when we update the Gateway API version.
+	_ "sigs.k8s.io/gateway-api/apis/v1beta1"
 )
 
 const (
-	errTmpl = "failed validation - flag: '--%s' reason: '%s'\n"
+	errTmpl             = "failed validation - flag: '--%s' reason: '%s'\n"
+	controllerNameRegex = `^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*\/[A-Za-z0-9\/\-._~%!$&'()*+,;=:]+$`
 )
 
 type (
@@ -22,13 +27,11 @@ type (
 	}
 )
 
-func GatewayControllerParam(domain string, namespace string) ValidatorContext {
+func GatewayControllerParam(domain string) ValidatorContext {
 	name := "gateway-ctlr-name"
 	return ValidatorContext{
 		name,
 		func(flagset *flag.FlagSet) error {
-			// FIXME(f5yacobucci) this does not provide the same regex validation as
-			// GatewayClass.ControllerName. provide equal and then specific validation
 			param, err := flagset.GetString(name)
 			if err != nil {
 				return err
@@ -40,32 +43,26 @@ func GatewayControllerParam(domain string, namespace string) ValidatorContext {
 
 			fields := strings.Split(param, "/")
 			l := len(fields)
-			if l != 3 {
-				return errors.New("unsupported path length, must be form DOMAIN/NAMESPACE/NAME")
+			if l < 2 {
+				return errors.New("invalid format; must be DOMAIN/PATH")
 			}
 
-			for i := len(fields); i > 0; i-- {
-				switch i {
-				case 3:
-					if fields[0] != domain {
-						return fmt.Errorf("invalid domain: %s", fields[0])
-					}
-					fields = fields[1:]
-				case 2:
-					if fields[0] != namespace {
-						return fmt.Errorf("cross namespace unsupported: %s", fields[0])
-					}
-					fields = fields[1:]
-				case 1:
-					if fields[0] == "" {
-						return errors.New("must provide a name")
-					}
-				}
+			if fields[0] != domain {
+				return fmt.Errorf("invalid domain: %s; domain must be: %s", fields[0], domain)
 			}
 
-			return nil
+			return validateControllerName(param)
 		},
 	}
+}
+
+func validateControllerName(name string) error {
+	// Regex from: https://github.com/kubernetes-sigs/gateway-api/blob/547122f7f55ac0464685552898c560658fb40073/apis/v1alpha2/shared_types.go#L462
+	re := regexp.MustCompile(controllerNameRegex)
+	if !re.Match([]byte(name)) {
+		return fmt.Errorf("invalid gateway controller name: %s; expected format is DOMAIN/PATH", name)
+	}
+	return nil
 }
 
 func GatewayClassParam() ValidatorContext {
