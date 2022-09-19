@@ -25,7 +25,7 @@ var (
 	gatewayCtlrName = flag.String(
 		"gateway-ctlr-name",
 		"",
-		fmt.Sprintf("The name of the Gateway controller. The controller name must of the form DOMAIN/PATH. The controller's domain is '%s'", domain),
+		fmt.Sprintf("The name of the Gateway controller. The controller name must be of the form: DOMAIN/PATH. The controller's domain is '%s'", domain),
 	)
 
 	gatewayClassName = flag.String(
