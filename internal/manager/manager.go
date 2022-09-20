@@ -7,6 +7,7 @@ import (
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	ctlr "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -38,9 +39,8 @@ const (
 var scheme = runtime.NewScheme()
 
 func init() {
-	// FIXME(pleshakov): handle errors returned by the calls bellow
-	_ = gatewayv1beta1.AddToScheme(scheme)
-	_ = apiv1.AddToScheme(scheme)
+	utilruntime.Must(gatewayv1beta1.AddToScheme(scheme))
+	utilruntime.Must(apiv1.AddToScheme(scheme))
 }
 
 func Start(cfg config.Config) error {
