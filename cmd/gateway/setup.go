@@ -59,7 +59,7 @@ func GatewayControllerParam(domain string) ValidatorContext {
 func validateControllerName(name string) error {
 	// Regex from: https://github.com/kubernetes-sigs/gateway-api/blob/547122f7f55ac0464685552898c560658fb40073/apis/v1alpha2/shared_types.go#L462
 	re := regexp.MustCompile(controllerNameRegex)
-	if !re.Match([]byte(name)) {
+	if !re.MatchString(name) {
 		return fmt.Errorf("invalid gateway controller name: %s; expected format is DOMAIN/PATH", name)
 	}
 	return nil
