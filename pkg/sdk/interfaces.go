@@ -4,8 +4,6 @@ import (
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
-
-	nginxgwv1alpha1 "github.com/nginxinc/nginx-kubernetes-gateway/pkg/apis/gateway/v1alpha1"
 )
 
 type GatewayClassImpl interface {
@@ -16,11 +14,6 @@ type GatewayClassImpl interface {
 type GatewayImpl interface {
 	Upsert(*v1beta1.Gateway)
 	Remove(types.NamespacedName)
-}
-
-type GatewayConfigImpl interface {
-	Upsert(config *nginxgwv1alpha1.GatewayConfig)
-	Remove(string)
 }
 
 type HTTPRouteImpl interface {

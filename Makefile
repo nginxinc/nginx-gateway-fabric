@@ -44,20 +44,6 @@ clean-go-cache: ## Clean go cache
 deps: ## Add missing and remove unused modules, verify deps and download them to local cache
 	@go mod tidy && go mod verify && go mod download
 
-.PHONY: update-codegen
-update-codegen: ## Update codegen
-	# requires the root folder of the repo to be inside the GOPATH
-	./hack/update-codegen.sh
-
-.PHONY: verify-codegen
-verify-codegen: ## Verify code generation
-	# requires the root folder of the repo to be inside the GOPATH
-	./hack/verify-codegen.sh
-
-.PHONY: update-crds
-update-crds: ## Update CRDs
-	go run sigs.k8s.io/controller-tools/cmd/controller-gen crd:crdVersions=v1 schemapatch:manifests=./deploy/manifests/crds/ paths=./pkg/apis/... output:dir=./deploy/manifests/crds/
-
 .PHONY: create-kind-cluster
 create-kind-cluster: ## Create a kind cluster
 	kind create cluster --image kindest/node:v1.25.0
