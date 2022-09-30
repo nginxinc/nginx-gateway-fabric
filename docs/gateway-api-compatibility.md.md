@@ -87,16 +87,11 @@ Fields:
 	  * `headers` - partially supported. Only `Exact` type.
 	  * `queryParams` - partially supported. Only `Exact` type. 
 	  * `method` -  supported.
-<<<<<<< HEAD
 	* `filters`
 		* `type` - supported.
 		* `requestRedirect` - supported except for the experimental `path` field. If multiple filters with `requestRedirect` are configured, NGINX Kubernetes Gateway will choose the first one and ignore the rest. 
 		* `requestHeaderModifier`, `requestMirror`, `urlRewrite`, `extensionRef` - not supported.
-	* `backendRefs` - partially supported. Only a single backend ref without support for `weight`. Backend ref `filters` are not supported. NGINX Kubernetes Gateway will use the IP of the Service as a backend, not the IPs of the corresponding Pods. Watching for Service updates is not supported.
-=======
-	* `filters` - not supported.
 	* `backendRefs` - partially supported. Only a single backend ref without support for `weight`. Backend ref `filters` are not supported.
->>>>>>> 1697a08... Add support for dynamic upstreams
 * `status`
   * `parents`
 	* `parentRef` - supported.
