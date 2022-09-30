@@ -142,10 +142,7 @@ func TestGenerateForDefaultServers(t *testing.T) {
 
 func TestGenerateHTTPServers(t *testing.T) {
 	const (
-		backendAddr = "http://10.0.0.1:80"
-		certPath    = "/etc/nginx/secrets/cert"
-		http        = false
-		https       = true
+		certPath = "/etc/nginx/secrets/cert"
 	)
 
 	hr := &v1beta1.HTTPRoute{
