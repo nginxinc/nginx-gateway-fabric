@@ -9,5 +9,5 @@ import (
 
 func TestState(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "NewState Suite")
+	RunSpecs(t, "State Suite")
 }

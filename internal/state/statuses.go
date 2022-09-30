@@ -1,6 +1,9 @@
 package state
 
-import "k8s.io/apimachinery/pkg/types"
+import (
+	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+)
 
 // ListenerStatuses holds the statuses of listeners where the key is the name of a listener in the Gateway resource.
 type ListenerStatuses map[string]ListenerStatus
@@ -89,7 +92,7 @@ func buildStatuses(graph *graph) Statuses {
 		}
 
 		statuses.GatewayStatus = &GatewayStatus{
-			NsName:           getNamespacedName(graph.Gateway.Source),
+			NsName:           client.ObjectKeyFromObject(graph.Gateway.Source),
 			ListenerStatuses: listenerStatuses,
 		}
 	}

@@ -2,6 +2,7 @@
 package statefakes
 
 import (
+	"context"
 	"sync"
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state"
@@ -21,9 +22,10 @@ type FakeChangeProcessor struct {
 	captureUpsertChangeArgsForCall []struct {
 		arg1 client.Object
 	}
-	ProcessStub        func() (bool, state.Configuration, state.Statuses)
+	ProcessStub        func(context.Context) (bool, state.Configuration, state.Statuses)
 	processMutex       sync.RWMutex
 	processArgsForCall []struct {
+		arg1 context.Context
 	}
 	processReturns struct {
 		result1 bool
@@ -104,17 +106,18 @@ func (fake *FakeChangeProcessor) CaptureUpsertChangeArgsForCall(i int) client.Ob
 	return argsForCall.arg1
 }
 
-func (fake *FakeChangeProcessor) Process() (bool, state.Configuration, state.Statuses) {
+func (fake *FakeChangeProcessor) Process(arg1 context.Context) (bool, state.Configuration, state.Statuses) {
 	fake.processMutex.Lock()
 	ret, specificReturn := fake.processReturnsOnCall[len(fake.processArgsForCall)]
 	fake.processArgsForCall = append(fake.processArgsForCall, struct {
-	}{})
+		arg1 context.Context
+	}{arg1})
 	stub := fake.ProcessStub
 	fakeReturns := fake.processReturns
-	fake.recordInvocation("Process", []interface{}{})
+	fake.recordInvocation("Process", []interface{}{arg1})
 	fake.processMutex.Unlock()
 	if stub != nil {
-		return stub()
+		return stub(arg1)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2, ret.result3
@@ -128,10 +131,17 @@ func (fake *FakeChangeProcessor) ProcessCallCount() int {
 	return len(fake.processArgsForCall)
 }
 
-func (fake *FakeChangeProcessor) ProcessCalls(stub func() (bool, state.Configuration, state.Statuses)) {
+func (fake *FakeChangeProcessor) ProcessCalls(stub func(context.Context) (bool, state.Configuration, state.Statuses)) {
 	fake.processMutex.Lock()
 	defer fake.processMutex.Unlock()
 	fake.ProcessStub = stub
+}
+
+func (fake *FakeChangeProcessor) ProcessArgsForCall(i int) context.Context {
+	fake.processMutex.RLock()
+	defer fake.processMutex.RUnlock()
+	argsForCall := fake.processArgsForCall[i]
+	return argsForCall.arg1
 }
 
 func (fake *FakeChangeProcessor) ProcessReturns(result1 bool, result2 state.Configuration, result3 state.Statuses) {

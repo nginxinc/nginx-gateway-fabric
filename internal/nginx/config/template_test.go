@@ -5,7 +5,7 @@ import (
 	"text/template"
 )
 
-func TestExecuteForServer(t *testing.T) {
+func TestExecuteForHTTPServers(t *testing.T) {
 	executor := newTemplateExecutor()
 
 	servers := httpServers{
@@ -15,7 +15,7 @@ func TestExecuteForServer(t *testing.T) {
 				Locations: []location{
 					{
 						Path:      "/",
-						ProxyPass: "http://10.0.0.1",
+						ProxyPass: "http://example-upstream",
 					},
 				},
 			},
@@ -26,7 +26,31 @@ func TestExecuteForServer(t *testing.T) {
 	// we only do a sanity check here.
 	// the config generation logic is tested in the Generator tests.
 	if len(cfg) == 0 {
-		t.Error("ExecuteForServer() returned 0-length config")
+		t.Error("ExecuteForHTTPServers() returned 0-length config")
+	}
+}
+
+func TestExecuteForHTTPUpstreams(t *testing.T) {
+	executor := newTemplateExecutor()
+
+	upstreams := httpUpstreams{
+		Upstreams: []upstream{
+			{
+				Name: "example-upstream",
+				Servers: []upstreamServer{
+					{
+						Address: "http://10.0.0.1:80",
+					},
+				},
+			},
+		},
+	}
+
+	cfg := executor.ExecuteForHTTPUpstreams(upstreams)
+	// we only do a sanity check here.
+	// the config generation logic is tested in the Generator tests.
+	if len(cfg) == 0 {
+		t.Error("ExecuteForHTTPUpstreams() returned 0-length config")
 	}
 }
 
@@ -42,11 +66,11 @@ func TestNewTemplateExecutorPanics(t *testing.T) {
 	newTemplateExecutor()
 }
 
-func TestExecuteForServerPanics(t *testing.T) {
+func TestExecuteForHTTPServersPanics(t *testing.T) {
 	defer func() {
 		r := recover()
 		if r == nil {
-			t.Error("ExecuteForServer() didn't panic")
+			t.Error("ExecuteForHTTPServers() didn't panic")
 		}
 	}()
 
@@ -58,4 +82,22 @@ func TestExecuteForServerPanics(t *testing.T) {
 	executor := &templateExecutor{httpServersTemplate: tmpl}
 
 	_ = executor.ExecuteForHTTPServers(httpServers{})
+}
+
+func TestExecuteForHTTPUpstreamsPanics(t *testing.T) {
+	defer func() {
+		r := recover()
+		if r == nil {
+			t.Error("ExecuteForHTTPUpstreams() didn't panic")
+		}
+	}()
+
+	tmpl, err := template.New("test").Parse("{{ .NonExistingField }}")
+	if err != nil {
+		t.Fatalf("Failed to parse template: %v", err)
+	}
+
+	executor := &templateExecutor{httpUpstreamsTemplate: tmpl}
+
+	_ = executor.ExecuteForHTTPUpstreams(httpUpstreams{})
 }

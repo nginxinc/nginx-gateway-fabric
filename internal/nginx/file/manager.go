@@ -12,10 +12,10 @@ const confdFolder = "/etc/nginx/conf.d"
 
 // Manager manages NGINX configuration files.
 type Manager interface {
-	// WriteHTTPServersConfig writes the http servers config on the file system.
+	// WriteHTTPConfig writes the http config on the file system.
 	// The name distinguishes this config among all other configs. For that, it must be unique.
 	// Note that name is not the name of the corresponding configuration file.
-	WriteHTTPServersConfig(name string, cfg []byte) error
+	WriteHTTPConfig(name string, cfg []byte) error
 }
 
 // ManagerImpl is an implementation of Manager.
@@ -26,8 +26,8 @@ func NewManagerImpl() *ManagerImpl {
 	return &ManagerImpl{}
 }
 
-func (m *ManagerImpl) WriteHTTPServersConfig(name string, cfg []byte) error {
-	path := getPathForServerConfig(name)
+func (m *ManagerImpl) WriteHTTPConfig(name string, cfg []byte) error {
+	path := getPathForConfig(name)
 
 	file, err := os.Create(path)
 	if err != nil {
@@ -44,6 +44,6 @@ func (m *ManagerImpl) WriteHTTPServersConfig(name string, cfg []byte) error {
 	return nil
 }
 
-func getPathForServerConfig(name string) string {
+func getPathForConfig(name string) string {
 	return filepath.Join(confdFolder, name+".conf")
 }

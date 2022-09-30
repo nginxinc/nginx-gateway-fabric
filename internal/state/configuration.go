@@ -5,6 +5,8 @@ import (
 	"sort"
 
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
+
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/resolver"
 )
 
 const wildcardHostname = "~^"
@@ -19,6 +21,8 @@ type Configuration struct {
 	// SSLServers holds all SSLServers.
 	// FIXME(kate-osborn) We assume that all SSL servers listen on port 443.
 	SSLServers []VirtualServer
+	// Upstreams holds all Upstreams.
+	Upstreams []Upstream
 }
 
 // VirtualServer is a virtual server.
@@ -29,6 +33,13 @@ type VirtualServer struct {
 	PathRules []PathRule
 	// SSL holds the SSL configuration options fo the server.
 	SSL *SSL
+}
+
+type Upstream struct {
+	// Name is the name of the Upstream. Will be unique for each service/port combination.
+	Name string
+	// Endpoints are the endpoints of the Upstream.
+	Endpoints []resolver.Endpoint
 }
 
 type SSL struct {
@@ -57,6 +68,8 @@ type MatchRule struct {
 	MatchIdx int
 	// RuleIdx is the index of the corresponding rule in the HTTPRoute.
 	RuleIdx int
+	// UpstreamName is the name of the upstream for this routing rule.
+	UpstreamName string
 	// Source is the corresponding HTTPRoute resource.
 	// FIXME(pleshakov): Consider referencing only the parts neeeded for the config generation rather than
 	// the entire resource.
@@ -81,67 +94,54 @@ func buildConfiguration(graph *graph) Configuration {
 		return Configuration{}
 	}
 
-	configBuilder := newConfigBuilder()
+	upstreams := buildUpstreams(graph.Backends)
+	httpServers, sslServers := buildServers(graph.Gateway.Listeners)
 
-	for _, l := range graph.Gateway.Listeners {
-		// only upsert listeners that are valid
+	config := Configuration{
+		HTTPServers: httpServers,
+		SSLServers:  sslServers,
+		Upstreams:   upstreams,
+	}
+
+	return config
+}
+
+func buildServers(listeners map[string]*listener) (http, ssl []VirtualServer) {
+	rulesForProtocol := map[v1beta1.ProtocolType]*hostPathRules{
+		v1beta1.HTTPProtocolType:  newHostPathRules(),
+		v1beta1.HTTPSProtocolType: newHostPathRules(),
+	}
+
+	for _, l := range listeners {
 		if l.Valid {
-			configBuilder.upsertListener(l)
+			rules := rulesForProtocol[l.Source.Protocol]
+			rules.upsertListener(l)
 		}
 	}
 
-	return configBuilder.build()
+	httpRules := rulesForProtocol[v1beta1.HTTPProtocolType]
+	sslRules := rulesForProtocol[v1beta1.HTTPSProtocolType]
+
+	return httpRules.buildServers(), sslRules.buildServers()
 }
 
-type configBuilder struct {
-	http *virtualServerBuilder
-	ssl  *virtualServerBuilder
-}
-
-func newConfigBuilder() *configBuilder {
-	return &configBuilder{
-		http: newVirtualServerBuilder(v1beta1.HTTPProtocolType),
-		ssl:  newVirtualServerBuilder(v1beta1.HTTPSProtocolType),
-	}
-}
-
-func (b *configBuilder) upsertListener(l *listener) {
-	switch l.Source.Protocol {
-	case v1beta1.HTTPProtocolType:
-		b.http.upsertListener(l)
-	case v1beta1.HTTPSProtocolType:
-		b.ssl.upsertListener(l)
-	default:
-		panic(fmt.Sprintf("listener protocol %s not supported", l.Source.Protocol))
-	}
-}
-
-func (b *configBuilder) build() Configuration {
-	return Configuration{
-		HTTPServers: b.http.build(),
-		SSLServers:  b.ssl.build(),
-	}
-}
-
-type virtualServerBuilder struct {
-	protocolType     v1beta1.ProtocolType
+type hostPathRules struct {
 	rulesPerHost     map[string]map[string]PathRule
 	listenersForHost map[string]*listener
 	listeners        []*listener
 }
 
-func newVirtualServerBuilder(protocolType v1beta1.ProtocolType) *virtualServerBuilder {
-	return &virtualServerBuilder{
-		protocolType:     protocolType,
+func newHostPathRules() *hostPathRules {
+	return &hostPathRules{
 		rulesPerHost:     make(map[string]map[string]PathRule),
 		listenersForHost: make(map[string]*listener),
 		listeners:        make([]*listener, 0),
 	}
 }
 
-func (b *virtualServerBuilder) upsertListener(l *listener) {
-	if b.protocolType == v1beta1.HTTPSProtocolType {
-		b.listeners = append(b.listeners, l)
+func (hpr *hostPathRules) upsertListener(l *listener) {
+	if l.Source.Protocol == v1beta1.HTTPSProtocolType {
+		hpr.listeners = append(hpr.listeners, l)
 	}
 
 	for _, r := range l.Routes {
@@ -154,10 +154,10 @@ func (b *virtualServerBuilder) upsertListener(l *listener) {
 		}
 
 		for _, h := range hostnames {
-			b.listenersForHost[h] = l
+			hpr.listenersForHost[h] = l
 
-			if _, exist := b.rulesPerHost[h]; !exist {
-				b.rulesPerHost[h] = make(map[string]PathRule)
+			if _, exist := hpr.rulesPerHost[h]; !exist {
+				hpr.rulesPerHost[h] = make(map[string]PathRule)
 			}
 		}
 
@@ -168,35 +168,36 @@ func (b *virtualServerBuilder) upsertListener(l *listener) {
 				for j, m := range rule.Matches {
 					path := getPath(m.Path)
 
-					rule, exist := b.rulesPerHost[h][path]
+					rule, exist := hpr.rulesPerHost[h][path]
 					if !exist {
 						rule.Path = path
 					}
 
 					rule.MatchRules = append(rule.MatchRules, MatchRule{
-						MatchIdx: j,
-						RuleIdx:  i,
-						Source:   r.Source,
-						Filters:  filters,
+						MatchIdx:     j,
+						RuleIdx:      i,
+						UpstreamName: generateUpstreamName(r.BackendServices[ruleIndex(i)]),
+						Source:       r.Source,
+						Filters:      filters,
 					})
 
-					b.rulesPerHost[h][path] = rule
+					hpr.rulesPerHost[h][path] = rule
 				}
 			}
 		}
 	}
 }
 
-func (b *virtualServerBuilder) build() []VirtualServer {
-	servers := make([]VirtualServer, 0, len(b.rulesPerHost)+len(b.listeners))
+func (hpr *hostPathRules) buildServers() []VirtualServer {
+	servers := make([]VirtualServer, 0, len(hpr.rulesPerHost)+len(hpr.listeners))
 
-	for h, rules := range b.rulesPerHost {
+	for h, rules := range hpr.rulesPerHost {
 		s := VirtualServer{
 			Hostname:  h,
 			PathRules: make([]PathRule, 0, len(rules)),
 		}
 
-		l, ok := b.listenersForHost[h]
+		l, ok := hpr.listenersForHost[h]
 		if !ok {
 			panic(fmt.Sprintf("no listener found for hostname: %s", h))
 		}
@@ -219,15 +220,20 @@ func (b *virtualServerBuilder) build() []VirtualServer {
 		servers = append(servers, s)
 	}
 
-	for _, l := range b.listeners {
+	for _, l := range hpr.listeners {
 		hostname := getListenerHostname(l.Source.Hostname)
 		// generate a 404 ssl server block for listeners with no routes or listeners with wildcard (match-all) routes
 		// FIXME(kate-osborn): when we support regex hostnames (e.g. *.example.com) we will have to modify this check to catch regex hostnames.
 		if len(l.Routes) == 0 || hostname == wildcardHostname {
-			servers = append(servers, VirtualServer{
+			s := VirtualServer{
 				Hostname: hostname,
-				SSL:      &SSL{CertificatePath: l.SecretPath},
-			})
+			}
+
+			if l.SecretPath != "" {
+				s.SSL = &SSL{CertificatePath: l.SecretPath}
+			}
+
+			servers = append(servers, s)
 		}
 	}
 
