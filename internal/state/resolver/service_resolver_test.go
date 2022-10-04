@@ -90,6 +90,7 @@ var _ = Describe("ServiceResolver", func() {
 		addresses2        = []string{"10.0.0.1", "10.0.0.2", "10.0.0.3"}
 		ipv6Addresses     = []string{"FE80:CD00:0:CDE:1257:0:211E:729C"}
 		diffPortAddresses = []string{"11.0.0.1", "11.0.0.2"}
+		dupeAddresses     = []string{"9.0.0.1", "12.0.0.1", "9.0.0.2"}
 
 		svc = &v1.Service{
 			ObjectMeta: metav1.ObjectMeta{
@@ -135,6 +136,16 @@ var _ = Describe("ServiceResolver", func() {
 			httpPortName,
 			discoveryV1.AddressTypeIPv4,
 		)
+		// contains some duplicate endpoints as slice1.
+		// only unique endpoints should be returned.
+		dupeEndpointSlice = createSlice(
+			"svc-dupe-endpoints",
+			dupeAddresses,
+			8080,
+			httpPortName,
+			discoveryV1.AddressTypeIPv4,
+		)
+
 		sliceIPV6 = createSlice(
 			"svc-ipv6",
 			ipv6Addresses,
@@ -160,7 +171,13 @@ var _ = Describe("ServiceResolver", func() {
 			var err error
 			// The fake K8s client does not honor the Service Name Index Field,
 			// so it will return all the EndpointSlices regardless of the Service Name.
-			fakeK8sClient, err = createFakeK8sClient(slice1, slice2, sliceIPV6, sliceNoMatchingPortName)
+			fakeK8sClient, err = createFakeK8sClient(
+				slice1,
+				slice2,
+				dupeEndpointSlice,
+				sliceIPV6,
+				sliceNoMatchingPortName,
+			)
 			Expect(err).ToNot(HaveOccurred())
 
 			serviceResolver = resolver.NewServiceResolverImpl(fakeK8sClient)
@@ -187,6 +204,10 @@ var _ = Describe("ServiceResolver", func() {
 					Address: "10.0.0.3",
 					Port:    8081,
 				},
+				{
+					Address: "12.0.0.1",
+					Port:    8080,
+				},
 			}
 
 			endpoints, err := serviceResolver.Resolve(context.TODO(), svc, 80)
@@ -202,6 +223,7 @@ var _ = Describe("ServiceResolver", func() {
 			// delete valid endpoint slices
 			Expect(fakeK8sClient.Delete(context.TODO(), slice1)).To(Succeed())
 			Expect(fakeK8sClient.Delete(context.TODO(), slice2)).To(Succeed())
+			Expect(fakeK8sClient.Delete(context.TODO(), dupeEndpointSlice)).To(Succeed())
 
 			endpoints, err := serviceResolver.Resolve(context.TODO(), svc, 80)
 			Expect(err).To(HaveOccurred())

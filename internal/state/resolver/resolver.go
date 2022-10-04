@@ -73,14 +73,15 @@ func resolveEndpoints(
 	}
 
 	filteredSlices := filterEndpointSliceList(endpointSliceList, svcPort)
-	capacity := calculateEndpointSliceCapacity(filteredSlices)
 
-	if capacity == 0 {
+	if len(filteredSlices) == 0 {
 		svcNsName := client.ObjectKeyFromObject(svc)
 		return nil, fmt.Errorf("no valid endpoints found for Service %s and port %+v", svcNsName, svcPort)
 	}
 
-	endpoints := make([]Endpoint, 0, capacity)
+	// Endpoints may be duplicated across multiple EndpointSlices.
+	// Using a set to prevent returning duplicate endpoints.
+	endpointSet := make(map[Endpoint]struct{})
 
 	for _, eps := range filteredSlices {
 		for _, endpoint := range eps.Endpoints {
@@ -95,9 +96,14 @@ func resolveEndpoints(
 
 			for _, address := range endpoint.Addresses {
 				ep := Endpoint{Address: address, Port: endpointPort}
-				endpoints = append(endpoints, ep)
+				endpointSet[ep] = struct{}{}
 			}
 		}
+	}
+
+	endpoints := make([]Endpoint, 0, len(endpointSet))
+	for ep := range endpointSet {
+		endpoints = append(endpoints, ep)
 	}
 
 	return endpoints, nil
@@ -135,19 +141,6 @@ func ignoreEndpointSlice(endpointSlice discoveryV1.EndpointSlice, port v1.Servic
 
 	// ignore endpoint slices that don't have a matching port.
 	return findPort(endpointSlice.Ports, port) == 0
-}
-
-func calculateEndpointSliceCapacity(endpointSlices []discoveryV1.EndpointSlice) (capacity int) {
-	for _, es := range endpointSlices {
-		for _, e := range es.Endpoints {
-			if !endpointReady(e) {
-				continue
-			}
-			capacity += len(e.Addresses)
-		}
-	}
-
-	return
 }
 
 func endpointReady(endpoint discoveryV1.Endpoint) bool {
