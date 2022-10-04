@@ -26,20 +26,6 @@ var (
 		Conditions: discoveryV1.EndpointConditions{Ready: helpers.GetBoolPointer(false)},
 	}
 
-	notReadyEndpointSlice = discoveryV1.EndpointSlice{
-		AddressType: discoveryV1.AddressTypeIPv4,
-		Endpoints: []discoveryV1.Endpoint{
-			notReadyEndpoint,
-			notReadyEndpoint,
-		}, // in reality these endpoints would be different but for this test it doesn't matter
-		Ports: []discoveryV1.EndpointPort{
-			{
-				Name: &svcPortName,
-				Port: helpers.GetInt32Pointer(80),
-			},
-		},
-	}
-
 	mixedValidityEndpointSlice = discoveryV1.EndpointSlice{
 		AddressType: discoveryV1.AddressTypeIPv4,
 		Endpoints:   []discoveryV1.Endpoint{readyEndpoint1, notReadyEndpoint, readyEndpoint1}, // 6 valid endpoints
@@ -154,45 +140,6 @@ func TestGetServicePort(t *testing.T) {
 	}
 	if port.Port != 0 {
 		t.Errorf("getServicePort() returned the wrong port for port 83; expected 0, got %d", port.Port)
-	}
-}
-
-func TestCalculateEndpointSliceCapacity(t *testing.T) {
-	testcases := []struct {
-		msg            string
-		endpointSlices []discoveryV1.EndpointSlice
-		targetPort     int32
-		expCapacity    int
-	}{
-		{
-			msg: "EndpointSlices with no ready endpoints",
-			endpointSlices: []discoveryV1.EndpointSlice{
-				notReadyEndpointSlice,
-				notReadyEndpointSlice,
-			},
-			expCapacity: 0,
-		},
-		{
-			msg: "EndpointSlices with some ready endpoints",
-			endpointSlices: []discoveryV1.EndpointSlice{
-				mixedValidityEndpointSlice,
-				mixedValidityEndpointSlice,
-				mixedValidityEndpointSlice,
-			},
-			expCapacity: 18,
-		},
-		{
-			msg:            "Empty EndpointSlice array",
-			endpointSlices: []discoveryV1.EndpointSlice{},
-			expCapacity:    0,
-		},
-	}
-
-	for _, tc := range testcases {
-		capacity := calculateEndpointSliceCapacity(tc.endpointSlices)
-		if capacity != tc.expCapacity {
-			t.Errorf("calculateEndpointSliceCapacity() mismatch for %q; expected %d, got %d", tc.msg, capacity, tc.expCapacity)
-		}
 	}
 }
 
