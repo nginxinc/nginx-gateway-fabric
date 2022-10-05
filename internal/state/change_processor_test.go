@@ -31,8 +31,9 @@ const (
 func createRoute(name string, gateway string, hostname string, backendRefs ...v1beta1.HTTPBackendRef) *v1beta1.HTTPRoute {
 	return &v1beta1.HTTPRoute{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: "test",
-			Name:      name,
+			Namespace:  "test",
+			Name:       name,
+			Generation: 1,
 		},
 		Spec: v1beta1.HTTPRouteSpec{
 			CommonRouteSpec: v1beta1.CommonRouteSpec{
@@ -247,6 +248,7 @@ var _ = Describe("ChangeProcessor", func() {
 						IgnoredGatewayStatuses: map[types.NamespacedName]state.IgnoredGatewayStatus{},
 						HTTPRouteStatuses: map[types.NamespacedName]state.HTTPRouteStatus{
 							{Namespace: "test", Name: "hr-1"}: {
+								ObservedGeneration: hr1.Generation,
 								ParentStatuses: map[string]state.ParentStatus{
 									"listener-80-1":  {Attached: false},
 									"listener-443-1": {Attached: false},
@@ -331,6 +333,7 @@ var _ = Describe("ChangeProcessor", func() {
 					IgnoredGatewayStatuses: map[types.NamespacedName]state.IgnoredGatewayStatus{},
 					HTTPRouteStatuses: map[types.NamespacedName]state.HTTPRouteStatus{
 						{Namespace: "test", Name: "hr-1"}: {
+							ObservedGeneration: hr1.Generation,
 							ParentStatuses: map[string]state.ParentStatus{
 								"listener-80-1":  {Attached: true},
 								"listener-443-1": {Attached: true},
@@ -424,6 +427,7 @@ var _ = Describe("ChangeProcessor", func() {
 					IgnoredGatewayStatuses: map[types.NamespacedName]state.IgnoredGatewayStatus{},
 					HTTPRouteStatuses: map[types.NamespacedName]state.HTTPRouteStatus{
 						{Namespace: "test", Name: "hr-1"}: {
+							ObservedGeneration: hr1Updated.Generation,
 							ParentStatuses: map[string]state.ParentStatus{
 								"listener-80-1":  {Attached: true},
 								"listener-443-1": {Attached: true},
@@ -517,6 +521,7 @@ var _ = Describe("ChangeProcessor", func() {
 					IgnoredGatewayStatuses: map[types.NamespacedName]state.IgnoredGatewayStatus{},
 					HTTPRouteStatuses: map[types.NamespacedName]state.HTTPRouteStatus{
 						{Namespace: "test", Name: "hr-1"}: {
+							ObservedGeneration: hr1Updated.Generation,
 							ParentStatuses: map[string]state.ParentStatus{
 								"listener-80-1":  {Attached: true},
 								"listener-443-1": {Attached: true},
@@ -610,6 +615,7 @@ var _ = Describe("ChangeProcessor", func() {
 					IgnoredGatewayStatuses: map[types.NamespacedName]state.IgnoredGatewayStatus{},
 					HTTPRouteStatuses: map[types.NamespacedName]state.HTTPRouteStatus{
 						{Namespace: "test", Name: "hr-1"}: {
+							ObservedGeneration: hr1Updated.Generation,
 							ParentStatuses: map[string]state.ParentStatus{
 								"listener-80-1":  {Attached: true},
 								"listener-443-1": {Attached: true},
@@ -706,6 +712,7 @@ var _ = Describe("ChangeProcessor", func() {
 					},
 					HTTPRouteStatuses: map[types.NamespacedName]state.HTTPRouteStatus{
 						{Namespace: "test", Name: "hr-1"}: {
+							ObservedGeneration: hr1Updated.Generation,
 							ParentStatuses: map[string]state.ParentStatus{
 								"listener-80-1":  {Attached: true},
 								"listener-443-1": {Attached: true},
@@ -792,12 +799,14 @@ var _ = Describe("ChangeProcessor", func() {
 					},
 					HTTPRouteStatuses: map[types.NamespacedName]state.HTTPRouteStatus{
 						{Namespace: "test", Name: "hr-1"}: {
+							ObservedGeneration: hr1Updated.Generation,
 							ParentStatuses: map[string]state.ParentStatus{
 								"listener-80-1":  {Attached: true},
 								"listener-443-1": {Attached: true},
 							},
 						},
 						{Namespace: "test", Name: "hr-2"}: {
+							ObservedGeneration: hr2.Generation,
 							ParentStatuses: map[string]state.ParentStatus{
 								"listener-80-1":  {Attached: false},
 								"listener-443-1": {Attached: false},
@@ -880,6 +889,7 @@ var _ = Describe("ChangeProcessor", func() {
 					IgnoredGatewayStatuses: map[types.NamespacedName]state.IgnoredGatewayStatus{},
 					HTTPRouteStatuses: map[types.NamespacedName]state.HTTPRouteStatus{
 						{Namespace: "test", Name: "hr-2"}: {
+							ObservedGeneration: hr2.Generation,
 							ParentStatuses: map[string]state.ParentStatus{
 								"listener-80-1":  {Attached: true},
 								"listener-443-1": {Attached: true},

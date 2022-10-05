@@ -44,7 +44,11 @@ type ListenerStatus struct {
 // ParentStatuses holds the statuses of parents where the key is the section name in a parentRef.
 type ParentStatuses map[string]ParentStatus
 
+// HTTPRouteStatus holds the status-related information about an HTTPRoute resource.
 type HTTPRouteStatus struct {
+	// ObservedGeneration is the generation of the resource that was processed.
+	ObservedGeneration int64
+	// ParentStatuses holds the statuses for parentRefs of the HTTPRoute.
 	ParentStatuses ParentStatuses
 }
 
@@ -116,7 +120,8 @@ func buildStatuses(graph *graph) Statuses {
 		}
 
 		statuses.HTTPRouteStatuses[nsname] = HTTPRouteStatus{
-			ParentStatuses: parentStatuses,
+			ObservedGeneration: r.Source.Generation,
+			ParentStatuses:     parentStatuses,
 		}
 	}
 

@@ -15,6 +15,7 @@ import (
 
 func TestPrepareHTTPRouteStatus(t *testing.T) {
 	status := state.HTTPRouteStatus{
+		ObservedGeneration: 1,
 		ParentStatuses: map[string]state.ParentStatus{
 			"attached": {
 				Attached: true,
@@ -44,7 +45,7 @@ func TestPrepareHTTPRouteStatus(t *testing.T) {
 						{
 							Type:               string(v1beta1.RouteConditionAccepted),
 							Status:             metav1.ConditionTrue,
-							ObservedGeneration: 123,
+							ObservedGeneration: 1,
 							LastTransitionTime: transitionTime,
 							Reason:             "Accepted",
 						},
@@ -61,7 +62,7 @@ func TestPrepareHTTPRouteStatus(t *testing.T) {
 						{
 							Type:               string(v1beta1.RouteConditionAccepted),
 							Status:             metav1.ConditionFalse,
-							ObservedGeneration: 123,
+							ObservedGeneration: 1,
 							LastTransitionTime: transitionTime,
 							Reason:             "NotAttached",
 						},
