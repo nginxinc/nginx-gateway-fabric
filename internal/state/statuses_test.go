@@ -21,6 +21,11 @@ func TestBuildStatuses(t *testing.T) {
 
 	routes := map[types.NamespacedName]*route{
 		{Namespace: "test", Name: "hr-1"}: {
+			Source: &v1beta1.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Generation: 3,
+				},
+			},
 			ValidSectionNameRefs: map[string]struct{}{
 				"listener-80-1": {},
 			},
@@ -32,6 +37,11 @@ func TestBuildStatuses(t *testing.T) {
 
 	routesAllRefsInvalid := map[types.NamespacedName]*route{
 		{Namespace: "test", Name: "hr-1"}: {
+			Source: &v1beta1.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Generation: 4,
+				},
+			},
 			InvalidSectionNameRefs: map[string]struct{}{
 				"listener-80-2": {},
 				"listener-80-1": {},
@@ -95,6 +105,7 @@ func TestBuildStatuses(t *testing.T) {
 				},
 				HTTPRouteStatuses: map[types.NamespacedName]HTTPRouteStatus{
 					{Namespace: "test", Name: "hr-1"}: {
+						ObservedGeneration: 3,
 						ParentStatuses: map[string]ParentStatus{
 							"listener-80-1": {
 								Attached: true,
@@ -136,6 +147,7 @@ func TestBuildStatuses(t *testing.T) {
 				},
 				HTTPRouteStatuses: map[types.NamespacedName]HTTPRouteStatus{
 					{Namespace: "test", Name: "hr-1"}: {
+						ObservedGeneration: 3,
 						ParentStatuses: map[string]ParentStatus{
 							"listener-80-1": {
 								Attached: false,
@@ -187,6 +199,7 @@ func TestBuildStatuses(t *testing.T) {
 				},
 				HTTPRouteStatuses: map[types.NamespacedName]HTTPRouteStatus{
 					{Namespace: "test", Name: "hr-1"}: {
+						ObservedGeneration: 3,
 						ParentStatuses: map[string]ParentStatus{
 							"listener-80-1": {
 								Attached: false,
@@ -221,6 +234,7 @@ func TestBuildStatuses(t *testing.T) {
 				IgnoredGatewayStatuses: map[types.NamespacedName]IgnoredGatewayStatus{},
 				HTTPRouteStatuses: map[types.NamespacedName]HTTPRouteStatus{
 					{Namespace: "test", Name: "hr-1"}: {
+						ObservedGeneration: 4,
 						ParentStatuses: map[string]ParentStatus{
 							"listener-80-1": {
 								Attached: false,

@@ -33,15 +33,15 @@ func prepareHTTPRouteStatus(
 		ps := status.ParentStatuses[name]
 
 		var (
-			status metav1.ConditionStatus
-			reason string // FIXME(pleshakov) use RouteConditionReason once we upgrade to v1beta1
+			conditionStatus metav1.ConditionStatus
+			reason          string // FIXME(pleshakov) use RouteConditionReason once we upgrade to v1beta1
 		)
 
 		if ps.Attached {
-			status = metav1.ConditionTrue
+			conditionStatus = metav1.ConditionTrue
 			reason = "Accepted" // FIXME(pleshakov): use RouteReasonAccepted once we upgrade to v1beta1
 		} else {
-			status = metav1.ConditionFalse
+			conditionStatus = metav1.ConditionFalse
 			reason = "NotAttached" // FIXME(pleshakov): use a more specific message from the defined constants (available in v1beta1)
 		}
 
@@ -56,10 +56,9 @@ func prepareHTTPRouteStatus(
 			ControllerName: v1beta1.GatewayController(gatewayCtlrName),
 			Conditions: []metav1.Condition{
 				{
-					Type:   string(v1beta1.RouteConditionAccepted),
-					Status: status,
-					// FIXME(pleshakov) Set the observed generation to the last processed generation of the HTTPRoute resource.
-					ObservedGeneration: 123,
+					Type:               string(v1beta1.RouteConditionAccepted),
+					Status:             conditionStatus,
+					ObservedGeneration: status.ObservedGeneration,
 					LastTransitionTime: transitionTime,
 					Reason:             reason,
 					Message:            "", // FIXME(pleshakov): Figure out a good message

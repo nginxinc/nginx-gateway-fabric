@@ -92,6 +92,7 @@ var _ = Describe("Updater", func() {
 					},
 					HTTPRouteStatuses: map[types.NamespacedName]state.HTTPRouteStatus{
 						{Namespace: "test", Name: "route1"}: {
+							ObservedGeneration: 5,
 							ParentStatuses: map[string]state.ParentStatus{
 								"http": {
 									Attached: valid,
@@ -210,7 +211,7 @@ var _ = Describe("Updater", func() {
 										{
 											Type:               string(gatewayv1beta1.RouteConditionAccepted),
 											Status:             metav1.ConditionTrue,
-											ObservedGeneration: 123,
+											ObservedGeneration: 5,
 											LastTransitionTime: fakeClockTime,
 											Reason:             "Accepted",
 										},
