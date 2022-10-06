@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"k8s.io/apimachinery/pkg/types"
 	ctlr "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -73,13 +72,4 @@ func addIndex(ctx context.Context, indexer client.FieldIndexer, objectType clien
 	}
 
 	return nil
-}
-
-func createFilterForGatewayClass(gcName string) reconciler.NamespacedNameFilterFunc {
-	return func(nsname types.NamespacedName) (bool, string) {
-		if nsname.Name != gcName {
-			return false, fmt.Sprintf("GatewayClass is ignored because this controller only supports the GatewayClass %s", gcName)
-		}
-		return true, ""
-	}
 }

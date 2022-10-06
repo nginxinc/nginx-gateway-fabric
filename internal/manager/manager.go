@@ -17,6 +17,7 @@ import (
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/config"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/events"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/manager/filter"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/manager/index"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/manager/predicate"
 	ngxcfg "github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/config"
@@ -65,7 +66,7 @@ func Start(cfg config.Config) error {
 	controllerConfigs := []controllerConfig{
 		{
 			objectType:           &gatewayv1beta1.GatewayClass{},
-			namespacedNameFilter: createFilterForGatewayClass(cfg.GatewayClassName),
+			namespacedNameFilter: filter.CreateFilterForGatewayClass(cfg.GatewayClassName),
 		},
 		{
 			objectType: &gatewayv1beta1.Gateway{},

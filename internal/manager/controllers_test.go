@@ -7,60 +7,18 @@ import (
 	"testing"
 
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/manager/filter"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/manager/index"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/manager/managerfakes"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/manager/predicate"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/reconciler"
 )
-
-func TestCreateFilterForGatewayClass(t *testing.T) {
-	const gcName = "my-gc"
-
-	filter := createFilterForGatewayClass(gcName)
-	if filter == nil {
-		t.Fatal("createFilterForGatewayClass() returned nil")
-	}
-
-	tests := []struct {
-		nsname   types.NamespacedName
-		expected bool
-	}{
-		{
-			nsname:   types.NamespacedName{Name: gcName},
-			expected: true,
-		},
-		{
-			nsname:   types.NamespacedName{Name: gcName, Namespace: "doesn't matter"},
-			expected: true,
-		},
-		{
-			nsname:   types.NamespacedName{Name: "some-gc"},
-			expected: false,
-		},
-	}
-
-	for _, test := range tests {
-		result, msg := filter(test.nsname)
-
-		if result != test.expected {
-			t.Errorf("filter(%#v) returned %v but expected %v", test.nsname, result, test.expected)
-		}
-
-		if result && msg != "" {
-			t.Errorf("filter(%#v) returned a non-empty message %q", test.nsname, msg)
-		}
-		if !result && msg == "" {
-			t.Errorf("filter(%#v) returned an empty message", test.nsname)
-		}
-	}
-}
 
 func TestRegisterController(t *testing.T) {
 	defer func() {
@@ -126,7 +84,7 @@ func TestRegisterController(t *testing.T) {
 
 	cfg := controllerConfig{
 		objectType:           &v1beta1.HTTPRoute{},
-		namespacedNameFilter: createFilterForGatewayClass("test"),
+		namespacedNameFilter: filter.CreateFilterForGatewayClass("test"),
 		k8sEventFilter:       predicate.ServicePortsChangedPredicate{},
 		fieldIndexes: map[string]client.IndexerFunc{
 			index.KubernetesServiceNameIndexField: index.ServiceNameIndexFunc,
