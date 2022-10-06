@@ -36,7 +36,7 @@ func registerController(
 	cfg controllerConfig,
 ) error {
 	for field, indexerFunc := range cfg.fieldIndexes {
-		err := prepareIndex(ctx, mgr.GetFieldIndexer(), cfg.objectType, field, indexerFunc)
+		err := addIndex(ctx, mgr.GetFieldIndexer(), cfg.objectType, field, indexerFunc)
 		if err != nil {
 			return fmt.Errorf("failed to add index when registering a controller for %T: %w", cfg.objectType, err)
 		}
@@ -63,7 +63,7 @@ func registerController(
 	return nil
 }
 
-func prepareIndex(ctx context.Context, indexer client.FieldIndexer, objectType client.Object, field string, indexerFunc client.IndexerFunc) error {
+func addIndex(ctx context.Context, indexer client.FieldIndexer, objectType client.Object, field string, indexerFunc client.IndexerFunc) error {
 	c, cancel := context.WithTimeout(ctx, addIndexFieldTimeout)
 	defer cancel()
 
