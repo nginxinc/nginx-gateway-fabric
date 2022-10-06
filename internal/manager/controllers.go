@@ -38,7 +38,7 @@ func registerController(
 	for field, indexerFunc := range cfg.fieldIndexes {
 		err := addIndex(ctx, mgr.GetFieldIndexer(), cfg.objectType, field, indexerFunc)
 		if err != nil {
-			return fmt.Errorf("failed to add index when registering a controller for %T: %w", cfg.objectType, err)
+			return err
 		}
 	}
 
