@@ -75,15 +75,15 @@ func Start(cfg config.Config) error {
 			objectType: &gatewayv1beta1.HTTPRoute{},
 		},
 		{
-			objectType:     &apiv1.Service{},
-			k8sEventFilter: predicate.ServicePortsChangedPredicate{},
+			objectType:   &apiv1.Service{},
+			k8sPredicate: predicate.ServicePortsChangedPredicate{},
 		},
 		{
 			objectType: &apiv1.Secret{},
 		},
 		{
-			objectType:     &discoveryV1.EndpointSlice{},
-			k8sEventFilter: k8spredicate.GenerationChangedPredicate{},
+			objectType:   &discoveryV1.EndpointSlice{},
+			k8sPredicate: k8spredicate.GenerationChangedPredicate{},
 			fieldIndexes: map[string]client.IndexerFunc{
 				index.KubernetesServiceNameIndexField: index.ServiceNameIndexFunc,
 			},

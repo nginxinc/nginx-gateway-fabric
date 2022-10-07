@@ -21,7 +21,7 @@ const (
 type controllerConfig struct {
 	objectType           client.Object
 	namespacedNameFilter reconciler.NamespacedNameFilterFunc // optional
-	k8sEventFilter       predicate.Predicate                 // optional
+	k8sPredicate         predicate.Predicate                 // optional
 	fieldIndexes         map[string]client.IndexerFunc       // optional
 }
 
@@ -43,8 +43,8 @@ func registerController(
 
 	builder := ctlr.NewControllerManagedBy(mgr).For(cfg.objectType)
 
-	if cfg.k8sEventFilter != nil {
-		builder = builder.WithEventFilter(cfg.k8sEventFilter)
+	if cfg.k8sPredicate != nil {
+		builder = builder.WithEventFilter(cfg.k8sPredicate)
 	}
 
 	recCfg := reconciler.Config{

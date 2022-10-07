@@ -85,7 +85,7 @@ func TestRegisterController(t *testing.T) {
 	cfg := controllerConfig{
 		objectType:           &v1beta1.HTTPRoute{},
 		namespacedNameFilter: filter.CreateFilterForGatewayClass("test"),
-		k8sEventFilter:       predicate.ServicePortsChangedPredicate{},
+		k8sPredicate:         predicate.ServicePortsChangedPredicate{},
 		fieldIndexes: map[string]client.IndexerFunc{
 			index.KubernetesServiceNameIndexField: index.ServiceNameIndexFunc,
 		},
