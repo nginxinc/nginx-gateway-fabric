@@ -8,7 +8,6 @@ import (
 
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
@@ -86,9 +85,7 @@ func TestRegisterController(t *testing.T) {
 		objectType:           &v1beta1.HTTPRoute{},
 		namespacedNameFilter: filter.CreateFilterForGatewayClass("test"),
 		k8sPredicate:         predicate.ServicePortsChangedPredicate{},
-		fieldIndexes: map[string]client.IndexerFunc{
-			index.KubernetesServiceNameIndexField: index.ServiceNameIndexFunc,
-		},
+		fieldIndexes:         index.CreateEndpointSliceFieldIndices(),
 	}
 
 	eventCh := make(chan interface{})
@@ -130,9 +127,11 @@ func TestRegisterController(t *testing.T) {
 			if field != index.KubernetesServiceNameIndexField {
 				t.Errorf("registerController() called indexer.IndexField() with field %q but expected %q for case of %q", field, index.KubernetesServiceNameIndexField, test.msg)
 			}
+
+			expectedIndexFunc := cfg.fieldIndexes[index.KubernetesServiceNameIndexField]
 			// comparing functions is not allowed in Go, so we're comparing the pointers
-			if reflect.ValueOf(indexFunc).Pointer() != reflect.ValueOf(index.ServiceNameIndexFunc).Pointer() {
-				t.Errorf("registerController() called indexer.IndexField() with indexFunc %p but expected %p for case of %q", indexFunc, index.ServiceNameIndexFunc, test.msg)
+			if reflect.ValueOf(indexFunc).Pointer() != reflect.ValueOf(expectedIndexFunc).Pointer() {
+				t.Errorf("registerController() called indexer.IndexField() with indexFunc %p but expected %p for case of %q", indexFunc, expectedIndexFunc, test.msg)
 			}
 		}
 

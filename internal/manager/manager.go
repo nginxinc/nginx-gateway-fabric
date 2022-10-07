@@ -84,9 +84,7 @@ func Start(cfg config.Config) error {
 		{
 			objectType:   &discoveryV1.EndpointSlice{},
 			k8sPredicate: k8spredicate.GenerationChangedPredicate{},
-			fieldIndexes: map[string]client.IndexerFunc{
-				index.KubernetesServiceNameIndexField: index.ServiceNameIndexFunc,
-			},
+			fieldIndexes: index.CreateEndpointSliceFieldIndices(),
 		},
 	}
 

@@ -1,4 +1,4 @@
-package index_test
+package index
 
 import (
 	"testing"
@@ -8,8 +8,6 @@ import (
 	discoveryV1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/manager/index"
 )
 
 func TestServiceNameIndexFunc(t *testing.T) {
@@ -22,7 +20,7 @@ func TestServiceNameIndexFunc(t *testing.T) {
 			msg: "normal case",
 			obj: &discoveryV1.EndpointSlice{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: map[string]string{index.KubernetesServiceNameLabel: "test-svc"},
+					Labels: map[string]string{KubernetesServiceNameLabel: "test-svc"},
 				},
 			},
 			expOutput: []string{"test-svc"},
@@ -44,9 +42,9 @@ func TestServiceNameIndexFunc(t *testing.T) {
 	}
 
 	for _, tc := range testcases {
-		output := index.ServiceNameIndexFunc(tc.obj)
+		output := serviceNameIndexFunc(tc.obj)
 		if diff := cmp.Diff(tc.expOutput, output); diff != "" {
-			t.Errorf("ServiceNameIndexFunc() mismatch on %q (-want +got):\n%s", tc.msg, diff)
+			t.Errorf("serviceNameIndexFunc() mismatch on %q (-want +got):\n%s", tc.msg, diff)
 		}
 	}
 }
@@ -54,9 +52,9 @@ func TestServiceNameIndexFunc(t *testing.T) {
 func TestServiceNameIndexFuncPanics(t *testing.T) {
 	defer func() {
 		if r := recover(); r == nil {
-			t.Errorf("ServiceNameIndexFunc() did not panic")
+			t.Errorf("serviceNameIndexFunc() did not panic")
 		}
 	}()
 
-	index.ServiceNameIndexFunc(&v1.Namespace{})
+	serviceNameIndexFunc(&v1.Namespace{})
 }
