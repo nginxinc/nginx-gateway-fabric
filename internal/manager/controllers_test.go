@@ -20,8 +20,10 @@ import (
 )
 
 func TestRegisterController(t *testing.T) {
+	// The test will inject a mock newReconciler func. This defer will restore it to the original func.
+	savedNewReconciler := reconciler.NewImplementation
 	defer func() {
-		newReconciler = reconciler.NewImplementation
+		newReconciler = savedNewReconciler
 	}()
 
 	type fakes struct {
