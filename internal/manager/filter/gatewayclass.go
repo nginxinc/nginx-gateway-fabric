@@ -8,6 +8,8 @@ import (
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/reconciler"
 )
 
+// CreateFilterForGatewayClass creates a filter function that filters out all GatewayClass resources except the one
+// with the given name.
 func CreateFilterForGatewayClass(gcName string) reconciler.NamespacedNameFilterFunc {
 	return func(nsname types.NamespacedName) (bool, string) {
 		if nsname.Name != gcName {
