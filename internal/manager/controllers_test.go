@@ -20,12 +20,6 @@ import (
 )
 
 func TestRegisterController(t *testing.T) {
-	// The test will inject a mock newReconciler func. This defer will restore it to the original func.
-	savedNewReconciler := reconciler.NewImplementation
-	defer func() {
-		newReconciler = savedNewReconciler
-	}()
-
 	type fakes struct {
 		mgr     *managerfakes.FakeManager
 		indexer *managerfakes.FakeFieldIndexer
@@ -83,35 +77,41 @@ func TestRegisterController(t *testing.T) {
 		},
 	}
 
-	cfg := controllerConfig{
-		objectType:           &v1beta1.HTTPRoute{},
-		namespacedNameFilter: filter.CreateFilterForGatewayClass("test"),
-		k8sPredicate:         predicate.ServicePortsChangedPredicate{},
-		fieldIndexes:         index.CreateEndpointSliceFieldIndices(),
-	}
+	objectType := &v1beta1.HTTPRoute{}
+	namespacedNameFilter := filter.CreateFilterForGatewayClass("test")
+	fieldIndexes := index.CreateEndpointSliceFieldIndices()
 
 	eventCh := make(chan interface{})
 
 	for _, test := range tests {
-		newReconciler = func(c reconciler.Config) *reconciler.Implementation {
+		newReconciler := func(c reconciler.Config) *reconciler.Implementation {
 			if c.Getter != test.fakes.mgr.GetClient() {
 				t.Errorf("regiterController() created a reconciler config with Getter %p but expected %p for case of %q", c.Getter, test.fakes.mgr.GetClient(), test.msg)
 			}
-			if c.ObjectType != cfg.objectType {
-				t.Errorf("registerController() created a reconciler config with ObjectType %T but expected %T for case of %q", c.ObjectType, cfg.objectType, test.msg)
+			if c.ObjectType != objectType {
+				t.Errorf("registerController() created a reconciler config with ObjectType %T but expected %T for case of %q", c.ObjectType, objectType, test.msg)
 			}
 			if c.EventCh != eventCh {
 				t.Errorf("registerController() created a reconciler config with EventCh %v but expected %v for case of %q", c.EventCh, eventCh, test.msg)
 			}
 			// comparing functions is not allowed in Go, so we're comparing the pointers
-			if reflect.ValueOf(c.NamespacedNameFilter).Pointer() != reflect.ValueOf(cfg.namespacedNameFilter).Pointer() {
-				t.Errorf("registerController() created a reconciler config with NamespacedNameFilter %p but expected %p for case of %q", c.NamespacedNameFilter, cfg.namespacedNameFilter, test.msg)
+			if reflect.ValueOf(c.NamespacedNameFilter).Pointer() != reflect.ValueOf(namespacedNameFilter).Pointer() {
+				t.Errorf("registerController() created a reconciler config with NamespacedNameFilter %p but expected %p for case of %q", c.NamespacedNameFilter, namespacedNameFilter, test.msg)
 			}
 
 			return reconciler.NewImplementation(c)
 		}
 
-		err := registerController(context.Background(), test.fakes.mgr, eventCh, cfg)
+		err := registerController(
+			context.Background(),
+			objectType,
+			test.fakes.mgr,
+			eventCh,
+			withNamespacedNameFilter(namespacedNameFilter),
+			withK8sPredicate(predicate.ServicePortsChangedPredicate{}),
+			withFieldIndices(fieldIndexes),
+			withNewReconciler(newReconciler),
+		)
 
 		if !errors.Is(err, test.expectedErr) {
 			t.Errorf("registerController() returned %q but expected %q for case of %q", err, test.expectedErr, test.msg)
@@ -123,14 +123,14 @@ func TestRegisterController(t *testing.T) {
 		} else {
 			_, objType, field, indexFunc := test.fakes.indexer.IndexFieldArgsForCall(0)
 
-			if objType != cfg.objectType {
-				t.Errorf("registerController() called indexer.IndexField() with object type %T but expected %T for case of %q", objType, cfg.objectType, test.msg)
+			if objType != objectType {
+				t.Errorf("registerController() called indexer.IndexField() with object type %T but expected %T for case of %q", objType, objectType, test.msg)
 			}
 			if field != index.KubernetesServiceNameIndexField {
 				t.Errorf("registerController() called indexer.IndexField() with field %q but expected %q for case of %q", field, index.KubernetesServiceNameIndexField, test.msg)
 			}
 
-			expectedIndexFunc := cfg.fieldIndexes[index.KubernetesServiceNameIndexField]
+			expectedIndexFunc := fieldIndexes[index.KubernetesServiceNameIndexField]
 			// comparing functions is not allowed in Go, so we're comparing the pointers
 			if reflect.ValueOf(indexFunc).Pointer() != reflect.ValueOf(expectedIndexFunc).Pointer() {
 				t.Errorf("registerController() called indexer.IndexField() with indexFunc %p but expected %p for case of %q", indexFunc, expectedIndexFunc, test.msg)

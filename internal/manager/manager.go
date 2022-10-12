@@ -63,10 +63,15 @@ func Start(cfg config.Config) error {
 		return fmt.Errorf("cannot build runtime manager: %w", err)
 	}
 
-	controllerConfigs := []controllerConfig{
+	controllerRegCfgs := []struct {
+		objectType client.Object
+		options    []controllerOption
+	}{
 		{
-			objectType:           &gatewayv1beta1.GatewayClass{},
-			namespacedNameFilter: filter.CreateFilterForGatewayClass(cfg.GatewayClassName),
+			objectType: &gatewayv1beta1.GatewayClass{},
+			options: []controllerOption{
+				withNamespacedNameFilter(filter.CreateFilterForGatewayClass(cfg.GatewayClassName)),
+			},
 		},
 		{
 			objectType: &gatewayv1beta1.Gateway{},
@@ -75,25 +80,29 @@ func Start(cfg config.Config) error {
 			objectType: &gatewayv1beta1.HTTPRoute{},
 		},
 		{
-			objectType:   &apiv1.Service{},
-			k8sPredicate: predicate.ServicePortsChangedPredicate{},
+			objectType: &apiv1.Service{},
+			options: []controllerOption{
+				withK8sPredicate(predicate.ServicePortsChangedPredicate{}),
+			},
 		},
 		{
 			objectType: &apiv1.Secret{},
 		},
 		{
-			objectType:   &discoveryV1.EndpointSlice{},
-			k8sPredicate: k8spredicate.GenerationChangedPredicate{},
-			fieldIndexes: index.CreateEndpointSliceFieldIndices(),
+			objectType: &discoveryV1.EndpointSlice{},
+			options: []controllerOption{
+				withK8sPredicate(k8spredicate.GenerationChangedPredicate{}),
+				withFieldIndices(index.CreateEndpointSliceFieldIndices()),
+			},
 		},
 	}
 
 	ctx := ctlr.SetupSignalHandler()
 
-	for _, cfg := range controllerConfigs {
-		err := registerController(ctx, mgr, eventCh, cfg)
+	for _, regCfg := range controllerRegCfgs {
+		err := registerController(ctx, regCfg.objectType, mgr, eventCh, regCfg.options...)
 		if err != nil {
-			return fmt.Errorf("cannot register controller for %T: %w", cfg.objectType, err)
+			return fmt.Errorf("cannot register controller for %T: %w", regCfg.objectType, err)
 		}
 	}
 

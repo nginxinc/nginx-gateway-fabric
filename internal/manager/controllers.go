@@ -10,6 +10,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/manager/index"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/reconciler"
 )
 
@@ -18,30 +19,69 @@ const (
 	addIndexFieldTimeout = 2 * time.Minute
 )
 
+type newReconcilerFunc func(cfg reconciler.Config) *reconciler.Implementation
+
 type controllerConfig struct {
-	objectType           client.Object
-	namespacedNameFilter reconciler.NamespacedNameFilterFunc // optional
-	k8sPredicate         predicate.Predicate                 // optional
-	fieldIndexes         map[string]client.IndexerFunc       // optional
+	namespacedNameFilter reconciler.NamespacedNameFilterFunc
+	k8sPredicate         predicate.Predicate
+	fieldIndices         index.FieldIndices
+	newReconciler        newReconcilerFunc
 }
 
-// newReconciler creates a new Implementation. Used for unit testing.
-var newReconciler = reconciler.NewImplementation
+type controllerOption func(*controllerConfig)
+
+func withNamespacedNameFilter(filter reconciler.NamespacedNameFilterFunc) controllerOption {
+	return func(cfg *controllerConfig) {
+		cfg.namespacedNameFilter = filter
+	}
+}
+
+func withK8sPredicate(p predicate.Predicate) controllerOption {
+	return func(cfg *controllerConfig) {
+		cfg.k8sPredicate = p
+	}
+}
+
+func withFieldIndices(fieldIndices index.FieldIndices) controllerOption {
+	return func(cfg *controllerConfig) {
+		cfg.fieldIndices = fieldIndices
+	}
+}
+
+// withNewReconciler allows us to mock reconciler creation in the unit tests.
+func withNewReconciler(newReconciler newReconcilerFunc) controllerOption {
+	return func(cfg *controllerConfig) {
+		cfg.newReconciler = newReconciler
+	}
+}
+
+func defaultControllerConfig() controllerConfig {
+	return controllerConfig{
+		newReconciler: reconciler.NewImplementation,
+	}
+}
 
 func registerController(
 	ctx context.Context,
+	objectType client.Object,
 	mgr manager.Manager,
 	eventCh chan interface{},
-	cfg controllerConfig,
+	options ...controllerOption,
 ) error {
-	for field, indexerFunc := range cfg.fieldIndexes {
-		err := addIndex(ctx, mgr.GetFieldIndexer(), cfg.objectType, field, indexerFunc)
+	cfg := defaultControllerConfig()
+
+	for _, opt := range options {
+		opt(&cfg)
+	}
+
+	for field, indexerFunc := range cfg.fieldIndices {
+		err := addIndex(ctx, mgr.GetFieldIndexer(), objectType, field, indexerFunc)
 		if err != nil {
 			return err
 		}
 	}
 
-	builder := ctlr.NewControllerManagedBy(mgr).For(cfg.objectType)
+	builder := ctlr.NewControllerManagedBy(mgr).For(objectType)
 
 	if cfg.k8sPredicate != nil {
 		builder = builder.WithEventFilter(cfg.k8sPredicate)
@@ -49,20 +89,26 @@ func registerController(
 
 	recCfg := reconciler.Config{
 		Getter:               mgr.GetClient(),
-		ObjectType:           cfg.objectType,
+		ObjectType:           objectType,
 		EventCh:              eventCh,
 		NamespacedNameFilter: cfg.namespacedNameFilter,
 	}
 
-	err := builder.Complete(newReconciler(recCfg))
+	err := builder.Complete(cfg.newReconciler(recCfg))
 	if err != nil {
-		return fmt.Errorf("cannot build a controller for %T: %w", cfg.objectType, err)
+		return fmt.Errorf("cannot build a controller for %T: %w", objectType, err)
 	}
 
 	return nil
 }
 
-func addIndex(ctx context.Context, indexer client.FieldIndexer, objectType client.Object, field string, indexerFunc client.IndexerFunc) error {
+func addIndex(
+	ctx context.Context,
+	indexer client.FieldIndexer,
+	objectType client.Object,
+	field string,
+	indexerFunc client.IndexerFunc,
+) error {
 	c, cancel := context.WithTimeout(ctx, addIndexFieldTimeout)
 	defer cancel()
 
