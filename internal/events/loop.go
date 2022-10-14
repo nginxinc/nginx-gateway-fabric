@@ -26,6 +26,13 @@ type EventLoop struct {
 	preparer FirstEventBatchPreparer
 	eventCh  <-chan interface{}
 	logger   logr.Logger
+
+	// The EventLoop uses double buffering to handle event batch processing.
+	// The goroutine that handles the batch will always read from the currentBatch slice.
+	// While the current batch is being handled, new events are added to the nextBatch slice.
+	// The batches are swapped after the handler finishes with the current batch.
+	currentBatch EventBatch
+	nextBatch    EventBatch
 }
 
 // NewEventLoop creates a new EventLoop.
@@ -36,24 +43,24 @@ func NewEventLoop(
 	preparer FirstEventBatchPreparer,
 ) *EventLoop {
 	return &EventLoop{
-		eventCh:  eventCh,
-		logger:   logger,
-		handler:  handler,
-		preparer: preparer,
+		eventCh:      eventCh,
+		logger:       logger,
+		handler:      handler,
+		preparer:     preparer,
+		currentBatch: make(EventBatch, 0),
+		nextBatch:    make(EventBatch, 0),
 	}
 }
 
 // Start starts the EventLoop.
 // This method will block until the EventLoop stops, which will happen after the ctx is closed.
 func (el *EventLoop) Start(ctx context.Context) error {
-	// The current batch.
-	var batch EventBatch
 	// handling tells if any batch is currently being handled.
 	var handling bool
 	// handlingDone is used to signal the completion of handling a batch.
 	handlingDone := make(chan struct{})
 
-	handleAndResetBatch := func() {
+	handleBatch := func() {
 		go func(batch EventBatch) {
 			el.logger.Info("Handling events from the batch", "total", len(batch))
 
@@ -61,12 +68,7 @@ func (el *EventLoop) Start(ctx context.Context) error {
 
 			el.logger.Info("Finished handling the batch")
 			handlingDone <- struct{}{}
-		}(batch)
-
-		// FIXME(pleshakov): Making an entirely new buffer is inefficient and multiplies memory operations.
-		// Use a double-buffer approach - create two buffers and exchange them between the producer and consumer
-		// routines. NOTE: pass-by-reference, and reset buffer to length 0, but retain capacity.
-		batch = make([]interface{}, 0)
+		}(el.currentBatch)
 	}
 
 	// Prepare the fist event batch, which includes the UpsertEvents for all relevant cluster resources.
@@ -81,13 +83,13 @@ func (el *EventLoop) Start(ctx context.Context) error {
 	// not trigger any reconfiguration after receiving an upsert for an existing resource with the same Generation.
 
 	var err error
-	batch, err = el.preparer.Prepare(ctx)
+	el.currentBatch, err = el.preparer.Prepare(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to prepare the first batch: %w", err)
 	}
 
 	// Handle the first batch
-	handleAndResetBatch()
+	handleBatch()
 	handling = true
 
 	// Note: at any point of time, no more than one batch is currently being handled.
@@ -103,28 +105,39 @@ func (el *EventLoop) Start(ctx context.Context) error {
 			return nil
 		case e := <-el.eventCh:
 			// Add the event to the current batch.
-			batch = append(batch, e)
+			el.nextBatch = append(el.nextBatch, e)
 
 			// FIXME(pleshakov): Log more details about the event like resource GVK and ns/name.
 			el.logger.Info(
-				"added an event to the current batch",
+				"added an event to the next batch",
 				"type", fmt.Sprintf("%T", e),
-				"total", len(batch),
+				"total", len(el.nextBatch),
 			)
 
-			// Handle the current batch if no batch is being handled.
+			// If no batch is currently being handled, swap batches and begin handling the batch.
 			if !handling {
-				handleAndResetBatch()
+				el.swapBatches()
+
+				handleBatch()
 				handling = true
 			}
 		case <-handlingDone:
 			handling = false
 
-			// Handle the current batch if it has at least one event.
-			if len(batch) > 0 {
-				handleAndResetBatch()
+			// If there's at least one event in the next batch, swap batches and begin handling the batch.
+			if len(el.nextBatch) > 0 {
+				el.swapBatches()
+
+				handleBatch()
 				handling = true
 			}
 		}
 	}
+}
+
+// swapBatches swaps the current and next batches.
+func (el *EventLoop) swapBatches() {
+	temp := el.currentBatch
+	el.currentBatch = el.nextBatch
+	el.nextBatch = temp[:0]
 }
