@@ -15,11 +15,11 @@ import (
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/helpers"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/manager/index"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/relationship"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/relationship/relationshipfakes"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/statefakes"
-	"github.com/nginxinc/nginx-kubernetes-gateway/pkg/sdk"
 )
 
 const (
@@ -1024,7 +1024,7 @@ var _ = Describe("ChangeProcessor", func() {
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "test",
 						Name:      name,
-						Labels:    map[string]string{sdk.KubernetesServiceNameLabel: svcName},
+						Labels:    map[string]string{index.KubernetesServiceNameLabel: svcName},
 					},
 				}
 			}

@@ -10,8 +10,8 @@ import (
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/helpers"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/manager/index"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/relationship"
-	"github.com/nginxinc/nginx-kubernetes-gateway/pkg/sdk"
 )
 
 func createBackendRefs(backendNames ...v1beta1.ObjectName) []v1beta1.HTTPBackendRef {
@@ -234,7 +234,7 @@ var _ = Describe("Capturer", func() {
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "test",
 						Name:      "es1",
-						Labels:    map[string]string{sdk.KubernetesServiceNameLabel: "svc1"},
+						Labels:    map[string]string{index.KubernetesServiceNameLabel: "svc1"},
 					},
 				}
 
@@ -242,7 +242,7 @@ var _ = Describe("Capturer", func() {
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "test",
 						Name:      "es2",
-						Labels:    map[string]string{sdk.KubernetesServiceNameLabel: "svc1"},
+						Labels:    map[string]string{index.KubernetesServiceNameLabel: "svc1"},
 					},
 				}
 
@@ -290,7 +290,7 @@ var _ = Describe("Capturer", func() {
 				When("endpoint slice service owner changes to an unrelated service owner", func() {
 					It("removes the endpoint slice relationship", func() {
 						updatedSlice1 := slice1.DeepCopy()
-						updatedSlice1.Labels[sdk.KubernetesServiceNameLabel] = "unrelated-svc"
+						updatedSlice1.Labels[index.KubernetesServiceNameLabel] = "unrelated-svc"
 
 						capturer.Capture(updatedSlice1)
 

@@ -1,4 +1,4 @@
-package sdk_test
+package predicate
 
 import (
 	"testing"
@@ -7,8 +7,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
-
-	"github.com/nginxinc/nginx-kubernetes-gateway/pkg/sdk"
 )
 
 func TestServicePortsChangedPredicate_Update(t *testing.T) {
@@ -223,10 +221,10 @@ func TestServicePortsChangedPredicate_Update(t *testing.T) {
 		},
 	}
 
-	predicate := sdk.ServicePortsChangedPredicate{}
+	p := ServicePortsChangedPredicate{}
 
 	for _, tc := range testcases {
-		update := predicate.Update(event.UpdateEvent{
+		update := p.Update(event.UpdateEvent{
 			ObjectOld: tc.objectOld,
 			ObjectNew: tc.objectNew,
 		})
@@ -238,17 +236,17 @@ func TestServicePortsChangedPredicate_Update(t *testing.T) {
 }
 
 func TestServicePortsChangedPredicate(t *testing.T) {
-	predicate := sdk.ServicePortsChangedPredicate{}
+	p := ServicePortsChangedPredicate{}
 
-	if !predicate.Delete(event.DeleteEvent{Object: &v1.Service{}}) {
+	if !p.Delete(event.DeleteEvent{Object: &v1.Service{}}) {
 		t.Errorf("ServicePortsChangedPredicate.Delete() returned false; expected true")
 	}
 
-	if !predicate.Create(event.CreateEvent{Object: &v1.Service{}}) {
+	if !p.Create(event.CreateEvent{Object: &v1.Service{}}) {
 		t.Errorf("ServicePortsChangedPredicate.Create() returned false; expected true")
 	}
 
-	if !predicate.Generic(event.GenericEvent{Object: &v1.Service{}}) {
+	if !p.Generic(event.GenericEvent{Object: &v1.Service{}}) {
 		t.Errorf("ServicePortsChangedPredicate.Generic() returned false; expected true")
 	}
 }
