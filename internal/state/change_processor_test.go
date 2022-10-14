@@ -181,6 +181,7 @@ var _ = Describe("ChangeProcessor", func() {
 			var (
 				gcUpdated            *v1beta1.GatewayClass
 				hr1, hr1Updated, hr2 *v1beta1.HTTPRoute
+				hr1Group, hr2Group   state.BackendGroup
 				gw1, gw1Updated, gw2 *v1beta1.Gateway
 			)
 			BeforeAll(func() {
@@ -189,10 +190,20 @@ var _ = Describe("ChangeProcessor", func() {
 
 				hr1 = createRoute("hr-1", "gateway-1", "foo.example.com")
 
+				hr1Group = state.BackendGroup{
+					Source:  types.NamespacedName{Namespace: hr1.Namespace, Name: hr1.Name},
+					RuleIdx: 0,
+				}
+
 				hr1Updated = hr1.DeepCopy()
 				hr1Updated.Generation++
 
 				hr2 = createRoute("hr-2", "gateway-2", "bar.example.com")
+
+				hr2Group = state.BackendGroup{
+					Source:  types.NamespacedName{Namespace: hr2.Namespace, Name: hr2.Name},
+					RuleIdx: 0,
+				}
 
 				gw1 = createGatewayWithTLSListener("gateway-1")
 
@@ -278,7 +289,7 @@ var _ = Describe("ChangeProcessor", func() {
 										{
 											MatchIdx:     0,
 											RuleIdx:      0,
-											UpstreamName: state.InvalidBackendRef,
+											BackendGroup: hr1Group,
 											Source:       hr1,
 										},
 									},
@@ -297,7 +308,7 @@ var _ = Describe("ChangeProcessor", func() {
 										{
 											MatchIdx:     0,
 											RuleIdx:      0,
-											UpstreamName: state.InvalidBackendRef,
+											BackendGroup: hr1Group,
 											Source:       hr1,
 										},
 									},
@@ -309,7 +320,9 @@ var _ = Describe("ChangeProcessor", func() {
 							SSL:      &state.SSL{CertificatePath: certificatePath},
 						},
 					},
-					Upstreams: []state.Upstream{},
+					BackendGroups: []state.BackendGroup{
+						hr1Group,
+					},
 				}
 
 				expectedStatuses := state.Statuses{
@@ -373,7 +386,7 @@ var _ = Describe("ChangeProcessor", func() {
 										{
 											MatchIdx:     0,
 											RuleIdx:      0,
-											UpstreamName: state.InvalidBackendRef,
+											BackendGroup: hr1Group,
 											Source:       hr1Updated,
 										},
 									},
@@ -392,7 +405,7 @@ var _ = Describe("ChangeProcessor", func() {
 										{
 											MatchIdx:     0,
 											RuleIdx:      0,
-											UpstreamName: state.InvalidBackendRef,
+											BackendGroup: hr1Group,
 											Source:       hr1Updated,
 										},
 									},
@@ -404,7 +417,9 @@ var _ = Describe("ChangeProcessor", func() {
 							SSL:      &state.SSL{CertificatePath: certificatePath},
 						},
 					},
-					Upstreams: []state.Upstream{},
+					BackendGroups: []state.BackendGroup{
+						hr1Group,
+					},
 				}
 				expectedStatuses := state.Statuses{
 					GatewayClassStatus: &state.GatewayClassStatus{
@@ -467,7 +482,7 @@ var _ = Describe("ChangeProcessor", func() {
 										{
 											MatchIdx:     0,
 											RuleIdx:      0,
-											UpstreamName: state.InvalidBackendRef,
+											BackendGroup: hr1Group,
 											Source:       hr1Updated,
 										},
 									},
@@ -486,7 +501,7 @@ var _ = Describe("ChangeProcessor", func() {
 										{
 											MatchIdx:     0,
 											RuleIdx:      0,
-											UpstreamName: state.InvalidBackendRef,
+											BackendGroup: hr1Group,
 											Source:       hr1Updated,
 										},
 									},
@@ -498,7 +513,9 @@ var _ = Describe("ChangeProcessor", func() {
 							SSL:      &state.SSL{CertificatePath: certificatePath},
 						},
 					},
-					Upstreams: []state.Upstream{},
+					BackendGroups: []state.BackendGroup{
+						hr1Group,
+					},
 				}
 				expectedStatuses := state.Statuses{
 					GatewayClassStatus: &state.GatewayClassStatus{
@@ -561,7 +578,7 @@ var _ = Describe("ChangeProcessor", func() {
 										{
 											MatchIdx:     0,
 											RuleIdx:      0,
-											UpstreamName: state.InvalidBackendRef,
+											BackendGroup: hr1Group,
 											Source:       hr1Updated,
 										},
 									},
@@ -580,7 +597,7 @@ var _ = Describe("ChangeProcessor", func() {
 										{
 											MatchIdx:     0,
 											RuleIdx:      0,
-											UpstreamName: state.InvalidBackendRef,
+											BackendGroup: hr1Group,
 											Source:       hr1Updated,
 										},
 									},
@@ -592,7 +609,9 @@ var _ = Describe("ChangeProcessor", func() {
 							SSL:      &state.SSL{CertificatePath: certificatePath},
 						},
 					},
-					Upstreams: []state.Upstream{},
+					BackendGroups: []state.BackendGroup{
+						hr1Group,
+					},
 				}
 				expectedStatuses := state.Statuses{
 					GatewayClassStatus: &state.GatewayClassStatus{
@@ -652,7 +671,7 @@ var _ = Describe("ChangeProcessor", func() {
 										{
 											MatchIdx:     0,
 											RuleIdx:      0,
-											UpstreamName: state.InvalidBackendRef,
+											BackendGroup: hr1Group,
 											Source:       hr1Updated,
 										},
 									},
@@ -670,7 +689,7 @@ var _ = Describe("ChangeProcessor", func() {
 										{
 											MatchIdx:     0,
 											RuleIdx:      0,
-											UpstreamName: state.InvalidBackendRef,
+											BackendGroup: hr1Group,
 											Source:       hr1Updated,
 										},
 									},
@@ -685,7 +704,9 @@ var _ = Describe("ChangeProcessor", func() {
 							SSL:      &state.SSL{CertificatePath: certificatePath},
 						},
 					},
-					Upstreams: []state.Upstream{},
+					BackendGroups: []state.BackendGroup{
+						hr1Group,
+					},
 				}
 				expectedStatuses := state.Statuses{
 					GatewayClassStatus: &state.GatewayClassStatus{
@@ -741,7 +762,7 @@ var _ = Describe("ChangeProcessor", func() {
 										{
 											MatchIdx:     0,
 											RuleIdx:      0,
-											UpstreamName: state.InvalidBackendRef,
+											BackendGroup: hr1Group,
 											Source:       hr1Updated,
 										},
 									},
@@ -760,7 +781,7 @@ var _ = Describe("ChangeProcessor", func() {
 										{
 											MatchIdx:     0,
 											RuleIdx:      0,
-											UpstreamName: state.InvalidBackendRef,
+											BackendGroup: hr1Group,
 											Source:       hr1Updated,
 										},
 									},
@@ -772,7 +793,9 @@ var _ = Describe("ChangeProcessor", func() {
 							SSL:      &state.SSL{CertificatePath: certificatePath},
 						},
 					},
-					Upstreams: []state.Upstream{},
+					BackendGroups: []state.BackendGroup{
+						hr1Group,
+					},
 				}
 				expectedStatuses := state.Statuses{
 					GatewayClassStatus: &state.GatewayClassStatus{
@@ -835,7 +858,7 @@ var _ = Describe("ChangeProcessor", func() {
 										{
 											MatchIdx:     0,
 											RuleIdx:      0,
-											UpstreamName: state.InvalidBackendRef,
+											BackendGroup: hr2Group,
 											Source:       hr2,
 										},
 									},
@@ -854,7 +877,7 @@ var _ = Describe("ChangeProcessor", func() {
 										{
 											MatchIdx:     0,
 											RuleIdx:      0,
-											UpstreamName: state.InvalidBackendRef,
+											BackendGroup: hr2Group,
 											Source:       hr2,
 										},
 									},
@@ -866,7 +889,9 @@ var _ = Describe("ChangeProcessor", func() {
 							SSL:      &state.SSL{CertificatePath: certificatePath},
 						},
 					},
-					Upstreams: []state.Upstream{},
+					BackendGroups: []state.BackendGroup{
+						hr2Group,
+					},
 				}
 				expectedStatuses := state.Statuses{
 					GatewayClassStatus: &state.GatewayClassStatus{
@@ -915,7 +940,6 @@ var _ = Describe("ChangeProcessor", func() {
 							SSL:      &state.SSL{CertificatePath: certificatePath},
 						},
 					},
-					Upstreams: []state.Upstream{},
 				}
 				expectedStatuses := state.Statuses{
 					GatewayClassStatus: &state.GatewayClassStatus{

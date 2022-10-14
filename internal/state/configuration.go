@@ -1,6 +1,7 @@
 package state
 
 import (
+	"context"
 	"fmt"
 	"sort"
 
@@ -21,8 +22,10 @@ type Configuration struct {
 	// SSLServers holds all SSLServers.
 	// FIXME(kate-osborn) We assume that all SSL servers listen on port 443.
 	SSLServers []VirtualServer
-	// Upstreams holds all Upstreams.
+	// Upstreams holds all unique Upstreams.
 	Upstreams []Upstream
+	// BackendGroups holds all unique BackendGroups.
+	BackendGroups []BackendGroup
 }
 
 // VirtualServer is a virtual server.
@@ -38,6 +41,8 @@ type VirtualServer struct {
 type Upstream struct {
 	// Name is the name of the Upstream. Will be unique for each service/port combination.
 	Name string
+	// ErrorMsg contains the error message if the Upstream is invalid.
+	ErrorMsg string
 	// Endpoints are the endpoints of the Upstream.
 	Endpoints []resolver.Endpoint
 }
@@ -68,14 +73,14 @@ type MatchRule struct {
 	MatchIdx int
 	// RuleIdx is the index of the corresponding rule in the HTTPRoute.
 	RuleIdx int
-	// UpstreamName is the name of the upstream for this routing rule.
-	UpstreamName string
-	// Source is the corresponding HTTPRoute resource.
-	// FIXME(pleshakov): Consider referencing only the parts neeeded for the config generation rather than
-	// the entire resource.
-	Source *v1beta1.HTTPRoute
 	// Filters holds the filters for the MatchRule.
 	Filters Filters
+	// BackendGroup is the group of Backends that the rule routes to.
+	BackendGroup BackendGroup
+	// Source is the corresponding HTTPRoute resource.
+	// FIXME(pleshakov): Consider referencing only the parts needed for the config generation rather than
+	// the entire resource.
+	Source *v1beta1.HTTPRoute
 }
 
 // GetMatch returns the HTTPRouteMatch of the Route .
@@ -85,25 +90,134 @@ func (r *MatchRule) GetMatch() v1beta1.HTTPRouteMatch {
 
 // buildConfiguration builds the Configuration from the graph.
 // FIXME(pleshakov) For now we only handle paths with prefix matches. Handle exact and regex matches
-func buildConfiguration(graph *graph) Configuration {
+func buildConfiguration(
+	ctx context.Context,
+	graph *graph,
+	resolver resolver.ServiceResolver,
+) (Configuration, Warnings) {
 	if graph.GatewayClass == nil || !graph.GatewayClass.Valid {
-		return Configuration{}
+		return Configuration{}, nil
 	}
 
 	if graph.Gateway == nil {
-		return Configuration{}
+		return Configuration{}, nil
 	}
 
-	upstreams := buildUpstreams(graph.Backends)
+	upstreamsMap := buildUpstreamsMap(ctx, graph.Gateway.Listeners, resolver)
 	httpServers, sslServers := buildServers(graph.Gateway.Listeners)
+	backendGroups := buildBackendGroups(graph.Gateway.Listeners)
+
+	warnings := buildWarnings(graph, upstreamsMap)
 
 	config := Configuration{
-		HTTPServers: httpServers,
-		SSLServers:  sslServers,
-		Upstreams:   upstreams,
+		HTTPServers:   httpServers,
+		SSLServers:    sslServers,
+		Upstreams:     upstreamsMapToSlice(upstreamsMap),
+		BackendGroups: backendGroups,
 	}
 
-	return config
+	return config, warnings
+}
+
+func upstreamsMapToSlice(upstreamsMap map[string]Upstream) []Upstream {
+	if len(upstreamsMap) == 0 {
+		return nil
+	}
+
+	upstreams := make([]Upstream, 0, len(upstreamsMap))
+	for _, upstream := range upstreamsMap {
+		upstreams = append(upstreams, upstream)
+	}
+
+	return upstreams
+}
+
+func buildWarnings(graph *graph, upstreams map[string]Upstream) Warnings {
+	warnings := newWarnings()
+
+	for _, l := range graph.Gateway.Listeners {
+		for _, r := range l.Routes {
+			if !l.Valid {
+				warnings.AddWarningf(
+					r.Source,
+					"cannot configure routes for listener %s; listener is invalid",
+					l.Source.Name,
+				)
+
+				continue
+			}
+
+			for _, group := range r.BackendGroups {
+
+				for _, errMsg := range group.Errors {
+					warnings.AddWarningf(r.Source, "invalid backend ref: %s", errMsg)
+				}
+
+				for _, backend := range group.Backends {
+					if backend.Name != "" {
+						upstream, ok := upstreams[backend.Name]
+
+						// this should never happen; but we check it just in case
+						if !ok {
+							warnings.AddWarningf(
+								r.Source,
+								"cannot resolve backend ref; internal error: upstream %s not found in map",
+								backend.Name,
+							)
+						}
+
+						if upstream.ErrorMsg != "" {
+							warnings.AddWarningf(
+								r.Source,
+								"cannot resolve backend ref: %s",
+								upstream.ErrorMsg,
+							)
+						}
+					}
+				}
+			}
+		}
+	}
+
+	if len(warnings) == 0 {
+		return nil
+	}
+
+	return warnings
+}
+
+func buildBackendGroups(listeners map[string]*listener) []BackendGroup {
+	// There can be duplicate backend groups if a route is attached to multiple listeners.
+	// We use a map to deduplicate them.
+	uniqueGroups := make(map[string]BackendGroup)
+
+	for _, l := range listeners {
+
+		if !l.Valid {
+			continue
+		}
+
+		for _, r := range l.Routes {
+			for _, group := range r.BackendGroups {
+				if _, ok := uniqueGroups[group.GroupName()]; !ok {
+					uniqueGroups[group.GroupName()] = group
+				}
+			}
+		}
+
+	}
+
+	numGroups := len(uniqueGroups)
+	if len(uniqueGroups) == 0 {
+		return nil
+	}
+
+	groups := make([]BackendGroup, 0, numGroups)
+	for _, group := range uniqueGroups {
+		groups = append(groups, group)
+	}
+
+	return groups
 }
 
 func buildServers(listeners map[string]*listener) (http, ssl []VirtualServer) {
@@ -176,8 +290,8 @@ func (hpr *hostPathRules) upsertListener(l *listener) {
 					rule.MatchRules = append(rule.MatchRules, MatchRule{
 						MatchIdx:     j,
 						RuleIdx:      i,
-						UpstreamName: generateUpstreamName(r.BackendServices[ruleIndex(i)]),
 						Source:       r.Source,
+						BackendGroup: r.BackendGroups[i],
 						Filters:      filters,
 					})
 
@@ -212,7 +326,7 @@ func (hpr *hostPathRules) buildServers() []VirtualServer {
 			s.PathRules = append(s.PathRules, r)
 		}
 
-		// sort rules for predictable order
+		// We sort the path rules so the order is preserved after reconfiguration.
 		sort.Slice(s.PathRules, func(i, j int) bool {
 			return s.PathRules[i].Path < s.PathRules[j].Path
 		})
@@ -237,11 +351,58 @@ func (hpr *hostPathRules) buildServers() []VirtualServer {
 		}
 	}
 
+	// We sort the servers so the order is preserved after reconfiguration.
 	sort.Slice(servers, func(i, j int) bool {
 		return servers[i].Hostname < servers[j].Hostname
 	})
 
 	return servers
+}
+
+func buildUpstreamsMap(
+	ctx context.Context,
+	listeners map[string]*listener,
+	resolver resolver.ServiceResolver,
+) map[string]Upstream {
+	// There can be duplicate upstreams if multiple routes reference the same upstream.
+	// We use a map to deduplicate them.
+	uniqueUpstreams := make(map[string]Upstream)
+
+	for _, l := range listeners {
+
+		if !l.Valid {
+			continue
+		}
+
+		for _, route := range l.Routes {
+			for _, group := range route.BackendGroups {
+				for _, backend := range group.Backends {
+					if name := backend.Name; name != "" {
+						_, exist := uniqueUpstreams[name]
+
+						if exist {
+							continue
+						}
+
+						var errMsg string
+
+						eps, err := resolver.Resolve(ctx, backend.Svc, backend.Port)
+						if err != nil {
+							errMsg = err.Error()
+						}
+
+						uniqueUpstreams[name] = Upstream{
+							Name:      name,
+							Endpoints: eps,
+							ErrorMsg:  errMsg,
+						}
+					}
+				}
+			}
+		}
+	}
+
+	return uniqueUpstreams
 }
 
 func getListenerHostname(h *v1beta1.Hostname) string {

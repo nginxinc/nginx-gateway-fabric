@@ -145,14 +145,15 @@ func (c *ChangeProcessorImpl) Process(ctx context.Context) (changed bool, conf C
 	c.store.changed = false
 	c.changed = false
 
-	graph, warnings := buildGraph(
-		ctx,
+	graph := buildGraph(
 		c.store,
 		c.cfg.GatewayCtlrName,
 		c.cfg.GatewayClassName,
 		c.cfg.SecretMemoryManager,
-		c.cfg.ServiceResolver,
 	)
+
+	var warnings Warnings
+	conf, warnings = buildConfiguration(ctx, graph, c.cfg.ServiceResolver)
 
 	for obj, objWarnings := range warnings {
 		for _, w := range objWarnings {
@@ -165,7 +166,6 @@ func (c *ChangeProcessorImpl) Process(ctx context.Context) (changed bool, conf C
 		}
 	}
 
-	conf = buildConfiguration(graph)
 	statuses = buildStatuses(graph)
 
 	return true, conf, statuses

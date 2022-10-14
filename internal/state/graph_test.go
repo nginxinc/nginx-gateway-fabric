@@ -2,9 +2,6 @@
 package state
 
 import (
-	"context"
-	"errors"
-	"strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -14,8 +11,6 @@ import (
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/helpers"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/resolver"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/resolver/resolverfakes"
 )
 
 var testSecret = &v1.Secret{
@@ -136,6 +131,38 @@ func TestBuildGraph(t *testing.T) {
 	hr2 := createRoute("hr-2", "wrong-gateway", "listener-80-1")
 	hr3 := createRoute("hr-3", "gateway-1", "listener-443-1") // https listener; should not conflict with hr1
 
+	fooSvc := &v1.Service{ObjectMeta: metav1.ObjectMeta{Name: "foo", Namespace: "test"}}
+
+	hr1Group := BackendGroup{
+		Errors:  []string{},
+		Source:  types.NamespacedName{Namespace: hr1.Namespace, Name: hr1.Name},
+		RuleIdx: 0,
+		Backends: []BackendRef{
+			{
+				Name:   "test_foo_80",
+				Svc:    fooSvc,
+				Port:   80,
+				Valid:  true,
+				Weight: 1,
+			},
+		},
+	}
+
+	hr3Group := BackendGroup{
+		Errors:  []string{},
+		Source:  types.NamespacedName{Namespace: hr3.Namespace, Name: hr3.Name},
+		RuleIdx: 0,
+		Backends: []BackendRef{
+			{
+				Name:   "test_foo_80",
+				Svc:    fooSvc,
+				Port:   80,
+				Valid:  true,
+				Weight: 1,
+			},
+		},
+	}
+
 	createGateway := func(name string) *v1beta1.Gateway {
 		return &v1beta1.Gateway{
 			ObjectMeta: metav1.ObjectMeta{
@@ -204,13 +231,7 @@ func TestBuildGraph(t *testing.T) {
 			"listener-80-1": {},
 		},
 		InvalidSectionNameRefs: map[string]struct{}{},
-		BackendServices: map[ruleIndex]backendService{
-			ruleIndex(0): {
-				Name:      "foo",
-				Namespace: "test",
-				Port:      80,
-			},
-		},
+		BackendGroups:          []BackendGroup{hr1Group},
 	}
 
 	routeHR3 := &route{
@@ -219,29 +240,13 @@ func TestBuildGraph(t *testing.T) {
 			"listener-443-1": {},
 		},
 		InvalidSectionNameRefs: map[string]struct{}{},
-		BackendServices: map[ruleIndex]backendService{
-			ruleIndex(0): {
-				Name:      "foo",
-				Namespace: "test",
-				Port:      80,
-			},
-		},
+		BackendGroups:          []BackendGroup{hr3Group},
 	}
 
 	// add test secret to store
 	secretStore := NewSecretStore()
 	secretStore.Upsert(testSecret)
 	secretMemoryMgr := NewSecretDiskMemoryManager(secretsDirectory, secretStore)
-
-	expFooEndpoints := []resolver.Endpoint{
-		{
-			Address: "10.0.0.0",
-			Port:    8080,
-		},
-	}
-
-	fakeServiceResolver := &resolverfakes.FakeServiceResolver{}
-	fakeServiceResolver.ResolveReturns(expFooEndpoints, nil)
 
 	expected := &graph{
 		GatewayClass: &gatewayClass{
@@ -281,25 +286,11 @@ func TestBuildGraph(t *testing.T) {
 			{Namespace: "test", Name: "hr-1"}: routeHR1,
 			{Namespace: "test", Name: "hr-3"}: routeHR3,
 		},
-		Backends: map[backendService]backend{
-			{
-				Name:      "foo",
-				Namespace: "test",
-				Port:      80,
-			}: {
-				Endpoints: expFooEndpoints,
-			},
-		},
 	}
 
-	expWarnings := Warnings{}
-
-	result, warnings := buildGraph(context.TODO(), store, controllerName, gcName, secretMemoryMgr, fakeServiceResolver)
+	result := buildGraph(store, controllerName, gcName, secretMemoryMgr)
 	if diff := cmp.Diff(expected, result); diff != "" {
 		t.Errorf("buildGraph() mismatch (-want +got):\n%s", diff)
-	}
-	if diff := cmp.Diff(expWarnings, warnings); diff != "" {
-		t.Errorf("buildGraph() mismatch on warnings (-want +got):\n%s", diff)
 	}
 }
 
@@ -1132,263 +1123,5 @@ func TestValidateGatewayClass(t *testing.T) {
 	err = validateGatewayClass(gc, "unmatched.controller")
 	if err == nil {
 		t.Errorf("validateGatewayClass() didn't return an error")
-	}
-}
-
-func TestGetBackendServiceFromRouteRule(t *testing.T) {
-	getNormalRefs := func() []v1beta1.HTTPBackendRef {
-		return []v1beta1.HTTPBackendRef{
-			{
-				BackendRef: v1beta1.BackendRef{
-					BackendObjectReference: v1beta1.BackendObjectReference{
-						Kind:      (*v1beta1.Kind)(helpers.GetStringPointer("Service")),
-						Name:      "service1",
-						Namespace: (*v1beta1.Namespace)(helpers.GetStringPointer("test")),
-						Port:      (*v1beta1.PortNumber)(helpers.GetInt32Pointer(80)),
-					},
-				},
-			},
-		}
-	}
-
-	getModifiedRefs := func(mod func([]v1beta1.HTTPBackendRef) []v1beta1.HTTPBackendRef) []v1beta1.HTTPBackendRef {
-		return mod(getNormalRefs())
-	}
-
-	testcases := []struct {
-		rule   v1beta1.HTTPRouteRule
-		expSvc backendService
-		expErr bool
-		msg    string
-	}{
-		{
-			rule: v1beta1.HTTPRouteRule{
-				BackendRefs: getNormalRefs(),
-			},
-			expSvc: backendService{
-				Name:      "service1",
-				Namespace: "test",
-				Port:      80,
-			},
-			expErr: false,
-			msg:    "normal case",
-		},
-		{
-			rule: v1beta1.HTTPRouteRule{
-				BackendRefs: getModifiedRefs(
-					func(refs []v1beta1.HTTPBackendRef) []v1beta1.HTTPBackendRef {
-						refs[0].BackendRef.Namespace = nil
-						return refs
-					},
-				),
-			},
-			expSvc: backendService{
-				Name:      "service1",
-				Namespace: "test",
-				Port:      80,
-			},
-			expErr: false,
-			msg:    "normal case with implicit namespace",
-		},
-		{
-			rule: v1beta1.HTTPRouteRule{
-				BackendRefs: getModifiedRefs(
-					func(refs []v1beta1.HTTPBackendRef) []v1beta1.HTTPBackendRef {
-						refs[0].BackendRef.Kind = nil
-						return refs
-					},
-				),
-			},
-			expSvc: backendService{
-				Name:      "service1",
-				Namespace: "test",
-				Port:      80,
-			},
-			expErr: false,
-			msg:    "normal case with implicit service",
-		},
-		{
-			rule: v1beta1.HTTPRouteRule{
-				BackendRefs: getModifiedRefs(
-					func(refs []v1beta1.HTTPBackendRef) []v1beta1.HTTPBackendRef {
-						secondRef := refs[0].DeepCopy()
-						secondRef.Name = "service2"
-						return append(refs, *secondRef)
-					},
-				),
-			},
-			expSvc: backendService{
-				Name:      "service1",
-				Namespace: "test",
-				Port:      80,
-			},
-			expErr: false,
-			msg:    "first backend ref is used",
-		},
-		{
-			rule: v1beta1.HTTPRouteRule{
-				BackendRefs: nil,
-			},
-			expSvc: backendService{},
-			expErr: true,
-			msg:    "no backend refs",
-		},
-		{
-			rule: v1beta1.HTTPRouteRule{
-				BackendRefs: getModifiedRefs(
-					func(refs []v1beta1.HTTPBackendRef) []v1beta1.HTTPBackendRef {
-						refs[0].BackendRef.Kind = (*v1beta1.Kind)(helpers.GetStringPointer("NotService"))
-						return refs
-					},
-				),
-			},
-			expSvc: backendService{},
-			expErr: true,
-			msg:    "not a service kind",
-		},
-		{
-			rule: v1beta1.HTTPRouteRule{
-				BackendRefs: getModifiedRefs(
-					func(refs []v1beta1.HTTPBackendRef) []v1beta1.HTTPBackendRef {
-						refs[0].BackendRef.Namespace = (*v1beta1.Namespace)(helpers.GetStringPointer("not-test"))
-						return refs
-					},
-				),
-			},
-			expSvc: backendService{},
-			expErr: true,
-			msg:    "invalid namespace",
-		},
-		{
-			rule: v1beta1.HTTPRouteRule{
-				BackendRefs: getModifiedRefs(
-					func(refs []v1beta1.HTTPBackendRef) []v1beta1.HTTPBackendRef {
-						refs[0].BackendRef.Port = nil
-						return refs
-					},
-				),
-			},
-			expSvc: backendService{},
-			expErr: true,
-			msg:    "missing port",
-		},
-	}
-
-	for _, tc := range testcases {
-		svc, err := getBackendServiceFromRouteRule(tc.rule, "test")
-
-		if err != nil && !tc.expErr {
-			t.Errorf("getBackendServiceFromRouteRule() returned unexpected error: %v for test case: %q", err, tc.msg)
-		}
-
-		if err == nil && tc.expErr {
-			t.Errorf("getBackendServiceFromRouteRule() did not return error for test case: %q", tc.msg)
-		}
-
-		if diff := helpers.Diff(tc.expSvc, svc); diff != "" {
-			t.Errorf("getBackendServiceFromRouteRule() returned incorrect backend service for test case: %q, diff: %v", tc.msg, diff)
-		}
-	}
-}
-
-func TestResolveBackends(t *testing.T) {
-	fakeK8sResolver := &resolverfakes.FakeServiceResolver{}
-
-	fakeK8sResolver.ResolveCalls(func(ctx context.Context, svc *v1.Service, port int32) ([]resolver.Endpoint, error) {
-		if strings.Contains(svc.Name, "error") {
-			return nil, errors.New("resolve error")
-		}
-
-		return []resolver.Endpoint{{Address: "10.0.0.0", Port: 80}}, nil
-	})
-
-	createRoute := func(name string, kind string, serviceNames ...string) *v1beta1.HTTPRoute {
-		hr := &v1beta1.HTTPRoute{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: "test",
-				Name:      name,
-			},
-		}
-
-		hr.Spec.Rules = make([]v1beta1.HTTPRouteRule, len(serviceNames))
-
-		for idx, svcName := range serviceNames {
-			hr.Spec.Rules[idx] = v1beta1.HTTPRouteRule{
-				BackendRefs: []v1beta1.HTTPBackendRef{
-					{
-						BackendRef: v1beta1.BackendRef{
-							BackendObjectReference: v1beta1.BackendObjectReference{
-								Kind:      (*v1beta1.Kind)(helpers.GetStringPointer(kind)),
-								Name:      v1beta1.ObjectName(svcName),
-								Namespace: (*v1beta1.Namespace)(helpers.GetStringPointer("test")),
-								Port:      (*v1beta1.PortNumber)(helpers.GetInt32Pointer(80)),
-							},
-						},
-					},
-				},
-			}
-		}
-		return hr
-	}
-
-	hr1 := createRoute("hr1", "Service", "svc1", "svc2", "svc3")
-	hr2 := createRoute("hr2", "Service", "svc1", "error-svc4")
-	hr3 := createRoute("hr3", "Service", "dne")
-	hr4 := createRoute("hr4", "NotService", "not-svc")
-	hr5 := createRoute("hr5", "Service", "error-svc4")
-
-	routes := map[types.NamespacedName]*route{
-		{Namespace: "test", Name: "hr1"}: {Source: hr1},
-		{Namespace: "test", Name: "hr2"}: {Source: hr2},
-		{Namespace: "test", Name: "hr3"}: {Source: hr3},
-		{Namespace: "test", Name: "hr4"}: {Source: hr4},
-		{Namespace: "test", Name: "hr5"}: {Source: hr5},
-	}
-
-	svc1 := &v1.Service{ObjectMeta: metav1.ObjectMeta{Name: "svc1"}}
-	svc2 := &v1.Service{ObjectMeta: metav1.ObjectMeta{Name: "svc2"}}
-	svc3 := &v1.Service{ObjectMeta: metav1.ObjectMeta{Name: "svc3"}}
-	svc4 := &v1.Service{ObjectMeta: metav1.ObjectMeta{Name: "error-svc4"}}
-
-	services := map[types.NamespacedName]*v1.Service{
-		{Namespace: "test", Name: "svc1"}:       svc1,
-		{Namespace: "test", Name: "svc2"}:       svc2,
-		{Namespace: "test", Name: "svc3"}:       svc3,
-		{Namespace: "test", Name: "error-svc4"}: svc4,
-	}
-
-	backendSvc1 := backendService{Name: "svc1", Namespace: "test", Port: 80}
-	backendSvc2 := backendService{Name: "svc2", Namespace: "test", Port: 80}
-	backendSvc3 := backendService{Name: "svc3", Namespace: "test", Port: 80}
-	backendSvc4 := backendService{Name: "error-svc4", Namespace: "test", Port: 80}
-	backendSvcDne := backendService{Name: "dne", Namespace: "test", Port: 80}
-
-	expBackends := map[backendService]backend{
-		backendSvc1:   {Endpoints: []resolver.Endpoint{{Address: "10.0.0.0", Port: 80}}},
-		backendSvc2:   {Endpoints: []resolver.Endpoint{{Address: "10.0.0.0", Port: 80}}},
-		backendSvc3:   {Endpoints: []resolver.Endpoint{{Address: "10.0.0.0", Port: 80}}},
-		backendSvc4:   {Endpoints: nil, ErrorMsg: "resolve error"},
-		backendSvcDne: {Endpoints: nil, ErrorMsg: "the Service test/dne does not exist"},
-	}
-
-	expWarnings := Warnings{
-		hr2: []string{"cannot resolve backend ref for rule 1: resolve error"},
-		hr3: []string{"cannot resolve backend ref for rule 0: the Service test/dne does not exist"},
-		hr4: []string{"invalid backend ref for rule 0: backend ref Kind must be Service; got NotService"},
-		hr5: []string{"cannot resolve backend ref for rule 0: resolve error"},
-	}
-
-	backends, warnings := resolveBackends(context.TODO(), routes, services, fakeK8sResolver)
-
-	if fakeK8sResolver.ResolveCallCount() != 4 {
-		t.Errorf("resolveBackends() mismatch on resolve call count; expected 5, got %d", fakeK8sResolver.ResolveCallCount())
-	}
-
-	if diff := cmp.Diff(expBackends, backends); diff != "" {
-		t.Errorf("resolveBackends() mismatch on backends (-want +got):\n%s", diff)
-	}
-
-	if diff := cmp.Diff(expWarnings, warnings); diff != "" {
-		t.Errorf("resolveBackends() mismatch on warnings (-want +got):\n%s", diff)
 	}
 }
