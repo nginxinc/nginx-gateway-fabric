@@ -137,7 +137,6 @@ func (el *EventLoop) Start(ctx context.Context) error {
 
 // swapBatches swaps the current and next batches.
 func (el *EventLoop) swapBatches() {
-	temp := el.currentBatch
-	el.currentBatch = el.nextBatch
-	el.nextBatch = temp[:0]
+	el.currentBatch, el.nextBatch = el.nextBatch, el.currentBatch
+	el.nextBatch = el.nextBatch[:0]
 }
