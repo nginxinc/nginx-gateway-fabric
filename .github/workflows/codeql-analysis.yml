@@ -2,16 +2,23 @@ name: "CodeQL"
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
+      - release-*
   pull_request:
     # The branches below must be a subset of the branches above
-    branches: [ main ]
+    branches:
+      - main
+      - release-*
   schedule:
     - cron: '39 13 * * 6'
 
 concurrency:
   group: ${{ github.ref_name }}-codeql
   cancel-in-progress: true
+
+permissions:  # added using https://github.com/step-security/secure-workflows
+  contents: read
 
 jobs:
   analyze:

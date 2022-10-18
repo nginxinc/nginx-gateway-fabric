@@ -1,4 +1,4 @@
-[![FOSSA Status](https://app.fossa.com/api/projects/custom%2B5618%2Fgithub.com%2Fnginxinc%2Fnginx-kubernetes-gateway.svg?type=shield)](https://app.fossa.com/projects/custom%2B5618%2Fgithub.com%2Fnginxinc%2Fnginx-kubernetes-gateway?ref=badge_shield)
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/nginxinc/nginx-kubernetes-gateway/badge)](https://api.securityscorecards.dev/projects/github.com/nginxinc/nginx-kubernetes-gateway) [![FOSSA Status](https://app.fossa.com/api/projects/custom%2B5618%2Fgithub.com%2Fnginxinc%2Fnginx-kubernetes-gateway.svg?type=shield)](https://app.fossa.com/projects/custom%2B5618%2Fgithub.com%2Fnginxinc%2Fnginx-kubernetes-gateway?ref=badge_shield)
 
 # NGINX Kubernetes Gateway
 
@@ -14,7 +14,7 @@ For a list of supported Gateway API resources and features, see the [Gateway API
 1. [Quick Start on a kind cluster](docs/running-on-kind.md).
 2. [Install](docs/installation.md) NGINX Kubernetes Gateway.
 3. [Build](docs/building-the-image.md) an NGINX Kubernetes Gateway container image from source or use a pre-built image available on [GitHub Container Registry](https://github.com/nginxinc/nginx-kubernetes-gateway/pkgs/container/nginx-kubernetes-gateway).
-4. Deploy various [examples](examples). 
+4. Deploy various [examples](examples).
 
 ## NGINX Kubernetes Gateway Releases
 
