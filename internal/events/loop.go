@@ -30,7 +30,7 @@ type EventLoop struct {
 	// The EventLoop uses double buffering to handle event batch processing.
 	// The goroutine that handles the batch will always read from the currentBatch slice.
 	// While the current batch is being handled, new events are added to the nextBatch slice.
-	// The batches are swapped after the handler finishes with the current batch.
+	// The batches are swapped before starting the handler goroutine.
 	currentBatch EventBatch
 	nextBatch    EventBatch
 }

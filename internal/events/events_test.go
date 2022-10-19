@@ -40,6 +40,6 @@ func TestEventLoop_SwapBatches(t *testing.T) {
 	}
 
 	if c := cap(eventLoop.nextBatch); c != 3 {
-		t.Errorf("EventLoop.swapBatches() mismatch. Expected capacity of 4 in the next batch, got %d", c)
+		t.Errorf("EventLoop.swapBatches() mismatch. Expected capacity of 3 in the next batch, got %d", c)
 	}
 }
