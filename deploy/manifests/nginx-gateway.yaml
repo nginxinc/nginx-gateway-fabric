@@ -107,7 +107,7 @@ spec:
         args:
         - --gateway-ctlr-name=k8s-gateway.nginx.org/nginx-gateway-controller
         - --gatewayclass=nginx
-      - image: nginx:1.23.1
+      - image: nginx:1.23
         imagePullPolicy: IfNotPresent
         name: nginx
         ports:
