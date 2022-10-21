@@ -33,7 +33,7 @@ jobs:
         with:
           go-version-file: go.mod
       - name: Lint Code
-        uses: golangci/golangci-lint-action@v3.2.0
+        uses: golangci/golangci-lint-action@v3.3.0
         with:
           args: --timeout 10m0s
           only-new-issues: true
