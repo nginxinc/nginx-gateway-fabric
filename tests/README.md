@@ -1,0 +1,1 @@
+This folder includes manifests for manual testing.
