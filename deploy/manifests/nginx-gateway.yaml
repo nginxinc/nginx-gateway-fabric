@@ -82,6 +82,8 @@ spec:
       volumes:
       - name: nginx-config
         emptyDir: { }
+      - name: var-lib-nginx
+        emptyDir: { }
       - name: njs-modules
         configMap:
           name: njs-modules
@@ -118,5 +120,7 @@ spec:
         volumeMounts:
         - name: nginx-config
           mountPath: /etc/nginx
+        - name: var-lib-nginx
+          mountPath: /var/lib/nginx
         - name: njs-modules
           mountPath: /usr/lib/nginx/modules/njs

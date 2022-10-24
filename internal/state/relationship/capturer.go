@@ -135,26 +135,22 @@ func (c *CapturerImpl) decrementRefCount(svcName types.NamespacedName) {
 	}
 }
 
-// FIXME(pleshakov): for now, we only support a single backend reference
 func getBackendServiceNamesFromRoute(hr *v1beta1.HTTPRoute) map[types.NamespacedName]struct{} {
 	svcNames := make(map[types.NamespacedName]struct{})
 
 	for _, rule := range hr.Spec.Rules {
-		if len(rule.BackendRefs) == 0 {
-			continue
-		}
-		ref := rule.BackendRefs[0].BackendRef
+		for _, ref := range rule.BackendRefs {
+			if ref.Kind != nil && *ref.Kind != "Service" {
+				continue
+			}
 
-		if ref.Kind != nil && *ref.Kind != "Service" {
-			continue
-		}
+			ns := hr.Namespace
+			if ref.Namespace != nil {
+				ns = string(*ref.Namespace)
+			}
 
-		ns := hr.Namespace
-		if ref.Namespace != nil {
-			ns = string(*ref.Namespace)
+			svcNames[types.NamespacedName{Namespace: ns, Name: string(ref.Name)}] = struct{}{}
 		}
-
-		svcNames[types.NamespacedName{Namespace: ns, Name: string(ref.Name)}] = struct{}{}
 	}
 
 	return svcNames

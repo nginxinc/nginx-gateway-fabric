@@ -1,7 +1,7 @@
 package config
 
-var httpServersTemplate = `
-{{ range $s := .Servers }}
+var serversTemplateText = `
+{{ range $s := . }}
 	{{ if $s.IsDefaultSSL }}
 server {
 	listen 443 ssl default_server;
@@ -53,4 +53,17 @@ server {
 }
 	{{ end }}
 {{ end }}
+server {
+    listen unix:/var/lib/nginx/nginx-502-server.sock;
+    access_log off;
+
+    return 502;
+}
+
+server {
+    listen unix:/var/lib/nginx/nginx-500-server.sock;
+    access_log off;
+    
+    return 500;
+}
 `
