@@ -4,7 +4,7 @@ This document includes a curated changelog for each release. We also publish a c
 
 ## Release 0.2.0
 
-*October 24, 2022*
+*October 25, 2022*
 
 This release extends the support of the features of the Gateway API resources.
 
