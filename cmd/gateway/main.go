@@ -12,7 +12,11 @@ import (
 )
 
 const (
-	domain string = "k8s-gateway.nginx.org"
+	domain                = "k8s-gateway.nginx.org"
+	gatewayClassNameUsage = `The name of the GatewayClass resource. ` +
+		`Every NGINX Gateway must have a unique corresponding GatewayClass resource.`
+	gatewayCtrlNameUsageFmt = `The name of the Gateway controller. ` +
+		`The controller name must be of the form: DOMAIN/PATH. The controller's domain is '%s'`
 )
 
 var (
@@ -25,14 +29,10 @@ var (
 	gatewayCtlrName = flag.String(
 		"gateway-ctlr-name",
 		"",
-		fmt.Sprintf("The name of the Gateway controller. The controller name must be of the form: DOMAIN/PATH. The controller's domain is '%s'", domain),
+		fmt.Sprintf(gatewayCtrlNameUsageFmt, domain),
 	)
 
-	gatewayClassName = flag.String(
-		"gatewayclass",
-		"",
-		"The name of the GatewayClass resource. Every NGINX Gateway must have a unique corresponding GatewayClass resource",
-	)
+	gatewayClassName = flag.String("gatewayclass", "", gatewayClassNameUsage)
 )
 
 func main() {

@@ -1,3 +1,4 @@
+// Package helpers contains helper functions for unit tests.
 package helpers
 
 import (
@@ -17,42 +18,42 @@ func Diff(x, y interface{}) string {
 	return r
 }
 
-// GetStringPointer takes a string and returns a pointer to it. Useful in unit tests when initializing structs.
+// GetStringPointer takes a string and returns a pointer to it.
 func GetStringPointer(s string) *string {
 	return &s
 }
 
-// GetIntPointer takes an int and returns a pointer to it. Useful in unit tests when initializing structs.
+// GetIntPointer takes an int and returns a pointer to it.
 func GetIntPointer(i int) *int {
 	return &i
 }
 
-// GetInt32Pointer takes an int32 and returns a pointer to it. Useful in unit tests when initializing structs.
+// GetInt32Pointer takes an int32 and returns a pointer to it.
 func GetInt32Pointer(i int32) *int32 {
 	return &i
 }
 
-// GetHTTPMethodPointer takes an HTTPMethod and returns a pointer to it. Useful in unit tests when initializing structs.
+// GetHTTPMethodPointer takes an HTTPMethod and returns a pointer to it.
 func GetHTTPMethodPointer(m v1beta1.HTTPMethod) *v1beta1.HTTPMethod {
 	return &m
 }
 
-// GetHeaderMatchTypePointer takes an HeaderMatchType and returns a pointer to it. Useful in unit tests when initializing structs.
+// GetHeaderMatchTypePointer takes an HeaderMatchType and returns a pointer to it.
 func GetHeaderMatchTypePointer(t v1beta1.HeaderMatchType) *v1beta1.HeaderMatchType {
 	return &t
 }
 
-// GetQueryParamMatchTypePointer takes an QueryParamMatchType and returns a pointer to it. Useful in unit tests when initializing structs.
+// GetQueryParamMatchTypePointer takes an QueryParamMatchType and returns a pointer to it.
 func GetQueryParamMatchTypePointer(t v1beta1.QueryParamMatchType) *v1beta1.QueryParamMatchType {
 	return &t
 }
 
-// GetTLSModePointer takes a TLSModeType and returns a pointer to it. Useful in unit tests when initializing structs.
+// GetTLSModePointer takes a TLSModeType and returns a pointer to it.
 func GetTLSModePointer(t v1beta1.TLSModeType) *v1beta1.TLSModeType {
 	return &t
 }
 
-// GetBoolPointer takes a bool and returns a pointer to it. Useful in unit tests when initializing structs.
+// GetBoolPointer takes a bool and returns a pointer to it.
 func GetBoolPointer(b bool) *bool {
 	return &b
 }

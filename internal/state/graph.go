@@ -103,7 +103,10 @@ func buildGraph(
 // processGateways determines which Gateway resource the NGINX Gateway will use (the winner) and which Gateway(s) will
 // be ignored. Note that the function will not take into the account any unrelated Gateway resources - the ones with the
 // different GatewayClassName field.
-func processGateways(gws map[types.NamespacedName]*v1beta1.Gateway, gcName string) (winner *v1beta1.Gateway, ignoredGateways map[types.NamespacedName]*v1beta1.Gateway) {
+func processGateways(
+	gws map[types.NamespacedName]*v1beta1.Gateway,
+	gcName string,
+) (winner *v1beta1.Gateway, ignoredGateways map[types.NamespacedName]*v1beta1.Gateway) {
 	referencedGws := make([]*v1beta1.Gateway, 0, len(gws))
 
 	for _, gw := range gws {

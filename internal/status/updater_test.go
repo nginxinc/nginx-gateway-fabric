@@ -103,7 +103,12 @@ var _ = Describe("Updater", func() {
 				}
 			}
 
-			createExpectedGc = func(status metav1.ConditionStatus, generation int64, reason string, msg string) *v1beta1.GatewayClass {
+			createExpectedGc = func(
+				status metav1.ConditionStatus,
+				generation int64,
+				reason string,
+				msg string,
+			) *v1beta1.GatewayClass {
 				return &v1beta1.GatewayClass{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: gcName,
@@ -279,7 +284,12 @@ var _ = Describe("Updater", func() {
 
 		It("should have the updated status of GatewayClass in the API server", func() {
 			latestGc := &v1beta1.GatewayClass{}
-			expectedGc := createExpectedGc(metav1.ConditionTrue, 1, string(v1beta1.GatewayClassConditionStatusAccepted), "GatewayClass has been accepted")
+			expectedGc := createExpectedGc(
+				metav1.ConditionTrue,
+				1,
+				string(v1beta1.GatewayClassConditionStatusAccepted),
+				"GatewayClass has been accepted",
+			)
 
 			err := client.Get(context.Background(), types.NamespacedName{Name: gcName}, latestGc)
 			Expect(err).Should(Not(HaveOccurred()))
@@ -305,7 +315,11 @@ var _ = Describe("Updater", func() {
 			latestGw := &v1beta1.Gateway{}
 			expectedGw := createExpectedIgnoredGw()
 
-			err := client.Get(context.Background(), types.NamespacedName{Namespace: "test", Name: "ignored-gateway"}, latestGw)
+			err := client.Get(
+				context.Background(),
+				types.NamespacedName{Namespace: "test", Name: "ignored-gateway"},
+				latestGw,
+			)
 			Expect(err).Should(Not(HaveOccurred()))
 
 			expectedGw.ResourceVersion = latestGw.ResourceVersion
@@ -334,7 +348,12 @@ var _ = Describe("Updater", func() {
 		When("updating with canceled context", func() {
 			It("should have the updated status of GatewayClass in the API server", func() {
 				latestGc := &v1beta1.GatewayClass{}
-				expectedGc := createExpectedGc(metav1.ConditionFalse, 2, string(v1beta1.GatewayClassConditionStatusAccepted), "GatewayClass has been rejected: error")
+				expectedGc := createExpectedGc(
+					metav1.ConditionFalse,
+					2,
+					string(v1beta1.GatewayClassConditionStatusAccepted),
+					"GatewayClass has been rejected: error",
+				)
 
 				err := client.Get(context.Background(), types.NamespacedName{Name: gcName}, latestGc)
 				Expect(err).Should(Not(HaveOccurred()))
@@ -348,7 +367,11 @@ var _ = Describe("Updater", func() {
 				latestGw := &v1beta1.Gateway{}
 				expectedGw := createExpectedGw(metav1.ConditionFalse, string(v1beta1.ListenerReasonInvalid))
 
-				err := client.Get(context.Background(), types.NamespacedName{Namespace: "test", Name: "gateway"}, latestGw)
+				err := client.Get(
+					context.Background(),
+					types.NamespacedName{Namespace: "test", Name: "gateway"},
+					latestGw,
+				)
 				Expect(err).Should(Not(HaveOccurred()))
 
 				expectedGw.ResourceVersion = latestGw.ResourceVersion
@@ -360,7 +383,11 @@ var _ = Describe("Updater", func() {
 				latestGw := &v1beta1.Gateway{}
 				expectedGw := createExpectedIgnoredGw()
 
-				err := client.Get(context.Background(), types.NamespacedName{Namespace: "test", Name: "ignored-gateway"}, latestGw)
+				err := client.Get(
+					context.Background(),
+					types.NamespacedName{Namespace: "test", Name: "ignored-gateway"},
+					latestGw,
+				)
 				Expect(err).Should(Not(HaveOccurred()))
 
 				expectedGw.ResourceVersion = latestGw.ResourceVersion
@@ -373,7 +400,11 @@ var _ = Describe("Updater", func() {
 				latestHR := &v1beta1.HTTPRoute{}
 				expectedHR := createExpectedHR()
 
-				err := client.Get(context.Background(), types.NamespacedName{Namespace: "test", Name: "route1"}, latestHR)
+				err := client.Get(
+					context.Background(),
+					types.NamespacedName{Namespace: "test", Name: "route1"},
+					latestHR,
+				)
 				Expect(err).Should(Not(HaveOccurred()))
 
 				expectedHR.ResourceVersion = latestHR.ResourceVersion

@@ -178,8 +178,9 @@ func createReturnValForRedirectFilter(filter *v1beta1.HTTPRequestRedirectFilter,
 
 // httpMatch is an internal representation of an HTTPRouteMatch.
 // This struct is marshaled into a string and stored as a variable in the nginx location block for the route's path.
-// The NJS httpmatches module will lookup this variable on the request object and compare the request against the Method, Headers, and QueryParams contained in httpMatch.
-// If the request satisfies the httpMatch, the request will be internally redirected to the location RedirectPath by NGINX.
+// The NJS httpmatches module will look up this variable on the request object and compare the request against the
+// Method, Headers, and QueryParams contained in httpMatch.
+// If the request satisfies the httpMatch, NGINX will redirect the request to the location RedirectPath.
 type httpMatch struct {
 	// Method is the HTTPMethod of the HTTPRouteMatch.
 	Method v1beta1.HTTPMethod `json:"method,omitempty"`
@@ -248,8 +249,10 @@ func createQueryParamKeyValString(p v1beta1.HTTPQueryParamMatch) string {
 }
 
 // The name and values are delimited by ":". A name and value can always be recovered using strings.Split(arg, ":").
-// Header names are case-insensitive while header values are case-sensitive (e.g. foo:bar == FOO:bar, but foo:bar != foo:BAR).
-// We preserve the case of the name here because NGINX allows us to lookup the header names in a case-insensitive manner.
+// Header names are case-insensitive and header values are case-sensitive.
+// Ex. foo:bar == FOO:bar, but foo:bar != foo:BAR,
+// We preserve the case of the name here because NGINX allows us to look up the header names in a case-insensitive
+// manner.
 func createHeaderKeyValString(h v1beta1.HTTPHeaderMatch) string {
 	return string(h.Name) + ":" + h.Value
 }

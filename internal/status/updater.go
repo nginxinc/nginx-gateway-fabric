@@ -87,10 +87,15 @@ func (upd *updaterImpl) Update(ctx context.Context, statuses state.Statuses) {
 	// FIXME(pleshakov) Skip the status update (API call) if the status hasn't changed.
 
 	if statuses.GatewayClassStatus != nil {
-		upd.update(ctx, types.NamespacedName{Name: upd.cfg.GatewayClassName}, &v1beta1.GatewayClass{}, func(object client.Object) {
-			gc := object.(*v1beta1.GatewayClass)
-			gc.Status = prepareGatewayClassStatus(*statuses.GatewayClassStatus, upd.cfg.Clock.Now())
-		})
+		upd.update(
+			ctx,
+			types.NamespacedName{Name: upd.cfg.GatewayClassName},
+			&v1beta1.GatewayClass{},
+			func(object client.Object) {
+				gc := object.(*v1beta1.GatewayClass)
+				gc.Status = prepareGatewayClassStatus(*statuses.GatewayClassStatus, upd.cfg.Clock.Now())
+			},
+		)
 	}
 
 	if statuses.GatewayStatus != nil {
@@ -123,12 +128,22 @@ func (upd *updaterImpl) Update(ctx context.Context, statuses state.Statuses) {
 		upd.update(ctx, nsname, &v1beta1.HTTPRoute{}, func(object client.Object) {
 			hr := object.(*v1beta1.HTTPRoute)
 			// statuses.GatewayStatus is never nil when len(statuses.HTTPRouteStatuses) > 0
-			hr.Status = prepareHTTPRouteStatus(rs, statuses.GatewayStatus.NsName, upd.cfg.GatewayCtlrName, upd.cfg.Clock.Now())
+			hr.Status = prepareHTTPRouteStatus(
+				rs,
+				statuses.GatewayStatus.NsName,
+				upd.cfg.GatewayCtlrName,
+				upd.cfg.Clock.Now(),
+			)
 		})
 	}
 }
 
-func (upd *updaterImpl) update(ctx context.Context, nsname types.NamespacedName, obj client.Object, statusSetter func(client.Object)) {
+func (upd *updaterImpl) update(
+	ctx context.Context,
+	nsname types.NamespacedName,
+	obj client.Object,
+	statusSetter func(client.Object),
+) {
 	// The function handles errors by reporting them in the logs.
 	// FIXME(pleshakov): figure out appropriate log level for these errors. Perhaps 3?
 

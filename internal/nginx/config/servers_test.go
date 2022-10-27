@@ -184,7 +184,9 @@ func TestCreateServers(t *testing.T) {
 						},
 						{
 							Path: &v1beta1.HTTPPathMatch{
-								Value: helpers.GetStringPointer("/"), // should generate an "any" httpmatch since other matches exists for /
+								Value: helpers.GetStringPointer(
+									"/", // should generate an "any" httpmatch since other matches exists for /
+								),
 							},
 						},
 					},

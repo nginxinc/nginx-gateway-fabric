@@ -18,8 +18,8 @@ import (
 
 //go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . ChangeProcessor
 
-// ChangeProcessor processes the changes to resources producing the internal representation of the Gateway configuration.
-// ChangeProcessor only supports one GatewayClass resource.
+// ChangeProcessor processes the changes to resources producing the internal representation
+// of the Gateway configuration. It only supports one GatewayClass resource.
 type ChangeProcessor interface {
 	// CaptureUpsertChange captures an upsert change to a resource.
 	// It panics if the resource is of unsupported type or if the passed Gateway is different from the one this
@@ -104,7 +104,10 @@ func (c *ChangeProcessorImpl) CaptureUpsertChange(obj client.Object) {
 	c.changed = c.changed || c.store.changed || c.cfg.RelationshipCapturer.Exists(obj, client.ObjectKeyFromObject(obj))
 }
 
-func (c *ChangeProcessorImpl) CaptureDeleteChange(resourceType client.Object, nsname types.NamespacedName) {
+func (c *ChangeProcessorImpl) CaptureDeleteChange(
+	resourceType client.Object,
+	nsname types.NamespacedName,
+) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
@@ -134,7 +137,9 @@ func (c *ChangeProcessorImpl) CaptureDeleteChange(resourceType client.Object, ns
 	c.cfg.RelationshipCapturer.Remove(resourceType, nsname)
 }
 
-func (c *ChangeProcessorImpl) Process(ctx context.Context) (changed bool, conf Configuration, statuses Statuses) {
+func (c *ChangeProcessorImpl) Process(
+	ctx context.Context,
+) (changed bool, conf Configuration, statuses Statuses) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 

@@ -86,17 +86,38 @@ func TestRegisterController(t *testing.T) {
 	for _, test := range tests {
 		newReconciler := func(c reconciler.Config) *reconciler.Implementation {
 			if c.Getter != test.fakes.mgr.GetClient() {
-				t.Errorf("regiterController() created a reconciler config with Getter %p but expected %p for case of %q", c.Getter, test.fakes.mgr.GetClient(), test.msg)
+				t.Errorf(
+					"regiterController() created a reconciler config with Getter %p but expected %p for case of %q",
+					c.Getter,
+					test.fakes.mgr.GetClient(),
+					test.msg,
+				)
 			}
 			if c.ObjectType != objectType {
-				t.Errorf("registerController() created a reconciler config with ObjectType %T but expected %T for case of %q", c.ObjectType, objectType, test.msg)
+				t.Errorf(
+					"registerController() created a reconciler config with ObjectType %T but expected %T for case of %q",
+					c.ObjectType,
+					objectType,
+					test.msg,
+				)
 			}
 			if c.EventCh != eventCh {
-				t.Errorf("registerController() created a reconciler config with EventCh %v but expected %v for case of %q", c.EventCh, eventCh, test.msg)
+				t.Errorf(
+					"registerController() created a reconciler config with EventCh %v but expected %v for case of %q",
+					c.EventCh,
+					eventCh,
+					test.msg,
+				)
 			}
 			// comparing functions is not allowed in Go, so we're comparing the pointers
+			// nolint: lll
 			if reflect.ValueOf(c.NamespacedNameFilter).Pointer() != reflect.ValueOf(namespacedNameFilter).Pointer() {
-				t.Errorf("registerController() created a reconciler config with NamespacedNameFilter %p but expected %p for case of %q", c.NamespacedNameFilter, namespacedNameFilter, test.msg)
+				t.Errorf(
+					"registerController() created a reconciler config with NamespacedNameFilter %p but expected %p for case of %q",
+					c.NamespacedNameFilter,
+					namespacedNameFilter,
+					test.msg,
+				)
 			}
 
 			return reconciler.NewImplementation(c)
@@ -114,32 +135,60 @@ func TestRegisterController(t *testing.T) {
 		)
 
 		if !errors.Is(err, test.expectedErr) {
-			t.Errorf("registerController() returned %q but expected %q for case of %q", err, test.expectedErr, test.msg)
+			t.Errorf(
+				"registerController() returned %q but expected %q for case of %q",
+				err,
+				test.expectedErr,
+				test.msg,
+			)
 		}
 
 		indexCallCount := test.fakes.indexer.IndexFieldCallCount()
 		if indexCallCount != 1 {
-			t.Errorf("registerController() called indexer.IndexField() %d times but expected 1 for case of %q", indexCallCount, test.msg)
+			t.Errorf(
+				"registerController() called indexer.IndexField() %d times but expected 1 for case of %q",
+				indexCallCount,
+				test.msg,
+			)
 		} else {
 			_, objType, field, indexFunc := test.fakes.indexer.IndexFieldArgsForCall(0)
 
 			if objType != objectType {
-				t.Errorf("registerController() called indexer.IndexField() with object type %T but expected %T for case of %q", objType, objectType, test.msg)
+				t.Errorf(
+					"registerController() called indexer.IndexField() with object type %T but expected %T for case %q",
+					objType,
+					objectType,
+					test.msg,
+				)
 			}
 			if field != index.KubernetesServiceNameIndexField {
-				t.Errorf("registerController() called indexer.IndexField() with field %q but expected %q for case of %q", field, index.KubernetesServiceNameIndexField, test.msg)
+				t.Errorf("registerController() called indexer.IndexField() with field %q but expected %q for case %q",
+					field,
+					index.KubernetesServiceNameIndexField,
+					test.msg,
+				)
 			}
 
 			expectedIndexFunc := fieldIndexes[index.KubernetesServiceNameIndexField]
 			// comparing functions is not allowed in Go, so we're comparing the pointers
+			// nolint:lll
 			if reflect.ValueOf(indexFunc).Pointer() != reflect.ValueOf(expectedIndexFunc).Pointer() {
-				t.Errorf("registerController() called indexer.IndexField() with indexFunc %p but expected %p for case of %q", indexFunc, expectedIndexFunc, test.msg)
+				t.Errorf("registerController() called indexer.IndexField() with indexFunc %p but expected %p for case %q",
+					indexFunc,
+					expectedIndexFunc,
+					test.msg,
+				)
 			}
 		}
 
 		addCallCount := test.fakes.mgr.AddCallCount()
 		if addCallCount != test.expectedMgrAddCallCount {
-			t.Errorf("registerController() called mgr.Add() %d times but expected %d times for case of %q", addCallCount, test.expectedMgrAddCallCount, test.msg)
+			t.Errorf(
+				"registerController() called mgr.Add() %d times but expected %d times for case %q",
+				addCallCount,
+				test.expectedMgrAddCallCount,
+				test.msg,
+			)
 		}
 	}
 }

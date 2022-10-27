@@ -97,7 +97,11 @@ func validateBackendRef(ref v1beta1.BackendRef, routeNs string) error {
 	}
 
 	if ref.Namespace != nil && string(*ref.Namespace) != routeNs {
-		return fmt.Errorf("cross-namespace routing is not permitted; namespace %s does not match the HTTPRoute namespace %s", *ref.Namespace, routeNs)
+		return fmt.Errorf(
+			"cross-namespace routing is not permitted; namespace %s does not match the HTTPRoute namespace %s",
+			*ref.Namespace,
+			routeNs,
+		)
 	}
 
 	if ref.Port == nil {

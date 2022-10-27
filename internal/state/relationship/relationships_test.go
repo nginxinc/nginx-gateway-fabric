@@ -27,7 +27,10 @@ func TestGetBackendServiceNamesFromRoute(t *testing.T) {
 		}
 	}
 
-	getModifiedRefs := func(svcName v1beta1.ObjectName, mod func([]v1beta1.HTTPBackendRef) []v1beta1.HTTPBackendRef) []v1beta1.HTTPBackendRef {
+	getModifiedRefs := func(
+		svcName v1beta1.ObjectName,
+		mod func([]v1beta1.HTTPBackendRef) []v1beta1.HTTPBackendRef,
+	) []v1beta1.HTTPBackendRef {
 		return mod(getNormalRefs(svcName))
 	}
 
@@ -60,7 +63,9 @@ func TestGetBackendServiceNamesFromRoute(t *testing.T) {
 				{
 					BackendRefs: getModifiedRefs("diff-namespace",
 						func(refs []v1beta1.HTTPBackendRef) []v1beta1.HTTPBackendRef {
-							refs[0].Namespace = (*v1beta1.Namespace)(helpers.GetStringPointer("not-test"))
+							refs[0].Namespace = (*v1beta1.Namespace)(
+								helpers.GetStringPointer("not-test"),
+							)
 							return refs
 						},
 					),
@@ -78,10 +83,16 @@ func TestGetBackendServiceNamesFromRoute(t *testing.T) {
 							return append(refs, v1beta1.HTTPBackendRef{
 								BackendRef: v1beta1.BackendRef{
 									BackendObjectReference: v1beta1.BackendObjectReference{
-										Kind:      (*v1beta1.Kind)(helpers.GetStringPointer("Service")),
-										Name:      "multiple-refs2",
-										Namespace: (*v1beta1.Namespace)(helpers.GetStringPointer("test")),
-										Port:      (*v1beta1.PortNumber)(helpers.GetInt32Pointer(80)),
+										Kind: (*v1beta1.Kind)(
+											helpers.GetStringPointer("Service"),
+										),
+										Name: "multiple-refs2",
+										Namespace: (*v1beta1.Namespace)(
+											helpers.GetStringPointer("test"),
+										),
+										Port: (*v1beta1.PortNumber)(
+											helpers.GetInt32Pointer(80),
+										),
 									},
 								},
 							})
