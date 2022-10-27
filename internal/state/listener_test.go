@@ -11,8 +11,8 @@ import (
 func TestValidateHTTPListener(t *testing.T) {
 	tests := []struct {
 		l        v1beta1.Listener
-		expected bool
 		msg      string
+		expected bool
 	}{
 		{
 			l: v1beta1.Listener{
@@ -63,8 +63,8 @@ func TestValidateHTTPSListener(t *testing.T) {
 
 	tests := []struct {
 		l        v1beta1.Listener
-		expected bool
 		msg      string
+		expected bool
 	}{
 		{
 			l: v1beta1.Listener{

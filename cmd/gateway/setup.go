@@ -22,16 +22,16 @@ const (
 type (
 	Validator        func(*flag.FlagSet) error
 	ValidatorContext struct {
-		Key string
 		V   Validator
+		Key string
 	}
 )
 
 func GatewayControllerParam(domain string) ValidatorContext {
 	name := "gateway-ctlr-name"
 	return ValidatorContext{
-		name,
-		func(flagset *flag.FlagSet) error {
+		Key: name,
+		V: func(flagset *flag.FlagSet) error {
 			param, err := flagset.GetString(name)
 			if err != nil {
 				return err
@@ -68,8 +68,8 @@ func validateControllerName(name string) error {
 func GatewayClassParam() ValidatorContext {
 	name := "gatewayclass"
 	return ValidatorContext{
-		name,
-		func(flagset *flag.FlagSet) error {
+		Key: name,
+		V: func(flagset *flag.FlagSet) error {
 			param, err := flagset.GetString(name)
 			if err != nil {
 				return err

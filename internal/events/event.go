@@ -17,8 +17,8 @@ type UpsertEvent struct {
 
 // DeleteEvent representing deleting a resource.
 type DeleteEvent struct {
-	// NamespacedName is the namespace & name of the deleted resource.
-	NamespacedName types.NamespacedName
 	// Type is the resource type. For example, if the event is for *v1beta1.HTTPRoute, pass &v1beta1.HTTPRoute{} as Type.
 	Type client.Object
+	// NamespacedName is the namespace & name of the deleted resource.
+	NamespacedName types.NamespacedName
 }

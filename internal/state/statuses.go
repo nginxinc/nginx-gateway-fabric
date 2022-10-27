@@ -21,8 +21,8 @@ type Statuses struct {
 
 // GatewayStatus holds the status of the winning Gateway resource.
 type GatewayStatus struct {
-	NsName           types.NamespacedName
 	ListenerStatuses ListenerStatuses
+	NsName           types.NamespacedName
 }
 
 // IgnoredGatewayStatuses holds the statuses of the ignored Gateway resources.
@@ -46,10 +46,10 @@ type ParentStatuses map[string]ParentStatus
 
 // HTTPRouteStatus holds the status-related information about an HTTPRoute resource.
 type HTTPRouteStatus struct {
-	// ObservedGeneration is the generation of the resource that was processed.
-	ObservedGeneration int64
 	// ParentStatuses holds the statuses for parentRefs of the HTTPRoute.
 	ParentStatuses ParentStatuses
+	// ObservedGeneration is the generation of the resource that was processed.
+	ObservedGeneration int64
 }
 
 // ParentStatus holds status-related information related to how the HTTPRoute binds to a specific parentRef.
@@ -60,12 +60,12 @@ type ParentStatus struct {
 
 // GatewayClassStatus holds status-related infortmation about the GatewayClass resource.
 type GatewayClassStatus struct {
-	// Valid shows if the resource is valid.
-	Valid bool
 	// ErrorMsg describe the error when the resource is invalid.
 	ErrorMsg string
 	// ObservedGeneration is the generation of the resource that was processed.
 	ObservedGeneration int64
+	// Valid shows if the resource is valid.
+	Valid bool
 }
 
 // buildStatuses builds statuses from a graph.

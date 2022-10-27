@@ -142,9 +142,9 @@ func TestCreateUpstreams(t *testing.T) {
 
 func TestCreateUpstream(t *testing.T) {
 	tests := []struct {
+		msg              string
 		stateUpstream    state.Upstream
 		expectedUpstream http.Upstream
-		msg              string
 	}{
 		{
 			stateUpstream: state.Upstream{

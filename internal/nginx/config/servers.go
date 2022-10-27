@@ -181,16 +181,16 @@ func createReturnValForRedirectFilter(filter *v1beta1.HTTPRequestRedirectFilter,
 // The NJS httpmatches module will lookup this variable on the request object and compare the request against the Method, Headers, and QueryParams contained in httpMatch.
 // If the request satisfies the httpMatch, the request will be internally redirected to the location RedirectPath by NGINX.
 type httpMatch struct {
-	// Any represents a match with no match conditions.
-	Any bool `json:"any,omitempty"`
 	// Method is the HTTPMethod of the HTTPRouteMatch.
 	Method v1beta1.HTTPMethod `json:"method,omitempty"`
+	// RedirectPath is the path to redirect the request to if the request satisfies the match conditions.
+	RedirectPath string `json:"redirectPath,omitempty"`
 	// Headers is a list of HTTPHeaders name value pairs with the format "{name}:{value}".
 	Headers []string `json:"headers,omitempty"`
 	// QueryParams is a list of HTTPQueryParams name value pairs with the format "{name}={value}".
 	QueryParams []string `json:"params,omitempty"`
-	// RedirectPath is the path to redirect the request to if the request satisfies the match conditions.
-	RedirectPath string `json:"redirectPath,omitempty"`
+	// Any represents a match with no match conditions.
+	Any bool `json:"any,omitempty"`
 }
 
 func createHTTPMatch(match v1beta1.HTTPRouteMatch, redirectPath string) httpMatch {

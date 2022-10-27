@@ -10,15 +10,15 @@ import (
 type listener struct {
 	// Source holds the source of the listener from the Gateway resource.
 	Source v1beta1.Listener
-	// Valid shows whether the listener is valid.
-	Valid bool
-	// SecretPath is the path to the secret on disk.
-	SecretPath string
 	// Routes holds the routes attached to the listener.
 	Routes map[types.NamespacedName]*route
 	// AcceptedHostnames is an intersection between the hostnames supported by the listener and the hostnames
 	// from the attached routes.
 	AcceptedHostnames map[string]struct{}
+	// SecretPath is the path to the secret on disk.
+	SecretPath string
+	// Valid shows whether the listener is valid.
+	Valid bool
 }
 
 type listenerConfigurator interface {

@@ -67,10 +67,10 @@ func TestExecuteServers(t *testing.T) {
 
 func TestExecuteForDefaultServers(t *testing.T) {
 	testcases := []struct {
+		msg         string
 		conf        state.Configuration
 		httpDefault bool
 		sslDefault  bool
-		msg         string
 	}{
 		{
 			conf:        state.Configuration{},
@@ -624,8 +624,8 @@ func TestCreateHTTPMatch(t *testing.T) {
 
 	tests := []struct {
 		match    v1beta1.HTTPRouteMatch
-		expected httpMatch
 		msg      string
+		expected httpMatch
 	}{
 		{
 			match: v1beta1.HTTPRouteMatch{
@@ -781,8 +781,8 @@ func TestCreateHeaderKeyValString(t *testing.T) {
 func TestIsPathOnlyMatch(t *testing.T) {
 	tests := []struct {
 		match    v1beta1.HTTPRouteMatch
-		expected bool
 		msg      string
+		expected bool
 	}{
 		{
 			match: v1beta1.HTTPRouteMatch{

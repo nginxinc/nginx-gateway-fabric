@@ -48,8 +48,8 @@ func TestRegisterController(t *testing.T) {
 	tests := []struct {
 		fakes                   fakes
 		expectedErr             error
-		expectedMgrAddCallCount int
 		msg                     string
+		expectedMgrAddCallCount int
 	}{
 		{
 			fakes:                   getDefaultFakes(),

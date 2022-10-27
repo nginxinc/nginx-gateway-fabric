@@ -405,8 +405,8 @@ func TestCreateSplitClientDistributions(t *testing.T) {
 func TestGetSplitClientValue(t *testing.T) {
 	tests := []struct {
 		msg      string
-		backend  state.BackendRef
 		expValue string
+		backend  state.BackendRef
 	}{
 		{
 			msg: "valid backend",
@@ -598,8 +598,8 @@ func TestBackendGroupNeedsSplit(t *testing.T) {
 func TestBackendGroupName(t *testing.T) {
 	tests := []struct {
 		msg      string
-		backends []state.BackendRef
 		expName  string
+		backends []state.BackendRef
 	}{
 		{
 			msg:      "empty backends",

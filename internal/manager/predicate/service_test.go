@@ -11,9 +11,9 @@ import (
 
 func TestServicePortsChangedPredicate_Update(t *testing.T) {
 	testcases := []struct {
-		msg       string
 		objectOld client.Object
 		objectNew client.Object
+		msg       string
 		expUpdate bool
 	}{
 		{

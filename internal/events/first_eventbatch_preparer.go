@@ -36,9 +36,9 @@ type EachListItemFunc func(obj runtime.Object, fn func(runtime.Object) error) er
 // FirstEventBatchPreparerImpl is an implementation of FirstEventBatchPreparer.
 type FirstEventBatchPreparerImpl struct {
 	reader       Reader
+	eachListItem EachListItemFunc
 	objects      []client.Object
 	objectLists  []client.ObjectList
-	eachListItem EachListItemFunc
 }
 
 // NewFirstEventBatchPreparerImpl creates a new FirstEventBatchPreparerImpl.

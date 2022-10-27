@@ -830,10 +830,10 @@ func TestBindRouteToListeners(t *testing.T) {
 		gw                *v1beta1.Gateway
 		ignoredGws        map[types.NamespacedName]*v1beta1.Gateway
 		listeners         map[string]*listener
-		expectedIgnored   bool
 		expectedRoute     *route
 		expectedListeners map[string]*listener
 		msg               string
+		expectedIgnored   bool
 	}{
 		{
 			httpRoute:  createRoute("foo.example.com"),
@@ -1042,9 +1042,9 @@ func TestFindAcceptedHostnames(t *testing.T) {
 
 	tests := []struct {
 		listenerHostname *v1beta1.Hostname
+		msg              string
 		routeHostnames   []v1beta1.Hostname
 		expected         []string
-		msg              string
 	}{
 		{
 			listenerHostname: &listenerHostnameFoo,

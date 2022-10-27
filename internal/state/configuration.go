@@ -30,12 +30,12 @@ type Configuration struct {
 
 // VirtualServer is a virtual server.
 type VirtualServer struct {
+	// SSL holds the SSL configuration options for the server.
+	SSL *SSL
 	// Hostname is the hostname of the server.
 	Hostname string
 	// PathRules is a collection of routing rules.
 	PathRules []PathRule
-	// SSL holds the SSL configuration options fo the server.
-	SSL *SSL
 }
 
 type Upstream struct {
@@ -69,18 +69,18 @@ type Filters struct {
 // An HTTPRoute is guaranteed to have at least one rule with one match.
 // If no rule or match is specified by the user, the default rule {{path:{ type: "PathPrefix", value: "/"}}} is set by the schema.
 type MatchRule struct {
-	// MatchIdx is the index of the rule in the Rule.Matches.
-	MatchIdx int
-	// RuleIdx is the index of the corresponding rule in the HTTPRoute.
-	RuleIdx int
 	// Filters holds the filters for the MatchRule.
 	Filters Filters
-	// BackendGroup is the group of Backends that the rule routes to.
-	BackendGroup BackendGroup
 	// Source is the corresponding HTTPRoute resource.
 	// FIXME(pleshakov): Consider referencing only the parts needed for the config generation rather than
 	// the entire resource.
 	Source *v1beta1.HTTPRoute
+	// BackendGroup is the group of Backends that the rule routes to.
+	BackendGroup BackendGroup
+	// MatchIdx is the index of the rule in the Rule.Matches.
+	MatchIdx int
+	// RuleIdx is the index of the corresponding rule in the HTTPRoute.
+	RuleIdx int
 }
 
 // GetMatch returns the HTTPRouteMatch of the Route .
