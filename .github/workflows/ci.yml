@@ -202,7 +202,7 @@ jobs:
           no-cache: ${{ github.event_name != 'pull_request' }}
 
       - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@0.7.1
+        uses: aquasecurity/trivy-action@0.8.0
         continue-on-error: true
         with:
           image-ref: ghcr.io/nginxinc/nginx-kubernetes-gateway:${{ steps.meta.outputs.version }}
