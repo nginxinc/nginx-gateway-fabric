@@ -35,7 +35,8 @@ linters-settings:
   govet:
     enable:
     - fieldalignment
-
+  lll:
+    line-length: 120
 linters:
     enable:
     - asciicheck
@@ -49,6 +50,7 @@ linters:
     - gosimple
     - govet
     - ineffassign
+    - lll
     - makezero
     - misspell
     - nilerr

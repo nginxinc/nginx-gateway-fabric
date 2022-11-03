@@ -88,7 +88,8 @@ var _ = Describe("EventHandler", func() {
 	})
 
 	Describe("Process the Gateway API resources events", func() {
-		DescribeTable("A batch with one event",
+		DescribeTable(
+			"A batch with one event",
 			func(e interface{}) {
 				fakeConf := state.Configuration{}
 				fakeStatuses := state.Statuses{}
@@ -119,17 +120,59 @@ var _ = Describe("EventHandler", func() {
 				// Check that a reconfig happened
 				expectReconfig(fakeConf, fakeCfg, fakeStatuses)
 			},
-			Entry("HTTPRoute upsert", &events.UpsertEvent{Resource: &v1beta1.HTTPRoute{}}),
-			Entry("Gateway upsert", &events.UpsertEvent{Resource: &v1beta1.Gateway{}}),
-			Entry("GatewayClass upsert", &events.UpsertEvent{Resource: &v1beta1.GatewayClass{}}),
-			Entry("Service upsert", &events.UpsertEvent{Resource: &apiv1.Service{}}),
-			Entry("EndpointSlice upsert", &events.UpsertEvent{Resource: &discoveryV1.EndpointSlice{}}),
+			Entry(
+				"HTTPRoute upsert",
+				&events.UpsertEvent{Resource: &v1beta1.HTTPRoute{}},
+			),
+			Entry(
+				"Gateway upsert",
+				&events.UpsertEvent{Resource: &v1beta1.Gateway{}},
+			),
+			Entry(
+				"GatewayClass upsert",
+				&events.UpsertEvent{Resource: &v1beta1.GatewayClass{}},
+			),
+			Entry(
+				"Service upsert",
+				&events.UpsertEvent{Resource: &apiv1.Service{}},
+			),
+			Entry(
+				"EndpointSlice upsert",
+				&events.UpsertEvent{Resource: &discoveryV1.EndpointSlice{}},
+			),
 
-			Entry("HTTPRoute delete", &events.DeleteEvent{Type: &v1beta1.HTTPRoute{}, NamespacedName: types.NamespacedName{Namespace: "test", Name: "route"}}),
-			Entry("Gateway delete", &events.DeleteEvent{Type: &v1beta1.Gateway{}, NamespacedName: types.NamespacedName{Namespace: "test", Name: "gateway"}}),
-			Entry("GatewayClass delete", &events.DeleteEvent{Type: &v1beta1.GatewayClass{}, NamespacedName: types.NamespacedName{Name: "class"}}),
-			Entry("Service delete", &events.DeleteEvent{Type: &apiv1.Service{}, NamespacedName: types.NamespacedName{Namespace: "test", Name: "service"}}),
-			Entry("EndpointSlice deleted", &events.DeleteEvent{Type: &discoveryV1.EndpointSlice{}, NamespacedName: types.NamespacedName{Namespace: "test", Name: "endpointslice"}}),
+			Entry(
+				"HTTPRoute delete",
+				&events.DeleteEvent{
+					Type:           &v1beta1.HTTPRoute{},
+					NamespacedName: types.NamespacedName{Namespace: "test", Name: "route"},
+				},
+			),
+			Entry(
+				"Gateway delete",
+				&events.DeleteEvent{
+					Type:           &v1beta1.Gateway{},
+					NamespacedName: types.NamespacedName{Namespace: "test", Name: "gateway"},
+				},
+			),
+			Entry(
+				"GatewayClass delete",
+				&events.DeleteEvent{Type: &v1beta1.GatewayClass{}, NamespacedName: types.NamespacedName{Name: "class"}},
+			),
+			Entry(
+				"Service delete",
+				&events.DeleteEvent{
+					Type:           &apiv1.Service{},
+					NamespacedName: types.NamespacedName{Namespace: "test", Name: "service"},
+				},
+			),
+			Entry(
+				"EndpointSlice deleted",
+				&events.DeleteEvent{
+					Type:           &discoveryV1.EndpointSlice{},
+					NamespacedName: types.NamespacedName{Namespace: "test", Name: "endpointslice"},
+				},
+			),
 		)
 	})
 
@@ -192,11 +235,20 @@ var _ = Describe("EventHandler", func() {
 			&events.UpsertEvent{Resource: secret},
 		}
 		deletes := []interface{}{
-			&events.DeleteEvent{Type: &v1beta1.HTTPRoute{}, NamespacedName: types.NamespacedName{Namespace: "test", Name: "route"}},
-			&events.DeleteEvent{Type: &v1beta1.Gateway{}, NamespacedName: types.NamespacedName{Namespace: "test", Name: "gateway"}},
+			&events.DeleteEvent{
+				Type:           &v1beta1.HTTPRoute{},
+				NamespacedName: types.NamespacedName{Namespace: "test", Name: "route"},
+			},
+			&events.DeleteEvent{
+				Type:           &v1beta1.Gateway{},
+				NamespacedName: types.NamespacedName{Namespace: "test", Name: "gateway"},
+			},
 			&events.DeleteEvent{Type: &v1beta1.GatewayClass{}, NamespacedName: types.NamespacedName{Name: "class"}},
 			&events.DeleteEvent{Type: &apiv1.Service{}, NamespacedName: svcNsName},
-			&events.DeleteEvent{Type: &discoveryV1.EndpointSlice{}, NamespacedName: types.NamespacedName{Namespace: "test", Name: "endpointslice"}},
+			&events.DeleteEvent{
+				Type:           &discoveryV1.EndpointSlice{},
+				NamespacedName: types.NamespacedName{Namespace: "test", Name: "endpointslice"},
+			},
 			&events.DeleteEvent{Type: &apiv1.Secret{}, NamespacedName: secretNsName},
 		}
 
@@ -219,7 +271,8 @@ var _ = Describe("EventHandler", func() {
 		// 5, not 6, because secret upsert events do not result into CaptureUpsertChange() call
 		Expect(fakeProcessor.CaptureUpsertChangeCallCount()).Should(Equal(5))
 		for i := 0; i < 5; i++ {
-			Expect(fakeProcessor.CaptureUpsertChangeArgsForCall(i)).Should(Equal(upserts[i].(*events.UpsertEvent).Resource))
+			Expect(fakeProcessor.CaptureUpsertChangeArgsForCall(i)).
+				Should(Equal(upserts[i].(*events.UpsertEvent).Resource))
 		}
 
 		// 5, not 6, because secret delete events do not result into CaptureDeleteChange() call

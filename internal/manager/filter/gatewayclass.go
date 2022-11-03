@@ -13,7 +13,10 @@ import (
 func CreateFilterForGatewayClass(gcName string) reconciler.NamespacedNameFilterFunc {
 	return func(nsname types.NamespacedName) (bool, string) {
 		if nsname.Name != gcName {
-			return false, fmt.Sprintf("GatewayClass is ignored because this controller only supports the GatewayClass %s", gcName)
+			return false, fmt.Sprintf(
+				"GatewayClass is ignored because this controller only supports the GatewayClass %s",
+				gcName,
+			)
 		}
 		return true, ""
 	}

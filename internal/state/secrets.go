@@ -69,7 +69,8 @@ func (s SecretStoreImpl) Get(nsname types.NamespacedName) *Secret {
 // SecretDiskMemoryManager manages secrets that are requested by Gateway resources.
 type SecretDiskMemoryManager interface {
 	// Request marks the secret as requested so that it can be written to disk before reloading NGINX.
-	// Returns the path to the secret and an error if the secret does not exist in the secret store or the secret is invalid.
+	// Returns the path to the secret if it exists.
+	// Returns an error if the secret does not exist in the secret store or the secret is invalid.
 	Request(nsname types.NamespacedName) (string, error)
 	// WriteAllRequestedSecrets writes all requested secrets to disk.
 	WriteAllRequestedSecrets() error
@@ -114,7 +115,11 @@ func WithSecretFileManager(fileManager FileManager) SecretDiskMemoryManagerOptio
 	}
 }
 
-func NewSecretDiskMemoryManager(secretDirectory string, secretStore SecretStore, options ...SecretDiskMemoryManagerOption) *SecretDiskMemoryManagerImpl {
+func NewSecretDiskMemoryManager(
+	secretDirectory string,
+	secretStore SecretStore,
+	options ...SecretDiskMemoryManagerOption,
+) *SecretDiskMemoryManagerImpl {
 	sm := &SecretDiskMemoryManagerImpl{
 		requestedSecrets: make(map[types.NamespacedName]requestedSecret),
 		secretStore:      secretStore,
@@ -136,7 +141,11 @@ func (s *SecretDiskMemoryManagerImpl) Request(nsname types.NamespacedName) (stri
 	}
 
 	if !secret.Valid {
-		return "", fmt.Errorf("secret %s is not valid; must be of type %s and contain a valid X509 key pair", nsname, apiv1.SecretTypeTLS)
+		return "", fmt.Errorf(
+			"secret %s is not valid; must be of type %s and contain a valid X509 key pair",
+			nsname,
+			apiv1.SecretTypeTLS,
+		)
 	}
 
 	ss := requestedSecret{
@@ -172,7 +181,12 @@ func (s *SecretDiskMemoryManagerImpl) WriteAllRequestedSecrets() error {
 		}
 
 		if err = s.fileManager.Chmod(file, tlsSecretFileMode); err != nil {
-			return fmt.Errorf("failed to change mode of file %s for secret %s: %w", ss.path, nsname, err)
+			return fmt.Errorf(
+				"failed to change mode of file %s for secret %s: %w",
+				ss.path,
+				nsname,
+				err,
+			)
 		}
 
 		contents := generateCertAndKeyFileContent(ss.secret)

@@ -230,7 +230,12 @@ func TestServicePortsChangedPredicate_Update(t *testing.T) {
 		})
 
 		if update != tc.expUpdate {
-			t.Errorf("ServicePortsChangedPredicate.Update() mismatch for %q; got %t, expected %t", tc.msg, update, tc.expUpdate)
+			t.Errorf(
+				"ServicePortsChangedPredicate.Update() mismatch for %q; got %t, expected %t",
+				tc.msg,
+				update,
+				tc.expUpdate,
+			)
 		}
 	}
 }

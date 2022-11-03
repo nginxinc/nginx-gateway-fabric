@@ -47,7 +47,11 @@ type FirstEventBatchPreparerImpl struct {
 // The object must specify its namespace (if any) and name.
 // For each list from objectLists, FirstEventBatchPreparerImpl will list the resources of the corresponding type from
 // the reader.
-func NewFirstEventBatchPreparerImpl(reader Reader, objects []client.Object, objectLists []client.ObjectList) *FirstEventBatchPreparerImpl {
+func NewFirstEventBatchPreparerImpl(
+	reader Reader,
+	objects []client.Object,
+	objectLists []client.ObjectList,
+) *FirstEventBatchPreparerImpl {
 	return &FirstEventBatchPreparerImpl{
 		reader:       reader,
 		objects:      objects,

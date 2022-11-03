@@ -688,8 +688,17 @@ func TestBuildConfiguration(t *testing.T) {
 						SSL:      &SSL{CertificatePath: secretPath},
 					},
 				},
-				Upstreams:     []Upstream{fooUpstream},
-				BackendGroups: []BackendGroup{hr3Groups[0], hr3Groups[1], hr4Groups[0], hr4Groups[1], httpsHR3Groups[0], httpsHR3Groups[1], httpsHR4Groups[0], httpsHR4Groups[1]},
+				Upstreams: []Upstream{fooUpstream},
+				BackendGroups: []BackendGroup{
+					hr3Groups[0],
+					hr3Groups[1],
+					hr4Groups[0],
+					hr4Groups[1],
+					httpsHR3Groups[0],
+					httpsHR3Groups[1],
+					httpsHR4Groups[0],
+					httpsHR4Groups[1],
+				},
 			},
 			msg: "one http and one https listener with two routes with the same hostname with and without collisions",
 		},
@@ -984,7 +993,12 @@ func TestMatchRuleGetMatch(t *testing.T) {
 	for _, tc := range tests {
 		actual := tc.rule.GetMatch()
 		if *actual.Path.Value != tc.expPath {
-			t.Errorf("MatchRule.GetMatch() returned incorrect match with path: %s, expected path: %s for test case: %q", *actual.Path.Value, tc.expPath, tc.name)
+			t.Errorf(
+				"MatchRule.GetMatch() returned incorrect match with path: %s, expected path: %s for test case: %q",
+				*actual.Path.Value,
+				tc.expPath,
+				tc.name,
+			)
 		}
 	}
 }
@@ -1018,7 +1032,12 @@ func TestGetListenerHostname(t *testing.T) {
 	for _, test := range tests {
 		result := getListenerHostname(test.hostname)
 		if result != test.expected {
-			t.Errorf("getListenerHostname() returned %q but expected %q for the case of %q", result, test.expected, test.msg)
+			t.Errorf(
+				"getListenerHostname() returned %q but expected %q for the case of %q",
+				result,
+				test.expected,
+				test.msg,
+			)
 		}
 	}
 }

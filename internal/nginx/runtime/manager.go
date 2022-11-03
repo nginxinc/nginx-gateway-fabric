@@ -32,8 +32,9 @@ func NewManagerImpl() *ManagerImpl {
 
 func (m *ManagerImpl) Reload(ctx context.Context) error {
 	// FIXME(pleshakov): Before reload attempt, make sure NGINX is running.
-	// If the gateway container starts before NGINX container (which is possible), then it is possible that a reload can be attempted
-	// when NGINX is not running yet. Make sure to prevent this case, so we don't get an error.
+	// If the gateway container starts before NGINX container (which is possible),
+	// then it is possible that a reload can be attempted when NGINX is not running yet.
+	// Make sure to prevent this case, so we don't get an error.
 
 	// We find the main NGINX PID on every reload because it will change if the NGINX container is restarted.
 	pid, err := findMainProcess(os.ReadFile)

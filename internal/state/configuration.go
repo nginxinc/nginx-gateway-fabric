@@ -67,7 +67,8 @@ type Filters struct {
 
 // MatchRule represents a routing rule. It corresponds directly to a Match in the HTTPRoute resource.
 // An HTTPRoute is guaranteed to have at least one rule with one match.
-// If no rule or match is specified by the user, the default rule {{path:{ type: "PathPrefix", value: "/"}}} is set by the schema.
+// If no rule or match is specified by the user, the default rule {{path:{ type: "PathPrefix", value: "/"}}}
+// is set by the schema.
 type MatchRule struct {
 	// Filters holds the filters for the MatchRule.
 	Filters Filters
@@ -337,7 +338,8 @@ func (hpr *hostPathRules) buildServers() []VirtualServer {
 	for _, l := range hpr.listeners {
 		hostname := getListenerHostname(l.Source.Hostname)
 		// generate a 404 ssl server block for listeners with no routes or listeners with wildcard (match-all) routes
-		// FIXME(kate-osborn): when we support regex hostnames (e.g. *.example.com) we will have to modify this check to catch regex hostnames.
+		// FIXME(kate-osborn): when we support regex hostnames (e.g. *.example.com)
+		// we will have to modify this check to catch regex hostnames.
 		if len(l.Routes) == 0 || hostname == wildcardHostname {
 			s := VirtualServer{
 				Hostname: hostname,

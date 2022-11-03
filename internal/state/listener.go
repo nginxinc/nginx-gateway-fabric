@@ -41,7 +41,10 @@ func (f *listenerConfiguratorFactory) getConfiguratorForListener(l v1beta1.Liste
 	}
 }
 
-func newListenerConfiguratorFactory(gw *v1beta1.Gateway, secretMemoryMgr SecretDiskMemoryManager) *listenerConfiguratorFactory {
+func newListenerConfiguratorFactory(
+	gw *v1beta1.Gateway,
+	secretMemoryMgr SecretDiskMemoryManager,
+) *listenerConfiguratorFactory {
 	return &listenerConfiguratorFactory{
 		https: newHTTPSListenerConfigurator(gw, secretMemoryMgr),
 		http:  newHTTPListenerConfigurator(),
@@ -54,7 +57,10 @@ type httpsListenerConfigurator struct {
 	usedHostnames   map[string]*listener
 }
 
-func newHTTPSListenerConfigurator(gateway *v1beta1.Gateway, secretMemoryMgr SecretDiskMemoryManager) *httpsListenerConfigurator {
+func newHTTPSListenerConfigurator(
+	gateway *v1beta1.Gateway,
+	secretMemoryMgr SecretDiskMemoryManager,
+) *httpsListenerConfigurator {
 	return &httpsListenerConfigurator{
 		gateway:         gateway,
 		secretMemoryMgr: secretMemoryMgr,
@@ -156,7 +162,8 @@ func validateHTTPSListener(listener v1beta1.Listener, gwNsname string) bool {
 	// FIXME(kate-osborn):
 	// 1. For now we require that all HTTPS listeners bind to port 443
 	// 2. Only TLSModeTerminate is supported.
-	if listener.Port != 443 || listener.TLS == nil || *listener.TLS.Mode != v1beta1.TLSModeTerminate || len(listener.TLS.CertificateRefs) == 0 {
+	if listener.Port != 443 || listener.TLS == nil || *listener.TLS.Mode != v1beta1.TLSModeTerminate ||
+		len(listener.TLS.CertificateRefs) == 0 {
 		return false
 	}
 

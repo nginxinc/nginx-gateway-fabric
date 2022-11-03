@@ -15,8 +15,10 @@ import (
 )
 
 const (
-	errTmpl             = "failed validation - flag: '--%s' reason: '%s'\n"
-	controllerNameRegex = `^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*\/[A-Za-z0-9\/\-._~%!$&'()*+,;=:]+$`
+	errTmpl = "failed validation - flag: '--%s' reason: '%s'\n"
+	// nolint:lll
+	// Regex from: https://github.com/kubernetes-sigs/gateway-api/blob/547122f7f55ac0464685552898c560658fb40073/apis/v1alpha2/shared_types.go#L462
+	controllerNameRegex = `^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*\/[A-Za-z0-9\/\-._~%!$&'()*+,;=:]+$` //nolint:lll
 )
 
 type (
@@ -57,7 +59,6 @@ func GatewayControllerParam(domain string) ValidatorContext {
 }
 
 func validateControllerName(name string) error {
-	// Regex from: https://github.com/kubernetes-sigs/gateway-api/blob/547122f7f55ac0464685552898c560658fb40073/apis/v1alpha2/shared_types.go#L462
 	re := regexp.MustCompile(controllerNameRegex)
 	if !re.MatchString(name) {
 		return fmt.Errorf("invalid gateway controller name: %s; expected format is DOMAIN/PATH", name)

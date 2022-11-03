@@ -1,6 +1,7 @@
 package config
 
-// FIXME(kate-osborn): Add upstream zone size for each upstream. This should be dynamically calculated based on the number of upstreams.
+// FIXME(kate-osborn): Add upstream zone size for each upstream.
+// This should be dynamically calculated based on the number of upstreams.
 var upstreamsTemplateText = `
 {{ range $u := . }}
 upstream {{ $u.Name }} {

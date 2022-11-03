@@ -28,7 +28,12 @@ const (
 	certificatePath = "path/to/cert"
 )
 
-func createRoute(name string, gateway string, hostname string, backendRefs ...v1beta1.HTTPBackendRef) *v1beta1.HTTPRoute {
+func createRoute(
+	name string,
+	gateway string,
+	hostname string,
+	backendRefs ...v1beta1.HTTPBackendRef,
+) *v1beta1.HTTPRoute {
 	return &v1beta1.HTTPRoute{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:  "test",
@@ -39,14 +44,18 @@ func createRoute(name string, gateway string, hostname string, backendRefs ...v1
 			CommonRouteSpec: v1beta1.CommonRouteSpec{
 				ParentRefs: []v1beta1.ParentReference{
 					{
-						Namespace:   (*v1beta1.Namespace)(helpers.GetStringPointer("test")),
-						Name:        v1beta1.ObjectName(gateway),
-						SectionName: (*v1beta1.SectionName)(helpers.GetStringPointer("listener-80-1")),
+						Namespace: (*v1beta1.Namespace)(helpers.GetStringPointer("test")),
+						Name:      v1beta1.ObjectName(gateway),
+						SectionName: (*v1beta1.SectionName)(
+							helpers.GetStringPointer("listener-80-1"),
+						),
 					},
 					{
-						Namespace:   (*v1beta1.Namespace)(helpers.GetStringPointer("test")),
-						Name:        v1beta1.ObjectName(gateway),
-						SectionName: (*v1beta1.SectionName)(helpers.GetStringPointer("listener-443-1")),
+						Namespace: (*v1beta1.Namespace)(helpers.GetStringPointer("test")),
+						Name:      v1beta1.ObjectName(gateway),
+						SectionName: (*v1beta1.SectionName)(
+							helpers.GetStringPointer("listener-443-1"),
+						),
 					},
 				},
 			},
@@ -114,7 +123,10 @@ func createGatewayWithTLSListener(name string) *v1beta1.Gateway {
 	return gw
 }
 
-func createRouteWithMultipleRules(name, gateway, hostname string, rules []v1beta1.HTTPRouteRule) *v1beta1.HTTPRoute {
+func createRouteWithMultipleRules(
+	name, gateway, hostname string,
+	rules []v1beta1.HTTPRouteRule,
+) *v1beta1.HTTPRoute {
 	hr := createRoute(name, gateway, hostname)
 	hr.Spec.Rules = rules
 
@@ -134,7 +146,11 @@ func createHTTPRule(path string, backendRefs ...v1beta1.HTTPBackendRef) v1beta1.
 	}
 }
 
-func createBackendRef(kind *v1beta1.Kind, name v1beta1.ObjectName, namespace *v1beta1.Namespace) v1beta1.HTTPBackendRef {
+func createBackendRef(
+	kind *v1beta1.Kind,
+	name v1beta1.ObjectName,
+	namespace *v1beta1.Namespace,
+) v1beta1.HTTPBackendRef {
 	return v1beta1.HTTPBackendRef{
 		BackendRef: v1beta1.BackendRef{
 			BackendObjectReference: v1beta1.BackendObjectReference{
@@ -213,7 +229,7 @@ var _ = Describe("ChangeProcessor", func() {
 				gw2 = createGatewayWithTLSListener("gateway-2")
 			})
 			When("no upsert has occurred", func() {
-				It("should return empty configuration and statuses", func() {
+				It("returns empty configuration and statuses", func() {
 					changed, conf, statuses := processor.Process(context.TODO())
 					Expect(changed).To(BeFalse())
 					Expect(conf).To(BeZero())
@@ -222,13 +238,52 @@ var _ = Describe("ChangeProcessor", func() {
 			})
 			When("GatewayClass doesn't exist", func() {
 				When("Gateways don't exist", func() {
-					It("should return empty configuration and updated statuses after upserting the first HTTPRoute", func() {
-						processor.CaptureUpsertChange(hr1)
+					When("the first HTTPRoute is upserted", func() {
+						It("returns empty configuration and statuses", func() {
+							processor.CaptureUpsertChange(hr1)
+
+							expectedConf := state.Configuration{}
+							expectedStatuses := state.Statuses{
+								IgnoredGatewayStatuses: map[types.NamespacedName]state.IgnoredGatewayStatus{},
+								HTTPRouteStatuses:      map[types.NamespacedName]state.HTTPRouteStatus{},
+							}
+
+							changed, conf, statuses := processor.Process(context.TODO())
+							Expect(changed).To(BeTrue())
+							Expect(helpers.Diff(expectedConf, conf)).To(BeEmpty())
+							Expect(helpers.Diff(expectedStatuses, statuses)).To(BeEmpty())
+						})
+					})
+				})
+				When("the first Gateway is upserted", func() {
+					It("returns empty configuration and updated statuses", func() {
+						processor.CaptureUpsertChange(gw1)
 
 						expectedConf := state.Configuration{}
 						expectedStatuses := state.Statuses{
+							GatewayStatus: &state.GatewayStatus{
+								NsName: types.NamespacedName{Namespace: "test", Name: "gateway-1"},
+								ListenerStatuses: map[string]state.ListenerStatus{
+									"listener-80-1": {
+										Valid:          false,
+										AttachedRoutes: 1,
+									},
+									"listener-443-1": {
+										Valid:          false,
+										AttachedRoutes: 1,
+									},
+								},
+							},
 							IgnoredGatewayStatuses: map[types.NamespacedName]state.IgnoredGatewayStatus{},
-							HTTPRouteStatuses:      map[types.NamespacedName]state.HTTPRouteStatus{},
+							HTTPRouteStatuses: map[types.NamespacedName]state.HTTPRouteStatus{
+								{Namespace: "test", Name: "hr-1"}: {
+									ObservedGeneration: hr1.Generation,
+									ParentStatuses: map[string]state.ParentStatus{
+										"listener-80-1":  {Attached: false},
+										"listener-443-1": {Attached: false},
+									},
+								},
+							},
 						}
 
 						changed, conf, statuses := processor.Process(context.TODO())
@@ -237,21 +292,72 @@ var _ = Describe("ChangeProcessor", func() {
 						Expect(helpers.Diff(expectedStatuses, statuses)).To(BeEmpty())
 					})
 				})
+			})
+			When("the GatewayClass is upserted", func() {
+				It("returns updated configuration and statuses", func() {
+					processor.CaptureUpsertChange(gc)
 
-				It("should return empty configuration and updated statuses after upserting the first Gateway", func() {
-					processor.CaptureUpsertChange(gw1)
+					expectedConf := state.Configuration{
+						HTTPServers: []state.VirtualServer{
+							{
+								Hostname: "foo.example.com",
+								PathRules: []state.PathRule{
+									{
+										Path: "/",
+										MatchRules: []state.MatchRule{
+											{
+												MatchIdx:     0,
+												RuleIdx:      0,
+												BackendGroup: hr1Group,
+												Source:       hr1,
+											},
+										},
+									},
+								},
+							},
+						},
+						SSLServers: []state.VirtualServer{
+							{
+								Hostname: "foo.example.com",
+								SSL:      &state.SSL{CertificatePath: certificatePath},
+								PathRules: []state.PathRule{
+									{
+										Path: "/",
+										MatchRules: []state.MatchRule{
+											{
+												MatchIdx:     0,
+												RuleIdx:      0,
+												BackendGroup: hr1Group,
+												Source:       hr1,
+											},
+										},
+									},
+								},
+							},
+							{
+								Hostname: "~^",
+								SSL:      &state.SSL{CertificatePath: certificatePath},
+							},
+						},
+						BackendGroups: []state.BackendGroup{
+							hr1Group,
+						},
+					}
 
-					expectedConf := state.Configuration{}
 					expectedStatuses := state.Statuses{
+						GatewayClassStatus: &state.GatewayClassStatus{
+							Valid:              true,
+							ObservedGeneration: gc.Generation,
+						},
 						GatewayStatus: &state.GatewayStatus{
 							NsName: types.NamespacedName{Namespace: "test", Name: "gateway-1"},
 							ListenerStatuses: map[string]state.ListenerStatus{
 								"listener-80-1": {
-									Valid:          false,
+									Valid:          true,
 									AttachedRoutes: 1,
 								},
 								"listener-443-1": {
-									Valid:          false,
+									Valid:          true,
 									AttachedRoutes: 1,
 								},
 							},
@@ -260,6 +366,499 @@ var _ = Describe("ChangeProcessor", func() {
 						HTTPRouteStatuses: map[types.NamespacedName]state.HTTPRouteStatus{
 							{Namespace: "test", Name: "hr-1"}: {
 								ObservedGeneration: hr1.Generation,
+								ParentStatuses: map[string]state.ParentStatus{
+									"listener-80-1":  {Attached: true},
+									"listener-443-1": {Attached: true},
+								},
+							},
+						},
+					}
+
+					changed, conf, statuses := processor.Process(context.TODO())
+					Expect(changed).To(BeTrue())
+					Expect(helpers.Diff(expectedConf, conf)).To(BeEmpty())
+					Expect(helpers.Diff(expectedStatuses, statuses)).To(BeEmpty())
+				})
+			})
+			When("the first HTTPRoute without a generation changed is processed", func() {
+				It("returns empty configuration and statuses", func() {
+					hr1UpdatedSameGen := hr1.DeepCopy()
+					// hr1UpdatedSameGen.Generation has not been changed
+					processor.CaptureUpsertChange(hr1UpdatedSameGen)
+
+					changed, conf, statuses := processor.Process(context.TODO())
+					Expect(changed).To(BeFalse())
+					Expect(conf).To(BeZero())
+					Expect(statuses).To(BeZero())
+				})
+			})
+			When("the first HTTPRoute update with a generation changed is processed", func() {
+				It("returns updated configuration and statuses", func() {
+					processor.CaptureUpsertChange(hr1Updated)
+
+					expectedConf := state.Configuration{
+						HTTPServers: []state.VirtualServer{
+							{
+								Hostname: "foo.example.com",
+								PathRules: []state.PathRule{
+									{
+										Path: "/",
+										MatchRules: []state.MatchRule{
+											{
+												MatchIdx:     0,
+												RuleIdx:      0,
+												BackendGroup: hr1Group,
+												Source:       hr1Updated,
+											},
+										},
+									},
+								},
+							},
+						},
+						SSLServers: []state.VirtualServer{
+							{
+								Hostname: "foo.example.com",
+								SSL:      &state.SSL{CertificatePath: certificatePath},
+								PathRules: []state.PathRule{
+									{
+										Path: "/",
+										MatchRules: []state.MatchRule{
+											{
+												MatchIdx:     0,
+												RuleIdx:      0,
+												BackendGroup: hr1Group,
+												Source:       hr1Updated,
+											},
+										},
+									},
+								},
+							},
+							{
+								Hostname: "~^",
+								SSL:      &state.SSL{CertificatePath: certificatePath},
+							},
+						},
+						BackendGroups: []state.BackendGroup{
+							hr1Group,
+						},
+					}
+					expectedStatuses := state.Statuses{
+						GatewayClassStatus: &state.GatewayClassStatus{
+							Valid:              true,
+							ObservedGeneration: gc.Generation,
+						},
+						GatewayStatus: &state.GatewayStatus{
+							NsName: types.NamespacedName{Namespace: "test", Name: "gateway-1"},
+							ListenerStatuses: map[string]state.ListenerStatus{
+								"listener-80-1": {
+									Valid:          true,
+									AttachedRoutes: 1,
+								},
+								"listener-443-1": {
+									Valid:          true,
+									AttachedRoutes: 1,
+								},
+							},
+						},
+						IgnoredGatewayStatuses: map[types.NamespacedName]state.IgnoredGatewayStatus{},
+						HTTPRouteStatuses: map[types.NamespacedName]state.HTTPRouteStatus{
+							{Namespace: "test", Name: "hr-1"}: {
+								ObservedGeneration: hr1Updated.Generation,
+								ParentStatuses: map[string]state.ParentStatus{
+									"listener-80-1":  {Attached: true},
+									"listener-443-1": {Attached: true},
+								},
+							},
+						},
+					}
+
+					changed, conf, statuses := processor.Process(context.TODO())
+					Expect(changed).To(BeTrue())
+					Expect(helpers.Diff(expectedConf, conf)).To(BeEmpty())
+					Expect(helpers.Diff(expectedStatuses, statuses)).To(BeEmpty())
+				},
+				)
+			})
+			When("the first Gateway update without generation changed is processed", func() {
+				It("returns empty configuration and statuses", func() {
+					gwUpdatedSameGen := gw1.DeepCopy()
+					// gwUpdatedSameGen.Generation has not been changed
+					processor.CaptureUpsertChange(gwUpdatedSameGen)
+
+					changed, conf, statuses := processor.Process(context.TODO())
+					Expect(changed).To(BeFalse())
+					Expect(conf).To(BeZero())
+					Expect(statuses).To(BeZero())
+				})
+			})
+			When("the first Gateway update with a generation changed is processed", func() {
+				It("returns updated configuration and statuses", func() {
+					processor.CaptureUpsertChange(gw1Updated)
+
+					expectedConf := state.Configuration{
+						HTTPServers: []state.VirtualServer{
+							{
+								Hostname: "foo.example.com",
+								PathRules: []state.PathRule{
+									{
+										Path: "/",
+										MatchRules: []state.MatchRule{
+											{
+												MatchIdx:     0,
+												RuleIdx:      0,
+												BackendGroup: hr1Group,
+												Source:       hr1Updated,
+											},
+										},
+									},
+								},
+							},
+						},
+						SSLServers: []state.VirtualServer{
+							{
+								Hostname: "foo.example.com",
+								SSL:      &state.SSL{CertificatePath: certificatePath},
+								PathRules: []state.PathRule{
+									{
+										Path: "/",
+										MatchRules: []state.MatchRule{
+											{
+												MatchIdx:     0,
+												RuleIdx:      0,
+												BackendGroup: hr1Group,
+												Source:       hr1Updated,
+											},
+										},
+									},
+								},
+							},
+							{
+								Hostname: "~^",
+								SSL:      &state.SSL{CertificatePath: certificatePath},
+							},
+						},
+						BackendGroups: []state.BackendGroup{
+							hr1Group,
+						},
+					}
+					expectedStatuses := state.Statuses{
+						GatewayClassStatus: &state.GatewayClassStatus{
+							Valid:              true,
+							ObservedGeneration: gc.Generation,
+						},
+						GatewayStatus: &state.GatewayStatus{
+							NsName: types.NamespacedName{Namespace: "test", Name: "gateway-1"},
+							ListenerStatuses: map[string]state.ListenerStatus{
+								"listener-80-1": {
+									Valid:          true,
+									AttachedRoutes: 1,
+								},
+								"listener-443-1": {
+									Valid:          true,
+									AttachedRoutes: 1,
+								},
+							},
+						},
+						IgnoredGatewayStatuses: map[types.NamespacedName]state.IgnoredGatewayStatus{},
+						HTTPRouteStatuses: map[types.NamespacedName]state.HTTPRouteStatus{
+							{Namespace: "test", Name: "hr-1"}: {
+								ObservedGeneration: hr1Updated.Generation,
+								ParentStatuses: map[string]state.ParentStatus{
+									"listener-80-1":  {Attached: true},
+									"listener-443-1": {Attached: true},
+								},
+							},
+						},
+					}
+
+					changed, conf, statuses := processor.Process(context.TODO())
+					Expect(changed).To(BeTrue())
+					Expect(helpers.Diff(expectedConf, conf)).To(BeEmpty())
+					Expect(helpers.Diff(expectedStatuses, statuses)).To(BeEmpty())
+				})
+			})
+			When("the GatewayClass update without generation change is processed", func() {
+				It("returns empty configuration and statuses", func() {
+					gcUpdatedSameGen := gc.DeepCopy()
+					// gcUpdatedSameGen.Generation has not been changed
+					processor.CaptureUpsertChange(gcUpdatedSameGen)
+
+					changed, conf, statuses := processor.Process(context.TODO())
+					Expect(changed).To(BeFalse())
+					Expect(conf).To(BeZero())
+					Expect(statuses).To(BeZero())
+				})
+			})
+			When("the GatewayClass update with generation change is processed", func() {
+				It("returns updated configuration and statuses", func() {
+					processor.CaptureUpsertChange(gcUpdated)
+
+					expectedConf := state.Configuration{
+						HTTPServers: []state.VirtualServer{
+							{
+								Hostname: "foo.example.com",
+								PathRules: []state.PathRule{
+									{
+										Path: "/",
+										MatchRules: []state.MatchRule{
+											{
+												MatchIdx:     0,
+												RuleIdx:      0,
+												BackendGroup: hr1Group,
+												Source:       hr1Updated,
+											},
+										},
+									},
+								},
+							},
+						},
+						SSLServers: []state.VirtualServer{
+							{
+								Hostname: "foo.example.com",
+								SSL:      &state.SSL{CertificatePath: certificatePath},
+								PathRules: []state.PathRule{
+									{
+										Path: "/",
+										MatchRules: []state.MatchRule{
+											{
+												MatchIdx:     0,
+												RuleIdx:      0,
+												BackendGroup: hr1Group,
+												Source:       hr1Updated,
+											},
+										},
+									},
+								},
+							},
+							{
+								Hostname: "~^",
+								SSL:      &state.SSL{CertificatePath: certificatePath},
+							},
+						},
+						BackendGroups: []state.BackendGroup{
+							hr1Group,
+						},
+					}
+					expectedStatuses := state.Statuses{
+						GatewayClassStatus: &state.GatewayClassStatus{
+							Valid:              true,
+							ObservedGeneration: gcUpdated.Generation,
+						},
+						GatewayStatus: &state.GatewayStatus{
+							NsName: types.NamespacedName{Namespace: "test", Name: "gateway-1"},
+							ListenerStatuses: map[string]state.ListenerStatus{
+								"listener-80-1": {
+									Valid:          true,
+									AttachedRoutes: 1,
+								},
+								"listener-443-1": {
+									Valid:          true,
+									AttachedRoutes: 1,
+								},
+							},
+						},
+						IgnoredGatewayStatuses: map[types.NamespacedName]state.IgnoredGatewayStatus{},
+						HTTPRouteStatuses: map[types.NamespacedName]state.HTTPRouteStatus{
+							{Namespace: "test", Name: "hr-1"}: {
+								ObservedGeneration: hr1Updated.Generation,
+								ParentStatuses: map[string]state.ParentStatus{
+									"listener-80-1":  {Attached: true},
+									"listener-443-1": {Attached: true},
+								},
+							},
+						},
+					}
+
+					changed, conf, statuses := processor.Process(context.TODO())
+					Expect(changed).To(BeTrue())
+					Expect(helpers.Diff(expectedConf, conf)).To(BeEmpty())
+					Expect(helpers.Diff(expectedStatuses, statuses)).To(BeEmpty())
+				})
+			})
+			When("no changes are captured", func() {
+				It("returns empty configuration and statuses", func() {
+					changed, conf, statuses := processor.Process(context.TODO())
+
+					Expect(changed).To(BeFalse())
+					Expect(conf).To(BeZero())
+					Expect(statuses).To(BeZero())
+				})
+			})
+			When("the second Gateway is upserted", func() {
+				It("returns updated configuration and statuses", func() {
+					processor.CaptureUpsertChange(gw2)
+
+					expectedConf := state.Configuration{
+						HTTPServers: []state.VirtualServer{
+							{
+								Hostname: "foo.example.com",
+								PathRules: []state.PathRule{
+									{
+										Path: "/",
+										MatchRules: []state.MatchRule{
+											{
+												MatchIdx:     0,
+												RuleIdx:      0,
+												BackendGroup: hr1Group,
+												Source:       hr1Updated,
+											},
+										},
+									},
+								},
+							},
+						},
+						SSLServers: []state.VirtualServer{
+							{
+								Hostname: "foo.example.com",
+								PathRules: []state.PathRule{
+									{
+										Path: "/",
+										MatchRules: []state.MatchRule{
+											{
+												MatchIdx:     0,
+												RuleIdx:      0,
+												BackendGroup: hr1Group,
+												Source:       hr1Updated,
+											},
+										},
+									},
+								},
+								SSL: &state.SSL{
+									CertificatePath: certificatePath,
+								},
+							},
+							{
+								Hostname: "~^",
+								SSL:      &state.SSL{CertificatePath: certificatePath},
+							},
+						},
+						BackendGroups: []state.BackendGroup{
+							hr1Group,
+						},
+					}
+					expectedStatuses := state.Statuses{
+						GatewayClassStatus: &state.GatewayClassStatus{
+							Valid:              true,
+							ObservedGeneration: gcUpdated.Generation,
+						},
+						GatewayStatus: &state.GatewayStatus{
+							NsName: types.NamespacedName{Namespace: "test", Name: "gateway-1"},
+							ListenerStatuses: map[string]state.ListenerStatus{
+								"listener-80-1": {
+									Valid:          true,
+									AttachedRoutes: 1,
+								},
+								"listener-443-1": {
+									Valid:          true,
+									AttachedRoutes: 1,
+								},
+							},
+						},
+						IgnoredGatewayStatuses: map[types.NamespacedName]state.IgnoredGatewayStatus{
+							{Namespace: "test", Name: "gateway-2"}: {
+								ObservedGeneration: gw2.Generation,
+							},
+						},
+						HTTPRouteStatuses: map[types.NamespacedName]state.HTTPRouteStatus{
+							{Namespace: "test", Name: "hr-1"}: {
+								ObservedGeneration: hr1Updated.Generation,
+								ParentStatuses: map[string]state.ParentStatus{
+									"listener-80-1":  {Attached: true},
+									"listener-443-1": {Attached: true},
+								},
+							},
+						},
+					}
+
+					changed, conf, statuses := processor.Process(context.TODO())
+					Expect(changed).To(BeTrue())
+					Expect(helpers.Diff(expectedConf, conf)).To(BeEmpty())
+					Expect(helpers.Diff(expectedStatuses, statuses)).To(BeEmpty())
+				})
+			})
+			When("the second HTTPRoute is upserted", func() {
+				It("returns same configuration and updated statuses", func() {
+					processor.CaptureUpsertChange(hr2)
+
+					expectedConf := state.Configuration{
+						HTTPServers: []state.VirtualServer{
+							{
+								Hostname: "foo.example.com",
+								PathRules: []state.PathRule{
+									{
+										Path: "/",
+										MatchRules: []state.MatchRule{
+											{
+												MatchIdx:     0,
+												RuleIdx:      0,
+												BackendGroup: hr1Group,
+												Source:       hr1Updated,
+											},
+										},
+									},
+								},
+							},
+						},
+						SSLServers: []state.VirtualServer{
+							{
+								Hostname: "foo.example.com",
+								SSL:      &state.SSL{CertificatePath: certificatePath},
+								PathRules: []state.PathRule{
+									{
+										Path: "/",
+										MatchRules: []state.MatchRule{
+											{
+												MatchIdx:     0,
+												RuleIdx:      0,
+												BackendGroup: hr1Group,
+												Source:       hr1Updated,
+											},
+										},
+									},
+								},
+							},
+							{
+								Hostname: "~^",
+								SSL:      &state.SSL{CertificatePath: certificatePath},
+							},
+						},
+						BackendGroups: []state.BackendGroup{
+							hr1Group,
+						},
+					}
+					expectedStatuses := state.Statuses{
+						GatewayClassStatus: &state.GatewayClassStatus{
+							Valid:              true,
+							ObservedGeneration: gcUpdated.Generation,
+						},
+						GatewayStatus: &state.GatewayStatus{
+							NsName: types.NamespacedName{Namespace: "test", Name: "gateway-1"},
+							ListenerStatuses: map[string]state.ListenerStatus{
+								"listener-80-1": {
+									Valid:          true,
+									AttachedRoutes: 1,
+								},
+								"listener-443-1": {
+									Valid:          true,
+									AttachedRoutes: 1,
+								},
+							},
+						},
+						IgnoredGatewayStatuses: map[types.NamespacedName]state.IgnoredGatewayStatus{
+							{Namespace: "test", Name: "gateway-2"}: {
+								ObservedGeneration: gw2.Generation,
+							},
+						},
+						HTTPRouteStatuses: map[types.NamespacedName]state.HTTPRouteStatus{
+							{Namespace: "test", Name: "hr-1"}: {
+								ObservedGeneration: hr1Updated.Generation,
+								ParentStatuses: map[string]state.ParentStatus{
+									"listener-80-1":  {Attached: true},
+									"listener-443-1": {Attached: true},
+								},
+							},
+							{Namespace: "test", Name: "hr-2"}: {
+								ObservedGeneration: hr2.Generation,
 								ParentStatuses: map[string]state.ParentStatus{
 									"listener-80-1":  {Attached: false},
 									"listener-443-1": {Attached: false},
@@ -274,757 +873,208 @@ var _ = Describe("ChangeProcessor", func() {
 					Expect(helpers.Diff(expectedStatuses, statuses)).To(BeEmpty())
 				})
 			})
+			When("the first Gateway is deleted", func() {
+				It("returns updated configuration and statuses", func() {
+					processor.CaptureDeleteChange(
+						&v1beta1.Gateway{},
+						types.NamespacedName{Namespace: "test", Name: "gateway-1"},
+					)
 
-			It("should return updated configuration and statuses after the GatewayClass is upserted", func() {
-				processor.CaptureUpsertChange(gc)
-
-				expectedConf := state.Configuration{
-					HTTPServers: []state.VirtualServer{
-						{
-							Hostname: "foo.example.com",
-							PathRules: []state.PathRule{
-								{
-									Path: "/",
-									MatchRules: []state.MatchRule{
-										{
-											MatchIdx:     0,
-											RuleIdx:      0,
-											BackendGroup: hr1Group,
-											Source:       hr1,
+					expectedConf := state.Configuration{
+						HTTPServers: []state.VirtualServer{
+							{
+								Hostname: "bar.example.com",
+								PathRules: []state.PathRule{
+									{
+										Path: "/",
+										MatchRules: []state.MatchRule{
+											{
+												MatchIdx:     0,
+												RuleIdx:      0,
+												BackendGroup: hr2Group,
+												Source:       hr2,
+											},
 										},
 									},
 								},
 							},
 						},
-					},
-					SSLServers: []state.VirtualServer{
-						{
-							Hostname: "foo.example.com",
-							SSL:      &state.SSL{CertificatePath: certificatePath},
-							PathRules: []state.PathRule{
-								{
-									Path: "/",
-									MatchRules: []state.MatchRule{
-										{
-											MatchIdx:     0,
-											RuleIdx:      0,
-											BackendGroup: hr1Group,
-											Source:       hr1,
+						SSLServers: []state.VirtualServer{
+							{
+								Hostname: "bar.example.com",
+								SSL:      &state.SSL{CertificatePath: certificatePath},
+								PathRules: []state.PathRule{
+									{
+										Path: "/",
+										MatchRules: []state.MatchRule{
+											{
+												MatchIdx:     0,
+												RuleIdx:      0,
+												BackendGroup: hr2Group,
+												Source:       hr2,
+											},
 										},
 									},
 								},
 							},
-						},
-						{
-							Hostname: "~^",
-							SSL:      &state.SSL{CertificatePath: certificatePath},
-						},
-					},
-					BackendGroups: []state.BackendGroup{
-						hr1Group,
-					},
-				}
-
-				expectedStatuses := state.Statuses{
-					GatewayClassStatus: &state.GatewayClassStatus{
-						Valid:              true,
-						ObservedGeneration: gc.Generation,
-					},
-					GatewayStatus: &state.GatewayStatus{
-						NsName: types.NamespacedName{Namespace: "test", Name: "gateway-1"},
-						ListenerStatuses: map[string]state.ListenerStatus{
-							"listener-80-1": {
-								Valid:          true,
-								AttachedRoutes: 1,
-							},
-							"listener-443-1": {
-								Valid:          true,
-								AttachedRoutes: 1,
+							{
+								Hostname: "~^",
+								SSL:      &state.SSL{CertificatePath: certificatePath},
 							},
 						},
-					},
-					IgnoredGatewayStatuses: map[types.NamespacedName]state.IgnoredGatewayStatus{},
-					HTTPRouteStatuses: map[types.NamespacedName]state.HTTPRouteStatus{
-						{Namespace: "test", Name: "hr-1"}: {
-							ObservedGeneration: hr1.Generation,
-							ParentStatuses: map[string]state.ParentStatus{
-								"listener-80-1":  {Attached: true},
-								"listener-443-1": {Attached: true},
-							},
+						BackendGroups: []state.BackendGroup{
+							hr2Group,
 						},
-					},
-				}
-
-				changed, conf, statuses := processor.Process(context.TODO())
-				Expect(changed).To(BeTrue())
-				Expect(helpers.Diff(expectedConf, conf)).To(BeEmpty())
-				Expect(helpers.Diff(expectedStatuses, statuses)).To(BeEmpty())
-			})
-
-			It("should return empty configuration and statuses after processing upserting the first HTTPRoute without generation change", func() {
-				hr1UpdatedSameGen := hr1.DeepCopy()
-				// hr1UpdatedSameGen.Generation has not been changed
-				processor.CaptureUpsertChange(hr1UpdatedSameGen)
-
-				changed, conf, statuses := processor.Process(context.TODO())
-				Expect(changed).To(BeFalse())
-				Expect(conf).To(BeZero())
-				Expect(statuses).To(BeZero())
-			})
-
-			It("should return updated configuration and statuses after upserting the first HTTPRoute with generation change", func() {
-				processor.CaptureUpsertChange(hr1Updated)
-
-				expectedConf := state.Configuration{
-					HTTPServers: []state.VirtualServer{
-						{
-							Hostname: "foo.example.com",
-							PathRules: []state.PathRule{
-								{
-									Path: "/",
-									MatchRules: []state.MatchRule{
-										{
-											MatchIdx:     0,
-											RuleIdx:      0,
-											BackendGroup: hr1Group,
-											Source:       hr1Updated,
-										},
-									},
+					}
+					expectedStatuses := state.Statuses{
+						GatewayClassStatus: &state.GatewayClassStatus{
+							Valid:              true,
+							ObservedGeneration: gcUpdated.Generation,
+						},
+						GatewayStatus: &state.GatewayStatus{
+							NsName: types.NamespacedName{Namespace: "test", Name: "gateway-2"},
+							ListenerStatuses: map[string]state.ListenerStatus{
+								"listener-80-1": {
+									Valid:          true,
+									AttachedRoutes: 1,
+								},
+								"listener-443-1": {
+									Valid:          true,
+									AttachedRoutes: 1,
 								},
 							},
 						},
-					},
-					SSLServers: []state.VirtualServer{
-						{
-							Hostname: "foo.example.com",
-							SSL:      &state.SSL{CertificatePath: certificatePath},
-							PathRules: []state.PathRule{
-								{
-									Path: "/",
-									MatchRules: []state.MatchRule{
-										{
-											MatchIdx:     0,
-											RuleIdx:      0,
-											BackendGroup: hr1Group,
-											Source:       hr1Updated,
-										},
-									},
+						IgnoredGatewayStatuses: map[types.NamespacedName]state.IgnoredGatewayStatus{},
+						HTTPRouteStatuses: map[types.NamespacedName]state.HTTPRouteStatus{
+							{Namespace: "test", Name: "hr-2"}: {
+								ObservedGeneration: hr2.Generation,
+								ParentStatuses: map[string]state.ParentStatus{
+									"listener-80-1":  {Attached: true},
+									"listener-443-1": {Attached: true},
 								},
 							},
 						},
-						{
-							Hostname: "~^",
-							SSL:      &state.SSL{CertificatePath: certificatePath},
-						},
-					},
-					BackendGroups: []state.BackendGroup{
-						hr1Group,
-					},
-				}
-				expectedStatuses := state.Statuses{
-					GatewayClassStatus: &state.GatewayClassStatus{
-						Valid:              true,
-						ObservedGeneration: gc.Generation,
-					},
-					GatewayStatus: &state.GatewayStatus{
-						NsName: types.NamespacedName{Namespace: "test", Name: "gateway-1"},
-						ListenerStatuses: map[string]state.ListenerStatus{
-							"listener-80-1": {
-								Valid:          true,
-								AttachedRoutes: 1,
-							},
-							"listener-443-1": {
-								Valid:          true,
-								AttachedRoutes: 1,
-							},
-						},
-					},
-					IgnoredGatewayStatuses: map[types.NamespacedName]state.IgnoredGatewayStatus{},
-					HTTPRouteStatuses: map[types.NamespacedName]state.HTTPRouteStatus{
-						{Namespace: "test", Name: "hr-1"}: {
-							ObservedGeneration: hr1Updated.Generation,
-							ParentStatuses: map[string]state.ParentStatus{
-								"listener-80-1":  {Attached: true},
-								"listener-443-1": {Attached: true},
-							},
-						},
-					},
-				}
+					}
 
-				changed, conf, statuses := processor.Process(context.TODO())
-				Expect(changed).To(BeTrue())
-				Expect(helpers.Diff(expectedConf, conf)).To(BeEmpty())
-				Expect(helpers.Diff(expectedStatuses, statuses)).To(BeEmpty())
+					changed, conf, statuses := processor.Process(context.TODO())
+					Expect(changed).To(BeTrue())
+					Expect(helpers.Diff(expectedConf, conf)).To(BeEmpty())
+					Expect(helpers.Diff(expectedStatuses, statuses)).To(BeEmpty())
+				})
 			})
+			When("the second HTTPRoute is deleted", func() {
+				It("returns configuration with default ssl server and updated statuses", func() {
+					processor.CaptureDeleteChange(
+						&v1beta1.HTTPRoute{},
+						types.NamespacedName{Namespace: "test", Name: "hr-2"},
+					)
 
-			It("should return empty configuration and statuses after processing upserting the first Gateway without generation change", func() {
-				gwUpdatedSameGen := gw1.DeepCopy()
-				// gwUpdatedSameGen.Generation has not been changed
-				processor.CaptureUpsertChange(gwUpdatedSameGen)
-
-				changed, conf, statuses := processor.Process(context.TODO())
-				Expect(changed).To(BeFalse())
-				Expect(conf).To(BeZero())
-				Expect(statuses).To(BeZero())
-			})
-
-			It("should return updated configuration and statuses after upserting the first Gateway with generation change", func() {
-				processor.CaptureUpsertChange(gw1Updated)
-
-				expectedConf := state.Configuration{
-					HTTPServers: []state.VirtualServer{
-						{
-							Hostname: "foo.example.com",
-							PathRules: []state.PathRule{
-								{
-									Path: "/",
-									MatchRules: []state.MatchRule{
-										{
-											MatchIdx:     0,
-											RuleIdx:      0,
-											BackendGroup: hr1Group,
-											Source:       hr1Updated,
-										},
-									},
+					expectedConf := state.Configuration{
+						HTTPServers: []state.VirtualServer{},
+						SSLServers: []state.VirtualServer{
+							{
+								Hostname: "~^",
+								SSL:      &state.SSL{CertificatePath: certificatePath},
+							},
+						},
+					}
+					expectedStatuses := state.Statuses{
+						GatewayClassStatus: &state.GatewayClassStatus{
+							Valid:              true,
+							ObservedGeneration: gcUpdated.Generation,
+						},
+						GatewayStatus: &state.GatewayStatus{
+							NsName: types.NamespacedName{Namespace: "test", Name: "gateway-2"},
+							ListenerStatuses: map[string]state.ListenerStatus{
+								"listener-80-1": {
+									Valid:          true,
+									AttachedRoutes: 0,
+								},
+								"listener-443-1": {
+									Valid:          true,
+									AttachedRoutes: 0,
 								},
 							},
 						},
-					},
-					SSLServers: []state.VirtualServer{
-						{
-							Hostname: "foo.example.com",
-							SSL:      &state.SSL{CertificatePath: certificatePath},
-							PathRules: []state.PathRule{
-								{
-									Path: "/",
-									MatchRules: []state.MatchRule{
-										{
-											MatchIdx:     0,
-											RuleIdx:      0,
-											BackendGroup: hr1Group,
-											Source:       hr1Updated,
-										},
-									},
+						IgnoredGatewayStatuses: map[types.NamespacedName]state.IgnoredGatewayStatus{},
+						HTTPRouteStatuses:      map[types.NamespacedName]state.HTTPRouteStatus{},
+					}
+
+					changed, conf, statuses := processor.Process(context.TODO())
+					Expect(changed).To(BeTrue())
+					Expect(helpers.Diff(expectedConf, conf)).To(BeEmpty())
+					Expect(helpers.Diff(expectedStatuses, statuses)).To(BeEmpty())
+				})
+			})
+			When("the GatewayClass is deleted", func() {
+				It("returns empty configuration and updated statuses", func() {
+					processor.CaptureDeleteChange(
+						&v1beta1.GatewayClass{},
+						types.NamespacedName{Name: gcName},
+					)
+
+					expectedConf := state.Configuration{}
+					expectedStatuses := state.Statuses{
+						GatewayStatus: &state.GatewayStatus{
+							NsName: types.NamespacedName{Namespace: "test", Name: "gateway-2"},
+							ListenerStatuses: map[string]state.ListenerStatus{
+								"listener-80-1": {
+									Valid:          false,
+									AttachedRoutes: 0,
+								},
+								"listener-443-1": {
+									Valid:          false,
+									AttachedRoutes: 0,
 								},
 							},
 						},
-						{
-							Hostname: "~^",
-							SSL:      &state.SSL{CertificatePath: certificatePath},
-						},
-					},
-					BackendGroups: []state.BackendGroup{
-						hr1Group,
-					},
-				}
-				expectedStatuses := state.Statuses{
-					GatewayClassStatus: &state.GatewayClassStatus{
-						Valid:              true,
-						ObservedGeneration: gc.Generation,
-					},
-					GatewayStatus: &state.GatewayStatus{
-						NsName: types.NamespacedName{Namespace: "test", Name: "gateway-1"},
-						ListenerStatuses: map[string]state.ListenerStatus{
-							"listener-80-1": {
-								Valid:          true,
-								AttachedRoutes: 1,
-							},
-							"listener-443-1": {
-								Valid:          true,
-								AttachedRoutes: 1,
-							},
-						},
-					},
-					IgnoredGatewayStatuses: map[types.NamespacedName]state.IgnoredGatewayStatus{},
-					HTTPRouteStatuses: map[types.NamespacedName]state.HTTPRouteStatus{
-						{Namespace: "test", Name: "hr-1"}: {
-							ObservedGeneration: hr1Updated.Generation,
-							ParentStatuses: map[string]state.ParentStatus{
-								"listener-80-1":  {Attached: true},
-								"listener-443-1": {Attached: true},
-							},
-						},
-					},
-				}
+						IgnoredGatewayStatuses: map[types.NamespacedName]state.IgnoredGatewayStatus{},
+						HTTPRouteStatuses:      map[types.NamespacedName]state.HTTPRouteStatus{},
+					}
 
-				changed, conf, statuses := processor.Process(context.TODO())
-				Expect(changed).To(BeTrue())
-				Expect(helpers.Diff(expectedConf, conf)).To(BeEmpty())
-				Expect(helpers.Diff(expectedStatuses, statuses)).To(BeEmpty())
+					changed, conf, statuses := processor.Process(context.TODO())
+					Expect(changed).To(BeTrue())
+					Expect(helpers.Diff(expectedConf, conf)).To(BeEmpty())
+					Expect(helpers.Diff(expectedStatuses, statuses)).To(BeEmpty())
+				})
 			})
+			When("the second Gateway is deleted", func() {
+				It("returns empty configuration and empty statuses", func() {
+					processor.CaptureDeleteChange(
+						&v1beta1.Gateway{},
+						types.NamespacedName{Namespace: "test", Name: "gateway-2"},
+					)
 
-			It("should return empty configuration and statuses after processing upserting the GatewayClass without generation change", func() {
-				gcUpdatedSameGen := gc.DeepCopy()
-				// gcUpdatedSameGen.Generation has not been changed
-				processor.CaptureUpsertChange(gcUpdatedSameGen)
+					expectedConf := state.Configuration{}
+					expectedStatuses := state.Statuses{
+						IgnoredGatewayStatuses: map[types.NamespacedName]state.IgnoredGatewayStatus{},
+						HTTPRouteStatuses:      map[types.NamespacedName]state.HTTPRouteStatus{},
+					}
 
-				changed, conf, statuses := processor.Process(context.TODO())
-				Expect(changed).To(BeFalse())
-				Expect(conf).To(BeZero())
-				Expect(statuses).To(BeZero())
+					changed, conf, statuses := processor.Process(context.TODO())
+					Expect(changed).To(BeTrue())
+					Expect(helpers.Diff(expectedConf, conf)).To(BeEmpty())
+					Expect(helpers.Diff(expectedStatuses, statuses)).To(BeEmpty())
+				})
 			})
+			When("the first HTTPRoute is deleted", func() {
+				It("returns empty configuration and empty statuses", func() {
+					processor.CaptureDeleteChange(
+						&v1beta1.HTTPRoute{},
+						types.NamespacedName{Namespace: "test", Name: "hr-1"},
+					)
 
-			It("should return updated configuration and statuses after upserting the GatewayClass with generation change", func() {
-				processor.CaptureUpsertChange(gcUpdated)
+					expectedConf := state.Configuration{}
+					expectedStatuses := state.Statuses{
+						IgnoredGatewayStatuses: map[types.NamespacedName]state.IgnoredGatewayStatus{},
+						HTTPRouteStatuses:      map[types.NamespacedName]state.HTTPRouteStatus{},
+					}
 
-				expectedConf := state.Configuration{
-					HTTPServers: []state.VirtualServer{
-						{
-							Hostname: "foo.example.com",
-							PathRules: []state.PathRule{
-								{
-									Path: "/",
-									MatchRules: []state.MatchRule{
-										{
-											MatchIdx:     0,
-											RuleIdx:      0,
-											BackendGroup: hr1Group,
-											Source:       hr1Updated,
-										},
-									},
-								},
-							},
-						},
-					},
-					SSLServers: []state.VirtualServer{
-						{
-							Hostname: "foo.example.com",
-							SSL:      &state.SSL{CertificatePath: certificatePath},
-							PathRules: []state.PathRule{
-								{
-									Path: "/",
-									MatchRules: []state.MatchRule{
-										{
-											MatchIdx:     0,
-											RuleIdx:      0,
-											BackendGroup: hr1Group,
-											Source:       hr1Updated,
-										},
-									},
-								},
-							},
-						},
-						{
-							Hostname: "~^",
-							SSL:      &state.SSL{CertificatePath: certificatePath},
-						},
-					},
-					BackendGroups: []state.BackendGroup{
-						hr1Group,
-					},
-				}
-				expectedStatuses := state.Statuses{
-					GatewayClassStatus: &state.GatewayClassStatus{
-						Valid:              true,
-						ObservedGeneration: gcUpdated.Generation,
-					},
-					GatewayStatus: &state.GatewayStatus{
-						NsName: types.NamespacedName{Namespace: "test", Name: "gateway-1"},
-						ListenerStatuses: map[string]state.ListenerStatus{
-							"listener-80-1": {
-								Valid:          true,
-								AttachedRoutes: 1,
-							},
-							"listener-443-1": {
-								Valid:          true,
-								AttachedRoutes: 1,
-							},
-						},
-					},
-					IgnoredGatewayStatuses: map[types.NamespacedName]state.IgnoredGatewayStatus{},
-					HTTPRouteStatuses: map[types.NamespacedName]state.HTTPRouteStatus{
-						{Namespace: "test", Name: "hr-1"}: {
-							ObservedGeneration: hr1Updated.Generation,
-							ParentStatuses: map[string]state.ParentStatus{
-								"listener-80-1":  {Attached: true},
-								"listener-443-1": {Attached: true},
-							},
-						},
-					},
-				}
-
-				changed, conf, statuses := processor.Process(context.TODO())
-				Expect(changed).To(BeTrue())
-				Expect(helpers.Diff(expectedConf, conf)).To(BeEmpty())
-				Expect(helpers.Diff(expectedStatuses, statuses)).To(BeEmpty())
-			})
-
-			It("should return empty configuration and statuses after processing without capturing any changes", func() {
-				changed, conf, statuses := processor.Process(context.TODO())
-
-				Expect(changed).To(BeFalse())
-				Expect(conf).To(BeZero())
-				Expect(statuses).To(BeZero())
-			})
-
-			It("should return updated configuration and statuses after the second Gateway is upserted", func() {
-				processor.CaptureUpsertChange(gw2)
-
-				expectedConf := state.Configuration{
-					HTTPServers: []state.VirtualServer{
-						{
-							Hostname: "foo.example.com",
-							PathRules: []state.PathRule{
-								{
-									Path: "/",
-									MatchRules: []state.MatchRule{
-										{
-											MatchIdx:     0,
-											RuleIdx:      0,
-											BackendGroup: hr1Group,
-											Source:       hr1Updated,
-										},
-									},
-								},
-							},
-						},
-					},
-					SSLServers: []state.VirtualServer{
-						{
-							Hostname: "foo.example.com",
-							PathRules: []state.PathRule{
-								{
-									Path: "/",
-									MatchRules: []state.MatchRule{
-										{
-											MatchIdx:     0,
-											RuleIdx:      0,
-											BackendGroup: hr1Group,
-											Source:       hr1Updated,
-										},
-									},
-								},
-							},
-							SSL: &state.SSL{
-								CertificatePath: certificatePath,
-							},
-						},
-						{
-							Hostname: "~^",
-							SSL:      &state.SSL{CertificatePath: certificatePath},
-						},
-					},
-					BackendGroups: []state.BackendGroup{
-						hr1Group,
-					},
-				}
-				expectedStatuses := state.Statuses{
-					GatewayClassStatus: &state.GatewayClassStatus{
-						Valid:              true,
-						ObservedGeneration: gcUpdated.Generation,
-					},
-					GatewayStatus: &state.GatewayStatus{
-						NsName: types.NamespacedName{Namespace: "test", Name: "gateway-1"},
-						ListenerStatuses: map[string]state.ListenerStatus{
-							"listener-80-1": {
-								Valid:          true,
-								AttachedRoutes: 1,
-							},
-							"listener-443-1": {
-								Valid:          true,
-								AttachedRoutes: 1,
-							},
-						},
-					},
-					IgnoredGatewayStatuses: map[types.NamespacedName]state.IgnoredGatewayStatus{
-						{Namespace: "test", Name: "gateway-2"}: {
-							ObservedGeneration: gw2.Generation,
-						},
-					},
-					HTTPRouteStatuses: map[types.NamespacedName]state.HTTPRouteStatus{
-						{Namespace: "test", Name: "hr-1"}: {
-							ObservedGeneration: hr1Updated.Generation,
-							ParentStatuses: map[string]state.ParentStatus{
-								"listener-80-1":  {Attached: true},
-								"listener-443-1": {Attached: true},
-							},
-						},
-					},
-				}
-
-				changed, conf, statuses := processor.Process(context.TODO())
-				Expect(changed).To(BeTrue())
-				Expect(helpers.Diff(expectedConf, conf)).To(BeEmpty())
-				Expect(helpers.Diff(expectedStatuses, statuses)).To(BeEmpty())
-			})
-
-			It("should return same configuration and updated statuses after the second HTTPRoute is upserted", func() {
-				processor.CaptureUpsertChange(hr2)
-
-				expectedConf := state.Configuration{
-					HTTPServers: []state.VirtualServer{
-						{
-							Hostname: "foo.example.com",
-							PathRules: []state.PathRule{
-								{
-									Path: "/",
-									MatchRules: []state.MatchRule{
-										{
-											MatchIdx:     0,
-											RuleIdx:      0,
-											BackendGroup: hr1Group,
-											Source:       hr1Updated,
-										},
-									},
-								},
-							},
-						},
-					},
-					SSLServers: []state.VirtualServer{
-						{
-							Hostname: "foo.example.com",
-							SSL:      &state.SSL{CertificatePath: certificatePath},
-							PathRules: []state.PathRule{
-								{
-									Path: "/",
-									MatchRules: []state.MatchRule{
-										{
-											MatchIdx:     0,
-											RuleIdx:      0,
-											BackendGroup: hr1Group,
-											Source:       hr1Updated,
-										},
-									},
-								},
-							},
-						},
-						{
-							Hostname: "~^",
-							SSL:      &state.SSL{CertificatePath: certificatePath},
-						},
-					},
-					BackendGroups: []state.BackendGroup{
-						hr1Group,
-					},
-				}
-				expectedStatuses := state.Statuses{
-					GatewayClassStatus: &state.GatewayClassStatus{
-						Valid:              true,
-						ObservedGeneration: gcUpdated.Generation,
-					},
-					GatewayStatus: &state.GatewayStatus{
-						NsName: types.NamespacedName{Namespace: "test", Name: "gateway-1"},
-						ListenerStatuses: map[string]state.ListenerStatus{
-							"listener-80-1": {
-								Valid:          true,
-								AttachedRoutes: 1,
-							},
-							"listener-443-1": {
-								Valid:          true,
-								AttachedRoutes: 1,
-							},
-						},
-					},
-					IgnoredGatewayStatuses: map[types.NamespacedName]state.IgnoredGatewayStatus{
-						{Namespace: "test", Name: "gateway-2"}: {
-							ObservedGeneration: gw2.Generation,
-						},
-					},
-					HTTPRouteStatuses: map[types.NamespacedName]state.HTTPRouteStatus{
-						{Namespace: "test", Name: "hr-1"}: {
-							ObservedGeneration: hr1Updated.Generation,
-							ParentStatuses: map[string]state.ParentStatus{
-								"listener-80-1":  {Attached: true},
-								"listener-443-1": {Attached: true},
-							},
-						},
-						{Namespace: "test", Name: "hr-2"}: {
-							ObservedGeneration: hr2.Generation,
-							ParentStatuses: map[string]state.ParentStatus{
-								"listener-80-1":  {Attached: false},
-								"listener-443-1": {Attached: false},
-							},
-						},
-					},
-				}
-
-				changed, conf, statuses := processor.Process(context.TODO())
-				Expect(changed).To(BeTrue())
-				Expect(helpers.Diff(expectedConf, conf)).To(BeEmpty())
-				Expect(helpers.Diff(expectedStatuses, statuses)).To(BeEmpty())
-			})
-
-			It("should return updated configuration and statuses after deleting the first Gateway", func() {
-				processor.CaptureDeleteChange(&v1beta1.Gateway{}, types.NamespacedName{Namespace: "test", Name: "gateway-1"})
-
-				expectedConf := state.Configuration{
-					HTTPServers: []state.VirtualServer{
-						{
-							Hostname: "bar.example.com",
-							PathRules: []state.PathRule{
-								{
-									Path: "/",
-									MatchRules: []state.MatchRule{
-										{
-											MatchIdx:     0,
-											RuleIdx:      0,
-											BackendGroup: hr2Group,
-											Source:       hr2,
-										},
-									},
-								},
-							},
-						},
-					},
-					SSLServers: []state.VirtualServer{
-						{
-							Hostname: "bar.example.com",
-							SSL:      &state.SSL{CertificatePath: certificatePath},
-							PathRules: []state.PathRule{
-								{
-									Path: "/",
-									MatchRules: []state.MatchRule{
-										{
-											MatchIdx:     0,
-											RuleIdx:      0,
-											BackendGroup: hr2Group,
-											Source:       hr2,
-										},
-									},
-								},
-							},
-						},
-						{
-							Hostname: "~^",
-							SSL:      &state.SSL{CertificatePath: certificatePath},
-						},
-					},
-					BackendGroups: []state.BackendGroup{
-						hr2Group,
-					},
-				}
-				expectedStatuses := state.Statuses{
-					GatewayClassStatus: &state.GatewayClassStatus{
-						Valid:              true,
-						ObservedGeneration: gcUpdated.Generation,
-					},
-					GatewayStatus: &state.GatewayStatus{
-						NsName: types.NamespacedName{Namespace: "test", Name: "gateway-2"},
-						ListenerStatuses: map[string]state.ListenerStatus{
-							"listener-80-1": {
-								Valid:          true,
-								AttachedRoutes: 1,
-							},
-							"listener-443-1": {
-								Valid:          true,
-								AttachedRoutes: 1,
-							},
-						},
-					},
-					IgnoredGatewayStatuses: map[types.NamespacedName]state.IgnoredGatewayStatus{},
-					HTTPRouteStatuses: map[types.NamespacedName]state.HTTPRouteStatus{
-						{Namespace: "test", Name: "hr-2"}: {
-							ObservedGeneration: hr2.Generation,
-							ParentStatuses: map[string]state.ParentStatus{
-								"listener-80-1":  {Attached: true},
-								"listener-443-1": {Attached: true},
-							},
-						},
-					},
-				}
-
-				changed, conf, statuses := processor.Process(context.TODO())
-				Expect(changed).To(BeTrue())
-				Expect(helpers.Diff(expectedConf, conf)).To(BeEmpty())
-				Expect(helpers.Diff(expectedStatuses, statuses)).To(BeEmpty())
-			})
-
-			It("should return configuration with default ssl server and updated statuses after deleting the second HTTPRoute", func() {
-				processor.CaptureDeleteChange(&v1beta1.HTTPRoute{}, types.NamespacedName{Namespace: "test", Name: "hr-2"})
-
-				expectedConf := state.Configuration{
-					HTTPServers: []state.VirtualServer{},
-					SSLServers: []state.VirtualServer{
-						{
-							Hostname: "~^",
-							SSL:      &state.SSL{CertificatePath: certificatePath},
-						},
-					},
-				}
-				expectedStatuses := state.Statuses{
-					GatewayClassStatus: &state.GatewayClassStatus{
-						Valid:              true,
-						ObservedGeneration: gcUpdated.Generation,
-					},
-					GatewayStatus: &state.GatewayStatus{
-						NsName: types.NamespacedName{Namespace: "test", Name: "gateway-2"},
-						ListenerStatuses: map[string]state.ListenerStatus{
-							"listener-80-1": {
-								Valid:          true,
-								AttachedRoutes: 0,
-							},
-							"listener-443-1": {
-								Valid:          true,
-								AttachedRoutes: 0,
-							},
-						},
-					},
-					IgnoredGatewayStatuses: map[types.NamespacedName]state.IgnoredGatewayStatus{},
-					HTTPRouteStatuses:      map[types.NamespacedName]state.HTTPRouteStatus{},
-				}
-
-				changed, conf, statuses := processor.Process(context.TODO())
-				Expect(changed).To(BeTrue())
-				Expect(helpers.Diff(expectedConf, conf)).To(BeEmpty())
-				Expect(helpers.Diff(expectedStatuses, statuses)).To(BeEmpty())
-			})
-
-			It("should return empty configuration and updated statuses after deleting the GatewayClass", func() {
-				processor.CaptureDeleteChange(&v1beta1.GatewayClass{}, types.NamespacedName{Name: gcName})
-
-				expectedConf := state.Configuration{}
-				expectedStatuses := state.Statuses{
-					GatewayStatus: &state.GatewayStatus{
-						NsName: types.NamespacedName{Namespace: "test", Name: "gateway-2"},
-						ListenerStatuses: map[string]state.ListenerStatus{
-							"listener-80-1": {
-								Valid:          false,
-								AttachedRoutes: 0,
-							},
-							"listener-443-1": {
-								Valid:          false,
-								AttachedRoutes: 0,
-							},
-						},
-					},
-					IgnoredGatewayStatuses: map[types.NamespacedName]state.IgnoredGatewayStatus{},
-					HTTPRouteStatuses:      map[types.NamespacedName]state.HTTPRouteStatus{},
-				}
-
-				changed, conf, statuses := processor.Process(context.TODO())
-				Expect(changed).To(BeTrue())
-				Expect(helpers.Diff(expectedConf, conf)).To(BeEmpty())
-				Expect(helpers.Diff(expectedStatuses, statuses)).To(BeEmpty())
-			})
-
-			It("should return empty configuration and empty statuses after deleting the second Gateway", func() {
-				processor.CaptureDeleteChange(&v1beta1.Gateway{}, types.NamespacedName{Namespace: "test", Name: "gateway-2"})
-
-				expectedConf := state.Configuration{}
-				expectedStatuses := state.Statuses{
-					IgnoredGatewayStatuses: map[types.NamespacedName]state.IgnoredGatewayStatus{},
-					HTTPRouteStatuses:      map[types.NamespacedName]state.HTTPRouteStatus{},
-				}
-
-				changed, conf, statuses := processor.Process(context.TODO())
-				Expect(changed).To(BeTrue())
-				Expect(helpers.Diff(expectedConf, conf)).To(BeEmpty())
-				Expect(helpers.Diff(expectedStatuses, statuses)).To(BeEmpty())
-			})
-
-			It("should return empty configuration and statuses after deleting the first HTTPRoute", func() {
-				processor.CaptureDeleteChange(&v1beta1.HTTPRoute{}, types.NamespacedName{Namespace: "test", Name: "hr-1"})
-
-				expectedConf := state.Configuration{}
-				expectedStatuses := state.Statuses{
-					IgnoredGatewayStatuses: map[types.NamespacedName]state.IgnoredGatewayStatus{},
-					HTTPRouteStatuses:      map[types.NamespacedName]state.HTTPRouteStatus{},
-				}
-
-				changed, conf, statuses := processor.Process(context.TODO())
-				Expect(changed).To(BeTrue())
-				Expect(helpers.Diff(expectedConf, conf)).To(BeEmpty())
-				Expect(helpers.Diff(expectedStatuses, statuses)).To(BeEmpty())
+					changed, conf, statuses := processor.Process(context.TODO())
+					Expect(changed).To(BeTrue())
+					Expect(helpers.Diff(expectedConf, conf)).To(BeEmpty())
+					Expect(helpers.Diff(expectedStatuses, statuses)).To(BeEmpty())
+				})
 			})
 		})
 		Describe("Process services and endpoints", Ordered, func() {
@@ -1060,23 +1110,24 @@ var _ = Describe("ChangeProcessor", func() {
 
 				// backend Refs
 				fooRef := createBackendRef(&kindService, "foo-svc", &testNamespace)
-				barRef := createBackendRef(&kindService, "bar-svc", nil) // nil namespace should inherit namespace from route
-				baz1Ref := createBackendRef(&kindService, "baz-svc-v1", &testNamespace)
+				baz1NilNamespace := createBackendRef(&kindService, "baz-svc-v1", &testNamespace)
+				barRef := createBackendRef(&kindService, "bar-svc", nil)
 				baz2Ref := createBackendRef(&kindService, "baz-svc-v2", &testNamespace)
 				baz3Ref := createBackendRef(&kindService, "baz-svc-v3", &testNamespace)
-				invalidRef := createBackendRef(&kindInvalid, "bar-svc", &testNamespace) // invalid kind
+				invalidKindRef := createBackendRef(&kindInvalid, "bar-svc", &testNamespace)
 
 				// httproutes
 				hr1 = createRoute("hr1", "gw", "foo.example.com", fooRef)
 				hr2 = createRoute("hr2", "gw", "bar.example.com", barRef)
-				hr3 = createRoute("hr3", "gw", "bar.2.example.com", barRef) // shares backend ref with hr2
-				hrInvalidBackendRef = createRoute("hr-invalid", "gw", "invalid.example.com", invalidRef)
+				// hr3 shares the same backendRef as hr2
+				hr3 = createRoute("hr3", "gw", "bar.2.example.com", barRef)
+				hrInvalidBackendRef = createRoute("hr-invalid", "gw", "invalid.com", invalidKindRef)
 				hrMultipleRules = createRouteWithMultipleRules(
 					"hr-multiple-rules",
 					"gw",
 					"mutli.example.com",
 					[]v1beta1.HTTPRouteRule{
-						createHTTPRule("/baz-v1", baz1Ref),
+						createHTTPRule("/baz-v1", baz1NilNamespace),
 						createHTTPRule("/baz-v2", baz2Ref),
 						createHTTPRule("/baz-v3", baz3Ref),
 					},
@@ -1112,115 +1163,249 @@ var _ = Describe("ChangeProcessor", func() {
 				processor.CaptureDeleteChange(obj, nsname)
 				testProcessChangedVal(expChanged)
 			}
-
-			It("add hr1", func() {
-				testUpsertTriggersChange(hr1, true)
-			})
-			It("add service for hr1", func() {
-				testUpsertTriggersChange(hr1svc, true)
-			})
-			It("add endpoint slice for hr1", func() {
-				testUpsertTriggersChange(hr1slice1, true)
-			})
-			It("update for service for hr1", func() {
-				testUpsertTriggersChange(hr1svc, true)
-			})
-			It("add second endpoint slice for hr1", func() {
-				testUpsertTriggersChange(hr1slice2, true)
-			})
-			It("add endpoint slice with missing svc name label", func() {
-				testUpsertTriggersChange(missingSvcNameSlice, false)
-			})
-			It("delete one endpoint slice for hr1", func() {
-				testDeleteTriggersChange(hr1slice1, types.NamespacedName{Namespace: hr1slice1.Namespace, Name: hr1slice1.Name}, true)
-			})
-			It("delete second endpoint slice for hr1", func() {
-				testDeleteTriggersChange(hr1slice2, types.NamespacedName{Namespace: hr1slice2.Namespace, Name: hr1slice2.Name}, true)
-			})
-			It("recreate second endpoint slice for hr1", func() {
-				testUpsertTriggersChange(hr1slice2, true)
-			})
-			It("delete hr1", func() {
-				testDeleteTriggersChange(hr1, types.NamespacedName{Namespace: hr1.Namespace, Name: hr1.Name}, true)
-			})
-			It("delete service for hr1", func() {
-				testDeleteTriggersChange(hr1svc, types.NamespacedName{Namespace: hr1svc.Namespace, Name: hr1svc.Name}, false)
-			})
-			It("delete second endpoint slice for hr1", func() {
-				testDeleteTriggersChange(hr1slice2, types.NamespacedName{Namespace: hr1slice2.Namespace, Name: hr1slice2.Name}, false)
-			})
-			It("add hr2", func() {
-				testUpsertTriggersChange(hr2, true)
-			})
-			It("add hr3 -- a route that shares a backend service with hr2", func() {
-				testUpsertTriggersChange(hr3, true)
-			})
-			It("add service referenced by both hr2 and hr3", func() {
-				testUpsertTriggersChange(sharedSvc, true)
-			})
-			It("delete hr2", func() {
-				testDeleteTriggersChange(hr2, types.NamespacedName{Namespace: hr2.Namespace, Name: hr2.Name}, true)
-			})
-			It("delete shared service", func() {
-				testDeleteTriggersChange(sharedSvc, types.NamespacedName{Namespace: sharedSvc.Namespace, Name: sharedSvc.Name}, true)
-			})
-			It("recreate shared service", func() {
-				testUpsertTriggersChange(sharedSvc, true)
-			})
-			It("delete hr3", func() {
-				testDeleteTriggersChange(hr3, types.NamespacedName{Namespace: hr3.Namespace, Name: hr3.Name}, true)
-			})
-			It("delete shared service", func() {
-				testDeleteTriggersChange(sharedSvc, types.NamespacedName{Namespace: sharedSvc.Namespace, Name: sharedSvc.Name}, false)
-			})
-			It("add service that is not referenced by any route", func() {
-				testUpsertTriggersChange(notRefSvc, false)
-			})
-			It("add route with an invalid backend ref type", func() {
-				testUpsertTriggersChange(hrInvalidBackendRef, true)
-			})
-			It("add service with a namespace name that matches invalid backend ref (should be ignored)", func() {
-				testUpsertTriggersChange(invalidSvc, false)
-			})
-			It("add endpoint slice that is not owned by a referenced service", func() {
-				testUpsertTriggersChange(noRefSlice, false)
-			})
-			It("delete endpoint slice that is not owned by a referenced service", func() {
-				testDeleteTriggersChange(noRefSlice, types.NamespacedName{Namespace: noRefSlice.Namespace, Name: noRefSlice.Name}, false)
-			})
-			When("processing a route with multiple rules and three unique backend services", func() {
-				It("adds route", func() {
-					testUpsertTriggersChange(hrMultipleRules, true)
+			When("hr1 is added", func() {
+				It("should trigger a change", func() {
+					testUpsertTriggersChange(hr1, true)
 				})
-				It("adds one referenced service", func() {
-					testUpsertTriggersChange(bazSvc1, true)
+			})
+			When("a hr1 service is added", func() {
+				It("should trigger a change", func() {
+					testUpsertTriggersChange(hr1svc, true)
 				})
-				It("adds second referenced service", func() {
-					testUpsertTriggersChange(bazSvc2, true)
+			})
+			When("an hr1 endpoint slice is added", func() {
+				It("should trigger a change", func() {
+					testUpsertTriggersChange(hr1slice1, true)
 				})
-				It("deletes first referenced service", func() {
-					testDeleteTriggersChange(bazSvc1, types.NamespacedName{Namespace: bazSvc1.Namespace, Name: bazSvc1.Name}, true)
+			})
+			When("an hr1 service is updated", func() {
+				It("should trigger a change", func() {
+					testUpsertTriggersChange(hr1svc, true)
 				})
-				It("recreates first referenced service", func() {
-					testUpsertTriggersChange(bazSvc1, true)
+			})
+			When("another hr1 endpoint slice is added", func() {
+				It("should trigger a change", func() {
+					testUpsertTriggersChange(hr1slice2, true)
 				})
-				It("adds third referenced service", func() {
-					testUpsertTriggersChange(bazSvc3, true)
+			})
+			When("an endpoint slice with a missing svc name label is added", func() {
+				It("should not trigger a change", func() {
+					testUpsertTriggersChange(missingSvcNameSlice, false)
 				})
-				It("updates third referenced service", func() {
-					testUpsertTriggersChange(bazSvc3, true)
+			})
+			When("an hr1 endpoint slice is deleted", func() {
+				It("should trigger a change", func() {
+					testDeleteTriggersChange(
+						hr1slice1,
+						types.NamespacedName{Namespace: hr1slice1.Namespace, Name: hr1slice1.Name},
+						true,
+					)
 				})
-				It("deletes route with multiple services", func() {
-					testDeleteTriggersChange(hrMultipleRules, types.NamespacedName{Namespace: hrMultipleRules.Namespace, Name: hrMultipleRules.Name}, true)
+			})
+			When("the second hr1 endpoint slice is deleted", func() {
+				It("should trigger a change", func() {
+					testDeleteTriggersChange(
+						hr1slice2,
+						types.NamespacedName{Namespace: hr1slice2.Namespace, Name: hr1slice2.Name},
+						true,
+					)
 				})
-				It("deletes first service", func() {
-					testDeleteTriggersChange(bazSvc1, types.NamespacedName{Namespace: bazSvc1.Namespace, Name: bazSvc1.Name}, false)
+			})
+			When("the second hr1 endpoint slice is recreated", func() {
+				It("should trigger a change", func() {
+					testUpsertTriggersChange(hr1slice2, true)
 				})
-				It("deletes second service", func() {
-					testDeleteTriggersChange(bazSvc2, types.NamespacedName{Namespace: bazSvc2.Namespace, Name: bazSvc2.Name}, false)
+			})
+			When("hr1 is deleted", func() {
+				It("should trigger a change", func() {
+					testDeleteTriggersChange(
+						hr1,
+						types.NamespacedName{Namespace: hr1.Namespace, Name: hr1.Name},
+						true,
+					)
 				})
-				It("deletes final service", func() {
-					testDeleteTriggersChange(bazSvc3, types.NamespacedName{Namespace: bazSvc3.Namespace, Name: bazSvc3.Name}, false)
+			})
+			When("hr1 service is deleted", func() {
+				It("should not trigger a change", func() {
+					testDeleteTriggersChange(
+						hr1svc,
+						types.NamespacedName{Namespace: hr1svc.Namespace, Name: hr1svc.Name},
+						false,
+					)
+				})
+			})
+			When("the second hr1 endpoint slice is deleted", func() {
+				It("should not trigger a change", func() {
+					testDeleteTriggersChange(
+						hr1slice2,
+						types.NamespacedName{Namespace: hr1slice2.Namespace, Name: hr1slice2.Name},
+						false,
+					)
+				})
+			})
+			When("hr2 is added", func() {
+				It("should trigger a change", func() {
+					testUpsertTriggersChange(hr2, true)
+				})
+			})
+			When("a hr3, that shares a backend service with hr2, is added", func() {
+				It("should trigger a change", func() {
+					testUpsertTriggersChange(hr3, true)
+				})
+			})
+			When("sharedSvc, a service referenced by both hr2 and hr3, is added", func() {
+				It("should trigger a change", func() {
+					testUpsertTriggersChange(sharedSvc, true)
+				})
+			})
+			When("hr2 is deleted", func() {
+				It("should trigger a change", func() {
+					testDeleteTriggersChange(
+						hr2,
+						types.NamespacedName{Namespace: hr2.Namespace, Name: hr2.Name},
+						true,
+					)
+				})
+			})
+			When("sharedSvc is deleted", func() {
+				It("should trigger a change", func() {
+					testDeleteTriggersChange(
+						sharedSvc,
+						types.NamespacedName{Namespace: sharedSvc.Namespace, Name: sharedSvc.Name},
+						true,
+					)
+				})
+			})
+			When("sharedSvc is recreated", func() {
+				It("should trigger a change", func() {
+					testUpsertTriggersChange(sharedSvc, true)
+				})
+			})
+			When("hr3 is deleted", func() {
+				It("should trigger a change", func() {
+					testDeleteTriggersChange(
+						hr3,
+						types.NamespacedName{Namespace: hr3.Namespace, Name: hr3.Name},
+						true,
+					)
+				})
+			})
+			When("sharedSvc is deleted", func() {
+				It("should not trigger a change", func() {
+					testDeleteTriggersChange(
+						sharedSvc,
+						types.NamespacedName{Namespace: sharedSvc.Namespace, Name: sharedSvc.Name},
+						false,
+					)
+				})
+			})
+			When("a service that is not referenced by any route is added", func() {
+				It("should not trigger a change", func() {
+					testUpsertTriggersChange(notRefSvc, false)
+				})
+			})
+			When("a route with an invalid backend ref type is added", func() {
+				It("should trigger a change", func() {
+					testUpsertTriggersChange(hrInvalidBackendRef, true)
+				})
+			})
+			When("a service with a namespace name that matches invalid backend ref is added", func() {
+				It("should not trigger a change", func() {
+					testUpsertTriggersChange(invalidSvc, false)
+				})
+			})
+			When("an endpoint slice that is not owned by a referenced service is added", func() {
+				It("should not trigger a change", func() {
+					testUpsertTriggersChange(noRefSlice, false)
+				})
+			})
+			When("an endpoint slice that is not owned by a referenced service is deleted", func() {
+				It("should not trigger a change", func() {
+					testDeleteTriggersChange(
+						noRefSlice,
+						types.NamespacedName{Namespace: noRefSlice.Namespace, Name: noRefSlice.Name},
+						false,
+					)
+				})
+			})
+			Context("processing a route with multiple rules and three unique backend services", func() {
+				When("route is added", func() {
+					It("should trigger a change", func() {
+						testUpsertTriggersChange(hrMultipleRules, true)
+					})
+				})
+				When("first referenced service is added", func() {
+					It("should trigger a change", func() {
+						testUpsertTriggersChange(bazSvc1, true)
+					})
+				})
+				When("second referenced service is added", func() {
+					It("should trigger a change", func() {
+						testUpsertTriggersChange(bazSvc2, true)
+					})
+				})
+				When("first referenced service is deleted", func() {
+					It("should trigger a change", func() {
+						testDeleteTriggersChange(
+							bazSvc1,
+							types.NamespacedName{Namespace: bazSvc1.Namespace, Name: bazSvc1.Name},
+							true,
+						)
+					})
+				})
+				When("first referenced service is recreated", func() {
+					It("should trigger a change", func() {
+						testUpsertTriggersChange(bazSvc1, true)
+					})
+				})
+				When("third referenced service is added", func() {
+					It("should trigger a change", func() {
+						testUpsertTriggersChange(bazSvc3, true)
+					})
+				})
+				When("third referenced service is updated", func() {
+					It("should trigger a change", func() {
+						testUpsertTriggersChange(bazSvc3, true)
+					})
+				})
+				When("route is deleted", func() {
+					It("should trigger a change", func() {
+						testDeleteTriggersChange(
+							hrMultipleRules,
+							types.NamespacedName{
+								Namespace: hrMultipleRules.Namespace,
+								Name:      hrMultipleRules.Name,
+							},
+							true,
+						)
+					})
+				})
+				When("first referenced service is deleted", func() {
+					It("should not trigger a change", func() {
+						testDeleteTriggersChange(
+							bazSvc1,
+							types.NamespacedName{Namespace: bazSvc1.Namespace, Name: bazSvc1.Name},
+							false,
+						)
+					})
+				})
+				When("second referenced service is deleted", func() {
+					It("should not trigger a change", func() {
+						testDeleteTriggersChange(
+							bazSvc2,
+							types.NamespacedName{Namespace: bazSvc2.Namespace, Name: bazSvc2.Name},
+							false,
+						)
+					})
+				})
+				When("final referenced service is deleted", func() {
+					It("should not trigger a change", func() {
+						testDeleteTriggersChange(
+							bazSvc3,
+							types.NamespacedName{Namespace: bazSvc3.Namespace, Name: bazSvc3.Name},
+							false,
+						)
+					})
 				})
 			})
 		})
@@ -1333,7 +1518,6 @@ var _ = Describe("ChangeProcessor", func() {
 				changed, _, _ := processor.Process(context.TODO())
 				Expect(changed).To(BeTrue())
 			})
-
 			It("should report not changed after multiple Upserts of the resource with same generation", func() {
 				processor.CaptureUpsertChange(gc)
 				processor.CaptureUpsertChange(gw1)
@@ -1342,22 +1526,22 @@ var _ = Describe("ChangeProcessor", func() {
 				changed, _, _ := processor.Process(context.TODO())
 				Expect(changed).To(BeFalse())
 			})
+			When("a upsert of updated resources is followed by an upsert of the same generation", func() {
+				It("should report changed", func() {
+					// these are changing changes
+					processor.CaptureUpsertChange(gcUpdated)
+					processor.CaptureUpsertChange(gw1Updated)
+					processor.CaptureUpsertChange(hr1Updated)
 
-			It("should report changed after upserting updated resources followed by upserting same generations", func() {
-				// these are changing changes
-				processor.CaptureUpsertChange(gcUpdated)
-				processor.CaptureUpsertChange(gw1Updated)
-				processor.CaptureUpsertChange(hr1Updated)
+					// there are non-changing changes
+					processor.CaptureUpsertChange(gcUpdated)
+					processor.CaptureUpsertChange(gw1Updated)
+					processor.CaptureUpsertChange(hr1Updated)
 
-				// there are non-changing changes
-				processor.CaptureUpsertChange(gcUpdated)
-				processor.CaptureUpsertChange(gw1Updated)
-				processor.CaptureUpsertChange(hr1Updated)
-
-				changed, _, _ := processor.Process(context.TODO())
-				Expect(changed).To(BeTrue())
+					changed, _, _ := processor.Process(context.TODO())
+					Expect(changed).To(BeTrue())
+				})
 			})
-
 			It("should report changed after upserting new resources", func() {
 				// we can't have a second GatewayClass, so we don't add it
 				processor.CaptureUpsertChange(gw2)
@@ -1366,19 +1550,20 @@ var _ = Describe("ChangeProcessor", func() {
 				changed, _, _ := processor.Process(context.TODO())
 				Expect(changed).To(BeTrue())
 			})
+			When("resources are deleted followed by upserts with the same generations", func() {
+				It("should report changed", func() {
+					// these are changing changes
+					processor.CaptureDeleteChange(&v1beta1.GatewayClass{}, gcNsName)
+					processor.CaptureDeleteChange(&v1beta1.Gateway{}, gwNsName)
+					processor.CaptureDeleteChange(&v1beta1.HTTPRoute{}, hrNsName)
 
-			It("should report changed after deleting resources followed by upserting same generations of new resources", func() {
-				// these are changing changes
-				processor.CaptureDeleteChange(&v1beta1.GatewayClass{}, gcNsName)
-				processor.CaptureDeleteChange(&v1beta1.Gateway{}, gwNsName)
-				processor.CaptureDeleteChange(&v1beta1.HTTPRoute{}, hrNsName)
+					// these are non-changing changes
+					processor.CaptureUpsertChange(gw2)
+					processor.CaptureUpsertChange(hr2)
 
-				// these are non-changing changes
-				processor.CaptureUpsertChange(gw2)
-				processor.CaptureUpsertChange(hr2)
-
-				changed, _, _ := processor.Process(context.TODO())
-				Expect(changed).To(BeTrue())
+					changed, _, _ := processor.Process(context.TODO())
+					Expect(changed).To(BeTrue())
+				})
 			})
 			It("should report changed after deleting resources", func() {
 				processor.CaptureDeleteChange(&v1beta1.HTTPRoute{}, hr2NsName)
@@ -1405,9 +1590,8 @@ var _ = Describe("ChangeProcessor", func() {
 				changed, _, _ := processor.Process(context.TODO())
 				Expect(changed).To(BeFalse())
 			})
-
-			It("should report changed after upserting related resources followed by upserting unrelated resources",
-				func() {
+			When("upserts of related resources are followed by upserts of unrelated resources", func() {
+				It("should report changed", func() {
 					// these are changing changes
 					fakeRelationshipCapturer.ExistsReturns(true)
 					processor.CaptureUpsertChange(svc)
@@ -1421,9 +1605,9 @@ var _ = Describe("ChangeProcessor", func() {
 					changed, _, _ := processor.Process(context.TODO())
 					Expect(changed).To(BeTrue())
 				})
-
-			It("should report changed after deleting related resources followed by upserting unrelated resources",
-				func() {
+			})
+			When("deletes of related resources are followed by upserts of unrelated resources", func() {
+				It("should report changed", func() {
 					// these are changing changes
 					fakeRelationshipCapturer.ExistsReturns(true)
 					processor.CaptureDeleteChange(&apiv1.Service{}, svcNsName)
@@ -1437,6 +1621,7 @@ var _ = Describe("ChangeProcessor", func() {
 					changed, _, _ := processor.Process(context.TODO())
 					Expect(changed).To(BeTrue())
 				})
+			})
 		})
 		Describe("Multiple Kubernetes API and Gateway API resource changes", Ordered, func() {
 			It("should report changed after multiple Upserts of new and related resources", func() {
@@ -1486,7 +1671,8 @@ var _ = Describe("ChangeProcessor", func() {
 
 					changed, _, _ := processor.Process(context.TODO())
 					Expect(changed).To(BeTrue())
-				})
+				},
+			)
 
 			It("should report changed after upserting changed resources followed by upserting unrelated resources",
 				func() {
@@ -1502,8 +1688,10 @@ var _ = Describe("ChangeProcessor", func() {
 
 					changed, _, _ := processor.Process(context.TODO())
 					Expect(changed).To(BeTrue())
-				})
-			It("should report changed after upserting related resources followed by upserting unchanged resources",
+				},
+			)
+			It(
+				"should report changed after upserting related resources followed by upserting unchanged resources",
 				func() {
 					// these are changing changes
 					fakeRelationshipCapturer.ExistsReturns(true)
@@ -1518,7 +1706,8 @@ var _ = Describe("ChangeProcessor", func() {
 
 					changed, _, _ := processor.Process(context.TODO())
 					Expect(changed).To(BeTrue())
-				})
+				},
+			)
 		})
 	})
 
@@ -1548,17 +1737,34 @@ var _ = Describe("ChangeProcessor", func() {
 				}
 				Expect(process).Should(Panic())
 			},
-			Entry("an unsupported resource", &v1alpha2.TCPRoute{ObjectMeta: metav1.ObjectMeta{Namespace: "test", Name: "tcp"}}),
-			Entry("a wrong gatewayclass", &v1beta1.GatewayClass{ObjectMeta: metav1.ObjectMeta{Name: "wrong-class"}}))
+			Entry(
+				"an unsupported resource",
+				&v1alpha2.TCPRoute{ObjectMeta: metav1.ObjectMeta{Namespace: "test", Name: "tcp"}},
+			),
+			Entry(
+				"a wrong gatewayclass",
+				&v1beta1.GatewayClass{ObjectMeta: metav1.ObjectMeta{Name: "wrong-class"}},
+			),
+		)
 
-		DescribeTable("CaptureDeleteChange must panic",
+		DescribeTable(
+			"CaptureDeleteChange must panic",
 			func(resourceType client.Object, nsname types.NamespacedName) {
 				process := func() {
 					processor.CaptureDeleteChange(resourceType, nsname)
 				}
 				Expect(process).Should(Panic())
 			},
-			Entry("an unsupported resource", &v1alpha2.TCPRoute{}, types.NamespacedName{Namespace: "test", Name: "tcp"}),
-			Entry("a wrong gatewayclass", &v1beta1.GatewayClass{}, types.NamespacedName{Name: "wrong-class"}))
+			Entry(
+				"an unsupported resource",
+				&v1alpha2.TCPRoute{},
+				types.NamespacedName{Namespace: "test", Name: "tcp"},
+			),
+			Entry(
+				"a wrong gatewayclass",
+				&v1beta1.GatewayClass{},
+				types.NamespacedName{Name: "wrong-class"},
+			),
+		)
 	})
 })
