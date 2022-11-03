@@ -104,10 +104,7 @@ func (c *ChangeProcessorImpl) CaptureUpsertChange(obj client.Object) {
 	c.changed = c.changed || c.store.changed || c.cfg.RelationshipCapturer.Exists(obj, client.ObjectKeyFromObject(obj))
 }
 
-func (c *ChangeProcessorImpl) CaptureDeleteChange(
-	resourceType client.Object,
-	nsname types.NamespacedName,
-) {
+func (c *ChangeProcessorImpl) CaptureDeleteChange(resourceType client.Object, nsname types.NamespacedName) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
@@ -137,9 +134,7 @@ func (c *ChangeProcessorImpl) CaptureDeleteChange(
 	c.cfg.RelationshipCapturer.Remove(resourceType, nsname)
 }
 
-func (c *ChangeProcessorImpl) Process(
-	ctx context.Context,
-) (changed bool, conf Configuration, statuses Statuses) {
+func (c *ChangeProcessorImpl) Process(ctx context.Context) (changed bool, conf Configuration, statuses Statuses) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
