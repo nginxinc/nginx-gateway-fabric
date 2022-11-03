@@ -239,9 +239,9 @@ func TestBuildConfiguration(t *testing.T) {
 
 	tests := []struct {
 		graph    *graph
-		expConf  Configuration
 		expWarns Warnings
 		msg      string
+		expConf  Configuration
 	}{
 		{
 			graph: &graph{
@@ -885,9 +885,9 @@ func TestCreateFilters(t *testing.T) {
 	}
 
 	tests := []struct {
-		filters  []v1beta1.HTTPRouteFilter
 		expected Filters
 		msg      string
+		filters  []v1beta1.HTTPRouteFilter
 	}{
 		{
 			filters:  []v1beta1.HTTPRouteFilter{},
@@ -960,9 +960,9 @@ func TestMatchRuleGetMatch(t *testing.T) {
 	}
 
 	tests := []struct {
-		name,
+		name    string
 		expPath string
-		rule MatchRule
+		rule    MatchRule
 	}{
 		{
 			name:    "first match in first rule",

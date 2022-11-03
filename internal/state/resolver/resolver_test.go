@@ -293,8 +293,8 @@ func TestIgnoreEndpointSlice(t *testing.T) {
 
 func TestEndpointReady(t *testing.T) {
 	testcases := []struct {
-		msg      string
 		endpoint discoveryV1.Endpoint
+		msg      string
 		ready    bool
 	}{
 		{

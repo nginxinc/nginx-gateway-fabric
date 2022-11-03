@@ -20,8 +20,8 @@ type Location struct {
 
 // Return represents an HTTP return.
 type Return struct {
-	Code StatusCode
 	URL  string
+	Code StatusCode
 }
 
 // SSL holds all SSL related configuration.

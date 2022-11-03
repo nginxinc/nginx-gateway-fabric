@@ -22,11 +22,10 @@ import (
 // FIXME(pleshakov): better document the side effects and how to prevent and mitigate them.
 // So when the EventLoop have 100 saved events, it is better to process them at once rather than one by one.
 type EventLoop struct {
-	eventCh <-chan interface{}
-	logger  logr.Logger
-	handler EventHandler
-
+	handler  EventHandler
 	preparer FirstEventBatchPreparer
+	eventCh  <-chan interface{}
+	logger   logr.Logger
 }
 
 // NewEventLoop creates a new EventLoop.

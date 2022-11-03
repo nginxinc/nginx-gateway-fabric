@@ -210,9 +210,10 @@ func TestLessObjectMeta(t *testing.T) {
 	later := metav1.NewTime(sooner.Add(10 * time.Millisecond))
 
 	tests := []struct {
-		meta1, meta2 *metav1.ObjectMeta
-		expected     bool
-		msg          string
+		meta1    *metav1.ObjectMeta
+		meta2    *metav1.ObjectMeta
+		msg      string
+		expected bool
 	}{
 		{
 			meta1: &metav1.ObjectMeta{

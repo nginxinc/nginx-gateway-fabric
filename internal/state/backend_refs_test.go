@@ -31,8 +31,8 @@ func getModifiedRef(mod func(ref v1beta1.BackendRef) v1beta1.BackendRef) v1beta1
 
 func TestValidateBackendRef(t *testing.T) {
 	tests := []struct {
-		msg    string
 		ref    v1beta1.BackendRef
+		msg    string
 		expErr bool
 	}{
 		{
@@ -107,9 +107,9 @@ func TestGetServiceAndPortFromRef(t *testing.T) {
 	}
 
 	tests := []struct {
-		msg        string
 		ref        v1beta1.BackendRef
 		expService *v1.Service
+		msg        string
 		expPort    int32
 		expErr     bool
 	}{

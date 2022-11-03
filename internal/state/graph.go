@@ -41,10 +41,10 @@ type route struct {
 type gatewayClass struct {
 	// Source is the source resource.
 	Source *v1beta1.GatewayClass
+	// ErrorMsg explains the error when the resource is invalid.
+	ErrorMsg string
 	// Valid shows whether the GatewayClass is valid.
 	Valid bool
-	// ErrorMsg explains the error when the resource is not valid.
-	ErrorMsg string
 }
 
 // graph is a graph-like representation of Gateway API resources.

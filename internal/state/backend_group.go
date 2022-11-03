@@ -9,19 +9,19 @@ import (
 
 // BackendGroup represents a group of backends for a rule in an HTTPRoute.
 type BackendGroup struct {
-	Errors   []string
 	Source   types.NamespacedName
-	RuleIdx  int
+	Errors   []string
 	Backends []BackendRef
+	RuleIdx  int
 }
 
 // BackendRef is an internal representation of a backendRef in an HTTPRoute.
 type BackendRef struct {
-	Name   string
 	Svc    *v1.Service
+	Name   string
 	Port   int32
-	Valid  bool
 	Weight int32
+	Valid  bool
 }
 
 // GroupName returns the name of the backend group.

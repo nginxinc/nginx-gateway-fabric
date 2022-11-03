@@ -35,14 +35,14 @@ type EventHandlerConfig struct {
 	SecretMemoryManager state.SecretDiskMemoryManager
 	// Generator is the nginx config Generator.
 	Generator config.Generator
-	// Logger is the logger to be used by the EventHandler.
-	Logger logr.Logger
 	// NginxFileMgr is the file Manager for nginx.
 	NginxFileMgr file.Manager
 	// NginxRuntimeMgr manages nginx runtime.
 	NginxRuntimeMgr runtime.Manager
 	// StatusUpdater updates statuses on Kubernetes resources.
 	StatusUpdater status.Updater
+	// Logger is the logger to be used by the EventHandler.
+	Logger logr.Logger
 }
 
 // EventHandlerImpl implements EventHandler.

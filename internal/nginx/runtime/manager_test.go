@@ -20,9 +20,9 @@ func TestFindMainProcess(t *testing.T) {
 
 	tests := []struct {
 		readFile    readFileFunc
+		msg         string
 		expected    int
 		expectError bool
-		msg         string
 	}{
 		{
 			readFile:    readFileFuncGen([]byte("1\n")),

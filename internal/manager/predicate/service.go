@@ -15,8 +15,8 @@ type ServicePortsChangedPredicate struct {
 
 // ports contains the ports that the Gateway cares about.
 type ports struct {
-	servicePort int32
 	targetPort  intstr.IntOrString
+	servicePort int32
 }
 
 // Update implements default UpdateEvent filter for validating Service port changes.

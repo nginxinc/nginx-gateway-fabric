@@ -15,9 +15,9 @@ func TestPrepareGatewayClassStatus(t *testing.T) {
 	transitionTime := metav1.NewTime(time.Now())
 
 	tests := []struct {
-		status   state.GatewayClassStatus
-		expected v1beta1.GatewayClassStatus
 		msg      string
+		expected v1beta1.GatewayClassStatus
+		status   state.GatewayClassStatus
 	}{
 		{
 			status: state.GatewayClassStatus{

@@ -22,16 +22,16 @@ type Updater interface {
 
 // UpdaterConfig holds configuration parameters for Updater.
 type UpdaterConfig struct {
+	// Client is a Kubernetes API client.
+	Client client.Client
+	// Clock is used as a source of time for the LastTransitionTime field in Conditions in resource statuses.
+	Clock Clock
+	// Logger holds a logger to be used.
+	Logger logr.Logger
 	// GatewayCtlrName is the name of the Gateway controller.
 	GatewayCtlrName string
 	// GatewayClassName is the name of the GatewayClass resource.
 	GatewayClassName string
-	// Client is a Kubernetes API client.
-	Client client.Client
-	// Logger holds a logger to be used.
-	Logger logr.Logger
-	// Clock is used as a source of time for the LastTransitionTime field in Conditions in resource statuses.
-	Clock Clock
 }
 
 // updaterImpl updates statuses of the Gateway API resources.

@@ -12,8 +12,8 @@ import (
 
 func MockValidator(name string, called *int, succeed bool) ValidatorContext {
 	return ValidatorContext{
-		name,
-		func(_ *flag.FlagSet) error {
+		Key: name,
+		V: func(_ *flag.FlagSet) error {
 			*called++
 
 			if !succeed {
@@ -41,71 +41,71 @@ var _ = Describe("Main", func() {
 		It("should call all validators", func() {
 			var called int
 			table := []struct {
+				Contexts      []ValidatorContext
 				ExpectedCalls int
 				Success       bool
-				Contexts      []ValidatorContext
 			}{
 				{
-					0,
-					true,
-					[]ValidatorContext{},
+					Contexts:      []ValidatorContext{},
+					ExpectedCalls: 0,
+					Success:       true,
 				},
 				{
-					0,
-					true,
-					[]ValidatorContext{
+					Contexts: []ValidatorContext{
 						MockValidator("no-flag-set", &called, true),
 					},
+					ExpectedCalls: 0,
+					Success:       true,
 				},
 				{
-					1,
-					true,
-					[]ValidatorContext{
+					Contexts: []ValidatorContext{
 						MockValidator("validator-1", &called, true),
 					},
+					ExpectedCalls: 1,
+					Success:       true,
 				},
 				{
-					1,
-					true,
-					[]ValidatorContext{
+					Contexts: []ValidatorContext{
 						MockValidator("no-flag-set", &called, true),
 						MockValidator("validator-1", &called, true),
 					},
+					ExpectedCalls: 1,
+					Success:       true,
 				},
 				{
-					2,
-					true,
-					[]ValidatorContext{
+					Contexts: []ValidatorContext{
 						MockValidator("validator-1", &called, true),
 						MockValidator("validator-2", &called, true),
 					},
+					ExpectedCalls: 2,
+					Success:       true,
 				},
 				{
-					3,
-					true,
-					[]ValidatorContext{
+					Contexts: []ValidatorContext{
 						MockValidator("validator-1", &called, true),
 						MockValidator("validator-2", &called, true),
 						MockValidator("validator-3", &called, true),
 					},
+					ExpectedCalls: 3,
+					Success:       true,
 				},
 				{
-					3,
-					false,
-					[]ValidatorContext{
+					Contexts: []ValidatorContext{
 						MockValidator("validator-1", &called, false),
 						MockValidator("validator-2", &called, true),
 						MockValidator("validator-3", &called, true),
 					},
+					ExpectedCalls: 3,
+					Success:       false,
 				},
 				{
-					3,
-					false,
-					[]ValidatorContext{
+					Contexts: []ValidatorContext{
 						MockValidator("validator-1", &called, true),
 						MockValidator("validator-2", &called, true),
 						MockValidator("validator-3", &called, false),
 					},
+					ExpectedCalls: 3,
+					Success:       false,
 				},
 			}
 
@@ -120,9 +120,9 @@ var _ = Describe("Main", func() {
 
 	Describe("CLI argument validation", func() {
 		type testCase struct {
+			ValidatorContext ValidatorContext
 			Flag             string
 			Value            string
-			ValidatorContext ValidatorContext
 			ExpError         bool
 		}
 

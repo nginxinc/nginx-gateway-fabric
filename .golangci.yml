@@ -32,6 +32,9 @@ linters-settings:
       - name: var-naming
   gocyclo:
     min-complexity: 15
+  govet:
+    enable:
+    - fieldalignment
 
 linters:
     enable:
