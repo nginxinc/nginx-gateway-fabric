@@ -96,7 +96,9 @@ Fields:
   * `parents`
 	* `parentRef` - supported.
 	* `controllerName` - supported.
-	* `conditions` - partially supported.
+	* `conditions` - partially supported. Supported (Condition/Status/Reason):
+    	*  `Accepted/True/Accepted`
+    	*  `Accepted/False/NoMatchingListenerHostname`
 
 ### TLSRoute
 

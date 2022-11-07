@@ -7,6 +7,8 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
+
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/conditions"
 )
 
 // gateway represents the winning Gateway resource.
@@ -28,8 +30,9 @@ type route struct {
 	// ValidSectionNameRefs includes the sectionNames from the parentRefs of the HTTPRoute that are valid -- i.e.
 	// the Gateway resource has a corresponding valid listener.
 	ValidSectionNameRefs map[string]struct{}
-	// ValidSectionNameRefs includes the sectionNames from the parentRefs of the HTTPRoute that are invalid.
-	InvalidSectionNameRefs map[string]struct{}
+	// InvalidSectionNameRefs includes the sectionNames from the parentRefs of the HTTPRoute that are invalid.
+	// The RouteCondition describes why the sectionName is invalid.
+	InvalidSectionNameRefs map[string]conditions.RouteCondition
 	// BackendGroups includes the backend groups of the HTTPRoute.
 	// There's one BackendGroup per rule in the HTTPRoute.
 	// The BackendGroups are stored in order of the rules.
@@ -189,7 +192,7 @@ func bindHTTPRouteToListeners(
 	r = &route{
 		Source:                 ghr,
 		ValidSectionNameRefs:   make(map[string]struct{}),
-		InvalidSectionNameRefs: make(map[string]struct{}),
+		InvalidSectionNameRefs: make(map[string]conditions.RouteCondition),
 	}
 
 	// FIXME (pleshakov) Handle the case when parent refs are duplicated
@@ -233,7 +236,9 @@ func bindHTTPRouteToListeners(
 
 			l, exists := listeners[name]
 			if !exists {
-				r.InvalidSectionNameRefs[name] = struct{}{}
+				// FIXME(pleshakov): Add a proper condition once it is available in the Gateway API.
+				// See also https://github.com/kubernetes-sigs/gateway-api/discussions/1445
+				r.InvalidSectionNameRefs[name] = conditions.NewRouteTODO("listener is not found")
 				continue
 			}
 
@@ -246,7 +251,7 @@ func bindHTTPRouteToListeners(
 				r.ValidSectionNameRefs[name] = struct{}{}
 				l.Routes[client.ObjectKeyFromObject(ghr)] = r
 			} else {
-				r.InvalidSectionNameRefs[name] = struct{}{}
+				r.InvalidSectionNameRefs[name] = conditions.NewRouteNoMatchingListenerHostname()
 			}
 
 			continue
@@ -257,7 +262,8 @@ func bindHTTPRouteToListeners(
 		key := types.NamespacedName{Namespace: ns, Name: string(p.Name)}
 
 		if _, exist := ignoredGws[key]; exist {
-			r.InvalidSectionNameRefs[name] = struct{}{}
+			// FIXME(pleshakov): Add a proper condition.
+			r.InvalidSectionNameRefs[name] = conditions.NewRouteTODO("Gateway is ignored")
 
 			processed = true
 			continue

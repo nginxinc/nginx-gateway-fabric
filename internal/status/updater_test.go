@@ -17,6 +17,7 @@ import (
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/helpers"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/conditions"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/status"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/status/statusfakes"
 )
@@ -95,7 +96,12 @@ var _ = Describe("Updater", func() {
 							ObservedGeneration: 5,
 							ParentStatuses: map[string]state.ParentStatus{
 								"http": {
-									Attached: valid,
+									Conditions: []conditions.RouteCondition{
+										{
+											Type:   "Test",
+											Status: metav1.ConditionTrue,
+										},
+									},
 								},
 							},
 						},
@@ -214,11 +220,10 @@ var _ = Describe("Updater", func() {
 									},
 									Conditions: []metav1.Condition{
 										{
-											Type:               string(gatewayv1beta1.RouteConditionAccepted),
+											Type:               "Test",
 											Status:             metav1.ConditionTrue,
 											ObservedGeneration: 5,
 											LastTransitionTime: fakeClockTime,
-											Reason:             "Accepted",
 										},
 									},
 								},

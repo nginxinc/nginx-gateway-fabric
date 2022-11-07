@@ -3,6 +3,8 @@ package state
 import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/conditions"
 )
 
 // ListenerStatuses holds the statuses of listeners where the key is the name of a listener in the Gateway resource.
@@ -54,8 +56,8 @@ type HTTPRouteStatus struct {
 
 // ParentStatus holds status-related information related to how the HTTPRoute binds to a specific parentRef.
 type ParentStatus struct {
-	// Attached is true if the route attaches to the parent (listener).
-	Attached bool
+	// Conditions is the list of conditions that are relevant to the parentRef.
+	Conditions []conditions.RouteCondition
 }
 
 // GatewayClassStatus holds status-related infortmation about the GatewayClass resource.
@@ -110,12 +112,20 @@ func buildStatuses(graph *graph) Statuses {
 
 		for ref := range r.ValidSectionNameRefs {
 			parentStatuses[ref] = ParentStatus{
-				Attached: gcValidAndExist, // Attached only when GatewayClass is valid and exists
+				Conditions: conditions.DeduplicateRouteConditions(
+					buildBaseRouteConditions(gcValidAndExist),
+				),
 			}
 		}
-		for ref := range r.InvalidSectionNameRefs {
+		for ref, cond := range r.InvalidSectionNameRefs {
+			baseConds := buildBaseRouteConditions(gcValidAndExist)
+
+			conds := make([]conditions.RouteCondition, 0, len(baseConds)+1)
+			conds = append(conds, baseConds...)
+			conds = append(conds, cond)
+
 			parentStatuses[ref] = ParentStatus{
-				Attached: false,
+				Conditions: conditions.DeduplicateRouteConditions(conds),
 			}
 		}
 
@@ -126,4 +136,17 @@ func buildStatuses(graph *graph) Statuses {
 	}
 
 	return statuses
+}
+
+func buildBaseRouteConditions(gcValidAndExist bool) []conditions.RouteCondition {
+	conds := conditions.NewDefaultRouteConditions()
+
+	// FIXME(pleshakov): Figure out appropriate conditions for the cases when:
+	// (1) GatewayClass is invalid.
+	// (2) GatewayClass does not exist.
+	if !gcValidAndExist {
+		conds = append(conds, conditions.NewRouteTODO("GatewayClass is invalid or doesn't exist"))
+	}
+
+	return conds
 }
