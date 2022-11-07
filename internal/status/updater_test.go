@@ -40,9 +40,9 @@ var _ = Describe("Updater", func() {
 			WithScheme(scheme).
 			Build()
 
-		// Rfc3339Copy() removes the monotonic clock reading
-		// We need to remove it, because updating the status in the FakeClient and then getting the resource back
-		// involves encoding and decoding the resource to/from JSON, which removes the monotonic clock reading.
+		// Rfc3339Copy() removes the monotonic clock reading and leaves only second-level precision.
+		// We use it because updating the status in the FakeClient and then getting the resource back
+		// involves encoding and decoding the resource to/from JSON, which uses RFC 3339 for metav1.Time.
 		fakeClockTime = metav1.NewTime(time.Now()).Rfc3339Copy()
 		fakeClock := &statusfakes.FakeClock{}
 		fakeClock.NowReturns(fakeClockTime)
