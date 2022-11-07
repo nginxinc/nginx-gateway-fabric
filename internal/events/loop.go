@@ -71,6 +71,12 @@ func (el *EventLoop) Start(ctx context.Context) error {
 		}(el.currentBatch)
 	}
 
+	swapAndHandleBatch := func() {
+		el.swapBatches()
+		handleBatch()
+		handling = true
+	}
+
 	// Prepare the fist event batch, which includes the UpsertEvents for all relevant cluster resources.
 	// This is necessary so that the first time the EventHandler generates NGINX configuration, it derives it from
 	// a complete view of the cluster. Otherwise, the handler would generate incomplete configuration, which can lead
@@ -116,20 +122,14 @@ func (el *EventLoop) Start(ctx context.Context) error {
 
 			// If no batch is currently being handled, swap batches and begin handling the batch.
 			if !handling {
-				el.swapBatches()
-
-				handleBatch()
-				handling = true
+				swapAndHandleBatch()
 			}
 		case <-handlingDone:
 			handling = false
 
 			// If there's at least one event in the next batch, swap batches and begin handling the batch.
 			if len(el.nextBatch) > 0 {
-				el.swapBatches()
-
-				handleBatch()
-				handling = true
+				swapAndHandleBatch()
 			}
 		}
 	}

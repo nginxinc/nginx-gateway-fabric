@@ -10,7 +10,7 @@ import (
 func TestEventLoop_SwapBatches(t *testing.T) {
 	eventLoop := NewEventLoop(nil, zap.New(), nil, nil)
 
-	eventLoop.currentBatch = []interface{}{
+	eventLoop.currentBatch = EventBatch{
 		"event0",
 		"event1",
 		"event2",
