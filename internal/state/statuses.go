@@ -144,6 +144,7 @@ func buildBaseRouteConditions(gcValidAndExist bool) []conditions.RouteCondition 
 	// FIXME(pleshakov): Figure out appropriate conditions for the cases when:
 	// (1) GatewayClass is invalid.
 	// (2) GatewayClass does not exist.
+	// https://github.com/nginxinc/nginx-kubernetes-gateway/issues/307
 	if !gcValidAndExist {
 		conds = append(conds, conditions.NewRouteTODO("GatewayClass is invalid or doesn't exist"))
 	}

@@ -237,7 +237,7 @@ func bindHTTPRouteToListeners(
 			l, exists := listeners[name]
 			if !exists {
 				// FIXME(pleshakov): Add a proper condition once it is available in the Gateway API.
-				// See also https://github.com/kubernetes-sigs/gateway-api/discussions/1445
+				// https://github.com/nginxinc/nginx-kubernetes-gateway/issues/306
 				r.InvalidSectionNameRefs[name] = conditions.NewRouteTODO("listener is not found")
 				continue
 			}
@@ -263,6 +263,7 @@ func bindHTTPRouteToListeners(
 
 		if _, exist := ignoredGws[key]; exist {
 			// FIXME(pleshakov): Add a proper condition.
+			// https://github.com/nginxinc/nginx-kubernetes-gateway/issues/306
 			r.InvalidSectionNameRefs[name] = conditions.NewRouteTODO("Gateway is ignored")
 
 			processed = true
