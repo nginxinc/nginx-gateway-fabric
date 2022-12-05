@@ -2,6 +2,7 @@ package state_test
 
 import (
 	"context"
+	"sort"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -17,6 +18,7 @@ import (
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/helpers"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/manager/index"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/conditions"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/relationship"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/relationship/relationshipfakes"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/statefakes"
@@ -228,6 +230,24 @@ var _ = Describe("ChangeProcessor", func() {
 
 				gw2 = createGatewayWithTLSListener("gateway-2")
 			})
+
+			assertStatuses := func(expected, result state.Statuses) {
+				sortConditions := func(statuses state.HTTPRouteStatuses) {
+					for _, status := range statuses {
+						for _, ps := range status.ParentStatuses {
+							sort.Slice(ps.Conditions, func(i, j int) bool {
+								return ps.Conditions[i].Type < ps.Conditions[j].Type
+							})
+						}
+					}
+				}
+
+				sortConditions(expected.HTTPRouteStatuses)
+				sortConditions(result.HTTPRouteStatuses)
+
+				ExpectWithOffset(1, helpers.Diff(expected, result)).To(BeEmpty())
+			}
+
 			When("no upsert has occurred", func() {
 				It("returns empty configuration and statuses", func() {
 					changed, conf, statuses := processor.Process(context.TODO())
@@ -279,8 +299,18 @@ var _ = Describe("ChangeProcessor", func() {
 								{Namespace: "test", Name: "hr-1"}: {
 									ObservedGeneration: hr1.Generation,
 									ParentStatuses: map[string]state.ParentStatus{
-										"listener-80-1":  {Attached: false},
-										"listener-443-1": {Attached: false},
+										"listener-80-1": {
+											Conditions: append(
+												conditions.NewDefaultRouteConditions(),
+												conditions.NewRouteTODO("GatewayClass is invalid or doesn't exist"),
+											),
+										},
+										"listener-443-1": {
+											Conditions: append(
+												conditions.NewDefaultRouteConditions(),
+												conditions.NewRouteTODO("GatewayClass is invalid or doesn't exist"),
+											),
+										},
 									},
 								},
 							},
@@ -289,7 +319,7 @@ var _ = Describe("ChangeProcessor", func() {
 						changed, conf, statuses := processor.Process(context.TODO())
 						Expect(changed).To(BeTrue())
 						Expect(helpers.Diff(expectedConf, conf)).To(BeEmpty())
-						Expect(helpers.Diff(expectedStatuses, statuses)).To(BeEmpty())
+						assertStatuses(expectedStatuses, statuses)
 					})
 				})
 			})
@@ -367,8 +397,12 @@ var _ = Describe("ChangeProcessor", func() {
 							{Namespace: "test", Name: "hr-1"}: {
 								ObservedGeneration: hr1.Generation,
 								ParentStatuses: map[string]state.ParentStatus{
-									"listener-80-1":  {Attached: true},
-									"listener-443-1": {Attached: true},
+									"listener-80-1": {
+										Conditions: conditions.NewDefaultRouteConditions(),
+									},
+									"listener-443-1": {
+										Conditions: conditions.NewDefaultRouteConditions(),
+									},
 								},
 							},
 						},
@@ -377,7 +411,7 @@ var _ = Describe("ChangeProcessor", func() {
 					changed, conf, statuses := processor.Process(context.TODO())
 					Expect(changed).To(BeTrue())
 					Expect(helpers.Diff(expectedConf, conf)).To(BeEmpty())
-					Expect(helpers.Diff(expectedStatuses, statuses)).To(BeEmpty())
+					assertStatuses(expectedStatuses, statuses)
 				})
 			})
 			When("the first HTTPRoute without a generation changed is processed", func() {
@@ -465,8 +499,12 @@ var _ = Describe("ChangeProcessor", func() {
 							{Namespace: "test", Name: "hr-1"}: {
 								ObservedGeneration: hr1Updated.Generation,
 								ParentStatuses: map[string]state.ParentStatus{
-									"listener-80-1":  {Attached: true},
-									"listener-443-1": {Attached: true},
+									"listener-80-1": {
+										Conditions: conditions.NewDefaultRouteConditions(),
+									},
+									"listener-443-1": {
+										Conditions: conditions.NewDefaultRouteConditions(),
+									},
 								},
 							},
 						},
@@ -475,7 +513,7 @@ var _ = Describe("ChangeProcessor", func() {
 					changed, conf, statuses := processor.Process(context.TODO())
 					Expect(changed).To(BeTrue())
 					Expect(helpers.Diff(expectedConf, conf)).To(BeEmpty())
-					Expect(helpers.Diff(expectedStatuses, statuses)).To(BeEmpty())
+					assertStatuses(expectedStatuses, statuses)
 				},
 				)
 			})
@@ -564,8 +602,12 @@ var _ = Describe("ChangeProcessor", func() {
 							{Namespace: "test", Name: "hr-1"}: {
 								ObservedGeneration: hr1Updated.Generation,
 								ParentStatuses: map[string]state.ParentStatus{
-									"listener-80-1":  {Attached: true},
-									"listener-443-1": {Attached: true},
+									"listener-80-1": {
+										Conditions: conditions.NewDefaultRouteConditions(),
+									},
+									"listener-443-1": {
+										Conditions: conditions.NewDefaultRouteConditions(),
+									},
 								},
 							},
 						},
@@ -574,7 +616,7 @@ var _ = Describe("ChangeProcessor", func() {
 					changed, conf, statuses := processor.Process(context.TODO())
 					Expect(changed).To(BeTrue())
 					Expect(helpers.Diff(expectedConf, conf)).To(BeEmpty())
-					Expect(helpers.Diff(expectedStatuses, statuses)).To(BeEmpty())
+					assertStatuses(expectedStatuses, statuses)
 				})
 			})
 			When("the GatewayClass update without generation change is processed", func() {
@@ -662,8 +704,12 @@ var _ = Describe("ChangeProcessor", func() {
 							{Namespace: "test", Name: "hr-1"}: {
 								ObservedGeneration: hr1Updated.Generation,
 								ParentStatuses: map[string]state.ParentStatus{
-									"listener-80-1":  {Attached: true},
-									"listener-443-1": {Attached: true},
+									"listener-80-1": {
+										Conditions: conditions.NewDefaultRouteConditions(),
+									},
+									"listener-443-1": {
+										Conditions: conditions.NewDefaultRouteConditions(),
+									},
 								},
 							},
 						},
@@ -672,7 +718,7 @@ var _ = Describe("ChangeProcessor", func() {
 					changed, conf, statuses := processor.Process(context.TODO())
 					Expect(changed).To(BeTrue())
 					Expect(helpers.Diff(expectedConf, conf)).To(BeEmpty())
-					Expect(helpers.Diff(expectedStatuses, statuses)).To(BeEmpty())
+					assertStatuses(expectedStatuses, statuses)
 				})
 			})
 			When("no changes are captured", func() {
@@ -763,8 +809,12 @@ var _ = Describe("ChangeProcessor", func() {
 							{Namespace: "test", Name: "hr-1"}: {
 								ObservedGeneration: hr1Updated.Generation,
 								ParentStatuses: map[string]state.ParentStatus{
-									"listener-80-1":  {Attached: true},
-									"listener-443-1": {Attached: true},
+									"listener-80-1": {
+										Conditions: conditions.NewDefaultRouteConditions(),
+									},
+									"listener-443-1": {
+										Conditions: conditions.NewDefaultRouteConditions(),
+									},
 								},
 							},
 						},
@@ -773,7 +823,7 @@ var _ = Describe("ChangeProcessor", func() {
 					changed, conf, statuses := processor.Process(context.TODO())
 					Expect(changed).To(BeTrue())
 					Expect(helpers.Diff(expectedConf, conf)).To(BeEmpty())
-					Expect(helpers.Diff(expectedStatuses, statuses)).To(BeEmpty())
+					assertStatuses(expectedStatuses, statuses)
 				})
 			})
 			When("the second HTTPRoute is upserted", func() {
@@ -853,15 +903,29 @@ var _ = Describe("ChangeProcessor", func() {
 							{Namespace: "test", Name: "hr-1"}: {
 								ObservedGeneration: hr1Updated.Generation,
 								ParentStatuses: map[string]state.ParentStatus{
-									"listener-80-1":  {Attached: true},
-									"listener-443-1": {Attached: true},
+									"listener-80-1": {
+										Conditions: conditions.NewDefaultRouteConditions(),
+									},
+									"listener-443-1": {
+										Conditions: conditions.NewDefaultRouteConditions(),
+									},
 								},
 							},
 							{Namespace: "test", Name: "hr-2"}: {
 								ObservedGeneration: hr2.Generation,
 								ParentStatuses: map[string]state.ParentStatus{
-									"listener-80-1":  {Attached: false},
-									"listener-443-1": {Attached: false},
+									"listener-80-1": {
+										Conditions: append(
+											conditions.NewDefaultRouteConditions(),
+											conditions.NewRouteTODO("Gateway is ignored"),
+										),
+									},
+									"listener-443-1": {
+										Conditions: append(
+											conditions.NewDefaultRouteConditions(),
+											conditions.NewRouteTODO("Gateway is ignored"),
+										),
+									},
 								},
 							},
 						},
@@ -870,7 +934,7 @@ var _ = Describe("ChangeProcessor", func() {
 					changed, conf, statuses := processor.Process(context.TODO())
 					Expect(changed).To(BeTrue())
 					Expect(helpers.Diff(expectedConf, conf)).To(BeEmpty())
-					Expect(helpers.Diff(expectedStatuses, statuses)).To(BeEmpty())
+					assertStatuses(expectedStatuses, statuses)
 				})
 			})
 			When("the first Gateway is deleted", func() {
@@ -949,8 +1013,12 @@ var _ = Describe("ChangeProcessor", func() {
 							{Namespace: "test", Name: "hr-2"}: {
 								ObservedGeneration: hr2.Generation,
 								ParentStatuses: map[string]state.ParentStatus{
-									"listener-80-1":  {Attached: true},
-									"listener-443-1": {Attached: true},
+									"listener-80-1": {
+										Conditions: conditions.NewDefaultRouteConditions(),
+									},
+									"listener-443-1": {
+										Conditions: conditions.NewDefaultRouteConditions(),
+									},
 								},
 							},
 						},
@@ -959,7 +1027,7 @@ var _ = Describe("ChangeProcessor", func() {
 					changed, conf, statuses := processor.Process(context.TODO())
 					Expect(changed).To(BeTrue())
 					Expect(helpers.Diff(expectedConf, conf)).To(BeEmpty())
-					Expect(helpers.Diff(expectedStatuses, statuses)).To(BeEmpty())
+					assertStatuses(expectedStatuses, statuses)
 				})
 			})
 			When("the second HTTPRoute is deleted", func() {
@@ -1003,7 +1071,7 @@ var _ = Describe("ChangeProcessor", func() {
 					changed, conf, statuses := processor.Process(context.TODO())
 					Expect(changed).To(BeTrue())
 					Expect(helpers.Diff(expectedConf, conf)).To(BeEmpty())
-					Expect(helpers.Diff(expectedStatuses, statuses)).To(BeEmpty())
+					assertStatuses(expectedStatuses, statuses)
 				})
 			})
 			When("the GatewayClass is deleted", func() {
@@ -1035,7 +1103,7 @@ var _ = Describe("ChangeProcessor", func() {
 					changed, conf, statuses := processor.Process(context.TODO())
 					Expect(changed).To(BeTrue())
 					Expect(helpers.Diff(expectedConf, conf)).To(BeEmpty())
-					Expect(helpers.Diff(expectedStatuses, statuses)).To(BeEmpty())
+					assertStatuses(expectedStatuses, statuses)
 				})
 			})
 			When("the second Gateway is deleted", func() {
@@ -1054,7 +1122,7 @@ var _ = Describe("ChangeProcessor", func() {
 					changed, conf, statuses := processor.Process(context.TODO())
 					Expect(changed).To(BeTrue())
 					Expect(helpers.Diff(expectedConf, conf)).To(BeEmpty())
-					Expect(helpers.Diff(expectedStatuses, statuses)).To(BeEmpty())
+					assertStatuses(expectedStatuses, statuses)
 				})
 			})
 			When("the first HTTPRoute is deleted", func() {
@@ -1073,7 +1141,7 @@ var _ = Describe("ChangeProcessor", func() {
 					changed, conf, statuses := processor.Process(context.TODO())
 					Expect(changed).To(BeTrue())
 					Expect(helpers.Diff(expectedConf, conf)).To(BeEmpty())
-					Expect(helpers.Diff(expectedStatuses, statuses)).To(BeEmpty())
+					assertStatuses(expectedStatuses, statuses)
 				})
 			})
 		})

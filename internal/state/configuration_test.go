@@ -14,6 +14,7 @@ import (
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/helpers"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/conditions"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/resolver"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/resolver/resolverfakes"
 )
@@ -100,7 +101,7 @@ func TestBuildConfiguration(t *testing.T) {
 	createInternalRoute := func(source *v1beta1.HTTPRoute, validSectionName string, groups ...BackendGroup) *route {
 		r := &route{
 			Source:                 source,
-			InvalidSectionNameRefs: make(map[string]struct{}),
+			InvalidSectionNameRefs: make(map[string]conditions.RouteCondition),
 			ValidSectionNameRefs:   map[string]struct{}{validSectionName: {}},
 			BackendGroups:          groups,
 		}
@@ -179,7 +180,7 @@ func TestBuildConfiguration(t *testing.T) {
 
 	routeHR5 := &route{
 		Source:                 hr5,
-		InvalidSectionNameRefs: make(map[string]struct{}),
+		InvalidSectionNameRefs: make(map[string]conditions.RouteCondition),
 		ValidSectionNameRefs:   map[string]struct{}{"listener-80-1": {}},
 		BackendGroups:          []BackendGroup{hr5BackendGroup},
 	}
