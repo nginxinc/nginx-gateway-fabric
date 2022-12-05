@@ -27,13 +27,13 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@93ea575cb5d8a053eaa0ac8fa3b40d7e05a33cc8 # v3.1.0
       - name: Setup Golang Environment
-        uses: actions/setup-go@v3
+        uses: actions/setup-go@c4a742cab115ed795e34d4513e2cf7d472deb55f # v3.3.1
         with:
           go-version-file: go.mod
       - name: Lint Code
-        uses: golangci/golangci-lint-action@v3.3.0
+        uses: golangci/golangci-lint-action@0ad9a0988b3973e851ab0a07adf248ec2e100376 # v3.3.1
         with:
           args: --timeout 10m0s
           only-new-issues: true
@@ -43,10 +43,10 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@e2f20e631ae6d7dd3b768f56a5d2af784dd54791 # v2.5.0
       - name: Run Prettier on NJS code
         id: prettier-run
-        uses: rutajdash/prettier-cli-action@v1.0.0
+        uses: rutajdash/prettier-cli-action@30325c923a7b131ab8b6c99e0aff38afaddb9643 # v1.0.0
         with:
           config_path: ${{ github.workspace }}/internal/nginx/modules/.prettierrc
           file_pattern: ${{ github.workspace }}/internal/nginx/modules/**/*.js
