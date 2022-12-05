@@ -7,7 +7,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestState(t *testing.T) {
+func TestEvents(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Events Suite")
 }

@@ -1,15 +1,23 @@
 package state
 
 import (
+	"sort"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
+
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/conditions"
 )
 
 func TestBuildStatuses(t *testing.T) {
+	invalidCondition := conditions.RouteCondition{
+		Type:   "Test",
+		Status: metav1.ConditionTrue,
+	}
+
 	listeners := map[string]*listener{
 		"listener-80-1": {
 			Valid: true,
@@ -29,8 +37,8 @@ func TestBuildStatuses(t *testing.T) {
 			ValidSectionNameRefs: map[string]struct{}{
 				"listener-80-1": {},
 			},
-			InvalidSectionNameRefs: map[string]struct{}{
-				"listener-80-2": {},
+			InvalidSectionNameRefs: map[string]conditions.RouteCondition{
+				"listener-80-2": invalidCondition,
 			},
 		},
 	}
@@ -42,9 +50,9 @@ func TestBuildStatuses(t *testing.T) {
 					Generation: 4,
 				},
 			},
-			InvalidSectionNameRefs: map[string]struct{}{
-				"listener-80-2": {},
-				"listener-80-1": {},
+			InvalidSectionNameRefs: map[string]conditions.RouteCondition{
+				"listener-80-2": invalidCondition,
+				"listener-80-1": invalidCondition,
 			},
 		},
 	}
@@ -108,10 +116,13 @@ func TestBuildStatuses(t *testing.T) {
 						ObservedGeneration: 3,
 						ParentStatuses: map[string]ParentStatus{
 							"listener-80-1": {
-								Attached: true,
+								Conditions: conditions.NewDefaultRouteConditions(),
 							},
 							"listener-80-2": {
-								Attached: false,
+								Conditions: append(
+									conditions.NewDefaultRouteConditions(),
+									invalidCondition,
+								),
 							},
 						},
 					},
@@ -150,10 +161,17 @@ func TestBuildStatuses(t *testing.T) {
 						ObservedGeneration: 3,
 						ParentStatuses: map[string]ParentStatus{
 							"listener-80-1": {
-								Attached: false,
+								Conditions: append(
+									conditions.NewDefaultRouteConditions(),
+									conditions.NewRouteTODO("GatewayClass is invalid or doesn't exist"),
+								),
 							},
 							"listener-80-2": {
-								Attached: false,
+								Conditions: append(
+									conditions.NewDefaultRouteConditions(),
+									conditions.NewRouteTODO("GatewayClass is invalid or doesn't exist"),
+									invalidCondition,
+								),
 							},
 						},
 					},
@@ -202,10 +220,17 @@ func TestBuildStatuses(t *testing.T) {
 						ObservedGeneration: 3,
 						ParentStatuses: map[string]ParentStatus{
 							"listener-80-1": {
-								Attached: false,
+								Conditions: append(
+									conditions.NewDefaultRouteConditions(),
+									conditions.NewRouteTODO("GatewayClass is invalid or doesn't exist"),
+								),
 							},
 							"listener-80-2": {
-								Attached: false,
+								Conditions: append(
+									conditions.NewDefaultRouteConditions(),
+									conditions.NewRouteTODO("GatewayClass is invalid or doesn't exist"),
+									invalidCondition,
+								),
 							},
 						},
 					},
@@ -237,10 +262,16 @@ func TestBuildStatuses(t *testing.T) {
 						ObservedGeneration: 4,
 						ParentStatuses: map[string]ParentStatus{
 							"listener-80-1": {
-								Attached: false,
+								Conditions: append(
+									conditions.NewDefaultRouteConditions(),
+									invalidCondition,
+								),
 							},
 							"listener-80-2": {
-								Attached: false,
+								Conditions: append(
+									conditions.NewDefaultRouteConditions(),
+									invalidCondition,
+								),
 							},
 						},
 					},
@@ -250,8 +281,22 @@ func TestBuildStatuses(t *testing.T) {
 		},
 	}
 
+	sortConditions := func(statuses Statuses) {
+		for _, rs := range statuses.HTTPRouteStatuses {
+			for _, ps := range rs.ParentStatuses {
+				sort.Slice(ps.Conditions, func(i, j int) bool {
+					return ps.Conditions[i].Type < ps.Conditions[j].Type
+				})
+			}
+		}
+	}
+
 	for _, test := range tests {
 		result := buildStatuses(test.graph)
+
+		sortConditions(result)
+		sortConditions(test.expected)
+
 		if diff := cmp.Diff(test.expected, result); diff != "" {
 			t.Errorf("buildStatuses() '%v' mismatch (-want +got):\n%s", test.msg, diff)
 		}
