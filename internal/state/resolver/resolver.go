@@ -59,13 +59,38 @@ func (e *ServiceResolverImpl) Resolve(ctx context.Context, svc *v1.Service, port
 		return nil, fmt.Errorf("no endpoints found for Service %s", client.ObjectKeyFromObject(svc))
 	}
 
-	return resolveEndpoints(svc, port, endpointSliceList)
+	return resolveEndpoints(svc, port, endpointSliceList, initEndpointSetWithCalculatedSize)
+}
+
+type initEndpointSetFunc func([]discoveryV1.EndpointSlice) map[Endpoint]struct{}
+
+func initEndpointSetWithCalculatedSize(endpointSlices []discoveryV1.EndpointSlice) map[Endpoint]struct{} {
+	// performance optimization to reduce the cost of growing the map. See the benchamarks for performance comparison.
+	return make(map[Endpoint]struct{}, calculateReadyEndpoints(endpointSlices))
+}
+
+func calculateReadyEndpoints(endpointSlices []discoveryV1.EndpointSlice) int {
+	total := 0
+
+	for _, eps := range endpointSlices {
+		for _, endpoint := range eps.Endpoints {
+
+			if !endpointReady(endpoint) {
+				continue
+			}
+
+			total += len(endpoint.Addresses)
+		}
+	}
+
+	return total
 }
 
 func resolveEndpoints(
 	svc *v1.Service,
 	port int32,
 	endpointSliceList discoveryV1.EndpointSliceList,
+	initEndpointsSet initEndpointSetFunc,
 ) ([]Endpoint, error) {
 	svcPort, err := getServicePort(svc, port)
 	if err != nil {
@@ -81,7 +106,7 @@ func resolveEndpoints(
 
 	// Endpoints may be duplicated across multiple EndpointSlices.
 	// Using a set to prevent returning duplicate endpoints.
-	endpointSet := make(map[Endpoint]struct{})
+	endpointSet := initEndpointsSet(filteredSlices)
 
 	for _, eps := range filteredSlices {
 		for _, endpoint := range eps.Endpoints {

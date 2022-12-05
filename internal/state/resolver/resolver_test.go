@@ -1,9 +1,11 @@
 package resolver
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	. "github.com/onsi/gomega"
 	v1 "k8s.io/api/core/v1"
 	discoveryV1 "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -467,6 +469,137 @@ func TestFindPort(t *testing.T) {
 				tc.expPort,
 				port,
 			)
+		}
+	}
+}
+
+func TestCalculateReadyEndpoints(t *testing.T) {
+	g := NewGomegaWithT(t)
+
+	slices := []discoveryV1.EndpointSlice{
+		{
+			Endpoints: []discoveryV1.Endpoint{
+				{
+					Addresses: []string{"1.0.0.1"},
+					Conditions: discoveryV1.EndpointConditions{
+						Ready: helpers.GetBoolPointer(true),
+					},
+				},
+				{
+					Addresses:  []string{"1.1.0.1", "1.1.0.2", "1.1.0.3, 1.1.0.4, 1.1.0.5"},
+					Conditions: discoveryV1.EndpointConditions{
+						// nil conditions should be treated as not ready
+					},
+				},
+			},
+		},
+		{
+			Endpoints: []discoveryV1.Endpoint{
+				{
+					Addresses: []string{"2.0.0.1", "2.0.0.2", "2.0.0.3"},
+					Conditions: discoveryV1.EndpointConditions{
+						Ready: helpers.GetBoolPointer(true),
+					},
+				},
+			},
+		},
+	}
+
+	result := calculateReadyEndpoints(slices)
+
+	g.Expect(result).To(Equal(4))
+}
+
+func generateEndpointSliceList(n int) discoveryV1.EndpointSliceList {
+	const maxEndpointsPerSlice = 100 // use the Kubernetes default max for endpoints in a slice.
+
+	slicesCount := (n + maxEndpointsPerSlice - 1) / maxEndpointsPerSlice
+
+	result := discoveryV1.EndpointSliceList{
+		Items: make([]discoveryV1.EndpointSlice, 0, slicesCount),
+	}
+
+	ready := true
+
+	for i := 0; n > 0; i++ {
+		c := maxEndpointsPerSlice
+		if n < maxEndpointsPerSlice {
+			c = n
+		}
+		n -= maxEndpointsPerSlice
+
+		slice := discoveryV1.EndpointSlice{
+			Endpoints:   make([]discoveryV1.Endpoint, c),
+			AddressType: discoveryV1.AddressTypeIPv4,
+			Ports: []discoveryV1.EndpointPort{
+				{
+					Port: nil, // will match any port in the service
+				},
+			},
+		}
+
+		for j := 0; j < c; j++ {
+			slice.Endpoints[j] = discoveryV1.Endpoint{
+				Addresses: []string{fmt.Sprintf("10.0.%d.%d", i, j)},
+				Conditions: discoveryV1.EndpointConditions{
+					Ready: &ready,
+				},
+			}
+		}
+
+		result.Items = append(result.Items, slice)
+	}
+
+	return result
+}
+
+func BenchmarkResolve(b *testing.B) {
+	counts := []int{
+		1,
+		2,
+		5,
+		10,
+		25,
+		50,
+		100,
+		500,
+		1000,
+	}
+
+	svc := &v1.Service{
+		Spec: v1.ServiceSpec{
+			Ports: []v1.ServicePort{
+				{
+					Port: 80,
+				},
+			},
+		},
+	}
+
+	initEndpointSet := func([]discoveryV1.EndpointSlice) map[Endpoint]struct{} {
+		return make(map[Endpoint]struct{})
+	}
+
+	for _, count := range counts {
+		list := generateEndpointSliceList(count)
+
+		b.Run(fmt.Sprintf("%d endpoints", count), func(b *testing.B) {
+			bench(b, svc, list, initEndpointSet, count)
+		})
+		b.Run(fmt.Sprintf("%d endpoints with optimization", count), func(b *testing.B) {
+			bench(b, svc, list, initEndpointSetWithCalculatedSize, count)
+		})
+	}
+}
+
+func bench(b *testing.B, svc *v1.Service, list discoveryV1.EndpointSliceList, initSet initEndpointSetFunc, n int) {
+	for i := 0; i < b.N; i++ {
+		res, err := resolveEndpoints(svc, 80, list, initSet)
+		if len(res) != n {
+			b.Fatalf("expected %d endpoints, got %d", n, len(res))
+		}
+		if err != nil {
+			b.Fatal(err)
 		}
 	}
 }
