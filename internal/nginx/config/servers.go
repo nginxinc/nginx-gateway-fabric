@@ -21,54 +21,55 @@ func executeServers(conf state.Configuration) []byte {
 }
 
 func createServers(httpServers, sslServers []state.VirtualServer) []http.Server {
-	confServers := append(httpServers, sslServers...)
+	servers := make([]http.Server, 0, len(httpServers)+len(sslServers))
 
-	servers := make([]http.Server, 0, len(confServers)+2)
-
-	if len(httpServers) > 0 {
-		defaultHTTPServer := createDefaultHTTPServer()
-
-		servers = append(servers, defaultHTTPServer)
-	}
-
-	if len(sslServers) > 0 {
-		defaultSSLServer := createDefaultSSLServer()
-
-		servers = append(servers, defaultSSLServer)
-	}
-
-	for _, s := range confServers {
+	for _, s := range httpServers {
 		servers = append(servers, createServer(s))
+	}
+
+	for _, s := range sslServers {
+		servers = append(servers, createSSLServer(s))
 	}
 
 	return servers
 }
 
-func createServer(virtualServer state.VirtualServer) http.Server {
-	s := http.Server{
-		ServerName: virtualServer.Hostname,
+func createSSLServer(virtualServer state.VirtualServer) http.Server {
+	if virtualServer.IsDefault {
+		return createDefaultSSLServer()
 	}
 
-	listenerPort := 80
-
-	if virtualServer.SSL != nil {
-		s.SSL = &http.SSL{
+	return http.Server{
+		ServerName: virtualServer.Hostname,
+		SSL: &http.SSL{
 			Certificate:    virtualServer.SSL.CertificatePath,
 			CertificateKey: virtualServer.SSL.CertificatePath,
-		}
+		},
+		Locations: createLocations(virtualServer.PathRules, 443),
+	}
+}
 
-		listenerPort = 443
+func createServer(virtualServer state.VirtualServer) http.Server {
+	if virtualServer.IsDefault {
+		return createDefaultHTTPServer()
 	}
 
-	if len(virtualServer.PathRules) == 0 {
-		// generate default "/" 404 location
-		s.Locations = []http.Location{{Path: "/", Return: &http.Return{Code: http.StatusNotFound}}}
-		return s
+	return http.Server{
+		ServerName: virtualServer.Hostname,
+		Locations:  createLocations(virtualServer.PathRules, 80),
+	}
+}
+
+func createLocations(pathRules []state.PathRule, listenerPort int) []http.Location {
+	lenPathRules := len(pathRules)
+
+	if lenPathRules == 0 {
+		return []http.Location{{Path: "/", Return: &http.Return{Code: http.StatusNotFound}}}
 	}
 
-	locs := make([]http.Location, 0, len(virtualServer.PathRules)) // FIXME(pleshakov): expand with rule.Routes
+	locs := make([]http.Location, 0, lenPathRules) // FIXME(pleshakov): expand with rule.Routes
 
-	for _, rule := range virtualServer.PathRules {
+	for _, rule := range pathRules {
 		matches := make([]httpMatch, 0, len(rule.MatchRules))
 
 		for matchRuleIdx, r := range rule.MatchRules {
@@ -129,8 +130,7 @@ func createServer(virtualServer state.VirtualServer) http.Server {
 		}
 	}
 
-	s.Locations = locs
-	return s
+	return locs
 }
 
 func createDefaultSSLServer() http.Server {

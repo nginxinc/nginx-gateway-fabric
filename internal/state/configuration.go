@@ -36,6 +36,8 @@ type VirtualServer struct {
 	Hostname string
 	// PathRules is a collection of routing rules.
 	PathRules []PathRule
+	// IsDefault indicates whether the server is the default server.
+	IsDefault bool
 }
 
 type Upstream struct {
@@ -244,6 +246,7 @@ type hostPathRules struct {
 	rulesPerHost     map[string]map[string]PathRule
 	listenersForHost map[string]*listener
 	listeners        []*listener
+	listenersExist   bool
 }
 
 func newHostPathRules() *hostPathRules {
@@ -255,6 +258,8 @@ func newHostPathRules() *hostPathRules {
 }
 
 func (hpr *hostPathRules) upsertListener(l *listener) {
+	hpr.listenersExist = true
+
 	if l.Source.Protocol == v1beta1.HTTPSProtocolType {
 		hpr.listeners = append(hpr.listeners, l)
 	}
@@ -351,6 +356,11 @@ func (hpr *hostPathRules) buildServers() []VirtualServer {
 
 			servers = append(servers, s)
 		}
+	}
+
+	// if any listeners exist, we need to generate a default server block.
+	if hpr.listenersExist {
+		servers = append(servers, VirtualServer{IsDefault: true})
 	}
 
 	// We sort the servers so the order is preserved after reconfiguration.
