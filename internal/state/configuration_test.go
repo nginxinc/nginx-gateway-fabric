@@ -20,7 +20,7 @@ import (
 )
 
 func TestBuildConfiguration(t *testing.T) {
-	createRoute := func(name string, hostname string, listenerName string, paths ...string) *v1beta1.HTTPRoute {
+	createRoute := func(name, hostname, listenerName string, paths ...string) *v1beta1.HTTPRoute {
 		rules := make([]v1beta1.HTTPRouteRule, 0, len(paths))
 		for _, p := range paths {
 			rules = append(rules, v1beta1.HTTPRouteRule{
@@ -282,8 +282,12 @@ func TestBuildConfiguration(t *testing.T) {
 				Routes: map[types.NamespacedName]*route{},
 			},
 			expConf: Configuration{
-				HTTPServers: []VirtualServer{},
-				SSLServers:  []VirtualServer{},
+				HTTPServers: []VirtualServer{
+					{
+						IsDefault: true,
+					},
+				},
+				SSLServers: []VirtualServer{},
 			},
 			msg: "http listener with no routes",
 		},
@@ -317,6 +321,9 @@ func TestBuildConfiguration(t *testing.T) {
 			expConf: Configuration{
 				HTTPServers: []VirtualServer{},
 				SSLServers: []VirtualServer{
+					{
+						IsDefault: true,
+					},
 					{
 						Hostname: string(hostname),
 						SSL:      &SSL{CertificatePath: secretPath},
@@ -398,6 +405,9 @@ func TestBuildConfiguration(t *testing.T) {
 			},
 			expConf: Configuration{
 				HTTPServers: []VirtualServer{
+					{
+						IsDefault: true,
+					},
 					{
 						Hostname: "bar.example.com",
 						PathRules: []PathRule{
@@ -481,6 +491,9 @@ func TestBuildConfiguration(t *testing.T) {
 			expConf: Configuration{
 				HTTPServers: []VirtualServer{},
 				SSLServers: []VirtualServer{
+					{
+						IsDefault: true,
+					},
 					{
 						Hostname: "bar.example.com",
 						PathRules: []PathRule{
@@ -592,6 +605,9 @@ func TestBuildConfiguration(t *testing.T) {
 			expConf: Configuration{
 				HTTPServers: []VirtualServer{
 					{
+						IsDefault: true,
+					},
+					{
 						Hostname: "foo.example.com",
 						PathRules: []PathRule{
 							{
@@ -637,6 +653,9 @@ func TestBuildConfiguration(t *testing.T) {
 					},
 				},
 				SSLServers: []VirtualServer{
+					{
+						IsDefault: true,
+					},
 					{
 						Hostname: "foo.example.com",
 						SSL: &SSL{
@@ -796,6 +815,9 @@ func TestBuildConfiguration(t *testing.T) {
 			},
 			expConf: Configuration{
 				HTTPServers: []VirtualServer{
+					{
+						IsDefault: true,
+					},
 					{
 						Hostname: "foo.example.com",
 						PathRules: []PathRule{

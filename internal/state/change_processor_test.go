@@ -330,6 +330,9 @@ var _ = Describe("ChangeProcessor", func() {
 					expectedConf := state.Configuration{
 						HTTPServers: []state.VirtualServer{
 							{
+								IsDefault: true,
+							},
+							{
 								Hostname: "foo.example.com",
 								PathRules: []state.PathRule{
 									{
@@ -347,6 +350,9 @@ var _ = Describe("ChangeProcessor", func() {
 							},
 						},
 						SSLServers: []state.VirtualServer{
+							{
+								IsDefault: true,
+							},
 							{
 								Hostname: "foo.example.com",
 								SSL:      &state.SSL{CertificatePath: certificatePath},
@@ -433,6 +439,9 @@ var _ = Describe("ChangeProcessor", func() {
 					expectedConf := state.Configuration{
 						HTTPServers: []state.VirtualServer{
 							{
+								IsDefault: true,
+							},
+							{
 								Hostname: "foo.example.com",
 								PathRules: []state.PathRule{
 									{
@@ -450,6 +459,9 @@ var _ = Describe("ChangeProcessor", func() {
 							},
 						},
 						SSLServers: []state.VirtualServer{
+							{
+								IsDefault: true,
+							},
 							{
 								Hostname: "foo.example.com",
 								SSL:      &state.SSL{CertificatePath: certificatePath},
@@ -536,6 +548,9 @@ var _ = Describe("ChangeProcessor", func() {
 					expectedConf := state.Configuration{
 						HTTPServers: []state.VirtualServer{
 							{
+								IsDefault: true,
+							},
+							{
 								Hostname: "foo.example.com",
 								PathRules: []state.PathRule{
 									{
@@ -553,6 +568,9 @@ var _ = Describe("ChangeProcessor", func() {
 							},
 						},
 						SSLServers: []state.VirtualServer{
+							{
+								IsDefault: true,
+							},
 							{
 								Hostname: "foo.example.com",
 								SSL:      &state.SSL{CertificatePath: certificatePath},
@@ -638,6 +656,9 @@ var _ = Describe("ChangeProcessor", func() {
 					expectedConf := state.Configuration{
 						HTTPServers: []state.VirtualServer{
 							{
+								IsDefault: true,
+							},
+							{
 								Hostname: "foo.example.com",
 								PathRules: []state.PathRule{
 									{
@@ -655,6 +676,9 @@ var _ = Describe("ChangeProcessor", func() {
 							},
 						},
 						SSLServers: []state.VirtualServer{
+							{
+								IsDefault: true,
+							},
 							{
 								Hostname: "foo.example.com",
 								SSL:      &state.SSL{CertificatePath: certificatePath},
@@ -737,6 +761,9 @@ var _ = Describe("ChangeProcessor", func() {
 					expectedConf := state.Configuration{
 						HTTPServers: []state.VirtualServer{
 							{
+								IsDefault: true,
+							},
+							{
 								Hostname: "foo.example.com",
 								PathRules: []state.PathRule{
 									{
@@ -754,6 +781,9 @@ var _ = Describe("ChangeProcessor", func() {
 							},
 						},
 						SSLServers: []state.VirtualServer{
+							{
+								IsDefault: true,
+							},
 							{
 								Hostname: "foo.example.com",
 								PathRules: []state.PathRule{
@@ -833,6 +863,9 @@ var _ = Describe("ChangeProcessor", func() {
 					expectedConf := state.Configuration{
 						HTTPServers: []state.VirtualServer{
 							{
+								IsDefault: true,
+							},
+							{
 								Hostname: "foo.example.com",
 								PathRules: []state.PathRule{
 									{
@@ -850,6 +883,9 @@ var _ = Describe("ChangeProcessor", func() {
 							},
 						},
 						SSLServers: []state.VirtualServer{
+							{
+								IsDefault: true,
+							},
 							{
 								Hostname: "foo.example.com",
 								SSL:      &state.SSL{CertificatePath: certificatePath},
@@ -947,6 +983,9 @@ var _ = Describe("ChangeProcessor", func() {
 					expectedConf := state.Configuration{
 						HTTPServers: []state.VirtualServer{
 							{
+								IsDefault: true,
+							},
+							{
 								Hostname: "bar.example.com",
 								PathRules: []state.PathRule{
 									{
@@ -964,6 +1003,9 @@ var _ = Describe("ChangeProcessor", func() {
 							},
 						},
 						SSLServers: []state.VirtualServer{
+							{
+								IsDefault: true,
+							},
 							{
 								Hostname: "bar.example.com",
 								SSL:      &state.SSL{CertificatePath: certificatePath},
@@ -1038,8 +1080,15 @@ var _ = Describe("ChangeProcessor", func() {
 					)
 
 					expectedConf := state.Configuration{
-						HTTPServers: []state.VirtualServer{},
+						HTTPServers: []state.VirtualServer{
+							{
+								IsDefault: true,
+							},
+						},
 						SSLServers: []state.VirtualServer{
+							{
+								IsDefault: true,
+							},
 							{
 								Hostname: "~^",
 								SSL:      &state.SSL{CertificatePath: certificatePath},

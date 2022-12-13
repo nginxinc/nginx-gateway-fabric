@@ -36,6 +36,8 @@ type VirtualServer struct {
 	Hostname string
 	// PathRules is a collection of routing rules.
 	PathRules []PathRule
+	// IsDefault indicates whether the server is the default server.
+	IsDefault bool
 }
 
 type Upstream struct {
@@ -243,20 +245,23 @@ func buildServers(listeners map[string]*listener) (http, ssl []VirtualServer) {
 type hostPathRules struct {
 	rulesPerHost     map[string]map[string]PathRule
 	listenersForHost map[string]*listener
-	listeners        []*listener
+	httpsListeners   []*listener
+	listenersExist   bool
 }
 
 func newHostPathRules() *hostPathRules {
 	return &hostPathRules{
 		rulesPerHost:     make(map[string]map[string]PathRule),
 		listenersForHost: make(map[string]*listener),
-		listeners:        make([]*listener, 0),
+		httpsListeners:   make([]*listener, 0),
 	}
 }
 
 func (hpr *hostPathRules) upsertListener(l *listener) {
+	hpr.listenersExist = true
+
 	if l.Source.Protocol == v1beta1.HTTPSProtocolType {
-		hpr.listeners = append(hpr.listeners, l)
+		hpr.httpsListeners = append(hpr.httpsListeners, l)
 	}
 
 	for _, r := range l.Routes {
@@ -304,7 +309,7 @@ func (hpr *hostPathRules) upsertListener(l *listener) {
 }
 
 func (hpr *hostPathRules) buildServers() []VirtualServer {
-	servers := make([]VirtualServer, 0, len(hpr.rulesPerHost)+len(hpr.listeners))
+	servers := make([]VirtualServer, 0, len(hpr.rulesPerHost)+len(hpr.httpsListeners))
 
 	for h, rules := range hpr.rulesPerHost {
 		s := VirtualServer{
@@ -335,7 +340,7 @@ func (hpr *hostPathRules) buildServers() []VirtualServer {
 		servers = append(servers, s)
 	}
 
-	for _, l := range hpr.listeners {
+	for _, l := range hpr.httpsListeners {
 		hostname := getListenerHostname(l.Source.Hostname)
 		// generate a 404 ssl server block for listeners with no routes or listeners with wildcard (match-all) routes
 		// FIXME(kate-osborn): when we support regex hostnames (e.g. *.example.com)
@@ -351,6 +356,11 @@ func (hpr *hostPathRules) buildServers() []VirtualServer {
 
 			servers = append(servers, s)
 		}
+	}
+
+	// if any listeners exist, we need to generate a default server block.
+	if hpr.listenersExist {
+		servers = append(servers, VirtualServer{IsDefault: true})
 	}
 
 	// We sort the servers so the order is preserved after reconfiguration.

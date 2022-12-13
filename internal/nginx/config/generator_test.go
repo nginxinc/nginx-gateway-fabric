@@ -25,12 +25,21 @@ func TestGenerate(t *testing.T) {
 	conf := state.Configuration{
 		HTTPServers: []state.VirtualServer{
 			{
+				IsDefault: true,
+			},
+			{
 				Hostname: "example.com",
 			},
 		},
 		SSLServers: []state.VirtualServer{
 			{
+				IsDefault: true,
+			},
+			{
 				Hostname: "example.com",
+				SSL: &state.SSL{
+					CertificatePath: "/etc/nginx/secrets/default",
+				},
 			},
 		},
 		Upstreams: []state.Upstream{
@@ -45,7 +54,7 @@ func TestGenerate(t *testing.T) {
 	cfg := string(generator.Generate(conf))
 
 	if !strings.Contains(cfg, "listen 80") {
-		t.Errorf("Generate() did not generate a config with an HTTP server; config: %s", cfg)
+		t.Errorf("Generate() did not generate a config with a default HTTP server; config: %s", cfg)
 	}
 
 	if !strings.Contains(cfg, "listen 443") {

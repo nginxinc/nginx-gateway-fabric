@@ -20,6 +20,9 @@ func TestExecuteServers(t *testing.T) {
 	conf := state.Configuration{
 		HTTPServers: []state.VirtualServer{
 			{
+				IsDefault: true,
+			},
+			{
 				Hostname: "example.com",
 			},
 			{
@@ -27,6 +30,9 @@ func TestExecuteServers(t *testing.T) {
 			},
 		},
 		SSLServers: []state.VirtualServer{
+			{
+				IsDefault: true,
+			},
 			{
 				Hostname: "example.com",
 				SSL: &state.SSL{
@@ -76,48 +82,48 @@ func TestExecuteForDefaultServers(t *testing.T) {
 			conf:        state.Configuration{},
 			httpDefault: false,
 			sslDefault:  false,
-			msg:         "no servers",
+			msg:         "no default servers",
 		},
 		{
 			conf: state.Configuration{
 				HTTPServers: []state.VirtualServer{
 					{
-						Hostname: "example.com",
+						IsDefault: true,
 					},
 				},
 			},
 			httpDefault: true,
 			sslDefault:  false,
-			msg:         "only HTTP servers",
+			msg:         "only HTTP default server",
 		},
 		{
 			conf: state.Configuration{
 				SSLServers: []state.VirtualServer{
 					{
-						Hostname: "example.com",
+						IsDefault: true,
 					},
 				},
 			},
 			httpDefault: false,
 			sslDefault:  true,
-			msg:         "only HTTPS servers",
+			msg:         "only HTTPS default server",
 		},
 		{
 			conf: state.Configuration{
 				HTTPServers: []state.VirtualServer{
 					{
-						Hostname: "example.com",
+						IsDefault: true,
 					},
 				},
 				SSLServers: []state.VirtualServer{
 					{
-						Hostname: "example.com",
+						IsDefault: true,
 					},
 				},
 			},
 			httpDefault: true,
 			sslDefault:  true,
-			msg:         "both HTTP and HTTPS servers",
+			msg:         "both HTTP and HTTPS default servers",
 		},
 	}
 
@@ -399,12 +405,18 @@ func TestCreateServers(t *testing.T) {
 
 	httpServers := []state.VirtualServer{
 		{
+			IsDefault: true,
+		},
+		{
 			Hostname:  "cafe.example.com",
 			PathRules: cafePathRules,
 		},
 	}
 
 	sslServers := []state.VirtualServer{
+		{
+			IsDefault: true,
+		},
 		{
 			Hostname:  "cafe.example.com",
 			SSL:       &state.SSL{CertificatePath: certPath},
@@ -495,11 +507,11 @@ func TestCreateServers(t *testing.T) {
 			IsDefaultHTTP: true,
 		},
 		{
-			IsDefaultSSL: true,
-		},
-		{
 			ServerName: "cafe.example.com",
 			Locations:  getExpectedLocations(false),
+		},
+		{
+			IsDefaultSSL: true,
 		},
 		{
 			ServerName: "cafe.example.com",
