@@ -14,6 +14,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/helpers"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/manager/index"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/resolver"
 )
 
@@ -28,6 +29,9 @@ func createSlice(
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: "test",
+			Labels: map[string]string{
+				index.KubernetesServiceNameLabel: "svc",
+			},
 		},
 		AddressType: addressType,
 		Endpoints: []discoveryV1.Endpoint{
@@ -76,6 +80,7 @@ func createFakeK8sClient(initObjs ...client.Object) (client.Client, error) {
 	fakeK8sClient := fake.NewClientBuilder().
 		WithScheme(scheme).
 		WithObjects(initObjs...).
+		WithIndex(&discoveryV1.EndpointSlice{}, index.KubernetesServiceNameIndexField, index.ServiceNameIndexFunc).
 		Build()
 
 	return fakeK8sClient, nil
@@ -122,7 +127,7 @@ var _ = Describe("ServiceResolver", func() {
 		}
 
 		slice1 = createSlice(
-			"svc-1",
+			"slice1",
 			addresses1,
 			8080,
 			httpPortName,
@@ -130,7 +135,7 @@ var _ = Describe("ServiceResolver", func() {
 		)
 		// slice2 has the same port name as slice1, but a different port number.
 		slice2 = createSlice(
-			"svc-2",
+			"slice2",
 			addresses2,
 			8081,
 			httpPortName,
@@ -139,7 +144,7 @@ var _ = Describe("ServiceResolver", func() {
 		// contains some duplicate endpoints as slice1.
 		// only unique endpoints should be returned.
 		dupeEndpointSlice = createSlice(
-			"svc-dupe-endpoints",
+			"duplicate-endpoint-slice",
 			dupeAddresses,
 			8080,
 			httpPortName,
@@ -147,14 +152,14 @@ var _ = Describe("ServiceResolver", func() {
 		)
 
 		sliceIPV6 = createSlice(
-			"svc-ipv6",
+			"slice-ipv6",
 			ipv6Addresses,
 			8080,
 			httpPortName,
 			discoveryV1.AddressTypeIPv6,
 		)
 		sliceNoMatchingPortName = createSlice(
-			"svc-diff-port-name",
+			"slice-diff-port-name",
 			diffPortAddresses,
 			8081,
 			"other-svc-port",
@@ -169,8 +174,6 @@ var _ = Describe("ServiceResolver", func() {
 	Describe("Resolve", Ordered, func() {
 		BeforeAll(func() {
 			var err error
-			// The fake K8s client does not honor the Service Name Index Field,
-			// so it will return all the EndpointSlices regardless of the Service Name.
 			fakeK8sClient, err = createFakeK8sClient(
 				slice1,
 				slice2,
