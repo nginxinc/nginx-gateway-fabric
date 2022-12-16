@@ -18,14 +18,14 @@ const (
 // CreateEndpointSliceFieldIndices creates a FieldIndices map for the EndpointSlice resource.
 func CreateEndpointSliceFieldIndices() FieldIndices {
 	return FieldIndices{
-		KubernetesServiceNameIndexField: serviceNameIndexFunc,
+		KubernetesServiceNameIndexField: ServiceNameIndexFunc,
 	}
 }
 
-// serviceNameIndexFunc is a client.IndexerFunc that parses a Kubernetes object and returns the value of the
+// ServiceNameIndexFunc is a client.IndexerFunc that parses a Kubernetes object and returns the value of the
 // Kubernetes service-name label.
 // Used to index EndpointSlices by their service owners.
-func serviceNameIndexFunc(obj client.Object) []string {
+func ServiceNameIndexFunc(obj client.Object) []string {
 	slice, ok := obj.(*discoveryV1.EndpointSlice)
 	if !ok {
 		panic(fmt.Sprintf("expected an EndpointSlice; got %T", obj))

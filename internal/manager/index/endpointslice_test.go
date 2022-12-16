@@ -42,9 +42,9 @@ func TestServiceNameIndexFunc(t *testing.T) {
 	}
 
 	for _, tc := range testcases {
-		output := serviceNameIndexFunc(tc.obj)
+		output := ServiceNameIndexFunc(tc.obj)
 		if diff := cmp.Diff(tc.expOutput, output); diff != "" {
-			t.Errorf("serviceNameIndexFunc() mismatch on %q (-want +got):\n%s", tc.msg, diff)
+			t.Errorf("ServiceNameIndexFunc() mismatch on %q (-want +got):\n%s", tc.msg, diff)
 		}
 	}
 }
@@ -52,9 +52,9 @@ func TestServiceNameIndexFunc(t *testing.T) {
 func TestServiceNameIndexFuncPanics(t *testing.T) {
 	defer func() {
 		if r := recover(); r == nil {
-			t.Errorf("serviceNameIndexFunc() did not panic")
+			t.Errorf("ServiceNameIndexFunc() did not panic")
 		}
 	}()
 
-	serviceNameIndexFunc(&v1.Namespace{})
+	ServiceNameIndexFunc(&v1.Namespace{})
 }
