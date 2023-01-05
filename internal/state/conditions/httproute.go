@@ -7,6 +7,9 @@ import (
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 )
 
+// RouteReasonInvalidListener is used with the "Accepted" condition when the route references an invalid listener.
+var RouteReasonInvalidListener v1beta1.RouteConditionReason = "InvalidListener"
+
 // RouteCondition defines a condition to be reported in the status of an HTTPRoute.
 type RouteCondition struct {
 	Type    v1beta1.RouteConditionType
@@ -68,5 +71,16 @@ func NewRouteTODO(msg string) RouteCondition {
 		Status:  metav1.ConditionTrue,
 		Reason:  "TODO",
 		Message: fmt.Sprintf("The condition for this has not been implemented yet: %s", msg),
+	}
+}
+
+// NewRouteInvalidListener returns a RouteCondition that indicates that the HTTPRoute is not accepted because of an
+// invalid listener.
+func NewRouteInvalidListener() RouteCondition {
+	return RouteCondition{
+		Type:    v1beta1.RouteConditionAccepted,
+		Status:  metav1.ConditionFalse,
+		Reason:  RouteReasonInvalidListener,
+		Message: "The listener is invalid for this parent ref",
 	}
 }
