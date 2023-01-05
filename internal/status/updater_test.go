@@ -162,7 +162,7 @@ var _ = Describe("Updater", func() {
 									{
 										Type:               string(v1beta1.ListenerConditionReady),
 										Status:             status,
-										ObservedGeneration: 123,
+										ObservedGeneration: 0,
 										LastTransitionTime: fakeClockTime,
 										Reason:             reason,
 									},
