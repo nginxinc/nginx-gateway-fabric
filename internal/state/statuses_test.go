@@ -59,8 +59,9 @@ func TestBuildStatuses(t *testing.T) {
 
 	gw := &v1beta1.Gateway{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: "test",
-			Name:      "gateway",
+			Namespace:  "test",
+			Name:       "gateway",
+			Generation: 2,
 		},
 	}
 
@@ -107,6 +108,7 @@ func TestBuildStatuses(t *testing.T) {
 							AttachedRoutes: 1,
 						},
 					},
+					ObservedGeneration: 2,
 				},
 				IgnoredGatewayStatuses: map[types.NamespacedName]IgnoredGatewayStatus{
 					{Namespace: "test", Name: "ignored-gateway"}: {ObservedGeneration: 1},
@@ -152,6 +154,7 @@ func TestBuildStatuses(t *testing.T) {
 							AttachedRoutes: 1,
 						},
 					},
+					ObservedGeneration: 2,
 				},
 				IgnoredGatewayStatuses: map[types.NamespacedName]IgnoredGatewayStatus{
 					{Namespace: "test", Name: "ignored-gateway"}: {ObservedGeneration: 1},
@@ -211,6 +214,7 @@ func TestBuildStatuses(t *testing.T) {
 							AttachedRoutes: 1,
 						},
 					},
+					ObservedGeneration: 2,
 				},
 				IgnoredGatewayStatuses: map[types.NamespacedName]IgnoredGatewayStatus{
 					{Namespace: "test", Name: "ignored-gateway"}: {ObservedGeneration: 1},
