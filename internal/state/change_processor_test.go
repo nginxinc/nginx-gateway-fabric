@@ -282,7 +282,8 @@ var _ = Describe("ChangeProcessor", func() {
 						expectedConf := state.Configuration{}
 						expectedStatuses := state.Statuses{
 							GatewayStatus: &state.GatewayStatus{
-								NsName: types.NamespacedName{Namespace: "test", Name: "gateway-1"},
+								NsName:             types.NamespacedName{Namespace: "test", Name: "gateway-1"},
+								ObservedGeneration: gw1.Generation,
 								ListenerStatuses: map[string]state.ListenerStatus{
 									"listener-80-1": {
 										Valid:          false,
@@ -386,7 +387,8 @@ var _ = Describe("ChangeProcessor", func() {
 							ObservedGeneration: gc.Generation,
 						},
 						GatewayStatus: &state.GatewayStatus{
-							NsName: types.NamespacedName{Namespace: "test", Name: "gateway-1"},
+							NsName:             types.NamespacedName{Namespace: "test", Name: "gateway-1"},
+							ObservedGeneration: gw1.Generation,
 							ListenerStatuses: map[string]state.ListenerStatus{
 								"listener-80-1": {
 									Valid:          true,
@@ -494,7 +496,8 @@ var _ = Describe("ChangeProcessor", func() {
 							ObservedGeneration: gc.Generation,
 						},
 						GatewayStatus: &state.GatewayStatus{
-							NsName: types.NamespacedName{Namespace: "test", Name: "gateway-1"},
+							NsName:             types.NamespacedName{Namespace: "test", Name: "gateway-1"},
+							ObservedGeneration: gw1.Generation,
 							ListenerStatuses: map[string]state.ListenerStatus{
 								"listener-80-1": {
 									Valid:          true,
@@ -603,7 +606,8 @@ var _ = Describe("ChangeProcessor", func() {
 							ObservedGeneration: gc.Generation,
 						},
 						GatewayStatus: &state.GatewayStatus{
-							NsName: types.NamespacedName{Namespace: "test", Name: "gateway-1"},
+							NsName:             types.NamespacedName{Namespace: "test", Name: "gateway-1"},
+							ObservedGeneration: gw1Updated.Generation,
 							ListenerStatuses: map[string]state.ListenerStatus{
 								"listener-80-1": {
 									Valid:          true,
@@ -711,7 +715,8 @@ var _ = Describe("ChangeProcessor", func() {
 							ObservedGeneration: gcUpdated.Generation,
 						},
 						GatewayStatus: &state.GatewayStatus{
-							NsName: types.NamespacedName{Namespace: "test", Name: "gateway-1"},
+							NsName:             types.NamespacedName{Namespace: "test", Name: "gateway-1"},
+							ObservedGeneration: gw1Updated.Generation,
 							ListenerStatuses: map[string]state.ListenerStatus{
 								"listener-80-1": {
 									Valid:          true,
@@ -818,7 +823,8 @@ var _ = Describe("ChangeProcessor", func() {
 							ObservedGeneration: gcUpdated.Generation,
 						},
 						GatewayStatus: &state.GatewayStatus{
-							NsName: types.NamespacedName{Namespace: "test", Name: "gateway-1"},
+							NsName:             types.NamespacedName{Namespace: "test", Name: "gateway-1"},
+							ObservedGeneration: gw1Updated.Generation,
 							ListenerStatuses: map[string]state.ListenerStatus{
 								"listener-80-1": {
 									Valid:          true,
@@ -918,7 +924,8 @@ var _ = Describe("ChangeProcessor", func() {
 							ObservedGeneration: gcUpdated.Generation,
 						},
 						GatewayStatus: &state.GatewayStatus{
-							NsName: types.NamespacedName{Namespace: "test", Name: "gateway-1"},
+							NsName:             types.NamespacedName{Namespace: "test", Name: "gateway-1"},
+							ObservedGeneration: gw1Updated.Generation,
 							ListenerStatuses: map[string]state.ListenerStatus{
 								"listener-80-1": {
 									Valid:          true,
@@ -1038,7 +1045,8 @@ var _ = Describe("ChangeProcessor", func() {
 							ObservedGeneration: gcUpdated.Generation,
 						},
 						GatewayStatus: &state.GatewayStatus{
-							NsName: types.NamespacedName{Namespace: "test", Name: "gateway-2"},
+							NsName:             types.NamespacedName{Namespace: "test", Name: "gateway-2"},
+							ObservedGeneration: gw2.Generation,
 							ListenerStatuses: map[string]state.ListenerStatus{
 								"listener-80-1": {
 									Valid:          true,
@@ -1101,7 +1109,8 @@ var _ = Describe("ChangeProcessor", func() {
 							ObservedGeneration: gcUpdated.Generation,
 						},
 						GatewayStatus: &state.GatewayStatus{
-							NsName: types.NamespacedName{Namespace: "test", Name: "gateway-2"},
+							NsName:             types.NamespacedName{Namespace: "test", Name: "gateway-2"},
+							ObservedGeneration: gw2.Generation,
 							ListenerStatuses: map[string]state.ListenerStatus{
 								"listener-80-1": {
 									Valid:          true,
@@ -1133,7 +1142,8 @@ var _ = Describe("ChangeProcessor", func() {
 					expectedConf := state.Configuration{}
 					expectedStatuses := state.Statuses{
 						GatewayStatus: &state.GatewayStatus{
-							NsName: types.NamespacedName{Namespace: "test", Name: "gateway-2"},
+							NsName:             types.NamespacedName{Namespace: "test", Name: "gateway-2"},
+							ObservedGeneration: gw2.Generation,
 							ListenerStatuses: map[string]state.ListenerStatus{
 								"listener-80-1": {
 									Valid:          false,

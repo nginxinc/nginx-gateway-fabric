@@ -23,8 +23,12 @@ type Statuses struct {
 
 // GatewayStatus holds the status of the winning Gateway resource.
 type GatewayStatus struct {
+	// ListenerStatuses holds the statuses of listeners defined on the Gateway.
 	ListenerStatuses ListenerStatuses
-	NsName           types.NamespacedName
+	// NsName is the namespaced name of the winning Gateway resource.
+	NsName types.NamespacedName
+	// ObservedGeneration is the generation of the resource that was processed.
+	ObservedGeneration int64
 }
 
 // IgnoredGatewayStatuses holds the statuses of the ignored Gateway resources.
@@ -98,8 +102,9 @@ func buildStatuses(graph *graph) Statuses {
 		}
 
 		statuses.GatewayStatus = &GatewayStatus{
-			NsName:           client.ObjectKeyFromObject(graph.Gateway.Source),
-			ListenerStatuses: listenerStatuses,
+			NsName:             client.ObjectKeyFromObject(graph.Gateway.Source),
+			ListenerStatuses:   listenerStatuses,
+			ObservedGeneration: graph.Gateway.Source.Generation,
 		}
 	}
 
