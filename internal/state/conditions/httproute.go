@@ -8,7 +8,7 @@ import (
 )
 
 // RouteReasonInvalidListener is used with the "Accepted" condition when the route references an invalid listener.
-var RouteReasonInvalidListener v1beta1.RouteConditionReason = "InvalidListener"
+const RouteReasonInvalidListener v1beta1.RouteConditionReason = "InvalidListener"
 
 // RouteCondition defines a condition to be reported in the status of an HTTPRoute.
 type RouteCondition struct {
