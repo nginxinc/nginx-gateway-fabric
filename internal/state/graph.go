@@ -242,6 +242,11 @@ func bindHTTPRouteToListeners(
 				continue
 			}
 
+			if !l.Valid {
+				r.InvalidSectionNameRefs[name] = conditions.NewRouteInvalidListener()
+				continue
+			}
+
 			accepted := findAcceptedHostnames(l.Source.Hostname, ghr.Spec.Hostnames)
 
 			if len(accepted) > 0 {

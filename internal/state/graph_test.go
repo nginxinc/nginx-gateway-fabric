@@ -1020,6 +1020,30 @@ func TestBindRouteToListeners(t *testing.T) {
 			expectedListeners: nil,
 			msg:               "HTTPRoute when no gateway exists",
 		},
+		{
+			httpRoute:  hrFoo,
+			gw:         gw,
+			ignoredGws: nil,
+			listeners: map[string]*listener{
+				"listener-80-1": createModifiedListener(func(l *listener) {
+					l.Valid = false
+				}),
+			},
+			expectedIgnored: false,
+			expectedRoute: &route{
+				Source:               hrFoo,
+				ValidSectionNameRefs: map[string]struct{}{},
+				InvalidSectionNameRefs: map[string]conditions.RouteCondition{
+					"listener-80-1": conditions.NewRouteInvalidListener(),
+				},
+			},
+			expectedListeners: map[string]*listener{
+				"listener-80-1": createModifiedListener(func(l *listener) {
+					l.Valid = false
+				}),
+			},
+			msg: "HTTPRoute with invalid listener parentRef",
+		},
 	}
 
 	for _, test := range tests {
