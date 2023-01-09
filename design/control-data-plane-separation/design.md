@@ -73,13 +73,13 @@ The following list outlines all of NKG's requirements for an agent and whether t
 
 The nginx agent is missing a few requirements we will need to add for our use case.
 
-Immediate features needed:
+Features needed (in priority order, more or less):
 
-- Add readiness and liveness endpoints
 - Add support for certificate rotation for the agent <-> control plane gRPC channel
-
-Longer-term features needed:
-
+- Deterministically confirm that a nginx reload succeeds (e.g. check that new worker processes are running)
+- Add an option to configure the server's token via a file
+- Add an option to refresh server token from a file
+- Add readiness and liveness endpoints
 - Produce a container image as a release artifact
     - This image should be non-root
     - This image should be as minimal as possible
@@ -87,15 +87,14 @@ Longer-term features needed:
 - Add support for metrics enrichment. Metrics can be enriched with Kubernetes meta-information such as namespace, pod
   name, etc.
 
-Features that **may** be in progress, planned, or in some cases, supported:
+Agent features/plugins that we'd like to disable:
 
-- Add an option to configure the server’s token via a file.
-- Add an option to disable the agent’s metrics service client
-- Add an option to disable the data plane status updates
-- Add an option to disable the config upload feature
+- Metrics service client
+- Data plane status updates
+- Config upload feature
     - This is the feature that uploads the config to the control plane
-- Add an option to disable the nginx-counting feature
-- Add an option to disable the activity-events feature
+- The nginx-counting feature
+- The activity-events feature
 
 ### Benefits
 
@@ -399,9 +398,8 @@ this [file](https://github.com/nginx/agent/blob/main/sdk/proto/nginx.proto).
 ### Authentication
 
 The agent and control plane will mutually authenticate each other using mTLS. We will store the server and client
-certificates, key pairs, and CA certificates in Kubernetes Secrets. The user will install the Secrets in the the
-’nginx-gateway`
-namespace under the following names:
+certificates, key pairs, and CA certificates in Kubernetes Secrets. The user will install the Secrets in
+the `nginx-gateway`namespace under the following names:
 
 - `nginx-gateway-cert`: This Secret will contain the TLS certificate and private key that the control plane will use to
   serve gRPC traffic, as well as the CA bundle that validates the agent’s certificate.
@@ -410,7 +408,8 @@ namespace under the following names:
 
 The Secrets will be mounted to the control plane and agent containers, respectively. If desired, we can make the Secret
 names and mount path configurable via flags. For production, we will direct the user to provide their own certificates.
-For development and testing purposes, we will provide a self-signed default certificate.
+For development and testing purposes, we will provide a self-signed default certificate. In order to be secure by
+default, NKG should generate the default keypair during installation using a Kubernetes Job.
 
 #### Certificate Rotation
 
@@ -716,6 +715,16 @@ have a use case for runtime configuration at the moment.
 
 [cli]: https://docs.nginx.com/nginx-management-suite/nginx-agent/install-nginx-agent/#nginx-agent-cli-flags-usage
 
+## Edge Cases
+
+The following edge cases should be considered and tested during implementation:
+
+- The data plane fails to establish a connection with the control plane.
+- Existing connections between data plane and control plane are terminated during a download event.
+
+In these cases, we expect the agent to be resilient. It should not crash or produce invalid config, and it should retry
+when possible.
+
 ## Data Plane Scaling
 
 Since the data plane is deployed in its own Pod, a user can horizontally scale the data plane independently of the
@@ -766,5 +775,18 @@ BenchmarkUnZipConfig/#03-2                                                   100
 PASS
 ok  	command-line-arguments	17.727s
 ```
+
+### Performance goals
+
+- NKG can handle frequent configuration changes (1 change per second)
+- NKG can handle large configurations:
+    - 5000 server blocks
+    - 64 TLS certs/keys
+    - 50 JWT keys
+    - 50 TLS cert/keys for egress
+    - 50 CA certs
+    - 50 basic auth files
+    - 50 OIDC secrets
+- NKG can scale to X number of data plane pods (we need to figure out what X is)
 
 [performance]: https://github.com/nginx/agent/blob/main/test/performance/user_workflow_test.go
