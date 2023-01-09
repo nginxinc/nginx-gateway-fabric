@@ -104,7 +104,8 @@ If a resource is invalid:
   report an Event instead of updating the status, because to update the status, NKG first needs to look inside the
   resource to determine whether it belongs to it or not. However, since the webhook validation applies to all parts of
   the spec of resource, it means NKG has to look inside the invalid resource and parse potentially invalid parts. To
-  avoid that, NKG will report an Event.
+  avoid that, NKG will report an Event. The owner of the resource will be able to see the Event.
+* NGK will also report the validation error in the NGK logs.
 
 ### NKG-specific validation
 
