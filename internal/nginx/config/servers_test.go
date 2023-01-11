@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
@@ -524,6 +525,173 @@ func TestCreateServers(t *testing.T) {
 
 	if diff := cmp.Diff(expectedServers, result); diff != "" {
 		t.Errorf("createServers() mismatch (-want +got):\n%s", diff)
+	}
+}
+
+func TestCreateLocationsRootPath(t *testing.T) {
+	g := NewGomegaWithT(t)
+
+	createRoute := func(rootPath bool) *v1beta1.HTTPRoute {
+		route := &v1beta1.HTTPRoute{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: "test",
+				Name:      "route1",
+			},
+			Spec: v1beta1.HTTPRouteSpec{
+				Hostnames: []v1beta1.Hostname{
+					"cafe.example.com",
+				},
+				Rules: []v1beta1.HTTPRouteRule{
+					{
+						Matches: []v1beta1.HTTPRouteMatch{
+							{
+								Path: &v1beta1.HTTPPathMatch{
+									Value: helpers.GetStringPointer("/path-1"),
+								},
+							},
+							{
+								Path: &v1beta1.HTTPPathMatch{
+									Value: helpers.GetStringPointer("/path-2"),
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+
+		if rootPath {
+			route.Spec.Rules[0].Matches = append(route.Spec.Rules[0].Matches, v1beta1.HTTPRouteMatch{
+				Path: &v1beta1.HTTPPathMatch{
+					Value: helpers.GetStringPointer("/"),
+				},
+			})
+		}
+
+		return route
+	}
+
+	hrWithRootPathRule := createRoute(true)
+
+	hrWithoutRootPathRule := createRoute(false)
+
+	hrNsName := types.NamespacedName{Namespace: "test", Name: "route1"}
+
+	fooGroup := state.BackendGroup{
+		Source:  hrNsName,
+		RuleIdx: 0,
+		Backends: []state.BackendRef{
+			{
+				Name:   "test_foo_80",
+				Valid:  true,
+				Weight: 1,
+			},
+		},
+	}
+
+	getPathRules := func(source *v1beta1.HTTPRoute, rootPath bool) []state.PathRule {
+		rules := []state.PathRule{
+			{
+				Path: "/path-1",
+				MatchRules: []state.MatchRule{
+					{
+						Source:       source,
+						BackendGroup: fooGroup,
+						MatchIdx:     0,
+						RuleIdx:      0,
+					},
+				},
+			},
+			{
+				Path: "/path-2",
+				MatchRules: []state.MatchRule{
+					{
+						Source:       source,
+						BackendGroup: fooGroup,
+						MatchIdx:     1,
+						RuleIdx:      0,
+					},
+				},
+			},
+		}
+
+		if rootPath {
+			rules = append(rules, state.PathRule{
+				Path: "/",
+				MatchRules: []state.MatchRule{
+					{
+						Source:       source,
+						BackendGroup: fooGroup,
+						MatchIdx:     2,
+						RuleIdx:      0,
+					},
+				},
+			})
+		}
+
+		return rules
+	}
+
+	tests := []struct {
+		name         string
+		pathRules    []state.PathRule
+		expLocations []http.Location
+	}{
+		{
+			name:      "path rules with no root path should generate a default 404 root location",
+			pathRules: getPathRules(hrWithoutRootPathRule, false),
+			expLocations: []http.Location{
+				{
+					Path:      "/path-1",
+					ProxyPass: "http://test_foo_80",
+				},
+				{
+					Path:      "/path-2",
+					ProxyPass: "http://test_foo_80",
+				},
+				{
+					Path: "/",
+					Return: &http.Return{
+						Code: http.StatusNotFound,
+					},
+				},
+			},
+		},
+		{
+			name:      "path rules with a root path should not generate a default 404 root path",
+			pathRules: getPathRules(hrWithRootPathRule, true),
+			expLocations: []http.Location{
+				{
+					Path:      "/path-1",
+					ProxyPass: "http://test_foo_80",
+				},
+				{
+					Path:      "/path-2",
+					ProxyPass: "http://test_foo_80",
+				},
+				{
+					Path:      "/",
+					ProxyPass: "http://test_foo_80",
+				},
+			},
+		},
+		{
+			name:      "nil path rules should generate a default 404 root path",
+			pathRules: nil,
+			expLocations: []http.Location{
+				{
+					Path: "/",
+					Return: &http.Return{
+						Code: http.StatusNotFound,
+					},
+				},
+			},
+		},
+	}
+
+	for _, test := range tests {
+		locs := createLocations(test.pathRules, 80)
+		g.Expect(locs).To(Equal(test.expLocations), fmt.Sprintf("test case: %s", test.name))
 	}
 }
 
