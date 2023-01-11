@@ -69,7 +69,16 @@ func createLocations(pathRules []state.PathRule, listenerPort int) []http.Locati
 		return []http.Location{createDefaultRootLocation()}
 	}
 
-	locs := make([]http.Location, 0, lenPathRules) // FIXME(pleshakov): expand with rule.Routes
+	maxLocs := 0
+	// To calculate the maximum number of locations, we need to take into account the following:
+	// 1. Each match rule for a path rule will have one location.
+	// 2. Each path rule may have an additional location if it contains non-path-only matches.
+	// 3. Each path rule may have an additional location for the default root path.
+	for _, rules := range pathRules {
+		maxLocs += len(rules.MatchRules) + 2
+	}
+
+	locs := make([]http.Location, 0, maxLocs)
 
 	rootPathExists := false
 
