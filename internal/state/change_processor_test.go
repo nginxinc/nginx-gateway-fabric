@@ -1606,7 +1606,7 @@ var _ = Describe("ChangeProcessor", func() {
 			hr1Updated = hr1.DeepCopy()
 			hr1Updated.Generation++
 
-			hr2NsName := types.NamespacedName{Namespace: "test", Name: "hr-2"}
+			hr2NsName = types.NamespacedName{Namespace: "test", Name: "hr-2"}
 
 			hr2 = hr1.DeepCopy()
 			hr2.Name = hr2NsName.Name
@@ -1697,6 +1697,17 @@ var _ = Describe("ChangeProcessor", func() {
 
 				changed, _, _ := processor.Process(context.TODO())
 				Expect(changed).To(BeTrue())
+			})
+		})
+		Describe("Deleting non-existing Gateway API resource", func() {
+			It("should not report changed after deleting non-existing", func() {
+				processor.CaptureDeleteChange(&v1beta1.GatewayClass{}, gcNsName)
+				processor.CaptureDeleteChange(&v1beta1.Gateway{}, gwNsName)
+				processor.CaptureDeleteChange(&v1beta1.HTTPRoute{}, hrNsName)
+				processor.CaptureDeleteChange(&v1beta1.HTTPRoute{}, hr2NsName)
+
+				changed, _, _ := processor.Process(context.TODO())
+				Expect(changed).To(BeFalse())
 			})
 		})
 		Describe("Multiple Kubernetes API resource changes", Ordered, func() {

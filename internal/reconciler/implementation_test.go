@@ -113,6 +113,27 @@ var _ = Describe("Reconciler", func() {
 	})
 
 	Describe("Normal cases", func() {
+		testUpsert := func(hr *v1beta1.HTTPRoute) {
+			fakeGetter.GetCalls(getReturnsHRForHR(hr))
+
+			resultCh := startReconciling(client.ObjectKeyFromObject(hr))
+
+			Eventually(eventCh).Should(Receive(Equal(&events.UpsertEvent{Resource: hr})))
+			Eventually(resultCh).Should(Receive(Equal(result{err: nil, reconcileResult: reconcile.Result{}})))
+		}
+
+		testDelete := func(hr *v1beta1.HTTPRoute) {
+			fakeGetter.GetCalls(getReturnsNotFoundErrorForHR(hr))
+
+			resultCh := startReconciling(client.ObjectKeyFromObject(hr))
+
+			Eventually(eventCh).Should(Receive(Equal(&events.DeleteEvent{
+				NamespacedName: client.ObjectKeyFromObject(hr),
+				Type:           &v1beta1.HTTPRoute{},
+			})))
+			Eventually(resultCh).Should(Receive(Equal(result{err: nil, reconcileResult: reconcile.Result{}})))
+		}
+
 		When("Reconciler doesn't have a filter", func() {
 			BeforeEach(func() {
 				rec = reconciler.NewImplementation(reconciler.Config{
@@ -123,24 +144,11 @@ var _ = Describe("Reconciler", func() {
 			})
 
 			It("should upsert HTTPRoute", func() {
-				fakeGetter.GetCalls(getReturnsHRForHR(hr1))
-
-				resultCh := startReconciling(hr1NsName)
-
-				Eventually(eventCh).Should(Receive(Equal(&events.UpsertEvent{Resource: hr1})))
-				Eventually(resultCh).Should(Receive(Equal(result{err: nil, reconcileResult: reconcile.Result{}})))
+				testUpsert(hr1)
 			})
 
 			It("should delete HTTPRoute", func() {
-				fakeGetter.GetCalls(getReturnsNotFoundErrorForHR(hr1))
-
-				resultCh := startReconciling(hr1NsName)
-
-				Eventually(eventCh).Should(Receive(Equal(&events.DeleteEvent{
-					NamespacedName: hr1NsName,
-					Type:           &v1beta1.HTTPRoute{},
-				})))
-				Eventually(resultCh).Should(Receive(Equal(result{err: nil, reconcileResult: reconcile.Result{}})))
+				testDelete(hr1)
 			})
 		})
 
@@ -163,24 +171,11 @@ var _ = Describe("Reconciler", func() {
 
 			When("HTTPRoute is not ignored", func() {
 				It("should upsert HTTPRoute", func() {
-					fakeGetter.GetCalls(getReturnsHRForHR(hr1))
-
-					resultCh := startReconciling(hr1NsName)
-
-					Eventually(eventCh).Should(Receive(Equal(&events.UpsertEvent{Resource: hr1})))
-					Eventually(resultCh).Should(Receive(Equal(result{err: nil, reconcileResult: reconcile.Result{}})))
+					testUpsert(hr1)
 				})
 
 				It("should delete HTTPRoute", func() {
-					fakeGetter.GetCalls(getReturnsNotFoundErrorForHR(hr1))
-
-					resultCh := startReconciling(hr1NsName)
-
-					Eventually(eventCh).Should(Receive(Equal(&events.DeleteEvent{
-						NamespacedName: hr1NsName,
-						Type:           &v1beta1.HTTPRoute{},
-					})))
-					Eventually(resultCh).Should(Receive(Equal(result{err: nil, reconcileResult: reconcile.Result{}})))
+					testDelete(hr1)
 				})
 			})
 
@@ -202,6 +197,54 @@ var _ = Describe("Reconciler", func() {
 					Consistently(eventCh).ShouldNot(Receive())
 					Eventually(resultCh).Should(Receive(Equal(result{err: nil, reconcileResult: reconcile.Result{}})))
 				})
+			})
+		})
+
+		When("Reconciler includes a Webhook Validator", func() {
+			var fakeRecorder *reconcilerfakes.FakeEventRecorder
+
+			BeforeEach(func() {
+				fakeRecorder = &reconcilerfakes.FakeEventRecorder{}
+
+				rec = reconciler.NewImplementation(reconciler.Config{
+					Getter:     fakeGetter,
+					ObjectType: &v1beta1.HTTPRoute{},
+					EventCh:    eventCh,
+					WebhookValidator: func(obj client.Object) error {
+						if client.ObjectKeyFromObject(obj) == hr2NsName {
+							return errors.New("test")
+						}
+						return nil
+					},
+					EventRecorder: fakeRecorder,
+				})
+			})
+
+			It("should upsert valid HTTPRoute", func() {
+				testUpsert(hr1)
+				Expect(fakeRecorder.EventfCallCount()).To(Equal(0))
+			})
+
+			It("should reject invalid HTTPRoute", func() {
+				fakeGetter.GetCalls(getReturnsHRForHR(hr2))
+
+				resultCh := startReconciling(client.ObjectKeyFromObject(hr2))
+
+				Eventually(eventCh).Should(Receive(Equal(&events.DeleteEvent{
+					NamespacedName: client.ObjectKeyFromObject(hr2),
+					Type:           &v1beta1.HTTPRoute{},
+				})))
+				Eventually(resultCh).Should(Receive(Equal(result{err: nil, reconcileResult: reconcile.Result{}})))
+
+				Expect(fakeRecorder.EventfCallCount()).To(Equal(1))
+				obj, _, _, _, _ := fakeRecorder.EventfArgsForCall(0)
+				Expect(obj).To(Equal(hr2))
+			})
+
+			It("should delete HTTPRoutes", func() {
+				testDelete(hr1)
+				testDelete(hr2)
+				Expect(fakeRecorder.EventfCallCount()).To(Equal(0))
 			})
 		})
 	})

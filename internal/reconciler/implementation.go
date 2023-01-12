@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"reflect"
 
+	apiv1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -18,6 +19,9 @@ import (
 // If the function returns false, the reconciler will log the returned string.
 type NamespacedNameFilterFunc func(nsname types.NamespacedName) (bool, string)
 
+// ValidatorFunc validates a Kubernetes resource.
+type ValidatorFunc func(object client.Object) error
+
 // Config contains the configuration for the Implementation.
 type Config struct {
 	// Getter gets a resource from the k8s API.
@@ -28,6 +32,10 @@ type Config struct {
 	EventCh chan<- interface{}
 	// NamespacedNameFilter filters resources the controller will process. Can be nil.
 	NamespacedNameFilter NamespacedNameFilterFunc
+	// WebhookValidator validates a resource using the same rules as in the Gateway API Webhook. Can be nil.
+	WebhookValidator ValidatorFunc
+	// EventRecorder records event about resources.
+	EventRecorder EventRecorder
 }
 
 // Implementation is a reconciler for Kubernetes resources.
@@ -58,6 +66,11 @@ func newObject(objectType client.Object) client.Object {
 	return reflect.New(t).Interface().(client.Object)
 }
 
+const (
+	webhookValidationErrorLogMsg = "Rejected the resource because the Gateway API webhook failed to reject it with" +
+		" a validation error; make sure the webhook is installed and running correctly"
+)
+
 // Reconcile implements the reconcile.Reconciler Reconcile method.
 func (r *Implementation) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
 	logger := log.FromContext(ctx)
@@ -66,7 +79,6 @@ func (r *Implementation) Reconcile(ctx context.Context, req reconcile.Request) (
 
 	logger.Info("Reconciling the resource")
 
-	found := true
 	obj := newObject(r.cfg.ObjectType)
 	err := r.cfg.Getter.Get(ctx, req.NamespacedName, obj)
 	if err != nil {
@@ -74,7 +86,8 @@ func (r *Implementation) Reconcile(ctx context.Context, req reconcile.Request) (
 			logger.Error(err, "Failed to get the resource")
 			return reconcile.Result{}, err
 		}
-		found = false
+		// The resource does not exist
+		obj = nil
 	}
 
 	if r.cfg.NamespacedNameFilter != nil {
@@ -84,28 +97,59 @@ func (r *Implementation) Reconcile(ctx context.Context, req reconcile.Request) (
 		}
 	}
 
-	var e interface{}
-	var operation string
-
-	if !found {
-		e = &events.DeleteEvent{
-			Type:           r.cfg.ObjectType,
-			NamespacedName: req.NamespacedName,
-		}
-		operation = "deleted"
-	} else {
-		e = &events.UpsertEvent{
-			Resource: obj,
-		}
-		operation = "upserted"
+	var validationError error
+	if obj != nil && r.cfg.WebhookValidator != nil {
+		validationError = r.cfg.WebhookValidator(obj)
 	}
+
+	e := generateEvent(r.cfg.ObjectType, req.NamespacedName, obj, validationError)
 
 	select {
 	case <-ctx.Done():
-		logger.Info(fmt.Sprintf("The resource was not %s because the context was canceled", operation))
+		logger.Info("Did not process the resource because the context was canceled")
+		return reconcile.Result{}, nil
 	case r.cfg.EventCh <- e:
-		logger.Info(fmt.Sprintf("The resource was %s", operation))
 	}
 
+	if validationError != nil {
+		logger.Error(validationError, webhookValidationErrorLogMsg)
+		r.cfg.EventRecorder.Eventf(obj, apiv1.EventTypeWarning, "Rejected",
+			webhookValidationErrorLogMsg+"; validation error: %v", validationError)
+		return reconcile.Result{}, nil
+	}
+
+	op := "Upserted"
+	if _, deleted := e.(*events.DeleteEvent); deleted {
+		op = "Deleted"
+	}
+
+	logger.Info(fmt.Sprintf("%s the resource", op))
+
 	return reconcile.Result{}, nil
+}
+
+func generateEvent(
+	objType client.Object,
+	nsName types.NamespacedName,
+	obj client.Object,
+	validationErr error,
+) interface{} {
+	if obj == nil {
+		return &events.DeleteEvent{
+			Type:           objType,
+			NamespacedName: nsName,
+		}
+	}
+
+	if validationErr != nil {
+		// If the resource is invalid, we will delete it from the NGINX configuration.
+		return &events.DeleteEvent{
+			Type:           objType,
+			NamespacedName: nsName,
+		}
+	}
+
+	return &events.UpsertEvent{
+		Resource: obj,
+	}
 }

@@ -113,14 +113,16 @@ func (c *ChangeProcessorImpl) CaptureDeleteChange(resourceType client.Object, ns
 		if nsname.Name != c.cfg.GatewayClassName {
 			panic(fmt.Errorf("gatewayclass resource must be %s, got %s", c.cfg.GatewayClassName, nsname.Name))
 		}
+		if c.store.gc != nil {
+			c.store.changed = true
+		}
 		c.store.gc = nil
-		c.store.changed = true
 	case *v1beta1.Gateway:
+		_, c.store.changed = c.store.gateways[nsname]
 		delete(c.store.gateways, nsname)
-		c.store.changed = true
 	case *v1beta1.HTTPRoute:
+		_, c.store.changed = c.store.httpRoutes[nsname]
 		delete(c.store.httpRoutes, nsname)
-		c.store.changed = true
 	case *v1.Service:
 		delete(c.store.services, nsname)
 	case *discoveryV1.EndpointSlice:

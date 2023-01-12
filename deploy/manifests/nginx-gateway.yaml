@@ -18,6 +18,13 @@ rules:
   - list
   - watch
 - apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+  - patch
+- apiGroups:
   - discovery.k8s.io
   resources:
   - endpointslices

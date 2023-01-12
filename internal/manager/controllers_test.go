@@ -6,8 +6,12 @@ import (
 	"reflect"
 	"testing"
 
+	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/gcustom"
+	"github.com/onsi/gomega/types"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/apimachinery/pkg/util/validation/field"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
@@ -17,6 +21,7 @@ import (
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/manager/managerfakes"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/manager/predicate"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/reconciler"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/reconciler/reconcilerfakes"
 )
 
 func TestRegisterController(t *testing.T) {
@@ -81,114 +86,69 @@ func TestRegisterController(t *testing.T) {
 	namespacedNameFilter := filter.CreateFilterForGatewayClass("test")
 	fieldIndexes := index.CreateEndpointSliceFieldIndices()
 
-	eventCh := make(chan interface{})
+	webhookValidator := createValidator(func(_ *v1beta1.HTTPRoute) field.ErrorList {
+		return nil
+	})
+
+	eventRecorder := &reconcilerfakes.FakeEventRecorder{}
+
+	eventCh := make(chan<- interface{})
+
+	beSameFunctionPointer := func(expected interface{}) types.GomegaMatcher {
+		return gcustom.MakeMatcher(func(f interface{}) (bool, error) {
+			// comparing functions is not allowed in Go, so we're comparing the pointers
+			return reflect.ValueOf(expected).Pointer() == reflect.ValueOf(f).Pointer(), nil
+		})
+	}
 
 	for _, test := range tests {
-		newReconciler := func(c reconciler.Config) *reconciler.Implementation {
-			if c.Getter != test.fakes.mgr.GetClient() {
-				t.Errorf(
-					"regiterController() created a reconciler config with Getter %p but expected %p for case of %q",
-					c.Getter,
-					test.fakes.mgr.GetClient(),
-					test.msg,
-				)
-			}
-			if c.ObjectType != objectType {
-				t.Errorf(
-					"registerController() created a reconciler config with ObjectType %T but expected %T for case of %q",
-					c.ObjectType,
-					objectType,
-					test.msg,
-				)
-			}
-			if c.EventCh != eventCh {
-				t.Errorf(
-					"registerController() created a reconciler config with EventCh %v but expected %v for case of %q",
-					c.EventCh,
-					eventCh,
-					test.msg,
-				)
-			}
-			// comparing functions is not allowed in Go, so we're comparing the pointers
-			// nolint: lll
-			if reflect.ValueOf(c.NamespacedNameFilter).Pointer() != reflect.ValueOf(namespacedNameFilter).Pointer() {
-				t.Errorf(
-					"registerController() created a reconciler config with NamespacedNameFilter %p but expected %p for case of %q",
-					c.NamespacedNameFilter,
-					namespacedNameFilter,
-					test.msg,
-				)
+		t.Run(test.msg, func(t *testing.T) {
+			g := NewGomegaWithT(t)
+
+			newReconciler := func(c reconciler.Config) *reconciler.Implementation {
+				g.Expect(c.Getter).To(BeIdenticalTo(test.fakes.mgr.GetClient()))
+				g.Expect(c.ObjectType).To(BeIdenticalTo(objectType))
+				g.Expect(c.EventCh).To(BeIdenticalTo(eventCh))
+				g.Expect(c.EventRecorder).To(BeIdenticalTo(eventRecorder))
+				g.Expect(c.WebhookValidator).Should(beSameFunctionPointer(webhookValidator))
+				g.Expect(c.NamespacedNameFilter).Should(beSameFunctionPointer(namespacedNameFilter))
+
+				return reconciler.NewImplementation(c)
 			}
 
-			return reconciler.NewImplementation(c)
-		}
-
-		err := registerController(
-			context.Background(),
-			objectType,
-			test.fakes.mgr,
-			eventCh,
-			withNamespacedNameFilter(namespacedNameFilter),
-			withK8sPredicate(predicate.ServicePortsChangedPredicate{}),
-			withFieldIndices(fieldIndexes),
-			withNewReconciler(newReconciler),
-		)
-
-		if !errors.Is(err, test.expectedErr) {
-			t.Errorf(
-				"registerController() returned %q but expected %q for case of %q",
-				err,
-				test.expectedErr,
-				test.msg,
+			err := registerController(
+				context.Background(),
+				objectType,
+				test.fakes.mgr,
+				eventCh,
+				eventRecorder,
+				withNamespacedNameFilter(namespacedNameFilter),
+				withK8sPredicate(predicate.ServicePortsChangedPredicate{}),
+				withFieldIndices(fieldIndexes),
+				withNewReconciler(newReconciler),
+				withWebhookValidator(webhookValidator),
 			)
-		}
 
-		indexCallCount := test.fakes.indexer.IndexFieldCallCount()
-		if indexCallCount != 1 {
-			t.Errorf(
-				"registerController() called indexer.IndexField() %d times but expected 1 for case of %q",
-				indexCallCount,
-				test.msg,
-			)
-		} else {
+			if test.expectedErr == nil {
+				g.Expect(err).To(BeNil())
+			} else {
+				g.Expect(err).To(MatchError(test.expectedErr))
+			}
+
+			indexCallCount := test.fakes.indexer.IndexFieldCallCount()
+
+			g.Expect(indexCallCount).To(Equal(1))
+
 			_, objType, field, indexFunc := test.fakes.indexer.IndexFieldArgsForCall(0)
 
-			if objType != objectType {
-				t.Errorf(
-					"registerController() called indexer.IndexField() with object type %T but expected %T for case %q",
-					objType,
-					objectType,
-					test.msg,
-				)
-			}
-			if field != index.KubernetesServiceNameIndexField {
-				t.Errorf("registerController() called indexer.IndexField() with field %q but expected %q for case %q",
-					field,
-					index.KubernetesServiceNameIndexField,
-					test.msg,
-				)
-			}
+			g.Expect(objType).To(BeIdenticalTo(objectType))
+			g.Expect(field).To(BeIdenticalTo(index.KubernetesServiceNameIndexField))
 
 			expectedIndexFunc := fieldIndexes[index.KubernetesServiceNameIndexField]
-			// comparing functions is not allowed in Go, so we're comparing the pointers
-			// nolint:lll
-			if reflect.ValueOf(indexFunc).Pointer() != reflect.ValueOf(expectedIndexFunc).Pointer() {
-				t.Errorf("registerController() called indexer.IndexField() with indexFunc %p but expected %p for case %q",
-					indexFunc,
-					expectedIndexFunc,
-					test.msg,
-				)
-			}
-		}
+			g.Expect(indexFunc).To(beSameFunctionPointer(expectedIndexFunc))
 
-		addCallCount := test.fakes.mgr.AddCallCount()
-		if addCallCount != test.expectedMgrAddCallCount {
-			t.Errorf(
-				"registerController() called mgr.Add() %d times but expected %d times for case %q",
-				addCallCount,
-				test.expectedMgrAddCallCount,
-				test.msg,
-			)
-		}
+			addCallCount := test.fakes.mgr.AddCallCount()
+			g.Expect(addCallCount).To(Equal(test.expectedMgrAddCallCount))
+		})
 	}
 }
