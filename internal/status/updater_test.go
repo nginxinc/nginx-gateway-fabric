@@ -85,6 +85,7 @@ var _ = Describe("Updater", func() {
 								AttachedRoutes: 1,
 							},
 						},
+						ObservedGeneration: generation,
 					},
 					IgnoredGatewayStatuses: map[types.NamespacedName]state.IgnoredGatewayStatus{
 						{Namespace: "test", Name: "ignored-gateway"}: {
@@ -138,7 +139,7 @@ var _ = Describe("Updater", func() {
 				}
 			}
 
-			createExpectedGw = func(status metav1.ConditionStatus, reason string) *v1beta1.Gateway {
+			createExpectedGw = func(status metav1.ConditionStatus, generation int64, reason string) *v1beta1.Gateway {
 				return &v1beta1.Gateway{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "test",
@@ -162,7 +163,7 @@ var _ = Describe("Updater", func() {
 									{
 										Type:               string(v1beta1.ListenerConditionReady),
 										Status:             status,
-										ObservedGeneration: 123,
+										ObservedGeneration: generation,
 										LastTransitionTime: fakeClockTime,
 										Reason:             reason,
 									},
@@ -306,7 +307,7 @@ var _ = Describe("Updater", func() {
 
 		It("should have the updated status of Gateway in the API server", func() {
 			latestGw := &v1beta1.Gateway{}
-			expectedGw := createExpectedGw(metav1.ConditionTrue, string(v1beta1.ListenerReasonReady))
+			expectedGw := createExpectedGw(metav1.ConditionTrue, 1, string(v1beta1.ListenerReasonReady))
 
 			err := client.Get(context.Background(), types.NamespacedName{Namespace: "test", Name: "gateway"}, latestGw)
 			Expect(err).Should(Not(HaveOccurred()))
@@ -370,7 +371,7 @@ var _ = Describe("Updater", func() {
 
 			It("should have the updated status of Gateway in the API server", func() {
 				latestGw := &v1beta1.Gateway{}
-				expectedGw := createExpectedGw(metav1.ConditionFalse, string(v1beta1.ListenerReasonInvalid))
+				expectedGw := createExpectedGw(metav1.ConditionFalse, 2, string(v1beta1.ListenerReasonInvalid))
 
 				err := client.Get(
 					context.Background(),
