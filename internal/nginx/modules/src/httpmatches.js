@@ -166,7 +166,7 @@ function paramsMatch(requestParams, params) {
     // (1) if the index is -1, then there are no "=" in the string (e.g. "keyvalue")
     // (2) if the index is 0, then there is no value in the string (e.g. "key=").
     // NOTE: While query parameter values are permitted to be empty, the Gateway API Spec forces the value to be a non-empty string.
-    // https://github.com/kubernetes-sigs/gateway-api/blob/50e61865db9659111582080daa5ca1a91bbe265d/apis/v1alpha2/httproute_types.go#L375
+    // https://github.com/kubernetes-sigs/gateway-api/blob/e9e04e498c566021c9d30ce4dbe0863894c7d7e1/apis/v1beta1/httproute_types.go#L419
     // (3) if the index is equal to length -1, then there is no key in the string (e.g. "=value").
     if (idx === -1 || (idx === 0) | (idx === p.length - 1)) {
       throw Error(`invalid query parameter: ${p}`);

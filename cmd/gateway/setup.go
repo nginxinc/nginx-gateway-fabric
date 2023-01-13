@@ -17,7 +17,7 @@ import (
 const (
 	errTmpl = "failed validation - flag: '--%s' reason: '%s'\n"
 	// nolint:lll
-	// Regex from: https://github.com/kubernetes-sigs/gateway-api/blob/547122f7f55ac0464685552898c560658fb40073/apis/v1alpha2/shared_types.go#L462
+	// Regex from: https://github.com/kubernetes-sigs/gateway-api/blob/e9e04e498c566021c9d30ce4dbe0863894c7d7e1/apis/v1beta1/shared_types.go#L494
 	controllerNameRegex = `^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*\/[A-Za-z0-9\/\-._~%!$&'()*+,;=:]+$` //nolint:lll
 )
 
