@@ -57,7 +57,7 @@ The following list outlines all of NKG's requirements for an agent and whether t
 - [x] It can report the status of configuration attempts to the control plane.
 - [x] It should not crash because of bad config.
 - [x] It can authenticate with the control plane.
-- [x] It supports mTLS between the control plane and the agent.
+- [x] It supports TLS between the control plane and the agent.
 - [x] It registers itself with the control plane.
 - [x] Many agents can register to a single control plane.
 - [x] It can scale separately from the control plane.
@@ -75,7 +75,7 @@ The nginx agent is missing a few requirements we will need to add for our use ca
 
 Features needed (in priority order, more or less):
 
-- Add support for certificate rotation for the agent <-> control plane gRPC channel
+- Add support for TLS CA certificate rotation for the agent <-> control plane gRPC channel
 - Deterministically confirm that a nginx reload succeeds (e.g. check that new worker processes are running)
 - Add an option to configure the server's token via a file
 - Add an option to refresh server token from a file
@@ -395,21 +395,20 @@ section.
 For the full `NginxConfig` message definition, see
 this [file](https://github.com/nginx/agent/blob/main/sdk/proto/nginx.proto).
 
-### Authentication
+### Encryption
 
-The agent and control plane will mutually authenticate each other using mTLS. We will store the server and client
-certificates, key pairs, and CA certificates in Kubernetes Secrets. The user will install the Secrets in
-the `nginx-gateway`namespace under the following names:
+The agent and control plane communication channel will be encrypted. We will store the server certificate, key pair, and
+CA certificate in Kubernetes Secrets. The user will install the Secrets in the `nginx-gateway` namespace under the
+following names:
 
 - `nginx-gateway-cert`: This Secret will contain the TLS certificate and private key that the control plane will use to
-  serve gRPC traffic, as well as the CA bundle that validates the agent’s certificate.
-- `nginx-agent-cert`: This Secret will contain the TLS certificate and private key that the agent will use to connect to
-  the control plane, as well as the CA bundle that validates the control plane’s certificate.
+  serve gRPC traffic.
+- `nginx-agent-cert`: This Secret will contain the CA bundle that validates the control plane’s certificate.
 
 The Secrets will be mounted to the control plane and agent containers, respectively. If desired, we can make the Secret
 names and mount path configurable via flags. For production, we will direct the user to provide their own certificates.
 For development and testing purposes, we will provide a self-signed default certificate. In order to be secure by
-default, NKG should generate the default keypair during installation using a Kubernetes Job.
+default, NKG should generate the default certificates and keypair during installation using a Kubernetes Job.
 
 #### Certificate Rotation
 
@@ -431,8 +430,8 @@ authenticate the token by sending a request to the Kubernetes [TokenReview API][
 
 On start-up the agent will create a gRPC [`CommanderClient`][client] and connect to the control plane
 [`CommanderServer`][server] using the server address, server token, and TLS options specified in the agent’s
-configuration file (see [Agent Configuration](#agent-configuration)). This connection is secured by mTLS; see the
-[Authentication](#authentication) section for more information. The control plane will validate the token with
+configuration file (see [Agent Configuration](#agent-configuration)). This connection is secured by TLS; see the
+[Encryption](#encryption) section for more information. The control plane will validate the token with
 Kubernetes by sending a TokenReview API request. If the token is valid, the bidirectional streaming `CommandChannel`
 between the agent and the control plane is established and left open for the lifetime of the agent.
 
