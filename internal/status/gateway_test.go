@@ -23,6 +23,7 @@ func TestPrepareGatewayStatus(t *testing.T) {
 				AttachedRoutes: 1,
 			},
 		},
+		ObservedGeneration: 1,
 	}
 
 	transitionTime := metav1.NewTime(time.Now())
@@ -41,7 +42,7 @@ func TestPrepareGatewayStatus(t *testing.T) {
 					{
 						Type:               string(v1beta1.ListenerConditionReady),
 						Status:             metav1.ConditionFalse,
-						ObservedGeneration: 123,
+						ObservedGeneration: 1,
 						LastTransitionTime: transitionTime,
 						Reason:             string(v1beta1.ListenerReasonInvalid),
 					},
@@ -59,7 +60,7 @@ func TestPrepareGatewayStatus(t *testing.T) {
 					{
 						Type:               string(v1beta1.ListenerConditionReady),
 						Status:             metav1.ConditionTrue,
-						ObservedGeneration: 123,
+						ObservedGeneration: 1,
 						LastTransitionTime: transitionTime,
 						Reason:             string(v1beta1.ListenerReasonReady),
 					},

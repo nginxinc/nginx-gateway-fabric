@@ -14,6 +14,8 @@ import (
 
 var serversTemplate = gotemplate.Must(gotemplate.New("servers").Parse(serversTemplateText))
 
+const rootPath = "/"
+
 func executeServers(conf state.Configuration) []byte {
 	servers := createServers(conf.HTTPServers, conf.SSLServers)
 
@@ -64,13 +66,28 @@ func createLocations(pathRules []state.PathRule, listenerPort int) []http.Locati
 	lenPathRules := len(pathRules)
 
 	if lenPathRules == 0 {
-		return []http.Location{{Path: "/", Return: &http.Return{Code: http.StatusNotFound}}}
+		return []http.Location{createDefaultRootLocation()}
 	}
 
-	locs := make([]http.Location, 0, lenPathRules) // FIXME(pleshakov): expand with rule.Routes
+	// To calculate the maximum number of locations, we need to take into account the following:
+	// 1. Each match rule for a path rule will have one location.
+	// 2. Each path rule may have an additional location if it contains non-path-only matches.
+	// 3. There may be an additional location for the default root path.
+	maxLocs := 1
+	for _, rules := range pathRules {
+		maxLocs += len(rules.MatchRules) + 1
+	}
+
+	locs := make([]http.Location, 0, maxLocs)
+
+	rootPathExists := false
 
 	for _, rule := range pathRules {
 		matches := make([]httpMatch, 0, len(rule.MatchRules))
+
+		if rule.Path == rootPath {
+			rootPathExists = true
+		}
 
 		for matchRuleIdx, r := range rule.MatchRules {
 			m := r.GetMatch()
@@ -128,6 +145,10 @@ func createLocations(pathRules []state.PathRule, listenerPort int) []http.Locati
 
 			locs = append(locs, pathLoc)
 		}
+	}
+
+	if !rootPathExists {
+		locs = append(locs, createDefaultRootLocation())
 	}
 
 	return locs
@@ -278,4 +299,11 @@ func createMatchLocation(path string) http.Location {
 
 func createPathForMatch(path string, routeIdx int) string {
 	return fmt.Sprintf("%s_route%d", path, routeIdx)
+}
+
+func createDefaultRootLocation() http.Location {
+	return http.Location{
+		Path:   "/",
+		Return: &http.Return{Code: http.StatusNotFound},
+	}
 }
