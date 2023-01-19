@@ -11,9 +11,9 @@ import (
 
 func TestCreateTypedValidator(t *testing.T) {
 	tests := []struct {
-		errorList   field.ErrorList
-		obj         client.Object
 		name        string
+		obj         client.Object
+		errorList   field.ErrorList
 		expectPanic bool
 		expectErr   bool
 	}{
