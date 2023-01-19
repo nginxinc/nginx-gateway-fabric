@@ -11,11 +11,11 @@ import (
 
 func TestCreateTypedValidator(t *testing.T) {
 	tests := []struct {
-		obj         client.Object
 		errorList   field.ErrorList
+		obj         client.Object
+		name        string
 		expectPanic bool
 		expectErr   bool
-		name        string
 	}{
 		{
 			obj:         &v1beta1.HTTPRoute{},
