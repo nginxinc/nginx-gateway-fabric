@@ -67,8 +67,9 @@ func newObject(objectType client.Object) client.Object {
 }
 
 const (
-	webhookValidationErrorLogMsg = "Rejected the resource because the Gateway API webhook failed to reject it with" +
-		" a validation error; make sure the webhook is installed and running correctly"
+	webhookValidationErrorLogMsg = "Rejected the resource because the Gateway API webhook failed to reject it with " +
+		"a validation error; make sure the webhook is installed and running correctly; " +
+		"NKG will delete any existing NGINX configuration that corresponds to the resource"
 )
 
 // Reconcile implements the reconcile.Reconciler Reconcile method.
@@ -79,17 +80,6 @@ func (r *Implementation) Reconcile(ctx context.Context, req reconcile.Request) (
 
 	logger.Info("Reconciling the resource")
 
-	obj := newObject(r.cfg.ObjectType)
-	err := r.cfg.Getter.Get(ctx, req.NamespacedName, obj)
-	if err != nil {
-		if !apierrors.IsNotFound(err) {
-			logger.Error(err, "Failed to get the resource")
-			return reconcile.Result{}, err
-		}
-		// The resource does not exist
-		obj = nil
-	}
-
 	if r.cfg.NamespacedNameFilter != nil {
 		if allow, msg := r.cfg.NamespacedNameFilter(req.NamespacedName); !allow {
 			logger.Info(msg)
@@ -97,12 +87,38 @@ func (r *Implementation) Reconcile(ctx context.Context, req reconcile.Request) (
 		}
 	}
 
+	obj := newObject(r.cfg.ObjectType)
+	err := r.cfg.Getter.Get(ctx, req.NamespacedName, obj)
+	if err != nil {
+		if !apierrors.IsNotFound(err) {
+			logger.Error(err, "Failed to get the resource")
+			return reconcile.Result{}, err
+		}
+		// The resource does not exist (was deleted).
+		obj = nil
+	}
+
 	var validationError error
 	if obj != nil && r.cfg.WebhookValidator != nil {
 		validationError = r.cfg.WebhookValidator(obj)
 	}
 
-	e := generateEvent(r.cfg.ObjectType, req.NamespacedName, obj, validationError)
+	var e interface{}
+	var op string
+
+	if obj == nil || validationError != nil {
+		// In case of a validation error, we handle the resource as if it was deleted.
+		e = &events.DeleteEvent{
+			Type:           r.cfg.ObjectType,
+			NamespacedName: req.NamespacedName,
+		}
+		op = "Deleted"
+	} else {
+		e = &events.UpsertEvent{
+			Resource: obj,
+		}
+		op = "Upserted"
+	}
 
 	select {
 	case <-ctx.Done():
@@ -115,41 +131,9 @@ func (r *Implementation) Reconcile(ctx context.Context, req reconcile.Request) (
 		logger.Error(validationError, webhookValidationErrorLogMsg)
 		r.cfg.EventRecorder.Eventf(obj, apiv1.EventTypeWarning, "Rejected",
 			webhookValidationErrorLogMsg+"; validation error: %v", validationError)
-		return reconcile.Result{}, nil
-	}
-
-	op := "Upserted"
-	if _, deleted := e.(*events.DeleteEvent); deleted {
-		op = "Deleted"
 	}
 
 	logger.Info(fmt.Sprintf("%s the resource", op))
 
 	return reconcile.Result{}, nil
-}
-
-func generateEvent(
-	objType client.Object,
-	nsName types.NamespacedName,
-	obj client.Object,
-	validationErr error,
-) interface{} {
-	if obj == nil {
-		return &events.DeleteEvent{
-			Type:           objType,
-			NamespacedName: nsName,
-		}
-	}
-
-	if validationErr != nil {
-		// If the resource is invalid, we will delete it from the NGINX configuration.
-		return &events.DeleteEvent{
-			Type:           objType,
-			NamespacedName: nsName,
-		}
-	}
-
-	return &events.UpsertEvent{
-		Resource: obj,
-	}
 }
