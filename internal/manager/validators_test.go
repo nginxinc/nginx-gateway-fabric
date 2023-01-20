@@ -61,7 +61,7 @@ func TestCreateTypedValidator(t *testing.T) {
 			result := v(test.obj)
 
 			if test.expectErr {
-				g.Expect(result).To(Not(BeNil()))
+				g.Expect(result).ToNot(BeNil())
 				return
 			}
 
