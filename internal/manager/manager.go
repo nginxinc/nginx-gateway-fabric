@@ -108,7 +108,7 @@ func Start(cfg config.Config) error {
 
 	ctx := ctlr.SetupSignalHandler()
 
-	recorderName := fmt.Sprintf("nginx-kubernetes-gateway-with-gatewayclass-%s", cfg.GatewayClassName)
+	recorderName := fmt.Sprintf("nginx-kubernetes-gateway-%s", cfg.GatewayClassName)
 	recorder := mgr.GetEventRecorderFor(recorderName)
 
 	for _, regCfg := range controllerRegCfgs {
