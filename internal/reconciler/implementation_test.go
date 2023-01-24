@@ -56,6 +56,13 @@ var _ = Describe("Reconciler", func() {
 				Name:      hr2NsName.Name,
 			},
 		}
+
+		hr2IsInvalidValidator = func(obj client.Object) error {
+			if client.ObjectKeyFromObject(obj) == hr2NsName {
+				return errors.New("test")
+			}
+			return nil
+		}
 	)
 
 	getReturnsHRForHR := func(hr *v1beta1.HTTPRoute) getFunc {
@@ -207,16 +214,11 @@ var _ = Describe("Reconciler", func() {
 				fakeRecorder = &reconcilerfakes.FakeEventRecorder{}
 
 				rec = reconciler.NewImplementation(reconciler.Config{
-					Getter:     fakeGetter,
-					ObjectType: &v1beta1.HTTPRoute{},
-					EventCh:    eventCh,
-					WebhookValidator: func(obj client.Object) error {
-						if client.ObjectKeyFromObject(obj) == hr2NsName {
-							return errors.New("test")
-						}
-						return nil
-					},
-					EventRecorder: fakeRecorder,
+					Getter:           fakeGetter,
+					ObjectType:       &v1beta1.HTTPRoute{},
+					EventCh:          eventCh,
+					WebhookValidator: hr2IsInvalidValidator,
+					EventRecorder:    fakeRecorder,
 				})
 			})
 
@@ -250,11 +252,17 @@ var _ = Describe("Reconciler", func() {
 	})
 
 	Describe("Edge cases", func() {
+		var fakeRecorder *reconcilerfakes.FakeEventRecorder
+
 		BeforeEach(func() {
+			fakeRecorder = &reconcilerfakes.FakeEventRecorder{}
+
 			rec = reconciler.NewImplementation(reconciler.Config{
-				Getter:     fakeGetter,
-				ObjectType: &v1beta1.HTTPRoute{},
-				EventCh:    eventCh,
+				Getter:           fakeGetter,
+				ObjectType:       &v1beta1.HTTPRoute{},
+				EventCh:          eventCh,
+				WebhookValidator: hr2IsInvalidValidator,
+				EventRecorder:    fakeRecorder,
 			})
 		})
 
@@ -269,7 +277,7 @@ var _ = Describe("Reconciler", func() {
 		})
 
 		DescribeTable("Reconciler should not block when ctx is done",
-			func(get getFunc, nsname types.NamespacedName) {
+			func(get getFunc, invalidResourceEventCount int, nsname types.NamespacedName) {
 				fakeGetter.GetCalls(get)
 
 				ctx, cancel := context.WithCancel(context.Background())
@@ -279,9 +287,11 @@ var _ = Describe("Reconciler", func() {
 
 				Consistently(eventCh).ShouldNot(Receive())
 				Expect(resultCh).To(Receive(Equal(result{err: nil, reconcileResult: reconcile.Result{}})))
+				Expect(fakeRecorder.EventfCallCount()).To(Equal(invalidResourceEventCount))
 			},
-			Entry("Upserting HTTPRoute", getReturnsHRForHR(hr1), hr1NsName),
-			Entry("Deleting HTTPRoute", getReturnsNotFoundErrorForHR(hr1), hr1NsName),
+			Entry("Upserting valid HTTPRoute", getReturnsHRForHR(hr1), 0, hr1NsName),
+			Entry("Deleting valid HTTPRoute", getReturnsNotFoundErrorForHR(hr1), 0, hr1NsName),
+			Entry("Upserting invalid HTTPRoute", getReturnsHRForHR(hr2), 1, hr2NsName),
 		)
 	})
 })

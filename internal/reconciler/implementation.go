@@ -103,6 +103,12 @@ func (r *Implementation) Reconcile(ctx context.Context, req reconcile.Request) (
 		validationError = r.cfg.WebhookValidator(obj)
 	}
 
+	if validationError != nil {
+		logger.Error(validationError, webhookValidationErrorLogMsg)
+		r.cfg.EventRecorder.Eventf(obj, apiv1.EventTypeWarning, "Rejected",
+			webhookValidationErrorLogMsg+"; validation error: %v", validationError)
+	}
+
 	var e interface{}
 	var op string
 
@@ -125,12 +131,6 @@ func (r *Implementation) Reconcile(ctx context.Context, req reconcile.Request) (
 		logger.Info("Did not process the resource because the context was canceled")
 		return reconcile.Result{}, nil
 	case r.cfg.EventCh <- e:
-	}
-
-	if validationError != nil {
-		logger.Error(validationError, webhookValidationErrorLogMsg)
-		r.cfg.EventRecorder.Eventf(obj, apiv1.EventTypeWarning, "Rejected",
-			webhookValidationErrorLogMsg+"; validation error: %v", validationError)
 	}
 
 	logger.Info(fmt.Sprintf("%s the resource", op))
