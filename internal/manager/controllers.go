@@ -26,6 +26,7 @@ type controllerConfig struct {
 	k8sPredicate         predicate.Predicate
 	fieldIndices         index.FieldIndices
 	newReconciler        newReconcilerFunc
+	webhookValidator     reconciler.ValidatorFunc
 }
 
 type controllerOption func(*controllerConfig)
@@ -55,6 +56,12 @@ func withNewReconciler(newReconciler newReconcilerFunc) controllerOption {
 	}
 }
 
+func withWebhookValidator(validator reconciler.ValidatorFunc) controllerOption {
+	return func(cfg *controllerConfig) {
+		cfg.webhookValidator = validator
+	}
+}
+
 func defaultControllerConfig() controllerConfig {
 	return controllerConfig{
 		newReconciler: reconciler.NewImplementation,
@@ -65,7 +72,8 @@ func registerController(
 	ctx context.Context,
 	objectType client.Object,
 	mgr manager.Manager,
-	eventCh chan interface{},
+	eventCh chan<- interface{},
+	recorder reconciler.EventRecorder,
 	options ...controllerOption,
 ) error {
 	cfg := defaultControllerConfig()
@@ -92,6 +100,8 @@ func registerController(
 		ObjectType:           objectType,
 		EventCh:              eventCh,
 		NamespacedNameFilter: cfg.namespacedNameFilter,
+		WebhookValidator:     cfg.webhookValidator,
+		EventRecorder:        recorder,
 	}
 
 	err := builder.Complete(cfg.newReconciler(recCfg))
