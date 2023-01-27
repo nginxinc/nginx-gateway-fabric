@@ -41,8 +41,8 @@ type IgnoredGatewayStatus struct {
 
 // ListenerStatus holds the status-related information about a listener in the Gateway resource.
 type ListenerStatus struct {
-	// Valid shows if the listener is valid.
-	Valid bool
+	// Conditions is the list of conditions for this listener.
+	Conditions []conditions.Condition
 	// AttachedRoutes is the number of routes attached to the listener.
 	AttachedRoutes int32
 }
@@ -94,10 +94,25 @@ func buildStatuses(graph *graph) Statuses {
 	if graph.Gateway != nil {
 		listenerStatuses := make(map[string]ListenerStatus)
 
+		defaultConds := conditions.NewDefaultListenerConditions()
+
 		for name, l := range graph.Gateway.Listeners {
+			conds := make([]conditions.Condition, 0, len(l.Conditions)+len(defaultConds)+1) // 1 is for missing GC
+
+			conds = append(conds, defaultConds...)
+			conds = append(conds, l.Conditions...)
+
+			if !gcValidAndExist {
+				// FIXME(pleshakov): Figure out appropriate conditions for the cases when:
+				// (1) GatewayClass is invalid.
+				// (2) GatewayClass does not exist.
+				// https://github.com/nginxinc/nginx-kubernetes-gateway/issues/307
+				conds = append(conds, conditions.NewTODO("GatewayClass is invalid or doesn't exist"))
+			}
+
 			listenerStatuses[name] = ListenerStatus{
-				Valid:          l.Valid && gcValidAndExist,
 				AttachedRoutes: int32(len(l.Routes)),
+				Conditions:     conditions.DeduplicateConditions(conds),
 			}
 		}
 

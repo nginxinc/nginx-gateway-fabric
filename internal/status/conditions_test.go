@@ -11,47 +11,52 @@ import (
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/conditions"
 )
 
-func TestConvertRouteConditions(t *testing.T) {
-	g := NewGomegaWithT(t)
-
-	routeConds := []conditions.Condition{
+func CreateTestConditions() []conditions.Condition {
+	return []conditions.Condition{
 		{
 			Type:    "Test",
 			Status:  metav1.ConditionTrue,
-			Reason:  "reason1",
-			Message: "message1",
+			Reason:  "TestReason1",
+			Message: "Test message1",
 		},
 		{
 			Type:    "Test",
 			Status:  metav1.ConditionFalse,
-			Reason:  "reason2",
-			Message: "message2",
+			Reason:  "TestReason2",
+			Message: "Test message2",
 		},
 	}
+}
 
-	var generation int64 = 1
-	transitionTime := metav1.NewTime(time.Now())
-
-	expected := []metav1.Condition{
+func CreateExpectedAPIConditions(observedGeneration int64, transitionTime metav1.Time) []metav1.Condition {
+	return []metav1.Condition{
 		{
 			Type:               "Test",
 			Status:             metav1.ConditionTrue,
-			ObservedGeneration: generation,
+			ObservedGeneration: observedGeneration,
 			LastTransitionTime: transitionTime,
-			Reason:             "reason1",
-			Message:            "message1",
+			Reason:             "TestReason1",
+			Message:            "Test message1",
 		},
 		{
 			Type:               "Test",
 			Status:             metav1.ConditionFalse,
-			ObservedGeneration: generation,
+			ObservedGeneration: observedGeneration,
 			LastTransitionTime: transitionTime,
-			Reason:             "reason2",
-			Message:            "message2",
+			Reason:             "TestReason2",
+			Message:            "Test message2",
 		},
 	}
+}
 
-	result := convertConditions(routeConds, generation, transitionTime)
+func TestConvertRouteConditions(t *testing.T) {
+	g := NewGomegaWithT(t)
 
+	var generation int64 = 1
+	transitionTime := metav1.NewTime(time.Now())
+
+	expected := CreateExpectedAPIConditions(generation, transitionTime)
+
+	result := convertConditions(CreateTestConditions(), generation, transitionTime)
 	g.Expect(helpers.Diff(expected, result)).To(BeEmpty())
 }

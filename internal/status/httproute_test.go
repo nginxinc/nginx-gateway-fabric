@@ -11,29 +11,16 @@ import (
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/helpers"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/conditions"
 )
 
 func TestPrepareHTTPRouteStatus(t *testing.T) {
 	g := NewGomegaWithT(t)
 
-	acceptedTrue := conditions.Condition{
-		Type:   string(v1beta1.RouteConditionAccepted),
-		Status: metav1.ConditionTrue,
-	}
-	acceptedFalse := conditions.Condition{
-		Type:   string(v1beta1.RouteConditionAccepted),
-		Status: metav1.ConditionFalse,
-	}
-
 	status := state.HTTPRouteStatus{
 		ObservedGeneration: 1,
 		ParentStatuses: map[string]state.ParentStatus{
-			"accepted": {
-				Conditions: []conditions.Condition{acceptedTrue},
-			},
-			"not-accepted": {
-				Conditions: []conditions.Condition{acceptedFalse},
+			"parent": {
+				Conditions: CreateTestConditions(),
 			},
 		},
 	}
@@ -50,33 +37,10 @@ func TestPrepareHTTPRouteStatus(t *testing.T) {
 					ParentRef: v1beta1.ParentReference{
 						Namespace:   (*v1beta1.Namespace)(helpers.GetStringPointer("test")),
 						Name:        "gateway",
-						SectionName: (*v1beta1.SectionName)(helpers.GetStringPointer("accepted")),
+						SectionName: (*v1beta1.SectionName)(helpers.GetStringPointer("parent")),
 					},
 					ControllerName: v1beta1.GatewayController(gatewayCtlrName),
-					Conditions: []metav1.Condition{
-						{
-							Type:               string(v1beta1.RouteConditionAccepted),
-							Status:             metav1.ConditionTrue,
-							ObservedGeneration: 1,
-							LastTransitionTime: transitionTime,
-						},
-					},
-				},
-				{
-					ParentRef: v1beta1.ParentReference{
-						Namespace:   (*v1beta1.Namespace)(helpers.GetStringPointer("test")),
-						Name:        "gateway",
-						SectionName: (*v1beta1.SectionName)(helpers.GetStringPointer("not-accepted")),
-					},
-					ControllerName: v1beta1.GatewayController(gatewayCtlrName),
-					Conditions: []metav1.Condition{
-						{
-							Type:               string(v1beta1.RouteConditionAccepted),
-							Status:             metav1.ConditionFalse,
-							ObservedGeneration: 1,
-							LastTransitionTime: transitionTime,
-						},
-					},
+					Conditions:     CreateExpectedAPIConditions(1, transitionTime),
 				},
 			},
 		},

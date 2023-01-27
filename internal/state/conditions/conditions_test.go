@@ -12,42 +12,50 @@ func TestDeduplicateDeduplicateRouteConditions(t *testing.T) {
 
 	conds := []Condition{
 		{
-			Type:   "Type1",
-			Status: metav1.ConditionTrue,
+			Type:    "Type1",
+			Status:  metav1.ConditionTrue,
+			Message: "0",
 		},
 		{
-			Type:   "Type1",
-			Status: metav1.ConditionFalse,
+			Type:    "Type1",
+			Status:  metav1.ConditionFalse,
+			Message: "1",
 		},
 		{
-			Type:   "Type2",
-			Status: metav1.ConditionFalse,
+			Type:    "Type2",
+			Status:  metav1.ConditionFalse,
+			Message: "2",
 		},
 		{
-			Type:   "Type2",
-			Status: metav1.ConditionTrue,
+			Type:    "Type2",
+			Status:  metav1.ConditionTrue,
+			Message: "3",
 		},
 		{
-			Type:   "Type3",
-			Status: metav1.ConditionTrue,
+			Type:    "Type3",
+			Status:  metav1.ConditionTrue,
+			Message: "4",
 		},
 	}
 
 	expected := []Condition{
 		{
-			Type:   "Type1",
-			Status: metav1.ConditionFalse,
+			Type:    "Type1",
+			Status:  metav1.ConditionFalse,
+			Message: "1",
 		},
 		{
-			Type:   "Type2",
-			Status: metav1.ConditionTrue,
+			Type:    "Type2",
+			Status:  metav1.ConditionTrue,
+			Message: "3",
 		},
 		{
-			Type:   "Type3",
-			Status: metav1.ConditionTrue,
+			Type:    "Type3",
+			Status:  metav1.ConditionTrue,
+			Message: "4",
 		},
 	}
 
 	result := DeduplicateConditions(conds)
-	g.Expect(result).Should(ConsistOf(expected))
+	g.Expect(result).Should(Equal(expected))
 }

@@ -1,8 +1,14 @@
 package state
 
 import (
+	"fmt"
+	"strings"
+
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/validation"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
+
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/conditions"
 )
 
 // listener represents a listener of the Gateway resource.
@@ -17,7 +23,10 @@ type listener struct {
 	AcceptedHostnames map[string]struct{}
 	// SecretPath is the path to the secret on disk.
 	SecretPath string
+	// Conditions holds the conditions of the listener.
+	Conditions []conditions.Condition
 	// Valid shows whether the listener is valid.
+	// A listener is considered valid if NKG can generate valid NGINX configuration for it.
 	Valid bool
 }
 
@@ -47,7 +56,7 @@ func newListenerConfiguratorFactory(
 ) *listenerConfiguratorFactory {
 	return &listenerConfiguratorFactory{
 		https: newHTTPSListenerConfigurator(gw, secretMemoryMgr),
-		http:  newHTTPListenerConfigurator(),
+		http:  newHTTPListenerConfigurator(gw),
 	}
 }
 
@@ -69,73 +78,50 @@ func newHTTPSListenerConfigurator(
 }
 
 func (c *httpsListenerConfigurator) configure(gl v1beta1.Listener) *listener {
-	var path string
-	var err error
-
-	valid := validateHTTPSListener(gl, c.gateway.Namespace)
-
-	if valid {
-		nsname := types.NamespacedName{
-			Namespace: c.gateway.Namespace,
-			Name:      string(gl.TLS.CertificateRefs[0].Name),
-		}
-
-		path, err = c.secretMemoryMgr.Request(nsname)
-		if err != nil {
-			valid = false
-		}
+	validate := func(gl v1beta1.Listener) []conditions.Condition {
+		return validateHTTPSListener(gl, c.gateway.Namespace)
 	}
 
-	h := getHostname(gl.Hostname)
+	l := configureListenerAndUseHostname(gl, c.gateway, c.usedHostnames, validate)
 
-	if holder, exist := c.usedHostnames[h]; exist {
-		valid = false
-		holder.Valid = false // all listeners for the same hostname become conflicted
+	if !l.Valid {
+		return l
 	}
 
-	l := &listener{
-		Source:            gl,
-		Valid:             valid,
-		SecretPath:        path,
-		Routes:            make(map[types.NamespacedName]*route),
-		AcceptedHostnames: make(map[string]struct{}),
+	nsname := types.NamespacedName{
+		Namespace: c.gateway.Namespace,
+		Name:      string(gl.TLS.CertificateRefs[0].Name),
 	}
 
-	c.usedHostnames[h] = l
+	path, err := c.secretMemoryMgr.Request(nsname)
+	if err != nil {
+		l.Valid = false
+
+		msg := fmt.Sprintf("Failed to get the certificate %s: %v", nsname.String(), err)
+		l.Conditions = append(l.Conditions, conditions.NewListenerInvalidCertificateRef(msg)...)
+
+		return l
+	}
+
+	l.SecretPath = path
 
 	return l
 }
 
 type httpListenerConfigurator struct {
 	usedHostnames map[string]*listener
+	gateway       *v1beta1.Gateway
 }
 
-func newHTTPListenerConfigurator() *httpListenerConfigurator {
+func newHTTPListenerConfigurator(gw *v1beta1.Gateway) *httpListenerConfigurator {
 	return &httpListenerConfigurator{
 		usedHostnames: make(map[string]*listener),
+		gateway:       gw,
 	}
 }
 
 func (c *httpListenerConfigurator) configure(gl v1beta1.Listener) *listener {
-	valid := validateHTTPListener(gl)
-
-	h := getHostname(gl.Hostname)
-
-	if holder, exist := c.usedHostnames[h]; exist {
-		valid = false
-		holder.Valid = false // all listeners for the same hostname become conflicted
-	}
-
-	l := &listener{
-		Source:            gl,
-		Valid:             valid,
-		Routes:            make(map[types.NamespacedName]*route),
-		AcceptedHostnames: make(map[string]struct{}),
-	}
-
-	c.usedHostnames[h] = l
-
-	return l
+	return configureListenerAndUseHostname(gl, c.gateway, c.usedHostnames, validateHTTPListener)
 }
 
 type invalidProtocolListenerConfigurator struct{}
@@ -145,38 +131,160 @@ func newInvalidProtocolListenerConfigurator() *invalidProtocolListenerConfigurat
 }
 
 func (c *invalidProtocolListenerConfigurator) configure(gl v1beta1.Listener) *listener {
+	msg := fmt.Sprintf("Protocol %q is not supported, use %q or %q",
+		gl.Protocol, v1beta1.HTTPProtocolType, v1beta1.HTTPSProtocolType)
+
 	return &listener{
 		Source:            gl,
 		Valid:             false,
 		Routes:            make(map[types.NamespacedName]*route),
 		AcceptedHostnames: make(map[string]struct{}),
+		Conditions: []conditions.Condition{
+			conditions.NewListenerUnsupportedProtocol(msg),
+		},
 	}
 }
 
-func validateHTTPListener(listener v1beta1.Listener) bool {
-	// FIXME(pleshakov): For now we require that all HTTP listeners bind to port 80
-	return listener.Port == 80
+func configureListenerAndUseHostname(
+	gl v1beta1.Listener,
+	gw *v1beta1.Gateway,
+	usedHostnames map[string]*listener,
+	validate func(listener v1beta1.Listener) []conditions.Condition,
+) *listener {
+	conds := validate(gl)
+
+	if len(gw.Spec.Addresses) > 0 {
+		conds = append(conds, conditions.NewListenerUnsupportedAddress("Specifying Gateway addresses is not supported"))
+	}
+
+	valid := len(conds) == 0
+
+	// we validate hostnames separately from validate() because we don't want to check for conflicts for
+	// invalid hostnames
+	validHostname, hostnameCond := validateListenerHostname(gl.Hostname)
+	if validHostname {
+		h := getHostname(gl.Hostname)
+
+		if holder, exist := usedHostnames[h]; exist {
+			valid = false
+			holder.Valid = false   // all listeners for the same hostname become conflicted
+			holder.SecretPath = "" // ensure secret path is unset for invalid listeners
+
+			format := "Multiple listeners for the same port use the same hostname %q; " +
+				"ensure only one listener uses that hostname"
+			conflictedConds := conditions.NewListenerConflictedHostname(fmt.Sprintf(format, h))
+			holder.Conditions = append(holder.Conditions, conflictedConds...)
+			conds = append(conds, conflictedConds...)
+		}
+	} else {
+		valid = false
+		conds = append(conds, hostnameCond)
+	}
+
+	l := &listener{
+		Source:            gl,
+		Valid:             valid,
+		Routes:            make(map[types.NamespacedName]*route),
+		AcceptedHostnames: make(map[string]struct{}),
+		Conditions:        conds,
+	}
+
+	if !validHostname {
+		return l
+	}
+
+	h := getHostname(gl.Hostname)
+	usedHostnames[h] = l
+
+	return l
 }
 
-func validateHTTPSListener(listener v1beta1.Listener, gwNsname string) bool {
-	// FIXME(kate-osborn):
-	// 1. For now we require that all HTTPS listeners bind to port 443
-	// 2. Only TLSModeTerminate is supported.
-	if listener.Port != 443 || listener.TLS == nil || *listener.TLS.Mode != v1beta1.TLSModeTerminate ||
-		len(listener.TLS.CertificateRefs) == 0 {
-		return false
+func validateHTTPListener(listener v1beta1.Listener) []conditions.Condition {
+	var conds []conditions.Condition
+
+	if listener.Port != 80 {
+		msg := fmt.Sprintf("Port %d is not supported for HTTP, use 80", listener.Port)
+		conds = append(conds, conditions.NewListenerPortUnavailable(msg))
 	}
+
+	// The imported Webhook validation ensures the tls field is not set for an HTTP listener.
+	// FIXME(pleshakov): Add a unit test for the imported Webhook validation code for this case.
+
+	return conds
+}
+
+func validateHTTPSListener(listener v1beta1.Listener, gwNsName string) []conditions.Condition {
+	var conds []conditions.Condition
+
+	if listener.Port != 443 {
+		msg := fmt.Sprintf("Port %d is not supported for HTTPS, use 443", listener.Port)
+		conds = append(conds, conditions.NewListenerPortUnavailable(msg))
+	}
+
+	// The imported Webhook validation ensures the tls field is not nil for an HTTPS listener.
+	// FIXME(pleshakov): Add a unit test for the imported Webhook validation code for this case.
+
+	if *listener.TLS.Mode != v1beta1.TLSModeTerminate {
+		msg := fmt.Sprintf("tls.mode %q is not supported, use %q", *listener.TLS.Mode, v1beta1.TLSModeTerminate)
+		conds = append(conds, conditions.NewListenerUnsupportedValue(msg))
+	}
+
+	if len(listener.TLS.Options) > 0 {
+		conds = append(conds, conditions.NewListenerUnsupportedValue("tls.options are not supported"))
+	}
+
+	// The imported Webhook validation ensures len(listener.TLS.Certificates) is not 0.
+	// FIXME(pleshakov): Add a unit test for the imported Webhook validation code for this case.
 
 	certRef := listener.TLS.CertificateRefs[0]
-	// certRef Kind has default of "Secret" so it's safe to directly access the Kind here
-	if *certRef.Kind != "Secret" {
-		return false
+
+	if certRef.Kind != nil && *certRef.Kind != "Secret" {
+		msg := fmt.Sprintf("Kind must be Secret, got %q", *certRef.Kind)
+		conds = append(conds, conditions.NewListenerInvalidCertificateRef(msg)...)
+	}
+
+	// for Kind Secret, certRef.Group must be nil or empty
+	if certRef.Group != nil && *certRef.Group != "" {
+		msg := fmt.Sprintf("Group must be empty, got %q", *certRef.Group)
+		conds = append(conds, conditions.NewListenerInvalidCertificateRef(msg)...)
 	}
 
 	// secret must be in the same namespace as the gateway
-	if certRef.Namespace != nil && string(*certRef.Namespace) != gwNsname {
-		return false
+	if certRef.Namespace != nil && string(*certRef.Namespace) != gwNsName {
+		const msg = "Referenced Secret must belong to the same namespace as the Gateway"
+		conds = append(conds, conditions.NewListenerInvalidCertificateRef(msg)...)
+
 	}
 
-	return true
+	if len(listener.TLS.CertificateRefs) > 1 {
+		msg := fmt.Sprintf("Only 1 certificateRef is supported, got %d", len(listener.TLS.CertificateRefs))
+		conds = append(conds, conditions.NewListenerUnsupportedValue(msg))
+	}
+
+	return conds
+}
+
+func validateListenerHostname(host *v1beta1.Hostname) (valid bool, cond conditions.Condition) {
+	if host == nil {
+		return true, conditions.Condition{}
+	}
+
+	h := string(*host)
+
+	if h == "" {
+		return true, conditions.Condition{}
+	}
+
+	// FIXME(pleshakov): For now, we don't support wildcard hostnames
+	if strings.HasPrefix(h, "*") {
+		return false, conditions.NewListenerUnsupportedValue("Wildcard hostnames are not supported")
+	}
+
+	msgs := validation.IsDNS1123Subdomain(h)
+	if len(msgs) > 0 {
+		combined := strings.Join(msgs, ",")
+		return false, conditions.NewListenerUnsupportedValue(fmt.Sprintf("Invalid hostname: %s", combined))
+	}
+
+	return true, conditions.Condition{}
 }
