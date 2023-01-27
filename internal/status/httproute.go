@@ -8,7 +8,6 @@ import (
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/conditions"
 )
 
 // prepareHTTPRouteStatus prepares the status for an HTTPRoute resource.
@@ -42,7 +41,7 @@ func prepareHTTPRouteStatus(
 				SectionName: (*v1beta1.SectionName)(&sectionName),
 			},
 			ControllerName: v1beta1.GatewayController(gatewayCtlrName),
-			Conditions:     convertRouteConditions(ps.Conditions, status.ObservedGeneration, transitionTime),
+			Conditions:     convertConditions(ps.Conditions, status.ObservedGeneration, transitionTime),
 		}
 		parents = append(parents, p)
 	}
@@ -52,25 +51,4 @@ func prepareHTTPRouteStatus(
 			Parents: parents,
 		},
 	}
-}
-
-func convertRouteConditions(
-	routeConds []conditions.RouteCondition,
-	observedGeneration int64,
-	transitionTime metav1.Time,
-) []metav1.Condition {
-	conds := make([]metav1.Condition, len(routeConds))
-
-	for i := range routeConds {
-		conds[i] = metav1.Condition{
-			Type:               string(routeConds[i].Type),
-			Status:             routeConds[i].Status,
-			ObservedGeneration: observedGeneration,
-			LastTransitionTime: transitionTime,
-			Reason:             string(routeConds[i].Reason),
-			Message:            routeConds[i].Message,
-		}
-	}
-
-	return conds
 }

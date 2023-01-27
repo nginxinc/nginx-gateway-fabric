@@ -10,7 +10,7 @@ import (
 func TestDeduplicateDeduplicateRouteConditions(t *testing.T) {
 	g := NewGomegaWithT(t)
 
-	conds := []RouteCondition{
+	conds := []Condition{
 		{
 			Type:   "Type1",
 			Status: metav1.ConditionTrue,
@@ -33,7 +33,7 @@ func TestDeduplicateDeduplicateRouteConditions(t *testing.T) {
 		},
 	}
 
-	expected := []RouteCondition{
+	expected := []Condition{
 		{
 			Type:   "Type1",
 			Status: metav1.ConditionFalse,
@@ -48,6 +48,6 @@ func TestDeduplicateDeduplicateRouteConditions(t *testing.T) {
 		},
 	}
 
-	result := DeduplicateRouteConditions(conds)
+	result := DeduplicateConditions(conds)
 	g.Expect(result).Should(ConsistOf(expected))
 }

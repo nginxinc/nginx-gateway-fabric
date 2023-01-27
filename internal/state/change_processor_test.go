@@ -303,13 +303,13 @@ var _ = Describe("ChangeProcessor", func() {
 										"listener-80-1": {
 											Conditions: append(
 												conditions.NewDefaultRouteConditions(),
-												conditions.NewRouteTODO("GatewayClass is invalid or doesn't exist"),
+												conditions.NewTODO("GatewayClass is invalid or doesn't exist"),
 											),
 										},
 										"listener-443-1": {
 											Conditions: append(
 												conditions.NewDefaultRouteConditions(),
-												conditions.NewRouteTODO("GatewayClass is invalid or doesn't exist"),
+												conditions.NewTODO("GatewayClass is invalid or doesn't exist"),
 											),
 										},
 									},
@@ -960,13 +960,13 @@ var _ = Describe("ChangeProcessor", func() {
 									"listener-80-1": {
 										Conditions: append(
 											conditions.NewDefaultRouteConditions(),
-											conditions.NewRouteTODO("Gateway is ignored"),
+											conditions.NewTODO("Gateway is ignored"),
 										),
 									},
 									"listener-443-1": {
 										Conditions: append(
 											conditions.NewDefaultRouteConditions(),
-											conditions.NewRouteTODO("Gateway is ignored"),
+											conditions.NewTODO("Gateway is ignored"),
 										),
 									},
 								},

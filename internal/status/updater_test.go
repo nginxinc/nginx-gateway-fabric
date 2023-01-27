@@ -97,7 +97,7 @@ var _ = Describe("Updater", func() {
 							ObservedGeneration: 5,
 							ParentStatuses: map[string]state.ParentStatus{
 								"http": {
-									Conditions: []conditions.RouteCondition{
+									Conditions: []conditions.Condition{
 										{
 											Type:   "Test",
 											Status: metav1.ConditionTrue,

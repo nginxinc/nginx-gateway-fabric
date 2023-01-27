@@ -13,7 +13,7 @@ import (
 )
 
 func TestBuildStatuses(t *testing.T) {
-	invalidCondition := conditions.RouteCondition{
+	invalidCondition := conditions.Condition{
 		Type:   "Test",
 		Status: metav1.ConditionTrue,
 	}
@@ -37,7 +37,7 @@ func TestBuildStatuses(t *testing.T) {
 			ValidSectionNameRefs: map[string]struct{}{
 				"listener-80-1": {},
 			},
-			InvalidSectionNameRefs: map[string]conditions.RouteCondition{
+			InvalidSectionNameRefs: map[string]conditions.Condition{
 				"listener-80-2": invalidCondition,
 			},
 		},
@@ -50,7 +50,7 @@ func TestBuildStatuses(t *testing.T) {
 					Generation: 4,
 				},
 			},
-			InvalidSectionNameRefs: map[string]conditions.RouteCondition{
+			InvalidSectionNameRefs: map[string]conditions.Condition{
 				"listener-80-2": invalidCondition,
 				"listener-80-1": invalidCondition,
 			},
@@ -166,13 +166,13 @@ func TestBuildStatuses(t *testing.T) {
 							"listener-80-1": {
 								Conditions: append(
 									conditions.NewDefaultRouteConditions(),
-									conditions.NewRouteTODO("GatewayClass is invalid or doesn't exist"),
+									conditions.NewTODO("GatewayClass is invalid or doesn't exist"),
 								),
 							},
 							"listener-80-2": {
 								Conditions: append(
 									conditions.NewDefaultRouteConditions(),
-									conditions.NewRouteTODO("GatewayClass is invalid or doesn't exist"),
+									conditions.NewTODO("GatewayClass is invalid or doesn't exist"),
 									invalidCondition,
 								),
 							},
@@ -226,13 +226,13 @@ func TestBuildStatuses(t *testing.T) {
 							"listener-80-1": {
 								Conditions: append(
 									conditions.NewDefaultRouteConditions(),
-									conditions.NewRouteTODO("GatewayClass is invalid or doesn't exist"),
+									conditions.NewTODO("GatewayClass is invalid or doesn't exist"),
 								),
 							},
 							"listener-80-2": {
 								Conditions: append(
 									conditions.NewDefaultRouteConditions(),
-									conditions.NewRouteTODO("GatewayClass is invalid or doesn't exist"),
+									conditions.NewTODO("GatewayClass is invalid or doesn't exist"),
 									invalidCondition,
 								),
 							},

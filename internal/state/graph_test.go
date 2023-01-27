@@ -231,7 +231,7 @@ func TestBuildGraph(t *testing.T) {
 		ValidSectionNameRefs: map[string]struct{}{
 			"listener-80-1": {},
 		},
-		InvalidSectionNameRefs: map[string]conditions.RouteCondition{},
+		InvalidSectionNameRefs: map[string]conditions.Condition{},
 		BackendGroups:          []BackendGroup{hr1Group},
 	}
 
@@ -240,7 +240,7 @@ func TestBuildGraph(t *testing.T) {
 		ValidSectionNameRefs: map[string]struct{}{
 			"listener-443-1": {},
 		},
-		InvalidSectionNameRefs: map[string]conditions.RouteCondition{},
+		InvalidSectionNameRefs: map[string]conditions.Condition{},
 		BackendGroups:          []BackendGroup{hr3Group},
 	}
 
@@ -879,8 +879,8 @@ func TestBindRouteToListeners(t *testing.T) {
 			expectedRoute: &route{
 				Source:               hrNonExistingSectionName,
 				ValidSectionNameRefs: map[string]struct{}{},
-				InvalidSectionNameRefs: map[string]conditions.RouteCondition{
-					"listener-80-2": conditions.NewRouteTODO("listener is not found"),
+				InvalidSectionNameRefs: map[string]conditions.Condition{
+					"listener-80-2": conditions.NewTODO("listener is not found"),
 				},
 			},
 			expectedListeners: map[string]*listener{
@@ -915,7 +915,7 @@ func TestBindRouteToListeners(t *testing.T) {
 				ValidSectionNameRefs: map[string]struct{}{
 					"listener-80-1": {},
 				},
-				InvalidSectionNameRefs: map[string]conditions.RouteCondition{},
+				InvalidSectionNameRefs: map[string]conditions.Condition{},
 			},
 			expectedListeners: map[string]*listener{
 				"listener-80-1": createModifiedListener(func(l *listener) {
@@ -925,7 +925,7 @@ func TestBindRouteToListeners(t *testing.T) {
 							ValidSectionNameRefs: map[string]struct{}{
 								"listener-80-1": {},
 							},
-							InvalidSectionNameRefs: map[string]conditions.RouteCondition{},
+							InvalidSectionNameRefs: map[string]conditions.Condition{},
 						},
 					}
 					l.AcceptedHostnames = map[string]struct{}{
@@ -948,7 +948,7 @@ func TestBindRouteToListeners(t *testing.T) {
 				ValidSectionNameRefs: map[string]struct{}{
 					"listener-80-1": {},
 				},
-				InvalidSectionNameRefs: map[string]conditions.RouteCondition{},
+				InvalidSectionNameRefs: map[string]conditions.Condition{},
 			},
 			expectedListeners: map[string]*listener{
 				"listener-80-1": createModifiedListener(func(l *listener) {
@@ -958,7 +958,7 @@ func TestBindRouteToListeners(t *testing.T) {
 							ValidSectionNameRefs: map[string]struct{}{
 								"listener-80-1": {},
 							},
-							InvalidSectionNameRefs: map[string]conditions.RouteCondition{},
+							InvalidSectionNameRefs: map[string]conditions.Condition{},
 						},
 					}
 					l.AcceptedHostnames = map[string]struct{}{
@@ -979,7 +979,7 @@ func TestBindRouteToListeners(t *testing.T) {
 			expectedRoute: &route{
 				Source:               hrBar,
 				ValidSectionNameRefs: map[string]struct{}{},
-				InvalidSectionNameRefs: map[string]conditions.RouteCondition{
+				InvalidSectionNameRefs: map[string]conditions.Condition{
 					"listener-80-1": conditions.NewRouteNoMatchingListenerHostname(),
 				},
 			},
@@ -1001,8 +1001,8 @@ func TestBindRouteToListeners(t *testing.T) {
 			expectedRoute: &route{
 				Source:               hrIgnoredGateway,
 				ValidSectionNameRefs: map[string]struct{}{},
-				InvalidSectionNameRefs: map[string]conditions.RouteCondition{
-					"listener-80-1": conditions.NewRouteTODO("Gateway is ignored"),
+				InvalidSectionNameRefs: map[string]conditions.Condition{
+					"listener-80-1": conditions.NewTODO("Gateway is ignored"),
 				},
 			},
 			expectedListeners: map[string]*listener{
@@ -1033,7 +1033,7 @@ func TestBindRouteToListeners(t *testing.T) {
 			expectedRoute: &route{
 				Source:               hrFoo,
 				ValidSectionNameRefs: map[string]struct{}{},
-				InvalidSectionNameRefs: map[string]conditions.RouteCondition{
+				InvalidSectionNameRefs: map[string]conditions.Condition{
 					"listener-80-1": conditions.NewRouteInvalidListener(),
 				},
 			},
