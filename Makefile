@@ -25,8 +25,8 @@ container: build ## Build the container
 	@docker -v || (code=$$?; printf "\033[0;31mError\033[0m: there was a problem with Docker\n"; exit $$code)
 	docker build --build-arg VERSION=$(VERSION) --build-arg GIT_COMMIT=$(GIT_COMMIT) --build-arg DATE=$(DATE) --target $(TARGET) -f build/Dockerfile -t $(PREFIX):$(TAG) .
 
-.PHONY: container
-agent-container: # Build the agent container
+.PHONY: agent-container
+agent-container: ## Build the agent container
 	@docker -v || (code=$$?; printf "\033[0;31mError\033[0m: there was a problem with Docker\n"; exit $$code)
 	docker build --build-arg AGENT_VERSION=$(AGENT_VERSION) --build-arg ALPINE_VERSION=$(ALPINE_VERSION) -f build/agent/Dockerfile -t $(PREFIX)/$(AGENT_PREFIX):$(TAG) .
 
