@@ -1,23 +1,23 @@
-# This manifest is for testing purposes and is not the final manifest for the agent.
+# This manifest is for testing purposes and is not the final manifest for the nginx-with-agent.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: nginx-agent
+  name: nginx-with-agent
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: nginx-agent
+      app: nginx-with-agent
   template:
     metadata:
       labels:
-        app: nginx-agent
+        app: nginx-with-agent
     spec:
       serviceAccountName: default
       containers:
-      - image: docker.io/nginx-kubernetes-gateway/agent:edge
+      - image: docker.io/nginx-kubernetes-gateway/nginx-with-agent:edge
         imagePullPolicy: IfNotPresent
-        name: nginx-agent
+        name: nginx-with-agent
         securityContext:
           allowPrivilegeEscalation: true
           runAsNonRoot: true

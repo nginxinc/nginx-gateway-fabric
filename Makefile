@@ -14,7 +14,7 @@ OUT_DIR=$(shell pwd)/build/.out
 
 AGENT_VERSION ?= 2.22.1
 ALPINE_VERSION ?= 3.16
-AGENT_PREFIX ?= agent
+NGINX_WITH_AGENT_PREFIX ?= nginx-with-agent
 
 .PHONY: help
 help: Makefile ## Display this help
@@ -25,10 +25,10 @@ container: build ## Build the container
 	@docker -v || (code=$$?; printf "\033[0;31mError\033[0m: there was a problem with Docker\n"; exit $$code)
 	docker build --build-arg VERSION=$(VERSION) --build-arg GIT_COMMIT=$(GIT_COMMIT) --build-arg DATE=$(DATE) --target $(TARGET) -f build/Dockerfile -t $(PREFIX):$(TAG) .
 
-.PHONY: agent-container
-agent-container: ## Build the agent container
+.PHONY: nginx-with-agent-container
+nginx-with-agent-container: ## Build the nginx-with-agent container
 	@docker -v || (code=$$?; printf "\033[0;31mError\033[0m: there was a problem with Docker\n"; exit $$code)
-	docker build --build-arg AGENT_VERSION=$(AGENT_VERSION) --build-arg ALPINE_VERSION=$(ALPINE_VERSION) -f build/agent/Dockerfile -t $(PREFIX)/$(AGENT_PREFIX):$(TAG) .
+	docker build --build-arg AGENT_VERSION=$(AGENT_VERSION) --build-arg ALPINE_VERSION=$(ALPINE_VERSION) -f build/nginx-with-agent/Dockerfile -t $(PREFIX)/$(NGINX_WITH_AGENT_PREFIX):$(TAG) .
 
 .PHONY: build
 build: ## Build the binary
