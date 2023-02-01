@@ -1,0 +1,33 @@
+# This manifest is for testing purposes and is not the final manifest for the nginx-with-agent.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-with-agent
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nginx-with-agent
+  template:
+    metadata:
+      labels:
+        app: nginx-with-agent
+    spec:
+      serviceAccountName: default
+      automountServiceAccountToken: false
+      containers:
+      - image: docker.io/nginx-kubernetes-gateway/nginx-with-agent:edge
+        imagePullPolicy: IfNotPresent
+        name: nginx-with-agent
+        securityContext:
+          allowPrivilegeEscalation: true
+          runAsNonRoot: true
+          runAsUser: 101 #nginx
+          capabilities:
+            drop:
+            - ALL
+        ports:
+        - name: http
+          containerPort: 8080
+        - name: https
+          containerPort: 8443
