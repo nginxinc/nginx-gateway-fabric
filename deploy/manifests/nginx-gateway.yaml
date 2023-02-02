@@ -116,7 +116,7 @@ spec:
         args:
         - --gateway-ctlr-name=k8s-gateway.nginx.org/nginx-gateway-controller
         - --gatewayclass=nginx
-      - image: nginx:1.23
+      - image: nginx:1.23 # I will remove the nginx container once the control plane can push config to nginx-with-agent.
         imagePullPolicy: IfNotPresent
         name: nginx
         ports:
@@ -131,3 +131,18 @@ spec:
           mountPath: /var/lib/nginx
         - name: njs-modules
           mountPath: /usr/lib/nginx/modules/njs
+      - name: nginx-with-agent
+        image: docker.io/nginx-kubernetes-gateway/nginx-with-agent:edge
+        imagePullPolicy: IfNotPresent
+        securityContext:
+          allowPrivilegeEscalation: true
+          runAsNonRoot: true
+          runAsUser: 101 #nginx
+          capabilities:
+            drop:
+            - ALL
+        ports:
+        - name: http
+          containerPort: 8080
+        - name: https
+          containerPort: 8443

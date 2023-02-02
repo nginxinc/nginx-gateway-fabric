@@ -18,6 +18,8 @@ import (
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/config"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/events"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/grpc"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/grpc/service"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/manager/filter"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/manager/index"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/manager/predicate"
@@ -36,6 +38,8 @@ const (
 	// secretsFolder is the folder that holds all the secrets for NGINX servers.
 	// nolint:gosec
 	secretsFolder = "/etc/nginx/secrets"
+	// grpcAddress is the address that the grpc server is listening on
+	grpcAddress = ":54789"
 )
 
 var scheme = runtime.NewScheme()
@@ -177,7 +181,21 @@ func Start(cfg config.Config) error {
 
 	err = mgr.Add(eventLoop)
 	if err != nil {
-		return fmt.Errorf("cannot register event loop: %w", err)
+		return fmt.Errorf("cannot register event loop with manager: %w", err)
+	}
+
+	server, err := grpc.NewServer(
+		cfg.Logger.WithName("grpcServer"),
+		grpcAddress,
+		service.NewCommander(cfg.Logger.WithName("commanderService")),
+	)
+	if err != nil {
+		return fmt.Errorf("cannot create gRPC server: %w", err)
+	}
+
+	err = mgr.Add(server)
+	if err != nil {
+		return fmt.Errorf("cannot register gRPC server with manager: %w", err)
 	}
 
 	logger.Info("Starting manager")
