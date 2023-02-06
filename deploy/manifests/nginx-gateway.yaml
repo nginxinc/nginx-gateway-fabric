@@ -135,7 +135,6 @@ spec:
         image: docker.io/nginx-kubernetes-gateway/nginx-with-agent:edge
         imagePullPolicy: IfNotPresent
         securityContext:
-          allowPrivilegeEscalation: true
           runAsNonRoot: true
           runAsUser: 101 #nginx
           capabilities:
