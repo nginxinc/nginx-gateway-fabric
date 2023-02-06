@@ -20,7 +20,6 @@ spec:
         imagePullPolicy: IfNotPresent
         name: nginx-with-agent
         securityContext:
-          allowPrivilegeEscalation: true
           runAsNonRoot: true
           runAsUser: 101 #nginx
           capabilities:
