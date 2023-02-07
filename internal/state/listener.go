@@ -1,6 +1,7 @@
 package state
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
@@ -35,7 +36,7 @@ type listenerConfigurator interface {
 }
 
 type listenerConfiguratorFactory struct {
-	https *httpsListenerConfigurator
+	https *httpListenerConfigurator
 	http  *httpListenerConfigurator
 }
 
@@ -60,68 +61,99 @@ func newListenerConfiguratorFactory(
 	}
 }
 
-type httpsListenerConfigurator struct {
+type httpListenerConfigurator struct {
 	gateway         *v1beta1.Gateway
 	secretMemoryMgr SecretDiskMemoryManager
 	usedHostnames   map[string]*listener
-}
-
-func newHTTPSListenerConfigurator(
-	gateway *v1beta1.Gateway,
-	secretMemoryMgr SecretDiskMemoryManager,
-) *httpsListenerConfigurator {
-	return &httpsListenerConfigurator{
-		gateway:         gateway,
-		secretMemoryMgr: secretMemoryMgr,
-		usedHostnames:   make(map[string]*listener),
-	}
-}
-
-func (c *httpsListenerConfigurator) configure(gl v1beta1.Listener) *listener {
-	validate := func(gl v1beta1.Listener) []conditions.Condition {
-		return validateHTTPSListener(gl, c.gateway.Namespace)
-	}
-
-	l := configureListenerAndUseHostname(gl, c.gateway, c.usedHostnames, validate)
-
-	if !l.Valid {
-		return l
-	}
-
-	nsname := types.NamespacedName{
-		Namespace: c.gateway.Namespace,
-		Name:      string(gl.TLS.CertificateRefs[0].Name),
-	}
-
-	path, err := c.secretMemoryMgr.Request(nsname)
-	if err != nil {
-		l.Valid = false
-
-		msg := fmt.Sprintf("Failed to get the certificate %s: %v", nsname.String(), err)
-		l.Conditions = append(l.Conditions, conditions.NewListenerInvalidCertificateRef(msg)...)
-
-		return l
-	}
-
-	l.SecretPath = path
-
-	return l
-}
-
-type httpListenerConfigurator struct {
-	usedHostnames map[string]*listener
-	gateway       *v1beta1.Gateway
+	validate        func(gl v1beta1.Listener) []conditions.Condition
 }
 
 func newHTTPListenerConfigurator(gw *v1beta1.Gateway) *httpListenerConfigurator {
 	return &httpListenerConfigurator{
 		usedHostnames: make(map[string]*listener),
 		gateway:       gw,
+		validate:      validateHTTPListener,
+	}
+}
+
+func newHTTPSListenerConfigurator(
+	gateway *v1beta1.Gateway,
+	secretMemoryMgr SecretDiskMemoryManager,
+) *httpListenerConfigurator {
+	return &httpListenerConfigurator{
+		gateway:         gateway,
+		secretMemoryMgr: secretMemoryMgr,
+		usedHostnames:   make(map[string]*listener),
+		validate: func(gl v1beta1.Listener) []conditions.Condition {
+			return validateHTTPSListener(gl, gateway.Namespace)
+		},
 	}
 }
 
 func (c *httpListenerConfigurator) configure(gl v1beta1.Listener) *listener {
-	return configureListenerAndUseHostname(gl, c.gateway, c.usedHostnames, validateHTTPListener)
+	conds := c.validate(gl)
+
+	if len(c.gateway.Spec.Addresses) > 0 {
+		conds = append(conds, conditions.NewListenerUnsupportedAddress("Specifying Gateway addresses is not supported"))
+	}
+
+	validHostnameErr := validateListenerHostname(gl.Hostname)
+	if validHostnameErr != nil {
+		msg := fmt.Sprintf("Invalid hostname: %v", validHostnameErr)
+		conds = append(conds, conditions.NewListenerUnsupportedValue(msg))
+	}
+
+	l := &listener{
+		Source:            gl,
+		Valid:             len(conds) == 0,
+		Routes:            make(map[types.NamespacedName]*route),
+		AcceptedHostnames: make(map[string]struct{}),
+		Conditions:        conds,
+	}
+
+	// this ensures that we don't check for hostname collisions for invalid hostnames
+	if validHostnameErr != nil {
+		return l
+	}
+
+	h := getHostname(gl.Hostname)
+	if holder, exist := c.usedHostnames[h]; exist {
+		l.Valid = false
+
+		holder.Valid = false   // all listeners for the same hostname become conflicted
+		holder.SecretPath = "" // ensure secret path is unset for invalid listeners
+
+		format := "Multiple listeners for the same port use the same hostname %q; " +
+			"ensure only one listener uses that hostname"
+		conflictedConds := conditions.NewListenerConflictedHostname(fmt.Sprintf(format, h))
+
+		holder.Conditions = append(holder.Conditions, conflictedConds...)
+		l.Conditions = append(l.Conditions, conflictedConds...)
+	} else {
+		c.usedHostnames[h] = l
+	}
+
+	if !l.Valid {
+		return l
+	}
+
+	if gl.Protocol == v1beta1.HTTPSProtocolType {
+		nsname := types.NamespacedName{
+			Namespace: c.gateway.Namespace,
+			Name:      string(gl.TLS.CertificateRefs[0].Name),
+		}
+
+		var err error
+
+		l.SecretPath, err = c.secretMemoryMgr.Request(nsname)
+		if err != nil {
+			msg := fmt.Sprintf("Failed to get the certificate %s: %v", nsname.String(), err)
+			l.Conditions = append(l.Conditions, conditions.NewListenerInvalidCertificateRef(msg)...)
+			l.Valid = false
+		}
+	}
+
+	return l
 }
 
 type invalidProtocolListenerConfigurator struct{}
@@ -143,60 +175,6 @@ func (c *invalidProtocolListenerConfigurator) configure(gl v1beta1.Listener) *li
 			conditions.NewListenerUnsupportedProtocol(msg),
 		},
 	}
-}
-
-func configureListenerAndUseHostname(
-	gl v1beta1.Listener,
-	gw *v1beta1.Gateway,
-	usedHostnames map[string]*listener,
-	validate func(listener v1beta1.Listener) []conditions.Condition,
-) *listener {
-	conds := validate(gl)
-
-	if len(gw.Spec.Addresses) > 0 {
-		conds = append(conds, conditions.NewListenerUnsupportedAddress("Specifying Gateway addresses is not supported"))
-	}
-
-	valid := len(conds) == 0
-
-	// we validate hostnames separately from validate() because we don't want to check for conflicts for
-	// invalid hostnames
-	validHostname, hostnameCond := validateListenerHostname(gl.Hostname)
-	if validHostname {
-		h := getHostname(gl.Hostname)
-
-		if holder, exist := usedHostnames[h]; exist {
-			valid = false
-			holder.Valid = false   // all listeners for the same hostname become conflicted
-			holder.SecretPath = "" // ensure secret path is unset for invalid listeners
-
-			format := "Multiple listeners for the same port use the same hostname %q; " +
-				"ensure only one listener uses that hostname"
-			conflictedConds := conditions.NewListenerConflictedHostname(fmt.Sprintf(format, h))
-			holder.Conditions = append(holder.Conditions, conflictedConds...)
-			conds = append(conds, conflictedConds...)
-		}
-	} else {
-		valid = false
-		conds = append(conds, hostnameCond)
-	}
-
-	l := &listener{
-		Source:            gl,
-		Valid:             valid,
-		Routes:            make(map[types.NamespacedName]*route),
-		AcceptedHostnames: make(map[string]struct{}),
-		Conditions:        conds,
-	}
-
-	if !validHostname {
-		return l
-	}
-
-	h := getHostname(gl.Hostname)
-	usedHostnames[h] = l
-
-	return l
 }
 
 func validateHTTPListener(listener v1beta1.Listener) []conditions.Condition {
@@ -264,27 +242,27 @@ func validateHTTPSListener(listener v1beta1.Listener, gwNsName string) []conditi
 	return conds
 }
 
-func validateListenerHostname(host *v1beta1.Hostname) (valid bool, cond conditions.Condition) {
+func validateListenerHostname(host *v1beta1.Hostname) error {
 	if host == nil {
-		return true, conditions.Condition{}
+		return nil
 	}
 
 	h := string(*host)
 
 	if h == "" {
-		return true, conditions.Condition{}
+		return nil
 	}
 
 	// FIXME(pleshakov): For now, we don't support wildcard hostnames
 	if strings.HasPrefix(h, "*") {
-		return false, conditions.NewListenerUnsupportedValue("Wildcard hostnames are not supported")
+		return fmt.Errorf("wildcard hostnames are not supported")
 	}
 
 	msgs := validation.IsDNS1123Subdomain(h)
 	if len(msgs) > 0 {
 		combined := strings.Join(msgs, ",")
-		return false, conditions.NewListenerUnsupportedValue(fmt.Sprintf("Invalid hostname: %s", combined))
+		return errors.New(combined)
 	}
 
-	return true, conditions.Condition{}
+	return nil
 }

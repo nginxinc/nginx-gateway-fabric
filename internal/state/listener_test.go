@@ -189,44 +189,34 @@ func TestValidateHTTPSListener(t *testing.T) {
 
 func TestValidateListenerHostname(t *testing.T) {
 	tests := []struct {
-		hostname          *v1beta1.Hostname
-		expectedCondition conditions.Condition
-		name              string
-		expectedValid     bool
+		hostname  *v1beta1.Hostname
+		name      string
+		expectErr bool
 	}{
 		{
-			hostname:          nil,
-			expectedValid:     true,
-			expectedCondition: conditions.Condition{},
-			name:              "nil hostname",
+			hostname:  nil,
+			expectErr: false,
+			name:      "nil hostname",
 		},
 		{
-			hostname:          (*v1beta1.Hostname)(helpers.GetStringPointer("")),
-			expectedValid:     true,
-			expectedCondition: conditions.Condition{},
-			name:              "empty hostname",
+			hostname:  (*v1beta1.Hostname)(helpers.GetStringPointer("")),
+			expectErr: false,
+			name:      "empty hostname",
 		},
 		{
-			hostname:          (*v1beta1.Hostname)(helpers.GetStringPointer("foo.example.com")),
-			expectedValid:     true,
-			expectedCondition: conditions.Condition{},
-			name:              "valid hostname",
+			hostname:  (*v1beta1.Hostname)(helpers.GetStringPointer("foo.example.com")),
+			expectErr: false,
+			name:      "valid hostname",
 		},
 		{
-			hostname:          (*v1beta1.Hostname)(helpers.GetStringPointer("*.example.com")),
-			expectedValid:     false,
-			expectedCondition: conditions.NewListenerUnsupportedValue("Wildcard hostnames are not supported"),
-			name:              "wildcard hostname",
+			hostname:  (*v1beta1.Hostname)(helpers.GetStringPointer("*.example.com")),
+			expectErr: true,
+			name:      "wildcard hostname",
 		},
 		{
-			hostname:      (*v1beta1.Hostname)(helpers.GetStringPointer("example$com")),
-			expectedValid: false,
-			expectedCondition: conditions.NewListenerUnsupportedValue(
-				"Invalid hostname: a lowercase RFC 1123 subdomain must consist of lower case alphanumeric " +
-					"characters, '-' or '.', and must start and end with an alphanumeric character " +
-					"(e.g. 'example.com', regex used for validation is '[a-z0-9]([-a-z0-9]*[a-z0-9])?" +
-					`(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*')`),
-			name: "invalid hostname",
+			hostname:  (*v1beta1.Hostname)(helpers.GetStringPointer("example$com")),
+			expectErr: true,
+			name:      "invalid hostname",
 		},
 	}
 
@@ -234,10 +224,13 @@ func TestValidateListenerHostname(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewGomegaWithT(t)
 
-			valid, cond := validateListenerHostname(test.hostname)
+			err := validateListenerHostname(test.hostname)
 
-			g.Expect(valid).To(Equal(test.expectedValid))
-			g.Expect(cond).To(Equal(test.expectedCondition))
+			if test.expectErr {
+				g.Expect(err).ToNot(BeNil())
+			} else {
+				g.Expect(err).To(BeNil())
+			}
 		})
 	}
 }
