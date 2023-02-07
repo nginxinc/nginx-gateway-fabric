@@ -99,6 +99,8 @@ func buildStatuses(graph *graph) Statuses {
 		for name, l := range graph.Gateway.Listeners {
 			conds := make([]conditions.Condition, 0, len(l.Conditions)+len(defaultConds)+1) // 1 is for missing GC
 
+			// We add default conds first, so that any additional conditions will override them, which is
+			// ensured by DeduplicateConditions.
 			conds = append(conds, defaultConds...)
 			conds = append(conds, l.Conditions...)
 
@@ -140,6 +142,8 @@ func buildStatuses(graph *graph) Statuses {
 		for ref, cond := range r.InvalidSectionNameRefs {
 			baseConds := buildBaseRouteConditions(gcValidAndExist)
 
+			// We add baseConds first, so that any additional conditions will override them, which is
+			// ensured by DeduplicateConditions.
 			conds := make([]conditions.Condition, 0, len(baseConds)+1)
 			conds = append(conds, baseConds...)
 			conds = append(conds, cond)
