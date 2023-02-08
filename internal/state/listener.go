@@ -90,10 +90,14 @@ func newHTTPSListenerConfigurator(
 	}
 }
 
-func (c *httpListenerConfigurator) configure(gl v1beta1.Listener) *listener {
-	conds := c.validate(gl)
+func buildListener(
+	gl v1beta1.Listener,
+	gw *v1beta1.Gateway,
+	validate func(gl v1beta1.Listener) []conditions.Condition,
+) (l *listener, validHostname bool) {
+	conds := validate(gl)
 
-	if len(c.gateway.Spec.Addresses) > 0 {
+	if len(gw.Spec.Addresses) > 0 {
 		conds = append(conds, conditions.NewListenerUnsupportedAddress("Specifying Gateway addresses is not supported"))
 	}
 
@@ -103,20 +107,18 @@ func (c *httpListenerConfigurator) configure(gl v1beta1.Listener) *listener {
 		conds = append(conds, conditions.NewListenerUnsupportedValue(msg))
 	}
 
-	l := &listener{
+	return &listener{
 		Source:            gl,
 		Valid:             len(conds) == 0,
 		Routes:            make(map[types.NamespacedName]*route),
 		AcceptedHostnames: make(map[string]struct{}),
 		Conditions:        conds,
-	}
+	}, validHostnameErr == nil
+}
 
-	// this ensures that we don't check for hostname collisions for invalid hostnames
-	if validHostnameErr != nil {
-		return l
-	}
+func (c *httpListenerConfigurator) ensureUniqueHostnamesAmongListeners(l *listener) {
+	h := getHostname(l.Source.Hostname)
 
-	h := getHostname(gl.Hostname)
 	if holder, exist := c.usedHostnames[h]; exist {
 		l.Valid = false
 
@@ -129,28 +131,42 @@ func (c *httpListenerConfigurator) configure(gl v1beta1.Listener) *listener {
 
 		holder.Conditions = append(holder.Conditions, conflictedConds...)
 		l.Conditions = append(l.Conditions, conflictedConds...)
-	} else {
-		c.usedHostnames[h] = l
+
+		return
 	}
 
+	c.usedHostnames[h] = l
+}
+
+func (c *httpListenerConfigurator) loadSecretIntoListener(l *listener) {
 	if !l.Valid {
-		return l
+		return
+	}
+
+	nsname := types.NamespacedName{
+		Namespace: c.gateway.Namespace,
+		Name:      string(l.Source.TLS.CertificateRefs[0].Name),
+	}
+
+	var err error
+
+	l.SecretPath, err = c.secretMemoryMgr.Request(nsname)
+	if err != nil {
+		msg := fmt.Sprintf("Failed to get the certificate %s: %v", nsname.String(), err)
+		l.Conditions = append(l.Conditions, conditions.NewListenerInvalidCertificateRef(msg)...)
+		l.Valid = false
+	}
+}
+
+func (c *httpListenerConfigurator) configure(gl v1beta1.Listener) *listener {
+	l, validHostname := buildListener(gl, c.gateway, c.validate)
+
+	if validHostname {
+		c.ensureUniqueHostnamesAmongListeners(l)
 	}
 
 	if gl.Protocol == v1beta1.HTTPSProtocolType {
-		nsname := types.NamespacedName{
-			Namespace: c.gateway.Namespace,
-			Name:      string(gl.TLS.CertificateRefs[0].Name),
-		}
-
-		var err error
-
-		l.SecretPath, err = c.secretMemoryMgr.Request(nsname)
-		if err != nil {
-			msg := fmt.Sprintf("Failed to get the certificate %s: %v", nsname.String(), err)
-			l.Conditions = append(l.Conditions, conditions.NewListenerInvalidCertificateRef(msg)...)
-			l.Valid = false
-		}
+		c.loadSecretIntoListener(l)
 	}
 
 	return l
