@@ -7,7 +7,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func TestDeduplicateDeduplicateRouteConditions(t *testing.T) {
+func TestDeduplicateConditions(t *testing.T) {
 	g := NewGomegaWithT(t)
 
 	conds := []Condition{
