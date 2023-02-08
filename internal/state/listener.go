@@ -250,8 +250,8 @@ func validateHTTPSListener(listener v1beta1.Listener, gwNsName string) []conditi
 
 	}
 
-	if len(listener.TLS.CertificateRefs) > 1 {
-		msg := fmt.Sprintf("Only 1 certificateRef is supported, got %d", len(listener.TLS.CertificateRefs))
+	if l := len(listener.TLS.CertificateRefs); l > 1 {
+		msg := fmt.Sprintf("Only 1 certificateRef is supported, got %d", l)
 		conds = append(conds, conditions.NewListenerUnsupportedValue(msg))
 	}
 
