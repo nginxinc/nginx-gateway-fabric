@@ -90,12 +90,12 @@ func newHTTPSListenerConfigurator(
 	}
 }
 
-func buildListener(
+func validateListener(
 	gl v1beta1.Listener,
 	gw *v1beta1.Gateway,
 	validate func(gl v1beta1.Listener) []conditions.Condition,
-) (l *listener, validHostname bool) {
-	conds := validate(gl)
+) (conds []conditions.Condition, validHostname bool) {
+	conds = validate(gl)
 
 	if len(gw.Spec.Addresses) > 0 {
 		conds = append(conds, conditions.NewListenerUnsupportedAddress("Specifying Gateway addresses is not supported"))
@@ -107,13 +107,7 @@ func buildListener(
 		conds = append(conds, conditions.NewListenerUnsupportedValue(msg))
 	}
 
-	return &listener{
-		Source:            gl,
-		Valid:             len(conds) == 0,
-		Routes:            make(map[types.NamespacedName]*route),
-		AcceptedHostnames: make(map[string]struct{}),
-		Conditions:        conds,
-	}, validHostnameErr == nil
+	return conds, validHostnameErr == nil
 }
 
 func (c *httpListenerConfigurator) ensureUniqueHostnamesAmongListeners(l *listener) {
@@ -159,7 +153,15 @@ func (c *httpListenerConfigurator) loadSecretIntoListener(l *listener) {
 }
 
 func (c *httpListenerConfigurator) configure(gl v1beta1.Listener) *listener {
-	l, validHostname := buildListener(gl, c.gateway, c.validate)
+	conds, validHostname := validateListener(gl, c.gateway, c.validate)
+
+	l := &listener{
+		Source:            gl,
+		Valid:             len(conds) == 0,
+		Routes:            make(map[types.NamespacedName]*route),
+		AcceptedHostnames: make(map[string]struct{}),
+		Conditions:        conds,
+	}
 
 	if validHostname {
 		c.ensureUniqueHostnamesAmongListeners(l)
