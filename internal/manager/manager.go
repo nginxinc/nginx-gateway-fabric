@@ -19,7 +19,8 @@ import (
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/config"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/events"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/grpc"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/grpc/service"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/grpc/agent"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/grpc/commander"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/manager/filter"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/manager/index"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/manager/predicate"
@@ -188,7 +189,9 @@ func Start(cfg config.Config) error {
 	server, err := grpc.NewServer(
 		cfg.Logger.WithName("grpcServer"),
 		grpcAddress,
-		service.NewCommander(cfg.Logger.WithName("commanderService")),
+		commander.NewCommander(cfg.Logger.WithName("commanderService"),
+			agent.NewPool(cfg.Logger.WithName("agentPool")),
+		),
 	)
 	if err != nil {
 		return fmt.Errorf("cannot create gRPC server: %w", err)

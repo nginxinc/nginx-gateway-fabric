@@ -2,47 +2,85 @@ package grpc_test
 
 import (
 	"context"
+	"fmt"
+	"sync"
 	"testing"
+	"time"
 
 	"github.com/nginx/agent/sdk/v2/client"
+	agentGRPC "github.com/nginx/agent/sdk/v2/grpc"
+	"github.com/nginx/agent/sdk/v2/proto"
 	. "github.com/onsi/gomega"
-	"github.com/onsi/gomega/gbytes"
 	goGrpc "google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/grpc"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/grpc/service"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/grpc/commander"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/grpc/commander/commanderfakes"
 )
 
-// This test is pretty simple at the moment. We are only verifying that the server can be started, stopped,
-// and that the Commander implementation is registered with the server.
-// Once we add more functionality this test may become more meaningful.
-func TestServer(t *testing.T) {
+func createTestClient(serverAddr string, clientUUID string) client.Commander {
+	c := client.NewCommanderClient()
+	c.WithServer(serverAddr)
+
+	meta := agentGRPC.NewMeta(clientUUID, "", "")
+	dialOptions := agentGRPC.DataplaneConnectionDialOptions("token", meta)
+	dialOptions = append(dialOptions, goGrpc.WithTransportCredentials(insecure.NewCredentials()))
+	c.WithDialOptions(dialOptions...)
+
+	return c
+}
+
+func TestServer_ConcurrentConnections(t *testing.T) {
 	g := NewGomegaWithT(t)
 
-	buf := gbytes.NewBuffer()
-	logger := zap.New(zap.WriteTo(buf))
+	fakeMgr := new(commanderfakes.FakeConnectorManager)
+	commanderService := commander.NewCommander(zap.New(), fakeMgr)
 
-	server, err := grpc.NewServer(logger, "localhost:0", service.NewCommander(logger))
+	server, err := grpc.NewServer(zap.New(), "localhost:0", commanderService)
 	g.Expect(err).To(BeNil())
 	g.Expect(server).ToNot(BeNil())
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(context.TODO())
 
+	errCh := make(chan error)
 	go func() {
-		g.Expect(server.Start(ctx)).To(Succeed())
+		errCh <- server.Start(ctx)
 	}()
 
-	commanderClient := client.NewCommanderClient()
-	commanderClient.WithServer(server.Addr())
-	commanderClient.WithDialOptions(goGrpc.WithTransportCredentials(insecure.NewCredentials()))
+	verifySendAndRecv := func(c client.Commander, cmd *proto.Command, msgID string) {
+		err := c.Send(ctx, client.MessageFromCommand(cmd))
+		g.Expect(err).ToNot(HaveOccurred())
 
-	err = commanderClient.Connect(ctx)
-	g.Expect(err).To(BeNil())
+		select {
+		case msg := <-c.Recv():
+			g.Expect(msg.Meta().MessageId).To(Equal(msgID))
+		case <-time.After(1 * time.Second):
+			g.Fail("no message received from commander server")
+		}
+	}
 
-	g.Eventually(buf).Should(gbytes.Say("Commander CommandChannel"))
+	testClientServer := func(uuid string, wg *sync.WaitGroup) {
+		defer wg.Done()
+
+		c := createTestClient(server.Addr(), uuid)
+		g.Expect(c.Connect(ctx)).To(Succeed())
+
+		connectID := fmt.Sprintf("connect-%s", uuid)
+		verifySendAndRecv(c, commander.CreateAgentConnectRequestCmd(connectID), connectID)
+	}
+
+	wg := &sync.WaitGroup{}
+	for i := 0; i < 10; i++ {
+		wg.Add(1)
+		go testClientServer(fmt.Sprintf("client-%d", i), wg)
+	}
+
+	wg.Wait()
 
 	cancel()
-	g.Eventually(buf).Should(gbytes.Say("gRPC server stopped"))
+
+	err = <-errCh
+	g.Expect(err).To(BeNil())
 }

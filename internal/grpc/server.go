@@ -50,8 +50,8 @@ func (s *Server) Start(ctx context.Context) error {
 	go func() {
 		<-ctx.Done()
 
-		s.server.GracefulStop()
 		s.logger.Info("gRPC server stopped")
+		s.server.Stop()
 	}()
 
 	s.logger.Info("Starting gRPC Server", "addr", s.listener.Addr().String())
