@@ -41,8 +41,8 @@ type IgnoredGatewayStatus struct {
 
 // ListenerStatus holds the status-related information about a listener in the Gateway resource.
 type ListenerStatus struct {
-	// Valid shows if the listener is valid.
-	Valid bool
+	// Conditions is the list of conditions for this listener.
+	Conditions []conditions.Condition
 	// AttachedRoutes is the number of routes attached to the listener.
 	AttachedRoutes int32
 }
@@ -61,7 +61,7 @@ type HTTPRouteStatus struct {
 // ParentStatus holds status-related information related to how the HTTPRoute binds to a specific parentRef.
 type ParentStatus struct {
 	// Conditions is the list of conditions that are relevant to the parentRef.
-	Conditions []conditions.RouteCondition
+	Conditions []conditions.Condition
 }
 
 // GatewayClassStatus holds status-related infortmation about the GatewayClass resource.
@@ -94,10 +94,27 @@ func buildStatuses(graph *graph) Statuses {
 	if graph.Gateway != nil {
 		listenerStatuses := make(map[string]ListenerStatus)
 
+		defaultConds := conditions.NewDefaultListenerConditions()
+
 		for name, l := range graph.Gateway.Listeners {
+			conds := make([]conditions.Condition, 0, len(l.Conditions)+len(defaultConds)+1) // 1 is for missing GC
+
+			// We add default conds first, so that any additional conditions will override them, which is
+			// ensured by DeduplicateConditions.
+			conds = append(conds, defaultConds...)
+			conds = append(conds, l.Conditions...)
+
+			if !gcValidAndExist {
+				// FIXME(pleshakov): Figure out appropriate conditions for the cases when:
+				// (1) GatewayClass is invalid.
+				// (2) GatewayClass does not exist.
+				// https://github.com/nginxinc/nginx-kubernetes-gateway/issues/307
+				conds = append(conds, conditions.NewTODO("GatewayClass is invalid or doesn't exist"))
+			}
+
 			listenerStatuses[name] = ListenerStatus{
-				Valid:          l.Valid && gcValidAndExist,
 				AttachedRoutes: int32(len(l.Routes)),
+				Conditions:     conditions.DeduplicateConditions(conds),
 			}
 		}
 
@@ -117,7 +134,7 @@ func buildStatuses(graph *graph) Statuses {
 
 		for ref := range r.ValidSectionNameRefs {
 			parentStatuses[ref] = ParentStatus{
-				Conditions: conditions.DeduplicateRouteConditions(
+				Conditions: conditions.DeduplicateConditions(
 					buildBaseRouteConditions(gcValidAndExist),
 				),
 			}
@@ -125,12 +142,14 @@ func buildStatuses(graph *graph) Statuses {
 		for ref, cond := range r.InvalidSectionNameRefs {
 			baseConds := buildBaseRouteConditions(gcValidAndExist)
 
-			conds := make([]conditions.RouteCondition, 0, len(baseConds)+1)
+			// We add baseConds first, so that any additional conditions will override them, which is
+			// ensured by DeduplicateConditions.
+			conds := make([]conditions.Condition, 0, len(baseConds)+1)
 			conds = append(conds, baseConds...)
 			conds = append(conds, cond)
 
 			parentStatuses[ref] = ParentStatus{
-				Conditions: conditions.DeduplicateRouteConditions(conds),
+				Conditions: conditions.DeduplicateConditions(conds),
 			}
 		}
 
@@ -143,7 +162,7 @@ func buildStatuses(graph *graph) Statuses {
 	return statuses
 }
 
-func buildBaseRouteConditions(gcValidAndExist bool) []conditions.RouteCondition {
+func buildBaseRouteConditions(gcValidAndExist bool) []conditions.Condition {
 	conds := conditions.NewDefaultRouteConditions()
 
 	// FIXME(pleshakov): Figure out appropriate conditions for the cases when:
@@ -151,7 +170,7 @@ func buildBaseRouteConditions(gcValidAndExist bool) []conditions.RouteCondition 
 	// (2) GatewayClass does not exist.
 	// https://github.com/nginxinc/nginx-kubernetes-gateway/issues/307
 	if !gcValidAndExist {
-		conds = append(conds, conditions.NewRouteTODO("GatewayClass is invalid or doesn't exist"))
+		conds = append(conds, conditions.NewTODO("GatewayClass is invalid or doesn't exist"))
 	}
 
 	return conds

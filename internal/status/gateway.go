@@ -36,28 +36,6 @@ func prepareGatewayStatus(gatewayStatus state.GatewayStatus, transitionTime meta
 	for _, name := range names {
 		s := gatewayStatus.ListenerStatuses[name]
 
-		var (
-			status metav1.ConditionStatus
-			reason v1beta1.ListenerConditionReason
-		)
-
-		if s.Valid {
-			status = metav1.ConditionTrue
-			reason = v1beta1.ListenerReasonReady
-		} else {
-			status = metav1.ConditionFalse
-			reason = v1beta1.ListenerReasonInvalid
-		}
-
-		cond := metav1.Condition{
-			Type:               string(v1beta1.ListenerConditionReady),
-			Status:             status,
-			ObservedGeneration: gatewayStatus.ObservedGeneration,
-			LastTransitionTime: transitionTime,
-			Reason:             string(reason),
-			Message:            "", // FIXME(pleshakov) Come up with a good message
-		}
-
 		listenerStatuses = append(listenerStatuses, v1beta1.ListenerStatus{
 			Name: v1beta1.SectionName(name),
 			SupportedKinds: []v1beta1.RouteGroupKind{
@@ -66,7 +44,7 @@ func prepareGatewayStatus(gatewayStatus state.GatewayStatus, transitionTime meta
 				},
 			},
 			AttachedRoutes: s.AttachedRoutes,
-			Conditions:     []metav1.Condition{cond},
+			Conditions:     convertConditions(s.Conditions, gatewayStatus.ObservedGeneration, transitionTime),
 		})
 	}
 
@@ -78,6 +56,8 @@ func prepareGatewayStatus(gatewayStatus state.GatewayStatus, transitionTime meta
 
 // prepareIgnoredGatewayStatus prepares the status for an ignored Gateway resource.
 // TODO: is it reasonable to not set the listener statuses?
+// FIXME(pleshakov): Simplify the code, so that we don't need a separate prepareIgnoredGatewayStatus
+// and state.IgnoredGatewayStatus.
 func prepareIgnoredGatewayStatus(status state.IgnoredGatewayStatus, transitionTime metav1.Time) v1beta1.GatewayStatus {
 	return v1beta1.GatewayStatus{
 		Conditions: []metav1.Condition{

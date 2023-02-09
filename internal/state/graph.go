@@ -31,8 +31,8 @@ type route struct {
 	// the Gateway resource has a corresponding valid listener.
 	ValidSectionNameRefs map[string]struct{}
 	// InvalidSectionNameRefs includes the sectionNames from the parentRefs of the HTTPRoute that are invalid.
-	// The RouteCondition describes why the sectionName is invalid.
-	InvalidSectionNameRefs map[string]conditions.RouteCondition
+	// The Condition describes why the sectionName is invalid.
+	InvalidSectionNameRefs map[string]conditions.Condition
 	// BackendGroups includes the backend groups of the HTTPRoute.
 	// There's one BackendGroup per rule in the HTTPRoute.
 	// The BackendGroups are stored in order of the rules.
@@ -192,7 +192,7 @@ func bindHTTPRouteToListeners(
 	r = &route{
 		Source:                 ghr,
 		ValidSectionNameRefs:   make(map[string]struct{}),
-		InvalidSectionNameRefs: make(map[string]conditions.RouteCondition),
+		InvalidSectionNameRefs: make(map[string]conditions.Condition),
 	}
 
 	// FIXME (pleshakov) Handle the case when parent refs are duplicated
@@ -238,7 +238,7 @@ func bindHTTPRouteToListeners(
 			if !exists {
 				// FIXME(pleshakov): Add a proper condition once it is available in the Gateway API.
 				// https://github.com/nginxinc/nginx-kubernetes-gateway/issues/306
-				r.InvalidSectionNameRefs[name] = conditions.NewRouteTODO("listener is not found")
+				r.InvalidSectionNameRefs[name] = conditions.NewTODO("listener is not found")
 				continue
 			}
 
@@ -269,7 +269,7 @@ func bindHTTPRouteToListeners(
 		if _, exist := ignoredGws[key]; exist {
 			// FIXME(pleshakov): Add a proper condition.
 			// https://github.com/nginxinc/nginx-kubernetes-gateway/issues/306
-			r.InvalidSectionNameRefs[name] = conditions.NewRouteTODO("Gateway is ignored")
+			r.InvalidSectionNameRefs[name] = conditions.NewTODO("Gateway is ignored")
 
 			processed = true
 			continue
