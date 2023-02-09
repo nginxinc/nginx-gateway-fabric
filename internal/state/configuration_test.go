@@ -101,7 +101,7 @@ func TestBuildConfiguration(t *testing.T) {
 	createInternalRoute := func(source *v1beta1.HTTPRoute, validSectionName string, groups ...BackendGroup) *route {
 		r := &route{
 			Source:                 source,
-			InvalidSectionNameRefs: make(map[string]conditions.RouteCondition),
+			InvalidSectionNameRefs: make(map[string]conditions.Condition),
 			ValidSectionNameRefs:   map[string]struct{}{validSectionName: {}},
 			BackendGroups:          groups,
 		}
@@ -180,7 +180,7 @@ func TestBuildConfiguration(t *testing.T) {
 
 	routeHR5 := &route{
 		Source:                 hr5,
-		InvalidSectionNameRefs: make(map[string]conditions.RouteCondition),
+		InvalidSectionNameRefs: make(map[string]conditions.Condition),
 		ValidSectionNameRefs:   map[string]struct{}{"listener-80-1": {}},
 		BackendGroups:          []BackendGroup{hr5BackendGroup},
 	}

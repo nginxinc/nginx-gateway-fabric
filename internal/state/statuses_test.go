@@ -1,19 +1,19 @@
 package state
 
 import (
-	"sort"
 	"testing"
 
-	"github.com/google/go-cmp/cmp"
+	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/helpers"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/conditions"
 )
 
 func TestBuildStatuses(t *testing.T) {
-	invalidCondition := conditions.RouteCondition{
+	invalidCondition := conditions.Condition{
 		Type:   "Test",
 		Status: metav1.ConditionTrue,
 	}
@@ -37,7 +37,7 @@ func TestBuildStatuses(t *testing.T) {
 			ValidSectionNameRefs: map[string]struct{}{
 				"listener-80-1": {},
 			},
-			InvalidSectionNameRefs: map[string]conditions.RouteCondition{
+			InvalidSectionNameRefs: map[string]conditions.Condition{
 				"listener-80-2": invalidCondition,
 			},
 		},
@@ -50,7 +50,7 @@ func TestBuildStatuses(t *testing.T) {
 					Generation: 4,
 				},
 			},
-			InvalidSectionNameRefs: map[string]conditions.RouteCondition{
+			InvalidSectionNameRefs: map[string]conditions.Condition{
 				"listener-80-2": invalidCondition,
 				"listener-80-1": invalidCondition,
 			},
@@ -76,7 +76,7 @@ func TestBuildStatuses(t *testing.T) {
 	tests := []struct {
 		graph    *graph
 		expected Statuses
-		msg      string
+		name     string
 	}{
 		{
 			graph: &graph{
@@ -104,8 +104,8 @@ func TestBuildStatuses(t *testing.T) {
 					NsName: types.NamespacedName{Namespace: "test", Name: "gateway"},
 					ListenerStatuses: map[string]ListenerStatus{
 						"listener-80-1": {
-							Valid:          true,
 							AttachedRoutes: 1,
+							Conditions:     conditions.NewDefaultListenerConditions(),
 						},
 					},
 					ObservedGeneration: 2,
@@ -130,7 +130,7 @@ func TestBuildStatuses(t *testing.T) {
 					},
 				},
 			},
-			msg: "normal case",
+			name: "normal case",
 		},
 		{
 			graph: &graph{
@@ -150,8 +150,11 @@ func TestBuildStatuses(t *testing.T) {
 					NsName: types.NamespacedName{Namespace: "test", Name: "gateway"},
 					ListenerStatuses: map[string]ListenerStatus{
 						"listener-80-1": {
-							Valid:          false,
 							AttachedRoutes: 1,
+							Conditions: append(
+								conditions.NewDefaultListenerConditions(),
+								conditions.NewTODO("GatewayClass is invalid or doesn't exist"),
+							),
 						},
 					},
 					ObservedGeneration: 2,
@@ -166,13 +169,13 @@ func TestBuildStatuses(t *testing.T) {
 							"listener-80-1": {
 								Conditions: append(
 									conditions.NewDefaultRouteConditions(),
-									conditions.NewRouteTODO("GatewayClass is invalid or doesn't exist"),
+									conditions.NewTODO("GatewayClass is invalid or doesn't exist"),
 								),
 							},
 							"listener-80-2": {
 								Conditions: append(
 									conditions.NewDefaultRouteConditions(),
-									conditions.NewRouteTODO("GatewayClass is invalid or doesn't exist"),
+									conditions.NewTODO("GatewayClass is invalid or doesn't exist"),
 									invalidCondition,
 								),
 							},
@@ -180,7 +183,7 @@ func TestBuildStatuses(t *testing.T) {
 					},
 				},
 			},
-			msg: "gatewayclass doesn't exist",
+			name: "gatewayclass doesn't exist",
 		},
 		{
 			graph: &graph{
@@ -210,8 +213,11 @@ func TestBuildStatuses(t *testing.T) {
 					NsName: types.NamespacedName{Namespace: "test", Name: "gateway"},
 					ListenerStatuses: map[string]ListenerStatus{
 						"listener-80-1": {
-							Valid:          false,
 							AttachedRoutes: 1,
+							Conditions: append(
+								conditions.NewDefaultListenerConditions(),
+								conditions.NewTODO("GatewayClass is invalid or doesn't exist"),
+							),
 						},
 					},
 					ObservedGeneration: 2,
@@ -226,13 +232,13 @@ func TestBuildStatuses(t *testing.T) {
 							"listener-80-1": {
 								Conditions: append(
 									conditions.NewDefaultRouteConditions(),
-									conditions.NewRouteTODO("GatewayClass is invalid or doesn't exist"),
+									conditions.NewTODO("GatewayClass is invalid or doesn't exist"),
 								),
 							},
 							"listener-80-2": {
 								Conditions: append(
 									conditions.NewDefaultRouteConditions(),
-									conditions.NewRouteTODO("GatewayClass is invalid or doesn't exist"),
+									conditions.NewTODO("GatewayClass is invalid or doesn't exist"),
 									invalidCondition,
 								),
 							},
@@ -240,7 +246,7 @@ func TestBuildStatuses(t *testing.T) {
 					},
 				},
 			},
-			msg: "gatewayclass is not valid",
+			name: "gatewayclass is not valid",
 		},
 		{
 			graph: &graph{
@@ -281,28 +287,16 @@ func TestBuildStatuses(t *testing.T) {
 					},
 				},
 			},
-			msg: "gateway and ignored gateways don't exist",
+			name: "gateway and ignored gateways don't exist",
 		},
 	}
 
-	sortConditions := func(statuses Statuses) {
-		for _, rs := range statuses.HTTPRouteStatuses {
-			for _, ps := range rs.ParentStatuses {
-				sort.Slice(ps.Conditions, func(i, j int) bool {
-					return ps.Conditions[i].Type < ps.Conditions[j].Type
-				})
-			}
-		}
-	}
-
 	for _, test := range tests {
-		result := buildStatuses(test.graph)
+		t.Run(test.name, func(t *testing.T) {
+			g := NewGomegaWithT(t)
 
-		sortConditions(result)
-		sortConditions(test.expected)
-
-		if diff := cmp.Diff(test.expected, result); diff != "" {
-			t.Errorf("buildStatuses() '%v' mismatch (-want +got):\n%s", test.msg, diff)
-		}
+			result := buildStatuses(test.graph)
+			g.Expect(helpers.Diff(test.expected, result)).To(BeEmpty())
+		})
 	}
 }

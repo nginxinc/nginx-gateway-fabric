@@ -17,7 +17,6 @@ import (
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/helpers"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/conditions"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/status"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/status/statusfakes"
 )
@@ -81,8 +80,8 @@ var _ = Describe("Updater", func() {
 						NsName: types.NamespacedName{Namespace: "test", Name: "gateway"},
 						ListenerStatuses: map[string]state.ListenerStatus{
 							"http": {
-								Valid:          valid,
 								AttachedRoutes: 1,
+								Conditions:     status.CreateTestConditions(),
 							},
 						},
 						ObservedGeneration: generation,
@@ -97,12 +96,7 @@ var _ = Describe("Updater", func() {
 							ObservedGeneration: 5,
 							ParentStatuses: map[string]state.ParentStatus{
 								"http": {
-									Conditions: []conditions.RouteCondition{
-										{
-											Type:   "Test",
-											Status: metav1.ConditionTrue,
-										},
-									},
+									Conditions: status.CreateTestConditions(),
 								},
 							},
 						},
@@ -139,7 +133,7 @@ var _ = Describe("Updater", func() {
 				}
 			}
 
-			createExpectedGw = func(status metav1.ConditionStatus, generation int64, reason string) *v1beta1.Gateway {
+			createExpectedGw = func(generation int64) *v1beta1.Gateway {
 				return &v1beta1.Gateway{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "test",
@@ -159,15 +153,7 @@ var _ = Describe("Updater", func() {
 									},
 								},
 								AttachedRoutes: 1,
-								Conditions: []metav1.Condition{
-									{
-										Type:               string(v1beta1.ListenerConditionReady),
-										Status:             status,
-										ObservedGeneration: generation,
-										LastTransitionTime: fakeClockTime,
-										Reason:             reason,
-									},
-								},
+								Conditions:     status.CreateExpectedAPIConditions(generation, fakeClockTime),
 							},
 						},
 					},
@@ -219,14 +205,7 @@ var _ = Describe("Updater", func() {
 										Name:        "gateway",
 										SectionName: (*v1beta1.SectionName)(helpers.GetStringPointer("http")),
 									},
-									Conditions: []metav1.Condition{
-										{
-											Type:               "Test",
-											Status:             metav1.ConditionTrue,
-											ObservedGeneration: 5,
-											LastTransitionTime: fakeClockTime,
-										},
-									},
+									Conditions: status.CreateExpectedAPIConditions(5, fakeClockTime),
 								},
 							},
 						},
@@ -307,7 +286,7 @@ var _ = Describe("Updater", func() {
 
 		It("should have the updated status of Gateway in the API server", func() {
 			latestGw := &v1beta1.Gateway{}
-			expectedGw := createExpectedGw(metav1.ConditionTrue, 1, string(v1beta1.ListenerReasonReady))
+			expectedGw := createExpectedGw(1)
 
 			err := client.Get(context.Background(), types.NamespacedName{Namespace: "test", Name: "gateway"}, latestGw)
 			Expect(err).Should(Not(HaveOccurred()))
@@ -371,7 +350,7 @@ var _ = Describe("Updater", func() {
 
 			It("should have the updated status of Gateway in the API server", func() {
 				latestGw := &v1beta1.Gateway{}
-				expectedGw := createExpectedGw(metav1.ConditionFalse, 2, string(v1beta1.ListenerReasonInvalid))
+				expectedGw := createExpectedGw(2)
 
 				err := client.Get(
 					context.Background(),

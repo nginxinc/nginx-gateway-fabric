@@ -286,12 +286,18 @@ var _ = Describe("ChangeProcessor", func() {
 								ObservedGeneration: gw1.Generation,
 								ListenerStatuses: map[string]state.ListenerStatus{
 									"listener-80-1": {
-										Valid:          false,
 										AttachedRoutes: 1,
+										Conditions: append(
+											conditions.NewDefaultListenerConditions(),
+											conditions.NewTODO("GatewayClass is invalid or doesn't exist"),
+										),
 									},
 									"listener-443-1": {
-										Valid:          false,
 										AttachedRoutes: 1,
+										Conditions: append(
+											conditions.NewDefaultListenerConditions(),
+											conditions.NewTODO("GatewayClass is invalid or doesn't exist"),
+										),
 									},
 								},
 							},
@@ -303,13 +309,13 @@ var _ = Describe("ChangeProcessor", func() {
 										"listener-80-1": {
 											Conditions: append(
 												conditions.NewDefaultRouteConditions(),
-												conditions.NewRouteTODO("GatewayClass is invalid or doesn't exist"),
+												conditions.NewTODO("GatewayClass is invalid or doesn't exist"),
 											),
 										},
 										"listener-443-1": {
 											Conditions: append(
 												conditions.NewDefaultRouteConditions(),
-												conditions.NewRouteTODO("GatewayClass is invalid or doesn't exist"),
+												conditions.NewTODO("GatewayClass is invalid or doesn't exist"),
 											),
 										},
 									},
@@ -391,12 +397,12 @@ var _ = Describe("ChangeProcessor", func() {
 							ObservedGeneration: gw1.Generation,
 							ListenerStatuses: map[string]state.ListenerStatus{
 								"listener-80-1": {
-									Valid:          true,
 									AttachedRoutes: 1,
+									Conditions:     conditions.NewDefaultListenerConditions(),
 								},
 								"listener-443-1": {
-									Valid:          true,
 									AttachedRoutes: 1,
+									Conditions:     conditions.NewDefaultListenerConditions(),
 								},
 							},
 						},
@@ -500,12 +506,12 @@ var _ = Describe("ChangeProcessor", func() {
 							ObservedGeneration: gw1.Generation,
 							ListenerStatuses: map[string]state.ListenerStatus{
 								"listener-80-1": {
-									Valid:          true,
 									AttachedRoutes: 1,
+									Conditions:     conditions.NewDefaultListenerConditions(),
 								},
 								"listener-443-1": {
-									Valid:          true,
 									AttachedRoutes: 1,
+									Conditions:     conditions.NewDefaultListenerConditions(),
 								},
 							},
 						},
@@ -610,12 +616,12 @@ var _ = Describe("ChangeProcessor", func() {
 							ObservedGeneration: gw1Updated.Generation,
 							ListenerStatuses: map[string]state.ListenerStatus{
 								"listener-80-1": {
-									Valid:          true,
 									AttachedRoutes: 1,
+									Conditions:     conditions.NewDefaultListenerConditions(),
 								},
 								"listener-443-1": {
-									Valid:          true,
 									AttachedRoutes: 1,
+									Conditions:     conditions.NewDefaultListenerConditions(),
 								},
 							},
 						},
@@ -719,12 +725,12 @@ var _ = Describe("ChangeProcessor", func() {
 							ObservedGeneration: gw1Updated.Generation,
 							ListenerStatuses: map[string]state.ListenerStatus{
 								"listener-80-1": {
-									Valid:          true,
 									AttachedRoutes: 1,
+									Conditions:     conditions.NewDefaultListenerConditions(),
 								},
 								"listener-443-1": {
-									Valid:          true,
 									AttachedRoutes: 1,
+									Conditions:     conditions.NewDefaultListenerConditions(),
 								},
 							},
 						},
@@ -827,12 +833,12 @@ var _ = Describe("ChangeProcessor", func() {
 							ObservedGeneration: gw1Updated.Generation,
 							ListenerStatuses: map[string]state.ListenerStatus{
 								"listener-80-1": {
-									Valid:          true,
 									AttachedRoutes: 1,
+									Conditions:     conditions.NewDefaultListenerConditions(),
 								},
 								"listener-443-1": {
-									Valid:          true,
 									AttachedRoutes: 1,
+									Conditions:     conditions.NewDefaultListenerConditions(),
 								},
 							},
 						},
@@ -928,12 +934,12 @@ var _ = Describe("ChangeProcessor", func() {
 							ObservedGeneration: gw1Updated.Generation,
 							ListenerStatuses: map[string]state.ListenerStatus{
 								"listener-80-1": {
-									Valid:          true,
 									AttachedRoutes: 1,
+									Conditions:     conditions.NewDefaultListenerConditions(),
 								},
 								"listener-443-1": {
-									Valid:          true,
 									AttachedRoutes: 1,
+									Conditions:     conditions.NewDefaultListenerConditions(),
 								},
 							},
 						},
@@ -960,13 +966,13 @@ var _ = Describe("ChangeProcessor", func() {
 									"listener-80-1": {
 										Conditions: append(
 											conditions.NewDefaultRouteConditions(),
-											conditions.NewRouteTODO("Gateway is ignored"),
+											conditions.NewTODO("Gateway is ignored"),
 										),
 									},
 									"listener-443-1": {
 										Conditions: append(
 											conditions.NewDefaultRouteConditions(),
-											conditions.NewRouteTODO("Gateway is ignored"),
+											conditions.NewTODO("Gateway is ignored"),
 										),
 									},
 								},
@@ -1049,12 +1055,12 @@ var _ = Describe("ChangeProcessor", func() {
 							ObservedGeneration: gw2.Generation,
 							ListenerStatuses: map[string]state.ListenerStatus{
 								"listener-80-1": {
-									Valid:          true,
 									AttachedRoutes: 1,
+									Conditions:     conditions.NewDefaultListenerConditions(),
 								},
 								"listener-443-1": {
-									Valid:          true,
 									AttachedRoutes: 1,
+									Conditions:     conditions.NewDefaultListenerConditions(),
 								},
 							},
 						},
@@ -1113,12 +1119,12 @@ var _ = Describe("ChangeProcessor", func() {
 							ObservedGeneration: gw2.Generation,
 							ListenerStatuses: map[string]state.ListenerStatus{
 								"listener-80-1": {
-									Valid:          true,
 									AttachedRoutes: 0,
+									Conditions:     conditions.NewDefaultListenerConditions(),
 								},
 								"listener-443-1": {
-									Valid:          true,
 									AttachedRoutes: 0,
+									Conditions:     conditions.NewDefaultListenerConditions(),
 								},
 							},
 						},
@@ -1146,12 +1152,18 @@ var _ = Describe("ChangeProcessor", func() {
 							ObservedGeneration: gw2.Generation,
 							ListenerStatuses: map[string]state.ListenerStatus{
 								"listener-80-1": {
-									Valid:          false,
 									AttachedRoutes: 0,
+									Conditions: append(
+										conditions.NewDefaultListenerConditions(),
+										conditions.NewTODO("GatewayClass is invalid or doesn't exist"),
+									),
 								},
 								"listener-443-1": {
-									Valid:          false,
 									AttachedRoutes: 0,
+									Conditions: append(
+										conditions.NewDefaultListenerConditions(),
+										conditions.NewTODO("GatewayClass is invalid or doesn't exist"),
+									),
 								},
 							},
 						},

@@ -3,64 +3,70 @@ package state
 import (
 	"testing"
 
+	. "github.com/onsi/gomega"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/helpers"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/conditions"
 )
 
 func TestValidateHTTPListener(t *testing.T) {
 	tests := []struct {
 		l        v1beta1.Listener
-		msg      string
-		expected bool
+		name     string
+		expected []conditions.Condition
 	}{
 		{
 			l: v1beta1.Listener{
-				Port:     80,
-				Protocol: v1beta1.HTTPProtocolType,
+				Port: 80,
 			},
-			expected: true,
-			msg:      "valid",
+			expected: nil,
+			name:     "valid",
 		},
 		{
 			l: v1beta1.Listener{
-				Port:     81,
-				Protocol: v1beta1.HTTPProtocolType,
+				Port: 81,
 			},
-			expected: false,
-			msg:      "invalid port",
+			expected: []conditions.Condition{
+				conditions.NewListenerPortUnavailable("Port 81 is not supported for HTTP, use 80"),
+			},
+			name: "invalid port",
 		},
 	}
 
 	for _, test := range tests {
-		result := validateHTTPListener(test.l)
-		if result != test.expected {
-			t.Errorf(
-				"validateListener() returned %v but expected %v for the case of %q",
-				result,
-				test.expected,
-				test.msg,
-			)
-		}
+		t.Run(test.name, func(t *testing.T) {
+			g := NewGomegaWithT(t)
+
+			result := validateHTTPListener(test.l)
+			g.Expect(result).To(Equal(test.expected))
+		})
 	}
 }
 
 func TestValidateHTTPSListener(t *testing.T) {
 	gwNs := "gateway-ns"
 
-	validSecretRef := &v1beta1.SecretObjectReference{
+	validSecretRef := v1beta1.SecretObjectReference{
 		Kind:      (*v1beta1.Kind)(helpers.GetStringPointer("Secret")),
 		Name:      "secret",
 		Namespace: (*v1beta1.Namespace)(helpers.GetStringPointer(gwNs)),
 	}
 
-	invalidSecretRefType := &v1beta1.SecretObjectReference{
+	invalidSecretRefGroup := v1beta1.SecretObjectReference{
+		Group:     (*v1beta1.Group)(helpers.GetStringPointer("some-group")),
+		Kind:      (*v1beta1.Kind)(helpers.GetStringPointer("Secret")),
+		Name:      "secret",
+		Namespace: (*v1beta1.Namespace)(helpers.GetStringPointer(gwNs)),
+	}
+
+	invalidSecretRefKind := v1beta1.SecretObjectReference{
 		Kind:      (*v1beta1.Kind)(helpers.GetStringPointer("ConfigMap")),
 		Name:      "secret",
 		Namespace: (*v1beta1.Namespace)(helpers.GetStringPointer(gwNs)),
 	}
 
-	invalidSecretRefTNamespace := &v1beta1.SecretObjectReference{
+	invalidSecretRefTNamespace := v1beta1.SecretObjectReference{
 		Kind:      (*v1beta1.Kind)(helpers.GetStringPointer("Secret")),
 		Name:      "secret",
 		Namespace: (*v1beta1.Namespace)(helpers.GetStringPointer("diff-ns")),
@@ -68,99 +74,163 @@ func TestValidateHTTPSListener(t *testing.T) {
 
 	tests := []struct {
 		l        v1beta1.Listener
-		msg      string
-		expected bool
+		name     string
+		expected []conditions.Condition
 	}{
 		{
 			l: v1beta1.Listener{
-				Port:     443,
-				Protocol: v1beta1.HTTPSProtocolType,
+				Port: 443,
 				TLS: &v1beta1.GatewayTLSConfig{
 					Mode:            helpers.GetTLSModePointer(v1beta1.TLSModeTerminate),
-					CertificateRefs: []v1beta1.SecretObjectReference{*validSecretRef},
+					CertificateRefs: []v1beta1.SecretObjectReference{validSecretRef},
 				},
 			},
-			expected: true,
-			msg:      "valid",
+			expected: nil,
+			name:     "valid",
 		},
 		{
 			l: v1beta1.Listener{
-				Port:     80,
-				Protocol: v1beta1.HTTPSProtocolType,
+				Port: 80,
 				TLS: &v1beta1.GatewayTLSConfig{
 					Mode:            helpers.GetTLSModePointer(v1beta1.TLSModeTerminate),
-					CertificateRefs: []v1beta1.SecretObjectReference{*validSecretRef},
+					CertificateRefs: []v1beta1.SecretObjectReference{validSecretRef},
 				},
 			},
-			expected: false,
-			msg:      "invalid port",
+			expected: []conditions.Condition{
+				conditions.NewListenerPortUnavailable("Port 80 is not supported for HTTPS, use 443"),
+			},
+			name: "invalid port",
 		},
 		{
 			l: v1beta1.Listener{
-				Port:     443,
-				Protocol: v1beta1.HTTPSProtocolType,
+				Port: 443,
 				TLS: &v1beta1.GatewayTLSConfig{
-					Mode: helpers.GetTLSModePointer(v1beta1.TLSModeTerminate),
+					Mode:            helpers.GetTLSModePointer(v1beta1.TLSModeTerminate),
+					CertificateRefs: []v1beta1.SecretObjectReference{validSecretRef},
+					Options:         map[v1beta1.AnnotationKey]v1beta1.AnnotationValue{"key": "val"},
 				},
 			},
-			expected: false,
-			msg:      "invalid - no cert ref",
+			expected: []conditions.Condition{
+				conditions.NewListenerUnsupportedValue("tls.options are not supported"),
+			},
+			name: "invalid options",
 		},
 		{
 			l: v1beta1.Listener{
-				Port:     443,
-				Protocol: v1beta1.HTTPSProtocolType,
+				Port: 443,
 				TLS: &v1beta1.GatewayTLSConfig{
 					Mode:            helpers.GetTLSModePointer(v1beta1.TLSModePassthrough),
-					CertificateRefs: []v1beta1.SecretObjectReference{*validSecretRef},
+					CertificateRefs: []v1beta1.SecretObjectReference{validSecretRef},
 				},
 			},
-			expected: false,
-			msg:      "invalid tls mode",
+			expected: []conditions.Condition{
+				conditions.NewListenerUnsupportedValue(`tls.mode "Passthrough" is not supported, use "Terminate"`),
+			},
+			name: "invalid tls mode",
 		},
 		{
 			l: v1beta1.Listener{
-				Port:     443,
-				Protocol: v1beta1.HTTPSProtocolType,
+				Port: 443,
 				TLS: &v1beta1.GatewayTLSConfig{
 					Mode:            helpers.GetTLSModePointer(v1beta1.TLSModeTerminate),
-					CertificateRefs: []v1beta1.SecretObjectReference{*invalidSecretRefType},
+					CertificateRefs: []v1beta1.SecretObjectReference{invalidSecretRefGroup},
 				},
 			},
-			expected: false,
-			msg:      "invalid cert ref kind",
+			expected: conditions.NewListenerInvalidCertificateRef(`Group must be empty, got "some-group"`),
+			name:     "invalid cert ref group",
 		},
 		{
 			l: v1beta1.Listener{
-				Port:     443,
-				Protocol: v1beta1.HTTPSProtocolType,
+				Port: 443,
 				TLS: &v1beta1.GatewayTLSConfig{
 					Mode:            helpers.GetTLSModePointer(v1beta1.TLSModeTerminate),
-					CertificateRefs: []v1beta1.SecretObjectReference{*invalidSecretRefTNamespace},
+					CertificateRefs: []v1beta1.SecretObjectReference{invalidSecretRefKind},
 				},
 			},
-			expected: false,
-			msg:      "invalid cert ref namespace",
+			expected: conditions.NewListenerInvalidCertificateRef(`Kind must be Secret, got "ConfigMap"`),
+			name:     "invalid cert ref kind",
 		},
 		{
 			l: v1beta1.Listener{
-				Port:     443,
-				Protocol: v1beta1.HTTPSProtocolType,
+				Port: 443,
+				TLS: &v1beta1.GatewayTLSConfig{
+					Mode:            helpers.GetTLSModePointer(v1beta1.TLSModeTerminate),
+					CertificateRefs: []v1beta1.SecretObjectReference{invalidSecretRefTNamespace},
+				},
 			},
-			expected: false,
-			msg:      "invalid - no tls config",
+			expected: conditions.NewListenerInvalidCertificateRef("Referenced Secret must belong to the same " +
+				"namespace as the Gateway"),
+			name: "invalid cert ref namespace",
+		},
+		{
+			l: v1beta1.Listener{
+				Port: 443,
+				TLS: &v1beta1.GatewayTLSConfig{
+					Mode:            helpers.GetTLSModePointer(v1beta1.TLSModeTerminate),
+					CertificateRefs: []v1beta1.SecretObjectReference{validSecretRef, validSecretRef},
+				},
+			},
+			expected: []conditions.Condition{
+				conditions.NewListenerUnsupportedValue("Only 1 certificateRef is supported, got 2"),
+			},
+			name: "too many cert refs",
 		},
 	}
 
 	for _, test := range tests {
-		result := validateHTTPSListener(test.l, gwNs)
-		if result != test.expected {
-			t.Errorf(
-				"validateHTTPSListener() returned %v but expected %v for the case of %q",
-				result,
-				test.expected,
-				test.msg,
-			)
-		}
+		t.Run(test.name, func(t *testing.T) {
+			g := NewGomegaWithT(t)
+
+			result := validateHTTPSListener(test.l, gwNs)
+			g.Expect(result).To(Equal(test.expected))
+		})
+	}
+}
+
+func TestValidateListenerHostname(t *testing.T) {
+	tests := []struct {
+		hostname  *v1beta1.Hostname
+		name      string
+		expectErr bool
+	}{
+		{
+			hostname:  nil,
+			expectErr: false,
+			name:      "nil hostname",
+		},
+		{
+			hostname:  (*v1beta1.Hostname)(helpers.GetStringPointer("")),
+			expectErr: false,
+			name:      "empty hostname",
+		},
+		{
+			hostname:  (*v1beta1.Hostname)(helpers.GetStringPointer("foo.example.com")),
+			expectErr: false,
+			name:      "valid hostname",
+		},
+		{
+			hostname:  (*v1beta1.Hostname)(helpers.GetStringPointer("*.example.com")),
+			expectErr: true,
+			name:      "wildcard hostname",
+		},
+		{
+			hostname:  (*v1beta1.Hostname)(helpers.GetStringPointer("example$com")),
+			expectErr: true,
+			name:      "invalid hostname",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			g := NewGomegaWithT(t)
+
+			err := validateListenerHostname(test.hostname)
+
+			if test.expectErr {
+				g.Expect(err).ToNot(BeNil())
+			} else {
+				g.Expect(err).To(BeNil())
+			}
+		})
 	}
 }

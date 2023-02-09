@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	. "github.com/onsi/gomega"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -231,7 +232,7 @@ func TestBuildGraph(t *testing.T) {
 		ValidSectionNameRefs: map[string]struct{}{
 			"listener-80-1": {},
 		},
-		InvalidSectionNameRefs: map[string]conditions.RouteCondition{},
+		InvalidSectionNameRefs: map[string]conditions.Condition{},
 		BackendGroups:          []BackendGroup{hr1Group},
 	}
 
@@ -240,7 +241,7 @@ func TestBuildGraph(t *testing.T) {
 		ValidSectionNameRefs: map[string]struct{}{
 			"listener-443-1": {},
 		},
-		InvalidSectionNameRefs: map[string]conditions.RouteCondition{},
+		InvalidSectionNameRefs: map[string]conditions.Condition{},
 		BackendGroups:          []BackendGroup{hr3Group},
 	}
 
@@ -451,6 +452,17 @@ func TestBuildListeners(t *testing.T) {
 		Port:     80,
 		Protocol: v1beta1.HTTPProtocolType,
 	}
+	listener805 := v1beta1.Listener{
+		Name:     "listener-80-5",
+		Port:     81, // invalid port
+		Protocol: v1beta1.HTTPProtocolType,
+	}
+	listener806 := v1beta1.Listener{
+		Name:     "listener-80-6",
+		Hostname: (*v1beta1.Hostname)(helpers.GetStringPointer("$example.com")), // invalid hostname
+		Port:     80,
+		Protocol: v1beta1.HTTPProtocolType,
+	}
 
 	gatewayTLSConfig := &v1beta1.GatewayTLSConfig{
 		Mode: helpers.GetTLSModePointer(v1beta1.TLSModeTerminate),
@@ -497,9 +509,9 @@ func TestBuildListeners(t *testing.T) {
 	}
 	listener4434 := v1beta1.Listener{
 		Name:     "listener-443-4",
-		Hostname: (*v1beta1.Hostname)(helpers.GetStringPointer("foo.example.com")),
+		Hostname: (*v1beta1.Hostname)(helpers.GetStringPointer("$example.com")), // invalid hostname
 		Port:     443,
-		TLS:      nil, // invalid https listener; missing tls config
+		TLS:      gatewayTLSConfig,
 		Protocol: v1beta1.HTTPSProtocolType,
 	}
 	listener4435 := v1beta1.Listener{
@@ -509,10 +521,28 @@ func TestBuildListeners(t *testing.T) {
 		TLS:      tlsConfigInvalidSecret, // invalid https listener; secret does not exist
 		Protocol: v1beta1.HTTPSProtocolType,
 	}
+	listener4436 := v1beta1.Listener{
+		Name:     "listener-443-6",
+		Hostname: (*v1beta1.Hostname)(helpers.GetStringPointer("foo.example.com")),
+		Port:     444, // invalid port
+		TLS:      gatewayTLSConfig,
+		Protocol: v1beta1.HTTPSProtocolType,
+	}
+
+	const (
+		invalidHostnameMsg = "Invalid hostname: a lowercase RFC 1123 subdomain " +
+			"must consist of lower case alphanumeric characters, '-' or '.', and must start and end " +
+			"with an alphanumeric character (e.g. 'example.com', regex used for validation is " +
+			`'[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*')`
+
+		conflictedHostnamesMsg = `Multiple listeners for the same port use the same hostname "foo.example.com"; ` +
+			"ensure only one listener uses that hostname"
+	)
+
 	tests := []struct {
 		gateway  *v1beta1.Gateway
 		expected map[string]*listener
-		msg      string
+		name     string
 	}{
 		{
 			gateway: &v1beta1.Gateway{
@@ -535,7 +565,7 @@ func TestBuildListeners(t *testing.T) {
 					AcceptedHostnames: map[string]struct{}{},
 				},
 			},
-			msg: "valid http listener",
+			name: "valid http listener",
 		},
 		{
 			gateway: &v1beta1.Gateway{
@@ -558,7 +588,7 @@ func TestBuildListeners(t *testing.T) {
 					SecretPath:        secretPath,
 				},
 			},
-			msg: "valid https listener",
+			name: "valid https listener",
 		},
 		{
 			gateway: &v1beta1.Gateway{
@@ -578,9 +608,13 @@ func TestBuildListeners(t *testing.T) {
 					Valid:             false,
 					Routes:            map[types.NamespacedName]*route{},
 					AcceptedHostnames: map[string]struct{}{},
+					Conditions: []conditions.Condition{
+						conditions.NewListenerUnsupportedProtocol(`Protocol "TCP" is not supported, use "HTTP" ` +
+							`or "HTTPS"`),
+					},
 				},
 			},
-			msg: "invalid listener protocol",
+			name: "invalid listener protocol",
 		},
 		{
 			gateway: &v1beta1.Gateway{
@@ -590,19 +624,82 @@ func TestBuildListeners(t *testing.T) {
 				Spec: v1beta1.GatewaySpec{
 					GatewayClassName: gcName,
 					Listeners: []v1beta1.Listener{
+						listener805,
+					},
+				},
+			},
+			expected: map[string]*listener{
+				"listener-80-5": {
+					Source:            listener805,
+					Valid:             false,
+					Routes:            map[types.NamespacedName]*route{},
+					AcceptedHostnames: map[string]struct{}{},
+					Conditions: []conditions.Condition{
+						conditions.NewListenerPortUnavailable("Port 81 is not supported for HTTP, use 80"),
+					},
+				},
+			},
+			name: "invalid http listener",
+		},
+		{
+			gateway: &v1beta1.Gateway{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+				},
+				Spec: v1beta1.GatewaySpec{
+					GatewayClassName: gcName,
+					Listeners: []v1beta1.Listener{
+						listener4436,
+					},
+				},
+			},
+			expected: map[string]*listener{
+				"listener-443-6": {
+					Source:            listener4436,
+					Valid:             false,
+					Routes:            map[types.NamespacedName]*route{},
+					AcceptedHostnames: map[string]struct{}{},
+					Conditions: []conditions.Condition{
+						conditions.NewListenerPortUnavailable("Port 444 is not supported for HTTPS, use 443"),
+					},
+				},
+			},
+			name: "invalid https listener",
+		},
+		{
+			gateway: &v1beta1.Gateway{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+				},
+				Spec: v1beta1.GatewaySpec{
+					GatewayClassName: gcName,
+					Listeners: []v1beta1.Listener{
+						listener806,
 						listener4434,
 					},
 				},
 			},
 			expected: map[string]*listener{
+				"listener-80-6": {
+					Source:            listener806,
+					Valid:             false,
+					Routes:            map[types.NamespacedName]*route{},
+					AcceptedHostnames: map[string]struct{}{},
+					Conditions: []conditions.Condition{
+						conditions.NewListenerUnsupportedValue(invalidHostnameMsg),
+					},
+				},
 				"listener-443-4": {
 					Source:            listener4434,
 					Valid:             false,
 					Routes:            map[types.NamespacedName]*route{},
 					AcceptedHostnames: map[string]struct{}{},
+					Conditions: []conditions.Condition{
+						conditions.NewListenerUnsupportedValue(invalidHostnameMsg),
+					},
 				},
 			},
-			msg: "invalid https listener (tls config missing)",
+			name: "invalid hostnames",
 		},
 		{
 			gateway: &v1beta1.Gateway{
@@ -622,9 +719,11 @@ func TestBuildListeners(t *testing.T) {
 					Valid:             false,
 					Routes:            map[types.NamespacedName]*route{},
 					AcceptedHostnames: map[string]struct{}{},
+					Conditions: conditions.NewListenerInvalidCertificateRef("Failed to get the certificate " +
+						"test/does-not-exist: secret test/does-not-exist does not exist"),
 				},
 			},
-			msg: "invalid https listener (secret does not exist)",
+			name: "invalid https listener (secret does not exist)",
 		},
 		{
 			gateway: &v1beta1.Gateway{
@@ -667,7 +766,7 @@ func TestBuildListeners(t *testing.T) {
 					SecretPath:        secretPath,
 				},
 			},
-			msg: "multiple valid http/https listeners",
+			name: "multiple valid http/https listeners",
 		},
 		{
 			gateway: &v1beta1.Gateway{
@@ -688,34 +787,75 @@ func TestBuildListeners(t *testing.T) {
 					Valid:             false,
 					Routes:            map[types.NamespacedName]*route{},
 					AcceptedHostnames: map[string]struct{}{},
+					Conditions:        conditions.NewListenerConflictedHostname(conflictedHostnamesMsg),
 				},
 				"listener-80-4": {
 					Source:            listener804,
 					Valid:             false,
 					Routes:            map[types.NamespacedName]*route{},
 					AcceptedHostnames: map[string]struct{}{},
+					Conditions:        conditions.NewListenerConflictedHostname(conflictedHostnamesMsg),
 				},
 				"listener-443-1": {
 					Source:            listener4431,
 					Valid:             false,
 					Routes:            map[types.NamespacedName]*route{},
 					AcceptedHostnames: map[string]struct{}{},
-					SecretPath:        secretPath,
+					Conditions:        conditions.NewListenerConflictedHostname(conflictedHostnamesMsg),
 				},
 				"listener-443-3": {
 					Source:            listener4433,
 					Valid:             false,
 					Routes:            map[types.NamespacedName]*route{},
 					AcceptedHostnames: map[string]struct{}{},
-					SecretPath:        secretPath,
+					Conditions:        conditions.NewListenerConflictedHostname(conflictedHostnamesMsg),
 				},
 			},
-			msg: "collisions",
+			name: "collisions",
+		},
+		{
+			gateway: &v1beta1.Gateway{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+				},
+				Spec: v1beta1.GatewaySpec{
+					GatewayClassName: gcName,
+					Listeners: []v1beta1.Listener{
+						listener801,
+						listener4431,
+					},
+					Addresses: []v1beta1.GatewayAddress{
+						{},
+					},
+				},
+			},
+			expected: map[string]*listener{
+				"listener-80-1": {
+					Source:            listener801,
+					Valid:             false,
+					Routes:            map[types.NamespacedName]*route{},
+					AcceptedHostnames: map[string]struct{}{},
+					Conditions: []conditions.Condition{
+						conditions.NewListenerUnsupportedAddress("Specifying Gateway addresses is not supported"),
+					},
+				},
+				"listener-443-1": {
+					Source:            listener4431,
+					Valid:             false,
+					Routes:            map[types.NamespacedName]*route{},
+					AcceptedHostnames: map[string]struct{}{},
+					SecretPath:        "",
+					Conditions: []conditions.Condition{
+						conditions.NewListenerUnsupportedAddress("Specifying Gateway addresses is not supported"),
+					},
+				},
+			},
+			name: "gateway addresses are not supported",
 		},
 		{
 			gateway:  nil,
 			expected: map[string]*listener{},
-			msg:      "no gateway",
+			name:     "no gateway",
 		},
 		{
 			gateway: &v1beta1.Gateway{
@@ -730,7 +870,7 @@ func TestBuildListeners(t *testing.T) {
 				},
 			},
 			expected: map[string]*listener{},
-			msg:      "wrong gatewayclass",
+			name:     "wrong gatewayclass",
 		},
 	}
 
@@ -741,11 +881,12 @@ func TestBuildListeners(t *testing.T) {
 	secretMemoryMgr := NewSecretDiskMemoryManager(secretsDirectory, secretStore)
 
 	for _, test := range tests {
-		result := buildListeners(test.gateway, gcName, secretMemoryMgr)
+		t.Run(test.name, func(t *testing.T) {
+			g := NewGomegaWithT(t)
 
-		if diff := cmp.Diff(test.expected, result); diff != "" {
-			t.Errorf("buildListeners() %q  mismatch (-want +got):\n%s", test.msg, diff)
-		}
+			result := buildListeners(test.gateway, gcName, secretMemoryMgr)
+			g.Expect(helpers.Diff(test.expected, result)).To(BeEmpty())
+		})
 	}
 }
 
@@ -879,8 +1020,8 @@ func TestBindRouteToListeners(t *testing.T) {
 			expectedRoute: &route{
 				Source:               hrNonExistingSectionName,
 				ValidSectionNameRefs: map[string]struct{}{},
-				InvalidSectionNameRefs: map[string]conditions.RouteCondition{
-					"listener-80-2": conditions.NewRouteTODO("listener is not found"),
+				InvalidSectionNameRefs: map[string]conditions.Condition{
+					"listener-80-2": conditions.NewTODO("listener is not found"),
 				},
 			},
 			expectedListeners: map[string]*listener{
@@ -915,7 +1056,7 @@ func TestBindRouteToListeners(t *testing.T) {
 				ValidSectionNameRefs: map[string]struct{}{
 					"listener-80-1": {},
 				},
-				InvalidSectionNameRefs: map[string]conditions.RouteCondition{},
+				InvalidSectionNameRefs: map[string]conditions.Condition{},
 			},
 			expectedListeners: map[string]*listener{
 				"listener-80-1": createModifiedListener(func(l *listener) {
@@ -925,7 +1066,7 @@ func TestBindRouteToListeners(t *testing.T) {
 							ValidSectionNameRefs: map[string]struct{}{
 								"listener-80-1": {},
 							},
-							InvalidSectionNameRefs: map[string]conditions.RouteCondition{},
+							InvalidSectionNameRefs: map[string]conditions.Condition{},
 						},
 					}
 					l.AcceptedHostnames = map[string]struct{}{
@@ -948,7 +1089,7 @@ func TestBindRouteToListeners(t *testing.T) {
 				ValidSectionNameRefs: map[string]struct{}{
 					"listener-80-1": {},
 				},
-				InvalidSectionNameRefs: map[string]conditions.RouteCondition{},
+				InvalidSectionNameRefs: map[string]conditions.Condition{},
 			},
 			expectedListeners: map[string]*listener{
 				"listener-80-1": createModifiedListener(func(l *listener) {
@@ -958,7 +1099,7 @@ func TestBindRouteToListeners(t *testing.T) {
 							ValidSectionNameRefs: map[string]struct{}{
 								"listener-80-1": {},
 							},
-							InvalidSectionNameRefs: map[string]conditions.RouteCondition{},
+							InvalidSectionNameRefs: map[string]conditions.Condition{},
 						},
 					}
 					l.AcceptedHostnames = map[string]struct{}{
@@ -979,7 +1120,7 @@ func TestBindRouteToListeners(t *testing.T) {
 			expectedRoute: &route{
 				Source:               hrBar,
 				ValidSectionNameRefs: map[string]struct{}{},
-				InvalidSectionNameRefs: map[string]conditions.RouteCondition{
+				InvalidSectionNameRefs: map[string]conditions.Condition{
 					"listener-80-1": conditions.NewRouteNoMatchingListenerHostname(),
 				},
 			},
@@ -1001,8 +1142,8 @@ func TestBindRouteToListeners(t *testing.T) {
 			expectedRoute: &route{
 				Source:               hrIgnoredGateway,
 				ValidSectionNameRefs: map[string]struct{}{},
-				InvalidSectionNameRefs: map[string]conditions.RouteCondition{
-					"listener-80-1": conditions.NewRouteTODO("Gateway is ignored"),
+				InvalidSectionNameRefs: map[string]conditions.Condition{
+					"listener-80-1": conditions.NewTODO("Gateway is ignored"),
 				},
 			},
 			expectedListeners: map[string]*listener{
@@ -1033,7 +1174,7 @@ func TestBindRouteToListeners(t *testing.T) {
 			expectedRoute: &route{
 				Source:               hrFoo,
 				ValidSectionNameRefs: map[string]struct{}{},
-				InvalidSectionNameRefs: map[string]conditions.RouteCondition{
+				InvalidSectionNameRefs: map[string]conditions.Condition{
 					"listener-80-1": conditions.NewRouteInvalidListener(),
 				},
 			},
