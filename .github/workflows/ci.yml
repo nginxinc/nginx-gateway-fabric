@@ -82,8 +82,7 @@ jobs:
         uses: actions/setup-node@64ed1c7eab4cce3362f8c340dee64e5eaeef8f7c # v3.6.0
         with:
           node-version: 18
-      - run: npm --prefix ${{ github.workspace }}/internal/nginx/modules install
-      - run: npm --prefix ${{ github.workspace }}/internal/nginx/modules test
+      - run: npm --prefix ${{ github.workspace }}/internal/nginx/modules install-ci-test
 
   binary:
     name: Build Binary
