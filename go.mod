@@ -76,10 +76,3 @@ require (
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.3 // indirect
 	sigs.k8s.io/yaml v1.3.0 // indirect
 )
-
-replace (
-	// temporary fix for CVE-2022-27664
-	golang.org/x/net v0.0.0-20220722155237-a158d28d115b => golang.org/x/net v0.0.0-20220906165146-f3363e06e74c
-	//temporary fix for CVE-2022-27664
-	golang.org/x/text v0.3.7 => golang.org/x/text v0.3.8
-)
