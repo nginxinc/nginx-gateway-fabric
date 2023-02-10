@@ -44,15 +44,19 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c # v2.5.0
+      - name: Get Prettier version
+        id: prettier-version
+        run: |
+          echo "version=$(jq -r .devDependencies.prettier ${{ github.workspace }}/internal/nginx/modules/package.json)" >> $GITHUB_OUTPUT
       - name: Run Prettier on NJS code
         id: prettier-run
         uses: rutajdash/prettier-cli-action@30325c923a7b131ab8b6c99e0aff38afaddb9643 # v1.0.0
         with:
           config_path: ${{ github.workspace }}/internal/nginx/modules/.prettierrc
           file_pattern: ${{ github.workspace }}/internal/nginx/modules/**/*.js
-          prettier_version: 2.6.2
+          prettier_version: ${{ steps.prettier-version.outputs.version }}
       - name: Prettier Output
-        if: ${{ failure() }}
+        if: failure()
         shell: bash
         run: |
           echo "The following files are not formatted:"
