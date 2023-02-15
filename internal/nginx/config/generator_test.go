@@ -7,23 +7,24 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/config"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/dataplane"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/graph"
 )
 
 // Note: this test only verifies that Generate() returns a byte array with upstream, server, and split_client blocks.
 // It does not test the correctness of those blocks. That functionality is covered by other tests in this package.
 func TestGenerate(t *testing.T) {
-	bg := state.BackendGroup{
+	bg := graph.BackendGroup{
 		Source:  types.NamespacedName{Namespace: "test", Name: "hr"},
 		RuleIdx: 0,
-		Backends: []state.BackendRef{
+		Backends: []graph.BackendRef{
 			{Name: "test", Valid: true, Weight: 1},
 			{Name: "test2", Valid: true, Weight: 1},
 		},
 	}
 
-	conf := state.Configuration{
-		HTTPServers: []state.VirtualServer{
+	conf := dataplane.Configuration{
+		HTTPServers: []dataplane.VirtualServer{
 			{
 				IsDefault: true,
 			},
@@ -31,24 +32,24 @@ func TestGenerate(t *testing.T) {
 				Hostname: "example.com",
 			},
 		},
-		SSLServers: []state.VirtualServer{
+		SSLServers: []dataplane.VirtualServer{
 			{
 				IsDefault: true,
 			},
 			{
 				Hostname: "example.com",
-				SSL: &state.SSL{
+				SSL: &dataplane.SSL{
 					CertificatePath: "/etc/nginx/secrets/default",
 				},
 			},
 		},
-		Upstreams: []state.Upstream{
+		Upstreams: []dataplane.Upstream{
 			{
 				Name:      "up",
 				Endpoints: nil,
 			},
 		},
-		BackendGroups: []state.BackendGroup{bg},
+		BackendGroups: []graph.BackendGroup{bg},
 	}
 	generator := config.NewGeneratorImpl()
 	cfg := string(generator.Generate(conf))

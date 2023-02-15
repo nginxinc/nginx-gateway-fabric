@@ -1,4 +1,4 @@
-package state
+package graph
 
 import (
 	"errors"
@@ -18,7 +18,7 @@ import (
 // - the Namespace is not the same as the HTTPRoute namespace
 // - the Port is nil
 func addBackendGroupsToRoutes(
-	routes map[types.NamespacedName]*route,
+	routes map[types.NamespacedName]*Route,
 	services map[types.NamespacedName]*v1.Service,
 ) {
 	for _, r := range routes {

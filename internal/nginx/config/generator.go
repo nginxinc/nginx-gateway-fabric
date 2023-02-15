@@ -1,7 +1,7 @@
 package config
 
 import (
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/dataplane"
 )
 
 //go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . Generator
@@ -10,7 +10,7 @@ import (
 // This interface is used for testing purposes only.
 type Generator interface {
 	// Generate generates NGINX configuration from internal representation.
-	Generate(configuration state.Configuration) []byte
+	Generate(configuration dataplane.Configuration) []byte
 }
 
 // GeneratorImpl is an implementation of Generator.
@@ -22,9 +22,9 @@ func NewGeneratorImpl() GeneratorImpl {
 }
 
 // executeFunc is a function that generates NGINX configuration from internal representation.
-type executeFunc func(configuration state.Configuration) []byte
+type executeFunc func(configuration dataplane.Configuration) []byte
 
-func (g GeneratorImpl) Generate(conf state.Configuration) []byte {
+func (g GeneratorImpl) Generate(conf dataplane.Configuration) []byte {
 	var generated []byte
 	for _, execute := range getExecuteFuncs() {
 		generated = append(generated, execute(conf)...)

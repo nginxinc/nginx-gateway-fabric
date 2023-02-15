@@ -12,8 +12,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/dataplane"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/graph"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/relationship"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/resolver"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/secrets"
 )
 
 //go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . ChangeProcessor
@@ -33,7 +36,7 @@ type ChangeProcessor interface {
 	// the status information about the processed resources.
 	// If no changes were captured, the changed return argument will be false and both the configuration and statuses
 	// will be empty.
-	Process(ctx context.Context) (changed bool, conf Configuration, statuses Statuses)
+	Process(ctx context.Context) (changed bool, conf dataplane.Configuration, statuses Statuses)
 }
 
 // ChangeProcessorConfig holds configuration parameters for ChangeProcessorImpl.
@@ -43,7 +46,7 @@ type ChangeProcessorConfig struct {
 	// GatewayClassName is the name of the GatewayClass resource.
 	GatewayClassName string
 	// SecretMemoryManager is the secret memory manager.
-	SecretMemoryManager SecretDiskMemoryManager
+	SecretMemoryManager secrets.SecretDiskMemoryManager
 	// ServiceResolver resolves Services to Endpoints.
 	ServiceResolver resolver.ServiceResolver
 	// RelationshipCapturer captures relationships between Kubernetes API resources and Gateway API resources.
@@ -136,7 +139,9 @@ func (c *ChangeProcessorImpl) CaptureDeleteChange(resourceType client.Object, ns
 	c.cfg.RelationshipCapturer.Remove(resourceType, nsname)
 }
 
-func (c *ChangeProcessorImpl) Process(ctx context.Context) (changed bool, conf Configuration, statuses Statuses) {
+func (c *ChangeProcessorImpl) Process(
+	ctx context.Context,
+) (changed bool, conf dataplane.Configuration, statuses Statuses) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
@@ -147,20 +152,25 @@ func (c *ChangeProcessorImpl) Process(ctx context.Context) (changed bool, conf C
 	c.store.changed = false
 	c.changed = false
 
-	graph := buildGraph(
-		c.store,
+	g := graph.BuildGraph(
+		graph.ClusterStore{
+			GatewayClass: c.store.gc,
+			Gateways:     c.store.gateways,
+			HTTPRoutes:   c.store.httpRoutes,
+			Services:     c.store.services,
+		},
 		c.cfg.GatewayCtlrName,
 		c.cfg.GatewayClassName,
 		c.cfg.SecretMemoryManager,
 	)
 
-	var warnings Warnings
-	conf, warnings = buildConfiguration(ctx, graph, c.cfg.ServiceResolver)
+	var warnings dataplane.Warnings
+	conf, warnings = dataplane.BuildConfiguration(ctx, g, c.cfg.ServiceResolver)
 
 	for obj, objWarnings := range warnings {
 		for _, w := range objWarnings {
 			// FIXME(pleshakov): report warnings via Object status
-			c.cfg.Logger.Info("Got warning while building graph",
+			c.cfg.Logger.Info("Got warning while building Graph",
 				"kind", obj.GetObjectKind().GroupVersionKind().Kind,
 				"namespace", obj.GetNamespace(),
 				"name", obj.GetName(),
@@ -168,7 +178,7 @@ func (c *ChangeProcessorImpl) Process(ctx context.Context) (changed bool, conf C
 		}
 	}
 
-	statuses = buildStatuses(graph)
+	statuses = buildStatuses(g)
 
 	return true, conf, statuses
 }

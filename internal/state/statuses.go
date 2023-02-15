@@ -5,6 +5,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/conditions"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/graph"
 )
 
 // ListenerStatuses holds the statuses of listeners where the key is the name of a listener in the Gateway resource.
@@ -74,8 +75,8 @@ type GatewayClassStatus struct {
 	Valid bool
 }
 
-// buildStatuses builds statuses from a graph.
-func buildStatuses(graph *graph) Statuses {
+// buildStatuses builds statuses from a Graph.
+func buildStatuses(graph *graph.Graph) Statuses {
 	statuses := Statuses{
 		HTTPRouteStatuses:      make(map[types.NamespacedName]HTTPRouteStatus),
 		IgnoredGatewayStatuses: make(map[types.NamespacedName]IgnoredGatewayStatus),

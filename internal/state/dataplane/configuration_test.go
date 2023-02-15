@@ -1,4 +1,4 @@
-package state
+package dataplane
 
 import (
 	"context"
@@ -15,6 +15,7 @@ import (
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/helpers"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/conditions"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/graph"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/resolver"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/resolver/resolverfakes"
 )
@@ -82,11 +83,11 @@ func TestBuildConfiguration(t *testing.T) {
 	fakeResolver := &resolverfakes.FakeServiceResolver{}
 	fakeResolver.ResolveReturns(fooEndpoints, nil)
 
-	createBackendGroup := func(nsname types.NamespacedName, idx int) BackendGroup {
-		return BackendGroup{
+	createBackendGroup := func(nsname types.NamespacedName, idx int) graph.BackendGroup {
+		return graph.BackendGroup{
 			Source:  nsname,
 			RuleIdx: idx,
-			Backends: []BackendRef{
+			Backends: []graph.BackendRef{
 				{
 					Name:   fooUpstreamName,
 					Svc:    fooSvc,
@@ -98,8 +99,12 @@ func TestBuildConfiguration(t *testing.T) {
 		}
 	}
 
-	createInternalRoute := func(source *v1beta1.HTTPRoute, validSectionName string, groups ...BackendGroup) *route {
-		r := &route{
+	createInternalRoute := func(
+		source *v1beta1.HTTPRoute,
+		validSectionName string,
+		groups ...graph.BackendGroup,
+	) *graph.Route {
+		r := &graph.Route{
 			Source:                 source,
 			InvalidSectionNameRefs: make(map[string]conditions.Condition),
 			ValidSectionNameRefs:   map[string]struct{}{validSectionName: {}},
@@ -109,10 +114,10 @@ func TestBuildConfiguration(t *testing.T) {
 	}
 
 	createTestResources := func(name, hostname, listenerName string, paths ...string) (
-		*v1beta1.HTTPRoute, []BackendGroup, *route,
+		*v1beta1.HTTPRoute, []graph.BackendGroup, *graph.Route,
 	) {
 		hr := createRoute(name, hostname, listenerName, paths...)
-		groups := make([]BackendGroup, 0, len(paths))
+		groups := make([]graph.BackendGroup, 0, len(paths))
 		for idx := range paths {
 			groups = append(groups, createBackendGroup(types.NamespacedName{Namespace: "test", Name: name}, idx))
 		}
@@ -173,16 +178,16 @@ func TestBuildConfiguration(t *testing.T) {
 		[]v1beta1.HTTPRouteFilter{redirect},
 	)
 
-	hr5BackendGroup := BackendGroup{
+	hr5BackendGroup := graph.BackendGroup{
 		Source:  types.NamespacedName{Namespace: hr5.Namespace, Name: hr5.Name},
 		RuleIdx: 0,
 	}
 
-	routeHR5 := &route{
+	routeHR5 := &graph.Route{
 		Source:                 hr5,
 		InvalidSectionNameRefs: make(map[string]conditions.Condition),
 		ValidSectionNameRefs:   map[string]struct{}{"listener-80-1": {}},
-		BackendGroups:          []BackendGroup{hr5BackendGroup},
+		BackendGroups:          []graph.BackendGroup{hr5BackendGroup},
 	}
 
 	listener80 := v1beta1.Listener{
@@ -239,22 +244,22 @@ func TestBuildConfiguration(t *testing.T) {
 	secretPath := "/etc/nginx/secrets/secret"
 
 	tests := []struct {
-		graph    *graph
+		graph    *graph.Graph
 		expWarns Warnings
 		msg      string
 		expConf  Configuration
 	}{
 		{
-			graph: &graph{
-				GatewayClass: &gatewayClass{
+			graph: &graph.Graph{
+				GatewayClass: &graph.GatewayClass{
 					Source: &v1beta1.GatewayClass{},
 					Valid:  true,
 				},
-				Gateway: &gateway{
+				Gateway: &graph.Gateway{
 					Source:    &v1beta1.Gateway{},
-					Listeners: map[string]*listener{},
+					Listeners: map[string]*graph.Listener{},
 				},
-				Routes: map[types.NamespacedName]*route{},
+				Routes: map[types.NamespacedName]*graph.Route{},
 			},
 			expConf: Configuration{
 				HTTPServers: []VirtualServer{},
@@ -263,23 +268,23 @@ func TestBuildConfiguration(t *testing.T) {
 			msg: "no listeners and routes",
 		},
 		{
-			graph: &graph{
-				GatewayClass: &gatewayClass{
+			graph: &graph.Graph{
+				GatewayClass: &graph.GatewayClass{
 					Source: &v1beta1.GatewayClass{},
 					Valid:  true,
 				},
-				Gateway: &gateway{
+				Gateway: &graph.Gateway{
 					Source: &v1beta1.Gateway{},
-					Listeners: map[string]*listener{
+					Listeners: map[string]*graph.Listener{
 						"listener-80-1": {
 							Source:            listener80,
 							Valid:             true,
-							Routes:            map[types.NamespacedName]*route{},
+							Routes:            map[types.NamespacedName]*graph.Route{},
 							AcceptedHostnames: map[string]struct{}{},
 						},
 					},
 				},
-				Routes: map[types.NamespacedName]*route{},
+				Routes: map[types.NamespacedName]*graph.Route{},
 			},
 			expConf: Configuration{
 				HTTPServers: []VirtualServer{
@@ -292,31 +297,31 @@ func TestBuildConfiguration(t *testing.T) {
 			msg: "http listener with no routes",
 		},
 		{
-			graph: &graph{
-				GatewayClass: &gatewayClass{
+			graph: &graph.Graph{
+				GatewayClass: &graph.GatewayClass{
 					Source: &v1beta1.GatewayClass{},
 					Valid:  true,
 				},
-				Gateway: &gateway{
+				Gateway: &graph.Gateway{
 					Source: &v1beta1.Gateway{},
-					Listeners: map[string]*listener{
+					Listeners: map[string]*graph.Listener{
 						"listener-443-1": {
 							Source:            listener443, // nil hostname
 							Valid:             true,
-							Routes:            map[types.NamespacedName]*route{},
+							Routes:            map[types.NamespacedName]*graph.Route{},
 							AcceptedHostnames: map[string]struct{}{},
 							SecretPath:        secretPath,
 						},
 						"listener-443-with-hostname": {
 							Source:            listener443WithHostname, // non-nil hostname
 							Valid:             true,
-							Routes:            map[types.NamespacedName]*route{},
+							Routes:            map[types.NamespacedName]*graph.Route{},
 							AcceptedHostnames: map[string]struct{}{},
 							SecretPath:        secretPath,
 						},
 					},
 				},
-				Routes: map[types.NamespacedName]*route{},
+				Routes: map[types.NamespacedName]*graph.Route{},
 			},
 			expConf: Configuration{
 				HTTPServers: []VirtualServer{},
@@ -337,18 +342,18 @@ func TestBuildConfiguration(t *testing.T) {
 			msg: "https listeners with no routes",
 		},
 		{
-			graph: &graph{
-				GatewayClass: &gatewayClass{
+			graph: &graph.Graph{
+				GatewayClass: &graph.GatewayClass{
 					Source: &v1beta1.GatewayClass{},
 					Valid:  true,
 				},
-				Gateway: &gateway{
+				Gateway: &graph.Gateway{
 					Source: &v1beta1.Gateway{},
-					Listeners: map[string]*listener{
+					Listeners: map[string]*graph.Listener{
 						"invalid-listener": {
 							Source: invalidListener,
 							Valid:  false,
-							Routes: map[types.NamespacedName]*route{
+							Routes: map[types.NamespacedName]*graph.Route{
 								{Namespace: "test", Name: "https-hr-1"}: httpsRouteHR1,
 								{Namespace: "test", Name: "https-hr-2"}: httpsRouteHR2,
 							},
@@ -360,7 +365,7 @@ func TestBuildConfiguration(t *testing.T) {
 						},
 					},
 				},
-				Routes: map[types.NamespacedName]*route{
+				Routes: map[types.NamespacedName]*graph.Route{
 					{Namespace: "test", Name: "https-hr-1"}: httpsRouteHR1,
 					{Namespace: "test", Name: "https-hr-2"}: httpsRouteHR2,
 				},
@@ -376,18 +381,18 @@ func TestBuildConfiguration(t *testing.T) {
 			msg: "invalid listener",
 		},
 		{
-			graph: &graph{
-				GatewayClass: &gatewayClass{
+			graph: &graph.Graph{
+				GatewayClass: &graph.GatewayClass{
 					Source: &v1beta1.GatewayClass{},
 					Valid:  true,
 				},
-				Gateway: &gateway{
+				Gateway: &graph.Gateway{
 					Source: &v1beta1.Gateway{},
-					Listeners: map[string]*listener{
+					Listeners: map[string]*graph.Listener{
 						"listener-80-1": {
 							Source: listener80,
 							Valid:  true,
-							Routes: map[types.NamespacedName]*route{
+							Routes: map[types.NamespacedName]*graph.Route{
 								{Namespace: "test", Name: "hr-1"}: routeHR1,
 								{Namespace: "test", Name: "hr-2"}: routeHR2,
 							},
@@ -398,7 +403,7 @@ func TestBuildConfiguration(t *testing.T) {
 						},
 					},
 				},
-				Routes: map[types.NamespacedName]*route{
+				Routes: map[types.NamespacedName]*graph.Route{
 					{Namespace: "test", Name: "hr-1"}: routeHR1,
 					{Namespace: "test", Name: "hr-2"}: routeHR2,
 				},
@@ -443,24 +448,24 @@ func TestBuildConfiguration(t *testing.T) {
 				},
 				SSLServers:    []VirtualServer{},
 				Upstreams:     []Upstream{fooUpstream},
-				BackendGroups: []BackendGroup{hr1Groups[0], hr2Groups[0]},
+				BackendGroups: []graph.BackendGroup{hr1Groups[0], hr2Groups[0]},
 			},
 			msg: "one http listener with two routes for different hostnames",
 		},
 		{
-			graph: &graph{
-				GatewayClass: &gatewayClass{
+			graph: &graph.Graph{
+				GatewayClass: &graph.GatewayClass{
 					Source: &v1beta1.GatewayClass{},
 					Valid:  true,
 				},
-				Gateway: &gateway{
+				Gateway: &graph.Gateway{
 					Source: &v1beta1.Gateway{},
-					Listeners: map[string]*listener{
+					Listeners: map[string]*graph.Listener{
 						"listener-443-1": {
 							Source:     listener443,
 							Valid:      true,
 							SecretPath: secretPath,
-							Routes: map[types.NamespacedName]*route{
+							Routes: map[types.NamespacedName]*graph.Route{
 								{Namespace: "test", Name: "https-hr-1"}: httpsRouteHR1,
 								{Namespace: "test", Name: "https-hr-2"}: httpsRouteHR2,
 							},
@@ -473,7 +478,7 @@ func TestBuildConfiguration(t *testing.T) {
 							Source:     listener443WithHostname,
 							Valid:      true,
 							SecretPath: secretPath,
-							Routes: map[types.NamespacedName]*route{
+							Routes: map[types.NamespacedName]*graph.Route{
 								{Namespace: "test", Name: "https-hr-5"}: httpsRouteHR5,
 							},
 							AcceptedHostnames: map[string]struct{}{
@@ -482,7 +487,7 @@ func TestBuildConfiguration(t *testing.T) {
 						},
 					},
 				},
-				Routes: map[types.NamespacedName]*route{
+				Routes: map[types.NamespacedName]*graph.Route{
 					{Namespace: "test", Name: "https-hr-1"}: httpsRouteHR1,
 					{Namespace: "test", Name: "https-hr-2"}: httpsRouteHR2,
 					{Namespace: "test", Name: "https-hr-5"}: httpsRouteHR5,
@@ -557,23 +562,23 @@ func TestBuildConfiguration(t *testing.T) {
 					},
 				},
 				Upstreams:     []Upstream{fooUpstream},
-				BackendGroups: []BackendGroup{httpsHR1Groups[0], httpsHR2Groups[0], httpsHR5Groups[0]},
+				BackendGroups: []graph.BackendGroup{httpsHR1Groups[0], httpsHR2Groups[0], httpsHR5Groups[0]},
 			},
 			msg: "two https listeners each with routes for different hostnames",
 		},
 		{
-			graph: &graph{
-				GatewayClass: &gatewayClass{
+			graph: &graph.Graph{
+				GatewayClass: &graph.GatewayClass{
 					Source: &v1beta1.GatewayClass{},
 					Valid:  true,
 				},
-				Gateway: &gateway{
+				Gateway: &graph.Gateway{
 					Source: &v1beta1.Gateway{},
-					Listeners: map[string]*listener{
+					Listeners: map[string]*graph.Listener{
 						"listener-80-1": {
 							Source: listener80,
 							Valid:  true,
-							Routes: map[types.NamespacedName]*route{
+							Routes: map[types.NamespacedName]*graph.Route{
 								{Namespace: "test", Name: "hr-3"}: routeHR3,
 								{Namespace: "test", Name: "hr-4"}: routeHR4,
 							},
@@ -585,7 +590,7 @@ func TestBuildConfiguration(t *testing.T) {
 							Source:     listener443,
 							Valid:      true,
 							SecretPath: secretPath,
-							Routes: map[types.NamespacedName]*route{
+							Routes: map[types.NamespacedName]*graph.Route{
 								{Namespace: "test", Name: "https-hr-3"}: httpsRouteHR3,
 								{Namespace: "test", Name: "https-hr-4"}: httpsRouteHR4,
 							},
@@ -595,7 +600,7 @@ func TestBuildConfiguration(t *testing.T) {
 						},
 					},
 				},
-				Routes: map[types.NamespacedName]*route{
+				Routes: map[types.NamespacedName]*graph.Route{
 					{Namespace: "test", Name: "hr-3"}:       routeHR3,
 					{Namespace: "test", Name: "hr-4"}:       routeHR4,
 					{Namespace: "test", Name: "https-hr-3"}: httpsRouteHR3,
@@ -709,7 +714,7 @@ func TestBuildConfiguration(t *testing.T) {
 					},
 				},
 				Upstreams: []Upstream{fooUpstream},
-				BackendGroups: []BackendGroup{
+				BackendGroups: []graph.BackendGroup{
 					hr3Groups[0],
 					hr3Groups[1],
 					hr4Groups[0],
@@ -723,19 +728,19 @@ func TestBuildConfiguration(t *testing.T) {
 			msg: "one http and one https listener with two routes with the same hostname with and without collisions",
 		},
 		{
-			graph: &graph{
-				GatewayClass: &gatewayClass{
+			graph: &graph.Graph{
+				GatewayClass: &graph.GatewayClass{
 					Source:   &v1beta1.GatewayClass{},
 					Valid:    false,
 					ErrorMsg: "error",
 				},
-				Gateway: &gateway{
+				Gateway: &graph.Gateway{
 					Source: &v1beta1.Gateway{},
-					Listeners: map[string]*listener{
+					Listeners: map[string]*graph.Listener{
 						"listener-80-1": {
 							Source: listener80,
 							Valid:  true,
-							Routes: map[types.NamespacedName]*route{
+							Routes: map[types.NamespacedName]*graph.Route{
 								{Namespace: "test", Name: "hr-1"}: routeHR1,
 							},
 							AcceptedHostnames: map[string]struct{}{
@@ -744,7 +749,7 @@ func TestBuildConfiguration(t *testing.T) {
 						},
 					},
 				},
-				Routes: map[types.NamespacedName]*route{
+				Routes: map[types.NamespacedName]*graph.Route{
 					{Namespace: "test", Name: "hr-1"}: routeHR1,
 				},
 			},
@@ -752,15 +757,15 @@ func TestBuildConfiguration(t *testing.T) {
 			msg:     "invalid gatewayclass",
 		},
 		{
-			graph: &graph{
+			graph: &graph.Graph{
 				GatewayClass: nil,
-				Gateway: &gateway{
+				Gateway: &graph.Gateway{
 					Source: &v1beta1.Gateway{},
-					Listeners: map[string]*listener{
+					Listeners: map[string]*graph.Listener{
 						"listener-80-1": {
 							Source: listener80,
 							Valid:  true,
-							Routes: map[types.NamespacedName]*route{
+							Routes: map[types.NamespacedName]*graph.Route{
 								{Namespace: "test", Name: "hr-1"}: routeHR1,
 							},
 							AcceptedHostnames: map[string]struct{}{
@@ -769,7 +774,7 @@ func TestBuildConfiguration(t *testing.T) {
 						},
 					},
 				},
-				Routes: map[types.NamespacedName]*route{
+				Routes: map[types.NamespacedName]*graph.Route{
 					{Namespace: "test", Name: "hr-1"}: routeHR1,
 				},
 			},
@@ -777,30 +782,30 @@ func TestBuildConfiguration(t *testing.T) {
 			msg:     "missing gatewayclass",
 		},
 		{
-			graph: &graph{
-				GatewayClass: &gatewayClass{
+			graph: &graph.Graph{
+				GatewayClass: &graph.GatewayClass{
 					Source: &v1beta1.GatewayClass{},
 					Valid:  true,
 				},
 				Gateway: nil,
-				Routes:  map[types.NamespacedName]*route{},
+				Routes:  map[types.NamespacedName]*graph.Route{},
 			},
 			expConf: Configuration{},
 			msg:     "missing gateway",
 		},
 		{
-			graph: &graph{
-				GatewayClass: &gatewayClass{
+			graph: &graph.Graph{
+				GatewayClass: &graph.GatewayClass{
 					Source: &v1beta1.GatewayClass{},
 					Valid:  true,
 				},
-				Gateway: &gateway{
+				Gateway: &graph.Gateway{
 					Source: &v1beta1.Gateway{},
-					Listeners: map[string]*listener{
+					Listeners: map[string]*graph.Listener{
 						"listener-80-1": {
 							Source: listener80,
 							Valid:  true,
-							Routes: map[types.NamespacedName]*route{
+							Routes: map[types.NamespacedName]*graph.Route{
 								{Namespace: "test", Name: "hr-5"}: routeHR5,
 							},
 							AcceptedHostnames: map[string]struct{}{
@@ -809,7 +814,7 @@ func TestBuildConfiguration(t *testing.T) {
 						},
 					},
 				},
-				Routes: map[types.NamespacedName]*route{
+				Routes: map[types.NamespacedName]*graph.Route{
 					{Namespace: "test", Name: "hr-5"}: routeHR5,
 				},
 			},
@@ -839,14 +844,14 @@ func TestBuildConfiguration(t *testing.T) {
 					},
 				},
 				SSLServers:    []VirtualServer{},
-				BackendGroups: []BackendGroup{hr5BackendGroup},
+				BackendGroups: []graph.BackendGroup{hr5BackendGroup},
 			},
 			msg: "one http listener with one route with filters",
 		},
 	}
 
 	for _, test := range tests {
-		result, warns := buildConfiguration(context.TODO(), test.graph, fakeResolver)
+		result, warns := BuildConfiguration(context.TODO(), test.graph, fakeResolver)
 
 		sort.Slice(result.BackendGroups, func(i, j int) bool {
 			return result.BackendGroups[i].GroupName() < result.BackendGroups[j].GroupName()
@@ -857,11 +862,11 @@ func TestBuildConfiguration(t *testing.T) {
 		})
 
 		if diff := cmp.Diff(test.expConf, result); diff != "" {
-			t.Errorf("buildConfiguration() %q mismatch for configuration (-want +got):\n%s", test.msg, diff)
+			t.Errorf("BuildConfiguration() %q mismatch for configuration (-want +got):\n%s", test.msg, diff)
 		}
 
 		if diff := cmp.Diff(test.expWarns, warns); diff != "" {
-			t.Errorf("buildConfiguration() %q mismatch for warnings (-want +got):\n%s", test.msg, diff)
+			t.Errorf("BuildConfiguration() %q mismatch for warnings (-want +got):\n%s", test.msg, diff)
 		}
 	}
 }
@@ -1114,15 +1119,15 @@ func TestBuildUpstreams(t *testing.T) {
 		},
 	}
 
-	createBackendGroup := func(serviceNames ...string) BackendGroup {
-		var backends []BackendRef
+	createBackendGroup := func(serviceNames ...string) graph.BackendGroup {
+		var backends []graph.BackendRef
 		for _, name := range serviceNames {
-			backends = append(backends, BackendRef{
+			backends = append(backends, graph.BackendRef{
 				Name: name,
 				Svc:  &v1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: "test", Name: name}},
 			})
 		}
-		return BackendGroup{
+		return graph.BackendGroup{
 			Backends: backends,
 		}
 	}
@@ -1143,31 +1148,31 @@ func TestBuildUpstreams(t *testing.T) {
 
 	invalidGroup := createBackendGroup("invalid")
 
-	routes := map[types.NamespacedName]*route{
+	routes := map[types.NamespacedName]*graph.Route{
 		{Name: "hr1", Namespace: "test"}: {
-			BackendGroups: []BackendGroup{hr1Group0, hr1Group1},
+			BackendGroups: []graph.BackendGroup{hr1Group0, hr1Group1},
 		},
 		{Name: "hr2", Namespace: "test"}: {
-			BackendGroups: []BackendGroup{hr2Group0, hr2Group1},
+			BackendGroups: []graph.BackendGroup{hr2Group0, hr2Group1},
 		},
 		{Name: "hr3", Namespace: "test"}: {
-			BackendGroups: []BackendGroup{hr3Group0},
+			BackendGroups: []graph.BackendGroup{hr3Group0},
 		},
 	}
 
-	routes2 := map[types.NamespacedName]*route{
+	routes2 := map[types.NamespacedName]*graph.Route{
 		{Name: "hr4", Namespace: "test"}: {
-			BackendGroups: []BackendGroup{hr4Group0, hr4Group1},
+			BackendGroups: []graph.BackendGroup{hr4Group0, hr4Group1},
 		},
 	}
 
-	invalidRoutes := map[types.NamespacedName]*route{
+	invalidRoutes := map[types.NamespacedName]*graph.Route{
 		{Name: "invalid", Namespace: "test"}: {
-			BackendGroups: []BackendGroup{invalidGroup},
+			BackendGroups: []graph.BackendGroup{invalidGroup},
 		},
 	}
 
-	listeners := map[string]*listener{
+	listeners := map[string]*graph.Listener{
 		"invalid-listener": {
 			Valid:  false,
 			Routes: invalidRoutes, // shouldn't be included since listener is invalid
@@ -1241,13 +1246,13 @@ func TestBuildUpstreams(t *testing.T) {
 }
 
 func TestBuildBackendGroups(t *testing.T) {
-	createBackendGroup := func(name string, ruleIdx int, backendNames ...string) BackendGroup {
-		backends := make([]BackendRef, len(backendNames))
+	createBackendGroup := func(name string, ruleIdx int, backendNames ...string) graph.BackendGroup {
+		backends := make([]graph.BackendRef, len(backendNames))
 		for i, name := range backendNames {
-			backends[i] = BackendRef{Name: name}
+			backends[i] = graph.BackendRef{Name: name}
 		}
 
-		return BackendGroup{
+		return graph.BackendGroup{
 			Source:   types.NamespacedName{Namespace: "test", Name: name},
 			RuleIdx:  ruleIdx,
 			Backends: backends,
@@ -1268,32 +1273,32 @@ func TestBuildBackendGroups(t *testing.T) {
 
 	hrInvalid := createBackendGroup("hr-invalid", 0, "invalid")
 
-	invalidRoutes := map[types.NamespacedName]*route{
+	invalidRoutes := map[types.NamespacedName]*graph.Route{
 		{Name: "invalid", Namespace: "test"}: {
-			BackendGroups: []BackendGroup{hrInvalid},
+			BackendGroups: []graph.BackendGroup{hrInvalid},
 		},
 	}
 
-	routes := map[types.NamespacedName]*route{
+	routes := map[types.NamespacedName]*graph.Route{
 		{Name: "hr1", Namespace: "test"}: {
-			BackendGroups: []BackendGroup{hr1Rule0, hr1Rule1},
+			BackendGroups: []graph.BackendGroup{hr1Rule0, hr1Rule1},
 		},
 		{Name: "hr2", Namespace: "test"}: {
-			BackendGroups: []BackendGroup{hr2Rule0, hr2Rule1},
+			BackendGroups: []graph.BackendGroup{hr2Rule0, hr2Rule1},
 		},
 	}
 
-	routes2 := map[types.NamespacedName]*route{
+	routes2 := map[types.NamespacedName]*graph.Route{
 		// this backend group is a dupe and should be ignored.
 		{Name: "hr1", Namespace: "test"}: {
-			BackendGroups: []BackendGroup{hr1Rule0, hr1Rule1},
+			BackendGroups: []graph.BackendGroup{hr1Rule0, hr1Rule1},
 		},
 		{Name: "hr3", Namespace: "test"}: {
-			BackendGroups: []BackendGroup{hr3Rule0, hr3Rule1},
+			BackendGroups: []graph.BackendGroup{hr3Rule0, hr3Rule1},
 		},
 	}
 
-	listeners := map[string]*listener{
+	listeners := map[string]*graph.Listener{
 		"invalid-listener": {
 			Valid:  false,
 			Routes: invalidRoutes, // routes on invalid listener should be ignored.
@@ -1308,7 +1313,7 @@ func TestBuildBackendGroups(t *testing.T) {
 		},
 	}
 
-	expGroups := []BackendGroup{
+	expGroups := []graph.BackendGroup{
 		hr1Rule0,
 		hr1Rule1,
 		hr2Rule0,
@@ -1329,17 +1334,17 @@ func TestBuildBackendGroups(t *testing.T) {
 }
 
 func TestBuildWarnings(t *testing.T) {
-	createBackendRefs := func(names ...string) []BackendRef {
-		backends := make([]BackendRef, len(names))
+	createBackendRefs := func(names ...string) []graph.BackendRef {
+		backends := make([]graph.BackendRef, len(names))
 		for idx, name := range names {
-			backends[idx] = BackendRef{Name: name}
+			backends[idx] = graph.BackendRef{Name: name}
 		}
 
 		return backends
 	}
 
-	createBackendGroup := func(sourceName string, backends []BackendRef, errMsgs ...string) BackendGroup {
-		return BackendGroup{
+	createBackendGroup := func(sourceName string, backends []graph.BackendRef, errMsgs ...string) graph.BackendGroup {
+		return graph.BackendGroup{
 			Source:   types.NamespacedName{Namespace: "test", Name: sourceName},
 			Backends: backends,
 			Errors:   errMsgs,
@@ -1390,28 +1395,28 @@ func TestBuildWarnings(t *testing.T) {
 	hr3 := &v1beta1.HTTPRoute{ObjectMeta: metav1.ObjectMeta{Name: "hr3", Namespace: "test"}}
 	hrInvalid := &v1beta1.HTTPRoute{ObjectMeta: metav1.ObjectMeta{Name: "hr-invalid", Namespace: "test"}}
 
-	invalidRoutes := map[types.NamespacedName]*route{
+	invalidRoutes := map[types.NamespacedName]*graph.Route{
 		{Name: "invalid", Namespace: "test"}: {
 			Source:        hrInvalid,
-			BackendGroups: []BackendGroup{hrInvalidGroup},
+			BackendGroups: []graph.BackendGroup{hrInvalidGroup},
 		},
 	}
 
-	routes := map[types.NamespacedName]*route{
+	routes := map[types.NamespacedName]*graph.Route{
 		{Name: "hr1", Namespace: "test"}: {
 			Source:        hr1,
-			BackendGroups: []BackendGroup{hr1BackendGroup0, hr1BackendGroup1},
+			BackendGroups: []graph.BackendGroup{hr1BackendGroup0, hr1BackendGroup1},
 		},
 		{Name: "hr2", Namespace: "test"}: {
 			Source:        hr2,
-			BackendGroups: []BackendGroup{hr2BackendGroup0, hr2BackendGroup1},
+			BackendGroups: []graph.BackendGroup{hr2BackendGroup0, hr2BackendGroup1},
 		},
 	}
 
-	routes2 := map[types.NamespacedName]*route{
+	routes2 := map[types.NamespacedName]*graph.Route{
 		{Name: "hr3", Namespace: "test"}: {
 			Source:        hr3,
-			BackendGroups: []BackendGroup{hr3BackendGroup0, hr3BackendGroup1},
+			BackendGroups: []graph.BackendGroup{hr3BackendGroup0, hr3BackendGroup1},
 		},
 	}
 
@@ -1421,9 +1426,9 @@ func TestBuildWarnings(t *testing.T) {
 		"resolve-error": {ErrorMsg: "resolve error"},
 	}
 
-	graph := &graph{
-		Gateway: &gateway{
-			Listeners: map[string]*listener{
+	graph := &graph.Graph{
+		Gateway: &graph.Gateway{
+			Listeners: map[string]*graph.Listener{
 				"invalid-listener": {
 					Source: v1beta1.Listener{
 						Name: "invalid",

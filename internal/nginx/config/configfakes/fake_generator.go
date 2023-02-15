@@ -5,14 +5,14 @@ import (
 	"sync"
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/config"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/dataplane"
 )
 
 type FakeGenerator struct {
-	GenerateStub        func(state.Configuration) []byte
+	GenerateStub        func(dataplane.Configuration) []byte
 	generateMutex       sync.RWMutex
 	generateArgsForCall []struct {
-		arg1 state.Configuration
+		arg1 dataplane.Configuration
 	}
 	generateReturns struct {
 		result1 []byte
@@ -24,11 +24,11 @@ type FakeGenerator struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeGenerator) Generate(arg1 state.Configuration) []byte {
+func (fake *FakeGenerator) Generate(arg1 dataplane.Configuration) []byte {
 	fake.generateMutex.Lock()
 	ret, specificReturn := fake.generateReturnsOnCall[len(fake.generateArgsForCall)]
 	fake.generateArgsForCall = append(fake.generateArgsForCall, struct {
-		arg1 state.Configuration
+		arg1 dataplane.Configuration
 	}{arg1})
 	stub := fake.GenerateStub
 	fakeReturns := fake.generateReturns
@@ -49,13 +49,13 @@ func (fake *FakeGenerator) GenerateCallCount() int {
 	return len(fake.generateArgsForCall)
 }
 
-func (fake *FakeGenerator) GenerateCalls(stub func(state.Configuration) []byte) {
+func (fake *FakeGenerator) GenerateCalls(stub func(dataplane.Configuration) []byte) {
 	fake.generateMutex.Lock()
 	defer fake.generateMutex.Unlock()
 	fake.GenerateStub = stub
 }
 
-func (fake *FakeGenerator) GenerateArgsForCall(i int) state.Configuration {
+func (fake *FakeGenerator) GenerateArgsForCall(i int) dataplane.Configuration {
 	fake.generateMutex.RLock()
 	defer fake.generateMutex.RUnlock()
 	argsForCall := fake.generateArgsForCall[i]

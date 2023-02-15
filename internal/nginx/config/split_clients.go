@@ -6,18 +6,19 @@ import (
 	gotemplate "text/template"
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/config/http"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/dataplane"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/graph"
 )
 
 var splitClientsTemplate = gotemplate.Must(gotemplate.New("split_clients").Parse(splitClientsTemplateText))
 
-func executeSplitClients(conf state.Configuration) []byte {
+func executeSplitClients(conf dataplane.Configuration) []byte {
 	splitClients := createSplitClients(conf.BackendGroups)
 
 	return execute(splitClientsTemplate, splitClients)
 }
 
-func createSplitClients(backendGroups []state.BackendGroup) []http.SplitClient {
+func createSplitClients(backendGroups []graph.BackendGroup) []http.SplitClient {
 	numSplits := 0
 	for _, group := range backendGroups {
 		if backendGroupNeedsSplit(group) {
@@ -48,7 +49,7 @@ func createSplitClients(backendGroups []state.BackendGroup) []http.SplitClient {
 	return splitClients
 }
 
-func createSplitClientDistributions(group state.BackendGroup) []http.SplitClientDistribution {
+func createSplitClientDistributions(group graph.BackendGroup) []http.SplitClientDistribution {
 	if !backendGroupNeedsSplit(group) {
 		return nil
 	}
@@ -100,7 +101,7 @@ func createSplitClientDistributions(group state.BackendGroup) []http.SplitClient
 	return distributions
 }
 
-func getSplitClientValue(b state.BackendRef) string {
+func getSplitClientValue(b graph.BackendRef) string {
 	if b.Valid {
 		return b.Name
 	}
@@ -117,7 +118,7 @@ func percentOf(weight, totalWeight int32) float64 {
 	return math.Floor(p*100) / 100
 }
 
-func backendGroupNeedsSplit(group state.BackendGroup) bool {
+func backendGroupNeedsSplit(group graph.BackendGroup) bool {
 	return len(group.Backends) > 1
 }
 
@@ -125,7 +126,7 @@ func backendGroupNeedsSplit(group state.BackendGroup) bool {
 // If the group needs to be split, the name returned is the group name.
 // If the group doesn't need to be split, the name returned is the name of the backend if it is valid.
 // If the name cannot be determined, it returns the name of the invalid backend upstream.
-func backendGroupName(group state.BackendGroup) string {
+func backendGroupName(group graph.BackendGroup) string {
 	switch len(group.Backends) {
 	case 0:
 		return invalidBackendRef

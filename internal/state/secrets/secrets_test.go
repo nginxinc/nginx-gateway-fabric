@@ -1,5 +1,5 @@
 // nolint:gosec
-package state_test
+package secrets_test
 
 import (
 	"errors"
@@ -13,8 +13,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/statefakes"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/secrets"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/secrets/secretsfakes"
 )
 
 var (
@@ -136,8 +136,8 @@ var (
 
 var _ = Describe("SecretDiskMemoryManager", func() {
 	var (
-		fakeStore     *statefakes.FakeSecretStore
-		memMgr        state.SecretDiskMemoryManager
+		fakeStore     *secretsfakes.FakeSecretStore
+		memMgr        secrets.SecretDiskMemoryManager
 		tmpSecretsDir string
 	)
 
@@ -146,8 +146,8 @@ var _ = Describe("SecretDiskMemoryManager", func() {
 		tmpSecretsDir = dir
 		Expect(err).ToNot(HaveOccurred(), "failed to create temp directory for tests")
 
-		fakeStore = &statefakes.FakeSecretStore{}
-		memMgr = state.NewSecretDiskMemoryManager(tmpSecretsDir, fakeStore)
+		fakeStore = &secretsfakes.FakeSecretStore{}
+		memMgr = secrets.NewSecretDiskMemoryManager(tmpSecretsDir, fakeStore)
 	})
 
 	AfterEach(OncePerOrdered, func() {
@@ -174,21 +174,21 @@ var _ = Describe("SecretDiskMemoryManager", func() {
 			testRequest(secret1, "", true)
 		})
 		It("request should return the file path for a valid secret", func() {
-			fakeStore.GetReturns(&state.Secret{Secret: secret1, Valid: true})
+			fakeStore.GetReturns(&secrets.Secret{Secret: secret1, Valid: true})
 			expectedPath := path.Join(tmpSecretsDir, "test_secret1")
 
 			testRequest(secret1, expectedPath, false)
 		})
 
 		It("request should return the file path for another valid secret", func() {
-			fakeStore.GetReturns(&state.Secret{Secret: secret2, Valid: true})
+			fakeStore.GetReturns(&secrets.Secret{Secret: secret2, Valid: true})
 			expectedPath := path.Join(tmpSecretsDir, "test_secret2")
 
 			testRequest(secret2, expectedPath, false)
 		})
 
 		It("request should return an error and empty path when secret is invalid", func() {
-			fakeStore.GetReturns(&state.Secret{Secret: invalidSecretType, Valid: false})
+			fakeStore.GetReturns(&secrets.Secret{Secret: invalidSecretType, Valid: false})
 
 			testRequest(invalidSecretType, "", true)
 		})
@@ -210,7 +210,7 @@ var _ = Describe("SecretDiskMemoryManager", func() {
 		})
 
 		It("request should return the file path for secret after write", func() {
-			fakeStore.GetReturns(&state.Secret{Secret: secret3, Valid: true})
+			fakeStore.GetReturns(&secrets.Secret{Secret: secret3, Valid: true})
 			expectedPath := path.Join(tmpSecretsDir, "test_secret3")
 
 			testRequest(secret3, expectedPath, false)
@@ -244,20 +244,20 @@ var _ = Describe("SecretDiskMemoryManager", func() {
 	})
 	Describe("Write all requested secrets", func() {
 		var (
-			fakeFileManager *statefakes.FakeFileManager
-			fakeStore       *statefakes.FakeSecretStore
+			fakeFileManager *secretsfakes.FakeFileManager
+			fakeStore       *secretsfakes.FakeSecretStore
 			fakeDirEntries  []fs.DirEntry
-			memMgr          *state.SecretDiskMemoryManagerImpl
+			memMgr          *secrets.SecretDiskMemoryManagerImpl
 		)
 
 		BeforeEach(OncePerOrdered, func() {
-			fakeFileManager = &statefakes.FakeFileManager{}
-			fakeStore = &statefakes.FakeSecretStore{}
-			fakeDirEntries = []fs.DirEntry{&statefakes.FakeDirEntry{}}
-			memMgr = state.NewSecretDiskMemoryManager("", fakeStore, state.WithSecretFileManager(fakeFileManager))
+			fakeFileManager = &secretsfakes.FakeFileManager{}
+			fakeStore = &secretsfakes.FakeSecretStore{}
+			fakeDirEntries = []fs.DirEntry{&secretsfakes.FakeDirEntry{}}
+			memMgr = secrets.NewSecretDiskMemoryManager("", fakeStore, secrets.WithSecretFileManager(fakeFileManager))
 
 			// populate a requested secret
-			fakeStore.GetReturns(&state.Secret{Secret: secret1, Valid: true})
+			fakeStore.GetReturns(&secrets.Secret{Secret: secret1, Valid: true})
 			_, err := memMgr.Request(types.NamespacedName{Namespace: secret1.Namespace, Name: secret1.Name})
 			Expect(err).ToNot(HaveOccurred())
 		})
@@ -298,11 +298,11 @@ var _ = Describe("SecretDiskMemoryManager", func() {
 })
 
 var _ = Describe("SecretStore", func() {
-	var store state.SecretStore
+	var store secrets.SecretStore
 	var invalidToValidSecret, validToInvalidSecret *apiv1.Secret
 
 	BeforeEach(OncePerOrdered, func() {
-		store = state.NewSecretStore()
+		store = secrets.NewSecretStore()
 
 		invalidToValidSecret = invalidSecretType.DeepCopy()
 		invalidToValidSecret.Type = apiv1.SecretTypeTLS
