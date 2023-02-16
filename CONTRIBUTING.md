@@ -14,13 +14,17 @@ The following is a set of guidelines for contributing to NGINX Kubernetes Gatewa
   * [Git Style Guide](#git-style-guide)
   * [Go Style Guide](#go-style-guide)
 
-[Code of Conduct](https://github.com/nginxinc/nginx-kubernetes-gateway/blob/master/CODE_OF_CONDUCT.md)
+[Code of Conduct](CODE_OF_CONDUCT.md)
 
 [Contributor License Agreement](#contributor-license-agreement)
 
 ## Ask a Question
 
-We will have a public forum soon where you can come and ask questions and have a discussion. For now please open an Issue on GitHub with the label `question`.
+To ask a question please use [Github Discussions](https://github.com/nginxinc/nginx-kubernetes-gateway/discussions).
+
+[NGINX Community Slack](https://community.nginx.org/joinslack) has a dedicated channel for this project -- `#nginx-kubernetes-gateway`.
+
+Please reserve GitHub issues for feature requests and bugs rather than general questions.
 
 ## Getting Started
 
@@ -36,7 +40,7 @@ Follow our [Installation Instructions](README.md#run-nginx-gateway) to get the N
     * Deployment yaml files are found at `deploy/`
     * External APIs, clients, and SDKs can be found under `pkg/`
 * We use [Go Modules](https://github.com/golang/go/wiki/Modules) for managing dependencies.
-* We use [Ginkgo](https://onsi.github.io/ginkgo/) and [Gomega](https://onsi.github.io/gomega/) for our BDD style unit tests. 
+* We use [Ginkgo](https://onsi.github.io/ginkgo/) and [Gomega](https://onsi.github.io/gomega/) for our BDD style unit tests.
 
 ## Contributing
 
@@ -51,16 +55,22 @@ To suggest an enhancement, please create an issue on GitHub with the label `enha
 ### Open a Pull Request
 
 * Fork the repo, create a branch, submit a PR when your changes are tested and ready for review
-* Fill in [our pull request template](https://github.com/nginxinc/nginx-kubernetes-gateway/blob/main/.github/PULL_REQUEST_TEMPLATE.md)
+* Fill in [our pull request template](.github/PULL_REQUEST_TEMPLATE.md)
 
-Note: if you’d like to implement a new feature, please consider creating a feature request issue first to start a discussion about the feature.
+> **Note**
+>
+> If you’d like to implement a new feature, please consider creating a feature request issue first to start a discussion about the feature.
+
+### Issue lifecycle
+
+* When an issue or PR is created, it will be triaged by the core development team and assigned a label to indicate the type of issue it is (bug, feature request, etc) and to determine the milestone. Please see the [Issue Lifecycle](ISSUE_LIFECYCLE.md) document for more information.
 
 ## Style Guides
 
 ### Git Style Guide
 
 * Keep a clean, concise and meaningful git commit history on your branch, rebasing locally and squashing before submitting a PR
-* Follow the guidelines of writing a good commit message as described [here](https://chris.beams.io/posts/git-commit/) and summarised in the next few points
+* Follow the guidelines of writing a good commit message as described [here](https://chris.beams.io/posts/git-commit/) and summarized in the next few points
     * In the subject line, use the present tense ("Add feature" not "Added feature")
     * In the subject line, use the imperative mood ("Move cursor to..." not "Moves cursor to...")
     * Limit the subject line to 72 characters or less
@@ -76,6 +86,6 @@ Note: if you’d like to implement a new feature, please consider creating a fea
 
 ## Contributor License Agreement
 
-Individuals or business entities who contribute to this project must have completed and submitted the [F5® Contributor License Agreement](F5ContributorLicenseAgreement.pdf) prior to their code submission being included in this project. 
+Individuals or business entities who contribute to this project must have completed and submitted the [F5® Contributor License Agreement](F5ContributorLicenseAgreement.pdf) prior to their code submission being included in this project.
 To submit, please print out the [F5® Contributor License Agreement](F5ContributorLicenseAgreement.pdf), fill in the required sections, sign, scan, and send executed CLA to kubernetes@nginx.com.
 Please include your github handle in the CLA email.
