@@ -22,7 +22,7 @@ The following is a set of guidelines for contributing to NGINX Kubernetes Gatewa
 
 To ask a question please use [Github Discussions](https://github.com/nginxinc/nginx-kubernetes-gateway/discussions).
 
-You can also join our [Community Slack](https://community.nginx.org/joinslack) which has a wider NGINX audience.
+[NGINX Community Slack](https://community.nginx.org/joinslack) has a dedicated channel for this project -- `#nginx-kubernetes-gateway`.
 
 Please reserve GitHub issues for feature requests and bugs rather than general questions.
 

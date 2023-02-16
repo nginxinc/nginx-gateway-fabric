@@ -14,14 +14,14 @@ To ensure a balance between work carried out by the NGINX engineering team while
 
    `bug`: The implementation of a feature is not correct.
 
-   `proposal`: Request for a change. This can be a new feature, tackling technical debt, documentation changes, or improving existing features.
+   `proposal`:  A new feature, tackling technical debt, documentation changes, or improving existing features.
 
    `question`: The owner converts the issue to a github discussion and engages the creator.
 
 
-4. Determine milestone: The owner, in collaboration with the wider team (PM & engineering), determines what milestone to attach to an issue. Generally, milestones correspond to product releases - however there are two 'magic' milestones with special meanings (not tied to a specific release):
+4. Determine milestone: The owner, in collaboration with the wider team (product management & engineering), determines what milestone to attach to an issue. Generally, milestones correspond to product releases - however there are two special milestones not tied to a specific release:
 
-   - Issues assigned to backlog: Our team is in favour of implementing the feature request/fixing the issue, however the implementation is not yet assigned to a concrete release. If and when a `backlog` issue aligns well with our roadmap, it will be scheduled for a concrete iteration. We review and update our roadmap at least once every quarter. The `backlog` list helps us shape our roadmap, but it is not the only source of input. Therefore, some `backlog` items may eventually be closed as `out of scope`, or relabelled as `backlog candidate` once it becomes clear that they do not align with our evolving roadmap.
+   - Issues assigned to `backlog`: Our team is in favour of implementing the feature request/fixing the issue, however the implementation is not yet assigned to a concrete release. If and when a `backlog` issue aligns well with our roadmap, it will be scheduled for a concrete iteration. We review and update our roadmap at least once every quarter. The `backlog` list helps us shape our roadmap, but it is not the only source of input. Therefore, some `backlog` items may eventually be closed as `out of scope`, or relabelled as `backlog candidate` once it becomes clear that they do not align with our evolving roadmap.
 
    - Issues assigned to `backlog candidate`: Our team does not intend to implement the feature/fix request described in the issue and wants the community to weigh in before we make our final decision.
 
