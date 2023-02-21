@@ -95,22 +95,22 @@ func (r *MatchRule) GetMatch() v1beta1.HTTPRouteMatch {
 // FIXME(pleshakov) For now we only handle paths with prefix matches. Handle exact and regex matches
 func BuildConfiguration(
 	ctx context.Context,
-	graph *graph.Graph,
+	g *graph.Graph,
 	resolver resolver.ServiceResolver,
 ) (Configuration, Warnings) {
-	if graph.GatewayClass == nil || !graph.GatewayClass.Valid {
+	if g.GatewayClass == nil || !g.GatewayClass.Valid {
 		return Configuration{}, nil
 	}
 
-	if graph.Gateway == nil {
+	if g.Gateway == nil {
 		return Configuration{}, nil
 	}
 
-	upstreamsMap := buildUpstreamsMap(ctx, graph.Gateway.Listeners, resolver)
-	httpServers, sslServers := buildServers(graph.Gateway.Listeners)
-	backendGroups := buildBackendGroups(graph.Gateway.Listeners)
+	upstreamsMap := buildUpstreamsMap(ctx, g.Gateway.Listeners, resolver)
+	httpServers, sslServers := buildServers(g.Gateway.Listeners)
+	backendGroups := buildBackendGroups(g.Gateway.Listeners)
 
-	warnings := buildWarnings(graph, upstreamsMap)
+	warnings := buildWarnings(g, upstreamsMap)
 
 	config := Configuration{
 		HTTPServers:   httpServers,
