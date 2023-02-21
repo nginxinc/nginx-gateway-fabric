@@ -3,7 +3,7 @@ package dataplane
 import (
 	"sort"
 
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/helpers"
+	nkgsort "github.com/nginxinc/nginx-kubernetes-gateway/internal/sort"
 )
 
 func sortMatchRules(matchRules []MatchRule) {
@@ -61,5 +61,5 @@ func higherPriority(rule1, rule2 MatchRule) bool {
 	}
 
 	// If still tied, compare the object meta of the two routes.
-	return helpers.LessObjectMeta(&rule1.Source.ObjectMeta, &rule2.Source.ObjectMeta)
+	return nkgsort.LessObjectMeta(&rule1.Source.ObjectMeta, &rule2.Source.ObjectMeta)
 }

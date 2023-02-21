@@ -11,7 +11,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/helpers"
+	nkgsort "github.com/nginxinc/nginx-kubernetes-gateway/internal/sort"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/conditions"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/secrets"
 )
@@ -65,7 +65,7 @@ func processGateways(
 	}
 
 	sort.Slice(referencedGws, func(i, j int) bool {
-		return helpers.LessObjectMeta(&referencedGws[i].ObjectMeta, &referencedGws[j].ObjectMeta)
+		return nkgsort.LessObjectMeta(&referencedGws[i].ObjectMeta, &referencedGws[j].ObjectMeta)
 	})
 
 	ignoredGws := make(map[types.NamespacedName]*v1beta1.Gateway)
