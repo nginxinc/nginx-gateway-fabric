@@ -1,9 +1,9 @@
-package state
+package dataplane
 
 import (
 	"sort"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	nkgsort "github.com/nginxinc/nginx-kubernetes-gateway/internal/sort"
 )
 
 func sortMatchRules(matchRules []MatchRule) {
@@ -61,16 +61,5 @@ func higherPriority(rule1, rule2 MatchRule) bool {
 	}
 
 	// If still tied, compare the object meta of the two routes.
-	return lessObjectMeta(&rule1.Source.ObjectMeta, &rule2.Source.ObjectMeta)
-}
-
-func lessObjectMeta(meta1 *metav1.ObjectMeta, meta2 *metav1.ObjectMeta) bool {
-	if meta1.CreationTimestamp.Equal(&meta2.CreationTimestamp) {
-		if meta1.Namespace == meta2.Namespace {
-			return meta1.Name < meta2.Name
-		}
-		return meta1.Namespace < meta2.Namespace
-	}
-
-	return meta1.CreationTimestamp.Before(&meta2.CreationTimestamp)
+	return nkgsort.LessObjectMeta(&rule1.Source.ObjectMeta, &rule2.Source.ObjectMeta)
 }

@@ -5,7 +5,7 @@ import (
 	gotemplate "text/template"
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/config/http"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/dataplane"
 )
 
 var upstreamsTemplate = gotemplate.Must(gotemplate.New("upstreams").Parse(upstreamsTemplateText))
@@ -19,13 +19,13 @@ const (
 	invalidBackendRef = "invalid-backend-ref"
 )
 
-func executeUpstreams(conf state.Configuration) []byte {
+func executeUpstreams(conf dataplane.Configuration) []byte {
 	upstreams := createUpstreams(conf.Upstreams)
 
 	return execute(upstreamsTemplate, upstreams)
 }
 
-func createUpstreams(upstreams []state.Upstream) []http.Upstream {
+func createUpstreams(upstreams []dataplane.Upstream) []http.Upstream {
 	// capacity is the number of upstreams + 1 for the invalid backend ref upstream
 	ups := make([]http.Upstream, 0, len(upstreams)+1)
 
@@ -38,7 +38,7 @@ func createUpstreams(upstreams []state.Upstream) []http.Upstream {
 	return ups
 }
 
-func createUpstream(up state.Upstream) http.Upstream {
+func createUpstream(up dataplane.Upstream) http.Upstream {
 	if len(up.Endpoints) == 0 {
 		return http.Upstream{
 			Name: up.Name,

@@ -1,15 +1,15 @@
-package state_test
+package graph_test
 
 import (
 	"testing"
 
 	"k8s.io/apimachinery/pkg/types"
 
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/graph"
 )
 
 func TestBackendGroup_GroupName(t *testing.T) {
-	bg := state.BackendGroup{
+	bg := graph.BackendGroup{
 		Source:  types.NamespacedName{Namespace: "test", Name: "hr"},
 		RuleIdx: 20,
 	}

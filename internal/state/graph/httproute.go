@@ -1,9 +1,6 @@
-package state
+package graph
 
 import (
-	"fmt"
-	"sort"
-
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
@@ -11,17 +8,9 @@ import (
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/conditions"
 )
 
-// gateway represents the winning Gateway resource.
-type gateway struct {
-	// Source is the corresponding Gateway resource.
-	Source *v1beta1.Gateway
-	// Listeners include the listeners of the Gateway.
-	Listeners map[string]*listener
-}
-
-// route represents an HTTPRoute.
-type route struct {
-	// Source is the source resource of the route.
+// Route represents an HTTPRoute.
+type Route struct {
+	// Source is the source resource of the Route.
 	// FIXME(pleshakov)
 	// For now, we assume that the source is only HTTPRoute.
 	// Later we can support more types - TLSRoute, TCPRoute and UDPRoute.
@@ -40,139 +29,6 @@ type route struct {
 	BackendGroups []BackendGroup
 }
 
-// gatewayClass represents the GatewayClass resource.
-type gatewayClass struct {
-	// Source is the source resource.
-	Source *v1beta1.GatewayClass
-	// ErrorMsg explains the error when the resource is invalid.
-	ErrorMsg string
-	// Valid shows whether the GatewayClass is valid.
-	Valid bool
-}
-
-// graph is a graph-like representation of Gateway API resources.
-type graph struct {
-	// GatewayClass holds the GatewayClass resource.
-	GatewayClass *gatewayClass
-	// Gateway holds the winning Gateway resource.
-	Gateway *gateway
-	// IgnoredGateways holds the ignored Gateway resources, which belong to the NGINX Gateway (based on the
-	// GatewayClassName field of the resource) but ignored. It doesn't hold the Gateway resources that do not belong to
-	// the NGINX Gateway.
-	IgnoredGateways map[types.NamespacedName]*v1beta1.Gateway
-	// Routes holds route resources.
-	Routes map[types.NamespacedName]*route
-}
-
-// buildGraph builds a graph from a store assuming that the Gateway resource has the gwNsName namespace and name.
-func buildGraph(
-	store *store,
-	controllerName string,
-	gcName string,
-	secretMemoryMgr SecretDiskMemoryManager,
-) *graph {
-	gc := buildGatewayClass(store.gc, controllerName)
-
-	gw, ignoredGws := processGateways(store.gateways, gcName)
-
-	listeners := buildListeners(gw, gcName, secretMemoryMgr)
-
-	routes := make(map[types.NamespacedName]*route)
-	for _, ghr := range store.httpRoutes {
-		ignored, r := bindHTTPRouteToListeners(ghr, gw, ignoredGws, listeners)
-		if !ignored {
-			routes[client.ObjectKeyFromObject(ghr)] = r
-		}
-	}
-
-	addBackendGroupsToRoutes(routes, store.services)
-
-	g := &graph{
-		GatewayClass:    gc,
-		Routes:          routes,
-		IgnoredGateways: ignoredGws,
-	}
-
-	if gw != nil {
-		g.Gateway = &gateway{
-			Source:    gw,
-			Listeners: listeners,
-		}
-	}
-
-	return g
-}
-
-// processGateways determines which Gateway resource the NGINX Gateway will use (the winner) and which Gateway(s) will
-// be ignored. Note that the function will not take into the account any unrelated Gateway resources - the ones with the
-// different GatewayClassName field.
-func processGateways(
-	gws map[types.NamespacedName]*v1beta1.Gateway,
-	gcName string,
-) (winner *v1beta1.Gateway, ignoredGateways map[types.NamespacedName]*v1beta1.Gateway) {
-	referencedGws := make([]*v1beta1.Gateway, 0, len(gws))
-
-	for _, gw := range gws {
-		if string(gw.Spec.GatewayClassName) != gcName {
-			continue
-		}
-
-		referencedGws = append(referencedGws, gw)
-	}
-
-	if len(referencedGws) == 0 {
-		return nil, nil
-	}
-
-	sort.Slice(referencedGws, func(i, j int) bool {
-		return lessObjectMeta(&referencedGws[i].ObjectMeta, &referencedGws[j].ObjectMeta)
-	})
-
-	ignoredGws := make(map[types.NamespacedName]*v1beta1.Gateway)
-
-	for _, gw := range referencedGws[1:] {
-		ignoredGws[client.ObjectKeyFromObject(gw)] = gw
-	}
-
-	return referencedGws[0], ignoredGws
-}
-
-func buildGatewayClass(gc *v1beta1.GatewayClass, controllerName string) *gatewayClass {
-	if gc == nil {
-		return nil
-	}
-
-	var errorMsg string
-
-	err := validateGatewayClass(gc, controllerName)
-	if err != nil {
-		errorMsg = err.Error()
-	}
-
-	return &gatewayClass{
-		Source:   gc,
-		Valid:    err == nil,
-		ErrorMsg: errorMsg,
-	}
-}
-
-func buildListeners(gw *v1beta1.Gateway, gcName string, secretMemoryMgr SecretDiskMemoryManager) map[string]*listener {
-	listeners := make(map[string]*listener)
-
-	if gw == nil || string(gw.Spec.GatewayClassName) != gcName {
-		return listeners
-	}
-
-	listenerFactory := newListenerConfiguratorFactory(gw, secretMemoryMgr)
-
-	for _, gl := range gw.Spec.Listeners {
-		configurator := listenerFactory.getConfiguratorForListener(gl)
-		listeners[string(gl.Name)] = configurator.configure(gl)
-	}
-
-	return listeners
-}
-
 // bindHTTPRouteToListeners tries to bind an HTTPRoute to listener.
 // There are three possibilities:
 // (1) HTTPRoute will be ignored.
@@ -182,14 +38,14 @@ func bindHTTPRouteToListeners(
 	ghr *v1beta1.HTTPRoute,
 	gw *v1beta1.Gateway,
 	ignoredGws map[types.NamespacedName]*v1beta1.Gateway,
-	listeners map[string]*listener,
-) (ignored bool, r *route) {
+	listeners map[string]*Listener,
+) (ignored bool, r *Route) {
 	if len(ghr.Spec.ParentRefs) == 0 {
 		// ignore HTTPRoute without refs
 		return true, nil
 	}
 
-	r = &route{
+	r = &Route{
 		Source:                 ghr,
 		ValidSectionNameRefs:   make(map[string]struct{}),
 		InvalidSectionNameRefs: make(map[string]conditions.Condition),
@@ -313,12 +169,4 @@ func getHostname(h *v1beta1.Hostname) string {
 		return ""
 	}
 	return string(*h)
-}
-
-func validateGatewayClass(gc *v1beta1.GatewayClass, controllerName string) error {
-	if string(gc.Spec.ControllerName) != controllerName {
-		return fmt.Errorf("Spec.ControllerName must be %s got %s", controllerName, gc.Spec.ControllerName)
-	}
-
-	return nil
 }

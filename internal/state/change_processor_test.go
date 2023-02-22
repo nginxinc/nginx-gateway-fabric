@@ -19,9 +19,11 @@ import (
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/manager/index"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/conditions"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/dataplane"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/graph"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/relationship"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/relationship/relationshipfakes"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/statefakes"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/secrets/secretsfakes"
 )
 
 const (
@@ -178,11 +180,11 @@ var _ = Describe("ChangeProcessor", func() {
 				},
 			}
 			processor           state.ChangeProcessor
-			fakeSecretMemoryMgr *statefakes.FakeSecretDiskMemoryManager
+			fakeSecretMemoryMgr *secretsfakes.FakeSecretDiskMemoryManager
 		)
 
 		BeforeEach(OncePerOrdered, func() {
-			fakeSecretMemoryMgr = &statefakes.FakeSecretDiskMemoryManager{}
+			fakeSecretMemoryMgr = &secretsfakes.FakeSecretDiskMemoryManager{}
 
 			processor = state.NewChangeProcessorImpl(state.ChangeProcessorConfig{
 				GatewayCtlrName:      controllerName,
@@ -199,7 +201,7 @@ var _ = Describe("ChangeProcessor", func() {
 			var (
 				gcUpdated            *v1beta1.GatewayClass
 				hr1, hr1Updated, hr2 *v1beta1.HTTPRoute
-				hr1Group, hr2Group   state.BackendGroup
+				hr1Group, hr2Group   graph.BackendGroup
 				gw1, gw1Updated, gw2 *v1beta1.Gateway
 			)
 			BeforeAll(func() {
@@ -208,7 +210,7 @@ var _ = Describe("ChangeProcessor", func() {
 
 				hr1 = createRoute("hr-1", "gateway-1", "foo.example.com")
 
-				hr1Group = state.BackendGroup{
+				hr1Group = graph.BackendGroup{
 					Source:  types.NamespacedName{Namespace: hr1.Namespace, Name: hr1.Name},
 					RuleIdx: 0,
 				}
@@ -218,7 +220,7 @@ var _ = Describe("ChangeProcessor", func() {
 
 				hr2 = createRoute("hr-2", "gateway-2", "bar.example.com")
 
-				hr2Group = state.BackendGroup{
+				hr2Group = graph.BackendGroup{
 					Source:  types.NamespacedName{Namespace: hr2.Namespace, Name: hr2.Name},
 					RuleIdx: 0,
 				}
@@ -262,7 +264,7 @@ var _ = Describe("ChangeProcessor", func() {
 						It("returns empty configuration and statuses", func() {
 							processor.CaptureUpsertChange(hr1)
 
-							expectedConf := state.Configuration{}
+							expectedConf := dataplane.Configuration{}
 							expectedStatuses := state.Statuses{
 								IgnoredGatewayStatuses: map[types.NamespacedName]state.IgnoredGatewayStatus{},
 								HTTPRouteStatuses:      map[types.NamespacedName]state.HTTPRouteStatus{},
@@ -279,7 +281,7 @@ var _ = Describe("ChangeProcessor", func() {
 					It("returns empty configuration and updated statuses", func() {
 						processor.CaptureUpsertChange(gw1)
 
-						expectedConf := state.Configuration{}
+						expectedConf := dataplane.Configuration{}
 						expectedStatuses := state.Statuses{
 							GatewayStatus: &state.GatewayStatus{
 								NsName:             types.NamespacedName{Namespace: "test", Name: "gateway-1"},
@@ -334,17 +336,17 @@ var _ = Describe("ChangeProcessor", func() {
 				It("returns updated configuration and statuses", func() {
 					processor.CaptureUpsertChange(gc)
 
-					expectedConf := state.Configuration{
-						HTTPServers: []state.VirtualServer{
+					expectedConf := dataplane.Configuration{
+						HTTPServers: []dataplane.VirtualServer{
 							{
 								IsDefault: true,
 							},
 							{
 								Hostname: "foo.example.com",
-								PathRules: []state.PathRule{
+								PathRules: []dataplane.PathRule{
 									{
 										Path: "/",
-										MatchRules: []state.MatchRule{
+										MatchRules: []dataplane.MatchRule{
 											{
 												MatchIdx:     0,
 												RuleIdx:      0,
@@ -356,17 +358,17 @@ var _ = Describe("ChangeProcessor", func() {
 								},
 							},
 						},
-						SSLServers: []state.VirtualServer{
+						SSLServers: []dataplane.VirtualServer{
 							{
 								IsDefault: true,
 							},
 							{
 								Hostname: "foo.example.com",
-								SSL:      &state.SSL{CertificatePath: certificatePath},
-								PathRules: []state.PathRule{
+								SSL:      &dataplane.SSL{CertificatePath: certificatePath},
+								PathRules: []dataplane.PathRule{
 									{
 										Path: "/",
-										MatchRules: []state.MatchRule{
+										MatchRules: []dataplane.MatchRule{
 											{
 												MatchIdx:     0,
 												RuleIdx:      0,
@@ -379,10 +381,10 @@ var _ = Describe("ChangeProcessor", func() {
 							},
 							{
 								Hostname: "~^",
-								SSL:      &state.SSL{CertificatePath: certificatePath},
+								SSL:      &dataplane.SSL{CertificatePath: certificatePath},
 							},
 						},
-						BackendGroups: []state.BackendGroup{
+						BackendGroups: []graph.BackendGroup{
 							hr1Group,
 						},
 					}
@@ -444,17 +446,17 @@ var _ = Describe("ChangeProcessor", func() {
 				It("returns updated configuration and statuses", func() {
 					processor.CaptureUpsertChange(hr1Updated)
 
-					expectedConf := state.Configuration{
-						HTTPServers: []state.VirtualServer{
+					expectedConf := dataplane.Configuration{
+						HTTPServers: []dataplane.VirtualServer{
 							{
 								IsDefault: true,
 							},
 							{
 								Hostname: "foo.example.com",
-								PathRules: []state.PathRule{
+								PathRules: []dataplane.PathRule{
 									{
 										Path: "/",
-										MatchRules: []state.MatchRule{
+										MatchRules: []dataplane.MatchRule{
 											{
 												MatchIdx:     0,
 												RuleIdx:      0,
@@ -466,17 +468,17 @@ var _ = Describe("ChangeProcessor", func() {
 								},
 							},
 						},
-						SSLServers: []state.VirtualServer{
+						SSLServers: []dataplane.VirtualServer{
 							{
 								IsDefault: true,
 							},
 							{
 								Hostname: "foo.example.com",
-								SSL:      &state.SSL{CertificatePath: certificatePath},
-								PathRules: []state.PathRule{
+								SSL:      &dataplane.SSL{CertificatePath: certificatePath},
+								PathRules: []dataplane.PathRule{
 									{
 										Path: "/",
-										MatchRules: []state.MatchRule{
+										MatchRules: []dataplane.MatchRule{
 											{
 												MatchIdx:     0,
 												RuleIdx:      0,
@@ -489,10 +491,10 @@ var _ = Describe("ChangeProcessor", func() {
 							},
 							{
 								Hostname: "~^",
-								SSL:      &state.SSL{CertificatePath: certificatePath},
+								SSL:      &dataplane.SSL{CertificatePath: certificatePath},
 							},
 						},
-						BackendGroups: []state.BackendGroup{
+						BackendGroups: []graph.BackendGroup{
 							hr1Group,
 						},
 					}
@@ -554,17 +556,17 @@ var _ = Describe("ChangeProcessor", func() {
 				It("returns updated configuration and statuses", func() {
 					processor.CaptureUpsertChange(gw1Updated)
 
-					expectedConf := state.Configuration{
-						HTTPServers: []state.VirtualServer{
+					expectedConf := dataplane.Configuration{
+						HTTPServers: []dataplane.VirtualServer{
 							{
 								IsDefault: true,
 							},
 							{
 								Hostname: "foo.example.com",
-								PathRules: []state.PathRule{
+								PathRules: []dataplane.PathRule{
 									{
 										Path: "/",
-										MatchRules: []state.MatchRule{
+										MatchRules: []dataplane.MatchRule{
 											{
 												MatchIdx:     0,
 												RuleIdx:      0,
@@ -576,17 +578,17 @@ var _ = Describe("ChangeProcessor", func() {
 								},
 							},
 						},
-						SSLServers: []state.VirtualServer{
+						SSLServers: []dataplane.VirtualServer{
 							{
 								IsDefault: true,
 							},
 							{
 								Hostname: "foo.example.com",
-								SSL:      &state.SSL{CertificatePath: certificatePath},
-								PathRules: []state.PathRule{
+								SSL:      &dataplane.SSL{CertificatePath: certificatePath},
+								PathRules: []dataplane.PathRule{
 									{
 										Path: "/",
-										MatchRules: []state.MatchRule{
+										MatchRules: []dataplane.MatchRule{
 											{
 												MatchIdx:     0,
 												RuleIdx:      0,
@@ -599,10 +601,10 @@ var _ = Describe("ChangeProcessor", func() {
 							},
 							{
 								Hostname: "~^",
-								SSL:      &state.SSL{CertificatePath: certificatePath},
+								SSL:      &dataplane.SSL{CertificatePath: certificatePath},
 							},
 						},
-						BackendGroups: []state.BackendGroup{
+						BackendGroups: []graph.BackendGroup{
 							hr1Group,
 						},
 					}
@@ -663,17 +665,17 @@ var _ = Describe("ChangeProcessor", func() {
 				It("returns updated configuration and statuses", func() {
 					processor.CaptureUpsertChange(gcUpdated)
 
-					expectedConf := state.Configuration{
-						HTTPServers: []state.VirtualServer{
+					expectedConf := dataplane.Configuration{
+						HTTPServers: []dataplane.VirtualServer{
 							{
 								IsDefault: true,
 							},
 							{
 								Hostname: "foo.example.com",
-								PathRules: []state.PathRule{
+								PathRules: []dataplane.PathRule{
 									{
 										Path: "/",
-										MatchRules: []state.MatchRule{
+										MatchRules: []dataplane.MatchRule{
 											{
 												MatchIdx:     0,
 												RuleIdx:      0,
@@ -685,17 +687,17 @@ var _ = Describe("ChangeProcessor", func() {
 								},
 							},
 						},
-						SSLServers: []state.VirtualServer{
+						SSLServers: []dataplane.VirtualServer{
 							{
 								IsDefault: true,
 							},
 							{
 								Hostname: "foo.example.com",
-								SSL:      &state.SSL{CertificatePath: certificatePath},
-								PathRules: []state.PathRule{
+								SSL:      &dataplane.SSL{CertificatePath: certificatePath},
+								PathRules: []dataplane.PathRule{
 									{
 										Path: "/",
-										MatchRules: []state.MatchRule{
+										MatchRules: []dataplane.MatchRule{
 											{
 												MatchIdx:     0,
 												RuleIdx:      0,
@@ -708,10 +710,10 @@ var _ = Describe("ChangeProcessor", func() {
 							},
 							{
 								Hostname: "~^",
-								SSL:      &state.SSL{CertificatePath: certificatePath},
+								SSL:      &dataplane.SSL{CertificatePath: certificatePath},
 							},
 						},
-						BackendGroups: []state.BackendGroup{
+						BackendGroups: []graph.BackendGroup{
 							hr1Group,
 						},
 					}
@@ -769,17 +771,17 @@ var _ = Describe("ChangeProcessor", func() {
 				It("returns updated configuration and statuses", func() {
 					processor.CaptureUpsertChange(gw2)
 
-					expectedConf := state.Configuration{
-						HTTPServers: []state.VirtualServer{
+					expectedConf := dataplane.Configuration{
+						HTTPServers: []dataplane.VirtualServer{
 							{
 								IsDefault: true,
 							},
 							{
 								Hostname: "foo.example.com",
-								PathRules: []state.PathRule{
+								PathRules: []dataplane.PathRule{
 									{
 										Path: "/",
-										MatchRules: []state.MatchRule{
+										MatchRules: []dataplane.MatchRule{
 											{
 												MatchIdx:     0,
 												RuleIdx:      0,
@@ -791,16 +793,16 @@ var _ = Describe("ChangeProcessor", func() {
 								},
 							},
 						},
-						SSLServers: []state.VirtualServer{
+						SSLServers: []dataplane.VirtualServer{
 							{
 								IsDefault: true,
 							},
 							{
 								Hostname: "foo.example.com",
-								PathRules: []state.PathRule{
+								PathRules: []dataplane.PathRule{
 									{
 										Path: "/",
-										MatchRules: []state.MatchRule{
+										MatchRules: []dataplane.MatchRule{
 											{
 												MatchIdx:     0,
 												RuleIdx:      0,
@@ -810,16 +812,16 @@ var _ = Describe("ChangeProcessor", func() {
 										},
 									},
 								},
-								SSL: &state.SSL{
+								SSL: &dataplane.SSL{
 									CertificatePath: certificatePath,
 								},
 							},
 							{
 								Hostname: "~^",
-								SSL:      &state.SSL{CertificatePath: certificatePath},
+								SSL:      &dataplane.SSL{CertificatePath: certificatePath},
 							},
 						},
-						BackendGroups: []state.BackendGroup{
+						BackendGroups: []graph.BackendGroup{
 							hr1Group,
 						},
 					}
@@ -872,17 +874,17 @@ var _ = Describe("ChangeProcessor", func() {
 				It("returns same configuration and updated statuses", func() {
 					processor.CaptureUpsertChange(hr2)
 
-					expectedConf := state.Configuration{
-						HTTPServers: []state.VirtualServer{
+					expectedConf := dataplane.Configuration{
+						HTTPServers: []dataplane.VirtualServer{
 							{
 								IsDefault: true,
 							},
 							{
 								Hostname: "foo.example.com",
-								PathRules: []state.PathRule{
+								PathRules: []dataplane.PathRule{
 									{
 										Path: "/",
-										MatchRules: []state.MatchRule{
+										MatchRules: []dataplane.MatchRule{
 											{
 												MatchIdx:     0,
 												RuleIdx:      0,
@@ -894,17 +896,17 @@ var _ = Describe("ChangeProcessor", func() {
 								},
 							},
 						},
-						SSLServers: []state.VirtualServer{
+						SSLServers: []dataplane.VirtualServer{
 							{
 								IsDefault: true,
 							},
 							{
 								Hostname: "foo.example.com",
-								SSL:      &state.SSL{CertificatePath: certificatePath},
-								PathRules: []state.PathRule{
+								SSL:      &dataplane.SSL{CertificatePath: certificatePath},
+								PathRules: []dataplane.PathRule{
 									{
 										Path: "/",
-										MatchRules: []state.MatchRule{
+										MatchRules: []dataplane.MatchRule{
 											{
 												MatchIdx:     0,
 												RuleIdx:      0,
@@ -917,10 +919,10 @@ var _ = Describe("ChangeProcessor", func() {
 							},
 							{
 								Hostname: "~^",
-								SSL:      &state.SSL{CertificatePath: certificatePath},
+								SSL:      &dataplane.SSL{CertificatePath: certificatePath},
 							},
 						},
-						BackendGroups: []state.BackendGroup{
+						BackendGroups: []graph.BackendGroup{
 							hr1Group,
 						},
 					}
@@ -993,17 +995,17 @@ var _ = Describe("ChangeProcessor", func() {
 						types.NamespacedName{Namespace: "test", Name: "gateway-1"},
 					)
 
-					expectedConf := state.Configuration{
-						HTTPServers: []state.VirtualServer{
+					expectedConf := dataplane.Configuration{
+						HTTPServers: []dataplane.VirtualServer{
 							{
 								IsDefault: true,
 							},
 							{
 								Hostname: "bar.example.com",
-								PathRules: []state.PathRule{
+								PathRules: []dataplane.PathRule{
 									{
 										Path: "/",
-										MatchRules: []state.MatchRule{
+										MatchRules: []dataplane.MatchRule{
 											{
 												MatchIdx:     0,
 												RuleIdx:      0,
@@ -1015,17 +1017,17 @@ var _ = Describe("ChangeProcessor", func() {
 								},
 							},
 						},
-						SSLServers: []state.VirtualServer{
+						SSLServers: []dataplane.VirtualServer{
 							{
 								IsDefault: true,
 							},
 							{
 								Hostname: "bar.example.com",
-								SSL:      &state.SSL{CertificatePath: certificatePath},
-								PathRules: []state.PathRule{
+								SSL:      &dataplane.SSL{CertificatePath: certificatePath},
+								PathRules: []dataplane.PathRule{
 									{
 										Path: "/",
-										MatchRules: []state.MatchRule{
+										MatchRules: []dataplane.MatchRule{
 											{
 												MatchIdx:     0,
 												RuleIdx:      0,
@@ -1038,10 +1040,10 @@ var _ = Describe("ChangeProcessor", func() {
 							},
 							{
 								Hostname: "~^",
-								SSL:      &state.SSL{CertificatePath: certificatePath},
+								SSL:      &dataplane.SSL{CertificatePath: certificatePath},
 							},
 						},
-						BackendGroups: []state.BackendGroup{
+						BackendGroups: []graph.BackendGroup{
 							hr2Group,
 						},
 					}
@@ -1093,19 +1095,19 @@ var _ = Describe("ChangeProcessor", func() {
 						types.NamespacedName{Namespace: "test", Name: "hr-2"},
 					)
 
-					expectedConf := state.Configuration{
-						HTTPServers: []state.VirtualServer{
+					expectedConf := dataplane.Configuration{
+						HTTPServers: []dataplane.VirtualServer{
 							{
 								IsDefault: true,
 							},
 						},
-						SSLServers: []state.VirtualServer{
+						SSLServers: []dataplane.VirtualServer{
 							{
 								IsDefault: true,
 							},
 							{
 								Hostname: "~^",
-								SSL:      &state.SSL{CertificatePath: certificatePath},
+								SSL:      &dataplane.SSL{CertificatePath: certificatePath},
 							},
 						},
 					}
@@ -1145,7 +1147,7 @@ var _ = Describe("ChangeProcessor", func() {
 						types.NamespacedName{Name: gcName},
 					)
 
-					expectedConf := state.Configuration{}
+					expectedConf := dataplane.Configuration{}
 					expectedStatuses := state.Statuses{
 						GatewayStatus: &state.GatewayStatus{
 							NsName:             types.NamespacedName{Namespace: "test", Name: "gateway-2"},
@@ -1184,7 +1186,7 @@ var _ = Describe("ChangeProcessor", func() {
 						types.NamespacedName{Namespace: "test", Name: "gateway-2"},
 					)
 
-					expectedConf := state.Configuration{}
+					expectedConf := dataplane.Configuration{}
 					expectedStatuses := state.Statuses{
 						IgnoredGatewayStatuses: map[types.NamespacedName]state.IgnoredGatewayStatus{},
 						HTTPRouteStatuses:      map[types.NamespacedName]state.HTTPRouteStatus{},
@@ -1203,7 +1205,7 @@ var _ = Describe("ChangeProcessor", func() {
 						types.NamespacedName{Namespace: "test", Name: "hr-1"},
 					)
 
-					expectedConf := state.Configuration{}
+					expectedConf := dataplane.Configuration{}
 					expectedStatuses := state.Statuses{
 						IgnoredGatewayStatuses: map[types.NamespacedName]state.IgnoredGatewayStatus{},
 						HTTPRouteStatuses:      map[types.NamespacedName]state.HTTPRouteStatus{},
@@ -1567,7 +1569,7 @@ var _ = Describe("ChangeProcessor", func() {
 		)
 
 		BeforeEach(OncePerOrdered, func() {
-			fakeSecretMemoryMgr := &statefakes.FakeSecretDiskMemoryManager{}
+			fakeSecretMemoryMgr := &secretsfakes.FakeSecretDiskMemoryManager{}
 			fakeRelationshipCapturer = &relationshipfakes.FakeCapturer{}
 
 			processor = state.NewChangeProcessorImpl(state.ChangeProcessorConfig{
@@ -1864,12 +1866,12 @@ var _ = Describe("ChangeProcessor", func() {
 	Describe("Edge cases with panic", func() {
 		var (
 			processor                state.ChangeProcessor
-			fakeSecretMemoryMgr      *statefakes.FakeSecretDiskMemoryManager
+			fakeSecretMemoryMgr      *secretsfakes.FakeSecretDiskMemoryManager
 			fakeRelationshipCapturer *relationshipfakes.FakeCapturer
 		)
 
 		BeforeEach(func() {
-			fakeSecretMemoryMgr = &statefakes.FakeSecretDiskMemoryManager{}
+			fakeSecretMemoryMgr = &secretsfakes.FakeSecretDiskMemoryManager{}
 			fakeRelationshipCapturer = &relationshipfakes.FakeCapturer{}
 
 			processor = state.NewChangeProcessorImpl(state.ChangeProcessorConfig{

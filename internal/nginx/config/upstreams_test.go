@@ -7,12 +7,12 @@ import (
 	"github.com/google/go-cmp/cmp"
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/config/http"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/dataplane"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/resolver"
 )
 
 func TestExecuteUpstreams(t *testing.T) {
-	stateUpstreams := []state.Upstream{
+	stateUpstreams := []dataplane.Upstream{
 		{
 			Name: "up1",
 			Endpoints: []resolver.Endpoint{
@@ -47,7 +47,7 @@ func TestExecuteUpstreams(t *testing.T) {
 		"server unix:/var/lib/nginx/nginx-502-server.sock;",
 	}
 
-	upstreams := string(executeUpstreams(state.Configuration{Upstreams: stateUpstreams}))
+	upstreams := string(executeUpstreams(dataplane.Configuration{Upstreams: stateUpstreams}))
 	for _, expSubString := range expectedSubStrings {
 		if !strings.Contains(upstreams, expSubString) {
 			t.Errorf(
@@ -60,7 +60,7 @@ func TestExecuteUpstreams(t *testing.T) {
 }
 
 func TestCreateUpstreams(t *testing.T) {
-	stateUpstreams := []state.Upstream{
+	stateUpstreams := []dataplane.Upstream{
 		{
 			Name: "up1",
 			Endpoints: []resolver.Endpoint{
@@ -143,11 +143,11 @@ func TestCreateUpstreams(t *testing.T) {
 func TestCreateUpstream(t *testing.T) {
 	tests := []struct {
 		msg              string
-		stateUpstream    state.Upstream
+		stateUpstream    dataplane.Upstream
 		expectedUpstream http.Upstream
 	}{
 		{
-			stateUpstream: state.Upstream{
+			stateUpstream: dataplane.Upstream{
 				Name:      "nil-endpoints",
 				Endpoints: nil,
 			},
@@ -162,7 +162,7 @@ func TestCreateUpstream(t *testing.T) {
 			msg: "nil endpoints",
 		},
 		{
-			stateUpstream: state.Upstream{
+			stateUpstream: dataplane.Upstream{
 				Name:      "no-endpoints",
 				Endpoints: []resolver.Endpoint{},
 			},
@@ -177,7 +177,7 @@ func TestCreateUpstream(t *testing.T) {
 			msg: "no endpoints",
 		},
 		{
-			stateUpstream: state.Upstream{
+			stateUpstream: dataplane.Upstream{
 				Name: "multiple-endpoints",
 				Endpoints: []resolver.Endpoint{
 					{

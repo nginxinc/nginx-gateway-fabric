@@ -1,4 +1,4 @@
-package state
+package dataplane
 
 import (
 	"context"
@@ -7,14 +7,13 @@ import (
 
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/graph"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/resolver"
 )
 
 const wildcardHostname = "~^"
 
-// Configuration is an internal representation of Gateway configuration.
-// We can think of Configuration as an intermediate state between the Gateway API resources and the data plane (NGINX)
-// configuration.
+// Configuration is an intermediate representation of dataplane configuration.
 type Configuration struct {
 	// HTTPServers holds all HTTPServers.
 	// FIXME(pleshakov) We assume that all servers are HTTP and listen on port 80.
@@ -25,7 +24,8 @@ type Configuration struct {
 	// Upstreams holds all unique Upstreams.
 	Upstreams []Upstream
 	// BackendGroups holds all unique BackendGroups.
-	BackendGroups []BackendGroup
+	// FIXME(pleshakov): Ensure Configuration doesn't include types from the graph package.
+	BackendGroups []graph.BackendGroup
 }
 
 // VirtualServer is a virtual server.
@@ -79,7 +79,7 @@ type MatchRule struct {
 	// the entire resource.
 	Source *v1beta1.HTTPRoute
 	// BackendGroup is the group of Backends that the rule routes to.
-	BackendGroup BackendGroup
+	BackendGroup graph.BackendGroup
 	// MatchIdx is the index of the rule in the Rule.Matches.
 	MatchIdx int
 	// RuleIdx is the index of the corresponding rule in the HTTPRoute.
@@ -91,26 +91,26 @@ func (r *MatchRule) GetMatch() v1beta1.HTTPRouteMatch {
 	return r.Source.Spec.Rules[r.RuleIdx].Matches[r.MatchIdx]
 }
 
-// buildConfiguration builds the Configuration from the graph.
+// BuildConfiguration builds the Configuration from the Graph.
 // FIXME(pleshakov) For now we only handle paths with prefix matches. Handle exact and regex matches
-func buildConfiguration(
+func BuildConfiguration(
 	ctx context.Context,
-	graph *graph,
+	g *graph.Graph,
 	resolver resolver.ServiceResolver,
 ) (Configuration, Warnings) {
-	if graph.GatewayClass == nil || !graph.GatewayClass.Valid {
+	if g.GatewayClass == nil || !g.GatewayClass.Valid {
 		return Configuration{}, nil
 	}
 
-	if graph.Gateway == nil {
+	if g.Gateway == nil {
 		return Configuration{}, nil
 	}
 
-	upstreamsMap := buildUpstreamsMap(ctx, graph.Gateway.Listeners, resolver)
-	httpServers, sslServers := buildServers(graph.Gateway.Listeners)
-	backendGroups := buildBackendGroups(graph.Gateway.Listeners)
+	upstreamsMap := buildUpstreamsMap(ctx, g.Gateway.Listeners, resolver)
+	httpServers, sslServers := buildServers(g.Gateway.Listeners)
+	backendGroups := buildBackendGroups(g.Gateway.Listeners)
 
-	warnings := buildWarnings(graph, upstreamsMap)
+	warnings := buildWarnings(g, upstreamsMap)
 
 	config := Configuration{
 		HTTPServers:   httpServers,
@@ -135,7 +135,7 @@ func upstreamsMapToSlice(upstreamsMap map[string]Upstream) []Upstream {
 	return upstreams
 }
 
-func buildWarnings(graph *graph, upstreams map[string]Upstream) Warnings {
+func buildWarnings(graph *graph.Graph, upstreams map[string]Upstream) Warnings {
 	warnings := newWarnings()
 
 	for _, l := range graph.Gateway.Listeners {
@@ -189,10 +189,10 @@ func buildWarnings(graph *graph, upstreams map[string]Upstream) Warnings {
 	return warnings
 }
 
-func buildBackendGroups(listeners map[string]*listener) []BackendGroup {
+func buildBackendGroups(listeners map[string]*graph.Listener) []graph.BackendGroup {
 	// There can be duplicate backend groups if a route is attached to multiple listeners.
 	// We use a map to deduplicate them.
-	uniqueGroups := make(map[string]BackendGroup)
+	uniqueGroups := make(map[string]graph.BackendGroup)
 
 	for _, l := range listeners {
 
@@ -215,7 +215,7 @@ func buildBackendGroups(listeners map[string]*listener) []BackendGroup {
 		return nil
 	}
 
-	groups := make([]BackendGroup, 0, numGroups)
+	groups := make([]graph.BackendGroup, 0, numGroups)
 	for _, group := range uniqueGroups {
 		groups = append(groups, group)
 	}
@@ -223,7 +223,7 @@ func buildBackendGroups(listeners map[string]*listener) []BackendGroup {
 	return groups
 }
 
-func buildServers(listeners map[string]*listener) (http, ssl []VirtualServer) {
+func buildServers(listeners map[string]*graph.Listener) (http, ssl []VirtualServer) {
 	rulesForProtocol := map[v1beta1.ProtocolType]*hostPathRules{
 		v1beta1.HTTPProtocolType:  newHostPathRules(),
 		v1beta1.HTTPSProtocolType: newHostPathRules(),
@@ -244,20 +244,20 @@ func buildServers(listeners map[string]*listener) (http, ssl []VirtualServer) {
 
 type hostPathRules struct {
 	rulesPerHost     map[string]map[string]PathRule
-	listenersForHost map[string]*listener
-	httpsListeners   []*listener
+	listenersForHost map[string]*graph.Listener
+	httpsListeners   []*graph.Listener
 	listenersExist   bool
 }
 
 func newHostPathRules() *hostPathRules {
 	return &hostPathRules{
 		rulesPerHost:     make(map[string]map[string]PathRule),
-		listenersForHost: make(map[string]*listener),
-		httpsListeners:   make([]*listener, 0),
+		listenersForHost: make(map[string]*graph.Listener),
+		httpsListeners:   make([]*graph.Listener, 0),
 	}
 }
 
-func (hpr *hostPathRules) upsertListener(l *listener) {
+func (hpr *hostPathRules) upsertListener(l *graph.Listener) {
 	hpr.listenersExist = true
 
 	if l.Source.Protocol == v1beta1.HTTPSProtocolType {
@@ -373,7 +373,7 @@ func (hpr *hostPathRules) buildServers() []VirtualServer {
 
 func buildUpstreamsMap(
 	ctx context.Context,
-	listeners map[string]*listener,
+	listeners map[string]*graph.Listener,
 	resolver resolver.ServiceResolver,
 ) map[string]Upstream {
 	// There can be duplicate upstreams if multiple routes reference the same upstream.
@@ -418,12 +418,11 @@ func buildUpstreamsMap(
 }
 
 func getListenerHostname(h *v1beta1.Hostname) string {
-	name := getHostname(h)
-	if name == "" {
+	if h == nil || *h == "" {
 		return wildcardHostname
 	}
 
-	return name
+	return string(*h)
 }
 
 func getPath(path *v1beta1.HTTPPathMatch) string {

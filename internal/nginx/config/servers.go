@@ -9,20 +9,20 @@ import (
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/config/http"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/dataplane"
 )
 
 var serversTemplate = gotemplate.Must(gotemplate.New("servers").Parse(serversTemplateText))
 
 const rootPath = "/"
 
-func executeServers(conf state.Configuration) []byte {
+func executeServers(conf dataplane.Configuration) []byte {
 	servers := createServers(conf.HTTPServers, conf.SSLServers)
 
 	return execute(serversTemplate, servers)
 }
 
-func createServers(httpServers, sslServers []state.VirtualServer) []http.Server {
+func createServers(httpServers, sslServers []dataplane.VirtualServer) []http.Server {
 	servers := make([]http.Server, 0, len(httpServers)+len(sslServers))
 
 	for _, s := range httpServers {
@@ -36,7 +36,7 @@ func createServers(httpServers, sslServers []state.VirtualServer) []http.Server 
 	return servers
 }
 
-func createSSLServer(virtualServer state.VirtualServer) http.Server {
+func createSSLServer(virtualServer dataplane.VirtualServer) http.Server {
 	if virtualServer.IsDefault {
 		return createDefaultSSLServer()
 	}
@@ -51,7 +51,7 @@ func createSSLServer(virtualServer state.VirtualServer) http.Server {
 	}
 }
 
-func createServer(virtualServer state.VirtualServer) http.Server {
+func createServer(virtualServer dataplane.VirtualServer) http.Server {
 	if virtualServer.IsDefault {
 		return createDefaultHTTPServer()
 	}
@@ -62,7 +62,7 @@ func createServer(virtualServer state.VirtualServer) http.Server {
 	}
 }
 
-func createLocations(pathRules []state.PathRule, listenerPort int) []http.Location {
+func createLocations(pathRules []dataplane.PathRule, listenerPort int) []http.Location {
 	lenPathRules := len(pathRules)
 
 	if lenPathRules == 0 {

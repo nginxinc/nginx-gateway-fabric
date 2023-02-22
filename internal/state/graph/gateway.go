@@ -1,38 +1,105 @@
-package state
+package graph
 
 import (
 	"errors"
 	"fmt"
+	"sort"
 	"strings"
 
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/validation"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
+	nkgsort "github.com/nginxinc/nginx-kubernetes-gateway/internal/sort"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/conditions"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/secrets"
 )
 
-// listener represents a listener of the Gateway resource.
+// Gateway represents the winning Gateway resource.
+type Gateway struct {
+	// Source is the corresponding Gateway resource.
+	Source *v1beta1.Gateway
+	// Listeners include the listeners of the Gateway.
+	Listeners map[string]*Listener
+}
+
+// Listener represents a Listener of the Gateway resource.
 // FIXME(pleshakov) For now, we only support HTTP and HTTPS listeners.
-type listener struct {
-	// Source holds the source of the listener from the Gateway resource.
+type Listener struct {
+	// Source holds the source of the Listener from the Gateway resource.
 	Source v1beta1.Listener
-	// Routes holds the routes attached to the listener.
-	Routes map[types.NamespacedName]*route
-	// AcceptedHostnames is an intersection between the hostnames supported by the listener and the hostnames
+	// Routes holds the routes attached to the Listener.
+	Routes map[types.NamespacedName]*Route
+	// AcceptedHostnames is an intersection between the hostnames supported by the Listener and the hostnames
 	// from the attached routes.
 	AcceptedHostnames map[string]struct{}
 	// SecretPath is the path to the secret on disk.
 	SecretPath string
-	// Conditions holds the conditions of the listener.
+	// Conditions holds the conditions of the Listener.
 	Conditions []conditions.Condition
-	// Valid shows whether the listener is valid.
-	// A listener is considered valid if NKG can generate valid NGINX configuration for it.
+	// Valid shows whether the Listener is valid.
+	// A Listener is considered valid if NKG can generate valid NGINX configuration for it.
 	Valid bool
 }
 
+// processGateways determines which Gateway resource the NGINX Gateway will use (the winner) and which Gateway(s) will
+// be ignored. Note that the function will not take into the account any unrelated Gateway resources - the ones with the
+// different GatewayClassName field.
+func processGateways(
+	gws map[types.NamespacedName]*v1beta1.Gateway,
+	gcName string,
+) (winner *v1beta1.Gateway, ignoredGateways map[types.NamespacedName]*v1beta1.Gateway) {
+	referencedGws := make([]*v1beta1.Gateway, 0, len(gws))
+
+	for _, gw := range gws {
+		if string(gw.Spec.GatewayClassName) != gcName {
+			continue
+		}
+
+		referencedGws = append(referencedGws, gw)
+	}
+
+	if len(referencedGws) == 0 {
+		return nil, nil
+	}
+
+	sort.Slice(referencedGws, func(i, j int) bool {
+		return nkgsort.LessObjectMeta(&referencedGws[i].ObjectMeta, &referencedGws[j].ObjectMeta)
+	})
+
+	ignoredGws := make(map[types.NamespacedName]*v1beta1.Gateway)
+
+	for _, gw := range referencedGws[1:] {
+		ignoredGws[client.ObjectKeyFromObject(gw)] = gw
+	}
+
+	return referencedGws[0], ignoredGws
+}
+
+func buildListeners(
+	gw *v1beta1.Gateway,
+	gcName string,
+	secretMemoryMgr secrets.SecretDiskMemoryManager,
+) map[string]*Listener {
+	listeners := make(map[string]*Listener)
+
+	if gw == nil || string(gw.Spec.GatewayClassName) != gcName {
+		return listeners
+	}
+
+	listenerFactory := newListenerConfiguratorFactory(gw, secretMemoryMgr)
+
+	for _, gl := range gw.Spec.Listeners {
+		configurator := listenerFactory.getConfiguratorForListener(gl)
+		listeners[string(gl.Name)] = configurator.configure(gl)
+	}
+
+	return listeners
+}
+
 type listenerConfigurator interface {
-	configure(listener v1beta1.Listener) *listener
+	configure(listener v1beta1.Listener) *Listener
 }
 
 type listenerConfiguratorFactory struct {
@@ -53,7 +120,7 @@ func (f *listenerConfiguratorFactory) getConfiguratorForListener(l v1beta1.Liste
 
 func newListenerConfiguratorFactory(
 	gw *v1beta1.Gateway,
-	secretMemoryMgr SecretDiskMemoryManager,
+	secretMemoryMgr secrets.SecretDiskMemoryManager,
 ) *listenerConfiguratorFactory {
 	return &listenerConfiguratorFactory{
 		https: newHTTPSListenerConfigurator(gw, secretMemoryMgr),
@@ -63,14 +130,14 @@ func newListenerConfiguratorFactory(
 
 type httpListenerConfigurator struct {
 	gateway         *v1beta1.Gateway
-	secretMemoryMgr SecretDiskMemoryManager
-	usedHostnames   map[string]*listener
+	secretMemoryMgr secrets.SecretDiskMemoryManager
+	usedHostnames   map[string]*Listener
 	validate        func(gl v1beta1.Listener) []conditions.Condition
 }
 
 func newHTTPListenerConfigurator(gw *v1beta1.Gateway) *httpListenerConfigurator {
 	return &httpListenerConfigurator{
-		usedHostnames: make(map[string]*listener),
+		usedHostnames: make(map[string]*Listener),
 		gateway:       gw,
 		validate:      validateHTTPListener,
 	}
@@ -78,12 +145,12 @@ func newHTTPListenerConfigurator(gw *v1beta1.Gateway) *httpListenerConfigurator 
 
 func newHTTPSListenerConfigurator(
 	gateway *v1beta1.Gateway,
-	secretMemoryMgr SecretDiskMemoryManager,
+	secretMemoryMgr secrets.SecretDiskMemoryManager,
 ) *httpListenerConfigurator {
 	return &httpListenerConfigurator{
 		gateway:         gateway,
 		secretMemoryMgr: secretMemoryMgr,
-		usedHostnames:   make(map[string]*listener),
+		usedHostnames:   make(map[string]*Listener),
 		validate: func(gl v1beta1.Listener) []conditions.Condition {
 			return validateHTTPSListener(gl, gateway.Namespace)
 		},
@@ -110,7 +177,7 @@ func validateListener(
 	return conds, validHostnameErr == nil
 }
 
-func (c *httpListenerConfigurator) ensureUniqueHostnamesAmongListeners(l *listener) {
+func (c *httpListenerConfigurator) ensureUniqueHostnamesAmongListeners(l *Listener) {
 	h := getHostname(l.Source.Hostname)
 
 	if holder, exist := c.usedHostnames[h]; exist {
@@ -132,7 +199,7 @@ func (c *httpListenerConfigurator) ensureUniqueHostnamesAmongListeners(l *listen
 	c.usedHostnames[h] = l
 }
 
-func (c *httpListenerConfigurator) loadSecretIntoListener(l *listener) {
+func (c *httpListenerConfigurator) loadSecretIntoListener(l *Listener) {
 	if !l.Valid {
 		return
 	}
@@ -152,13 +219,13 @@ func (c *httpListenerConfigurator) loadSecretIntoListener(l *listener) {
 	}
 }
 
-func (c *httpListenerConfigurator) configure(gl v1beta1.Listener) *listener {
+func (c *httpListenerConfigurator) configure(gl v1beta1.Listener) *Listener {
 	conds, validHostname := validateListener(gl, c.gateway, c.validate)
 
-	l := &listener{
+	l := &Listener{
 		Source:            gl,
 		Valid:             len(conds) == 0,
-		Routes:            make(map[types.NamespacedName]*route),
+		Routes:            make(map[types.NamespacedName]*Route),
 		AcceptedHostnames: make(map[string]struct{}),
 		Conditions:        conds,
 	}
@@ -180,14 +247,14 @@ func newInvalidProtocolListenerConfigurator() *invalidProtocolListenerConfigurat
 	return &invalidProtocolListenerConfigurator{}
 }
 
-func (c *invalidProtocolListenerConfigurator) configure(gl v1beta1.Listener) *listener {
+func (c *invalidProtocolListenerConfigurator) configure(gl v1beta1.Listener) *Listener {
 	msg := fmt.Sprintf("Protocol %q is not supported, use %q or %q",
 		gl.Protocol, v1beta1.HTTPProtocolType, v1beta1.HTTPSProtocolType)
 
-	return &listener{
+	return &Listener{
 		Source:            gl,
 		Valid:             false,
-		Routes:            make(map[types.NamespacedName]*route),
+		Routes:            make(map[types.NamespacedName]*Route),
 		AcceptedHostnames: make(map[string]struct{}),
 		Conditions: []conditions.Condition{
 			conditions.NewListenerUnsupportedProtocol(msg),

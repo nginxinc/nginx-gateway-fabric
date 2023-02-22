@@ -10,6 +10,7 @@ import (
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/helpers"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/conditions"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/graph"
 )
 
 func TestBuildStatuses(t *testing.T) {
@@ -18,16 +19,16 @@ func TestBuildStatuses(t *testing.T) {
 		Status: metav1.ConditionTrue,
 	}
 
-	listeners := map[string]*listener{
+	listeners := map[string]*graph.Listener{
 		"listener-80-1": {
 			Valid: true,
-			Routes: map[types.NamespacedName]*route{
+			Routes: map[types.NamespacedName]*graph.Route{
 				{Namespace: "test", Name: "hr-1"}: {},
 			},
 		},
 	}
 
-	routes := map[types.NamespacedName]*route{
+	routes := map[types.NamespacedName]*graph.Route{
 		{Namespace: "test", Name: "hr-1"}: {
 			Source: &v1beta1.HTTPRoute{
 				ObjectMeta: metav1.ObjectMeta{
@@ -43,7 +44,7 @@ func TestBuildStatuses(t *testing.T) {
 		},
 	}
 
-	routesAllRefsInvalid := map[types.NamespacedName]*route{
+	routesAllRefsInvalid := map[types.NamespacedName]*graph.Route{
 		{Namespace: "test", Name: "hr-1"}: {
 			Source: &v1beta1.HTTPRoute{
 				ObjectMeta: metav1.ObjectMeta{
@@ -74,19 +75,19 @@ func TestBuildStatuses(t *testing.T) {
 	}
 
 	tests := []struct {
-		graph    *graph
+		graph    *graph.Graph
 		expected Statuses
 		name     string
 	}{
 		{
-			graph: &graph{
-				GatewayClass: &gatewayClass{
+			graph: &graph.Graph{
+				GatewayClass: &graph.GatewayClass{
 					Source: &v1beta1.GatewayClass{
 						ObjectMeta: metav1.ObjectMeta{Generation: 1},
 					},
 					Valid: true,
 				},
-				Gateway: &gateway{
+				Gateway: &graph.Gateway{
 					Source:    gw,
 					Listeners: listeners,
 				},
@@ -133,9 +134,9 @@ func TestBuildStatuses(t *testing.T) {
 			name: "normal case",
 		},
 		{
-			graph: &graph{
+			graph: &graph.Graph{
 				GatewayClass: nil,
-				Gateway: &gateway{
+				Gateway: &graph.Gateway{
 					Source:    gw,
 					Listeners: listeners,
 				},
@@ -186,15 +187,15 @@ func TestBuildStatuses(t *testing.T) {
 			name: "gatewayclass doesn't exist",
 		},
 		{
-			graph: &graph{
-				GatewayClass: &gatewayClass{
+			graph: &graph.Graph{
+				GatewayClass: &graph.GatewayClass{
 					Source: &v1beta1.GatewayClass{
 						ObjectMeta: metav1.ObjectMeta{Generation: 1},
 					},
 					Valid:    false,
 					ErrorMsg: "error",
 				},
-				Gateway: &gateway{
+				Gateway: &graph.Gateway{
 					Source:    gw,
 					Listeners: listeners,
 				},
@@ -249,8 +250,8 @@ func TestBuildStatuses(t *testing.T) {
 			name: "gatewayclass is not valid",
 		},
 		{
-			graph: &graph{
-				GatewayClass: &gatewayClass{
+			graph: &graph.Graph{
+				GatewayClass: &graph.GatewayClass{
 					Source: &v1beta1.GatewayClass{
 						ObjectMeta: metav1.ObjectMeta{Generation: 1},
 					},

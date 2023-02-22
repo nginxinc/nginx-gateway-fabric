@@ -1,4 +1,4 @@
-package state
+package graph
 
 import (
 	"testing"
@@ -214,7 +214,7 @@ func TestResolveBackendRefs(t *testing.T) {
 	hr3 := createRoute("hr3", "NotService", "not-svc")
 	hr4 := removeRefs(createRoute("hr4", "Service", "no-backend-refs"))
 
-	routes := map[types.NamespacedName]*route{
+	routes := map[types.NamespacedName]*Route{
 		{Namespace: "test", Name: "hr1"}: {
 			Source: hr1,
 		},
@@ -241,7 +241,7 @@ func TestResolveBackendRefs(t *testing.T) {
 		{Namespace: "test", Name: "svc4"}: svc4,
 	}
 
-	expRoutes := map[types.NamespacedName]*route{
+	expRoutes := map[types.NamespacedName]*Route{
 		{Namespace: "test", Name: "hr1"}: {
 			Source: hr1,
 			BackendGroups: []BackendGroup{

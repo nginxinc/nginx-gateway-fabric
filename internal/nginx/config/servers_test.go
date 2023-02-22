@@ -14,12 +14,13 @@ import (
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/helpers"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/config/http"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/dataplane"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/graph"
 )
 
 func TestExecuteServers(t *testing.T) {
-	conf := state.Configuration{
-		HTTPServers: []state.VirtualServer{
+	conf := dataplane.Configuration{
+		HTTPServers: []dataplane.VirtualServer{
 			{
 				IsDefault: true,
 			},
@@ -30,19 +31,19 @@ func TestExecuteServers(t *testing.T) {
 				Hostname: "cafe.example.com",
 			},
 		},
-		SSLServers: []state.VirtualServer{
+		SSLServers: []dataplane.VirtualServer{
 			{
 				IsDefault: true,
 			},
 			{
 				Hostname: "example.com",
-				SSL: &state.SSL{
+				SSL: &dataplane.SSL{
 					CertificatePath: "cert-path",
 				},
 			},
 			{
 				Hostname: "cafe.example.com",
-				SSL: &state.SSL{
+				SSL: &dataplane.SSL{
 					CertificatePath: "cert-path",
 				},
 			},
@@ -75,19 +76,19 @@ func TestExecuteServers(t *testing.T) {
 func TestExecuteForDefaultServers(t *testing.T) {
 	testcases := []struct {
 		msg         string
-		conf        state.Configuration
+		conf        dataplane.Configuration
 		httpDefault bool
 		sslDefault  bool
 	}{
 		{
-			conf:        state.Configuration{},
+			conf:        dataplane.Configuration{},
 			httpDefault: false,
 			sslDefault:  false,
 			msg:         "no default servers",
 		},
 		{
-			conf: state.Configuration{
-				HTTPServers: []state.VirtualServer{
+			conf: dataplane.Configuration{
+				HTTPServers: []dataplane.VirtualServer{
 					{
 						IsDefault: true,
 					},
@@ -98,8 +99,8 @@ func TestExecuteForDefaultServers(t *testing.T) {
 			msg:         "only HTTP default server",
 		},
 		{
-			conf: state.Configuration{
-				SSLServers: []state.VirtualServer{
+			conf: dataplane.Configuration{
+				SSLServers: []dataplane.VirtualServer{
 					{
 						IsDefault: true,
 					},
@@ -110,13 +111,13 @@ func TestExecuteForDefaultServers(t *testing.T) {
 			msg:         "only HTTPS default server",
 		},
 		{
-			conf: state.Configuration{
-				HTTPServers: []state.VirtualServer{
+			conf: dataplane.Configuration{
+				HTTPServers: []dataplane.VirtualServer{
 					{
 						IsDefault: true,
 					},
 				},
-				SSLServers: []state.VirtualServer{
+				SSLServers: []dataplane.VirtualServer{
 					{
 						IsDefault: true,
 					},
@@ -276,10 +277,10 @@ func TestCreateServers(t *testing.T) {
 
 	hrNsName := types.NamespacedName{Namespace: hr.Namespace, Name: hr.Name}
 
-	fooGroup := state.BackendGroup{
+	fooGroup := graph.BackendGroup{
 		Source:  hrNsName,
 		RuleIdx: 0,
-		Backends: []state.BackendRef{
+		Backends: []graph.BackendRef{
 			{
 				Name:   "test_foo_80",
 				Valid:  true,
@@ -289,10 +290,10 @@ func TestCreateServers(t *testing.T) {
 	}
 
 	// barGroup has two backends, which should generate a proxy pass with a variable.
-	barGroup := state.BackendGroup{
+	barGroup := graph.BackendGroup{
 		Source:  hrNsName,
 		RuleIdx: 1,
-		Backends: []state.BackendRef{
+		Backends: []graph.BackendRef{
 			{
 				Name:   "test_bar_80",
 				Valid:  true,
@@ -307,10 +308,10 @@ func TestCreateServers(t *testing.T) {
 	}
 
 	// baz group has an invalid backend, which should generate a proxy pass to the invalid ref backend.
-	bazGroup := state.BackendGroup{
+	bazGroup := graph.BackendGroup{
 		Source:  hrNsName,
 		RuleIdx: 2,
-		Backends: []state.BackendRef{
+		Backends: []graph.BackendRef{
 			{
 				Name:   "test_baz_80",
 				Valid:  false,
@@ -319,14 +320,14 @@ func TestCreateServers(t *testing.T) {
 		},
 	}
 
-	filterGroup1 := state.BackendGroup{Source: hrNsName, RuleIdx: 3}
+	filterGroup1 := graph.BackendGroup{Source: hrNsName, RuleIdx: 3}
 
-	filterGroup2 := state.BackendGroup{Source: hrNsName, RuleIdx: 4}
+	filterGroup2 := graph.BackendGroup{Source: hrNsName, RuleIdx: 4}
 
-	cafePathRules := []state.PathRule{
+	cafePathRules := []dataplane.PathRule{
 		{
 			Path: "/",
-			MatchRules: []state.MatchRule{
+			MatchRules: []dataplane.MatchRule{
 				{
 					MatchIdx:     0,
 					RuleIdx:      0,
@@ -349,7 +350,7 @@ func TestCreateServers(t *testing.T) {
 		},
 		{
 			Path: "/test",
-			MatchRules: []state.MatchRule{
+			MatchRules: []dataplane.MatchRule{
 				{
 					MatchIdx:     0,
 					RuleIdx:      1,
@@ -360,7 +361,7 @@ func TestCreateServers(t *testing.T) {
 		},
 		{
 			Path: "/path-only",
-			MatchRules: []state.MatchRule{
+			MatchRules: []dataplane.MatchRule{
 				{
 					MatchIdx:     0,
 					RuleIdx:      2,
@@ -371,12 +372,12 @@ func TestCreateServers(t *testing.T) {
 		},
 		{
 			Path: "/redirect-implicit-port",
-			MatchRules: []state.MatchRule{
+			MatchRules: []dataplane.MatchRule{
 				{
 					MatchIdx: 0,
 					RuleIdx:  3,
 					Source:   hr,
-					Filters: state.Filters{
+					Filters: dataplane.Filters{
 						RequestRedirect: &v1beta1.HTTPRequestRedirectFilter{
 							Hostname: (*v1beta1.PreciseHostname)(helpers.GetStringPointer("foo.example.com")),
 						},
@@ -387,12 +388,12 @@ func TestCreateServers(t *testing.T) {
 		},
 		{
 			Path: "/redirect-explicit-port",
-			MatchRules: []state.MatchRule{
+			MatchRules: []dataplane.MatchRule{
 				{
 					MatchIdx: 0,
 					RuleIdx:  4,
 					Source:   hr,
-					Filters: state.Filters{
+					Filters: dataplane.Filters{
 						RequestRedirect: &v1beta1.HTTPRequestRedirectFilter{
 							Hostname: (*v1beta1.PreciseHostname)(helpers.GetStringPointer("bar.example.com")),
 							Port:     (*v1beta1.PortNumber)(helpers.GetInt32Pointer(8080)),
@@ -404,7 +405,7 @@ func TestCreateServers(t *testing.T) {
 		},
 	}
 
-	httpServers := []state.VirtualServer{
+	httpServers := []dataplane.VirtualServer{
 		{
 			IsDefault: true,
 		},
@@ -414,13 +415,13 @@ func TestCreateServers(t *testing.T) {
 		},
 	}
 
-	sslServers := []state.VirtualServer{
+	sslServers := []dataplane.VirtualServer{
 		{
 			IsDefault: true,
 		},
 		{
 			Hostname:  "cafe.example.com",
-			SSL:       &state.SSL{CertificatePath: certPath},
+			SSL:       &dataplane.SSL{CertificatePath: certPath},
 			PathRules: cafePathRules,
 		},
 	}
@@ -577,10 +578,10 @@ func TestCreateLocationsRootPath(t *testing.T) {
 
 	hrNsName := types.NamespacedName{Namespace: "test", Name: "route1"}
 
-	fooGroup := state.BackendGroup{
+	fooGroup := graph.BackendGroup{
 		Source:  hrNsName,
 		RuleIdx: 0,
-		Backends: []state.BackendRef{
+		Backends: []graph.BackendRef{
 			{
 				Name:   "test_foo_80",
 				Valid:  true,
@@ -589,11 +590,11 @@ func TestCreateLocationsRootPath(t *testing.T) {
 		},
 	}
 
-	getPathRules := func(source *v1beta1.HTTPRoute, rootPath bool) []state.PathRule {
-		rules := []state.PathRule{
+	getPathRules := func(source *v1beta1.HTTPRoute, rootPath bool) []dataplane.PathRule {
+		rules := []dataplane.PathRule{
 			{
 				Path: "/path-1",
-				MatchRules: []state.MatchRule{
+				MatchRules: []dataplane.MatchRule{
 					{
 						Source:       source,
 						BackendGroup: fooGroup,
@@ -604,7 +605,7 @@ func TestCreateLocationsRootPath(t *testing.T) {
 			},
 			{
 				Path: "/path-2",
-				MatchRules: []state.MatchRule{
+				MatchRules: []dataplane.MatchRule{
 					{
 						Source:       source,
 						BackendGroup: fooGroup,
@@ -616,9 +617,9 @@ func TestCreateLocationsRootPath(t *testing.T) {
 		}
 
 		if rootPath {
-			rules = append(rules, state.PathRule{
+			rules = append(rules, dataplane.PathRule{
 				Path: "/",
-				MatchRules: []state.MatchRule{
+				MatchRules: []dataplane.MatchRule{
 					{
 						Source:       source,
 						BackendGroup: fooGroup,
@@ -634,7 +635,7 @@ func TestCreateLocationsRootPath(t *testing.T) {
 
 	tests := []struct {
 		name         string
-		pathRules    []state.PathRule
+		pathRules    []dataplane.PathRule
 		expLocations []http.Location
 	}{
 		{

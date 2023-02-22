@@ -20,6 +20,8 @@ import (
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/file/filefakes"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/runtime/runtimefakes"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/dataplane"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/secrets/secretsfakes"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/statefakes"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/status/statusfakes"
 )
@@ -40,15 +42,15 @@ var _ = Describe("EventHandler", func() {
 	var (
 		handler                 *events.EventHandlerImpl
 		fakeProcessor           *statefakes.FakeChangeProcessor
-		fakeSecretStore         *statefakes.FakeSecretStore
-		fakeSecretMemoryManager *statefakes.FakeSecretDiskMemoryManager
+		fakeSecretStore         *secretsfakes.FakeSecretStore
+		fakeSecretMemoryManager *secretsfakes.FakeSecretDiskMemoryManager
 		fakeGenerator           *configfakes.FakeGenerator
 		fakeNginxFileMgr        *filefakes.FakeManager
 		fakeNginxRuntimeMgr     *runtimefakes.FakeManager
 		fakeStatusUpdater       *statusfakes.FakeUpdater
 	)
 
-	expectReconfig := func(expectedConf state.Configuration, expectedCfg []byte, expectedStatuses state.Statuses) {
+	expectReconfig := func(expectedConf dataplane.Configuration, expectedCfg []byte, expectedStatuses state.Statuses) {
 		Expect(fakeProcessor.ProcessCallCount()).Should(Equal(1))
 
 		Expect(fakeGenerator.GenerateCallCount()).Should(Equal(1))
@@ -68,8 +70,8 @@ var _ = Describe("EventHandler", func() {
 
 	BeforeEach(func() {
 		fakeProcessor = &statefakes.FakeChangeProcessor{}
-		fakeSecretMemoryManager = &statefakes.FakeSecretDiskMemoryManager{}
-		fakeSecretStore = &statefakes.FakeSecretStore{}
+		fakeSecretMemoryManager = &secretsfakes.FakeSecretDiskMemoryManager{}
+		fakeSecretStore = &secretsfakes.FakeSecretStore{}
 		fakeGenerator = &configfakes.FakeGenerator{}
 		fakeNginxFileMgr = &filefakes.FakeManager{}
 		fakeNginxRuntimeMgr = &runtimefakes.FakeManager{}
@@ -91,7 +93,7 @@ var _ = Describe("EventHandler", func() {
 		DescribeTable(
 			"A batch with one event",
 			func(e interface{}) {
-				fakeConf := state.Configuration{}
+				fakeConf := dataplane.Configuration{}
 				fakeStatuses := state.Statuses{}
 				changed := true
 				fakeProcessor.ProcessReturns(changed, fakeConf, fakeStatuses)
@@ -256,7 +258,7 @@ var _ = Describe("EventHandler", func() {
 		batch = append(batch, upserts...)
 		batch = append(batch, deletes...)
 
-		fakeConf := state.Configuration{}
+		fakeConf := dataplane.Configuration{}
 		changed := true
 		fakeStatuses := state.Statuses{}
 		fakeProcessor.ProcessReturns(changed, fakeConf, fakeStatuses)

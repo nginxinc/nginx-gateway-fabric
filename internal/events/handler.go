@@ -13,6 +13,8 @@ import (
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/file"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/runtime"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/dataplane"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/secrets"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/status"
 )
 
@@ -30,9 +32,9 @@ type EventHandlerConfig struct {
 	// Processor is the state ChangeProcessor.
 	Processor state.ChangeProcessor
 	// SecretStore is the state SecretStore.
-	SecretStore state.SecretStore
+	SecretStore secrets.SecretStore
 	// SecretMemoryManager is the state SecretMemoryManager.
-	SecretMemoryManager state.SecretDiskMemoryManager
+	SecretMemoryManager secrets.SecretDiskMemoryManager
 	// Generator is the nginx config Generator.
 	Generator config.Generator
 	// NginxFileMgr is the file Manager for nginx.
@@ -88,7 +90,7 @@ func (h *EventHandlerImpl) HandleEventBatch(ctx context.Context, batch EventBatc
 	h.cfg.StatusUpdater.Update(ctx, statuses)
 }
 
-func (h *EventHandlerImpl) updateNginx(ctx context.Context, conf state.Configuration) error {
+func (h *EventHandlerImpl) updateNginx(ctx context.Context, conf dataplane.Configuration) error {
 	// Write all secrets (nuke and pave).
 	// This will remove all secrets in the secrets directory before writing the requested secrets.
 	// FIXME(kate-osborn): We may want to rethink this approach in the future and write and remove secrets individually.

@@ -27,6 +27,7 @@ import (
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/relationship"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/resolver"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/secrets"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/status"
 )
 
@@ -118,8 +119,8 @@ func Start(cfg config.Config) error {
 		}
 	}
 
-	secretStore := state.NewSecretStore()
-	secretMemoryMgr := state.NewSecretDiskMemoryManager(secretsFolder, secretStore)
+	secretStore := secrets.NewSecretStore()
+	secretMemoryMgr := secrets.NewSecretDiskMemoryManager(secretsFolder, secretStore)
 
 	processor := state.NewChangeProcessorImpl(state.ChangeProcessorConfig{
 		GatewayCtlrName:      cfg.GatewayCtlrName,
