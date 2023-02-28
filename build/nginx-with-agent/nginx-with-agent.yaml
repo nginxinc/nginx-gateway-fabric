@@ -15,6 +15,10 @@ spec:
     spec:
       serviceAccountName: default
       automountServiceAccountToken: false
+      securityContext:
+        sysctls:
+        - name: "net.ipv4.ip_unprivileged_port_start"
+          value: "0"
       containers:
       - image: docker.io/nginx-kubernetes-gateway/nginx-with-agent:edge
         imagePullPolicy: IfNotPresent
@@ -27,6 +31,6 @@ spec:
             - ALL
         ports:
         - name: http
-          containerPort: 8080
+          containerPort: 80
         - name: https
-          containerPort: 8443
+          containerPort: 443
