@@ -28,20 +28,11 @@ RUN mkdir -p /etc/nginx/secrets /var/lib/nginx /var/log/nginx \
     && chown -R 101:101 /var/log/nginx-agent /etc/nginx-agent /var/log/nginx-agent /etc/nginx-agent\
     && chmod +x /nginx-with-agent/entrypoint.sh
 
-
-# The following instructions allow nginx and nginx-debug binaries to bind to privileged ports.
-# However, adding this capability prevents the agent from reading nginx's /proc/<pid>/exe symlink which is required by
-# the agent to determine the path to the nginx binary. While we wait for a more permanent fix, we will work around this
-# by having nginx bind to non-privileged ports. See this write-up for more details: https://dxuuu.xyz/filecaps.html
-
-#RUN setcap 'cap_net_bind_service=+ep' /usr/sbin/nginx 'cap_net_bind_service=+ep' /usr/sbin/nginx-debug
-#RUN setcap -v 'cap_net_bind_service=+ep' /usr/sbin/nginx 'cap_net_bind_service=+ep' /usr/sbin/nginx-debug
-
 # Set user to 101 (nginx)
 USER 101:101
 
 STOPSIGNAL SIGTERM
 
-EXPOSE 8080 8443
+EXPOSE 80 443
 
 ENTRYPOINT ["/nginx-with-agent/entrypoint.sh"]
