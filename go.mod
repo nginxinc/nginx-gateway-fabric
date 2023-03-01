@@ -10,8 +10,8 @@ require (
 	github.com/onsi/ginkgo/v2 v2.8.4
 	github.com/onsi/gomega v1.27.2
 	github.com/spf13/pflag v1.0.5
-	k8s.io/api v0.26.1
-	k8s.io/apimachinery v0.26.1
+	k8s.io/api v0.26.2
+	k8s.io/apimachinery v0.26.2
 	k8s.io/client-go v0.26.1
 	sigs.k8s.io/controller-runtime v0.14.4
 	sigs.k8s.io/gateway-api v0.6.0
