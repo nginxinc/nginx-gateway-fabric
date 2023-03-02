@@ -50,7 +50,7 @@ jobs:
           echo "version=$(jq -r .devDependencies.prettier ${{ github.workspace }}/internal/nginx/modules/package.json)" >> $GITHUB_OUTPUT
       - name: Run Prettier on NJS code
         id: prettier-run
-        uses: rutajdash/prettier-cli-action@30325c923a7b131ab8b6c99e0aff38afaddb9643 # v1.0.0
+        uses: rutajdash/prettier-cli-action@9e27606a9e18d40b6b4a2b4159e780241d2fbb3c # v1.0.1
         with:
           config_path: ${{ github.workspace }}/internal/nginx/modules/.prettierrc
           file_pattern: ${{ github.workspace }}/internal/nginx/modules/**/*.js
