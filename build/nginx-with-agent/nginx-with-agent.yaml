@@ -14,7 +14,6 @@ spec:
         app: nginx-with-agent
     spec:
       serviceAccountName: default
-      automountServiceAccountToken: false
       securityContext:
         sysctls:
         - name: "net.ipv4.ip_unprivileged_port_start"
