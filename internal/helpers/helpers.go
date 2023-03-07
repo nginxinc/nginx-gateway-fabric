@@ -9,8 +9,8 @@ import (
 // Diff prints the diff between two structs.
 // It is useful in testing to compare two structs when they are large. In such a case, without Diff it will be difficult
 // to pinpoint the difference between the two structs.
-func Diff(x, y interface{}) string {
-	r := cmp.Diff(x, y)
+func Diff(want, got any) string {
+	r := cmp.Diff(want, got)
 
 	if r != "" {
 		return "(-want +got)\n" + r
@@ -56,4 +56,9 @@ func GetTLSModePointer(t v1beta1.TLSModeType) *v1beta1.TLSModeType {
 // GetBoolPointer takes a bool and returns a pointer to it.
 func GetBoolPointer(b bool) *bool {
 	return &b
+}
+
+// GetPointer takes a value of any type and returns a pointer to it.
+func GetPointer[T any](v T) *T {
+	return &v
 }

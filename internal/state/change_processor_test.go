@@ -24,6 +24,8 @@ import (
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/relationship"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/relationship/relationshipfakes"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/secrets/secretsfakes"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/validation"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/validation/validationfakes"
 )
 
 const (
@@ -71,6 +73,7 @@ func createRoute(
 					Matches: []v1beta1.HTTPRouteMatch{
 						{
 							Path: &v1beta1.HTTPPathMatch{
+								Type:  (*v1beta1.PathMatchType)(helpers.GetStringPointer(string(v1beta1.PathMatchPathPrefix))),
 								Value: helpers.GetStringPointer("/"),
 							},
 						},
@@ -166,6 +169,14 @@ func createBackendRef(
 	}
 }
 
+func createAlwaysValidValidators() validation.Validators {
+	http := &validationfakes.FakeHTTPFieldsValidator{}
+
+	return validation.Validators{
+		HTTPFieldsValidator: http,
+	}
+}
+
 // FIXME(kate-osborn): Consider refactoring these tests to reduce code duplication.
 var _ = Describe("ChangeProcessor", func() {
 	Describe("Normal cases of processing changes", func() {
@@ -192,6 +203,7 @@ var _ = Describe("ChangeProcessor", func() {
 				SecretMemoryManager:  fakeSecretMemoryMgr,
 				RelationshipCapturer: relationship.NewCapturerImpl(),
 				Logger:               zap.New(),
+				Validators:           createAlwaysValidValidators(),
 			})
 
 			fakeSecretMemoryMgr.RequestReturns(certificatePath, nil)
@@ -1577,6 +1589,7 @@ var _ = Describe("ChangeProcessor", func() {
 				GatewayClassName:     "my-class",
 				SecretMemoryManager:  fakeSecretMemoryMgr,
 				RelationshipCapturer: fakeRelationshipCapturer,
+				Validators:           createAlwaysValidValidators(),
 			})
 
 			gcNsName = types.NamespacedName{Name: "my-class"}
@@ -1879,6 +1892,7 @@ var _ = Describe("ChangeProcessor", func() {
 				GatewayClassName:     "my-class",
 				SecretMemoryManager:  fakeSecretMemoryMgr,
 				RelationshipCapturer: fakeRelationshipCapturer,
+				Validators:           createAlwaysValidValidators(),
 			})
 		})
 

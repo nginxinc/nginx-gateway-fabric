@@ -17,6 +17,7 @@ import (
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/relationship"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/resolver"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/secrets"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/validation"
 )
 
 //go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . ChangeProcessor
@@ -41,18 +42,20 @@ type ChangeProcessor interface {
 
 // ChangeProcessorConfig holds configuration parameters for ChangeProcessorImpl.
 type ChangeProcessorConfig struct {
-	// GatewayCtlrName is the name of the Gateway controller.
-	GatewayCtlrName string
-	// GatewayClassName is the name of the GatewayClass resource.
-	GatewayClassName string
 	// SecretMemoryManager is the secret memory manager.
 	SecretMemoryManager secrets.SecretDiskMemoryManager
 	// ServiceResolver resolves Services to Endpoints.
 	ServiceResolver resolver.ServiceResolver
 	// RelationshipCapturer captures relationships between Kubernetes API resources and Gateway API resources.
 	RelationshipCapturer relationship.Capturer
+	// Validators validate resources according to data-plane specific rules.
+	Validators validation.Validators
 	// Logger is the logger for this Change Processor.
 	Logger logr.Logger
+	// GatewayCtlrName is the name of the Gateway controller.
+	GatewayCtlrName string
+	// GatewayClassName is the name of the GatewayClass resource.
+	GatewayClassName string
 }
 
 // ChangeProcessorImpl is an implementation of ChangeProcessor.
@@ -162,6 +165,7 @@ func (c *ChangeProcessorImpl) Process(
 		c.cfg.GatewayCtlrName,
 		c.cfg.GatewayClassName,
 		c.cfg.SecretMemoryManager,
+		c.cfg.Validators,
 	)
 
 	var warnings dataplane.Warnings

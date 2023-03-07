@@ -8,19 +8,24 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	. "github.com/onsi/gomega"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/helpers"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/conditions"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/graph"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/resolver"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/resolver/resolverfakes"
 )
 
 func TestBuildConfiguration(t *testing.T) {
+	const (
+		invalidMatchesPath = "/not-valid-matches"
+		invalidFiltersPath = "/not-valid-filters"
+	)
+
 	createRoute := func(name, hostname, listenerName string, paths ...string) *v1beta1.HTTPRoute {
 		rules := make([]v1beta1.HTTPRouteRule, 0, len(paths))
 		for _, p := range paths {
@@ -57,11 +62,10 @@ func TestBuildConfiguration(t *testing.T) {
 		}
 	}
 
-	addFilters := func(hr *v1beta1.HTTPRoute, filters []v1beta1.HTTPRouteFilter) *v1beta1.HTTPRoute {
+	addFilters := func(hr *v1beta1.HTTPRoute, filters []v1beta1.HTTPRouteFilter) {
 		for i := range hr.Spec.Rules {
 			hr.Spec.Rules[i].Filters = filters
 		}
-		return hr
 	}
 
 	fooUpstreamName := "test_foo_80"
@@ -83,7 +87,11 @@ func TestBuildConfiguration(t *testing.T) {
 	fakeResolver := &resolverfakes.FakeServiceResolver{}
 	fakeResolver.ResolveReturns(fooEndpoints, nil)
 
-	createBackendGroup := func(nsname types.NamespacedName, idx int) graph.BackendGroup {
+	createBackendGroup := func(nsname types.NamespacedName, idx int, validRule bool) graph.BackendGroup {
+		if !validRule {
+			return graph.BackendGroup{}
+		}
+
 		return graph.BackendGroup{
 			Source:  nsname,
 			RuleIdx: idx,
@@ -99,16 +107,31 @@ func TestBuildConfiguration(t *testing.T) {
 		}
 	}
 
+	createRules := func(hr *v1beta1.HTTPRoute, paths []string) []graph.Rule {
+		rules := make([]graph.Rule, len(hr.Spec.Rules))
+
+		for i := range paths {
+			validMatches := paths[i] != invalidMatchesPath
+			validFilters := paths[i] != invalidFiltersPath
+			validRule := validMatches && validFilters
+
+			rules[i] = graph.Rule{
+				ValidMatches: validMatches,
+				ValidFilters: validFilters,
+				BackendGroup: createBackendGroup(types.NamespacedName{Namespace: "test", Name: hr.Name}, i, validRule),
+			}
+		}
+
+		return rules
+	}
+
 	createInternalRoute := func(
 		source *v1beta1.HTTPRoute,
-		validSectionName string,
-		groups ...graph.BackendGroup,
+		paths []string,
 	) *graph.Route {
 		r := &graph.Route{
-			Source:                 source,
-			InvalidSectionNameRefs: make(map[string]conditions.Condition),
-			ValidSectionNameRefs:   map[string]struct{}{validSectionName: {}},
-			BackendGroups:          groups,
+			Source: source,
+			Rules:  createRules(source, paths),
 		}
 		return r
 	}
@@ -117,19 +140,30 @@ func TestBuildConfiguration(t *testing.T) {
 		*v1beta1.HTTPRoute, []graph.BackendGroup, *graph.Route,
 	) {
 		hr := createRoute(name, hostname, listenerName, paths...)
-		groups := make([]graph.BackendGroup, 0, len(paths))
-		for idx := range paths {
-			groups = append(groups, createBackendGroup(types.NamespacedName{Namespace: "test", Name: name}, idx))
-		}
-
-		route := createInternalRoute(hr, listenerName, groups...)
-		return hr, groups, route
+		route := createInternalRoute(hr, paths)
+		return hr, route.GetAllBackendGroups(), route
 	}
 
 	hr1, hr1Groups, routeHR1 := createTestResources("hr-1", "foo.example.com", "listener-80-1", "/")
 	hr2, hr2Groups, routeHR2 := createTestResources("hr-2", "bar.example.com", "listener-80-1", "/")
 	hr3, hr3Groups, routeHR3 := createTestResources("hr-3", "foo.example.com", "listener-80-1", "/", "/third")
 	hr4, hr4Groups, routeHR4 := createTestResources("hr-4", "foo.example.com", "listener-80-1", "/fourth", "/")
+
+	hr5, hr5Groups, routeHR5 := createTestResources("hr-5", "foo.example.com", "listener-80-1", "/", invalidFiltersPath)
+	redirect := v1beta1.HTTPRouteFilter{
+		Type: v1beta1.HTTPRouteFilterRequestRedirect,
+		RequestRedirect: &v1beta1.HTTPRequestRedirectFilter{
+			Hostname: (*v1beta1.PreciseHostname)(helpers.GetStringPointer("foo.example.com")),
+		},
+	}
+	addFilters(hr5, []v1beta1.HTTPRouteFilter{redirect})
+
+	hr6, hr6Groups, routeHR6 := createTestResources(
+		"hr-6",
+		"foo.example.com",
+		"listener-80-1",
+		"/valid", invalidMatchesPath,
+	)
 
 	httpsHR1, httpsHR1Groups, httpsRouteHR1 := createTestResources(
 		"https-hr-1",
@@ -166,29 +200,13 @@ func TestBuildConfiguration(t *testing.T) {
 		"/",
 	)
 
-	redirect := v1beta1.HTTPRouteFilter{
-		Type: v1beta1.HTTPRouteFilterRequestRedirect,
-		RequestRedirect: &v1beta1.HTTPRequestRedirectFilter{
-			Hostname: (*v1beta1.PreciseHostname)(helpers.GetStringPointer("foo.example.com")),
-		},
-	}
-
-	hr5 := addFilters(
-		createRoute("hr-5", "foo.example.com", "listener-80-1", "/"),
-		[]v1beta1.HTTPRouteFilter{redirect},
+	httpsHR6, httpsHR6Groups, httpsRouteHR6 := createTestResources(
+		"https-hr-6",
+		"foo.example.com",
+		"listener-443-1",
+		"/valid",
+		invalidMatchesPath,
 	)
-
-	hr5BackendGroup := graph.BackendGroup{
-		Source:  types.NamespacedName{Namespace: hr5.Namespace, Name: hr5.Name},
-		RuleIdx: 0,
-	}
-
-	routeHR5 := &graph.Route{
-		Source:                 hr5,
-		InvalidSectionNameRefs: make(map[string]conditions.Condition),
-		ValidSectionNameRefs:   map[string]struct{}{"listener-80-1": {}},
-		BackendGroups:          []graph.BackendGroup{hr5BackendGroup},
-	}
 
 	listener80 := v1beta1.Listener{
 		Name:     "listener-80-1",
@@ -833,9 +851,22 @@ func TestBuildConfiguration(t *testing.T) {
 										MatchIdx:     0,
 										RuleIdx:      0,
 										Source:       hr5,
-										BackendGroup: hr5BackendGroup,
+										BackendGroup: hr5Groups[0],
 										Filters: Filters{
 											RequestRedirect: redirect.RequestRedirect,
+										},
+									},
+								},
+							},
+							{
+								Path: invalidFiltersPath,
+								MatchRules: []MatchRule{
+									{
+										MatchIdx: 0,
+										RuleIdx:  1,
+										Source:   hr5,
+										Filters: Filters{
+											InvalidFilter: &InvalidFilter{},
 										},
 									},
 								},
@@ -844,30 +875,128 @@ func TestBuildConfiguration(t *testing.T) {
 					},
 				},
 				SSLServers:    []VirtualServer{},
-				BackendGroups: []graph.BackendGroup{hr5BackendGroup},
+				Upstreams:     []Upstream{fooUpstream},
+				BackendGroups: hr5Groups,
 			},
 			msg: "one http listener with one route with filters",
+		},
+		{
+			graph: &graph.Graph{
+				GatewayClass: &graph.GatewayClass{
+					Source: &v1beta1.GatewayClass{},
+					Valid:  true,
+				},
+				Gateway: &graph.Gateway{
+					Source: &v1beta1.Gateway{},
+					Listeners: map[string]*graph.Listener{
+						"listener-80-1": {
+							Source: listener80,
+							Valid:  true,
+							Routes: map[types.NamespacedName]*graph.Route{
+								{Namespace: "test", Name: "hr-6"}: routeHR6,
+							},
+							AcceptedHostnames: map[string]struct{}{
+								"foo.example.com": {},
+							},
+						},
+						"listener-443-1": {
+							Source:     listener443,
+							Valid:      true,
+							SecretPath: secretPath,
+							Routes: map[types.NamespacedName]*graph.Route{
+								{Namespace: "test", Name: "https-hr-6"}: httpsRouteHR6,
+							},
+							AcceptedHostnames: map[string]struct{}{
+								"foo.example.com": {},
+							},
+						},
+					},
+				},
+				Routes: map[types.NamespacedName]*graph.Route{
+					{Namespace: "test", Name: "hr-6"}:       routeHR6,
+					{Namespace: "test", Name: "https-hr-6"}: httpsRouteHR6,
+				},
+			},
+			expConf: Configuration{
+				HTTPServers: []VirtualServer{
+					{
+						IsDefault: true,
+					},
+					{
+						Hostname: "foo.example.com",
+						PathRules: []PathRule{
+							{
+								Path: "/valid",
+								MatchRules: []MatchRule{
+									{
+										MatchIdx:     0,
+										RuleIdx:      0,
+										BackendGroup: hr6Groups[0],
+										Source:       hr6,
+									},
+								},
+							},
+						},
+					},
+				},
+				SSLServers: []VirtualServer{
+					{
+						IsDefault: true,
+					},
+					{
+						Hostname: "foo.example.com",
+						SSL: &SSL{
+							CertificatePath: secretPath,
+						},
+						PathRules: []PathRule{
+							{
+								Path: "/valid",
+								MatchRules: []MatchRule{
+									{
+										MatchIdx:     0,
+										RuleIdx:      0,
+										BackendGroup: httpsHR6Groups[0],
+										Source:       httpsHR6,
+									},
+								},
+							},
+						},
+					},
+					{
+						Hostname: wildcardHostname,
+						SSL:      &SSL{CertificatePath: secretPath},
+					},
+				},
+				Upstreams: []Upstream{fooUpstream},
+				BackendGroups: []graph.BackendGroup{
+					hr6Groups[0],
+					httpsHR6Groups[0],
+				},
+			},
+			msg: "one http and one https listener with routes with valid and invalid rules",
 		},
 	}
 
 	for _, test := range tests {
-		result, warns := BuildConfiguration(context.TODO(), test.graph, fakeResolver)
+		t.Run(test.msg, func(t *testing.T) {
+			result, warns := BuildConfiguration(context.TODO(), test.graph, fakeResolver)
 
-		sort.Slice(result.BackendGroups, func(i, j int) bool {
-			return result.BackendGroups[i].GroupName() < result.BackendGroups[j].GroupName()
+			sort.Slice(result.BackendGroups, func(i, j int) bool {
+				return result.BackendGroups[i].GroupName() < result.BackendGroups[j].GroupName()
+			})
+
+			sort.Slice(result.Upstreams, func(i, j int) bool {
+				return result.Upstreams[i].Name < result.Upstreams[j].Name
+			})
+
+			if diff := cmp.Diff(test.expConf, result); diff != "" {
+				t.Errorf("BuildConfiguration() %q mismatch for configuration (-want +got):\n%s", test.msg, diff)
+			}
+
+			if diff := cmp.Diff(test.expWarns, warns); diff != "" {
+				t.Errorf("BuildConfiguration() %q mismatch for warnings (-want +got):\n%s", test.msg, diff)
+			}
 		})
-
-		sort.Slice(result.Upstreams, func(i, j int) bool {
-			return result.Upstreams[i].Name < result.Upstreams[j].Name
-		})
-
-		if diff := cmp.Diff(test.expConf, result); diff != "" {
-			t.Errorf("BuildConfiguration() %q mismatch for configuration (-want +got):\n%s", test.msg, diff)
-		}
-
-		if diff := cmp.Diff(test.expWarns, warns); diff != "" {
-			t.Errorf("BuildConfiguration() %q mismatch for warnings (-want +got):\n%s", test.msg, diff)
-		}
 	}
 }
 
@@ -1070,6 +1199,20 @@ func TestGetListenerHostname(t *testing.T) {
 	}
 }
 
+func groupsToValidRules(groups ...graph.BackendGroup) []graph.Rule {
+	rules := make([]graph.Rule, 0, len(groups))
+
+	for _, group := range groups {
+		rules = append(rules, graph.Rule{
+			ValidMatches: true,
+			ValidFilters: true,
+			BackendGroup: group,
+		})
+	}
+
+	return rules
+}
+
 func TestBuildUpstreams(t *testing.T) {
 	fooEndpoints := []resolver.Endpoint{
 		{
@@ -1150,25 +1293,25 @@ func TestBuildUpstreams(t *testing.T) {
 
 	routes := map[types.NamespacedName]*graph.Route{
 		{Name: "hr1", Namespace: "test"}: {
-			BackendGroups: []graph.BackendGroup{hr1Group0, hr1Group1},
+			Rules: groupsToValidRules(hr1Group0, hr1Group1),
 		},
 		{Name: "hr2", Namespace: "test"}: {
-			BackendGroups: []graph.BackendGroup{hr2Group0, hr2Group1},
+			Rules: groupsToValidRules(hr2Group0, hr2Group1),
 		},
 		{Name: "hr3", Namespace: "test"}: {
-			BackendGroups: []graph.BackendGroup{hr3Group0},
+			Rules: groupsToValidRules(hr3Group0),
 		},
 	}
 
 	routes2 := map[types.NamespacedName]*graph.Route{
 		{Name: "hr4", Namespace: "test"}: {
-			BackendGroups: []graph.BackendGroup{hr4Group0, hr4Group1},
+			Rules: groupsToValidRules(hr4Group0, hr4Group1),
 		},
 	}
 
 	invalidRoutes := map[types.NamespacedName]*graph.Route{
 		{Name: "invalid", Namespace: "test"}: {
-			BackendGroups: []graph.BackendGroup{invalidGroup},
+			Rules: groupsToValidRules(invalidGroup),
 		},
 	}
 
@@ -1238,11 +1381,11 @@ func TestBuildUpstreams(t *testing.T) {
 		}
 	})
 
+	g := NewGomegaWithT(t)
+
 	upstreams := buildUpstreamsMap(context.TODO(), listeners, fakeResolver)
 
-	if diff := cmp.Diff(expUpstreams, upstreams); diff != "" {
-		t.Errorf("buildUpstreamsMap() mismatch (-want +got):\n%s", diff)
-	}
+	g.Expect(helpers.Diff(upstreams, expUpstreams)).To(BeEmpty())
 }
 
 func TestBuildBackendGroups(t *testing.T) {
@@ -1275,26 +1418,26 @@ func TestBuildBackendGroups(t *testing.T) {
 
 	invalidRoutes := map[types.NamespacedName]*graph.Route{
 		{Name: "invalid", Namespace: "test"}: {
-			BackendGroups: []graph.BackendGroup{hrInvalid},
+			Rules: groupsToValidRules(hrInvalid),
 		},
 	}
 
 	routes := map[types.NamespacedName]*graph.Route{
 		{Name: "hr1", Namespace: "test"}: {
-			BackendGroups: []graph.BackendGroup{hr1Rule0, hr1Rule1},
+			Rules: groupsToValidRules(hr1Rule0, hr1Rule1),
 		},
 		{Name: "hr2", Namespace: "test"}: {
-			BackendGroups: []graph.BackendGroup{hr2Rule0, hr2Rule1},
+			Rules: groupsToValidRules(hr2Rule0, hr2Rule1),
 		},
 	}
 
 	routes2 := map[types.NamespacedName]*graph.Route{
 		// this backend group is a dupe and should be ignored.
 		{Name: "hr1", Namespace: "test"}: {
-			BackendGroups: []graph.BackendGroup{hr1Rule0, hr1Rule1},
+			Rules: groupsToValidRules(hr1Rule0, hr1Rule1),
 		},
 		{Name: "hr3", Namespace: "test"}: {
-			BackendGroups: []graph.BackendGroup{hr3Rule0, hr3Rule1},
+			Rules: groupsToValidRules(hr3Rule0, hr3Rule1),
 		},
 	}
 
@@ -1322,15 +1465,11 @@ func TestBuildBackendGroups(t *testing.T) {
 		hr3Rule1,
 	}
 
+	g := NewGomegaWithT(t)
+
 	result := buildBackendGroups(listeners)
 
-	sort.Slice(result, func(i, j int) bool {
-		return result[i].GroupName() < result[j].GroupName()
-	})
-
-	if diff := helpers.Diff(expGroups, result); diff != "" {
-		t.Errorf("buildBackendGroups() mismatch: %+v", diff)
-	}
+	g.Expect(result).To(ConsistOf(expGroups))
 }
 
 func TestBuildWarnings(t *testing.T) {
@@ -1343,80 +1482,42 @@ func TestBuildWarnings(t *testing.T) {
 		return backends
 	}
 
-	createBackendGroup := func(sourceName string, backends []graph.BackendRef, errMsgs ...string) graph.BackendGroup {
+	createBackendGroup := func(sourceName string, backends []graph.BackendRef) graph.BackendGroup {
 		return graph.BackendGroup{
 			Source:   types.NamespacedName{Namespace: "test", Name: sourceName},
 			Backends: backends,
-			Errors:   errMsgs,
 		}
 	}
 
-	hr1BackendGroup0 := createBackendGroup(
-		"hr1",
-		createBackendRefs("foo"),
-		"error1-1", "error1-2", "error1-3",
-	)
-
-	hr1BackendGroup1 := createBackendGroup(
-		"hr1",
-		createBackendRefs("bar"),
-	)
-
-	hr2BackendGroup0 := createBackendGroup(
-		"hr2",
-		createBackendRefs("foo", "bar"),
-	)
-
-	hr2BackendGroup1 := createBackendGroup(
-		"hr2",
-		createBackendRefs("resolve-error"),
-		"error2",
-	)
-
-	hr3BackendGroup0 := createBackendGroup(
-		"hr3",
+	hrBackendGroup0 := createBackendGroup(
+		"hr",
 		createBackendRefs(""), // empty backend name should be skipped
-		"error3",
 	)
 
-	hr3BackendGroup1 := createBackendGroup(
-		"hr3",
+	hrBackendGroup1 := createBackendGroup(
+		"hr",
 		createBackendRefs("dne"),
 	)
 
 	hrInvalidGroup := createBackendGroup(
 		"hr-invalid",
 		createBackendRefs("invalid"),
-		"invalid",
 	)
 
-	hr1 := &v1beta1.HTTPRoute{ObjectMeta: metav1.ObjectMeta{Name: "hr1", Namespace: "test"}}
-	hr2 := &v1beta1.HTTPRoute{ObjectMeta: metav1.ObjectMeta{Name: "hr2", Namespace: "test"}}
-	hr3 := &v1beta1.HTTPRoute{ObjectMeta: metav1.ObjectMeta{Name: "hr3", Namespace: "test"}}
+	hr := &v1beta1.HTTPRoute{ObjectMeta: metav1.ObjectMeta{Name: "hr", Namespace: "test"}}
 	hrInvalid := &v1beta1.HTTPRoute{ObjectMeta: metav1.ObjectMeta{Name: "hr-invalid", Namespace: "test"}}
 
 	invalidRoutes := map[types.NamespacedName]*graph.Route{
 		{Name: "invalid", Namespace: "test"}: {
-			Source:        hrInvalid,
-			BackendGroups: []graph.BackendGroup{hrInvalidGroup},
+			Source: hrInvalid,
+			Rules:  groupsToValidRules(hrInvalidGroup),
 		},
 	}
 
 	routes := map[types.NamespacedName]*graph.Route{
-		{Name: "hr1", Namespace: "test"}: {
-			Source:        hr1,
-			BackendGroups: []graph.BackendGroup{hr1BackendGroup0, hr1BackendGroup1},
-		},
-		{Name: "hr2", Namespace: "test"}: {
-			Source:        hr2,
-			BackendGroups: []graph.BackendGroup{hr2BackendGroup0, hr2BackendGroup1},
-		},
-	}
-
-	routes2 := map[types.NamespacedName]*graph.Route{
-		{Name: "hr3", Namespace: "test"}: {
-			Source:        hr3,
-			BackendGroups: []graph.BackendGroup{hr3BackendGroup0, hr3BackendGroup1},
+		{Name: "hr", Namespace: "test"}: {
+			Source: hr,
+			Rules:  groupsToValidRules(hrBackendGroup0, hrBackendGroup1),
 		},
 	}
 
@@ -1443,38 +1544,22 @@ func TestBuildWarnings(t *testing.T) {
 					Valid:  true,
 					Routes: routes,
 				},
-				"listener2": {
-					Source: v1beta1.Listener{
-						Name: "valid2",
-					},
-					Valid:  true,
-					Routes: routes2,
-				},
 			},
 		},
 	}
 
 	expWarns := Warnings{
-		hr1: []string{
-			"invalid backend ref: error1-1",
-			"invalid backend ref: error1-2",
-			"invalid backend ref: error1-3",
-		},
-		hr2: []string{
-			"invalid backend ref: error2",
-			"cannot resolve backend ref: resolve error",
-		},
-		hr3: []string{
-			"invalid backend ref: error3",
+		hr: []string{
 			"cannot resolve backend ref; internal error: upstream dne not found in map",
 		},
 		hrInvalid: []string{"cannot configure routes for listener invalid; listener is invalid"},
 	}
 
+	g := NewGomegaWithT(t)
+
 	warns := buildWarnings(graph, upstreamMap)
-	if diff := cmp.Diff(expWarns, warns); diff != "" {
-		t.Errorf("buildWarnings() mismatch (-want +got):\n%s", diff)
-	}
+
+	g.Expect(helpers.Diff(warns, expWarns)).To(BeEmpty())
 }
 
 func TestUpstreamsMapToSlice(t *testing.T) {

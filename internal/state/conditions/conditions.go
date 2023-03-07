@@ -8,11 +8,16 @@ import (
 )
 
 const (
-	// RouteReasonInvalidListener is used with the "Accepted" condition when the route references an invalid listener.
+	// RouteReasonInvalidListener is used with the "Accepted" condition when the Route references an invalid listener.
 	RouteReasonInvalidListener v1beta1.RouteConditionReason = "InvalidListener"
+
 	// ListenerReasonUnsupportedValue is used with the "Accepted" condition when a value of a field in a Listener
 	// is invalid or not supported.
 	ListenerReasonUnsupportedValue v1beta1.ListenerConditionReason = "UnsupportedValue"
+
+	// RouteReasonBackendRefUnsupportedValue is used with the "ResolvedRefs" condition when one of the
+	// Route rules has a backendRef with an unsupported value.
+	RouteReasonBackendRefUnsupportedValue = "UnsupportedValue"
 )
 
 // Condition defines a condition to be reported in the status of resources.
@@ -80,6 +85,16 @@ func NewRouteAccepted() Condition {
 		Status:  metav1.ConditionTrue,
 		Reason:  string(v1beta1.RouteReasonAccepted),
 		Message: "The route is accepted",
+	}
+}
+
+// NewRouteUnsupportedValue returns a Condition that indicates that the HTTPRoute includes an unsupported value.
+func NewRouteUnsupportedValue(msg string) Condition {
+	return Condition{
+		Type:    string(v1beta1.RouteConditionAccepted),
+		Status:  metav1.ConditionFalse,
+		Reason:  string(v1beta1.RouteReasonUnsupportedValue),
+		Message: msg,
 	}
 }
 
@@ -201,6 +216,50 @@ func NewListenerUnsupportedProtocol(msg string) Condition {
 		Type:    string(v1beta1.ListenerConditionAccepted),
 		Status:  metav1.ConditionFalse,
 		Reason:  string(v1beta1.ListenerReasonUnsupportedProtocol),
+		Message: msg,
+	}
+}
+
+// NewRouteBackendRefInvalidKind returns a Condition that indicates that the Route has a backendRef with an
+// invalid kind.
+func NewRouteBackendRefInvalidKind(msg string) Condition {
+	return Condition{
+		Type:    string(v1beta1.RouteConditionResolvedRefs),
+		Status:  metav1.ConditionFalse,
+		Reason:  string(v1beta1.RouteReasonInvalidKind),
+		Message: msg,
+	}
+}
+
+// NewRouteBackendRefRefNotPermitted returns a Condition that indicates that the Route has a backendRef that
+// is not permitted.
+func NewRouteBackendRefRefNotPermitted(msg string) Condition {
+	return Condition{
+		Type:    string(v1beta1.RouteConditionResolvedRefs),
+		Status:  metav1.ConditionFalse,
+		Reason:  string(v1beta1.RouteReasonRefNotPermitted),
+		Message: msg,
+	}
+}
+
+// NewRouteBackendRefRefBackendNotFound returns a Condition that indicates that the Route has a backendRef that
+// points to non-existing backend.
+func NewRouteBackendRefRefBackendNotFound(msg string) Condition {
+	return Condition{
+		Type:    string(v1beta1.RouteConditionResolvedRefs),
+		Status:  metav1.ConditionFalse,
+		Reason:  string(v1beta1.RouteReasonBackendNotFound),
+		Message: msg,
+	}
+}
+
+// NewRouteBackendRefUnsupportedValue returns a Condition that indicates that the Route has a backendRef with
+// an unsupported value.
+func NewRouteBackendRefUnsupportedValue(msg string) Condition {
+	return Condition{
+		Type:    string(v1beta1.RouteConditionResolvedRefs),
+		Status:  metav1.ConditionFalse,
+		Reason:  RouteReasonBackendRefUnsupportedValue,
 		Message: msg,
 	}
 }

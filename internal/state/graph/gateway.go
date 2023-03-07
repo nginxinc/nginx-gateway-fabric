@@ -1,13 +1,10 @@
 package graph
 
 import (
-	"errors"
 	"fmt"
 	"sort"
-	"strings"
 
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/validation"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
@@ -30,6 +27,7 @@ type Listener struct {
 	// Source holds the source of the Listener from the Gateway resource.
 	Source v1beta1.Listener
 	// Routes holds the routes attached to the Listener.
+	// Only valid routes are attached.
 	Routes map[types.NamespacedName]*Route
 	// AcceptedHostnames is an intersection between the hostnames supported by the Listener and the hostnames
 	// from the attached routes.
@@ -43,13 +41,41 @@ type Listener struct {
 	Valid bool
 }
 
-// processGateways determines which Gateway resource the NGINX Gateway will use (the winner) and which Gateway(s) will
-// be ignored. Note that the function will not take into the account any unrelated Gateway resources - the ones with the
-// different GatewayClassName field.
+// processedGateways holds the resources that belong to NKG.
+type processedGateways struct {
+	Winner  *v1beta1.Gateway
+	Ignored map[types.NamespacedName]*v1beta1.Gateway
+}
+
+// GetAllNsNames returns all the NamespacedNames of the Gateway resources that belong to NKG
+func (gws processedGateways) GetAllNsNames() []types.NamespacedName {
+	winnerCnt := 0
+	if gws.Winner != nil {
+		winnerCnt = 1
+	}
+
+	length := winnerCnt + len(gws.Ignored)
+	if length == 0 {
+		return nil
+	}
+
+	allNsNames := make([]types.NamespacedName, 0, length)
+
+	if gws.Winner != nil {
+		allNsNames = append(allNsNames, client.ObjectKeyFromObject(gws.Winner))
+	}
+	for nsName := range gws.Ignored {
+		allNsNames = append(allNsNames, nsName)
+	}
+
+	return allNsNames
+}
+
+// processGateways determines which Gateway resource belong to NKG (determined by the Gateway GatewayClassName field).
 func processGateways(
 	gws map[types.NamespacedName]*v1beta1.Gateway,
 	gcName string,
-) (winner *v1beta1.Gateway, ignoredGateways map[types.NamespacedName]*v1beta1.Gateway) {
+) processedGateways {
 	referencedGws := make([]*v1beta1.Gateway, 0, len(gws))
 
 	for _, gw := range gws {
@@ -61,7 +87,7 @@ func processGateways(
 	}
 
 	if len(referencedGws) == 0 {
-		return nil, nil
+		return processedGateways{}
 	}
 
 	sort.Slice(referencedGws, func(i, j int) bool {
@@ -74,19 +100,28 @@ func processGateways(
 		ignoredGws[client.ObjectKeyFromObject(gw)] = gw
 	}
 
-	return referencedGws[0], ignoredGws
+	return processedGateways{
+		Winner:  referencedGws[0],
+		Ignored: ignoredGws,
+	}
+}
+
+func buildGateway(gw *v1beta1.Gateway, secretMemoryMgr secrets.SecretDiskMemoryManager) *Gateway {
+	if gw == nil {
+		return nil
+	}
+
+	return &Gateway{
+		Source:    gw,
+		Listeners: buildListeners(gw, secretMemoryMgr),
+	}
 }
 
 func buildListeners(
 	gw *v1beta1.Gateway,
-	gcName string,
 	secretMemoryMgr secrets.SecretDiskMemoryManager,
 ) map[string]*Listener {
 	listeners := make(map[string]*Listener)
-
-	if gw == nil || string(gw.Spec.GatewayClassName) != gcName {
-		return listeners
-	}
 
 	listenerFactory := newListenerConfiguratorFactory(gw, secretMemoryMgr)
 
@@ -338,16 +373,5 @@ func validateListenerHostname(host *v1beta1.Hostname) error {
 		return nil
 	}
 
-	// FIXME(pleshakov): For now, we don't support wildcard hostnames
-	if strings.HasPrefix(h, "*") {
-		return fmt.Errorf("wildcard hostnames are not supported")
-	}
-
-	msgs := validation.IsDNS1123Subdomain(h)
-	if len(msgs) > 0 {
-		combined := strings.Join(msgs, ",")
-		return errors.New(combined)
-	}
-
-	return nil
+	return validateHostname(h)
 }

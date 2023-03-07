@@ -14,7 +14,11 @@ import (
 
 var serversTemplate = gotemplate.Must(gotemplate.New("servers").Parse(serversTemplateText))
 
-const rootPath = "/"
+const (
+	// HeaderMatchSeparator is the separator for constructing header-based match for NJS.
+	HeaderMatchSeparator = ":"
+	rootPath             = "/"
+)
 
 func executeServers(conf dataplane.Configuration) []byte {
 	servers := createServers(conf.HTTPServers, conf.SSLServers)
@@ -106,16 +110,19 @@ func createLocations(pathRules []dataplane.PathRule, listenerPort int) []http.Lo
 				matches = append(matches, createHTTPMatch(m, path))
 			}
 
-			// FIXME(pleshakov): There could be a case when the filter has the type set but not the corresponding field.
+			if r.Filters.InvalidFilter != nil {
+				loc.Return = &http.Return{Code: http.StatusInternalServerError}
+				locs = append(locs, loc)
+				continue
+			}
+
+			// There could be a case when the filter has the type set but not the corresponding field.
 			// For example, type is v1beta1.HTTPRouteFilterRequestRedirect, but RequestRedirect field is nil.
-			// The validation webhook catches that.
-			// If it doesn't work as expected, such situation is silently handled below in findFirstFilters.
-			// Consider reporting an error. But that should be done in a separate validation layer.
+			// The imported Webhook validation webhook catches that.
 
 			// RequestRedirect and proxying are mutually exclusive.
 			if r.Filters.RequestRedirect != nil {
 				loc.Return = createReturnValForRedirectFilter(r.Filters.RequestRedirect, listenerPort)
-
 				locs = append(locs, loc)
 				continue
 			}
@@ -172,9 +179,6 @@ func createReturnValForRedirectFilter(filter *v1beta1.HTTPRequestRedirectFilter,
 		hostname = string(*filter.Hostname)
 	}
 
-	// FIXME(pleshakov): Unknown values here must result in the implementation setting the Attached Condition for
-	// the Route to  `status: False`, with a Reason of `UnsupportedValue`. In that case, all routes of the Route will be
-	// ignored. NGINX will return 500. This should be implemented in the validation layer.
 	code := http.StatusFound
 	if filter.StatusCode != nil {
 		code = http.StatusCode(*filter.StatusCode)
@@ -185,7 +189,6 @@ func createReturnValForRedirectFilter(filter *v1beta1.HTTPRequestRedirectFilter,
 		port = int(*filter.Port)
 	}
 
-	// FIXME(pleshakov): Same as the FIXME about StatusCode above.
 	scheme := "$scheme"
 	if filter.Scheme != nil {
 		scheme = *filter.Scheme
@@ -193,7 +196,7 @@ func createReturnValForRedirectFilter(filter *v1beta1.HTTPRequestRedirectFilter,
 
 	return &http.Return{
 		Code: code,
-		URL:  fmt.Sprintf("%s://%s:%d$request_uri", scheme, hostname, port),
+		Body: fmt.Sprintf("%s://%s:%d$request_uri", scheme, hostname, port),
 	}
 }
 
@@ -275,7 +278,7 @@ func createQueryParamKeyValString(p v1beta1.HTTPQueryParamMatch) string {
 // We preserve the case of the name here because NGINX allows us to look up the header names in a case-insensitive
 // manner.
 func createHeaderKeyValString(h v1beta1.HTTPHeaderMatch) string {
-	return string(h.Name) + ":" + h.Value
+	return string(h.Name) + HeaderMatchSeparator + h.Value
 }
 
 func isPathOnlyMatch(match v1beta1.HTTPRouteMatch) bool {

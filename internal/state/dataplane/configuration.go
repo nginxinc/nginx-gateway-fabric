@@ -62,8 +62,12 @@ type PathRule struct {
 	MatchRules []MatchRule
 }
 
+// InvalidFilter is a special filter for handling the case when configured filters are invalid.
+type InvalidFilter struct{}
+
 // Filters hold the filters for a MatchRule.
 type Filters struct {
+	InvalidFilter   *InvalidFilter
 	RequestRedirect *v1beta1.HTTPRequestRedirectFilter
 }
 
@@ -150,12 +154,7 @@ func buildWarnings(graph *graph.Graph, upstreams map[string]Upstream) Warnings {
 				continue
 			}
 
-			for _, group := range r.BackendGroups {
-
-				for _, errMsg := range group.Errors {
-					warnings.AddWarningf(r.Source, "invalid backend ref: %s", errMsg)
-				}
-
+			for _, group := range r.GetAllBackendGroups() {
 				for _, backend := range group.Backends {
 					if backend.Name != "" {
 						upstream, ok := upstreams[backend.Name]
@@ -201,13 +200,12 @@ func buildBackendGroups(listeners map[string]*graph.Listener) []graph.BackendGro
 		}
 
 		for _, r := range l.Routes {
-			for _, group := range r.BackendGroups {
+			for _, group := range r.GetAllBackendGroups() {
 				if _, ok := uniqueGroups[group.GroupName()]; !ok {
 					uniqueGroups[group.GroupName()] = group
 				}
 			}
 		}
-
 	}
 
 	numGroups := len(uniqueGroups)
@@ -282,7 +280,18 @@ func (hpr *hostPathRules) upsertListener(l *graph.Listener) {
 		}
 
 		for i, rule := range r.Source.Spec.Rules {
-			filters := createFilters(rule.Filters)
+			if !r.Rules[i].ValidMatches {
+				continue
+			}
+
+			var filters Filters
+			if r.Rules[i].ValidFilters {
+				filters = createFilters(rule.Filters)
+			} else {
+				filters = Filters{
+					InvalidFilter: &InvalidFilter{},
+				}
+			}
 
 			for _, h := range hostnames {
 				for j, m := range rule.Matches {
@@ -297,7 +306,7 @@ func (hpr *hostPathRules) upsertListener(l *graph.Listener) {
 						MatchIdx:     j,
 						RuleIdx:      i,
 						Source:       r.Source,
-						BackendGroup: r.BackendGroups[i],
+						BackendGroup: r.Rules[i].BackendGroup,
 						Filters:      filters,
 					})
 
@@ -387,7 +396,7 @@ func buildUpstreamsMap(
 		}
 
 		for _, route := range l.Routes {
-			for _, group := range route.BackendGroups {
+			for _, group := range route.GetAllBackendGroups() {
 				for _, backend := range group.Backends {
 					if name := backend.Name; name != "" {
 						_, exist := uniqueUpstreams[name]

@@ -36,7 +36,7 @@ server {
 		{{ end }}
 
 		{{ if $l.Return }}
-		return {{ $l.Return.Code }} {{ $l.Return.URL }};
+		return {{ $l.Return.Code }} "{{ $l.Return.Body }}";
 		{{ end }}
 
 		{{ if $l.HTTPMatchVar }}
