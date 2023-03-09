@@ -63,8 +63,8 @@ var _ = Describe("Agent Pool", func() {
 		pool.RemoveAgent("3")
 		Expect(pool.Size()).To(Equal(0))
 	})
-	When("a connector does not exist in pool", func() {
-		It("remove connector does nothing", func() {
+	When("an agent does not exist in pool", func() {
+		It("remove agent does nothing", func() {
 			Expect(pool.Size()).To(Equal(0))
 			pool.RemoveAgent("dne")
 			Expect(pool.Size()).To(Equal(0))
@@ -78,13 +78,13 @@ var _ = Describe("Agent Pool", func() {
 		pool.AddAgent(newFakeAgent("4"))
 		pool.AddAgent(newFakeAgent("5"))
 
-		addGetConn := func(id string, wg *sync.WaitGroup) {
+		addGetAgent := func(id string, wg *sync.WaitGroup) {
 			defer wg.Done()
 			pool.AddAgent(newFakeAgent(id))
 			Expect(pool.GetAgent(id).ID()).To(Equal(id))
 		}
 
-		removeGetConn := func(id string, wg *sync.WaitGroup) {
+		removeGetAgent := func(id string, wg *sync.WaitGroup) {
 			defer wg.Done()
 			Expect(pool.GetAgent(id).ID()).To(Equal(id))
 			pool.RemoveAgent(id)
@@ -98,10 +98,10 @@ var _ = Describe("Agent Pool", func() {
 			wg.Add(1)
 			// remove first five
 			if i < 5 {
-				go removeGetConn(id, wg)
+				go removeGetAgent(id, wg)
 			} else {
 				// add 10 new
-				go addGetConn(id, wg)
+				go addGetAgent(id, wg)
 			}
 		}
 
