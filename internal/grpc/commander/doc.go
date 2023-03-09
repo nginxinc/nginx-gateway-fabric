@@ -3,6 +3,7 @@ Package commander holds all the objects and methods for interacting with agents 
 
 This package includes:
 - Commander: object that implements the Commander interface.
+- Agent: interface for agent.
 - AgentManager: interface for managing agents.
 - connection: object that encapsulates a connection to an agent.
 - BidirectionalChannel: object that encapsulates the bidirectional streaming channel: CommandChannelServer.
