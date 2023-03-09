@@ -53,7 +53,7 @@ var _ = Describe("Commander", func() {
 			Expect(fakeMgr.RemoveAgentCallCount()).To(Equal(1))
 		})
 		When("server context metadata is missing UUID", func() {
-			It("errors and does not add connector", func() {
+			It("errors and does not add agent to manager", func() {
 				fakeMgr := new(commanderfakes.FakeAgentManager)
 
 				fakeServer := &commanderfakes.FakeCommander_CommandChannelServer{
@@ -72,7 +72,7 @@ var _ = Describe("Commander", func() {
 	})
 	Describe("Upload", func() {
 		When("server context metadata is missing UUID", func() {
-			It("errors and does not get connector", func() {
+			It("errors and does not get agent", func() {
 				fakeMgr := new(commanderfakes.FakeAgentManager)
 
 				fakeServer := &commanderfakes.FakeCommander_UploadServer{
@@ -88,7 +88,7 @@ var _ = Describe("Commander", func() {
 				Expect(fakeMgr.GetAgentCallCount()).To(BeZero())
 			})
 		})
-		When("connector does not exist for the server", func() {
+		When("agent does not exist for the server", func() {
 			It("errors", func() {
 				fakeMgr := new(commanderfakes.FakeAgentManager)
 
@@ -108,7 +108,7 @@ var _ = Describe("Commander", func() {
 				Expect(fakeMgr.GetAgentCallCount()).To(Equal(1))
 			})
 		})
-		When("connector for the server exists but is not registered", func() {
+		When("agent for the server exists but is not registered", func() {
 			It("errors", func() {
 				fakeMgr := &commanderfakes.FakeAgentManager{
 					GetAgentStub: func(s string) commander.Agent {
@@ -132,8 +132,8 @@ var _ = Describe("Commander", func() {
 				Expect(fakeMgr.GetAgentCallCount()).To(Equal(1))
 			})
 		})
-		When("connector for the server exists and is registered", func() {
-			It("calls ReceiveFromUploadServer on connector", func() {
+		When("agent for the server exists and is registered", func() {
+			It("calls ReceiveFromUploadServer on agent", func() {
 				fakeAgent := &commanderfakes.FakeAgent{
 					StateStub: func() commander.State {
 						return commander.StateRegistered
