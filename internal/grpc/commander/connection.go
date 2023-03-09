@@ -126,8 +126,6 @@ func (c *connection) handleCommand(cmd *proto.Command) {
 	switch cmd.Data.(type) {
 	case *proto.Command_AgentConnectRequest:
 		c.handleAgentConnectRequest(cmd)
-	case *proto.Command_DataplaneStatus:
-		c.handleDataplaneStatus(cmd)
 	default:
 		c.logger.Info("Ignoring command", "command data type", fmt.Sprintf("%T", cmd.Data))
 	}
@@ -147,18 +145,6 @@ func (c *connection) handleAgentConnectRequest(cmd *proto.Command) {
 	)
 
 	c.cmdExchanger.In() <- res
-}
-
-func (c *connection) handleDataplaneStatus(cmd *proto.Command) {
-	status := cmd.GetDataplaneStatus()
-	c.logger.Info("Received a dataplane status command", "status", status)
-
-	// FIXME(kate-osborn): this check is required because on a controller restart event the agent will re-connect but
-	// not re-register. This means we have to register the agent using the information in the first dataplane status
-	// command we receive.
-	if c.state != StateRegistered {
-		c.register(getFirstNginxID(status.GetDetails()), status.SystemId)
-	}
 }
 
 func (c *connection) register(nginxID, systemID string) {

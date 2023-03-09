@@ -141,23 +141,6 @@ func TestConnection_HandleCommand(t *testing.T) {
 			expInboundCmd: true,
 			expCmdType:    &proto.Command{Data: &proto.Command_AgentConnectResponse{}},
 		},
-		{
-			msg: "dataplane status command",
-			cmd: &proto.Command{
-				Meta: &proto.Metadata{MessageId: "msg-id"},
-				Data: &proto.Command_DataplaneStatus{
-					DataplaneStatus: &proto.DataplaneStatus{
-						SystemId: "system-id",
-						Details: []*proto.NginxDetails{
-							{
-								NginxId: "nginx-id",
-							},
-						},
-					},
-				},
-			},
-			expInboundCmd: false,
-		},
 	}
 
 	for _, test := range tests {
@@ -214,54 +197,6 @@ func TestConnection_HandleAgentConnectRequest(t *testing.T) {
 	g.Expect(agentConnResponse.Status.StatusCode).To(Equal(proto.AgentConnectStatus_CONNECT_OK))
 
 	g.Expect(conn.state).To(Equal(StateRegistered))
-}
-
-func TestConnection_HandleDataplaneStatus(t *testing.T) {
-	tests := []struct {
-		name         string
-		isRegistered bool
-	}{
-		{
-			name:         "connection is registered",
-			isRegistered: true,
-		},
-		{
-			name:         "connection is not registered",
-			isRegistered: false,
-		},
-	}
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			g := NewGomegaWithT(t)
-
-			conn := newConnection(
-				"conn-id",
-				zap.New(),
-				new(exchangerfakes.FakeCommandExchanger),
-			)
-
-			if test.isRegistered {
-				conn.state = StateRegistered
-			}
-
-			conn.handleDataplaneStatus(&proto.Command{
-				Meta: &proto.Metadata{MessageId: "msg-id"},
-				Data: &proto.Command_DataplaneStatus{
-					DataplaneStatus: &proto.DataplaneStatus{
-						SystemId: "system-id",
-						Details: []*proto.NginxDetails{
-							{
-								NginxId: "nginx-id",
-							},
-						},
-					},
-				},
-			})
-
-			g.Expect(conn.state).To(Equal(StateRegistered))
-		})
-	}
 }
 
 func TestConnection_Register(t *testing.T) {
