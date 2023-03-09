@@ -11,6 +11,7 @@ require (
 	github.com/onsi/ginkgo/v2 v2.9.0
 	github.com/onsi/gomega v1.27.2
 	github.com/spf13/pflag v1.0.5
+	golang.org/x/sync v0.1.0
 	google.golang.org/grpc v1.52.0
 	k8s.io/api v0.26.2
 	k8s.io/apimachinery v0.26.2
