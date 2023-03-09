@@ -27,8 +27,8 @@ const (
 	StateInvalid
 )
 
-// Connection represents a connection to an agent.
-type Connection struct {
+// connection represents a connection to an agent.
+type connection struct {
 	cmdExchanger exchanger.CommandExchanger
 	logger       logr.Logger
 	id           string
@@ -37,70 +37,18 @@ type Connection struct {
 	state        State
 }
 
-// NewConnection creates a new instance of Connection.
-//
-// id is the unique ID of the connection.
-// cmdExchanger sends and receives commands to and from the CommandChannelServer.
-//
-// The creator of Connection must call its run method in order for the Connection send and receive commands.
-func NewConnection(
-	id string,
-	logger logr.Logger,
-	cmdExchanger exchanger.CommandExchanger,
-) *Connection {
-	return &Connection{
-		logger:       logger.WithName(fmt.Sprintf("connection-%s", id)),
-		cmdExchanger: cmdExchanger,
-		id:           id,
-	}
-}
-
-// run is a blocking method that kicks off the Connection's receive loop and the CommandExchanger's Run loop.
-// run will return when the context is canceled or if either loop returns an error.
-func (c *Connection) run(parent context.Context) error {
-	eg, ctx := errgroup.WithContext(parent)
-
-	eg.Go(func() error {
-		return c.receive(ctx)
-	})
-
-	eg.Go(func() error {
-		return c.cmdExchanger.Run(ctx)
-	})
-
-	return eg.Wait()
-}
-
-// State returns the state of the Connection.
-func (c *Connection) State() State {
-	return c.state
-}
-
-// ID returns the unique ID of the Connection.
-func (c *Connection) ID() string {
+func (c *connection) ID() string {
 	return c.id
 }
 
-func (c *Connection) receive(ctx context.Context) error {
-	defer func() {
-		c.logger.Info("Stopping receive loop")
-	}()
-	c.logger.Info("Starting receive loop")
-
-	for {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case cmd := <-c.cmdExchanger.Out():
-			c.handleCommand(cmd)
-		}
-	}
+func (c *connection) State() State {
+	return c.state
 }
 
 // ReceiveFromUploadServer uploads data chunks from the UploadServer and logs them.
 // FIXME(kate-osborn): NKG doesn't need this functionality and ideally we wouldn't have to implement and maintain this.
 // Figure out how to remove this without causing errors in the agent.
-func (c *Connection) ReceiveFromUploadServer(server proto.Commander_UploadServer) error {
+func (c *connection) ReceiveFromUploadServer(server proto.Commander_UploadServer) error {
 	c.logger.Info("Upload request")
 
 	for {
@@ -120,7 +68,57 @@ func (c *Connection) ReceiveFromUploadServer(server proto.Commander_UploadServer
 	}
 }
 
-func (c *Connection) handleCommand(cmd *proto.Command) {
+// newConnection creates a new instance of connection.
+//
+// id is the unique ID of the connection.
+// cmdExchanger sends and receives commands to and from the CommandChannelServer.
+//
+// The creator of connection must call its run method in order for the connection send and receive commands.
+func newConnection(
+	id string,
+	logger logr.Logger,
+	cmdExchanger exchanger.CommandExchanger,
+) *connection {
+	return &connection{
+		logger:       logger.WithName(fmt.Sprintf("connection-%s", id)),
+		cmdExchanger: cmdExchanger,
+		id:           id,
+	}
+}
+
+// run is a blocking method that kicks off the connection's receive loop and the CommandExchanger's Run loop.
+// run will return when the context is canceled or if either loop returns an error.
+func (c *connection) run(parent context.Context) error {
+	eg, ctx := errgroup.WithContext(parent)
+
+	eg.Go(func() error {
+		return c.receive(ctx)
+	})
+
+	eg.Go(func() error {
+		return c.cmdExchanger.Run(ctx)
+	})
+
+	return eg.Wait()
+}
+
+func (c *connection) receive(ctx context.Context) error {
+	defer func() {
+		c.logger.Info("Stopping receive loop")
+	}()
+	c.logger.Info("Starting receive loop")
+
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case cmd := <-c.cmdExchanger.Out():
+			c.handleCommand(cmd)
+		}
+	}
+}
+
+func (c *connection) handleCommand(cmd *proto.Command) {
 	if cmd == nil {
 		return
 	}
@@ -135,7 +133,7 @@ func (c *Connection) handleCommand(cmd *proto.Command) {
 	}
 }
 
-func (c *Connection) handleAgentConnectRequest(cmd *proto.Command) {
+func (c *connection) handleAgentConnectRequest(cmd *proto.Command) {
 	req := cmd.GetAgentConnectRequest()
 
 	c.logger.Info("Received agent connect request", "message ID", cmd.GetMeta().GetMessageId())
@@ -151,7 +149,7 @@ func (c *Connection) handleAgentConnectRequest(cmd *proto.Command) {
 	c.cmdExchanger.In() <- res
 }
 
-func (c *Connection) handleDataplaneStatus(cmd *proto.Command) {
+func (c *connection) handleDataplaneStatus(cmd *proto.Command) {
 	status := cmd.GetDataplaneStatus()
 	c.logger.Info("Received a dataplane status command", "status", status)
 
@@ -163,7 +161,7 @@ func (c *Connection) handleDataplaneStatus(cmd *proto.Command) {
 	}
 }
 
-func (c *Connection) register(nginxID, systemID string) {
+func (c *connection) register(nginxID, systemID string) {
 	if nginxID == "" || systemID == "" {
 		c.state = StateInvalid
 		c.logger.Info(

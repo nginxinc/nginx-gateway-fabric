@@ -24,7 +24,7 @@ func TestConnection_Run_ExchangerErr(t *testing.T) {
 		return errors.New("exchanger error")
 	}
 
-	conn := NewConnection("id", zap.New(), fakeExchanger)
+	conn := newConnection("id", zap.New(), fakeExchanger)
 
 	errCh := make(chan error)
 	go func() {
@@ -47,7 +47,7 @@ func TestConnection_Run_ConnectionError(t *testing.T) {
 		return nil
 	}
 
-	conn := NewConnection("id", zap.New(), fakeExchanger)
+	conn := newConnection("id", zap.New(), fakeExchanger)
 
 	errCh := make(chan error)
 	go func() {
@@ -76,7 +76,7 @@ func TestConnection_Receive(t *testing.T) {
 		return in
 	}
 
-	conn := NewConnection("id", zap.New(), fakeExchanger)
+	conn := newConnection("id", zap.New(), fakeExchanger)
 
 	errCh := make(chan error)
 	go func() {
@@ -108,14 +108,14 @@ func TestConnection_Receive(t *testing.T) {
 func TestConnection_State(t *testing.T) {
 	g := NewGomegaWithT(t)
 
-	conn := NewConnection("id", zap.New(), new(exchangerfakes.FakeCommandExchanger))
+	conn := newConnection("id", zap.New(), new(exchangerfakes.FakeCommandExchanger))
 	g.Expect(conn.State()).To(Equal(StateConnected))
 }
 
 func TestConnection_ID(t *testing.T) {
 	g := NewGomegaWithT(t)
 
-	conn := NewConnection("id", zap.New(), new(exchangerfakes.FakeCommandExchanger))
+	conn := newConnection("id", zap.New(), new(exchangerfakes.FakeCommandExchanger))
 	g.Expect(conn.ID()).To(Equal("id"))
 }
 
@@ -171,7 +171,7 @@ func TestConnection_HandleCommand(t *testing.T) {
 				return in
 			}
 
-			conn := NewConnection("id", zap.New(), fakeExchanger)
+			conn := newConnection("id", zap.New(), fakeExchanger)
 
 			conn.handleCommand(test.cmd)
 
@@ -197,7 +197,7 @@ func TestConnection_HandleAgentConnectRequest(t *testing.T) {
 		return in
 	}
 
-	conn := NewConnection("id", zap.New(), fakeExchanger)
+	conn := newConnection("id", zap.New(), fakeExchanger)
 
 	cmd := CreateAgentConnectRequestCmd("msg-id")
 
@@ -235,7 +235,7 @@ func TestConnection_HandleDataplaneStatus(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewGomegaWithT(t)
 
-			conn := NewConnection(
+			conn := newConnection(
 				"conn-id",
 				zap.New(),
 				new(exchangerfakes.FakeCommandExchanger),
@@ -301,7 +301,7 @@ func TestConnection_Register(t *testing.T) {
 		t.Run(test.msg, func(t *testing.T) {
 			g := NewGomegaWithT(t)
 
-			conn := NewConnection(
+			conn := newConnection(
 				"conn-id",
 				zap.New(),
 				new(exchangerfakes.FakeCommandExchanger),

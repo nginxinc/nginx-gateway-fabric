@@ -16,23 +16,24 @@ import (
 
 var _ = Describe("Commander", func() {
 	Describe("CommandChannel", func() {
-		It("adds and removes connector over its lifetime", func() {
-			fakeMgr := new(commanderfakes.FakeConnectorManager)
-			fakeServer := new(commanderfakes.FakeCommander_CommandChannelServer)
-
+		It("adds and removes agents over its lifetime", func() {
 			ctx, cancel := context.WithCancel(context.TODO())
-			fakeServer.ContextStub = func() context.Context {
-				return metadata.NewIncomingContext(ctx, metadata.New(map[string]string{"uuid": "uuid"}))
-			}
 
-			fakeServer.RecvStub = func() (*proto.Command, error) {
-				<-ctx.Done()
-				return nil, nil
+			fakeServer := &commanderfakes.FakeCommander_CommandChannelServer{
+				ContextStub: func() context.Context {
+					return metadata.NewIncomingContext(ctx, metadata.New(map[string]string{"uuid": "uuid"}))
+				},
+				RecvStub: func() (*proto.Command, error) {
+					<-ctx.Done()
+					return nil, nil
+				},
 			}
 
 			added := make(chan struct{})
-			fakeMgr.AddConnectorStub = func(_ commander.Connector) {
-				close(added)
+			fakeMgr := &commanderfakes.FakeAgentManager{
+				AddAgentStub: func(_ commander.Agent) {
+					close(added)
+				},
 			}
 
 			cmdr := commander.NewCommander(zap.New(), fakeMgr)
@@ -43,71 +44,80 @@ var _ = Describe("Commander", func() {
 			}()
 
 			<-added
-			Expect(fakeMgr.AddConnectorCallCount()).To(Equal(1))
+			Expect(fakeMgr.AddAgentCallCount()).To(Equal(1))
 
 			cancel()
 
 			err := <-errCh
 			Expect(err).Should(MatchError(context.Canceled))
-			Expect(fakeMgr.RemoveConnectorCallCount()).To(Equal(1))
+			Expect(fakeMgr.RemoveAgentCallCount()).To(Equal(1))
 		})
 		When("server context metadata is missing UUID", func() {
 			It("errors and does not add connector", func() {
-				fakeMgr := new(commanderfakes.FakeConnectorManager)
-				fakeServer := new(commanderfakes.FakeCommander_CommandChannelServer)
+				fakeMgr := new(commanderfakes.FakeAgentManager)
 
-				fakeServer.ContextStub = func() context.Context {
-					return context.TODO()
+				fakeServer := &commanderfakes.FakeCommander_CommandChannelServer{
+					ContextStub: func() context.Context {
+						return context.TODO()
+					},
 				}
 
 				cmdr := commander.NewCommander(zap.New(), fakeMgr)
 				err := cmdr.CommandChannel(fakeServer)
 				Expect(err).ToNot(BeNil())
 
-				Expect(fakeMgr.AddConnectorCallCount()).To(Equal(0))
+				Expect(fakeMgr.AddAgentCallCount()).To(Equal(0))
 			})
 		})
 	})
 	Describe("Upload", func() {
 		When("server context metadata is missing UUID", func() {
 			It("errors and does not get connector", func() {
-				fakeMgr := new(commanderfakes.FakeConnectorManager)
-				fakeServer := new(commanderfakes.FakeCommander_UploadServer)
-				fakeServer.ContextStub = func() context.Context {
-					return context.TODO()
+				fakeMgr := new(commanderfakes.FakeAgentManager)
+
+				fakeServer := &commanderfakes.FakeCommander_UploadServer{
+					ContextStub: func() context.Context {
+						return context.TODO()
+					},
 				}
 
 				cmdr := commander.NewCommander(zap.New(), fakeMgr)
 
 				err := cmdr.Upload(fakeServer)
 				Expect(err).ToNot(BeNil())
-				Expect(fakeMgr.GetConnectorCallCount()).To(BeZero())
+				Expect(fakeMgr.GetAgentCallCount()).To(BeZero())
 			})
 		})
 		When("connector does not exist for the server", func() {
 			It("errors", func() {
-				fakeMgr := new(commanderfakes.FakeConnectorManager)
-				fakeServer := new(commanderfakes.FakeCommander_UploadServer)
-				fakeServer.ContextStub = func() context.Context {
-					return metadata.NewIncomingContext(context.TODO(), metadata.New(map[string]string{"uuid": "uuid"}))
+				fakeMgr := new(commanderfakes.FakeAgentManager)
+
+				fakeServer := &commanderfakes.FakeCommander_UploadServer{
+					ContextStub: func() context.Context {
+						return metadata.NewIncomingContext(
+							context.TODO(),
+							metadata.New(map[string]string{"uuid": "uuid"}),
+						)
+					},
 				}
 
 				cmdr := commander.NewCommander(zap.New(), fakeMgr)
 
 				err := cmdr.Upload(fakeServer)
 				Expect(err).ToNot(BeNil())
-				Expect(fakeMgr.GetConnectorCallCount()).To(Equal(1))
+				Expect(fakeMgr.GetAgentCallCount()).To(Equal(1))
 			})
 		})
 		When("connector for the server exists but is not registered", func() {
 			It("errors", func() {
-				fakeMgr := new(commanderfakes.FakeConnectorManager)
-				fakeMgr.GetConnectorStub = func(s string) commander.Connector {
-					conn := new(commanderfakes.FakeConnector)
-					conn.StateStub = func() commander.State {
-						return commander.StateConnected
-					}
-					return conn
+				fakeMgr := &commanderfakes.FakeAgentManager{
+					GetAgentStub: func(s string) commander.Agent {
+						return &commanderfakes.FakeAgent{
+							StateStub: func() commander.State {
+								return commander.StateConnected
+							},
+						}
+					},
 				}
 
 				fakeServer := new(commanderfakes.FakeCommander_UploadServer)
@@ -119,19 +129,21 @@ var _ = Describe("Commander", func() {
 
 				err := cmdr.Upload(fakeServer)
 				Expect(err).ToNot(BeNil())
-				Expect(fakeMgr.GetConnectorCallCount()).To(Equal(1))
+				Expect(fakeMgr.GetAgentCallCount()).To(Equal(1))
 			})
 		})
 		When("connector for the server exists and is registered", func() {
 			It("calls ReceiveFromUploadServer on connector", func() {
-				fakeConn := new(commanderfakes.FakeConnector)
-				fakeConn.StateStub = func() commander.State {
-					return commander.StateRegistered
+				fakeAgent := &commanderfakes.FakeAgent{
+					StateStub: func() commander.State {
+						return commander.StateRegistered
+					},
 				}
 
-				fakeMgr := new(commanderfakes.FakeConnectorManager)
-				fakeMgr.GetConnectorStub = func(s string) commander.Connector {
-					return fakeConn
+				fakeMgr := &commanderfakes.FakeAgentManager{
+					GetAgentStub: func(s string) commander.Agent {
+						return fakeAgent
+					},
 				}
 
 				fakeServer := new(commanderfakes.FakeCommander_UploadServer)
@@ -143,8 +155,8 @@ var _ = Describe("Commander", func() {
 
 				err := cmdr.Upload(fakeServer)
 				Expect(err).To(BeNil())
-				Expect(fakeMgr.GetConnectorCallCount()).To(Equal(1))
-				Expect(fakeConn.ReceiveFromUploadServerCallCount()).To(Equal(1))
+				Expect(fakeMgr.GetAgentCallCount()).To(Equal(1))
+				Expect(fakeAgent.ReceiveFromUploadServerCallCount()).To(Equal(1))
 			})
 		})
 	})

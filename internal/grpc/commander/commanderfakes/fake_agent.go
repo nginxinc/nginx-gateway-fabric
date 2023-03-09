@@ -8,7 +8,7 @@ import (
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/grpc/commander"
 )
 
-type FakeConnector struct {
+type FakeAgent struct {
 	IDStub        func() string
 	iDMutex       sync.RWMutex
 	iDArgsForCall []struct {
@@ -44,7 +44,7 @@ type FakeConnector struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeConnector) ID() string {
+func (fake *FakeAgent) ID() string {
 	fake.iDMutex.Lock()
 	ret, specificReturn := fake.iDReturnsOnCall[len(fake.iDArgsForCall)]
 	fake.iDArgsForCall = append(fake.iDArgsForCall, struct {
@@ -62,19 +62,19 @@ func (fake *FakeConnector) ID() string {
 	return fakeReturns.result1
 }
 
-func (fake *FakeConnector) IDCallCount() int {
+func (fake *FakeAgent) IDCallCount() int {
 	fake.iDMutex.RLock()
 	defer fake.iDMutex.RUnlock()
 	return len(fake.iDArgsForCall)
 }
 
-func (fake *FakeConnector) IDCalls(stub func() string) {
+func (fake *FakeAgent) IDCalls(stub func() string) {
 	fake.iDMutex.Lock()
 	defer fake.iDMutex.Unlock()
 	fake.IDStub = stub
 }
 
-func (fake *FakeConnector) IDReturns(result1 string) {
+func (fake *FakeAgent) IDReturns(result1 string) {
 	fake.iDMutex.Lock()
 	defer fake.iDMutex.Unlock()
 	fake.IDStub = nil
@@ -83,7 +83,7 @@ func (fake *FakeConnector) IDReturns(result1 string) {
 	}{result1}
 }
 
-func (fake *FakeConnector) IDReturnsOnCall(i int, result1 string) {
+func (fake *FakeAgent) IDReturnsOnCall(i int, result1 string) {
 	fake.iDMutex.Lock()
 	defer fake.iDMutex.Unlock()
 	fake.IDStub = nil
@@ -97,7 +97,7 @@ func (fake *FakeConnector) IDReturnsOnCall(i int, result1 string) {
 	}{result1}
 }
 
-func (fake *FakeConnector) ReceiveFromUploadServer(arg1 proto.Commander_UploadServer) error {
+func (fake *FakeAgent) ReceiveFromUploadServer(arg1 proto.Commander_UploadServer) error {
 	fake.receiveFromUploadServerMutex.Lock()
 	ret, specificReturn := fake.receiveFromUploadServerReturnsOnCall[len(fake.receiveFromUploadServerArgsForCall)]
 	fake.receiveFromUploadServerArgsForCall = append(fake.receiveFromUploadServerArgsForCall, struct {
@@ -116,26 +116,26 @@ func (fake *FakeConnector) ReceiveFromUploadServer(arg1 proto.Commander_UploadSe
 	return fakeReturns.result1
 }
 
-func (fake *FakeConnector) ReceiveFromUploadServerCallCount() int {
+func (fake *FakeAgent) ReceiveFromUploadServerCallCount() int {
 	fake.receiveFromUploadServerMutex.RLock()
 	defer fake.receiveFromUploadServerMutex.RUnlock()
 	return len(fake.receiveFromUploadServerArgsForCall)
 }
 
-func (fake *FakeConnector) ReceiveFromUploadServerCalls(stub func(proto.Commander_UploadServer) error) {
+func (fake *FakeAgent) ReceiveFromUploadServerCalls(stub func(proto.Commander_UploadServer) error) {
 	fake.receiveFromUploadServerMutex.Lock()
 	defer fake.receiveFromUploadServerMutex.Unlock()
 	fake.ReceiveFromUploadServerStub = stub
 }
 
-func (fake *FakeConnector) ReceiveFromUploadServerArgsForCall(i int) proto.Commander_UploadServer {
+func (fake *FakeAgent) ReceiveFromUploadServerArgsForCall(i int) proto.Commander_UploadServer {
 	fake.receiveFromUploadServerMutex.RLock()
 	defer fake.receiveFromUploadServerMutex.RUnlock()
 	argsForCall := fake.receiveFromUploadServerArgsForCall[i]
 	return argsForCall.arg1
 }
 
-func (fake *FakeConnector) ReceiveFromUploadServerReturns(result1 error) {
+func (fake *FakeAgent) ReceiveFromUploadServerReturns(result1 error) {
 	fake.receiveFromUploadServerMutex.Lock()
 	defer fake.receiveFromUploadServerMutex.Unlock()
 	fake.ReceiveFromUploadServerStub = nil
@@ -144,7 +144,7 @@ func (fake *FakeConnector) ReceiveFromUploadServerReturns(result1 error) {
 	}{result1}
 }
 
-func (fake *FakeConnector) ReceiveFromUploadServerReturnsOnCall(i int, result1 error) {
+func (fake *FakeAgent) ReceiveFromUploadServerReturnsOnCall(i int, result1 error) {
 	fake.receiveFromUploadServerMutex.Lock()
 	defer fake.receiveFromUploadServerMutex.Unlock()
 	fake.ReceiveFromUploadServerStub = nil
@@ -158,7 +158,7 @@ func (fake *FakeConnector) ReceiveFromUploadServerReturnsOnCall(i int, result1 e
 	}{result1}
 }
 
-func (fake *FakeConnector) State() commander.State {
+func (fake *FakeAgent) State() commander.State {
 	fake.stateMutex.Lock()
 	ret, specificReturn := fake.stateReturnsOnCall[len(fake.stateArgsForCall)]
 	fake.stateArgsForCall = append(fake.stateArgsForCall, struct {
@@ -176,19 +176,19 @@ func (fake *FakeConnector) State() commander.State {
 	return fakeReturns.result1
 }
 
-func (fake *FakeConnector) StateCallCount() int {
+func (fake *FakeAgent) StateCallCount() int {
 	fake.stateMutex.RLock()
 	defer fake.stateMutex.RUnlock()
 	return len(fake.stateArgsForCall)
 }
 
-func (fake *FakeConnector) StateCalls(stub func() commander.State) {
+func (fake *FakeAgent) StateCalls(stub func() commander.State) {
 	fake.stateMutex.Lock()
 	defer fake.stateMutex.Unlock()
 	fake.StateStub = stub
 }
 
-func (fake *FakeConnector) StateReturns(result1 commander.State) {
+func (fake *FakeAgent) StateReturns(result1 commander.State) {
 	fake.stateMutex.Lock()
 	defer fake.stateMutex.Unlock()
 	fake.StateStub = nil
@@ -197,7 +197,7 @@ func (fake *FakeConnector) StateReturns(result1 commander.State) {
 	}{result1}
 }
 
-func (fake *FakeConnector) StateReturnsOnCall(i int, result1 commander.State) {
+func (fake *FakeAgent) StateReturnsOnCall(i int, result1 commander.State) {
 	fake.stateMutex.Lock()
 	defer fake.stateMutex.Unlock()
 	fake.StateStub = nil
@@ -211,7 +211,7 @@ func (fake *FakeConnector) StateReturnsOnCall(i int, result1 commander.State) {
 	}{result1}
 }
 
-func (fake *FakeConnector) Invocations() map[string][][]interface{} {
+func (fake *FakeAgent) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
 	fake.iDMutex.RLock()
@@ -227,7 +227,7 @@ func (fake *FakeConnector) Invocations() map[string][][]interface{} {
 	return copiedInvocations
 }
 
-func (fake *FakeConnector) recordInvocation(key string, args []interface{}) {
+func (fake *FakeAgent) recordInvocation(key string, args []interface{}) {
 	fake.invocationsMutex.Lock()
 	defer fake.invocationsMutex.Unlock()
 	if fake.invocations == nil {
@@ -239,4 +239,4 @@ func (fake *FakeConnector) recordInvocation(key string, args []interface{}) {
 	fake.invocations[key] = append(fake.invocations[key], args)
 }
 
-var _ commander.Connector = new(FakeConnector)
+var _ commander.Agent = new(FakeAgent)

@@ -16,10 +16,10 @@ import (
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	"sigs.k8s.io/gateway-api/apis/v1beta1/validation"
 
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/agent"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/config"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/events"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/grpc"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/grpc/agent"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/grpc/commander"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/manager/filter"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/manager/index"

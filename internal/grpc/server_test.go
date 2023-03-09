@@ -35,7 +35,7 @@ func createTestClient(serverAddr string, clientUUID string) client.Commander {
 func TestServer_ConcurrentConnections(t *testing.T) {
 	g := NewGomegaWithT(t)
 
-	fakeMgr := new(commanderfakes.FakeConnectorManager)
+	fakeMgr := new(commanderfakes.FakeAgentManager)
 	commanderService := commander.NewCommander(zap.New(), fakeMgr)
 
 	server, err := grpc.NewServer(zap.New(), "localhost:0", commanderService)
