@@ -72,11 +72,9 @@ var _ = Describe("Agent Pool", func() {
 	})
 	It("can handle concurrent CRUD", func() {
 		// populate pool with 5 agents which will be removed.
-		pool.AddAgent(agent1)
-		pool.AddAgent(agent2)
-		pool.AddAgent(agent3)
-		pool.AddAgent(newFakeAgent("4"))
-		pool.AddAgent(newFakeAgent("5"))
+		for i := 1; i <= 5; i++ {
+			pool.AddAgent(newFakeAgent(fmt.Sprintf("%d", i)))
+		}
 
 		addAndGetAgent := func(id string, wg *sync.WaitGroup) {
 			defer wg.Done()
