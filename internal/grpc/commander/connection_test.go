@@ -86,22 +86,19 @@ func TestConnection_Receive(t *testing.T) {
 		errCh <- conn.receive(ctx)
 	}()
 
-	out <- CreateAgentConnectRequestCmd("msg-1")
+	sendCmdAndVerifyResponse := func(msgID string) {
+		out <- CreateAgentConnectRequestCmd(msgID)
 
-	res := <-in
-	g.Expect(res).ToNot(BeNil())
-	meta := res.GetMeta()
-	g.Expect(meta).ToNot(BeNil())
-	g.Expect(meta.MessageId).To(Equal("msg-1"))
+		res := <-in
+		g.Expect(res).ToNot(BeNil())
+		meta := res.GetMeta()
+		g.Expect(meta).ToNot(BeNil())
+		g.Expect(meta.MessageId).To(Equal(msgID))
+	}
 
-	out <- CreateAgentConnectRequestCmd("msg-2")
-
-	res = <-in
-	g.Expect(res).ToNot(BeNil())
-	meta = res.GetMeta()
-	g.Expect(meta).ToNot(BeNil())
-	g.Expect(meta.MessageId).To(Equal("msg-2"))
-
+	sendCmdAndVerifyResponse("msg-1")
+	sendCmdAndVerifyResponse("msg-2")
+	
 	cancel()
 
 	receiveErr := <-errCh
