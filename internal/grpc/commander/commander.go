@@ -80,17 +80,21 @@ func (c *Commander) Upload(server proto.Commander_UploadServer) error {
 
 	id, err := getUUIDFromContext(server.Context())
 	if err != nil {
-		c.logger.Error(err, "cannot get the UUID of the agent")
+		c.logger.Error(err, "upload failed; cannot get the UUID of the agent")
 		return err
 	}
 
 	agent := c.agentMgr.GetAgent(id)
 	if agent == nil {
-		return fmt.Errorf("cannot upload; no existing agent for id: %s", id)
+		err := fmt.Errorf("agent with id: %s not found", id)
+		c.logger.Error(err, "failed upload")
+		return err
 	}
 
 	if agent.State() != StateRegistered {
-		return fmt.Errorf("cannot upload; agent with id: %s is not registered", id)
+		err := fmt.Errorf("agent with id: %s is not registered", id)
+		c.logger.Error(err, "failed upload")
+		return err
 	}
 
 	return agent.ReceiveFromUploadServer(server)
@@ -105,6 +109,10 @@ func getUUIDFromContext(ctx context.Context) (string, error) {
 	vals := md.Get(serverUUIDKey)
 	if len(vals) == 0 {
 		return "", errors.New("uuid is not in metadata")
+	}
+
+	if len(vals) > 1 {
+		return "", fmt.Errorf("more than one value for uuid in metadata")
 	}
 
 	return vals[0], nil

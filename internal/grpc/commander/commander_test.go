@@ -66,69 +66,6 @@ var _ = Describe("Commander", func() {
 		})
 	})
 	Describe("Upload", func() {
-		When("server context metadata is missing UUID", func() {
-			It("errors and does not get agent", func() {
-				fakeMgr := new(commanderfakes.FakeAgentManager)
-
-				fakeServer := &commanderfakes.FakeCommander_UploadServer{
-					ContextStub: func() context.Context {
-						return context.TODO()
-					},
-				}
-
-				cmdr := commander.NewCommander(zap.New(), fakeMgr)
-
-				err := cmdr.Upload(fakeServer)
-				Expect(err).ToNot(BeNil())
-				Expect(fakeMgr.GetAgentCallCount()).To(BeZero())
-			})
-		})
-		When("agent does not exist for the server", func() {
-			It("errors", func() {
-				fakeMgr := new(commanderfakes.FakeAgentManager)
-
-				fakeServer := &commanderfakes.FakeCommander_UploadServer{
-					ContextStub: func() context.Context {
-						return metadata.NewIncomingContext(
-							context.TODO(),
-							metadata.New(map[string]string{"uuid": "uuid"}),
-						)
-					},
-				}
-
-				cmdr := commander.NewCommander(zap.New(), fakeMgr)
-
-				err := cmdr.Upload(fakeServer)
-				Expect(err).ToNot(BeNil())
-				Expect(fakeMgr.GetAgentCallCount()).To(Equal(1))
-			})
-		})
-		When("agent for the server exists but is not registered", func() {
-			It("errors", func() {
-				fakeMgr := &commanderfakes.FakeAgentManager{
-					GetAgentStub: func(s string) commander.Agent {
-						return &commanderfakes.FakeAgent{
-							StateStub: func() commander.State {
-								return commander.StateConnected
-							},
-						}
-					},
-				}
-
-				fakeServer := &commanderfakes.FakeCommander_UploadServer{
-					ContextStub: func() context.Context {
-						return metadata.NewIncomingContext(context.TODO(),
-							metadata.New(map[string]string{"uuid": "uuid"}))
-					},
-				}
-
-				cmdr := commander.NewCommander(zap.New(), fakeMgr)
-
-				err := cmdr.Upload(fakeServer)
-				Expect(err).ToNot(BeNil())
-				Expect(fakeMgr.GetAgentCallCount()).To(Equal(1))
-			})
-		})
 		When("agent for the server exists and is registered", func() {
 			It("calls ReceiveFromUploadServer on agent", func() {
 				fakeAgent := &commanderfakes.FakeAgent{
@@ -157,6 +94,91 @@ var _ = Describe("Commander", func() {
 				Expect(fakeMgr.GetAgentCallCount()).To(Equal(1))
 				Expect(fakeAgent.ReceiveFromUploadServerCallCount()).To(Equal(1))
 			})
+		})
+		Describe("error cases", func() {
+			tests := []struct {
+				getAgentCallCount int
+				expErrString      string
+				name              string
+				getAgentStub      func(string) commander.Agent
+				contextStub       func() context.Context
+			}{
+				{
+					contextStub:       func() context.Context { return context.Background() },
+					expErrString:      "metadata is not provided",
+					getAgentCallCount: 0,
+					name:              "server context has no metadata",
+				},
+				{
+					contextStub: func() context.Context {
+						return metadata.NewIncomingContext(
+							context.Background(),
+							metadata.Pairs("key", "value"),
+						)
+					},
+					expErrString:      "uuid is not in metadata",
+					getAgentCallCount: 0,
+					name:              "server context has no uuid key in metadata",
+				},
+				{
+					contextStub: func() context.Context {
+						return metadata.NewIncomingContext(
+							context.Background(),
+							metadata.Pairs("uuid", "val1", "uuid", "val2"),
+						)
+					},
+					expErrString:      "more than one value for uuid in metadata",
+					getAgentCallCount: 0,
+					name:              "server context has multiple values for uuid in metadata",
+				},
+				{
+					getAgentStub: func(s string) commander.Agent {
+						return nil
+					},
+					contextStub: func() context.Context {
+						return metadata.NewIncomingContext(
+							context.Background(),
+							metadata.Pairs("uuid", "val1"),
+						)
+					},
+					expErrString:      "agent with id: val1 not found",
+					getAgentCallCount: 1,
+					name:              "agent does not exist",
+				},
+				{
+					getAgentStub: func(s string) commander.Agent {
+						return &commanderfakes.FakeAgent{
+							StateStub: func() commander.State {
+								return commander.StateConnected
+							},
+						}
+					},
+					contextStub: func() context.Context {
+						return metadata.NewIncomingContext(
+							context.Background(),
+							metadata.Pairs("uuid", "val1"),
+						)
+					},
+					expErrString:      "agent with id: val1 is not registered",
+					getAgentCallCount: 1,
+					name:              "agent is not registered",
+				},
+			}
+
+			for _, test := range tests {
+				fakeMgr := &commanderfakes.FakeAgentManager{
+					GetAgentStub: test.getAgentStub,
+				}
+
+				fakeServer := &commanderfakes.FakeCommander_UploadServer{
+					ContextStub: test.contextStub,
+				}
+
+				cmdr := commander.NewCommander(zap.New(), fakeMgr)
+				err := cmdr.Upload(fakeServer)
+				Expect(err).To(MatchError(test.expErrString))
+				Expect(fakeMgr.GetAgentCallCount()).To(Equal(test.getAgentCallCount))
+			}
 		})
 	})
 })
