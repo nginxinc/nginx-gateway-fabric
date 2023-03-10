@@ -2,6 +2,7 @@ package commander
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/go-logr/logr"
@@ -86,7 +87,7 @@ func (bc *BidirectionalChannel) receive(ctx context.Context) error {
 				// The agent should never send us a nil command, but we catch this case out of an abundance of caution.
 				// We don't want to return an error in this case because that would break the CommandChannel
 				// connection with the agent. Instead, we log the abnormality and continue processing.
-				bc.logger.Info("Received nil command")
+				bc.logger.Error(errors.New("received nil command"), "expected non-nil command")
 			}
 		}
 	}

@@ -154,8 +154,9 @@ func (c *connection) handleAgentConnectRequest(cmd *proto.Command) {
 func (c *connection) register(nginxID, systemID string) {
 	if nginxID == "" || systemID == "" {
 		c.state = StateInvalid
-		c.logger.Info(
-			"Cannot register agent; nginxID and systemID must be provided",
+		c.logger.Error(
+			errors.New("nginxID and/or systemID are empty"),
+			"cannot register agent",
 			"nginxID",
 			nginxID,
 			"systemID",
