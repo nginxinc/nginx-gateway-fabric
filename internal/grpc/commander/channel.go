@@ -110,11 +110,12 @@ func (bc *BidirectionalChannel) send(ctx context.Context) error {
 		case <-ctx.Done():
 			return ctx.Err()
 		case cmd := <-bc.toClient:
-			if cmd != nil {
-				bc.logger.Info("Sending command", "command", cmd)
-				if err := bc.channel.Send(cmd); err != nil {
-					return err
-				}
+			if cmd == nil {
+				panic("outgoing command is nil")
+			}
+			bc.logger.Info("Sending command", "command", cmd)
+			if err := bc.channel.Send(cmd); err != nil {
+				return err
 			}
 		}
 	}
