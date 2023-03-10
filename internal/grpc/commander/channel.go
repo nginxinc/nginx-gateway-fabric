@@ -73,7 +73,7 @@ func (bc *BidirectionalChannel) receive(ctx context.Context) error {
 	for {
 		cmd, err := bc.channel.Recv()
 		if err != nil {
-			return fmt.Errorf("recv error: %w", err)
+			return fmt.Errorf("error receiving command from CommandChannel: %w", err)
 		}
 
 		select {
@@ -115,7 +115,7 @@ func (bc *BidirectionalChannel) send(ctx context.Context) error {
 			}
 			bc.logger.Info("Sending command", "command", cmd)
 			if err := bc.channel.Send(cmd); err != nil {
-				return err
+				return fmt.Errorf("error sending command to CommandChannel: %w", err)
 			}
 		}
 	}
