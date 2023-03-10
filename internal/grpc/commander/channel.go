@@ -121,14 +121,14 @@ func (bc *BidirectionalChannel) send(ctx context.Context) error {
 	}
 }
 
-// In returns a write-only channel of commands.
+// Out returns a write-only channel of commands.
 // Commands written to this channel will be sent to the client over the CommandChannelServer.
-func (bc *BidirectionalChannel) In() chan<- *proto.Command {
+func (bc *BidirectionalChannel) Out() chan<- *proto.Command {
 	return bc.toClient
 }
 
-// Out returns a read-only channel of commands.
+// In returns a read-only channel of commands.
 // The BidirectionalChannel writes commands that it receives from the CommandChannelServer to this channel.
-func (bc *BidirectionalChannel) Out() <-chan *proto.Command {
+func (bc *BidirectionalChannel) In() <-chan *proto.Command {
 	return bc.fromClient
 }

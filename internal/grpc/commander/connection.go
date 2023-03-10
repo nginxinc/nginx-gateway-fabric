@@ -116,7 +116,7 @@ func (c *connection) receive(ctx context.Context) error {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
-		case cmd := <-c.cmdExchanger.Out():
+		case cmd := <-c.cmdExchanger.In():
 			c.handleCommand(ctx, cmd)
 		}
 	}
@@ -147,7 +147,7 @@ func (c *connection) handleAgentConnectRequest(ctx context.Context, cmd *proto.C
 	select {
 	case <-ctx.Done():
 		return
-	case c.cmdExchanger.In() <- res:
+	case c.cmdExchanger.Out() <- res:
 	}
 }
 

@@ -10,25 +10,25 @@ import (
 )
 
 type FakeCommandExchanger struct {
-	InStub        func() chan<- *proto.Command
+	InStub        func() <-chan *proto.Command
 	inMutex       sync.RWMutex
 	inArgsForCall []struct {
 	}
 	inReturns struct {
-		result1 chan<- *proto.Command
+		result1 <-chan *proto.Command
 	}
 	inReturnsOnCall map[int]struct {
-		result1 chan<- *proto.Command
+		result1 <-chan *proto.Command
 	}
-	OutStub        func() <-chan *proto.Command
+	OutStub        func() chan<- *proto.Command
 	outMutex       sync.RWMutex
 	outArgsForCall []struct {
 	}
 	outReturns struct {
-		result1 <-chan *proto.Command
+		result1 chan<- *proto.Command
 	}
 	outReturnsOnCall map[int]struct {
-		result1 <-chan *proto.Command
+		result1 chan<- *proto.Command
 	}
 	RunStub        func(context.Context) error
 	runMutex       sync.RWMutex
@@ -45,7 +45,7 @@ type FakeCommandExchanger struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeCommandExchanger) In() chan<- *proto.Command {
+func (fake *FakeCommandExchanger) In() <-chan *proto.Command {
 	fake.inMutex.Lock()
 	ret, specificReturn := fake.inReturnsOnCall[len(fake.inArgsForCall)]
 	fake.inArgsForCall = append(fake.inArgsForCall, struct {
@@ -69,36 +69,36 @@ func (fake *FakeCommandExchanger) InCallCount() int {
 	return len(fake.inArgsForCall)
 }
 
-func (fake *FakeCommandExchanger) InCalls(stub func() chan<- *proto.Command) {
+func (fake *FakeCommandExchanger) InCalls(stub func() <-chan *proto.Command) {
 	fake.inMutex.Lock()
 	defer fake.inMutex.Unlock()
 	fake.InStub = stub
 }
 
-func (fake *FakeCommandExchanger) InReturns(result1 chan<- *proto.Command) {
+func (fake *FakeCommandExchanger) InReturns(result1 <-chan *proto.Command) {
 	fake.inMutex.Lock()
 	defer fake.inMutex.Unlock()
 	fake.InStub = nil
 	fake.inReturns = struct {
-		result1 chan<- *proto.Command
+		result1 <-chan *proto.Command
 	}{result1}
 }
 
-func (fake *FakeCommandExchanger) InReturnsOnCall(i int, result1 chan<- *proto.Command) {
+func (fake *FakeCommandExchanger) InReturnsOnCall(i int, result1 <-chan *proto.Command) {
 	fake.inMutex.Lock()
 	defer fake.inMutex.Unlock()
 	fake.InStub = nil
 	if fake.inReturnsOnCall == nil {
 		fake.inReturnsOnCall = make(map[int]struct {
-			result1 chan<- *proto.Command
+			result1 <-chan *proto.Command
 		})
 	}
 	fake.inReturnsOnCall[i] = struct {
-		result1 chan<- *proto.Command
+		result1 <-chan *proto.Command
 	}{result1}
 }
 
-func (fake *FakeCommandExchanger) Out() <-chan *proto.Command {
+func (fake *FakeCommandExchanger) Out() chan<- *proto.Command {
 	fake.outMutex.Lock()
 	ret, specificReturn := fake.outReturnsOnCall[len(fake.outArgsForCall)]
 	fake.outArgsForCall = append(fake.outArgsForCall, struct {
@@ -122,32 +122,32 @@ func (fake *FakeCommandExchanger) OutCallCount() int {
 	return len(fake.outArgsForCall)
 }
 
-func (fake *FakeCommandExchanger) OutCalls(stub func() <-chan *proto.Command) {
+func (fake *FakeCommandExchanger) OutCalls(stub func() chan<- *proto.Command) {
 	fake.outMutex.Lock()
 	defer fake.outMutex.Unlock()
 	fake.OutStub = stub
 }
 
-func (fake *FakeCommandExchanger) OutReturns(result1 <-chan *proto.Command) {
+func (fake *FakeCommandExchanger) OutReturns(result1 chan<- *proto.Command) {
 	fake.outMutex.Lock()
 	defer fake.outMutex.Unlock()
 	fake.OutStub = nil
 	fake.outReturns = struct {
-		result1 <-chan *proto.Command
+		result1 chan<- *proto.Command
 	}{result1}
 }
 
-func (fake *FakeCommandExchanger) OutReturnsOnCall(i int, result1 <-chan *proto.Command) {
+func (fake *FakeCommandExchanger) OutReturnsOnCall(i int, result1 chan<- *proto.Command) {
 	fake.outMutex.Lock()
 	defer fake.outMutex.Unlock()
 	fake.OutStub = nil
 	if fake.outReturnsOnCall == nil {
 		fake.outReturnsOnCall = make(map[int]struct {
-			result1 <-chan *proto.Command
+			result1 chan<- *proto.Command
 		})
 	}
 	fake.outReturnsOnCall[i] = struct {
-		result1 <-chan *proto.Command
+		result1 chan<- *proto.Command
 	}{result1}
 }
 

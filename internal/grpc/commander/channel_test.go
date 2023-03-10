@@ -51,12 +51,12 @@ func TestBidirectionalChannel(t *testing.T) {
 
 	testRecvCommand := func(msgID string) {
 		recvCommands <- newTestCommand(msgID)
-		cmd := <-ch.Out()
+		cmd := <-ch.In()
 		g.Expect(cmd.GetMeta().GetMessageId()).To(Equal(msgID))
 	}
 
 	testSendCommand := func(msgID string) {
-		ch.In() <- newTestCommand(msgID)
+		ch.Out() <- newTestCommand(msgID)
 		cmd := <-sentCommands
 		g.Expect(cmd.GetMeta().GetMessageId()).To(Equal(msgID))
 	}
@@ -96,7 +96,7 @@ func TestBidirectionalChannel_SendError(t *testing.T) {
 		errCh <- ch.Run(context.Background())
 	}()
 
-	ch.In() <- newTestCommand("msg-id")
+	ch.Out() <- newTestCommand("msg-id")
 	close(done)
 
 	err := <-errCh
@@ -156,7 +156,7 @@ func TestBidirectionalChannel_NilCommand(t *testing.T) {
 
 	testRecvCommand := func(msgID string) {
 		recvCommands <- newTestCommand(msgID)
-		cmd := <-ch.Out()
+		cmd := <-ch.In()
 		g.Expect(cmd.GetMeta().GetMessageId()).To(Equal(msgID))
 	}
 

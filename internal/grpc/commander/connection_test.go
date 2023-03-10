@@ -71,10 +71,10 @@ func TestConnection_Receive(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	fakeExchanger := &exchangerfakes.FakeCommandExchanger{
-		OutStub: func() <-chan *proto.Command {
+		OutStub: func() chan<- *proto.Command {
 			return out
 		},
-		InStub: func() chan<- *proto.Command {
+		InStub: func() <-chan *proto.Command {
 			return in
 		},
 	}
@@ -87,9 +87,9 @@ func TestConnection_Receive(t *testing.T) {
 	}()
 
 	sendCmdAndVerifyResponse := func(msgID string) {
-		out <- CreateAgentConnectRequestCmd(msgID)
+		in <- CreateAgentConnectRequestCmd(msgID)
 
-		res := <-in
+		res := <-out
 		g.Expect(res).ToNot(BeNil())
 		meta := res.GetMeta()
 		g.Expect(meta).ToNot(BeNil())
@@ -147,11 +147,11 @@ func TestConnection_HandleCommand(t *testing.T) {
 		t.Run(test.msg, func(t *testing.T) {
 			g := NewGomegaWithT(t)
 
-			in := make(chan *proto.Command, 1)
+			out := make(chan *proto.Command, 1)
 
 			fakeExchanger := &exchangerfakes.FakeCommandExchanger{
-				InStub: func() chan<- *proto.Command {
-					return in
+				OutStub: func() chan<- *proto.Command {
+					return out
 				},
 			}
 
@@ -160,13 +160,13 @@ func TestConnection_HandleCommand(t *testing.T) {
 			conn.handleCommand(context.Background(), test.cmd)
 
 			if test.expInboundCmd {
-				cmd := <-in
+				cmd := <-out
 				g.Expect(cmd.Data).To(BeAssignableToTypeOf(test.expCmdType.Data))
 			} else {
-				g.Expect(in).To(BeEmpty())
+				g.Expect(out).To(BeEmpty())
 			}
 
-			close(in)
+			close(out)
 		})
 	}
 }
@@ -174,11 +174,11 @@ func TestConnection_HandleCommand(t *testing.T) {
 func TestConnection_HandleAgentConnectRequest(t *testing.T) {
 	g := NewGomegaWithT(t)
 
-	in := make(chan *proto.Command)
+	out := make(chan *proto.Command)
 
 	fakeExchanger := &exchangerfakes.FakeCommandExchanger{
-		InStub: func() chan<- *proto.Command {
-			return in
+		OutStub: func() chan<- *proto.Command {
+			return out
 		},
 	}
 
@@ -188,7 +188,7 @@ func TestConnection_HandleAgentConnectRequest(t *testing.T) {
 
 	go conn.handleAgentConnectRequest(context.Background(), cmd)
 
-	response := <-in
+	response := <-out
 
 	meta := response.GetMeta()
 	g.Expect(meta).ToNot(BeNil())
@@ -204,11 +204,11 @@ func TestConnection_HandleAgentConnectRequest(t *testing.T) {
 func TestConnection_HandleAgentConnectRequest_CtxCanceled(t *testing.T) {
 	g := NewGomegaWithT(t)
 
-	in := make(chan *proto.Command)
+	out := make(chan *proto.Command)
 
 	fakeExchanger := &exchangerfakes.FakeCommandExchanger{
-		InStub: func() chan<- *proto.Command {
-			return in
+		OutStub: func() chan<- *proto.Command {
+			return out
 		},
 	}
 
