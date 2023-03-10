@@ -44,6 +44,11 @@ func NewBidirectionalChannel(
 // Run runs the receive and send loops on the BidirectionalChannel.
 // Run is blocking and will return if an error occurs in either loop or the context is canceled.
 func (bc *BidirectionalChannel) Run(parent context.Context) error {
+	defer func() {
+		close(bc.fromClient)
+		close(bc.toClient)
+	}()
+
 	eg, ctx := errgroup.WithContext(parent)
 
 	eg.Go(func() error {
