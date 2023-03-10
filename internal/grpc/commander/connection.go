@@ -52,6 +52,10 @@ func (c *connection) ReceiveFromUploadServer(server proto.Commander_UploadServer
 	c.logger.Info("Upload request")
 
 	for {
+		// Recv blocks until it receives a message into or the stream is
+		// done. It returns io.EOF when the client has performed a CloseSend. On
+		// any non-EOF error, the stream is aborted and the error contains the
+		// RPC status.
 		_, err := server.Recv()
 
 		if err != nil && !errors.Is(err, io.EOF) {
