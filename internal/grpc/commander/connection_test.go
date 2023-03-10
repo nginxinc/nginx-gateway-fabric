@@ -29,7 +29,7 @@ func TestConnection_Run_ExchangerErr(t *testing.T) {
 
 	errCh := make(chan error)
 	go func() {
-		errCh <- conn.run(context.TODO())
+		errCh <- conn.run(context.Background())
 	}()
 
 	close(exchangerClose)
@@ -40,7 +40,7 @@ func TestConnection_Run_ExchangerErr(t *testing.T) {
 
 func TestConnection_Run_ConnectionError(t *testing.T) {
 	g := NewGomegaWithT(t)
-	ctx, cancel := context.WithCancel(context.TODO())
+	ctx, cancel := context.WithCancel(context.Background())
 
 	fakeExchanger := &exchangerfakes.FakeCommandExchanger{
 		RunStub: func(ctx context.Context) error {
@@ -68,7 +68,7 @@ func TestConnection_Receive(t *testing.T) {
 	out := make(chan *proto.Command)
 	in := make(chan *proto.Command)
 
-	ctx, cancel := context.WithCancel(context.TODO())
+	ctx, cancel := context.WithCancel(context.Background())
 
 	fakeExchanger := &exchangerfakes.FakeCommandExchanger{
 		OutStub: func() <-chan *proto.Command {

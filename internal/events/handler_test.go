@@ -103,7 +103,7 @@ var _ = Describe("EventHandler", func() {
 
 				batch := []interface{}{e}
 
-				handler.HandleEventBatch(context.TODO(), batch)
+				handler.HandleEventBatch(context.Background(), batch)
 
 				// Check that the events were captured
 				switch typedEvent := e.(type) {
@@ -195,7 +195,7 @@ var _ = Describe("EventHandler", func() {
 				},
 			}
 
-			handler.HandleEventBatch(context.TODO(), batch)
+			handler.HandleEventBatch(context.Background(), batch)
 
 			Expect(fakeSecretStore.UpsertCallCount()).Should(Equal(1))
 			Expect(fakeSecretStore.UpsertArgsForCall(0)).Should(Equal(secret))
@@ -213,7 +213,7 @@ var _ = Describe("EventHandler", func() {
 				},
 			}
 
-			handler.HandleEventBatch(context.TODO(), batch)
+			handler.HandleEventBatch(context.Background(), batch)
 
 			Expect(fakeSecretStore.DeleteCallCount()).Should(Equal(1))
 			Expect(fakeSecretStore.DeleteArgsForCall(0)).Should(Equal(nsname))
@@ -266,7 +266,7 @@ var _ = Describe("EventHandler", func() {
 		fakeCfg := []byte("fake")
 		fakeGenerator.GenerateReturns(fakeCfg)
 
-		handler.HandleEventBatch(context.TODO(), batch)
+		handler.HandleEventBatch(context.Background(), batch)
 
 		// Check that the events for Gateway API resources were captured
 
@@ -302,7 +302,7 @@ var _ = Describe("EventHandler", func() {
 			func(e interface{}) {
 				handle := func() {
 					batch := []interface{}{e}
-					handler.HandleEventBatch(context.TODO(), batch)
+					handler.HandleEventBatch(context.Background(), batch)
 				}
 
 				Expect(handle).Should(Panic())

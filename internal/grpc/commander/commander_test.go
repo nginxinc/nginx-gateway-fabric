@@ -16,7 +16,7 @@ import (
 var _ = Describe("Commander", func() {
 	Describe("CommandChannel", func() {
 		It("adds and removes agents over its lifetime", func() {
-			ctx, cancel := context.WithCancel(context.TODO())
+			ctx, cancel := context.WithCancel(context.Background())
 
 			fakeServer := &commanderfakes.FakeCommander_CommandChannelServer{
 				ContextStub: func() context.Context {
@@ -53,7 +53,7 @@ var _ = Describe("Commander", func() {
 
 				fakeServer := &commanderfakes.FakeCommander_CommandChannelServer{
 					ContextStub: func() context.Context {
-						return context.TODO()
+						return context.Background()
 					},
 				}
 
@@ -82,7 +82,7 @@ var _ = Describe("Commander", func() {
 
 				fakeServer := &commanderfakes.FakeCommander_UploadServer{
 					ContextStub: func() context.Context {
-						return metadata.NewIncomingContext(context.TODO(),
+						return metadata.NewIncomingContext(context.Background(),
 							metadata.New(map[string]string{"uuid": "uuid"}))
 					},
 				}

@@ -252,7 +252,7 @@ var _ = Describe("ChangeProcessor", func() {
 
 			When("no upsert has occurred", func() {
 				It("returns empty configuration and statuses", func() {
-					changed, conf, statuses := processor.Process(context.TODO())
+					changed, conf, statuses := processor.Process(context.Background())
 					Expect(changed).To(BeFalse())
 					Expect(conf).To(BeZero())
 					Expect(statuses).To(BeZero())
@@ -270,7 +270,7 @@ var _ = Describe("ChangeProcessor", func() {
 								HTTPRouteStatuses:      map[types.NamespacedName]state.HTTPRouteStatus{},
 							}
 
-							changed, conf, statuses := processor.Process(context.TODO())
+							changed, conf, statuses := processor.Process(context.Background())
 							Expect(changed).To(BeTrue())
 							Expect(helpers.Diff(expectedConf, conf)).To(BeEmpty())
 							Expect(helpers.Diff(expectedStatuses, statuses)).To(BeEmpty())
@@ -325,7 +325,7 @@ var _ = Describe("ChangeProcessor", func() {
 							},
 						}
 
-						changed, conf, statuses := processor.Process(context.TODO())
+						changed, conf, statuses := processor.Process(context.Background())
 						Expect(changed).To(BeTrue())
 						Expect(helpers.Diff(expectedConf, conf)).To(BeEmpty())
 						assertStatuses(expectedStatuses, statuses)
@@ -424,7 +424,7 @@ var _ = Describe("ChangeProcessor", func() {
 						},
 					}
 
-					changed, conf, statuses := processor.Process(context.TODO())
+					changed, conf, statuses := processor.Process(context.Background())
 					Expect(changed).To(BeTrue())
 					Expect(helpers.Diff(expectedConf, conf)).To(BeEmpty())
 					assertStatuses(expectedStatuses, statuses)
@@ -436,7 +436,7 @@ var _ = Describe("ChangeProcessor", func() {
 					// hr1UpdatedSameGen.Generation has not been changed
 					processor.CaptureUpsertChange(hr1UpdatedSameGen)
 
-					changed, conf, statuses := processor.Process(context.TODO())
+					changed, conf, statuses := processor.Process(context.Background())
 					Expect(changed).To(BeFalse())
 					Expect(conf).To(BeZero())
 					Expect(statuses).To(BeZero())
@@ -533,7 +533,7 @@ var _ = Describe("ChangeProcessor", func() {
 						},
 					}
 
-					changed, conf, statuses := processor.Process(context.TODO())
+					changed, conf, statuses := processor.Process(context.Background())
 					Expect(changed).To(BeTrue())
 					Expect(helpers.Diff(expectedConf, conf)).To(BeEmpty())
 					assertStatuses(expectedStatuses, statuses)
@@ -546,7 +546,7 @@ var _ = Describe("ChangeProcessor", func() {
 					// gwUpdatedSameGen.Generation has not been changed
 					processor.CaptureUpsertChange(gwUpdatedSameGen)
 
-					changed, conf, statuses := processor.Process(context.TODO())
+					changed, conf, statuses := processor.Process(context.Background())
 					Expect(changed).To(BeFalse())
 					Expect(conf).To(BeZero())
 					Expect(statuses).To(BeZero())
@@ -643,7 +643,7 @@ var _ = Describe("ChangeProcessor", func() {
 						},
 					}
 
-					changed, conf, statuses := processor.Process(context.TODO())
+					changed, conf, statuses := processor.Process(context.Background())
 					Expect(changed).To(BeTrue())
 					Expect(helpers.Diff(expectedConf, conf)).To(BeEmpty())
 					assertStatuses(expectedStatuses, statuses)
@@ -655,7 +655,7 @@ var _ = Describe("ChangeProcessor", func() {
 					// gcUpdatedSameGen.Generation has not been changed
 					processor.CaptureUpsertChange(gcUpdatedSameGen)
 
-					changed, conf, statuses := processor.Process(context.TODO())
+					changed, conf, statuses := processor.Process(context.Background())
 					Expect(changed).To(BeFalse())
 					Expect(conf).To(BeZero())
 					Expect(statuses).To(BeZero())
@@ -752,7 +752,7 @@ var _ = Describe("ChangeProcessor", func() {
 						},
 					}
 
-					changed, conf, statuses := processor.Process(context.TODO())
+					changed, conf, statuses := processor.Process(context.Background())
 					Expect(changed).To(BeTrue())
 					Expect(helpers.Diff(expectedConf, conf)).To(BeEmpty())
 					assertStatuses(expectedStatuses, statuses)
@@ -760,7 +760,7 @@ var _ = Describe("ChangeProcessor", func() {
 			})
 			When("no changes are captured", func() {
 				It("returns empty configuration and statuses", func() {
-					changed, conf, statuses := processor.Process(context.TODO())
+					changed, conf, statuses := processor.Process(context.Background())
 
 					Expect(changed).To(BeFalse())
 					Expect(conf).To(BeZero())
@@ -864,7 +864,7 @@ var _ = Describe("ChangeProcessor", func() {
 						},
 					}
 
-					changed, conf, statuses := processor.Process(context.TODO())
+					changed, conf, statuses := processor.Process(context.Background())
 					Expect(changed).To(BeTrue())
 					Expect(helpers.Diff(expectedConf, conf)).To(BeEmpty())
 					assertStatuses(expectedStatuses, statuses)
@@ -982,7 +982,7 @@ var _ = Describe("ChangeProcessor", func() {
 						},
 					}
 
-					changed, conf, statuses := processor.Process(context.TODO())
+					changed, conf, statuses := processor.Process(context.Background())
 					Expect(changed).To(BeTrue())
 					Expect(helpers.Diff(expectedConf, conf)).To(BeEmpty())
 					assertStatuses(expectedStatuses, statuses)
@@ -1082,7 +1082,7 @@ var _ = Describe("ChangeProcessor", func() {
 						},
 					}
 
-					changed, conf, statuses := processor.Process(context.TODO())
+					changed, conf, statuses := processor.Process(context.Background())
 					Expect(changed).To(BeTrue())
 					Expect(helpers.Diff(expectedConf, conf)).To(BeEmpty())
 					assertStatuses(expectedStatuses, statuses)
@@ -1134,7 +1134,7 @@ var _ = Describe("ChangeProcessor", func() {
 						HTTPRouteStatuses:      map[types.NamespacedName]state.HTTPRouteStatus{},
 					}
 
-					changed, conf, statuses := processor.Process(context.TODO())
+					changed, conf, statuses := processor.Process(context.Background())
 					Expect(changed).To(BeTrue())
 					Expect(helpers.Diff(expectedConf, conf)).To(BeEmpty())
 					assertStatuses(expectedStatuses, statuses)
@@ -1173,7 +1173,7 @@ var _ = Describe("ChangeProcessor", func() {
 						HTTPRouteStatuses:      map[types.NamespacedName]state.HTTPRouteStatus{},
 					}
 
-					changed, conf, statuses := processor.Process(context.TODO())
+					changed, conf, statuses := processor.Process(context.Background())
 					Expect(changed).To(BeTrue())
 					Expect(helpers.Diff(expectedConf, conf)).To(BeEmpty())
 					assertStatuses(expectedStatuses, statuses)
@@ -1192,7 +1192,7 @@ var _ = Describe("ChangeProcessor", func() {
 						HTTPRouteStatuses:      map[types.NamespacedName]state.HTTPRouteStatus{},
 					}
 
-					changed, conf, statuses := processor.Process(context.TODO())
+					changed, conf, statuses := processor.Process(context.Background())
 					Expect(changed).To(BeTrue())
 					Expect(helpers.Diff(expectedConf, conf)).To(BeEmpty())
 					assertStatuses(expectedStatuses, statuses)
@@ -1211,7 +1211,7 @@ var _ = Describe("ChangeProcessor", func() {
 						HTTPRouteStatuses:      map[types.NamespacedName]state.HTTPRouteStatus{},
 					}
 
-					changed, conf, statuses := processor.Process(context.TODO())
+					changed, conf, statuses := processor.Process(context.Background())
 					Expect(changed).To(BeTrue())
 					Expect(helpers.Diff(expectedConf, conf)).To(BeEmpty())
 					assertStatuses(expectedStatuses, statuses)
@@ -1291,7 +1291,7 @@ var _ = Describe("ChangeProcessor", func() {
 			})
 
 			testProcessChangedVal := func(expChanged bool) {
-				changed, _, _ := processor.Process(context.TODO())
+				changed, _, _ := processor.Process(context.Background())
 				Expect(changed).To(Equal(expChanged))
 			}
 
@@ -1656,7 +1656,7 @@ var _ = Describe("ChangeProcessor", func() {
 				processor.CaptureUpsertChange(gw1)
 				processor.CaptureUpsertChange(hr1)
 
-				changed, _, _ := processor.Process(context.TODO())
+				changed, _, _ := processor.Process(context.Background())
 				Expect(changed).To(BeTrue())
 			})
 			It("should report not changed after multiple Upserts of the resource with same generation", func() {
@@ -1664,7 +1664,7 @@ var _ = Describe("ChangeProcessor", func() {
 				processor.CaptureUpsertChange(gw1)
 				processor.CaptureUpsertChange(hr1)
 
-				changed, _, _ := processor.Process(context.TODO())
+				changed, _, _ := processor.Process(context.Background())
 				Expect(changed).To(BeFalse())
 			})
 			When("a upsert of updated resources is followed by an upsert of the same generation", func() {
@@ -1679,7 +1679,7 @@ var _ = Describe("ChangeProcessor", func() {
 					processor.CaptureUpsertChange(gw1Updated)
 					processor.CaptureUpsertChange(hr1Updated)
 
-					changed, _, _ := processor.Process(context.TODO())
+					changed, _, _ := processor.Process(context.Background())
 					Expect(changed).To(BeTrue())
 				})
 			})
@@ -1688,7 +1688,7 @@ var _ = Describe("ChangeProcessor", func() {
 				processor.CaptureUpsertChange(gw2)
 				processor.CaptureUpsertChange(hr2)
 
-				changed, _, _ := processor.Process(context.TODO())
+				changed, _, _ := processor.Process(context.Background())
 				Expect(changed).To(BeTrue())
 			})
 			When("resources are deleted followed by upserts with the same generations", func() {
@@ -1702,14 +1702,14 @@ var _ = Describe("ChangeProcessor", func() {
 					processor.CaptureUpsertChange(gw2)
 					processor.CaptureUpsertChange(hr2)
 
-					changed, _, _ := processor.Process(context.TODO())
+					changed, _, _ := processor.Process(context.Background())
 					Expect(changed).To(BeTrue())
 				})
 			})
 			It("should report changed after deleting resources", func() {
 				processor.CaptureDeleteChange(&v1beta1.HTTPRoute{}, hr2NsName)
 
-				changed, _, _ := processor.Process(context.TODO())
+				changed, _, _ := processor.Process(context.Background())
 				Expect(changed).To(BeTrue())
 			})
 		})
@@ -1720,7 +1720,7 @@ var _ = Describe("ChangeProcessor", func() {
 				processor.CaptureDeleteChange(&v1beta1.HTTPRoute{}, hrNsName)
 				processor.CaptureDeleteChange(&v1beta1.HTTPRoute{}, hr2NsName)
 
-				changed, _, _ := processor.Process(context.TODO())
+				changed, _, _ := processor.Process(context.Background())
 				Expect(changed).To(BeFalse())
 			})
 		})
@@ -1730,7 +1730,7 @@ var _ = Describe("ChangeProcessor", func() {
 				processor.CaptureUpsertChange(svc)
 				processor.CaptureUpsertChange(slice)
 
-				changed, _, _ := processor.Process(context.TODO())
+				changed, _, _ := processor.Process(context.Background())
 				Expect(changed).To(BeTrue())
 			})
 
@@ -1739,7 +1739,7 @@ var _ = Describe("ChangeProcessor", func() {
 				processor.CaptureUpsertChange(svc)
 				processor.CaptureUpsertChange(slice)
 
-				changed, _, _ := processor.Process(context.TODO())
+				changed, _, _ := processor.Process(context.Background())
 				Expect(changed).To(BeFalse())
 			})
 			When("upserts of related resources are followed by upserts of unrelated resources", func() {
@@ -1754,7 +1754,7 @@ var _ = Describe("ChangeProcessor", func() {
 					processor.CaptureUpsertChange(svc)
 					processor.CaptureUpsertChange(slice)
 
-					changed, _, _ := processor.Process(context.TODO())
+					changed, _, _ := processor.Process(context.Background())
 					Expect(changed).To(BeTrue())
 				})
 			})
@@ -1770,7 +1770,7 @@ var _ = Describe("ChangeProcessor", func() {
 					processor.CaptureUpsertChange(svc)
 					processor.CaptureUpsertChange(slice)
 
-					changed, _, _ := processor.Process(context.TODO())
+					changed, _, _ := processor.Process(context.Background())
 					Expect(changed).To(BeTrue())
 				})
 			})
@@ -1788,7 +1788,7 @@ var _ = Describe("ChangeProcessor", func() {
 				processor.CaptureUpsertChange(svc)
 				processor.CaptureUpsertChange(slice)
 
-				changed, _, _ := processor.Process(context.TODO())
+				changed, _, _ := processor.Process(context.Background())
 				Expect(changed).To(BeTrue())
 			})
 
@@ -1804,7 +1804,7 @@ var _ = Describe("ChangeProcessor", func() {
 				processor.CaptureUpsertChange(svc)
 				processor.CaptureUpsertChange(slice)
 
-				changed, _, _ := processor.Process(context.TODO())
+				changed, _, _ := processor.Process(context.Background())
 				Expect(changed).To(BeFalse())
 			})
 
@@ -1821,7 +1821,7 @@ var _ = Describe("ChangeProcessor", func() {
 					processor.CaptureUpsertChange(gw1)
 					processor.CaptureUpsertChange(hr1)
 
-					changed, _, _ := processor.Process(context.TODO())
+					changed, _, _ := processor.Process(context.Background())
 					Expect(changed).To(BeTrue())
 				},
 			)
@@ -1838,7 +1838,7 @@ var _ = Describe("ChangeProcessor", func() {
 					processor.CaptureUpsertChange(svc)
 					processor.CaptureUpsertChange(slice)
 
-					changed, _, _ := processor.Process(context.TODO())
+					changed, _, _ := processor.Process(context.Background())
 					Expect(changed).To(BeTrue())
 				},
 			)
@@ -1856,7 +1856,7 @@ var _ = Describe("ChangeProcessor", func() {
 					processor.CaptureUpsertChange(gw1Updated)
 					processor.CaptureUpsertChange(hr1Updated)
 
-					changed, _, _ := processor.Process(context.TODO())
+					changed, _, _ := processor.Process(context.Background())
 					Expect(changed).To(BeTrue())
 				},
 			)

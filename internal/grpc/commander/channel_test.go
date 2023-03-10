@@ -24,7 +24,7 @@ func TestBidirectionalChannel(t *testing.T) {
 	recvCommands := make(chan *proto.Command)
 	sentCommands := make(chan *proto.Command)
 
-	ctx, cancel := context.WithCancel(context.TODO())
+	ctx, cancel := context.WithCancel(context.Background())
 
 	fakeServer := &commanderfakes.FakeCommander_CommandChannelServer{
 		RecvStub: func() (*proto.Command, error) {

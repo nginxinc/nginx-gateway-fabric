@@ -213,36 +213,36 @@ var _ = Describe("ServiceResolver", func() {
 				},
 			}
 
-			endpoints, err := serviceResolver.Resolve(context.TODO(), svc, 80)
+			endpoints, err := serviceResolver.Resolve(context.Background(), svc, 80)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(endpoints).To(ConsistOf(expectedEndpoints))
 		})
 		It("returns an error if port does not exist in service", func() {
-			endpoints, err := serviceResolver.Resolve(context.TODO(), svc, 8080) // service port does not exist
+			endpoints, err := serviceResolver.Resolve(context.Background(), svc, 8080) // service port does not exist
 			Expect(err).To(HaveOccurred())
 			Expect(endpoints).To(BeNil())
 		})
 		It("returns an error if there are no valid endpoint slices for the service and port", func() {
 			// delete valid endpoint slices
-			Expect(fakeK8sClient.Delete(context.TODO(), slice1)).To(Succeed())
-			Expect(fakeK8sClient.Delete(context.TODO(), slice2)).To(Succeed())
-			Expect(fakeK8sClient.Delete(context.TODO(), dupeEndpointSlice)).To(Succeed())
+			Expect(fakeK8sClient.Delete(context.Background(), slice1)).To(Succeed())
+			Expect(fakeK8sClient.Delete(context.Background(), slice2)).To(Succeed())
+			Expect(fakeK8sClient.Delete(context.Background(), dupeEndpointSlice)).To(Succeed())
 
-			endpoints, err := serviceResolver.Resolve(context.TODO(), svc, 80)
+			endpoints, err := serviceResolver.Resolve(context.Background(), svc, 80)
 			Expect(err).To(HaveOccurred())
 			Expect(endpoints).To(BeNil())
 		})
 		It("returns an error if there are no endpoint slices for the service", func() {
 			// delete remaining endpoint slices
-			Expect(fakeK8sClient.Delete(context.TODO(), sliceIPV6)).To(Succeed())
-			Expect(fakeK8sClient.Delete(context.TODO(), sliceNoMatchingPortName)).To(Succeed())
+			Expect(fakeK8sClient.Delete(context.Background(), sliceIPV6)).To(Succeed())
+			Expect(fakeK8sClient.Delete(context.Background(), sliceNoMatchingPortName)).To(Succeed())
 
-			endpoints, err := serviceResolver.Resolve(context.TODO(), svc, 80)
+			endpoints, err := serviceResolver.Resolve(context.Background(), svc, 80)
 			Expect(err).To(HaveOccurred())
 			Expect(endpoints).To(BeNil())
 		})
 		It("returns an error if the service is nil", func() {
-			endpoints, err := serviceResolver.Resolve(context.TODO(), nil, 80)
+			endpoints, err := serviceResolver.Resolve(context.Background(), nil, 80)
 			Expect(err).To(HaveOccurred())
 			Expect(endpoints).To(BeNil())
 		})

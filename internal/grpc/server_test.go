@@ -42,7 +42,7 @@ func TestServer_ConcurrentConnections(t *testing.T) {
 	g.Expect(err).To(BeNil())
 	g.Expect(server).ToNot(BeNil())
 
-	ctx, cancel := context.WithCancel(context.TODO())
+	ctx, cancel := context.WithCancel(context.Background())
 
 	errCh := make(chan error)
 	go func() {
