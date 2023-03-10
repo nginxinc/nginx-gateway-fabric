@@ -156,7 +156,7 @@ func TestConnection_HandleCommand(t *testing.T) {
 
 			conn := newConnection("id", zap.New(), fakeExchanger)
 
-			conn.handleCommand(test.cmd)
+			conn.handleCommand(context.Background(), test.cmd)
 
 			if test.expInboundCmd {
 				cmd := <-in
@@ -185,7 +185,7 @@ func TestConnection_HandleAgentConnectRequest(t *testing.T) {
 
 	cmd := CreateAgentConnectRequestCmd("msg-id")
 
-	go conn.handleAgentConnectRequest(cmd)
+	go conn.handleAgentConnectRequest(context.Background(), cmd)
 
 	response := <-in
 
@@ -198,6 +198,34 @@ func TestConnection_HandleAgentConnectRequest(t *testing.T) {
 	g.Expect(agentConnResponse.Status.StatusCode).To(Equal(proto.AgentConnectStatus_CONNECT_OK))
 
 	g.Expect(conn.state).To(Equal(StateRegistered))
+}
+
+func TestConnection_HandleAgentConnectRequest_CtxCanceled(t *testing.T) {
+	g := NewGomegaWithT(t)
+
+	in := make(chan *proto.Command)
+
+	fakeExchanger := &exchangerfakes.FakeCommandExchanger{
+		InStub: func() chan<- *proto.Command {
+			return in
+		},
+	}
+
+	conn := newConnection("id", zap.New(), fakeExchanger)
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	cmd := CreateAgentConnectRequestCmd("msg-id")
+
+	done := make(chan struct{})
+	go func() {
+		conn.handleAgentConnectRequest(ctx, cmd)
+		close(done)
+	}()
+
+	cancel()
+
+	g.Eventually(done).Should(BeClosed())
 }
 
 func TestConnection_Register(t *testing.T) {

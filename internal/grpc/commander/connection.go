@@ -117,21 +117,21 @@ func (c *connection) receive(ctx context.Context) error {
 		case <-ctx.Done():
 			return ctx.Err()
 		case cmd := <-c.cmdExchanger.Out():
-			c.handleCommand(cmd)
+			c.handleCommand(ctx, cmd)
 		}
 	}
 }
 
-func (c *connection) handleCommand(cmd *proto.Command) {
+func (c *connection) handleCommand(ctx context.Context, cmd *proto.Command) {
 	switch cmd.Data.(type) {
 	case *proto.Command_AgentConnectRequest:
-		c.handleAgentConnectRequest(cmd)
+		c.handleAgentConnectRequest(ctx, cmd)
 	default:
 		c.logger.Info("Ignoring command", "command data type", fmt.Sprintf("%T", cmd.Data))
 	}
 }
 
-func (c *connection) handleAgentConnectRequest(cmd *proto.Command) {
+func (c *connection) handleAgentConnectRequest(ctx context.Context, cmd *proto.Command) {
 	req := cmd.GetAgentConnectRequest()
 
 	c.logger.Info("Received agent connect request", "message ID", cmd.GetMeta().GetMessageId())
@@ -144,7 +144,11 @@ func (c *connection) handleAgentConnectRequest(cmd *proto.Command) {
 		c.systemID,
 	)
 
-	c.cmdExchanger.In() <- res
+	select {
+	case <-ctx.Done():
+		return
+	case c.cmdExchanger.In() <- res:
+	}
 }
 
 func (c *connection) register(nginxID, systemID string) {
