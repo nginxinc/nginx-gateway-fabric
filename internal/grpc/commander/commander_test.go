@@ -115,9 +115,11 @@ var _ = Describe("Commander", func() {
 					},
 				}
 
-				fakeServer := new(commanderfakes.FakeCommander_UploadServer)
-				fakeServer.ContextStub = func() context.Context {
-					return metadata.NewIncomingContext(context.TODO(), metadata.New(map[string]string{"uuid": "uuid"}))
+				fakeServer := &commanderfakes.FakeCommander_UploadServer{
+					ContextStub: func() context.Context {
+						return metadata.NewIncomingContext(context.TODO(),
+							metadata.New(map[string]string{"uuid": "uuid"}))
+					},
 				}
 
 				cmdr := commander.NewCommander(zap.New(), fakeMgr)
@@ -141,9 +143,11 @@ var _ = Describe("Commander", func() {
 					},
 				}
 
-				fakeServer := new(commanderfakes.FakeCommander_UploadServer)
-				fakeServer.ContextStub = func() context.Context {
-					return metadata.NewIncomingContext(context.TODO(), metadata.New(map[string]string{"uuid": "uuid"}))
+				fakeServer := &commanderfakes.FakeCommander_UploadServer{
+					ContextStub: func() context.Context {
+						return metadata.NewIncomingContext(context.TODO(),
+							metadata.New(map[string]string{"uuid": "uuid"}))
+					},
 				}
 
 				cmdr := commander.NewCommander(zap.New(), fakeMgr)

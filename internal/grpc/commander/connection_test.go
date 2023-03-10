@@ -18,10 +18,11 @@ func TestConnection_Run_ExchangerErr(t *testing.T) {
 	exchangerClose := make(chan struct{})
 	exchangerErr := errors.New("exchanger error")
 
-	fakeExchanger := new(exchangerfakes.FakeCommandExchanger)
-	fakeExchanger.RunStub = func(ctx context.Context) error {
-		<-exchangerClose
-		return errors.New("exchanger error")
+	fakeExchanger := &exchangerfakes.FakeCommandExchanger{
+		RunStub: func(ctx context.Context) error {
+			<-exchangerClose
+			return errors.New("exchanger error")
+		},
 	}
 
 	conn := newConnection("id", zap.New(), fakeExchanger)
@@ -41,10 +42,11 @@ func TestConnection_Run_ConnectionError(t *testing.T) {
 	g := NewGomegaWithT(t)
 	ctx, cancel := context.WithCancel(context.TODO())
 
-	fakeExchanger := new(exchangerfakes.FakeCommandExchanger)
-	fakeExchanger.RunStub = func(ctx context.Context) error {
-		<-ctx.Done()
-		return nil
+	fakeExchanger := &exchangerfakes.FakeCommandExchanger{
+		RunStub: func(ctx context.Context) error {
+			<-ctx.Done()
+			return nil
+		},
 	}
 
 	conn := newConnection("id", zap.New(), fakeExchanger)
@@ -68,12 +70,13 @@ func TestConnection_Receive(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.TODO())
 
-	fakeExchanger := new(exchangerfakes.FakeCommandExchanger)
-	fakeExchanger.OutStub = func() <-chan *proto.Command {
-		return out
-	}
-	fakeExchanger.InStub = func() chan<- *proto.Command {
-		return in
+	fakeExchanger := &exchangerfakes.FakeCommandExchanger{
+		OutStub: func() <-chan *proto.Command {
+			return out
+		},
+		InStub: func() chan<- *proto.Command {
+			return in
+		},
 	}
 
 	conn := newConnection("id", zap.New(), fakeExchanger)
@@ -149,9 +152,10 @@ func TestConnection_HandleCommand(t *testing.T) {
 
 			in := make(chan *proto.Command, 1)
 
-			fakeExchanger := new(exchangerfakes.FakeCommandExchanger)
-			fakeExchanger.InStub = func() chan<- *proto.Command {
-				return in
+			fakeExchanger := &exchangerfakes.FakeCommandExchanger{
+				InStub: func() chan<- *proto.Command {
+					return in
+				},
 			}
 
 			conn := newConnection("id", zap.New(), fakeExchanger)
@@ -175,9 +179,10 @@ func TestConnection_HandleAgentConnectRequest(t *testing.T) {
 
 	in := make(chan *proto.Command)
 
-	fakeExchanger := new(exchangerfakes.FakeCommandExchanger)
-	fakeExchanger.InStub = func() chan<- *proto.Command {
-		return in
+	fakeExchanger := &exchangerfakes.FakeCommandExchanger{
+		InStub: func() chan<- *proto.Command {
+			return in
+		},
 	}
 
 	conn := newConnection("id", zap.New(), fakeExchanger)

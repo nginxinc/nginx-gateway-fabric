@@ -21,19 +21,19 @@ func TestBidirectionalChannel(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.TODO())
 
-	fakeServer := new(commanderfakes.FakeCommander_CommandChannelServer)
-	fakeServer.RecvStub = func() (*proto.Command, error) {
-		select {
-		case <-ctx.Done():
-			return nil, nil
-		case cmd := <-recvCommands:
-			return cmd, nil
-		}
-	}
-
-	fakeServer.SendStub = func(command *proto.Command) error {
-		sentCommands <- command
-		return nil
+	fakeServer := &commanderfakes.FakeCommander_CommandChannelServer{
+		RecvStub: func() (*proto.Command, error) {
+			select {
+			case <-ctx.Done():
+				return nil, nil
+			case cmd := <-recvCommands:
+				return cmd, nil
+			}
+		},
+		SendStub: func(command *proto.Command) error {
+			sentCommands <- command
+			return nil
+		},
 	}
 
 	ch := commander.NewBidirectionalChannel(fakeServer, zap.New())
