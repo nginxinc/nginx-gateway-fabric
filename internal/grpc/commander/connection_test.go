@@ -98,7 +98,7 @@ func TestConnection_Receive(t *testing.T) {
 
 	sendCmdAndVerifyResponse("msg-1")
 	sendCmdAndVerifyResponse("msg-2")
-	
+
 	cancel()
 
 	receiveErr := <-errCh
@@ -110,6 +110,10 @@ func TestConnection_State(t *testing.T) {
 
 	conn := newConnection("id", zap.New(), new(exchangerfakes.FakeCommandExchanger))
 	g.Expect(conn.State()).To(Equal(StateConnected))
+
+	// change state
+	conn.state = StateRegistered
+	g.Expect(conn.State()).To(Equal(StateRegistered))
 }
 
 func TestConnection_ID(t *testing.T) {
