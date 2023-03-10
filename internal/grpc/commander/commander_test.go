@@ -3,7 +3,6 @@ package commander_test
 import (
 	"context"
 
-	"github.com/nginx/agent/sdk/v2/proto"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"google.golang.org/grpc/metadata"
@@ -22,10 +21,6 @@ var _ = Describe("Commander", func() {
 			fakeServer := &commanderfakes.FakeCommander_CommandChannelServer{
 				ContextStub: func() context.Context {
 					return metadata.NewIncomingContext(ctx, metadata.New(map[string]string{"uuid": "uuid"}))
-				},
-				RecvStub: func() (*proto.Command, error) {
-					<-ctx.Done()
-					return nil, nil
 				},
 			}
 
