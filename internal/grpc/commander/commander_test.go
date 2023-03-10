@@ -97,11 +97,11 @@ var _ = Describe("Commander", func() {
 		})
 		Describe("error cases", func() {
 			tests := []struct {
-				getAgentCallCount int
-				expErrString      string
-				name              string
 				getAgentStub      func(string) commander.Agent
 				contextStub       func() context.Context
+				expErrString      string
+				name              string
+				getAgentCallCount int
 			}{
 				{
 					contextStub:       func() context.Context { return context.Background() },
