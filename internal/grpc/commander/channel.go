@@ -82,7 +82,12 @@ func (bc *BidirectionalChannel) receive(ctx context.Context) error {
 		default:
 			if cmd != nil {
 				bc.logger.Info("Received command", "command type", fmt.Sprintf("%T", cmd.Data))
-				bc.fromClient <- cmd
+
+				select {
+				case <-ctx.Done():
+					return ctx.Err()
+				case bc.fromClient <- cmd:
+				}
 			} else {
 				// The agent should never send us a nil command, but we catch this case out of an abundance of caution.
 				// We don't want to return an error in this case because that would break the CommandChannel
