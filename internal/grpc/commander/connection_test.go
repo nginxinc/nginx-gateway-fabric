@@ -130,10 +130,6 @@ func TestConnection_HandleCommand(t *testing.T) {
 		expInboundCmd bool
 	}{
 		{
-			msg:           "nil command",
-			expInboundCmd: false,
-		},
-		{
 			msg:           "unsupported command",
 			cmd:           &proto.Command{Data: &proto.Command_EventReport{}},
 			expInboundCmd: false,

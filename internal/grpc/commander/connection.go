@@ -123,10 +123,6 @@ func (c *connection) receive(ctx context.Context) error {
 }
 
 func (c *connection) handleCommand(cmd *proto.Command) {
-	if cmd == nil {
-		return
-	}
-
 	switch cmd.Data.(type) {
 	case *proto.Command_AgentConnectRequest:
 		c.handleAgentConnectRequest(cmd)
