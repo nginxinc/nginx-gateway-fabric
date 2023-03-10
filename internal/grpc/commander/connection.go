@@ -84,7 +84,7 @@ func newConnection(
 	cmdExchanger exchanger.CommandExchanger,
 ) *connection {
 	return &connection{
-		logger:       logger.WithName(fmt.Sprintf("connection-%s", id)),
+		logger:       logger,
 		cmdExchanger: cmdExchanger,
 		id:           id,
 	}

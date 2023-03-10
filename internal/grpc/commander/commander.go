@@ -54,10 +54,12 @@ func (c *Commander) CommandChannel(server proto.Commander_CommandChannelServer) 
 		c.agentMgr.RemoveAgent(id)
 	}()
 
+	agentLogger := c.logger.WithValues("id", id)
+
 	agentConn := newConnection(
 		id,
-		c.logger,
-		NewBidirectionalChannel(server, c.logger.WithName("channel")),
+		agentLogger.WithName("connection"),
+		NewBidirectionalChannel(server, agentLogger.WithName("channel")),
 	)
 
 	c.logger.Info("Adding agent to manager")
