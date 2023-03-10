@@ -78,13 +78,13 @@ var _ = Describe("Agent Pool", func() {
 		pool.AddAgent(newFakeAgent("4"))
 		pool.AddAgent(newFakeAgent("5"))
 
-		addGetAgent := func(id string, wg *sync.WaitGroup) {
+		addAndGetAgent := func(id string, wg *sync.WaitGroup) {
 			defer wg.Done()
 			pool.AddAgent(newFakeAgent(id))
 			Expect(pool.GetAgent(id).ID()).To(Equal(id))
 		}
 
-		removeGetAgent := func(id string, wg *sync.WaitGroup) {
+		removeAndGetAgent := func(id string, wg *sync.WaitGroup) {
 			defer wg.Done()
 			Expect(pool.GetAgent(id).ID()).To(Equal(id))
 			pool.RemoveAgent(id)
@@ -98,10 +98,10 @@ var _ = Describe("Agent Pool", func() {
 			wg.Add(1)
 			// remove first five
 			if i < 5 {
-				go removeGetAgent(id, wg)
+				go removeAndGetAgent(id, wg)
 			} else {
 				// add 10 new
-				go addGetAgent(id, wg)
+				go addAndGetAgent(id, wg)
 			}
 		}
 
