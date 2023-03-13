@@ -80,7 +80,7 @@ func (c *Commander) Upload(server proto.Commander_UploadServer) error {
 
 	id, err := getUUIDFromContext(server.Context())
 	if err != nil {
-		c.logger.Error(err, "upload failed; cannot get the UUID of the agent")
+		c.logger.Error(err, "failed upload; cannot get the UUID of the agent")
 		return err
 	}
 
@@ -112,7 +112,7 @@ func getUUIDFromContext(ctx context.Context) (string, error) {
 	}
 
 	if len(vals) > 1 {
-		return "", fmt.Errorf("more than one value for uuid in metadata")
+		return "", errors.New("more than one value for uuid in metadata")
 	}
 
 	return vals[0], nil
