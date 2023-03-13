@@ -70,7 +70,7 @@ func validateCommonMatchPart(value string) error {
 	// empty values do not make sense, so we don't allow them.
 
 	if value == "" {
-		return fmt.Errorf("cannot be empty")
+		return errors.New("cannot be empty")
 	}
 
 	trimmed := strings.TrimSpace(value)
@@ -82,7 +82,7 @@ func validateCommonMatchPart(value string) error {
 	// The directive supports NGINX variables.
 	// We don't want to allow them, as any undefined variable will cause NGINX to fail to reload.
 	if strings.Contains(value, "$") {
-		return fmt.Errorf("cannot contain $")
+		return errors.New("cannot contain $")
 	}
 
 	return nil

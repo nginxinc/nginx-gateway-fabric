@@ -64,7 +64,7 @@ func createBackend(
 ) (BackendRef, []conditions.Condition) {
 	// Data plane will handle invalid ref by responding with 500.
 	// Because of that, we always need to add a BackendRef to group.Backends, even if the ref is invalid.
-	// Additionally, we always calculate the weight, even if it is not invalid.
+	// Additionally, we always calculate the weight, even if it is invalid.
 	weight := int32(1)
 	if ref.Weight != nil {
 		if validateWeight(*ref.Weight) != nil {

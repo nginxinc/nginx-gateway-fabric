@@ -46,7 +46,7 @@ type Route struct {
 	// Conditions include Conditions for the HTTPRoute.
 	Conditions []conditions.Condition
 	// Rules include Rules for the HTTPRoute. Each Rule[i] corresponds to the ith HTTPRouteRule.
-	// If the Route is invalid, the field is nil
+	// If the Route is invalid, this field is nil
 	Rules []Rule
 	// Valid tells if the Route is valid.
 	// If it is invalid, NGK should not generate any configuration for it.

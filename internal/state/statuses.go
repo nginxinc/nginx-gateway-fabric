@@ -145,7 +145,7 @@ func buildStatuses(graph *graph.Graph) Statuses {
 			allConds = append(allConds, conds...)
 
 			if ref == "" {
-				// FIXME(pleshakov): Gateway API spec doesn't allow empty section names in the status.
+				// FIXME(pleshakov): Gateway API spec does allow empty section names in the status.
 				// However, NKG doesn't yet support the empty section names.
 				// Once NKG supports them, it will be able to determine which section name the HTTPRoute was bound to.
 				// So we won't need this workaround.
