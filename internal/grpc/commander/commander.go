@@ -3,7 +3,6 @@ package commander
 import (
 	"context"
 	"errors"
-	"fmt"
 
 	"github.com/go-logr/logr"
 	"github.com/nginx/agent/sdk/v2/proto"
@@ -73,31 +72,10 @@ func (c *Commander) Download(_ *proto.DownloadRequest, _ proto.Commander_Downloa
 	return nil
 }
 
-// Upload is not needed by NKG but if we don't implement it the agent will spew error messages.
-// An active (connected) connection must exist in the AgentManager for the Upload to proceed.
-func (c *Commander) Upload(server proto.Commander_UploadServer) error {
+func (c *Commander) Upload(_ proto.Commander_UploadServer) error {
 	c.logger.Info("Commander Upload requested")
 
-	id, err := getUUIDFromContext(server.Context())
-	if err != nil {
-		c.logger.Error(err, "failed upload; cannot get the UUID of the agent")
-		return err
-	}
-
-	agent := c.agentMgr.GetAgent(id)
-	if agent == nil {
-		err := fmt.Errorf("agent with id: %s not found", id)
-		c.logger.Error(err, "failed upload")
-		return err
-	}
-
-	if agent.State() != StateRegistered {
-		err := fmt.Errorf("agent with id: %s is not registered", id)
-		c.logger.Error(err, "failed upload")
-		return err
-	}
-
-	return agent.ReceiveFromUploadServer(server)
+	return nil
 }
 
 func getUUIDFromContext(ctx context.Context) (string, error) {

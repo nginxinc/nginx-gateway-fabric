@@ -2,9 +2,7 @@ package commander
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"io"
 
 	"github.com/go-logr/logr"
 	"github.com/nginx/agent/sdk/v2/grpc"
@@ -43,33 +41,6 @@ func (c *connection) ID() string {
 
 func (c *connection) State() State {
 	return c.state
-}
-
-// ReceiveFromUploadServer uploads data chunks from the UploadServer and logs them.
-// FIXME(kate-osborn): NKG doesn't need this functionality and ideally we wouldn't have to implement and maintain this.
-// Figure out how to remove this without causing errors in the agent.
-func (c *connection) ReceiveFromUploadServer(server proto.Commander_UploadServer) error {
-	c.logger.Info("Upload request")
-
-	for {
-		// Recv blocks until it receives a message into or the stream is
-		// done. It returns io.EOF when the client has performed a CloseSend. On
-		// any non-EOF error, the stream is aborted and the error contains the
-		// RPC status.
-		_, err := server.Recv()
-
-		if err != nil && !errors.Is(err, io.EOF) {
-			c.logger.Error(err, "upload receive error")
-			return err
-		}
-
-		c.logger.Info("Received chunk from upload channel")
-
-		if errors.Is(err, io.EOF) {
-			c.logger.Info("Upload completed")
-			return server.SendAndClose(&proto.UploadStatus{Status: proto.UploadStatus_OK})
-		}
-	}
 }
 
 // newConnection creates a new instance of connection.

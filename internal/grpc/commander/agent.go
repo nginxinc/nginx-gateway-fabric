@@ -1,9 +1,5 @@
 package commander
 
-import (
-	"github.com/nginx/agent/sdk/v2/proto"
-)
-
 //go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . AgentManager
 //go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . Agent
 
@@ -14,10 +10,6 @@ type Agent interface {
 	ID() string
 	// State returns the State of the Agent.
 	State() State
-	// ReceiveFromUploadServer uploads data fom the UploadServer.
-	// FIXME(kate-osborn): NKG doesn't need this functionality and ideally we wouldn't have to implement and maintain this.
-	// Figure out how to remove this without causing errors in the agent.
-	ReceiveFromUploadServer(server proto.Commander_UploadServer) error
 }
 
 // AgentManager manages all the connected agents.

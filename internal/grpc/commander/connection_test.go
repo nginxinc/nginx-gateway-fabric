@@ -172,7 +172,6 @@ func TestConnection_HandleCommand(t *testing.T) {
 }
 
 func TestConnection_HandleAgentConnectRequest(t *testing.T) {
-
 	invalidConnectRequest := &proto.Command{
 		Meta: &proto.Metadata{
 			MessageId: "msg-id",
@@ -186,10 +185,10 @@ func TestConnection_HandleAgentConnectRequest(t *testing.T) {
 	}
 
 	tests := []struct {
-		name          string
 		request       *proto.Command
-		expStatusCode proto.AgentConnectStatus_StatusCode
+		name          string
 		expStatusMsg  string
+		expStatusCode proto.AgentConnectStatus_StatusCode
 	}{
 		{
 			name:          "normal",
@@ -239,7 +238,6 @@ func TestConnection_HandleAgentConnectRequest(t *testing.T) {
 			}
 		})
 	}
-
 }
 
 func TestConnection_HandleAgentConnectRequest_CtxCanceled(t *testing.T) {
