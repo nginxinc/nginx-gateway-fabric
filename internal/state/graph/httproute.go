@@ -55,6 +55,11 @@ type Route struct {
 }
 
 // GetAllBackendGroups returns BackendGroups for all rules with valid matches and filters in the Route.
+//
+// FIXME(pleshakov) Improve the name once https://github.com/nginxinc/nginx-kubernetes-gateway/issues/468 is
+// implemented. The current name doesn't reflect the filtering of rules inside the loops.
+// See also the discussion below for more context:
+// https://github.com/nginxinc/nginx-kubernetes-gateway/pull/455#discussion_r1136277589
 func (r *Route) GetAllBackendGroups() []BackendGroup {
 	count := 0
 
