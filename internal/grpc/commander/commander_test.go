@@ -5,8 +5,9 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
-
+	status2 "google.golang.org/grpc/status"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/grpc/commander"
@@ -63,6 +64,15 @@ var _ = Describe("Commander", func() {
 
 				Expect(fakeMgr.AddAgentCallCount()).To(Equal(0))
 			})
+		})
+	})
+	Describe("Upload", func() {
+		It("returns Unimplemented error code", func() {
+			cmdr := commander.NewCommander(zap.New(), &commanderfakes.FakeAgentManager{})
+			err := cmdr.Upload(&commanderfakes.FakeCommander_UploadServer{})
+			status, ok := status2.FromError(err)
+			Expect(ok).To(BeTrue())
+			Expect(status.Code()).To(Equal(codes.Unimplemented))
 		})
 	})
 })

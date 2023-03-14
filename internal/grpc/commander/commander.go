@@ -6,7 +6,9 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/nginx/agent/sdk/v2/proto"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 )
 
 // nolint:lll
@@ -75,7 +77,7 @@ func (c *Commander) Download(_ *proto.DownloadRequest, _ proto.Commander_Downloa
 func (c *Commander) Upload(_ proto.Commander_UploadServer) error {
 	c.logger.Info("Commander Upload requested")
 
-	return nil
+	return status.Error(codes.Unimplemented, "upload method is not implemented")
 }
 
 func getUUIDFromContext(ctx context.Context) (string, error) {
