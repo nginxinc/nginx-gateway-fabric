@@ -345,14 +345,15 @@ func bindRouteToListeners(
 
 			accepted := findAcceptedHostnames(l.Source.Hostname, r.Source.Spec.Hostnames)
 
-			if len(accepted) > 0 {
-				for _, h := range accepted {
-					l.AcceptedHostnames[h] = struct{}{}
-				}
-				l.Routes[client.ObjectKeyFromObject(r.Source)] = r
-			} else {
+			if len(accepted) == 0 {
 				r.UnboundSectionNameRefs[name] = conditions.NewRouteNoMatchingListenerHostname()
+				continue
 			}
+
+			for _, h := range accepted {
+				l.AcceptedHostnames[h] = struct{}{}
+			}
+			l.Routes[client.ObjectKeyFromObject(r.Source)] = r
 
 			continue
 		}
