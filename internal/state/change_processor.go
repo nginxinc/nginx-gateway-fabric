@@ -174,6 +174,7 @@ func (c *ChangeProcessorImpl) Process(
 	for obj, objWarnings := range warnings {
 		for _, w := range objWarnings {
 			// FIXME(pleshakov): report warnings via Object status
+			// https://github.com/nginxinc/nginx-kubernetes-gateway/issues/467
 			c.cfg.Logger.Info("Got warning while building Graph",
 				"kind", obj.GetObjectKind().GroupVersionKind().Kind,
 				"namespace", obj.GetNamespace(),
