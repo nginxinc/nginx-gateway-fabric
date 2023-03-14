@@ -258,14 +258,17 @@ func buildRoute(
 	}
 
 	if len(allRulesErrs) > 0 {
-		// FIXME(pleshakov): We report Accepted condition with status False even if some of the rules are valid.
-		// The spec is not clear about such cases. However, this issue
-		// https://github.com/kubernetes-sigs/gateway-api/issues/1696 might clarify the situation.
 		msg := allRulesErrs.ToAggregate().Error()
-		if !atLeastOneValid {
+
+		if atLeastOneValid {
+			// FIXME(pleshakov): Partial validity for HTTPRoute rules is not defined in the Gateway API spec yet.
+			// See https://github.com/kubernetes-sigs/gateway-api/issues/1696
+			msg = "Some rules are invalid: " + msg
+			r.Conditions = append(r.Conditions, conditions.NewTODO(msg))
+		} else {
 			msg = "All rules are invalid: " + msg
+			r.Conditions = append(r.Conditions, conditions.NewRouteUnsupportedValue(msg))
 		}
-		r.Conditions = append(r.Conditions, conditions.NewRouteUnsupportedValue(msg))
 	}
 
 	return r

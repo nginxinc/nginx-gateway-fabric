@@ -592,8 +592,9 @@ func TestBuildRoute(t *testing.T) {
 				},
 				UnboundSectionNameRefs: map[string]conditions.Condition{},
 				Conditions: []conditions.Condition{
-					conditions.NewRouteUnsupportedValue(
-						`[spec.rules[0].matches[0].path: Invalid value: "/invalid": invalid path, ` +
+					conditions.NewTODO(
+						`Some rules are invalid: ` +
+							`[spec.rules[0].matches[0].path: Invalid value: "/invalid": invalid path, ` +
 							`spec.rules[1].filters[0].requestRedirect.hostname: Invalid value: ` +
 							`"invalid.example.com": invalid hostname]`,
 					),
