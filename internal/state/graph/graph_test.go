@@ -185,8 +185,8 @@ func TestBuildGraph(t *testing.T) {
 				Gateway: client.ObjectKeyFromObject(gw1),
 			},
 		},
-		UnboundSectionNameRefs: map[string]conditions.Condition{},
-		Rules:                  []Rule{createValidRuleWithBackendGroup(hr1Group)},
+		UnattachedSectionNameRefs: map[string]conditions.Condition{},
+		Rules:                     []Rule{createValidRuleWithBackendGroup(hr1Group)},
 	}
 
 	routeHR3 := &Route{
@@ -198,8 +198,8 @@ func TestBuildGraph(t *testing.T) {
 				Gateway: client.ObjectKeyFromObject(gw1),
 			},
 		},
-		UnboundSectionNameRefs: map[string]conditions.Condition{},
-		Rules:                  []Rule{createValidRuleWithBackendGroup(hr3Group)},
+		UnattachedSectionNameRefs: map[string]conditions.Condition{},
+		Rules:                     []Rule{createValidRuleWithBackendGroup(hr3Group)},
 	}
 
 	secretMemoryMgr := &secretsfakes.FakeSecretDiskMemoryManager{}

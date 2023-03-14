@@ -108,16 +108,16 @@ func TestGetAllConditionsForSectionName(t *testing.T) {
 		{
 			route: &Route{
 				SectionNameRefs: sectionNameRefs,
-				UnboundSectionNameRefs: map[string]conditions.Condition{
-					sectionName: conditions.NewTODO("unbound"),
+				UnattachedSectionNameRefs: map[string]conditions.Condition{
+					sectionName: conditions.NewTODO("unattached"),
 				},
 				Conditions: []conditions.Condition{conditions.NewTODO("route")},
 			},
 			expected: []conditions.Condition{
-				conditions.NewTODO("unbound"),
+				conditions.NewTODO("unattached"),
 				conditions.NewTODO("route"),
 			},
-			name: "unbound section and route",
+			name: "unattached section and route",
 		},
 	}
 
@@ -173,8 +173,8 @@ func TestBuildRoutes(t *testing.T) {
 							Gateway: gwNsName,
 						},
 					},
-					UnboundSectionNameRefs: map[string]conditions.Condition{},
-					Valid:                  true,
+					UnattachedSectionNameRefs: map[string]conditions.Condition{},
+					Valid:                     true,
 					Rules: []Rule{
 						{
 							ValidMatches: true,
@@ -438,8 +438,8 @@ func TestBuildRoute(t *testing.T) {
 						Gateway: gatewayNsName,
 					},
 				},
-				UnboundSectionNameRefs: map[string]conditions.Condition{},
-				Valid:                  true,
+				UnattachedSectionNameRefs: map[string]conditions.Condition{},
+				Valid:                     true,
 				Rules: []Rule{
 					{
 						ValidMatches: true,
@@ -485,7 +485,7 @@ func TestBuildRoute(t *testing.T) {
 						Gateway: gatewayNsName,
 					},
 				},
-				UnboundSectionNameRefs: map[string]conditions.Condition{},
+				UnattachedSectionNameRefs: map[string]conditions.Condition{},
 				Conditions: []conditions.Condition{
 					conditions.NewRouteUnsupportedValue(`spec.hostnames[0]: Invalid value: "": cannot be empty string`),
 				},
@@ -508,7 +508,7 @@ func TestBuildRoute(t *testing.T) {
 						Gateway: gatewayNsName,
 					},
 				},
-				UnboundSectionNameRefs: map[string]conditions.Condition{},
+				UnattachedSectionNameRefs: map[string]conditions.Condition{},
 				Conditions: []conditions.Condition{
 					conditions.NewRouteUnsupportedValue(`spec.hostnames[0]: Invalid value: "example.com": invalid hostname`),
 				},
@@ -527,7 +527,7 @@ func TestBuildRoute(t *testing.T) {
 						Gateway: gatewayNsName,
 					},
 				},
-				UnboundSectionNameRefs: map[string]conditions.Condition{},
+				UnattachedSectionNameRefs: map[string]conditions.Condition{},
 				Conditions: []conditions.Condition{
 					conditions.NewRouteUnsupportedValue(
 						`All rules are invalid: spec.rules[0].matches[0].path: Invalid value: "/invalid": invalid path`,
@@ -558,7 +558,7 @@ func TestBuildRoute(t *testing.T) {
 						Gateway: gatewayNsName,
 					},
 				},
-				UnboundSectionNameRefs: map[string]conditions.Condition{},
+				UnattachedSectionNameRefs: map[string]conditions.Condition{},
 				Conditions: []conditions.Condition{
 					conditions.NewRouteUnsupportedValue(
 						`All rules are invalid: spec.rules[0].filters[0].requestRedirect.hostname: ` +
@@ -589,7 +589,7 @@ func TestBuildRoute(t *testing.T) {
 						Gateway: gatewayNsName,
 					},
 				},
-				UnboundSectionNameRefs: map[string]conditions.Condition{},
+				UnattachedSectionNameRefs: map[string]conditions.Condition{},
 				Conditions: []conditions.Condition{
 					conditions.NewTODO(
 						`Some rules are invalid: ` +
@@ -713,7 +713,7 @@ func TestBindRouteToListeners(t *testing.T) {
 				Gateway: client.ObjectKeyFromObject(gw),
 			},
 		},
-		UnboundSectionNameRefs: map[string]conditions.Condition{},
+		UnattachedSectionNameRefs: map[string]conditions.Condition{},
 	}
 	routeWithMissingSectionName := &Route{
 		Source: hrWithMissingSectionName,
@@ -724,7 +724,7 @@ func TestBindRouteToListeners(t *testing.T) {
 				Gateway: client.ObjectKeyFromObject(gw),
 			},
 		},
-		UnboundSectionNameRefs: map[string]conditions.Condition{},
+		UnattachedSectionNameRefs: map[string]conditions.Condition{},
 	}
 	routeWithEmptySectionName := &Route{
 		Source: hrWithEmptySectionName,
@@ -735,7 +735,7 @@ func TestBindRouteToListeners(t *testing.T) {
 				Gateway: client.ObjectKeyFromObject(gw),
 			},
 		},
-		UnboundSectionNameRefs: map[string]conditions.Condition{},
+		UnattachedSectionNameRefs: map[string]conditions.Condition{},
 	}
 	routeWithNonExistingListener := &Route{
 		Source: hrWithNonExistingListener,
@@ -746,7 +746,7 @@ func TestBindRouteToListeners(t *testing.T) {
 				Gateway: client.ObjectKeyFromObject(gw),
 			},
 		},
-		UnboundSectionNameRefs: map[string]conditions.Condition{},
+		UnattachedSectionNameRefs: map[string]conditions.Condition{},
 	}
 	routeWithPort := &Route{
 		Source: hrWithPort,
@@ -757,7 +757,7 @@ func TestBindRouteToListeners(t *testing.T) {
 				Gateway: client.ObjectKeyFromObject(gw),
 			},
 		},
-		UnboundSectionNameRefs: map[string]conditions.Condition{},
+		UnattachedSectionNameRefs: map[string]conditions.Condition{},
 	}
 	routeWithIgnoredGateway := &Route{
 		Source: hr,
@@ -768,11 +768,11 @@ func TestBindRouteToListeners(t *testing.T) {
 				Gateway: types.NamespacedName{Namespace: "test", Name: "ignored-gateway"},
 			},
 		},
-		UnboundSectionNameRefs: map[string]conditions.Condition{},
+		UnattachedSectionNameRefs: map[string]conditions.Condition{},
 	}
 	notValidRoute := &Route{
-		Valid:                  false,
-		UnboundSectionNameRefs: map[string]conditions.Condition{},
+		Valid:                     false,
+		UnattachedSectionNameRefs: map[string]conditions.Condition{},
 	}
 
 	notValidListener := createModifiedListener(func(l *Listener) {
@@ -783,11 +783,11 @@ func TestBindRouteToListeners(t *testing.T) {
 	})
 
 	tests := []struct {
-		route                               *Route
-		gateway                             *Gateway
-		expectedRouteUnboundSectionNameRefs map[string]conditions.Condition
-		expectedGatewayListeners            map[string]*Listener
-		name                                string
+		route                                  *Route
+		gateway                                *Gateway
+		expectedRouteUnattachedSectionNameRefs map[string]conditions.Condition
+		expectedGatewayListeners               map[string]*Listener
+		name                                   string
 	}{
 		{
 			route: normalRoute,
@@ -797,7 +797,7 @@ func TestBindRouteToListeners(t *testing.T) {
 					"listener-80-1": createListener(),
 				},
 			},
-			expectedRouteUnboundSectionNameRefs: map[string]conditions.Condition{},
+			expectedRouteUnattachedSectionNameRefs: map[string]conditions.Condition{},
 			expectedGatewayListeners: map[string]*Listener{
 				"listener-80-1": createModifiedListener(func(l *Listener) {
 					l.Routes = map[types.NamespacedName]*Route{
@@ -818,7 +818,7 @@ func TestBindRouteToListeners(t *testing.T) {
 					"listener-80-1": createListener(),
 				},
 			},
-			expectedRouteUnboundSectionNameRefs: map[string]conditions.Condition{
+			expectedRouteUnattachedSectionNameRefs: map[string]conditions.Condition{
 				"": conditions.NewRouteUnsupportedValue(`spec.parentRefs[0].sectionName: Required value: cannot be empty`),
 			},
 			expectedGatewayListeners: map[string]*Listener{
@@ -834,7 +834,7 @@ func TestBindRouteToListeners(t *testing.T) {
 					"listener-80-1": createListener(),
 				},
 			},
-			expectedRouteUnboundSectionNameRefs: map[string]conditions.Condition{
+			expectedRouteUnattachedSectionNameRefs: map[string]conditions.Condition{
 				"": conditions.NewRouteUnsupportedValue(`spec.parentRefs[0].sectionName: Required value: cannot be empty`),
 			},
 			expectedGatewayListeners: map[string]*Listener{
@@ -850,7 +850,7 @@ func TestBindRouteToListeners(t *testing.T) {
 					"listener-80-1": createListener(),
 				},
 			},
-			expectedRouteUnboundSectionNameRefs: map[string]conditions.Condition{
+			expectedRouteUnattachedSectionNameRefs: map[string]conditions.Condition{
 				"listener-80-1": conditions.NewRouteUnsupportedValue(`spec.parentRefs[0].port: Forbidden: cannot be set`),
 			},
 			expectedGatewayListeners: map[string]*Listener{
@@ -866,7 +866,7 @@ func TestBindRouteToListeners(t *testing.T) {
 					"listener-80-1": createListener(),
 				},
 			},
-			expectedRouteUnboundSectionNameRefs: map[string]conditions.Condition{
+			expectedRouteUnattachedSectionNameRefs: map[string]conditions.Condition{
 				"listener-80-2": conditions.NewTODO("listener is not found"),
 			},
 			expectedGatewayListeners: map[string]*Listener{
@@ -882,7 +882,7 @@ func TestBindRouteToListeners(t *testing.T) {
 					"listener-80-1": notValidListener,
 				},
 			},
-			expectedRouteUnboundSectionNameRefs: map[string]conditions.Condition{
+			expectedRouteUnattachedSectionNameRefs: map[string]conditions.Condition{
 				"listener-80-1": conditions.NewRouteInvalidListener(),
 			},
 			expectedGatewayListeners: map[string]*Listener{
@@ -898,7 +898,7 @@ func TestBindRouteToListeners(t *testing.T) {
 					"listener-80-1": nonMatchingHostnameListener,
 				},
 			},
-			expectedRouteUnboundSectionNameRefs: map[string]conditions.Condition{
+			expectedRouteUnattachedSectionNameRefs: map[string]conditions.Condition{
 				"listener-80-1": conditions.NewRouteNoMatchingListenerHostname(),
 			},
 			expectedGatewayListeners: map[string]*Listener{
@@ -914,7 +914,7 @@ func TestBindRouteToListeners(t *testing.T) {
 					"listener-80-1": createListener(),
 				},
 			},
-			expectedRouteUnboundSectionNameRefs: map[string]conditions.Condition{
+			expectedRouteUnattachedSectionNameRefs: map[string]conditions.Condition{
 				"listener-80-1": conditions.NewTODO("Gateway is ignored"),
 			},
 			expectedGatewayListeners: map[string]*Listener{
@@ -930,7 +930,7 @@ func TestBindRouteToListeners(t *testing.T) {
 					"listener-80-1": createListener(),
 				},
 			},
-			expectedRouteUnboundSectionNameRefs: map[string]conditions.Condition{},
+			expectedRouteUnattachedSectionNameRefs: map[string]conditions.Condition{},
 			expectedGatewayListeners: map[string]*Listener{
 				"listener-80-1": createListener(),
 			},
@@ -944,7 +944,7 @@ func TestBindRouteToListeners(t *testing.T) {
 
 			bindRouteToListeners(test.route, test.gateway)
 
-			g.Expect(test.route.UnboundSectionNameRefs).To(Equal(test.expectedRouteUnboundSectionNameRefs))
+			g.Expect(test.route.UnattachedSectionNameRefs).To(Equal(test.expectedRouteUnattachedSectionNameRefs))
 			g.Expect(helpers.Diff(test.gateway.Listeners, test.expectedGatewayListeners)).To(BeEmpty())
 		})
 	}

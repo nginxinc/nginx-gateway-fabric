@@ -62,7 +62,7 @@ func TestBuildStatuses(t *testing.T) {
 					Gateway: client.ObjectKeyFromObject(ignoredGw),
 				},
 			},
-			UnboundSectionNameRefs: map[string]conditions.Condition{
+			UnattachedSectionNameRefs: map[string]conditions.Condition{
 				"listener-80-2": invalidCondition,
 			},
 		},
@@ -85,7 +85,7 @@ func TestBuildStatuses(t *testing.T) {
 					Gateway: client.ObjectKeyFromObject(ignoredGw),
 				},
 			},
-			UnboundSectionNameRefs: map[string]conditions.Condition{
+			UnattachedSectionNameRefs: map[string]conditions.Condition{
 				"listener-80-1": invalidCondition,
 				"listener-80-2": invalidCondition,
 			},

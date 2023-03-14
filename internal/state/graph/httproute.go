@@ -41,9 +41,9 @@ type Route struct {
 	Source *v1beta1.HTTPRoute
 	// SectionNameRefs is a map of section names to the referenced NKG Gateways
 	SectionNameRefs map[string]ParentRef
-	// UnboundSectionNameRefs is a subset of SectionNameRefs that includes sections that could not be bound
+	// UnattachedSectionNameRefs is a subset of SectionNameRefs that includes sections that could not be attached
 	// to the referenced Gateway. For example, because section does not exist in the Gateway.
-	UnboundSectionNameRefs map[string]conditions.Condition
+	UnattachedSectionNameRefs map[string]conditions.Condition
 	// Conditions include Conditions for the HTTPRoute.
 	Conditions []conditions.Condition
 	// Rules include Rules for the HTTPRoute. Each Rule[i] corresponds to the ith HTTPRouteRule.
@@ -88,8 +88,8 @@ func (r *Route) GetAllConditionsForSectionName(name string) []conditions.Conditi
 
 	count := len(r.Conditions)
 
-	unboundCond, sectionIsUnbound := r.UnboundSectionNameRefs[name]
-	if sectionIsUnbound {
+	unattachedCond, sectionIsUnattached := r.UnattachedSectionNameRefs[name]
+	if sectionIsUnattached {
 		count++
 	}
 
@@ -99,8 +99,8 @@ func (r *Route) GetAllConditionsForSectionName(name string) []conditions.Conditi
 
 	conds := make([]conditions.Condition, 0, count)
 
-	if sectionIsUnbound {
-		conds = append(conds, unboundCond)
+	if sectionIsUnattached {
+		conds = append(conds, unattachedCond)
 	}
 
 	conds = append(conds, r.Conditions...)
@@ -202,9 +202,9 @@ func buildRoute(
 	}
 
 	r := &Route{
-		Source:                 ghr,
-		SectionNameRefs:        sectionNameRefs,
-		UnboundSectionNameRefs: map[string]conditions.Condition{},
+		Source:                    ghr,
+		SectionNameRefs:           sectionNameRefs,
+		UnattachedSectionNameRefs: map[string]conditions.Condition{},
 	}
 
 	err := validateHostnames(validator, ghr.Spec.Hostnames, field.NewPath("spec").Child("hostnames"))
@@ -301,13 +301,13 @@ func bindRouteToListeners(r *Route, gw *Gateway) {
 
 		if routeRef.SectionName == nil || *routeRef.SectionName == "" {
 			valErr := field.Required(path.Child("sectionName"), "cannot be empty")
-			r.UnboundSectionNameRefs[name] = conditions.NewRouteUnsupportedValue(valErr.Error())
+			r.UnattachedSectionNameRefs[name] = conditions.NewRouteUnsupportedValue(valErr.Error())
 			continue
 		}
 
 		if routeRef.Port != nil {
 			valErr := field.Forbidden(path.Child("port"), "cannot be set")
-			r.UnboundSectionNameRefs[name] = conditions.NewRouteUnsupportedValue(valErr.Error())
+			r.UnattachedSectionNameRefs[name] = conditions.NewRouteUnsupportedValue(valErr.Error())
 			continue
 		}
 
@@ -316,7 +316,7 @@ func bindRouteToListeners(r *Route, gw *Gateway) {
 		referencesWinningGw := ref.Gateway.Namespace == gw.Source.Namespace && ref.Gateway.Name == gw.Source.Name
 
 		if !referencesWinningGw {
-			r.UnboundSectionNameRefs[name] = conditions.NewTODO("Gateway is ignored")
+			r.UnattachedSectionNameRefs[name] = conditions.NewTODO("Gateway is ignored")
 			continue
 		}
 
@@ -339,19 +339,19 @@ func bindRouteToListeners(r *Route, gw *Gateway) {
 		if !exists {
 			// FIXME(pleshakov): Add a proper condition once it is available in the Gateway API.
 			// https://github.com/nginxinc/nginx-kubernetes-gateway/issues/306
-			r.UnboundSectionNameRefs[name] = conditions.NewTODO("listener is not found")
+			r.UnattachedSectionNameRefs[name] = conditions.NewTODO("listener is not found")
 			continue
 		}
 
 		if !l.Valid {
-			r.UnboundSectionNameRefs[name] = conditions.NewRouteInvalidListener()
+			r.UnattachedSectionNameRefs[name] = conditions.NewRouteInvalidListener()
 			continue
 		}
 
 		accepted := findAcceptedHostnames(l.Source.Hostname, r.Source.Spec.Hostnames)
 
 		if len(accepted) == 0 {
-			r.UnboundSectionNameRefs[name] = conditions.NewRouteNoMatchingListenerHostname()
+			r.UnattachedSectionNameRefs[name] = conditions.NewRouteNoMatchingListenerHostname()
 			continue
 		}
 
