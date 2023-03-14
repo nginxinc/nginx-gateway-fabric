@@ -1058,9 +1058,13 @@ func TestValidateHostnames(t *testing.T) {
 	}{
 		{
 			validator: &validationfakes.FakeHTTPFieldsValidator{},
-			hostnames: []v1beta1.Hostname{validHostname},
+			hostnames: []v1beta1.Hostname{
+				validHostname,
+				"example.org",
+				"foo.example.net",
+			},
 			expectErr: false,
-			name:      "valid",
+			name:      "multiple valid",
 		},
 		{
 			validator: &validationfakes.FakeHTTPFieldsValidator{},
