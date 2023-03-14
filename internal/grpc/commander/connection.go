@@ -136,12 +136,20 @@ func (c *connection) handleAgentConnectRequest(ctx context.Context, cmd *proto.C
 
 	c.logger.Info("Received agent connect request", "message ID", cmd.GetMeta().GetMessageId())
 
-	c.register(getFirstNginxID(req.GetDetails()), req.GetMeta().SystemUid)
+	requestStatusCode := proto.AgentConnectStatus_CONNECT_OK
+	msg := "Connected"
+
+	if err := c.register(getFirstNginxID(req.GetDetails()), req.GetMeta().SystemUid); err != nil {
+		requestStatusCode = proto.AgentConnectStatus_CONNECT_REJECTED_OTHER
+		msg = err.Error()
+
+		c.logger.Error(err, "failed to register agent")
+	}
 
 	res := createAgentConnectResponseCmd(
 		cmd.GetMeta().GetMessageId(),
-		c.nginxID,
-		c.systemID,
+		requestStatusCode,
+		msg,
 	)
 
 	select {
@@ -151,19 +159,10 @@ func (c *connection) handleAgentConnectRequest(ctx context.Context, cmd *proto.C
 	}
 }
 
-func (c *connection) register(nginxID, systemID string) {
+func (c *connection) register(nginxID, systemID string) error {
 	if nginxID == "" || systemID == "" {
 		c.state = StateInvalid
-		c.logger.Error(
-			errors.New("nginxID and/or systemID are empty"),
-			"cannot register agent",
-			"nginxID",
-			nginxID,
-			"systemID",
-			systemID,
-		)
-
-		return
+		return fmt.Errorf("missing nginxID: %q and/or systemID: %q", nginxID, systemID)
 	}
 
 	c.logger.Info("Registering agent", "nginxID", nginxID, "systemID", systemID)
@@ -171,26 +170,21 @@ func (c *connection) register(nginxID, systemID string) {
 	c.nginxID = nginxID
 	c.systemID = systemID
 	c.state = StateRegistered
+
+	return nil
 }
 
-func createAgentConnectResponseCmd(msgID, nginxID, systemID string) *proto.Command {
+func createAgentConnectResponseCmd(
+	msgID string,
+	statusCode proto.AgentConnectStatus_StatusCode,
+	statusMsg string,
+) *proto.Command {
 	return &proto.Command{
 		Data: &proto.Command_AgentConnectResponse{
 			AgentConnectResponse: &proto.AgentConnectResponse{
-				AgentConfig: &proto.AgentConfig{
-					Configs: &proto.ConfigReport{
-						Meta: grpc.NewMessageMeta(msgID),
-						Configs: []*proto.ConfigDescriptor{
-							{
-								NginxId:  nginxID,
-								SystemId: systemID,
-							},
-						},
-					},
-				},
 				Status: &proto.AgentConnectStatus{
-					StatusCode: proto.AgentConnectStatus_CONNECT_OK,
-					Message:    "Connected",
+					StatusCode: statusCode,
+					Message:    statusMsg,
 				},
 			},
 		},

@@ -172,33 +172,74 @@ func TestConnection_HandleCommand(t *testing.T) {
 }
 
 func TestConnection_HandleAgentConnectRequest(t *testing.T) {
-	g := NewGomegaWithT(t)
 
-	out := make(chan *proto.Command)
-
-	fakeExchanger := &exchangerfakes.FakeCommandExchanger{
-		OutStub: func() chan<- *proto.Command {
-			return out
+	invalidConnectRequest := &proto.Command{
+		Meta: &proto.Metadata{
+			MessageId: "msg-id",
+		},
+		Data: &proto.Command_AgentConnectRequest{
+			AgentConnectRequest: &proto.AgentConnectRequest{
+				Meta:    &proto.AgentMeta{},
+				Details: []*proto.NginxDetails{},
+			},
 		},
 	}
 
-	conn := newConnection("id", zap.New(), fakeExchanger)
+	tests := []struct {
+		name          string
+		request       *proto.Command
+		expStatusCode proto.AgentConnectStatus_StatusCode
+		expStatusMsg  string
+	}{
+		{
+			name:          "normal",
+			request:       CreateAgentConnectRequestCmd("msg-id"),
+			expStatusCode: proto.AgentConnectStatus_CONNECT_OK,
+			expStatusMsg:  "Connected",
+		},
+		{
+			name:          "invalid",
+			request:       invalidConnectRequest,
+			expStatusCode: proto.AgentConnectStatus_CONNECT_REJECTED_OTHER,
+			expStatusMsg:  "missing nginxID: \"\" and/or systemID: \"\"",
+		},
+	}
 
-	cmd := CreateAgentConnectRequestCmd("msg-id")
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			g := NewGomegaWithT(t)
 
-	go conn.handleAgentConnectRequest(context.Background(), cmd)
+			out := make(chan *proto.Command)
 
-	response := <-out
+			fakeExchanger := &exchangerfakes.FakeCommandExchanger{
+				OutStub: func() chan<- *proto.Command {
+					return out
+				},
+			}
 
-	meta := response.GetMeta()
-	g.Expect(meta).ToNot(BeNil())
-	g.Expect(meta.MessageId).To(Equal("msg-id"))
+			conn := newConnection("id", zap.New(), fakeExchanger)
 
-	agentConnResponse := response.GetAgentConnectResponse()
-	g.Expect(agentConnResponse).ToNot(BeNil())
-	g.Expect(agentConnResponse.Status.StatusCode).To(Equal(proto.AgentConnectStatus_CONNECT_OK))
+			go conn.handleAgentConnectRequest(context.Background(), test.request)
 
-	g.Expect(conn.state).To(Equal(StateRegistered))
+			response := <-out
+
+			meta := response.GetMeta()
+			g.Expect(meta).ToNot(BeNil())
+			g.Expect(meta.MessageId).To(Equal("msg-id"))
+
+			agentConnResponse := response.GetAgentConnectResponse()
+			g.Expect(agentConnResponse).ToNot(BeNil())
+			g.Expect(agentConnResponse.Status.StatusCode).To(Equal(test.expStatusCode))
+			g.Expect(agentConnResponse.Status.Message).To(Equal(test.expStatusMsg))
+
+			if test.expStatusCode == proto.AgentConnectStatus_CONNECT_OK {
+				g.Expect(conn.state).To(Equal(StateRegistered))
+			} else {
+				g.Expect(conn.state).To(Equal(StateInvalid))
+			}
+		})
+	}
+
 }
 
 func TestConnection_HandleAgentConnectRequest_CtxCanceled(t *testing.T) {
@@ -276,12 +317,14 @@ func TestConnection_Register(t *testing.T) {
 			g.Expect(conn.nginxID).To(BeEmpty())
 			g.Expect(conn.systemID).To(BeEmpty())
 
-			conn.register(test.nginxID, test.systemID)
+			err := conn.register(test.nginxID, test.systemID)
 			if test.expRegister {
+				g.Expect(err).To(BeNil())
 				g.Expect(conn.state).To(Equal(StateRegistered))
 				g.Expect(conn.nginxID).To(Equal(test.nginxID))
 				g.Expect(conn.systemID).To(Equal(test.systemID))
 			} else {
+				g.Expect(err).ToNot(BeNil())
 				g.Expect(conn.state).To(Equal(StateInvalid))
 				g.Expect(conn.nginxID).To(BeEmpty())
 				g.Expect(conn.systemID).To(BeEmpty())
