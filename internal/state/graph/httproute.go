@@ -269,6 +269,8 @@ func buildRoute(
 		} else {
 			msg = "All rules are invalid: " + msg
 			r.Conditions = append(r.Conditions, conditions.NewRouteUnsupportedValue(msg))
+
+			r.Valid = false
 		}
 	}
 

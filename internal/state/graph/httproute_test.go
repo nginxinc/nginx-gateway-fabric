@@ -521,7 +521,7 @@ func TestBuildRoute(t *testing.T) {
 			hr:        hrInvalidMatches,
 			expected: &Route{
 				Source: hrInvalidMatches,
-				Valid:  true,
+				Valid:  false,
 				SectionNameRefs: map[string]ParentRef{
 					sectionNameOfCreateHTTPRoute: {
 						Idx:     0,
@@ -552,7 +552,7 @@ func TestBuildRoute(t *testing.T) {
 			hr:        hrInvalidFilters,
 			expected: &Route{
 				Source: hrInvalidFilters,
-				Valid:  true,
+				Valid:  false,
 				SectionNameRefs: map[string]ParentRef{
 					sectionNameOfCreateHTTPRoute: {
 						Idx:     0,
