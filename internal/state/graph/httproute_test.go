@@ -17,6 +17,65 @@ import (
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/validation/validationfakes"
 )
 
+const (
+	sectionNameOfCreateHTTPRoute = "test-section"
+)
+
+func createHTTPRoute(
+	name string,
+	refName string,
+	hostname v1beta1.Hostname,
+	paths ...string,
+) *v1beta1.HTTPRoute {
+	rules := make([]v1beta1.HTTPRouteRule, 0, len(paths))
+
+	for _, path := range paths {
+		rules = append(rules, v1beta1.HTTPRouteRule{
+			Matches: []v1beta1.HTTPRouteMatch{
+				{
+					Path: &v1beta1.HTTPPathMatch{
+						Type:  helpers.GetPointer(v1beta1.PathMatchPathPrefix),
+						Value: helpers.GetPointer(path),
+					},
+				},
+			},
+		})
+	}
+
+	return &v1beta1.HTTPRoute{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "test",
+			Name:      name,
+		},
+		Spec: v1beta1.HTTPRouteSpec{
+			CommonRouteSpec: v1beta1.CommonRouteSpec{
+				ParentRefs: []v1beta1.ParentReference{
+					{
+						Namespace:   helpers.GetPointer[v1beta1.Namespace]("test"),
+						Name:        v1beta1.ObjectName(refName),
+						SectionName: helpers.GetPointer[v1beta1.SectionName](sectionNameOfCreateHTTPRoute),
+					},
+				},
+			},
+			Hostnames: []v1beta1.Hostname{hostname},
+			Rules:     rules,
+		},
+	}
+}
+
+func addFilterToPath(hr *v1beta1.HTTPRoute, path string, filter v1beta1.HTTPRouteFilter) {
+	for i := range hr.Spec.Rules {
+		for _, match := range hr.Spec.Rules[i].Matches {
+			if match.Path == nil {
+				panic("unexpected nil path")
+			}
+			if *match.Path.Value == path {
+				hr.Spec.Rules[i].Filters = append(hr.Spec.Rules[i].Filters, filter)
+			}
+		}
+	}
+}
+
 func TestRouteGetAllBackendGroups(t *testing.T) {
 	group0 := BackendGroup{
 		RuleIdx: 0,
@@ -336,65 +395,6 @@ func TestFindGatewayForParentRef(t *testing.T) {
 			g.Expect(found).To(Equal(test.expectedFound))
 			g.Expect(gw).To(Equal(test.expectedGwNsName))
 		})
-	}
-}
-
-const (
-	sectionNameOfCreateHTTPRoute = "test-section"
-)
-
-func createHTTPRoute(
-	name string,
-	refName string,
-	hostname v1beta1.Hostname,
-	paths ...string,
-) *v1beta1.HTTPRoute {
-	rules := make([]v1beta1.HTTPRouteRule, 0, len(paths))
-
-	for _, path := range paths {
-		rules = append(rules, v1beta1.HTTPRouteRule{
-			Matches: []v1beta1.HTTPRouteMatch{
-				{
-					Path: &v1beta1.HTTPPathMatch{
-						Type:  helpers.GetPointer(v1beta1.PathMatchPathPrefix),
-						Value: helpers.GetPointer(path),
-					},
-				},
-			},
-		})
-	}
-
-	return &v1beta1.HTTPRoute{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: "test",
-			Name:      name,
-		},
-		Spec: v1beta1.HTTPRouteSpec{
-			CommonRouteSpec: v1beta1.CommonRouteSpec{
-				ParentRefs: []v1beta1.ParentReference{
-					{
-						Namespace:   helpers.GetPointer[v1beta1.Namespace]("test"),
-						Name:        v1beta1.ObjectName(refName),
-						SectionName: helpers.GetPointer[v1beta1.SectionName](sectionNameOfCreateHTTPRoute),
-					},
-				},
-			},
-			Hostnames: []v1beta1.Hostname{hostname},
-			Rules:     rules,
-		},
-	}
-}
-
-func addFilterToPath(hr *v1beta1.HTTPRoute, path string, filter v1beta1.HTTPRouteFilter) {
-	for i := range hr.Spec.Rules {
-		for _, match := range hr.Spec.Rules[i].Matches {
-			if match.Path == nil {
-				panic("unexpected nil path")
-			}
-			if *match.Path.Value == path {
-				hr.Spec.Rules[i].Filters = append(hr.Spec.Rules[i].Filters, filter)
-			}
-		}
 	}
 }
 
