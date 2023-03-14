@@ -303,6 +303,8 @@ func bindRouteToListeners(
 
 		path := field.NewPath("spec").Child("parentRefs").Index(ref.Idx)
 
+		// Case 1: Attachment is not possible due to unsupported configuration
+
 		if routeRef.SectionName == nil || *routeRef.SectionName == "" {
 			valErr := field.Required(path.Child("sectionName"), "cannot be empty")
 			r.UnboundSectionNameRefs[name] = conditions.NewRouteUnsupportedValue(valErr.Error())
@@ -315,51 +317,54 @@ func bindRouteToListeners(
 			continue
 		}
 
-		// Case 1 - winning Gateway
-		if ref.Gateway.Namespace == gw.Source.Namespace && ref.Gateway.Name == gw.Source.Name {
-			// Find a listener
+		// Case 2: the parentRef references an ignored Gateway resource.
 
-			// FIXME(pleshakov)
-			// For now, let's do simple matching.
-			// However, we need to also support wildcard matching.
-			// More over, we need to handle cases when a Route host matches multiple HTTP listeners on the same port
-			// when sectionName is empty and only choose one listener.
-			// For example:
-			// - Route with host foo.example.com;
-			// - listener 1 for port 80 with hostname foo.example.com
-			// - listener 2 for port 80 with hostname *.example.com;
-			// In this case, the Route host foo.example.com should choose listener 1, as it is a more specific match.
+		referencesWinningGw := ref.Gateway.Namespace == gw.Source.Namespace && ref.Gateway.Name == gw.Source.Name
 
-			l, exists := gw.Listeners[name]
-			if !exists {
-				// FIXME(pleshakov): Add a proper condition once it is available in the Gateway API.
-				// https://github.com/nginxinc/nginx-kubernetes-gateway/issues/306
-				r.UnboundSectionNameRefs[name] = conditions.NewTODO("listener is not found")
-				continue
-			}
-
-			if !l.Valid {
-				r.UnboundSectionNameRefs[name] = conditions.NewRouteInvalidListener()
-				continue
-			}
-
-			accepted := findAcceptedHostnames(l.Source.Hostname, r.Source.Spec.Hostnames)
-
-			if len(accepted) == 0 {
-				r.UnboundSectionNameRefs[name] = conditions.NewRouteNoMatchingListenerHostname()
-				continue
-			}
-
-			for _, h := range accepted {
-				l.AcceptedHostnames[h] = struct{}{}
-			}
-			l.Routes[client.ObjectKeyFromObject(r.Source)] = r
-
+		if !referencesWinningGw {
+			r.UnboundSectionNameRefs[name] = conditions.NewTODO("Gateway is ignored")
 			continue
 		}
 
-		// Case 2: the parentRef references an ignored Gateway resource.
-		r.UnboundSectionNameRefs[name] = conditions.NewTODO("Gateway is ignored")
+		// Case 3 - winning Gateway
+
+		// Find a listener
+
+		// FIXME(pleshakov)
+		// For now, let's do simple matching.
+		// However, we need to also support wildcard matching.
+		// More over, we need to handle cases when a Route host matches multiple HTTP listeners on the same port
+		// when sectionName is empty and only choose one listener.
+		// For example:
+		// - Route with host foo.example.com;
+		// - listener 1 for port 80 with hostname foo.example.com
+		// - listener 2 for port 80 with hostname *.example.com;
+		// In this case, the Route host foo.example.com should choose listener 1, as it is a more specific match.
+
+		l, exists := gw.Listeners[name]
+		if !exists {
+			// FIXME(pleshakov): Add a proper condition once it is available in the Gateway API.
+			// https://github.com/nginxinc/nginx-kubernetes-gateway/issues/306
+			r.UnboundSectionNameRefs[name] = conditions.NewTODO("listener is not found")
+			continue
+		}
+
+		if !l.Valid {
+			r.UnboundSectionNameRefs[name] = conditions.NewRouteInvalidListener()
+			continue
+		}
+
+		accepted := findAcceptedHostnames(l.Source.Hostname, r.Source.Spec.Hostnames)
+
+		if len(accepted) == 0 {
+			r.UnboundSectionNameRefs[name] = conditions.NewRouteNoMatchingListenerHostname()
+			continue
+		}
+
+		for _, h := range accepted {
+			l.AcceptedHostnames[h] = struct{}{}
+		}
+		l.Routes[client.ObjectKeyFromObject(r.Source)] = r
 	}
 }
 
