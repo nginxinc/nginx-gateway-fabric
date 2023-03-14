@@ -18,6 +18,7 @@ var escapedStringsFmtRegexp = regexp.MustCompile("^" + escapedStringsFmt + "$")
 // validateEscapedString is used to validate a string that is surrounded by " in the NGINX config for a directive
 // that doesn't support any regex rules or variables (it doesn't try to expand the variable name behind $).
 // For example, server_name "hello $not_a_var world"
+// If the value is invalid, the function returns an error that includes the specified examples of valid values.
 func validateEscapedString(value string, examples ...string) error {
 	if !escapedStringsFmtRegexp.MatchString(value) {
 		msg := k8svalidation.RegexError(escapedStringsErrMsg, escapedStringsFmt, examples...)
@@ -36,6 +37,7 @@ var escapedStringsNoVarExpansionFmtRegexp = regexp.MustCompile("^" + escapedStri
 
 // validateEscapedStringNoVarExpansion is the same as validateEscapedString except it doesn't allow $ to
 // prevent variable expansion.
+// If the value is invalid, the function returns an error that includes the specified examples of valid values.
 func validateEscapedStringNoVarExpansion(value string, examples ...string) error {
 	if !escapedStringsNoVarExpansionFmtRegexp.MatchString(value) {
 		msg := k8svalidation.RegexError(escapedStringsNoVarExpansionErrMsg, escapedStringsNoVarExpansionFmt,
