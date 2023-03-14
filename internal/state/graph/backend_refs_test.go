@@ -23,7 +23,7 @@ func getNormalRef() v1beta1.BackendRef {
 			Namespace: (*v1beta1.Namespace)(helpers.GetStringPointer("test")),
 			Port:      (*v1beta1.PortNumber)(helpers.GetInt32Pointer(80)),
 		},
-		Weight: helpers.GetInt32Pointer(1),
+		Weight: helpers.GetInt32Pointer(5),
 	}
 }
 
@@ -496,7 +496,7 @@ func TestCreateBackend(t *testing.T) {
 				Svc:    svc1,
 				Name:   "test_service1_80",
 				Port:   80,
-				Weight: 1,
+				Weight: 5,
 				Valid:  true,
 			},
 			expectedCondition: nil,
@@ -551,7 +551,7 @@ func TestCreateBackend(t *testing.T) {
 				Svc:    nil,
 				Name:   "",
 				Port:   0,
-				Weight: 1,
+				Weight: 5,
 				Valid:  false,
 			},
 			expectedCondition: helpers.GetPointer(
@@ -572,7 +572,7 @@ func TestCreateBackend(t *testing.T) {
 				Svc:    nil,
 				Name:   "",
 				Port:   0,
-				Weight: 1,
+				Weight: 5,
 				Valid:  false,
 			},
 			expectedCondition: helpers.GetPointer(
