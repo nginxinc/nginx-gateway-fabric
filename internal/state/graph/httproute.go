@@ -14,6 +14,7 @@ import (
 
 // Rule represents a rule of an HTTPRoute.
 type Rule struct {
+	// BackendGroup is the BackendGroup of the rule.
 	BackendGroup BackendGroup
 	// ValidMatches indicates whether the matches of the rule are valid.
 	// If the matches are invalid, NGK should not generate any configuration for the rule.
