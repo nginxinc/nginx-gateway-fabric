@@ -84,12 +84,11 @@ func TestGetAllConditionsForSectionName(t *testing.T) {
 	const (
 		sectionName = "foo"
 	)
-	route := &Route{
-		SectionNameRefs: map[string]ParentRef{
-			sectionName: {
-				Idx:     0,
-				Gateway: types.NamespacedName{Namespace: "test", Name: "gateway"},
-			},
+
+	sectionNameRefs := map[string]ParentRef{
+		sectionName: {
+			Idx:     0,
+			Gateway: types.NamespacedName{Namespace: "test", Name: "gateway"},
 		},
 	}
 
@@ -100,7 +99,7 @@ func TestGetAllConditionsForSectionName(t *testing.T) {
 	}{
 		{
 			route: &Route{
-				SectionNameRefs: route.SectionNameRefs,
+				SectionNameRefs: sectionNameRefs,
 				Conditions:      nil,
 			},
 			expected: nil,
@@ -108,7 +107,7 @@ func TestGetAllConditionsForSectionName(t *testing.T) {
 		},
 		{
 			route: &Route{
-				SectionNameRefs: route.SectionNameRefs,
+				SectionNameRefs: sectionNameRefs,
 				UnboundSectionNameRefs: map[string]conditions.Condition{
 					sectionName: conditions.NewTODO("unbound"),
 				},
