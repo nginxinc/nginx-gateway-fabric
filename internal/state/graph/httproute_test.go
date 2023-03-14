@@ -717,7 +717,7 @@ func TestBindRouteToListeners(t *testing.T) {
 	}
 
 	hr := createHTTPRouteWithSectionNameAndPort(helpers.GetPointer[v1beta1.SectionName]("listener-80-1"), nil)
-	hrWithMissingSectionName := createHTTPRouteWithSectionNameAndPort(nil, nil)
+	hrWithNilSectionName := createHTTPRouteWithSectionNameAndPort(nil, nil)
 	hrWithEmptySectionName := createHTTPRouteWithSectionNameAndPort(helpers.GetPointer[v1beta1.SectionName](""), nil)
 	hrWithPort := createHTTPRouteWithSectionNameAndPort(
 		helpers.GetPointer[v1beta1.SectionName]("listener-80-1"),
@@ -740,7 +740,7 @@ func TestBindRouteToListeners(t *testing.T) {
 		UnattachedSectionNameRefs: map[string]conditions.Condition{},
 	}
 	routeWithMissingSectionName := &Route{
-		Source: hrWithMissingSectionName,
+		Source: hrWithNilSectionName,
 		Valid:  true,
 		SectionNameRefs: map[string]ParentRef{
 			"": {
@@ -848,7 +848,7 @@ func TestBindRouteToListeners(t *testing.T) {
 			expectedGatewayListeners: map[string]*Listener{
 				"listener-80-1": createListener(),
 			},
-			name: "section name is missing",
+			name: "section name is nil",
 		},
 		{
 			route: routeWithEmptySectionName,
