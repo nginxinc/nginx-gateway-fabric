@@ -485,8 +485,8 @@ func TestCreateBackend(t *testing.T) {
 	tests := []struct {
 		name              string
 		ref               v1beta1.HTTPBackendRef
-		expectedBackend   BackendRef
 		expectedCondition *conditions.Condition
+		expectedBackend   BackendRef
 	}{
 		{
 			ref: v1beta1.HTTPBackendRef{
