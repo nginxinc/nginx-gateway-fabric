@@ -108,8 +108,8 @@ func (r *Route) GetAllConditionsForSectionName(name string) []conditions.Conditi
 	return conds
 }
 
-// buildRoutes builds routes from HTTPRoutes excluding the ones that don't reference any of the NKG Gateways.
-func buildRoutes(
+// buildRoutesForGateways builds routes from HTTPRoutes that reference any of the specified Gateways.
+func buildRoutesForGateways(
 	validator validation.HTTPFieldsValidator,
 	httpRoutes map[types.NamespacedName]*v1beta1.HTTPRoute,
 	gatewayNsNames []types.NamespacedName,

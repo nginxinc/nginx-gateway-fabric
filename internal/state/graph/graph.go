@@ -45,7 +45,7 @@ func BuildGraph(
 
 	gw := buildGateway(processedGws.Winner, secretMemoryMgr)
 
-	routes := buildRoutes(validators.HTTPFieldsValidator, store.HTTPRoutes, processedGws.GetAllNsNames())
+	routes := buildRoutesForGateways(validators.HTTPFieldsValidator, store.HTTPRoutes, processedGws.GetAllNsNames())
 	bindRoutesToListeners(routes, gw)
 	addBackendGroupsToRoutes(routes, store.Services)
 

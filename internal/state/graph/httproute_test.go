@@ -202,7 +202,7 @@ func TestBuildRoutes(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewGomegaWithT(t)
-			routes := buildRoutes(validator, hrRoutes, test.gwNsNames)
+			routes := buildRoutesForGateways(validator, hrRoutes, test.gwNsNames)
 			g.Expect(helpers.Diff(test.expected, routes)).To(BeEmpty())
 		})
 	}
