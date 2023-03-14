@@ -24,7 +24,7 @@ var prefixPathRegexp = regexp.MustCompile("^" + prefixPathFmt + "$")
 // ValidatePathInPrefixMatch a prefix path used in the location directive.
 func (HTTPMatchValidator) ValidatePathInPrefixMatch(path string) error {
 	if path == "" {
-		return fmt.Errorf("cannot be empty")
+		return errors.New("cannot be empty")
 	}
 
 	if !prefixPathRegexp.MatchString(path) {

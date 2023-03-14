@@ -2,6 +2,7 @@ package resolver
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	v1 "k8s.io/api/core/v1"
@@ -42,7 +43,7 @@ func NewServiceResolverImpl(client client.Client) *ServiceResolverImpl {
 // Returns an error if the Service or Port cannot be resolved.
 func (e *ServiceResolverImpl) Resolve(ctx context.Context, svc *v1.Service, port int32) ([]Endpoint, error) {
 	if svc == nil {
-		return nil, fmt.Errorf("cannot resolve a nil Service")
+		return nil, errors.New("cannot resolve a nil Service")
 	}
 
 	// We list EndpointSlices using the Service Name Index Field we added as an index to the EndpointSlice cache.

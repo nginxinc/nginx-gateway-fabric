@@ -1,7 +1,7 @@
 package validation
 
 import (
-	"fmt"
+	"errors"
 	"regexp"
 
 	k8svalidation "k8s.io/apimachinery/pkg/util/validation"
@@ -21,7 +21,7 @@ var escapedStringsFmtRegexp = regexp.MustCompile("^" + escapedStringsFmt + "$")
 func validateEscapedString(value string, examples ...string) error {
 	if !escapedStringsFmtRegexp.MatchString(value) {
 		msg := k8svalidation.RegexError(escapedStringsErrMsg, escapedStringsFmt, examples...)
-		return fmt.Errorf(msg)
+		return errors.New(msg)
 	}
 	return nil
 }
@@ -40,7 +40,7 @@ func validateEscapedStringNoVarExpansion(value string, examples ...string) error
 	if !escapedStringsNoVarExpansionFmtRegexp.MatchString(value) {
 		msg := k8svalidation.RegexError(escapedStringsNoVarExpansionErrMsg, escapedStringsNoVarExpansionFmt,
 			examples...)
-		return fmt.Errorf(msg)
+		return errors.New(msg)
 	}
 	return nil
 }
