@@ -200,7 +200,7 @@ func TestConnection_HandleAgentConnectRequest(t *testing.T) {
 			name:          "invalid",
 			request:       invalidConnectRequest,
 			expStatusCode: proto.AgentConnectStatus_CONNECT_REJECTED_OTHER,
-			expStatusMsg:  "missing nginxID: \"\" and/or systemID: \"\"",
+			expStatusMsg:  "missing nginxID: '' and/or systemID: ''",
 		},
 	}
 

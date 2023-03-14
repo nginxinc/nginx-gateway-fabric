@@ -133,7 +133,7 @@ func (c *connection) handleAgentConnectRequest(ctx context.Context, cmd *proto.C
 func (c *connection) register(nginxID, systemID string) error {
 	if nginxID == "" || systemID == "" {
 		c.state = StateInvalid
-		return fmt.Errorf("missing nginxID: %q and/or systemID: %q", nginxID, systemID)
+		return fmt.Errorf("missing nginxID: '%s' and/or systemID: '%s'", nginxID, systemID)
 	}
 
 	c.logger.Info("Registering agent", "nginxID", nginxID, "systemID", systemID)
