@@ -63,7 +63,13 @@ func TestValidateMethodInMatch(t *testing.T) {
 	validator := HTTPNJSMatchValidator{}
 
 	testValidValuesForSupportedValuesValidator(t, validator.ValidateMethodInMatch,
-		"GET")
+		"GET",
+		"HEAD",
+		"POST",
+		"PUT",
+		"DELETE",
+		"OPTIONS",
+		"PATCH")
 	testInvalidValuesForSupportedValuesValidator(t, validator.ValidateMethodInMatch, supportedMethods,
 		"GOT",
 		"TRACE")
