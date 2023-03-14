@@ -5,12 +5,14 @@ on:
     branches:
       - main
       - release-*
+      - feature/cp-dp-separation
     tags:
       - 'v[0-9]+.[0-9]+.[0-9]+*'
   pull_request:
     branches:
       - main
       - release-*
+      - feature/cp-dp-separation
     types:
       - opened
       - reopened

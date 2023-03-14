@@ -851,7 +851,7 @@ func TestBuildConfiguration(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		result, warns := BuildConfiguration(context.TODO(), test.graph, fakeResolver)
+		result, warns := BuildConfiguration(context.Background(), test.graph, fakeResolver)
 
 		sort.Slice(result.BackendGroups, func(i, j int) bool {
 			return result.BackendGroups[i].GroupName() < result.BackendGroups[j].GroupName()
@@ -1238,7 +1238,7 @@ func TestBuildUpstreams(t *testing.T) {
 		}
 	})
 
-	upstreams := buildUpstreamsMap(context.TODO(), listeners, fakeResolver)
+	upstreams := buildUpstreamsMap(context.Background(), listeners, fakeResolver)
 
 	if diff := cmp.Diff(expUpstreams, upstreams); diff != "" {
 		t.Errorf("buildUpstreamsMap() mismatch (-want +got):\n%s", diff)
