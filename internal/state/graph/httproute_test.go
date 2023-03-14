@@ -111,6 +111,18 @@ func TestGetAllConditionsForSectionName(t *testing.T) {
 				UnattachedSectionNameRefs: map[string]conditions.Condition{
 					sectionName: conditions.NewTODO("unattached"),
 				},
+			},
+			expected: []conditions.Condition{
+				conditions.NewTODO("unattached"),
+			},
+			name: "unattached section",
+		},
+		{
+			route: &Route{
+				SectionNameRefs: sectionNameRefs,
+				UnattachedSectionNameRefs: map[string]conditions.Condition{
+					sectionName: conditions.NewTODO("unattached"),
+				},
 				Conditions: []conditions.Condition{conditions.NewTODO("route")},
 			},
 			expected: []conditions.Condition{
