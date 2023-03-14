@@ -48,10 +48,12 @@ func addBackendGroupsToRoute(route *Route, services map[types.NamespacedName]*v1
 		for refIdx, ref := range rule.BackendRefs {
 			refPath := field.NewPath("spec").Child("rules").Index(idx).Child("backendRefs").Index(refIdx)
 
-			backend, conds := createBackend(ref, route.Source.Namespace, services, refPath)
+			backend, cond := createBackend(ref, route.Source.Namespace, services, refPath)
 
 			group.Backends = append(group.Backends, backend)
-			route.Conditions = append(route.Conditions, conds...)
+			if cond != nil {
+				route.Conditions = append(route.Conditions, *cond)
+			}
 		}
 	}
 }
@@ -61,7 +63,7 @@ func createBackend(
 	sourceNamespace string,
 	services map[types.NamespacedName]*v1.Service,
 	refPath *field.Path,
-) (BackendRef, []conditions.Condition) {
+) (BackendRef, *conditions.Condition) {
 	// Data plane will handle invalid ref by responding with 500.
 	// Because of that, we always need to add a BackendRef to group.Backends, even if the ref is invalid.
 	// Additionally, we always calculate the weight, even if it is invalid.
@@ -84,7 +86,7 @@ func createBackend(
 			Valid:  false,
 		}
 
-		return backend, []conditions.Condition{cond}
+		return backend, &cond
 	}
 
 	svc, port, err := getServiceAndPortFromRef(ref.BackendRef, sourceNamespace, services, refPath)
@@ -95,7 +97,7 @@ func createBackend(
 		}
 
 		cond := conditions.NewRouteBackendRefRefBackendNotFound(err.Error())
-		return backend, []conditions.Condition{cond}
+		return backend, &cond
 	}
 
 	backend = BackendRef{

@@ -483,10 +483,10 @@ func TestCreateBackend(t *testing.T) {
 	svc1 := &v1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: "test", Name: "service1"}}
 
 	tests := []struct {
-		name               string
-		ref                v1beta1.HTTPBackendRef
-		expectedConditions []conditions.Condition
-		expectedBackend    BackendRef
+		name              string
+		ref               v1beta1.HTTPBackendRef
+		expectedBackend   BackendRef
+		expectedCondition *conditions.Condition
 	}{
 		{
 			ref: v1beta1.HTTPBackendRef{
@@ -499,7 +499,8 @@ func TestCreateBackend(t *testing.T) {
 				Weight: 1,
 				Valid:  true,
 			},
-			name: "normal case",
+			expectedCondition: nil,
+			name:              "normal case",
 		},
 		{
 			ref: v1beta1.HTTPBackendRef{
@@ -515,7 +516,8 @@ func TestCreateBackend(t *testing.T) {
 				Weight: 1,
 				Valid:  true,
 			},
-			name: "normal with nil weight",
+			expectedCondition: nil,
+			name:              "normal with nil weight",
 		},
 		{
 			ref: v1beta1.HTTPBackendRef{
@@ -531,9 +533,11 @@ func TestCreateBackend(t *testing.T) {
 				Weight: 0,
 				Valid:  false,
 			},
-			expectedConditions: []conditions.Condition{
-				conditions.NewRouteBackendRefUnsupportedValue("test.weight: Invalid value: -1: must be in the range [0, 1000000]"),
-			},
+			expectedCondition: helpers.GetPointer(
+				conditions.NewRouteBackendRefUnsupportedValue(
+					"test.weight: Invalid value: -1: must be in the range [0, 1000000]",
+				),
+			),
 			name: "invalid weight",
 		},
 		{
@@ -550,9 +554,11 @@ func TestCreateBackend(t *testing.T) {
 				Weight: 1,
 				Valid:  false,
 			},
-			expectedConditions: []conditions.Condition{
-				conditions.NewRouteBackendRefInvalidKind(`test.kind: Unsupported value: "NotService": supported values: "Service"`),
-			},
+			expectedCondition: helpers.GetPointer(
+				conditions.NewRouteBackendRefInvalidKind(
+					`test.kind: Unsupported value: "NotService": supported values: "Service"`,
+				),
+			),
 			name: "invalid kind",
 		},
 		{
@@ -569,9 +575,9 @@ func TestCreateBackend(t *testing.T) {
 				Weight: 1,
 				Valid:  false,
 			},
-			expectedConditions: []conditions.Condition{
+			expectedCondition: helpers.GetPointer(
 				conditions.NewRouteBackendRefRefBackendNotFound(`test.name: Not found: "not-exist"`),
-			},
+			),
 			name: "service doesn't exist",
 		},
 	}
@@ -587,10 +593,10 @@ func TestCreateBackend(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewGomegaWithT(t)
 
-			backend, conds := createBackend(test.ref, sourceNamespace, services, refPath)
+			backend, cond := createBackend(test.ref, sourceNamespace, services, refPath)
 
 			g.Expect(helpers.Diff(test.expectedBackend, backend)).To(BeEmpty())
-			g.Expect(conds).To(Equal(test.expectedConditions))
+			g.Expect(cond).To(Equal(test.expectedCondition))
 		})
 	}
 }
