@@ -280,6 +280,18 @@ func TestFindGatewayForParentRef(t *testing.T) {
 		},
 		{
 			ref: v1beta1.ParentReference{
+				Group:       helpers.GetPointer[v1beta1.Group](v1beta1.GroupName),
+				Kind:        helpers.GetPointer[v1beta1.Kind]("Gateway"),
+				Namespace:   helpers.GetPointer(v1beta1.Namespace(gwNsName1.Namespace)),
+				Name:        v1beta1.ObjectName(gwNsName1.Name),
+				SectionName: helpers.GetPointer[v1beta1.SectionName]("one"),
+			},
+			expectedFound:    true,
+			expectedGwNsName: gwNsName1,
+			name:             "found with explicit group and kind",
+		},
+		{
+			ref: v1beta1.ParentReference{
 				Name:        v1beta1.ObjectName(gwNsName2.Name),
 				SectionName: helpers.GetPointer[v1beta1.SectionName]("one"),
 			},
