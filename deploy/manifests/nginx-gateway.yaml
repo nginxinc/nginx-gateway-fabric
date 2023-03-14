@@ -86,6 +86,10 @@ spec:
     spec:
       shareProcessNamespace: true
       serviceAccountName: nginx-gateway
+      securityContext:
+        sysctls:
+        - name: "net.ipv4.ip_unprivileged_port_start"
+          value: "0"
       volumes:
       - name: nginx-config
         emptyDir: { }
@@ -102,9 +106,12 @@ spec:
         - name: nginx-config
           mountPath: /etc/nginx
       containers:
-      - image: ghcr.io/nginxinc/nginx-kubernetes-gateway:edge
-        imagePullPolicy: Always
+      - image: docker.io/nginx-kubernetes-gateway:edge # FIXME(kate-osborn): change back to ghcr before merging to main
+        imagePullPolicy: IfNotPresent # FIXME(kate-osborn): change back to Always before merging to main
         name: nginx-gateway
+        ports:
+        - name: grpc
+          containerPort: 54789
         volumeMounts:
         - name: nginx-config
           mountPath: /etc/nginx
@@ -142,6 +149,6 @@ spec:
             - ALL
         ports:
         - name: http
-          containerPort: 8080
+          containerPort: 80
         - name: https
-          containerPort: 8443
+          containerPort: 443
