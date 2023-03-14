@@ -5,7 +5,7 @@ import (
 )
 
 func TestValidateEscapedString(t *testing.T) {
-	validator := func(value string) error { return validateEscapedString(value, "example") }
+	validator := func(value string) error { return validateEscapedString(value, []string{"example"}) }
 
 	testValidValuesForSimpleValidator(t, validator,
 		`test`,
@@ -18,7 +18,7 @@ func TestValidateEscapedString(t *testing.T) {
 }
 
 func TestValidateEscapedStringNoVarExpansion(t *testing.T) {
-	validator := func(value string) error { return validateEscapedStringNoVarExpansion(value, "example") }
+	validator := func(value string) error { return validateEscapedStringNoVarExpansion(value, []string{"example"}) }
 
 	testValidValuesForSimpleValidator(t, validator,
 		`test`,

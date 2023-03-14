@@ -16,8 +16,10 @@ func (HTTPRedirectValidator) ValidateRedirectScheme(scheme string) (valid bool, 
 	return validateInSupportedValues(scheme, supportedRedirectSchemes)
 }
 
+var redirectHostnameExamples = []string{"host", "example.com"}
+
 func (HTTPRedirectValidator) ValidateRedirectHostname(hostname string) error {
-	return validateEscapedStringNoVarExpansion(hostname, "host", "example.com")
+	return validateEscapedStringNoVarExpansion(hostname, redirectHostnameExamples)
 }
 
 func (HTTPRedirectValidator) ValidateRedirectPort(_ int32) error {

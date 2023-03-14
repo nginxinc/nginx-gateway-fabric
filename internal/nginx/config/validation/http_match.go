@@ -19,7 +19,10 @@ const (
 	prefixPathErrMsg = "must start with / and must not include any whitespace character, `{`, `}` or `;`"
 )
 
-var prefixPathRegexp = regexp.MustCompile("^" + prefixPathFmt + "$")
+var (
+	prefixPathRegexp   = regexp.MustCompile("^" + prefixPathFmt + "$")
+	prefixPathExamples = []string{"/", "/path", "/path/subpath-123"}
+)
 
 // ValidatePathInPrefixMatch a prefix path used in the location directive.
 func (HTTPMatchValidator) ValidatePathInPrefixMatch(path string) error {
@@ -28,7 +31,7 @@ func (HTTPMatchValidator) ValidatePathInPrefixMatch(path string) error {
 	}
 
 	if !prefixPathRegexp.MatchString(path) {
-		msg := k8svalidation.RegexError(prefixPathErrMsg, prefixPathFmt, "/", "/path", "/path/subpath-123")
+		msg := k8svalidation.RegexError(prefixPathErrMsg, prefixPathFmt, prefixPathExamples...)
 		return errors.New(msg)
 	}
 
