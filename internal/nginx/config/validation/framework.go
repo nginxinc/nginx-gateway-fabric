@@ -5,7 +5,11 @@ import (
 	"sort"
 )
 
-func validateInSupportedValues[T comparable](
+type configValue interface {
+	int | int32 | string
+}
+
+func validateInSupportedValues[T configValue](
 	value T,
 	supportedValues map[T]struct{},
 ) (valid bool, supportedValuesAsStrings []string) {
@@ -16,7 +20,7 @@ func validateInSupportedValues[T comparable](
 	return false, getSortedKeysAsString(supportedValues)
 }
 
-func getSortedKeysAsString[T comparable](m map[T]struct{}) []string {
+func getSortedKeysAsString[T configValue](m map[T]struct{}) []string {
 	keysAsString := make([]string, 0, len(m))
 
 	for k := range m {

@@ -7,11 +7,11 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-type simpleValidatorFunc[T comparable] func(v T) error
+type simpleValidatorFunc[T configValue] func(v T) error
 
-type supportedValuesValidatorFunc[T comparable] func(v T) (bool, []string)
+type supportedValuesValidatorFunc[T configValue] func(v T) (bool, []string)
 
-func runValidatorTests[T comparable](t *testing.T, run func(g *WithT, v T), caseNamePrefix string, values ...T) {
+func runValidatorTests[T configValue](t *testing.T, run func(g *WithT, v T), caseNamePrefix string, values ...T) {
 	for i, v := range values {
 		t.Run(fmt.Sprintf("%s_case_#%d", caseNamePrefix, i), func(t *testing.T) {
 			g := NewGomegaWithT(t)
@@ -24,21 +24,21 @@ func createFailureMessage[T any](v T) string {
 	return fmt.Sprintf("value: %v", v)
 }
 
-func testValidValuesForSimpleValidator[T comparable](t *testing.T, f simpleValidatorFunc[T], values ...T) {
+func testValidValuesForSimpleValidator[T configValue](t *testing.T, f simpleValidatorFunc[T], values ...T) {
 	runValidatorTests(t, func(g *WithT, v T) {
 		err := f(v)
 		g.Expect(err).ToNot(HaveOccurred(), createFailureMessage(v))
 	}, "valid_value", values...)
 }
 
-func testInvalidValuesForSimpleValidator[T comparable](t *testing.T, f simpleValidatorFunc[T], values ...T) {
+func testInvalidValuesForSimpleValidator[T configValue](t *testing.T, f simpleValidatorFunc[T], values ...T) {
 	runValidatorTests(t, func(g *WithT, v T) {
 		err := f(v)
 		g.Expect(err).To(HaveOccurred(), createFailureMessage(v))
 	}, "invalid_value", values...)
 }
 
-func testValidValuesForSupportedValuesValidator[T comparable](
+func testValidValuesForSupportedValuesValidator[T configValue](
 	t *testing.T,
 	f supportedValuesValidatorFunc[T],
 	values ...T,
@@ -50,7 +50,7 @@ func testValidValuesForSupportedValuesValidator[T comparable](
 	}, "valid_value", values...)
 }
 
-func testInvalidValuesForSupportedValuesValidator[T comparable](
+func testInvalidValuesForSupportedValuesValidator[T configValue](
 	t *testing.T,
 	f supportedValuesValidatorFunc[T],
 	supportedValuesMap map[T]struct{},
