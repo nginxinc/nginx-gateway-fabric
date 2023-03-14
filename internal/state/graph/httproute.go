@@ -426,7 +426,9 @@ func validateMatch(
 		allErrs = append(allErrs, validateQueryParamMatch(validator, q, queryParamPath)...)
 	}
 
-	allErrs = append(allErrs, validateMethodMatch(validator, match.Method, matchPath.Child("method"))...)
+	if err := validateMethodMatch(validator, match.Method, matchPath.Child("method")); err != nil {
+		allErrs = append(allErrs, err)
+	}
 
 	return allErrs
 }
@@ -435,19 +437,16 @@ func validateMethodMatch(
 	validator validation.HTTPFieldsValidator,
 	method *v1beta1.HTTPMethod,
 	methodPath *field.Path,
-) field.ErrorList {
-	var allErrs field.ErrorList
-
+) *field.Error {
 	if method == nil {
-		return allErrs
+		return nil
 	}
 
 	if valid, supportedValues := validator.ValidateMethodInMatch(string(*method)); !valid {
-		valErr := field.NotSupported(methodPath, *method, supportedValues)
-		allErrs = append(allErrs, valErr)
+		return field.NotSupported(methodPath, *method, supportedValues)
 	}
 
-	return allErrs
+	return nil
 }
 
 func validateQueryParamMatch(
