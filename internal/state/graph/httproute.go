@@ -277,10 +277,7 @@ func buildRoute(
 	return r
 }
 
-func bindRoutesToListeners(
-	routes map[types.NamespacedName]*Route,
-	gw *Gateway,
-) {
+func bindRoutesToListeners(routes map[types.NamespacedName]*Route, gw *Gateway) {
 	if gw == nil {
 		return
 	}
@@ -290,10 +287,7 @@ func bindRoutesToListeners(
 	}
 }
 
-func bindRouteToListeners(
-	r *Route,
-	gw *Gateway,
-) {
+func bindRouteToListeners(r *Route, gw *Gateway) {
 	if !r.Valid {
 		return
 	}
