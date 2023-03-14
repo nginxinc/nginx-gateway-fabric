@@ -5,7 +5,7 @@ import (
 )
 
 func TestValidatePathInPrefixMatch(t *testing.T) {
-	validator := HTTPMatchValidator{}
+	validator := HTTPNJSMatchValidator{}
 
 	testValidValuesForSimpleValidator(t, validator.ValidatePathInPrefixMatch,
 		"/",
@@ -22,7 +22,7 @@ func TestValidatePathInPrefixMatch(t *testing.T) {
 }
 
 func TestValidateHeaderNameInMatch(t *testing.T) {
-	validator := HTTPMatchValidator{}
+	validator := HTTPNJSMatchValidator{}
 
 	testValidValuesForSimpleValidator(t, validator.ValidateHeaderNameInMatch,
 		"header")
@@ -32,7 +32,7 @@ func TestValidateHeaderNameInMatch(t *testing.T) {
 }
 
 func TestValidateHeaderValueInMatch(t *testing.T) {
-	validator := HTTPMatchValidator{}
+	validator := HTTPNJSMatchValidator{}
 
 	testValidValuesForSimpleValidator(t, validator.ValidateHeaderValueInMatch,
 		"value")
@@ -42,7 +42,7 @@ func TestValidateHeaderValueInMatch(t *testing.T) {
 }
 
 func TestValidateQueryParamNameInMatch(t *testing.T) {
-	validator := HTTPMatchValidator{}
+	validator := HTTPNJSMatchValidator{}
 
 	testValidValuesForSimpleValidator(t, validator.ValidateQueryParamNameInMatch,
 		"param")
@@ -51,7 +51,7 @@ func TestValidateQueryParamNameInMatch(t *testing.T) {
 }
 
 func TestValidateQueryParamValueInMatch(t *testing.T) {
-	validator := HTTPMatchValidator{}
+	validator := HTTPNJSMatchValidator{}
 
 	testValidValuesForSimpleValidator(t, validator.ValidateQueryParamValueInMatch,
 		"value")
@@ -60,7 +60,7 @@ func TestValidateQueryParamValueInMatch(t *testing.T) {
 }
 
 func TestValidateMethodInMatch(t *testing.T) {
-	validator := HTTPMatchValidator{}
+	validator := HTTPNJSMatchValidator{}
 
 	testValidValuesForSupportedValuesValidator(t, validator.ValidateMethodInMatch,
 		"GET")
@@ -70,9 +70,9 @@ func TestValidateMethodInMatch(t *testing.T) {
 }
 
 func TestValidateCommonMatchPart(t *testing.T) {
-	testValidValuesForSimpleValidator(t, validateCommonMatchPart,
+	testValidValuesForSimpleValidator(t, validateCommonNJSMatchPart,
 		"test")
-	testInvalidValuesForSimpleValidator(t, validateCommonMatchPart,
+	testInvalidValuesForSimpleValidator(t, validateCommonNJSMatchPart,
 		"",
 		" ",
 		"$")

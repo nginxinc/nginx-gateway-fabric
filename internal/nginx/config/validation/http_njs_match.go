@@ -11,8 +11,10 @@ import (
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/config"
 )
 
-// HTTPMatchValidator validates values used for matching a request.
-type HTTPMatchValidator struct{}
+// HTTPNJSMatchValidator validates values used for matching a request.
+// The matching is implemented in NJS (except for path matching),
+// so changes to the implementation change the validation rules here.
+type HTTPNJSMatchValidator struct{}
 
 const (
 	prefixPathFmt    = `/[^\s{};]*`
@@ -25,7 +27,7 @@ var (
 )
 
 // ValidatePathInPrefixMatch a prefix path used in the location directive.
-func (HTTPMatchValidator) ValidatePathInPrefixMatch(path string) error {
+func (HTTPNJSMatchValidator) ValidatePathInPrefixMatch(path string) error {
 	if path == "" {
 		return errors.New("cannot be empty")
 	}
@@ -40,36 +42,36 @@ func (HTTPMatchValidator) ValidatePathInPrefixMatch(path string) error {
 	// That's because the location path gets into the set directive in the location block.
 	// Example: set $http_matches "[{\"redirectPath\":\"/coffee_route0\" ...
 	// Where /coffee is tha path.
-	return validateCommonMatchPart(path)
+	return validateCommonNJSMatchPart(path)
 }
 
-func (HTTPMatchValidator) ValidateHeaderNameInMatch(name string) error {
-	return validateHeaderPart(name)
+func (HTTPNJSMatchValidator) ValidateHeaderNameInMatch(name string) error {
+	return validateNJSHeaderPart(name)
 }
 
-func (HTTPMatchValidator) ValidateHeaderValueInMatch(value string) error {
-	return validateHeaderPart(value)
+func (HTTPNJSMatchValidator) ValidateHeaderValueInMatch(value string) error {
+	return validateNJSHeaderPart(value)
 }
 
-func validateHeaderPart(value string) error {
+func validateNJSHeaderPart(value string) error {
 	// if it contains the separator, it will break NJS code.
 	if strings.Contains(value, config.HeaderMatchSeparator) {
 		return fmt.Errorf("cannot contain %q", config.HeaderMatchSeparator)
 	}
 
-	return validateCommonMatchPart(value)
+	return validateCommonNJSMatchPart(value)
 }
 
-func (HTTPMatchValidator) ValidateQueryParamNameInMatch(name string) error {
-	return validateCommonMatchPart(name)
+func (HTTPNJSMatchValidator) ValidateQueryParamNameInMatch(name string) error {
+	return validateCommonNJSMatchPart(name)
 }
 
-func (HTTPMatchValidator) ValidateQueryParamValueInMatch(value string) error {
-	return validateCommonMatchPart(value)
+func (HTTPNJSMatchValidator) ValidateQueryParamValueInMatch(value string) error {
+	return validateCommonNJSMatchPart(value)
 }
 
-// validateCommonMatchPart validates a string value used in NJS-based matching.
-func validateCommonMatchPart(value string) error {
+// validateCommonNJSMatchPart validates a string value used in NJS-based matching.
+func validateCommonNJSMatchPart(value string) error {
 	// empty values do not make sense, so we don't allow them.
 
 	if value == "" {
@@ -102,6 +104,6 @@ var supportedMethods = map[string]struct{}{
 	"PATCH":   {},
 }
 
-func (HTTPMatchValidator) ValidateMethodInMatch(method string) (valid bool, supportedValues []string) {
+func (HTTPNJSMatchValidator) ValidateMethodInMatch(method string) (valid bool, supportedValues []string) {
 	return validateInSupportedValues(method, supportedMethods)
 }
