@@ -51,6 +51,8 @@ func (s *Server) Start(ctx context.Context) error {
 		<-ctx.Done()
 
 		s.logger.Info("gRPC server stopped")
+		// FIXME(kate-osborn): Figure out how to use GracefulStop() here. Currently,
+		// GracefulStop() leads to timeout errors in the logs on shutdown.
 		s.server.Stop()
 	}()
 
