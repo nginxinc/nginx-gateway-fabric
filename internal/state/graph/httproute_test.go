@@ -329,9 +329,8 @@ func TestFindGatewayForParentRef(t *testing.T) {
 	}{
 		{
 			ref: v1beta1.ParentReference{
-				Namespace:   helpers.GetPointer(v1beta1.Namespace(gwNsName1.Namespace)),
-				Name:        v1beta1.ObjectName(gwNsName1.Name),
-				SectionName: helpers.GetPointer[v1beta1.SectionName]("one"),
+				Namespace: helpers.GetPointer(v1beta1.Namespace(gwNsName1.Namespace)),
+				Name:      v1beta1.ObjectName(gwNsName1.Name),
 			},
 			expectedFound:    true,
 			expectedGwNsName: gwNsName1,
@@ -339,11 +338,10 @@ func TestFindGatewayForParentRef(t *testing.T) {
 		},
 		{
 			ref: v1beta1.ParentReference{
-				Group:       helpers.GetPointer[v1beta1.Group](v1beta1.GroupName),
-				Kind:        helpers.GetPointer[v1beta1.Kind]("Gateway"),
-				Namespace:   helpers.GetPointer(v1beta1.Namespace(gwNsName1.Namespace)),
-				Name:        v1beta1.ObjectName(gwNsName1.Name),
-				SectionName: helpers.GetPointer[v1beta1.SectionName]("one"),
+				Group:     helpers.GetPointer[v1beta1.Group](v1beta1.GroupName),
+				Kind:      helpers.GetPointer[v1beta1.Kind]("Gateway"),
+				Namespace: helpers.GetPointer(v1beta1.Namespace(gwNsName1.Namespace)),
+				Name:      v1beta1.ObjectName(gwNsName1.Name),
 			},
 			expectedFound:    true,
 			expectedGwNsName: gwNsName1,
@@ -351,8 +349,7 @@ func TestFindGatewayForParentRef(t *testing.T) {
 		},
 		{
 			ref: v1beta1.ParentReference{
-				Name:        v1beta1.ObjectName(gwNsName2.Name),
-				SectionName: helpers.GetPointer[v1beta1.SectionName]("one"),
+				Name: v1beta1.ObjectName(gwNsName2.Name),
 			},
 			expectedFound:    true,
 			expectedGwNsName: gwNsName2,
@@ -360,9 +357,8 @@ func TestFindGatewayForParentRef(t *testing.T) {
 		},
 		{
 			ref: v1beta1.ParentReference{
-				Kind:        helpers.GetPointer[v1beta1.Kind]("NotGateway"),
-				Name:        v1beta1.ObjectName(gwNsName2.Name),
-				SectionName: helpers.GetPointer[v1beta1.SectionName]("one"),
+				Kind: helpers.GetPointer[v1beta1.Kind]("NotGateway"),
+				Name: v1beta1.ObjectName(gwNsName2.Name),
 			},
 			expectedFound:    false,
 			expectedGwNsName: types.NamespacedName{},
@@ -370,13 +366,21 @@ func TestFindGatewayForParentRef(t *testing.T) {
 		},
 		{
 			ref: v1beta1.ParentReference{
-				Group:       helpers.GetPointer[v1beta1.Group]("wrong-group"),
-				Name:        v1beta1.ObjectName(gwNsName2.Name),
-				SectionName: helpers.GetPointer[v1beta1.SectionName]("one"),
+				Group: helpers.GetPointer[v1beta1.Group]("wrong-group"),
+				Name:  v1beta1.ObjectName(gwNsName2.Name),
 			},
 			expectedFound:    false,
 			expectedGwNsName: types.NamespacedName{},
 			name:             "wrong group",
+		},
+		{
+			ref: v1beta1.ParentReference{
+				Namespace: helpers.GetPointer(v1beta1.Namespace(gwNsName1.Namespace)),
+				Name:      "some-gateway",
+			},
+			expectedFound:    false,
+			expectedGwNsName: types.NamespacedName{},
+			name:             "not found",
 		},
 	}
 
