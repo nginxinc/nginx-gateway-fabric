@@ -271,6 +271,16 @@ func TestCreateServers(t *testing.T) {
 					},
 					// redirect is set in the corresponding state.MatchRule
 				},
+				{
+					// A match with an invalid filter
+					Matches: []v1beta1.HTTPRouteMatch{
+						{
+							Path: &v1beta1.HTTPPathMatch{
+								Value: helpers.GetPointer("/invalid-filter"),
+							},
+						},
+					},
+				},
 			},
 		},
 	}
@@ -323,6 +333,8 @@ func TestCreateServers(t *testing.T) {
 	filterGroup1 := graph.BackendGroup{Source: hrNsName, RuleIdx: 3}
 
 	filterGroup2 := graph.BackendGroup{Source: hrNsName, RuleIdx: 4}
+
+	invalidFilterGroup := graph.BackendGroup{Source: hrNsName, RuleIdx: 5}
 
 	cafePathRules := []dataplane.PathRule{
 		{
@@ -400,6 +412,20 @@ func TestCreateServers(t *testing.T) {
 						},
 					},
 					BackendGroup: filterGroup2,
+				},
+			},
+		},
+		{
+			Path: "/invalid-filter",
+			MatchRules: []dataplane.MatchRule{
+				{
+					MatchIdx: 0,
+					RuleIdx:  5,
+					Source:   hr,
+					Filters: dataplane.Filters{
+						InvalidFilter: &dataplane.InvalidFilter{},
+					},
+					BackendGroup: invalidFilterGroup,
 				},
 			},
 		},
@@ -491,14 +517,20 @@ func TestCreateServers(t *testing.T) {
 				Path: "/redirect-implicit-port",
 				Return: &http.Return{
 					Code: 302,
-					URL:  fmt.Sprintf("$scheme://foo.example.com:%d$request_uri", port),
+					Body: fmt.Sprintf("$scheme://foo.example.com:%d$request_uri", port),
 				},
 			},
 			{
 				Path: "/redirect-explicit-port",
 				Return: &http.Return{
 					Code: 302,
-					URL:  "$scheme://bar.example.com:8080$request_uri",
+					Body: "$scheme://bar.example.com:8080$request_uri",
+				},
+			},
+			{
+				Path: "/invalid-filter",
+				Return: &http.Return{
+					Code: http.StatusInternalServerError,
 				},
 			},
 		}
@@ -522,11 +554,10 @@ func TestCreateServers(t *testing.T) {
 		},
 	}
 
-	result := createServers(httpServers, sslServers)
+	g := NewGomegaWithT(t)
 
-	if diff := cmp.Diff(expectedServers, result); diff != "" {
-		t.Errorf("createServers() mismatch (-want +got):\n%s", diff)
-	}
+	result := createServers(httpServers, sslServers)
+	g.Expect(helpers.Diff(expectedServers, result)).To(BeEmpty())
 }
 
 func TestCreateLocationsRootPath(t *testing.T) {
@@ -713,7 +744,7 @@ func TestCreateReturnValForRedirectFilter(t *testing.T) {
 			filter: &v1beta1.HTTPRequestRedirectFilter{},
 			expected: &http.Return{
 				Code: http.StatusFound,
-				URL:  "$scheme://$host:123$request_uri",
+				Body: "$scheme://$host:123$request_uri",
 			},
 			msg: "all fields are empty",
 		},
@@ -726,7 +757,7 @@ func TestCreateReturnValForRedirectFilter(t *testing.T) {
 			},
 			expected: &http.Return{
 				Code: 101,
-				URL:  "https://foo.example.com:2022$request_uri",
+				Body: "https://foo.example.com:2022$request_uri",
 			},
 			msg: "all fields are set",
 		},

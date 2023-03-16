@@ -6,6 +6,7 @@ import (
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/helpers"
@@ -28,36 +29,6 @@ func TestBuildStatuses(t *testing.T) {
 		},
 	}
 
-	routes := map[types.NamespacedName]*graph.Route{
-		{Namespace: "test", Name: "hr-1"}: {
-			Source: &v1beta1.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Generation: 3,
-				},
-			},
-			ValidSectionNameRefs: map[string]struct{}{
-				"listener-80-1": {},
-			},
-			InvalidSectionNameRefs: map[string]conditions.Condition{
-				"listener-80-2": invalidCondition,
-			},
-		},
-	}
-
-	routesAllRefsInvalid := map[types.NamespacedName]*graph.Route{
-		{Namespace: "test", Name: "hr-1"}: {
-			Source: &v1beta1.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Generation: 4,
-				},
-			},
-			InvalidSectionNameRefs: map[string]conditions.Condition{
-				"listener-80-2": invalidCondition,
-				"listener-80-1": invalidCondition,
-			},
-		},
-	}
-
 	gw := &v1beta1.Gateway{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:  "test",
@@ -71,6 +42,53 @@ func TestBuildStatuses(t *testing.T) {
 			Namespace:  "test",
 			Name:       "ignored-gateway",
 			Generation: 1,
+		},
+	}
+
+	routes := map[types.NamespacedName]*graph.Route{
+		{Namespace: "test", Name: "hr-1"}: {
+			Source: &v1beta1.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Generation: 3,
+				},
+			},
+			SectionNameRefs: map[string]graph.ParentRef{
+				"listener-80-1": {
+					Idx:     0,
+					Gateway: client.ObjectKeyFromObject(gw),
+				},
+				"listener-80-2": {
+					Idx:     0,
+					Gateway: client.ObjectKeyFromObject(ignoredGw),
+				},
+			},
+			UnattachedSectionNameRefs: map[string]conditions.Condition{
+				"listener-80-2": invalidCondition,
+			},
+		},
+	}
+
+	routesAllRefsInvalid := map[types.NamespacedName]*graph.Route{
+		{Namespace: "test", Name: "hr-1"}: {
+			Source: &v1beta1.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Generation: 4,
+				},
+			},
+			SectionNameRefs: map[string]graph.ParentRef{
+				"listener-80-1": {
+					Idx:     0,
+					Gateway: client.ObjectKeyFromObject(gw),
+				},
+				"listener-80-2": {
+					Idx:     0,
+					Gateway: client.ObjectKeyFromObject(ignoredGw),
+				},
+			},
+			UnattachedSectionNameRefs: map[string]conditions.Condition{
+				"listener-80-1": invalidCondition,
+				"listener-80-2": invalidCondition,
+			},
 		},
 	}
 

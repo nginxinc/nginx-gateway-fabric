@@ -10,5 +10,12 @@ Those three points make it easier to generate intermediate data plane configurat
 
 The package includes the types to represent the graph and the functions to convert resources into their graph
 representation.
+
+The validation of the resource fields consists of two parts:
+- Data-plane specific validation. For example, validating the value of an HTTP header. Such validation is delegated
+to the data-plane specific implementation of a Validator.
+- Data-plane agnostic validation. For such validation, the values either don't affect the data-plane configuration
+directly or they must be validated to process a resource. For example, hostnames must be validated to be able to bind
+an HTTPRoute to a Listener.
 */
 package graph

@@ -133,24 +133,27 @@ func buildStatuses(graph *graph.Graph) Statuses {
 	for nsname, r := range graph.Routes {
 		parentStatuses := make(map[string]ParentStatus)
 
-		for ref := range r.ValidSectionNameRefs {
-			parentStatuses[ref] = ParentStatus{
-				Conditions: conditions.DeduplicateConditions(
-					buildBaseRouteConditions(gcValidAndExist),
-				),
-			}
-		}
-		for ref, cond := range r.InvalidSectionNameRefs {
-			baseConds := buildBaseRouteConditions(gcValidAndExist)
+		baseConds := buildBaseRouteConditions(gcValidAndExist)
 
+		for ref := range r.SectionNameRefs {
+			conds := r.GetAllConditionsForSectionName(ref)
+
+			allConds := make([]conditions.Condition, 0, len(conds)+len(baseConds))
 			// We add baseConds first, so that any additional conditions will override them, which is
 			// ensured by DeduplicateConditions.
-			conds := make([]conditions.Condition, 0, len(baseConds)+1)
-			conds = append(conds, baseConds...)
-			conds = append(conds, cond)
+			allConds = append(allConds, baseConds...)
+			allConds = append(allConds, conds...)
+
+			if ref == "" {
+				// FIXME(pleshakov): Gateway API spec does allow empty section names in the status.
+				// However, NKG doesn't yet support the empty section names.
+				// Once NKG supports them, it will be able to determine which section name the HTTPRoute was
+				// attached to. So we won't need this workaround.
+				ref = "unattached"
+			}
 
 			parentStatuses[ref] = ParentStatus{
-				Conditions: conditions.DeduplicateConditions(conds),
+				Conditions: conditions.DeduplicateConditions(allConds),
 			}
 		}
 

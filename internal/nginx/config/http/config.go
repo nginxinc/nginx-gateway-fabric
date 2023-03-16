@@ -20,7 +20,7 @@ type Location struct {
 
 // Return represents an HTTP return.
 type Return struct {
-	URL  string
+	Body string
 	Code StatusCode
 }
 
@@ -38,6 +38,8 @@ const (
 	StatusFound StatusCode = 302
 	// StatusNotFound is the HTTP 404 status code.
 	StatusNotFound StatusCode = 404
+	// StatusInternalServerError is the HTTP 500 status code.
+	StatusInternalServerError StatusCode = 500
 )
 
 // Upstream holds all configuration for an HTTP upstream.

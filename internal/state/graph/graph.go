@@ -3,10 +3,10 @@ package graph
 import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/secrets"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/validation"
 )
 
 // ClusterStore includes cluster resources necessary to build the Graph.
@@ -37,34 +37,23 @@ func BuildGraph(
 	controllerName string,
 	gcName string,
 	secretMemoryMgr secrets.SecretDiskMemoryManager,
+	validators validation.Validators,
 ) *Graph {
 	gc := buildGatewayClass(store.GatewayClass, controllerName)
 
-	gw, ignoredGws := processGateways(store.Gateways, gcName)
+	processedGws := processGateways(store.Gateways, gcName)
 
-	listeners := buildListeners(gw, gcName, secretMemoryMgr)
+	gw := buildGateway(processedGws.Winner, secretMemoryMgr)
 
-	routes := make(map[types.NamespacedName]*Route)
-	for _, ghr := range store.HTTPRoutes {
-		ignored, r := bindHTTPRouteToListeners(ghr, gw, ignoredGws, listeners)
-		if !ignored {
-			routes[client.ObjectKeyFromObject(ghr)] = r
-		}
-	}
-
+	routes := buildRoutesForGateways(validators.HTTPFieldsValidator, store.HTTPRoutes, processedGws.GetAllNsNames())
+	bindRoutesToListeners(routes, gw)
 	addBackendGroupsToRoutes(routes, store.Services)
 
 	g := &Graph{
 		GatewayClass:    gc,
+		Gateway:         gw,
 		Routes:          routes,
-		IgnoredGateways: ignoredGws,
-	}
-
-	if gw != nil {
-		g.Gateway = &Gateway{
-			Source:    gw,
-			Listeners: listeners,
-		}
+		IgnoredGateways: processedGws.Ignored,
 	}
 
 	return g

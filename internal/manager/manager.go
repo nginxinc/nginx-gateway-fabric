@@ -14,7 +14,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	k8spredicate "sigs.k8s.io/controller-runtime/pkg/predicate"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
-	"sigs.k8s.io/gateway-api/apis/v1beta1/validation"
+	gwapivalidation "sigs.k8s.io/gateway-api/apis/v1beta1/validation"
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/config"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/events"
@@ -22,12 +22,14 @@ import (
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/manager/index"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/manager/predicate"
 	ngxcfg "github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/config"
+	ngxvalidation "github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/config/validation"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/file"
 	ngxruntime "github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/runtime"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/relationship"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/resolver"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/secrets"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/validation"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/status"
 )
 
@@ -80,13 +82,13 @@ func Start(cfg config.Config) error {
 		{
 			objectType: &gatewayv1beta1.Gateway{},
 			options: []controllerOption{
-				withWebhookValidator(createValidator(validation.ValidateGateway)),
+				withWebhookValidator(createValidator(gwapivalidation.ValidateGateway)),
 			},
 		},
 		{
 			objectType: &gatewayv1beta1.HTTPRoute{},
 			options: []controllerOption{
-				withWebhookValidator(createValidator(validation.ValidateHTTPRoute)),
+				withWebhookValidator(createValidator(gwapivalidation.ValidateHTTPRoute)),
 			},
 		},
 		{
@@ -129,6 +131,9 @@ func Start(cfg config.Config) error {
 		ServiceResolver:      resolver.NewServiceResolverImpl(mgr.GetClient()),
 		RelationshipCapturer: relationship.NewCapturerImpl(),
 		Logger:               cfg.Logger.WithName("changeProcessor"),
+		Validators: validation.Validators{
+			HTTPFieldsValidator: ngxvalidation.HTTPValidator{},
+		},
 	})
 
 	configGenerator := ngxcfg.NewGeneratorImpl()

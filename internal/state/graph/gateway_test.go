@@ -1,18 +1,68 @@
+//nolint:gosec
 package graph
 
 import (
+	"errors"
 	"testing"
 
-	"github.com/google/go-cmp/cmp"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/helpers"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/conditions"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/secrets"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/secrets/secretsfakes"
 )
+
+func TestProcessedGatewaysGetAllNsNames(t *testing.T) {
+	winner := &v1beta1.Gateway{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "test",
+			Name:      "gateway-1",
+		},
+	}
+	loser := &v1beta1.Gateway{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "test",
+			Name:      "gateway-2",
+		},
+	}
+
+	tests := []struct {
+		gws      processedGateways
+		name     string
+		expected []types.NamespacedName
+	}{
+		{
+			gws:      processedGateways{},
+			expected: nil,
+			name:     "no gateways",
+		},
+		{
+			gws: processedGateways{
+				Winner: winner,
+				Ignored: map[types.NamespacedName]*v1beta1.Gateway{
+					client.ObjectKeyFromObject(loser): loser,
+				},
+			},
+			expected: []types.NamespacedName{
+				client.ObjectKeyFromObject(winner),
+				client.ObjectKeyFromObject(loser),
+			},
+			name: "winner and ignored",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			g := NewGomegaWithT(t)
+			result := test.gws.GetAllNsNames()
+			g.Expect(result).To(Equal(test.expected))
+		})
+	}
+}
 
 func TestProcessGateways(t *testing.T) {
 	const gcName = "test-gc"
@@ -37,16 +87,14 @@ func TestProcessGateways(t *testing.T) {
 	}
 
 	tests := []struct {
-		gws                map[types.NamespacedName]*v1beta1.Gateway
-		expectedWinner     *v1beta1.Gateway
-		expectedIgnoredGws map[types.NamespacedName]*v1beta1.Gateway
-		msg                string
+		gws      map[types.NamespacedName]*v1beta1.Gateway
+		expected processedGateways
+		name     string
 	}{
 		{
-			gws:                nil,
-			expectedWinner:     nil,
-			expectedIgnoredGws: nil,
-			msg:                "no gateways",
+			gws:      nil,
+			expected: processedGateways{},
+			name:     "no gateways",
 		},
 		{
 			gws: map[types.NamespacedName]*v1beta1.Gateway{
@@ -54,44 +102,44 @@ func TestProcessGateways(t *testing.T) {
 					Spec: v1beta1.GatewaySpec{GatewayClassName: "some-class"},
 				},
 			},
-			expectedWinner:     nil,
-			expectedIgnoredGws: nil,
-			msg:                "unrelated gateway",
+			expected: processedGateways{},
+			name:     "unrelated gateway",
 		},
 		{
 			gws: map[types.NamespacedName]*v1beta1.Gateway{
-				{Namespace: "test", Name: "gateway"}: winner,
+				{Namespace: "test", Name: "gateway-1"}: winner,
 			},
-			expectedWinner:     winner,
-			expectedIgnoredGws: map[types.NamespacedName]*v1beta1.Gateway{},
-			msg:                "one gateway",
+			expected: processedGateways{
+				Winner:  winner,
+				Ignored: map[types.NamespacedName]*v1beta1.Gateway{},
+			},
+			name: "one gateway",
 		},
 		{
 			gws: map[types.NamespacedName]*v1beta1.Gateway{
 				{Namespace: "test", Name: "gateway-1"}: winner,
 				{Namespace: "test", Name: "gateway-2"}: loser,
 			},
-			expectedWinner: winner,
-			expectedIgnoredGws: map[types.NamespacedName]*v1beta1.Gateway{
-				{Namespace: "test", Name: "gateway-2"}: loser,
+			expected: processedGateways{
+				Winner: winner,
+				Ignored: map[types.NamespacedName]*v1beta1.Gateway{
+					{Namespace: "test", Name: "gateway-2"}: loser,
+				},
 			},
-			msg: "multiple gateways",
+			name: "multiple gateways",
 		},
 	}
 
 	for _, test := range tests {
-		winner, ignoredGws := processGateways(test.gws, gcName)
-
-		if diff := cmp.Diff(winner, test.expectedWinner); diff != "" {
-			t.Errorf("processGateways() '%s' mismatch for winner (-want +got):\n%s", test.msg, diff)
-		}
-		if diff := cmp.Diff(ignoredGws, test.expectedIgnoredGws); diff != "" {
-			t.Errorf("processGateways() '%s' mismatch for ignored gateways (-want +got):\n%s", test.msg, diff)
-		}
+		t.Run(test.name, func(t *testing.T) {
+			g := NewGomegaWithT(t)
+			result := processGateways(test.gws, gcName)
+			g.Expect(helpers.Diff(test.expected, result)).To(BeEmpty())
+		})
 	}
 }
 
-func TestBuildListeners(t *testing.T) {
+func TestBuildGateway(t *testing.T) {
 	const gcName = "my-gateway-class"
 
 	listener801 := v1beta1.Listener{
@@ -203,316 +251,272 @@ func TestBuildListeners(t *testing.T) {
 
 		conflictedHostnamesMsg = `Multiple listeners for the same port use the same hostname "foo.example.com"; ` +
 			"ensure only one listener uses that hostname"
+
+		secretPath = "/etc/nginx/secrets/test_secret"
 	)
+
+	type gatewayCfg struct {
+		listeners []v1beta1.Listener
+		addresses []v1beta1.GatewayAddress
+	}
+
+	var lastCreatedGateway *v1beta1.Gateway
+	createGateway := func(cfg gatewayCfg) *v1beta1.Gateway {
+		lastCreatedGateway = &v1beta1.Gateway{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: "test",
+			},
+			Spec: v1beta1.GatewaySpec{
+				GatewayClassName: gcName,
+				Listeners:        cfg.listeners,
+				Addresses:        cfg.addresses,
+			},
+		}
+		return lastCreatedGateway
+	}
+	getLastCreatedGetaway := func() *v1beta1.Gateway {
+		return lastCreatedGateway
+	}
 
 	tests := []struct {
 		gateway  *v1beta1.Gateway
-		expected map[string]*Listener
+		expected *Gateway
 		name     string
 	}{
 		{
-			gateway: &v1beta1.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "test",
-				},
-				Spec: v1beta1.GatewaySpec{
-					GatewayClassName: gcName,
-					Listeners: []v1beta1.Listener{
-						listener801,
+			gateway: createGateway(gatewayCfg{listeners: []v1beta1.Listener{listener801}}),
+			expected: &Gateway{
+				Source: getLastCreatedGetaway(),
+				Listeners: map[string]*Listener{
+					"listener-80-1": {
+						Source:            listener801,
+						Valid:             true,
+						Routes:            map[types.NamespacedName]*Route{},
+						AcceptedHostnames: map[string]struct{}{},
 					},
-				},
-				Status: v1beta1.GatewayStatus{},
-			},
-			expected: map[string]*Listener{
-				"listener-80-1": {
-					Source:            listener801,
-					Valid:             true,
-					Routes:            map[types.NamespacedName]*Route{},
-					AcceptedHostnames: map[string]struct{}{},
 				},
 			},
 			name: "valid http listener",
 		},
 		{
-			gateway: &v1beta1.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "test",
-				},
-				Spec: v1beta1.GatewaySpec{
-					GatewayClassName: gcName,
-					Listeners: []v1beta1.Listener{
-						listener4431,
+			gateway: createGateway(gatewayCfg{listeners: []v1beta1.Listener{listener4431}}),
+			expected: &Gateway{
+				Source: getLastCreatedGetaway(),
+				Listeners: map[string]*Listener{
+					"listener-443-1": {
+						Source:            listener4431,
+						Valid:             true,
+						Routes:            map[types.NamespacedName]*Route{},
+						AcceptedHostnames: map[string]struct{}{},
+						SecretPath:        secretPath,
 					},
-				},
-			},
-			expected: map[string]*Listener{
-				"listener-443-1": {
-					Source:            listener4431,
-					Valid:             true,
-					Routes:            map[types.NamespacedName]*Route{},
-					AcceptedHostnames: map[string]struct{}{},
-					SecretPath:        secretPath,
 				},
 			},
 			name: "valid https listener",
 		},
 		{
-			gateway: &v1beta1.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "test",
-				},
-				Spec: v1beta1.GatewaySpec{
-					GatewayClassName: gcName,
-					Listeners: []v1beta1.Listener{
-						listener802,
-					},
-				},
-			},
-			expected: map[string]*Listener{
-				"listener-80-2": {
-					Source:            listener802,
-					Valid:             false,
-					Routes:            map[types.NamespacedName]*Route{},
-					AcceptedHostnames: map[string]struct{}{},
-					Conditions: []conditions.Condition{
-						conditions.NewListenerUnsupportedProtocol(`Protocol "TCP" is not supported, use "HTTP" ` +
-							`or "HTTPS"`),
+			gateway: createGateway(gatewayCfg{listeners: []v1beta1.Listener{listener802}}),
+			expected: &Gateway{
+				Source: getLastCreatedGetaway(),
+				Listeners: map[string]*Listener{
+					"listener-80-2": {
+						Source:            listener802,
+						Valid:             false,
+						Routes:            map[types.NamespacedName]*Route{},
+						AcceptedHostnames: map[string]struct{}{},
+						Conditions: []conditions.Condition{
+							conditions.NewListenerUnsupportedProtocol(`Protocol "TCP" is not supported, use "HTTP" ` +
+								`or "HTTPS"`),
+						},
 					},
 				},
 			},
 			name: "invalid listener protocol",
 		},
 		{
-			gateway: &v1beta1.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "test",
-				},
-				Spec: v1beta1.GatewaySpec{
-					GatewayClassName: gcName,
-					Listeners: []v1beta1.Listener{
-						listener805,
-					},
-				},
-			},
-			expected: map[string]*Listener{
-				"listener-80-5": {
-					Source:            listener805,
-					Valid:             false,
-					Routes:            map[types.NamespacedName]*Route{},
-					AcceptedHostnames: map[string]struct{}{},
-					Conditions: []conditions.Condition{
-						conditions.NewListenerPortUnavailable("Port 81 is not supported for HTTP, use 80"),
+			gateway: createGateway(gatewayCfg{listeners: []v1beta1.Listener{listener805}}),
+			expected: &Gateway{
+				Source: getLastCreatedGetaway(),
+				Listeners: map[string]*Listener{
+					"listener-80-5": {
+						Source:            listener805,
+						Valid:             false,
+						Routes:            map[types.NamespacedName]*Route{},
+						AcceptedHostnames: map[string]struct{}{},
+						Conditions: []conditions.Condition{
+							conditions.NewListenerPortUnavailable("Port 81 is not supported for HTTP, use 80"),
+						},
 					},
 				},
 			},
 			name: "invalid http listener",
 		},
 		{
-			gateway: &v1beta1.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "test",
-				},
-				Spec: v1beta1.GatewaySpec{
-					GatewayClassName: gcName,
-					Listeners: []v1beta1.Listener{
-						listener4436,
-					},
-				},
-			},
-			expected: map[string]*Listener{
-				"listener-443-6": {
-					Source:            listener4436,
-					Valid:             false,
-					Routes:            map[types.NamespacedName]*Route{},
-					AcceptedHostnames: map[string]struct{}{},
-					Conditions: []conditions.Condition{
-						conditions.NewListenerPortUnavailable("Port 444 is not supported for HTTPS, use 443"),
+			gateway: createGateway(gatewayCfg{listeners: []v1beta1.Listener{listener4436}}),
+			expected: &Gateway{
+				Source: getLastCreatedGetaway(),
+				Listeners: map[string]*Listener{
+					"listener-443-6": {
+						Source:            listener4436,
+						Valid:             false,
+						Routes:            map[types.NamespacedName]*Route{},
+						AcceptedHostnames: map[string]struct{}{},
+						Conditions: []conditions.Condition{
+							conditions.NewListenerPortUnavailable("Port 444 is not supported for HTTPS, use 443"),
+						},
 					},
 				},
 			},
 			name: "invalid https listener",
 		},
 		{
-			gateway: &v1beta1.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "test",
-				},
-				Spec: v1beta1.GatewaySpec{
-					GatewayClassName: gcName,
-					Listeners: []v1beta1.Listener{
-						listener806,
-						listener4434,
+			gateway: createGateway(gatewayCfg{listeners: []v1beta1.Listener{listener806, listener4434}}),
+			expected: &Gateway{
+				Source: getLastCreatedGetaway(),
+				Listeners: map[string]*Listener{
+					"listener-80-6": {
+						Source:            listener806,
+						Valid:             false,
+						Routes:            map[types.NamespacedName]*Route{},
+						AcceptedHostnames: map[string]struct{}{},
+						Conditions: []conditions.Condition{
+							conditions.NewListenerUnsupportedValue(invalidHostnameMsg),
+						},
 					},
-				},
-			},
-			expected: map[string]*Listener{
-				"listener-80-6": {
-					Source:            listener806,
-					Valid:             false,
-					Routes:            map[types.NamespacedName]*Route{},
-					AcceptedHostnames: map[string]struct{}{},
-					Conditions: []conditions.Condition{
-						conditions.NewListenerUnsupportedValue(invalidHostnameMsg),
-					},
-				},
-				"listener-443-4": {
-					Source:            listener4434,
-					Valid:             false,
-					Routes:            map[types.NamespacedName]*Route{},
-					AcceptedHostnames: map[string]struct{}{},
-					Conditions: []conditions.Condition{
-						conditions.NewListenerUnsupportedValue(invalidHostnameMsg),
+					"listener-443-4": {
+						Source:            listener4434,
+						Valid:             false,
+						Routes:            map[types.NamespacedName]*Route{},
+						AcceptedHostnames: map[string]struct{}{},
+						Conditions: []conditions.Condition{
+							conditions.NewListenerUnsupportedValue(invalidHostnameMsg),
+						},
 					},
 				},
 			},
 			name: "invalid hostnames",
 		},
 		{
-			gateway: &v1beta1.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "test",
-				},
-				Spec: v1beta1.GatewaySpec{
-					GatewayClassName: gcName,
-					Listeners: []v1beta1.Listener{
-						listener4435,
+			gateway: createGateway(gatewayCfg{listeners: []v1beta1.Listener{listener4435}}),
+			expected: &Gateway{
+				Source: getLastCreatedGetaway(),
+				Listeners: map[string]*Listener{
+					"listener-443-5": {
+						Source:            listener4435,
+						Valid:             false,
+						Routes:            map[types.NamespacedName]*Route{},
+						AcceptedHostnames: map[string]struct{}{},
+						Conditions: conditions.NewListenerInvalidCertificateRef("Failed to get the certificate " +
+							"test/does-not-exist: secret not found"),
 					},
-				},
-			},
-			expected: map[string]*Listener{
-				"listener-443-5": {
-					Source:            listener4435,
-					Valid:             false,
-					Routes:            map[types.NamespacedName]*Route{},
-					AcceptedHostnames: map[string]struct{}{},
-					Conditions: conditions.NewListenerInvalidCertificateRef("Failed to get the certificate " +
-						"test/does-not-exist: secret test/does-not-exist does not exist"),
 				},
 			},
 			name: "invalid https listener (secret does not exist)",
 		},
 		{
-			gateway: &v1beta1.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "test",
-				},
-				Spec: v1beta1.GatewaySpec{
-					GatewayClassName: gcName,
-					Listeners: []v1beta1.Listener{
-						listener801, listener803,
-						listener4431, listener4432,
+			gateway: createGateway(
+				gatewayCfg{listeners: []v1beta1.Listener{listener801, listener803, listener4431, listener4432}},
+			),
+			expected: &Gateway{
+				Source: getLastCreatedGetaway(),
+				Listeners: map[string]*Listener{
+					"listener-80-1": {
+						Source:            listener801,
+						Valid:             true,
+						Routes:            map[types.NamespacedName]*Route{},
+						AcceptedHostnames: map[string]struct{}{},
 					},
-				},
-			},
-			expected: map[string]*Listener{
-				"listener-80-1": {
-					Source:            listener801,
-					Valid:             true,
-					Routes:            map[types.NamespacedName]*Route{},
-					AcceptedHostnames: map[string]struct{}{},
-				},
-				"listener-80-3": {
-					Source:            listener803,
-					Valid:             true,
-					Routes:            map[types.NamespacedName]*Route{},
-					AcceptedHostnames: map[string]struct{}{},
-				},
-				"listener-443-1": {
-					Source:            listener4431,
-					Valid:             true,
-					Routes:            map[types.NamespacedName]*Route{},
-					AcceptedHostnames: map[string]struct{}{},
-					SecretPath:        secretPath,
-				},
-				"listener-443-2": {
-					Source:            listener4432,
-					Valid:             true,
-					Routes:            map[types.NamespacedName]*Route{},
-					AcceptedHostnames: map[string]struct{}{},
-					SecretPath:        secretPath,
+					"listener-80-3": {
+						Source:            listener803,
+						Valid:             true,
+						Routes:            map[types.NamespacedName]*Route{},
+						AcceptedHostnames: map[string]struct{}{},
+					},
+					"listener-443-1": {
+						Source:            listener4431,
+						Valid:             true,
+						Routes:            map[types.NamespacedName]*Route{},
+						AcceptedHostnames: map[string]struct{}{},
+						SecretPath:        secretPath,
+					},
+					"listener-443-2": {
+						Source:            listener4432,
+						Valid:             true,
+						Routes:            map[types.NamespacedName]*Route{},
+						AcceptedHostnames: map[string]struct{}{},
+						SecretPath:        secretPath,
+					},
 				},
 			},
 			name: "multiple valid http/https listeners",
 		},
 		{
-			gateway: &v1beta1.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "test",
-				},
-				Spec: v1beta1.GatewaySpec{
-					GatewayClassName: gcName,
-					Listeners: []v1beta1.Listener{
-						listener801, listener804,
-						listener4431, listener4433,
+			gateway: createGateway(
+				gatewayCfg{listeners: []v1beta1.Listener{listener801, listener804, listener4431, listener4433}},
+			),
+			expected: &Gateway{
+				Source: getLastCreatedGetaway(),
+				Listeners: map[string]*Listener{
+					"listener-80-1": {
+						Source:            listener801,
+						Valid:             false,
+						Routes:            map[types.NamespacedName]*Route{},
+						AcceptedHostnames: map[string]struct{}{},
+						Conditions:        conditions.NewListenerConflictedHostname(conflictedHostnamesMsg),
 					},
-				},
-			},
-			expected: map[string]*Listener{
-				"listener-80-1": {
-					Source:            listener801,
-					Valid:             false,
-					Routes:            map[types.NamespacedName]*Route{},
-					AcceptedHostnames: map[string]struct{}{},
-					Conditions:        conditions.NewListenerConflictedHostname(conflictedHostnamesMsg),
-				},
-				"listener-80-4": {
-					Source:            listener804,
-					Valid:             false,
-					Routes:            map[types.NamespacedName]*Route{},
-					AcceptedHostnames: map[string]struct{}{},
-					Conditions:        conditions.NewListenerConflictedHostname(conflictedHostnamesMsg),
-				},
-				"listener-443-1": {
-					Source:            listener4431,
-					Valid:             false,
-					Routes:            map[types.NamespacedName]*Route{},
-					AcceptedHostnames: map[string]struct{}{},
-					Conditions:        conditions.NewListenerConflictedHostname(conflictedHostnamesMsg),
-				},
-				"listener-443-3": {
-					Source:            listener4433,
-					Valid:             false,
-					Routes:            map[types.NamespacedName]*Route{},
-					AcceptedHostnames: map[string]struct{}{},
-					Conditions:        conditions.NewListenerConflictedHostname(conflictedHostnamesMsg),
+					"listener-80-4": {
+						Source:            listener804,
+						Valid:             false,
+						Routes:            map[types.NamespacedName]*Route{},
+						AcceptedHostnames: map[string]struct{}{},
+						Conditions:        conditions.NewListenerConflictedHostname(conflictedHostnamesMsg),
+					},
+					"listener-443-1": {
+						Source:            listener4431,
+						Valid:             false,
+						Routes:            map[types.NamespacedName]*Route{},
+						AcceptedHostnames: map[string]struct{}{},
+						Conditions:        conditions.NewListenerConflictedHostname(conflictedHostnamesMsg),
+					},
+					"listener-443-3": {
+						Source:            listener4433,
+						Valid:             false,
+						Routes:            map[types.NamespacedName]*Route{},
+						AcceptedHostnames: map[string]struct{}{},
+						Conditions:        conditions.NewListenerConflictedHostname(conflictedHostnamesMsg),
+					},
 				},
 			},
 			name: "collisions",
 		},
 		{
-			gateway: &v1beta1.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "test",
+			gateway: createGateway(gatewayCfg{
+				listeners: []v1beta1.Listener{listener801, listener4431},
+				addresses: []v1beta1.GatewayAddress{
+					{},
 				},
-				Spec: v1beta1.GatewaySpec{
-					GatewayClassName: gcName,
-					Listeners: []v1beta1.Listener{
-						listener801,
-						listener4431,
+			}),
+			expected: &Gateway{
+				Source: getLastCreatedGetaway(),
+				Listeners: map[string]*Listener{
+					"listener-80-1": {
+						Source:            listener801,
+						Valid:             false,
+						Routes:            map[types.NamespacedName]*Route{},
+						AcceptedHostnames: map[string]struct{}{},
+						Conditions: []conditions.Condition{
+							conditions.NewListenerUnsupportedAddress("Specifying Gateway addresses is not supported"),
+						},
 					},
-					Addresses: []v1beta1.GatewayAddress{
-						{},
-					},
-				},
-			},
-			expected: map[string]*Listener{
-				"listener-80-1": {
-					Source:            listener801,
-					Valid:             false,
-					Routes:            map[types.NamespacedName]*Route{},
-					AcceptedHostnames: map[string]struct{}{},
-					Conditions: []conditions.Condition{
-						conditions.NewListenerUnsupportedAddress("Specifying Gateway addresses is not supported"),
-					},
-				},
-				"listener-443-1": {
-					Source:            listener4431,
-					Valid:             false,
-					Routes:            map[types.NamespacedName]*Route{},
-					AcceptedHostnames: map[string]struct{}{},
-					SecretPath:        "",
-					Conditions: []conditions.Condition{
-						conditions.NewListenerUnsupportedAddress("Specifying Gateway addresses is not supported"),
+					"listener-443-1": {
+						Source:            listener4431,
+						Valid:             false,
+						Routes:            map[types.NamespacedName]*Route{},
+						AcceptedHostnames: map[string]struct{}{},
+						SecretPath:        "",
+						Conditions: []conditions.Condition{
+							conditions.NewListenerUnsupportedAddress("Specifying Gateway addresses is not supported"),
+						},
 					},
 				},
 			},
@@ -520,37 +524,23 @@ func TestBuildListeners(t *testing.T) {
 		},
 		{
 			gateway:  nil,
-			expected: map[string]*Listener{},
-			name:     "no gateway",
-		},
-		{
-			gateway: &v1beta1.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "test",
-				},
-				Spec: v1beta1.GatewaySpec{
-					GatewayClassName: "wrong-class",
-					Listeners: []v1beta1.Listener{
-						listener801, listener804,
-					},
-				},
-			},
-			expected: map[string]*Listener{},
-			name:     "wrong gatewayclass",
+			expected: nil,
+			name:     "nil gateway",
 		},
 	}
 
-	// add secret to store
-	secretStore := secrets.NewSecretStore()
-	secretStore.Upsert(testSecret)
-
-	secretMemoryMgr := secrets.NewSecretDiskMemoryManager(secretsDirectory, secretStore)
+	secretMemoryMgr := &secretsfakes.FakeSecretDiskMemoryManager{}
+	secretMemoryMgr.RequestCalls(func(nsname types.NamespacedName) (string, error) {
+		if (nsname == types.NamespacedName{Namespace: "test", Name: "secret"}) {
+			return secretPath, nil
+		}
+		return "", errors.New("secret not found")
+	})
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewGomegaWithT(t)
-
-			result := buildListeners(test.gateway, gcName, secretMemoryMgr)
+			result := buildGateway(test.gateway, secretMemoryMgr)
 			g.Expect(helpers.Diff(test.expected, result)).To(BeEmpty())
 		})
 	}

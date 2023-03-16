@@ -10,7 +10,6 @@ import (
 // BackendGroup represents a group of backends for a rule in an HTTPRoute.
 type BackendGroup struct {
 	Source   types.NamespacedName
-	Errors   []string
 	Backends []BackendRef
 	RuleIdx  int
 }
