@@ -37,15 +37,17 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c # v3.3.0
+
       - name: Setup Golang Environment
         uses: actions/setup-go@4d34df0c2316fe8122ab82dc22947d607c0c91f9 # v4.0.0
         with:
           go-version-file: go.mod
-          cache: true
+
       - name: Output Variables
         id: vars
         run: |
           echo "go_path=$(go env GOPATH)" >> $GITHUB_OUTPUT
+
       - name: Check if go.mod and go.sum are up to date
         run: |
           go mod tidy && git diff --exit-code -- go.mod go.sum
@@ -57,13 +59,15 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c # v3.3.0
+
       - name: Setup Golang Environment
         uses: actions/setup-go@4d34df0c2316fe8122ab82dc22947d607c0c91f9 # v4.0.0
         with:
           go-version-file: go.mod
-          cache: true
+
       - name: Run Tests
         run: make unit-test
+
       - name: Upload Coverage Report
         uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
         with:
@@ -93,11 +97,11 @@ jobs:
         uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c # v3.3.0
         with:
           fetch-depth: 0
+
       - name: Setup Golang Environment
         uses: actions/setup-go@4d34df0c2316fe8122ab82dc22947d607c0c91f9 # v4.0.0
         with:
           go-version-file: go.mod
-          cache: true
 
       - name: Publish release on tag
         uses: actions/github-script@98814c53be79b1d30f795b907e553d8679345975 # v6.4.0
