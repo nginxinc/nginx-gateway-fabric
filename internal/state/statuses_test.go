@@ -116,8 +116,8 @@ func TestBuildStatuses(t *testing.T) {
 			},
 			expected: Statuses{
 				GatewayClassStatus: &GatewayClassStatus{
-					Valid:              true,
 					ObservedGeneration: 1,
+					Conditions:         conditions.NewDefaultGatewayClassConditions(),
 				},
 				GatewayStatus: &GatewayStatus{
 					NsName: types.NamespacedName{Namespace: "test", Name: "gateway"},
@@ -210,8 +210,10 @@ func TestBuildStatuses(t *testing.T) {
 					Source: &v1beta1.GatewayClass{
 						ObjectMeta: metav1.ObjectMeta{Generation: 1},
 					},
-					Valid:    false,
-					ErrorMsg: "error",
+					Valid: false,
+					Conditions: []conditions.Condition{
+						conditions.NewGatewayClassInvalidParameters("error"),
+					},
 				},
 				Gateway: &graph.Gateway{
 					Source:    gw,
@@ -224,9 +226,10 @@ func TestBuildStatuses(t *testing.T) {
 			},
 			expected: Statuses{
 				GatewayClassStatus: &GatewayClassStatus{
-					Valid:              false,
-					ErrorMsg:           "error",
 					ObservedGeneration: 1,
+					Conditions: []conditions.Condition{
+						conditions.NewGatewayClassInvalidParameters("error"),
+					},
 				},
 				GatewayStatus: &GatewayStatus{
 					NsName: types.NamespacedName{Namespace: "test", Name: "gateway"},
@@ -281,8 +284,8 @@ func TestBuildStatuses(t *testing.T) {
 			},
 			expected: Statuses{
 				GatewayClassStatus: &GatewayClassStatus{
-					Valid:              true,
 					ObservedGeneration: 1,
+					Conditions:         conditions.NewDefaultGatewayClassConditions(),
 				},
 				GatewayStatus:          nil,
 				IgnoredGatewayStatuses: map[types.NamespacedName]IgnoredGatewayStatus{},
