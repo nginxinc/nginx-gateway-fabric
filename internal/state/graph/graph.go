@@ -39,7 +39,11 @@ func BuildGraph(
 	secretMemoryMgr secrets.SecretDiskMemoryManager,
 	validators validation.Validators,
 ) *Graph {
-	gc := buildGatewayClass(store.GatewayClass, controllerName)
+	if !gatewayClassBelongsToController(store.GatewayClass, controllerName) {
+		return &Graph{}
+	}
+
+	gc := buildGatewayClass(store.GatewayClass)
 
 	processedGws := processGateways(store.Gateways, gcName)
 

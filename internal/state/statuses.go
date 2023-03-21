@@ -65,14 +65,10 @@ type ParentStatus struct {
 	Conditions []conditions.Condition
 }
 
-// GatewayClassStatus holds status-related infortmation about the GatewayClass resource.
+// GatewayClassStatus holds status-related information about the GatewayClass resource.
 type GatewayClassStatus struct {
-	// ErrorMsg describe the error when the resource is invalid.
-	ErrorMsg string
-	// ObservedGeneration is the generation of the resource that was processed.
+	Conditions         []conditions.Condition
 	ObservedGeneration int64
-	// Valid shows if the resource is valid.
-	Valid bool
 }
 
 // buildStatuses builds statuses from a Graph.
@@ -83,9 +79,17 @@ func buildStatuses(graph *graph.Graph) Statuses {
 	}
 
 	if graph.GatewayClass != nil {
+		defaultConds := conditions.NewDefaultGatewayClassConditions()
+
+		conds := make([]conditions.Condition, 0, len(graph.GatewayClass.Conditions)+len(defaultConds))
+
+		// We add default conds first, so that any additional conditions will override them, which is
+		// ensured by DeduplicateConditions.
+		conds = append(conds, defaultConds...)
+		conds = append(conds, graph.GatewayClass.Conditions...)
+
 		statuses.GatewayClassStatus = &GatewayClassStatus{
-			Valid:              graph.GatewayClass.Valid,
-			ErrorMsg:           graph.GatewayClass.ErrorMsg,
+			Conditions:         conditions.DeduplicateConditions(conds),
 			ObservedGeneration: graph.GatewayClass.Source.Generation,
 		}
 	}

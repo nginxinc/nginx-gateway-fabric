@@ -1,43 +1,54 @@
 package graph
 
 import (
-	"fmt"
-
+	"k8s.io/apimachinery/pkg/util/validation/field"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
+
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/conditions"
 )
 
 // GatewayClass represents the GatewayClass resource.
 type GatewayClass struct {
 	// Source is the source resource.
 	Source *v1beta1.GatewayClass
-	// ErrorMsg explains the error when the resource is invalid.
-	ErrorMsg string
+	// Conditions include Conditions for the GatewayClass.
+	Conditions []conditions.Condition
 	// Valid shows whether the GatewayClass is valid.
 	Valid bool
 }
 
-func buildGatewayClass(gc *v1beta1.GatewayClass, controllerName string) *GatewayClass {
+func gatewayClassBelongsToController(gc *v1beta1.GatewayClass, controllerName string) bool {
+	// if GatewayClass doesn't exist, we assume it belongs to the controller
+	if gc == nil {
+		return true
+	}
+
+	return string(gc.Spec.ControllerName) == controllerName
+}
+
+func buildGatewayClass(gc *v1beta1.GatewayClass) *GatewayClass {
 	if gc == nil {
 		return nil
 	}
 
-	var errorMsg string
+	var conds []conditions.Condition
 
-	err := validateGatewayClass(gc, controllerName)
-	if err != nil {
-		errorMsg = err.Error()
+	valErr := validateGatewayClass(gc)
+	if valErr != nil {
+		conds = append(conds, conditions.NewGatewayClassInvalidParameters(valErr.Error()))
 	}
 
 	return &GatewayClass{
-		Source:   gc,
-		Valid:    err == nil,
-		ErrorMsg: errorMsg,
+		Source:     gc,
+		Valid:      valErr == nil,
+		Conditions: conds,
 	}
 }
 
-func validateGatewayClass(gc *v1beta1.GatewayClass, controllerName string) error {
-	if string(gc.Spec.ControllerName) != controllerName {
-		return fmt.Errorf("Spec.ControllerName must be %s got %s", controllerName, gc.Spec.ControllerName)
+func validateGatewayClass(gc *v1beta1.GatewayClass) error {
+	if gc.Spec.ParametersRef != nil {
+		path := field.NewPath("spec").Child("parametersRef")
+		return field.Forbidden(path, "parametersRef is not supported")
 	}
 
 	return nil

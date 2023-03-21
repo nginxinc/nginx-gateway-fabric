@@ -156,24 +156,22 @@ func TestBuildGraph(t *testing.T) {
 
 	svc := &v1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: "test", Name: "foo"}}
 
-	store := ClusterStore{
-		GatewayClass: &v1beta1.GatewayClass{
-			Spec: v1beta1.GatewayClassSpec{
-				ControllerName: controllerName,
+	createStoreWithGatewayClass := func(gc *v1beta1.GatewayClass) ClusterStore {
+		return ClusterStore{
+			GatewayClass: gc,
+			Gateways: map[types.NamespacedName]*v1beta1.Gateway{
+				{Namespace: "test", Name: "gateway-1"}: gw1,
+				{Namespace: "test", Name: "gateway-2"}: gw2,
 			},
-		},
-		Gateways: map[types.NamespacedName]*v1beta1.Gateway{
-			{Namespace: "test", Name: "gateway-1"}: gw1,
-			{Namespace: "test", Name: "gateway-2"}: gw2,
-		},
-		HTTPRoutes: map[types.NamespacedName]*v1beta1.HTTPRoute{
-			{Namespace: "test", Name: "hr-1"}: hr1,
-			{Namespace: "test", Name: "hr-2"}: hr2,
-			{Namespace: "test", Name: "hr-3"}: hr3,
-		},
-		Services: map[types.NamespacedName]*v1.Service{
-			{Namespace: "test", Name: "foo"}: svc,
-		},
+			HTTPRoutes: map[types.NamespacedName]*v1beta1.HTTPRoute{
+				{Namespace: "test", Name: "hr-1"}: hr1,
+				{Namespace: "test", Name: "hr-2"}: hr2,
+				{Namespace: "test", Name: "hr-3"}: hr3,
+			},
+			Services: map[types.NamespacedName]*v1.Service{
+				{Namespace: "test", Name: "foo"}: svc,
+			},
+		}
 	}
 
 	routeHR1 := &Route{
@@ -210,49 +208,89 @@ func TestBuildGraph(t *testing.T) {
 		panic("unexpected secret request")
 	})
 
-	expected := &Graph{
-		GatewayClass: &GatewayClass{
-			Source: store.GatewayClass,
-			Valid:  true,
-		},
-		Gateway: &Gateway{
-			Source: gw1,
-			Listeners: map[string]*Listener{
-				"listener-80-1": {
-					Source: gw1.Spec.Listeners[0],
-					Valid:  true,
-					Routes: map[types.NamespacedName]*Route{
-						{Namespace: "test", Name: "hr-1"}: routeHR1,
+	createExpectedGraphWithGatewayClass := func(gc *v1beta1.GatewayClass) *Graph {
+		return &Graph{
+			GatewayClass: &GatewayClass{
+				Source: gc,
+				Valid:  true,
+			},
+			Gateway: &Gateway{
+				Source: gw1,
+				Listeners: map[string]*Listener{
+					"listener-80-1": {
+						Source: gw1.Spec.Listeners[0],
+						Valid:  true,
+						Routes: map[types.NamespacedName]*Route{
+							{Namespace: "test", Name: "hr-1"}: routeHR1,
+						},
+						AcceptedHostnames: map[string]struct{}{
+							"foo.example.com": {},
+						},
 					},
-					AcceptedHostnames: map[string]struct{}{
-						"foo.example.com": {},
+					"listener-443-1": {
+						Source: gw1.Spec.Listeners[1],
+						Valid:  true,
+						Routes: map[types.NamespacedName]*Route{
+							{Namespace: "test", Name: "hr-3"}: routeHR3,
+						},
+						AcceptedHostnames: map[string]struct{}{
+							"foo.example.com": {},
+						},
+						SecretPath: secretPath,
 					},
-				},
-				"listener-443-1": {
-					Source: gw1.Spec.Listeners[1],
-					Valid:  true,
-					Routes: map[types.NamespacedName]*Route{
-						{Namespace: "test", Name: "hr-3"}: routeHR3,
-					},
-					AcceptedHostnames: map[string]struct{}{
-						"foo.example.com": {},
-					},
-					SecretPath: secretPath,
 				},
 			},
+			IgnoredGateways: map[types.NamespacedName]*v1beta1.Gateway{
+				{Namespace: "test", Name: "gateway-2"}: gw2,
+			},
+			Routes: map[types.NamespacedName]*Route{
+				{Namespace: "test", Name: "hr-1"}: routeHR1,
+				{Namespace: "test", Name: "hr-3"}: routeHR3,
+			},
+		}
+	}
+
+	normalGC := &v1beta1.GatewayClass{
+		Spec: v1beta1.GatewayClassSpec{
+			ControllerName: controllerName,
 		},
-		IgnoredGateways: map[types.NamespacedName]*v1beta1.Gateway{
-			{Namespace: "test", Name: "gateway-2"}: gw2,
-		},
-		Routes: map[types.NamespacedName]*Route{
-			{Namespace: "test", Name: "hr-1"}: routeHR1,
-			{Namespace: "test", Name: "hr-3"}: routeHR3,
+	}
+	differentControllerGC := &v1beta1.GatewayClass{
+		Spec: v1beta1.GatewayClassSpec{
+			ControllerName: "different-controller",
 		},
 	}
 
-	g := NewGomegaWithT(t)
+	tests := []struct {
+		store    ClusterStore
+		expected *Graph
+		name     string
+	}{
+		{
+			store:    createStoreWithGatewayClass(normalGC),
+			expected: createExpectedGraphWithGatewayClass(normalGC),
+			name:     "normal case",
+		},
+		{
+			store:    createStoreWithGatewayClass(differentControllerGC),
+			expected: &Graph{},
+			name:     "gatewayclass belongs to a different controller",
+		},
+	}
 
-	result := BuildGraph(store, controllerName, gcName, secretMemoryMgr,
-		validation.Validators{HTTPFieldsValidator: &validationfakes.FakeHTTPFieldsValidator{}})
-	g.Expect(helpers.Diff(expected, result)).To(BeEmpty())
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			g := NewGomegaWithT(t)
+
+			result := BuildGraph(
+				test.store,
+				controllerName,
+				gcName,
+				secretMemoryMgr,
+				validation.Validators{HTTPFieldsValidator: &validationfakes.FakeHTTPFieldsValidator{}},
+			)
+
+			g.Expect(helpers.Diff(test.expected, result)).To(BeEmpty())
+		})
+	}
 }

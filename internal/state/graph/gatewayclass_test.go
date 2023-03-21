@@ -3,76 +3,111 @@ package graph
 import (
 	"testing"
 
-	"github.com/google/go-cmp/cmp"
+	. "github.com/onsi/gomega"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
+
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/helpers"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/conditions"
 )
 
 func TestBuildGatewayClass(t *testing.T) {
-	const controllerName = "my.controller"
+	validGC := &v1beta1.GatewayClass{}
 
-	validGC := &v1beta1.GatewayClass{
-		Spec: v1beta1.GatewayClassSpec{
-			ControllerName: "my.controller",
-		},
-	}
 	invalidGC := &v1beta1.GatewayClass{
 		Spec: v1beta1.GatewayClassSpec{
-			ControllerName: "wrong.controller",
+			ParametersRef: &v1beta1.ParametersReference{},
 		},
 	}
 
 	tests := []struct {
 		gc       *v1beta1.GatewayClass
 		expected *GatewayClass
-		msg      string
+		name     string
 	}{
-		{
-			gc:       nil,
-			expected: nil,
-			msg:      "no gatewayclass",
-		},
 		{
 			gc: validGC,
 			expected: &GatewayClass{
-				Source:   validGC,
-				Valid:    true,
-				ErrorMsg: "",
+				Source: validGC,
+				Valid:  true,
 			},
-			msg: "valid gatewayclass",
+			name: "valid gatewayclass",
+		},
+		{
+			gc:       nil,
+			expected: nil,
+			name:     "no gatewayclass",
 		},
 		{
 			gc: invalidGC,
 			expected: &GatewayClass{
-				Source:   invalidGC,
-				Valid:    false,
-				ErrorMsg: "Spec.ControllerName must be my.controller got wrong.controller",
+				Source: invalidGC,
+				Valid:  false,
+				Conditions: []conditions.Condition{
+					conditions.NewGatewayClassInvalidParameters("spec.parametersRef: Forbidden: parametersRef is not supported"),
+				},
 			},
-			msg: "invalid gatewayclass",
+			name: "invalid gatewayclass",
 		},
 	}
 
 	for _, test := range tests {
-		result := buildGatewayClass(test.gc, controllerName)
-		if diff := cmp.Diff(test.expected, result); diff != "" {
-			t.Errorf("buildGatewayClass() '%s' mismatch (-want +got):\n%s", test.msg, diff)
-		}
+		t.Run(test.name, func(t *testing.T) {
+			g := NewGomegaWithT(t)
+
+			result := buildGatewayClass(test.gc)
+			g.Expect(helpers.Diff(test.expected, result)).To(BeEmpty())
+		})
 	}
 }
 
-func TestValidateGatewayClass(t *testing.T) {
-	gc := &v1beta1.GatewayClass{
-		Spec: v1beta1.GatewayClassSpec{
-			ControllerName: "test.controller",
+func TestGatewayClassBelongsToController(t *testing.T) {
+	const controllerName = "my.controller"
+
+	tests := []struct {
+		gc       *v1beta1.GatewayClass
+		name     string
+		expected bool
+	}{
+		{
+			gc: &v1beta1.GatewayClass{
+				Spec: v1beta1.GatewayClassSpec{
+					ControllerName: controllerName,
+				},
+			},
+			expected: true,
+			name:     "normal gatewayclass",
+		},
+		{
+			gc:       nil,
+			expected: true,
+			name:     "no gatewayclass",
+		},
+		{
+			gc: &v1beta1.GatewayClass{
+				Spec: v1beta1.GatewayClassSpec{
+					ControllerName: "some.controller",
+				},
+			},
+			expected: false,
+			name:     "wrong controller name",
+		},
+		{
+			gc: &v1beta1.GatewayClass{
+				Spec: v1beta1.GatewayClassSpec{
+					ControllerName: "",
+				},
+			},
+			expected: false,
+			name:     "empty controller name",
 		},
 	}
 
-	err := validateGatewayClass(gc, "test.controller")
-	if err != nil {
-		t.Errorf("validateGatewayClass() returned unexpected error %v", err)
-	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			g := NewGomegaWithT(t)
 
-	err = validateGatewayClass(gc, "unmatched.controller")
-	if err == nil {
-		t.Errorf("validateGatewayClass() didn't return an error")
+			result := gatewayClassBelongsToController(test.gc, controllerName)
+			g.Expect(result).To(Equal(test.expected))
+		})
 	}
 }

@@ -403,8 +403,8 @@ var _ = Describe("ChangeProcessor", func() {
 
 					expectedStatuses := state.Statuses{
 						GatewayClassStatus: &state.GatewayClassStatus{
-							Valid:              true,
 							ObservedGeneration: gc.Generation,
+							Conditions:         conditions.NewDefaultGatewayClassConditions(),
 						},
 						GatewayStatus: &state.GatewayStatus{
 							NsName:             types.NamespacedName{Namespace: "test", Name: "gateway-1"},
@@ -512,8 +512,8 @@ var _ = Describe("ChangeProcessor", func() {
 					}
 					expectedStatuses := state.Statuses{
 						GatewayClassStatus: &state.GatewayClassStatus{
-							Valid:              true,
 							ObservedGeneration: gc.Generation,
+							Conditions:         conditions.NewDefaultGatewayClassConditions(),
 						},
 						GatewayStatus: &state.GatewayStatus{
 							NsName:             types.NamespacedName{Namespace: "test", Name: "gateway-1"},
@@ -622,8 +622,8 @@ var _ = Describe("ChangeProcessor", func() {
 					}
 					expectedStatuses := state.Statuses{
 						GatewayClassStatus: &state.GatewayClassStatus{
-							Valid:              true,
 							ObservedGeneration: gc.Generation,
+							Conditions:         conditions.NewDefaultGatewayClassConditions(),
 						},
 						GatewayStatus: &state.GatewayStatus{
 							NsName:             types.NamespacedName{Namespace: "test", Name: "gateway-1"},
@@ -731,8 +731,8 @@ var _ = Describe("ChangeProcessor", func() {
 					}
 					expectedStatuses := state.Statuses{
 						GatewayClassStatus: &state.GatewayClassStatus{
-							Valid:              true,
 							ObservedGeneration: gcUpdated.Generation,
+							Conditions:         conditions.NewDefaultGatewayClassConditions(),
 						},
 						GatewayStatus: &state.GatewayStatus{
 							NsName:             types.NamespacedName{Namespace: "test", Name: "gateway-1"},
@@ -839,8 +839,8 @@ var _ = Describe("ChangeProcessor", func() {
 					}
 					expectedStatuses := state.Statuses{
 						GatewayClassStatus: &state.GatewayClassStatus{
-							Valid:              true,
 							ObservedGeneration: gcUpdated.Generation,
+							Conditions:         conditions.NewDefaultGatewayClassConditions(),
 						},
 						GatewayStatus: &state.GatewayStatus{
 							NsName:             types.NamespacedName{Namespace: "test", Name: "gateway-1"},
@@ -940,8 +940,8 @@ var _ = Describe("ChangeProcessor", func() {
 					}
 					expectedStatuses := state.Statuses{
 						GatewayClassStatus: &state.GatewayClassStatus{
-							Valid:              true,
 							ObservedGeneration: gcUpdated.Generation,
+							Conditions:         conditions.NewDefaultGatewayClassConditions(),
 						},
 						GatewayStatus: &state.GatewayStatus{
 							NsName:             types.NamespacedName{Namespace: "test", Name: "gateway-1"},
@@ -1061,8 +1061,8 @@ var _ = Describe("ChangeProcessor", func() {
 					}
 					expectedStatuses := state.Statuses{
 						GatewayClassStatus: &state.GatewayClassStatus{
-							Valid:              true,
 							ObservedGeneration: gcUpdated.Generation,
+							Conditions:         conditions.NewDefaultGatewayClassConditions(),
 						},
 						GatewayStatus: &state.GatewayStatus{
 							NsName:             types.NamespacedName{Namespace: "test", Name: "gateway-2"},
@@ -1125,8 +1125,8 @@ var _ = Describe("ChangeProcessor", func() {
 					}
 					expectedStatuses := state.Statuses{
 						GatewayClassStatus: &state.GatewayClassStatus{
-							Valid:              true,
 							ObservedGeneration: gcUpdated.Generation,
+							Conditions:         conditions.NewDefaultGatewayClassConditions(),
 						},
 						GatewayStatus: &state.GatewayStatus{
 							NsName:             types.NamespacedName{Namespace: "test", Name: "gateway-2"},
