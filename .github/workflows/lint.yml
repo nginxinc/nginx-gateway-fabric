@@ -43,7 +43,7 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@24cb9080177205b6e8c946b17badbe402adc938f # v2.5.0
+        uses: actions/checkout@24cb9080177205b6e8c946b17badbe402adc938f # v3.4.0
       - name: Get Prettier version
         id: prettier-version
         run: |
