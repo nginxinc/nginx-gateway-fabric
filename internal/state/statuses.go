@@ -79,11 +79,13 @@ func buildStatuses(graph *graph.Graph) Statuses {
 	}
 
 	if graph.GatewayClass != nil {
-		conds := make([]conditions.Condition, 0, len(graph.GatewayClass.Conditions)+len(conditions.NewDefaultGatewayClassConditions()))
+		defaultConds := conditions.NewDefaultGatewayClassConditions()
 
-		// We add default conditions first, so that any additional conditions will override them, which is
+		conds := make([]conditions.Condition, 0, len(graph.GatewayClass.Conditions)+len(defaultConds))
+
+		// We add default conds first, so that any additional conditions will override them, which is
 		// ensured by DeduplicateConditions.
-		conds = append(conds, conditions.NewDefaultGatewayClassConditions()...)
+		conds = append(conds, defaultConds...)
 		conds = append(conds, graph.GatewayClass.Conditions...)
 
 		statuses.GatewayClassStatus = &GatewayClassStatus{
