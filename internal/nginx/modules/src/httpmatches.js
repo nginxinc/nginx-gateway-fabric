@@ -159,14 +159,13 @@ function headersMatch(requestHeaders, headers) {
 function paramsMatch(requestParams, params) {
   for (let i = 0; i < params.length; i++) {
     let p = params[i];
-    // We store query parameter matches as strings with the format "key=value"; however, there may be more than one instance of "=" in the string.
+    // We store query parameter matches as strings with the format "key=value"; however, there may be more than one
+    // instance of "=" in the string.
     // To recover the key and value, we need to find the first occurrence of "=" in the string.
     const idx = params[i].indexOf('=');
     // Check for an improperly constructed query parameter match. There are three possible error cases:
     // (1) if the index is -1, then there are no "=" in the string (e.g. "keyvalue")
     // (2) if the index is 0, then there is no value in the string (e.g. "key=").
-    // NOTE: While query parameter values are permitted to be empty, the Gateway API Spec forces the value to be a non-empty string.
-    // https://github.com/kubernetes-sigs/gateway-api/blob/e9e04e498c566021c9d30ce4dbe0863894c7d7e1/apis/v1beta1/httproute_types.go#L419
     // (3) if the index is equal to length -1, then there is no key in the string (e.g. "=value").
     if (idx === -1 || (idx === 0) | (idx === p.length - 1)) {
       throw Error(`invalid query parameter: ${p}`);
