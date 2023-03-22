@@ -75,7 +75,7 @@ func Start(cfg config.Config) error {
 			objectType: &gatewayv1beta1.GatewayClass{},
 			options: []controllerOption{
 				withNamespacedNameFilter(filter.CreateFilterForGatewayClass(cfg.GatewayClassName)),
-				// as of v0.6.0, the Gateway API Webhook doesn't include a validation function
+				// as of v0.6.2, the Gateway API Webhook doesn't include a validation function
 				// for the GatewayClass resource
 			},
 		},
