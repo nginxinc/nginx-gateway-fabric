@@ -59,22 +59,21 @@ var _ = Describe("Updater", func() {
 	})
 
 	Describe("Process status updates", Ordered, func() {
+		type generations struct {
+			gatewayClass int64
+			gateways     int64
+		}
+
 		var (
 			gc            *v1beta1.GatewayClass
 			gw, ignoredGw *v1beta1.Gateway
 			hr            *v1beta1.HTTPRoute
 
-			createStatuses = func(valid bool, generation int64) state.Statuses {
-				var gcErrorMsg string
-				if !valid {
-					gcErrorMsg = "error"
-				}
-
+			createStatuses = func(gens generations) state.Statuses {
 				return state.Statuses{
 					GatewayClassStatus: &state.GatewayClassStatus{
-						Valid:              valid,
-						ErrorMsg:           gcErrorMsg,
-						ObservedGeneration: generation,
+						ObservedGeneration: gens.gatewayClass,
+						Conditions:         status.CreateTestConditions(),
 					},
 					GatewayStatus: &state.GatewayStatus{
 						NsName: types.NamespacedName{Namespace: "test", Name: "gateway"},
@@ -84,11 +83,11 @@ var _ = Describe("Updater", func() {
 								Conditions:     status.CreateTestConditions(),
 							},
 						},
-						ObservedGeneration: generation,
+						ObservedGeneration: gens.gateways,
 					},
 					IgnoredGatewayStatuses: map[types.NamespacedName]state.IgnoredGatewayStatus{
 						{Namespace: "test", Name: "ignored-gateway"}: {
-							ObservedGeneration: generation,
+							ObservedGeneration: gens.gateways,
 						},
 					},
 					HTTPRouteStatuses: map[types.NamespacedName]state.HTTPRouteStatus{
@@ -104,12 +103,7 @@ var _ = Describe("Updater", func() {
 				}
 			}
 
-			createExpectedGc = func(
-				status metav1.ConditionStatus,
-				generation int64,
-				reason string,
-				msg string,
-			) *v1beta1.GatewayClass {
+			createExpectedGCWithGeneration = func(generation int64) *v1beta1.GatewayClass {
 				return &v1beta1.GatewayClass{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: gcName,
@@ -119,21 +113,12 @@ var _ = Describe("Updater", func() {
 						APIVersion: "gateway.networking.k8s.io/v1beta1",
 					},
 					Status: v1beta1.GatewayClassStatus{
-						Conditions: []metav1.Condition{
-							{
-								Type:               string(v1beta1.GatewayClassConditionStatusAccepted),
-								Status:             status,
-								ObservedGeneration: generation,
-								LastTransitionTime: fakeClockTime,
-								Reason:             reason,
-								Message:            msg,
-							},
-						},
+						Conditions: status.CreateExpectedAPIConditions(generation, fakeClockTime),
 					},
 				}
 			}
 
-			createExpectedGw = func(generation int64) *v1beta1.Gateway {
+			createExpectedGwWithGeneration = func(generation int64) *v1beta1.Gateway {
 				return &v1beta1.Gateway{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "test",
@@ -264,17 +249,15 @@ var _ = Describe("Updater", func() {
 		})
 
 		It("should update statuses", func() {
-			updater.Update(context.Background(), createStatuses(true, 1))
+			updater.Update(context.Background(), createStatuses(generations{
+				gatewayClass: 1,
+				gateways:     1,
+			}))
 		})
 
 		It("should have the updated status of GatewayClass in the API server", func() {
 			latestGc := &v1beta1.GatewayClass{}
-			expectedGc := createExpectedGc(
-				metav1.ConditionTrue,
-				1,
-				string(v1beta1.GatewayClassConditionStatusAccepted),
-				"GatewayClass has been accepted",
-			)
+			expectedGc := createExpectedGCWithGeneration(1)
 
 			err := client.Get(context.Background(), types.NamespacedName{Name: gcName}, latestGc)
 			Expect(err).Should(Not(HaveOccurred()))
@@ -286,7 +269,7 @@ var _ = Describe("Updater", func() {
 
 		It("should have the updated status of Gateway in the API server", func() {
 			latestGw := &v1beta1.Gateway{}
-			expectedGw := createExpectedGw(1)
+			expectedGw := createExpectedGwWithGeneration(1)
 
 			err := client.Get(context.Background(), types.NamespacedName{Namespace: "test", Name: "gateway"}, latestGw)
 			Expect(err).Should(Not(HaveOccurred()))
@@ -327,18 +310,16 @@ var _ = Describe("Updater", func() {
 		It("should update statuses with canceled context - function normally returns", func() {
 			ctx, cancel := context.WithCancel(context.Background())
 			cancel()
-			updater.Update(ctx, createStatuses(false, 2))
+			updater.Update(ctx, createStatuses(generations{
+				gatewayClass: 2,
+				gateways:     2,
+			}))
 		})
 
 		When("updating with canceled context", func() {
 			It("should have the updated status of GatewayClass in the API server", func() {
 				latestGc := &v1beta1.GatewayClass{}
-				expectedGc := createExpectedGc(
-					metav1.ConditionFalse,
-					2,
-					string(v1beta1.GatewayClassConditionStatusAccepted),
-					"GatewayClass has been rejected: error",
-				)
+				expectedGc := createExpectedGCWithGeneration(2)
 
 				err := client.Get(context.Background(), types.NamespacedName{Name: gcName}, latestGc)
 				Expect(err).Should(Not(HaveOccurred()))
@@ -350,7 +331,7 @@ var _ = Describe("Updater", func() {
 
 			It("should have the updated status of Gateway in the API server", func() {
 				latestGw := &v1beta1.Gateway{}
-				expectedGw := createExpectedGw(2)
+				expectedGw := createExpectedGwWithGeneration(2)
 
 				err := client.Get(
 					context.Background(),

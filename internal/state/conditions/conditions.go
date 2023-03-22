@@ -263,3 +263,25 @@ func NewRouteBackendRefUnsupportedValue(msg string) Condition {
 		Message: msg,
 	}
 }
+
+// NewGatewayClassInvalidParameters returns a Condition that indicates that the GatewayClass has invalid parameters.
+func NewGatewayClassInvalidParameters(msg string) Condition {
+	return Condition{
+		Type:    string(v1beta1.GatewayClassConditionStatusAccepted),
+		Status:  metav1.ConditionFalse,
+		Reason:  string(v1beta1.GatewayClassReasonInvalidParameters),
+		Message: msg,
+	}
+}
+
+// NewDefaultGatewayClassConditions returns the default Conditions that must be present in the status of a GatewayClass.
+func NewDefaultGatewayClassConditions() []Condition {
+	return []Condition{
+		{
+			Type:    string(v1beta1.GatewayClassConditionStatusAccepted),
+			Status:  metav1.ConditionTrue,
+			Reason:  string(v1beta1.GatewayClassReasonAccepted),
+			Message: "GatewayClass is accepted",
+		},
+	}
+}

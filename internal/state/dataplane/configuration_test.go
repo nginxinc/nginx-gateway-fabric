@@ -748,9 +748,8 @@ func TestBuildConfiguration(t *testing.T) {
 		{
 			graph: &graph.Graph{
 				GatewayClass: &graph.GatewayClass{
-					Source:   &v1beta1.GatewayClass{},
-					Valid:    false,
-					ErrorMsg: "error",
+					Source: &v1beta1.GatewayClass{},
+					Valid:  false,
 				},
 				Gateway: &graph.Gateway{
 					Source: &v1beta1.Gateway{},
