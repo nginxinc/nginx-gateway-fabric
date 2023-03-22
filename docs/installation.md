@@ -20,7 +20,7 @@ This guide walks you through how to install NGINX Kubernetes Gateway on a generi
 1. Install the Gateway CRDs:
 
    ```
-   kubectl apply -k "github.com/kubernetes-sigs/gateway-api/config/crd?ref=v0.6.0"
+   kubectl apply -k "github.com/kubernetes-sigs/gateway-api/config/crd?ref=v0.6.2"
    ```
 
 1. Create the nginx-gateway Namespace:
