@@ -97,24 +97,18 @@ func (r *MatchRule) GetMatch() v1beta1.HTTPRouteMatch {
 
 // BuildConfiguration builds the Configuration from the Graph.
 // FIXME(pleshakov) For now we only handle paths with prefix matches. Handle exact and regex matches
-func BuildConfiguration(
-	ctx context.Context,
-	g *graph.Graph,
-	resolver resolver.ServiceResolver,
-) (Configuration, Warnings) {
+func BuildConfiguration(ctx context.Context, g *graph.Graph, resolver resolver.ServiceResolver) Configuration {
 	if g.GatewayClass == nil || !g.GatewayClass.Valid {
-		return Configuration{}, nil
+		return Configuration{}
 	}
 
 	if g.Gateway == nil {
-		return Configuration{}, nil
+		return Configuration{}
 	}
 
 	upstreamsMap := buildUpstreamsMap(ctx, g.Gateway.Listeners, resolver)
 	httpServers, sslServers := buildServers(g.Gateway.Listeners)
 	backendGroups := buildBackendGroups(g.Gateway.Listeners)
-
-	warnings := buildWarnings(g, upstreamsMap)
 
 	config := Configuration{
 		HTTPServers:   httpServers,
@@ -123,7 +117,7 @@ func BuildConfiguration(
 		BackendGroups: backendGroups,
 	}
 
-	return config, warnings
+	return config
 }
 
 func upstreamsMapToSlice(upstreamsMap map[string]Upstream) []Upstream {
@@ -137,55 +131,6 @@ func upstreamsMapToSlice(upstreamsMap map[string]Upstream) []Upstream {
 	}
 
 	return upstreams
-}
-
-func buildWarnings(graph *graph.Graph, upstreams map[string]Upstream) Warnings {
-	warnings := newWarnings()
-
-	for _, l := range graph.Gateway.Listeners {
-		for _, r := range l.Routes {
-			if !l.Valid {
-				warnings.AddWarningf(
-					r.Source,
-					"cannot configure routes for listener %s; listener is invalid",
-					l.Source.Name,
-				)
-
-				continue
-			}
-
-			for _, group := range r.GetAllBackendGroups() {
-				for _, backend := range group.Backends {
-					if backend.Name != "" {
-						upstream, ok := upstreams[backend.Name]
-
-						// this should never happen; but we check it just in case
-						if !ok {
-							warnings.AddWarningf(
-								r.Source,
-								"cannot resolve backend ref; internal error: upstream %s not found in map",
-								backend.Name,
-							)
-						}
-
-						if upstream.ErrorMsg != "" {
-							warnings.AddWarningf(
-								r.Source,
-								"cannot resolve backend ref: %s",
-								upstream.ErrorMsg,
-							)
-						}
-					}
-				}
-			}
-		}
-	}
-
-	if len(warnings) == 0 {
-		return nil
-	}
-
-	return warnings
 }
 
 func buildBackendGroups(listeners map[string]*graph.Listener) []graph.BackendGroup {

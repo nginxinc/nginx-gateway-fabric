@@ -168,21 +168,7 @@ func (c *ChangeProcessorImpl) Process(
 		c.cfg.Validators,
 	)
 
-	var warnings dataplane.Warnings
-	conf, warnings = dataplane.BuildConfiguration(ctx, g, c.cfg.ServiceResolver)
-
-	for obj, objWarnings := range warnings {
-		for _, w := range objWarnings {
-			// FIXME(pleshakov): report warnings via Object status
-			// https://github.com/nginxinc/nginx-kubernetes-gateway/issues/467
-			c.cfg.Logger.Info("Got warning while building Graph",
-				"kind", obj.GetObjectKind().GroupVersionKind().Kind,
-				"namespace", obj.GetNamespace(),
-				"name", obj.GetName(),
-				"warning", w)
-		}
-	}
-
+	conf = dataplane.BuildConfiguration(ctx, g, c.cfg.ServiceResolver)
 	statuses = buildStatuses(g)
 
 	return true, conf, statuses
