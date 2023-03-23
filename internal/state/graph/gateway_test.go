@@ -244,7 +244,7 @@ func TestBuildGateway(t *testing.T) {
 	}
 
 	const (
-		invalidHostnameMsg = "Invalid hostname: a lowercase RFC 1123 subdomain " +
+		invalidHostnameMsg = `hostname: Invalid value: "$example.com": a lowercase RFC 1123 subdomain ` +
 			"must consist of lower case alphanumeric characters, '-' or '.', and must start and end " +
 			"with an alphanumeric character (e.g. 'example.com', regex used for validation is " +
 			`'[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*')`
@@ -325,8 +325,9 @@ func TestBuildGateway(t *testing.T) {
 						Routes:            map[types.NamespacedName]*Route{},
 						AcceptedHostnames: map[string]struct{}{},
 						Conditions: []conditions.Condition{
-							conditions.NewListenerUnsupportedProtocol(`Protocol "TCP" is not supported, use "HTTP" ` +
-								`or "HTTPS"`),
+							conditions.NewListenerUnsupportedProtocol(
+								`protocol: Unsupported value: "TCP": supported values: "HTTP", "HTTPS"`,
+							),
 						},
 					},
 				},
@@ -344,7 +345,7 @@ func TestBuildGateway(t *testing.T) {
 						Routes:            map[types.NamespacedName]*Route{},
 						AcceptedHostnames: map[string]struct{}{},
 						Conditions: []conditions.Condition{
-							conditions.NewListenerPortUnavailable("Port 81 is not supported for HTTP, use 80"),
+							conditions.NewListenerPortUnavailable(`port: Unsupported value: 81: supported values: "80"`),
 						},
 					},
 				},
@@ -362,7 +363,7 @@ func TestBuildGateway(t *testing.T) {
 						Routes:            map[types.NamespacedName]*Route{},
 						AcceptedHostnames: map[string]struct{}{},
 						Conditions: []conditions.Condition{
-							conditions.NewListenerPortUnavailable("Port 444 is not supported for HTTPS, use 443"),
+							conditions.NewListenerPortUnavailable(`port: Unsupported value: 444: supported values: "443"`),
 						},
 					},
 				},
@@ -406,8 +407,9 @@ func TestBuildGateway(t *testing.T) {
 						Valid:             false,
 						Routes:            map[types.NamespacedName]*Route{},
 						AcceptedHostnames: map[string]struct{}{},
-						Conditions: conditions.NewListenerInvalidCertificateRef("Failed to get the certificate " +
-							"test/does-not-exist: secret not found"),
+						Conditions: conditions.NewListenerInvalidCertificateRef(
+							`tls.certificateRefs[0]: Invalid value: test/does-not-exist: secret not found`,
+						),
 					},
 				},
 			},
@@ -505,7 +507,9 @@ func TestBuildGateway(t *testing.T) {
 						Routes:            map[types.NamespacedName]*Route{},
 						AcceptedHostnames: map[string]struct{}{},
 						Conditions: []conditions.Condition{
-							conditions.NewListenerUnsupportedAddress("Specifying Gateway addresses is not supported"),
+							conditions.NewListenerUnsupportedAddress(
+								"spec.addresses: Forbidden: addresses are not supported",
+							),
 						},
 					},
 					"listener-443-1": {
@@ -515,7 +519,9 @@ func TestBuildGateway(t *testing.T) {
 						AcceptedHostnames: map[string]struct{}{},
 						SecretPath:        "",
 						Conditions: []conditions.Condition{
-							conditions.NewListenerUnsupportedAddress("Specifying Gateway addresses is not supported"),
+							conditions.NewListenerUnsupportedAddress(
+								"spec.addresses: Forbidden: addresses are not supported",
+							),
 						},
 					},
 				},
@@ -564,7 +570,7 @@ func TestValidateHTTPListener(t *testing.T) {
 				Port: 81,
 			},
 			expected: []conditions.Condition{
-				conditions.NewListenerPortUnavailable("Port 81 is not supported for HTTP, use 80"),
+				conditions.NewListenerPortUnavailable(`port: Unsupported value: 81: supported values: "80"`),
 			},
 			name: "invalid port",
 		},
@@ -633,7 +639,7 @@ func TestValidateHTTPSListener(t *testing.T) {
 				},
 			},
 			expected: []conditions.Condition{
-				conditions.NewListenerPortUnavailable("Port 80 is not supported for HTTPS, use 443"),
+				conditions.NewListenerPortUnavailable(`port: Unsupported value: 80: supported values: "443"`),
 			},
 			name: "invalid port",
 		},
@@ -647,7 +653,7 @@ func TestValidateHTTPSListener(t *testing.T) {
 				},
 			},
 			expected: []conditions.Condition{
-				conditions.NewListenerUnsupportedValue("tls.options are not supported"),
+				conditions.NewListenerUnsupportedValue("tls.options: Forbidden: options are not supported"),
 			},
 			name: "invalid options",
 		},
@@ -660,7 +666,9 @@ func TestValidateHTTPSListener(t *testing.T) {
 				},
 			},
 			expected: []conditions.Condition{
-				conditions.NewListenerUnsupportedValue(`tls.mode "Passthrough" is not supported, use "Terminate"`),
+				conditions.NewListenerUnsupportedValue(
+					`tls.mode: Unsupported value: "Passthrough": supported values: "Terminate"`,
+				),
 			},
 			name: "invalid tls mode",
 		},
@@ -672,8 +680,10 @@ func TestValidateHTTPSListener(t *testing.T) {
 					CertificateRefs: []v1beta1.SecretObjectReference{invalidSecretRefGroup},
 				},
 			},
-			expected: conditions.NewListenerInvalidCertificateRef(`Group must be empty, got "some-group"`),
-			name:     "invalid cert ref group",
+			expected: conditions.NewListenerInvalidCertificateRef(
+				`tls.certificateRefs[0].group: Unsupported value: "some-group": supported values: ""`,
+			),
+			name: "invalid cert ref group",
 		},
 		{
 			l: v1beta1.Listener{
@@ -683,8 +693,10 @@ func TestValidateHTTPSListener(t *testing.T) {
 					CertificateRefs: []v1beta1.SecretObjectReference{invalidSecretRefKind},
 				},
 			},
-			expected: conditions.NewListenerInvalidCertificateRef(`Kind must be Secret, got "ConfigMap"`),
-			name:     "invalid cert ref kind",
+			expected: conditions.NewListenerInvalidCertificateRef(
+				`tls.certificateRefs[0].kind: Unsupported value: "ConfigMap": supported values: "Secret"`,
+			),
+			name: "invalid cert ref kind",
 		},
 		{
 			l: v1beta1.Listener{
@@ -694,8 +706,10 @@ func TestValidateHTTPSListener(t *testing.T) {
 					CertificateRefs: []v1beta1.SecretObjectReference{invalidSecretRefTNamespace},
 				},
 			},
-			expected: conditions.NewListenerInvalidCertificateRef("Referenced Secret must belong to the same " +
-				"namespace as the Gateway"),
+			expected: conditions.NewListenerInvalidCertificateRef(
+				`tls.certificateRefs[0].namespace: Invalid value: "diff-ns": Referenced Secret must belong to ` +
+					`the same namespace as the Gateway`,
+			),
 			name: "invalid cert ref namespace",
 		},
 		{
@@ -707,7 +721,7 @@ func TestValidateHTTPSListener(t *testing.T) {
 				},
 			},
 			expected: []conditions.Condition{
-				conditions.NewListenerUnsupportedValue("Only 1 certificateRef is supported, got 2"),
+				conditions.NewListenerUnsupportedValue("tls.certificateRefs: Too many: 2: must have at most 1 items"),
 			},
 			name: "too many cert refs",
 		},

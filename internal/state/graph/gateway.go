@@ -5,6 +5,7 @@ import (
 	"sort"
 
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/validation/field"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
@@ -200,13 +201,16 @@ func validateListener(
 	conds = validate(gl)
 
 	if len(gw.Spec.Addresses) > 0 {
-		conds = append(conds, conditions.NewListenerUnsupportedAddress("Specifying Gateway addresses is not supported"))
+		path := field.NewPath("spec", "addresses")
+		valErr := field.Forbidden(path, "addresses are not supported")
+		conds = append(conds, conditions.NewListenerUnsupportedAddress(valErr.Error()))
 	}
 
 	validHostnameErr := validateListenerHostname(gl.Hostname)
 	if validHostnameErr != nil {
-		msg := fmt.Sprintf("Invalid hostname: %v", validHostnameErr)
-		conds = append(conds, conditions.NewListenerUnsupportedValue(msg))
+		path := field.NewPath("hostname")
+		valErr := field.Invalid(path, gl.Hostname, validHostnameErr.Error())
+		conds = append(conds, conditions.NewListenerUnsupportedValue(valErr.Error()))
 	}
 
 	return conds, validHostnameErr == nil
@@ -248,13 +252,21 @@ func (c *httpListenerConfigurator) loadSecretIntoListener(l *Listener) {
 
 	l.SecretPath, err = c.secretMemoryMgr.Request(nsname)
 	if err != nil {
-		msg := fmt.Sprintf("Failed to get the certificate %s: %v", nsname.String(), err)
-		l.Conditions = append(l.Conditions, conditions.NewListenerInvalidCertificateRef(msg)...)
+		path := field.NewPath("tls", "certificateRefs").Index(0)
+		// field.NotFound could be better, but it doesn't allow us to set the error message.
+		valErr := field.Invalid(path, nsname, err.Error())
+
+		l.Conditions = append(l.Conditions, conditions.NewListenerInvalidCertificateRef(valErr.Error())...)
 		l.Valid = false
 	}
 }
 
 func (c *httpListenerConfigurator) configure(gl v1beta1.Listener) *Listener {
+	// The functions called by configure() generate conditions for invalid fields of the listener.
+	// Because the Gateway status includes a status field for each listener, the messages in those conditions
+	// don't need to include the full path to the field (e.g. "spec.listeners[0].hostname"). They will include
+	// a path starting from the field of a listener (e.g. "hostname", "tls.options").
+
 	conds, validHostname := validateListener(gl, c.gateway, c.validate)
 
 	l := &Listener{
@@ -283,8 +295,11 @@ func newInvalidProtocolListenerConfigurator() *invalidProtocolListenerConfigurat
 }
 
 func (c *invalidProtocolListenerConfigurator) configure(gl v1beta1.Listener) *Listener {
-	msg := fmt.Sprintf("Protocol %q is not supported, use %q or %q",
-		gl.Protocol, v1beta1.HTTPProtocolType, v1beta1.HTTPSProtocolType)
+	valErr := field.NotSupported(
+		field.NewPath("protocol"),
+		gl.Protocol,
+		[]string{string(v1beta1.HTTPProtocolType), string(v1beta1.HTTPSProtocolType)},
+	)
 
 	return &Listener{
 		Source:            gl,
@@ -292,7 +307,7 @@ func (c *invalidProtocolListenerConfigurator) configure(gl v1beta1.Listener) *Li
 		Routes:            make(map[types.NamespacedName]*Route),
 		AcceptedHostnames: make(map[string]struct{}),
 		Conditions: []conditions.Condition{
-			conditions.NewListenerUnsupportedProtocol(msg),
+			conditions.NewListenerUnsupportedProtocol(valErr.Error()),
 		},
 	}
 }
@@ -301,8 +316,9 @@ func validateHTTPListener(listener v1beta1.Listener) []conditions.Condition {
 	var conds []conditions.Condition
 
 	if listener.Port != 80 {
-		msg := fmt.Sprintf("Port %d is not supported for HTTP, use 80", listener.Port)
-		conds = append(conds, conditions.NewListenerPortUnavailable(msg))
+		path := field.NewPath("port")
+		valErr := field.NotSupported(path, listener.Port, []string{"80"})
+		conds = append(conds, conditions.NewListenerPortUnavailable(valErr.Error()))
 	}
 
 	// The imported Webhook validation ensures the tls field is not set for an HTTP listener.
@@ -315,20 +331,29 @@ func validateHTTPSListener(listener v1beta1.Listener, gwNsName string) []conditi
 	var conds []conditions.Condition
 
 	if listener.Port != 443 {
-		msg := fmt.Sprintf("Port %d is not supported for HTTPS, use 443", listener.Port)
-		conds = append(conds, conditions.NewListenerPortUnavailable(msg))
+		path := field.NewPath("port")
+		valErr := field.NotSupported(path, listener.Port, []string{"443"})
+		conds = append(conds, conditions.NewListenerPortUnavailable(valErr.Error()))
 	}
 
 	// The imported Webhook validation ensures the tls field is not nil for an HTTPS listener.
 	// FIXME(pleshakov): Add a unit test for the imported Webhook validation code for this case.
 
+	tlsPath := field.NewPath("tls")
+
 	if *listener.TLS.Mode != v1beta1.TLSModeTerminate {
-		msg := fmt.Sprintf("tls.mode %q is not supported, use %q", *listener.TLS.Mode, v1beta1.TLSModeTerminate)
-		conds = append(conds, conditions.NewListenerUnsupportedValue(msg))
+		valErr := field.NotSupported(
+			tlsPath.Child("mode"),
+			*listener.TLS.Mode,
+			[]string{string(v1beta1.TLSModeTerminate)},
+		)
+		conds = append(conds, conditions.NewListenerUnsupportedValue(valErr.Error()))
 	}
 
 	if len(listener.TLS.Options) > 0 {
-		conds = append(conds, conditions.NewListenerUnsupportedValue("tls.options are not supported"))
+		path := tlsPath.Child("options")
+		valErr := field.Forbidden(path, "options are not supported")
+		conds = append(conds, conditions.NewListenerUnsupportedValue(valErr.Error()))
 	}
 
 	// The imported Webhook validation ensures len(listener.TLS.Certificates) is not 0.
@@ -336,27 +361,33 @@ func validateHTTPSListener(listener v1beta1.Listener, gwNsName string) []conditi
 
 	certRef := listener.TLS.CertificateRefs[0]
 
+	certRefPath := tlsPath.Child("certificateRefs").Index(0)
+
 	if certRef.Kind != nil && *certRef.Kind != "Secret" {
-		msg := fmt.Sprintf("Kind must be Secret, got %q", *certRef.Kind)
-		conds = append(conds, conditions.NewListenerInvalidCertificateRef(msg)...)
+		path := certRefPath.Child("kind")
+		valErr := field.NotSupported(path, *certRef.Kind, []string{"Secret"})
+		conds = append(conds, conditions.NewListenerInvalidCertificateRef(valErr.Error())...)
 	}
 
 	// for Kind Secret, certRef.Group must be nil or empty
 	if certRef.Group != nil && *certRef.Group != "" {
-		msg := fmt.Sprintf("Group must be empty, got %q", *certRef.Group)
-		conds = append(conds, conditions.NewListenerInvalidCertificateRef(msg)...)
+		path := certRefPath.Child("group")
+		valErr := field.NotSupported(path, *certRef.Group, []string{""})
+		conds = append(conds, conditions.NewListenerInvalidCertificateRef(valErr.Error())...)
 	}
 
 	// secret must be in the same namespace as the gateway
 	if certRef.Namespace != nil && string(*certRef.Namespace) != gwNsName {
-		const msg = "Referenced Secret must belong to the same namespace as the Gateway"
-		conds = append(conds, conditions.NewListenerInvalidCertificateRef(msg)...)
-
+		const detail = "Referenced Secret must belong to the same namespace as the Gateway"
+		path := certRefPath.Child("namespace")
+		valErr := field.Invalid(path, certRef.Namespace, detail)
+		conds = append(conds, conditions.NewListenerInvalidCertificateRef(valErr.Error())...)
 	}
 
 	if l := len(listener.TLS.CertificateRefs); l > 1 {
-		msg := fmt.Sprintf("Only 1 certificateRef is supported, got %d", l)
-		conds = append(conds, conditions.NewListenerUnsupportedValue(msg))
+		path := tlsPath.Child("certificateRefs")
+		valErr := field.TooMany(path, l, 1)
+		conds = append(conds, conditions.NewListenerUnsupportedValue(valErr.Error()))
 	}
 
 	return conds
