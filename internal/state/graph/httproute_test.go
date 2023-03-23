@@ -521,29 +521,6 @@ func TestBuildRoute(t *testing.T) {
 			name: "invalid hostname",
 		},
 		{
-			validator: &validationfakes.FakeHTTPFieldsValidator{
-				ValidateHostnameInServerStub: func(string) error {
-					return errors.New("invalid hostname")
-				},
-			},
-			hr: hr,
-			expected: &Route{
-				Source: hr,
-				Valid:  false,
-				SectionNameRefs: map[string]ParentRef{
-					sectionNameOfCreateHTTPRoute: {
-						Idx:     0,
-						Gateway: gatewayNsName,
-					},
-				},
-				UnattachedSectionNameRefs: map[string]conditions.Condition{},
-				Conditions: []conditions.Condition{
-					conditions.NewRouteUnsupportedValue(`spec.hostnames[0]: Invalid value: "example.com": invalid hostname`),
-				},
-			},
-			name: "invalid hostname by the data-plane",
-		},
-		{
 			validator: validatorInvalidFieldsInRule,
 			hr:        hrInvalidMatches,
 			expected: &Route{
@@ -1055,13 +1032,11 @@ func TestValidateHostnames(t *testing.T) {
 	const validHostname = "example.com"
 
 	tests := []struct {
-		validator *validationfakes.FakeHTTPFieldsValidator
 		name      string
 		hostnames []v1beta1.Hostname
 		expectErr bool
 	}{
 		{
-			validator: &validationfakes.FakeHTTPFieldsValidator{},
 			hostnames: []v1beta1.Hostname{
 				validHostname,
 				"example.org",
@@ -1071,29 +1046,12 @@ func TestValidateHostnames(t *testing.T) {
 			name:      "multiple valid",
 		},
 		{
-			validator: &validationfakes.FakeHTTPFieldsValidator{},
 			hostnames: []v1beta1.Hostname{
 				validHostname,
 				"",
 			},
 			expectErr: true,
 			name:      "valid and invalid",
-		},
-		{
-			validator: &validationfakes.FakeHTTPFieldsValidator{
-				ValidateHostnameInServerStub: func(h string) error {
-					if h == validHostname {
-						return nil
-					}
-					return errors.New("invalid hostname")
-				},
-			},
-			hostnames: []v1beta1.Hostname{
-				validHostname,
-				"value", // invalid by the validator
-			},
-			expectErr: true,
-			name:      "valid and invalid by the validator",
 		},
 	}
 
@@ -1103,7 +1061,7 @@ func TestValidateHostnames(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewGomegaWithT(t)
 
-			err := validateHostnames(test.validator, test.hostnames, path)
+			err := validateHostnames(test.hostnames, path)
 
 			if test.expectErr {
 				g.Expect(err).To(HaveOccurred())

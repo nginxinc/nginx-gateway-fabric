@@ -212,7 +212,7 @@ func buildRoute(
 		UnattachedSectionNameRefs: map[string]conditions.Condition{},
 	}
 
-	err := validateHostnames(validator, ghr.Spec.Hostnames, field.NewPath("spec").Child("hostnames"))
+	err := validateHostnames(ghr.Spec.Hostnames, field.NewPath("spec").Child("hostnames"))
 	if err != nil {
 		r.Valid = false
 		r.Conditions = append(r.Conditions, conditions.NewRouteUnsupportedValue(err.Error()))
@@ -395,16 +395,13 @@ func getHostname(h *v1beta1.Hostname) string {
 	return string(*h)
 }
 
-func validateHostnames(validator validation.HTTPFieldsValidator, hostnames []v1beta1.Hostname, path *field.Path) error {
+func validateHostnames(hostnames []v1beta1.Hostname, path *field.Path) error {
 	var allErrs field.ErrorList
 
 	for i := range hostnames {
 		if err := validateHostname(string(hostnames[i])); err != nil {
 			allErrs = append(allErrs, field.Invalid(path.Index(i), hostnames[i], err.Error()))
 			continue
-		}
-		if err := validator.ValidateHostnameInServer(string(hostnames[i])); err != nil {
-			allErrs = append(allErrs, field.Invalid(path.Index(i), hostnames[i], err.Error()))
 		}
 	}
 

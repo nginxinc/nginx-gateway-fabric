@@ -30,17 +30,6 @@ type FakeHTTPFieldsValidator struct {
 	validateHeaderValueInMatchReturnsOnCall map[int]struct {
 		result1 error
 	}
-	ValidateHostnameInServerStub        func(string) error
-	validateHostnameInServerMutex       sync.RWMutex
-	validateHostnameInServerArgsForCall []struct {
-		arg1 string
-	}
-	validateHostnameInServerReturns struct {
-		result1 error
-	}
-	validateHostnameInServerReturnsOnCall map[int]struct {
-		result1 error
-	}
 	ValidateMethodInMatchStub        func(string) (bool, []string)
 	validateMethodInMatchMutex       sync.RWMutex
 	validateMethodInMatchArgsForCall []struct {
@@ -257,67 +246,6 @@ func (fake *FakeHTTPFieldsValidator) ValidateHeaderValueInMatchReturnsOnCall(i i
 		})
 	}
 	fake.validateHeaderValueInMatchReturnsOnCall[i] = struct {
-		result1 error
-	}{result1}
-}
-
-func (fake *FakeHTTPFieldsValidator) ValidateHostnameInServer(arg1 string) error {
-	fake.validateHostnameInServerMutex.Lock()
-	ret, specificReturn := fake.validateHostnameInServerReturnsOnCall[len(fake.validateHostnameInServerArgsForCall)]
-	fake.validateHostnameInServerArgsForCall = append(fake.validateHostnameInServerArgsForCall, struct {
-		arg1 string
-	}{arg1})
-	stub := fake.ValidateHostnameInServerStub
-	fakeReturns := fake.validateHostnameInServerReturns
-	fake.recordInvocation("ValidateHostnameInServer", []interface{}{arg1})
-	fake.validateHostnameInServerMutex.Unlock()
-	if stub != nil {
-		return stub(arg1)
-	}
-	if specificReturn {
-		return ret.result1
-	}
-	return fakeReturns.result1
-}
-
-func (fake *FakeHTTPFieldsValidator) ValidateHostnameInServerCallCount() int {
-	fake.validateHostnameInServerMutex.RLock()
-	defer fake.validateHostnameInServerMutex.RUnlock()
-	return len(fake.validateHostnameInServerArgsForCall)
-}
-
-func (fake *FakeHTTPFieldsValidator) ValidateHostnameInServerCalls(stub func(string) error) {
-	fake.validateHostnameInServerMutex.Lock()
-	defer fake.validateHostnameInServerMutex.Unlock()
-	fake.ValidateHostnameInServerStub = stub
-}
-
-func (fake *FakeHTTPFieldsValidator) ValidateHostnameInServerArgsForCall(i int) string {
-	fake.validateHostnameInServerMutex.RLock()
-	defer fake.validateHostnameInServerMutex.RUnlock()
-	argsForCall := fake.validateHostnameInServerArgsForCall[i]
-	return argsForCall.arg1
-}
-
-func (fake *FakeHTTPFieldsValidator) ValidateHostnameInServerReturns(result1 error) {
-	fake.validateHostnameInServerMutex.Lock()
-	defer fake.validateHostnameInServerMutex.Unlock()
-	fake.ValidateHostnameInServerStub = nil
-	fake.validateHostnameInServerReturns = struct {
-		result1 error
-	}{result1}
-}
-
-func (fake *FakeHTTPFieldsValidator) ValidateHostnameInServerReturnsOnCall(i int, result1 error) {
-	fake.validateHostnameInServerMutex.Lock()
-	defer fake.validateHostnameInServerMutex.Unlock()
-	fake.ValidateHostnameInServerStub = nil
-	if fake.validateHostnameInServerReturnsOnCall == nil {
-		fake.validateHostnameInServerReturnsOnCall = make(map[int]struct {
-			result1 error
-		})
-	}
-	fake.validateHostnameInServerReturnsOnCall[i] = struct {
 		result1 error
 	}{result1}
 }
@@ -826,8 +754,6 @@ func (fake *FakeHTTPFieldsValidator) Invocations() map[string][][]interface{} {
 	defer fake.validateHeaderNameInMatchMutex.RUnlock()
 	fake.validateHeaderValueInMatchMutex.RLock()
 	defer fake.validateHeaderValueInMatchMutex.RUnlock()
-	fake.validateHostnameInServerMutex.RLock()
-	defer fake.validateHostnameInServerMutex.RUnlock()
 	fake.validateMethodInMatchMutex.RLock()
 	defer fake.validateMethodInMatchMutex.RUnlock()
 	fake.validatePathInPrefixMatchMutex.RLock()
