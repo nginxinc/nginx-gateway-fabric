@@ -262,10 +262,9 @@ func TestBuildConfiguration(t *testing.T) {
 	secretPath := "/etc/nginx/secrets/secret"
 
 	tests := []struct {
-		graph    *graph.Graph
-		expWarns Warnings
-		msg      string
-		expConf  Configuration
+		graph   *graph.Graph
+		msg     string
+		expConf Configuration
 	}{
 		{
 			graph: &graph.Graph{
@@ -371,15 +370,6 @@ func TestBuildConfiguration(t *testing.T) {
 						"invalid-listener": {
 							Source: invalidListener,
 							Valid:  false,
-							Routes: map[types.NamespacedName]*graph.Route{
-								{Namespace: "test", Name: "https-hr-1"}: httpsRouteHR1,
-								{Namespace: "test", Name: "https-hr-2"}: httpsRouteHR2,
-							},
-							AcceptedHostnames: map[string]struct{}{
-								"foo.example.com": {},
-								"bar.example.com": {},
-							},
-							SecretPath: "",
 						},
 					},
 				},
@@ -391,10 +381,6 @@ func TestBuildConfiguration(t *testing.T) {
 			expConf: Configuration{
 				HTTPServers: []VirtualServer{},
 				SSLServers:  []VirtualServer{},
-			},
-			expWarns: Warnings{
-				httpsHR1: []string{"cannot configure routes for listener invalid-listener; listener is invalid"},
-				httpsHR2: []string{"cannot configure routes for listener invalid-listener; listener is invalid"},
 			},
 			msg: "invalid listener",
 		},
@@ -978,7 +964,7 @@ func TestBuildConfiguration(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.msg, func(t *testing.T) {
-			result, warns := BuildConfiguration(context.TODO(), test.graph, fakeResolver)
+			result := BuildConfiguration(context.TODO(), test.graph, fakeResolver)
 
 			sort.Slice(result.BackendGroups, func(i, j int) bool {
 				return result.BackendGroups[i].GroupName() < result.BackendGroups[j].GroupName()
@@ -990,10 +976,6 @@ func TestBuildConfiguration(t *testing.T) {
 
 			if diff := cmp.Diff(test.expConf, result); diff != "" {
 				t.Errorf("BuildConfiguration() %q mismatch for configuration (-want +got):\n%s", test.msg, diff)
-			}
-
-			if diff := cmp.Diff(test.expWarns, warns); diff != "" {
-				t.Errorf("BuildConfiguration() %q mismatch for warnings (-want +got):\n%s", test.msg, diff)
 			}
 		})
 	}
@@ -1469,96 +1451,6 @@ func TestBuildBackendGroups(t *testing.T) {
 	result := buildBackendGroups(listeners)
 
 	g.Expect(result).To(ConsistOf(expGroups))
-}
-
-func TestBuildWarnings(t *testing.T) {
-	createBackendRefs := func(names ...string) []graph.BackendRef {
-		backends := make([]graph.BackendRef, len(names))
-		for idx, name := range names {
-			backends[idx] = graph.BackendRef{Name: name}
-		}
-
-		return backends
-	}
-
-	createBackendGroup := func(sourceName string, backends []graph.BackendRef) graph.BackendGroup {
-		return graph.BackendGroup{
-			Source:   types.NamespacedName{Namespace: "test", Name: sourceName},
-			Backends: backends,
-		}
-	}
-
-	hrBackendGroup0 := createBackendGroup(
-		"hr",
-		createBackendRefs(""), // empty backend name should be skipped
-	)
-
-	hrBackendGroup1 := createBackendGroup(
-		"hr",
-		createBackendRefs("dne"),
-	)
-
-	hrInvalidGroup := createBackendGroup(
-		"hr-invalid",
-		createBackendRefs("invalid"),
-	)
-
-	hr := &v1beta1.HTTPRoute{ObjectMeta: metav1.ObjectMeta{Name: "hr", Namespace: "test"}}
-	hrInvalid := &v1beta1.HTTPRoute{ObjectMeta: metav1.ObjectMeta{Name: "hr-invalid", Namespace: "test"}}
-
-	invalidRoutes := map[types.NamespacedName]*graph.Route{
-		{Name: "invalid", Namespace: "test"}: {
-			Source: hrInvalid,
-			Rules:  groupsToValidRules(hrInvalidGroup),
-		},
-	}
-
-	routes := map[types.NamespacedName]*graph.Route{
-		{Name: "hr", Namespace: "test"}: {
-			Source: hr,
-			Rules:  groupsToValidRules(hrBackendGroup0, hrBackendGroup1),
-		},
-	}
-
-	upstreamMap := map[string]Upstream{
-		"foo":           {},
-		"bar":           {},
-		"resolve-error": {ErrorMsg: "resolve error"},
-	}
-
-	graph := &graph.Graph{
-		Gateway: &graph.Gateway{
-			Listeners: map[string]*graph.Listener{
-				"invalid-listener": {
-					Source: v1beta1.Listener{
-						Name: "invalid",
-					},
-					Valid:  false,
-					Routes: invalidRoutes,
-				},
-				"listener": {
-					Source: v1beta1.Listener{
-						Name: "valid",
-					},
-					Valid:  true,
-					Routes: routes,
-				},
-			},
-		},
-	}
-
-	expWarns := Warnings{
-		hr: []string{
-			"cannot resolve backend ref; internal error: upstream dne not found in map",
-		},
-		hrInvalid: []string{"cannot configure routes for listener invalid; listener is invalid"},
-	}
-
-	g := NewGomegaWithT(t)
-
-	warns := buildWarnings(graph, upstreamMap)
-
-	g.Expect(helpers.Diff(warns, expWarns)).To(BeEmpty())
 }
 
 func TestUpstreamsMapToSlice(t *testing.T) {
