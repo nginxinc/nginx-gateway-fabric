@@ -13,10 +13,3 @@ type HTTPValidator struct {
 }
 
 var _ validation.HTTPFieldsValidator = HTTPValidator{}
-
-var hostnameInServerExamples = []string{"host", "example.com"}
-
-// ValidateHostnameInServer validates a hostname to be used in the server_name directive.
-func (HTTPValidator) ValidateHostnameInServer(hostname string) error {
-	return validateEscapedString(hostname, hostnameInServerExamples)
-}

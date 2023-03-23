@@ -1,6 +1,9 @@
 package validation
 
 // Validators include validators for Gateway API resources from the perspective of a data-plane.
+// It is used for fields that propagate into the data plane configuration. For example, the path in a routing rule.
+// However, not all such fields are validated: NKG will not validate a field using Validators if it is confident that
+// the field is valid.
 type Validators struct {
 	HTTPFieldsValidator HTTPFieldsValidator
 }
@@ -10,7 +13,6 @@ type Validators struct {
 //
 //go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . HTTPFieldsValidator
 type HTTPFieldsValidator interface {
-	ValidateHostnameInServer(hostname string) error
 	ValidatePathInPrefixMatch(path string) error
 	ValidateHeaderNameInMatch(name string) error
 	ValidateHeaderValueInMatch(value string) error
