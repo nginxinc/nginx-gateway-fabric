@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"reflect"
 
-	apiv1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -19,9 +18,6 @@ import (
 // If the function returns false, the reconciler will log the returned string.
 type NamespacedNameFilterFunc func(nsname types.NamespacedName) (bool, string)
 
-// ValidatorFunc validates a Kubernetes resource.
-type ValidatorFunc func(object client.Object) error
-
 // Config contains the configuration for the Implementation.
 type Config struct {
 	// Getter gets a resource from the k8s API.
@@ -32,10 +28,6 @@ type Config struct {
 	EventCh chan<- interface{}
 	// NamespacedNameFilter filters resources the controller will process. Can be nil.
 	NamespacedNameFilter NamespacedNameFilterFunc
-	// WebhookValidator validates a resource using the same rules as in the Gateway API Webhook. Can be nil.
-	WebhookValidator ValidatorFunc
-	// EventRecorder records event about resources.
-	EventRecorder EventRecorder
 }
 
 // Implementation is a reconciler for Kubernetes resources.
@@ -66,12 +58,6 @@ func newObject(objectType client.Object) client.Object {
 	return reflect.New(t).Interface().(client.Object)
 }
 
-const (
-	webhookValidationErrorLogMsg = "Rejected the resource because the Gateway API webhook failed to reject it with " +
-		"a validation error; make sure the webhook is installed and running correctly; " +
-		"NKG will delete any existing NGINX configuration that corresponds to the resource"
-)
-
 // Reconcile implements the reconcile.Reconciler Reconcile method.
 func (r *Implementation) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
 	logger := log.FromContext(ctx)
@@ -98,22 +84,10 @@ func (r *Implementation) Reconcile(ctx context.Context, req reconcile.Request) (
 		obj = nil
 	}
 
-	var validationError error
-	if obj != nil && r.cfg.WebhookValidator != nil {
-		validationError = r.cfg.WebhookValidator(obj)
-	}
-
-	if validationError != nil {
-		logger.Error(validationError, webhookValidationErrorLogMsg)
-		r.cfg.EventRecorder.Eventf(obj, apiv1.EventTypeWarning, "Rejected",
-			webhookValidationErrorLogMsg+"; validation error: %v", validationError)
-	}
-
 	var e interface{}
 	var op string
 
-	if obj == nil || validationError != nil {
-		// In case of a validation error, we handle the resource as if it was deleted.
+	if obj == nil {
 		e = &events.DeleteEvent{
 			Type:           r.cfg.ObjectType,
 			NamespacedName: req.NamespacedName,

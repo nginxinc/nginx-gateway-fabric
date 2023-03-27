@@ -9,12 +9,12 @@ import (
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/validation"
 )
 
-// ClusterStore includes cluster resources necessary to build the Graph.
-type ClusterStore struct {
-	GatewayClass *v1beta1.GatewayClass
-	Gateways     map[types.NamespacedName]*v1beta1.Gateway
-	HTTPRoutes   map[types.NamespacedName]*v1beta1.HTTPRoute
-	Services     map[types.NamespacedName]*v1.Service
+// ClusterState includes cluster resources necessary to build the Graph.
+type ClusterState struct {
+	GatewayClasses map[types.NamespacedName]*v1beta1.GatewayClass
+	Gateways       map[types.NamespacedName]*v1beta1.Gateway
+	HTTPRoutes     map[types.NamespacedName]*v1beta1.HTTPRoute
+	Services       map[types.NamespacedName]*v1.Service
 }
 
 // Graph is a Graph-like representation of Gateway API resources.
@@ -31,19 +31,21 @@ type Graph struct {
 	Routes map[types.NamespacedName]*Route
 }
 
-// BuildGraph builds a Graph from a store.
+// BuildGraph builds a Graph from a state.
 func BuildGraph(
-	store ClusterStore,
+	store ClusterState,
 	controllerName string,
 	gcName string,
 	secretMemoryMgr secrets.SecretDiskMemoryManager,
 	validators validation.Validators,
 ) *Graph {
-	if !gatewayClassBelongsToController(store.GatewayClass, controllerName) {
+	gatewayClass := store.GatewayClasses[types.NamespacedName{Name: gcName}]
+
+	if !gatewayClassBelongsToController(gatewayClass, controllerName) {
 		return &Graph{}
 	}
 
-	gc := buildGatewayClass(store.GatewayClass)
+	gc := buildGatewayClass(gatewayClass)
 
 	processedGws := processGateways(store.Gateways, gcName)
 

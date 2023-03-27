@@ -11,7 +11,6 @@ import (
 	"github.com/onsi/gomega/types"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/apimachinery/pkg/util/validation/field"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
@@ -21,7 +20,6 @@ import (
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/manager/managerfakes"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/manager/predicate"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/reconciler"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/reconciler/reconcilerfakes"
 )
 
 func TestRegisterController(t *testing.T) {
@@ -86,12 +84,6 @@ func TestRegisterController(t *testing.T) {
 	namespacedNameFilter := filter.CreateFilterForGatewayClass("test")
 	fieldIndexes := index.CreateEndpointSliceFieldIndices()
 
-	webhookValidator := createValidator(func(_ *v1beta1.HTTPRoute) field.ErrorList {
-		return nil
-	})
-
-	eventRecorder := &reconcilerfakes.FakeEventRecorder{}
-
 	eventCh := make(chan<- interface{})
 
 	beSameFunctionPointer := func(expected interface{}) types.GomegaMatcher {
@@ -109,8 +101,6 @@ func TestRegisterController(t *testing.T) {
 				g.Expect(c.Getter).To(BeIdenticalTo(test.fakes.mgr.GetClient()))
 				g.Expect(c.ObjectType).To(BeIdenticalTo(objectType))
 				g.Expect(c.EventCh).To(BeIdenticalTo(eventCh))
-				g.Expect(c.EventRecorder).To(BeIdenticalTo(eventRecorder))
-				g.Expect(c.WebhookValidator).Should(beSameFunctionPointer(webhookValidator))
 				g.Expect(c.NamespacedNameFilter).Should(beSameFunctionPointer(namespacedNameFilter))
 
 				return reconciler.NewImplementation(c)
@@ -121,12 +111,10 @@ func TestRegisterController(t *testing.T) {
 				objectType,
 				test.fakes.mgr,
 				eventCh,
-				eventRecorder,
 				withNamespacedNameFilter(namespacedNameFilter),
 				withK8sPredicate(predicate.ServicePortsChangedPredicate{}),
 				withFieldIndices(fieldIndexes),
 				withNewReconciler(newReconciler),
-				withWebhookValidator(webhookValidator),
 			)
 
 			if test.expectedErr == nil {
