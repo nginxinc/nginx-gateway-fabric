@@ -19,7 +19,7 @@ const (
 	confPrefix        = "/etc/nginx"
 	secretsPrefix     = "/etc/nginx/secrets" //nolint:gosec
 	nginxConfFilePath = "nginx.conf"
-	httpConfFilePath  = "/conf.d/http.conf"
+	httpConfFilePath  = "conf.d/http.conf"
 )
 
 type directory struct {

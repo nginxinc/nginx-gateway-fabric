@@ -85,6 +85,10 @@ spec:
         app: nginx-gateway
     spec:
       serviceAccountName: nginx-gateway
+      securityContext:
+        sysctls:
+        - name: "net.ipv4.ip_unprivileged_port_start"
+          value: "0"
       containers:
       - image: docker.io/library/nginx-kubernetes-gateway:edge # FIXME(kate-osborn): change back to ghcr before merging to main
         imagePullPolicy: IfNotPresent # FIXME(kate-osborn): change back to Always before merging to main
