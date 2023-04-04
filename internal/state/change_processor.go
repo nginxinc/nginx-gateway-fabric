@@ -143,8 +143,14 @@ func NewChangeProcessorImpl(cfg ChangeProcessorConfig) *ChangeProcessorImpl {
 		cfg.EventRecorder,
 		[]upsertValidatorFunc{
 			func(obj client.Object) error {
+				// Add the validation for Gateway API resources which the webhook validates
+
 				var err error
 				switch o := obj.(type) {
+				// We don't validate GatewayClass, because as of 0.6.2, the webhook doesn't validate it (it only
+				// validates an update that requires the previous version of the resource,
+				// which NKG cannot reliably provide - for example, after NKG restarts).
+				// https://github.com/kubernetes-sigs/gateway-api/blob/v0.6.2/apis/v1beta1/validation/gatewayclass.go#L28
 				case *v1beta1.Gateway:
 					err = gwapivalidation.ValidateGateway(o).ToAggregate()
 				case *v1beta1.HTTPRoute:
