@@ -2026,156 +2026,164 @@ var _ = Describe("ChangeProcessor", func() {
 			Expect(fakeEventRecorder.Events).To(HaveLen(0))
 		})
 
-		It("should ignore invalid resources", func() {
-			processor.CaptureUpsertChange(gwInvalid)
-			processor.CaptureUpsertChange(hrInvalid)
+		When("resources are invalid", func() {
+			It("should not process them", func() {
+				processor.CaptureUpsertChange(gwInvalid)
+				processor.CaptureUpsertChange(hrInvalid)
 
-			expectedConf := dataplane.Configuration{}
-			expectedStatuses := state.Statuses{}
+				expectedConf := dataplane.Configuration{}
+				expectedStatuses := state.Statuses{}
 
-			changed, conf, statuses := processor.Process(context.TODO())
+				changed, conf, statuses := processor.Process(context.TODO())
 
-			Expect(changed).To(BeFalse())
-			Expect(helpers.Diff(expectedConf, conf)).To(BeEmpty())
-			assertStatuses(expectedStatuses, statuses)
+				Expect(changed).To(BeFalse())
+				Expect(helpers.Diff(expectedConf, conf)).To(BeEmpty())
+				assertStatuses(expectedStatuses, statuses)
 
-			Expect(fakeEventRecorder.Events).To(HaveLen(2))
-			assertGwEvent()
-			assertHREvent()
+				Expect(fakeEventRecorder.Events).To(HaveLen(2))
+				assertGwEvent()
+				assertHREvent()
+			})
 		})
 
-		It("should process valid resources", func() {
-			processor.CaptureUpsertChange(gw)
-			processor.CaptureUpsertChange(hr)
+		When("resources are valid", func() {
+			It("should process them", func() {
+				processor.CaptureUpsertChange(gw)
+				processor.CaptureUpsertChange(hr)
 
-			bg := graph.BackendGroup{
-				Source:  types.NamespacedName{Namespace: hr.Namespace, Name: hr.Name},
-				RuleIdx: 0,
-			}
+				bg := graph.BackendGroup{
+					Source:  types.NamespacedName{Namespace: hr.Namespace, Name: hr.Name},
+					RuleIdx: 0,
+				}
 
-			expectedConf := dataplane.Configuration{
-				HTTPServers: []dataplane.VirtualServer{
-					{
-						IsDefault: true,
-					},
-					{
-						Hostname: "foo.example.com",
-						PathRules: []dataplane.PathRule{
-							{
-								Path: "/",
-								MatchRules: []dataplane.MatchRule{
-									{
-										MatchIdx:     0,
-										RuleIdx:      0,
-										BackendGroup: bg,
-										Source:       hr,
+				expectedConf := dataplane.Configuration{
+					HTTPServers: []dataplane.VirtualServer{
+						{
+							IsDefault: true,
+						},
+						{
+							Hostname: "foo.example.com",
+							PathRules: []dataplane.PathRule{
+								{
+									Path: "/",
+									MatchRules: []dataplane.MatchRule{
+										{
+											MatchIdx:     0,
+											RuleIdx:      0,
+											BackendGroup: bg,
+											Source:       hr,
+										},
 									},
 								},
 							},
 						},
 					},
-				},
-				SSLServers:    []dataplane.VirtualServer{},
-				BackendGroups: []graph.BackendGroup{bg},
-			}
-			expectedStatuses := state.Statuses{
-				GatewayClassStatus: &state.GatewayClassStatus{
-					ObservedGeneration: gc.Generation,
-					Conditions:         conditions.NewDefaultGatewayClassConditions(),
-				},
-				GatewayStatus: &state.GatewayStatus{
-					NsName:             gwNsName,
-					ObservedGeneration: gw.Generation,
-					ListenerStatuses: map[string]state.ListenerStatus{
-						"listener-80-1": {
-							AttachedRoutes: 1,
-							Conditions:     conditions.NewDefaultListenerConditions(),
-						},
+					SSLServers:    []dataplane.VirtualServer{},
+					BackendGroups: []graph.BackendGroup{bg},
+				}
+				expectedStatuses := state.Statuses{
+					GatewayClassStatus: &state.GatewayClassStatus{
+						ObservedGeneration: gc.Generation,
+						Conditions:         conditions.NewDefaultGatewayClassConditions(),
 					},
-				},
-				IgnoredGatewayStatuses: map[types.NamespacedName]state.IgnoredGatewayStatus{},
-				HTTPRouteStatuses: map[types.NamespacedName]state.HTTPRouteStatus{
-					hrNsName: {
-						ObservedGeneration: hr.Generation,
-						ParentStatuses: map[string]state.ParentStatus{
+					GatewayStatus: &state.GatewayStatus{
+						NsName:             gwNsName,
+						ObservedGeneration: gw.Generation,
+						ListenerStatuses: map[string]state.ListenerStatus{
 							"listener-80-1": {
-								Conditions: conditions.NewDefaultRouteConditions(),
+								AttachedRoutes: 1,
+								Conditions:     conditions.NewDefaultListenerConditions(),
 							},
 						},
 					},
-				},
-			}
-
-			changed, conf, statuses := processor.Process(context.TODO())
-
-			Expect(changed).To(BeTrue())
-			Expect(helpers.Diff(expectedConf, conf)).To(BeEmpty())
-			assertStatuses(expectedStatuses, statuses)
-
-			Expect(fakeEventRecorder.Events).To(HaveLen(0))
-		})
-
-		It("should delete invalid HTTPRoute", func() {
-			processor.CaptureUpsertChange(hrInvalid)
-
-			expectedConf := dataplane.Configuration{
-				HTTPServers: []dataplane.VirtualServer{
-					{
-						IsDefault: true,
-					},
-				},
-				SSLServers: []dataplane.VirtualServer{},
-			}
-			expectedStatuses := state.Statuses{
-				GatewayClassStatus: &state.GatewayClassStatus{
-					ObservedGeneration: gc.Generation,
-					Conditions:         conditions.NewDefaultGatewayClassConditions(),
-				},
-				GatewayStatus: &state.GatewayStatus{
-					NsName:             gwNsName,
-					ObservedGeneration: gw.Generation,
-					ListenerStatuses: map[string]state.ListenerStatus{
-						"listener-80-1": {
-							AttachedRoutes: 0,
-							Conditions:     conditions.NewDefaultListenerConditions(),
+					IgnoredGatewayStatuses: map[types.NamespacedName]state.IgnoredGatewayStatus{},
+					HTTPRouteStatuses: map[types.NamespacedName]state.HTTPRouteStatus{
+						hrNsName: {
+							ObservedGeneration: hr.Generation,
+							ParentStatuses: map[string]state.ParentStatus{
+								"listener-80-1": {
+									Conditions: conditions.NewDefaultRouteConditions(),
+								},
+							},
 						},
 					},
-				},
-				IgnoredGatewayStatuses: map[types.NamespacedName]state.IgnoredGatewayStatus{},
-				HTTPRouteStatuses:      map[types.NamespacedName]state.HTTPRouteStatus{},
-			}
+				}
 
-			changed, conf, statuses := processor.Process(context.TODO())
+				changed, conf, statuses := processor.Process(context.TODO())
 
-			Expect(changed).To(BeTrue())
-			Expect(helpers.Diff(expectedConf, conf)).To(BeEmpty())
-			assertStatuses(expectedStatuses, statuses)
+				Expect(changed).To(BeTrue())
+				Expect(helpers.Diff(expectedConf, conf)).To(BeEmpty())
+				assertStatuses(expectedStatuses, statuses)
 
-			Expect(fakeEventRecorder.Events).To(HaveLen(1))
-			assertHREvent()
+				Expect(fakeEventRecorder.Events).To(HaveLen(0))
+			})
 		})
 
-		It("should delete invalid Gateway", func() {
-			processor.CaptureUpsertChange(gwInvalid)
+		When("a new version of HTTPRoute is invalid", func() {
+			It("it should delete the configuration for the old one and not process the new one", func() {
+				processor.CaptureUpsertChange(hrInvalid)
 
-			expectedConf := dataplane.Configuration{}
-			expectedStatuses := state.Statuses{
-				GatewayClassStatus: &state.GatewayClassStatus{
-					ObservedGeneration: gc.Generation,
-					Conditions:         conditions.NewDefaultGatewayClassConditions(),
-				},
-				IgnoredGatewayStatuses: map[types.NamespacedName]state.IgnoredGatewayStatus{},
-				HTTPRouteStatuses:      map[types.NamespacedName]state.HTTPRouteStatus{},
-			}
+				expectedConf := dataplane.Configuration{
+					HTTPServers: []dataplane.VirtualServer{
+						{
+							IsDefault: true,
+						},
+					},
+					SSLServers: []dataplane.VirtualServer{},
+				}
+				expectedStatuses := state.Statuses{
+					GatewayClassStatus: &state.GatewayClassStatus{
+						ObservedGeneration: gc.Generation,
+						Conditions:         conditions.NewDefaultGatewayClassConditions(),
+					},
+					GatewayStatus: &state.GatewayStatus{
+						NsName:             gwNsName,
+						ObservedGeneration: gw.Generation,
+						ListenerStatuses: map[string]state.ListenerStatus{
+							"listener-80-1": {
+								AttachedRoutes: 0,
+								Conditions:     conditions.NewDefaultListenerConditions(),
+							},
+						},
+					},
+					IgnoredGatewayStatuses: map[types.NamespacedName]state.IgnoredGatewayStatus{},
+					HTTPRouteStatuses:      map[types.NamespacedName]state.HTTPRouteStatus{},
+				}
 
-			changed, conf, statuses := processor.Process(context.TODO())
+				changed, conf, statuses := processor.Process(context.TODO())
 
-			Expect(changed).To(BeTrue())
-			Expect(helpers.Diff(expectedConf, conf)).To(BeEmpty())
-			assertStatuses(expectedStatuses, statuses)
+				Expect(changed).To(BeTrue())
+				Expect(helpers.Diff(expectedConf, conf)).To(BeEmpty())
+				assertStatuses(expectedStatuses, statuses)
 
-			Expect(fakeEventRecorder.Events).To(HaveLen(1))
-			assertGwEvent()
+				Expect(fakeEventRecorder.Events).To(HaveLen(1))
+				assertHREvent()
+			})
+		})
+
+		When("a new version of Gateway is invalid", func() {
+			It("it should delete the configuration for the old one and not process the new one", func() {
+				processor.CaptureUpsertChange(gwInvalid)
+
+				expectedConf := dataplane.Configuration{}
+				expectedStatuses := state.Statuses{
+					GatewayClassStatus: &state.GatewayClassStatus{
+						ObservedGeneration: gc.Generation,
+						Conditions:         conditions.NewDefaultGatewayClassConditions(),
+					},
+					IgnoredGatewayStatuses: map[types.NamespacedName]state.IgnoredGatewayStatus{},
+					HTTPRouteStatuses:      map[types.NamespacedName]state.HTTPRouteStatus{},
+				}
+
+				changed, conf, statuses := processor.Process(context.TODO())
+
+				Expect(changed).To(BeTrue())
+				Expect(helpers.Diff(expectedConf, conf)).To(BeEmpty())
+				assertStatuses(expectedStatuses, statuses)
+
+				Expect(fakeEventRecorder.Events).To(HaveLen(1))
+				assertGwEvent()
+			})
 		})
 	})
 
