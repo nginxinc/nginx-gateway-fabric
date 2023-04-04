@@ -156,20 +156,22 @@ func TestBuildGraph(t *testing.T) {
 
 	svc := &v1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: "test", Name: "foo"}}
 
-	createStoreWithGatewayClass := func(gc *v1beta1.GatewayClass) ClusterStore {
-		return ClusterStore{
-			GatewayClass: gc,
+	createStateWithGatewayClass := func(gc *v1beta1.GatewayClass) ClusterState {
+		return ClusterState{
+			GatewayClasses: map[types.NamespacedName]*v1beta1.GatewayClass{
+				client.ObjectKeyFromObject(gc): gc,
+			},
 			Gateways: map[types.NamespacedName]*v1beta1.Gateway{
-				{Namespace: "test", Name: "gateway-1"}: gw1,
-				{Namespace: "test", Name: "gateway-2"}: gw2,
+				client.ObjectKeyFromObject(gw1): gw1,
+				client.ObjectKeyFromObject(gw2): gw2,
 			},
 			HTTPRoutes: map[types.NamespacedName]*v1beta1.HTTPRoute{
-				{Namespace: "test", Name: "hr-1"}: hr1,
-				{Namespace: "test", Name: "hr-2"}: hr2,
-				{Namespace: "test", Name: "hr-3"}: hr3,
+				client.ObjectKeyFromObject(hr1): hr1,
+				client.ObjectKeyFromObject(hr2): hr2,
+				client.ObjectKeyFromObject(hr3): hr3,
 			},
 			Services: map[types.NamespacedName]*v1.Service{
-				{Namespace: "test", Name: "foo"}: svc,
+				client.ObjectKeyFromObject(svc): svc,
 			},
 		}
 	}
@@ -251,28 +253,34 @@ func TestBuildGraph(t *testing.T) {
 	}
 
 	normalGC := &v1beta1.GatewayClass{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: gcName,
+		},
 		Spec: v1beta1.GatewayClassSpec{
 			ControllerName: controllerName,
 		},
 	}
 	differentControllerGC := &v1beta1.GatewayClass{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: gcName,
+		},
 		Spec: v1beta1.GatewayClassSpec{
 			ControllerName: "different-controller",
 		},
 	}
 
 	tests := []struct {
-		store    ClusterStore
+		store    ClusterState
 		expected *Graph
 		name     string
 	}{
 		{
-			store:    createStoreWithGatewayClass(normalGC),
+			store:    createStateWithGatewayClass(normalGC),
 			expected: createExpectedGraphWithGatewayClass(normalGC),
 			name:     "normal case",
 		},
 		{
-			store:    createStoreWithGatewayClass(differentControllerGC),
+			store:    createStateWithGatewayClass(differentControllerGC),
 			expected: &Graph{},
 			name:     "gatewayclass belongs to a different controller",
 		},

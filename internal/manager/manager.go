@@ -14,7 +14,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	k8spredicate "sigs.k8s.io/controller-runtime/pkg/predicate"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
-	gwapivalidation "sigs.k8s.io/gateway-api/apis/v1beta1/validation"
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/config"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/events"
@@ -75,21 +74,13 @@ func Start(cfg config.Config) error {
 			objectType: &gatewayv1beta1.GatewayClass{},
 			options: []controllerOption{
 				withNamespacedNameFilter(filter.CreateFilterForGatewayClass(cfg.GatewayClassName)),
-				// as of v0.6.2, the Gateway API Webhook doesn't include a validation function
-				// for the GatewayClass resource
 			},
 		},
 		{
 			objectType: &gatewayv1beta1.Gateway{},
-			options: []controllerOption{
-				withWebhookValidator(createValidator(gwapivalidation.ValidateGateway)),
-			},
 		},
 		{
 			objectType: &gatewayv1beta1.HTTPRoute{},
-			options: []controllerOption{
-				withWebhookValidator(createValidator(gwapivalidation.ValidateHTTPRoute)),
-			},
 		},
 		{
 			objectType: &apiv1.Service{},
@@ -111,11 +102,8 @@ func Start(cfg config.Config) error {
 
 	ctx := ctlr.SetupSignalHandler()
 
-	recorderName := fmt.Sprintf("nginx-kubernetes-gateway-%s", cfg.GatewayClassName)
-	recorder := mgr.GetEventRecorderFor(recorderName)
-
 	for _, regCfg := range controllerRegCfgs {
-		err := registerController(ctx, regCfg.objectType, mgr, eventCh, recorder, regCfg.options...)
+		err := registerController(ctx, regCfg.objectType, mgr, eventCh, regCfg.options...)
 		if err != nil {
 			return fmt.Errorf("cannot register controller for %T: %w", regCfg.objectType, err)
 		}
@@ -123,6 +111,9 @@ func Start(cfg config.Config) error {
 
 	secretStore := secrets.NewSecretStore()
 	secretMemoryMgr := secrets.NewSecretDiskMemoryManager(secretsFolder, secretStore)
+
+	recorderName := fmt.Sprintf("nginx-kubernetes-gateway-%s", cfg.GatewayClassName)
+	recorder := mgr.GetEventRecorderFor(recorderName)
 
 	processor := state.NewChangeProcessorImpl(state.ChangeProcessorConfig{
 		GatewayCtlrName:      cfg.GatewayCtlrName,
@@ -134,6 +125,8 @@ func Start(cfg config.Config) error {
 		Validators: validation.Validators{
 			HTTPFieldsValidator: ngxvalidation.HTTPValidator{},
 		},
+		EventRecorder: recorder,
+		Scheme:        scheme,
 	})
 
 	configGenerator := ngxcfg.NewGeneratorImpl()

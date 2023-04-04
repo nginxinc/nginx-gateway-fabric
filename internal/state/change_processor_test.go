@@ -9,7 +9,10 @@ import (
 	apiv1 "k8s.io/api/core/v1"
 	discoveryV1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
@@ -145,6 +148,7 @@ func createHTTPRule(path string, backendRefs ...v1beta1.HTTPBackendRef) v1beta1.
 		Matches: []v1beta1.HTTPRouteMatch{
 			{
 				Path: &v1beta1.HTTPPathMatch{
+					Type:  helpers.GetPointer(v1beta1.PathMatchPathPrefix),
 					Value: &path,
 				},
 			},
@@ -164,6 +168,7 @@ func createBackendRef(
 				Kind:      kind,
 				Name:      name,
 				Namespace: namespace,
+				Port:      helpers.GetPointer[v1beta1.PortNumber](80),
 			},
 		},
 	}
@@ -175,6 +180,33 @@ func createAlwaysValidValidators() validation.Validators {
 	return validation.Validators{
 		HTTPFieldsValidator: http,
 	}
+}
+
+func createScheme() *runtime.Scheme {
+	scheme := runtime.NewScheme()
+
+	utilruntime.Must(v1beta1.AddToScheme(scheme))
+	utilruntime.Must(apiv1.AddToScheme(scheme))
+	utilruntime.Must(discoveryV1.AddToScheme(scheme))
+
+	return scheme
+}
+
+func assertStatuses(expected, result state.Statuses) {
+	sortConditions := func(statuses state.HTTPRouteStatuses) {
+		for _, status := range statuses {
+			for _, ps := range status.ParentStatuses {
+				sort.Slice(ps.Conditions, func(i, j int) bool {
+					return ps.Conditions[i].Type < ps.Conditions[j].Type
+				})
+			}
+		}
+	}
+
+	sortConditions(expected.HTTPRouteStatuses)
+	sortConditions(result.HTTPRouteStatuses)
+
+	ExpectWithOffset(1, helpers.Diff(expected, result)).To(BeEmpty())
 }
 
 // FIXME(kate-osborn): Consider refactoring these tests to reduce code duplication.
@@ -204,6 +236,7 @@ var _ = Describe("ChangeProcessor", func() {
 				RelationshipCapturer: relationship.NewCapturerImpl(),
 				Logger:               zap.New(),
 				Validators:           createAlwaysValidValidators(),
+				Scheme:               createScheme(),
 			})
 
 			fakeSecretMemoryMgr.RequestReturns(certificatePath, nil)
@@ -244,23 +277,6 @@ var _ = Describe("ChangeProcessor", func() {
 
 				gw2 = createGatewayWithTLSListener("gateway-2")
 			})
-
-			assertStatuses := func(expected, result state.Statuses) {
-				sortConditions := func(statuses state.HTTPRouteStatuses) {
-					for _, status := range statuses {
-						for _, ps := range status.ParentStatuses {
-							sort.Slice(ps.Conditions, func(i, j int) bool {
-								return ps.Conditions[i].Type < ps.Conditions[j].Type
-							})
-						}
-					}
-				}
-
-				sortConditions(expected.HTTPRouteStatuses)
-				sortConditions(result.HTTPRouteStatuses)
-
-				ExpectWithOffset(1, helpers.Diff(expected, result)).To(BeEmpty())
-			}
 
 			When("no upsert has occurred", func() {
 				It("returns empty configuration and statuses", func() {
@@ -1590,6 +1606,7 @@ var _ = Describe("ChangeProcessor", func() {
 				SecretMemoryManager:  fakeSecretMemoryMgr,
 				RelationshipCapturer: fakeRelationshipCapturer,
 				Validators:           createAlwaysValidValidators(),
+				Scheme:               createScheme(),
 			})
 
 			gcNsName = types.NamespacedName{Name: "my-class"}
@@ -1876,6 +1893,300 @@ var _ = Describe("ChangeProcessor", func() {
 		})
 	})
 
+	Describe("Webhook validation cases", Ordered, func() {
+		var (
+			processor           state.ChangeProcessor
+			fakeEventRecorder   *record.FakeRecorder
+			fakeSecretMemoryMgr *secretsfakes.FakeSecretDiskMemoryManager
+
+			gc *v1beta1.GatewayClass
+
+			gwNsName, hrNsName types.NamespacedName
+			gw, gwInvalid      *v1beta1.Gateway
+			hr, hrInvalid      *v1beta1.HTTPRoute
+		)
+		BeforeAll(func() {
+			fakeSecretMemoryMgr = &secretsfakes.FakeSecretDiskMemoryManager{}
+			fakeEventRecorder = record.NewFakeRecorder(2 /* number of buffered events */)
+
+			processor = state.NewChangeProcessorImpl(state.ChangeProcessorConfig{
+				GatewayCtlrName:      controllerName,
+				GatewayClassName:     gcName,
+				SecretMemoryManager:  fakeSecretMemoryMgr,
+				RelationshipCapturer: relationship.NewCapturerImpl(),
+				Logger:               zap.New(),
+				Validators:           createAlwaysValidValidators(),
+				EventRecorder:        fakeEventRecorder,
+				Scheme:               createScheme(),
+			})
+
+			gc = &v1beta1.GatewayClass{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:       gcName,
+					Generation: 1,
+				},
+				Spec: v1beta1.GatewayClassSpec{
+					ControllerName: controllerName,
+				},
+			}
+
+			gwNsName = types.NamespacedName{Namespace: "test", Name: "gateway"}
+			hrNsName = types.NamespacedName{Namespace: "test", Name: "hr"}
+
+			gw = &v1beta1.Gateway{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: gwNsName.Namespace,
+					Name:      gwNsName.Name,
+				},
+				Spec: v1beta1.GatewaySpec{
+					GatewayClassName: gcName,
+					Listeners: []v1beta1.Listener{
+						{
+							Name:     "listener-80-1",
+							Hostname: helpers.GetPointer[v1beta1.Hostname]("foo.example.com"),
+							Port:     80,
+							Protocol: v1beta1.HTTPProtocolType,
+						},
+					},
+				},
+			}
+
+			gwInvalid = gw.DeepCopy()
+			// cannot have hostname for TCP protocol
+			gwInvalid.Spec.Listeners[0].Protocol = v1beta1.TCPProtocolType
+
+			hr = &v1beta1.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: hrNsName.Namespace,
+					Name:      hrNsName.Name,
+				},
+				Spec: v1beta1.HTTPRouteSpec{
+					CommonRouteSpec: v1beta1.CommonRouteSpec{
+						ParentRefs: []v1beta1.ParentReference{
+							{
+								Namespace: (*v1beta1.Namespace)(&gw.Namespace),
+								Name:      v1beta1.ObjectName(gw.Name),
+								SectionName: (*v1beta1.SectionName)(
+									helpers.GetStringPointer("listener-80-1"),
+								),
+							},
+						},
+					},
+					Hostnames: []v1beta1.Hostname{
+						"foo.example.com",
+					},
+					Rules: []v1beta1.HTTPRouteRule{
+						{
+							Matches: []v1beta1.HTTPRouteMatch{
+								{
+									Path: &v1beta1.HTTPPathMatch{
+										Type:  (*v1beta1.PathMatchType)(helpers.GetStringPointer(string(v1beta1.PathMatchPathPrefix))),
+										Value: helpers.GetStringPointer("/"),
+									},
+								},
+							},
+						},
+					},
+				},
+			}
+
+			hrInvalid = hr.DeepCopy()
+			hrInvalid.Spec.Rules[0].Matches[0].Path.Type = nil // cannot be nil
+		})
+
+		assertHREvent := func() {
+			e := <-fakeEventRecorder.Events
+			ExpectWithOffset(1, e).To(ContainSubstring("Rejected"))
+			ExpectWithOffset(1, e).To(ContainSubstring("spec.rules[0].matches[0].path.type"))
+		}
+
+		assertGwEvent := func() {
+			e := <-fakeEventRecorder.Events
+			ExpectWithOffset(1, e).To(ContainSubstring("Rejected"))
+			ExpectWithOffset(1, e).To(ContainSubstring("spec.listeners[0].hostname"))
+		}
+
+		It("should process GatewayClass", func() {
+			processor.CaptureUpsertChange(gc)
+
+			expectedConf := dataplane.Configuration{}
+			expectedStatuses := state.Statuses{
+				GatewayClassStatus: &state.GatewayClassStatus{
+					ObservedGeneration: gc.Generation,
+					Conditions:         conditions.NewDefaultGatewayClassConditions(),
+				},
+				IgnoredGatewayStatuses: map[types.NamespacedName]state.IgnoredGatewayStatus{},
+				HTTPRouteStatuses:      map[types.NamespacedName]state.HTTPRouteStatus{},
+			}
+
+			changed, conf, statuses := processor.Process(context.TODO())
+			Expect(changed).To(BeTrue())
+			Expect(helpers.Diff(expectedConf, conf)).To(BeEmpty())
+			assertStatuses(expectedStatuses, statuses)
+			Expect(fakeEventRecorder.Events).To(HaveLen(0))
+		})
+
+		When("resources are invalid", func() {
+			It("should not process them", func() {
+				processor.CaptureUpsertChange(gwInvalid)
+				processor.CaptureUpsertChange(hrInvalid)
+
+				expectedConf := dataplane.Configuration{}
+				expectedStatuses := state.Statuses{}
+
+				changed, conf, statuses := processor.Process(context.TODO())
+
+				Expect(changed).To(BeFalse())
+				Expect(helpers.Diff(expectedConf, conf)).To(BeEmpty())
+				assertStatuses(expectedStatuses, statuses)
+
+				Expect(fakeEventRecorder.Events).To(HaveLen(2))
+				assertGwEvent()
+				assertHREvent()
+			})
+		})
+
+		When("resources are valid", func() {
+			It("should process them", func() {
+				processor.CaptureUpsertChange(gw)
+				processor.CaptureUpsertChange(hr)
+
+				bg := graph.BackendGroup{
+					Source:  types.NamespacedName{Namespace: hr.Namespace, Name: hr.Name},
+					RuleIdx: 0,
+				}
+
+				expectedConf := dataplane.Configuration{
+					HTTPServers: []dataplane.VirtualServer{
+						{
+							IsDefault: true,
+						},
+						{
+							Hostname: "foo.example.com",
+							PathRules: []dataplane.PathRule{
+								{
+									Path: "/",
+									MatchRules: []dataplane.MatchRule{
+										{
+											MatchIdx:     0,
+											RuleIdx:      0,
+											BackendGroup: bg,
+											Source:       hr,
+										},
+									},
+								},
+							},
+						},
+					},
+					SSLServers:    []dataplane.VirtualServer{},
+					BackendGroups: []graph.BackendGroup{bg},
+				}
+				expectedStatuses := state.Statuses{
+					GatewayClassStatus: &state.GatewayClassStatus{
+						ObservedGeneration: gc.Generation,
+						Conditions:         conditions.NewDefaultGatewayClassConditions(),
+					},
+					GatewayStatus: &state.GatewayStatus{
+						NsName:             gwNsName,
+						ObservedGeneration: gw.Generation,
+						ListenerStatuses: map[string]state.ListenerStatus{
+							"listener-80-1": {
+								AttachedRoutes: 1,
+								Conditions:     conditions.NewDefaultListenerConditions(),
+							},
+						},
+					},
+					IgnoredGatewayStatuses: map[types.NamespacedName]state.IgnoredGatewayStatus{},
+					HTTPRouteStatuses: map[types.NamespacedName]state.HTTPRouteStatus{
+						hrNsName: {
+							ObservedGeneration: hr.Generation,
+							ParentStatuses: map[string]state.ParentStatus{
+								"listener-80-1": {
+									Conditions: conditions.NewDefaultRouteConditions(),
+								},
+							},
+						},
+					},
+				}
+
+				changed, conf, statuses := processor.Process(context.TODO())
+
+				Expect(changed).To(BeTrue())
+				Expect(helpers.Diff(expectedConf, conf)).To(BeEmpty())
+				assertStatuses(expectedStatuses, statuses)
+
+				Expect(fakeEventRecorder.Events).To(HaveLen(0))
+			})
+		})
+
+		When("a new version of HTTPRoute is invalid", func() {
+			It("it should delete the configuration for the old one and not process the new one", func() {
+				processor.CaptureUpsertChange(hrInvalid)
+
+				expectedConf := dataplane.Configuration{
+					HTTPServers: []dataplane.VirtualServer{
+						{
+							IsDefault: true,
+						},
+					},
+					SSLServers: []dataplane.VirtualServer{},
+				}
+				expectedStatuses := state.Statuses{
+					GatewayClassStatus: &state.GatewayClassStatus{
+						ObservedGeneration: gc.Generation,
+						Conditions:         conditions.NewDefaultGatewayClassConditions(),
+					},
+					GatewayStatus: &state.GatewayStatus{
+						NsName:             gwNsName,
+						ObservedGeneration: gw.Generation,
+						ListenerStatuses: map[string]state.ListenerStatus{
+							"listener-80-1": {
+								AttachedRoutes: 0,
+								Conditions:     conditions.NewDefaultListenerConditions(),
+							},
+						},
+					},
+					IgnoredGatewayStatuses: map[types.NamespacedName]state.IgnoredGatewayStatus{},
+					HTTPRouteStatuses:      map[types.NamespacedName]state.HTTPRouteStatus{},
+				}
+
+				changed, conf, statuses := processor.Process(context.TODO())
+
+				Expect(changed).To(BeTrue())
+				Expect(helpers.Diff(expectedConf, conf)).To(BeEmpty())
+				assertStatuses(expectedStatuses, statuses)
+
+				Expect(fakeEventRecorder.Events).To(HaveLen(1))
+				assertHREvent()
+			})
+		})
+
+		When("a new version of Gateway is invalid", func() {
+			It("it should delete the configuration for the old one and not process the new one", func() {
+				processor.CaptureUpsertChange(gwInvalid)
+
+				expectedConf := dataplane.Configuration{}
+				expectedStatuses := state.Statuses{
+					GatewayClassStatus: &state.GatewayClassStatus{
+						ObservedGeneration: gc.Generation,
+						Conditions:         conditions.NewDefaultGatewayClassConditions(),
+					},
+					IgnoredGatewayStatuses: map[types.NamespacedName]state.IgnoredGatewayStatus{},
+					HTTPRouteStatuses:      map[types.NamespacedName]state.HTTPRouteStatus{},
+				}
+
+				changed, conf, statuses := processor.Process(context.TODO())
+
+				Expect(changed).To(BeTrue())
+				Expect(helpers.Diff(expectedConf, conf)).To(BeEmpty())
+				assertStatuses(expectedStatuses, statuses)
+
+				Expect(fakeEventRecorder.Events).To(HaveLen(1))
+				assertGwEvent()
+			})
+		})
+	})
+
 	Describe("Edge cases with panic", func() {
 		var (
 			processor                state.ChangeProcessor
@@ -1893,6 +2204,7 @@ var _ = Describe("ChangeProcessor", func() {
 				SecretMemoryManager:  fakeSecretMemoryMgr,
 				RelationshipCapturer: fakeRelationshipCapturer,
 				Validators:           createAlwaysValidValidators(),
+				Scheme:               createScheme(),
 			})
 		})
 
@@ -1908,8 +2220,8 @@ var _ = Describe("ChangeProcessor", func() {
 				&v1alpha2.TCPRoute{ObjectMeta: metav1.ObjectMeta{Namespace: "test", Name: "tcp"}},
 			),
 			Entry(
-				"a wrong gatewayclass",
-				&v1beta1.GatewayClass{ObjectMeta: metav1.ObjectMeta{Name: "wrong-class"}},
+				"nil resource",
+				nil,
 			),
 		)
 
@@ -1927,9 +2239,9 @@ var _ = Describe("ChangeProcessor", func() {
 				types.NamespacedName{Namespace: "test", Name: "tcp"},
 			),
 			Entry(
-				"a wrong gatewayclass",
-				&v1beta1.GatewayClass{},
-				types.NamespacedName{Name: "wrong-class"},
+				"nil resource type",
+				nil,
+				types.NamespacedName{Namespace: "test", Name: "resource"},
 			),
 		)
 	})
