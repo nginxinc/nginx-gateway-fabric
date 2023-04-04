@@ -21,7 +21,7 @@ const channelLength = 25
 // Commands can be sent to the CommandChannelServer by placing them on the toClient channel,
 // which is accessible through the In() method.
 //
-// To use the BidirectionalChannel you must call the Run() method to kick of the receive and send loops.
+// To use the BidirectionalChannel you must call the Run() method to kick off the receive and send loops.
 type BidirectionalChannel struct {
 	channel    proto.Commander_CommandChannelServer
 	fromClient chan *proto.Command
@@ -113,7 +113,7 @@ func (bc *BidirectionalChannel) send(ctx context.Context) error {
 			if cmd == nil {
 				panic("outgoing command is nil")
 			}
-			bc.logger.Info("Sending command", "command", cmd)
+			bc.logger.Info("Sending command", "command type", fmt.Sprintf("%T", cmd.Data))
 			if err := bc.channel.Send(cmd); err != nil {
 				return fmt.Errorf("error sending command to CommandChannel: %w", err)
 			}
