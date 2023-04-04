@@ -240,38 +240,36 @@ type upsertValidatorFunc func(obj client.Object) error
 // validatingUpsertUpdater is an Updater that validates an object before upserting it.
 // If the validation fails, it deletes the object and records an event with the validation error.
 type validatingUpsertUpdater struct {
-	updater          Updater
-	eventRecorder    record.EventRecorder
-	upsertValidators []upsertValidatorFunc
+	updater       Updater
+	eventRecorder record.EventRecorder
+	validator     upsertValidatorFunc
 }
 
 func newValidatingUpsertUpdater(
 	updater Updater,
 	eventRecorder record.EventRecorder,
-	upsertValidators []upsertValidatorFunc,
+	validator upsertValidatorFunc,
 ) *validatingUpsertUpdater {
 	return &validatingUpsertUpdater{
-		updater:          updater,
-		eventRecorder:    eventRecorder,
-		upsertValidators: upsertValidators,
+		updater:       updater,
+		eventRecorder: eventRecorder,
+		validator:     validator,
 	}
 }
 
 func (u *validatingUpsertUpdater) Upsert(obj client.Object) {
-	for _, validator := range u.upsertValidators {
-		if err := validator(obj); err != nil {
-			u.updater.Delete(obj, client.ObjectKeyFromObject(obj))
+	if err := u.validator(obj); err != nil {
+		u.updater.Delete(obj, client.ObjectKeyFromObject(obj))
 
-			u.eventRecorder.Eventf(
-				obj,
-				apiv1.EventTypeWarning,
-				"Rejected",
-				"%s; NKG will delete any existing NGINX configuration that corresponds to the resource",
-				err.Error(),
-			)
+		u.eventRecorder.Eventf(
+			obj,
+			apiv1.EventTypeWarning,
+			"Rejected",
+			"%s; NKG will delete any existing NGINX configuration that corresponds to the resource",
+			err.Error(),
+		)
 
-			return
-		}
+		return
 	}
 
 	u.updater.Upsert(obj)
