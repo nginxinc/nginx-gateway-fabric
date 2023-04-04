@@ -16,7 +16,6 @@ import (
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	"sigs.k8s.io/gateway-api/apis/v1beta1/validation"
 
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/agent"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/config"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/events"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/grpc"
@@ -24,9 +23,8 @@ import (
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/manager/filter"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/manager/index"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/manager/predicate"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/agent"
 	ngxcfg "github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/config"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/file"
-	ngxruntime "github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/runtime"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/relationship"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/resolver"
@@ -136,9 +134,6 @@ func Start(cfg config.Config) error {
 		Logger:               cfg.Logger.WithName("changeProcessor"),
 	})
 
-	configGenerator := ngxcfg.NewGeneratorImpl()
-	nginxFileMgr := file.NewManagerImpl()
-	nginxRuntimeMgr := ngxruntime.NewManagerImpl()
 	statusUpdater := status.NewUpdater(status.UpdaterConfig{
 		GatewayCtlrName:  cfg.GatewayCtlrName,
 		GatewayClassName: cfg.GatewayClassName,
@@ -150,15 +145,16 @@ func Start(cfg config.Config) error {
 		Clock:  status.NewRealClock(),
 	})
 
+	nginxAgentConfigBuilder := agent.NewNginxConfigBuilder(ngxcfg.NewGeneratorImpl(), secretMemoryMgr)
+
+	agentConfigStore := agent.NewConfigStore(nginxAgentConfigBuilder, cfg.Logger.WithName("agentConfigStore"))
+
 	eventHandler := events.NewEventHandlerImpl(events.EventHandlerConfig{
-		Processor:           processor,
-		SecretStore:         secretStore,
-		SecretMemoryManager: secretMemoryMgr,
-		Generator:           configGenerator,
-		Logger:              cfg.Logger.WithName("eventHandler"),
-		NginxFileMgr:        nginxFileMgr,
-		NginxRuntimeMgr:     nginxRuntimeMgr,
-		StatusUpdater:       statusUpdater,
+		Processor:     processor,
+		SecretStore:   secretStore,
+		ConfigStorer:  agentConfigStore,
+		Logger:        cfg.Logger.WithName("eventHandler"),
+		StatusUpdater: statusUpdater,
 	})
 
 	firstBatchPreparer := events.NewFirstEventBatchPreparerImpl(
@@ -190,7 +186,7 @@ func Start(cfg config.Config) error {
 		cfg.Logger.WithName("grpcServer"),
 		grpcAddress,
 		commander.NewCommander(cfg.Logger.WithName("commanderService"),
-			agent.NewPool(cfg.Logger.WithName("agentPool")),
+			agentConfigStore,
 		),
 	)
 	if err != nil {

@@ -42,6 +42,12 @@ type Secret struct {
 	Valid bool
 }
 
+// File represents a secret as a file. Contains the file name and the file contents.
+type File struct {
+	Name     string
+	Contents []byte
+}
+
 func NewSecretStore() *SecretStoreImpl {
 	return &SecretStoreImpl{
 		secrets: make(map[types.NamespacedName]*Secret),
@@ -74,6 +80,8 @@ type SecretDiskMemoryManager interface {
 	Request(nsname types.NamespacedName) (string, error)
 	// WriteAllRequestedSecrets writes all requested secrets to disk.
 	WriteAllRequestedSecrets() error
+	// GetAllRequestedSecrets returns all request secrets as Files.
+	GetAllRequestedSecrets() []File
 }
 
 // FileManager is an interface that exposes File I/O operations.
@@ -201,6 +209,18 @@ func (s *SecretDiskMemoryManagerImpl) WriteAllRequestedSecrets() error {
 	s.requestedSecrets = make(map[types.NamespacedName]requestedSecret)
 
 	return nil
+}
+
+func (s *SecretDiskMemoryManagerImpl) GetAllRequestedSecrets() []File {
+	files := make([]File, 0, len(s.requestedSecrets))
+	for _, secret := range s.requestedSecrets {
+		files = append(files, File{
+			Name:     secret.path,
+			Contents: generateCertAndKeyFileContent(secret.secret),
+		})
+	}
+
+	return files
 }
 
 func isSecretValid(secret *apiv1.Secret) bool {

@@ -9,9 +9,6 @@ import (
 	discoveryV1 "k8s.io/api/discovery/v1"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/config"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/file"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/runtime"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/dataplane"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/secrets"
@@ -27,20 +24,19 @@ type EventHandler interface {
 	HandleEventBatch(ctx context.Context, batch EventBatch)
 }
 
+// ConfigStorer stores dataplane configuration.
+type ConfigStorer interface {
+	Store(conf dataplane.Configuration) error
+}
+
 // EventHandlerConfig holds configuration parameters for EventHandlerImpl.
 type EventHandlerConfig struct {
 	// Processor is the state ChangeProcessor.
 	Processor state.ChangeProcessor
 	// SecretStore is the state SecretStore.
 	SecretStore secrets.SecretStore
-	// SecretMemoryManager is the state SecretMemoryManager.
-	SecretMemoryManager secrets.SecretDiskMemoryManager
-	// Generator is the nginx config Generator.
-	Generator config.Generator
-	// NginxFileMgr is the file Manager for nginx.
-	NginxFileMgr file.Manager
-	// NginxRuntimeMgr manages nginx runtime.
-	NginxRuntimeMgr runtime.Manager
+	// ConfigStorer stores dataplane configuration.
+	ConfigStorer ConfigStorer
 	// StatusUpdater updates statuses on Kubernetes resources.
 	StatusUpdater status.Updater
 	// Logger is the logger to be used by the EventHandler.
@@ -53,6 +49,8 @@ type EventHandlerConfig struct {
 // (2) Keeping the statuses of the Gateway API resources updated.
 type EventHandlerImpl struct {
 	cfg EventHandlerConfig
+	// changeCounter keeps track of the number of dataplane configuration changes (used as config generation).
+	changeCounter int
 }
 
 // NewEventHandlerImpl creates a new EventHandlerImpl.
@@ -80,36 +78,16 @@ func (h *EventHandlerImpl) HandleEventBatch(ctx context.Context, batch EventBatc
 		return
 	}
 
-	err := h.updateNginx(ctx, conf)
+	h.changeCounter++
+	conf.Generation = h.changeCounter
+
+	err := h.cfg.ConfigStorer.Store(conf)
 	if err != nil {
-		h.cfg.Logger.Error(err, "Failed to update NGINX configuration")
-	} else {
-		h.cfg.Logger.Info("NGINX configuration was successfully updated")
+		h.cfg.Logger.Error(err, "error storing dataplane configuration")
+		// FIXME(kate-osborn): Update status to indicate that the gateway is not accepted or programmed.
 	}
 
 	h.cfg.StatusUpdater.Update(ctx, statuses)
-}
-
-func (h *EventHandlerImpl) updateNginx(ctx context.Context, conf dataplane.Configuration) error {
-	// Write all secrets (nuke and pave).
-	// This will remove all secrets in the secrets directory before writing the requested secrets.
-	// FIXME(kate-osborn): We may want to rethink this approach in the future and write and remove secrets individually.
-	err := h.cfg.SecretMemoryManager.WriteAllRequestedSecrets()
-	if err != nil {
-		return err
-	}
-
-	cfg := h.cfg.Generator.Generate(conf)
-
-	// For now, we keep all http servers and upstreams in one config file.
-	// We might rethink that. For example, we can write each server to its file
-	// or group servers in some way.
-	err = h.cfg.NginxFileMgr.WriteHTTPConfig("http", cfg)
-	if err != nil {
-		return err
-	}
-
-	return h.cfg.NginxRuntimeMgr.Reload(ctx)
 }
 
 func (h *EventHandlerImpl) propagateUpsert(e *UpsertEvent) {
