@@ -13,8 +13,7 @@ There are several reasons why NKG validates Gateway API resources:
 Ultimately, the goal is to ensure that NGINX continues to handle traffic even if invalid Gateway API resources were
 created.
 
-A Gateway API resource (a new resource or an update for the existing one) is validated by the following steps, some of
-which are provided by the Gateway API, while others are done by NKG:
+A Gateway API resource (a new resource or an update for the existing one) is validated by the following steps:
 
 1. OpenAPI schema validation by the Kubernetes API server.
 2. Webhook validation by the Gateway API webhook.
