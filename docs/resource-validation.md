@@ -6,9 +6,9 @@ This document describes how NGINX Kubernetes Gateway (NKG) validates Gateway API
 
 There are several reasons why NKG validates Gateway API resources:
 
-- *Robustness*, to gracefully handle invalid resources.
-- *Security*, to prevent malicious input from propagating to the NGINX configuration.
-- *Correctness*, to conform to the Gateway API specification for handling invalid resources.
+- *Robustness*: to gracefully handle invalid resources.
+- *Security*: to prevent malicious input from propagating to the NGINX configuration.
+- *Correctness*: to conform to the Gateway API specification for handling invalid resources.
 
 Ultimately, the goal is to ensure that NGINX continues to handle traffic even if invalid Gateway API resources were
 created.
