@@ -2,13 +2,13 @@ package config
 
 import (
 	"fmt"
-	gotemplate "text/template"
+	"text/template"
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/config/http"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/dataplane"
 )
 
-var upstreamsTemplate = gotemplate.Must(gotemplate.New("upstreams").Parse(upstreamsTemplateText))
+var upstreamsTemplate = template.Must(template.New("upstreams").Parse(upstreamsTemplateText))
 
 const (
 	// nginx502Server is used as a backend for services that cannot be resolved (have no IP address).

@@ -25,6 +25,8 @@ server {
 	if ($ssl_server_name != $host) {
 		return 421;
 	}
+        {{ else }}
+    listen 80;
 		{{ end }}
 
 	server_name {{ $s.ServerName }};
@@ -53,17 +55,4 @@ server {
 }
 	{{ end }}
 {{ end }}
-server {
-    listen unix:/var/lib/nginx/nginx-502-server.sock;
-    access_log off;
-
-    return 502;
-}
-
-server {
-    listen unix:/var/lib/nginx/nginx-500-server.sock;
-    access_log off;
-    
-    return 500;
-}
 `

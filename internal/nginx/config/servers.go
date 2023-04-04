@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
-	gotemplate "text/template"
+	"text/template"
 
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
@@ -12,7 +12,7 @@ import (
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/dataplane"
 )
 
-var serversTemplate = gotemplate.Must(gotemplate.New("servers").Parse(serversTemplateText))
+var serversTemplate = template.Must(template.New("servers").Parse(serversTemplateText))
 
 const rootPath = "/"
 
