@@ -102,12 +102,13 @@ Events:
 
 This step catches the following cases of invalid values:
 
-* Values valid from the Gateway API perspective but not supported by NKG yet. For example, a feature in an
+* Valid values from the Gateway API perspective but not supported by NKG yet. For example, a feature in an
   HTTPRoute routing rule. Note: for the list of supported features,
   see [Gateway API Compatibility](gateway-api-compatibility.md) doc.
-* Some values in Gateway API resources which are valid by the CRD and webhook validation, but invalid for NGINX. Such
-  values will cause NGINX to fail to reload or operate erroneously.
-* Invalid values in Gateway API resources that were not rejected because Step 1 was bypassed.
+* Valid values from the Gateway API perspective, but invalid for NGINX, because NGINX has stricter validation
+  requirements for certain fields. Such values will cause NGINX to fail to reload or operate erroneously.
+* Invalid values (both from the Gateway API and NGINX perspectives) that were not rejected because Step 1 was bypassed.
+  Similarly to the previous case, such values will cause NGINX to fail to reload or operate erroneously.
 * Malicious values that inject unrestricted NGINX config into the NGINX configuration (similar to an SQL injection
   attack).
 
