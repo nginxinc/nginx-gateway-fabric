@@ -3,12 +3,15 @@ package commander
 import (
 	"context"
 	"errors"
+	"fmt"
+	"sync"
 
 	"github.com/go-logr/logr"
 	"github.com/nginx/agent/sdk/v2/proto"
-	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
-	"google.golang.org/grpc/status"
+
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/agent"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/observer"
 )
 
 // nolint:lll
@@ -17,17 +20,26 @@ import (
 
 const serverUUIDKey = "uuid"
 
+type observedNginxConfig interface {
+	observer.Subject
+	GetLatestConfig() *agent.NginxConfig
+}
+
 // Commander implements the proto.CommanderServer interface.
 type Commander struct {
-	agentMgr AgentManager
-	logger   logr.Logger
+	connections    map[string]*connection
+	observedConfig observedNginxConfig
+	logger         logr.Logger
+
+	connLock sync.Mutex
 }
 
 // NewCommander returns a new instance of the Commander.
-func NewCommander(logger logr.Logger, agentMgr AgentManager) *Commander {
+func NewCommander(logger logr.Logger, observedConfig observedNginxConfig) *Commander {
 	return &Commander{
-		logger:   logger,
-		agentMgr: agentMgr,
+		logger:         logger,
+		connections:    make(map[string]*connection),
+		observedConfig: observedConfig,
 	}
 }
 
@@ -48,36 +60,102 @@ func (c *Commander) CommandChannel(server proto.Commander_CommandChannelServer) 
 		return err
 	}
 
-	c.logger.Info("New agent connection", "id", id)
-
 	defer func() {
-		c.logger.Info("Removing agent from manager")
-		c.agentMgr.RemoveAgent(id)
+		c.removeConnection(id)
 	}()
 
-	agentLogger := c.logger.WithValues("id", id)
+	idLogger := c.logger.WithValues("id", id)
 
-	agentConn := newConnection(
+	conn := newConnection(
 		id,
-		agentLogger.WithName("connection"),
-		NewBidirectionalChannel(server, agentLogger.WithName("channel")),
+		idLogger.WithName("connection"),
+		NewBidirectionalChannel(server, idLogger.WithName("channel")),
+		c.observedConfig,
 	)
 
-	c.logger.Info("Adding agent to manager")
-	c.agentMgr.AddAgent(agentConn)
+	c.addConnection(conn)
 
-	return agentConn.run(server.Context())
+	return conn.run(server.Context())
 }
 
-// Download will be implemented in a future PR.
-func (c *Commander) Download(_ *proto.DownloadRequest, _ proto.Commander_DownloadServer) error {
-	return nil
+// Download implements the Download method of the Commander gRPC service. An agent invokes this method to download the
+// latest version of the NGINX configuration.
+func (c *Commander) Download(request *proto.DownloadRequest, server proto.Commander_DownloadServer) error {
+	c.logger.Info("Download requested", "message ID", request.GetMeta().GetMessageId())
+
+	id, err := getUUIDFromContext(server.Context())
+	if err != nil {
+		c.logger.Error(err, "failed download")
+		return err
+	}
+
+	conn := c.getConnection(id)
+	if conn == nil {
+		err := fmt.Errorf("connection with id: %s not found", id)
+		c.logger.Error(err, "failed download")
+		return err
+	}
+
+	// TODO: can there be a race condition here?
+	if conn.State() != StateRegistered {
+		err := fmt.Errorf("connection with id: %s is not registered", id)
+		c.logger.Error(err, "failed upload")
+		return err
+	}
+
+	return conn.sendConfig(request, server)
 }
 
-func (c *Commander) Upload(_ proto.Commander_UploadServer) error {
+// Upload implements the Upload method of the Commander gRPC service.
+// FIXME(kate-osborn): NKG doesn't need this functionality and ideally we wouldn't have to implement and maintain this.
+// Figure out how to remove this without causing errors in the agent.
+func (c *Commander) Upload(server proto.Commander_UploadServer) error {
 	c.logger.Info("Commander Upload requested")
 
-	return status.Error(codes.Unimplemented, "upload method is not implemented")
+	id, err := getUUIDFromContext(server.Context())
+	if err != nil {
+		c.logger.Error(err, "failed upload; cannot get the UUID of the conn")
+		return err
+	}
+
+	conn := c.getConnection(id)
+	if conn == nil {
+		err := fmt.Errorf("connection with id: %s not found", id)
+		c.logger.Error(err, "failed upload")
+		return err
+	}
+
+	// TODO: can there be a race condition here?
+	if conn.State() != StateRegistered {
+		err := fmt.Errorf("connection with id: %s is not registered", id)
+		c.logger.Error(err, "failed upload")
+		return err
+	}
+
+	return conn.receiveFromUploadServer(server)
+}
+
+func (c *Commander) removeConnection(id string) {
+	c.connLock.Lock()
+	defer c.connLock.Unlock()
+
+	delete(c.connections, id)
+	c.logger.Info("removed connection", "id", id, "total connections", len(c.connections))
+}
+
+func (c *Commander) addConnection(conn *connection) {
+	c.connLock.Lock()
+	defer c.connLock.Unlock()
+
+	c.connections[conn.id] = conn
+	c.logger.Info("added connection", "id", conn.id, "total connections", len(c.connections))
+}
+
+func (c *Commander) getConnection(id string) *connection {
+	c.connLock.Lock()
+	defer c.connLock.Unlock()
+
+	return c.connections[id]
 }
 
 func getUUIDFromContext(ctx context.Context) (string, error) {
