@@ -68,8 +68,8 @@ you create a Gateway resource with a TCP listener that configures a hostname, th
 following error:
 
 ```
-kubectl apply -f gateway.yaml 
-Error from server: error when creating "gateway.yaml": admission webhook "validate.gateway.networking.k8s.io" denied the request: spec.listeners[1].hostname: Forbidden: should be empty for protocol TCP
+kubectl apply -f prod-gateway.yaml 
+Error from server: error when creating "prod-gateway.yaml": admission webhook "validate.gateway.networking.k8s.io" denied the request: spec.listeners[1].hostname: Forbidden: should be empty for protocol TCP
 ```
 
 > Bypassing this validation step is possible if the webhook is not running in the cluster.
@@ -85,7 +85,7 @@ Below is an example of how NKG rejects an invalid resource (a Gateway resource w
 hostname) with a Kubernetes event:
 
 ```
-kubectl describe gateway gateway
+kubectl describe gateway prod-gateway
 . . .
 Events:
   Type     Reason    Age   From                            Message
@@ -128,7 +128,7 @@ Status:
     Parent Ref:
       Group:         gateway.networking.k8s.io
       Kind:          Gateway
-      Name:          gateway
+      Name:          prod-gateway
       Namespace:     default
       Section Name:  http
 ```
