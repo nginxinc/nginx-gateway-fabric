@@ -9,6 +9,16 @@ import (
 )
 
 type FakeSecretDiskMemoryManager struct {
+	GetAllRequestedSecretsStub        func() []secrets.File
+	getAllRequestedSecretsMutex       sync.RWMutex
+	getAllRequestedSecretsArgsForCall []struct {
+	}
+	getAllRequestedSecretsReturns struct {
+		result1 []secrets.File
+	}
+	getAllRequestedSecretsReturnsOnCall map[int]struct {
+		result1 []secrets.File
+	}
 	RequestStub        func(types.NamespacedName) (string, error)
 	requestMutex       sync.RWMutex
 	requestArgsForCall []struct {
@@ -34,6 +44,59 @@ type FakeSecretDiskMemoryManager struct {
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
+}
+
+func (fake *FakeSecretDiskMemoryManager) GetAllRequestedSecrets() []secrets.File {
+	fake.getAllRequestedSecretsMutex.Lock()
+	ret, specificReturn := fake.getAllRequestedSecretsReturnsOnCall[len(fake.getAllRequestedSecretsArgsForCall)]
+	fake.getAllRequestedSecretsArgsForCall = append(fake.getAllRequestedSecretsArgsForCall, struct {
+	}{})
+	stub := fake.GetAllRequestedSecretsStub
+	fakeReturns := fake.getAllRequestedSecretsReturns
+	fake.recordInvocation("GetAllRequestedSecrets", []interface{}{})
+	fake.getAllRequestedSecretsMutex.Unlock()
+	if stub != nil {
+		return stub()
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fakeReturns.result1
+}
+
+func (fake *FakeSecretDiskMemoryManager) GetAllRequestedSecretsCallCount() int {
+	fake.getAllRequestedSecretsMutex.RLock()
+	defer fake.getAllRequestedSecretsMutex.RUnlock()
+	return len(fake.getAllRequestedSecretsArgsForCall)
+}
+
+func (fake *FakeSecretDiskMemoryManager) GetAllRequestedSecretsCalls(stub func() []secrets.File) {
+	fake.getAllRequestedSecretsMutex.Lock()
+	defer fake.getAllRequestedSecretsMutex.Unlock()
+	fake.GetAllRequestedSecretsStub = stub
+}
+
+func (fake *FakeSecretDiskMemoryManager) GetAllRequestedSecretsReturns(result1 []secrets.File) {
+	fake.getAllRequestedSecretsMutex.Lock()
+	defer fake.getAllRequestedSecretsMutex.Unlock()
+	fake.GetAllRequestedSecretsStub = nil
+	fake.getAllRequestedSecretsReturns = struct {
+		result1 []secrets.File
+	}{result1}
+}
+
+func (fake *FakeSecretDiskMemoryManager) GetAllRequestedSecretsReturnsOnCall(i int, result1 []secrets.File) {
+	fake.getAllRequestedSecretsMutex.Lock()
+	defer fake.getAllRequestedSecretsMutex.Unlock()
+	fake.GetAllRequestedSecretsStub = nil
+	if fake.getAllRequestedSecretsReturnsOnCall == nil {
+		fake.getAllRequestedSecretsReturnsOnCall = make(map[int]struct {
+			result1 []secrets.File
+		})
+	}
+	fake.getAllRequestedSecretsReturnsOnCall[i] = struct {
+		result1 []secrets.File
+	}{result1}
 }
 
 func (fake *FakeSecretDiskMemoryManager) Request(arg1 types.NamespacedName) (string, error) {
@@ -156,6 +219,8 @@ func (fake *FakeSecretDiskMemoryManager) WriteAllRequestedSecretsReturnsOnCall(i
 func (fake *FakeSecretDiskMemoryManager) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
+	fake.getAllRequestedSecretsMutex.RLock()
+	defer fake.getAllRequestedSecretsMutex.RUnlock()
 	fake.requestMutex.RLock()
 	defer fake.requestMutex.RUnlock()
 	fake.writeAllRequestedSecretsMutex.RLock()

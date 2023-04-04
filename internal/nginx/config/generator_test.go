@@ -11,8 +11,9 @@ import (
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/graph"
 )
 
-// Note: this test only verifies that GenerateHTTPConf() returns a byte array with upstream, server, and split_client blocks.
-// It does not test the correctness of those blocks. That functionality is covered by other tests in this package.
+// Note: this test only verifies that GenerateHTTPConf() returns a byte array with upstream, server,
+// and split_client blocks. It does not test the correctness of those blocks.
+// That functionality is covered by other tests in this package.
 func TestGenerateHTTPConf(t *testing.T) {
 	bg := graph.BackendGroup{
 		Source:  types.NamespacedName{Namespace: "test", Name: "hr"},

@@ -69,7 +69,6 @@ type connection struct {
 	pendingConfig         *agent.NginxConfig
 	logger                logr.Logger
 	id                    string
-	podName               string
 	nginxID               string
 	systemID              string
 	state                 State
