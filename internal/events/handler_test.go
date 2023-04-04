@@ -40,21 +40,20 @@ func (r *unsupportedResource) DeepCopyObject() runtime.Object {
 
 var _ = Describe("EventHandler", func() {
 	var (
-		handler                 *events.EventHandlerImpl
-		fakeProcessor           *statefakes.FakeChangeProcessor
-		fakeSecretStore         *secretsfakes.FakeSecretStore
-		fakeSecretMemoryManager *secretsfakes.FakeSecretDiskMemoryManager
-		fakeGenerator           *configfakes.FakeGenerator
-		fakeNginxFileMgr        *filefakes.FakeManager
-		fakeNginxRuntimeMgr     *runtimefakes.FakeManager
-		fakeStatusUpdater       *statusfakes.FakeUpdater
+		handler             *events.EventHandlerImpl
+		fakeProcessor       *statefakes.FakeChangeProcessor
+		fakeSecretStore     *secretsfakes.FakeSecretStore
+		fakeGenerator       *configfakes.FakeGenerator
+		fakeNginxFileMgr    *filefakes.FakeManager
+		fakeNginxRuntimeMgr *runtimefakes.FakeManager
+		fakeStatusUpdater   *statusfakes.FakeUpdater
 	)
 
 	expectReconfig := func(expectedConf dataplane.Configuration, expectedCfg []byte, expectedStatuses state.Statuses) {
 		Expect(fakeProcessor.ProcessCallCount()).Should(Equal(1))
 
-		Expect(fakeGenerator.GenerateCallCount()).Should(Equal(1))
-		Expect(fakeGenerator.GenerateArgsForCall(0)).Should(Equal(expectedConf))
+		Expect(fakeGenerator.GenerateHTTPConfCallCount()).Should(Equal(1))
+		Expect(fakeGenerator.GenerateHTTPConfArgsForCall(0)).Should(Equal(expectedConf))
 
 		Expect(fakeNginxFileMgr.WriteHTTPConfigCallCount()).Should(Equal(1))
 		name, cfg := fakeNginxFileMgr.WriteHTTPConfigArgsForCall(0)
@@ -70,7 +69,6 @@ var _ = Describe("EventHandler", func() {
 
 	BeforeEach(func() {
 		fakeProcessor = &statefakes.FakeChangeProcessor{}
-		fakeSecretMemoryManager = &secretsfakes.FakeSecretDiskMemoryManager{}
 		fakeSecretStore = &secretsfakes.FakeSecretStore{}
 		fakeGenerator = &configfakes.FakeGenerator{}
 		fakeNginxFileMgr = &filefakes.FakeManager{}
@@ -78,14 +76,10 @@ var _ = Describe("EventHandler", func() {
 		fakeStatusUpdater = &statusfakes.FakeUpdater{}
 
 		handler = events.NewEventHandlerImpl(events.EventHandlerConfig{
-			Processor:           fakeProcessor,
-			SecretStore:         fakeSecretStore,
-			SecretMemoryManager: fakeSecretMemoryManager,
-			Generator:           fakeGenerator,
-			Logger:              zap.New(),
-			NginxFileMgr:        fakeNginxFileMgr,
-			NginxRuntimeMgr:     fakeNginxRuntimeMgr,
-			StatusUpdater:       fakeStatusUpdater,
+			Processor:     fakeProcessor,
+			SecretStore:   fakeSecretStore,
+			Logger:        zap.New(),
+			StatusUpdater: fakeStatusUpdater,
 		})
 	})
 
@@ -99,7 +93,7 @@ var _ = Describe("EventHandler", func() {
 				fakeProcessor.ProcessReturns(changed, fakeConf, fakeStatuses)
 
 				fakeCfg := []byte("fake")
-				fakeGenerator.GenerateReturns(fakeCfg)
+				fakeGenerator.GenerateHTTPConfReturns(fakeCfg)
 
 				batch := []interface{}{e}
 
@@ -181,7 +175,7 @@ var _ = Describe("EventHandler", func() {
 	Describe("Process Secret events", func() {
 		expectNoReconfig := func() {
 			Expect(fakeProcessor.ProcessCallCount()).Should(Equal(1))
-			Expect(fakeGenerator.GenerateCallCount()).Should(Equal(0))
+			Expect(fakeGenerator.GenerateHTTPConfCallCount()).Should(Equal(0))
 			Expect(fakeNginxFileMgr.WriteHTTPConfigCallCount()).Should(Equal(0))
 			Expect(fakeNginxRuntimeMgr.ReloadCallCount()).Should(Equal(0))
 			Expect(fakeStatusUpdater.UpdateCallCount()).Should(Equal(0))
@@ -264,7 +258,7 @@ var _ = Describe("EventHandler", func() {
 		fakeProcessor.ProcessReturns(changed, fakeConf, fakeStatuses)
 
 		fakeCfg := []byte("fake")
-		fakeGenerator.GenerateReturns(fakeCfg)
+		fakeGenerator.GenerateHTTPConfReturns(fakeCfg)
 
 		handler.HandleEventBatch(context.Background(), batch)
 

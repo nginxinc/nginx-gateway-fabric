@@ -55,8 +55,8 @@ type ChangeProcessor interface {
 
 // ChangeProcessorConfig holds configuration parameters for ChangeProcessorImpl.
 type ChangeProcessorConfig struct {
-	// SecretMemoryManager is the secret memory manager.
-	SecretMemoryManager secrets.SecretDiskMemoryManager
+	// SecretRequestManager manages secret requests.
+	SecretRequestManager secrets.RequestManager
 	// ServiceResolver resolves Services to Endpoints.
 	ServiceResolver resolver.ServiceResolver
 	// RelationshipCapturer captures relationships between Kubernetes API resources and Gateway API resources.
@@ -212,7 +212,7 @@ func (c *ChangeProcessorImpl) Process(
 		c.clusterState,
 		c.cfg.GatewayCtlrName,
 		c.cfg.GatewayClassName,
-		c.cfg.SecretMemoryManager,
+		c.cfg.SecretRequestManager,
 		c.cfg.Validators,
 	)
 

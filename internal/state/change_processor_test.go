@@ -76,7 +76,9 @@ func createRoute(
 					Matches: []v1beta1.HTTPRouteMatch{
 						{
 							Path: &v1beta1.HTTPPathMatch{
-								Type:  (*v1beta1.PathMatchType)(helpers.GetStringPointer(string(v1beta1.PathMatchPathPrefix))),
+								Type: (*v1beta1.PathMatchType)(
+									helpers.GetStringPointer(string(v1beta1.PathMatchPathPrefix)),
+								),
 								Value: helpers.GetStringPointer("/"),
 							},
 						},
@@ -222,24 +224,24 @@ var _ = Describe("ChangeProcessor", func() {
 					ControllerName: controllerName,
 				},
 			}
-			processor           state.ChangeProcessor
-			fakeSecretMemoryMgr *secretsfakes.FakeSecretDiskMemoryManager
+			processor        state.ChangeProcessor
+			secretRequestMgr *secretsfakes.FakeRequestManager
 		)
 
 		BeforeEach(OncePerOrdered, func() {
-			fakeSecretMemoryMgr = &secretsfakes.FakeSecretDiskMemoryManager{}
+			secretRequestMgr = &secretsfakes.FakeRequestManager{}
 
 			processor = state.NewChangeProcessorImpl(state.ChangeProcessorConfig{
 				GatewayCtlrName:      controllerName,
 				GatewayClassName:     gcName,
-				SecretMemoryManager:  fakeSecretMemoryMgr,
+				SecretRequestManager: secretRequestMgr,
 				RelationshipCapturer: relationship.NewCapturerImpl(),
 				Logger:               zap.New(),
 				Validators:           createAlwaysValidValidators(),
 				Scheme:               createScheme(),
 			})
 
-			fakeSecretMemoryMgr.RequestReturns(certificatePath, nil)
+			secretRequestMgr.RequestReturns(certificatePath, nil)
 		})
 
 		Describe("Process gateway resources", Ordered, func() {
@@ -1635,13 +1637,13 @@ var _ = Describe("ChangeProcessor", func() {
 		)
 
 		BeforeEach(OncePerOrdered, func() {
-			fakeSecretMemoryMgr := &secretsfakes.FakeSecretDiskMemoryManager{}
+			fakeSecretRequestMgr := &secretsfakes.FakeRequestManager{}
 			fakeRelationshipCapturer = &relationshipfakes.FakeCapturer{}
 
 			processor = state.NewChangeProcessorImpl(state.ChangeProcessorConfig{
 				GatewayCtlrName:      "test.controller",
 				GatewayClassName:     "my-class",
-				SecretMemoryManager:  fakeSecretMemoryMgr,
+				SecretRequestManager: fakeSecretRequestMgr,
 				RelationshipCapturer: fakeRelationshipCapturer,
 				Validators:           createAlwaysValidValidators(),
 				Scheme:               createScheme(),
@@ -1933,9 +1935,9 @@ var _ = Describe("ChangeProcessor", func() {
 
 	Describe("Webhook validation cases", Ordered, func() {
 		var (
-			processor           state.ChangeProcessor
-			fakeEventRecorder   *record.FakeRecorder
-			fakeSecretMemoryMgr *secretsfakes.FakeSecretDiskMemoryManager
+			processor            state.ChangeProcessor
+			fakeEventRecorder    *record.FakeRecorder
+			fakeSecretRequestMgr *secretsfakes.FakeRequestManager
 
 			gc *v1beta1.GatewayClass
 
@@ -1944,13 +1946,13 @@ var _ = Describe("ChangeProcessor", func() {
 			hr, hrInvalid      *v1beta1.HTTPRoute
 		)
 		BeforeAll(func() {
-			fakeSecretMemoryMgr = &secretsfakes.FakeSecretDiskMemoryManager{}
+			fakeSecretRequestMgr = &secretsfakes.FakeRequestManager{}
 			fakeEventRecorder = record.NewFakeRecorder(2 /* number of buffered events */)
 
 			processor = state.NewChangeProcessorImpl(state.ChangeProcessorConfig{
 				GatewayCtlrName:      controllerName,
 				GatewayClassName:     gcName,
-				SecretMemoryManager:  fakeSecretMemoryMgr,
+				SecretRequestManager: fakeSecretRequestMgr,
 				RelationshipCapturer: relationship.NewCapturerImpl(),
 				Logger:               zap.New(),
 				Validators:           createAlwaysValidValidators(),
@@ -2018,7 +2020,9 @@ var _ = Describe("ChangeProcessor", func() {
 							Matches: []v1beta1.HTTPRouteMatch{
 								{
 									Path: &v1beta1.HTTPPathMatch{
-										Type:  (*v1beta1.PathMatchType)(helpers.GetStringPointer(string(v1beta1.PathMatchPathPrefix))),
+										Type: (*v1beta1.PathMatchType)(
+											helpers.GetStringPointer(string(v1beta1.PathMatchPathPrefix)),
+										),
 										Value: helpers.GetStringPointer("/"),
 									},
 								},
@@ -2232,13 +2236,13 @@ var _ = Describe("ChangeProcessor", func() {
 			var processor state.ChangeProcessor
 
 			BeforeEach(func() {
-				fakeSecretMemoryMgr = &secretsfakes.FakeSecretDiskMemoryManager{}
+				fakeSecretRequestMgr = &secretsfakes.FakeRequestManager{}
 				fakeEventRecorder = record.NewFakeRecorder(1 /* number of buffered events */)
 
 				processor = state.NewChangeProcessorImpl(state.ChangeProcessorConfig{
 					GatewayCtlrName:      controllerName,
 					GatewayClassName:     gcName,
-					SecretMemoryManager:  fakeSecretMemoryMgr,
+					SecretRequestManager: fakeSecretRequestMgr,
 					RelationshipCapturer: relationship.NewCapturerImpl(),
 					Logger:               zap.New(),
 					Validators:           createAlwaysValidValidators(),
@@ -2362,18 +2366,18 @@ var _ = Describe("ChangeProcessor", func() {
 	Describe("Edge cases with panic", func() {
 		var (
 			processor                state.ChangeProcessor
-			fakeSecretMemoryMgr      *secretsfakes.FakeSecretDiskMemoryManager
+			fakeSecretRequestMgr     *secretsfakes.FakeRequestManager
 			fakeRelationshipCapturer *relationshipfakes.FakeCapturer
 		)
 
 		BeforeEach(func() {
-			fakeSecretMemoryMgr = &secretsfakes.FakeSecretDiskMemoryManager{}
+			fakeSecretRequestMgr = &secretsfakes.FakeRequestManager{}
 			fakeRelationshipCapturer = &relationshipfakes.FakeCapturer{}
 
 			processor = state.NewChangeProcessorImpl(state.ChangeProcessorConfig{
 				GatewayCtlrName:      "test.controller",
 				GatewayClassName:     "my-class",
-				SecretMemoryManager:  fakeSecretMemoryMgr,
+				SecretRequestManager: fakeSecretRequestMgr,
 				RelationshipCapturer: fakeRelationshipCapturer,
 				Validators:           createAlwaysValidValidators(),
 				Scheme:               createScheme(),

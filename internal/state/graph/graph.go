@@ -36,7 +36,7 @@ func BuildGraph(
 	state ClusterState,
 	controllerName string,
 	gcName string,
-	secretMemoryMgr secrets.SecretDiskMemoryManager,
+	secretRequestMgr secrets.RequestManager,
 	validators validation.Validators,
 ) *Graph {
 	gatewayClass := state.GatewayClasses[types.NamespacedName{Name: gcName}]
@@ -49,7 +49,7 @@ func BuildGraph(
 
 	processedGws := processGateways(state.Gateways, gcName)
 
-	gw := buildGateway(processedGws.Winner, secretMemoryMgr, gc)
+	gw := buildGateway(processedGws.Winner, secretRequestMgr, gc)
 
 	routes := buildRoutesForGateways(validators.HTTPFieldsValidator, state.HTTPRoutes, processedGws.GetAllNsNames())
 	bindRoutesToListeners(routes, gw)

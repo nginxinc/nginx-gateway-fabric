@@ -16,6 +16,7 @@ import (
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/agent"
+	agentConfig "github.com/nginxinc/nginx-kubernetes-gateway/internal/agent/config"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/config"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/events"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/grpc"
@@ -25,8 +26,7 @@ import (
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/manager/predicate"
 	ngxcfg "github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/config"
 	ngxvalidation "github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/config/validation"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/file"
-	ngxruntime "github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/runtime"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/observer"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/relationship"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/resolver"
@@ -43,6 +43,8 @@ const (
 	secretsFolder = "/etc/nginx/secrets"
 	// grpcAddress is the address that the grpc server is listening on
 	grpcAddress = ":54789"
+	// agentTTL is the TTL for the agent's connection info
+	agentTTL = 5 * time.Minute
 )
 
 var scheme = runtime.NewScheme()
@@ -115,7 +117,7 @@ func Start(cfg config.Config) error {
 	}
 
 	secretStore := secrets.NewSecretStore()
-	secretMemoryMgr := secrets.NewSecretDiskMemoryManager(secretsFolder, secretStore)
+	secretRequestMgr := secrets.NewRequestManagerImpl(secretsFolder, secretStore)
 
 	recorderName := fmt.Sprintf("nginx-kubernetes-gateway-%s", cfg.GatewayClassName)
 	recorder := mgr.GetEventRecorderFor(recorderName)
@@ -123,7 +125,7 @@ func Start(cfg config.Config) error {
 	processor := state.NewChangeProcessorImpl(state.ChangeProcessorConfig{
 		GatewayCtlrName:      cfg.GatewayCtlrName,
 		GatewayClassName:     cfg.GatewayClassName,
-		SecretMemoryManager:  secretMemoryMgr,
+		SecretRequestManager: secretRequestMgr,
 		ServiceResolver:      resolver.NewServiceResolverImpl(mgr.GetClient()),
 		RelationshipCapturer: relationship.NewCapturerImpl(),
 		Logger:               cfg.Logger.WithName("changeProcessor"),
@@ -134,9 +136,6 @@ func Start(cfg config.Config) error {
 		Scheme:        scheme,
 	})
 
-	configGenerator := ngxcfg.NewGeneratorImpl()
-	nginxFileMgr := file.NewManagerImpl()
-	nginxRuntimeMgr := ngxruntime.NewManagerImpl()
 	statusUpdater := status.NewUpdater(status.UpdaterConfig{
 		GatewayCtlrName:  cfg.GatewayCtlrName,
 		GatewayClassName: cfg.GatewayClassName,
@@ -148,15 +147,17 @@ func Start(cfg config.Config) error {
 		Clock:  status.NewRealClock(),
 	})
 
+	agentNginxConfigAdapter := agentConfig.NewNginxConfigAdapter(ngxcfg.NewGeneratorImpl(), secretRequestMgr)
+
+	agentConfigSubject := observer.NewConfigSubject[*agentConfig.NginxConfig](cfg.Logger.WithName("agentConfigSubject"))
+
 	eventHandler := events.NewEventHandlerImpl(events.EventHandlerConfig{
-		Processor:           processor,
-		SecretStore:         secretStore,
-		SecretMemoryManager: secretMemoryMgr,
-		Generator:           configGenerator,
-		Logger:              cfg.Logger.WithName("eventHandler"),
-		NginxFileMgr:        nginxFileMgr,
-		NginxRuntimeMgr:     nginxRuntimeMgr,
-		StatusUpdater:       statusUpdater,
+		Processor:     processor,
+		SecretStore:   secretStore,
+		ConfigAdapter: agentNginxConfigAdapter,
+		ConfigUpdater: agentConfigSubject,
+		Logger:        cfg.Logger.WithName("eventHandler"),
+		StatusUpdater: statusUpdater,
 	})
 
 	firstBatchPreparer := events.NewFirstEventBatchPreparerImpl(
@@ -184,12 +185,22 @@ func Start(cfg config.Config) error {
 		return fmt.Errorf("cannot register event loop with manager: %w", err)
 	}
 
+	agentStore := agent.NewConnectInfoStore(cfg.Logger.WithName("agentConnectInfoStore"), agentTTL)
+	err = mgr.Add(agentStore)
+	if err != nil {
+		return fmt.Errorf("cannot register agent connect info store with manager: %w", err)
+	}
+
+	cmdr := commander.NewCommander(
+		agentStore,
+		agentConfigSubject,
+		cfg.Logger.WithName("commanderService"),
+	)
+
 	server, err := grpc.NewServer(
 		cfg.Logger.WithName("grpcServer"),
 		grpcAddress,
-		commander.NewCommander(cfg.Logger.WithName("commanderService"),
-			agent.NewPool(cfg.Logger.WithName("agentPool")),
-		),
+		cmdr,
 	)
 	if err != nil {
 		return fmt.Errorf("cannot create gRPC server: %w", err)

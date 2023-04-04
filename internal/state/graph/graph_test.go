@@ -205,8 +205,8 @@ func TestBuildGraph(t *testing.T) {
 		Rules: []Rule{createValidRuleWithBackendGroup(hr3Group)},
 	}
 
-	secretMemoryMgr := &secretsfakes.FakeSecretDiskMemoryManager{}
-	secretMemoryMgr.RequestCalls(func(nsname types.NamespacedName) (string, error) {
+	secretRequestMgr := &secretsfakes.FakeRequestManager{}
+	secretRequestMgr.RequestCalls(func(nsname types.NamespacedName) (string, error) {
 		if (nsname == types.NamespacedName{Namespace: "test", Name: "secret"}) {
 			return secretPath, nil
 		}
@@ -297,7 +297,7 @@ func TestBuildGraph(t *testing.T) {
 				test.store,
 				controllerName,
 				gcName,
-				secretMemoryMgr,
+				secretRequestMgr,
 				validation.Validators{HTTPFieldsValidator: &validationfakes.FakeHTTPFieldsValidator{}},
 			)
 

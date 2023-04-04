@@ -9,31 +9,42 @@ import (
 )
 
 type FakeGenerator struct {
-	GenerateStub        func(dataplane.Configuration) []byte
-	generateMutex       sync.RWMutex
-	generateArgsForCall []struct {
+	GenerateHTTPConfStub        func(dataplane.Configuration) []byte
+	generateHTTPConfMutex       sync.RWMutex
+	generateHTTPConfArgsForCall []struct {
 		arg1 dataplane.Configuration
 	}
-	generateReturns struct {
+	generateHTTPConfReturns struct {
 		result1 []byte
 	}
-	generateReturnsOnCall map[int]struct {
+	generateHTTPConfReturnsOnCall map[int]struct {
+		result1 []byte
+	}
+	GenerateMainConfStub        func(int) []byte
+	generateMainConfMutex       sync.RWMutex
+	generateMainConfArgsForCall []struct {
+		arg1 int
+	}
+	generateMainConfReturns struct {
+		result1 []byte
+	}
+	generateMainConfReturnsOnCall map[int]struct {
 		result1 []byte
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeGenerator) Generate(arg1 dataplane.Configuration) []byte {
-	fake.generateMutex.Lock()
-	ret, specificReturn := fake.generateReturnsOnCall[len(fake.generateArgsForCall)]
-	fake.generateArgsForCall = append(fake.generateArgsForCall, struct {
+func (fake *FakeGenerator) GenerateHTTPConf(arg1 dataplane.Configuration) []byte {
+	fake.generateHTTPConfMutex.Lock()
+	ret, specificReturn := fake.generateHTTPConfReturnsOnCall[len(fake.generateHTTPConfArgsForCall)]
+	fake.generateHTTPConfArgsForCall = append(fake.generateHTTPConfArgsForCall, struct {
 		arg1 dataplane.Configuration
 	}{arg1})
-	stub := fake.GenerateStub
-	fakeReturns := fake.generateReturns
-	fake.recordInvocation("Generate", []interface{}{arg1})
-	fake.generateMutex.Unlock()
+	stub := fake.GenerateHTTPConfStub
+	fakeReturns := fake.generateHTTPConfReturns
+	fake.recordInvocation("GenerateHTTPConf", []interface{}{arg1})
+	fake.generateHTTPConfMutex.Unlock()
 	if stub != nil {
 		return stub(arg1)
 	}
@@ -43,44 +54,105 @@ func (fake *FakeGenerator) Generate(arg1 dataplane.Configuration) []byte {
 	return fakeReturns.result1
 }
 
-func (fake *FakeGenerator) GenerateCallCount() int {
-	fake.generateMutex.RLock()
-	defer fake.generateMutex.RUnlock()
-	return len(fake.generateArgsForCall)
+func (fake *FakeGenerator) GenerateHTTPConfCallCount() int {
+	fake.generateHTTPConfMutex.RLock()
+	defer fake.generateHTTPConfMutex.RUnlock()
+	return len(fake.generateHTTPConfArgsForCall)
 }
 
-func (fake *FakeGenerator) GenerateCalls(stub func(dataplane.Configuration) []byte) {
-	fake.generateMutex.Lock()
-	defer fake.generateMutex.Unlock()
-	fake.GenerateStub = stub
+func (fake *FakeGenerator) GenerateHTTPConfCalls(stub func(dataplane.Configuration) []byte) {
+	fake.generateHTTPConfMutex.Lock()
+	defer fake.generateHTTPConfMutex.Unlock()
+	fake.GenerateHTTPConfStub = stub
 }
 
-func (fake *FakeGenerator) GenerateArgsForCall(i int) dataplane.Configuration {
-	fake.generateMutex.RLock()
-	defer fake.generateMutex.RUnlock()
-	argsForCall := fake.generateArgsForCall[i]
+func (fake *FakeGenerator) GenerateHTTPConfArgsForCall(i int) dataplane.Configuration {
+	fake.generateHTTPConfMutex.RLock()
+	defer fake.generateHTTPConfMutex.RUnlock()
+	argsForCall := fake.generateHTTPConfArgsForCall[i]
 	return argsForCall.arg1
 }
 
-func (fake *FakeGenerator) GenerateReturns(result1 []byte) {
-	fake.generateMutex.Lock()
-	defer fake.generateMutex.Unlock()
-	fake.GenerateStub = nil
-	fake.generateReturns = struct {
+func (fake *FakeGenerator) GenerateHTTPConfReturns(result1 []byte) {
+	fake.generateHTTPConfMutex.Lock()
+	defer fake.generateHTTPConfMutex.Unlock()
+	fake.GenerateHTTPConfStub = nil
+	fake.generateHTTPConfReturns = struct {
 		result1 []byte
 	}{result1}
 }
 
-func (fake *FakeGenerator) GenerateReturnsOnCall(i int, result1 []byte) {
-	fake.generateMutex.Lock()
-	defer fake.generateMutex.Unlock()
-	fake.GenerateStub = nil
-	if fake.generateReturnsOnCall == nil {
-		fake.generateReturnsOnCall = make(map[int]struct {
+func (fake *FakeGenerator) GenerateHTTPConfReturnsOnCall(i int, result1 []byte) {
+	fake.generateHTTPConfMutex.Lock()
+	defer fake.generateHTTPConfMutex.Unlock()
+	fake.GenerateHTTPConfStub = nil
+	if fake.generateHTTPConfReturnsOnCall == nil {
+		fake.generateHTTPConfReturnsOnCall = make(map[int]struct {
 			result1 []byte
 		})
 	}
-	fake.generateReturnsOnCall[i] = struct {
+	fake.generateHTTPConfReturnsOnCall[i] = struct {
+		result1 []byte
+	}{result1}
+}
+
+func (fake *FakeGenerator) GenerateMainConf(arg1 int) []byte {
+	fake.generateMainConfMutex.Lock()
+	ret, specificReturn := fake.generateMainConfReturnsOnCall[len(fake.generateMainConfArgsForCall)]
+	fake.generateMainConfArgsForCall = append(fake.generateMainConfArgsForCall, struct {
+		arg1 int
+	}{arg1})
+	stub := fake.GenerateMainConfStub
+	fakeReturns := fake.generateMainConfReturns
+	fake.recordInvocation("GenerateMainConf", []interface{}{arg1})
+	fake.generateMainConfMutex.Unlock()
+	if stub != nil {
+		return stub(arg1)
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fakeReturns.result1
+}
+
+func (fake *FakeGenerator) GenerateMainConfCallCount() int {
+	fake.generateMainConfMutex.RLock()
+	defer fake.generateMainConfMutex.RUnlock()
+	return len(fake.generateMainConfArgsForCall)
+}
+
+func (fake *FakeGenerator) GenerateMainConfCalls(stub func(int) []byte) {
+	fake.generateMainConfMutex.Lock()
+	defer fake.generateMainConfMutex.Unlock()
+	fake.GenerateMainConfStub = stub
+}
+
+func (fake *FakeGenerator) GenerateMainConfArgsForCall(i int) int {
+	fake.generateMainConfMutex.RLock()
+	defer fake.generateMainConfMutex.RUnlock()
+	argsForCall := fake.generateMainConfArgsForCall[i]
+	return argsForCall.arg1
+}
+
+func (fake *FakeGenerator) GenerateMainConfReturns(result1 []byte) {
+	fake.generateMainConfMutex.Lock()
+	defer fake.generateMainConfMutex.Unlock()
+	fake.GenerateMainConfStub = nil
+	fake.generateMainConfReturns = struct {
+		result1 []byte
+	}{result1}
+}
+
+func (fake *FakeGenerator) GenerateMainConfReturnsOnCall(i int, result1 []byte) {
+	fake.generateMainConfMutex.Lock()
+	defer fake.generateMainConfMutex.Unlock()
+	fake.GenerateMainConfStub = nil
+	if fake.generateMainConfReturnsOnCall == nil {
+		fake.generateMainConfReturnsOnCall = make(map[int]struct {
+			result1 []byte
+		})
+	}
+	fake.generateMainConfReturnsOnCall[i] = struct {
 		result1 []byte
 	}{result1}
 }
@@ -88,8 +160,10 @@ func (fake *FakeGenerator) GenerateReturnsOnCall(i int, result1 []byte) {
 func (fake *FakeGenerator) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.generateMutex.RLock()
-	defer fake.generateMutex.RUnlock()
+	fake.generateHTTPConfMutex.RLock()
+	defer fake.generateHTTPConfMutex.RUnlock()
+	fake.generateMainConfMutex.RLock()
+	defer fake.generateMainConfMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

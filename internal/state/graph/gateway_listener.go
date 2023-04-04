@@ -33,12 +33,12 @@ type Listener struct {
 
 func buildListeners(
 	gw *v1beta1.Gateway,
-	secretMemoryMgr secrets.SecretDiskMemoryManager,
+	secretRequestMgr secrets.RequestManager,
 	gc *GatewayClass,
 ) map[string]*Listener {
 	listeners := make(map[string]*Listener)
 
-	listenerFactory := newListenerConfiguratorFactory(gw, secretMemoryMgr, gc)
+	listenerFactory := newListenerConfiguratorFactory(gw, secretRequestMgr, gc)
 
 	for _, gl := range gw.Spec.Listeners {
 		configurator := listenerFactory.getConfiguratorForListener(gl)
@@ -65,7 +65,7 @@ func (f *listenerConfiguratorFactory) getConfiguratorForListener(l v1beta1.Liste
 
 func newListenerConfiguratorFactory(
 	gw *v1beta1.Gateway,
-	secretMemoryMgr secrets.SecretDiskMemoryManager,
+	secretRequestMgr secrets.RequestManager,
 	gc *GatewayClass,
 ) *listenerConfiguratorFactory {
 	return &listenerConfiguratorFactory{
@@ -103,7 +103,7 @@ func newListenerConfiguratorFactory(
 				createHostnameConflictResolver(),
 			},
 			externalReferenceResolvers: []listenerExternalReferenceResolver{
-				createExternalReferencesForTLSSecretsResolver(gw.Namespace, secretMemoryMgr),
+				createExternalReferencesForTLSSecretsResolver(gw.Namespace, secretRequestMgr),
 			},
 		},
 	}
@@ -328,7 +328,7 @@ func createHostnameConflictResolver() listenerConflictResolver {
 
 func createExternalReferencesForTLSSecretsResolver(
 	gwNs string,
-	secretMemoryMgr secrets.SecretDiskMemoryManager,
+	secretRequestMgr secrets.RequestManager,
 ) listenerExternalReferenceResolver {
 	return func(l *Listener) {
 		nsname := types.NamespacedName{
@@ -338,7 +338,7 @@ func createExternalReferencesForTLSSecretsResolver(
 
 		var err error
 
-		l.SecretPath, err = secretMemoryMgr.Request(nsname)
+		l.SecretPath, err = secretRequestMgr.Request(nsname)
 		if err != nil {
 			path := field.NewPath("tls", "certificateRefs").Index(0)
 			// field.NotFound could be better, but it doesn't allow us to set the error message.

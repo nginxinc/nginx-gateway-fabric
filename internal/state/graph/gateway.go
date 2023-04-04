@@ -84,13 +84,13 @@ func processGateways(
 	}
 }
 
-func buildGateway(gw *v1beta1.Gateway, secretMemoryMgr secrets.SecretDiskMemoryManager, gc *GatewayClass) *Gateway {
+func buildGateway(gw *v1beta1.Gateway, secretRequestMgr secrets.RequestManager, gc *GatewayClass) *Gateway {
 	if gw == nil {
 		return nil
 	}
 
 	return &Gateway{
 		Source:    gw,
-		Listeners: buildListeners(gw, secretMemoryMgr, gc),
+		Listeners: buildListeners(gw, secretRequestMgr, gc),
 	}
 }

@@ -17,7 +17,6 @@ import (
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/grpc"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/grpc/commander"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/grpc/commander/commanderfakes"
 )
 
 func createTestClient(serverAddr string, clientUUID string) client.Commander {
@@ -35,8 +34,7 @@ func createTestClient(serverAddr string, clientUUID string) client.Commander {
 func TestServer_ConcurrentConnections(t *testing.T) {
 	g := NewGomegaWithT(t)
 
-	fakeMgr := new(commanderfakes.FakeAgentManager)
-	commanderService := commander.NewCommander(zap.New(), fakeMgr)
+	commanderService := commander.NewCommander(nil, nil, zap.New())
 
 	server, err := grpc.NewServer(zap.New(), "localhost:0", commanderService)
 	g.Expect(err).To(BeNil())

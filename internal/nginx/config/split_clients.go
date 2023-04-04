@@ -3,14 +3,14 @@ package config
 import (
 	"fmt"
 	"math"
-	gotemplate "text/template"
+	"text/template"
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/config/http"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/dataplane"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/graph"
 )
 
-var splitClientsTemplate = gotemplate.Must(gotemplate.New("split_clients").Parse(splitClientsTemplateText))
+var splitClientsTemplate = template.Must(template.New("split_clients").Parse(splitClientsTemplateText))
 
 func executeSplitClients(conf dataplane.Configuration) []byte {
 	splitClients := createSplitClients(conf.BackendGroups)

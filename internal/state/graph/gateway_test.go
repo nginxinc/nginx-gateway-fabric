@@ -353,7 +353,9 @@ func TestBuildGateway(t *testing.T) {
 						Source: listener805,
 						Valid:  false,
 						Conditions: []conditions.Condition{
-							conditions.NewListenerPortUnavailable(`port: Unsupported value: 81: supported values: "80"`),
+							conditions.NewListenerPortUnavailable(
+								`port: Unsupported value: 81: supported values: "80"`,
+							),
 						},
 					},
 				},
@@ -370,7 +372,9 @@ func TestBuildGateway(t *testing.T) {
 						Source: listener4436,
 						Valid:  false,
 						Conditions: []conditions.Condition{
-							conditions.NewListenerPortUnavailable(`port: Unsupported value: 444: supported values: "443"`),
+							conditions.NewListenerPortUnavailable(
+								`port: Unsupported value: 444: supported values: "443"`,
+							),
 						},
 					},
 				},
@@ -575,8 +579,8 @@ func TestBuildGateway(t *testing.T) {
 		},
 	}
 
-	secretMemoryMgr := &secretsfakes.FakeSecretDiskMemoryManager{}
-	secretMemoryMgr.RequestCalls(func(nsname types.NamespacedName) (string, error) {
+	secretRequestMgr := &secretsfakes.FakeRequestManager{}
+	secretRequestMgr.RequestCalls(func(nsname types.NamespacedName) (string, error) {
 		if (nsname == types.NamespacedName{Namespace: "test", Name: "secret"}) {
 			return secretPath, nil
 		}
@@ -586,7 +590,7 @@ func TestBuildGateway(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewGomegaWithT(t)
-			result := buildGateway(test.gateway, secretMemoryMgr, test.gatewayClass)
+			result := buildGateway(test.gateway, secretRequestMgr, test.gatewayClass)
 			g.Expect(helpers.Diff(test.expected, result)).To(BeEmpty())
 		})
 	}
