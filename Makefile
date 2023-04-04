@@ -12,7 +12,7 @@ OUT_DIR=$(shell pwd)/build/.out
 
 .DEFAULT_GOAL := help
 
-AGENT_VERSION ?= 2.22.1
+AGENT_VERSION ?= 2.24.1
 ALPINE_VERSION ?= 3.16
 NGINX_WITH_AGENT_PREFIX ?= nginx-with-agent
 
