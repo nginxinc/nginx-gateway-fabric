@@ -33,13 +33,13 @@ type Graph struct {
 
 // BuildGraph builds a Graph from a state.
 func BuildGraph(
-	store ClusterState,
+	state ClusterState,
 	controllerName string,
 	gcName string,
 	secretMemoryMgr secrets.SecretDiskMemoryManager,
 	validators validation.Validators,
 ) *Graph {
-	gatewayClass := store.GatewayClasses[types.NamespacedName{Name: gcName}]
+	gatewayClass := state.GatewayClasses[types.NamespacedName{Name: gcName}]
 
 	if !gatewayClassBelongsToController(gatewayClass, controllerName) {
 		return &Graph{}
@@ -47,13 +47,13 @@ func BuildGraph(
 
 	gc := buildGatewayClass(gatewayClass)
 
-	processedGws := processGateways(store.Gateways, gcName)
+	processedGws := processGateways(state.Gateways, gcName)
 
 	gw := buildGateway(processedGws.Winner, secretMemoryMgr)
 
-	routes := buildRoutesForGateways(validators.HTTPFieldsValidator, store.HTTPRoutes, processedGws.GetAllNsNames())
+	routes := buildRoutesForGateways(validators.HTTPFieldsValidator, state.HTTPRoutes, processedGws.GetAllNsNames())
 	bindRoutesToListeners(routes, gw)
-	addBackendGroupsToRoutes(routes, store.Services)
+	addBackendGroupsToRoutes(routes, state.Services)
 
 	g := &Graph{
 		GatewayClass:    gc,
