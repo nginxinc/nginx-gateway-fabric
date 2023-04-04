@@ -15,6 +15,7 @@ const wildcardHostname = "~^"
 
 // Configuration is an intermediate representation of dataplane configuration.
 type Configuration struct {
+	Generation int
 	// HTTPServers holds all HTTPServers.
 	// FIXME(pleshakov) We assume that all servers are HTTP and listen on port 80.
 	HTTPServers []VirtualServer
