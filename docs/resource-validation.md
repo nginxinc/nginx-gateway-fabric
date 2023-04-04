@@ -43,7 +43,7 @@ Status:
       Section Name:  http
 ```
 
-> Make sure that the reported observed generation is the same as the resource generation.
+> Make sure the reported observed generation is the same as the resource generation.
 
 The remaining part of this document describes each step in detail with examples of how validation errors are reported.
 
@@ -58,13 +58,13 @@ kubectl apply -f coffee-route.yaml
 The HTTPRoute "coffee" is invalid: spec.hostnames[0]: Invalid value: "cafe.!@#$%example.com": spec.hostnames[0] in body should match '^(\*\.)?[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
 ```
 
-> While unlikely, this validation step can be bypassed if the Gateway API CRDs are modified to remove the validation.
-> If this happens, Step 4 will ensure that invalid values (from NGINX perspective) are rejected.
+> While unlikely, bypassing this validation step is possible if the Gateway API CRDs are modified to remove the validation.
+> If this happens, Step 4 will reject any invalid values (from NGINX perspective).
 
 ### Step 2 - Webhook Validation by Gateway API Webhook
 
 The Gateway API comes with a validating webhook which is enabled by default in the Gateway API installation manifests.
-It validates Gateway API resources using advanced rules not available in the OpenAPI schema validation. For example, if
+It validates Gateway API resources using advanced rules unavailable in the OpenAPI schema validation. For example, if
 you create a Gateway resource with a TCP listener that configures a hostname, the webhook will reject it with the
 following error:
 
@@ -73,14 +73,14 @@ kubectl apply -f gateway.yaml
 Error from server: error when creating "gateway.yaml": admission webhook "validate.gateway.networking.k8s.io" denied the request: spec.listeners[1].hostname: Forbidden: should be empty for protocol TCP
 ```
 
-> This validation step can be bypassed if the webhook is not running in the cluster.
-> If this happens, Step 3 will ensure invalid values are rejected.
+> Bypassing this validation step is possible if the webhook is not running in the cluster.
+> If this happens, Step 3 will reject the invalid values.
 
 ### Step 3 - Webhook validation by NKG
 
 The previous step relies on the Gateway API webhook running in the cluster. To ensure that the resources are validated
-with the webhook validation rules even if the webhook is not running, NKG performs the same validation. However, NKG
-will perform the validation *after* a resource is already accepted by the Kubernetes API server.
+with the webhook validation rules, even if the webhook is not running, NKG performs the same validation. However, NKG
+performs the validation *after* the Kubernetes API server accepts the resource.
 
 Below is an example of how NKG rejects an invalid resource (a Gateway resource with a TCP listener that configures a
 hostname) with a Kubernetes event:
@@ -96,7 +96,7 @@ Events:
 
 > This validation step always runs and cannot be bypassed.
 
-> NKG will ignore any resources that fail the webhook validation like in the example above.
+> NKG will ignore any resources that fail the webhook validation, like in the example above.
 > If the resource previously existed, NKG will remove any existing NGINX configuration for that resource.
 
 ### Step 4 - Validation by NKG
