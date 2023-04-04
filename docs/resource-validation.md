@@ -20,9 +20,9 @@ A Gateway API resource (a new resource or an update for the existing one) is val
 3. Webhook validation by NKG.
 4. Validation by NKG.
 
-To confirm that a resource is valid and accepted by NKG, check the `Accepted` condition in the resource status,
-which must have the Status field set to `True`. For example, in a status of a valid HTTPRoute, if NKG accepts a
-parentRef, the status of that parentRef will look like this:
+To confirm that a resource is valid and accepted by NKG, check that the `Accepted` condition in the resource status
+has the Status field set to `True`. For example, in a status of a valid HTTPRoute, if NKG accepts a parentRef,
+the status of that parentRef will look like this:
 ```
 Status:
   Parents:
