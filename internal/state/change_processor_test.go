@@ -1995,13 +1995,15 @@ var _ = Describe("ChangeProcessor", func() {
 		})
 
 		assertHREvent := func() {
-			e := <-fakeEventRecorder.Events
+			var e string
+			EventuallyWithOffset(1, fakeEventRecorder.Events).Should(Receive(&e))
 			ExpectWithOffset(1, e).To(ContainSubstring("Rejected"))
 			ExpectWithOffset(1, e).To(ContainSubstring("spec.rules[0].matches[0].path.type"))
 		}
 
 		assertGwEvent := func() {
-			e := <-fakeEventRecorder.Events
+			var e string
+			EventuallyWithOffset(1, fakeEventRecorder.Events).Should(Receive(&e))
 			ExpectWithOffset(1, e).To(ContainSubstring("Rejected"))
 			ExpectWithOffset(1, e).To(ContainSubstring("spec.listeners[0].hostname"))
 		}
@@ -2184,6 +2186,136 @@ var _ = Describe("ChangeProcessor", func() {
 				Expect(fakeEventRecorder.Events).To(HaveLen(1))
 				assertGwEvent()
 			})
+		})
+
+		Describe("Webhook assumptions", func() {
+			var processor state.ChangeProcessor
+
+			BeforeEach(func() {
+				fakeSecretMemoryMgr = &secretsfakes.FakeSecretDiskMemoryManager{}
+				fakeEventRecorder = record.NewFakeRecorder(1 /* number of buffered events */)
+
+				processor = state.NewChangeProcessorImpl(state.ChangeProcessorConfig{
+					GatewayCtlrName:      controllerName,
+					GatewayClassName:     gcName,
+					SecretMemoryManager:  fakeSecretMemoryMgr,
+					RelationshipCapturer: relationship.NewCapturerImpl(),
+					Logger:               zap.New(),
+					Validators:           createAlwaysValidValidators(),
+					EventRecorder:        fakeEventRecorder,
+					Scheme:               createScheme(),
+				})
+			})
+
+			createInvalidHTTPRoute := func(invalidator func(hr *v1beta1.HTTPRoute)) *v1beta1.HTTPRoute {
+				hr := createRoute(
+					"hr",
+					"gateway",
+					"foo.example.com",
+					createBackendRef(
+						helpers.GetPointer[v1beta1.Kind]("Service"),
+						"test",
+						helpers.GetPointer[v1beta1.Namespace]("namespace"),
+					),
+				)
+				invalidator(hr)
+				return hr
+			}
+
+			createInvalidGateway := func(invalidator func(gw *v1beta1.Gateway)) *v1beta1.Gateway {
+				gw := createGateway("gateway")
+				invalidator(gw)
+				return gw
+			}
+
+			assertRejectedEvent := func() {
+				EventuallyWithOffset(1, fakeEventRecorder.Events).Should(Receive(ContainSubstring("Rejected")))
+			}
+
+			DescribeTable("Invalid HTTPRoutes",
+				func(hr *v1beta1.HTTPRoute) {
+					processor.CaptureUpsertChange(hr)
+
+					expectedConf := dataplane.Configuration{}
+					expectedStatuses := state.Statuses{}
+
+					changed, conf, statuses := processor.Process(context.Background())
+
+					Expect(changed).To(BeFalse())
+					Expect(helpers.Diff(expectedConf, conf)).To(BeEmpty())
+					assertStatuses(expectedStatuses, statuses)
+
+					assertRejectedEvent()
+				},
+				Entry(
+					"duplicate parentRefs",
+					createInvalidHTTPRoute(func(hr *v1beta1.HTTPRoute) {
+						hr.Spec.ParentRefs = append(hr.Spec.ParentRefs, hr.Spec.ParentRefs[len(hr.Spec.ParentRefs)-1])
+					}),
+				),
+				Entry(
+					"nil path.Type",
+					createInvalidHTTPRoute(func(hr *v1beta1.HTTPRoute) {
+						hr.Spec.Rules[0].Matches[0].Path.Type = nil
+					}),
+				),
+				Entry("nil path.Value",
+					createInvalidHTTPRoute(func(hr *v1beta1.HTTPRoute) {
+						hr.Spec.Rules[0].Matches[0].Path.Value = nil
+					}),
+				),
+				Entry(
+					"nil request.Redirect",
+					createInvalidHTTPRoute(func(hr *v1beta1.HTTPRoute) {
+						hr.Spec.Rules[0].Filters = append(hr.Spec.Rules[0].Filters, v1beta1.HTTPRouteFilter{
+							Type:            v1beta1.HTTPRouteFilterRequestRedirect,
+							RequestRedirect: nil,
+						})
+					}),
+				),
+				Entry("nil port in BackendRef",
+					createInvalidHTTPRoute(func(hr *v1beta1.HTTPRoute) {
+						hr.Spec.Rules[0].BackendRefs[0].Port = nil
+					}),
+				),
+			)
+
+			DescribeTable("Invalid Gateway resources",
+				func(gw *v1beta1.Gateway) {
+					processor.CaptureUpsertChange(gw)
+
+					expectedConf := dataplane.Configuration{}
+					expectedStatuses := state.Statuses{}
+
+					changed, conf, statuses := processor.Process(context.Background())
+
+					Expect(changed).To(BeFalse())
+					Expect(helpers.Diff(expectedConf, conf)).To(BeEmpty())
+					assertStatuses(expectedStatuses, statuses)
+
+					assertRejectedEvent()
+				},
+				Entry("tls in HTTP listener",
+					createInvalidGateway(func(gw *v1beta1.Gateway) {
+						gw.Spec.Listeners[0].TLS = &v1beta1.GatewayTLSConfig{}
+					}),
+				),
+				Entry("tls is nil in HTTPS listener",
+					createInvalidGateway(func(gw *v1beta1.Gateway) {
+						gw.Spec.Listeners[0].Protocol = v1beta1.HTTPSProtocolType
+						gw.Spec.Listeners[0].TLS = nil
+					}),
+				),
+				Entry("zero certificateRefs in HTTPS listener",
+					createInvalidGateway(func(gw *v1beta1.Gateway) {
+						gw.Spec.Listeners[0].Protocol = v1beta1.HTTPSProtocolType
+						gw.Spec.Listeners[0].TLS = &v1beta1.GatewayTLSConfig{
+							Mode:            helpers.GetPointer(v1beta1.TLSModeTerminate),
+							CertificateRefs: nil,
+						}
+					}),
+				),
+			)
 		})
 	})
 

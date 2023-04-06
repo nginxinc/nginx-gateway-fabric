@@ -120,6 +120,10 @@ func createLocations(pathRules []dataplane.PathRule, listenerPort int) []http.Lo
 			// For example, type is v1beta1.HTTPRouteFilterRequestRedirect, but RequestRedirect field is nil.
 			// The imported Webhook validation webhook catches that.
 
+			// FIXME(pleshakov): Ensure dataplane.Configuration -related types don't include v1beta1 types, so that
+			// we don't need to make any assumptions like above here. After fixing this, ensure that there is a test
+			// for checking the imported Webhook validation catches the case above.
+
 			// RequestRedirect and proxying are mutually exclusive.
 			if r.Filters.RequestRedirect != nil {
 				loc.Return = createReturnValForRedirectFilter(r.Filters.RequestRedirect, listenerPort)
