@@ -1,6 +1,7 @@
 package graph
 
 import (
+	"errors"
 	"fmt"
 
 	"k8s.io/apimachinery/pkg/types"
@@ -148,15 +149,14 @@ func buildSectionNameRefs(
 			continue
 		}
 
-		// The imported Webhook validation ensures unique section names.
-		// Additionally, it ensures that if multiple refs reference the same Gateway, their section names
-		// are not empty
-		// FIXME(pleshakov): Add a unit test for the imported Webhook validation code for this case.
-
 		// FIXME(pleshakov): SectionNames across multiple Gateways might collide. Fix that.
 		var sectionName string
 		if p.SectionName != nil {
 			sectionName = string(*p.SectionName)
+		}
+
+		if _, exist := sectionNameRefs[sectionName]; exist {
+			panicForBrokenWebhookAssumption(fmt.Errorf("duplicate section name %q", sectionName))
 		}
 
 		sectionNameRefs[sectionName] = ParentRef{
@@ -520,8 +520,12 @@ func validatePathMatch(
 		return allErrs
 	}
 
-	// The imported Webhook validation ensures the path type and value are not nil
-	// FIXME(pleshakov): Add a unit test for the imported Webhook validation code for this case.
+	if path.Type == nil {
+		panicForBrokenWebhookAssumption(errors.New("path type cannot be nil"))
+	}
+	if path.Value == nil {
+		panicForBrokenWebhookAssumption(errors.New("path value cannot be nil"))
+	}
 
 	if *path.Type != v1beta1.PathMatchPathPrefix {
 		valErr := field.NotSupported(fieldPath, *path.Type, []string{string(v1beta1.PathMatchPathPrefix)})
@@ -553,8 +557,9 @@ func validateFilter(
 		return allErrs
 	}
 
-	// The imported Webhook validation ensures  filter.RequestRedirect is not nil
-	// FIXME(pleshakov): Add a unit test for the imported Webhook validation code for this case.
+	if filter.RequestRedirect == nil {
+		panicForBrokenWebhookAssumption(errors.New("requestRedirect cannot be nil"))
+	}
 
 	redirect := filter.RequestRedirect
 

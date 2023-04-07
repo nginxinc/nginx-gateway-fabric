@@ -321,8 +321,9 @@ func validateHTTPListener(listener v1beta1.Listener) []conditions.Condition {
 		conds = append(conds, conditions.NewListenerPortUnavailable(valErr.Error()))
 	}
 
-	// The imported Webhook validation ensures the tls field is not set for an HTTP listener.
-	// FIXME(pleshakov): Add a unit test for the imported Webhook validation code for this case.
+	if listener.TLS != nil {
+		panicForBrokenWebhookAssumption(fmt.Errorf("tls is not nil for HTTP listener %q", listener.Name))
+	}
 
 	return conds
 }
@@ -336,8 +337,9 @@ func validateHTTPSListener(listener v1beta1.Listener, gwNsName string) []conditi
 		conds = append(conds, conditions.NewListenerPortUnavailable(valErr.Error()))
 	}
 
-	// The imported Webhook validation ensures the tls field is not nil for an HTTPS listener.
-	// FIXME(pleshakov): Add a unit test for the imported Webhook validation code for this case.
+	if listener.TLS == nil {
+		panicForBrokenWebhookAssumption(fmt.Errorf("tls is nil for HTTPS listener %q", listener.Name))
+	}
 
 	tlsPath := field.NewPath("tls")
 
@@ -356,8 +358,9 @@ func validateHTTPSListener(listener v1beta1.Listener, gwNsName string) []conditi
 		conds = append(conds, conditions.NewListenerUnsupportedValue(valErr.Error()))
 	}
 
-	// The imported Webhook validation ensures len(listener.TLS.Certificates) is not 0.
-	// FIXME(pleshakov): Add a unit test for the imported Webhook validation code for this case.
+	if len(listener.TLS.CertificateRefs) == 0 {
+		panicForBrokenWebhookAssumption(fmt.Errorf("zero certificateRefs for HTTPS listener %q", listener.Name))
+	}
 
 	certRef := listener.TLS.CertificateRefs[0]
 

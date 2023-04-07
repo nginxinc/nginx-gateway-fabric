@@ -167,9 +167,11 @@ func validateBackendRef(
 		return false, conditions.NewRouteBackendRefRefNotPermitted(valErr.Error())
 	}
 
-	// The imported Webhook validation ensures ref.Port is set
-	// any value is OK
-	// FIXME(pleshakov): Add a unit test for the imported Webhook validation code for this case.
+	if ref.Port == nil {
+		panicForBrokenWebhookAssumption(fmt.Errorf("port is nil for ref %q", ref.Name))
+	}
+
+	// any value of port is OK
 
 	if ref.Weight != nil {
 		if err := validateWeight(*ref.Weight); err != nil {
