@@ -14,20 +14,26 @@ import (
 )
 
 func TestPrepareHTTPRouteStatus(t *testing.T) {
-	g := NewGomegaWithT(t)
+	gwNsName1 := types.NamespacedName{Namespace: "test", Name: "gateway-1"}
+	gwNsName2 := types.NamespacedName{Namespace: "test", Name: "gateway-2"}
 
 	status := state.HTTPRouteStatus{
 		ObservedGeneration: 1,
-		ParentStatuses: map[string]state.ParentStatus{
-			"parent": {
-				Conditions: CreateTestConditions(),
+		ParentStatuses: []state.ParentStatus{
+			{
+				GatewayNsName: gwNsName1,
+				SectionName:   helpers.GetPointer[v1beta1.SectionName]("http"),
+				Conditions:    CreateTestConditions(),
+			},
+			{
+				GatewayNsName: gwNsName2,
+				SectionName:   nil,
+				Conditions:    CreateTestConditions(),
 			},
 		},
 	}
 
-	gwNsName := types.NamespacedName{Namespace: "test", Name: "gateway"}
 	gatewayCtlrName := "test.example.com"
-
 	transitionTime := metav1.NewTime(time.Now())
 
 	expected := v1beta1.HTTPRouteStatus{
@@ -35,9 +41,18 @@ func TestPrepareHTTPRouteStatus(t *testing.T) {
 			Parents: []v1beta1.RouteParentStatus{
 				{
 					ParentRef: v1beta1.ParentReference{
-						Namespace:   (*v1beta1.Namespace)(helpers.GetStringPointer("test")),
-						Name:        "gateway",
-						SectionName: (*v1beta1.SectionName)(helpers.GetStringPointer("parent")),
+						Namespace:   helpers.GetPointer(v1beta1.Namespace(gwNsName1.Namespace)),
+						Name:        v1beta1.ObjectName(gwNsName1.Name),
+						SectionName: helpers.GetPointer[v1beta1.SectionName]("http"),
+					},
+					ControllerName: v1beta1.GatewayController(gatewayCtlrName),
+					Conditions:     CreateExpectedAPIConditions(1, transitionTime),
+				},
+				{
+					ParentRef: v1beta1.ParentReference{
+						Namespace:   helpers.GetPointer(v1beta1.Namespace(gwNsName2.Namespace)),
+						Name:        v1beta1.ObjectName(gwNsName2.Name),
+						SectionName: nil,
 					},
 					ControllerName: v1beta1.GatewayController(gatewayCtlrName),
 					Conditions:     CreateExpectedAPIConditions(1, transitionTime),
@@ -45,6 +60,9 @@ func TestPrepareHTTPRouteStatus(t *testing.T) {
 			},
 		},
 	}
-	result := prepareHTTPRouteStatus(status, gwNsName, gatewayCtlrName, transitionTime)
+
+	g := NewGomegaWithT(t)
+
+	result := prepareHTTPRouteStatus(status, gatewayCtlrName, transitionTime)
 	g.Expect(helpers.Diff(expected, result)).To(BeEmpty())
 }

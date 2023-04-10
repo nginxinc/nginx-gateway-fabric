@@ -130,7 +130,6 @@ func (upd *updaterImpl) Update(ctx context.Context, statuses state.Statuses) {
 			// statuses.GatewayStatus is never nil when len(statuses.HTTPRouteStatuses) > 0
 			hr.Status = prepareHTTPRouteStatus(
 				rs,
-				statuses.GatewayStatus.NsName,
 				upd.cfg.GatewayCtlrName,
 				upd.cfg.Clock.Now(),
 			)

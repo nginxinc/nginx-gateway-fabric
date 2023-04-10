@@ -93,9 +93,11 @@ var _ = Describe("Updater", func() {
 					HTTPRouteStatuses: map[types.NamespacedName]state.HTTPRouteStatus{
 						{Namespace: "test", Name: "route1"}: {
 							ObservedGeneration: 5,
-							ParentStatuses: map[string]state.ParentStatus{
-								"http": {
-									Conditions: status.CreateTestConditions(),
+							ParentStatuses: []state.ParentStatus{
+								{
+									GatewayNsName: types.NamespacedName{Namespace: "test", Name: "gateway"},
+									SectionName:   helpers.GetPointer[v1beta1.SectionName]("http"),
+									Conditions:    status.CreateTestConditions(),
 								},
 							},
 						},

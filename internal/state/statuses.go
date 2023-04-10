@@ -3,6 +3,7 @@ package state
 import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/conditions"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/graph"
@@ -48,19 +49,20 @@ type ListenerStatus struct {
 	AttachedRoutes int32
 }
 
-// ParentStatuses holds the statuses of parents where the key is the section name in a parentRef.
-type ParentStatuses map[string]ParentStatus
-
 // HTTPRouteStatus holds the status-related information about an HTTPRoute resource.
 type HTTPRouteStatus struct {
 	// ParentStatuses holds the statuses for parentRefs of the HTTPRoute.
-	ParentStatuses ParentStatuses
+	ParentStatuses []ParentStatus
 	// ObservedGeneration is the generation of the resource that was processed.
 	ObservedGeneration int64
 }
 
 // ParentStatus holds status-related information related to how the HTTPRoute binds to a specific parentRef.
 type ParentStatus struct {
+	// GatewayNsName is the Namespaced name of the Gateway, which the parentRef references.
+	GatewayNsName types.NamespacedName
+	// SectionName is the SectionName of the parentRef.
+	SectionName *v1beta1.SectionName
 	// Conditions is the list of conditions that are relevant to the parentRef.
 	Conditions []conditions.Condition
 }
@@ -102,14 +104,19 @@ func buildStatuses(graph *graph.Graph) Statuses {
 		defaultConds := conditions.NewDefaultListenerConditions()
 
 		for name, l := range graph.Gateway.Listeners {
-			conds := make([]conditions.Condition, 0, len(l.Conditions)+len(defaultConds)+1) // 1 is for missing GC
+			missingGCCondCount := 0
+			if !gcValidAndExist {
+				missingGCCondCount = 1
+			}
+
+			conds := make([]conditions.Condition, 0, len(l.Conditions)+len(defaultConds)+missingGCCondCount)
 
 			// We add default conds first, so that any additional conditions will override them, which is
 			// ensured by DeduplicateConditions.
 			conds = append(conds, defaultConds...)
 			conds = append(conds, l.Conditions...)
 
-			if !gcValidAndExist {
+			if missingGCCondCount == 1 {
 				// FIXME(pleshakov): Figure out appropriate conditions for the cases when:
 				// (1) GatewayClass is invalid.
 				// (2) GatewayClass does not exist.
@@ -135,30 +142,32 @@ func buildStatuses(graph *graph.Graph) Statuses {
 	}
 
 	for nsname, r := range graph.Routes {
-		parentStatuses := make(map[string]ParentStatus)
+		parentStatuses := make([]ParentStatus, 0, len(r.ParentRefs))
 
 		baseConds := buildBaseRouteConditions(gcValidAndExist)
 
-		for ref := range r.SectionNameRefs {
-			conds := r.GetAllConditionsForSectionName(ref)
+		for _, ref := range r.ParentRefs {
+			failedAttachmentCondCount := 0
+			if !ref.Attached {
+				failedAttachmentCondCount = 1
+			}
+			allConds := make([]conditions.Condition, 0, len(r.Conditions)+len(baseConds)+failedAttachmentCondCount)
 
-			allConds := make([]conditions.Condition, 0, len(conds)+len(baseConds))
 			// We add baseConds first, so that any additional conditions will override them, which is
 			// ensured by DeduplicateConditions.
 			allConds = append(allConds, baseConds...)
-			allConds = append(allConds, conds...)
-
-			if ref == "" {
-				// FIXME(pleshakov): Gateway API spec does allow empty section names in the status.
-				// However, NKG doesn't yet support the empty section names.
-				// Once NKG supports them, it will be able to determine which section name the HTTPRoute was
-				// attached to. So we won't need this workaround.
-				ref = "unattached"
+			allConds = append(allConds, r.Conditions...)
+			if failedAttachmentCondCount == 1 {
+				allConds = append(allConds, ref.FailedAttachmentCondition)
 			}
 
-			parentStatuses[ref] = ParentStatus{
-				Conditions: conditions.DeduplicateConditions(allConds),
-			}
+			routeRef := r.Source.Spec.ParentRefs[ref.Idx]
+
+			parentStatuses = append(parentStatuses, ParentStatus{
+				GatewayNsName: ref.Gateway,
+				SectionName:   routeRef.SectionName,
+				Conditions:    conditions.DeduplicateConditions(allConds),
+			})
 		}
 
 		statuses.HTTPRouteStatuses[nsname] = HTTPRouteStatus{

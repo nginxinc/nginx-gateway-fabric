@@ -139,84 +139,6 @@ func TestRouteGetAllBackendGroups(t *testing.T) {
 	}
 }
 
-func TestGetAllConditionsForSectionName(t *testing.T) {
-	const (
-		sectionName = "foo"
-	)
-
-	sectionNameRefs := map[string]ParentRef{
-		sectionName: {
-			Idx:     0,
-			Gateway: types.NamespacedName{Namespace: "test", Name: "gateway"},
-		},
-	}
-
-	tests := []struct {
-		route    *Route
-		name     string
-		expected []conditions.Condition
-	}{
-		{
-			route: &Route{
-				SectionNameRefs: sectionNameRefs,
-				Conditions:      nil,
-			},
-			expected: nil,
-			name:     "no conditions",
-		},
-		{
-			route: &Route{
-				SectionNameRefs: sectionNameRefs,
-				UnattachedSectionNameRefs: map[string]conditions.Condition{
-					sectionName: conditions.NewTODO("unattached"),
-				},
-			},
-			expected: []conditions.Condition{
-				conditions.NewTODO("unattached"),
-			},
-			name: "unattached section",
-		},
-		{
-			route: &Route{
-				SectionNameRefs: sectionNameRefs,
-				UnattachedSectionNameRefs: map[string]conditions.Condition{
-					sectionName: conditions.NewTODO("unattached"),
-				},
-				Conditions: []conditions.Condition{conditions.NewTODO("route")},
-			},
-			expected: []conditions.Condition{
-				conditions.NewTODO("unattached"),
-				conditions.NewTODO("route"),
-			},
-			name: "unattached section and route",
-		},
-	}
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			g := NewGomegaWithT(t)
-			result := test.route.GetAllConditionsForSectionName(sectionName)
-			g.Expect(result).To(Equal(test.expected))
-		})
-	}
-}
-
-func TestGetAllConditionsForSectionNamePanics(t *testing.T) {
-	route := &Route{
-		SectionNameRefs: map[string]ParentRef{
-			"foo": {
-				Idx:     0,
-				Gateway: types.NamespacedName{Namespace: "test", Name: "gateway"},
-			},
-		},
-	}
-
-	invoke := func() { _ = route.GetAllConditionsForSectionName("bar") }
-
-	g := NewGomegaWithT(t)
-	g.Expect(invoke).To(Panic())
-}
-
 func TestBuildRoutes(t *testing.T) {
 	gwNsName := types.NamespacedName{Namespace: "test", Name: "gateway"}
 
@@ -238,14 +160,13 @@ func TestBuildRoutes(t *testing.T) {
 			expected: map[types.NamespacedName]*Route{
 				client.ObjectKeyFromObject(hr): {
 					Source: hr,
-					SectionNameRefs: map[string]ParentRef{
-						sectionNameOfCreateHTTPRoute: {
+					ParentRefs: []ParentRef{
+						{
 							Idx:     0,
 							Gateway: gwNsName,
 						},
 					},
-					UnattachedSectionNameRefs: map[string]conditions.Condition{},
-					Valid:                     true,
+					Valid: true,
 					Rules: []Rule{
 						{
 							ValidMatches: true,
@@ -279,8 +200,10 @@ func TestBuildRoutes(t *testing.T) {
 }
 
 func TestBuildSectionNameRefs(t *testing.T) {
-	gwNsName1 := types.NamespacedName{Namespace: "test", Name: "gateway-1"}
-	gwNsName2 := types.NamespacedName{Namespace: "test", Name: "gateway-2"}
+	const routeNamespace = "test"
+
+	gwNsName1 := types.NamespacedName{Namespace: routeNamespace, Name: "gateway-1"}
+	gwNsName2 := types.NamespacedName{Namespace: routeNamespace, Name: "gateway-2"}
 
 	parentRefs := []v1beta1.ParentReference{
 		{
@@ -298,14 +221,13 @@ func TestBuildSectionNameRefs(t *testing.T) {
 	}
 
 	gwNsNames := []types.NamespacedName{gwNsName1, gwNsName2}
-	routeNamespace := "test"
 
-	expected := map[string]ParentRef{
-		"one": {
+	expected := []ParentRef{
+		{
 			Idx:     0,
 			Gateway: gwNsName1,
 		},
-		"two": {
+		{
 			Idx:     2,
 			Gateway: gwNsName2,
 		},
@@ -315,6 +237,52 @@ func TestBuildSectionNameRefs(t *testing.T) {
 
 	result := buildSectionNameRefs(parentRefs, routeNamespace, gwNsNames)
 	g.Expect(result).To(Equal(expected))
+}
+
+func TestBuildSectionNameRefsPanicsForDuplicateParentRefs(t *testing.T) {
+	gwNsName := types.NamespacedName{Namespace: "test", Name: "gateway"}
+
+	tests := []struct {
+		name       string
+		parentRefs []v1beta1.ParentReference
+	}{
+		{
+			parentRefs: []v1beta1.ParentReference{
+				{
+					Name:        v1beta1.ObjectName(gwNsName.Name),
+					SectionName: helpers.GetPointer[v1beta1.SectionName]("http"),
+				},
+				{
+					Name:        v1beta1.ObjectName(gwNsName.Name),
+					SectionName: helpers.GetPointer[v1beta1.SectionName]("http"),
+				},
+			},
+			name: "with sectionNames",
+		},
+		{
+			parentRefs: []v1beta1.ParentReference{
+				{
+					Name:        v1beta1.ObjectName(gwNsName.Name),
+					SectionName: nil,
+				},
+				{
+					Name:        v1beta1.ObjectName(gwNsName.Name),
+					SectionName: nil,
+				},
+			},
+			name: "nil sectionNames",
+		},
+	}
+
+	gwNsNames := []types.NamespacedName{gwNsName}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			g := NewGomegaWithT(t)
+			run := func() { buildSectionNameRefs(test.parentRefs, gwNsName.Namespace, gwNsNames) }
+			g.Expect(run).To(Panic())
+		})
+	}
 }
 
 func TestFindGatewayForParentRef(t *testing.T) {
@@ -460,14 +428,13 @@ func TestBuildRoute(t *testing.T) {
 			hr:        hr,
 			expected: &Route{
 				Source: hr,
-				SectionNameRefs: map[string]ParentRef{
-					sectionNameOfCreateHTTPRoute: {
+				ParentRefs: []ParentRef{
+					{
 						Idx:     0,
 						Gateway: gatewayNsName,
 					},
 				},
-				UnattachedSectionNameRefs: map[string]conditions.Condition{},
-				Valid:                     true,
+				Valid: true,
 				Rules: []Rule{
 					{
 						ValidMatches: true,
@@ -507,13 +474,12 @@ func TestBuildRoute(t *testing.T) {
 			expected: &Route{
 				Source: hrInvalidHostname,
 				Valid:  false,
-				SectionNameRefs: map[string]ParentRef{
-					sectionNameOfCreateHTTPRoute: {
+				ParentRefs: []ParentRef{
+					{
 						Idx:     0,
 						Gateway: gatewayNsName,
 					},
 				},
-				UnattachedSectionNameRefs: map[string]conditions.Condition{},
 				Conditions: []conditions.Condition{
 					conditions.NewRouteUnsupportedValue(`spec.hostnames[0]: Invalid value: "": cannot be empty string`),
 				},
@@ -526,13 +492,12 @@ func TestBuildRoute(t *testing.T) {
 			expected: &Route{
 				Source: hrInvalidMatches,
 				Valid:  false,
-				SectionNameRefs: map[string]ParentRef{
-					sectionNameOfCreateHTTPRoute: {
+				ParentRefs: []ParentRef{
+					{
 						Idx:     0,
 						Gateway: gatewayNsName,
 					},
 				},
-				UnattachedSectionNameRefs: map[string]conditions.Condition{},
 				Conditions: []conditions.Condition{
 					conditions.NewRouteUnsupportedValue(
 						`All rules are invalid: spec.rules[0].matches[0].path: Invalid value: "/invalid": invalid path`,
@@ -557,13 +522,12 @@ func TestBuildRoute(t *testing.T) {
 			expected: &Route{
 				Source: hrInvalidFilters,
 				Valid:  false,
-				SectionNameRefs: map[string]ParentRef{
-					sectionNameOfCreateHTTPRoute: {
+				ParentRefs: []ParentRef{
+					{
 						Idx:     0,
 						Gateway: gatewayNsName,
 					},
 				},
-				UnattachedSectionNameRefs: map[string]conditions.Condition{},
 				Conditions: []conditions.Condition{
 					conditions.NewRouteUnsupportedValue(
 						`All rules are invalid: spec.rules[0].filters[0].requestRedirect.hostname: ` +
@@ -588,13 +552,12 @@ func TestBuildRoute(t *testing.T) {
 			expected: &Route{
 				Source: hrInvalidValidRules,
 				Valid:  true,
-				SectionNameRefs: map[string]ParentRef{
-					sectionNameOfCreateHTTPRoute: {
+				ParentRefs: []ParentRef{
+					{
 						Idx:     0,
 						Gateway: gatewayNsName,
 					},
 				},
-				UnattachedSectionNameRefs: map[string]conditions.Condition{},
 				Conditions: []conditions.Condition{
 					conditions.NewTODO(
 						`Some rules are invalid: ` +
@@ -709,75 +672,77 @@ func TestBindRouteToListeners(t *testing.T) {
 		nil,
 	)
 
-	normalRoute := &Route{
-		Source: hr,
-		Valid:  true,
-		SectionNameRefs: map[string]ParentRef{
-			"listener-80-1": {
-				Idx:     0,
-				Gateway: client.ObjectKeyFromObject(gw),
+	var normalRoute *Route
+	createNormalRoute := func() *Route {
+		normalRoute = &Route{
+			Source: hr,
+			Valid:  true,
+			ParentRefs: []ParentRef{
+				{
+					Idx:     0,
+					Gateway: client.ObjectKeyFromObject(gw),
+				},
 			},
-		},
-		UnattachedSectionNameRefs: map[string]conditions.Condition{},
+		}
+		return normalRoute
 	}
+	getLastNormalRoute := func() *Route {
+		return normalRoute
+	}
+
 	routeWithMissingSectionName := &Route{
 		Source: hrWithNilSectionName,
 		Valid:  true,
-		SectionNameRefs: map[string]ParentRef{
-			"": {
+		ParentRefs: []ParentRef{
+			{
 				Idx:     0,
 				Gateway: client.ObjectKeyFromObject(gw),
 			},
 		},
-		UnattachedSectionNameRefs: map[string]conditions.Condition{},
 	}
 	routeWithEmptySectionName := &Route{
 		Source: hrWithEmptySectionName,
 		Valid:  true,
-		SectionNameRefs: map[string]ParentRef{
-			"": {
+		ParentRefs: []ParentRef{
+			{
 				Idx:     0,
 				Gateway: client.ObjectKeyFromObject(gw),
 			},
 		},
-		UnattachedSectionNameRefs: map[string]conditions.Condition{},
 	}
 	routeWithNonExistingListener := &Route{
 		Source: hrWithNonExistingListener,
 		Valid:  true,
-		SectionNameRefs: map[string]ParentRef{
-			"listener-80-2": {
+		ParentRefs: []ParentRef{
+			{
 				Idx:     0,
 				Gateway: client.ObjectKeyFromObject(gw),
 			},
 		},
-		UnattachedSectionNameRefs: map[string]conditions.Condition{},
 	}
 	routeWithPort := &Route{
 		Source: hrWithPort,
 		Valid:  true,
-		SectionNameRefs: map[string]ParentRef{
-			"listener-80-1": {
+		ParentRefs: []ParentRef{
+			{
 				Idx:     0,
 				Gateway: client.ObjectKeyFromObject(gw),
 			},
 		},
-		UnattachedSectionNameRefs: map[string]conditions.Condition{},
 	}
+	ignoredGwNsName := types.NamespacedName{Namespace: "test", Name: "ignored-gateway"}
 	routeWithIgnoredGateway := &Route{
 		Source: hr,
 		Valid:  true,
-		SectionNameRefs: map[string]ParentRef{
-			"listener-80-1": {
+		ParentRefs: []ParentRef{
+			{
 				Idx:     0,
-				Gateway: types.NamespacedName{Namespace: "test", Name: "ignored-gateway"},
+				Gateway: ignoredGwNsName,
 			},
 		},
-		UnattachedSectionNameRefs: map[string]conditions.Condition{},
 	}
 	notValidRoute := &Route{
-		Valid:                     false,
-		UnattachedSectionNameRefs: map[string]conditions.Condition{},
+		Valid: false,
 	}
 
 	notValidListener := createModifiedListener(func(l *Listener) {
@@ -793,20 +758,27 @@ func TestBindRouteToListeners(t *testing.T) {
 		expectedRouteUnattachedSectionNameRefs map[string]conditions.Condition
 		expectedGatewayListeners               map[string]*Listener
 		name                                   string
+		expectedSectionNameRefs                []ParentRef
 	}{
 		{
-			route: normalRoute,
+			route: createNormalRoute(),
 			gateway: &Gateway{
 				Source: gw,
 				Listeners: map[string]*Listener{
 					"listener-80-1": createListener(),
 				},
 			},
-			expectedRouteUnattachedSectionNameRefs: map[string]conditions.Condition{},
+			expectedSectionNameRefs: []ParentRef{
+				{
+					Idx:      0,
+					Gateway:  client.ObjectKeyFromObject(gw),
+					Attached: true,
+				},
+			},
 			expectedGatewayListeners: map[string]*Listener{
 				"listener-80-1": createModifiedListener(func(l *Listener) {
 					l.Routes = map[types.NamespacedName]*Route{
-						client.ObjectKeyFromObject(hr): normalRoute,
+						client.ObjectKeyFromObject(hr): getLastNormalRoute(),
 					}
 					l.AcceptedHostnames = map[string]struct{}{
 						"foo.example.com": {},
@@ -823,8 +795,15 @@ func TestBindRouteToListeners(t *testing.T) {
 					"listener-80-1": createListener(),
 				},
 			},
-			expectedRouteUnattachedSectionNameRefs: map[string]conditions.Condition{
-				"": conditions.NewRouteUnsupportedValue(`spec.parentRefs[0].sectionName: Required value: cannot be empty`),
+			expectedSectionNameRefs: []ParentRef{
+				{
+					Idx:      0,
+					Gateway:  client.ObjectKeyFromObject(gw),
+					Attached: false,
+					FailedAttachmentCondition: conditions.NewRouteUnsupportedValue(
+						`spec.parentRefs[0].sectionName: Required value: cannot be empty`,
+					),
+				},
 			},
 			expectedGatewayListeners: map[string]*Listener{
 				"listener-80-1": createListener(),
@@ -839,8 +818,15 @@ func TestBindRouteToListeners(t *testing.T) {
 					"listener-80-1": createListener(),
 				},
 			},
-			expectedRouteUnattachedSectionNameRefs: map[string]conditions.Condition{
-				"": conditions.NewRouteUnsupportedValue(`spec.parentRefs[0].sectionName: Required value: cannot be empty`),
+			expectedSectionNameRefs: []ParentRef{
+				{
+					Idx:      0,
+					Gateway:  client.ObjectKeyFromObject(gw),
+					Attached: false,
+					FailedAttachmentCondition: conditions.NewRouteUnsupportedValue(
+						`spec.parentRefs[0].sectionName: Required value: cannot be empty`,
+					),
+				},
 			},
 			expectedGatewayListeners: map[string]*Listener{
 				"listener-80-1": createListener(),
@@ -855,8 +841,15 @@ func TestBindRouteToListeners(t *testing.T) {
 					"listener-80-1": createListener(),
 				},
 			},
-			expectedRouteUnattachedSectionNameRefs: map[string]conditions.Condition{
-				"listener-80-1": conditions.NewRouteUnsupportedValue(`spec.parentRefs[0].port: Forbidden: cannot be set`),
+			expectedSectionNameRefs: []ParentRef{
+				{
+					Idx:      0,
+					Gateway:  client.ObjectKeyFromObject(gw),
+					Attached: false,
+					FailedAttachmentCondition: conditions.NewRouteUnsupportedValue(
+						`spec.parentRefs[0].port: Forbidden: cannot be set`,
+					),
+				},
 			},
 			expectedGatewayListeners: map[string]*Listener{
 				"listener-80-1": createListener(),
@@ -871,8 +864,13 @@ func TestBindRouteToListeners(t *testing.T) {
 					"listener-80-1": createListener(),
 				},
 			},
-			expectedRouteUnattachedSectionNameRefs: map[string]conditions.Condition{
-				"listener-80-2": conditions.NewTODO("listener is not found"),
+			expectedSectionNameRefs: []ParentRef{
+				{
+					Idx:                       0,
+					Gateway:                   client.ObjectKeyFromObject(gw),
+					Attached:                  false,
+					FailedAttachmentCondition: conditions.NewTODO("listener is not found"),
+				},
 			},
 			expectedGatewayListeners: map[string]*Listener{
 				"listener-80-1": createListener(),
@@ -880,15 +878,20 @@ func TestBindRouteToListeners(t *testing.T) {
 			name: "listener doesn't exist",
 		},
 		{
-			route: normalRoute,
+			route: createNormalRoute(),
 			gateway: &Gateway{
 				Source: gw,
 				Listeners: map[string]*Listener{
 					"listener-80-1": notValidListener,
 				},
 			},
-			expectedRouteUnattachedSectionNameRefs: map[string]conditions.Condition{
-				"listener-80-1": conditions.NewRouteInvalidListener(),
+			expectedSectionNameRefs: []ParentRef{
+				{
+					Idx:                       0,
+					Gateway:                   client.ObjectKeyFromObject(gw),
+					Attached:                  false,
+					FailedAttachmentCondition: conditions.NewRouteInvalidListener(),
+				},
 			},
 			expectedGatewayListeners: map[string]*Listener{
 				"listener-80-1": notValidListener,
@@ -896,15 +899,20 @@ func TestBindRouteToListeners(t *testing.T) {
 			name: "listener isn't valid",
 		},
 		{
-			route: normalRoute,
+			route: createNormalRoute(),
 			gateway: &Gateway{
 				Source: gw,
 				Listeners: map[string]*Listener{
 					"listener-80-1": nonMatchingHostnameListener,
 				},
 			},
-			expectedRouteUnattachedSectionNameRefs: map[string]conditions.Condition{
-				"listener-80-1": conditions.NewRouteNoMatchingListenerHostname(),
+			expectedSectionNameRefs: []ParentRef{
+				{
+					Idx:                       0,
+					Gateway:                   client.ObjectKeyFromObject(gw),
+					Attached:                  false,
+					FailedAttachmentCondition: conditions.NewRouteNoMatchingListenerHostname(),
+				},
 			},
 			expectedGatewayListeners: map[string]*Listener{
 				"listener-80-1": nonMatchingHostnameListener,
@@ -919,8 +927,13 @@ func TestBindRouteToListeners(t *testing.T) {
 					"listener-80-1": createListener(),
 				},
 			},
-			expectedRouteUnattachedSectionNameRefs: map[string]conditions.Condition{
-				"listener-80-1": conditions.NewTODO("Gateway is ignored"),
+			expectedSectionNameRefs: []ParentRef{
+				{
+					Idx:                       0,
+					Gateway:                   ignoredGwNsName,
+					Attached:                  false,
+					FailedAttachmentCondition: conditions.NewTODO("Gateway is ignored"),
+				},
 			},
 			expectedGatewayListeners: map[string]*Listener{
 				"listener-80-1": createListener(),
@@ -949,7 +962,7 @@ func TestBindRouteToListeners(t *testing.T) {
 
 			bindRouteToListeners(test.route, test.gateway)
 
-			g.Expect(test.route.UnattachedSectionNameRefs).To(Equal(test.expectedRouteUnattachedSectionNameRefs))
+			g.Expect(test.route.ParentRefs).To(Equal(test.expectedSectionNameRefs))
 			g.Expect(helpers.Diff(test.gateway.Listeners, test.expectedGatewayListeners)).To(BeEmpty())
 		})
 	}
