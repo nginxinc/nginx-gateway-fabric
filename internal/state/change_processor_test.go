@@ -179,22 +179,22 @@ var _ = Describe("ChangeProcessor", func() {
 					ControllerName: controllerName,
 				},
 			}
-			processor           state.ChangeProcessor
-			fakeSecretMemoryMgr *secretsfakes.FakeSecretDiskMemoryManager
+			processor        state.ChangeProcessor
+			secretRequestMgr *secretsfakes.FakeRequestManager
 		)
 
 		BeforeEach(OncePerOrdered, func() {
-			fakeSecretMemoryMgr = &secretsfakes.FakeSecretDiskMemoryManager{}
+			secretRequestMgr = &secretsfakes.FakeRequestManager{}
 
 			processor = state.NewChangeProcessorImpl(state.ChangeProcessorConfig{
 				GatewayCtlrName:      controllerName,
 				GatewayClassName:     gcName,
-				SecretMemoryManager:  fakeSecretMemoryMgr,
+				SecretRequestManager: secretRequestMgr,
 				RelationshipCapturer: relationship.NewCapturerImpl(),
 				Logger:               zap.New(),
 			})
 
-			fakeSecretMemoryMgr.RequestReturns(certificatePath, nil)
+			secretRequestMgr.RequestReturns(certificatePath, nil)
 		})
 
 		Describe("Process gateway resources", Ordered, func() {
@@ -1569,13 +1569,13 @@ var _ = Describe("ChangeProcessor", func() {
 		)
 
 		BeforeEach(OncePerOrdered, func() {
-			fakeSecretMemoryMgr := &secretsfakes.FakeSecretDiskMemoryManager{}
+			fakeSecretRequestMgr := &secretsfakes.FakeRequestManager{}
 			fakeRelationshipCapturer = &relationshipfakes.FakeCapturer{}
 
 			processor = state.NewChangeProcessorImpl(state.ChangeProcessorConfig{
 				GatewayCtlrName:      "test.controller",
 				GatewayClassName:     "my-class",
-				SecretMemoryManager:  fakeSecretMemoryMgr,
+				SecretRequestManager: fakeSecretRequestMgr,
 				RelationshipCapturer: fakeRelationshipCapturer,
 			})
 
@@ -1866,18 +1866,18 @@ var _ = Describe("ChangeProcessor", func() {
 	Describe("Edge cases with panic", func() {
 		var (
 			processor                state.ChangeProcessor
-			fakeSecretMemoryMgr      *secretsfakes.FakeSecretDiskMemoryManager
+			fakeSecretRequestMgr     *secretsfakes.FakeRequestManager
 			fakeRelationshipCapturer *relationshipfakes.FakeCapturer
 		)
 
 		BeforeEach(func() {
-			fakeSecretMemoryMgr = &secretsfakes.FakeSecretDiskMemoryManager{}
+			fakeSecretRequestMgr = &secretsfakes.FakeRequestManager{}
 			fakeRelationshipCapturer = &relationshipfakes.FakeCapturer{}
 
 			processor = state.NewChangeProcessorImpl(state.ChangeProcessorConfig{
 				GatewayCtlrName:      "test.controller",
 				GatewayClassName:     "my-class",
-				SecretMemoryManager:  fakeSecretMemoryMgr,
+				SecretRequestManager: fakeSecretRequestMgr,
 				RelationshipCapturer: fakeRelationshipCapturer,
 			})
 		})

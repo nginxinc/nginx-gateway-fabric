@@ -2,9 +2,6 @@
 package secrets_test
 
 import (
-	"errors"
-	"io/fs"
-	"os"
 	"path"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -134,30 +131,22 @@ var (
 	}
 )
 
-var _ = Describe("SecretDiskMemoryManager", func() {
+var _ = Describe("RequestManager", func() {
 	var (
-		fakeStore     *secretsfakes.FakeSecretStore
-		memMgr        secrets.SecretDiskMemoryManager
-		tmpSecretsDir string
+		fakeStore  *secretsfakes.FakeSecretStore
+		mgr        secrets.RequestManager
+		secretsDir string
 	)
 
 	BeforeEach(OncePerOrdered, func() {
-		dir, err := os.MkdirTemp("", "secrets-test")
-		tmpSecretsDir = dir
-		Expect(err).ToNot(HaveOccurred(), "failed to create temp directory for tests")
-
 		fakeStore = &secretsfakes.FakeSecretStore{}
-		memMgr = secrets.NewSecretDiskMemoryManager(tmpSecretsDir, fakeStore)
+		mgr = secrets.NewRequestManagerImpl(secretsDir, fakeStore)
 	})
 
-	AfterEach(OncePerOrdered, func() {
-		Expect(os.RemoveAll(tmpSecretsDir)).To(Succeed())
-	})
-
-	Describe("Manages secrets on disk", Ordered, func() {
+	Describe("Manages requested secrets", Ordered, func() {
 		testRequest := func(s *apiv1.Secret, expPath string, expErr bool) {
 			nsname := types.NamespacedName{Namespace: s.Namespace, Name: s.Name}
-			actualPath, err := memMgr.Request(nsname)
+			actualPath, err := mgr.Request(nsname)
 
 			if expErr {
 				Expect(err).To(HaveOccurred())
@@ -175,14 +164,14 @@ var _ = Describe("SecretDiskMemoryManager", func() {
 		})
 		It("request should return the file path for a valid secret", func() {
 			fakeStore.GetReturns(&secrets.Secret{Secret: secret1, Valid: true})
-			expectedPath := path.Join(tmpSecretsDir, "test_secret1")
+			expectedPath := path.Join(secretsDir, "test_secret1")
 
 			testRequest(secret1, expectedPath, false)
 		})
 
 		It("request should return the file path for another valid secret", func() {
 			fakeStore.GetReturns(&secrets.Secret{Secret: secret2, Valid: true})
-			expectedPath := path.Join(tmpSecretsDir, "test_secret2")
+			expectedPath := path.Join(secretsDir, "test_secret2")
 
 			testRequest(secret2, expectedPath, false)
 		})
@@ -193,110 +182,39 @@ var _ = Describe("SecretDiskMemoryManager", func() {
 			testRequest(invalidSecretType, "", true)
 		})
 
-		It("should write all requested secrets", func() {
-			err := memMgr.WriteAllRequestedSecrets()
-			Expect(err).ToNot(HaveOccurred())
+		It("should return all requested secrets", func() {
+			secretFiles := mgr.GetAndResetRequestedSecrets()
 
 			expectedFileNames := []string{"test_secret1", "test_secret2"}
+			Expect(secretFiles).To(HaveLen(2))
 
-			// read all files from directory
-			dir, err := os.ReadDir(tmpSecretsDir)
-			Expect(err).ToNot(HaveOccurred())
-
-			// test that the files exist that we expect
-			Expect(dir).To(HaveLen(2))
-			actualFilenames := []string{dir[0].Name(), dir[1].Name()}
+			actualFilenames := []string{secretFiles[0].Name, secretFiles[1].Name}
 			Expect(actualFilenames).To(ConsistOf(expectedFileNames))
 		})
 
-		It("request should return the file path for secret after write", func() {
+		It("request should return the file path for secret after get", func() {
 			fakeStore.GetReturns(&secrets.Secret{Secret: secret3, Valid: true})
-			expectedPath := path.Join(tmpSecretsDir, "test_secret3")
+			expectedPath := path.Join(secretsDir, "test_secret3")
 
 			testRequest(secret3, expectedPath, false)
 		})
 
-		It("should write all requested secrets", func() {
-			err := memMgr.WriteAllRequestedSecrets()
-			Expect(err).ToNot(HaveOccurred())
-
-			// read all files from directory
-			dir, err := os.ReadDir(tmpSecretsDir)
-			Expect(err).ToNot(HaveOccurred())
+		It("should return all requested secrets", func() {
+			secretFiles := mgr.GetAndResetRequestedSecrets()
 
 			// only the secrets stored after the last write should be written to disk.
-			Expect(dir).To(HaveLen(1))
-			Expect(dir[0].Name()).To(Equal("test_secret3"))
+			Expect(secretFiles).To(HaveLen(1))
+			Expect(secretFiles[0].Name).To(Equal("test_secret3"))
 		})
 		When("no secrets are requested", func() {
 			It("write all secrets should remove all existing secrets and write no additional secrets", func() {
-				err := memMgr.WriteAllRequestedSecrets()
-				Expect(err).ToNot(HaveOccurred())
-
-				// read all files from directory
-				dir, err := os.ReadDir(tmpSecretsDir)
-				Expect(err).ToNot(HaveOccurred())
-
+				secretFiles := mgr.GetAndResetRequestedSecrets()
 				// no secrets should exist
-				Expect(dir).To(BeEmpty())
+				Expect(secretFiles).To(HaveLen(0))
 			})
 		})
 	})
-	Describe("Write all requested secrets", func() {
-		var (
-			fakeFileManager *secretsfakes.FakeFileManager
-			fakeStore       *secretsfakes.FakeSecretStore
-			fakeDirEntries  []fs.DirEntry
-			memMgr          *secrets.SecretDiskMemoryManagerImpl
-		)
-
-		BeforeEach(OncePerOrdered, func() {
-			fakeFileManager = &secretsfakes.FakeFileManager{}
-			fakeStore = &secretsfakes.FakeSecretStore{}
-			fakeDirEntries = []fs.DirEntry{&secretsfakes.FakeDirEntry{}}
-			memMgr = secrets.NewSecretDiskMemoryManager("", fakeStore, secrets.WithSecretFileManager(fakeFileManager))
-
-			// populate a requested secret
-			fakeStore.GetReturns(&secrets.Secret{Secret: secret1, Valid: true})
-			_, err := memMgr.Request(types.NamespacedName{Namespace: secret1.Namespace, Name: secret1.Name})
-			Expect(err).ToNot(HaveOccurred())
-		})
-
-		DescribeTable("error cases", Ordered,
-			func(e error, preparer func(e error)) {
-				preparer(e)
-
-				err := memMgr.WriteAllRequestedSecrets()
-				Expect(err).To(MatchError(e))
-			},
-			Entry("read directory error", errors.New("read dir"),
-				func(e error) {
-					fakeFileManager.ReadDirReturns(nil, e)
-				}),
-			Entry("remove file error", errors.New("remove file"),
-				func(e error) {
-					fakeFileManager.ReadDirReturns(fakeDirEntries, nil)
-					fakeFileManager.RemoveReturns(e)
-				}),
-			Entry("create file error", errors.New("create error"),
-				func(e error) {
-					fakeFileManager.RemoveReturns(nil)
-					fakeFileManager.CreateReturns(nil, e)
-				}),
-			Entry("chmod error", errors.New("chmod"),
-				func(e error) {
-					fakeFileManager.CreateReturns(&os.File{}, nil)
-					fakeFileManager.ChmodReturns(e)
-				}),
-			Entry("write error", errors.New("write"),
-				func(e error) {
-					fakeFileManager.ChmodReturns(nil)
-					fakeFileManager.WriteReturns(e)
-				}),
-		)
-	})
 })
-
 var _ = Describe("SecretStore", func() {
 	var store secrets.SecretStore
 	var invalidToValidSecret, validToInvalidSecret *apiv1.Secret

@@ -123,12 +123,12 @@ func Start(cfg config.Config) error {
 	}
 
 	secretStore := secrets.NewSecretStore()
-	secretMemoryMgr := secrets.NewSecretDiskMemoryManager(secretsFolder, secretStore)
+	secretRequestMgr := secrets.NewRequestManagerImpl(secretsFolder, secretStore)
 
 	processor := state.NewChangeProcessorImpl(state.ChangeProcessorConfig{
 		GatewayCtlrName:      cfg.GatewayCtlrName,
 		GatewayClassName:     cfg.GatewayClassName,
-		SecretMemoryManager:  secretMemoryMgr,
+		SecretRequestManager: secretRequestMgr,
 		ServiceResolver:      resolver.NewServiceResolverImpl(mgr.GetClient()),
 		RelationshipCapturer: relationship.NewCapturerImpl(),
 		Logger:               cfg.Logger.WithName("changeProcessor"),
@@ -145,7 +145,7 @@ func Start(cfg config.Config) error {
 		Clock:  status.NewRealClock(),
 	})
 
-	nginxAgentConfigBuilder := agent.NewNginxConfigBuilder(ngxcfg.NewGeneratorImpl(), secretMemoryMgr)
+	nginxAgentConfigBuilder := agent.NewNginxConfigBuilder(ngxcfg.NewGeneratorImpl(), secretRequestMgr)
 
 	agentConfigStore := agent.NewConfigStore(nginxAgentConfigBuilder, cfg.Logger.WithName("agentConfigStore"))
 

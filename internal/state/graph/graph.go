@@ -36,13 +36,13 @@ func BuildGraph(
 	store ClusterStore,
 	controllerName string,
 	gcName string,
-	secretMemoryMgr secrets.SecretDiskMemoryManager,
+	secretRequestMgr secrets.RequestManager,
 ) *Graph {
 	gc := buildGatewayClass(store.GatewayClass, controllerName)
 
 	gw, ignoredGws := processGateways(store.Gateways, gcName)
 
-	listeners := buildListeners(gw, gcName, secretMemoryMgr)
+	listeners := buildListeners(gw, gcName, secretRequestMgr)
 
 	routes := make(map[types.NamespacedName]*Route)
 	for _, ghr := range store.HTTPRoutes {

@@ -544,13 +544,13 @@ func TestBuildListeners(t *testing.T) {
 	secretStore := secrets.NewSecretStore()
 	secretStore.Upsert(testSecret)
 
-	secretMemoryMgr := secrets.NewSecretDiskMemoryManager(secretsDirectory, secretStore)
+	secretRequestMgr := secrets.NewRequestManagerImpl(secretsDirectory, secretStore)
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewGomegaWithT(t)
 
-			result := buildListeners(test.gateway, gcName, secretMemoryMgr)
+			result := buildListeners(test.gateway, gcName, secretRequestMgr)
 			g.Expect(helpers.Diff(test.expected, result)).To(BeEmpty())
 		})
 	}

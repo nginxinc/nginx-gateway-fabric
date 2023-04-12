@@ -80,7 +80,7 @@ func processGateways(
 func buildListeners(
 	gw *v1beta1.Gateway,
 	gcName string,
-	secretMemoryMgr secrets.SecretDiskMemoryManager,
+	secretRequestMgr secrets.RequestManager,
 ) map[string]*Listener {
 	listeners := make(map[string]*Listener)
 
@@ -88,7 +88,7 @@ func buildListeners(
 		return listeners
 	}
 
-	listenerFactory := newListenerConfiguratorFactory(gw, secretMemoryMgr)
+	listenerFactory := newListenerConfiguratorFactory(gw, secretRequestMgr)
 
 	for _, gl := range gw.Spec.Listeners {
 		configurator := listenerFactory.getConfiguratorForListener(gl)
@@ -120,19 +120,19 @@ func (f *listenerConfiguratorFactory) getConfiguratorForListener(l v1beta1.Liste
 
 func newListenerConfiguratorFactory(
 	gw *v1beta1.Gateway,
-	secretMemoryMgr secrets.SecretDiskMemoryManager,
+	secretRequestMgr secrets.RequestManager,
 ) *listenerConfiguratorFactory {
 	return &listenerConfiguratorFactory{
-		https: newHTTPSListenerConfigurator(gw, secretMemoryMgr),
+		https: newHTTPSListenerConfigurator(gw, secretRequestMgr),
 		http:  newHTTPListenerConfigurator(gw),
 	}
 }
 
 type httpListenerConfigurator struct {
-	gateway         *v1beta1.Gateway
-	secretMemoryMgr secrets.SecretDiskMemoryManager
-	usedHostnames   map[string]*Listener
-	validate        func(gl v1beta1.Listener) []conditions.Condition
+	gateway          *v1beta1.Gateway
+	secretRequestMgr secrets.RequestManager
+	usedHostnames    map[string]*Listener
+	validate         func(gl v1beta1.Listener) []conditions.Condition
 }
 
 func newHTTPListenerConfigurator(gw *v1beta1.Gateway) *httpListenerConfigurator {
@@ -145,12 +145,12 @@ func newHTTPListenerConfigurator(gw *v1beta1.Gateway) *httpListenerConfigurator 
 
 func newHTTPSListenerConfigurator(
 	gateway *v1beta1.Gateway,
-	secretMemoryMgr secrets.SecretDiskMemoryManager,
+	secretRequestMgr secrets.RequestManager,
 ) *httpListenerConfigurator {
 	return &httpListenerConfigurator{
-		gateway:         gateway,
-		secretMemoryMgr: secretMemoryMgr,
-		usedHostnames:   make(map[string]*Listener),
+		gateway:          gateway,
+		secretRequestMgr: secretRequestMgr,
+		usedHostnames:    make(map[string]*Listener),
 		validate: func(gl v1beta1.Listener) []conditions.Condition {
 			return validateHTTPSListener(gl, gateway.Namespace)
 		},
@@ -211,7 +211,7 @@ func (c *httpListenerConfigurator) loadSecretIntoListener(l *Listener) {
 
 	var err error
 
-	l.SecretPath, err = c.secretMemoryMgr.Request(nsname)
+	l.SecretPath, err = c.secretRequestMgr.Request(nsname)
 	if err != nil {
 		msg := fmt.Sprintf("Failed to get the certificate %s: %v", nsname.String(), err)
 		l.Conditions = append(l.Conditions, conditions.NewListenerInvalidCertificateRef(msg)...)

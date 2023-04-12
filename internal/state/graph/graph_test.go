@@ -248,7 +248,7 @@ func TestBuildGraph(t *testing.T) {
 	// add test secret to store
 	secretStore := secrets.NewSecretStore()
 	secretStore.Upsert(testSecret)
-	secretMemoryMgr := secrets.NewSecretDiskMemoryManager(secretsDirectory, secretStore)
+	secretRequestMgr := secrets.NewRequestManagerImpl(secretsDirectory, secretStore)
 
 	expected := &Graph{
 		GatewayClass: &GatewayClass{
@@ -290,7 +290,7 @@ func TestBuildGraph(t *testing.T) {
 		},
 	}
 
-	result := BuildGraph(store, controllerName, gcName, secretMemoryMgr)
+	result := BuildGraph(store, controllerName, gcName, secretRequestMgr)
 	if diff := cmp.Diff(expected, result); diff != "" {
 		t.Errorf("BuildGraph() mismatch (-want +got):\n%s", diff)
 	}

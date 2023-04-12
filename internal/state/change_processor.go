@@ -45,8 +45,8 @@ type ChangeProcessorConfig struct {
 	GatewayCtlrName string
 	// GatewayClassName is the name of the GatewayClass resource.
 	GatewayClassName string
-	// SecretMemoryManager is the secret memory manager.
-	SecretMemoryManager secrets.SecretDiskMemoryManager
+	// SecretRequestManager manages secret requests.
+	SecretRequestManager secrets.RequestManager
 	// ServiceResolver resolves Services to Endpoints.
 	ServiceResolver resolver.ServiceResolver
 	// RelationshipCapturer captures relationships between Kubernetes API resources and Gateway API resources.
@@ -161,7 +161,7 @@ func (c *ChangeProcessorImpl) Process(
 		},
 		c.cfg.GatewayCtlrName,
 		c.cfg.GatewayClassName,
-		c.cfg.SecretMemoryManager,
+		c.cfg.SecretRequestManager,
 	)
 
 	var warnings dataplane.Warnings
