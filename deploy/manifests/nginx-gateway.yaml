@@ -85,10 +85,6 @@ spec:
         app: nginx-gateway
     spec:
       serviceAccountName: nginx-gateway
-      securityContext:
-        sysctls:
-        - name: "net.ipv4.ip_unprivileged_port_start"
-          value: "0"
       containers:
       - image: docker.io/library/nginx-kubernetes-gateway:edge # FIXME(kate-osborn): change back to ghcr before merging to main
         imagePullPolicy: IfNotPresent # FIXME(kate-osborn): change back to Always before merging to main
@@ -101,17 +97,17 @@ spec:
         args:
         - --gateway-ctlr-name=k8s-gateway.nginx.org/nginx-gateway-controller
         - --gatewayclass=nginx
-      - image: docker.io/nginx-kubernetes-gateway/nginx-with-agent:edge
-        name: nginx-with-agent
-        imagePullPolicy: IfNotPresent
-        securityContext:
-          runAsNonRoot: true
-          runAsUser: 101 #nginx
-          capabilities:
-            drop:
-            - ALL
-        ports:
-        - name: http
-          containerPort: 80
-        - name: https
-          containerPort: 443
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-gateway
+  namespace: nginx-gateway
+spec:
+  ports:
+  - port: 54789
+    targetPort: 54789
+    protocol: TCP
+    name: grpc
+  selector:
+    app: nginx-gateway

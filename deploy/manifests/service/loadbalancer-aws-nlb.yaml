@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: nginx-gateway
+  name: nginx-with-agent
   namespace: nginx-gateway
   annotations:
     service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
@@ -13,4 +13,4 @@ spec:
     protocol: TCP
     name: http
   selector:
-    app: nginx-gateway
+    app: nginx-with-agent
