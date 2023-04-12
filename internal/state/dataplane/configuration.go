@@ -15,11 +15,19 @@ const wildcardHostname = "~^"
 
 // Configuration is an intermediate representation of dataplane configuration.
 type Configuration struct {
-	HTTPServers   []VirtualServer
-	SSLServers    []VirtualServer
-	Upstreams     []Upstream
+	// HTTPServers holds all HTTPServers.
+	// FIXME(pleshakov) We assume that all servers are HTTP and listen on port 8
+	HTTPServers []VirtualServer
+	// SSLServers holds all SSLServers.
+	// FIXME(kate-osborn) We assume that all SSL servers listen on port 443.
+	SSLServers []VirtualServer
+	// Upstreams holds all unique Upstreams.
+	Upstreams []Upstream
+	// BackendGroups holds all unique BackendGroups.
+	// FIXME(pleshakov): Ensure Configuration doesn't include types from the graph package.
 	BackendGroups []graph.BackendGroup
-	Generation    int
+	// Version is the version of the configuration.
+	Version int
 }
 
 // VirtualServer is a virtual server.

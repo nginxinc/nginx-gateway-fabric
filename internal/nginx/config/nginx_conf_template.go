@@ -1,6 +1,6 @@
 package config
 
-var nginxConfTemplateText = `# config generation: {{ . }}
+var nginxConfTemplateText = `# config version: {{ . }}
 load_module /usr/lib/nginx/modules/ngx_http_js_module.so;
 
 events {}
@@ -30,17 +30,17 @@ http {
         }
     }
 
-	server {
-		listen unix:/var/lib/nginx/nginx-502-server.sock;
-		access_log off;
-	
-		return 502;
-	}
-	
-	server {
-		listen unix:/var/lib/nginx/nginx-500-server.sock;
-		access_log off;
-		
-		return 500;
-	}
+    server {
+        listen unix:/var/lib/nginx/nginx-502-server.sock;
+        access_log off;
+    
+        return 502;
+    }
+    
+    server {
+        listen unix:/var/lib/nginx/nginx-500-server.sock;
+        access_log off;
+        
+        return 500;
+    }
 }`

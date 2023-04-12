@@ -9,6 +9,7 @@ import (
 	discoveryV1 "k8s.io/api/discovery/v1"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/observer"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/dataplane"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/secrets"
@@ -24,9 +25,12 @@ type EventHandler interface {
 	HandleEventBatch(ctx context.Context, batch EventBatch)
 }
 
-// ConfigStorer stores dataplane configuration.
-type ConfigStorer interface {
-	Store(conf dataplane.Configuration) error
+type ConfigUpdater interface {
+	Update(cfg observer.VersionedConfig)
+}
+
+type VersionedConfigAdapter interface {
+	VersionedConfig(cfg dataplane.Configuration) (observer.VersionedConfig, error)
 }
 
 // EventHandlerConfig holds configuration parameters for EventHandlerImpl.
@@ -35,8 +39,10 @@ type EventHandlerConfig struct {
 	Processor state.ChangeProcessor
 	// SecretStore is the state SecretStore.
 	SecretStore secrets.SecretStore
-	// ConfigStorer stores dataplane configuration.
-	ConfigStorer ConfigStorer
+	// ConfigAdapter adapts dataplane.Configuration to a dataplane-specific versioned configuration.
+	ConfigAdapter VersionedConfigAdapter
+	// ConfigUpdater updates configuration.
+	ConfigUpdater ConfigUpdater
 	// StatusUpdater updates statuses on Kubernetes resources.
 	StatusUpdater status.Updater
 	// Logger is the logger to be used by the EventHandler.
@@ -79,13 +85,16 @@ func (h *EventHandlerImpl) HandleEventBatch(ctx context.Context, batch EventBatc
 	}
 
 	h.changeCounter++
-	conf.Generation = h.changeCounter
+	conf.Version = h.changeCounter
 
-	err := h.cfg.ConfigStorer.Store(conf)
+	// TODO should I pass in the version to the adapter?
+	vc, err := h.cfg.ConfigAdapter.VersionedConfig(conf)
 	if err != nil {
-		h.cfg.Logger.Error(err, "error storing dataplane configuration")
-		// FIXME(kate-osborn): Update status to indicate that the gateway is not accepted or programmed.
+		h.cfg.Logger.Error(err, "error adapting dataplane configuration to a versioned configuration")
+		return
 	}
+
+	h.cfg.ConfigUpdater.Update(vc)
 
 	h.cfg.StatusUpdater.Update(ctx, statuses)
 }

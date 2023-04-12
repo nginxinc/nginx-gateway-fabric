@@ -215,6 +215,7 @@ var _ = Describe("RequestManager", func() {
 		})
 	})
 })
+
 var _ = Describe("SecretStore", func() {
 	var store secrets.SecretStore
 	var invalidToValidSecret, validToInvalidSecret *apiv1.Secret
