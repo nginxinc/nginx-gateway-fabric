@@ -211,12 +211,24 @@ func TestBuildSectionNameRefs(t *testing.T) {
 			SectionName: helpers.GetPointer[v1beta1.SectionName]("one"),
 		},
 		{
-			Name:        v1beta1.ObjectName("some-gateway"),
-			SectionName: helpers.GetPointer[v1beta1.SectionName]("other"),
+			Name:        v1beta1.ObjectName("some-other-gateway"),
+			SectionName: helpers.GetPointer[v1beta1.SectionName]("two"),
 		},
 		{
 			Name:        v1beta1.ObjectName(gwNsName2.Name),
-			SectionName: helpers.GetPointer[v1beta1.SectionName]("two"),
+			SectionName: helpers.GetPointer[v1beta1.SectionName]("three"),
+		},
+		{
+			Name:        v1beta1.ObjectName(gwNsName1.Name),
+			SectionName: helpers.GetPointer[v1beta1.SectionName]("same-name"),
+		},
+		{
+			Name:        v1beta1.ObjectName(gwNsName2.Name),
+			SectionName: helpers.GetPointer[v1beta1.SectionName]("same-name"),
+		},
+		{
+			Name:        v1beta1.ObjectName("some-other-gateway"),
+			SectionName: helpers.GetPointer[v1beta1.SectionName]("same-name"),
 		},
 	}
 
@@ -229,6 +241,14 @@ func TestBuildSectionNameRefs(t *testing.T) {
 		},
 		{
 			Idx:     2,
+			Gateway: gwNsName2,
+		},
+		{
+			Idx:     3,
+			Gateway: gwNsName1,
+		},
+		{
+			Idx:     4,
 			Gateway: gwNsName2,
 		},
 	}
