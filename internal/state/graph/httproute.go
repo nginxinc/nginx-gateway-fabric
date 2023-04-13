@@ -27,10 +27,14 @@ type Rule struct {
 
 // ParentRef describes a reference to a parent in an HTTPRoute.
 type ParentRef struct {
+	// FailedAttachmentCondition describes the failure of the attachment when Attached is false.
+	FailedAttachmentCondition conditions.Condition
 	// Gateway is the NamespacedName of the referenced Gateway
 	Gateway types.NamespacedName
-	// Idx is the index of the reference in the HTTPRoute.
+	// Idx is the index of the corresponding ParentReference in the HTTPRoute.
 	Idx int
+	// Attached indicates if the ParentRef is attached to the Gateway.
+	Attached bool
 }
 
 // Route represents an HTTPRoute.
@@ -40,11 +44,8 @@ type Route struct {
 	// For now, we assume that the source is only HTTPRoute.
 	// Later we can support more types - TLSRoute, TCPRoute and UDPRoute.
 	Source *v1beta1.HTTPRoute
-	// SectionNameRefs is a map of section names to the referenced NKG Gateways
-	SectionNameRefs map[string]ParentRef
-	// UnattachedSectionNameRefs is a subset of SectionNameRefs that includes sections that could not be attached
-	// to the referenced Gateway. For example, because section does not exist in the Gateway.
-	UnattachedSectionNameRefs map[string]conditions.Condition
+	// ParentRefs includes ParentRefs with NKG Gateways only.
+	ParentRefs []ParentRef
 	// Conditions include Conditions for the HTTPRoute.
 	Conditions []conditions.Condition
 	// Rules include Rules for the HTTPRoute. Each Rule[i] corresponds to the ith HTTPRouteRule.
@@ -85,35 +86,6 @@ func (r *Route) GetAllBackendGroups() []BackendGroup {
 	return groups
 }
 
-// GetAllConditionsForSectionName returns all Conditions for the referenced section name.
-// It panics if the section name does not exist.
-func (r *Route) GetAllConditionsForSectionName(name string) []conditions.Condition {
-	if _, exist := r.SectionNameRefs[name]; !exist {
-		panic(fmt.Errorf("section name %q does not exist", name))
-	}
-
-	count := len(r.Conditions)
-
-	unattachedCond, sectionIsUnattached := r.UnattachedSectionNameRefs[name]
-	if sectionIsUnattached {
-		count++
-	}
-
-	if count == 0 {
-		return nil
-	}
-
-	conds := make([]conditions.Condition, 0, count)
-
-	if sectionIsUnattached {
-		conds = append(conds, unattachedCond)
-	}
-
-	conds = append(conds, r.Conditions...)
-
-	return conds
-}
-
 // buildRoutesForGateways builds routes from HTTPRoutes that reference any of the specified Gateways.
 func buildRoutesForGateways(
 	validator validation.HTTPFieldsValidator,
@@ -140,8 +112,14 @@ func buildSectionNameRefs(
 	parentRefs []v1beta1.ParentReference,
 	routeNamespace string,
 	gatewayNsNames []types.NamespacedName,
-) map[string]ParentRef {
-	sectionNameRefs := make(map[string]ParentRef)
+) []ParentRef {
+	sectionNameRefs := make([]ParentRef, 0, len(parentRefs))
+
+	type key struct {
+		gwNsName    types.NamespacedName
+		sectionName string
+	}
+	uniqueSectionsPerGateway := make(map[key]struct{})
 
 	for i, p := range parentRefs {
 		gw, found := findGatewayForParentRef(p, routeNamespace, gatewayNsNames)
@@ -149,20 +127,25 @@ func buildSectionNameRefs(
 			continue
 		}
 
-		// FIXME(pleshakov): SectionNames across multiple Gateways might collide. Fix that.
 		var sectionName string
 		if p.SectionName != nil {
 			sectionName = string(*p.SectionName)
 		}
 
-		if _, exist := sectionNameRefs[sectionName]; exist {
-			panicForBrokenWebhookAssumption(fmt.Errorf("duplicate section name %q", sectionName))
+		k := key{
+			gwNsName:    gw,
+			sectionName: sectionName,
 		}
 
-		sectionNameRefs[sectionName] = ParentRef{
+		if _, exist := uniqueSectionsPerGateway[k]; exist {
+			panicForBrokenWebhookAssumption(fmt.Errorf("duplicate section name %q for Gateway %s", sectionName, gw.String()))
+		}
+		uniqueSectionsPerGateway[k] = struct{}{}
+
+		sectionNameRefs = append(sectionNameRefs, ParentRef{
 			Idx:     i,
 			Gateway: gw,
-		}
+		})
 	}
 
 	return sectionNameRefs
@@ -207,9 +190,8 @@ func buildRoute(
 	}
 
 	r := &Route{
-		Source:                    ghr,
-		SectionNameRefs:           sectionNameRefs,
-		UnattachedSectionNameRefs: map[string]conditions.Condition{},
+		Source:     ghr,
+		ParentRefs: sectionNameRefs,
 	}
 
 	err := validateHostnames(ghr.Spec.Hostnames, field.NewPath("spec").Child("hostnames"))
@@ -297,7 +279,8 @@ func bindRouteToListeners(r *Route, gw *Gateway) {
 		return
 	}
 
-	for name, ref := range r.SectionNameRefs {
+	for i := 0; i < len(r.ParentRefs); i++ {
+		ref := &r.ParentRefs[i]
 		routeRef := r.Source.Spec.ParentRefs[ref.Idx]
 
 		path := field.NewPath("spec").Child("parentRefs").Index(ref.Idx)
@@ -306,13 +289,13 @@ func bindRouteToListeners(r *Route, gw *Gateway) {
 
 		if routeRef.SectionName == nil || *routeRef.SectionName == "" {
 			valErr := field.Required(path.Child("sectionName"), "cannot be empty")
-			r.UnattachedSectionNameRefs[name] = conditions.NewRouteUnsupportedValue(valErr.Error())
+			ref.FailedAttachmentCondition = conditions.NewRouteUnsupportedValue(valErr.Error())
 			continue
 		}
 
 		if routeRef.Port != nil {
 			valErr := field.Forbidden(path.Child("port"), "cannot be set")
-			r.UnattachedSectionNameRefs[name] = conditions.NewRouteUnsupportedValue(valErr.Error())
+			ref.FailedAttachmentCondition = conditions.NewRouteUnsupportedValue(valErr.Error())
 			continue
 		}
 
@@ -321,7 +304,7 @@ func bindRouteToListeners(r *Route, gw *Gateway) {
 		referencesWinningGw := ref.Gateway.Namespace == gw.Source.Namespace && ref.Gateway.Name == gw.Source.Name
 
 		if !referencesWinningGw {
-			r.UnattachedSectionNameRefs[name] = conditions.NewTODO("Gateway is ignored")
+			ref.FailedAttachmentCondition = conditions.NewTODO("Gateway is ignored")
 			continue
 		}
 
@@ -340,25 +323,27 @@ func bindRouteToListeners(r *Route, gw *Gateway) {
 		// - listener 2 for port 80 with hostname *.example.com;
 		// In this case, the Route host foo.example.com should choose listener 1, as it is a more specific match.
 
-		l, exists := gw.Listeners[name]
+		l, exists := gw.Listeners[string(*routeRef.SectionName)]
 		if !exists {
 			// FIXME(pleshakov): Add a proper condition once it is available in the Gateway API.
 			// https://github.com/nginxinc/nginx-kubernetes-gateway/issues/306
-			r.UnattachedSectionNameRefs[name] = conditions.NewTODO("listener is not found")
+			ref.FailedAttachmentCondition = conditions.NewTODO("listener is not found")
 			continue
 		}
 
 		if !l.Valid {
-			r.UnattachedSectionNameRefs[name] = conditions.NewRouteInvalidListener()
+			ref.FailedAttachmentCondition = conditions.NewRouteInvalidListener()
 			continue
 		}
 
 		accepted := findAcceptedHostnames(l.Source.Hostname, r.Source.Spec.Hostnames)
 
 		if len(accepted) == 0 {
-			r.UnattachedSectionNameRefs[name] = conditions.NewRouteNoMatchingListenerHostname()
+			ref.FailedAttachmentCondition = conditions.NewRouteNoMatchingListenerHostname()
 			continue
 		}
+
+		ref.Attached = true
 
 		for _, h := range accepted {
 			l.AcceptedHostnames[h] = struct{}{}

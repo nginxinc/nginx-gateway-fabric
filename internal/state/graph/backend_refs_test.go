@@ -309,11 +309,11 @@ func TestAddBackendGroupsToRouteTest(t *testing.T) {
 		return rules
 	}
 
-	const sectionName = "test"
-	sectionNameRefs := map[string]ParentRef{
-		sectionName: {
-			Idx:     0,
-			Gateway: types.NamespacedName{Namespace: "test", Name: "gateway"},
+	sectionNameRefs := []ParentRef{
+		{
+			Idx:      0,
+			Gateway:  types.NamespacedName{Namespace: "test", Name: "gateway"},
+			Attached: true,
 		},
 	}
 
@@ -337,10 +337,10 @@ func TestAddBackendGroupsToRouteTest(t *testing.T) {
 	}{
 		{
 			route: &Route{
-				Source:          hrWithOneBackend,
-				SectionNameRefs: sectionNameRefs,
-				Valid:           true,
-				Rules:           createRules(hrWithOneBackend, allValid, allValid),
+				Source:     hrWithOneBackend,
+				ParentRefs: sectionNameRefs,
+				Valid:      true,
+				Rules:      createRules(hrWithOneBackend, allValid, allValid),
 			},
 			expectedBackendGroups: []BackendGroup{
 				{
@@ -362,10 +362,10 @@ func TestAddBackendGroupsToRouteTest(t *testing.T) {
 		},
 		{
 			route: &Route{
-				Source:          hrWithTwoBackends,
-				SectionNameRefs: sectionNameRefs,
-				Valid:           true,
-				Rules:           createRules(hrWithTwoBackends, allValid, allValid),
+				Source:     hrWithTwoBackends,
+				ParentRefs: sectionNameRefs,
+				Valid:      true,
+				Rules:      createRules(hrWithTwoBackends, allValid, allValid),
 			},
 			expectedBackendGroups: []BackendGroup{
 				{
@@ -394,9 +394,9 @@ func TestAddBackendGroupsToRouteTest(t *testing.T) {
 		},
 		{
 			route: &Route{
-				Source:          hrWithOneBackend,
-				SectionNameRefs: sectionNameRefs,
-				Valid:           false,
+				Source:     hrWithOneBackend,
+				ParentRefs: sectionNameRefs,
+				Valid:      false,
 			},
 			expectedBackendGroups: nil,
 			expectedConditions:    nil,
@@ -404,10 +404,10 @@ func TestAddBackendGroupsToRouteTest(t *testing.T) {
 		},
 		{
 			route: &Route{
-				Source:          hrWithOneBackend,
-				SectionNameRefs: sectionNameRefs,
-				Valid:           true,
-				Rules:           createRules(hrWithOneBackend, allInvalid, allValid),
+				Source:     hrWithOneBackend,
+				ParentRefs: sectionNameRefs,
+				Valid:      true,
+				Rules:      createRules(hrWithOneBackend, allInvalid, allValid),
 			},
 			expectedBackendGroups: nil,
 			expectedConditions:    nil,
@@ -415,10 +415,10 @@ func TestAddBackendGroupsToRouteTest(t *testing.T) {
 		},
 		{
 			route: &Route{
-				Source:          hrWithOneBackend,
-				SectionNameRefs: sectionNameRefs,
-				Valid:           true,
-				Rules:           createRules(hrWithOneBackend, allValid, allInvalid),
+				Source:     hrWithOneBackend,
+				ParentRefs: sectionNameRefs,
+				Valid:      true,
+				Rules:      createRules(hrWithOneBackend, allValid, allInvalid),
 			},
 			expectedBackendGroups: nil,
 			expectedConditions:    nil,
@@ -426,10 +426,10 @@ func TestAddBackendGroupsToRouteTest(t *testing.T) {
 		},
 		{
 			route: &Route{
-				Source:          hrWithInvalidRule,
-				SectionNameRefs: sectionNameRefs,
-				Valid:           true,
-				Rules:           createRules(hrWithInvalidRule, allValid, allValid),
+				Source:     hrWithInvalidRule,
+				ParentRefs: sectionNameRefs,
+				Valid:      true,
+				Rules:      createRules(hrWithInvalidRule, allValid, allValid),
 			},
 			expectedBackendGroups: []BackendGroup{
 				{
@@ -451,10 +451,10 @@ func TestAddBackendGroupsToRouteTest(t *testing.T) {
 		},
 		{
 			route: &Route{
-				Source:          hrWithZeroBackendRefs,
-				SectionNameRefs: sectionNameRefs,
-				Valid:           true,
-				Rules:           createRules(hrWithZeroBackendRefs, allValid, allValid),
+				Source:     hrWithZeroBackendRefs,
+				ParentRefs: sectionNameRefs,
+				Valid:      true,
+				Rules:      createRules(hrWithZeroBackendRefs, allValid, allValid),
 			},
 			expectedBackendGroups: []BackendGroup{
 				{
@@ -474,7 +474,7 @@ func TestAddBackendGroupsToRouteTest(t *testing.T) {
 			addBackendGroupsToRoute(test.route, services)
 
 			g.Expect(helpers.Diff(test.expectedBackendGroups, test.route.GetAllBackendGroups())).To(BeEmpty())
-			g.Expect(test.route.GetAllConditionsForSectionName(sectionName)).To(Equal(test.expectedConditions))
+			g.Expect(test.route.Conditions).To(Equal(test.expectedConditions))
 		})
 	}
 }

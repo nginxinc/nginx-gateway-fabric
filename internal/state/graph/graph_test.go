@@ -12,7 +12,6 @@ import (
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/helpers"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/conditions"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/secrets/secretsfakes"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/validation"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/validation/validationfakes"
@@ -179,27 +178,27 @@ func TestBuildGraph(t *testing.T) {
 	routeHR1 := &Route{
 		Valid:  true,
 		Source: hr1,
-		SectionNameRefs: map[string]ParentRef{
-			"listener-80-1": {
-				Idx:     0,
-				Gateway: client.ObjectKeyFromObject(gw1),
+		ParentRefs: []ParentRef{
+			{
+				Idx:      0,
+				Gateway:  client.ObjectKeyFromObject(gw1),
+				Attached: true,
 			},
 		},
-		UnattachedSectionNameRefs: map[string]conditions.Condition{},
-		Rules:                     []Rule{createValidRuleWithBackendGroup(hr1Group)},
+		Rules: []Rule{createValidRuleWithBackendGroup(hr1Group)},
 	}
 
 	routeHR3 := &Route{
 		Valid:  true,
 		Source: hr3,
-		SectionNameRefs: map[string]ParentRef{
-			"listener-443-1": {
-				Idx:     0,
-				Gateway: client.ObjectKeyFromObject(gw1),
+		ParentRefs: []ParentRef{
+			{
+				Idx:      0,
+				Gateway:  client.ObjectKeyFromObject(gw1),
+				Attached: true,
 			},
 		},
-		UnattachedSectionNameRefs: map[string]conditions.Condition{},
-		Rules:                     []Rule{createValidRuleWithBackendGroup(hr3Group)},
+		Rules: []Rule{createValidRuleWithBackendGroup(hr3Group)},
 	}
 
 	secretMemoryMgr := &secretsfakes.FakeSecretDiskMemoryManager{}

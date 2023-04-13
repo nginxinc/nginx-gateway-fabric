@@ -335,14 +335,18 @@ var _ = Describe("ChangeProcessor", func() {
 							HTTPRouteStatuses: map[types.NamespacedName]state.HTTPRouteStatus{
 								{Namespace: "test", Name: "hr-1"}: {
 									ObservedGeneration: hr1.Generation,
-									ParentStatuses: map[string]state.ParentStatus{
-										"listener-80-1": {
+									ParentStatuses: []state.ParentStatus{
+										{
+											GatewayNsName: client.ObjectKeyFromObject(gw1),
+											SectionName:   helpers.GetPointer[v1beta1.SectionName]("listener-80-1"),
 											Conditions: append(
 												conditions.NewDefaultRouteConditions(),
 												conditions.NewTODO("GatewayClass is invalid or doesn't exist"),
 											),
 										},
-										"listener-443-1": {
+										{
+											GatewayNsName: client.ObjectKeyFromObject(gw1),
+											SectionName:   helpers.GetPointer[v1beta1.SectionName]("listener-443-1"),
 											Conditions: append(
 												conditions.NewDefaultRouteConditions(),
 												conditions.NewTODO("GatewayClass is invalid or doesn't exist"),
@@ -440,12 +444,16 @@ var _ = Describe("ChangeProcessor", func() {
 						HTTPRouteStatuses: map[types.NamespacedName]state.HTTPRouteStatus{
 							{Namespace: "test", Name: "hr-1"}: {
 								ObservedGeneration: hr1.Generation,
-								ParentStatuses: map[string]state.ParentStatus{
-									"listener-80-1": {
-										Conditions: conditions.NewDefaultRouteConditions(),
+								ParentStatuses: []state.ParentStatus{
+									{
+										GatewayNsName: client.ObjectKeyFromObject(gw1),
+										SectionName:   helpers.GetPointer[v1beta1.SectionName]("listener-80-1"),
+										Conditions:    conditions.NewDefaultRouteConditions(),
 									},
-									"listener-443-1": {
-										Conditions: conditions.NewDefaultRouteConditions(),
+									{
+										GatewayNsName: client.ObjectKeyFromObject(gw1),
+										SectionName:   helpers.GetPointer[v1beta1.SectionName]("listener-443-1"),
+										Conditions:    conditions.NewDefaultRouteConditions(),
 									},
 								},
 							},
@@ -549,12 +557,16 @@ var _ = Describe("ChangeProcessor", func() {
 						HTTPRouteStatuses: map[types.NamespacedName]state.HTTPRouteStatus{
 							{Namespace: "test", Name: "hr-1"}: {
 								ObservedGeneration: hr1Updated.Generation,
-								ParentStatuses: map[string]state.ParentStatus{
-									"listener-80-1": {
-										Conditions: conditions.NewDefaultRouteConditions(),
+								ParentStatuses: []state.ParentStatus{
+									{
+										GatewayNsName: client.ObjectKeyFromObject(gw1),
+										SectionName:   helpers.GetPointer[v1beta1.SectionName]("listener-80-1"),
+										Conditions:    conditions.NewDefaultRouteConditions(),
 									},
-									"listener-443-1": {
-										Conditions: conditions.NewDefaultRouteConditions(),
+									{
+										GatewayNsName: client.ObjectKeyFromObject(gw1),
+										SectionName:   helpers.GetPointer[v1beta1.SectionName]("listener-443-1"),
+										Conditions:    conditions.NewDefaultRouteConditions(),
 									},
 								},
 							},
@@ -659,12 +671,16 @@ var _ = Describe("ChangeProcessor", func() {
 						HTTPRouteStatuses: map[types.NamespacedName]state.HTTPRouteStatus{
 							{Namespace: "test", Name: "hr-1"}: {
 								ObservedGeneration: hr1Updated.Generation,
-								ParentStatuses: map[string]state.ParentStatus{
-									"listener-80-1": {
-										Conditions: conditions.NewDefaultRouteConditions(),
+								ParentStatuses: []state.ParentStatus{
+									{
+										GatewayNsName: client.ObjectKeyFromObject(gw1Updated),
+										SectionName:   helpers.GetPointer[v1beta1.SectionName]("listener-80-1"),
+										Conditions:    conditions.NewDefaultRouteConditions(),
 									},
-									"listener-443-1": {
-										Conditions: conditions.NewDefaultRouteConditions(),
+									{
+										GatewayNsName: client.ObjectKeyFromObject(gw1Updated),
+										SectionName:   helpers.GetPointer[v1beta1.SectionName]("listener-443-1"),
+										Conditions:    conditions.NewDefaultRouteConditions(),
 									},
 								},
 							},
@@ -768,12 +784,16 @@ var _ = Describe("ChangeProcessor", func() {
 						HTTPRouteStatuses: map[types.NamespacedName]state.HTTPRouteStatus{
 							{Namespace: "test", Name: "hr-1"}: {
 								ObservedGeneration: hr1Updated.Generation,
-								ParentStatuses: map[string]state.ParentStatus{
-									"listener-80-1": {
-										Conditions: conditions.NewDefaultRouteConditions(),
+								ParentStatuses: []state.ParentStatus{
+									{
+										GatewayNsName: client.ObjectKeyFromObject(gw1Updated),
+										SectionName:   helpers.GetPointer[v1beta1.SectionName]("listener-80-1"),
+										Conditions:    conditions.NewDefaultRouteConditions(),
 									},
-									"listener-443-1": {
-										Conditions: conditions.NewDefaultRouteConditions(),
+									{
+										GatewayNsName: client.ObjectKeyFromObject(gw1Updated),
+										SectionName:   helpers.GetPointer[v1beta1.SectionName]("listener-443-1"),
+										Conditions:    conditions.NewDefaultRouteConditions(),
 									},
 								},
 							},
@@ -880,12 +900,16 @@ var _ = Describe("ChangeProcessor", func() {
 						HTTPRouteStatuses: map[types.NamespacedName]state.HTTPRouteStatus{
 							{Namespace: "test", Name: "hr-1"}: {
 								ObservedGeneration: hr1Updated.Generation,
-								ParentStatuses: map[string]state.ParentStatus{
-									"listener-80-1": {
-										Conditions: conditions.NewDefaultRouteConditions(),
+								ParentStatuses: []state.ParentStatus{
+									{
+										GatewayNsName: client.ObjectKeyFromObject(gw1Updated),
+										SectionName:   helpers.GetPointer[v1beta1.SectionName]("listener-80-1"),
+										Conditions:    conditions.NewDefaultRouteConditions(),
 									},
-									"listener-443-1": {
-										Conditions: conditions.NewDefaultRouteConditions(),
+									{
+										GatewayNsName: client.ObjectKeyFromObject(gw1Updated),
+										SectionName:   helpers.GetPointer[v1beta1.SectionName]("listener-443-1"),
+										Conditions:    conditions.NewDefaultRouteConditions(),
 									},
 								},
 							},
@@ -981,25 +1005,33 @@ var _ = Describe("ChangeProcessor", func() {
 						HTTPRouteStatuses: map[types.NamespacedName]state.HTTPRouteStatus{
 							{Namespace: "test", Name: "hr-1"}: {
 								ObservedGeneration: hr1Updated.Generation,
-								ParentStatuses: map[string]state.ParentStatus{
-									"listener-80-1": {
-										Conditions: conditions.NewDefaultRouteConditions(),
+								ParentStatuses: []state.ParentStatus{
+									{
+										GatewayNsName: client.ObjectKeyFromObject(gw1Updated),
+										SectionName:   helpers.GetPointer[v1beta1.SectionName]("listener-80-1"),
+										Conditions:    conditions.NewDefaultRouteConditions(),
 									},
-									"listener-443-1": {
-										Conditions: conditions.NewDefaultRouteConditions(),
+									{
+										GatewayNsName: client.ObjectKeyFromObject(gw1Updated),
+										SectionName:   helpers.GetPointer[v1beta1.SectionName]("listener-443-1"),
+										Conditions:    conditions.NewDefaultRouteConditions(),
 									},
 								},
 							},
 							{Namespace: "test", Name: "hr-2"}: {
 								ObservedGeneration: hr2.Generation,
-								ParentStatuses: map[string]state.ParentStatus{
-									"listener-80-1": {
+								ParentStatuses: []state.ParentStatus{
+									{
+										GatewayNsName: client.ObjectKeyFromObject(gw2),
+										SectionName:   helpers.GetPointer[v1beta1.SectionName]("listener-80-1"),
 										Conditions: append(
 											conditions.NewDefaultRouteConditions(),
 											conditions.NewTODO("Gateway is ignored"),
 										),
 									},
-									"listener-443-1": {
+									{
+										GatewayNsName: client.ObjectKeyFromObject(gw2),
+										SectionName:   helpers.GetPointer[v1beta1.SectionName]("listener-443-1"),
 										Conditions: append(
 											conditions.NewDefaultRouteConditions(),
 											conditions.NewTODO("Gateway is ignored"),
@@ -1098,12 +1130,16 @@ var _ = Describe("ChangeProcessor", func() {
 						HTTPRouteStatuses: map[types.NamespacedName]state.HTTPRouteStatus{
 							{Namespace: "test", Name: "hr-2"}: {
 								ObservedGeneration: hr2.Generation,
-								ParentStatuses: map[string]state.ParentStatus{
-									"listener-80-1": {
-										Conditions: conditions.NewDefaultRouteConditions(),
+								ParentStatuses: []state.ParentStatus{
+									{
+										GatewayNsName: client.ObjectKeyFromObject(gw2),
+										SectionName:   helpers.GetPointer[v1beta1.SectionName]("listener-80-1"),
+										Conditions:    conditions.NewDefaultRouteConditions(),
 									},
-									"listener-443-1": {
-										Conditions: conditions.NewDefaultRouteConditions(),
+									{
+										GatewayNsName: client.ObjectKeyFromObject(gw2),
+										SectionName:   helpers.GetPointer[v1beta1.SectionName]("listener-443-1"),
+										Conditions:    conditions.NewDefaultRouteConditions(),
 									},
 								},
 							},
@@ -2102,9 +2138,11 @@ var _ = Describe("ChangeProcessor", func() {
 					HTTPRouteStatuses: map[types.NamespacedName]state.HTTPRouteStatus{
 						hrNsName: {
 							ObservedGeneration: hr.Generation,
-							ParentStatuses: map[string]state.ParentStatus{
-								"listener-80-1": {
-									Conditions: conditions.NewDefaultRouteConditions(),
+							ParentStatuses: []state.ParentStatus{
+								{
+									GatewayNsName: gwNsName,
+									SectionName:   helpers.GetPointer[v1beta1.SectionName]("listener-80-1"),
+									Conditions:    conditions.NewDefaultRouteConditions(),
 								},
 							},
 						},
