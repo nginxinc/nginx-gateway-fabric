@@ -320,10 +320,8 @@ func TestBuildGateway(t *testing.T) {
 				Source: getLastCreatedGetaway(),
 				Listeners: map[string]*Listener{
 					"listener-80-2": {
-						Source:            listener802,
-						Valid:             false,
-						Routes:            map[types.NamespacedName]*Route{},
-						AcceptedHostnames: map[string]struct{}{},
+						Source: listener802,
+						Valid:  false,
 						Conditions: []conditions.Condition{
 							conditions.NewListenerUnsupportedProtocol(
 								`protocol: Unsupported value: "TCP": supported values: "HTTP", "HTTPS"`,
@@ -340,10 +338,8 @@ func TestBuildGateway(t *testing.T) {
 				Source: getLastCreatedGetaway(),
 				Listeners: map[string]*Listener{
 					"listener-80-5": {
-						Source:            listener805,
-						Valid:             false,
-						Routes:            map[types.NamespacedName]*Route{},
-						AcceptedHostnames: map[string]struct{}{},
+						Source: listener805,
+						Valid:  false,
 						Conditions: []conditions.Condition{
 							conditions.NewListenerPortUnavailable(`port: Unsupported value: 81: supported values: "80"`),
 						},
@@ -358,10 +354,8 @@ func TestBuildGateway(t *testing.T) {
 				Source: getLastCreatedGetaway(),
 				Listeners: map[string]*Listener{
 					"listener-443-6": {
-						Source:            listener4436,
-						Valid:             false,
-						Routes:            map[types.NamespacedName]*Route{},
-						AcceptedHostnames: map[string]struct{}{},
+						Source: listener4436,
+						Valid:  false,
 						Conditions: []conditions.Condition{
 							conditions.NewListenerPortUnavailable(`port: Unsupported value: 444: supported values: "443"`),
 						},
@@ -376,19 +370,15 @@ func TestBuildGateway(t *testing.T) {
 				Source: getLastCreatedGetaway(),
 				Listeners: map[string]*Listener{
 					"listener-80-6": {
-						Source:            listener806,
-						Valid:             false,
-						Routes:            map[types.NamespacedName]*Route{},
-						AcceptedHostnames: map[string]struct{}{},
+						Source: listener806,
+						Valid:  false,
 						Conditions: []conditions.Condition{
 							conditions.NewListenerUnsupportedValue(invalidHostnameMsg),
 						},
 					},
 					"listener-443-4": {
-						Source:            listener4434,
-						Valid:             false,
-						Routes:            map[types.NamespacedName]*Route{},
-						AcceptedHostnames: map[string]struct{}{},
+						Source: listener4434,
+						Valid:  false,
 						Conditions: []conditions.Condition{
 							conditions.NewListenerUnsupportedValue(invalidHostnameMsg),
 						},
@@ -479,6 +469,7 @@ func TestBuildGateway(t *testing.T) {
 						Routes:            map[types.NamespacedName]*Route{},
 						AcceptedHostnames: map[string]struct{}{},
 						Conditions:        conditions.NewListenerConflictedHostname(conflictedHostnamesMsg),
+						SecretPath:        "/etc/nginx/secrets/test_secret",
 					},
 					"listener-443-3": {
 						Source:            listener4433,
@@ -486,6 +477,7 @@ func TestBuildGateway(t *testing.T) {
 						Routes:            map[types.NamespacedName]*Route{},
 						AcceptedHostnames: map[string]struct{}{},
 						Conditions:        conditions.NewListenerConflictedHostname(conflictedHostnamesMsg),
+						SecretPath:        "/etc/nginx/secrets/test_secret",
 					},
 				},
 			},
@@ -502,10 +494,8 @@ func TestBuildGateway(t *testing.T) {
 				Source: getLastCreatedGetaway(),
 				Listeners: map[string]*Listener{
 					"listener-80-1": {
-						Source:            listener801,
-						Valid:             false,
-						Routes:            map[types.NamespacedName]*Route{},
-						AcceptedHostnames: map[string]struct{}{},
+						Source: listener801,
+						Valid:  false,
 						Conditions: []conditions.Condition{
 							conditions.NewListenerUnsupportedAddress(
 								"spec.addresses: Forbidden: addresses are not supported",
@@ -513,11 +503,9 @@ func TestBuildGateway(t *testing.T) {
 						},
 					},
 					"listener-443-1": {
-						Source:            listener4431,
-						Valid:             false,
-						Routes:            map[types.NamespacedName]*Route{},
-						AcceptedHostnames: map[string]struct{}{},
-						SecretPath:        "",
+						Source:     listener4431,
+						Valid:      false,
+						SecretPath: "",
 						Conditions: []conditions.Condition{
 							conditions.NewListenerUnsupportedAddress(
 								"spec.addresses: Forbidden: addresses are not supported",
@@ -731,7 +719,9 @@ func TestValidateHTTPSListener(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewGomegaWithT(t)
 
-			result := validateHTTPSListener(test.l, gwNs)
+			v := createHTTPSListenerValidator(gwNs)
+
+			result := v(test.l)
 			g.Expect(result).To(Equal(test.expected))
 		})
 	}
@@ -774,12 +764,12 @@ func TestValidateListenerHostname(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewGomegaWithT(t)
 
-			err := validateListenerHostname(test.hostname)
+			conds := validateListenerHostname(v1beta1.Listener{Hostname: test.hostname})
 
 			if test.expectErr {
-				g.Expect(err).ToNot(BeNil())
+				g.Expect(conds).ToNot(BeEmpty())
 			} else {
-				g.Expect(err).To(BeNil())
+				g.Expect(conds).To(BeEmpty())
 			}
 		})
 	}
