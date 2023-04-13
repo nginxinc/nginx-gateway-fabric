@@ -49,7 +49,7 @@ func BuildGraph(
 
 	processedGws := processGateways(state.Gateways, gcName)
 
-	gw := buildGateway(processedGws.Winner, secretMemoryMgr)
+	gw := buildGateway(processedGws.Winner, secretMemoryMgr, gc)
 
 	routes := buildRoutesForGateways(validators.HTTPFieldsValidator, state.HTTPRoutes, processedGws.GetAllNsNames())
 	bindRoutesToListeners(routes, gw)

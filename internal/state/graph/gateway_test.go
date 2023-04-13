@@ -278,13 +278,22 @@ func TestBuildGateway(t *testing.T) {
 		return lastCreatedGateway
 	}
 
+	validGC := &GatewayClass{
+		Valid: true,
+	}
+	invalidGC := &GatewayClass{
+		Valid: false,
+	}
+
 	tests := []struct {
-		gateway  *v1beta1.Gateway
-		expected *Gateway
-		name     string
+		gateway      *v1beta1.Gateway
+		gatewayClass *GatewayClass
+		expected     *Gateway
+		name         string
 	}{
 		{
-			gateway: createGateway(gatewayCfg{listeners: []v1beta1.Listener{listener801}}),
+			gateway:      createGateway(gatewayCfg{listeners: []v1beta1.Listener{listener801}}),
+			gatewayClass: validGC,
 			expected: &Gateway{
 				Source: getLastCreatedGetaway(),
 				Listeners: map[string]*Listener{
@@ -299,7 +308,8 @@ func TestBuildGateway(t *testing.T) {
 			name: "valid http listener",
 		},
 		{
-			gateway: createGateway(gatewayCfg{listeners: []v1beta1.Listener{listener4431}}),
+			gateway:      createGateway(gatewayCfg{listeners: []v1beta1.Listener{listener4431}}),
+			gatewayClass: validGC,
 			expected: &Gateway{
 				Source: getLastCreatedGetaway(),
 				Listeners: map[string]*Listener{
@@ -315,7 +325,8 @@ func TestBuildGateway(t *testing.T) {
 			name: "valid https listener",
 		},
 		{
-			gateway: createGateway(gatewayCfg{listeners: []v1beta1.Listener{listener802}}),
+			gateway:      createGateway(gatewayCfg{listeners: []v1beta1.Listener{listener802}}),
+			gatewayClass: validGC,
 			expected: &Gateway{
 				Source: getLastCreatedGetaway(),
 				Listeners: map[string]*Listener{
@@ -333,7 +344,8 @@ func TestBuildGateway(t *testing.T) {
 			name: "invalid listener protocol",
 		},
 		{
-			gateway: createGateway(gatewayCfg{listeners: []v1beta1.Listener{listener805}}),
+			gateway:      createGateway(gatewayCfg{listeners: []v1beta1.Listener{listener805}}),
+			gatewayClass: validGC,
 			expected: &Gateway{
 				Source: getLastCreatedGetaway(),
 				Listeners: map[string]*Listener{
@@ -349,7 +361,8 @@ func TestBuildGateway(t *testing.T) {
 			name: "invalid http listener",
 		},
 		{
-			gateway: createGateway(gatewayCfg{listeners: []v1beta1.Listener{listener4436}}),
+			gateway:      createGateway(gatewayCfg{listeners: []v1beta1.Listener{listener4436}}),
+			gatewayClass: validGC,
 			expected: &Gateway{
 				Source: getLastCreatedGetaway(),
 				Listeners: map[string]*Listener{
@@ -365,7 +378,8 @@ func TestBuildGateway(t *testing.T) {
 			name: "invalid https listener",
 		},
 		{
-			gateway: createGateway(gatewayCfg{listeners: []v1beta1.Listener{listener806, listener4434}}),
+			gateway:      createGateway(gatewayCfg{listeners: []v1beta1.Listener{listener806, listener4434}}),
+			gatewayClass: validGC,
 			expected: &Gateway{
 				Source: getLastCreatedGetaway(),
 				Listeners: map[string]*Listener{
@@ -388,7 +402,8 @@ func TestBuildGateway(t *testing.T) {
 			name: "invalid hostnames",
 		},
 		{
-			gateway: createGateway(gatewayCfg{listeners: []v1beta1.Listener{listener4435}}),
+			gateway:      createGateway(gatewayCfg{listeners: []v1beta1.Listener{listener4435}}),
+			gatewayClass: validGC,
 			expected: &Gateway{
 				Source: getLastCreatedGetaway(),
 				Listeners: map[string]*Listener{
@@ -409,6 +424,7 @@ func TestBuildGateway(t *testing.T) {
 			gateway: createGateway(
 				gatewayCfg{listeners: []v1beta1.Listener{listener801, listener803, listener4431, listener4432}},
 			),
+			gatewayClass: validGC,
 			expected: &Gateway{
 				Source: getLastCreatedGetaway(),
 				Listeners: map[string]*Listener{
@@ -446,6 +462,7 @@ func TestBuildGateway(t *testing.T) {
 			gateway: createGateway(
 				gatewayCfg{listeners: []v1beta1.Listener{listener801, listener804, listener4431, listener4433}},
 			),
+			gatewayClass: validGC,
 			expected: &Gateway{
 				Source: getLastCreatedGetaway(),
 				Listeners: map[string]*Listener{
@@ -490,6 +507,7 @@ func TestBuildGateway(t *testing.T) {
 					{},
 				},
 			}),
+			gatewayClass: validGC,
 			expected: &Gateway{
 				Source: getLastCreatedGetaway(),
 				Listeners: map[string]*Listener{
@@ -521,6 +539,40 @@ func TestBuildGateway(t *testing.T) {
 			expected: nil,
 			name:     "nil gateway",
 		},
+		{
+			gateway:      createGateway(gatewayCfg{listeners: []v1beta1.Listener{listener801}}),
+			gatewayClass: invalidGC,
+			expected: &Gateway{
+				Source: getLastCreatedGetaway(),
+				Listeners: map[string]*Listener{
+					"listener-80-1": {
+						Source: listener801,
+						Valid:  false,
+						Conditions: []conditions.Condition{
+							conditions.NewListenerNoValidGatewayClass("GatewayClass is invalid"),
+						},
+					},
+				},
+			},
+			name: "invalid gatewayclass",
+		},
+		{
+			gateway:      createGateway(gatewayCfg{listeners: []v1beta1.Listener{listener801}}),
+			gatewayClass: nil,
+			expected: &Gateway{
+				Source: getLastCreatedGetaway(),
+				Listeners: map[string]*Listener{
+					"listener-80-1": {
+						Source: listener801,
+						Valid:  false,
+						Conditions: []conditions.Condition{
+							conditions.NewListenerNoValidGatewayClass("GatewayClass doesn't exist"),
+						},
+					},
+				},
+			},
+			name: "nil gatewayclass",
+		},
 	}
 
 	secretMemoryMgr := &secretsfakes.FakeSecretDiskMemoryManager{}
@@ -534,7 +586,7 @@ func TestBuildGateway(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewGomegaWithT(t)
-			result := buildGateway(test.gateway, secretMemoryMgr)
+			result := buildGateway(test.gateway, secretMemoryMgr, test.gatewayClass)
 			g.Expect(helpers.Diff(test.expected, result)).To(BeEmpty())
 		})
 	}
