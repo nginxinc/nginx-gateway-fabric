@@ -15,6 +15,10 @@ const (
 	// is invalid or not supported.
 	ListenerReasonUnsupportedValue v1beta1.ListenerConditionReason = "UnsupportedValue"
 
+	// ListenerReasonNoValidGatewayClass is used with the "Accepted" condition when there is no valid GatewayClass
+	// in the cluster.
+	ListenerReasonNoValidGatewayClass v1beta1.ListenerConditionReason = "NoValidGatewayClass"
+
 	// RouteReasonBackendRefUnsupportedValue is used with the "ResolvedRefs" condition when one of the
 	// Route rules has a backendRef with an unsupported value.
 	RouteReasonBackendRefUnsupportedValue = "UnsupportedValue"
@@ -129,27 +133,42 @@ func NewListenerPortUnavailable(msg string) Condition {
 	}
 }
 
+// NewListenerAccepted returns a Condition that indicates that the Listener is accepted.
+func NewListenerAccepted() Condition {
+	return Condition{
+		Type:    string(v1beta1.ListenerConditionAccepted),
+		Status:  metav1.ConditionTrue,
+		Reason:  string(v1beta1.ListenerReasonAccepted),
+		Message: "Listener is accepted",
+	}
+}
+
+// NewListenerResolvedRefs returns a Condition that indicates that all references in a Listener are resolved.
+func NewListenerResolvedRefs() Condition {
+	return Condition{
+		Type:    string(v1beta1.ListenerConditionResolvedRefs),
+		Status:  metav1.ConditionTrue,
+		Reason:  string(v1beta1.ListenerReasonResolvedRefs),
+		Message: "All references are resolved",
+	}
+}
+
+// NewListenerNoConflicts returns a Condition that indicates that there are no conflicts in a Listener.
+func NewListenerNoConflicts() Condition {
+	return Condition{
+		Type:    string(v1beta1.ListenerConditionConflicted),
+		Status:  metav1.ConditionFalse,
+		Reason:  string(v1beta1.ListenerReasonNoConflicts),
+		Message: "No conflicts",
+	}
+}
+
 // NewDefaultListenerConditions returns the default Conditions that must be present in the status of a Listener.
 func NewDefaultListenerConditions() []Condition {
 	return []Condition{
-		{
-			Type:    string(v1beta1.ListenerConditionAccepted),
-			Status:  metav1.ConditionTrue,
-			Reason:  string(v1beta1.ListenerReasonAccepted),
-			Message: "Listener is accepted",
-		},
-		{
-			Type:    string(v1beta1.ListenerReasonResolvedRefs),
-			Status:  metav1.ConditionTrue,
-			Reason:  string(v1beta1.ListenerReasonResolvedRefs),
-			Message: "All references are resolved",
-		},
-		{
-			Type:    string(v1beta1.ListenerConditionConflicted),
-			Status:  metav1.ConditionFalse,
-			Reason:  string(v1beta1.ListenerReasonNoConflicts),
-			Message: "No conflicts",
-		},
+		NewListenerAccepted(),
+		NewListenerResolvedRefs(),
+		NewListenerNoConflicts(),
 	}
 }
 
@@ -216,6 +235,17 @@ func NewListenerUnsupportedProtocol(msg string) Condition {
 		Type:    string(v1beta1.ListenerConditionAccepted),
 		Status:  metav1.ConditionFalse,
 		Reason:  string(v1beta1.ListenerReasonUnsupportedProtocol),
+		Message: msg,
+	}
+}
+
+// NewListenerNoValidGatewayClass returns a Condition that indicates that the Listener is not accepted because
+// there is no valid GatewayClass.
+func NewListenerNoValidGatewayClass(msg string) Condition {
+	return Condition{
+		Type:    string(v1beta1.ListenerConditionAccepted),
+		Status:  metav1.ConditionFalse,
+		Reason:  string(ListenerReasonNoValidGatewayClass),
 		Message: msg,
 	}
 }

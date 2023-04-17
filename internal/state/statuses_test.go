@@ -20,15 +20,6 @@ func TestBuildStatuses(t *testing.T) {
 		Status: metav1.ConditionTrue,
 	}
 
-	listeners := map[string]*graph.Listener{
-		"listener-80-1": {
-			Valid: true,
-			Routes: map[types.NamespacedName]*graph.Route{
-				{Namespace: "test", Name: "hr-1"}: {},
-			},
-		},
-	}
-
 	gw := &v1beta1.Gateway{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:  "test",
@@ -80,204 +71,72 @@ func TestBuildStatuses(t *testing.T) {
 		},
 	}
 
-	tests := []struct {
-		graph    *graph.Graph
-		expected Statuses
-		name     string
-	}{
-		{
-			graph: &graph.Graph{
-				GatewayClass: &graph.GatewayClass{
-					Source: &v1beta1.GatewayClass{
-						ObjectMeta: metav1.ObjectMeta{Generation: 1},
-					},
+	graph := &graph.Graph{
+		GatewayClass: &graph.GatewayClass{
+			Source: &v1beta1.GatewayClass{
+				ObjectMeta: metav1.ObjectMeta{Generation: 1},
+			},
+			Valid: true,
+		},
+		Gateway: &graph.Gateway{
+			Source: gw,
+			Listeners: map[string]*graph.Listener{
+				"listener-80-1": {
 					Valid: true,
-				},
-				Gateway: &graph.Gateway{
-					Source:    gw,
-					Listeners: listeners,
-				},
-				IgnoredGateways: map[types.NamespacedName]*v1beta1.Gateway{
-					{Namespace: "test", Name: "ignored-gateway"}: ignoredGw,
-				},
-				Routes: routes,
-			},
-			expected: Statuses{
-				GatewayClassStatus: &GatewayClassStatus{
-					ObservedGeneration: 1,
-					Conditions:         conditions.NewDefaultGatewayClassConditions(),
-				},
-				GatewayStatus: &GatewayStatus{
-					NsName: types.NamespacedName{Namespace: "test", Name: "gateway"},
-					ListenerStatuses: map[string]ListenerStatus{
-						"listener-80-1": {
-							AttachedRoutes: 1,
-							Conditions:     conditions.NewDefaultListenerConditions(),
-						},
-					},
-					ObservedGeneration: 2,
-				},
-				IgnoredGatewayStatuses: map[types.NamespacedName]IgnoredGatewayStatus{
-					{Namespace: "test", Name: "ignored-gateway"}: {ObservedGeneration: 1},
-				},
-				HTTPRouteStatuses: map[types.NamespacedName]HTTPRouteStatus{
-					{Namespace: "test", Name: "hr-1"}: {
-						ObservedGeneration: 3,
-						ParentStatuses: []ParentStatus{
-							{
-								GatewayNsName: client.ObjectKeyFromObject(gw),
-								SectionName:   helpers.GetPointer[v1beta1.SectionName]("listener-80-1"),
-								Conditions:    conditions.NewDefaultRouteConditions(),
-							},
-							{
-								GatewayNsName: client.ObjectKeyFromObject(gw),
-								SectionName:   helpers.GetPointer[v1beta1.SectionName]("listener-80-2"),
-								Conditions: append(
-									conditions.NewDefaultRouteConditions(),
-									invalidCondition,
-								),
-							},
-						},
+					Routes: map[types.NamespacedName]*graph.Route{
+						{Namespace: "test", Name: "hr-1"}: {},
 					},
 				},
 			},
-			name: "normal case",
 		},
-		{
-			graph: &graph.Graph{
-				GatewayClass: nil,
-				Gateway: &graph.Gateway{
-					Source:    gw,
-					Listeners: listeners,
-				},
-				IgnoredGateways: map[types.NamespacedName]*v1beta1.Gateway{
-					{Namespace: "test", Name: "ignored-gateway"}: ignoredGw,
-				},
-				Routes: routes,
-			},
-			expected: Statuses{
-				GatewayClassStatus: nil,
-				GatewayStatus: &GatewayStatus{
-					NsName: types.NamespacedName{Namespace: "test", Name: "gateway"},
-					ListenerStatuses: map[string]ListenerStatus{
-						"listener-80-1": {
-							AttachedRoutes: 1,
-							Conditions: append(
-								conditions.NewDefaultListenerConditions(),
-								conditions.NewTODO("GatewayClass is invalid or doesn't exist"),
-							),
-						},
-					},
-					ObservedGeneration: 2,
-				},
-				IgnoredGatewayStatuses: map[types.NamespacedName]IgnoredGatewayStatus{
-					{Namespace: "test", Name: "ignored-gateway"}: {ObservedGeneration: 1},
-				},
-				HTTPRouteStatuses: map[types.NamespacedName]HTTPRouteStatus{
-					{Namespace: "test", Name: "hr-1"}: {
-						ObservedGeneration: 3,
-						ParentStatuses: []ParentStatus{
-							{
-								GatewayNsName: client.ObjectKeyFromObject(gw),
-								SectionName:   helpers.GetPointer[v1beta1.SectionName]("listener-80-1"),
-								Conditions: append(
-									conditions.NewDefaultRouteConditions(),
-									conditions.NewTODO("GatewayClass is invalid or doesn't exist"),
-								),
-							},
-							{
-								GatewayNsName: client.ObjectKeyFromObject(gw),
-								SectionName:   helpers.GetPointer[v1beta1.SectionName]("listener-80-2"),
-								Conditions: append(
-									conditions.NewDefaultRouteConditions(),
-									conditions.NewTODO("GatewayClass is invalid or doesn't exist"),
-									invalidCondition,
-								),
-							},
-						},
-					},
-				},
-			},
-			name: "gatewayclass doesn't exist",
+		IgnoredGateways: map[types.NamespacedName]*v1beta1.Gateway{
+			client.ObjectKeyFromObject(ignoredGw): ignoredGw,
 		},
-		{
-			graph: &graph.Graph{
-				GatewayClass: &graph.GatewayClass{
-					Source: &v1beta1.GatewayClass{
-						ObjectMeta: metav1.ObjectMeta{Generation: 1},
-					},
-					Valid: false,
-					Conditions: []conditions.Condition{
-						conditions.NewGatewayClassInvalidParameters("error"),
-					},
+		Routes: routes,
+	}
+
+	expected := Statuses{
+		GatewayClassStatus: &GatewayClassStatus{
+			ObservedGeneration: 1,
+			Conditions:         conditions.NewDefaultGatewayClassConditions(),
+		},
+		GatewayStatus: &GatewayStatus{
+			NsName: types.NamespacedName{Namespace: "test", Name: "gateway"},
+			ListenerStatuses: map[string]ListenerStatus{
+				"listener-80-1": {
+					AttachedRoutes: 1,
+					Conditions:     conditions.NewDefaultListenerConditions(),
 				},
-				Gateway: &graph.Gateway{
-					Source:    gw,
-					Listeners: listeners,
-				},
-				IgnoredGateways: map[types.NamespacedName]*v1beta1.Gateway{
-					{Namespace: "test", Name: "ignored-gateway"}: ignoredGw,
-				},
-				Routes: routes,
 			},
-			expected: Statuses{
-				GatewayClassStatus: &GatewayClassStatus{
-					ObservedGeneration: 1,
-					Conditions: []conditions.Condition{
-						conditions.NewGatewayClassInvalidParameters("error"),
+			ObservedGeneration: 2,
+		},
+		IgnoredGatewayStatuses: map[types.NamespacedName]IgnoredGatewayStatus{
+			{Namespace: "test", Name: "ignored-gateway"}: {ObservedGeneration: 1},
+		},
+		HTTPRouteStatuses: map[types.NamespacedName]HTTPRouteStatus{
+			{Namespace: "test", Name: "hr-1"}: {
+				ObservedGeneration: 3,
+				ParentStatuses: []ParentStatus{
+					{
+						GatewayNsName: client.ObjectKeyFromObject(gw),
+						SectionName:   helpers.GetPointer[v1beta1.SectionName]("listener-80-1"),
+						Conditions:    conditions.NewDefaultRouteConditions(),
 					},
-				},
-				GatewayStatus: &GatewayStatus{
-					NsName: types.NamespacedName{Namespace: "test", Name: "gateway"},
-					ListenerStatuses: map[string]ListenerStatus{
-						"listener-80-1": {
-							AttachedRoutes: 1,
-							Conditions: append(
-								conditions.NewDefaultListenerConditions(),
-								conditions.NewTODO("GatewayClass is invalid or doesn't exist"),
-							),
-						},
-					},
-					ObservedGeneration: 2,
-				},
-				IgnoredGatewayStatuses: map[types.NamespacedName]IgnoredGatewayStatus{
-					{Namespace: "test", Name: "ignored-gateway"}: {ObservedGeneration: 1},
-				},
-				HTTPRouteStatuses: map[types.NamespacedName]HTTPRouteStatus{
-					{Namespace: "test", Name: "hr-1"}: {
-						ObservedGeneration: 3,
-						ParentStatuses: []ParentStatus{
-							{
-								GatewayNsName: client.ObjectKeyFromObject(gw),
-								SectionName:   helpers.GetPointer[v1beta1.SectionName]("listener-80-1"),
-								Conditions: append(
-									conditions.NewDefaultRouteConditions(),
-									conditions.NewTODO("GatewayClass is invalid or doesn't exist"),
-								),
-							},
-							{
-								GatewayNsName: client.ObjectKeyFromObject(gw),
-								SectionName:   helpers.GetPointer[v1beta1.SectionName]("listener-80-2"),
-								Conditions: append(
-									conditions.NewDefaultRouteConditions(),
-									conditions.NewTODO("GatewayClass is invalid or doesn't exist"),
-									invalidCondition,
-								),
-							},
-						},
+					{
+						GatewayNsName: client.ObjectKeyFromObject(gw),
+						SectionName:   helpers.GetPointer[v1beta1.SectionName]("listener-80-2"),
+						Conditions: append(
+							conditions.NewDefaultRouteConditions(),
+							invalidCondition,
+						),
 					},
 				},
 			},
-			name: "gatewayclass is not valid",
 		},
 	}
 
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			g := NewGomegaWithT(t)
+	g := NewGomegaWithT(t)
 
-			result := buildStatuses(test.graph)
-			g.Expect(helpers.Diff(test.expected, result)).To(BeEmpty())
-		})
-	}
+	result := buildStatuses(graph)
+	g.Expect(helpers.Diff(expected, result)).To(BeEmpty())
 }

@@ -316,18 +316,20 @@ var _ = Describe("ChangeProcessor", func() {
 								ObservedGeneration: gw1.Generation,
 								ListenerStatuses: map[string]state.ListenerStatus{
 									"listener-80-1": {
-										AttachedRoutes: 1,
-										Conditions: append(
-											conditions.NewDefaultListenerConditions(),
-											conditions.NewTODO("GatewayClass is invalid or doesn't exist"),
-										),
+										AttachedRoutes: 0,
+										Conditions: []conditions.Condition{
+											conditions.NewListenerResolvedRefs(),
+											conditions.NewListenerNoConflicts(),
+											conditions.NewListenerNoValidGatewayClass("GatewayClass doesn't exist"),
+										},
 									},
 									"listener-443-1": {
-										AttachedRoutes: 1,
-										Conditions: append(
-											conditions.NewDefaultListenerConditions(),
-											conditions.NewTODO("GatewayClass is invalid or doesn't exist"),
-										),
+										AttachedRoutes: 0,
+										Conditions: []conditions.Condition{
+											conditions.NewListenerResolvedRefs(),
+											conditions.NewListenerNoConflicts(),
+											conditions.NewListenerNoValidGatewayClass("GatewayClass doesn't exist"),
+										},
 									},
 								},
 							},
@@ -339,18 +341,16 @@ var _ = Describe("ChangeProcessor", func() {
 										{
 											GatewayNsName: client.ObjectKeyFromObject(gw1),
 											SectionName:   helpers.GetPointer[v1beta1.SectionName]("listener-80-1"),
-											Conditions: append(
-												conditions.NewDefaultRouteConditions(),
-												conditions.NewTODO("GatewayClass is invalid or doesn't exist"),
-											),
+											Conditions: []conditions.Condition{
+												conditions.NewRouteInvalidListener(),
+											},
 										},
 										{
 											GatewayNsName: client.ObjectKeyFromObject(gw1),
 											SectionName:   helpers.GetPointer[v1beta1.SectionName]("listener-443-1"),
-											Conditions: append(
-												conditions.NewDefaultRouteConditions(),
-												conditions.NewTODO("GatewayClass is invalid or doesn't exist"),
-											),
+											Conditions: []conditions.Condition{
+												conditions.NewRouteInvalidListener(),
+											},
 										},
 									},
 								},
@@ -1219,17 +1219,19 @@ var _ = Describe("ChangeProcessor", func() {
 							ListenerStatuses: map[string]state.ListenerStatus{
 								"listener-80-1": {
 									AttachedRoutes: 0,
-									Conditions: append(
-										conditions.NewDefaultListenerConditions(),
-										conditions.NewTODO("GatewayClass is invalid or doesn't exist"),
-									),
+									Conditions: []conditions.Condition{
+										conditions.NewListenerResolvedRefs(),
+										conditions.NewListenerNoConflicts(),
+										conditions.NewListenerNoValidGatewayClass("GatewayClass doesn't exist"),
+									},
 								},
 								"listener-443-1": {
 									AttachedRoutes: 0,
-									Conditions: append(
-										conditions.NewDefaultListenerConditions(),
-										conditions.NewTODO("GatewayClass is invalid or doesn't exist"),
-									),
+									Conditions: []conditions.Condition{
+										conditions.NewListenerResolvedRefs(),
+										conditions.NewListenerNoConflicts(),
+										conditions.NewListenerNoValidGatewayClass("GatewayClass doesn't exist"),
+									},
 								},
 							},
 						},
