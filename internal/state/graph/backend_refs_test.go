@@ -311,9 +311,11 @@ func TestAddBackendGroupsToRouteTest(t *testing.T) {
 
 	sectionNameRefs := []ParentRef{
 		{
-			Idx:      0,
-			Gateway:  types.NamespacedName{Namespace: "test", Name: "gateway"},
-			Attached: true,
+			Idx:     0,
+			Gateway: types.NamespacedName{Namespace: "test", Name: "gateway"},
+			Attachment: &ParentRefAttachmentStatus{
+				Attached: true,
+			},
 		},
 	}
 
