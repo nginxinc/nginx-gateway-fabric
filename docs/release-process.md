@@ -10,9 +10,6 @@ NKG uses semantic versioning for its releases. For more information, see https:/
 
 ## Release Planning and Development
 
-Until NKG reaches version 1.0.0, we aim to release approximately every two months. This enables us to introduce new
-features quickly while minimizing the cost of frequent releases and related procedural overhead.
-
 The features that will go into the next release are reflected in the
 corresponding [milestone](https://github.com/nginxinc/nginx-kubernetes-gateway/milestones). Refer to
 the [Issue Lifecycle](../ISSUE_LIFECYCLE.md) document for information on issues creation and assignment to releases.
