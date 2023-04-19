@@ -18,6 +18,9 @@ changelog:
     - title: 🧪 Tests
       labels:
         - tests
+    - title: 🧹 Tech debt
+      labels:
+        - tech-debt
     - title: 🔨 Maintenance
       labels:
         - chore
