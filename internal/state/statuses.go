@@ -133,7 +133,7 @@ func buildStatuses(graph *graph.Graph) Statuses {
 
 		for _, ref := range r.ParentRefs {
 			failedAttachmentCondCount := 0
-			if !ref.Attached {
+			if ref.Attachment != nil && !ref.Attachment.Attached {
 				failedAttachmentCondCount = 1
 			}
 			allConds := make([]conditions.Condition, 0, len(r.Conditions)+len(defaultConds)+failedAttachmentCondCount)
@@ -143,7 +143,7 @@ func buildStatuses(graph *graph.Graph) Statuses {
 			allConds = append(allConds, defaultConds...)
 			allConds = append(allConds, r.Conditions...)
 			if failedAttachmentCondCount == 1 {
-				allConds = append(allConds, ref.FailedAttachmentCondition)
+				allConds = append(allConds, ref.Attachment.FailedCondition)
 			}
 
 			routeRef := r.Source.Spec.ParentRefs[ref.Idx]

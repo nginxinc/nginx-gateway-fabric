@@ -763,6 +763,12 @@ func TestBindRouteToListeners(t *testing.T) {
 	}
 	notValidRoute := &Route{
 		Valid: false,
+		ParentRefs: []ParentRef{
+			{
+				Idx:     0,
+				Gateway: client.ObjectKeyFromObject(gw),
+			},
+		},
 	}
 
 	notValidListener := createModifiedListener(func(l *Listener) {
@@ -773,12 +779,11 @@ func TestBindRouteToListeners(t *testing.T) {
 	})
 
 	tests := []struct {
-		route                                  *Route
-		gateway                                *Gateway
-		expectedRouteUnattachedSectionNameRefs map[string]conditions.Condition
-		expectedGatewayListeners               map[string]*Listener
-		name                                   string
-		expectedSectionNameRefs                []ParentRef
+		route                    *Route
+		gateway                  *Gateway
+		expectedGatewayListeners map[string]*Listener
+		name                     string
+		expectedSectionNameRefs  []ParentRef
 	}{
 		{
 			route: createNormalRoute(),
@@ -790,9 +795,11 @@ func TestBindRouteToListeners(t *testing.T) {
 			},
 			expectedSectionNameRefs: []ParentRef{
 				{
-					Idx:      0,
-					Gateway:  client.ObjectKeyFromObject(gw),
-					Attached: true,
+					Idx:     0,
+					Gateway: client.ObjectKeyFromObject(gw),
+					Attachment: &ParentRefAttachmentStatus{
+						Attached: true,
+					},
 				},
 			},
 			expectedGatewayListeners: map[string]*Listener{
@@ -817,12 +824,14 @@ func TestBindRouteToListeners(t *testing.T) {
 			},
 			expectedSectionNameRefs: []ParentRef{
 				{
-					Idx:      0,
-					Gateway:  client.ObjectKeyFromObject(gw),
-					Attached: false,
-					FailedAttachmentCondition: conditions.NewRouteUnsupportedValue(
-						`spec.parentRefs[0].sectionName: Required value: cannot be empty`,
-					),
+					Idx:     0,
+					Gateway: client.ObjectKeyFromObject(gw),
+					Attachment: &ParentRefAttachmentStatus{
+						Attached: false,
+						FailedCondition: conditions.NewRouteUnsupportedValue(
+							`spec.parentRefs[0].sectionName: Required value: cannot be empty`,
+						),
+					},
 				},
 			},
 			expectedGatewayListeners: map[string]*Listener{
@@ -840,12 +849,14 @@ func TestBindRouteToListeners(t *testing.T) {
 			},
 			expectedSectionNameRefs: []ParentRef{
 				{
-					Idx:      0,
-					Gateway:  client.ObjectKeyFromObject(gw),
-					Attached: false,
-					FailedAttachmentCondition: conditions.NewRouteUnsupportedValue(
-						`spec.parentRefs[0].sectionName: Required value: cannot be empty`,
-					),
+					Idx:     0,
+					Gateway: client.ObjectKeyFromObject(gw),
+					Attachment: &ParentRefAttachmentStatus{
+						Attached: false,
+						FailedCondition: conditions.NewRouteUnsupportedValue(
+							`spec.parentRefs[0].sectionName: Required value: cannot be empty`,
+						),
+					},
 				},
 			},
 			expectedGatewayListeners: map[string]*Listener{
@@ -863,12 +874,14 @@ func TestBindRouteToListeners(t *testing.T) {
 			},
 			expectedSectionNameRefs: []ParentRef{
 				{
-					Idx:      0,
-					Gateway:  client.ObjectKeyFromObject(gw),
-					Attached: false,
-					FailedAttachmentCondition: conditions.NewRouteUnsupportedValue(
-						`spec.parentRefs[0].port: Forbidden: cannot be set`,
-					),
+					Idx:     0,
+					Gateway: client.ObjectKeyFromObject(gw),
+					Attachment: &ParentRefAttachmentStatus{
+						Attached: false,
+						FailedCondition: conditions.NewRouteUnsupportedValue(
+							`spec.parentRefs[0].port: Forbidden: cannot be set`,
+						),
+					},
 				},
 			},
 			expectedGatewayListeners: map[string]*Listener{
@@ -886,10 +899,12 @@ func TestBindRouteToListeners(t *testing.T) {
 			},
 			expectedSectionNameRefs: []ParentRef{
 				{
-					Idx:                       0,
-					Gateway:                   client.ObjectKeyFromObject(gw),
-					Attached:                  false,
-					FailedAttachmentCondition: conditions.NewTODO("listener is not found"),
+					Idx:     0,
+					Gateway: client.ObjectKeyFromObject(gw),
+					Attachment: &ParentRefAttachmentStatus{
+						Attached:        false,
+						FailedCondition: conditions.NewTODO("listener is not found"),
+					},
 				},
 			},
 			expectedGatewayListeners: map[string]*Listener{
@@ -907,10 +922,12 @@ func TestBindRouteToListeners(t *testing.T) {
 			},
 			expectedSectionNameRefs: []ParentRef{
 				{
-					Idx:                       0,
-					Gateway:                   client.ObjectKeyFromObject(gw),
-					Attached:                  false,
-					FailedAttachmentCondition: conditions.NewRouteInvalidListener(),
+					Idx:     0,
+					Gateway: client.ObjectKeyFromObject(gw),
+					Attachment: &ParentRefAttachmentStatus{
+						Attached:        false,
+						FailedCondition: conditions.NewRouteInvalidListener(),
+					},
 				},
 			},
 			expectedGatewayListeners: map[string]*Listener{
@@ -928,10 +945,12 @@ func TestBindRouteToListeners(t *testing.T) {
 			},
 			expectedSectionNameRefs: []ParentRef{
 				{
-					Idx:                       0,
-					Gateway:                   client.ObjectKeyFromObject(gw),
-					Attached:                  false,
-					FailedAttachmentCondition: conditions.NewRouteNoMatchingListenerHostname(),
+					Idx:     0,
+					Gateway: client.ObjectKeyFromObject(gw),
+					Attachment: &ParentRefAttachmentStatus{
+						Attached:        false,
+						FailedCondition: conditions.NewRouteNoMatchingListenerHostname(),
+					},
 				},
 			},
 			expectedGatewayListeners: map[string]*Listener{
@@ -949,10 +968,12 @@ func TestBindRouteToListeners(t *testing.T) {
 			},
 			expectedSectionNameRefs: []ParentRef{
 				{
-					Idx:                       0,
-					Gateway:                   ignoredGwNsName,
-					Attached:                  false,
-					FailedAttachmentCondition: conditions.NewTODO("Gateway is ignored"),
+					Idx:     0,
+					Gateway: ignoredGwNsName,
+					Attachment: &ParentRefAttachmentStatus{
+						Attached:        false,
+						FailedCondition: conditions.NewTODO("Gateway is ignored"),
+					},
 				},
 			},
 			expectedGatewayListeners: map[string]*Listener{
@@ -968,7 +989,13 @@ func TestBindRouteToListeners(t *testing.T) {
 					"listener-80-1": createListener(),
 				},
 			},
-			expectedRouteUnattachedSectionNameRefs: map[string]conditions.Condition{},
+			expectedSectionNameRefs: []ParentRef{
+				{
+					Idx:        0,
+					Gateway:    client.ObjectKeyFromObject(gw),
+					Attachment: nil,
+				},
+			},
 			expectedGatewayListeners: map[string]*Listener{
 				"listener-80-1": createListener(),
 			},

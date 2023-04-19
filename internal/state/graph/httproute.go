@@ -27,12 +27,20 @@ type Rule struct {
 
 // ParentRef describes a reference to a parent in an HTTPRoute.
 type ParentRef struct {
-	// FailedAttachmentCondition describes the failure of the attachment when Attached is false.
-	FailedAttachmentCondition conditions.Condition
+	// Attachment is the attachment status of the ParentRef. It could be nil. In that case, NGK didn't attempt to
+	// attach because of problems with the Route.
+	Attachment *ParentRefAttachmentStatus
 	// Gateway is the NamespacedName of the referenced Gateway
 	Gateway types.NamespacedName
 	// Idx is the index of the corresponding ParentReference in the HTTPRoute.
 	Idx int
+}
+
+// ParentRefAttachmentStatus describes the attachment status of a ParentRef.
+type ParentRefAttachmentStatus struct {
+	// FailedCondition is the condition that describes why the ParentRef is not attached to the Gateway. It is set
+	// when Attached is false.
+	FailedCondition conditions.Condition
 	// Attached indicates if the ParentRef is attached to the Gateway.
 	Attached bool
 }
@@ -280,7 +288,10 @@ func bindRouteToListeners(r *Route, gw *Gateway) {
 	}
 
 	for i := 0; i < len(r.ParentRefs); i++ {
+		attachment := &ParentRefAttachmentStatus{}
 		ref := &r.ParentRefs[i]
+		ref.Attachment = attachment
+
 		routeRef := r.Source.Spec.ParentRefs[ref.Idx]
 
 		path := field.NewPath("spec").Child("parentRefs").Index(ref.Idx)
@@ -289,13 +300,13 @@ func bindRouteToListeners(r *Route, gw *Gateway) {
 
 		if routeRef.SectionName == nil || *routeRef.SectionName == "" {
 			valErr := field.Required(path.Child("sectionName"), "cannot be empty")
-			ref.FailedAttachmentCondition = conditions.NewRouteUnsupportedValue(valErr.Error())
+			attachment.FailedCondition = conditions.NewRouteUnsupportedValue(valErr.Error())
 			continue
 		}
 
 		if routeRef.Port != nil {
 			valErr := field.Forbidden(path.Child("port"), "cannot be set")
-			ref.FailedAttachmentCondition = conditions.NewRouteUnsupportedValue(valErr.Error())
+			attachment.FailedCondition = conditions.NewRouteUnsupportedValue(valErr.Error())
 			continue
 		}
 
@@ -304,7 +315,7 @@ func bindRouteToListeners(r *Route, gw *Gateway) {
 		referencesWinningGw := ref.Gateway.Namespace == gw.Source.Namespace && ref.Gateway.Name == gw.Source.Name
 
 		if !referencesWinningGw {
-			ref.FailedAttachmentCondition = conditions.NewTODO("Gateway is ignored")
+			attachment.FailedCondition = conditions.NewTODO("Gateway is ignored")
 			continue
 		}
 
@@ -327,23 +338,23 @@ func bindRouteToListeners(r *Route, gw *Gateway) {
 		if !exists {
 			// FIXME(pleshakov): Add a proper condition once it is available in the Gateway API.
 			// https://github.com/nginxinc/nginx-kubernetes-gateway/issues/306
-			ref.FailedAttachmentCondition = conditions.NewTODO("listener is not found")
+			attachment.FailedCondition = conditions.NewTODO("listener is not found")
 			continue
 		}
 
 		if !l.Valid {
-			ref.FailedAttachmentCondition = conditions.NewRouteInvalidListener()
+			attachment.FailedCondition = conditions.NewRouteInvalidListener()
 			continue
 		}
 
 		accepted := findAcceptedHostnames(l.Source.Hostname, r.Source.Spec.Hostnames)
 
 		if len(accepted) == 0 {
-			ref.FailedAttachmentCondition = conditions.NewRouteNoMatchingListenerHostname()
+			attachment.FailedCondition = conditions.NewRouteNoMatchingListenerHostname()
 			continue
 		}
 
-		ref.Attached = true
+		attachment.Attached = true
 
 		for _, h := range accepted {
 			l.AcceptedHostnames[h] = struct{}{}

@@ -180,9 +180,11 @@ func TestBuildGraph(t *testing.T) {
 		Source: hr1,
 		ParentRefs: []ParentRef{
 			{
-				Idx:      0,
-				Gateway:  client.ObjectKeyFromObject(gw1),
-				Attached: true,
+				Idx:     0,
+				Gateway: client.ObjectKeyFromObject(gw1),
+				Attachment: &ParentRefAttachmentStatus{
+					Attached: true,
+				},
 			},
 		},
 		Rules: []Rule{createValidRuleWithBackendGroup(hr1Group)},
@@ -193,9 +195,11 @@ func TestBuildGraph(t *testing.T) {
 		Source: hr3,
 		ParentRefs: []ParentRef{
 			{
-				Idx:      0,
-				Gateway:  client.ObjectKeyFromObject(gw1),
-				Attached: true,
+				Idx:     0,
+				Gateway: client.ObjectKeyFromObject(gw1),
+				Attachment: &ParentRefAttachmentStatus{
+					Attached: true,
+				},
 			},
 		},
 		Rules: []Rule{createValidRuleWithBackendGroup(hr3Group)},
