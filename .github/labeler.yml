@@ -7,6 +7,9 @@ bug:
 chore:
 - branch: ['chore/**']
 
+tech-debt:
+- branch: ['tech-debt/**', 'techdebt/**', 'debt/**']
+
 documentation:
 - branch: ['docs/**', 'doc/**']
 - '**/*.md'
