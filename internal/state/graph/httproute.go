@@ -524,12 +524,12 @@ func validatePathMatch(
 	}
 
 	if *path.Type != v1beta1.PathMatchPathPrefix {
-		valErr := field.NotSupported(fieldPath, *path.Type, []string{string(v1beta1.PathMatchPathPrefix)})
+		valErr := field.NotSupported(fieldPath.Child("type"), *path.Type, []string{string(v1beta1.PathMatchPathPrefix)})
 		allErrs = append(allErrs, valErr)
 	}
 
 	if err := validator.ValidatePathInPrefixMatch(*path.Value); err != nil {
-		valErr := field.Invalid(fieldPath, *path.Value, err.Error())
+		valErr := field.Invalid(fieldPath.Child("value"), *path.Value, err.Error())
 		allErrs = append(allErrs, valErr)
 	}
 
