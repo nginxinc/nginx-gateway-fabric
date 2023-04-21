@@ -1,4 +1,4 @@
-VERSION = edge
+VERSION = 0.3.0
 TAG = $(VERSION)
 PREFIX ?= nginx-kubernetes-gateway
 
