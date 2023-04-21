@@ -520,7 +520,7 @@ func TestBuildRoute(t *testing.T) {
 				},
 				Conditions: []conditions.Condition{
 					conditions.NewRouteUnsupportedValue(
-						`All rules are invalid: spec.rules[0].matches[0].path: Invalid value: "/invalid": invalid path`,
+						`All rules are invalid: spec.rules[0].matches[0].path.value: Invalid value: "/invalid": invalid path`,
 					),
 				},
 				Rules: []Rule{
@@ -581,7 +581,7 @@ func TestBuildRoute(t *testing.T) {
 				Conditions: []conditions.Condition{
 					conditions.NewTODO(
 						`Some rules are invalid: ` +
-							`[spec.rules[0].matches[0].path: Invalid value: "/invalid": invalid path, ` +
+							`[spec.rules[0].matches[0].path.value: Invalid value: "/invalid": invalid path, ` +
 							`spec.rules[1].filters[0].requestRedirect.hostname: Invalid value: ` +
 							`"invalid.example.com": invalid hostname]`,
 					),
