@@ -46,7 +46,7 @@ deps: ## Add missing and remove unused modules, verify deps and download them to
 
 .PHONY: create-kind-cluster
 create-kind-cluster: ## Create a kind cluster
-	kind create cluster --image kindest/node:v1.26.0
+	kind create cluster --image kindest/node:v1.27.1
 	kind export kubeconfig --kubeconfig $(KIND_KUBE_CONFIG_FOLDER)/config
 
 .PHONY: delete-kind-cluster
