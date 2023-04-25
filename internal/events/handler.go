@@ -6,8 +6,6 @@ import (
 
 	"github.com/go-logr/logr"
 	apiv1 "k8s.io/api/core/v1"
-	discoveryV1 "k8s.io/api/discovery/v1"
-	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/config"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/file"
@@ -63,18 +61,36 @@ func NewEventHandlerImpl(cfg EventHandlerConfig) *EventHandlerImpl {
 }
 
 func (h *EventHandlerImpl) HandleEventBatch(ctx context.Context, batch EventBatch) {
+	change := state.NewChange()
+
 	for _, event := range batch {
 		switch e := event.(type) {
 		case *UpsertEvent:
-			h.propagateUpsert(e)
+			// FIXME(pleshakov): Move secret processing to ChangeProcessor
+			secret, ok := e.Resource.(*apiv1.Secret)
+			if ok {
+				// FIXME(kate-osborn): need to handle certificate rotation
+				h.cfg.SecretStore.Upsert(secret)
+				continue
+			}
+
+			change.IncludeUpsert(e.Resource)
 		case *DeleteEvent:
-			h.propagateDelete(e)
+			// FIXME(pleshakov): Move secret processing to ChangeProcessor
+			_, ok := e.Type.(*apiv1.Secret)
+			if ok {
+				// FIXME(kate-osborn): make sure that affected servers are updated
+				h.cfg.SecretStore.Delete(e.NamespacedName)
+				continue
+			}
+
+			change.IncludeDelete(e.Type, e.NamespacedName)
 		default:
 			panic(fmt.Errorf("unknown event type %T", e))
 		}
 	}
 
-	changed, conf, statuses := h.cfg.Processor.Process(ctx)
+	changed, conf, statuses := h.cfg.Processor.Process(ctx, change)
 	if !changed {
 		h.cfg.Logger.Info("Handling events didn't result into NGINX configuration changes")
 		return
@@ -110,44 +126,4 @@ func (h *EventHandlerImpl) updateNginx(ctx context.Context, conf dataplane.Confi
 	}
 
 	return h.cfg.NginxRuntimeMgr.Reload(ctx)
-}
-
-func (h *EventHandlerImpl) propagateUpsert(e *UpsertEvent) {
-	switch r := e.Resource.(type) {
-	case *v1beta1.GatewayClass:
-		h.cfg.Processor.CaptureUpsertChange(r)
-	case *v1beta1.Gateway:
-		h.cfg.Processor.CaptureUpsertChange(r)
-	case *v1beta1.HTTPRoute:
-		h.cfg.Processor.CaptureUpsertChange(r)
-	case *apiv1.Service:
-		h.cfg.Processor.CaptureUpsertChange(r)
-	case *apiv1.Secret:
-		// FIXME(kate-osborn): need to handle certificate rotation
-		h.cfg.SecretStore.Upsert(r)
-	case *discoveryV1.EndpointSlice:
-		h.cfg.Processor.CaptureUpsertChange(r)
-	default:
-		panic(fmt.Errorf("unknown resource type %T", e.Resource))
-	}
-}
-
-func (h *EventHandlerImpl) propagateDelete(e *DeleteEvent) {
-	switch e.Type.(type) {
-	case *v1beta1.GatewayClass:
-		h.cfg.Processor.CaptureDeleteChange(e.Type, e.NamespacedName)
-	case *v1beta1.Gateway:
-		h.cfg.Processor.CaptureDeleteChange(e.Type, e.NamespacedName)
-	case *v1beta1.HTTPRoute:
-		h.cfg.Processor.CaptureDeleteChange(e.Type, e.NamespacedName)
-	case *apiv1.Service:
-		h.cfg.Processor.CaptureDeleteChange(e.Type, e.NamespacedName)
-	case *apiv1.Secret:
-		// FIXME(kate-osborn): make sure that affected servers are updated
-		h.cfg.SecretStore.Delete(e.NamespacedName)
-	case *discoveryV1.EndpointSlice:
-		h.cfg.Processor.CaptureDeleteChange(e.Type, e.NamespacedName)
-	default:
-		panic(fmt.Errorf("unknown resource type %T", e.Type))
-	}
 }

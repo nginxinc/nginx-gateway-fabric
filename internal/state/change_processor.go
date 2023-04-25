@@ -35,22 +35,40 @@ const (
 
 type extractGVKFunc func(obj client.Object) schema.GroupVersionKind
 
+type Change struct {
+	updates []func(Updater)
+}
+
+func NewChange() *Change {
+	return &Change{}
+}
+
+func (c *Change) IncludeUpsert(obj client.Object) {
+	c.updates = append(c.updates, func(u Updater) {
+		u.Upsert(obj)
+	})
+}
+
+func (c *Change) IncludeDelete(resourceType client.Object, nsname types.NamespacedName) {
+	c.updates = append(c.updates, func(u Updater) {
+		u.Delete(resourceType, nsname)
+	})
+}
+
+func (c *Change) apply(u Updater) {
+	for _, update := range c.updates {
+		update(u)
+	}
+}
+
 // ChangeProcessor processes the changes to resources producing the internal representation
 // of the Gateway configuration. It only supports one GatewayClass resource.
 type ChangeProcessor interface {
-	// CaptureUpsertChange captures an upsert change to a resource.
-	// It panics if the resource is of unsupported type or if the passed Gateway is different from the one this
-	// ChangeProcessor was created for.
-	CaptureUpsertChange(obj client.Object)
-	// CaptureDeleteChange captures a delete change to a resource.
-	// The method panics if the resource is of unsupported type or if the passed Gateway is different from the one
-	// this ChangeProcessor was created for.
-	CaptureDeleteChange(resourceType client.Object, nsname types.NamespacedName)
 	// Process processes any captured changes and produces an internal representation of the Gateway configuration and
 	// the status information about the processed resources.
 	// If no changes were captured, the changed return argument will be false and both the configuration and statuses
 	// will be empty.
-	Process(ctx context.Context) (changed bool, conf dataplane.Configuration, statuses Statuses)
+	Process(ctx context.Context, change *Change) (changed bool, conf dataplane.Configuration, statuses Statuses)
 }
 
 // ChangeProcessorConfig holds configuration parameters for ChangeProcessorImpl.
@@ -184,25 +202,14 @@ func NewChangeProcessorImpl(cfg ChangeProcessorConfig) *ChangeProcessorImpl {
 // Now the clients make a combination of CaptureUpsertChange() and CaptureDeleteChange() calls followed by a call to
 // Process().
 
-func (c *ChangeProcessorImpl) CaptureUpsertChange(obj client.Object) {
-	c.lock.Lock()
-	defer c.lock.Unlock()
-
-	c.updater.Upsert(obj)
-}
-
-func (c *ChangeProcessorImpl) CaptureDeleteChange(resourceType client.Object, nsname types.NamespacedName) {
-	c.lock.Lock()
-	defer c.lock.Unlock()
-
-	c.updater.Delete(resourceType, nsname)
-}
-
 func (c *ChangeProcessorImpl) Process(
 	ctx context.Context,
+	change *Change,
 ) (changed bool, conf dataplane.Configuration, statuses Statuses) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
+
+	change.apply(c.updater)
 
 	if !c.getAndResetClusterStateChanged() {
 		return false, conf, statuses
