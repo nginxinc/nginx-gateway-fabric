@@ -22,7 +22,8 @@ type Graph struct {
 	// GatewayClass holds the GatewayClass resource.
 	GatewayClass *GatewayClass
 	// Gateway holds the winning Gateway resource.
-	Gateway *Gateway
+	Gateways []*Gateway
+
 	// IgnoredGateways holds the ignored Gateway resources, which belong to the NGINX Gateway (based on the
 	// GatewayClassName field of the resource) but ignored. It doesn't hold the Gateway resources that do not belong to
 	// the NGINX Gateway.
@@ -48,16 +49,25 @@ func BuildGraph(
 	gc := buildGatewayClass(gatewayClass)
 
 	processedGws := processGateways(state.Gateways, gcName)
+	gws := getGateways(state.Gateways, gcName)
 
-	gw := buildGateway(processedGws.Winner, secretMemoryMgr, gc)
+	graphGws := make([]*Gateway, 0, len(gws))
+
+	for _, gw := range gws {
+		graphGw := buildGateway(gw, secretMemoryMgr, gc)
+		// assume the same name
+		graphGw.Service = state.Services[types.NamespacedName{Namespace: "nginx-gateway", Name: gw.Name}]
+
+		graphGws = append(graphGws, graphGw)
+	}
 
 	routes := buildRoutesForGateways(validators.HTTPFieldsValidator, state.HTTPRoutes, processedGws.GetAllNsNames())
-	bindRoutesToListeners(routes, gw)
+	bindRoutesToListeners(routes, graphGws)
 	addBackendGroupsToRoutes(routes, state.Services)
 
 	g := &Graph{
 		GatewayClass:    gc,
-		Gateway:         gw,
+		Gateways:        graphGws,
 		Routes:          routes,
 		IgnoredGateways: processedGws.Ignored,
 	}

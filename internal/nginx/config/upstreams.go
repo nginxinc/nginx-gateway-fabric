@@ -19,29 +19,33 @@ const (
 	invalidBackendRef = "invalid-backend-ref"
 )
 
-func executeUpstreams(conf dataplane.Configuration) []byte {
-	upstreams := createUpstreams(conf.Upstreams)
+func executeUpstreams(confs []dataplane.Configuration) []byte {
+	var upstreams []http.Upstream
+
+	for _, conf := range confs {
+		upstreams = append(upstreams, createUpstreams(conf.Key, conf.Upstreams)...)
+	}
 
 	return execute(upstreamsTemplate, upstreams)
 }
 
-func createUpstreams(upstreams []dataplane.Upstream) []http.Upstream {
+func createUpstreams(key string, upstreams []dataplane.Upstream) []http.Upstream {
 	// capacity is the number of upstreams + 1 for the invalid backend ref upstream
 	ups := make([]http.Upstream, 0, len(upstreams)+1)
 
 	for _, u := range upstreams {
-		ups = append(ups, createUpstream(u))
+		ups = append(ups, createUpstream(key, u))
 	}
 
-	ups = append(ups, createInvalidBackendRefUpstream())
+	ups = append(ups, createInvalidBackendRefUpstream(key))
 
 	return ups
 }
 
-func createUpstream(up dataplane.Upstream) http.Upstream {
+func createUpstream(key string, up dataplane.Upstream) http.Upstream {
 	if len(up.Endpoints) == 0 {
 		return http.Upstream{
-			Name: up.Name,
+			Name: fmt.Sprintf("%s__%s", key, up.Name),
 			Servers: []http.UpstreamServer{
 				{
 					Address: nginx502Server,
@@ -58,14 +62,14 @@ func createUpstream(up dataplane.Upstream) http.Upstream {
 	}
 
 	return http.Upstream{
-		Name:    up.Name,
+		Name:    fmt.Sprintf("%s__%s", key, up.Name),
 		Servers: upstreamServers,
 	}
 }
 
-func createInvalidBackendRefUpstream() http.Upstream {
+func createInvalidBackendRefUpstream(key string) http.Upstream {
 	return http.Upstream{
-		Name: invalidBackendRef,
+		Name: fmt.Sprintf("%s__%s", key, invalidBackendRef),
 		Servers: []http.UpstreamServer{
 			{
 				Address: nginx500Server,

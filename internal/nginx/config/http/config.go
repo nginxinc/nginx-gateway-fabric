@@ -2,6 +2,7 @@ package http
 
 // Server holds all configuration for an HTTP server.
 type Server struct {
+	Port          int32
 	SSL           *SSL
 	ServerName    string
 	Locations     []Location

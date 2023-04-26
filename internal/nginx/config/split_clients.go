@@ -12,13 +12,17 @@ import (
 
 var splitClientsTemplate = gotemplate.Must(gotemplate.New("split_clients").Parse(splitClientsTemplateText))
 
-func executeSplitClients(conf dataplane.Configuration) []byte {
-	splitClients := createSplitClients(conf.BackendGroups)
+func executeSplitClients(confs []dataplane.Configuration) []byte {
+	var splitClients []http.SplitClient
+
+	for _, conf := range confs {
+		splitClients = append(splitClients, createSplitClients(conf.Key, conf.BackendGroups)...)
+	}
 
 	return execute(splitClientsTemplate, splitClients)
 }
 
-func createSplitClients(backendGroups []graph.BackendGroup) []http.SplitClient {
+func createSplitClients(key string, backendGroups []graph.BackendGroup) []http.SplitClient {
 	numSplits := 0
 	for _, group := range backendGroups {
 		if backendGroupNeedsSplit(group) {
@@ -39,8 +43,10 @@ func createSplitClients(backendGroups []graph.BackendGroup) []http.SplitClient {
 			continue
 		}
 
+		name := fmt.Sprintf("%s__%s", key, group.GroupName())
+
 		splitClients = append(splitClients, http.SplitClient{
-			VariableName:  convertStringToSafeVariableName(group.GroupName()),
+			VariableName:  convertStringToSafeVariableName(name),
 			Distributions: distributions,
 		})
 

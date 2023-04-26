@@ -15,6 +15,8 @@ const wildcardHostname = "~^"
 
 // Configuration is an intermediate representation of dataplane configuration.
 type Configuration struct {
+	Key   string
+	Ports graph.GatewayPorts
 	// HTTPServers holds all HTTPServers.
 	// FIXME(pleshakov) We assume that all servers are HTTP and listen on port 80.
 	HTTPServers []VirtualServer
@@ -97,27 +99,37 @@ func (r *MatchRule) GetMatch() v1beta1.HTTPRouteMatch {
 
 // BuildConfiguration builds the Configuration from the Graph.
 // FIXME(pleshakov) For now we only handle paths with prefix matches. Handle exact and regex matches
-func BuildConfiguration(ctx context.Context, g *graph.Graph, resolver resolver.ServiceResolver) Configuration {
+func BuildConfiguration(ctx context.Context, g *graph.Graph, resolver resolver.ServiceResolver) []Configuration {
 	if g.GatewayClass == nil || !g.GatewayClass.Valid {
-		return Configuration{}
+		return nil
 	}
 
-	if g.Gateway == nil {
-		return Configuration{}
+	if len(g.Gateways) == 0 {
+		return nil
 	}
 
-	upstreamsMap := buildUpstreamsMap(ctx, g.Gateway.Listeners, resolver)
-	httpServers, sslServers := buildServers(g.Gateway.Listeners)
-	backendGroups := buildBackendGroups(g.Gateway.Listeners)
+	confs := make([]Configuration, 0, len(g.Gateways))
 
-	config := Configuration{
-		HTTPServers:   httpServers,
-		SSLServers:    sslServers,
-		Upstreams:     upstreamsMapToSlice(upstreamsMap),
-		BackendGroups: backendGroups,
+	// for each Gateway, build its servers
+
+	for _, gw := range g.Gateways {
+		upstreamsMap := buildUpstreamsMap(ctx, gw.Listeners, resolver)
+		httpServers, sslServers := buildServers(gw.Listeners)
+		backendGroups := buildBackendGroups(gw.Listeners)
+
+		config := Configuration{
+			Key:           fmt.Sprintf("gateway__%s__%s", gw.Source.Namespace, gw.Source.Name),
+			Ports:         gw.Ports,
+			HTTPServers:   httpServers,
+			SSLServers:    sslServers,
+			Upstreams:     upstreamsMapToSlice(upstreamsMap),
+			BackendGroups: backendGroups,
+		}
+
+		confs = append(confs, config)
 	}
 
-	return config
+	return confs
 }
 
 func upstreamsMapToSlice(upstreamsMap map[string]Upstream) []Upstream {

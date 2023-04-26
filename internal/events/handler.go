@@ -87,10 +87,14 @@ func (h *EventHandlerImpl) HandleEventBatch(ctx context.Context, batch EventBatc
 		h.cfg.Logger.Info("NGINX configuration was successfully updated")
 	}
 
+	// provision or update Services
+
+	// update Gateway-related statuses to include information about Services (IPs)
+
 	h.cfg.StatusUpdater.Update(ctx, statuses)
 }
 
-func (h *EventHandlerImpl) updateNginx(ctx context.Context, conf dataplane.Configuration) error {
+func (h *EventHandlerImpl) updateNginx(ctx context.Context, conf []dataplane.Configuration) error {
 	// Write all secrets (nuke and pave).
 	// This will remove all secrets in the secrets directory before writing the requested secrets.
 	// FIXME(kate-osborn): We may want to rethink this approach in the future and write and remove secrets individually.

@@ -18,7 +18,7 @@ type HTTPRouteStatuses map[types.NamespacedName]HTTPRouteStatus
 // Statuses holds the status-related information about Gateway API resources.
 type Statuses struct {
 	GatewayClassStatus     *GatewayClassStatus
-	GatewayStatus          *GatewayStatus
+	GatewayStatuses        []GatewayStatus
 	IgnoredGatewayStatuses IgnoredGatewayStatuses
 	HTTPRouteStatuses      HTTPRouteStatuses
 }
@@ -96,12 +96,13 @@ func buildStatuses(graph *graph.Graph) Statuses {
 		}
 	}
 
-	if graph.Gateway != nil {
+	for _, gw := range graph.Gateways {
+
 		listenerStatuses := make(map[string]ListenerStatus)
 
 		defaultConds := conditions.NewDefaultListenerConditions()
 
-		for name, l := range graph.Gateway.Listeners {
+		for name, l := range gw.Listeners {
 			conds := make([]conditions.Condition, 0, len(l.Conditions)+len(defaultConds))
 
 			// We add default conds first, so that any additional conditions will override them, which is
@@ -115,11 +116,13 @@ func buildStatuses(graph *graph.Graph) Statuses {
 			}
 		}
 
-		statuses.GatewayStatus = &GatewayStatus{
-			NsName:             client.ObjectKeyFromObject(graph.Gateway.Source),
+		status := GatewayStatus{
+			NsName:             client.ObjectKeyFromObject(gw.Source),
 			ListenerStatuses:   listenerStatuses,
-			ObservedGeneration: graph.Gateway.Source.Generation,
+			ObservedGeneration: gw.Source.Generation,
 		}
+
+		statuses.GatewayStatuses = append(statuses.GatewayStatuses, status)
 	}
 
 	for nsname, gw := range graph.IgnoredGateways {

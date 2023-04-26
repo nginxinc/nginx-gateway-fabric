@@ -272,17 +272,17 @@ func buildRoute(
 	return r
 }
 
-func bindRoutesToListeners(routes map[types.NamespacedName]*Route, gw *Gateway) {
-	if gw == nil {
+func bindRoutesToListeners(routes map[types.NamespacedName]*Route, gws []*Gateway) {
+	if len(gws) == 0 {
 		return
 	}
 
 	for _, r := range routes {
-		bindRouteToListeners(r, gw)
+		bindRouteToListeners(r, gws)
 	}
 }
 
-func bindRouteToListeners(r *Route, gw *Gateway) {
+func bindRouteToListeners(r *Route, gws []*Gateway) {
 	if !r.Valid {
 		return
 	}
@@ -310,16 +310,20 @@ func bindRouteToListeners(r *Route, gw *Gateway) {
 			continue
 		}
 
-		// Case 2: the parentRef references an ignored Gateway resource.
+		// Find a Gateway
 
-		referencesWinningGw := ref.Gateway.Namespace == gw.Source.Namespace && ref.Gateway.Name == gw.Source.Name
+		var gw *Gateway
 
-		if !referencesWinningGw {
-			attachment.FailedCondition = conditions.NewTODO("Gateway is ignored")
-			continue
+		for i := range gws {
+			if gws[i].Source.Namespace == ref.Gateway.Namespace && gws[i].Source.Name == ref.Gateway.Name {
+				gw = gws[i]
+				break
+			}
 		}
 
-		// Case 3 - winning Gateway
+		if gw == nil {
+			panic("Gateway not found")
+		}
 
 		// Find a listener
 

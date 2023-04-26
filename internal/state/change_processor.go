@@ -8,9 +8,11 @@ import (
 	"github.com/go-logr/logr"
 	apiv1 "k8s.io/api/core/v1"
 	discoveryV1 "k8s.io/api/discovery/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
@@ -50,7 +52,7 @@ type ChangeProcessor interface {
 	// the status information about the processed resources.
 	// If no changes were captured, the changed return argument will be false and both the configuration and statuses
 	// will be empty.
-	Process(ctx context.Context) (changed bool, conf dataplane.Configuration, statuses Statuses)
+	Process(ctx context.Context) (changed bool, confs []dataplane.Configuration, statuses Statuses)
 }
 
 // ChangeProcessorConfig holds configuration parameters for ChangeProcessorImpl.
@@ -73,6 +75,7 @@ type ChangeProcessorConfig struct {
 	GatewayCtlrName string
 	// GatewayClassName is the name of the GatewayClass resource.
 	GatewayClassName string
+	Client           client.Client
 }
 
 // ChangeProcessorImpl is an implementation of ChangeProcessor.
@@ -85,6 +88,8 @@ type ChangeProcessorImpl struct {
 	getAndResetClusterStateChanged func() bool
 
 	cfg ChangeProcessorConfig
+
+	portAllocator *gatewayPortAllocator
 
 	lock sync.Mutex
 }
@@ -169,6 +174,7 @@ func NewChangeProcessorImpl(cfg ChangeProcessorConfig) *ChangeProcessorImpl {
 		getAndResetClusterStateChanged: trackingUpdater.getAndResetChangedStatus,
 		updater:                        updater,
 		clusterState:                   clusterStore,
+		portAllocator:                  newGatewayPortAllocator(),
 	}
 }
 
@@ -200,12 +206,12 @@ func (c *ChangeProcessorImpl) CaptureDeleteChange(resourceType client.Object, ns
 
 func (c *ChangeProcessorImpl) Process(
 	ctx context.Context,
-) (changed bool, conf dataplane.Configuration, statuses Statuses) {
+) (changed bool, confs []dataplane.Configuration, statuses Statuses) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
 	if !c.getAndResetClusterStateChanged() {
-		return false, conf, statuses
+		return false, confs, statuses
 	}
 
 	g := graph.BuildGraph(
@@ -216,8 +222,85 @@ func (c *ChangeProcessorImpl) Process(
 		c.cfg.Validators,
 	)
 
-	conf = dataplane.BuildConfiguration(ctx, g, c.cfg.ServiceResolver)
+	// provision Services
+	for _, gw := range g.Gateways {
+		gw.Ports = c.portAllocator.getPorts(client.ObjectKeyFromObject(gw.Source))
+
+		if gw.Service != nil {
+			continue
+		}
+
+		svc := &apiv1.Service{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      gw.Source.Name,
+				Namespace: "nginx-gateway",
+			},
+			Spec: apiv1.ServiceSpec{
+				Ports: []apiv1.ServicePort{
+					{
+						Name:     "http",
+						Protocol: "TCP",
+						Port:     80,
+						TargetPort: intstr.IntOrString{
+							Type:   intstr.Int,
+							IntVal: gw.Ports.HTTP,
+						},
+					},
+					{
+						Name:     "https",
+						Protocol: "TCP",
+						Port:     443,
+						TargetPort: intstr.IntOrString{
+							Type:   intstr.Int,
+							IntVal: gw.Ports.HTTPS,
+						},
+					},
+				},
+				Selector: map[string]string{
+					"app": "nginx-gateway",
+				},
+			},
+		}
+
+		err := c.cfg.Client.Create(ctx, svc)
+		if err != nil {
+			panic(fmt.Errorf("failed to create service: %w", err))
+		}
+
+		gw.Service = svc
+	}
+
+	// pass ports here
+	confs = dataplane.BuildConfiguration(ctx, g, c.cfg.ServiceResolver)
 	statuses = buildStatuses(g)
 
-	return true, conf, statuses
+	return true, confs, statuses
+}
+
+type gatewayPortAllocator struct {
+	allocations       map[types.NamespacedName]graph.GatewayPorts
+	nextAvailablePort int32
+}
+
+func newGatewayPortAllocator() *gatewayPortAllocator {
+	return &gatewayPortAllocator{
+		allocations:       make(map[types.NamespacedName]graph.GatewayPorts),
+		nextAvailablePort: 5000,
+	}
+}
+
+func (p *gatewayPortAllocator) getPorts(gw types.NamespacedName) graph.GatewayPorts {
+	if ports, ok := p.allocations[gw]; ok {
+		return ports
+	}
+
+	ports := graph.GatewayPorts{
+		HTTP:  p.nextAvailablePort,
+		HTTPS: p.nextAvailablePort + 1,
+	}
+
+	p.nextAvailablePort += 2
+	p.allocations[gw] = ports
+
+	return ports
 }

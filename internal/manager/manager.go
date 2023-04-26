@@ -127,6 +127,7 @@ func Start(cfg config.Config) error {
 		},
 		EventRecorder: recorder,
 		Scheme:        scheme,
+		Client:        mgr.GetClient(),
 	})
 
 	configGenerator := ngxcfg.NewGeneratorImpl()

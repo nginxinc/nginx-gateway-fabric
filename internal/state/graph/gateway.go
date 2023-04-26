@@ -3,6 +3,7 @@ package graph
 import (
 	"sort"
 
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
@@ -17,6 +18,12 @@ type Gateway struct {
 	Source *v1beta1.Gateway
 	// Listeners include the listeners of the Gateway.
 	Listeners map[string]*Listener
+	Service   *v1.Service
+	Ports     GatewayPorts
+}
+
+type GatewayPorts struct {
+	HTTP, HTTPS int32
 }
 
 // processedGateways holds the resources that belong to NKG.
@@ -47,6 +54,20 @@ func (gws processedGateways) GetAllNsNames() []types.NamespacedName {
 	}
 
 	return allNsNames
+}
+
+func getGateways(gws map[types.NamespacedName]*v1beta1.Gateway, gcName string) []*v1beta1.Gateway {
+	referencedGws := make([]*v1beta1.Gateway, 0, len(gws))
+
+	for _, gw := range gws {
+		if string(gw.Spec.GatewayClassName) != gcName {
+			continue
+		}
+
+		referencedGws = append(referencedGws, gw)
+	}
+
+	return referencedGws
 }
 
 // processGateways determines which Gateway resource belong to NKG (determined by the Gateway GatewayClassName field).

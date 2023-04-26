@@ -13,6 +13,12 @@ rules:
   - ""
   resources:
   - services
+  verbs:
+  - create
+- apiGroups:
+  - ""
+  resources:
+  - services
   - secrets
   verbs:
   - list

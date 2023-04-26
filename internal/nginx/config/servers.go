@@ -10,6 +10,7 @@ import (
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/config/http"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/dataplane"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/graph"
 )
 
 var serversTemplate = gotemplate.Must(gotemplate.New("servers").Parse(serversTemplateText))
@@ -20,53 +21,61 @@ const (
 	rootPath             = "/"
 )
 
-func executeServers(conf dataplane.Configuration) []byte {
-	servers := createServers(conf.HTTPServers, conf.SSLServers)
+func executeServers(confs []dataplane.Configuration) []byte {
+	var servers []http.Server
+
+	for _, conf := range confs {
+		servers = append(servers, createServers(conf.Key, conf.Ports, conf.HTTPServers, conf.SSLServers)...)
+	}
 
 	return execute(serversTemplate, servers)
 }
 
-func createServers(httpServers, sslServers []dataplane.VirtualServer) []http.Server {
+func createServers(key string, ports graph.GatewayPorts, httpServers, sslServers []dataplane.VirtualServer) []http.Server {
+	// user port information to create servers
+
 	servers := make([]http.Server, 0, len(httpServers)+len(sslServers))
 
 	for _, s := range httpServers {
-		servers = append(servers, createServer(s))
+		servers = append(servers, createServer(key, ports.HTTP, s))
 	}
 
 	for _, s := range sslServers {
-		servers = append(servers, createSSLServer(s))
+		servers = append(servers, createSSLServer(key, ports.HTTPS, s))
 	}
 
 	return servers
 }
 
-func createSSLServer(virtualServer dataplane.VirtualServer) http.Server {
+func createSSLServer(key string, httpsPort int32, virtualServer dataplane.VirtualServer) http.Server {
 	if virtualServer.IsDefault {
-		return createDefaultSSLServer()
+		return createDefaultSSLServer(httpsPort)
 	}
 
 	return http.Server{
+		Port:       httpsPort,
 		ServerName: virtualServer.Hostname,
 		SSL: &http.SSL{
 			Certificate:    virtualServer.SSL.CertificatePath,
 			CertificateKey: virtualServer.SSL.CertificatePath,
 		},
-		Locations: createLocations(virtualServer.PathRules, 443),
+		Locations: createLocations(key, virtualServer.PathRules, httpsPort),
 	}
 }
 
-func createServer(virtualServer dataplane.VirtualServer) http.Server {
+func createServer(key string, httpPort int32, virtualServer dataplane.VirtualServer) http.Server {
 	if virtualServer.IsDefault {
-		return createDefaultHTTPServer()
+		return createDefaultHTTPServer(httpPort)
 	}
 
 	return http.Server{
+		Port:       httpPort,
 		ServerName: virtualServer.Hostname,
-		Locations:  createLocations(virtualServer.PathRules, 80),
+		Locations:  createLocations(key, virtualServer.PathRules, httpPort),
 	}
 }
 
-func createLocations(pathRules []dataplane.PathRule, listenerPort int) []http.Location {
+func createLocations(key string, pathRules []dataplane.PathRule, listenerPort int32) []http.Location {
 	lenPathRules := len(pathRules)
 
 	if lenPathRules == 0 {
@@ -126,12 +135,13 @@ func createLocations(pathRules []dataplane.PathRule, listenerPort int) []http.Lo
 
 			// RequestRedirect and proxying are mutually exclusive.
 			if r.Filters.RequestRedirect != nil {
-				loc.Return = createReturnValForRedirectFilter(r.Filters.RequestRedirect, listenerPort)
+				loc.Return = createReturnValForRedirectFilter(r.Filters.RequestRedirect, int(listenerPort))
 				locs = append(locs, loc)
 				continue
 			}
 
 			backendName := backendGroupName(r.BackendGroup)
+			backendName = fmt.Sprintf("%s__%s", key, backendName)
 
 			if backendGroupNeedsSplit(r.BackendGroup) {
 				loc.ProxyPass = createProxyPassForVar(backendName)
@@ -165,12 +175,18 @@ func createLocations(pathRules []dataplane.PathRule, listenerPort int) []http.Lo
 	return locs
 }
 
-func createDefaultSSLServer() http.Server {
-	return http.Server{IsDefaultSSL: true}
+func createDefaultSSLServer(port int32) http.Server {
+	return http.Server{
+		Port:         port,
+		IsDefaultSSL: true,
+	}
 }
 
-func createDefaultHTTPServer() http.Server {
-	return http.Server{IsDefaultHTTP: true}
+func createDefaultHTTPServer(port int32) http.Server {
+	return http.Server{
+		Port:          port,
+		IsDefaultHTTP: true,
+	}
 }
 
 func createReturnValForRedirectFilter(filter *v1beta1.HTTPRequestRedirectFilter, listenerPort int) *http.Return {

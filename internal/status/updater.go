@@ -98,10 +98,10 @@ func (upd *updaterImpl) Update(ctx context.Context, statuses state.Statuses) {
 		)
 	}
 
-	if statuses.GatewayStatus != nil {
-		upd.update(ctx, statuses.GatewayStatus.NsName, &v1beta1.Gateway{}, func(object client.Object) {
+	for _, gs := range statuses.GatewayStatuses {
+		upd.update(ctx, gs.NsName, &v1beta1.Gateway{}, func(object client.Object) {
 			gw := object.(*v1beta1.Gateway)
-			gw.Status = prepareGatewayStatus(*statuses.GatewayStatus, upd.cfg.Clock.Now())
+			gw.Status = prepareGatewayStatus(gs, upd.cfg.Clock.Now())
 		})
 	}
 
