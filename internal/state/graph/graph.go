@@ -53,7 +53,7 @@ func BuildGraph(
 
 	routes := buildRoutesForGateways(validators.HTTPFieldsValidator, state.HTTPRoutes, processedGws.GetAllNsNames())
 	bindRoutesToListeners(routes, gw)
-	addBackendGroupsToRoutes(routes, state.Services)
+	addBackendRefsToRouteRules(routes, state.Services)
 
 	g := &Graph{
 		GatewayClass:    gc,

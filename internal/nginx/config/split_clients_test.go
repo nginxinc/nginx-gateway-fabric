@@ -9,45 +9,44 @@ import (
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/config/http"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/dataplane"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/graph"
 )
 
 func TestExecuteSplitClients(t *testing.T) {
-	bg1 := graph.BackendGroup{
+	bg1 := dataplane.BackendGroup{
 		Source:  types.NamespacedName{Namespace: "test", Name: "hr"},
 		RuleIdx: 0,
-		Backends: []graph.BackendRef{
-			{Name: "test1", Valid: true, Weight: 1},
-			{Name: "test2", Valid: true, Weight: 1},
+		Backends: []dataplane.Backend{
+			{UpstreamName: "test1", Valid: true, Weight: 1},
+			{UpstreamName: "test2", Valid: true, Weight: 1},
 		},
 	}
 
-	bg2 := graph.BackendGroup{
+	bg2 := dataplane.BackendGroup{
 		Source:  types.NamespacedName{Namespace: "test", Name: "no-split"},
 		RuleIdx: 1,
-		Backends: []graph.BackendRef{
-			{Name: "no-split", Valid: true, Weight: 1},
+		Backends: []dataplane.Backend{
+			{UpstreamName: "no-split", Valid: true, Weight: 1},
 		},
 	}
 
-	bg3 := graph.BackendGroup{
+	bg3 := dataplane.BackendGroup{
 		Source:  types.NamespacedName{Namespace: "test", Name: "hr"},
 		RuleIdx: 1,
-		Backends: []graph.BackendRef{
-			{Name: "test3", Valid: true, Weight: 1},
-			{Name: "test4", Valid: true, Weight: 1},
+		Backends: []dataplane.Backend{
+			{UpstreamName: "test3", Valid: true, Weight: 1},
+			{UpstreamName: "test4", Valid: true, Weight: 1},
 		},
 	}
 
 	tests := []struct {
 		msg           string
-		backendGroups []graph.BackendGroup
+		backendGroups []dataplane.BackendGroup
 		expStrings    []string
 		notExpStrings []string
 	}{
 		{
 			msg: "non-zero weights",
-			backendGroups: []graph.BackendGroup{
+			backendGroups: []dataplane.BackendGroup{
 				bg1,
 				bg2,
 				bg3,
@@ -64,13 +63,13 @@ func TestExecuteSplitClients(t *testing.T) {
 		},
 		{
 			msg: "zero weight",
-			backendGroups: []graph.BackendGroup{
+			backendGroups: []dataplane.BackendGroup{
 				{
 					Source:  types.NamespacedName{Namespace: "test", Name: "zero-percent"},
 					RuleIdx: 0,
-					Backends: []graph.BackendRef{
-						{Name: "non-zero", Valid: true, Weight: 1},
-						{Name: "zero", Valid: true, Weight: 0},
+					Backends: []dataplane.Backend{
+						{UpstreamName: "non-zero", Valid: true, Weight: 1},
+						{UpstreamName: "zero", Valid: true, Weight: 0},
 					},
 				},
 			},
@@ -83,12 +82,12 @@ func TestExecuteSplitClients(t *testing.T) {
 		},
 		{
 			msg: "no split clients",
-			backendGroups: []graph.BackendGroup{
+			backendGroups: []dataplane.BackendGroup{
 				{
 					Source:  types.NamespacedName{Namespace: "test", Name: "single-backend-route"},
 					RuleIdx: 0,
-					Backends: []graph.BackendRef{
-						{Name: "single-backend", Valid: true, Weight: 1},
+					Backends: []dataplane.Backend{
+						{UpstreamName: "single-backend", Valid: true, Weight: 1},
 					},
 				},
 			},
@@ -132,9 +131,9 @@ func TestCreateSplitClients(t *testing.T) {
 	createBackendGroup := func(
 		sourceNsName types.NamespacedName,
 		ruleIdx int,
-		backends ...graph.BackendRef,
-	) graph.BackendGroup {
-		return graph.BackendGroup{
+		backends ...dataplane.Backend,
+	) dataplane.BackendGroup {
+		return dataplane.BackendGroup{
 			Source:   sourceNsName,
 			RuleIdx:  ruleIdx,
 			Backends: backends,
@@ -146,46 +145,46 @@ func TestCreateSplitClients(t *testing.T) {
 	oneBackend := createBackendGroup(
 		hrNoSplit,
 		0,
-		graph.BackendRef{Name: "one-backend", Valid: true, Weight: 1},
+		dataplane.Backend{UpstreamName: "one-backend", Valid: true, Weight: 1},
 	)
 
 	invalidBackend := createBackendGroup(
 		hrNoSplit,
 		0,
-		graph.BackendRef{Name: "invalid-backend", Valid: false, Weight: 1},
+		dataplane.Backend{UpstreamName: "invalid-backend", Valid: false, Weight: 1},
 	)
 
 	// the following backends need splits
 	oneSplit := createBackendGroup(
 		hrOneSplit,
 		0,
-		graph.BackendRef{Name: "one-split-1", Valid: true, Weight: 50},
-		graph.BackendRef{Name: "one-split-2", Valid: true, Weight: 50},
+		dataplane.Backend{UpstreamName: "one-split-1", Valid: true, Weight: 50},
+		dataplane.Backend{UpstreamName: "one-split-2", Valid: true, Weight: 50},
 	)
 
 	twoSplitGroup0 := createBackendGroup(
 		hrTwoSplits,
 		0,
-		graph.BackendRef{Name: "two-split-1", Valid: true, Weight: 50},
-		graph.BackendRef{Name: "two-split-2", Valid: true, Weight: 50},
+		dataplane.Backend{UpstreamName: "two-split-1", Valid: true, Weight: 50},
+		dataplane.Backend{UpstreamName: "two-split-2", Valid: true, Weight: 50},
 	)
 
 	twoSplitGroup1 := createBackendGroup(
 		hrTwoSplits,
 		1,
-		graph.BackendRef{Name: "two-split-3", Valid: true, Weight: 50},
-		graph.BackendRef{Name: "two-split-4", Valid: true, Weight: 50},
-		graph.BackendRef{Name: "two-split-5", Valid: true, Weight: 50},
+		dataplane.Backend{UpstreamName: "two-split-3", Valid: true, Weight: 50},
+		dataplane.Backend{UpstreamName: "two-split-4", Valid: true, Weight: 50},
+		dataplane.Backend{UpstreamName: "two-split-5", Valid: true, Weight: 50},
 	)
 
 	tests := []struct {
 		msg             string
-		backendGroups   []graph.BackendGroup
+		backendGroups   []dataplane.BackendGroup
 		expSplitClients []http.SplitClient
 	}{
 		{
 			msg: "normal case",
-			backendGroups: []graph.BackendGroup{
+			backendGroups: []dataplane.BackendGroup{
 				noBackends,
 				oneBackend,
 				invalidBackend,
@@ -241,7 +240,7 @@ func TestCreateSplitClients(t *testing.T) {
 		},
 		{
 			msg: "no split clients are needed",
-			backendGroups: []graph.BackendGroup{
+			backendGroups: []dataplane.BackendGroup{
 				noBackends,
 				oneBackend,
 			},
@@ -260,7 +259,7 @@ func TestCreateSplitClients(t *testing.T) {
 func TestCreateSplitClientDistributions(t *testing.T) {
 	tests := []struct {
 		msg              string
-		backends         []graph.BackendRef
+		backends         []dataplane.Backend
 		expDistributions []http.SplitClientDistribution
 	}{
 		{
@@ -270,27 +269,27 @@ func TestCreateSplitClientDistributions(t *testing.T) {
 		},
 		{
 			msg: "one backend",
-			backends: []graph.BackendRef{
+			backends: []dataplane.Backend{
 				{
-					Name:   "one",
-					Valid:  true,
-					Weight: 1,
+					UpstreamName: "one",
+					Valid:        true,
+					Weight:       1,
 				},
 			},
 			expDistributions: nil,
 		},
 		{
 			msg: "total weight 0",
-			backends: []graph.BackendRef{
+			backends: []dataplane.Backend{
 				{
-					Name:   "one",
-					Valid:  true,
-					Weight: 0,
+					UpstreamName: "one",
+					Valid:        true,
+					Weight:       0,
 				},
 				{
-					Name:   "two",
-					Valid:  true,
-					Weight: 0,
+					UpstreamName: "two",
+					Valid:        true,
+					Weight:       0,
 				},
 			},
 			expDistributions: []http.SplitClientDistribution{
@@ -302,16 +301,16 @@ func TestCreateSplitClientDistributions(t *testing.T) {
 		},
 		{
 			msg: "two backends; equal weights that sum to 100",
-			backends: []graph.BackendRef{
+			backends: []dataplane.Backend{
 				{
-					Name:   "one",
-					Valid:  true,
-					Weight: 1,
+					UpstreamName: "one",
+					Valid:        true,
+					Weight:       1,
 				},
 				{
-					Name:   "two",
-					Valid:  true,
-					Weight: 1,
+					UpstreamName: "two",
+					Valid:        true,
+					Weight:       1,
 				},
 			},
 			expDistributions: []http.SplitClientDistribution{
@@ -327,21 +326,21 @@ func TestCreateSplitClientDistributions(t *testing.T) {
 		},
 		{
 			msg: "three backends; whole percentages that sum to 100",
-			backends: []graph.BackendRef{
+			backends: []dataplane.Backend{
 				{
-					Name:   "one",
-					Valid:  true,
-					Weight: 20,
+					UpstreamName: "one",
+					Valid:        true,
+					Weight:       20,
 				},
 				{
-					Name:   "two",
-					Valid:  true,
-					Weight: 30,
+					UpstreamName: "two",
+					Valid:        true,
+					Weight:       30,
 				},
 				{
-					Name:   "three",
-					Valid:  true,
-					Weight: 50,
+					UpstreamName: "three",
+					Valid:        true,
+					Weight:       50,
 				},
 			},
 			expDistributions: []http.SplitClientDistribution{
@@ -361,21 +360,21 @@ func TestCreateSplitClientDistributions(t *testing.T) {
 		},
 		{
 			msg: "three backends; whole percentages that sum to less than 100",
-			backends: []graph.BackendRef{
+			backends: []dataplane.Backend{
 				{
-					Name:   "one",
-					Valid:  true,
-					Weight: 3,
+					UpstreamName: "one",
+					Valid:        true,
+					Weight:       3,
 				},
 				{
-					Name:   "two",
-					Valid:  true,
-					Weight: 3,
+					UpstreamName: "two",
+					Valid:        true,
+					Weight:       3,
 				},
 				{
-					Name:   "three",
-					Valid:  true,
-					Weight: 3,
+					UpstreamName: "three",
+					Valid:        true,
+					Weight:       3,
 				},
 			},
 			expDistributions: []http.SplitClientDistribution{
@@ -396,7 +395,7 @@ func TestCreateSplitClientDistributions(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		result := createSplitClientDistributions(graph.BackendGroup{Backends: test.backends})
+		result := createSplitClientDistributions(dataplane.BackendGroup{Backends: test.backends})
 		if diff := cmp.Diff(test.expDistributions, result); diff != "" {
 			t.Errorf("createSplitClientDistributions() mismatch for %q (-want +got):\n%s", test.msg, diff)
 		}
@@ -407,21 +406,21 @@ func TestGetSplitClientValue(t *testing.T) {
 	tests := []struct {
 		msg      string
 		expValue string
-		backend  graph.BackendRef
+		backend  dataplane.Backend
 	}{
 		{
 			msg: "valid backend",
-			backend: graph.BackendRef{
-				Name:  "valid",
-				Valid: true,
+			backend: dataplane.Backend{
+				UpstreamName: "valid",
+				Valid:        true,
 			},
 			expValue: "valid",
 		},
 		{
 			msg: "invalid backend",
-			backend: graph.BackendRef{
-				Name:  "invalid",
-				Valid: false,
+			backend: dataplane.Backend{
+				UpstreamName: "invalid",
+				Valid:        false,
 			},
 			expValue: invalidBackendRef,
 		},
@@ -515,12 +514,12 @@ func TestPercentOf(t *testing.T) {
 func TestBackendGroupNeedsSplit(t *testing.T) {
 	tests := []struct {
 		msg      string
-		backends []graph.BackendRef
+		backends []dataplane.Backend
 		expSplit bool
 	}{
 		{
 			msg:      "empty backends",
-			backends: []graph.BackendRef{},
+			backends: []dataplane.Backend{},
 			expSplit: false,
 		},
 		{
@@ -530,54 +529,54 @@ func TestBackendGroupNeedsSplit(t *testing.T) {
 		},
 		{
 			msg: "one valid backend",
-			backends: []graph.BackendRef{
+			backends: []dataplane.Backend{
 				{
-					Name:   "backend1",
-					Valid:  true,
-					Weight: 1,
+					UpstreamName: "backend1",
+					Valid:        true,
+					Weight:       1,
 				},
 			},
 			expSplit: false,
 		},
 		{
 			msg: "one invalid backend",
-			backends: []graph.BackendRef{
+			backends: []dataplane.Backend{
 				{
-					Name:   "backend1",
-					Valid:  false,
-					Weight: 1,
+					UpstreamName: "backend1",
+					Valid:        false,
+					Weight:       1,
 				},
 			},
 			expSplit: false,
 		},
 		{
 			msg: "multiple valid backends",
-			backends: []graph.BackendRef{
+			backends: []dataplane.Backend{
 				{
-					Name:   "backend1",
-					Valid:  true,
-					Weight: 1,
+					UpstreamName: "backend1",
+					Valid:        true,
+					Weight:       1,
 				},
 				{
-					Name:   "backend2",
-					Valid:  true,
-					Weight: 1,
+					UpstreamName: "backend2",
+					Valid:        true,
+					Weight:       1,
 				},
 			},
 			expSplit: true,
 		},
 		{
 			msg: "multiple backends - one invalid",
-			backends: []graph.BackendRef{
+			backends: []dataplane.Backend{
 				{
-					Name:   "backend1",
-					Valid:  true,
-					Weight: 1,
+					UpstreamName: "backend1",
+					Valid:        true,
+					Weight:       1,
 				},
 				{
-					Name:   "backend2",
-					Valid:  false,
-					Weight: 1,
+					UpstreamName: "backend2",
+					Valid:        false,
+					Weight:       1,
 				},
 			},
 			expSplit: true,
@@ -585,7 +584,7 @@ func TestBackendGroupNeedsSplit(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		bg := graph.BackendGroup{
+		bg := dataplane.BackendGroup{
 			Source:   types.NamespacedName{Namespace: "test", Name: "hr"},
 			Backends: test.backends,
 		}
@@ -600,11 +599,11 @@ func TestBackendGroupName(t *testing.T) {
 	tests := []struct {
 		msg      string
 		expName  string
-		backends []graph.BackendRef
+		backends []dataplane.Backend
 	}{
 		{
 			msg:      "empty backends",
-			backends: []graph.BackendRef{},
+			backends: []dataplane.Backend{},
 			expName:  invalidBackendRef,
 		},
 		{
@@ -614,65 +613,65 @@ func TestBackendGroupName(t *testing.T) {
 		},
 		{
 			msg: "one valid backend with non-zero weight",
-			backends: []graph.BackendRef{
+			backends: []dataplane.Backend{
 				{
-					Name:   "backend1",
-					Valid:  true,
-					Weight: 1,
+					UpstreamName: "backend1",
+					Valid:        true,
+					Weight:       1,
 				},
 			},
 			expName: "backend1",
 		},
 		{
 			msg: "one valid backend with zero weight",
-			backends: []graph.BackendRef{
+			backends: []dataplane.Backend{
 				{
-					Name:   "backend1",
-					Valid:  true,
-					Weight: 0,
+					UpstreamName: "backend1",
+					Valid:        true,
+					Weight:       0,
 				},
 			},
 			expName: invalidBackendRef,
 		},
 		{
 			msg: "one invalid backend",
-			backends: []graph.BackendRef{
+			backends: []dataplane.Backend{
 				{
-					Name:   "backend1",
-					Valid:  false,
-					Weight: 1,
+					UpstreamName: "backend1",
+					Valid:        false,
+					Weight:       1,
 				},
 			},
 			expName: invalidBackendRef,
 		},
 		{
 			msg: "multiple valid backends",
-			backends: []graph.BackendRef{
+			backends: []dataplane.Backend{
 				{
-					Name:   "backend1",
-					Valid:  true,
-					Weight: 1,
+					UpstreamName: "backend1",
+					Valid:        true,
+					Weight:       1,
 				},
 				{
-					Name:   "backend2",
-					Valid:  true,
-					Weight: 1,
+					UpstreamName: "backend2",
+					Valid:        true,
+					Weight:       1,
 				},
 			},
 			expName: "test__hr_rule0",
 		},
 		{
 			msg: "multiple invalid backends",
-			backends: []graph.BackendRef{
+			backends: []dataplane.Backend{
 				{
-					Name:   "backend1",
-					Valid:  false,
-					Weight: 1,
+					UpstreamName: "backend1",
+					Valid:        false,
+					Weight:       1,
 				},
 				{
-					Name:   "backend2",
-					Valid:  false,
-					Weight: 1,
+					UpstreamName: "backend2",
+					Valid:        false,
+					Weight:       1,
 				},
 			},
 			expName: "test__hr_rule0",
@@ -680,7 +679,7 @@ func TestBackendGroupName(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		bg := graph.BackendGroup{
+		bg := dataplane.BackendGroup{
 			Source:   types.NamespacedName{Namespace: "test", Name: "hr"},
 			RuleIdx:  0,
 			Backends: test.backends,

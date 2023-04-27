@@ -24,11 +24,11 @@ func TestBuildGraph(t *testing.T) {
 		secretPath     = "/etc/nginx/secrets/test_secret"
 	)
 
-	createValidRuleWithBackendGroup := func(group BackendGroup) Rule {
+	createValidRuleWithBackendRefs := func(refs []BackendRef) Rule {
 		return Rule{
 			ValidMatches: true,
 			ValidFilters: true,
-			BackendGroup: group,
+			BackendRefs:  refs,
 		}
 	}
 
@@ -85,31 +85,21 @@ func TestBuildGraph(t *testing.T) {
 
 	fooSvc := &v1.Service{ObjectMeta: metav1.ObjectMeta{Name: "foo", Namespace: "test"}}
 
-	hr1Group := BackendGroup{
-		Source:  types.NamespacedName{Namespace: hr1.Namespace, Name: hr1.Name},
-		RuleIdx: 0,
-		Backends: []BackendRef{
-			{
-				Name:   "test_foo_80",
-				Svc:    fooSvc,
-				Port:   80,
-				Valid:  true,
-				Weight: 1,
-			},
+	hr1Refs := []BackendRef{
+		{
+			Svc:    fooSvc,
+			Port:   80,
+			Valid:  true,
+			Weight: 1,
 		},
 	}
 
-	hr3Group := BackendGroup{
-		Source:  types.NamespacedName{Namespace: hr3.Namespace, Name: hr3.Name},
-		RuleIdx: 0,
-		Backends: []BackendRef{
-			{
-				Name:   "test_foo_80",
-				Svc:    fooSvc,
-				Port:   80,
-				Valid:  true,
-				Weight: 1,
-			},
+	hr3Refs := []BackendRef{
+		{
+			Svc:    fooSvc,
+			Port:   80,
+			Valid:  true,
+			Weight: 1,
 		},
 	}
 
@@ -187,7 +177,7 @@ func TestBuildGraph(t *testing.T) {
 				},
 			},
 		},
-		Rules: []Rule{createValidRuleWithBackendGroup(hr1Group)},
+		Rules: []Rule{createValidRuleWithBackendRefs(hr1Refs)},
 	}
 
 	routeHR3 := &Route{
@@ -202,7 +192,7 @@ func TestBuildGraph(t *testing.T) {
 				},
 			},
 		},
-		Rules: []Rule{createValidRuleWithBackendGroup(hr3Group)},
+		Rules: []Rule{createValidRuleWithBackendRefs(hr3Refs)},
 	}
 
 	secretMemoryMgr := &secretsfakes.FakeSecretDiskMemoryManager{}

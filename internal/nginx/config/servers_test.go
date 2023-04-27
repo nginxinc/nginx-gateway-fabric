@@ -15,7 +15,6 @@ import (
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/helpers"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/config/http"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/dataplane"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/graph"
 )
 
 func TestExecuteServers(t *testing.T) {
@@ -318,54 +317,54 @@ func TestCreateServers(t *testing.T) {
 
 	hrNsName := types.NamespacedName{Namespace: hr.Namespace, Name: hr.Name}
 
-	fooGroup := graph.BackendGroup{
+	fooGroup := dataplane.BackendGroup{
 		Source:  hrNsName,
 		RuleIdx: 0,
-		Backends: []graph.BackendRef{
+		Backends: []dataplane.Backend{
 			{
-				Name:   "test_foo_80",
-				Valid:  true,
-				Weight: 1,
+				UpstreamName: "test_foo_80",
+				Valid:        true,
+				Weight:       1,
 			},
 		},
 	}
 
 	// barGroup has two backends, which should generate a proxy pass with a variable.
-	barGroup := graph.BackendGroup{
+	barGroup := dataplane.BackendGroup{
 		Source:  hrNsName,
 		RuleIdx: 1,
-		Backends: []graph.BackendRef{
+		Backends: []dataplane.Backend{
 			{
-				Name:   "test_bar_80",
-				Valid:  true,
-				Weight: 50,
+				UpstreamName: "test_bar_80",
+				Valid:        true,
+				Weight:       50,
 			},
 			{
-				Name:   "test_bar2_80",
-				Valid:  true,
-				Weight: 50,
+				UpstreamName: "test_bar2_80",
+				Valid:        true,
+				Weight:       50,
 			},
 		},
 	}
 
 	// baz group has an invalid backend, which should generate a proxy pass to the invalid ref backend.
-	bazGroup := graph.BackendGroup{
+	bazGroup := dataplane.BackendGroup{
 		Source:  hrNsName,
 		RuleIdx: 2,
-		Backends: []graph.BackendRef{
+		Backends: []dataplane.Backend{
 			{
-				Name:   "test_baz_80",
-				Valid:  false,
-				Weight: 1,
+				UpstreamName: "test_baz_80",
+				Valid:        false,
+				Weight:       1,
 			},
 		},
 	}
 
-	filterGroup1 := graph.BackendGroup{Source: hrNsName, RuleIdx: 3}
+	filterGroup1 := dataplane.BackendGroup{Source: hrNsName, RuleIdx: 3}
 
-	filterGroup2 := graph.BackendGroup{Source: hrNsName, RuleIdx: 4}
+	filterGroup2 := dataplane.BackendGroup{Source: hrNsName, RuleIdx: 4}
 
-	invalidFilterGroup := graph.BackendGroup{Source: hrNsName, RuleIdx: 5}
+	invalidFilterGroup := dataplane.BackendGroup{Source: hrNsName, RuleIdx: 5}
 
 	cafePathRules := []dataplane.PathRule{
 		{
@@ -694,14 +693,14 @@ func TestCreateLocationsRootPath(t *testing.T) {
 
 	hrNsName := types.NamespacedName{Namespace: "test", Name: "route1"}
 
-	fooGroup := graph.BackendGroup{
+	fooGroup := dataplane.BackendGroup{
 		Source:  hrNsName,
 		RuleIdx: 0,
-		Backends: []graph.BackendRef{
+		Backends: []dataplane.Backend{
 			{
-				Name:   "test_foo_80",
-				Valid:  true,
-				Weight: 1,
+				UpstreamName: "test_foo_80",
+				Valid:        true,
+				Weight:       1,
 			},
 		},
 	}

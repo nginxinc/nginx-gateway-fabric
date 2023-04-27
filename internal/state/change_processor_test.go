@@ -23,7 +23,6 @@ import (
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/conditions"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/dataplane"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/graph"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/relationship"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/relationship/relationshipfakes"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/secrets/secretsfakes"
@@ -53,17 +52,17 @@ func createRoute(
 			CommonRouteSpec: v1beta1.CommonRouteSpec{
 				ParentRefs: []v1beta1.ParentReference{
 					{
-						Namespace: (*v1beta1.Namespace)(helpers.GetStringPointer("test")),
+						Namespace: (*v1beta1.Namespace)(helpers.GetPointer("test")),
 						Name:      v1beta1.ObjectName(gateway),
 						SectionName: (*v1beta1.SectionName)(
-							helpers.GetStringPointer("listener-80-1"),
+							helpers.GetPointer("listener-80-1"),
 						),
 					},
 					{
-						Namespace: (*v1beta1.Namespace)(helpers.GetStringPointer("test")),
+						Namespace: (*v1beta1.Namespace)(helpers.GetPointer("test")),
 						Name:      v1beta1.ObjectName(gateway),
 						SectionName: (*v1beta1.SectionName)(
-							helpers.GetStringPointer("listener-443-1"),
+							helpers.GetPointer("listener-443-1"),
 						),
 					},
 				},
@@ -77,7 +76,7 @@ func createRoute(
 						{
 							Path: &v1beta1.HTTPPathMatch{
 								Type:  helpers.GetPointer(v1beta1.PathMatchPathPrefix),
-								Value: helpers.GetStringPointer("/"),
+								Value: helpers.GetPointer("/"),
 							},
 						},
 					},
@@ -118,12 +117,12 @@ func createGatewayWithTLSListener(name string) *v1beta1.Gateway {
 		Port:     443,
 		Protocol: v1beta1.HTTPSProtocolType,
 		TLS: &v1beta1.GatewayTLSConfig{
-			Mode: helpers.GetTLSModePointer(v1beta1.TLSModeTerminate),
+			Mode: helpers.GetPointer(v1beta1.TLSModeTerminate),
 			CertificateRefs: []v1beta1.SecretObjectReference{
 				{
-					Kind:      (*v1beta1.Kind)(helpers.GetStringPointer("Secret")),
+					Kind:      (*v1beta1.Kind)(helpers.GetPointer("Secret")),
 					Name:      "secret",
-					Namespace: (*v1beta1.Namespace)(helpers.GetStringPointer("test")),
+					Namespace: (*v1beta1.Namespace)(helpers.GetPointer("test")),
 				},
 			},
 		},
@@ -246,7 +245,7 @@ var _ = Describe("ChangeProcessor", func() {
 			var (
 				gcUpdated            *v1beta1.GatewayClass
 				hr1, hr1Updated, hr2 *v1beta1.HTTPRoute
-				hr1Group, hr2Group   graph.BackendGroup
+				hr1Group, hr2Group   dataplane.BackendGroup
 				gw1, gw1Updated, gw2 *v1beta1.Gateway
 			)
 			BeforeAll(func() {
@@ -255,7 +254,7 @@ var _ = Describe("ChangeProcessor", func() {
 
 				hr1 = createRoute("hr-1", "gateway-1", "foo.example.com")
 
-				hr1Group = graph.BackendGroup{
+				hr1Group = dataplane.BackendGroup{
 					Source:  types.NamespacedName{Namespace: hr1.Namespace, Name: hr1.Name},
 					RuleIdx: 0,
 				}
@@ -265,7 +264,7 @@ var _ = Describe("ChangeProcessor", func() {
 
 				hr2 = createRoute("hr-2", "gateway-2", "bar.example.com")
 
-				hr2Group = graph.BackendGroup{
+				hr2Group = dataplane.BackendGroup{
 					Source:  types.NamespacedName{Namespace: hr2.Namespace, Name: hr2.Name},
 					RuleIdx: 0,
 				}
@@ -418,9 +417,7 @@ var _ = Describe("ChangeProcessor", func() {
 								SSL:      &dataplane.SSL{CertificatePath: certificatePath},
 							},
 						},
-						BackendGroups: []graph.BackendGroup{
-							hr1Group,
-						},
+						BackendGroups: []dataplane.BackendGroup{hr1Group},
 					}
 
 					expectedStatuses := state.Statuses{
@@ -534,9 +531,7 @@ var _ = Describe("ChangeProcessor", func() {
 								SSL:      &dataplane.SSL{CertificatePath: certificatePath},
 							},
 						},
-						BackendGroups: []graph.BackendGroup{
-							hr1Group,
-						},
+						BackendGroups: []dataplane.BackendGroup{hr1Group},
 					}
 					expectedStatuses := state.Statuses{
 						GatewayClassStatus: &state.GatewayClassStatus{
@@ -650,9 +645,7 @@ var _ = Describe("ChangeProcessor", func() {
 								SSL:      &dataplane.SSL{CertificatePath: certificatePath},
 							},
 						},
-						BackendGroups: []graph.BackendGroup{
-							hr1Group,
-						},
+						BackendGroups: []dataplane.BackendGroup{hr1Group},
 					}
 					expectedStatuses := state.Statuses{
 						GatewayClassStatus: &state.GatewayClassStatus{
@@ -765,9 +758,7 @@ var _ = Describe("ChangeProcessor", func() {
 								SSL:      &dataplane.SSL{CertificatePath: certificatePath},
 							},
 						},
-						BackendGroups: []graph.BackendGroup{
-							hr1Group,
-						},
+						BackendGroups: []dataplane.BackendGroup{hr1Group},
 					}
 					expectedStatuses := state.Statuses{
 						GatewayClassStatus: &state.GatewayClassStatus{
@@ -879,9 +870,7 @@ var _ = Describe("ChangeProcessor", func() {
 								SSL:      &dataplane.SSL{CertificatePath: certificatePath},
 							},
 						},
-						BackendGroups: []graph.BackendGroup{
-							hr1Group,
-						},
+						BackendGroups: []dataplane.BackendGroup{hr1Group},
 					}
 					expectedStatuses := state.Statuses{
 						GatewayClassStatus: &state.GatewayClassStatus{
@@ -986,9 +975,7 @@ var _ = Describe("ChangeProcessor", func() {
 								SSL:      &dataplane.SSL{CertificatePath: certificatePath},
 							},
 						},
-						BackendGroups: []graph.BackendGroup{
-							hr1Group,
-						},
+						BackendGroups: []dataplane.BackendGroup{hr1Group},
 					}
 					expectedStatuses := state.Statuses{
 						GatewayClassStatus: &state.GatewayClassStatus{
@@ -1117,9 +1104,7 @@ var _ = Describe("ChangeProcessor", func() {
 								SSL:      &dataplane.SSL{CertificatePath: certificatePath},
 							},
 						},
-						BackendGroups: []graph.BackendGroup{
-							hr2Group,
-						},
+						BackendGroups: []dataplane.BackendGroup{hr2Group},
 					}
 					expectedStatuses := state.Statuses{
 						GatewayClassStatus: &state.GatewayClassStatus{
@@ -2019,7 +2004,7 @@ var _ = Describe("ChangeProcessor", func() {
 								Namespace: (*v1beta1.Namespace)(&gw.Namespace),
 								Name:      v1beta1.ObjectName(gw.Name),
 								SectionName: (*v1beta1.SectionName)(
-									helpers.GetStringPointer("listener-80-1"),
+									helpers.GetPointer("listener-80-1"),
 								),
 							},
 						},
@@ -2033,7 +2018,7 @@ var _ = Describe("ChangeProcessor", func() {
 								{
 									Path: &v1beta1.HTTPPathMatch{
 										Type:  helpers.GetPointer(v1beta1.PathMatchPathPrefix),
-										Value: helpers.GetStringPointer("/"),
+										Value: helpers.GetPointer("/"),
 									},
 								},
 							},
@@ -2105,7 +2090,7 @@ var _ = Describe("ChangeProcessor", func() {
 				processor.CaptureUpsertChange(gw)
 				processor.CaptureUpsertChange(hr)
 
-				bg := graph.BackendGroup{
+				bg := dataplane.BackendGroup{
 					Source:  types.NamespacedName{Namespace: hr.Namespace, Name: hr.Name},
 					RuleIdx: 0,
 				}
@@ -2134,7 +2119,7 @@ var _ = Describe("ChangeProcessor", func() {
 						},
 					},
 					SSLServers:    []dataplane.VirtualServer{},
-					BackendGroups: []graph.BackendGroup{bg},
+					BackendGroups: []dataplane.BackendGroup{bg},
 				}
 				expectedStatuses := state.Statuses{
 					GatewayClassStatus: &state.GatewayClassStatus{

@@ -8,18 +8,17 @@ import (
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/config"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/dataplane"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/graph"
 )
 
 // Note: this test only verifies that Generate() returns a byte array with upstream, server, and split_client blocks.
 // It does not test the correctness of those blocks. That functionality is covered by other tests in this package.
 func TestGenerate(t *testing.T) {
-	bg := graph.BackendGroup{
+	bg := dataplane.BackendGroup{
 		Source:  types.NamespacedName{Namespace: "test", Name: "hr"},
 		RuleIdx: 0,
-		Backends: []graph.BackendRef{
-			{Name: "test", Valid: true, Weight: 1},
-			{Name: "test2", Valid: true, Weight: 1},
+		Backends: []dataplane.Backend{
+			{UpstreamName: "test", Valid: true, Weight: 1},
+			{UpstreamName: "test2", Valid: true, Weight: 1},
 		},
 	}
 
@@ -49,7 +48,7 @@ func TestGenerate(t *testing.T) {
 				Endpoints: nil,
 			},
 		},
-		BackendGroups: []graph.BackendGroup{bg},
+		BackendGroups: []dataplane.BackendGroup{bg},
 	}
 	generator := config.NewGeneratorImpl()
 	cfg := string(generator.Generate(conf))

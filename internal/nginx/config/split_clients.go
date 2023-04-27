@@ -7,7 +7,6 @@ import (
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/config/http"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/dataplane"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/graph"
 )
 
 var splitClientsTemplate = gotemplate.Must(gotemplate.New("split_clients").Parse(splitClientsTemplateText))
@@ -18,7 +17,7 @@ func executeSplitClients(conf dataplane.Configuration) []byte {
 	return execute(splitClientsTemplate, splitClients)
 }
 
-func createSplitClients(backendGroups []graph.BackendGroup) []http.SplitClient {
+func createSplitClients(backendGroups []dataplane.BackendGroup) []http.SplitClient {
 	numSplits := 0
 	for _, group := range backendGroups {
 		if backendGroupNeedsSplit(group) {
@@ -40,7 +39,7 @@ func createSplitClients(backendGroups []graph.BackendGroup) []http.SplitClient {
 		}
 
 		splitClients = append(splitClients, http.SplitClient{
-			VariableName:  convertStringToSafeVariableName(group.GroupName()),
+			VariableName:  convertStringToSafeVariableName(group.Name()),
 			Distributions: distributions,
 		})
 
@@ -49,7 +48,7 @@ func createSplitClients(backendGroups []graph.BackendGroup) []http.SplitClient {
 	return splitClients
 }
 
-func createSplitClientDistributions(group graph.BackendGroup) []http.SplitClientDistribution {
+func createSplitClientDistributions(group dataplane.BackendGroup) []http.SplitClientDistribution {
 	if !backendGroupNeedsSplit(group) {
 		return nil
 	}
@@ -101,9 +100,9 @@ func createSplitClientDistributions(group graph.BackendGroup) []http.SplitClient
 	return distributions
 }
 
-func getSplitClientValue(b graph.BackendRef) string {
+func getSplitClientValue(b dataplane.Backend) string {
 	if b.Valid {
-		return b.Name
+		return b.UpstreamName
 	}
 	return invalidBackendRef
 }
@@ -118,7 +117,7 @@ func percentOf(weight, totalWeight int32) float64 {
 	return math.Floor(p*100) / 100
 }
 
-func backendGroupNeedsSplit(group graph.BackendGroup) bool {
+func backendGroupNeedsSplit(group dataplane.BackendGroup) bool {
 	return len(group.Backends) > 1
 }
 
@@ -126,17 +125,17 @@ func backendGroupNeedsSplit(group graph.BackendGroup) bool {
 // If the group needs to be split, the name returned is the group name.
 // If the group doesn't need to be split, the name returned is the name of the backend if it is valid.
 // If the name cannot be determined, it returns the name of the invalid backend upstream.
-func backendGroupName(group graph.BackendGroup) string {
+func backendGroupName(group dataplane.BackendGroup) string {
 	switch len(group.Backends) {
 	case 0:
 		return invalidBackendRef
 	case 1:
 		b := group.Backends[0]
-		if b.Weight <= 0 || !b.Valid {
+		if b.Weight == 0 || !b.Valid {
 			return invalidBackendRef
 		}
-		return b.Name
+		return b.UpstreamName
 	default:
-		return group.GroupName()
+		return group.Name()
 	}
 }
