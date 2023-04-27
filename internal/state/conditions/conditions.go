@@ -112,6 +112,23 @@ func NewTODO(msg string) Condition {
 	}
 }
 
+func NewDefaultGatewayConditions() []Condition {
+	return []Condition{
+		{
+			Type:    string(v1beta1.GatewayConditionAccepted),
+			Status:  metav1.ConditionTrue,
+			Reason:  string(v1beta1.GatewayReasonAccepted),
+			Message: "Gateway is accepted",
+		},
+		{
+			Type:    string(v1beta1.GatewayConditionProgrammed),
+			Status:  metav1.ConditionTrue,
+			Reason:  string(v1beta1.GatewayReasonProgrammed),
+			Message: "Gateway is programmed",
+		},
+	}
+}
+
 // NewRouteInvalidListener returns a Condition that indicates that the HTTPRoute is not accepted because of an
 // invalid listener.
 func NewRouteInvalidListener() Condition {

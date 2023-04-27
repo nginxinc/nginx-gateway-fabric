@@ -66,10 +66,10 @@ func BuildGraph(
 	addBackendGroupsToRoutes(routes, state.Services)
 
 	g := &Graph{
-		GatewayClass:    gc,
-		Gateways:        graphGws,
-		Routes:          routes,
-		IgnoredGateways: processedGws.Ignored,
+		GatewayClass: gc,
+		Gateways:     graphGws,
+		Routes:       routes,
+		// IgnoredGateways: processedGws.Ignored,
 	}
 
 	return g

@@ -25,6 +25,7 @@ type Statuses struct {
 
 // GatewayStatus holds the status of the winning Gateway resource.
 type GatewayStatus struct {
+	Conditions []conditions.Condition
 	// ListenerStatuses holds the statuses of listeners defined on the Gateway.
 	ListenerStatuses ListenerStatuses
 	// NsName is the namespaced name of the winning Gateway resource.
@@ -97,7 +98,6 @@ func buildStatuses(graph *graph.Graph) Statuses {
 	}
 
 	for _, gw := range graph.Gateways {
-
 		listenerStatuses := make(map[string]ListenerStatus)
 
 		defaultConds := conditions.NewDefaultListenerConditions()
@@ -117,6 +117,7 @@ func buildStatuses(graph *graph.Graph) Statuses {
 		}
 
 		status := GatewayStatus{
+			Conditions:         conditions.NewDefaultGatewayConditions(),
 			NsName:             client.ObjectKeyFromObject(gw.Source),
 			ListenerStatuses:   listenerStatuses,
 			ObservedGeneration: gw.Source.Generation,

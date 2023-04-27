@@ -50,7 +50,7 @@ func prepareGatewayStatus(gatewayStatus state.GatewayStatus, transitionTime meta
 
 	return v1beta1.GatewayStatus{
 		Listeners:  listenerStatuses,
-		Conditions: nil, // FIXME(pleshakov) Create conditions for the Gateway resource.
+		Conditions: convertConditions(gatewayStatus.Conditions, gatewayStatus.ObservedGeneration, transitionTime),
 	}
 }
 
