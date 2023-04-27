@@ -9,6 +9,7 @@ import (
 	apiv1 "k8s.io/api/core/v1"
 	discoveryV1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
@@ -234,6 +235,9 @@ func (c *ChangeProcessorImpl) Process(
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      gw.Source.Name,
 				Namespace: "nginx-gateway",
+				Labels: map[string]string{
+					"app": "nginx-gateway",
+				},
 			},
 			Spec: apiv1.ServiceSpec{
 				Ports: []apiv1.ServicePort{
@@ -268,6 +272,35 @@ func (c *ChangeProcessorImpl) Process(
 		}
 
 		gw.Service = svc
+	}
+
+	// delete orphaned Services
+
+	var services apiv1.ServiceList
+
+	err := c.cfg.Client.List(ctx, &services, &client.ListOptions{
+		Namespace:     "nginx-gateway",
+		LabelSelector: labels.SelectorFromSet(map[string]string{"app": "nginx-gateway"}),
+	})
+	if err != nil {
+		panic(fmt.Errorf("failed to list services: %w", err))
+	}
+
+	for _, svc := range services.Items {
+		found := false
+		for _, gw := range g.Gateways {
+			if gw.Service != nil && gw.Service.Name == svc.Name {
+				found = true
+				break
+			}
+		}
+
+		if !found {
+			err := c.cfg.Client.Delete(ctx, &svc)
+			if err != nil {
+				panic(fmt.Errorf("failed to delete service: %w", err))
+			}
+		}
 	}
 
 	// pass ports here

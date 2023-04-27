@@ -15,6 +15,7 @@ rules:
   - services
   verbs:
   - create
+  - delete
 - apiGroups:
   - ""
   resources:
