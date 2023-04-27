@@ -25,6 +25,7 @@ type Statuses struct {
 
 // GatewayStatus holds the status of the winning Gateway resource.
 type GatewayStatus struct {
+	IPAddress  string
 	Conditions []conditions.Condition
 	// ListenerStatuses holds the statuses of listeners defined on the Gateway.
 	ListenerStatuses ListenerStatuses
@@ -117,6 +118,7 @@ func buildStatuses(graph *graph.Graph) Statuses {
 		}
 
 		status := GatewayStatus{
+			IPAddress:          gw.Service.Spec.ClusterIP,
 			Conditions:         conditions.NewDefaultGatewayConditions(),
 			NsName:             client.ObjectKeyFromObject(gw.Source),
 			ListenerStatuses:   listenerStatuses,

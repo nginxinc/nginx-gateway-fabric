@@ -49,6 +49,11 @@ func prepareGatewayStatus(gatewayStatus state.GatewayStatus, transitionTime meta
 	}
 
 	return v1beta1.GatewayStatus{
+		Addresses: []v1beta1.GatewayAddress{
+			{
+				Value: gatewayStatus.IPAddress,
+			},
+		},
 		Listeners:  listenerStatuses,
 		Conditions: convertConditions(gatewayStatus.Conditions, gatewayStatus.ObservedGeneration, transitionTime),
 	}
