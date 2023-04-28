@@ -8,6 +8,7 @@ upstream {{ $u.Name }} {
     random two least_conn;
     {{ range $server := $u.Servers }} 
     server {{ $server.Address }};
-    {{ end }}
+    {{- end }}
 }
-{{ end }}`
+{{ end }}
+`
