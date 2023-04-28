@@ -58,6 +58,8 @@ type SSL struct {
 type PathRule struct {
 	// Path is a path. For example, '/hello'.
 	Path string
+	// PathType is a path type. For example, PathPrefix or Exact.
+	PathType v1beta1.PathMatchType
 	// MatchRules holds routing rules.
 	MatchRules []MatchRule
 }
@@ -185,8 +187,13 @@ func buildServers(listeners map[string]*graph.Listener) (http, ssl []VirtualServ
 	return httpRules.buildServers(), sslRules.buildServers()
 }
 
+type pathAndType struct {
+	path     string
+	pathType v1beta1.PathMatchType
+}
+
 type hostPathRules struct {
-	rulesPerHost     map[string]map[string]PathRule
+	rulesPerHost     map[string]map[pathAndType]PathRule
 	listenersForHost map[string]*graph.Listener
 	httpsListeners   []*graph.Listener
 	listenersExist   bool
@@ -194,7 +201,7 @@ type hostPathRules struct {
 
 func newHostPathRules() *hostPathRules {
 	return &hostPathRules{
-		rulesPerHost:     make(map[string]map[string]PathRule),
+		rulesPerHost:     make(map[string]map[pathAndType]PathRule),
 		listenersForHost: make(map[string]*graph.Listener),
 		httpsListeners:   make([]*graph.Listener, 0),
 	}
@@ -220,7 +227,7 @@ func (hpr *hostPathRules) upsertListener(l *graph.Listener) {
 			hpr.listenersForHost[h] = l
 
 			if _, exist := hpr.rulesPerHost[h]; !exist {
-				hpr.rulesPerHost[h] = make(map[string]PathRule)
+				hpr.rulesPerHost[h] = make(map[pathAndType]PathRule)
 			}
 		}
 
@@ -242,9 +249,15 @@ func (hpr *hostPathRules) upsertListener(l *graph.Listener) {
 				for j, m := range rule.Matches {
 					path := getPath(m.Path)
 
-					rule, exist := hpr.rulesPerHost[h][path]
+					key := pathAndType{
+						path:     path,
+						pathType: *m.Path.Type,
+					}
+
+					rule, exist := hpr.rulesPerHost[h][key]
 					if !exist {
 						rule.Path = path
+						rule.PathType = *m.Path.Type
 					}
 
 					rule.MatchRules = append(rule.MatchRules, MatchRule{
@@ -255,7 +268,7 @@ func (hpr *hostPathRules) upsertListener(l *graph.Listener) {
 						Filters:      filters,
 					})
 
-					hpr.rulesPerHost[h][path] = rule
+					hpr.rulesPerHost[h][key] = rule
 				}
 			}
 		}
@@ -288,7 +301,11 @@ func (hpr *hostPathRules) buildServers() []VirtualServer {
 
 		// We sort the path rules so the order is preserved after reconfiguration.
 		sort.Slice(s.PathRules, func(i, j int) bool {
-			return s.PathRules[i].Path < s.PathRules[j].Path
+			if s.PathRules[i].Path != s.PathRules[j].Path {
+				return s.PathRules[i].Path < s.PathRules[j].Path
+			}
+
+			return s.PathRules[i].PathType < s.PathRules[j].PathType
 		})
 
 		servers = append(servers, s)

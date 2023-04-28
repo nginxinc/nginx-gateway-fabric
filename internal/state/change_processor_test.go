@@ -377,7 +377,8 @@ var _ = Describe("ChangeProcessor", func() {
 								Hostname: "foo.example.com",
 								PathRules: []dataplane.PathRule{
 									{
-										Path: "/",
+										Path:     "/",
+										PathType: v1beta1.PathMatchPathPrefix,
 										MatchRules: []dataplane.MatchRule{
 											{
 												MatchIdx:     0,
@@ -399,7 +400,8 @@ var _ = Describe("ChangeProcessor", func() {
 								SSL:      &dataplane.SSL{CertificatePath: certificatePath},
 								PathRules: []dataplane.PathRule{
 									{
-										Path: "/",
+										Path:     "/",
+										PathType: v1beta1.PathMatchPathPrefix,
 										MatchRules: []dataplane.MatchRule{
 											{
 												MatchIdx:     0,
@@ -491,7 +493,8 @@ var _ = Describe("ChangeProcessor", func() {
 								Hostname: "foo.example.com",
 								PathRules: []dataplane.PathRule{
 									{
-										Path: "/",
+										Path:     "/",
+										PathType: v1beta1.PathMatchPathPrefix,
 										MatchRules: []dataplane.MatchRule{
 											{
 												MatchIdx:     0,
@@ -513,7 +516,8 @@ var _ = Describe("ChangeProcessor", func() {
 								SSL:      &dataplane.SSL{CertificatePath: certificatePath},
 								PathRules: []dataplane.PathRule{
 									{
-										Path: "/",
+										Path:     "/",
+										PathType: v1beta1.PathMatchPathPrefix,
 										MatchRules: []dataplane.MatchRule{
 											{
 												MatchIdx:     0,
@@ -605,7 +609,8 @@ var _ = Describe("ChangeProcessor", func() {
 								Hostname: "foo.example.com",
 								PathRules: []dataplane.PathRule{
 									{
-										Path: "/",
+										Path:     "/",
+										PathType: v1beta1.PathMatchPathPrefix,
 										MatchRules: []dataplane.MatchRule{
 											{
 												MatchIdx:     0,
@@ -627,7 +632,8 @@ var _ = Describe("ChangeProcessor", func() {
 								SSL:      &dataplane.SSL{CertificatePath: certificatePath},
 								PathRules: []dataplane.PathRule{
 									{
-										Path: "/",
+										Path:     "/",
+										PathType: v1beta1.PathMatchPathPrefix,
 										MatchRules: []dataplane.MatchRule{
 											{
 												MatchIdx:     0,
@@ -718,7 +724,8 @@ var _ = Describe("ChangeProcessor", func() {
 								Hostname: "foo.example.com",
 								PathRules: []dataplane.PathRule{
 									{
-										Path: "/",
+										Path:     "/",
+										PathType: v1beta1.PathMatchPathPrefix,
 										MatchRules: []dataplane.MatchRule{
 											{
 												MatchIdx:     0,
@@ -740,7 +747,8 @@ var _ = Describe("ChangeProcessor", func() {
 								SSL:      &dataplane.SSL{CertificatePath: certificatePath},
 								PathRules: []dataplane.PathRule{
 									{
-										Path: "/",
+										Path:     "/",
+										PathType: v1beta1.PathMatchPathPrefix,
 										MatchRules: []dataplane.MatchRule{
 											{
 												MatchIdx:     0,
@@ -828,7 +836,8 @@ var _ = Describe("ChangeProcessor", func() {
 								Hostname: "foo.example.com",
 								PathRules: []dataplane.PathRule{
 									{
-										Path: "/",
+										Path:     "/",
+										PathType: v1beta1.PathMatchPathPrefix,
 										MatchRules: []dataplane.MatchRule{
 											{
 												MatchIdx:     0,
@@ -849,7 +858,8 @@ var _ = Describe("ChangeProcessor", func() {
 								Hostname: "foo.example.com",
 								PathRules: []dataplane.PathRule{
 									{
-										Path: "/",
+										Path:     "/",
+										PathType: v1beta1.PathMatchPathPrefix,
 										MatchRules: []dataplane.MatchRule{
 											{
 												MatchIdx:     0,
@@ -935,7 +945,8 @@ var _ = Describe("ChangeProcessor", func() {
 								Hostname: "foo.example.com",
 								PathRules: []dataplane.PathRule{
 									{
-										Path: "/",
+										Path:     "/",
+										PathType: v1beta1.PathMatchPathPrefix,
 										MatchRules: []dataplane.MatchRule{
 											{
 												MatchIdx:     0,
@@ -957,7 +968,8 @@ var _ = Describe("ChangeProcessor", func() {
 								SSL:      &dataplane.SSL{CertificatePath: certificatePath},
 								PathRules: []dataplane.PathRule{
 									{
-										Path: "/",
+										Path:     "/",
+										PathType: v1beta1.PathMatchPathPrefix,
 										MatchRules: []dataplane.MatchRule{
 											{
 												MatchIdx:     0,
@@ -1064,7 +1076,8 @@ var _ = Describe("ChangeProcessor", func() {
 								Hostname: "bar.example.com",
 								PathRules: []dataplane.PathRule{
 									{
-										Path: "/",
+										Path:     "/",
+										PathType: v1beta1.PathMatchPathPrefix,
 										MatchRules: []dataplane.MatchRule{
 											{
 												MatchIdx:     0,
@@ -1086,7 +1099,8 @@ var _ = Describe("ChangeProcessor", func() {
 								SSL:      &dataplane.SSL{CertificatePath: certificatePath},
 								PathRules: []dataplane.PathRule{
 									{
-										Path: "/",
+										Path:     "/",
+										PathType: v1beta1.PathMatchPathPrefix,
 										MatchRules: []dataplane.MatchRule{
 											{
 												MatchIdx:     0,
@@ -2105,7 +2119,8 @@ var _ = Describe("ChangeProcessor", func() {
 							Hostname: "foo.example.com",
 							PathRules: []dataplane.PathRule{
 								{
-									Path: "/",
+									Path:     "/",
+									PathType: v1beta1.PathMatchPathPrefix,
 									MatchRules: []dataplane.MatchRule{
 										{
 											MatchIdx:     0,

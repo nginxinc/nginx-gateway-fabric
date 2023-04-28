@@ -13,7 +13,7 @@ type Validators struct {
 //
 //go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . HTTPFieldsValidator
 type HTTPFieldsValidator interface {
-	ValidatePathInPrefixMatch(path string) error
+	ValidatePathInMatch(path string) error
 	ValidateHeaderNameInMatch(name string) error
 	ValidateHeaderValueInMatch(value string) error
 	ValidateQueryParamNameInMatch(name string) error

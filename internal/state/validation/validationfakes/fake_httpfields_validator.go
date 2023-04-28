@@ -43,15 +43,15 @@ type FakeHTTPFieldsValidator struct {
 		result1 bool
 		result2 []string
 	}
-	ValidatePathInPrefixMatchStub        func(string) error
-	validatePathInPrefixMatchMutex       sync.RWMutex
-	validatePathInPrefixMatchArgsForCall []struct {
+	ValidatePathInMatchStub        func(string) error
+	validatePathInMatchMutex       sync.RWMutex
+	validatePathInMatchArgsForCall []struct {
 		arg1 string
 	}
-	validatePathInPrefixMatchReturns struct {
+	validatePathInMatchReturns struct {
 		result1 error
 	}
-	validatePathInPrefixMatchReturnsOnCall map[int]struct {
+	validatePathInMatchReturnsOnCall map[int]struct {
 		result1 error
 	}
 	ValidateQueryParamNameInMatchStub        func(string) error
@@ -314,16 +314,16 @@ func (fake *FakeHTTPFieldsValidator) ValidateMethodInMatchReturnsOnCall(i int, r
 	}{result1, result2}
 }
 
-func (fake *FakeHTTPFieldsValidator) ValidatePathInPrefixMatch(arg1 string) error {
-	fake.validatePathInPrefixMatchMutex.Lock()
-	ret, specificReturn := fake.validatePathInPrefixMatchReturnsOnCall[len(fake.validatePathInPrefixMatchArgsForCall)]
-	fake.validatePathInPrefixMatchArgsForCall = append(fake.validatePathInPrefixMatchArgsForCall, struct {
+func (fake *FakeHTTPFieldsValidator) ValidatePathInMatch(arg1 string) error {
+	fake.validatePathInMatchMutex.Lock()
+	ret, specificReturn := fake.validatePathInMatchReturnsOnCall[len(fake.validatePathInMatchArgsForCall)]
+	fake.validatePathInMatchArgsForCall = append(fake.validatePathInMatchArgsForCall, struct {
 		arg1 string
 	}{arg1})
-	stub := fake.ValidatePathInPrefixMatchStub
-	fakeReturns := fake.validatePathInPrefixMatchReturns
-	fake.recordInvocation("ValidatePathInPrefixMatch", []interface{}{arg1})
-	fake.validatePathInPrefixMatchMutex.Unlock()
+	stub := fake.ValidatePathInMatchStub
+	fakeReturns := fake.validatePathInMatchReturns
+	fake.recordInvocation("ValidatePathInMatch", []interface{}{arg1})
+	fake.validatePathInMatchMutex.Unlock()
 	if stub != nil {
 		return stub(arg1)
 	}
@@ -333,44 +333,44 @@ func (fake *FakeHTTPFieldsValidator) ValidatePathInPrefixMatch(arg1 string) erro
 	return fakeReturns.result1
 }
 
-func (fake *FakeHTTPFieldsValidator) ValidatePathInPrefixMatchCallCount() int {
-	fake.validatePathInPrefixMatchMutex.RLock()
-	defer fake.validatePathInPrefixMatchMutex.RUnlock()
-	return len(fake.validatePathInPrefixMatchArgsForCall)
+func (fake *FakeHTTPFieldsValidator) ValidatePathInMatchCallCount() int {
+	fake.validatePathInMatchMutex.RLock()
+	defer fake.validatePathInMatchMutex.RUnlock()
+	return len(fake.validatePathInMatchArgsForCall)
 }
 
-func (fake *FakeHTTPFieldsValidator) ValidatePathInPrefixMatchCalls(stub func(string) error) {
-	fake.validatePathInPrefixMatchMutex.Lock()
-	defer fake.validatePathInPrefixMatchMutex.Unlock()
-	fake.ValidatePathInPrefixMatchStub = stub
+func (fake *FakeHTTPFieldsValidator) ValidatePathInMatchCalls(stub func(string) error) {
+	fake.validatePathInMatchMutex.Lock()
+	defer fake.validatePathInMatchMutex.Unlock()
+	fake.ValidatePathInMatchStub = stub
 }
 
-func (fake *FakeHTTPFieldsValidator) ValidatePathInPrefixMatchArgsForCall(i int) string {
-	fake.validatePathInPrefixMatchMutex.RLock()
-	defer fake.validatePathInPrefixMatchMutex.RUnlock()
-	argsForCall := fake.validatePathInPrefixMatchArgsForCall[i]
+func (fake *FakeHTTPFieldsValidator) ValidatePathInMatchArgsForCall(i int) string {
+	fake.validatePathInMatchMutex.RLock()
+	defer fake.validatePathInMatchMutex.RUnlock()
+	argsForCall := fake.validatePathInMatchArgsForCall[i]
 	return argsForCall.arg1
 }
 
-func (fake *FakeHTTPFieldsValidator) ValidatePathInPrefixMatchReturns(result1 error) {
-	fake.validatePathInPrefixMatchMutex.Lock()
-	defer fake.validatePathInPrefixMatchMutex.Unlock()
-	fake.ValidatePathInPrefixMatchStub = nil
-	fake.validatePathInPrefixMatchReturns = struct {
+func (fake *FakeHTTPFieldsValidator) ValidatePathInMatchReturns(result1 error) {
+	fake.validatePathInMatchMutex.Lock()
+	defer fake.validatePathInMatchMutex.Unlock()
+	fake.ValidatePathInMatchStub = nil
+	fake.validatePathInMatchReturns = struct {
 		result1 error
 	}{result1}
 }
 
-func (fake *FakeHTTPFieldsValidator) ValidatePathInPrefixMatchReturnsOnCall(i int, result1 error) {
-	fake.validatePathInPrefixMatchMutex.Lock()
-	defer fake.validatePathInPrefixMatchMutex.Unlock()
-	fake.ValidatePathInPrefixMatchStub = nil
-	if fake.validatePathInPrefixMatchReturnsOnCall == nil {
-		fake.validatePathInPrefixMatchReturnsOnCall = make(map[int]struct {
+func (fake *FakeHTTPFieldsValidator) ValidatePathInMatchReturnsOnCall(i int, result1 error) {
+	fake.validatePathInMatchMutex.Lock()
+	defer fake.validatePathInMatchMutex.Unlock()
+	fake.ValidatePathInMatchStub = nil
+	if fake.validatePathInMatchReturnsOnCall == nil {
+		fake.validatePathInMatchReturnsOnCall = make(map[int]struct {
 			result1 error
 		})
 	}
-	fake.validatePathInPrefixMatchReturnsOnCall[i] = struct {
+	fake.validatePathInMatchReturnsOnCall[i] = struct {
 		result1 error
 	}{result1}
 }
@@ -756,8 +756,8 @@ func (fake *FakeHTTPFieldsValidator) Invocations() map[string][][]interface{} {
 	defer fake.validateHeaderValueInMatchMutex.RUnlock()
 	fake.validateMethodInMatchMutex.RLock()
 	defer fake.validateMethodInMatchMutex.RUnlock()
-	fake.validatePathInPrefixMatchMutex.RLock()
-	defer fake.validatePathInPrefixMatchMutex.RUnlock()
+	fake.validatePathInMatchMutex.RLock()
+	defer fake.validatePathInMatchMutex.RUnlock()
 	fake.validateQueryParamNameInMatchMutex.RLock()
 	defer fake.validateQueryParamNameInMatchMutex.RUnlock()
 	fake.validateQueryParamValueInMatchMutex.RLock()

@@ -16,6 +16,7 @@ type Location struct {
 	ProxyPass    string
 	HTTPMatchVar string
 	Internal     bool
+	Exact        bool
 }
 
 // Return represents an HTTP return.

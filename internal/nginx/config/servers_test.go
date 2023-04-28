@@ -181,12 +181,14 @@ func TestCreateServers(t *testing.T) {
 						{
 							Path: &v1beta1.HTTPPathMatch{
 								Value: helpers.GetStringPointer("/"),
+								Type:  helpers.GetPointer(v1beta1.PathMatchPathPrefix),
 							},
 							Method: helpers.GetHTTPMethodPointer(v1beta1.HTTPMethodPost),
 						},
 						{
 							Path: &v1beta1.HTTPPathMatch{
 								Value: helpers.GetStringPointer("/"),
+								Type:  helpers.GetPointer(v1beta1.PathMatchPathPrefix),
 							},
 							Method: helpers.GetHTTPMethodPointer(v1beta1.HTTPMethodPatch),
 						},
@@ -195,6 +197,7 @@ func TestCreateServers(t *testing.T) {
 								Value: helpers.GetStringPointer(
 									"/", // should generate an "any" httpmatch since other matches exists for /
 								),
+								Type: helpers.GetPointer(v1beta1.PathMatchPathPrefix),
 							},
 						},
 					},
@@ -205,6 +208,7 @@ func TestCreateServers(t *testing.T) {
 						{
 							Path: &v1beta1.HTTPPathMatch{
 								Value: helpers.GetStringPointer("/test"),
+								Type:  helpers.GetPointer(v1beta1.PathMatchPathPrefix),
 							},
 							Method: helpers.GetHTTPMethodPointer(v1beta1.HTTPMethodGet),
 							Headers: []v1beta1.HTTPHeaderMatch{
@@ -245,6 +249,7 @@ func TestCreateServers(t *testing.T) {
 						{
 							Path: &v1beta1.HTTPPathMatch{
 								Value: helpers.GetStringPointer("/path-only"),
+								Type:  helpers.GetPointer(v1beta1.PathMatchPathPrefix),
 							},
 						},
 					},
@@ -255,6 +260,7 @@ func TestCreateServers(t *testing.T) {
 						{
 							Path: &v1beta1.HTTPPathMatch{
 								Value: helpers.GetStringPointer("/redirect-implicit-port"),
+								Type:  helpers.GetPointer(v1beta1.PathMatchPathPrefix),
 							},
 						},
 					},
@@ -266,6 +272,7 @@ func TestCreateServers(t *testing.T) {
 						{
 							Path: &v1beta1.HTTPPathMatch{
 								Value: helpers.GetStringPointer("/redirect-explicit-port"),
+								Type:  helpers.GetPointer(v1beta1.PathMatchPathPrefix),
 							},
 						},
 					},
@@ -277,6 +284,7 @@ func TestCreateServers(t *testing.T) {
 						{
 							Path: &v1beta1.HTTPPathMatch{
 								Value: helpers.GetPointer("/invalid-filter"),
+								Type:  helpers.GetPointer(v1beta1.PathMatchPathPrefix),
 							},
 						},
 					},
@@ -338,7 +346,8 @@ func TestCreateServers(t *testing.T) {
 
 	cafePathRules := []dataplane.PathRule{
 		{
-			Path: "/",
+			Path:     "/",
+			PathType: v1beta1.PathMatchPathPrefix,
 			MatchRules: []dataplane.MatchRule{
 				{
 					MatchIdx:     0,
@@ -361,7 +370,8 @@ func TestCreateServers(t *testing.T) {
 			},
 		},
 		{
-			Path: "/test",
+			Path:     "/test",
+			PathType: v1beta1.PathMatchPathPrefix,
 			MatchRules: []dataplane.MatchRule{
 				{
 					MatchIdx:     0,
@@ -372,7 +382,8 @@ func TestCreateServers(t *testing.T) {
 			},
 		},
 		{
-			Path: "/path-only",
+			Path:     "/path-only",
+			PathType: v1beta1.PathMatchPathPrefix,
 			MatchRules: []dataplane.MatchRule{
 				{
 					MatchIdx:     0,
@@ -383,7 +394,8 @@ func TestCreateServers(t *testing.T) {
 			},
 		},
 		{
-			Path: "/redirect-implicit-port",
+			Path:     "/redirect-implicit-port",
+			PathType: v1beta1.PathMatchPathPrefix,
 			MatchRules: []dataplane.MatchRule{
 				{
 					MatchIdx: 0,
@@ -399,7 +411,8 @@ func TestCreateServers(t *testing.T) {
 			},
 		},
 		{
-			Path: "/redirect-explicit-port",
+			Path:     "/redirect-explicit-port",
+			PathType: v1beta1.PathMatchPathPrefix,
 			MatchRules: []dataplane.MatchRule{
 				{
 					MatchIdx: 0,
@@ -416,7 +429,8 @@ func TestCreateServers(t *testing.T) {
 			},
 		},
 		{
-			Path: "/invalid-filter",
+			Path:     "/invalid-filter",
+			PathType: v1beta1.PathMatchPathPrefix,
 			MatchRules: []dataplane.MatchRule{
 				{
 					MatchIdx: 0,
@@ -461,16 +475,16 @@ func TestCreateServers(t *testing.T) {
 	}
 
 	slashMatches := []httpMatch{
-		{Method: v1beta1.HTTPMethodPost, RedirectPath: "/_route0"},
-		{Method: v1beta1.HTTPMethodPatch, RedirectPath: "/_route1"},
-		{Any: true, RedirectPath: "/_route2"},
+		{Method: v1beta1.HTTPMethodPost, RedirectPath: "/_prefix_route0"},
+		{Method: v1beta1.HTTPMethodPatch, RedirectPath: "/_prefix_route1"},
+		{Any: true, RedirectPath: "/_prefix_route2"},
 	}
 	testMatches := []httpMatch{
 		{
 			Method:       v1beta1.HTTPMethodGet,
 			Headers:      []string{"Version:V1", "test:foo", "my-header:my-value"},
 			QueryParams:  []string{"GrEat=EXAMPLE", "test=foo=bar"},
-			RedirectPath: "/test_route0",
+			RedirectPath: "/test_prefix_route0",
 		},
 	}
 
@@ -482,17 +496,17 @@ func TestCreateServers(t *testing.T) {
 
 		return []http.Location{
 			{
-				Path:      "/_route0",
+				Path:      "/_prefix_route0",
 				Internal:  true,
 				ProxyPass: "http://test_foo_80",
 			},
 			{
-				Path:      "/_route1",
+				Path:      "/_prefix_route1",
 				Internal:  true,
 				ProxyPass: "http://test_foo_80",
 			},
 			{
-				Path:      "/_route2",
+				Path:      "/_prefix_route2",
 				Internal:  true,
 				ProxyPass: "http://test_foo_80",
 			},
@@ -501,7 +515,7 @@ func TestCreateServers(t *testing.T) {
 				HTTPMatchVar: expectedMatchString(slashMatches),
 			},
 			{
-				Path:      "/test_route0",
+				Path:      "/test_prefix_route0",
 				Internal:  true,
 				ProxyPass: "http://$test__route1_rule1",
 			},
@@ -579,11 +593,13 @@ func TestCreateLocationsRootPath(t *testing.T) {
 							{
 								Path: &v1beta1.HTTPPathMatch{
 									Value: helpers.GetStringPointer("/path-1"),
+									Type:  helpers.GetPointer(v1beta1.PathMatchPathPrefix),
 								},
 							},
 							{
 								Path: &v1beta1.HTTPPathMatch{
 									Value: helpers.GetStringPointer("/path-2"),
+									Type:  helpers.GetPointer(v1beta1.PathMatchPathPrefix),
 								},
 							},
 						},
@@ -596,6 +612,7 @@ func TestCreateLocationsRootPath(t *testing.T) {
 			route.Spec.Rules[0].Matches = append(route.Spec.Rules[0].Matches, v1beta1.HTTPRouteMatch{
 				Path: &v1beta1.HTTPPathMatch{
 					Value: helpers.GetStringPointer("/"),
+					Type:  helpers.GetPointer(v1beta1.PathMatchPathPrefix),
 				},
 			})
 		}
@@ -1089,10 +1106,28 @@ func TestCreateMatchLocation(t *testing.T) {
 }
 
 func TestCreatePathForMatch(t *testing.T) {
-	expected := "/path_route1"
+	tests := []struct {
+		expected string
+		pathType v1beta1.PathMatchType
+	}{
+		{
+			expected: "/path_prefix_route1",
+			pathType: v1beta1.PathMatchPathPrefix,
+		},
+		{
+			expected: "/path_exact_route1",
+			pathType: v1beta1.PathMatchExact,
+		},
+		{
+			expected: "/path_regex_route1",
+			pathType: v1beta1.PathMatchRegularExpression,
+		},
+	}
 
-	result := createPathForMatch("/path", 1)
-	if result != expected {
-		t.Errorf("createPathForMatch() returned %q but expected %q", result, expected)
+	for _, tc := range tests {
+		result := createPathForMatch("/path", tc.pathType, 1)
+		if result != tc.expected {
+			t.Errorf("createPathForMatch() returned %q but expected %q", result, tc.expected)
+		}
 	}
 }
