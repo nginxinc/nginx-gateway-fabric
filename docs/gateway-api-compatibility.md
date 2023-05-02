@@ -83,7 +83,7 @@ Fields:
   * `hostnames` - partially supported. Wildcard binding is not supported: a hostname like `example.com` will not bind to a listener with the hostname `*.example.com`. However, `example.com` will bind to a listener with the empty hostname.
   * `rules`
 	* `matches`
-	  * `path` - partially supported. Only `PathPrefix` and `Exact` type.
+	  * `path` - Core (`PathPrefix` and `Exact` types) -- supported; Implementation-specific (`RegularExpression` type) -- not supported.
 	  * `headers` - partially supported. Only `Exact` type.
 	  * `queryParams` - partially supported. Only `Exact` type. 
 	  * `method` -  supported.

@@ -1180,7 +1180,7 @@ func TestValidateMatch(t *testing.T) {
 				},
 			},
 			expectErrCount: 0,
-			name:           "valid",
+			name:           "valid exact match",
 		},
 		{
 			validator: createAllValidValidator(),

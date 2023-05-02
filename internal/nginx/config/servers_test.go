@@ -289,6 +289,29 @@ func TestCreateServers(t *testing.T) {
 						},
 					},
 				},
+				{
+					// A match using type Exact
+					Matches: []v1beta1.HTTPRouteMatch{
+						{
+							Path: &v1beta1.HTTPPathMatch{
+								Value: helpers.GetPointer("/exact"),
+								Type:  helpers.GetPointer(v1beta1.PathMatchExact),
+							},
+						},
+					},
+				},
+				{
+					// A match using type Exact with method
+					Matches: []v1beta1.HTTPRouteMatch{
+						{
+							Path: &v1beta1.HTTPPathMatch{
+								Value: helpers.GetPointer("/test"),
+								Type:  helpers.GetPointer(v1beta1.PathMatchExact),
+							},
+							Method: helpers.GetHTTPMethodPointer(v1beta1.HTTPMethodGet),
+						},
+					},
+				},
 			},
 		},
 	}
@@ -347,7 +370,7 @@ func TestCreateServers(t *testing.T) {
 	cafePathRules := []dataplane.PathRule{
 		{
 			Path:     "/",
-			PathType: v1beta1.PathMatchPathPrefix,
+			PathType: string(v1beta1.PathMatchPathPrefix),
 			MatchRules: []dataplane.MatchRule{
 				{
 					MatchIdx:     0,
@@ -371,7 +394,7 @@ func TestCreateServers(t *testing.T) {
 		},
 		{
 			Path:     "/test",
-			PathType: v1beta1.PathMatchPathPrefix,
+			PathType: string(v1beta1.PathMatchPathPrefix),
 			MatchRules: []dataplane.MatchRule{
 				{
 					MatchIdx:     0,
@@ -383,7 +406,7 @@ func TestCreateServers(t *testing.T) {
 		},
 		{
 			Path:     "/path-only",
-			PathType: v1beta1.PathMatchPathPrefix,
+			PathType: string(v1beta1.PathMatchPathPrefix),
 			MatchRules: []dataplane.MatchRule{
 				{
 					MatchIdx:     0,
@@ -395,7 +418,7 @@ func TestCreateServers(t *testing.T) {
 		},
 		{
 			Path:     "/redirect-implicit-port",
-			PathType: v1beta1.PathMatchPathPrefix,
+			PathType: string(v1beta1.PathMatchPathPrefix),
 			MatchRules: []dataplane.MatchRule{
 				{
 					MatchIdx: 0,
@@ -412,7 +435,7 @@ func TestCreateServers(t *testing.T) {
 		},
 		{
 			Path:     "/redirect-explicit-port",
-			PathType: v1beta1.PathMatchPathPrefix,
+			PathType: string(v1beta1.PathMatchPathPrefix),
 			MatchRules: []dataplane.MatchRule{
 				{
 					MatchIdx: 0,
@@ -430,7 +453,7 @@ func TestCreateServers(t *testing.T) {
 		},
 		{
 			Path:     "/invalid-filter",
-			PathType: v1beta1.PathMatchPathPrefix,
+			PathType: string(v1beta1.PathMatchPathPrefix),
 			MatchRules: []dataplane.MatchRule{
 				{
 					MatchIdx: 0,
@@ -440,6 +463,30 @@ func TestCreateServers(t *testing.T) {
 						InvalidFilter: &dataplane.InvalidFilter{},
 					},
 					BackendGroup: invalidFilterGroup,
+				},
+			},
+		},
+		{
+			Path:     "/exact",
+			PathType: string(v1beta1.PathMatchExact),
+			MatchRules: []dataplane.MatchRule{
+				{
+					MatchIdx:     0,
+					RuleIdx:      6,
+					Source:       hr,
+					BackendGroup: fooGroup,
+				},
+			},
+		},
+		{
+			Path:     "/test",
+			PathType: string(v1beta1.PathMatchExact),
+			MatchRules: []dataplane.MatchRule{
+				{
+					MatchIdx:     0,
+					RuleIdx:      7,
+					Source:       hr,
+					BackendGroup: fooGroup,
 				},
 			},
 		},
@@ -485,6 +532,12 @@ func TestCreateServers(t *testing.T) {
 			Headers:      []string{"Version:V1", "test:foo", "my-header:my-value"},
 			QueryParams:  []string{"GrEat=EXAMPLE", "test=foo=bar"},
 			RedirectPath: "/test_prefix_route0",
+		},
+	}
+	exactMatches := []httpMatch{
+		{
+			Method:       v1beta1.HTTPMethodGet,
+			RedirectPath: "/test_exact_route0",
 		},
 	}
 
@@ -546,6 +599,21 @@ func TestCreateServers(t *testing.T) {
 				Return: &http.Return{
 					Code: http.StatusInternalServerError,
 				},
+			},
+			{
+				Path:      "/exact",
+				ProxyPass: "http://test_foo_80",
+				Exact:     true,
+			},
+			{
+				Path:      "/test_exact_route0",
+				ProxyPass: "http://test_foo_80",
+				Internal:  true,
+			},
+			{
+				Path:         "/test",
+				HTTPMatchVar: expectedMatchString(exactMatches),
+				Exact:        true,
 			},
 		}
 	}
@@ -1106,6 +1174,8 @@ func TestCreateMatchLocation(t *testing.T) {
 }
 
 func TestCreatePathForMatch(t *testing.T) {
+	g := NewGomegaWithT(t)
+
 	tests := []struct {
 		expected string
 		pathType v1beta1.PathMatchType
@@ -1126,8 +1196,6 @@ func TestCreatePathForMatch(t *testing.T) {
 
 	for _, tc := range tests {
 		result := createPathForMatch("/path", tc.pathType, 1)
-		if result != tc.expected {
-			t.Errorf("createPathForMatch() returned %q but expected %q", result, tc.expected)
-		}
+		g.Expect(result).To(Equal(tc.expected))
 	}
 }

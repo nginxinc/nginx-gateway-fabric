@@ -59,7 +59,7 @@ type PathRule struct {
 	// Path is a path. For example, '/hello'.
 	Path string
 	// PathType is a path type. For example, PathPrefix or Exact.
-	PathType v1beta1.PathMatchType
+	PathType string
 	// MatchRules holds routing rules.
 	MatchRules []MatchRule
 }
@@ -257,7 +257,7 @@ func (hpr *hostPathRules) upsertListener(l *graph.Listener) {
 					rule, exist := hpr.rulesPerHost[h][key]
 					if !exist {
 						rule.Path = path
-						rule.PathType = *m.Path.Type
+						rule.PathType = string(*m.Path.Type)
 					}
 
 					rule.MatchRules = append(rule.MatchRules, MatchRule{
