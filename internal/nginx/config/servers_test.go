@@ -1188,10 +1188,6 @@ func TestCreatePathForMatch(t *testing.T) {
 			expected: "/path_exact_route1",
 			pathType: v1beta1.PathMatchExact,
 		},
-		{
-			expected: "/path_regex_route1",
-			pathType: v1beta1.PathMatchRegularExpression,
-		},
 	}
 
 	for _, tc := range tests {

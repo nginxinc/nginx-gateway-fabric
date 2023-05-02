@@ -76,7 +76,7 @@ func createRoute(
 					Matches: []v1beta1.HTTPRouteMatch{
 						{
 							Path: &v1beta1.HTTPPathMatch{
-								Type:  (*v1beta1.PathMatchType)(helpers.GetStringPointer(string(string(v1beta1.PathMatchPathPrefix)))),
+								Type:  helpers.GetPointer(v1beta1.PathMatchPathPrefix),
 								Value: helpers.GetStringPointer("/"),
 							},
 						},
@@ -2032,7 +2032,7 @@ var _ = Describe("ChangeProcessor", func() {
 							Matches: []v1beta1.HTTPRouteMatch{
 								{
 									Path: &v1beta1.HTTPPathMatch{
-										Type:  (*v1beta1.PathMatchType)(helpers.GetStringPointer(string(string(v1beta1.PathMatchPathPrefix)))),
+										Type:  helpers.GetPointer(v1beta1.PathMatchPathPrefix),
 										Value: helpers.GetStringPointer("/"),
 									},
 								},
