@@ -323,8 +323,6 @@ func formatPathType(pathType v1beta1.PathMatchType) string {
 		return "prefix"
 	case v1beta1.PathMatchExact:
 		return "exact"
-	case v1beta1.PathMatchRegularExpression:
-		panic(fmt.Sprintf("unsupported path type: %s", pathType))
 	default:
 		panic(fmt.Sprintf("unsupported path type: %s", pathType))
 	}
