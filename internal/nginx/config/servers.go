@@ -106,7 +106,7 @@ func createLocations(pathRules []dataplane.PathRule, listenerPort int) []http.Lo
 					Exact: *m.Path.Type == v1beta1.PathMatchExact,
 				}
 			} else {
-				path := createPathForMatch(rule.Path, v1beta1.PathMatchType(rule.PathType), matchRuleIdx)
+				path := createPathForMatch(rule.Path, rule.PathType, matchRuleIdx)
 				loc = createMatchLocation(path)
 				matches = append(matches, createHTTPMatch(m, path))
 			}
@@ -306,7 +306,7 @@ func createMatchLocation(path string) http.Location {
 	}
 }
 
-func createPathForMatch(path string, pathType v1beta1.PathMatchType, routeIdx int) string {
+func createPathForMatch(path, pathType string, routeIdx int) string {
 	return fmt.Sprintf("%s_%s_route%d", path, formatPathType(pathType), routeIdx)
 }
 
@@ -317,8 +317,8 @@ func createDefaultRootLocation() http.Location {
 	}
 }
 
-func formatPathType(pathType v1beta1.PathMatchType) string {
-	switch pathType {
+func formatPathType(pathType string) string {
+	switch v1beta1.PathMatchType(pathType) {
 	case v1beta1.PathMatchPathPrefix:
 		return "prefix"
 	case v1beta1.PathMatchExact:

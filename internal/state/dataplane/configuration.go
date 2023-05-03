@@ -11,7 +11,11 @@ import (
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/resolver"
 )
 
-const wildcardHostname = "~^"
+const (
+	wildcardHostname    = "~^"
+	PathMatchPathPrefix = string(v1beta1.PathMatchPathPrefix)
+	PathMatchExact      = string(v1beta1.PathMatchExact)
+)
 
 // Configuration is an intermediate representation of dataplane configuration.
 type Configuration struct {
