@@ -1,7 +1,7 @@
 package config
 
 // FIXME(kate-osborn): Dynamically calculate upstream zone size based on the number of upstreams.
-// 512k will support up to 648 upstream servers. 
+// 512k will support up to 648 upstream servers.
 var upstreamsTemplateText = `
 {{ range $u := . }}
 upstream {{ $u.Name }} {
