@@ -102,10 +102,11 @@ func createLocations(pathRules []dataplane.PathRule, listenerPort int) []http.Lo
 			// generate a standard location block without http_matches.
 			if len(rule.MatchRules) == 1 && isPathOnlyMatch(m) {
 				loc = http.Location{
-					Path: rule.Path,
+					Path:  rule.Path,
+					Exact: rule.PathType == dataplane.PathTypeExact,
 				}
 			} else {
-				path := createPathForMatch(rule.Path, matchRuleIdx)
+				path := createPathForMatch(rule.Path, rule.PathType, matchRuleIdx)
 				loc = createMatchLocation(path)
 				matches = append(matches, createHTTPMatch(m, path))
 			}
@@ -151,6 +152,7 @@ func createLocations(pathRules []dataplane.PathRule, listenerPort int) []http.Lo
 
 			pathLoc := http.Location{
 				Path:         rule.Path,
+				Exact:        rule.PathType == dataplane.PathTypeExact,
 				HTTPMatchVar: string(b),
 			}
 
@@ -304,8 +306,8 @@ func createMatchLocation(path string) http.Location {
 	}
 }
 
-func createPathForMatch(path string, routeIdx int) string {
-	return fmt.Sprintf("%s_route%d", path, routeIdx)
+func createPathForMatch(path string, pathType dataplane.PathType, routeIdx int) string {
+	return fmt.Sprintf("%s_%s_route%d", path, pathType, routeIdx)
 }
 
 func createDefaultRootLocation() http.Location {

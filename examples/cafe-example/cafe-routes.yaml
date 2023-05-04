@@ -30,7 +30,7 @@ spec:
   rules:
   - matches:
     - path:
-        type: PathPrefix
+        type: Exact
         value: /tea
     backendRefs:
     - name: tea

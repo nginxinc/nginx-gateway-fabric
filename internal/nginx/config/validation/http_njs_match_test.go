@@ -4,14 +4,14 @@ import (
 	"testing"
 )
 
-func TestValidatePathInPrefixMatch(t *testing.T) {
+func TestValidatePathInMatch(t *testing.T) {
 	validator := HTTPNJSMatchValidator{}
 
-	testValidValuesForSimpleValidator(t, validator.ValidatePathInPrefixMatch,
+	testValidValuesForSimpleValidator(t, validator.ValidatePathInMatch,
 		"/",
 		"/path",
 		"/path/subpath-123")
-	testInvalidValuesForSimpleValidator(t, validator.ValidatePathInPrefixMatch,
+	testInvalidValuesForSimpleValidator(t, validator.ValidatePathInMatch,
 		"/ ",
 		"/path{",
 		"/path}",

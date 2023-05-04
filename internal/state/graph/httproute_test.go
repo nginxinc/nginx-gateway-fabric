@@ -423,7 +423,7 @@ func TestBuildRoute(t *testing.T) {
 	addFilterToPath(hrInvalidValidRules, "/filter", invalidFilter)
 
 	validatorInvalidFieldsInRule := &validationfakes.FakeHTTPFieldsValidator{
-		ValidatePathInPrefixMatchStub: func(path string) error {
+		ValidatePathInMatchStub: func(path string) error {
 			if path == invalidPath {
 				return errors.New("invalid path")
 			}
@@ -1175,6 +1175,17 @@ func TestValidateMatch(t *testing.T) {
 			validator: createAllValidValidator(),
 			match: v1beta1.HTTPRouteMatch{
 				Path: &v1beta1.HTTPPathMatch{
+					Type:  helpers.GetPointer(v1beta1.PathMatchExact),
+					Value: helpers.GetPointer("/"),
+				},
+			},
+			expectErrCount: 0,
+			name:           "valid exact match",
+		},
+		{
+			validator: createAllValidValidator(),
+			match: v1beta1.HTTPRouteMatch{
+				Path: &v1beta1.HTTPPathMatch{
 					Type:  helpers.GetPointer(v1beta1.PathMatchRegularExpression),
 					Value: helpers.GetPointer("/"),
 				},
@@ -1185,7 +1196,7 @@ func TestValidateMatch(t *testing.T) {
 		{
 			validator: func() *validationfakes.FakeHTTPFieldsValidator {
 				validator := createAllValidValidator()
-				validator.ValidatePathInPrefixMatchReturns(errors.New("invalid path value"))
+				validator.ValidatePathInMatchReturns(errors.New("invalid path value"))
 				return validator
 			}(),
 			match: v1beta1.HTTPRouteMatch{

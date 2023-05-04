@@ -26,14 +26,15 @@ func TestBuildConfiguration(t *testing.T) {
 		invalidFiltersPath = "/not-valid-filters"
 	)
 
-	createRoute := func(name, hostname, listenerName string, paths ...string) *v1beta1.HTTPRoute {
+	createRoute := func(name, hostname, listenerName string, paths ...pathAndType) *v1beta1.HTTPRoute {
 		rules := make([]v1beta1.HTTPRouteRule, 0, len(paths))
 		for _, p := range paths {
 			rules = append(rules, v1beta1.HTTPRouteRule{
 				Matches: []v1beta1.HTTPRouteMatch{
 					{
 						Path: &v1beta1.HTTPPathMatch{
-							Value: helpers.GetStringPointer(p),
+							Value: helpers.GetStringPointer(p.path),
+							Type:  helpers.GetPointer(p.pathType),
 						},
 					},
 				},
@@ -107,12 +108,12 @@ func TestBuildConfiguration(t *testing.T) {
 		}
 	}
 
-	createRules := func(hr *v1beta1.HTTPRoute, paths []string) []graph.Rule {
+	createRules := func(hr *v1beta1.HTTPRoute, paths []pathAndType) []graph.Rule {
 		rules := make([]graph.Rule, len(hr.Spec.Rules))
 
 		for i := range paths {
-			validMatches := paths[i] != invalidMatchesPath
-			validFilters := paths[i] != invalidFiltersPath
+			validMatches := paths[i].path != invalidMatchesPath
+			validFilters := paths[i].path != invalidFiltersPath
 			validRule := validMatches && validFilters
 
 			rules[i] = graph.Rule{
@@ -127,7 +128,7 @@ func TestBuildConfiguration(t *testing.T) {
 
 	createInternalRoute := func(
 		source *v1beta1.HTTPRoute,
-		paths []string,
+		paths []pathAndType,
 	) *graph.Route {
 		r := &graph.Route{
 			Source: source,
@@ -136,7 +137,7 @@ func TestBuildConfiguration(t *testing.T) {
 		return r
 	}
 
-	createTestResources := func(name, hostname, listenerName string, paths ...string) (
+	createTestResources := func(name, hostname, listenerName string, paths ...pathAndType) (
 		*v1beta1.HTTPRoute, []graph.BackendGroup, *graph.Route,
 	) {
 		hr := createRoute(name, hostname, listenerName, paths...)
@@ -144,12 +145,21 @@ func TestBuildConfiguration(t *testing.T) {
 		return hr, route.GetAllBackendGroups(), route
 	}
 
-	hr1, hr1Groups, routeHR1 := createTestResources("hr-1", "foo.example.com", "listener-80-1", "/")
-	hr2, hr2Groups, routeHR2 := createTestResources("hr-2", "bar.example.com", "listener-80-1", "/")
-	hr3, hr3Groups, routeHR3 := createTestResources("hr-3", "foo.example.com", "listener-80-1", "/", "/third")
-	hr4, hr4Groups, routeHR4 := createTestResources("hr-4", "foo.example.com", "listener-80-1", "/fourth", "/")
+	prefix := v1beta1.PathMatchPathPrefix
+	hr1, hr1Groups, routeHR1 := createTestResources(
+		"hr-1", "foo.example.com", "listener-80-1", pathAndType{path: "/", pathType: prefix})
+	hr2, hr2Groups, routeHR2 := createTestResources(
+		"hr-2", "bar.example.com", "listener-80-1", pathAndType{path: "/", pathType: prefix})
+	hr3, hr3Groups, routeHR3 := createTestResources(
+		"hr-3", "foo.example.com", "listener-80-1",
+		pathAndType{path: "/", pathType: prefix}, pathAndType{path: "/third", pathType: prefix})
+	hr4, hr4Groups, routeHR4 := createTestResources(
+		"hr-4", "foo.example.com", "listener-80-1",
+		pathAndType{path: "/fourth", pathType: prefix}, pathAndType{path: "/", pathType: prefix})
 
-	hr5, hr5Groups, routeHR5 := createTestResources("hr-5", "foo.example.com", "listener-80-1", "/", invalidFiltersPath)
+	hr5, hr5Groups, routeHR5 := createTestResources(
+		"hr-5", "foo.example.com", "listener-80-1",
+		pathAndType{path: "/", pathType: prefix}, pathAndType{path: invalidFiltersPath, pathType: prefix})
 	redirect := v1beta1.HTTPRouteFilter{
 		Type: v1beta1.HTTPRouteFilterRequestRedirect,
 		RequestRedirect: &v1beta1.HTTPRequestRedirectFilter{
@@ -162,50 +172,56 @@ func TestBuildConfiguration(t *testing.T) {
 		"hr-6",
 		"foo.example.com",
 		"listener-80-1",
-		"/valid", invalidMatchesPath,
+		pathAndType{path: "/valid", pathType: prefix}, pathAndType{path: invalidMatchesPath, pathType: prefix},
+	)
+
+	hr7, hr7Groups, routeHR7 := createTestResources(
+		"hr-7",
+		"foo.example.com",
+		"listener-80-1",
+		pathAndType{path: "/valid", pathType: prefix}, pathAndType{path: "/valid", pathType: v1beta1.PathMatchExact},
 	)
 
 	httpsHR1, httpsHR1Groups, httpsRouteHR1 := createTestResources(
 		"https-hr-1",
 		"foo.example.com",
 		"listener-443-1",
-		"/",
+		pathAndType{path: "/", pathType: prefix},
 	)
 
 	httpsHR2, httpsHR2Groups, httpsRouteHR2 := createTestResources(
 		"https-hr-2",
 		"bar.example.com",
 		"listener-443-1",
-		"/",
+		pathAndType{path: "/", pathType: prefix},
 	)
 
 	httpsHR3, httpsHR3Groups, httpsRouteHR3 := createTestResources(
 		"https-hr-3",
 		"foo.example.com",
 		"listener-443-1",
-		"/", "/third",
+		pathAndType{path: "/", pathType: prefix}, pathAndType{path: "/third", pathType: prefix},
 	)
 
 	httpsHR4, httpsHR4Groups, httpsRouteHR4 := createTestResources(
 		"https-hr-4",
 		"foo.example.com",
 		"listener-443-1",
-		"/fourth", "/",
+		pathAndType{path: "/fourth", pathType: prefix}, pathAndType{path: "/", pathType: prefix},
 	)
 
 	httpsHR5, httpsHR5Groups, httpsRouteHR5 := createTestResources(
 		"https-hr-5",
 		"example.com",
 		"listener-443-with-hostname",
-		"/",
+		pathAndType{path: "/", pathType: prefix},
 	)
 
 	httpsHR6, httpsHR6Groups, httpsRouteHR6 := createTestResources(
 		"https-hr-6",
 		"foo.example.com",
 		"listener-443-1",
-		"/valid",
-		invalidMatchesPath,
+		pathAndType{path: "/valid", pathType: prefix}, pathAndType{path: invalidMatchesPath, pathType: prefix},
 	)
 
 	listener80 := v1beta1.Listener{
@@ -421,7 +437,8 @@ func TestBuildConfiguration(t *testing.T) {
 						Hostname: "bar.example.com",
 						PathRules: []PathRule{
 							{
-								Path: "/",
+								Path:     "/",
+								PathType: PathTypePrefix,
 								MatchRules: []MatchRule{
 									{
 										MatchIdx:     0,
@@ -437,7 +454,8 @@ func TestBuildConfiguration(t *testing.T) {
 						Hostname: "foo.example.com",
 						PathRules: []PathRule{
 							{
-								Path: "/",
+								Path:     "/",
+								PathType: PathTypePrefix,
 								MatchRules: []MatchRule{
 									{
 										MatchIdx:     0,
@@ -507,7 +525,8 @@ func TestBuildConfiguration(t *testing.T) {
 						Hostname: "bar.example.com",
 						PathRules: []PathRule{
 							{
-								Path: "/",
+								Path:     "/",
+								PathType: PathTypePrefix,
 								MatchRules: []MatchRule{
 									{
 										MatchIdx:     0,
@@ -526,7 +545,8 @@ func TestBuildConfiguration(t *testing.T) {
 						Hostname: "example.com",
 						PathRules: []PathRule{
 							{
-								Path: "/",
+								Path:     "/",
+								PathType: PathTypePrefix,
 								MatchRules: []MatchRule{
 									{
 										MatchIdx:     0,
@@ -545,7 +565,8 @@ func TestBuildConfiguration(t *testing.T) {
 						Hostname: "foo.example.com",
 						PathRules: []PathRule{
 							{
-								Path: "/",
+								Path:     "/",
+								PathType: PathTypePrefix,
 								MatchRules: []MatchRule{
 									{
 										MatchIdx:     0,
@@ -620,7 +641,8 @@ func TestBuildConfiguration(t *testing.T) {
 						Hostname: "foo.example.com",
 						PathRules: []PathRule{
 							{
-								Path: "/",
+								Path:     "/",
+								PathType: PathTypePrefix,
 								MatchRules: []MatchRule{
 									{
 										MatchIdx:     0,
@@ -637,7 +659,8 @@ func TestBuildConfiguration(t *testing.T) {
 								},
 							},
 							{
-								Path: "/fourth",
+								Path:     "/fourth",
+								PathType: PathTypePrefix,
 								MatchRules: []MatchRule{
 									{
 										MatchIdx:     0,
@@ -648,7 +671,8 @@ func TestBuildConfiguration(t *testing.T) {
 								},
 							},
 							{
-								Path: "/third",
+								Path:     "/third",
+								PathType: PathTypePrefix,
 								MatchRules: []MatchRule{
 									{
 										MatchIdx:     0,
@@ -672,7 +696,8 @@ func TestBuildConfiguration(t *testing.T) {
 						},
 						PathRules: []PathRule{
 							{
-								Path: "/",
+								Path:     "/",
+								PathType: PathTypePrefix,
 								MatchRules: []MatchRule{
 									{
 										MatchIdx:     0,
@@ -689,7 +714,8 @@ func TestBuildConfiguration(t *testing.T) {
 								},
 							},
 							{
-								Path: "/fourth",
+								Path:     "/fourth",
+								PathType: PathTypePrefix,
 								MatchRules: []MatchRule{
 									{
 										MatchIdx:     0,
@@ -700,7 +726,8 @@ func TestBuildConfiguration(t *testing.T) {
 								},
 							},
 							{
-								Path: "/third",
+								Path:     "/third",
+								PathType: PathTypePrefix,
 								MatchRules: []MatchRule{
 									{
 										MatchIdx:     0,
@@ -830,7 +857,8 @@ func TestBuildConfiguration(t *testing.T) {
 						Hostname: "foo.example.com",
 						PathRules: []PathRule{
 							{
-								Path: "/",
+								Path:     "/",
+								PathType: PathTypePrefix,
 								MatchRules: []MatchRule{
 									{
 										MatchIdx:     0,
@@ -844,7 +872,8 @@ func TestBuildConfiguration(t *testing.T) {
 								},
 							},
 							{
-								Path: invalidFiltersPath,
+								Path:     invalidFiltersPath,
+								PathType: PathTypePrefix,
 								MatchRules: []MatchRule{
 									{
 										MatchIdx: 0,
@@ -911,7 +940,8 @@ func TestBuildConfiguration(t *testing.T) {
 						Hostname: "foo.example.com",
 						PathRules: []PathRule{
 							{
-								Path: "/valid",
+								Path:     "/valid",
+								PathType: PathTypePrefix,
 								MatchRules: []MatchRule{
 									{
 										MatchIdx:     0,
@@ -935,7 +965,8 @@ func TestBuildConfiguration(t *testing.T) {
 						},
 						PathRules: []PathRule{
 							{
-								Path: "/valid",
+								Path:     "/valid",
+								PathType: PathTypePrefix,
 								MatchRules: []MatchRule{
 									{
 										MatchIdx:     0,
@@ -959,6 +990,72 @@ func TestBuildConfiguration(t *testing.T) {
 				},
 			},
 			msg: "one http and one https listener with routes with valid and invalid rules",
+		},
+		{
+			graph: &graph.Graph{
+				GatewayClass: &graph.GatewayClass{
+					Source: &v1beta1.GatewayClass{},
+					Valid:  true,
+				},
+				Gateway: &graph.Gateway{
+					Source: &v1beta1.Gateway{},
+					Listeners: map[string]*graph.Listener{
+						"listener-80-1": {
+							Source: listener80,
+							Valid:  true,
+							Routes: map[types.NamespacedName]*graph.Route{
+								{Namespace: "test", Name: "hr-7"}: routeHR7,
+							},
+							AcceptedHostnames: map[string]struct{}{
+								"foo.example.com": {},
+							},
+						},
+					},
+				},
+				Routes: map[types.NamespacedName]*graph.Route{
+					{Namespace: "test", Name: "hr-7"}: routeHR7,
+				},
+			},
+			expConf: Configuration{
+				HTTPServers: []VirtualServer{
+					{
+						IsDefault: true,
+					},
+					{
+						Hostname: "foo.example.com",
+						PathRules: []PathRule{
+							{
+								Path:     "/valid",
+								PathType: PathTypeExact,
+								MatchRules: []MatchRule{
+									{
+										MatchIdx:     0,
+										RuleIdx:      1,
+										BackendGroup: hr7Groups[1],
+										Source:       hr7,
+									},
+								},
+							},
+							{
+								Path:     "/valid",
+								PathType: PathTypePrefix,
+								MatchRules: []MatchRule{
+									{
+										MatchIdx:     0,
+										RuleIdx:      0,
+										BackendGroup: hr7Groups[0],
+										Source:       hr7,
+									},
+								},
+							},
+						},
+					},
+				},
+				SSLServers:    []VirtualServer{},
+				Upstreams:     []Upstream{fooUpstream},
+				BackendGroups: []graph.BackendGroup{hr7Groups[0], hr7Groups[1]},
+			},
+			msg: "duplicate paths with different types",
 		},
 	}
 
@@ -1495,5 +1592,37 @@ func TestUpstreamsMapToSlice(t *testing.T) {
 
 	if diff := cmp.Diff(expUpstreams, upstreams); diff != "" {
 		t.Errorf("upstreamMapToSlice() mismatch (-want +got):\n%s", diff)
+	}
+}
+
+func TestConvertPathType(t *testing.T) {
+	g := NewGomegaWithT(t)
+
+	tests := []struct {
+		expected PathType
+		pathType v1beta1.PathMatchType
+		panic    bool
+	}{
+		{
+			expected: PathTypePrefix,
+			pathType: v1beta1.PathMatchPathPrefix,
+		},
+		{
+			expected: PathTypeExact,
+			pathType: v1beta1.PathMatchExact,
+		},
+		{
+			pathType: v1beta1.PathMatchRegularExpression,
+			panic:    true,
+		},
+	}
+
+	for _, tc := range tests {
+		if tc.panic {
+			g.Expect(func() { convertPathType(tc.pathType) }).To(Panic())
+		} else {
+			result := convertPathType(tc.pathType)
+			g.Expect(result).To(Equal(tc.expected))
+		}
 	}
 }

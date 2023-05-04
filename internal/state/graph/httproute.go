@@ -523,12 +523,13 @@ func validatePathMatch(
 		panicForBrokenWebhookAssumption(errors.New("path value cannot be nil"))
 	}
 
-	if *path.Type != v1beta1.PathMatchPathPrefix {
-		valErr := field.NotSupported(fieldPath.Child("type"), *path.Type, []string{string(v1beta1.PathMatchPathPrefix)})
+	if *path.Type != v1beta1.PathMatchPathPrefix && *path.Type != v1beta1.PathMatchExact {
+		valErr := field.NotSupported(fieldPath.Child("type"), *path.Type,
+			[]string{string(v1beta1.PathMatchExact), string(v1beta1.PathMatchPathPrefix)})
 		allErrs = append(allErrs, valErr)
 	}
 
-	if err := validator.ValidatePathInPrefixMatch(*path.Value); err != nil {
+	if err := validator.ValidatePathInMatch(*path.Value); err != nil {
 		valErr := field.Invalid(fieldPath.Child("value"), *path.Value, err.Error())
 		allErrs = append(allErrs, valErr)
 	}

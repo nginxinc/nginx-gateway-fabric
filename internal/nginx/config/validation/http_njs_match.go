@@ -17,23 +17,23 @@ import (
 type HTTPNJSMatchValidator struct{}
 
 const (
-	prefixPathFmt    = `/[^\s{};]*`
-	prefixPathErrMsg = "must start with / and must not include any whitespace character, `{`, `}` or `;`"
+	pathFmt    = `/[^\s{};]*`
+	pathErrMsg = "must start with / and must not include any whitespace character, `{`, `}` or `;`"
 )
 
 var (
-	prefixPathRegexp   = regexp.MustCompile("^" + prefixPathFmt + "$")
-	prefixPathExamples = []string{"/", "/path", "/path/subpath-123"}
+	pathRegexp   = regexp.MustCompile("^" + pathFmt + "$")
+	pathExamples = []string{"/", "/path", "/path/subpath-123"}
 )
 
-// ValidatePathInPrefixMatch a prefix path used in the location directive.
-func (HTTPNJSMatchValidator) ValidatePathInPrefixMatch(path string) error {
+// ValidatePathInMatch a path used in the location directive.
+func (HTTPNJSMatchValidator) ValidatePathInMatch(path string) error {
 	if path == "" {
 		return errors.New("cannot be empty")
 	}
 
-	if !prefixPathRegexp.MatchString(path) {
-		msg := k8svalidation.RegexError(prefixPathErrMsg, prefixPathFmt, prefixPathExamples...)
+	if !pathRegexp.MatchString(path) {
+		msg := k8svalidation.RegexError(pathErrMsg, pathFmt, pathExamples...)
 		return errors.New(msg)
 	}
 
