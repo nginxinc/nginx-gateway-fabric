@@ -298,12 +298,6 @@ func bindRouteToListeners(r *Route, gw *Gateway) {
 
 		// Case 1: Attachment is not possible due to unsupported configuration
 
-		if routeRef.SectionName == nil || *routeRef.SectionName == "" {
-			valErr := field.Required(path.Child("sectionName"), "cannot be empty")
-			attachment.FailedCondition = conditions.NewRouteUnsupportedValue(valErr.Error())
-			continue
-		}
-
 		if routeRef.Port != nil {
 			valErr := field.Forbidden(path.Child("port"), "cannot be set")
 			attachment.FailedCondition = conditions.NewRouteUnsupportedValue(valErr.Error())
@@ -326,40 +320,49 @@ func bindRouteToListeners(r *Route, gw *Gateway) {
 		// FIXME(pleshakov)
 		// For now, let's do simple matching.
 		// However, we need to also support wildcard matching.
-		// More over, we need to handle cases when a Route host matches multiple HTTP listeners on the same port
-		// when sectionName is empty and only choose one listener.
-		// For example:
-		// - Route with host foo.example.com;
-		// - listener 1 for port 80 with hostname foo.example.com
-		// - listener 2 for port 80 with hostname *.example.com;
-		// In this case, the Route host foo.example.com should choose listener 1, as it is a more specific match.
 
-		l, exists := gw.Listeners[string(*routeRef.SectionName)]
-		if !exists {
-			// FIXME(pleshakov): Add a proper condition once it is available in the Gateway API.
-			// https://github.com/nginxinc/nginx-kubernetes-gateway/issues/306
-			attachment.FailedCondition = conditions.NewTODO("listener is not found")
-			continue
+		bind := func(l *Listener) (valid bool) {
+			if !l.Valid {
+				return false
+			}
+
+			hostnames := findAcceptedHostnames(l.Source.Hostname, r.Source.Spec.Hostnames)
+			if len(hostnames) == 0 {
+				return true // listener is valid, but return without attaching due to no matching hostnames
+			}
+
+			attachment.Attached = true
+			for _, h := range hostnames {
+				l.AcceptedHostnames[h] = struct{}{}
+			}
+			l.Routes[client.ObjectKeyFromObject(r.Source)] = r
+
+			return true
 		}
 
-		if !l.Valid {
+		var valid bool
+		if getSectionName(routeRef.SectionName) == "" {
+			for _, l := range gw.Listeners {
+				valid = bind(l) || valid
+			}
+		} else {
+			l, exists := gw.Listeners[string(*routeRef.SectionName)]
+			if !exists {
+				// FIXME(pleshakov): Add a proper condition once it is available in the Gateway API.
+				// https://github.com/nginxinc/nginx-kubernetes-gateway/issues/306
+				attachment.FailedCondition = conditions.NewTODO("listener is not found")
+				continue
+			}
+
+			valid = bind(l)
+		}
+		if !valid {
 			attachment.FailedCondition = conditions.NewRouteInvalidListener()
 			continue
 		}
-
-		accepted := findAcceptedHostnames(l.Source.Hostname, r.Source.Spec.Hostnames)
-
-		if len(accepted) == 0 {
+		if !attachment.Attached {
 			attachment.FailedCondition = conditions.NewRouteNoMatchingListenerHostname()
-			continue
 		}
-
-		attachment.Attached = true
-
-		for _, h := range accepted {
-			l.AcceptedHostnames[h] = struct{}{}
-		}
-		l.Routes[client.ObjectKeyFromObject(r.Source)] = r
 	}
 }
 
@@ -389,6 +392,13 @@ func getHostname(h *v1beta1.Hostname) string {
 		return ""
 	}
 	return string(*h)
+}
+
+func getSectionName(s *v1beta1.SectionName) string {
+	if s == nil {
+		return ""
+	}
+	return string(*s)
 }
 
 func validateHostnames(hostnames []v1beta1.Hostname, path *field.Path) error {

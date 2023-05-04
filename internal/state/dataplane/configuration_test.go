@@ -1057,6 +1057,86 @@ func TestBuildConfiguration(t *testing.T) {
 			},
 			msg: "duplicate paths with different types",
 		},
+		{
+			graph: &graph.Graph{
+				GatewayClass: &graph.GatewayClass{
+					Source: &v1beta1.GatewayClass{},
+					Valid:  true,
+				},
+				Gateway: &graph.Gateway{
+					Source: &v1beta1.Gateway{},
+					Listeners: map[string]*graph.Listener{
+						"listener-443-with-hostname": {
+							Source:     listener443WithHostname,
+							Valid:      true,
+							SecretPath: "secret-path-https-listener-2",
+							Routes: map[types.NamespacedName]*graph.Route{
+								{Namespace: "test", Name: "https-hr-5"}: httpsRouteHR5,
+							},
+							AcceptedHostnames: map[string]struct{}{
+								"example.com": {},
+							},
+						},
+						"listener-443-1": {
+							Source:     listener443,
+							Valid:      true,
+							SecretPath: secretPath,
+							Routes: map[types.NamespacedName]*graph.Route{
+								{Namespace: "test", Name: "https-hr-5"}: httpsRouteHR5,
+							},
+							AcceptedHostnames: map[string]struct{}{
+								"example.com": {},
+							},
+						},
+					},
+				},
+				Routes: map[types.NamespacedName]*graph.Route{
+					{Namespace: "test", Name: "https-hr-5"}: httpsRouteHR5,
+				},
+			},
+			expConf: Configuration{
+				HTTPServers: []VirtualServer{},
+				SSLServers: []VirtualServer{
+					{
+						IsDefault: true,
+					},
+					{
+						Hostname: "example.com",
+						PathRules: []PathRule{
+							{
+								Path:     "/",
+								PathType: PathTypePrefix,
+								MatchRules: []MatchRule{
+									// duplicate match rules since two listeners both match this route's hostname
+									{
+										MatchIdx:     0,
+										RuleIdx:      0,
+										BackendGroup: httpsHR5Groups[0],
+										Source:       httpsHR5,
+									},
+									{
+										MatchIdx:     0,
+										RuleIdx:      0,
+										BackendGroup: httpsHR5Groups[0],
+										Source:       httpsHR5,
+									},
+								},
+							},
+						},
+						SSL: &SSL{
+							CertificatePath: "secret-path-https-listener-2",
+						},
+					},
+					{
+						Hostname: wildcardHostname,
+						SSL:      &SSL{CertificatePath: secretPath},
+					},
+				},
+				Upstreams:     []Upstream{fooUpstream},
+				BackendGroups: []graph.BackendGroup{httpsHR5Groups[0]},
+			},
+			msg: "two https listeners with different hostnames but same route; chooses listener with more specific hostname",
+		},
 	}
 
 	for _, test := range tests {
@@ -1624,5 +1704,51 @@ func TestConvertPathType(t *testing.T) {
 			result := convertPathType(tc.pathType)
 			g.Expect(result).To(Equal(tc.expected))
 		}
+	}
+}
+
+func TestHostnameMoreSpecific(t *testing.T) {
+	g := NewGomegaWithT(t)
+
+	tests := []struct {
+		host1     *v1beta1.Hostname
+		host2     *v1beta1.Hostname
+		msg       string
+		host1Wins bool
+	}{
+		{
+			host1:     nil,
+			host2:     helpers.GetPointer(v1beta1.Hostname("")),
+			host1Wins: true,
+			msg:       "host1 nil; host2 empty",
+		},
+		{
+			host1:     helpers.GetPointer(v1beta1.Hostname("")),
+			host2:     nil,
+			host1Wins: true,
+			msg:       "host1 empty; host2 nil",
+		},
+		{
+			host1:     helpers.GetPointer(v1beta1.Hostname("")),
+			host2:     helpers.GetPointer(v1beta1.Hostname("")),
+			host1Wins: true,
+			msg:       "both hosts empty",
+		},
+		{
+			host1:     helpers.GetPointer(v1beta1.Hostname("example.com")),
+			host2:     helpers.GetPointer(v1beta1.Hostname("")),
+			host1Wins: true,
+			msg:       "host1 has value; host2 empty",
+		},
+		{
+			host1:     helpers.GetPointer(v1beta1.Hostname("example.com")),
+			host2:     helpers.GetPointer(v1beta1.Hostname("foo.example.com")),
+			host1Wins: false,
+			msg:       "host2 longer than host1",
+		},
+	}
+
+	for _, tc := range tests {
+		g.Expect(hostnameMoreSpecific(tc.host1, tc.host2)).To(Equal(tc.host1Wins), tc.msg)
 	}
 }

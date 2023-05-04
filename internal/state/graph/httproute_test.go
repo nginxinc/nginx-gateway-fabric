@@ -827,15 +827,19 @@ func TestBindRouteToListeners(t *testing.T) {
 					Idx:     0,
 					Gateway: client.ObjectKeyFromObject(gw),
 					Attachment: &ParentRefAttachmentStatus{
-						Attached: false,
-						FailedCondition: conditions.NewRouteUnsupportedValue(
-							`spec.parentRefs[0].sectionName: Required value: cannot be empty`,
-						),
+						Attached: true,
 					},
 				},
 			},
 			expectedGatewayListeners: map[string]*Listener{
-				"listener-80-1": createListener(),
+				"listener-80-1": createModifiedListener(func(l *Listener) {
+					l.Routes = map[types.NamespacedName]*Route{
+						client.ObjectKeyFromObject(hr): routeWithMissingSectionName,
+					}
+					l.AcceptedHostnames = map[string]struct{}{
+						"foo.example.com": {},
+					}
+				}),
 			},
 			name: "section name is nil",
 		},
@@ -852,15 +856,19 @@ func TestBindRouteToListeners(t *testing.T) {
 					Idx:     0,
 					Gateway: client.ObjectKeyFromObject(gw),
 					Attachment: &ParentRefAttachmentStatus{
-						Attached: false,
-						FailedCondition: conditions.NewRouteUnsupportedValue(
-							`spec.parentRefs[0].sectionName: Required value: cannot be empty`,
-						),
+						Attached: true,
 					},
 				},
 			},
 			expectedGatewayListeners: map[string]*Listener{
-				"listener-80-1": createListener(),
+				"listener-80-1": createModifiedListener(func(l *Listener) {
+					l.Routes = map[types.NamespacedName]*Route{
+						client.ObjectKeyFromObject(hr): routeWithEmptySectionName,
+					}
+					l.AcceptedHostnames = map[string]struct{}{
+						"foo.example.com": {},
+					}
+				}),
 			},
 			name: "section name is empty",
 		},
