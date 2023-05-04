@@ -438,7 +438,7 @@ func TestBuildConfiguration(t *testing.T) {
 						PathRules: []PathRule{
 							{
 								Path:     "/",
-								PathType: PathMatchPathPrefix,
+								PathType: PathTypePrefix,
 								MatchRules: []MatchRule{
 									{
 										MatchIdx:     0,
@@ -455,7 +455,7 @@ func TestBuildConfiguration(t *testing.T) {
 						PathRules: []PathRule{
 							{
 								Path:     "/",
-								PathType: PathMatchPathPrefix,
+								PathType: PathTypePrefix,
 								MatchRules: []MatchRule{
 									{
 										MatchIdx:     0,
@@ -526,7 +526,7 @@ func TestBuildConfiguration(t *testing.T) {
 						PathRules: []PathRule{
 							{
 								Path:     "/",
-								PathType: PathMatchPathPrefix,
+								PathType: PathTypePrefix,
 								MatchRules: []MatchRule{
 									{
 										MatchIdx:     0,
@@ -546,7 +546,7 @@ func TestBuildConfiguration(t *testing.T) {
 						PathRules: []PathRule{
 							{
 								Path:     "/",
-								PathType: PathMatchPathPrefix,
+								PathType: PathTypePrefix,
 								MatchRules: []MatchRule{
 									{
 										MatchIdx:     0,
@@ -566,7 +566,7 @@ func TestBuildConfiguration(t *testing.T) {
 						PathRules: []PathRule{
 							{
 								Path:     "/",
-								PathType: PathMatchPathPrefix,
+								PathType: PathTypePrefix,
 								MatchRules: []MatchRule{
 									{
 										MatchIdx:     0,
@@ -642,7 +642,7 @@ func TestBuildConfiguration(t *testing.T) {
 						PathRules: []PathRule{
 							{
 								Path:     "/",
-								PathType: PathMatchPathPrefix,
+								PathType: PathTypePrefix,
 								MatchRules: []MatchRule{
 									{
 										MatchIdx:     0,
@@ -660,7 +660,7 @@ func TestBuildConfiguration(t *testing.T) {
 							},
 							{
 								Path:     "/fourth",
-								PathType: PathMatchPathPrefix,
+								PathType: PathTypePrefix,
 								MatchRules: []MatchRule{
 									{
 										MatchIdx:     0,
@@ -672,7 +672,7 @@ func TestBuildConfiguration(t *testing.T) {
 							},
 							{
 								Path:     "/third",
-								PathType: PathMatchPathPrefix,
+								PathType: PathTypePrefix,
 								MatchRules: []MatchRule{
 									{
 										MatchIdx:     0,
@@ -697,7 +697,7 @@ func TestBuildConfiguration(t *testing.T) {
 						PathRules: []PathRule{
 							{
 								Path:     "/",
-								PathType: PathMatchPathPrefix,
+								PathType: PathTypePrefix,
 								MatchRules: []MatchRule{
 									{
 										MatchIdx:     0,
@@ -715,7 +715,7 @@ func TestBuildConfiguration(t *testing.T) {
 							},
 							{
 								Path:     "/fourth",
-								PathType: PathMatchPathPrefix,
+								PathType: PathTypePrefix,
 								MatchRules: []MatchRule{
 									{
 										MatchIdx:     0,
@@ -727,7 +727,7 @@ func TestBuildConfiguration(t *testing.T) {
 							},
 							{
 								Path:     "/third",
-								PathType: PathMatchPathPrefix,
+								PathType: PathTypePrefix,
 								MatchRules: []MatchRule{
 									{
 										MatchIdx:     0,
@@ -858,7 +858,7 @@ func TestBuildConfiguration(t *testing.T) {
 						PathRules: []PathRule{
 							{
 								Path:     "/",
-								PathType: PathMatchPathPrefix,
+								PathType: PathTypePrefix,
 								MatchRules: []MatchRule{
 									{
 										MatchIdx:     0,
@@ -873,7 +873,7 @@ func TestBuildConfiguration(t *testing.T) {
 							},
 							{
 								Path:     invalidFiltersPath,
-								PathType: PathMatchPathPrefix,
+								PathType: PathTypePrefix,
 								MatchRules: []MatchRule{
 									{
 										MatchIdx: 0,
@@ -941,7 +941,7 @@ func TestBuildConfiguration(t *testing.T) {
 						PathRules: []PathRule{
 							{
 								Path:     "/valid",
-								PathType: PathMatchPathPrefix,
+								PathType: PathTypePrefix,
 								MatchRules: []MatchRule{
 									{
 										MatchIdx:     0,
@@ -966,7 +966,7 @@ func TestBuildConfiguration(t *testing.T) {
 						PathRules: []PathRule{
 							{
 								Path:     "/valid",
-								PathType: PathMatchPathPrefix,
+								PathType: PathTypePrefix,
 								MatchRules: []MatchRule{
 									{
 										MatchIdx:     0,
@@ -1026,7 +1026,7 @@ func TestBuildConfiguration(t *testing.T) {
 						PathRules: []PathRule{
 							{
 								Path:     "/valid",
-								PathType: PathMatchExact,
+								PathType: PathTypeExact,
 								MatchRules: []MatchRule{
 									{
 										MatchIdx:     0,
@@ -1038,7 +1038,7 @@ func TestBuildConfiguration(t *testing.T) {
 							},
 							{
 								Path:     "/valid",
-								PathType: PathMatchPathPrefix,
+								PathType: PathTypePrefix,
 								MatchRules: []MatchRule{
 									{
 										MatchIdx:     0,
@@ -1592,5 +1592,37 @@ func TestUpstreamsMapToSlice(t *testing.T) {
 
 	if diff := cmp.Diff(expUpstreams, upstreams); diff != "" {
 		t.Errorf("upstreamMapToSlice() mismatch (-want +got):\n%s", diff)
+	}
+}
+
+func TestConvertPathType(t *testing.T) {
+	g := NewGomegaWithT(t)
+
+	tests := []struct {
+		expected PathType
+		pathType v1beta1.PathMatchType
+		panic    bool
+	}{
+		{
+			expected: PathTypePrefix,
+			pathType: v1beta1.PathMatchPathPrefix,
+		},
+		{
+			expected: PathTypeExact,
+			pathType: v1beta1.PathMatchExact,
+		},
+		{
+			pathType: v1beta1.PathMatchRegularExpression,
+			panic:    true,
+		},
+	}
+
+	for _, tc := range tests {
+		if tc.panic {
+			g.Expect(func() { convertPathType(tc.pathType) }).To(Panic())
+		} else {
+			result := convertPathType(tc.pathType)
+			g.Expect(result).To(Equal(tc.expected))
+		}
 	}
 }

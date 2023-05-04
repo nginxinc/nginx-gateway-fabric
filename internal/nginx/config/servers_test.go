@@ -370,7 +370,7 @@ func TestCreateServers(t *testing.T) {
 	cafePathRules := []dataplane.PathRule{
 		{
 			Path:     "/",
-			PathType: dataplane.PathMatchPathPrefix,
+			PathType: dataplane.PathTypePrefix,
 			MatchRules: []dataplane.MatchRule{
 				{
 					MatchIdx:     0,
@@ -394,7 +394,7 @@ func TestCreateServers(t *testing.T) {
 		},
 		{
 			Path:     "/test",
-			PathType: dataplane.PathMatchPathPrefix,
+			PathType: dataplane.PathTypePrefix,
 			MatchRules: []dataplane.MatchRule{
 				{
 					MatchIdx:     0,
@@ -406,7 +406,7 @@ func TestCreateServers(t *testing.T) {
 		},
 		{
 			Path:     "/path-only",
-			PathType: dataplane.PathMatchPathPrefix,
+			PathType: dataplane.PathTypePrefix,
 			MatchRules: []dataplane.MatchRule{
 				{
 					MatchIdx:     0,
@@ -418,7 +418,7 @@ func TestCreateServers(t *testing.T) {
 		},
 		{
 			Path:     "/redirect-implicit-port",
-			PathType: dataplane.PathMatchPathPrefix,
+			PathType: dataplane.PathTypePrefix,
 			MatchRules: []dataplane.MatchRule{
 				{
 					MatchIdx: 0,
@@ -435,7 +435,7 @@ func TestCreateServers(t *testing.T) {
 		},
 		{
 			Path:     "/redirect-explicit-port",
-			PathType: dataplane.PathMatchPathPrefix,
+			PathType: dataplane.PathTypePrefix,
 			MatchRules: []dataplane.MatchRule{
 				{
 					MatchIdx: 0,
@@ -453,7 +453,7 @@ func TestCreateServers(t *testing.T) {
 		},
 		{
 			Path:     "/invalid-filter",
-			PathType: dataplane.PathMatchPathPrefix,
+			PathType: dataplane.PathTypePrefix,
 			MatchRules: []dataplane.MatchRule{
 				{
 					MatchIdx: 0,
@@ -468,7 +468,7 @@ func TestCreateServers(t *testing.T) {
 		},
 		{
 			Path:     "/exact",
-			PathType: dataplane.PathMatchExact,
+			PathType: dataplane.PathTypeExact,
 			MatchRules: []dataplane.MatchRule{
 				{
 					MatchIdx:     0,
@@ -480,7 +480,7 @@ func TestCreateServers(t *testing.T) {
 		},
 		{
 			Path:     "/test",
-			PathType: dataplane.PathMatchExact,
+			PathType: dataplane.PathTypeExact,
 			MatchRules: []dataplane.MatchRule{
 				{
 					MatchIdx:     0,
@@ -1178,15 +1178,16 @@ func TestCreatePathForMatch(t *testing.T) {
 
 	tests := []struct {
 		expected string
-		pathType string
+		pathType dataplane.PathType
+		panic    bool
 	}{
 		{
 			expected: "/path_prefix_route1",
-			pathType: dataplane.PathMatchPathPrefix,
+			pathType: dataplane.PathTypePrefix,
 		},
 		{
 			expected: "/path_exact_route1",
-			pathType: dataplane.PathMatchExact,
+			pathType: dataplane.PathTypeExact,
 		},
 	}
 

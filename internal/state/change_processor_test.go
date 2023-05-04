@@ -378,7 +378,7 @@ var _ = Describe("ChangeProcessor", func() {
 								PathRules: []dataplane.PathRule{
 									{
 										Path:     "/",
-										PathType: dataplane.PathMatchPathPrefix,
+										PathType: dataplane.PathTypePrefix,
 										MatchRules: []dataplane.MatchRule{
 											{
 												MatchIdx:     0,
@@ -401,7 +401,7 @@ var _ = Describe("ChangeProcessor", func() {
 								PathRules: []dataplane.PathRule{
 									{
 										Path:     "/",
-										PathType: dataplane.PathMatchPathPrefix,
+										PathType: dataplane.PathTypePrefix,
 										MatchRules: []dataplane.MatchRule{
 											{
 												MatchIdx:     0,
@@ -494,7 +494,7 @@ var _ = Describe("ChangeProcessor", func() {
 								PathRules: []dataplane.PathRule{
 									{
 										Path:     "/",
-										PathType: dataplane.PathMatchPathPrefix,
+										PathType: dataplane.PathTypePrefix,
 										MatchRules: []dataplane.MatchRule{
 											{
 												MatchIdx:     0,
@@ -517,7 +517,7 @@ var _ = Describe("ChangeProcessor", func() {
 								PathRules: []dataplane.PathRule{
 									{
 										Path:     "/",
-										PathType: dataplane.PathMatchPathPrefix,
+										PathType: dataplane.PathTypePrefix,
 										MatchRules: []dataplane.MatchRule{
 											{
 												MatchIdx:     0,
@@ -610,7 +610,7 @@ var _ = Describe("ChangeProcessor", func() {
 								PathRules: []dataplane.PathRule{
 									{
 										Path:     "/",
-										PathType: dataplane.PathMatchPathPrefix,
+										PathType: dataplane.PathTypePrefix,
 										MatchRules: []dataplane.MatchRule{
 											{
 												MatchIdx:     0,
@@ -633,7 +633,7 @@ var _ = Describe("ChangeProcessor", func() {
 								PathRules: []dataplane.PathRule{
 									{
 										Path:     "/",
-										PathType: dataplane.PathMatchPathPrefix,
+										PathType: dataplane.PathTypePrefix,
 										MatchRules: []dataplane.MatchRule{
 											{
 												MatchIdx:     0,
@@ -725,7 +725,7 @@ var _ = Describe("ChangeProcessor", func() {
 								PathRules: []dataplane.PathRule{
 									{
 										Path:     "/",
-										PathType: dataplane.PathMatchPathPrefix,
+										PathType: dataplane.PathTypePrefix,
 										MatchRules: []dataplane.MatchRule{
 											{
 												MatchIdx:     0,
@@ -748,7 +748,7 @@ var _ = Describe("ChangeProcessor", func() {
 								PathRules: []dataplane.PathRule{
 									{
 										Path:     "/",
-										PathType: dataplane.PathMatchPathPrefix,
+										PathType: dataplane.PathTypePrefix,
 										MatchRules: []dataplane.MatchRule{
 											{
 												MatchIdx:     0,
@@ -837,7 +837,7 @@ var _ = Describe("ChangeProcessor", func() {
 								PathRules: []dataplane.PathRule{
 									{
 										Path:     "/",
-										PathType: dataplane.PathMatchPathPrefix,
+										PathType: dataplane.PathTypePrefix,
 										MatchRules: []dataplane.MatchRule{
 											{
 												MatchIdx:     0,
@@ -859,7 +859,7 @@ var _ = Describe("ChangeProcessor", func() {
 								PathRules: []dataplane.PathRule{
 									{
 										Path:     "/",
-										PathType: dataplane.PathMatchPathPrefix,
+										PathType: dataplane.PathTypePrefix,
 										MatchRules: []dataplane.MatchRule{
 											{
 												MatchIdx:     0,
@@ -946,7 +946,7 @@ var _ = Describe("ChangeProcessor", func() {
 								PathRules: []dataplane.PathRule{
 									{
 										Path:     "/",
-										PathType: dataplane.PathMatchPathPrefix,
+										PathType: dataplane.PathTypePrefix,
 										MatchRules: []dataplane.MatchRule{
 											{
 												MatchIdx:     0,
@@ -969,7 +969,7 @@ var _ = Describe("ChangeProcessor", func() {
 								PathRules: []dataplane.PathRule{
 									{
 										Path:     "/",
-										PathType: dataplane.PathMatchPathPrefix,
+										PathType: dataplane.PathTypePrefix,
 										MatchRules: []dataplane.MatchRule{
 											{
 												MatchIdx:     0,
@@ -1077,7 +1077,7 @@ var _ = Describe("ChangeProcessor", func() {
 								PathRules: []dataplane.PathRule{
 									{
 										Path:     "/",
-										PathType: dataplane.PathMatchPathPrefix,
+										PathType: dataplane.PathTypePrefix,
 										MatchRules: []dataplane.MatchRule{
 											{
 												MatchIdx:     0,
@@ -1100,7 +1100,7 @@ var _ = Describe("ChangeProcessor", func() {
 								PathRules: []dataplane.PathRule{
 									{
 										Path:     "/",
-										PathType: dataplane.PathMatchPathPrefix,
+										PathType: dataplane.PathTypePrefix,
 										MatchRules: []dataplane.MatchRule{
 											{
 												MatchIdx:     0,
@@ -2120,7 +2120,7 @@ var _ = Describe("ChangeProcessor", func() {
 							PathRules: []dataplane.PathRule{
 								{
 									Path:     "/",
-									PathType: dataplane.PathMatchPathPrefix,
+									PathType: dataplane.PathTypePrefix,
 									MatchRules: []dataplane.MatchRule{
 										{
 											MatchIdx:     0,

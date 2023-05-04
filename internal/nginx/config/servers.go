@@ -103,7 +103,7 @@ func createLocations(pathRules []dataplane.PathRule, listenerPort int) []http.Lo
 			if len(rule.MatchRules) == 1 && isPathOnlyMatch(m) {
 				loc = http.Location{
 					Path:  rule.Path,
-					Exact: *m.Path.Type == v1beta1.PathMatchExact,
+					Exact: rule.PathType == dataplane.PathTypeExact,
 				}
 			} else {
 				path := createPathForMatch(rule.Path, rule.PathType, matchRuleIdx)
@@ -152,7 +152,7 @@ func createLocations(pathRules []dataplane.PathRule, listenerPort int) []http.Lo
 
 			pathLoc := http.Location{
 				Path:         rule.Path,
-				Exact:        v1beta1.PathMatchType(rule.PathType) == v1beta1.PathMatchExact,
+				Exact:        rule.PathType == dataplane.PathTypeExact,
 				HTTPMatchVar: string(b),
 			}
 
@@ -306,24 +306,13 @@ func createMatchLocation(path string) http.Location {
 	}
 }
 
-func createPathForMatch(path, pathType string, routeIdx int) string {
-	return fmt.Sprintf("%s_%s_route%d", path, formatPathType(pathType), routeIdx)
+func createPathForMatch(path string, pathType dataplane.PathType, routeIdx int) string {
+	return fmt.Sprintf("%s_%s_route%d", path, pathType, routeIdx)
 }
 
 func createDefaultRootLocation() http.Location {
 	return http.Location{
 		Path:   "/",
 		Return: &http.Return{Code: http.StatusNotFound},
-	}
-}
-
-func formatPathType(pathType string) string {
-	switch v1beta1.PathMatchType(pathType) {
-	case v1beta1.PathMatchPathPrefix:
-		return "prefix"
-	case v1beta1.PathMatchExact:
-		return "exact"
-	default:
-		panic(fmt.Sprintf("unsupported path type: %s", pathType))
 	}
 }

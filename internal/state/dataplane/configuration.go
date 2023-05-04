@@ -11,10 +11,12 @@ import (
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/resolver"
 )
 
+type PathType string
+
 const (
-	wildcardHostname    = "~^"
-	PathMatchPathPrefix = string(v1beta1.PathMatchPathPrefix)
-	PathMatchExact      = string(v1beta1.PathMatchExact)
+	wildcardHostname          = "~^"
+	PathTypePrefix   PathType = "prefix"
+	PathTypeExact    PathType = "exact"
 )
 
 // Configuration is an intermediate representation of dataplane configuration.
@@ -62,8 +64,8 @@ type SSL struct {
 type PathRule struct {
 	// Path is a path. For example, '/hello'.
 	Path string
-	// PathType is a path type. For example, PathPrefix or Exact.
-	PathType string
+	// PathType is simplified path type. For example, prefix or exact.
+	PathType PathType
 	// MatchRules holds routing rules.
 	MatchRules []MatchRule
 }
@@ -261,7 +263,7 @@ func (hpr *hostPathRules) upsertListener(l *graph.Listener) {
 					rule, exist := hpr.rulesPerHost[h][key]
 					if !exist {
 						rule.Path = path
-						rule.PathType = string(*m.Path.Type)
+						rule.PathType = convertPathType(*m.Path.Type)
 					}
 
 					rule.MatchRules = append(rule.MatchRules, MatchRule{
@@ -420,4 +422,15 @@ func createFilters(filters []v1beta1.HTTPRouteFilter) Filters {
 	}
 
 	return result
+}
+
+func convertPathType(pathType v1beta1.PathMatchType) PathType {
+	switch pathType {
+	case v1beta1.PathMatchPathPrefix:
+		return PathTypePrefix
+	case v1beta1.PathMatchExact:
+		return PathTypeExact
+	default:
+		panic(fmt.Sprintf("unsupported path type: %s", pathType))
+	}
 }
