@@ -68,66 +68,66 @@ roleRef:
   kind: ClusterRole
   name: nginx-gateway
   apiGroup: rbac.authorization.k8s.io
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: nginx-gateway
-  namespace: nginx-gateway
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: nginx-gateway
-  template:
-    metadata:
-      labels:
-        app: nginx-gateway
-    spec:
-      shareProcessNamespace: true
-      serviceAccountName: nginx-gateway
-      volumes:
-      - name: nginx-config
-        emptyDir: { }
-      - name: var-lib-nginx
-        emptyDir: { }
-      - name: njs-modules
-        configMap:
-          name: njs-modules
-      initContainers:
-      - image: busybox:1.34 # FIXME(pleshakov): use gateway container to init the Config with proper main config
-        name: nginx-config-initializer
-        command: [ 'sh', '-c', 'echo "load_module /usr/lib/nginx/modules/ngx_http_js_module.so; events {}  pid /etc/nginx/nginx.pid; error_log stderr debug; http { include /etc/nginx/conf.d/*.conf; js_import /usr/lib/nginx/modules/njs/httpmatches.js; }" > /etc/nginx/nginx.conf && (rm -r /etc/nginx/conf.d /etc/nginx/secrets; mkdir /etc/nginx/conf.d /etc/nginx/secrets && chown 1001:0 /etc/nginx/conf.d /etc/nginx/secrets)' ]
-        volumeMounts:
-        - name: nginx-config
-          mountPath: /etc/nginx
-      containers:
-      - image: ghcr.io/nginxinc/nginx-kubernetes-gateway:edge
-        imagePullPolicy: Always
-        name: nginx-gateway
-        volumeMounts:
-        - name: nginx-config
-          mountPath: /etc/nginx
-        securityContext:
-          runAsUser: 1001
-          # FIXME(pleshakov) - figure out which capabilities are required
-          # dropping ALL and adding only CAP_KILL doesn't work
-          # Note: CAP_KILL is needed for sending HUP signal to NGINX main process
-        args:
-        - --gateway-ctlr-name=k8s-gateway.nginx.org/nginx-gateway-controller
-        - --gatewayclass=nginx
-      - image: nginx:1.23
-        imagePullPolicy: IfNotPresent
-        name: nginx
-        ports:
-        - name: http
-          containerPort: 80
-        - name: https
-          containerPort: 443
-        volumeMounts:
-        - name: nginx-config
-          mountPath: /etc/nginx
-        - name: var-lib-nginx
-          mountPath: /var/lib/nginx
-        - name: njs-modules
-          mountPath: /usr/lib/nginx/modules/njs
+#---
+#apiVersion: apps/v1
+#kind: Deployment
+#metadata:
+#  name: nginx-gateway
+#  namespace: nginx-gateway
+#spec:
+#  replicas: 1
+#  selector:
+#    matchLabels:
+#      app: nginx-gateway
+#  template:
+#    metadata:
+#      labels:
+#        app: nginx-gateway
+#    spec:
+#      shareProcessNamespace: true
+#      serviceAccountName: nginx-gateway
+#      volumes:
+#      - name: nginx-config
+#        emptyDir: { }
+#      - name: var-lib-nginx
+#        emptyDir: { }
+#      - name: njs-modules
+#        configMap:
+#          name: njs-modules
+#      initContainers:
+#      - image: busybox:1.34 # FIXME(pleshakov): use gateway container to init the Config with proper main config
+#        name: nginx-config-initializer
+#        command: [ 'sh', '-c', 'echo "load_module /usr/lib/nginx/modules/ngx_http_js_module.so; events {}  pid /etc/nginx/nginx.pid; error_log stderr debug; http { include /etc/nginx/conf.d/*.conf; js_import /usr/lib/nginx/modules/njs/httpmatches.js; }" > /etc/nginx/nginx.conf && (rm -r /etc/nginx/conf.d /etc/nginx/secrets; mkdir /etc/nginx/conf.d /etc/nginx/secrets && chown 1001:0 /etc/nginx/conf.d /etc/nginx/secrets)' ]
+#        volumeMounts:
+#        - name: nginx-config
+#          mountPath: /etc/nginx
+#      containers:
+#      - image: ghcr.io/nginxinc/nginx-kubernetes-gateway:edge
+#        imagePullPolicy: Always
+#        name: nginx-gateway
+#        volumeMounts:
+#        - name: nginx-config
+#          mountPath: /etc/nginx
+#        securityContext:
+#          runAsUser: 1001
+#          # FIXME(pleshakov) - figure out which capabilities are required
+#          # dropping ALL and adding only CAP_KILL doesn't work
+#          # Note: CAP_KILL is needed for sending HUP signal to NGINX main process
+#        args:
+#        - --gateway-ctlr-name=k8s-gateway.nginx.org/nginx-gateway-controller
+#        - --gatewayclass=nginx
+#      - image: nginx:1.23
+#        imagePullPolicy: IfNotPresent
+#        name: nginx
+#        ports:
+#        - name: http
+#          containerPort: 80
+#        - name: https
+#          containerPort: 443
+#        volumeMounts:
+#        - name: nginx-config
+#          mountPath: /etc/nginx
+#        - name: var-lib-nginx
+#          mountPath: /var/lib/nginx
+#        - name: njs-modules
+#          mountPath: /usr/lib/nginx/modules/njs

@@ -1,0 +1,5 @@
+# syntax=docker/dockerfile:1.4
+FROM scratch
+USER 1001:1001
+COPY ./build/.out/gateway-provisioner /usr/bin/
+ENTRYPOINT [ "/usr/bin/gateway-provisioner" ]
