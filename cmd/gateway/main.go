@@ -3,8 +3,10 @@ package main
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	flag "github.com/spf13/pflag"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/config"
@@ -33,16 +35,35 @@ var (
 	)
 
 	gatewayClassName = flag.String("gatewayclass", "", gatewayClassNameUsage)
+
+	gateway = flag.String("gateway", "", "Gateway to watch")
+
+	updateGatewayClassStatus = flag.Bool("update-gatewayclass-status", true, "Update GatewayClass status")
 )
 
 func main() {
 	flag.Parse()
 
+	var gwNsName types.NamespacedName
+
+	if *gateway != "" {
+		parts := strings.Split(*gateway, "/")
+		if len(parts) != 2 {
+			panic("invalid gateway name")
+		}
+		gwNsName = types.NamespacedName{
+			Namespace: parts[0],
+			Name:      parts[1],
+		}
+	}
+
 	logger := zap.New()
 	conf := config.Config{
-		GatewayCtlrName:  *gatewayCtlrName,
-		Logger:           logger,
-		GatewayClassName: *gatewayClassName,
+		GatewayCtlrName:          *gatewayCtlrName,
+		Logger:                   logger,
+		GatewayClassName:         *gatewayClassName,
+		GatewayNsName:            &gwNsName,
+		UpdateGatewayClassStatus: *updateGatewayClassStatus,
 	}
 
 	MustValidateArguments(

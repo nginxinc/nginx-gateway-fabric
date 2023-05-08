@@ -21,3 +21,19 @@ func CreateFilterForGatewayClass(gcName string) reconciler.NamespacedNameFilterF
 		return true, ""
 	}
 }
+
+func CreateFilterForGateway(gwNsName *types.NamespacedName) reconciler.NamespacedNameFilterFunc {
+	if gwNsName == nil {
+		return nil
+	}
+	return func(nsname types.NamespacedName) (bool, string) {
+		if nsname != *gwNsName {
+			return false, fmt.Sprintf(
+				"Gateway is ignored because this controller only supports the Gateway %s/%s",
+				gwNsName.Namespace,
+				gwNsName.Name,
+			)
+		}
+		return true, ""
+	}
+}

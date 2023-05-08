@@ -122,7 +122,7 @@ func (h *eventHandler) HandleEventBatch(ctx context.Context, batch events.EventB
 	for _, nsname := range toCreate {
 		// create deployment
 
-		deployment := prepareDeployment(nsname.Name)
+		deployment := prepareDeployment(nsname)
 
 		err := h.k8sClient.Create(ctx, deployment)
 		if err != nil {
@@ -157,17 +157,17 @@ func (h *eventHandler) HandleEventBatch(ctx context.Context, batch events.EventB
 const deploymentTemplate = `apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ .Name }} 
+  name: {{ .DeploymentName }} 
   namespace: nginx-gateway
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: {{ .Name }} 
+      app: {{ .DeploymentName }} 
   template:
     metadata:
       labels:
-        app: {{ .Name }} 
+        app: {{ .DeploymentName }} 
     spec:
       shareProcessNamespace: true
       serviceAccountName: nginx-gateway
@@ -201,6 +201,8 @@ spec:
         args:
         - --gateway-ctlr-name=k8s-gateway.nginx.org/nginx-gateway-controller
         - --gatewayclass=nginx
+        - --gateway={{ .GatewayArg }}
+        - --update-gatewayclass-status=false
       - image: nginx:1.23
         imagePullPolicy: IfNotPresent
         name: nginx
@@ -218,11 +220,18 @@ spec:
           mountPath: /usr/lib/nginx/modules/njs
 `
 
-func prepareDeployment(gwName string) *v1.Deployment {
+func prepareDeployment(gwNsName types.NamespacedName) *v1.Deployment {
 	t := template.Must(template.New("deployment").Parse(deploymentTemplate))
 
 	var buf bytes.Buffer
-	err := t.Execute(&buf, struct{ Name string }{Name: gwName})
+	err := t.Execute(&buf,
+		struct {
+			DeploymentName string
+			GatewayArg     string
+		}{DeploymentName: gwNsName.Name,
+			GatewayArg: gwNsName.String(),
+		},
+	)
 	if err != nil {
 		panic(err)
 	}

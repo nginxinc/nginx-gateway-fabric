@@ -31,7 +31,8 @@ type UpdaterConfig struct {
 	// GatewayCtlrName is the name of the Gateway controller.
 	GatewayCtlrName string
 	// GatewayClassName is the name of the GatewayClass resource.
-	GatewayClassName string
+	GatewayClassName   string
+	UpdateGatewayClass bool
 }
 
 // updaterImpl updates statuses of the Gateway API resources.
@@ -86,7 +87,7 @@ func (upd *updaterImpl) Update(ctx context.Context, statuses state.Statuses) {
 	// FIXME(pleshakov) Merge the new Conditions in the status with the existing Conditions
 	// FIXME(pleshakov) Skip the status update (API call) if the status hasn't changed.
 
-	if statuses.GatewayClassStatus != nil {
+	if upd.cfg.UpdateGatewayClass && statuses.GatewayClassStatus != nil {
 		upd.update(
 			ctx,
 			types.NamespacedName{Name: upd.cfg.GatewayClassName},

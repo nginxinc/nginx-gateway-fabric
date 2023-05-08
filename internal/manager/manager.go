@@ -78,6 +78,9 @@ func Start(cfg config.Config) error {
 		},
 		{
 			objectType: &gatewayv1beta1.Gateway{},
+			options: []controllerOption{
+				withNamespacedNameFilter(filter.CreateFilterForGateway(cfg.GatewayNsName)),
+			},
 		},
 		{
 			objectType: &gatewayv1beta1.HTTPRoute{},
@@ -139,8 +142,9 @@ func Start(cfg config.Config) error {
 		// FIXME(pleshakov) Make sure each component:
 		// (1) Has a dedicated named logger.
 		// (2) Get it from the Manager (the WithName is done here for all components).
-		Logger: cfg.Logger.WithName("statusUpdater"),
-		Clock:  status.NewRealClock(),
+		Logger:             cfg.Logger.WithName("statusUpdater"),
+		Clock:              status.NewRealClock(),
+		UpdateGatewayClass: cfg.UpdateGatewayClassStatus,
 	})
 
 	eventHandler := events.NewEventHandlerImpl(events.EventHandlerConfig{
