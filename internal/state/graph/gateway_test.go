@@ -304,6 +304,7 @@ func TestBuildGateway(t *testing.T) {
 						AcceptedHostnames: map[string]struct{}{},
 					},
 				},
+				Valid: true,
 			},
 			name: "valid http listener",
 		},
@@ -321,6 +322,7 @@ func TestBuildGateway(t *testing.T) {
 						SecretPath:        secretPath,
 					},
 				},
+				Valid: true,
 			},
 			name: "valid https listener",
 		},
@@ -340,6 +342,7 @@ func TestBuildGateway(t *testing.T) {
 						},
 					},
 				},
+				Valid: true,
 			},
 			name: "invalid listener protocol",
 		},
@@ -359,6 +362,7 @@ func TestBuildGateway(t *testing.T) {
 						},
 					},
 				},
+				Valid: true,
 			},
 			name: "invalid http listener",
 		},
@@ -378,6 +382,7 @@ func TestBuildGateway(t *testing.T) {
 						},
 					},
 				},
+				Valid: true,
 			},
 			name: "invalid https listener",
 		},
@@ -402,6 +407,7 @@ func TestBuildGateway(t *testing.T) {
 						},
 					},
 				},
+				Valid: true,
 			},
 			name: "invalid hostnames",
 		},
@@ -421,6 +427,7 @@ func TestBuildGateway(t *testing.T) {
 						),
 					},
 				},
+				Valid: true,
 			},
 			name: "invalid https listener (secret does not exist)",
 		},
@@ -459,6 +466,7 @@ func TestBuildGateway(t *testing.T) {
 						SecretPath:        secretPath,
 					},
 				},
+				Valid: true,
 			},
 			name: "multiple valid http/https listeners",
 		},
@@ -501,6 +509,7 @@ func TestBuildGateway(t *testing.T) {
 						SecretPath:        "/etc/nginx/secrets/test_secret",
 					},
 				},
+				Valid: true,
 			},
 			name: "collisions",
 		},
@@ -514,26 +523,9 @@ func TestBuildGateway(t *testing.T) {
 			gatewayClass: validGC,
 			expected: &Gateway{
 				Source: getLastCreatedGetaway(),
-				Listeners: map[string]*Listener{
-					"listener-80-1": {
-						Source: listener801,
-						Valid:  false,
-						Conditions: []conditions.Condition{
-							conditions.NewListenerUnsupportedValue(
-								"spec.addresses: Forbidden: addresses are not supported",
-							),
-						},
-					},
-					"listener-443-1": {
-						Source:     listener4431,
-						Valid:      false,
-						SecretPath: "",
-						Conditions: []conditions.Condition{
-							conditions.NewListenerUnsupportedValue(
-								"spec.addresses: Forbidden: addresses are not supported",
-							),
-						},
-					},
+				Valid:  false,
+				Conditions: []conditions.Condition{
+					conditions.NewGatewayUnsupportedValue("spec.addresses: Forbidden: addresses are not supported"),
 				},
 			},
 			name: "gateway addresses are not supported",
@@ -544,35 +536,25 @@ func TestBuildGateway(t *testing.T) {
 			name:     "nil gateway",
 		},
 		{
-			gateway:      createGateway(gatewayCfg{listeners: []v1beta1.Listener{listener801}}),
+			gateway:      createGateway(gatewayCfg{listeners: []v1beta1.Listener{listener801, listener802}}),
 			gatewayClass: invalidGC,
 			expected: &Gateway{
 				Source: getLastCreatedGetaway(),
-				Listeners: map[string]*Listener{
-					"listener-80-1": {
-						Source: listener801,
-						Valid:  false,
-						Conditions: []conditions.Condition{
-							conditions.NewListenerNoValidGatewayClass("GatewayClass is invalid"),
-						},
-					},
+				Valid:  false,
+				Conditions: []conditions.Condition{
+					conditions.NewGatewayInvalid("GatewayClass is invalid"),
 				},
 			},
 			name: "invalid gatewayclass",
 		},
 		{
-			gateway:      createGateway(gatewayCfg{listeners: []v1beta1.Listener{listener801}}),
+			gateway:      createGateway(gatewayCfg{listeners: []v1beta1.Listener{listener801, listener802}}),
 			gatewayClass: nil,
 			expected: &Gateway{
 				Source: getLastCreatedGetaway(),
-				Listeners: map[string]*Listener{
-					"listener-80-1": {
-						Source: listener801,
-						Valid:  false,
-						Conditions: []conditions.Condition{
-							conditions.NewListenerNoValidGatewayClass("GatewayClass doesn't exist"),
-						},
-					},
+				Valid:  false,
+				Conditions: []conditions.Condition{
+					conditions.NewGatewayInvalid("GatewayClass doesn't exist"),
 				},
 			},
 			name: "nil gatewayclass",

@@ -4,7 +4,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/go-cmp/cmp"
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
@@ -21,10 +20,11 @@ func TestPrepareGatewayStatus(t *testing.T) {
 	}
 
 	status := state.GatewayStatus{
+		Conditions: CreateTestConditions("GatewayTest"),
 		ListenerStatuses: state.ListenerStatuses{
 			"listener": {
 				AttachedRoutes: 3,
-				Conditions:     CreateTestConditions(),
+				Conditions:     CreateTestConditions("ListenerTest"),
 			},
 		},
 		ObservedGeneration: 1,
@@ -33,6 +33,7 @@ func TestPrepareGatewayStatus(t *testing.T) {
 	transitionTime := metav1.NewTime(time.Now())
 
 	expected := v1beta1.GatewayStatus{
+		Conditions: CreateExpectedAPIConditions("GatewayTest", 1, transitionTime),
 		Listeners: []v1beta1.ListenerStatus{
 			{
 				Name: "listener",
@@ -42,7 +43,7 @@ func TestPrepareGatewayStatus(t *testing.T) {
 					},
 				},
 				AttachedRoutes: 3,
-				Conditions:     CreateExpectedAPIConditions(1, transitionTime),
+				Conditions:     CreateExpectedAPIConditions("ListenerTest", 1, transitionTime),
 			},
 		},
 		Addresses: []v1beta1.GatewayAddress{podIP},
@@ -52,30 +53,4 @@ func TestPrepareGatewayStatus(t *testing.T) {
 
 	result := prepareGatewayStatus(status, "1.2.3.4", transitionTime)
 	g.Expect(helpers.Diff(expected, result)).To(BeEmpty())
-}
-
-func TestPrepareIgnoredGatewayStatus(t *testing.T) {
-	status := state.IgnoredGatewayStatus{
-		ObservedGeneration: 1,
-	}
-
-	transitionTime := metav1.NewTime(time.Now())
-
-	expected := v1beta1.GatewayStatus{
-		Conditions: []metav1.Condition{
-			{
-				Type:               string(v1beta1.GatewayConditionReady),
-				Status:             metav1.ConditionFalse,
-				ObservedGeneration: status.ObservedGeneration,
-				LastTransitionTime: transitionTime,
-				Reason:             string(GetawayReasonGatewayConflict),
-				Message:            GatewayMessageGatewayConflict,
-			},
-		},
-	}
-
-	result := prepareIgnoredGatewayStatus(status, transitionTime)
-	if diff := cmp.Diff(expected, result); diff != "" {
-		t.Errorf("prepareIgnoredGatewayStatus() mismatch (-want +got):\n%s", diff)
-	}
 }

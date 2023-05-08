@@ -9,16 +9,6 @@ import (
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state"
 )
 
-const (
-	// GetawayReasonGatewayConflict indicates there are multiple Gateway resources for NGINX Gateway to choose from,
-	// and NGINX Gateway ignored the resource in question and picked another Gateway as the winner.
-	// NGINX Gateway will use this reason with GatewayConditionReady (false).
-	GetawayReasonGatewayConflict v1beta1.GatewayConditionReason = "GatewayConflict"
-
-	// GatewayMessageGatewayConflict is message that describes GetawayReasonGatewayConflict.
-	GatewayMessageGatewayConflict = "The resource is ignored due to a conflicting Gateway resource"
-)
-
 // prepareGatewayStatus prepares the status for a Gateway resource.
 // FIXME(pleshakov): Be compliant with in the Gateway API.
 // Currently, we only support simple valid/invalid status per each listener.
@@ -61,25 +51,5 @@ func prepareGatewayStatus(
 	return v1beta1.GatewayStatus{
 		Listeners:  listenerStatuses,
 		Addresses:  []v1beta1.GatewayAddress{gwPodIP},
-		Conditions: nil, // FIXME(pleshakov) Create conditions for the Gateway resource.
-	}
-}
-
-// prepareIgnoredGatewayStatus prepares the status for an ignored Gateway resource.
-// TODO: is it reasonable to not set the listener statuses?
-// FIXME(pleshakov): Simplify the code, so that we don't need a separate prepareIgnoredGatewayStatus
-// and state.IgnoredGatewayStatus.
-func prepareIgnoredGatewayStatus(status state.IgnoredGatewayStatus, transitionTime metav1.Time) v1beta1.GatewayStatus {
-	return v1beta1.GatewayStatus{
-		Conditions: []metav1.Condition{
-			{
-				Type:               string(v1beta1.GatewayConditionReady),
-				Status:             metav1.ConditionFalse,
-				ObservedGeneration: status.ObservedGeneration,
-				LastTransitionTime: transitionTime,
-				Reason:             string(GetawayReasonGatewayConflict),
-				Message:            GatewayMessageGatewayConflict,
-			},
-		},
-	}
+		Conditions: convertConditions(gatewayStatus.Conditions, gatewayStatus.ObservedGeneration, transitionTime)}
 }

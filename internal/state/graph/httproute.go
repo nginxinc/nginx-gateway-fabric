@@ -281,7 +281,14 @@ func bindRouteToListeners(r *Route, gw *Gateway) {
 			continue
 		}
 
-		// Case 3 - winning Gateway
+		// Case 3: Attachment is not possible because Gateway is invalid
+
+		if !gw.Valid {
+			attachment.FailedCondition = conditions.NewRouteInvalidGateway()
+			continue
+		}
+
+		// Case 4 - winning Gateway
 
 		// Find a listener
 

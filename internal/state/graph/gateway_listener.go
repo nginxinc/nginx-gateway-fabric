@@ -34,11 +34,10 @@ type Listener struct {
 func buildListeners(
 	gw *v1beta1.Gateway,
 	secretMemoryMgr secrets.SecretDiskMemoryManager,
-	gc *GatewayClass,
 ) map[string]*Listener {
 	listeners := make(map[string]*Listener)
 
-	listenerFactory := newListenerConfiguratorFactory(gw, secretMemoryMgr, gc)
+	listenerFactory := newListenerConfiguratorFactory(gw, secretMemoryMgr)
 
 	for _, gl := range gw.Spec.Listeners {
 		configurator := listenerFactory.getConfiguratorForListener(gl)
@@ -66,7 +65,6 @@ func (f *listenerConfiguratorFactory) getConfiguratorForListener(l v1beta1.Liste
 func newListenerConfiguratorFactory(
 	gw *v1beta1.Gateway,
 	secretMemoryMgr secrets.SecretDiskMemoryManager,
-	gc *GatewayClass,
 ) *listenerConfiguratorFactory {
 	return &listenerConfiguratorFactory{
 		unsupportedProtocol: &listenerConfigurator{
@@ -84,8 +82,6 @@ func newListenerConfiguratorFactory(
 		http: &listenerConfigurator{
 			validators: []listenerValidator{
 				validateListenerHostname,
-				createAddressesValidator(gw),
-				createNoValidGatewayClassValidator(gc),
 				validateHTTPListener,
 			},
 			conflictResolvers: []listenerConflictResolver{
@@ -95,8 +91,6 @@ func newListenerConfiguratorFactory(
 		https: &listenerConfigurator{
 			validators: []listenerValidator{
 				validateListenerHostname,
-				createAddressesValidator(gw),
-				createNoValidGatewayClassValidator(gc),
 				createHTTPSListenerValidator(gw.Namespace),
 			},
 			conflictResolvers: []listenerConflictResolver{
@@ -190,31 +184,6 @@ func validateListenerHostname(listener v1beta1.Listener) []conditions.Condition 
 		return []conditions.Condition{conditions.NewListenerUnsupportedValue(valErr.Error())}
 	}
 	return nil
-}
-
-func createAddressesValidator(gw *v1beta1.Gateway) listenerValidator {
-	return func(listener v1beta1.Listener) []conditions.Condition {
-		if len(gw.Spec.Addresses) > 0 {
-			path := field.NewPath("spec", "addresses")
-			valErr := field.Forbidden(path, "addresses are not supported")
-			return []conditions.Condition{conditions.NewListenerUnsupportedValue(valErr.Error())}
-		}
-		return nil
-	}
-}
-
-func createNoValidGatewayClassValidator(gc *GatewayClass) listenerValidator {
-	return func(listener v1beta1.Listener) []conditions.Condition {
-		if gc == nil {
-			return []conditions.Condition{conditions.NewListenerNoValidGatewayClass("GatewayClass doesn't exist")}
-		}
-
-		if !gc.Valid {
-			return []conditions.Condition{conditions.NewListenerNoValidGatewayClass("GatewayClass is invalid")}
-		}
-
-		return nil
-	}
 }
 
 func validateHTTPListener(listener v1beta1.Listener) []conditions.Condition {

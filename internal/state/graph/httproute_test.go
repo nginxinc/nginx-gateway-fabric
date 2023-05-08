@@ -688,6 +688,7 @@ func TestBindRouteToListeners(t *testing.T) {
 			route: createNormalRoute(),
 			gateway: &Gateway{
 				Source: gw,
+				Valid:  true,
 				Listeners: map[string]*Listener{
 					"listener-80-1": createListener(),
 				},
@@ -717,6 +718,7 @@ func TestBindRouteToListeners(t *testing.T) {
 			route: routeWithMissingSectionName,
 			gateway: &Gateway{
 				Source: gw,
+				Valid:  true,
 				Listeners: map[string]*Listener{
 					"listener-80-1": createListener(),
 				},
@@ -746,6 +748,7 @@ func TestBindRouteToListeners(t *testing.T) {
 			route: routeWithEmptySectionName,
 			gateway: &Gateway{
 				Source: gw,
+				Valid:  true,
 				Listeners: map[string]*Listener{
 					"listener-80-1": createListener(),
 				},
@@ -775,6 +778,7 @@ func TestBindRouteToListeners(t *testing.T) {
 			route: routeWithEmptySectionName,
 			gateway: &Gateway{
 				Source: gw,
+				Valid:  true,
 				Listeners: map[string]*Listener{
 					"listener-80-1": notValidListener,
 				},
@@ -798,6 +802,7 @@ func TestBindRouteToListeners(t *testing.T) {
 			route: routeWithPort,
 			gateway: &Gateway{
 				Source: gw,
+				Valid:  true,
 				Listeners: map[string]*Listener{
 					"listener-80-1": createListener(),
 				},
@@ -823,6 +828,7 @@ func TestBindRouteToListeners(t *testing.T) {
 			route: routeWithNonExistingListener,
 			gateway: &Gateway{
 				Source: gw,
+				Valid:  true,
 				Listeners: map[string]*Listener{
 					"listener-80-1": createListener(),
 				},
@@ -846,6 +852,7 @@ func TestBindRouteToListeners(t *testing.T) {
 			route: createNormalRoute(),
 			gateway: &Gateway{
 				Source: gw,
+				Valid:  true,
 				Listeners: map[string]*Listener{
 					"listener-80-1": notValidListener,
 				},
@@ -869,6 +876,7 @@ func TestBindRouteToListeners(t *testing.T) {
 			route: createNormalRoute(),
 			gateway: &Gateway{
 				Source: gw,
+				Valid:  true,
 				Listeners: map[string]*Listener{
 					"listener-80-1": nonMatchingHostnameListener,
 				},
@@ -892,6 +900,7 @@ func TestBindRouteToListeners(t *testing.T) {
 			route: routeWithIgnoredGateway,
 			gateway: &Gateway{
 				Source: gw,
+				Valid:  true,
 				Listeners: map[string]*Listener{
 					"listener-80-1": createListener(),
 				},
@@ -915,6 +924,7 @@ func TestBindRouteToListeners(t *testing.T) {
 			route: notValidRoute,
 			gateway: &Gateway{
 				Source: gw,
+				Valid:  true,
 				Listeners: map[string]*Listener{
 					"listener-80-1": createListener(),
 				},
@@ -930,6 +940,30 @@ func TestBindRouteToListeners(t *testing.T) {
 				"listener-80-1": createListener(),
 			},
 			name: "route isn't valid",
+		},
+		{
+			route: createNormalRoute(),
+			gateway: &Gateway{
+				Source: gw,
+				Valid:  false,
+				Listeners: map[string]*Listener{
+					"listener-80-1": createListener(),
+				},
+			},
+			expectedSectionNameRefs: []ParentRef{
+				{
+					Idx:     0,
+					Gateway: client.ObjectKeyFromObject(gw),
+					Attachment: &ParentRefAttachmentStatus{
+						Attached:        false,
+						FailedCondition: conditions.NewRouteInvalidGateway(),
+					},
+				},
+			},
+			expectedGatewayListeners: map[string]*Listener{
+				"listener-80-1": createListener(),
+			},
+			name: "invalid gateway",
 		},
 	}
 

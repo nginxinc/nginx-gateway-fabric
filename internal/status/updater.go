@@ -100,23 +100,10 @@ func (upd *updaterImpl) Update(ctx context.Context, statuses state.Statuses) {
 		)
 	}
 
-	if statuses.GatewayStatus != nil {
-		upd.update(ctx, statuses.GatewayStatus.NsName, &v1beta1.Gateway{}, func(object client.Object) {
-			gw := object.(*v1beta1.Gateway)
-			gw.Status = prepareGatewayStatus(*statuses.GatewayStatus, upd.cfg.PodIP, upd.cfg.Clock.Now())
-		})
-	}
-
-	for nsname, gs := range statuses.IgnoredGatewayStatuses {
-		select {
-		case <-ctx.Done():
-			return
-		default:
-		}
-
+	for nsname, gs := range statuses.GatewayStatuses {
 		upd.update(ctx, nsname, &v1beta1.Gateway{}, func(object client.Object) {
 			gw := object.(*v1beta1.Gateway)
-			gw.Status = prepareIgnoredGatewayStatus(gs, upd.cfg.Clock.Now())
+			gw.Status = prepareGatewayStatus(gs, upd.cfg.PodIP, upd.cfg.Clock.Now())
 		})
 	}
 

@@ -8,20 +8,32 @@ import (
 )
 
 const (
-	// RouteReasonInvalidListener is used with the "Accepted" condition when the Route references an invalid listener.
-	RouteReasonInvalidListener v1beta1.RouteConditionReason = "InvalidListener"
-
 	// ListenerReasonUnsupportedValue is used with the "Accepted" condition when a value of a field in a Listener
 	// is invalid or not supported.
 	ListenerReasonUnsupportedValue v1beta1.ListenerConditionReason = "UnsupportedValue"
 
-	// ListenerReasonNoValidGatewayClass is used with the "Accepted" condition when there is no valid GatewayClass
-	// in the cluster.
-	ListenerReasonNoValidGatewayClass v1beta1.ListenerConditionReason = "NoValidGatewayClass"
-
 	// RouteReasonBackendRefUnsupportedValue is used with the "ResolvedRefs" condition when one of the
 	// Route rules has a backendRef with an unsupported value.
 	RouteReasonBackendRefUnsupportedValue = "UnsupportedValue"
+
+	// RouteReasonInvalidGateway is used with the "Accepted" (false) condition when the Gateway the Route
+	// references is invalid.
+	RouteReasonInvalidGateway = "InvalidGateway"
+
+	// RouteReasonInvalidListener is used with the "Accepted" condition when the Route references an invalid listener.
+	RouteReasonInvalidListener v1beta1.RouteConditionReason = "InvalidListener"
+
+	// GatewayReasonGatewayConflict indicates there are multiple Gateway resources to choose from,
+	// and we ignored the resource in question and picked another Gateway as the winner.
+	// This reason is used with GatewayConditionAccepted (false).
+	GatewayReasonGatewayConflict v1beta1.GatewayConditionReason = "GatewayConflict"
+
+	// GatewayMessageGatewayConflict is message that describes GatewayReasonGatewayConflict.
+	GatewayMessageGatewayConflict = "The resource is ignored due to a conflicting Gateway resource"
+
+	// GatewayReasonUnsupportedValue is used with GatewayConditionAccepted (false) when a value of a field in a Gateway
+	// is invalid or not supported.
+	GatewayReasonUnsupportedValue v1beta1.GatewayConditionReason = "UnsupportedValue"
 )
 
 // Condition defines a condition to be reported in the status of resources.
@@ -64,6 +76,16 @@ func DeduplicateConditions(conds []Condition) []Condition {
 	return result
 }
 
+// NewTODO returns a Condition that can be used as a placeholder for a condition that is not yet implemented.
+func NewTODO(msg string) Condition {
+	return Condition{
+		Type:    "TODO",
+		Status:  metav1.ConditionTrue,
+		Reason:  "TODO",
+		Message: fmt.Sprintf("The condition for this has not been implemented yet: %s", msg),
+	}
+}
+
 // NewDefaultRouteConditions returns the default conditions that must be present in the status of an HTTPRoute.
 func NewDefaultRouteConditions() []Condition {
 	return []Condition{
@@ -103,16 +125,6 @@ func NewRouteUnsupportedValue(msg string) Condition {
 	}
 }
 
-// NewTODO returns a Condition that can be used as a placeholder for a condition that is not yet implemented.
-func NewTODO(msg string) Condition {
-	return Condition{
-		Type:    "TODO",
-		Status:  metav1.ConditionTrue,
-		Reason:  "TODO",
-		Message: fmt.Sprintf("The condition for this has not been implemented yet: %s", msg),
-	}
-}
-
 // NewRouteInvalidListener returns a Condition that indicates that the HTTPRoute is not accepted because of an
 // invalid listener.
 func NewRouteInvalidListener() Condition {
@@ -121,6 +133,80 @@ func NewRouteInvalidListener() Condition {
 		Status:  metav1.ConditionFalse,
 		Reason:  string(RouteReasonInvalidListener),
 		Message: "Listener is invalid for this parent ref",
+	}
+}
+
+// NewRouteResolvedRefs returns a Condition that indicates that all the references on the Route are resolved.
+func NewRouteResolvedRefs() Condition {
+	return Condition{
+		Type:    string(v1beta1.RouteConditionResolvedRefs),
+		Status:  metav1.ConditionTrue,
+		Reason:  string(v1beta1.RouteReasonResolvedRefs),
+		Message: "All references are resolved",
+	}
+}
+
+// NewRouteBackendRefInvalidKind returns a Condition that indicates that the Route has a backendRef with an
+// invalid kind.
+func NewRouteBackendRefInvalidKind(msg string) Condition {
+	return Condition{
+		Type:    string(v1beta1.RouteConditionResolvedRefs),
+		Status:  metav1.ConditionFalse,
+		Reason:  string(v1beta1.RouteReasonInvalidKind),
+		Message: msg,
+	}
+}
+
+// NewRouteBackendRefRefNotPermitted returns a Condition that indicates that the Route has a backendRef that
+// is not permitted.
+func NewRouteBackendRefRefNotPermitted(msg string) Condition {
+	return Condition{
+		Type:    string(v1beta1.RouteConditionResolvedRefs),
+		Status:  metav1.ConditionFalse,
+		Reason:  string(v1beta1.RouteReasonRefNotPermitted),
+		Message: msg,
+	}
+}
+
+// NewRouteBackendRefRefBackendNotFound returns a Condition that indicates that the Route has a backendRef that
+// points to non-existing backend.
+func NewRouteBackendRefRefBackendNotFound(msg string) Condition {
+	return Condition{
+		Type:    string(v1beta1.RouteConditionResolvedRefs),
+		Status:  metav1.ConditionFalse,
+		Reason:  string(v1beta1.RouteReasonBackendNotFound),
+		Message: msg,
+	}
+}
+
+// NewRouteBackendRefUnsupportedValue returns a Condition that indicates that the Route has a backendRef with
+// an unsupported value.
+func NewRouteBackendRefUnsupportedValue(msg string) Condition {
+	return Condition{
+		Type:    string(v1beta1.RouteConditionResolvedRefs),
+		Status:  metav1.ConditionFalse,
+		Reason:  RouteReasonBackendRefUnsupportedValue,
+		Message: msg,
+	}
+}
+
+// NewRouteInvalidGateway returns a Condition that indicates that the Route is not Accepted because the Gateway it
+// references is invalid.
+func NewRouteInvalidGateway() Condition {
+	return Condition{
+		Type:    string(v1beta1.RouteConditionAccepted),
+		Status:  metav1.ConditionFalse,
+		Reason:  RouteReasonInvalidGateway,
+		Message: "Gateway is invalid",
+	}
+}
+
+// NewDefaultListenerConditions returns the default Conditions that must be present in the status of a Listener.
+func NewDefaultListenerConditions() []Condition {
+	return []Condition{
+		NewListenerAccepted(),
+		NewListenerResolvedRefs(),
+		NewListenerNoConflicts(),
 	}
 }
 
@@ -161,15 +247,6 @@ func NewListenerNoConflicts() Condition {
 		Status:  metav1.ConditionFalse,
 		Reason:  string(v1beta1.ListenerReasonNoConflicts),
 		Message: "No conflicts",
-	}
-}
-
-// NewDefaultListenerConditions returns the default Conditions that must be present in the status of a Listener.
-func NewDefaultListenerConditions() []Condition {
-	return []Condition{
-		NewListenerAccepted(),
-		NewListenerResolvedRefs(),
-		NewListenerNoConflicts(),
 	}
 }
 
@@ -230,68 +307,15 @@ func NewListenerUnsupportedProtocol(msg string) Condition {
 	}
 }
 
-// NewListenerNoValidGatewayClass returns a Condition that indicates that the Listener is not accepted because
-// there is no valid GatewayClass.
-func NewListenerNoValidGatewayClass(msg string) Condition {
-	return Condition{
-		Type:    string(v1beta1.ListenerConditionAccepted),
-		Status:  metav1.ConditionFalse,
-		Reason:  string(ListenerReasonNoValidGatewayClass),
-		Message: msg,
-	}
-}
-
-// NewRouteBackendRefInvalidKind returns a Condition that indicates that the Route has a backendRef with an
-// invalid kind.
-func NewRouteBackendRefInvalidKind(msg string) Condition {
-	return Condition{
-		Type:    string(v1beta1.RouteConditionResolvedRefs),
-		Status:  metav1.ConditionFalse,
-		Reason:  string(v1beta1.RouteReasonInvalidKind),
-		Message: msg,
-	}
-}
-
-// NewRouteBackendRefRefNotPermitted returns a Condition that indicates that the Route has a backendRef that
-// is not permitted.
-func NewRouteBackendRefRefNotPermitted(msg string) Condition {
-	return Condition{
-		Type:    string(v1beta1.RouteConditionResolvedRefs),
-		Status:  metav1.ConditionFalse,
-		Reason:  string(v1beta1.RouteReasonRefNotPermitted),
-		Message: msg,
-	}
-}
-
-// NewRouteBackendRefRefBackendNotFound returns a Condition that indicates that the Route has a backendRef that
-// points to non-existing backend.
-func NewRouteBackendRefRefBackendNotFound(msg string) Condition {
-	return Condition{
-		Type:    string(v1beta1.RouteConditionResolvedRefs),
-		Status:  metav1.ConditionFalse,
-		Reason:  string(v1beta1.RouteReasonBackendNotFound),
-		Message: msg,
-	}
-}
-
-// NewRouteBackendRefUnsupportedValue returns a Condition that indicates that the Route has a backendRef with
-// an unsupported value.
-func NewRouteBackendRefUnsupportedValue(msg string) Condition {
-	return Condition{
-		Type:    string(v1beta1.RouteConditionResolvedRefs),
-		Status:  metav1.ConditionFalse,
-		Reason:  RouteReasonBackendRefUnsupportedValue,
-		Message: msg,
-	}
-}
-
-// NewRouteResolvedRefs returns a Condition that indicates that all the references on the Route are resolved.
-func NewRouteResolvedRefs() Condition {
-	return Condition{
-		Type:    string(v1beta1.RouteConditionResolvedRefs),
-		Status:  metav1.ConditionTrue,
-		Reason:  string(v1beta1.RouteReasonResolvedRefs),
-		Message: "All references are resolved",
+// NewDefaultGatewayClassConditions returns the default Conditions that must be present in the status of a GatewayClass.
+func NewDefaultGatewayClassConditions() []Condition {
+	return []Condition{
+		{
+			Type:    string(v1beta1.GatewayClassConditionStatusAccepted),
+			Status:  metav1.ConditionTrue,
+			Reason:  string(v1beta1.GatewayClassReasonAccepted),
+			Message: "GatewayClass is accepted",
+		},
 	}
 }
 
@@ -305,14 +329,73 @@ func NewGatewayClassInvalidParameters(msg string) Condition {
 	}
 }
 
-// NewDefaultGatewayClassConditions returns the default Conditions that must be present in the status of a GatewayClass.
-func NewDefaultGatewayClassConditions() []Condition {
+// NewDefaultGatewayConditions returns the default Condition that must be present in the status of a Gateway.
+func NewDefaultGatewayConditions() []Condition {
 	return []Condition{
-		{
-			Type:    string(v1beta1.GatewayClassConditionStatusAccepted),
-			Status:  metav1.ConditionTrue,
-			Reason:  string(v1beta1.GatewayClassReasonAccepted),
-			Message: "GatewayClass is accepted",
-		},
+		NewGatewayAccepted(),
+	}
+}
+
+// NewGatewayAccepted returns a Condition that indicates the Gateway is accepted.
+func NewGatewayAccepted() Condition {
+	return Condition{
+		Type:    string(v1beta1.GatewayConditionAccepted),
+		Status:  metav1.ConditionTrue,
+		Reason:  string(v1beta1.GatewayReasonAccepted),
+		Message: "Gateway is accepted",
+	}
+}
+
+// NewGatewayConflict returns a Condition that indicates the Gateway has a conflict with another Gateway.
+func NewGatewayConflict() Condition {
+	return Condition{
+		Type:    string(v1beta1.GatewayConditionAccepted),
+		Status:  metav1.ConditionFalse,
+		Reason:  string(GatewayReasonGatewayConflict),
+		Message: GatewayMessageGatewayConflict,
+	}
+}
+
+// NewGatewayAcceptedListenersNotValid returns a Condition that indicates the Gateway is accepted,
+// but has at least one listener that is invalid.
+func NewGatewayAcceptedListenersNotValid() Condition {
+	return Condition{
+		Type:    string(v1beta1.GatewayConditionAccepted),
+		Status:  metav1.ConditionTrue,
+		Reason:  string(v1beta1.GatewayReasonListenersNotValid),
+		Message: "Gateway has at least one valid listener",
+	}
+}
+
+// NewGatewayNotAcceptedListenersNotValid returns a Condition that indicates the Gateway is not accepted,
+// because all listeners are invalid.
+func NewGatewayNotAcceptedListenersNotValid() Condition {
+	return Condition{
+		Type:    string(v1beta1.GatewayConditionAccepted),
+		Status:  metav1.ConditionFalse,
+		Reason:  string(v1beta1.GatewayReasonListenersNotValid),
+		Message: "Gateway has no valid listeners",
+	}
+}
+
+// NewGatewayInvalid returns a Condition that indicates the Gateway is not accepted because it is
+// semantically or syntactically invalid. The provided message contains the details of why the Gateway is invalid.
+func NewGatewayInvalid(msg string) Condition {
+	return Condition{
+		Type:    string(v1beta1.GatewayConditionAccepted),
+		Status:  metav1.ConditionFalse,
+		Reason:  string(v1beta1.GatewayReasonInvalid),
+		Message: msg,
+	}
+}
+
+// NewGatewayUnsupportedValue returns a Condition that indicates that a field of the Gateway has an unsupported value.
+// Unsupported means that the value is not supported by the implementation or invalid.
+func NewGatewayUnsupportedValue(msg string) Condition {
+	return Condition{
+		Type:    string(v1beta1.GatewayConditionAccepted),
+		Status:  metav1.ConditionFalse,
+		Reason:  string(GatewayReasonUnsupportedValue),
+		Message: msg,
 	}
 }
