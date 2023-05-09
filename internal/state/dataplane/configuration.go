@@ -230,7 +230,14 @@ func (hpr *hostPathRules) upsertListener(l *graph.Listener) {
 		}
 
 		for _, h := range hostnames {
-			hpr.listenersForHost[h] = l
+			if prevListener, exists := hpr.listenersForHost[h]; exists {
+				// override the previous listener if the new one has a more specific hostname
+				if listenerHostnameMoreSpecific(l.Source.Hostname, prevListener.Source.Hostname) {
+					hpr.listenersForHost[h] = l
+				}
+			} else {
+				hpr.listenersForHost[h] = l
+			}
 
 			if _, exist := hpr.rulesPerHost[h]; !exist {
 				hpr.rulesPerHost[h] = make(map[pathAndType]PathRule)
@@ -319,7 +326,8 @@ func (hpr *hostPathRules) buildServers() []VirtualServer {
 
 	for _, l := range hpr.httpsListeners {
 		hostname := getListenerHostname(l.Source.Hostname)
-		// generate a 404 ssl server block for listeners with no routes or listeners with wildcard (match-all) routes
+		// Generate a 404 ssl server block for listeners with no routes or listeners with wildcard (match-all) routes.
+		// This server overrides the default ssl server.
 		// FIXME(kate-osborn): when we support regex hostnames (e.g. *.example.com)
 		// we will have to modify this check to catch regex hostnames.
 		if len(l.Routes) == 0 || hostname == wildcardHostname {
@@ -433,4 +441,31 @@ func convertPathType(pathType v1beta1.PathMatchType) PathType {
 	default:
 		panic(fmt.Sprintf("unsupported path type: %s", pathType))
 	}
+}
+
+// listenerHostnameMoreSpecific returns true if host1 is more specific than host2 (using length).
+//
+// FIXME(sberman): Since the only caller of this function specifies listener hostnames that are both
+// bound to the same route hostname, this function assumes that host1 and host2 match, either
+// exactly or as a substring.
+//
+// For example:
+// - foo.example.com and "" (host1 wins)
+// Non-example:
+// - foo.example.com and bar.example.com (should not be given to this function)
+//
+// As we add regex support, we should put in the proper
+// validation and error handling for this function to ensure that the hostnames are actually matching,
+// to avoid the unintended inputs above for the invalid case.
+func listenerHostnameMoreSpecific(host1, host2 *v1beta1.Hostname) bool {
+	var host1Str, host2Str string
+	if host1 != nil {
+		host1Str = string(*host1)
+	}
+
+	if host2 != nil {
+		host2Str = string(*host2)
+	}
+
+	return len(host1Str) >= len(host2Str)
 }

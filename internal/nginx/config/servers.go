@@ -144,6 +144,8 @@ func createLocations(pathRules []dataplane.PathRule, listenerPort int) []http.Lo
 		}
 
 		if len(matches) > 0 {
+			// FIXME(sberman): De-dupe matches and associated locations
+			// so we don't need nginx/njs to perform unnecessary matching.
 			b, err := json.Marshal(matches)
 			if err != nil {
 				// panic is safe here because we should never fail to marshal the match unless we constructed it incorrectly.

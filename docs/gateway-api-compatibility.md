@@ -79,7 +79,7 @@ Fields:
 
 Fields:
 * `spec`
-  * `parentRefs` - partially supported. `sectionName` must always be set. 
+  * `parentRefs` - partially supported. Port not supported.
   * `hostnames` - partially supported. Wildcard binding is not supported: a hostname like `example.com` will not bind to a listener with the hostname `*.example.com`. However, `example.com` will bind to a listener with the empty hostname.
   * `rules`
 	* `matches`
