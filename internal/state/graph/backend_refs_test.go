@@ -460,10 +460,11 @@ func TestCreateBackend(t *testing.T) {
 	svc1 := &v1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: "test", Name: "service1"}}
 
 	tests := []struct {
-		name              string
-		ref               v1beta1.HTTPBackendRef
-		expectedCondition *conditions.Condition
-		expectedBackend   BackendRef
+		expectedCondition            *conditions.Condition
+		name                         string
+		expectedServicePortReference string
+		ref                          v1beta1.HTTPBackendRef
+		expectedBackend              BackendRef
 	}{
 		{
 			ref: v1beta1.HTTPBackendRef{
@@ -475,8 +476,9 @@ func TestCreateBackend(t *testing.T) {
 				Weight: 5,
 				Valid:  true,
 			},
-			expectedCondition: nil,
-			name:              "normal case",
+			expectedServicePortReference: "test_service1_80",
+			expectedCondition:            nil,
+			name:                         "normal case",
 		},
 		{
 			ref: v1beta1.HTTPBackendRef{
@@ -491,8 +493,9 @@ func TestCreateBackend(t *testing.T) {
 				Weight: 1,
 				Valid:  true,
 			},
-			expectedCondition: nil,
-			name:              "normal with nil weight",
+			expectedServicePortReference: "test_service1_80",
+			expectedCondition:            nil,
+			name:                         "normal with nil weight",
 		},
 		{
 			ref: v1beta1.HTTPBackendRef{
@@ -507,6 +510,7 @@ func TestCreateBackend(t *testing.T) {
 				Weight: 0,
 				Valid:  false,
 			},
+			expectedServicePortReference: "",
 			expectedCondition: helpers.GetPointer(
 				conditions.NewRouteBackendRefUnsupportedValue(
 					"test.weight: Invalid value: -1: must be in the range [0, 1000000]",
@@ -527,6 +531,7 @@ func TestCreateBackend(t *testing.T) {
 				Weight: 5,
 				Valid:  false,
 			},
+			expectedServicePortReference: "",
 			expectedCondition: helpers.GetPointer(
 				conditions.NewRouteBackendRefInvalidKind(
 					`test.kind: Unsupported value: "NotService": supported values: "Service"`,
@@ -547,6 +552,7 @@ func TestCreateBackend(t *testing.T) {
 				Weight: 5,
 				Valid:  false,
 			},
+			expectedServicePortReference: "",
 			expectedCondition: helpers.GetPointer(
 				conditions.NewRouteBackendRefRefBackendNotFound(`test.name: Not found: "not-exist"`),
 			),
@@ -569,6 +575,9 @@ func TestCreateBackend(t *testing.T) {
 
 			g.Expect(helpers.Diff(test.expectedBackend, backend)).To(BeEmpty())
 			g.Expect(cond).To(Equal(test.expectedCondition))
+
+			servicePortRef := backend.ServicePortReference()
+			g.Expect(servicePortRef).To(Equal(test.expectedServicePortReference))
 		})
 	}
 }

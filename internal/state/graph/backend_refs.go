@@ -25,6 +25,9 @@ type BackendRef struct {
 
 // ServicePortReference returns a string representation for the service and port that is referenced by the BackendRef.
 func (b BackendRef) ServicePortReference() string {
+	if b.Svc == nil {
+		return ""
+	}
 	return fmt.Sprintf("%s_%s_%d", b.Svc.Namespace, b.Svc.Name, b.Port)
 }
 
