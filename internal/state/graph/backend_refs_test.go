@@ -248,7 +248,7 @@ func TestGetServiceAndPortFromRef(t *testing.T) {
 	}
 }
 
-func TestAddBackendGroupsToRouteTest(t *testing.T) {
+func TestAddBackendRefsToRulesTest(t *testing.T) {
 	createRoute := func(name string, kind v1beta1.Kind, refsPerBackend int, serviceNames ...string) *v1beta1.HTTPRoute {
 		hr := &v1beta1.HTTPRoute{
 			ObjectMeta: metav1.ObjectMeta{
@@ -301,10 +301,6 @@ func TestAddBackendGroupsToRouteTest(t *testing.T) {
 		for i := range rules {
 			rules[i].ValidMatches = validMatches
 			rules[i].ValidFilters = validFilters
-			rules[i].BackendGroup = BackendGroup{
-				Source:  client.ObjectKeyFromObject(hr),
-				RuleIdx: i,
-			}
 		}
 		return rules
 	}
@@ -332,10 +328,10 @@ func TestAddBackendGroupsToRouteTest(t *testing.T) {
 	}
 
 	tests := []struct {
-		name                  string
-		route                 *Route
-		expectedBackendGroups []BackendGroup
-		expectedConditions    []conditions.Condition
+		name                string
+		route               *Route
+		expectedBackendRefs []BackendRef
+		expectedConditions  []conditions.Condition
 	}{
 		{
 			route: &Route{
@@ -344,19 +340,12 @@ func TestAddBackendGroupsToRouteTest(t *testing.T) {
 				Valid:      true,
 				Rules:      createRules(hrWithOneBackend, allValid, allValid),
 			},
-			expectedBackendGroups: []BackendGroup{
+			expectedBackendRefs: []BackendRef{
 				{
-					Source:  client.ObjectKeyFromObject(hrWithOneBackend),
-					RuleIdx: 0,
-					Backends: []BackendRef{
-						{
-							Name:   "test_svc1_80",
-							Svc:    svc1,
-							Port:   80,
-							Valid:  true,
-							Weight: 1,
-						},
-					},
+					Svc:    svc1,
+					Port:   80,
+					Valid:  true,
+					Weight: 1,
 				},
 			},
 			expectedConditions: nil,
@@ -369,26 +358,18 @@ func TestAddBackendGroupsToRouteTest(t *testing.T) {
 				Valid:      true,
 				Rules:      createRules(hrWithTwoBackends, allValid, allValid),
 			},
-			expectedBackendGroups: []BackendGroup{
+			expectedBackendRefs: []BackendRef{
 				{
-					Source:  client.ObjectKeyFromObject(hrWithTwoBackends),
-					RuleIdx: 0,
-					Backends: []BackendRef{
-						{
-							Name:   "test_svc1_80",
-							Svc:    svc1,
-							Port:   80,
-							Valid:  true,
-							Weight: 1,
-						},
-						{
-							Name:   "test_svc1_81",
-							Svc:    svc1,
-							Port:   81,
-							Valid:  true,
-							Weight: 5,
-						},
-					},
+					Svc:    svc1,
+					Port:   80,
+					Valid:  true,
+					Weight: 1,
+				},
+				{
+					Svc:    svc1,
+					Port:   81,
+					Valid:  true,
+					Weight: 5,
 				},
 			},
 			expectedConditions: nil,
@@ -400,9 +381,9 @@ func TestAddBackendGroupsToRouteTest(t *testing.T) {
 				ParentRefs: sectionNameRefs,
 				Valid:      false,
 			},
-			expectedBackendGroups: nil,
-			expectedConditions:    nil,
-			name:                  "invalid route",
+			expectedBackendRefs: nil,
+			expectedConditions:  nil,
+			name:                "invalid route",
 		},
 		{
 			route: &Route{
@@ -411,9 +392,9 @@ func TestAddBackendGroupsToRouteTest(t *testing.T) {
 				Valid:      true,
 				Rules:      createRules(hrWithOneBackend, allInvalid, allValid),
 			},
-			expectedBackendGroups: nil,
-			expectedConditions:    nil,
-			name:                  "invalid matches",
+			expectedBackendRefs: nil,
+			expectedConditions:  nil,
+			name:                "invalid matches",
 		},
 		{
 			route: &Route{
@@ -422,9 +403,9 @@ func TestAddBackendGroupsToRouteTest(t *testing.T) {
 				Valid:      true,
 				Rules:      createRules(hrWithOneBackend, allValid, allInvalid),
 			},
-			expectedBackendGroups: nil,
-			expectedConditions:    nil,
-			name:                  "invalid filters",
+			expectedBackendRefs: nil,
+			expectedConditions:  nil,
+			name:                "invalid filters",
 		},
 		{
 			route: &Route{
@@ -433,15 +414,9 @@ func TestAddBackendGroupsToRouteTest(t *testing.T) {
 				Valid:      true,
 				Rules:      createRules(hrWithInvalidRule, allValid, allValid),
 			},
-			expectedBackendGroups: []BackendGroup{
+			expectedBackendRefs: []BackendRef{
 				{
-					Source:  client.ObjectKeyFromObject(hrWithInvalidRule),
-					RuleIdx: 0,
-					Backends: []BackendRef{
-						{
-							Weight: 1,
-						},
-					},
+					Weight: 1,
 				},
 			},
 			expectedConditions: []conditions.Condition{
@@ -458,14 +433,9 @@ func TestAddBackendGroupsToRouteTest(t *testing.T) {
 				Valid:      true,
 				Rules:      createRules(hrWithZeroBackendRefs, allValid, allValid),
 			},
-			expectedBackendGroups: []BackendGroup{
-				{
-					Source:  client.ObjectKeyFromObject(hrWithZeroBackendRefs),
-					RuleIdx: 0,
-				},
-			},
-			expectedConditions: nil,
-			name:               "zero backendRefs",
+			expectedBackendRefs: nil,
+			expectedConditions:  nil,
+			name:                "zero backendRefs",
 		},
 	}
 
@@ -473,9 +443,14 @@ func TestAddBackendGroupsToRouteTest(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewGomegaWithT(t)
 
-			addBackendGroupsToRoute(test.route, services)
+			addBackendRefsToRules(test.route, services)
 
-			g.Expect(helpers.Diff(test.expectedBackendGroups, test.route.GetAllBackendGroups())).To(BeEmpty())
+			var actual []BackendRef
+			if test.route.Rules != nil {
+				actual = test.route.Rules[0].BackendRefs
+			}
+
+			g.Expect(helpers.Diff(test.expectedBackendRefs, actual)).To(BeEmpty())
 			g.Expect(test.route.Conditions).To(Equal(test.expectedConditions))
 		})
 	}
@@ -485,10 +460,11 @@ func TestCreateBackend(t *testing.T) {
 	svc1 := &v1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: "test", Name: "service1"}}
 
 	tests := []struct {
-		name              string
-		ref               v1beta1.HTTPBackendRef
-		expectedCondition *conditions.Condition
-		expectedBackend   BackendRef
+		expectedCondition            *conditions.Condition
+		name                         string
+		expectedServicePortReference string
+		ref                          v1beta1.HTTPBackendRef
+		expectedBackend              BackendRef
 	}{
 		{
 			ref: v1beta1.HTTPBackendRef{
@@ -496,13 +472,13 @@ func TestCreateBackend(t *testing.T) {
 			},
 			expectedBackend: BackendRef{
 				Svc:    svc1,
-				Name:   "test_service1_80",
 				Port:   80,
 				Weight: 5,
 				Valid:  true,
 			},
-			expectedCondition: nil,
-			name:              "normal case",
+			expectedServicePortReference: "test_service1_80",
+			expectedCondition:            nil,
+			name:                         "normal case",
 		},
 		{
 			ref: v1beta1.HTTPBackendRef{
@@ -513,13 +489,13 @@ func TestCreateBackend(t *testing.T) {
 			},
 			expectedBackend: BackendRef{
 				Svc:    svc1,
-				Name:   "test_service1_80",
 				Port:   80,
 				Weight: 1,
 				Valid:  true,
 			},
-			expectedCondition: nil,
-			name:              "normal with nil weight",
+			expectedServicePortReference: "test_service1_80",
+			expectedCondition:            nil,
+			name:                         "normal with nil weight",
 		},
 		{
 			ref: v1beta1.HTTPBackendRef{
@@ -530,11 +506,11 @@ func TestCreateBackend(t *testing.T) {
 			},
 			expectedBackend: BackendRef{
 				Svc:    nil,
-				Name:   "",
 				Port:   0,
 				Weight: 0,
 				Valid:  false,
 			},
+			expectedServicePortReference: "",
 			expectedCondition: helpers.GetPointer(
 				conditions.NewRouteBackendRefUnsupportedValue(
 					"test.weight: Invalid value: -1: must be in the range [0, 1000000]",
@@ -551,11 +527,11 @@ func TestCreateBackend(t *testing.T) {
 			},
 			expectedBackend: BackendRef{
 				Svc:    nil,
-				Name:   "",
 				Port:   0,
 				Weight: 5,
 				Valid:  false,
 			},
+			expectedServicePortReference: "",
 			expectedCondition: helpers.GetPointer(
 				conditions.NewRouteBackendRefInvalidKind(
 					`test.kind: Unsupported value: "NotService": supported values: "Service"`,
@@ -572,11 +548,11 @@ func TestCreateBackend(t *testing.T) {
 			},
 			expectedBackend: BackendRef{
 				Svc:    nil,
-				Name:   "",
 				Port:   0,
 				Weight: 5,
 				Valid:  false,
 			},
+			expectedServicePortReference: "",
 			expectedCondition: helpers.GetPointer(
 				conditions.NewRouteBackendRefRefBackendNotFound(`test.name: Not found: "not-exist"`),
 			),
@@ -595,10 +571,13 @@ func TestCreateBackend(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewGomegaWithT(t)
 
-			backend, cond := createBackend(test.ref, sourceNamespace, services, refPath)
+			backend, cond := createBackendRef(test.ref, sourceNamespace, services, refPath)
 
 			g.Expect(helpers.Diff(test.expectedBackend, backend)).To(BeEmpty())
 			g.Expect(cond).To(Equal(test.expectedCondition))
+
+			servicePortRef := backend.ServicePortReference()
+			g.Expect(servicePortRef).To(Equal(test.expectedServicePortReference))
 		})
 	}
 }

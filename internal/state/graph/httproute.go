@@ -15,8 +15,8 @@ import (
 
 // Rule represents a rule of an HTTPRoute.
 type Rule struct {
-	// BackendGroup is the BackendGroup of the rule.
-	BackendGroup BackendGroup
+	// BackendRefs is a list of BackendRefs for the rule.
+	BackendRefs []BackendRef
 	// ValidMatches indicates whether the matches of the rule are valid.
 	// If the matches are invalid, NGK should not generate any configuration for the rule.
 	ValidMatches bool
@@ -62,36 +62,6 @@ type Route struct {
 	// Valid tells if the Route is valid.
 	// If it is invalid, NGK should not generate any configuration for it.
 	Valid bool
-}
-
-// GetAllBackendGroups returns BackendGroups for all rules with valid matches and filters in the Route.
-//
-// FIXME(pleshakov) Improve the name once https://github.com/nginxinc/nginx-kubernetes-gateway/issues/468 is
-// implemented. The current name doesn't reflect the filtering of rules inside the loops.
-// See also the discussion below for more context:
-// https://github.com/nginxinc/nginx-kubernetes-gateway/pull/455#discussion_r1136277589
-func (r *Route) GetAllBackendGroups() []BackendGroup {
-	count := 0
-
-	for _, rule := range r.Rules {
-		if rule.ValidMatches && rule.ValidFilters {
-			count++
-		}
-	}
-
-	if count == 0 {
-		return nil
-	}
-
-	groups := make([]BackendGroup, 0, count)
-
-	for _, rule := range r.Rules {
-		if rule.ValidMatches && rule.ValidFilters {
-			groups = append(groups, rule.BackendGroup)
-		}
-	}
-
-	return groups
 }
 
 // buildRoutesForGateways builds routes from HTTPRoutes that reference any of the specified Gateways.
@@ -146,7 +116,9 @@ func buildSectionNameRefs(
 		}
 
 		if _, exist := uniqueSectionsPerGateway[k]; exist {
-			panicForBrokenWebhookAssumption(fmt.Errorf("duplicate section name %q for Gateway %s", sectionName, gw.String()))
+			panicForBrokenWebhookAssumption(
+				fmt.Errorf("duplicate section name %q for Gateway %s", sectionName, gw.String()),
+			)
 		}
 		uniqueSectionsPerGateway[k] = struct{}{}
 
@@ -246,10 +218,6 @@ func buildRoute(
 		r.Rules[i] = Rule{
 			ValidMatches: len(matchesErrs) == 0,
 			ValidFilters: len(filtersErrs) == 0,
-			BackendGroup: BackendGroup{
-				Source:  client.ObjectKeyFromObject(r.Source),
-				RuleIdx: i,
-			},
 		}
 	}
 

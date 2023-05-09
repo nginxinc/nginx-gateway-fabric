@@ -76,69 +76,6 @@ func addFilterToPath(hr *v1beta1.HTTPRoute, path string, filter v1beta1.HTTPRout
 	}
 }
 
-func TestRouteGetAllBackendGroups(t *testing.T) {
-	group0 := BackendGroup{
-		RuleIdx: 0,
-	}
-	group1 := BackendGroup{
-		RuleIdx: 1,
-	}
-	group2 := BackendGroup{
-		RuleIdx: 2,
-	}
-	group3 := BackendGroup{
-		RuleIdx: 3,
-	}
-
-	tests := []struct {
-		route    *Route
-		name     string
-		expected []BackendGroup
-	}{
-		{
-			route:    &Route{},
-			expected: nil,
-			name:     "no rules",
-		},
-		{
-			route: &Route{
-				Rules: []Rule{
-					{
-						ValidMatches: true,
-						ValidFilters: true,
-						BackendGroup: group0,
-					},
-					{
-						ValidMatches: false,
-						ValidFilters: true,
-						BackendGroup: group1,
-					},
-					{
-						ValidMatches: true,
-						ValidFilters: false,
-						BackendGroup: group2,
-					},
-					{
-						ValidMatches: false,
-						ValidFilters: false,
-						BackendGroup: group3,
-					},
-				},
-			},
-			expected: []BackendGroup{group0},
-			name:     "mix of valid and invalid rules",
-		},
-	}
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			g := NewGomegaWithT(t)
-			result := test.route.GetAllBackendGroups()
-			g.Expect(result).To(Equal(test.expected))
-		})
-	}
-}
-
 func TestBuildRoutes(t *testing.T) {
 	gwNsName := types.NamespacedName{Namespace: "test", Name: "gateway"}
 
@@ -171,10 +108,6 @@ func TestBuildRoutes(t *testing.T) {
 						{
 							ValidMatches: true,
 							ValidFilters: true,
-							BackendGroup: BackendGroup{
-								Source:  client.ObjectKeyFromObject(hr),
-								RuleIdx: 0,
-							},
 						},
 					},
 				},
@@ -459,24 +392,10 @@ func TestBuildRoute(t *testing.T) {
 					{
 						ValidMatches: true,
 						ValidFilters: true,
-						BackendGroup: BackendGroup{
-							Source: types.NamespacedName{
-								Namespace: hr.Namespace,
-								Name:      hr.Name,
-							},
-							RuleIdx: 0,
-						},
 					},
 					{
 						ValidMatches: true,
 						ValidFilters: true,
-						BackendGroup: BackendGroup{
-							Source: types.NamespacedName{
-								Namespace: hr.Namespace,
-								Name:      hr.Name,
-							},
-							RuleIdx: 1,
-						},
 					},
 				},
 			},
@@ -527,10 +446,6 @@ func TestBuildRoute(t *testing.T) {
 					{
 						ValidMatches: false,
 						ValidFilters: true,
-						BackendGroup: BackendGroup{
-							Source:  client.ObjectKeyFromObject(hr),
-							RuleIdx: 0,
-						},
 					},
 				},
 			},
@@ -557,10 +472,6 @@ func TestBuildRoute(t *testing.T) {
 					{
 						ValidMatches: true,
 						ValidFilters: false,
-						BackendGroup: BackendGroup{
-							Source:  client.ObjectKeyFromObject(hr),
-							RuleIdx: 0,
-						},
 					},
 				},
 			},
@@ -590,26 +501,14 @@ func TestBuildRoute(t *testing.T) {
 					{
 						ValidMatches: false,
 						ValidFilters: true,
-						BackendGroup: BackendGroup{
-							Source:  client.ObjectKeyFromObject(hrInvalidValidRules),
-							RuleIdx: 0,
-						},
 					},
 					{
 						ValidMatches: true,
 						ValidFilters: false,
-						BackendGroup: BackendGroup{
-							Source:  client.ObjectKeyFromObject(hrInvalidValidRules),
-							RuleIdx: 1,
-						},
 					},
 					{
 						ValidMatches: true,
 						ValidFilters: true,
-						BackendGroup: BackendGroup{
-							Source:  client.ObjectKeyFromObject(hrInvalidValidRules),
-							RuleIdx: 2,
-						},
 					},
 				},
 			},
@@ -1486,7 +1385,9 @@ func TestValidateFilter(t *testing.T) {
 			filter: v1beta1.HTTPRouteFilter{
 				Type: v1beta1.HTTPRouteFilterRequestRedirect,
 				RequestRedirect: &v1beta1.HTTPRequestRedirectFilter{
-					Hostname: helpers.GetPointer[v1beta1.PreciseHostname]("example.com"), // any value is invalid by the validator
+					Hostname: helpers.GetPointer[v1beta1.PreciseHostname](
+						"example.com",
+					), // any value is invalid by the validator
 				},
 			},
 			expectErrCount: 1,
@@ -1543,8 +1444,12 @@ func TestValidateFilter(t *testing.T) {
 			filter: v1beta1.HTTPRouteFilter{
 				Type: v1beta1.HTTPRouteFilterRequestRedirect,
 				RequestRedirect: &v1beta1.HTTPRequestRedirectFilter{
-					Hostname: helpers.GetPointer[v1beta1.PreciseHostname]("example.com"), // any value is invalid by the validator
-					Port:     helpers.GetPointer[v1beta1.PortNumber](80),                 // any value is invalid by the validator
+					Hostname: helpers.GetPointer[v1beta1.PreciseHostname](
+						"example.com",
+					), // any value is invalid by the validator
+					Port: helpers.GetPointer[v1beta1.PortNumber](
+						80,
+					), // any value is invalid by the validator
 				},
 			},
 			expectErrCount: 2,

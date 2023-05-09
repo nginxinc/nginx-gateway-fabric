@@ -11,19 +11,39 @@ import (
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/conditions"
 )
 
-func addBackendGroupsToRoutes(
+// BackendRef is an internal representation of a backendRef in an HTTPRoute.
+type BackendRef struct {
+	// Svc is the service referenced by the backendRef.
+	Svc *v1.Service
+	// Port is the port of the backendRef.
+	Port int32
+	// Weight is the weight of the backendRef.
+	Weight int32
+	// Valid indicates whether the backendRef is valid.
+	Valid bool
+}
+
+// ServicePortReference returns a string representation for the service and port that is referenced by the BackendRef.
+func (b BackendRef) ServicePortReference() string {
+	if b.Svc == nil {
+		return ""
+	}
+	return fmt.Sprintf("%s_%s_%d", b.Svc.Namespace, b.Svc.Name, b.Port)
+}
+
+func addBackendRefsToRouteRules(
 	routes map[types.NamespacedName]*Route,
 	services map[types.NamespacedName]*v1.Service,
 ) {
 	for _, r := range routes {
-		addBackendGroupsToRoute(r, services)
+		addBackendRefsToRules(r, services)
 	}
 }
 
-// addBackendGroupsToRoute iterates over the rules of a route and adds BackendGroups to the rules.
+// addBackendRefsToRules iterates over the rules of a route and adds a list of BackendRef to each rule.
 // The route is modified in place.
 // If a reference in a rule is invalid, the function will add a condition to the rule.
-func addBackendGroupsToRoute(route *Route, services map[types.NamespacedName]*v1.Service) {
+func addBackendRefsToRules(route *Route, services map[types.NamespacedName]*v1.Service) {
 	if !route.Valid {
 		return
 	}
@@ -41,24 +61,24 @@ func addBackendGroupsToRoute(route *Route, services map[types.NamespacedName]*v1
 			continue
 		}
 
-		group := &route.Rules[idx].BackendGroup
-
-		group.Backends = make([]BackendRef, 0, len(rule.BackendRefs))
+		backendRefs := make([]BackendRef, 0, len(rule.BackendRefs))
 
 		for refIdx, ref := range rule.BackendRefs {
 			refPath := field.NewPath("spec").Child("rules").Index(idx).Child("backendRefs").Index(refIdx)
 
-			backend, cond := createBackend(ref, route.Source.Namespace, services, refPath)
+			ref, cond := createBackendRef(ref, route.Source.Namespace, services, refPath)
 
-			group.Backends = append(group.Backends, backend)
+			backendRefs = append(backendRefs, ref)
 			if cond != nil {
 				route.Conditions = append(route.Conditions, *cond)
 			}
 		}
+
+		route.Rules[idx].BackendRefs = backendRefs
 	}
 }
 
-func createBackend(
+func createBackendRef(
 	ref v1beta1.HTTPBackendRef,
 	sourceNamespace string,
 	services map[types.NamespacedName]*v1.Service,
@@ -77,38 +97,37 @@ func createBackend(
 		}
 	}
 
-	var backend BackendRef
+	var backendRef BackendRef
 
 	valid, cond := validateHTTPBackendRef(ref, sourceNamespace, refPath)
 	if !valid {
-		backend = BackendRef{
+		backendRef = BackendRef{
 			Weight: weight,
 			Valid:  false,
 		}
 
-		return backend, &cond
+		return backendRef, &cond
 	}
 
 	svc, port, err := getServiceAndPortFromRef(ref.BackendRef, sourceNamespace, services, refPath)
 	if err != nil {
-		backend = BackendRef{
+		backendRef = BackendRef{
 			Weight: weight,
 			Valid:  false,
 		}
 
 		cond := conditions.NewRouteBackendRefRefBackendNotFound(err.Error())
-		return backend, &cond
+		return backendRef, &cond
 	}
 
-	backend = BackendRef{
-		Name:   fmt.Sprintf("%s_%s_%d", svc.Namespace, svc.Name, port),
+	backendRef = BackendRef{
 		Svc:    svc,
 		Port:   port,
 		Valid:  true,
 		Weight: weight,
 	}
 
-	return backend, nil
+	return backendRef, nil
 }
 
 func getServiceAndPortFromRef(
