@@ -447,10 +447,9 @@ func convertPathType(pathType v1beta1.PathMatchType) PathType {
 //
 // FIXME(sberman): Since the only caller of this function specifies listener hostnames that are both
 // bound to the same route hostname, this function assumes that host1 and host2 match, either
-// exactly or as a wildcard/substring.
+// exactly or as a substring.
 //
 // For example:
-// - *.example.com and foo.example.com (host2 wins)
 // - foo.example.com and "" (host1 wins)
 // Non-example:
 // - foo.example.com and bar.example.com (should not be given to this function)
@@ -460,15 +459,11 @@ func convertPathType(pathType v1beta1.PathMatchType) PathType {
 // to avoid the unintended inputs above for the invalid case.
 func listenerHostnameMoreSpecific(host1, host2 *v1beta1.Hostname) bool {
 	var host1Str, host2Str string
-	if host1 == nil {
-		host1Str = ""
-	} else {
+	if host1 != nil {
 		host1Str = string(*host1)
 	}
 
-	if host2 == nil {
-		host2Str = ""
-	} else {
+	if host2 != nil {
 		host2Str = string(*host2)
 	}
 
