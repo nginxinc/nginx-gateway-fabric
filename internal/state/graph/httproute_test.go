@@ -873,6 +873,29 @@ func TestBindRouteToListeners(t *testing.T) {
 			name: "section name is empty",
 		},
 		{
+			route: routeWithEmptySectionName,
+			gateway: &Gateway{
+				Source: gw,
+				Listeners: map[string]*Listener{
+					"listener-80-1": notValidListener,
+				},
+			},
+			expectedSectionNameRefs: []ParentRef{
+				{
+					Idx:     0,
+					Gateway: client.ObjectKeyFromObject(gw),
+					Attachment: &ParentRefAttachmentStatus{
+						Attached:        false,
+						FailedCondition: conditions.NewRouteInvalidListener(),
+					},
+				},
+			},
+			expectedGatewayListeners: map[string]*Listener{
+				"listener-80-1": notValidListener,
+			},
+			name: "empty section name with no valid listeners",
+		},
+		{
 			route: routeWithPort,
 			gateway: &Gateway{
 				Source: gw,

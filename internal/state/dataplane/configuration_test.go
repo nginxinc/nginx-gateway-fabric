@@ -1749,6 +1749,6 @@ func TestHostnameMoreSpecific(t *testing.T) {
 	}
 
 	for _, tc := range tests {
-		g.Expect(hostnameMoreSpecific(tc.host1, tc.host2)).To(Equal(tc.host1Wins), tc.msg)
+		g.Expect(listenerHostnameMoreSpecific(tc.host1, tc.host2)).To(Equal(tc.host1Wins), tc.msg)
 	}
 }

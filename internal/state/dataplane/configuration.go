@@ -232,7 +232,7 @@ func (hpr *hostPathRules) upsertListener(l *graph.Listener) {
 		for _, h := range hostnames {
 			if prevListener, exists := hpr.listenersForHost[h]; exists {
 				// override the previous listener if the new one has a more specific hostname
-				if hostnameMoreSpecific(l.Source.Hostname, prevListener.Source.Hostname) {
+				if listenerHostnameMoreSpecific(l.Source.Hostname, prevListener.Source.Hostname) {
 					hpr.listenersForHost[h] = l
 				}
 			} else {
@@ -443,7 +443,7 @@ func convertPathType(pathType v1beta1.PathMatchType) PathType {
 	}
 }
 
-// Returns true if host1 is more specific than host2 (using length).
+// listenerHostnameMoreSpecific returns true if host1 is more specific than host2 (using length).
 //
 // FIXME(sberman): Since the only caller of this function specifies listener hostnames that are both
 // bound to the same route hostname, this function assumes that host1 and host2 match, either
@@ -458,7 +458,7 @@ func convertPathType(pathType v1beta1.PathMatchType) PathType {
 // As we add regex support, we should put in the proper
 // validation and error handling for this function to ensure that the hostnames are actually matching,
 // to avoid the unintended inputs above for the invalid case.
-func hostnameMoreSpecific(host1, host2 *v1beta1.Hostname) bool {
+func listenerHostnameMoreSpecific(host1, host2 *v1beta1.Hostname) bool {
 	var host1Str, host2Str string
 	if host1 == nil {
 		host1Str = ""

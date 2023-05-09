@@ -340,10 +340,10 @@ func bindRouteToListeners(r *Route, gw *Gateway) {
 			return true
 		}
 
-		var valid bool
+		var validListener bool
 		if getSectionName(routeRef.SectionName) == "" {
 			for _, l := range gw.Listeners {
-				valid = bind(l) || valid
+				validListener = bind(l) || validListener
 			}
 		} else {
 			l, exists := gw.Listeners[string(*routeRef.SectionName)]
@@ -354,9 +354,9 @@ func bindRouteToListeners(r *Route, gw *Gateway) {
 				continue
 			}
 
-			valid = bind(l)
+			validListener = bind(l)
 		}
-		if !valid {
+		if !validListener {
 			attachment.FailedCondition = conditions.NewRouteInvalidListener()
 			continue
 		}
