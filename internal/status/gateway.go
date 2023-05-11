@@ -1,6 +1,7 @@
 package status
 
 import (
+	"os"
 	"sort"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -48,8 +49,15 @@ func prepareGatewayStatus(gatewayStatus state.GatewayStatus, transitionTime meta
 		})
 	}
 
+	ipAddrType := v1beta1.IPAddressType
+	podIP := v1beta1.GatewayAddress{
+		Type:  &ipAddrType,
+		Value: os.Getenv("POD_IP"),
+	}
+
 	return v1beta1.GatewayStatus{
 		Listeners:  listenerStatuses,
+		Addresses:  []v1beta1.GatewayAddress{podIP},
 		Conditions: nil, // FIXME(pleshakov) Create conditions for the Gateway resource.
 	}
 }

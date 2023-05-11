@@ -14,6 +14,13 @@ import (
 )
 
 func TestPrepareGatewayStatus(t *testing.T) {
+	t.Setenv("POD_IP", "1.2.3.4")
+	ipAddrType := v1beta1.IPAddressType
+	podIP := v1beta1.GatewayAddress{
+		Type:  &ipAddrType,
+		Value: "1.2.3.4",
+	}
+
 	status := state.GatewayStatus{
 		ListenerStatuses: state.ListenerStatuses{
 			"listener": {
@@ -39,6 +46,7 @@ func TestPrepareGatewayStatus(t *testing.T) {
 				Conditions:     CreateExpectedAPIConditions(1, transitionTime),
 			},
 		},
+		Addresses: []v1beta1.GatewayAddress{podIP},
 	}
 
 	g := NewGomegaWithT(t)

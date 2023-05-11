@@ -113,6 +113,11 @@ spec:
           # FIXME(pleshakov) - figure out which capabilities are required
           # dropping ALL and adding only CAP_KILL doesn't work
           # Note: CAP_KILL is needed for sending HUP signal to NGINX main process
+        env:
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
         args:
         - --gateway-ctlr-name=k8s-gateway.nginx.org/nginx-gateway-controller
         - --gatewayclass=nginx

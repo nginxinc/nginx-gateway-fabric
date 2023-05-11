@@ -65,7 +65,7 @@ Fields:
 		* `allowedRoutes` - not supported. 
 	* `addresses` - not supported.
 * `status`
-  * `addresses` - not supported.
+  * `addresses` - Pod IPAddress supported.
   * `conditions` - not supported.
   * `listeners`
 	* `name` - supported.
