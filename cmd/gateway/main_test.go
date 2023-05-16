@@ -1,27 +1,47 @@
 package main
 
 import (
-	. "github.com/onsi/ginkgo/v2"
+	"testing"
+
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("Main", func() {
-	type testCase struct {
+func TestValidateIP(t *testing.T) {
+	tests := []struct {
+		name      string
 		expSubMsg string
-		podIP     string
+		ip        string
 		expErr    bool
-	}
-	DescribeTable("should validate an IP address",
-		func(tc testCase) {
-			err := validateIP(tc.podIP)
-			if !tc.expErr {
-				Expect(err).ToNot(HaveOccurred())
-			} else {
-				Expect(err.Error()).To(ContainSubstring(tc.expSubMsg))
-			}
+	}{
+		{
+			name:      "var not set",
+			ip:        "",
+			expErr:    true,
+			expSubMsg: "must be set",
 		},
-		Entry("var not set", testCase{podIP: "", expErr: true, expSubMsg: "must be set"}),
-		Entry("var set to invalid value", testCase{podIP: "invalid", expErr: true, expSubMsg: "must be a valid"}),
-		Entry("var set to valid value", testCase{podIP: "1.2.3.4", expErr: false}),
-	) // should validate an IP address
-})
+		{
+			name:      "invalid ip address",
+			ip:        "invalid",
+			expErr:    true,
+			expSubMsg: "must be a valid",
+		},
+		{
+			name:   "valid ip address",
+			ip:     "1.2.3.4",
+			expErr: false,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			g := NewGomegaWithT(t)
+
+			err := validateIP(tc.ip)
+			if !tc.expErr {
+				g.Expect(err).ToNot(HaveOccurred())
+			} else {
+				g.Expect(err.Error()).To(ContainSubstring(tc.expSubMsg))
+			}
+		})
+	}
+}
