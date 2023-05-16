@@ -342,6 +342,7 @@ var _ = Describe("ChangeProcessor", func() {
 											SectionName:   helpers.GetPointer[v1beta1.SectionName]("listener-80-1"),
 											Conditions: []conditions.Condition{
 												conditions.NewRouteInvalidListener(),
+												conditions.NewRouteResolvedRefs(),
 											},
 										},
 										{
@@ -349,6 +350,7 @@ var _ = Describe("ChangeProcessor", func() {
 											SectionName:   helpers.GetPointer[v1beta1.SectionName]("listener-443-1"),
 											Conditions: []conditions.Condition{
 												conditions.NewRouteInvalidListener(),
+												conditions.NewRouteResolvedRefs(),
 											},
 										},
 									},
