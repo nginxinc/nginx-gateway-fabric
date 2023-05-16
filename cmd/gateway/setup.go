@@ -28,12 +28,6 @@ type (
 		V   Validator
 		Key string
 	}
-
-	EnvValidator        func(string) error
-	EnvValidatorContext struct {
-		V   EnvValidator
-		Key string
-	}
 )
 
 func GatewayControllerParam(domain string) ValidatorContext {
@@ -131,8 +125,9 @@ func MustValidateArguments(flagset *flag.FlagSet, validators ...ValidatorContext
 func ValidatePodIP(podIP string) error {
 	if podIP == "" {
 		return errors.New("POD_IP environment variable must be set")
-	} else if net.ParseIP(podIP) == nil {
-		return fmt.Errorf("POD_IP '%s' must be a valid IP address", podIP)
+	}
+	if net.ParseIP(podIP) == nil {
+		return fmt.Errorf("POD_IP %q must be a valid IP address", podIP)
 	}
 
 	return nil

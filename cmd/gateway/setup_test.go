@@ -3,7 +3,7 @@ package main_test
 import (
 	"errors"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	flag "github.com/spf13/pflag"
 
@@ -265,15 +265,23 @@ var _ = Describe("Main", func() {
 	}) // CLI argument validation
 
 	Describe("environment variable validaton", func() {
-		It("should validate the POD_IP env var", func() {
-			// var not set
-			err := ValidatePodIP("")
-			Expect(err.Error()).To(ContainSubstring("must be set"))
-			// var set to invalid value
-			err = ValidatePodIP("invalid")
-			Expect(err.Error()).To(ContainSubstring("must be a valid"))
-			// var set to valid value
-			Expect(ValidatePodIP("1.2.3.4")).To(Succeed())
-		})
+		type testCase struct {
+			expSubMsg string
+			podIP     string
+			expErr    bool
+		}
+		DescribeTable("should validate the POD_IP env var",
+			func(tc testCase) {
+				err := ValidatePodIP(tc.podIP)
+				if !tc.expErr {
+					Expect(err).ToNot(HaveOccurred())
+				} else {
+					Expect(err.Error()).To(ContainSubstring(tc.expSubMsg))
+				}
+			},
+			Entry("var not set", testCase{podIP: "", expErr: true, expSubMsg: "must be set"}),
+			Entry("var set to invalid value", testCase{podIP: "invalid", expErr: true, expSubMsg: "must be a valid"}),
+			Entry("var set to valid value", testCase{podIP: "1.2.3.4", expErr: false}),
+		)
 	}) // environment variable validation
 }) // end Main
