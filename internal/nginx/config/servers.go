@@ -277,7 +277,7 @@ func createHTTPMatch(match v1beta1.HTTPRouteMatch, redirectPath string) httpMatc
 // The name and values are delimited by "=". A name and value can always be recovered using strings.SplitN(arg,"=", 2).
 // Query Parameters are case-sensitive so case is preserved.
 func createQueryParamKeyValString(p v1beta1.HTTPQueryParamMatch) string {
-	return p.Name + "=" + p.Value
+	return string(p.Name) + "=" + p.Value
 }
 
 // The name and values are delimited by ":". A name and value can always be recovered using strings.Split(arg, ":").

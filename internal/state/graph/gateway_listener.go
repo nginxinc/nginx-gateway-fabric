@@ -197,7 +197,7 @@ func createAddressesValidator(gw *v1beta1.Gateway) listenerValidator {
 		if len(gw.Spec.Addresses) > 0 {
 			path := field.NewPath("spec", "addresses")
 			valErr := field.Forbidden(path, "addresses are not supported")
-			return []conditions.Condition{conditions.NewListenerUnsupportedAddress(valErr.Error())}
+			return []conditions.Condition{conditions.NewListenerUnsupportedValue(valErr.Error())}
 		}
 		return nil
 	}
