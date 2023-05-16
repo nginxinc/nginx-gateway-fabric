@@ -16,6 +16,7 @@ import (
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/config"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/controller"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/events"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/manager/filter"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/manager/index"
@@ -68,12 +69,12 @@ func Start(cfg config.Config) error {
 
 	controllerRegCfgs := []struct {
 		objectType client.Object
-		options    []controllerOption
+		options    []controller.Option
 	}{
 		{
 			objectType: &gatewayv1beta1.GatewayClass{},
-			options: []controllerOption{
-				withNamespacedNameFilter(filter.CreateFilterForGatewayClass(cfg.GatewayClassName)),
+			options: []controller.Option{
+				controller.WithNamespacedNameFilter(filter.CreateFilterForGatewayClass(cfg.GatewayClassName)),
 			},
 		},
 		{
@@ -84,8 +85,8 @@ func Start(cfg config.Config) error {
 		},
 		{
 			objectType: &apiv1.Service{},
-			options: []controllerOption{
-				withK8sPredicate(predicate.ServicePortsChangedPredicate{}),
+			options: []controller.Option{
+				controller.WithK8sPredicate(predicate.ServicePortsChangedPredicate{}),
 			},
 		},
 		{
@@ -93,9 +94,9 @@ func Start(cfg config.Config) error {
 		},
 		{
 			objectType: &discoveryV1.EndpointSlice{},
-			options: []controllerOption{
-				withK8sPredicate(k8spredicate.GenerationChangedPredicate{}),
-				withFieldIndices(index.CreateEndpointSliceFieldIndices()),
+			options: []controller.Option{
+				controller.WithK8sPredicate(k8spredicate.GenerationChangedPredicate{}),
+				controller.WithFieldIndices(index.CreateEndpointSliceFieldIndices()),
 			},
 		},
 	}
@@ -103,7 +104,7 @@ func Start(cfg config.Config) error {
 	ctx := ctlr.SetupSignalHandler()
 
 	for _, regCfg := range controllerRegCfgs {
-		err := registerController(ctx, regCfg.objectType, mgr, eventCh, regCfg.options...)
+		err := controller.Register(ctx, regCfg.objectType, mgr, eventCh, regCfg.options...)
 		if err != nil {
 			return fmt.Errorf("cannot register controller for %T: %w", regCfg.objectType, err)
 		}

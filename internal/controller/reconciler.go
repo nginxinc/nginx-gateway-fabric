@@ -1,4 +1,4 @@
-package reconciler
+package controller
 
 import (
 	"context"
@@ -18,8 +18,8 @@ import (
 // If the function returns false, the reconciler will log the returned string.
 type NamespacedNameFilterFunc func(nsname types.NamespacedName) (bool, string)
 
-// Config contains the configuration for the Implementation.
-type Config struct {
+// ReconcilerConfig is the configuration for the reconciler.
+type ReconcilerConfig struct {
 	// Getter gets a resource from the k8s API.
 	Getter Getter
 	// ObjectType is the type of the resource that the reconciler will reconcile.
@@ -30,21 +30,21 @@ type Config struct {
 	NamespacedNameFilter NamespacedNameFilterFunc
 }
 
-// Implementation is a reconciler for Kubernetes resources.
+// Reconciler reconciles Kubernetes resources of a specific type.
 // It implements the reconcile.Reconciler interface.
 // A successful reconciliation of a resource has the two possible outcomes:
 // (1) If the resource is deleted, the Implementation will send a DeleteEvent to the event channel.
 // (2) If the resource is upserted (created or updated), the Implementation will send an UpsertEvent
 // to the event channel.
-type Implementation struct {
-	cfg Config
+type Reconciler struct {
+	cfg ReconcilerConfig
 }
 
-var _ reconcile.Reconciler = &Implementation{}
+var _ reconcile.Reconciler = &Reconciler{}
 
-// NewImplementation creates a new Implementation.
-func NewImplementation(cfg Config) *Implementation {
-	return &Implementation{
+// NewReconciler creates a new reconciler.
+func NewReconciler(cfg ReconcilerConfig) *Reconciler {
+	return &Reconciler{
 		cfg: cfg,
 	}
 }
@@ -59,7 +59,7 @@ func newObject(objectType client.Object) client.Object {
 }
 
 // Reconcile implements the reconcile.Reconciler Reconcile method.
-func (r *Implementation) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
+func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
 	logger := log.FromContext(ctx)
 	// The controller runtime has set the logger with the group, kind, namespace and name of the resource,
 	// and a few other key/value pairs. So we don't need to set them here.

@@ -1,4 +1,4 @@
-package reconciler_test
+package controller_test
 
 import (
 	"testing"

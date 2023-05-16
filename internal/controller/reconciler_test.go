@@ -1,4 +1,4 @@
-package reconciler_test
+package controller_test
 
 import (
 	"context"
@@ -14,10 +14,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/reconciler/reconcilerfakes"
-
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/controller"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/controller/controllerfakes"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/events"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/reconciler"
 )
 
 type getFunc func(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error
@@ -29,8 +28,8 @@ type result struct {
 
 var _ = Describe("Reconciler", func() {
 	var (
-		rec        *reconciler.Implementation
-		fakeGetter *reconcilerfakes.FakeGetter
+		rec        *controller.Reconciler
+		fakeGetter *controllerfakes.FakeGetter
 		eventCh    chan interface{}
 
 		hr1NsName = types.NamespacedName{
@@ -108,7 +107,7 @@ var _ = Describe("Reconciler", func() {
 	}
 
 	BeforeEach(func() {
-		fakeGetter = &reconcilerfakes.FakeGetter{}
+		fakeGetter = &controllerfakes.FakeGetter{}
 		eventCh = make(chan interface{})
 	})
 
@@ -136,7 +135,7 @@ var _ = Describe("Reconciler", func() {
 
 		When("Reconciler doesn't have a filter", func() {
 			BeforeEach(func() {
-				rec = reconciler.NewImplementation(reconciler.Config{
+				rec = controller.NewReconciler(controller.ReconcilerConfig{
 					Getter:     fakeGetter,
 					ObjectType: &v1beta1.HTTPRoute{},
 					EventCh:    eventCh,
@@ -161,7 +160,7 @@ var _ = Describe("Reconciler", func() {
 					return true, ""
 				}
 
-				rec = reconciler.NewImplementation(reconciler.Config{
+				rec = controller.NewReconciler(controller.ReconcilerConfig{
 					Getter:               fakeGetter,
 					ObjectType:           &v1beta1.HTTPRoute{},
 					EventCh:              eventCh,
@@ -203,7 +202,7 @@ var _ = Describe("Reconciler", func() {
 
 	Describe("Edge cases", func() {
 		BeforeEach(func() {
-			rec = reconciler.NewImplementation(reconciler.Config{
+			rec = controller.NewReconciler(controller.ReconcilerConfig{
 				Getter:     fakeGetter,
 				ObjectType: &v1beta1.HTTPRoute{},
 				EventCh:    eventCh,
@@ -221,7 +220,7 @@ var _ = Describe("Reconciler", func() {
 		})
 
 		DescribeTable("Reconciler should not block when ctx is done",
-			func(get getFunc, invalidResourceEventCount int, nsname types.NamespacedName) {
+			func(get getFunc, nsname types.NamespacedName) {
 				fakeGetter.GetCalls(get)
 
 				ctx, cancel := context.WithCancel(context.Background())
@@ -232,9 +231,8 @@ var _ = Describe("Reconciler", func() {
 				Consistently(eventCh).ShouldNot(Receive())
 				Expect(resultCh).To(Receive(Equal(result{err: nil, reconcileResult: reconcile.Result{}})))
 			},
-			Entry("Upserting valid HTTPRoute", getReturnsHRForHR(hr1), 0, hr1NsName),
-			Entry("Deleting valid HTTPRoute", getReturnsNotFoundErrorForHR(hr1), 0, hr1NsName),
-			Entry("Upserting invalid HTTPRoute", getReturnsHRForHR(hr2), 1, hr2NsName),
+			Entry("Upserting HTTPRoute", getReturnsHRForHR(hr1), hr1NsName),
+			Entry("Deleting HTTPRoute", getReturnsNotFoundErrorForHR(hr1), hr1NsName),
 		)
 	})
 })
