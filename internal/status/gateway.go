@@ -1,7 +1,6 @@
 package status
 
 import (
-	"os"
 	"sort"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -24,7 +23,11 @@ const (
 // FIXME(pleshakov): Be compliant with in the Gateway API.
 // Currently, we only support simple valid/invalid status per each listener.
 // Extend support to cover more cases.
-func prepareGatewayStatus(gatewayStatus state.GatewayStatus, transitionTime metav1.Time) v1beta1.GatewayStatus {
+func prepareGatewayStatus(
+	gatewayStatus state.GatewayStatus,
+	podIP string,
+	transitionTime metav1.Time,
+) v1beta1.GatewayStatus {
 	listenerStatuses := make([]v1beta1.ListenerStatus, 0, len(gatewayStatus.ListenerStatuses))
 
 	// FIXME(pleshakov) Maintain the order from the Gateway resource
@@ -50,14 +53,14 @@ func prepareGatewayStatus(gatewayStatus state.GatewayStatus, transitionTime meta
 	}
 
 	ipAddrType := v1beta1.IPAddressType
-	podIP := v1beta1.GatewayAddress{
+	gwPodIP := v1beta1.GatewayAddress{
 		Type:  &ipAddrType,
-		Value: os.Getenv("POD_IP"),
+		Value: podIP,
 	}
 
 	return v1beta1.GatewayStatus{
 		Listeners:  listenerStatuses,
-		Addresses:  []v1beta1.GatewayAddress{podIP},
+		Addresses:  []v1beta1.GatewayAddress{gwPodIP},
 		Conditions: nil, // FIXME(pleshakov) Create conditions for the Gateway resource.
 	}
 }

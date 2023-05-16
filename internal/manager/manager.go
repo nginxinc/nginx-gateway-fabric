@@ -136,6 +136,7 @@ func Start(cfg config.Config) error {
 		GatewayCtlrName:  cfg.GatewayCtlrName,
 		GatewayClassName: cfg.GatewayClassName,
 		Client:           mgr.GetClient(),
+		PodIP:            cfg.PodIP,
 		// FIXME(pleshakov) Make sure each component:
 		// (1) Has a dedicated named logger.
 		// (2) Get it from the Manager (the WithName is done here for all components).

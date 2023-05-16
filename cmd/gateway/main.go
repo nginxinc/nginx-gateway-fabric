@@ -33,17 +33,13 @@ var (
 	)
 
 	gatewayClassName = flag.String("gatewayclass", "", gatewayClassNameUsage)
+
+	// Environment variables
+	podIP = os.Getenv("POD_IP")
 )
 
 func main() {
 	flag.Parse()
-
-	logger := zap.New()
-	conf := config.Config{
-		GatewayCtlrName:  *gatewayCtlrName,
-		Logger:           logger,
-		GatewayClassName: *gatewayClassName,
-	}
 
 	MustValidateArguments(
 		flag.CommandLine,
@@ -51,10 +47,24 @@ func main() {
 		GatewayClassParam(),
 	)
 
+	if err := ValidatePodIP(podIP); err != nil {
+		fmt.Println(err.Error())
+		os.Exit(1)
+	}
+
+	logger := zap.New()
+	conf := config.Config{
+		GatewayCtlrName:  *gatewayCtlrName,
+		Logger:           logger,
+		GatewayClassName: *gatewayClassName,
+		PodIP:            podIP,
+	}
+
 	logger.Info("Starting NGINX Kubernetes Gateway",
 		"version", version,
 		"commit", commit,
-		"date", date)
+		"date", date,
+	)
 
 	err := manager.Start(conf)
 	if err != nil {

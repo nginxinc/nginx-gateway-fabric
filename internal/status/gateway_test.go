@@ -14,7 +14,6 @@ import (
 )
 
 func TestPrepareGatewayStatus(t *testing.T) {
-	t.Setenv("POD_IP", "1.2.3.4")
 	ipAddrType := v1beta1.IPAddressType
 	podIP := v1beta1.GatewayAddress{
 		Type:  &ipAddrType,
@@ -51,7 +50,7 @@ func TestPrepareGatewayStatus(t *testing.T) {
 
 	g := NewGomegaWithT(t)
 
-	result := prepareGatewayStatus(status, transitionTime)
+	result := prepareGatewayStatus(status, "1.2.3.4", transitionTime)
 	g.Expect(helpers.Diff(expected, result)).To(BeEmpty())
 }
 

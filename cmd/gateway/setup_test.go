@@ -263,4 +263,17 @@ var _ = Describe("Main", func() {
 			}) // should fail with invalid name
 		}) // gatewayclass validation
 	}) // CLI argument validation
+
+	Describe("environment variable validaton", func() {
+		It("should validate the POD_IP env var", func() {
+			// var not set
+			err := ValidatePodIP("")
+			Expect(err.Error()).To(ContainSubstring("must be set"))
+			// var set to invalid value
+			err = ValidatePodIP("invalid")
+			Expect(err.Error()).To(ContainSubstring("must be a valid"))
+			// var set to valid value
+			Expect(ValidatePodIP("1.2.3.4")).To(Succeed())
+		})
+	}) // environment variable validation
 }) // end Main
