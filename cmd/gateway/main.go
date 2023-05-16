@@ -1,7 +1,9 @@
 package main
 
 import (
+	"errors"
 	"fmt"
+	"net"
 	"os"
 
 	flag "github.com/spf13/pflag"
@@ -38,6 +40,17 @@ var (
 	podIP = os.Getenv("POD_IP")
 )
 
+func validateIP(podIP string) error {
+	if podIP == "" {
+		return errors.New("IP address must be set")
+	}
+	if net.ParseIP(podIP) == nil {
+		return fmt.Errorf("%q must be a valid IP address", podIP)
+	}
+
+	return nil
+}
+
 func main() {
 	flag.Parse()
 
@@ -47,8 +60,8 @@ func main() {
 		GatewayClassParam(),
 	)
 
-	if err := ValidatePodIP(podIP); err != nil {
-		fmt.Println(err.Error())
+	if err := validateIP(podIP); err != nil {
+		fmt.Printf("error validating POD_IP environment variable: %v\n", err)
 		os.Exit(1)
 	}
 

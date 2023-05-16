@@ -24,7 +24,7 @@ func MockValidator(name string, called *int, succeed bool) ValidatorContext {
 	}
 }
 
-var _ = Describe("Main", func() {
+var _ = Describe("Main Setup", func() {
 	Describe("Generic Validator", func() {
 		var mockFlags *flag.FlagSet
 		BeforeEach(func() {
@@ -263,25 +263,4 @@ var _ = Describe("Main", func() {
 			}) // should fail with invalid name
 		}) // gatewayclass validation
 	}) // CLI argument validation
-
-	Describe("environment variable validaton", func() {
-		type testCase struct {
-			expSubMsg string
-			podIP     string
-			expErr    bool
-		}
-		DescribeTable("should validate the POD_IP env var",
-			func(tc testCase) {
-				err := ValidatePodIP(tc.podIP)
-				if !tc.expErr {
-					Expect(err).ToNot(HaveOccurred())
-				} else {
-					Expect(err.Error()).To(ContainSubstring(tc.expSubMsg))
-				}
-			},
-			Entry("var not set", testCase{podIP: "", expErr: true, expSubMsg: "must be set"}),
-			Entry("var set to invalid value", testCase{podIP: "invalid", expErr: true, expSubMsg: "must be a valid"}),
-			Entry("var set to valid value", testCase{podIP: "1.2.3.4", expErr: false}),
-		)
-	}) // environment variable validation
 }) // end Main

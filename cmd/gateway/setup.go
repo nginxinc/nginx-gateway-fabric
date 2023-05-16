@@ -3,7 +3,6 @@ package main
 import (
 	"errors"
 	"fmt"
-	"net"
 	"os"
 	"regexp"
 	"strings"
@@ -120,15 +119,4 @@ func MustValidateArguments(flagset *flag.FlagSet, validators ...ValidatorContext
 
 		os.Exit(1)
 	}
-}
-
-func ValidatePodIP(podIP string) error {
-	if podIP == "" {
-		return errors.New("POD_IP environment variable must be set")
-	}
-	if net.ParseIP(podIP) == nil {
-		return fmt.Errorf("POD_IP %q must be a valid IP address", podIP)
-	}
-
-	return nil
 }
