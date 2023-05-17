@@ -1,7 +1,9 @@
 package main
 
 import (
+	"errors"
 	"fmt"
+	"net"
 	"os"
 
 	flag "github.com/spf13/pflag"
@@ -33,17 +35,24 @@ var (
 	)
 
 	gatewayClassName = flag.String("gatewayclass", "", gatewayClassNameUsage)
+
+	// Environment variables
+	podIP = os.Getenv("POD_IP")
 )
+
+func validateIP(ip string) error {
+	if ip == "" {
+		return errors.New("IP address must be set")
+	}
+	if net.ParseIP(ip) == nil {
+		return fmt.Errorf("%q must be a valid IP address", ip)
+	}
+
+	return nil
+}
 
 func main() {
 	flag.Parse()
-
-	logger := zap.New()
-	conf := config.Config{
-		GatewayCtlrName:  *gatewayCtlrName,
-		Logger:           logger,
-		GatewayClassName: *gatewayClassName,
-	}
 
 	MustValidateArguments(
 		flag.CommandLine,
@@ -51,10 +60,24 @@ func main() {
 		GatewayClassParam(),
 	)
 
+	if err := validateIP(podIP); err != nil {
+		fmt.Printf("error validating POD_IP environment variable: %v\n", err)
+		os.Exit(1)
+	}
+
+	logger := zap.New()
+	conf := config.Config{
+		GatewayCtlrName:  *gatewayCtlrName,
+		Logger:           logger,
+		GatewayClassName: *gatewayClassName,
+		PodIP:            podIP,
+	}
+
 	logger.Info("Starting NGINX Kubernetes Gateway",
 		"version", version,
 		"commit", commit,
-		"date", date)
+		"date", date,
+	)
 
 	err := manager.Start(conf)
 	if err != nil {
