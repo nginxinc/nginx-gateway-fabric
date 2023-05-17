@@ -1,4 +1,4 @@
-package manager
+package controller_test
 
 import (
 	"context"
@@ -15,26 +15,26 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/controller"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/controller/controllerfakes"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/manager/filter"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/manager/index"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/manager/managerfakes"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/manager/predicate"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/reconciler"
 )
 
-func TestRegisterController(t *testing.T) {
+func TestRegister(t *testing.T) {
 	type fakes struct {
-		mgr     *managerfakes.FakeManager
-		indexer *managerfakes.FakeFieldIndexer
+		mgr     *controllerfakes.FakeManager
+		indexer *controllerfakes.FakeFieldIndexer
 	}
 
 	getDefaultFakes := func() fakes {
-		scheme = runtime.NewScheme()
+		scheme := runtime.NewScheme()
 		utilruntime.Must(v1beta1.AddToScheme(scheme))
 
-		indexer := &managerfakes.FakeFieldIndexer{}
+		indexer := &controllerfakes.FakeFieldIndexer{}
 
-		mgr := &managerfakes.FakeManager{}
+		mgr := &controllerfakes.FakeManager{}
 		mgr.GetClientReturns(fake.NewClientBuilder().Build())
 		mgr.GetSchemeReturns(scheme)
 		mgr.GetLoggerReturns(zap.New())
@@ -97,24 +97,24 @@ func TestRegisterController(t *testing.T) {
 		t.Run(test.msg, func(t *testing.T) {
 			g := NewGomegaWithT(t)
 
-			newReconciler := func(c reconciler.Config) *reconciler.Implementation {
+			newReconciler := func(c controller.ReconcilerConfig) *controller.Reconciler {
 				g.Expect(c.Getter).To(BeIdenticalTo(test.fakes.mgr.GetClient()))
 				g.Expect(c.ObjectType).To(BeIdenticalTo(objectType))
 				g.Expect(c.EventCh).To(BeIdenticalTo(eventCh))
 				g.Expect(c.NamespacedNameFilter).Should(beSameFunctionPointer(namespacedNameFilter))
 
-				return reconciler.NewImplementation(c)
+				return controller.NewReconciler(c)
 			}
 
-			err := registerController(
+			err := controller.Register(
 				context.Background(),
 				objectType,
 				test.fakes.mgr,
 				eventCh,
-				withNamespacedNameFilter(namespacedNameFilter),
-				withK8sPredicate(predicate.ServicePortsChangedPredicate{}),
-				withFieldIndices(fieldIndexes),
-				withNewReconciler(newReconciler),
+				controller.WithNamespacedNameFilter(namespacedNameFilter),
+				controller.WithK8sPredicate(predicate.ServicePortsChangedPredicate{}),
+				controller.WithFieldIndices(fieldIndexes),
+				controller.WithNewReconciler(newReconciler),
 			)
 
 			if test.expectedErr == nil {

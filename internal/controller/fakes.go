@@ -1,4 +1,4 @@
-package manager
+package controller
 
 import (
 	_ "sigs.k8s.io/controller-runtime/pkg/client"  // used below to generate a fake

@@ -1,4 +1,4 @@
-package manager
+package controller
 
 import (
 	"context"
@@ -11,7 +11,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/manager/index"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/reconciler"
 )
 
 const (
@@ -19,56 +18,64 @@ const (
 	addIndexFieldTimeout = 2 * time.Minute
 )
 
-type newReconcilerFunc func(cfg reconciler.Config) *reconciler.Implementation
-
-type controllerConfig struct {
-	namespacedNameFilter reconciler.NamespacedNameFilterFunc
+type config struct {
+	namespacedNameFilter NamespacedNameFilterFunc
 	k8sPredicate         predicate.Predicate
 	fieldIndices         index.FieldIndices
-	newReconciler        newReconcilerFunc
+	newReconciler        NewReconcilerFunc
 }
 
-type controllerOption func(*controllerConfig)
+// NewReconcilerFunc defines a function that creates a new Reconciler. Used for unit-testing.
+type NewReconcilerFunc func(cfg ReconcilerConfig) *Reconciler
 
-func withNamespacedNameFilter(filter reconciler.NamespacedNameFilterFunc) controllerOption {
-	return func(cfg *controllerConfig) {
+// Option defines configuration options for registering a controller.
+type Option func(*config)
+
+// WithNamespacedNameFilter enables filtering of objects by NamespacedName by the controller.
+func WithNamespacedNameFilter(filter NamespacedNameFilterFunc) Option {
+	return func(cfg *config) {
 		cfg.namespacedNameFilter = filter
 	}
 }
 
-func withK8sPredicate(p predicate.Predicate) controllerOption {
-	return func(cfg *controllerConfig) {
+// WithK8sPredicate enables filtering of events before they are sent to the controller.
+func WithK8sPredicate(p predicate.Predicate) Option {
+	return func(cfg *config) {
 		cfg.k8sPredicate = p
 	}
 }
 
-func withFieldIndices(fieldIndices index.FieldIndices) controllerOption {
-	return func(cfg *controllerConfig) {
+// WithFieldIndices adds indices to the FieldIndexer of the manager.
+func WithFieldIndices(fieldIndices index.FieldIndices) Option {
+	return func(cfg *config) {
 		cfg.fieldIndices = fieldIndices
 	}
 }
 
-// withNewReconciler allows us to mock reconciler creation in the unit tests.
-func withNewReconciler(newReconciler newReconcilerFunc) controllerOption {
-	return func(cfg *controllerConfig) {
+// WithNewReconciler allows us to mock reconciler creation in the unit tests.
+func WithNewReconciler(newReconciler NewReconcilerFunc) Option {
+	return func(cfg *config) {
 		cfg.newReconciler = newReconciler
 	}
 }
 
-func defaultControllerConfig() controllerConfig {
-	return controllerConfig{
-		newReconciler: reconciler.NewImplementation,
+func defaultConfig() config {
+	return config{
+		newReconciler: NewReconciler,
 	}
 }
 
-func registerController(
+// Register registers a new controller for the object type in the manager and configure it with the provided options.
+// If the options include WithFieldIndices, it will add the specified indices to FieldIndexer of the manager.
+// The registered controller will send events to the provided channel.
+func Register(
 	ctx context.Context,
 	objectType client.Object,
 	mgr manager.Manager,
 	eventCh chan<- interface{},
-	options ...controllerOption,
+	options ...Option,
 ) error {
-	cfg := defaultControllerConfig()
+	cfg := defaultConfig()
 
 	for _, opt := range options {
 		opt(&cfg)
@@ -87,7 +94,7 @@ func registerController(
 		builder = builder.WithEventFilter(cfg.k8sPredicate)
 	}
 
-	recCfg := reconciler.Config{
+	recCfg := ReconcilerConfig{
 		Getter:               mgr.GetClient(),
 		ObjectType:           objectType,
 		EventCh:              eventCh,
