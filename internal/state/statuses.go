@@ -15,29 +15,23 @@ type ListenerStatuses map[string]ListenerStatus
 // HTTPRouteStatuses holds the statuses of HTTPRoutes where the key is the namespaced name of an HTTPRoute.
 type HTTPRouteStatuses map[types.NamespacedName]HTTPRouteStatus
 
+// GatewayStatuses holds the statuses of Gateways where the key is the namespaced name of a Gateway.
+type GatewayStatuses map[types.NamespacedName]GatewayStatus
+
 // Statuses holds the status-related information about Gateway API resources.
 type Statuses struct {
-	GatewayClassStatus     *GatewayClassStatus
-	GatewayStatus          *GatewayStatus
-	IgnoredGatewayStatuses IgnoredGatewayStatuses
-	HTTPRouteStatuses      HTTPRouteStatuses
+	GatewayClassStatus *GatewayClassStatus
+	GatewayStatuses    GatewayStatuses
+	HTTPRouteStatuses  HTTPRouteStatuses
 }
 
 // GatewayStatus holds the status of the winning Gateway resource.
 type GatewayStatus struct {
 	// ListenerStatuses holds the statuses of listeners defined on the Gateway.
 	ListenerStatuses ListenerStatuses
-	// NsName is the namespaced name of the winning Gateway resource.
-	NsName types.NamespacedName
+	// Conditions is the list of conditions for this Gateway.
+	Conditions []conditions.Condition
 	// ObservedGeneration is the generation of the resource that was processed.
-	ObservedGeneration int64
-}
-
-// IgnoredGatewayStatuses holds the statuses of the ignored Gateway resources.
-type IgnoredGatewayStatuses map[types.NamespacedName]IgnoredGatewayStatus
-
-// IgnoredGatewayStatus holds the status of an ignored Gateway resource.
-type IgnoredGatewayStatus struct {
 	ObservedGeneration int64
 }
 
@@ -76,8 +70,7 @@ type GatewayClassStatus struct {
 // buildStatuses builds statuses from a Graph.
 func buildStatuses(graph *graph.Graph) Statuses {
 	statuses := Statuses{
-		HTTPRouteStatuses:      make(map[types.NamespacedName]HTTPRouteStatus),
-		IgnoredGatewayStatuses: make(map[types.NamespacedName]IgnoredGatewayStatus),
+		HTTPRouteStatuses: make(HTTPRouteStatuses),
 	}
 
 	if graph.GatewayClass != nil {
@@ -96,35 +89,7 @@ func buildStatuses(graph *graph.Graph) Statuses {
 		}
 	}
 
-	if graph.Gateway != nil {
-		listenerStatuses := make(map[string]ListenerStatus)
-
-		defaultConds := conditions.NewDefaultListenerConditions()
-
-		for name, l := range graph.Gateway.Listeners {
-			conds := make([]conditions.Condition, 0, len(l.Conditions)+len(defaultConds))
-
-			// We add default conds first, so that any additional conditions will override them, which is
-			// ensured by DeduplicateConditions.
-			conds = append(conds, defaultConds...)
-			conds = append(conds, l.Conditions...)
-
-			listenerStatuses[name] = ListenerStatus{
-				AttachedRoutes: int32(len(l.Routes)),
-				Conditions:     conditions.DeduplicateConditions(conds),
-			}
-		}
-
-		statuses.GatewayStatus = &GatewayStatus{
-			NsName:             client.ObjectKeyFromObject(graph.Gateway.Source),
-			ListenerStatuses:   listenerStatuses,
-			ObservedGeneration: graph.Gateway.Source.Generation,
-		}
-	}
-
-	for nsname, gw := range graph.IgnoredGateways {
-		statuses.IgnoredGatewayStatuses[nsname] = IgnoredGatewayStatus{ObservedGeneration: gw.Generation}
-	}
+	statuses.GatewayStatuses = buildGatewayStatuses(graph.Gateway, graph.IgnoredGateways)
 
 	for nsname, r := range graph.Routes {
 		parentStatuses := make([]ParentStatus, 0, len(r.ParentRefs))
@@ -162,4 +127,65 @@ func buildStatuses(graph *graph.Graph) Statuses {
 	}
 
 	return statuses
+}
+
+func buildGatewayStatuses(
+	gateway *graph.Gateway,
+	ignoredGateways map[types.NamespacedName]*v1beta1.Gateway,
+) GatewayStatuses {
+	statuses := make(GatewayStatuses)
+
+	if gateway != nil {
+		statuses[client.ObjectKeyFromObject(gateway.Source)] = buildGatewayStatus(gateway)
+	}
+
+	for nsname, gw := range ignoredGateways {
+		statuses[nsname] = GatewayStatus{
+			Conditions:         []conditions.Condition{conditions.NewGatewayConflict()},
+			ObservedGeneration: gw.Generation,
+		}
+	}
+
+	return statuses
+}
+
+func buildGatewayStatus(gateway *graph.Gateway) GatewayStatus {
+	if !gateway.Valid {
+		return GatewayStatus{
+			Conditions:         conditions.DeduplicateConditions(gateway.Conditions),
+			ObservedGeneration: gateway.Source.Generation,
+		}
+	}
+
+	listenerStatuses := make(map[string]ListenerStatus)
+
+	validListenerCount := 0
+	for name, l := range gateway.Listeners {
+		var conds []conditions.Condition
+
+		if l.Valid {
+			conds = conditions.NewDefaultListenerConditions()
+			validListenerCount++
+		} else {
+			conds = l.Conditions
+		}
+
+		listenerStatuses[name] = ListenerStatus{
+			AttachedRoutes: int32(len(l.Routes)),
+			Conditions:     conditions.DeduplicateConditions(conds),
+		}
+	}
+
+	gwConds := conditions.NewDefaultGatewayConditions()
+	if validListenerCount == 0 {
+		gwConds = append(gwConds, conditions.NewGatewayNotAcceptedListenersNotValid())
+	} else if validListenerCount < len(gateway.Listeners) {
+		gwConds = append(gwConds, conditions.NewGatewayAcceptedListenersNotValid())
+	}
+
+	return GatewayStatus{
+		Conditions:         conditions.DeduplicateConditions(gwConds),
+		ListenerStatuses:   listenerStatuses,
+		ObservedGeneration: gateway.Source.Generation,
+	}
 }

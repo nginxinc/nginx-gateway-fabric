@@ -23,12 +23,12 @@ func TestPrepareHTTPRouteStatus(t *testing.T) {
 			{
 				GatewayNsName: gwNsName1,
 				SectionName:   helpers.GetPointer[v1beta1.SectionName]("http"),
-				Conditions:    CreateTestConditions(),
+				Conditions:    CreateTestConditions("Test"),
 			},
 			{
 				GatewayNsName: gwNsName2,
 				SectionName:   nil,
-				Conditions:    CreateTestConditions(),
+				Conditions:    CreateTestConditions("Test"),
 			},
 		},
 	}
@@ -46,7 +46,7 @@ func TestPrepareHTTPRouteStatus(t *testing.T) {
 						SectionName: helpers.GetPointer[v1beta1.SectionName]("http"),
 					},
 					ControllerName: v1beta1.GatewayController(gatewayCtlrName),
-					Conditions:     CreateExpectedAPIConditions(1, transitionTime),
+					Conditions:     CreateExpectedAPIConditions("Test", 1, transitionTime),
 				},
 				{
 					ParentRef: v1beta1.ParentReference{
@@ -55,7 +55,7 @@ func TestPrepareHTTPRouteStatus(t *testing.T) {
 						SectionName: nil,
 					},
 					ControllerName: v1beta1.GatewayController(gatewayCtlrName),
-					Conditions:     CreateExpectedAPIConditions(1, transitionTime),
+					Conditions:     CreateExpectedAPIConditions("Test", 1, transitionTime),
 				},
 			},
 		},

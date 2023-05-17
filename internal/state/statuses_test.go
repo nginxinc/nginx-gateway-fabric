@@ -14,6 +14,24 @@ import (
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/graph"
 )
 
+var (
+	gw = &v1beta1.Gateway{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace:  "test",
+			Name:       "gateway",
+			Generation: 2,
+		},
+	}
+
+	ignoredGw = &v1beta1.Gateway{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace:  "test",
+			Name:       "ignored-gateway",
+			Generation: 1,
+		},
+	}
+)
+
 func TestBuildStatuses(t *testing.T) {
 	invalidRouteCondition := conditions.Condition{
 		Type:   "TestInvalidRoute",
@@ -22,22 +40,6 @@ func TestBuildStatuses(t *testing.T) {
 	invalidAttachmentCondition := conditions.Condition{
 		Type:   "TestInvalidAttachment",
 		Status: metav1.ConditionTrue,
-	}
-
-	gw := &v1beta1.Gateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace:  "test",
-			Name:       "gateway",
-			Generation: 2,
-		},
-	}
-
-	ignoredGw := &v1beta1.Gateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace:  "test",
-			Name:       "ignored-gateway",
-			Generation: 1,
-		},
 	}
 
 	routes := map[types.NamespacedName]*graph.Route{
@@ -122,6 +124,7 @@ func TestBuildStatuses(t *testing.T) {
 					},
 				},
 			},
+			Valid: true,
 		},
 		IgnoredGateways: map[types.NamespacedName]*v1beta1.Gateway{
 			client.ObjectKeyFromObject(ignoredGw): ignoredGw,
@@ -134,20 +137,23 @@ func TestBuildStatuses(t *testing.T) {
 			ObservedGeneration: 1,
 			Conditions:         conditions.NewDefaultGatewayClassConditions(),
 		},
-		GatewayStatus: &GatewayStatus{
-			NsName: types.NamespacedName{Namespace: "test", Name: "gateway"},
-			ListenerStatuses: map[string]ListenerStatus{
-				"listener-80-1": {
-					AttachedRoutes: 1,
-					Conditions:     conditions.NewDefaultListenerConditions(),
+		GatewayStatuses: GatewayStatuses{
+			{Namespace: "test", Name: "gateway"}: {
+				Conditions: conditions.NewDefaultGatewayConditions(),
+				ListenerStatuses: map[string]ListenerStatus{
+					"listener-80-1": {
+						AttachedRoutes: 1,
+						Conditions:     conditions.NewDefaultListenerConditions(),
+					},
 				},
+				ObservedGeneration: 2,
 			},
-			ObservedGeneration: 2,
+			{Namespace: "test", Name: "ignored-gateway"}: {
+				Conditions:         []conditions.Condition{conditions.NewGatewayConflict()},
+				ObservedGeneration: 1,
+			},
 		},
-		IgnoredGatewayStatuses: map[types.NamespacedName]IgnoredGatewayStatus{
-			{Namespace: "test", Name: "ignored-gateway"}: {ObservedGeneration: 1},
-		},
-		HTTPRouteStatuses: map[types.NamespacedName]HTTPRouteStatus{
+		HTTPRouteStatuses: HTTPRouteStatuses{
 			{Namespace: "test", Name: "hr-valid"}: {
 				ObservedGeneration: 3,
 				ParentStatuses: []ParentStatus{
@@ -186,4 +192,180 @@ func TestBuildStatuses(t *testing.T) {
 
 	result := buildStatuses(graph)
 	g.Expect(helpers.Diff(expected, result)).To(BeEmpty())
+}
+
+func TestBuildGatewayStatuses(t *testing.T) {
+	tests := []struct {
+		gateway         *graph.Gateway
+		ignoredGateways map[types.NamespacedName]*v1beta1.Gateway
+		expected        GatewayStatuses
+		name            string
+	}{
+		{
+			name:     "nil gateway and no ignored gateways",
+			expected: GatewayStatuses{},
+		},
+		{
+			name: "nil gateway and ignored gateways",
+			ignoredGateways: map[types.NamespacedName]*v1beta1.Gateway{
+				{Namespace: "test", Name: "ignored-1"}: {
+					ObjectMeta: metav1.ObjectMeta{
+						Generation: 1,
+					},
+				},
+				{Namespace: "test", Name: "ignored-2"}: {
+					ObjectMeta: metav1.ObjectMeta{
+						Generation: 2,
+					},
+				},
+			},
+			expected: GatewayStatuses{
+				{Namespace: "test", Name: "ignored-1"}: {
+					Conditions:         []conditions.Condition{conditions.NewGatewayConflict()},
+					ObservedGeneration: 1,
+				},
+				{Namespace: "test", Name: "ignored-2"}: {
+					Conditions:         []conditions.Condition{conditions.NewGatewayConflict()},
+					ObservedGeneration: 2,
+				},
+			},
+		},
+		{
+			name: "valid gateway; all valid listeners",
+			gateway: &graph.Gateway{
+				Source: gw,
+				Listeners: map[string]*graph.Listener{
+					"listener-valid-1": {
+						Valid: true,
+						Routes: map[types.NamespacedName]*graph.Route{
+							{Namespace: "test", Name: "hr-1"}: {},
+						},
+					},
+					"listener-valid-2": {
+						Valid: true,
+						Routes: map[types.NamespacedName]*graph.Route{
+							{Namespace: "test", Name: "hr-1"}: {},
+						},
+					},
+				},
+				Valid: true,
+			},
+			expected: GatewayStatuses{
+				{Namespace: "test", Name: "gateway"}: {
+					Conditions: conditions.NewDefaultGatewayConditions(),
+					ListenerStatuses: map[string]ListenerStatus{
+						"listener-valid-1": {
+							AttachedRoutes: 1,
+							Conditions:     conditions.NewDefaultListenerConditions(),
+						},
+						"listener-valid-2": {
+							AttachedRoutes: 1,
+							Conditions:     conditions.NewDefaultListenerConditions(),
+						},
+					},
+					ObservedGeneration: 2,
+				},
+			},
+		},
+		{
+			name: "valid gateway; some valid listeners",
+			gateway: &graph.Gateway{
+				Source: gw,
+				Listeners: map[string]*graph.Listener{
+					"listener-valid": {
+						Valid: true,
+						Routes: map[types.NamespacedName]*graph.Route{
+							{Namespace: "test", Name: "hr-1"}: {},
+						},
+					},
+					"listener-invalid": {
+						Valid: false,
+						Conditions: []conditions.Condition{
+							conditions.NewListenerUnsupportedValue("unsupported value"),
+						},
+					},
+				},
+				Valid: true,
+			},
+			expected: GatewayStatuses{
+				{Namespace: "test", Name: "gateway"}: {
+					Conditions: []conditions.Condition{conditions.NewGatewayAcceptedListenersNotValid()},
+					ListenerStatuses: map[string]ListenerStatus{
+						"listener-valid": {
+							AttachedRoutes: 1,
+							Conditions:     conditions.NewDefaultListenerConditions(),
+						},
+						"listener-invalid": {
+							Conditions: []conditions.Condition{
+								conditions.NewListenerUnsupportedValue("unsupported value"),
+							},
+						},
+					},
+					ObservedGeneration: 2,
+				},
+			},
+		},
+		{
+			name: "valid gateway; no valid listeners",
+			gateway: &graph.Gateway{
+				Source: gw,
+				Listeners: map[string]*graph.Listener{
+					"listener-invalid-1": {
+						Valid: false,
+						Conditions: []conditions.Condition{
+							conditions.NewListenerPortUnavailable("port unavailable"),
+						},
+					},
+					"listener-invalid-2": {
+						Valid: false,
+						Conditions: []conditions.Condition{
+							conditions.NewListenerUnsupportedValue("unsupported value"),
+						},
+					},
+				},
+				Valid: true,
+			},
+			expected: GatewayStatuses{
+				{Namespace: "test", Name: "gateway"}: {
+					Conditions: []conditions.Condition{conditions.NewGatewayNotAcceptedListenersNotValid()},
+					ListenerStatuses: map[string]ListenerStatus{
+						"listener-invalid-1": {
+							Conditions: []conditions.Condition{
+								conditions.NewListenerPortUnavailable("port unavailable"),
+							},
+						},
+						"listener-invalid-2": {
+							Conditions: []conditions.Condition{
+								conditions.NewListenerUnsupportedValue("unsupported value"),
+							},
+						},
+					},
+					ObservedGeneration: 2,
+				},
+			},
+		},
+		{
+			name: "invalid gateway",
+			gateway: &graph.Gateway{
+				Source:     gw,
+				Valid:      false,
+				Conditions: []conditions.Condition{conditions.NewGatewayInvalid("no gateway class")},
+			},
+			expected: GatewayStatuses{
+				{Namespace: "test", Name: "gateway"}: {
+					Conditions:         []conditions.Condition{conditions.NewGatewayInvalid("no gateway class")},
+					ObservedGeneration: 2,
+				},
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			g := NewGomegaWithT(t)
+
+			result := buildGatewayStatuses(test.gateway, test.ignoredGateways)
+			g.Expect(helpers.Diff(test.expected, result)).To(BeEmpty())
+		})
+	}
 }

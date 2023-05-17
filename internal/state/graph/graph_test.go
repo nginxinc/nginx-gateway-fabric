@@ -234,6 +234,7 @@ func TestBuildGraph(t *testing.T) {
 						SecretPath: secretPath,
 					},
 				},
+				Valid: true,
 			},
 			IgnoredGateways: map[types.NamespacedName]*v1beta1.Gateway{
 				{Namespace: "test", Name: "gateway-2"}: gw2,

@@ -71,7 +71,13 @@ Fields:
 	* `name` - supported.
 	* `supportedKinds` - not supported.
 	* `attachedRoutes` - supported.
-	* `conditions` - partially supported.
+	* `conditions` - Supported (Condition/Status/Reason):
+      * `Accepted/True/Accepted`
+      * `Accepted/True/ListenersNotValid`
+      * `Accepted/False/Invalid`
+      * `Accepted/False/ListenersNotValid`
+      * `Accepted/False/UnsupportedValue`: Custom reason for when a value of a field in a Gateway is invalid or not supported.
+      * `Accepted/False/GatewayConflict`: Custom reason for when the Gateway is ignored due to a conflicting Gateway. NKG only supports a single Gateway.
 
 ### HTTPRoute
 

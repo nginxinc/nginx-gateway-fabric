@@ -4,10 +4,12 @@ import (
 	"sort"
 
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/validation/field"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	nkgsort "github.com/nginxinc/nginx-kubernetes-gateway/internal/sort"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/conditions"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/secrets"
 )
 
@@ -17,6 +19,10 @@ type Gateway struct {
 	Source *v1beta1.Gateway
 	// Listeners include the listeners of the Gateway.
 	Listeners map[string]*Listener
+	// Conditions holds the conditions for the Gateway.
+	Conditions []conditions.Condition
+	// Valid indicates whether the Gateway Spec is valid.
+	Valid bool
 }
 
 // processedGateways holds the resources that belong to NKG.
@@ -89,8 +95,38 @@ func buildGateway(gw *v1beta1.Gateway, secretMemoryMgr secrets.SecretDiskMemoryM
 		return nil
 	}
 
+	conds := validateGateway(gw, gc)
+
+	if len(conds) > 0 {
+		return &Gateway{
+			Source:     gw,
+			Valid:      false,
+			Conditions: conds,
+		}
+	}
+
 	return &Gateway{
 		Source:    gw,
-		Listeners: buildListeners(gw, secretMemoryMgr, gc),
+		Listeners: buildListeners(gw, secretMemoryMgr),
+		Valid:     true,
 	}
+}
+
+func validateGateway(gw *v1beta1.Gateway, gc *GatewayClass) []conditions.Condition {
+	var conds []conditions.Condition
+
+	if gc == nil {
+		conds = append(conds, conditions.NewGatewayInvalid("GatewayClass doesn't exist"))
+	} else if !gc.Valid {
+		conds = append(conds, conditions.NewGatewayInvalid("GatewayClass is invalid"))
+	}
+
+	if len(gw.Spec.Addresses) > 0 {
+		path := field.NewPath("spec", "addresses")
+		valErr := field.Forbidden(path, "addresses are not supported")
+
+		conds = append(conds, conditions.NewGatewayUnsupportedValue(valErr.Error()))
+	}
+
+	return conds
 }

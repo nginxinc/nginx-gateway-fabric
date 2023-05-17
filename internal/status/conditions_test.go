@@ -11,16 +11,16 @@ import (
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/conditions"
 )
 
-func CreateTestConditions() []conditions.Condition {
+func CreateTestConditions(condType string) []conditions.Condition {
 	return []conditions.Condition{
 		{
-			Type:    "Test",
+			Type:    condType,
 			Status:  metav1.ConditionTrue,
 			Reason:  "TestReason1",
 			Message: "Test message1",
 		},
 		{
-			Type:    "Test",
+			Type:    condType,
 			Status:  metav1.ConditionFalse,
 			Reason:  "TestReason2",
 			Message: "Test message2",
@@ -28,10 +28,14 @@ func CreateTestConditions() []conditions.Condition {
 	}
 }
 
-func CreateExpectedAPIConditions(observedGeneration int64, transitionTime metav1.Time) []metav1.Condition {
+func CreateExpectedAPIConditions(
+	condType string,
+	observedGeneration int64,
+	transitionTime metav1.Time,
+) []metav1.Condition {
 	return []metav1.Condition{
 		{
-			Type:               "Test",
+			Type:               condType,
 			Status:             metav1.ConditionTrue,
 			ObservedGeneration: observedGeneration,
 			LastTransitionTime: transitionTime,
@@ -39,7 +43,7 @@ func CreateExpectedAPIConditions(observedGeneration int64, transitionTime metav1
 			Message:            "Test message1",
 		},
 		{
-			Type:               "Test",
+			Type:               condType,
 			Status:             metav1.ConditionFalse,
 			ObservedGeneration: observedGeneration,
 			LastTransitionTime: transitionTime,
@@ -55,8 +59,8 @@ func TestConvertRouteConditions(t *testing.T) {
 	var generation int64 = 1
 	transitionTime := metav1.NewTime(time.Now())
 
-	expected := CreateExpectedAPIConditions(generation, transitionTime)
+	expected := CreateExpectedAPIConditions("Test", generation, transitionTime)
 
-	result := convertConditions(CreateTestConditions(), generation, transitionTime)
+	result := convertConditions(CreateTestConditions("Test"), generation, transitionTime)
 	g.Expect(helpers.Diff(expected, result)).To(BeEmpty())
 }

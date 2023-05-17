@@ -293,8 +293,8 @@ var _ = Describe("ChangeProcessor", func() {
 
 							expectedConf := dataplane.Configuration{}
 							expectedStatuses := state.Statuses{
-								IgnoredGatewayStatuses: map[types.NamespacedName]state.IgnoredGatewayStatus{},
-								HTTPRouteStatuses:      map[types.NamespacedName]state.HTTPRouteStatus{},
+								GatewayStatuses:   state.GatewayStatuses{},
+								HTTPRouteStatuses: state.HTTPRouteStatuses{},
 							}
 
 							changed, conf, statuses := processor.Process(context.TODO())
@@ -310,30 +310,15 @@ var _ = Describe("ChangeProcessor", func() {
 
 						expectedConf := dataplane.Configuration{}
 						expectedStatuses := state.Statuses{
-							GatewayStatus: &state.GatewayStatus{
-								NsName:             types.NamespacedName{Namespace: "test", Name: "gateway-1"},
-								ObservedGeneration: gw1.Generation,
-								ListenerStatuses: map[string]state.ListenerStatus{
-									"listener-80-1": {
-										AttachedRoutes: 0,
-										Conditions: []conditions.Condition{
-											conditions.NewListenerResolvedRefs(),
-											conditions.NewListenerNoConflicts(),
-											conditions.NewListenerNoValidGatewayClass("GatewayClass doesn't exist"),
-										},
+							GatewayStatuses: state.GatewayStatuses{
+								{Namespace: "test", Name: "gateway-1"}: {
+									Conditions: []conditions.Condition{
+										conditions.NewGatewayInvalid("GatewayClass doesn't exist"),
 									},
-									"listener-443-1": {
-										AttachedRoutes: 0,
-										Conditions: []conditions.Condition{
-											conditions.NewListenerResolvedRefs(),
-											conditions.NewListenerNoConflicts(),
-											conditions.NewListenerNoValidGatewayClass("GatewayClass doesn't exist"),
-										},
-									},
+									ObservedGeneration: gw1.Generation,
 								},
 							},
-							IgnoredGatewayStatuses: map[types.NamespacedName]state.IgnoredGatewayStatus{},
-							HTTPRouteStatuses: map[types.NamespacedName]state.HTTPRouteStatus{
+							HTTPRouteStatuses: state.HTTPRouteStatuses{
 								{Namespace: "test", Name: "hr-1"}: {
 									ObservedGeneration: hr1.Generation,
 									ParentStatuses: []state.ParentStatus{
@@ -341,16 +326,16 @@ var _ = Describe("ChangeProcessor", func() {
 											GatewayNsName: client.ObjectKeyFromObject(gw1),
 											SectionName:   helpers.GetPointer[v1beta1.SectionName]("listener-80-1"),
 											Conditions: []conditions.Condition{
-												conditions.NewRouteInvalidListener(),
 												conditions.NewRouteResolvedRefs(),
+												conditions.NewRouteInvalidGateway(),
 											},
 										},
 										{
 											GatewayNsName: client.ObjectKeyFromObject(gw1),
 											SectionName:   helpers.GetPointer[v1beta1.SectionName]("listener-443-1"),
 											Conditions: []conditions.Condition{
-												conditions.NewRouteInvalidListener(),
 												conditions.NewRouteResolvedRefs(),
+												conditions.NewRouteInvalidGateway(),
 											},
 										},
 									},
@@ -427,22 +412,23 @@ var _ = Describe("ChangeProcessor", func() {
 							ObservedGeneration: gc.Generation,
 							Conditions:         conditions.NewDefaultGatewayClassConditions(),
 						},
-						GatewayStatus: &state.GatewayStatus{
-							NsName:             types.NamespacedName{Namespace: "test", Name: "gateway-1"},
-							ObservedGeneration: gw1.Generation,
-							ListenerStatuses: map[string]state.ListenerStatus{
-								"listener-80-1": {
-									AttachedRoutes: 1,
-									Conditions:     conditions.NewDefaultListenerConditions(),
-								},
-								"listener-443-1": {
-									AttachedRoutes: 1,
-									Conditions:     conditions.NewDefaultListenerConditions(),
+						GatewayStatuses: state.GatewayStatuses{
+							{Namespace: "test", Name: "gateway-1"}: {
+								Conditions:         conditions.NewDefaultGatewayConditions(),
+								ObservedGeneration: gw1.Generation,
+								ListenerStatuses: map[string]state.ListenerStatus{
+									"listener-80-1": {
+										AttachedRoutes: 1,
+										Conditions:     conditions.NewDefaultListenerConditions(),
+									},
+									"listener-443-1": {
+										AttachedRoutes: 1,
+										Conditions:     conditions.NewDefaultListenerConditions(),
+									},
 								},
 							},
 						},
-						IgnoredGatewayStatuses: map[types.NamespacedName]state.IgnoredGatewayStatus{},
-						HTTPRouteStatuses: map[types.NamespacedName]state.HTTPRouteStatus{
+						HTTPRouteStatuses: state.HTTPRouteStatuses{
 							{Namespace: "test", Name: "hr-1"}: {
 								ObservedGeneration: hr1.Generation,
 								ParentStatuses: []state.ParentStatus{
@@ -540,22 +526,23 @@ var _ = Describe("ChangeProcessor", func() {
 							ObservedGeneration: gc.Generation,
 							Conditions:         conditions.NewDefaultGatewayClassConditions(),
 						},
-						GatewayStatus: &state.GatewayStatus{
-							NsName:             types.NamespacedName{Namespace: "test", Name: "gateway-1"},
-							ObservedGeneration: gw1.Generation,
-							ListenerStatuses: map[string]state.ListenerStatus{
-								"listener-80-1": {
-									AttachedRoutes: 1,
-									Conditions:     conditions.NewDefaultListenerConditions(),
-								},
-								"listener-443-1": {
-									AttachedRoutes: 1,
-									Conditions:     conditions.NewDefaultListenerConditions(),
+						GatewayStatuses: state.GatewayStatuses{
+							{Namespace: "test", Name: "gateway-1"}: {
+								Conditions:         conditions.NewDefaultGatewayConditions(),
+								ObservedGeneration: gw1.Generation,
+								ListenerStatuses: map[string]state.ListenerStatus{
+									"listener-80-1": {
+										AttachedRoutes: 1,
+										Conditions:     conditions.NewDefaultListenerConditions(),
+									},
+									"listener-443-1": {
+										AttachedRoutes: 1,
+										Conditions:     conditions.NewDefaultListenerConditions(),
+									},
 								},
 							},
 						},
-						IgnoredGatewayStatuses: map[types.NamespacedName]state.IgnoredGatewayStatus{},
-						HTTPRouteStatuses: map[types.NamespacedName]state.HTTPRouteStatus{
+						HTTPRouteStatuses: state.HTTPRouteStatuses{
 							{Namespace: "test", Name: "hr-1"}: {
 								ObservedGeneration: hr1Updated.Generation,
 								ParentStatuses: []state.ParentStatus{
@@ -654,22 +641,23 @@ var _ = Describe("ChangeProcessor", func() {
 							ObservedGeneration: gc.Generation,
 							Conditions:         conditions.NewDefaultGatewayClassConditions(),
 						},
-						GatewayStatus: &state.GatewayStatus{
-							NsName:             types.NamespacedName{Namespace: "test", Name: "gateway-1"},
-							ObservedGeneration: gw1Updated.Generation,
-							ListenerStatuses: map[string]state.ListenerStatus{
-								"listener-80-1": {
-									AttachedRoutes: 1,
-									Conditions:     conditions.NewDefaultListenerConditions(),
-								},
-								"listener-443-1": {
-									AttachedRoutes: 1,
-									Conditions:     conditions.NewDefaultListenerConditions(),
+						GatewayStatuses: state.GatewayStatuses{
+							{Namespace: "test", Name: "gateway-1"}: {
+								Conditions:         conditions.NewDefaultGatewayConditions(),
+								ObservedGeneration: gw1Updated.Generation,
+								ListenerStatuses: map[string]state.ListenerStatus{
+									"listener-80-1": {
+										AttachedRoutes: 1,
+										Conditions:     conditions.NewDefaultListenerConditions(),
+									},
+									"listener-443-1": {
+										AttachedRoutes: 1,
+										Conditions:     conditions.NewDefaultListenerConditions(),
+									},
 								},
 							},
 						},
-						IgnoredGatewayStatuses: map[types.NamespacedName]state.IgnoredGatewayStatus{},
-						HTTPRouteStatuses: map[types.NamespacedName]state.HTTPRouteStatus{
+						HTTPRouteStatuses: state.HTTPRouteStatuses{
 							{Namespace: "test", Name: "hr-1"}: {
 								ObservedGeneration: hr1Updated.Generation,
 								ParentStatuses: []state.ParentStatus{
@@ -767,22 +755,23 @@ var _ = Describe("ChangeProcessor", func() {
 							ObservedGeneration: gcUpdated.Generation,
 							Conditions:         conditions.NewDefaultGatewayClassConditions(),
 						},
-						GatewayStatus: &state.GatewayStatus{
-							NsName:             types.NamespacedName{Namespace: "test", Name: "gateway-1"},
-							ObservedGeneration: gw1Updated.Generation,
-							ListenerStatuses: map[string]state.ListenerStatus{
-								"listener-80-1": {
-									AttachedRoutes: 1,
-									Conditions:     conditions.NewDefaultListenerConditions(),
-								},
-								"listener-443-1": {
-									AttachedRoutes: 1,
-									Conditions:     conditions.NewDefaultListenerConditions(),
+						GatewayStatuses: state.GatewayStatuses{
+							{Namespace: "test", Name: "gateway-1"}: {
+								Conditions:         conditions.NewDefaultGatewayConditions(),
+								ObservedGeneration: gw1Updated.Generation,
+								ListenerStatuses: map[string]state.ListenerStatus{
+									"listener-80-1": {
+										AttachedRoutes: 1,
+										Conditions:     conditions.NewDefaultListenerConditions(),
+									},
+									"listener-443-1": {
+										AttachedRoutes: 1,
+										Conditions:     conditions.NewDefaultListenerConditions(),
+									},
 								},
 							},
 						},
-						IgnoredGatewayStatuses: map[types.NamespacedName]state.IgnoredGatewayStatus{},
-						HTTPRouteStatuses: map[types.NamespacedName]state.HTTPRouteStatus{
+						HTTPRouteStatuses: state.HTTPRouteStatuses{
 							{Namespace: "test", Name: "hr-1"}: {
 								ObservedGeneration: hr1Updated.Generation,
 								ParentStatuses: []state.ParentStatus{
@@ -879,26 +868,27 @@ var _ = Describe("ChangeProcessor", func() {
 							ObservedGeneration: gcUpdated.Generation,
 							Conditions:         conditions.NewDefaultGatewayClassConditions(),
 						},
-						GatewayStatus: &state.GatewayStatus{
-							NsName:             types.NamespacedName{Namespace: "test", Name: "gateway-1"},
-							ObservedGeneration: gw1Updated.Generation,
-							ListenerStatuses: map[string]state.ListenerStatus{
-								"listener-80-1": {
-									AttachedRoutes: 1,
-									Conditions:     conditions.NewDefaultListenerConditions(),
-								},
-								"listener-443-1": {
-									AttachedRoutes: 1,
-									Conditions:     conditions.NewDefaultListenerConditions(),
+						GatewayStatuses: state.GatewayStatuses{
+							{Namespace: "test", Name: "gateway-1"}: {
+								Conditions:         conditions.NewDefaultGatewayConditions(),
+								ObservedGeneration: gw1Updated.Generation,
+								ListenerStatuses: map[string]state.ListenerStatus{
+									"listener-80-1": {
+										AttachedRoutes: 1,
+										Conditions:     conditions.NewDefaultListenerConditions(),
+									},
+									"listener-443-1": {
+										AttachedRoutes: 1,
+										Conditions:     conditions.NewDefaultListenerConditions(),
+									},
 								},
 							},
-						},
-						IgnoredGatewayStatuses: map[types.NamespacedName]state.IgnoredGatewayStatus{
 							{Namespace: "test", Name: "gateway-2"}: {
+								Conditions:         []conditions.Condition{conditions.NewGatewayConflict()},
 								ObservedGeneration: gw2.Generation,
 							},
 						},
-						HTTPRouteStatuses: map[types.NamespacedName]state.HTTPRouteStatus{
+						HTTPRouteStatuses: state.HTTPRouteStatuses{
 							{Namespace: "test", Name: "hr-1"}: {
 								ObservedGeneration: hr1Updated.Generation,
 								ParentStatuses: []state.ParentStatus{
@@ -984,26 +974,27 @@ var _ = Describe("ChangeProcessor", func() {
 							ObservedGeneration: gcUpdated.Generation,
 							Conditions:         conditions.NewDefaultGatewayClassConditions(),
 						},
-						GatewayStatus: &state.GatewayStatus{
-							NsName:             types.NamespacedName{Namespace: "test", Name: "gateway-1"},
-							ObservedGeneration: gw1Updated.Generation,
-							ListenerStatuses: map[string]state.ListenerStatus{
-								"listener-80-1": {
-									AttachedRoutes: 1,
-									Conditions:     conditions.NewDefaultListenerConditions(),
-								},
-								"listener-443-1": {
-									AttachedRoutes: 1,
-									Conditions:     conditions.NewDefaultListenerConditions(),
+						GatewayStatuses: state.GatewayStatuses{
+							{Namespace: "test", Name: "gateway-1"}: {
+								Conditions:         conditions.NewDefaultGatewayConditions(),
+								ObservedGeneration: gw1Updated.Generation,
+								ListenerStatuses: map[string]state.ListenerStatus{
+									"listener-80-1": {
+										AttachedRoutes: 1,
+										Conditions:     conditions.NewDefaultListenerConditions(),
+									},
+									"listener-443-1": {
+										AttachedRoutes: 1,
+										Conditions:     conditions.NewDefaultListenerConditions(),
+									},
 								},
 							},
-						},
-						IgnoredGatewayStatuses: map[types.NamespacedName]state.IgnoredGatewayStatus{
 							{Namespace: "test", Name: "gateway-2"}: {
 								ObservedGeneration: gw2.Generation,
+								Conditions:         []conditions.Condition{conditions.NewGatewayConflict()},
 							},
 						},
-						HTTPRouteStatuses: map[types.NamespacedName]state.HTTPRouteStatus{
+						HTTPRouteStatuses: state.HTTPRouteStatuses{
 							{Namespace: "test", Name: "hr-1"}: {
 								ObservedGeneration: hr1Updated.Generation,
 								ParentStatuses: []state.ParentStatus{
@@ -1113,22 +1104,23 @@ var _ = Describe("ChangeProcessor", func() {
 							ObservedGeneration: gcUpdated.Generation,
 							Conditions:         conditions.NewDefaultGatewayClassConditions(),
 						},
-						GatewayStatus: &state.GatewayStatus{
-							NsName:             types.NamespacedName{Namespace: "test", Name: "gateway-2"},
-							ObservedGeneration: gw2.Generation,
-							ListenerStatuses: map[string]state.ListenerStatus{
-								"listener-80-1": {
-									AttachedRoutes: 1,
-									Conditions:     conditions.NewDefaultListenerConditions(),
-								},
-								"listener-443-1": {
-									AttachedRoutes: 1,
-									Conditions:     conditions.NewDefaultListenerConditions(),
+						GatewayStatuses: state.GatewayStatuses{
+							{Namespace: "test", Name: "gateway-2"}: {
+								Conditions:         conditions.NewDefaultGatewayConditions(),
+								ObservedGeneration: gw2.Generation,
+								ListenerStatuses: map[string]state.ListenerStatus{
+									"listener-80-1": {
+										AttachedRoutes: 1,
+										Conditions:     conditions.NewDefaultListenerConditions(),
+									},
+									"listener-443-1": {
+										AttachedRoutes: 1,
+										Conditions:     conditions.NewDefaultListenerConditions(),
+									},
 								},
 							},
 						},
-						IgnoredGatewayStatuses: map[types.NamespacedName]state.IgnoredGatewayStatus{},
-						HTTPRouteStatuses: map[types.NamespacedName]state.HTTPRouteStatus{
+						HTTPRouteStatuses: state.HTTPRouteStatuses{
 							{Namespace: "test", Name: "hr-2"}: {
 								ObservedGeneration: hr2.Generation,
 								ParentStatuses: []state.ParentStatus{
@@ -1181,22 +1173,23 @@ var _ = Describe("ChangeProcessor", func() {
 							ObservedGeneration: gcUpdated.Generation,
 							Conditions:         conditions.NewDefaultGatewayClassConditions(),
 						},
-						GatewayStatus: &state.GatewayStatus{
-							NsName:             types.NamespacedName{Namespace: "test", Name: "gateway-2"},
-							ObservedGeneration: gw2.Generation,
-							ListenerStatuses: map[string]state.ListenerStatus{
-								"listener-80-1": {
-									AttachedRoutes: 0,
-									Conditions:     conditions.NewDefaultListenerConditions(),
-								},
-								"listener-443-1": {
-									AttachedRoutes: 0,
-									Conditions:     conditions.NewDefaultListenerConditions(),
+						GatewayStatuses: state.GatewayStatuses{
+							{Namespace: "test", Name: "gateway-2"}: {
+								Conditions:         conditions.NewDefaultGatewayConditions(),
+								ObservedGeneration: gw2.Generation,
+								ListenerStatuses: map[string]state.ListenerStatus{
+									"listener-80-1": {
+										AttachedRoutes: 0,
+										Conditions:     conditions.NewDefaultListenerConditions(),
+									},
+									"listener-443-1": {
+										AttachedRoutes: 0,
+										Conditions:     conditions.NewDefaultListenerConditions(),
+									},
 								},
 							},
 						},
-						IgnoredGatewayStatuses: map[types.NamespacedName]state.IgnoredGatewayStatus{},
-						HTTPRouteStatuses:      map[types.NamespacedName]state.HTTPRouteStatus{},
+						HTTPRouteStatuses: state.HTTPRouteStatuses{},
 					}
 
 					changed, conf, statuses := processor.Process(context.TODO())
@@ -1214,30 +1207,15 @@ var _ = Describe("ChangeProcessor", func() {
 
 					expectedConf := dataplane.Configuration{}
 					expectedStatuses := state.Statuses{
-						GatewayStatus: &state.GatewayStatus{
-							NsName:             types.NamespacedName{Namespace: "test", Name: "gateway-2"},
-							ObservedGeneration: gw2.Generation,
-							ListenerStatuses: map[string]state.ListenerStatus{
-								"listener-80-1": {
-									AttachedRoutes: 0,
-									Conditions: []conditions.Condition{
-										conditions.NewListenerResolvedRefs(),
-										conditions.NewListenerNoConflicts(),
-										conditions.NewListenerNoValidGatewayClass("GatewayClass doesn't exist"),
-									},
+						GatewayStatuses: state.GatewayStatuses{
+							{Namespace: "test", Name: "gateway-2"}: {
+								Conditions: []conditions.Condition{
+									conditions.NewGatewayInvalid("GatewayClass doesn't exist"),
 								},
-								"listener-443-1": {
-									AttachedRoutes: 0,
-									Conditions: []conditions.Condition{
-										conditions.NewListenerResolvedRefs(),
-										conditions.NewListenerNoConflicts(),
-										conditions.NewListenerNoValidGatewayClass("GatewayClass doesn't exist"),
-									},
-								},
+								ObservedGeneration: gw2.Generation,
 							},
 						},
-						IgnoredGatewayStatuses: map[types.NamespacedName]state.IgnoredGatewayStatus{},
-						HTTPRouteStatuses:      map[types.NamespacedName]state.HTTPRouteStatus{},
+						HTTPRouteStatuses: state.HTTPRouteStatuses{},
 					}
 
 					changed, conf, statuses := processor.Process(context.TODO())
@@ -1255,8 +1233,8 @@ var _ = Describe("ChangeProcessor", func() {
 
 					expectedConf := dataplane.Configuration{}
 					expectedStatuses := state.Statuses{
-						IgnoredGatewayStatuses: map[types.NamespacedName]state.IgnoredGatewayStatus{},
-						HTTPRouteStatuses:      map[types.NamespacedName]state.HTTPRouteStatus{},
+						GatewayStatuses:   state.GatewayStatuses{},
+						HTTPRouteStatuses: state.HTTPRouteStatuses{},
 					}
 
 					changed, conf, statuses := processor.Process(context.TODO())
@@ -1274,8 +1252,8 @@ var _ = Describe("ChangeProcessor", func() {
 
 					expectedConf := dataplane.Configuration{}
 					expectedStatuses := state.Statuses{
-						IgnoredGatewayStatuses: map[types.NamespacedName]state.IgnoredGatewayStatus{},
-						HTTPRouteStatuses:      map[types.NamespacedName]state.HTTPRouteStatus{},
+						GatewayStatuses:   state.GatewayStatuses{},
+						HTTPRouteStatuses: state.HTTPRouteStatuses{},
 					}
 
 					changed, conf, statuses := processor.Process(context.TODO())
@@ -2056,8 +2034,8 @@ var _ = Describe("ChangeProcessor", func() {
 					ObservedGeneration: gc.Generation,
 					Conditions:         conditions.NewDefaultGatewayClassConditions(),
 				},
-				IgnoredGatewayStatuses: map[types.NamespacedName]state.IgnoredGatewayStatus{},
-				HTTPRouteStatuses:      map[types.NamespacedName]state.HTTPRouteStatus{},
+				GatewayStatuses:   state.GatewayStatuses{},
+				HTTPRouteStatuses: state.HTTPRouteStatuses{},
 			}
 
 			changed, conf, statuses := processor.Process(context.TODO())
@@ -2128,18 +2106,19 @@ var _ = Describe("ChangeProcessor", func() {
 						ObservedGeneration: gc.Generation,
 						Conditions:         conditions.NewDefaultGatewayClassConditions(),
 					},
-					GatewayStatus: &state.GatewayStatus{
-						NsName:             gwNsName,
-						ObservedGeneration: gw.Generation,
-						ListenerStatuses: map[string]state.ListenerStatus{
-							"listener-80-1": {
-								AttachedRoutes: 1,
-								Conditions:     conditions.NewDefaultListenerConditions(),
+					GatewayStatuses: state.GatewayStatuses{
+						gwNsName: {
+							Conditions:         conditions.NewDefaultGatewayConditions(),
+							ObservedGeneration: gw.Generation,
+							ListenerStatuses: map[string]state.ListenerStatus{
+								"listener-80-1": {
+									AttachedRoutes: 1,
+									Conditions:     conditions.NewDefaultListenerConditions(),
+								},
 							},
 						},
 					},
-					IgnoredGatewayStatuses: map[types.NamespacedName]state.IgnoredGatewayStatus{},
-					HTTPRouteStatuses: map[types.NamespacedName]state.HTTPRouteStatus{
+					HTTPRouteStatuses: state.HTTPRouteStatuses{
 						hrNsName: {
 							ObservedGeneration: hr.Generation,
 							ParentStatuses: []state.ParentStatus{
@@ -2180,18 +2159,19 @@ var _ = Describe("ChangeProcessor", func() {
 						ObservedGeneration: gc.Generation,
 						Conditions:         conditions.NewDefaultGatewayClassConditions(),
 					},
-					GatewayStatus: &state.GatewayStatus{
-						NsName:             gwNsName,
-						ObservedGeneration: gw.Generation,
-						ListenerStatuses: map[string]state.ListenerStatus{
-							"listener-80-1": {
-								AttachedRoutes: 0,
-								Conditions:     conditions.NewDefaultListenerConditions(),
+					GatewayStatuses: state.GatewayStatuses{
+						gwNsName: {
+							Conditions:         conditions.NewDefaultGatewayConditions(),
+							ObservedGeneration: gw.Generation,
+							ListenerStatuses: map[string]state.ListenerStatus{
+								"listener-80-1": {
+									AttachedRoutes: 0,
+									Conditions:     conditions.NewDefaultListenerConditions(),
+								},
 							},
 						},
 					},
-					IgnoredGatewayStatuses: map[types.NamespacedName]state.IgnoredGatewayStatus{},
-					HTTPRouteStatuses:      map[types.NamespacedName]state.HTTPRouteStatus{},
+					HTTPRouteStatuses: state.HTTPRouteStatuses{},
 				}
 
 				changed, conf, statuses := processor.Process(context.TODO())
@@ -2215,8 +2195,8 @@ var _ = Describe("ChangeProcessor", func() {
 						ObservedGeneration: gc.Generation,
 						Conditions:         conditions.NewDefaultGatewayClassConditions(),
 					},
-					IgnoredGatewayStatuses: map[types.NamespacedName]state.IgnoredGatewayStatus{},
-					HTTPRouteStatuses:      map[types.NamespacedName]state.HTTPRouteStatus{},
+					GatewayStatuses:   state.GatewayStatuses{},
+					HTTPRouteStatuses: state.HTTPRouteStatuses{},
 				}
 
 				changed, conf, statuses := processor.Process(context.TODO())

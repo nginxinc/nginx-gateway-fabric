@@ -17,10 +17,10 @@ func TestPrepareGatewayClassStatus(t *testing.T) {
 
 	status := state.GatewayClassStatus{
 		ObservedGeneration: 1,
-		Conditions:         CreateTestConditions(),
+		Conditions:         CreateTestConditions("Test"),
 	}
 	expected := v1beta1.GatewayClassStatus{
-		Conditions: CreateExpectedAPIConditions(1, transitionTime),
+		Conditions: CreateExpectedAPIConditions("Test", 1, transitionTime),
 	}
 
 	g := NewGomegaWithT(t)
