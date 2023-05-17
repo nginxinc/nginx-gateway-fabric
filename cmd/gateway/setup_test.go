@@ -3,7 +3,7 @@ package main_test
 import (
 	"errors"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	flag "github.com/spf13/pflag"
 
@@ -24,7 +24,7 @@ func MockValidator(name string, called *int, succeed bool) ValidatorContext {
 	}
 }
 
-var _ = Describe("Main", func() {
+var _ = Describe("Main Setup", func() {
 	Describe("Generic Validator", func() {
 		var mockFlags *flag.FlagSet
 		BeforeEach(func() {

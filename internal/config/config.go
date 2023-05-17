@@ -13,4 +13,6 @@ type Config struct {
 	GatewayNsName types.NamespacedName
 	// GatewayClassName is the name of the GatewayClass resource that the Gateway will use.
 	GatewayClassName string
+	// PodIP is the IP address of this Pod.
+	PodIP string
 }

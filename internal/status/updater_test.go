@@ -55,6 +55,7 @@ var _ = Describe("Updater", func() {
 			Client:           client,
 			Logger:           zap.New(),
 			Clock:            fakeClock,
+			PodIP:            "1.2.3.4",
 		})
 	})
 
@@ -121,6 +122,12 @@ var _ = Describe("Updater", func() {
 			}
 
 			createExpectedGwWithGeneration = func(generation int64) *v1beta1.Gateway {
+				ipAddrType := v1beta1.IPAddressType
+				addr := v1beta1.GatewayAddress{
+					Type:  &ipAddrType,
+					Value: "1.2.3.4",
+				}
+
 				return &v1beta1.Gateway{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "test",
@@ -143,6 +150,7 @@ var _ = Describe("Updater", func() {
 								Conditions:     status.CreateExpectedAPIConditions(generation, fakeClockTime),
 							},
 						},
+						Addresses: []v1beta1.GatewayAddress{addr},
 					},
 				}
 			}
