@@ -353,7 +353,9 @@ func TestBuildGateway(t *testing.T) {
 						Source: listener805,
 						Valid:  false,
 						Conditions: []conditions.Condition{
-							conditions.NewListenerPortUnavailable(`port: Unsupported value: 81: supported values: "80"`),
+							conditions.NewListenerPortUnavailable(
+								`port: Unsupported value: 81: supported values: "80"`,
+							),
 						},
 					},
 				},
@@ -370,7 +372,9 @@ func TestBuildGateway(t *testing.T) {
 						Source: listener4436,
 						Valid:  false,
 						Conditions: []conditions.Condition{
-							conditions.NewListenerPortUnavailable(`port: Unsupported value: 444: supported values: "443"`),
+							conditions.NewListenerPortUnavailable(
+								`port: Unsupported value: 444: supported values: "443"`,
+							),
 						},
 					},
 				},
@@ -515,7 +519,7 @@ func TestBuildGateway(t *testing.T) {
 						Source: listener801,
 						Valid:  false,
 						Conditions: []conditions.Condition{
-							conditions.NewListenerUnsupportedAddress(
+							conditions.NewListenerUnsupportedValue(
 								"spec.addresses: Forbidden: addresses are not supported",
 							),
 						},
@@ -525,7 +529,7 @@ func TestBuildGateway(t *testing.T) {
 						Valid:      false,
 						SecretPath: "",
 						Conditions: []conditions.Condition{
-							conditions.NewListenerUnsupportedAddress(
+							conditions.NewListenerUnsupportedValue(
 								"spec.addresses: Forbidden: addresses are not supported",
 							),
 						},

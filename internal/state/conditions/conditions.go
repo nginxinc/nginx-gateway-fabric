@@ -220,16 +220,6 @@ func NewListenerConflictedHostname(msg string) []Condition {
 	}
 }
 
-// NewListenerUnsupportedAddress returns a Condition that indicates that the address of a Listener is unsupported.
-func NewListenerUnsupportedAddress(msg string) Condition {
-	return Condition{
-		Type:    string(v1beta1.ListenerConditionAccepted),
-		Status:  metav1.ConditionFalse,
-		Reason:  string(v1beta1.ListenerReasonUnsupportedAddress),
-		Message: msg,
-	}
-}
-
 // NewListenerUnsupportedProtocol returns a Condition that indicates that the protocol of a Listener is unsupported.
 func NewListenerUnsupportedProtocol(msg string) Condition {
 	return Condition{

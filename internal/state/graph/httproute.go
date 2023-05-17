@@ -439,7 +439,7 @@ func validateQueryParamMatch(
 		allErrs = append(allErrs, valErr)
 	}
 
-	if err := validator.ValidateQueryParamNameInMatch(q.Name); err != nil {
+	if err := validator.ValidateQueryParamNameInMatch(string(q.Name)); err != nil {
 		valErr := field.Invalid(queryParamPath.Child("name"), q.Name, err.Error())
 		allErrs = append(allErrs, valErr)
 	}
