@@ -68,6 +68,7 @@ func DeduplicateConditions(conds []Condition) []Condition {
 func NewDefaultRouteConditions() []Condition {
 	return []Condition{
 		NewRouteAccepted(),
+		NewRouteResolvedRefs(),
 	}
 }
 
@@ -291,6 +292,16 @@ func NewRouteBackendRefUnsupportedValue(msg string) Condition {
 		Status:  metav1.ConditionFalse,
 		Reason:  RouteReasonBackendRefUnsupportedValue,
 		Message: msg,
+	}
+}
+
+// NewRouteResolvedRefs returns a Condition that indicates that all the references on the Route are resolved.
+func NewRouteResolvedRefs() Condition {
+	return Condition{
+		Type:    string(v1beta1.RouteConditionResolvedRefs),
+		Status:  metav1.ConditionTrue,
+		Reason:  string(v1beta1.RouteReasonResolvedRefs),
+		Message: "All references are resolved",
 	}
 }
 

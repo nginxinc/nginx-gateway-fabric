@@ -99,6 +99,13 @@ Fields:
 	* `conditions` - partially supported. Supported (Condition/Status/Reason):
     	*  `Accepted/True/Accepted`
     	*  `Accepted/False/NoMatchingListenerHostname`
+        *  `Accepted/False/UnsupportedValue`: Custom reason for when the HTTPRoute includes an invalid or unsupported value.
+        *  `Accepted/False/InvalidListener`: Custom reason for when the HTTPRoute references an invalid listener.
+        *  `ResolvedRefs/True/ResolvedRefs`
+        *  `ResolvedRefs/False/InvalidKind`
+        *  `ResolvedRefs/False/RefNotPermitted`
+        *  `ResolvedRefs/False/BackendNotFound`
+        *  `ResolvedRefs/False/UnsupportedValue`: Custom reason for when one of the HTTPRoute rules has a backendRef with an unsupported value.
 
 ### TLSRoute
 
