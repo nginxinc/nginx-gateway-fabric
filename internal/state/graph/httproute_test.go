@@ -1008,6 +1008,18 @@ func TestFindAcceptedHostnames(t *testing.T) {
 			expected:         []string{"foo.example.com", "bar.example.com"},
 			msg:              "nil listener hostname",
 		},
+		{
+			listenerHostname: &listenerHostnameFoo,
+			routeHostnames:   nil,
+			expected:         []string{"foo.example.com"},
+			msg:              "route has empty hostnames",
+		},
+		{
+			listenerHostname: nil,
+			routeHostnames:   nil,
+			expected:         []string{wildcardHostname},
+			msg:              "both listener and route have empty hostnames",
+		},
 	}
 
 	for _, test := range tests {

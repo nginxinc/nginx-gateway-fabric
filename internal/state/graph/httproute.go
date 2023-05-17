@@ -13,6 +13,8 @@ import (
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/validation"
 )
 
+const wildcardHostname = "~^"
+
 // Rule represents a rule of an HTTPRoute.
 type Rule struct {
 	// BackendRefs is a list of BackendRefs for the rule.
@@ -379,6 +381,13 @@ func findValidListeners(sectionName string, listeners map[string]*Listener) ([]*
 
 func findAcceptedHostnames(listenerHostname *v1beta1.Hostname, routeHostnames []v1beta1.Hostname) []string {
 	hostname := getHostname(listenerHostname)
+
+	if len(routeHostnames) == 0 {
+		if hostname == "" {
+			return []string{wildcardHostname}
+		}
+		return []string{hostname}
+	}
 
 	match := func(h v1beta1.Hostname) bool {
 		if hostname == "" {

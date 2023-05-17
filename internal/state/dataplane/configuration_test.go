@@ -217,12 +217,20 @@ func TestBuildConfiguration(t *testing.T) {
 		pathAndType{path: "/valid", pathType: prefix}, pathAndType{path: invalidMatchesPath, pathType: prefix},
 	)
 
-	hr7, hr7Groups, routeHR7 := createTestResources(
+	hr7, expHR7Groups, routeHR7 := createTestResources(
 		"hr-7",
 		"foo.example.com",
 		"listener-80-1",
 		pathAndType{path: "/valid", pathType: prefix}, pathAndType{path: "/valid", pathType: v1beta1.PathMatchExact},
 	)
+
+	hrNoHost, expHRNoHostGroups, routeNoHost := createTestResources(
+		"route-no-host",
+		"",
+		"listener-80-1",
+		pathAndType{path: "/", pathType: prefix},
+	)
+	routeNoHost.Source.Spec.Hostnames = []v1beta1.Hostname{}
 
 	httpsHR1, expHTTPSHR1Groups, httpsRouteHR1 := createTestResources(
 		"https-hr-1",
@@ -515,6 +523,60 @@ func TestBuildConfiguration(t *testing.T) {
 				BackendGroups: []BackendGroup{expHR1Groups[0], expHR2Groups[0]},
 			},
 			msg: "one http listener with two routes for different hostnames",
+		},
+		{
+			graph: &graph.Graph{
+				GatewayClass: &graph.GatewayClass{
+					Source: &v1beta1.GatewayClass{},
+					Valid:  true,
+				},
+				Gateway: &graph.Gateway{
+					Source: &v1beta1.Gateway{},
+					Listeners: map[string]*graph.Listener{
+						"listener-80-1": {
+							Source: listener80,
+							Valid:  true,
+							Routes: map[types.NamespacedName]*graph.Route{
+								{Namespace: "test", Name: "route-no-host"}: routeNoHost,
+							},
+							AcceptedHostnames: map[string]struct{}{
+								wildcardHostname: {},
+							},
+						},
+					},
+				},
+				Routes: map[types.NamespacedName]*graph.Route{
+					{Namespace: "test", Name: "route-no-host"}: routeNoHost,
+				},
+			},
+			expConf: Configuration{
+				HTTPServers: []VirtualServer{
+					{
+						IsDefault: true,
+					},
+					{
+						Hostname: wildcardHostname,
+						PathRules: []PathRule{
+							{
+								Path:     "/",
+								PathType: PathTypePrefix,
+								MatchRules: []MatchRule{
+									{
+										MatchIdx:     0,
+										RuleIdx:      0,
+										BackendGroup: expHRNoHostGroups[0],
+										Source:       hrNoHost,
+									},
+								},
+							},
+						},
+					},
+				},
+				SSLServers:    []VirtualServer{},
+				Upstreams:     []Upstream{fooUpstream},
+				BackendGroups: []BackendGroup{expHRNoHostGroups[0]},
+			},
+			msg: "one listener and route without hostnames",
 		},
 		{
 			graph: &graph.Graph{
@@ -1074,7 +1136,7 @@ func TestBuildConfiguration(t *testing.T) {
 									{
 										MatchIdx:     0,
 										RuleIdx:      1,
-										BackendGroup: hr7Groups[1],
+										BackendGroup: expHR7Groups[1],
 										Source:       hr7,
 									},
 								},
@@ -1086,7 +1148,7 @@ func TestBuildConfiguration(t *testing.T) {
 									{
 										MatchIdx:     0,
 										RuleIdx:      0,
-										BackendGroup: hr7Groups[0],
+										BackendGroup: expHR7Groups[0],
 										Source:       hr7,
 									},
 								},
@@ -1096,7 +1158,7 @@ func TestBuildConfiguration(t *testing.T) {
 				},
 				SSLServers:    []VirtualServer{},
 				Upstreams:     []Upstream{fooUpstream},
-				BackendGroups: []BackendGroup{hr7Groups[0], hr7Groups[1]},
+				BackendGroups: []BackendGroup{expHR7Groups[0], expHR7Groups[1]},
 			},
 			msg: "duplicate paths with different types",
 		},
