@@ -290,55 +290,91 @@ func bindRouteToListeners(r *Route, gw *Gateway) {
 
 		// Case 4 - winning Gateway
 
-		// Find a listener
-
-		// FIXME(pleshakov)
-		// For now, let's do simple matching.
-		// However, we need to also support wildcard matching.
-
-		bind := func(l *Listener) (valid bool) {
-			if !l.Valid {
-				return false
-			}
-
-			hostnames := findAcceptedHostnames(l.Source.Hostname, r.Source.Spec.Hostnames)
-			if len(hostnames) == 0 {
-				return true // listener is valid, but return without attaching due to no matching hostnames
-			}
-
-			attachment.Attached = true
-			for _, h := range hostnames {
-				l.AcceptedHostnames[h] = struct{}{}
-			}
-			l.Routes[client.ObjectKeyFromObject(r.Source)] = r
-
-			return true
-		}
-
-		var validListener bool
-		if getSectionName(routeRef.SectionName) == "" {
-			for _, l := range gw.Listeners {
-				validListener = bind(l) || validListener
-			}
-		} else {
-			l, exists := gw.Listeners[string(*routeRef.SectionName)]
-			if !exists {
-				// FIXME(pleshakov): Add a proper condition once it is available in the Gateway API.
-				// https://github.com/nginxinc/nginx-kubernetes-gateway/issues/306
-				attachment.FailedCondition = conditions.NewTODO("listener is not found")
-				continue
-			}
-
-			validListener = bind(l)
-		}
-		if !validListener {
-			attachment.FailedCondition = conditions.NewRouteInvalidListener()
+		// Try to attach Route to all matching listeners
+		cond, attached := tryToAttachRouteToListeners(routeRef, r, gw.Listeners)
+		if !attached {
+			attachment.FailedCondition = cond
 			continue
 		}
-		if !attachment.Attached {
-			attachment.FailedCondition = conditions.NewRouteNoMatchingListenerHostname()
-		}
+
+		attachment.Attached = true
 	}
+}
+
+// tryToAttachRouteToListeners tries to attach the route to the listeners that match the parentRef and the hostnames.
+// If it succeeds in attaching at least one listener it will return true and the condition will be empty.
+// If it fails to attach the route, it will return false and the failure condition.
+// FIXME(pleshakov)
+// For now, let's do simple matching.
+// However, we need to also support wildcard matching.
+func tryToAttachRouteToListeners(
+	ref v1beta1.ParentReference,
+	route *Route,
+	listeners map[string]*Listener,
+) (conditions.Condition, bool) {
+	validListeners, listenerExists := findValidListeners(getSectionName(ref.SectionName), listeners)
+
+	if !listenerExists {
+		// FIXME(pleshakov): Add a proper condition once it is available in the Gateway API.
+		// https://github.com/nginxinc/nginx-kubernetes-gateway/issues/306
+		return conditions.NewTODO("listener is not found"), false
+	}
+
+	if len(validListeners) == 0 {
+		return conditions.NewRouteInvalidListener(), false
+	}
+
+	bind := func(l *Listener) (attached bool) {
+		hostnames := findAcceptedHostnames(l.Source.Hostname, route.Source.Spec.Hostnames)
+		if len(hostnames) == 0 {
+			return false
+		}
+
+		for _, h := range hostnames {
+			l.AcceptedHostnames[h] = struct{}{}
+		}
+		l.Routes[client.ObjectKeyFromObject(route.Source)] = route
+
+		return true
+	}
+
+	attached := false
+	for _, l := range validListeners {
+		attached = attached || bind(l)
+	}
+
+	if !attached {
+		return conditions.NewRouteNoMatchingListenerHostname(), false
+	}
+
+	return conditions.Condition{}, true
+}
+
+// findValidListeners returns a list of valid listeners and whether the listener exists for a non-empty sectionName.
+func findValidListeners(sectionName string, listeners map[string]*Listener) ([]*Listener, bool) {
+	if sectionName != "" {
+		l, exists := listeners[sectionName]
+		if !exists {
+			return nil, false
+		}
+
+		if l.Valid {
+			return []*Listener{l}, true
+		}
+
+		return nil, true
+	}
+
+	validListeners := make([]*Listener, 0, len(listeners))
+	for _, l := range listeners {
+		if !l.Valid {
+			continue
+		}
+
+		validListeners = append(validListeners, l)
+	}
+
+	return validListeners, true
 }
 
 func findAcceptedHostnames(listenerHostname *v1beta1.Hostname, routeHostnames []v1beta1.Hostname) []string {

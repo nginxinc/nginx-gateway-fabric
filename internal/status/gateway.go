@@ -51,5 +51,6 @@ func prepareGatewayStatus(
 	return v1beta1.GatewayStatus{
 		Listeners:  listenerStatuses,
 		Addresses:  []v1beta1.GatewayAddress{gwPodIP},
-		Conditions: convertConditions(gatewayStatus.Conditions, gatewayStatus.ObservedGeneration, transitionTime)}
+		Conditions: convertConditions(gatewayStatus.Conditions, gatewayStatus.ObservedGeneration, transitionTime),
+	}
 }
