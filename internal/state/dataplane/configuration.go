@@ -266,7 +266,12 @@ func (hpr *hostPathRules) upsertListener(l *graph.Listener) {
 	}
 
 	for routeNsName, r := range l.Routes {
-		hostnames := getHostnames(r, l)
+		var hostnames []string
+		for _, p := range r.ParentRefs {
+			if val, exist := p.Attachment.AcceptedHostnames[string(l.Source.Name)]; exist {
+				hostnames = val
+			}
+		}
 
 		for _, h := range hostnames {
 			if prevListener, exists := hpr.listenersForHost[h]; exists {
@@ -325,23 +330,6 @@ func (hpr *hostPathRules) upsertListener(l *graph.Listener) {
 			}
 		}
 	}
-}
-
-func getHostnames(r *graph.Route, l *graph.Listener) []string {
-	var hostnames []string
-	for _, h := range r.Source.Spec.Hostnames {
-		if _, exist := l.AcceptedHostnames[string(h)]; exist {
-			hostnames = append(hostnames, string(h))
-		}
-	}
-
-	if len(r.Source.Spec.Hostnames) == 0 {
-		for hostname := range l.AcceptedHostnames {
-			hostnames = append(hostnames, hostname)
-		}
-	}
-
-	return hostnames
 }
 
 func (hpr *hostPathRules) buildServers() []VirtualServer {
