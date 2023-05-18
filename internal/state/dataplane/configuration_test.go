@@ -130,11 +130,25 @@ func TestBuildConfiguration(t *testing.T) {
 
 	createInternalRoute := func(
 		source *v1beta1.HTTPRoute,
+		listenerName string,
 		paths []pathAndType,
 	) *graph.Route {
+		hostnames := make([]string, 0, len(source.Spec.Hostnames))
+		for _, h := range source.Spec.Hostnames {
+			hostnames = append(hostnames, string(h))
+		}
 		r := &graph.Route{
 			Source: source,
 			Rules:  createRules(source, paths),
+			ParentRefs: []graph.ParentRef{
+				{
+					Attachment: &graph.ParentRefAttachmentStatus{
+						AcceptedHostnames: map[string][]string{
+							listenerName: hostnames,
+						},
+					},
+				},
+			},
 		}
 		return r
 	}
@@ -162,7 +176,7 @@ func TestBuildConfiguration(t *testing.T) {
 		*v1beta1.HTTPRoute, []BackendGroup, *graph.Route,
 	) {
 		hr := createRoute(name, hostname, listenerName, paths...)
-		route := createInternalRoute(hr, paths)
+		route := createInternalRoute(hr, listenerName, paths)
 		groups := createExpBackendGroupsForRoute(route)
 		return hr, groups, route
 	}
@@ -217,7 +231,7 @@ func TestBuildConfiguration(t *testing.T) {
 		pathAndType{path: "/valid", pathType: prefix}, pathAndType{path: invalidMatchesPath, pathType: prefix},
 	)
 
-	hr7, hr7Groups, routeHR7 := createTestResources(
+	hr7, expHR7Groups, routeHR7 := createTestResources(
 		"hr-7",
 		"foo.example.com",
 		"listener-80-1",
@@ -258,6 +272,8 @@ func TestBuildConfiguration(t *testing.T) {
 		"listener-443-with-hostname",
 		pathAndType{path: "/", pathType: prefix},
 	)
+	// add extra attachment for this route for duplicate listener test
+	httpsRouteHR5.ParentRefs[0].Attachment.AcceptedHostnames["listener-443-1"] = []string{"example.com"}
 
 	httpsHR6, expHTTPSHR6Groups, httpsRouteHR6 := createTestResources(
 		"https-hr-6",
@@ -352,10 +368,9 @@ func TestBuildConfiguration(t *testing.T) {
 					Source: &v1beta1.Gateway{},
 					Listeners: map[string]*graph.Listener{
 						"listener-80-1": {
-							Source:            listener80,
-							Valid:             true,
-							Routes:            map[types.NamespacedName]*graph.Route{},
-							AcceptedHostnames: map[string]struct{}{},
+							Source: listener80,
+							Valid:  true,
+							Routes: map[types.NamespacedName]*graph.Route{},
 						},
 					},
 				},
@@ -381,18 +396,16 @@ func TestBuildConfiguration(t *testing.T) {
 					Source: &v1beta1.Gateway{},
 					Listeners: map[string]*graph.Listener{
 						"listener-443-1": {
-							Source:            listener443, // nil hostname
-							Valid:             true,
-							Routes:            map[types.NamespacedName]*graph.Route{},
-							AcceptedHostnames: map[string]struct{}{},
-							SecretPath:        secretPath,
+							Source:     listener443, // nil hostname
+							Valid:      true,
+							Routes:     map[types.NamespacedName]*graph.Route{},
+							SecretPath: secretPath,
 						},
 						"listener-443-with-hostname": {
-							Source:            listener443WithHostname, // non-nil hostname
-							Valid:             true,
-							Routes:            map[types.NamespacedName]*graph.Route{},
-							AcceptedHostnames: map[string]struct{}{},
-							SecretPath:        secretPath,
+							Source:     listener443WithHostname, // non-nil hostname
+							Valid:      true,
+							Routes:     map[types.NamespacedName]*graph.Route{},
+							SecretPath: secretPath,
 						},
 					},
 				},
@@ -457,10 +470,6 @@ func TestBuildConfiguration(t *testing.T) {
 							Routes: map[types.NamespacedName]*graph.Route{
 								{Namespace: "test", Name: "hr-1"}: routeHR1,
 								{Namespace: "test", Name: "hr-2"}: routeHR2,
-							},
-							AcceptedHostnames: map[string]struct{}{
-								"foo.example.com": {},
-								"bar.example.com": {},
 							},
 						},
 					},
@@ -533,10 +542,6 @@ func TestBuildConfiguration(t *testing.T) {
 								{Namespace: "test", Name: "https-hr-1"}: httpsRouteHR1,
 								{Namespace: "test", Name: "https-hr-2"}: httpsRouteHR2,
 							},
-							AcceptedHostnames: map[string]struct{}{
-								"foo.example.com": {},
-								"bar.example.com": {},
-							},
 						},
 						"listener-443-with-hostname": {
 							Source:     listener443WithHostname,
@@ -544,9 +549,6 @@ func TestBuildConfiguration(t *testing.T) {
 							SecretPath: secretPath,
 							Routes: map[types.NamespacedName]*graph.Route{
 								{Namespace: "test", Name: "https-hr-5"}: httpsRouteHR5,
-							},
-							AcceptedHostnames: map[string]struct{}{
-								"example.com": {},
 							},
 						},
 					},
@@ -649,9 +651,6 @@ func TestBuildConfiguration(t *testing.T) {
 								{Namespace: "test", Name: "hr-3"}: routeHR3,
 								{Namespace: "test", Name: "hr-4"}: routeHR4,
 							},
-							AcceptedHostnames: map[string]struct{}{
-								"foo.example.com": {},
-							},
 						},
 						"listener-443-1": {
 							Source:     listener443,
@@ -660,9 +659,6 @@ func TestBuildConfiguration(t *testing.T) {
 							Routes: map[types.NamespacedName]*graph.Route{
 								{Namespace: "test", Name: "https-hr-3"}: httpsRouteHR3,
 								{Namespace: "test", Name: "https-hr-4"}: httpsRouteHR4,
-							},
-							AcceptedHostnames: map[string]struct{}{
-								"foo.example.com": {},
 							},
 						},
 					},
@@ -815,9 +811,6 @@ func TestBuildConfiguration(t *testing.T) {
 							Routes: map[types.NamespacedName]*graph.Route{
 								{Namespace: "test", Name: "hr-1"}: routeHR1,
 							},
-							AcceptedHostnames: map[string]struct{}{
-								"foo.example.com": {},
-							},
 						},
 					},
 				},
@@ -839,9 +832,6 @@ func TestBuildConfiguration(t *testing.T) {
 							Valid:  true,
 							Routes: map[types.NamespacedName]*graph.Route{
 								{Namespace: "test", Name: "hr-1"}: routeHR1,
-							},
-							AcceptedHostnames: map[string]struct{}{
-								"foo.example.com": {},
 							},
 						},
 					},
@@ -879,9 +869,6 @@ func TestBuildConfiguration(t *testing.T) {
 							Valid:  true,
 							Routes: map[types.NamespacedName]*graph.Route{
 								{Namespace: "test", Name: "hr-5"}: routeHR5,
-							},
-							AcceptedHostnames: map[string]struct{}{
-								"foo.example.com": {},
 							},
 						},
 					},
@@ -952,9 +939,6 @@ func TestBuildConfiguration(t *testing.T) {
 							Routes: map[types.NamespacedName]*graph.Route{
 								{Namespace: "test", Name: "hr-6"}: routeHR6,
 							},
-							AcceptedHostnames: map[string]struct{}{
-								"foo.example.com": {},
-							},
 						},
 						"listener-443-1": {
 							Source:     listener443,
@@ -962,9 +946,6 @@ func TestBuildConfiguration(t *testing.T) {
 							SecretPath: secretPath,
 							Routes: map[types.NamespacedName]*graph.Route{
 								{Namespace: "test", Name: "https-hr-6"}: httpsRouteHR6,
-							},
-							AcceptedHostnames: map[string]struct{}{
-								"foo.example.com": {},
 							},
 						},
 					},
@@ -1049,9 +1030,6 @@ func TestBuildConfiguration(t *testing.T) {
 							Routes: map[types.NamespacedName]*graph.Route{
 								{Namespace: "test", Name: "hr-7"}: routeHR7,
 							},
-							AcceptedHostnames: map[string]struct{}{
-								"foo.example.com": {},
-							},
 						},
 					},
 				},
@@ -1074,7 +1052,7 @@ func TestBuildConfiguration(t *testing.T) {
 									{
 										MatchIdx:     0,
 										RuleIdx:      1,
-										BackendGroup: hr7Groups[1],
+										BackendGroup: expHR7Groups[1],
 										Source:       hr7,
 									},
 								},
@@ -1086,7 +1064,7 @@ func TestBuildConfiguration(t *testing.T) {
 									{
 										MatchIdx:     0,
 										RuleIdx:      0,
-										BackendGroup: hr7Groups[0],
+										BackendGroup: expHR7Groups[0],
 										Source:       hr7,
 									},
 								},
@@ -1096,7 +1074,7 @@ func TestBuildConfiguration(t *testing.T) {
 				},
 				SSLServers:    []VirtualServer{},
 				Upstreams:     []Upstream{fooUpstream},
-				BackendGroups: []BackendGroup{hr7Groups[0], hr7Groups[1]},
+				BackendGroups: []BackendGroup{expHR7Groups[0], expHR7Groups[1]},
 			},
 			msg: "duplicate paths with different types",
 		},
@@ -1116,9 +1094,6 @@ func TestBuildConfiguration(t *testing.T) {
 							Routes: map[types.NamespacedName]*graph.Route{
 								{Namespace: "test", Name: "https-hr-5"}: httpsRouteHR5,
 							},
-							AcceptedHostnames: map[string]struct{}{
-								"example.com": {},
-							},
 						},
 						"listener-443-1": {
 							Source:     listener443,
@@ -1126,9 +1101,6 @@ func TestBuildConfiguration(t *testing.T) {
 							SecretPath: secretPath,
 							Routes: map[types.NamespacedName]*graph.Route{
 								{Namespace: "test", Name: "https-hr-5"}: httpsRouteHR5,
-							},
-							AcceptedHostnames: map[string]struct{}{
-								"example.com": {},
 							},
 						},
 					},

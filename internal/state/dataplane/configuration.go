@@ -267,10 +267,9 @@ func (hpr *hostPathRules) upsertListener(l *graph.Listener) {
 
 	for routeNsName, r := range l.Routes {
 		var hostnames []string
-
-		for _, h := range r.Source.Spec.Hostnames {
-			if _, exist := l.AcceptedHostnames[string(h)]; exist {
-				hostnames = append(hostnames, string(h))
+		for _, p := range r.ParentRefs {
+			if val, exist := p.Attachment.AcceptedHostnames[string(l.Source.Name)]; exist {
+				hostnames = val
 			}
 		}
 

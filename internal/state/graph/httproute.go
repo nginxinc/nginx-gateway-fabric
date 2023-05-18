@@ -13,6 +13,8 @@ import (
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/validation"
 )
 
+const wildcardHostname = "~^"
+
 // Rule represents a rule of an HTTPRoute.
 type Rule struct {
 	// BackendRefs is a list of BackendRefs for the rule.
@@ -38,6 +40,9 @@ type ParentRef struct {
 
 // ParentRefAttachmentStatus describes the attachment status of a ParentRef.
 type ParentRefAttachmentStatus struct {
+	// AcceptedHostnames is an intersection between the hostnames supported by an attached Listener
+	// and the hostnames from this Route. Key is listener name, value is list of hostnames.
+	AcceptedHostnames map[string][]string
 	// FailedCondition is the condition that describes why the ParentRef is not attached to the Gateway. It is set
 	// when Attached is false.
 	FailedCondition conditions.Condition
@@ -256,7 +261,9 @@ func bindRouteToListeners(r *Route, gw *Gateway) {
 	}
 
 	for i := 0; i < len(r.ParentRefs); i++ {
-		attachment := &ParentRefAttachmentStatus{}
+		attachment := &ParentRefAttachmentStatus{
+			AcceptedHostnames: make(map[string][]string),
+		}
 		ref := &r.ParentRefs[i]
 		ref.Attachment = attachment
 
@@ -291,7 +298,7 @@ func bindRouteToListeners(r *Route, gw *Gateway) {
 		// Case 4 - winning Gateway
 
 		// Try to attach Route to all matching listeners
-		cond, attached := tryToAttachRouteToListeners(routeRef, r, gw.Listeners)
+		cond, attached := tryToAttachRouteToListeners(ref.Attachment, routeRef.SectionName, r, gw.Listeners)
 		if !attached {
 			attachment.FailedCondition = cond
 			continue
@@ -308,11 +315,12 @@ func bindRouteToListeners(r *Route, gw *Gateway) {
 // For now, let's do simple matching.
 // However, we need to also support wildcard matching.
 func tryToAttachRouteToListeners(
-	ref v1beta1.ParentReference,
+	refStatus *ParentRefAttachmentStatus,
+	sectionName *v1beta1.SectionName,
 	route *Route,
 	listeners map[string]*Listener,
 ) (conditions.Condition, bool) {
-	validListeners, listenerExists := findValidListeners(getSectionName(ref.SectionName), listeners)
+	validListeners, listenerExists := findValidListeners(getSectionName(sectionName), listeners)
 
 	if !listenerExists {
 		// FIXME(pleshakov): Add a proper condition once it is available in the Gateway API.
@@ -330,9 +338,7 @@ func tryToAttachRouteToListeners(
 			return false
 		}
 
-		for _, h := range hostnames {
-			l.AcceptedHostnames[h] = struct{}{}
-		}
+		refStatus.AcceptedHostnames[string(l.Source.Name)] = hostnames
 		l.Routes[client.ObjectKeyFromObject(route.Source)] = route
 
 		return true
@@ -379,6 +385,13 @@ func findValidListeners(sectionName string, listeners map[string]*Listener) ([]*
 
 func findAcceptedHostnames(listenerHostname *v1beta1.Hostname, routeHostnames []v1beta1.Hostname) []string {
 	hostname := getHostname(listenerHostname)
+
+	if len(routeHostnames) == 0 {
+		if hostname == "" {
+			return []string{wildcardHostname}
+		}
+		return []string{hostname}
+	}
 
 	match := func(h v1beta1.Hostname) bool {
 		if hostname == "" {

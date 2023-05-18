@@ -173,7 +173,8 @@ func TestBuildGraph(t *testing.T) {
 				Idx:     0,
 				Gateway: client.ObjectKeyFromObject(gw1),
 				Attachment: &ParentRefAttachmentStatus{
-					Attached: true,
+					Attached:          true,
+					AcceptedHostnames: map[string][]string{"listener-80-1": {"foo.example.com"}},
 				},
 			},
 		},
@@ -188,7 +189,8 @@ func TestBuildGraph(t *testing.T) {
 				Idx:     0,
 				Gateway: client.ObjectKeyFromObject(gw1),
 				Attachment: &ParentRefAttachmentStatus{
-					Attached: true,
+					Attached:          true,
+					AcceptedHostnames: map[string][]string{"listener-443-1": {"foo.example.com"}},
 				},
 			},
 		},
@@ -218,18 +220,12 @@ func TestBuildGraph(t *testing.T) {
 						Routes: map[types.NamespacedName]*Route{
 							{Namespace: "test", Name: "hr-1"}: routeHR1,
 						},
-						AcceptedHostnames: map[string]struct{}{
-							"foo.example.com": {},
-						},
 					},
 					"listener-443-1": {
 						Source: gw1.Spec.Listeners[1],
 						Valid:  true,
 						Routes: map[types.NamespacedName]*Route{
 							{Namespace: "test", Name: "hr-3"}: routeHR3,
-						},
-						AcceptedHostnames: map[string]struct{}{
-							"foo.example.com": {},
 						},
 						SecretPath: secretPath,
 					},

@@ -19,9 +19,6 @@ type Listener struct {
 	// Routes holds the routes attached to the Listener.
 	// Only valid routes are attached.
 	Routes map[types.NamespacedName]*Route
-	// AcceptedHostnames is an intersection between the hostnames supported by the Listener and the hostnames
-	// from the attached routes.
-	AcceptedHostnames map[string]struct{}
 	// SecretPath is the path to the secret on disk.
 	SecretPath string
 	// Conditions holds the conditions of the Listener.
@@ -147,10 +144,9 @@ func (c *listenerConfigurator) configure(listener v1beta1.Listener) *Listener {
 	}
 
 	l := &Listener{
-		Source:            listener,
-		Routes:            make(map[types.NamespacedName]*Route),
-		AcceptedHostnames: make(map[string]struct{}),
-		Valid:             true,
+		Source: listener,
+		Routes: make(map[types.NamespacedName]*Route),
+		Valid:  true,
 	}
 
 	// resolvers might add different conditions to the listener, so we run them all.
