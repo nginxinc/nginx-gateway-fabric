@@ -34,7 +34,8 @@ For a description of each field, visit the [Gateway API documentation](https://g
 
 > Status: Partially supported. 
 
-NGINX Kubernetes Gateway supports only a single GatewayClass resource configured via `--gatewayclass` [cli argument](./cli-args.md).
+NGINX Kubernetes Gateway supports only a single GatewayClass resource configured via `--gatewayclass` flag
+of the [control-plane](./cli-help.md#control-plane) command.
 
 Fields:
 * `spec`
