@@ -83,13 +83,13 @@ func createRootCommand() *cobra.Command {
 	return rootCmd
 }
 
-func createControlPlaneCommand() *cobra.Command {
+func createStaticModeCommand() *cobra.Command {
 	return &cobra.Command{
-		Use:   "control-plane",
-		Short: "Start the control plane",
+		Use:   "static-mode",
+		Short: "Configure NGINX in the scope of a single Gateway resource",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			logger := zap.New()
-			logger.Info("Starting NGINX Kubernetes Gateway Control Plane",
+			logger.Info("Starting NGINX Kubernetes Gateway in static mode",
 				"version", version,
 				"commit", commit,
 				"date", date,
@@ -116,10 +116,10 @@ func createControlPlaneCommand() *cobra.Command {
 	}
 }
 
-func createProvisionerCommand() *cobra.Command {
+func createProvisionerModeCommand() *cobra.Command {
 	return &cobra.Command{
-		Use:    "provisioner",
-		Short:  "Start the provisioner",
+		Use:    "provisioner-mode",
+		Short:  "Provision an NGINX Gateway Deployment per Gateway resource configured in the static mode",
 		Hidden: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			logger := zap.New()

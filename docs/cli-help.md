@@ -2,14 +2,18 @@
 
 This document describes the commands available in the `gateway` binary of `nginx-kubernetes-gateway` container.
 
-## Control Plane 
+## Static Mode
 
-This command starts the control plane.
+This command configures NGINX in the scope of a single Gateway resource. In case of multiple Gateway resources created
+in the cluster, NGINX Kubernetes Gateway will use a deterministic conflict resolution strategy: it will choose the
+oldest resource by creation timestamp. If the timestamps are equal, NGINX Kubernetes Gateway will choose the resource
+that appears first in alphabetical order by “{namespace}/{name}”. We might support multiple Gateway resources. Please
+share your use case with us if you're interested in that support.
 
 Usage:
 
 ```
-  gateway control-plane [flags]
+  gateway static-mode [flags]
 ```
 
 Flags:

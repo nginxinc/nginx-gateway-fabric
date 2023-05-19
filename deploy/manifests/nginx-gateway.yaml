@@ -119,7 +119,7 @@ spec:
             fieldRef:
               fieldPath: status.podIP
         args:
-        - control-plane
+        - static-mode
         - --gateway-ctlr-name=k8s-gateway.nginx.org/nginx-gateway-controller
         - --gatewayclass=nginx
       - image: nginx:1.23

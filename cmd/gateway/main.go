@@ -16,8 +16,8 @@ func main() {
 	rootCmd := createRootCommand()
 
 	rootCmd.AddCommand(
-		createControlPlaneCommand(),
-		createProvisionerCommand(),
+		createStaticModeCommand(),
+		createProvisionerModeCommand(),
 	)
 
 	if err := rootCmd.Execute(); err != nil {
