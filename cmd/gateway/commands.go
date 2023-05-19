@@ -119,7 +119,7 @@ func createStaticModeCommand() *cobra.Command {
 func createProvisionerModeCommand() *cobra.Command {
 	return &cobra.Command{
 		Use:    "provisioner-mode",
-		Short:  "Provision an NGINX Gateway Deployment per Gateway resource configured in the static mode",
+		Short:  "Provision a static-mode NGINX Gateway Deployment per Gateway resource",
 		Hidden: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			logger := zap.New()
