@@ -31,7 +31,7 @@ func TestRootCmdFlagValidation(t *testing.T) {
 			expectedErrPrefix: `required flag(s) "gateway-ctlr-name" not set`,
 		},
 		{
-			name: "gateway-ctrl-name is set to empty string",
+			name: "gateway-ctlr-name is set to empty string",
 			args: []string{
 				"--gateway-ctlr-name=",
 				"--gatewayclass=nginx",
