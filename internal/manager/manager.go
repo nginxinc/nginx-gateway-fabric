@@ -133,7 +133,6 @@ func Start(cfg config.Config) error {
 		GatewayCtlrName:      cfg.GatewayCtlrName,
 		GatewayClassName:     cfg.GatewayClassName,
 		SecretMemoryManager:  secretMemoryMgr,
-		ServiceResolver:      resolver.NewServiceResolverImpl(mgr.GetClient()),
 		RelationshipCapturer: relationship.NewCapturerImpl(),
 		Logger:               cfg.Logger.WithName("changeProcessor"),
 		Validators: validation.Validators{
@@ -160,6 +159,7 @@ func Start(cfg config.Config) error {
 		Processor:           processor,
 		SecretStore:         secretStore,
 		SecretMemoryManager: secretMemoryMgr,
+		ServiceResolver:     resolver.NewServiceResolverImpl(mgr.GetClient()),
 		Generator:           configGenerator,
 		Logger:              cfg.Logger.WithName("eventHandler"),
 		NginxFileMgr:        nginxFileMgr,

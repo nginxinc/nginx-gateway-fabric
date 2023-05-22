@@ -1,4 +1,4 @@
-package state
+package status
 
 import (
 	"k8s.io/apimachinery/pkg/types"
@@ -67,8 +67,12 @@ type GatewayClassStatus struct {
 	ObservedGeneration int64
 }
 
-// buildStatuses builds statuses from a Graph.
-func buildStatuses(graph *graph.Graph) Statuses {
+type NginxReloadResult struct {
+	Error error
+}
+
+// BuildStatuses builds statuses from a Graph.
+func BuildStatuses(graph *graph.Graph, nginxReloadRes NginxReloadResult) Statuses {
 	statuses := Statuses{
 		HTTPRouteStatuses: make(HTTPRouteStatuses),
 	}
@@ -89,7 +93,7 @@ func buildStatuses(graph *graph.Graph) Statuses {
 		}
 	}
 
-	statuses.GatewayStatuses = buildGatewayStatuses(graph.Gateway, graph.IgnoredGateways)
+	statuses.GatewayStatuses = buildGatewayStatuses(graph.Gateway, graph.IgnoredGateways, nginxReloadRes)
 
 	for nsname, r := range graph.Routes {
 		parentStatuses := make([]ParentStatus, 0, len(r.ParentRefs))
@@ -109,6 +113,10 @@ func buildStatuses(graph *graph.Graph) Statuses {
 			allConds = append(allConds, r.Conditions...)
 			if failedAttachmentCondCount == 1 {
 				allConds = append(allConds, ref.Attachment.FailedCondition)
+			}
+
+			if nginxReloadRes.Error != nil {
+				allConds = append(allConds, conditions.NewRouteGatewayNotProgrammed(conditions.RouteMessageFailedNginxReload))
 			}
 
 			routeRef := r.Source.Spec.ParentRefs[ref.Idx]
@@ -132,16 +140,17 @@ func buildStatuses(graph *graph.Graph) Statuses {
 func buildGatewayStatuses(
 	gateway *graph.Gateway,
 	ignoredGateways map[types.NamespacedName]*v1beta1.Gateway,
+	nginxReloadRes NginxReloadResult,
 ) GatewayStatuses {
 	statuses := make(GatewayStatuses)
 
 	if gateway != nil {
-		statuses[client.ObjectKeyFromObject(gateway.Source)] = buildGatewayStatus(gateway)
+		statuses[client.ObjectKeyFromObject(gateway.Source)] = buildGatewayStatus(gateway, nginxReloadRes)
 	}
 
 	for nsname, gw := range ignoredGateways {
 		statuses[nsname] = GatewayStatus{
-			Conditions:         []conditions.Condition{conditions.NewGatewayConflict()},
+			Conditions:         conditions.NewGatewayConflict(),
 			ObservedGeneration: gw.Generation,
 		}
 	}
@@ -149,7 +158,7 @@ func buildGatewayStatuses(
 	return statuses
 }
 
-func buildGatewayStatus(gateway *graph.Gateway) GatewayStatus {
+func buildGatewayStatus(gateway *graph.Gateway, nginxReloadRes NginxReloadResult) GatewayStatus {
 	if !gateway.Valid {
 		return GatewayStatus{
 			Conditions:         conditions.DeduplicateConditions(gateway.Conditions),
@@ -178,9 +187,13 @@ func buildGatewayStatus(gateway *graph.Gateway) GatewayStatus {
 
 	gwConds := conditions.NewDefaultGatewayConditions()
 	if validListenerCount == 0 {
-		gwConds = append(gwConds, conditions.NewGatewayNotAcceptedListenersNotValid())
+		gwConds = append(gwConds, conditions.NewGatewayNotAcceptedListenersNotValid()...)
 	} else if validListenerCount < len(gateway.Listeners) {
 		gwConds = append(gwConds, conditions.NewGatewayAcceptedListenersNotValid())
+	}
+
+	if nginxReloadRes.Error != nil {
+		gwConds = append(gwConds, conditions.NewGatewayNotProgrammedInvalid(conditions.GatewayMessageFailedNginxReload))
 	}
 
 	return GatewayStatus{

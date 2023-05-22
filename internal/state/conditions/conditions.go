@@ -23,17 +23,32 @@ const (
 	// RouteReasonInvalidListener is used with the "Accepted" condition when the Route references an invalid listener.
 	RouteReasonInvalidListener v1beta1.RouteConditionReason = "InvalidListener"
 
+	// RouteReasonGatewayNotProgrammed is used when the associated Gateway is not programmed.
+	// Used with Accepted (false).
+	RouteReasonGatewayNotProgrammed v1beta1.RouteConditionReason = "GatewayNotProgrammed"
+
 	// GatewayReasonGatewayConflict indicates there are multiple Gateway resources to choose from,
 	// and we ignored the resource in question and picked another Gateway as the winner.
 	// This reason is used with GatewayConditionAccepted (false).
 	GatewayReasonGatewayConflict v1beta1.GatewayConditionReason = "GatewayConflict"
 
-	// GatewayMessageGatewayConflict is message that describes GatewayReasonGatewayConflict.
+	// GatewayMessageGatewayConflict is a message that describes GatewayReasonGatewayConflict.
 	GatewayMessageGatewayConflict = "The resource is ignored due to a conflicting Gateway resource"
 
 	// GatewayReasonUnsupportedValue is used with GatewayConditionAccepted (false) when a value of a field in a Gateway
 	// is invalid or not supported.
 	GatewayReasonUnsupportedValue v1beta1.GatewayConditionReason = "UnsupportedValue"
+
+	// GatewayMessageFailedNginxReload is a message used with GatewayConditionProgrammed (false)
+	// when nginx fails to reload.
+	GatewayMessageFailedNginxReload = "The Gateway is not programmed due to a failure to " +
+		"reload nginx with the configuration"
+
+	// RouteMessageFailedNginxReload is a message used with RouteReasonGatewayNotProgrammed
+	// when nginx fails to reload.
+	RouteMessageFailedNginxReload = GatewayMessageFailedNginxReload + ". NGINX may still be configured " +
+		"for this HTTPRoute. However, future updates to this resource will not be configured until the Gateway " +
+		"is programmed again"
 )
 
 // Condition defines a condition to be reported in the status of resources.
@@ -212,6 +227,17 @@ func NewRouteNoMatchingParent() Condition {
 	}
 }
 
+// NewRouteGatewayNotProgrammed returns a Condition that indicates that the Gateway it references is not programmed,
+// which does not guarantee that the HTTPRoute has been configured.
+func NewRouteGatewayNotProgrammed(msg string) Condition {
+	return Condition{
+		Type:    string(v1beta1.RouteConditionAccepted),
+		Status:  metav1.ConditionFalse,
+		Reason:  string(RouteReasonGatewayNotProgrammed),
+		Message: msg,
+	}
+}
+
 // NewDefaultListenerConditions returns the default Conditions that must be present in the status of a Listener.
 func NewDefaultListenerConditions() []Condition {
 	return []Condition{
@@ -344,6 +370,7 @@ func NewGatewayClassInvalidParameters(msg string) Condition {
 func NewDefaultGatewayConditions() []Condition {
 	return []Condition{
 		NewGatewayAccepted(),
+		NewGatewayProgrammed(),
 	}
 }
 
@@ -358,12 +385,15 @@ func NewGatewayAccepted() Condition {
 }
 
 // NewGatewayConflict returns a Condition that indicates the Gateway has a conflict with another Gateway.
-func NewGatewayConflict() Condition {
-	return Condition{
-		Type:    string(v1beta1.GatewayConditionAccepted),
-		Status:  metav1.ConditionFalse,
-		Reason:  string(GatewayReasonGatewayConflict),
-		Message: GatewayMessageGatewayConflict,
+func NewGatewayConflict() []Condition {
+	return []Condition{
+		{
+			Type:    string(v1beta1.GatewayConditionAccepted),
+			Status:  metav1.ConditionFalse,
+			Reason:  string(GatewayReasonGatewayConflict),
+			Message: GatewayMessageGatewayConflict,
+		},
+		NewGatewayConflictNotProgrammed(),
 	}
 }
 
@@ -380,33 +410,80 @@ func NewGatewayAcceptedListenersNotValid() Condition {
 
 // NewGatewayNotAcceptedListenersNotValid returns a Condition that indicates the Gateway is not accepted,
 // because all listeners are invalid.
-func NewGatewayNotAcceptedListenersNotValid() Condition {
-	return Condition{
-		Type:    string(v1beta1.GatewayConditionAccepted),
-		Status:  metav1.ConditionFalse,
-		Reason:  string(v1beta1.GatewayReasonListenersNotValid),
-		Message: "Gateway has no valid listeners",
+func NewGatewayNotAcceptedListenersNotValid() []Condition {
+	msg := "Gateway has no valid listeners"
+	return []Condition{
+		{
+			Type:    string(v1beta1.GatewayConditionAccepted),
+			Status:  metav1.ConditionFalse,
+			Reason:  string(v1beta1.GatewayReasonListenersNotValid),
+			Message: msg,
+		},
+		NewGatewayNotProgrammedInvalid(msg),
 	}
 }
 
-// NewGatewayInvalid returns a Condition that indicates the Gateway is not accepted because it is
+// NewGatewayInvalid returns a Condition that indicates the Gateway is not accepted and programmed because it is
 // semantically or syntactically invalid. The provided message contains the details of why the Gateway is invalid.
-func NewGatewayInvalid(msg string) Condition {
+func NewGatewayInvalid(msg string) []Condition {
+	return []Condition{
+		{
+			Type:    string(v1beta1.GatewayConditionAccepted),
+			Status:  metav1.ConditionFalse,
+			Reason:  string(v1beta1.GatewayReasonInvalid),
+			Message: msg,
+		},
+		NewGatewayNotProgrammedInvalid(msg),
+	}
+}
+
+// NewGatewayUnsupportedValue returns a Condition that indicates that a field of the Gateway has an unsupported value.
+// Unsupported means that the value is not supported by the implementation or invalid.
+func NewGatewayUnsupportedValue(msg string) []Condition {
+	return []Condition{
+		{
+			Type:    string(v1beta1.GatewayConditionAccepted),
+			Status:  metav1.ConditionFalse,
+			Reason:  string(GatewayReasonUnsupportedValue),
+			Message: msg,
+		},
+		{
+			Type:    string(v1beta1.GatewayConditionProgrammed),
+			Status:  metav1.ConditionFalse,
+			Reason:  string(GatewayReasonUnsupportedValue),
+			Message: msg,
+		},
+	}
+}
+
+// NewGatewayProgrammed returns a Condition that indicates the Gateway is programmed.
+func NewGatewayProgrammed() Condition {
 	return Condition{
-		Type:    string(v1beta1.GatewayConditionAccepted),
+		Type:    string(v1beta1.GatewayConditionProgrammed),
+		Status:  metav1.ConditionTrue,
+		Reason:  string(v1beta1.GatewayReasonProgrammed),
+		Message: "Gateway is programmed",
+	}
+}
+
+// NewGatewayInvalid returns a Condition that indicates the Gateway is not programmed because it is
+// semantically or syntactically invalid. The provided message contains the details of why the Gateway is invalid.
+func NewGatewayNotProgrammedInvalid(msg string) Condition {
+	return Condition{
+		Type:    string(v1beta1.GatewayConditionProgrammed),
 		Status:  metav1.ConditionFalse,
 		Reason:  string(v1beta1.GatewayReasonInvalid),
 		Message: msg,
 	}
 }
 
-// NewGatewayUnsupportedValue returns a Condition that indicates that a field of the Gateway has an unsupported value.
-// Unsupported means that the value is not supported by the implementation or invalid.
-func NewGatewayUnsupportedValue(msg string) Condition {
+// NewGatewayConflictNotProgrammed returns a custom Programmed Condition that indicates the Gateway has a
+// conflict with another Gateway.
+func NewGatewayConflictNotProgrammed() Condition {
 	return Condition{
-		Type:    string(v1beta1.GatewayConditionAccepted),
+		Type:    string(v1beta1.GatewayConditionProgrammed),
 		Status:  metav1.ConditionFalse,
-		Reason:  string(GatewayReasonUnsupportedValue),
-		Message: msg,
+		Reason:  string(GatewayReasonGatewayConflict),
+		Message: GatewayMessageGatewayConflict,
 	}
 }

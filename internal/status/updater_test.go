@@ -16,7 +16,6 @@ import (
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/helpers"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/conditions"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/status"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/status/statusfakes"
@@ -73,16 +72,16 @@ var _ = Describe("Updater", func() {
 				Value: "1.2.3.4",
 			}
 
-			createStatuses = func(gens generations) state.Statuses {
-				return state.Statuses{
-					GatewayClassStatus: &state.GatewayClassStatus{
+			createStatuses = func(gens generations) status.Statuses {
+				return status.Statuses{
+					GatewayClassStatus: &status.GatewayClassStatus{
 						ObservedGeneration: gens.gatewayClass,
 						Conditions:         status.CreateTestConditions("Test"),
 					},
-					GatewayStatuses: state.GatewayStatuses{
+					GatewayStatuses: status.GatewayStatuses{
 						{Namespace: "test", Name: "gateway"}: {
 							Conditions: status.CreateTestConditions("Test"),
-							ListenerStatuses: map[string]state.ListenerStatus{
+							ListenerStatuses: map[string]status.ListenerStatus{
 								"http": {
 									AttachedRoutes: 1,
 									Conditions:     status.CreateTestConditions("Test"),
@@ -91,14 +90,14 @@ var _ = Describe("Updater", func() {
 							ObservedGeneration: gens.gateways,
 						},
 						{Namespace: "test", Name: "ignored-gateway"}: {
-							Conditions:         []conditions.Condition{conditions.NewGatewayConflict()},
+							Conditions:         conditions.NewGatewayConflict(),
 							ObservedGeneration: 1,
 						},
 					},
-					HTTPRouteStatuses: state.HTTPRouteStatuses{
+					HTTPRouteStatuses: status.HTTPRouteStatuses{
 						{Namespace: "test", Name: "route1"}: {
 							ObservedGeneration: 5,
-							ParentStatuses: []state.ParentStatus{
+							ParentStatuses: []status.ParentStatus{
 								{
 									GatewayNsName: types.NamespacedName{Namespace: "test", Name: "gateway"},
 									SectionName:   helpers.GetPointer[v1beta1.SectionName]("http"),
@@ -168,6 +167,14 @@ var _ = Describe("Updater", func() {
 						Conditions: []metav1.Condition{
 							{
 								Type:               string(v1beta1.GatewayConditionAccepted),
+								Status:             metav1.ConditionFalse,
+								ObservedGeneration: 1,
+								LastTransitionTime: fakeClockTime,
+								Reason:             string(conditions.GatewayReasonGatewayConflict),
+								Message:            conditions.GatewayMessageGatewayConflict,
+							},
+							{
+								Type:               string(v1beta1.GatewayConditionProgrammed),
 								Status:             metav1.ConditionFalse,
 								ObservedGeneration: 1,
 								LastTransitionTime: fakeClockTime,
@@ -436,8 +443,8 @@ var _ = Describe("Updater", func() {
 		It("should not update GatewayClass status", func() {
 			updater.Update(
 				context.Background(),
-				state.Statuses{
-					GatewayClassStatus: &state.GatewayClassStatus{
+				status.Statuses{
+					GatewayClassStatus: &status.GatewayClassStatus{
 						ObservedGeneration: 1,
 						Conditions:         status.CreateTestConditions("Test"),
 					},

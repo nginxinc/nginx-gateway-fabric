@@ -5,13 +5,11 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
-
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state"
 )
 
 // prepareGatewayStatus prepares the status for a Gateway resource.
 func prepareGatewayStatus(
-	gatewayStatus state.GatewayStatus,
+	gatewayStatus GatewayStatus,
 	podIP string,
 	transitionTime metav1.Time,
 ) v1beta1.GatewayStatus {

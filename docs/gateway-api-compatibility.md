@@ -39,11 +39,11 @@ of the [static-mode](./cli-help.md#static-mode) command.
 
 Fields:
 * `spec`
-	* `controllerName` - supported.
-	* `parametersRef` - not supported.
-	* `description` - supported.
+    * `controllerName` - supported.
+    * `parametersRef` - not supported.
+    * `description` - supported.
 * `status`
-	* `conditions` - partially supported.
+    * `conditions` - partially supported.
 
 ### Gateway
 
@@ -54,18 +54,18 @@ See [static-mode](./cli-help.md#static-mode) command for more info.
 
 Fields:
 * `spec`
-	* `gatewayClassName` - supported.
-	* `listeners`
-		* `name` - supported.
-		* `hostname` - partially supported. Wildcard hostnames like `*.example.com` are not yet supported.
-		* `port` - partially supported. Allowed values: `80` for HTTP listeners and `443` for HTTPS listeners.
-		* `protocol` - partially supported. Allowed values: `HTTP`, `HTTPS`.
-		* `tls`
-		  * `mode` - partially supported. Allowed value: `Terminate`.
-		  * `certificateRefs` - partially supported. The TLS certificate and key must be stored in a Secret resource of type `kubernetes.io/tls` in the same namespace as the Gateway resource. Only a single reference is supported. You must deploy the Secret before the Gateway resource. Secret rotation (watching for updates) is not supported.
-		  * `options` - not supported.
-		* `allowedRoutes` - not supported. 
-	* `addresses` - not supported.
+    * `gatewayClassName` - supported.
+    * `listeners`
+        * `name` - supported.
+        * `hostname` - partially supported. Wildcard hostnames like `*.example.com` are not yet supported.
+        * `port` - partially supported. Allowed values: `80` for HTTP listeners and `443` for HTTPS listeners.
+        * `protocol` - partially supported. Allowed values: `HTTP`, `HTTPS`.
+        * `tls`
+          * `mode` - partially supported. Allowed value: `Terminate`.
+          * `certificateRefs` - partially supported. The TLS certificate and key must be stored in a Secret resource of type `kubernetes.io/tls` in the same namespace as the Gateway resource. Only a single reference is supported. You must deploy the Secret before the Gateway resource. Secret rotation (watching for updates) is not supported.
+          * `options` - not supported.
+        * `allowedRoutes` - not supported.
+    * `addresses` - not supported.
 * `status`
   * `addresses` - Pod IPAddress supported.
   * `conditions` - Supported (Condition/Status/Reason):
@@ -75,11 +75,14 @@ Fields:
     * `Accepted/False/Invalid`
     * `Accepted/False/UnsupportedValue`: Custom reason for when a value of a field in a Gateway is invalid or not supported.
     * `Accepted/False/GatewayConflict`: Custom reason for when the Gateway is ignored due to a conflicting Gateway. NKG only supports a single Gateway.
+    * `Programmed/True/Programmed`
+    * `Programmed/False/Invalid`
+    * `Programmed/False/GatewayConflict`: Custom reason for when the Gateway is ignored due to a conflicting Gateway. NKG only supports a single Gateway.
   * `listeners`
-	* `name` - supported.
-	* `supportedKinds` - not supported.
-	* `attachedRoutes` - supported.
-	* `conditions` - Supported (Condition/Status/Reason):
+    * `name` - supported.
+    * `supportedKinds` - not supported.
+    * `attachedRoutes` - supported.
+    * `conditions` - Supported (Condition/Status/Reason):
       * `Accepted/True/Accepted`
       * `Accepted/False/UnsupportedProtocol`
       * `Accepted/False/InvalidCertificateRef`
@@ -101,26 +104,27 @@ Fields:
   * `parentRefs` - partially supported. Port not supported.
   * `hostnames` - partially supported. Wildcard binding is not supported: a hostname like `example.com` will not bind to a listener with the hostname `*.example.com`. However, `example.com` will bind to a listener with the empty hostname.
   * `rules`
-	* `matches`
-	  * `path` - partially supported. Only `PathPrefix` and `Exact` types.
-	  * `headers` - partially supported. Only `Exact` type.
-	  * `queryParams` - partially supported. Only `Exact` type. 
-	  * `method` -  supported.
-	* `filters`
-		* `type` - supported.
-		* `requestRedirect` - supported except for the experimental `path` field. If multiple filters with `requestRedirect` are configured, NGINX Kubernetes Gateway will choose the first one and ignore the rest. 
-		* `requestHeaderModifier`, `requestMirror`, `urlRewrite`, `extensionRef` - not supported.
-	* `backendRefs` - partially supported. Backend ref `filters` are not supported.
+    * `matches`
+      * `path` - partially supported. Only `PathPrefix` and `Exact` types.
+      * `headers` - partially supported. Only `Exact` type.
+      * `queryParams` - partially supported. Only `Exact` type.
+      * `method` -  supported.
+    * `filters`
+        * `type` - supported.
+        * `requestRedirect` - supported except for the experimental `path` field. If multiple filters with `requestRedirect` are configured, NGINX Kubernetes Gateway will choose the first one and ignore the rest.
+        * `requestHeaderModifier`, `requestMirror`, `urlRewrite`, `extensionRef` - not supported.
+    * `backendRefs` - partially supported. Backend ref `filters` are not supported.
 * `status`
   * `parents`
-	* `parentRef` - supported.
-	* `controllerName` - supported.
-	* `conditions` - partially supported. Supported (Condition/Status/Reason):
-    	*  `Accepted/True/Accepted`
-    	*  `Accepted/False/NoMatchingListenerHostname`
+    * `parentRef` - supported.
+    * `controllerName` - supported.
+    * `conditions` - partially supported. Supported (Condition/Status/Reason):
+        *  `Accepted/True/Accepted`
+        *  `Accepted/False/NoMatchingListenerHostname`
         *  `Accepted/False/NoMatchingParent`
         *  `Accepted/False/UnsupportedValue`: Custom reason for when the HTTPRoute includes an invalid or unsupported value.
         *  `Accepted/False/InvalidListener`: Custom reason for when the HTTPRoute references an invalid listener.
+        *  `Accepted/False/GatewayNotProgrammed`: Custom reason for when the Gateway is not Programmed. HTTPRoute may be valid and configured, but will maintain this status as long as the Gateway is not Programmed.
         *  `ResolvedRefs/True/ResolvedRefs`
         *  `ResolvedRefs/False/InvalidKind`
         *  `ResolvedRefs/False/RefNotPermitted`

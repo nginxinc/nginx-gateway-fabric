@@ -1,7 +1,6 @@
 package state
 
 import (
-	"context"
 	"fmt"
 	"sync"
 
@@ -18,10 +17,8 @@ import (
 
 	gwapivalidation "sigs.k8s.io/gateway-api/apis/v1beta1/validation"
 
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/dataplane"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/graph"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/relationship"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/resolver"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/secrets"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/validation"
 )
@@ -46,19 +43,15 @@ type ChangeProcessor interface {
 	// The method panics if the resource is of unsupported type or if the passed Gateway is different from the one
 	// this ChangeProcessor was created for.
 	CaptureDeleteChange(resourceType client.Object, nsname types.NamespacedName)
-	// Process processes any captured changes and produces an internal representation of the Gateway configuration and
-	// the status information about the processed resources.
-	// If no changes were captured, the changed return argument will be false and both the configuration and statuses
-	// will be empty.
-	Process(ctx context.Context) (changed bool, conf dataplane.Configuration, statuses Statuses)
+	// Process produces an internal representation of the Gateway configuration.
+	// If no changes were captured, the changed return argument will be false and graph will be empty.
+	Process() (changed bool, graphCfg *graph.Graph)
 }
 
 // ChangeProcessorConfig holds configuration parameters for ChangeProcessorImpl.
 type ChangeProcessorConfig struct {
 	// SecretMemoryManager is the secret memory manager.
 	SecretMemoryManager secrets.SecretDiskMemoryManager
-	// ServiceResolver resolves Services to Endpoints.
-	ServiceResolver resolver.ServiceResolver
 	// RelationshipCapturer captures relationships between Kubernetes API resources and Gateway API resources.
 	RelationshipCapturer relationship.Capturer
 	// Validators validate resources according to data-plane specific rules.
@@ -197,17 +190,15 @@ func (c *ChangeProcessorImpl) CaptureDeleteChange(resourceType client.Object, ns
 	c.updater.Delete(resourceType, nsname)
 }
 
-func (c *ChangeProcessorImpl) Process(
-	ctx context.Context,
-) (changed bool, conf dataplane.Configuration, statuses Statuses) {
+func (c *ChangeProcessorImpl) Process() (bool, *graph.Graph) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
 	if !c.getAndResetClusterStateChanged() {
-		return false, conf, statuses
+		return false, nil
 	}
 
-	g := graph.BuildGraph(
+	graphCfg := graph.BuildGraph(
 		c.clusterState,
 		c.cfg.GatewayCtlrName,
 		c.cfg.GatewayClassName,
@@ -215,8 +206,5 @@ func (c *ChangeProcessorImpl) Process(
 		c.cfg.Validators,
 	)
 
-	conf = dataplane.BuildConfiguration(ctx, g, c.cfg.ServiceResolver)
-	statuses = buildStatuses(g)
-
-	return true, conf, statuses
+	return true, graphCfg
 }

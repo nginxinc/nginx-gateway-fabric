@@ -5,26 +5,25 @@ import (
 	"context"
 	"sync"
 
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/status"
 )
 
 type FakeUpdater struct {
-	UpdateStub        func(context.Context, state.Statuses)
+	UpdateStub        func(context.Context, status.Statuses)
 	updateMutex       sync.RWMutex
 	updateArgsForCall []struct {
 		arg1 context.Context
-		arg2 state.Statuses
+		arg2 status.Statuses
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeUpdater) Update(arg1 context.Context, arg2 state.Statuses) {
+func (fake *FakeUpdater) Update(arg1 context.Context, arg2 status.Statuses) {
 	fake.updateMutex.Lock()
 	fake.updateArgsForCall = append(fake.updateArgsForCall, struct {
 		arg1 context.Context
-		arg2 state.Statuses
+		arg2 status.Statuses
 	}{arg1, arg2})
 	stub := fake.UpdateStub
 	fake.recordInvocation("Update", []interface{}{arg1, arg2})
@@ -40,13 +39,13 @@ func (fake *FakeUpdater) UpdateCallCount() int {
 	return len(fake.updateArgsForCall)
 }
 
-func (fake *FakeUpdater) UpdateCalls(stub func(context.Context, state.Statuses)) {
+func (fake *FakeUpdater) UpdateCalls(stub func(context.Context, status.Statuses)) {
 	fake.updateMutex.Lock()
 	defer fake.updateMutex.Unlock()
 	fake.UpdateStub = stub
 }
 
-func (fake *FakeUpdater) UpdateArgsForCall(i int) (context.Context, state.Statuses) {
+func (fake *FakeUpdater) UpdateArgsForCall(i int) (context.Context, status.Statuses) {
 	fake.updateMutex.RLock()
 	defer fake.updateMutex.RUnlock()
 	argsForCall := fake.updateArgsForCall[i]

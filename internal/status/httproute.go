@@ -3,13 +3,11 @@ package status
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
-
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state"
 )
 
 // prepareHTTPRouteStatus prepares the status for an HTTPRoute resource.
 func prepareHTTPRouteStatus(
-	status state.HTTPRouteStatus,
+	status HTTPRouteStatus,
 	gatewayCtlrName string,
 	transitionTime metav1.Time,
 ) v1beta1.HTTPRouteStatus {
