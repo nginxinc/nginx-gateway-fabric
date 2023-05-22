@@ -50,7 +50,6 @@ Fields:
 > Status: Partially supported.
 
 NGINX Kubernetes Gateway supports only a single Gateway resource. The Gateway resource must reference NGINX Kubernetes Gateway's corresponding GatewayClass.
-In case of multiple Gateway resources created in the cluster, NGINX Kubernetes Gateway will use a deterministic conflict resolution strategy.
 See [static-mode](./cli-help.md#static-mode) command for more info.
 
 Fields:

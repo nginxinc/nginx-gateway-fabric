@@ -8,6 +8,7 @@ import (
 	discoveryV1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	ctlr "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -67,6 +68,9 @@ func Start(cfg config.Config) error {
 		return fmt.Errorf("cannot build runtime manager: %w", err)
 	}
 
+	// Note: for any new object type or a change to the existing one,
+	// make sure to also update prepareFirstEventBatchPreparerArgs()
+	// FIXME(pleshakov): Make the comment above redundant.
 	controllerRegCfgs := []struct {
 		objectType client.Object
 		options    []controller.Option
@@ -74,11 +78,21 @@ func Start(cfg config.Config) error {
 		{
 			objectType: &gatewayv1beta1.GatewayClass{},
 			options: []controller.Option{
-				controller.WithNamespacedNameFilter(filter.CreateFilterForGatewayClass(cfg.GatewayClassName)),
+				controller.WithNamespacedNameFilter(filter.CreateSingleResourceFilter(
+					types.NamespacedName{Name: cfg.GatewayClassName},
+				)),
 			},
 		},
 		{
 			objectType: &gatewayv1beta1.Gateway{},
+			options: func() []controller.Option {
+				if cfg.GatewayNsName != nil {
+					return []controller.Option{
+						controller.WithNamespacedNameFilter(filter.CreateSingleResourceFilter(*cfg.GatewayNsName)),
+					}
+				}
+				return nil
+			}(),
 		},
 		{
 			objectType: &gatewayv1beta1.HTTPRoute{},
@@ -134,12 +148,13 @@ func Start(cfg config.Config) error {
 	nginxFileMgr := file.NewManagerImpl()
 	nginxRuntimeMgr := ngxruntime.NewManagerImpl()
 	statusUpdater := status.NewUpdater(status.UpdaterConfig{
-		GatewayCtlrName:  cfg.GatewayCtlrName,
-		GatewayClassName: cfg.GatewayClassName,
-		Client:           mgr.GetClient(),
-		PodIP:            cfg.PodIP,
-		Logger:           cfg.Logger.WithName("statusUpdater"),
-		Clock:            status.NewRealClock(),
+		GatewayCtlrName:          cfg.GatewayCtlrName,
+		GatewayClassName:         cfg.GatewayClassName,
+		Client:                   mgr.GetClient(),
+		PodIP:                    cfg.PodIP,
+		Logger:                   cfg.Logger.WithName("statusUpdater"),
+		Clock:                    status.NewRealClock(),
+		UpdateGatewayClassStatus: cfg.UpdateGatewayClassStatus,
 	})
 
 	eventHandler := events.NewEventHandlerImpl(events.EventHandlerConfig{
@@ -153,19 +168,8 @@ func Start(cfg config.Config) error {
 		StatusUpdater:       statusUpdater,
 	})
 
-	firstBatchPreparer := events.NewFirstEventBatchPreparerImpl(
-		mgr.GetCache(),
-		[]client.Object{
-			&gatewayv1beta1.GatewayClass{ObjectMeta: metav1.ObjectMeta{Name: cfg.GatewayClassName}},
-		},
-		[]client.ObjectList{
-			&apiv1.ServiceList{},
-			&apiv1.SecretList{},
-			&discoveryV1.EndpointSliceList{},
-			&gatewayv1beta1.GatewayList{},
-			&gatewayv1beta1.HTTPRouteList{},
-		},
-	)
+	objects, objectLists := prepareFirstEventBatchPreparerArgs(cfg.GatewayClassName, cfg.GatewayNsName)
+	firstBatchPreparer := events.NewFirstEventBatchPreparerImpl(mgr.GetCache(), objects, objectLists)
 
 	eventLoop := events.NewEventLoop(
 		eventCh,
@@ -180,4 +184,30 @@ func Start(cfg config.Config) error {
 
 	logger.Info("Starting manager")
 	return mgr.Start(ctx)
+}
+
+func prepareFirstEventBatchPreparerArgs(
+	gcName string,
+	gwNsName *types.NamespacedName,
+) ([]client.Object, []client.ObjectList) {
+	objects := []client.Object{
+		&gatewayv1beta1.GatewayClass{ObjectMeta: metav1.ObjectMeta{Name: gcName}},
+	}
+	objectLists := []client.ObjectList{
+		&apiv1.ServiceList{},
+		&apiv1.SecretList{},
+		&discoveryV1.EndpointSliceList{},
+		&gatewayv1beta1.HTTPRouteList{},
+	}
+
+	if gwNsName == nil {
+		objectLists = append(objectLists, &gatewayv1beta1.GatewayList{})
+	} else {
+		objects = append(
+			objects,
+			&gatewayv1beta1.Gateway{ObjectMeta: metav1.ObjectMeta{Name: gwNsName.Name, Namespace: gwNsName.Namespace}},
+		)
+	}
+
+	return objects, objectLists
 }
