@@ -4,8 +4,8 @@ NKG is an open source and public repository; our goal is to keep the number of b
 the main branch, release branches and long-term feature branches.
 
 Internal developers and external contributors will follow a fork and merge process. Each contributor should fork the
-repo to their own space; branch, experiment, develop and merge from their space into NKG’s main branch. NKG branches are
-long-lived, developer branches are ephemeral and unconstrained outside the main repository.
+repo to their own space; branch, experiment, develop and prepare a PR to merge their work into NKG’s main branch. This
+way ephemeral developer branches will remain outside the main repository.
 
 Developer Alice,
 
