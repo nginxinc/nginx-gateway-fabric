@@ -6,7 +6,6 @@ import (
 )
 
 // EventBatch is a batch of events to be handled at once.
-// FIXME(pleshakov): think about how to avoid using an interface{} here
 type EventBatch []interface{}
 
 // UpsertEvent represents upserting a resource.

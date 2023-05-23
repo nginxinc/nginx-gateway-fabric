@@ -124,6 +124,7 @@ func createLocations(pathRules []dataplane.PathRule, listenerPort int) []http.Lo
 			// FIXME(pleshakov): Ensure dataplane.Configuration -related types don't include v1beta1 types, so that
 			// we don't need to make any assumptions like above here. After fixing this, ensure that there is a test
 			// for checking the imported Webhook validation catches the case above.
+			// https://github.com/nginxinc/nginx-kubernetes-gateway/issues/660
 
 			// RequestRedirect and proxying are mutually exclusive.
 			if r.Filters.RequestRedirect != nil {
@@ -146,6 +147,7 @@ func createLocations(pathRules []dataplane.PathRule, listenerPort int) []http.Lo
 		if len(matches) > 0 {
 			// FIXME(sberman): De-dupe matches and associated locations
 			// so we don't need nginx/njs to perform unnecessary matching.
+			// https://github.com/nginxinc/nginx-kubernetes-gateway/issues/662
 			b, err := json.Marshal(matches)
 			if err != nil {
 				// panic is safe here because we should never fail to marshal the match unless we constructed it incorrectly.
@@ -244,7 +246,6 @@ func createHTTPMatch(match v1beta1.HTTPRouteMatch, redirectPath string) httpMatc
 		headers := make([]string, 0, len(match.Headers))
 		headerNames := make(map[string]struct{})
 
-		// FIXME(kate-osborn): For now we only support type "Exact".
 		for _, h := range match.Headers {
 			if *h.Type == v1beta1.HeaderMatchExact {
 				// duplicate header names are not permitted by the spec
@@ -262,7 +263,6 @@ func createHTTPMatch(match v1beta1.HTTPRouteMatch, redirectPath string) httpMatc
 	if match.QueryParams != nil {
 		params := make([]string, 0, len(match.QueryParams))
 
-		// FIXME(kate-osborn): For now we only support type "Exact".
 		for _, p := range match.QueryParams {
 			if *p.Type == v1beta1.QueryParamMatchExact {
 				params = append(params, createQueryParamKeyValString(p))

@@ -21,6 +21,7 @@ import (
 // (2) A reload can have side-effects for the data plane traffic.
 // FIXME(pleshakov): better document the side effects and how to prevent and mitigate them.
 // So when the EventLoop have 100 saved events, it is better to process them at once rather than one by one.
+// https://github.com/nginxinc/nginx-kubernetes-gateway/issues/551
 type EventLoop struct {
 	handler  EventHandler
 	preparer FirstEventBatchPreparer
@@ -113,7 +114,6 @@ func (el *EventLoop) Start(ctx context.Context) error {
 			// Add the event to the current batch.
 			el.nextBatch = append(el.nextBatch, e)
 
-			// FIXME(pleshakov): Log more details about the event like resource GVK and ns/name.
 			el.logger.Info(
 				"added an event to the next batch",
 				"type", fmt.Sprintf("%T", e),

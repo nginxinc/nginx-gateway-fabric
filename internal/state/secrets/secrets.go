@@ -92,6 +92,7 @@ type FileManager interface {
 }
 
 // FIXME(kate-osborn): Is it necessary to make this concurrent-safe?
+// https://github.com/nginxinc/nginx-kubernetes-gateway/issues/441
 type SecretDiskMemoryManagerImpl struct {
 	requestedSecrets map[types.NamespacedName]requestedSecret
 	secretStore      SecretStore

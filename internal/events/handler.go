@@ -94,6 +94,7 @@ func (h *EventHandlerImpl) updateNginx(ctx context.Context, conf dataplane.Confi
 	// Write all secrets (nuke and pave).
 	// This will remove all secrets in the secrets directory before writing the requested secrets.
 	// FIXME(kate-osborn): We may want to rethink this approach in the future and write and remove secrets individually.
+	// https://github.com/nginxinc/nginx-kubernetes-gateway/issues/561
 	err := h.cfg.SecretMemoryManager.WriteAllRequestedSecrets()
 	if err != nil {
 		return err
@@ -124,6 +125,7 @@ func (h *EventHandlerImpl) propagateUpsert(e *UpsertEvent) {
 		h.cfg.Processor.CaptureUpsertChange(r)
 	case *apiv1.Secret:
 		// FIXME(kate-osborn): need to handle certificate rotation
+		// https://github.com/nginxinc/nginx-kubernetes-gateway/issues/553
 		h.cfg.SecretStore.Upsert(r)
 	case *discoveryV1.EndpointSlice:
 		h.cfg.Processor.CaptureUpsertChange(r)
@@ -144,6 +146,7 @@ func (h *EventHandlerImpl) propagateDelete(e *DeleteEvent) {
 		h.cfg.Processor.CaptureDeleteChange(e.Type, e.NamespacedName)
 	case *apiv1.Secret:
 		// FIXME(kate-osborn): make sure that affected servers are updated
+		// https://github.com/nginxinc/nginx-kubernetes-gateway/issues/553
 		h.cfg.SecretStore.Delete(e.NamespacedName)
 	case *discoveryV1.EndpointSlice:
 		h.cfg.Processor.CaptureDeleteChange(e.Type, e.NamespacedName)

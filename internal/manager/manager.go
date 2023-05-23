@@ -138,11 +138,8 @@ func Start(cfg config.Config) error {
 		GatewayClassName: cfg.GatewayClassName,
 		Client:           mgr.GetClient(),
 		PodIP:            cfg.PodIP,
-		// FIXME(pleshakov) Make sure each component:
-		// (1) Has a dedicated named logger.
-		// (2) Get it from the Manager (the WithName is done here for all components).
-		Logger: cfg.Logger.WithName("statusUpdater"),
-		Clock:  status.NewRealClock(),
+		Logger:           cfg.Logger.WithName("statusUpdater"),
+		Clock:            status.NewRealClock(),
 	})
 
 	eventHandler := events.NewEventHandlerImpl(events.EventHandlerConfig{

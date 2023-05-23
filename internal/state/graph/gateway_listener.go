@@ -12,7 +12,7 @@ import (
 )
 
 // Listener represents a Listener of the Gateway resource.
-// FIXME(pleshakov) For now, we only support HTTP and HTTPS listeners.
+// For now, we only support HTTP and HTTPS listeners.
 type Listener struct {
 	// Source holds the source of the Listener from the Gateway resource.
 	Source v1beta1.Listener
