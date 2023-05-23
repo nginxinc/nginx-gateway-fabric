@@ -67,7 +67,7 @@ Follow the steps below for manual testing:
     - Logs of the `nginx-gateway` container. Look out for unexpected error logs or panics.
     - Logs of the `nginx` container. Look for unexpected error logs and verify the access logs are correct.
     - The generated nginx config. Make sure it's correct.
-    - Pass traffic through NKG when applicable.
+    - NGINX proxies traffic successfully (when applicable).
     - Run through the [examples](../../examples) to ensure that your changes have not introduced any regressions.
     - The statuses of the Gateway API Resources. Make sure they look correct.
 
