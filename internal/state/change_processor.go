@@ -172,7 +172,6 @@ func NewChangeProcessorImpl(cfg ChangeProcessorConfig) *ChangeProcessorImpl {
 	}
 }
 
-// FIXME(pleshakov)
 // Currently, changes (upserts/delete) trigger rebuilding of the configuration, even if the change doesn't change
 // the configuration or the statuses of the resources. For example, a change in a Gateway resource that doesn't
 // belong to the NGINX Gateway or an HTTPRoute that doesn't belong to any of the Gateways of the NGINX Gateway.

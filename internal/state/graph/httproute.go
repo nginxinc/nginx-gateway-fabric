@@ -53,9 +53,6 @@ type ParentRefAttachmentStatus struct {
 // Route represents an HTTPRoute.
 type Route struct {
 	// Source is the source resource of the Route.
-	// FIXME(pleshakov)
-	// For now, we assume that the source is only HTTPRoute.
-	// Later we can support more types - TLSRoute, TCPRoute and UDPRoute.
 	Source *v1beta1.HTTPRoute
 	// ParentRefs includes ParentRefs with NKG Gateways only.
 	ParentRefs []ParentRef
@@ -231,7 +228,7 @@ func buildRoute(
 
 		if atLeastOneValid {
 			// FIXME(pleshakov): Partial validity for HTTPRoute rules is not defined in the Gateway API spec yet.
-			// See https://github.com/kubernetes-sigs/gateway-api/issues/1696
+			// See https://github.com/nginxinc/nginx-kubernetes-gateway/issues/485
 			msg = "Some rules are invalid: " + msg
 			r.Conditions = append(r.Conditions, conditions.NewTODO(msg))
 		} else {
@@ -311,9 +308,6 @@ func bindRouteToListeners(r *Route, gw *Gateway) {
 // tryToAttachRouteToListeners tries to attach the route to the listeners that match the parentRef and the hostnames.
 // If it succeeds in attaching at least one listener it will return true and the condition will be empty.
 // If it fails to attach the route, it will return false and the failure condition.
-// FIXME(pleshakov)
-// For now, let's do simple matching.
-// However, we need to also support wildcard matching.
 func tryToAttachRouteToListeners(
 	refStatus *ParentRefAttachmentStatus,
 	sectionName *v1beta1.SectionName,
@@ -324,7 +318,7 @@ func tryToAttachRouteToListeners(
 
 	if !listenerExists {
 		// FIXME(pleshakov): Add a proper condition once it is available in the Gateway API.
-		// https://github.com/nginxinc/nginx-kubernetes-gateway/issues/306
+		// https://github.com/nginxinc/nginx-kubernetes-gateway/issues/665
 		return conditions.NewTODO("listener is not found"), false
 	}
 

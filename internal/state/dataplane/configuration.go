@@ -23,10 +23,10 @@ const (
 // Configuration is an intermediate representation of dataplane configuration.
 type Configuration struct {
 	// HTTPServers holds all HTTPServers.
-	// FIXME(pleshakov) We assume that all servers are HTTP and listen on port 80.
+	// We assume that all servers are HTTP and listen on port 80.
 	HTTPServers []VirtualServer
 	// SSLServers holds all SSLServers.
-	// FIXME(kate-osborn) We assume that all SSL servers listen on port 443.
+	// We assume that all SSL servers listen on port 443.
 	SSLServers []VirtualServer
 	// Upstreams holds all unique Upstreams.
 	Upstreams []Upstream
@@ -87,8 +87,6 @@ type MatchRule struct {
 	// Filters holds the filters for the MatchRule.
 	Filters Filters
 	// Source is the corresponding HTTPRoute resource.
-	// FIXME(pleshakov): Consider referencing only the parts needed for the config generation rather than
-	// the entire resource.
 	Source *v1beta1.HTTPRoute
 	// BackendGroup is the group of Backends that the rule routes to.
 	BackendGroup BackendGroup
@@ -135,7 +133,6 @@ func (r *MatchRule) GetMatch() v1beta1.HTTPRouteMatch {
 }
 
 // BuildConfiguration builds the Configuration from the Graph.
-// FIXME(pleshakov) For now we only handle paths with prefix matches. Handle exact and regex matches
 func BuildConfiguration(ctx context.Context, g *graph.Graph, resolver resolver.ServiceResolver) Configuration {
 	if g.GatewayClass == nil || !g.GatewayClass.Valid {
 		return Configuration{}
@@ -372,8 +369,6 @@ func (hpr *hostPathRules) buildServers() []VirtualServer {
 		hostname := getListenerHostname(l.Source.Hostname)
 		// Generate a 404 ssl server block for listeners with no routes or listeners with wildcard (match-all) routes.
 		// This server overrides the default ssl server.
-		// FIXME(kate-osborn): when we support regex hostnames (e.g. *.example.com)
-		// we will have to modify this check to catch regex hostnames.
 		if len(l.Routes) == 0 || hostname == wildcardHostname {
 			s := VirtualServer{
 				Hostname: hostname,
@@ -503,7 +498,7 @@ func convertPathType(pathType v1beta1.PathMatchType) PathType {
 
 // listenerHostnameMoreSpecific returns true if host1 is more specific than host2 (using length).
 //
-// FIXME(sberman): Since the only caller of this function specifies listener hostnames that are both
+// Since the only caller of this function specifies listener hostnames that are both
 // bound to the same route hostname, this function assumes that host1 and host2 match, either
 // exactly or as a substring.
 //

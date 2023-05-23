@@ -37,8 +37,8 @@ func (HTTPNJSMatchValidator) ValidatePathInMatch(path string) error {
 		return errors.New(msg)
 	}
 
-	// FIXME(pleshakov): This is temporary until https://github.com/nginxinc/nginx-kubernetes-gateway/issues/428
-	// is fixed.
+	// FIXME(pleshakov): This function will no longer be
+	// needed once https://github.com/nginxinc/nginx-kubernetes-gateway/issues/428 is fixed.
 	// That's because the location path gets into the set directive in the location block.
 	// Example: set $http_matches "[{\"redirectPath\":\"/coffee_route0\" ...
 	// Where /coffee is tha path.
