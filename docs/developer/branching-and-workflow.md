@@ -1,8 +1,7 @@
 # Branching and Workflow
 
-NKG is an open source and public repository; our goal is for a spartan and easily manageable set of branches. Ideally,
-our branches are created minimally; there will be a main branch and a handful of release and other long-term feature
-branches.
+NKG is an open source and public repository; our goal is to keep the number of branches in the repository to a minimum:
+the main branch, release branches and long-term feature branches.
 
 Internal developers and external contributors will follow a fork and merge process. Each contributor should fork the
 repo to their own space; branch, experiment, develop and merge from their space into NKG’s main branch. NKG branches are
