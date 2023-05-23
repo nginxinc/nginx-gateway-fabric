@@ -32,8 +32,7 @@ practices to ensure a successful feature development process.
     - **Gateway API Feature**: If you are implementing a Gateway API feature, make sure to update
       the [Gateway API Compatibility](../gateway-api-compatibility.md) documentation.
     - **New Use Case:** If your feature introduces a new use case, add an example of how to use it in
-      the [examples](../../examples) directory. This example will help users understand how to leverage the new feature
-      in their own deployments.
+      the [examples](../../examples) directory. This example will help users understand how to leverage the new feature.
     - **Installation Changes**: If your feature involves changes to the installation process of NKG, update
       the [installation](../installation.md) documentation.
     - **Command-line Changes**: If your feature introduces or changes a command-line flag or subcommand, update
@@ -52,7 +51,7 @@ practices to ensure a successful feature development process.
 13. **Squash and merge**: Squash your commits locally, or use the GitHub UI to squash and merge. Only one commit per PR
     should be merged.
 
-## Fixing a bug
+## Fixing a Bug
 
 When fixing a bug, follow the same process as [implementing a feature](#implementing-a-feature) with one additional
 requirement:
