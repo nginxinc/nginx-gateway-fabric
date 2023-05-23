@@ -94,12 +94,12 @@ For additional help on writing good commit messages, see this [article](https://
 
 # Comment Tags
 
-Common comment tags are FIXMEs and TODOs.
+We use the comment tags FIXME and TODO.
 
 A TODO is a developer note-to-self. TODOs _MUST_ be fixed before merging.
 
-A FIXME is for things that should be fixed in the future. FIXMEs can be merged, but they _MUST_ include your username and
-an link to the issue. For example:
+A FIXME is for things that should be fixed in the future. If FIXMEs cannot be addressed before merging, they can be
+merged, but they _MUST_ include your username and a link to the issue. For example:
 
 ```go
 // FIXME(username): This is currently a hack to work around known issue X. 
