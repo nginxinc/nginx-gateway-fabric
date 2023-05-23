@@ -1,6 +1,6 @@
 # Implementing a Feature
 
-This section provides guidance on implementing new features in the project. Follow the recommended steps and best
+This document provides guidance on implementing new features in the project. Follow the recommended steps and best
 practices to ensure a successful feature development process.
 
 > **Note**
