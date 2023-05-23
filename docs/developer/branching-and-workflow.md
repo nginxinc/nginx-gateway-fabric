@@ -7,7 +7,7 @@ Internal developers and external contributors will follow a fork and merge proce
 repo to their own space; branch, experiment, develop and prepare a PR to merge their work into NKG’s main branch. This
 way ephemeral developer branches will remain outside the main repository.
 
-Developer Alice,
+Below is an example of following the merge and fork process. Developer Alice:
 
 - Forks `github.com/nginxinc/nginx-kubernetes-gateway` → `github.com/<alice-user-id>/nginx-kubernetes-gateway`
 - Alice develops a feature or bugfix - using as many ephemeral branches as she needs.
