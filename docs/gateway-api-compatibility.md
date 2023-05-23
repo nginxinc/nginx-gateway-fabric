@@ -68,18 +68,29 @@ Fields:
 	* `addresses` - not supported.
 * `status`
   * `addresses` - Pod IPAddress supported.
-  * `conditions` - not supported.
+  * `conditions` - Supported (Condition/Status/Reason):
+    * `Accepted/True/Accepted`
+    * `Accepted/True/ListenersNotValid`
+    * `Accepted/False/ListenersNotValid`
+    * `Accepted/False/Invalid`
+    * `Accepted/False/UnsupportedValue`: Custom reason for when a value of a field in a Gateway is invalid or not supported.
+    * `Accepted/False/GatewayConflict`: Custom reason for when the Gateway is ignored due to a conflicting Gateway. NKG only supports a single Gateway.
   * `listeners`
 	* `name` - supported.
 	* `supportedKinds` - not supported.
 	* `attachedRoutes` - supported.
 	* `conditions` - Supported (Condition/Status/Reason):
       * `Accepted/True/Accepted`
-      * `Accepted/True/ListenersNotValid`
-      * `Accepted/False/Invalid`
-      * `Accepted/False/ListenersNotValid`
-      * `Accepted/False/UnsupportedValue`: Custom reason for when a value of a field in a Gateway is invalid or not supported.
+      * `Accepted/False/UnsupportedProtocol`
+      * `Accepted/False/InvalidCertificateRef`
+      * `Accepted/False/HostnameConflict`
+      * `Accepted/False/PortUnavailable`
+      * `Accepted/False/UnsupportedValue`: Custom reason for when a value of a field in a Listener is invalid or not supported.
       * `Accepted/False/GatewayConflict`: Custom reason for when the Gateway is ignored due to a conflicting Gateway. NKG only supports a single Gateway.
+      * `ResolvedRefs/True/ResolvedRefs`
+      * `ResolvedRefs/False/ListenerReasonInvalidCertificateRef`
+      * `Conflicted/True/HostnameConflict`
+      * `Conflicted/False/NoConflicts`
 
 ### HTTPRoute
 
