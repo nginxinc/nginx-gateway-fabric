@@ -25,12 +25,12 @@ considering contributing!
 
 ## Ask a Question
 
-To ask a question please use [Github Discussions](https://github.com/nginxinc/nginx-kubernetes-gateway/discussions).
+To ask a question, use [Github Discussions](https://github.com/nginxinc/nginx-kubernetes-gateway/discussions).
 
 [NGINX Community Slack](https://community.nginx.org/joinslack) has a dedicated channel for this
 project -- `#nginx-kubernetes-gateway`.
 
-Please reserve GitHub issues for feature requests and bugs rather than general questions.
+Reserve GitHub issues for feature requests and bugs rather than general questions.
 
 ## Getting Started
 
@@ -63,23 +63,23 @@ opportunity to provide valuable feedback.
 
 #### Report a Bug
 
-To report a bug, open an issue on GitHub with the label `bug` using the available bug report issue template. Please
-ensure the issue has not already been reported.
+To report a bug, open an issue on GitHub with the label `bug` using the available bug report issue template. Before
+reporting a bug, make sure the issue has not already been reported.
 
 #### Suggest an Enhancement
 
-To suggest an enhancement, please create an issue on GitHub with the label `proposal` using the available feature issue
+To suggest an enhancement, create an issue on GitHub with the label `proposal` using the available feature issue
 template.
 
 #### Issue lifecycle
 
-When an issue or PR is created, it will be triaged by the maintainers and assigned a label to indicate the
-type of issue it is (bug, feature request, etc) and to determine the milestone. Please see
-the [Issue Lifecycle](ISSUE_LIFECYCLE.md) document for more information.
+When an issue or PR is created, it will be triaged by the maintainers and assigned a label to indicate the type of issue
+it is (bug, feature request, etc) and to determine the milestone. See the [Issue Lifecycle](ISSUE_LIFECYCLE.md) document
+for more information.
 
 ### Development Guide
 
-Before beginning development, please familiarize yourself with the following documents:
+Before beginning development, familiarize yourself with the following documents:
 
 - [Developer Quickstart](docs/developer/quickstart.md): This guide provides a quick and easy walkthrough of setting up
   your development environment and executing tasks required when submitting a PR.
@@ -120,6 +120,6 @@ Before beginning development, please familiarize yourself with the following doc
 
 Individuals or business entities who contribute to this project must have completed and submitted
 the [F5® Contributor License Agreement](F5ContributorLicenseAgreement.pdf) prior to their code submission being included
-in this project. To submit, please print out the [F5® Contributor License Agreement](F5ContributorLicenseAgreement.pdf),
-fill in the required sections, sign, scan, and send executed CLA to kubernetes@nginx.com. Please include your github
+in this project. To submit, print out the [F5® Contributor License Agreement](F5ContributorLicenseAgreement.pdf), fill
+in the required sections, sign, scan, and send executed CLA to kubernetes@nginx.com. Make sure to include your github
 handle in the CLA email.
