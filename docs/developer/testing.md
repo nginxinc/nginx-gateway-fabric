@@ -1,9 +1,9 @@
 # Testing
 
-This document provides guidelines for unit testing in the project, including instructions on running the
-unit tests, accessing the code coverage report, and performing manual testing. By following these guidelines, you will
-gain a thorough understanding of the project's approach to unit testing, enabling you to ensure code quality, validate
-functionality, and maintain robust test coverage.
+This document provides guidelines for testing, including instructions on running the unit tests, accessing the code
+coverage report, and performing manual testing. By following these guidelines, you will gain a thorough understanding of
+the project's approach to unit testing, enabling you to ensure code quality, validate functionality, and maintain robust
+test coverage.
 
 ## Unit Test Guidelines
 
@@ -28,8 +28,8 @@ ensures that critical code paths and edge cases are thoroughly tested. We still 
 the [Gomega](https://onsi.github.io/gomega/) matcher library for assertions within these tests.
 
 **Use table-driven tests**: When testing multiple cases for a single function or method, we prefer to use table-driven
-tests. For BDD style tests, use [DescribeTable](https://onsi.github.io/ginkgo/#table-specs) and for standard unit
-tests, use [subtests](https://go.dev/blog/subtests).
+tests. For BDD style tests, use [DescribeTable](https://onsi.github.io/ginkgo/#table-specs) and for standard unit tests,
+use [subtests](https://go.dev/blog/subtests).
 
 **Generate test mocks**: To facilitate the generation of mocks for testing, we use
 the [Counterfeiter](https://github.com/maxbrunsfeld/counterfeiter) tool. Counterfeiter helps us create mock
@@ -72,9 +72,7 @@ Follow the steps below for manual testing:
     - The statuses of the Gateway API Resources. Make sure they look correct.
 
 > **Note**
-> Don't limit yourself to happy path testing. Make an effort to cover various scenarios, including
-edge cases and potential error conditions. By testing a wide range of scenarios, you can uncover hidden issues and
-ensure the robustness of your changes.
+> Don't limit yourself to happy path testing. Make an effort to cover various scenarios, including edge cases and potential error conditions. By testing a wide range of scenarios, you can uncover hidden issues and ensure the robustness of your changes.
 
 Performing manual testing helps guarantee the stability, reliability, and effectiveness of your changes before
 submitting them for review and integration into the project.
