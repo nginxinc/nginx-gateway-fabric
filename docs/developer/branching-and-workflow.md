@@ -9,10 +9,10 @@ long-lived, developer branches are ephemeral and unconstrained outside the main 
 
 Developer Alice,
 
-- Forks `github.com/nginxinc/nginx-kubernetes-gateway` → `github.com/alice/nginx-kubernetes-gateway`
+- Forks `github.com/nginxinc/nginx-kubernetes-gateway` → `github.com/<alice-user-id>/nginx-kubernetes-gateway`
 - Alice develops a feature or bugfix - using as many ephemeral branches as she needs.
 - Alice creates a
-  PR `github.com/alice/nginx-kubernetes-gateway:feature/some-feature` → `github.com/nginxinc/nginx-kubernetes-gateway:main`
+  PR `github.com/<alice-user-id>/nginx-kubernetes-gateway:feature/some-feature` → `github.com/nginxinc/nginx-kubernetes-gateway:main`
 
 ## Branch Naming Conventions
 
