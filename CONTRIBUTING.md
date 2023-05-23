@@ -73,7 +73,7 @@ template.
 
 #### Issue lifecycle
 
-When an issue or PR is created, it will be triaged by the core development team and assigned a label to indicate the
+When an issue or PR is created, it will be triaged by the maintainers and assigned a label to indicate the
 type of issue it is (bug, feature request, etc) and to determine the milestone. Please see
 the [Issue Lifecycle](ISSUE_LIFECYCLE.md) document for more information.
 
