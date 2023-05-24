@@ -201,6 +201,17 @@ func NewRouteInvalidGateway() Condition {
 	}
 }
 
+// NewRouteNoMatchingParent returns a Condition that indicates that the Route is not Accepted because
+// it specifies a Port and/or SectionName that does not match any Listeners in the Gateway.
+func NewRouteNoMatchingParent() Condition {
+	return Condition{
+		Type:    string(v1beta1.RouteConditionAccepted),
+		Status:  metav1.ConditionFalse,
+		Reason:  string(v1beta1.RouteReasonNoMatchingParent),
+		Message: "Listener is not found for this parent ref",
+	}
+}
+
 // NewDefaultListenerConditions returns the default Conditions that must be present in the status of a Listener.
 func NewDefaultListenerConditions() []Condition {
 	return []Condition{

@@ -317,9 +317,7 @@ func tryToAttachRouteToListeners(
 	validListeners, listenerExists := findValidListeners(getSectionName(sectionName), listeners)
 
 	if !listenerExists {
-		// FIXME(pleshakov): Add a proper condition once it is available in the Gateway API.
-		// https://github.com/nginxinc/nginx-kubernetes-gateway/issues/665
-		return conditions.NewTODO("listener is not found"), false
+		return conditions.NewRouteNoMatchingParent(), false
 	}
 
 	if len(validListeners) == 0 {

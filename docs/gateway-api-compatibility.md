@@ -118,6 +118,7 @@ Fields:
 	* `conditions` - partially supported. Supported (Condition/Status/Reason):
     	*  `Accepted/True/Accepted`
     	*  `Accepted/False/NoMatchingListenerHostname`
+        *  `Accepted/False/NoMatchingParent`
         *  `Accepted/False/UnsupportedValue`: Custom reason for when the HTTPRoute includes an invalid or unsupported value.
         *  `Accepted/False/InvalidListener`: Custom reason for when the HTTPRoute references an invalid listener.
         *  `ResolvedRefs/True/ResolvedRefs`
