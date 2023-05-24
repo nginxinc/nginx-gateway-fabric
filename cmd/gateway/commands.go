@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
+	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
@@ -36,7 +37,7 @@ var (
 )
 
 // stringValidatingValue is a string flag value with custom validation logic.
-// stringValidatingValue implements the pflag.Value interface.
+// it implements the pflag.Value interface.
 type stringValidatingValue struct {
 	validator func(v string) error
 	value     string
@@ -55,6 +56,34 @@ func (v *stringValidatingValue) Set(param string) error {
 }
 
 func (v *stringValidatingValue) Type() string {
+	return "string"
+}
+
+// namespacedNameValue is a string flag value that represents a namespaced name.
+// it implements the pflag.Value interface.
+type namespacedNameValue struct {
+	value types.NamespacedName
+}
+
+func (v *namespacedNameValue) String() string {
+	if (v.value == types.NamespacedName{}) {
+		// if we don't do that, the default value in the help message will be printed as "/"
+		return ""
+	}
+	return v.value.String()
+}
+
+func (v *namespacedNameValue) Set(param string) error {
+	nsname, err := parseNamespacedResourceName(param)
+	if err != nil {
+		return err
+	}
+
+	v.value = nsname
+	return nil
+}
+
+func (v *namespacedNameValue) Type() string {
 	return "string"
 }
 
@@ -84,7 +113,13 @@ func createRootCommand() *cobra.Command {
 }
 
 func createStaticModeCommand() *cobra.Command {
-	return &cobra.Command{
+	const gatewayFlag = "gateway"
+
+	// flag values
+	gateway := namespacedNameValue{}
+	var updateGCStatus bool
+
+	cmd := &cobra.Command{
 		Use:   "static-mode",
 		Short: "Configure NGINX in the scope of a single Gateway resource",
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -100,11 +135,18 @@ func createStaticModeCommand() *cobra.Command {
 				return fmt.Errorf("error validating POD_IP environment variable: %w", err)
 			}
 
+			var gwNsName *types.NamespacedName
+			if cmd.Flags().Changed(gatewayFlag) {
+				gwNsName = &gateway.value
+			}
+
 			conf := config.Config{
-				GatewayCtlrName:  gatewayCtlrName.value,
-				Logger:           logger,
-				GatewayClassName: gatewayClassName.value,
-				PodIP:            podIP,
+				GatewayCtlrName:          gatewayCtlrName.value,
+				Logger:                   logger,
+				GatewayClassName:         gatewayClassName.value,
+				PodIP:                    podIP,
+				GatewayNsName:            gwNsName,
+				UpdateGatewayClassStatus: updateGCStatus,
 			}
 
 			if err := manager.Start(conf); err != nil {
@@ -114,6 +156,25 @@ func createStaticModeCommand() *cobra.Command {
 			return nil
 		},
 	}
+
+	cmd.Flags().Var(
+		&gateway,
+		gatewayFlag,
+		"The namespaced name of the Gateway resource to use. "+
+			"Must be of the form: NAMESPACE/NAME. "+
+			"If not specified, the control plane will process all Gateways for the configured GatewayClass. "+
+			"However, among them, it will choose the oldest resource by creation timestamp. If the timestamps are "+
+			"equal, it will choose the resource that appears first in alphabetical order by {namespace}/{name}.",
+	)
+
+	cmd.Flags().BoolVar(
+		&updateGCStatus,
+		"update-gatewayclass-status",
+		true,
+		"Update the status of the GatewayClass resource.",
+	)
+
+	return cmd
 }
 
 func createProvisionerModeCommand() *cobra.Command {

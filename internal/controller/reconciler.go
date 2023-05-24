@@ -16,7 +16,7 @@ import (
 
 // NamespacedNameFilterFunc is a function that returns true if the resource should be processed by the reconciler.
 // If the function returns false, the reconciler will log the returned string.
-type NamespacedNameFilterFunc func(nsname types.NamespacedName) (bool, string)
+type NamespacedNameFilterFunc func(nsname types.NamespacedName) (shouldProcess bool, msg string)
 
 // ReconcilerConfig is the configuration for the reconciler.
 type ReconcilerConfig struct {
@@ -67,7 +67,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	logger.Info("Reconciling the resource")
 
 	if r.cfg.NamespacedNameFilter != nil {
-		if allow, msg := r.cfg.NamespacedNameFilter(req.NamespacedName); !allow {
+		if shouldProcess, msg := r.cfg.NamespacedNameFilter(req.NamespacedName); !shouldProcess {
 			logger.Info(msg)
 			return reconcile.Result{}, nil
 		}

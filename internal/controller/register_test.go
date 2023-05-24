@@ -8,8 +8,9 @@ import (
 
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gcustom"
-	"github.com/onsi/gomega/types"
+	gtypes "github.com/onsi/gomega/types"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -17,7 +18,6 @@ import (
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/controller"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/controller/controllerfakes"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/manager/filter"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/manager/index"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/manager/predicate"
 )
@@ -81,12 +81,15 @@ func TestRegister(t *testing.T) {
 	}
 
 	objectType := &v1beta1.HTTPRoute{}
-	namespacedNameFilter := filter.CreateFilterForGatewayClass("test")
+	nsNameFilter := func(nsname types.NamespacedName) (bool, string) {
+		return true, ""
+	}
+
 	fieldIndexes := index.CreateEndpointSliceFieldIndices()
 
 	eventCh := make(chan<- interface{})
 
-	beSameFunctionPointer := func(expected interface{}) types.GomegaMatcher {
+	beSameFunctionPointer := func(expected interface{}) gtypes.GomegaMatcher {
 		return gcustom.MakeMatcher(func(f interface{}) (bool, error) {
 			// comparing functions is not allowed in Go, so we're comparing the pointers
 			return reflect.ValueOf(expected).Pointer() == reflect.ValueOf(f).Pointer(), nil
@@ -101,7 +104,7 @@ func TestRegister(t *testing.T) {
 				g.Expect(c.Getter).To(BeIdenticalTo(test.fakes.mgr.GetClient()))
 				g.Expect(c.ObjectType).To(BeIdenticalTo(objectType))
 				g.Expect(c.EventCh).To(BeIdenticalTo(eventCh))
-				g.Expect(c.NamespacedNameFilter).Should(beSameFunctionPointer(namespacedNameFilter))
+				g.Expect(c.NamespacedNameFilter).Should(beSameFunctionPointer(nsNameFilter))
 
 				return controller.NewReconciler(c)
 			}
@@ -111,7 +114,7 @@ func TestRegister(t *testing.T) {
 				objectType,
 				test.fakes.mgr,
 				eventCh,
-				controller.WithNamespacedNameFilter(namespacedNameFilter),
+				controller.WithNamespacedNameFilter(nsNameFilter),
 				controller.WithK8sPredicate(predicate.ServicePortsChangedPredicate{}),
 				controller.WithFieldIndices(fieldIndexes),
 				controller.WithNewReconciler(newReconciler),

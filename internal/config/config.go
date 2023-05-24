@@ -10,9 +10,11 @@ type Config struct {
 	Logger          logr.Logger
 	// GatewayNsName is the namespaced name of a Gateway resource that the Gateway will use.
 	// The Gateway will ignore all other Gateway resources.
-	GatewayNsName types.NamespacedName
+	GatewayNsName *types.NamespacedName
 	// GatewayClassName is the name of the GatewayClass resource that the Gateway will use.
 	GatewayClassName string
 	// PodIP is the IP address of this Pod.
 	PodIP string
+	// UpdateGatewayClassStatus enables updating the status of the GatewayClass resource.
+	UpdateGatewayClassStatus bool
 }

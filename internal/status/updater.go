@@ -34,6 +34,8 @@ type UpdaterConfig struct {
 	GatewayClassName string
 	// PodIP is the IP address of this Pod.
 	PodIP string
+	// UpdateGatewayClassStatus enables updating the status of the GatewayClass resource.
+	UpdateGatewayClassStatus bool
 }
 
 // updaterImpl updates statuses of the Gateway API resources.
@@ -88,7 +90,7 @@ func (upd *updaterImpl) Update(ctx context.Context, statuses state.Statuses) {
 	// FIXME(pleshakov) Merge the new Conditions in the status with the existing Conditions
 	// FIXME(pleshakov) Skip the status update (API call) if the status hasn't changed.
 
-	if statuses.GatewayClassStatus != nil {
+	if upd.cfg.UpdateGatewayClassStatus && statuses.GatewayClassStatus != nil {
 		upd.update(
 			ctx,
 			types.NamespacedName{Name: upd.cfg.GatewayClassName},

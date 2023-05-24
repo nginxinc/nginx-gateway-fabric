@@ -26,9 +26,9 @@ var _ = Describe("Updater", func() {
 	const gcName = "my-class"
 
 	var (
-		updater         status.Updater
 		client          client.Client
 		fakeClockTime   metav1.Time
+		fakeClock       *statusfakes.FakeClock
 		gatewayCtrlName string
 	)
 
@@ -45,19 +45,10 @@ var _ = Describe("Updater", func() {
 		// We use it because updating the status in the FakeClient and then getting the resource back
 		// involves encoding and decoding the resource to/from JSON, which uses RFC 3339 for metav1.Time.
 		fakeClockTime = metav1.NewTime(time.Now()).Rfc3339Copy()
-		fakeClock := &statusfakes.FakeClock{}
+		fakeClock = &statusfakes.FakeClock{}
 		fakeClock.NowReturns(fakeClockTime)
 
 		gatewayCtrlName = "test.example.com"
-
-		updater = status.NewUpdater(status.UpdaterConfig{
-			GatewayCtlrName:  gatewayCtrlName,
-			GatewayClassName: gcName,
-			Client:           client,
-			Logger:           zap.New(),
-			Clock:            fakeClock,
-			PodIP:            "1.2.3.4",
-		})
 	})
 
 	Describe("Process status updates", Ordered, func() {
@@ -67,6 +58,7 @@ var _ = Describe("Updater", func() {
 		}
 
 		var (
+			updater       status.Updater
 			gc            *v1beta1.GatewayClass
 			gw, ignoredGw *v1beta1.Gateway
 			hr            *v1beta1.HTTPRoute
@@ -213,6 +205,16 @@ var _ = Describe("Updater", func() {
 		)
 
 		BeforeAll(func() {
+			updater = status.NewUpdater(status.UpdaterConfig{
+				GatewayCtlrName:          gatewayCtrlName,
+				GatewayClassName:         gcName,
+				Client:                   client,
+				Logger:                   zap.New(),
+				Clock:                    fakeClock,
+				PodIP:                    "1.2.3.4",
+				UpdateGatewayClassStatus: true,
+			})
+
 			gc = &v1beta1.GatewayClass{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: gcName,
@@ -391,6 +393,58 @@ var _ = Describe("Updater", func() {
 				// if the status was updated, we would see the route rejected (Accepted = false)
 				Expect(helpers.Diff(expectedHR, latestHR)).To(BeEmpty())
 			})
+		})
+	})
+
+	Describe("Skip GatewayClass updates", Ordered, func() {
+		var (
+			updater status.Updater
+			gc      *v1beta1.GatewayClass
+		)
+
+		BeforeAll(func() {
+			updater = status.NewUpdater(status.UpdaterConfig{
+				GatewayCtlrName:          gatewayCtrlName,
+				GatewayClassName:         gcName,
+				Client:                   client,
+				Logger:                   zap.New(),
+				Clock:                    fakeClock,
+				PodIP:                    "1.2.3.4",
+				UpdateGatewayClassStatus: false,
+			})
+
+			gc = &v1beta1.GatewayClass{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: gcName,
+				},
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "GatewayClass",
+					APIVersion: "gateway.networking.k8s.io/v1beta1",
+				},
+			}
+		})
+
+		It("should create resources in the API server", func() {
+			Expect(client.Create(context.Background(), gc)).Should(Succeed())
+		})
+
+		It("should not update GatewayClass status", func() {
+			updater.Update(
+				context.Background(),
+				state.Statuses{
+					GatewayClassStatus: &state.GatewayClassStatus{
+						ObservedGeneration: 1,
+						Conditions:         status.CreateTestConditions("Test"),
+					},
+				},
+			)
+
+			latestGc := &v1beta1.GatewayClass{}
+
+			err := client.Get(context.Background(), types.NamespacedName{Name: gcName}, latestGc)
+			Expect(err).Should(Not(HaveOccurred()))
+
+			Expect(latestGc.Status).To(BeZero())
 		})
 	})
 })
