@@ -13,7 +13,7 @@ import (
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/config/v1alpha1"
+	"sigs.k8s.io/controller-runtime/pkg/config"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
@@ -117,15 +117,15 @@ type FakeManager struct {
 	getConfigReturnsOnCall map[int]struct {
 		result1 *rest.Config
 	}
-	GetControllerOptionsStub        func() v1alpha1.ControllerConfigurationSpec
+	GetControllerOptionsStub        func() config.Controller
 	getControllerOptionsMutex       sync.RWMutex
 	getControllerOptionsArgsForCall []struct {
 	}
 	getControllerOptionsReturns struct {
-		result1 v1alpha1.ControllerConfigurationSpec
+		result1 config.Controller
 	}
 	getControllerOptionsReturnsOnCall map[int]struct {
-		result1 v1alpha1.ControllerConfigurationSpec
+		result1 config.Controller
 	}
 	GetEventRecorderForStub        func(string) record.EventRecorder
 	getEventRecorderForMutex       sync.RWMutex
@@ -147,6 +147,16 @@ type FakeManager struct {
 	}
 	getFieldIndexerReturnsOnCall map[int]struct {
 		result1 client.FieldIndexer
+	}
+	GetHTTPClientStub        func() *http.Client
+	getHTTPClientMutex       sync.RWMutex
+	getHTTPClientArgsForCall []struct {
+	}
+	getHTTPClientReturns struct {
+		result1 *http.Client
+	}
+	getHTTPClientReturnsOnCall map[int]struct {
+		result1 *http.Client
 	}
 	GetLoggerStub        func() logr.Logger
 	getLoggerMutex       sync.RWMutex
@@ -178,26 +188,15 @@ type FakeManager struct {
 	getSchemeReturnsOnCall map[int]struct {
 		result1 *runtime.Scheme
 	}
-	GetWebhookServerStub        func() *webhook.Server
+	GetWebhookServerStub        func() webhook.Server
 	getWebhookServerMutex       sync.RWMutex
 	getWebhookServerArgsForCall []struct {
 	}
 	getWebhookServerReturns struct {
-		result1 *webhook.Server
+		result1 webhook.Server
 	}
 	getWebhookServerReturnsOnCall map[int]struct {
-		result1 *webhook.Server
-	}
-	SetFieldsStub        func(interface{}) error
-	setFieldsMutex       sync.RWMutex
-	setFieldsArgsForCall []struct {
-		arg1 interface{}
-	}
-	setFieldsReturns struct {
-		result1 error
-	}
-	setFieldsReturnsOnCall map[int]struct {
-		result1 error
+		result1 webhook.Server
 	}
 	StartStub        func(context.Context) error
 	startMutex       sync.RWMutex
@@ -726,7 +725,7 @@ func (fake *FakeManager) GetConfigReturnsOnCall(i int, result1 *rest.Config) {
 	}{result1}
 }
 
-func (fake *FakeManager) GetControllerOptions() v1alpha1.ControllerConfigurationSpec {
+func (fake *FakeManager) GetControllerOptions() config.Controller {
 	fake.getControllerOptionsMutex.Lock()
 	ret, specificReturn := fake.getControllerOptionsReturnsOnCall[len(fake.getControllerOptionsArgsForCall)]
 	fake.getControllerOptionsArgsForCall = append(fake.getControllerOptionsArgsForCall, struct {
@@ -750,32 +749,32 @@ func (fake *FakeManager) GetControllerOptionsCallCount() int {
 	return len(fake.getControllerOptionsArgsForCall)
 }
 
-func (fake *FakeManager) GetControllerOptionsCalls(stub func() v1alpha1.ControllerConfigurationSpec) {
+func (fake *FakeManager) GetControllerOptionsCalls(stub func() config.Controller) {
 	fake.getControllerOptionsMutex.Lock()
 	defer fake.getControllerOptionsMutex.Unlock()
 	fake.GetControllerOptionsStub = stub
 }
 
-func (fake *FakeManager) GetControllerOptionsReturns(result1 v1alpha1.ControllerConfigurationSpec) {
+func (fake *FakeManager) GetControllerOptionsReturns(result1 config.Controller) {
 	fake.getControllerOptionsMutex.Lock()
 	defer fake.getControllerOptionsMutex.Unlock()
 	fake.GetControllerOptionsStub = nil
 	fake.getControllerOptionsReturns = struct {
-		result1 v1alpha1.ControllerConfigurationSpec
+		result1 config.Controller
 	}{result1}
 }
 
-func (fake *FakeManager) GetControllerOptionsReturnsOnCall(i int, result1 v1alpha1.ControllerConfigurationSpec) {
+func (fake *FakeManager) GetControllerOptionsReturnsOnCall(i int, result1 config.Controller) {
 	fake.getControllerOptionsMutex.Lock()
 	defer fake.getControllerOptionsMutex.Unlock()
 	fake.GetControllerOptionsStub = nil
 	if fake.getControllerOptionsReturnsOnCall == nil {
 		fake.getControllerOptionsReturnsOnCall = make(map[int]struct {
-			result1 v1alpha1.ControllerConfigurationSpec
+			result1 config.Controller
 		})
 	}
 	fake.getControllerOptionsReturnsOnCall[i] = struct {
-		result1 v1alpha1.ControllerConfigurationSpec
+		result1 config.Controller
 	}{result1}
 }
 
@@ -890,6 +889,59 @@ func (fake *FakeManager) GetFieldIndexerReturnsOnCall(i int, result1 client.Fiel
 	}
 	fake.getFieldIndexerReturnsOnCall[i] = struct {
 		result1 client.FieldIndexer
+	}{result1}
+}
+
+func (fake *FakeManager) GetHTTPClient() *http.Client {
+	fake.getHTTPClientMutex.Lock()
+	ret, specificReturn := fake.getHTTPClientReturnsOnCall[len(fake.getHTTPClientArgsForCall)]
+	fake.getHTTPClientArgsForCall = append(fake.getHTTPClientArgsForCall, struct {
+	}{})
+	stub := fake.GetHTTPClientStub
+	fakeReturns := fake.getHTTPClientReturns
+	fake.recordInvocation("GetHTTPClient", []interface{}{})
+	fake.getHTTPClientMutex.Unlock()
+	if stub != nil {
+		return stub()
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fakeReturns.result1
+}
+
+func (fake *FakeManager) GetHTTPClientCallCount() int {
+	fake.getHTTPClientMutex.RLock()
+	defer fake.getHTTPClientMutex.RUnlock()
+	return len(fake.getHTTPClientArgsForCall)
+}
+
+func (fake *FakeManager) GetHTTPClientCalls(stub func() *http.Client) {
+	fake.getHTTPClientMutex.Lock()
+	defer fake.getHTTPClientMutex.Unlock()
+	fake.GetHTTPClientStub = stub
+}
+
+func (fake *FakeManager) GetHTTPClientReturns(result1 *http.Client) {
+	fake.getHTTPClientMutex.Lock()
+	defer fake.getHTTPClientMutex.Unlock()
+	fake.GetHTTPClientStub = nil
+	fake.getHTTPClientReturns = struct {
+		result1 *http.Client
+	}{result1}
+}
+
+func (fake *FakeManager) GetHTTPClientReturnsOnCall(i int, result1 *http.Client) {
+	fake.getHTTPClientMutex.Lock()
+	defer fake.getHTTPClientMutex.Unlock()
+	fake.GetHTTPClientStub = nil
+	if fake.getHTTPClientReturnsOnCall == nil {
+		fake.getHTTPClientReturnsOnCall = make(map[int]struct {
+			result1 *http.Client
+		})
+	}
+	fake.getHTTPClientReturnsOnCall[i] = struct {
+		result1 *http.Client
 	}{result1}
 }
 
@@ -1052,7 +1104,7 @@ func (fake *FakeManager) GetSchemeReturnsOnCall(i int, result1 *runtime.Scheme) 
 	}{result1}
 }
 
-func (fake *FakeManager) GetWebhookServer() *webhook.Server {
+func (fake *FakeManager) GetWebhookServer() webhook.Server {
 	fake.getWebhookServerMutex.Lock()
 	ret, specificReturn := fake.getWebhookServerReturnsOnCall[len(fake.getWebhookServerArgsForCall)]
 	fake.getWebhookServerArgsForCall = append(fake.getWebhookServerArgsForCall, struct {
@@ -1076,93 +1128,32 @@ func (fake *FakeManager) GetWebhookServerCallCount() int {
 	return len(fake.getWebhookServerArgsForCall)
 }
 
-func (fake *FakeManager) GetWebhookServerCalls(stub func() *webhook.Server) {
+func (fake *FakeManager) GetWebhookServerCalls(stub func() webhook.Server) {
 	fake.getWebhookServerMutex.Lock()
 	defer fake.getWebhookServerMutex.Unlock()
 	fake.GetWebhookServerStub = stub
 }
 
-func (fake *FakeManager) GetWebhookServerReturns(result1 *webhook.Server) {
+func (fake *FakeManager) GetWebhookServerReturns(result1 webhook.Server) {
 	fake.getWebhookServerMutex.Lock()
 	defer fake.getWebhookServerMutex.Unlock()
 	fake.GetWebhookServerStub = nil
 	fake.getWebhookServerReturns = struct {
-		result1 *webhook.Server
+		result1 webhook.Server
 	}{result1}
 }
 
-func (fake *FakeManager) GetWebhookServerReturnsOnCall(i int, result1 *webhook.Server) {
+func (fake *FakeManager) GetWebhookServerReturnsOnCall(i int, result1 webhook.Server) {
 	fake.getWebhookServerMutex.Lock()
 	defer fake.getWebhookServerMutex.Unlock()
 	fake.GetWebhookServerStub = nil
 	if fake.getWebhookServerReturnsOnCall == nil {
 		fake.getWebhookServerReturnsOnCall = make(map[int]struct {
-			result1 *webhook.Server
+			result1 webhook.Server
 		})
 	}
 	fake.getWebhookServerReturnsOnCall[i] = struct {
-		result1 *webhook.Server
-	}{result1}
-}
-
-func (fake *FakeManager) SetFields(arg1 interface{}) error {
-	fake.setFieldsMutex.Lock()
-	ret, specificReturn := fake.setFieldsReturnsOnCall[len(fake.setFieldsArgsForCall)]
-	fake.setFieldsArgsForCall = append(fake.setFieldsArgsForCall, struct {
-		arg1 interface{}
-	}{arg1})
-	stub := fake.SetFieldsStub
-	fakeReturns := fake.setFieldsReturns
-	fake.recordInvocation("SetFields", []interface{}{arg1})
-	fake.setFieldsMutex.Unlock()
-	if stub != nil {
-		return stub(arg1)
-	}
-	if specificReturn {
-		return ret.result1
-	}
-	return fakeReturns.result1
-}
-
-func (fake *FakeManager) SetFieldsCallCount() int {
-	fake.setFieldsMutex.RLock()
-	defer fake.setFieldsMutex.RUnlock()
-	return len(fake.setFieldsArgsForCall)
-}
-
-func (fake *FakeManager) SetFieldsCalls(stub func(interface{}) error) {
-	fake.setFieldsMutex.Lock()
-	defer fake.setFieldsMutex.Unlock()
-	fake.SetFieldsStub = stub
-}
-
-func (fake *FakeManager) SetFieldsArgsForCall(i int) interface{} {
-	fake.setFieldsMutex.RLock()
-	defer fake.setFieldsMutex.RUnlock()
-	argsForCall := fake.setFieldsArgsForCall[i]
-	return argsForCall.arg1
-}
-
-func (fake *FakeManager) SetFieldsReturns(result1 error) {
-	fake.setFieldsMutex.Lock()
-	defer fake.setFieldsMutex.Unlock()
-	fake.SetFieldsStub = nil
-	fake.setFieldsReturns = struct {
-		result1 error
-	}{result1}
-}
-
-func (fake *FakeManager) SetFieldsReturnsOnCall(i int, result1 error) {
-	fake.setFieldsMutex.Lock()
-	defer fake.setFieldsMutex.Unlock()
-	fake.SetFieldsStub = nil
-	if fake.setFieldsReturnsOnCall == nil {
-		fake.setFieldsReturnsOnCall = make(map[int]struct {
-			result1 error
-		})
-	}
-	fake.setFieldsReturnsOnCall[i] = struct {
-		result1 error
+		result1 webhook.Server
 	}{result1}
 }
 
@@ -1254,6 +1245,8 @@ func (fake *FakeManager) Invocations() map[string][][]interface{} {
 	defer fake.getEventRecorderForMutex.RUnlock()
 	fake.getFieldIndexerMutex.RLock()
 	defer fake.getFieldIndexerMutex.RUnlock()
+	fake.getHTTPClientMutex.RLock()
+	defer fake.getHTTPClientMutex.RUnlock()
 	fake.getLoggerMutex.RLock()
 	defer fake.getLoggerMutex.RUnlock()
 	fake.getRESTMapperMutex.RLock()
@@ -1262,8 +1255,6 @@ func (fake *FakeManager) Invocations() map[string][][]interface{} {
 	defer fake.getSchemeMutex.RUnlock()
 	fake.getWebhookServerMutex.RLock()
 	defer fake.getWebhookServerMutex.RUnlock()
-	fake.setFieldsMutex.RLock()
-	defer fake.setFieldsMutex.RUnlock()
 	fake.startMutex.RLock()
 	defer fake.startMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
