@@ -22,7 +22,7 @@ recommendations tailored to the project's specific requirements and coding style
 
 ### Use the empty struct `struct{}` for sentinel values
 
-Empty structs as sentinels unambiguously signal an explicit lack of information. For example, use empty struct when for
+Empty structs as sentinels unambiguously signal an explicit lack of information. For example, use empty struct for
 sets and for signaling via channels that don't require a message.
 
 DO:
