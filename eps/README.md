@@ -41,7 +41,7 @@ on GitHub.
 
 The first version of your EP should include a summary of the feature and sections addressing the "Goals" and "Non-Goals".
 The purpose of this initial EP is to achieve consensus on the objectives before filling out the details of
-implementation. Once this version of the EP is approved, designate it as "Provisional."
+implementation. Once this version of the EP is approved, designate it as "Provisional".
 
 ### 4. Document Implementation Details
 
