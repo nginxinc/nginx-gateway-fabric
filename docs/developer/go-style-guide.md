@@ -366,7 +366,7 @@ Below are some general guidelines to follow for writing concurrent code:
 - **Close channels to signal receivers NOT to free resources**: Channels do not need to be closed to free resources.
   Only close channels as a means to signal the channel's receivers that the channel is done accepting new data.
 
-Sources and Recommend Reading:
+Sources and Recommended Reading:
 
 - [Concurrency in Go][cig]
 - [Concurrency Made Easy][cheney]
