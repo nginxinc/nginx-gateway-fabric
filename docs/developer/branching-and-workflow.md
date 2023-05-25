@@ -14,9 +14,12 @@ Below is an example of following the merge and fork process. Developer Alice:
   ```shell
   git remote add upstream git@github.com:nginxinc/nginx-kubernetes-gateway.git
   ```
-  Alice now has the follow remotes configured:
+- Alice lists all of her configured remotes:
   ```shell
   git remote -v
+  ```
+  Which shows the following:
+  ```text
   origin	git@github.com:<alice-user-id>/nginx-kubernetes-gateway.git (fetch)
   origin	git@github.com:<alice-user-id>/nginx-kubernetes-gateway.git (push)
   upstream	git@github.com:nginxinc/nginx-kubernetes-gateway.git (fetch)
