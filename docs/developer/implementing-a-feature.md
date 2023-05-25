@@ -49,7 +49,13 @@ practices to ensure a successful feature development process.
     for expectations and guidelines.
 12. **Obtain the necessary approvals**: Work with code reviewers to maintain the required number of approvals.
 13. **Squash and merge**: Squash your commits locally, or use the GitHub UI to squash and merge. Only one commit per PR
-    should be merged.
+    should be merged. Make sure the first line of the final commit message includes the PR number. For example, Fix
+    supported gateway conditions in compatibility doc (#674).
+    > **Note**:
+    When you squash commits, make sure to not include any commit messages related to the code review
+    (for example, Fixed a typo). If you changed the code as a result of the code review in way that the original commit message no longer describes it well, make sure to update the message.
+     
+
 
 ## Fixing a Bug
 
