@@ -1,7 +1,7 @@
 # Enhancement Proposal (EP)
 
 This document describes the process of submitting an Enhancement Proposal (EP). EPs are a way to propose, communicate,
-and coordinate on new features for the NGINX Kubernetes Gateway. It is based of
+and coordinate on new features for the NGINX Kubernetes Gateway. It is based off of
 the [Gateway Enhancement Proposals](https://github.com/kubernetes-sigs/gateway-api/blob/main/geps/overview.md). Their
 purpose is to:
 
