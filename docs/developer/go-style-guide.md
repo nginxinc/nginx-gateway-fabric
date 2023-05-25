@@ -455,4 +455,3 @@ short periods of time will benefit the most.
 
 For example, channels that send and receive signals using interfaces; these are often only referenced for the duration
 of the event and can be recycled once the signal is received and processed.
- Guidelines
