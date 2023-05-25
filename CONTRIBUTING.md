@@ -82,15 +82,15 @@ for more information.
 Before beginning development, familiarize yourself with the following documents:
 
 - [Developer Quickstart](docs/developer/quickstart.md): This guide provides a quick and easy walkthrough of setting up
-  your development environment and executing tasks required when submitting a PR.
+  your development environment and executing tasks required when submitting a pull request.
 - [Branching and Workflow](docs/developer/branching-and-workflow.md): This document outlines the project's specific
   branching and workflow practices, including instructions on how to name a branch.
 - [Implement a Feature](docs/developer/implementing-a-feature.md): A step-by-step guide on how to implement a feature or
   bug.
 - [Testing](docs/developer/testing.md): The project's testing guidelines, includes both unit testing and manual testing
   procedures. This document explains how to write and run unit tests, and how to manually verify changes.
-- [Pull Request Guidelines](docs/developer/pull-request.md): A guide for both PR submitters and reviewers, outlining
-  guidelines and best practices to ensure smooth and efficient PR processes.
+- [Pull Request Guidelines](docs/developer/pull-request.md): A guide for both pull request submitters and reviewers,
+  outlining guidelines and best practices to ensure smooth and efficient pull request processes.
 
 ## Style Guides
 

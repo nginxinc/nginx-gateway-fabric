@@ -1,7 +1,7 @@
 # Development Quickstart
 
 This guide will assist you in setting up your development environment for NGINX Kubernetes Gateway, covering the steps
-to build, install, and execute tasks necessary for submitting PRs. By following this guide, you'll have a fully prepared
+to build, install, and execute tasks necessary for submitting pull requests. By following this guide, you'll have a fully prepared
 development environment that allows you to contribute to the project effectively.
 
 ## Setup Your Development Environment

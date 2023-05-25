@@ -42,15 +42,15 @@ practices to ensure a successful feature development process.
       up to date with the latest changes.
 10. **Lint code**: See the [run the linter](quickstart.md#run-the-linter) section of the quickstart guide for
     instructions.
-11. **Open PR**: Open a PR targeting the `main` branch of
+11. **Open pull request**: Open a pull request targeting the `main` branch of
     the [nginx-kubernetes-gateway](https://github.com/nginxinc/nginx-kubernetes-gateway/tree/main) repository. The
     entire `nginx-kubernetes-gateway` group will be automatically requested for review. If you have a specific or
     different reviewer in mind, you can request them as well. Refer to the [pull request](pull-request.md) documentation
     for expectations and guidelines.
 12. **Obtain the necessary approvals**: Work with code reviewers to maintain the required number of approvals.
-13. **Squash and merge**: Squash your commits locally, or use the GitHub UI to squash and merge. Only one commit per PR
-    should be merged. Make sure the first line of the final commit message includes the PR number. For example, Fix
-    supported gateway conditions in compatibility doc (#674).
+13. **Squash and merge**: Squash your commits locally, or use the GitHub UI to squash and merge. Only one commit per
+    pull request should be merged. Make sure the first line of the final commit message includes the pull request
+    number. For example, Fix supported gateway conditions in compatibility doc (#674).
     > **Note**:
     When you squash commits, make sure to not include any commit messages related to the code review
     (for example, Fixed a typo). If you changed the code as a result of the code review in way that the original commit message no longer describes it well, make sure to update the message.

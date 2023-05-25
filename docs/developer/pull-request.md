@@ -1,4 +1,4 @@
-# Pull Requests
+# Pull Request (PR) Guidelines
 
 ## Submitter Guidelines
 
