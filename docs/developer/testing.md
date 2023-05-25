@@ -64,14 +64,28 @@ Follow the steps below for manual testing:
 
 1. Follow the instructions to [deploy on kind](/docs/developer/quickstart.md#deploy-on-kind).
 2. Test your changes. Make sure to check the following:
-    - Logs of the `nginx-gateway` container. Look out for unexpected error logs or panics.
-    - Logs of the `nginx` container. Look for unexpected error logs and verify the access logs are correct.
-    - The generated nginx config. Make sure it's correct.
-    - NGINX proxies traffic successfully (when applicable).
-    - [Examples](/examples) work correctly. This will ensure that your changes have not introduced any regressions.
-    - The statuses of the Gateway API Resources. Make sure they look correct.
+   - Logs of the `nginx-gateway` container. Look out for unexpected error logs or panics.
+     ```shell
+     kubectl logs -n nginx-gateway -l app=nginx-gateway
+     ```
+   - Logs of the `nginx` container. Look for unexpected error logs and verify the access logs are correct.
+     ```shell
+     kubectl logs -n nginx-gateway -l app=nginx
+     ```
+   - The generated nginx config. Make sure it's correct.
+     ```shell
+     kubectl exec -it -n nginx-gateway <nginx gateway pod> -c nginx -- nginx -T
+     ```
+   - The statuses of the Gateway API Resources. Make sure they look correct.
+     ```shell
+     kubectl describe <resource> <resource name> 
+     ```
+   - NGINX proxies traffic successfully (when applicable). 
+   - [Examples](/examples) work correctly. This will ensure that your changes have not introduced any regressions.
+
 
 > **Note**
+>  
 > Don't limit yourself to happy path testing. Make an effort to cover various scenarios, including edge cases and potential error conditions. By testing a wide range of scenarios, you can uncover hidden issues and ensure the robustness of your changes.
 
 Performing manual testing helps guarantee the stability, reliability, and effectiveness of your changes before
