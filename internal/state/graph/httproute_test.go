@@ -841,7 +841,7 @@ func TestBindRouteToListeners(t *testing.T) {
 					Gateway: client.ObjectKeyFromObject(gw),
 					Attachment: &ParentRefAttachmentStatus{
 						Attached:          false,
-						FailedCondition:   conditions.NewTODO("listener is not found"),
+						FailedCondition:   conditions.NewRouteNoMatchingParent(),
 						AcceptedHostnames: map[string][]string{},
 					},
 				},
