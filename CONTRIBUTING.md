@@ -34,7 +34,7 @@ Reserve GitHub issues for feature requests and bugs rather than general question
 
 ## Getting Started
 
-Follow our [Installation Instructions](docs/installation.md) to get the NGINX Kubernetes Gateway up and running.
+Follow our [Installation Instructions](/docs/installation.md) to get the NGINX Kubernetes Gateway up and running.
 
 ### Project Structure
 
@@ -74,22 +74,22 @@ template.
 #### Issue lifecycle
 
 When an issue or PR is created, it will be triaged by the maintainers and assigned a label to indicate the type of issue
-it is (bug, feature request, etc) and to determine the milestone. See the [Issue Lifecycle](ISSUE_LIFECYCLE.md) document
+it is (bug, feature request, etc) and to determine the milestone. See the [Issue Lifecycle](/ISSUE_LIFECYCLE.md) document
 for more information.
 
 ### Development Guide
 
 Before beginning development, familiarize yourself with the following documents:
 
-- [Developer Quickstart](docs/developer/quickstart.md): This guide provides a quick and easy walkthrough of setting up
+- [Developer Quickstart](/docs/developer/quickstart.md): This guide provides a quick and easy walkthrough of setting up
   your development environment and executing tasks required when submitting a pull request.
-- [Branching and Workflow](docs/developer/branching-and-workflow.md): This document outlines the project's specific
+- [Branching and Workflow](/docs/developer/branching-and-workflow.md): This document outlines the project's specific
   branching and workflow practices, including instructions on how to name a branch.
-- [Implement a Feature](docs/developer/implementing-a-feature.md): A step-by-step guide on how to implement a feature or
+- [Implement a Feature](/docs/developer/implementing-a-feature.md): A step-by-step guide on how to implement a feature or
   bug.
-- [Testing](docs/developer/testing.md): The project's testing guidelines, includes both unit testing and manual testing
+- [Testing](/docs/developer/testing.md): The project's testing guidelines, includes both unit testing and manual testing
   procedures. This document explains how to write and run unit tests, and how to manually verify changes.
-- [Pull Request Guidelines](docs/developer/pull-request.md): A guide for both pull request submitters and reviewers,
+- [Pull Request Guidelines](/docs/developer/pull-request.md): A guide for both pull request submitters and reviewers,
   outlining guidelines and best practices to ensure smooth and efficient pull request processes.
 
 ## Style Guides

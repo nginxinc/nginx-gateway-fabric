@@ -2,7 +2,7 @@
 
 ## Submitter Guidelines
 
-- Fill in [our pull request template](../../.github/PULL_REQUEST_TEMPLATE.md). In addition, write a clear and concise PR
+- Fill in [our pull request template](/.github/PULL_REQUEST_TEMPLATE.md). In addition, write a clear and concise PR
   description that helps reviewers understand the purpose and impact of your changes. Start with a brief overview of the
   problem or feature being addressed. Then, explain the approach you took to implement the solution, highlighting any
   significant design decisions or considerations. Finally, mention any specific areas where you would like reviewers to

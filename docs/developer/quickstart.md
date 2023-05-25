@@ -1,8 +1,8 @@
 # Development Quickstart
 
 This guide will assist you in setting up your development environment for NGINX Kubernetes Gateway, covering the steps
-to build, install, and execute tasks necessary for submitting pull requests. By following this guide, you'll have a fully prepared
-development environment that allows you to contribute to the project effectively.
+to build, install, and execute tasks necessary for submitting pull requests. By following this guide, you'll have a
+fully prepared development environment that allows you to contribute to the project effectively.
 
 ## Setup Your Development Environment
 
@@ -67,9 +67,9 @@ This will build the docker image and tag it with your user ID, e.g. `docker.io/l
    ```
 
 3. Modify the image name and image pull policy for the `nginx-gateway` container in the
-   NKG [deployment manifest](../../deploy/manifests/nginx-gateway.yaml). Set the image name to the image you built in
+   NKG [deployment manifest](/deploy/manifests/nginx-gateway.yaml). Set the image name to the image you built in
    the previous step and the image pull policy to `Never`. Once the changes are made, follow
-   the [installation instructions](../installation.md) to install NKG on your `kind` cluster.
+   the [installation instructions](/docs/installation.md) to install NKG on your `kind` cluster.
 
    Alternatively, you can update the image name and pull policy by using the following command when applying
    `nginx-gateway.yaml`:
@@ -80,7 +80,7 @@ This will build the docker image and tag it with your user ID, e.g. `docker.io/l
 
 ### Run Examples
 
-To make sure NKG is running properly, try out the [examples](../../examples).
+To make sure NKG is running properly, try out the [examples](/examples).
 
 ## Run the Unit Tests
 
@@ -90,7 +90,7 @@ To run all the unit tests, run the make unit-test command from the project's roo
 make unit-test
 ```
 
-For more details on testing, see the [testing](testing.md) documentation.
+For more details on testing, see the [testing](/docs/developer/testing.md) documentation.
 
 ## Run the Linter
 

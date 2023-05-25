@@ -62,13 +62,13 @@ To ensure the quality and correctness of your changes, it is essential to perfor
 cluster. Manual testing helps validate the functionality and behavior of your changes in a real-world environment.
 Follow the steps below for manual testing:
 
-1. Follow the instructions to [deploy on kind](quickstart.md#deploy-on-kind).
+1. Follow the instructions to [deploy on kind](/docs/developer/quickstart.md#deploy-on-kind).
 2. Test your changes. Make sure to check the following:
     - Logs of the `nginx-gateway` container. Look out for unexpected error logs or panics.
     - Logs of the `nginx` container. Look for unexpected error logs and verify the access logs are correct.
     - The generated nginx config. Make sure it's correct.
     - NGINX proxies traffic successfully (when applicable).
-    - [Examples](../../examples) work correctly. This will ensure that your changes have not introduced any regressions.
+    - [Examples](/examples) work correctly. This will ensure that your changes have not introduced any regressions.
     - The statuses of the Gateway API Resources. Make sure they look correct.
 
 > **Note**
