@@ -38,7 +38,7 @@
 
 - As a reviewer, you bear the ultimate responsibility for the resolution of the comment. If not resolved, please
   follow-up in a timely manner with acceptance of the solution and explanation.
-- Do your best to review in a timely manner. However, code reviews are time-consuming, maximize their benefit by
+- Do your best to review in a timely manner. However, code reviews are time-consuming; maximize their benefit by
   focusing on what’s highest value. This code review pyramid outlines a reasonable shorthand:
   ![Code Review Pyramid](code-review-pyramid.jpeg)
 - Always review for: design, API semantics, [DRY](https://en.wikipedia.org/wiki/Don%27t_repeat_yourself) and
