@@ -39,6 +39,11 @@ var _ = Describe("Updater", func() {
 
 		client = fake.NewClientBuilder().
 			WithScheme(scheme).
+			WithStatusSubresource(
+				&v1beta1.GatewayClass{},
+				&v1beta1.Gateway{},
+				&v1beta1.HTTPRoute{},
+			).
 			Build()
 
 		// Rfc3339Copy() removes the monotonic clock reading and leaves only second-level precision.
