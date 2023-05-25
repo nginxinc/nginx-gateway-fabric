@@ -110,9 +110,11 @@ spec:
           mountPath: /etc/nginx
         securityContext:
           runAsUser: 1001
-          # FIXME(pleshakov) - figure out which capabilities are required
-          # dropping ALL and adding only CAP_KILL doesn't work
-          # Note: CAP_KILL is needed for sending HUP signal to NGINX main process
+          capabilities:
+            drop:
+            - ALL
+            add:
+            - KILL
         env:
         - name: POD_IP
           valueFrom:
@@ -137,3 +139,12 @@ spec:
           mountPath: /var/lib/nginx
         - name: njs-modules
           mountPath: /usr/lib/nginx/modules/njs
+        securityContext:
+          capabilities:
+            drop:
+            - ALL
+            add:
+            - CHOWN
+            - NET_BIND_SERVICE
+            - SETGID
+            - SETUID
