@@ -134,7 +134,7 @@ modified without changing the signature.
 
 ### Use contexts in a viral fashion
 
-Functions that accept a `context.Contex`t should pass the context or derive a subsidiary context to functions it calls.
+Functions that accept a `context.Context` should pass the context or derive a subsidiary context to functions it calls.
 When designing libraries, subordinate functions (especially those asynchronous or expensive in nature) should accept
 `context.Context`.
 
