@@ -6,7 +6,7 @@ following format:
 Problem: Give a brief overview of the problem or feature being addressed.
 
 Solution: Explain the approach you took to implement the solution, highlighting any significant design decisions or
-considerations
+considerations.
 
 Testing: Describe any testing that you did.
 
