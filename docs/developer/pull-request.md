@@ -2,13 +2,8 @@
 
 ## Submitter Guidelines
 
-- Fill in [our pull request template](/.github/PULL_REQUEST_TEMPLATE.md). In addition, write a clear and concise PR
-  description that helps reviewers understand the purpose and impact of your changes. Start with a brief overview of the
-  problem or feature being addressed. Then, explain the approach you took to implement the solution, highlighting any
-  significant design decisions or considerations. Finally, mention any specific areas where you would like reviewers to
-  focus their attention or provide specific feedback. A well-written PR description sets the stage for effective code
-  review and facilitates a smoother review process.
-- Include the issue number in the PR description to automatically close the issue when the PR mergers.
+- Fill in [our pull request template](/.github/PULL_REQUEST_TEMPLATE.md). 
+- Make sure to include the issue number in the PR description to automatically close the issue when the PR mergers.
   See [Closing Issues via Pull Requests](https://github.blog/2013-05-14-closing-issues-via-pull-requests/) for details.
 - For significant changes, break your changes into a logical series of smaller commits. By approaching the changes
   incrementally, it becomes easier to comprehend and review the code.

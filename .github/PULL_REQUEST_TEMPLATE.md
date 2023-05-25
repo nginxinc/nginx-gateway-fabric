@@ -1,7 +1,22 @@
 ### Proposed changes
-Describe the use case and detail of the change. If this PR addresses an issue on GitHub, make sure to include a link to that issue here in this description (not in the title of the PR).
+
+Write a clear and concise description that helps reviewers understand the purpose and impact of your changes. Use the
+following format:
+
+Problem: Give a brief overview of the problem or feature being addressed.
+
+Solution: Explain the approach you took to implement the solution, highlighting any significant design decisions or
+considerations
+
+Testing: Describe any testing that you did.
+
+Please focus on (optional): If you any specific areas where you would like reviewers to focus their attention or provide
+specific feedback, add them here.
+
+Closes #ISSUE
 
 ### Checklist
+
 Before creating a PR, run through this checklist and mark each as complete.
 
 - [ ] I have read the [CONTRIBUTING](https://github.com/nginxinc/nginx-kubernetes-gateway/blob/main/CONTRIBUTING.md) doc
