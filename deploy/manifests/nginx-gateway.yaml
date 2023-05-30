@@ -125,7 +125,7 @@ spec:
         - --gateway-ctlr-name=k8s-gateway.nginx.org/nginx-gateway-controller
         - --gatewayclass=nginx
       - image: nginx:1.25
-        imagePullPolicy: IfNotPresent
+        imagePullPolicy: Always
         name: nginx
         ports:
         - name: http
