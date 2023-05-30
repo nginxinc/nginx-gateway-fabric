@@ -32,7 +32,9 @@ func prepareGatewayStatus(
 			Name: v1beta1.SectionName(name),
 			SupportedKinds: []v1beta1.RouteGroupKind{
 				{
-					Kind: "HTTPRoute", // FIXME(pleshakov) Set it based on the listener https://github.com/nginxinc/nginx-kubernetes-gateway/issues/690
+					// FIXME(pleshakov) Set it based on the listener
+					// https://github.com/nginxinc/nginx-kubernetes-gateway/issues/690
+					Kind: "HTTPRoute",
 				},
 			},
 			AttachedRoutes: s.AttachedRoutes,
