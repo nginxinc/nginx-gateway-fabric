@@ -14,11 +14,6 @@ considering contributing!
 * [Issues and Discussions](#issues-and-discussions)
 * [Development Guide](#development-guide)
 
-[Style Guides](#style-guides)
-
-* [Git Style Guide](#git-style-guide)
-* [Go Style Guide](#go-style-guide)
-
 [Code of Conduct](CODE_OF_CONDUCT.md)
 
 [Contributor License Agreement](#contributor-license-agreement)
@@ -74,8 +69,8 @@ template.
 #### Issue lifecycle
 
 When an issue or PR is created, it will be triaged by the maintainers and assigned a label to indicate the type of issue
-it is (bug, feature request, etc) and to determine the milestone. See the [Issue Lifecycle](/ISSUE_LIFECYCLE.md) document
-for more information.
+it is (bug, feature request, etc) and to determine the milestone. See the [Issue Lifecycle](/ISSUE_LIFECYCLE.md)
+document for more information.
 
 ### Development Guide
 
@@ -85,36 +80,14 @@ Before beginning development, familiarize yourself with the following documents:
   your development environment and executing tasks required when submitting a pull request.
 - [Branching and Workflow](/docs/developer/branching-and-workflow.md): This document outlines the project's specific
   branching and workflow practices, including instructions on how to name a branch.
-- [Implement a Feature](/docs/developer/implementing-a-feature.md): A step-by-step guide on how to implement a feature or
-  bug.
+- [Implement a Feature](/docs/developer/implementing-a-feature.md): A step-by-step guide on how to implement a feature
+  or bug.
 - [Testing](/docs/developer/testing.md): The project's testing guidelines, includes both unit testing and manual testing
   procedures. This document explains how to write and run unit tests, and how to manually verify changes.
 - [Pull Request Guidelines](/docs/developer/pull-request.md): A guide for both pull request submitters and reviewers,
   outlining guidelines and best practices to ensure smooth and efficient pull request processes.
-
-## Style Guides
-
-### Git Style Guide
-
-* Keep a clean, concise and meaningful git commit history on your branch, rebasing locally and squashing before
-  submitting a PR
-* Follow the guidelines of writing a good commit message as described [here](https://chris.beams.io/posts/git-commit/)
-  and summarized in the next few points
-    * In the subject line, use the present tense ("Add feature" not "Added feature")
-    * In the subject line, use the imperative mood ("Move cursor to..." not "Moves cursor to...")
-    * Limit the subject line to 72 characters or less
-    * Reference issues and pull requests liberally after the subject line
-    * Add more detailed description in the body of the git message (`git commit -a` to give you more space and time in
-      your text editor to write a good message instead of `git commit -am`)
-
-### Go Style Guide
-
-* Run `gofmt` over your code to automatically resolve a lot of style issues. Most editors support this running
-  automatically when saving a code file.
-* Run `go lint` and `go vet` on your code too to catch any other issues.
-* Follow this guide on some good practice and idioms for Go -  https://github.com/golang/go/wiki/CodeReviewComments
-* To check for extra issues, install [golangci-lint](https://github.com/golangci/golangci-lint) and run `make lint`
-  or `golangci-lint run`
+- [Go Style Guide](/docs/developer/go-style-guide.md) A coding style guide for Go. Contains best practices and
+  conventions to follow when writing Go code for the project. 
 
 ## Contributor License Agreement
 

@@ -17,19 +17,21 @@ practices to ensure a successful feature development process.
    the [branching and workflow](/docs/developer/branching-and-workflow.md) documentation.
 4. **Branch**: Create a branch following
    the [naming conventions](/docs/developer/branching-and-workflow.md#branch-naming-conventions).
-5. **Make changes**: Make the necessary changes for the feature.
-6. **Consider opening a draft PR**: If your feature involves substantial architecture changes, or you would like to
+5. **Review style guide** Review the [Go style guide](/docs/developer/go-style-guide.md) to familiarize yourself with
+   the project's coding practices.
+6. **Make changes**: Make the necessary changes for the feature.
+7. **Consider opening a draft PR**: If your feature involves substantial architecture changes, or you would like to
    receive early feedback, consider opening a draft PR and requesting reviews from the maintainers. Draft PRs are an
    effective means to solicit feedback and ensure that major architectural changes align with the project's goals and
    standards.
-7. **Add or update unit tests** All features **must** be accompanied by unit tests that verify the functionality. Make
+8. **Add or update unit tests** All features **must** be accompanied by unit tests that verify the functionality. Make
    sure to thoroughly test the different scenarios and edge cases related to the feature to ensure robustness and
    reliability. Additionally, open the code coverage report to ensure that the code you added has sufficient test
    coverage. For instructions on writing and running unit tests, refer to
    the [testing](/docs/developer/testing.md#unit-test-guidelines) documentation.
-8. **Manually verify your changes**: Refer to the [manual testing](/docs/developer/testing.md#manual-testing) section of
+9. **Manually verify your changes**: Refer to the [manual testing](/docs/developer/testing.md#manual-testing) section of
    the testing documentation for instructions on how to manually test your changes.
-9. **Update any relevant documentation**: Here are some guidelines for updating documentation:
+10. **Update any relevant documentation**: Here are some guidelines for updating documentation:
     - **Gateway API Feature**: If you are implementing a Gateway API feature, make sure to update
       the [Gateway API Compatibility](/docs/gateway-api-compatibility.md) documentation.
     - **New Use Case:** If your feature introduces a new use case, add an example of how to use it in
@@ -41,22 +43,20 @@ practices to ensure a successful feature development process.
     - **Other Documentation Updates**: For any other changes that affect the behavior, usage, or configuration of NKG,
       review the existing documentation and update it as necessary. Ensure that the documentation remains accurate and
       up to date with the latest changes.
-10. **Lint code**: See the [run the linter](/docs/developer/quickstart.md#run-the-linter) section of the quickstart
+11. **Lint code**: See the [run the linter](/docs/developer/quickstart.md#run-the-linter) section of the quickstart
     guide for instructions.
-11. **Open pull request**: Open a pull request targeting the `main` branch of
+12. **Open pull request**: Open a pull request targeting the `main` branch of
     the [nginx-kubernetes-gateway](https://github.com/nginxinc/nginx-kubernetes-gateway/tree/main) repository. The
     entire `nginx-kubernetes-gateway` group will be automatically requested for review. If you have a specific or
     different reviewer in mind, you can request them as well. Refer to
     the [pull request](/docs/developer/pull-request.md) documentation for expectations and guidelines.
-12. **Obtain the necessary approvals**: Work with code reviewers to maintain the required number of approvals.
-13. **Squash and merge**: Squash your commits locally, or use the GitHub UI to squash and merge. Only one commit per
+13. **Obtain the necessary approvals**: Work with code reviewers to maintain the required number of approvals.
+14. **Squash and merge**: Squash your commits locally, or use the GitHub UI to squash and merge. Only one commit per
     pull request should be merged. Make sure the first line of the final commit message includes the pull request
     number. For example, Fix supported gateway conditions in compatibility doc (#674).
     > **Note**:
     When you squash commits, make sure to not include any commit messages related to the code review
     (for example, Fixed a typo). If you changed the code as a result of the code review in way that the original commit message no longer describes it well, make sure to update the message.
-     
-
 
 ## Fixing a Bug
 
