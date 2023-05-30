@@ -343,7 +343,7 @@ Below are some general guidelines to follow for writing concurrent code:
 - **Avoid buffered channels**:  Use unbuffered channels unless there is a very good reason for using a buffered channel.
   Unbuffered channels provide strong synchronization guarantees. Buffered channels are asynchronous and will not block
   unless the channel is full. Buffered channels can also be slower than unbuffered channels.
-- **Protect maps and slices**: Maps and slices cannot be accessed concurrently without locking. Doing so can lead to
+- **Protect maps and slices**: Maps and slices cannot be accessed concurrently (when at least one goroutine is writing) without locking. Doing so can lead to
   data races.
 - **Never copy sync types**: see [above section](#do-not-copy-sync-entities).
 - **Choose primitives or channels based on use case**: In general, the Go language writers tell us to prefer channels
