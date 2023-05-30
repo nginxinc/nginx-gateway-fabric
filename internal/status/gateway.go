@@ -10,9 +10,6 @@ import (
 )
 
 // prepareGatewayStatus prepares the status for a Gateway resource.
-// FIXME(pleshakov): Be compliant with in the Gateway API.
-// Currently, we only support simple valid/invalid status per each listener.
-// Extend support to cover more cases.
 func prepareGatewayStatus(
 	gatewayStatus state.GatewayStatus,
 	podIP string,
@@ -21,6 +18,7 @@ func prepareGatewayStatus(
 	listenerStatuses := make([]v1beta1.ListenerStatus, 0, len(gatewayStatus.ListenerStatuses))
 
 	// FIXME(pleshakov) Maintain the order from the Gateway resource
+	// https://github.com/nginxinc/nginx-kubernetes-gateway/issues/689
 	names := make([]string, 0, len(gatewayStatus.ListenerStatuses))
 	for name := range gatewayStatus.ListenerStatuses {
 		names = append(names, name)
@@ -34,7 +32,7 @@ func prepareGatewayStatus(
 			Name: v1beta1.SectionName(name),
 			SupportedKinds: []v1beta1.RouteGroupKind{
 				{
-					Kind: "HTTPRoute", // FIXME(pleshakov) Set it based on the listener
+					Kind: "HTTPRoute", // FIXME(pleshakov) Set it based on the listener https://github.com/nginxinc/nginx-kubernetes-gateway/issues/690
 				},
 			},
 			AttachedRoutes: s.AttachedRoutes,

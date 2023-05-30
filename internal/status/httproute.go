@@ -8,9 +8,6 @@ import (
 )
 
 // prepareHTTPRouteStatus prepares the status for an HTTPRoute resource.
-// FIXME(pleshakov): Be compliant with in the Gateway API.
-// Currently, we only support simple attached/not attached status per each parentRef.
-// Extend support to cover more cases.
 func prepareHTTPRouteStatus(
 	status state.HTTPRouteStatus,
 	gatewayCtlrName string,

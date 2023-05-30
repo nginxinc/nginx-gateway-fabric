@@ -44,10 +44,8 @@ type UpdaterConfig struct {
 //
 // (1) It doesn't understand the leader election. Only the leader must report the statuses of the resources. Otherwise,
 // multiple replicas will step on each other when trying to report statuses for the same resources.
-// FIXME(pleshakov): address limitation (1)
 //
 // (2) It is not smart. It will update the status of a resource (make an API call) even if it hasn't changed.
-// FIXME(pleshakov) address limitation (2)
 //
 // (3) It is synchronous, which means the status reporter can slow down the event loop.
 // Consider the following cases:
@@ -55,26 +53,23 @@ type UpdaterConfig struct {
 // status API calls sequentially will take time.
 // (b) k8s API can become slow or even timeout. This will increase every update status API call.
 // Making updaterImpl asynchronous will prevent it from adding variable delays to the event loop.
-// FIXME(pleshakov) address limitation (3)
 //
 // (4) It doesn't retry on failures. This means there is a chance that some resources will not have up-to-do statuses.
 // Statuses are important part of the Gateway API, so we need to ensure that the Gateway always keep the resources
 // statuses up-to-date.
-// FIXME(pleshakov): address limitation (4)
 //
 // (5) It doesn't clear the statuses of a resources that are no longer handled by the Gateway. For example, if
 // an HTTPRoute resource no longer has the parentRef to the Gateway resources, the Gateway must update the status
 // of the resource to remove the status about the removed parentRef.
-// FIXME(pleshakov): address limitation (5)
 //
 // (6) If another controllers changes the status of the Gateway/HTTPRoute resource so that the information set by our
 // Gateway is removed, our Gateway will not restore the status until the EventLoop invokes the StatusUpdater as a
 // result of processing some other new change to a resource(s).
-// FIXME(pleshakov): Figure out if this is something that needs to be addressed.
+// FIXME(pleshakov): Make updater production ready
+// https://github.com/nginxinc/nginx-kubernetes-gateway/issues/691
 
-// (7) To support new resources, updaterImpl needs to be modified. Consider making updaterImpl extendable, so that it
+// To support new resources, updaterImpl needs to be modified. Consider making updaterImpl extendable, so that it
 // goes along the Open-closed principle.
-// FIXME(pleshakov): address limitation (7)
 type updaterImpl struct {
 	cfg UpdaterConfig
 }
@@ -88,7 +83,7 @@ func NewUpdater(cfg UpdaterConfig) Updater {
 
 func (upd *updaterImpl) Update(ctx context.Context, statuses state.Statuses) {
 	// FIXME(pleshakov) Merge the new Conditions in the status with the existing Conditions
-	// FIXME(pleshakov) Skip the status update (API call) if the status hasn't changed.
+	// https://github.com/nginxinc/nginx-kubernetes-gateway/issues/558
 
 	if upd.cfg.UpdateGatewayClassStatus && statuses.GatewayClassStatus != nil {
 		upd.update(
@@ -135,8 +130,6 @@ func (upd *updaterImpl) update(
 	statusSetter func(client.Object),
 ) {
 	// The function handles errors by reporting them in the logs.
-	// FIXME(pleshakov): figure out appropriate log level for these errors. Perhaps 3?
-
 	// We need to get the latest version of the resource.
 	// Otherwise, the Update status API call can fail.
 	// Note: the default client uses a cache for reads, so we're not making an unnecessary API call here.

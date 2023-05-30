@@ -70,7 +70,6 @@ func Start(cfg config.Config) error {
 
 	// Note: for any new object type or a change to the existing one,
 	// make sure to also update prepareFirstEventBatchPreparerArgs()
-	// FIXME(pleshakov): Make the comment above redundant.
 	controllerRegCfgs := []struct {
 		objectType client.Object
 		options    []controller.Option
