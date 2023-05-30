@@ -44,12 +44,12 @@ The following table lists the software versions NGINX Kubernetes Gateway support
 
 | NGINX Kubernetes Gateway | Gateway API | Kubernetes | NGINX OSS |
 |-|-|-|-|
-| Edge | 0.7.0 | 1.21+ | 1.21.x *|
+| Edge | 0.7.0 | 1.21+ | 1.25.x *|
 | 0.3.0 | 0.6.2 | 1.21+ | 1.23.x *|
 | 0.2.0 | 0.5.1 | 1.21+ | 1.21.x *|
 | 0.1.0 | 0.5.0 | 1.19+ | 1.21.3 |
 
-\*the installation manifests use the minor version of nginx (e.g. 1.25) and the patch version is not specified. This means that the latest available patch version of nginx is used.
+\*the installation manifests use the minor version of NGINX container image (e.g. 1.25) and the patch version is not specified. This means that the latest available patch version is used.
 
 ## Contacts
 
