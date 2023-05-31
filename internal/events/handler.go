@@ -77,14 +77,14 @@ func (h *EventHandlerImpl) HandleEventBatch(ctx context.Context, batch EventBatc
 		}
 	}
 
-	changed, graphCfg := h.cfg.Processor.Process()
+	changed, graph := h.cfg.Processor.Process()
 	if !changed {
 		h.cfg.Logger.Info("Handling events didn't result into NGINX configuration changes")
 		return
 	}
 
 	var nginxReloadRes status.NginxReloadResult
-	err := h.updateNginx(ctx, dataplane.BuildConfiguration(ctx, graphCfg, h.cfg.ServiceResolver))
+	err := h.updateNginx(ctx, dataplane.BuildConfiguration(ctx, graph, h.cfg.ServiceResolver))
 	if err != nil {
 		h.cfg.Logger.Error(err, "Failed to update NGINX configuration")
 		nginxReloadRes.Error = err
@@ -92,7 +92,7 @@ func (h *EventHandlerImpl) HandleEventBatch(ctx context.Context, batch EventBatc
 		h.cfg.Logger.Info("NGINX configuration was successfully updated")
 	}
 
-	h.cfg.StatusUpdater.Update(ctx, status.BuildStatuses(graphCfg, nginxReloadRes))
+	h.cfg.StatusUpdater.Update(ctx, status.BuildStatuses(graph, nginxReloadRes))
 }
 
 func (h *EventHandlerImpl) updateNginx(ctx context.Context, conf dataplane.Configuration) error {

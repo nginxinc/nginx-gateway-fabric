@@ -43,7 +43,7 @@ type ChangeProcessor interface {
 	// The method panics if the resource is of unsupported type or if the passed Gateway is different from the one
 	// this ChangeProcessor was created for.
 	CaptureDeleteChange(resourceType client.Object, nsname types.NamespacedName)
-	// Process produces an internal representation of the Gateway configuration.
+	// Process produces a Graph-like representation of GatewayAPI resources.
 	// If no changes were captured, the changed return argument will be false and graph will be empty.
 	Process() (changed bool, graphCfg *graph.Graph)
 }

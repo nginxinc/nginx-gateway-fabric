@@ -18,7 +18,6 @@ import (
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/helpers"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/manager/index"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/graph"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/relationship"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/relationship/relationshipfakes"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/secrets/secretsfakes"
@@ -221,9 +220,9 @@ var _ = Describe("ChangeProcessor", func() {
 
 		Describe("Process gateway resources", Ordered, func() {
 			var (
-				gcUpdated       *v1beta1.GatewayClass
-				hr1, hr1Updated *v1beta1.HTTPRoute
-				gw1, gw1Updated *v1beta1.Gateway
+				gcUpdated            *v1beta1.GatewayClass
+				hr1, hr1Updated, hr2 *v1beta1.HTTPRoute
+				gw1, gw1Updated, gw2 *v1beta1.Gateway
 			)
 			BeforeAll(func() {
 				gcUpdated = gc.DeepCopy()
@@ -234,10 +233,14 @@ var _ = Describe("ChangeProcessor", func() {
 				hr1Updated = hr1.DeepCopy()
 				hr1Updated.Generation++
 
+				hr2 = createRoute("hr-2", "gateway-2", "bar.example.com")
+
 				gw1 = createGatewayWithTLSListener("gateway-1")
 
 				gw1Updated = gw1.DeepCopy()
 				gw1Updated.Generation++
+
+				gw2 = createGatewayWithTLSListener("gateway-2")
 			})
 
 			When("no upsert has occurred", func() {
@@ -247,15 +250,36 @@ var _ = Describe("ChangeProcessor", func() {
 					Expect(graphCfg).To(BeNil())
 				})
 			})
-			When("upsert has occurred", func() {
-				It("returns populated graph", func() {
-					processor.CaptureUpsertChange(hr1)
-					processor.CaptureUpsertChange(gw1)
+			When("GatewayClass doesn't exist", func() {
+				When("Gateways don't exist", func() {
+					When("the first HTTPRoute is upserted", func() {
+						It("returns empty graph", func() {
+							processor.CaptureUpsertChange(hr1)
+
+							changed, graphCfg := processor.Process()
+							Expect(changed).To(BeTrue())
+							Expect(graphCfg.Routes).To(BeNil())
+						})
+					})
+					When("the first Gateway is upserted", func() {
+						It("returns populated graph", func() {
+							processor.CaptureUpsertChange(gw1)
+
+							changed, graphCfg := processor.Process()
+							Expect(changed).To(BeTrue())
+							Expect(graphCfg.Gateway).ToNot(BeNil())
+							Expect(graphCfg.Routes).To(HaveLen(1))
+						})
+					})
+				})
+			})
+			When("the GatewayClass is upserted", func() {
+				It("returns updated graph", func() {
 					processor.CaptureUpsertChange(gc)
 
 					changed, graphCfg := processor.Process()
 					Expect(changed).To(BeTrue())
-					Expect(graphCfg).ToNot(BeNil())
+					Expect(graphCfg.GatewayClass).ToNot(BeNil())
 				})
 			})
 			When("the first HTTPRoute without a generation changed is processed", func() {
@@ -275,7 +299,7 @@ var _ = Describe("ChangeProcessor", func() {
 
 					changed, graphCfg := processor.Process()
 					Expect(changed).To(BeTrue())
-					Expect(graphCfg).ToNot(BeNil())
+					Expect(graphCfg.Routes).To(HaveLen(1))
 				},
 				)
 			})
@@ -296,7 +320,7 @@ var _ = Describe("ChangeProcessor", func() {
 
 					changed, graphCfg := processor.Process()
 					Expect(changed).To(BeTrue())
-					Expect(graphCfg).ToNot(BeNil())
+					Expect(graphCfg.Gateway).ToNot(BeNil())
 				})
 			})
 			When("the GatewayClass update without generation change is processed", func() {
@@ -316,7 +340,7 @@ var _ = Describe("ChangeProcessor", func() {
 
 					changed, graphCfg := processor.Process()
 					Expect(changed).To(BeTrue())
-					Expect(graphCfg).ToNot(BeNil())
+					Expect(graphCfg.GatewayClass).ToNot(BeNil())
 				})
 			})
 			When("no changes are captured", func() {
@@ -327,26 +351,83 @@ var _ = Describe("ChangeProcessor", func() {
 					Expect(graphCfg).To(BeNil())
 				})
 			})
-			When("resources are deleted", func() {
-				It("returns empty graph", func() {
-					processor.CaptureDeleteChange(
-						&v1beta1.GatewayClass{},
-						types.NamespacedName{Name: gcName},
-					)
+			When("the second Gateway is upserted", func() {
+				It("returns populated graph using first gateway", func() {
+					processor.CaptureUpsertChange(gw2)
+
+					changed, graphCfg := processor.Process()
+					Expect(changed).To(BeTrue())
+					Expect(graphCfg.Gateway.Source.Name).To(Equal(gw1.Name))
+				})
+			})
+			When("the second HTTPRoute is upserted", func() {
+				It("returns populated graph", func() {
+					processor.CaptureUpsertChange(hr2)
+
+					changed, graphCfg := processor.Process()
+					Expect(changed).To(BeTrue())
+					Expect(graphCfg.Routes).To(HaveLen(2))
+				})
+			})
+			When("the first Gateway is deleted", func() {
+				It("returns updated graph", func() {
 					processor.CaptureDeleteChange(
 						&v1beta1.Gateway{},
 						types.NamespacedName{Namespace: "test", Name: "gateway-1"},
 					)
+
+					changed, graphCfg := processor.Process()
+					Expect(changed).To(BeTrue())
+					Expect(graphCfg.Gateway.Source.Name).To(Equal(gw2.Name))
+					Expect(graphCfg.Routes).To(HaveLen(1))
+				})
+			})
+			When("the second HTTPRoute is deleted", func() {
+				It("returns updated graph", func() {
+					processor.CaptureDeleteChange(
+						&v1beta1.HTTPRoute{},
+						types.NamespacedName{Namespace: "test", Name: "hr-2"},
+					)
+
+					changed, graphCfg := processor.Process()
+					Expect(changed).To(BeTrue())
+					Expect(graphCfg.Routes).To(HaveLen(0))
+				})
+			})
+			When("the GatewayClass is deleted", func() {
+				It("returns updated graph", func() {
+					processor.CaptureDeleteChange(
+						&v1beta1.GatewayClass{},
+						types.NamespacedName{Name: gcName},
+					)
+
+					changed, graphCfg := processor.Process()
+					Expect(changed).To(BeTrue())
+					Expect(graphCfg.GatewayClass).To(BeNil())
+				})
+			})
+			When("the second Gateway is deleted", func() {
+				It("returns updated graph", func() {
+					processor.CaptureDeleteChange(
+						&v1beta1.Gateway{},
+						types.NamespacedName{Namespace: "test", Name: "gateway-2"},
+					)
+
+					changed, graphCfg := processor.Process()
+					Expect(changed).To(BeTrue())
+					Expect(graphCfg.Gateway).To(BeNil())
+				})
+			})
+			When("the first HTTPRoute is deleted", func() {
+				It("returns updated graph", func() {
 					processor.CaptureDeleteChange(
 						&v1beta1.HTTPRoute{},
 						types.NamespacedName{Namespace: "test", Name: "hr-1"},
 					)
 
-					emptyGraph := &graph.Graph{}
-
 					changed, graphCfg := processor.Process()
 					Expect(changed).To(BeTrue())
-					Expect(helpers.Diff(emptyGraph, graphCfg)).To(BeEmpty())
+					Expect(graphCfg.Routes).To(BeNil())
 				})
 			})
 		})
@@ -685,9 +766,6 @@ var _ = Describe("ChangeProcessor", func() {
 	})
 
 	Describe("Ensuring non-changing changes don't override previously changing changes", func() {
-		// Note: in these tests, we deliberately don't fully inspect the returned configuration and statuses
-		// -- this is done in 'Normal cases of processing changes'
-
 		var (
 			processor                               *state.ChangeProcessorImpl
 			fakeRelationshipCapturer                *relationshipfakes.FakeCapturer
