@@ -48,6 +48,9 @@ maintainer will ask you
 to [open an issue](https://github.com/nginxinc/nginx-kubernetes-gateway/issues/new?assignees=&labels=proposal&projects=&template=enhancement.md&title=)
 on GitHub.
 
+Not every enhancement warrants an Enhancement Proposal. _If_ the enhancement issue requires an Enhancement Proposals,
+the maintainers will add the label `enhancement-proposal-needed` to the issue.
+
 ### 3. Agree on the Goals (Provisional)
 
 Write the first version of your Enhancement Proposal using the [template](/docs/proposals/template.md), including only
@@ -77,8 +80,8 @@ may be beneficial to open a draft Pull Request with a prototype of the changes. 
 with the changes and update the status field of the corresponding Enhancement Proposal to "Completed".
 
 > Note:
-> 
-> Make sure to read the [Development Guide](/CONTRIBUTING.md#development-guide) before making any code changes. 
+>
+> Make sure to read the [Development Guide](/CONTRIBUTING.md#development-guide) before making any code changes.
 
 ## Status
 
