@@ -2,25 +2,26 @@
 
 This document describes the process of submitting an Enhancement Proposal. Enhancement Proposals are a way to propose,
 communicate, and coordinate on enhancements for the NGINX Kubernetes Gateway. It is based off of
-the [Gateway Enhancement Proposals](https://github.com/kubernetes-sigs/gateway-api/blob/main/geps/overview.md). Their
-purpose is to:
+the [Gateway Enhancement Proposals][gep]. Their purpose is to:
 
 - Make changes and proposals discoverable (current and future).
 - Provide a common place to discuss design, architecture, and impacts of a particular change.
 - Document design ideas, tradeoffs, and decisions for historical reference.
 
+[gep]: https://github.com/kubernetes-sigs/gateway-api/blob/c8b54a05c850cd717eb852c4874c6c89d02a5ef8/geps/overview.md
+
 ## When to Write an Enhancement Proposal
 
 You should only write an Enhancement Proposal if a maintainer has requested one for a particular issue. All enhancement
-requests should start as an idea
-on [GitHub Discussions](https://github.com/nginxinc/nginx-kubernetes-gateway/discussions). Not all enhancement requests
-will require an Enhancement Proposal. For example, here are some examples of requests that may not need an Enhancement
-Proposal:
+requests should start as an idea on [GitHub Discussions][discussion]. Not all enhancement requests will require an
+Enhancement Proposal. For example, here are some examples of requests that may not need an Enhancement Proposal:
 
 * Gateway API fields. However, some larger Gateway API fields may require Enhancement Proposals if they require
   significant changes to the architecture of the code.
 * Small changes (validation, documentation, fixups). It is always possible that the maintainers will determine a "small"
   change ends up requiring a Enhancement Proposal.
+
+[discussion]: https://github.com/nginxinc/nginx-kubernetes-gateway/discussions
 
 ## Process
 
@@ -36,20 +37,21 @@ flowchart TD
 
 ### 1. Open a GitHub Discussion
 
-Before creating an issue or Enhancement Proposal, open an idea
-on [GitHub discussion](https://github.com/nginxinc/nginx-kubernetes-gateway/discussions/new?category=ideas). Describe
-the enhancement you would like, any use cases you have, and other relevant details. Beginning with a discussion allows
-you to get feedback from the maintainers and the community before you invest time in writing an Enhancement Proposal.
+Before creating an issue or Enhancement Proposal, open an idea on [GitHub discussion][idea]. Describe the enhancement
+you would like, any use cases you have, and other relevant details. Beginning with a discussion allows you to get
+feedback from the maintainers and the community before you invest time in writing an Enhancement Proposal.
+
+[idea]: https://github.com/nginxinc/nginx-kubernetes-gateway/discussions/new?category=ideas
 
 ### 2. Create an Issue
 
 If there is consensus on the discussion post that the enhancement is important and should be included in the roadmap, a
-maintainer will ask you
-to [open an issue](https://github.com/nginxinc/nginx-kubernetes-gateway/issues/new?assignees=&labels=proposal&projects=&template=enhancement.md&title=)
-on GitHub.
+maintainer will ask you to [open an issue][issue] on GitHub.
 
 Not every enhancement warrants an Enhancement Proposal. _If_ the enhancement issue requires an Enhancement Proposals,
 the maintainers will add the label `enhancement-proposal-needed` to the issue.
+
+[issue]: https://github.com/nginxinc/nginx-kubernetes-gateway/issues/new?assignees=&labels=proposal&projects=&template=enhancement.md&title=
 
 ### 3. Agree on the Goals (Provisional)
 
