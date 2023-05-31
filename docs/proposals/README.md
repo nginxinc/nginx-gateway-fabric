@@ -31,8 +31,6 @@ flowchart TD
     D([Open Discussion]) --> C
     C([Issue Created]) --> Provisional
     Provisional -->|Enhancement Proposal Doc PR<br />done| Implementable
-    Provisional -->|If practical <br /> work needed| Prototyping
-    Prototyping -->|Enhancement Proposal Doc PR<br />done| Implementable
     Implementable -->|Work completed| Completed
 ```
 
@@ -72,18 +70,6 @@ Once the goals are set, begin filling out the implementation details. The detail
 
 Once the Enhancement Proposal is merged, mark it as "Implementable".
 
-### 5. Prototype (optional)
-
-In some cases, you may be asked or want to create a prototype of the design. Prototypes are a good way to get early
-feedback about the implementation without investing too much time and effort on the small details. When creating a
-prototype of an Enhancement Proposal, mark the Enhancement Proposal as "Prototyping" and open a Draft PR. If the
-prototype is approved, you can move on to the next stage. Otherwise, you may be asked to make changes to the design and
-resubmit the Enhancement Proposal as "Provisional".
-
-Note that the prototype is not expected to be merged, but should be used as a way to move an Enhancement Proposal from "
-Provisional" to "
-Implementable".
-
 ### 6. Implement
 
 Once the Enhancement Proposal is marked as "Implementable", you can start implementing the proposed changes. Once the
@@ -97,9 +83,6 @@ the Enhancement Proposal.
 
 * **Provisional:** The goals described by this Enhancement Proposal have consensus but implementation details have not
   been agreed to yet.
-* **Prototyping:** An extension of `Provisional` which can be opted in to in order to indicate that there are some
-  active practical tests and experiments going on which are intended to be a part of the development of this Enhancement
-  Proposal.
 * **Implementable:** The goals and implementation details described by this Enhancement Proposal have consensus but have
   not been fully implemented yet.
 * **Completed:** This Enhancement Proposal has been implemented.

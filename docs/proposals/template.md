@@ -2,7 +2,7 @@
 # Enhancement Proposal-\<issue number\>: Enhancement Proposal Template
 
 * Issue: \<link to issue\>
-* Status: Provisional|Prototyping|Implementable|Completed|Deferred|Rejected|Withdrawn|Replaced
+* Status: Provisional|Implementable|Completed|Deferred|Rejected|Withdrawn|Replaced
 
 (See status definitions [here](README.md#status).)
 
