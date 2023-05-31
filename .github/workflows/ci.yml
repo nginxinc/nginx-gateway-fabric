@@ -89,7 +89,7 @@ jobs:
     name: Release
     runs-on: ubuntu-20.04
     needs: [unit-tests, njs-unit-tests]
-    if: ${{ github.event_name == 'push' && ! github.ref != 'refs/heads/main' }}
+    if: ${{ github.event_name == 'push' && github.ref != 'refs/heads/main' }}
     steps:
       - name: Checkout Repository
         uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
