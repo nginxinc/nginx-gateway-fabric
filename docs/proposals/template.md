@@ -1,3 +1,4 @@
+
 # EP-\<issue number\>: Enhancement Proposal Template
 
 * Issue: \<link to issue\>
@@ -5,7 +6,7 @@
 
 (See status definitions [here](README.md#status).)
 
-## TLDR
+## Summary
 
 (1-2 sentence summary of the proposal)
 
