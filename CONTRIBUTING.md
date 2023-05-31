@@ -60,14 +60,14 @@ reporting a bug, make sure the issue has not already been reported.
 
 #### Suggest an Enhancement
 
-To suggest an enhancement, open an idea
-on [GitHub discussions](https://github.com/nginxinc/nginx-kubernetes-gateway/discussions/new?category=ideas). We highly
-recommend that you open a discussion about a potential enhancement before opening an issue. This enables the maintainers
-to gather valuable insights regarding the idea and its use cases, while also giving the community an opportunity to
-provide valuable feedback.
+To suggest an enhancement, [open an idea][idea] on GitHub discussions. We highly recommend that you open a discussion
+about a potential enhancement before opening an issue. This enables the maintainers to gather valuable insights
+regarding the idea and its use cases, while also giving the community an opportunity to provide valuable feedback.
 
 In some cases, the maintainers may ask you to write an Enhancement Proposal. For details on this process, see
 the [Enhancement Proposal](/docs/proposals/README.md) README.
+
+[idea]: https://github.com/nginxinc/nginx-kubernetes-gateway/discussions/new?category=ideas
 
 #### Issue lifecycle
 

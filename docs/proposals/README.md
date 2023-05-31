@@ -31,13 +31,13 @@ The diagram below shows the Enhancement Proposal process:
 flowchart TD
     D([Open Discussion]) --> C
     C([Issue Created]) --> Provisional
-    Provisional -->|Enhancement Proposal Doc PR<br />done| Implementable
+    Provisional -->|Enhancement Proposal<br /> Doc PR done| Implementable
     Implementable -->|Work completed| Completed
 ```
 
 ### 1. Open a GitHub Discussion
 
-Before creating an issue or Enhancement Proposal, open an idea on [GitHub discussion][idea]. Describe the enhancement
+Before creating an issue or Enhancement Proposal, [open an idea][idea] on GitHub discussion. Describe the enhancement
 you would like, any use cases you have, and other relevant details. Beginning with a discussion allows you to get
 feedback from the maintainers and the community before you invest time in writing an Enhancement Proposal.
 
