@@ -37,18 +37,19 @@ The table below summarizes the options regarding the images, manifests, document
 |-|-|-|-|-|
 | Latest release | For experimental use | Use the 0.3.0 image from [GitHub](https://github.com/nginxinc/nginx-kubernetes-gateway/pkgs/container/nginx-kubernetes-gateway) | [Manifests](https://github.com/nginxinc/nginx-kubernetes-gateway/tree/v0.3.0/deploy). | [Documentation](https://github.com/nginxinc/nginx-kubernetes-gateway/tree/v0.3.0/docs). [Examples](https://github.com/nginxinc/nginx-kubernetes-gateway/tree/v0.3.0/examples). |
 | Edge| For experimental use and latest features | Use the edge image from [GitHub](https://github.com/nginxinc/nginx-kubernetes-gateway/pkgs/container/nginx-kubernetes-gateway) | [Manifests](https://github.com/nginxinc/nginx-kubernetes-gateway/tree/main/deploy). | [Documentation](https://github.com/nginxinc/nginx-kubernetes-gateway/tree/main/docs). [Examples](https://github.com/nginxinc/nginx-kubernetes-gateway/tree/main/examples). |
+
 ## Technical Specifications
 
 The following table lists the software versions NGINX Kubernetes Gateway supports.
 
 | NGINX Kubernetes Gateway | Gateway API | Kubernetes | NGINX OSS |
 |-|-|-|-|
-| Edge | 0.7.0 | 1.21+ | 1.21.x *|
-| 0.3.0 | 0.6.2 | 1.21+ | 1.21.x *|
+| Edge | 0.7.0 | 1.21+ | 1.25.x *|
+| 0.3.0 | 0.6.2 | 1.21+ | 1.23.x *|
 | 0.2.0 | 0.5.1 | 1.21+ | 1.21.x *|
 | 0.1.0 | 0.5.0 | 1.19+ | 1.21.3 |
 
-\*the installation manifests use the `nginx:1.21` image, which always points to the latest version of 1.21.x releases.
+\*the installation manifests use the minor version of NGINX container image (e.g. 1.25) and the patch version is not specified. This means that the latest available patch version is used.
 
 ## Contacts
 

@@ -124,8 +124,8 @@ spec:
         - static-mode
         - --gateway-ctlr-name=k8s-gateway.nginx.org/nginx-gateway-controller
         - --gatewayclass=nginx
-      - image: nginx:1.23
-        imagePullPolicy: IfNotPresent
+      - image: nginx:1.25
+        imagePullPolicy: Always
         name: nginx
         ports:
         - name: http
