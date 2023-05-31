@@ -33,10 +33,10 @@ DEPENDENCIES:
 
 COMPATIBILITY:
 - The Gateway API version: `0.6.2`
-- NGINX version: `1.21.x` *
+- NGINX version: `1.23.x` *
 - Kubernetes version: `1.21+`
 
-\*the installation manifests use the `nginx:1.21` image, which always points to the latest version of 1.21.x releases.
+\*the installation manifests use the `nginx:1.23` image, which always points to the latest version of 1.23.x releases.
 
 CONTAINER IMAGES:
 - Control plane: `ghcr.io/nginxinc/nginx-kubernetes-gateway:0.3.0`
