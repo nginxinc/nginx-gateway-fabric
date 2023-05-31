@@ -9,6 +9,19 @@ purpose is to:
 - Provide a common place to discuss design, architecture, and impacts of a particular change.
 - Document design ideas, tradeoffs, and decisions for historical reference.
 
+## When to Write an Enhancement Proposal
+
+You should only write an Enhancement Proposal if a maintainer has requested one for a particular issue. All enhancement
+requests should start as an idea
+on [GitHub Discussions](https://github.com/nginxinc/nginx-kubernetes-gateway/discussions). Not all enhancement requests
+will require an Enhancement Proposal. For example, here are some examples of requests that may not need an Enhancement
+Proposal:
+
+* Gateway API features. However, some larger Gateway API features may require Enhancement Proposals if they require
+  significant changes to the architecture of the code.
+* Small changes (validation, documentation, fixups). It is always possible that the maintainers will determine a "small"
+  change ends up requiring a Enhancement Proposal.
+
 ## Process
 
 The diagram below shows the Enhancement Proposal process:
@@ -102,13 +115,3 @@ Although less common, some Enhancement Proposals may end up in one of the follow
 ## Format
 
 Enhancement Proposals should match the format of this [template](template.md).
-
-## Out of scope
-
-The following is out of scope for Enhancement Proposals:
-
-* Bug fixes
-* Gateway API features. However, some larger Gateway API features may require Enhancement Proposals if they require
-  significant changes to the architecture of the code.
-* Small changes (validation, documentation, fixups). It is always possible that the reviewers will determine a "small"
-  change ends up requiring a Enhancement Proposal.
