@@ -8,7 +8,7 @@
 
 ## Summary
 
-(1-2 sentence summary of the proposal)
+(1-2 sentence summary of the proposal.)
 
 ## Goals
 
@@ -23,17 +23,13 @@
 (Can link to external doc -- but we should bias towards copying the content into the EP as online documents are easier
 to lose -- e.g. owner messes up the permissions, accidental deletion)
 
-## API and Customer Driven Interfaces
+## API, Customer Driven Interfaces, and User Experience
 
-(... details, can point to PR with changes)
+(Details of API or interfaces, analysis of customer workflow impact, impacts to installation, etc. )
 
 ## Use Cases
 
-(Describe the use cases for this enhancement)
-
-## User Experience and User Interface
-
-(Analysis of customer workflow impact, impacts to installation, etc. )
+(Describe the use cases for this enhancement. )
 
 ## Testing
 
@@ -41,13 +37,13 @@ to lose -- e.g. owner messes up the permissions, accidental deletion)
 
 ## Security Considerations
 
-(Potential assets, mitigations, justification for why security is unchanged, not threatened, and not impacted)
+(Potential assets, mitigations, justification for why security is unchanged, not threatened, and not impacted. )
 
 ## Alternatives
 
-(List other design alternatives and why we did not go in that direction)
+(List other design alternatives and why we did not go in that direction. )
 
 ## References
 
 (Add any additional document links. Again, we should try to avoid too much content not in version control to avoid
-broken links)
+broken links. )
