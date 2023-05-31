@@ -1,20 +1,22 @@
+change:
+  - head-branch: ['^change/']
+
 enhancement:
-- branch: ['feature/**', 'feat/**', 'enhancement/**', 'enh/**']
+  - head-branch: ['^feature/', '^feat/', '^enhancement/', '^enh/']
 
 bug:
-- branch: ['fix/**', 'bug/**']
+  - head-branch: ['^fix/', '^bug/']
 
 chore:
-- branch: ['chore/**']
+  - head-branch: ['^chore/']
 
 tech-debt:
-- branch: ['tech-debt/**', 'techdebt/**', 'debt/**']
+  - head-branch: ['^tech-debt/', '^techdebt/', '^debt/']
 
 documentation:
-- branch: ['docs/**', 'doc/**']
-- '**/*.md'
+  - head-branch: ['^docs/', '^doc/']
+  - changed-files: '**/*.md'
 
 dependencies:
-- branch: ['deps/**', 'dep/**', 'dependabot/**']
-- go.mod
-- go.sum
+  - head-branch: ['^deps/', '^dep/', '^dependabot/']
+  - changed-files: ['go.mod', 'go.sum']
