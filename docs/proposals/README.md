@@ -25,10 +25,10 @@ flowchart TD
 
 ### 1. Open a GitHub Discussion
 
-Before creating an issue or EP, open
-a [GitHub discussion](https://github.com/nginxinc/nginx-kubernetes-gateway/discussions). Describe the feature you would
-like, any use cases you have, and other relevant details. Beginning with a discussion allows you to get feedback from
-the maintainers and the community before you invest time in writing an EP.
+Before creating an issue or EP, open an idea
+on [GitHub discussion](https://github.com/nginxinc/nginx-kubernetes-gateway/discussions/new?category=ideas). Describe
+the feature you would like, any use cases you have, and other relevant details. Beginning with a discussion allows you
+to get feedback from the maintainers and the community before you invest time in writing an EP.
 
 ### 2. Create an Issue
 
