@@ -49,7 +49,7 @@ If there is consensus on the discussion post that the enhancement is important a
 maintainer will ask you to [open an issue][issue] on GitHub.
 
 Not every enhancement warrants an Enhancement Proposal. _If_ the enhancement issue requires an Enhancement Proposals,
-the maintainers will add the label `enhancement-proposal-needed` to the issue.
+the maintainers will add the label `needs-enhancement-proposal` to the issue.
 
 [issue]: https://github.com/nginxinc/nginx-kubernetes-gateway/issues/new?assignees=&labels=proposal&projects=&template=enhancement.md&title=
 
