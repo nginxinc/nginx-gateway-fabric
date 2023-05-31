@@ -38,8 +38,8 @@ flowchart TD
 
 Before creating an issue or Enhancement Proposal, open an idea
 on [GitHub discussion](https://github.com/nginxinc/nginx-kubernetes-gateway/discussions/new?category=ideas). Describe
-the enhancement you would like, any use cases you have, and other relevant details. Beginning with a discussion allows you
-to get feedback from the maintainers and the community before you invest time in writing an Enhancement Proposal.
+the enhancement you would like, any use cases you have, and other relevant details. Beginning with a discussion allows
+you to get feedback from the maintainers and the community before you invest time in writing an Enhancement Proposal.
 
 ### 2. Create an Issue
 
@@ -50,31 +50,35 @@ on GitHub.
 
 ### 3. Agree on the Goals (Provisional)
 
-The first version of your Enhancement Proposal should include a summary of the enhancement and sections addressing the "
-Goals" and "Non-Goals". The purpose of this initial Enhancement Proposal is to achieve consensus on the objectives
-before filling out the details of implementation. Once this version of the Enhancement Proposal is approved, designate
-it as "Provisional".
+Write the first version of your Enhancement Proposal using the [template](/docs/proposals/template.md), including only
+the summary of the enhancement and the sections addressing the "Goals" and "Non-Goals". The purpose of this initial
+Enhancement Proposal is to achieve consensus on the objectives before filling out the details of implementation. Set the
+[status](#status) field in the Enhancement Proposal document to "Provisional".
+
+Open a Pull Request with your Enhancement Proposal and work with the reviewers to get the necessary approvals.
+
+> Note:
+>
+> All Enhancement Proposals should be placed in the [docs/proposals](/docs/proposals) directory.
 
 ### 4. Document Implementation Details
 
-Once the goals are set, begin filling out the implementation details. The details should include the following:
+Once the goals are set and the Provisional Enhancement Proposal has been merged, you can begin filling out the
+implementation details of the [template](/docs/proposals/template.md). Set the [status](#status) field in the
+Enhancement Proposal document to "Implementable".
 
-- APIs and customer driven interfaces -- this includes CLI arguments, public libraries and SDKs, API resources and
-  objects.
-- Use cases.
-- Security considerations.
-- User experience and user interface changes.
-- Testing plans and considerations.
-- References.
-- Any alternatives considered and why we decided against them.
-
-Once the Enhancement Proposal is merged, mark it as "Implementable".
+Make your changes to the existing Provisional Enhancement Proposal and open a Pull Request. Work with the reviewers to
+get the necessary approvals.
 
 ### 6. Implement
 
-Once the Enhancement Proposal is marked as "Implementable", you can start implementing the proposed changes. Once the
-changes have been merged, the Enhancement Proposal issue should be closed and the Enhancement Proposal should be marked
-as "Completed".
+Once the Implementable Enhancement Proposal is merged, you can start implementing the proposed changes. In some cases it
+may be beneficial to open a draft Pull Request with a prototype of the changes. Otherwise, open a standard Pull Request
+with the changes and update the status field of the corresponding Enhancement Proposal to "Completed".
+
+> Note:
+> 
+> Make sure to read the [Development Guide](/CONTRIBUTING.md#development-guide) before making any code changes. 
 
 ## Status
 
@@ -94,7 +98,3 @@ Although less common, some Enhancement Proposals may end up in one of the follow
 * **Rejected:** This proposal was considered but ultimately rejected.
 * **Replaced:** This proposal was considered but ultimately replaced by a newer proposal.
 * **Withdrawn:** This proposal was considered but ultimately withdrawn by the author.
-
-## Format
-
-Enhancement Proposals should match the format of this [template](template.md).
