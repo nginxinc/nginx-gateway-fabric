@@ -1,5 +1,5 @@
 
-# EP-\<issue number\>: Enhancement Proposal Template
+# Enhancement Proposal-\<issue number\>: Enhancement Proposal Template
 
 * Issue: \<link to issue\>
 * Status: Provisional|Prototyping|Implementable|Completed|Deferred|Rejected|Withdrawn|Replaced

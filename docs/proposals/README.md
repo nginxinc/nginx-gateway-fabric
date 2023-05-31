@@ -1,7 +1,7 @@
-# Enhancement Proposal (EP)
+# Enhancement Proposal
 
-This document describes the process of submitting an Enhancement Proposal (EP). EPs are a way to propose, communicate,
-and coordinate on new features for the NGINX Kubernetes Gateway. It is based off of
+This document describes the process of submitting an Enhancement Proposal. Enhancement Proposals are a way to propose,
+communicate, and coordinate on new features for the NGINX Kubernetes Gateway. It is based off of
 the [Gateway Enhancement Proposals](https://github.com/kubernetes-sigs/gateway-api/blob/main/geps/overview.md). Their
 purpose is to:
 
@@ -11,24 +11,24 @@ purpose is to:
 
 ## Process
 
-The diagram below shows the EP process:
+The diagram below shows the Enhancement Proposal process:
 
 ```mermaid
 flowchart TD
     D([Open Discussion]) --> C
     C([Issue Created]) --> Provisional
-    Provisional -->|EP Doc PR<br />done| Implementable
+    Provisional -->|Enhancement Proposal Doc PR<br />done| Implementable
     Provisional -->|If practical <br /> work needed| Prototyping
-    Prototyping -->|EP Doc PR<br />done| Implementable
+    Prototyping -->|Enhancement Proposal Doc PR<br />done| Implementable
     Implementable -->|Work completed| Completed
 ```
 
 ### 1. Open a GitHub Discussion
 
-Before creating an issue or EP, open an idea
+Before creating an issue or Enhancement Proposal, open an idea
 on [GitHub discussion](https://github.com/nginxinc/nginx-kubernetes-gateway/discussions/new?category=ideas). Describe
 the feature you would like, any use cases you have, and other relevant details. Beginning with a discussion allows you
-to get feedback from the maintainers and the community before you invest time in writing an EP.
+to get feedback from the maintainers and the community before you invest time in writing an Enhancement Proposal.
 
 ### 2. Create an Issue
 
@@ -39,9 +39,10 @@ on GitHub.
 
 ### 3. Agree on the Goals (Provisional)
 
-The first version of your EP should include a summary of the feature and sections addressing the "Goals" and "Non-Goals".
-The purpose of this initial EP is to achieve consensus on the objectives before filling out the details of
-implementation. Once this version of the EP is approved, designate it as "Provisional".
+The first version of your Enhancement Proposal should include a summary of the feature and sections addressing the "
+Goals" and "Non-Goals". The purpose of this initial Enhancement Proposal is to achieve consensus on the objectives
+before filling out the details of implementation. Once this version of the Enhancement Proposal is approved, designate
+it as "Provisional".
 
 ### 4. Document Implementation Details
 
@@ -56,51 +57,58 @@ Once the goals are set, begin filling out the implementation details. The detail
 - References.
 - Any alternatives considered and why we decided against them.
 
-Once the EP is merged, mark it as "Implementable".
+Once the Enhancement Proposal is merged, mark it as "Implementable".
 
 ### 5. Prototype (optional)
 
 In some cases, you may be asked or want to create a prototype of the design. Prototypes are a good way to get early
 feedback about the implementation without investing too much time and effort on the small details. When creating a
-prototype of an EP, mark the EP as "Prototyping" and open a Draft PR. If the prototype is approved, you can move on to
-the next stage. Otherwise, you may be asked to make changes to the design and resubmit the EP as "Provisional".
+prototype of an Enhancement Proposal, mark the Enhancement Proposal as "Prototyping" and open a Draft PR. If the
+prototype is approved, you can move on to the next stage. Otherwise, you may be asked to make changes to the design and
+resubmit the Enhancement Proposal as "Provisional".
 
-Note that the prototype is not expected to be merged, but should be used as a way to move an EP from "Provisional" to "
+Note that the prototype is not expected to be merged, but should be used as a way to move an Enhancement Proposal from "
+Provisional" to "
 Implementable".
 
 ### 6. Implement
 
-Once the EP is marked as "Implementable", you can start implementing the proposed changes. Once the changes have been
-merged, the EP issue should be closed and the EP should be marked as "Completed".
+Once the Enhancement Proposal is marked as "Implementable", you can start implementing the proposed changes. Once the
+changes have been merged, the Enhancement Proposal issue should be closed and the Enhancement Proposal should be marked
+as "Completed".
 
 ## Status
 
-Each EP has a status field that defines its current state. Each transition will require a PR to update the EP.
+Each Enhancement Proposal has a status field that defines its current state. Each transition will require a PR to update
+the Enhancement Proposal.
 
-* **Provisional:** The goals described by this EP have consensus but implementation details have not been agreed to yet.
+* **Provisional:** The goals described by this Enhancement Proposal have consensus but implementation details have not
+  been agreed to yet.
 * **Prototyping:** An extension of `Provisional` which can be opted in to in order to indicate that there are some
-  active practical tests and experiments going on which are intended to be a part of the development of this EP.
-* **Implementable:** The goals and implementation details described by this EP have consensus but have not been fully
-  implemented yet.
-* **Completed:** This EP has been implemented.
+  active practical tests and experiments going on which are intended to be a part of the development of this Enhancement
+  Proposal.
+* **Implementable:** The goals and implementation details described by this Enhancement Proposal have consensus but have
+  not been fully implemented yet.
+* **Completed:** This Enhancement Proposal has been implemented.
 
-Although less common, some EPs may end up in one of the following states:
+Although less common, some Enhancement Proposals may end up in one of the following states:
 
-* **Deferred:** We do not currently have bandwidth to handle this EP, it may be revisited in the future.
+* **Deferred:** We do not currently have bandwidth to handle this Enhancement Proposal, it may be revisited in the
+  future.
 * **Rejected:** This proposal was considered but ultimately rejected.
 * **Replaced:** This proposal was considered but ultimately replaced by a newer proposal.
 * **Withdrawn:** This proposal was considered but ultimately withdrawn by the author.
 
 ## Format
 
-EPs should match the format of this [template](template.md).
+Enhancement Proposals should match the format of this [template](template.md).
 
 ## Out of scope
 
-The following is out of scope for EPs:
+The following is out of scope for Enhancement Proposals:
 
 * Bug fixes
-* Gateway API features. However, some larger Gateway API features may require EPs if they require significant changes to the
-  architecture of the code.
+* Gateway API features. However, some larger Gateway API features may require Enhancement Proposals if they require
+  significant changes to the architecture of the code.
 * Small changes (validation, documentation, fixups). It is always possible that the reviewers will determine a "small"
-  change ends up requiring a EP.
+  change ends up requiring a Enhancement Proposal.

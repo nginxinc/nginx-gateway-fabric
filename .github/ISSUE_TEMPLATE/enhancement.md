@@ -19,6 +19,6 @@ Explain why this feature is needed.
 Add any other context or screenshots about the feature request here.
 
 <!--
-NOTE: depending on the scope of the enhancement, you may be asked to use the EP
+NOTE: depending on the scope of the enhancement, you may be asked to use the Enhancement Proposal
 process to document your work: https://github.com/nginxinc/nginx-kubernetes-gateway/blob/main/eps/README.md
 -->
