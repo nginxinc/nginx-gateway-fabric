@@ -1,7 +1,7 @@
 # Enhancement Proposal
 
 This document describes the process of submitting an Enhancement Proposal. Enhancement Proposals are a way to propose,
-communicate, and coordinate on new features for the NGINX Kubernetes Gateway. It is based off of
+communicate, and coordinate on enhancements for the NGINX Kubernetes Gateway. It is based off of
 the [Gateway Enhancement Proposals](https://github.com/kubernetes-sigs/gateway-api/blob/main/geps/overview.md). Their
 purpose is to:
 
@@ -17,7 +17,7 @@ on [GitHub Discussions](https://github.com/nginxinc/nginx-kubernetes-gateway/dis
 will require an Enhancement Proposal. For example, here are some examples of requests that may not need an Enhancement
 Proposal:
 
-* Gateway API features. However, some larger Gateway API features may require Enhancement Proposals if they require
+* Gateway API fields. However, some larger Gateway API fields may require Enhancement Proposals if they require
   significant changes to the architecture of the code.
 * Small changes (validation, documentation, fixups). It is always possible that the maintainers will determine a "small"
   change ends up requiring a Enhancement Proposal.
@@ -40,19 +40,19 @@ flowchart TD
 
 Before creating an issue or Enhancement Proposal, open an idea
 on [GitHub discussion](https://github.com/nginxinc/nginx-kubernetes-gateway/discussions/new?category=ideas). Describe
-the feature you would like, any use cases you have, and other relevant details. Beginning with a discussion allows you
+the enhancement you would like, any use cases you have, and other relevant details. Beginning with a discussion allows you
 to get feedback from the maintainers and the community before you invest time in writing an Enhancement Proposal.
 
 ### 2. Create an Issue
 
-If there is consensus on the discussion post that the feature is important and should be included in the roadmap, a
+If there is consensus on the discussion post that the enhancement is important and should be included in the roadmap, a
 maintainer will ask you
 to [open an issue](https://github.com/nginxinc/nginx-kubernetes-gateway/issues/new?assignees=&labels=proposal&projects=&template=enhancement.md&title=)
 on GitHub.
 
 ### 3. Agree on the Goals (Provisional)
 
-The first version of your Enhancement Proposal should include a summary of the feature and sections addressing the "
+The first version of your Enhancement Proposal should include a summary of the enhancement and sections addressing the "
 Goals" and "Non-Goals". The purpose of this initial Enhancement Proposal is to achieve consensus on the objectives
 before filling out the details of implementation. Once this version of the Enhancement Proposal is approved, designate
 it as "Provisional".

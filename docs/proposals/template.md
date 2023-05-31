@@ -29,7 +29,7 @@ to lose -- e.g. owner messes up the permissions, accidental deletion)
 
 ## Use Cases
 
-(Describe the use cases for this feature)
+(Describe the use cases for this enhancement)
 
 ## User Experience and User Interface
 
@@ -37,7 +37,7 @@ to lose -- e.g. owner messes up the permissions, accidental deletion)
 
 ## Testing
 
-(How this feature will be tested, any complexities, performance tests, etc. )
+(How this enhancement will be tested, any complexities, performance tests, etc. )
 
 ## Security Considerations
 
