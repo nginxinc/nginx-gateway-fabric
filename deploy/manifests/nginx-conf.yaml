@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-conf
+  namespace: nginx-gateway
+data:
+  nginx.conf: |
+    load_module /usr/lib/nginx/modules/ngx_http_js_module.so;
+
+    events {}
+
+    pid /etc/nginx/nginx.pid;
+    error_log stderr debug;
+
+    http {
+      include /etc/nginx/conf.d/*.conf;
+      js_import /usr/lib/nginx/modules/njs/httpmatches.js;
+      server_names_hash_bucket_size 256;
+      server_names_hash_max_size 1024;
+    }

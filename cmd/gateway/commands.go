@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"os"
 
@@ -12,6 +11,7 @@ import (
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/config"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/manager"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/provisioner"
 )
 
 const (
@@ -190,7 +190,10 @@ func createProvisionerModeCommand() *cobra.Command {
 				"date", date,
 			)
 
-			return errors.New("not implemented yet")
+			return provisioner.StartManager(provisioner.Config{
+				Logger:           logger,
+				GatewayClassName: gatewayClassName.value,
+			})
 		},
 	}
 }

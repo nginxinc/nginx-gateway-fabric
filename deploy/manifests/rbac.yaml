@@ -1,0 +1,70 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: nginx-gateway
+  namespace: nginx-gateway
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: nginx-gateway
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - services
+  - secrets
+  verbs:
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+  - patch
+- apiGroups:
+  - discovery.k8s.io
+  resources:
+  - endpointslices
+  verbs:
+  - list
+  - watch
+- apiGroups:
+  - gateway.networking.k8s.io
+  resources:
+  - gatewayclasses
+  - gateways
+  - httproutes
+  verbs:
+  - list
+  - watch
+- apiGroups:
+  - gateway.nginx.org
+  resources:
+  - gatewayconfigs
+  verbs:
+  - list
+  - watch
+- apiGroups:
+  - gateway.networking.k8s.io
+  resources:
+  - httproutes/status
+  - gateways/status
+  - gatewayclasses/status
+  verbs:
+  - update
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: nginx-gateway
+subjects:
+- kind: ServiceAccount
+  name: nginx-gateway
+  namespace: nginx-gateway
+roleRef:
+  kind: ClusterRole
+  name: nginx-gateway
+  apiGroup: rbac.authorization.k8s.io
