@@ -75,7 +75,7 @@ Enhancement Proposal document to "Implementable".
 Make your changes to the existing Provisional Enhancement Proposal and open a Pull Request. Work with the reviewers to
 get the necessary approvals.
 
-### 6. Implement
+### 5. Implement
 
 Once the Implementable Enhancement Proposal is merged, you can start implementing the proposed changes. In some cases it
 may be beneficial to open a draft Pull Request with a prototype of the changes. Otherwise, open a standard Pull Request
