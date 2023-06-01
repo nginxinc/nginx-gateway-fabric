@@ -190,6 +190,7 @@ func createScheme() *runtime.Scheme {
 }
 
 var _ = Describe("ChangeProcessor", func() {
+	// graph outputs are large, so allow gomega to print everything on test failure
 	format.MaxLength = 0
 	Describe("Normal cases of processing changes", func() {
 		var (

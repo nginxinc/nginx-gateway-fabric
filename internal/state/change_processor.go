@@ -32,7 +32,7 @@ const (
 
 type extractGVKFunc func(obj client.Object) schema.GroupVersionKind
 
-// ChangeProcessor processes the changes to resources producing the internal representation
+// ChangeProcessor processes the changes to resources and produces a graph-like representation
 // of the Gateway configuration. It only supports one GatewayClass resource.
 type ChangeProcessor interface {
 	// CaptureUpsertChange captures an upsert change to a resource.
@@ -43,7 +43,7 @@ type ChangeProcessor interface {
 	// The method panics if the resource is of unsupported type or if the passed Gateway is different from the one
 	// this ChangeProcessor was created for.
 	CaptureDeleteChange(resourceType client.Object, nsname types.NamespacedName)
-	// Process produces a Graph-like representation of GatewayAPI resources.
+	// Process produces a graph-like representation of GatewayAPI resources.
 	// If no changes were captured, the changed return argument will be false and graph will be empty.
 	Process() (changed bool, graphCfg *graph.Graph)
 }
