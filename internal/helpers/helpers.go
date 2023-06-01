@@ -2,7 +2,10 @@
 package helpers
 
 import (
+	"fmt"
+
 	"github.com/google/go-cmp/cmp"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 )
 
@@ -61,4 +64,22 @@ func GetBoolPointer(b bool) *bool {
 // GetPointer takes a value of any type and returns a pointer to it.
 func GetPointer[T any](v T) *T {
 	return &v
+}
+
+// PrepareTimeForFakeClient processes the time similarly to the fake client
+// from sigs.k8s.io/controller-runtime/pkg/client/fake
+// making it is possible to use it in tests when comparing against values returned by the fake client.
+// It panics if it fails to process the time.
+func PrepareTimeForFakeClient(t metav1.Time) metav1.Time {
+	bytes, err := t.Marshal()
+	if err != nil {
+		panic(fmt.Errorf("failed to marshal time: %w", err))
+	}
+
+	err = t.Unmarshal(bytes)
+	if err != nil {
+		panic(fmt.Errorf("failed to unmarshal time: %w", err))
+	}
+
+	return t
 }
