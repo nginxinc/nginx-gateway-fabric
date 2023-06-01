@@ -3,6 +3,7 @@ package state_test
 import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/format"
 	apiv1 "k8s.io/api/core/v1"
 	discoveryV1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -18,6 +19,8 @@ import (
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/helpers"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/manager/index"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/conditions"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/graph"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/relationship"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/relationship/relationshipfakes"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/secrets/secretsfakes"
@@ -187,6 +190,7 @@ func createScheme() *runtime.Scheme {
 }
 
 var _ = Describe("ChangeProcessor", func() {
+	format.MaxLength = 0
 	Describe("Normal cases of processing changes", func() {
 		var (
 			gc = &v1beta1.GatewayClass{
@@ -220,9 +224,11 @@ var _ = Describe("ChangeProcessor", func() {
 
 		Describe("Process gateway resources", Ordered, func() {
 			var (
-				gcUpdated            *v1beta1.GatewayClass
-				hr1, hr1Updated, hr2 *v1beta1.HTTPRoute
-				gw1, gw1Updated, gw2 *v1beta1.Gateway
+				gcUpdated                *v1beta1.GatewayClass
+				hr1, hr1Updated, hr2     *v1beta1.HTTPRoute
+				gw1, gw1Updated, gw2     *v1beta1.Gateway
+				expGraph                 *graph.Graph
+				expRouteHR1, expRouteHR2 *graph.Route
 			)
 			BeforeAll(func() {
 				gcUpdated = gc.DeepCopy()
@@ -242,6 +248,87 @@ var _ = Describe("ChangeProcessor", func() {
 
 				gw2 = createGatewayWithTLSListener("gateway-2")
 			})
+			BeforeEach(func() {
+				expRouteHR1 = &graph.Route{
+					Source: hr1,
+					ParentRefs: []graph.ParentRef{
+						{
+							Attachment: &graph.ParentRefAttachmentStatus{
+								AcceptedHostnames: map[string][]string{"listener-80-1": {"foo.example.com"}},
+								Attached:          true,
+							},
+							Gateway: types.NamespacedName{Namespace: "test", Name: "gateway-1"},
+						},
+						{
+							Attachment: &graph.ParentRefAttachmentStatus{
+								AcceptedHostnames: map[string][]string{"listener-443-1": {"foo.example.com"}},
+								Attached:          true,
+							},
+							Gateway: types.NamespacedName{Namespace: "test", Name: "gateway-1"},
+							Idx:     1,
+						},
+					},
+					Rules: []graph.Rule{{ValidMatches: true, ValidFilters: true}},
+					Valid: true,
+				}
+
+				expRouteHR2 = &graph.Route{
+					Source: hr2,
+					ParentRefs: []graph.ParentRef{
+						{
+							Attachment: &graph.ParentRefAttachmentStatus{
+								AcceptedHostnames: map[string][]string{"listener-80-1": {"bar.example.com"}},
+								Attached:          true,
+							},
+							Gateway: types.NamespacedName{Namespace: "test", Name: "gateway-2"},
+						},
+						{
+							Attachment: &graph.ParentRefAttachmentStatus{
+								AcceptedHostnames: map[string][]string{"listener-443-1": {"bar.example.com"}},
+								Attached:          true,
+							},
+							Gateway: types.NamespacedName{Namespace: "test", Name: "gateway-2"},
+							Idx:     1,
+						},
+					},
+					Rules: []graph.Rule{{ValidMatches: true, ValidFilters: true}},
+					Valid: true,
+				}
+
+				// This is the base case expected graph. Tests will manipulate this to add or remove elements
+				// to fit the expected output of the input under test.
+				expGraph = &graph.Graph{
+					GatewayClass: &graph.GatewayClass{
+						Source: gc,
+						Valid:  true,
+					},
+					Gateway: &graph.Gateway{
+						Source: gw1,
+						Listeners: map[string]*graph.Listener{
+							"listener-80-1": {
+								Source: gw1.Spec.Listeners[0],
+								Valid:  true,
+								Routes: map[types.NamespacedName]*graph.Route{
+									{Namespace: "test", Name: "hr-1"}: expRouteHR1,
+								},
+							},
+							"listener-443-1": {
+								Source: gw1.Spec.Listeners[1],
+								Valid:  true,
+								Routes: map[types.NamespacedName]*graph.Route{
+									{Namespace: "test", Name: "hr-1"}: expRouteHR1,
+								},
+								SecretPath: "path/to/cert",
+							},
+						},
+						Valid: true,
+					},
+					IgnoredGateways: map[types.NamespacedName]*v1beta1.Gateway{},
+					Routes: map[types.NamespacedName]*graph.Route{
+						{Namespace: "test", Name: "hr-1"}: expRouteHR1,
+					},
+				}
+			})
 
 			When("no upsert has occurred", func() {
 				It("returns empty graph", func() {
@@ -258,17 +345,32 @@ var _ = Describe("ChangeProcessor", func() {
 
 							changed, graphCfg := processor.Process()
 							Expect(changed).To(BeTrue())
-							Expect(graphCfg.Routes).To(BeNil())
+							Expect(graphCfg).To(Equal(&graph.Graph{}))
 						})
 					})
 					When("the first Gateway is upserted", func() {
 						It("returns populated graph", func() {
 							processor.CaptureUpsertChange(gw1)
 
+							expGraph.GatewayClass = nil
+
+							expGraph.Gateway.Conditions = conditions.NewGatewayInvalid("GatewayClass doesn't exist")
+							expGraph.Gateway.Valid = false
+							expGraph.Gateway.Listeners = nil
+
+							hrName := types.NamespacedName{Namespace: "test", Name: "hr-1"}
+							expGraph.Routes[hrName].ParentRefs[0].Attachment = &graph.ParentRefAttachmentStatus{
+								AcceptedHostnames: map[string][]string{},
+								FailedCondition:   conditions.NewRouteInvalidGateway(),
+							}
+							expGraph.Routes[hrName].ParentRefs[1].Attachment = &graph.ParentRefAttachmentStatus{
+								AcceptedHostnames: map[string][]string{},
+								FailedCondition:   conditions.NewRouteInvalidGateway(),
+							}
+
 							changed, graphCfg := processor.Process()
 							Expect(changed).To(BeTrue())
-							Expect(graphCfg.Gateway).ToNot(BeNil())
-							Expect(graphCfg.Routes).To(HaveLen(1))
+							Expect(helpers.Diff(expGraph, graphCfg)).To(BeEmpty())
 						})
 					})
 				})
@@ -279,7 +381,7 @@ var _ = Describe("ChangeProcessor", func() {
 
 					changed, graphCfg := processor.Process()
 					Expect(changed).To(BeTrue())
-					Expect(graphCfg.GatewayClass).ToNot(BeNil())
+					Expect(helpers.Diff(expGraph, graphCfg)).To(BeEmpty())
 				})
 			})
 			When("the first HTTPRoute without a generation changed is processed", func() {
@@ -297,9 +399,13 @@ var _ = Describe("ChangeProcessor", func() {
 				It("returns populated graph", func() {
 					processor.CaptureUpsertChange(hr1Updated)
 
+					hrName := types.NamespacedName{Namespace: "test", Name: "hr-1"}
+					expGraph.Gateway.Listeners["listener-443-1"].Routes[hrName].Source.Generation = hr1Updated.Generation
+					expGraph.Gateway.Listeners["listener-80-1"].Routes[hrName].Source.Generation = hr1Updated.Generation
+
 					changed, graphCfg := processor.Process()
 					Expect(changed).To(BeTrue())
-					Expect(graphCfg.Routes).To(HaveLen(1))
+					Expect(helpers.Diff(expGraph, graphCfg)).To(BeEmpty())
 				},
 				)
 			})
@@ -318,9 +424,11 @@ var _ = Describe("ChangeProcessor", func() {
 				It("returns populated graph", func() {
 					processor.CaptureUpsertChange(gw1Updated)
 
+					expGraph.Gateway.Source.Generation = gw1Updated.Generation
+
 					changed, graphCfg := processor.Process()
 					Expect(changed).To(BeTrue())
-					Expect(graphCfg.Gateway).ToNot(BeNil())
+					Expect(helpers.Diff(expGraph, graphCfg)).To(BeEmpty())
 				})
 			})
 			When("the GatewayClass update without generation change is processed", func() {
@@ -338,9 +446,11 @@ var _ = Describe("ChangeProcessor", func() {
 				It("returns populated graph", func() {
 					processor.CaptureUpsertChange(gcUpdated)
 
+					expGraph.GatewayClass.Source.Generation = gcUpdated.Generation
+
 					changed, graphCfg := processor.Process()
 					Expect(changed).To(BeTrue())
-					Expect(graphCfg.GatewayClass).ToNot(BeNil())
+					Expect(helpers.Diff(expGraph, graphCfg)).To(BeEmpty())
 				})
 			})
 			When("no changes are captured", func() {
@@ -355,18 +465,37 @@ var _ = Describe("ChangeProcessor", func() {
 				It("returns populated graph using first gateway", func() {
 					processor.CaptureUpsertChange(gw2)
 
+					expGraph.IgnoredGateways = map[types.NamespacedName]*v1beta1.Gateway{
+						{Namespace: "test", Name: "gateway-2"}: gw2,
+					}
+
 					changed, graphCfg := processor.Process()
 					Expect(changed).To(BeTrue())
-					Expect(graphCfg.Gateway.Source.Name).To(Equal(gw1.Name))
+					Expect(helpers.Diff(expGraph, graphCfg)).To(BeEmpty())
 				})
 			})
 			When("the second HTTPRoute is upserted", func() {
 				It("returns populated graph", func() {
 					processor.CaptureUpsertChange(hr2)
 
+					hrName := types.NamespacedName{Namespace: "test", Name: "hr-2"}
+
+					expGraph.IgnoredGateways = map[types.NamespacedName]*v1beta1.Gateway{
+						{Namespace: "test", Name: "gateway-2"}: gw2,
+					}
+					expGraph.Routes[hrName] = expRouteHR2
+					expGraph.Routes[hrName].ParentRefs[0].Attachment = &graph.ParentRefAttachmentStatus{
+						AcceptedHostnames: map[string][]string{},
+						FailedCondition:   conditions.NewTODO("Gateway is ignored"),
+					}
+					expGraph.Routes[hrName].ParentRefs[1].Attachment = &graph.ParentRefAttachmentStatus{
+						AcceptedHostnames: map[string][]string{},
+						FailedCondition:   conditions.NewTODO("Gateway is ignored"),
+					}
+
 					changed, graphCfg := processor.Process()
 					Expect(changed).To(BeTrue())
-					Expect(graphCfg.Routes).To(HaveLen(2))
+					Expect(helpers.Diff(expGraph, graphCfg)).To(BeEmpty())
 				})
 			})
 			When("the first Gateway is deleted", func() {
@@ -376,10 +505,22 @@ var _ = Describe("ChangeProcessor", func() {
 						types.NamespacedName{Namespace: "test", Name: "gateway-1"},
 					)
 
+					// gateway 2 takes over;
+					// route 1 has been replaced by route 2
+					hr1Name := types.NamespacedName{Namespace: "test", Name: "hr-1"}
+					hr2Name := types.NamespacedName{Namespace: "test", Name: "hr-2"}
+					expGraph.Gateway.Source = gw2
+					delete(expGraph.Gateway.Listeners["listener-80-1"].Routes, hr1Name)
+					delete(expGraph.Gateway.Listeners["listener-443-1"].Routes, hr1Name)
+					expGraph.Gateway.Listeners["listener-80-1"].Routes[hr2Name] = expRouteHR2
+					expGraph.Gateway.Listeners["listener-443-1"].Routes[hr2Name] = expRouteHR2
+
+					delete(expGraph.Routes, hr1Name)
+					expGraph.Routes[hr2Name] = expRouteHR2
+
 					changed, graphCfg := processor.Process()
 					Expect(changed).To(BeTrue())
-					Expect(graphCfg.Gateway.Source.Name).To(Equal(gw2.Name))
-					Expect(graphCfg.Routes).To(HaveLen(1))
+					Expect(helpers.Diff(expGraph, graphCfg)).To(BeEmpty())
 				})
 			})
 			When("the second HTTPRoute is deleted", func() {
@@ -389,9 +530,17 @@ var _ = Describe("ChangeProcessor", func() {
 						types.NamespacedName{Namespace: "test", Name: "hr-2"},
 					)
 
+					// gateway 2 still in charge;
+					// no routes remain
+					hr1Name := types.NamespacedName{Namespace: "test", Name: "hr-1"}
+					expGraph.Gateway.Source = gw2
+					delete(expGraph.Gateway.Listeners["listener-80-1"].Routes, hr1Name)
+					delete(expGraph.Gateway.Listeners["listener-443-1"].Routes, hr1Name)
+					expGraph.Routes = map[types.NamespacedName]*graph.Route{}
+
 					changed, graphCfg := processor.Process()
 					Expect(changed).To(BeTrue())
-					Expect(graphCfg.Routes).To(HaveLen(0))
+					Expect(helpers.Diff(expGraph, graphCfg)).To(BeEmpty())
 				})
 			})
 			When("the GatewayClass is deleted", func() {
@@ -401,9 +550,16 @@ var _ = Describe("ChangeProcessor", func() {
 						types.NamespacedName{Name: gcName},
 					)
 
+					expGraph.GatewayClass = nil
+					expGraph.Gateway = &graph.Gateway{
+						Source:     gw2,
+						Conditions: conditions.NewGatewayInvalid("GatewayClass doesn't exist"),
+					}
+					expGraph.Routes = map[types.NamespacedName]*graph.Route{}
+
 					changed, graphCfg := processor.Process()
 					Expect(changed).To(BeTrue())
-					Expect(graphCfg.GatewayClass).To(BeNil())
+					Expect(helpers.Diff(expGraph, graphCfg)).To(BeEmpty())
 				})
 			})
 			When("the second Gateway is deleted", func() {
@@ -413,9 +569,11 @@ var _ = Describe("ChangeProcessor", func() {
 						types.NamespacedName{Namespace: "test", Name: "gateway-2"},
 					)
 
+					expGraph := &graph.Graph{}
+
 					changed, graphCfg := processor.Process()
 					Expect(changed).To(BeTrue())
-					Expect(graphCfg.Gateway).To(BeNil())
+					Expect(helpers.Diff(expGraph, graphCfg)).To(BeEmpty())
 				})
 			})
 			When("the first HTTPRoute is deleted", func() {
@@ -425,9 +583,11 @@ var _ = Describe("ChangeProcessor", func() {
 						types.NamespacedName{Namespace: "test", Name: "hr-1"},
 					)
 
+					expGraph := &graph.Graph{}
+
 					changed, graphCfg := processor.Process()
 					Expect(changed).To(BeTrue())
-					Expect(graphCfg.Routes).To(BeNil())
+					Expect(helpers.Diff(expGraph, graphCfg)).To(BeEmpty())
 				})
 			})
 		})
@@ -766,6 +926,9 @@ var _ = Describe("ChangeProcessor", func() {
 	})
 
 	Describe("Ensuring non-changing changes don't override previously changing changes", func() {
+		// Note: in these tests, we deliberately don't fully inspect the returned configuration and statuses
+		// -- this is done in 'Normal cases of processing changes'
+
 		var (
 			processor                               *state.ChangeProcessorImpl
 			fakeRelationshipCapturer                *relationshipfakes.FakeCapturer
