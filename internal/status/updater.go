@@ -8,8 +8,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
-
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state"
 )
 
 //go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . Updater
@@ -17,7 +15,7 @@ import (
 // Updater updates statuses of the Gateway API resources.
 type Updater interface {
 	// Update updates the statuses of the resources.
-	Update(context.Context, state.Statuses)
+	Update(context.Context, Statuses)
 }
 
 // UpdaterConfig holds configuration parameters for Updater.
@@ -81,7 +79,7 @@ func NewUpdater(cfg UpdaterConfig) Updater {
 	}
 }
 
-func (upd *updaterImpl) Update(ctx context.Context, statuses state.Statuses) {
+func (upd *updaterImpl) Update(ctx context.Context, statuses Statuses) {
 	// FIXME(pleshakov) Merge the new Conditions in the status with the existing Conditions
 	// https://github.com/nginxinc/nginx-kubernetes-gateway/issues/558
 

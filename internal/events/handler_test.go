@@ -19,8 +19,8 @@ import (
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/config/configfakes"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/file/filefakes"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/runtime/runtimefakes"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/dataplane"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/graph"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/secrets/secretsfakes"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/statefakes"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/status/statusfakes"
@@ -50,7 +50,7 @@ var _ = Describe("EventHandler", func() {
 		fakeStatusUpdater       *statusfakes.FakeUpdater
 	)
 
-	expectReconfig := func(expectedConf dataplane.Configuration, expectedCfg []byte, expectedStatuses state.Statuses) {
+	expectReconfig := func(expectedConf dataplane.Configuration, expectedCfg []byte) {
 		Expect(fakeProcessor.ProcessCallCount()).Should(Equal(1))
 
 		Expect(fakeGenerator.GenerateCallCount()).Should(Equal(1))
@@ -64,8 +64,6 @@ var _ = Describe("EventHandler", func() {
 		Expect(fakeNginxRuntimeMgr.ReloadCallCount()).Should(Equal(1))
 
 		Expect(fakeStatusUpdater.UpdateCallCount()).Should(Equal(1))
-		_, statuses := fakeStatusUpdater.UpdateArgsForCall(0)
-		Expect(statuses).Should(Equal(expectedStatuses))
 	}
 
 	BeforeEach(func() {
@@ -93,10 +91,8 @@ var _ = Describe("EventHandler", func() {
 		DescribeTable(
 			"A batch with one event",
 			func(e interface{}) {
-				fakeConf := dataplane.Configuration{}
-				fakeStatuses := state.Statuses{}
 				changed := true
-				fakeProcessor.ProcessReturns(changed, fakeConf, fakeStatuses)
+				fakeProcessor.ProcessReturns(changed, &graph.Graph{})
 
 				fakeCfg := []byte("fake")
 				fakeGenerator.GenerateReturns(fakeCfg)
@@ -120,7 +116,7 @@ var _ = Describe("EventHandler", func() {
 				}
 
 				// Check that a reconfig happened
-				expectReconfig(fakeConf, fakeCfg, fakeStatuses)
+				expectReconfig(dataplane.Configuration{}, fakeCfg)
 			},
 			Entry(
 				"HTTPRoute upsert",
@@ -258,10 +254,8 @@ var _ = Describe("EventHandler", func() {
 		batch = append(batch, upserts...)
 		batch = append(batch, deletes...)
 
-		fakeConf := dataplane.Configuration{}
 		changed := true
-		fakeStatuses := state.Statuses{}
-		fakeProcessor.ProcessReturns(changed, fakeConf, fakeStatuses)
+		fakeProcessor.ProcessReturns(changed, &graph.Graph{})
 
 		fakeCfg := []byte("fake")
 		fakeGenerator.GenerateReturns(fakeCfg)
@@ -294,7 +288,7 @@ var _ = Describe("EventHandler", func() {
 		Expect(fakeSecretStore.DeleteArgsForCall(0)).Should(Equal(secretNsName))
 
 		// Check that a reconfig happened
-		expectReconfig(fakeConf, fakeCfg, fakeStatuses)
+		expectReconfig(dataplane.Configuration{}, fakeCfg)
 	})
 
 	Describe("Edge cases", func() {

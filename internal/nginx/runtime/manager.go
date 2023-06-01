@@ -51,7 +51,6 @@ func (m *ManagerImpl) Reload(ctx context.Context) error {
 
 	// FIXME(pleshakov)
 	// (1) ensure the reload actually happens.
-	// (2) ensure that in case of an error, the error message can be seen by the admins.
 	// https://github.com/nginxinc/nginx-kubernetes-gateway/issues/664
 
 	// for now, to prevent a subsequent reload starting before the in-flight reload finishes, we simply sleep.

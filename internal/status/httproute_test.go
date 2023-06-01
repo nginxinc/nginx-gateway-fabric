@@ -10,16 +10,15 @@ import (
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/helpers"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state"
 )
 
 func TestPrepareHTTPRouteStatus(t *testing.T) {
 	gwNsName1 := types.NamespacedName{Namespace: "test", Name: "gateway-1"}
 	gwNsName2 := types.NamespacedName{Namespace: "test", Name: "gateway-2"}
 
-	status := state.HTTPRouteStatus{
+	status := HTTPRouteStatus{
 		ObservedGeneration: 1,
-		ParentStatuses: []state.ParentStatus{
+		ParentStatuses: []ParentStatus{
 			{
 				GatewayNsName: gwNsName1,
 				SectionName:   helpers.GetPointer[v1beta1.SectionName]("http"),

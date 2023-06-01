@@ -511,11 +511,9 @@ func TestBuildGateway(t *testing.T) {
 			}),
 			gatewayClass: validGC,
 			expected: &Gateway{
-				Source: getLastCreatedGetaway(),
-				Valid:  false,
-				Conditions: []conditions.Condition{
-					conditions.NewGatewayUnsupportedValue("spec.addresses: Forbidden: addresses are not supported"),
-				},
+				Source:     getLastCreatedGetaway(),
+				Valid:      false,
+				Conditions: conditions.NewGatewayUnsupportedValue("spec.addresses: Forbidden: addresses are not supported"),
 			},
 			name: "gateway addresses are not supported",
 		},
@@ -528,11 +526,9 @@ func TestBuildGateway(t *testing.T) {
 			gateway:      createGateway(gatewayCfg{listeners: []v1beta1.Listener{listener801, listener802}}),
 			gatewayClass: invalidGC,
 			expected: &Gateway{
-				Source: getLastCreatedGetaway(),
-				Valid:  false,
-				Conditions: []conditions.Condition{
-					conditions.NewGatewayInvalid("GatewayClass is invalid"),
-				},
+				Source:     getLastCreatedGetaway(),
+				Valid:      false,
+				Conditions: conditions.NewGatewayInvalid("GatewayClass is invalid"),
 			},
 			name: "invalid gatewayclass",
 		},
@@ -540,11 +536,9 @@ func TestBuildGateway(t *testing.T) {
 			gateway:      createGateway(gatewayCfg{listeners: []v1beta1.Listener{listener801, listener802}}),
 			gatewayClass: nil,
 			expected: &Gateway{
-				Source: getLastCreatedGetaway(),
-				Valid:  false,
-				Conditions: []conditions.Condition{
-					conditions.NewGatewayInvalid("GatewayClass doesn't exist"),
-				},
+				Source:     getLastCreatedGetaway(),
+				Valid:      false,
+				Conditions: conditions.NewGatewayInvalid("GatewayClass doesn't exist"),
 			},
 			name: "nil gatewayclass",
 		},

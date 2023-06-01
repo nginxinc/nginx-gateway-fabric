@@ -2,11 +2,10 @@
 package statefakes
 
 import (
-	"context"
 	"sync"
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/dataplane"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/graph"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -23,20 +22,17 @@ type FakeChangeProcessor struct {
 	captureUpsertChangeArgsForCall []struct {
 		arg1 client.Object
 	}
-	ProcessStub        func(context.Context) (bool, dataplane.Configuration, state.Statuses)
+	ProcessStub        func() (bool, *graph.Graph)
 	processMutex       sync.RWMutex
 	processArgsForCall []struct {
-		arg1 context.Context
 	}
 	processReturns struct {
 		result1 bool
-		result2 dataplane.Configuration
-		result3 state.Statuses
+		result2 *graph.Graph
 	}
 	processReturnsOnCall map[int]struct {
 		result1 bool
-		result2 dataplane.Configuration
-		result3 state.Statuses
+		result2 *graph.Graph
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
@@ -107,23 +103,22 @@ func (fake *FakeChangeProcessor) CaptureUpsertChangeArgsForCall(i int) client.Ob
 	return argsForCall.arg1
 }
 
-func (fake *FakeChangeProcessor) Process(arg1 context.Context) (bool, dataplane.Configuration, state.Statuses) {
+func (fake *FakeChangeProcessor) Process() (bool, *graph.Graph) {
 	fake.processMutex.Lock()
 	ret, specificReturn := fake.processReturnsOnCall[len(fake.processArgsForCall)]
 	fake.processArgsForCall = append(fake.processArgsForCall, struct {
-		arg1 context.Context
-	}{arg1})
+	}{})
 	stub := fake.ProcessStub
 	fakeReturns := fake.processReturns
-	fake.recordInvocation("Process", []interface{}{arg1})
+	fake.recordInvocation("Process", []interface{}{})
 	fake.processMutex.Unlock()
 	if stub != nil {
-		return stub(arg1)
+		return stub()
 	}
 	if specificReturn {
-		return ret.result1, ret.result2, ret.result3
+		return ret.result1, ret.result2
 	}
-	return fakeReturns.result1, fakeReturns.result2, fakeReturns.result3
+	return fakeReturns.result1, fakeReturns.result2
 }
 
 func (fake *FakeChangeProcessor) ProcessCallCount() int {
@@ -132,46 +127,36 @@ func (fake *FakeChangeProcessor) ProcessCallCount() int {
 	return len(fake.processArgsForCall)
 }
 
-func (fake *FakeChangeProcessor) ProcessCalls(stub func(context.Context) (bool, dataplane.Configuration, state.Statuses)) {
+func (fake *FakeChangeProcessor) ProcessCalls(stub func() (bool, *graph.Graph)) {
 	fake.processMutex.Lock()
 	defer fake.processMutex.Unlock()
 	fake.ProcessStub = stub
 }
 
-func (fake *FakeChangeProcessor) ProcessArgsForCall(i int) context.Context {
-	fake.processMutex.RLock()
-	defer fake.processMutex.RUnlock()
-	argsForCall := fake.processArgsForCall[i]
-	return argsForCall.arg1
-}
-
-func (fake *FakeChangeProcessor) ProcessReturns(result1 bool, result2 dataplane.Configuration, result3 state.Statuses) {
+func (fake *FakeChangeProcessor) ProcessReturns(result1 bool, result2 *graph.Graph) {
 	fake.processMutex.Lock()
 	defer fake.processMutex.Unlock()
 	fake.ProcessStub = nil
 	fake.processReturns = struct {
 		result1 bool
-		result2 dataplane.Configuration
-		result3 state.Statuses
-	}{result1, result2, result3}
+		result2 *graph.Graph
+	}{result1, result2}
 }
 
-func (fake *FakeChangeProcessor) ProcessReturnsOnCall(i int, result1 bool, result2 dataplane.Configuration, result3 state.Statuses) {
+func (fake *FakeChangeProcessor) ProcessReturnsOnCall(i int, result1 bool, result2 *graph.Graph) {
 	fake.processMutex.Lock()
 	defer fake.processMutex.Unlock()
 	fake.ProcessStub = nil
 	if fake.processReturnsOnCall == nil {
 		fake.processReturnsOnCall = make(map[int]struct {
 			result1 bool
-			result2 dataplane.Configuration
-			result3 state.Statuses
+			result2 *graph.Graph
 		})
 	}
 	fake.processReturnsOnCall[i] = struct {
 		result1 bool
-		result2 dataplane.Configuration
-		result3 state.Statuses
-	}{result1, result2, result3}
+		result2 *graph.Graph
+	}{result1, result2}
 }
 
 func (fake *FakeChangeProcessor) Invocations() map[string][][]interface{} {

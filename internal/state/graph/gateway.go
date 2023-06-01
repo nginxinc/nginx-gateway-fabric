@@ -116,16 +116,16 @@ func validateGateway(gw *v1beta1.Gateway, gc *GatewayClass) []conditions.Conditi
 	var conds []conditions.Condition
 
 	if gc == nil {
-		conds = append(conds, conditions.NewGatewayInvalid("GatewayClass doesn't exist"))
+		conds = append(conds, conditions.NewGatewayInvalid("GatewayClass doesn't exist")...)
 	} else if !gc.Valid {
-		conds = append(conds, conditions.NewGatewayInvalid("GatewayClass is invalid"))
+		conds = append(conds, conditions.NewGatewayInvalid("GatewayClass is invalid")...)
 	}
 
 	if len(gw.Spec.Addresses) > 0 {
 		path := field.NewPath("spec", "addresses")
 		valErr := field.Forbidden(path, "addresses are not supported")
 
-		conds = append(conds, conditions.NewGatewayUnsupportedValue(valErr.Error()))
+		conds = append(conds, conditions.NewGatewayUnsupportedValue(valErr.Error())...)
 	}
 
 	return conds

@@ -14,6 +14,7 @@ import (
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/runtime"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/dataplane"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/resolver"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/secrets"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/status"
 )
@@ -35,6 +36,8 @@ type EventHandlerConfig struct {
 	SecretStore secrets.SecretStore
 	// SecretMemoryManager is the state SecretMemoryManager.
 	SecretMemoryManager secrets.SecretDiskMemoryManager
+	// ServiceResolver resolves Services to Endpoints.
+	ServiceResolver resolver.ServiceResolver
 	// Generator is the nginx config Generator.
 	Generator config.Generator
 	// NginxFileMgr is the file Manager for nginx.
@@ -74,20 +77,22 @@ func (h *EventHandlerImpl) HandleEventBatch(ctx context.Context, batch EventBatc
 		}
 	}
 
-	changed, conf, statuses := h.cfg.Processor.Process(ctx)
+	changed, graph := h.cfg.Processor.Process()
 	if !changed {
 		h.cfg.Logger.Info("Handling events didn't result into NGINX configuration changes")
 		return
 	}
 
-	err := h.updateNginx(ctx, conf)
+	var nginxReloadRes status.NginxReloadResult
+	err := h.updateNginx(ctx, dataplane.BuildConfiguration(ctx, graph, h.cfg.ServiceResolver))
 	if err != nil {
 		h.cfg.Logger.Error(err, "Failed to update NGINX configuration")
+		nginxReloadRes.Error = err
 	} else {
 		h.cfg.Logger.Info("NGINX configuration was successfully updated")
 	}
 
-	h.cfg.StatusUpdater.Update(ctx, statuses)
+	h.cfg.StatusUpdater.Update(ctx, status.BuildStatuses(graph, nginxReloadRes))
 }
 
 func (h *EventHandlerImpl) updateNginx(ctx context.Context, conf dataplane.Configuration) error {

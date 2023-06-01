@@ -9,7 +9,6 @@ import (
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/helpers"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state"
 )
 
 func TestPrepareGatewayStatus(t *testing.T) {
@@ -19,9 +18,9 @@ func TestPrepareGatewayStatus(t *testing.T) {
 		Value: "1.2.3.4",
 	}
 
-	status := state.GatewayStatus{
+	status := GatewayStatus{
 		Conditions: CreateTestConditions("GatewayTest"),
-		ListenerStatuses: state.ListenerStatuses{
+		ListenerStatuses: ListenerStatuses{
 			"listener": {
 				AttachedRoutes: 3,
 				Conditions:     CreateTestConditions("ListenerTest"),

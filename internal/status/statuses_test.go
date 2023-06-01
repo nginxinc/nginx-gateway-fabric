@@ -1,6 +1,7 @@
-package state
+package status
 
 import (
+	"errors"
 	"testing"
 
 	. "github.com/onsi/gomega"
@@ -149,7 +150,7 @@ func TestBuildStatuses(t *testing.T) {
 				ObservedGeneration: 2,
 			},
 			{Namespace: "test", Name: "ignored-gateway"}: {
-				Conditions:         []conditions.Condition{conditions.NewGatewayConflict()},
+				Conditions:         conditions.NewGatewayConflict(),
 				ObservedGeneration: 1,
 			},
 		},
@@ -190,12 +191,100 @@ func TestBuildStatuses(t *testing.T) {
 
 	g := NewGomegaWithT(t)
 
-	result := buildStatuses(graph)
+	var nginxReloadRes NginxReloadResult
+	result := BuildStatuses(graph, nginxReloadRes)
+	g.Expect(helpers.Diff(expected, result)).To(BeEmpty())
+}
+
+func TestBuildStatusesNginxErr(t *testing.T) {
+	routes := map[types.NamespacedName]*graph.Route{
+		{Namespace: "test", Name: "hr-valid"}: {
+			Valid: true,
+			Source: &v1beta1.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Generation: 3,
+				},
+				Spec: v1beta1.HTTPRouteSpec{
+					CommonRouteSpec: v1beta1.CommonRouteSpec{
+						ParentRefs: []v1beta1.ParentReference{
+							{
+								SectionName: helpers.GetPointer[v1beta1.SectionName]("listener-80-1"),
+							},
+						},
+					},
+				},
+			},
+			ParentRefs: []graph.ParentRef{
+				{
+					Idx:     0,
+					Gateway: client.ObjectKeyFromObject(gw),
+					Attachment: &graph.ParentRefAttachmentStatus{
+						Attached: true,
+					},
+				},
+			},
+		},
+	}
+
+	graph := &graph.Graph{
+		Gateway: &graph.Gateway{
+			Source: gw,
+			Listeners: map[string]*graph.Listener{
+				"listener-80-1": {
+					Valid: true,
+					Routes: map[types.NamespacedName]*graph.Route{
+						{Namespace: "test", Name: "hr-1"}: {},
+					},
+				},
+			},
+			Valid: true,
+		},
+		Routes: routes,
+	}
+
+	expected := Statuses{
+		GatewayStatuses: GatewayStatuses{
+			{Namespace: "test", Name: "gateway"}: {
+				Conditions: []conditions.Condition{
+					conditions.NewGatewayAccepted(),
+					conditions.NewGatewayNotProgrammedInvalid(conditions.GatewayMessageFailedNginxReload),
+				},
+				ListenerStatuses: map[string]ListenerStatus{
+					"listener-80-1": {
+						AttachedRoutes: 1,
+						Conditions:     conditions.NewDefaultListenerConditions(),
+					},
+				},
+				ObservedGeneration: 2,
+			},
+		},
+		HTTPRouteStatuses: HTTPRouteStatuses{
+			{Namespace: "test", Name: "hr-valid"}: {
+				ObservedGeneration: 3,
+				ParentStatuses: []ParentStatus{
+					{
+						GatewayNsName: client.ObjectKeyFromObject(gw),
+						SectionName:   helpers.GetPointer[v1beta1.SectionName]("listener-80-1"),
+						Conditions: []conditions.Condition{
+							conditions.NewRouteResolvedRefs(),
+							conditions.NewRouteGatewayNotProgrammed(conditions.RouteMessageFailedNginxReload),
+						},
+					},
+				},
+			},
+		},
+	}
+
+	g := NewGomegaWithT(t)
+
+	nginxReloadRes := NginxReloadResult{Error: errors.New("test error")}
+	result := BuildStatuses(graph, nginxReloadRes)
 	g.Expect(helpers.Diff(expected, result)).To(BeEmpty())
 }
 
 func TestBuildGatewayStatuses(t *testing.T) {
 	tests := []struct {
+		nginxReloadRes  NginxReloadResult
 		gateway         *graph.Gateway
 		ignoredGateways map[types.NamespacedName]*v1beta1.Gateway
 		expected        GatewayStatuses
@@ -221,11 +310,11 @@ func TestBuildGatewayStatuses(t *testing.T) {
 			},
 			expected: GatewayStatuses{
 				{Namespace: "test", Name: "ignored-1"}: {
-					Conditions:         []conditions.Condition{conditions.NewGatewayConflict()},
+					Conditions:         conditions.NewGatewayConflict(),
 					ObservedGeneration: 1,
 				},
 				{Namespace: "test", Name: "ignored-2"}: {
-					Conditions:         []conditions.Condition{conditions.NewGatewayConflict()},
+					Conditions:         conditions.NewGatewayConflict(),
 					ObservedGeneration: 2,
 				},
 			},
@@ -289,7 +378,10 @@ func TestBuildGatewayStatuses(t *testing.T) {
 			},
 			expected: GatewayStatuses{
 				{Namespace: "test", Name: "gateway"}: {
-					Conditions: []conditions.Condition{conditions.NewGatewayAcceptedListenersNotValid()},
+					Conditions: []conditions.Condition{
+						conditions.NewGatewayProgrammed(),
+						conditions.NewGatewayAcceptedListenersNotValid(),
+					},
 					ListenerStatuses: map[string]ListenerStatus{
 						"listener-valid": {
 							AttachedRoutes: 1,
@@ -327,7 +419,7 @@ func TestBuildGatewayStatuses(t *testing.T) {
 			},
 			expected: GatewayStatuses{
 				{Namespace: "test", Name: "gateway"}: {
-					Conditions: []conditions.Condition{conditions.NewGatewayNotAcceptedListenersNotValid()},
+					Conditions: conditions.NewGatewayNotAcceptedListenersNotValid(),
 					ListenerStatuses: map[string]ListenerStatus{
 						"listener-invalid-1": {
 							Conditions: []conditions.Condition{
@@ -349,14 +441,46 @@ func TestBuildGatewayStatuses(t *testing.T) {
 			gateway: &graph.Gateway{
 				Source:     gw,
 				Valid:      false,
-				Conditions: []conditions.Condition{conditions.NewGatewayInvalid("no gateway class")},
+				Conditions: conditions.NewGatewayInvalid("no gateway class"),
 			},
 			expected: GatewayStatuses{
 				{Namespace: "test", Name: "gateway"}: {
-					Conditions:         []conditions.Condition{conditions.NewGatewayInvalid("no gateway class")},
+					Conditions:         conditions.NewGatewayInvalid("no gateway class"),
 					ObservedGeneration: 2,
 				},
 			},
+		},
+		{
+			name: "error reloading nginx; gateway not programmed",
+			gateway: &graph.Gateway{
+				Source:     gw,
+				Valid:      true,
+				Conditions: conditions.NewDefaultGatewayConditions(),
+				Listeners: map[string]*graph.Listener{
+					"listener-valid": {
+						Valid: true,
+						Routes: map[types.NamespacedName]*graph.Route{
+							{Namespace: "test", Name: "hr-1"}: {},
+						},
+					},
+				},
+			},
+			expected: GatewayStatuses{
+				{Namespace: "test", Name: "gateway"}: {
+					Conditions: []conditions.Condition{
+						conditions.NewGatewayAccepted(),
+						conditions.NewGatewayNotProgrammedInvalid(conditions.GatewayMessageFailedNginxReload),
+					},
+					ListenerStatuses: map[string]ListenerStatus{
+						"listener-valid": {
+							AttachedRoutes: 1,
+							Conditions:     conditions.NewDefaultListenerConditions(),
+						},
+					},
+					ObservedGeneration: 2,
+				},
+			},
+			nginxReloadRes: NginxReloadResult{Error: errors.New("test error")},
 		},
 	}
 
@@ -364,7 +488,7 @@ func TestBuildGatewayStatuses(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewGomegaWithT(t)
 
-			result := buildGatewayStatuses(test.gateway, test.ignoredGateways)
+			result := buildGatewayStatuses(test.gateway, test.ignoredGateways, test.nginxReloadRes)
 			g.Expect(helpers.Diff(test.expected, result)).To(BeEmpty())
 		})
 	}
