@@ -19,16 +19,15 @@ create-kind-cluster: ## Create a KinD cluster
 	kind export kubeconfig --kubeconfig $(KIND_KUBE_CONFIG_FOLDER)/config
 
 .PHONY: install-nkg
-install-nkg: ## Install NKG on configured KinD cluster
-	kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v0.7.0/standard-install.yaml
-	kubectl apply -f ../../deploy/manifests/namespace.yaml
-	kubectl create configmap njs-modules --from-file=../../internal/nginx/modules/src/httpmatches.js -n nginx-gateway
-	kubectl apply -f ../../deploy/manifests/nginx-conf.yaml
-	kubectl apply -f ../../deploy/manifests/rbac.yaml && sleep 3
-	kubectl apply -f ../../deploy/manifests/gatewayclass.yaml
-	kubectl apply -f ../../deploy/manifests/deployment.yaml
-	kubectl apply -f ../../deploy/manifests/service/nodeport.yaml
-	kubectl apply -f ../../conformance/provisioner/provisioner.yaml
+install-nkg: ## Install NKG with provisioner on configured KinD cluster
+	kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v0.7.0/standard-install.yaml && sleep 10
+	kubectl apply -f ../deploy/manifests/namespace.yaml
+	kubectl create configmap njs-modules --from-file=../internal/nginx/modules/src/httpmatches.js -n nginx-gateway
+	kubectl apply -f ../deploy/manifests/nginx-conf.yaml
+	kubectl apply -f ../deploy/manifests/rbac.yaml
+	kubectl apply -f ../deploy/manifests/gatewayclass.yaml
+	kubectl apply -f ../deploy/manifests/service/nodeport.yaml
+	kubectl apply -f ../conformance/provisioner/provisioner.yaml
 
 .PHONY: update-test-kind-config 
 update-test-kind-config: ## Update KinD config
@@ -42,8 +41,8 @@ run-conformance-tests: update-test-kind-config ## Run conformance tests
 .PHONY: uninstall-nkg
 uninstall-nkg: ## Uninstall NKG on configured KinD cluster
 	kubectl delete -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v0.7.0/standard-install.yaml
-	kubectl delete -f ../../deploy/manifests/rbac.yaml
-	kubectl delete -f ../../deploy/manifests/namespace.yaml
+	kubectl delete -f ../deploy/manifests/rbac.yaml
+	kubectl delete -f ../deploy/manifests/namespace.yaml
 	
 .PHONY: delete-kind-cluster
 delete-kind-cluster: ## Delete kind cluster
