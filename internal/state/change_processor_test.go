@@ -924,6 +924,53 @@ var _ = Describe("ChangeProcessor", func() {
 				})
 			})
 		})
+		Describe("namespace changes", func() {
+			When("namespace is linked via label selectors", func() {
+				It("triggers an update when labels are removed", func() {
+					ns := &apiv1.Namespace{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "ns",
+							Labels: map[string]string{
+								"app": "allowed",
+							},
+						},
+					}
+					gw := &v1beta1.Gateway{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "gw",
+						},
+						Spec: v1beta1.GatewaySpec{
+							Listeners: []v1beta1.Listener{
+								{
+									AllowedRoutes: &v1beta1.AllowedRoutes{
+										Namespaces: &v1beta1.RouteNamespaces{
+											From: helpers.GetPointer(v1beta1.NamespacesFromSelector),
+											Selector: &metav1.LabelSelector{
+												MatchLabels: map[string]string{
+													"app": "allowed",
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					}
+
+					processor.CaptureUpsertChange(gw)
+					processor.CaptureUpsertChange(ns)
+
+					changed, _ := processor.Process()
+					Expect(changed).To(BeTrue())
+
+					ns.Labels = nil
+					processor.CaptureUpsertChange(ns)
+
+					changed, _ = processor.Process()
+					Expect(changed).To(BeTrue())
+				})
+			})
+		})
 	})
 
 	Describe("Ensuring non-changing changes don't override previously changing changes", func() {

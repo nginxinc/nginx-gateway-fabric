@@ -244,3 +244,72 @@ func TestValidateListenerHostname(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateListenerAllowedRouteKind(t *testing.T) {
+	tests := []struct {
+		protocol  v1beta1.ProtocolType
+		kind      v1beta1.Kind
+		group     v1beta1.Group
+		name      string
+		expectErr bool
+	}{
+		{
+			protocol:  v1beta1.TCPProtocolType,
+			expectErr: false,
+			name:      "unsupported protocol is ignored",
+		},
+		{
+			protocol:  v1beta1.HTTPProtocolType,
+			group:     "bad-group",
+			kind:      "HTTPRoute",
+			expectErr: true,
+			name:      "invalid group",
+		},
+		{
+			protocol:  v1beta1.HTTPProtocolType,
+			group:     v1beta1.GroupName,
+			kind:      "TCPRoute",
+			expectErr: true,
+			name:      "invalid kind",
+		},
+		{
+			protocol:  v1beta1.HTTPProtocolType,
+			group:     v1beta1.GroupName,
+			kind:      "HTTPRoute",
+			expectErr: false,
+			name:      "valid HTTP",
+		},
+		{
+			protocol:  v1beta1.HTTPSProtocolType,
+			group:     v1beta1.GroupName,
+			kind:      "HTTPRoute",
+			expectErr: false,
+			name:      "valid HTTPS",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			g := NewGomegaWithT(t)
+
+			listener := v1beta1.Listener{
+				Protocol: test.protocol,
+				AllowedRoutes: &v1beta1.AllowedRoutes{
+					Kinds: []v1beta1.RouteGroupKind{
+						{
+							Kind:  test.kind,
+							Group: &test.group,
+						},
+					},
+				},
+			}
+
+			conds := validateListenerAllowedRouteKind(listener)
+			if test.expectErr {
+				g.Expect(conds).ToNot(BeEmpty())
+			} else {
+				g.Expect(conds).To(BeEmpty())
+			}
+		})
+	}
+}

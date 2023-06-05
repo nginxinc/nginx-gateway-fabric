@@ -7,6 +7,7 @@ import (
 
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
@@ -177,6 +178,24 @@ func TestBuildGateway(t *testing.T) {
 		Port:     80,
 		Protocol: v1beta1.HTTPProtocolType,
 	}
+	labelSet := map[string]string{
+		"key": "value",
+	}
+	listenerAllowedRoutes := v1beta1.Listener{
+		Name:     "listener-with-allowed-routes",
+		Hostname: (*v1beta1.Hostname)(helpers.GetStringPointer("foo.example.com")),
+		Port:     80,
+		Protocol: v1beta1.HTTPProtocolType,
+		AllowedRoutes: &v1beta1.AllowedRoutes{
+			Kinds: []v1beta1.RouteGroupKind{
+				{Kind: "HTTPRoute", Group: helpers.GetPointer(v1beta1.Group(v1beta1.GroupName))},
+			},
+			Namespaces: &v1beta1.RouteNamespaces{
+				From:     helpers.GetPointer(v1beta1.NamespacesFromSelector),
+				Selector: &metav1.LabelSelector{MatchLabels: labelSet},
+			},
+		},
+	}
 
 	gatewayTLSConfig := &v1beta1.GatewayTLSConfig{
 		Mode: helpers.GetTLSModePointer(v1beta1.TLSModeTerminate),
@@ -323,6 +342,23 @@ func TestBuildGateway(t *testing.T) {
 				Valid: true,
 			},
 			name: "valid https listener",
+		},
+		{
+			gateway:      createGateway(gatewayCfg{listeners: []v1beta1.Listener{listenerAllowedRoutes}}),
+			gatewayClass: validGC,
+			expected: &Gateway{
+				Source: getLastCreatedGetaway(),
+				Listeners: map[string]*Listener{
+					"listener-with-allowed-routes": {
+						Source:                    listenerAllowedRoutes,
+						Valid:                     true,
+						AllowedRouteLabelSelector: labels.SelectorFromSet(labels.Set(labelSet)),
+						Routes:                    map[types.NamespacedName]*Route{},
+					},
+				},
+				Valid: true,
+			},
+			name: "valid http listener with allowed routes label selector",
 		},
 		{
 			gateway:      createGateway(gatewayCfg{listeners: []v1beta1.Listener{listener802}}),

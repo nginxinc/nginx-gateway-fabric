@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 
+	apiv1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -242,17 +244,21 @@ func buildRoute(
 	return r
 }
 
-func bindRoutesToListeners(routes map[types.NamespacedName]*Route, gw *Gateway) {
+func bindRoutesToListeners(
+	routes map[types.NamespacedName]*Route,
+	gw *Gateway,
+	namespaces map[types.NamespacedName]*apiv1.Namespace,
+) {
 	if gw == nil {
 		return
 	}
 
 	for _, r := range routes {
-		bindRouteToListeners(r, gw)
+		bindRouteToListeners(r, gw, namespaces)
 	}
 }
 
-func bindRouteToListeners(r *Route, gw *Gateway) {
+func bindRouteToListeners(r *Route, gw *Gateway, namespaces map[types.NamespacedName]*apiv1.Namespace) {
 	if !r.Valid {
 		return
 	}
@@ -278,9 +284,7 @@ func bindRouteToListeners(r *Route, gw *Gateway) {
 
 		// Case 2: the parentRef references an ignored Gateway resource.
 
-		referencesWinningGw := ref.Gateway.Namespace == gw.Source.Namespace && ref.Gateway.Name == gw.Source.Name
-
-		if !referencesWinningGw {
+		if ref.Gateway.Name != gw.Source.Name {
 			attachment.FailedCondition = conditions.NewTODO("Gateway is ignored")
 			continue
 		}
@@ -295,7 +299,7 @@ func bindRouteToListeners(r *Route, gw *Gateway) {
 		// Case 4 - winning Gateway
 
 		// Try to attach Route to all matching listeners
-		cond, attached := tryToAttachRouteToListeners(ref.Attachment, routeRef.SectionName, r, gw.Listeners)
+		cond, attached := tryToAttachRouteToListeners(ref.Attachment, routeRef.SectionName, r, gw, namespaces)
 		if !attached {
 			attachment.FailedCondition = cond
 			continue
@@ -312,9 +316,10 @@ func tryToAttachRouteToListeners(
 	refStatus *ParentRefAttachmentStatus,
 	sectionName *v1beta1.SectionName,
 	route *Route,
-	listeners map[string]*Listener,
+	gw *Gateway,
+	namespaces map[types.NamespacedName]*apiv1.Namespace,
 ) (conditions.Condition, bool) {
-	validListeners, listenerExists := findValidListeners(getSectionName(sectionName), listeners)
+	validListeners, listenerExists := findValidListeners(getSectionName(sectionName), gw.Listeners)
 
 	if !listenerExists {
 		return conditions.NewRouteNoMatchingParent(), false
@@ -324,7 +329,14 @@ func tryToAttachRouteToListeners(
 		return conditions.NewRouteInvalidListener(), false
 	}
 
+	var routeAllowed bool
 	bind := func(l *Listener) (attached bool) {
+		allowed := routeAllowedByListener(l, route.Source.Namespace, gw.Source.Namespace, namespaces)
+		if !allowed {
+			return false
+		}
+		routeAllowed = true
+
 		hostnames := findAcceptedHostnames(l.Source.Hostname, route.Source.Spec.Hostnames)
 		if len(hostnames) == 0 {
 			return false
@@ -342,6 +354,9 @@ func tryToAttachRouteToListeners(
 	}
 
 	if !attached {
+		if !routeAllowed {
+			return conditions.NewRouteNotAllowedByListeners(), false
+		}
 		return conditions.NewRouteNoMatchingListenerHostname(), false
 	}
 
@@ -401,6 +416,34 @@ func findAcceptedHostnames(listenerHostname *v1beta1.Hostname, routeHostnames []
 	}
 
 	return result
+}
+
+func routeAllowedByListener(
+	listener *Listener,
+	routeNS,
+	gwNS string,
+	namespaces map[types.NamespacedName]*apiv1.Namespace,
+) bool {
+	if listener.Source.AllowedRoutes != nil {
+		switch *listener.Source.AllowedRoutes.Namespaces.From {
+		case v1beta1.NamespacesFromAll:
+			return true
+		case v1beta1.NamespacesFromSame:
+			return routeNS == gwNS
+		case v1beta1.NamespacesFromSelector:
+			if listener.AllowedRouteLabelSelector == nil {
+				return false
+			}
+
+			for _, ns := range namespaces {
+				if listener.AllowedRouteLabelSelector.Matches(labels.Set(ns.Labels)) {
+					return true
+				}
+			}
+			return false
+		}
+	}
+	return true
 }
 
 func getHostname(h *v1beta1.Hostname) string {

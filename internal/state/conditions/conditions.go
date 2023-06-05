@@ -109,6 +109,17 @@ func NewDefaultRouteConditions() []Condition {
 	}
 }
 
+// NewRouteNotAllowedByListeners returns a Condition that indicates that the HTTPRoute is not allowed by
+// any listener.
+func NewRouteNotAllowedByListeners() Condition {
+	return Condition{
+		Type:    string(v1beta1.RouteConditionAccepted),
+		Status:  metav1.ConditionFalse,
+		Reason:  string(v1beta1.RouteReasonNotAllowedByListeners),
+		Message: "HTTPRoute is not allowed by any listener",
+	}
+}
+
 // NewRouteNoMatchingListenerHostname returns a Condition that indicates that the hostname of the listener
 // does not match the hostnames of the HTTPRoute.
 func NewRouteNoMatchingListenerHostname() Condition {

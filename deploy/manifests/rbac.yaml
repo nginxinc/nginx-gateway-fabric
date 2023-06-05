@@ -12,6 +12,7 @@ rules:
 - apiGroups:
   - ""
   resources:
+  - namespaces
   - services
   - secrets
   verbs:
