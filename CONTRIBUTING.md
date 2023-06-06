@@ -91,7 +91,8 @@ Before beginning development, familiarize yourself with the following documents:
   outlining guidelines and best practices to ensure smooth and efficient pull request processes.
 - [Go Style Guide](/docs/developer/go-style-guide.md): A coding style guide for Go. Contains best practices and
   conventions to follow when writing Go code for the project. 
-- [Architecture and Design Principles](/docs/architecture.md): An overview of the project's architecture and design principles.
+- [Architecture](/docs/architecture.md): An high-level overview of the project's architecture.
+- [Design Principles](/docs/developer/design-principles.md): An overview of the project's design principles.
 
 ## Contributor License Agreement
 
