@@ -1,10 +1,12 @@
 ---
-name: Enhancement Request 
-about: Suggest an idea for this project 
-title: ''
-labels: 'proposal' 
-assignees: ''
+name: Enhancement Request about: Suggest an idea for this project title: ''
+labels: 'proposal' assignees: ''
 ---
+
+<!--
+WARNING: Prior to submitting an enhancement request, we ask that you create a discussion. If you have not yet 
+created a discussion related to your request, please do so now: https://github.com/nginxinc/nginx-kubernetes-gateway/discussions/new?category=ideas
+-->
 
 **Is your enhancement request related to a problem? Please describe.**
 A clear and concise description of what the problem is. Ex. I'm always frustrated when [...]

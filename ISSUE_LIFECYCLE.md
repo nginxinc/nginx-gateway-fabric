@@ -20,9 +20,9 @@ lifecycle.)
 
    `bug`: The implementation of a feature is not correct.
 
-   `proposal`:  An enhancement, tackling technical debt, documentation changes, or improving existing features. In cases
+   `enhancement`:  An enhancement, tackling technical debt, documentation changes, or improving existing features. In cases
    where the enhancement requires an [Enhancement Proposal](/docs/proposals/README.md), the additional
-   label `needs-enhancement-proposal` will be added.
+   label `enhancement-proposal` will be added.
 
    `question`: The owner converts the issue to a github discussion and engages the creator.
 
