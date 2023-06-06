@@ -138,6 +138,8 @@ func (h *eventHandler) HandleEventBatch(ctx context.Context, batch events.EventB
 }
 
 func (h *eventHandler) generateDeploymentID() string {
+	// This approach will break if the provisioner is restarted, because the existing Gateways might get
+	// IDs different from the previous replica of the provisioner.
 	id := h.gatewayNextID
 	h.gatewayNextID++
 
