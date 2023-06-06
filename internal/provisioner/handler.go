@@ -30,6 +30,8 @@ type eventHandler struct {
 	logger        logr.Logger
 
 	staticModeDeploymentYAML []byte
+
+	gatewayNextID int64
 }
 
 func newEventHandler(
@@ -47,6 +49,7 @@ func newEventHandler(
 		k8sClient:                k8sClient,
 		logger:                   logger,
 		staticModeDeploymentYAML: staticModeDeploymentYAML,
+		gatewayNextID:            1,
 	}
 }
 
@@ -91,7 +94,7 @@ func (h *eventHandler) ensureDeploymentsMatchGateways(ctx context.Context) {
 	// Create new deployments
 
 	for _, nsname := range gwsWithoutDeps {
-		deployment, err := prepareDeployment(h.staticModeDeploymentYAML, generateDeploymentID(nsname), nsname)
+		deployment, err := prepareDeployment(h.staticModeDeploymentYAML, h.generateDeploymentID(), nsname)
 		if err != nil {
 			panic(fmt.Errorf("failed to prepare deployment: %w", err))
 		}
@@ -103,7 +106,10 @@ func (h *eventHandler) ensureDeploymentsMatchGateways(ctx context.Context) {
 
 		h.provisions[nsname] = deployment
 
-		h.logger.Info("Created deployment", "deployment", client.ObjectKeyFromObject(deployment))
+		h.logger.Info("Created deployment",
+			"deployment", client.ObjectKeyFromObject(deployment),
+			"gateway", nsname,
+		)
 	}
 
 	// Remove unnecessary deployments
@@ -118,7 +124,10 @@ func (h *eventHandler) ensureDeploymentsMatchGateways(ctx context.Context) {
 
 		delete(h.provisions, nsname)
 
-		h.logger.Info("Deleted deployment", "deployment", client.ObjectKeyFromObject(deployment))
+		h.logger.Info("Deleted deployment",
+			"deployment", client.ObjectKeyFromObject(deployment),
+			"gateway", nsname,
+		)
 	}
 }
 
@@ -128,9 +137,11 @@ func (h *eventHandler) HandleEventBatch(ctx context.Context, batch events.EventB
 	h.ensureDeploymentsMatchGateways(ctx)
 }
 
-func generateDeploymentID(gatewayNsName types.NamespacedName) string {
-	// for production, make sure the ID is:
-	// - a valid resource name (ex. can't be too long);
-	// - unique among all Gateway resources (Gateways test-test/test and test/test-test should not have the same ID)
-	return fmt.Sprintf("nginx-gateway-%s-%s", gatewayNsName.Namespace, gatewayNsName.Name)
+func (h *eventHandler) generateDeploymentID() string {
+	// This approach will break if the provisioner is restarted, because the existing Gateways might get
+	// IDs different from the previous replica of the provisioner.
+	id := h.gatewayNextID
+	h.gatewayNextID++
+
+	return fmt.Sprintf("nginx-gateway-%d", id)
 }

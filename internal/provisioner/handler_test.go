@@ -2,6 +2,7 @@ package provisioner
 
 import (
 	"context"
+	"fmt"
 
 	. "github.com/onsi/ginkgo/v2"
 	v1 "k8s.io/api/apps/v1"
@@ -32,9 +33,6 @@ var _ = Describe("handler", func() {
 
 		statusUpdater status.Updater
 		k8sclient     client.Client
-
-		gwNsName, depNsName types.NamespacedName
-		gw                  *v1beta1.Gateway
 	)
 
 	BeforeEach(OncePerOrdered, func() {
@@ -64,12 +62,10 @@ var _ = Describe("handler", func() {
 			PodIP:                    "1.2.3.4",
 			UpdateGatewayClassStatus: true,
 		})
+	})
 
-		gwNsName = types.NamespacedName{
-			Namespace: "test-ns",
-			Name:      "test-gw",
-		}
-		gw = &v1beta1.Gateway{
+	createGateway := func(gwNsName types.NamespacedName) *v1beta1.Gateway {
+		return &v1beta1.Gateway{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: gwNsName.Namespace,
 				Name:      gwNsName.Name,
@@ -78,12 +74,7 @@ var _ = Describe("handler", func() {
 				GatewayClassName: gcName,
 			},
 		}
-
-		depNsName = types.NamespacedName{
-			Namespace: "nginx-gateway",
-			Name:      "nginx-gateway-test-ns-test-gw",
-		}
-	})
+	}
 
 	itShouldUpsertGatewayClass := func() {
 		// Add GatewayClass to the cluster
@@ -127,14 +118,19 @@ var _ = Describe("handler", func() {
 		Expect(clusterGc.Status.Conditions).To(Equal(expectedConditions))
 	}
 
-	itShouldUpsertGateway := func() {
+	itShouldUpsertGateway := func(gwNsName types.NamespacedName, seqNumber int64) {
 		batch := []interface{}{
 			&events.UpsertEvent{
-				Resource: gw,
+				Resource: createGateway(gwNsName),
 			},
 		}
 
 		handler.HandleEventBatch(context.Background(), batch)
+
+		depNsName := types.NamespacedName{
+			Namespace: "nginx-gateway",
+			Name:      fmt.Sprintf("nginx-gateway-%d", seqNumber),
+		}
 
 		dep := &v1.Deployment{}
 		err := k8sclient.Get(context.Background(), depNsName, dep)
@@ -142,16 +138,17 @@ var _ = Describe("handler", func() {
 		Expect(err).ShouldNot(HaveOccurred())
 
 		Expect(dep.ObjectMeta.Namespace).To(Equal("nginx-gateway"))
-		Expect(dep.ObjectMeta.Name).To(Equal("nginx-gateway-test-ns-test-gw"))
+		Expect(dep.ObjectMeta.Name).To(Equal(depNsName.Name))
 		Expect(dep.Spec.Template.Spec.Containers[0].Args).To(ContainElement("static-mode"))
-		Expect(dep.Spec.Template.Spec.Containers[0].Args).To(ContainElement("--gateway=test-ns/test-gw"))
+		expectedGwFlag := fmt.Sprintf("--gateway=%s", gwNsName.String())
+		Expect(dep.Spec.Template.Spec.Containers[0].Args).To(ContainElement(expectedGwFlag))
 		Expect(dep.Spec.Template.Spec.Containers[0].Args).To(ContainElement("--update-gatewayclass-status=false"))
 	}
 
-	itShouldPanicWhenUpsertingGateway := func() {
+	itShouldPanicWhenUpsertingGateway := func(gwNsName types.NamespacedName) {
 		batch := []interface{}{
 			&events.UpsertEvent{
-				Resource: gw,
+				Resource: createGateway(gwNsName),
 			},
 		}
 
@@ -163,7 +160,18 @@ var _ = Describe("handler", func() {
 	}
 
 	Describe("Core cases", Ordered, func() {
+		var gwNsName1, gwNsName2 types.NamespacedName
+
 		BeforeAll(func() {
+			gwNsName1 = types.NamespacedName{
+				Namespace: "test-ns-1",
+				Name:      "test-gw-1",
+			}
+			gwNsName2 = types.NamespacedName{
+				Namespace: "test-ns-2",
+				Name:      "test-gw-2",
+			}
+
 			handler = newEventHandler(
 				gcName,
 				statusUpdater,
@@ -179,24 +187,50 @@ var _ = Describe("handler", func() {
 			})
 		})
 
-		When("upserting Gateway", func() {
-			It("should create Deployment", func() {
-				itShouldUpsertGateway()
+		When("upserting first Gateway", func() {
+			It("should create first Deployment", func() {
+				itShouldUpsertGateway(gwNsName1, 1)
 			})
 		})
 
-		When("upserting Gateway again", func() {
+		When("upserting first Gateway again", func() {
 			It("must retain Deployment", func() {
-				itShouldUpsertGateway()
+				itShouldUpsertGateway(gwNsName1, 1)
 			})
 		})
 
-		When("deleting Gateway", func() {
-			It("should remove Deployment", func() {
+		When("upserting second Gateway", func() {
+			It("should create second Deployment", func() {
+				itShouldUpsertGateway(gwNsName2, 2)
+			})
+		})
+
+		When("deleting first Gateway", func() {
+			It("should remove first Deployment", func() {
 				batch := []interface{}{
 					&events.DeleteEvent{
 						Type:           &v1beta1.Gateway{},
-						NamespacedName: gwNsName,
+						NamespacedName: gwNsName1,
+					},
+				}
+
+				handler.HandleEventBatch(context.Background(), batch)
+				deps := &v1.DeploymentList{}
+
+				err := k8sclient.List(context.Background(), deps)
+
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(deps.Items).To(HaveLen(1))
+				Expect(deps.Items[0].ObjectMeta.Name).To(Equal("nginx-gateway-2"))
+			})
+		})
+
+		When("deleting second Gateway", func() {
+			It("should remove second Deployment", func() {
+				batch := []interface{}{
+					&events.DeleteEvent{
+						Type:           &v1beta1.Gateway{},
+						NamespacedName: gwNsName2,
 					},
 				}
 
@@ -215,8 +249,8 @@ var _ = Describe("handler", func() {
 			It("should not create Deployment", func() {
 				gw := &v1beta1.Gateway{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-gw-2",
-						Namespace: "test-ns-2",
+						Name:      "test-gw-3",
+						Namespace: "test-ns-3",
 					},
 					Spec: v1beta1.GatewaySpec{
 						GatewayClassName: "some-class",
@@ -241,7 +275,14 @@ var _ = Describe("handler", func() {
 	})
 
 	Describe("Edge cases", func() {
+		var gwNsName types.NamespacedName
+
 		BeforeEach(func() {
+			gwNsName = types.NamespacedName{
+				Namespace: "test-ns",
+				Name:      "test-gw",
+			}
+
 			handler = newEventHandler(
 				gcName,
 				statusUpdater,
@@ -275,7 +316,7 @@ var _ = Describe("handler", func() {
 
 		When("upserting Gateway when GatewayClass doesn't exist", func() {
 			It("should panic", func() {
-				itShouldPanicWhenUpsertingGateway()
+				itShouldPanicWhenUpsertingGateway(gwNsName)
 			})
 		})
 
@@ -287,29 +328,29 @@ var _ = Describe("handler", func() {
 
 				dep := &v1.Deployment{
 					ObjectMeta: metav1.ObjectMeta{
-						Namespace: depNsName.Namespace,
-						Name:      depNsName.Name,
+						Namespace: "nginx-gateway",
+						Name:      "nginx-gateway-1",
 					},
 				}
 
 				err := k8sclient.Create(context.Background(), dep)
 				Expect(err).ShouldNot(HaveOccurred())
 
-				itShouldPanicWhenUpsertingGateway()
+				itShouldPanicWhenUpsertingGateway(gwNsName)
 			})
 		})
 
 		When("deleting Gateway when Deployment can't be deleted", func() {
 			It("should panic", func() {
 				itShouldUpsertGatewayClass()
-				itShouldUpsertGateway()
+				itShouldUpsertGateway(gwNsName, 1)
 
 				// Delete the deployment so that the Handler will fail to delete it because it doesn't exist.
 
 				dep := &v1.Deployment{
 					ObjectMeta: metav1.ObjectMeta{
-						Namespace: depNsName.Namespace,
-						Name:      depNsName.Name,
+						Namespace: "nginx-gateway",
+						Name:      "nginx-gateway-1",
 					},
 				}
 
@@ -364,7 +405,7 @@ var _ = Describe("handler", func() {
 			)
 
 			itShouldUpsertGatewayClass()
-			itShouldPanicWhenUpsertingGateway()
+			itShouldPanicWhenUpsertingGateway(types.NamespacedName{Namespace: "test-ns", Name: "test-gw"})
 		})
 	})
 })
