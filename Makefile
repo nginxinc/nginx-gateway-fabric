@@ -74,7 +74,7 @@ lint: ## Run golangci-lint against code
 
 .PHONY: unit-test
 unit-test: ## Run unit tests for the go code
-	go test ./... -race -coverprofile cover.out
+	go test ./... -race -coverprofile cover.out -skip TestConformance
 	go tool cover -html=cover.out -o cover.html
 
 njs-unit-test: ## Run unit tests for the njs httpmatches module

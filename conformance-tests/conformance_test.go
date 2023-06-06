@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
 package tests
 
 import (
@@ -36,11 +37,13 @@ func TestConformance(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error initializing Kubernetes client: %v", err)
 	}
-	v1alpha2.AddToScheme(client.Scheme())
-	v1beta1.AddToScheme(client.Scheme())
+	_ = v1alpha2.AddToScheme(client.Scheme())
+	_ = v1beta1.AddToScheme(client.Scheme())
 
-	t.Logf("Running conformance tests with %s GatewayClass\n cleanup: %t\n debug: %t\n enable all features: %t \n supported features: [%v]\n exempt features: [%v]",
-		*flags.GatewayClassName, *flags.CleanupBaseResources, *flags.ShowDebug, *flags.EnableAllSupportedFeatures, *flags.SupportedFeatures, *flags.ExemptFeatures)
+	t.Logf(`Running conformance tests with %s GatewayClass\n cleanup: %t\n`+
+		`debug: %t\n enable all features: %t \n supported features: [%v]\n exempt features: [%v]`,
+		*flags.GatewayClassName, *flags.CleanupBaseResources, *flags.ShowDebug,
+		*flags.EnableAllSupportedFeatures, *flags.SupportedFeatures, *flags.ExemptFeatures)
 
 	cSuite := suite.New(suite.Options{
 		Client:                     client,
