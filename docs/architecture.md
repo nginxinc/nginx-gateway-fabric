@@ -85,7 +85,7 @@ the [controller-runtime][runtime] library. It watches Kubernetes objects (Servic
 CRDs), translates them to nginx configuration, and configures NGINX. This configuration happens in two stages. First,
 NGINX configuration files are written to the NGINX configuration volume shared by the `nginx-gateway` and `nginx`
 containers. Next, the control plane reloads the NGINX process. This is possible because the two
-containers [share a process namespace][share], which gives the `nginx-gateway` process access to the `nginx` process.
+containers [share a process namespace][share], which allows the NKG process to send signals to the NGINX master process.
 
 The diagram below provides a visual representation of the interactions between processes within the nginx and
 nginx-gateway containers, as well as external processes/entities. It showcases the connections and relationships between
