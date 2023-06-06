@@ -284,7 +284,7 @@ func bindRouteToListeners(r *Route, gw *Gateway, namespaces map[types.Namespaced
 
 		// Case 2: the parentRef references an ignored Gateway resource.
 
-		if ref.Gateway.Name != gw.Source.Name {
+		if ref.Gateway.Namespace == gw.Source.Namespace && ref.Gateway.Name != gw.Source.Name {
 			attachment.FailedCondition = conditions.NewTODO("Gateway is ignored")
 			continue
 		}
@@ -331,8 +331,7 @@ func tryToAttachRouteToListeners(
 
 	var routeAllowed bool
 	bind := func(l *Listener) (attached bool) {
-		allowed := routeAllowedByListener(l, route.Source.Namespace, gw.Source.Namespace, namespaces)
-		if !allowed {
+		if !routeAllowedByListener(l, route.Source.Namespace, gw.Source.Namespace, namespaces) {
 			return false
 		}
 		routeAllowed = true
@@ -435,10 +434,9 @@ func routeAllowedByListener(
 				return false
 			}
 
-			for _, ns := range namespaces {
-				if listener.AllowedRouteLabelSelector.Matches(labels.Set(ns.Labels)) {
-					return true
-				}
+			ns := namespaces[types.NamespacedName{Name: routeNS}]
+			if listener.AllowedRouteLabelSelector.Matches(labels.Set(ns.Labels)) {
+				return true
 			}
 			return false
 		}

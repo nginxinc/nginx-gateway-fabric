@@ -351,8 +351,10 @@ func createExternalReferencesForTLSSecretsResolver(
 
 // GetAllowedRouteLabelSelector returns a listener's AllowedRoutes label selector if it exists.
 func GetAllowedRouteLabelSelector(l v1beta1.Listener) *metav1.LabelSelector {
-	if l.AllowedRoutes != nil && l.AllowedRoutes.Namespaces != nil && l.AllowedRoutes.Namespaces.Selector != nil {
-		return l.AllowedRoutes.Namespaces.Selector
+	if l.AllowedRoutes != nil && l.AllowedRoutes.Namespaces != nil {
+		if *l.AllowedRoutes.Namespaces.From == v1beta1.NamespacesFromSelector && l.AllowedRoutes.Namespaces.Selector != nil {
+			return l.AllowedRoutes.Namespaces.Selector
+		}
 	}
 
 	return nil

@@ -36,8 +36,8 @@ type (
 	routeToServicesMap map[types.NamespacedName]map[types.NamespacedName]struct{}
 	// serviceRefCountMap maps Service names to the number of HTTPRoutes that reference it.
 	serviceRefCountMap map[types.NamespacedName]int
-	// listenerLabelSelectorsMap maps Gateways to the label selectors that their listeners use for allowed routes
-	listenerLabelSelectorsMap map[types.NamespacedName][]labels.Selector
+	// gatewayLabelSelectorsMap maps Gateways to the label selectors that their listeners use for allowed routes
+	gatewayLabelSelectorsMap map[types.NamespacedName][]labels.Selector
 	// namespaceCfg holds information about a namespace
 	// - labels that it contains
 	// - gateways that reference it (if labels match)
@@ -53,21 +53,21 @@ type (
 
 // CapturerImpl implements the Capturer interface.
 type CapturerImpl struct {
-	routesToServices       routeToServicesMap
-	serviceRefCount        serviceRefCountMap
-	listenerLabelSelectors listenerLabelSelectorsMap
-	referencedNamespaces   referencedNamespaces
-	endpointSliceOwners    map[types.NamespacedName]types.NamespacedName
+	routesToServices      routeToServicesMap
+	serviceRefCount       serviceRefCountMap
+	gatewayLabelSelectors gatewayLabelSelectorsMap
+	referencedNamespaces  referencedNamespaces
+	endpointSliceOwners   map[types.NamespacedName]types.NamespacedName
 }
 
 // NewCapturerImpl creates a new instance of CapturerImpl.
 func NewCapturerImpl() *CapturerImpl {
 	return &CapturerImpl{
-		routesToServices:       make(routeToServicesMap),
-		serviceRefCount:        make(serviceRefCountMap),
-		listenerLabelSelectors: make(listenerLabelSelectorsMap),
-		referencedNamespaces:   make(referencedNamespaces),
-		endpointSliceOwners:    make(map[types.NamespacedName]types.NamespacedName),
+		routesToServices:      make(routeToServicesMap),
+		serviceRefCount:       make(serviceRefCountMap),
+		gatewayLabelSelectors: make(gatewayLabelSelectorsMap),
+		referencedNamespaces:  make(referencedNamespaces),
+		endpointSliceOwners:   make(map[types.NamespacedName]types.NamespacedName),
 	}
 }
 
@@ -97,7 +97,7 @@ func (c *CapturerImpl) Capture(obj client.Object) {
 
 		nsname := client.ObjectKeyFromObject(o)
 		if len(selectors) > 0 {
-			c.listenerLabelSelectors[nsname] = selectors
+			c.gatewayLabelSelectors[nsname] = selectors
 			for ns, cfg := range c.referencedNamespaces {
 				for _, selector := range selectors {
 					if selector.Matches(labels.Set(cfg.labelMap)) {
@@ -108,7 +108,7 @@ func (c *CapturerImpl) Capture(obj client.Object) {
 				}
 				c.referencedNamespaces[ns] = cfg
 			}
-		} else if _, exists := c.listenerLabelSelectors[nsname]; exists {
+		} else if _, exists := c.gatewayLabelSelectors[nsname]; exists {
 			// label selectors existed previously for this gateway, so clean up any references to them
 			c.removeGatewayLabelSelector(nsname)
 		}
@@ -238,7 +238,7 @@ func getBackendServiceNamesFromRoute(hr *v1beta1.HTTPRoute) map[types.Namespaced
 // and if any matches are found, returns a map of those gateways
 func (c *CapturerImpl) matchingGateways(labelMap map[string]string) map[types.NamespacedName]struct{} {
 	gateways := make(map[types.NamespacedName]struct{})
-	for gw, selectors := range c.listenerLabelSelectors {
+	for gw, selectors := range c.gatewayLabelSelectors {
 		for _, selector := range selectors {
 			if selector.Matches(labels.Set(labelMap)) {
 				gateways[gw] = struct{}{}
@@ -251,7 +251,7 @@ func (c *CapturerImpl) matchingGateways(labelMap map[string]string) map[types.Na
 }
 
 func (c *CapturerImpl) removeGatewayLabelSelector(nsname types.NamespacedName) {
-	delete(c.listenerLabelSelectors, nsname)
+	delete(c.gatewayLabelSelectors, nsname)
 	for ns, cfg := range c.referencedNamespaces {
 		delete(cfg.gateways, nsname)
 		cfg.match = len(cfg.gateways) != 0

@@ -319,7 +319,7 @@ var _ = Describe("Capturer", func() {
 		var gw *v1beta1.Gateway
 		var nsNoLabels, ns *v1.Namespace
 
-		BeforeEach(OncePerOrdered, func() {
+		BeforeEach(func() {
 			capturer = relationship.NewCapturerImpl()
 			gw = &v1beta1.Gateway{
 				ObjectMeta: metav1.ObjectMeta{
