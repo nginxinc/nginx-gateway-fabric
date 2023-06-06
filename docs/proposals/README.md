@@ -60,11 +60,8 @@ the summary of the enhancement and the sections addressing the "Goals" and "Non-
 Enhancement Proposal is to achieve consensus on the objectives before filling out the details of implementation. Set the
 [status](#status) field in the Enhancement Proposal document to "Provisional".
 
-Open a Pull Request with your Enhancement Proposal and work with the reviewers to get the necessary approvals.
-
-> Note:
->
-> All Enhancement Proposals should be placed in the [docs/proposals](/docs/proposals) directory.
+Open a Pull Request with your Enhancement Proposal and work with the reviewers to get the necessary approvals. All
+Enhancement Proposals should be placed in the [docs/proposals](/docs/proposals) directory.
 
 ### 4. Document Implementation Details
 
