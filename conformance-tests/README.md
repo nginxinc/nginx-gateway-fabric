@@ -29,8 +29,6 @@ $ make create-kind-cluster
 ```
 
 ### Step 2 - Build conformance test image
-**Note**: Make sure to run `export DOCKER_BUILDKIT=1` before executing below command.
-
 ```bash
 $ make build-test-image
 ```

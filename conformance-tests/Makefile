@@ -20,7 +20,8 @@ create-kind-cluster: ## Create a KinD cluster
 
 .PHONY: install-nkg
 install-nkg: ## Install NKG with provisioner on configured KinD cluster
-	kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v0.7.0/standard-install.yaml && sleep 10
+	kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v0.7.0/standard-install.yaml
+	./wait_for_webhook.sh 
 	kubectl apply -f ../deploy/manifests/namespace.yaml
 	kubectl create configmap njs-modules --from-file=../internal/nginx/modules/src/httpmatches.js -n nginx-gateway
 	kubectl apply -f ../deploy/manifests/nginx-conf.yaml
@@ -43,6 +44,8 @@ uninstall-nkg: ## Uninstall NKG on configured KinD cluster
 	kubectl delete -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v0.7.0/standard-install.yaml
 	kubectl delete -f ../deploy/manifests/rbac.yaml
 	kubectl delete -f ../deploy/manifests/namespace.yaml
+	kubectl delete clusterrole nginx-gateway-provisioner
+	kubectl delete clusterrolebinding nginx-gateway-provisioner
 	
 .PHONY: delete-kind-cluster
 delete-kind-cluster: ## Delete kind cluster
