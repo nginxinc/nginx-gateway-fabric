@@ -21,6 +21,7 @@ create-kind-cluster: ## Create a KinD cluster
 .PHONY: install-nkg
 install-nkg: ## Install NKG with provisioner on configured KinD cluster
 	kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v0.7.0/standard-install.yaml
+	chmod +x ./wait_for_webhook.sh
 	./wait_for_webhook.sh 
 	kubectl apply -f ../deploy/manifests/namespace.yaml
 	kubectl create configmap njs-modules --from-file=../internal/nginx/modules/src/httpmatches.js -n nginx-gateway
