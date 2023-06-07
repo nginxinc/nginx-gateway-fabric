@@ -83,3 +83,4 @@ spec:
             - NET_BIND_SERVICE
             - SETGID
             - SETUID
+            - DAC_OVERRIDE
