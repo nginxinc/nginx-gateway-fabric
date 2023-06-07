@@ -1,5 +1,5 @@
 GATEWAY_CLASS = nginx
-SUPPORTED_FEATURES = Gateway
+SUPPORTED_FEATURES = Gateway,HTTPRoute
 KIND_KUBE_CONFIG_FOLDER = $${HOME}/.kube/kind
 TAG = latest
 PREFIX = conformance-test-runner
@@ -21,7 +21,7 @@ create-kind-cluster: ## Create a KinD cluster
 .PHONY: install-nkg
 install-nkg: ## Install NKG with provisioner on configured KinD cluster
 	kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v0.7.0/standard-install.yaml
-	kubectl wait --for=condition=available deployment gateway-api-admission-server -n gateway-system 
+	kubectl wait --for=condition=available --timeout=60s deployment gateway-api-admission-server -n gateway-system 
 	kubectl apply -f ../deploy/manifests/namespace.yaml
 	kubectl create configmap njs-modules --from-file=../internal/nginx/modules/src/httpmatches.js -n nginx-gateway
 	kubectl apply -f ../deploy/manifests/nginx-conf.yaml
