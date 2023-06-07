@@ -434,7 +434,10 @@ func routeAllowedByListener(
 				return false
 			}
 
-			ns := namespaces[types.NamespacedName{Name: routeNS}]
+			ns, exists := namespaces[types.NamespacedName{Name: routeNS}]
+			if !exists {
+				panic(fmt.Errorf("route namespace %q not found in map", routeNS))
+			}
 			if listener.AllowedRouteLabelSelector.Matches(labels.Set(ns.Labels)) {
 				return true
 			}

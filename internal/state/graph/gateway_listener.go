@@ -83,6 +83,7 @@ func newListenerConfiguratorFactory(
 		http: &listenerConfigurator{
 			validators: []listenerValidator{
 				validateListenerAllowedRouteKind,
+				validateListenerLabelSelector,
 				validateListenerHostname,
 				validateHTTPListener,
 			},
@@ -93,6 +94,7 @@ func newListenerConfiguratorFactory(
 		https: &listenerConfigurator{
 			validators: []listenerValidator{
 				validateListenerAllowedRouteKind,
+				validateListenerLabelSelector,
 				validateListenerHostname,
 				createHTTPSListenerValidator(gw.Namespace),
 			},
@@ -220,6 +222,19 @@ func validateListenerAllowedRouteKind(listener v1beta1.Listener) []conditions.Co
 				}
 			}
 		}
+	}
+
+	return nil
+}
+
+func validateListenerLabelSelector(listener v1beta1.Listener) []conditions.Condition {
+	if listener.AllowedRoutes != nil &&
+		listener.AllowedRoutes.Namespaces != nil &&
+		listener.AllowedRoutes.Namespaces.From != nil &&
+		*listener.AllowedRoutes.Namespaces.From == v1beta1.NamespacesFromSelector &&
+		listener.AllowedRoutes.Namespaces.Selector == nil {
+		msg := "Listener's AllowedRoutes Selector must be set when From is set to type Selector"
+		return []conditions.Condition{conditions.NewListenerUnsupportedValue(msg)}
 	}
 
 	return nil

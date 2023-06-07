@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	. "github.com/onsi/gomega"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/helpers"
@@ -305,6 +306,56 @@ func TestValidateListenerAllowedRouteKind(t *testing.T) {
 			}
 
 			conds := validateListenerAllowedRouteKind(listener)
+			if test.expectErr {
+				g.Expect(conds).ToNot(BeEmpty())
+			} else {
+				g.Expect(conds).To(BeEmpty())
+			}
+		})
+	}
+}
+
+func TestValidateListenerLabelSelector(t *testing.T) {
+	tests := []struct {
+		selector  *metav1.LabelSelector
+		from      v1beta1.FromNamespaces
+		name      string
+		expectErr bool
+	}{
+		{
+			from:      v1beta1.NamespacesFromSelector,
+			selector:  &metav1.LabelSelector{},
+			expectErr: false,
+			name:      "valid spec",
+		},
+		{
+			from:      v1beta1.NamespacesFromSelector,
+			selector:  nil,
+			expectErr: true,
+			name:      "invalid spec",
+		},
+		{
+			from:      v1beta1.NamespacesFromAll,
+			selector:  nil,
+			expectErr: false,
+			name:      "ignored from type",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			g := NewGomegaWithT(t)
+
+			listener := v1beta1.Listener{
+				AllowedRoutes: &v1beta1.AllowedRoutes{
+					Namespaces: &v1beta1.RouteNamespaces{
+						From:     &test.from,
+						Selector: test.selector,
+					},
+				},
+			}
+
+			conds := validateListenerLabelSelector(listener)
 			if test.expectErr {
 				g.Expect(conds).ToNot(BeEmpty())
 			} else {
