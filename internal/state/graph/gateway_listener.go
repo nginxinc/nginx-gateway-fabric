@@ -200,14 +200,23 @@ func validateListenerHostname(listener v1beta1.Listener) []conditions.Condition 
 }
 
 func validateListenerAllowedRouteKind(listener v1beta1.Listener) []conditions.Condition {
+	validHTTPRouteKind := func(kind v1beta1.RouteGroupKind) bool {
+		if kind.Kind != v1beta1.Kind("HTTPRoute") {
+			return false
+		}
+		if kind.Group == nil || *kind.Group != v1beta1.GroupName {
+			return false
+		}
+		return true
+	}
+
 	switch listener.Protocol {
 	case v1beta1.HTTPProtocolType, v1beta1.HTTPSProtocolType:
 		if listener.AllowedRoutes != nil {
 			for _, kind := range listener.AllowedRoutes.Kinds {
-				if kind.Kind != v1beta1.Kind("HTTPRoute") || *kind.Group != v1beta1.GroupName {
-					return []conditions.Condition{
-						conditions.NewListenerUnsupportedValue(fmt.Sprintf("Unsupported route kind \"%s/%s\"", *kind.Group, kind.Kind)),
-					}
+				if !validHTTPRouteKind(kind) {
+					msg := fmt.Sprintf("Unsupported route kind \"%s/%s\"", *kind.Group, kind.Kind)
+					return []conditions.Condition{conditions.NewListenerUnsupportedValue(msg)}
 				}
 			}
 		}

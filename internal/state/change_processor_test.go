@@ -963,8 +963,9 @@ var _ = Describe("ChangeProcessor", func() {
 					changed, _ := processor.Process()
 					Expect(changed).To(BeTrue())
 
-					ns.Labels = nil
-					processor.CaptureUpsertChange(ns)
+					newNS := ns.DeepCopy()
+					newNS.Labels = nil
+					processor.CaptureUpsertChange(newNS)
 
 					changed, _ = processor.Process()
 					Expect(changed).To(BeTrue())

@@ -401,6 +401,20 @@ var _ = Describe("Capturer", func() {
 				Expect(capturer.Exists(ns, client.ObjectKeyFromObject(ns))).To(BeFalse())
 			})
 		})
+		When("gateway changes its labels", func() {
+			It("does not report a relationship", func() {
+				capturer.Capture(gw)
+				capturer.Capture(ns)
+
+				Expect(capturer.Exists(ns, client.ObjectKeyFromObject(ns))).To(BeTrue())
+
+				gw.Spec.Listeners[0].AllowedRoutes.Namespaces.Selector.MatchLabels = map[string]string{
+					"app": "new-value",
+				}
+				capturer.Capture(gw)
+				Expect(capturer.Exists(ns, client.ObjectKeyFromObject(ns))).To(BeFalse())
+			})
+		})
 		When("gateway is deleted", func() {
 			It("does not report a relationship", func() {
 				capturer.Capture(gw)

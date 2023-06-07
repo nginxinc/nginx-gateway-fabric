@@ -99,14 +99,21 @@ func (c *CapturerImpl) Capture(obj client.Object) {
 		if len(selectors) > 0 {
 			c.gatewayLabelSelectors[nsname] = selectors
 			for ns, cfg := range c.referencedNamespaces {
+				var gatewayMatches bool
 				for _, selector := range selectors {
 					if selector.Matches(labels.Set(cfg.labelMap)) {
+						gatewayMatches = true
 						cfg.match = true
 						cfg.gateways[nsname] = struct{}{}
 						break
 					}
 				}
-				c.referencedNamespaces[ns] = cfg
+				if !gatewayMatches {
+					// gateway labels have changed, so remove the namespace relationship
+					c.removeGatewayReferenceFromNamespaces(nsname)
+				} else {
+					c.referencedNamespaces[ns] = cfg
+				}
 			}
 		} else if _, exists := c.gatewayLabelSelectors[nsname]; exists {
 			// label selectors existed previously for this gateway, so clean up any references to them
@@ -252,6 +259,10 @@ func (c *CapturerImpl) matchingGateways(labelMap map[string]string) map[types.Na
 
 func (c *CapturerImpl) removeGatewayLabelSelector(nsname types.NamespacedName) {
 	delete(c.gatewayLabelSelectors, nsname)
+	c.removeGatewayReferenceFromNamespaces(nsname)
+}
+
+func (c *CapturerImpl) removeGatewayReferenceFromNamespaces(nsname types.NamespacedName) {
 	for ns, cfg := range c.referencedNamespaces {
 		delete(cfg.gateways, nsname)
 		cfg.match = len(cfg.gateways) != 0

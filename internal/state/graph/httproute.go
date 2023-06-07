@@ -329,31 +329,31 @@ func tryToAttachRouteToListeners(
 		return conditions.NewRouteInvalidListener(), false
 	}
 
-	var routeAllowed bool
-	bind := func(l *Listener) (attached bool) {
+	bind := func(l *Listener) (allowed, attached bool) {
 		if !routeAllowedByListener(l, route.Source.Namespace, gw.Source.Namespace, namespaces) {
-			return false
+			return false, false
 		}
-		routeAllowed = true
 
 		hostnames := findAcceptedHostnames(l.Source.Hostname, route.Source.Spec.Hostnames)
 		if len(hostnames) == 0 {
-			return false
+			return true, false
 		}
 
 		refStatus.AcceptedHostnames[string(l.Source.Name)] = hostnames
 		l.Routes[client.ObjectKeyFromObject(route.Source)] = route
 
-		return true
+		return true, true
 	}
 
-	attached := false
+	var allowed, attached bool
 	for _, l := range validListeners {
-		attached = bind(l) || attached
+		routeAllowed, routeAttached := bind(l)
+		allowed = allowed || routeAllowed
+		attached = attached || routeAttached
 	}
 
 	if !attached {
-		if !routeAllowed {
+		if !allowed {
 			return conditions.NewRouteNotAllowedByListeners(), false
 		}
 		return conditions.NewRouteNoMatchingListenerHostname(), false
