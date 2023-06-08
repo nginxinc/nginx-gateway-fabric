@@ -1,6 +1,8 @@
 ---
-name: Enhancement Request about: Suggest an idea for this project title: ''
-labels: 'proposal' assignees: ''
+name: Enhancement Request 
+about: Suggest an idea for this project title: ''
+labels: 'proposal' 
+assignees: ''
 ---
 
 <!--
