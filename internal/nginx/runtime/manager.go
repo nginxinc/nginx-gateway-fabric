@@ -3,6 +3,7 @@ package runtime
 import (
 	"context"
 	"fmt"
+	"io/fs"
 	"os"
 	"strconv"
 	"strings"
@@ -10,9 +11,15 @@ import (
 	"time"
 )
 
-const pidFile = "/etc/nginx/nginx.pid"
+const (
+	pidFile        = "/etc/nginx/nginx.pid"
+	pidFileTimeout = 5 * time.Second
+)
 
-type readFileFunc func(string) ([]byte, error)
+type (
+	readFileFunc  func(string) ([]byte, error)
+	checkFileFunc func(string) (fs.FileInfo, error)
+)
 
 //go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . Manager
 
@@ -31,13 +38,8 @@ func NewManagerImpl() *ManagerImpl {
 }
 
 func (m *ManagerImpl) Reload(ctx context.Context) error {
-	// FIXME(pleshakov): Before reload attempt, make sure NGINX is running.
-	// If the gateway container starts before NGINX container (which is possible),
-	// then it is possible that a reload can be attempted when NGINX is not running yet.
-	// Make sure to prevent this case, so we don't get an error.
-
 	// We find the main NGINX PID on every reload because it will change if the NGINX container is restarted.
-	pid, err := findMainProcess(os.ReadFile)
+	pid, err := findMainProcess(os.Stat, os.ReadFile, pidFileTimeout)
 	if err != nil {
 		return fmt.Errorf("failed to find NGINX main process: %w", err)
 	}
@@ -65,8 +67,22 @@ func (m *ManagerImpl) Reload(ctx context.Context) error {
 	return nil
 }
 
-func findMainProcess(readFile readFileFunc) (int, error) {
-	content, err := readFile(pidFile)
+func findMainProcess(checkFile checkFileFunc, readFile readFileFunc, timeout time.Duration) (int, error) {
+	startTime := time.Now()
+	deadline := startTime.Add(timeout)
+
+	fileCheck := func() (content []byte, err error) {
+		for time.Now().Before(deadline) {
+			_, err := checkFile(pidFile)
+			if err == nil {
+				return readFile(pidFile)
+			}
+			time.Sleep(1 * time.Second)
+		}
+		return nil, fmt.Errorf("timeout waiting for pid file to appear")
+	}
+
+	content, err := fileCheck()
 	if err != nil {
 		return 0, err
 	}
