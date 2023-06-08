@@ -427,14 +427,14 @@ var _ = Describe("Capturer", func() {
 			})
 		})
 		When("a namespace has its labels removed after being linked", func() {
-			It("reports that a relationship ended", func() {
+			It("reports that a relationship once existed", func() {
 				capturer.Capture(gw)
 				capturer.Capture(ns)
 
 				Expect(capturer.Exists(ns, client.ObjectKeyFromObject(ns))).To(BeTrue())
 
 				ns.Labels = nil
-				Expect(capturer.RelationshipEnded(ns)).To(BeTrue())
+				Expect(capturer.Exists(ns, client.ObjectKeyFromObject(ns))).To(BeTrue())
 
 				capturer.Capture(ns)
 				Expect(capturer.Exists(ns, client.ObjectKeyFromObject(ns))).To(BeFalse())

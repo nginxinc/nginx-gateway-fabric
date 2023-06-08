@@ -196,13 +196,13 @@ func (s *changeTrackingUpdater) Upsert(obj client.Object) {
 	s.assertSupportedGVK(s.extractGVK(obj))
 
 	changingUpsert := s.upsert(obj)
-	relationshipEnded := s.capturer.RelationshipEnded(obj)
+	relationshipExisted := s.capturer.Exists(obj, client.ObjectKeyFromObject(obj))
 
 	s.capturer.Capture(obj)
 
 	relationshipExists := s.capturer.Exists(obj, client.ObjectKeyFromObject(obj))
 
-	s.changed = s.changed || changingUpsert || relationshipEnded || relationshipExists
+	s.changed = s.changed || changingUpsert || relationshipExisted || relationshipExists
 }
 
 func (s *changeTrackingUpdater) delete(objType client.Object, nsname types.NamespacedName) (changed bool) {

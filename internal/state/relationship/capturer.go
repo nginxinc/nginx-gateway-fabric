@@ -28,7 +28,6 @@ type Capturer interface {
 	Capture(obj client.Object)
 	Remove(resource client.Object, nsname types.NamespacedName)
 	Exists(resource client.Object, nsname types.NamespacedName) bool
-	RelationshipEnded(resource client.Object) bool
 }
 
 type (
@@ -95,29 +94,29 @@ func (c *CapturerImpl) Capture(obj client.Object) {
 			}
 		}
 
-		nsname := client.ObjectKeyFromObject(o)
+		gatewayName := client.ObjectKeyFromObject(o)
 		if len(selectors) > 0 {
-			c.gatewayLabelSelectors[nsname] = selectors
+			c.gatewayLabelSelectors[gatewayName] = selectors
 			for ns, cfg := range c.referencedNamespaces {
 				var gatewayMatches bool
 				for _, selector := range selectors {
 					if selector.Matches(labels.Set(cfg.labelMap)) {
 						gatewayMatches = true
 						cfg.match = true
-						cfg.gateways[nsname] = struct{}{}
+						cfg.gateways[gatewayName] = struct{}{}
 						break
 					}
 				}
 				if !gatewayMatches {
 					// gateway labels have changed, so remove the namespace relationship
-					c.removeGatewayReferenceFromNamespaces(nsname)
+					c.removeGatewayReferenceFromNamespaces(gatewayName, referencedNamespaces{ns: cfg})
 				} else {
 					c.referencedNamespaces[ns] = cfg
 				}
 			}
-		} else if _, exists := c.gatewayLabelSelectors[nsname]; exists {
+		} else if _, exists := c.gatewayLabelSelectors[gatewayName]; exists {
 			// label selectors existed previously for this gateway, so clean up any references to them
-			c.removeGatewayLabelSelector(nsname)
+			c.removeGatewayLabelSelector(gatewayName)
 		}
 	case *v1.Namespace:
 		nsLabels := o.GetLabels()
@@ -158,19 +157,6 @@ func (c *CapturerImpl) Exists(resource client.Object, nsname types.NamespacedNam
 		return exists && cfg.match
 	}
 
-	return false
-}
-
-// RelationshipEnded checks if a relationship previously existed, but no longer does.
-func (c CapturerImpl) RelationshipEnded(resource client.Object) bool {
-	switch o := resource.(type) {
-	case *v1.Namespace:
-		if c.Exists(o, client.ObjectKeyFromObject(o)) {
-			if len(c.matchingGateways(o.GetLabels())) == 0 {
-				return true
-			}
-		}
-	}
 	return false
 }
 
@@ -257,14 +243,17 @@ func (c *CapturerImpl) matchingGateways(labelMap map[string]string) map[types.Na
 	return gateways
 }
 
-func (c *CapturerImpl) removeGatewayLabelSelector(nsname types.NamespacedName) {
-	delete(c.gatewayLabelSelectors, nsname)
-	c.removeGatewayReferenceFromNamespaces(nsname)
+func (c *CapturerImpl) removeGatewayLabelSelector(gatewayName types.NamespacedName) {
+	delete(c.gatewayLabelSelectors, gatewayName)
+	c.removeGatewayReferenceFromNamespaces(gatewayName, c.referencedNamespaces)
 }
 
-func (c *CapturerImpl) removeGatewayReferenceFromNamespaces(nsname types.NamespacedName) {
-	for ns, cfg := range c.referencedNamespaces {
-		delete(cfg.gateways, nsname)
+func (c *CapturerImpl) removeGatewayReferenceFromNamespaces(
+	gatewayName types.NamespacedName,
+	namespaces referencedNamespaces,
+) {
+	for ns, cfg := range namespaces {
+		delete(cfg.gateways, gatewayName)
 		cfg.match = len(cfg.gateways) != 0
 		c.referencedNamespaces[ns] = cfg
 	}
