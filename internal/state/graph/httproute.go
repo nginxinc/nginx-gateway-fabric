@@ -338,7 +338,7 @@ func tryToAttachRouteToListeners(
 
 	attached := false
 	for _, l := range validListeners {
-		attached = attached || bind(l)
+		attached = bind(l) || attached
 	}
 
 	if !attached {

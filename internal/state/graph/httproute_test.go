@@ -751,6 +751,9 @@ func TestBindRouteToListeners(t *testing.T) {
 				Valid:  true,
 				Listeners: map[string]*Listener{
 					"listener-80-1": createListener("listener-80-1"),
+					"listener-80-2": createModifiedListener("listener-80-2", func(l *Listener) {
+						l.Source.Hostname = nil
+					}),
 				},
 			},
 			expectedSectionNameRefs: []ParentRef{
@@ -761,6 +764,7 @@ func TestBindRouteToListeners(t *testing.T) {
 						Attached: true,
 						AcceptedHostnames: map[string][]string{
 							"listener-80-1": {"foo.example.com"},
+							"listener-80-2": {"foo.example.com"},
 						},
 					},
 				},
@@ -770,6 +774,12 @@ func TestBindRouteToListeners(t *testing.T) {
 					l.Routes = map[types.NamespacedName]*Route{
 						client.ObjectKeyFromObject(hr): routeWithEmptySectionName,
 					}
+				}),
+				"listener-80-2": createModifiedListener("listener-80-2", func(l *Listener) {
+					l.Routes = map[types.NamespacedName]*Route{
+						client.ObjectKeyFromObject(hr): routeWithEmptySectionName,
+					}
+					l.Source.Hostname = nil
 				}),
 			},
 			name: "section name is empty",
