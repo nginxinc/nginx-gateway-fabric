@@ -83,10 +83,16 @@ Follow the steps below for manual testing:
    - NGINX proxies traffic successfully (when applicable). 
    - [Examples](/examples) work correctly. This will ensure that your changes have not introduced any regressions.
 
-
 > **Note**
 >  
 > Don't limit yourself to happy path testing. Make an effort to cover various scenarios, including edge cases and potential error conditions. By testing a wide range of scenarios, you can uncover hidden issues and ensure the robustness of your changes.
 
 Performing manual testing helps guarantee the stability, reliability, and effectiveness of your changes before
 submitting them for review and integration into the project.
+
+
+## Gateway API Conformance Testing
+
+To run Gateway API conformance tests, please follow the instructions on [this](/conformance-tests/README.md) page.
+
+

@@ -14,12 +14,12 @@ build-test-image: ## Build conformance test image
 	docker build -t $(PREFIX):$(TAG) -f Dockerfile ..
 
 .PHONY: create-kind-cluster
-create-kind-cluster: ## Create a KinD cluster
+create-kind-cluster: ## Create a kind cluster
 	kind create cluster --image kindest/node:v1.27.1
 	kind export kubeconfig --kubeconfig $(KIND_KUBE_CONFIG_FOLDER)/config
 
 .PHONY: install-nkg
-install-nkg: ## Install NKG with provisioner on configured KinD cluster
+install-nkg: ## Install NKG with provisioner on configured kind cluster
 	kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v0.7.0/standard-install.yaml
 	kubectl wait --for=condition=available --timeout=60s deployment gateway-api-admission-server -n gateway-system 
 	kubectl apply -f ../deploy/manifests/namespace.yaml
@@ -31,7 +31,7 @@ install-nkg: ## Install NKG with provisioner on configured KinD cluster
 	kubectl apply -f ../conformance/provisioner/provisioner.yaml
 
 .PHONY: update-test-kind-config 
-update-test-kind-config: ## Update KinD config
+update-test-kind-config: ## Update kind config
 	sed -ir "s|server:.*|server: https://kind-control-plane:6443|" $(KIND_KUBE_CONFIG_FOLDER)/config
 
 .PHONY: run-conformance-tests
@@ -40,7 +40,7 @@ run-conformance-tests: update-test-kind-config ## Run conformance tests
 		go test -v . -args --gateway-class=$(GATEWAY_CLASS) --supported-features=$(SUPPORTED_FEATURES)
 
 .PHONY: uninstall-nkg
-uninstall-nkg: ## Uninstall NKG on configured KinD cluster
+uninstall-nkg: ## Uninstall NKG on configured kind cluster
 	kubectl delete -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v0.7.0/standard-install.yaml
 	kubectl delete -f ../deploy/manifests/rbac.yaml
 	kubectl delete -f ../deploy/manifests/namespace.yaml

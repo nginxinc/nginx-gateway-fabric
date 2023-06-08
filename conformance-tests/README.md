@@ -1,8 +1,8 @@
-# Running [Gateway Conformance Tests](https://gateway-api.sigs.k8s.io/concepts/conformance/#3-conformance-tests) in Kind
+# Running [Gateway Conformance Tests](https://gateway-api.sigs.k8s.io/concepts/conformance/#3-conformance-tests) in kind
 
 ## Prerequisites:
 
-* [Kind](https://kind.sigs.k8s.io/).
+* [kind](https://kind.sigs.k8s.io/).
 * Docker.
 * Golang.
 
@@ -14,15 +14,15 @@ List available commands:
 $ make
 
 build-test-image               Build conformance test image
-create-kind-cluster            Create a KinD cluster
+create-kind-cluster            Create a kind cluster
 delete-kind-cluster            Delete kind cluster
 help                           Display this help
-install-nkg                    Install NKG on configured KinD cluster
+install-nkg                    Install NKG on configured kind cluster
 run-conformance-tests          Run conformance tests
-uninstall-nkg                  Uninstall NKG from configured KinD cluster
-update-test-kind-config        Update KinD config
+uninstall-nkg                  Uninstall NKG from configured kind cluster
+update-test-kind-config        Update kind config
 ```
-### Step 1 - Create a Kind Cluster
+### Step 1 - Create a kind Cluster
 
 ```bash
 $ make create-kind-cluster
@@ -48,7 +48,7 @@ $ make run-conformance-tests
 $ make uninstall-nkg
 ```
 
-### Step 6 - Delete KinD cluster
+### Step 6 - Delete kind cluster
 ```bash
 $ make delete-kind-cluster
 ```
