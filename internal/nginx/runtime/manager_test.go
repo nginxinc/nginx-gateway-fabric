@@ -1,6 +1,7 @@
 package runtime
 
 import (
+	"context"
 	"errors"
 	"io/fs"
 	"testing"
@@ -32,8 +33,12 @@ func TestFindMainProcess(t *testing.T) {
 		return nil, errors.New("error")
 	}
 	var testFileInfo fs.FileInfo
+	ctx := context.Background()
+	cancellingCtx, cancel := context.WithCancel(ctx)
+	time.AfterFunc(1*time.Millisecond, cancel)
 
 	tests := []struct {
+		ctx         context.Context
 		readFile    readFileFunc
 		checkFile   checkFileFunc
 		msg         string
@@ -41,6 +46,7 @@ func TestFindMainProcess(t *testing.T) {
 		expectError bool
 	}{
 		{
+			ctx:         ctx,
 			readFile:    readFileFuncGen([]byte("1\n")),
 			checkFile:   checkFileFuncGen(testFileInfo),
 			expected:    1,
@@ -48,6 +54,7 @@ func TestFindMainProcess(t *testing.T) {
 			msg:         "normal case",
 		},
 		{
+			ctx:         ctx,
 			readFile:    readFileFuncGen([]byte("")),
 			checkFile:   checkFileFuncGen(testFileInfo),
 			expected:    0,
@@ -55,6 +62,7 @@ func TestFindMainProcess(t *testing.T) {
 			msg:         "empty file content",
 		},
 		{
+			ctx:         ctx,
 			readFile:    readFileFuncGen([]byte("not a number")),
 			checkFile:   checkFileFuncGen(testFileInfo),
 			expected:    0,
@@ -62,6 +70,7 @@ func TestFindMainProcess(t *testing.T) {
 			msg:         "bad file content",
 		},
 		{
+			ctx:         ctx,
 			readFile:    readFileError,
 			checkFile:   checkFileFuncGen(testFileInfo),
 			expected:    0,
@@ -69,16 +78,25 @@ func TestFindMainProcess(t *testing.T) {
 			msg:         "cannot read file",
 		},
 		{
+			ctx:         ctx,
 			readFile:    readFileFuncGen([]byte("1\n")),
 			checkFile:   checkFileError,
 			expected:    0,
 			expectError: true,
-			msg:         "cannot file pid file",
+			msg:         "cannot find pid file",
+		},
+		{
+			ctx:         cancellingCtx,
+			readFile:    readFileFuncGen([]byte("1\n")),
+			checkFile:   checkFileError,
+			expected:    0,
+			expectError: true,
+			msg:         "context canceled",
 		},
 	}
 
 	for _, test := range tests {
-		result, err := findMainProcess(test.checkFile, test.readFile, 1*time.Microsecond)
+		result, err := findMainProcess(test.ctx, test.checkFile, test.readFile, 2*time.Millisecond)
 
 		if result != test.expected {
 			t.Errorf("findMainProcess() returned %d but expected %d for case %q", result, test.expected, test.msg)

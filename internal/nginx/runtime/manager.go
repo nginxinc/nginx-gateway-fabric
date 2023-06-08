@@ -2,6 +2,7 @@ package runtime
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io/fs"
 	"os"
@@ -9,6 +10,8 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	"k8s.io/apimachinery/pkg/util/wait"
 )
 
 const (
@@ -39,7 +42,7 @@ func NewManagerImpl() *ManagerImpl {
 
 func (m *ManagerImpl) Reload(ctx context.Context) error {
 	// We find the main NGINX PID on every reload because it will change if the NGINX container is restarted.
-	pid, err := findMainProcess(os.Stat, os.ReadFile, pidFileTimeout)
+	pid, err := findMainProcess(ctx, os.Stat, os.ReadFile, pidFileTimeout)
 	if err != nil {
 		return fmt.Errorf("failed to find NGINX main process: %w", err)
 	}
@@ -67,22 +70,34 @@ func (m *ManagerImpl) Reload(ctx context.Context) error {
 	return nil
 }
 
-func findMainProcess(checkFile checkFileFunc, readFile readFileFunc, timeout time.Duration) (int, error) {
-	startTime := time.Now()
-	deadline := startTime.Add(timeout)
+func findMainProcess(
+	ctx context.Context,
+	checkFile checkFileFunc,
+	readFile readFileFunc,
+	timeout time.Duration,
+) (int, error) {
+	ctx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
 
-	fileCheck := func() (content []byte, err error) {
-		for time.Now().Before(deadline) {
+	err := wait.PollUntilContextCancel(
+		ctx,
+		1*time.Second,
+		true, /* poll immediately */
+		func(ctx context.Context) (bool, error) {
 			_, err := checkFile(pidFile)
 			if err == nil {
-				return readFile(pidFile)
+				return true, nil
 			}
-			time.Sleep(1 * time.Second)
-		}
-		return nil, fmt.Errorf("timeout waiting for pid file to appear")
+			if !errors.Is(err, fs.ErrNotExist) {
+				return false, err
+			}
+			return false, nil
+		})
+	if err != nil {
+		return 0, err
 	}
 
-	content, err := fileCheck()
+	content, err := readFile(pidFile)
 	if err != nil {
 		return 0, err
 	}
