@@ -7,6 +7,7 @@ import (
 	discoveryV1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/helpers"
@@ -313,23 +314,149 @@ var _ = Describe("Capturer", func() {
 				})
 			})
 		})
-		Describe("Edge cases", func() {
-			BeforeEach(func() {
-				capturer = relationship.NewCapturerImpl()
+	})
+	Describe("Capture namespace and gateway relationships", func() {
+		var gw *v1beta1.Gateway
+		var nsNoLabels, ns *v1.Namespace
+
+		BeforeEach(func() {
+			capturer = relationship.NewCapturerImpl()
+			gw = &v1beta1.Gateway{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "gw",
+				},
+				Spec: v1beta1.GatewaySpec{
+					Listeners: []v1beta1.Listener{
+						{
+							AllowedRoutes: &v1beta1.AllowedRoutes{
+								Namespaces: &v1beta1.RouteNamespaces{
+									From: helpers.GetPointer(v1beta1.NamespacesFromSelector),
+									Selector: &metav1.LabelSelector{
+										MatchLabels: map[string]string{
+											"app": "valid",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			}
+			nsNoLabels = &v1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "no-labels",
+				},
+			}
+			ns = &v1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "with-labels",
+					Labels: map[string]string{
+						"app": "valid",
+					},
+				},
+			}
+		})
+
+		When("a gateway with label selectors is created, but no namespace has been captured", func() {
+			It("does not report a relationship", func() {
+				capturer.Capture(gw)
+
+				Expect(capturer.Exists(ns, client.ObjectKeyFromObject(ns))).To(BeFalse())
 			})
-			It("Capture does not panic when passed an unsupported resource type", func() {
-				Expect(func() {
-					capturer.Capture(&v1beta1.Gateway{})
-				}).ToNot(Panic())
+		})
+		When("a namespace is created that is not linked to a listener", func() {
+			It("does not report a relationship", func() {
+				capturer.Capture(gw)
+				capturer.Capture(nsNoLabels)
+
+				Expect(capturer.Exists(nsNoLabels, client.ObjectKeyFromObject(nsNoLabels))).To(BeFalse())
 			})
-			It("Remove does not panic when passed an unsupported resource type", func() {
-				Expect(func() {
-					capturer.Remove(&v1beta1.Gateway{}, types.NamespacedName{})
-				}).ToNot(Panic())
+		})
+		When("a namespace is created that is linked to a listener", func() {
+			It("reports a relationship", func() {
+				capturer.Capture(gw)
+				capturer.Capture(ns)
+
+				Expect(capturer.Exists(ns, client.ObjectKeyFromObject(ns))).To(BeTrue())
 			})
-			It("Exist returns false if passed an unsupported resource type", func() {
-				Expect(capturer.Exists(&v1beta1.Gateway{}, types.NamespacedName{})).To(BeFalse())
+		})
+		When("a gateway with label selectors is created after a linked namespace", func() {
+			It("reports a relationship", func() {
+				capturer.Capture(ns)
+				Expect(capturer.Exists(ns, client.ObjectKeyFromObject(ns))).To(BeFalse())
+
+				capturer.Capture(gw)
+				Expect(capturer.Exists(ns, client.ObjectKeyFromObject(ns))).To(BeTrue())
 			})
+		})
+		When("label selectors are removed from gateway", func() {
+			It("does not report a relationship", func() {
+				capturer.Capture(gw)
+				capturer.Capture(ns)
+
+				Expect(capturer.Exists(ns, client.ObjectKeyFromObject(ns))).To(BeTrue())
+
+				gw.Spec.Listeners[0].AllowedRoutes = nil
+				capturer.Capture(gw)
+				Expect(capturer.Exists(ns, client.ObjectKeyFromObject(ns))).To(BeFalse())
+			})
+		})
+		When("gateway changes its labels", func() {
+			It("does not report a relationship", func() {
+				capturer.Capture(gw)
+				capturer.Capture(ns)
+
+				Expect(capturer.Exists(ns, client.ObjectKeyFromObject(ns))).To(BeTrue())
+
+				gw.Spec.Listeners[0].AllowedRoutes.Namespaces.Selector.MatchLabels = map[string]string{
+					"app": "new-value",
+				}
+				capturer.Capture(gw)
+				Expect(capturer.Exists(ns, client.ObjectKeyFromObject(ns))).To(BeFalse())
+			})
+		})
+		When("gateway is deleted", func() {
+			It("does not report a relationship", func() {
+				capturer.Capture(gw)
+				capturer.Capture(ns)
+
+				Expect(capturer.Exists(ns, client.ObjectKeyFromObject(ns))).To(BeTrue())
+
+				capturer.Remove(gw, client.ObjectKeyFromObject(gw))
+				Expect(capturer.Exists(ns, client.ObjectKeyFromObject(ns))).To(BeFalse())
+			})
+		})
+		When("a namespace has its labels removed after being linked", func() {
+			It("reports that a relationship once existed", func() {
+				capturer.Capture(gw)
+				capturer.Capture(ns)
+
+				Expect(capturer.Exists(ns, client.ObjectKeyFromObject(ns))).To(BeTrue())
+
+				ns.Labels = nil
+				Expect(capturer.Exists(ns, client.ObjectKeyFromObject(ns))).To(BeTrue())
+
+				capturer.Capture(ns)
+				Expect(capturer.Exists(ns, client.ObjectKeyFromObject(ns))).To(BeFalse())
+			})
+		})
+	})
+	Describe("Edge cases", func() {
+		BeforeEach(func() {
+			capturer = relationship.NewCapturerImpl()
+		})
+		It("Capture does not panic when passed an unsupported resource type", func() {
+			Expect(func() {
+				capturer.Capture(&v1beta1.GatewayClass{})
+			}).ToNot(Panic())
+		})
+		It("Remove does not panic when passed an unsupported resource type", func() {
+			Expect(func() {
+				capturer.Remove(&v1beta1.GatewayClass{}, types.NamespacedName{})
+			}).ToNot(Panic())
+		})
+		It("Exist returns false if passed an unsupported resource type", func() {
+			Expect(capturer.Exists(&v1beta1.GatewayClass{}, types.NamespacedName{})).To(BeFalse())
 		})
 	})
 })

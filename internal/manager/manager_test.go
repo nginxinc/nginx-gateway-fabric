@@ -30,6 +30,7 @@ func TestPrepareFirstEventBatchPreparerArgs(t *testing.T) {
 			expectedObjectLists: []client.ObjectList{
 				&apiv1.ServiceList{},
 				&apiv1.SecretList{},
+				&apiv1.NamespaceList{},
 				&discoveryV1.EndpointSliceList{},
 				&gatewayv1beta1.HTTPRouteList{},
 				&gatewayv1beta1.GatewayList{},
@@ -48,6 +49,7 @@ func TestPrepareFirstEventBatchPreparerArgs(t *testing.T) {
 			expectedObjectLists: []client.ObjectList{
 				&apiv1.ServiceList{},
 				&apiv1.SecretList{},
+				&apiv1.NamespaceList{},
 				&discoveryV1.EndpointSliceList{},
 				&gatewayv1beta1.HTTPRouteList{},
 			},

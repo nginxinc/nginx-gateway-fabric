@@ -128,9 +128,9 @@ type changeTrackingUpdater struct {
 	capturer relationship.Capturer
 
 	extractGVK              extractGVKFunc
-	supportedGKVs           gvkList
-	trackedUpsertDeleteGKVs gvkList
-	persistedGKVs           gvkList
+	supportedGVKs           gvkList
+	trackedUpsertDeleteGVKs gvkList
+	persistedGVKs           gvkList
 
 	changed bool
 }
@@ -141,22 +141,22 @@ func newChangeTrackingUpdater(
 	objectTypeCfgs []changeTrackingUpdaterObjectTypeCfg,
 ) *changeTrackingUpdater {
 	var (
-		supportedGKVs           gvkList
-		trackedUpsertDeleteGKVs gvkList
-		persistedGKVs           gvkList
+		supportedGVKs           gvkList
+		trackedUpsertDeleteGVKs gvkList
+		persistedGVKs           gvkList
 
 		stores = make(map[schema.GroupVersionKind]objectStore)
 	)
 
 	for _, cfg := range objectTypeCfgs {
-		supportedGKVs = append(supportedGKVs, cfg.gvk)
+		supportedGVKs = append(supportedGVKs, cfg.gvk)
 
 		if cfg.trackUpsertDelete {
-			trackedUpsertDeleteGKVs = append(trackedUpsertDeleteGKVs, cfg.gvk)
+			trackedUpsertDeleteGVKs = append(trackedUpsertDeleteGVKs, cfg.gvk)
 		}
 
 		if cfg.store != nil {
-			persistedGKVs = append(persistedGKVs, cfg.gvk)
+			persistedGVKs = append(persistedGVKs, cfg.gvk)
 			stores[cfg.gvk] = cfg.store
 		}
 	}
@@ -164,28 +164,28 @@ func newChangeTrackingUpdater(
 	return &changeTrackingUpdater{
 		store:                   newMultiObjectStore(stores, extractGVK),
 		extractGVK:              extractGVK,
-		supportedGKVs:           supportedGKVs,
-		trackedUpsertDeleteGKVs: trackedUpsertDeleteGKVs,
-		persistedGKVs:           persistedGKVs,
+		supportedGVKs:           supportedGVKs,
+		trackedUpsertDeleteGVKs: trackedUpsertDeleteGVKs,
+		persistedGVKs:           persistedGVKs,
 		capturer:                capturer,
 	}
 }
 
 func (s *changeTrackingUpdater) assertSupportedGVK(gvk schema.GroupVersionKind) {
-	if !s.supportedGKVs.contains(gvk) {
+	if !s.supportedGVKs.contains(gvk) {
 		panic(fmt.Errorf("unsupported GVK %v", gvk))
 	}
 }
 
 func (s *changeTrackingUpdater) upsert(obj client.Object) (changed bool) {
-	if !s.persistedGKVs.contains(s.extractGVK(obj)) {
+	if !s.persistedGVKs.contains(s.extractGVK(obj)) {
 		return false
 	}
 
 	oldObj, exist := s.store.get(obj, client.ObjectKeyFromObject(obj))
 	s.store.upsert(obj)
 
-	if !s.trackedUpsertDeleteGKVs.contains(s.extractGVK(obj)) {
+	if !s.trackedUpsertDeleteGVKs.contains(s.extractGVK(obj)) {
 		return false
 	}
 
@@ -196,15 +196,19 @@ func (s *changeTrackingUpdater) Upsert(obj client.Object) {
 	s.assertSupportedGVK(s.extractGVK(obj))
 
 	changingUpsert := s.upsert(obj)
+	relationshipExisted := s.capturer.Exists(obj, client.ObjectKeyFromObject(obj))
+
 	s.capturer.Capture(obj)
 
-	s.changed = s.changed || changingUpsert || s.capturer.Exists(obj, client.ObjectKeyFromObject(obj))
+	relationshipExists := s.capturer.Exists(obj, client.ObjectKeyFromObject(obj))
+
+	s.changed = s.changed || changingUpsert || relationshipExisted || relationshipExists
 }
 
 func (s *changeTrackingUpdater) delete(objType client.Object, nsname types.NamespacedName) (changed bool) {
 	objTypeGVK := s.extractGVK(objType)
 
-	if !s.persistedGKVs.contains(objTypeGVK) {
+	if !s.persistedGVKs.contains(objTypeGVK) {
 		return false
 	}
 
@@ -214,7 +218,7 @@ func (s *changeTrackingUpdater) delete(objType client.Object, nsname types.Names
 	}
 	s.store.delete(objType, nsname)
 
-	return s.trackedUpsertDeleteGKVs.contains(objTypeGVK)
+	return s.trackedUpsertDeleteGVKs.contains(objTypeGVK)
 }
 
 func (s *changeTrackingUpdater) Delete(objType client.Object, nsname types.NamespacedName) {

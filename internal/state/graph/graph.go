@@ -15,6 +15,7 @@ type ClusterState struct {
 	Gateways       map[types.NamespacedName]*v1beta1.Gateway
 	HTTPRoutes     map[types.NamespacedName]*v1beta1.HTTPRoute
 	Services       map[types.NamespacedName]*v1.Service
+	Namespaces     map[types.NamespacedName]*v1.Namespace
 }
 
 // Graph is a Graph-like representation of Gateway API resources.
@@ -52,7 +53,7 @@ func BuildGraph(
 	gw := buildGateway(processedGws.Winner, secretMemoryMgr, gc)
 
 	routes := buildRoutesForGateways(validators.HTTPFieldsValidator, state.HTTPRoutes, processedGws.GetAllNsNames())
-	bindRoutesToListeners(routes, gw)
+	bindRoutesToListeners(routes, gw, state.Namespaces)
 	addBackendRefsToRouteRules(routes, state.Services)
 
 	g := &Graph{

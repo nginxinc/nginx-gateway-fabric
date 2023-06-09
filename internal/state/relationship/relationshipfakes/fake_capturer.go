@@ -27,6 +27,17 @@ type FakeCapturer struct {
 	existsReturnsOnCall map[int]struct {
 		result1 bool
 	}
+	RelationshipEndedStub        func(client.Object) bool
+	relationshipEndedMutex       sync.RWMutex
+	relationshipEndedArgsForCall []struct {
+		arg1 client.Object
+	}
+	relationshipEndedReturns struct {
+		result1 bool
+	}
+	relationshipEndedReturnsOnCall map[int]struct {
+		result1 bool
+	}
 	RemoveStub        func(client.Object, types.NamespacedName)
 	removeMutex       sync.RWMutex
 	removeArgsForCall []struct {
@@ -131,6 +142,67 @@ func (fake *FakeCapturer) ExistsReturnsOnCall(i int, result1 bool) {
 	}{result1}
 }
 
+func (fake *FakeCapturer) RelationshipEnded(arg1 client.Object) bool {
+	fake.relationshipEndedMutex.Lock()
+	ret, specificReturn := fake.relationshipEndedReturnsOnCall[len(fake.relationshipEndedArgsForCall)]
+	fake.relationshipEndedArgsForCall = append(fake.relationshipEndedArgsForCall, struct {
+		arg1 client.Object
+	}{arg1})
+	stub := fake.RelationshipEndedStub
+	fakeReturns := fake.relationshipEndedReturns
+	fake.recordInvocation("RelationshipEnded", []interface{}{arg1})
+	fake.relationshipEndedMutex.Unlock()
+	if stub != nil {
+		return stub(arg1)
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fakeReturns.result1
+}
+
+func (fake *FakeCapturer) RelationshipEndedCallCount() int {
+	fake.relationshipEndedMutex.RLock()
+	defer fake.relationshipEndedMutex.RUnlock()
+	return len(fake.relationshipEndedArgsForCall)
+}
+
+func (fake *FakeCapturer) RelationshipEndedCalls(stub func(client.Object) bool) {
+	fake.relationshipEndedMutex.Lock()
+	defer fake.relationshipEndedMutex.Unlock()
+	fake.RelationshipEndedStub = stub
+}
+
+func (fake *FakeCapturer) RelationshipEndedArgsForCall(i int) client.Object {
+	fake.relationshipEndedMutex.RLock()
+	defer fake.relationshipEndedMutex.RUnlock()
+	argsForCall := fake.relationshipEndedArgsForCall[i]
+	return argsForCall.arg1
+}
+
+func (fake *FakeCapturer) RelationshipEndedReturns(result1 bool) {
+	fake.relationshipEndedMutex.Lock()
+	defer fake.relationshipEndedMutex.Unlock()
+	fake.RelationshipEndedStub = nil
+	fake.relationshipEndedReturns = struct {
+		result1 bool
+	}{result1}
+}
+
+func (fake *FakeCapturer) RelationshipEndedReturnsOnCall(i int, result1 bool) {
+	fake.relationshipEndedMutex.Lock()
+	defer fake.relationshipEndedMutex.Unlock()
+	fake.RelationshipEndedStub = nil
+	if fake.relationshipEndedReturnsOnCall == nil {
+		fake.relationshipEndedReturnsOnCall = make(map[int]struct {
+			result1 bool
+		})
+	}
+	fake.relationshipEndedReturnsOnCall[i] = struct {
+		result1 bool
+	}{result1}
+}
+
 func (fake *FakeCapturer) Remove(arg1 client.Object, arg2 types.NamespacedName) {
 	fake.removeMutex.Lock()
 	fake.removeArgsForCall = append(fake.removeArgsForCall, struct {
@@ -171,6 +243,8 @@ func (fake *FakeCapturer) Invocations() map[string][][]interface{} {
 	defer fake.captureMutex.RUnlock()
 	fake.existsMutex.RLock()
 	defer fake.existsMutex.RUnlock()
+	fake.relationshipEndedMutex.RLock()
+	defer fake.relationshipEndedMutex.RUnlock()
 	fake.removeMutex.RLock()
 	defer fake.removeMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}

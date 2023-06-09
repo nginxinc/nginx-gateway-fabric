@@ -60,7 +60,7 @@ type ChangeProcessorConfig struct {
 	Logger logr.Logger
 	// EventRecorder records events for Kubernetes resources.
 	EventRecorder record.EventRecorder
-	// Scheme is the a Kubernetes scheme.
+	// Scheme is the Kubernetes scheme.
 	Scheme *runtime.Scheme
 	// GatewayCtlrName is the name of the Gateway controller.
 	GatewayCtlrName string
@@ -89,6 +89,7 @@ func NewChangeProcessorImpl(cfg ChangeProcessorConfig) *ChangeProcessorImpl {
 		Gateways:       make(map[types.NamespacedName]*v1beta1.Gateway),
 		HTTPRoutes:     make(map[types.NamespacedName]*v1beta1.HTTPRoute),
 		Services:       make(map[types.NamespacedName]*apiv1.Service),
+		Namespaces:     make(map[types.NamespacedName]*apiv1.Namespace),
 	}
 
 	extractGVK := func(obj client.Object) schema.GroupVersionKind {
@@ -117,6 +118,11 @@ func NewChangeProcessorImpl(cfg ChangeProcessorConfig) *ChangeProcessorImpl {
 				gvk:               extractGVK(&v1beta1.HTTPRoute{}),
 				store:             newObjectStoreMapAdapter(clusterStore.HTTPRoutes),
 				trackUpsertDelete: true,
+			},
+			{
+				gvk:               extractGVK(&apiv1.Namespace{}),
+				store:             newObjectStoreMapAdapter(clusterStore.Namespaces),
+				trackUpsertDelete: false,
 			},
 			{
 				gvk:               extractGVK(&apiv1.Service{}),

@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	. "github.com/onsi/gomega"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/helpers"
@@ -236,6 +237,125 @@ func TestValidateListenerHostname(t *testing.T) {
 
 			conds := validateListenerHostname(v1beta1.Listener{Hostname: test.hostname})
 
+			if test.expectErr {
+				g.Expect(conds).ToNot(BeEmpty())
+			} else {
+				g.Expect(conds).To(BeEmpty())
+			}
+		})
+	}
+}
+
+func TestValidateListenerAllowedRouteKind(t *testing.T) {
+	tests := []struct {
+		protocol  v1beta1.ProtocolType
+		kind      v1beta1.Kind
+		group     v1beta1.Group
+		name      string
+		expectErr bool
+	}{
+		{
+			protocol:  v1beta1.TCPProtocolType,
+			expectErr: false,
+			name:      "unsupported protocol is ignored",
+		},
+		{
+			protocol:  v1beta1.HTTPProtocolType,
+			group:     "bad-group",
+			kind:      "HTTPRoute",
+			expectErr: true,
+			name:      "invalid group",
+		},
+		{
+			protocol:  v1beta1.HTTPProtocolType,
+			group:     v1beta1.GroupName,
+			kind:      "TCPRoute",
+			expectErr: true,
+			name:      "invalid kind",
+		},
+		{
+			protocol:  v1beta1.HTTPProtocolType,
+			group:     v1beta1.GroupName,
+			kind:      "HTTPRoute",
+			expectErr: false,
+			name:      "valid HTTP",
+		},
+		{
+			protocol:  v1beta1.HTTPSProtocolType,
+			group:     v1beta1.GroupName,
+			kind:      "HTTPRoute",
+			expectErr: false,
+			name:      "valid HTTPS",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			g := NewGomegaWithT(t)
+
+			listener := v1beta1.Listener{
+				Protocol: test.protocol,
+				AllowedRoutes: &v1beta1.AllowedRoutes{
+					Kinds: []v1beta1.RouteGroupKind{
+						{
+							Kind:  test.kind,
+							Group: &test.group,
+						},
+					},
+				},
+			}
+
+			conds := validateListenerAllowedRouteKind(listener)
+			if test.expectErr {
+				g.Expect(conds).ToNot(BeEmpty())
+			} else {
+				g.Expect(conds).To(BeEmpty())
+			}
+		})
+	}
+}
+
+func TestValidateListenerLabelSelector(t *testing.T) {
+	tests := []struct {
+		selector  *metav1.LabelSelector
+		from      v1beta1.FromNamespaces
+		name      string
+		expectErr bool
+	}{
+		{
+			from:      v1beta1.NamespacesFromSelector,
+			selector:  &metav1.LabelSelector{},
+			expectErr: false,
+			name:      "valid spec",
+		},
+		{
+			from:      v1beta1.NamespacesFromSelector,
+			selector:  nil,
+			expectErr: true,
+			name:      "invalid spec",
+		},
+		{
+			from:      v1beta1.NamespacesFromAll,
+			selector:  nil,
+			expectErr: false,
+			name:      "ignored from type",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			g := NewGomegaWithT(t)
+
+			listener := v1beta1.Listener{
+				AllowedRoutes: &v1beta1.AllowedRoutes{
+					Namespaces: &v1beta1.RouteNamespaces{
+						From:     &test.from,
+						Selector: test.selector,
+					},
+				},
+			}
+
+			conds := validateListenerLabelSelector(listener)
 			if test.expectErr {
 				g.Expect(conds).ToNot(BeEmpty())
 			} else {

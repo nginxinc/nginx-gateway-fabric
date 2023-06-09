@@ -128,6 +128,8 @@ func (h *EventHandlerImpl) propagateUpsert(e *UpsertEvent) {
 		h.cfg.Processor.CaptureUpsertChange(r)
 	case *apiv1.Service:
 		h.cfg.Processor.CaptureUpsertChange(r)
+	case *apiv1.Namespace:
+		h.cfg.Processor.CaptureUpsertChange(r)
 	case *apiv1.Secret:
 		// FIXME(kate-osborn): need to handle certificate rotation
 		// https://github.com/nginxinc/nginx-kubernetes-gateway/issues/553
@@ -148,6 +150,8 @@ func (h *EventHandlerImpl) propagateDelete(e *DeleteEvent) {
 	case *v1beta1.HTTPRoute:
 		h.cfg.Processor.CaptureDeleteChange(e.Type, e.NamespacedName)
 	case *apiv1.Service:
+		h.cfg.Processor.CaptureDeleteChange(e.Type, e.NamespacedName)
+	case *apiv1.Namespace:
 		h.cfg.Processor.CaptureDeleteChange(e.Type, e.NamespacedName)
 	case *apiv1.Secret:
 		// FIXME(kate-osborn): make sure that affected servers are updated

@@ -3,6 +3,8 @@ package graph
 import (
 	"fmt"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
@@ -19,6 +21,8 @@ type Listener struct {
 	// Routes holds the routes attached to the Listener.
 	// Only valid routes are attached.
 	Routes map[types.NamespacedName]*Route
+	// AllowedRouteLabelSelector is the label selector for this Listener's allowed routes, if defined.
+	AllowedRouteLabelSelector labels.Selector
 	// SecretPath is the path to the secret on disk.
 	SecretPath string
 	// Conditions holds the conditions of the Listener.
@@ -78,6 +82,8 @@ func newListenerConfiguratorFactory(
 		},
 		http: &listenerConfigurator{
 			validators: []listenerValidator{
+				validateListenerAllowedRouteKind,
+				validateListenerLabelSelector,
 				validateListenerHostname,
 				validateHTTPListener,
 			},
@@ -87,6 +93,8 @@ func newListenerConfiguratorFactory(
 		},
 		https: &listenerConfigurator{
 			validators: []listenerValidator{
+				validateListenerAllowedRouteKind,
+				validateListenerLabelSelector,
 				validateListenerHostname,
 				createHTTPSListenerValidator(gw.Namespace),
 			},
@@ -135,6 +143,16 @@ func (c *listenerConfigurator) configure(listener v1beta1.Listener) *Listener {
 		conds = append(conds, validator(listener)...)
 	}
 
+	var allowedRouteSelector labels.Selector
+	if selector := GetAllowedRouteLabelSelector(listener); selector != nil {
+		var err error
+		allowedRouteSelector, err = metav1.LabelSelectorAsSelector(selector)
+		if err != nil {
+			msg := fmt.Sprintf("invalid label selector: %s", err.Error())
+			conds = append(conds, conditions.NewListenerUnsupportedValue(msg))
+		}
+	}
+
 	if len(conds) > 0 {
 		return &Listener{
 			Source:     listener,
@@ -144,9 +162,10 @@ func (c *listenerConfigurator) configure(listener v1beta1.Listener) *Listener {
 	}
 
 	l := &Listener{
-		Source: listener,
-		Routes: make(map[types.NamespacedName]*Route),
-		Valid:  true,
+		Source:                    listener,
+		AllowedRouteLabelSelector: allowedRouteSelector,
+		Routes:                    make(map[types.NamespacedName]*Route),
+		Valid:                     true,
 	}
 
 	// resolvers might add different conditions to the listener, so we run them all.
@@ -179,6 +198,45 @@ func validateListenerHostname(listener v1beta1.Listener) []conditions.Condition 
 		valErr := field.Invalid(path, listener.Hostname, err.Error())
 		return []conditions.Condition{conditions.NewListenerUnsupportedValue(valErr.Error())}
 	}
+	return nil
+}
+
+func validateListenerAllowedRouteKind(listener v1beta1.Listener) []conditions.Condition {
+	validHTTPRouteKind := func(kind v1beta1.RouteGroupKind) bool {
+		if kind.Kind != v1beta1.Kind("HTTPRoute") {
+			return false
+		}
+		if kind.Group == nil || *kind.Group != v1beta1.GroupName {
+			return false
+		}
+		return true
+	}
+
+	switch listener.Protocol {
+	case v1beta1.HTTPProtocolType, v1beta1.HTTPSProtocolType:
+		if listener.AllowedRoutes != nil {
+			for _, kind := range listener.AllowedRoutes.Kinds {
+				if !validHTTPRouteKind(kind) {
+					msg := fmt.Sprintf("Unsupported route kind \"%s/%s\"", *kind.Group, kind.Kind)
+					return []conditions.Condition{conditions.NewListenerUnsupportedValue(msg)}
+				}
+			}
+		}
+	}
+
+	return nil
+}
+
+func validateListenerLabelSelector(listener v1beta1.Listener) []conditions.Condition {
+	if listener.AllowedRoutes != nil &&
+		listener.AllowedRoutes.Namespaces != nil &&
+		listener.AllowedRoutes.Namespaces.From != nil &&
+		*listener.AllowedRoutes.Namespaces.From == v1beta1.NamespacesFromSelector &&
+		listener.AllowedRoutes.Namespaces.Selector == nil {
+		msg := "Listener's AllowedRoutes Selector must be set when From is set to type Selector"
+		return []conditions.Condition{conditions.NewListenerUnsupportedValue(msg)}
+	}
+
 	return nil
 }
 
@@ -313,4 +371,15 @@ func createExternalReferencesForTLSSecretsResolver(
 			l.Valid = false
 		}
 	}
+}
+
+// GetAllowedRouteLabelSelector returns a listener's AllowedRoutes label selector if it exists.
+func GetAllowedRouteLabelSelector(l v1beta1.Listener) *metav1.LabelSelector {
+	if l.AllowedRoutes != nil && l.AllowedRoutes.Namespaces != nil {
+		if *l.AllowedRoutes.Namespaces.From == v1beta1.NamespacesFromSelector && l.AllowedRoutes.Namespaces.Selector != nil {
+			return l.AllowedRoutes.Namespaces.Selector
+		}
+	}
+
+	return nil
 }

@@ -64,7 +64,7 @@ Fields:
           * `mode` - partially supported. Allowed value: `Terminate`.
           * `certificateRefs` - partially supported. The TLS certificate and key must be stored in a Secret resource of type `kubernetes.io/tls` in the same namespace as the Gateway resource. Only a single reference is supported. You must deploy the Secret before the Gateway resource. Secret rotation (watching for updates) is not supported.
           * `options` - not supported.
-        * `allowedRoutes` - not supported.
+        * `allowedRoutes` - supported.
     * `addresses` - not supported.
 * `status`
   * `addresses` - Pod IPAddress supported.
@@ -122,6 +122,7 @@ Fields:
         *  `Accepted/True/Accepted`
         *  `Accepted/False/NoMatchingListenerHostname`
         *  `Accepted/False/NoMatchingParent`
+        *  `Accepted/False/NotAllowedByListeners`
         *  `Accepted/False/UnsupportedValue`: Custom reason for when the HTTPRoute includes an invalid or unsupported value.
         *  `Accepted/False/InvalidListener`: Custom reason for when the HTTPRoute references an invalid listener.
         *  `Accepted/False/GatewayNotProgrammed`: Custom reason for when the Gateway is not Programmed. HTTPRoute may be valid and configured, but will maintain this status as long as the Gateway is not Programmed.
