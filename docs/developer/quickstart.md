@@ -49,7 +49,7 @@ To build an NGINX Kubernetes Gateway container image from source run the followi
 make TAG=$(whoami) container
 ```
 
-This will build the docker image and tag it with your user ID, e.g. `docker.io/library/nginx-kubernetes-gateway:user`
+This will build the docker image `nginx-kubernetes-gateway:<your-user>`.
 
 ## Deploy on Kind
 
@@ -59,23 +59,23 @@ This will build the docker image and tag it with your user ID, e.g. `docker.io/l
    make create-kind-cluster
    ```
 
-2. Build the NKG image and load it onto your `kind` cluster:
+2. Load the previously built image onto your `kind` cluster:
 
    ```shell
-   make TAG=$(whoami) container
-   kind load docker-image docker.io/library/nginx-kubernetes-gateway:$(whoami)
+   kind load docker-image nginx-kubernetes-gateway:$(whoami)
    ```
 
 3. Modify the image name and image pull policy for the `nginx-gateway` container in the
-   NKG [deployment manifest](/deploy/manifests/nginx-gateway.yaml). Set the image name to the image you built in
-   the previous step and the image pull policy to `Never`. Once the changes are made, follow
+   NKG [deployment manifest](/deploy/manifests/deployment.yaml). Set the image name to the image you built in
+   the previous step and the image pull policy to `IfNotPresent`, so that Kubernetes will not try to pull it from
+   the DockerHub. Once the changes are made, follow
    the [installation instructions](/docs/installation.md) to install NKG on your `kind` cluster.
 
    Alternatively, you can update the image name and pull policy by using the following command when applying
-   `nginx-gateway.yaml`:
+   `deployment.yaml`:
 
    ```shell 
-   cat deploy/manifests/nginx-gateway.yaml | sed "s|image: ghcr.io/nginxinc/nginx-kubernetes-gateway.*|image: docker.io/library/nginx-kubernetes-gateway:<YOUR-TAG>|" | sed "s|imagePullPolicy: Always|imagePullPolicy: Never|" | kubectl apply -f -
+   cat deploy/manifests/deployment.yaml | sed "s|image: ghcr.io/nginxinc/nginx-kubernetes-gateway.*|image: nginx-kubernetes-gateway:$(whoami)|" | sed "s|imagePullPolicy: Always|imagePullPolicy: IfNotPresent|" | kubectl apply -f -
    ```
 
 ### Run Examples

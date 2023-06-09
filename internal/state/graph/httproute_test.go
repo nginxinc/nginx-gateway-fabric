@@ -6,7 +6,9 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	. "github.com/onsi/gomega"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -552,6 +554,12 @@ func TestBindRouteToListeners(t *testing.T) {
 			Name:      "gateway",
 		},
 	}
+	gwDiffNamespace := &v1beta1.Gateway{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "diff-namespace",
+			Name:      "gateway",
+		},
+	}
 
 	createHTTPRouteWithSectionNameAndPort := func(
 		sectionName *v1beta1.SectionName,
@@ -592,14 +600,14 @@ func TestBindRouteToListeners(t *testing.T) {
 	)
 
 	var normalRoute *Route
-	createNormalRoute := func() *Route {
+	createNormalRoute := func(gateway *v1beta1.Gateway) *Route {
 		normalRoute = &Route{
 			Source: hr,
 			Valid:  true,
 			ParentRefs: []ParentRef{
 				{
 					Idx:     0,
-					Gateway: client.ObjectKeyFromObject(gw),
+					Gateway: client.ObjectKeyFromObject(gateway),
 				},
 			},
 		}
@@ -685,7 +693,7 @@ func TestBindRouteToListeners(t *testing.T) {
 		expectedSectionNameRefs  []ParentRef
 	}{
 		{
-			route: createNormalRoute(),
+			route: createNormalRoute(gw),
 			gateway: &Gateway{
 				Source: gw,
 				Valid:  true,
@@ -751,6 +759,9 @@ func TestBindRouteToListeners(t *testing.T) {
 				Valid:  true,
 				Listeners: map[string]*Listener{
 					"listener-80-1": createListener("listener-80-1"),
+					"listener-80-2": createModifiedListener("listener-80-2", func(l *Listener) {
+						l.Source.Hostname = nil
+					}),
 				},
 			},
 			expectedSectionNameRefs: []ParentRef{
@@ -761,6 +772,7 @@ func TestBindRouteToListeners(t *testing.T) {
 						Attached: true,
 						AcceptedHostnames: map[string][]string{
 							"listener-80-1": {"foo.example.com"},
+							"listener-80-2": {"foo.example.com"},
 						},
 					},
 				},
@@ -770,6 +782,12 @@ func TestBindRouteToListeners(t *testing.T) {
 					l.Routes = map[types.NamespacedName]*Route{
 						client.ObjectKeyFromObject(hr): routeWithEmptySectionName,
 					}
+				}),
+				"listener-80-2": createModifiedListener("listener-80-2", func(l *Listener) {
+					l.Routes = map[types.NamespacedName]*Route{
+						client.ObjectKeyFromObject(hr): routeWithEmptySectionName,
+					}
+					l.Source.Hostname = nil
 				}),
 			},
 			name: "section name is empty",
@@ -852,7 +870,7 @@ func TestBindRouteToListeners(t *testing.T) {
 			name: "listener doesn't exist",
 		},
 		{
-			route: createNormalRoute(),
+			route: createNormalRoute(gw),
 			gateway: &Gateway{
 				Source: gw,
 				Valid:  true,
@@ -877,7 +895,7 @@ func TestBindRouteToListeners(t *testing.T) {
 			name: "listener isn't valid",
 		},
 		{
-			route: createNormalRoute(),
+			route: createNormalRoute(gw),
 			gateway: &Gateway{
 				Source: gw,
 				Valid:  true,
@@ -948,7 +966,7 @@ func TestBindRouteToListeners(t *testing.T) {
 			name: "route isn't valid",
 		},
 		{
-			route: createNormalRoute(),
+			route: createNormalRoute(gw),
 			gateway: &Gateway{
 				Source: gw,
 				Valid:  false,
@@ -972,13 +990,226 @@ func TestBindRouteToListeners(t *testing.T) {
 			},
 			name: "invalid gateway",
 		},
+		{
+			route: createNormalRoute(gw),
+			gateway: &Gateway{
+				Source: gw,
+				Valid:  true,
+				Listeners: map[string]*Listener{
+					"listener-80-1": createModifiedListener("listener-80-1", func(l *Listener) {
+						l.Source.AllowedRoutes = &v1beta1.AllowedRoutes{
+							Namespaces: &v1beta1.RouteNamespaces{
+								From: helpers.GetPointer(v1beta1.NamespacesFromSelector),
+							},
+						}
+						allowedLabels := map[string]string{"app": "not-allowed"}
+						l.AllowedRouteLabelSelector = labels.SelectorFromSet(allowedLabels)
+					}),
+				},
+			},
+			expectedSectionNameRefs: []ParentRef{
+				{
+					Idx:     0,
+					Gateway: client.ObjectKeyFromObject(gw),
+					Attachment: &ParentRefAttachmentStatus{
+						Attached:          false,
+						FailedCondition:   conditions.NewRouteNotAllowedByListeners(),
+						AcceptedHostnames: map[string][]string{},
+					},
+				},
+			},
+			expectedGatewayListeners: map[string]*Listener{
+				"listener-80-1": createModifiedListener("listener-80-1", func(l *Listener) {
+					l.Source.AllowedRoutes = &v1beta1.AllowedRoutes{
+						Namespaces: &v1beta1.RouteNamespaces{
+							From: helpers.GetPointer(v1beta1.NamespacesFromSelector),
+						},
+					}
+					allowedLabels := map[string]string{"app": "not-allowed"}
+					l.AllowedRouteLabelSelector = labels.SelectorFromSet(allowedLabels)
+				}),
+			},
+			name: "route not allowed via labels",
+		},
+		{
+			route: createNormalRoute(gw),
+			gateway: &Gateway{
+				Source: gw,
+				Valid:  true,
+				Listeners: map[string]*Listener{
+					"listener-80-1": createModifiedListener("listener-80-1", func(l *Listener) {
+						l.Source.AllowedRoutes = &v1beta1.AllowedRoutes{
+							Namespaces: &v1beta1.RouteNamespaces{
+								From: helpers.GetPointer(v1beta1.NamespacesFromSelector),
+							},
+						}
+						allowedLabels := map[string]string{"app": "allowed"}
+						l.AllowedRouteLabelSelector = labels.SelectorFromSet(allowedLabels)
+					}),
+				},
+			},
+			expectedSectionNameRefs: []ParentRef{
+				{
+					Idx:     0,
+					Gateway: client.ObjectKeyFromObject(gw),
+					Attachment: &ParentRefAttachmentStatus{
+						Attached: true,
+						AcceptedHostnames: map[string][]string{
+							"listener-80-1": {"foo.example.com"},
+						},
+					},
+				},
+			},
+			expectedGatewayListeners: map[string]*Listener{
+				"listener-80-1": createModifiedListener("listener-80-1", func(l *Listener) {
+					allowedLabels := map[string]string{"app": "allowed"}
+					l.AllowedRouteLabelSelector = labels.SelectorFromSet(allowedLabels)
+					l.Source.AllowedRoutes = &v1beta1.AllowedRoutes{
+						Namespaces: &v1beta1.RouteNamespaces{
+							From: helpers.GetPointer(v1beta1.NamespacesFromSelector),
+						},
+					}
+					l.Routes = map[types.NamespacedName]*Route{
+						client.ObjectKeyFromObject(hr): getLastNormalRoute(),
+					}
+				}),
+			},
+			name: "route allowed via labels",
+		},
+		{
+			route: createNormalRoute(gwDiffNamespace),
+			gateway: &Gateway{
+				Source: gwDiffNamespace,
+				Valid:  true,
+				Listeners: map[string]*Listener{
+					"listener-80-1": createModifiedListener("listener-80-1", func(l *Listener) {
+						l.Source.AllowedRoutes = &v1beta1.AllowedRoutes{
+							Namespaces: &v1beta1.RouteNamespaces{
+								From: helpers.GetPointer(v1beta1.NamespacesFromSame),
+							},
+						}
+					}),
+				},
+			},
+			expectedSectionNameRefs: []ParentRef{
+				{
+					Idx:     0,
+					Gateway: client.ObjectKeyFromObject(gwDiffNamespace),
+					Attachment: &ParentRefAttachmentStatus{
+						Attached:          false,
+						FailedCondition:   conditions.NewRouteNotAllowedByListeners(),
+						AcceptedHostnames: map[string][]string{},
+					},
+				},
+			},
+			expectedGatewayListeners: map[string]*Listener{
+				"listener-80-1": createModifiedListener("listener-80-1", func(l *Listener) {
+					l.Source.AllowedRoutes = &v1beta1.AllowedRoutes{
+						Namespaces: &v1beta1.RouteNamespaces{
+							From: helpers.GetPointer(v1beta1.NamespacesFromSame),
+						},
+					}
+				}),
+			},
+			name: "route not allowed via same namespace",
+		},
+		{
+			route: createNormalRoute(gw),
+			gateway: &Gateway{
+				Source: gw,
+				Valid:  true,
+				Listeners: map[string]*Listener{
+					"listener-80-1": createModifiedListener("listener-80-1", func(l *Listener) {
+						l.Source.AllowedRoutes = &v1beta1.AllowedRoutes{
+							Namespaces: &v1beta1.RouteNamespaces{
+								From: helpers.GetPointer(v1beta1.NamespacesFromSame),
+							},
+						}
+					}),
+				},
+			},
+			expectedSectionNameRefs: []ParentRef{
+				{
+					Idx:     0,
+					Gateway: client.ObjectKeyFromObject(gw),
+					Attachment: &ParentRefAttachmentStatus{
+						Attached: true,
+						AcceptedHostnames: map[string][]string{
+							"listener-80-1": {"foo.example.com"},
+						},
+					},
+				},
+			},
+			expectedGatewayListeners: map[string]*Listener{
+				"listener-80-1": createModifiedListener("listener-80-1", func(l *Listener) {
+					l.Source.AllowedRoutes = &v1beta1.AllowedRoutes{
+						Namespaces: &v1beta1.RouteNamespaces{
+							From: helpers.GetPointer(v1beta1.NamespacesFromSame),
+						},
+					}
+					l.Routes = map[types.NamespacedName]*Route{
+						client.ObjectKeyFromObject(hr): getLastNormalRoute(),
+					}
+				}),
+			},
+			name: "route allowed via same namespace",
+		},
+		{
+			route: createNormalRoute(gwDiffNamespace),
+			gateway: &Gateway{
+				Source: gwDiffNamespace,
+				Valid:  true,
+				Listeners: map[string]*Listener{
+					"listener-80-1": createModifiedListener("listener-80-1", func(l *Listener) {
+						l.Source.AllowedRoutes = &v1beta1.AllowedRoutes{
+							Namespaces: &v1beta1.RouteNamespaces{
+								From: helpers.GetPointer(v1beta1.NamespacesFromAll),
+							},
+						}
+					}),
+				},
+			},
+			expectedSectionNameRefs: []ParentRef{
+				{
+					Idx:     0,
+					Gateway: client.ObjectKeyFromObject(gwDiffNamespace),
+					Attachment: &ParentRefAttachmentStatus{
+						Attached: true,
+						AcceptedHostnames: map[string][]string{
+							"listener-80-1": {"foo.example.com"},
+						},
+					},
+				},
+			},
+			expectedGatewayListeners: map[string]*Listener{
+				"listener-80-1": createModifiedListener("listener-80-1", func(l *Listener) {
+					l.Source.AllowedRoutes = &v1beta1.AllowedRoutes{
+						Namespaces: &v1beta1.RouteNamespaces{
+							From: helpers.GetPointer(v1beta1.NamespacesFromAll),
+						},
+					}
+					l.Routes = map[types.NamespacedName]*Route{
+						client.ObjectKeyFromObject(hr): getLastNormalRoute(),
+					}
+				}),
+			},
+			name: "route allowed via all namespaces",
+		},
 	}
 
+	namespaces := map[types.NamespacedName]*v1.Namespace{
+		{Name: "test"}: {
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   "test",
+				Labels: map[string]string{"app": "allowed"},
+			},
+		},
+	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewGomegaWithT(t)
 
-			bindRouteToListeners(test.route, test.gateway)
+			bindRouteToListeners(test.route, test.gateway, namespaces)
 
 			g.Expect(test.route.ParentRefs).To(Equal(test.expectedSectionNameRefs))
 			g.Expect(helpers.Diff(test.gateway.Listeners, test.expectedGatewayListeners)).To(BeEmpty())

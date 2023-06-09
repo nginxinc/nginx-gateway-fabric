@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 
+	apiv1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -242,17 +244,21 @@ func buildRoute(
 	return r
 }
 
-func bindRoutesToListeners(routes map[types.NamespacedName]*Route, gw *Gateway) {
+func bindRoutesToListeners(
+	routes map[types.NamespacedName]*Route,
+	gw *Gateway,
+	namespaces map[types.NamespacedName]*apiv1.Namespace,
+) {
 	if gw == nil {
 		return
 	}
 
 	for _, r := range routes {
-		bindRouteToListeners(r, gw)
+		bindRouteToListeners(r, gw, namespaces)
 	}
 }
 
-func bindRouteToListeners(r *Route, gw *Gateway) {
+func bindRouteToListeners(r *Route, gw *Gateway, namespaces map[types.NamespacedName]*apiv1.Namespace) {
 	if !r.Valid {
 		return
 	}
@@ -295,7 +301,7 @@ func bindRouteToListeners(r *Route, gw *Gateway) {
 		// Case 4 - winning Gateway
 
 		// Try to attach Route to all matching listeners
-		cond, attached := tryToAttachRouteToListeners(ref.Attachment, routeRef.SectionName, r, gw.Listeners)
+		cond, attached := tryToAttachRouteToListeners(ref.Attachment, routeRef.SectionName, r, gw, namespaces)
 		if !attached {
 			attachment.FailedCondition = cond
 			continue
@@ -312,9 +318,10 @@ func tryToAttachRouteToListeners(
 	refStatus *ParentRefAttachmentStatus,
 	sectionName *v1beta1.SectionName,
 	route *Route,
-	listeners map[string]*Listener,
+	gw *Gateway,
+	namespaces map[types.NamespacedName]*apiv1.Namespace,
 ) (conditions.Condition, bool) {
-	validListeners, listenerExists := findValidListeners(getSectionName(sectionName), listeners)
+	validListeners, listenerExists := findValidListeners(getSectionName(sectionName), gw.Listeners)
 
 	if !listenerExists {
 		return conditions.NewRouteNoMatchingParent(), false
@@ -324,24 +331,33 @@ func tryToAttachRouteToListeners(
 		return conditions.NewRouteInvalidListener(), false
 	}
 
-	bind := func(l *Listener) (attached bool) {
+	bind := func(l *Listener) (allowed, attached bool) {
+		if !routeAllowedByListener(l, route.Source.Namespace, gw.Source.Namespace, namespaces) {
+			return false, false
+		}
+
 		hostnames := findAcceptedHostnames(l.Source.Hostname, route.Source.Spec.Hostnames)
 		if len(hostnames) == 0 {
-			return false
+			return true, false
 		}
 
 		refStatus.AcceptedHostnames[string(l.Source.Name)] = hostnames
 		l.Routes[client.ObjectKeyFromObject(route.Source)] = route
 
-		return true
+		return true, true
 	}
 
-	attached := false
+	var allowed, attached bool
 	for _, l := range validListeners {
-		attached = attached || bind(l)
+		routeAllowed, routeAttached := bind(l)
+		allowed = allowed || routeAllowed
+		attached = attached || routeAttached
 	}
 
 	if !attached {
+		if !allowed {
+			return conditions.NewRouteNotAllowedByListeners(), false
+		}
 		return conditions.NewRouteNoMatchingListenerHostname(), false
 	}
 
@@ -401,6 +417,33 @@ func findAcceptedHostnames(listenerHostname *v1beta1.Hostname, routeHostnames []
 	}
 
 	return result
+}
+
+func routeAllowedByListener(
+	listener *Listener,
+	routeNS,
+	gwNS string,
+	namespaces map[types.NamespacedName]*apiv1.Namespace,
+) bool {
+	if listener.Source.AllowedRoutes != nil {
+		switch *listener.Source.AllowedRoutes.Namespaces.From {
+		case v1beta1.NamespacesFromAll:
+			return true
+		case v1beta1.NamespacesFromSame:
+			return routeNS == gwNS
+		case v1beta1.NamespacesFromSelector:
+			if listener.AllowedRouteLabelSelector == nil {
+				return false
+			}
+
+			ns, exists := namespaces[types.NamespacedName{Name: routeNS}]
+			if !exists {
+				panic(fmt.Errorf("route namespace %q not found in map", routeNS))
+			}
+			return listener.AllowedRouteLabelSelector.Matches(labels.Set(ns.Labels))
+		}
+	}
+	return true
 }
 
 func getHostname(h *v1beta1.Hostname) string {

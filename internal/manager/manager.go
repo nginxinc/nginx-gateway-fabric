@@ -112,6 +112,12 @@ func Start(cfg config.Config) error {
 				controller.WithFieldIndices(index.CreateEndpointSliceFieldIndices()),
 			},
 		},
+		{
+			objectType: &apiv1.Namespace{},
+			options: []controller.Option{
+				controller.WithK8sPredicate(k8spredicate.LabelChangedPredicate{}),
+			},
+		},
 	}
 
 	ctx := ctlr.SetupSignalHandler()
@@ -195,6 +201,7 @@ func prepareFirstEventBatchPreparerArgs(
 	objectLists := []client.ObjectList{
 		&apiv1.ServiceList{},
 		&apiv1.SecretList{},
+		&apiv1.NamespaceList{},
 		&discoveryV1.EndpointSliceList{},
 		&gatewayv1beta1.HTTPRouteList{},
 	}

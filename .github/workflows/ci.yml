@@ -35,7 +35,7 @@ jobs:
       go_path: ${{ steps.vars.outputs.go_path }}
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
+        uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
 
       - name: Setup Golang Environment
         uses: actions/setup-go@fac708d6674e30b6ba41289acaab6d4b75aa0753 # v4.0.1
@@ -55,7 +55,7 @@ jobs:
     needs: vars
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
+        uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
 
       - name: Setup Golang Environment
         uses: actions/setup-go@fac708d6674e30b6ba41289acaab6d4b75aa0753 # v4.0.1
@@ -78,7 +78,7 @@ jobs:
     needs: vars
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
+        uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
 
       - name: Setup Node.js Environment
         uses: actions/setup-node@64ed1c7eab4cce3362f8c340dee64e5eaeef8f7c # v3.6.0
@@ -93,7 +93,7 @@ jobs:
     if: ${{ github.event_name == 'push' && github.ref != 'refs/heads/main' }}
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
+        uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
 
       - name: Create/Update Draft
         uses: lucacome/draft-release@b79be3ff634f771230b2b6ee9f47308c5793671a # v0.2.0
@@ -112,7 +112,7 @@ jobs:
     needs: vars
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
+        uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
         with:
           fetch-depth: 0
 
@@ -150,7 +150,7 @@ jobs:
     needs: [vars, binary]
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
+        uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
 
       - name: Fetch Cached Artifacts
         uses: actions/cache@88522ab9f39a2ea568f7027eddc7d8d8bc9d59c8 # v3.3.1
@@ -187,7 +187,7 @@ jobs:
             type=ref,event=branch,suffix=-rc,enable=${{ startsWith(github.ref, 'refs/heads/release') }}
 
       - name: Build Docker Image
-        uses: docker/build-push-action@3b5e8027fcad23fda98b2e3ac259d8d67585f671 # v4.0.0
+        uses: docker/build-push-action@44ea916f6c540f9302d50c2b1e5a8dc071f15cdf # v4.1.0
         with:
           file: build/Dockerfile
           context: "."
@@ -214,7 +214,7 @@ jobs:
           ignore-unfixed: "true"
 
       - name: Upload Trivy scan results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@83f0fe6c4988d98a455712a27f0255212bba9bd4 # v2.3.6
+        uses: github/codeql-action/upload-sarif@cdcdbb579706841c47f7063dda365e292e5cad7a # v2.13.4
         continue-on-error: true
         with:
           sarif_file: "trivy-results-nginx-kubernetes-gateway.sarif"
