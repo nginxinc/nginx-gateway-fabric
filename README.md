@@ -51,6 +51,23 @@ The following table lists the software versions NGINX Kubernetes Gateway support
 
 \*the installation manifests use the minor version of NGINX container image (e.g. 1.25) and the patch version is not specified. This means that the latest available patch version is used.
 
+## SBOM (Software Bill of Materials)
+
+We generate SBOMs for the binaries and the Docker image.
+
+### Binaries
+
+The SBOMs for the binaries are available in the releases page. The SBOMs are generated using [syft](https://github.com/anchore/syft) and are available in SPDX format.
+
+### Docker Images
+
+The SBOM for the Docker image is available in the [GitHub Container](https://github.com/nginxinc/nginx-kubernetes-gateway/pkgs/container/nginx-kubernetes-gateway) repository. The SBOM is generated using [syft](https://github.com/anchore/syft) and stored as an attestation in the image manifest.
+
+For example to retrieve the SBOM for `linux/amd64` and analyze it using [grype](https://github.com/anchore/grype) you can run the following command:
+```
+$ docker buildx imagetools inspect ghcr.io/nginxinc/nginx-kubernetes-gateway:edge --format '{{ json (index .SBOM "linux/amd64").SPDX }}' | grype
+```
+
 ## Contacts
 
 We’d like to hear your feedback! If you experience issues with our Gateway Controller, please [open a bug][bug] in
