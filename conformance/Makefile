@@ -22,7 +22,7 @@ create-kind-cluster: ## Create a kind cluster
 	kind export kubeconfig --kubeconfig $(KIND_KUBE_CONFIG_FOLDER)/config
 
 .PHONY: prepare-nkg
-prepare-nkg: ## Build and load NKG container in configured 
+prepare-nkg: ## Build and load NKG container on configured kind cluster
 	cd .. && make PREFIX=$(NKG_PREFIX) TAG=$(NKG_TAG) container
 	kind load docker-image $(NKG_PREFIX):$(NKG_TAG)
 
