@@ -201,6 +201,8 @@ jobs:
           cache-to: type=gha,mode=max
           pull: true
           no-cache: ${{ github.event_name != 'pull_request' }}
+          sbom: ${{ github.event_name != 'pull_request' }}
+          provenance: false
 
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@b43daad0c3c96202fc5800b511dfae8e6ecce864 # 0.11.0
