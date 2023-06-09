@@ -46,10 +46,10 @@ This command will build the binary and output it to the `/build/.out` directory.
 To build an NGINX Kubernetes Gateway container image from source run the following make command:
 
 ```shell
-make container
+make TAG=$(whoami) container
 ```
 
-This will build the docker image `nginx-kubernetes-gateway:edge`.
+This will build the docker image `nginx-kubernetes-gateway:<your-user>`.
 
 ## Deploy on Kind
 
@@ -62,7 +62,7 @@ This will build the docker image `nginx-kubernetes-gateway:edge`.
 2. Load the previously built image onto your `kind` cluster:
 
    ```shell
-   kind load docker-image nginx-kubernetes-gateway:edge
+   kind load docker-image nginx-kubernetes-gateway:$(whoami)
    ```
 
 3. Modify the image name and image pull policy for the `nginx-gateway` container in the
@@ -75,7 +75,7 @@ This will build the docker image `nginx-kubernetes-gateway:edge`.
    `deployment.yaml`:
 
    ```shell 
-   cat deploy/manifests/deployment.yaml | sed "s|image: ghcr.io/nginxinc/nginx-kubernetes-gateway.*|image: nginx-kubernetes-gateway:edge|" | sed "s|imagePullPolicy: Always|imagePullPolicy: IfNotPresent|" | kubectl apply -f -
+   cat deploy/manifests/deployment.yaml | sed "s|image: ghcr.io/nginxinc/nginx-kubernetes-gateway.*|image: nginx-kubernetes-gateway:$(whoami)|" | sed "s|imagePullPolicy: Always|imagePullPolicy: IfNotPresent|" | kubectl apply -f -
    ```
 
 ### Run Examples
