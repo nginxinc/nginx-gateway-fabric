@@ -600,14 +600,14 @@ func TestBindRouteToListeners(t *testing.T) {
 	)
 
 	var normalRoute *Route
-	createNormalRoute := func() *Route {
+	createNormalRoute := func(gateway *v1beta1.Gateway) *Route {
 		normalRoute = &Route{
 			Source: hr,
 			Valid:  true,
 			ParentRefs: []ParentRef{
 				{
 					Idx:     0,
-					Gateway: client.ObjectKeyFromObject(gw),
+					Gateway: client.ObjectKeyFromObject(gateway),
 				},
 			},
 		}
@@ -693,7 +693,7 @@ func TestBindRouteToListeners(t *testing.T) {
 		expectedSectionNameRefs  []ParentRef
 	}{
 		{
-			route: createNormalRoute(),
+			route: createNormalRoute(gw),
 			gateway: &Gateway{
 				Source: gw,
 				Valid:  true,
@@ -870,7 +870,7 @@ func TestBindRouteToListeners(t *testing.T) {
 			name: "listener doesn't exist",
 		},
 		{
-			route: createNormalRoute(),
+			route: createNormalRoute(gw),
 			gateway: &Gateway{
 				Source: gw,
 				Valid:  true,
@@ -895,7 +895,7 @@ func TestBindRouteToListeners(t *testing.T) {
 			name: "listener isn't valid",
 		},
 		{
-			route: createNormalRoute(),
+			route: createNormalRoute(gw),
 			gateway: &Gateway{
 				Source: gw,
 				Valid:  true,
@@ -966,7 +966,7 @@ func TestBindRouteToListeners(t *testing.T) {
 			name: "route isn't valid",
 		},
 		{
-			route: createNormalRoute(),
+			route: createNormalRoute(gw),
 			gateway: &Gateway{
 				Source: gw,
 				Valid:  false,
@@ -991,7 +991,7 @@ func TestBindRouteToListeners(t *testing.T) {
 			name: "invalid gateway",
 		},
 		{
-			route: createNormalRoute(),
+			route: createNormalRoute(gw),
 			gateway: &Gateway{
 				Source: gw,
 				Valid:  true,
@@ -1032,7 +1032,7 @@ func TestBindRouteToListeners(t *testing.T) {
 			name: "route not allowed via labels",
 		},
 		{
-			route: createNormalRoute(),
+			route: createNormalRoute(gw),
 			gateway: &Gateway{
 				Source: gw,
 				Valid:  true,
@@ -1077,7 +1077,7 @@ func TestBindRouteToListeners(t *testing.T) {
 			name: "route allowed via labels",
 		},
 		{
-			route: createNormalRoute(),
+			route: createNormalRoute(gwDiffNamespace),
 			gateway: &Gateway{
 				Source: gwDiffNamespace,
 				Valid:  true,
@@ -1094,7 +1094,7 @@ func TestBindRouteToListeners(t *testing.T) {
 			expectedSectionNameRefs: []ParentRef{
 				{
 					Idx:     0,
-					Gateway: client.ObjectKeyFromObject(gw),
+					Gateway: client.ObjectKeyFromObject(gwDiffNamespace),
 					Attachment: &ParentRefAttachmentStatus{
 						Attached:          false,
 						FailedCondition:   conditions.NewRouteNotAllowedByListeners(),
@@ -1114,7 +1114,7 @@ func TestBindRouteToListeners(t *testing.T) {
 			name: "route not allowed via same namespace",
 		},
 		{
-			route: createNormalRoute(),
+			route: createNormalRoute(gw),
 			gateway: &Gateway{
 				Source: gw,
 				Valid:  true,
@@ -1155,7 +1155,7 @@ func TestBindRouteToListeners(t *testing.T) {
 			name: "route allowed via same namespace",
 		},
 		{
-			route: createNormalRoute(),
+			route: createNormalRoute(gwDiffNamespace),
 			gateway: &Gateway{
 				Source: gwDiffNamespace,
 				Valid:  true,
@@ -1172,7 +1172,7 @@ func TestBindRouteToListeners(t *testing.T) {
 			expectedSectionNameRefs: []ParentRef{
 				{
 					Idx:     0,
-					Gateway: client.ObjectKeyFromObject(gw),
+					Gateway: client.ObjectKeyFromObject(gwDiffNamespace),
 					Attachment: &ParentRefAttachmentStatus{
 						Attached: true,
 						AcceptedHostnames: map[string][]string{
@@ -1197,18 +1197,18 @@ func TestBindRouteToListeners(t *testing.T) {
 		},
 	}
 
+	namespaces := map[types.NamespacedName]*v1.Namespace{
+		{Name: "test"}: {
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   "test",
+				Labels: map[string]string{"app": "allowed"},
+			},
+		},
+	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewGomegaWithT(t)
 
-			namespaces := map[types.NamespacedName]*v1.Namespace{
-				{Name: "test"}: {
-					ObjectMeta: metav1.ObjectMeta{
-						Name:   "test",
-						Labels: map[string]string{"app": "allowed"},
-					},
-				},
-			}
 			bindRouteToListeners(test.route, test.gateway, namespaces)
 
 			g.Expect(test.route.ParentRefs).To(Equal(test.expectedSectionNameRefs))

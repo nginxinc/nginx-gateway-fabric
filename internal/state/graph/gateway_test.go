@@ -196,6 +196,13 @@ func TestBuildGateway(t *testing.T) {
 			},
 		},
 	}
+	listenerInvalidSelector := *listenerAllowedRoutes.DeepCopy()
+	listenerInvalidSelector.Name = "listener-with-invalid-selector"
+	listenerInvalidSelector.AllowedRoutes.Namespaces.Selector.MatchExpressions = []metav1.LabelSelectorRequirement{
+		{
+			Operator: "invalid",
+		},
+	}
 
 	gatewayTLSConfig := &v1beta1.GatewayTLSConfig{
 		Mode: helpers.GetTLSModePointer(v1beta1.TLSModeTerminate),
@@ -359,6 +366,26 @@ func TestBuildGateway(t *testing.T) {
 				Valid: true,
 			},
 			name: "valid http listener with allowed routes label selector",
+		},
+		{
+			gateway:      createGateway(gatewayCfg{listeners: []v1beta1.Listener{listenerInvalidSelector}}),
+			gatewayClass: validGC,
+			expected: &Gateway{
+				Source: getLastCreatedGetaway(),
+				Listeners: map[string]*Listener{
+					"listener-with-invalid-selector": {
+						Source: listenerInvalidSelector,
+						Valid:  false,
+						Conditions: []conditions.Condition{
+							conditions.NewListenerUnsupportedValue(
+								`invalid label selector: "invalid" is not a valid label selector operator`,
+							),
+						},
+					},
+				},
+				Valid: true,
+			},
+			name: "http listener with invalid label selector",
 		},
 		{
 			gateway:      createGateway(gatewayCfg{listeners: []v1beta1.Listener{listener802}}),

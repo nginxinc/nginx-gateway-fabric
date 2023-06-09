@@ -284,7 +284,9 @@ func bindRouteToListeners(r *Route, gw *Gateway, namespaces map[types.Namespaced
 
 		// Case 2: the parentRef references an ignored Gateway resource.
 
-		if ref.Gateway.Namespace == gw.Source.Namespace && ref.Gateway.Name != gw.Source.Name {
+		referencesWinningGw := ref.Gateway.Namespace == gw.Source.Namespace && ref.Gateway.Name == gw.Source.Name
+
+		if !referencesWinningGw {
 			attachment.FailedCondition = conditions.NewTODO("Gateway is ignored")
 			continue
 		}
@@ -438,10 +440,7 @@ func routeAllowedByListener(
 			if !exists {
 				panic(fmt.Errorf("route namespace %q not found in map", routeNS))
 			}
-			if listener.AllowedRouteLabelSelector.Matches(labels.Set(ns.Labels)) {
-				return true
-			}
-			return false
+			return listener.AllowedRouteLabelSelector.Matches(labels.Set(ns.Labels))
 		}
 	}
 	return true
