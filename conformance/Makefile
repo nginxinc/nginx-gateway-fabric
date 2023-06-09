@@ -1,4 +1,3 @@
-
 NKG_TAG = edge
 NKG_PREFIX = nginx-kubernetes-gateway
 GATEWAY_CLASS = nginx
