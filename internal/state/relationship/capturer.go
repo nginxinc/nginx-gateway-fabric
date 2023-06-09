@@ -48,6 +48,10 @@ type (
 	namespaces map[types.NamespacedName]namespaceCfg
 )
 
+func (n namespaceCfg) match() bool {
+	return len(n.gateways) > 0
+}
+
 // CapturerImpl implements the Capturer interface.
 type CapturerImpl struct {
 	routesToServices      routeToServicesMap
@@ -244,8 +248,4 @@ func (c *CapturerImpl) removeGatewayLabelSelector(gatewayName types.NamespacedNa
 		delete(cfg.gateways, gatewayName)
 		c.namespaces[ns] = cfg
 	}
-}
-
-func (n namespaceCfg) match() bool {
-	return len(n.gateways) > 0
 }
