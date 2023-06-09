@@ -15,9 +15,13 @@ Global Flags:
       --gatewayclass string        The name of the GatewayClass resource. Every NGINX Gateway must have a unique corresponding GatewayClass resource. (default "")
 ```
 
-Provisioner is not meant to be used in production yet (see this issue for more details
+> Note: Provisioner is not ready for production yet (see this issue for more details
 https://github.com/nginxinc/nginx-kubernetes-gateway/issues/634). However, it can be used in the Gateway API conformance
 tests, which expect a Gateway API implementation to provision an independent data plane per Gateway.
+
+> Note: Provisioner uses [this manifest](/deploy/manifests/deployment.yaml) to create an NKG static mode Deployment.
+That manifests gets included into the NKG binary during the NKG build. To customize the Deployment, modify the manifest 
+and **re-build** NKG again.
 
 How to deploy:
 
