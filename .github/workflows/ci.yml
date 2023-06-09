@@ -30,7 +30,7 @@ env:
 jobs:
   vars:
     name: Checks and variables
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     outputs:
       go_path: ${{ steps.vars.outputs.go_path }}
     steps:
@@ -51,7 +51,7 @@ jobs:
 
   unit-tests:
     name: Unit Tests
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     needs: vars
     steps:
       - name: Checkout Repository
@@ -74,7 +74,7 @@ jobs:
 
   njs-unit-tests:
     name: NJS Unit Tests
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     needs: vars
     steps:
       - name: Checkout Repository
@@ -88,7 +88,7 @@ jobs:
 
   release:
     name: Release
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     needs: [unit-tests, njs-unit-tests]
     if: ${{ github.event_name == 'push' && github.ref != 'refs/heads/main' }}
     steps:
@@ -108,7 +108,7 @@ jobs:
 
   binary:
     name: Build Binary
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     needs: vars
     steps:
       - name: Checkout Repository
@@ -146,7 +146,7 @@ jobs:
 
   build:
     name: Build Image
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     needs: [vars, binary]
     steps:
       - name: Checkout Repository
