@@ -1,3 +1,6 @@
+
+NKG_TAG = edge
+NKG_PREFIX = nginx-kubernetes-gateway
 GATEWAY_CLASS = nginx
 SUPPORTED_FEATURES = Gateway,HTTPRoute
 KIND_KUBE_CONFIG_FOLDER = $${HOME}/.kube/kind
@@ -9,14 +12,19 @@ PREFIX = conformance-test-runner
 help: Makefile ## Display this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "; printf "Usage:\n\n    make \033[36m<target>\033[0m\n\nTargets:\n\n"}; {printf "    \033[36m%-30s\033[0m %s\n", $$1, $$2}'
 
-.PHONY: build-test-image
-build-test-image: ## Build conformance test image
-	docker build -t $(PREFIX):$(TAG) -f Dockerfile ..
+.PHONY: build-test-runner-image
+build-test-runner-image: ## Build conformance test runner image
+	docker build -t $(PREFIX):$(TAG) -f tests/Dockerfile ..
 
 .PHONY: create-kind-cluster
 create-kind-cluster: ## Create a kind cluster
 	kind create cluster --image kindest/node:v1.27.1
 	kind export kubeconfig --kubeconfig $(KIND_KUBE_CONFIG_FOLDER)/config
+
+.PHONY: prepare-nkg
+prepare-nkg: ## Build and load NKG container in configured 
+	cd .. && make PREFIX=$(NKG_PREFIX) TAG=$(NKG_TAG) container
+	kind load docker-image $(NKG_PREFIX):$(NKG_TAG)
 
 .PHONY: install-nkg
 install-nkg: ## Install NKG with provisioner on configured kind cluster
@@ -28,7 +36,7 @@ install-nkg: ## Install NKG with provisioner on configured kind cluster
 	kubectl apply -f ../deploy/manifests/rbac.yaml
 	kubectl apply -f ../deploy/manifests/gatewayclass.yaml
 	kubectl apply -f ../deploy/manifests/service/nodeport.yaml
-	kubectl apply -f ../conformance/provisioner/provisioner.yaml
+	kubectl apply -f provisioner/provisioner.yaml
 
 .PHONY: update-test-kind-config 
 update-test-kind-config: ## Update kind config
@@ -37,7 +45,7 @@ update-test-kind-config: ## Update kind config
 .PHONY: run-conformance-tests
 run-conformance-tests: update-test-kind-config ## Run conformance tests
 	docker run --network=kind --rm -v $(KIND_KUBE_CONFIG_FOLDER):/root/.kube $(PREFIX):$(TAG) \
-		go test -v . -args --gateway-class=$(GATEWAY_CLASS) --supported-features=$(SUPPORTED_FEATURES)
+		go test -v . -tags conformance -args --gateway-class=$(GATEWAY_CLASS) --supported-features=$(SUPPORTED_FEATURES)
 
 .PHONY: uninstall-nkg
 uninstall-nkg: ## Uninstall NKG on configured kind cluster
