@@ -51,10 +51,7 @@ Follow our [Installation Instructions](/docs/installation.md) to get the NGINX K
 #### Open a Discussion
 
 If you have any questions, ideas, or simply want to engage in a conversation with the community and maintainers, we
-encourage you to open a [discussion](https://github.com/nginxinc/nginx-kubernetes-gateway/discussions) on GitHub. We
-highly recommend that you open a discussion about a potential enhancement before opening an issue. This enables the
-maintainers to gather valuable insights regarding the idea and its use cases, while also giving the community an
-opportunity to provide valuable feedback.
+encourage you to open a [discussion](https://github.com/nginxinc/nginx-kubernetes-gateway/discussions) on GitHub.
 
 #### Report a Bug
 
@@ -63,14 +60,20 @@ reporting a bug, make sure the issue has not already been reported.
 
 #### Suggest an Enhancement
 
-To suggest an enhancement, create an issue on GitHub with the label `proposal` using the available feature issue
-template.
+To suggest an enhancement, [open an idea][idea] on GitHub discussions. We highly recommend that you open a discussion
+about a potential enhancement before opening an issue. This enables the maintainers to gather valuable insights
+regarding the idea and its use cases, while also giving the community an opportunity to provide valuable feedback.
+
+In some cases, the maintainers may ask you to write an Enhancement Proposal. For details on this process, see
+the [Enhancement Proposal](/docs/proposals/README.md) README.
+
+[idea]: https://github.com/nginxinc/nginx-kubernetes-gateway/discussions/new?category=ideas
 
 #### Issue lifecycle
 
 When an issue or PR is created, it will be triaged by the maintainers and assigned a label to indicate the type of issue
-it is (bug, feature request, etc) and to determine the milestone. See the [Issue Lifecycle](/ISSUE_LIFECYCLE.md)
-document for more information.
+it is (bug, proposal, etc) and to determine the milestone. See the [Issue Lifecycle](/ISSUE_LIFECYCLE.md) document for
+more information.
 
 ### Development Guide
 
@@ -87,7 +90,7 @@ Before beginning development, familiarize yourself with the following documents:
 - [Pull Request Guidelines](/docs/developer/pull-request.md): A guide for both pull request submitters and reviewers,
   outlining guidelines and best practices to ensure smooth and efficient pull request processes.
 - [Go Style Guide](/docs/developer/go-style-guide.md) A coding style guide for Go. Contains best practices and
-  conventions to follow when writing Go code for the project. 
+  conventions to follow when writing Go code for the project.
 
 ## Contributor License Agreement
 
