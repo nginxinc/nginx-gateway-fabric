@@ -1506,6 +1506,28 @@ func TestCreateFilters(t *testing.T) {
 			Hostname: (*v1beta1.PreciseHostname)(helpers.GetStringPointer("bar.example.com")),
 		},
 	}
+	requestHeaderModifiers1 := v1beta1.HTTPRouteFilter{
+		Type: v1beta1.HTTPRouteFilterRequestHeaderModifier,
+		RequestHeaderModifier: &v1beta1.HTTPHeaderFilter{
+			Set: []v1beta1.HTTPHeader{
+				{
+					Name:  "Connection",
+					Value: "close",
+				},
+			},
+		},
+	}
+	requestHeaderModifiers2 := v1beta1.HTTPRouteFilter{
+		Type: v1beta1.HTTPRouteFilterRequestHeaderModifier,
+		RequestHeaderModifier: &v1beta1.HTTPHeaderFilter{
+			Add: []v1beta1.HTTPHeader{
+				{
+					Name:  "Content-Accepted",
+					Value: "gzip",
+				},
+			},
+		},
+	}
 
 	tests := []struct {
 		expected Filters
@@ -1535,6 +1557,31 @@ func TestCreateFilters(t *testing.T) {
 				RequestRedirect: redirect1.RequestRedirect,
 			},
 			msg: "two filters, first wins",
+		},
+		{
+			filters: []v1beta1.HTTPRouteFilter{
+				redirect1,
+				redirect2,
+				requestHeaderModifiers1,
+			},
+			expected: Filters{
+				RequestRedirect:        redirect1.RequestRedirect,
+				RequestHeaderModifiers: convertHTTPFilter(requestHeaderModifiers1.RequestHeaderModifier),
+			},
+			msg: "two redirect filters, one request header modifier, first redirect wins",
+		},
+		{
+			filters: []v1beta1.HTTPRouteFilter{
+				redirect1,
+				redirect2,
+				requestHeaderModifiers1,
+				requestHeaderModifiers2,
+			},
+			expected: Filters{
+				RequestRedirect:        redirect1.RequestRedirect,
+				RequestHeaderModifiers: convertHTTPFilter(requestHeaderModifiers1.RequestHeaderModifier),
+			},
+			msg: "two redirect filters, two request header modifier, first value for each wins",
 		},
 	}
 
@@ -1992,4 +2039,35 @@ func TestHostnameMoreSpecific(t *testing.T) {
 	for _, tc := range tests {
 		g.Expect(listenerHostnameMoreSpecific(tc.host1, tc.host2)).To(Equal(tc.host1Wins), tc.msg)
 	}
+}
+
+func TestConvertHTTPFilter(t *testing.T) {
+	g := NewGomegaWithT(t)
+
+	httpFilter := &v1beta1.HTTPHeaderFilter{
+		Set: []v1beta1.HTTPHeader{{
+			Name:  "My-Set-Header",
+			Value: "my-value",
+		}},
+		Add: []v1beta1.HTTPHeader{{
+			Name:  "My-Add-Header",
+			Value: "my-value",
+		}},
+		Remove: []string{"My-remove-header"},
+	}
+
+	expected := HTTPHeaderFilter{
+		Set: []HTTPHeader{{
+			Name:  "My-Set-Header",
+			Value: "my-value",
+		}},
+		Add: []HTTPHeader{{
+			Name:  "My-Add-Header",
+			Value: "my-value",
+		}},
+		Remove: []string{"My-remove-header"},
+	}
+
+	result := convertHTTPFilter(httpFilter)
+	g.Expect(*result).To(Equal(expected))
 }

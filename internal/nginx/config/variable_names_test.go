@@ -1,6 +1,10 @@
 package config
 
-import "testing"
+import (
+	"testing"
+
+	. "github.com/onsi/gomega"
+)
 
 func TestConvertStringToSafeVariableName(t *testing.T) {
 	tests := []struct {
@@ -28,5 +32,29 @@ func TestConvertStringToSafeVariableName(t *testing.T) {
 				result,
 			)
 		}
+	}
+}
+
+func TestGenerateAddHeaderMapVariableName(t *testing.T) {
+	g := NewGomegaWithT(t)
+	tests := []struct {
+		msg        string
+		headerName string
+		expected   string
+	}{
+		{
+			msg:        "no hyphens",
+			headerName: "MyCoolHeader",
+			expected:   "mycoolheader_header_var",
+		},
+		{
+			msg:        "with hyphens",
+			headerName: "My-Cool-Header",
+			expected:   "my_cool_header_header_var",
+		},
+	}
+	for _, tc := range tests {
+		actual := generateAddHeaderMapVariableName(tc.headerName)
+		g.Expect(actual).To(Equal(tc.expected))
 	}
 }

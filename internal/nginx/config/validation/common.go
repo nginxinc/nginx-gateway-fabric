@@ -3,6 +3,7 @@ package validation
 import (
 	"errors"
 	"regexp"
+	"strings"
 
 	k8svalidation "k8s.io/apimachinery/pkg/util/validation"
 )
@@ -43,6 +44,24 @@ func validateEscapedStringNoVarExpansion(value string, examples []string) error 
 		msg := k8svalidation.RegexError(escapedStringsNoVarExpansionErrMsg, escapedStringsNoVarExpansionFmt,
 			examples...)
 		return errors.New(msg)
+	}
+	return nil
+}
+
+const (
+	invalidHostHeaderErrMsg string = "redefining the Host request header is not supported"
+	maxHeaderLength         int    = 256
+)
+
+func validateHeaderName(name string) error {
+	if len(name) > maxHeaderLength {
+		return errors.New(k8svalidation.MaxLenError(maxHeaderLength))
+	}
+	if msg := k8svalidation.IsHTTPHeaderName(name); msg != nil {
+		return errors.New(msg[0])
+	}
+	if strings.ToLower(name) == "host" {
+		return errors.New(invalidHostHeaderErrMsg)
 	}
 	return nil
 }

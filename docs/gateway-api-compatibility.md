@@ -111,7 +111,8 @@ Fields:
     * `filters`
         * `type` - supported.
         * `requestRedirect` - supported except for the experimental `path` field. If multiple filters with `requestRedirect` are configured, NGINX Kubernetes Gateway will choose the first one and ignore the rest.
-        * `requestHeaderModifier`, `requestMirror`, `urlRewrite`, `extensionRef` - not supported.
+        * `requestHeaderModifier` - supported. If multiple filters with `requestHeaderModifier` are configured, NGINX Kubernetes Gateway will choose the first one and ignore the rest.
+        * `responseHeaderModifier`, `requestMirror`, `urlRewrite`, `extensionRef` - not supported.
     * `backendRefs` - partially supported. Backend ref `filters` are not supported.
 * `status`
   * `parents`

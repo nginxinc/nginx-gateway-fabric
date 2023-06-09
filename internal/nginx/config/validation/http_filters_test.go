@@ -44,3 +44,27 @@ func TestValidateRedirectStatusCode(t *testing.T) {
 	testInvalidValuesForSupportedValuesValidator(t, validator.ValidateRedirectStatusCode, supportedRedirectStatusCodes,
 		404)
 }
+
+func TestValidateRequestHeaderName(t *testing.T) {
+	validator := HTTPRequestHeaderValidator{}
+
+	testValidValuesForSimpleValidator(t, validator.ValidateRequestHeaderName,
+		"Content-Encoding",
+		"Connection")
+
+	testInvalidValuesForSimpleValidator(t, validator.ValidateRequestHeaderName, "$Content-Encoding")
+}
+
+func TestValidateRequestHeaderValue(t *testing.T) {
+	validator := HTTPRequestHeaderValidator{}
+
+	testValidValuesForSimpleValidator(t, validator.ValidateRequestHeaderValue,
+		"my-cookie-name",
+		"ssl_(server_name}",
+		"example/1234==",
+		"1234:3456")
+
+	testInvalidValuesForSimpleValidator(t, validator.ValidateRequestHeaderValue,
+		"$Content-Encoding",
+		`"example"`)
+}

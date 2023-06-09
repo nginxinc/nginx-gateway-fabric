@@ -70,13 +70,25 @@ type PathRule struct {
 	MatchRules []MatchRule
 }
 
+type HTTPHeaderFilter struct {
+	Set    []HTTPHeader
+	Add    []HTTPHeader
+	Remove []string
+}
+
+type HTTPHeader struct {
+	Name  string
+	Value string
+}
+
 // InvalidFilter is a special filter for handling the case when configured filters are invalid.
 type InvalidFilter struct{}
 
 // Filters hold the filters for a MatchRule.
 type Filters struct {
-	InvalidFilter   *InvalidFilter
-	RequestRedirect *v1beta1.HTTPRequestRedirectFilter
+	InvalidFilter          *InvalidFilter
+	RequestRedirect        *v1beta1.HTTPRequestRedirectFilter
+	RequestHeaderModifiers *HTTPHeaderFilter
 }
 
 // MatchRule represents a routing rule. It corresponds directly to a Match in the HTTPRoute resource.
@@ -515,12 +527,32 @@ func createFilters(filters []v1beta1.HTTPRouteFilter) Filters {
 	for _, f := range filters {
 		switch f.Type {
 		case v1beta1.HTTPRouteFilterRequestRedirect:
-			result.RequestRedirect = f.RequestRedirect
-			// using the first filter
-			return result
+			if result.RequestRedirect == nil {
+				// using the first filter
+				result.RequestRedirect = f.RequestRedirect
+			}
+		case v1beta1.HTTPRouteFilterRequestHeaderModifier:
+			if result.RequestHeaderModifiers == nil {
+				// using the first filter
+				result.RequestHeaderModifiers = convertHTTPFilter(f.RequestHeaderModifier)
+			}
 		}
 	}
+	return result
+}
 
+func convertHTTPFilter(httpFilter *v1beta1.HTTPHeaderFilter) *HTTPHeaderFilter {
+	result := &HTTPHeaderFilter{
+		Remove: httpFilter.Remove,
+		Set:    make([]HTTPHeader, 0, len(httpFilter.Set)),
+		Add:    make([]HTTPHeader, 0, len(httpFilter.Add)),
+	}
+	for _, s := range httpFilter.Set {
+		result.Set = append(result.Set, HTTPHeader{Name: string(s.Name), Value: s.Value})
+	}
+	for _, a := range httpFilter.Add {
+		result.Add = append(result.Add, HTTPHeader{Name: string(a.Name), Value: a.Value})
+	}
 	return result
 }
 
