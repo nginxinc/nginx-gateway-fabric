@@ -38,8 +38,8 @@ func TestConformance(t *testing.T) {
 	client, err := client.New(cfg, client.Options{})
 	g.Expect(err).To(BeNil())
 
-	g.Expect(v1alpha2.AddToScheme(client.Scheme()).ToSucceed())
-	g.Expect(v1beta1.AddToScheme(client.Scheme()).ToSucceed())
+	g.Expect(v1alpha2.AddToScheme(client.Scheme())).To(Succeed())
+	g.Expect(v1beta1.AddToScheme(client.Scheme())).To(Succeed())
 
 	t.Logf(`Running conformance tests with %s GatewayClass\n cleanup: %t\n`+
 		`debug: %t\n enable all features: %t \n supported features: [%v]\n exempt features: [%v]`,

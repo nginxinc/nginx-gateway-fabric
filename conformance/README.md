@@ -28,17 +28,12 @@ update-test-kind-config        Update kind config
 $ make create-kind-cluster
 ```
 
-### Step 2 - Build and load Nginx Kubernetes Gateway container to configured kind cluster
+### Step 2 - Update NKG deployment and provisioner manifests
 **Note**: this step is only required when user wants to run conformance tests using locally built image of Nginx Kubernetes Gateway
-
-```bash
-$ make NKG_PREFIX=<repo_name> NKG_TAG=<image_tag> prepare-nkg
-```
-
-### Step 3 - Update NKG deployment and provisioner manifests
-**Note**: this step is only required when user wants to run conformance tests using locally built image of Nginx Kubernetes Gateway
+* Set NKG_PREFIX=<repo_name> NKG_TAG=<image_tag> to preferred values.
 * Navigate to `deploy/manifests` and update values in `deployment.yaml` as specified in below code-block.
 * Navigate to `conformance/provisioner` and update values in `provisioner.yaml` as specified in below code-block.
+* Save the changes.
 ```
 .
 ..
@@ -49,6 +44,13 @@ containers:
 .
 ```
 
+### Step 3 - Build and load Nginx Kubernetes Gateway container to configured kind cluster
+**Note**: this step is only required when user wants to run conformance tests using locally built image of Nginx Kubernetes Gateway
+
+```bash
+$ make NKG_PREFIX=<repo_name> NKG_TAG=<image_tag> prepare-nkg
+
+```
 ### Step 4 - Build conformance test runner image
 ```bash
 $ make build-test-runner-image
