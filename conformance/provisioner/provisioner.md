@@ -21,7 +21,7 @@ tests, which expect a Gateway API implementation to provision an independent dat
 
 > Note: Provisioner uses [this manifest](/deploy/manifests/deployment.yaml) to create an NKG static mode Deployment.
 This manifest gets included into the NKG binary during the NKG build. To customize the Deployment, modify the manifest 
-and **re-build** NKG again.
+and **re-build** NKG.
 
 How to deploy:
 
