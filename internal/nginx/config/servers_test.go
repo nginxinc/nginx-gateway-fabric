@@ -22,41 +22,48 @@ func TestExecuteServers(t *testing.T) {
 		HTTPServers: []dataplane.VirtualServer{
 			{
 				IsDefault: true,
+				Port:      8080,
 			},
 			{
 				Hostname: "example.com",
+				Port:     8080,
 			},
 			{
 				Hostname: "cafe.example.com",
+				Port:     8080,
 			},
 		},
 		SSLServers: []dataplane.VirtualServer{
 			{
 				IsDefault: true,
+				Port:      8443,
 			},
 			{
 				Hostname: "example.com",
 				SSL: &dataplane.SSL{
 					CertificatePath: "cert-path",
 				},
+				Port: 8443,
 			},
 			{
 				Hostname: "cafe.example.com",
 				SSL: &dataplane.SSL{
 					CertificatePath: "cert-path",
 				},
+				Port: 8443,
 			},
 		},
 	}
 
 	expSubStrings := map[string]int{
-		"listen 80 default_server;":      1,
-		"listen 443 ssl;":                2,
-		"listen 443 ssl default_server;": 1,
-		"server_name example.com;":       2,
-		"server_name cafe.example.com;":  2,
-		"ssl_certificate cert-path;":     2,
-		"ssl_certificate_key cert-path;": 2,
+		"listen 8080 default_server;":     1,
+		"listen 8080;":                    2,
+		"listen 8443 ssl;":                2,
+		"listen 8443 ssl default_server;": 1,
+		"server_name example.com;":        2,
+		"server_name cafe.example.com;":   2,
+		"ssl_certificate cert-path;":      2,
+		"ssl_certificate_key cert-path;":  2,
 	}
 
 	servers := string(executeServers(conf))
@@ -74,88 +81,85 @@ func TestExecuteServers(t *testing.T) {
 
 func TestExecuteForDefaultServers(t *testing.T) {
 	testcases := []struct {
-		msg         string
-		conf        dataplane.Configuration
-		httpDefault bool
-		sslDefault  bool
+		msg       string
+		conf      dataplane.Configuration
+		httpPorts []int
+		sslPorts  []int
 	}{
 		{
-			conf:        dataplane.Configuration{},
-			httpDefault: false,
-			sslDefault:  false,
-			msg:         "no default servers",
+			conf: dataplane.Configuration{},
+			msg:  "no default servers",
 		},
 		{
 			conf: dataplane.Configuration{
 				HTTPServers: []dataplane.VirtualServer{
 					{
 						IsDefault: true,
+						Port:      80,
 					},
 				},
 			},
-			httpDefault: true,
-			sslDefault:  false,
-			msg:         "only HTTP default server",
+			httpPorts: []int{80},
+			msg:       "only HTTP default server",
 		},
 		{
 			conf: dataplane.Configuration{
 				SSLServers: []dataplane.VirtualServer{
 					{
 						IsDefault: true,
+						Port:      443,
 					},
 				},
 			},
-			httpDefault: false,
-			sslDefault:  true,
-			msg:         "only HTTPS default server",
+			sslPorts: []int{443},
+			msg:      "only HTTPS default server",
 		},
 		{
 			conf: dataplane.Configuration{
 				HTTPServers: []dataplane.VirtualServer{
 					{
 						IsDefault: true,
+						Port:      80,
+					},
+					{
+						IsDefault: true,
+						Port:      8080,
 					},
 				},
 				SSLServers: []dataplane.VirtualServer{
 					{
 						IsDefault: true,
+						Port:      443,
+					},
+					{
+						IsDefault: true,
+						Port:      8443,
 					},
 				},
 			},
-			httpDefault: true,
-			sslDefault:  true,
-			msg:         "both HTTP and HTTPS default servers",
+			httpPorts: []int{80, 8080},
+			sslPorts:  []int{443, 8443},
+			msg:       "multiple HTTP and HTTPS default servers",
 		},
 	}
 
+	sslDefaultFmt := "listen %d ssl default_server"
+	httpDefaultFmt := "listen %d default_server"
+
 	for _, tc := range testcases {
-		cfg := string(executeServers(tc.conf))
+		t.Run(tc.msg, func(t *testing.T) {
+			g := NewGomegaWithT(t)
 
-		defaultSSLExists := strings.Contains(cfg, "listen 443 ssl default_server")
-		defaultHTTPExists := strings.Contains(cfg, "listen 80 default_server")
+			cfg := string(executeServers(tc.conf))
 
-		if tc.sslDefault && !defaultSSLExists {
-			t.Errorf(
-				"executeServers() did not generate a config with a default TLS termination server for test: %q",
-				tc.msg,
-			)
-		}
+			for _, expPort := range tc.httpPorts {
+				g.Expect(cfg).To(ContainSubstring(fmt.Sprintf(httpDefaultFmt, expPort)))
+			}
 
-		if !tc.sslDefault && defaultSSLExists {
-			t.Errorf("executeServers() generated a config with a default TLS termination server for test: %q", tc.msg)
-		}
-
-		if tc.httpDefault && !defaultHTTPExists {
-			t.Errorf("executeServers() did not generate a config with a default http server for test: %q", tc.msg)
-		}
-
-		if !tc.httpDefault && defaultHTTPExists {
-			t.Errorf("executeServers() generated a config with a default http server for test: %q", tc.msg)
-		}
-
-		if len(cfg) == 0 {
-			t.Errorf("executeServers() generated empty config for test: %q", tc.msg)
-		}
+			for _, expPort := range tc.sslPorts {
+				g.Expect(cfg).To(ContainSubstring(fmt.Sprintf(sslDefaultFmt, expPort)))
+			}
+		})
 	}
 }
 
@@ -494,21 +498,25 @@ func TestCreateServers(t *testing.T) {
 	httpServers := []dataplane.VirtualServer{
 		{
 			IsDefault: true,
+			Port:      8080,
 		},
 		{
 			Hostname:  "cafe.example.com",
 			PathRules: cafePathRules,
+			Port:      8080,
 		},
 	}
 
 	sslServers := []dataplane.VirtualServer{
 		{
 			IsDefault: true,
+			Port:      8443,
 		},
 		{
 			Hostname:  "cafe.example.com",
 			SSL:       &dataplane.SSL{CertificatePath: certPath},
 			PathRules: cafePathRules,
+			Port:      8443,
 		},
 	}
 
@@ -541,9 +549,9 @@ func TestCreateServers(t *testing.T) {
 	}
 
 	getExpectedLocations := func(isHTTPS bool) []http.Location {
-		port := 80
+		port := 8080
 		if isHTTPS {
-			port = 443
+			port = 8443
 		}
 
 		return []http.Location{
@@ -620,18 +628,22 @@ func TestCreateServers(t *testing.T) {
 	expectedServers := []http.Server{
 		{
 			IsDefaultHTTP: true,
+			Port:          8080,
 		},
 		{
 			ServerName: "cafe.example.com",
 			Locations:  getExpectedLocations(false),
+			Port:       8080,
 		},
 		{
 			IsDefaultSSL: true,
+			Port:         8443,
 		},
 		{
 			ServerName: "cafe.example.com",
 			SSL:        &http.SSL{Certificate: certPath, CertificateKey: certPath},
 			Locations:  getExpectedLocations(true),
+			Port:       8443,
 		},
 	}
 

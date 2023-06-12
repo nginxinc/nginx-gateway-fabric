@@ -58,7 +58,7 @@ Fields:
     * `listeners`
         * `name` - supported.
         * `hostname` - partially supported. Wildcard hostnames like `*.example.com` are not yet supported.
-        * `port` - partially supported. Allowed values: `80` for HTTP listeners and `443` for HTTPS listeners.
+        * `port` - supported. 
         * `protocol` - partially supported. Allowed values: `HTTP`, `HTTPS`.
         * `tls`
           * `mode` - partially supported. Allowed value: `Terminate`.
@@ -87,7 +87,6 @@ Fields:
       * `Accepted/False/UnsupportedProtocol`
       * `Accepted/False/InvalidCertificateRef`
       * `Accepted/False/HostnameConflict`
-      * `Accepted/False/PortUnavailable`
       * `Accepted/False/UnsupportedValue`: Custom reason for when a value of a field in a Listener is invalid or not supported.
       * `Accepted/False/GatewayConflict`: Custom reason for when the Gateway is ignored due to a conflicting Gateway. NKG only supports a single Gateway.
       * `ResolvedRefs/True/ResolvedRefs`

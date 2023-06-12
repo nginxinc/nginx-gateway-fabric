@@ -1,6 +1,7 @@
 package graph
 
 import (
+	"errors"
 	"fmt"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -241,10 +242,10 @@ func validateListenerLabelSelector(listener v1beta1.Listener) []conditions.Condi
 }
 
 func validateHTTPListener(listener v1beta1.Listener) []conditions.Condition {
-	if listener.Port != 80 {
+	if err := validateListenerPort(listener.Port); err != nil {
 		path := field.NewPath("port")
-		valErr := field.NotSupported(path, listener.Port, []string{"80"})
-		return []conditions.Condition{conditions.NewListenerPortUnavailable(valErr.Error())}
+		valErr := field.Invalid(path, listener.Port, err.Error())
+		return []conditions.Condition{conditions.NewListenerUnsupportedValue(valErr.Error())}
 	}
 
 	if listener.TLS != nil {
@@ -254,14 +255,22 @@ func validateHTTPListener(listener v1beta1.Listener) []conditions.Condition {
 	return nil
 }
 
+func validateListenerPort(port v1beta1.PortNumber) error {
+	if port < 1 || port > 65535 {
+		return errors.New("port must be between 1-65535")
+	}
+
+	return nil
+}
+
 func createHTTPSListenerValidator(gwNsName string) listenerValidator {
 	return func(listener v1beta1.Listener) []conditions.Condition {
 		var conds []conditions.Condition
 
-		if listener.Port != 443 {
+		if err := validateListenerPort(listener.Port); err != nil {
 			path := field.NewPath("port")
-			valErr := field.NotSupported(path, listener.Port, []string{"443"})
-			conds = append(conds, conditions.NewListenerPortUnavailable(valErr.Error()))
+			valErr := field.Invalid(path, listener.Port, err.Error())
+			conds = append(conds, conditions.NewListenerUnsupportedValue(valErr.Error()))
 		}
 
 		if listener.TLS == nil {
@@ -325,27 +334,30 @@ func createHTTPSListenerValidator(gwNsName string) listenerValidator {
 }
 
 func createHostnameConflictResolver() listenerConflictResolver {
-	usedHostnames := make(map[string]*Listener)
+	usedHostnamesByPort := make(map[v1beta1.PortNumber]map[string]*Listener)
 
 	return func(l *Listener) {
+		port := l.Source.Port
 		h := getHostname(l.Source.Hostname)
 
-		if holder, exist := usedHostnames[h]; exist {
-			l.Valid = false
+		if listenersForPort, portExists := usedHostnamesByPort[port]; portExists {
+			if holder, holderExists := listenersForPort[h]; holderExists {
+				l.Valid = false
+				holder.Valid = false // all listeners for the same hostname/port become conflicted
 
-			holder.Valid = false // all listeners for the same hostname become conflicted
+				format := "Multiple listeners for the same port use the same hostname %q; " +
+					"ensure only one listener uses that hostname"
+				conflictedConds := conditions.NewListenerConflictedHostname(fmt.Sprintf(format, h))
+				holder.Conditions = append(holder.Conditions, conflictedConds...)
+				l.Conditions = append(l.Conditions, conflictedConds...)
+			}
 
-			format := "Multiple listeners for the same port use the same hostname %q; " +
-				"ensure only one listener uses that hostname"
-			conflictedConds := conditions.NewListenerConflictedHostname(fmt.Sprintf(format, h))
-
-			holder.Conditions = append(holder.Conditions, conflictedConds...)
-			l.Conditions = append(l.Conditions, conflictedConds...)
+			usedHostnamesByPort[port][h] = l
 
 			return
 		}
 
-		usedHostnames[h] = l
+		usedHostnamesByPort[port] = map[string]*Listener{h: l}
 	}
 }
 

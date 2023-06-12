@@ -1,31 +1,33 @@
 package config
 
 var serversTemplateText = `
-{{ range $s := . -}}
+{{- range $s := . -}}
 	{{ if $s.IsDefaultSSL -}}
 server {
-	listen 443 ssl default_server;
+	listen {{ $s.Port }} ssl default_server;
 
 	ssl_reject_handshake on;
 }
 	{{- else if $s.IsDefaultHTTP }}
 server {
-	listen 80 default_server;
+	listen {{ $s.Port }} default_server;
 
 	default_type text/html;
 	return 404;
 }
 	{{- else }}
 server {
-		{{- if $s.SSL }}
-	listen 443 ssl;
-	ssl_certificate {{ $s.SSL.Certificate }};
-	ssl_certificate_key {{ $s.SSL.CertificateKey }};
+        {{- if $s.SSL }}
+    listen {{ $s.Port }} ssl;
+    ssl_certificate {{ $s.SSL.Certificate }};
+    ssl_certificate_key {{ $s.SSL.CertificateKey }};
 
-	if ($ssl_server_name != $host) {
-		return 421;
-	}
-		{{- end }}
+    if ($ssl_server_name != $host) {
+        return 421;
+    }
+        {{- else }}
+    listen {{ $s.Port }};
+        {{- end }}
 
 	server_name {{ $s.ServerName }};
 

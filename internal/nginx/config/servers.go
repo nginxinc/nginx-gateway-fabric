@@ -42,7 +42,10 @@ func createServers(httpServers, sslServers []dataplane.VirtualServer) []http.Ser
 
 func createSSLServer(virtualServer dataplane.VirtualServer) http.Server {
 	if virtualServer.IsDefault {
-		return createDefaultSSLServer()
+		return http.Server{
+			IsDefaultSSL: true,
+			Port:         virtualServer.Port,
+		}
 	}
 
 	return http.Server{
@@ -51,22 +54,27 @@ func createSSLServer(virtualServer dataplane.VirtualServer) http.Server {
 			Certificate:    virtualServer.SSL.CertificatePath,
 			CertificateKey: virtualServer.SSL.CertificatePath,
 		},
-		Locations: createLocations(virtualServer.PathRules, 443),
+		Locations: createLocations(virtualServer.PathRules, virtualServer.Port),
+		Port:      virtualServer.Port,
 	}
 }
 
 func createServer(virtualServer dataplane.VirtualServer) http.Server {
 	if virtualServer.IsDefault {
-		return createDefaultHTTPServer()
+		return http.Server{
+			IsDefaultHTTP: true,
+			Port:          virtualServer.Port,
+		}
 	}
 
 	return http.Server{
 		ServerName: virtualServer.Hostname,
-		Locations:  createLocations(virtualServer.PathRules, 80),
+		Locations:  createLocations(virtualServer.PathRules, virtualServer.Port),
+		Port:       virtualServer.Port,
 	}
 }
 
-func createLocations(pathRules []dataplane.PathRule, listenerPort int) []http.Location {
+func createLocations(pathRules []dataplane.PathRule, listenerPort int32) []http.Location {
 	lenPathRules := len(pathRules)
 
 	if lenPathRules == 0 {
@@ -171,15 +179,7 @@ func createLocations(pathRules []dataplane.PathRule, listenerPort int) []http.Lo
 	return locs
 }
 
-func createDefaultSSLServer() http.Server {
-	return http.Server{IsDefaultSSL: true}
-}
-
-func createDefaultHTTPServer() http.Server {
-	return http.Server{IsDefaultHTTP: true}
-}
-
-func createReturnValForRedirectFilter(filter *v1beta1.HTTPRequestRedirectFilter, listenerPort int) *http.Return {
+func createReturnValForRedirectFilter(filter *v1beta1.HTTPRequestRedirectFilter, listenerPort int32) *http.Return {
 	if filter == nil {
 		return nil
 	}
@@ -196,7 +196,7 @@ func createReturnValForRedirectFilter(filter *v1beta1.HTTPRequestRedirectFilter,
 
 	port := listenerPort
 	if filter.Port != nil {
-		port = int(*filter.Port)
+		port = int32(*filter.Port)
 	}
 
 	scheme := "$scheme"

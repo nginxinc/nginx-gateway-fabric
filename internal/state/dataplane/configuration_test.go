@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"sort"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -202,6 +201,7 @@ func TestBuildConfiguration(t *testing.T) {
 		pathAndType{path: "/", pathType: prefix},
 		pathAndType{path: "/third", pathType: prefix},
 	)
+
 	hr4, expHR4Groups, routeHR4 := createTestResources(
 		"hr-4",
 		"foo.example.com",
@@ -236,6 +236,14 @@ func TestBuildConfiguration(t *testing.T) {
 		"foo.example.com",
 		"listener-80-1",
 		pathAndType{path: "/valid", pathType: prefix}, pathAndType{path: "/valid", pathType: v1beta1.PathMatchExact},
+	)
+
+	hr8, expHR8Groups, routeHR8 := createTestResources(
+		"hr-8",
+		"foo.example.com", // same as hr3
+		"listener-8080",
+		pathAndType{path: "/", pathType: prefix},
+		pathAndType{path: "/third", pathType: prefix},
 	)
 
 	httpsHR1, expHTTPSHR1Groups, httpsRouteHR1 := createTestResources(
@@ -282,10 +290,24 @@ func TestBuildConfiguration(t *testing.T) {
 		pathAndType{path: "/valid", pathType: prefix}, pathAndType{path: invalidMatchesPath, pathType: prefix},
 	)
 
+	httpsHR7, expHTTPSHR7Groups, httpsRouteHR7 := createTestResources(
+		"https-hr-7",
+		"foo.example.com", // same as httpsHR3
+		"listener-8443",
+		pathAndType{path: "/", pathType: prefix}, pathAndType{path: "/third", pathType: prefix},
+	)
+
 	listener80 := v1beta1.Listener{
 		Name:     "listener-80-1",
 		Hostname: nil,
 		Port:     80,
+		Protocol: v1beta1.HTTPProtocolType,
+	}
+
+	listener8080 := v1beta1.Listener{
+		Name:     "listener-8080",
+		Hostname: nil,
+		Port:     8080,
 		Protocol: v1beta1.HTTPProtocolType,
 	}
 
@@ -305,6 +327,24 @@ func TestBuildConfiguration(t *testing.T) {
 			},
 		},
 	}
+
+	listener8443 := v1beta1.Listener{
+		Name:     "listener-8443",
+		Hostname: nil,
+		Port:     8443,
+		Protocol: v1beta1.HTTPSProtocolType,
+		TLS: &v1beta1.GatewayTLSConfig{
+			Mode: helpers.GetTLSModePointer(v1beta1.TLSModeTerminate),
+			CertificateRefs: []v1beta1.SecretObjectReference{
+				{
+					Kind:      (*v1beta1.Kind)(helpers.GetStringPointer("Secret")),
+					Name:      "secret",
+					Namespace: (*v1beta1.Namespace)(helpers.GetStringPointer("test")),
+				},
+			},
+		},
+	}
+
 	hostname := v1beta1.Hostname("example.com")
 
 	listener443WithHostname := v1beta1.Listener{
@@ -380,6 +420,7 @@ func TestBuildConfiguration(t *testing.T) {
 				HTTPServers: []VirtualServer{
 					{
 						IsDefault: true,
+						Port:      80,
 					},
 				},
 				SSLServers: []VirtualServer{},
@@ -416,14 +457,17 @@ func TestBuildConfiguration(t *testing.T) {
 				SSLServers: []VirtualServer{
 					{
 						IsDefault: true,
+						Port:      443,
 					},
 					{
 						Hostname: string(hostname),
 						SSL:      &SSL{CertificatePath: secretPath},
+						Port:     443,
 					},
 					{
 						Hostname: wildcardHostname,
 						SSL:      &SSL{CertificatePath: secretPath},
+						Port:     443,
 					},
 				},
 			},
@@ -483,6 +527,7 @@ func TestBuildConfiguration(t *testing.T) {
 				HTTPServers: []VirtualServer{
 					{
 						IsDefault: true,
+						Port:      80,
 					},
 					{
 						Hostname: "bar.example.com",
@@ -500,6 +545,7 @@ func TestBuildConfiguration(t *testing.T) {
 								},
 							},
 						},
+						Port: 80,
 					},
 					{
 						Hostname: "foo.example.com",
@@ -517,6 +563,7 @@ func TestBuildConfiguration(t *testing.T) {
 								},
 							},
 						},
+						Port: 80,
 					},
 				},
 				SSLServers:    []VirtualServer{},
@@ -564,6 +611,7 @@ func TestBuildConfiguration(t *testing.T) {
 				SSLServers: []VirtualServer{
 					{
 						IsDefault: true,
+						Port:      443,
 					},
 					{
 						Hostname: "bar.example.com",
@@ -584,6 +632,7 @@ func TestBuildConfiguration(t *testing.T) {
 						SSL: &SSL{
 							CertificatePath: secretPath,
 						},
+						Port: 443,
 					},
 					{
 						Hostname: "example.com",
@@ -604,6 +653,7 @@ func TestBuildConfiguration(t *testing.T) {
 						SSL: &SSL{
 							CertificatePath: secretPath,
 						},
+						Port: 443,
 					},
 					{
 						Hostname: "foo.example.com",
@@ -624,10 +674,12 @@ func TestBuildConfiguration(t *testing.T) {
 						SSL: &SSL{
 							CertificatePath: secretPath,
 						},
+						Port: 443,
 					},
 					{
 						Hostname: wildcardHostname,
 						SSL:      &SSL{CertificatePath: secretPath},
+						Port:     443,
 					},
 				},
 				Upstreams:     []Upstream{fooUpstream},
@@ -674,6 +726,7 @@ func TestBuildConfiguration(t *testing.T) {
 				HTTPServers: []VirtualServer{
 					{
 						IsDefault: true,
+						Port:      80,
 					},
 					{
 						Hostname: "foo.example.com",
@@ -721,11 +774,13 @@ func TestBuildConfiguration(t *testing.T) {
 								},
 							},
 						},
+						Port: 80,
 					},
 				},
 				SSLServers: []VirtualServer{
 					{
 						IsDefault: true,
+						Port:      443,
 					},
 					{
 						Hostname: "foo.example.com",
@@ -776,10 +831,12 @@ func TestBuildConfiguration(t *testing.T) {
 								},
 							},
 						},
+						Port: 443,
 					},
 					{
 						Hostname: wildcardHostname,
 						SSL:      &SSL{CertificatePath: secretPath},
+						Port:     443,
 					},
 				},
 				Upstreams: []Upstream{fooUpstream},
@@ -795,6 +852,226 @@ func TestBuildConfiguration(t *testing.T) {
 				},
 			},
 			msg: "one http and one https listener with two routes with the same hostname with and without collisions",
+		},
+		{
+			graph: &graph.Graph{
+				GatewayClass: &graph.GatewayClass{
+					Source: &v1beta1.GatewayClass{},
+					Valid:  true,
+				},
+				Gateway: &graph.Gateway{
+					Source: &v1beta1.Gateway{},
+					Listeners: map[string]*graph.Listener{
+						"listener-80-1": {
+							Source: listener80,
+							Valid:  true,
+							Routes: map[types.NamespacedName]*graph.Route{
+								{Namespace: "test", Name: "hr-3"}: routeHR3,
+							},
+						},
+						"listener-8080": {
+							Source: listener8080,
+							Valid:  true,
+							Routes: map[types.NamespacedName]*graph.Route{
+								{Namespace: "test", Name: "hr-8"}: routeHR8,
+							},
+						},
+						"listener-443-1": {
+							Source:     listener443,
+							Valid:      true,
+							SecretPath: secretPath,
+							Routes: map[types.NamespacedName]*graph.Route{
+								{Namespace: "test", Name: "https-hr-3"}: httpsRouteHR3,
+							},
+						},
+						"listener-8443": {
+							Source:     listener8443,
+							Valid:      true,
+							SecretPath: secretPath,
+							Routes: map[types.NamespacedName]*graph.Route{
+								{Namespace: "test", Name: "https-hr-7"}: httpsRouteHR7,
+							},
+						},
+					},
+				},
+				Routes: map[types.NamespacedName]*graph.Route{
+					{Namespace: "test", Name: "hr-3"}:       routeHR3,
+					{Namespace: "test", Name: "hr-8"}:       routeHR8,
+					{Namespace: "test", Name: "https-hr-3"}: httpsRouteHR3,
+					{Namespace: "test", Name: "https-hr-7"}: httpsRouteHR7,
+				},
+			},
+			expConf: Configuration{
+				HTTPServers: []VirtualServer{
+					{
+						IsDefault: true,
+						Port:      80,
+					},
+					{
+						Hostname: "foo.example.com",
+						PathRules: []PathRule{
+							{
+								Path:     "/",
+								PathType: PathTypePrefix,
+								MatchRules: []MatchRule{
+									{
+										MatchIdx:     0,
+										RuleIdx:      0,
+										BackendGroup: expHR3Groups[0],
+										Source:       hr3,
+									},
+								},
+							},
+							{
+								Path:     "/third",
+								PathType: PathTypePrefix,
+								MatchRules: []MatchRule{
+									{
+										MatchIdx:     0,
+										RuleIdx:      1,
+										BackendGroup: expHR3Groups[1],
+										Source:       hr3,
+									},
+								},
+							},
+						},
+						Port: 80,
+					},
+					{
+						IsDefault: true,
+						Port:      8080,
+					},
+					{
+						Hostname: "foo.example.com",
+						PathRules: []PathRule{
+							{
+								Path:     "/",
+								PathType: PathTypePrefix,
+								MatchRules: []MatchRule{
+									{
+										MatchIdx:     0,
+										RuleIdx:      0,
+										BackendGroup: expHR8Groups[0],
+										Source:       hr8,
+									},
+								},
+							},
+							{
+								Path:     "/third",
+								PathType: PathTypePrefix,
+								MatchRules: []MatchRule{
+									{
+										MatchIdx:     0,
+										RuleIdx:      1,
+										BackendGroup: expHR8Groups[1],
+										Source:       hr8,
+									},
+								},
+							},
+						},
+						Port: 8080,
+					},
+				},
+				SSLServers: []VirtualServer{
+					{
+						IsDefault: true,
+						Port:      443,
+					},
+					{
+						Hostname: "foo.example.com",
+						SSL: &SSL{
+							CertificatePath: secretPath,
+						},
+						PathRules: []PathRule{
+							{
+								Path:     "/",
+								PathType: PathTypePrefix,
+								MatchRules: []MatchRule{
+									{
+										MatchIdx:     0,
+										RuleIdx:      0,
+										BackendGroup: expHTTPSHR3Groups[0],
+										Source:       httpsHR3,
+									},
+								},
+							},
+							{
+								Path:     "/third",
+								PathType: PathTypePrefix,
+								MatchRules: []MatchRule{
+									{
+										MatchIdx:     0,
+										RuleIdx:      1,
+										BackendGroup: expHTTPSHR3Groups[1],
+										Source:       httpsHR3,
+									},
+								},
+							},
+						},
+						Port: 443,
+					},
+					{
+						Hostname: wildcardHostname,
+						SSL:      &SSL{CertificatePath: secretPath},
+						Port:     443,
+					},
+					{
+						IsDefault: true,
+						Port:      8443,
+					},
+					{
+						Hostname: "foo.example.com",
+						SSL: &SSL{
+							CertificatePath: secretPath,
+						},
+						PathRules: []PathRule{
+							{
+								Path:     "/",
+								PathType: PathTypePrefix,
+								MatchRules: []MatchRule{
+									{
+										MatchIdx:     0,
+										RuleIdx:      0,
+										BackendGroup: expHTTPSHR7Groups[0],
+										Source:       httpsHR7,
+									},
+								},
+							},
+							{
+								Path:     "/third",
+								PathType: PathTypePrefix,
+								MatchRules: []MatchRule{
+									{
+										MatchIdx:     0,
+										RuleIdx:      1,
+										BackendGroup: expHTTPSHR7Groups[1],
+										Source:       httpsHR7,
+									},
+								},
+							},
+						},
+						Port: 8443,
+					},
+					{
+						Hostname: wildcardHostname,
+						SSL:      &SSL{CertificatePath: secretPath},
+						Port:     8443,
+					},
+				},
+				Upstreams: []Upstream{fooUpstream},
+				BackendGroups: []BackendGroup{
+					expHR3Groups[0],
+					expHR3Groups[1],
+					expHR8Groups[0],
+					expHR8Groups[1],
+					expHTTPSHR3Groups[0],
+					expHTTPSHR3Groups[1],
+					expHTTPSHR7Groups[0],
+					expHTTPSHR7Groups[1],
+				},
+			},
+
+			msg: "multiple http and https listener; different ports",
 		},
 		{
 			graph: &graph.Graph{
@@ -881,6 +1158,7 @@ func TestBuildConfiguration(t *testing.T) {
 				HTTPServers: []VirtualServer{
 					{
 						IsDefault: true,
+						Port:      80,
 					},
 					{
 						Hostname: "foo.example.com",
@@ -916,6 +1194,7 @@ func TestBuildConfiguration(t *testing.T) {
 								},
 							},
 						},
+						Port: 80,
 					},
 				},
 				SSLServers:    []VirtualServer{},
@@ -959,6 +1238,7 @@ func TestBuildConfiguration(t *testing.T) {
 				HTTPServers: []VirtualServer{
 					{
 						IsDefault: true,
+						Port:      80,
 					},
 					{
 						Hostname: "foo.example.com",
@@ -976,11 +1256,13 @@ func TestBuildConfiguration(t *testing.T) {
 								},
 							},
 						},
+						Port: 80,
 					},
 				},
 				SSLServers: []VirtualServer{
 					{
 						IsDefault: true,
+						Port:      443,
 					},
 					{
 						Hostname: "foo.example.com",
@@ -1001,10 +1283,12 @@ func TestBuildConfiguration(t *testing.T) {
 								},
 							},
 						},
+						Port: 443,
 					},
 					{
 						Hostname: wildcardHostname,
 						SSL:      &SSL{CertificatePath: secretPath},
+						Port:     443,
 					},
 				},
 				Upstreams: []Upstream{fooUpstream},
@@ -1041,6 +1325,7 @@ func TestBuildConfiguration(t *testing.T) {
 				HTTPServers: []VirtualServer{
 					{
 						IsDefault: true,
+						Port:      80,
 					},
 					{
 						Hostname: "foo.example.com",
@@ -1070,6 +1355,7 @@ func TestBuildConfiguration(t *testing.T) {
 								},
 							},
 						},
+						Port: 80,
 					},
 				},
 				SSLServers:    []VirtualServer{},
@@ -1114,6 +1400,7 @@ func TestBuildConfiguration(t *testing.T) {
 				SSLServers: []VirtualServer{
 					{
 						IsDefault: true,
+						Port:      443,
 					},
 					{
 						Hostname: "example.com",
@@ -1141,10 +1428,12 @@ func TestBuildConfiguration(t *testing.T) {
 						SSL: &SSL{
 							CertificatePath: "secret-path-https-listener-2",
 						},
+						Port: 443,
 					},
 					{
 						Hostname: wildcardHostname,
 						SSL:      &SSL{CertificatePath: secretPath},
+						Port:     443,
 					},
 				},
 				Upstreams:     []Upstream{fooUpstream},
@@ -1156,19 +1445,14 @@ func TestBuildConfiguration(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.msg, func(t *testing.T) {
+			g := NewGomegaWithT(t)
+
 			result := BuildConfiguration(context.TODO(), test.graph, fakeResolver)
 
-			sort.Slice(result.BackendGroups, func(i, j int) bool {
-				return result.BackendGroups[i].Name() < result.BackendGroups[j].Name()
-			})
-
-			sort.Slice(result.Upstreams, func(i, j int) bool {
-				return result.Upstreams[i].Name < result.Upstreams[j].Name
-			})
-
-			if diff := cmp.Diff(test.expConf, result); diff != "" {
-				t.Errorf("BuildConfiguration() %q mismatch for configuration (-want +got):\n%s", test.msg, diff)
-			}
+			g.Expect(result.BackendGroups).To(ConsistOf(test.expConf.BackendGroups))
+			g.Expect(result.Upstreams).To(ConsistOf(test.expConf.Upstreams))
+			g.Expect(result.HTTPServers).To(ConsistOf(test.expConf.HTTPServers))
+			g.Expect(result.SSLServers).To(ConsistOf(test.expConf.SSLServers))
 		})
 	}
 }

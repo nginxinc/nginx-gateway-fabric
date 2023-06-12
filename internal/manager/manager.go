@@ -56,6 +56,9 @@ func Start(cfg config.Config) error {
 	options := manager.Options{
 		Scheme: scheme,
 		Logger: logger,
+		// We disable the metrics server because it listens on port 8080.
+		// Once we add support for Prometheus, we can make this port configurable by the user.
+		MetricsBindAddress: "0",
 	}
 
 	eventCh := make(chan interface{})

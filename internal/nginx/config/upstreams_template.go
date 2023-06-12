@@ -12,5 +12,5 @@ upstream {{ $u.Name }} {
     server {{ $server.Address }};
     {{- end }}
 }
-{{ end }}
+{{ end -}}
 `

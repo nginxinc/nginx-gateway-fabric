@@ -258,16 +258,6 @@ func NewDefaultListenerConditions() []Condition {
 	}
 }
 
-// NewListenerPortUnavailable returns a Condition that indicates a port is unavailable in a Listener.
-func NewListenerPortUnavailable(msg string) Condition {
-	return Condition{
-		Type:    string(v1beta1.ListenerConditionAccepted),
-		Status:  metav1.ConditionFalse,
-		Reason:  string(v1beta1.ListenerReasonPortUnavailable),
-		Message: msg,
-	}
-}
-
 // NewListenerAccepted returns a Condition that indicates that the Listener is accepted.
 func NewListenerAccepted() Condition {
 	return Condition{
