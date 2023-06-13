@@ -215,23 +215,26 @@ func TestBuildGateway(t *testing.T) {
 	createHTTPSListener := func(name, hostname string, port int, tls *v1beta1.GatewayTLSConfig) v1beta1.Listener {
 		return createListener(name, hostname, port, v1beta1.HTTPSProtocolType, tls)
 	}
+
 	// foo http listeners
 	foo80Listener1 := createHTTPListener("foo-80-1", "foo.example.com", 80)
 	foo80Listener2 := createHTTPListener("foo-80-2", "foo.example.com", 80)
 	foo8080Listener := createHTTPListener("foo-8080", "foo.example.com", 8080)
 	foo8081Listener := createHTTPListener("foo-8081", "foo.example.com", 8081)
+	foo443Listener := createHTTPListener("foo-443", "foo.example.com", 443)
 
 	// foo https listeners
-	foo443Listener1 := createHTTPSListener("foo-443-1", "foo.example.com", 443, gatewayTLSConfig)
-	foo443Listener2 := createHTTPSListener("foo-443-2", "foo.example.com", 443, gatewayTLSConfig)
-	foo8443Listener := createHTTPSListener("foo-8443", "foo.example.com", 8443, gatewayTLSConfig)
+	foo80HTTPSListener := createHTTPSListener("foo-80-https", "foo.example.com", 80, gatewayTLSConfig)
+	foo443HTTPSListener1 := createHTTPSListener("foo-443-https-1", "foo.example.com", 443, gatewayTLSConfig)
+	foo443HTTPSListener2 := createHTTPSListener("foo-443-https-2", "foo.example.com", 443, gatewayTLSConfig)
+	foo8443HTTPSListener := createHTTPSListener("foo-8443-https", "foo.example.com", 8443, gatewayTLSConfig)
 
 	// bar http listener
 	bar80Listener := createHTTPListener("bar-80", "bar.example.com", 80)
 
 	// bar https listeners
-	bar443Listener := createHTTPSListener("bar-443", "bar.example.com", 443, gatewayTLSConfig)
-	bar8443Listener := createHTTPSListener("bar-8443", "bar.example.com", 8443, gatewayTLSConfig)
+	bar443HTTPSListener := createHTTPSListener("bar-443-https", "bar.example.com", 443, gatewayTLSConfig)
+	bar8443HTTPSListener := createHTTPSListener("bar-8443-https", "bar.example.com", 8443, gatewayTLSConfig)
 
 	// invalid listeners
 	invalidProtocolListener := createTCPListener("invalid-protocol", "bar.example.com", 80)
@@ -316,19 +319,21 @@ func TestBuildGateway(t *testing.T) {
 			name: "valid http listeners",
 		},
 		{
-			gateway:      createGateway(gatewayCfg{listeners: []v1beta1.Listener{foo443Listener1, foo8443Listener}}),
+			gateway: createGateway(
+				gatewayCfg{listeners: []v1beta1.Listener{foo443HTTPSListener1, foo8443HTTPSListener}},
+			),
 			gatewayClass: validGC,
 			expected: &Gateway{
 				Source: getLastCreatedGetaway(),
 				Listeners: map[string]*Listener{
-					"foo-443-1": {
-						Source:     foo443Listener1,
+					"foo-443-https-1": {
+						Source:     foo443HTTPSListener1,
 						Valid:      true,
 						Routes:     map[types.NamespacedName]*Route{},
 						SecretPath: secretPath,
 					},
-					"foo-8443": {
-						Source:     foo8443Listener,
+					"foo-8443-https": {
+						Source:     foo8443HTTPSListener,
 						Valid:      true,
 						Routes:     map[types.NamespacedName]*Route{},
 						SecretPath: secretPath,
@@ -479,11 +484,11 @@ func TestBuildGateway(t *testing.T) {
 						foo80Listener1,
 						foo8080Listener,
 						foo8081Listener,
-						foo443Listener1,
-						foo8443Listener,
+						foo443HTTPSListener1,
+						foo8443HTTPSListener,
 						bar80Listener,
-						bar443Listener,
-						bar8443Listener,
+						bar443HTTPSListener,
+						bar8443HTTPSListener,
 					},
 				},
 			),
@@ -511,26 +516,26 @@ func TestBuildGateway(t *testing.T) {
 						Valid:  true,
 						Routes: map[types.NamespacedName]*Route{},
 					},
-					"foo-443-1": {
-						Source:     foo443Listener1,
+					"foo-443-https-1": {
+						Source:     foo443HTTPSListener1,
 						Valid:      true,
 						Routes:     map[types.NamespacedName]*Route{},
 						SecretPath: secretPath,
 					},
-					"foo-8443": {
-						Source:     foo8443Listener,
+					"foo-8443-https": {
+						Source:     foo8443HTTPSListener,
 						Valid:      true,
 						Routes:     map[types.NamespacedName]*Route{},
 						SecretPath: secretPath,
 					},
-					"bar-443": {
-						Source:     bar443Listener,
+					"bar-443-https": {
+						Source:     bar443HTTPSListener,
 						Valid:      true,
 						Routes:     map[types.NamespacedName]*Route{},
 						SecretPath: secretPath,
 					},
-					"bar-8443": {
-						Source:     bar8443Listener,
+					"bar-8443-https": {
+						Source:     bar8443HTTPSListener,
 						Valid:      true,
 						Routes:     map[types.NamespacedName]*Route{},
 						SecretPath: secretPath,
@@ -543,7 +548,12 @@ func TestBuildGateway(t *testing.T) {
 		{
 			gateway: createGateway(
 				gatewayCfg{
-					listeners: []v1beta1.Listener{foo80Listener1, foo80Listener2, foo443Listener1, foo443Listener2},
+					listeners: []v1beta1.Listener{
+						foo80Listener1,
+						foo80Listener2,
+						foo443HTTPSListener1,
+						foo443HTTPSListener2,
+					},
 				},
 			),
 			gatewayClass: validGC,
@@ -562,14 +572,15 @@ func TestBuildGateway(t *testing.T) {
 						Routes:     map[types.NamespacedName]*Route{},
 						Conditions: conditions.NewListenerConflictedHostname(conflictedHostnamesMsg),
 					},
-					"foo-443-1": {
-						Source:     foo443Listener1,
+					"foo-443-https-1": {
+						Source:     foo443HTTPSListener1,
 						Valid:      false,
 						Routes:     map[types.NamespacedName]*Route{},
 						Conditions: conditions.NewListenerConflictedHostname(conflictedHostnamesMsg),
 						SecretPath: "/etc/nginx/secrets/test_secret",
-					}, "foo-443-2": {
-						Source:     foo443Listener2,
+					},
+					"foo-443-https-2": {
+						Source:     foo443HTTPSListener2,
 						Valid:      false,
 						Routes:     map[types.NamespacedName]*Route{},
 						Conditions: conditions.NewListenerConflictedHostname(conflictedHostnamesMsg),
@@ -578,12 +589,58 @@ func TestBuildGateway(t *testing.T) {
 				},
 				Valid: true,
 			},
-			name: "collisions",
+			name: "collisions; same hostname, port, and protocol",
 		},
 		{
 			gateway: createGateway(
 				gatewayCfg{
-					listeners: []v1beta1.Listener{foo80Listener1, foo443Listener1},
+					listeners: []v1beta1.Listener{
+						foo80Listener1,
+						foo443Listener,
+						foo80HTTPSListener,
+						foo443HTTPSListener1,
+					},
+				},
+			),
+			gatewayClass: validGC,
+			expected: &Gateway{
+				Source: getLastCreatedGetaway(),
+				Listeners: map[string]*Listener{
+					"foo-80-1": {
+						Source:     foo80Listener1,
+						Valid:      false,
+						Routes:     map[types.NamespacedName]*Route{},
+						Conditions: conditions.NewListenerConflictedHostname(conflictedHostnamesMsg),
+					},
+					"foo-443": {
+						Source:     foo443Listener,
+						Valid:      false,
+						Routes:     map[types.NamespacedName]*Route{},
+						Conditions: conditions.NewListenerConflictedHostname(conflictedHostnamesMsg),
+					},
+					"foo-80-https": {
+						Source:     foo80HTTPSListener,
+						Valid:      false,
+						Routes:     map[types.NamespacedName]*Route{},
+						Conditions: conditions.NewListenerConflictedHostname(conflictedHostnamesMsg),
+						SecretPath: "/etc/nginx/secrets/test_secret",
+					},
+					"foo-443-https-1": {
+						Source:     foo443HTTPSListener1,
+						Valid:      false,
+						Routes:     map[types.NamespacedName]*Route{},
+						Conditions: conditions.NewListenerConflictedHostname(conflictedHostnamesMsg),
+						SecretPath: "/etc/nginx/secrets/test_secret",
+					},
+				},
+				Valid: true,
+			},
+			name: "collisions; same hostname and port but different protocols",
+		},
+		{
+			gateway: createGateway(
+				gatewayCfg{
+					listeners: []v1beta1.Listener{foo80Listener1, foo443HTTPSListener1},
 					addresses: []v1beta1.GatewayAddress{{}},
 				},
 			),

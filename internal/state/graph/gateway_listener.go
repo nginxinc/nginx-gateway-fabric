@@ -68,6 +68,8 @@ func newListenerConfiguratorFactory(
 	gw *v1beta1.Gateway,
 	secretMemoryMgr secrets.SecretDiskMemoryManager,
 ) *listenerConfiguratorFactory {
+	sharedHostnameConflictResolver := createHostnameConflictResolver()
+
 	return &listenerConfiguratorFactory{
 		unsupportedProtocol: &listenerConfigurator{
 			validators: []listenerValidator{
@@ -89,7 +91,7 @@ func newListenerConfiguratorFactory(
 				validateHTTPListener,
 			},
 			conflictResolvers: []listenerConflictResolver{
-				createHostnameConflictResolver(),
+				sharedHostnameConflictResolver,
 			},
 		},
 		https: &listenerConfigurator{
@@ -100,7 +102,7 @@ func newListenerConfiguratorFactory(
 				createHTTPSListenerValidator(gw.Namespace),
 			},
 			conflictResolvers: []listenerConflictResolver{
-				createHostnameConflictResolver(),
+				sharedHostnameConflictResolver,
 			},
 			externalReferenceResolvers: []listenerExternalReferenceResolver{
 				createExternalReferencesForTLSSecretsResolver(gw.Namespace, secretMemoryMgr),
@@ -388,7 +390,8 @@ func createExternalReferencesForTLSSecretsResolver(
 // GetAllowedRouteLabelSelector returns a listener's AllowedRoutes label selector if it exists.
 func GetAllowedRouteLabelSelector(l v1beta1.Listener) *metav1.LabelSelector {
 	if l.AllowedRoutes != nil && l.AllowedRoutes.Namespaces != nil {
-		if *l.AllowedRoutes.Namespaces.From == v1beta1.NamespacesFromSelector && l.AllowedRoutes.Namespaces.Selector != nil {
+		if *l.AllowedRoutes.Namespaces.From == v1beta1.NamespacesFromSelector &&
+			l.AllowedRoutes.Namespaces.Selector != nil {
 			return l.AllowedRoutes.Namespaces.Selector
 		}
 	}
