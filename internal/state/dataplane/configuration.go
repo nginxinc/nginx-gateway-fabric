@@ -246,7 +246,7 @@ type portPathRules map[v1beta1.PortNumber]*hostPathRules
 func (p portPathRules) buildServers() []VirtualServer {
 	serverCount := 0
 	for _, rules := range p {
-		serverCount += len(rules.rulesPerHost) + len(rules.httpsListeners)
+		serverCount += rules.maxServerCount()
 	}
 
 	servers := make([]VirtualServer, 0, serverCount)
@@ -423,6 +423,15 @@ func (hpr *hostPathRules) buildServers() []VirtualServer {
 	})
 
 	return servers
+}
+
+// maxServerCount returns the maximum number of VirtualServers that can be built from the host path rules.
+// to calculate max # of servers we add up:
+// - # of hostnames
+// - # of https listeners - this is to account for https wildcard default servers
+// - default server - for every hostPathRules we generate 1 default server.
+func (hpr *hostPathRules) maxServerCount() int {
+	return len(hpr.rulesPerHost) + len(hpr.httpsListeners) + 1
 }
 
 func buildUpstreams(
