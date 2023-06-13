@@ -537,7 +537,6 @@ func TestBindRouteToListeners(t *testing.T) {
 			Source: v1beta1.Listener{
 				Name:     v1beta1.SectionName(name),
 				Hostname: (*v1beta1.Hostname)(helpers.GetStringPointer("foo.example.com")),
-				Port:     80,
 			},
 			Valid:  true,
 			Routes: map[types.NamespacedName]*Route{},
@@ -759,10 +758,8 @@ func TestBindRouteToListeners(t *testing.T) {
 				Source: gw,
 				Valid:  true,
 				Listeners: map[string]*Listener{
-					"listener-80": createListener("listener-80"),
-					"listener-8080": createModifiedListener("listener-8080", func(l *Listener) {
-						l.Source.Port = 8080
-					}),
+					"listener-80":   createListener("listener-80"),
+					"listener-8080": createListener("listener-8080"),
 				},
 			},
 			expectedSectionNameRefs: []ParentRef{
@@ -788,7 +785,6 @@ func TestBindRouteToListeners(t *testing.T) {
 					l.Routes = map[types.NamespacedName]*Route{
 						client.ObjectKeyFromObject(hr): routeWithEmptySectionName,
 					}
-					l.Source.Port = 8080
 				}),
 			},
 			name: "section name is empty; bind to multiple listeners",
