@@ -16,13 +16,12 @@ on:
       - reopened
       - synchronize
 
-defaults:
-  run:
-    shell: bash
-
 concurrency:
   group: ${{ github.ref_name }}-ci
   cancel-in-progress: true
+
+permissions:
+  contents: read
 
 env:
   platforms: "linux/arm64, linux/amd64"

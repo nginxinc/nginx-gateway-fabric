@@ -12,13 +12,12 @@ on:
       - reopened
       - synchronize
 
-defaults:
-  run:
-    shell: bash
-
 concurrency:
   group: ${{ github.ref_name }}-lint
   cancel-in-progress: true
+
+permissions:
+  contents: read
 
 jobs:
   lint:
