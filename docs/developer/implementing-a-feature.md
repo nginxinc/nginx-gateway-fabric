@@ -44,7 +44,6 @@ practices to ensure a successful feature development process.
     - **Other Documentation Updates**: For any other changes that affect the behavior, usage, or configuration of NKG,
       review the existing documentation and update it as necessary. Ensure that the documentation remains accurate and
       up to date with the latest changes.
-
 11. **Lint code**: See the [run the linter](/docs/developer/quickstart.md#run-the-linter) section of the quickstart
     guide for instructions.
 12. **Open pull request**: Open a pull request targeting the `main` branch of
