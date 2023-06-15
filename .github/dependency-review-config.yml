@@ -10,3 +10,4 @@ allow_licenses:
   - OpenSSL
   - Python-2.0
   - X11
+comment-summary-in-pr: true
