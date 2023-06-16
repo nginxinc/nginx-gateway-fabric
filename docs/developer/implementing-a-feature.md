@@ -36,6 +36,7 @@ practices to ensure a successful feature development process.
       the [Gateway API Compatibility](/docs/gateway-api-compatibility.md) documentation.
     - **New Use Case:** If your feature introduces a new use case, add an example of how to use it in
       the [examples](/examples) directory. This example will help users understand how to leverage the new feature.
+      > For security, a Docker image used in an example must be either managed by F5/NGINX or be an [official image](https://docs.docker.com/docker-hub/official_images/).
     - **Installation Changes**: If your feature involves changes to the installation process of NKG, update
       the [installation](/docs/installation.md) documentation.
     - **Command-line Changes**: If your feature introduces or changes a command-line flag or subcommand, update
