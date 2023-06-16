@@ -25,6 +25,7 @@ cover.html
 
 # Binary and Artifacts
 build/.out
+build/out
 dist/
 
 # Node modules
