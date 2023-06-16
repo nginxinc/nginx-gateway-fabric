@@ -2,17 +2,27 @@ package runtime
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"strconv"
 	"strings"
 	"syscall"
 	"time"
+
+	"k8s.io/apimachinery/pkg/util/wait"
 )
 
-const pidFile = "/etc/nginx/nginx.pid"
+const (
+	pidFile        = "/etc/nginx/nginx.pid"
+	pidFileTimeout = 5 * time.Second
+)
 
-type readFileFunc func(string) ([]byte, error)
+type (
+	readFileFunc  func(string) ([]byte, error)
+	checkFileFunc func(string) (fs.FileInfo, error)
+)
 
 //go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . Manager
 
@@ -31,13 +41,8 @@ func NewManagerImpl() *ManagerImpl {
 }
 
 func (m *ManagerImpl) Reload(ctx context.Context) error {
-	// FIXME(pleshakov): Before reload attempt, make sure NGINX is running.
-	// If the gateway container starts before NGINX container (which is possible),
-	// then it is possible that a reload can be attempted when NGINX is not running yet.
-	// Make sure to prevent this case, so we don't get an error.
-
 	// We find the main NGINX PID on every reload because it will change if the NGINX container is restarted.
-	pid, err := findMainProcess(os.ReadFile)
+	pid, err := findMainProcess(ctx, os.Stat, os.ReadFile, pidFileTimeout)
 	if err != nil {
 		return fmt.Errorf("failed to find NGINX main process: %w", err)
 	}
@@ -65,7 +70,33 @@ func (m *ManagerImpl) Reload(ctx context.Context) error {
 	return nil
 }
 
-func findMainProcess(readFile readFileFunc) (int, error) {
+func findMainProcess(
+	ctx context.Context,
+	checkFile checkFileFunc,
+	readFile readFileFunc,
+	timeout time.Duration,
+) (int, error) {
+	ctx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+
+	err := wait.PollUntilContextCancel(
+		ctx,
+		1*time.Second,
+		true, /* poll immediately */
+		func(ctx context.Context) (bool, error) {
+			_, err := checkFile(pidFile)
+			if err == nil {
+				return true, nil
+			}
+			if !errors.Is(err, fs.ErrNotExist) {
+				return false, err
+			}
+			return false, nil
+		})
+	if err != nil {
+		return 0, err
+	}
+
 	content, err := readFile(pidFile)
 	if err != nil {
 		return 0, err
