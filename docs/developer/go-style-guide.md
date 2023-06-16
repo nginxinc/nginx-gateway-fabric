@@ -413,7 +413,7 @@ FAVOR:
 
 ```go
 type Object struct{
-    subobject SubObject
+  subobject SubObject
 }
 
 func New() Object {
@@ -427,7 +427,7 @@ DISFAVOR:
 
 ```go
 type Object struct{
-    subobject *SubObject
+  subobject *SubObject
 }
 
 func New() *Object {
