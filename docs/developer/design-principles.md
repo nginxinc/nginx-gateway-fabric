@@ -8,7 +8,7 @@ cache. NGINX is renowned for its stability, high performance, security, and rich
 critical infrastructure tool. Notably, once properly configured and operational, NGINX requires minimal attention,
 making it reliable and "boring" software.
 
-Likewise, the goal for the NGINX Kubernetes Gateway is to embody the same qualities as NGINX and be regarded as "boring"
+The NGINX Kubernetes Gateway aims to embody the same qualities as NGINX and become familiar, trustworthy and reliable
 software. The principles outlined below serve as a guide for engineering the NGINX Kubernetes Gateway with the intention
 of achieving this goal.
 
