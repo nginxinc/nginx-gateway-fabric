@@ -6,7 +6,7 @@ audience includes the following groups:
 * *Cluster Operators* who would like to know how the software works and also better understand how it can fail.
 * *Developers* who would like to [contribute][contribute] to the project.
 
-We assume that the reader is familiar with core Kubernetes concepts, such as Pod, Deployment, Service, and Endpoints.
+We assume that the reader is familiar with core Kubernetes concepts, such as Pods, Deployments, Services, and Endpoints.
 Additionally, we recommend reading [this blog post][blog] for an overview of the NGINX architecture.
 
 [contribute]: https://github.com/nginxinc/nginx-kubernetes-gateway/blob/main/CONTRIBUTING.md
