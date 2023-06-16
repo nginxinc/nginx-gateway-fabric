@@ -9,6 +9,8 @@ For a list of supported Gateway API resources and features, see the [Gateway API
 > Warning: This project is actively in development (beta feature state) and should not be deployed in a production environment.
 > All APIs, SDKs, designs, and packages are subject to change.
 
+Learn about our [design principles](/docs/developer/design-principles.md) and [architecture](/docs/architecture.md). 
+
 ## Getting Started
 
 1. [Quick Start on a kind cluster](docs/running-on-kind.md).
