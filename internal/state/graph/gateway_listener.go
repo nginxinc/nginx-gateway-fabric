@@ -10,7 +10,6 @@ import (
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/conditions"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/secrets"
 )
 
 // Listener represents a Listener of the Gateway resource.
@@ -23,22 +22,21 @@ type Listener struct {
 	Routes map[types.NamespacedName]*Route
 	// AllowedRouteLabelSelector is the label selector for this Listener's allowed routes, if defined.
 	AllowedRouteLabelSelector labels.Selector
-	// SecretPath is the path to the secret on disk.
-	SecretPath string
 	// Conditions holds the conditions of the Listener.
 	Conditions []conditions.Condition
 	// Valid shows whether the Listener is valid.
 	// A Listener is considered valid if NKG can generate valid NGINX configuration for it.
-	Valid bool
+	Valid     bool
+	SecretRef types.NamespacedName
 }
 
 func buildListeners(
 	gw *v1beta1.Gateway,
-	secretMemoryMgr secrets.SecretDiskMemoryManager,
+	secretResolver *secretResolver,
 ) map[string]*Listener {
 	listeners := make(map[string]*Listener)
 
-	listenerFactory := newListenerConfiguratorFactory(gw, secretMemoryMgr)
+	listenerFactory := newListenerConfiguratorFactory(gw, secretResolver)
 
 	for _, gl := range gw.Spec.Listeners {
 		configurator := listenerFactory.getConfiguratorForListener(gl)
@@ -65,7 +63,7 @@ func (f *listenerConfiguratorFactory) getConfiguratorForListener(l v1beta1.Liste
 
 func newListenerConfiguratorFactory(
 	gw *v1beta1.Gateway,
-	secretMemoryMgr secrets.SecretDiskMemoryManager,
+	secretResolver *secretResolver,
 ) *listenerConfiguratorFactory {
 	return &listenerConfiguratorFactory{
 		unsupportedProtocol: &listenerConfigurator{
@@ -102,7 +100,7 @@ func newListenerConfiguratorFactory(
 				createHostnameConflictResolver(),
 			},
 			externalReferenceResolvers: []listenerExternalReferenceResolver{
-				createExternalReferencesForTLSSecretsResolver(gw.Namespace, secretMemoryMgr),
+				createExternalReferencesForTLSSecretsResolver(gw.Namespace, secretResolver),
 			},
 		},
 	}
@@ -351,7 +349,7 @@ func createHostnameConflictResolver() listenerConflictResolver {
 
 func createExternalReferencesForTLSSecretsResolver(
 	gwNs string,
-	secretMemoryMgr secrets.SecretDiskMemoryManager,
+	secretResolver *secretResolver,
 ) listenerExternalReferenceResolver {
 	return func(l *Listener) {
 		nsname := types.NamespacedName{
@@ -361,7 +359,7 @@ func createExternalReferencesForTLSSecretsResolver(
 
 		var err error
 
-		l.SecretPath, err = secretMemoryMgr.Request(nsname)
+		err = secretResolver.Resolve(nsname)
 		if err != nil {
 			path := field.NewPath("tls", "certificateRefs").Index(0)
 			// field.NotFound could be better, but it doesn't allow us to set the error message.
@@ -369,6 +367,8 @@ func createExternalReferencesForTLSSecretsResolver(
 
 			l.Conditions = append(l.Conditions, conditions.NewListenerInvalidCertificateRef(valErr.Error())...)
 			l.Valid = false
+		} else {
+			l.SecretRef = nsname
 		}
 	}
 }

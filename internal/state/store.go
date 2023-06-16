@@ -114,6 +114,8 @@ type changeTrackingUpdaterObjectTypeCfg struct {
 	trackUpsertDelete bool
 }
 
+type isRelevantFunc func(objType client.Object, nsname types.NamespacedName) bool
+
 // changeTrackingUpdater is an Updater that tracks changes to the cluster state in the multiObjectStore.
 //
 // It only works with objects with the GVKs registered in changeTrackingUpdaterObjectTypeCfg. Otherwise, it panics.
@@ -124,8 +126,9 @@ type changeTrackingUpdaterObjectTypeCfg struct {
 // - An object is upserted or deleted, and it is related to another object, based on the decision by
 // the relationship capturer.
 type changeTrackingUpdater struct {
-	store    *multiObjectStore
-	capturer relationship.Capturer
+	store      *multiObjectStore
+	capturer   relationship.Capturer
+	isRelevant isRelevantFunc
 
 	extractGVK              extractGVKFunc
 	supportedGVKs           gvkList
@@ -137,6 +140,7 @@ type changeTrackingUpdater struct {
 
 func newChangeTrackingUpdater(
 	capturer relationship.Capturer,
+	isRelevant isRelevantFunc,
 	extractGVK extractGVKFunc,
 	objectTypeCfgs []changeTrackingUpdaterObjectTypeCfg,
 ) *changeTrackingUpdater {
@@ -168,6 +172,7 @@ func newChangeTrackingUpdater(
 		trackedUpsertDeleteGVKs: trackedUpsertDeleteGVKs,
 		persistedGVKs:           persistedGVKs,
 		capturer:                capturer,
+		isRelevant:              isRelevant,
 	}
 }
 
@@ -196,13 +201,19 @@ func (s *changeTrackingUpdater) Upsert(obj client.Object) {
 	s.assertSupportedGVK(s.extractGVK(obj))
 
 	changingUpsert := s.upsert(obj)
+	// We can refactor and get rid of the Capturer completely in favour of the isRelevant function.
+	// isRelevant function uses Graph as a source of the relationship.
+	// The Capturer builds the relationships separately in the graph. As a result, we have two sources of truth,
+	// which is not good.
 	relationshipExisted := s.capturer.Exists(obj, client.ObjectKeyFromObject(obj))
 
 	s.capturer.Capture(obj)
 
 	relationshipExists := s.capturer.Exists(obj, client.ObjectKeyFromObject(obj))
 
-	s.changed = s.changed || changingUpsert || relationshipExisted || relationshipExists
+	relevant := s.isRelevant(obj, client.ObjectKeyFromObject(obj))
+
+	s.changed = s.changed || changingUpsert || relationshipExisted || relationshipExists || relevant
 }
 
 func (s *changeTrackingUpdater) delete(objType client.Object, nsname types.NamespacedName) (changed bool) {
@@ -226,7 +237,9 @@ func (s *changeTrackingUpdater) Delete(objType client.Object, nsname types.Names
 
 	changingDelete := s.delete(objType, nsname)
 
-	s.changed = s.changed || changingDelete || s.capturer.Exists(objType, nsname)
+	relevant := s.isRelevant(objType, nsname)
+
+	s.changed = s.changed || changingDelete || s.capturer.Exists(objType, nsname) || relevant
 
 	s.capturer.Remove(objType, nsname)
 }

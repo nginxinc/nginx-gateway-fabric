@@ -29,7 +29,6 @@ import (
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/relationship"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/resolver"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/secrets"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/validation"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/status"
 )
@@ -129,16 +128,12 @@ func Start(cfg config.Config) error {
 		}
 	}
 
-	secretStore := secrets.NewSecretStore()
-	secretMemoryMgr := secrets.NewSecretDiskMemoryManager(secretsFolder, secretStore)
-
 	recorderName := fmt.Sprintf("nginx-kubernetes-gateway-%s", cfg.GatewayClassName)
 	recorder := mgr.GetEventRecorderFor(recorderName)
 
 	processor := state.NewChangeProcessorImpl(state.ChangeProcessorConfig{
 		GatewayCtlrName:      cfg.GatewayCtlrName,
 		GatewayClassName:     cfg.GatewayClassName,
-		SecretMemoryManager:  secretMemoryMgr,
 		RelationshipCapturer: relationship.NewCapturerImpl(),
 		Logger:               cfg.Logger.WithName("changeProcessor"),
 		Validators: validation.Validators{
@@ -162,15 +157,13 @@ func Start(cfg config.Config) error {
 	})
 
 	eventHandler := events.NewEventHandlerImpl(events.EventHandlerConfig{
-		Processor:           processor,
-		SecretStore:         secretStore,
-		SecretMemoryManager: secretMemoryMgr,
-		ServiceResolver:     resolver.NewServiceResolverImpl(mgr.GetClient()),
-		Generator:           configGenerator,
-		Logger:              cfg.Logger.WithName("eventHandler"),
-		NginxFileMgr:        nginxFileMgr,
-		NginxRuntimeMgr:     nginxRuntimeMgr,
-		StatusUpdater:       statusUpdater,
+		Processor:       processor,
+		ServiceResolver: resolver.NewServiceResolverImpl(mgr.GetClient()),
+		Generator:       configGenerator,
+		Logger:          cfg.Logger.WithName("eventHandler"),
+		NginxFileMgr:    nginxFileMgr,
+		NginxRuntimeMgr: nginxRuntimeMgr,
+		StatusUpdater:   statusUpdater,
 	})
 
 	objects, objectLists := prepareFirstEventBatchPreparerArgs(cfg.GatewayClassName, cfg.GatewayNsName)

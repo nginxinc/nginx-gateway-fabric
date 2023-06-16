@@ -3,9 +3,9 @@ package graph
 import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/secrets"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/validation"
 )
 
@@ -16,6 +16,7 @@ type ClusterState struct {
 	HTTPRoutes     map[types.NamespacedName]*v1beta1.HTTPRoute
 	Services       map[types.NamespacedName]*v1.Service
 	Namespaces     map[types.NamespacedName]*v1.Namespace
+	Secrets        map[types.NamespacedName]*v1.Secret
 }
 
 // Graph is a Graph-like representation of Gateway API resources.
@@ -30,6 +31,21 @@ type Graph struct {
 	IgnoredGateways map[types.NamespacedName]*v1beta1.Gateway
 	// Routes holds Route resources.
 	Routes map[types.NamespacedName]*Route
+	// Secrets includes Secrets used by the Gateway. The Secret might not exist in the API, but it will be
+	// present in the Secrets if a Gateway listener references it.
+	Secrets map[types.NamespacedName]*Secret
+}
+
+// IncludesResource returns true if the Graph includes the resource.
+func (g *Graph) IncludesResource(objType client.Object, nsname types.NamespacedName) bool {
+	// only works for Secrets for now, but we can add more types later to reduce the number of reloads.
+	_, ok := objType.(*v1.Secret)
+	if !ok {
+		return false
+	}
+
+	_, exists := g.Secrets[nsname]
+	return exists
 }
 
 // BuildGraph builds a Graph from a state.
@@ -37,7 +53,6 @@ func BuildGraph(
 	state ClusterState,
 	controllerName string,
 	gcName string,
-	secretMemoryMgr secrets.SecretDiskMemoryManager,
 	validators validation.Validators,
 ) *Graph {
 	gatewayClass := state.GatewayClasses[types.NamespacedName{Name: gcName}]
@@ -50,7 +65,9 @@ func BuildGraph(
 
 	processedGws := processGateways(state.Gateways, gcName)
 
-	gw := buildGateway(processedGws.Winner, secretMemoryMgr, gc)
+	secretResolver := newSecretResolver(state.Secrets)
+
+	gw := buildGateway(processedGws.Winner, secretResolver, gc)
 
 	routes := buildRoutesForGateways(validators.HTTPFieldsValidator, state.HTTPRoutes, processedGws.GetAllNsNames())
 	bindRoutesToListeners(routes, gw, state.Namespaces)
@@ -61,6 +78,7 @@ func BuildGraph(
 		Gateway:         gw,
 		Routes:          routes,
 		IgnoredGateways: processedGws.Ignored,
+		Secrets:         secretResolver.ResolvedSecrets(),
 	}
 
 	return g

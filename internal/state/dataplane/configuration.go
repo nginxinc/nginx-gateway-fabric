@@ -32,6 +32,13 @@ type Configuration struct {
 	Upstreams []Upstream
 	// BackendGroups holds all unique BackendGroups.
 	BackendGroups []BackendGroup
+	TLSCerts      map[TLSCertID]TLSCert
+}
+
+type TLSCertID string
+
+type TLSCert struct {
+	Cert, Key []byte
 }
 
 // VirtualServer is a virtual server.
@@ -56,8 +63,7 @@ type Upstream struct {
 }
 
 type SSL struct {
-	// CertificatePath is the path to the certificate file.
-	CertificatePath string
+	TLSCertID TLSCertID
 }
 
 // PathRule represents routing rules that share a common path.
@@ -146,11 +152,25 @@ func BuildConfiguration(ctx context.Context, g *graph.Graph, resolver resolver.S
 	httpServers, sslServers := buildServers(g.Gateway.Listeners)
 	backendGroups := buildBackendGroups(append(httpServers, sslServers...))
 
+	certs := make(map[TLSCertID]TLSCert)
+	for _, s := range g.Secrets {
+		if !s.Valid {
+			continue
+		}
+
+		id := fmt.Sprintf("tls_cert_%s_%s", s.Source.Namespace, s.Source.Name)
+		certs[TLSCertID(id)] = TLSCert{
+			Cert: s.Source.Data["tls.crt"],
+			Key:  s.Source.Data["tls.key"],
+		}
+	}
+
 	config := Configuration{
 		HTTPServers:   httpServers,
 		SSLServers:    sslServers,
 		Upstreams:     upstreams,
 		BackendGroups: backendGroups,
+		TLSCerts:      certs,
 	}
 
 	return config
@@ -343,8 +363,10 @@ func (hpr *hostPathRules) buildServers() []VirtualServer {
 			panic(fmt.Sprintf("no listener found for hostname: %s", h))
 		}
 
-		if l.SecretPath != "" {
-			s.SSL = &SSL{CertificatePath: l.SecretPath}
+		if (l.SecretRef != types.NamespacedName{}) {
+			s.SSL = &SSL{
+				TLSCertID: TLSCertID(fmt.Sprintf("tls_cert_%s_%s", l.SecretRef.Namespace, l.SecretRef.Name)),
+			}
 		}
 
 		for _, r := range rules {
@@ -374,8 +396,10 @@ func (hpr *hostPathRules) buildServers() []VirtualServer {
 				Hostname: hostname,
 			}
 
-			if l.SecretPath != "" {
-				s.SSL = &SSL{CertificatePath: l.SecretPath}
+			if (l.SecretRef != types.NamespacedName{}) {
+				s.SSL = &SSL{
+					TLSCertID: TLSCertID(fmt.Sprintf("tls_cert_%s_%s", l.SecretRef.Namespace, l.SecretRef.Name)),
+				}
 			}
 
 			servers = append(servers, s)
