@@ -426,11 +426,11 @@ func (hpr *hostPathRules) buildServers() []VirtualServer {
 }
 
 // maxServerCount returns the maximum number of VirtualServers that can be built from the host path rules.
-// to calculate max # of servers we add up:
-// - # of hostnames
-// - # of https listeners - this is to account for https wildcard default servers
-// - default server - for every hostPathRules we generate 1 default server.
 func (hpr *hostPathRules) maxServerCount() int {
+	// to calculate max # of servers we add up:
+	// - # of hostnames
+	// - # of https listeners - this is to account for https wildcard default servers
+	// - default server - for every hostPathRules we generate 1 default server
 	return len(hpr.rulesPerHost) + len(hpr.httpsListeners) + 1
 }
 
