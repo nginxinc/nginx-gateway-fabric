@@ -86,12 +86,12 @@ Fields:
       * `Accepted/True/Accepted`
       * `Accepted/False/UnsupportedProtocol`
       * `Accepted/False/InvalidCertificateRef`
-      * `Accepted/False/HostnameConflict`
+      * `Accepted/False/ProtocolConflict`
       * `Accepted/False/UnsupportedValue`: Custom reason for when a value of a field in a Listener is invalid or not supported.
       * `Accepted/False/GatewayConflict`: Custom reason for when the Gateway is ignored due to a conflicting Gateway. NKG only supports a single Gateway.
       * `ResolvedRefs/True/ResolvedRefs`
       * `ResolvedRefs/False/InvalidCertificateRef`
-      * `Conflicted/True/HostnameConflict`
+      * `Conflicted/True/ProtocolConflict`
       * `Conflicted/False/NoConflicts`
 
 ### HTTPRoute

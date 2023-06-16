@@ -68,7 +68,7 @@ func newListenerConfiguratorFactory(
 	gw *v1beta1.Gateway,
 	secretMemoryMgr secrets.SecretDiskMemoryManager,
 ) *listenerConfiguratorFactory {
-	sharedHostnameConflictResolver := createHostnameConflictResolver()
+	sharedPortConflictResolver := createPortConflictResolver()
 
 	return &listenerConfiguratorFactory{
 		unsupportedProtocol: &listenerConfigurator{
@@ -91,7 +91,7 @@ func newListenerConfiguratorFactory(
 				validateHTTPListener,
 			},
 			conflictResolvers: []listenerConflictResolver{
-				sharedHostnameConflictResolver,
+				sharedPortConflictResolver,
 			},
 		},
 		https: &listenerConfigurator{
@@ -102,7 +102,7 @@ func newListenerConfiguratorFactory(
 				createHTTPSListenerValidator(gw.Namespace),
 			},
 			conflictResolvers: []listenerConflictResolver{
-				sharedHostnameConflictResolver,
+				sharedPortConflictResolver,
 			},
 			externalReferenceResolvers: []listenerExternalReferenceResolver{
 				createExternalReferencesForTLSSecretsResolver(gw.Namespace, secretMemoryMgr),
@@ -335,31 +335,47 @@ func createHTTPSListenerValidator(gwNsName string) listenerValidator {
 	}
 }
 
-func createHostnameConflictResolver() listenerConflictResolver {
-	usedHostnamesByPort := make(map[v1beta1.PortNumber]map[string]*Listener)
+func createPortConflictResolver() listenerConflictResolver {
+	conflictedPorts := make(map[v1beta1.PortNumber]bool)
+	portProtocolOwner := make(map[v1beta1.PortNumber]v1beta1.ProtocolType)
+	listenersByPort := make(map[v1beta1.PortNumber][]*Listener)
+
+	format := "Multiple listeners for the same port %d specify different protocols; " +
+		"ensure only one protocol per port"
 
 	return func(l *Listener) {
 		port := l.Source.Port
-		h := getHostname(l.Source.Hostname)
 
-		if listenersForPort, portExists := usedHostnamesByPort[port]; portExists {
-			if holder, holderExists := listenersForPort[h]; holderExists {
-				l.Valid = false
-				holder.Valid = false // all listeners for the same hostname/port become conflicted
+		// if port is in map of conflictedPorts then we only need to set the current listener to invalid
+		if conflictedPorts[port] {
+			l.Valid = false
 
-				format := "Multiple listeners for the same port use the same hostname %q; " +
-					"ensure only one listener uses that hostname"
-				conflictedConds := conditions.NewListenerConflictedHostname(fmt.Sprintf(format, h))
-				holder.Conditions = append(holder.Conditions, conflictedConds...)
-				l.Conditions = append(l.Conditions, conflictedConds...)
-			}
-
-			usedHostnamesByPort[port][h] = l
-
+			conflictedConds := conditions.NewListenerProtocolConflict(fmt.Sprintf(format, port))
+			l.Conditions = append(l.Conditions, conflictedConds...)
 			return
 		}
 
-		usedHostnamesByPort[port] = map[string]*Listener{h: l}
+		// otherwise, we add the listener to the list of listeners for this port
+		// and then check if the protocol owner for the port is different from the current listener's protocol.
+
+		listenersByPort[port] = append(listenersByPort[port], l)
+
+		protocol, ok := portProtocolOwner[port]
+		if !ok {
+			portProtocolOwner[port] = l.Source.Protocol
+			return
+		}
+
+		// if protocol owner doesn't match the listener's protocol we mark the port as conflicted,
+		// and invalidate all listeners we've seen for this port.
+		if protocol != l.Source.Protocol {
+			conflictedPorts[port] = true
+			for _, l := range listenersByPort[port] {
+				l.Valid = false
+				conflictedConds := conditions.NewListenerProtocolConflict(fmt.Sprintf(format, port))
+				l.Conditions = append(l.Conditions, conflictedConds...)
+			}
+		}
 	}
 }
 

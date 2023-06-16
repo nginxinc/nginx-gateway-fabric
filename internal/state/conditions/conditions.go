@@ -317,19 +317,20 @@ func NewListenerInvalidCertificateRef(msg string) []Condition {
 	}
 }
 
-// NewListenerConflictedHostname returns Conditions that indicate that a hostname of a Listener is conflicted.
-func NewListenerConflictedHostname(msg string) []Condition {
+// NewListenerProtocolConflict returns Conditions that indicate multiple Listeners are specified with the same
+// Listener port number, but have conflicting protocol specifications.
+func NewListenerProtocolConflict(msg string) []Condition {
 	return []Condition{
 		{
 			Type:    string(v1beta1.ListenerConditionAccepted),
 			Status:  metav1.ConditionFalse,
-			Reason:  string(v1beta1.ListenerReasonHostnameConflict),
+			Reason:  string(v1beta1.ListenerReasonProtocolConflict),
 			Message: msg,
 		},
 		{
 			Type:    string(v1beta1.ListenerConditionConflicted),
 			Status:  metav1.ConditionTrue,
-			Reason:  string(v1beta1.ListenerReasonHostnameConflict),
+			Reason:  string(v1beta1.ListenerReasonProtocolConflict),
 			Message: msg,
 		},
 	}
