@@ -1,12 +1,12 @@
 # Design Principles
 
 The aim of the NGINX Kubernetes Gateway is to become a fundamental infrastructure component within a Kubernetes cluster,
-serving as both an ingress and egress point for traffic directed towards the services (applications) running
-within or outside the cluster. Leveraging NGINX as a data plane technology, it harnesses the well-established reputation
-of NGINX as an open-source project widely recognized for its role as a web server, proxy, load balancer, and content
-cache. NGINX is renowned for its stability, high performance, security, and rich feature set, positioning it as a
-critical infrastructure tool. Notably, once properly configured and operational, NGINX requires minimal attention,
-making it reliable and "boring" software.
+serving as both an ingress and egress point for traffic directed towards the services (applications) running within or
+outside the cluster. Leveraging NGINX as a data plane technology, it harnesses the well-established reputation of NGINX
+as an open-source project widely recognized for its role as a web server, proxy, load balancer, and content cache. NGINX
+is renowned for its stability, high performance, security, and rich feature set, positioning it as a critical
+infrastructure tool. Notably, once properly configured and operational, NGINX requires minimal attention, making it
+reliable and steady software.
 
 The NGINX Kubernetes Gateway aims to embody the same qualities as NGINX and become familiar, trustworthy and reliable
 software. The principles outlined below serve as a guide for engineering the NGINX Kubernetes Gateway with the intention
@@ -41,9 +41,9 @@ policies.
 
 ## Observability
 
-We provide comprehensive logging, metrics, and tracing capabilities to gain insights into our behavior and
-performance. We prioritize Kubernetes-native observability tools like Prometheus, Grafana, and distributed
-tracing systems to help users monitor the health of NGINX Kubernetes Gateway and to assist in diagnosing issues.
+We provide comprehensive logging, metrics, and tracing capabilities to gain insights into our behavior and performance.
+We prioritize Kubernetes-native observability tools like Prometheus, Grafana, and distributed tracing systems to help
+users monitor the health of NGINX Kubernetes Gateway and to assist in diagnosing issues.
 
 ## Ease of Use
 
