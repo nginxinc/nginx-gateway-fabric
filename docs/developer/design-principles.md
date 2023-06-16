@@ -1,6 +1,6 @@
 # Design Principles
 
-The aim of NGINX Kubernetes Gateway is to become a fundamental infrastructure component within a Kubernetes cluster,
+The aim of the NGINX Kubernetes Gateway is to become a fundamental infrastructure component within a Kubernetes cluster,
 serving as both an ingress and egress point for traffic directed towards the services (applications) running either
 within or outside the cluster. Leveraging NGINX as a data plane technology, it harnesses the well-established reputation
 of NGINX as an open-source project widely recognized for its role as a web server, proxy, load balancer, and content
