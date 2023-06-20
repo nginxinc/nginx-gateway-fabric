@@ -340,7 +340,7 @@ func createPortConflictResolver() listenerConflictResolver {
 	portProtocolOwner := make(map[v1beta1.PortNumber]v1beta1.ProtocolType)
 	listenersByPort := make(map[v1beta1.PortNumber][]*Listener)
 
-	format := "Multiple listeners for the same port %d specify different protocols; " +
+	format := "Multiple listeners for the same port %d specify incompatible protocols; " +
 		"ensure only one protocol per port"
 
 	return func(l *Listener) {

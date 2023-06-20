@@ -253,10 +253,10 @@ func TestBuildGateway(t *testing.T) {
 			"with an alphanumeric character (e.g. 'example.com', regex used for validation is " +
 			`'[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*')`
 
-		conflict80PortMsg = "Multiple listeners for the same port 80 specify different protocols; " +
+		conflict80PortMsg = "Multiple listeners for the same port 80 specify incompatible protocols; " +
 			"ensure only one protocol per port"
 
-		conflict443PortMsg = "Multiple listeners for the same port 443 specify different protocols; " +
+		conflict443PortMsg = "Multiple listeners for the same port 443 specify incompatible protocols; " +
 			"ensure only one protocol per port"
 
 		secretPath = "/etc/nginx/secrets/test_secret"
