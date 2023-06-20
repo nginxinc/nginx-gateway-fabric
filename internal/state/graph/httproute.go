@@ -3,6 +3,7 @@ package graph
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -405,18 +406,29 @@ func findAcceptedHostnames(listenerHostname *v1beta1.Hostname, routeHostnames []
 		if hostname == "" {
 			return true
 		}
-		return string(h) == hostname
+
+		routeHost := string(h)
+		return routeHost == hostname || wildcardMatch(hostname, routeHost) || wildcardMatch(routeHost, hostname)
 	}
 
 	var result []string
 
 	for _, h := range routeHostnames {
 		if match(h) {
-			result = append(result, string(h))
+			if len(hostname) > len(h) {
+				result = append(result, hostname)
+			} else {
+				result = append(result, string(h))
+			}
 		}
 	}
 
 	return result
+}
+
+// wildcardMatch checks if host1 is a wildcard host, and if so, checks if host2 is a match for that wildcard.
+func wildcardMatch(host1, host2 string) bool {
+	return strings.HasPrefix(host1, "*.") && strings.HasSuffix(host2, strings.TrimPrefix(host1, "*"))
 }
 
 func routeAllowedByListener(

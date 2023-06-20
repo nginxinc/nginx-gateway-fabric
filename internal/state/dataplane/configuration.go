@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"sort"
+	"strings"
 
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
@@ -567,20 +568,9 @@ func convertPathType(pathType v1beta1.PathMatchType) PathType {
 	}
 }
 
-// listenerHostnameMoreSpecific returns true if host1 is more specific than host2 (using length).
+// listenerHostnameMoreSpecific returns true if host1 is more specific than host2.
 //
-// Since the only caller of this function specifies listener hostnames that are both
-// bound to the same route hostname, this function assumes that host1 and host2 match, either
-// exactly or as a substring.
-//
-// For example:
-// - foo.example.com and "" (host1 wins)
-// Non-example:
-// - foo.example.com and bar.example.com (should not be given to this function)
-//
-// As we add regex support, we should put in the proper
-// validation and error handling for this function to ensure that the hostnames are actually matching,
-// to avoid the unintended inputs above for the invalid case.
+// This function assumes that host1 and host2 match, either exactly or as a substring.
 func listenerHostnameMoreSpecific(host1, host2 *v1beta1.Hostname) bool {
 	var host1Str, host2Str string
 	if host1 != nil {
@@ -589,6 +579,16 @@ func listenerHostnameMoreSpecific(host1, host2 *v1beta1.Hostname) bool {
 
 	if host2 != nil {
 		host2Str = string(*host2)
+	}
+
+	host1Segments := len(strings.Split(host1Str, "."))
+	host2Segments := len(strings.Split(host2Str, "."))
+	if host1Segments > host2Segments {
+		return true
+	}
+
+	if host2Segments > host1Segments {
+		return false
 	}
 
 	return len(host1Str) >= len(host2Str)

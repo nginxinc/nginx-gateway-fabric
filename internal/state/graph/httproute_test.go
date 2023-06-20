@@ -1217,6 +1217,7 @@ func TestBindRouteToListeners(t *testing.T) {
 func TestFindAcceptedHostnames(t *testing.T) {
 	var listenerHostnameFoo v1beta1.Hostname = "foo.example.com"
 	var listenerHostnameCafe v1beta1.Hostname = "cafe.example.com"
+	var listenerHostnameWildcard v1beta1.Hostname = "*.example.com"
 	routeHostnames := []v1beta1.Hostname{"foo.example.com", "bar.example.com"}
 
 	tests := []struct {
@@ -1254,6 +1255,30 @@ func TestFindAcceptedHostnames(t *testing.T) {
 			routeHostnames:   nil,
 			expected:         []string{wildcardHostname},
 			msg:              "both listener and route have empty hostnames",
+		},
+		{
+			listenerHostname: &listenerHostnameWildcard,
+			routeHostnames:   routeHostnames,
+			expected:         []string{"foo.example.com", "bar.example.com"},
+			msg:              "listener wildcard hostname",
+		},
+		{
+			listenerHostname: &listenerHostnameFoo,
+			routeHostnames:   []v1beta1.Hostname{"*.example.com"},
+			expected:         []string{"foo.example.com"},
+			msg:              "route wildcard hostname; specific listener hostname",
+		},
+		{
+			listenerHostname: &listenerHostnameWildcard,
+			routeHostnames:   nil,
+			expected:         []string{"*.example.com"},
+			msg:              "listener wildcard hostname; nil route hostname",
+		},
+		{
+			listenerHostname: nil,
+			routeHostnames:   []v1beta1.Hostname{"*.example.com"},
+			expected:         []string{"*.example.com"},
+			msg:              "route wildcard hostname; nil listener hostname",
 		},
 	}
 

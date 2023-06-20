@@ -2029,15 +2029,29 @@ func TestHostnameMoreSpecific(t *testing.T) {
 			msg:       "host1 has value; host2 empty",
 		},
 		{
-			host1:     helpers.GetPointer(v1beta1.Hostname("example.com")),
+			host1:     helpers.GetPointer(v1beta1.Hostname("foo.bar.example.com")),
 			host2:     helpers.GetPointer(v1beta1.Hostname("foo.example.com")),
+			host1Wins: true,
+			msg:       "host1 has more segments than host2",
+		},
+		{
+			host1:     helpers.GetPointer(v1beta1.Hostname("somelongname.example.com")),
+			host2:     helpers.GetPointer(v1beta1.Hostname("foo.bar.example.com")),
+			host1Wins: false,
+			msg:       "host2 has more segments than host1",
+		},
+		{
+			host1:     helpers.GetPointer(v1beta1.Hostname("example.com")),
+			host2:     helpers.GetPointer(v1beta1.Hostname("longerexample.com")),
 			host1Wins: false,
 			msg:       "host2 longer than host1",
 		},
 	}
 
 	for _, tc := range tests {
-		g.Expect(listenerHostnameMoreSpecific(tc.host1, tc.host2)).To(Equal(tc.host1Wins), tc.msg)
+		t.Run(tc.msg, func(t *testing.T) {
+			g.Expect(listenerHostnameMoreSpecific(tc.host1, tc.host2)).To(Equal(tc.host1Wins))
+		})
 	}
 }
 

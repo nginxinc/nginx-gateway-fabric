@@ -24,7 +24,7 @@ func TestValidateHostname(t *testing.T) {
 		},
 		{
 			hostname:  "*.example.com",
-			expectErr: true,
+			expectErr: false,
 			name:      "wildcard hostname",
 		},
 		{
