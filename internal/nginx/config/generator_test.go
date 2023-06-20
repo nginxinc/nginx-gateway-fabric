@@ -1,9 +1,9 @@
 package config_test
 
 import (
-	"strings"
 	"testing"
 
+	. "github.com/onsi/gomega"
 	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/config"
@@ -26,20 +26,24 @@ func TestGenerate(t *testing.T) {
 		HTTPServers: []dataplane.VirtualServer{
 			{
 				IsDefault: true,
+				Port:      80,
 			},
 			{
 				Hostname: "example.com",
+				Port:     80,
 			},
 		},
 		SSLServers: []dataplane.VirtualServer{
 			{
 				IsDefault: true,
+				Port:      443,
 			},
 			{
 				Hostname: "example.com",
 				SSL: &dataplane.SSL{
 					CertificatePath: "/etc/nginx/secrets/default",
 				},
+				Port: 443,
 			},
 		},
 		Upstreams: []dataplane.Upstream{
@@ -50,22 +54,13 @@ func TestGenerate(t *testing.T) {
 		},
 		BackendGroups: []dataplane.BackendGroup{bg},
 	}
+	g := NewGomegaWithT(t)
+
 	generator := config.NewGeneratorImpl()
 	cfg := string(generator.Generate(conf))
 
-	if !strings.Contains(cfg, "listen 80") {
-		t.Errorf("Generate() did not generate a config with a default HTTP server; config: %s", cfg)
-	}
-
-	if !strings.Contains(cfg, "listen 443") {
-		t.Errorf("Generate() did not generate a config with an SSL server; config: %s", cfg)
-	}
-
-	if !strings.Contains(cfg, "upstream") {
-		t.Errorf("Generate() did not generate a config with an upstream block; config: %s", cfg)
-	}
-
-	if !strings.Contains(cfg, "split_clients") {
-		t.Errorf("Generate() did not generate a config with an split_clients block; config: %s", cfg)
-	}
+	g.Expect(cfg).To(ContainSubstring("listen 80"))
+	g.Expect(cfg).To(ContainSubstring("listen 443"))
+	g.Expect(cfg).To(ContainSubstring("upstream"))
+	g.Expect(cfg).To(ContainSubstring("split_clients"))
 }

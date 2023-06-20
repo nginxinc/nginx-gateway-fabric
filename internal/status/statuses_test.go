@@ -405,7 +405,7 @@ func TestBuildGatewayStatuses(t *testing.T) {
 					"listener-invalid-1": {
 						Valid: false,
 						Conditions: []conditions.Condition{
-							conditions.NewListenerPortUnavailable("port unavailable"),
+							conditions.NewListenerUnsupportedProtocol("unsupported protocol"),
 						},
 					},
 					"listener-invalid-2": {
@@ -423,7 +423,7 @@ func TestBuildGatewayStatuses(t *testing.T) {
 					ListenerStatuses: map[string]ListenerStatus{
 						"listener-invalid-1": {
 							Conditions: []conditions.Condition{
-								conditions.NewListenerPortUnavailable("port unavailable"),
+								conditions.NewListenerUnsupportedProtocol("unsupported protocol"),
 							},
 						},
 						"listener-invalid-2": {

@@ -71,6 +71,11 @@ This guide walks you through how to install NGINX Kubernetes Gateway on a generi
 
 You can gain access to NGINX Kubernetes Gateway by creating a `NodePort` Service or a `LoadBalancer` Service.
 
+> Important
+> 
+> The Service manifests expose NGINX Kubernetes Gateway on ports 80 and 443, which exposes any Gateway [Listener](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.Listener) configured for those ports. If you'd like to use different ports in your listeners,
+> update the manifests accordingly. 
+
 ### Create a NodePort Service
 
 Create a Service with type `NodePort`:

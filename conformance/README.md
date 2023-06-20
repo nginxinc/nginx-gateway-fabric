@@ -13,13 +13,14 @@ List available commands:
 ```bash
 $ make
 
-build-test-image               Build conformance test image
+build-test-runner-image        Build conformance test runner image
 create-kind-cluster            Create a kind cluster
 delete-kind-cluster            Delete kind cluster
 help                           Display this help
-install-nkg                    Install NKG on configured kind cluster
+install-nkg                    Install NKG with provisioner on configured kind cluster
+prepare-nkg                    Build and load NKG container on configured kind cluster
 run-conformance-tests          Run conformance tests
-uninstall-nkg                  Uninstall NKG from configured kind cluster
+uninstall-nkg                  Uninstall NKG on configured kind cluster
 update-test-kind-config        Update kind config
 ```
 ### Step 1 - Create a kind Cluster

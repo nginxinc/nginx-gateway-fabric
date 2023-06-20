@@ -1590,6 +1590,16 @@ var _ = Describe("ChangeProcessor", func() {
 						}
 					}),
 				),
+				Entry("listener hostnames conflict",
+					createInvalidGateway(func(gw *v1beta1.Gateway) {
+						gw.Spec.Listeners = append(gw.Spec.Listeners, v1beta1.Listener{
+							Name:     "listener-80-2",
+							Hostname: nil,
+							Port:     80,
+							Protocol: v1beta1.HTTPProtocolType,
+						})
+					}),
+				),
 			)
 		})
 	})

@@ -7,6 +7,7 @@ type Server struct {
 	Locations     []Location
 	IsDefaultHTTP bool
 	IsDefaultSSL  bool
+	Port          int32
 }
 
 // Location holds all configuration for an HTTP location.

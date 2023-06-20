@@ -1,6 +1,7 @@
 package graph
 
 import (
+	"errors"
 	"fmt"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -67,6 +68,8 @@ func newListenerConfiguratorFactory(
 	gw *v1beta1.Gateway,
 	secretMemoryMgr secrets.SecretDiskMemoryManager,
 ) *listenerConfiguratorFactory {
+	sharedPortConflictResolver := createPortConflictResolver()
+
 	return &listenerConfiguratorFactory{
 		unsupportedProtocol: &listenerConfigurator{
 			validators: []listenerValidator{
@@ -88,7 +91,7 @@ func newListenerConfiguratorFactory(
 				validateHTTPListener,
 			},
 			conflictResolvers: []listenerConflictResolver{
-				createHostnameConflictResolver(),
+				sharedPortConflictResolver,
 			},
 		},
 		https: &listenerConfigurator{
@@ -99,7 +102,7 @@ func newListenerConfiguratorFactory(
 				createHTTPSListenerValidator(gw.Namespace),
 			},
 			conflictResolvers: []listenerConflictResolver{
-				createHostnameConflictResolver(),
+				sharedPortConflictResolver,
 			},
 			externalReferenceResolvers: []listenerExternalReferenceResolver{
 				createExternalReferencesForTLSSecretsResolver(gw.Namespace, secretMemoryMgr),
@@ -241,10 +244,10 @@ func validateListenerLabelSelector(listener v1beta1.Listener) []conditions.Condi
 }
 
 func validateHTTPListener(listener v1beta1.Listener) []conditions.Condition {
-	if listener.Port != 80 {
+	if err := validateListenerPort(listener.Port); err != nil {
 		path := field.NewPath("port")
-		valErr := field.NotSupported(path, listener.Port, []string{"80"})
-		return []conditions.Condition{conditions.NewListenerPortUnavailable(valErr.Error())}
+		valErr := field.Invalid(path, listener.Port, err.Error())
+		return []conditions.Condition{conditions.NewListenerUnsupportedValue(valErr.Error())}
 	}
 
 	if listener.TLS != nil {
@@ -254,14 +257,22 @@ func validateHTTPListener(listener v1beta1.Listener) []conditions.Condition {
 	return nil
 }
 
+func validateListenerPort(port v1beta1.PortNumber) error {
+	if port < 1 || port > 65535 {
+		return errors.New("port must be between 1-65535")
+	}
+
+	return nil
+}
+
 func createHTTPSListenerValidator(gwNsName string) listenerValidator {
 	return func(listener v1beta1.Listener) []conditions.Condition {
 		var conds []conditions.Condition
 
-		if listener.Port != 443 {
+		if err := validateListenerPort(listener.Port); err != nil {
 			path := field.NewPath("port")
-			valErr := field.NotSupported(path, listener.Port, []string{"443"})
-			conds = append(conds, conditions.NewListenerPortUnavailable(valErr.Error()))
+			valErr := field.Invalid(path, listener.Port, err.Error())
+			conds = append(conds, conditions.NewListenerUnsupportedValue(valErr.Error()))
 		}
 
 		if listener.TLS == nil {
@@ -324,28 +335,47 @@ func createHTTPSListenerValidator(gwNsName string) listenerValidator {
 	}
 }
 
-func createHostnameConflictResolver() listenerConflictResolver {
-	usedHostnames := make(map[string]*Listener)
+func createPortConflictResolver() listenerConflictResolver {
+	conflictedPorts := make(map[v1beta1.PortNumber]bool)
+	portProtocolOwner := make(map[v1beta1.PortNumber]v1beta1.ProtocolType)
+	listenersByPort := make(map[v1beta1.PortNumber][]*Listener)
+
+	format := "Multiple listeners for the same port %d specify incompatible protocols; " +
+		"ensure only one protocol per port"
 
 	return func(l *Listener) {
-		h := getHostname(l.Source.Hostname)
+		port := l.Source.Port
 
-		if holder, exist := usedHostnames[h]; exist {
+		// if port is in map of conflictedPorts then we only need to set the current listener to invalid
+		if conflictedPorts[port] {
 			l.Valid = false
 
-			holder.Valid = false // all listeners for the same hostname become conflicted
-
-			format := "Multiple listeners for the same port use the same hostname %q; " +
-				"ensure only one listener uses that hostname"
-			conflictedConds := conditions.NewListenerConflictedHostname(fmt.Sprintf(format, h))
-
-			holder.Conditions = append(holder.Conditions, conflictedConds...)
+			conflictedConds := conditions.NewListenerProtocolConflict(fmt.Sprintf(format, port))
 			l.Conditions = append(l.Conditions, conflictedConds...)
-
 			return
 		}
 
-		usedHostnames[h] = l
+		// otherwise, we add the listener to the list of listeners for this port
+		// and then check if the protocol owner for the port is different from the current listener's protocol.
+
+		listenersByPort[port] = append(listenersByPort[port], l)
+
+		protocol, ok := portProtocolOwner[port]
+		if !ok {
+			portProtocolOwner[port] = l.Source.Protocol
+			return
+		}
+
+		// if protocol owner doesn't match the listener's protocol we mark the port as conflicted,
+		// and invalidate all listeners we've seen for this port.
+		if protocol != l.Source.Protocol {
+			conflictedPorts[port] = true
+			for _, l := range listenersByPort[port] {
+				l.Valid = false
+				conflictedConds := conditions.NewListenerProtocolConflict(fmt.Sprintf(format, port))
+				l.Conditions = append(l.Conditions, conflictedConds...)
+			}
+		}
 	}
 }
 
@@ -376,7 +406,8 @@ func createExternalReferencesForTLSSecretsResolver(
 // GetAllowedRouteLabelSelector returns a listener's AllowedRoutes label selector if it exists.
 func GetAllowedRouteLabelSelector(l v1beta1.Listener) *metav1.LabelSelector {
 	if l.AllowedRoutes != nil && l.AllowedRoutes.Namespaces != nil {
-		if *l.AllowedRoutes.Namespaces.From == v1beta1.NamespacesFromSelector && l.AllowedRoutes.Namespaces.Selector != nil {
+		if *l.AllowedRoutes.Namespaces.From == v1beta1.NamespacesFromSelector &&
+			l.AllowedRoutes.Namespaces.Selector != nil {
 			return l.AllowedRoutes.Namespaces.Selector
 		}
 	}

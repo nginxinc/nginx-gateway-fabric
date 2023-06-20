@@ -23,10 +23,8 @@ const (
 // Configuration is an intermediate representation of dataplane configuration.
 type Configuration struct {
 	// HTTPServers holds all HTTPServers.
-	// We assume that all servers are HTTP and listen on port 80.
 	HTTPServers []VirtualServer
 	// SSLServers holds all SSLServers.
-	// We assume that all SSL servers listen on port 443.
 	SSLServers []VirtualServer
 	// Upstreams holds all unique Upstreams.
 	Upstreams []Upstream
@@ -44,6 +42,8 @@ type VirtualServer struct {
 	PathRules []PathRule
 	// IsDefault indicates whether the server is the default server.
 	IsDefault bool
+	// Port is the port of the server.
+	Port int32
 }
 
 type Upstream struct {
@@ -217,14 +217,19 @@ func newBackendGroup(refs []graph.BackendRef, sourceNsName types.NamespacedName,
 }
 
 func buildServers(listeners map[string]*graph.Listener) (http, ssl []VirtualServer) {
-	rulesForProtocol := map[v1beta1.ProtocolType]*hostPathRules{
-		v1beta1.HTTPProtocolType:  newHostPathRules(),
-		v1beta1.HTTPSProtocolType: newHostPathRules(),
+	rulesForProtocol := map[v1beta1.ProtocolType]portPathRules{
+		v1beta1.HTTPProtocolType:  make(portPathRules),
+		v1beta1.HTTPSProtocolType: make(portPathRules),
 	}
 
 	for _, l := range listeners {
 		if l.Valid {
-			rules := rulesForProtocol[l.Source.Protocol]
+			rules := rulesForProtocol[l.Source.Protocol][l.Source.Port]
+			if rules == nil {
+				rules = newHostPathRules()
+				rulesForProtocol[l.Source.Protocol][l.Source.Port] = rules
+			}
+
 			rules.upsertListener(l)
 		}
 	}
@@ -233,6 +238,24 @@ func buildServers(listeners map[string]*graph.Listener) (http, ssl []VirtualServ
 	sslRules := rulesForProtocol[v1beta1.HTTPSProtocolType]
 
 	return httpRules.buildServers(), sslRules.buildServers()
+}
+
+// portPathRules keeps track of hostPathRules per port
+type portPathRules map[v1beta1.PortNumber]*hostPathRules
+
+func (p portPathRules) buildServers() []VirtualServer {
+	serverCount := 0
+	for _, rules := range p {
+		serverCount += rules.maxServerCount()
+	}
+
+	servers := make([]VirtualServer, 0, serverCount)
+
+	for _, rules := range p {
+		servers = append(servers, rules.buildServers()...)
+	}
+
+	return servers
 }
 
 type pathAndType struct {
@@ -245,6 +268,7 @@ type hostPathRules struct {
 	listenersForHost map[string]*graph.Listener
 	httpsListeners   []*graph.Listener
 	listenersExist   bool
+	port             int32
 }
 
 func newHostPathRules() *hostPathRules {
@@ -257,6 +281,7 @@ func newHostPathRules() *hostPathRules {
 
 func (hpr *hostPathRules) upsertListener(l *graph.Listener) {
 	hpr.listenersExist = true
+	hpr.port = int32(l.Source.Port)
 
 	if l.Source.Protocol == v1beta1.HTTPSProtocolType {
 		hpr.httpsListeners = append(hpr.httpsListeners, l)
@@ -336,6 +361,7 @@ func (hpr *hostPathRules) buildServers() []VirtualServer {
 		s := VirtualServer{
 			Hostname:  h,
 			PathRules: make([]PathRule, 0, len(rules)),
+			Port:      hpr.port,
 		}
 
 		l, ok := hpr.listenersForHost[h]
@@ -372,6 +398,7 @@ func (hpr *hostPathRules) buildServers() []VirtualServer {
 		if len(l.Routes) == 0 || hostname == wildcardHostname {
 			s := VirtualServer{
 				Hostname: hostname,
+				Port:     hpr.port,
 			}
 
 			if l.SecretPath != "" {
@@ -384,7 +411,10 @@ func (hpr *hostPathRules) buildServers() []VirtualServer {
 
 	// if any listeners exist, we need to generate a default server block.
 	if hpr.listenersExist {
-		servers = append(servers, VirtualServer{IsDefault: true})
+		servers = append(servers, VirtualServer{
+			IsDefault: true,
+			Port:      hpr.port,
+		})
 	}
 
 	// We sort the servers so the order is preserved after reconfiguration.
@@ -393,6 +423,15 @@ func (hpr *hostPathRules) buildServers() []VirtualServer {
 	})
 
 	return servers
+}
+
+// maxServerCount returns the maximum number of VirtualServers that can be built from the host path rules.
+func (hpr *hostPathRules) maxServerCount() int {
+	// to calculate max # of servers we add up:
+	// - # of hostnames
+	// - # of https listeners - this is to account for https wildcard default servers
+	// - default server - for every hostPathRules we generate 1 default server
+	return len(hpr.rulesPerHost) + len(hpr.httpsListeners) + 1
 }
 
 func buildUpstreams(

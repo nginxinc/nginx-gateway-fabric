@@ -758,10 +758,8 @@ func TestBindRouteToListeners(t *testing.T) {
 				Source: gw,
 				Valid:  true,
 				Listeners: map[string]*Listener{
-					"listener-80-1": createListener("listener-80-1"),
-					"listener-80-2": createModifiedListener("listener-80-2", func(l *Listener) {
-						l.Source.Hostname = nil
-					}),
+					"listener-80":   createListener("listener-80"),
+					"listener-8080": createListener("listener-8080"),
 				},
 			},
 			expectedSectionNameRefs: []ParentRef{
@@ -771,26 +769,25 @@ func TestBindRouteToListeners(t *testing.T) {
 					Attachment: &ParentRefAttachmentStatus{
 						Attached: true,
 						AcceptedHostnames: map[string][]string{
-							"listener-80-1": {"foo.example.com"},
-							"listener-80-2": {"foo.example.com"},
+							"listener-80":   {"foo.example.com"},
+							"listener-8080": {"foo.example.com"},
 						},
 					},
 				},
 			},
 			expectedGatewayListeners: map[string]*Listener{
-				"listener-80-1": createModifiedListener("listener-80-1", func(l *Listener) {
+				"listener-80": createModifiedListener("listener-80", func(l *Listener) {
 					l.Routes = map[types.NamespacedName]*Route{
 						client.ObjectKeyFromObject(hr): routeWithEmptySectionName,
 					}
 				}),
-				"listener-80-2": createModifiedListener("listener-80-2", func(l *Listener) {
+				"listener-8080": createModifiedListener("listener-8080", func(l *Listener) {
 					l.Routes = map[types.NamespacedName]*Route{
 						client.ObjectKeyFromObject(hr): routeWithEmptySectionName,
 					}
-					l.Source.Hostname = nil
 				}),
 			},
-			name: "section name is empty",
+			name: "section name is empty; bind to multiple listeners",
 		},
 		{
 			route: routeWithEmptySectionName,

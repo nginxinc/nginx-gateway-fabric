@@ -143,41 +143,6 @@ func TestProcessGateways(t *testing.T) {
 func TestBuildGateway(t *testing.T) {
 	const gcName = "my-gateway-class"
 
-	listener801 := v1beta1.Listener{
-		Name:     "listener-80-1",
-		Hostname: (*v1beta1.Hostname)(helpers.GetStringPointer("foo.example.com")),
-		Port:     80,
-		Protocol: v1beta1.HTTPProtocolType,
-	}
-	listener802 := v1beta1.Listener{
-		Name:     "listener-80-2",
-		Hostname: (*v1beta1.Hostname)(helpers.GetStringPointer("bar.example.com")),
-		Port:     80,
-		Protocol: v1beta1.TCPProtocolType, // invalid protocol
-	}
-	listener803 := v1beta1.Listener{
-		Name:     "listener-80-3",
-		Hostname: (*v1beta1.Hostname)(helpers.GetStringPointer("bar.example.com")),
-		Port:     80,
-		Protocol: v1beta1.HTTPProtocolType,
-	}
-	listener804 := v1beta1.Listener{
-		Name:     "listener-80-4",
-		Hostname: (*v1beta1.Hostname)(helpers.GetStringPointer("foo.example.com")),
-		Port:     80,
-		Protocol: v1beta1.HTTPProtocolType,
-	}
-	listener805 := v1beta1.Listener{
-		Name:     "listener-80-5",
-		Port:     81, // invalid port
-		Protocol: v1beta1.HTTPProtocolType,
-	}
-	listener806 := v1beta1.Listener{
-		Name:     "listener-80-6",
-		Hostname: (*v1beta1.Hostname)(helpers.GetStringPointer("$example.com")), // invalid hostname
-		Port:     80,
-		Protocol: v1beta1.HTTPProtocolType,
-	}
 	labelSet := map[string]string{
 		"key": "value",
 	}
@@ -225,49 +190,62 @@ func TestBuildGateway(t *testing.T) {
 			},
 		},
 	}
-	// https listeners
-	listener4431 := v1beta1.Listener{
-		Name:     "listener-443-1",
-		Hostname: (*v1beta1.Hostname)(helpers.GetStringPointer("foo.example.com")),
-		Port:     443,
-		TLS:      gatewayTLSConfig,
-		Protocol: v1beta1.HTTPSProtocolType,
+
+	createListener := func(
+		name string,
+		hostname string,
+		port int,
+		protocol v1beta1.ProtocolType,
+		tls *v1beta1.GatewayTLSConfig,
+	) v1beta1.Listener {
+		return v1beta1.Listener{
+			Name:     v1beta1.SectionName(name),
+			Hostname: (*v1beta1.Hostname)(helpers.GetStringPointer(hostname)),
+			Port:     v1beta1.PortNumber(port),
+			Protocol: protocol,
+			TLS:      tls,
+		}
 	}
-	listener4432 := v1beta1.Listener{
-		Name:     "listener-443-2",
-		Hostname: (*v1beta1.Hostname)(helpers.GetStringPointer("bar.example.com")),
-		Port:     443,
-		TLS:      gatewayTLSConfig,
-		Protocol: v1beta1.HTTPSProtocolType,
+	createHTTPListener := func(name, hostname string, port int) v1beta1.Listener {
+		return createListener(name, hostname, port, v1beta1.HTTPProtocolType, nil)
 	}
-	listener4433 := v1beta1.Listener{
-		Name:     "listener-443-3",
-		Hostname: (*v1beta1.Hostname)(helpers.GetStringPointer("foo.example.com")),
-		Port:     443,
-		TLS:      gatewayTLSConfig,
-		Protocol: v1beta1.HTTPSProtocolType,
+	createTCPListener := func(name, hostname string, port int) v1beta1.Listener {
+		return createListener(name, hostname, port, v1beta1.TCPProtocolType, nil)
 	}
-	listener4434 := v1beta1.Listener{
-		Name:     "listener-443-4",
-		Hostname: (*v1beta1.Hostname)(helpers.GetStringPointer("$example.com")), // invalid hostname
-		Port:     443,
-		TLS:      gatewayTLSConfig,
-		Protocol: v1beta1.HTTPSProtocolType,
+	createHTTPSListener := func(name, hostname string, port int, tls *v1beta1.GatewayTLSConfig) v1beta1.Listener {
+		return createListener(name, hostname, port, v1beta1.HTTPSProtocolType, tls)
 	}
-	listener4435 := v1beta1.Listener{
-		Name:     "listener-443-5",
-		Hostname: (*v1beta1.Hostname)(helpers.GetStringPointer("foo.example.com")),
-		Port:     443,
-		TLS:      tlsConfigInvalidSecret, // invalid https listener; secret does not exist
-		Protocol: v1beta1.HTTPSProtocolType,
-	}
-	listener4436 := v1beta1.Listener{
-		Name:     "listener-443-6",
-		Hostname: (*v1beta1.Hostname)(helpers.GetStringPointer("foo.example.com")),
-		Port:     444, // invalid port
-		TLS:      gatewayTLSConfig,
-		Protocol: v1beta1.HTTPSProtocolType,
-	}
+
+	// foo http listeners
+	foo80Listener1 := createHTTPListener("foo-80-1", "foo.example.com", 80)
+	foo8080Listener := createHTTPListener("foo-8080", "foo.example.com", 8080)
+	foo8081Listener := createHTTPListener("foo-8081", "foo.example.com", 8081)
+	foo443Listener := createHTTPListener("foo-443", "foo.example.com", 443)
+
+	// foo https listeners
+	foo80HTTPSListener := createHTTPSListener("foo-80-https", "foo.example.com", 80, gatewayTLSConfig)
+	foo443HTTPSListener1 := createHTTPSListener("foo-443-https-1", "foo.example.com", 443, gatewayTLSConfig)
+	foo8443HTTPSListener := createHTTPSListener("foo-8443-https", "foo.example.com", 8443, gatewayTLSConfig)
+
+	// bar http listener
+	bar80Listener := createHTTPListener("bar-80", "bar.example.com", 80)
+
+	// bar https listeners
+	bar443HTTPSListener := createHTTPSListener("bar-443-https", "bar.example.com", 443, gatewayTLSConfig)
+	bar8443HTTPSListener := createHTTPSListener("bar-8443-https", "bar.example.com", 8443, gatewayTLSConfig)
+
+	// invalid listeners
+	invalidProtocolListener := createTCPListener("invalid-protocol", "bar.example.com", 80)
+	invalidPortListener := createHTTPListener("invalid-port", "invalid-port", 0)
+	invalidHostnameListener := createHTTPListener("invalid-hostname", "$example.com", 80)
+	invalidHTTPSHostnameListener := createHTTPSListener("invalid-https-hostname", "$example.com", 443, gatewayTLSConfig)
+	invalidTLSConfigListener := createHTTPSListener(
+		"invalid-tls-config",
+		"foo.example.com",
+		443,
+		tlsConfigInvalidSecret,
+	)
+	invalidHTTPSPortListener := createHTTPSListener("invalid-https-port", "foo.example.com", 0, gatewayTLSConfig)
 
 	const (
 		invalidHostnameMsg = `hostname: Invalid value: "$example.com": a lowercase RFC 1123 subdomain ` +
@@ -275,8 +253,11 @@ func TestBuildGateway(t *testing.T) {
 			"with an alphanumeric character (e.g. 'example.com', regex used for validation is " +
 			`'[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*')`
 
-		conflictedHostnamesMsg = `Multiple listeners for the same port use the same hostname "foo.example.com"; ` +
-			"ensure only one listener uses that hostname"
+		conflict80PortMsg = "Multiple listeners for the same port 80 specify incompatible protocols; " +
+			"ensure only one protocol per port"
+
+		conflict443PortMsg = "Multiple listeners for the same port 443 specify incompatible protocols; " +
+			"ensure only one protocol per port"
 
 		secretPath = "/etc/nginx/secrets/test_secret"
 	)
@@ -318,29 +299,42 @@ func TestBuildGateway(t *testing.T) {
 		name         string
 	}{
 		{
-			gateway:      createGateway(gatewayCfg{listeners: []v1beta1.Listener{listener801}}),
+			gateway:      createGateway(gatewayCfg{listeners: []v1beta1.Listener{foo80Listener1, foo8080Listener}}),
 			gatewayClass: validGC,
 			expected: &Gateway{
 				Source: getLastCreatedGetaway(),
 				Listeners: map[string]*Listener{
-					"listener-80-1": {
-						Source: listener801,
+					"foo-80-1": {
+						Source: foo80Listener1,
+						Valid:  true,
+						Routes: map[types.NamespacedName]*Route{},
+					},
+					"foo-8080": {
+						Source: foo8080Listener,
 						Valid:  true,
 						Routes: map[types.NamespacedName]*Route{},
 					},
 				},
 				Valid: true,
 			},
-			name: "valid http listener",
+			name: "valid http listeners",
 		},
 		{
-			gateway:      createGateway(gatewayCfg{listeners: []v1beta1.Listener{listener4431}}),
+			gateway: createGateway(
+				gatewayCfg{listeners: []v1beta1.Listener{foo443HTTPSListener1, foo8443HTTPSListener}},
+			),
 			gatewayClass: validGC,
 			expected: &Gateway{
 				Source: getLastCreatedGetaway(),
 				Listeners: map[string]*Listener{
-					"listener-443-1": {
-						Source:     listener4431,
+					"foo-443-https-1": {
+						Source:     foo443HTTPSListener1,
+						Valid:      true,
+						Routes:     map[types.NamespacedName]*Route{},
+						SecretPath: secretPath,
+					},
+					"foo-8443-https": {
+						Source:     foo8443HTTPSListener,
 						Valid:      true,
 						Routes:     map[types.NamespacedName]*Route{},
 						SecretPath: secretPath,
@@ -348,7 +342,7 @@ func TestBuildGateway(t *testing.T) {
 				},
 				Valid: true,
 			},
-			name: "valid https listener",
+			name: "valid https listeners",
 		},
 		{
 			gateway:      createGateway(gatewayCfg{listeners: []v1beta1.Listener{listenerAllowedRoutes}}),
@@ -388,13 +382,13 @@ func TestBuildGateway(t *testing.T) {
 			name: "http listener with invalid label selector",
 		},
 		{
-			gateway:      createGateway(gatewayCfg{listeners: []v1beta1.Listener{listener802}}),
+			gateway:      createGateway(gatewayCfg{listeners: []v1beta1.Listener{invalidProtocolListener}}),
 			gatewayClass: validGC,
 			expected: &Gateway{
 				Source: getLastCreatedGetaway(),
 				Listeners: map[string]*Listener{
-					"listener-80-2": {
-						Source: listener802,
+					"invalid-protocol": {
+						Source: invalidProtocolListener,
 						Valid:  false,
 						Conditions: []conditions.Condition{
 							conditions.NewListenerUnsupportedProtocol(
@@ -408,60 +402,53 @@ func TestBuildGateway(t *testing.T) {
 			name: "invalid listener protocol",
 		},
 		{
-			gateway:      createGateway(gatewayCfg{listeners: []v1beta1.Listener{listener805}}),
+			gateway: createGateway(
+				gatewayCfg{listeners: []v1beta1.Listener{invalidPortListener, invalidHTTPSPortListener}},
+			),
 			gatewayClass: validGC,
 			expected: &Gateway{
 				Source: getLastCreatedGetaway(),
 				Listeners: map[string]*Listener{
-					"listener-80-5": {
-						Source: listener805,
+					"invalid-port": {
+						Source: invalidPortListener,
 						Valid:  false,
 						Conditions: []conditions.Condition{
-							conditions.NewListenerPortUnavailable(
-								`port: Unsupported value: 81: supported values: "80"`,
+							conditions.NewListenerUnsupportedValue(
+								`port: Invalid value: 0: port must be between 1-65535`,
+							),
+						},
+					},
+					"invalid-https-port": {
+						Source: invalidHTTPSPortListener,
+						Valid:  false,
+						Conditions: []conditions.Condition{
+							conditions.NewListenerUnsupportedValue(
+								`port: Invalid value: 0: port must be between 1-65535`,
 							),
 						},
 					},
 				},
 				Valid: true,
 			},
-			name: "invalid http listener",
+			name: "invalid ports",
 		},
 		{
-			gateway:      createGateway(gatewayCfg{listeners: []v1beta1.Listener{listener4436}}),
+			gateway: createGateway(
+				gatewayCfg{listeners: []v1beta1.Listener{invalidHostnameListener, invalidHTTPSHostnameListener}},
+			),
 			gatewayClass: validGC,
 			expected: &Gateway{
 				Source: getLastCreatedGetaway(),
 				Listeners: map[string]*Listener{
-					"listener-443-6": {
-						Source: listener4436,
-						Valid:  false,
-						Conditions: []conditions.Condition{
-							conditions.NewListenerPortUnavailable(
-								`port: Unsupported value: 444: supported values: "443"`,
-							),
-						},
-					},
-				},
-				Valid: true,
-			},
-			name: "invalid https listener",
-		},
-		{
-			gateway:      createGateway(gatewayCfg{listeners: []v1beta1.Listener{listener806, listener4434}}),
-			gatewayClass: validGC,
-			expected: &Gateway{
-				Source: getLastCreatedGetaway(),
-				Listeners: map[string]*Listener{
-					"listener-80-6": {
-						Source: listener806,
+					"invalid-hostname": {
+						Source: invalidHostnameListener,
 						Valid:  false,
 						Conditions: []conditions.Condition{
 							conditions.NewListenerUnsupportedValue(invalidHostnameMsg),
 						},
 					},
-					"listener-443-4": {
-						Source: listener4434,
+					"invalid-https-hostname": {
+						Source: invalidHTTPSHostnameListener,
 						Valid:  false,
 						Conditions: []conditions.Condition{
 							conditions.NewListenerUnsupportedValue(invalidHostnameMsg),
@@ -473,13 +460,13 @@ func TestBuildGateway(t *testing.T) {
 			name: "invalid hostnames",
 		},
 		{
-			gateway:      createGateway(gatewayCfg{listeners: []v1beta1.Listener{listener4435}}),
+			gateway:      createGateway(gatewayCfg{listeners: []v1beta1.Listener{invalidTLSConfigListener}}),
 			gatewayClass: validGC,
 			expected: &Gateway{
 				Source: getLastCreatedGetaway(),
 				Listeners: map[string]*Listener{
-					"listener-443-5": {
-						Source: listener4435,
+					"invalid-tls-config": {
+						Source: invalidTLSConfigListener,
 						Valid:  false,
 						Routes: map[types.NamespacedName]*Route{},
 						Conditions: conditions.NewListenerInvalidCertificateRef(
@@ -493,30 +480,63 @@ func TestBuildGateway(t *testing.T) {
 		},
 		{
 			gateway: createGateway(
-				gatewayCfg{listeners: []v1beta1.Listener{listener801, listener803, listener4431, listener4432}},
+				gatewayCfg{
+					listeners: []v1beta1.Listener{
+						foo80Listener1,
+						foo8080Listener,
+						foo8081Listener,
+						foo443HTTPSListener1,
+						foo8443HTTPSListener,
+						bar80Listener,
+						bar443HTTPSListener,
+						bar8443HTTPSListener,
+					},
+				},
 			),
 			gatewayClass: validGC,
 			expected: &Gateway{
 				Source: getLastCreatedGetaway(),
 				Listeners: map[string]*Listener{
-					"listener-80-1": {
-						Source: listener801,
+					"foo-80-1": {
+						Source: foo80Listener1,
 						Valid:  true,
 						Routes: map[types.NamespacedName]*Route{},
 					},
-					"listener-80-3": {
-						Source: listener803,
+					"foo-8080": {
+						Source: foo8080Listener,
 						Valid:  true,
 						Routes: map[types.NamespacedName]*Route{},
 					},
-					"listener-443-1": {
-						Source:     listener4431,
+					"foo-8081": {
+						Source: foo8081Listener,
+						Valid:  true,
+						Routes: map[types.NamespacedName]*Route{},
+					},
+					"bar-80": {
+						Source: bar80Listener,
+						Valid:  true,
+						Routes: map[types.NamespacedName]*Route{},
+					},
+					"foo-443-https-1": {
+						Source:     foo443HTTPSListener1,
 						Valid:      true,
 						Routes:     map[types.NamespacedName]*Route{},
 						SecretPath: secretPath,
 					},
-					"listener-443-2": {
-						Source:     listener4432,
+					"foo-8443-https": {
+						Source:     foo8443HTTPSListener,
+						Valid:      true,
+						Routes:     map[types.NamespacedName]*Route{},
+						SecretPath: secretPath,
+					},
+					"bar-443-https": {
+						Source:     bar443HTTPSListener,
+						Valid:      true,
+						Routes:     map[types.NamespacedName]*Route{},
+						SecretPath: secretPath,
+					},
+					"bar-8443-https": {
+						Source:     bar8443HTTPSListener,
 						Valid:      true,
 						Routes:     map[types.NamespacedName]*Route{},
 						SecretPath: secretPath,
@@ -528,55 +548,79 @@ func TestBuildGateway(t *testing.T) {
 		},
 		{
 			gateway: createGateway(
-				gatewayCfg{listeners: []v1beta1.Listener{listener801, listener804, listener4431, listener4433}},
+				gatewayCfg{
+					listeners: []v1beta1.Listener{
+						foo80Listener1,
+						bar80Listener,
+						foo443Listener,
+						foo80HTTPSListener,
+						foo443HTTPSListener1,
+						bar443HTTPSListener,
+					},
+				},
 			),
 			gatewayClass: validGC,
 			expected: &Gateway{
 				Source: getLastCreatedGetaway(),
 				Listeners: map[string]*Listener{
-					"listener-80-1": {
-						Source:     listener801,
+					"foo-80-1": {
+						Source:     foo80Listener1,
 						Valid:      false,
 						Routes:     map[types.NamespacedName]*Route{},
-						Conditions: conditions.NewListenerConflictedHostname(conflictedHostnamesMsg),
+						Conditions: conditions.NewListenerProtocolConflict(conflict80PortMsg),
 					},
-					"listener-80-4": {
-						Source:     listener804,
+					"bar-80": {
+						Source:     bar80Listener,
 						Valid:      false,
 						Routes:     map[types.NamespacedName]*Route{},
-						Conditions: conditions.NewListenerConflictedHostname(conflictedHostnamesMsg),
+						Conditions: conditions.NewListenerProtocolConflict(conflict80PortMsg),
 					},
-					"listener-443-1": {
-						Source:     listener4431,
+					"foo-443": {
+						Source:     foo443Listener,
 						Valid:      false,
 						Routes:     map[types.NamespacedName]*Route{},
-						Conditions: conditions.NewListenerConflictedHostname(conflictedHostnamesMsg),
+						Conditions: conditions.NewListenerProtocolConflict(conflict443PortMsg),
+					},
+					"foo-80-https": {
+						Source:     foo80HTTPSListener,
+						Valid:      false,
+						Routes:     map[types.NamespacedName]*Route{},
+						Conditions: conditions.NewListenerProtocolConflict(conflict80PortMsg),
 						SecretPath: "/etc/nginx/secrets/test_secret",
 					},
-					"listener-443-3": {
-						Source:     listener4433,
+					"foo-443-https-1": {
+						Source:     foo443HTTPSListener1,
 						Valid:      false,
 						Routes:     map[types.NamespacedName]*Route{},
-						Conditions: conditions.NewListenerConflictedHostname(conflictedHostnamesMsg),
+						Conditions: conditions.NewListenerProtocolConflict(conflict443PortMsg),
+						SecretPath: "/etc/nginx/secrets/test_secret",
+					},
+					"bar-443-https": {
+						Source:     bar443HTTPSListener,
+						Valid:      false,
+						Routes:     map[types.NamespacedName]*Route{},
+						Conditions: conditions.NewListenerProtocolConflict(conflict443PortMsg),
 						SecretPath: "/etc/nginx/secrets/test_secret",
 					},
 				},
 				Valid: true,
 			},
-			name: "collisions",
+			name: "port/protocol collisions",
 		},
 		{
-			gateway: createGateway(gatewayCfg{
-				listeners: []v1beta1.Listener{listener801, listener4431},
-				addresses: []v1beta1.GatewayAddress{
-					{},
+			gateway: createGateway(
+				gatewayCfg{
+					listeners: []v1beta1.Listener{foo80Listener1, foo443HTTPSListener1},
+					addresses: []v1beta1.GatewayAddress{{}},
 				},
-			}),
+			),
 			gatewayClass: validGC,
 			expected: &Gateway{
-				Source:     getLastCreatedGetaway(),
-				Valid:      false,
-				Conditions: conditions.NewGatewayUnsupportedValue("spec.addresses: Forbidden: addresses are not supported"),
+				Source: getLastCreatedGetaway(),
+				Valid:  false,
+				Conditions: conditions.NewGatewayUnsupportedValue("spec." +
+					"addresses: Forbidden: addresses are not supported",
+				),
 			},
 			name: "gateway addresses are not supported",
 		},
@@ -586,7 +630,9 @@ func TestBuildGateway(t *testing.T) {
 			name:     "nil gateway",
 		},
 		{
-			gateway:      createGateway(gatewayCfg{listeners: []v1beta1.Listener{listener801, listener802}}),
+			gateway: createGateway(
+				gatewayCfg{listeners: []v1beta1.Listener{foo80Listener1, invalidProtocolListener}},
+			),
 			gatewayClass: invalidGC,
 			expected: &Gateway{
 				Source:     getLastCreatedGetaway(),
@@ -596,7 +642,9 @@ func TestBuildGateway(t *testing.T) {
 			name: "invalid gatewayclass",
 		},
 		{
-			gateway:      createGateway(gatewayCfg{listeners: []v1beta1.Listener{listener801, listener802}}),
+			gateway: createGateway(
+				gatewayCfg{listeners: []v1beta1.Listener{foo80Listener1, invalidProtocolListener}},
+			),
 			gatewayClass: nil,
 			expected: &Gateway{
 				Source:     getLastCreatedGetaway(),

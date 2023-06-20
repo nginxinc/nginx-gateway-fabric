@@ -1,6 +1,7 @@
 package graph
 
 import (
+	"fmt"
 	"testing"
 
 	. "github.com/onsi/gomega"
@@ -26,10 +27,10 @@ func TestValidateHTTPListener(t *testing.T) {
 		},
 		{
 			l: v1beta1.Listener{
-				Port: 81,
+				Port: 0,
 			},
 			expected: []conditions.Condition{
-				conditions.NewListenerPortUnavailable(`port: Unsupported value: 81: supported values: "80"`),
+				conditions.NewListenerUnsupportedValue(`port: Invalid value: 0: port must be between 1-65535`),
 			},
 			name: "invalid port",
 		},
@@ -91,14 +92,14 @@ func TestValidateHTTPSListener(t *testing.T) {
 		},
 		{
 			l: v1beta1.Listener{
-				Port: 80,
+				Port: 0,
 				TLS: &v1beta1.GatewayTLSConfig{
 					Mode:            helpers.GetTLSModePointer(v1beta1.TLSModeTerminate),
 					CertificateRefs: []v1beta1.SecretObjectReference{validSecretRef},
 				},
 			},
 			expected: []conditions.Condition{
-				conditions.NewListenerPortUnavailable(`port: Unsupported value: 80: supported values: "443"`),
+				conditions.NewListenerUnsupportedValue(`port: Invalid value: 0: port must be between 1-65535`),
 			},
 			name: "invalid port",
 		},
@@ -361,6 +362,25 @@ func TestValidateListenerLabelSelector(t *testing.T) {
 			} else {
 				g.Expect(conds).To(BeEmpty())
 			}
+		})
+	}
+}
+
+func TestValidateListenerPort(t *testing.T) {
+	validPorts := []v1beta1.PortNumber{1, 80, 443, 1000, 50000, 65535}
+	invalidPorts := []v1beta1.PortNumber{-1, 0, 65536, 80000}
+
+	for _, p := range validPorts {
+		t.Run(fmt.Sprintf("valid port %d", p), func(t *testing.T) {
+			g := NewWithT(t)
+			g.Expect(validateListenerPort(p)).To(Succeed())
+		})
+	}
+
+	for _, p := range invalidPorts {
+		t.Run(fmt.Sprintf("invalid port %d", p), func(t *testing.T) {
+			g := NewWithT(t)
+			g.Expect(validateListenerPort(p)).ToNot(Succeed())
 		})
 	}
 }
