@@ -18,9 +18,11 @@ limitations under the License.
 package tests
 
 import (
+	"strings"
 	"testing"
 
 	. "github.com/onsi/gomega"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
@@ -41,6 +43,9 @@ func TestConformance(t *testing.T) {
 	g.Expect(v1alpha2.AddToScheme(client.Scheme())).To(Succeed())
 	g.Expect(v1beta1.AddToScheme(client.Scheme())).To(Succeed())
 
+	supportedFeatures := parseSupportedFeatures(*flags.SupportedFeatures)
+	exemptFeatures := parseSupportedFeatures(*flags.ExemptFeatures)
+
 	t.Logf(`Running conformance tests with %s GatewayClass\n cleanup: %t\n`+
 		`debug: %t\n enable all features: %t \n supported features: [%v]\n exempt features: [%v]`,
 		*flags.GatewayClassName, *flags.CleanupBaseResources, *flags.ShowDebug,
@@ -51,9 +56,26 @@ func TestConformance(t *testing.T) {
 		GatewayClassName:           *flags.GatewayClassName,
 		Debug:                      *flags.ShowDebug,
 		CleanupBaseResources:       *flags.CleanupBaseResources,
-		SupportedFeatures:          nil,
+		SupportedFeatures:          supportedFeatures,
+		ExemptFeatures:             exemptFeatures,
 		EnableAllSupportedFeatures: *flags.EnableAllSupportedFeatures,
 	})
 	cSuite.Setup(t)
 	cSuite.Run(t, tests.ConformanceTests)
+}
+
+// parseSupportedFeatures parses flag arguments and converts the string to
+// sets.Set[suite.SupportedFeature]
+// FIXME(kate-osborn): Use exported ParseSupportedFeatures function
+// https://github.com/kubernetes-sigs/gateway-api/blob/63e423cf1b837991d2747742199d90863a98b0c3/conformance/utils/suite/suite.go#L235
+// once it's released.
+func parseSupportedFeatures(f string) sets.Set[suite.SupportedFeature] {
+	if f == "" {
+		return nil
+	}
+	res := sets.Set[suite.SupportedFeature]{}
+	for _, value := range strings.Split(f, ",") {
+		res.Insert(suite.SupportedFeature(value))
+	}
+	return res
 }
