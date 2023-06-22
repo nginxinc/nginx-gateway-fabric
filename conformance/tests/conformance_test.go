@@ -68,7 +68,7 @@ func TestConformance(t *testing.T) {
 // sets.Set[suite.SupportedFeature]
 // FIXME(kate-osborn): Use exported ParseSupportedFeatures function
 // https://github.com/kubernetes-sigs/gateway-api/blob/63e423cf1b837991d2747742199d90863a98b0c3/conformance/utils/suite/suite.go#L235
-// once it's released.
+// once it's released. https://github.com/nginxinc/nginx-kubernetes-gateway/issues/779
 func parseSupportedFeatures(f string) sets.Set[suite.SupportedFeature] {
 	if f == "" {
 		return nil
