@@ -1,7 +1,8 @@
 NKG_TAG = edge
 NKG_PREFIX = nginx-kubernetes-gateway
 GATEWAY_CLASS = nginx
-SUPPORTED_FEATURES = Gateway,HTTPRoute
+SUPPORTED_FEATURES = HTTPRoute,HTTPRouteQueryParamMatching,HTTPRouteMethodMatching,HTTPRoutePortRedirect,HTTPRouteSchemeRedirect
+EXEMPT_FEATURES = ReferenceGrant
 KIND_KUBE_CONFIG_FOLDER = $${HOME}/.kube/kind
 TAG = latest
 PREFIX = conformance-test-runner
@@ -44,7 +45,7 @@ update-test-kind-config: ## Update kind config
 .PHONY: run-conformance-tests
 run-conformance-tests: update-test-kind-config ## Run conformance tests
 	docker run --network=kind --rm -v $(KIND_KUBE_CONFIG_FOLDER):/root/.kube $(PREFIX):$(TAG) \
-		go test -v . -tags conformance -args --gateway-class=$(GATEWAY_CLASS) --supported-features=$(SUPPORTED_FEATURES)
+		go test -timeout 25m -v . -tags conformance -args --gateway-class=$(GATEWAY_CLASS) --debug --supported-features=$(SUPPORTED_FEATURES) --exempt-features=$(EXEMPT_FEATURES)
 
 .PHONY: uninstall-nkg
 uninstall-nkg: ## Uninstall NKG on configured kind cluster
