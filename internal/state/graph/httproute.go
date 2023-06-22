@@ -441,15 +441,14 @@ func match(listenerHost, routeHost string) bool {
 // This function assumes that the two hostnames match each other, either:
 // - Exactly
 // - One as a substring of the other
-// - Both as substrings of some parent wildcard
 func GetMoreSpecificHostname(hostname1, hostname2 string) string {
 	if hostname1 == hostname2 {
 		return hostname1
 	}
-
 	if hostname1 == "" {
 		return hostname2
-	} else if hostname2 == "" {
+	}
+	if hostname2 == "" {
 		return hostname1
 	}
 
@@ -468,25 +467,12 @@ func GetMoreSpecificHostname(hostname1, hostname2 string) string {
 		}
 
 		return hostname2
-	} else if strings.HasPrefix(hostname2, "*.") {
+	}
+	if strings.HasPrefix(hostname2, "*.") {
 		return hostname1
 	}
 
-	subdomains1 := strings.Split(hostname1, ".")
-	subdomains2 := strings.Split(hostname2, ".")
-
-	// Compare number of subdomains
-	if len(subdomains1) > len(subdomains2) {
-		return hostname1
-	} else if len(subdomains1) < len(subdomains2) {
-		return hostname2
-	}
-
-	if len(hostname1) > len(hostname2) {
-		return hostname1
-	}
-
-	return hostname2
+	return ""
 }
 
 func routeAllowedByListener(
