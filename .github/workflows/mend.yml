@@ -27,6 +27,8 @@ jobs:
         uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
       - name: Download agent
         run: curl -LJO https://github.com/whitesource/unified-agent-distribution/releases/latest/download/wss-unified-agent.jar
+      - name: Verify JAR
+        run: jarsigner -verify wss-unified-agent.jar
       - name: Scan and upload
         env:
           PRODUCT_NAME: nginx-kubernetes-gateway_${{ github.ref_name }}
