@@ -613,15 +613,31 @@ func validateFilter(
 ) field.ErrorList {
 	var allErrs field.ErrorList
 
-	if filter.Type != v1beta1.HTTPRouteFilterRequestRedirect {
+	switch filter.Type {
+	case v1beta1.HTTPRouteFilterRequestRedirect:
+		return validateFilterRedirect(validator, filter, filterPath)
+	case v1beta1.HTTPRouteFilterRequestHeaderModifier:
+		return validateFilterHeaderModifier(validator, filter, filterPath)
+	default:
 		valErr := field.NotSupported(
 			filterPath.Child("type"),
 			filter.Type,
-			[]string{string(v1beta1.HTTPRouteFilterRequestRedirect)},
+			[]string{
+				string(v1beta1.HTTPRouteFilterRequestRedirect),
+				string(v1beta1.HTTPRouteFilterRequestHeaderModifier),
+			},
 		)
 		allErrs = append(allErrs, valErr)
 		return allErrs
 	}
+}
+
+func validateFilterRedirect(
+	validator validation.HTTPFieldsValidator,
+	filter v1beta1.HTTPRouteFilter,
+	filterPath *field.Path,
+) field.ErrorList {
+	var allErrs field.ErrorList
 
 	if filter.RequestRedirect == nil {
 		panicForBrokenWebhookAssumption(errors.New("requestRedirect cannot be nil"))
@@ -660,6 +676,59 @@ func validateFilter(
 	if redirect.StatusCode != nil {
 		if valid, supportedValues := validator.ValidateRedirectStatusCode(*redirect.StatusCode); !valid {
 			valErr := field.NotSupported(redirectPath.Child("statusCode"), *redirect.StatusCode, supportedValues)
+			allErrs = append(allErrs, valErr)
+		}
+	}
+
+	return allErrs
+}
+
+func validateFilterHeaderModifier(
+	validator validation.HTTPFieldsValidator,
+	filter v1beta1.HTTPRouteFilter,
+	filterPath *field.Path,
+) field.ErrorList {
+	headerModifier := filter.RequestHeaderModifier
+
+	headerModifierPath := filterPath.Child("requestHeaderModifier")
+
+	if headerModifier == nil {
+		panicForBrokenWebhookAssumption(errors.New("requestHeaderModifier cannot be nil"))
+	}
+
+	return validateFilterHeaderModifierFields(validator, headerModifier, headerModifierPath)
+}
+
+func validateFilterHeaderModifierFields(
+	validator validation.HTTPFieldsValidator,
+	headerModifier *v1beta1.HTTPHeaderFilter,
+	headerModifierPath *field.Path,
+) field.ErrorList {
+	var allErrs field.ErrorList
+
+	for _, h := range headerModifier.Add {
+		if err := validator.ValidateRequestHeaderName(string(h.Name)); err != nil {
+			valErr := field.Invalid(headerModifierPath.Child("add"), h, err.Error())
+			allErrs = append(allErrs, valErr)
+		}
+		if err := validator.ValidateRequestHeaderValue(h.Value); err != nil {
+			valErr := field.Invalid(headerModifierPath.Child("add"), h, err.Error())
+			allErrs = append(allErrs, valErr)
+		}
+	}
+	for _, h := range headerModifier.Set {
+		if err := validator.ValidateRequestHeaderName(string(h.Name)); err != nil {
+			valErr := field.Invalid(headerModifierPath.Child("set"), h, err.Error())
+			allErrs = append(allErrs, valErr)
+		}
+		if err := validator.ValidateRequestHeaderValue(h.Value); err != nil {
+			valErr := field.Invalid(headerModifierPath.Child("set"), h, err.Error())
+			allErrs = append(allErrs, valErr)
+		}
+	}
+	for _, h := range headerModifier.Remove {
+		if err := validator.ValidateRequestHeaderName(h); err != nil {
+			valErr := field.Invalid(headerModifierPath.Child("remove"), h, err.Error())
 			allErrs = append(allErrs, valErr)
 		}
 	}

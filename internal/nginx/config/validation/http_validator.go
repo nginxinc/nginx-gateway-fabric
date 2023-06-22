@@ -10,6 +10,7 @@ import (
 type HTTPValidator struct {
 	HTTPNJSMatchValidator
 	HTTPRedirectValidator
+	HTTPRequestHeaderValidator
 }
 
 var _ validation.HTTPFieldsValidator = HTTPValidator{}

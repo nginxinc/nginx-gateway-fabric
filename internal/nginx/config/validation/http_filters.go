@@ -4,6 +4,10 @@ package validation
 // For example, return 302 "https://example.com:8080";
 type HTTPRedirectValidator struct{}
 
+// HTTPRequestHeaderValidator validates values for request headers,
+// which in NGINX is done with the proxy_set_header directive.
+type HTTPRequestHeaderValidator struct{}
+
 var supportedRedirectSchemes = map[string]struct{}{
 	"http":  {},
 	"https": {},
@@ -38,4 +42,15 @@ var supportedRedirectStatusCodes = map[int]struct{}{
 // possible code values. We can always relax the validation later in case there is a need.
 func (HTTPRedirectValidator) ValidateRedirectStatusCode(statusCode int) (valid bool, supportedValues []string) {
 	return validateInSupportedValues(statusCode, supportedRedirectStatusCodes)
+}
+
+func (HTTPRequestHeaderValidator) ValidateRequestHeaderName(name string) error {
+	return validateHeaderName(name)
+}
+
+var requestHeaderValueExamples = []string{"my-header-value", "example/12345=="}
+
+func (HTTPRequestHeaderValidator) ValidateRequestHeaderValue(value string) error {
+	// Variables in header values are supported by NGINX but not required by the Gateway API.
+	return validateEscapedStringNoVarExpansion(value, requestHeaderValueExamples)
 }

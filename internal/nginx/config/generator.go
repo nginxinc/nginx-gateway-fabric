@@ -42,5 +42,6 @@ func getExecuteFuncs() []executeFunc {
 		executeUpstreams,
 		executeSplitClients,
 		executeServers,
+		executeMaps,
 	}
 }

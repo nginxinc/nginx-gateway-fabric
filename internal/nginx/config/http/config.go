@@ -12,12 +12,19 @@ type Server struct {
 
 // Location holds all configuration for an HTTP location.
 type Location struct {
-	Return       *Return
-	Path         string
-	ProxyPass    string
-	HTTPMatchVar string
-	Internal     bool
-	Exact        bool
+	Return          *Return
+	Path            string
+	ProxyPass       string
+	HTTPMatchVar    string
+	ProxySetHeaders []Header
+	Internal        bool
+	Exact           bool
+}
+
+// Header defines a HTTP header to be passed to the proxied server.
+type Header struct {
+	Name  string
+	Value string
 }
 
 // Return represents an HTTP return.
@@ -65,4 +72,17 @@ type SplitClient struct {
 type SplitClientDistribution struct {
 	Percent string
 	Value   string
+}
+
+// Map defines an NGINX map.
+type Map struct {
+	Source     string
+	Variable   string
+	Parameters []MapParameter
+}
+
+// Parameter defines a Value and Result pair in a Map.
+type MapParameter struct {
+	Value  string
+	Result string
 }
