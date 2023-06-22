@@ -2,7 +2,6 @@ NKG_TAG = edge
 NKG_PREFIX = nginx-kubernetes-gateway
 GATEWAY_CLASS = nginx
 SUPPORTED_FEATURES = HTTPRoute,HTTPRouteQueryParamMatching,HTTPRouteMethodMatching,HTTPRoutePortRedirect,HTTPRouteSchemeRedirect
-EXEMPT_FEATURES = ReferenceGrant
 KIND_KUBE_CONFIG_FOLDER = $${HOME}/.kube/kind
 TAG = latest
 PREFIX = conformance-test-runner
@@ -62,7 +61,7 @@ run-conformance-tests: ## Run conformance tests
 		--image=$(PREFIX):$(TAG) --image-pull-policy=Never \
 		--overrides='{ "spec": { "serviceAccountName": "conformance" }  }' \
 		--restart=Never -- go test -v . -tags conformance -args --gateway-class=$(GATEWAY_CLASS) --debug \
-						        --supported-features=$(SUPPORTED_FEATURES) --exempt-features=$(EXEMPT_FEATURES)
+						        --supported-features=$(SUPPORTED_FEATURES)
 
 .PHONY: cleanup-conformance-tests
 cleanup-conformance-tests: ## Clean up conformance tests fixtures

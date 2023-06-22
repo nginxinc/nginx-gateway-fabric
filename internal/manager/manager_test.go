@@ -34,6 +34,7 @@ func TestPrepareFirstEventBatchPreparerArgs(t *testing.T) {
 				&discoveryV1.EndpointSliceList{},
 				&gatewayv1beta1.HTTPRouteList{},
 				&gatewayv1beta1.GatewayList{},
+				&gatewayv1beta1.ReferenceGrantList{},
 			},
 		},
 		{
@@ -52,6 +53,7 @@ func TestPrepareFirstEventBatchPreparerArgs(t *testing.T) {
 				&apiv1.NamespaceList{},
 				&discoveryV1.EndpointSliceList{},
 				&gatewayv1beta1.HTTPRouteList{},
+				&gatewayv1beta1.ReferenceGrantList{},
 			},
 		},
 	}

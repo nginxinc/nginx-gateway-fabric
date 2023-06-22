@@ -169,7 +169,7 @@ func TestBuildGateway(t *testing.T) {
 		},
 	}
 
-	gatewayTLSConfig := &v1beta1.GatewayTLSConfig{
+	gatewayTLSConfigSameNs := &v1beta1.GatewayTLSConfig{
 		Mode: helpers.GetTLSModePointer(v1beta1.TLSModeTerminate),
 		CertificateRefs: []v1beta1.SecretObjectReference{
 			{
@@ -187,6 +187,17 @@ func TestBuildGateway(t *testing.T) {
 				Kind:      (*v1beta1.Kind)(helpers.GetStringPointer("Secret")),
 				Name:      "does-not-exist",
 				Namespace: (*v1beta1.Namespace)(helpers.GetStringPointer("test")),
+			},
+		},
+	}
+
+	gatewayTLSConfigDiffNs := &v1beta1.GatewayTLSConfig{
+		Mode: helpers.GetTLSModePointer(v1beta1.TLSModeTerminate),
+		CertificateRefs: []v1beta1.SecretObjectReference{
+			{
+				Kind:      (*v1beta1.Kind)(helpers.GetStringPointer("Secret")),
+				Name:      "secret",
+				Namespace: (*v1beta1.Namespace)(helpers.GetStringPointer("diff-ns")),
 			},
 		},
 	}
@@ -223,29 +234,42 @@ func TestBuildGateway(t *testing.T) {
 	foo443Listener := createHTTPListener("foo-443", "foo.example.com", 443)
 
 	// foo https listeners
-	foo80HTTPSListener := createHTTPSListener("foo-80-https", "foo.example.com", 80, gatewayTLSConfig)
-	foo443HTTPSListener1 := createHTTPSListener("foo-443-https-1", "foo.example.com", 443, gatewayTLSConfig)
-	foo8443HTTPSListener := createHTTPSListener("foo-8443-https", "foo.example.com", 8443, gatewayTLSConfig)
+	foo80HTTPSListener := createHTTPSListener("foo-80-https", "foo.example.com", 80, gatewayTLSConfigSameNs)
+	foo443HTTPSListener1 := createHTTPSListener("foo-443-https-1", "foo.example.com", 443, gatewayTLSConfigSameNs)
+	foo8443HTTPSListener := createHTTPSListener("foo-8443-https", "foo.example.com", 8443, gatewayTLSConfigSameNs)
 
 	// bar http listener
 	bar80Listener := createHTTPListener("bar-80", "bar.example.com", 80)
 
 	// bar https listeners
-	bar443HTTPSListener := createHTTPSListener("bar-443-https", "bar.example.com", 443, gatewayTLSConfig)
-	bar8443HTTPSListener := createHTTPSListener("bar-8443-https", "bar.example.com", 8443, gatewayTLSConfig)
+	bar443HTTPSListener := createHTTPSListener("bar-443-https", "bar.example.com", 443, gatewayTLSConfigSameNs)
+	bar8443HTTPSListener := createHTTPSListener("bar-8443-https", "bar.example.com", 8443, gatewayTLSConfigSameNs)
+
+	// https listener that references secret in different namespace
+	crossNamespaceSecretListener := createHTTPSListener(
+		"listener-cross-ns-secret",
+		"foo.example.com",
+		443,
+		gatewayTLSConfigDiffNs,
+	)
 
 	// invalid listeners
 	invalidProtocolListener := createTCPListener("invalid-protocol", "bar.example.com", 80)
 	invalidPortListener := createHTTPListener("invalid-port", "invalid-port", 0)
 	invalidHostnameListener := createHTTPListener("invalid-hostname", "$example.com", 80)
-	invalidHTTPSHostnameListener := createHTTPSListener("invalid-https-hostname", "$example.com", 443, gatewayTLSConfig)
+	invalidHTTPSHostnameListener := createHTTPSListener(
+		"invalid-https-hostname",
+		"$example.com",
+		443,
+		gatewayTLSConfigSameNs,
+	)
 	invalidTLSConfigListener := createHTTPSListener(
 		"invalid-tls-config",
 		"foo.example.com",
 		443,
 		tlsConfigInvalidSecret,
 	)
-	invalidHTTPSPortListener := createHTTPSListener("invalid-https-port", "foo.example.com", 0, gatewayTLSConfig)
+	invalidHTTPSPortListener := createHTTPSListener("invalid-https-port", "foo.example.com", 0, gatewayTLSConfigSameNs)
 
 	const (
 		invalidHostnameMsg = `hostname: Invalid value: "$example.com": a lowercase RFC 1123 subdomain ` +
@@ -259,7 +283,8 @@ func TestBuildGateway(t *testing.T) {
 		conflict443PortMsg = "Multiple listeners for the same port 443 specify incompatible protocols; " +
 			"ensure only one protocol per port"
 
-		secretPath = "/etc/nginx/secrets/test_secret"
+		secretPath       = "/etc/nginx/secrets/test_secret"
+		diffNsSecretPath = "/etc/nginx/secrets/diff_ns_secret"
 	)
 
 	type gatewayCfg struct {
@@ -295,6 +320,7 @@ func TestBuildGateway(t *testing.T) {
 	tests := []struct {
 		gateway      *v1beta1.Gateway
 		gatewayClass *GatewayClass
+		refGrants    map[types.NamespacedName]*v1beta1.ReferenceGrant
 		expected     *Gateway
 		name         string
 	}{
@@ -360,6 +386,66 @@ func TestBuildGateway(t *testing.T) {
 				Valid: true,
 			},
 			name: "valid http listener with allowed routes label selector",
+		},
+		{
+			gateway:      createGateway(gatewayCfg{listeners: []v1beta1.Listener{crossNamespaceSecretListener}}),
+			gatewayClass: validGC,
+			refGrants: map[types.NamespacedName]*v1beta1.ReferenceGrant{
+				{Name: "ref-grant", Namespace: "diff-ns"}: {
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "ref-grant",
+						Namespace: "diff-ns",
+					},
+					Spec: v1beta1.ReferenceGrantSpec{
+						From: []v1beta1.ReferenceGrantFrom{
+							{
+								Group:     v1beta1.GroupName,
+								Kind:      "Gateway",
+								Namespace: "test",
+							},
+						},
+						To: []v1beta1.ReferenceGrantTo{
+							{
+								Group: "core",
+								Kind:  "Secret",
+								Name:  helpers.GetPointer(v1beta1.ObjectName("secret")),
+							},
+						},
+					},
+				},
+			},
+			expected: &Gateway{
+				Source: getLastCreatedGetaway(),
+				Listeners: map[string]*Listener{
+					"listener-cross-ns-secret": {
+						Source:     crossNamespaceSecretListener,
+						Valid:      true,
+						Routes:     map[types.NamespacedName]*Route{},
+						SecretPath: diffNsSecretPath,
+					},
+				},
+				Valid: true,
+			},
+			name: "valid https listener with cross-namespace secret; allowed by reference grant",
+		},
+		{
+			gateway:      createGateway(gatewayCfg{listeners: []v1beta1.Listener{crossNamespaceSecretListener}}),
+			gatewayClass: validGC,
+			expected: &Gateway{
+				Source: getLastCreatedGetaway(),
+				Listeners: map[string]*Listener{
+					"listener-cross-ns-secret": {
+						Source: crossNamespaceSecretListener,
+						Valid:  false,
+						Conditions: conditions.NewListenerRefNotPermitted(
+							`Certificate ref to secret diff-ns/secret not permitted by any ReferenceGrant`,
+						),
+						Routes: map[types.NamespacedName]*Route{},
+					},
+				},
+				Valid: true,
+			},
+			name: "invalid https listener with cross-namespace secret; no reference grant",
 		},
 		{
 			gateway:      createGateway(gatewayCfg{listeners: []v1beta1.Listener{listenerInvalidSelector}}),
@@ -645,16 +731,20 @@ func TestBuildGateway(t *testing.T) {
 
 	secretMemoryMgr := &secretsfakes.FakeSecretDiskMemoryManager{}
 	secretMemoryMgr.RequestCalls(func(nsname types.NamespacedName) (string, error) {
-		if (nsname == types.NamespacedName{Namespace: "test", Name: "secret"}) {
+		switch nsname {
+		case types.NamespacedName{Namespace: "test", Name: "secret"}:
 			return secretPath, nil
+		case types.NamespacedName{Namespace: "diff-ns", Name: "secret"}:
+			return diffNsSecretPath, nil
+		default:
+			return "", errors.New("secret not found")
 		}
-		return "", errors.New("secret not found")
 	})
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewGomegaWithT(t)
-			result := buildGateway(test.gateway, secretMemoryMgr, test.gatewayClass)
+			result := buildGateway(test.gateway, secretMemoryMgr, test.gatewayClass, test.refGrants)
 			g.Expect(helpers.Diff(test.expected, result)).To(BeEmpty())
 		})
 	}

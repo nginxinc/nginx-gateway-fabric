@@ -1,6 +1,8 @@
 # HTTPS Termination Example
 
-In this example, we expand on the simple [cafe-example](../cafe-example) by adding HTTPS termination to our routes and an HTTPS redirect from port 80 to 443.
+In this example, we expand on the simple [cafe-example](../cafe-example) by adding HTTPS termination to our routes and
+an HTTPS redirect from port 80 to 443. We will also show how you can use a ReferenceGrant to permit your Gateway to
+reference a Secret in a different Namespace.
 
 ## Running the Example
 
@@ -40,13 +42,21 @@ In this example, we expand on the simple [cafe-example](../cafe-example) by addi
 
 ## 3. Configure HTTPS Termination and Routing
 
-1. Create a Secret with a TLS certificate and key:
+1. Create the Namespace `certificate` and a Secret with a TLS certificate and key:
    ```
    kubectl apply -f cafe-secret.yaml
    ```
 
    The TLS certificate and key in this Secret are used to terminate the TLS connections for the cafe application.
-   **Important**: This certificate and key are for demo purposes only.
+   > **Important**: This certificate and key are for demo purposes only.
+
+1. Create the `ReferenceGrant`:
+   ```
+   kubectl apply -f reference-grant.yaml
+   ```
+
+   This ReferenceGrant allows all Gateways in the `default` namespace to references the `cafe-secret` Secret in
+   the `certificate` namespace.
 
 1. Create the `Gateway` resource:
    ```
@@ -54,15 +64,18 @@ In this example, we expand on the simple [cafe-example](../cafe-example) by addi
    ```
 
    This [Gateway](./gateway.yaml) configures:
-   * `http` listener for HTTP traffic
-   * `https` listener for HTTPS traffic. It terminates TLS connections using the `cafe-secret` we created in step 1.
+    * `http` listener for HTTP traffic
+    * `https` listener for HTTPS traffic. It terminates TLS connections using the `cafe-secret` we created in step 1.
 
 1. Create the `HTTPRoute` resources:
    ```
    kubectl apply -f cafe-routes.yaml
    ```
 
-   To configure HTTPS termination for our cafe application, we will bind our `coffee` and `tea` HTTPRoutes to the `https` listener in [cafe-routes.yaml](./cafe-routes.yaml) using the [`parentReference`](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.ParentReference) field:
+   To configure HTTPS termination for our cafe application, we will bind our `coffee` and `tea` HTTPRoutes to
+   the `https` listener in [cafe-routes.yaml](./cafe-routes.yaml) using
+   the [`parentReference`](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.ParentReference)
+   field:
 
    ```yaml
    parentRefs:
@@ -70,7 +83,9 @@ In this example, we expand on the simple [cafe-example](../cafe-example) by addi
      sectionName: https
    ```
 
-   To configure an HTTPS redirect from port 80 to 443, we will bind the special `cafe-tls-redirect` HTTPRoute with a [`HTTPRequestRedirectFilter`](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.HTTPRequestRedirectFilter) to the `http` listener:
+   To configure an HTTPS redirect from port 80 to 443, we will bind the special `cafe-tls-redirect` HTTPRoute with
+   a [`HTTPRequestRedirectFilter`](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.HTTPRequestRedirectFilter)
+   to the `http` listener:
 
    ```yaml
    parentRefs:
@@ -80,13 +95,16 @@ In this example, we expand on the simple [cafe-example](../cafe-example) by addi
 
 ## 4. Test the Application
 
-To access the application, we will use `curl` to send requests to the `coffee` and `tea` Services. First, we will access the application over HTTP to test that the HTTPS redirect works. Then we will use HTTPS.
+To access the application, we will use `curl` to send requests to the `coffee` and `tea` Services. First, we will access
+the application over HTTP to test that the HTTPS redirect works. Then we will use HTTPS.
 
 ### 4.1 Test HTTPS Redirect
 
-To test that NGINX sends an HTTPS redirect, we will send requests to the `coffee` and `tea` Services on HTTP port. We will use curl's `--include` option to print the response headers (we are interested in the `Location` header).
+To test that NGINX sends an HTTPS redirect, we will send requests to the `coffee` and `tea` Services on HTTP port. We
+will use curl's `--include` option to print the response headers (we are interested in the `Location` header).
 
 To get a redirect for coffee:
+
 ```
 curl --resolve cafe.example.com:$GW_HTTP_PORT:$GW_IP http://cafe.example.com:$GW_HTTP_PORT/coffee --include
 HTTP/1.1 302 Moved Temporarily
@@ -96,6 +114,7 @@ Location: https://cafe.example.com:443/coffee
 ```
 
 To get a redirect for tea:
+
 ```
 curl --resolve cafe.example.com:$GW_HTTP_PORT:$GW_IP http://cafe.example.com:$GW_HTTP_PORT/tea --include
 HTTP/1.1 302 Moved Temporarily
@@ -104,9 +123,10 @@ Location: https://cafe.example.com:443/tea
 ...
 ```
 
-### 4.2 Access Coffee and Tea 
+### 4.2 Access Coffee and Tea
 
-Now we will access the application over HTTPS. Since our certificate is self-signed, we will use curl's `--insecure` option to turn off certificate verification.
+Now we will access the application over HTTPS. Since our certificate is self-signed, we will use curl's `--insecure`
+option to turn off certificate verification.
 
 To get coffee:
 
@@ -122,4 +142,46 @@ To get tea:
 curl --resolve cafe.example.com:$GW_HTTPS_PORT:$GW_IP https://cafe.example.com:$GW_HTTPS_PORT/tea --insecure
 Server address: 10.12.0.19:80
 Server name: tea-7cd44fcb4d-xfw2x
+```
+
+### 4.3 Remove the ReferenceGrant
+
+To restrict access to the `cafe-secret` in the `certificate` Namespace, we can delete the ReferenceGrant we created in
+Step 3:
+
+```
+kubectl delete -f reference-grant.yaml
+```
+
+Now, if we try to access the application over HTTPS, we will get a connection refused error:
+```
+curl --resolve cafe.example.com:$GW_HTTPS_PORT:$GW_IP https://cafe.example.com:$GW_HTTPS_PORT/coffee --insecure -vvv
+...
+curl: (7) Failed to connect to cafe.example.com port 443 after 0 ms: Connection refused
+```
+
+
+You can also check the conditions of the Gateway `https` Listener to verify the that the reference is not permitted:
+
+```
+ Name:                    https
+ Conditions:
+   Last Transition Time:  2023-06-26T20:23:56Z
+   Message:               Certificate ref to secret certificate/cafe-secret not permitted by any ReferenceGrant
+   Observed Generation:   2
+   Reason:                RefNotPermitted
+   Status:                False
+   Type:                  Accepted
+   Last Transition Time:  2023-06-26T20:23:56Z
+   Message:               Certificate ref to secret certificate/cafe-secret not permitted by any ReferenceGrant
+   Observed Generation:   2
+   Reason:                RefNotPermitted
+   Status:                False
+   Type:                  ResolvedRefs
+   Last Transition Time:  2023-06-26T20:23:56Z
+   Message:               Certificate ref to secret certificate/cafe-secret not permitted by any ReferenceGrant
+   Observed Generation:   2
+   Reason:                Invalid
+   Status:                False
+   Type:                  Programmed
 ```

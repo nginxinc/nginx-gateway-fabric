@@ -381,6 +381,26 @@ func NewListenerUnsupportedProtocol(msg string) []Condition {
 	}
 }
 
+// NewListenerRefNotPermitted returns Conditions that indicates that the Listener references a TLS secret that is not
+// permitted by a ReferenceGrant.
+func NewListenerRefNotPermitted(msg string) []Condition {
+	return []Condition{
+		{
+			Type:    string(v1beta1.ListenerConditionAccepted),
+			Status:  metav1.ConditionFalse,
+			Reason:  string(v1beta1.ListenerReasonRefNotPermitted),
+			Message: msg,
+		},
+		{
+			Type:    string(v1beta1.ListenerReasonResolvedRefs),
+			Status:  metav1.ConditionFalse,
+			Reason:  string(v1beta1.ListenerReasonRefNotPermitted),
+			Message: msg,
+		},
+		NewListenerNotProgrammedInvalid(msg),
+	}
+}
+
 // NewDefaultGatewayClassConditions returns the default Conditions that must be present in the status of a GatewayClass.
 func NewDefaultGatewayClassConditions() []Condition {
 	return []Condition{

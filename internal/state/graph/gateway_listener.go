@@ -36,10 +36,11 @@ type Listener struct {
 func buildListeners(
 	gw *v1beta1.Gateway,
 	secretMemoryMgr secrets.SecretDiskMemoryManager,
+	refGrants map[types.NamespacedName]*v1beta1.ReferenceGrant,
 ) map[string]*Listener {
 	listeners := make(map[string]*Listener)
 
-	listenerFactory := newListenerConfiguratorFactory(gw, secretMemoryMgr)
+	listenerFactory := newListenerConfiguratorFactory(gw, secretMemoryMgr, refGrants)
 
 	for _, gl := range gw.Spec.Listeners {
 		configurator := listenerFactory.getConfiguratorForListener(gl)
@@ -67,6 +68,7 @@ func (f *listenerConfiguratorFactory) getConfiguratorForListener(l v1beta1.Liste
 func newListenerConfiguratorFactory(
 	gw *v1beta1.Gateway,
 	secretMemoryMgr secrets.SecretDiskMemoryManager,
+	refGrants map[types.NamespacedName]*v1beta1.ReferenceGrant,
 ) *listenerConfiguratorFactory {
 	sharedPortConflictResolver := createPortConflictResolver()
 
@@ -99,13 +101,13 @@ func newListenerConfiguratorFactory(
 				validateListenerAllowedRouteKind,
 				validateListenerLabelSelector,
 				validateListenerHostname,
-				createHTTPSListenerValidator(gw.Namespace),
+				createHTTPSListenerValidator(),
 			},
 			conflictResolvers: []listenerConflictResolver{
 				sharedPortConflictResolver,
 			},
 			externalReferenceResolvers: []listenerExternalReferenceResolver{
-				createExternalReferencesForTLSSecretsResolver(gw.Namespace, secretMemoryMgr),
+				createExternalReferencesForTLSSecretsResolver(gw.Namespace, secretMemoryMgr, refGrants),
 			},
 		},
 	}
@@ -265,7 +267,7 @@ func validateListenerPort(port v1beta1.PortNumber) error {
 	return nil
 }
 
-func createHTTPSListenerValidator(gwNsName string) listenerValidator {
+func createHTTPSListenerValidator() listenerValidator {
 	return func(listener v1beta1.Listener) []conditions.Condition {
 		var conds []conditions.Condition
 
@@ -314,14 +316,6 @@ func createHTTPSListenerValidator(gwNsName string) listenerValidator {
 		if certRef.Group != nil && *certRef.Group != "" {
 			path := certRefPath.Child("group")
 			valErr := field.NotSupported(path, *certRef.Group, []string{""})
-			conds = append(conds, conditions.NewListenerInvalidCertificateRef(valErr.Error())...)
-		}
-
-		// secret must be in the same namespace as the gateway
-		if certRef.Namespace != nil && string(*certRef.Namespace) != gwNsName {
-			const detail = "Referenced Secret must belong to the same namespace as the Gateway"
-			path := certRefPath.Child("namespace")
-			valErr := field.Invalid(path, certRef.Namespace, detail)
 			conds = append(conds, conditions.NewListenerInvalidCertificateRef(valErr.Error())...)
 		}
 
@@ -382,20 +376,42 @@ func createPortConflictResolver() listenerConflictResolver {
 func createExternalReferencesForTLSSecretsResolver(
 	gwNs string,
 	secretMemoryMgr secrets.SecretDiskMemoryManager,
+	refGrants map[types.NamespacedName]*v1beta1.ReferenceGrant,
 ) listenerExternalReferenceResolver {
 	return func(l *Listener) {
-		nsname := types.NamespacedName{
-			Namespace: gwNs,
-			Name:      string(l.Source.TLS.CertificateRefs[0].Name),
+		certRef := l.Source.TLS.CertificateRefs[0]
+
+		certRefNs := gwNs
+		if certRef.Namespace != nil {
+			certRefNs = string(*certRef.Namespace)
+		}
+
+		certRefNsName := types.NamespacedName{
+			Namespace: certRefNs,
+			Name:      string(certRef.Name),
+		}
+
+		if certRefNs != gwNs {
+			if !refGrantAllowsGatewayToSecret(refGrants, gwNs, certRefNsName) {
+				msg := fmt.Sprintf(
+					"Certificate ref to secret %s/%s not permitted by any ReferenceGrant",
+					certRefNs,
+					certRef.Name,
+				)
+
+				l.Conditions = append(l.Conditions, conditions.NewListenerRefNotPermitted(msg)...)
+				l.Valid = false
+				return
+			}
 		}
 
 		var err error
 
-		l.SecretPath, err = secretMemoryMgr.Request(nsname)
+		l.SecretPath, err = secretMemoryMgr.Request(certRefNsName)
 		if err != nil {
 			path := field.NewPath("tls", "certificateRefs").Index(0)
 			// field.NotFound could be better, but it doesn't allow us to set the error message.
-			valErr := field.Invalid(path, nsname, err.Error())
+			valErr := field.Invalid(path, certRefNsName, err.Error())
 
 			l.Conditions = append(l.Conditions, conditions.NewListenerInvalidCertificateRef(valErr.Error())...)
 			l.Valid = false

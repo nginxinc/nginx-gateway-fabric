@@ -148,7 +148,20 @@ Fields:
 
 ### ReferenceGrant
 
-> Status: Not supported.
+> Status: Partially supported.
+
+NKG only supports ReferenceGrants that permit Gateways to reference Secrets. 
+
+Fields:
+* `spec`
+  * `to`
+    * `group` - supported.
+    * `kind` - partially supported. Only `Secret`.
+    * `name`- supported.
+  * `from`
+    * `group` - supported.
+    * `kind` - partially supported. Only `Gateway`.
+    * `namespace`- supported.
 
 ### Custom Policies
 
