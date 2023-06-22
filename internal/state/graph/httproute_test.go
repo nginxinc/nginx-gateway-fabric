@@ -1280,6 +1280,12 @@ func TestFindAcceptedHostnames(t *testing.T) {
 			expected:         []string{"*.example.com"},
 			msg:              "route wildcard hostname; nil listener hostname",
 		},
+		{
+			listenerHostname: &listenerHostnameWildcard,
+			routeHostnames:   []v1beta1.Hostname{"*.bar.example.com"},
+			expected:         []string{"*.bar.example.com"},
+			msg:              "route and listener wildcard hostnames",
+		},
 	}
 
 	for _, test := range tests {

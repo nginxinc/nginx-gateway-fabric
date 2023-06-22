@@ -1996,8 +1996,6 @@ func TestConvertPathType(t *testing.T) {
 }
 
 func TestHostnameMoreSpecific(t *testing.T) {
-	g := NewGomegaWithT(t)
-
 	tests := []struct {
 		host1     *v1beta1.Hostname
 		host2     *v1beta1.Hostname
@@ -2050,6 +2048,8 @@ func TestHostnameMoreSpecific(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.msg, func(t *testing.T) {
+			g := NewGomegaWithT(t)
+
 			g.Expect(listenerHostnameMoreSpecific(tc.host1, tc.host2)).To(Equal(tc.host1Wins))
 		})
 	}

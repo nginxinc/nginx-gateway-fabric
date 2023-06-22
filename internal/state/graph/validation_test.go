@@ -32,6 +32,11 @@ func TestValidateHostname(t *testing.T) {
 			expectErr: true,
 			name:      "invalid hostname",
 		},
+		{
+			hostname:  "*.example.*.com",
+			expectErr: true,
+			name:      "invalid wildcard hostname",
+		},
 	}
 
 	for _, test := range tests {

@@ -402,33 +402,91 @@ func findAcceptedHostnames(listenerHostname *v1beta1.Hostname, routeHostnames []
 		return []string{hostname}
 	}
 
-	match := func(h v1beta1.Hostname) bool {
-		if hostname == "" {
-			return true
-		}
-
-		routeHost := string(h)
-		return routeHost == hostname || wildcardMatch(hostname, routeHost) || wildcardMatch(routeHost, hostname)
-	}
-
 	var result []string
 
 	for _, h := range routeHostnames {
-		if match(h) {
-			if len(hostname) > len(h) {
-				result = append(result, hostname)
-			} else {
-				result = append(result, string(h))
-			}
+		routeHost := string(h)
+		if match(hostname, routeHost) {
+			result = append(result, GetMoreSpecificHostname(hostname, routeHost))
 		}
 	}
 
 	return result
 }
 
-// wildcardMatch checks if host1 is a wildcard host, and if so, checks if host2 is a match for that wildcard.
-func wildcardMatch(host1, host2 string) bool {
-	return strings.HasPrefix(host1, "*.") && strings.HasSuffix(host2, strings.TrimPrefix(host1, "*"))
+func match(listenerHost, routeHost string) bool {
+	if listenerHost == "" {
+		return true
+	}
+
+	if routeHost == listenerHost {
+		return true
+	}
+
+	wildcardMatch := func(host1, host2 string) bool {
+		return strings.HasPrefix(host1, "*.") && strings.HasSuffix(host2, strings.TrimPrefix(host1, "*"))
+	}
+
+	// check if listenerHost is a wildcard and routeHost matches
+	if wildcardMatch(listenerHost, routeHost) {
+		return true
+	}
+
+	// check if routeHost is a wildcard and listener matchess
+	return wildcardMatch(routeHost, listenerHost)
+}
+
+// GetMoreSpecificHostname returns the more specific hostname between the two inputs.
+//
+// This function assumes that the two hostnames match each other, either:
+// - Exactly
+// - One as a substring of the other
+// - Both as substrings of some parent wildcard
+func GetMoreSpecificHostname(hostname1, hostname2 string) string {
+	if hostname1 == hostname2 {
+		return hostname1
+	}
+
+	if hostname1 == "" {
+		return hostname2
+	} else if hostname2 == "" {
+		return hostname1
+	}
+
+	// Compare if wildcards are present
+	if strings.HasPrefix(hostname1, "*.") {
+		if strings.HasPrefix(hostname2, "*.") {
+			subdomains1 := strings.Split(hostname1, ".")
+			subdomains2 := strings.Split(hostname2, ".")
+
+			// Compare number of subdomains
+			if len(subdomains1) > len(subdomains2) {
+				return hostname1
+			}
+
+			return hostname2
+		}
+
+		return hostname2
+	} else if strings.HasPrefix(hostname2, "*.") {
+		return hostname1
+	}
+
+	subdomains1 := strings.Split(hostname1, ".")
+	subdomains2 := strings.Split(hostname2, ".")
+
+	// Compare number of subdomains
+	if len(subdomains1) > len(subdomains2) {
+		return hostname1
+	} else if len(subdomains1) < len(subdomains2) {
+		return hostname2
+	}
+
+	if len(hostname1) > len(hostname2) {
+		return hostname1
+	}
+
+	return hostname2
 }
 
 func routeAllowedByListener(
