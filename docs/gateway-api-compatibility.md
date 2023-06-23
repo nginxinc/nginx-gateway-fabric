@@ -57,7 +57,7 @@ Fields:
     * `gatewayClassName` - supported.
     * `listeners`
         * `name` - supported.
-        * `hostname` - partially supported. Wildcard hostnames like `*.example.com` are not yet supported.
+        * `hostname` - supported.
         * `port` - supported. 
         * `protocol` - partially supported. Allowed values: `HTTP`, `HTTPS`.
         * `tls`
@@ -101,7 +101,7 @@ Fields:
 Fields:
 * `spec`
   * `parentRefs` - partially supported. Port not supported.
-  * `hostnames` - partially supported. Wildcard binding is not supported: a hostname like `example.com` will not bind to a listener with the hostname `*.example.com`. However, `example.com` will bind to a listener with the empty hostname.
+  * `hostnames` - supported.
   * `rules`
     * `matches`
       * `path` - partially supported. Only `PathPrefix` and `Exact` types.
