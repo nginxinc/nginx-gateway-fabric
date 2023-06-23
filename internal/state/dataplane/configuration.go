@@ -567,20 +567,7 @@ func convertPathType(pathType v1beta1.PathMatchType) PathType {
 	}
 }
 
-// listenerHostnameMoreSpecific returns true if host1 is more specific than host2 (using length).
-//
-// Since the only caller of this function specifies listener hostnames that are both
-// bound to the same route hostname, this function assumes that host1 and host2 match, either
-// exactly or as a substring.
-//
-// For example:
-// - foo.example.com and "" (host1 wins)
-// Non-example:
-// - foo.example.com and bar.example.com (should not be given to this function)
-//
-// As we add regex support, we should put in the proper
-// validation and error handling for this function to ensure that the hostnames are actually matching,
-// to avoid the unintended inputs above for the invalid case.
+// listenerHostnameMoreSpecific returns true if host1 is more specific than host2.
 func listenerHostnameMoreSpecific(host1, host2 *v1beta1.Hostname) bool {
 	var host1Str, host2Str string
 	if host1 != nil {
@@ -591,5 +578,5 @@ func listenerHostnameMoreSpecific(host1, host2 *v1beta1.Hostname) bool {
 		host2Str = string(*host2)
 	}
 
-	return len(host1Str) >= len(host2Str)
+	return graph.GetMoreSpecificHostname(host1Str, host2Str) == host1Str
 }

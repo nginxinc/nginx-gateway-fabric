@@ -222,7 +222,7 @@ func TestValidateListenerHostname(t *testing.T) {
 		},
 		{
 			hostname:  (*v1beta1.Hostname)(helpers.GetStringPointer("*.example.com")),
-			expectErr: true,
+			expectErr: false,
 			name:      "wildcard hostname",
 		},
 		{
