@@ -89,6 +89,8 @@ Fields:
       * `Accepted/False/ProtocolConflict`
       * `Accepted/False/UnsupportedValue`: Custom reason for when a value of a field in a Listener is invalid or not supported.
       * `Accepted/False/GatewayConflict`: Custom reason for when the Gateway is ignored due to a conflicting Gateway. NKG only supports a single Gateway.
+      * `Programmed/True/Programmed`
+      * `Programmed/False/Invalid`
       * `ResolvedRefs/True/ResolvedRefs`
       * `ResolvedRefs/False/InvalidCertificateRef`
       * `Conflicted/True/ProtocolConflict`

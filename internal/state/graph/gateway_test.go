@@ -370,11 +370,9 @@ func TestBuildGateway(t *testing.T) {
 					"listener-with-invalid-selector": {
 						Source: listenerInvalidSelector,
 						Valid:  false,
-						Conditions: []conditions.Condition{
-							conditions.NewListenerUnsupportedValue(
-								`invalid label selector: "invalid" is not a valid label selector operator`,
-							),
-						},
+						Conditions: conditions.NewListenerUnsupportedValue(
+							`invalid label selector: "invalid" is not a valid label selector operator`,
+						),
 					},
 				},
 				Valid: true,
@@ -390,11 +388,9 @@ func TestBuildGateway(t *testing.T) {
 					"invalid-protocol": {
 						Source: invalidProtocolListener,
 						Valid:  false,
-						Conditions: []conditions.Condition{
-							conditions.NewListenerUnsupportedProtocol(
-								`protocol: Unsupported value: "TCP": supported values: "HTTP", "HTTPS"`,
-							),
-						},
+						Conditions: conditions.NewListenerUnsupportedProtocol(
+							`protocol: Unsupported value: "TCP": supported values: "HTTP", "HTTPS"`,
+						),
 					},
 				},
 				Valid: true,
@@ -412,20 +408,16 @@ func TestBuildGateway(t *testing.T) {
 					"invalid-port": {
 						Source: invalidPortListener,
 						Valid:  false,
-						Conditions: []conditions.Condition{
-							conditions.NewListenerUnsupportedValue(
-								`port: Invalid value: 0: port must be between 1-65535`,
-							),
-						},
+						Conditions: conditions.NewListenerUnsupportedValue(
+							`port: Invalid value: 0: port must be between 1-65535`,
+						),
 					},
 					"invalid-https-port": {
 						Source: invalidHTTPSPortListener,
 						Valid:  false,
-						Conditions: []conditions.Condition{
-							conditions.NewListenerUnsupportedValue(
-								`port: Invalid value: 0: port must be between 1-65535`,
-							),
-						},
+						Conditions: conditions.NewListenerUnsupportedValue(
+							`port: Invalid value: 0: port must be between 1-65535`,
+						),
 					},
 				},
 				Valid: true,
@@ -441,18 +433,14 @@ func TestBuildGateway(t *testing.T) {
 				Source: getLastCreatedGetaway(),
 				Listeners: map[string]*Listener{
 					"invalid-hostname": {
-						Source: invalidHostnameListener,
-						Valid:  false,
-						Conditions: []conditions.Condition{
-							conditions.NewListenerUnsupportedValue(invalidHostnameMsg),
-						},
+						Source:     invalidHostnameListener,
+						Valid:      false,
+						Conditions: conditions.NewListenerUnsupportedValue(invalidHostnameMsg),
 					},
 					"invalid-https-hostname": {
-						Source: invalidHTTPSHostnameListener,
-						Valid:  false,
-						Conditions: []conditions.Condition{
-							conditions.NewListenerUnsupportedValue(invalidHostnameMsg),
-						},
+						Source:     invalidHTTPSHostnameListener,
+						Valid:      false,
+						Conditions: conditions.NewListenerUnsupportedValue(invalidHostnameMsg),
 					},
 				},
 				Valid: true,

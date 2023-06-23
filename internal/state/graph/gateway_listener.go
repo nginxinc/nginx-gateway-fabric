@@ -79,7 +79,7 @@ func newListenerConfiguratorFactory(
 						listener.Protocol,
 						[]string{string(v1beta1.HTTPProtocolType), string(v1beta1.HTTPSProtocolType)},
 					)
-					return []conditions.Condition{conditions.NewListenerUnsupportedProtocol(valErr.Error())}
+					return conditions.NewListenerUnsupportedProtocol(valErr.Error())
 				},
 			},
 		},
@@ -152,7 +152,7 @@ func (c *listenerConfigurator) configure(listener v1beta1.Listener) *Listener {
 		allowedRouteSelector, err = metav1.LabelSelectorAsSelector(selector)
 		if err != nil {
 			msg := fmt.Sprintf("invalid label selector: %s", err.Error())
-			conds = append(conds, conditions.NewListenerUnsupportedValue(msg))
+			conds = append(conds, conditions.NewListenerUnsupportedValue(msg)...)
 		}
 	}
 
@@ -199,7 +199,7 @@ func validateListenerHostname(listener v1beta1.Listener) []conditions.Condition 
 	if err != nil {
 		path := field.NewPath("hostname")
 		valErr := field.Invalid(path, listener.Hostname, err.Error())
-		return []conditions.Condition{conditions.NewListenerUnsupportedValue(valErr.Error())}
+		return conditions.NewListenerUnsupportedValue(valErr.Error())
 	}
 	return nil
 }
@@ -221,7 +221,7 @@ func validateListenerAllowedRouteKind(listener v1beta1.Listener) []conditions.Co
 			for _, kind := range listener.AllowedRoutes.Kinds {
 				if !validHTTPRouteKind(kind) {
 					msg := fmt.Sprintf("Unsupported route kind \"%s/%s\"", *kind.Group, kind.Kind)
-					return []conditions.Condition{conditions.NewListenerUnsupportedValue(msg)}
+					return conditions.NewListenerUnsupportedValue(msg)
 				}
 			}
 		}
@@ -237,7 +237,7 @@ func validateListenerLabelSelector(listener v1beta1.Listener) []conditions.Condi
 		*listener.AllowedRoutes.Namespaces.From == v1beta1.NamespacesFromSelector &&
 		listener.AllowedRoutes.Namespaces.Selector == nil {
 		msg := "Listener's AllowedRoutes Selector must be set when From is set to type Selector"
-		return []conditions.Condition{conditions.NewListenerUnsupportedValue(msg)}
+		return conditions.NewListenerUnsupportedValue(msg)
 	}
 
 	return nil
@@ -247,7 +247,7 @@ func validateHTTPListener(listener v1beta1.Listener) []conditions.Condition {
 	if err := validateListenerPort(listener.Port); err != nil {
 		path := field.NewPath("port")
 		valErr := field.Invalid(path, listener.Port, err.Error())
-		return []conditions.Condition{conditions.NewListenerUnsupportedValue(valErr.Error())}
+		return conditions.NewListenerUnsupportedValue(valErr.Error())
 	}
 
 	if listener.TLS != nil {
@@ -272,7 +272,7 @@ func createHTTPSListenerValidator(gwNsName string) listenerValidator {
 		if err := validateListenerPort(listener.Port); err != nil {
 			path := field.NewPath("port")
 			valErr := field.Invalid(path, listener.Port, err.Error())
-			conds = append(conds, conditions.NewListenerUnsupportedValue(valErr.Error()))
+			conds = append(conds, conditions.NewListenerUnsupportedValue(valErr.Error())...)
 		}
 
 		if listener.TLS == nil {
@@ -287,13 +287,13 @@ func createHTTPSListenerValidator(gwNsName string) listenerValidator {
 				*listener.TLS.Mode,
 				[]string{string(v1beta1.TLSModeTerminate)},
 			)
-			conds = append(conds, conditions.NewListenerUnsupportedValue(valErr.Error()))
+			conds = append(conds, conditions.NewListenerUnsupportedValue(valErr.Error())...)
 		}
 
 		if len(listener.TLS.Options) > 0 {
 			path := tlsPath.Child("options")
 			valErr := field.Forbidden(path, "options are not supported")
-			conds = append(conds, conditions.NewListenerUnsupportedValue(valErr.Error()))
+			conds = append(conds, conditions.NewListenerUnsupportedValue(valErr.Error())...)
 		}
 
 		if len(listener.TLS.CertificateRefs) == 0 {
@@ -328,7 +328,7 @@ func createHTTPSListenerValidator(gwNsName string) listenerValidator {
 		if l := len(listener.TLS.CertificateRefs); l > 1 {
 			path := tlsPath.Child("certificateRefs")
 			valErr := field.TooMany(path, l, 1)
-			conds = append(conds, conditions.NewListenerUnsupportedValue(valErr.Error()))
+			conds = append(conds, conditions.NewListenerUnsupportedValue(valErr.Error())...)
 		}
 
 		return conds

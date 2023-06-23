@@ -29,10 +29,8 @@ func TestValidateHTTPListener(t *testing.T) {
 			l: v1beta1.Listener{
 				Port: 0,
 			},
-			expected: []conditions.Condition{
-				conditions.NewListenerUnsupportedValue(`port: Invalid value: 0: port must be between 1-65535`),
-			},
-			name: "invalid port",
+			expected: conditions.NewListenerUnsupportedValue(`port: Invalid value: 0: port must be between 1-65535`),
+			name:     "invalid port",
 		},
 	}
 
@@ -98,10 +96,8 @@ func TestValidateHTTPSListener(t *testing.T) {
 					CertificateRefs: []v1beta1.SecretObjectReference{validSecretRef},
 				},
 			},
-			expected: []conditions.Condition{
-				conditions.NewListenerUnsupportedValue(`port: Invalid value: 0: port must be between 1-65535`),
-			},
-			name: "invalid port",
+			expected: conditions.NewListenerUnsupportedValue(`port: Invalid value: 0: port must be between 1-65535`),
+			name:     "invalid port",
 		},
 		{
 			l: v1beta1.Listener{
@@ -112,10 +108,8 @@ func TestValidateHTTPSListener(t *testing.T) {
 					Options:         map[v1beta1.AnnotationKey]v1beta1.AnnotationValue{"key": "val"},
 				},
 			},
-			expected: []conditions.Condition{
-				conditions.NewListenerUnsupportedValue("tls.options: Forbidden: options are not supported"),
-			},
-			name: "invalid options",
+			expected: conditions.NewListenerUnsupportedValue("tls.options: Forbidden: options are not supported"),
+			name:     "invalid options",
 		},
 		{
 			l: v1beta1.Listener{
@@ -125,11 +119,9 @@ func TestValidateHTTPSListener(t *testing.T) {
 					CertificateRefs: []v1beta1.SecretObjectReference{validSecretRef},
 				},
 			},
-			expected: []conditions.Condition{
-				conditions.NewListenerUnsupportedValue(
-					`tls.mode: Unsupported value: "Passthrough": supported values: "Terminate"`,
-				),
-			},
+			expected: conditions.NewListenerUnsupportedValue(
+				`tls.mode: Unsupported value: "Passthrough": supported values: "Terminate"`,
+			),
 			name: "invalid tls mode",
 		},
 		{
@@ -180,10 +172,8 @@ func TestValidateHTTPSListener(t *testing.T) {
 					CertificateRefs: []v1beta1.SecretObjectReference{validSecretRef, validSecretRef},
 				},
 			},
-			expected: []conditions.Condition{
-				conditions.NewListenerUnsupportedValue("tls.certificateRefs: Too many: 2: must have at most 1 items"),
-			},
-			name: "too many cert refs",
+			expected: conditions.NewListenerUnsupportedValue("tls.certificateRefs: Too many: 2: must have at most 1 items"),
+			name:     "too many cert refs",
 		},
 	}
 

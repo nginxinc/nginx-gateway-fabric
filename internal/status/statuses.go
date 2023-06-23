@@ -179,6 +179,10 @@ func buildGatewayStatus(gateway *graph.Gateway, nginxReloadRes NginxReloadResult
 			conds = l.Conditions
 		}
 
+		if nginxReloadRes.Error != nil {
+			conds = append(conds, conditions.NewListenerNotProgrammedInvalid(conditions.ListenerMessageFailedNginxReload))
+		}
+
 		listenerStatuses[name] = ListenerStatus{
 			AttachedRoutes: int32(len(l.Routes)),
 			Conditions:     conditions.DeduplicateConditions(conds),
