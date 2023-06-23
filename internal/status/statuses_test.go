@@ -252,7 +252,12 @@ func TestBuildStatusesNginxErr(t *testing.T) {
 				ListenerStatuses: map[string]ListenerStatus{
 					"listener-80-1": {
 						AttachedRoutes: 1,
-						Conditions:     conditions.NewDefaultListenerConditions(),
+						Conditions: []conditions.Condition{
+							conditions.NewListenerAccepted(),
+							conditions.NewListenerResolvedRefs(),
+							conditions.NewListenerNoConflicts(),
+							conditions.NewListenerNotProgrammedInvalid(conditions.ListenerMessageFailedNginxReload),
+						},
 					},
 				},
 				ObservedGeneration: 2,
@@ -368,10 +373,8 @@ func TestBuildGatewayStatuses(t *testing.T) {
 						},
 					},
 					"listener-invalid": {
-						Valid: false,
-						Conditions: []conditions.Condition{
-							conditions.NewListenerUnsupportedValue("unsupported value"),
-						},
+						Valid:      false,
+						Conditions: conditions.NewListenerUnsupportedValue("unsupported value"),
 					},
 				},
 				Valid: true,
@@ -388,9 +391,7 @@ func TestBuildGatewayStatuses(t *testing.T) {
 							Conditions:     conditions.NewDefaultListenerConditions(),
 						},
 						"listener-invalid": {
-							Conditions: []conditions.Condition{
-								conditions.NewListenerUnsupportedValue("unsupported value"),
-							},
+							Conditions: conditions.NewListenerUnsupportedValue("unsupported value"),
 						},
 					},
 					ObservedGeneration: 2,
@@ -403,16 +404,12 @@ func TestBuildGatewayStatuses(t *testing.T) {
 				Source: gw,
 				Listeners: map[string]*graph.Listener{
 					"listener-invalid-1": {
-						Valid: false,
-						Conditions: []conditions.Condition{
-							conditions.NewListenerUnsupportedProtocol("unsupported protocol"),
-						},
+						Valid:      false,
+						Conditions: conditions.NewListenerUnsupportedProtocol("unsupported protocol"),
 					},
 					"listener-invalid-2": {
-						Valid: false,
-						Conditions: []conditions.Condition{
-							conditions.NewListenerUnsupportedValue("unsupported value"),
-						},
+						Valid:      false,
+						Conditions: conditions.NewListenerUnsupportedValue("unsupported value"),
 					},
 				},
 				Valid: true,
@@ -422,14 +419,10 @@ func TestBuildGatewayStatuses(t *testing.T) {
 					Conditions: conditions.NewGatewayNotAcceptedListenersNotValid(),
 					ListenerStatuses: map[string]ListenerStatus{
 						"listener-invalid-1": {
-							Conditions: []conditions.Condition{
-								conditions.NewListenerUnsupportedProtocol("unsupported protocol"),
-							},
+							Conditions: conditions.NewListenerUnsupportedProtocol("unsupported protocol"),
 						},
 						"listener-invalid-2": {
-							Conditions: []conditions.Condition{
-								conditions.NewListenerUnsupportedValue("unsupported value"),
-							},
+							Conditions: conditions.NewListenerUnsupportedValue("unsupported value"),
 						},
 					},
 					ObservedGeneration: 2,
@@ -451,7 +444,7 @@ func TestBuildGatewayStatuses(t *testing.T) {
 			},
 		},
 		{
-			name: "error reloading nginx; gateway not programmed",
+			name: "error reloading nginx; gateway/listener not programmed",
 			gateway: &graph.Gateway{
 				Source:     gw,
 				Valid:      true,
@@ -474,7 +467,12 @@ func TestBuildGatewayStatuses(t *testing.T) {
 					ListenerStatuses: map[string]ListenerStatus{
 						"listener-valid": {
 							AttachedRoutes: 1,
-							Conditions:     conditions.NewDefaultListenerConditions(),
+							Conditions: []conditions.Condition{
+								conditions.NewListenerAccepted(),
+								conditions.NewListenerResolvedRefs(),
+								conditions.NewListenerNoConflicts(),
+								conditions.NewListenerNotProgrammedInvalid(conditions.ListenerMessageFailedNginxReload),
+							},
 						},
 					},
 					ObservedGeneration: 2,
