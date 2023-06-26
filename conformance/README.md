@@ -5,7 +5,7 @@
 * [kind](https://kind.sigs.k8s.io/).
 * Docker.
 * Golang.
-* [yq](https://github.com/mikefarah/yq/#macos--linux-via-homebrew)
+* [yq](https://github.com/mikefarah/yq/#install)
 
 **Note**: all commands in steps below are executed from the ```conformance``` directory
 
@@ -14,63 +14,80 @@ List available commands:
 ```bash
 $ make
 
+build-and-load-images          Build NKG container and load it and NGINX container on configured kind cluster
 build-test-runner-image        Build conformance test runner image
 cleanup-conformance-tests      Clean up conformance tests fixtures
 create-kind-cluster            Create a kind cluster
 delete-kind-cluster            Delete kind cluster
 help                           Display this help
-install-nkg                    Install NKG with provisioner on configured kind cluster
-prepare-nkg-no-build           Load NKG and NGINX containers on configured kind cluster
-prepare-nkg                    Build and load NKG and NGINX containers on configured kind cluster
+install-nkg-edge               Install NKG with provisioner from edge on configured kind cluster
+install-nkg-local-build        Install NKG from local build with provisioner on configured kind cluster
+preload-nginx-container        Preload NGINX container on configured kind cluster
+prepare-nkg-dependencies       Install NKG dependencies on configured kind cluster
 run-conformance-tests          Run conformance tests
 undo-image-update              Undo the NKG image name and tag in deployment manifest
 uninstall-nkg                  Uninstall NKG on configured kind cluster
 ```
+
+**Note:** The following variables are configurable when running the below `make` commands:
+
+| Variable  | Default | Description |
+| ------------- | ------------- | ------------- |
+| TAG | latest  | The tag for the conformance test image |
+| PREFIX | conformance-test-runner | The prefix for the conformance test image |
+| NKG_TAG  | edge  | The tag for the locally built NKG image |
+| NKG_PREFIX | nginx-kubernetes-gateway  | The prefix for the locally built NKG image |
+| KIND_KUBE_CONFIG_FOLDER | ~/.kube/kind  | The location of the kubeconfig folder |
+| GATEWAY_CLASS | nginx | The gateway class that should be used for the tests |
+| SUPPORTED_FEATURES | HTTPRoute,HTTPRouteQueryParamMatching,HTTPRouteMethodMatching,HTTPRoutePortRedirect,HTTPRouteSchemeRedirect | The supported features that should be tested by the conformance tests |
+| EXEMPT_FEATURES | ReferenceGrant | The features that should not be tested by the conformance tests |
+| NGINX_IMAGE | as defined in the ../deploy/manifests/deployment.yaml file  | The NGINX image for the NKG deployments |
+| NKG_DEPLOYMENT_MANIFEST | ../deploy/manifests/deployment.yaml | The location of the NKG deployment manifest |
+
 ### Step 1 - Create a kind Cluster
 
 ```bash
 $ make create-kind-cluster
 ```
+### Step 2 - Install Nginx Kubernetes Gateway to configured kind cluster
 
-### Step 2 - Build Nginx Kubernetes Gateway container and load it and the NGINX container to configured kind cluster
+#### *Option 1* Build and install Nginx Kubernetes Gateway from local to configured kind cluster
 ```bash
-$ make NKG_PREFIX=<repo_name> NKG_TAG=<image_tag> prepare-nkg
-
+$ make install-nkg-local-build
 ```
-**Optional** Instead of the above command, you can skip the build NKG image step by running
+
+#### *Option 2* Install Nginx Kubernetes Gateway from edge to configured kind cluster
+Instead of the above command, you can skip the build NKG image step and prepare the environment to instead
+use the `edge` image
 
 ```bash
-$ make NKG_PREFIX=<repo_name> NKG_TAG=<image_tag> prepare-nkg-no-build
-
+$ make install-nkg-edge
 ```
+
 ### Step 3 - Build conformance test runner image
 ```bash
 $ make build-test-runner-image
 ```
 
-### Step 4 - Install Nginx Kubernetes Gateway
+### Step 4 - Run Gateway conformance tests
 ```bash
-$ make NKG_PREFIX=<repo_name> NKG_TAG=<image_tag> install-nkg
+$ make run-conformance-tests
 ```
 
-### Step 5 - Run Gateway conformance tests
-```bash
-$ make NKG_PREFIX=<repo_name> NKG_TAG=<image_tag> run-conformance-tests
-```
-
-### Step 6 - Cleanup the conformance test fixtures and uninstall Nginx Kubernetes Gateway
+### Step 5 - Cleanup the conformance test fixtures and uninstall Nginx Kubernetes Gateway
 ```bash
 $ make cleanup-conformance-tests
 $ make uninstall-nkg
 ```
 
-### Step 7 - Revert changes to the NKG deployment manifest
+### Step 6 - Revert changes to the NKG deployment manifest
+**Optional** Not required if using `edge` image
 **Warning**: `make undo-image-update` will hard reset changes to the deploy/manifests/deployment.yaml file!
 ```bash
 $ make undo-image-update
 ```
 
-### Step 8 - Delete kind cluster
+### Step 7 - Delete kind cluster
 ```bash
 $ make delete-kind-cluster
 ```

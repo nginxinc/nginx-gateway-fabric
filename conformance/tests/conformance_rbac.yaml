@@ -61,22 +61,3 @@ roleRef:
   kind: ClusterRole
   name: conformance
   apiGroup: rbac.authorization.k8s.io
----
-apiVersion: v1
-kind: Pod
-metadata:
-  name: conformance
-spec:
-  containers:
-  - name: conformance
-    image: conformance-test-runner:latest
-    imagePullPolicy: Never
-    env:
-      - name: GATEWAY_CLASS
-        value: nginx
-      - name: SUPPORTED_FEATURES
-        value: HTTPRoute,HTTPRouteQueryParamMatching,HTTPRouteMethodMatching,HTTPRoutePortRedirect,HTTPRouteSchemeRedirect
-      - name: EXEMPT_FEATURES
-        value: ReferenceGrant
-  serviceAccountName: conformance
-  restartPolicy: Never

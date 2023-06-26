@@ -14,6 +14,7 @@ Follow these steps to set up your development environment.
     - [Kind](https://kind.sigs.k8s.io/docs/user/quick-start/)
     - [git](https://git-scm.com/)
     - [GNU Make](https://www.gnu.org/software/software.html)
+    - [yq](https://github.com/mikefarah/yq/#install)
     - [fieldalignment](https://pkg.go.dev/golang.org/x/tools/go/analysis/passes/fieldalignment):
 
       ```shell
@@ -91,6 +92,10 @@ make unit-test
 ```
 
 For more details on testing, see the [testing](/docs/developer/testing.md) documentation.
+
+## Gateway API Conformance Testing
+
+To run Gateway API conformance tests, please follow the instructions on [this](/conformance/README.md) page.
 
 ## Run the Linter
 
