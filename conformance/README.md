@@ -15,14 +15,16 @@ List available commands:
 $ make
 
 build-test-runner-image        Build conformance test runner image
+cleanup-conformance-tests      Clean up conformance tests fixtures
 create-kind-cluster            Create a kind cluster
 delete-kind-cluster            Delete kind cluster
 help                           Display this help
 install-nkg                    Install NKG with provisioner on configured kind cluster
-prepare-nkg                    Build and load NKG container on configured kind cluster
+prepare-nkg-no-build           Load NKG and NGINX containers on configured kind cluster
+prepare-nkg                    Build and load NKG and NGINX containers on configured kind cluster
 run-conformance-tests          Run conformance tests
+undo-image-update              Undo the NKG image name and tag in deployment manifest
 uninstall-nkg                  Uninstall NKG on configured kind cluster
-update-test-kind-config        Update kind config
 ```
 ### Step 1 - Create a kind Cluster
 
@@ -31,9 +33,14 @@ $ make create-kind-cluster
 ```
 
 ### Step 2 - Build Nginx Kubernetes Gateway container and load it and the NGINX container to configured kind cluster
-
 ```bash
 $ make NKG_PREFIX=<repo_name> NKG_TAG=<image_tag> prepare-nkg
+
+```
+**Optional** Instead of the above command, you can skip the build NKG image step by running
+
+```bash
+$ make NKG_PREFIX=<repo_name> NKG_TAG=<image_tag> prepare-nkg-no-build
 
 ```
 ### Step 3 - Build conformance test runner image
@@ -51,8 +58,9 @@ $ make NKG_PREFIX=<repo_name> NKG_TAG=<image_tag> install-nkg
 $ make NKG_PREFIX=<repo_name> NKG_TAG=<image_tag> run-conformance-tests
 ```
 
-### Step 6 - Uninstall Nginx Kubernetes Gateway
+### Step 6 - Cleanup the conformance test fixtures and uninstall Nginx Kubernetes Gateway
 ```bash
+$ make cleanup-conformance-tests
 $ make uninstall-nkg
 ```
 

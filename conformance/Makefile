@@ -12,16 +12,23 @@ help: Makefile ## Display this help
 
 .PHONY: build-test-runner-image
 build-test-runner-image: ## Build conformance test runner image
-	docker build -t $(PREFIX):$(TAG) -f tests/Dockerfile .. 
+	docker build -t $(PREFIX):$(TAG) -f tests/Dockerfile ..
 
 .PHONY: create-kind-cluster
 create-kind-cluster: ## Create a kind cluster
-	kind create cluster --image kindest/node:v1.27.1 
+	kind create cluster --image kindest/node:v1.27.1
 	kind export kubeconfig --kubeconfig $(KIND_KUBE_CONFIG_FOLDER)/config
 
 .PHONY: prepare-nkg
 prepare-nkg: ## Build and load NKG and NGINX containers on configured kind cluster
 	cd .. && make PREFIX=$(NKG_PREFIX) TAG=$(NKG_TAG) container
+	kind load docker-image $(NKG_PREFIX):$(NKG_TAG)
+	docker pull $(NGINX_IMAGE)
+	kind load docker-image $(NGINX_IMAGE)
+	yq -i 'with(.spec.template.spec.containers[0]; .image = "$(NKG_PREFIX):$(NKG_TAG)" | .imagePullPolicy = "Never")' ../deploy/manifests/deployment.yaml
+
+.PHONY: prepare-nkg-no-build
+prepare-nkg-no-build: ## Load NKG and NGINX containers on configured kind cluster
 	kind load docker-image $(NKG_PREFIX):$(NKG_TAG)
 	docker pull $(NGINX_IMAGE)
 	kind load docker-image $(NGINX_IMAGE)
@@ -45,8 +52,11 @@ run-conformance-tests: ## Run conformance tests
 	kind load docker-image $(PREFIX):$(TAG)
 	yq '(select(di != 3))' tests/conformance_spec.yaml | kubectl apply -f -
 	yq '(select(.spec.containers[].image) | .spec.containers[].image="$(PREFIX):$(TAG)")' tests/conformance_spec.yaml | kubectl apply -f -
-	sleep 5
+	kubectl wait --for=condition=ready pod conformance
 	kubectl logs conformance --follow
+
+.PHONY: cleanup-conformance-tests
+cleanup-conformance-tests: ## Clean up conformance tests fixtures
 	kubectl delete -f tests/conformance_spec.yaml
 
 .PHONY: uninstall-nkg
