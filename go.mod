@@ -2,6 +2,8 @@ module github.com/nginxinc/nginx-kubernetes-gateway
 
 go 1.20
 
+replace github.com/chzyer/logex v1.1.10 => github.com/chzyer/logex v1.2.0
+
 require (
 	github.com/go-logr/logr v1.2.4
 	github.com/google/go-cmp v0.5.9
