@@ -77,6 +77,12 @@ func TestSort(t *testing.T) {
 			},
 		},
 	}
+	methodMatch := v1beta1.HTTPRouteMatch{
+		Path: &v1beta1.HTTPPathMatch{
+			Value: helpers.GetStringPointer("/path"),
+		},
+		Method: helpers.GetPointer(v1beta1.HTTPMethodPost),
+	}
 
 	hr1 := v1beta1.HTTPRoute{
 		ObjectMeta: metav1.ObjectMeta{
@@ -96,6 +102,7 @@ func TestSort(t *testing.T) {
 					Matches: []v1beta1.HTTPRouteMatch{
 						twoHeaderOneParamMatch, // tie decided on params
 						threeHeaderMatch,       // tie decided on headers
+						methodMatch,            // tie decided on method
 					},
 				},
 			},
@@ -154,6 +161,11 @@ func TestSort(t *testing.T) {
 			Source:   &hr1,
 		},
 		{
+			MatchIdx: 2, // methodMatch
+			RuleIdx:  2,
+			Source:   &hr1,
+		},
+		{
 			MatchIdx: 0, // twoHeaderMatch / later timestamp / test/hr2
 			RuleIdx:  0,
 			Source:   &hr2,
@@ -166,6 +178,11 @@ func TestSort(t *testing.T) {
 	}
 
 	sortedRoutes := []MatchRule{
+		{
+			MatchIdx: 2, // methodMatch
+			RuleIdx:  2,
+			Source:   &hr1,
+		},
 		{
 			MatchIdx: 1, // threeHeaderMatch
 			RuleIdx:  2,
