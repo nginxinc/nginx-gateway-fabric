@@ -1,11 +1,9 @@
 NKG_TAG = edge
 NKG_PREFIX = nginx-kubernetes-gateway
-GATEWAY_CLASS = nginx
-SUPPORTED_FEATURES = HTTPRoute,HTTPRouteQueryParamMatching,HTTPRouteMethodMatching,HTTPRoutePortRedirect,HTTPRouteSchemeRedirect
-EXEMPT_FEATURES = ReferenceGrant
 KIND_KUBE_CONFIG_FOLDER = $${HOME}/.kube/kind
 TAG = latest
 PREFIX = conformance-test-runner
+NGINX_IMAGE=$(shell yq '.spec.template.spec.containers[1].image as $$nginx_ver | $$nginx_ver' ../deploy/manifests/deployment.yaml)
 .DEFAULT_GOAL := help
 
 .PHONY: help
@@ -14,17 +12,20 @@ help: Makefile ## Display this help
 
 .PHONY: build-test-runner-image
 build-test-runner-image: ## Build conformance test runner image
-	docker build -t $(PREFIX):$(TAG) -f tests/Dockerfile ..
+	docker build -t $(PREFIX):$(TAG) -f tests/Dockerfile .. 
 
 .PHONY: create-kind-cluster
 create-kind-cluster: ## Create a kind cluster
-	kind create cluster --image kindest/node:v1.27.1
+	kind create cluster --image kindest/node:v1.27.1 
 	kind export kubeconfig --kubeconfig $(KIND_KUBE_CONFIG_FOLDER)/config
 
 .PHONY: prepare-nkg
-prepare-nkg: ## Build and load NKG container on configured kind cluster
+prepare-nkg: ## Build and load NKG and NGINX containers on configured kind cluster
 	cd .. && make PREFIX=$(NKG_PREFIX) TAG=$(NKG_TAG) container
 	kind load docker-image $(NKG_PREFIX):$(NKG_TAG)
+	docker pull $(NGINX_IMAGE)
+	kind load docker-image $(NGINX_IMAGE)
+	yq -i 'with(.spec.template.spec.containers[0]; .image = "$(NKG_PREFIX):$(NKG_TAG)" | .imagePullPolicy = "Never")' ../deploy/manifests/deployment.yaml
 
 .PHONY: install-nkg
 install-nkg: ## Install NKG with provisioner on configured kind cluster
@@ -36,16 +37,17 @@ install-nkg: ## Install NKG with provisioner on configured kind cluster
 	kubectl apply -f ../deploy/manifests/rbac.yaml
 	kubectl apply -f ../deploy/manifests/gatewayclass.yaml
 	kubectl apply -f ../deploy/manifests/service/nodeport.yaml
-	kubectl apply -f provisioner/provisioner.yaml
-
-.PHONY: update-test-kind-config 
-update-test-kind-config: ## Update kind config
-	sed -ir "s|server:.*|server: https://kind-control-plane:6443|" $(KIND_KUBE_CONFIG_FOLDER)/config
+	yq '(select(di != 3))' provisioner/provisioner.yaml | kubectl apply -f -
+	yq '(select(.spec.template.spec.containers[].image) | .spec.template.spec.containers[].image="$(NKG_PREFIX):$(NKG_TAG)" | .spec.template.spec.containers[].imagePullPolicy = "Never")' provisioner/provisioner.yaml | kubectl apply -f -
 
 .PHONY: run-conformance-tests
-run-conformance-tests: update-test-kind-config ## Run conformance tests
-	docker run --network=kind --rm -v $(KIND_KUBE_CONFIG_FOLDER):/root/.kube $(PREFIX):$(TAG) \
-		go test -timeout 25m -v . -tags conformance -args --gateway-class=$(GATEWAY_CLASS) --debug --supported-features=$(SUPPORTED_FEATURES) --exempt-features=$(EXEMPT_FEATURES)
+run-conformance-tests: ## Run conformance tests
+	kind load docker-image $(PREFIX):$(TAG)
+	yq '(select(di != 3))' tests/conformance_spec.yaml | kubectl apply -f -
+	yq '(select(.spec.containers[].image) | .spec.containers[].image="$(PREFIX):$(TAG)")' tests/conformance_spec.yaml | kubectl apply -f -
+	sleep 5
+	kubectl logs conformance --follow
+	kubectl delete -f tests/conformance_spec.yaml
 
 .PHONY: uninstall-nkg
 uninstall-nkg: ## Uninstall NKG on configured kind cluster
@@ -54,7 +56,11 @@ uninstall-nkg: ## Uninstall NKG on configured kind cluster
 	kubectl delete -f ../deploy/manifests/namespace.yaml
 	kubectl delete clusterrole nginx-gateway-provisioner
 	kubectl delete clusterrolebinding nginx-gateway-provisioner
-	
+
+.PHONY: undo-image-update
+undo-image-update: ## Undo the NKG image name and tag in deployment manifest
+	git checkout -- ../deploy/manifests/deployment.yaml
+
 .PHONY: delete-kind-cluster
 delete-kind-cluster: ## Delete kind cluster
 	kind delete cluster

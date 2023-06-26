@@ -5,6 +5,7 @@
 * [kind](https://kind.sigs.k8s.io/).
 * Docker.
 * Golang.
+* [yq](https://github.com/mikefarah/yq/#macos--linux-via-homebrew)
 
 **Note**: all commands in steps below are executed from the ```conformance``` directory
 
@@ -29,47 +30,36 @@ update-test-kind-config        Update kind config
 $ make create-kind-cluster
 ```
 
-### Step 2 - Update NKG deployment and provisioner manifests
-**Note**: this step is only required when user wants to run conformance tests using locally built image of Nginx Kubernetes Gateway
-* Set NKG_PREFIX=<repo_name> NKG_TAG=<image_tag> to preferred values.
-* Navigate to `deploy/manifests` and update values in `deployment.yaml` as specified in below code-block.
-* Navigate to `conformance/provisioner` and update values in `provisioner.yaml` as specified in below code-block.
-* Save the changes.
-```
-.
-..
-containers:
-- image: <repo_name>:<image_tag>
-  imagePullPolicy: Never
-..
-.
-```
-
-### Step 3 - Build and load Nginx Kubernetes Gateway container to configured kind cluster
-**Note**: this step is only required when user wants to run conformance tests using locally built image of Nginx Kubernetes Gateway
+### Step 2 - Build Nginx Kubernetes Gateway container and load it and the NGINX container to configured kind cluster
 
 ```bash
 $ make NKG_PREFIX=<repo_name> NKG_TAG=<image_tag> prepare-nkg
 
 ```
-### Step 4 - Build conformance test runner image
+### Step 3 - Build conformance test runner image
 ```bash
 $ make build-test-runner-image
 ```
 
-### Step 5 - Install Nginx Kubernetes Gateway
+### Step 4 - Install Nginx Kubernetes Gateway
 ```bash
-$ make install-nkg
+$ make NKG_PREFIX=<repo_name> NKG_TAG=<image_tag> install-nkg
 ```
 
-### Step 6 - Run Gateway conformance tests
+### Step 5 - Run Gateway conformance tests
 ```bash
-$ make run-conformance-tests
+$ make NKG_PREFIX=<repo_name> NKG_TAG=<image_tag> run-conformance-tests
 ```
 
-### Step 7 - Uninstall Nginx Kubernetes Gateway
+### Step 6 - Uninstall Nginx Kubernetes Gateway
 ```bash
 $ make uninstall-nkg
+```
+
+### Step 7 - Revert changes to the NKG deployment manifest
+**Warning**: `make undo-image-update` will hard reset changes to the deploy/manifests/deployment.yaml file!
+```bash
+$ make undo-image-update
 ```
 
 ### Step 8 - Delete kind cluster
