@@ -12,7 +12,7 @@ This document describes which Gateway API resources NGINX Kubernetes Gateway sup
 | [TLSRoute](#tlsroute) | Not supported |
 | [TCPRoute](#tcproute) | Not supported |
 | [UDPRoute](#udproute) | Not supported |
-| [ReferenceGrant](#referencegrant) |  Not supported |
+| [ReferenceGrant](#referencegrant) |  Partially supported |
 | [Custom policies](#custom-policies) | Not supported |
 
 ## Terminology
