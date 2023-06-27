@@ -44,7 +44,7 @@ reference a Secret in a different Namespace.
 
 1. Create the Namespace `certificate` and a Secret with a TLS certificate and key:
    ```
-   kubectl apply -f cafe-secret.yaml
+   kubectl apply -f certificate-ns-and-cafe-secret.yaml
    ```
 
    The TLS certificate and key in this Secret are used to terminate the TLS connections for the cafe application.
