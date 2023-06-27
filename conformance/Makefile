@@ -57,13 +57,17 @@ install-nkg-edge: preload-nginx-container prepare-nkg-dependencies ## Install NK
 .PHONY: run-conformance-tests
 run-conformance-tests: ## Run conformance tests
 	kind load docker-image $(PREFIX):$(TAG)
-	kubectl apply -f tests/conformance_rbac.yaml
-	kubectl run -i conformance --image=$(PREFIX):$(TAG) --image-pull-policy=Never --restart=Never --overrides='{ "spec": { "serviceAccountName": "conformance" }  }' -- go test -v . -tags conformance -args --gateway-class=$(GATEWAY_CLASS) --debug --supported-features=$(SUPPORTED_FEATURES) --exempt-features=$(EXEMPT_FEATURES)
+	kubectl apply -f tests/conformance-rbac.yaml
+	kubectl run -i conformance \
+		--image=$(PREFIX):$(TAG) --image-pull-policy=Never \
+		--overrides='{ "spec": { "serviceAccountName": "conformance" }  }' \
+		--restart=Never -- go test -v . -tags conformance -args --gateway-class=$(GATEWAY_CLASS) --debug \
+						        --supported-features=$(SUPPORTED_FEATURES) --exempt-features=$(EXEMPT_FEATURES)
 
 .PHONY: cleanup-conformance-tests
 cleanup-conformance-tests: ## Clean up conformance tests fixtures
 	kubectl delete pod conformance
-	kubectl delete -f tests/conformance_rbac.yaml
+	kubectl delete -f tests/conformance-rbac.yaml
 
 .PHONY: uninstall-nkg
 uninstall-nkg: ## Uninstall NKG on configured kind cluster

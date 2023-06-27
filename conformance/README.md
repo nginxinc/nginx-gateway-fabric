@@ -39,7 +39,7 @@ uninstall-nkg                  Uninstall NKG on configured kind cluster
 | NKG_PREFIX | nginx-kubernetes-gateway  | The prefix for the locally built NKG image |
 | KIND_KUBE_CONFIG_FOLDER | ~/.kube/kind  | The location of the kubeconfig folder |
 | GATEWAY_CLASS | nginx | The gateway class that should be used for the tests |
-| SUPPORTED_FEATURES | HTTPRoute,HTTPRouteQueryParamMatching,HTTPRouteMethodMatching,HTTPRoutePortRedirect,HTTPRouteSchemeRedirect | The supported features that should be tested by the conformance tests |
+| SUPPORTED_FEATURES | HTTPRoute,HTTPRouteQueryParamMatching, HTTPRouteMethodMatching,HTTPRoutePortRedirect, HTTPRouteSchemeRedirect | The supported features that should be tested by the conformance tests. Ensure the list is comma separated with no spaces. |
 | EXEMPT_FEATURES | ReferenceGrant | The features that should not be tested by the conformance tests |
 | NGINX_IMAGE | as defined in the ../deploy/manifests/deployment.yaml file  | The NGINX image for the NKG deployments |
 | NKG_DEPLOYMENT_MANIFEST | ../deploy/manifests/deployment.yaml | The location of the NKG deployment manifest |
