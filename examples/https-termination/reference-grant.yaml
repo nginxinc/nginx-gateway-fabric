@@ -5,7 +5,7 @@ metadata:
   namespace: certificate
 spec:
   to:
-  - group: core
+  - group: ""
     kind: Secret
     name: cafe-secret # if you omit this name, then Gateways in default ns can access all Secrets in the certificate ns
   from:
