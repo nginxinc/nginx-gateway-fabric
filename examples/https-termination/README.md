@@ -55,7 +55,7 @@ reference a Secret in a different Namespace.
    kubectl apply -f reference-grant.yaml
    ```
 
-   This ReferenceGrant allows all Gateways in the `default` namespace to references the `cafe-secret` Secret in
+   This ReferenceGrant allows all Gateways in the `default` namespace to reference the `cafe-secret` Secret in
    the `certificate` namespace.
 
 1. Create the `Gateway` resource:
