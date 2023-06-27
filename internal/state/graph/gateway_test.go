@@ -148,7 +148,7 @@ func TestBuildGateway(t *testing.T) {
 	}
 	listenerAllowedRoutes := v1beta1.Listener{
 		Name:     "listener-with-allowed-routes",
-		Hostname: (*v1beta1.Hostname)(helpers.GetStringPointer("foo.example.com")),
+		Hostname: (*v1beta1.Hostname)(helpers.GetPointer("foo.example.com")),
 		Port:     80,
 		Protocol: v1beta1.HTTPProtocolType,
 		AllowedRoutes: &v1beta1.AllowedRoutes{
@@ -170,34 +170,34 @@ func TestBuildGateway(t *testing.T) {
 	}
 
 	gatewayTLSConfigSameNs := &v1beta1.GatewayTLSConfig{
-		Mode: helpers.GetTLSModePointer(v1beta1.TLSModeTerminate),
+		Mode: helpers.GetPointer(v1beta1.TLSModeTerminate),
 		CertificateRefs: []v1beta1.SecretObjectReference{
 			{
-				Kind:      (*v1beta1.Kind)(helpers.GetStringPointer("Secret")),
+				Kind:      (*v1beta1.Kind)(helpers.GetPointer("Secret")),
 				Name:      "secret",
-				Namespace: (*v1beta1.Namespace)(helpers.GetStringPointer("test")),
+				Namespace: (*v1beta1.Namespace)(helpers.GetPointer("test")),
 			},
 		},
 	}
 
 	tlsConfigInvalidSecret := &v1beta1.GatewayTLSConfig{
-		Mode: helpers.GetTLSModePointer(v1beta1.TLSModeTerminate),
+		Mode: helpers.GetPointer(v1beta1.TLSModeTerminate),
 		CertificateRefs: []v1beta1.SecretObjectReference{
 			{
-				Kind:      (*v1beta1.Kind)(helpers.GetStringPointer("Secret")),
+				Kind:      (*v1beta1.Kind)(helpers.GetPointer("Secret")),
 				Name:      "does-not-exist",
-				Namespace: (*v1beta1.Namespace)(helpers.GetStringPointer("test")),
+				Namespace: (*v1beta1.Namespace)(helpers.GetPointer("test")),
 			},
 		},
 	}
 
 	gatewayTLSConfigDiffNs := &v1beta1.GatewayTLSConfig{
-		Mode: helpers.GetTLSModePointer(v1beta1.TLSModeTerminate),
+		Mode: helpers.GetPointer(v1beta1.TLSModeTerminate),
 		CertificateRefs: []v1beta1.SecretObjectReference{
 			{
-				Kind:      (*v1beta1.Kind)(helpers.GetStringPointer("Secret")),
+				Kind:      (*v1beta1.Kind)(helpers.GetPointer("Secret")),
 				Name:      "secret",
-				Namespace: (*v1beta1.Namespace)(helpers.GetStringPointer("diff-ns")),
+				Namespace: (*v1beta1.Namespace)(helpers.GetPointer("diff-ns")),
 			},
 		},
 	}
@@ -211,7 +211,7 @@ func TestBuildGateway(t *testing.T) {
 	) v1beta1.Listener {
 		return v1beta1.Listener{
 			Name:     v1beta1.SectionName(name),
-			Hostname: (*v1beta1.Hostname)(helpers.GetStringPointer(hostname)),
+			Hostname: (*v1beta1.Hostname)(helpers.GetPointer(hostname)),
 			Port:     v1beta1.PortNumber(port),
 			Protocol: protocol,
 			TLS:      tls,
