@@ -75,7 +75,7 @@ func TestRefGrantAllowsGatewayToSecret(t *testing.T) {
 			allowed: true,
 		},
 		{
-			msg: "allowed; implicit to Group",
+			msg: "allowed; implicit 'to' Group",
 			refGrants: map[types.NamespacedName]*v1beta1.ReferenceGrant{
 				{Namespace: "test", Name: "rg"}: createModifiedRefGrant(func(rg *v1beta1.ReferenceGrant) {
 					rg.Spec.To[0].Group = ""
@@ -135,7 +135,7 @@ func TestRefGrantAllowsGatewayToSecret(t *testing.T) {
 			allowed: false,
 		},
 		{
-			msg: "not allowed; no ref group with the right from Group",
+			msg: "not allowed; no ref group with the right 'from' Group",
 			refGrants: map[types.NamespacedName]*v1beta1.ReferenceGrant{
 				{Namespace: "test", Name: "rg"}: createModifiedRefGrant(func(rg *v1beta1.ReferenceGrant) {
 					rg.Spec.From[0].Group = "wrong.group"
@@ -144,7 +144,7 @@ func TestRefGrantAllowsGatewayToSecret(t *testing.T) {
 			allowed: false,
 		},
 		{
-			msg: "not allowed; no ref group with the right from Kind",
+			msg: "not allowed; no ref group with the right 'from' Kind",
 			refGrants: map[types.NamespacedName]*v1beta1.ReferenceGrant{
 				{Namespace: "test", Name: "rg"}: createModifiedRefGrant(func(rg *v1beta1.ReferenceGrant) {
 					rg.Spec.From[0].Kind = "WrongKind"
@@ -153,7 +153,7 @@ func TestRefGrantAllowsGatewayToSecret(t *testing.T) {
 			allowed: false,
 		},
 		{
-			msg: "not allowed; no ref group with the right from Namespace",
+			msg: "not allowed; no ref group with the right 'from' Namespace",
 			refGrants: map[types.NamespacedName]*v1beta1.ReferenceGrant{
 				{Namespace: "test", Name: "rg"}: createModifiedRefGrant(func(rg *v1beta1.ReferenceGrant) {
 					rg.Spec.From[0].Namespace = "wrong-ns"
@@ -162,7 +162,7 @@ func TestRefGrantAllowsGatewayToSecret(t *testing.T) {
 			allowed: false,
 		},
 		{
-			msg: "not allowed; no ref group with the right to Group",
+			msg: "not allowed; no ref group with the right 'to' Group",
 			refGrants: map[types.NamespacedName]*v1beta1.ReferenceGrant{
 				{Namespace: "test", Name: "rg"}: createModifiedRefGrant(func(rg *v1beta1.ReferenceGrant) {
 					rg.Spec.To[0].Group = "wrong.group"
@@ -171,7 +171,7 @@ func TestRefGrantAllowsGatewayToSecret(t *testing.T) {
 			allowed: false,
 		},
 		{
-			msg: "not allowed; no ref group with the right to Kind",
+			msg: "not allowed; no ref group with the right 'to' Kind",
 			refGrants: map[types.NamespacedName]*v1beta1.ReferenceGrant{
 				{Namespace: "test", Name: "rg"}: createModifiedRefGrant(func(rg *v1beta1.ReferenceGrant) {
 					rg.Spec.To[0].Kind = "WrongKind"
@@ -180,7 +180,7 @@ func TestRefGrantAllowsGatewayToSecret(t *testing.T) {
 			allowed: false,
 		},
 		{
-			msg: "not allowed; no ref group with the right to Name",
+			msg: "not allowed; no ref group with the right 'to' Name",
 			refGrants: map[types.NamespacedName]*v1beta1.ReferenceGrant{
 				{Namespace: "test", Name: "rg"}: createModifiedRefGrant(func(rg *v1beta1.ReferenceGrant) {
 					rg.Spec.To[0].Name = helpers.GetPointer(v1beta1.ObjectName("wrong-name"))
