@@ -148,12 +148,12 @@ func TestBuildGateway(t *testing.T) {
 	}
 	listenerAllowedRoutes := v1beta1.Listener{
 		Name:     "listener-with-allowed-routes",
-		Hostname: (*v1beta1.Hostname)(helpers.GetPointer("foo.example.com")),
+		Hostname: helpers.GetPointer[v1beta1.Hostname]("foo.example.com"),
 		Port:     80,
 		Protocol: v1beta1.HTTPProtocolType,
 		AllowedRoutes: &v1beta1.AllowedRoutes{
 			Kinds: []v1beta1.RouteGroupKind{
-				{Kind: "HTTPRoute", Group: helpers.GetPointer(v1beta1.Group(v1beta1.GroupName))},
+				{Kind: "HTTPRoute", Group: helpers.GetPointer[v1beta1.Group](v1beta1.GroupName)},
 			},
 			Namespaces: &v1beta1.RouteNamespaces{
 				From:     helpers.GetPointer(v1beta1.NamespacesFromSelector),
@@ -173,9 +173,9 @@ func TestBuildGateway(t *testing.T) {
 		Mode: helpers.GetPointer(v1beta1.TLSModeTerminate),
 		CertificateRefs: []v1beta1.SecretObjectReference{
 			{
-				Kind:      (*v1beta1.Kind)(helpers.GetPointer("Secret")),
+				Kind:      helpers.GetPointer[v1beta1.Kind]("Secret"),
 				Name:      "secret",
-				Namespace: (*v1beta1.Namespace)(helpers.GetPointer("test")),
+				Namespace: helpers.GetPointer[v1beta1.Namespace]("test"),
 			},
 		},
 	}
@@ -184,9 +184,9 @@ func TestBuildGateway(t *testing.T) {
 		Mode: helpers.GetPointer(v1beta1.TLSModeTerminate),
 		CertificateRefs: []v1beta1.SecretObjectReference{
 			{
-				Kind:      (*v1beta1.Kind)(helpers.GetPointer("Secret")),
+				Kind:      helpers.GetPointer[v1beta1.Kind]("Secret"),
 				Name:      "does-not-exist",
-				Namespace: (*v1beta1.Namespace)(helpers.GetPointer("test")),
+				Namespace: helpers.GetPointer[v1beta1.Namespace]("test"),
 			},
 		},
 	}
@@ -195,9 +195,9 @@ func TestBuildGateway(t *testing.T) {
 		Mode: helpers.GetPointer(v1beta1.TLSModeTerminate),
 		CertificateRefs: []v1beta1.SecretObjectReference{
 			{
-				Kind:      (*v1beta1.Kind)(helpers.GetPointer("Secret")),
+				Kind:      helpers.GetPointer[v1beta1.Kind]("Secret"),
 				Name:      "secret",
-				Namespace: (*v1beta1.Namespace)(helpers.GetPointer("diff-ns")),
+				Namespace: helpers.GetPointer[v1beta1.Namespace]("diff-ns"),
 			},
 		},
 	}
@@ -408,7 +408,7 @@ func TestBuildGateway(t *testing.T) {
 							{
 								Group: "core",
 								Kind:  "Secret",
-								Name:  helpers.GetPointer(v1beta1.ObjectName("secret")),
+								Name:  helpers.GetPointer[v1beta1.ObjectName]("secret"),
 							},
 						},
 					},
