@@ -169,14 +169,14 @@ func validateBackendRef(
 ) (valid bool, cond conditions.Condition) {
 	// Because all errors cause same condition but different reasons, we return as soon as we find an error
 
-	if ref.Group != nil && !(*ref.Group == "core" || *ref.Group == "") {
-		valErr := field.NotSupported(path.Child("group"), *ref.Group, []string{"core", ""})
-		return false, conditions.NewRouteBackendRefUnsupportedValue(valErr.Error())
-	}
-
 	if ref.Kind != nil && *ref.Kind != "Service" {
 		valErr := field.NotSupported(path.Child("kind"), *ref.Kind, []string{"Service"})
 		return false, conditions.NewRouteBackendRefInvalidKind(valErr.Error())
+	}
+
+	if ref.Group != nil && !(*ref.Group == "core" || *ref.Group == "") {
+		valErr := field.NotSupported(path.Child("group"), *ref.Group, []string{"core", ""})
+		return false, conditions.NewRouteBackendRefUnsupportedValue(valErr.Error())
 	}
 
 	// no need to validate ref.Name
