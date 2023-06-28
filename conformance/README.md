@@ -35,6 +35,7 @@ uninstall-nkg                  Uninstall NKG on configured kind cluster
 | ------------- | ------------- | ------------- |
 | TAG | latest  | The tag for the conformance test image |
 | PREFIX | conformance-test-runner | The prefix for the conformance test image |
+| BUILD_NKG | true | Flag to indicate if the local NKG image needs to be built |
 | NKG_TAG  | edge  | The tag for the locally built NKG image |
 | NKG_PREFIX | nginx-kubernetes-gateway  | The prefix for the locally built NKG image |
 | KIND_KUBE_CONFIG_FOLDER | ~/.kube/kind  | The location of the kubeconfig folder |
@@ -55,6 +56,21 @@ $ make create-kind-cluster
 ```bash
 $ make install-nkg-local-build
 ```
+
+**Note:** You can optionally skip the actual *build* step by setting the BUILD_NKG flag to "false". However, if choosing 
+this option, the following step *must* be completed manually *before* the build step:
+ * Set NKG_PREFIX=<nkg_repo_name> NKG_TAG=<nkg_image_tag> to preferred values.
+ * Navigate to `deploy/manifests` and update values in `deployment.yaml` as specified in below code-block.
+ * Save the changes.
+ ```
+ .
+ ..
+ containers:
+ - image: <nkg_repo_name>:<nkg_image_tag>
+   imagePullPolicy: Never
+ ..
+ .
+ ```
 
 #### *Option 2* Install Nginx Kubernetes Gateway from edge to configured kind cluster
 Instead of the above command, you can skip the build NKG image step and prepare the environment to instead

@@ -4,6 +4,7 @@ GATEWAY_CLASS = nginx
 SUPPORTED_FEATURES = HTTPRoute,HTTPRouteQueryParamMatching,HTTPRouteMethodMatching,HTTPRoutePortRedirect,HTTPRouteSchemeRedirect
 KIND_KUBE_CONFIG_FOLDER = $${HOME}/.kube/kind
 TAG = latest
+BUILD_NKG = true
 PREFIX = conformance-test-runner
 NKG_DEPLOYMENT_MANIFEST=../deploy/manifests/deployment.yaml
 NGINX_IMAGE=$(shell yq '.spec.template.spec.containers[1].image as $$nginx_ver | $$nginx_ver' $(NKG_DEPLOYMENT_MANIFEST))
@@ -29,8 +30,10 @@ preload-nginx-container: ## Preload NGINX container on configured kind cluster
 
 .PHONY: build-and-load-images
 build-and-load-images: preload-nginx-container ## Build NKG container and load it and NGINX container on configured kind cluster
+ifeq ($(BUILD_NKG),true)
 	yq -i 'with(.spec.template.spec.containers[0]; .image = "$(NKG_PREFIX):$(NKG_TAG)" | .imagePullPolicy = "Never")' $(NKG_DEPLOYMENT_MANIFEST)
 	cd .. && make PREFIX=$(NKG_PREFIX) TAG=$(NKG_TAG) container
+endif
 	kind load docker-image $(NKG_PREFIX):$(NKG_TAG)
 
 .PHONY: prepare-nkg-dependencies
