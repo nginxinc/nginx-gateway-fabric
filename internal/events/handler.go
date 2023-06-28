@@ -126,6 +126,8 @@ func (h *EventHandlerImpl) propagateUpsert(e *UpsertEvent) {
 		h.cfg.Processor.CaptureUpsertChange(r)
 	case *v1beta1.HTTPRoute:
 		h.cfg.Processor.CaptureUpsertChange(r)
+	case *v1beta1.ReferenceGrant:
+		h.cfg.Processor.CaptureUpsertChange(r)
 	case *apiv1.Service:
 		h.cfg.Processor.CaptureUpsertChange(r)
 	case *apiv1.Namespace:
@@ -148,6 +150,8 @@ func (h *EventHandlerImpl) propagateDelete(e *DeleteEvent) {
 	case *v1beta1.Gateway:
 		h.cfg.Processor.CaptureDeleteChange(e.Type, e.NamespacedName)
 	case *v1beta1.HTTPRoute:
+		h.cfg.Processor.CaptureDeleteChange(e.Type, e.NamespacedName)
+	case *v1beta1.ReferenceGrant:
 		h.cfg.Processor.CaptureDeleteChange(e.Type, e.NamespacedName)
 	case *apiv1.Service:
 		h.cfg.Processor.CaptureDeleteChange(e.Type, e.NamespacedName)

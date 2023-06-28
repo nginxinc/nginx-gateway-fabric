@@ -106,7 +106,7 @@ func createGateway(name string) *v1beta1.Gateway {
 	}
 }
 
-func createGatewayWithTLSListener(name string) *v1beta1.Gateway {
+func createGatewayWithTLSListener(name, certNs string) *v1beta1.Gateway {
 	gw := createGateway(name)
 
 	l := v1beta1.Listener{
@@ -120,7 +120,7 @@ func createGatewayWithTLSListener(name string) *v1beta1.Gateway {
 				{
 					Kind:      (*v1beta1.Kind)(helpers.GetPointer("Secret")),
 					Name:      "secret",
-					Namespace: (*v1beta1.Namespace)(helpers.GetPointer("test")),
+					Namespace: (*v1beta1.Namespace)(helpers.GetPointer(certNs)),
 				},
 			},
 		},
@@ -228,6 +228,7 @@ var _ = Describe("ChangeProcessor", func() {
 				gcUpdated                *v1beta1.GatewayClass
 				hr1, hr1Updated, hr2     *v1beta1.HTTPRoute
 				gw1, gw1Updated, gw2     *v1beta1.Gateway
+				refGrant                 *v1beta1.ReferenceGrant
 				expGraph                 *graph.Graph
 				expRouteHR1, expRouteHR2 *graph.Route
 			)
@@ -242,12 +243,33 @@ var _ = Describe("ChangeProcessor", func() {
 
 				hr2 = createRoute("hr-2", "gateway-2", "bar.example.com")
 
-				gw1 = createGatewayWithTLSListener("gateway-1")
+				gw1 = createGatewayWithTLSListener("gateway-1", "cert-ns") // cert in diff namespace than gw
+				refGrant = &v1beta1.ReferenceGrant{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "cert-ns",
+						Name:      "ref-grant",
+					},
+					Spec: v1beta1.ReferenceGrantSpec{
+						From: []v1beta1.ReferenceGrantFrom{
+							{
+								Group:     v1beta1.GroupName,
+								Kind:      "Gateway",
+								Namespace: "test",
+							},
+						},
+						To: []v1beta1.ReferenceGrantTo{
+							{
+								Group: "core",
+								Kind:  "Secret",
+							},
+						},
+					},
+				}
 
 				gw1Updated = gw1.DeepCopy()
 				gw1Updated.Generation++
 
-				gw2 = createGatewayWithTLSListener("gateway-2")
+				gw2 = createGatewayWithTLSListener("gateway-2", "test")
 			})
 			BeforeEach(func() {
 				expRouteHR1 = &graph.Route{
@@ -380,6 +402,36 @@ var _ = Describe("ChangeProcessor", func() {
 				It("returns updated graph", func() {
 					processor.CaptureUpsertChange(gc)
 
+					// no ref grant exists yet for gw1
+					expGraph.Gateway.Listeners["listener-443-1"] = &graph.Listener{
+						Source: gw1.Spec.Listeners[1],
+						Valid:  false,
+						Routes: map[types.NamespacedName]*graph.Route{},
+						Conditions: conditions.NewListenerRefNotPermitted(
+							"Certificate ref to secret cert-ns/secret not permitted by any ReferenceGrant",
+						),
+					}
+
+					hr1Name := types.NamespacedName{Namespace: hr1.Namespace, Name: hr1.Name}
+
+					expAttachment := &graph.ParentRefAttachmentStatus{
+						AcceptedHostnames: map[string][]string{},
+						FailedCondition:   conditions.NewRouteInvalidListener(),
+						Attached:          false,
+					}
+
+					expGraph.Gateway.Listeners["listener-80-1"].Routes[hr1Name].ParentRefs[1].Attachment = expAttachment
+					expGraph.Routes[hr1Name].ParentRefs[1].Attachment = expAttachment
+
+					changed, graphCfg := processor.Process()
+					Expect(changed).To(BeTrue())
+					Expect(helpers.Diff(expGraph, graphCfg)).To(BeEmpty())
+				})
+			})
+			When("the ReferenceGrant allowing the Gateway to reference its Secret is upserted", func() {
+				It("returns updated graph", func() {
+					processor.CaptureUpsertChange(refGrant)
+
 					changed, graphCfg := processor.Process()
 					Expect(changed).To(BeTrue())
 					Expect(helpers.Diff(expGraph, graphCfg)).To(BeEmpty())
@@ -511,6 +563,8 @@ var _ = Describe("ChangeProcessor", func() {
 					hr1Name := types.NamespacedName{Namespace: "test", Name: "hr-1"}
 					hr2Name := types.NamespacedName{Namespace: "test", Name: "hr-2"}
 					expGraph.Gateway.Source = gw2
+					expGraph.Gateway.Listeners["listener-80-1"].Source = gw2.Spec.Listeners[0]
+					expGraph.Gateway.Listeners["listener-443-1"].Source = gw2.Spec.Listeners[1]
 					delete(expGraph.Gateway.Listeners["listener-80-1"].Routes, hr1Name)
 					delete(expGraph.Gateway.Listeners["listener-443-1"].Routes, hr1Name)
 					expGraph.Gateway.Listeners["listener-80-1"].Routes[hr2Name] = expRouteHR2
@@ -535,6 +589,8 @@ var _ = Describe("ChangeProcessor", func() {
 					// no routes remain
 					hr1Name := types.NamespacedName{Namespace: "test", Name: "hr-1"}
 					expGraph.Gateway.Source = gw2
+					expGraph.Gateway.Listeners["listener-80-1"].Source = gw2.Spec.Listeners[0]
+					expGraph.Gateway.Listeners["listener-443-1"].Source = gw2.Spec.Listeners[1]
 					delete(expGraph.Gateway.Listeners["listener-80-1"].Routes, hr1Name)
 					delete(expGraph.Gateway.Listeners["listener-443-1"].Routes, hr1Name)
 					expGraph.Routes = map[types.NamespacedName]*graph.Route{}
@@ -979,15 +1035,16 @@ var _ = Describe("ChangeProcessor", func() {
 		// -- this is done in 'Normal cases of processing changes'
 
 		var (
-			processor                               *state.ChangeProcessorImpl
-			fakeRelationshipCapturer                *relationshipfakes.FakeCapturer
-			gcNsName, gwNsName, hrNsName, hr2NsName types.NamespacedName
-			svcNsName, sliceNsName                  types.NamespacedName
-			gc, gcUpdated                           *v1beta1.GatewayClass
-			gw1, gw1Updated, gw2                    *v1beta1.Gateway
-			hr1, hr1Updated, hr2                    *v1beta1.HTTPRoute
-			svc                                     *apiv1.Service
-			slice                                   *discoveryV1.EndpointSlice
+			processor                                         *state.ChangeProcessorImpl
+			fakeRelationshipCapturer                          *relationshipfakes.FakeCapturer
+			gcNsName, gwNsName, hrNsName, hr2NsName, rgNsName types.NamespacedName
+			svcNsName, sliceNsName                            types.NamespacedName
+			gc, gcUpdated                                     *v1beta1.GatewayClass
+			gw1, gw1Updated, gw2                              *v1beta1.Gateway
+			hr1, hr1Updated, hr2                              *v1beta1.HTTPRoute
+			rg1, rg1Updated, rg2                              *v1beta1.ReferenceGrant
+			svc                                               *apiv1.Service
+			slice                                             *discoveryV1.EndpointSlice
 		)
 
 		BeforeEach(OncePerOrdered, func() {
@@ -1066,6 +1123,21 @@ var _ = Describe("ChangeProcessor", func() {
 					Name:      sliceNsName.Name,
 				},
 			}
+
+			rgNsName = types.NamespacedName{Namespace: "test", Name: "rg-1"}
+
+			rg1 = &v1beta1.ReferenceGrant{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      rgNsName.Name,
+					Namespace: rgNsName.Namespace,
+				},
+			}
+
+			rg1Updated = rg1.DeepCopy()
+			rg1Updated.Generation++
+
+			rg2 = rg1.DeepCopy()
+			rg2.Name = "rg-2"
 		})
 		// Changing change - a change that makes processor.Process() report changed
 		// Non-changing change - a change that doesn't do that
@@ -1079,6 +1151,7 @@ var _ = Describe("ChangeProcessor", func() {
 				processor.CaptureUpsertChange(gc)
 				processor.CaptureUpsertChange(gw1)
 				processor.CaptureUpsertChange(hr1)
+				processor.CaptureUpsertChange(rg1)
 
 				changed, _ := processor.Process()
 				Expect(changed).To(BeTrue())
@@ -1087,6 +1160,7 @@ var _ = Describe("ChangeProcessor", func() {
 				processor.CaptureUpsertChange(gc)
 				processor.CaptureUpsertChange(gw1)
 				processor.CaptureUpsertChange(hr1)
+				processor.CaptureUpsertChange(rg1)
 
 				changed, _ := processor.Process()
 				Expect(changed).To(BeFalse())
@@ -1097,11 +1171,13 @@ var _ = Describe("ChangeProcessor", func() {
 					processor.CaptureUpsertChange(gcUpdated)
 					processor.CaptureUpsertChange(gw1Updated)
 					processor.CaptureUpsertChange(hr1Updated)
+					processor.CaptureUpsertChange(rg1Updated)
 
 					// there are non-changing changes
 					processor.CaptureUpsertChange(gcUpdated)
 					processor.CaptureUpsertChange(gw1Updated)
 					processor.CaptureUpsertChange(hr1Updated)
+					processor.CaptureUpsertChange(rg1Updated)
 
 					changed, _ := processor.Process()
 					Expect(changed).To(BeTrue())
@@ -1111,6 +1187,7 @@ var _ = Describe("ChangeProcessor", func() {
 				// we can't have a second GatewayClass, so we don't add it
 				processor.CaptureUpsertChange(gw2)
 				processor.CaptureUpsertChange(hr2)
+				processor.CaptureUpsertChange(rg2)
 
 				changed, _ := processor.Process()
 				Expect(changed).To(BeTrue())
@@ -1121,10 +1198,12 @@ var _ = Describe("ChangeProcessor", func() {
 					processor.CaptureDeleteChange(&v1beta1.GatewayClass{}, gcNsName)
 					processor.CaptureDeleteChange(&v1beta1.Gateway{}, gwNsName)
 					processor.CaptureDeleteChange(&v1beta1.HTTPRoute{}, hrNsName)
+					processor.CaptureDeleteChange(&v1beta1.ReferenceGrant{}, rgNsName)
 
 					// these are non-changing changes
 					processor.CaptureUpsertChange(gw2)
 					processor.CaptureUpsertChange(hr2)
+					processor.CaptureUpsertChange(rg2)
 
 					changed, _ := processor.Process()
 					Expect(changed).To(BeTrue())
@@ -1143,6 +1222,7 @@ var _ = Describe("ChangeProcessor", func() {
 				processor.CaptureDeleteChange(&v1beta1.Gateway{}, gwNsName)
 				processor.CaptureDeleteChange(&v1beta1.HTTPRoute{}, hrNsName)
 				processor.CaptureDeleteChange(&v1beta1.HTTPRoute{}, hr2NsName)
+				processor.CaptureDeleteChange(&v1beta1.ReferenceGrant{}, rgNsName)
 
 				changed, _ := processor.Process()
 				Expect(changed).To(BeFalse())
@@ -1206,6 +1286,7 @@ var _ = Describe("ChangeProcessor", func() {
 				processor.CaptureUpsertChange(gc)
 				processor.CaptureUpsertChange(gw1)
 				processor.CaptureUpsertChange(hr1)
+				processor.CaptureUpsertChange(rg1)
 
 				// related Kubernetes API resources
 				fakeRelationshipCapturer.ExistsReturns(true)
@@ -1222,6 +1303,7 @@ var _ = Describe("ChangeProcessor", func() {
 				processor.CaptureUpsertChange(gc)
 				processor.CaptureUpsertChange(gw1)
 				processor.CaptureUpsertChange(hr1)
+				processor.CaptureUpsertChange(rg1)
 
 				// unrelated Kubernetes API resources
 				fakeRelationshipCapturer.ExistsReturns(false)
@@ -1244,6 +1326,7 @@ var _ = Describe("ChangeProcessor", func() {
 					processor.CaptureUpsertChange(gc)
 					processor.CaptureUpsertChange(gw1)
 					processor.CaptureUpsertChange(hr1)
+					processor.CaptureUpsertChange(rg1)
 
 					changed, _ := processor.Process()
 					Expect(changed).To(BeTrue())
@@ -1257,6 +1340,7 @@ var _ = Describe("ChangeProcessor", func() {
 					processor.CaptureUpsertChange(gcUpdated)
 					processor.CaptureUpsertChange(gw1Updated)
 					processor.CaptureUpsertChange(hr1Updated)
+					processor.CaptureUpsertChange(rg1Updated)
 
 					// these are non-changing changes
 					processor.CaptureUpsertChange(svc)
@@ -1279,6 +1363,7 @@ var _ = Describe("ChangeProcessor", func() {
 					processor.CaptureUpsertChange(gcUpdated)
 					processor.CaptureUpsertChange(gw1Updated)
 					processor.CaptureUpsertChange(hr1Updated)
+					processor.CaptureUpsertChange(rg1Updated)
 
 					changed, _ := processor.Process()
 					Expect(changed).To(BeTrue())

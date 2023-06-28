@@ -38,6 +38,7 @@ rules:
   - gatewayclasses
   - gateways
   - httproutes
+  - referencegrants
   verbs:
   - list
   - watch

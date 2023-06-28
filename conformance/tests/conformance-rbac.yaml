@@ -33,15 +33,10 @@ rules:
 - apiGroups:
   - gateway.networking.k8s.io
   resources:
-  - gatewayclasses
-  verbs:
-  - get
-  - list
-- apiGroups:
-  - gateway.networking.k8s.io
-  resources:
   - gateways
   - httproutes
+  - referencegrants
+  - gatewayclasses
   verbs:
   - create
   - delete
