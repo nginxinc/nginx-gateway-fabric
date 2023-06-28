@@ -913,6 +913,42 @@ func TestCreateReturnValForRedirectFilter(t *testing.T) {
 			},
 			msg: "all fields are set",
 		},
+		{
+			filter: &v1beta1.HTTPRequestRedirectFilter{
+				Scheme:     helpers.GetStringPointer("https"),
+				Hostname:   (*v1beta1.PreciseHostname)(helpers.GetStringPointer("foo.example.com")),
+				StatusCode: helpers.GetIntPointer(101),
+			},
+			expected: &http.Return{
+				Code: 101,
+				Body: "https://foo.example.com:443$request_uri",
+			},
+			msg: "scheme is https, no port is set",
+		},
+		{
+			filter: &v1beta1.HTTPRequestRedirectFilter{
+				Scheme:     helpers.GetStringPointer("http"),
+				Hostname:   (*v1beta1.PreciseHostname)(helpers.GetStringPointer("foo.example.com")),
+				StatusCode: helpers.GetIntPointer(101),
+			},
+			expected: &http.Return{
+				Code: 101,
+				Body: "http://foo.example.com:80$request_uri",
+			},
+			msg: "scheme is http, no port is set",
+		},
+		{
+			filter: &v1beta1.HTTPRequestRedirectFilter{
+				Scheme:     helpers.GetStringPointer("custom"),
+				Hostname:   (*v1beta1.PreciseHostname)(helpers.GetStringPointer("foo.example.com")),
+				StatusCode: helpers.GetIntPointer(101),
+			},
+			expected: &http.Return{
+				Code: 101,
+				Body: "custom://foo.example.com:123$request_uri",
+			},
+			msg: "scheme is custom, no port is set",
+		},
 	}
 
 	for _, test := range tests {

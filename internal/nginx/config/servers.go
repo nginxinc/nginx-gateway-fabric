@@ -198,6 +198,14 @@ func createReturnValForRedirectFilter(filter *v1beta1.HTTPRequestRedirectFilter,
 	port := listenerPort
 	if filter.Port != nil {
 		port = int32(*filter.Port)
+	} else {
+		if filter.Scheme != nil {
+			if *filter.Scheme == "http" {
+				port = 80
+			} else if *filter.Scheme == "https" {
+				port = 443
+			}
+		}
 	}
 
 	scheme := "$scheme"
