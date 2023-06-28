@@ -93,6 +93,7 @@ Fields:
       * `Programmed/False/Invalid`
       * `ResolvedRefs/True/ResolvedRefs`
       * `ResolvedRefs/False/InvalidCertificateRef`
+      * `ResolvedRefs/False/InvalidRouteKinds`
       * `Conflicted/True/ProtocolConflict`
       * `Conflicted/False/NoConflicts`
 
