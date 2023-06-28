@@ -223,7 +223,7 @@ func validateListenerAllowedRouteKind(listener v1beta1.Listener) []conditions.Co
 			for _, kind := range listener.AllowedRoutes.Kinds {
 				if !validHTTPRouteKind(kind) {
 					msg := fmt.Sprintf("Unsupported route kind \"%s/%s\"", *kind.Group, kind.Kind)
-					return conditions.NewListenerUnsupportedValue(msg)
+					return conditions.NewListenerInvalidRouteKinds(msg)
 				}
 			}
 		}

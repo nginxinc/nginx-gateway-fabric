@@ -348,6 +348,20 @@ func NewListenerInvalidCertificateRef(msg string) []Condition {
 	}
 }
 
+// NewListenerInvalidRouteKinds returns Conditions that indicate that an invalid or unsupported Route kind is
+// specified by the Listener.
+func NewListenerInvalidRouteKinds(msg string) []Condition {
+	return []Condition{
+		{
+			Type:    string(v1beta1.ListenerReasonResolvedRefs),
+			Status:  metav1.ConditionFalse,
+			Reason:  string(v1beta1.ListenerReasonInvalidRouteKinds),
+			Message: msg,
+		},
+		NewListenerNotProgrammedInvalid(msg),
+	}
+}
+
 // NewListenerProtocolConflict returns Conditions that indicate multiple Listeners are specified with the same
 // Listener port number, but have conflicting protocol specifications.
 func NewListenerProtocolConflict(msg string) []Condition {
