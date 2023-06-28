@@ -127,9 +127,9 @@ func TestBuildGraph(t *testing.T) {
 							Mode: helpers.GetTLSModePointer(v1beta1.TLSModeTerminate),
 							CertificateRefs: []v1beta1.SecretObjectReference{
 								{
-									Kind:      (*v1beta1.Kind)(helpers.GetStringPointer("Secret")),
+									Kind:      helpers.GetPointer[v1beta1.Kind]("Secret"),
 									Name:      "secret",
-									Namespace: (*v1beta1.Namespace)(helpers.GetStringPointer("test")),
+									Namespace: helpers.GetPointer[v1beta1.Namespace]("certificate"),
 								},
 							},
 						},
@@ -144,6 +144,27 @@ func TestBuildGraph(t *testing.T) {
 	gw2 := createGateway("gateway-2")
 
 	svc := &v1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: "test", Name: "foo"}}
+
+	rg := &v1beta1.ReferenceGrant{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "rg",
+			Namespace: "certificate",
+		},
+		Spec: v1beta1.ReferenceGrantSpec{
+			From: []v1beta1.ReferenceGrantFrom{
+				{
+					Group:     v1beta1.GroupName,
+					Kind:      "Gateway",
+					Namespace: "test",
+				},
+			},
+			To: []v1beta1.ReferenceGrantTo{
+				{
+					Kind: "Secret",
+				},
+			},
+		},
+	}
 
 	createStateWithGatewayClass := func(gc *v1beta1.GatewayClass) ClusterState {
 		return ClusterState{
@@ -161,6 +182,9 @@ func TestBuildGraph(t *testing.T) {
 			},
 			Services: map[types.NamespacedName]*v1.Service{
 				client.ObjectKeyFromObject(svc): svc,
+			},
+			ReferenceGrants: map[types.NamespacedName]*v1beta1.ReferenceGrant{
+				client.ObjectKeyFromObject(rg): rg,
 			},
 		}
 	}
@@ -199,7 +223,7 @@ func TestBuildGraph(t *testing.T) {
 
 	secretMemoryMgr := &secretsfakes.FakeSecretDiskMemoryManager{}
 	secretMemoryMgr.RequestCalls(func(nsname types.NamespacedName) (string, error) {
-		if (nsname == types.NamespacedName{Namespace: "test", Name: "secret"}) {
+		if (nsname == types.NamespacedName{Namespace: "certificate", Name: "secret"}) {
 			return secretPath, nil
 		}
 		panic("unexpected secret request")

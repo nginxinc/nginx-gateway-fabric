@@ -11,11 +11,12 @@ import (
 
 // ClusterState includes cluster resources necessary to build the Graph.
 type ClusterState struct {
-	GatewayClasses map[types.NamespacedName]*v1beta1.GatewayClass
-	Gateways       map[types.NamespacedName]*v1beta1.Gateway
-	HTTPRoutes     map[types.NamespacedName]*v1beta1.HTTPRoute
-	Services       map[types.NamespacedName]*v1.Service
-	Namespaces     map[types.NamespacedName]*v1.Namespace
+	GatewayClasses  map[types.NamespacedName]*v1beta1.GatewayClass
+	Gateways        map[types.NamespacedName]*v1beta1.Gateway
+	HTTPRoutes      map[types.NamespacedName]*v1beta1.HTTPRoute
+	Services        map[types.NamespacedName]*v1.Service
+	Namespaces      map[types.NamespacedName]*v1.Namespace
+	ReferenceGrants map[types.NamespacedName]*v1beta1.ReferenceGrant
 }
 
 // Graph is a Graph-like representation of Gateway API resources.
@@ -50,7 +51,7 @@ func BuildGraph(
 
 	processedGws := processGateways(state.Gateways, gcName)
 
-	gw := buildGateway(processedGws.Winner, secretMemoryMgr, gc)
+	gw := buildGateway(processedGws.Winner, secretMemoryMgr, gc, state.ReferenceGrants)
 
 	routes := buildRoutesForGateways(validators.HTTPFieldsValidator, state.HTTPRoutes, processedGws.GetAllNsNames())
 	bindRoutesToListeners(routes, gw, state.Namespaces)

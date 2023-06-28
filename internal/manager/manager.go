@@ -121,6 +121,9 @@ func Start(cfg config.Config) error {
 				controller.WithK8sPredicate(k8spredicate.LabelChangedPredicate{}),
 			},
 		},
+		{
+			objectType: &gatewayv1beta1.ReferenceGrant{},
+		},
 	}
 
 	ctx := ctlr.SetupSignalHandler()
@@ -207,6 +210,7 @@ func prepareFirstEventBatchPreparerArgs(
 		&apiv1.NamespaceList{},
 		&discoveryV1.EndpointSliceList{},
 		&gatewayv1beta1.HTTPRouteList{},
+		&gatewayv1beta1.ReferenceGrantList{},
 	}
 
 	if gwNsName == nil {

@@ -348,6 +348,20 @@ func NewListenerInvalidCertificateRef(msg string) []Condition {
 	}
 }
 
+// NewListenerInvalidRouteKinds returns Conditions that indicate that an invalid or unsupported Route kind is
+// specified by the Listener.
+func NewListenerInvalidRouteKinds(msg string) []Condition {
+	return []Condition{
+		{
+			Type:    string(v1beta1.ListenerReasonResolvedRefs),
+			Status:  metav1.ConditionFalse,
+			Reason:  string(v1beta1.ListenerReasonInvalidRouteKinds),
+			Message: msg,
+		},
+		NewListenerNotProgrammedInvalid(msg),
+	}
+}
+
 // NewListenerProtocolConflict returns Conditions that indicate multiple Listeners are specified with the same
 // Listener port number, but have conflicting protocol specifications.
 func NewListenerProtocolConflict(msg string) []Condition {
@@ -375,6 +389,26 @@ func NewListenerUnsupportedProtocol(msg string) []Condition {
 			Type:    string(v1beta1.ListenerConditionAccepted),
 			Status:  metav1.ConditionFalse,
 			Reason:  string(v1beta1.ListenerReasonUnsupportedProtocol),
+			Message: msg,
+		},
+		NewListenerNotProgrammedInvalid(msg),
+	}
+}
+
+// NewListenerRefNotPermitted returns Conditions that indicates that the Listener references a TLS secret that is not
+// permitted by a ReferenceGrant.
+func NewListenerRefNotPermitted(msg string) []Condition {
+	return []Condition{
+		{
+			Type:    string(v1beta1.ListenerConditionAccepted),
+			Status:  metav1.ConditionFalse,
+			Reason:  string(v1beta1.ListenerReasonRefNotPermitted),
+			Message: msg,
+		},
+		{
+			Type:    string(v1beta1.ListenerReasonResolvedRefs),
+			Status:  metav1.ConditionFalse,
+			Reason:  string(v1beta1.ListenerReasonRefNotPermitted),
 			Message: msg,
 		},
 		NewListenerNotProgrammedInvalid(msg),

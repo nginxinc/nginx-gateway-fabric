@@ -18,4 +18,4 @@ spec:
       certificateRefs:
       - kind: Secret
         name: cafe-secret
-        namespace: default
+        namespace: certificate

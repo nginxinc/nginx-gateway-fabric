@@ -45,31 +45,25 @@ func TestValidateHTTPListener(t *testing.T) {
 }
 
 func TestValidateHTTPSListener(t *testing.T) {
-	gwNs := "gateway-ns"
+	secretNs := "secret-ns"
 
 	validSecretRef := v1beta1.SecretObjectReference{
 		Kind:      (*v1beta1.Kind)(helpers.GetStringPointer("Secret")),
 		Name:      "secret",
-		Namespace: (*v1beta1.Namespace)(helpers.GetStringPointer(gwNs)),
+		Namespace: (*v1beta1.Namespace)(helpers.GetStringPointer(secretNs)),
 	}
 
 	invalidSecretRefGroup := v1beta1.SecretObjectReference{
 		Group:     (*v1beta1.Group)(helpers.GetStringPointer("some-group")),
 		Kind:      (*v1beta1.Kind)(helpers.GetStringPointer("Secret")),
 		Name:      "secret",
-		Namespace: (*v1beta1.Namespace)(helpers.GetStringPointer(gwNs)),
+		Namespace: (*v1beta1.Namespace)(helpers.GetStringPointer(secretNs)),
 	}
 
 	invalidSecretRefKind := v1beta1.SecretObjectReference{
 		Kind:      (*v1beta1.Kind)(helpers.GetStringPointer("ConfigMap")),
 		Name:      "secret",
-		Namespace: (*v1beta1.Namespace)(helpers.GetStringPointer(gwNs)),
-	}
-
-	invalidSecretRefTNamespace := v1beta1.SecretObjectReference{
-		Kind:      (*v1beta1.Kind)(helpers.GetStringPointer("Secret")),
-		Name:      "secret",
-		Namespace: (*v1beta1.Namespace)(helpers.GetStringPointer("diff-ns")),
+		Namespace: (*v1beta1.Namespace)(helpers.GetStringPointer(secretNs)),
 	}
 
 	tests := []struct {
@@ -155,25 +149,13 @@ func TestValidateHTTPSListener(t *testing.T) {
 				Port: 443,
 				TLS: &v1beta1.GatewayTLSConfig{
 					Mode:            helpers.GetTLSModePointer(v1beta1.TLSModeTerminate),
-					CertificateRefs: []v1beta1.SecretObjectReference{invalidSecretRefTNamespace},
-				},
-			},
-			expected: conditions.NewListenerInvalidCertificateRef(
-				`tls.certificateRefs[0].namespace: Invalid value: "diff-ns": Referenced Secret must belong to ` +
-					`the same namespace as the Gateway`,
-			),
-			name: "invalid cert ref namespace",
-		},
-		{
-			l: v1beta1.Listener{
-				Port: 443,
-				TLS: &v1beta1.GatewayTLSConfig{
-					Mode:            helpers.GetTLSModePointer(v1beta1.TLSModeTerminate),
 					CertificateRefs: []v1beta1.SecretObjectReference{validSecretRef, validSecretRef},
 				},
 			},
-			expected: conditions.NewListenerUnsupportedValue("tls.certificateRefs: Too many: 2: must have at most 1 items"),
-			name:     "too many cert refs",
+			expected: conditions.NewListenerUnsupportedValue(
+				"tls.certificateRefs: Too many: 2: must have at most 1 items",
+			),
+			name: "too many cert refs",
 		},
 	}
 
@@ -181,7 +163,7 @@ func TestValidateHTTPSListener(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewGomegaWithT(t)
 
-			v := createHTTPSListenerValidator(gwNs)
+			v := createHTTPSListenerValidator()
 
 			result := v(test.l)
 			g.Expect(result).To(Equal(test.expected))
