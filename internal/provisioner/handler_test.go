@@ -19,6 +19,7 @@ import (
 	embeddedfiles "github.com/nginxinc/nginx-kubernetes-gateway"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/events"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/helpers"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/conditions"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/status"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/status/statusfakes"
 )
@@ -272,6 +273,46 @@ var _ = Describe("handler", func() {
 				Expect(deps.Items).To(HaveLen(0))
 			})
 		})
+
+		When("upserting GatewayClass that is not set in command-line argument", func() {
+			It("should set the proper status if this controller is referenced", func() {
+				gc := &v1beta1.GatewayClass{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "unknown-gc",
+					},
+					Spec: v1beta1.GatewayClassSpec{
+						ControllerName: "test.example.com",
+					},
+				}
+				err := k8sclient.Create(context.Background(), gc)
+				Expect(err).ShouldNot(HaveOccurred())
+
+				batch := []interface{}{
+					&events.UpsertEvent{
+						Resource: gc,
+					},
+				}
+
+				handler.HandleEventBatch(context.Background(), batch)
+
+				unknownGC := &v1beta1.GatewayClass{}
+				err = k8sclient.Get(context.Background(), client.ObjectKeyFromObject(gc), unknownGC)
+				Expect(err).ShouldNot(HaveOccurred())
+
+				expectedConditions := []metav1.Condition{
+					{
+						Type:               string(v1beta1.GatewayClassConditionStatusAccepted),
+						Status:             metav1.ConditionFalse,
+						ObservedGeneration: 0,
+						LastTransitionTime: fakeClockTime,
+						Reason:             string(conditions.GatewayClassReasonGatewayClassConflict),
+						Message:            string(conditions.GatewayClassMessageGatewayClassConflict),
+					},
+				}
+
+				Expect(unknownGC.Status.Conditions).To(Equal(expectedConditions))
+			})
+		})
 	})
 
 	Describe("Edge cases", func() {
@@ -392,20 +433,20 @@ var _ = Describe("handler", func() {
 				Expect(handle).Should(Panic())
 			})
 		})
-	})
 
-	When("upserting Gateway with broken static Deployment YAML", func() {
-		It("it should panic", func() {
-			handler = newEventHandler(
-				gcName,
-				statusUpdater,
-				k8sclient,
-				zap.New(),
-				[]byte("broken YAML"),
-			)
+		When("upserting Gateway with broken static Deployment YAML", func() {
+			It("it should panic", func() {
+				handler = newEventHandler(
+					gcName,
+					statusUpdater,
+					k8sclient,
+					zap.New(),
+					[]byte("broken YAML"),
+				)
 
-			itShouldUpsertGatewayClass()
-			itShouldPanicWhenUpsertingGateway(types.NamespacedName{Namespace: "test-ns", Name: "test-gw"})
+				itShouldUpsertGatewayClass()
+				itShouldPanicWhenUpsertingGateway(types.NamespacedName{Namespace: "test-ns", Name: "test-gw"})
+			})
 		})
 	})
 })

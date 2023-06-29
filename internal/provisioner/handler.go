@@ -53,17 +53,28 @@ func newEventHandler(
 	}
 }
 
-func (h *eventHandler) ensureGatewayClassAccepted(ctx context.Context) {
-	gc, exist := h.store.gatewayClasses[types.NamespacedName{Name: h.gcName}]
-	if !exist {
-		panic(fmt.Errorf("GatewayClass %s must exist", h.gcName))
+func (h *eventHandler) setGatewayClassStatuses(ctx context.Context) {
+	statuses := status.Statuses{
+		GatewayClassStatuses: make(status.GatewayClassStatuses),
 	}
 
-	statuses := status.Statuses{
-		GatewayClassStatus: &status.GatewayClassStatus{
-			Conditions:         conditions.NewDefaultGatewayClassConditions(),
+	var gcExists bool
+	for nsname, gc := range h.store.gatewayClasses {
+		var conds []conditions.Condition
+		if gc.Name == h.gcName {
+			gcExists = true
+			conds = conditions.NewDefaultGatewayClassConditions()
+		} else {
+			conds = []conditions.Condition{conditions.NewGatewayClassConflict()}
+		}
+
+		statuses.GatewayClassStatuses[nsname] = status.GatewayClassStatus{
+			Conditions:         conds,
 			ObservedGeneration: gc.Generation,
-		},
+		}
+	}
+	if !gcExists {
+		panic(fmt.Errorf("GatewayClass %s must exist", h.gcName))
 	}
 
 	h.statusUpdater.Update(ctx, statuses)
@@ -133,7 +144,7 @@ func (h *eventHandler) ensureDeploymentsMatchGateways(ctx context.Context) {
 
 func (h *eventHandler) HandleEventBatch(ctx context.Context, batch events.EventBatch) {
 	h.store.update(batch)
-	h.ensureGatewayClassAccepted(ctx)
+	h.setGatewayClassStatuses(ctx)
 	h.ensureDeploymentsMatchGateways(ctx)
 }
 

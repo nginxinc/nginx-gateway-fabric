@@ -8,6 +8,15 @@ import (
 )
 
 const (
+	// GatewayClassReasonGatewayClassConflict indicates there are multiple GatewayClass resources
+	// that reference this controller, and we ignored the resource in question and picked the
+	// GatewayClass that is referenced in the command-line argument.
+	// This reason is used with GatewayClassConditionAccepted (false).
+	GatewayClassReasonGatewayClassConflict v1beta1.GatewayClassConditionReason = "GatewayClassConflict"
+
+	// GatewayClassMessageGatewayClassConflict is a message that describes GatewayClassReasonGatewayClassConflict.
+	GatewayClassMessageGatewayClassConflict = "The resource is ignored due to a conflicting GatewayClass resource"
+
 	// ListenerReasonUnsupportedValue is used with the "Accepted" condition when a value of a field in a Listener
 	// is invalid or not supported.
 	ListenerReasonUnsupportedValue v1beta1.ListenerConditionReason = "UnsupportedValue"
@@ -424,6 +433,17 @@ func NewDefaultGatewayClassConditions() []Condition {
 			Reason:  string(v1beta1.GatewayClassReasonAccepted),
 			Message: "GatewayClass is accepted",
 		},
+	}
+}
+
+// NewGatewayClassConflict returns a Condition that indicates that the GatewayClass is not accepted
+// due to a conflict with another GatewayClass.
+func NewGatewayClassConflict() Condition {
+	return Condition{
+		Type:    string(v1beta1.GatewayClassConditionStatusAccepted),
+		Status:  metav1.ConditionFalse,
+		Reason:  string(GatewayClassReasonGatewayClassConflict),
+		Message: GatewayClassMessageGatewayClassConflict,
 	}
 }
 
