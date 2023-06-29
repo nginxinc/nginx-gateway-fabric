@@ -880,20 +880,25 @@ func TestCreateLocationsRootPath(t *testing.T) {
 }
 
 func TestCreateReturnValForRedirectFilter(t *testing.T) {
-	const listenerPort = 123
+	const listenerPortCustom = 123
+	const listenerPortHTTP = 80
+	const listenerPortHTTPS = 443
 
 	tests := []struct {
-		filter   *v1beta1.HTTPRequestRedirectFilter
-		expected *http.Return
-		msg      string
+		filter       *v1beta1.HTTPRequestRedirectFilter
+		expected     *http.Return
+		msg          string
+		listenerPort int32
 	}{
 		{
-			filter:   nil,
-			expected: nil,
-			msg:      "filter is nil",
+			filter:       nil,
+			expected:     nil,
+			listenerPort: listenerPortCustom,
+			msg:          "filter is nil",
 		},
 		{
-			filter: &v1beta1.HTTPRequestRedirectFilter{},
+			filter:       &v1beta1.HTTPRequestRedirectFilter{},
+			listenerPort: listenerPortCustom,
 			expected: &http.Return{
 				Code: http.StatusFound,
 				Body: "$scheme://$host:123$request_uri",
@@ -902,11 +907,12 @@ func TestCreateReturnValForRedirectFilter(t *testing.T) {
 		},
 		{
 			filter: &v1beta1.HTTPRequestRedirectFilter{
-				Scheme:     helpers.GetStringPointer("https"),
-				Hostname:   (*v1beta1.PreciseHostname)(helpers.GetStringPointer("foo.example.com")),
+				Scheme:     helpers.GetPointer("https"),
+				Hostname:   helpers.GetPointer(v1beta1.PreciseHostname("foo.example.com")),
 				Port:       (*v1beta1.PortNumber)(helpers.GetInt32Pointer(2022)),
-				StatusCode: helpers.GetIntPointer(101),
+				StatusCode: helpers.GetPointer(101),
 			},
+			listenerPort: listenerPortCustom,
 			expected: &http.Return{
 				Code: 101,
 				Body: "https://foo.example.com:2022$request_uri",
@@ -915,44 +921,59 @@ func TestCreateReturnValForRedirectFilter(t *testing.T) {
 		},
 		{
 			filter: &v1beta1.HTTPRequestRedirectFilter{
-				Scheme:     helpers.GetStringPointer("https"),
-				Hostname:   (*v1beta1.PreciseHostname)(helpers.GetStringPointer("foo.example.com")),
-				StatusCode: helpers.GetIntPointer(101),
+				Hostname:   helpers.GetPointer(v1beta1.PreciseHostname("foo.example.com")),
+				StatusCode: helpers.GetPointer(101),
 			},
+			listenerPort: listenerPortHTTPS,
 			expected: &http.Return{
 				Code: 101,
-				Body: "https://foo.example.com:443$request_uri",
+				Body: "$scheme://foo.example.com:443$request_uri",
 			},
-			msg: "scheme is https, no port is set",
+			msg: "no scheme, listenerPort https, no port is set",
 		},
 		{
 			filter: &v1beta1.HTTPRequestRedirectFilter{
-				Scheme:     helpers.GetStringPointer("http"),
-				Hostname:   (*v1beta1.PreciseHostname)(helpers.GetStringPointer("foo.example.com")),
-				StatusCode: helpers.GetIntPointer(101),
+				Scheme:     helpers.GetPointer("https"),
+				Hostname:   helpers.GetPointer(v1beta1.PreciseHostname("foo.example.com")),
+				StatusCode: helpers.GetPointer(101),
 			},
+			listenerPort: listenerPortHTTPS,
 			expected: &http.Return{
 				Code: 101,
-				Body: "http://foo.example.com:80$request_uri",
+				Body: "https://foo.example.com$request_uri",
 			},
-			msg: "scheme is http, no port is set",
+			msg: "scheme is https, listenerPort https, no port is set",
 		},
 		{
 			filter: &v1beta1.HTTPRequestRedirectFilter{
-				Scheme:     helpers.GetStringPointer("custom"),
-				Hostname:   (*v1beta1.PreciseHostname)(helpers.GetStringPointer("foo.example.com")),
-				StatusCode: helpers.GetIntPointer(101),
+				Scheme:     helpers.GetPointer("http"),
+				Hostname:   helpers.GetPointer(v1beta1.PreciseHostname("foo.example.com")),
+				StatusCode: helpers.GetPointer(101),
 			},
+			listenerPort: listenerPortHTTP,
 			expected: &http.Return{
 				Code: 101,
-				Body: "custom://foo.example.com:123$request_uri",
+				Body: "http://foo.example.com$request_uri",
 			},
-			msg: "scheme is custom, no port is set",
+			msg: "scheme is http, listenerPort http, no port is set",
+		},
+		{
+			filter: &v1beta1.HTTPRequestRedirectFilter{
+				Scheme:     helpers.GetPointer("custom"),
+				Hostname:   helpers.GetPointer(v1beta1.PreciseHostname("foo.example.com")),
+				StatusCode: helpers.GetPointer(101),
+			},
+			listenerPort: listenerPortHTTP,
+			expected: &http.Return{
+				Code: 101,
+				Body: "custom://foo.example.com:80$request_uri",
+			},
+			msg: "scheme is custom, listenerPort http, no port is set",
 		},
 	}
 
 	for _, test := range tests {
-		result := createReturnValForRedirectFilter(test.filter, listenerPort)
+		result := createReturnValForRedirectFilter(test.filter, test.listenerPort)
 		if diff := cmp.Diff(test.expected, result); diff != "" {
 			t.Errorf("createReturnValForRedirectFilter() mismatch %q (-want +got):\n%s", test.msg, diff)
 		}

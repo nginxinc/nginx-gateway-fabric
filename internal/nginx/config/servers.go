@@ -198,24 +198,25 @@ func createReturnValForRedirectFilter(filter *v1beta1.HTTPRequestRedirectFilter,
 	port := listenerPort
 	if filter.Port != nil {
 		port = int32(*filter.Port)
-	} else {
-		if filter.Scheme != nil {
-			if *filter.Scheme == "http" {
-				port = 80
-			} else if *filter.Scheme == "https" {
-				port = 443
-			}
-		}
 	}
+
+	hostnamePort := fmt.Sprintf("%s:%d", hostname, port)
 
 	scheme := "$scheme"
 	if filter.Scheme != nil {
 		scheme = *filter.Scheme
+		if filter.Port == nil {
+			// Don't specify the port in the return url if the scheme is
+			// well known and the port is not specified by the user
+			if *filter.Scheme == "http" || *filter.Scheme == "https" {
+				hostnamePort = hostname
+			}
+		}
 	}
 
 	return &http.Return{
 		Code: code,
-		Body: fmt.Sprintf("%s://%s:%d$request_uri", scheme, hostname, port),
+		Body: fmt.Sprintf("%s://%s$request_uri", scheme, hostnamePort),
 	}
 }
 
