@@ -14,19 +14,23 @@ List available commands:
 ```bash
 $ make
 
-build-and-load-images          Build NKG container and load it and NGINX container on configured kind cluster
+build-nkg-image                Build NKG container and load it and NGINX container on configured kind cluster
 build-test-runner-image        Build conformance test runner image
 cleanup-conformance-tests      Clean up conformance tests fixtures
 create-kind-cluster            Create a kind cluster
 delete-kind-cluster            Delete kind cluster
+deploy-updated-provisioner     Update provisioner manifest and deploy to the configured kind cluster
 help                           Display this help
 install-nkg-edge               Install NKG with provisioner from edge on configured kind cluster
 install-nkg-local-build        Install NKG from local build with provisioner on configured kind cluster
+install-nkg-local-no-build     Install NKG from local build with provisioner on configured kind cluster but do not build the NKG image
+load-images                    Load NKG and NGINX containers on configured kind cluster
 preload-nginx-container        Preload NGINX container on configured kind cluster
 prepare-nkg-dependencies       Install NKG dependencies on configured kind cluster
 run-conformance-tests          Run conformance tests
 undo-image-update              Undo the NKG image name and tag in deployment manifest
 uninstall-nkg                  Uninstall NKG on configured kind cluster
+update-nkg-manifest            Update the NKG deployment manifest image name and imagePullPolicy
 ```
 
 **Note:** The following variables are configurable when running the below `make` commands:
@@ -35,10 +39,9 @@ uninstall-nkg                  Uninstall NKG on configured kind cluster
 | ------------- | ------------- | ------------- |
 | TAG | latest  | The tag for the conformance test image |
 | PREFIX | conformance-test-runner | The prefix for the conformance test image |
-| BUILD_NKG | true | Flag to indicate if the local NKG image needs to be built |
 | NKG_TAG  | edge  | The tag for the locally built NKG image |
 | NKG_PREFIX | nginx-kubernetes-gateway  | The prefix for the locally built NKG image |
-| KIND_KUBE_CONFIG_FOLDER | ~/.kube/kind  | The location of the kubeconfig folder |
+| KIND_KUBE_CONFIG |  ~/.kube/kind/config | The location of the kubeconfig |
 | GATEWAY_CLASS | nginx | The gateway class that should be used for the tests |
 | SUPPORTED_FEATURES | HTTPRoute,HTTPRouteQueryParamMatching, HTTPRouteMethodMatching,HTTPRoutePortRedirect, HTTPRouteSchemeRedirect | The supported features that should be tested by the conformance tests. Ensure the list is comma separated with no spaces. |
 | EXEMPT_FEATURES | ReferenceGrant | The features that should not be tested by the conformance tests |
@@ -56,8 +59,11 @@ $ make create-kind-cluster
 ```bash
 $ make install-nkg-local-build
 ```
-
-**Note:** You can optionally skip the actual *build* step by setting the BUILD_NKG flag to "false". However, if choosing 
+#### *Option 2* Install Nginx Kubernetes Gateway from local already built image to configured kind cluster
+```bash
+$ make install-nkg-local-no-build
+```
+**Note:** You can optionally skip the actual *build* step. However, if choosing 
 this option, the following step *must* be completed manually *before* the build step:
  * Set NKG_PREFIX=<nkg_repo_name> NKG_TAG=<nkg_image_tag> to preferred values.
  * Navigate to `deploy/manifests` and update values in `deployment.yaml` as specified in below code-block.
@@ -71,10 +77,8 @@ this option, the following step *must* be completed manually *before* the build 
  ..
  .
  ```
-
-#### *Option 2* Install Nginx Kubernetes Gateway from edge to configured kind cluster
-Instead of the above command, you can skip the build NKG image step and prepare the environment to instead
-use the `edge` image
+#### *Option 3* Install Nginx Kubernetes Gateway from edge to configured kind cluster
+You can also skip the build NKG image step and prepare the environment to instead use the `edge` image
 
 ```bash
 $ make install-nkg-edge
