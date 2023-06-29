@@ -205,10 +205,15 @@ func createReturnValForRedirectFilter(filter *v1beta1.HTTPRequestRedirectFilter,
 	scheme := "$scheme"
 	if filter.Scheme != nil {
 		scheme = *filter.Scheme
+		// Don't specify the port in the return url if the scheme is
+		// well known and the port is already set to the correct well known port
+		if (port == 80 && scheme == "http") || (port == 443 && scheme == "https") {
+			hostnamePort = hostname
+		}
 		if filter.Port == nil {
 			// Don't specify the port in the return url if the scheme is
 			// well known and the port is not specified by the user
-			if *filter.Scheme == "http" || *filter.Scheme == "https" {
+			if scheme == "http" || scheme == "https" {
 				hostnamePort = hostname
 			}
 		}
