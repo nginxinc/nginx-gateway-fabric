@@ -177,7 +177,8 @@ jobs:
         run: |
           nkg_prefix=$(echo ${{ steps.meta.outputs.tags }} | cut -d ":" -f 1)
           nkg_tag=$(echo ${{ steps.meta.outputs.tags }} | cut -d ":" -f 2)
-          yq -i "with(.spec.template.spec.containers[0]; .image = \"${nkg_prefix}:${nkg_tag}\" | .imagePullPolicy = \"Never\")" deploy/manifests/deployment.yaml
+          make update-nkg-manifest NKG_PREFIX=${nkg_prefix} NKG_TAG=${nkg_tag}
+        working-directory: ./conformance
 
       - name: Build Docker Image
         uses: docker/build-push-action@2eb1c1961a95fc15694676618e422e8ba1d63825 # v4.1.1
@@ -205,7 +206,7 @@ jobs:
       - name: Deploy Kubernetes
         id: k8s
         run: |
-          kind create cluster --image kindest/node:v1.27.1 --kubeconfig kube-${{ github.run_id }}
+          make create-kind-cluster KIND_KUBE_CONFIG=kube-${{ github.run_id }}
           echo "KUBECONFIG=kube-${{ github.run_id }}" >> "$GITHUB_ENV"
         working-directory: ./conformance
 
@@ -213,7 +214,7 @@ jobs:
         run: |
           nkg_prefix=$(echo ${{ steps.meta.outputs.tags }} | cut -d ":" -f 1)
           nkg_tag=$(echo ${{ steps.meta.outputs.tags }} | cut -d ":" -f 2)
-          make install-nkg-local-build NKG_PREFIX=${nkg_prefix} NKG_TAG=${nkg_tag} BUILD_NKG=false
+          make install-nkg-local-no-build NKG_PREFIX=${nkg_prefix} NKG_TAG=${nkg_tag}
         working-directory: ./conformance
 
       - name: Run conformance tests

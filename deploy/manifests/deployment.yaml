@@ -16,71 +16,71 @@ spec:
       shareProcessNamespace: true
       serviceAccountName: nginx-gateway
       volumes:
-      - name: nginx
-        emptyDir: { }
-      - name: nginx-conf
-        configMap:
-          name: nginx-conf
-      - name: var-lib-nginx
-        emptyDir: { }
-      - name: njs-modules
-        configMap:
-          name: njs-modules
-      initContainers:
-      - image: busybox:1.36
-        name: set-permissions
-        command: [ 'sh', '-c', 'rm -r /etc/nginx/conf.d /etc/nginx/secrets; mkdir /etc/nginx/conf.d /etc/nginx/secrets && chown 1001:0 /etc/nginx/conf.d /etc/nginx/secrets' ]
-        volumeMounts:
         - name: nginx
-          mountPath: /etc/nginx
-      containers:
-      - image: ghcr.io/nginxinc/nginx-kubernetes-gateway:edge
-        imagePullPolicy: Always
-        name: nginx-gateway
-        volumeMounts:
-        - name: nginx
-          mountPath: /etc/nginx
-        securityContext:
-          runAsUser: 1001
-          capabilities:
-            drop:
-            - ALL
-            add:
-            - KILL
-        env:
-        - name: POD_IP
-          valueFrom:
-            fieldRef:
-              fieldPath: status.podIP
-        args:
-        - static-mode
-        - --gateway-ctlr-name=k8s-gateway.nginx.org/nginx-gateway-controller
-        - --gatewayclass=nginx
-      - image: nginx:1.25
-        imagePullPolicy: Always
-        name: nginx
-        ports:
-        - name: http
-          containerPort: 80
-        - name: https
-          containerPort: 443
-        volumeMounts:
-        - name: nginx
-          mountPath: /etc/nginx
+          emptyDir: {}
         - name: nginx-conf
-          mountPath: /etc/nginx/nginx.conf
-          subPath: nginx.conf
+          configMap:
+            name: nginx-conf
         - name: var-lib-nginx
-          mountPath: /var/lib/nginx
+          emptyDir: {}
         - name: njs-modules
-          mountPath: /usr/lib/nginx/modules/njs
-        securityContext:
-          capabilities:
-            drop:
-            - ALL
-            add:
-            - CHOWN
-            - NET_BIND_SERVICE
-            - SETGID
-            - SETUID
-            - DAC_OVERRIDE
+          configMap:
+            name: njs-modules
+      initContainers:
+        - image: busybox:1.36
+          name: set-permissions
+          command: ['sh', '-c', 'rm -r /etc/nginx/conf.d /etc/nginx/secrets; mkdir /etc/nginx/conf.d /etc/nginx/secrets && chown 1001:0 /etc/nginx/conf.d /etc/nginx/secrets']
+          volumeMounts:
+            - name: nginx
+              mountPath: /etc/nginx
+      containers:
+        - image: nginx-kubernetes-gateway:edge
+          imagePullPolicy: Never
+          name: nginx-gateway
+          volumeMounts:
+            - name: nginx
+              mountPath: /etc/nginx
+          securityContext:
+            runAsUser: 1001
+            capabilities:
+              drop:
+                - ALL
+              add:
+                - KILL
+          env:
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+          args:
+            - static-mode
+            - --gateway-ctlr-name=k8s-gateway.nginx.org/nginx-gateway-controller
+            - --gatewayclass=nginx
+        - image: nginx:1.25
+          imagePullPolicy: Always
+          name: nginx
+          ports:
+            - name: http
+              containerPort: 80
+            - name: https
+              containerPort: 443
+          volumeMounts:
+            - name: nginx
+              mountPath: /etc/nginx
+            - name: nginx-conf
+              mountPath: /etc/nginx/nginx.conf
+              subPath: nginx.conf
+            - name: var-lib-nginx
+              mountPath: /var/lib/nginx
+            - name: njs-modules
+              mountPath: /usr/lib/nginx/modules/njs
+          securityContext:
+            capabilities:
+              drop:
+                - ALL
+              add:
+                - CHOWN
+                - NET_BIND_SERVICE
+                - SETGID
+                - SETUID
+                - DAC_OVERRIDE
