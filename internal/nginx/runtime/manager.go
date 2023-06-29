@@ -16,7 +16,7 @@ import (
 
 const (
 	pidFile        = "/etc/nginx/nginx.pid"
-	pidFileTimeout = 10 * time.Second
+	pidFileTimeout = 15 * time.Second
 )
 
 type (
