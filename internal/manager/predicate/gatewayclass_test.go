@@ -3,11 +3,14 @@ package predicate
 import (
 	"testing"
 
+	. "github.com/onsi/gomega"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 )
 
 func TestGatewayClassPredicate(t *testing.T) {
+	g := NewGomegaWithT(t)
+
 	p := GatewayClassPredicate{ControllerName: "nginx-ctlr"}
 
 	gc := &v1beta1.GatewayClass{
@@ -16,18 +19,10 @@ func TestGatewayClassPredicate(t *testing.T) {
 		},
 	}
 
-	if !p.Create(event.CreateEvent{Object: gc}) {
-		t.Error("GatewayClassPredicate.Create() returned false; expected true")
-	}
-	if !p.Update(event.UpdateEvent{ObjectNew: gc}) {
-		t.Error("GatewayClassPredicate.Update() returned false; expected true")
-	}
+	g.Expect(p.Create(event.CreateEvent{Object: gc})).To(BeTrue())
+	g.Expect(p.Update(event.UpdateEvent{ObjectNew: gc})).To(BeTrue())
 
 	gc.Spec.ControllerName = "unknown"
-	if p.Create(event.CreateEvent{Object: gc}) {
-		t.Error("GatewayClassPredicate.Create() returned true; expected false")
-	}
-	if p.Update(event.UpdateEvent{ObjectNew: gc}) {
-		t.Error("GatewayClassPredicate.Update() returned true; expected false")
-	}
+	g.Expect(p.Create(event.CreateEvent{Object: gc})).To(BeFalse())
+	g.Expect(p.Update(event.UpdateEvent{ObjectNew: gc})).To(BeFalse())
 }
