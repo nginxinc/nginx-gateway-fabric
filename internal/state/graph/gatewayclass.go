@@ -28,7 +28,7 @@ type processedGatewayClasses struct {
 // processGatewayClasses returns the "Winner" GatewayClass, which is defined in
 // the command-line argument and references this controller, and a list of "Ignored" GatewayClasses
 // that reference this controller, but are not named in the command-line argument.
-// Also returns a boolean that says whether or not the GatewayClasa defined
+// Also returns a boolean that says whether or not the GatewayClass defined
 // in the command-line argument exists, regardless of which controller it references.
 func processGatewayClasses(
 	gcs map[types.NamespacedName]*v1beta1.GatewayClass,

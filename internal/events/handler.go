@@ -7,6 +7,7 @@ import (
 	"github.com/go-logr/logr"
 	apiv1 "k8s.io/api/core/v1"
 	discoveryV1 "k8s.io/api/discovery/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/config"
@@ -48,6 +49,8 @@ type EventHandlerConfig struct {
 	StatusUpdater status.Updater
 	// Logger is the logger to be used by the EventHandler.
 	Logger logr.Logger
+	// ControllerName is the name of this controller.
+	ControllerName string
 }
 
 // EventHandlerImpl implements EventHandler.
@@ -121,7 +124,11 @@ func (h *EventHandlerImpl) updateNginx(ctx context.Context, conf dataplane.Confi
 func (h *EventHandlerImpl) propagateUpsert(e *UpsertEvent) {
 	switch r := e.Resource.(type) {
 	case *v1beta1.GatewayClass:
-		h.cfg.Processor.CaptureUpsertChange(r)
+		if string(r.Spec.ControllerName) != h.cfg.ControllerName {
+			h.cfg.Processor.CaptureDeleteChange(r, client.ObjectKeyFromObject(r))
+		} else {
+			h.cfg.Processor.CaptureUpsertChange(r)
+		}
 	case *v1beta1.Gateway:
 		h.cfg.Processor.CaptureUpsertChange(r)
 	case *v1beta1.HTTPRoute:

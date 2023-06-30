@@ -175,6 +175,7 @@ func Start(cfg config.Config) error {
 		NginxFileMgr:        nginxFileMgr,
 		NginxRuntimeMgr:     nginxRuntimeMgr,
 		StatusUpdater:       statusUpdater,
+		ControllerName:      cfg.GatewayCtlrName,
 	})
 
 	objects, objectLists := prepareFirstEventBatchPreparerArgs(cfg.GatewayClassName, cfg.GatewayNsName)

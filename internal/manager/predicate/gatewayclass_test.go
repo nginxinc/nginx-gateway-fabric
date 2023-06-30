@@ -22,7 +22,11 @@ func TestGatewayClassPredicate(t *testing.T) {
 	g.Expect(p.Create(event.CreateEvent{Object: gc})).To(BeTrue())
 	g.Expect(p.Update(event.UpdateEvent{ObjectNew: gc})).To(BeTrue())
 
-	gc.Spec.ControllerName = "unknown"
-	g.Expect(p.Create(event.CreateEvent{Object: gc})).To(BeFalse())
-	g.Expect(p.Update(event.UpdateEvent{ObjectNew: gc})).To(BeFalse())
+	gc2 := &v1beta1.GatewayClass{
+		Spec: v1beta1.GatewayClassSpec{
+			ControllerName: "unknown",
+		},
+	}
+	g.Expect(p.Create(event.CreateEvent{Object: gc2})).To(BeFalse())
+	g.Expect(p.Update(event.UpdateEvent{ObjectOld: gc, ObjectNew: gc2})).To(BeTrue())
 }

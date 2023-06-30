@@ -29,14 +29,19 @@ func (gcp GatewayClassPredicate) Create(e event.CreateEvent) bool {
 
 // Update implements default UpdateEvent filter for validating a GatewayClass controllerName.
 func (gcp GatewayClassPredicate) Update(e event.UpdateEvent) bool {
-	if e.ObjectNew == nil {
-		return false
+	if e.ObjectOld != nil {
+		gcOld, ok := e.ObjectOld.(*v1beta1.GatewayClass)
+		if ok {
+			return string(gcOld.Spec.ControllerName) == gcp.ControllerName
+		}
 	}
 
-	gc, ok := e.ObjectNew.(*v1beta1.GatewayClass)
-	if !ok {
-		return false
+	if e.ObjectNew != nil {
+		gcNew, ok := e.ObjectNew.(*v1beta1.GatewayClass)
+		if ok {
+			return string(gcNew.Spec.ControllerName) == gcp.ControllerName
+		}
 	}
 
-	return string(gc.Spec.ControllerName) == gcp.ControllerName
+	return false
 }
