@@ -88,7 +88,7 @@ Step 3:
 kubectl delete -f reference-grant.yaml
 ```
 
-Now, if we try to access the application over HTTPS, we will get an internal server error:
+Now, if we try to access the application over HTTP, we will get an internal server error:
 ```
 curl --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/tea
 
