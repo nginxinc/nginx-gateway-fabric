@@ -79,8 +79,9 @@ func TestValidateHTTPBackendRef(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewGomegaWithT(t)
+			resolver := newReferenceGrantResolver(nil)
 
-			valid, cond := validateHTTPBackendRef(test.ref, "test", field.NewPath("test"))
+			valid, cond := validateHTTPBackendRef(test.ref, "test", resolver, field.NewPath("test"))
 
 			g.Expect(valid).To(Equal(test.expectedValid))
 			g.Expect(cond).To(Equal(test.expectedCondition))
@@ -89,8 +90,30 @@ func TestValidateHTTPBackendRef(t *testing.T) {
 }
 
 func TestValidateBackendRef(t *testing.T) {
+	specificRefGrant := &v1beta1.ReferenceGrant{
+		Spec: v1beta1.ReferenceGrantSpec{
+			To: []v1beta1.ReferenceGrantTo{
+				{
+					Kind: "Service",
+					Name: helpers.GetPointer(v1beta1.ObjectName("service1")),
+				},
+			},
+			From: []v1beta1.ReferenceGrantFrom{
+				{
+					Group:     v1beta1.GroupName,
+					Kind:      "HTTPRoute",
+					Namespace: "test",
+				},
+			},
+		},
+	}
+
+	allInNamespaceRefGrant := specificRefGrant.DeepCopy()
+	allInNamespaceRefGrant.Spec.To[0].Name = nil
+
 	tests := []struct {
 		ref               v1beta1.BackendRef
+		refGrants         map[types.NamespacedName]*v1beta1.ReferenceGrant
 		expectedCondition conditions.Condition
 		name              string
 		expectedValid     bool
@@ -117,6 +140,28 @@ func TestValidateBackendRef(t *testing.T) {
 			expectedValid: true,
 		},
 		{
+			name: "normal case with backend ref allowed by specific reference grant",
+			ref: getModifiedRef(func(backend v1beta1.BackendRef) v1beta1.BackendRef {
+				backend.Namespace = (*v1beta1.Namespace)(helpers.GetStringPointer("cross-ns"))
+				return backend
+			}),
+			refGrants: map[types.NamespacedName]*v1beta1.ReferenceGrant{
+				{Namespace: "cross-ns", Name: "rg"}: specificRefGrant,
+			},
+			expectedValid: true,
+		},
+		{
+			name: "normal case with backend ref allowed by all-in-namespace reference grant",
+			ref: getModifiedRef(func(backend v1beta1.BackendRef) v1beta1.BackendRef {
+				backend.Namespace = (*v1beta1.Namespace)(helpers.GetStringPointer("cross-ns"))
+				return backend
+			}),
+			refGrants: map[types.NamespacedName]*v1beta1.ReferenceGrant{
+				{Namespace: "cross-ns", Name: "rg"}: allInNamespaceRefGrant,
+			},
+			expectedValid: true,
+		},
+		{
 			name: "invalid group",
 			ref: getModifiedRef(func(backend v1beta1.BackendRef) v1beta1.BackendRef {
 				backend.Group = helpers.GetPointer[v1beta1.Group]("invalid")
@@ -139,14 +184,14 @@ func TestValidateBackendRef(t *testing.T) {
 			),
 		},
 		{
-			name: "invalid namespace",
+			name: "backend ref not allowed by reference grant",
 			ref: getModifiedRef(func(backend v1beta1.BackendRef) v1beta1.BackendRef {
 				backend.Namespace = (*v1beta1.Namespace)(helpers.GetStringPointer("invalid"))
 				return backend
 			}),
 			expectedValid: false,
 			expectedCondition: conditions.NewRouteBackendRefRefNotPermitted(
-				`test.namespace: Invalid value: "invalid": cross-namespace routing is not permitted`,
+				"Backend ref to Service invalid/service1 not permitted by any ReferenceGrant",
 			),
 		},
 		{
@@ -166,7 +211,8 @@ func TestValidateBackendRef(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewGomegaWithT(t)
 
-			valid, cond := validateBackendRef(test.ref, "test", field.NewPath("test"))
+			resolver := newReferenceGrantResolver(test.refGrants)
+			valid, cond := validateBackendRef(test.ref, "test", resolver, field.NewPath("test"))
 
 			g.Expect(valid).To(Equal(test.expectedValid))
 			g.Expect(cond).To(Equal(test.expectedCondition))
@@ -442,8 +488,8 @@ func TestAddBackendRefsToRulesTest(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewGomegaWithT(t)
-
-			addBackendRefsToRules(test.route, services)
+			resolver := newReferenceGrantResolver(nil)
+			addBackendRefsToRules(test.route, resolver, services)
 
 			var actual []BackendRef
 			if test.route.Rules != nil {
@@ -571,7 +617,8 @@ func TestCreateBackend(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewGomegaWithT(t)
 
-			backend, cond := createBackendRef(test.ref, sourceNamespace, services, refPath)
+			resolver := newReferenceGrantResolver(nil)
+			backend, cond := createBackendRef(test.ref, sourceNamespace, resolver, services, refPath)
 
 			g.Expect(helpers.Diff(test.expectedBackend, backend)).To(BeEmpty())
 			g.Expect(cond).To(Equal(test.expectedCondition))

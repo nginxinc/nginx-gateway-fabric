@@ -67,7 +67,7 @@ func TestBuildGraph(t *testing.T) {
 									BackendObjectReference: v1beta1.BackendObjectReference{
 										Kind:      (*v1beta1.Kind)(helpers.GetStringPointer("Service")),
 										Name:      "foo",
-										Namespace: (*v1beta1.Namespace)(helpers.GetStringPointer("test")),
+										Namespace: (*v1beta1.Namespace)(helpers.GetStringPointer("service")),
 										Port:      (*v1beta1.PortNumber)(helpers.GetInt32Pointer(80)),
 									},
 								},
@@ -83,7 +83,7 @@ func TestBuildGraph(t *testing.T) {
 	hr2 := createRoute("hr-2", "wrong-gateway", "listener-80-1")
 	hr3 := createRoute("hr-3", "gateway-1", "listener-443-1") // https listener; should not conflict with hr1
 
-	fooSvc := &v1.Service{ObjectMeta: metav1.ObjectMeta{Name: "foo", Namespace: "test"}}
+	fooSvc := &v1.Service{ObjectMeta: metav1.ObjectMeta{Name: "foo", Namespace: "service"}}
 
 	hr1Refs := []BackendRef{
 		{
@@ -143,11 +143,11 @@ func TestBuildGraph(t *testing.T) {
 	gw1 := createGateway("gateway-1")
 	gw2 := createGateway("gateway-2")
 
-	svc := &v1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: "test", Name: "foo"}}
+	svc := &v1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: "service", Name: "foo"}}
 
-	rg := &v1beta1.ReferenceGrant{
+	rgSecret := &v1beta1.ReferenceGrant{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "rg",
+			Name:      "rg-secret",
 			Namespace: "certificate",
 		},
 		Spec: v1beta1.ReferenceGrantSpec{
@@ -161,6 +161,27 @@ func TestBuildGraph(t *testing.T) {
 			To: []v1beta1.ReferenceGrantTo{
 				{
 					Kind: "Secret",
+				},
+			},
+		},
+	}
+
+	rgService := &v1beta1.ReferenceGrant{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "rg-service",
+			Namespace: "service",
+		},
+		Spec: v1beta1.ReferenceGrantSpec{
+			From: []v1beta1.ReferenceGrantFrom{
+				{
+					Group:     v1beta1.GroupName,
+					Kind:      "HTTPRoute",
+					Namespace: "test",
+				},
+			},
+			To: []v1beta1.ReferenceGrantTo{
+				{
+					Kind: "Service",
 				},
 			},
 		},
@@ -184,7 +205,8 @@ func TestBuildGraph(t *testing.T) {
 				client.ObjectKeyFromObject(svc): svc,
 			},
 			ReferenceGrants: map[types.NamespacedName]*v1beta1.ReferenceGrant{
-				client.ObjectKeyFromObject(rg): rg,
+				client.ObjectKeyFromObject(rgSecret):  rgSecret,
+				client.ObjectKeyFromObject(rgService): rgService,
 			},
 		}
 	}

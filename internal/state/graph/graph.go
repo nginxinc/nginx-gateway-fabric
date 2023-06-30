@@ -53,11 +53,13 @@ func BuildGraph(
 	gc := buildGatewayClass(processedGwClasses.Winner)
 
 	processedGws := processGateways(state.Gateways, gcName)
-	gw := buildGateway(processedGws.Winner, secretMemoryMgr, gc, state.ReferenceGrants)
+
+	refGrantResolver := newReferenceGrantResolver(state.ReferenceGrants)
+	gw := buildGateway(processedGws.Winner, secretMemoryMgr, gc, refGrantResolver)
 
 	routes := buildRoutesForGateways(validators.HTTPFieldsValidator, state.HTTPRoutes, processedGws.GetAllNsNames())
 	bindRoutesToListeners(routes, gw, state.Namespaces)
-	addBackendRefsToRouteRules(routes, state.Services)
+	addBackendRefsToRouteRules(routes, refGrantResolver, state.Services)
 
 	g := &Graph{
 		GatewayClass:          gc,

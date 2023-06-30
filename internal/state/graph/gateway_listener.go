@@ -36,11 +36,11 @@ type Listener struct {
 func buildListeners(
 	gw *v1beta1.Gateway,
 	secretMemoryMgr secrets.SecretDiskMemoryManager,
-	refGrants map[types.NamespacedName]*v1beta1.ReferenceGrant,
+	refGrantResolver *referenceGrantResolver,
 ) map[string]*Listener {
 	listeners := make(map[string]*Listener)
 
-	listenerFactory := newListenerConfiguratorFactory(gw, secretMemoryMgr, refGrants)
+	listenerFactory := newListenerConfiguratorFactory(gw, secretMemoryMgr, refGrantResolver)
 
 	for _, gl := range gw.Spec.Listeners {
 		configurator := listenerFactory.getConfiguratorForListener(gl)
@@ -68,7 +68,7 @@ func (f *listenerConfiguratorFactory) getConfiguratorForListener(l v1beta1.Liste
 func newListenerConfiguratorFactory(
 	gw *v1beta1.Gateway,
 	secretMemoryMgr secrets.SecretDiskMemoryManager,
-	refGrants map[types.NamespacedName]*v1beta1.ReferenceGrant,
+	refGrantResolver *referenceGrantResolver,
 ) *listenerConfiguratorFactory {
 	sharedPortConflictResolver := createPortConflictResolver()
 
@@ -107,7 +107,7 @@ func newListenerConfiguratorFactory(
 				sharedPortConflictResolver,
 			},
 			externalReferenceResolvers: []listenerExternalReferenceResolver{
-				createExternalReferencesForTLSSecretsResolver(gw.Namespace, secretMemoryMgr, refGrants),
+				createExternalReferencesForTLSSecretsResolver(gw.Namespace, secretMemoryMgr, refGrantResolver),
 			},
 		},
 	}
@@ -376,7 +376,7 @@ func createPortConflictResolver() listenerConflictResolver {
 func createExternalReferencesForTLSSecretsResolver(
 	gwNs string,
 	secretMemoryMgr secrets.SecretDiskMemoryManager,
-	refGrants map[types.NamespacedName]*v1beta1.ReferenceGrant,
+	refGrantResolver *referenceGrantResolver,
 ) listenerExternalReferenceResolver {
 	return func(l *Listener) {
 		certRef := l.Source.TLS.CertificateRefs[0]
@@ -392,12 +392,8 @@ func createExternalReferencesForTLSSecretsResolver(
 		}
 
 		if certRefNs != gwNs {
-			if !refGrantAllowsGatewayToSecret(refGrants, gwNs, certRefNsName) {
-				msg := fmt.Sprintf(
-					"Certificate ref to secret %s/%s not permitted by any ReferenceGrant",
-					certRefNs,
-					certRef.Name,
-				)
+			if !refGrantResolver.refAllowed(toSecret(certRefNsName), fromGateway(gwNs)) {
+				msg := fmt.Sprintf("Certificate ref to secret %s not permitted by any ReferenceGrant", certRefNsName)
 
 				l.Conditions = append(l.Conditions, conditions.NewListenerRefNotPermitted(msg)...)
 				l.Valid = false

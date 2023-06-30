@@ -228,23 +228,38 @@ var _ = Describe("ChangeProcessor", func() {
 				gcUpdated                *v1beta1.GatewayClass
 				hr1, hr1Updated, hr2     *v1beta1.HTTPRoute
 				gw1, gw1Updated, gw2     *v1beta1.Gateway
-				refGrant                 *v1beta1.ReferenceGrant
+				refGrant1, refGrant2     *v1beta1.ReferenceGrant
 				expGraph                 *graph.Graph
 				expRouteHR1, expRouteHR2 *graph.Route
+				hr1Name, hr2Name         types.NamespacedName
 			)
 			BeforeAll(func() {
 				gcUpdated = gc.DeepCopy()
 				gcUpdated.Generation++
 
-				hr1 = createRoute("hr-1", "gateway-1", "foo.example.com")
+				crossNsBackendRef := v1beta1.HTTPBackendRef{
+					BackendRef: v1beta1.BackendRef{
+						BackendObjectReference: v1beta1.BackendObjectReference{
+							Kind:      helpers.GetPointer[v1beta1.Kind]("Service"),
+							Name:      "service",
+							Namespace: helpers.GetPointer[v1beta1.Namespace]("service-ns"),
+							Port:      helpers.GetPointer[v1beta1.PortNumber](80),
+						},
+					},
+				}
+
+				hr1 = createRoute("hr-1", "gateway-1", "foo.example.com", crossNsBackendRef)
+				hr1Name = types.NamespacedName{Namespace: hr1.Namespace, Name: hr1.Name}
 
 				hr1Updated = hr1.DeepCopy()
 				hr1Updated.Generation++
 
 				hr2 = createRoute("hr-2", "gateway-2", "bar.example.com")
+				hr2Name = types.NamespacedName{Namespace: "test", Name: "hr-2"}
 
 				gw1 = createGatewayWithTLSListener("gateway-1", "cert-ns") // cert in diff namespace than gw
-				refGrant = &v1beta1.ReferenceGrant{
+
+				refGrant1 = &v1beta1.ReferenceGrant{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "cert-ns",
 						Name:      "ref-grant",
@@ -259,8 +274,28 @@ var _ = Describe("ChangeProcessor", func() {
 						},
 						To: []v1beta1.ReferenceGrantTo{
 							{
-								Group: "core",
-								Kind:  "Secret",
+								Kind: "Secret",
+							},
+						},
+					},
+				}
+
+				refGrant2 = &v1beta1.ReferenceGrant{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "service-ns",
+						Name:      "ref-grant",
+					},
+					Spec: v1beta1.ReferenceGrantSpec{
+						From: []v1beta1.ReferenceGrantFrom{
+							{
+								Group:     v1beta1.GroupName,
+								Kind:      "HTTPRoute",
+								Namespace: "test",
+							},
+						},
+						To: []v1beta1.ReferenceGrantTo{
+							{
+								Kind: "Service",
 							},
 						},
 					},
@@ -291,8 +326,23 @@ var _ = Describe("ChangeProcessor", func() {
 							Idx:     1,
 						},
 					},
-					Rules: []graph.Rule{{ValidMatches: true, ValidFilters: true}},
+					Rules: []graph.Rule{
+						{
+							BackendRefs: []graph.BackendRef{
+								{
+									Weight: 1,
+								},
+							},
+							ValidMatches: true,
+							ValidFilters: true,
+						},
+					},
 					Valid: true,
+					Conditions: []conditions.Condition{
+						conditions.NewRouteBackendRefRefBackendNotFound(
+							"spec.rules[0].backendRefs[0].name: Not found: \"service\"",
+						),
+					},
 				}
 
 				expRouteHR2 = &graph.Route{
@@ -381,12 +431,17 @@ var _ = Describe("ChangeProcessor", func() {
 							expGraph.Gateway.Valid = false
 							expGraph.Gateway.Listeners = nil
 
-							hrName := types.NamespacedName{Namespace: "test", Name: "hr-1"}
-							expGraph.Routes[hrName].ParentRefs[0].Attachment = &graph.ParentRefAttachmentStatus{
+							// no ref grant exists yet for hr1
+							expGraph.Routes[hr1Name].Conditions = []conditions.Condition{
+								conditions.NewRouteBackendRefRefNotPermitted(
+									"Backend ref to Service service-ns/service not permitted by any ReferenceGrant",
+								),
+							}
+							expGraph.Routes[hr1Name].ParentRefs[0].Attachment = &graph.ParentRefAttachmentStatus{
 								AcceptedHostnames: map[string][]string{},
 								FailedCondition:   conditions.NewRouteInvalidGateway(),
 							}
-							expGraph.Routes[hrName].ParentRefs[1].Attachment = &graph.ParentRefAttachmentStatus{
+							expGraph.Routes[hr1Name].ParentRefs[1].Attachment = &graph.ParentRefAttachmentStatus{
 								AcceptedHostnames: map[string][]string{},
 								FailedCondition:   conditions.NewRouteInvalidGateway(),
 							}
@@ -412,8 +467,6 @@ var _ = Describe("ChangeProcessor", func() {
 						),
 					}
 
-					hr1Name := types.NamespacedName{Namespace: hr1.Namespace, Name: hr1.Name}
-
 					expAttachment := &graph.ParentRefAttachmentStatus{
 						AcceptedHostnames: map[string][]string{},
 						FailedCondition:   conditions.NewRouteInvalidListener(),
@@ -421,7 +474,14 @@ var _ = Describe("ChangeProcessor", func() {
 					}
 
 					expGraph.Gateway.Listeners["listener-80-1"].Routes[hr1Name].ParentRefs[1].Attachment = expAttachment
+
+					// no ref grant exists yet for hr1
 					expGraph.Routes[hr1Name].ParentRefs[1].Attachment = expAttachment
+					expGraph.Routes[hr1Name].Conditions = []conditions.Condition{
+						conditions.NewRouteBackendRefRefNotPermitted(
+							"Backend ref to Service service-ns/service not permitted by any ReferenceGrant",
+						),
+					}
 
 					changed, graphCfg := processor.Process()
 					Expect(changed).To(BeTrue())
@@ -430,7 +490,24 @@ var _ = Describe("ChangeProcessor", func() {
 			})
 			When("the ReferenceGrant allowing the Gateway to reference its Secret is upserted", func() {
 				It("returns updated graph", func() {
-					processor.CaptureUpsertChange(refGrant)
+					processor.CaptureUpsertChange(refGrant1)
+
+					// no ref grant exists yet for hr1
+					expGraph.Routes[hr1Name].Conditions = []conditions.Condition{
+						conditions.NewRouteBackendRefRefNotPermitted(
+							"Backend ref to Service service-ns/service not permitted by any ReferenceGrant",
+						),
+					}
+
+					changed, graphCfg := processor.Process()
+					Expect(changed).To(BeTrue())
+					Expect(helpers.Diff(expGraph, graphCfg)).To(BeEmpty())
+				})
+			})
+
+			When("the ReferenceGrant allowing the hr1 to reference the Service in different ns is upserted", func() {
+				It("returns updated graph", func() {
+					processor.CaptureUpsertChange(refGrant2)
 
 					changed, graphCfg := processor.Process()
 					Expect(changed).To(BeTrue())
@@ -452,9 +529,8 @@ var _ = Describe("ChangeProcessor", func() {
 				It("returns populated graph", func() {
 					processor.CaptureUpsertChange(hr1Updated)
 
-					hrName := types.NamespacedName{Namespace: "test", Name: "hr-1"}
-					expGraph.Gateway.Listeners["listener-443-1"].Routes[hrName].Source.Generation = hr1Updated.Generation
-					expGraph.Gateway.Listeners["listener-80-1"].Routes[hrName].Source.Generation = hr1Updated.Generation
+					expGraph.Gateway.Listeners["listener-443-1"].Routes[hr1Name].Source.Generation = hr1Updated.Generation
+					expGraph.Gateway.Listeners["listener-80-1"].Routes[hr1Name].Source.Generation = hr1Updated.Generation
 
 					changed, graphCfg := processor.Process()
 					Expect(changed).To(BeTrue())
@@ -531,17 +607,15 @@ var _ = Describe("ChangeProcessor", func() {
 				It("returns populated graph", func() {
 					processor.CaptureUpsertChange(hr2)
 
-					hrName := types.NamespacedName{Namespace: "test", Name: "hr-2"}
-
 					expGraph.IgnoredGateways = map[types.NamespacedName]*v1beta1.Gateway{
 						{Namespace: "test", Name: "gateway-2"}: gw2,
 					}
-					expGraph.Routes[hrName] = expRouteHR2
-					expGraph.Routes[hrName].ParentRefs[0].Attachment = &graph.ParentRefAttachmentStatus{
+					expGraph.Routes[hr2Name] = expRouteHR2
+					expGraph.Routes[hr2Name].ParentRefs[0].Attachment = &graph.ParentRefAttachmentStatus{
 						AcceptedHostnames: map[string][]string{},
 						FailedCondition:   conditions.NewTODO("Gateway is ignored"),
 					}
-					expGraph.Routes[hrName].ParentRefs[1].Attachment = &graph.ParentRefAttachmentStatus{
+					expGraph.Routes[hr2Name].ParentRefs[1].Attachment = &graph.ParentRefAttachmentStatus{
 						AcceptedHostnames: map[string][]string{},
 						FailedCondition:   conditions.NewTODO("Gateway is ignored"),
 					}
@@ -560,8 +634,6 @@ var _ = Describe("ChangeProcessor", func() {
 
 					// gateway 2 takes over;
 					// route 1 has been replaced by route 2
-					hr1Name := types.NamespacedName{Namespace: "test", Name: "hr-1"}
-					hr2Name := types.NamespacedName{Namespace: "test", Name: "hr-2"}
 					expGraph.Gateway.Source = gw2
 					expGraph.Gateway.Listeners["listener-80-1"].Source = gw2.Spec.Listeners[0]
 					expGraph.Gateway.Listeners["listener-443-1"].Source = gw2.Spec.Listeners[1]
@@ -587,7 +659,6 @@ var _ = Describe("ChangeProcessor", func() {
 
 					// gateway 2 still in charge;
 					// no routes remain
-					hr1Name := types.NamespacedName{Namespace: "test", Name: "hr-1"}
 					expGraph.Gateway.Source = gw2
 					expGraph.Gateway.Listeners["listener-80-1"].Source = gw2.Spec.Listeners[0]
 					expGraph.Gateway.Listeners["listener-443-1"].Source = gw2.Spec.Listeners[1]

@@ -744,7 +744,8 @@ func TestBuildGateway(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewGomegaWithT(t)
-			result := buildGateway(test.gateway, secretMemoryMgr, test.gatewayClass, test.refGrants)
+			resolver := newReferenceGrantResolver(test.refGrants)
+			result := buildGateway(test.gateway, secretMemoryMgr, test.gatewayClass, resolver)
 			g.Expect(helpers.Diff(test.expected, result)).To(BeEmpty())
 		})
 	}
