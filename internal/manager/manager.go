@@ -80,9 +80,7 @@ func Start(cfg config.Config) error {
 		{
 			objectType: &gatewayv1beta1.GatewayClass{},
 			options: []controller.Option{
-				controller.WithNamespacedNameFilter(filter.CreateSingleResourceFilter(
-					types.NamespacedName{Name: cfg.GatewayClassName},
-				)),
+				controller.WithK8sPredicate(predicate.GatewayClassPredicate{ControllerName: cfg.GatewayCtlrName}),
 			},
 		},
 		{

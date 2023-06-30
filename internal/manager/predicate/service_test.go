@@ -3,6 +3,7 @@ package predicate
 import (
 	"testing"
 
+	. "github.com/onsi/gomega"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -224,34 +225,24 @@ func TestServicePortsChangedPredicate_Update(t *testing.T) {
 	p := ServicePortsChangedPredicate{}
 
 	for _, tc := range testcases {
-		update := p.Update(event.UpdateEvent{
-			ObjectOld: tc.objectOld,
-			ObjectNew: tc.objectNew,
-		})
+		t.Run(tc.msg, func(t *testing.T) {
+			g := NewGomegaWithT(t)
+			update := p.Update(event.UpdateEvent{
+				ObjectOld: tc.objectOld,
+				ObjectNew: tc.objectNew,
+			})
 
-		if update != tc.expUpdate {
-			t.Errorf(
-				"ServicePortsChangedPredicate.Update() mismatch for %q; got %t, expected %t",
-				tc.msg,
-				update,
-				tc.expUpdate,
-			)
-		}
+			g.Expect(update).To(Equal(tc.expUpdate))
+		})
 	}
 }
 
 func TestServicePortsChangedPredicate(t *testing.T) {
+	g := NewGomegaWithT(t)
+
 	p := ServicePortsChangedPredicate{}
 
-	if !p.Delete(event.DeleteEvent{Object: &v1.Service{}}) {
-		t.Errorf("ServicePortsChangedPredicate.Delete() returned false; expected true")
-	}
-
-	if !p.Create(event.CreateEvent{Object: &v1.Service{}}) {
-		t.Errorf("ServicePortsChangedPredicate.Create() returned false; expected true")
-	}
-
-	if !p.Generic(event.GenericEvent{Object: &v1.Service{}}) {
-		t.Errorf("ServicePortsChangedPredicate.Generic() returned false; expected true")
-	}
+	g.Expect(p.Delete(event.DeleteEvent{Object: &v1.Service{}})).To(BeTrue())
+	g.Expect(p.Create(event.CreateEvent{Object: &v1.Service{}})).To(BeTrue())
+	g.Expect(p.Generic(event.GenericEvent{Object: &v1.Service{}})).To(BeTrue())
 }

@@ -18,11 +18,14 @@ type HTTPRouteStatuses map[types.NamespacedName]HTTPRouteStatus
 // GatewayStatuses holds the statuses of Gateways where the key is the namespaced name of a Gateway.
 type GatewayStatuses map[types.NamespacedName]GatewayStatus
 
+// GatewayClassStatuses holds the statuses of GatewayClasses where the key is the namespaced name of a GatewayClass.
+type GatewayClassStatuses map[types.NamespacedName]GatewayClassStatus
+
 // Statuses holds the status-related information about Gateway API resources.
 type Statuses struct {
-	GatewayClassStatus *GatewayClassStatus
-	GatewayStatuses    GatewayStatuses
-	HTTPRouteStatuses  HTTPRouteStatuses
+	GatewayClassStatuses GatewayClassStatuses
+	GatewayStatuses      GatewayStatuses
+	HTTPRouteStatuses    HTTPRouteStatuses
 }
 
 // GatewayStatus holds the status of the winning Gateway resource.
@@ -77,21 +80,7 @@ func BuildStatuses(graph *graph.Graph, nginxReloadRes NginxReloadResult) Statuse
 		HTTPRouteStatuses: make(HTTPRouteStatuses),
 	}
 
-	if graph.GatewayClass != nil {
-		defaultConds := conditions.NewDefaultGatewayClassConditions()
-
-		conds := make([]conditions.Condition, 0, len(graph.GatewayClass.Conditions)+len(defaultConds))
-
-		// We add default conds first, so that any additional conditions will override them, which is
-		// ensured by DeduplicateConditions.
-		conds = append(conds, defaultConds...)
-		conds = append(conds, graph.GatewayClass.Conditions...)
-
-		statuses.GatewayClassStatus = &GatewayClassStatus{
-			Conditions:         conditions.DeduplicateConditions(conds),
-			ObservedGeneration: graph.GatewayClass.Source.Generation,
-		}
-	}
+	statuses.GatewayClassStatuses = buildGatewayClassStatuses(graph.GatewayClass, graph.IgnoredGatewayClasses)
 
 	statuses.GatewayStatuses = buildGatewayStatuses(graph.Gateway, graph.IgnoredGateways, nginxReloadRes)
 
@@ -131,6 +120,38 @@ func BuildStatuses(graph *graph.Graph, nginxReloadRes NginxReloadResult) Statuse
 		statuses.HTTPRouteStatuses[nsname] = HTTPRouteStatus{
 			ObservedGeneration: r.Source.Generation,
 			ParentStatuses:     parentStatuses,
+		}
+	}
+
+	return statuses
+}
+
+func buildGatewayClassStatuses(
+	gc *graph.GatewayClass,
+	ignoredGwClasses map[types.NamespacedName]*v1beta1.GatewayClass,
+) GatewayClassStatuses {
+	statuses := make(GatewayClassStatuses)
+
+	if gc != nil {
+		defaultConds := conditions.NewDefaultGatewayClassConditions()
+
+		conds := make([]conditions.Condition, 0, len(gc.Conditions)+len(defaultConds))
+
+		// We add default conds first, so that any additional conditions will override them, which is
+		// ensured by DeduplicateConditions.
+		conds = append(conds, defaultConds...)
+		conds = append(conds, gc.Conditions...)
+
+		statuses[client.ObjectKeyFromObject(gc.Source)] = GatewayClassStatus{
+			Conditions:         conditions.DeduplicateConditions(conds),
+			ObservedGeneration: gc.Source.Generation,
+		}
+	}
+
+	for nsname, gwClass := range ignoredGwClasses {
+		statuses[nsname] = GatewayClassStatus{
+			Conditions:         []conditions.Condition{conditions.NewGatewayClassConflict()},
+			ObservedGeneration: gwClass.Generation,
 		}
 	}
 

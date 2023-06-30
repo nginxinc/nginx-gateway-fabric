@@ -1,7 +1,7 @@
 NKG_TAG = edge
 NKG_PREFIX = nginx-kubernetes-gateway
 GATEWAY_CLASS = nginx
-SUPPORTED_FEATURES = HTTPRoute,HTTPRouteQueryParamMatching,HTTPRouteMethodMatching,HTTPRoutePortRedirect,HTTPRouteSchemeRedirect
+SUPPORTED_FEATURES = HTTPRoute,HTTPRouteQueryParamMatching,HTTPRouteMethodMatching,HTTPRoutePortRedirect,HTTPRouteSchemeRedirect,GatewayClassObservedGenerationBump
 KIND_KUBE_CONFIG=$${HOME}/.kube/kind/config
 TAG = latest
 PREFIX = conformance-test-runner

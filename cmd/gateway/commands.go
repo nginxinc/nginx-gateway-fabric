@@ -193,6 +193,7 @@ func createProvisionerModeCommand() *cobra.Command {
 			return provisioner.StartManager(provisioner.Config{
 				Logger:           logger,
 				GatewayClassName: gatewayClassName.value,
+				GatewayCtlrName:  gatewayCtlrName.value,
 			})
 		},
 	}

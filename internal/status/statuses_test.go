@@ -134,9 +134,11 @@ func TestBuildStatuses(t *testing.T) {
 	}
 
 	expected := Statuses{
-		GatewayClassStatus: &GatewayClassStatus{
-			ObservedGeneration: 1,
-			Conditions:         conditions.NewDefaultGatewayClassConditions(),
+		GatewayClassStatuses: GatewayClassStatuses{
+			{Name: ""}: {
+				ObservedGeneration: 1,
+				Conditions:         conditions.NewDefaultGatewayClassConditions(),
+			},
 		},
 		GatewayStatuses: GatewayStatuses{
 			{Namespace: "test", Name: "gateway"}: {
@@ -243,6 +245,7 @@ func TestBuildStatusesNginxErr(t *testing.T) {
 	}
 
 	expected := Statuses{
+		GatewayClassStatuses: GatewayClassStatuses{},
 		GatewayStatuses: GatewayStatuses{
 			{Namespace: "test", Name: "gateway"}: {
 				Conditions: []conditions.Condition{
@@ -285,6 +288,71 @@ func TestBuildStatusesNginxErr(t *testing.T) {
 	nginxReloadRes := NginxReloadResult{Error: errors.New("test error")}
 	result := BuildStatuses(graph, nginxReloadRes)
 	g.Expect(helpers.Diff(expected, result)).To(BeEmpty())
+}
+
+func TestBuildGatewayClassStatuses(t *testing.T) {
+	tests := []struct {
+		gc             *graph.GatewayClass
+		ignoredClasses map[types.NamespacedName]*v1beta1.GatewayClass
+		expected       GatewayClassStatuses
+		name           string
+	}{
+		{
+			name:     "nil gatewayclass and no ignored gatewayclasses",
+			expected: GatewayClassStatuses{},
+		},
+		{
+			name: "nil gatewayclass and ignored gatewayclasses",
+			ignoredClasses: map[types.NamespacedName]*v1beta1.GatewayClass{
+				{Name: "ignored-1"}: {
+					ObjectMeta: metav1.ObjectMeta{
+						Generation: 1,
+					},
+				},
+				{Name: "ignored-2"}: {
+					ObjectMeta: metav1.ObjectMeta{
+						Generation: 2,
+					},
+				},
+			},
+			expected: GatewayClassStatuses{
+				{Name: "ignored-1"}: {
+					Conditions:         []conditions.Condition{conditions.NewGatewayClassConflict()},
+					ObservedGeneration: 1,
+				},
+				{Name: "ignored-2"}: {
+					Conditions:         []conditions.Condition{conditions.NewGatewayClassConflict()},
+					ObservedGeneration: 2,
+				},
+			},
+		},
+		{
+			name: "valid gatewayclass",
+			gc: &graph.GatewayClass{
+				Source: &v1beta1.GatewayClass{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:       "valid-gc",
+						Generation: 1,
+					},
+				},
+			},
+			expected: GatewayClassStatuses{
+				{Name: "valid-gc"}: {
+					Conditions:         conditions.NewDefaultGatewayClassConditions(),
+					ObservedGeneration: 1,
+				},
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			g := NewGomegaWithT(t)
+
+			result := buildGatewayClassStatuses(test.gc, test.ignoredClasses)
+			g.Expect(helpers.Diff(test.expected, result)).To(BeEmpty())
+		})
+	}
 }
 
 func TestBuildGatewayStatuses(t *testing.T) {

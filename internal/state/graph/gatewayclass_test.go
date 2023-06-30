@@ -4,11 +4,118 @@ import (
 	"testing"
 
 	. "github.com/onsi/gomega"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/helpers"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/conditions"
 )
+
+func TestProcessGatewayClasses(t *testing.T) {
+	gcName := "test-gc"
+	ctlrName := "test-ctlr"
+	winner := &v1beta1.GatewayClass{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: gcName,
+		},
+		Spec: v1beta1.GatewayClassSpec{
+			ControllerName: v1beta1.GatewayController(ctlrName),
+		},
+	}
+	ignored := &v1beta1.GatewayClass{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "test-gc-ignored",
+		},
+		Spec: v1beta1.GatewayClassSpec{
+			ControllerName: v1beta1.GatewayController(ctlrName),
+		},
+	}
+
+	tests := []struct {
+		expected processedGatewayClasses
+		gcs      map[types.NamespacedName]*v1beta1.GatewayClass
+		name     string
+		exists   bool
+	}{
+		{
+			gcs:      nil,
+			expected: processedGatewayClasses{},
+			name:     "no gatewayclasses",
+		},
+		{
+			gcs: map[types.NamespacedName]*v1beta1.GatewayClass{
+				{Name: gcName}: winner,
+			},
+			expected: processedGatewayClasses{
+				Winner: winner,
+			},
+			exists: true,
+			name:   "one valid gatewayclass",
+		},
+		{
+			gcs: map[types.NamespacedName]*v1beta1.GatewayClass{
+				{Name: gcName}: {
+					ObjectMeta: metav1.ObjectMeta{
+						Name: gcName,
+					},
+					Spec: v1beta1.GatewayClassSpec{
+						ControllerName: v1beta1.GatewayController("not ours"),
+					},
+				},
+			},
+			expected: processedGatewayClasses{},
+			exists:   true,
+			name:     "one valid gatewayclass, but references wrong controller",
+		},
+		{
+			gcs: map[types.NamespacedName]*v1beta1.GatewayClass{
+				{Name: ignored.Name}: ignored,
+			},
+			expected: processedGatewayClasses{
+				Ignored: map[types.NamespacedName]*v1beta1.GatewayClass{
+					client.ObjectKeyFromObject(ignored): ignored,
+				},
+			},
+			name: "one non-referenced gatewayclass with our controller",
+		},
+		{
+			gcs: map[types.NamespacedName]*v1beta1.GatewayClass{
+				{Name: "completely ignored"}: {
+					Spec: v1beta1.GatewayClassSpec{
+						ControllerName: v1beta1.GatewayController("not ours"),
+					},
+				},
+			},
+			expected: processedGatewayClasses{},
+			name:     "one non-referenced gatewayclass without our controller",
+		},
+		{
+			gcs: map[types.NamespacedName]*v1beta1.GatewayClass{
+				{Name: gcName}:       winner,
+				{Name: ignored.Name}: ignored,
+			},
+			expected: processedGatewayClasses{
+				Winner: winner,
+				Ignored: map[types.NamespacedName]*v1beta1.GatewayClass{
+					client.ObjectKeyFromObject(ignored): ignored,
+				},
+			},
+			exists: true,
+			name:   "one valid gateway class and non-referenced gatewayclass",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			g := NewGomegaWithT(t)
+			result, exists := processGatewayClasses(test.gcs, gcName, ctlrName)
+			g.Expect(helpers.Diff(test.expected, result)).To(BeEmpty())
+			g.Expect(exists).To(Equal(test.exists))
+		})
+	}
+}
 
 func TestBuildGatewayClass(t *testing.T) {
 	validGC := &v1beta1.GatewayClass{}
@@ -56,58 +163,6 @@ func TestBuildGatewayClass(t *testing.T) {
 
 			result := buildGatewayClass(test.gc)
 			g.Expect(helpers.Diff(test.expected, result)).To(BeEmpty())
-		})
-	}
-}
-
-func TestGatewayClassBelongsToController(t *testing.T) {
-	const controllerName = "my.controller"
-
-	tests := []struct {
-		gc       *v1beta1.GatewayClass
-		name     string
-		expected bool
-	}{
-		{
-			gc: &v1beta1.GatewayClass{
-				Spec: v1beta1.GatewayClassSpec{
-					ControllerName: controllerName,
-				},
-			},
-			expected: true,
-			name:     "normal gatewayclass",
-		},
-		{
-			gc:       nil,
-			expected: true,
-			name:     "no gatewayclass",
-		},
-		{
-			gc: &v1beta1.GatewayClass{
-				Spec: v1beta1.GatewayClassSpec{
-					ControllerName: "some.controller",
-				},
-			},
-			expected: false,
-			name:     "wrong controller name",
-		},
-		{
-			gc: &v1beta1.GatewayClass{
-				Spec: v1beta1.GatewayClassSpec{
-					ControllerName: "",
-				},
-			},
-			expected: false,
-			name:     "empty controller name",
-		},
-	}
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			g := NewGomegaWithT(t)
-
-			result := gatewayClassBelongsToController(test.gc, controllerName)
-			g.Expect(result).To(Equal(test.expected))
 		})
 	}
 }
