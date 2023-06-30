@@ -31,15 +31,15 @@ func (gcp GatewayClassPredicate) Create(e event.CreateEvent) bool {
 func (gcp GatewayClassPredicate) Update(e event.UpdateEvent) bool {
 	if e.ObjectOld != nil {
 		gcOld, ok := e.ObjectOld.(*v1beta1.GatewayClass)
-		if ok {
-			return string(gcOld.Spec.ControllerName) == gcp.ControllerName
+		if ok && string(gcOld.Spec.ControllerName) == gcp.ControllerName {
+			return true
 		}
 	}
 
 	if e.ObjectNew != nil {
 		gcNew, ok := e.ObjectNew.(*v1beta1.GatewayClass)
-		if ok {
-			return string(gcNew.Spec.ControllerName) == gcp.ControllerName
+		if ok && string(gcNew.Spec.ControllerName) == gcp.ControllerName {
+			return true
 		}
 	}
 
