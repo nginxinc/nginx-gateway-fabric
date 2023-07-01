@@ -2,7 +2,8 @@ NKG_TAG = edge
 NKG_PREFIX = nginx-kubernetes-gateway
 GATEWAY_CLASS = nginx
 SUPPORTED_FEATURES = HTTPRoute,HTTPRouteQueryParamMatching,HTTPRouteMethodMatching,HTTPRoutePortRedirect,HTTPRouteSchemeRedirect,GatewayClassObservedGenerationBump
-KIND_KUBE_CONFIG=$${HOME}/.kube/kind/config
+KIND_NAME ?= kind
+KIND_KUBE_CONFIG=$${HOME}/.kube/$(KIND_NAME)/config
 TAG = latest
 PREFIX = conformance-test-runner
 NKG_DEPLOYMENT_MANIFEST=../deploy/manifests/deployment.yaml
@@ -11,7 +12,7 @@ NGINX_IMAGE=$(shell yq '.spec.template.spec.containers[1].image as $$nginx_ver |
 
 .PHONY: help
 help: Makefile ## Display this help
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "; printf "Usage:\n\n    make \033[36m<target>\033[0m\n\nTargets:\n\n"}; {printf "    \033[36m%-30s\033[0m %s\n", $$1, $$2}'
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "; printf "Usage:\n\n    make \033[36m<target>\033[0m KIND_NAME=\033[36m<cluster-name>\033[0m\n\nTargets:\n\n"}; {printf "    \033[36m%-30s\033[0m %s\n", $$1, $$2}'
 
 .PHONY: build-test-runner-image
 build-test-runner-image: ## Build conformance test runner image
@@ -20,13 +21,13 @@ build-test-runner-image: ## Build conformance test runner image
 .PHONY: create-kind-cluster
 create-kind-cluster: ## Create a kind cluster
 	$(eval KIND_IMAGE=$(shell grep -m1 'FROM kindest/node' <tests/Dockerfile | awk -F'[ ]' '{print $$2}'))
-	kind create cluster --image $(KIND_IMAGE)
-	kind export kubeconfig --kubeconfig $(KIND_KUBE_CONFIG)
+	kind create cluster --image $(KIND_IMAGE) --name $(KIND_NAME)
+	kind export kubeconfig --kubeconfig $(KIND_KUBE_CONFIG) --name $(KIND_NAME)
 
 .PHONY: preload-nginx-container
 preload-nginx-container: ## Preload NGINX container on configured kind cluster
 	docker pull $(NGINX_IMAGE)
-	kind load docker-image $(NGINX_IMAGE)
+	kind load docker-image $(NGINX_IMAGE) --name $(KIND_NAME)
 
 .PHONY: update-nkg-manifest
 update-nkg-manifest: ## Update the NKG deployment manifest image name and imagePullPolicy
@@ -38,7 +39,7 @@ build-nkg-image: update-nkg-manifest ## Build NKG container and load it and NGIN
 
 .PHONY: load-images
 load-images: preload-nginx-container ## Load NKG and NGINX containers on configured kind cluster
-	kind load docker-image $(NKG_PREFIX):$(NKG_TAG)
+	kind load docker-image $(NKG_PREFIX):$(NKG_TAG) --name $(KIND_NAME)
 
 .PHONY: prepare-nkg-dependencies
 prepare-nkg-dependencies: ## Install NKG dependencies on configured kind cluster
@@ -68,7 +69,7 @@ install-nkg-edge: preload-nginx-container prepare-nkg-dependencies ## Install NK
 
 .PHONY: run-conformance-tests
 run-conformance-tests: ## Run conformance tests
-	kind load docker-image $(PREFIX):$(TAG)
+	kind load docker-image $(PREFIX):$(TAG) --name $(KIND_NAME)
 	kubectl apply -f tests/conformance-rbac.yaml
 	kubectl run -i conformance \
 		--image=$(PREFIX):$(TAG) --image-pull-policy=Never \
@@ -95,4 +96,4 @@ undo-image-update: ## Undo the NKG image name and tag in deployment manifest
 
 .PHONY: delete-kind-cluster
 delete-kind-cluster: ## Delete kind cluster
-	kind delete cluster
+	kind delete cluster --name $(KIND_NAME)

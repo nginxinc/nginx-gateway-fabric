@@ -6,15 +6,16 @@ GIT_COMMIT = $(shell git rev-parse HEAD)
 DATE = $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 
 TARGET ?= local
+KIND_NAME ?= kind
 
-KIND_KUBE_CONFIG_FOLDER = $${HOME}/.kube/kind
+KIND_KUBE_CONFIG_FOLDER = $${HOME}/.kube/$(KIND_NAME)
 OUT_DIR=$(shell pwd)/build/.out
 
 .DEFAULT_GOAL := help
 
 .PHONY: help
 help: Makefile ## Display this help
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "; printf "Usage:\n\n    make \033[36m<target>\033[0m\n\nTargets:\n\n"}; {printf "    \033[36m%-30s\033[0m %s\n", $$1, $$2}'
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "; printf "Usage:\n\n    make \033[36m<target>\033[0m KIND_NAME=\033[36m<cluster-name>\033[0m\n\nTargets:\n\n"}; {printf "    \033[36m%-30s\033[0m %s\n", $$1, $$2}'
 
 .PHONY: container
 container: build ## Build the container
@@ -47,12 +48,12 @@ deps: ## Add missing and remove unused modules, verify deps and download them to
 .PHONY: create-kind-cluster
 create-kind-cluster: ## Create a kind cluster
 	$(eval KIND_IMAGE=$(shell grep -m1 'FROM kindest/node' <conformance/tests/Dockerfile | awk -F'[ ]' '{print $$2}'))
-	kind create cluster --image $(KIND_IMAGE)
-	kind export kubeconfig --kubeconfig $(KIND_KUBE_CONFIG_FOLDER)/config
+	kind create cluster --image $(KIND_IMAGE) --name $(KIND_NAME)
+	kind export kubeconfig --kubeconfig $(KIND_KUBE_CONFIG_FOLDER)/config --name $(KIND_NAME)
 
 .PHONY: delete-kind-cluster
 delete-kind-cluster: ## Delete kind cluster
-	kind delete cluster
+	kind delete cluster --name $(KIND_NAME)
 
 .PHONY: fmt
 fmt: ## Run go fmt against code
