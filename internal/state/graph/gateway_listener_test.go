@@ -220,17 +220,27 @@ func TestValidateListenerHostname(t *testing.T) {
 }
 
 func TestValidateListenerAllowedRouteKind(t *testing.T) {
+	expectedKinds := []v1beta1.RouteGroupKind{
+		{
+			Kind:  "HTTPRoute",
+			Group: helpers.GetPointer[v1beta1.Group](v1beta1.GroupName),
+		},
+	}
 	tests := []struct {
 		protocol  v1beta1.ProtocolType
 		kind      v1beta1.Kind
 		group     v1beta1.Group
 		name      string
+		expected  []v1beta1.RouteGroupKind
 		expectErr bool
 	}{
 		{
 			protocol:  v1beta1.TCPProtocolType,
 			expectErr: false,
 			name:      "unsupported protocol is ignored",
+			kind:      "TCPRoute",
+			group:     v1beta1.GroupName,
+			expected:  []v1beta1.RouteGroupKind{},
 		},
 		{
 			protocol:  v1beta1.HTTPProtocolType,
@@ -252,6 +262,7 @@ func TestValidateListenerAllowedRouteKind(t *testing.T) {
 			kind:      "HTTPRoute",
 			expectErr: false,
 			name:      "valid HTTP",
+			expected:  expectedKinds,
 		},
 		{
 			protocol:  v1beta1.HTTPSProtocolType,
@@ -259,30 +270,50 @@ func TestValidateListenerAllowedRouteKind(t *testing.T) {
 			kind:      "HTTPRoute",
 			expectErr: false,
 			name:      "valid HTTPS",
+			expected:  expectedKinds,
+		},
+		{
+			protocol:  v1beta1.HTTPSProtocolType,
+			expectErr: false,
+			name:      "valid HTTPS no kind specified",
+			expected: []v1beta1.RouteGroupKind{
+				{
+					Kind: "HTTPRoute",
+				},
+			},
 		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewGomegaWithT(t)
+			var listener v1beta1.Listener
 
-			listener := v1beta1.Listener{
-				Protocol: test.protocol,
-				AllowedRoutes: &v1beta1.AllowedRoutes{
-					Kinds: []v1beta1.RouteGroupKind{
-						{
-							Kind:  test.kind,
-							Group: &test.group,
+			if test.kind != "" {
+				listener = v1beta1.Listener{
+					Protocol: test.protocol,
+					AllowedRoutes: &v1beta1.AllowedRoutes{
+						Kinds: []v1beta1.RouteGroupKind{
+							{
+								Kind:  test.kind,
+								Group: &test.group,
+							},
 						},
 					},
-				},
+				}
+			} else {
+				listener = v1beta1.Listener{
+					Protocol: test.protocol,
+				}
 			}
 
-			conds := validateListenerAllowedRouteKind(listener)
+			conds, kinds := getAndValidateSupportedKinds(listener)
 			if test.expectErr {
 				g.Expect(conds).ToNot(BeEmpty())
+				g.Expect(kinds).To(BeEmpty())
 			} else {
 				g.Expect(conds).To(BeEmpty())
+				g.Expect(helpers.Diff(test.expected, kinds)).To(BeEmpty())
 			}
 		})
 	}

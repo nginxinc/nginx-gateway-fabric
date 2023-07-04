@@ -27,14 +27,8 @@ func prepareGatewayStatus(
 		s := gatewayStatus.ListenerStatuses[name]
 
 		listenerStatuses = append(listenerStatuses, v1beta1.ListenerStatus{
-			Name: v1beta1.SectionName(name),
-			SupportedKinds: []v1beta1.RouteGroupKind{
-				{
-					// FIXME(pleshakov) Set it based on the listener
-					// https://github.com/nginxinc/nginx-kubernetes-gateway/issues/690
-					Kind: "HTTPRoute",
-				},
-			},
+			Name:           v1beta1.SectionName(name),
+			SupportedKinds: s.SupportedKinds,
 			AttachedRoutes: s.AttachedRoutes,
 			Conditions:     convertConditions(s.Conditions, gatewayStatus.ObservedGeneration, transitionTime),
 		})
