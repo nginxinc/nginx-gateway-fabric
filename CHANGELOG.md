@@ -2,6 +2,58 @@
 
 This document includes a curated changelog for each release. We also publish a changelog as the description of a [GitHub release](https://github.com/nginxinc/nginx-kubernetes-gateway/releases), which, by contrast, is auto-generated and includes links to all PRs that went into the release.
 
+## Release 0.4.0
+
+*July 5, 2023*
+
+This release brings:
+- Extended support of the features of the Gateway API resources.
+- Support for running the conformance test suite. See the [Conformance tests README](https://github.com/nginxinc/nginx-kubernetes-gateway/blob/v0.4.0/conformance/README.md).
+- Defined Enhancement Proposal process for NGINX Kubernetes Gateway project. See the [Proposal README](https://github.com/nginxinc/nginx-kubernetes-gateway/blob/v0.4.0/docs/proposals/README.md).
+- Miscellaneous enhancements and bug fixes.
+
+FEATURES:
+* Allow empty sectionName in HTTPRoute parentRef. [PR-626](https://github.com/nginxinc/nginx-kubernetes-gateway/pull/626)
+* Set ResolvedRefs condition to true on HTTPRoutes. [PR-645](https://github.com/nginxinc/nginx-kubernetes-gateway/pull/645)
+* Set gateway Pod IP as GatewayStatus address. [PR-638](https://github.com/nginxinc/nginx-kubernetes-gateway/pull/638)
+* Set Accepted condition type on Gateway status. [PR-633](https://github.com/nginxinc/nginx-kubernetes-gateway/pull/633)
+* Make static mode compatible with provisioner. [PR-657](https://github.com/nginxinc/nginx-kubernetes-gateway/pull/657)
+* Drop unrequired capabilities from containers. [PR-677](https://github.com/nginxinc/nginx-kubernetes-gateway/pull/677)
+* Update route condition where listener is not found. [PR-675](https://github.com/nginxinc/nginx-kubernetes-gateway/pull/675)
+* Set Gateway Programmed condition. [PR-658](https://github.com/nginxinc/nginx-kubernetes-gateway/pull/658)
+* AllowedRoutes support for Listeners. [PR-721](https://github.com/nginxinc/nginx-kubernetes-gateway/pull/721)
+* Support custom listener ports. [PR-745](https://github.com/nginxinc/nginx-kubernetes-gateway/pull/745)
+* Add support for RequestHeaderModifier for HTTPRouteRule objects. [PR-717](https://github.com/nginxinc/nginx-kubernetes-gateway/pull/717)
+* Add wildcard hostname support. [PR-769](https://github.com/nginxinc/nginx-kubernetes-gateway/pull/769)
+* Add Programmed status for listener. [PR-786](https://github.com/nginxinc/nginx-kubernetes-gateway/pull/786)
+* ReferenceGrant from Gateway to Secret. [PR-791](https://github.com/nginxinc/nginx-kubernetes-gateway/pull/791)
+
+BUG FIXES:
+* Set upstream zone size to 512k. [PR-609](https://github.com/nginxinc/nginx-kubernetes-gateway/pull/609)
+* Allow empty HTTPRoute hostnames. [PR-650](https://github.com/nginxinc/nginx-kubernetes-gateway/pull/650)
+* Allow long server names. [PR-651](https://github.com/nginxinc/nginx-kubernetes-gateway/pull/651)
+* Ensure uniqueness and validity of generated names and labels. [PR-716](https://github.com/nginxinc/nginx-kubernetes-gateway/pull/716)
+* Add in required capabilities for writing TLS secrets. [PR-718](https://github.com/nginxinc/nginx-kubernetes-gateway/pull/718)
+* Fix binding to multiple listeners with empty section name. [PR-730](https://github.com/nginxinc/nginx-kubernetes-gateway/pull/730)
+* Add timeout and retry logic for finding NGINX PID file. [PR-676](https://github.com/nginxinc/nginx-kubernetes-gateway/pull/676)
+* Prioritize method matching. [PR-789](https://github.com/nginxinc/nginx-kubernetes-gateway/pull/789)
+* Add NewListenerInvalidRouteKinds condition. [PR-799](https://github.com/nginxinc/nginx-kubernetes-gateway/pull/799)
+* Update validateBackendRef invalid group error conditions. [PR-800](https://github.com/nginxinc/nginx-kubernetes-gateway/pull/800)
+* Set GatewayClass status for ignored GatewayClasses. [PR-804](https://github.com/nginxinc/nginx-kubernetes-gateway/pull/804)
+
+DEPENDENCIES:
+* Bump sigs.k8s.io/gateway-api from 0.7.0 to 0.7.1. [PR-711](https://github.com/nginxinc/nginx-kubernetes-gateway/pull/711)
+
+COMPATIBILITY:
+- The Gateway API version: `0.7.1`
+- NGINX version: `1.25.x` *
+- Kubernetes version: `1.21+`
+
+\*the installation manifests use the `nginx:1.25` image, which always points to the latest version of 1.25.x releases.
+
+CONTAINER IMAGES:
+- Control plane: `ghcr.io/nginxinc/nginx-kubernetes-gateway:0.4.0`
+
 ## Release 0.3.0
 
 *April 24, 2023*
