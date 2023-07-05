@@ -117,7 +117,8 @@ func (r *referenceGrantResolver) refAllowed(to toResource, from fromResource) bo
 		from: from,
 	}
 
-	// omit name field to check for ReferenceGrants that allow access to all resources of the particular kind in the namespace
+	// omit name field to check for ReferenceGrants that allow access to all resources
+	// of the particular kind in the namespace
 	allInNamespaceKey := allowedReference{
 		to: toResource{
 			kind:      to.kind,
