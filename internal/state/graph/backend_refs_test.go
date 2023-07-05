@@ -123,7 +123,7 @@ func TestValidateBackendRef(t *testing.T) {
 				return backend
 			}),
 			expectedValid: false,
-			expectedCondition: conditions.NewRouteBackendRefUnsupportedValue(
+			expectedCondition: conditions.NewRouteBackendRefInvalidKind(
 				`test.group: Unsupported value: "invalid": supported values: "core", ""`,
 			),
 		},

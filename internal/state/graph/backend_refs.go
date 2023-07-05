@@ -171,7 +171,7 @@ func validateBackendRef(
 
 	if ref.Group != nil && !(*ref.Group == "core" || *ref.Group == "") {
 		valErr := field.NotSupported(path.Child("group"), *ref.Group, []string{"core", ""})
-		return false, conditions.NewRouteBackendRefUnsupportedValue(valErr.Error())
+		return false, conditions.NewRouteBackendRefInvalidKind(valErr.Error())
 	}
 
 	if ref.Kind != nil && *ref.Kind != "Service" {

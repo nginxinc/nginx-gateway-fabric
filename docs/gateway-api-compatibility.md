@@ -12,7 +12,7 @@ This document describes which Gateway API resources NGINX Kubernetes Gateway sup
 | [TLSRoute](#tlsroute) | Not supported |
 | [TCPRoute](#tcproute) | Not supported |
 | [UDPRoute](#udproute) | Not supported |
-| [ReferenceGrant](#referencegrant) |  Not supported |
+| [ReferenceGrant](#referencegrant) |  Partially supported |
 | [Custom policies](#custom-policies) | Not supported |
 
 ## Terminology
@@ -43,7 +43,10 @@ Fields:
     * `parametersRef` - not supported.
     * `description` - supported.
 * `status`
-    * `conditions` - partially supported.
+    * `conditions` - supported (Condition/Status/Reason):
+      * `Accepted/True/Accepted`
+      * `Accepted/False/InvalidParameters`
+      * `Accepted/False/GatewayClassConflict`: Custom reason for when the GatewayClass references this controller, but a different GatewayClass name is provided to the controller via the command-line argument.
 
 ### Gateway
 
@@ -57,7 +60,7 @@ Fields:
     * `gatewayClassName` - supported.
     * `listeners`
         * `name` - supported.
-        * `hostname` - partially supported. Wildcard hostnames like `*.example.com` are not yet supported.
+        * `hostname` - supported.
         * `port` - supported. 
         * `protocol` - partially supported. Allowed values: `HTTP`, `HTTPS`.
         * `tls`
@@ -89,8 +92,11 @@ Fields:
       * `Accepted/False/ProtocolConflict`
       * `Accepted/False/UnsupportedValue`: Custom reason for when a value of a field in a Listener is invalid or not supported.
       * `Accepted/False/GatewayConflict`: Custom reason for when the Gateway is ignored due to a conflicting Gateway. NKG only supports a single Gateway.
+      * `Programmed/True/Programmed`
+      * `Programmed/False/Invalid`
       * `ResolvedRefs/True/ResolvedRefs`
       * `ResolvedRefs/False/InvalidCertificateRef`
+      * `ResolvedRefs/False/InvalidRouteKinds`
       * `Conflicted/True/ProtocolConflict`
       * `Conflicted/False/NoConflicts`
 
@@ -101,7 +107,7 @@ Fields:
 Fields:
 * `spec`
   * `parentRefs` - partially supported. Port not supported.
-  * `hostnames` - partially supported. Wildcard binding is not supported: a hostname like `example.com` will not bind to a listener with the hostname `*.example.com`. However, `example.com` will bind to a listener with the empty hostname.
+  * `hostnames` - supported.
   * `rules`
     * `matches`
       * `path` - partially supported. Only `PathPrefix` and `Exact` types.
@@ -111,7 +117,8 @@ Fields:
     * `filters`
         * `type` - supported.
         * `requestRedirect` - supported except for the experimental `path` field. If multiple filters with `requestRedirect` are configured, NGINX Kubernetes Gateway will choose the first one and ignore the rest.
-        * `requestHeaderModifier`, `requestMirror`, `urlRewrite`, `extensionRef` - not supported.
+        * `requestHeaderModifier` - supported. If multiple filters with `requestHeaderModifier` are configured, NGINX Kubernetes Gateway will choose the first one and ignore the rest.
+        * `responseHeaderModifier`, `requestMirror`, `urlRewrite`, `extensionRef` - not supported.
     * `backendRefs` - partially supported. Backend ref `filters` are not supported.
 * `status`
   * `parents`
@@ -145,7 +152,20 @@ Fields:
 
 ### ReferenceGrant
 
-> Status: Not supported.
+> Status: Partially supported.
+
+NKG only supports ReferenceGrants that permit Gateways to reference Secrets. 
+
+Fields:
+* `spec`
+  * `to`
+    * `group` - supported.
+    * `kind` - partially supported. Only `Secret`.
+    * `name`- supported.
+  * `from`
+    * `group` - supported.
+    * `kind` - partially supported. Only `Gateway`.
+    * `namespace`- supported.
 
 ### Custom Policies
 

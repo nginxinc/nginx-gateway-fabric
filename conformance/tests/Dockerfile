@@ -1,4 +1,6 @@
 # syntax=docker/dockerfile:1.5
+# this is here so we can grab the latest version of kind and have dependabot keep it up to date
+FROM kindest/node:v1.27.3
 
 FROM golang:1.20
 

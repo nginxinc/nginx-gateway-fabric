@@ -16,7 +16,7 @@ import (
 
 const (
 	pidFile        = "/etc/nginx/nginx.pid"
-	pidFileTimeout = 5 * time.Second
+	pidFileTimeout = 10 * time.Second
 )
 
 type (
@@ -81,7 +81,7 @@ func findMainProcess(
 
 	err := wait.PollUntilContextCancel(
 		ctx,
-		1*time.Second,
+		500*time.Millisecond,
 		true, /* poll immediately */
 		func(ctx context.Context) (bool, error) {
 			_, err := checkFile(pidFile)

@@ -1,6 +1,7 @@
 package validation
 
 import (
+	"strings"
 	"testing"
 )
 
@@ -29,4 +30,24 @@ func TestValidateEscapedStringNoVarExpansion(t *testing.T) {
 		`\`,
 		`test"test`,
 		`$test`)
+}
+
+func TestValidateValidHeaderName(t *testing.T) {
+	validator := func(value string) error { return validateHeaderName(value) }
+
+	testValidValuesForSimpleValidator(t, validator,
+		`Content-Encoding`,
+		`X-Forwarded-For`,
+		// max supported length is 256, generate string with 16*16 chars (256)
+		strings.Repeat("very-long-header", 16))
+	testInvalidValuesForSimpleValidator(t, validator,
+		`\`,
+		`test test`,
+		`test"test`,
+		`$test`,
+		"Host",
+		"host",
+		"my-header[]",
+		"my-header&",
+		strings.Repeat("very-long-header", 16)+"1")
 }

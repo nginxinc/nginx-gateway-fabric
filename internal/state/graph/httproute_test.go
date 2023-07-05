@@ -1217,6 +1217,7 @@ func TestBindRouteToListeners(t *testing.T) {
 func TestFindAcceptedHostnames(t *testing.T) {
 	var listenerHostnameFoo v1beta1.Hostname = "foo.example.com"
 	var listenerHostnameCafe v1beta1.Hostname = "cafe.example.com"
+	var listenerHostnameWildcard v1beta1.Hostname = "*.example.com"
 	routeHostnames := []v1beta1.Hostname{"foo.example.com", "bar.example.com"}
 
 	tests := []struct {
@@ -1254,6 +1255,36 @@ func TestFindAcceptedHostnames(t *testing.T) {
 			routeHostnames:   nil,
 			expected:         []string{wildcardHostname},
 			msg:              "both listener and route have empty hostnames",
+		},
+		{
+			listenerHostname: &listenerHostnameWildcard,
+			routeHostnames:   routeHostnames,
+			expected:         []string{"foo.example.com", "bar.example.com"},
+			msg:              "listener wildcard hostname",
+		},
+		{
+			listenerHostname: &listenerHostnameFoo,
+			routeHostnames:   []v1beta1.Hostname{"*.example.com"},
+			expected:         []string{"foo.example.com"},
+			msg:              "route wildcard hostname; specific listener hostname",
+		},
+		{
+			listenerHostname: &listenerHostnameWildcard,
+			routeHostnames:   nil,
+			expected:         []string{"*.example.com"},
+			msg:              "listener wildcard hostname; nil route hostname",
+		},
+		{
+			listenerHostname: nil,
+			routeHostnames:   []v1beta1.Hostname{"*.example.com"},
+			expected:         []string{"*.example.com"},
+			msg:              "route wildcard hostname; nil listener hostname",
+		},
+		{
+			listenerHostname: &listenerHostnameWildcard,
+			routeHostnames:   []v1beta1.Hostname{"*.bar.example.com"},
+			expected:         []string{"*.bar.example.com"},
+			msg:              "route and listener wildcard hostnames",
 		},
 	}
 
@@ -1596,6 +1627,48 @@ func TestValidateMatch(t *testing.T) {
 }
 
 func TestValidateFilter(t *testing.T) {
+	tests := []struct {
+		filter         v1beta1.HTTPRouteFilter
+		name           string
+		expectErrCount int
+	}{
+		{
+			filter: v1beta1.HTTPRouteFilter{
+				Type:            v1beta1.HTTPRouteFilterRequestRedirect,
+				RequestRedirect: &v1beta1.HTTPRequestRedirectFilter{},
+			},
+			expectErrCount: 0,
+			name:           "valid redirect filter",
+		},
+		{
+			filter: v1beta1.HTTPRouteFilter{
+				Type:                  v1beta1.HTTPRouteFilterRequestHeaderModifier,
+				RequestHeaderModifier: &v1beta1.HTTPHeaderFilter{},
+			},
+			expectErrCount: 0,
+			name:           "valid request header modifiers filter",
+		},
+		{
+			filter: v1beta1.HTTPRouteFilter{
+				Type: v1beta1.HTTPRouteFilterURLRewrite,
+			},
+			expectErrCount: 1,
+			name:           "unsupported filter",
+		},
+	}
+
+	filterPath := field.NewPath("test")
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			g := NewGomegaWithT(t)
+			allErrs := validateFilter(&validationfakes.FakeHTTPFieldsValidator{}, test.filter, filterPath)
+			g.Expect(allErrs).To(HaveLen(test.expectErrCount))
+		})
+	}
+}
+
+func TestValidateFilterRedirect(t *testing.T) {
 	createAllValidValidator := func() *validationfakes.FakeHTTPFieldsValidator {
 		v := &validationfakes.FakeHTTPFieldsValidator{}
 
@@ -1633,14 +1706,6 @@ func TestValidateFilter(t *testing.T) {
 			},
 			expectErrCount: 0,
 			name:           "valid redirect filter with no fields set",
-		},
-		{
-			validator: createAllValidValidator(),
-			filter: v1beta1.HTTPRouteFilter{
-				Type: v1beta1.HTTPRouteFilterURLRewrite,
-			},
-			expectErrCount: 1,
-			name:           "unsupported filter",
 		},
 		{
 			validator: func() *validationfakes.FakeHTTPFieldsValidator {
@@ -1743,7 +1808,121 @@ func TestValidateFilter(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewGomegaWithT(t)
-			allErrs := validateFilter(test.validator, test.filter, filterPath)
+			allErrs := validateFilterRedirect(test.validator, test.filter, filterPath)
+			g.Expect(allErrs).To(HaveLen(test.expectErrCount))
+		})
+	}
+}
+
+func TestValidateFilterRequestHeaderModifier(t *testing.T) {
+	createAllValidValidator := func() *validationfakes.FakeHTTPFieldsValidator {
+		v := &validationfakes.FakeHTTPFieldsValidator{}
+		return v
+	}
+
+	tests := []struct {
+		filter         v1beta1.HTTPRouteFilter
+		validator      *validationfakes.FakeHTTPFieldsValidator
+		name           string
+		expectErrCount int
+	}{
+		{
+			validator: createAllValidValidator(),
+			filter: v1beta1.HTTPRouteFilter{
+				Type: v1beta1.HTTPRouteFilterRequestHeaderModifier,
+				RequestHeaderModifier: &v1beta1.HTTPHeaderFilter{
+					Set: []v1beta1.HTTPHeader{
+						{Name: "Connection", Value: "close"},
+					},
+					Add: []v1beta1.HTTPHeader{
+						{Name: "Accept-Encoding", Value: "gzip"},
+					},
+					Remove: []string{"Cache-Control"},
+				},
+			},
+			expectErrCount: 0,
+			name:           "valid request header modifier filter",
+		},
+		{
+			validator: func() *validationfakes.FakeHTTPFieldsValidator {
+				v := createAllValidValidator()
+				v.ValidateRequestHeaderNameReturns(errors.New("Invalid header"))
+				return v
+			}(),
+			filter: v1beta1.HTTPRouteFilter{
+				Type: v1beta1.HTTPRouteFilterRequestHeaderModifier,
+				RequestHeaderModifier: &v1beta1.HTTPHeaderFilter{
+					Add: []v1beta1.HTTPHeader{
+						{Name: "$var_name", Value: "gzip"},
+					},
+				},
+			},
+			expectErrCount: 1,
+			name:           "request header modifier filter with invalid add",
+		},
+		{
+			validator: func() *validationfakes.FakeHTTPFieldsValidator {
+				v := createAllValidValidator()
+				v.ValidateRequestHeaderNameReturns(errors.New("Invalid header"))
+				return v
+			}(),
+			filter: v1beta1.HTTPRouteFilter{
+				Type: v1beta1.HTTPRouteFilterRequestHeaderModifier,
+				RequestHeaderModifier: &v1beta1.HTTPHeaderFilter{
+					Remove: []string{"$var-name"},
+				},
+			},
+			expectErrCount: 1,
+			name:           "request header modifier filter with invalid remove",
+		},
+		{
+			validator: func() *validationfakes.FakeHTTPFieldsValidator {
+				v := createAllValidValidator()
+				v.ValidateRequestHeaderValueReturns(errors.New("Invalid header value"))
+				return v
+			}(),
+			filter: v1beta1.HTTPRouteFilter{
+				Type: v1beta1.HTTPRouteFilterRequestHeaderModifier,
+				RequestHeaderModifier: &v1beta1.HTTPHeaderFilter{
+					Add: []v1beta1.HTTPHeader{
+						{Name: "Accept-Encoding", Value: "yhu$"},
+					},
+				},
+			},
+			expectErrCount: 1,
+			name:           "request header modifier filter with invalid header value",
+		},
+		{
+			validator: func() *validationfakes.FakeHTTPFieldsValidator {
+				v := createAllValidValidator()
+				v.ValidateRequestHeaderValueReturns(errors.New("Invalid header value"))
+				v.ValidateRequestHeaderNameReturns(errors.New("Invalid header"))
+				return v
+			}(),
+			filter: v1beta1.HTTPRouteFilter{
+				Type: v1beta1.HTTPRouteFilterRequestHeaderModifier,
+				RequestHeaderModifier: &v1beta1.HTTPHeaderFilter{
+					Set: []v1beta1.HTTPHeader{
+						{Name: "Host", Value: "my_host"},
+					},
+					Add: []v1beta1.HTTPHeader{
+						{Name: "}90yh&$", Value: "gzip$"},
+						{Name: "}67yh&$", Value: "compress$"},
+					},
+					Remove: []string{"Cache-Control$}"},
+				},
+			},
+			expectErrCount: 7,
+			name:           "request header modifier filter all fields invalid",
+		},
+	}
+
+	filterPath := field.NewPath("test")
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			g := NewGomegaWithT(t)
+			allErrs := validateFilterHeaderModifier(test.validator, test.filter, filterPath)
 			g.Expect(allErrs).To(HaveLen(test.expectErrCount))
 		})
 	}

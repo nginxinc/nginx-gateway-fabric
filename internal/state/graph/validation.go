@@ -13,8 +13,13 @@ func validateHostname(hostname string) error {
 		return errors.New("cannot be empty string")
 	}
 
-	if strings.Contains(hostname, "*") {
-		return errors.New("wildcards are not supported")
+	if strings.HasPrefix(hostname, "*.") {
+		msgs := validation.IsWildcardDNS1123Subdomain(hostname)
+		if len(msgs) > 0 {
+			combined := strings.Join(msgs, ",")
+			return errors.New(combined)
+		}
+		return nil
 	}
 
 	msgs := validation.IsDNS1123Subdomain(hostname)

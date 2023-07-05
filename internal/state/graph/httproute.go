@@ -3,6 +3,7 @@ package graph
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -401,22 +402,77 @@ func findAcceptedHostnames(listenerHostname *v1beta1.Hostname, routeHostnames []
 		return []string{hostname}
 	}
 
-	match := func(h v1beta1.Hostname) bool {
-		if hostname == "" {
-			return true
-		}
-		return string(h) == hostname
-	}
-
 	var result []string
 
 	for _, h := range routeHostnames {
-		if match(h) {
-			result = append(result, string(h))
+		routeHost := string(h)
+		if match(hostname, routeHost) {
+			result = append(result, GetMoreSpecificHostname(hostname, routeHost))
 		}
 	}
 
 	return result
+}
+
+func match(listenerHost, routeHost string) bool {
+	if listenerHost == "" {
+		return true
+	}
+
+	if routeHost == listenerHost {
+		return true
+	}
+
+	wildcardMatch := func(host1, host2 string) bool {
+		return strings.HasPrefix(host1, "*.") && strings.HasSuffix(host2, strings.TrimPrefix(host1, "*"))
+	}
+
+	// check if listenerHost is a wildcard and routeHost matches
+	if wildcardMatch(listenerHost, routeHost) {
+		return true
+	}
+
+	// check if routeHost is a wildcard and listener matchess
+	return wildcardMatch(routeHost, listenerHost)
+}
+
+// GetMoreSpecificHostname returns the more specific hostname between the two inputs.
+//
+// This function assumes that the two hostnames match each other, either:
+// - Exactly
+// - One as a substring of the other
+func GetMoreSpecificHostname(hostname1, hostname2 string) string {
+	if hostname1 == hostname2 {
+		return hostname1
+	}
+	if hostname1 == "" {
+		return hostname2
+	}
+	if hostname2 == "" {
+		return hostname1
+	}
+
+	// Compare if wildcards are present
+	if strings.HasPrefix(hostname1, "*.") {
+		if strings.HasPrefix(hostname2, "*.") {
+			subdomains1 := strings.Split(hostname1, ".")
+			subdomains2 := strings.Split(hostname2, ".")
+
+			// Compare number of subdomains
+			if len(subdomains1) > len(subdomains2) {
+				return hostname1
+			}
+
+			return hostname2
+		}
+
+		return hostname2
+	}
+	if strings.HasPrefix(hostname2, "*.") {
+		return hostname1
+	}
+
+	return ""
 }
 
 func routeAllowedByListener(
@@ -613,15 +669,31 @@ func validateFilter(
 ) field.ErrorList {
 	var allErrs field.ErrorList
 
-	if filter.Type != v1beta1.HTTPRouteFilterRequestRedirect {
+	switch filter.Type {
+	case v1beta1.HTTPRouteFilterRequestRedirect:
+		return validateFilterRedirect(validator, filter, filterPath)
+	case v1beta1.HTTPRouteFilterRequestHeaderModifier:
+		return validateFilterHeaderModifier(validator, filter, filterPath)
+	default:
 		valErr := field.NotSupported(
 			filterPath.Child("type"),
 			filter.Type,
-			[]string{string(v1beta1.HTTPRouteFilterRequestRedirect)},
+			[]string{
+				string(v1beta1.HTTPRouteFilterRequestRedirect),
+				string(v1beta1.HTTPRouteFilterRequestHeaderModifier),
+			},
 		)
 		allErrs = append(allErrs, valErr)
 		return allErrs
 	}
+}
+
+func validateFilterRedirect(
+	validator validation.HTTPFieldsValidator,
+	filter v1beta1.HTTPRouteFilter,
+	filterPath *field.Path,
+) field.ErrorList {
+	var allErrs field.ErrorList
 
 	if filter.RequestRedirect == nil {
 		panicForBrokenWebhookAssumption(errors.New("requestRedirect cannot be nil"))
@@ -660,6 +732,59 @@ func validateFilter(
 	if redirect.StatusCode != nil {
 		if valid, supportedValues := validator.ValidateRedirectStatusCode(*redirect.StatusCode); !valid {
 			valErr := field.NotSupported(redirectPath.Child("statusCode"), *redirect.StatusCode, supportedValues)
+			allErrs = append(allErrs, valErr)
+		}
+	}
+
+	return allErrs
+}
+
+func validateFilterHeaderModifier(
+	validator validation.HTTPFieldsValidator,
+	filter v1beta1.HTTPRouteFilter,
+	filterPath *field.Path,
+) field.ErrorList {
+	headerModifier := filter.RequestHeaderModifier
+
+	headerModifierPath := filterPath.Child("requestHeaderModifier")
+
+	if headerModifier == nil {
+		panicForBrokenWebhookAssumption(errors.New("requestHeaderModifier cannot be nil"))
+	}
+
+	return validateFilterHeaderModifierFields(validator, headerModifier, headerModifierPath)
+}
+
+func validateFilterHeaderModifierFields(
+	validator validation.HTTPFieldsValidator,
+	headerModifier *v1beta1.HTTPHeaderFilter,
+	headerModifierPath *field.Path,
+) field.ErrorList {
+	var allErrs field.ErrorList
+
+	for _, h := range headerModifier.Add {
+		if err := validator.ValidateRequestHeaderName(string(h.Name)); err != nil {
+			valErr := field.Invalid(headerModifierPath.Child("add"), h, err.Error())
+			allErrs = append(allErrs, valErr)
+		}
+		if err := validator.ValidateRequestHeaderValue(h.Value); err != nil {
+			valErr := field.Invalid(headerModifierPath.Child("add"), h, err.Error())
+			allErrs = append(allErrs, valErr)
+		}
+	}
+	for _, h := range headerModifier.Set {
+		if err := validator.ValidateRequestHeaderName(string(h.Name)); err != nil {
+			valErr := field.Invalid(headerModifierPath.Child("set"), h, err.Error())
+			allErrs = append(allErrs, valErr)
+		}
+		if err := validator.ValidateRequestHeaderValue(h.Value); err != nil {
+			valErr := field.Invalid(headerModifierPath.Child("set"), h, err.Error())
+			allErrs = append(allErrs, valErr)
+		}
+	}
+	for _, h := range headerModifier.Remove {
+		if err := validator.ValidateRequestHeaderName(h); err != nil {
+			valErr := field.Invalid(headerModifierPath.Child("remove"), h, err.Error())
 			allErrs = append(allErrs, valErr)
 		}
 	}

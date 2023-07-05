@@ -83,16 +83,14 @@ func (upd *updaterImpl) Update(ctx context.Context, statuses Statuses) {
 	// FIXME(pleshakov) Merge the new Conditions in the status with the existing Conditions
 	// https://github.com/nginxinc/nginx-kubernetes-gateway/issues/558
 
-	if upd.cfg.UpdateGatewayClassStatus && statuses.GatewayClassStatus != nil {
-		upd.update(
-			ctx,
-			types.NamespacedName{Name: upd.cfg.GatewayClassName},
-			&v1beta1.GatewayClass{},
-			func(object client.Object) {
+	if upd.cfg.UpdateGatewayClassStatus {
+		for nsname, gcs := range statuses.GatewayClassStatuses {
+			upd.update(ctx, nsname, &v1beta1.GatewayClass{}, func(object client.Object) {
 				gc := object.(*v1beta1.GatewayClass)
-				gc.Status = prepareGatewayClassStatus(*statuses.GatewayClassStatus, upd.cfg.Clock.Now())
+				gc.Status = prepareGatewayClassStatus(gcs, upd.cfg.Clock.Now())
 			},
-		)
+			)
+		}
 	}
 
 	for nsname, gs := range statuses.GatewayStatuses {

@@ -7,7 +7,6 @@ import (
 	v1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	ctlr "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -17,7 +16,7 @@ import (
 	embeddedfiles "github.com/nginxinc/nginx-kubernetes-gateway"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/controller"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/events"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/manager/filter"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/manager/predicate"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/status"
 )
 
@@ -25,6 +24,7 @@ import (
 type Config struct {
 	Logger           logr.Logger
 	GatewayClassName string
+	GatewayCtlrName  string
 }
 
 // StartManager starts a Manager for the provisioner mode, which provisions
@@ -60,9 +60,7 @@ func StartManager(cfg Config) error {
 		{
 			objectType: &gatewayv1beta1.GatewayClass{},
 			options: []controller.Option{
-				controller.WithNamespacedNameFilter(
-					filter.CreateSingleResourceFilter(types.NamespacedName{Name: cfg.GatewayClassName}),
-				),
+				controller.WithK8sPredicate(predicate.GatewayClassPredicate{ControllerName: cfg.GatewayCtlrName}),
 			},
 		},
 		{

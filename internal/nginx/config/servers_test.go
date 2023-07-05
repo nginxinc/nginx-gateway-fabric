@@ -315,6 +315,30 @@ func TestCreateServers(t *testing.T) {
 						},
 					},
 				},
+				{
+					// A match with requestHeaderModifier filter set
+					Matches: []v1beta1.HTTPRouteMatch{
+						{
+							Path: &v1beta1.HTTPPathMatch{
+								Value: helpers.GetStringPointer("/proxy-set-headers"),
+								Type:  helpers.GetPointer(v1beta1.PathMatchPathPrefix),
+							},
+						},
+					},
+					Filters: []v1beta1.HTTPRouteFilter{
+						{
+							Type: "RequestHeaderModifier",
+							RequestHeaderModifier: &v1beta1.HTTPHeaderFilter{
+								Add: []v1beta1.HTTPHeader{
+									{
+										Name:  "my-header",
+										Value: "some-value-123",
+									},
+								},
+							},
+						},
+					},
+				},
 			},
 		},
 	}
@@ -493,6 +517,28 @@ func TestCreateServers(t *testing.T) {
 				},
 			},
 		},
+		{
+			Path:     "/proxy-set-headers",
+			PathType: dataplane.PathTypePrefix,
+			MatchRules: []dataplane.MatchRule{
+				{
+					MatchIdx:     0,
+					RuleIdx:      8,
+					Source:       hr,
+					BackendGroup: fooGroup,
+					Filters: dataplane.Filters{
+						RequestHeaderModifiers: &dataplane.HTTPHeaderFilter{
+							Add: []dataplane.HTTPHeader{
+								{
+									Name:  "my-header",
+									Value: "some-value-123",
+								},
+							},
+						},
+					},
+				},
+			},
+		},
 	}
 
 	httpServers := []dataplane.VirtualServer{
@@ -621,6 +667,16 @@ func TestCreateServers(t *testing.T) {
 				Path:         "/test",
 				HTTPMatchVar: expectedMatchString(exactMatches),
 				Exact:        true,
+			},
+			{
+				Path:      "/proxy-set-headers",
+				ProxyPass: "http://test_foo_80",
+				ProxySetHeaders: []http.Header{
+					{
+						Name:  "my-header",
+						Value: "${my_header_header_var}some-value-123",
+					},
+				},
 			},
 		}
 	}
@@ -1173,15 +1229,15 @@ func TestCreateProxyPassForVar(t *testing.T) {
 }
 
 func TestCreateMatchLocation(t *testing.T) {
+	g := NewGomegaWithT(t)
+
 	expected := http.Location{
 		Path:     "/path",
 		Internal: true,
 	}
 
 	result := createMatchLocation("/path")
-	if result != expected {
-		t.Errorf("createMatchLocation() returned %v but expected %v", result, expected)
-	}
+	g.Expect(result).To(Equal(expected))
 }
 
 func TestCreatePathForMatch(t *testing.T) {
@@ -1206,4 +1262,41 @@ func TestCreatePathForMatch(t *testing.T) {
 		result := createPathForMatch("/path", tc.pathType, 1)
 		g.Expect(result).To(Equal(tc.expected))
 	}
+}
+
+func TestGenerateProxySetHeaders(t *testing.T) {
+	g := NewGomegaWithT(t)
+
+	filters := dataplane.HTTPHeaderFilter{
+		Add: []dataplane.HTTPHeader{
+			{
+				Name:  "Authorization",
+				Value: "my-auth",
+			},
+		},
+		Set: []dataplane.HTTPHeader{
+			{
+				Name:  "Accept-Encoding",
+				Value: "gzip",
+			},
+		},
+		Remove: []string{"my-header"},
+	}
+	expectedHeaders := []http.Header{
+		{
+			Name:  "Authorization",
+			Value: "${authorization_header_var}my-auth",
+		},
+		{
+			Name:  "Accept-Encoding",
+			Value: "gzip",
+		},
+		{
+			Name:  "my-header",
+			Value: "",
+		},
+	}
+
+	headers := generateProxySetHeaders(&filters)
+	g.Expect(headers).To(Equal(expectedHeaders))
 }

@@ -8,9 +8,23 @@ import (
 )
 
 const (
+	// GatewayClassReasonGatewayClassConflict indicates there are multiple GatewayClass resources
+	// that reference this controller, and we ignored the resource in question and picked the
+	// GatewayClass that is referenced in the command-line argument.
+	// This reason is used with GatewayClassConditionAccepted (false).
+	GatewayClassReasonGatewayClassConflict v1beta1.GatewayClassConditionReason = "GatewayClassConflict"
+
+	// GatewayClassMessageGatewayClassConflict is a message that describes GatewayClassReasonGatewayClassConflict.
+	GatewayClassMessageGatewayClassConflict = "The resource is ignored due to a conflicting GatewayClass resource"
+
 	// ListenerReasonUnsupportedValue is used with the "Accepted" condition when a value of a field in a Listener
 	// is invalid or not supported.
 	ListenerReasonUnsupportedValue v1beta1.ListenerConditionReason = "UnsupportedValue"
+
+	// ListenerMessageFailedNginxReload is a message used with ListenerConditionProgrammed (false)
+	// when nginx fails to reload.
+	ListenerMessageFailedNginxReload = "The Listener is not programmed due to a failure to " +
+		"reload nginx with the configuration"
 
 	// RouteReasonBackendRefUnsupportedValue is used with the "ResolvedRefs" condition when one of the
 	// Route rules has a backendRef with an unsupported value.
@@ -253,6 +267,7 @@ func NewRouteGatewayNotProgrammed(msg string) Condition {
 func NewDefaultListenerConditions() []Condition {
 	return []Condition{
 		NewListenerAccepted(),
+		NewListenerProgrammed(),
 		NewListenerResolvedRefs(),
 		NewListenerNoConflicts(),
 	}
@@ -265,6 +280,16 @@ func NewListenerAccepted() Condition {
 		Status:  metav1.ConditionTrue,
 		Reason:  string(v1beta1.ListenerReasonAccepted),
 		Message: "Listener is accepted",
+	}
+}
+
+// NewListenerProgrammed returns a Condition that indicates the Listener is programmed.
+func NewListenerProgrammed() Condition {
+	return Condition{
+		Type:    string(v1beta1.ListenerConditionProgrammed),
+		Status:  metav1.ConditionTrue,
+		Reason:  string(v1beta1.ListenerReasonProgrammed),
+		Message: "Listener is programmed",
 	}
 }
 
@@ -288,14 +313,28 @@ func NewListenerNoConflicts() Condition {
 	}
 }
 
-// NewListenerUnsupportedValue returns a Condition that indicates that a field of a Listener has an unsupported value.
-// Unsupported means that the value is not supported by the implementation or invalid.
-func NewListenerUnsupportedValue(msg string) Condition {
+// NewListenerNotProgrammedInvalid returns a Condition that indicates the Listener is not programmed because it is
+// semantically or syntactically invalid. The provided message contains the details of why the Listener is invalid.
+func NewListenerNotProgrammedInvalid(msg string) Condition {
 	return Condition{
-		Type:    string(v1beta1.ListenerConditionAccepted),
+		Type:    string(v1beta1.ListenerConditionProgrammed),
 		Status:  metav1.ConditionFalse,
-		Reason:  string(ListenerReasonUnsupportedValue),
+		Reason:  string(v1beta1.ListenerReasonInvalid),
 		Message: msg,
+	}
+}
+
+// NewListenerUnsupportedValue returns Conditions that indicate that a field of a Listener has an unsupported value.
+// Unsupported means that the value is not supported by the implementation or invalid.
+func NewListenerUnsupportedValue(msg string) []Condition {
+	return []Condition{
+		{
+			Type:    string(v1beta1.ListenerConditionAccepted),
+			Status:  metav1.ConditionFalse,
+			Reason:  string(ListenerReasonUnsupportedValue),
+			Message: msg,
+		},
+		NewListenerNotProgrammedInvalid(msg),
 	}
 }
 
@@ -314,6 +353,21 @@ func NewListenerInvalidCertificateRef(msg string) []Condition {
 			Reason:  string(v1beta1.ListenerReasonInvalidCertificateRef),
 			Message: msg,
 		},
+		NewListenerNotProgrammedInvalid(msg),
+	}
+}
+
+// NewListenerInvalidRouteKinds returns Conditions that indicate that an invalid or unsupported Route kind is
+// specified by the Listener.
+func NewListenerInvalidRouteKinds(msg string) []Condition {
+	return []Condition{
+		{
+			Type:    string(v1beta1.ListenerReasonResolvedRefs),
+			Status:  metav1.ConditionFalse,
+			Reason:  string(v1beta1.ListenerReasonInvalidRouteKinds),
+			Message: msg,
+		},
+		NewListenerNotProgrammedInvalid(msg),
 	}
 }
 
@@ -333,16 +387,40 @@ func NewListenerProtocolConflict(msg string) []Condition {
 			Reason:  string(v1beta1.ListenerReasonProtocolConflict),
 			Message: msg,
 		},
+		NewListenerNotProgrammedInvalid(msg),
 	}
 }
 
-// NewListenerUnsupportedProtocol returns a Condition that indicates that the protocol of a Listener is unsupported.
-func NewListenerUnsupportedProtocol(msg string) Condition {
-	return Condition{
-		Type:    string(v1beta1.ListenerConditionAccepted),
-		Status:  metav1.ConditionFalse,
-		Reason:  string(v1beta1.ListenerReasonUnsupportedProtocol),
-		Message: msg,
+// NewListenerUnsupportedProtocol returns Conditions that indicate that the protocol of a Listener is unsupported.
+func NewListenerUnsupportedProtocol(msg string) []Condition {
+	return []Condition{
+		{
+			Type:    string(v1beta1.ListenerConditionAccepted),
+			Status:  metav1.ConditionFalse,
+			Reason:  string(v1beta1.ListenerReasonUnsupportedProtocol),
+			Message: msg,
+		},
+		NewListenerNotProgrammedInvalid(msg),
+	}
+}
+
+// NewListenerRefNotPermitted returns Conditions that indicates that the Listener references a TLS secret that is not
+// permitted by a ReferenceGrant.
+func NewListenerRefNotPermitted(msg string) []Condition {
+	return []Condition{
+		{
+			Type:    string(v1beta1.ListenerConditionAccepted),
+			Status:  metav1.ConditionFalse,
+			Reason:  string(v1beta1.ListenerReasonRefNotPermitted),
+			Message: msg,
+		},
+		{
+			Type:    string(v1beta1.ListenerReasonResolvedRefs),
+			Status:  metav1.ConditionFalse,
+			Reason:  string(v1beta1.ListenerReasonRefNotPermitted),
+			Message: msg,
+		},
+		NewListenerNotProgrammedInvalid(msg),
 	}
 }
 
@@ -358,6 +436,17 @@ func NewDefaultGatewayClassConditions() []Condition {
 	}
 }
 
+// NewGatewayClassConflict returns a Condition that indicates that the GatewayClass is not accepted
+// due to a conflict with another GatewayClass.
+func NewGatewayClassConflict() Condition {
+	return Condition{
+		Type:    string(v1beta1.GatewayClassConditionStatusAccepted),
+		Status:  metav1.ConditionFalse,
+		Reason:  string(GatewayClassReasonGatewayClassConflict),
+		Message: GatewayClassMessageGatewayClassConflict,
+	}
+}
+
 // NewGatewayClassInvalidParameters returns a Condition that indicates that the GatewayClass has invalid parameters.
 func NewGatewayClassInvalidParameters(msg string) Condition {
 	return Condition{
@@ -368,7 +457,7 @@ func NewGatewayClassInvalidParameters(msg string) Condition {
 	}
 }
 
-// NewDefaultGatewayConditions returns the default Condition that must be present in the status of a Gateway.
+// NewDefaultGatewayConditions returns the default Conditions that must be present in the status of a Gateway.
 func NewDefaultGatewayConditions() []Condition {
 	return []Condition{
 		NewGatewayAccepted(),
@@ -386,7 +475,7 @@ func NewGatewayAccepted() Condition {
 	}
 }
 
-// NewGatewayConflict returns a Condition that indicates the Gateway has a conflict with another Gateway.
+// NewGatewayConflict returns Conditions that indicate the Gateway has a conflict with another Gateway.
 func NewGatewayConflict() []Condition {
 	return []Condition{
 		{
@@ -410,7 +499,7 @@ func NewGatewayAcceptedListenersNotValid() Condition {
 	}
 }
 
-// NewGatewayNotAcceptedListenersNotValid returns a Condition that indicates the Gateway is not accepted,
+// NewGatewayNotAcceptedListenersNotValid returns Conditions that indicate the Gateway is not accepted,
 // because all listeners are invalid.
 func NewGatewayNotAcceptedListenersNotValid() []Condition {
 	msg := "Gateway has no valid listeners"
@@ -425,7 +514,7 @@ func NewGatewayNotAcceptedListenersNotValid() []Condition {
 	}
 }
 
-// NewGatewayInvalid returns a Condition that indicates the Gateway is not accepted and programmed because it is
+// NewGatewayInvalid returns Conditions that indicate the Gateway is not accepted and programmed because it is
 // semantically or syntactically invalid. The provided message contains the details of why the Gateway is invalid.
 func NewGatewayInvalid(msg string) []Condition {
 	return []Condition{
@@ -439,7 +528,7 @@ func NewGatewayInvalid(msg string) []Condition {
 	}
 }
 
-// NewGatewayUnsupportedValue returns a Condition that indicates that a field of the Gateway has an unsupported value.
+// NewGatewayUnsupportedValue returns Conditions that indicate that a field of the Gateway has an unsupported value.
 // Unsupported means that the value is not supported by the implementation or invalid.
 func NewGatewayUnsupportedValue(msg string) []Condition {
 	return []Condition{

@@ -71,9 +71,11 @@ var _ = Describe("Updater", func() {
 
 			createStatuses = func(gens generations) status.Statuses {
 				return status.Statuses{
-					GatewayClassStatus: &status.GatewayClassStatus{
-						ObservedGeneration: gens.gatewayClass,
-						Conditions:         status.CreateTestConditions("Test"),
+					GatewayClassStatuses: status.GatewayClassStatuses{
+						{Name: gcName}: {
+							ObservedGeneration: gens.gatewayClass,
+							Conditions:         status.CreateTestConditions("Test"),
+						},
 					},
 					GatewayStatuses: status.GatewayStatuses{
 						{Namespace: "test", Name: "gateway"}: {
@@ -441,9 +443,11 @@ var _ = Describe("Updater", func() {
 			updater.Update(
 				context.Background(),
 				status.Statuses{
-					GatewayClassStatus: &status.GatewayClassStatus{
-						ObservedGeneration: 1,
-						Conditions:         status.CreateTestConditions("Test"),
+					GatewayClassStatuses: status.GatewayClassStatuses{
+						{Name: gcName}: {
+							ObservedGeneration: 1,
+							Conditions:         status.CreateTestConditions("Test"),
+						},
 					},
 				},
 			)

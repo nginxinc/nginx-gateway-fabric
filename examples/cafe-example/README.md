@@ -70,3 +70,26 @@ curl --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT
 Server address: 10.12.0.19:80
 Server name: tea-7cd44fcb4d-xfw2x
 ```
+
+## 5. Using different hostnames
+
+Traffic is allowed to `cafe.example.com` because the Gateway listener's hostname allows `*.example.com`. You can
+change an HTTPRoute's hostname to something that matches this wildcard and still pass traffic.
+
+For example, run the following command to open your editor and change the HTTPRoute's hostname to `foo.example.com`.
+
+```
+kubectl -n default edit httproute tea
+```
+
+Once changed, update the `curl` command above for the `tea` service to use the new hostname. Traffic should still pass successfully.
+
+Likewise, if you change the Gateway listener's hostname to something else, you can prevent the HTTPRoute's traffic from passing successfully.
+
+For example, run the following to open your editor and change the Gateway listener's hostname to `bar.example.com`:
+
+```
+kubectl -n default edit gateway gateway
+```
+
+Once changed, try running the same `curl` requests as above. They should be denied with a `404 Not Found`.

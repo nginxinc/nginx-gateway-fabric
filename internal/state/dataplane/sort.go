@@ -24,6 +24,7 @@ Precedence must be given to the Rule with the largest number of (Continuing on t
 - Characters in a matching non-wildcard hostname.
 - Characters in a matching hostname.
 - Characters in a matching path.
+- Method match.
 - Header matches.
 - Query param matches.
 
@@ -43,16 +44,25 @@ func higherPriority(rule1, rule2 MatchRule) bool {
 	match1 := rule1.GetMatch()
 	match2 := rule2.GetMatch()
 
-	// If both matches exists then compare the number of header matches
-	// The match with the largest number of header matches wins
+	// Compare if a method exists on one of the matches but not the other.
+	// The match with the method specified wins.
+	if match1.Method != nil && match2.Method == nil {
+		return true
+	}
+	if match2.Method != nil && match1.Method == nil {
+		return false
+	}
+
+	// Compare the number of header matches.
+	// The match with the largest number of header matches wins.
 	l1 := len(match1.Headers)
 	l2 := len(match2.Headers)
 
 	if l1 != l2 {
 		return l1 > l2
 	}
-	// If the number of headers is equal then compare the number of query param matches
-	// The match with the most query param matches wins
+	// If the number of headers is equal then compare the number of query param matches.
+	// The match with the most query param matches wins.
 	l1 = len(match1.QueryParams)
 	l2 = len(match2.QueryParams)
 

@@ -1,9 +1,9 @@
 # Testing
 
 This document provides guidelines for testing, including instructions on running the unit tests, accessing the code
-coverage report, and performing manual testing. By following these guidelines, you will gain a thorough understanding of
-the project's approach to unit testing, enabling you to ensure code quality, validate functionality, and maintain robust
-test coverage.
+coverage report, performing manual testing, and running the conformance tests. By following these guidelines, you will 
+gain a thorough understanding of the project's approach to unit testing, enabling you to ensure code quality, validate
+functionality, and maintain robust test coverage.
 
 ## Unit Test Guidelines
 

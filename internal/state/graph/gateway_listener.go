@@ -36,10 +36,11 @@ type Listener struct {
 func buildListeners(
 	gw *v1beta1.Gateway,
 	secretMemoryMgr secrets.SecretDiskMemoryManager,
+	refGrants map[types.NamespacedName]*v1beta1.ReferenceGrant,
 ) map[string]*Listener {
 	listeners := make(map[string]*Listener)
 
-	listenerFactory := newListenerConfiguratorFactory(gw, secretMemoryMgr)
+	listenerFactory := newListenerConfiguratorFactory(gw, secretMemoryMgr, refGrants)
 
 	for _, gl := range gw.Spec.Listeners {
 		configurator := listenerFactory.getConfiguratorForListener(gl)
@@ -67,6 +68,7 @@ func (f *listenerConfiguratorFactory) getConfiguratorForListener(l v1beta1.Liste
 func newListenerConfiguratorFactory(
 	gw *v1beta1.Gateway,
 	secretMemoryMgr secrets.SecretDiskMemoryManager,
+	refGrants map[types.NamespacedName]*v1beta1.ReferenceGrant,
 ) *listenerConfiguratorFactory {
 	sharedPortConflictResolver := createPortConflictResolver()
 
@@ -79,7 +81,7 @@ func newListenerConfiguratorFactory(
 						listener.Protocol,
 						[]string{string(v1beta1.HTTPProtocolType), string(v1beta1.HTTPSProtocolType)},
 					)
-					return []conditions.Condition{conditions.NewListenerUnsupportedProtocol(valErr.Error())}
+					return conditions.NewListenerUnsupportedProtocol(valErr.Error())
 				},
 			},
 		},
@@ -99,13 +101,13 @@ func newListenerConfiguratorFactory(
 				validateListenerAllowedRouteKind,
 				validateListenerLabelSelector,
 				validateListenerHostname,
-				createHTTPSListenerValidator(gw.Namespace),
+				createHTTPSListenerValidator(),
 			},
 			conflictResolvers: []listenerConflictResolver{
 				sharedPortConflictResolver,
 			},
 			externalReferenceResolvers: []listenerExternalReferenceResolver{
-				createExternalReferencesForTLSSecretsResolver(gw.Namespace, secretMemoryMgr),
+				createExternalReferencesForTLSSecretsResolver(gw.Namespace, secretMemoryMgr, refGrants),
 			},
 		},
 	}
@@ -152,7 +154,7 @@ func (c *listenerConfigurator) configure(listener v1beta1.Listener) *Listener {
 		allowedRouteSelector, err = metav1.LabelSelectorAsSelector(selector)
 		if err != nil {
 			msg := fmt.Sprintf("invalid label selector: %s", err.Error())
-			conds = append(conds, conditions.NewListenerUnsupportedValue(msg))
+			conds = append(conds, conditions.NewListenerUnsupportedValue(msg)...)
 		}
 	}
 
@@ -199,7 +201,7 @@ func validateListenerHostname(listener v1beta1.Listener) []conditions.Condition 
 	if err != nil {
 		path := field.NewPath("hostname")
 		valErr := field.Invalid(path, listener.Hostname, err.Error())
-		return []conditions.Condition{conditions.NewListenerUnsupportedValue(valErr.Error())}
+		return conditions.NewListenerUnsupportedValue(valErr.Error())
 	}
 	return nil
 }
@@ -221,7 +223,7 @@ func validateListenerAllowedRouteKind(listener v1beta1.Listener) []conditions.Co
 			for _, kind := range listener.AllowedRoutes.Kinds {
 				if !validHTTPRouteKind(kind) {
 					msg := fmt.Sprintf("Unsupported route kind \"%s/%s\"", *kind.Group, kind.Kind)
-					return []conditions.Condition{conditions.NewListenerUnsupportedValue(msg)}
+					return conditions.NewListenerInvalidRouteKinds(msg)
 				}
 			}
 		}
@@ -237,7 +239,7 @@ func validateListenerLabelSelector(listener v1beta1.Listener) []conditions.Condi
 		*listener.AllowedRoutes.Namespaces.From == v1beta1.NamespacesFromSelector &&
 		listener.AllowedRoutes.Namespaces.Selector == nil {
 		msg := "Listener's AllowedRoutes Selector must be set when From is set to type Selector"
-		return []conditions.Condition{conditions.NewListenerUnsupportedValue(msg)}
+		return conditions.NewListenerUnsupportedValue(msg)
 	}
 
 	return nil
@@ -247,7 +249,7 @@ func validateHTTPListener(listener v1beta1.Listener) []conditions.Condition {
 	if err := validateListenerPort(listener.Port); err != nil {
 		path := field.NewPath("port")
 		valErr := field.Invalid(path, listener.Port, err.Error())
-		return []conditions.Condition{conditions.NewListenerUnsupportedValue(valErr.Error())}
+		return conditions.NewListenerUnsupportedValue(valErr.Error())
 	}
 
 	if listener.TLS != nil {
@@ -265,14 +267,14 @@ func validateListenerPort(port v1beta1.PortNumber) error {
 	return nil
 }
 
-func createHTTPSListenerValidator(gwNsName string) listenerValidator {
+func createHTTPSListenerValidator() listenerValidator {
 	return func(listener v1beta1.Listener) []conditions.Condition {
 		var conds []conditions.Condition
 
 		if err := validateListenerPort(listener.Port); err != nil {
 			path := field.NewPath("port")
 			valErr := field.Invalid(path, listener.Port, err.Error())
-			conds = append(conds, conditions.NewListenerUnsupportedValue(valErr.Error()))
+			conds = append(conds, conditions.NewListenerUnsupportedValue(valErr.Error())...)
 		}
 
 		if listener.TLS == nil {
@@ -287,13 +289,13 @@ func createHTTPSListenerValidator(gwNsName string) listenerValidator {
 				*listener.TLS.Mode,
 				[]string{string(v1beta1.TLSModeTerminate)},
 			)
-			conds = append(conds, conditions.NewListenerUnsupportedValue(valErr.Error()))
+			conds = append(conds, conditions.NewListenerUnsupportedValue(valErr.Error())...)
 		}
 
 		if len(listener.TLS.Options) > 0 {
 			path := tlsPath.Child("options")
 			valErr := field.Forbidden(path, "options are not supported")
-			conds = append(conds, conditions.NewListenerUnsupportedValue(valErr.Error()))
+			conds = append(conds, conditions.NewListenerUnsupportedValue(valErr.Error())...)
 		}
 
 		if len(listener.TLS.CertificateRefs) == 0 {
@@ -317,18 +319,10 @@ func createHTTPSListenerValidator(gwNsName string) listenerValidator {
 			conds = append(conds, conditions.NewListenerInvalidCertificateRef(valErr.Error())...)
 		}
 
-		// secret must be in the same namespace as the gateway
-		if certRef.Namespace != nil && string(*certRef.Namespace) != gwNsName {
-			const detail = "Referenced Secret must belong to the same namespace as the Gateway"
-			path := certRefPath.Child("namespace")
-			valErr := field.Invalid(path, certRef.Namespace, detail)
-			conds = append(conds, conditions.NewListenerInvalidCertificateRef(valErr.Error())...)
-		}
-
 		if l := len(listener.TLS.CertificateRefs); l > 1 {
 			path := tlsPath.Child("certificateRefs")
 			valErr := field.TooMany(path, l, 1)
-			conds = append(conds, conditions.NewListenerUnsupportedValue(valErr.Error()))
+			conds = append(conds, conditions.NewListenerUnsupportedValue(valErr.Error())...)
 		}
 
 		return conds
@@ -382,20 +376,42 @@ func createPortConflictResolver() listenerConflictResolver {
 func createExternalReferencesForTLSSecretsResolver(
 	gwNs string,
 	secretMemoryMgr secrets.SecretDiskMemoryManager,
+	refGrants map[types.NamespacedName]*v1beta1.ReferenceGrant,
 ) listenerExternalReferenceResolver {
 	return func(l *Listener) {
-		nsname := types.NamespacedName{
-			Namespace: gwNs,
-			Name:      string(l.Source.TLS.CertificateRefs[0].Name),
+		certRef := l.Source.TLS.CertificateRefs[0]
+
+		certRefNs := gwNs
+		if certRef.Namespace != nil {
+			certRefNs = string(*certRef.Namespace)
+		}
+
+		certRefNsName := types.NamespacedName{
+			Namespace: certRefNs,
+			Name:      string(certRef.Name),
+		}
+
+		if certRefNs != gwNs {
+			if !refGrantAllowsGatewayToSecret(refGrants, gwNs, certRefNsName) {
+				msg := fmt.Sprintf(
+					"Certificate ref to secret %s/%s not permitted by any ReferenceGrant",
+					certRefNs,
+					certRef.Name,
+				)
+
+				l.Conditions = append(l.Conditions, conditions.NewListenerRefNotPermitted(msg)...)
+				l.Valid = false
+				return
+			}
 		}
 
 		var err error
 
-		l.SecretPath, err = secretMemoryMgr.Request(nsname)
+		l.SecretPath, err = secretMemoryMgr.Request(certRefNsName)
 		if err != nil {
 			path := field.NewPath("tls", "certificateRefs").Index(0)
 			// field.NotFound could be better, but it doesn't allow us to set the error message.
-			valErr := field.Invalid(path, nsname, err.Error())
+			valErr := field.Invalid(path, certRefNsName, err.Error())
 
 			l.Conditions = append(l.Conditions, conditions.NewListenerInvalidCertificateRef(valErr.Error())...)
 			l.Valid = false

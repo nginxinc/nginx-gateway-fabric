@@ -11,11 +11,12 @@ import (
 
 // ClusterState includes cluster resources necessary to build the Graph.
 type ClusterState struct {
-	GatewayClasses map[types.NamespacedName]*v1beta1.GatewayClass
-	Gateways       map[types.NamespacedName]*v1beta1.Gateway
-	HTTPRoutes     map[types.NamespacedName]*v1beta1.HTTPRoute
-	Services       map[types.NamespacedName]*v1.Service
-	Namespaces     map[types.NamespacedName]*v1.Namespace
+	GatewayClasses  map[types.NamespacedName]*v1beta1.GatewayClass
+	Gateways        map[types.NamespacedName]*v1beta1.Gateway
+	HTTPRoutes      map[types.NamespacedName]*v1beta1.HTTPRoute
+	Services        map[types.NamespacedName]*v1.Service
+	Namespaces      map[types.NamespacedName]*v1.Namespace
+	ReferenceGrants map[types.NamespacedName]*v1beta1.ReferenceGrant
 }
 
 // Graph is a Graph-like representation of Gateway API resources.
@@ -24,6 +25,10 @@ type Graph struct {
 	GatewayClass *GatewayClass
 	// Gateway holds the winning Gateway resource.
 	Gateway *Gateway
+	// IgnoredGatewayClasses holds the ignored GatewayClass resources, which reference NGINX Gateway in the
+	// controllerName, but are not configured via the NGINX Gateway CLI argument. It doesn't hold the GatewayClass
+	// resources that do not belong to the NGINX Gateway.
+	IgnoredGatewayClasses map[types.NamespacedName]*v1beta1.GatewayClass
 	// IgnoredGateways holds the ignored Gateway resources, which belong to the NGINX Gateway (based on the
 	// GatewayClassName field of the resource) but ignored. It doesn't hold the Gateway resources that do not belong to
 	// the NGINX Gateway.
@@ -40,27 +45,26 @@ func BuildGraph(
 	secretMemoryMgr secrets.SecretDiskMemoryManager,
 	validators validation.Validators,
 ) *Graph {
-	gatewayClass := state.GatewayClasses[types.NamespacedName{Name: gcName}]
-
-	if !gatewayClassBelongsToController(gatewayClass, controllerName) {
+	processedGwClasses, gcExists := processGatewayClasses(state.GatewayClasses, gcName, controllerName)
+	if gcExists && processedGwClasses.Winner == nil {
+		// configured GatewayClass does not reference this controller
 		return &Graph{}
 	}
-
-	gc := buildGatewayClass(gatewayClass)
+	gc := buildGatewayClass(processedGwClasses.Winner)
 
 	processedGws := processGateways(state.Gateways, gcName)
-
-	gw := buildGateway(processedGws.Winner, secretMemoryMgr, gc)
+	gw := buildGateway(processedGws.Winner, secretMemoryMgr, gc, state.ReferenceGrants)
 
 	routes := buildRoutesForGateways(validators.HTTPFieldsValidator, state.HTTPRoutes, processedGws.GetAllNsNames())
 	bindRoutesToListeners(routes, gw, state.Namespaces)
 	addBackendRefsToRouteRules(routes, state.Services)
 
 	g := &Graph{
-		GatewayClass:    gc,
-		Gateway:         gw,
-		Routes:          routes,
-		IgnoredGateways: processedGws.Ignored,
+		GatewayClass:          gc,
+		Gateway:               gw,
+		Routes:                routes,
+		IgnoredGatewayClasses: processedGwClasses.Ignored,
+		IgnoredGateways:       processedGws.Ignored,
 	}
 
 	return g

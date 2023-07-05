@@ -142,6 +142,7 @@ func createLocations(pathRules []dataplane.PathRule, listenerPort int32) []http.
 			}
 
 			backendName := backendGroupName(r.BackendGroup)
+			loc.ProxySetHeaders = generateProxySetHeaders(r.Filters.RequestHeaderModifiers)
 
 			if backendGroupNeedsSplit(r.BackendGroup) {
 				loc.ProxyPass = createProxyPassForVar(backendName)
@@ -306,6 +307,52 @@ func createMatchLocation(path string) http.Location {
 		Path:     path,
 		Internal: true,
 	}
+}
+
+func generateProxySetHeaders(filters *dataplane.HTTPHeaderFilter) []http.Header {
+	if filters == nil {
+		return nil
+	}
+	proxySetHeaders := make([]http.Header, 0, len(filters.Add)+len(filters.Set)+len(filters.Remove))
+	if len(filters.Add) > 0 {
+		addHeaders := convertAddHeaders(filters.Add)
+		proxySetHeaders = append(proxySetHeaders, addHeaders...)
+	}
+	if len(filters.Set) > 0 {
+		setHeaders := convertSetHeaders(filters.Set)
+		proxySetHeaders = append(proxySetHeaders, setHeaders...)
+	}
+	// If the value of a header field is an empty string then this field will not be passed to a proxied server
+	for _, h := range filters.Remove {
+		proxySetHeaders = append(proxySetHeaders, http.Header{
+			Name:  h,
+			Value: "",
+		})
+	}
+	return proxySetHeaders
+}
+
+func convertAddHeaders(headers []dataplane.HTTPHeader) []http.Header {
+	locHeaders := make([]http.Header, 0, len(headers))
+	for _, h := range headers {
+		mapVarName := "${" + generateAddHeaderMapVariableName(h.Name) + "}"
+		locHeaders = append(locHeaders, http.Header{
+			Name:  h.Name,
+			Value: mapVarName + h.Value,
+		})
+	}
+	return locHeaders
+}
+
+func convertSetHeaders(headers []dataplane.HTTPHeader) []http.Header {
+	locHeaders := make([]http.Header, 0, len(headers))
+	for _, h := range headers {
+		locHeaders = append(locHeaders, http.Header{
+			Name:  h.Name,
+			Value: h.Value,
+		})
+	}
+	return locHeaders
 }
 
 func createPathForMatch(path string, pathType dataplane.PathType, routeIdx int) string {

@@ -80,9 +80,7 @@ func Start(cfg config.Config) error {
 		{
 			objectType: &gatewayv1beta1.GatewayClass{},
 			options: []controller.Option{
-				controller.WithNamespacedNameFilter(filter.CreateSingleResourceFilter(
-					types.NamespacedName{Name: cfg.GatewayClassName},
-				)),
+				controller.WithK8sPredicate(predicate.GatewayClassPredicate{ControllerName: cfg.GatewayCtlrName}),
 			},
 		},
 		{
@@ -120,6 +118,9 @@ func Start(cfg config.Config) error {
 			options: []controller.Option{
 				controller.WithK8sPredicate(k8spredicate.LabelChangedPredicate{}),
 			},
+		},
+		{
+			objectType: &gatewayv1beta1.ReferenceGrant{},
 		},
 	}
 
@@ -207,6 +208,7 @@ func prepareFirstEventBatchPreparerArgs(
 		&apiv1.NamespaceList{},
 		&discoveryV1.EndpointSliceList{},
 		&gatewayv1beta1.HTTPRouteList{},
+		&gatewayv1beta1.ReferenceGrantList{},
 	}
 
 	if gwNsName == nil {
