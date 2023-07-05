@@ -14,8 +14,8 @@ func TestReferenceGrantResolver(t *testing.T) {
 	gwNs := "gw-ns"
 	secretNsName := types.NamespacedName{Namespace: "test", Name: "certificate"}
 
-	getNormalRefGrant := func() *v1beta1.ReferenceGrant {
-		return &v1beta1.ReferenceGrant{
+	refGrants := map[types.NamespacedName]*v1beta1.ReferenceGrant{
+		{Namespace: "test", Name: "valid"}: {
 			Spec: v1beta1.ReferenceGrantSpec{
 				From: []v1beta1.ReferenceGrantFrom{
 					{
@@ -27,110 +27,126 @@ func TestReferenceGrantResolver(t *testing.T) {
 				To: []v1beta1.ReferenceGrantTo{
 					{
 						Kind: "Secret",
-						Name: helpers.GetPointer(v1beta1.ObjectName(secretNsName.Name)),
+						Name: helpers.GetPointer(v1beta1.ObjectName("wrong-name1")),
+					},
+					{
+						Kind: "Secret",
+						Name: helpers.GetPointer(v1beta1.ObjectName("wrong-name2")),
+					},
+					{
+						Kind: "Secret",
+						Name: helpers.GetPointer(v1beta1.ObjectName(secretNsName.Name)), // matches
 					},
 				},
 			},
-		}
+		},
+		{Namespace: "explicit-core-group", Name: "valid"}: {
+			Spec: v1beta1.ReferenceGrantSpec{
+				From: []v1beta1.ReferenceGrantFrom{
+					{
+						Group:     v1beta1.GroupName,
+						Kind:      "Gateway",
+						Namespace: v1beta1.Namespace(gwNs),
+					},
+				},
+				To: []v1beta1.ReferenceGrantTo{
+					{
+						Group: "core",
+						Kind:  "Secret",
+						Name:  helpers.GetPointer(v1beta1.ObjectName(secretNsName.Name)),
+					},
+				},
+			},
+		},
+		{Namespace: "all-in-namespace", Name: "valid"}: {
+			Spec: v1beta1.ReferenceGrantSpec{
+				To: []v1beta1.ReferenceGrantTo{
+					{
+						Kind: "Secret",
+					},
+				},
+				From: []v1beta1.ReferenceGrantFrom{
+					{
+						Group:     v1beta1.GroupName,
+						Kind:      "Gateway",
+						Namespace: "wrong-ns1",
+					},
+					{
+						Group:     v1beta1.GroupName,
+						Kind:      "Gateway",
+						Namespace: "wrong-ns2",
+					},
+					{
+						Group:     v1beta1.GroupName,
+						Kind:      "Gateway",
+						Namespace: v1beta1.Namespace(gwNs),
+					},
+				},
+			},
+		},
 	}
 
-	createModifiedRefGrant := func(mod func(rg *v1beta1.ReferenceGrant)) *v1beta1.ReferenceGrant {
-		rg := getNormalRefGrant()
-		mod(rg)
-		return rg
-	}
-
-	refGrants := map[types.NamespacedName]*v1beta1.ReferenceGrant{
-		{Namespace: "test", Name: "valid"}: createModifiedRefGrant(func(rg *v1beta1.ReferenceGrant) {
-			rg.Spec.To = []v1beta1.ReferenceGrantTo{
-				{
-					Kind: "Secret",
-					Name: helpers.GetPointer(v1beta1.ObjectName("wrong-name1")),
-				},
-				{
-					Kind: "Secret",
-					Name: helpers.GetPointer(v1beta1.ObjectName("wrong-name2")),
-				},
-				{
-					Kind: "Secret",
-					Name: helpers.GetPointer(v1beta1.ObjectName(secretNsName.Name)), // matches
-				},
-			}
-		}),
-		{Namespace: "explicit-core-group", Name: "valid"}: createModifiedRefGrant(func(rg *v1beta1.ReferenceGrant) {
-			rg.Spec.To[0].Group = "core"
-		}),
-		{Namespace: "all-in-namespace", Name: "valid"}: createModifiedRefGrant(func(rg *v1beta1.ReferenceGrant) {
-			rg.Spec.To[0].Name = nil
-			rg.Spec.From = []v1beta1.ReferenceGrantFrom{
-				{
-					Group:     v1beta1.GroupName,
-					Kind:      "Gateway",
-					Namespace: "wrong-ns1",
-				},
-				{
-					Group:     v1beta1.GroupName,
-					Kind:      "Gateway",
-					Namespace: "wrong-ns2",
-				},
-				{
-					Group:     v1beta1.GroupName,
-					Kind:      "Gateway",
-					Namespace: v1beta1.Namespace(gwNs), // matches
-				},
-			}
-		}),
-	}
+	normalTo := toResource{kind: "Secret", name: secretNsName.Name, namespace: secretNsName.Namespace}
+	normalFrom := fromResource{group: v1beta1.GroupName, kind: "Gateway", namespace: gwNs}
 
 	tests := []struct {
-		overrideTo   *toResource
-		overrideFrom *fromResource
-		msg          string
-		allowed      bool
+		to      toResource
+		from    fromResource
+		msg     string
+		allowed bool
 	}{
 		{
-			msg:        "wrong 'to' kind",
-			overrideTo: &toResource{kind: "WrongKind", name: secretNsName.Name, namespace: secretNsName.Namespace},
-			allowed:    false,
+			msg:     "wrong 'to' kind",
+			to:      toResource{kind: "WrongKind", name: secretNsName.Name, namespace: secretNsName.Namespace},
+			from:    normalFrom,
+			allowed: false,
 		},
 		{
 			msg: "wrong 'to' group",
-			overrideTo: &toResource{
+			to: toResource{
 				group:     "wrong.group",
 				kind:      "Secret",
 				name:      secretNsName.Name,
 				namespace: secretNsName.Namespace,
 			},
+			from:    normalFrom,
 			allowed: false,
 		},
 		{
-			msg:        "wrong 'to' name",
-			overrideTo: &toResource{kind: "Secret", name: "wrong-name", namespace: secretNsName.Namespace},
-			allowed:    false,
+			msg:     "wrong 'to' name",
+			to:      toResource{kind: "Secret", name: "wrong-name", namespace: secretNsName.Namespace},
+			from:    normalFrom,
+			allowed: false,
 		},
 		{
-			msg:          "wrong 'from' kind",
-			overrideFrom: &fromResource{group: v1beta1.GroupName, kind: "WrongKind", namespace: gwNs},
-			allowed:      false,
+			msg:     "wrong 'from' kind",
+			to:      normalTo,
+			from:    fromResource{group: v1beta1.GroupName, kind: "WrongKind", namespace: gwNs},
+			allowed: false,
 		},
 		{
-			msg:          "wrong 'from' group",
-			overrideFrom: &fromResource{group: "wrong.group", kind: "Gateway", namespace: gwNs},
-			allowed:      false,
+			msg:     "wrong 'from' group",
+			to:      normalTo,
+			from:    fromResource{group: "wrong.group", kind: "Gateway", namespace: gwNs},
+			allowed: false,
 		},
 		{
-			msg:          "wrong 'from' namespace",
-			overrideFrom: &fromResource{group: v1beta1.GroupName, kind: "Gateway", namespace: "wrong-ns"},
-			allowed:      false,
+			msg:     "wrong 'from' namespace",
+			to:      normalTo,
+			from:    fromResource{group: v1beta1.GroupName, kind: "Gateway", namespace: "wrong-ns"},
+			allowed: false,
 		},
 		{
 			msg:     "allowed; matches specific reference grant",
+			to:      normalTo,
+			from:    normalFrom,
 			allowed: true,
 		},
 		{
-			msg:        "allowed; matches all-in-namespace reference grant",
-			overrideTo: &toResource{kind: "Secret", name: secretNsName.Name, namespace: "all-in-namespace"},
-			allowed:    true,
+			msg:     "allowed; matches all-in-namespace reference grant",
+			to:      toResource{kind: "Secret", name: secretNsName.Name, namespace: "all-in-namespace"},
+			from:    normalFrom,
+			allowed: true,
 		},
 	}
 
@@ -140,17 +156,7 @@ func TestReferenceGrantResolver(t *testing.T) {
 		t.Run(test.msg, func(t *testing.T) {
 			g := NewGomegaWithT(t)
 
-			to := toResource{kind: "Secret", name: secretNsName.Name, namespace: secretNsName.Namespace}
-			if test.overrideTo != nil {
-				to = *test.overrideTo
-			}
-
-			from := fromResource{group: v1beta1.GroupName, kind: "Gateway", namespace: gwNs}
-			if test.overrideFrom != nil {
-				from = *test.overrideFrom
-			}
-
-			g.Expect(resolver.refAllowed(to, from)).To(Equal(test.allowed))
+			g.Expect(resolver.refAllowed(test.to, test.from)).To(Equal(test.allowed))
 		})
 	}
 }
