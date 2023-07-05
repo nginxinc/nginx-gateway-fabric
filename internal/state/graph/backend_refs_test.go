@@ -18,12 +18,12 @@ import (
 func getNormalRef() v1beta1.BackendRef {
 	return v1beta1.BackendRef{
 		BackendObjectReference: v1beta1.BackendObjectReference{
-			Kind:      (*v1beta1.Kind)(helpers.GetStringPointer("Service")),
+			Kind:      helpers.GetPointer[v1beta1.Kind]("Service"),
 			Name:      "service1",
-			Namespace: (*v1beta1.Namespace)(helpers.GetStringPointer("test")),
-			Port:      (*v1beta1.PortNumber)(helpers.GetInt32Pointer(80)),
+			Namespace: helpers.GetPointer[v1beta1.Namespace]("test"),
+			Port:      helpers.GetPointer[v1beta1.PortNumber](80),
 		},
-		Weight: helpers.GetInt32Pointer(5),
+		Weight: helpers.GetPointer[int32](5),
 	}
 }
 
@@ -95,7 +95,7 @@ func TestValidateBackendRef(t *testing.T) {
 			To: []v1beta1.ReferenceGrantTo{
 				{
 					Kind: "Service",
-					Name: helpers.GetPointer(v1beta1.ObjectName("service1")),
+					Name: helpers.GetPointer[v1beta1.ObjectName]("service1"),
 				},
 			},
 			From: []v1beta1.ReferenceGrantFrom{
@@ -142,7 +142,7 @@ func TestValidateBackendRef(t *testing.T) {
 		{
 			name: "normal case with backend ref allowed by specific reference grant",
 			ref: getModifiedRef(func(backend v1beta1.BackendRef) v1beta1.BackendRef {
-				backend.Namespace = (*v1beta1.Namespace)(helpers.GetStringPointer("cross-ns"))
+				backend.Namespace = helpers.GetPointer[v1beta1.Namespace]("cross-ns")
 				return backend
 			}),
 			refGrants: map[types.NamespacedName]*v1beta1.ReferenceGrant{
@@ -153,7 +153,7 @@ func TestValidateBackendRef(t *testing.T) {
 		{
 			name: "normal case with backend ref allowed by all-in-namespace reference grant",
 			ref: getModifiedRef(func(backend v1beta1.BackendRef) v1beta1.BackendRef {
-				backend.Namespace = (*v1beta1.Namespace)(helpers.GetStringPointer("cross-ns"))
+				backend.Namespace = helpers.GetPointer[v1beta1.Namespace]("cross-ns")
 				return backend
 			}),
 			refGrants: map[types.NamespacedName]*v1beta1.ReferenceGrant{
@@ -175,7 +175,7 @@ func TestValidateBackendRef(t *testing.T) {
 		{
 			name: "not a service kind",
 			ref: getModifiedRef(func(backend v1beta1.BackendRef) v1beta1.BackendRef {
-				backend.Kind = (*v1beta1.Kind)(helpers.GetStringPointer("NotService"))
+				backend.Kind = helpers.GetPointer[v1beta1.Kind]("NotService")
 				return backend
 			}),
 			expectedValid: false,
@@ -186,7 +186,7 @@ func TestValidateBackendRef(t *testing.T) {
 		{
 			name: "backend ref not allowed by reference grant",
 			ref: getModifiedRef(func(backend v1beta1.BackendRef) v1beta1.BackendRef {
-				backend.Namespace = (*v1beta1.Namespace)(helpers.GetStringPointer("invalid"))
+				backend.Namespace = helpers.GetPointer[v1beta1.Namespace]("invalid")
 				return backend
 			}),
 			expectedValid: false,
