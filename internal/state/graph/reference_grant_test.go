@@ -116,8 +116,7 @@ func TestReferenceGrantResolver(t *testing.T) {
 		{
 			msg:          "wrong 'from' group",
 			overrideFrom: &fromResource{group: "wrong.group", kind: "Gateway", namespace: gwNs},
-
-			allowed: false,
+			allowed:      false,
 		},
 		{
 			msg:          "wrong 'from' namespace",

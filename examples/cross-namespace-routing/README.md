@@ -101,7 +101,6 @@ curl --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT
 </html>
 ```
 
-
 You can also check the conditions of the HTTPRoutes `coffee` and `tea` to verify that the reference is not permitted:
 
 ```
