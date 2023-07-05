@@ -148,6 +148,12 @@ func TestReferenceGrantResolver(t *testing.T) {
 			from:    normalFrom,
 			allowed: true,
 		},
+		{
+			msg:     "allowed; matches specific reference grant with explicit 'core' group name",
+			to:      toResource{kind: "Secret", name: secretNsName.Name, namespace: "explicit-core-group"},
+			from:    normalFrom,
+			allowed: true,
+		},
 	}
 
 	resolver := newReferenceGrantResolver(refGrants)
