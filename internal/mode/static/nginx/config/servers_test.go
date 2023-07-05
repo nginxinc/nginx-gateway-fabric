@@ -282,12 +282,48 @@ func TestCreateServers(t *testing.T) {
 					// redirect is set in the corresponding state.MatchRule
 				},
 				{
+					// A match with a redirect and header matches
+					Matches: []v1beta1.HTTPRouteMatch{
+						{
+							Path: &v1beta1.HTTPPathMatch{
+								Value: helpers.GetStringPointer("/redirect-with-headers"),
+								Type:  helpers.GetPointer(v1beta1.PathMatchPathPrefix),
+							},
+							Headers: []v1beta1.HTTPHeaderMatch{
+								{
+									Type:  helpers.GetHeaderMatchTypePointer(v1beta1.HeaderMatchExact),
+									Name:  "redirect",
+									Value: "this",
+								},
+							},
+						},
+					},
+				},
+				{
 					// A match with an invalid filter
 					Matches: []v1beta1.HTTPRouteMatch{
 						{
 							Path: &v1beta1.HTTPPathMatch{
 								Value: helpers.GetPointer("/invalid-filter"),
 								Type:  helpers.GetPointer(v1beta1.PathMatchPathPrefix),
+							},
+						},
+					},
+				},
+				{
+					// A match with an invalid filter and headers
+					Matches: []v1beta1.HTTPRouteMatch{
+						{
+							Path: &v1beta1.HTTPPathMatch{
+								Value: helpers.GetPointer("/invalid-filter-with-headers"),
+								Type:  helpers.GetPointer(v1beta1.PathMatchPathPrefix),
+							},
+							Headers: []v1beta1.HTTPHeaderMatch{
+								{
+									Type:  helpers.GetHeaderMatchTypePointer(v1beta1.HeaderMatchExact),
+									Name:  "filter",
+									Value: "this",
+								},
 							},
 						},
 					},
@@ -479,12 +515,45 @@ func TestCreateServers(t *testing.T) {
 			},
 		},
 		{
-			Path:     "/invalid-filter",
+			Path:     "/redirect-with-headers",
 			PathType: dataplane.PathTypePrefix,
 			MatchRules: []dataplane.MatchRule{
 				{
 					MatchIdx: 0,
 					RuleIdx:  5,
+					Source:   hr,
+					Filters: dataplane.Filters{
+						RequestRedirect: &v1beta1.HTTPRequestRedirectFilter{
+							Hostname: helpers.GetPointer(v1beta1.PreciseHostname("foo.example.com")),
+							Port:     helpers.GetPointer(v1beta1.PortNumber(8080)),
+						},
+					},
+					BackendGroup: filterGroup1,
+				},
+			},
+		},
+		{
+			Path:     "/invalid-filter",
+			PathType: dataplane.PathTypePrefix,
+			MatchRules: []dataplane.MatchRule{
+				{
+					MatchIdx: 0,
+					RuleIdx:  6,
+					Source:   hr,
+					Filters: dataplane.Filters{
+						InvalidFilter: &dataplane.InvalidFilter{},
+					},
+					BackendGroup: invalidFilterGroup,
+				},
+			},
+		},
+		{
+			Path:     "/invalid-filter-with-headers",
+			PathType: dataplane.PathTypePrefix,
+			MatchRules: []dataplane.MatchRule{
+				{
+					MatchIdx: 0,
+					RuleIdx:  7,
 					Source:   hr,
 					Filters: dataplane.Filters{
 						InvalidFilter: &dataplane.InvalidFilter{},
@@ -499,7 +568,7 @@ func TestCreateServers(t *testing.T) {
 			MatchRules: []dataplane.MatchRule{
 				{
 					MatchIdx:     0,
-					RuleIdx:      6,
+					RuleIdx:      8,
 					Source:       hr,
 					BackendGroup: fooGroup,
 				},
@@ -511,7 +580,7 @@ func TestCreateServers(t *testing.T) {
 			MatchRules: []dataplane.MatchRule{
 				{
 					MatchIdx:     0,
-					RuleIdx:      7,
+					RuleIdx:      9,
 					Source:       hr,
 					BackendGroup: fooGroup,
 				},
@@ -523,7 +592,7 @@ func TestCreateServers(t *testing.T) {
 			MatchRules: []dataplane.MatchRule{
 				{
 					MatchIdx:     0,
-					RuleIdx:      8,
+					RuleIdx:      10,
 					Source:       hr,
 					BackendGroup: fooGroup,
 					Filters: dataplane.Filters{
@@ -593,6 +662,18 @@ func TestCreateServers(t *testing.T) {
 			RedirectPath: "/test_exact_route0",
 		},
 	}
+	redirectHeaderMatches := []httpMatch{
+		{
+			Headers:      []string{"redirect:this"},
+			RedirectPath: "/redirect-with-headers_prefix_route0",
+		},
+	}
+	invalidFilterHeaderMatches := []httpMatch{
+		{
+			Headers:      []string{"filter:this"},
+			RedirectPath: "/invalid-filter-with-headers_prefix_route0",
+		},
+	}
 
 	getExpectedLocations := func(isHTTPS bool) []http.Location {
 		port := 8080
@@ -626,37 +707,91 @@ func TestCreateServers(t *testing.T) {
 				ProxyPass: "http://$test__route1_rule1",
 			},
 			{
-				Path:         "/test",
+				Path:         "/test/",
 				HTTPMatchVar: expectedMatchString(testMatches),
 			},
 			{
-				Path:      "/path-only",
+				Path:      "/path-only/",
 				ProxyPass: "http://invalid-backend-ref",
 			},
 			{
-				Path: "/redirect-implicit-port",
+				Path:      "= /path-only",
+				ProxyPass: "http://invalid-backend-ref",
+			},
+			{
+				Path: "/redirect-implicit-port/",
 				Return: &http.Return{
 					Code: 302,
 					Body: fmt.Sprintf("$scheme://foo.example.com:%d$request_uri", port),
 				},
 			},
 			{
-				Path: "/redirect-explicit-port",
+				Path: "= /redirect-implicit-port",
+				Return: &http.Return{
+					Code: 302,
+					Body: fmt.Sprintf("$scheme://foo.example.com:%d$request_uri", port),
+				},
+			},
+			{
+				Path: "/redirect-explicit-port/",
 				Return: &http.Return{
 					Code: 302,
 					Body: "$scheme://bar.example.com:8080$request_uri",
 				},
 			},
 			{
-				Path: "/invalid-filter",
+				Path: "= /redirect-explicit-port",
+				Return: &http.Return{
+					Code: 302,
+					Body: "$scheme://bar.example.com:8080$request_uri",
+				},
+			},
+			{
+				Path: "/redirect-with-headers_prefix_route0",
+				Return: &http.Return{
+					Body: "$scheme://foo.example.com:8080$request_uri",
+					Code: 302,
+				},
+				Internal: true,
+			},
+			{
+				Path:         "/redirect-with-headers/",
+				HTTPMatchVar: expectedMatchString(redirectHeaderMatches),
+			},
+			{
+				Path:         "= /redirect-with-headers",
+				HTTPMatchVar: expectedMatchString(redirectHeaderMatches),
+			},
+			{
+				Path: "/invalid-filter/",
 				Return: &http.Return{
 					Code: http.StatusInternalServerError,
 				},
 			},
 			{
-				Path:      "/exact",
+				Path: "= /invalid-filter",
+				Return: &http.Return{
+					Code: http.StatusInternalServerError,
+				},
+			},
+			{
+				Path: "/invalid-filter-with-headers_prefix_route0",
+				Return: &http.Return{
+					Code: http.StatusInternalServerError,
+				},
+				Internal: true,
+			},
+			{
+				Path:         "/invalid-filter-with-headers/",
+				HTTPMatchVar: expectedMatchString(invalidFilterHeaderMatches),
+			},
+			{
+				Path:         "= /invalid-filter-with-headers",
+				HTTPMatchVar: expectedMatchString(invalidFilterHeaderMatches),
+			},
+			{
+				Path:      "= /exact",
 				ProxyPass: "http://test_foo_80",
-				Exact:     true,
 			},
 			{
 				Path:      "/test_exact_route0",
@@ -664,12 +799,21 @@ func TestCreateServers(t *testing.T) {
 				Internal:  true,
 			},
 			{
-				Path:         "/test",
+				Path:         "= /test",
 				HTTPMatchVar: expectedMatchString(exactMatches),
-				Exact:        true,
 			},
 			{
-				Path:      "/proxy-set-headers",
+				Path:      "/proxy-set-headers/",
+				ProxyPass: "http://test_foo_80",
+				ProxySetHeaders: []http.Header{
+					{
+						Name:  "my-header",
+						Value: "${my_header_header_var}some-value-123",
+					},
+				},
+			},
+			{
+				Path:      "= /proxy-set-headers",
 				ProxyPass: "http://test_foo_80",
 				ProxySetHeaders: []http.Header{
 					{
@@ -712,6 +856,321 @@ func TestCreateServers(t *testing.T) {
 
 	result := createServers(httpServers, sslServers)
 	g.Expect(helpers.Diff(expectedServers, result)).To(BeEmpty())
+}
+
+func TestCreateServersConflicts(t *testing.T) {
+	type pathAndType struct {
+		path     string
+		pathType v1beta1.PathMatchType
+	}
+
+	createHR := func(pathsAndTypes []pathAndType) *v1beta1.HTTPRoute {
+		hr := &v1beta1.HTTPRoute{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: "test",
+				Name:      "route",
+			},
+			Spec: v1beta1.HTTPRouteSpec{
+				Hostnames: []v1beta1.Hostname{
+					"cafe.example.com",
+				},
+				Rules: []v1beta1.HTTPRouteRule{},
+			},
+		}
+		for _, pt := range pathsAndTypes {
+			match := v1beta1.HTTPRouteMatch{
+				Path: &v1beta1.HTTPPathMatch{
+					Value: helpers.GetPointer(pt.path),
+					Type:  helpers.GetPointer(pt.pathType),
+				},
+			}
+			hr.Spec.Rules = append(hr.Spec.Rules, v1beta1.HTTPRouteRule{
+				Matches: []v1beta1.HTTPRouteMatch{match},
+			})
+		}
+
+		return hr
+	}
+
+	fooGroup := dataplane.BackendGroup{
+		Source:  types.NamespacedName{Namespace: "test", Name: "route"},
+		RuleIdx: 0,
+		Backends: []dataplane.Backend{
+			{
+				UpstreamName: "test_foo_80",
+				Valid:        true,
+				Weight:       1,
+			},
+		},
+	}
+	barGroup := dataplane.BackendGroup{
+		Source:  types.NamespacedName{Namespace: "test", Name: "route"},
+		RuleIdx: 0,
+		Backends: []dataplane.Backend{
+			{
+				UpstreamName: "test_bar_80",
+				Valid:        true,
+				Weight:       1,
+			},
+		},
+	}
+	bazGroup := dataplane.BackendGroup{
+		Source:  types.NamespacedName{Namespace: "test", Name: "route"},
+		RuleIdx: 0,
+		Backends: []dataplane.Backend{
+			{
+				UpstreamName: "test_baz_80",
+				Valid:        true,
+				Weight:       1,
+			},
+		},
+	}
+
+	tests := []struct {
+		name    string
+		rules   []dataplane.PathRule
+		expLocs []http.Location
+	}{
+		{
+			name: "/coffee prefix, /coffee exact",
+			rules: []dataplane.PathRule{
+				{
+					Path:     "/coffee",
+					PathType: dataplane.PathTypePrefix,
+					MatchRules: []dataplane.MatchRule{
+						{
+							MatchIdx: 0,
+							RuleIdx:  0,
+							Source: createHR([]pathAndType{
+								{
+									path:     "/coffee",
+									pathType: v1beta1.PathMatchPathPrefix,
+								},
+								{
+									path:     "/coffee",
+									pathType: v1beta1.PathMatchExact,
+								},
+							}),
+							BackendGroup: fooGroup,
+						},
+					},
+				},
+				{
+					Path:     "/coffee",
+					PathType: dataplane.PathTypeExact,
+					MatchRules: []dataplane.MatchRule{
+						{
+							MatchIdx: 0,
+							RuleIdx:  0,
+							Source: createHR([]pathAndType{
+								{
+									path:     "/coffee",
+									pathType: v1beta1.PathMatchPathPrefix,
+								},
+								{
+									path:     "/coffee",
+									pathType: v1beta1.PathMatchExact,
+								},
+							}),
+							BackendGroup: barGroup,
+						},
+					},
+				},
+			},
+			expLocs: []http.Location{
+				{
+					Path:      "/coffee/",
+					ProxyPass: "http://test_foo_80",
+				},
+				{
+					Path:      "= /coffee",
+					ProxyPass: "http://test_bar_80",
+				},
+				createDefaultRootLocation(),
+			},
+		},
+		{
+			name: "/coffee prefix, /coffee/ prefix",
+			rules: []dataplane.PathRule{
+				{
+					Path:     "/coffee",
+					PathType: dataplane.PathTypePrefix,
+					MatchRules: []dataplane.MatchRule{
+						{
+							MatchIdx: 0,
+							RuleIdx:  0,
+							Source: createHR([]pathAndType{
+								{
+									path:     "/coffee",
+									pathType: v1beta1.PathMatchPathPrefix,
+								},
+								{
+									path:     "/coffee/",
+									pathType: v1beta1.PathMatchPathPrefix,
+								},
+							}),
+							BackendGroup: fooGroup,
+						},
+					},
+				},
+				{
+					Path:     "/coffee/",
+					PathType: dataplane.PathTypePrefix,
+					MatchRules: []dataplane.MatchRule{
+						{
+							MatchIdx: 0,
+							RuleIdx:  1,
+							Source: createHR([]pathAndType{
+								{
+									path:     "/coffee",
+									pathType: v1beta1.PathMatchPathPrefix,
+								},
+								{
+									path:     "/coffee/",
+									pathType: v1beta1.PathMatchPathPrefix,
+								},
+							}),
+							BackendGroup: barGroup,
+						},
+					},
+				},
+			},
+			expLocs: []http.Location{
+				{
+					Path:      "= /coffee",
+					ProxyPass: "http://test_foo_80",
+				},
+				{
+					Path:      "/coffee/",
+					ProxyPass: "http://test_bar_80",
+				},
+				createDefaultRootLocation(),
+			},
+		},
+		{
+			name: "/coffee prefix, /coffee/ prefix, /coffee exact",
+			rules: []dataplane.PathRule{
+				{
+					Path:     "/coffee",
+					PathType: dataplane.PathTypePrefix,
+					MatchRules: []dataplane.MatchRule{
+						{
+							MatchIdx: 0,
+							RuleIdx:  0,
+							Source: createHR([]pathAndType{
+								{
+									path:     "/coffee",
+									pathType: v1beta1.PathMatchPathPrefix,
+								},
+								{
+									path:     "/coffee/",
+									pathType: v1beta1.PathMatchPathPrefix,
+								},
+								{
+									path:     "/coffee",
+									pathType: v1beta1.PathMatchExact,
+								},
+							}),
+							BackendGroup: fooGroup,
+						},
+					},
+				},
+				{
+					Path:     "/coffee/",
+					PathType: dataplane.PathTypePrefix,
+					MatchRules: []dataplane.MatchRule{
+						{
+							MatchIdx: 0,
+							RuleIdx:  1,
+							Source: createHR([]pathAndType{
+								{
+									path:     "/coffee",
+									pathType: v1beta1.PathMatchPathPrefix,
+								},
+								{
+									path:     "/coffee/",
+									pathType: v1beta1.PathMatchPathPrefix,
+								},
+								{
+									path:     "/coffee",
+									pathType: v1beta1.PathMatchExact,
+								},
+							}),
+							BackendGroup: barGroup,
+						},
+					},
+				},
+				{
+					Path:     "/coffee",
+					PathType: dataplane.PathTypeExact,
+					MatchRules: []dataplane.MatchRule{
+						{
+							MatchIdx: 0,
+							RuleIdx:  2,
+							Source: createHR([]pathAndType{
+								{
+									path:     "/coffee",
+									pathType: v1beta1.PathMatchPathPrefix,
+								},
+								{
+									path:     "/coffee/",
+									pathType: v1beta1.PathMatchPathPrefix,
+								},
+								{
+									path:     "/coffee",
+									pathType: v1beta1.PathMatchExact,
+								},
+							}),
+							BackendGroup: bazGroup,
+						},
+					},
+				},
+			},
+			expLocs: []http.Location{
+				{
+					Path:      "/coffee/",
+					ProxyPass: "http://test_bar_80",
+				},
+				{
+					Path:      "= /coffee",
+					ProxyPass: "http://test_baz_80",
+				},
+				createDefaultRootLocation(),
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			httpServers := []dataplane.VirtualServer{
+				{
+					IsDefault: true,
+					Port:      8080,
+				},
+				{
+					Hostname:  "cafe.example.com",
+					PathRules: test.rules,
+					Port:      8080,
+				},
+			}
+			expectedServers := []http.Server{
+				{
+					IsDefaultHTTP: true,
+					Port:          8080,
+				},
+				{
+					ServerName: "cafe.example.com",
+					Locations:  test.expLocs,
+					Port:       8080,
+				},
+			}
+
+			g := NewGomegaWithT(t)
+
+			result := createServers(httpServers, []dataplane.VirtualServer{})
+			g.Expect(helpers.Diff(expectedServers, result)).To(BeEmpty())
+		})
+	}
 }
 
 func TestCreateLocationsRootPath(t *testing.T) {
@@ -1301,21 +1760,42 @@ func TestIsPathOnlyMatch(t *testing.T) {
 }
 
 func TestCreateProxyPass(t *testing.T) {
+	g := NewGomegaWithT(t)
+
 	expected := "http://10.0.0.1:80"
 
-	result := createProxyPass("10.0.0.1:80")
-	if result != expected {
-		t.Errorf("createProxyPass() returned %s but expected %s", result, expected)
+	grp := dataplane.BackendGroup{
+		Backends: []dataplane.Backend{
+			{
+				UpstreamName: "10.0.0.1:80",
+				Valid:        true,
+				Weight:       1,
+			},
+		},
 	}
-}
 
-func TestCreateProxyPassForVar(t *testing.T) {
-	expected := "http://$my_variable"
+	result := createProxyPass(grp)
+	g.Expect(result).To(Equal(expected))
 
-	result := createProxyPassForVar("my-variable")
-	if result != expected {
-		t.Errorf("createProxyPassForVar() returned %s but expected %s", result, expected)
+	expected = "http://$ns1__bg_rule0"
+
+	grp = dataplane.BackendGroup{
+		Source: types.NamespacedName{Namespace: "ns1", Name: "bg"},
+		Backends: []dataplane.Backend{
+			{
+				UpstreamName: "my-variable",
+				Valid:        true,
+				Weight:       1,
+			},
+			{
+				UpstreamName: "my-variable2",
+				Valid:        true,
+				Weight:       1,
+			},
+		},
 	}
+	result = createProxyPass(grp)
+	g.Expect(result).To(Equal(expected))
 }
 
 func TestCreateMatchLocation(t *testing.T) {

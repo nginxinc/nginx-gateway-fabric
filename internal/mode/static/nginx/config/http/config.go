@@ -18,7 +18,6 @@ type Location struct {
 	HTTPMatchVar    string
 	ProxySetHeaders []Header
 	Internal        bool
-	Exact           bool
 }
 
 // Header defines a HTTP header to be passed to the proxied server.

@@ -32,7 +32,7 @@ server {
     server_name {{ $s.ServerName }};
 
         {{ range $l := $s.Locations }}
-    location {{ if $l.Exact }}= {{ end }}{{ $l.Path }} {
+    location {{ $l.Path }} {
         {{ if $l.Internal -}}
         internal;
         {{ end }}
