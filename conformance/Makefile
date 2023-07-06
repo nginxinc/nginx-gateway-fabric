@@ -1,4 +1,4 @@
-NKG_TAG = edge
+NKG_TAG = 0.4.0
 NKG_PREFIX = nginx-kubernetes-gateway
 GATEWAY_CLASS = nginx
 SUPPORTED_FEATURES = HTTPRoute,HTTPRouteQueryParamMatching,HTTPRouteMethodMatching,HTTPRoutePortRedirect,HTTPRouteSchemeRedirect,GatewayClassObservedGenerationBump
