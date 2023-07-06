@@ -164,6 +164,8 @@ curl: (7) Failed to connect to cafe.example.com port 443 after 0 ms: Connection 
 You can also check the conditions of the Gateway `https` Listener to verify the that the reference is not permitted:
 
 ```
+ kubectl describe gateway gateway
+
  Name:                    https
  Conditions:
    Last Transition Time:  2023-06-26T20:23:56Z

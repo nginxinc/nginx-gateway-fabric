@@ -12,7 +12,7 @@ This document describes which Gateway API resources NGINX Kubernetes Gateway sup
 | [TLSRoute](#tlsroute) | Not supported |
 | [TCPRoute](#tcproute) | Not supported |
 | [UDPRoute](#udproute) | Not supported |
-| [ReferenceGrant](#referencegrant) |  Partially supported |
+| [ReferenceGrant](#referencegrant) |  Supported |
 | [Custom policies](#custom-policies) | Not supported |
 
 ## Terminology
@@ -152,19 +152,18 @@ Fields:
 
 ### ReferenceGrant
 
-> Status: Partially supported.
-
-NKG only supports ReferenceGrants that permit Gateways to reference Secrets. 
+> Status: Supported.
+> Support Level: Core
 
 Fields:
 * `spec`
   * `to`
     * `group` - supported.
-    * `kind` - partially supported. Only `Secret`.
+    * `kind` - supports `Secret` and `Service`.
     * `name`- supported.
   * `from`
     * `group` - supported.
-    * `kind` - partially supported. Only `Gateway`.
+    * `kind` - supports `Gateway` and `HTTPRoute`.
     * `namespace`- supported.
 
 ### Custom Policies

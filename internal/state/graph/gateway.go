@@ -94,7 +94,7 @@ func buildGateway(
 	gw *v1beta1.Gateway,
 	secretMemoryMgr secrets.SecretDiskMemoryManager,
 	gc *GatewayClass,
-	refGrants map[types.NamespacedName]*v1beta1.ReferenceGrant,
+	refGrantResolver *referenceGrantResolver,
 ) *Gateway {
 	if gw == nil {
 		return nil
@@ -112,7 +112,7 @@ func buildGateway(
 
 	return &Gateway{
 		Source:    gw,
-		Listeners: buildListeners(gw, secretMemoryMgr, refGrants),
+		Listeners: buildListeners(gw, secretMemoryMgr, refGrantResolver),
 		Valid:     true,
 	}
 }

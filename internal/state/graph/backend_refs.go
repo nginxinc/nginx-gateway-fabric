@@ -33,17 +33,22 @@ func (b BackendRef) ServicePortReference() string {
 
 func addBackendRefsToRouteRules(
 	routes map[types.NamespacedName]*Route,
+	refGrantResolver *referenceGrantResolver,
 	services map[types.NamespacedName]*v1.Service,
 ) {
 	for _, r := range routes {
-		addBackendRefsToRules(r, services)
+		addBackendRefsToRules(r, refGrantResolver, services)
 	}
 }
 
 // addBackendRefsToRules iterates over the rules of a route and adds a list of BackendRef to each rule.
 // The route is modified in place.
 // If a reference in a rule is invalid, the function will add a condition to the rule.
-func addBackendRefsToRules(route *Route, services map[types.NamespacedName]*v1.Service) {
+func addBackendRefsToRules(
+	route *Route,
+	refGrantResolver *referenceGrantResolver,
+	services map[types.NamespacedName]*v1.Service,
+) {
 	if !route.Valid {
 		return
 	}
@@ -66,7 +71,7 @@ func addBackendRefsToRules(route *Route, services map[types.NamespacedName]*v1.S
 		for refIdx, ref := range rule.BackendRefs {
 			refPath := field.NewPath("spec").Child("rules").Index(idx).Child("backendRefs").Index(refIdx)
 
-			ref, cond := createBackendRef(ref, route.Source.Namespace, services, refPath)
+			ref, cond := createBackendRef(ref, route.Source.Namespace, refGrantResolver, services, refPath)
 
 			backendRefs = append(backendRefs, ref)
 			if cond != nil {
@@ -81,6 +86,7 @@ func addBackendRefsToRules(route *Route, services map[types.NamespacedName]*v1.S
 func createBackendRef(
 	ref v1beta1.HTTPBackendRef,
 	sourceNamespace string,
+	refGrantResolver *referenceGrantResolver,
 	services map[types.NamespacedName]*v1.Service,
 	refPath *field.Path,
 ) (BackendRef, *conditions.Condition) {
@@ -99,7 +105,7 @@ func createBackendRef(
 
 	var backendRef BackendRef
 
-	valid, cond := validateHTTPBackendRef(ref, sourceNamespace, refPath)
+	valid, cond := validateHTTPBackendRef(ref, sourceNamespace, refGrantResolver, refPath)
 	if !valid {
 		backendRef = BackendRef{
 			Weight: weight,
@@ -136,7 +142,12 @@ func getServiceAndPortFromRef(
 	services map[types.NamespacedName]*v1.Service,
 	refPath *field.Path,
 ) (*v1.Service, int32, error) {
-	svcNsName := types.NamespacedName{Name: string(ref.Name), Namespace: routeNamespace}
+	ns := routeNamespace
+	if ref.Namespace != nil {
+		ns = string(*ref.Namespace)
+	}
+
+	svcNsName := types.NamespacedName{Name: string(ref.Name), Namespace: ns}
 
 	svc, ok := services[svcNsName]
 	if !ok {
@@ -150,6 +161,7 @@ func getServiceAndPortFromRef(
 func validateHTTPBackendRef(
 	ref v1beta1.HTTPBackendRef,
 	routeNs string,
+	refGrantResolver *referenceGrantResolver,
 	path *field.Path,
 ) (valid bool, cond conditions.Condition) {
 	// Because all errors cause the same condition but different reasons, we return as soon as we find an error
@@ -159,12 +171,13 @@ func validateHTTPBackendRef(
 		return false, conditions.NewRouteBackendRefUnsupportedValue(valErr.Error())
 	}
 
-	return validateBackendRef(ref.BackendRef, routeNs, path)
+	return validateBackendRef(ref.BackendRef, routeNs, refGrantResolver, path)
 }
 
 func validateBackendRef(
 	ref v1beta1.BackendRef,
 	routeNs string,
+	refGrantResolver *referenceGrantResolver,
 	path *field.Path,
 ) (valid bool, cond conditions.Condition) {
 	// Because all errors cause same condition but different reasons, we return as soon as we find an error
@@ -182,8 +195,13 @@ func validateBackendRef(
 	// no need to validate ref.Name
 
 	if ref.Namespace != nil && string(*ref.Namespace) != routeNs {
-		valErr := field.Invalid(path.Child("namespace"), *ref.Namespace, "cross-namespace routing is not permitted")
-		return false, conditions.NewRouteBackendRefRefNotPermitted(valErr.Error())
+		refNsName := types.NamespacedName{Namespace: string(*ref.Namespace), Name: string(ref.Name)}
+
+		if !refGrantResolver.refAllowed(toService(refNsName), fromHTTPRoute(routeNs)) {
+			msg := fmt.Sprintf("Backend ref to Service %s not permitted by any ReferenceGrant", refNsName)
+
+			return false, conditions.NewRouteBackendRefRefNotPermitted(msg)
+		}
 	}
 
 	if ref.Port == nil {

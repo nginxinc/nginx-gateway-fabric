@@ -5,59 +5,132 @@ import (
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 )
 
-func refGrantAllowsGatewayToSecret(
-	refGrants map[types.NamespacedName]*v1beta1.ReferenceGrant,
-	gwNs string,
-	secretNsName types.NamespacedName,
-) bool {
-	for nsname, grant := range refGrants {
-		if nsname.Namespace != secretNsName.Namespace {
-			continue
-		}
+// referenceGrantResolver resolves references from one resource to another.
+type referenceGrantResolver struct {
+	allowed map[allowedReference]struct{}
+}
 
-		if fromIncludesGatewayNs(grant.Spec.From, gwNs) && toIncludesSecret(grant.Spec.To, secretNsName.Name) {
+// allowedReference represents an allowed reference from one resource to another.
+type allowedReference struct {
+	to   toResource
+	from fromResource
+}
+
+// toResource represents the resource that the ReferenceGrant is granting access to.
+// Maps to the v1beta1.ReferenceGrantTo.
+type toResource struct {
+	// if group is core, this should be set to "".
+	group     string
+	kind      string
+	name      string
+	namespace string
+}
+
+// fromResource represents the resource that the ReferenceGrant is granting access from.
+// Maps to the v1beta1.ReferenceGrantFrom.
+type fromResource struct {
+	group     string
+	kind      string
+	namespace string
+}
+
+// The following functions are helper functions that create toResources and fromResources for the ReferenceGrant
+// resources that we support. Use these functions when calling refAllowed instead of creating your own toResource and
+// fromResource.
+
+func toSecret(nsname types.NamespacedName) toResource {
+	return toResource{
+		kind:      "Secret",
+		name:      nsname.Name,
+		namespace: nsname.Namespace,
+	}
+}
+
+func toService(nsname types.NamespacedName) toResource {
+	return toResource{
+		kind:      "Service",
+		name:      nsname.Name,
+		namespace: nsname.Namespace,
+	}
+}
+
+func fromGateway(namespace string) fromResource {
+	return fromResource{
+		group:     v1beta1.GroupName,
+		kind:      "Gateway",
+		namespace: namespace,
+	}
+}
+
+func fromHTTPRoute(namespace string) fromResource {
+	return fromResource{
+		group:     v1beta1.GroupName,
+		kind:      "HTTPRoute",
+		namespace: namespace,
+	}
+}
+
+// newReferenceGrantResolver creates a new referenceGrantResolver.
+func newReferenceGrantResolver(refGrants map[types.NamespacedName]*v1beta1.ReferenceGrant) *referenceGrantResolver {
+	allowed := make(map[allowedReference]struct{})
+
+	for nsname, grant := range refGrants {
+		for _, to := range grant.Spec.To {
+			for _, from := range grant.Spec.From {
+
+				toName := ""
+				if to.Name != nil {
+					toName = string(*to.Name)
+				}
+
+				toGroup := string(to.Group)
+				if toGroup == "core" {
+					toGroup = ""
+				}
+
+				ar := allowedReference{
+					to: toResource{
+						group:     toGroup,
+						kind:      string(to.Kind),
+						name:      toName,
+						namespace: nsname.Namespace,
+					},
+					from: fromResource{
+						group:     string(from.Group),
+						kind:      string(from.Kind),
+						namespace: string(from.Namespace),
+					},
+				}
+
+				allowed[ar] = struct{}{}
+			}
+		}
+	}
+
+	return &referenceGrantResolver{allowed: allowed}
+}
+
+// refAllowed returns whether the reference from the fromResource to the toResource is allowed by a ReferenceGrant.
+func (r *referenceGrantResolver) refAllowed(to toResource, from fromResource) bool {
+	specificKey := allowedReference{
+		to:   to,
+		from: from,
+	}
+
+	// omit name field to check for ReferenceGrants that allow access to all resources
+	// of the particular kind in the namespace
+	allInNamespaceKey := allowedReference{
+		to: toResource{
+			kind:      to.kind,
+			namespace: to.namespace,
+		},
+		from: from,
+	}
+
+	for _, key := range []allowedReference{specificKey, allInNamespaceKey} {
+		if _, ok := r.allowed[key]; ok {
 			return true
 		}
-	}
-
-	return false
-}
-
-func fromIncludesGatewayNs(fromList []v1beta1.ReferenceGrantFrom, gwNs string) bool {
-	for _, from := range fromList {
-		if from.Group != v1beta1.GroupName {
-			continue
-		}
-
-		if from.Kind != "Gateway" {
-			continue
-		}
-
-		if string(from.Namespace) != gwNs {
-			continue
-		}
-
-		return true
-	}
-
-	return false
-}
-
-func toIncludesSecret(toList []v1beta1.ReferenceGrantTo, secretName string) bool {
-	for _, to := range toList {
-		if to.Group != "" && to.Group != "core" {
-			continue
-		}
-
-		if to.Kind != "Secret" {
-			continue
-		}
-
-		if to.Name != nil && string(*to.Name) != secretName {
-			continue
-		}
-
-		return true
 	}
 
 	return false
