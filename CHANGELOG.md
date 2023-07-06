@@ -4,20 +4,22 @@ This document includes a curated changelog for each release. We also publish a c
 
 ## Release 0.4.0
 
-*July 5, 2023*
+*July 6, 2023*
 
 This release brings:
-- Extended support of the features of the Gateway API resources.
+- Support for more features of the Gateway API resources. See the [Gateway Compatibility doc](https://github.com/nginxinc/nginx-kubernetes-gateway/blob/v0.4.0/docs/gateway-api-compatibility.md)
 - Support for running the conformance test suite. See the [Conformance tests README](https://github.com/nginxinc/nginx-kubernetes-gateway/blob/v0.4.0/conformance/README.md).
-- Defined Enhancement Proposal process for NGINX Kubernetes Gateway project. See the [Proposal README](https://github.com/nginxinc/nginx-kubernetes-gateway/blob/v0.4.0/docs/proposals/README.md).
+- Defined Enhancement Proposal process for NGINX Kubernetes Gateway project. See the [Enhancement Proposal README](https://github.com/nginxinc/nginx-kubernetes-gateway/blob/v0.4.0/docs/proposals/README.md).
+- Improved developer documentation for contributing to the project. See the [Development quickstart](https://github.com/nginxinc/nginx-kubernetes-gateway/blob/v0.4.0/docs/developer/quickstart.md).
+- Architecture document that explains how NGINX Kubernetes Gateway works at a high level. See the [Architecture doc](https://github.com/nginxinc/nginx-kubernetes-gateway/blob/v0.4.0/docs/architecture.md)
 - Miscellaneous enhancements and bug fixes.
 
 FEATURES:
 * Allow empty sectionName in HTTPRoute parentRef. [PR-626](https://github.com/nginxinc/nginx-kubernetes-gateway/pull/626)
+* Exact PathMatch support for HTTPRoutes. [PR-603](https://github.com/nginxinc/nginx-kubernetes-gateway/pull/603)
 * Set ResolvedRefs condition to true on HTTPRoutes. [PR-645](https://github.com/nginxinc/nginx-kubernetes-gateway/pull/645)
 * Set gateway Pod IP as GatewayStatus address. [PR-638](https://github.com/nginxinc/nginx-kubernetes-gateway/pull/638)
 * Set Accepted condition type on Gateway status. [PR-633](https://github.com/nginxinc/nginx-kubernetes-gateway/pull/633)
-* Make static mode compatible with provisioner. [PR-657](https://github.com/nginxinc/nginx-kubernetes-gateway/pull/657)
 * Drop unrequired capabilities from containers. [PR-677](https://github.com/nginxinc/nginx-kubernetes-gateway/pull/677)
 * Update route condition where listener is not found. [PR-675](https://github.com/nginxinc/nginx-kubernetes-gateway/pull/675)
 * Set Gateway Programmed condition. [PR-658](https://github.com/nginxinc/nginx-kubernetes-gateway/pull/658)
@@ -32,13 +34,12 @@ BUG FIXES:
 * Set upstream zone size to 512k. [PR-609](https://github.com/nginxinc/nginx-kubernetes-gateway/pull/609)
 * Allow empty HTTPRoute hostnames. [PR-650](https://github.com/nginxinc/nginx-kubernetes-gateway/pull/650)
 * Allow long server names. [PR-651](https://github.com/nginxinc/nginx-kubernetes-gateway/pull/651)
-* Ensure uniqueness and validity of generated names and labels. [PR-716](https://github.com/nginxinc/nginx-kubernetes-gateway/pull/716)
 * Add in required capabilities for writing TLS secrets. [PR-718](https://github.com/nginxinc/nginx-kubernetes-gateway/pull/718)
 * Fix binding to multiple listeners with empty section name. [PR-730](https://github.com/nginxinc/nginx-kubernetes-gateway/pull/730)
 * Add timeout and retry logic for finding NGINX PID file. [PR-676](https://github.com/nginxinc/nginx-kubernetes-gateway/pull/676)
 * Prioritize method matching. [PR-789](https://github.com/nginxinc/nginx-kubernetes-gateway/pull/789)
 * Add NewListenerInvalidRouteKinds condition. [PR-799](https://github.com/nginxinc/nginx-kubernetes-gateway/pull/799)
-* Update validateBackendRef invalid group error conditions. [PR-800](https://github.com/nginxinc/nginx-kubernetes-gateway/pull/800)
+* Set ResolvedRefs/False/InvalidKind condition on the HTTPRoute if a BackendRef specifies an unknown kind. [PR-800](https://github.com/nginxinc/nginx-kubernetes-gateway/pull/800)
 * Set GatewayClass status for ignored GatewayClasses. [PR-804](https://github.com/nginxinc/nginx-kubernetes-gateway/pull/804)
 
 DEPENDENCIES:
