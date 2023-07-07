@@ -89,6 +89,7 @@ func newListenerConfiguratorFactory(
 		},
 		http: &listenerConfigurator{
 			validators: []listenerValidator{
+				validateListenerAllowedRouteKind,
 				validateListenerLabelSelector,
 				validateListenerHostname,
 				validateHTTPListener,
@@ -158,8 +159,7 @@ func (c *listenerConfigurator) configure(listener v1beta1.Listener) *Listener {
 		}
 	}
 
-	cnds, supportedKinds := getAndValidateSupportedKinds(listener)
-	conds = append(conds, cnds...)
+	supportedKinds := getListenerSupportedKinds(listener)
 
 	if len(conds) > 0 {
 		return &Listener{
@@ -211,7 +211,10 @@ func validateListenerHostname(listener v1beta1.Listener) []conditions.Condition 
 	return nil
 }
 
-func getAndValidateSupportedKinds(listener v1beta1.Listener) ([]conditions.Condition, []v1beta1.RouteGroupKind) {
+func getAndValidateListenerSupportedKinds(listener v1beta1.Listener) (
+	[]conditions.Condition,
+	[]v1beta1.RouteGroupKind,
+) {
 	if listener.AllowedRoutes == nil || listener.AllowedRoutes.Kinds == nil {
 		return nil, []v1beta1.RouteGroupKind{
 			{
@@ -245,6 +248,16 @@ func getAndValidateSupportedKinds(listener v1beta1.Listener) ([]conditions.Condi
 		}
 	}
 	return conds, supportedKinds
+}
+
+func validateListenerAllowedRouteKind(listener v1beta1.Listener) []conditions.Condition {
+	conds, _ := getAndValidateListenerSupportedKinds(listener)
+	return conds
+}
+
+func getListenerSupportedKinds(listener v1beta1.Listener) []v1beta1.RouteGroupKind {
+	_, kinds := getAndValidateListenerSupportedKinds(listener)
+	return kinds
 }
 
 func validateListenerLabelSelector(listener v1beta1.Listener) []conditions.Condition {

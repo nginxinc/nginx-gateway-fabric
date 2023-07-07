@@ -219,7 +219,7 @@ func TestValidateListenerHostname(t *testing.T) {
 	}
 }
 
-func TestGetAndValidateSupportedKinds(t *testing.T) {
+func TestGetAndValidateListenerSupportedKinds(t *testing.T) {
 	HTTPRouteGroupKind := []v1beta1.RouteGroupKind{
 		{
 			Kind:  "HTTPRoute",
@@ -321,7 +321,7 @@ func TestGetAndValidateSupportedKinds(t *testing.T) {
 				}
 			}
 
-			conds, kinds := getAndValidateSupportedKinds(listener)
+			conds, kinds := getAndValidateListenerSupportedKinds(listener)
 			g.Expect(helpers.Diff(test.expected, kinds)).To(BeEmpty())
 			if test.expectErr {
 				g.Expect(conds).ToNot(BeEmpty())
