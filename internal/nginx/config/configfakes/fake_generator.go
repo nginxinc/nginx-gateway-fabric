@@ -5,26 +5,27 @@ import (
 	"sync"
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/config"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/file"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/dataplane"
 )
 
 type FakeGenerator struct {
-	GenerateStub        func(dataplane.Configuration) []byte
+	GenerateStub        func(dataplane.Configuration) []file.File
 	generateMutex       sync.RWMutex
 	generateArgsForCall []struct {
 		arg1 dataplane.Configuration
 	}
 	generateReturns struct {
-		result1 []byte
+		result1 []file.File
 	}
 	generateReturnsOnCall map[int]struct {
-		result1 []byte
+		result1 []file.File
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeGenerator) Generate(arg1 dataplane.Configuration) []byte {
+func (fake *FakeGenerator) Generate(arg1 dataplane.Configuration) []file.File {
 	fake.generateMutex.Lock()
 	ret, specificReturn := fake.generateReturnsOnCall[len(fake.generateArgsForCall)]
 	fake.generateArgsForCall = append(fake.generateArgsForCall, struct {
@@ -49,7 +50,7 @@ func (fake *FakeGenerator) GenerateCallCount() int {
 	return len(fake.generateArgsForCall)
 }
 
-func (fake *FakeGenerator) GenerateCalls(stub func(dataplane.Configuration) []byte) {
+func (fake *FakeGenerator) GenerateCalls(stub func(dataplane.Configuration) []file.File) {
 	fake.generateMutex.Lock()
 	defer fake.generateMutex.Unlock()
 	fake.GenerateStub = stub
@@ -62,26 +63,26 @@ func (fake *FakeGenerator) GenerateArgsForCall(i int) dataplane.Configuration {
 	return argsForCall.arg1
 }
 
-func (fake *FakeGenerator) GenerateReturns(result1 []byte) {
+func (fake *FakeGenerator) GenerateReturns(result1 []file.File) {
 	fake.generateMutex.Lock()
 	defer fake.generateMutex.Unlock()
 	fake.GenerateStub = nil
 	fake.generateReturns = struct {
-		result1 []byte
+		result1 []file.File
 	}{result1}
 }
 
-func (fake *FakeGenerator) GenerateReturnsOnCall(i int, result1 []byte) {
+func (fake *FakeGenerator) GenerateReturnsOnCall(i int, result1 []file.File) {
 	fake.generateMutex.Lock()
 	defer fake.generateMutex.Unlock()
 	fake.GenerateStub = nil
 	if fake.generateReturnsOnCall == nil {
 		fake.generateReturnsOnCall = make(map[int]struct {
-			result1 []byte
+			result1 []file.File
 		})
 	}
 	fake.generateReturnsOnCall[i] = struct {
-		result1 []byte
+		result1 []file.File
 	}{result1}
 }
 

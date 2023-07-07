@@ -23,15 +23,13 @@ import (
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/graph"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/relationship"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/relationship/relationshipfakes"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/secrets/secretsfakes"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/validation"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/validation/validationfakes"
 )
 
 const (
-	controllerName  = "my.controller"
-	gcName          = "test-class"
-	certificatePath = "path/to/cert"
+	controllerName = "my.controller"
+	gcName         = "test-class"
 )
 
 func createRoute(
@@ -106,7 +104,7 @@ func createGateway(name string) *v1beta1.Gateway {
 	}
 }
 
-func createGatewayWithTLSListener(name, certNs string) *v1beta1.Gateway {
+func createGatewayWithTLSListener(name string, tlsSecret *apiv1.Secret) *v1beta1.Gateway {
 	gw := createGateway(name)
 
 	l := v1beta1.Listener{
@@ -119,8 +117,8 @@ func createGatewayWithTLSListener(name, certNs string) *v1beta1.Gateway {
 			CertificateRefs: []v1beta1.SecretObjectReference{
 				{
 					Kind:      (*v1beta1.Kind)(helpers.GetPointer("Secret")),
-					Name:      "secret",
-					Namespace: (*v1beta1.Namespace)(helpers.GetPointer(certNs)),
+					Name:      v1beta1.ObjectName(tlsSecret.Name),
+					Namespace: (*v1beta1.Namespace)(&tlsSecret.Namespace),
 				},
 			},
 		},
@@ -189,6 +187,56 @@ func createScheme() *runtime.Scheme {
 	return scheme
 }
 
+var (
+	cert = []byte(`-----BEGIN CERTIFICATE-----
+MIIDLjCCAhYCCQDAOF9tLsaXWjANBgkqhkiG9w0BAQsFADBaMQswCQYDVQQGEwJV
+UzELMAkGA1UECAwCQ0ExITAfBgNVBAoMGEludGVybmV0IFdpZGdpdHMgUHR5IEx0
+ZDEbMBkGA1UEAwwSY2FmZS5leGFtcGxlLmNvbSAgMB4XDTE4MDkxMjE2MTUzNVoX
+DTIzMDkxMTE2MTUzNVowWDELMAkGA1UEBhMCVVMxCzAJBgNVBAgMAkNBMSEwHwYD
+VQQKDBhJbnRlcm5ldCBXaWRnaXRzIFB0eSBMdGQxGTAXBgNVBAMMEGNhZmUuZXhh
+bXBsZS5jb20wggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQCp6Kn7sy81
+p0juJ/cyk+vCAmlsfjtFM2muZNK0KtecqG2fjWQb55xQ1YFA2XOSwHAYvSdwI2jZ
+ruW8qXXCL2rb4CZCFxwpVECrcxdjm3teViRXVsYImmJHPPSyQgpiobs9x7DlLc6I
+BA0ZjUOyl0PqG9SJexMV73WIIa5rDVSF2r4kSkbAj4Dcj7LXeFlVXH2I5XwXCptC
+n67JCg42f+k8wgzcRVp8XZkZWZVjwq9RUKDXmFB2YyN1XEWdZ0ewRuKYUJlsm692
+skOrKQj0vkoPn41EE/+TaVEpqLTRoUY3rzg7DkdzfdBizFO2dsPNFx2CW0jXkNLv
+Ko25CZrOhXAHAgMBAAEwDQYJKoZIhvcNAQELBQADggEBAKHFCcyOjZvoHswUBMdL
+RdHIb383pWFynZq/LuUovsVA58B0Cg7BEfy5vWVVrq5RIkv4lZ81N29x21d1JH6r
+jSnQx+DXCO/TJEV5lSCUpIGzEUYaUPgRyjsM/NUdCJ8uHVhZJ+S6FA+CnOD9rn2i
+ZBePCI5rHwEXwnnl8ywij3vvQ5zHIuyBglWr/Qyui9fjPpwWUvUm4nv5SMG9zCV7
+PpuwvuatqjO1208BjfE/cZHIg8Hw9mvW9x9C+IQMIMDE7b/g6OcK7LGTLwlFxvA8
+7WjEequnayIphMhKRXVf1N349eN98Ez38fOTHTPbdJjFA/PcC+Gyme+iGt5OQdFh
+yRE=
+-----END CERTIFICATE-----`)
+	key = []byte(`-----BEGIN RSA PRIVATE KEY-----
+MIIEowIBAAKCAQEAqeip+7MvNadI7if3MpPrwgJpbH47RTNprmTStCrXnKhtn41k
+G+ecUNWBQNlzksBwGL0ncCNo2a7lvKl1wi9q2+AmQhccKVRAq3MXY5t7XlYkV1bG
+CJpiRzz0skIKYqG7Pcew5S3OiAQNGY1DspdD6hvUiXsTFe91iCGuaw1Uhdq+JEpG
+wI+A3I+y13hZVVx9iOV8FwqbQp+uyQoONn/pPMIM3EVafF2ZGVmVY8KvUVCg15hQ
+dmMjdVxFnWdHsEbimFCZbJuvdrJDqykI9L5KD5+NRBP/k2lRKai00aFGN684Ow5H
+c33QYsxTtnbDzRcdgltI15DS7yqNuQmazoVwBwIDAQABAoIBAQCPSdSYnQtSPyql
+FfVFpTOsoOYRhf8sI+ibFxIOuRauWehhJxdm5RORpAzmCLyL5VhjtJme223gLrw2
+N99EjUKb/VOmZuDsBc6oCF6QNR58dz8cnORTewcotsJR1pn1hhlnR5HqJJBJask1
+ZEnUQfcXZrL94lo9JH3E+Uqjo1FFs8xxE8woPBqjZsV7pRUZgC3LhxnwLSExyFo4
+cxb9SOG5OmAJozStFoQ2GJOes8rJ5qfdvytgg9xbLaQL/x0kpQ62BoFMBDdqOePW
+KfP5zZ6/07/vpj48yA1Q32PzobubsBLd3Kcn32jfm1E7prtWl+JeOFiOznBQFJbN
+4qPVRz5hAoGBANtWyxhNCSLu4P+XgKyckljJ6F5668fNj5CzgFRqJ09zn0TlsNro
+FTLZcxDqnR3HPYM42JERh2J/qDFZynRQo3cg3oeivUdBVGY8+FI1W0qdub/L9+yu
+edOZTQ5XmGGp6r6jexymcJim/OsB3ZnYOpOrlD7SPmBvzNLk4MF6gxbXAoGBAMZO
+0p6HbBmcP0tjFXfcKE77ImLm0sAG4uHoUx0ePj/2qrnTnOBBNE4MvgDuTJzy+caU
+k8RqmdHCbHzTe6fzYq/9it8sZ77KVN1qkbIcuc+RTxA9nNh1TjsRne74Z0j1FCLk
+hHcqH0ri7PYSKHTE8FvFCxZYdbuB84CmZihvxbpRAoGAIbjqaMYPTYuklCda5S79
+YSFJ1JzZe1Kja//tDw1zFcgVCKa31jAwciz0f/lSRq3HS1GGGmezhPVTiqLfeZqc
+R0iKbhgbOcVVkJJ3K0yAyKwPTumxKHZ6zImZS0c0am+RY9YGq5T7YrzpzcfvpiOU
+ffe3RyFT7cfCmfoOhDCtzukCgYB30oLC1RLFOrqn43vCS51zc5zoY44uBzspwwYN
+TwvP/ExWMf3VJrDjBCH+T/6sysePbJEImlzM+IwytFpANfiIXEt/48Xf60Nx8gWM
+uHyxZZx/NKtDw0V8vX1POnq2A5eiKa+8jRARYKJLYNdfDuwolxvG6bZhkPi/4EtT
+3Y18sQKBgHtKbk+7lNJVeswXE5cUG6EDUsDe/2Ua7fXp7FcjqBEoap1LSw+6TXp0
+ZgrmKE8ARzM47+EJHUviiq/nupE15g0kJW3syhpU9zZLO7ltB0KIkO9ZRcmUjo8Q
+cpLlHMAqbLJ8WYGJCkhiWxyal6hYTyWY4cVkC0xtTl/hUE9IeNKo
+-----END RSA PRIVATE KEY-----`)
+)
+
 var _ = Describe("ChangeProcessor", func() {
 	// graph outputs are large, so allow gomega to print everything on test failure
 	format.MaxLength = 0
@@ -203,35 +251,30 @@ var _ = Describe("ChangeProcessor", func() {
 					ControllerName: controllerName,
 				},
 			}
-			processor           state.ChangeProcessor
-			fakeSecretMemoryMgr *secretsfakes.FakeSecretDiskMemoryManager
+			processor state.ChangeProcessor
 		)
 
 		BeforeEach(OncePerOrdered, func() {
-			fakeSecretMemoryMgr = &secretsfakes.FakeSecretDiskMemoryManager{}
-
 			processor = state.NewChangeProcessorImpl(state.ChangeProcessorConfig{
 				GatewayCtlrName:      controllerName,
 				GatewayClassName:     gcName,
-				SecretMemoryManager:  fakeSecretMemoryMgr,
 				RelationshipCapturer: relationship.NewCapturerImpl(),
 				Logger:               zap.New(),
 				Validators:           createAlwaysValidValidators(),
 				Scheme:               createScheme(),
 			})
-
-			fakeSecretMemoryMgr.RequestReturns(certificatePath, nil)
 		})
 
 		Describe("Process gateway resources", Ordered, func() {
 			var (
-				gcUpdated                *v1beta1.GatewayClass
-				hr1, hr1Updated, hr2     *v1beta1.HTTPRoute
-				gw1, gw1Updated, gw2     *v1beta1.Gateway
-				refGrant1, refGrant2     *v1beta1.ReferenceGrant
-				expGraph                 *graph.Graph
-				expRouteHR1, expRouteHR2 *graph.Route
-				hr1Name, hr2Name         types.NamespacedName
+				gcUpdated                        *v1beta1.GatewayClass
+				diffNsTLSSecret, sameNsTLSSecret *apiv1.Secret
+				hr1, hr1Updated, hr2             *v1beta1.HTTPRoute
+				gw1, gw1Updated, gw2             *v1beta1.Gateway
+				refGrant1, refGrant2             *v1beta1.ReferenceGrant
+				expGraph                         *graph.Graph
+				expRouteHR1, expRouteHR2         *graph.Route
+				hr1Name, hr2Name                 types.NamespacedName
 			)
 			BeforeAll(func() {
 				gcUpdated = gc.DeepCopy()
@@ -256,8 +299,6 @@ var _ = Describe("ChangeProcessor", func() {
 
 				hr2 = createRoute("hr-2", "gateway-2", "bar.example.com")
 				hr2Name = types.NamespacedName{Namespace: "test", Name: "hr-2"}
-
-				gw1 = createGatewayWithTLSListener("gateway-1", "cert-ns") // cert in diff namespace than gw
 
 				refGrant1 = &v1beta1.ReferenceGrant{
 					ObjectMeta: metav1.ObjectMeta{
@@ -301,10 +342,36 @@ var _ = Describe("ChangeProcessor", func() {
 					},
 				}
 
+				sameNsTLSSecret = &apiv1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "tls-secret",
+						Namespace: "test",
+					},
+					Type: apiv1.SecretTypeTLS,
+					Data: map[string][]byte{
+						apiv1.TLSCertKey:       cert,
+						apiv1.TLSPrivateKeyKey: key,
+					},
+				}
+
+				diffNsTLSSecret = &apiv1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "different-ns-tls-secret",
+						Namespace: "cert-ns",
+					},
+					Type: apiv1.SecretTypeTLS,
+					Data: map[string][]byte{
+						apiv1.TLSCertKey:       cert,
+						apiv1.TLSPrivateKeyKey: key,
+					},
+				}
+
+				gw1 = createGatewayWithTLSListener("gateway-1", diffNsTLSSecret) // cert in diff namespace than gw
+
 				gw1Updated = gw1.DeepCopy()
 				gw1Updated.Generation++
 
-				gw2 = createGatewayWithTLSListener("gateway-2", "test")
+				gw2 = createGatewayWithTLSListener("gateway-2", sameNsTLSSecret)
 			})
 			BeforeEach(func() {
 				expRouteHR1 = &graph.Route{
@@ -391,7 +458,7 @@ var _ = Describe("ChangeProcessor", func() {
 								Routes: map[types.NamespacedName]*graph.Route{
 									{Namespace: "test", Name: "hr-1"}: expRouteHR1,
 								},
-								SecretPath: "path/to/cert",
+								ResolvedSecret: helpers.GetPointer(client.ObjectKeyFromObject(diffNsTLSSecret)),
 							},
 						},
 						Valid: true,
@@ -400,11 +467,12 @@ var _ = Describe("ChangeProcessor", func() {
 					Routes: map[types.NamespacedName]*graph.Route{
 						{Namespace: "test", Name: "hr-1"}: expRouteHR1,
 					},
+					ReferencedSecrets: map[types.NamespacedName]*graph.Secret{},
 				}
 			})
 
 			When("no upsert has occurred", func() {
-				It("returns empty graph", func() {
+				It("returns nil graph", func() {
 					changed, graphCfg := processor.Process()
 					Expect(changed).To(BeFalse())
 					Expect(graphCfg).To(BeNil())
@@ -418,7 +486,16 @@ var _ = Describe("ChangeProcessor", func() {
 
 							changed, graphCfg := processor.Process()
 							Expect(changed).To(BeTrue())
-							Expect(graphCfg).To(Equal(&graph.Graph{}))
+							Expect(helpers.Diff(&graph.Graph{}, graphCfg)).To(BeEmpty())
+						})
+					})
+					When("the different namespace TLS Secret is upserted", func() {
+						It("returns nil graph", func() {
+							processor.CaptureUpsertChange(diffNsTLSSecret)
+
+							changed, graphCfg := processor.Process()
+							Expect(changed).To(BeFalse())
+							Expect(graphCfg).To(BeNil())
 						})
 					})
 					When("the first Gateway is upserted", func() {
@@ -446,6 +523,8 @@ var _ = Describe("ChangeProcessor", func() {
 								FailedCondition:   conditions.NewRouteInvalidGateway(),
 							}
 
+							expGraph.ReferencedSecrets = nil
+
 							changed, graphCfg := processor.Process()
 							Expect(changed).To(BeTrue())
 							Expect(helpers.Diff(expGraph, graphCfg)).To(BeEmpty())
@@ -463,7 +542,7 @@ var _ = Describe("ChangeProcessor", func() {
 						Valid:  false,
 						Routes: map[types.NamespacedName]*graph.Route{},
 						Conditions: conditions.NewListenerRefNotPermitted(
-							"Certificate ref to secret cert-ns/secret not permitted by any ReferenceGrant",
+							"Certificate ref to secret cert-ns/different-ns-tls-secret not permitted by any ReferenceGrant",
 						),
 					}
 
@@ -483,6 +562,8 @@ var _ = Describe("ChangeProcessor", func() {
 						),
 					}
 
+					expGraph.ReferencedSecrets = nil
+
 					changed, graphCfg := processor.Process()
 					Expect(changed).To(BeTrue())
 					Expect(helpers.Diff(expGraph, graphCfg)).To(BeEmpty())
@@ -498,6 +579,9 @@ var _ = Describe("ChangeProcessor", func() {
 							"Backend ref to Service service-ns/service not permitted by any ReferenceGrant",
 						),
 					}
+					expGraph.ReferencedSecrets[client.ObjectKeyFromObject(diffNsTLSSecret)] = &graph.Secret{
+						Source: diffNsTLSSecret,
+					}
 
 					changed, graphCfg := processor.Process()
 					Expect(changed).To(BeTrue())
@@ -509,13 +593,17 @@ var _ = Describe("ChangeProcessor", func() {
 				It("returns updated graph", func() {
 					processor.CaptureUpsertChange(refGrant2)
 
+					expGraph.ReferencedSecrets[client.ObjectKeyFromObject(diffNsTLSSecret)] = &graph.Secret{
+						Source: diffNsTLSSecret,
+					}
+
 					changed, graphCfg := processor.Process()
 					Expect(changed).To(BeTrue())
 					Expect(helpers.Diff(expGraph, graphCfg)).To(BeEmpty())
 				})
 			})
 			When("the first HTTPRoute without a generation changed is processed", func() {
-				It("returns empty graph", func() {
+				It("returns nil graph", func() {
 					hr1UpdatedSameGen := hr1.DeepCopy()
 					// hr1UpdatedSameGen.Generation has not been changed
 					processor.CaptureUpsertChange(hr1UpdatedSameGen)
@@ -531,6 +619,9 @@ var _ = Describe("ChangeProcessor", func() {
 
 					expGraph.Gateway.Listeners["listener-443-1"].Routes[hr1Name].Source.Generation = hr1Updated.Generation
 					expGraph.Gateway.Listeners["listener-80-1"].Routes[hr1Name].Source.Generation = hr1Updated.Generation
+					expGraph.ReferencedSecrets[client.ObjectKeyFromObject(diffNsTLSSecret)] = &graph.Secret{
+						Source: diffNsTLSSecret,
+					}
 
 					changed, graphCfg := processor.Process()
 					Expect(changed).To(BeTrue())
@@ -539,7 +630,7 @@ var _ = Describe("ChangeProcessor", func() {
 				)
 			})
 			When("the first Gateway update without generation changed is processed", func() {
-				It("returns empty graph", func() {
+				It("returns nil graph", func() {
 					gwUpdatedSameGen := gw1.DeepCopy()
 					// gwUpdatedSameGen.Generation has not been changed
 					processor.CaptureUpsertChange(gwUpdatedSameGen)
@@ -554,6 +645,9 @@ var _ = Describe("ChangeProcessor", func() {
 					processor.CaptureUpsertChange(gw1Updated)
 
 					expGraph.Gateway.Source.Generation = gw1Updated.Generation
+					expGraph.ReferencedSecrets[client.ObjectKeyFromObject(diffNsTLSSecret)] = &graph.Secret{
+						Source: diffNsTLSSecret,
+					}
 
 					changed, graphCfg := processor.Process()
 					Expect(changed).To(BeTrue())
@@ -561,7 +655,7 @@ var _ = Describe("ChangeProcessor", func() {
 				})
 			})
 			When("the GatewayClass update without generation change is processed", func() {
-				It("returns empty graph", func() {
+				It("returns nil graph", func() {
 					gcUpdatedSameGen := gc.DeepCopy()
 					// gcUpdatedSameGen.Generation has not been changed
 					processor.CaptureUpsertChange(gcUpdatedSameGen)
@@ -576,6 +670,22 @@ var _ = Describe("ChangeProcessor", func() {
 					processor.CaptureUpsertChange(gcUpdated)
 
 					expGraph.GatewayClass.Source.Generation = gcUpdated.Generation
+					expGraph.ReferencedSecrets[client.ObjectKeyFromObject(diffNsTLSSecret)] = &graph.Secret{
+						Source: diffNsTLSSecret,
+					}
+
+					changed, graphCfg := processor.Process()
+					Expect(changed).To(BeTrue())
+					Expect(helpers.Diff(expGraph, graphCfg)).To(BeEmpty())
+				})
+			})
+			When("the different namespace TLS secret is upserted again", func() {
+				It("returns populated graph", func() {
+					processor.CaptureUpsertChange(diffNsTLSSecret)
+
+					expGraph.ReferencedSecrets[client.ObjectKeyFromObject(diffNsTLSSecret)] = &graph.Secret{
+						Source: diffNsTLSSecret,
+					}
 
 					changed, graphCfg := processor.Process()
 					Expect(changed).To(BeTrue())
@@ -583,7 +693,17 @@ var _ = Describe("ChangeProcessor", func() {
 				})
 			})
 			When("no changes are captured", func() {
-				It("returns empty graph", func() {
+				It("returns nil graph", func() {
+					changed, graphCfg := processor.Process()
+
+					Expect(changed).To(BeFalse())
+					Expect(graphCfg).To(BeNil())
+				})
+			})
+			When("the same namespace TLS Secret is upserted", func() {
+				It("returns nil graph", func() {
+					processor.CaptureUpsertChange(sameNsTLSSecret)
+
 					changed, graphCfg := processor.Process()
 
 					Expect(changed).To(BeFalse())
@@ -596,6 +716,9 @@ var _ = Describe("ChangeProcessor", func() {
 
 					expGraph.IgnoredGateways = map[types.NamespacedName]*v1beta1.Gateway{
 						{Namespace: "test", Name: "gateway-2"}: gw2,
+					}
+					expGraph.ReferencedSecrets[client.ObjectKeyFromObject(diffNsTLSSecret)] = &graph.Secret{
+						Source: diffNsTLSSecret,
 					}
 
 					changed, graphCfg := processor.Process()
@@ -619,6 +742,9 @@ var _ = Describe("ChangeProcessor", func() {
 						AcceptedHostnames: map[string][]string{},
 						FailedCondition:   conditions.NewTODO("Gateway is ignored"),
 					}
+					expGraph.ReferencedSecrets[client.ObjectKeyFromObject(diffNsTLSSecret)] = &graph.Secret{
+						Source: diffNsTLSSecret,
+					}
 
 					changed, graphCfg := processor.Process()
 					Expect(changed).To(BeTrue())
@@ -641,9 +767,13 @@ var _ = Describe("ChangeProcessor", func() {
 					delete(expGraph.Gateway.Listeners["listener-443-1"].Routes, hr1Name)
 					expGraph.Gateway.Listeners["listener-80-1"].Routes[hr2Name] = expRouteHR2
 					expGraph.Gateway.Listeners["listener-443-1"].Routes[hr2Name] = expRouteHR2
-
 					delete(expGraph.Routes, hr1Name)
 					expGraph.Routes[hr2Name] = expRouteHR2
+					sameNsTLSSecretRef := helpers.GetPointer(client.ObjectKeyFromObject(sameNsTLSSecret))
+					expGraph.Gateway.Listeners["listener-443-1"].ResolvedSecret = sameNsTLSSecretRef
+					expGraph.ReferencedSecrets[client.ObjectKeyFromObject(sameNsTLSSecret)] = &graph.Secret{
+						Source: sameNsTLSSecret,
+					}
 
 					changed, graphCfg := processor.Process()
 					Expect(changed).To(BeTrue())
@@ -665,6 +795,11 @@ var _ = Describe("ChangeProcessor", func() {
 					delete(expGraph.Gateway.Listeners["listener-80-1"].Routes, hr1Name)
 					delete(expGraph.Gateway.Listeners["listener-443-1"].Routes, hr1Name)
 					expGraph.Routes = map[types.NamespacedName]*graph.Route{}
+					sameNsTLSSecretRef := helpers.GetPointer(client.ObjectKeyFromObject(sameNsTLSSecret))
+					expGraph.Gateway.Listeners["listener-443-1"].ResolvedSecret = sameNsTLSSecretRef
+					expGraph.ReferencedSecrets[client.ObjectKeyFromObject(sameNsTLSSecret)] = &graph.Secret{
+						Source: sameNsTLSSecret,
+					}
 
 					changed, graphCfg := processor.Process()
 					Expect(changed).To(BeTrue())
@@ -684,6 +819,7 @@ var _ = Describe("ChangeProcessor", func() {
 						Conditions: conditions.NewGatewayInvalid("GatewayClass doesn't exist"),
 					}
 					expGraph.Routes = map[types.NamespacedName]*graph.Route{}
+					expGraph.ReferencedSecrets = nil
 
 					changed, graphCfg := processor.Process()
 					Expect(changed).To(BeTrue())
@@ -691,31 +827,27 @@ var _ = Describe("ChangeProcessor", func() {
 				})
 			})
 			When("the second Gateway is deleted", func() {
-				It("returns updated graph", func() {
+				It("returns empty graph", func() {
 					processor.CaptureDeleteChange(
 						&v1beta1.Gateway{},
 						types.NamespacedName{Namespace: "test", Name: "gateway-2"},
 					)
 
-					expGraph := &graph.Graph{}
-
 					changed, graphCfg := processor.Process()
 					Expect(changed).To(BeTrue())
-					Expect(helpers.Diff(expGraph, graphCfg)).To(BeEmpty())
+					Expect(helpers.Diff(&graph.Graph{}, graphCfg)).To(BeEmpty())
 				})
 			})
 			When("the first HTTPRoute is deleted", func() {
-				It("returns updated graph", func() {
+				It("returns empty graph", func() {
 					processor.CaptureDeleteChange(
 						&v1beta1.HTTPRoute{},
 						types.NamespacedName{Namespace: "test", Name: "hr-1"},
 					)
 
-					expGraph := &graph.Graph{}
-
 					changed, graphCfg := processor.Process()
 					Expect(changed).To(BeTrue())
-					Expect(helpers.Diff(expGraph, graphCfg)).To(BeEmpty())
+					Expect(helpers.Diff(&graph.Graph{}, graphCfg)).To(BeEmpty())
 				})
 			})
 		})
@@ -1109,23 +1241,22 @@ var _ = Describe("ChangeProcessor", func() {
 			processor                                         *state.ChangeProcessorImpl
 			fakeRelationshipCapturer                          *relationshipfakes.FakeCapturer
 			gcNsName, gwNsName, hrNsName, hr2NsName, rgNsName types.NamespacedName
-			svcNsName, sliceNsName                            types.NamespacedName
+			svcNsName, sliceNsName, secretNsName              types.NamespacedName
 			gc, gcUpdated                                     *v1beta1.GatewayClass
 			gw1, gw1Updated, gw2                              *v1beta1.Gateway
 			hr1, hr1Updated, hr2                              *v1beta1.HTTPRoute
 			rg1, rg1Updated, rg2                              *v1beta1.ReferenceGrant
 			svc                                               *apiv1.Service
 			slice                                             *discoveryV1.EndpointSlice
+			secret                                            *apiv1.Secret
 		)
 
 		BeforeEach(OncePerOrdered, func() {
-			fakeSecretMemoryMgr := &secretsfakes.FakeSecretDiskMemoryManager{}
 			fakeRelationshipCapturer = &relationshipfakes.FakeCapturer{}
 
 			processor = state.NewChangeProcessorImpl(state.ChangeProcessorConfig{
 				GatewayCtlrName:      "test.controller",
 				GatewayClassName:     "my-class",
-				SecretMemoryManager:  fakeSecretMemoryMgr,
 				RelationshipCapturer: fakeRelationshipCapturer,
 				Validators:           createAlwaysValidValidators(),
 				Scheme:               createScheme(),
@@ -1209,6 +1340,15 @@ var _ = Describe("ChangeProcessor", func() {
 
 			rg2 = rg1.DeepCopy()
 			rg2.Name = "rg-2"
+
+			secretNsName = types.NamespacedName{Namespace: "test", Name: "test-secret"}
+
+			secret = &apiv1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: secretNsName.Namespace,
+					Name:      secretNsName.Name,
+				},
+			}
 		})
 		// Changing change - a change that makes processor.Process() report changed
 		// Non-changing change - a change that doesn't do that
@@ -1300,6 +1440,8 @@ var _ = Describe("ChangeProcessor", func() {
 			})
 		})
 		Describe("Multiple Kubernetes API resource changes", Ordered, func() {
+			// Note: because secret resource is not used by the real relationship.Capturer, it is not used
+			// in the same way as service and endpoint slice in the tests below.
 			It("should report changed after multiple Upserts of related resources", func() {
 				fakeRelationshipCapturer.ExistsReturns(true)
 				processor.CaptureUpsertChange(svc)
@@ -1313,6 +1455,8 @@ var _ = Describe("ChangeProcessor", func() {
 				fakeRelationshipCapturer.ExistsReturns(false)
 				processor.CaptureUpsertChange(svc)
 				processor.CaptureUpsertChange(slice)
+
+				processor.CaptureUpsertChange(secret)
 
 				changed, _ := processor.Process()
 				Expect(changed).To(BeFalse())
@@ -1328,6 +1472,7 @@ var _ = Describe("ChangeProcessor", func() {
 					fakeRelationshipCapturer.ExistsReturns(false)
 					processor.CaptureUpsertChange(svc)
 					processor.CaptureUpsertChange(slice)
+					processor.CaptureUpsertChange(secret)
 
 					changed, _ := processor.Process()
 					Expect(changed).To(BeTrue())
@@ -1344,6 +1489,7 @@ var _ = Describe("ChangeProcessor", func() {
 					fakeRelationshipCapturer.ExistsReturns(false)
 					processor.CaptureUpsertChange(svc)
 					processor.CaptureUpsertChange(slice)
+					processor.CaptureUpsertChange(secret)
 
 					changed, _ := processor.Process()
 					Expect(changed).To(BeTrue())
@@ -1380,6 +1526,7 @@ var _ = Describe("ChangeProcessor", func() {
 				fakeRelationshipCapturer.ExistsReturns(false)
 				processor.CaptureUpsertChange(svc)
 				processor.CaptureUpsertChange(slice)
+				processor.CaptureUpsertChange(secret)
 
 				changed, _ := processor.Process()
 				Expect(changed).To(BeFalse())
@@ -1398,6 +1545,7 @@ var _ = Describe("ChangeProcessor", func() {
 					processor.CaptureUpsertChange(gw1)
 					processor.CaptureUpsertChange(hr1)
 					processor.CaptureUpsertChange(rg1)
+					processor.CaptureUpsertChange(secret)
 
 					changed, _ := processor.Process()
 					Expect(changed).To(BeTrue())
@@ -1416,6 +1564,7 @@ var _ = Describe("ChangeProcessor", func() {
 					// these are non-changing changes
 					processor.CaptureUpsertChange(svc)
 					processor.CaptureUpsertChange(slice)
+					processor.CaptureUpsertChange(secret)
 
 					changed, _ := processor.Process()
 					Expect(changed).To(BeTrue())
@@ -1435,6 +1584,7 @@ var _ = Describe("ChangeProcessor", func() {
 					processor.CaptureUpsertChange(gw1Updated)
 					processor.CaptureUpsertChange(hr1Updated)
 					processor.CaptureUpsertChange(rg1Updated)
+					processor.CaptureUpsertChange(secret)
 
 					changed, _ := processor.Process()
 					Expect(changed).To(BeTrue())
@@ -1445,9 +1595,8 @@ var _ = Describe("ChangeProcessor", func() {
 
 	Describe("Webhook validation cases", Ordered, func() {
 		var (
-			processor           state.ChangeProcessor
-			fakeEventRecorder   *record.FakeRecorder
-			fakeSecretMemoryMgr *secretsfakes.FakeSecretDiskMemoryManager
+			processor         state.ChangeProcessor
+			fakeEventRecorder *record.FakeRecorder
 
 			gc *v1beta1.GatewayClass
 
@@ -1456,13 +1605,11 @@ var _ = Describe("ChangeProcessor", func() {
 			hr, hrInvalid      *v1beta1.HTTPRoute
 		)
 		BeforeAll(func() {
-			fakeSecretMemoryMgr = &secretsfakes.FakeSecretDiskMemoryManager{}
 			fakeEventRecorder = record.NewFakeRecorder(2 /* number of buffered events */)
 
 			processor = state.NewChangeProcessorImpl(state.ChangeProcessorConfig{
 				GatewayCtlrName:      controllerName,
 				GatewayClassName:     gcName,
-				SecretMemoryManager:  fakeSecretMemoryMgr,
 				RelationshipCapturer: relationship.NewCapturerImpl(),
 				Logger:               zap.New(),
 				Validators:           createAlwaysValidValidators(),
@@ -1631,13 +1778,11 @@ var _ = Describe("ChangeProcessor", func() {
 			var processor state.ChangeProcessor
 
 			BeforeEach(func() {
-				fakeSecretMemoryMgr = &secretsfakes.FakeSecretDiskMemoryManager{}
 				fakeEventRecorder = record.NewFakeRecorder(1 /* number of buffered events */)
 
 				processor = state.NewChangeProcessorImpl(state.ChangeProcessorConfig{
 					GatewayCtlrName:      controllerName,
 					GatewayClassName:     gcName,
-					SecretMemoryManager:  fakeSecretMemoryMgr,
 					RelationshipCapturer: relationship.NewCapturerImpl(),
 					Logger:               zap.New(),
 					Validators:           createAlwaysValidValidators(),
@@ -1763,18 +1908,15 @@ var _ = Describe("ChangeProcessor", func() {
 	Describe("Edge cases with panic", func() {
 		var (
 			processor                state.ChangeProcessor
-			fakeSecretMemoryMgr      *secretsfakes.FakeSecretDiskMemoryManager
 			fakeRelationshipCapturer *relationshipfakes.FakeCapturer
 		)
 
 		BeforeEach(func() {
-			fakeSecretMemoryMgr = &secretsfakes.FakeSecretDiskMemoryManager{}
 			fakeRelationshipCapturer = &relationshipfakes.FakeCapturer{}
 
 			processor = state.NewChangeProcessorImpl(state.ChangeProcessorConfig{
 				GatewayCtlrName:      "test.controller",
 				GatewayClassName:     "my-class",
-				SecretMemoryManager:  fakeSecretMemoryMgr,
 				RelationshipCapturer: fakeRelationshipCapturer,
 				Validators:           createAlwaysValidValidators(),
 				Scheme:               createScheme(),

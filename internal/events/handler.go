@@ -5,9 +5,6 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
-	apiv1 "k8s.io/api/core/v1"
-	discoveryV1 "k8s.io/api/discovery/v1"
-	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/config"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/file"
@@ -15,7 +12,6 @@ import (
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/dataplane"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/resolver"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/secrets"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/status"
 )
 
@@ -32,10 +28,6 @@ type EventHandler interface {
 type EventHandlerConfig struct {
 	// Processor is the state ChangeProcessor.
 	Processor state.ChangeProcessor
-	// SecretStore is the state SecretStore.
-	SecretStore secrets.SecretStore
-	// SecretMemoryManager is the state SecretMemoryManager.
-	SecretMemoryManager secrets.SecretDiskMemoryManager
 	// ServiceResolver resolves Services to Endpoints.
 	ServiceResolver resolver.ServiceResolver
 	// Generator is the nginx config Generator.
@@ -69,9 +61,9 @@ func (h *EventHandlerImpl) HandleEventBatch(ctx context.Context, batch EventBatc
 	for _, event := range batch {
 		switch e := event.(type) {
 		case *UpsertEvent:
-			h.propagateUpsert(e)
+			h.cfg.Processor.CaptureUpsertChange(e.Resource)
 		case *DeleteEvent:
-			h.propagateDelete(e)
+			h.cfg.Processor.CaptureDeleteChange(e.Type, e.NamespacedName)
 		default:
 			panic(fmt.Errorf("unknown event type %T", e))
 		}
@@ -96,74 +88,15 @@ func (h *EventHandlerImpl) HandleEventBatch(ctx context.Context, batch EventBatc
 }
 
 func (h *EventHandlerImpl) updateNginx(ctx context.Context, conf dataplane.Configuration) error {
-	// Write all secrets (nuke and pave).
-	// This will remove all secrets in the secrets directory before writing the requested secrets.
-	// FIXME(kate-osborn): We may want to rethink this approach in the future and write and remove secrets individually.
-	// https://github.com/nginxinc/nginx-kubernetes-gateway/issues/561
-	err := h.cfg.SecretMemoryManager.WriteAllRequestedSecrets()
-	if err != nil {
-		return err
+	files := h.cfg.Generator.Generate(conf)
+
+	if err := h.cfg.NginxFileMgr.ReplaceFiles(files); err != nil {
+		return fmt.Errorf("failed to replace NGINX configuration files: %w", err)
 	}
 
-	cfg := h.cfg.Generator.Generate(conf)
-
-	// For now, we keep all http servers and upstreams in one config file.
-	// We might rethink that. For example, we can write each server to its file
-	// or group servers in some way.
-	err = h.cfg.NginxFileMgr.WriteHTTPConfig("http", cfg)
-	if err != nil {
-		return err
+	if err := h.cfg.NginxRuntimeMgr.Reload(ctx); err != nil {
+		return fmt.Errorf("failed to reload NGINX: %w", err)
 	}
 
-	return h.cfg.NginxRuntimeMgr.Reload(ctx)
-}
-
-func (h *EventHandlerImpl) propagateUpsert(e *UpsertEvent) {
-	switch r := e.Resource.(type) {
-	case *v1beta1.GatewayClass:
-		h.cfg.Processor.CaptureUpsertChange(r)
-	case *v1beta1.Gateway:
-		h.cfg.Processor.CaptureUpsertChange(r)
-	case *v1beta1.HTTPRoute:
-		h.cfg.Processor.CaptureUpsertChange(r)
-	case *v1beta1.ReferenceGrant:
-		h.cfg.Processor.CaptureUpsertChange(r)
-	case *apiv1.Service:
-		h.cfg.Processor.CaptureUpsertChange(r)
-	case *apiv1.Namespace:
-		h.cfg.Processor.CaptureUpsertChange(r)
-	case *apiv1.Secret:
-		// FIXME(kate-osborn): need to handle certificate rotation
-		// https://github.com/nginxinc/nginx-kubernetes-gateway/issues/553
-		h.cfg.SecretStore.Upsert(r)
-	case *discoveryV1.EndpointSlice:
-		h.cfg.Processor.CaptureUpsertChange(r)
-	default:
-		panic(fmt.Errorf("unknown resource type %T", e.Resource))
-	}
-}
-
-func (h *EventHandlerImpl) propagateDelete(e *DeleteEvent) {
-	switch e.Type.(type) {
-	case *v1beta1.GatewayClass:
-		h.cfg.Processor.CaptureDeleteChange(e.Type, e.NamespacedName)
-	case *v1beta1.Gateway:
-		h.cfg.Processor.CaptureDeleteChange(e.Type, e.NamespacedName)
-	case *v1beta1.HTTPRoute:
-		h.cfg.Processor.CaptureDeleteChange(e.Type, e.NamespacedName)
-	case *v1beta1.ReferenceGrant:
-		h.cfg.Processor.CaptureDeleteChange(e.Type, e.NamespacedName)
-	case *apiv1.Service:
-		h.cfg.Processor.CaptureDeleteChange(e.Type, e.NamespacedName)
-	case *apiv1.Namespace:
-		h.cfg.Processor.CaptureDeleteChange(e.Type, e.NamespacedName)
-	case *apiv1.Secret:
-		// FIXME(kate-osborn): make sure that affected servers are updated
-		// https://github.com/nginxinc/nginx-kubernetes-gateway/issues/553
-		h.cfg.SecretStore.Delete(e.NamespacedName)
-	case *discoveryV1.EndpointSlice:
-		h.cfg.Processor.CaptureDeleteChange(e.Type, e.NamespacedName)
-	default:
-		panic(fmt.Errorf("unknown resource type %T", e.Type))
-	}
+	return nil
 }

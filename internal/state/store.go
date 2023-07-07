@@ -114,6 +114,9 @@ type changeTrackingUpdaterObjectTypeCfg struct {
 	trackUpsertDelete bool
 }
 
+// triggerStateChangeFunc triggers a change to the changeTrackingUpdater's store for the given object.
+type triggerStateChangeFunc func(objType client.Object, nsname types.NamespacedName) bool
+
 // changeTrackingUpdater is an Updater that tracks changes to the cluster state in the multiObjectStore.
 //
 // It only works with objects with the GVKs registered in changeTrackingUpdaterObjectTypeCfg. Otherwise, it panics.
@@ -123,9 +126,11 @@ type changeTrackingUpdaterObjectTypeCfg struct {
 // that its generation changed.
 // - An object is upserted or deleted, and it is related to another object, based on the decision by
 // the relationship capturer.
+// - An object is upserted or deleted and triggerStateChange returns true for the object.
 type changeTrackingUpdater struct {
-	store    *multiObjectStore
-	capturer relationship.Capturer
+	store              *multiObjectStore
+	capturer           relationship.Capturer
+	triggerStateChange triggerStateChangeFunc
 
 	extractGVK              extractGVKFunc
 	supportedGVKs           gvkList
@@ -137,6 +142,7 @@ type changeTrackingUpdater struct {
 
 func newChangeTrackingUpdater(
 	capturer relationship.Capturer,
+	triggerStateChange triggerStateChangeFunc,
 	extractGVK extractGVKFunc,
 	objectTypeCfgs []changeTrackingUpdaterObjectTypeCfg,
 ) *changeTrackingUpdater {
@@ -168,6 +174,7 @@ func newChangeTrackingUpdater(
 		trackedUpsertDeleteGVKs: trackedUpsertDeleteGVKs,
 		persistedGVKs:           persistedGVKs,
 		capturer:                capturer,
+		triggerStateChange:      triggerStateChange,
 	}
 }
 
@@ -202,7 +209,14 @@ func (s *changeTrackingUpdater) Upsert(obj client.Object) {
 
 	relationshipExists := s.capturer.Exists(obj, client.ObjectKeyFromObject(obj))
 
-	s.changed = s.changed || changingUpsert || relationshipExisted || relationshipExists
+	forceChanged := s.triggerStateChange(obj, client.ObjectKeyFromObject(obj))
+
+	// FIXME(pleshakov): Check generation in all cases to minimize the number of Graph regeneration.
+	// s.changed can be true even if the generation of the object did not change, because
+	// capturer and triggerStateChange don't take the generation into account.
+	// See https://github.com/nginxinc/nginx-kubernetes-gateway/issues/825
+
+	s.changed = s.changed || changingUpsert || relationshipExisted || relationshipExists || forceChanged
 }
 
 func (s *changeTrackingUpdater) delete(objType client.Object, nsname types.NamespacedName) (changed bool) {
@@ -226,7 +240,9 @@ func (s *changeTrackingUpdater) Delete(objType client.Object, nsname types.Names
 
 	changingDelete := s.delete(objType, nsname)
 
-	s.changed = s.changed || changingDelete || s.capturer.Exists(objType, nsname)
+	forceChanged := s.triggerStateChange(objType, nsname)
+
+	s.changed = s.changed || changingDelete || s.capturer.Exists(objType, nsname) || forceChanged
 
 	s.capturer.Remove(objType, nsname)
 }

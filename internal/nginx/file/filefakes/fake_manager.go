@@ -8,40 +8,38 @@ import (
 )
 
 type FakeManager struct {
-	WriteHTTPConfigStub        func(string, []byte) error
-	writeHTTPConfigMutex       sync.RWMutex
-	writeHTTPConfigArgsForCall []struct {
-		arg1 string
-		arg2 []byte
+	ReplaceFilesStub        func([]file.File) error
+	replaceFilesMutex       sync.RWMutex
+	replaceFilesArgsForCall []struct {
+		arg1 []file.File
 	}
-	writeHTTPConfigReturns struct {
+	replaceFilesReturns struct {
 		result1 error
 	}
-	writeHTTPConfigReturnsOnCall map[int]struct {
+	replaceFilesReturnsOnCall map[int]struct {
 		result1 error
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeManager) WriteHTTPConfig(arg1 string, arg2 []byte) error {
-	var arg2Copy []byte
-	if arg2 != nil {
-		arg2Copy = make([]byte, len(arg2))
-		copy(arg2Copy, arg2)
+func (fake *FakeManager) ReplaceFiles(arg1 []file.File) error {
+	var arg1Copy []file.File
+	if arg1 != nil {
+		arg1Copy = make([]file.File, len(arg1))
+		copy(arg1Copy, arg1)
 	}
-	fake.writeHTTPConfigMutex.Lock()
-	ret, specificReturn := fake.writeHTTPConfigReturnsOnCall[len(fake.writeHTTPConfigArgsForCall)]
-	fake.writeHTTPConfigArgsForCall = append(fake.writeHTTPConfigArgsForCall, struct {
-		arg1 string
-		arg2 []byte
-	}{arg1, arg2Copy})
-	stub := fake.WriteHTTPConfigStub
-	fakeReturns := fake.writeHTTPConfigReturns
-	fake.recordInvocation("WriteHTTPConfig", []interface{}{arg1, arg2Copy})
-	fake.writeHTTPConfigMutex.Unlock()
+	fake.replaceFilesMutex.Lock()
+	ret, specificReturn := fake.replaceFilesReturnsOnCall[len(fake.replaceFilesArgsForCall)]
+	fake.replaceFilesArgsForCall = append(fake.replaceFilesArgsForCall, struct {
+		arg1 []file.File
+	}{arg1Copy})
+	stub := fake.ReplaceFilesStub
+	fakeReturns := fake.replaceFilesReturns
+	fake.recordInvocation("ReplaceFiles", []interface{}{arg1Copy})
+	fake.replaceFilesMutex.Unlock()
 	if stub != nil {
-		return stub(arg1, arg2)
+		return stub(arg1)
 	}
 	if specificReturn {
 		return ret.result1
@@ -49,44 +47,44 @@ func (fake *FakeManager) WriteHTTPConfig(arg1 string, arg2 []byte) error {
 	return fakeReturns.result1
 }
 
-func (fake *FakeManager) WriteHTTPConfigCallCount() int {
-	fake.writeHTTPConfigMutex.RLock()
-	defer fake.writeHTTPConfigMutex.RUnlock()
-	return len(fake.writeHTTPConfigArgsForCall)
+func (fake *FakeManager) ReplaceFilesCallCount() int {
+	fake.replaceFilesMutex.RLock()
+	defer fake.replaceFilesMutex.RUnlock()
+	return len(fake.replaceFilesArgsForCall)
 }
 
-func (fake *FakeManager) WriteHTTPConfigCalls(stub func(string, []byte) error) {
-	fake.writeHTTPConfigMutex.Lock()
-	defer fake.writeHTTPConfigMutex.Unlock()
-	fake.WriteHTTPConfigStub = stub
+func (fake *FakeManager) ReplaceFilesCalls(stub func([]file.File) error) {
+	fake.replaceFilesMutex.Lock()
+	defer fake.replaceFilesMutex.Unlock()
+	fake.ReplaceFilesStub = stub
 }
 
-func (fake *FakeManager) WriteHTTPConfigArgsForCall(i int) (string, []byte) {
-	fake.writeHTTPConfigMutex.RLock()
-	defer fake.writeHTTPConfigMutex.RUnlock()
-	argsForCall := fake.writeHTTPConfigArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2
+func (fake *FakeManager) ReplaceFilesArgsForCall(i int) []file.File {
+	fake.replaceFilesMutex.RLock()
+	defer fake.replaceFilesMutex.RUnlock()
+	argsForCall := fake.replaceFilesArgsForCall[i]
+	return argsForCall.arg1
 }
 
-func (fake *FakeManager) WriteHTTPConfigReturns(result1 error) {
-	fake.writeHTTPConfigMutex.Lock()
-	defer fake.writeHTTPConfigMutex.Unlock()
-	fake.WriteHTTPConfigStub = nil
-	fake.writeHTTPConfigReturns = struct {
+func (fake *FakeManager) ReplaceFilesReturns(result1 error) {
+	fake.replaceFilesMutex.Lock()
+	defer fake.replaceFilesMutex.Unlock()
+	fake.ReplaceFilesStub = nil
+	fake.replaceFilesReturns = struct {
 		result1 error
 	}{result1}
 }
 
-func (fake *FakeManager) WriteHTTPConfigReturnsOnCall(i int, result1 error) {
-	fake.writeHTTPConfigMutex.Lock()
-	defer fake.writeHTTPConfigMutex.Unlock()
-	fake.WriteHTTPConfigStub = nil
-	if fake.writeHTTPConfigReturnsOnCall == nil {
-		fake.writeHTTPConfigReturnsOnCall = make(map[int]struct {
+func (fake *FakeManager) ReplaceFilesReturnsOnCall(i int, result1 error) {
+	fake.replaceFilesMutex.Lock()
+	defer fake.replaceFilesMutex.Unlock()
+	fake.ReplaceFilesStub = nil
+	if fake.replaceFilesReturnsOnCall == nil {
+		fake.replaceFilesReturnsOnCall = make(map[int]struct {
 			result1 error
 		})
 	}
-	fake.writeHTTPConfigReturnsOnCall[i] = struct {
+	fake.replaceFilesReturnsOnCall[i] = struct {
 		result1 error
 	}{result1}
 }
@@ -94,8 +92,8 @@ func (fake *FakeManager) WriteHTTPConfigReturnsOnCall(i int, result1 error) {
 func (fake *FakeManager) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.writeHTTPConfigMutex.RLock()
-	defer fake.writeHTTPConfigMutex.RUnlock()
+	fake.replaceFilesMutex.RLock()
+	defer fake.replaceFilesMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value
