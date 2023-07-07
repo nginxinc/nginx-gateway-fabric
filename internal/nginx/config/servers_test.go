@@ -41,14 +41,14 @@ func TestExecuteServers(t *testing.T) {
 			{
 				Hostname: "example.com",
 				SSL: &dataplane.SSL{
-					CertificatePath: "cert-path",
+					KeyPairID: "test-keypair",
 				},
 				Port: 8443,
 			},
 			{
 				Hostname: "cafe.example.com",
 				SSL: &dataplane.SSL{
-					CertificatePath: "cert-path",
+					KeyPairID: "test-keypair",
 				},
 				Port: 8443,
 			},
@@ -56,14 +56,14 @@ func TestExecuteServers(t *testing.T) {
 	}
 
 	expSubStrings := map[string]int{
-		"listen 8080 default_server;":     1,
-		"listen 8080;":                    2,
-		"listen 8443 ssl;":                2,
-		"listen 8443 ssl default_server;": 1,
-		"server_name example.com;":        2,
-		"server_name cafe.example.com;":   2,
-		"ssl_certificate cert-path;":      2,
-		"ssl_certificate_key cert-path;":  2,
+		"listen 8080 default_server;":                              1,
+		"listen 8080;":                                             2,
+		"listen 8443 ssl;":                                         2,
+		"listen 8443 ssl default_server;":                          1,
+		"server_name example.com;":                                 2,
+		"server_name cafe.example.com;":                            2,
+		"ssl_certificate /etc/nginx/secrets/test-keypair.pem;":     2,
+		"ssl_certificate_key /etc/nginx/secrets/test-keypair.pem;": 2,
 	}
 
 	servers := string(executeServers(conf))
@@ -165,7 +165,7 @@ func TestExecuteForDefaultServers(t *testing.T) {
 
 func TestCreateServers(t *testing.T) {
 	const (
-		certPath = "/etc/nginx/secrets/cert"
+		sslKeyPairID = "test-keypair"
 	)
 
 	hr := &v1beta1.HTTPRoute{
@@ -560,7 +560,7 @@ func TestCreateServers(t *testing.T) {
 		},
 		{
 			Hostname:  "cafe.example.com",
-			SSL:       &dataplane.SSL{CertificatePath: certPath},
+			SSL:       &dataplane.SSL{KeyPairID: sslKeyPairID},
 			PathRules: cafePathRules,
 			Port:      8443,
 		},
@@ -681,6 +681,8 @@ func TestCreateServers(t *testing.T) {
 		}
 	}
 
+	expectedPEMPath := fmt.Sprintf("/etc/nginx/secrets/%s.pem", sslKeyPairID)
+
 	expectedServers := []http.Server{
 		{
 			IsDefaultHTTP: true,
@@ -697,9 +699,12 @@ func TestCreateServers(t *testing.T) {
 		},
 		{
 			ServerName: "cafe.example.com",
-			SSL:        &http.SSL{Certificate: certPath, CertificateKey: certPath},
-			Locations:  getExpectedLocations(true),
-			Port:       8443,
+			SSL: &http.SSL{
+				Certificate:    expectedPEMPath,
+				CertificateKey: expectedPEMPath,
+			},
+			Locations: getExpectedLocations(true),
+			Port:      8443,
 		},
 	}
 

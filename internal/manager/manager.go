@@ -29,7 +29,6 @@ import (
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/relationship"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/resolver"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/secrets"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/validation"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/status"
 )
@@ -37,9 +36,6 @@ import (
 const (
 	// clusterTimeout is a timeout for connections to the Kubernetes API
 	clusterTimeout = 10 * time.Second
-	// secretsFolder is the folder that holds all the secrets for NGINX servers.
-	// nolint:gosec
-	secretsFolder = "/etc/nginx/secrets"
 )
 
 var scheme = runtime.NewScheme()
@@ -133,16 +129,12 @@ func Start(cfg config.Config) error {
 		}
 	}
 
-	secretStore := secrets.NewSecretStore()
-	secretMemoryMgr := secrets.NewSecretDiskMemoryManager(secretsFolder, secretStore)
-
 	recorderName := fmt.Sprintf("nginx-kubernetes-gateway-%s", cfg.GatewayClassName)
 	recorder := mgr.GetEventRecorderFor(recorderName)
 
 	processor := state.NewChangeProcessorImpl(state.ChangeProcessorConfig{
 		GatewayCtlrName:      cfg.GatewayCtlrName,
 		GatewayClassName:     cfg.GatewayClassName,
-		SecretMemoryManager:  secretMemoryMgr,
 		RelationshipCapturer: relationship.NewCapturerImpl(),
 		Logger:               cfg.Logger.WithName("changeProcessor"),
 		Validators: validation.Validators{
@@ -153,7 +145,18 @@ func Start(cfg config.Config) error {
 	})
 
 	configGenerator := ngxcfg.NewGeneratorImpl()
-	nginxFileMgr := file.NewManagerImpl()
+
+	// Clear the configuration folders to ensure that no files are left over in case the control plane was restarted
+	// (this assumes the folders are in a shared volume).
+	removedPaths, err := file.ClearFolders(file.NewStdLibOSFileManager(), ngxcfg.ConfigFolders)
+	for _, path := range removedPaths {
+		logger.Info("removed configuration file", "path", path)
+	}
+	if err != nil {
+		return fmt.Errorf("cannot clear NGINX configuration folders: %w", err)
+	}
+
+	nginxFileMgr := file.NewManagerImpl(logger.WithName("nginxFileManager"), file.NewStdLibOSFileManager())
 	nginxRuntimeMgr := ngxruntime.NewManagerImpl()
 	statusUpdater := status.NewUpdater(status.UpdaterConfig{
 		GatewayCtlrName:          cfg.GatewayCtlrName,
@@ -166,15 +169,13 @@ func Start(cfg config.Config) error {
 	})
 
 	eventHandler := events.NewEventHandlerImpl(events.EventHandlerConfig{
-		Processor:           processor,
-		SecretStore:         secretStore,
-		SecretMemoryManager: secretMemoryMgr,
-		ServiceResolver:     resolver.NewServiceResolverImpl(mgr.GetClient()),
-		Generator:           configGenerator,
-		Logger:              cfg.Logger.WithName("eventHandler"),
-		NginxFileMgr:        nginxFileMgr,
-		NginxRuntimeMgr:     nginxRuntimeMgr,
-		StatusUpdater:       statusUpdater,
+		Processor:       processor,
+		ServiceResolver: resolver.NewServiceResolverImpl(mgr.GetClient()),
+		Generator:       configGenerator,
+		Logger:          cfg.Logger.WithName("eventHandler"),
+		NginxFileMgr:    nginxFileMgr,
+		NginxRuntimeMgr: nginxRuntimeMgr,
+		StatusUpdater:   statusUpdater,
 	})
 
 	objects, objectLists := prepareFirstEventBatchPreparerArgs(cfg.GatewayClassName, cfg.GatewayNsName)

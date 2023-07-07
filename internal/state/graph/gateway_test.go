@@ -2,10 +2,10 @@
 package graph
 
 import (
-	"errors"
 	"testing"
 
 	. "github.com/onsi/gomega"
+	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
@@ -14,7 +14,6 @@ import (
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/helpers"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/conditions"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/secrets/secretsfakes"
 )
 
 func TestProcessedGatewaysGetAllNsNames(t *testing.T) {
@@ -169,13 +168,25 @@ func TestBuildGateway(t *testing.T) {
 		},
 	}
 
+	secretSameNs := &apiv1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "test",
+			Name:      "secret",
+		},
+		Data: map[string][]byte{
+			apiv1.TLSCertKey:       cert,
+			apiv1.TLSPrivateKeyKey: key,
+		},
+		Type: apiv1.SecretTypeTLS,
+	}
+
 	gatewayTLSConfigSameNs := &v1beta1.GatewayTLSConfig{
 		Mode: helpers.GetPointer(v1beta1.TLSModeTerminate),
 		CertificateRefs: []v1beta1.SecretObjectReference{
 			{
 				Kind:      helpers.GetPointer[v1beta1.Kind]("Secret"),
-				Name:      "secret",
-				Namespace: helpers.GetPointer[v1beta1.Namespace]("test"),
+				Name:      v1beta1.ObjectName(secretSameNs.Name),
+				Namespace: (*v1beta1.Namespace)(&secretSameNs.Namespace),
 			},
 		},
 	}
@@ -191,13 +202,25 @@ func TestBuildGateway(t *testing.T) {
 		},
 	}
 
+	secretDiffNamespace := &apiv1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "diff-ns",
+			Name:      "secret",
+		},
+		Data: map[string][]byte{
+			apiv1.TLSCertKey:       cert,
+			apiv1.TLSPrivateKeyKey: key,
+		},
+		Type: apiv1.SecretTypeTLS,
+	}
+
 	gatewayTLSConfigDiffNs := &v1beta1.GatewayTLSConfig{
 		Mode: helpers.GetPointer(v1beta1.TLSModeTerminate),
 		CertificateRefs: []v1beta1.SecretObjectReference{
 			{
 				Kind:      helpers.GetPointer[v1beta1.Kind]("Secret"),
-				Name:      "secret",
-				Namespace: helpers.GetPointer[v1beta1.Namespace]("diff-ns"),
+				Name:      v1beta1.ObjectName(secretDiffNamespace.Name),
+				Namespace: (*v1beta1.Namespace)(&secretDiffNamespace.Namespace),
 			},
 		},
 	}
@@ -282,9 +305,6 @@ func TestBuildGateway(t *testing.T) {
 
 		conflict443PortMsg = "Multiple listeners for the same port 443 specify incompatible protocols; " +
 			"ensure only one protocol per port"
-
-		secretPath       = "/etc/nginx/secrets/test_secret"
-		diffNsSecretPath = "/etc/nginx/secrets/diff_ns_secret"
 	)
 
 	type gatewayCfg struct {
@@ -354,16 +374,16 @@ func TestBuildGateway(t *testing.T) {
 				Source: getLastCreatedGetaway(),
 				Listeners: map[string]*Listener{
 					"foo-443-https-1": {
-						Source:     foo443HTTPSListener1,
-						Valid:      true,
-						Routes:     map[types.NamespacedName]*Route{},
-						SecretPath: secretPath,
+						Source:         foo443HTTPSListener1,
+						Valid:          true,
+						Routes:         map[types.NamespacedName]*Route{},
+						ResolvedSecret: helpers.GetPointer(client.ObjectKeyFromObject(secretSameNs)),
 					},
 					"foo-8443-https": {
-						Source:     foo8443HTTPSListener,
-						Valid:      true,
-						Routes:     map[types.NamespacedName]*Route{},
-						SecretPath: secretPath,
+						Source:         foo8443HTTPSListener,
+						Valid:          true,
+						Routes:         map[types.NamespacedName]*Route{},
+						ResolvedSecret: helpers.GetPointer(client.ObjectKeyFromObject(secretSameNs)),
 					},
 				},
 				Valid: true,
@@ -418,10 +438,10 @@ func TestBuildGateway(t *testing.T) {
 				Source: getLastCreatedGetaway(),
 				Listeners: map[string]*Listener{
 					"listener-cross-ns-secret": {
-						Source:     crossNamespaceSecretListener,
-						Valid:      true,
-						Routes:     map[types.NamespacedName]*Route{},
-						SecretPath: diffNsSecretPath,
+						Source:         crossNamespaceSecretListener,
+						Valid:          true,
+						Routes:         map[types.NamespacedName]*Route{},
+						ResolvedSecret: helpers.GetPointer(client.ObjectKeyFromObject(secretDiffNamespace)),
 					},
 				},
 				Valid: true,
@@ -544,7 +564,7 @@ func TestBuildGateway(t *testing.T) {
 						Valid:  false,
 						Routes: map[types.NamespacedName]*Route{},
 						Conditions: conditions.NewListenerInvalidCertificateRef(
-							`tls.certificateRefs[0]: Invalid value: test/does-not-exist: secret not found`,
+							`tls.certificateRefs[0]: Invalid value: test/does-not-exist: secret does not exist`,
 						),
 					},
 				},
@@ -592,28 +612,28 @@ func TestBuildGateway(t *testing.T) {
 						Routes: map[types.NamespacedName]*Route{},
 					},
 					"foo-443-https-1": {
-						Source:     foo443HTTPSListener1,
-						Valid:      true,
-						Routes:     map[types.NamespacedName]*Route{},
-						SecretPath: secretPath,
+						Source:         foo443HTTPSListener1,
+						Valid:          true,
+						Routes:         map[types.NamespacedName]*Route{},
+						ResolvedSecret: helpers.GetPointer(client.ObjectKeyFromObject(secretSameNs)),
 					},
 					"foo-8443-https": {
-						Source:     foo8443HTTPSListener,
-						Valid:      true,
-						Routes:     map[types.NamespacedName]*Route{},
-						SecretPath: secretPath,
+						Source:         foo8443HTTPSListener,
+						Valid:          true,
+						Routes:         map[types.NamespacedName]*Route{},
+						ResolvedSecret: helpers.GetPointer(client.ObjectKeyFromObject(secretSameNs)),
 					},
 					"bar-443-https": {
-						Source:     bar443HTTPSListener,
-						Valid:      true,
-						Routes:     map[types.NamespacedName]*Route{},
-						SecretPath: secretPath,
+						Source:         bar443HTTPSListener,
+						Valid:          true,
+						Routes:         map[types.NamespacedName]*Route{},
+						ResolvedSecret: helpers.GetPointer(client.ObjectKeyFromObject(secretSameNs)),
 					},
 					"bar-8443-https": {
-						Source:     bar8443HTTPSListener,
-						Valid:      true,
-						Routes:     map[types.NamespacedName]*Route{},
-						SecretPath: secretPath,
+						Source:         bar8443HTTPSListener,
+						Valid:          true,
+						Routes:         map[types.NamespacedName]*Route{},
+						ResolvedSecret: helpers.GetPointer(client.ObjectKeyFromObject(secretSameNs)),
 					},
 				},
 				Valid: true,
@@ -656,25 +676,25 @@ func TestBuildGateway(t *testing.T) {
 						Conditions: conditions.NewListenerProtocolConflict(conflict443PortMsg),
 					},
 					"foo-80-https": {
-						Source:     foo80HTTPSListener,
-						Valid:      false,
-						Routes:     map[types.NamespacedName]*Route{},
-						Conditions: conditions.NewListenerProtocolConflict(conflict80PortMsg),
-						SecretPath: "/etc/nginx/secrets/test_secret",
+						Source:         foo80HTTPSListener,
+						Valid:          false,
+						Routes:         map[types.NamespacedName]*Route{},
+						Conditions:     conditions.NewListenerProtocolConflict(conflict80PortMsg),
+						ResolvedSecret: helpers.GetPointer(client.ObjectKeyFromObject(secretSameNs)),
 					},
 					"foo-443-https-1": {
-						Source:     foo443HTTPSListener1,
-						Valid:      false,
-						Routes:     map[types.NamespacedName]*Route{},
-						Conditions: conditions.NewListenerProtocolConflict(conflict443PortMsg),
-						SecretPath: "/etc/nginx/secrets/test_secret",
+						Source:         foo443HTTPSListener1,
+						Valid:          false,
+						Routes:         map[types.NamespacedName]*Route{},
+						Conditions:     conditions.NewListenerProtocolConflict(conflict443PortMsg),
+						ResolvedSecret: helpers.GetPointer(client.ObjectKeyFromObject(secretSameNs)),
 					},
 					"bar-443-https": {
-						Source:     bar443HTTPSListener,
-						Valid:      false,
-						Routes:     map[types.NamespacedName]*Route{},
-						Conditions: conditions.NewListenerProtocolConflict(conflict443PortMsg),
-						SecretPath: "/etc/nginx/secrets/test_secret",
+						Source:         bar443HTTPSListener,
+						Valid:          false,
+						Routes:         map[types.NamespacedName]*Route{},
+						Conditions:     conditions.NewListenerProtocolConflict(conflict443PortMsg),
+						ResolvedSecret: helpers.GetPointer(client.ObjectKeyFromObject(secretSameNs)),
 					},
 				},
 				Valid: true,
@@ -729,23 +749,17 @@ func TestBuildGateway(t *testing.T) {
 		},
 	}
 
-	secretMemoryMgr := &secretsfakes.FakeSecretDiskMemoryManager{}
-	secretMemoryMgr.RequestCalls(func(nsname types.NamespacedName) (string, error) {
-		switch nsname {
-		case types.NamespacedName{Namespace: "test", Name: "secret"}:
-			return secretPath, nil
-		case types.NamespacedName{Namespace: "diff-ns", Name: "secret"}:
-			return diffNsSecretPath, nil
-		default:
-			return "", errors.New("secret not found")
-		}
-	})
+	secretResolver := newSecretResolver(
+		map[types.NamespacedName]*apiv1.Secret{
+			client.ObjectKeyFromObject(secretSameNs):        secretSameNs,
+			client.ObjectKeyFromObject(secretDiffNamespace): secretDiffNamespace,
+		})
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewGomegaWithT(t)
 			resolver := newReferenceGrantResolver(test.refGrants)
-			result := buildGateway(test.gateway, secretMemoryMgr, test.gatewayClass, resolver)
+			result := buildGateway(test.gateway, secretResolver, test.gatewayClass, resolver)
 			g.Expect(helpers.Diff(test.expected, result)).To(BeEmpty())
 		})
 	}

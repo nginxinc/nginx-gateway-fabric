@@ -51,8 +51,8 @@ func createSSLServer(virtualServer dataplane.VirtualServer) http.Server {
 	return http.Server{
 		ServerName: virtualServer.Hostname,
 		SSL: &http.SSL{
-			Certificate:    virtualServer.SSL.CertificatePath,
-			CertificateKey: virtualServer.SSL.CertificatePath,
+			Certificate:    generatePEMFileName(virtualServer.SSL.KeyPairID),
+			CertificateKey: generatePEMFileName(virtualServer.SSL.KeyPairID),
 		},
 		Locations: createLocations(virtualServer.PathRules, virtualServer.Port),
 		Port:      virtualServer.Port,

@@ -19,7 +19,6 @@ import (
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/graph"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/relationship"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/secrets"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/validation"
 )
 
@@ -50,8 +49,6 @@ type ChangeProcessor interface {
 
 // ChangeProcessorConfig holds configuration parameters for ChangeProcessorImpl.
 type ChangeProcessorConfig struct {
-	// SecretMemoryManager is the secret memory manager.
-	SecretMemoryManager secrets.SecretDiskMemoryManager
 	// RelationshipCapturer captures relationships between Kubernetes API resources and Gateway API resources.
 	RelationshipCapturer relationship.Capturer
 	// Validators validate resources according to data-plane specific rules.
@@ -70,6 +67,8 @@ type ChangeProcessorConfig struct {
 
 // ChangeProcessorImpl is an implementation of ChangeProcessor.
 type ChangeProcessorImpl struct {
+	latestGraph *graph.Graph
+
 	// clusterState holds the current state of the cluster
 	clusterState graph.ClusterState
 	// updater acts upon the cluster state.
@@ -77,8 +76,7 @@ type ChangeProcessorImpl struct {
 	// getAndResetClusterStateChanged tells if the cluster state has changed.
 	getAndResetClusterStateChanged func() bool
 
-	cfg ChangeProcessorConfig
-
+	cfg  ChangeProcessorConfig
 	lock sync.Mutex
 }
 
@@ -91,6 +89,7 @@ func NewChangeProcessorImpl(cfg ChangeProcessorConfig) *ChangeProcessorImpl {
 		Services:        make(map[types.NamespacedName]*apiv1.Service),
 		Namespaces:      make(map[types.NamespacedName]*apiv1.Namespace),
 		ReferenceGrants: make(map[types.NamespacedName]*v1beta1.ReferenceGrant),
+		Secrets:         make(map[types.NamespacedName]*apiv1.Secret),
 	}
 
 	extractGVK := func(obj client.Object) schema.GroupVersionKind {
@@ -101,8 +100,18 @@ func NewChangeProcessorImpl(cfg ChangeProcessorConfig) *ChangeProcessorImpl {
 		return gvk
 	}
 
+	processor := &ChangeProcessorImpl{
+		cfg:          cfg,
+		clusterState: clusterStore,
+	}
+
+	triggerStateChange := func(objType client.Object, nsname types.NamespacedName) bool {
+		return processor.latestGraph != nil && processor.latestGraph.IsReferenced(objType, nsname)
+	}
+
 	trackingUpdater := newChangeTrackingUpdater(
 		cfg.RelationshipCapturer,
+		triggerStateChange,
 		extractGVK,
 		[]changeTrackingUpdaterObjectTypeCfg{
 			{
@@ -140,6 +149,11 @@ func NewChangeProcessorImpl(cfg ChangeProcessorConfig) *ChangeProcessorImpl {
 				store:             nil,
 				trackUpsertDelete: false,
 			},
+			{
+				gvk:               extractGVK(&apiv1.Secret{}),
+				store:             newObjectStoreMapAdapter(clusterStore.Secrets),
+				trackUpsertDelete: false,
+			},
 		},
 	)
 
@@ -169,12 +183,10 @@ func NewChangeProcessorImpl(cfg ChangeProcessorConfig) *ChangeProcessorImpl {
 		},
 	)
 
-	return &ChangeProcessorImpl{
-		cfg:                            cfg,
-		getAndResetClusterStateChanged: trackingUpdater.getAndResetChangedStatus,
-		updater:                        updater,
-		clusterState:                   clusterStore,
-	}
+	processor.getAndResetClusterStateChanged = trackingUpdater.getAndResetChangedStatus
+	processor.updater = updater
+
+	return processor
 }
 
 // Currently, changes (upserts/delete) trigger rebuilding of the configuration, even if the change doesn't change
@@ -210,13 +222,12 @@ func (c *ChangeProcessorImpl) Process() (bool, *graph.Graph) {
 		return false, nil
 	}
 
-	graphCfg := graph.BuildGraph(
+	c.latestGraph = graph.BuildGraph(
 		c.clusterState,
 		c.cfg.GatewayCtlrName,
 		c.cfg.GatewayClassName,
-		c.cfg.SecretMemoryManager,
 		c.cfg.Validators,
 	)
 
-	return true, graphCfg
+	return true, c.latestGraph
 }

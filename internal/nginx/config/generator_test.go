@@ -7,11 +7,10 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/config"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/nginx/file"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/dataplane"
 )
 
-// Note: this test only verifies that Generate() returns a byte array with upstream, server, and split_client blocks.
-// It does not test the correctness of those blocks. That functionality is covered by other tests in this package.
 func TestGenerate(t *testing.T) {
 	bg := dataplane.BackendGroup{
 		Source:  types.NamespacedName{Namespace: "test", Name: "hr"},
@@ -41,7 +40,7 @@ func TestGenerate(t *testing.T) {
 			{
 				Hostname: "example.com",
 				SSL: &dataplane.SSL{
-					CertificatePath: "/etc/nginx/secrets/default",
+					KeyPairID: "test-keypair",
 				},
 				Port: 443,
 			},
@@ -53,14 +52,34 @@ func TestGenerate(t *testing.T) {
 			},
 		},
 		BackendGroups: []dataplane.BackendGroup{bg},
+		SSLKeyPairs: map[dataplane.SSLKeyPairID]dataplane.SSLKeyPair{
+			"test-keypair": {
+				Cert: []byte("test-cert"),
+				Key:  []byte("test-key"),
+			},
+		},
 	}
 	g := NewGomegaWithT(t)
 
 	generator := config.NewGeneratorImpl()
-	cfg := string(generator.Generate(conf))
 
-	g.Expect(cfg).To(ContainSubstring("listen 80"))
-	g.Expect(cfg).To(ContainSubstring("listen 443"))
-	g.Expect(cfg).To(ContainSubstring("upstream"))
-	g.Expect(cfg).To(ContainSubstring("split_clients"))
+	files := generator.Generate(conf)
+
+	g.Expect(files).To(HaveLen(2))
+
+	g.Expect(files[0]).To(Equal(file.File{
+		Type:    file.TypeSecret,
+		Path:    "/etc/nginx/secrets/test-keypair.pem",
+		Content: []byte("test-cert\ntest-key"),
+	}))
+
+	g.Expect(files[1].Type).To(Equal(file.TypeRegular))
+	g.Expect(files[1].Path).To(Equal("/etc/nginx/conf.d/http.conf"))
+	httpCfg := string(files[1].Content) // converting to string so that on failure gomega prints strings not byte arrays
+	// Note: this only verifies that Generate() returns a byte array with upstream, server, and split_client blocks.
+	// It does not test the correctness of those blocks. That functionality is covered by other tests in this package.
+	g.Expect(httpCfg).To(ContainSubstring("listen 80"))
+	g.Expect(httpCfg).To(ContainSubstring("listen 443"))
+	g.Expect(httpCfg).To(ContainSubstring("upstream"))
+	g.Expect(httpCfg).To(ContainSubstring("split_clients"))
 }

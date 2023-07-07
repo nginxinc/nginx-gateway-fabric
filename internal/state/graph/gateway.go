@@ -10,7 +10,6 @@ import (
 
 	nkgsort "github.com/nginxinc/nginx-kubernetes-gateway/internal/sort"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/conditions"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/secrets"
 )
 
 // Gateway represents the winning Gateway resource.
@@ -92,7 +91,7 @@ func processGateways(
 
 func buildGateway(
 	gw *v1beta1.Gateway,
-	secretMemoryMgr secrets.SecretDiskMemoryManager,
+	secretResolver *secretResolver,
 	gc *GatewayClass,
 	refGrantResolver *referenceGrantResolver,
 ) *Gateway {
@@ -112,7 +111,7 @@ func buildGateway(
 
 	return &Gateway{
 		Source:    gw,
-		Listeners: buildListeners(gw, secretMemoryMgr, refGrantResolver),
+		Listeners: buildListeners(gw, secretResolver, refGrantResolver),
 		Valid:     true,
 	}
 }

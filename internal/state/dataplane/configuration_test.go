@@ -8,7 +8,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	. "github.com/onsi/gomega"
-	v1 "k8s.io/api/core/v1"
+	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -83,7 +83,7 @@ func TestBuildConfiguration(t *testing.T) {
 		Endpoints: fooEndpoints,
 	}
 
-	fooSvc := &v1.Service{ObjectMeta: metav1.ObjectMeta{Name: "foo", Namespace: "test"}}
+	fooSvc := &apiv1.Service{ObjectMeta: metav1.ObjectMeta{Name: "foo", Namespace: "test"}}
 
 	fakeResolver := &resolverfakes.FakeServiceResolver{}
 	fakeResolver.ResolveReturns(fooEndpoints, nil)
@@ -297,6 +297,34 @@ func TestBuildConfiguration(t *testing.T) {
 		pathAndType{path: "/", pathType: prefix}, pathAndType{path: "/third", pathType: prefix},
 	)
 
+	secret1NsName := types.NamespacedName{Namespace: "test", Name: "secret-1"}
+	secret1 := &graph.Secret{
+		Source: &apiv1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      secret1NsName.Name,
+				Namespace: secret1NsName.Namespace,
+			},
+			Data: map[string][]byte{
+				apiv1.TLSCertKey:       []byte("cert-1"),
+				apiv1.TLSPrivateKeyKey: []byte("privateKey-1"),
+			},
+		},
+	}
+
+	secret2NsName := types.NamespacedName{Namespace: "test", Name: "secret-2"}
+	secret2 := &graph.Secret{
+		Source: &apiv1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      secret2NsName.Name,
+				Namespace: secret2NsName.Namespace,
+			},
+			Data: map[string][]byte{
+				apiv1.TLSCertKey:       []byte("cert-2"),
+				apiv1.TLSPrivateKeyKey: []byte("privateKey-2"),
+			},
+		},
+	}
+
 	listener80 := v1beta1.Listener{
 		Name:     "listener-80-1",
 		Hostname: nil,
@@ -321,8 +349,8 @@ func TestBuildConfiguration(t *testing.T) {
 			CertificateRefs: []v1beta1.SecretObjectReference{
 				{
 					Kind:      (*v1beta1.Kind)(helpers.GetStringPointer("Secret")),
-					Name:      "secret",
-					Namespace: (*v1beta1.Namespace)(helpers.GetStringPointer("test")),
+					Namespace: helpers.GetPointer(v1beta1.Namespace(secret1NsName.Namespace)),
+					Name:      v1beta1.ObjectName(secret1NsName.Name),
 				},
 			},
 		},
@@ -338,8 +366,8 @@ func TestBuildConfiguration(t *testing.T) {
 			CertificateRefs: []v1beta1.SecretObjectReference{
 				{
 					Kind:      (*v1beta1.Kind)(helpers.GetStringPointer("Secret")),
-					Name:      "secret",
-					Namespace: (*v1beta1.Namespace)(helpers.GetStringPointer("test")),
+					Namespace: helpers.GetPointer(v1beta1.Namespace(secret2NsName.Namespace)),
+					Name:      v1beta1.ObjectName(secret2NsName.Name),
 				},
 			},
 		},
@@ -357,8 +385,8 @@ func TestBuildConfiguration(t *testing.T) {
 			CertificateRefs: []v1beta1.SecretObjectReference{
 				{
 					Kind:      (*v1beta1.Kind)(helpers.GetStringPointer("Secret")),
-					Name:      "secret",
-					Namespace: (*v1beta1.Namespace)(helpers.GetStringPointer("test")),
+					Namespace: helpers.GetPointer(v1beta1.Namespace(secret2NsName.Namespace)),
+					Name:      v1beta1.ObjectName(secret2NsName.Name),
 				},
 			},
 		},
@@ -369,11 +397,17 @@ func TestBuildConfiguration(t *testing.T) {
 		Hostname: nil,
 		Port:     443,
 		Protocol: v1beta1.HTTPSProtocolType,
-		TLS:      nil, // missing TLS config
+		TLS: &v1beta1.GatewayTLSConfig{
+			// Mode is missing, that's why invalid
+			CertificateRefs: []v1beta1.SecretObjectReference{
+				{
+					Kind:      helpers.GetPointer[v1beta1.Kind]("Secret"),
+					Namespace: helpers.GetPointer(v1beta1.Namespace(secret1NsName.Namespace)),
+					Name:      v1beta1.ObjectName(secret1NsName.Name),
+				},
+			},
+		},
 	}
-
-	// nolint:gosec
-	secretPath := "/etc/nginx/secrets/secret"
 
 	tests := []struct {
 		graph   *graph.Graph
@@ -395,6 +429,7 @@ func TestBuildConfiguration(t *testing.T) {
 			expConf: Configuration{
 				HTTPServers: []VirtualServer{},
 				SSLServers:  []VirtualServer{},
+				SSLKeyPairs: map[SSLKeyPairID]SSLKeyPair{},
 			},
 			msg: "no listeners and routes",
 		},
@@ -423,7 +458,8 @@ func TestBuildConfiguration(t *testing.T) {
 						Port:      80,
 					},
 				},
-				SSLServers: []VirtualServer{},
+				SSLServers:  []VirtualServer{},
+				SSLKeyPairs: map[SSLKeyPairID]SSLKeyPair{},
 			},
 			msg: "http listener with no routes",
 		},
@@ -437,20 +473,24 @@ func TestBuildConfiguration(t *testing.T) {
 					Source: &v1beta1.Gateway{},
 					Listeners: map[string]*graph.Listener{
 						"listener-443-1": {
-							Source:     listener443, // nil hostname
-							Valid:      true,
-							Routes:     map[types.NamespacedName]*graph.Route{},
-							SecretPath: secretPath,
+							Source:         listener443, // nil hostname
+							Valid:          true,
+							Routes:         map[types.NamespacedName]*graph.Route{},
+							ResolvedSecret: &secret1NsName,
 						},
 						"listener-443-with-hostname": {
-							Source:     listener443WithHostname, // non-nil hostname
-							Valid:      true,
-							Routes:     map[types.NamespacedName]*graph.Route{},
-							SecretPath: secretPath,
+							Source:         listener443WithHostname, // non-nil hostname
+							Valid:          true,
+							Routes:         map[types.NamespacedName]*graph.Route{},
+							ResolvedSecret: &secret2NsName,
 						},
 					},
 				},
 				Routes: map[types.NamespacedName]*graph.Route{},
+				ReferencedSecrets: map[types.NamespacedName]*graph.Secret{
+					secret1NsName: secret1,
+					secret2NsName: secret2,
+				},
 			},
 			expConf: Configuration{
 				HTTPServers: []VirtualServer{},
@@ -461,13 +501,23 @@ func TestBuildConfiguration(t *testing.T) {
 					},
 					{
 						Hostname: string(hostname),
-						SSL:      &SSL{CertificatePath: secretPath},
+						SSL:      &SSL{KeyPairID: "ssl_keypair_test_secret-2"},
 						Port:     443,
 					},
 					{
 						Hostname: wildcardHostname,
-						SSL:      &SSL{CertificatePath: secretPath},
+						SSL:      &SSL{KeyPairID: "ssl_keypair_test_secret-1"},
 						Port:     443,
+					},
+				},
+				SSLKeyPairs: map[SSLKeyPairID]SSLKeyPair{
+					"ssl_keypair_test_secret-1": {
+						Cert: []byte("cert-1"),
+						Key:  []byte("privateKey-1"),
+					},
+					"ssl_keypair_test_secret-2": {
+						Cert: []byte("cert-2"),
+						Key:  []byte("privateKey-2"),
 					},
 				},
 			},
@@ -483,8 +533,9 @@ func TestBuildConfiguration(t *testing.T) {
 					Source: &v1beta1.Gateway{},
 					Listeners: map[string]*graph.Listener{
 						"invalid-listener": {
-							Source: invalidListener,
-							Valid:  false,
+							Source:         invalidListener,
+							Valid:          false,
+							ResolvedSecret: &secret1NsName,
 						},
 					},
 				},
@@ -492,12 +543,16 @@ func TestBuildConfiguration(t *testing.T) {
 					{Namespace: "test", Name: "https-hr-1"}: httpsRouteHR1,
 					{Namespace: "test", Name: "https-hr-2"}: httpsRouteHR2,
 				},
+				ReferencedSecrets: map[types.NamespacedName]*graph.Secret{
+					secret1NsName: secret1,
+				},
 			},
 			expConf: Configuration{
 				HTTPServers: []VirtualServer{},
 				SSLServers:  []VirtualServer{},
+				SSLKeyPairs: map[SSLKeyPairID]SSLKeyPair{},
 			},
-			msg: "invalid listener",
+			msg: "invalid https listener with resolved secret",
 		},
 		{
 			graph: &graph.Graph{
@@ -569,6 +624,7 @@ func TestBuildConfiguration(t *testing.T) {
 				SSLServers:    []VirtualServer{},
 				Upstreams:     []Upstream{fooUpstream},
 				BackendGroups: []BackendGroup{expHR1Groups[0], expHR2Groups[0]},
+				SSLKeyPairs:   map[SSLKeyPairID]SSLKeyPair{},
 			},
 			msg: "one http listener with two routes for different hostnames",
 		},
@@ -582,21 +638,21 @@ func TestBuildConfiguration(t *testing.T) {
 					Source: &v1beta1.Gateway{},
 					Listeners: map[string]*graph.Listener{
 						"listener-443-1": {
-							Source:     listener443,
-							Valid:      true,
-							SecretPath: secretPath,
+							Source: listener443,
+							Valid:  true,
 							Routes: map[types.NamespacedName]*graph.Route{
 								{Namespace: "test", Name: "https-hr-1"}: httpsRouteHR1,
 								{Namespace: "test", Name: "https-hr-2"}: httpsRouteHR2,
 							},
+							ResolvedSecret: &secret1NsName,
 						},
 						"listener-443-with-hostname": {
-							Source:     listener443WithHostname,
-							Valid:      true,
-							SecretPath: secretPath,
+							Source: listener443WithHostname,
+							Valid:  true,
 							Routes: map[types.NamespacedName]*graph.Route{
 								{Namespace: "test", Name: "https-hr-5"}: httpsRouteHR5,
 							},
+							ResolvedSecret: &secret2NsName,
 						},
 					},
 				},
@@ -604,6 +660,10 @@ func TestBuildConfiguration(t *testing.T) {
 					{Namespace: "test", Name: "https-hr-1"}: httpsRouteHR1,
 					{Namespace: "test", Name: "https-hr-2"}: httpsRouteHR2,
 					{Namespace: "test", Name: "https-hr-5"}: httpsRouteHR5,
+				},
+				ReferencedSecrets: map[types.NamespacedName]*graph.Secret{
+					secret1NsName: secret1,
+					secret2NsName: secret2,
 				},
 			},
 			expConf: Configuration{
@@ -629,9 +689,7 @@ func TestBuildConfiguration(t *testing.T) {
 								},
 							},
 						},
-						SSL: &SSL{
-							CertificatePath: secretPath,
-						},
+						SSL:  &SSL{KeyPairID: "ssl_keypair_test_secret-1"},
 						Port: 443,
 					},
 					{
@@ -650,9 +708,7 @@ func TestBuildConfiguration(t *testing.T) {
 								},
 							},
 						},
-						SSL: &SSL{
-							CertificatePath: secretPath,
-						},
+						SSL:  &SSL{KeyPairID: "ssl_keypair_test_secret-2"},
 						Port: 443,
 					},
 					{
@@ -671,19 +727,27 @@ func TestBuildConfiguration(t *testing.T) {
 								},
 							},
 						},
-						SSL: &SSL{
-							CertificatePath: secretPath,
-						},
+						SSL:  &SSL{KeyPairID: "ssl_keypair_test_secret-1"},
 						Port: 443,
 					},
 					{
 						Hostname: wildcardHostname,
-						SSL:      &SSL{CertificatePath: secretPath},
+						SSL:      &SSL{KeyPairID: "ssl_keypair_test_secret-1"},
 						Port:     443,
 					},
 				},
 				Upstreams:     []Upstream{fooUpstream},
 				BackendGroups: []BackendGroup{expHTTPSHR1Groups[0], expHTTPSHR2Groups[0], expHTTPSHR5Groups[0]},
+				SSLKeyPairs: map[SSLKeyPairID]SSLKeyPair{
+					"ssl_keypair_test_secret-1": {
+						Cert: []byte("cert-1"),
+						Key:  []byte("privateKey-1"),
+					},
+					"ssl_keypair_test_secret-2": {
+						Cert: []byte("cert-2"),
+						Key:  []byte("privateKey-2"),
+					},
+				},
 			},
 			msg: "two https listeners each with routes for different hostnames",
 		},
@@ -705,13 +769,13 @@ func TestBuildConfiguration(t *testing.T) {
 							},
 						},
 						"listener-443-1": {
-							Source:     listener443,
-							Valid:      true,
-							SecretPath: secretPath,
+							Source: listener443,
+							Valid:  true,
 							Routes: map[types.NamespacedName]*graph.Route{
 								{Namespace: "test", Name: "https-hr-3"}: httpsRouteHR3,
 								{Namespace: "test", Name: "https-hr-4"}: httpsRouteHR4,
 							},
+							ResolvedSecret: &secret1NsName,
 						},
 					},
 				},
@@ -720,6 +784,9 @@ func TestBuildConfiguration(t *testing.T) {
 					{Namespace: "test", Name: "hr-4"}:       routeHR4,
 					{Namespace: "test", Name: "https-hr-3"}: httpsRouteHR3,
 					{Namespace: "test", Name: "https-hr-4"}: httpsRouteHR4,
+				},
+				ReferencedSecrets: map[types.NamespacedName]*graph.Secret{
+					secret1NsName: secret1,
 				},
 			},
 			expConf: Configuration{
@@ -784,9 +851,7 @@ func TestBuildConfiguration(t *testing.T) {
 					},
 					{
 						Hostname: "foo.example.com",
-						SSL: &SSL{
-							CertificatePath: secretPath,
-						},
+						SSL:      &SSL{KeyPairID: "ssl_keypair_test_secret-1"},
 						PathRules: []PathRule{
 							{
 								Path:     "/",
@@ -835,7 +900,7 @@ func TestBuildConfiguration(t *testing.T) {
 					},
 					{
 						Hostname: wildcardHostname,
-						SSL:      &SSL{CertificatePath: secretPath},
+						SSL:      &SSL{KeyPairID: "ssl_keypair_test_secret-1"},
 						Port:     443,
 					},
 				},
@@ -849,6 +914,12 @@ func TestBuildConfiguration(t *testing.T) {
 					expHTTPSHR3Groups[1],
 					expHTTPSHR4Groups[0],
 					expHTTPSHR4Groups[1],
+				},
+				SSLKeyPairs: map[SSLKeyPairID]SSLKeyPair{
+					"ssl_keypair_test_secret-1": {
+						Cert: []byte("cert-1"),
+						Key:  []byte("privateKey-1"),
+					},
 				},
 			},
 			msg: "one http and one https listener with two routes with the same hostname with and without collisions",
@@ -877,20 +948,20 @@ func TestBuildConfiguration(t *testing.T) {
 							},
 						},
 						"listener-443-1": {
-							Source:     listener443,
-							Valid:      true,
-							SecretPath: secretPath,
+							Source: listener443,
+							Valid:  true,
 							Routes: map[types.NamespacedName]*graph.Route{
 								{Namespace: "test", Name: "https-hr-3"}: httpsRouteHR3,
 							},
+							ResolvedSecret: &secret1NsName,
 						},
 						"listener-8443": {
-							Source:     listener8443,
-							Valid:      true,
-							SecretPath: secretPath,
+							Source: listener8443,
+							Valid:  true,
 							Routes: map[types.NamespacedName]*graph.Route{
 								{Namespace: "test", Name: "https-hr-7"}: httpsRouteHR7,
 							},
+							ResolvedSecret: &secret1NsName,
 						},
 					},
 				},
@@ -899,6 +970,9 @@ func TestBuildConfiguration(t *testing.T) {
 					{Namespace: "test", Name: "hr-8"}:       routeHR8,
 					{Namespace: "test", Name: "https-hr-3"}: httpsRouteHR3,
 					{Namespace: "test", Name: "https-hr-7"}: httpsRouteHR7,
+				},
+				ReferencedSecrets: map[types.NamespacedName]*graph.Secret{
+					secret1NsName: secret1,
 				},
 			},
 			expConf: Configuration{
@@ -979,9 +1053,7 @@ func TestBuildConfiguration(t *testing.T) {
 					},
 					{
 						Hostname: "foo.example.com",
-						SSL: &SSL{
-							CertificatePath: secretPath,
-						},
+						SSL:      &SSL{KeyPairID: "ssl_keypair_test_secret-1"},
 						PathRules: []PathRule{
 							{
 								Path:     "/",
@@ -1012,7 +1084,7 @@ func TestBuildConfiguration(t *testing.T) {
 					},
 					{
 						Hostname: wildcardHostname,
-						SSL:      &SSL{CertificatePath: secretPath},
+						SSL:      &SSL{KeyPairID: "ssl_keypair_test_secret-1"},
 						Port:     443,
 					},
 					{
@@ -1021,9 +1093,7 @@ func TestBuildConfiguration(t *testing.T) {
 					},
 					{
 						Hostname: "foo.example.com",
-						SSL: &SSL{
-							CertificatePath: secretPath,
-						},
+						SSL:      &SSL{KeyPairID: "ssl_keypair_test_secret-1"},
 						PathRules: []PathRule{
 							{
 								Path:     "/",
@@ -1054,7 +1124,7 @@ func TestBuildConfiguration(t *testing.T) {
 					},
 					{
 						Hostname: wildcardHostname,
-						SSL:      &SSL{CertificatePath: secretPath},
+						SSL:      &SSL{KeyPairID: "ssl_keypair_test_secret-1"},
 						Port:     8443,
 					},
 				},
@@ -1068,6 +1138,12 @@ func TestBuildConfiguration(t *testing.T) {
 					expHTTPSHR3Groups[1],
 					expHTTPSHR7Groups[0],
 					expHTTPSHR7Groups[1],
+				},
+				SSLKeyPairs: map[SSLKeyPairID]SSLKeyPair{
+					"ssl_keypair_test_secret-1": {
+						Cert: []byte("cert-1"),
+						Key:  []byte("privateKey-1"),
+					},
 				},
 			},
 
@@ -1200,6 +1276,7 @@ func TestBuildConfiguration(t *testing.T) {
 				SSLServers:    []VirtualServer{},
 				Upstreams:     []Upstream{fooUpstream},
 				BackendGroups: []BackendGroup{expHR5Groups[0], expHR5Groups[1]},
+				SSLKeyPairs:   map[SSLKeyPairID]SSLKeyPair{},
 			},
 			msg: "one http listener with one route with filters",
 		},
@@ -1220,18 +1297,21 @@ func TestBuildConfiguration(t *testing.T) {
 							},
 						},
 						"listener-443-1": {
-							Source:     listener443,
-							Valid:      true,
-							SecretPath: secretPath,
+							Source: listener443,
+							Valid:  true,
 							Routes: map[types.NamespacedName]*graph.Route{
 								{Namespace: "test", Name: "https-hr-6"}: httpsRouteHR6,
 							},
+							ResolvedSecret: &secret1NsName,
 						},
 					},
 				},
 				Routes: map[types.NamespacedName]*graph.Route{
 					{Namespace: "test", Name: "hr-6"}:       routeHR6,
 					{Namespace: "test", Name: "https-hr-6"}: httpsRouteHR6,
+				},
+				ReferencedSecrets: map[types.NamespacedName]*graph.Secret{
+					secret1NsName: secret1,
 				},
 			},
 			expConf: Configuration{
@@ -1266,9 +1346,7 @@ func TestBuildConfiguration(t *testing.T) {
 					},
 					{
 						Hostname: "foo.example.com",
-						SSL: &SSL{
-							CertificatePath: secretPath,
-						},
+						SSL:      &SSL{KeyPairID: "ssl_keypair_test_secret-1"},
 						PathRules: []PathRule{
 							{
 								Path:     "/valid",
@@ -1287,7 +1365,7 @@ func TestBuildConfiguration(t *testing.T) {
 					},
 					{
 						Hostname: wildcardHostname,
-						SSL:      &SSL{CertificatePath: secretPath},
+						SSL:      &SSL{KeyPairID: "ssl_keypair_test_secret-1"},
 						Port:     443,
 					},
 				},
@@ -1295,6 +1373,12 @@ func TestBuildConfiguration(t *testing.T) {
 				BackendGroups: []BackendGroup{
 					expHR6Groups[0],
 					expHTTPSHR6Groups[0],
+				},
+				SSLKeyPairs: map[SSLKeyPairID]SSLKeyPair{
+					"ssl_keypair_test_secret-1": {
+						Cert: []byte("cert-1"),
+						Key:  []byte("privateKey-1"),
+					},
 				},
 			},
 			msg: "one http and one https listener with routes with valid and invalid rules",
@@ -1361,6 +1445,7 @@ func TestBuildConfiguration(t *testing.T) {
 				SSLServers:    []VirtualServer{},
 				Upstreams:     []Upstream{fooUpstream},
 				BackendGroups: []BackendGroup{expHR7Groups[0], expHR7Groups[1]},
+				SSLKeyPairs:   map[SSLKeyPairID]SSLKeyPair{},
 			},
 			msg: "duplicate paths with different types",
 		},
@@ -1374,25 +1459,29 @@ func TestBuildConfiguration(t *testing.T) {
 					Source: &v1beta1.Gateway{},
 					Listeners: map[string]*graph.Listener{
 						"listener-443-with-hostname": {
-							Source:     listener443WithHostname,
-							Valid:      true,
-							SecretPath: "secret-path-https-listener-2",
+							Source: listener443WithHostname,
+							Valid:  true,
 							Routes: map[types.NamespacedName]*graph.Route{
 								{Namespace: "test", Name: "https-hr-5"}: httpsRouteHR5,
 							},
+							ResolvedSecret: &secret2NsName,
 						},
 						"listener-443-1": {
-							Source:     listener443,
-							Valid:      true,
-							SecretPath: secretPath,
+							Source: listener443,
+							Valid:  true,
 							Routes: map[types.NamespacedName]*graph.Route{
 								{Namespace: "test", Name: "https-hr-5"}: httpsRouteHR5,
 							},
+							ResolvedSecret: &secret1NsName,
 						},
 					},
 				},
 				Routes: map[types.NamespacedName]*graph.Route{
 					{Namespace: "test", Name: "https-hr-5"}: httpsRouteHR5,
+				},
+				ReferencedSecrets: map[types.NamespacedName]*graph.Secret{
+					secret1NsName: secret1,
+					secret2NsName: secret2,
 				},
 			},
 			expConf: Configuration{
@@ -1425,19 +1514,27 @@ func TestBuildConfiguration(t *testing.T) {
 								},
 							},
 						},
-						SSL: &SSL{
-							CertificatePath: "secret-path-https-listener-2",
-						},
+						SSL:  &SSL{KeyPairID: "ssl_keypair_test_secret-2"},
 						Port: 443,
 					},
 					{
 						Hostname: wildcardHostname,
-						SSL:      &SSL{CertificatePath: secretPath},
+						SSL:      &SSL{KeyPairID: "ssl_keypair_test_secret-1"},
 						Port:     443,
 					},
 				},
 				Upstreams:     []Upstream{fooUpstream},
 				BackendGroups: []BackendGroup{expHTTPSHR5Groups[0]},
+				SSLKeyPairs: map[SSLKeyPairID]SSLKeyPair{
+					"ssl_keypair_test_secret-1": {
+						Cert: []byte("cert-1"),
+						Key:  []byte("privateKey-1"),
+					},
+					"ssl_keypair_test_secret-2": {
+						Cert: []byte("cert-2"),
+						Key:  []byte("privateKey-2"),
+					},
+				},
 			},
 			msg: "two https listeners with different hostnames but same route; chooses listener with more specific hostname",
 		},
@@ -1453,6 +1550,7 @@ func TestBuildConfiguration(t *testing.T) {
 			g.Expect(result.Upstreams).To(ConsistOf(test.expConf.Upstreams))
 			g.Expect(result.HTTPServers).To(ConsistOf(test.expConf.HTTPServers))
 			g.Expect(result.SSLServers).To(ConsistOf(test.expConf.SSLServers))
+			g.Expect(result.SSLKeyPairs).To(Equal(test.expConf.SSLKeyPairs))
 		})
 	}
 }
@@ -1770,7 +1868,7 @@ func TestBuildUpstreams(t *testing.T) {
 		var backends []graph.BackendRef
 		for _, name := range serviceNames {
 			backends = append(backends, graph.BackendRef{
-				Svc:   &v1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: "test", Name: name}},
+				Svc:   &apiv1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: "test", Name: name}},
 				Port:  80,
 				Valid: name != "",
 			})
@@ -1866,7 +1964,7 @@ func TestBuildUpstreams(t *testing.T) {
 	}
 
 	fakeResolver := &resolverfakes.FakeServiceResolver{}
-	fakeResolver.ResolveCalls(func(ctx context.Context, svc *v1.Service, port int32) ([]resolver.Endpoint, error) {
+	fakeResolver.ResolveCalls(func(ctx context.Context, svc *apiv1.Service, port int32) ([]resolver.Endpoint, error) {
 		switch svc.Name {
 		case "bar":
 			return barEndpoints, nil

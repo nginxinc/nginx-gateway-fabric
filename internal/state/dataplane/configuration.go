@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"sort"
 
+	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
@@ -22,6 +23,8 @@ const (
 
 // Configuration is an intermediate representation of dataplane configuration.
 type Configuration struct {
+	// SSLKeyPairs holds all unique SSLKeyPairs.
+	SSLKeyPairs map[SSLKeyPairID]SSLKeyPair
 	// HTTPServers holds all HTTPServers.
 	HTTPServers []VirtualServer
 	// SSLServers holds all SSLServers.
@@ -32,9 +35,18 @@ type Configuration struct {
 	BackendGroups []BackendGroup
 }
 
+// SSLKeyPairID is a unique identifier for a SSLKeyPair.
+// The ID is safe to use as a file name.
+type SSLKeyPairID string
+
+// SSLKeyPair is an SSL private/public key pair.
+type SSLKeyPair struct {
+	Cert, Key []byte
+}
+
 // VirtualServer is a virtual server.
 type VirtualServer struct {
-	// SSL holds the SSL configuration options for the server.
+	// SSL holds the SSL configuration for the server.
 	SSL *SSL
 	// Hostname is the hostname of the server.
 	Hostname string
@@ -46,6 +58,7 @@ type VirtualServer struct {
 	Port int32
 }
 
+// Upstream is a pool of endpoints to be load balanced.
 type Upstream struct {
 	// Name is the name of the Upstream. Will be unique for each service/port combination.
 	Name string
@@ -55,9 +68,9 @@ type Upstream struct {
 	Endpoints []resolver.Endpoint
 }
 
+// SSL is the SSL configuration for a server.
 type SSL struct {
-	// CertificatePath is the path to the certificate file.
-	CertificatePath string
+	KeyPairID SSLKeyPairID
 }
 
 // PathRule represents routing rules that share a common path.
@@ -157,15 +170,41 @@ func BuildConfiguration(ctx context.Context, g *graph.Graph, resolver resolver.S
 	upstreams := buildUpstreams(ctx, g.Gateway.Listeners, resolver)
 	httpServers, sslServers := buildServers(g.Gateway.Listeners)
 	backendGroups := buildBackendGroups(append(httpServers, sslServers...))
+	keyPairs := buildSSLKeyPairs(g.ReferencedSecrets, g.Gateway.Listeners)
 
 	config := Configuration{
 		HTTPServers:   httpServers,
 		SSLServers:    sslServers,
 		Upstreams:     upstreams,
 		BackendGroups: backendGroups,
+		SSLKeyPairs:   keyPairs,
 	}
 
 	return config
+}
+
+// buildSSLKeyPairs builds the SSLKeyPairs from the Secrets. It will only include Secrets that are referenced by
+// valid listeners, so that we don't include unused Secrets in the configuration of the data plane.
+func buildSSLKeyPairs(
+	secrets map[types.NamespacedName]*graph.Secret,
+	listeners map[string]*graph.Listener,
+) map[SSLKeyPairID]SSLKeyPair {
+	keyPairs := make(map[SSLKeyPairID]SSLKeyPair)
+
+	for _, l := range listeners {
+		if l.Valid && l.ResolvedSecret != nil {
+			id := generateSSLKeyPairID(*l.ResolvedSecret)
+			secret := secrets[*l.ResolvedSecret]
+			// The Data map keys are guaranteed to exist by the graph package.
+			// the Source field is guaranteed to be non-nil by the graph package.
+			keyPairs[id] = SSLKeyPair{
+				Cert: secret.Source.Data[apiv1.TLSCertKey],
+				Key:  secret.Source.Data[apiv1.TLSPrivateKeyKey],
+			}
+		}
+	}
+
+	return keyPairs
 }
 
 func buildBackendGroups(servers []VirtualServer) []BackendGroup {
@@ -381,8 +420,10 @@ func (hpr *hostPathRules) buildServers() []VirtualServer {
 			panic(fmt.Sprintf("no listener found for hostname: %s", h))
 		}
 
-		if l.SecretPath != "" {
-			s.SSL = &SSL{CertificatePath: l.SecretPath}
+		if l.ResolvedSecret != nil {
+			s.SSL = &SSL{
+				KeyPairID: generateSSLKeyPairID(*l.ResolvedSecret),
+			}
 		}
 
 		for _, r := range rules {
@@ -413,8 +454,10 @@ func (hpr *hostPathRules) buildServers() []VirtualServer {
 				Port:     hpr.port,
 			}
 
-			if l.SecretPath != "" {
-				s.SSL = &SSL{CertificatePath: l.SecretPath}
+			if l.ResolvedSecret != nil {
+				s.SSL = &SSL{
+					KeyPairID: generateSSLKeyPairID(*l.ResolvedSecret),
+				}
 			}
 
 			servers = append(servers, s)
@@ -579,4 +622,11 @@ func listenerHostnameMoreSpecific(host1, host2 *v1beta1.Hostname) bool {
 	}
 
 	return graph.GetMoreSpecificHostname(host1Str, host2Str) == host1Str
+}
+
+// generateSSLKeyPairID generates an ID for the SSL key pair based on the Secret namespaced name.
+// It is guaranteed to be unique per unique namespaced name.
+// The ID is safe to use as a file name.
+func generateSSLKeyPairID(secret types.NamespacedName) SSLKeyPairID {
+	return SSLKeyPairID(fmt.Sprintf("ssl_keypair_%s_%s", secret.Namespace, secret.Name))
 }

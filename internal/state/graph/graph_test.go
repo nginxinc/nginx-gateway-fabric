@@ -12,7 +12,6 @@ import (
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/helpers"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/secrets/secretsfakes"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/validation"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/validation/validationfakes"
 )
@@ -21,7 +20,6 @@ func TestBuildGraph(t *testing.T) {
 	const (
 		gcName         = "my-class"
 		controllerName = "my.controller"
-		secretPath     = "/etc/nginx/secrets/test_secret"
 	)
 
 	createValidRuleWithBackendRefs := func(refs []BackendRef) Rule {
@@ -103,6 +101,18 @@ func TestBuildGraph(t *testing.T) {
 		},
 	}
 
+	secret := &v1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "test",
+			Name:      "secret",
+		},
+		Data: map[string][]byte{
+			v1.TLSCertKey:       cert,
+			v1.TLSPrivateKeyKey: key,
+		},
+		Type: v1.SecretTypeTLS,
+	}
+
 	createGateway := func(name string) *v1beta1.Gateway {
 		return &v1beta1.Gateway{
 			ObjectMeta: metav1.ObjectMeta{
@@ -128,8 +138,8 @@ func TestBuildGraph(t *testing.T) {
 							CertificateRefs: []v1beta1.SecretObjectReference{
 								{
 									Kind:      helpers.GetPointer[v1beta1.Kind]("Secret"),
-									Name:      "secret",
-									Namespace: helpers.GetPointer[v1beta1.Namespace]("certificate"),
+									Name:      v1beta1.ObjectName(secret.Name),
+									Namespace: helpers.GetPointer(v1beta1.Namespace(secret.Namespace)),
 								},
 							},
 						},
@@ -208,6 +218,9 @@ func TestBuildGraph(t *testing.T) {
 				client.ObjectKeyFromObject(rgSecret):  rgSecret,
 				client.ObjectKeyFromObject(rgService): rgService,
 			},
+			Secrets: map[types.NamespacedName]*v1.Secret{
+				client.ObjectKeyFromObject(secret): secret,
+			},
 		}
 	}
 
@@ -243,14 +256,6 @@ func TestBuildGraph(t *testing.T) {
 		Rules: []Rule{createValidRuleWithBackendRefs(hr3Refs)},
 	}
 
-	secretMemoryMgr := &secretsfakes.FakeSecretDiskMemoryManager{}
-	secretMemoryMgr.RequestCalls(func(nsname types.NamespacedName) (string, error) {
-		if (nsname == types.NamespacedName{Namespace: "certificate", Name: "secret"}) {
-			return secretPath, nil
-		}
-		panic("unexpected secret request")
-	})
-
 	createExpectedGraphWithGatewayClass := func(gc *v1beta1.GatewayClass) *Graph {
 		return &Graph{
 			GatewayClass: &GatewayClass{
@@ -273,7 +278,7 @@ func TestBuildGraph(t *testing.T) {
 						Routes: map[types.NamespacedName]*Route{
 							{Namespace: "test", Name: "hr-3"}: routeHR3,
 						},
-						SecretPath: secretPath,
+						ResolvedSecret: helpers.GetPointer(client.ObjectKeyFromObject(secret)),
 					},
 				},
 				Valid: true,
@@ -284,6 +289,11 @@ func TestBuildGraph(t *testing.T) {
 			Routes: map[types.NamespacedName]*Route{
 				{Namespace: "test", Name: "hr-1"}: routeHR1,
 				{Namespace: "test", Name: "hr-3"}: routeHR3,
+			},
+			ReferencedSecrets: map[types.NamespacedName]*Secret{
+				client.ObjectKeyFromObject(secret): {
+					Source: secret,
+				},
 			},
 		}
 	}
@@ -330,7 +340,6 @@ func TestBuildGraph(t *testing.T) {
 				test.store,
 				controllerName,
 				gcName,
-				secretMemoryMgr,
 				validation.Validators{HTTPFieldsValidator: &validationfakes.FakeHTTPFieldsValidator{}},
 			)
 
