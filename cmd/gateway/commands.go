@@ -9,9 +9,9 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/config"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/manager"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/provisioner"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/config"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/provisioner"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static"
 )
 
 const (
@@ -149,7 +149,7 @@ func createStaticModeCommand() *cobra.Command {
 				UpdateGatewayClassStatus: updateGCStatus,
 			}
 
-			if err := manager.Start(conf); err != nil {
+			if err := static.StartManager(conf); err != nil {
 				return fmt.Errorf("failed to start control loop: %w", err)
 			}
 
