@@ -50,7 +50,7 @@ server {
             {{ range $h := $l.ProxySetHeaders }}
         proxy_set_header {{ $h.Name }} "{{ $h.Value }}";
             {{- end }}
-        proxy_set_header Host $host;
+        proxy_set_header Host $gw_api_compliant_host;
         proxy_pass {{ $l.ProxyPass }}$request_uri;
         {{- end }}
     }
