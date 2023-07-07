@@ -74,10 +74,9 @@ Fields:
         * `protocol` - partially supported. Allowed values: `HTTP`, `HTTPS`.
         * `tls`
             * `mode` - partially supported. Allowed value: `Terminate`.
-            * `certificateRefs` - partially supported. The TLS certificate and key must be stored in a Secret resource
-              of type `kubernetes.io/tls` in the same namespace as the Gateway resource. Only a single reference is
-              supported. You must deploy the Secret before the Gateway resource. Secret rotation (watching for updates)
-              is not supported.
+            * `certificateRefs` - The TLS certificate and key must be stored in a Secret resource of
+              type `kubernetes.io/tls`. Only a single reference is supported. You must deploy the Secret before the
+              Gateway resource.
             * `options` - not supported.
         * `allowedRoutes` - supported.
     * `addresses` - not supported.
