@@ -100,6 +100,7 @@ func newListenerConfiguratorFactory(
 		},
 		https: &listenerConfigurator{
 			validators: []listenerValidator{
+				validateListenerAllowedRouteKind,
 				validateListenerLabelSelector,
 				validateListenerHostname,
 				createHTTPSListenerValidator(),
