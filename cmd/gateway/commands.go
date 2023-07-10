@@ -9,9 +9,9 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/config"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/provisioner"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/config"
 )
 
 const (

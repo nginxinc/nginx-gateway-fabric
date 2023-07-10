@@ -18,8 +18,8 @@ import (
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/controller"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/controller/controllerfakes"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/manager/index"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/manager/predicate"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/controller/index"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/controller/predicate"
 )
 
 func TestRegister(t *testing.T) {

@@ -15,8 +15,8 @@ import (
 
 	embeddedfiles "github.com/nginxinc/nginx-kubernetes-gateway"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/controller"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/controller/predicate"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/events"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/manager/predicate"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/status"
 )
 

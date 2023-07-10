@@ -10,7 +10,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/manager/index"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/controller/index"
 )
 
 //go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . ServiceResolver
