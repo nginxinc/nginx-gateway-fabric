@@ -13,6 +13,7 @@ import (
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/conditions"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/helpers"
+	staticConds "github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/state/conditions"
 )
 
 func getNormalRef() v1beta1.BackendRef {
@@ -57,7 +58,7 @@ func TestValidateHTTPBackendRef(t *testing.T) {
 				},
 			},
 			expectedValid: false,
-			expectedCondition: conditions.NewRouteBackendRefUnsupportedValue(
+			expectedCondition: staticConds.NewRouteBackendRefUnsupportedValue(
 				"test.filters: Too many: 1: must have at most 0 items",
 			),
 		},
@@ -70,7 +71,7 @@ func TestValidateHTTPBackendRef(t *testing.T) {
 				}),
 			},
 			expectedValid: false,
-			expectedCondition: conditions.NewRouteBackendRefInvalidKind(
+			expectedCondition: staticConds.NewRouteBackendRefInvalidKind(
 				`test.kind: Unsupported value: "NotService": supported values: "Service"`,
 			),
 		},
@@ -168,7 +169,7 @@ func TestValidateBackendRef(t *testing.T) {
 				return backend
 			}),
 			expectedValid: false,
-			expectedCondition: conditions.NewRouteBackendRefInvalidKind(
+			expectedCondition: staticConds.NewRouteBackendRefInvalidKind(
 				`test.group: Unsupported value: "invalid": supported values: "core", ""`,
 			),
 		},
@@ -179,7 +180,7 @@ func TestValidateBackendRef(t *testing.T) {
 				return backend
 			}),
 			expectedValid: false,
-			expectedCondition: conditions.NewRouteBackendRefInvalidKind(
+			expectedCondition: staticConds.NewRouteBackendRefInvalidKind(
 				`test.kind: Unsupported value: "NotService": supported values: "Service"`,
 			),
 		},
@@ -190,7 +191,7 @@ func TestValidateBackendRef(t *testing.T) {
 				return backend
 			}),
 			expectedValid: false,
-			expectedCondition: conditions.NewRouteBackendRefRefNotPermitted(
+			expectedCondition: staticConds.NewRouteBackendRefRefNotPermitted(
 				"Backend ref to Service invalid/service1 not permitted by any ReferenceGrant",
 			),
 		},
@@ -201,7 +202,7 @@ func TestValidateBackendRef(t *testing.T) {
 				return backend
 			}),
 			expectedValid: false,
-			expectedCondition: conditions.NewRouteBackendRefUnsupportedValue(
+			expectedCondition: staticConds.NewRouteBackendRefUnsupportedValue(
 				"test.weight: Invalid value: -1: must be in the range [0, 1000000]",
 			),
 		},
@@ -466,7 +467,7 @@ func TestAddBackendRefsToRulesTest(t *testing.T) {
 				},
 			},
 			expectedConditions: []conditions.Condition{
-				conditions.NewRouteBackendRefInvalidKind(
+				staticConds.NewRouteBackendRefInvalidKind(
 					`spec.rules[0].backendRefs[0].kind: Unsupported value: "NotService": supported values: "Service"`,
 				),
 			},
@@ -558,7 +559,7 @@ func TestCreateBackend(t *testing.T) {
 			},
 			expectedServicePortReference: "",
 			expectedCondition: helpers.GetPointer(
-				conditions.NewRouteBackendRefUnsupportedValue(
+				staticConds.NewRouteBackendRefUnsupportedValue(
 					"test.weight: Invalid value: -1: must be in the range [0, 1000000]",
 				),
 			),
@@ -579,7 +580,7 @@ func TestCreateBackend(t *testing.T) {
 			},
 			expectedServicePortReference: "",
 			expectedCondition: helpers.GetPointer(
-				conditions.NewRouteBackendRefInvalidKind(
+				staticConds.NewRouteBackendRefInvalidKind(
 					`test.kind: Unsupported value: "NotService": supported values: "Service"`,
 				),
 			),
@@ -600,7 +601,7 @@ func TestCreateBackend(t *testing.T) {
 			},
 			expectedServicePortReference: "",
 			expectedCondition: helpers.GetPointer(
-				conditions.NewRouteBackendRefRefBackendNotFound(`test.name: Not found: "not-exist"`),
+				staticConds.NewRouteBackendRefRefBackendNotFound(`test.name: Not found: "not-exist"`),
 			),
 			name: "service doesn't exist",
 		},

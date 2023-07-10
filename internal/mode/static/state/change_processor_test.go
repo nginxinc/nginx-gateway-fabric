@@ -20,6 +20,7 @@ import (
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/controller/index"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/helpers"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/state"
+	staticConds "github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/state/conditions"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/state/graph"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/state/relationship"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/state/relationship/relationshipfakes"
@@ -406,7 +407,7 @@ var _ = Describe("ChangeProcessor", func() {
 					},
 					Valid: true,
 					Conditions: []conditions.Condition{
-						conditions.NewRouteBackendRefRefBackendNotFound(
+						staticConds.NewRouteBackendRefRefBackendNotFound(
 							"spec.rules[0].backendRefs[0].name: Not found: \"service\"",
 						),
 					},
@@ -506,23 +507,23 @@ var _ = Describe("ChangeProcessor", func() {
 
 							expGraph.GatewayClass = nil
 
-							expGraph.Gateway.Conditions = conditions.NewGatewayInvalid("GatewayClass doesn't exist")
+							expGraph.Gateway.Conditions = staticConds.NewGatewayInvalid("GatewayClass doesn't exist")
 							expGraph.Gateway.Valid = false
 							expGraph.Gateway.Listeners = nil
 
 							// no ref grant exists yet for hr1
 							expGraph.Routes[hr1Name].Conditions = []conditions.Condition{
-								conditions.NewRouteBackendRefRefNotPermitted(
+								staticConds.NewRouteBackendRefRefNotPermitted(
 									"Backend ref to Service service-ns/service not permitted by any ReferenceGrant",
 								),
 							}
 							expGraph.Routes[hr1Name].ParentRefs[0].Attachment = &graph.ParentRefAttachmentStatus{
 								AcceptedHostnames: map[string][]string{},
-								FailedCondition:   conditions.NewRouteInvalidGateway(),
+								FailedCondition:   staticConds.NewRouteInvalidGateway(),
 							}
 							expGraph.Routes[hr1Name].ParentRefs[1].Attachment = &graph.ParentRefAttachmentStatus{
 								AcceptedHostnames: map[string][]string{},
-								FailedCondition:   conditions.NewRouteInvalidGateway(),
+								FailedCondition:   staticConds.NewRouteInvalidGateway(),
 							}
 
 							expGraph.ReferencedSecrets = nil
@@ -543,7 +544,7 @@ var _ = Describe("ChangeProcessor", func() {
 						Source: gw1.Spec.Listeners[1],
 						Valid:  false,
 						Routes: map[types.NamespacedName]*graph.Route{},
-						Conditions: conditions.NewListenerRefNotPermitted(
+						Conditions: staticConds.NewListenerRefNotPermitted(
 							"Certificate ref to secret cert-ns/different-ns-tls-secret not permitted by any ReferenceGrant",
 						),
 						SupportedKinds: []v1beta1.RouteGroupKind{{Kind: "HTTPRoute"}},
@@ -551,7 +552,7 @@ var _ = Describe("ChangeProcessor", func() {
 
 					expAttachment := &graph.ParentRefAttachmentStatus{
 						AcceptedHostnames: map[string][]string{},
-						FailedCondition:   conditions.NewRouteInvalidListener(),
+						FailedCondition:   staticConds.NewRouteInvalidListener(),
 						Attached:          false,
 					}
 
@@ -560,7 +561,7 @@ var _ = Describe("ChangeProcessor", func() {
 					// no ref grant exists yet for hr1
 					expGraph.Routes[hr1Name].ParentRefs[1].Attachment = expAttachment
 					expGraph.Routes[hr1Name].Conditions = []conditions.Condition{
-						conditions.NewRouteBackendRefRefNotPermitted(
+						staticConds.NewRouteBackendRefRefNotPermitted(
 							"Backend ref to Service service-ns/service not permitted by any ReferenceGrant",
 						),
 					}
@@ -578,7 +579,7 @@ var _ = Describe("ChangeProcessor", func() {
 
 					// no ref grant exists yet for hr1
 					expGraph.Routes[hr1Name].Conditions = []conditions.Condition{
-						conditions.NewRouteBackendRefRefNotPermitted(
+						staticConds.NewRouteBackendRefRefNotPermitted(
 							"Backend ref to Service service-ns/service not permitted by any ReferenceGrant",
 						),
 					}
@@ -739,11 +740,11 @@ var _ = Describe("ChangeProcessor", func() {
 					expGraph.Routes[hr2Name] = expRouteHR2
 					expGraph.Routes[hr2Name].ParentRefs[0].Attachment = &graph.ParentRefAttachmentStatus{
 						AcceptedHostnames: map[string][]string{},
-						FailedCondition:   conditions.NewTODO("Gateway is ignored"),
+						FailedCondition:   staticConds.NewTODO("Gateway is ignored"),
 					}
 					expGraph.Routes[hr2Name].ParentRefs[1].Attachment = &graph.ParentRefAttachmentStatus{
 						AcceptedHostnames: map[string][]string{},
-						FailedCondition:   conditions.NewTODO("Gateway is ignored"),
+						FailedCondition:   staticConds.NewTODO("Gateway is ignored"),
 					}
 					expGraph.ReferencedSecrets[client.ObjectKeyFromObject(diffNsTLSSecret)] = &graph.Secret{
 						Source: diffNsTLSSecret,
@@ -819,7 +820,7 @@ var _ = Describe("ChangeProcessor", func() {
 					expGraph.GatewayClass = nil
 					expGraph.Gateway = &graph.Gateway{
 						Source:     gw2,
-						Conditions: conditions.NewGatewayInvalid("GatewayClass doesn't exist"),
+						Conditions: staticConds.NewGatewayInvalid("GatewayClass doesn't exist"),
 					}
 					expGraph.Routes = map[types.NamespacedName]*graph.Route{}
 					expGraph.ReferencedSecrets = nil

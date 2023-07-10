@@ -7,6 +7,7 @@ import (
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/conditions"
+	staticConds "github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/state/conditions"
 )
 
 // GatewayClass represents the GatewayClass resource.
@@ -64,7 +65,7 @@ func buildGatewayClass(gc *v1beta1.GatewayClass) *GatewayClass {
 
 	valErr := validateGatewayClass(gc)
 	if valErr != nil {
-		conds = append(conds, conditions.NewGatewayClassInvalidParameters(valErr.Error()))
+		conds = append(conds, staticConds.NewGatewayClassInvalidParameters(valErr.Error()))
 	}
 
 	return &GatewayClass{

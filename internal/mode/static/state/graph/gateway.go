@@ -10,6 +10,7 @@ import (
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/conditions"
 	nkgsort "github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/sort"
+	staticConds "github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/state/conditions"
 )
 
 // Gateway represents the winning Gateway resource.
@@ -120,16 +121,16 @@ func validateGateway(gw *v1beta1.Gateway, gc *GatewayClass) []conditions.Conditi
 	var conds []conditions.Condition
 
 	if gc == nil {
-		conds = append(conds, conditions.NewGatewayInvalid("GatewayClass doesn't exist")...)
+		conds = append(conds, staticConds.NewGatewayInvalid("GatewayClass doesn't exist")...)
 	} else if !gc.Valid {
-		conds = append(conds, conditions.NewGatewayInvalid("GatewayClass is invalid")...)
+		conds = append(conds, staticConds.NewGatewayInvalid("GatewayClass is invalid")...)
 	}
 
 	if len(gw.Spec.Addresses) > 0 {
 		path := field.NewPath("spec", "addresses")
 		valErr := field.Forbidden(path, "addresses are not supported")
 
-		conds = append(conds, conditions.NewGatewayUnsupportedValue(valErr.Error())...)
+		conds = append(conds, staticConds.NewGatewayUnsupportedValue(valErr.Error())...)
 	}
 
 	return conds

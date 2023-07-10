@@ -11,6 +11,7 @@ import (
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/conditions"
+	staticConds "github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/state/conditions"
 )
 
 // Listener represents a Listener of the Gateway resource.
@@ -83,7 +84,7 @@ func newListenerConfiguratorFactory(
 						listener.Protocol,
 						[]string{string(v1beta1.HTTPProtocolType), string(v1beta1.HTTPSProtocolType)},
 					)
-					return conditions.NewListenerUnsupportedProtocol(valErr.Error())
+					return staticConds.NewListenerUnsupportedProtocol(valErr.Error())
 				},
 			},
 		},
@@ -156,7 +157,7 @@ func (c *listenerConfigurator) configure(listener v1beta1.Listener) *Listener {
 		allowedRouteSelector, err = metav1.LabelSelectorAsSelector(selector)
 		if err != nil {
 			msg := fmt.Sprintf("invalid label selector: %s", err.Error())
-			conds = append(conds, conditions.NewListenerUnsupportedValue(msg)...)
+			conds = append(conds, staticConds.NewListenerUnsupportedValue(msg)...)
 		}
 	}
 
@@ -207,7 +208,7 @@ func validateListenerHostname(listener v1beta1.Listener) []conditions.Condition 
 	if err != nil {
 		path := field.NewPath("hostname")
 		valErr := field.Invalid(path, listener.Hostname, err.Error())
-		return conditions.NewListenerUnsupportedValue(valErr.Error())
+		return staticConds.NewListenerUnsupportedValue(valErr.Error())
 	}
 	return nil
 }
@@ -242,7 +243,7 @@ func getAndValidateListenerSupportedKinds(listener v1beta1.Listener) (
 		for _, kind := range listener.AllowedRoutes.Kinds {
 			if !validHTTPRouteKind(kind) {
 				msg := fmt.Sprintf("Unsupported route kind \"%s/%s\"", *kind.Group, kind.Kind)
-				conds = append(conds, conditions.NewListenerInvalidRouteKinds(msg)...)
+				conds = append(conds, staticConds.NewListenerInvalidRouteKinds(msg)...)
 				continue
 			}
 			supportedKinds = append(supportedKinds, kind)
@@ -268,7 +269,7 @@ func validateListenerLabelSelector(listener v1beta1.Listener) []conditions.Condi
 		*listener.AllowedRoutes.Namespaces.From == v1beta1.NamespacesFromSelector &&
 		listener.AllowedRoutes.Namespaces.Selector == nil {
 		msg := "Listener's AllowedRoutes Selector must be set when From is set to type Selector"
-		return conditions.NewListenerUnsupportedValue(msg)
+		return staticConds.NewListenerUnsupportedValue(msg)
 	}
 
 	return nil
@@ -278,7 +279,7 @@ func validateHTTPListener(listener v1beta1.Listener) []conditions.Condition {
 	if err := validateListenerPort(listener.Port); err != nil {
 		path := field.NewPath("port")
 		valErr := field.Invalid(path, listener.Port, err.Error())
-		return conditions.NewListenerUnsupportedValue(valErr.Error())
+		return staticConds.NewListenerUnsupportedValue(valErr.Error())
 	}
 
 	if listener.TLS != nil {
@@ -303,7 +304,7 @@ func createHTTPSListenerValidator() listenerValidator {
 		if err := validateListenerPort(listener.Port); err != nil {
 			path := field.NewPath("port")
 			valErr := field.Invalid(path, listener.Port, err.Error())
-			conds = append(conds, conditions.NewListenerUnsupportedValue(valErr.Error())...)
+			conds = append(conds, staticConds.NewListenerUnsupportedValue(valErr.Error())...)
 		}
 
 		if listener.TLS == nil {
@@ -318,13 +319,13 @@ func createHTTPSListenerValidator() listenerValidator {
 				*listener.TLS.Mode,
 				[]string{string(v1beta1.TLSModeTerminate)},
 			)
-			conds = append(conds, conditions.NewListenerUnsupportedValue(valErr.Error())...)
+			conds = append(conds, staticConds.NewListenerUnsupportedValue(valErr.Error())...)
 		}
 
 		if len(listener.TLS.Options) > 0 {
 			path := tlsPath.Child("options")
 			valErr := field.Forbidden(path, "options are not supported")
-			conds = append(conds, conditions.NewListenerUnsupportedValue(valErr.Error())...)
+			conds = append(conds, staticConds.NewListenerUnsupportedValue(valErr.Error())...)
 		}
 
 		if len(listener.TLS.CertificateRefs) == 0 {
@@ -338,20 +339,20 @@ func createHTTPSListenerValidator() listenerValidator {
 		if certRef.Kind != nil && *certRef.Kind != "Secret" {
 			path := certRefPath.Child("kind")
 			valErr := field.NotSupported(path, *certRef.Kind, []string{"Secret"})
-			conds = append(conds, conditions.NewListenerInvalidCertificateRef(valErr.Error())...)
+			conds = append(conds, staticConds.NewListenerInvalidCertificateRef(valErr.Error())...)
 		}
 
 		// for Kind Secret, certRef.Group must be nil or empty
 		if certRef.Group != nil && *certRef.Group != "" {
 			path := certRefPath.Child("group")
 			valErr := field.NotSupported(path, *certRef.Group, []string{""})
-			conds = append(conds, conditions.NewListenerInvalidCertificateRef(valErr.Error())...)
+			conds = append(conds, staticConds.NewListenerInvalidCertificateRef(valErr.Error())...)
 		}
 
 		if l := len(listener.TLS.CertificateRefs); l > 1 {
 			path := tlsPath.Child("certificateRefs")
 			valErr := field.TooMany(path, l, 1)
-			conds = append(conds, conditions.NewListenerUnsupportedValue(valErr.Error())...)
+			conds = append(conds, staticConds.NewListenerUnsupportedValue(valErr.Error())...)
 		}
 
 		return conds
@@ -373,7 +374,7 @@ func createPortConflictResolver() listenerConflictResolver {
 		if conflictedPorts[port] {
 			l.Valid = false
 
-			conflictedConds := conditions.NewListenerProtocolConflict(fmt.Sprintf(format, port))
+			conflictedConds := staticConds.NewListenerProtocolConflict(fmt.Sprintf(format, port))
 			l.Conditions = append(l.Conditions, conflictedConds...)
 			return
 		}
@@ -395,7 +396,7 @@ func createPortConflictResolver() listenerConflictResolver {
 			conflictedPorts[port] = true
 			for _, l := range listenersByPort[port] {
 				l.Valid = false
-				conflictedConds := conditions.NewListenerProtocolConflict(fmt.Sprintf(format, port))
+				conflictedConds := staticConds.NewListenerProtocolConflict(fmt.Sprintf(format, port))
 				l.Conditions = append(l.Conditions, conflictedConds...)
 			}
 		}
@@ -424,7 +425,7 @@ func createExternalReferencesForTLSSecretsResolver(
 			if !refGrantResolver.refAllowed(toSecret(certRefNsName), fromGateway(gwNs)) {
 				msg := fmt.Sprintf("Certificate ref to secret %s not permitted by any ReferenceGrant", certRefNsName)
 
-				l.Conditions = append(l.Conditions, conditions.NewListenerRefNotPermitted(msg)...)
+				l.Conditions = append(l.Conditions, staticConds.NewListenerRefNotPermitted(msg)...)
 				l.Valid = false
 				return
 			}
@@ -435,7 +436,7 @@ func createExternalReferencesForTLSSecretsResolver(
 			// field.NotFound could be better, but it doesn't allow us to set the error message.
 			valErr := field.Invalid(path, certRefNsName, err.Error())
 
-			l.Conditions = append(l.Conditions, conditions.NewListenerInvalidCertificateRef(valErr.Error())...)
+			l.Conditions = append(l.Conditions, staticConds.NewListenerInvalidCertificateRef(valErr.Error())...)
 			l.Valid = false
 		} else {
 			l.ResolvedSecret = &certRefNsName

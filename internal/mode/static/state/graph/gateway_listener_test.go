@@ -10,6 +10,7 @@ import (
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/conditions"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/helpers"
+	staticConds "github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/state/conditions"
 )
 
 func TestValidateHTTPListener(t *testing.T) {
@@ -29,7 +30,7 @@ func TestValidateHTTPListener(t *testing.T) {
 			l: v1beta1.Listener{
 				Port: 0,
 			},
-			expected: conditions.NewListenerUnsupportedValue(`port: Invalid value: 0: port must be between 1-65535`),
+			expected: staticConds.NewListenerUnsupportedValue(`port: Invalid value: 0: port must be between 1-65535`),
 			name:     "invalid port",
 		},
 	}
@@ -90,7 +91,7 @@ func TestValidateHTTPSListener(t *testing.T) {
 					CertificateRefs: []v1beta1.SecretObjectReference{validSecretRef},
 				},
 			},
-			expected: conditions.NewListenerUnsupportedValue(`port: Invalid value: 0: port must be between 1-65535`),
+			expected: staticConds.NewListenerUnsupportedValue(`port: Invalid value: 0: port must be between 1-65535`),
 			name:     "invalid port",
 		},
 		{
@@ -102,7 +103,7 @@ func TestValidateHTTPSListener(t *testing.T) {
 					Options:         map[v1beta1.AnnotationKey]v1beta1.AnnotationValue{"key": "val"},
 				},
 			},
-			expected: conditions.NewListenerUnsupportedValue("tls.options: Forbidden: options are not supported"),
+			expected: staticConds.NewListenerUnsupportedValue("tls.options: Forbidden: options are not supported"),
 			name:     "invalid options",
 		},
 		{
@@ -113,7 +114,7 @@ func TestValidateHTTPSListener(t *testing.T) {
 					CertificateRefs: []v1beta1.SecretObjectReference{validSecretRef},
 				},
 			},
-			expected: conditions.NewListenerUnsupportedValue(
+			expected: staticConds.NewListenerUnsupportedValue(
 				`tls.mode: Unsupported value: "Passthrough": supported values: "Terminate"`,
 			),
 			name: "invalid tls mode",
@@ -126,7 +127,7 @@ func TestValidateHTTPSListener(t *testing.T) {
 					CertificateRefs: []v1beta1.SecretObjectReference{invalidSecretRefGroup},
 				},
 			},
-			expected: conditions.NewListenerInvalidCertificateRef(
+			expected: staticConds.NewListenerInvalidCertificateRef(
 				`tls.certificateRefs[0].group: Unsupported value: "some-group": supported values: ""`,
 			),
 			name: "invalid cert ref group",
@@ -139,7 +140,7 @@ func TestValidateHTTPSListener(t *testing.T) {
 					CertificateRefs: []v1beta1.SecretObjectReference{invalidSecretRefKind},
 				},
 			},
-			expected: conditions.NewListenerInvalidCertificateRef(
+			expected: staticConds.NewListenerInvalidCertificateRef(
 				`tls.certificateRefs[0].kind: Unsupported value: "ConfigMap": supported values: "Secret"`,
 			),
 			name: "invalid cert ref kind",
@@ -152,7 +153,7 @@ func TestValidateHTTPSListener(t *testing.T) {
 					CertificateRefs: []v1beta1.SecretObjectReference{validSecretRef, validSecretRef},
 				},
 			},
-			expected: conditions.NewListenerUnsupportedValue(
+			expected: staticConds.NewListenerUnsupportedValue(
 				"tls.certificateRefs: Too many: 2: must have at most 1 items",
 			),
 			name: "too many cert refs",

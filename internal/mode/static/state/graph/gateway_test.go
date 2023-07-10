@@ -12,8 +12,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/conditions"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/helpers"
+	staticConds "github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/state/conditions"
 )
 
 func TestProcessedGatewaysGetAllNsNames(t *testing.T) {
@@ -475,7 +475,7 @@ func TestBuildGateway(t *testing.T) {
 					"listener-cross-ns-secret": {
 						Source: crossNamespaceSecretListener,
 						Valid:  false,
-						Conditions: conditions.NewListenerRefNotPermitted(
+						Conditions: staticConds.NewListenerRefNotPermitted(
 							`Certificate ref to secret diff-ns/secret not permitted by any ReferenceGrant`,
 						),
 						Routes: map[types.NamespacedName]*Route{},
@@ -497,7 +497,7 @@ func TestBuildGateway(t *testing.T) {
 					"listener-with-invalid-selector": {
 						Source: listenerInvalidSelector,
 						Valid:  false,
-						Conditions: conditions.NewListenerUnsupportedValue(
+						Conditions: staticConds.NewListenerUnsupportedValue(
 							`invalid label selector: "invalid" is not a valid label selector operator`,
 						),
 						SupportedKinds: []v1beta1.RouteGroupKind{
@@ -518,7 +518,7 @@ func TestBuildGateway(t *testing.T) {
 					"invalid-protocol": {
 						Source: invalidProtocolListener,
 						Valid:  false,
-						Conditions: conditions.NewListenerUnsupportedProtocol(
+						Conditions: staticConds.NewListenerUnsupportedProtocol(
 							`protocol: Unsupported value: "TCP": supported values: "HTTP", "HTTPS"`,
 						),
 						SupportedKinds: []v1beta1.RouteGroupKind{
@@ -541,7 +541,7 @@ func TestBuildGateway(t *testing.T) {
 					"invalid-port": {
 						Source: invalidPortListener,
 						Valid:  false,
-						Conditions: conditions.NewListenerUnsupportedValue(
+						Conditions: staticConds.NewListenerUnsupportedValue(
 							`port: Invalid value: 0: port must be between 1-65535`,
 						),
 						SupportedKinds: []v1beta1.RouteGroupKind{
@@ -551,7 +551,7 @@ func TestBuildGateway(t *testing.T) {
 					"invalid-https-port": {
 						Source: invalidHTTPSPortListener,
 						Valid:  false,
-						Conditions: conditions.NewListenerUnsupportedValue(
+						Conditions: staticConds.NewListenerUnsupportedValue(
 							`port: Invalid value: 0: port must be between 1-65535`,
 						),
 						SupportedKinds: []v1beta1.RouteGroupKind{
@@ -574,7 +574,7 @@ func TestBuildGateway(t *testing.T) {
 					"invalid-hostname": {
 						Source:     invalidHostnameListener,
 						Valid:      false,
-						Conditions: conditions.NewListenerUnsupportedValue(invalidHostnameMsg),
+						Conditions: staticConds.NewListenerUnsupportedValue(invalidHostnameMsg),
 						SupportedKinds: []v1beta1.RouteGroupKind{
 							{Kind: "HTTPRoute"},
 						},
@@ -582,7 +582,7 @@ func TestBuildGateway(t *testing.T) {
 					"invalid-https-hostname": {
 						Source:     invalidHTTPSHostnameListener,
 						Valid:      false,
-						Conditions: conditions.NewListenerUnsupportedValue(invalidHostnameMsg),
+						Conditions: staticConds.NewListenerUnsupportedValue(invalidHostnameMsg),
 						SupportedKinds: []v1beta1.RouteGroupKind{
 							{Kind: "HTTPRoute"},
 						},
@@ -602,7 +602,7 @@ func TestBuildGateway(t *testing.T) {
 						Source: invalidTLSConfigListener,
 						Valid:  false,
 						Routes: map[types.NamespacedName]*Route{},
-						Conditions: conditions.NewListenerInvalidCertificateRef(
+						Conditions: staticConds.NewListenerInvalidCertificateRef(
 							`tls.certificateRefs[0]: Invalid value: test/does-not-exist: secret does not exist`,
 						),
 						SupportedKinds: []v1beta1.RouteGroupKind{
@@ -727,7 +727,7 @@ func TestBuildGateway(t *testing.T) {
 						Source:     foo80Listener1,
 						Valid:      false,
 						Routes:     map[types.NamespacedName]*Route{},
-						Conditions: conditions.NewListenerProtocolConflict(conflict80PortMsg),
+						Conditions: staticConds.NewListenerProtocolConflict(conflict80PortMsg),
 						SupportedKinds: []v1beta1.RouteGroupKind{
 							{Kind: "HTTPRoute"},
 						},
@@ -736,7 +736,7 @@ func TestBuildGateway(t *testing.T) {
 						Source:     bar80Listener,
 						Valid:      false,
 						Routes:     map[types.NamespacedName]*Route{},
-						Conditions: conditions.NewListenerProtocolConflict(conflict80PortMsg),
+						Conditions: staticConds.NewListenerProtocolConflict(conflict80PortMsg),
 						SupportedKinds: []v1beta1.RouteGroupKind{
 							{Kind: "HTTPRoute"},
 						},
@@ -745,7 +745,7 @@ func TestBuildGateway(t *testing.T) {
 						Source:     foo443Listener,
 						Valid:      false,
 						Routes:     map[types.NamespacedName]*Route{},
-						Conditions: conditions.NewListenerProtocolConflict(conflict443PortMsg),
+						Conditions: staticConds.NewListenerProtocolConflict(conflict443PortMsg),
 						SupportedKinds: []v1beta1.RouteGroupKind{
 							{Kind: "HTTPRoute"},
 						},
@@ -754,7 +754,7 @@ func TestBuildGateway(t *testing.T) {
 						Source:         foo80HTTPSListener,
 						Valid:          false,
 						Routes:         map[types.NamespacedName]*Route{},
-						Conditions:     conditions.NewListenerProtocolConflict(conflict80PortMsg),
+						Conditions:     staticConds.NewListenerProtocolConflict(conflict80PortMsg),
 						ResolvedSecret: helpers.GetPointer(client.ObjectKeyFromObject(secretSameNs)),
 						SupportedKinds: []v1beta1.RouteGroupKind{
 							{Kind: "HTTPRoute"},
@@ -764,7 +764,7 @@ func TestBuildGateway(t *testing.T) {
 						Source:         foo443HTTPSListener1,
 						Valid:          false,
 						Routes:         map[types.NamespacedName]*Route{},
-						Conditions:     conditions.NewListenerProtocolConflict(conflict443PortMsg),
+						Conditions:     staticConds.NewListenerProtocolConflict(conflict443PortMsg),
 						ResolvedSecret: helpers.GetPointer(client.ObjectKeyFromObject(secretSameNs)),
 						SupportedKinds: []v1beta1.RouteGroupKind{
 							{Kind: "HTTPRoute"},
@@ -774,7 +774,7 @@ func TestBuildGateway(t *testing.T) {
 						Source:         bar443HTTPSListener,
 						Valid:          false,
 						Routes:         map[types.NamespacedName]*Route{},
-						Conditions:     conditions.NewListenerProtocolConflict(conflict443PortMsg),
+						Conditions:     staticConds.NewListenerProtocolConflict(conflict443PortMsg),
 						ResolvedSecret: helpers.GetPointer(client.ObjectKeyFromObject(secretSameNs)),
 						SupportedKinds: []v1beta1.RouteGroupKind{
 							{Kind: "HTTPRoute"},
@@ -796,7 +796,7 @@ func TestBuildGateway(t *testing.T) {
 			expected: &Gateway{
 				Source: getLastCreatedGetaway(),
 				Valid:  false,
-				Conditions: conditions.NewGatewayUnsupportedValue("spec." +
+				Conditions: staticConds.NewGatewayUnsupportedValue("spec." +
 					"addresses: Forbidden: addresses are not supported",
 				),
 			},
@@ -815,7 +815,7 @@ func TestBuildGateway(t *testing.T) {
 			expected: &Gateway{
 				Source:     getLastCreatedGetaway(),
 				Valid:      false,
-				Conditions: conditions.NewGatewayInvalid("GatewayClass is invalid"),
+				Conditions: staticConds.NewGatewayInvalid("GatewayClass is invalid"),
 			},
 			name: "invalid gatewayclass",
 		},
@@ -827,7 +827,7 @@ func TestBuildGateway(t *testing.T) {
 			expected: &Gateway{
 				Source:     getLastCreatedGetaway(),
 				Valid:      false,
-				Conditions: conditions.NewGatewayInvalid("GatewayClass doesn't exist"),
+				Conditions: staticConds.NewGatewayInvalid("GatewayClass doesn't exist"),
 			},
 			name: "nil gatewayclass",
 		},

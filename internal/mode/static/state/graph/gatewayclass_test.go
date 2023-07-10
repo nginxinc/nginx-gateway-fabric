@@ -11,6 +11,7 @@ import (
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/conditions"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/helpers"
+	staticConds "github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/state/conditions"
 )
 
 func TestProcessGatewayClasses(t *testing.T) {
@@ -150,7 +151,7 @@ func TestBuildGatewayClass(t *testing.T) {
 				Source: invalidGC,
 				Valid:  false,
 				Conditions: []conditions.Condition{
-					conditions.NewGatewayClassInvalidParameters(
+					staticConds.NewGatewayClassInvalidParameters(
 						"spec.parametersRef: Forbidden: parametersRef is not supported",
 					),
 				},

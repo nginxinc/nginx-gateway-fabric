@@ -14,10 +14,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/conditions"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/helpers"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/status"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/status/statusfakes"
+	staticConds "github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/state/conditions"
 )
 
 var _ = Describe("Updater", func() {
@@ -89,7 +89,7 @@ var _ = Describe("Updater", func() {
 							ObservedGeneration: gens.gateways,
 						},
 						{Namespace: "test", Name: "ignored-gateway"}: {
-							Conditions:         conditions.NewGatewayConflict(),
+							Conditions:         staticConds.NewGatewayConflict(),
 							ObservedGeneration: 1,
 						},
 					},
@@ -165,16 +165,16 @@ var _ = Describe("Updater", func() {
 								Status:             metav1.ConditionFalse,
 								ObservedGeneration: 1,
 								LastTransitionTime: fakeClockTime,
-								Reason:             string(conditions.GatewayReasonGatewayConflict),
-								Message:            conditions.GatewayMessageGatewayConflict,
+								Reason:             string(staticConds.GatewayReasonGatewayConflict),
+								Message:            staticConds.GatewayMessageGatewayConflict,
 							},
 							{
 								Type:               string(v1beta1.GatewayConditionProgrammed),
 								Status:             metav1.ConditionFalse,
 								ObservedGeneration: 1,
 								LastTransitionTime: fakeClockTime,
-								Reason:             string(conditions.GatewayReasonGatewayConflict),
-								Message:            conditions.GatewayMessageGatewayConflict,
+								Reason:             string(staticConds.GatewayReasonGatewayConflict),
+								Message:            staticConds.GatewayMessageGatewayConflict,
 							},
 						},
 						Addresses: []v1beta1.GatewayAddress{addr},

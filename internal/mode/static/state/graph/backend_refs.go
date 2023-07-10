@@ -9,6 +9,7 @@ import (
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/conditions"
+	staticConds "github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/state/conditions"
 )
 
 // BackendRef is an internal representation of a backendRef in an HTTPRoute.
@@ -122,7 +123,7 @@ func createBackendRef(
 			Valid:  false,
 		}
 
-		cond := conditions.NewRouteBackendRefRefBackendNotFound(err.Error())
+		cond := staticConds.NewRouteBackendRefRefBackendNotFound(err.Error())
 		return backendRef, &cond
 	}
 
@@ -168,7 +169,7 @@ func validateHTTPBackendRef(
 
 	if len(ref.Filters) > 0 {
 		valErr := field.TooMany(path.Child("filters"), len(ref.Filters), 0)
-		return false, conditions.NewRouteBackendRefUnsupportedValue(valErr.Error())
+		return false, staticConds.NewRouteBackendRefUnsupportedValue(valErr.Error())
 	}
 
 	return validateBackendRef(ref.BackendRef, routeNs, refGrantResolver, path)
@@ -184,12 +185,12 @@ func validateBackendRef(
 
 	if ref.Group != nil && !(*ref.Group == "core" || *ref.Group == "") {
 		valErr := field.NotSupported(path.Child("group"), *ref.Group, []string{"core", ""})
-		return false, conditions.NewRouteBackendRefInvalidKind(valErr.Error())
+		return false, staticConds.NewRouteBackendRefInvalidKind(valErr.Error())
 	}
 
 	if ref.Kind != nil && *ref.Kind != "Service" {
 		valErr := field.NotSupported(path.Child("kind"), *ref.Kind, []string{"Service"})
-		return false, conditions.NewRouteBackendRefInvalidKind(valErr.Error())
+		return false, staticConds.NewRouteBackendRefInvalidKind(valErr.Error())
 	}
 
 	// no need to validate ref.Name
@@ -200,7 +201,7 @@ func validateBackendRef(
 		if !refGrantResolver.refAllowed(toService(refNsName), fromHTTPRoute(routeNs)) {
 			msg := fmt.Sprintf("Backend ref to Service %s not permitted by any ReferenceGrant", refNsName)
 
-			return false, conditions.NewRouteBackendRefRefNotPermitted(msg)
+			return false, staticConds.NewRouteBackendRefRefNotPermitted(msg)
 		}
 	}
 
@@ -213,7 +214,7 @@ func validateBackendRef(
 	if ref.Weight != nil {
 		if err := validateWeight(*ref.Weight); err != nil {
 			valErr := field.Invalid(path.Child("weight"), *ref.Weight, err.Error())
-			return false, conditions.NewRouteBackendRefUnsupportedValue(valErr.Error())
+			return false, staticConds.NewRouteBackendRefUnsupportedValue(valErr.Error())
 		}
 	}
 

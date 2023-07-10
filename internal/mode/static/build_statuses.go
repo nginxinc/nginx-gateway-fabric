@@ -7,6 +7,7 @@ import (
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/conditions"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/status"
+	staticConds "github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/state/conditions"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/state/graph"
 )
 
@@ -27,7 +28,7 @@ func buildStatuses(graph *graph.Graph, nginxReloadRes nginxReloadResult) status.
 	for nsname, r := range graph.Routes {
 		parentStatuses := make([]status.ParentStatus, 0, len(r.ParentRefs))
 
-		defaultConds := conditions.NewDefaultRouteConditions()
+		defaultConds := staticConds.NewDefaultRouteConditions()
 
 		for _, ref := range r.ParentRefs {
 			failedAttachmentCondCount := 0
@@ -47,7 +48,7 @@ func buildStatuses(graph *graph.Graph, nginxReloadRes nginxReloadResult) status.
 			if nginxReloadRes.error != nil {
 				allConds = append(
 					allConds,
-					conditions.NewRouteGatewayNotProgrammed(conditions.RouteMessageFailedNginxReload),
+					staticConds.NewRouteGatewayNotProgrammed(staticConds.RouteMessageFailedNginxReload),
 				)
 			}
 
@@ -56,7 +57,7 @@ func buildStatuses(graph *graph.Graph, nginxReloadRes nginxReloadResult) status.
 			parentStatuses = append(parentStatuses, status.ParentStatus{
 				GatewayNsName: ref.Gateway,
 				SectionName:   routeRef.SectionName,
-				Conditions:    conditions.DeduplicateConditions(allConds),
+				Conditions:    staticConds.DeduplicateConditions(allConds),
 			})
 		}
 
@@ -86,7 +87,7 @@ func buildGatewayClassStatuses(
 		conds = append(conds, gc.Conditions...)
 
 		statuses[client.ObjectKeyFromObject(gc.Source)] = status.GatewayClassStatus{
-			Conditions:         conditions.DeduplicateConditions(conds),
+			Conditions:         staticConds.DeduplicateConditions(conds),
 			ObservedGeneration: gc.Source.Generation,
 		}
 	}
@@ -114,7 +115,7 @@ func buildGatewayStatuses(
 
 	for nsname, gw := range ignoredGateways {
 		statuses[nsname] = status.GatewayStatus{
-			Conditions:         conditions.NewGatewayConflict(),
+			Conditions:         staticConds.NewGatewayConflict(),
 			ObservedGeneration: gw.Generation,
 		}
 	}
@@ -125,7 +126,7 @@ func buildGatewayStatuses(
 func buildGatewayStatus(gateway *graph.Gateway, nginxReloadRes nginxReloadResult) status.GatewayStatus {
 	if !gateway.Valid {
 		return status.GatewayStatus{
-			Conditions:         conditions.DeduplicateConditions(gateway.Conditions),
+			Conditions:         staticConds.DeduplicateConditions(gateway.Conditions),
 			ObservedGeneration: gateway.Source.Generation,
 		}
 	}
@@ -137,7 +138,7 @@ func buildGatewayStatus(gateway *graph.Gateway, nginxReloadRes nginxReloadResult
 		var conds []conditions.Condition
 
 		if l.Valid {
-			conds = conditions.NewDefaultListenerConditions()
+			conds = staticConds.NewDefaultListenerConditions()
 			validListenerCount++
 		} else {
 			conds = l.Conditions
@@ -146,30 +147,33 @@ func buildGatewayStatus(gateway *graph.Gateway, nginxReloadRes nginxReloadResult
 		if nginxReloadRes.error != nil {
 			conds = append(
 				conds,
-				conditions.NewListenerNotProgrammedInvalid(conditions.ListenerMessageFailedNginxReload),
+				staticConds.NewListenerNotProgrammedInvalid(staticConds.ListenerMessageFailedNginxReload),
 			)
 		}
 
 		listenerStatuses[name] = status.ListenerStatus{
 			AttachedRoutes: int32(len(l.Routes)),
-			Conditions:     conditions.DeduplicateConditions(conds),
+			Conditions:     staticConds.DeduplicateConditions(conds),
 			SupportedKinds: l.SupportedKinds,
 		}
 	}
 
-	gwConds := conditions.NewDefaultGatewayConditions()
+	gwConds := staticConds.NewDefaultGatewayConditions()
 	if validListenerCount == 0 {
-		gwConds = append(gwConds, conditions.NewGatewayNotAcceptedListenersNotValid()...)
+		gwConds = append(gwConds, staticConds.NewGatewayNotAcceptedListenersNotValid()...)
 	} else if validListenerCount < len(gateway.Listeners) {
-		gwConds = append(gwConds, conditions.NewGatewayAcceptedListenersNotValid())
+		gwConds = append(gwConds, staticConds.NewGatewayAcceptedListenersNotValid())
 	}
 
 	if nginxReloadRes.error != nil {
-		gwConds = append(gwConds, conditions.NewGatewayNotProgrammedInvalid(conditions.GatewayMessageFailedNginxReload))
+		gwConds = append(
+			gwConds,
+			staticConds.NewGatewayNotProgrammedInvalid(staticConds.GatewayMessageFailedNginxReload),
+		)
 	}
 
 	return status.GatewayStatus{
-		Conditions:         conditions.DeduplicateConditions(gwConds),
+		Conditions:         staticConds.DeduplicateConditions(gwConds),
 		ListenerStatuses:   listenerStatuses,
 		ObservedGeneration: gateway.Source.Generation,
 	}

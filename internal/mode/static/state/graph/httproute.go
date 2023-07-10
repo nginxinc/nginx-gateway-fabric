@@ -13,6 +13,7 @@ import (
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/conditions"
+	staticConds "github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/state/conditions"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/state/validation"
 )
 
@@ -182,7 +183,7 @@ func buildRoute(
 	err := validateHostnames(ghr.Spec.Hostnames, field.NewPath("spec").Child("hostnames"))
 	if err != nil {
 		r.Valid = false
-		r.Conditions = append(r.Conditions, conditions.NewRouteUnsupportedValue(err.Error()))
+		r.Conditions = append(r.Conditions, staticConds.NewRouteUnsupportedValue(err.Error()))
 
 		return r
 	}
@@ -233,10 +234,10 @@ func buildRoute(
 			// FIXME(pleshakov): Partial validity for HTTPRoute rules is not defined in the Gateway API spec yet.
 			// See https://github.com/nginxinc/nginx-kubernetes-gateway/issues/485
 			msg = "Some rules are invalid: " + msg
-			r.Conditions = append(r.Conditions, conditions.NewTODO(msg))
+			r.Conditions = append(r.Conditions, staticConds.NewTODO(msg))
 		} else {
 			msg = "All rules are invalid: " + msg
-			r.Conditions = append(r.Conditions, conditions.NewRouteUnsupportedValue(msg))
+			r.Conditions = append(r.Conditions, staticConds.NewRouteUnsupportedValue(msg))
 
 			r.Valid = false
 		}
@@ -279,7 +280,7 @@ func bindRouteToListeners(r *Route, gw *Gateway, namespaces map[types.Namespaced
 
 		if routeRef.Port != nil {
 			valErr := field.Forbidden(path.Child("port"), "cannot be set")
-			attachment.FailedCondition = conditions.NewRouteUnsupportedValue(valErr.Error())
+			attachment.FailedCondition = staticConds.NewRouteUnsupportedValue(valErr.Error())
 			continue
 		}
 
@@ -288,14 +289,14 @@ func bindRouteToListeners(r *Route, gw *Gateway, namespaces map[types.Namespaced
 		referencesWinningGw := ref.Gateway.Namespace == gw.Source.Namespace && ref.Gateway.Name == gw.Source.Name
 
 		if !referencesWinningGw {
-			attachment.FailedCondition = conditions.NewTODO("Gateway is ignored")
+			attachment.FailedCondition = staticConds.NewTODO("Gateway is ignored")
 			continue
 		}
 
 		// Case 3: Attachment is not possible because Gateway is invalid
 
 		if !gw.Valid {
-			attachment.FailedCondition = conditions.NewRouteInvalidGateway()
+			attachment.FailedCondition = staticConds.NewRouteInvalidGateway()
 			continue
 		}
 
@@ -325,11 +326,11 @@ func tryToAttachRouteToListeners(
 	validListeners, listenerExists := findValidListeners(getSectionName(sectionName), gw.Listeners)
 
 	if !listenerExists {
-		return conditions.NewRouteNoMatchingParent(), false
+		return staticConds.NewRouteNoMatchingParent(), false
 	}
 
 	if len(validListeners) == 0 {
-		return conditions.NewRouteInvalidListener(), false
+		return staticConds.NewRouteInvalidListener(), false
 	}
 
 	bind := func(l *Listener) (allowed, attached bool) {
@@ -357,9 +358,9 @@ func tryToAttachRouteToListeners(
 
 	if !attached {
 		if !allowed {
-			return conditions.NewRouteNotAllowedByListeners(), false
+			return staticConds.NewRouteNotAllowedByListeners(), false
 		}
-		return conditions.NewRouteNoMatchingListenerHostname(), false
+		return staticConds.NewRouteNoMatchingListenerHostname(), false
 	}
 
 	return conditions.Condition{}, true

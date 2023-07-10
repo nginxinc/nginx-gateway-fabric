@@ -16,6 +16,7 @@ import (
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/conditions"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/helpers"
+	staticConds "github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/state/conditions"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/state/validation/validationfakes"
 )
 
@@ -422,7 +423,9 @@ func TestBuildRoute(t *testing.T) {
 					},
 				},
 				Conditions: []conditions.Condition{
-					conditions.NewRouteUnsupportedValue(`spec.hostnames[0]: Invalid value: "": cannot be empty string`),
+					staticConds.NewRouteUnsupportedValue(
+						`spec.hostnames[0]: Invalid value: "": cannot be empty string`,
+					),
 				},
 			},
 			name: "invalid hostname",
@@ -440,7 +443,7 @@ func TestBuildRoute(t *testing.T) {
 					},
 				},
 				Conditions: []conditions.Condition{
-					conditions.NewRouteUnsupportedValue(
+					staticConds.NewRouteUnsupportedValue(
 						`All rules are invalid: spec.rules[0].matches[0].path.value: Invalid value: "/invalid": invalid path`,
 					),
 				},
@@ -466,7 +469,7 @@ func TestBuildRoute(t *testing.T) {
 					},
 				},
 				Conditions: []conditions.Condition{
-					conditions.NewRouteUnsupportedValue(
+					staticConds.NewRouteUnsupportedValue(
 						`All rules are invalid: spec.rules[0].filters[0].requestRedirect.hostname: ` +
 							`Invalid value: "invalid.example.com": invalid hostname`),
 				},
@@ -492,7 +495,7 @@ func TestBuildRoute(t *testing.T) {
 					},
 				},
 				Conditions: []conditions.Condition{
-					conditions.NewTODO(
+					staticConds.NewTODO(
 						`Some rules are invalid: ` +
 							`[spec.rules[0].matches[0].path.value: Invalid value: "/invalid": invalid path, ` +
 							`spec.rules[1].filters[0].requestRedirect.hostname: Invalid value: ` +
@@ -804,7 +807,7 @@ func TestBindRouteToListeners(t *testing.T) {
 					Gateway: client.ObjectKeyFromObject(gw),
 					Attachment: &ParentRefAttachmentStatus{
 						Attached:          false,
-						FailedCondition:   conditions.NewRouteInvalidListener(),
+						FailedCondition:   staticConds.NewRouteInvalidListener(),
 						AcceptedHostnames: map[string][]string{},
 					},
 				},
@@ -829,7 +832,7 @@ func TestBindRouteToListeners(t *testing.T) {
 					Gateway: client.ObjectKeyFromObject(gw),
 					Attachment: &ParentRefAttachmentStatus{
 						Attached: false,
-						FailedCondition: conditions.NewRouteUnsupportedValue(
+						FailedCondition: staticConds.NewRouteUnsupportedValue(
 							`spec.parentRefs[0].port: Forbidden: cannot be set`,
 						),
 						AcceptedHostnames: map[string][]string{},
@@ -856,7 +859,7 @@ func TestBindRouteToListeners(t *testing.T) {
 					Gateway: client.ObjectKeyFromObject(gw),
 					Attachment: &ParentRefAttachmentStatus{
 						Attached:          false,
-						FailedCondition:   conditions.NewRouteNoMatchingParent(),
+						FailedCondition:   staticConds.NewRouteNoMatchingParent(),
 						AcceptedHostnames: map[string][]string{},
 					},
 				},
@@ -881,7 +884,7 @@ func TestBindRouteToListeners(t *testing.T) {
 					Gateway: client.ObjectKeyFromObject(gw),
 					Attachment: &ParentRefAttachmentStatus{
 						Attached:          false,
-						FailedCondition:   conditions.NewRouteInvalidListener(),
+						FailedCondition:   staticConds.NewRouteInvalidListener(),
 						AcceptedHostnames: map[string][]string{},
 					},
 				},
@@ -906,7 +909,7 @@ func TestBindRouteToListeners(t *testing.T) {
 					Gateway: client.ObjectKeyFromObject(gw),
 					Attachment: &ParentRefAttachmentStatus{
 						Attached:          false,
-						FailedCondition:   conditions.NewRouteNoMatchingListenerHostname(),
+						FailedCondition:   staticConds.NewRouteNoMatchingListenerHostname(),
 						AcceptedHostnames: map[string][]string{},
 					},
 				},
@@ -931,7 +934,7 @@ func TestBindRouteToListeners(t *testing.T) {
 					Gateway: ignoredGwNsName,
 					Attachment: &ParentRefAttachmentStatus{
 						Attached:          false,
-						FailedCondition:   conditions.NewTODO("Gateway is ignored"),
+						FailedCondition:   staticConds.NewTODO("Gateway is ignored"),
 						AcceptedHostnames: map[string][]string{},
 					},
 				},
@@ -977,7 +980,7 @@ func TestBindRouteToListeners(t *testing.T) {
 					Gateway: client.ObjectKeyFromObject(gw),
 					Attachment: &ParentRefAttachmentStatus{
 						Attached:          false,
-						FailedCondition:   conditions.NewRouteInvalidGateway(),
+						FailedCondition:   staticConds.NewRouteInvalidGateway(),
 						AcceptedHostnames: map[string][]string{},
 					},
 				},
@@ -1010,7 +1013,7 @@ func TestBindRouteToListeners(t *testing.T) {
 					Gateway: client.ObjectKeyFromObject(gw),
 					Attachment: &ParentRefAttachmentStatus{
 						Attached:          false,
-						FailedCondition:   conditions.NewRouteNotAllowedByListeners(),
+						FailedCondition:   staticConds.NewRouteNotAllowedByListeners(),
 						AcceptedHostnames: map[string][]string{},
 					},
 				},
@@ -1094,7 +1097,7 @@ func TestBindRouteToListeners(t *testing.T) {
 					Gateway: client.ObjectKeyFromObject(gwDiffNamespace),
 					Attachment: &ParentRefAttachmentStatus{
 						Attached:          false,
-						FailedCondition:   conditions.NewRouteNotAllowedByListeners(),
+						FailedCondition:   staticConds.NewRouteNotAllowedByListeners(),
 						AcceptedHostnames: map[string][]string{},
 					},
 				},
