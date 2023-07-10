@@ -1,6 +1,9 @@
 name: Generate
 
 on:
+  push:
+    branches:
+      - chore/generatE
   pull_request:
     branches:
     - main
