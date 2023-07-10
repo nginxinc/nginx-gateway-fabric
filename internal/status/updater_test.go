@@ -13,7 +13,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/helpers"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/state/conditions"
@@ -34,7 +33,7 @@ var _ = Describe("Updater", func() {
 	BeforeEach(OncePerOrdered, func() {
 		scheme := runtime.NewScheme()
 
-		Expect(gatewayv1beta1.AddToScheme(scheme)).Should(Succeed())
+		Expect(v1beta1.AddToScheme(scheme)).Should(Succeed())
 
 		client = fake.NewClientBuilder().
 			WithScheme(scheme).
@@ -135,7 +134,7 @@ var _ = Describe("Updater", func() {
 					},
 					Status: v1beta1.GatewayStatus{
 						Conditions: status.CreateExpectedAPIConditions("Test", generation, fakeClockTime),
-						Listeners: []gatewayv1beta1.ListenerStatus{
+						Listeners: []v1beta1.ListenerStatus{
 							{
 								Name: "http",
 								SupportedKinds: []v1beta1.RouteGroupKind{
@@ -196,12 +195,12 @@ var _ = Describe("Updater", func() {
 						Kind:       "HTTPRoute",
 						APIVersion: "gateway.networking.k8s.io/v1beta1",
 					},
-					Status: gatewayv1beta1.HTTPRouteStatus{
-						RouteStatus: gatewayv1beta1.RouteStatus{
-							Parents: []gatewayv1beta1.RouteParentStatus{
+					Status: v1beta1.HTTPRouteStatus{
+						RouteStatus: v1beta1.RouteStatus{
+							Parents: []v1beta1.RouteParentStatus{
 								{
-									ControllerName: gatewayv1beta1.GatewayController(gatewayCtrlName),
-									ParentRef: gatewayv1beta1.ParentReference{
+									ControllerName: v1beta1.GatewayController(gatewayCtrlName),
+									ParentRef: v1beta1.ParentReference{
 										Namespace:   (*v1beta1.Namespace)(helpers.GetStringPointer("test")),
 										Name:        "gateway",
 										SectionName: (*v1beta1.SectionName)(helpers.GetStringPointer("http")),
