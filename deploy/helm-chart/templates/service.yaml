@@ -1,0 +1,41 @@
+{{- if .Values.gateway.service.create }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "nginx-gateway.gateway.service.name" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "nginx-gateway.labels" . | nindent 4 }}
+{{- if .Values.gateway.service.extraLabels }}
+{{ toYaml .Values.gateway.service.extraLabels | indent 4 }}
+{{- end }}
+{{- if .Values.gateway.service.annotations }}
+  annotations:
+{{ toYaml .Values.gateway.service.annotations | indent 4 }}
+{{- end }}
+spec:
+{{- if or (eq .Values.gateway.service.type "LoadBalancer") (eq .Values.gateway.service.type "NodePort") }}
+  {{- if .Values.gateway.service.externalTrafficPolicy }}
+  externalTrafficPolicy: {{ .Values.gateway.service.externalTrafficPolicy }}
+  {{- end }}
+{{- end }}
+  type: {{ .Values.gateway.service.type }}
+  ports:
+{{- if .Values.gateway.service.customPorts }}
+{{ toYaml .Values.gateway.service.customPorts | indent 2 }}
+{{ end }}
+{{- if .Values.gateway.service.httpPort.enable }}
+  - port: {{ .Values.gateway.service.httpPort.port }}
+    targetPort: {{ .Values.gateway.service.httpPort.targetPort }}
+    protocol: TCP
+    name: http
+{{- end }}
+{{- if .Values.gateway.service.httpsPort.enable }}
+  - port: {{ .Values.gateway.service.httpsPort.port }}
+    targetPort: {{ .Values.gateway.service.httpsPort.targetPort }}
+    protocol: TCP
+    name: https
+{{- end }}
+  selector:
+    {{- include "nginx-gateway.selectorLabels" . | nindent 4 }}
+{{- end }}

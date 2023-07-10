@@ -32,8 +32,8 @@ This guide walks you through how to install NGINX Kubernetes Gateway on a generi
 
 1. Create the njs-modules ConfigMap:
 
-    ```shell
-    kubectl create configmap njs-modules --from-file=internal/mode/static/nginx/modules/src/httpmatches.js -n nginx-gateway
+    ```
+    kubectl apply -f deploy/manifests/njs-modules.yaml -n nginx-gateway
     ```
 
 1. Create the ConfigMap with the main NGINX configuration file:

@@ -2,6 +2,9 @@
 VERSION = edge
 GIT_COMMIT = $(shell git rev-parse HEAD || echo "unknown")
 DATE = $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
+MANIFEST_DIR = $(shell pwd)/deploy/manifests 
+NJS_DIR = $(shell pwd)/internal/nginx/modules/src/
+CHART_DIR = $(shell pwd)/deploy/helm-chart
 
 # variables that can be overridden by the user
 PREFIX ?= nginx-kubernetes-gateway## The name of the image. For example, nginx-kubernetes-gateway
@@ -91,6 +94,14 @@ njs-unit-test: ## Run unit tests for the njs httpmatches module
 		-v $(PWD)/internal/mode/static/nginx/modules:/modules/ \
 		node:18 \
 		/bin/bash -c "npm install && npm test && npm run clean"
+
+.PHONY: generate-njs-yaml
+generate-njs-yaml:
+	kubectl create configmap njs-modules --from-file=$(NJS_DIR)/httpmatches.js --dry-run=client --output=yaml > $(MANIFEST_DIR)/njs-modules.yaml
+
+.PHONY: lint-helm
+lint-helm:
+	helm lint $(CHART_DIR)
 
 .PHONY: dev-all
 dev-all: deps fmt njs-fmt vet lint unit-test njs-unit-test ## Run all the development checks

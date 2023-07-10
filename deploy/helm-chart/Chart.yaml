@@ -1,0 +1,16 @@
+apiVersion: v2
+name: nginx-gateway
+description: NGINX Kubernetes Gateway
+type: application
+version: 0.1.0
+appVersion: "0.4.0"
+home: https://github.com/nginxinc/nginx-kubernetes-gateway
+sources:
+  - https://github.com/nginxinc/nginx-kubernetes-gateway/tree/v0.5.0/deploy/helm-chart
+keywords:
+  - kubernetes
+  - gateway
+  - nginx
+maintainers:
+  - name: nginxinc
+    email: kubernetes@nginx.com
