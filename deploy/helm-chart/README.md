@@ -20,19 +20,21 @@ the future releases.
    cd nginx-kubernetes-gateway
    ```
 
-1. Install the Gateway API resources from the standard channel (the CRDs and the validating webhook):
-
-   ```
-   kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v0.7.1/standard-install.yaml
-   ```
-
 ### Installing the Chart from local
 
 To install the chart with the release name `my-release` (`my-release` is the name that you choose) into the nginx-gateway
-namespace (with optional `--create-namespace` flag - omit if the namespace already exists):
+namespace (with optional `--create-namespace` flag - omit if the namespace already exists), and the Gateway API
+resources from the standard channel (the CRDs and the validating webhook):
 
 ```
-helm install my-release ./deploy/helm-chart --create-namespace -n nginx-gateway
+helm install my-release ./deploy/helm-chart --create-namespace --wait-for-jobs -n nginx-gateway
+```
+
+Optionally, you can install the the Gateway API resources separately and skip installing them as part of the helm
+install:
+```
+kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v0.7.1/standard-install.yaml
+helm install my-release ./deploy/helm-chart --create-namespace --skip-crds -n nginx-gateway
 ```
 
 ### Uninstalling the Chart
@@ -44,6 +46,7 @@ helm uninstall my-release -n nginx-gateway
 ```
 
 The command removes all the Kubernetes components associated with the release and deletes the release.
+> Note: Uninstalling the release does NOT uninstall the CRDs or validating webhook.
 
 ## Configuration
 

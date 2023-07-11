@@ -99,6 +99,10 @@ njs-unit-test: ## Run unit tests for the njs httpmatches module
 generate-njs-yaml:
 	kubectl create configmap njs-modules --from-file=$(NJS_DIR)/httpmatches.js --dry-run=client --output=yaml > $(MANIFEST_DIR)/njs-modules.yaml
 
+.PHONY: fetch-crds-yaml
+fetch-crds-yaml:
+	wget https://github.com/kubernetes-sigs/gateway-api/releases/download/v$(GW_API_VERSION)/standard-install.yaml -q -O $(CHART_DIR)/crds/gateway-crds.yaml
+
 .PHONY: lint-helm
 lint-helm:
 	helm lint $(CHART_DIR)
