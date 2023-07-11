@@ -72,8 +72,8 @@ metadata:
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: '{{ include "nginx-gateway.fullname" . }}'
+  name: {{ include "nginx-gateway.fullname" . }}
 subjects:
 - kind: ServiceAccount
   name: {{ include "nginx-gateway.serviceAccountName" . }}
-  namespace: '{{ .Release.Namespace }}'
+  namespace: {{ .Release.Namespace }}

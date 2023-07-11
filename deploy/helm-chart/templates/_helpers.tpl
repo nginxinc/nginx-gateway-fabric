@@ -24,14 +24,6 @@ If release name contains chart name it will be used as a full name.
 {{- end }}
 
 {{/*
-Create a default fully qualified service name.
-We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
-*/}}
-{{- define "nginx-gateway.gateway.service.name" -}}
-{{- default (include "nginx-gateway.fullname" .) .Values.serviceNameOverride | trunc 63 | trimSuffix "-" -}}
-{{- end -}}
-
-{{/*
 Create chart name and version as used by the chart label.
 */}}
 {{- define "nginx-gateway.chart" -}}

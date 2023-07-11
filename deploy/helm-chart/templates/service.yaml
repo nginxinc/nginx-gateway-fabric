@@ -2,7 +2,7 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "nginx-gateway.gateway.service.name" . }}
+  name: {{ include "nginx-gateway.fullname" . }}
   namespace: {{ .Release.Namespace }}
   labels:
     {{- include "nginx-gateway.labels" . | nindent 4 }}
@@ -21,21 +21,9 @@ spec:
 {{- end }}
   type: {{ .Values.gateway.service.type }}
   ports:
-{{- if .Values.gateway.service.customPorts }}
-{{ toYaml .Values.gateway.service.customPorts | indent 2 }}
+{{- if .Values.gateway.service.ports }}
+{{ toYaml .Values.gateway.service.ports | indent 2 }}
 {{ end }}
-{{- if .Values.gateway.service.httpPort.enable }}
-  - port: {{ .Values.gateway.service.httpPort.port }}
-    targetPort: {{ .Values.gateway.service.httpPort.targetPort }}
-    protocol: TCP
-    name: http
-{{- end }}
-{{- if .Values.gateway.service.httpsPort.enable }}
-  - port: {{ .Values.gateway.service.httpsPort.port }}
-    targetPort: {{ .Values.gateway.service.httpsPort.targetPort }}
-    protocol: TCP
-    name: https
-{{- end }}
   selector:
     {{- include "nginx-gateway.selectorLabels" . | nindent 4 }}
 {{- end }}

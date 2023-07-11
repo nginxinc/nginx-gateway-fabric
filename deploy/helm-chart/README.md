@@ -26,19 +26,13 @@ the future releases.
    kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v0.7.1/standard-install.yaml
    ```
 
-1. Create the nginx-gateway Namespace:
-
-    ```
-    kubectl create ns nginx-gateway
-    ```
-
 ### Installing the Chart from local
 
-To install the chart with the release name my-release (my-release is the name that you choose) into the nginx-gateway
-namespace:
+To install the chart with the release name `my-release` (`my-release` is the name that you choose) into the nginx-gateway
+namespace (with optional `--create-namespace` flag - omit if the namespace already exists):
 
 ```
-helm install my-release ./deploy/helm-chart -n nginx-gateway
+helm install my-release ./deploy/helm-chart --create-namespace -n nginx-gateway
 ```
 
 ### Uninstalling the Chart
@@ -72,10 +66,4 @@ The following tables lists the configurable parameters of the NGINX Kubernetes G
 |`gateway.service.type` | The type of service to create for the NGINX Kubernetes Gateway. | Loadbalancer |
 |`gateway.service.externalTrafficPolicy` | The externalTrafficPolicy of the service. The value Local preserves the client source IP. | Local |
 |`gateway.service.annotations` | The annotations of the NGINX Kubernetes Gateway service. | true |
-|`gateway.service.httpPort.enable` | Enables the HTTP port for the NGINX Kubernetes Gateway service. | true |
-|`gateway.service.httpPort.port` | The HTTP port of the NGINX Kubernetes Gateway service. | 80 |
-|`gateway.service.httpPort.targetPort` | The HTTP port on the POD where the NGINX Kubernetes Gateway service is running. | 80 |
-|`gateway.service.httpPorts.enable` | Enables the HTTPS port for the NGINX Kubernetes Gateway service. | true |
-|`gateway.service.httpPorts.port` | The HTTPS port of the NGINX Kubernetes Gateway service. | 443 |
-|`gateway.service.httpPorts.targetPort` | The HTTPS port on the POD where the NGINX Kubernetes Gateway service is running. | 443 |
-|`gateway.service.httpPort.customPorts` | A list of custom ports to expose through the NGINX Kubernetes Gateway service. Follows the conventional Kubernetes yaml syntax for service ports. | [] |
+|`gateway.service.ports` | A list of ports to expose through the NGINX Kubernetes Gateway service. Follows the conventional Kubernetes yaml syntax for service ports. | [ port: 80, targetPort: 80, protocol: TCP, name: http; port: 443, targetPort: 443, protocol: TCP, name: https ] |
