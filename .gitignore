@@ -31,4 +31,4 @@ dist/
 node_modules/
 
 # JS test coverage
-internal/nginx/modules/coverage
+internal/mode/static/nginx/modules/coverage

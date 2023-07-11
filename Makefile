@@ -80,7 +80,7 @@ unit-test: ## Run unit tests for the go code
 
 njs-unit-test: ## Run unit tests for the njs httpmatches module
 	docker run --rm -w /modules \
-		-v $(PWD)/internal/nginx/modules:/modules/ \
+		-v $(PWD)/internal/mode/static/nginx/modules:/modules/ \
 		node:18 \
 		/bin/bash -c "npm install && npm test && npm run clean"
 

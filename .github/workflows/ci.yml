@@ -87,7 +87,7 @@ jobs:
         uses: actions/setup-node@e33196f7422957bea03ed53f6fbb155025ffc7b8 # v3.7.0
         with:
           node-version: 18
-      - run: npm --prefix ${{ github.workspace }}/internal/nginx/modules install-ci-test
+      - run: npm --prefix ${{ github.workspace }}/internal/mode/static/nginx/modules install-ci-test
 
   release:
     name: Release
