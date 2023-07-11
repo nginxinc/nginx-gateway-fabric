@@ -1,7 +1,7 @@
 apiVersion: gateway.networking.k8s.io/v1beta1
 kind: GatewayClass
 metadata:
-  name: {{ .Values.gateway.nginxGateway.gatewayClass }}
+  name: {{ .Values.nginxGateway.gatewayClass }}
   labels:
   {{- include "nginx-gateway.labels" . | nindent 4 }}
 spec:

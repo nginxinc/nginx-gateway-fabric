@@ -1,4 +1,4 @@
-{{- if .Values.gateway.service.create }}
+{{- if .Values.service.create }}
 apiVersion: v1
 kind: Service
 metadata:
@@ -6,23 +6,23 @@ metadata:
   namespace: {{ .Release.Namespace }}
   labels:
     {{- include "nginx-gateway.labels" . | nindent 4 }}
-{{- if .Values.gateway.service.extraLabels }}
-{{ toYaml .Values.gateway.service.extraLabels | indent 4 }}
+{{- if .Values.service.extraLabels }}
+{{ toYaml .Values.service.extraLabels | indent 4 }}
 {{- end }}
-{{- if .Values.gateway.service.annotations }}
+{{- if .Values.service.annotations }}
   annotations:
-{{ toYaml .Values.gateway.service.annotations | indent 4 }}
+{{ toYaml .Values.service.annotations | indent 4 }}
 {{- end }}
 spec:
-{{- if or (eq .Values.gateway.service.type "LoadBalancer") (eq .Values.gateway.service.type "NodePort") }}
-  {{- if .Values.gateway.service.externalTrafficPolicy }}
-  externalTrafficPolicy: {{ .Values.gateway.service.externalTrafficPolicy }}
+{{- if or (eq .Values.service.type "LoadBalancer") (eq .Values.service.type "NodePort") }}
+  {{- if .Values.service.externalTrafficPolicy }}
+  externalTrafficPolicy: {{ .Values.service.externalTrafficPolicy }}
   {{- end }}
 {{- end }}
-  type: {{ .Values.gateway.service.type }}
+  type: {{ .Values.service.type }}
   ports:
-{{- if .Values.gateway.service.ports }}
-{{ toYaml .Values.gateway.service.ports | indent 2 }}
+{{- if .Values.service.ports }}
+{{ toYaml .Values.service.ports | indent 2 }}
 {{ end }}
   selector:
     {{- include "nginx-gateway.selectorLabels" . | nindent 4 }}

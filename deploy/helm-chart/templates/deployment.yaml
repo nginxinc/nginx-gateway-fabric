@@ -21,14 +21,14 @@ spec:
       - args:
         - static-mode
         - --gateway-ctlr-name=k8s-gateway.nginx.org/nginx-gateway-controller
-        - --gatewayclass={{ .Values.gateway.nginxGateway.gatewayClass }}
+        - --gatewayclass={{ .Values.nginxGateway.gatewayClass }}
         env:
         - name: POD_IP
           valueFrom:
             fieldRef:
               fieldPath: status.podIP
-        image: {{ .Values.gateway.nginxGateway.image.repository }}:{{ .Values.gateway.nginxGateway.image.tag | default .Chart.AppVersion }}
-        imagePullPolicy: {{ .Values.gateway.nginxGateway.imagePullPolicy }}
+        image: {{ .Values.nginxGateway.image.repository }}:{{ .Values.nginxGateway.image.tag | default .Chart.AppVersion }}
+        imagePullPolicy: {{ .Values.nginxGateway.imagePullPolicy }}
         name: nginx-gateway
         resources: {}
         securityContext:
@@ -41,8 +41,8 @@ spec:
         volumeMounts:
         - mountPath: /etc/nginx
           name: nginx
-      - image: {{ .Values.gateway.nginx.image.repository }}:{{ .Values.gateway.nginx.image.tag }}
-        imagePullPolicy: {{ .Values.gateway.nginx.imagePullPolicy }}
+      - image: {{ .Values.nginx.image.repository }}:{{ .Values.nginx.image.tag }}
+        imagePullPolicy: {{ .Values.nginx.imagePullPolicy }}
         name: nginx
         ports:
         - containerPort: 80
@@ -76,7 +76,7 @@ spec:
         - -c
         - rm -r /etc/nginx/conf.d /etc/nginx/secrets; mkdir /etc/nginx/conf.d /etc/nginx/secrets
           && chown 1001:0 /etc/nginx/conf.d /etc/nginx/secrets
-        image: {{ .Values.gateway.initContainer.image.repository }}:{{ .Values.gateway.initContainer.image.tag }}
+        image: {{ .Values.initContainer.image.repository }}:{{ .Values.initContainer.image.tag }}
         name: set-permissions
         resources: {}
         volumeMounts:

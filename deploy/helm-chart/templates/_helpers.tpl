@@ -54,7 +54,7 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 Create the name of the ServiceAccount to use
 */}}
 {{- define "nginx-gateway.serviceAccountName" -}}
-{{- default (include "nginx-gateway.fullname" .) .Values.gateway.serviceAccount.name }}
+{{- default (include "nginx-gateway.fullname" .) .Values.serviceAccount.name }}
 {{- end }}
 
 {{/*
