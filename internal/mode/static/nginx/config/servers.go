@@ -75,24 +75,9 @@ func createServer(virtualServer dataplane.VirtualServer) http.Server {
 }
 
 func createLocations(pathRules []dataplane.PathRule, listenerPort int32) []http.Location {
-	lenPathRules := len(pathRules)
-
-	if lenPathRules == 0 {
-		return []http.Location{createDefaultRootLocation()}
-	}
-
-	// To calculate the maximum number of locations, we need to take into account the following:
-	// 1. Each match rule for a path rule will have one location.
-	// 2. Each path rule may have an additional location if it contains non-path-only matches.
-	// 3. There may be an additional location for the default root path.
-	maxLocs := 1
-	for _, rules := range pathRules {
-		maxLocs += len(rules.MatchRules) + 1
-	}
-
+	maxLocs, pathsAndTypes := getMaxLocationCountAndPathMap(pathRules)
 	locs := make([]http.Location, 0, maxLocs)
-
-	rootPathExists := false
+	var rootPathExists bool
 
 	for _, rule := range pathRules {
 		matches := make([]httpMatch, 0, len(rule.MatchRules))
@@ -101,27 +86,23 @@ func createLocations(pathRules []dataplane.PathRule, listenerPort int32) []http.
 			rootPathExists = true
 		}
 
+		extLocations := initializeExternalLocations(rule, pathsAndTypes)
+
 		for matchRuleIdx, r := range rule.MatchRules {
 			m := r.GetMatch()
 
-			var loc http.Location
-
-			// handle case where the only route is a path-only match
-			// generate a standard location block without http_matches.
-			if len(rule.MatchRules) == 1 && isPathOnlyMatch(m) {
-				loc = http.Location{
-					Path:  rule.Path,
-					Exact: rule.PathType == dataplane.PathTypeExact,
-				}
-			} else {
-				path := createPathForMatch(rule.Path, rule.PathType, matchRuleIdx)
-				loc = createMatchLocation(path)
-				matches = append(matches, createHTTPMatch(m, path))
+			buildLocations := extLocations
+			if len(rule.MatchRules) != 1 || !isPathOnlyMatch(m) {
+				intLocation, match := initializeInternalLocation(rule, matchRuleIdx, m)
+				buildLocations = []http.Location{intLocation}
+				matches = append(matches, match)
 			}
 
 			if r.Filters.InvalidFilter != nil {
-				loc.Return = &http.Return{Code: http.StatusInternalServerError}
-				locs = append(locs, loc)
+				for i := range buildLocations {
+					buildLocations[i].Return = &http.Return{Code: http.StatusInternalServerError}
+				}
+				locs = append(locs, buildLocations...)
 				continue
 			}
 
@@ -136,40 +117,32 @@ func createLocations(pathRules []dataplane.PathRule, listenerPort int32) []http.
 
 			// RequestRedirect and proxying are mutually exclusive.
 			if r.Filters.RequestRedirect != nil {
-				loc.Return = createReturnValForRedirectFilter(r.Filters.RequestRedirect, listenerPort)
-				locs = append(locs, loc)
+				ret := createReturnValForRedirectFilter(r.Filters.RequestRedirect, listenerPort)
+				for i := range buildLocations {
+					buildLocations[i].Return = ret
+				}
+				locs = append(locs, buildLocations...)
 				continue
 			}
 
-			backendName := backendGroupName(r.BackendGroup)
-			loc.ProxySetHeaders = generateProxySetHeaders(r.Filters.RequestHeaderModifiers)
-
-			if backendGroupNeedsSplit(r.BackendGroup) {
-				loc.ProxyPass = createProxyPassForVar(backendName)
-			} else {
-				loc.ProxyPass = createProxyPass(backendName)
+			proxySetHeaders := generateProxySetHeaders(r.Filters.RequestHeaderModifiers)
+			for i := range buildLocations {
+				buildLocations[i].ProxySetHeaders = proxySetHeaders
 			}
 
-			locs = append(locs, loc)
+			proxyPass := createProxyPass(r.BackendGroup)
+			for i := range buildLocations {
+				buildLocations[i].ProxyPass = proxyPass
+			}
+			locs = append(locs, buildLocations...)
 		}
 
 		if len(matches) > 0 {
-			// FIXME(sberman): De-dupe matches and associated locations
-			// so we don't need nginx/njs to perform unnecessary matching.
-			// https://github.com/nginxinc/nginx-kubernetes-gateway/issues/662
-			b, err := json.Marshal(matches)
-			if err != nil {
-				// panic is safe here because we should never fail to marshal the match unless we constructed it incorrectly.
-				panic(fmt.Errorf("could not marshal http match: %w", err))
+			matchesStr := convertMatchesToString(matches)
+			for i := range extLocations {
+				extLocations[i].HTTPMatchVar = matchesStr
 			}
-
-			pathLoc := http.Location{
-				Path:         rule.Path,
-				Exact:        rule.PathType == dataplane.PathTypeExact,
-				HTTPMatchVar: string(b),
-			}
-
-			locs = append(locs, pathLoc)
+			locs = append(locs, extLocations...)
 		}
 	}
 
@@ -178,6 +151,87 @@ func createLocations(pathRules []dataplane.PathRule, listenerPort int32) []http.
 	}
 
 	return locs
+}
+
+// pathAndTypeMap contains a map of paths and any path types defined for that path
+// for example, {/foo: {exact: {}, prefix: {}}}
+type pathAndTypeMap map[string]map[dataplane.PathType]struct{}
+
+// To calculate the maximum number of locations, we need to take into account the following:
+// 1. Each match rule for a path rule will have one location.
+// 2. Each path rule may have an additional location if it contains non-path-only matches.
+// 3. Each prefix path rule may have an additional location if it doesn't contain trailing slash.
+// 4. There may be an additional location for the default root path.
+// We also return a map of all paths and their types.
+func getMaxLocationCountAndPathMap(pathRules []dataplane.PathRule) (int, pathAndTypeMap) {
+	maxLocs := 1
+	pathsAndTypes := make(pathAndTypeMap)
+	for _, rule := range pathRules {
+		maxLocs += len(rule.MatchRules) + 2
+		if pathsAndTypes[rule.Path] == nil {
+			pathsAndTypes[rule.Path] = map[dataplane.PathType]struct{}{
+				rule.PathType: {},
+			}
+		} else {
+			pathsAndTypes[rule.Path][rule.PathType] = struct{}{}
+		}
+	}
+
+	return maxLocs, pathsAndTypes
+}
+
+func initializeExternalLocations(
+	rule dataplane.PathRule,
+	pathsAndTypes pathAndTypeMap,
+) []http.Location {
+	extLocations := make([]http.Location, 0, 2)
+	externalLocPath := createPath(rule)
+	// If the path type is Prefix and doesn't contain a trailing slash, then we need a second location
+	// that handles the Exact prefix case (if it doesn't already exist), and the first location is updated
+	// to handle the trailing slash prefix case (if it doesn't already exist)
+	if isNonSlashedPrefixPath(rule.PathType, externalLocPath) {
+		// if Exact path and/or trailing slash Prefix path already exists, this means some routing rule
+		// configures it. The routing rule location has priority over this location, so we don't try to
+		// overwrite it and we don't add a duplicate location to NGINX because that will cause an NGINX config error.
+		_, exactPathExists := pathsAndTypes[rule.Path][dataplane.PathTypeExact]
+		var trailingSlashPrefixPathExists bool
+		if pathTypes, exists := pathsAndTypes[rule.Path+"/"]; exists {
+			_, trailingSlashPrefixPathExists = pathTypes[dataplane.PathTypePrefix]
+		}
+
+		if exactPathExists && trailingSlashPrefixPathExists {
+			return []http.Location{}
+		}
+
+		if !trailingSlashPrefixPathExists {
+			externalLocTrailing := http.Location{
+				Path: externalLocPath + "/",
+			}
+			extLocations = append(extLocations, externalLocTrailing)
+		}
+		if !exactPathExists {
+			externalLocExact := http.Location{
+				Path: exactPath(externalLocPath),
+			}
+			extLocations = append(extLocations, externalLocExact)
+		}
+	} else {
+		externalLoc := http.Location{
+			Path: externalLocPath,
+		}
+		extLocations = []http.Location{externalLoc}
+	}
+
+	return extLocations
+}
+
+func initializeInternalLocation(
+	rule dataplane.PathRule,
+	matchRuleIdx int,
+	match v1beta1.HTTPRouteMatch,
+) (http.Location, httpMatch) {
+	path := createPathForMatch(rule.Path, rule.PathType, matchRuleIdx)
+	return createMatchLocation(path), createHTTPMatch(match, path)
 }
 
 func createReturnValForRedirectFilter(filter *v1beta1.HTTPRequestRedirectFilter, listenerPort int32) *http.Return {
@@ -308,12 +362,13 @@ func isPathOnlyMatch(match v1beta1.HTTPRouteMatch) bool {
 	return match.Method == nil && match.Headers == nil && match.QueryParams == nil
 }
 
-func createProxyPass(address string) string {
-	return "http://" + address
-}
+func createProxyPass(backendGroup dataplane.BackendGroup) string {
+	backendName := backendGroupName(backendGroup)
+	if backendGroupNeedsSplit(backendGroup) {
+		return "http://$" + convertStringToSafeVariableName(backendName)
+	}
 
-func createProxyPassForVar(variable string) string {
-	return "http://$" + convertStringToSafeVariableName(variable)
+	return "http://" + backendName
 }
 
 func createMatchLocation(path string) http.Location {
@@ -369,6 +424,33 @@ func convertSetHeaders(headers []dataplane.HTTPHeader) []http.Header {
 	return locHeaders
 }
 
+func convertMatchesToString(matches []httpMatch) string {
+	// FIXME(sberman): De-dupe matches and associated locations
+	// so we don't need nginx/njs to perform unnecessary matching.
+	// https://github.com/nginxinc/nginx-kubernetes-gateway/issues/662
+	b, err := json.Marshal(matches)
+	if err != nil {
+		// panic is safe here because we should never fail to marshal the match unless we constructed it incorrectly.
+		panic(fmt.Errorf("could not marshal http match: %w", err))
+	}
+
+	return string(b)
+}
+
+func exactPath(path string) string {
+	return fmt.Sprintf("= %s", path)
+}
+
+// createPath builds the location path depending on the path type.
+func createPath(rule dataplane.PathRule) string {
+	switch rule.PathType {
+	case dataplane.PathTypeExact:
+		return exactPath(rule.Path)
+	default:
+		return rule.Path
+	}
+}
+
 func createPathForMatch(path string, pathType dataplane.PathType, routeIdx int) string {
 	return fmt.Sprintf("%s_%s_route%d", path, pathType, routeIdx)
 }
@@ -378,4 +460,9 @@ func createDefaultRootLocation() http.Location {
 		Path:   "/",
 		Return: &http.Return{Code: http.StatusNotFound},
 	}
+}
+
+// isNonSlashedPrefixPath returns whether or not a path is of type Prefix and does not contain a trailing slash
+func isNonSlashedPrefixPath(pathType dataplane.PathType, path string) bool {
+	return pathType == dataplane.PathTypePrefix && !strings.HasSuffix(path, "/")
 }
