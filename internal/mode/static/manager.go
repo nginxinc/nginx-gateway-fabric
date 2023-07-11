@@ -168,14 +168,14 @@ func StartManager(cfg config.Config) error {
 		UpdateGatewayClassStatus: cfg.UpdateGatewayClassStatus,
 	})
 
-	eventHandler := NewEventHandlerImpl(EventHandlerConfig{
-		Processor:       processor,
-		ServiceResolver: resolver.NewServiceResolverImpl(mgr.GetClient()),
-		Generator:       configGenerator,
-		Logger:          cfg.Logger.WithName("eventHandler"),
-		NginxFileMgr:    nginxFileMgr,
-		NginxRuntimeMgr: nginxRuntimeMgr,
-		StatusUpdater:   statusUpdater,
+	eventHandler := newEventHandlerImpl(eventHandlerConfig{
+		processor:       processor,
+		serviceResolver: resolver.NewServiceResolverImpl(mgr.GetClient()),
+		generator:       configGenerator,
+		logger:          cfg.Logger.WithName("eventHandler"),
+		nginxFileMgr:    nginxFileMgr,
+		nginxRuntimeMgr: nginxRuntimeMgr,
+		statusUpdater:   statusUpdater,
 	})
 
 	objects, objectLists := prepareFirstEventBatchPreparerArgs(cfg.GatewayClassName, cfg.GatewayNsName)

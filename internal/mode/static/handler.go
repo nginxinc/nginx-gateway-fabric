@@ -16,77 +16,77 @@ import (
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/state/resolver"
 )
 
-// EventHandlerConfig holds configuration parameters for EventHandlerImpl.
-type EventHandlerConfig struct {
-	// Processor is the state ChangeProcessor.
-	Processor state.ChangeProcessor
-	// ServiceResolver resolves Services to Endpoints.
-	ServiceResolver resolver.ServiceResolver
-	// Generator is the nginx config Generator.
-	Generator config.Generator
-	// NginxFileMgr is the file Manager for nginx.
-	NginxFileMgr file.Manager
-	// NginxRuntimeMgr manages nginx runtime.
-	NginxRuntimeMgr runtime.Manager
-	// StatusUpdater updates statuses on Kubernetes resources.
-	StatusUpdater status.Updater
-	// Logger is the logger to be used by the EventHandler.
-	Logger logr.Logger
+// eventHandlerConfig holds configuration parameters for eventHandlerImpl.
+type eventHandlerConfig struct {
+	// processor is the state ChangeProcessor.
+	processor state.ChangeProcessor
+	// serviceResolver resolves Services to Endpoints.
+	serviceResolver resolver.ServiceResolver
+	// generator is the nginx config generator.
+	generator config.Generator
+	// nginxFileMgr is the file Manager for nginx.
+	nginxFileMgr file.Manager
+	// nginxRuntimeMgr manages nginx runtime.
+	nginxRuntimeMgr runtime.Manager
+	// statusUpdater updates statuses on Kubernetes resources.
+	statusUpdater status.Updater
+	// logger is the logger to be used by the EventHandler.
+	logger logr.Logger
 }
 
-// EventHandlerImpl implements EventHandler.
-// EventHandlerImpl is responsible for:
+// eventHandlerImpl implements EventHandler.
+// eventHandlerImpl is responsible for:
 // (1) Reconciling the Gateway API and Kubernetes built-in resources with the NGINX configuration.
 // (2) Keeping the statuses of the Gateway API resources updated.
-type EventHandlerImpl struct {
-	cfg EventHandlerConfig
+type eventHandlerImpl struct {
+	cfg eventHandlerConfig
 }
 
-// NewEventHandlerImpl creates a new EventHandlerImpl.
-func NewEventHandlerImpl(cfg EventHandlerConfig) *EventHandlerImpl {
-	return &EventHandlerImpl{
+// newEventHandlerImpl creates a new eventHandlerImpl.
+func newEventHandlerImpl(cfg eventHandlerConfig) *eventHandlerImpl {
+	return &eventHandlerImpl{
 		cfg: cfg,
 	}
 }
 
-func (h *EventHandlerImpl) HandleEventBatch(ctx context.Context, batch events.EventBatch) {
+func (h *eventHandlerImpl) HandleEventBatch(ctx context.Context, batch events.EventBatch) {
 	for _, event := range batch {
 		switch e := event.(type) {
 		case *events.UpsertEvent:
-			h.cfg.Processor.CaptureUpsertChange(e.Resource)
+			h.cfg.processor.CaptureUpsertChange(e.Resource)
 		case *events.DeleteEvent:
-			h.cfg.Processor.CaptureDeleteChange(e.Type, e.NamespacedName)
+			h.cfg.processor.CaptureDeleteChange(e.Type, e.NamespacedName)
 		default:
 			panic(fmt.Errorf("unknown event type %T", e))
 		}
 	}
 
-	changed, graph := h.cfg.Processor.Process()
+	changed, graph := h.cfg.processor.Process()
 	if !changed {
-		h.cfg.Logger.Info("Handling events didn't result into NGINX configuration changes")
+		h.cfg.logger.Info("Handling events didn't result into NGINX configuration changes")
 		return
 	}
 
 	var nginxReloadRes nginxReloadResult
-	err := h.updateNginx(ctx, dataplane.BuildConfiguration(ctx, graph, h.cfg.ServiceResolver))
+	err := h.updateNginx(ctx, dataplane.BuildConfiguration(ctx, graph, h.cfg.serviceResolver))
 	if err != nil {
-		h.cfg.Logger.Error(err, "Failed to update NGINX configuration")
+		h.cfg.logger.Error(err, "Failed to update NGINX configuration")
 		nginxReloadRes.error = err
 	} else {
-		h.cfg.Logger.Info("NGINX configuration was successfully updated")
+		h.cfg.logger.Info("NGINX configuration was successfully updated")
 	}
 
-	h.cfg.StatusUpdater.Update(ctx, buildStatuses(graph, nginxReloadRes))
+	h.cfg.statusUpdater.Update(ctx, buildStatuses(graph, nginxReloadRes))
 }
 
-func (h *EventHandlerImpl) updateNginx(ctx context.Context, conf dataplane.Configuration) error {
-	files := h.cfg.Generator.Generate(conf)
+func (h *eventHandlerImpl) updateNginx(ctx context.Context, conf dataplane.Configuration) error {
+	files := h.cfg.generator.Generate(conf)
 
-	if err := h.cfg.NginxFileMgr.ReplaceFiles(files); err != nil {
+	if err := h.cfg.nginxFileMgr.ReplaceFiles(files); err != nil {
 		return fmt.Errorf("failed to replace NGINX configuration files: %w", err)
 	}
 
-	if err := h.cfg.NginxRuntimeMgr.Reload(ctx); err != nil {
+	if err := h.cfg.nginxRuntimeMgr.Reload(ctx); err != nil {
 		return fmt.Errorf("failed to reload NGINX: %w", err)
 	}
 

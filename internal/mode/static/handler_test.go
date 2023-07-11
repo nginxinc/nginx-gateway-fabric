@@ -1,4 +1,4 @@
-package static_test
+package static
 
 import (
 	"context"
@@ -11,7 +11,6 @@ import (
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/events"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/status/statusfakes"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/nginx/config/configfakes"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/nginx/file"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/nginx/file/filefakes"
@@ -21,9 +20,9 @@ import (
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/state/statefakes"
 )
 
-var _ = Describe("EventHandler", func() {
+var _ = Describe("eventHandler", func() {
 	var (
-		handler             *static.EventHandlerImpl
+		handler             *eventHandlerImpl
 		fakeProcessor       *statefakes.FakeChangeProcessor
 		fakeGenerator       *configfakes.FakeGenerator
 		fakeNginxFileMgr    *filefakes.FakeManager
@@ -53,13 +52,13 @@ var _ = Describe("EventHandler", func() {
 		fakeNginxRuntimeMgr = &runtimefakes.FakeManager{}
 		fakeStatusUpdater = &statusfakes.FakeUpdater{}
 
-		handler = static.NewEventHandlerImpl(static.EventHandlerConfig{
-			Processor:       fakeProcessor,
-			Generator:       fakeGenerator,
-			Logger:          zap.New(),
-			NginxFileMgr:    fakeNginxFileMgr,
-			NginxRuntimeMgr: fakeNginxRuntimeMgr,
-			StatusUpdater:   fakeStatusUpdater,
+		handler = newEventHandlerImpl(eventHandlerConfig{
+			processor:       fakeProcessor,
+			generator:       fakeGenerator,
+			logger:          zap.New(),
+			nginxFileMgr:    fakeNginxFileMgr,
+			nginxRuntimeMgr: fakeNginxRuntimeMgr,
+			statusUpdater:   fakeStatusUpdater,
 		})
 	})
 
