@@ -88,3 +88,12 @@ jobs:
       with:
         config: ${{ github.workspace }}/.markdownlint-cli2.yaml
         globs: '**/*.md'
+
+  chart-lint:
+    name: Chart Lint
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+      - name: Lint chart
+        run: make lint-helm

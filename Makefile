@@ -10,7 +10,7 @@ CHART_DIR = $(shell pwd)/deploy/helm-chart
 PREFIX ?= nginx-kubernetes-gateway## The name of the image. For example, nginx-kubernetes-gateway
 TAG ?= $(VERSION:v%=%)## The tag of the image. For example, 0.3.0
 TARGET ?= local## The target of the build. Possible values: local and container
-KIND_KUBE_CONFIG_FOLDER = $${HOME}/.kube/kind## The folder where the kind kubeconfig is stored
+KIND_KUBE_CONFIG=$${HOME}/.kube/kind/config## The location of the kind kubeconfig
 OUT_DIR ?= $(shell pwd)/build/out## The folder where the binary will be stored
 ARCH ?= amd64## The architecture of the image and/or binary. For example: amd64 or arm64
 override DOCKER_BUILD_OPTIONS += --build-arg VERSION=$(VERSION) --build-arg GIT_COMMIT=$(GIT_COMMIT) --build-arg DATE=$(DATE)## The options for the docker build command. For example, --pull
@@ -59,7 +59,7 @@ deps: ## Add missing and remove unused modules, verify deps and download them to
 create-kind-cluster: ## Create a kind cluster
 	$(eval KIND_IMAGE=$(shell grep -m1 'FROM kindest/node' <conformance/tests/Dockerfile | awk -F'[ ]' '{print $$2}'))
 	kind create cluster --image $(KIND_IMAGE)
-	kind export kubeconfig --kubeconfig $(KIND_KUBE_CONFIG_FOLDER)/config
+	kind export kubeconfig --kubeconfig $(KIND_KUBE_CONFIG)
 
 .PHONY: delete-kind-cluster
 delete-kind-cluster: ## Delete kind cluster
