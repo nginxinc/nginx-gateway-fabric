@@ -219,46 +219,91 @@ func TestValidateListenerHostname(t *testing.T) {
 	}
 }
 
-func TestValidateListenerAllowedRouteKind(t *testing.T) {
+func TestGetAndValidateListenerSupportedKinds(t *testing.T) {
+	HTTPRouteGroupKind := []v1beta1.RouteGroupKind{
+		{
+			Kind:  "HTTPRoute",
+			Group: helpers.GetPointer[v1beta1.Group](v1beta1.GroupName),
+		},
+	}
+	TCPRouteGroupKind := []v1beta1.RouteGroupKind{
+		{
+			Kind:  "TCPRoute",
+			Group: helpers.GetPointer[v1beta1.Group](v1beta1.GroupName),
+		},
+	}
 	tests := []struct {
 		protocol  v1beta1.ProtocolType
-		kind      v1beta1.Kind
-		group     v1beta1.Group
 		name      string
+		kind      []v1beta1.RouteGroupKind
+		expected  []v1beta1.RouteGroupKind
 		expectErr bool
 	}{
 		{
 			protocol:  v1beta1.TCPProtocolType,
 			expectErr: false,
 			name:      "unsupported protocol is ignored",
+			kind:      TCPRouteGroupKind,
+			expected:  []v1beta1.RouteGroupKind{},
 		},
 		{
-			protocol:  v1beta1.HTTPProtocolType,
-			group:     "bad-group",
-			kind:      "HTTPRoute",
+			protocol: v1beta1.HTTPProtocolType,
+			kind: []v1beta1.RouteGroupKind{
+				{
+					Kind:  "HTTPRoute",
+					Group: helpers.GetPointer[v1beta1.Group]("bad-group"),
+				},
+			},
 			expectErr: true,
 			name:      "invalid group",
+			expected:  []v1beta1.RouteGroupKind{},
 		},
 		{
 			protocol:  v1beta1.HTTPProtocolType,
-			group:     v1beta1.GroupName,
-			kind:      "TCPRoute",
+			kind:      TCPRouteGroupKind,
 			expectErr: true,
 			name:      "invalid kind",
+			expected:  []v1beta1.RouteGroupKind{},
 		},
 		{
 			protocol:  v1beta1.HTTPProtocolType,
-			group:     v1beta1.GroupName,
-			kind:      "HTTPRoute",
+			kind:      HTTPRouteGroupKind,
 			expectErr: false,
 			name:      "valid HTTP",
+			expected:  HTTPRouteGroupKind,
 		},
 		{
 			protocol:  v1beta1.HTTPSProtocolType,
-			group:     v1beta1.GroupName,
-			kind:      "HTTPRoute",
+			kind:      HTTPRouteGroupKind,
 			expectErr: false,
 			name:      "valid HTTPS",
+			expected:  HTTPRouteGroupKind,
+		},
+		{
+			protocol:  v1beta1.HTTPSProtocolType,
+			expectErr: false,
+			name:      "valid HTTPS no kind specified",
+			expected: []v1beta1.RouteGroupKind{
+				{
+					Kind: "HTTPRoute",
+				},
+			},
+		},
+		{
+			protocol: v1beta1.HTTPProtocolType,
+			kind: []v1beta1.RouteGroupKind{
+				{
+					Kind:  "HTTPRoute",
+					Group: helpers.GetPointer[v1beta1.Group](v1beta1.GroupName),
+				},
+				{
+					Kind:  "bad-kind",
+					Group: helpers.GetPointer[v1beta1.Group](v1beta1.GroupName),
+				},
+			},
+			expectErr: true,
+			name:      "valid and invalid kinds",
+			expected:  HTTPRouteGroupKind,
 		},
 	}
 
@@ -268,17 +313,16 @@ func TestValidateListenerAllowedRouteKind(t *testing.T) {
 
 			listener := v1beta1.Listener{
 				Protocol: test.protocol,
-				AllowedRoutes: &v1beta1.AllowedRoutes{
-					Kinds: []v1beta1.RouteGroupKind{
-						{
-							Kind:  test.kind,
-							Group: &test.group,
-						},
-					},
-				},
 			}
 
-			conds := validateListenerAllowedRouteKind(listener)
+			if test.kind != nil {
+				listener.AllowedRoutes = &v1beta1.AllowedRoutes{
+					Kinds: test.kind,
+				}
+			}
+
+			conds, kinds := getAndValidateListenerSupportedKinds(listener)
+			g.Expect(helpers.Diff(test.expected, kinds)).To(BeEmpty())
 			if test.expectErr {
 				g.Expect(conds).ToNot(BeEmpty())
 			} else {

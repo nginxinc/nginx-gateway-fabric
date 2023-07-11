@@ -271,6 +271,7 @@ func TestBuildGraph(t *testing.T) {
 						Routes: map[types.NamespacedName]*Route{
 							{Namespace: "test", Name: "hr-1"}: routeHR1,
 						},
+						SupportedKinds: []v1beta1.RouteGroupKind{{Kind: "HTTPRoute"}},
 					},
 					"listener-443-1": {
 						Source: gw1.Spec.Listeners[1],
@@ -279,6 +280,7 @@ func TestBuildGraph(t *testing.T) {
 							{Namespace: "test", Name: "hr-3"}: routeHR3,
 						},
 						ResolvedSecret: helpers.GetPointer(client.ObjectKeyFromObject(secret)),
+						SupportedKinds: []v1beta1.RouteGroupKind{{Kind: "HTTPRoute"}},
 					},
 				},
 				Valid: true,

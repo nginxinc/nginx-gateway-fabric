@@ -40,9 +40,8 @@ type GatewayStatus struct {
 
 // ListenerStatus holds the status-related information about a listener in the Gateway resource.
 type ListenerStatus struct {
-	// Conditions is the list of conditions for this listener.
-	Conditions []conditions.Condition
-	// AttachedRoutes is the number of routes attached to the listener.
+	Conditions     []conditions.Condition
+	SupportedKinds []v1beta1.RouteGroupKind
 	AttachedRoutes int32
 }
 
@@ -207,6 +206,7 @@ func buildGatewayStatus(gateway *graph.Gateway, nginxReloadRes NginxReloadResult
 		listenerStatuses[name] = ListenerStatus{
 			AttachedRoutes: int32(len(l.Routes)),
 			Conditions:     conditions.DeduplicateConditions(conds),
+			SupportedKinds: l.SupportedKinds,
 		}
 	}
 

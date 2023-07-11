@@ -17,13 +17,17 @@ func TestPrepareGatewayStatus(t *testing.T) {
 		Type:  &ipAddrType,
 		Value: "1.2.3.4",
 	}
-
 	status := GatewayStatus{
 		Conditions: CreateTestConditions("GatewayTest"),
 		ListenerStatuses: ListenerStatuses{
 			"listener": {
 				AttachedRoutes: 3,
 				Conditions:     CreateTestConditions("ListenerTest"),
+				SupportedKinds: []v1beta1.RouteGroupKind{
+					{
+						Kind: v1beta1.Kind("HTTPRoute"),
+					},
+				},
 			},
 		},
 		ObservedGeneration: 1,

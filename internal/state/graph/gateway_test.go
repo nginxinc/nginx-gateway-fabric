@@ -354,11 +354,17 @@ func TestBuildGateway(t *testing.T) {
 						Source: foo80Listener1,
 						Valid:  true,
 						Routes: map[types.NamespacedName]*Route{},
+						SupportedKinds: []v1beta1.RouteGroupKind{
+							{Kind: "HTTPRoute"},
+						},
 					},
 					"foo-8080": {
 						Source: foo8080Listener,
 						Valid:  true,
 						Routes: map[types.NamespacedName]*Route{},
+						SupportedKinds: []v1beta1.RouteGroupKind{
+							{Kind: "HTTPRoute"},
+						},
 					},
 				},
 				Valid: true,
@@ -378,12 +384,18 @@ func TestBuildGateway(t *testing.T) {
 						Valid:          true,
 						Routes:         map[types.NamespacedName]*Route{},
 						ResolvedSecret: helpers.GetPointer(client.ObjectKeyFromObject(secretSameNs)),
+						SupportedKinds: []v1beta1.RouteGroupKind{
+							{Kind: "HTTPRoute"},
+						},
 					},
 					"foo-8443-https": {
 						Source:         foo8443HTTPSListener,
 						Valid:          true,
 						Routes:         map[types.NamespacedName]*Route{},
 						ResolvedSecret: helpers.GetPointer(client.ObjectKeyFromObject(secretSameNs)),
+						SupportedKinds: []v1beta1.RouteGroupKind{
+							{Kind: "HTTPRoute"},
+						},
 					},
 				},
 				Valid: true,
@@ -401,6 +413,9 @@ func TestBuildGateway(t *testing.T) {
 						Valid:                     true,
 						AllowedRouteLabelSelector: labels.SelectorFromSet(labels.Set(labelSet)),
 						Routes:                    map[types.NamespacedName]*Route{},
+						SupportedKinds: []v1beta1.RouteGroupKind{
+							{Kind: "HTTPRoute", Group: helpers.GetPointer[v1beta1.Group](v1beta1.GroupName)},
+						},
 					},
 				},
 				Valid: true,
@@ -442,6 +457,9 @@ func TestBuildGateway(t *testing.T) {
 						Valid:          true,
 						Routes:         map[types.NamespacedName]*Route{},
 						ResolvedSecret: helpers.GetPointer(client.ObjectKeyFromObject(secretDiffNamespace)),
+						SupportedKinds: []v1beta1.RouteGroupKind{
+							{Kind: "HTTPRoute"},
+						},
 					},
 				},
 				Valid: true,
@@ -461,6 +479,9 @@ func TestBuildGateway(t *testing.T) {
 							`Certificate ref to secret diff-ns/secret not permitted by any ReferenceGrant`,
 						),
 						Routes: map[types.NamespacedName]*Route{},
+						SupportedKinds: []v1beta1.RouteGroupKind{
+							{Kind: "HTTPRoute"},
+						},
 					},
 				},
 				Valid: true,
@@ -479,6 +500,9 @@ func TestBuildGateway(t *testing.T) {
 						Conditions: conditions.NewListenerUnsupportedValue(
 							`invalid label selector: "invalid" is not a valid label selector operator`,
 						),
+						SupportedKinds: []v1beta1.RouteGroupKind{
+							{Kind: "HTTPRoute", Group: helpers.GetPointer[v1beta1.Group](v1beta1.GroupName)},
+						},
 					},
 				},
 				Valid: true,
@@ -497,6 +521,9 @@ func TestBuildGateway(t *testing.T) {
 						Conditions: conditions.NewListenerUnsupportedProtocol(
 							`protocol: Unsupported value: "TCP": supported values: "HTTP", "HTTPS"`,
 						),
+						SupportedKinds: []v1beta1.RouteGroupKind{
+							{Kind: "HTTPRoute"},
+						},
 					},
 				},
 				Valid: true,
@@ -517,6 +544,9 @@ func TestBuildGateway(t *testing.T) {
 						Conditions: conditions.NewListenerUnsupportedValue(
 							`port: Invalid value: 0: port must be between 1-65535`,
 						),
+						SupportedKinds: []v1beta1.RouteGroupKind{
+							{Kind: "HTTPRoute"},
+						},
 					},
 					"invalid-https-port": {
 						Source: invalidHTTPSPortListener,
@@ -524,6 +554,9 @@ func TestBuildGateway(t *testing.T) {
 						Conditions: conditions.NewListenerUnsupportedValue(
 							`port: Invalid value: 0: port must be between 1-65535`,
 						),
+						SupportedKinds: []v1beta1.RouteGroupKind{
+							{Kind: "HTTPRoute"},
+						},
 					},
 				},
 				Valid: true,
@@ -542,11 +575,17 @@ func TestBuildGateway(t *testing.T) {
 						Source:     invalidHostnameListener,
 						Valid:      false,
 						Conditions: conditions.NewListenerUnsupportedValue(invalidHostnameMsg),
+						SupportedKinds: []v1beta1.RouteGroupKind{
+							{Kind: "HTTPRoute"},
+						},
 					},
 					"invalid-https-hostname": {
 						Source:     invalidHTTPSHostnameListener,
 						Valid:      false,
 						Conditions: conditions.NewListenerUnsupportedValue(invalidHostnameMsg),
+						SupportedKinds: []v1beta1.RouteGroupKind{
+							{Kind: "HTTPRoute"},
+						},
 					},
 				},
 				Valid: true,
@@ -566,6 +605,9 @@ func TestBuildGateway(t *testing.T) {
 						Conditions: conditions.NewListenerInvalidCertificateRef(
 							`tls.certificateRefs[0]: Invalid value: test/does-not-exist: secret does not exist`,
 						),
+						SupportedKinds: []v1beta1.RouteGroupKind{
+							{Kind: "HTTPRoute"},
+						},
 					},
 				},
 				Valid: true,
@@ -595,45 +637,69 @@ func TestBuildGateway(t *testing.T) {
 						Source: foo80Listener1,
 						Valid:  true,
 						Routes: map[types.NamespacedName]*Route{},
+						SupportedKinds: []v1beta1.RouteGroupKind{
+							{Kind: "HTTPRoute"},
+						},
 					},
 					"foo-8080": {
 						Source: foo8080Listener,
 						Valid:  true,
 						Routes: map[types.NamespacedName]*Route{},
+						SupportedKinds: []v1beta1.RouteGroupKind{
+							{Kind: "HTTPRoute"},
+						},
 					},
 					"foo-8081": {
 						Source: foo8081Listener,
 						Valid:  true,
 						Routes: map[types.NamespacedName]*Route{},
+						SupportedKinds: []v1beta1.RouteGroupKind{
+							{Kind: "HTTPRoute"},
+						},
 					},
 					"bar-80": {
 						Source: bar80Listener,
 						Valid:  true,
 						Routes: map[types.NamespacedName]*Route{},
+						SupportedKinds: []v1beta1.RouteGroupKind{
+							{Kind: "HTTPRoute"},
+						},
 					},
 					"foo-443-https-1": {
 						Source:         foo443HTTPSListener1,
 						Valid:          true,
 						Routes:         map[types.NamespacedName]*Route{},
 						ResolvedSecret: helpers.GetPointer(client.ObjectKeyFromObject(secretSameNs)),
+						SupportedKinds: []v1beta1.RouteGroupKind{
+							{Kind: "HTTPRoute"},
+						},
 					},
 					"foo-8443-https": {
 						Source:         foo8443HTTPSListener,
 						Valid:          true,
 						Routes:         map[types.NamespacedName]*Route{},
 						ResolvedSecret: helpers.GetPointer(client.ObjectKeyFromObject(secretSameNs)),
+						SupportedKinds: []v1beta1.RouteGroupKind{
+							{Kind: "HTTPRoute"},
+						},
 					},
 					"bar-443-https": {
 						Source:         bar443HTTPSListener,
 						Valid:          true,
 						Routes:         map[types.NamespacedName]*Route{},
 						ResolvedSecret: helpers.GetPointer(client.ObjectKeyFromObject(secretSameNs)),
+						SupportedKinds: []v1beta1.RouteGroupKind{
+							{Kind: "HTTPRoute"},
+						},
 					},
 					"bar-8443-https": {
 						Source:         bar8443HTTPSListener,
 						Valid:          true,
 						Routes:         map[types.NamespacedName]*Route{},
 						ResolvedSecret: helpers.GetPointer(client.ObjectKeyFromObject(secretSameNs)),
+						SupportedKinds: []v1beta1.RouteGroupKind{
+							{Kind: "HTTPRoute"},
+						},
 					},
 				},
 				Valid: true,
@@ -662,18 +728,27 @@ func TestBuildGateway(t *testing.T) {
 						Valid:      false,
 						Routes:     map[types.NamespacedName]*Route{},
 						Conditions: conditions.NewListenerProtocolConflict(conflict80PortMsg),
+						SupportedKinds: []v1beta1.RouteGroupKind{
+							{Kind: "HTTPRoute"},
+						},
 					},
 					"bar-80": {
 						Source:     bar80Listener,
 						Valid:      false,
 						Routes:     map[types.NamespacedName]*Route{},
 						Conditions: conditions.NewListenerProtocolConflict(conflict80PortMsg),
+						SupportedKinds: []v1beta1.RouteGroupKind{
+							{Kind: "HTTPRoute"},
+						},
 					},
 					"foo-443": {
 						Source:     foo443Listener,
 						Valid:      false,
 						Routes:     map[types.NamespacedName]*Route{},
 						Conditions: conditions.NewListenerProtocolConflict(conflict443PortMsg),
+						SupportedKinds: []v1beta1.RouteGroupKind{
+							{Kind: "HTTPRoute"},
+						},
 					},
 					"foo-80-https": {
 						Source:         foo80HTTPSListener,
@@ -681,6 +756,9 @@ func TestBuildGateway(t *testing.T) {
 						Routes:         map[types.NamespacedName]*Route{},
 						Conditions:     conditions.NewListenerProtocolConflict(conflict80PortMsg),
 						ResolvedSecret: helpers.GetPointer(client.ObjectKeyFromObject(secretSameNs)),
+						SupportedKinds: []v1beta1.RouteGroupKind{
+							{Kind: "HTTPRoute"},
+						},
 					},
 					"foo-443-https-1": {
 						Source:         foo443HTTPSListener1,
@@ -688,6 +766,9 @@ func TestBuildGateway(t *testing.T) {
 						Routes:         map[types.NamespacedName]*Route{},
 						Conditions:     conditions.NewListenerProtocolConflict(conflict443PortMsg),
 						ResolvedSecret: helpers.GetPointer(client.ObjectKeyFromObject(secretSameNs)),
+						SupportedKinds: []v1beta1.RouteGroupKind{
+							{Kind: "HTTPRoute"},
+						},
 					},
 					"bar-443-https": {
 						Source:         bar443HTTPSListener,
@@ -695,6 +776,9 @@ func TestBuildGateway(t *testing.T) {
 						Routes:         map[types.NamespacedName]*Route{},
 						Conditions:     conditions.NewListenerProtocolConflict(conflict443PortMsg),
 						ResolvedSecret: helpers.GetPointer(client.ObjectKeyFromObject(secretSameNs)),
+						SupportedKinds: []v1beta1.RouteGroupKind{
+							{Kind: "HTTPRoute"},
+						},
 					},
 				},
 				Valid: true,

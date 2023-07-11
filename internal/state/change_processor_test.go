@@ -451,6 +451,7 @@ var _ = Describe("ChangeProcessor", func() {
 								Routes: map[types.NamespacedName]*graph.Route{
 									{Namespace: "test", Name: "hr-1"}: expRouteHR1,
 								},
+								SupportedKinds: []v1beta1.RouteGroupKind{{Kind: "HTTPRoute"}},
 							},
 							"listener-443-1": {
 								Source: gw1.Spec.Listeners[1],
@@ -459,6 +460,7 @@ var _ = Describe("ChangeProcessor", func() {
 									{Namespace: "test", Name: "hr-1"}: expRouteHR1,
 								},
 								ResolvedSecret: helpers.GetPointer(client.ObjectKeyFromObject(diffNsTLSSecret)),
+								SupportedKinds: []v1beta1.RouteGroupKind{{Kind: "HTTPRoute"}},
 							},
 						},
 						Valid: true,
@@ -544,6 +546,7 @@ var _ = Describe("ChangeProcessor", func() {
 						Conditions: conditions.NewListenerRefNotPermitted(
 							"Certificate ref to secret cert-ns/different-ns-tls-secret not permitted by any ReferenceGrant",
 						),
+						SupportedKinds: []v1beta1.RouteGroupKind{{Kind: "HTTPRoute"}},
 					}
 
 					expAttachment := &graph.ParentRefAttachmentStatus{

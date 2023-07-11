@@ -28,6 +28,8 @@ type Listener struct {
 	ResolvedSecret *types.NamespacedName
 	// Conditions holds the conditions of the Listener.
 	Conditions []conditions.Condition
+	// SupportedKinds is the list of RouteGroupKinds allowed by the listener.
+	SupportedKinds []v1beta1.RouteGroupKind
 	// Valid shows whether the Listener is valid.
 	// A Listener is considered valid if NKG can generate valid NGINX configuration for it.
 	Valid bool
@@ -158,11 +160,14 @@ func (c *listenerConfigurator) configure(listener v1beta1.Listener) *Listener {
 		}
 	}
 
+	supportedKinds := getListenerSupportedKinds(listener)
+
 	if len(conds) > 0 {
 		return &Listener{
-			Source:     listener,
-			Conditions: conds,
-			Valid:      false,
+			Source:         listener,
+			Conditions:     conds,
+			Valid:          false,
+			SupportedKinds: supportedKinds,
 		}
 	}
 
@@ -171,6 +176,7 @@ func (c *listenerConfigurator) configure(listener v1beta1.Listener) *Listener {
 		AllowedRouteLabelSelector: allowedRouteSelector,
 		Routes:                    make(map[types.NamespacedName]*Route),
 		Valid:                     true,
+		SupportedKinds:            supportedKinds,
 	}
 
 	// resolvers might add different conditions to the listener, so we run them all.
@@ -206,7 +212,21 @@ func validateListenerHostname(listener v1beta1.Listener) []conditions.Condition 
 	return nil
 }
 
-func validateListenerAllowedRouteKind(listener v1beta1.Listener) []conditions.Condition {
+func getAndValidateListenerSupportedKinds(listener v1beta1.Listener) (
+	[]conditions.Condition,
+	[]v1beta1.RouteGroupKind,
+) {
+	if listener.AllowedRoutes == nil || listener.AllowedRoutes.Kinds == nil {
+		return nil, []v1beta1.RouteGroupKind{
+			{
+				Kind: "HTTPRoute",
+			},
+		}
+	}
+	var conds []conditions.Condition
+
+	supportedKinds := make([]v1beta1.RouteGroupKind, 0, len(listener.AllowedRoutes.Kinds))
+
 	validHTTPRouteKind := func(kind v1beta1.RouteGroupKind) bool {
 		if kind.Kind != v1beta1.Kind("HTTPRoute") {
 			return false
@@ -219,17 +239,26 @@ func validateListenerAllowedRouteKind(listener v1beta1.Listener) []conditions.Co
 
 	switch listener.Protocol {
 	case v1beta1.HTTPProtocolType, v1beta1.HTTPSProtocolType:
-		if listener.AllowedRoutes != nil {
-			for _, kind := range listener.AllowedRoutes.Kinds {
-				if !validHTTPRouteKind(kind) {
-					msg := fmt.Sprintf("Unsupported route kind \"%s/%s\"", *kind.Group, kind.Kind)
-					return conditions.NewListenerInvalidRouteKinds(msg)
-				}
+		for _, kind := range listener.AllowedRoutes.Kinds {
+			if !validHTTPRouteKind(kind) {
+				msg := fmt.Sprintf("Unsupported route kind \"%s/%s\"", *kind.Group, kind.Kind)
+				conds = append(conds, conditions.NewListenerInvalidRouteKinds(msg)...)
+				continue
 			}
+			supportedKinds = append(supportedKinds, kind)
 		}
 	}
+	return conds, supportedKinds
+}
 
-	return nil
+func validateListenerAllowedRouteKind(listener v1beta1.Listener) []conditions.Condition {
+	conds, _ := getAndValidateListenerSupportedKinds(listener)
+	return conds
+}
+
+func getListenerSupportedKinds(listener v1beta1.Listener) []v1beta1.RouteGroupKind {
+	_, kinds := getAndValidateListenerSupportedKinds(listener)
+	return kinds
 }
 
 func validateListenerLabelSelector(listener v1beta1.Listener) []conditions.Condition {

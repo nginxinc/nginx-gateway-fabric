@@ -97,7 +97,7 @@ Fields:
           Gateway. NKG only supports a single Gateway.
     * `listeners`
         * `name` - supported.
-        * `supportedKinds` - not supported.
+        * `supportedKinds` - supported.
         * `attachedRoutes` - supported.
         * `conditions` - Supported (Condition/Status/Reason):
             * `Accepted/True/Accepted`
