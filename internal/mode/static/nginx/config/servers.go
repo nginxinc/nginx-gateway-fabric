@@ -92,8 +92,8 @@ func createLocations(pathRules []dataplane.PathRule, listenerPort int32) []http.
 			m := r.GetMatch()
 
 			buildLocations := extLocations
-			intLocation, match, intLocationExists := initializeInternalLocation(rule, matchRuleIdx, m)
-			if intLocationExists {
+			if len(rule.MatchRules) != 1 || !isPathOnlyMatch(m) {
+				intLocation, match := initializeInternalLocation(rule, matchRuleIdx, m)
 				buildLocations = []http.Location{intLocation}
 				matches = append(matches, match)
 			}
@@ -138,17 +138,9 @@ func createLocations(pathRules []dataplane.PathRule, listenerPort int32) []http.
 		}
 
 		if len(matches) > 0 {
-			// FIXME(sberman): De-dupe matches and associated locations
-			// so we don't need nginx/njs to perform unnecessary matching.
-			// https://github.com/nginxinc/nginx-kubernetes-gateway/issues/662
-			b, err := json.Marshal(matches)
-			if err != nil {
-				// panic is safe here because we should never fail to marshal the match unless we constructed it incorrectly.
-				panic(fmt.Errorf("could not marshal http match: %w", err))
-			}
-
+			matchesStr := convertMatchesToString(matches)
 			for i := range extLocations {
-				extLocations[i].HTTPMatchVar = string(b)
+				extLocations[i].HTTPMatchVar = matchesStr
 			}
 			locs = append(locs, extLocations...)
 		}
@@ -198,7 +190,9 @@ func initializeExternalLocations(
 	// that handles the Exact prefix case (if it doesn't already exist), and the first location is updated
 	// to handle the trailing slash prefix case (if it doesn't already exist)
 	if isNonSlashedPrefixPath(rule.PathType, externalLocPath) {
-		// if Exact path and trailing slash Prefix path already exist, then we don't need to build anything
+		// if Exact path and/or trailing slash Prefix path already exists, this means some routing rule
+		// configures it. The routing rule location has priority over this location, so we don't try to
+		// overwrite it and we don't add a duplicate location to NGINX because that will cause an NGINX config error.
 		_, exactPathExists := pathsAndTypes[rule.Path][dataplane.PathTypeExact]
 		var trailingSlashPrefixPathExists bool
 		if pathTypes, exists := pathsAndTypes[rule.Path+"/"]; exists {
@@ -235,17 +229,9 @@ func initializeInternalLocation(
 	rule dataplane.PathRule,
 	matchRuleIdx int,
 	match v1beta1.HTTPRouteMatch,
-) (http.Location, httpMatch, bool) {
-	var intLocation http.Location
-	var hm httpMatch
-	intLocationNeeded := len(rule.MatchRules) != 1 || !isPathOnlyMatch(match)
-	if intLocationNeeded {
-		path := createPathForMatch(rule.Path, rule.PathType, matchRuleIdx)
-		hm = createHTTPMatch(match, path)
-		intLocation = createMatchLocation(path)
-	}
-
-	return intLocation, hm, intLocationNeeded
+) (http.Location, httpMatch) {
+	path := createPathForMatch(rule.Path, rule.PathType, matchRuleIdx)
+	return createMatchLocation(path), createHTTPMatch(match, path)
 }
 
 func createReturnValForRedirectFilter(filter *v1beta1.HTTPRequestRedirectFilter, listenerPort int32) *http.Return {
@@ -438,6 +424,19 @@ func convertSetHeaders(headers []dataplane.HTTPHeader) []http.Header {
 	return locHeaders
 }
 
+func convertMatchesToString(matches []httpMatch) string {
+	// FIXME(sberman): De-dupe matches and associated locations
+	// so we don't need nginx/njs to perform unnecessary matching.
+	// https://github.com/nginxinc/nginx-kubernetes-gateway/issues/662
+	b, err := json.Marshal(matches)
+	if err != nil {
+		// panic is safe here because we should never fail to marshal the match unless we constructed it incorrectly.
+		panic(fmt.Errorf("could not marshal http match: %w", err))
+	}
+
+	return string(b)
+}
+
 func exactPath(path string) string {
 	return fmt.Sprintf("= %s", path)
 }
@@ -463,7 +462,7 @@ func createDefaultRootLocation() http.Location {
 	}
 }
 
-// returns whether or not a path is of type Prefix and does not contain a trailing slash
+// isNonSlashedPrefixPath returns whether or not a path is of type Prefix and does not contain a trailing slash
 func isNonSlashedPrefixPath(pathType dataplane.PathType, path string) bool {
 	return pathType == dataplane.PathTypePrefix && !strings.HasSuffix(path, "/")
 }

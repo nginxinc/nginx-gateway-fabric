@@ -892,6 +892,41 @@ func TestCreateServersConflicts(t *testing.T) {
 		return hr
 	}
 
+	hr1 := createHR([]pathAndType{
+		{
+			path:     "/coffee",
+			pathType: v1beta1.PathMatchPathPrefix,
+		},
+		{
+			path:     "/coffee",
+			pathType: v1beta1.PathMatchExact,
+		},
+	})
+	hr2 := createHR([]pathAndType{
+		{
+			path:     "/coffee",
+			pathType: v1beta1.PathMatchPathPrefix,
+		},
+		{
+			path:     "/coffee/",
+			pathType: v1beta1.PathMatchPathPrefix,
+		},
+	})
+	hr3 := createHR([]pathAndType{
+		{
+			path:     "/coffee",
+			pathType: v1beta1.PathMatchPathPrefix,
+		},
+		{
+			path:     "/coffee/",
+			pathType: v1beta1.PathMatchPathPrefix,
+		},
+		{
+			path:     "/coffee",
+			pathType: v1beta1.PathMatchExact,
+		},
+	})
+
 	fooGroup := dataplane.BackendGroup{
 		Source:  types.NamespacedName{Namespace: "test", Name: "route"},
 		RuleIdx: 0,
@@ -939,18 +974,9 @@ func TestCreateServersConflicts(t *testing.T) {
 					PathType: dataplane.PathTypePrefix,
 					MatchRules: []dataplane.MatchRule{
 						{
-							MatchIdx: 0,
-							RuleIdx:  0,
-							Source: createHR([]pathAndType{
-								{
-									path:     "/coffee",
-									pathType: v1beta1.PathMatchPathPrefix,
-								},
-								{
-									path:     "/coffee",
-									pathType: v1beta1.PathMatchExact,
-								},
-							}),
+							MatchIdx:     0,
+							RuleIdx:      0,
+							Source:       hr1,
 							BackendGroup: fooGroup,
 						},
 					},
@@ -960,18 +986,9 @@ func TestCreateServersConflicts(t *testing.T) {
 					PathType: dataplane.PathTypeExact,
 					MatchRules: []dataplane.MatchRule{
 						{
-							MatchIdx: 0,
-							RuleIdx:  0,
-							Source: createHR([]pathAndType{
-								{
-									path:     "/coffee",
-									pathType: v1beta1.PathMatchPathPrefix,
-								},
-								{
-									path:     "/coffee",
-									pathType: v1beta1.PathMatchExact,
-								},
-							}),
+							MatchIdx:     0,
+							RuleIdx:      0,
+							Source:       hr1,
 							BackendGroup: barGroup,
 						},
 					},
@@ -997,18 +1014,9 @@ func TestCreateServersConflicts(t *testing.T) {
 					PathType: dataplane.PathTypePrefix,
 					MatchRules: []dataplane.MatchRule{
 						{
-							MatchIdx: 0,
-							RuleIdx:  0,
-							Source: createHR([]pathAndType{
-								{
-									path:     "/coffee",
-									pathType: v1beta1.PathMatchPathPrefix,
-								},
-								{
-									path:     "/coffee/",
-									pathType: v1beta1.PathMatchPathPrefix,
-								},
-							}),
+							MatchIdx:     0,
+							RuleIdx:      0,
+							Source:       hr2,
 							BackendGroup: fooGroup,
 						},
 					},
@@ -1018,18 +1026,9 @@ func TestCreateServersConflicts(t *testing.T) {
 					PathType: dataplane.PathTypePrefix,
 					MatchRules: []dataplane.MatchRule{
 						{
-							MatchIdx: 0,
-							RuleIdx:  1,
-							Source: createHR([]pathAndType{
-								{
-									path:     "/coffee",
-									pathType: v1beta1.PathMatchPathPrefix,
-								},
-								{
-									path:     "/coffee/",
-									pathType: v1beta1.PathMatchPathPrefix,
-								},
-							}),
+							MatchIdx:     0,
+							RuleIdx:      1,
+							Source:       hr2,
 							BackendGroup: barGroup,
 						},
 					},
@@ -1055,22 +1054,9 @@ func TestCreateServersConflicts(t *testing.T) {
 					PathType: dataplane.PathTypePrefix,
 					MatchRules: []dataplane.MatchRule{
 						{
-							MatchIdx: 0,
-							RuleIdx:  0,
-							Source: createHR([]pathAndType{
-								{
-									path:     "/coffee",
-									pathType: v1beta1.PathMatchPathPrefix,
-								},
-								{
-									path:     "/coffee/",
-									pathType: v1beta1.PathMatchPathPrefix,
-								},
-								{
-									path:     "/coffee",
-									pathType: v1beta1.PathMatchExact,
-								},
-							}),
+							MatchIdx:     0,
+							RuleIdx:      0,
+							Source:       hr3,
 							BackendGroup: fooGroup,
 						},
 					},
@@ -1080,22 +1066,9 @@ func TestCreateServersConflicts(t *testing.T) {
 					PathType: dataplane.PathTypePrefix,
 					MatchRules: []dataplane.MatchRule{
 						{
-							MatchIdx: 0,
-							RuleIdx:  1,
-							Source: createHR([]pathAndType{
-								{
-									path:     "/coffee",
-									pathType: v1beta1.PathMatchPathPrefix,
-								},
-								{
-									path:     "/coffee/",
-									pathType: v1beta1.PathMatchPathPrefix,
-								},
-								{
-									path:     "/coffee",
-									pathType: v1beta1.PathMatchExact,
-								},
-							}),
+							MatchIdx:     0,
+							RuleIdx:      1,
+							Source:       hr3,
 							BackendGroup: barGroup,
 						},
 					},
@@ -1762,40 +1735,46 @@ func TestIsPathOnlyMatch(t *testing.T) {
 func TestCreateProxyPass(t *testing.T) {
 	g := NewGomegaWithT(t)
 
-	expected := "http://10.0.0.1:80"
-
-	grp := dataplane.BackendGroup{
-		Backends: []dataplane.Backend{
-			{
-				UpstreamName: "10.0.0.1:80",
-				Valid:        true,
-				Weight:       1,
+	tests := []struct {
+		expected string
+		grp      dataplane.BackendGroup
+	}{
+		{
+			expected: "http://10.0.0.1:80",
+			grp: dataplane.BackendGroup{
+				Backends: []dataplane.Backend{
+					{
+						UpstreamName: "10.0.0.1:80",
+						Valid:        true,
+						Weight:       1,
+					},
+				},
+			},
+		},
+		{
+			expected: "http://$ns1__bg_rule0",
+			grp: dataplane.BackendGroup{
+				Source: types.NamespacedName{Namespace: "ns1", Name: "bg"},
+				Backends: []dataplane.Backend{
+					{
+						UpstreamName: "my-variable",
+						Valid:        true,
+						Weight:       1,
+					},
+					{
+						UpstreamName: "my-variable2",
+						Valid:        true,
+						Weight:       1,
+					},
+				},
 			},
 		},
 	}
 
-	result := createProxyPass(grp)
-	g.Expect(result).To(Equal(expected))
-
-	expected = "http://$ns1__bg_rule0"
-
-	grp = dataplane.BackendGroup{
-		Source: types.NamespacedName{Namespace: "ns1", Name: "bg"},
-		Backends: []dataplane.Backend{
-			{
-				UpstreamName: "my-variable",
-				Valid:        true,
-				Weight:       1,
-			},
-			{
-				UpstreamName: "my-variable2",
-				Valid:        true,
-				Weight:       1,
-			},
-		},
+	for _, tc := range tests {
+		result := createProxyPass(tc.grp)
+		g.Expect(result).To(Equal(tc.expected))
 	}
-	result = createProxyPass(grp)
-	g.Expect(result).To(Equal(expected))
 }
 
 func TestCreateMatchLocation(t *testing.T) {
