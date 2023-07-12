@@ -200,6 +200,27 @@ func (int required, ...Options) {
 
 ## Error Handling
 
+### Prefer inline error handling
+
+When possible, use inline error handling.
+
+DO:
+
+```go
+if err := execute(); err != nil {
+    // handle error
+}
+```
+
+DO NOT:
+
+```go
+err := execute()
+if err != nil {
+    // handle error
+}
+```
+
 ### Do not filter context when returning errors
 
 Preserve error context by wrapping errors as the stack unwinds. Utilize native error wrapping with `fmt.Errorf` and
