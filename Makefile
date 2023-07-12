@@ -3,7 +3,7 @@ VERSION = edge
 GIT_COMMIT = $(shell git rev-parse HEAD || echo "unknown")
 DATE = $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 MANIFEST_DIR = $(shell pwd)/deploy/manifests 
-NJS_DIR = $(shell pwd)/internal/nginx/modules/src/
+NJS_DIR = $(shell pwd)/internal/mode/static/nginx/modules/src
 CHART_DIR = $(shell pwd)/deploy/helm-chart
 
 # variables that can be overridden by the user
