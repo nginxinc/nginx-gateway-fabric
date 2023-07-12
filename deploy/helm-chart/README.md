@@ -55,14 +55,14 @@ helm install my-release . --create-namespace --wait-for-jobs -n nginx-gateway
 Helm does not upgrade CRDs during a release upgrade, or on an install if they are already present in the cluster.
 Before you upgrade a release, ensure the Gateway API resources are up to date by doing one of the following:
 
+1. To upgrade the Gateway resources from [the Gateway API repo](https://github.com/kubernetes-sigs/gateway-api), run:
+   ```
+   kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v0.7.1/standard-install.yaml
+   ```
 1. To upgrade the Gateway resources from the NGINX Kubernetes Gateway Chart sources, pull the chart sources as described
    in [Pulling the Chart](#pulling-the-chart) and then run:
    ```
    kubectl apply -f crds/
-   ```
-1. To upgrade the Gateway resources from [the Gateway API repo](https://github.com/kubernetes-sigs/gateway-api), run:
-   ```
-   kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v0.7.1/standard-install.yaml
    ```
 
 >Note: The following warning is expected and can be ignored: `Warning: kubectl apply should be used on resource created
@@ -101,14 +101,14 @@ following:
 Please ensure there are no custom resources that you want to keep and there are no other Gateway API implementations
 running in the cluster!**
 
+1. To delete the Gateway resources using [the Gateway API repo](https://github.com/kubernetes-sigs/gateway-api), run:
+   ```
+   kubectl delete -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v0.7.1/standard-install.yaml
+   ```
 1. To delete the Gateway resources using the NGINX Kubernetes Gateway Chart sources, pull the chart sources as described
    in [Pulling the Chart](#pulling-the-chart) and then run:
    ```
    kubectl delete -f crds/
-   ```
-1. To delete the Gateway resources using [the Gateway API repo](https://github.com/kubernetes-sigs/gateway-api), run:
-   ```
-   kubectl delete -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v0.7.1/standard-install.yaml
    ```
 
 ## Configuration

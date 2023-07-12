@@ -8,7 +8,7 @@ This guide walks you through how to install NGINX Kubernetes Gateway on a generi
 
 ## Deploy NGINX Kubernetes Gateway using Helm
 
-To deploy NGINX Kubernetes Gateway using Helm, please follow the instructions on [this](../deploy/helm-chart/README.md)
+To deploy NGINX Kubernetes Gateway using Helm, please follow the instructions on [this](/deploy/helm-chart/README.md)
 page.
 
 ## Deploy NGINX Kubernetes Gateway from Manifests

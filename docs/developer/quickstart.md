@@ -124,3 +124,33 @@ make lint
 
 > **Note**
 > fieldalignment errors can be fixed by running: `fieldalignment -fix <path-to-package>`
+
+## Run the Helm Linter
+
+If you have made changes to the Helm Chart, run the following make command from the project's root directory to lint the
+Helm Chart code:
+
+```shell
+make lint-helm
+```
+
+## Run go generate
+
+To ensure all the generated code is up to date, run the following make command from the project's root directory:
+
+```shell
+make generate
+```
+
+## Update NJS module ConfigMaps
+
+If you have made changes to the [NJS module code](/internal/mode/static/nginx/modules/README.md), run the following make
+command from the project's root directory to update the ConfigMap yaml:
+
+```shell
+make generate-njs-yaml
+```
+
+Additionally, the [NJS ConfigMap Helm template](/deploy/helm-chart/templates/njs-modules.yaml) will need to be updated.
+This is currently a manual process - ensure the content in the `data` field matches that in the
+[NJS ConfigMap manifest](/deploy/manifests/njs-modules.yaml) `data` field.
