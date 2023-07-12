@@ -52,17 +52,17 @@ DO:
 
 ```go
 func longFunctionDefinition(
-paramX int,
-paramY string,
-paramZ bool,
+  paramX int,
+  paramY string,
+  paramZ bool,
 ) (string, error){}
 
 // and 
 
 s := myStruct{
-field1: 1,
-field2: 2,
-field3: 3,
+  field1: 1,
+  field2: 2,
+  field3: 3,
 }
 ```
 
@@ -70,14 +70,14 @@ DO NOT:
 
 ```go
 func longFunctionDefinition(paramX int, paramY string,
-paramZ bool,
+  paramZ bool,
 ) (string, error){}
 
 // or 
 
 func longFunctionDefinition(
-paramX int, paramY string,
-paramZ bool,
+  paramX int, paramY string,
+  paramZ bool,
 ) (string, error){}
 
 // or 
@@ -92,12 +92,12 @@ Example:
 
 ```go
 cfg := foo.Config{
-Site: "example.com",
-Out: os.Stdout,
-Dest: c.KeyPair{
-Key: "style",
-Value: "well formatted",
-},
+  Site: "example.com",
+  Out: os.Stdout,
+  Dest: c.KeyPair{
+    Key: "style",
+    Value: "well formatted",
+  },
 }
 ```
 
@@ -176,7 +176,7 @@ DO NOT:
 
 ```go 
 func(int required, int optional) {
-if optional {...} 
+  if optional {...} 
 }
 ```
 
@@ -186,19 +186,40 @@ DO:
 type Option func (o *Object)
 
 func Optional(string optional) Option {
-return func (o *Object) {
-o.optional = optional
-} 
+  return func (o *Object) {
+    o.optional = optional
+  } 
 }
 
 func (int required, ...Options) {
-for o := range Options {
-o(self)
-} 
+  for o := range Options {
+    o(self)
+  } 
 }
 ```
 
 ## Error Handling
+
+### Prefer inline error handling
+
+When possible, use inline error handling.
+
+DO:
+
+```go
+if err := execute(); err != nil {
+    // handle error
+}
+```
+
+DO NOT:
+
+```go
+err := execute()
+if err != nil {
+    // handle error
+}
+```
 
 ### Do not filter context when returning errors
 
@@ -217,11 +238,11 @@ DO NOT:
 
 ```go
 func badAtStuff(noData string) error {
-if len(noData) == 0 {
-fmt.Printf("Received no data")
-}
+  if len(noData) == 0 {
+    fmt.Printf("Received no data")
+  }
 
-return errors.New("received no data")
+  return errors.New("received no data")
 }
 ```
 
@@ -229,10 +250,10 @@ DO
 
 ```go
 func badAtStuff(noData string) error {
-if len(noData) == 0 {
-return errors.New("received no data")
-}
-...
+  if len(noData) == 0 {
+    return errors.New("received no data")
+  }
+  ...
 }
 ```
 
@@ -253,10 +274,10 @@ func onError(err error) {
 }
 
 func ReadAsync(r io.Reader, onError) {
-err := r()
-if err != nil {
-onError(err)
-} 
+  err := r()
+  if err != nil {
+    onError(err)
+  } 
 }
 
 go ReadAsync(reader, onError)
@@ -264,10 +285,10 @@ go ReadAsync(reader, onError)
 // OR errs := make(chan error)
 
 func ReadAsync(r io.Reader, errs chan<- error) {
-err := r()
-if err != nil {
-// put error on errs channel, but don't block forever.
-}
+  err := r()
+  if err != nil {
+    // put error on errs channel, but don't block forever.
+  }
 }
 ```
 
@@ -281,35 +302,35 @@ Example:
 
 ```go
 func readFile(filename string) ([]byte, error) {
-file, err := os.Open(filename)
-if err != nil {
-return nil, fmt.Errorf("failed to open file: %w", err)
-}
-defer file.Close()
-
-data, err := ioutil.ReadAll(file)
-if err != nil {
-return nil, fmt.Errorf("failed to read file: %w", err)
-}
-
-return data, nil
+  file, err := os.Open(filename)
+  if err != nil {
+    return nil, fmt.Errorf("failed to open file: %w", err)
+  }
+  defer file.Close()
+  
+  data, err := ioutil.ReadAll(file)
+  if err != nil {
+    return nil, fmt.Errorf("failed to read file: %w", err)
+  }
+  
+  return data, nil
 }
 
 func processFile(filename string) error {
-data, err := readFile(filename)
-if err != nil {
-return fmt.Errorf("failed to process file: %w", err)
-}
-// Process the file data here
-return nil
+  data, err := readFile(filename)
+  if err != nil {
+    return fmt.Errorf("failed to process file: %w", err)
+  }
+  // Process the file data here
+  return nil
 }
 
 func main() {
-filename := "example.txt"
-err := processFile(filename)
-if err != nil {
-fmt.Printf("Error processing file: %v\n", err) // caller handles the error
-}
+  filename := "example.txt"
+  err := processFile(filename)
+  if err != nil {
+    fmt.Printf("Error processing file: %v\n", err) // caller handles the error
+  }
 }
 ```
 
@@ -413,13 +434,13 @@ FAVOR:
 
 ```go
 type Object struct{
-subobject SubObject
+  subobject SubObject
 }
 
 func New() Object {
-return Object{
-subobject: SubObject{},
-}
+  return Object{
+    subobject: SubObject{},
+  }
 }
 ```
 
@@ -427,13 +448,13 @@ DISFAVOR:
 
 ```go
 type Object struct{
-subobject *SubObject
+  subobject *SubObject
 }
 
 func New() *Object {
-return &Object{
-subobject: &SubObject{},
-} 
+  return &Object{
+    subobject: &SubObject{},
+  } 
 }
 ```
 
@@ -455,8 +476,8 @@ DO NOT:
 
 ```go
 func(s string) *string {
-s := s + "more strings"
-return &s // this will move to heap 
+  s := s + "more strings"
+  return &s // this will move to heap 
 }
 ```
 

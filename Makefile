@@ -54,7 +54,8 @@ deps: ## Add missing and remove unused modules, verify deps and download them to
 
 .PHONY: create-kind-cluster
 create-kind-cluster: ## Create a kind cluster
-	kind create cluster --image kindest/node:v1.27.1
+	$(eval KIND_IMAGE=$(shell grep -m1 'FROM kindest/node' <conformance/tests/Dockerfile | awk -F'[ ]' '{print $$2}'))
+	kind create cluster --image $(KIND_IMAGE)
 	kind export kubeconfig --kubeconfig $(KIND_KUBE_CONFIG_FOLDER)/config
 
 .PHONY: delete-kind-cluster
@@ -87,7 +88,7 @@ unit-test: ## Run unit tests for the go code
 
 njs-unit-test: ## Run unit tests for the njs httpmatches module
 	docker run --rm -w /modules \
-		-v $(PWD)/internal/nginx/modules:/modules/ \
+		-v $(PWD)/internal/mode/static/nginx/modules:/modules/ \
 		node:18 \
 		/bin/bash -c "npm install && npm test && npm run clean"
 

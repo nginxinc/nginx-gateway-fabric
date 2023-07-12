@@ -7,10 +7,14 @@ metadata:
     service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
 spec:
   type: LoadBalancer
-  ports:
+  ports: # Update the following ports to match your Gateway Listener ports
   - port: 80
     targetPort: 80
     protocol: TCP
     name: http
+  - port: 443
+    targetPort: 443
+    protocol: TCP
+    name: https
   selector:
     app: nginx-gateway

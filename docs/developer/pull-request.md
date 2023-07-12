@@ -2,7 +2,10 @@
 
 ## Submitter Guidelines
 
-- Fill in [our pull request template](/.github/PULL_REQUEST_TEMPLATE.md). 
+- Title the PR using customer-focused language. The release notes are generated from PR titles, so the titles should
+  describe the feature from the user's perspective and avoid implementation details. For example, instead of "Add debug
+  boolean", write "Support configurable debug mode".
+- Fill in [our pull request template](/.github/PULL_REQUEST_TEMPLATE.md).
 - Make sure to include the issue number in the PR description to automatically close the issue when the PR mergers.
   See [Closing Issues via Pull Requests](https://github.blog/2013-05-14-closing-issues-via-pull-requests/) for details.
 - For significant changes, break your changes into a logical series of smaller commits. By approaching the changes
@@ -35,7 +38,7 @@
   follow-up in a timely manner with acceptance of the solution and explanation.
 - Do your best to review in a timely manner. However, code reviews are time-consuming; maximize their benefit by
   focusing on what’s highest value. This code review pyramid outlines a reasonable shorthand:
-  ![Code Review Pyramid](code-review-pyramid.jpeg)
+  ![Code Review Pyramid](/docs/images/code-review-pyramid.jpeg)
 - Always review for: design, API semantics, [DRY](https://en.wikipedia.org/wiki/Don%27t_repeat_yourself) and
   maintainability practices, bugs and quality, efficiency and correctness.
 - Code review checklist:

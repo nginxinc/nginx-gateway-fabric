@@ -1,0 +1,18 @@
+{
+  "dependencies": {
+    "chai": "4.3.7",
+    "esm": "3.2.25",
+    "mocha": "10.2.0"
+  },
+  "scripts": {
+    "format": "prettier -w src/ test/",
+    "lint": "prettier -c src/ test/",
+    "test": "c8 mocha -r esm",
+    "clean": "rm -rf node_modules coverage"
+  },
+  "devDependencies": {
+    "c8": "8.0.0",
+    "prettier": "3.0.0"
+  },
+  "type": "module"
+}
