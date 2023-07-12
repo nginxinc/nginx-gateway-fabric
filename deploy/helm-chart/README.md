@@ -28,7 +28,7 @@ nginx-gateway namespace (with optional `--create-namespace` flag - you can omit 
 the Gateway API resources from the standard channel (if not already present):
 
 ```
-helm install my-release oci://ghcr.io/nginxinc/charts/nginx-gateway --version 0.0.0-edge --create-namespace --wait-for-jobs -n nginx-gateway
+helm install my-release oci://ghcr.io/nginxinc/charts/nginx-gateway --version 0.0.0-edge --create-namespace --wait --wait-for-jobs -n nginx-gateway
 ```
 
 ### Installing the Chart via Sources
@@ -47,7 +47,7 @@ nginx-gateway namespace (with optional `--create-namespace` flag - you can omit 
 the Gateway API resources from the standard channel (if not already present):
 
 ```
-helm install my-release . --create-namespace --wait-for-jobs -n nginx-gateway
+helm install my-release . --create-namespace --wait --wait-for-jobs -n nginx-gateway
 ```
 
 ## Upgrading the Chart
