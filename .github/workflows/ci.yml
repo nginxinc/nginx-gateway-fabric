@@ -232,7 +232,6 @@ jobs:
         run: |
           make run-conformance-tests TAG=${{ github.sha }}
         working-directory: ./conformance
-        continue-on-error: true
 
   build:
     name: Build Image
