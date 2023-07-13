@@ -25,14 +25,16 @@ We will use `HTTPRoute` resources to split traffic between two versions of the a
 
 1. Create the Cafe Deployments and Services:
 
-   ```
+   ```shell
    kubectl apply -f cafe.yaml
    ```
 
 1. Check that the Pods are running in the `default` namespace:
 
-   ```
+   ```shell
    kubectl -n default get pods
+   ```
+   ```
    NAME                         READY   STATUS    RESTARTS   AGE
    coffee-v1-7c57c576b-rfjsh    1/1     Running   0          21m
    coffee-v2-698f66dc46-vcb6r   1/1     Running   0          21m
@@ -42,13 +44,13 @@ We will use `HTTPRoute` resources to split traffic between two versions of the a
 
 1. Create the `Gateway`:
 
-   ```
+   ```shell
    kubectl apply -f gateway.yaml
    ```
 
 1. Create the `HTTPRoute` resources:
 
-   ```
+   ```shell
    kubectl apply -f cafe-route.yaml
    ```
    
@@ -60,7 +62,7 @@ For example, the weights of 8 and 2, 16 and 4, or 32 and 8 all evaluate to the s
 
 To access the application, we will use `curl` to send requests to `/coffee`:
 
-```
+```shell
 curl --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/coffee
 ```
 
@@ -85,13 +87,13 @@ of the `coffee-v2` backend to 80. Backends with equal weights will receive an eq
 
 1. Apply the updated `HTTPRoute` resource:
 
-   ```
+   ```shell
    kubectl apply -f cafe-route-equal-weight.yaml
    ```
    
 2. Test the application again:
 
-   ```
+   ```shell
    curl --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/coffee
    ```
 

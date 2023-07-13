@@ -11,7 +11,7 @@ This guide walks you through how to run NGINX Kubernetes Gateway on a [kind](htt
 
 Create a cluster with `kind`. You can follow their [instructions](https://kind.sigs.k8s.io/docs/user/quick-start/#creating-a-cluster), or run the following make command at the root of the repository:
 
-```
+```shell
 make create-kind-cluster
 ```
     
@@ -23,7 +23,7 @@ Follow the [installation](./installation.md) instructions to deploy NGINX Kubern
 
 Forward local ports 8080 and 8443 to ports 80 and 443 of the nginx-gateway Pod:
 
-```
+```shell
 kubectl -n nginx-gateway port-forward <pod-name> 8080:80 8443:443
 ```
 

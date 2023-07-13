@@ -25,14 +25,16 @@ headers to the request.
 
 1. Create the headers Deployment and Service:
    
-   ```
+   ```shell
    kubectl apply -f headers.yaml
    ```
 
 1. Check that the Pod is running in the `default` namespace:
 
-   ```
+   ```shell
    kubectl -n default get pods
+   ```
+   ```
    NAME                      READY   STATUS    RESTARTS   AGE
    headers-6f4b79b975-2sb28   1/1     Running   0          12s
    ```
@@ -41,13 +43,13 @@ headers to the request.
 
 1. Create the `Gateway`:
 
-   ```
+   ```shell
    kubectl apply -f gateway.yaml
    ```
 
 1. Create the `HTTPRoute` resources:
 
-   ```
+   ```shell
    kubectl apply -f echo-route.yaml
    ```
 
@@ -58,8 +60,10 @@ our request.
 Notice our configured header values can be seen in the `requestHeaders` section below, and that the `User-Agent` header 
 is absent.
 
-```
+```shell
 curl -s --resolve echo.example.com:$GW_PORT:$GW_IP http://echo.example.com:$GW_PORT/headers -H "My-Cool-Header:my-client-value" -H "My-Overwrite-Header:dont-see-this"
+```
+```
 Headers:
   header 'Accept-Encoding' is 'compress'
   header 'My-cool-header' is 'my-client-value, this-is-an-appended-value'

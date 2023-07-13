@@ -67,7 +67,7 @@ The SBOMs for the binaries are available in the releases page. The SBOMs are gen
 The SBOM for the Docker image is available in the [GitHub Container](https://github.com/nginxinc/nginx-kubernetes-gateway/pkgs/container/nginx-kubernetes-gateway) repository. The SBOM is generated using [syft](https://github.com/anchore/syft) and stored as an attestation in the image manifest.
 
 For example to retrieve the SBOM for `linux/amd64` and analyze it using [grype](https://github.com/anchore/grype) you can run the following command:
-```
+```shell
 $ docker buildx imagetools inspect ghcr.io/nginxinc/nginx-kubernetes-gateway:edge --format '{{ json (index .SBOM "linux/amd64").SPDX }}' | grype
 ```
 

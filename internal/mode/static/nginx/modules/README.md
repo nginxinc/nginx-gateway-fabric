@@ -39,7 +39,7 @@ To run unit tests against the [httpmatches](./src/httpmatches.js) modules you mu
 
 To run the unit tests:
 
-```bash
+```shell
 npm test
 ```
 
@@ -51,7 +51,7 @@ To debug on the command-line:
 - Set a breakpoint using the [debugger](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/debugger) statement.
 - Run the tests with the inspect argument:
 
-```bash
+```shell
 npx mocha inspect -r esm
 ```
 
@@ -71,19 +71,19 @@ You can add log statements to debug njs code at runtime. The following log funct
 
 Log at error level:
 
-```bash
+```shell
 r.error(string)
 ```
 
 Log at info level:
 
-```bash
+```shell
 r.log(string)
 ```
 
 Log at warn level:
 
-```bash
+```shell
 r.warn(string)
 ```
 
@@ -91,6 +91,6 @@ r.warn(string)
 
 This project uses [prettier](https://prettier.io/) to lint and format the JavaScript code. To format the code run:
 
-```bash
+```shell
 npm run format
 ```

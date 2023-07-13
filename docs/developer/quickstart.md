@@ -26,7 +26,11 @@ Follow these steps to set up your development environment.
 
    ```shell
    git clone https://github.com/<YOUR-USERNAME>/nginx-kubernetes-gateway.git
+   ```
+   ```shell
    cd nginx-kubernetes-gateway
+   ```
+   ```shell
    make deps
    ```
 

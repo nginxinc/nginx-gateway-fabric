@@ -28,12 +28,14 @@ How to deploy:
 1. Follow the [installation](/docs/installation.md) instructions up until the Deploy the NGINX Kubernetes Gateway Step
    to deploy prerequisites for both the static mode Deployments and the provisioner.
 1. Deploy provisioner:
-   ```
+   ```shell
    kubectl apply -f conformance/provisioner/provisioner.yaml
    ```
 1. Confirm the provisioner is running in nginx-gateway namespace:
-   ```
+   ```shell
    kubectl get pods -n nginx-gateway 
+   ```
+   ```
    NAME                                         READY   STATUS    RESTARTS   AGE
    nginx-gateway-provisioner-6c9d9fdcb8-b2pf8   1/1     Running   0          11m
    ```
