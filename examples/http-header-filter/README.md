@@ -34,7 +34,7 @@ headers to the request.
    ```shell
    kubectl -n default get pods
    ```
-   ```
+   ```console
    NAME                      READY   STATUS    RESTARTS   AGE
    headers-6f4b79b975-2sb28   1/1     Running   0          12s
    ```
@@ -63,7 +63,7 @@ is absent.
 ```shell
 curl -s --resolve echo.example.com:$GW_PORT:$GW_IP http://echo.example.com:$GW_PORT/headers -H "My-Cool-Header:my-client-value" -H "My-Overwrite-Header:dont-see-this"
 ```
-```
+```console
 Headers:
   header 'Accept-Encoding' is 'compress'
   header 'My-cool-header' is 'my-client-value, this-is-an-appended-value'

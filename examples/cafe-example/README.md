@@ -33,7 +33,7 @@ In this example we deploy NGINX Kubernetes Gateway, a simple web application, an
    ```shell
    kubectl -n default get pods
    ```
-   ```
+   ```console
    NAME                      READY   STATUS    RESTARTS   AGE
    coffee-6f4b79b975-2sb28   1/1     Running   0          12s
    tea-6fb46d899f-fm7zr      1/1     Running   0          12s

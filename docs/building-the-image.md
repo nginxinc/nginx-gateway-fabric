@@ -13,14 +13,12 @@ Before you can build the NGINX Kubernetes Gateway, make sure you have the follow
 
    ```shell
    git clone https://github.com/nginxinc/nginx-kubernetes-gateway.git
-   ```
-   ```shell
    cd nginx-kubernetes-gateway
    ```
 
 1. Build the image:
 
-   ```shell
+   ```makefile
    make PREFIX=myregistry.example.com/nginx-kubernetes-gateway container
    ```
 

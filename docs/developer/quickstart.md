@@ -26,11 +26,9 @@ Follow these steps to set up your development environment.
 
    ```shell
    git clone https://github.com/<YOUR-USERNAME>/nginx-kubernetes-gateway.git
-   ```
-   ```shell
    cd nginx-kubernetes-gateway
    ```
-   ```shell
+   ```makefile
    make deps
    ```
 
@@ -40,7 +38,7 @@ Follow these steps to set up your development environment.
 
 To build the binary, run the make build command from the project's root directory:
 
-```shell
+```makefile
 make build
 ```
 
@@ -50,7 +48,7 @@ This command will build the binary and output it to the `/build/.out` directory.
 
 To build an NGINX Kubernetes Gateway container image from source run the following make command:
 
-```shell
+```makefile
 make TAG=$(whoami) container
 ```
 
@@ -60,7 +58,7 @@ This will build the docker image `nginx-kubernetes-gateway:<your-user>`.
 
 1. Create a `kind` cluster:
 
-   ```shell
+   ```makefile
    make create-kind-cluster
    ```
 
@@ -91,7 +89,7 @@ To make sure NKG is running properly, try out the [examples](/examples).
 
 To run all the unit tests, run the make unit-test command from the project's root directory:
 
-```shell
+```makefile
 make unit-test
 ```
 
@@ -105,7 +103,7 @@ To run Gateway API conformance tests, please follow the instructions on [this](/
 
 To lint the code, run the following make command from the project's root directory:
 
-```shell
+```makefile
 make lint
 ```
 

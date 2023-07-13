@@ -36,7 +36,7 @@ reference a Secret in a different Namespace.
    ```shell
    kubectl -n default get pods
    ```
-   ```
+   ```console
    NAME                      READY   STATUS    RESTARTS   AGE
    coffee-6f4b79b975-2sb28   1/1     Running   0          12s
    tea-6fb46d899f-fm7zr      1/1     Running   0          12s
@@ -110,7 +110,7 @@ To get a redirect for coffee:
 ```shell
 curl --resolve cafe.example.com:$GW_HTTP_PORT:$GW_IP http://cafe.example.com:$GW_HTTP_PORT/coffee --include
 ```
-```
+```console
 HTTP/1.1 302 Moved Temporarily
 ...
 Location: https://cafe.example.com:443/coffee
@@ -122,7 +122,7 @@ To get a redirect for tea:
 ```shell
 curl --resolve cafe.example.com:$GW_HTTP_PORT:$GW_IP http://cafe.example.com:$GW_HTTP_PORT/tea --include
 ```
-```
+```console
 HTTP/1.1 302 Moved Temporarily
 ...
 Location: https://cafe.example.com:443/tea
@@ -139,7 +139,7 @@ To get coffee:
 ```shell
 curl --resolve cafe.example.com:$GW_HTTPS_PORT:$GW_IP https://cafe.example.com:$GW_HTTPS_PORT/coffee --insecure
 ```
-```
+```console
 Server address: 10.12.0.18:80
 Server name: coffee-7586895968-r26zn
 ```
@@ -149,7 +149,7 @@ To get tea:
 ```shell
 curl --resolve cafe.example.com:$GW_HTTPS_PORT:$GW_IP https://cafe.example.com:$GW_HTTPS_PORT/tea --insecure
 ```
-```
+```console
 Server address: 10.12.0.19:80
 Server name: tea-7cd44fcb4d-xfw2x
 ```
@@ -167,7 +167,7 @@ Now, if we try to access the application over HTTPS, we will get a connection re
 ```shell
 curl --resolve cafe.example.com:$GW_HTTPS_PORT:$GW_IP https://cafe.example.com:$GW_HTTPS_PORT/coffee --insecure -vvv
 ```
-```
+```console
 ...
 curl: (7) Failed to connect to cafe.example.com port 443 after 0 ms: Connection refused
 ```
@@ -178,7 +178,7 @@ You can also check the conditions of the Gateway `https` Listener to verify the 
 ```shell
  kubectl describe gateway gateway
 ```
-```
+```console
  Name:                    https
  Conditions:
    Last Transition Time:  2023-06-26T20:23:56Z

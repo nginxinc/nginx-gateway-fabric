@@ -52,17 +52,17 @@ update-nkg-manifest            Update the NKG deployment manifest image name and
 
 ### Step 1 - Create a kind Cluster
 
-```shell
+```makefile
 make create-kind-cluster
 ```
 ### Step 2 - Install Nginx Kubernetes Gateway to configured kind cluster
 
 #### *Option 1* Build and install Nginx Kubernetes Gateway from local to configured kind cluster
-```shell
+```makefile
 make install-nkg-local-build
 ```
 #### *Option 2* Install Nginx Kubernetes Gateway from local already built image to configured kind cluster
-```shell
+```makefile
 make install-nkg-local-no-build
 ```
 **Note:** You can optionally skip the actual *build* step. However, if choosing 
@@ -82,36 +82,36 @@ this option, the following step *must* be completed manually *before* the build 
 #### *Option 3* Install Nginx Kubernetes Gateway from edge to configured kind cluster
 You can also skip the build NKG image step and prepare the environment to instead use the `edge` image
 
-```shell
+```makefile
 make install-nkg-edge
 ```
 
 ### Step 3 - Build conformance test runner image
-```shell
+```makefile
 make build-test-runner-image
 ```
 
 ### Step 4 - Run Gateway conformance tests
-```shell
+```makefile
 make run-conformance-tests
 ```
 
 ### Step 5 - Cleanup the conformance test fixtures and uninstall Nginx Kubernetes Gateway
-```shell
+```makefile
 make cleanup-conformance-tests
 ```
-```shell
+```makefile
 make uninstall-nkg
 ```
 
 ### Step 6 - Revert changes to the NKG deployment manifest
 **Optional** Not required if using `edge` image
 **Warning**: `make undo-image-update` will hard reset changes to the deploy/manifests/deployment.yaml file!
-```shell
+```makefile
 make undo-image-update
 ```
 
 ### Step 7 - Delete kind cluster
-```shell
+```makefile
 make delete-kind-cluster
 ```

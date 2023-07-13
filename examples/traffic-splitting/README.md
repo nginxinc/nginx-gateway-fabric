@@ -34,7 +34,7 @@ We will use `HTTPRoute` resources to split traffic between two versions of the a
    ```shell
    kubectl -n default get pods
    ```
-   ```
+   ```console
    NAME                         READY   STATUS    RESTARTS   AGE
    coffee-v1-7c57c576b-rfjsh    1/1     Running   0          21m
    coffee-v2-698f66dc46-vcb6r   1/1     Running   0          21m
@@ -68,14 +68,14 @@ curl --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT
 
 80% of the responses will come from `coffee-v1`:
 
-```
+```console
 Server address: 10.12.0.18:80
 Server name: coffee-v1-7c57c576b-rfjsh
 ```
 
 20% of the responses will come from `coffee-v2`:
 
-```
+```console
 Server address: 10.12.0.19:80
 Server name: coffee-v2-698f66dc46-vcb6r
 ```

@@ -38,7 +38,7 @@ The cafe application consists of four Services: `coffee-v1-svc`, `coffee-v2-svc`
    ```shell
    kubectl -n default get pods
    ```
-   ```
+   ```console
    NAME                         READY   STATUS    RESTARTS   AGE
    coffee-v1-75869cf7ff-vlfpq   1/1     Running   0          17m
    coffee-v2-67499ff985-2k6cc   1/1     Running   0          17m

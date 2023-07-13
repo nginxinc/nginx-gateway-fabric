@@ -34,7 +34,7 @@ in a different namespace from our HTTPRoutes.
    ```shell
    kubectl -n cafe get pods
    ```
-   ```
+   ```console
    NAME                      READY   STATUS    RESTARTS   AGE
    coffee-6f4b79b975-2sb28   1/1     Running   0          12s
    tea-6fb46d899f-fm7zr      1/1     Running   0          12s
@@ -113,7 +113,7 @@ You can also check the conditions of the HTTPRoutes `coffee` and `tea` to verify
 ```shell
 kubectl describe httproute coffee
 ```
-```
+```console
 Condtions:
       Message:               Backend ref to Service cafe/coffee not permitted by any ReferenceGrant
       Observed Generation:   1
@@ -126,7 +126,7 @@ Condtions:
 ```shell
 kubectl describe httproute tea
 ```
-```
+```console
 Condtions:
       Message:               Backend ref to Service cafe/tea not permitted by any ReferenceGrant
       Observed Generation:   1
