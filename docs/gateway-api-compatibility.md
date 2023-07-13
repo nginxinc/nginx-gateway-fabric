@@ -4,28 +4,32 @@ This document describes which Gateway API resources NGINX Kubernetes Gateway sup
 
 ## Summary
 
-| Resource                            | Support Level | API Version |
-|-------------------------------------|---------------|-------------|
-| [GatewayClass](#gatewayclass)       | Core          | v1beta1     |
-| [Gateway](#gateway)                 | Core          | v1beta1     |
-| [HTTPRoute](#httproute)             | Core          | v1beta1     |
-| [ReferenceGrant](#referencegrant)   | Core          | v1beta1     |
-| [Custom policies](#custom-policies) | Not supported | N/A         |
-| [TLSRoute](#tlsroute)               | Not supported | N/A         |
-| [TCPRoute](#tcproute)               | Not supported | N/A         |
-| [UDPRoute](#udproute)               | Not supported | N/A         |
+| Resource                            | Core Support Level | Extended Support Level | Implementation-Specific Support Level | API Version |
+|-------------------------------------|--------------------|------------------------|---------------------------------------|-------------|
+| [GatewayClass](#gatewayclass)       | Supported          | Not supported          | Not Supported                         | v1beta1     |
+| [Gateway](#gateway)                 | Supported          | Not supported          | Not Supported                         | v1beta1     |
+| [HTTPRoute](#httproute)             | Supported          | Partially supported    | Not Supported                         | v1beta1     |
+| [ReferenceGrant](#referencegrant)   | Supported          | N/A                    | Not Supported                         | v1beta1     |
+| [Custom policies](#custom-policies) | Not supported      | N/A                    | Not Supported                         | N/A         |
+| [TLSRoute](#tlsroute)               | Not supported      | Not supported          | Not Supported                         | N/A         |
+| [TCPRoute](#tcproute)               | Not supported      | Not supported          | Not Supported                         | N/A         |
+| [UDPRoute](#udproute)               | Not supported      | Not supported          | Not Supported                         | N/A         |
 
 ## Terminology
 
-- *Support Level*. See the Gateway API [support levels](https://gateway-api.sigs.k8s.io/concepts/conformance/#2-support-levels).
+Gateway API features has three [support levels](https://gateway-api.sigs.k8s.io/concepts/conformance/#2-support-levels):
+Core, Extended and Implementation-specific. We use the following terms to describe the support status for each level and
+resource field:
+
 - *Supported*. The resource or field is fully supported.
 - *Partially supported*. The resource or field is supported partially or with limitations. It will become fully
   supported in future releases.
 - *Not supported*. The resource or field is not yet supported. It will become partially or fully supported in future
   releases.
 
-Note: it might be possible that NGINX Kubernetes Gateway will never support some resources and/or fields of the Gateway
-API. We will document these decisions on a case by case basis.
+> Note: it might be possible that NGINX Kubernetes Gateway will never support some resources and/or fields of the Gateway API. We will document these decisions on a case by case basis.
+
+> NGINX Kubernetes Gateway doesn't support any features from the experimental release channel.
 
 ## Resources
 
@@ -36,10 +40,13 @@ the [Gateway API documentation](https://gateway-api.sigs.k8s.io/references/spec/
 
 ### GatewayClass
 
-> Support Level: Core.
+> Support Levels:
+> - Core: Supported.
+> - Extended: Not supported.
+> - Implementation-specific: Not supported.
 
-NGINX Kubernetes Gateway supports only a single GatewayClass resource configured via `--gatewayclass` flag
-of the [static-mode](./cli-help.md#static-mode) command.
+NGINX Kubernetes Gateway supports only a single GatewayClass resource configured via `--gatewayclass` flag of
+the [static-mode](./cli-help.md#static-mode) command.
 
 Fields:
 
@@ -56,11 +63,13 @@ Fields:
 
 ### Gateway
 
-> Support Level: Core.
+> Support Levels:
+> - Core: Supported.
+> - Extended: Not supported.
+> - Implementation-specific: Not supported.
 
 NGINX Kubernetes Gateway supports only a single Gateway resource. The Gateway resource must reference NGINX Kubernetes
-Gateway's corresponding GatewayClass.
-See [static-mode](./cli-help.md#static-mode) command for more info.
+Gateway's corresponding GatewayClass. See [static-mode](./cli-help.md#static-mode) command for more info.
 
 Fields:
 
@@ -116,7 +125,10 @@ Fields:
 
 ### HTTPRoute
 
-> Support Level: Core.
+> Support Levels:
+> - Core: Supported.
+> - Extended: Partially supported.
+> - Implementation-specific: Not supported.
 
 Fields:
 
@@ -147,11 +159,11 @@ Fields:
             * `Accepted/False/NoMatchingListenerHostname`
             * `Accepted/False/NoMatchingParent`
             * `Accepted/False/NotAllowedByListeners`
-            * `Accepted/False/UnsupportedValue` - custom reason for when the HTTPRoute includes an invalid or unsupported
-              value.
+            * `Accepted/False/UnsupportedValue` - custom reason for when the HTTPRoute includes an invalid or
+              unsupported value.
             * `Accepted/False/InvalidListener` - custom reason for when the HTTPRoute references an invalid listener.
-            * `Accepted/False/GatewayNotProgrammed` - custom reason for when the Gateway is not Programmed. HTTPRoute may
-              be valid and configured, but will maintain this status as long as the Gateway is not Programmed.
+            * `Accepted/False/GatewayNotProgrammed` - custom reason for when the Gateway is not Programmed. HTTPRoute
+              may be valid and configured, but will maintain this status as long as the Gateway is not Programmed.
             * `ResolvedRefs/True/ResolvedRefs`
             * `ResolvedRefs/False/InvalidKind`
             * `ResolvedRefs/False/RefNotPermitted`
@@ -161,7 +173,10 @@ Fields:
 
 ### ReferenceGrant
 
-> Support Level: Core
+> Support Levels:
+> - Core: Supported.
+> - Extended: N/A.
+> - Implementation-specific: N/A
 
 Fields:
 
