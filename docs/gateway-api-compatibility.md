@@ -4,22 +4,21 @@ This document describes which Gateway API resources NGINX Kubernetes Gateway sup
 
 ## Summary
 
-| Resource                            | Support Status      |
-|-------------------------------------|---------------------|
-| [GatewayClass](#gatewayclass)       | Partially supported |
-| [Gateway](#gateway)                 | Partially supported |
-| [HTTPRoute](#httproute)             | Partially supported |
-| [TLSRoute](#tlsroute)               | Not supported       |
-| [TCPRoute](#tcproute)               | Not supported       |
-| [UDPRoute](#udproute)               | Not supported       |
-| [ReferenceGrant](#referencegrant)   | Supported           |
-| [Custom policies](#custom-policies) | Not supported       |
+| Resource                            | Support Level | API Version |
+|-------------------------------------|---------------|-------------|
+| [GatewayClass](#gatewayclass)       | Core          | v1beta1     |
+| [Gateway](#gateway)                 | Core          | v1beta1     |
+| [HTTPRoute](#httproute)             | Core          | v1beta1     |
+| [ReferenceGrant](#referencegrant)   | Core          | v1beta1     |
+| [Custom policies](#custom-policies) | Not supported | N/A         |
+| [TLSRoute](#tlsroute)               | Not supported | N/A         |
+| [TCPRoute](#tcproute)               | Not supported | N/A         |
+| [UDPRoute](#udproute)               | Not supported | N/A         |
 
 ## Terminology
 
-We use the following words to describe support status:
-
-- *Supported*. The resource or field is fully supported and conformant to the Gateway API specification.
+- *Support Level*. See the Gateway API [support levels](https://gateway-api.sigs.k8s.io/concepts/conformance/#2-support-levels).
+- *Supported*. The resource or field is fully supported.
 - *Partially supported*. The resource or field is supported partially or with limitations. It will become fully
   supported in future releases.
 - *Not supported*. The resource or field is not yet supported. It will become partially or fully supported in future
@@ -37,7 +36,7 @@ the [Gateway API documentation](https://gateway-api.sigs.k8s.io/references/spec/
 
 ### GatewayClass
 
-> Status: Partially supported.
+> Support Level: Core.
 
 NGINX Kubernetes Gateway supports only a single GatewayClass resource configured via `--gatewayclass` flag
 of the [static-mode](./cli-help.md#static-mode) command.
@@ -57,7 +56,7 @@ Fields:
 
 ### Gateway
 
-> Status: Partially supported.
+> Support Level: Core.
 
 NGINX Kubernetes Gateway supports only a single Gateway resource. The Gateway resource must reference NGINX Kubernetes
 Gateway's corresponding GatewayClass.
@@ -75,38 +74,37 @@ Fields:
         * `tls`
             * `mode` - partially supported. Allowed value: `Terminate`.
             * `certificateRefs` - The TLS certificate and key must be stored in a Secret resource of
-              type `kubernetes.io/tls`. Only a single reference is supported. You must deploy the Secret before the
-              Gateway resource.
+              type `kubernetes.io/tls`. Only a single reference is supported.
             * `options` - not supported.
         * `allowedRoutes` - supported.
     * `addresses` - not supported.
 * `status`
     * `addresses` - Pod IPAddress supported.
-    * `conditions` - Supported (Condition/Status/Reason):
+    * `conditions` - supported (Condition/Status/Reason):
         * `Accepted/True/Accepted`
         * `Accepted/True/ListenersNotValid`
         * `Accepted/False/ListenersNotValid`
         * `Accepted/False/Invalid`
-        * `Accepted/False/UnsupportedValue`: Custom reason for when a value of a field in a Gateway is invalid or not
+        * `Accepted/False/UnsupportedValue`- custom reason for when a value of a field in a Gateway is invalid or not
           supported.
-        * `Accepted/False/GatewayConflict`: Custom reason for when the Gateway is ignored due to a conflicting Gateway.
+        * `Accepted/False/GatewayConflict`- custom reason for when the Gateway is ignored due to a conflicting Gateway.
           NKG only supports a single Gateway.
         * `Programmed/True/Programmed`
         * `Programmed/False/Invalid`
-        * `Programmed/False/GatewayConflict`: Custom reason for when the Gateway is ignored due to a conflicting
+        * `Programmed/False/GatewayConflict`- custom reason for when the Gateway is ignored due to a conflicting
           Gateway. NKG only supports a single Gateway.
     * `listeners`
         * `name` - supported.
         * `supportedKinds` - supported.
         * `attachedRoutes` - supported.
-        * `conditions` - Supported (Condition/Status/Reason):
+        * `conditions` - supported (Condition/Status/Reason):
             * `Accepted/True/Accepted`
             * `Accepted/False/UnsupportedProtocol`
             * `Accepted/False/InvalidCertificateRef`
             * `Accepted/False/ProtocolConflict`
-            * `Accepted/False/UnsupportedValue`: Custom reason for when a value of a field in a Listener is invalid or
+            * `Accepted/False/UnsupportedValue`- custom reason for when a value of a field in a Listener is invalid or
               not supported.
-            * `Accepted/False/GatewayConflict`: Custom reason for when the Gateway is ignored due to a conflicting
+            * `Accepted/False/GatewayConflict` - custom reason for when the Gateway is ignored due to a conflicting
               Gateway. NKG only supports a single Gateway.
             * `Programmed/True/Programmed`
             * `Programmed/False/Invalid`
@@ -118,7 +116,7 @@ Fields:
 
 ### HTTPRoute
 
-> Status: Partially supported.
+> Support Level: Core.
 
 Fields:
 
@@ -149,33 +147,20 @@ Fields:
             * `Accepted/False/NoMatchingListenerHostname`
             * `Accepted/False/NoMatchingParent`
             * `Accepted/False/NotAllowedByListeners`
-            * `Accepted/False/UnsupportedValue`: Custom reason for when the HTTPRoute includes an invalid or unsupported
+            * `Accepted/False/UnsupportedValue` - custom reason for when the HTTPRoute includes an invalid or unsupported
               value.
-            * `Accepted/False/InvalidListener`: Custom reason for when the HTTPRoute references an invalid listener.
-            * `Accepted/False/GatewayNotProgrammed`: Custom reason for when the Gateway is not Programmed. HTTPRoute may
+            * `Accepted/False/InvalidListener` - custom reason for when the HTTPRoute references an invalid listener.
+            * `Accepted/False/GatewayNotProgrammed` - custom reason for when the Gateway is not Programmed. HTTPRoute may
               be valid and configured, but will maintain this status as long as the Gateway is not Programmed.
             * `ResolvedRefs/True/ResolvedRefs`
             * `ResolvedRefs/False/InvalidKind`
             * `ResolvedRefs/False/RefNotPermitted`
             * `ResolvedRefs/False/BackendNotFound`
-            * `ResolvedRefs/False/UnsupportedValue`: Custom reason for when one of the HTTPRoute rules has a backendRef
+            * `ResolvedRefs/False/UnsupportedValue` - custom reason for when one of the HTTPRoute rules has a backendRef
               with an unsupported value.
-
-### TLSRoute
-
-> Status: Not supported.
-
-### TCPRoute
-
-> Status: Not supported.
-
-### UDPRoute
-
-> Status: Not supported.
 
 ### ReferenceGrant
 
-> Status: Supported.
 > Support Level: Core
 
 Fields:
@@ -189,6 +174,18 @@ Fields:
         * `group` - supported.
         * `kind` - supports `Gateway` and `HTTPRoute`.
         * `namespace`- supported.
+
+### TLSRoute
+
+> Status: Not supported.
+
+### TCPRoute
+
+> Status: Not supported.
+
+### UDPRoute
+
+> Status: Not supported.
 
 ### Custom Policies
 
