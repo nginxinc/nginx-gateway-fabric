@@ -20,8 +20,8 @@ spec:
       containers:
       - args:
         - static-mode
-        - --gateway-ctlr-name=k8s-gateway.nginx.org/nginx-gateway-controller
-        - --gatewayclass={{ .Values.nginxGateway.gatewayClass }}
+        - --gateway-ctlr-name={{ .Values.nginxGateway.gatewayControllerName }}
+        - --gatewayclass={{ .Values.nginxGateway.gatewayClassName }}
         env:
         - name: POD_IP
           valueFrom:
@@ -30,7 +30,6 @@ spec:
         image: {{ .Values.nginxGateway.image.repository }}:{{ .Values.nginxGateway.image.tag | default .Chart.AppVersion }}
         imagePullPolicy: {{ .Values.nginxGateway.imagePullPolicy }}
         name: nginx-gateway
-        resources: {}
         securityContext:
           capabilities:
             add:
@@ -49,7 +48,6 @@ spec:
           name: http
         - containerPort: 443
           name: https
-        resources: {}
         securityContext:
           capabilities:
             add:
@@ -78,7 +76,6 @@ spec:
           && chown 1001:0 /etc/nginx/conf.d /etc/nginx/secrets
         image: {{ .Values.initContainer.image.repository }}:{{ .Values.initContainer.image.tag }}
         name: set-permissions
-        resources: {}
         volumeMounts:
         - mountPath: /etc/nginx
           name: nginx

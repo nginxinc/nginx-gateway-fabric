@@ -97,11 +97,11 @@ njs-unit-test: ## Run unit tests for the njs httpmatches module
 
 .PHONY: generate-njs-yaml
 generate-njs-yaml: ## Generate the njs-modules ConfigMap
-	kubectl create configmap njs-modules --from-file=$(NJS_DIR)/httpmatches.js --dry-run=client --output=yaml > $(MANIFEST_DIR)/njs-modules.yaml
+	kubectl create configmap njs-modules --from-file=$(NJS_DIR)/httpmatches.js --dry-run=client --output=yaml > $(strip $(MANIFEST_DIR))/njs-modules.yaml
 
 .PHONY: fetch-crds-yaml
 fetch-crds-yaml: ## Fetch the Gateway API resources yaml and output it to the Helm chart crds folder
-	wget https://github.com/kubernetes-sigs/gateway-api/releases/download/v$(GW_API_VERSION)/standard-install.yaml -q -O $(CHART_DIR)/crds/gateway-crds.yaml
+	curl -s -L https://github.com/kubernetes-sigs/gateway-api/releases/download/v$(strip $(GW_API_VERSION))/standard-install.yaml -o $(CHART_DIR)/crds/gateway-crds.yaml
 
 .PHONY: lint-helm
 lint-helm: ## Run the helm chart linter

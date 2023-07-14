@@ -12,6 +12,7 @@ Follow these steps to set up your development environment.
     - [Go](https://golang.org/doc/install)
     - [Docker](https://docs.docker.com/get-docker/) v18.09+
     - [Kind](https://kind.sigs.k8s.io/docs/user/quick-start/)
+    - [Helm](https://helm.sh/docs/intro/quickstart/#install-helm)
     - [git](https://git-scm.com/)
     - [GNU Make](https://www.gnu.org/software/software.html)
     - [yq](https://github.com/mikefarah/yq/#install)
@@ -127,8 +128,7 @@ make lint
 
 ## Run the Helm Linter
 
-If you have made changes to the Helm Chart, run the following make command from the project's root directory to lint the
-Helm Chart code:
+Run the following make command from the project's root directory to lint the Helm Chart code:
 
 ```shell
 make lint-helm
@@ -144,8 +144,7 @@ make generate
 
 ## Update NJS module ConfigMaps
 
-If you have made changes to the [NJS module code](/internal/mode/static/nginx/modules/README.md), run the following make
-command from the project's root directory to update the ConfigMap yaml:
+To update the NJS ConfigMap yaml, run the following make command from the project's root directory:
 
 ```shell
 make generate-njs-yaml

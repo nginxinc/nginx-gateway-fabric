@@ -21,14 +21,14 @@ supported by the NGINX Kubernetes Gateway - [see the Technical Specifications](.
 Helm will not upgrade CRDs - to do so manually, see
 [Upgrading the Gateway API resources](#upgrading-the-gateway-resources).
 
-### Installing the Chart from the OCI registry
+### Installing the Chart from the OCI Registry
 
 To install the chart with the release name `my-release` (`my-release` is the name that you choose) into the
 nginx-gateway namespace (with optional `--create-namespace` flag - you can omit if the namespace already exists), and
 the Gateway API resources from the standard channel (if not already present):
 
 ```
-helm install my-release oci://ghcr.io/nginxinc/charts/nginx-gateway --version 0.0.0-edge --create-namespace --wait --wait-for-jobs -n nginx-gateway
+helm install my-release oci://ghcr.io/nginxinc/charts/nginx-kubernetes-gateway --version 0.0.0-edge --create-namespace --wait --wait-for-jobs -n nginx-gateway
 ```
 
 ### Installing the Chart via Sources
@@ -36,7 +36,7 @@ helm install my-release oci://ghcr.io/nginxinc/charts/nginx-gateway --version 0.
 #### Pulling the Chart
 
 ```
-helm pull oci://ghcr.io/nginxinc/charts/nginx-gateway --untar --version 0.0.0-edge
+helm pull oci://ghcr.io/nginxinc/charts/nginx-kubernetes-gateway --untar --version 0.0.0-edge
 cd nginx-gateway
 ```
 
@@ -51,7 +51,7 @@ helm install my-release . --create-namespace --wait --wait-for-jobs -n nginx-gat
 ```
 
 ## Upgrading the Chart
-### Upgrading the Gateway resources
+### Upgrading the Gateway Resources
 Helm does not upgrade CRDs during a release upgrade, or on an install if they are already present in the cluster.
 Before you upgrade a release, ensure the Gateway API resources are up to date by doing one of the following:
 
@@ -68,14 +68,14 @@ Before you upgrade a release, ensure the Gateway API resources are up to date by
 >Note: The following warning is expected and can be ignored: `Warning: kubectl apply should be used on resource created
 by either kubectl create --save-config or kubectl apply`.
 
-### Upgrading the Chart from the OCI registry
+### Upgrading the Chart from the OCI Registry
 To upgrade the release `my-release`, run:
 
 ```
-helm upgrade my-release oci://ghcr.io/nginxinc/charts/nginx-ingress --version 0.0.0-edge -n nginx-gateway
+helm upgrade my-release oci://ghcr.io/nginxinc/charts/nginx-kubernetes-gateway --version 0.0.0-edge -n nginx-gateway
 ```
 
-### Upgrading the Chart from the sources
+### Upgrading the Chart from the Sources
 
 Pull the chart sources as described in [Pulling the Chart](#pulling-the-chart), if not already present. Then, to upgrade
 the release `my-release`, run:
@@ -93,7 +93,7 @@ helm uninstall my-release -n nginx-gateway
 
 The command removes all the Kubernetes components associated with the release and deletes the release.
 
-### Uninstalling the Gateway resources
+### Uninstalling the Gateway Resources
 Uninstalling the release does NOT uninstall the CRDs or validating webhook. To clean up these resources, do one of the
 following:
 
@@ -115,15 +115,16 @@ running in the cluster!**
 
 The following tables lists the configurable parameters of the NGINX Kubernetes Gateway chart and their default values.
 
-|Parameter | Description | Default |
+|Parameter | Description | Default Value |
 | --- | --- | --- |
 |`nginxGateway.image.repository` | The repository for the NGINX Kubernetes Gateway image. | ghcr.io/nginxinc/nginx-kubernetes-gateway |
 |`nginxGateway.image.tag` | The tag for the NGINX Kubernetes Gateway image. | edge |
-|`nginxGateway.imagePullPolicy` | The imagePullPolicy for the NGINX Kubernetes Gateway image. | Always |
-|`nginxGateway.gatewayClass` | The GatewayClass for the NGINX Kubernetes Gateway deployment. | nginx |
+|`nginxGateway.image.pullPolicy` | The imagePullPolicy for the NGINX Kubernetes Gateway image. | Always |
+|`nginxGateway.gatewayClassName` | The name of the GatewayClass for the NGINX Kubernetes Gateway deployment. | nginx |
+|`nginxGateway.gatewayControllerName` | The name of the Gateway controller. The controller name must be of the form: DOMAIN/PATH. The controller's domain is k8s-gateway.nginx.org. | k8s-gateway.nginx.org/nginx-gateway-controller |
 |`nginx.image.repository` | The repository for the NGINX image. | nginx |
 |`nginx.image.tag` | The tag for the NGINX image. | 1.25 |
-|`nginx.imagePullPolicy` | The imagePullPolicy for the NGINX image. | Always |
+|`nginx.image.pullPolicy` | The imagePullPolicy for the NGINX image. | Always |
 |`initContainer.image.repository` | The repository for the initContainer image. | busybox |
 |`initContainer.image.tag` | The tag for the initContainer image. | 1.36 |
 |`serviceAccount.annotations` | Annotations for the ServiceAccount used by the NGINX Kubernetes Gateway deployment. | {} |
@@ -131,5 +132,5 @@ The following tables lists the configurable parameters of the NGINX Kubernetes G
 |`service.create` | Creates a service to expose the NGINX Kubernetes Gateway pods. | true |
 |`service.type` | The type of service to create for the NGINX Kubernetes Gateway. | Loadbalancer |
 |`service.externalTrafficPolicy` | The externalTrafficPolicy of the service. The value Local preserves the client source IP. | Local |
-|`service.annotations` | The annotations of the NGINX Kubernetes Gateway service. | true |
-|`service.ports` | A list of ports to expose through the NGINX Kubernetes Gateway service. Follows the conventional Kubernetes yaml syntax for service ports. | [ port: 80, targetPort: 80, protocol: TCP, name: http; port: 443, targetPort: 443, protocol: TCP, name: https ] |
+|`service.annotations` | The annotations of the NGINX Kubernetes Gateway service. | {} |
+|`service.ports` | A list of ports to expose through the NGINX Kubernetes Gateway service. Update it to match the listener ports from your Gateway resource. Follows the conventional Kubernetes yaml syntax for service ports. | [ port: 80, targetPort: 80, protocol: TCP, name: http; port: 443, targetPort: 443, protocol: TCP, name: https ] |
