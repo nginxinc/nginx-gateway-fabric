@@ -109,7 +109,7 @@ To get a redirect for coffee:
 curl --resolve cafe.example.com:$GW_HTTP_PORT:$GW_IP http://cafe.example.com:$GW_HTTP_PORT/coffee --include
 HTTP/1.1 302 Moved Temporarily
 ...
-Location: https://cafe.example.com:443/coffee
+Location: https://cafe.example.com/coffee
 ...
 ```
 
@@ -119,7 +119,7 @@ To get a redirect for tea:
 curl --resolve cafe.example.com:$GW_HTTP_PORT:$GW_IP http://cafe.example.com:$GW_HTTP_PORT/tea --include
 HTTP/1.1 302 Moved Temporarily
 ...
-Location: https://cafe.example.com:443/tea
+Location: https://cafe.example.com/tea
 ...
 ```
 
