@@ -1,21 +1,26 @@
 version: 2
 updates:
-  - package-ecosystem: "github-actions"
-    directory: "/"
+  - package-ecosystem: github-actions
+    directory: /
     schedule:
       interval: daily
 
-  - package-ecosystem: "gomod"
-    directory: "/"
+  - package-ecosystem: gomod
+    directory: /
     schedule:
       interval: daily
 
-  - package-ecosystem: "docker"
-    directory: "/build"
+  - package-ecosystem: docker
+    directory: /build
     schedule:
       interval: daily
 
-  - package-ecosystem: "npm"
-    directory: "/internal/mode/static/nginx/modules"
+  - package-ecosystem: npm
+    directory: /internal/mode/static/nginx/modules
     schedule:
-      interval: "daily"
+      interval: daily
+
+  - package-ecosystem: docker
+    directory: /conformance/tests
+    schedule:
+      interval: daily
