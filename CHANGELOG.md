@@ -6,9 +6,7 @@ This document includes a curated changelog for each release. We also publish a c
 
 *July 17, 2023*
 
-This release brings:
-- Support for all v1beta1 Core features of the Gateway API resources. See the [Gateway Compatibility doc](https://github.com/nginxinc/nginx-kubernetes-gateway/blob/v0.5.0/docs/gateway-api-compatibility.md)
-- Miscellaneous enhancements and bug fixes.
+This release completes all v1beta1 Core features of the Gateway API resources. See the [Gateway Compatibility doc](https://github.com/nginxinc/nginx-kubernetes-gateway/blob/v0.5.0/docs/gateway-api-compatibility.md)
 
 FEATURES:
 * Support cross-namespace BackendRefs in HTTPRoutes. [PR-806](https://github.com/nginxinc/nginx-kubernetes-gateway/pull/806)
@@ -17,7 +15,6 @@ FEATURES:
 
 BUG FIXES:
 * Set redirect port in location header according to the scheme. [PR-801](https://github.com/nginxinc/nginx-kubernetes-gateway/pull/801)
-* Skip conformance tests on GitHub tags. [PR-819](https://github.com/nginxinc/nginx-kubernetes-gateway/pull/819)
 * Set proxy host header to the exact value of the request host header. [PR-827](https://github.com/nginxinc/nginx-kubernetes-gateway/pull/827)
 * Ensure Prefix matching requires trailing slash. [PR-817](https://github.com/nginxinc/nginx-kubernetes-gateway/pull/817)
 
