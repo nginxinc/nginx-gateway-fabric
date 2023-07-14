@@ -87,7 +87,7 @@ This will build the docker image `nginx-kubernetes-gateway:<your-user>`.
    Alternatively, you can update the image name and pull policy by using the following command when applying
    `deployment.yaml`:
 
-   ```shell 
+   ```shell
    cat deploy/manifests/deployment.yaml | sed "s|image: ghcr.io/nginxinc/nginx-kubernetes-gateway.*|image: nginx-kubernetes-gateway:$(whoami)|" | sed "s|imagePullPolicy: Always|imagePullPolicy: IfNotPresent|" | kubectl apply -f -
    ```
 

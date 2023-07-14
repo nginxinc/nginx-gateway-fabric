@@ -1,7 +1,7 @@
 # Testing
 
 This document provides guidelines for testing, including instructions on running the unit tests, accessing the code
-coverage report, performing manual testing, and running the conformance tests. By following these guidelines, you will 
+coverage report, performing manual testing, and running the conformance tests. By following these guidelines, you will
 gain a thorough understanding of the project's approach to unit testing, enabling you to ensure code quality, validate
 functionality, and maintain robust test coverage.
 
@@ -78,13 +78,13 @@ Follow the steps below for manual testing:
      ```
    - The statuses of the Gateway API Resources. Make sure they look correct.
      ```shell
-     kubectl describe <resource> <resource name> 
+     kubectl describe <resource> <resource name>
      ```
-   - NGINX proxies traffic successfully (when applicable). 
+   - NGINX proxies traffic successfully (when applicable).
    - [Examples](/examples) work correctly. This will ensure that your changes have not introduced any regressions.
 
 > **Note**
->  
+>
 > Don't limit yourself to happy path testing. Make an effort to cover various scenarios, including edge cases and potential error conditions. By testing a wide range of scenarios, you can uncover hidden issues and ensure the robustness of your changes.
 
 Performing manual testing helps guarantee the stability, reliability, and effectiveness of your changes before

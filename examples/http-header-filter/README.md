@@ -1,7 +1,7 @@
 # Example
 
 In this example we will deploy NGINX Kubernetes Gateway and configure traffic routing for a simple echo server.
-We will use `HTTPRoute` resources to route traffic to the echo server, using the RequestHeaderModifier filter to modify 
+We will use `HTTPRoute` resources to route traffic to the echo server, using the RequestHeaderModifier filter to modify
 headers to the request.
 ## Running the Example
 
@@ -10,21 +10,21 @@ headers to the request.
 1. Follow the [installation instructions](/docs/installation.md) to deploy NGINX Gateway.
 
 1. Save the public IP address of NGINX Kubernetes Gateway into a shell variable:
-   
+
    ```
    GW_IP=XXX.YYY.ZZZ.III
    ```
 
 1. Save the port of NGINX Kubernetes Gateway:
-   
+
    ```
    GW_PORT=<port number>
    ```
 
-## 2. Deploy the Cafe Application  
+## 2. Deploy the Cafe Application
 
 1. Create the headers Deployment and Service:
-   
+
    ```shell
    kubectl apply -f headers.yaml
    ```
@@ -55,9 +55,9 @@ headers to the request.
 
 ## 4. Test the Application
 
-To access the application, we will use `curl` to send requests to the `headers` Service, including sending headers with 
+To access the application, we will use `curl` to send requests to the `headers` Service, including sending headers with
 our request.
-Notice our configured header values can be seen in the `requestHeaders` section below, and that the `User-Agent` header 
+Notice our configured header values can be seen in the `requestHeaders` section below, and that the `User-Agent` header
 is absent.
 
 ```shell

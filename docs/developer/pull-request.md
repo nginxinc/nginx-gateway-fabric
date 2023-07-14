@@ -100,6 +100,6 @@ A FIXME is for things that should be fixed in the future. If FIXMEs cannot be ad
 merged, but they _MUST_ include your username and a link to the issue. For example:
 
 ```go
-// FIXME(username): This is currently a hack to work around known issue X. 
+// FIXME(username): This is currently a hack to work around known issue X.
 // Issue <LINK TO GITHUB ISSUE> will remove need for this work around.
 ```

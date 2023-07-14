@@ -53,9 +53,9 @@ We will use `HTTPRoute` resources to split traffic between two versions of the a
    ```shell
    kubectl apply -f cafe-route.yaml
    ```
-   
-This `HTTPRoute` resource defines a route for the path `/coffee` that sends 80% of the requests to `coffee-v1` and 20% to `coffee-v2`. 
-In this example, we use 80 and 20; however, the weights are calculated proportionally and do not need to sum to 100. 
+
+This `HTTPRoute` resource defines a route for the path `/coffee` that sends 80% of the requests to `coffee-v1` and 20% to `coffee-v2`.
+In this example, we use 80 and 20; however, the weights are calculated proportionally and do not need to sum to 100.
 For example, the weights of 8 and 2, 16 and 4, or 32 and 8 all evaluate to the same relative proportions.
 
 ## 4. Test the Application
@@ -82,7 +82,7 @@ Server name: coffee-v2-698f66dc46-vcb6r
 
 ### 5. Modify the Traffic Split Configuration
 
-Let's shift more of the traffic to `coffee-v2`. To do this we will update the `HTTPRoute` resource and change the weight 
+Let's shift more of the traffic to `coffee-v2`. To do this we will update the `HTTPRoute` resource and change the weight
 of the `coffee-v2` backend to 80. Backends with equal weights will receive an equal share of traffic.
 
 1. Apply the updated `HTTPRoute` resource:
@@ -90,14 +90,14 @@ of the `coffee-v2` backend to 80. Backends with equal weights will receive an eq
    ```shell
    kubectl apply -f cafe-route-equal-weight.yaml
    ```
-   
+
 2. Test the application again:
 
    ```shell
    curl --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/coffee
    ```
 
-The responses will now be split evenly between `coffee-v1` and `coffee-v2`. 
+The responses will now be split evenly between `coffee-v1` and `coffee-v2`.
 
-We can continue modifying the weights of the backends to shift more and more traffic to `coffee-v2`. If there's an issue 
+We can continue modifying the weights of the backends to shift more and more traffic to `coffee-v2`. If there's an issue
 with `coffee-v2`, we can quickly shift traffic back to `coffee-v1`.

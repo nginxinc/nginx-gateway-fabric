@@ -1,15 +1,15 @@
 # NGINX JavaScript Modules
 
-This directory contains the [njs](http://nginx.org/en/docs/njs/) modules for NGINX Kubernetes Gateway. 
+This directory contains the [njs](http://nginx.org/en/docs/njs/) modules for NGINX Kubernetes Gateway.
 
 ## Prerequisites
 
 We recommend using [nvm](https://github.com/nvm-sh/nvm/blob/master/README.md) to install the following dependencies:
 
-- [Node.js](https://nodejs.org/en/) (version 1.18) 
+- [Node.js](https://nodejs.org/en/) (version 1.18)
 - [npm](https://docs.npmjs.com/)
 
-Once you've installed Node.js and npm, run `npm install` in this directory to install the rest of the project's dependencies. 
+Once you've installed Node.js and npm, run `npm install` in this directory to install the rest of the project's dependencies.
 
 ## Modules
 
@@ -32,10 +32,10 @@ This project uses the [Mocha](https://mochajs.org/) test framework and the [Chai
 
 To run unit tests against the [httpmatches](./src/httpmatches.js) modules you must:
 - Use the [default import statement](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/import#importing_defaults) to import the module.
-- Run mocha with the `--require esm` option. 
+- Run mocha with the `--require esm` option.
 - Mock the [NGINX HTTP Request Object](http://nginx.org/en/docs/njs/reference.html#http) and pass it to the exported function. Not all functions and fields on the HTTP request object need to be mocked, just the ones that are used in the module.
 
-### Run Unit Tests 
+### Run Unit Tests
 
 To run the unit tests:
 

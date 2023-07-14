@@ -118,7 +118,7 @@ DEPENDENCIES:
 
 COMPATIBILITY:
 - The Gateway API version: `0.5.1`
-- NGINX version: `1.21.x` * 
+- NGINX version: `1.21.x` *
 - Kubernetes version: `1.21+`
 
 \*the installation manifests use the `nginx:1.21` image, which always points to the latest version of 1.21.x releases.
@@ -146,7 +146,7 @@ If you'd like to give us feedback or get involved, see the [README](https://gith
 
 COMPATIBILITY:
 - The Gateway API version: `0.5.0`
-- NGINX version: `1.21.3` 
+- NGINX version: `1.21.3`
 - Kubernetes version: `1.19+`
 
 CONTAINER IMAGES:
