@@ -9,21 +9,21 @@ In this example we deploy NGINX Kubernetes Gateway, a simple web application, an
 1. Follow the [installation instructions](/docs/installation.md) to deploy NGINX Gateway.
 
 1. Save the public IP address of NGINX Kubernetes Gateway into a shell variable:
-   
+
    ```
    GW_IP=XXX.YYY.ZZZ.III
    ```
 
 1. Save the port of NGINX Kubernetes Gateway:
-   
+
    ```
    GW_PORT=<port number>
    ```
 
-## 2. Deploy the Cafe Application  
+## 2. Deploy the Cafe Application
 
 1. Create the coffee and the tea Deployments and Services:
-   
+
    ```shell
    kubectl apply -f cafe.yaml
    ```
@@ -55,7 +55,7 @@ In this example we deploy NGINX Kubernetes Gateway, a simple web application, an
 
 ## 4. Test the Application
 
-To access the application, we will use `curl` to send requests to the `coffee` and `tea` Services. 
+To access the application, we will use `curl` to send requests to the `coffee` and `tea` Services.
 
 To get coffee:
 

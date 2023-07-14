@@ -53,7 +53,7 @@ For example, if you create an HTTPRoute with an invalid hostname `cafe.!@#$%exam
 with the following error:
 
 ```shell
-kubectl apply -f coffee-route.yaml 
+kubectl apply -f coffee-route.yaml
 ```
 ```
 The HTTPRoute "coffee" is invalid: spec.hostnames[0]: Invalid value: "cafe.!@#$%example.com": spec.hostnames[0] in body should match '^(\*\.)?[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
@@ -70,7 +70,7 @@ you create a Gateway resource with a TCP listener that configures a hostname, th
 following error:
 
 ```shell
-kubectl apply -f prod-gateway.yaml 
+kubectl apply -f prod-gateway.yaml
 ```
 ```
 Error from server: error when creating "prod-gateway.yaml": admission webhook "validate.gateway.networking.k8s.io" denied the request: spec.listeners[1].hostname: Forbidden: should be empty for protocol TCP

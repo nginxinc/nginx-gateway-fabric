@@ -43,7 +43,7 @@ load-images: preload-nginx-container ## Load NKG and NGINX containers on configu
 .PHONY: prepare-nkg-dependencies
 prepare-nkg-dependencies: ## Install NKG dependencies on configured kind cluster
 	kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v0.7.1/standard-install.yaml
-	kubectl wait --for=condition=available --timeout=60s deployment gateway-api-admission-server -n gateway-system 
+	kubectl wait --for=condition=available --timeout=60s deployment gateway-api-admission-server -n gateway-system
 	kubectl apply -f ../deploy/manifests/namespace.yaml
 	kubectl create configmap njs-modules --from-file=../internal/mode/static/nginx/modules/src/httpmatches.js -n nginx-gateway
 	kubectl apply -f ../deploy/manifests/nginx-conf.yaml

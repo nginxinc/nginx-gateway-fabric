@@ -1,11 +1,11 @@
 ---
-name: Enhancement Request 
-about: Suggest an enhancement for this project 
+name: Enhancement Request
+about: Suggest an enhancement for this project
 labels: 'enhancement'
 ---
 
 <!--
-WARNING: Prior to submitting an enhancement request, we ask that you create a discussion. If you have not yet 
+WARNING: Prior to submitting an enhancement request, we ask that you create a discussion. If you have not yet
 created a discussion related to your request, please do so now: https://github.com/nginxinc/nginx-kubernetes-gateway/discussions/new?category=ideas
 -->
 

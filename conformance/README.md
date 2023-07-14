@@ -65,7 +65,7 @@ make install-nkg-local-build
 ```makefile
 make install-nkg-local-no-build
 ```
-**Note:** You can optionally skip the actual *build* step. However, if choosing 
+**Note:** You can optionally skip the actual *build* step. However, if choosing
 this option, the following step *must* be completed manually *before* the build step:
  * Set NKG_PREFIX=<nkg_repo_name> NKG_TAG=<nkg_image_tag> to preferred values.
  * Navigate to `deploy/manifests` and update values in `deployment.yaml` as specified in below code-block.

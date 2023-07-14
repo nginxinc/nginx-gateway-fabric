@@ -49,4 +49,4 @@ users monitor the health of NGINX Kubernetes Gateway and to assist in diagnosing
 
 NGINX Kubernetes Gateway must be easy and intuitive to use. This means that it should be easy to install, easy to
 configure, and easy to monitor. Its defaults should be sane and should lead to "out-of-box" success. The documentation
-should be clear and provide meaningful examples that customer's can use to inform their deployments and configurations. 
+should be clear and provide meaningful examples that customer's can use to inform their deployments and configurations.

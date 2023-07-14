@@ -57,7 +57,7 @@ func longFunctionDefinition(
   paramZ bool,
 ) (string, error){}
 
-// and 
+// and
 
 s := myStruct{
   field1: 1,
@@ -73,14 +73,14 @@ func longFunctionDefinition(paramX int, paramY string,
   paramZ bool,
 ) (string, error){}
 
-// or 
+// or
 
 func longFunctionDefinition(
   paramX int, paramY string,
   paramZ bool,
 ) (string, error){}
 
-// or 
+// or
 s := myStruct{field1: 1, field2: 2,
 field3: 3}
 
@@ -174,9 +174,9 @@ dependencies adds side-effects which complicates testing.
 
 DO NOT:
 
-```go 
+```go
 func(int required, int optional) {
-  if optional {...} 
+  if optional {...}
 }
 ```
 
@@ -188,13 +188,13 @@ type Option func (o *Object)
 func Optional(string optional) Option {
   return func (o *Object) {
     o.optional = optional
-  } 
+  }
 }
 
 func (int required, ...Options) {
   for o := range Options {
     o(self)
-  } 
+  }
 }
 ```
 
@@ -270,14 +270,14 @@ Example:
 
 ```go
 func onError(err error) {
-// got an asynchronous error 
+// got an asynchronous error
 }
 
 func ReadAsync(r io.Reader, onError) {
   err := r()
   if err != nil {
     onError(err)
-  } 
+  }
 }
 
 go ReadAsync(reader, onError)
@@ -307,12 +307,12 @@ func readFile(filename string) ([]byte, error) {
     return nil, fmt.Errorf("failed to open file: %w", err)
   }
   defer file.Close()
-  
+
   data, err := ioutil.ReadAll(file)
   if err != nil {
     return nil, fmt.Errorf("failed to read file: %w", err)
   }
-  
+
   return data, nil
 }
 
@@ -454,7 +454,7 @@ type Object struct{
 func New() *Object {
   return &Object{
     subobject: &SubObject{},
-  } 
+  }
 }
 ```
 
@@ -477,7 +477,7 @@ DO NOT:
 ```go
 func(s string) *string {
   s := s + "more strings"
-  return &s // this will move to heap 
+  return &s // this will move to heap
 }
 ```
 

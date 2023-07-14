@@ -20,7 +20,7 @@ https://github.com/nginxinc/nginx-kubernetes-gateway/issues/634). However, it ca
 tests, which expect a Gateway API implementation to provision an independent data plane per Gateway.
 
 > Note: Provisioner uses [this manifest](/deploy/manifests/deployment.yaml) to create an NKG static mode Deployment.
-This manifest gets included into the NKG binary during the NKG build. To customize the Deployment, modify the manifest 
+This manifest gets included into the NKG binary during the NKG build. To customize the Deployment, modify the manifest
 and **re-build** NKG.
 
 How to deploy:
@@ -33,7 +33,7 @@ How to deploy:
    ```
 1. Confirm the provisioner is running in nginx-gateway namespace:
    ```shell
-   kubectl get pods -n nginx-gateway 
+   kubectl get pods -n nginx-gateway
    ```
    ```console
    NAME                                         READY   STATUS    RESTARTS   AGE
