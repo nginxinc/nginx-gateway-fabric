@@ -48,14 +48,14 @@ jobs:
       - name: Get Prettier version
         id: prettier-version
         run: |
-          echo "version=$(jq -r .devDependencies.prettier ${{ github.workspace }}/internal/nginx/modules/package.json)" >> $GITHUB_OUTPUT
+          echo "version=$(jq -r .devDependencies.prettier ${{ github.workspace }}/internal/mode/static/nginx/modules/package.json)" >> $GITHUB_OUTPUT
 
       - name: Run Prettier on NJS code
         id: prettier-run
         uses: rutajdash/prettier-cli-action@9e27606a9e18d40b6b4a2b4159e780241d2fbb3c # v1.0.1
         with:
-          config_path: ${{ github.workspace }}/internal/nginx/modules/.prettierrc
-          file_pattern: ${{ github.workspace }}/internal/nginx/modules/**/*.js
+          config_path: ${{ github.workspace }}/internal/mode/static/nginx/modules/.prettierrc
+          file_pattern: ${{ github.workspace }}/internal/mode/static/nginx/modules/**/*.js
           prettier_version: ${{ steps.prettier-version.outputs.version }}
 
       - name: Prettier Output
