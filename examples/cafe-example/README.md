@@ -1,12 +1,12 @@
 # Example
 
-In this example we deploy NGINX Kubernetes Gateway, a simple web application, and then configure NGINX Gateway to route traffic to that application using `HTTPRoute` resources.
+In this example we deploy NGINX Kubernetes Gateway, a simple web application, and then configure NGINX Kubernetes Gateway to route traffic to that application using HTTPRoute resources.
 
 ## Running the Example
 
 ## 1. Deploy NGINX Kubernetes Gateway
 
-1. Follow the [installation instructions](/docs/installation.md) to deploy NGINX Gateway.
+1. Follow the [installation instructions](/docs/installation.md) to deploy NGINX Kubernetes Gateway.
 
 1. Save the public IP address of NGINX Kubernetes Gateway into a shell variable:
 
@@ -28,12 +28,12 @@ In this example we deploy NGINX Kubernetes Gateway, a simple web application, an
    kubectl apply -f cafe.yaml
    ```
 
-1. Check that the Pods are running in the `default` namespace:
+1. Check that the Pods are running in the `default` Namespace:
 
    ```shell
    kubectl -n default get pods
    ```
-   ```console
+   ```text
    NAME                      READY   STATUS    RESTARTS   AGE
    coffee-6f4b79b975-2sb28   1/1     Running   0          12s
    tea-6fb46d899f-fm7zr      1/1     Running   0          12s
@@ -41,13 +41,13 @@ In this example we deploy NGINX Kubernetes Gateway, a simple web application, an
 
 ## 3. Configure Routing
 
-1. Create the `Gateway`:
+1. Create the Gateway:
 
    ```shell
    kubectl apply -f gateway.yaml
    ```
 
-1. Create the `HTTPRoute` resources:
+1. Create the HTTPRoute resources:
 
    ```shell
    kubectl apply -f cafe-routes.yaml
@@ -62,7 +62,7 @@ To get coffee:
 ```shell
 curl --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/coffee
 ```
-```
+```text
 Server address: 10.12.0.18:80
 Server name: coffee-7586895968-r26zn
 ```
@@ -72,7 +72,7 @@ To get tea:
 ```shell
 curl --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/tea
 ```
-```
+```text
 Server address: 10.12.0.19:80
 Server name: tea-7cd44fcb4d-xfw2x
 ```

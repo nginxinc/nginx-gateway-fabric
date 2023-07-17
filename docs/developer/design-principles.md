@@ -35,7 +35,7 @@ improve performance.
 
 ## Resilience
 
-We design with resilience in mind. This includes gracefully handling failures, such as pod restarts or network
+We design with resilience in mind. This includes gracefully handling failures, such as Pod restarts or network
 interruptions, as well as leveraging Kubernetes features like health checks, readiness probes, and container restart
 policies.
 

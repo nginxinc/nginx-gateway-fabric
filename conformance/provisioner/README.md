@@ -35,7 +35,7 @@ How to deploy:
    ```shell
    kubectl get pods -n nginx-gateway
    ```
-   ```console
+   ```text
    NAME                                         READY   STATUS    RESTARTS   AGE
    nginx-gateway-provisioner-6c9d9fdcb8-b2pf8   1/1     Running   0          11m
    ```

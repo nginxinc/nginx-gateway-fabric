@@ -55,7 +55,7 @@ with the following error:
 ```shell
 kubectl apply -f coffee-route.yaml
 ```
-```
+```text
 The HTTPRoute "coffee" is invalid: spec.hostnames[0]: Invalid value: "cafe.!@#$%example.com": spec.hostnames[0] in body should match '^(\*\.)?[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
 ```
 
@@ -72,7 +72,7 @@ following error:
 ```shell
 kubectl apply -f prod-gateway.yaml
 ```
-```
+```text
 Error from server: error when creating "prod-gateway.yaml": admission webhook "validate.gateway.networking.k8s.io" denied the request: spec.listeners[1].hostname: Forbidden: should be empty for protocol TCP
 ```
 
@@ -91,7 +91,7 @@ hostname) with a Kubernetes event:
 ```shell
 kubectl describe gateway prod-gateway
 ```
-```
+```text
 . . .
 Events:
   Type     Reason    Age   From                            Message
@@ -123,7 +123,7 @@ Below is an example of how NGK rejects an invalid resource. The validation error
 ```shell
 kubectl describe httproutes.gateway.networking.k8s.io coffee
 ```
-```
+```text
 . . .
 Status:
   Parents:
