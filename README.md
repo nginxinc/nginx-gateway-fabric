@@ -20,7 +20,7 @@ For a list of supported Gateway API resources and features, see the [Gateway API
 
 We publish NGINX Kubernetes Gateway releases on GitHub. See our [releases page](https://github.com/nginxinc/nginx-kubernetes-gateway/releases).
 
-The latest release is [0.2.0](https://github.com/nginxinc/kubernetes-ingress/releases/tag/v0.2.0).
+The latest release is [0.2.0](https://github.com/nginxinc/nginx-kubernetes-gateway/releases/tag/v0.2.0).
 
 The edge version is useful for experimenting with new features that are not yet published in a release. To use, choose the *edge* version built from the [latest commit](https://github.com/nginxinc/nginx-kubernetes-gateway/commits/main) from the main branch.
 
