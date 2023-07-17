@@ -14,8 +14,6 @@ This guide walks you through how to install NGINX Kubernetes Gateway on a generi
 
    ```shell
    git clone https://github.com/nginxinc/nginx-kubernetes-gateway.git
-   ```
-   ```shell
    cd nginx-kubernetes-gateway
    ```
 
@@ -66,7 +64,7 @@ This guide walks you through how to install NGINX Kubernetes Gateway on a generi
    ```shell
    kubectl get pods -n nginx-gateway
    ```
-   ```console
+   ```text
    NAME                             READY   STATUS    RESTARTS   AGE
    nginx-gateway-5d4f4c7db7-xk2kq   2/2     Running   0          112s
    ```

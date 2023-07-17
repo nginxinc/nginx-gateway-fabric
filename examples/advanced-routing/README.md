@@ -1,7 +1,7 @@
 # Advanced Routing
 
 In this example we will deploy NGINX Kubernetes Gateway and configure advanced routing rules for a simple cafe application.
-We will use `HTTPRoute` resources to route traffic to the cafe application based on a combination of the request method, headers, and query parameters.
+We will use  HTTPRoute resources to route traffic to the cafe application based on a combination of the request method, headers, and query parameters.
 
 The cafe application consists of four Services: `coffee-v1-svc`, `coffee-v2-svc`, `tea-svc`, and `tea-post-svc`. In the next section we will create the following routing rules for the cafe application:
 - For the path `/coffee` route requests with the header `version` set to `v2` or with the query param `TEST` set to `v2` to `coffee-v2-svc`, and all other requests to `coffee-v1-svc`.
@@ -11,7 +11,7 @@ The cafe application consists of four Services: `coffee-v1-svc`, `coffee-v2-svc`
 
 ## 1. Deploy NGINX Kubernetes Gateway
 
-1. Follow the [installation instructions](/docs/installation.md) to deploy NGINX Gateway.
+1. Follow the [installation instructions](/docs/installation.md) to deploy NGINX Kubernetes Gateway.
 
 1. Save the public IP address of NGINX Kubernetes Gateway into a shell variable:
 
@@ -33,12 +33,12 @@ The cafe application consists of four Services: `coffee-v1-svc`, `coffee-v2-svc`
    kubectl apply -f cafe.yaml
    ```
 
-1. Check that the Pods are running in the `default` namespace:
+1. Check that the Pods are running in the `default` Namespace:
 
    ```shell
    kubectl -n default get pods
    ```
-   ```console
+   ```text
    NAME                         READY   STATUS    RESTARTS   AGE
    coffee-v1-75869cf7ff-vlfpq   1/1     Running   0          17m
    coffee-v2-67499ff985-2k6cc   1/1     Running   0          17m
@@ -48,13 +48,13 @@ The cafe application consists of four Services: `coffee-v1-svc`, `coffee-v2-svc`
 
 ## 3. Configure Routing
 
-1. Create the `Gateway`:
+1. Create the Gateway:
 
    ```shell
    kubectl apply -f gateway.yaml
    ```
 
-1. Create the `HTTPRoute` resources:
+1. Create the HTTPRoute resources:
 
    ```shell
    kubectl apply -f cafe-routes.yaml
@@ -71,7 +71,7 @@ Send a request with the header `version:v2` and confirm that the response comes 
 ```shell
 curl --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/coffee -H "version:v2"
 ```
-```
+```text
 Server address: 10.116.2.67:8080
 Server name: coffee-v2-67499ff985-gw6vt
 ...
@@ -82,7 +82,7 @@ Send a request with the query parameter `TEST=v2` and confirm that the response 
 ```shell
 curl --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/coffee?TEST=v2
 ```
-```
+```text
 Server address: 10.116.2.67:8080
 Server name: coffee-v2-67499ff985-gw6vt
 ...
@@ -93,7 +93,7 @@ Send a request without the header or the query parameter and confirm the respons
 ```shell
 curl --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/coffee
 ```
-```
+```text
 Server address: 10.116.2.70:8080
 Server name: coffee-v1-75869cf7ff-vlfpq
 ...
@@ -106,7 +106,7 @@ Send a POST request and confirm that the response comes from `tea-post-svc`:
 ```shell
 curl --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/tea -X POST
 ```
-```
+```text
 Server address: 10.116.2.72:8080
 Server name: tea-post-648dfcdd6c-2rlqb
 ...
@@ -117,7 +117,7 @@ Send a GET request and confirm that the response comes from `tea-svc`:
 ```shell
 curl --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/tea
 ```
-```
+```text
 Server address: 10.116.3.30:8080
 Server name: tea-6fb46d899f-hjzwr
 ...
@@ -130,7 +130,7 @@ Send a PUT request and confirm the 404 Not Found response:
 ```shell
 curl --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/tea -X PUT
 ```
-```
+```text
 <html>
 <head><title>404 Not Found</title></head>
 <body>

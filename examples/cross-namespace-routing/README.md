@@ -7,7 +7,7 @@ in a different namespace from our HTTPRoutes.
 
 ## 1. Deploy NGINX Kubernetes Gateway
 
-1. Follow the [installation instructions](/docs/installation.md) to deploy NGINX Gateway.
+1. Follow the [installation instructions](/docs/installation.md) to deploy NGINX Kubernetes Gateway.
 
 1. Save the public IP address of NGINX Kubernetes Gateway into a shell variable:
 
@@ -29,12 +29,12 @@ in a different namespace from our HTTPRoutes.
    kubectl apply -f cafe-ns-and-app.yaml
    ```
 
-1. Check that the Pods are running in the `cafe` namespace:
+1. Check that the Pods are running in the `cafe` Namespace:
 
    ```shell
    kubectl -n cafe get pods
    ```
-   ```console
+   ```text
    NAME                      READY   STATUS    RESTARTS   AGE
    coffee-6f4b79b975-2sb28   1/1     Running   0          12s
    tea-6fb46d899f-fm7zr      1/1     Running   0          12s
@@ -42,24 +42,24 @@ in a different namespace from our HTTPRoutes.
 
 ## 3. Configure Routing
 
-1. Create the `Gateway`:
+1. Create the Gateway:
 
    ```shell
    kubectl apply -f gateway.yaml
    ```
 
-1. Create the `HTTPRoute` resources:
+1. Create the HTTPRoute resources:
 
    ```shell
    kubectl apply -f cafe-routes.yaml
    ```
-1. Create the `ReferenceGrant`:
+1. Create the ReferenceGrant:
 
    ```shell
    kubectl apply -f reference-grant.yaml
    ```
-   This ReferenceGrant allows all HTTPRoutes in the `default` namespace to reference all Services in the `cafe`
-   namespace.
+   This ReferenceGrant allows all HTTPRoutes in the `default` Namespace to reference all Services in the `cafe`
+   Namespace.
 
 ## 4. Test the Application
 
@@ -70,7 +70,7 @@ To get coffee:
 ```shell
 curl --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/coffee
 ```
-```
+```text
 Server address: 10.12.0.18:80
 Server name: coffee-7586895968-r26zn
 ```
@@ -80,7 +80,7 @@ To get tea:
 ```shell
 curl --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/tea
 ```
-```
+```text
 Server address: 10.12.0.19:80
 Server name: tea-7cd44fcb4d-xfw2x
 ```
@@ -98,7 +98,7 @@ Now, if we try to access the application over HTTP, we will get an internal serv
 ```shell
 curl --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/tea
 ```
-```
+```text
 <html>
 <head><title>500 Internal Server Error</title></head>
 <body>
@@ -113,7 +113,7 @@ You can also check the conditions of the HTTPRoutes `coffee` and `tea` to verify
 ```shell
 kubectl describe httproute coffee
 ```
-```console
+```text
 Condtions:
       Message:               Backend ref to Service cafe/coffee not permitted by any ReferenceGrant
       Observed Generation:   1
@@ -126,7 +126,7 @@ Condtions:
 ```shell
 kubectl describe httproute tea
 ```
-```console
+```text
 Condtions:
       Message:               Backend ref to Service cafe/tea not permitted by any ReferenceGrant
       Observed Generation:   1

@@ -1,13 +1,13 @@
 # Example
 
 In this example we will deploy NGINX Kubernetes Gateway and configure traffic routing for a simple echo server.
-We will use `HTTPRoute` resources to route traffic to the echo server, using the RequestHeaderModifier filter to modify
+We will use HTTPRoute resources to route traffic to the echo server, using the `RequestHeaderModifier` filter to modify
 headers to the request.
 ## Running the Example
 
 ## 1. Deploy NGINX Kubernetes Gateway
 
-1. Follow the [installation instructions](/docs/installation.md) to deploy NGINX Gateway.
+1. Follow the [installation instructions](/docs/installation.md) to deploy NGINX Kubernetes Gateway.
 
 1. Save the public IP address of NGINX Kubernetes Gateway into a shell variable:
 
@@ -29,25 +29,25 @@ headers to the request.
    kubectl apply -f headers.yaml
    ```
 
-1. Check that the Pod is running in the `default` namespace:
+1. Check that the Pod is running in the `default` Namespace:
 
    ```shell
    kubectl -n default get pods
    ```
-   ```console
+   ```text
    NAME                      READY   STATUS    RESTARTS   AGE
    headers-6f4b79b975-2sb28   1/1     Running   0          12s
    ```
 
 ## 3. Configure Routing
 
-1. Create the `Gateway`:
+1. Create the Gateway:
 
    ```shell
    kubectl apply -f gateway.yaml
    ```
 
-1. Create the `HTTPRoute` resources:
+1. Create the HTTPRoute resources:
 
    ```shell
    kubectl apply -f echo-route.yaml
@@ -63,7 +63,7 @@ is absent.
 ```shell
 curl -s --resolve echo.example.com:$GW_PORT:$GW_IP http://echo.example.com:$GW_PORT/headers -H "My-Cool-Header:my-client-value" -H "My-Overwrite-Header:dont-see-this"
 ```
-```console
+```text
 Headers:
   header 'Accept-Encoding' is 'compress'
   header 'My-cool-header' is 'my-client-value, this-is-an-appended-value'

@@ -82,13 +82,13 @@ These containers are deployed in a single Pod as a Kubernetes Deployment. The in
 
 The `nginx-gateway`, or the control plane, is a [Kubernetes controller][controller], written with
 the [controller-runtime][runtime] library. It watches Kubernetes objects (Services, Endpoints, Secrets, and Gateway API
-CRDs), translates them to nginx configuration, and configures NGINX. This configuration happens in two stages. First,
+CRDs), translates them to NGINX configuration, and configures NGINX. This configuration happens in two stages. First,
 NGINX configuration files are written to the NGINX configuration volume shared by the `nginx-gateway` and `nginx`
 containers. Next, the control plane reloads the NGINX process. This is possible because the two
 containers [share a process namespace][share], which allows the NKG process to send signals to the NGINX master process.
 
-The diagram below provides a visual representation of the interactions between processes within the nginx and
-nginx-gateway containers, as well as external processes/entities. It showcases the connections and relationships between
+The diagram below provides a visual representation of the interactions between processes within the `nginx` and
+`nginx-gateway` containers, as well as external processes/entities. It showcases the connections and relationships between
 these components. For the sake of simplicity, the `busybox` init container is not depicted in the diagram.
 
 ![NKG pod](/docs/images/nkg-pod.png)
