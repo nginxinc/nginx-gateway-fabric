@@ -29,14 +29,16 @@ The cafe application consists of four Services: `coffee-v1-svc`, `coffee-v2-svc`
 
 1. Create the coffee and the tea Deployments and Services:
    
-   ```
+   ```shell
    kubectl apply -f cafe.yaml
    ```
 
 1. Check that the Pods are running in the `default` namespace:
 
-   ```
+   ```shell
    kubectl -n default get pods
+   ```
+   ```console
    NAME                         READY   STATUS    RESTARTS   AGE
    coffee-v1-75869cf7ff-vlfpq   1/1     Running   0          17m
    coffee-v2-67499ff985-2k6cc   1/1     Running   0          17m
@@ -48,13 +50,13 @@ The cafe application consists of four Services: `coffee-v1-svc`, `coffee-v2-svc`
 
 1. Create the `Gateway`:
    
-   ```
+   ```shell
    kubectl apply -f gateway.yaml
    ```
    
 1. Create the `HTTPRoute` resources:
 
-   ```
+   ```shell
    kubectl apply -f cafe-routes.yaml
    ```
 
@@ -66,8 +68,10 @@ We will use `curl` to send requests to the `/coffee` and `/tea` endpoints of the
 
 Send a request with the header `version:v2` and confirm that the response comes from `coffee-v2-svc`:
 
-```bash
+```shell
 curl --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/coffee -H "version:v2"
+```
+```
 Server address: 10.116.2.67:8080
 Server name: coffee-v2-67499ff985-gw6vt
 ...
@@ -75,8 +79,10 @@ Server name: coffee-v2-67499ff985-gw6vt
 
 Send a request with the query parameter `TEST=v2` and confirm that the response comes from `coffee-v2-svc`:
 
-```bash
+```shell
 curl --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/coffee?TEST=v2
+```
+```
 Server address: 10.116.2.67:8080
 Server name: coffee-v2-67499ff985-gw6vt
 ...
@@ -84,8 +90,10 @@ Server name: coffee-v2-67499ff985-gw6vt
 
 Send a request without the header or the query parameter and confirm the response comes from `coffee-v1-svc`:
 
-```bash
+```shell
 curl --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/coffee
+```
+```
 Server address: 10.116.2.70:8080
 Server name: coffee-v1-75869cf7ff-vlfpq
 ...
@@ -95,8 +103,10 @@ Server name: coffee-v1-75869cf7ff-vlfpq
 
 Send a POST request and confirm that the response comes from `tea-post-svc`:
 
-```bash
+```shell
 curl --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/tea -X POST
+```
+```
 Server address: 10.116.2.72:8080
 Server name: tea-post-648dfcdd6c-2rlqb
 ...
@@ -104,8 +114,10 @@ Server name: tea-post-648dfcdd6c-2rlqb
 
 Send a GET request and confirm that the response comes from `tea-svc`:
 
-```bash
+```shell
 curl --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/tea
+```
+```
 Server address: 10.116.3.30:8080
 Server name: tea-6fb46d899f-hjzwr
 ...
@@ -115,8 +127,10 @@ The `/tea` endpoint has routing rules configured for GET and POST requests. If y
 
 Send a PUT request and confirm the 404 Not Found response:
 
-```bash
+```shell
 curl --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/tea -X PUT
+```
+```
 <html>
 <head><title>404 Not Found</title></head>
 <body>

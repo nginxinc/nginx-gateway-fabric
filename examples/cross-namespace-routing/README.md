@@ -25,14 +25,16 @@ in a different namespace from our HTTPRoutes.
 
 1. Create the cafe namespace and cafe application:
 
-   ```
+   ```shell
    kubectl apply -f cafe-ns-and-app.yaml
    ```
 
 1. Check that the Pods are running in the `cafe` namespace:
 
-   ```
+   ```shell
    kubectl -n cafe get pods
+   ```
+   ```console
    NAME                      READY   STATUS    RESTARTS   AGE
    coffee-6f4b79b975-2sb28   1/1     Running   0          12s
    tea-6fb46d899f-fm7zr      1/1     Running   0          12s
@@ -42,18 +44,18 @@ in a different namespace from our HTTPRoutes.
 
 1. Create the `Gateway`:
 
-   ```
+   ```shell
    kubectl apply -f gateway.yaml
    ```
 
 1. Create the `HTTPRoute` resources:
 
-   ```
+   ```shell
    kubectl apply -f cafe-routes.yaml
    ```
 1. Create the `ReferenceGrant`:
 
-   ```
+   ```shell
    kubectl apply -f reference-grant.yaml
    ```
    This ReferenceGrant allows all HTTPRoutes in the `default` namespace to reference all Services in the `cafe`
@@ -65,16 +67,20 @@ To access the application, we will use `curl` to send requests to the `coffee` a
 
 To get coffee:
 
-```
+```shell
 curl --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/coffee
+```
+```
 Server address: 10.12.0.18:80
 Server name: coffee-7586895968-r26zn
 ```
 
 To get tea:
 
-```
+```shell
 curl --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/tea
+```
+```
 Server address: 10.12.0.19:80
 Server name: tea-7cd44fcb4d-xfw2x
 ```
@@ -84,14 +90,15 @@ Server name: tea-7cd44fcb4d-xfw2x
 To restrict access to Services in the `cafe` Namespace, we can delete the ReferenceGrant we created in
 Step 3:
 
-```
+```shell
 kubectl delete -f reference-grant.yaml
 ```
 
 Now, if we try to access the application over HTTP, we will get an internal server error:
-```
+```shell
 curl --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/tea
-
+```
+```
 <html>
 <head><title>500 Internal Server Error</title></head>
 <body>
@@ -103,9 +110,10 @@ curl --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT
 
 You can also check the conditions of the HTTPRoutes `coffee` and `tea` to verify that the reference is not permitted:
 
-```
+```shell
 kubectl describe httproute coffee
-
+```
+```console
 Condtions:
       Message:               Backend ref to Service cafe/coffee not permitted by any ReferenceGrant
       Observed Generation:   1
@@ -115,9 +123,10 @@ Condtions:
       Controller Name:       k8s-gateway.nginx.org/nginx-gateway-controller
 ```
 
-```
+```shell
 kubectl describe httproute tea
-
+```
+```console
 Condtions:
       Message:               Backend ref to Service cafe/tea not permitted by any ReferenceGrant
       Observed Generation:   1

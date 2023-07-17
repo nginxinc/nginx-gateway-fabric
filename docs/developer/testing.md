@@ -44,7 +44,7 @@ promoting efficient refactoring and continuous development.
 
 To run the unit tests, run the make unit-test command from the project's root directory:
 
-```shell
+```makefile
 make unit-test
 ```
 

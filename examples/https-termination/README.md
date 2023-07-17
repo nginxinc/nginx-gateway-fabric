@@ -27,14 +27,16 @@ reference a Secret in a different Namespace.
 
 1. Create the coffee and the tea Deployments and Services:
 
-   ```
+   ```shell
    kubectl apply -f cafe.yaml
    ```
 
 1. Check that the Pods are running in the `default` namespace:
 
-   ```
+   ```shell
    kubectl -n default get pods
+   ```
+   ```console
    NAME                      READY   STATUS    RESTARTS   AGE
    coffee-6f4b79b975-2sb28   1/1     Running   0          12s
    tea-6fb46d899f-fm7zr      1/1     Running   0          12s
@@ -43,7 +45,7 @@ reference a Secret in a different Namespace.
 ## 3. Configure HTTPS Termination and Routing
 
 1. Create the Namespace `certificate` and a Secret with a TLS certificate and key:
-   ```
+   ```shell
    kubectl apply -f certificate-ns-and-cafe-secret.yaml
    ```
 
@@ -51,7 +53,7 @@ reference a Secret in a different Namespace.
    > **Important**: This certificate and key are for demo purposes only.
 
 1. Create the `ReferenceGrant`:
-   ```
+   ```shell
    kubectl apply -f reference-grant.yaml
    ```
 
@@ -59,7 +61,7 @@ reference a Secret in a different Namespace.
    the `certificate` namespace.
 
 1. Create the `Gateway` resource:
-   ```
+   ```shell
    kubectl apply -f gateway.yaml
    ```
 
@@ -68,7 +70,7 @@ reference a Secret in a different Namespace.
     * `https` listener for HTTPS traffic. It terminates TLS connections using the `cafe-secret` we created in step 1.
 
 1. Create the `HTTPRoute` resources:
-   ```
+   ```shell
    kubectl apply -f cafe-routes.yaml
    ```
 
@@ -105,8 +107,10 @@ will use curl's `--include` option to print the response headers (we are interes
 
 To get a redirect for coffee:
 
-```
+```shell
 curl --resolve cafe.example.com:$GW_HTTP_PORT:$GW_IP http://cafe.example.com:$GW_HTTP_PORT/coffee --include
+```
+```console
 HTTP/1.1 302 Moved Temporarily
 ...
 Location: https://cafe.example.com/coffee
@@ -115,8 +119,10 @@ Location: https://cafe.example.com/coffee
 
 To get a redirect for tea:
 
-```
+```shell
 curl --resolve cafe.example.com:$GW_HTTP_PORT:$GW_IP http://cafe.example.com:$GW_HTTP_PORT/tea --include
+```
+```console
 HTTP/1.1 302 Moved Temporarily
 ...
 Location: https://cafe.example.com/tea
@@ -130,16 +136,20 @@ option to turn off certificate verification.
 
 To get coffee:
 
-```
+```shell
 curl --resolve cafe.example.com:$GW_HTTPS_PORT:$GW_IP https://cafe.example.com:$GW_HTTPS_PORT/coffee --insecure
+```
+```console
 Server address: 10.12.0.18:80
 Server name: coffee-7586895968-r26zn
 ```
 
 To get tea:
 
-```
+```shell
 curl --resolve cafe.example.com:$GW_HTTPS_PORT:$GW_IP https://cafe.example.com:$GW_HTTPS_PORT/tea --insecure
+```
+```console
 Server address: 10.12.0.19:80
 Server name: tea-7cd44fcb4d-xfw2x
 ```
@@ -149,13 +159,15 @@ Server name: tea-7cd44fcb4d-xfw2x
 To restrict access to the `cafe-secret` in the `certificate` Namespace, we can delete the ReferenceGrant we created in
 Step 3:
 
-```
+```shell
 kubectl delete -f reference-grant.yaml
 ```
 
 Now, if we try to access the application over HTTPS, we will get a connection refused error:
-```
+```shell
 curl --resolve cafe.example.com:$GW_HTTPS_PORT:$GW_IP https://cafe.example.com:$GW_HTTPS_PORT/coffee --insecure -vvv
+```
+```console
 ...
 curl: (7) Failed to connect to cafe.example.com port 443 after 0 ms: Connection refused
 ```
@@ -163,9 +175,10 @@ curl: (7) Failed to connect to cafe.example.com port 443 after 0 ms: Connection 
 
 You can also check the conditions of the Gateway `https` Listener to verify the that the reference is not permitted:
 
-```
+```shell
  kubectl describe gateway gateway
-
+```
+```console
  Name:                    https
  Conditions:
    Last Transition Time:  2023-06-26T20:23:56Z

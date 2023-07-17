@@ -24,14 +24,16 @@ In this example we deploy NGINX Kubernetes Gateway, a simple web application, an
 
 1. Create the coffee and the tea Deployments and Services:
    
-   ```
+   ```shell
    kubectl apply -f cafe.yaml
    ```
 
 1. Check that the Pods are running in the `default` namespace:
 
-   ```
+   ```shell
    kubectl -n default get pods
+   ```
+   ```console
    NAME                      READY   STATUS    RESTARTS   AGE
    coffee-6f4b79b975-2sb28   1/1     Running   0          12s
    tea-6fb46d899f-fm7zr      1/1     Running   0          12s
@@ -41,13 +43,13 @@ In this example we deploy NGINX Kubernetes Gateway, a simple web application, an
 
 1. Create the `Gateway`:
 
-   ```
+   ```shell
    kubectl apply -f gateway.yaml
    ```
 
 1. Create the `HTTPRoute` resources:
 
-   ```
+   ```shell
    kubectl apply -f cafe-routes.yaml
    ```
 
@@ -57,16 +59,20 @@ To access the application, we will use `curl` to send requests to the `coffee` a
 
 To get coffee:
 
-```
+```shell
 curl --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/coffee
+```
+```
 Server address: 10.12.0.18:80
 Server name: coffee-7586895968-r26zn
 ```
 
 To get tea:
 
-```
+```shell
 curl --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/tea
+```
+```
 Server address: 10.12.0.19:80
 Server name: tea-7cd44fcb4d-xfw2x
 ```
@@ -78,7 +84,7 @@ change an HTTPRoute's hostname to something that matches this wildcard and still
 
 For example, run the following command to open your editor and change the HTTPRoute's hostname to `foo.example.com`.
 
-```
+```shell
 kubectl -n default edit httproute tea
 ```
 
@@ -88,7 +94,7 @@ Likewise, if you change the Gateway listener's hostname to something else, you c
 
 For example, run the following to open your editor and change the Gateway listener's hostname to `bar.example.com`:
 
-```
+```shell
 kubectl -n default edit gateway gateway
 ```
 
