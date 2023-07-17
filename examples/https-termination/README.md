@@ -113,7 +113,7 @@ curl --resolve cafe.example.com:$GW_HTTP_PORT:$GW_IP http://cafe.example.com:$GW
 ```console
 HTTP/1.1 302 Moved Temporarily
 ...
-Location: https://cafe.example.com:443/coffee
+Location: https://cafe.example.com/coffee
 ...
 ```
 
@@ -125,7 +125,7 @@ curl --resolve cafe.example.com:$GW_HTTP_PORT:$GW_IP http://cafe.example.com:$GW
 ```console
 HTTP/1.1 302 Moved Temporarily
 ...
-Location: https://cafe.example.com:443/tea
+Location: https://cafe.example.com/tea
 ...
 ```
 

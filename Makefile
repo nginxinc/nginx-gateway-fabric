@@ -1,32 +1,40 @@
+# variables that should not be overridden by the user
 VERSION = edge
-TAG = $(VERSION)
-PREFIX ?= nginx-kubernetes-gateway
-
-GIT_COMMIT = $(shell git rev-parse HEAD)
+GIT_COMMIT = $(shell git rev-parse HEAD || echo "unknown")
 DATE = $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 
-TARGET ?= local
-
-KIND_KUBE_CONFIG_FOLDER = $${HOME}/.kube/kind
-OUT_DIR=$(shell pwd)/build/.out
+# variables that can be overridden by the user
+PREFIX ?= nginx-kubernetes-gateway ## The name of the image. For example, nginx-kubernetes-gateway
+TAG ?= $(VERSION:v%=%) ## The tag of the image. For example, 0.3.0
+TARGET ?= local ## The target of the build. Possible values: local and container
+KIND_KUBE_CONFIG_FOLDER = $${HOME}/.kube/kind ## The folder where the kind kubeconfig is stored
+OUT_DIR ?= $(shell pwd)/build/out ## The folder where the binary will be stored
+ARCH ?= amd64 ## The architecture of the image and/or binary. For example: amd64 or arm64
+override DOCKER_BUILD_OPTIONS += --build-arg VERSION=$(VERSION) --build-arg GIT_COMMIT=$(GIT_COMMIT) --build-arg DATE=$(DATE) ## The options for the docker build command. For example, --pull
 
 .DEFAULT_GOAL := help
 
 .PHONY: help
 help: Makefile ## Display this help
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "; printf "Usage:\n\n    make \033[36m<target>\033[0m\n\nTargets:\n\n"}; {printf "    \033[36m%-30s\033[0m %s\n", $$1, $$2}'
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "; printf "Usage:\n\n    make \033[36m<target>\033[0m [VARIABLE=value...]\n\nTargets:\n\n"}; {printf "    \033[36m%-30s\033[0m %s\n", $$1, $$2}'
+	@grep -E '^(override )?[a-zA-Z_-]+ \??\+?= .*? ## .*$$' $< | sort | awk 'BEGIN {FS = " \\??\\+?= .*? ## "; printf "\nVariables:\n\n"}; {gsub(/override /, "", $$1); printf "    \033[36m%-30s\033[0m %s\n", $$1, $$2}'
 
 .PHONY: container
 container: build ## Build the container
 	@docker -v || (code=$$?; printf "\033[0;31mError\033[0m: there was a problem with Docker\n"; exit $$code)
-	docker build --build-arg VERSION=$(VERSION) --build-arg GIT_COMMIT=$(GIT_COMMIT) --build-arg DATE=$(DATE) --target $(TARGET) -f build/Dockerfile -t $(PREFIX):$(TAG) .
+	docker build --platform linux/$(ARCH) $(strip $(DOCKER_BUILD_OPTIONS)) --target $(strip $(TARGET)) -f build/Dockerfile -t $(strip $(PREFIX)):$(strip $(TAG)) .
 
 .PHONY: build
 build: ## Build the binary
 ifeq (${TARGET},local)
 	@go version || (code=$$?; printf "\033[0;31mError\033[0m: unable to build locally\n"; exit $$code)
-	CGO_ENABLED=0 GOOS=linux go build -trimpath -a -ldflags "-s -w -X main.version=${VERSION} -X main.commit=${GIT_COMMIT} -X main.date=${DATE}" -o $(OUT_DIR)/gateway github.com/nginxinc/nginx-kubernetes-gateway/cmd/gateway
+	CGO_ENABLED=0 GOOS=linux GOARCH=$(ARCH) go build -trimpath -a -ldflags "-s -w -X main.version=${VERSION} -X main.commit=${GIT_COMMIT} -X main.date=${DATE}" -o $(OUT_DIR)/gateway github.com/nginxinc/nginx-kubernetes-gateway/cmd/gateway
 endif
+
+.PHONY: build-goreleaser
+build-goreleaser: ## Build the binary using GoReleaser
+	@goreleaser -v || (code=$$?; printf "\033[0;31mError\033[0m: there was a problem with GoReleaser. Follow the docs to install it https://goreleaser.com/install\n"; exit $$code)
+	GOOS=linux GOPATH=$(shell go env GOPATH) GOARCH=$(ARCH) goreleaser build --clean --snapshot --single-target
 
 .PHONY: generate
 generate: ## Run go generate
@@ -36,7 +44,7 @@ generate: ## Run go generate
 clean: ## Clean the build
 	-rm -r $(OUT_DIR)
 
-.PHONY: clean--go-cache
+.PHONY: clean-go-cache
 clean-go-cache: ## Clean go cache
 	@go clean -modcache
 
