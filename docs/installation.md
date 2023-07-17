@@ -13,7 +13,7 @@ This guide walks you through how to install NGINX Kubernetes Gateway on a generi
 1. Clone the repo and change into the `nginx-kubernetes-gateway` directory:
 
    ```
-   git clone https://github.com/nginxinc/nginx-kubernetes-gateway.git
+   git clone https://github.com/nginxinc/nginx-kubernetes-gateway.git --branch v0.5.0
    cd nginx-kubernetes-gateway
    ```
 

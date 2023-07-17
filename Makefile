@@ -1,5 +1,5 @@
 # variables that should not be overridden by the user
-VERSION = edge
+VERSION = 0.5.0
 GIT_COMMIT = $(shell git rev-parse HEAD || echo "unknown")
 DATE = $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 
