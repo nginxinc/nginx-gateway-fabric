@@ -2,6 +2,32 @@
 
 This document includes a curated changelog for each release. We also publish a changelog as the description of a [GitHub release](https://github.com/nginxinc/nginx-kubernetes-gateway/releases), which, by contrast, is auto-generated and includes links to all PRs that went into the release.
 
+## Release 0.5.0
+
+*July 17, 2023*
+
+This release completes all v1beta1 Core features of the Gateway API resources. See the [Gateway Compatibility doc](https://github.com/nginxinc/nginx-kubernetes-gateway/blob/v0.5.0/docs/gateway-api-compatibility.md)
+
+FEATURES:
+* Support cross-namespace BackendRefs in HTTPRoutes. [PR-806](https://github.com/nginxinc/nginx-kubernetes-gateway/pull/806)
+* Support dynamic certificate rotation with Kubernetes Secrets. [PR-807](https://github.com/nginxinc/nginx-kubernetes-gateway/pull/807)
+* Support SupportedKinds in ListenerStatus. [PR-809](https://github.com/nginxinc/nginx-kubernetes-gateway/pull/809)
+
+BUG FIXES:
+* Set redirect port in location header according to the scheme. [PR-801](https://github.com/nginxinc/nginx-kubernetes-gateway/pull/801)
+* Set proxy host header to the exact value of the request host header. [PR-827](https://github.com/nginxinc/nginx-kubernetes-gateway/pull/827)
+* Ensure Prefix matching requires trailing slash. [PR-817](https://github.com/nginxinc/nginx-kubernetes-gateway/pull/817)
+
+COMPATIBILITY:
+- The Gateway API version: `0.7.1`
+- NGINX version: `1.25.x` *
+- Kubernetes version: `1.21+`
+
+\*the installation manifests use the `nginx:1.25` image, which always points to the latest version of 1.25.x releases.
+
+CONTAINER IMAGES:
+- Control plane: `ghcr.io/nginxinc/nginx-kubernetes-gateway:0.5.0`
+
 ## Release 0.4.0
 
 *July 6, 2023*
