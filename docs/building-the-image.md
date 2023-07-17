@@ -11,14 +11,14 @@ Before you can build the NGINX Kubernetes Gateway, make sure you have the follow
 
 1. Clone the repo and change into the `nginx-kubernetes-gateway` directory:
 
-   ```
+   ```shell
    git clone https://github.com/nginxinc/nginx-kubernetes-gateway.git
    cd nginx-kubernetes-gateway
    ```
 
 1. Build the image:
 
-   ```
+   ```makefile
    make PREFIX=myregistry.example.com/nginx-kubernetes-gateway container
    ```
 
@@ -26,7 +26,7 @@ Before you can build the NGINX Kubernetes Gateway, make sure you have the follow
 
 1. Push the image to your container registry:
 
-   ```
+   ```shell
    docker push myregistry.example.com/nginx-kubernetes-gateway:edge
    ```
 

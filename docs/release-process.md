@@ -32,7 +32,7 @@ To create a new release, follow these steps:
 4. If a problem is found, prepare a fix PR, merge it into the main branch and return to the previous step.
 5. Create a release branch with a name that follows the `release-X.Y` format.
 6. Prepare and merge a PR into the release branch to update the repo files for the release:
-    1. Update the tag of NKG container images used in the installation manifests (both the 
+    1. Update the tag of NKG container images used in the installation manifests (both the
     [deployment manifest](../deploy/manifests/deployment.yaml) and the
     [provisioner manifest](../conformance/provisioner/provisioner.yaml)) and docs to `X.Y.Z`.
     2. Ensure that the `imagePullPolicy` is `IfNotPresent` in the installation manifests.

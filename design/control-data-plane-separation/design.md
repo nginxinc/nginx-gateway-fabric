@@ -748,7 +748,7 @@ configurations, we can work with them to add bigger config files to the test sui
 
 Config Push Benchmarks:
 
-```bash
+```shell
 cpu: Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz
 BenchmarkNginxConfig/../testdata/configs/bigger/1k.conf-2         	1000000000	         0.005241 ns/op	       0 B/op	       0 allocs/op
 BenchmarkNginxConfig/../testdata/configs/bigger/2k.conf-2         	1000000000	         0.01087 ns/op	       0 B/op	       0 allocs/op
@@ -762,7 +762,7 @@ BenchmarkGetConfigFiles/GetConfigFiles#03-2                       	1000000000	  
 
 Config Zip and Unzip Benchmarks:
 
-```bash
+```shell
 BenchmarkZipConfig/Zip_config../testdata/configs/bigger/1k.conf-2            	1000000000	         0.0001852 ns/op	       0 B/op	       0 allocs/op
 BenchmarkZipConfig/Zip_config../testdata/configs/bigger/2k.conf-2            	1000000000	         0.0000663 ns/op	       0 B/op	       0 allocs/op
 BenchmarkZipConfig/Zip_config../testdata/configs/bigger/3k.conf-2            	1000000000	         0.0000674 ns/op	       0 B/op	       0 allocs/op

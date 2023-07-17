@@ -4,7 +4,7 @@ metadata:
   name: nginx-gateway
   namespace: nginx-gateway
 spec:
-  type: NodePort 
+  type: NodePort
   ports: # Update the following ports to match your Gateway Listener ports
   - port: 80
     targetPort: 80

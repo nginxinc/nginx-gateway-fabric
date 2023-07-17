@@ -52,8 +52,10 @@ The Kubernetes API server validates Gateway API resources against the OpenAPI sc
 For example, if you create an HTTPRoute with an invalid hostname `cafe.!@#$%example.com`, the API server will reject it
 with the following error:
 
+```shell
+kubectl apply -f coffee-route.yaml
 ```
-kubectl apply -f coffee-route.yaml 
+```
 The HTTPRoute "coffee" is invalid: spec.hostnames[0]: Invalid value: "cafe.!@#$%example.com": spec.hostnames[0] in body should match '^(\*\.)?[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
 ```
 
@@ -67,8 +69,10 @@ It validates Gateway API resources using advanced rules unavailable in the OpenA
 you create a Gateway resource with a TCP listener that configures a hostname, the webhook will reject it with the
 following error:
 
+```shell
+kubectl apply -f prod-gateway.yaml
 ```
-kubectl apply -f prod-gateway.yaml 
+```
 Error from server: error when creating "prod-gateway.yaml": admission webhook "validate.gateway.networking.k8s.io" denied the request: spec.listeners[1].hostname: Forbidden: should be empty for protocol TCP
 ```
 
@@ -84,8 +88,10 @@ performs the validation *after* the Kubernetes API server accepts the resource.
 Below is an example of how NKG rejects an invalid resource (a Gateway resource with a TCP listener that configures a
 hostname) with a Kubernetes event:
 
-```
+```shell
 kubectl describe gateway prod-gateway
+```
+```
 . . .
 Events:
   Type     Reason    Age   From                            Message
@@ -114,8 +120,10 @@ This step catches the following cases of invalid values:
 
 Below is an example of how NGK rejects an invalid resource. The validation error is reported via the status:
 
-```
+```shell
 kubectl describe httproutes.gateway.networking.k8s.io coffee
+```
+```
 . . .
 Status:
   Parents:

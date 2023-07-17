@@ -8,7 +8,7 @@ var upstreamsTemplateText = `
 upstream {{ $u.Name }} {
     random two least_conn;
     zone {{ $u.Name }} 512k;
-    {{ range $server := $u.Servers }} 
+    {{ range $server := $u.Servers }}
     server {{ $server.Address }};
     {{- end }}
 }

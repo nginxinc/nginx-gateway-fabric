@@ -25,7 +25,7 @@ A clear and concise description of what you expected to happen.
 * Kubernetes platform (e.g. Mini-kube or GCP)
 * Details on how you expose the NGINX Gateway Pod (e.g. Service of type LoadBalancer or port-forward)
 * Logs of NGINX container: `kubectl -n nginx-gateway logs -l app=nginx-gateway -c nginx`
-* NGINX Configuration: `kubectl -n nginx-gateway exec <gateway-pod> -c nginx -- nginx -T` 
+* NGINX Configuration: `kubectl -n nginx-gateway exec <gateway-pod> -c nginx -- nginx -T`
 
 **Additional context**
 Add any other context about the problem here. Any log files you want to share.

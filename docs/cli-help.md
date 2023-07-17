@@ -4,7 +4,7 @@ This document describes the commands available in the `gateway` binary of `nginx
 
 ## Static Mode
 
-This command configures NGINX in the scope of a single Gateway resource. 
+This command configures NGINX in the scope of a single Gateway resource.
 
 Usage:
 

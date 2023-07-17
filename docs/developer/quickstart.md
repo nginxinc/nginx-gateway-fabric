@@ -20,6 +20,16 @@ Follow these steps to set up your development environment.
       ```shell
       go install golang.org/x/tools/go/analysis/passes/fieldalignment/cmd/fieldalignment@latest
       ```
+   - [pre-commit](https://pre-commit.com/#install):
+
+     ```shell
+     brew install pre-commit
+     ```
+     and then run
+     ```shell
+     pre-commit install
+     ```
+     in the project root directory to install the git hooks.
 
 2. [Fork the project repository](https://github.com/nginxinc/nginx-kubernetes-gateway/fork)
 3. Clone your repository, and install the project dependencies:
@@ -27,6 +37,8 @@ Follow these steps to set up your development environment.
    ```shell
    git clone https://github.com/<YOUR-USERNAME>/nginx-kubernetes-gateway.git
    cd nginx-kubernetes-gateway
+   ```
+   ```makefile
    make deps
    ```
 
@@ -36,7 +48,7 @@ Follow these steps to set up your development environment.
 
 To build the binary, run the make build command from the project's root directory:
 
-```shell
+```makefile
 make build
 ```
 
@@ -46,7 +58,7 @@ This command will build the binary and output it to the `/build/.out` directory.
 
 To build an NGINX Kubernetes Gateway container image from source run the following make command:
 
-```shell
+```makefile
 make TAG=$(whoami) container
 ```
 
@@ -56,7 +68,7 @@ This will build the docker image `nginx-kubernetes-gateway:<your-user>`.
 
 1. Create a `kind` cluster:
 
-   ```shell
+   ```makefile
    make create-kind-cluster
    ```
 
@@ -75,7 +87,7 @@ This will build the docker image `nginx-kubernetes-gateway:<your-user>`.
    Alternatively, you can update the image name and pull policy by using the following command when applying
    `deployment.yaml`:
 
-   ```shell 
+   ```shell
    cat deploy/manifests/deployment.yaml | sed "s|image: ghcr.io/nginxinc/nginx-kubernetes-gateway.*|image: nginx-kubernetes-gateway:$(whoami)|" | sed "s|imagePullPolicy: Always|imagePullPolicy: IfNotPresent|" | kubectl apply -f -
    ```
 
@@ -87,7 +99,7 @@ To make sure NKG is running properly, try out the [examples](/examples).
 
 To run all the unit tests, run the make unit-test command from the project's root directory:
 
-```shell
+```makefile
 make unit-test
 ```
 
@@ -101,7 +113,7 @@ To run Gateway API conformance tests, please follow the instructions on [this](/
 
 To lint the code, run the following make command from the project's root directory:
 
-```shell
+```makefile
 make lint
 ```
 
