@@ -56,7 +56,7 @@ deps: ## Add missing and remove unused modules, verify deps and download them to
 create-kind-cluster: ## Create a kind cluster
 	$(eval KIND_IMAGE=$(shell grep -m1 'FROM kindest/node' <conformance/tests/Dockerfile | awk -F'[ ]' '{print $$2}'))
 	kind create cluster --image $(KIND_IMAGE)
-	kind export kubeconfig --kubeconfig $(KIND_KUBE_CONFIG_FOLDER)/config
+	kind export kubeconfig --kubeconfig $(KIND_KUBE_CONFIG)
 
 .PHONY: delete-kind-cluster
 delete-kind-cluster: ## Delete kind cluster

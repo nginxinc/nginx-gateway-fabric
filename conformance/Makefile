@@ -1,5 +1,6 @@
 NKG_TAG = edge
 NKG_PREFIX = nginx-kubernetes-gateway
+GW_API_VERSION ?= 0.7.1
 GATEWAY_CLASS = nginx
 SUPPORTED_FEATURES = HTTPRoute,HTTPRouteQueryParamMatching,HTTPRouteMethodMatching,HTTPRoutePortRedirect,HTTPRouteSchemeRedirect,GatewayClassObservedGenerationBump
 KIND_KUBE_CONFIG=$${HOME}/.kube/kind/config
@@ -42,7 +43,7 @@ load-images: preload-nginx-container ## Load NKG and NGINX containers on configu
 
 .PHONY: prepare-nkg-dependencies
 prepare-nkg-dependencies: ## Install NKG dependencies on configured kind cluster
-	kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v0.7.1/standard-install.yaml
+	./scripts/install-gateway.sh $(GW_API_VERSION)
 	kubectl wait --for=condition=available --timeout=60s deployment gateway-api-admission-server -n gateway-system
 	kubectl apply -f ../deploy/manifests/namespace.yaml
 	kubectl create configmap njs-modules --from-file=../internal/mode/static/nginx/modules/src/httpmatches.js -n nginx-gateway
@@ -83,7 +84,7 @@ cleanup-conformance-tests: ## Clean up conformance tests fixtures
 
 .PHONY: uninstall-nkg
 uninstall-nkg: ## Uninstall NKG on configured kind cluster
-	kubectl delete -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v0.7.1/standard-install.yaml
+	./scripts/uninstall-gateway.sh $(GW_API_VERSION)
 	kubectl delete -f ../deploy/manifests/rbac.yaml
 	kubectl delete -f ../deploy/manifests/namespace.yaml
 	kubectl delete clusterrole nginx-gateway-provisioner
