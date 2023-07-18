@@ -26,8 +26,8 @@
 
 - When pushing code review changes, it's important to provide clear information to the reviewer. Here are a couple of
   guidelines to follow:
-    - Commit each code review change individually.
-    - Use descriptive commit messages that accurately describe the change made, making it easy for the reviewer to
+  - Commit each code review change individually.
+  - Use descriptive commit messages that accurately describe the change made, making it easy for the reviewer to
       understand the purpose of the change.
 - When approved, and all review comments have been resolved; squash commits to a single commit. Follow
   the [Commit Message Format](#commit-message-format) guidelines when writing the final commit.
@@ -42,17 +42,17 @@
 - Always review for: design, API semantics, [DRY](https://en.wikipedia.org/wiki/Don%27t_repeat_yourself) and
   maintainability practices, bugs and quality, efficiency and correctness.
 - Code review checklist:
-    - Do any changes need to made in documentation?
-        - Do public docs need updating?
-        - Have internal workflow and informational docs been impacted?
-    - Are there unit tests for the change?
-        - If the change is a bug fix, has a unit test been added or modified that catches the bug? All bug fixes should
+  - Do any changes need to made in documentation?
+    - Do public docs need updating?
+    - Have internal workflow and informational docs been impacted?
+  - Are there unit tests for the change?
+    - If the change is a bug fix, has a unit test been added or modified that catches the bug? All bug fixes should
           be reproduced with a unit test before submitting any code. Then the code should be fixed so that the unit test
           passes.
-        - If the change is a feature or new functionality. The expectation is to include a reasonable set of unit tests
+    - If the change is a feature or new functionality. The expectation is to include a reasonable set of unit tests
           which exercise positive and negative cases.
-    - Is this change backwards compatible? Is it causing breaking behavior?
-    - Are there any [Comment Tags](#comment-tags) in the change?
+  - Is this change backwards compatible? Is it causing breaking behavior?
+  - Are there any [Comment Tags](#comment-tags) in the change?
 
 ## Commit Message Format
 
@@ -86,11 +86,14 @@ Added unit tests for events up to 1MB.
 ```
 
 > **Note**
-> Do not put any customer identifying information in message. Say “a customer found…”, NOT “ACME Corp found…”. If customer generated data is included it must be redacted for any PII (or identifying information). This includes IPs, ports, names of applications and objects, and URL paths. If customers volunteered this information, do not propagate it externally.
+> Do not put any customer identifying information in message. Say “a customer found…”, NOT “ACME Corp found…”.
+> If customer generated data is included it must be redacted for any PII (or identifying information).
+> This includes IPs, ports, names of applications and objects, and URL paths.
+> If customers volunteered this information, do not propagate it externally.
 
 For additional help on writing good commit messages, see this [article](https://cbea.ms/git-commit/).
 
-# Comment Tags
+## Comment Tags
 
 We use the comment tags FIXME and TODO.
 

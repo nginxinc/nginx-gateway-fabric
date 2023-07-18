@@ -8,7 +8,8 @@ This guide walks you through how to install NGINX Kubernetes Gateway on a generi
 
 ## Deploy NGINX Kubernetes Gateway
 
-> Note: NGINX Kubernetes Gateway can only run in the `nginx-gateway` namespace. This limitation will be addressed in the future releases.
+> Note: NGINX Kubernetes Gateway can only run in the `nginx-gateway` namespace.
+> This limitation will be addressed in the future releases.
 
 1. Clone the repo and change into the `nginx-kubernetes-gateway` directory:
 
@@ -64,6 +65,7 @@ This guide walks you through how to install NGINX Kubernetes Gateway on a generi
    ```shell
    kubectl get pods -n nginx-gateway
    ```
+
    ```text
    NAME                             READY   STATUS    RESTARTS   AGE
    nginx-gateway-5d4f4c7db7-xk2kq   2/2     Running   0          112s
@@ -75,7 +77,9 @@ You can gain access to NGINX Kubernetes Gateway by creating a `NodePort` Service
 
 > Important
 >
-> The Service manifests expose NGINX Kubernetes Gateway on ports 80 and 443, which exposes any Gateway [Listener](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.Listener) configured for those ports. If you'd like to use different ports in your listeners,
+> The Service manifests expose NGINX Kubernetes Gateway on ports 80 and 443, which exposes any
+> Gateway [Listener](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.Listener)
+> configured for those ports. If you'd like to use different ports in your listeners,
 > update the manifests accordingly.
 
 ### Create a NodePort Service
@@ -86,7 +90,8 @@ Create a Service with type `NodePort`:
 kubectl apply -f deploy/manifests/service/nodeport.yaml
 ```
 
-A `NodePort` Service will randomly allocate one port on every Node of the cluster. To access NGINX Kubernetes Gateway, use an IP address of any Node in the cluster along with the allocated port.
+A `NodePort` Service will randomly allocate one port on every Node of the cluster. To access NGINX Kubernetes Gateway,
+use an IP address of any Node in the cluster along with the allocated port.
 
 ### Create a LoadBalancer Service
 
@@ -98,13 +103,14 @@ Create a Service with type `LoadBalancer` using the appropriate manifest for you
    kubectl apply -f deploy/manifests/service/loadbalancer.yaml
    ```
 
-   Lookup the public IP of the load balancer, which is reported in the `EXTERNAL-IP` column in the output of the following command:
+  Lookup the public IP of the load balancer, which is reported in the `EXTERNAL-IP` column in the output of the
+  following command:
 
    ```shell
    kubectl get svc nginx-gateway -n nginx-gateway
    ```
 
-   Use the public IP of the load balancer to access NGINX Kubernetes Gateway.
+  Use the public IP of the load balancer to access NGINX Kubernetes Gateway.
 
 - For AWS:
 
@@ -112,13 +118,15 @@ Create a Service with type `LoadBalancer` using the appropriate manifest for you
    kubectl apply -f deploy/manifests/service/loadbalancer-aws-nlb.yaml
    ```
 
-   In AWS, the NLB DNS name will be reported by Kubernetes in lieu of a public IP in the `EXTERNAL-IP` column. To get the DNS name run:
+  In AWS, the NLB DNS name will be reported by Kubernetes in lieu of a public IP in the `EXTERNAL-IP` column. To get the
+  DNS name run:
 
    ```shell
    kubectl get svc nginx-gateway -n nginx-gateway
    ```
 
-   In general, you should rely on the NLB DNS name, however for testing purposes you can resolve the DNS name to get the IP address of the load balancer:
+  In general, you should rely on the NLB DNS name, however for testing purposes you can resolve the DNS name to get the
+  IP address of the load balancer:
 
    ```shell
    nslookup <dns-name>
