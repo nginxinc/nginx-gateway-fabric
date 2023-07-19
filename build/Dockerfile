@@ -18,7 +18,7 @@ FROM alpine:3.18 as capabilizer
 RUN apk add --no-cache libcap
 
 FROM capabilizer as local-capabilizer
-COPY ./build/.out/gateway /usr/bin/
+COPY ./build/out/gateway /usr/bin/
 RUN setcap 'cap_kill=+ep' /usr/bin/gateway
 
 FROM capabilizer as container-capabilizer
