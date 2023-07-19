@@ -99,7 +99,7 @@ jobs:
         uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
 
       - name: Create/Update Draft
-        uses: lucacome/draft-release@d13ccde6350706e32f451566ee5cd4bf5a27de3d # v0.2.1
+        uses: lucacome/draft-release@f6dc37dcdf44be100a649b72c62c628776750190 # v0.2.2
         with:
           minor-label: "enhancement"
           major-label: "change"
