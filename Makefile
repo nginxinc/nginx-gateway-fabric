@@ -4,20 +4,20 @@ GIT_COMMIT = $(shell git rev-parse HEAD || echo "unknown")
 DATE = $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 
 # variables that can be overridden by the user
-PREFIX ?= nginx-kubernetes-gateway ## The name of the image. For example, nginx-kubernetes-gateway
-TAG ?= $(VERSION:v%=%) ## The tag of the image. For example, 0.3.0
-TARGET ?= local ## The target of the build. Possible values: local and container
-KIND_KUBE_CONFIG_FOLDER = $${HOME}/.kube/kind ## The folder where the kind kubeconfig is stored
-OUT_DIR ?= $(shell pwd)/build/out ## The folder where the binary will be stored
-ARCH ?= amd64 ## The architecture of the image and/or binary. For example: amd64 or arm64
-override DOCKER_BUILD_OPTIONS += --build-arg VERSION=$(VERSION) --build-arg GIT_COMMIT=$(GIT_COMMIT) --build-arg DATE=$(DATE) ## The options for the docker build command. For example, --pull
+PREFIX ?= nginx-kubernetes-gateway## The name of the image. For example, nginx-kubernetes-gateway
+TAG ?= $(VERSION:v%=%)## The tag of the image. For example, 0.3.0
+TARGET ?= local## The target of the build. Possible values: local and container
+KIND_KUBE_CONFIG_FOLDER = $${HOME}/.kube/kind## The folder where the kind kubeconfig is stored
+OUT_DIR ?= $(shell pwd)/build/out## The folder where the binary will be stored
+ARCH ?= amd64## The architecture of the image and/or binary. For example: amd64 or arm64
+override DOCKER_BUILD_OPTIONS += --build-arg VERSION=$(VERSION) --build-arg GIT_COMMIT=$(GIT_COMMIT) --build-arg DATE=$(DATE)## The options for the docker build command. For example, --pull
 
 .DEFAULT_GOAL := help
 
 .PHONY: help
 help: Makefile ## Display this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "; printf "Usage:\n\n    make \033[36m<target>\033[0m [VARIABLE=value...]\n\nTargets:\n\n"}; {printf "    \033[36m%-30s\033[0m %s\n", $$1, $$2}'
-	@grep -E '^(override )?[a-zA-Z_-]+ \??\+?= .*? ## .*$$' $< | sort | awk 'BEGIN {FS = " \\??\\+?= .*? ## "; printf "\nVariables:\n\n"}; {gsub(/override /, "", $$1); printf "    \033[36m%-30s\033[0m %s\n", $$1, $$2}'
+	@grep -E '^(override )?[a-zA-Z_-]+ \??\+?= .*?## .*$$' $< | sort | awk 'BEGIN {FS = " \\??\\+?= .*?## "; printf "\nVariables:\n\n"}; {gsub(/override /, "", $$1); printf "    \033[36m%-30s\033[0m %s\n", $$1, $$2}'
 
 .PHONY: container
 container: build ## Build the container
