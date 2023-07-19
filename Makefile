@@ -103,5 +103,15 @@ generate-njs-yaml: ## Generate the njs-modules ConfigMap
 lint-helm: ## Run the helm chart linter
 	helm lint $(CHART_DIR)
 
+debug-build: ## Build binary with debug info, symbols, and no optimizations
+ifeq (${TARGET},local)
+	@go version || (code=$$?; printf "\033[0;31mError\033[0m: unable to build locally\n"; exit $$code)
+	CGO_ENABLED=0 GOOS=linux GOARCH=$(ARCH) go build -trimpath -a -gcflags "all=-N -l" -ldflags "-X main.version=${VERSION} -X main.commit=${GIT_COMMIT} -X main.date=${DATE}" -o $(OUT_DIR)/gateway github.com/nginxinc/nginx-kubernetes-gateway/cmd/gateway
+endif
+
+debug-container: debug-build ## Build container with debug binary
+	@docker -v || (code=$$?; printf "\033[0;31mError\033[0m: there was a problem with Docker\n"; exit $$code)
+	docker build --platform linux/$(ARCH) $(strip $(DOCKER_BUILD_OPTIONS)) --target $(strip $(TARGET)) -f build/Dockerfile -t $(strip $(PREFIX)):$(strip $(TAG)) .
+
 .PHONY: dev-all
 dev-all: deps fmt njs-fmt vet lint unit-test njs-unit-test ## Run all the development checks
