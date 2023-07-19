@@ -425,9 +425,6 @@ func convertSetHeaders(headers []dataplane.HTTPHeader) []http.Header {
 }
 
 func convertMatchesToString(matches []httpMatch) string {
-	// FIXME(sberman): De-dupe matches and associated locations
-	// so we don't need nginx/njs to perform unnecessary matching.
-	// https://github.com/nginxinc/nginx-kubernetes-gateway/issues/662
 	b, err := json.Marshal(matches)
 	if err != nil {
 		// panic is safe here because we should never fail to marshal the match unless we constructed it incorrectly.
