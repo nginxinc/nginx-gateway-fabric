@@ -6,7 +6,7 @@ Issue #292: https://github.com/nginxinc/nginx-kubernetes-gateway/issues/292
 
 > Note: I use data plane and agent interchangeably in this document.
 
-# Background
+## Background
 
 NKG composes its control and data plane containers into a single Kubernetes Pod. The control plane uses OS signals and a
 shared file system to configure and reload nginx. This architecture is problematic because the same RBAC policies govern
@@ -14,7 +14,7 @@ the control and data planes and share CVE potential. A compromised control plane
 Kubernetes API server may be affected if the data plane is compromised. In addition to security concerns, this
 architecture does not allow the control plane and data plane to scale independently.
 
-# Goals
+## Goals
 
 - Data plane and control plane containers run in separate Pods
 - The communication channel between the control and data planes can be encrypted
@@ -24,32 +24,32 @@ architecture does not allow the control plane and data plane to scale independen
   Kubernetes API server.
 - RBAC policy for control plane follows the principle of least privilege.
 
-# Non-Goals
+## Non-Goals
 
 - Control plane can scale
 - Support for multiple control planes per GatewayClass or Namespace.
 
-# Design
+## Design
 
 Since the choice of a data plane agent will inform the rest of the design, I will start by proposing the agent.
 
-## Nginx Agent
+### Nginx Agent
 
 I propose using the [nginx agent](https://github.com/nginx/agent) as our data plane agent.
 
-### Evaluation of Requirements
+#### Evaluation of Requirements
 
 The following list outlines all of NKG's requirements for an agent and whether the nginx agent meets them:
 
 - [x] It is open source.
 - [x] It supports both OSS and Plus versions of nginx.
 - [x] It can be deployed in Kubernetes.
-    - [ ] It supports readiness and liveness probes.
-    - [x] It supports logging to stderr/stdout.
-    - [x] It handles SIGTERM gracefully.
-    - [ ] Its container base image is scratch or something minimal.
-    - [x] It supports a read-only root file system.
-    - [x] It can run as a non-root user.
+  - [ ] It supports readiness and liveness probes.
+  - [x] It supports logging to stderr/stdout.
+  - [x] It handles SIGTERM gracefully.
+  - [ ] Its container base image is scratch or something minimal.
+  - [x] It supports a read-only root file system.
+  - [x] It can run as a non-root user.
 - [x] It can configure an nginx instance running in the same Pod.
 - [x] It is loosely coupled to the nginx version. The Nginx version can be updated independently of the agent.
 - [x] A user can update it independently of the control plane.
@@ -81,8 +81,8 @@ Features needed (in priority order, more or less):
 - Add an option to refresh server token from a file
 - Add readiness and liveness endpoints
 - Produce a container image as a release artifact
-    - This image should be non-root
-    - This image should be as minimal as possible
+  - This image should be non-root
+  - This image should be as minimal as possible
 - Allow the control plane to access the N+ API to configure upstreams and the key-value store.
 - Add support for metrics enrichment. Metrics can be enriched with Kubernetes meta-information such as namespace, pod
   name, etc.
@@ -92,11 +92,11 @@ Agent features/plugins that we'd like to disable:
 - Metrics service client
 - Data plane status updates
 - Config upload feature
-    - This is the feature that uploads the config to the control plane
+  - This is the feature that uploads the config to the control plane
 - The nginx-counting feature
 - The activity-events feature
 
-### Benefits
+#### Benefits
 
 Using the nginx agent has the following benefits:
 
@@ -111,22 +111,22 @@ Using the nginx agent has the following benefits:
 - It is built to be modular and configurable. We should be able to disable most or all of the features we don’t need in
   the future.
 
-### Drawbacks
+#### Drawbacks
 
 Using the nginx agent has the following drawbacks:
 
 - It is not custom-built for our use case. It contains more features that we need.
 - It was not built to run in Kubernetes.
-    - Violates some of the best practices for running in Kubernetes. For example, it runs two processes in a single
+  - Violates some of the best practices for running in Kubernetes. For example, it runs two processes in a single
       container.
-    - Metrics do not include Kubernetes meta-information.
+  - Metrics do not include Kubernetes meta-information.
 - It is a dependency that we do not control.
 - It does not support dynamic configuration of upstreams and the key-value store.
 - We may need to replace it in the future if we run into performance issues or encounter a blocker.
 
-## Alternatives
+### Alternatives
 
-### Write our own agent
+#### Write our own agent
 
 We could write our own agent. This would give us the most control over the design and implementation. There are few
 different approaches we could take to design an agent.
@@ -185,7 +185,7 @@ Drawbacks:
 - Translating xDS to nginx config is not a trivial task. Some features will not map easily to nginx config.
 - We would either need to completely re-write our control plane or adopt an xDS control plane
 
-### Modify nginx-agent
+#### Modify nginx-agent
 
 We could modify the nginx agent to meet our needs. This would require us to maintain a fork of the nginx agent. I see
 this option as a last resort that we can decide to adopt if we hit a roadblock with the nginx agent.
@@ -198,20 +198,20 @@ this option as a last resort that we can decide to adopt if we hit a roadblock w
 
 [xds-wg]: https://github.com/cncf/xds
 
-## Deployment Architecture
+### Deployment Architecture
 
 ![Deployment architecture](deployment-architecture.png)
 
-* _Control Plane Deployment_: The control plane is a Kubernetes Deployment with one container running the NKG
+- _Control Plane Deployment_: The control plane is a Kubernetes Deployment with one container running the NKG
   controller. Initially, the control plane will be limited to a single Pod. Once we add leader election, the control
   plane will be able to scale. The control plane will perform the same functions as it does today, but instead of
   configuring nginx by writing files to a shared volume, it will send the configuration to the agent via gRPC.
-* _Control Plane Service_: Exposes the control plane via a Kubernetes Service of type `ClusterIP`. The data plane will
+- _Control Plane Service_: Exposes the control plane via a Kubernetes Service of type `ClusterIP`. The data plane will
   use the DNS name of the Service to connect to the control plane.
-* _Data Plane DaemonSet/Deployment_: A user can deploy the data plane as either a DaemonSet or Deployment. The data
+- _Data Plane DaemonSet/Deployment_: A user can deploy the data plane as either a DaemonSet or Deployment. The data
   plane contains a single container running both the agent and nginx processes. The agent will download the
   configuration from the control plane over a streaming RPC.
-* _NGINX Service_: Exposes nginx via a Kubernetes Service of type `LoadBalancer .`This is the entry point for the
+- _NGINX Service_: Exposes nginx via a Kubernetes Service of type `LoadBalancer .`This is the entry point for the
   customer’s traffic. Initially, this Service will only expose ports 80 and 443. In the future, if we add support for
   additional listener ports, this Service will expose all the listener ports. Note that this Service should not expose
   any of the agent’s ports.
@@ -230,7 +230,7 @@ controllers will be able to coexist in the same cluster as long as they each hav
 resource. In this case, each installation of NKG will contain a unique `GatewayClass` resource, a control plane
 Deployment, and a data plane Deployment/DaemonSet.
 
-## Communication Channels
+### Communication Channels
 
 The control plane and agent will communicate over gRPC. The agent will establish a gRPC connection to the control plane
 on start-up. The agent will gracefully retry to connect to the control plane, so the start order of the containers is
@@ -292,9 +292,9 @@ this [file](https://github.com/nginx/agent/blob/main/sdk/proto/command_svc.proto
 
 Command Messages have the following structure:
 
-* Metadata - contains details about the sender and the message.
-* Type - contains information about the type of data the message carries.
-* Data - the message payload.
+- Metadata - contains details about the sender and the message.
+- Type - contains information about the type of data the message carries.
+- Data - the message payload.
 
 Command messages act as envelopes, but they make use of both the type field and the `oneof` feature of gRPC to embed
 different types of payloads.
@@ -377,14 +377,14 @@ message NginxConfig {
 }
 ```
 
-* `action`: what action the agent should take with the nginx config: apply, test, rollback, return, or force.
-* `config_data`: contains metadata on the agent and nginx instance we are configuring.
-* `zconfig`: a zipped file with all nginx `.conf` files.
-* `zaux`: a zipped file with all nginx auxiliary files, such as njs modules, static html files, etc.
-* `access_logs`: meta-information about the access logs.
-* `error_logs`: meta-information about the error logs.
-* `ssl`: meta-information about the SSL certificates stored on the data plane.
-* `directory_map`:meta-information about the nginx configuration files. The agent uses this for synchronization (i.e.,
+- `action`: what action the agent should take with the nginx config: apply, test, rollback, return, or force.
+- `config_data`: contains metadata on the agent and nginx instance we are configuring.
+- `zconfig`: a zipped file with all nginx `.conf` files.
+- `zaux`: a zipped file with all nginx auxiliary files, such as njs modules, static html files, etc.
+- `access_logs`: meta-information about the access logs.
+- `error_logs`: meta-information about the error logs.
+- `ssl`: meta-information about the SSL certificates stored on the data plane.
+- `directory_map`:meta-information about the nginx configuration files. The agent uses this for synchronization (i.e.,
   comparing configuration against previous deployments) and to interrogate the file system before applying the
   configuration.
 
@@ -421,7 +421,7 @@ well.
 
 [tls-config]: https://pkg.go.dev/crypto/tls#Config
 
-## Authorization
+### Authorization
 
 The agent will use a Kubernetes ServiceAccount token to authenticate with the control plane. The control plane will
 authenticate the token by sending a request to the Kubernetes [TokenReview API][token-review].
@@ -439,7 +439,7 @@ Upon successful connection, the agent will register by sending an `AgentConnecti
 to the control plane over the `CommandChannel.` This message is used by the control plane to associate the agent with
 internal resources correctly. See the [Registration](#agent-registration) section for more information.
 
-### Long-lived token v/s bound token
+#### Long-lived token v/s bound token
 
 Long-lived tokens are JWT tokens for a ServiceAccount that are valid for the lifetime of the ServiceAccount. They are
 stored in Secrets and can be mounted to a Pod as a file or an environment variable. We can use the TokenReview API to
@@ -509,7 +509,7 @@ For a good comparison of long-lived and bound tokens, see [this blog post][bound
 
 [projected-volume]: https://kubernetes.io/docs/reference/access-authn-authz/service-accounts-admin/#bound-service-account-token-volume
 
-## Agent Registration
+### Agent Registration
 
 ![Agent Connect Response](./connect-response.png)
 
@@ -531,9 +531,9 @@ the enabled features, extensions, tags, log configuration, and alias for the age
 
 [response]: https://github.com/nginx/agent/blob/ea3a1b4df5d7ecf95bd3d9297d26e420f5e1dd57/sdk/proto/agent.pb.go#L226
 
-## Configuration Download
+### Configuration Download
 
-### Building the NginxConfig message
+#### Building the NginxConfig message
 
 Currently, NKG configures nginx by translating the Gateway API resources into
 an [internal representation of the nginx config][internal-config], executing a template with this data to generate the
@@ -560,14 +560,14 @@ Note that we must send the entire nginx configuration to the agent on each confi
 checksum if we want to reduce the number of configuration updates sent to the agent. By storing the last checksum in the
 control plane, we can avoid sending the configuration to the agent if it hasn’t changed.
 
-### Static Configuration Files
+#### Static Configuration Files
 
 Static configuration files, such as njs modules, do not need to be sent to the agent on every configuration update.
 Instead, we will mount these files to the agent’s container using a `ConfigMap .`This will also require us to specify
 the path to the module in the agent’s configuration file and the `DirectoryMap` of the `NginxConfig` message to prevent
 the agent from removing them from the filesystem.
 
-### Handling User’s Secret Data
+#### Handling User’s Secret Data
 
 The TLS certificates and keys specified in the [`GatewayTLSConfig`][gw-tls-config] field of `Listeners` are references
 to Kubernetes Secrets. In the future, we will support other forms of authentication data, such as JWT tokens and
@@ -654,7 +654,7 @@ Drawbacks:
 
 > My preference is option 1, as it is the simplest and requires the least changes.
 
-### Sending the NginxConfig message
+#### Sending the NginxConfig message
 
 ![Download](./download-config.png)
 
@@ -682,9 +682,8 @@ the `CommandChannel` in a `NginxConfigResponse` message.
 
 [host-path]: https://kubernetes.io/docs/concepts/storage/volumes/#hostpath
 
-[config-resp]: https://github.com/nginx/agent/blob/ea3a1b4df5d7ecf95bd3d9297d26e420f5e1dd57/sdk/proto/command.pb.go#L891
 
-## Agent Configuration
+### Agent Configuration
 
 We can configure the agent through a YAML file, command-line flags, or environment variables on start-up. The agent
 interprets configuration in the following priorities (from highest to lowest):
@@ -779,13 +778,13 @@ ok  	command-line-arguments	17.727s
 
 - NKG can handle frequent configuration changes (1 change per second)
 - NKG can handle large configurations:
-    - 5000 server blocks
-    - 64 TLS certs/keys
-    - 50 JWT keys
-    - 50 TLS cert/keys for egress
-    - 50 CA certs
-    - 50 basic auth files
-    - 50 OIDC secrets
+  - 5000 server blocks
+  - 64 TLS certs/keys
+  - 50 JWT keys
+  - 50 TLS cert/keys for egress
+  - 50 CA certs
+  - 50 basic auth files
+  - 50 OIDC secrets
 - NKG can scale to X number of data plane pods (we need to figure out what X is)
 
 [performance]: https://github.com/nginx/agent/blob/main/test/performance/user_workflow_test.go
