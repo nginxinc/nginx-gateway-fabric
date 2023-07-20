@@ -79,6 +79,11 @@ jobs:
           cache-to: type=gha,mode=max
           pull: true
 
+      - name: Update Go Modules
+        if: ${{ github.event_name == 'schedule' }}
+        run: make update-go-modules
+        working-directory: ./conformance
+
       - name: Build Test Docker Image
         uses: docker/build-push-action@2eb1c1961a95fc15694676618e422e8ba1d63825 # v4.1.1
         with:
@@ -108,6 +113,5 @@ jobs:
         working-directory: ./conformance
 
       - name: Run conformance tests
-        run: |
-          make run-conformance-tests TAG=${{ github.sha }}
+        run: make run-conformance-tests TAG=${{ github.sha }}
         working-directory: ./conformance
