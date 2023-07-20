@@ -86,5 +86,5 @@ jobs:
 
     - uses: DavidAnson/markdownlint-cli2-action@8f3516061301755c97ff833a8e933f09282cc5b5 # v11.0.0
       with:
-        config: ${{ github.workspace }}.markdownlint-cli2.yaml
+        config: ${{ github.workspace }}/.markdownlint-cli2.yaml
         globs: '**/*.md'
