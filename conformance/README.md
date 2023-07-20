@@ -63,9 +63,11 @@ make create-kind-cluster
 
 > Note: If you want to run the latest conformance tests from the Gateway API `main` branch, set the following
 > environment variable before deploying NKG:
-> ```bash
-> export GW_API_VERSION=main
->```
+
+```bash
+ export GW_API_VERSION=main
+```
+
 > Otherwise, the latest stable version will be used by default.
 
 #### *Option 1* Build and install Nginx Kubernetes Gateway from local to configured kind cluster
@@ -108,9 +110,20 @@ make install-nkg-edge
 
 > Note: If you want to run the latest conformance tests from the Gateway API `main` branch, run the following
 > make command to update the Go modules to `main`:
-> ```makefile
-> make update-go-modules
->```
+
+ ```makefile
+ make update-go-modules
+ ```
+
+> You can also point to a specific fork/branch by running:
+
+ ```bash
+ go mod edit -replace=sigs.k8s.io/gateway-api=<your-fork>@<your-branch>
+ go mod download
+ go mod verify
+ go mod tidy
+ ```
+
 > Otherwise, the latest stable version will be used by default.
 
 ```makefile
@@ -135,6 +148,7 @@ make uninstall-nkg
 
 ### Step 6 - Revert changes to Go modules
 **Optional** Not required if you aren't running the `main` Gateway API tests.
+
 ```makefile
 make reset-go-modules
 ```
@@ -148,6 +162,7 @@ make undo-image-update
 ```
 
 ### Step 8 - Delete kind cluster
+
 ```makefile
 make delete-kind-cluster
 ```
