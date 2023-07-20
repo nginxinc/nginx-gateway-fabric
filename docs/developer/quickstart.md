@@ -20,15 +20,19 @@ Follow these steps to set up your development environment.
       ```shell
       go install golang.org/x/tools/go/analysis/passes/fieldalignment/cmd/fieldalignment@latest
       ```
-   - [pre-commit](https://pre-commit.com/#install):
+
+    - [pre-commit](https://pre-commit.com/#install):
 
      ```shell
      brew install pre-commit
      ```
+
      and then run
+
      ```shell
      pre-commit install
      ```
+
      in the project root directory to install the git hooks.
 
 2. [Fork the project repository](https://github.com/nginxinc/nginx-kubernetes-gateway/fork)
@@ -38,6 +42,7 @@ Follow these steps to set up your development environment.
    git clone https://github.com/<YOUR-USERNAME>/nginx-kubernetes-gateway.git
    cd nginx-kubernetes-gateway
    ```
+
    ```makefile
    make deps
    ```

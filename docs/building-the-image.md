@@ -3,6 +3,7 @@
 ## Prerequisites
 
 Before you can build the NGINX Kubernetes Gateway, make sure you have the following software installed on your machine:
+
 - [git](https://git-scm.com/)
 - [GNU Make](https://www.gnu.org/software/software.html)
 - [Docker](https://www.docker.com/) v18.09+
@@ -22,7 +23,8 @@ Before you can build the NGINX Kubernetes Gateway, make sure you have the follow
    make PREFIX=myregistry.example.com/nginx-kubernetes-gateway container
    ```
 
-   Set the `PREFIX` variable to the name of the registry you'd like to push the image to. By default, the image will be named `nginx-kubernetes-gateway:edge`.
+   Set the `PREFIX` variable to the name of the registry you'd like to push the image to. By default, the image will be
+   named `nginx-kubernetes-gateway:edge`.
 
 1. Push the image to your container registry:
 

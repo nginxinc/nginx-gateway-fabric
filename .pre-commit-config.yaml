@@ -48,5 +48,12 @@ repos:
       - id: golangci-lint
         args: [--new-from-patch=/tmp/diff.patch]
 
+    # Rules are in .markdownlint-cli2.yaml file
+    # See https://github.com/DavidAnson/markdownlint/blob/main/doc/Rules.md for rule descriptions
+  - repo: https://github.com/DavidAnson/markdownlint-cli2
+    rev: v0.8.1
+    hooks:
+    - id: markdownlint-cli2-fix
+
 ci:
-  skip: [golang-diff, golangci-lint, prettier]
+  skip: [golang-diff, golangci-lint, prettier, markdownlint-cli2-fix]

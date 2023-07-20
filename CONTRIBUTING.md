@@ -3,7 +3,7 @@
 The following is a set of guidelines for contributing to NGINX Kubernetes Gateway. We really appreciate that you are
 considering contributing!
 
-#### Table Of Contents
+## Table Of Contents
 
 [Ask a Question](#ask-a-question)
 
@@ -11,8 +11,8 @@ considering contributing!
 
 [Contributing](#contributing)
 
-* [Issues and Discussions](#issues-and-discussions)
-* [Development Guide](#development-guide)
+- [Issues and Discussions](#issues-and-discussions)
+- [Development Guide](#development-guide)
 
 [Code of Conduct](CODE_OF_CONDUCT.md)
 
@@ -33,15 +33,15 @@ Follow our [Installation Instructions](/docs/installation.md) to get the NGINX K
 
 ### Project Structure
 
-* NGINX Kubernetes Gateway is written in Go and uses the open source NGINX software as the data plane.
-* The project follows a standard Go project layout
-    * The main code is found at `cmd/gateway/`
-    * The internal code is found at `internal/`
-    * Build files for Docker are found under `build/`
-    * Deployment yaml files are found at `deploy/`
-    * External APIs, clients, and SDKs can be found under `pkg/`
-* We use [Go Modules](https://github.com/golang/go/wiki/Modules) for managing dependencies.
-* We use [Ginkgo](https://onsi.github.io/ginkgo/) and [Gomega](https://onsi.github.io/gomega/) for our BDD style unit
+- NGINX Kubernetes Gateway is written in Go and uses the open source NGINX software as the data plane.
+- The project follows a standard Go project layout
+  - The main code is found at `cmd/gateway/`
+  - The internal code is found at `internal/`
+  - Build files for Docker are found under `build/`
+  - Deployment yaml files are found at `deploy/`
+  - External APIs, clients, and SDKs can be found under `pkg/`
+- We use [Go Modules](https://github.com/golang/go/wiki/Modules) for managing dependencies.
+- We use [Ginkgo](https://onsi.github.io/ginkgo/) and [Gomega](https://onsi.github.io/gomega/) for our BDD style unit
   tests.
 
 ## Contributing

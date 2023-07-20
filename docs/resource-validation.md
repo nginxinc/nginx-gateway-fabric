@@ -23,7 +23,8 @@ A Gateway API resource (a new resource or an update for the existing one) is val
 To confirm that a resource is valid and accepted by NKG, check that the `Accepted` condition in the resource status
 has the Status field set to `True`. For example, in a status of a valid HTTPRoute, if NKG accepts a parentRef,
 the status of that parentRef will look like this:
-```
+
+```text
 Status:
   Parents:
     Conditions:
@@ -55,6 +56,7 @@ with the following error:
 ```shell
 kubectl apply -f coffee-route.yaml
 ```
+
 ```text
 The HTTPRoute "coffee" is invalid: spec.hostnames[0]: Invalid value: "cafe.!@#$%example.com": spec.hostnames[0] in body should match '^(\*\.)?[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
 ```
@@ -72,6 +74,7 @@ following error:
 ```shell
 kubectl apply -f prod-gateway.yaml
 ```
+
 ```text
 Error from server: error when creating "prod-gateway.yaml": admission webhook "validate.gateway.networking.k8s.io" denied the request: spec.listeners[1].hostname: Forbidden: should be empty for protocol TCP
 ```
@@ -91,6 +94,7 @@ hostname) with a Kubernetes event:
 ```shell
 kubectl describe gateway prod-gateway
 ```
+
 ```text
 . . .
 Events:
@@ -100,7 +104,6 @@ Events:
 ```
 
 > This validation step always runs and cannot be bypassed.
-
 > NKG will ignore any resources that fail the webhook validation, like in the example above.
 > If the resource previously existed, NKG will remove any existing NGINX configuration for that resource.
 
@@ -108,14 +111,14 @@ Events:
 
 This step catches the following cases of invalid values:
 
-* Valid values from the Gateway API perspective but not supported by NKG yet. For example, a feature in an
+- Valid values from the Gateway API perspective but not supported by NKG yet. For example, a feature in an
   HTTPRoute routing rule. Note: for the list of supported features,
   see [Gateway API Compatibility](gateway-api-compatibility.md) doc.
-* Valid values from the Gateway API perspective, but invalid for NGINX, because NGINX has stricter validation
+- Valid values from the Gateway API perspective, but invalid for NGINX, because NGINX has stricter validation
   requirements for certain fields. Such values will cause NGINX to fail to reload or operate erroneously.
-* Invalid values (both from the Gateway API and NGINX perspectives) that were not rejected because Step 1 was bypassed.
+- Invalid values (both from the Gateway API and NGINX perspectives) that were not rejected because Step 1 was bypassed.
   Similarly to the previous case, such values will cause NGINX to fail to reload or operate erroneously.
-* Malicious values that inject unrestricted NGINX config into the NGINX configuration (similar to an SQL injection
+- Malicious values that inject unrestricted NGINX config into the NGINX configuration (similar to an SQL injection
   attack).
 
 Below is an example of how NGK rejects an invalid resource. The validation error is reported via the status:
@@ -123,6 +126,7 @@ Below is an example of how NGK rejects an invalid resource. The validation error
 ```shell
 kubectl describe httproutes.gateway.networking.k8s.io coffee
 ```
+
 ```text
 . . .
 Status:

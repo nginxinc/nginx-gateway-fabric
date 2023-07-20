@@ -5,7 +5,8 @@ practices to ensure a successful feature development process.
 
 > **Note**
 >
-> If you’d like to implement a new feature, please open a discussion about the feature before creating an issue or opening a PR.
+> If you’d like to implement a new feature, please open a discussion about the feature
+> before creating an issue or opening a PR.
 
 1. **Assign yourself to the GitHub issue for the feature**: Each feature must have a corresponding GitHub issue to track
    its progress.
@@ -57,7 +58,8 @@ practices to ensure a successful feature development process.
     number. For example, Fix supported gateway conditions in compatibility doc (#674).
     > **Note**:
     When you squash commits, make sure to not include any commit messages related to the code review
-    (for example, Fixed a typo). If you changed the code as a result of the code review in way that the original commit message no longer describes it well, make sure to update the message.
+    (for example, Fixed a typo). If you changed the code as a result of the code review in way that the
+    > original commit message no longer describes it well, make sure to update the message.
 
 ## Fixing a Bug
 

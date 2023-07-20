@@ -26,21 +26,21 @@ its validity, which is important for the following reasons:
 
 To help the implementations with the validation, the Gateway API already includes:
 
-* *The OpenAPI scheme with validation rules in the Gateway API CRDs*. It enforces the structure (for example, the field
+- *The OpenAPI scheme with validation rules in the Gateway API CRDs*. It enforces the structure (for example, the field
   X must be a string) and the contents of the fields (for example, field Y only allows values 'a' and 'b').
   Additionally, it enforces the limits like max lengths on field values. Note:
   Kubernetes API server enforces this validation. To bypass it, a user needs to change the CRDs.
-* *The webhook validation*. This validation is written in go and run as part of the webhook, which is included in the
+- *The webhook validation*. This validation is written in go and run as part of the webhook, which is included in the
   Gateway API installation files. The validation covers additional logic, not possible to implement in the CRDs. It does
   not repeat the validation from the CRDs. Note: a user can bypass this validation if the webhook is not installed.
 
 However, the built-in validation rules do not cover all validation needs of NKG:
 
-* The rules are not enough for NGINX. For example, the validation rule for the
+- The rules are not enough for NGINX. For example, the validation rule for the
   `value` of the path in a path-based routing rule allows symbols like `;`, `{`
   and `}`, which can break NGINX configuration for the
   corresponding [location](https://nginx.org/en/docs/http/ngx_http_core_module.html#location) block.
-* The rules don't cover unsupported field cases. For example, the webhook does not know which filters are implemented by
+- The rules don't cover unsupported field cases. For example, the webhook does not know which filters are implemented by
   NKG, thus it cannot generate an appropriate error for NKG.
 
 Additionally, as mentioned in [GEP-922](https://gateway-api.sigs.k8s.io/geps/gep-922/#implementers),
@@ -53,9 +53,9 @@ Design a validation mechanism for Gateway API resources.
 
 ### Personas
 
-* *Cluster admin* who installs Gateway API (the CRDs and Webhook), installs NKG, creates Gateway and GatewayClass
+- *Cluster admin* who installs Gateway API (the CRDs and Webhook), installs NKG, creates Gateway and GatewayClass
   resources.
-* *Application developer* who creates HTTPRoutes and other routes.
+- *Application developer* who creates HTTPRoutes and other routes.
 
 ### User Stories
 
@@ -66,16 +66,16 @@ Design a validation mechanism for Gateway API resources.
 
 ### Goals
 
-* Ensure that NKG continues to work and/or fails predictably in the face of invalid input.
-* Ensure that both cluster admin and application developers can see the validation errors reported about the resource
+- Ensure that NKG continues to work and/or fails predictably in the face of invalid input.
+- Ensure that both cluster admin and application developers can see the validation errors reported about the resource
   they create (own).
-* For the best UX, minimize the feedback loop: users should be able to see most of the validation errors reported by a
+- For the best UX, minimize the feedback loop: users should be able to see most of the validation errors reported by a
   Kubernetes API server during a CRUD operation on a resource.
-* Ensure that the validation mechanism conforms to the Gateway API spec.
+- Ensure that the validation mechanism conforms to the Gateway API spec.
 
 ### Non-Goals
 
-* Validation of non-Gateway API resources: Secrets, EndpointSlices. (For example, a TLS Secret resource might include a
+- Validation of non-Gateway API resources: Secrets, EndpointSlices. (For example, a TLS Secret resource might include a
   non-valid TLS cert that will make NGINX fail to reload).
 
 ## Design
@@ -95,17 +95,17 @@ validation in our code.
 
 If a resource is invalid:
 
-* NKG will not process it -- it will treat it as if the resource didn't exist. This also means that if the resource was
+- NKG will not process it -- it will treat it as if the resource didn't exist. This also means that if the resource was
   updated from a valid to an invalid state, NKG will also ignore any previous valid state. For example, it will remove
   the generation configuration for an HTTPRoute resource.
-* NKG will report the validation error as a
+- NKG will report the validation error as a
   Warning [Event](https://kubernetes.io/docs/reference/kubernetes-api/cluster-resources/event-v1/)
   for that resource. The Event message will describe the error and explain that the resource was ignored. We chose to
   report an Event instead of updating the status, because to update the status, NKG first needs to look inside the
   resource to determine whether it belongs to it or not. However, since the webhook validation applies to all parts of
   the spec of resource, it means NKG has to look inside the invalid resource and parse potentially invalid parts. To
   avoid that, NKG will report an Event. The owner of the resource will be able to see the Event.
-* NGK will also report the validation error in the NGK logs.
+- NGK will also report the validation error in the NGK logs.
 
 ### NKG-specific validation
 
@@ -139,9 +139,9 @@ following methods in order of their appearance in the table.
 
 Notes:
 
-* The amount and the extent of the validation should allow multiple application developers to share a single NKG (User
+- The amount and the extent of the validation should allow multiple application developers to share a single NKG (User
   story 1).
-* We expect that most of the validation problems will be caught by CRD and webhook validation and reported quickly to
+- We expect that most of the validation problems will be caught by CRD and webhook validation and reported quickly to
   users as a response to a Kubernetes API call (User story 2).
 
 ### Evolution
@@ -171,9 +171,9 @@ to release a new version like supporting a new field. See also
 
 NGK processes two kinds of transactions:
 
-* *Data plane transactions*. NGINX handles requests from clients that want to connect to applications exposed through
+- *Data plane transactions*. NGINX handles requests from clients that want to connect to applications exposed through
   NKG.
-* *Control plane transactions*. NKG handles configuration requests (ex. a new HTTPRoute is created) from NKG users.
+- *Control plane transactions*. NKG handles configuration requests (ex. a new HTTPRoute is created) from NKG users.
 
 Invalid user input makes NGINX config invalid, which means NGINX will fail to reload, which will prevent any new control
 plane transactions until that invalid value is fixed or removed. The proposed design addresses this issue by preventing

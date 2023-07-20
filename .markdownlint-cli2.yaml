@@ -1,0 +1,23 @@
+# Rule configuration.
+# For rule descriptions and how to fix: https://github.com/DavidAnson/markdownlint/tree/main#rules--aliases
+config:
+  ul-style:
+    style: dash
+  no-hard-tabs: false
+  no-multiple-blanks: false
+  line-length:
+    line_length: 120
+    code_blocks: false
+    tables: false
+  blanks-around-headers: false
+  no-duplicate-heading:
+    siblings_only: true
+  no-inline-html: false
+  no-bare-urls: false
+  no-emphasis-as-heading: false
+  first-line-h1: false
+  code-block-style: false
+
+# Define glob expressions to ignore
+ignores:
+  - ".github/"

@@ -7,25 +7,24 @@ lifecycle.)
 
 1. New issue created by community member.
 
-
 2. Assign issue owner: All new issues are assigned an owner on the NGINX engineering team. This owner shepherds the
    issue through the subsequent stages in the issue lifecycle.
 
-
 3. Determine issue type: This is done with automation where possible, and manually by the owner where necessary. The
    associated label is applied to the issue.
-   #### Possible Issue Types
-   `needs more info`: The owner should use the issue to request information from the creator. If we don't receive the
-   needed information within 7 days, automation closes the issue.
 
-   `bug`: The implementation of a feature is not correct.
+   Possible Issue Types:
 
-   `enhancement`:  An enhancement, tackling technical debt, documentation changes, or improving existing features.
+   - `needs more info`: The owner should use the issue to request information from the creator. If we don't receive the
+         needed information within 7 days, automation closes the issue.
 
-   `enhancement-proposal`: Enhancements that require an [Enhancement Proposal](/docs/proposals/README.md).
+   - `bug`: The implementation of a feature is not correct.
 
-   `question`: The owner converts the issue to a github discussion and engages the creator.
+   - `enhancement`:  An enhancement, tackling technical debt, documentation changes, or improving existing features.
 
+   - `enhancement-proposal`: Enhancements that require an [Enhancement Proposal](/docs/proposals/README.md).
+
+   - `question`: The owner converts the issue to a github discussion and engages the creator.
 
 4. Determine milestone: The owner, in collaboration with the wider team (product management & engineering), determines
    what milestone to attach to an issue. Generally, milestones correspond to product releases - however there are two
@@ -42,7 +41,6 @@ lifecycle.)
       the issue and wants the community to weigh in before we make our final decision.
 
    `backlog` issues can be labeled by the owner as `help wanted` and/or `good first issue` as appropriate.
-
 
 5. Promotion of `backlog candidate` issue to `backlog` issue: If an issue labelled `backlog candidate` receives more
    than 30 upvotes within 60 days, we promote the issue by applying the `backlog` label. While issues promoted in this

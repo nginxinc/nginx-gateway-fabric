@@ -345,6 +345,7 @@ Panics should be used in the following cases:
    example, if the wrong type is passed or a go template is passed an invalid value.
 
 When using panics, pass an error as the argument. For example:
+
 ```go
 panic(fmt.Errorf("unknown event type %T", e))
 ```
@@ -370,9 +371,9 @@ Below are some general guidelines to follow for writing concurrent code:
   reentrant, you _must_ document that in the comments. Make it clear and obvious.
 - **Don't leak goroutines**: Goroutines are not garbage collected by the runtime, so every goroutine you start must also
   be cleaned up. Here's a couple of related principles:
-    - "If a goroutine is responsible for creating a goroutine, it is also responsible for ensuring it can stop the
+  - "If a goroutine is responsible for creating a goroutine, it is also responsible for ensuring it can stop the
       goroutine." -- [Concurrency in Go][cig]
-    - "Before you start a goroutine, always know when, and how, it will stop." -- [Concurrency Made Easy][cheney].
+  - "Before you start a goroutine, always know when, and how, it will stop." -- [Concurrency Made Easy][cheney].
 - **Blocking operations within a goroutine must be preemptable**: This allows goroutines to be cancelled and prevents
   goroutine leaks.
 - **Leverage contexts**: Contexts allow you to enforce deadlines and send cancellation signals to multiple goroutines.
@@ -423,7 +424,7 @@ These recommendations are generally related to performance and efficiency but wi
 
 The `-gcflags '-m'` can be used to analyze escape analysis and estimate logging costs.
 
-### Reduce the number of stored pointers. Structures should store instances whenever possible.
+### Reduce the number of stored pointers. Structures should store instances whenever possible
 
 DO NOT use pointers to avoid copying. Pass by value. Ancillary benefit is reduction of nil checks. Fewer pointers helps
 garbage collection and can indicate memory regions that can be skipped. It reduces de-referencing and bounds checking in

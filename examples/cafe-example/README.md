@@ -1,6 +1,7 @@
 # Example
 
-In this example we deploy NGINX Kubernetes Gateway, a simple web application, and then configure NGINX Kubernetes Gateway to route traffic to that application using HTTPRoute resources.
+In this example we deploy NGINX Kubernetes Gateway, a simple web application, and then configure NGINX Gateway to route
+traffic to that application using HTTPRoute resources.
 
 ## Running the Example
 
@@ -10,13 +11,13 @@ In this example we deploy NGINX Kubernetes Gateway, a simple web application, an
 
 1. Save the public IP address of NGINX Kubernetes Gateway into a shell variable:
 
-   ```
+   ```text
    GW_IP=XXX.YYY.ZZZ.III
    ```
 
 1. Save the port of NGINX Kubernetes Gateway:
 
-   ```
+   ```text
    GW_PORT=<port number>
    ```
 
@@ -33,6 +34,7 @@ In this example we deploy NGINX Kubernetes Gateway, a simple web application, an
    ```shell
    kubectl -n default get pods
    ```
+
    ```text
    NAME                      READY   STATUS    RESTARTS   AGE
    coffee-6f4b79b975-2sb28   1/1     Running   0          12s
@@ -62,6 +64,7 @@ To get coffee:
 ```shell
 curl --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/coffee
 ```
+
 ```text
 Server address: 10.12.0.18:80
 Server name: coffee-7586895968-r26zn
@@ -72,6 +75,7 @@ To get tea:
 ```shell
 curl --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/tea
 ```
+
 ```text
 Server address: 10.12.0.19:80
 Server name: tea-7cd44fcb4d-xfw2x
@@ -88,9 +92,11 @@ For example, run the following command to open your editor and change the HTTPRo
 kubectl -n default edit httproute tea
 ```
 
-Once changed, update the `curl` command above for the `tea` service to use the new hostname. Traffic should still pass successfully.
+Once changed, update the `curl` command above for the `tea` service to use the new hostname. Traffic should still pass
+successfully.
 
-Likewise, if you change the Gateway listener's hostname to something else, you can prevent the HTTPRoute's traffic from passing successfully.
+Likewise, if you change the Gateway listener's hostname to something else, you can prevent the HTTPRoute's traffic from
+passing successfully.
 
 For example, run the following to open your editor and change the Gateway listener's hostname to `bar.example.com`:
 

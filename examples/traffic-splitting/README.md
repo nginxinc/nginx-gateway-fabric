@@ -1,7 +1,9 @@
 # Example
 
 In this example we will deploy NGINX Kubernetes Gateway and configure traffic splitting for a simple cafe application.
-We will use HTTPRoute resources to split traffic between two versions of the application -- `coffee-v1` and `coffee-v2`.
+We will use HTTPRoute resources to split traffic between two versions of the application -- `coffee-v1`
+and `coffee-v2`.
+
 
 ## Running the Example
 
@@ -11,13 +13,13 @@ We will use HTTPRoute resources to split traffic between two versions of the app
 
 1. Save the public IP address of NGINX Kubernetes Gateway into a shell variable:
 
-   ```
+   ```text
    GW_IP=XXX.YYY.ZZZ.III
    ```
 
 1. Save the port of NGINX Kubernetes Gateway:
 
-   ```
+   ```text
    GW_PORT=<port number>
    ```
 
@@ -34,6 +36,7 @@ We will use HTTPRoute resources to split traffic between two versions of the app
    ```shell
    kubectl -n default get pods
    ```
+
    ```text
    NAME                         READY   STATUS    RESTARTS   AGE
    coffee-v1-7c57c576b-rfjsh    1/1     Running   0          21m
@@ -54,9 +57,9 @@ We will use HTTPRoute resources to split traffic between two versions of the app
    kubectl apply -f cafe-route.yaml
    ```
 
-This HTTPRoute resource defines a route for the path `/coffee` that sends 80% of the requests to `coffee-v1` and 20% to `coffee-v2`.
-In this example, we use 80 and 20; however, the weights are calculated proportionally and do not need to sum to 100.
-For example, the weights of 8 and 2, 16 and 4, or 32 and 8 all evaluate to the same relative proportions.
+This HTTPRoute resource defines a route for the path `/coffee` that sends 80% of the requests to `coffee-v1` and 20%
+to `coffee-v2`. In this example, we use 80 and 20; however, the weights are calculated proportionally and do not need to
+sum to 100. For example, the weights of 8 and 2, 16 and 4, or 32 and 8 all evaluate to the same relative proportions.
 
 ## 4. Test the Application
 

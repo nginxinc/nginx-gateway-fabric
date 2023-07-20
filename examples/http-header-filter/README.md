@@ -11,13 +11,13 @@ headers to the request.
 
 1. Save the public IP address of NGINX Kubernetes Gateway into a shell variable:
 
-   ```
+   ```text
    GW_IP=XXX.YYY.ZZZ.III
    ```
 
 1. Save the port of NGINX Kubernetes Gateway:
 
-   ```
+   ```text
    GW_PORT=<port number>
    ```
 
@@ -34,6 +34,7 @@ headers to the request.
    ```shell
    kubectl -n default get pods
    ```
+
    ```text
    NAME                      READY   STATUS    RESTARTS   AGE
    headers-6f4b79b975-2sb28   1/1     Running   0          12s
@@ -63,6 +64,7 @@ is absent.
 ```shell
 curl -s --resolve echo.example.com:$GW_PORT:$GW_IP http://echo.example.com:$GW_PORT/headers -H "My-Cool-Header:my-client-value" -H "My-Overwrite-Header:dont-see-this"
 ```
+
 ```text
 Headers:
   header 'Accept-Encoding' is 'compress'

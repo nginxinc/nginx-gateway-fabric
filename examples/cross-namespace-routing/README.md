@@ -11,13 +11,13 @@ in a different namespace from our HTTPRoutes.
 
 1. Save the public IP address of NGINX Kubernetes Gateway into a shell variable:
 
-   ```
+   ```text
    GW_IP=XXX.YYY.ZZZ.III
    ```
 
 1. Save the port of NGINX Kubernetes Gateway:
 
-   ```
+   ```text
    GW_PORT=<port number>
    ```
 
@@ -34,6 +34,7 @@ in a different namespace from our HTTPRoutes.
    ```shell
    kubectl -n cafe get pods
    ```
+
    ```text
    NAME                      READY   STATUS    RESTARTS   AGE
    coffee-6f4b79b975-2sb28   1/1     Running   0          12s
@@ -53,11 +54,13 @@ in a different namespace from our HTTPRoutes.
    ```shell
    kubectl apply -f cafe-routes.yaml
    ```
+
 1. Create the ReferenceGrant:
 
    ```shell
    kubectl apply -f reference-grant.yaml
    ```
+
    This ReferenceGrant allows all HTTPRoutes in the `default` Namespace to reference all Services in the `cafe`
    Namespace.
 
@@ -70,6 +73,7 @@ To get coffee:
 ```shell
 curl --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/coffee
 ```
+
 ```text
 Server address: 10.12.0.18:80
 Server name: coffee-7586895968-r26zn
@@ -80,6 +84,7 @@ To get tea:
 ```shell
 curl --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/tea
 ```
+
 ```text
 Server address: 10.12.0.19:80
 Server name: tea-7cd44fcb4d-xfw2x
@@ -95,9 +100,11 @@ kubectl delete -f reference-grant.yaml
 ```
 
 Now, if we try to access the application over HTTP, we will get an internal server error:
+
 ```shell
 curl --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/tea
 ```
+
 ```text
 <html>
 <head><title>500 Internal Server Error</title></head>
@@ -113,6 +120,7 @@ You can also check the conditions of the HTTPRoutes `coffee` and `tea` to verify
 ```shell
 kubectl describe httproute coffee
 ```
+
 ```text
 Condtions:
       Message:               Backend ref to Service cafe/coffee not permitted by any ReferenceGrant
@@ -126,6 +134,7 @@ Condtions:
 ```shell
 kubectl describe httproute tea
 ```
+
 ```text
 Condtions:
       Message:               Backend ref to Service cafe/tea not permitted by any ReferenceGrant

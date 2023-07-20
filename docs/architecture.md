@@ -3,8 +3,8 @@
 This document provides an overview of the architecture and design principles of the NGINX Kubernetes Gateway. The target
 audience includes the following groups:
 
-* *Cluster Operators* who would like to know how the software works and also better understand how it can fail.
-* *Developers* who would like to [contribute][contribute] to the project.
+- *Cluster Operators* who would like to know how the software works and also better understand how it can fail.
+- *Developers* who would like to [contribute][contribute] to the project.
 
 We assume that the reader is familiar with core Kubernetes concepts, such as Pods, Deployments, Services, and Endpoints.
 Additionally, we recommend reading [this blog post][blog] for an overview of the NGINX architecture.
@@ -35,25 +35,25 @@ internet:
 
 The figure shows:
 
-* A *Kubernetes cluster*.
-* Users *Cluster Operator*, *Application Developer A* and *Application Developer B*. These users interact with the
+- A *Kubernetes cluster*.
+- Users *Cluster Operator*, *Application Developer A* and *Application Developer B*. These users interact with the
 cluster through the Kubernetes API by creating Kubernetes objects.
-* *Clients A* and *Clients B* connect to *Applications A* and *B*, respectively. This applications have been deployed by
+- *Clients A* and *Clients B* connect to *Applications A* and *B*, respectively. This applications have been deployed by
 the corresponding users.
-* The *NKG Pod*, [deployed by *Cluster Operator*](/docs/installation.md) in the Namespace *nginx-gateway*. This Pod
+- The *NKG Pod*, [deployed by *Cluster Operator*](/docs/installation.md) in the Namespace *nginx-gateway*. This Pod
 consists of two containers: `NGINX` and `NKG`. The *NKG* container interacts with the Kubernetes API to retrieve the
 most up-to-date Gateway API resources created within the cluster. It then dynamically configures the *NGINX*
 container based on these resources, ensuring proper alignment between the cluster state and the NGINX configuration.
-* *Gateway AB*, created by *Cluster Operator*, requests a point where traffic can be translated to Services within the
+- *Gateway AB*, created by *Cluster Operator*, requests a point where traffic can be translated to Services within the
 cluster. This Gateway includes a listener with a hostname `*.example.com`. Application Developers have the ability to
 attach their application's routes to this Gateway if their application's hostname matches `*.example.com`.
-* *Application A* with two Pods deployed in the *applications* Namespace by *Application Developer A*. To expose the
+- *Application A* with two Pods deployed in the *applications* Namespace by *Application Developer A*. To expose the
 application to its clients (*Clients A*) via the host `a.example.com`, *Application Developer A* creates *HTTPRoute A*
 and attaches it to `Gateway AB`.
-* *Application B* with one Pod deployed in the *applications* Namespace by *Application Developer B*. To expose the
+- *Application B* with one Pod deployed in the *applications* Namespace by *Application Developer B*. To expose the
 application to its clients (*Clients B*) via the host `b.example.com`, *Application Developer B* creates *HTTPRoute B*
 and attaches it to `Gateway AB`.
-* *Public Endpoint*, which fronts the *NKG* Pod. This is typically a TCP load balancer (cloud, software, or hardware)
+- *Public Endpoint*, which fronts the *NKG* Pod. This is typically a TCP load balancer (cloud, software, or hardware)
 or a combination of such load balancer with a NodePort Service. *Clients A* and *B* connect to their applications via
 the *Public Endpoint*.
 

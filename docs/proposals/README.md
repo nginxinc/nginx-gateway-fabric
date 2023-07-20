@@ -16,9 +16,9 @@ You should only write an Enhancement Proposal if a maintainer has requested one 
 requests should start as an idea on [GitHub Discussions][discussion]. Not all enhancement requests will require an
 Enhancement Proposal. For example, here are some examples of requests that may not need an Enhancement Proposal:
 
-* Gateway API fields. However, some larger Gateway API fields may require Enhancement Proposals if they require
+- Gateway API fields. However, some larger Gateway API fields may require Enhancement Proposals if they require
   significant changes to the architecture of the code.
-* Small changes (validation, documentation, fixups). It is always possible that the maintainers will determine a "small"
+- Small changes (validation, documentation, fixups). It is always possible that the maintainers will determine a "small"
   change ends up requiring a Enhancement Proposal.
 
 [discussion]: https://github.com/nginxinc/nginx-kubernetes-gateway/discussions
@@ -87,16 +87,16 @@ with the changes and update the status field of the corresponding Enhancement Pr
 Each Enhancement Proposal has a status field that defines its current state. Each transition will require a PR to update
 the Enhancement Proposal.
 
-* **Provisional:** The goals described by this Enhancement Proposal have consensus but implementation details have not
+- **Provisional:** The goals described by this Enhancement Proposal have consensus but implementation details have not
   been agreed to yet.
-* **Implementable:** The goals and implementation details described by this Enhancement Proposal have consensus but have
+- **Implementable:** The goals and implementation details described by this Enhancement Proposal have consensus but have
   not been fully implemented yet.
-* **Completed:** This Enhancement Proposal has been implemented.
+- **Completed:** This Enhancement Proposal has been implemented.
 
 Although less common, some Enhancement Proposals may end up in one of the following states:
 
-* **Deferred:** We do not currently have bandwidth to handle this Enhancement Proposal, it may be revisited in the
+- **Deferred:** We do not currently have bandwidth to handle this Enhancement Proposal, it may be revisited in the
   future.
-* **Rejected:** This proposal was considered but ultimately rejected.
-* **Replaced:** This proposal was considered but ultimately replaced by a newer proposal.
-* **Withdrawn:** This proposal was considered but ultimately withdrawn by the author.
+- **Rejected:** This proposal was considered but ultimately rejected.
+- **Replaced:** This proposal was considered but ultimately replaced by a newer proposal.
+- **Withdrawn:** This proposal was considered but ultimately withdrawn by the author.
