@@ -56,4 +56,4 @@ repos:
     - id: markdownlint-cli2-fix
 
 ci:
-  skip: [golang-diff, golangci-lint, prettier]
+  skip: [golang-diff, golangci-lint, prettier, markdownlint-cli2-fix]
