@@ -29,9 +29,11 @@ install-nkg-local-no-build     Install NKG from local build with provisioner on 
 load-images                    Load NKG and NGINX containers on configured kind cluster
 preload-nginx-container        Preload NGINX container on configured kind cluster
 prepare-nkg-dependencies       Install NKG dependencies on configured kind cluster
+reset-go-modules               Reset the go modules changes
 run-conformance-tests          Run conformance tests
 undo-image-update              Undo the NKG image name and tag in deployment manifest
 uninstall-nkg                  Uninstall NKG on configured kind cluster
+update-go-modules              Update the gateway-api go modules to latest main version
 update-nkg-manifest            Update the NKG deployment manifest image name and imagePullPolicy
 ```
 
@@ -43,6 +45,7 @@ update-nkg-manifest            Update the NKG deployment manifest image name and
 | PREFIX                  | conformance-test-runner                                                                                       | The prefix for the conformance test image                                                                                 |
 | NKG_TAG                 | edge                                                                                                          | The tag for the locally built NKG image                                                                                   |
 | NKG_PREFIX              | nginx-kubernetes-gateway                                                                                      | The prefix for the locally built NKG image                                                                                |
+| GW_API_VERSION          | 0.7.1                                                                                                         | Tag for the Gateway API version to check out. Set to `main` to get the latest version                                     |
 | KIND_KUBE_CONFIG        | ~/.kube/kind/config                                                                                           | The location of the kubeconfig                                                                                            |
 | GATEWAY_CLASS           | nginx                                                                                                         | The gateway class that should be used for the tests                                                                       |
 | SUPPORTED_FEATURES      | HTTPRoute,HTTPRouteQueryParamMatching, HTTPRouteMethodMatching,HTTPRoutePortRedirect, HTTPRouteSchemeRedirect | The supported features that should be tested by the conformance tests. Ensure the list is comma separated with no spaces. |
@@ -57,6 +60,15 @@ make create-kind-cluster
 ```
 
 ### Step 2 - Install Nginx Kubernetes Gateway to configured kind cluster
+
+> Note: If you want to run the latest conformance tests from the Gateway API `main` branch, set the following
+> environment variable before deploying NKG:
+
+```bash
+ export GW_API_VERSION=main
+```
+
+> Otherwise, the latest stable version will be used by default.
 
 #### *Option 1* Build and install Nginx Kubernetes Gateway from local to configured kind cluster
 
@@ -96,6 +108,24 @@ make install-nkg-edge
 
 ### Step 3 - Build conformance test runner image
 
+> Note: If you want to run the latest conformance tests from the Gateway API `main` branch, run the following
+> make command to update the Go modules to `main`:
+
+ ```makefile
+ make update-go-modules
+ ```
+
+> You can also point to a specific fork/branch by running:
+
+ ```bash
+ go mod edit -replace=sigs.k8s.io/gateway-api=<your-fork>@<your-branch>
+ go mod download
+ go mod verify
+ go mod tidy
+ ```
+
+> Otherwise, the latest stable version will be used by default.
+
 ```makefile
 make build-test-runner-image
 ```
@@ -116,7 +146,14 @@ make cleanup-conformance-tests
 make uninstall-nkg
 ```
 
-### Step 6 - Revert changes to the NKG deployment manifest
+### Step 6 - Revert changes to Go modules
+**Optional** Not required if you aren't running the `main` Gateway API tests.
+
+```makefile
+make reset-go-modules
+```
+
+### Step 7 - Revert changes to the NKG deployment manifest
 **Optional** Not required if using `edge` image
 **Warning**: `make undo-image-update` will hard reset changes to the deploy/manifests/deployment.yaml file!
 
@@ -124,7 +161,7 @@ make uninstall-nkg
 make undo-image-update
 ```
 
-### Step 7 - Delete kind cluster
+### Step 8 - Delete kind cluster
 
 ```makefile
 make delete-kind-cluster

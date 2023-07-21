@@ -1,5 +1,6 @@
 NKG_TAG = edge
 NKG_PREFIX = nginx-kubernetes-gateway
+GW_API_VERSION ?= 0.7.1
 GATEWAY_CLASS = nginx
 SUPPORTED_FEATURES = HTTPRoute,HTTPRouteQueryParamMatching,HTTPRouteMethodMatching,HTTPRoutePortRedirect,HTTPRouteSchemeRedirect,GatewayClassObservedGenerationBump
 KIND_KUBE_CONFIG=$${HOME}/.kube/kind/config
@@ -12,6 +13,11 @@ NGINX_IMAGE=$(shell yq '.spec.template.spec.containers[1].image as $$nginx_ver |
 .PHONY: help
 help: Makefile ## Display this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "; printf "Usage:\n\n    make \033[36m<target>\033[0m\n\nTargets:\n\n"}; {printf "    \033[36m%-30s\033[0m %s\n", $$1, $$2}'
+
+.PHONY: update-go-modules
+update-go-modules: ## Update the gateway-api go modules to latest main version
+	go get -u sigs.k8s.io/gateway-api@main
+	go mod tidy
 
 .PHONY: build-test-runner-image
 build-test-runner-image: ## Build conformance test runner image
@@ -42,7 +48,7 @@ load-images: preload-nginx-container ## Load NKG and NGINX containers on configu
 
 .PHONY: prepare-nkg-dependencies
 prepare-nkg-dependencies: ## Install NKG dependencies on configured kind cluster
-	kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v0.7.1/standard-install.yaml
+	./scripts/install-gateway.sh $(GW_API_VERSION)
 	kubectl wait --for=condition=available --timeout=60s deployment gateway-api-admission-server -n gateway-system
 	kubectl apply -f ../deploy/manifests/namespace.yaml
 	kubectl create configmap njs-modules --from-file=../internal/mode/static/nginx/modules/src/httpmatches.js -n nginx-gateway
@@ -83,7 +89,7 @@ cleanup-conformance-tests: ## Clean up conformance tests fixtures
 
 .PHONY: uninstall-nkg
 uninstall-nkg: ## Uninstall NKG on configured kind cluster
-	kubectl delete -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v0.7.1/standard-install.yaml
+	./scripts/uninstall-gateway.sh $(GW_API_VERSION)
 	kubectl delete -f ../deploy/manifests/rbac.yaml
 	kubectl delete -f ../deploy/manifests/namespace.yaml
 	kubectl delete clusterrole nginx-gateway-provisioner
@@ -92,6 +98,10 @@ uninstall-nkg: ## Uninstall NKG on configured kind cluster
 .PHONY: undo-image-update
 undo-image-update: ## Undo the NKG image name and tag in deployment manifest
 	git checkout -- $(NKG_DEPLOYMENT_MANIFEST)
+
+.PHONY: reset-go-modules
+reset-go-modules: ## Reset the go modules changes
+	git checkout -- ../go.mod ../go.sum
 
 .PHONY: delete-kind-cluster
 delete-kind-cluster: ## Delete kind cluster
