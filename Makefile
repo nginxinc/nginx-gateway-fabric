@@ -6,6 +6,11 @@ MANIFEST_DIR = $(shell pwd)/deploy/manifests
 NJS_DIR = $(shell pwd)/internal/mode/static/nginx/modules/src
 CHART_DIR = $(shell pwd)/deploy/helm-chart
 
+# go build flags - should not be overridden by the user
+GO_LINKER_FlAGS_VARS = -X main.version=${VERSION} -X main.commit=${GIT_COMMIT} -X main.date=${DATE}
+GO_LINKER_FLAGS_OPTIMIZATIONS = -s -w
+GO_LINKER_FLAGS = $(GO_LINKER_FLAGS_OPTIMIZATIONS) $(GO_LINKER_FlAGS_VARS)
+
 # variables that can be overridden by the user
 PREFIX ?= nginx-kubernetes-gateway## The name of the image. For example, nginx-kubernetes-gateway
 TAG ?= $(VERSION:v%=%)## The tag of the image. For example, 0.3.0
@@ -31,7 +36,7 @@ container: build ## Build the container
 build: ## Build the binary
 ifeq (${TARGET},local)
 	@go version || (code=$$?; printf "\033[0;31mError\033[0m: unable to build locally\n"; exit $$code)
-	CGO_ENABLED=0 GOOS=linux GOARCH=$(ARCH) go build -trimpath -a -ldflags "-s -w -X main.version=${VERSION} -X main.commit=${GIT_COMMIT} -X main.date=${DATE}" -o $(OUT_DIR)/gateway github.com/nginxinc/nginx-kubernetes-gateway/cmd/gateway
+	CGO_ENABLED=0 GOOS=linux GOARCH=$(ARCH) go build -trimpath -a -ldflags "$(GO_LINKER_FLAGS)" $(ADDITIONAL_GO_BUILD_FLAGS) -o $(OUT_DIR)/gateway github.com/nginxinc/nginx-kubernetes-gateway/cmd/gateway
 endif
 
 .PHONY: build-goreleaser
@@ -89,6 +94,7 @@ unit-test: ## Run unit tests for the go code
 	go test ./... -race -coverprofile cover.out
 	go tool cover -html=cover.out -o cover.html
 
+.PHONY: njs-unit-test
 njs-unit-test: ## Run unit tests for the njs httpmatches module
 	docker run --rm -w /modules \
 		-v $(PWD)/internal/mode/static/nginx/modules:/modules/ \
@@ -103,15 +109,13 @@ generate-njs-yaml: ## Generate the njs-modules ConfigMap
 lint-helm: ## Run the helm chart linter
 	helm lint $(CHART_DIR)
 
-debug-build: ## Build binary with debug info, symbols, and no optimizations
-ifeq (${TARGET},local)
-	@go version || (code=$$?; printf "\033[0;31mError\033[0m: unable to build locally\n"; exit $$code)
-	CGO_ENABLED=0 GOOS=linux GOARCH=$(ARCH) go build -trimpath -a -gcflags "all=-N -l" -ldflags "-X main.version=${VERSION} -X main.commit=${GIT_COMMIT} -X main.date=${DATE}" -o $(OUT_DIR)/gateway github.com/nginxinc/nginx-kubernetes-gateway/cmd/gateway
-endif
+.PHONY: debug-build
+debug-build: GO_LINKER_FLAGS=$(GO_LINKER_FlAGS_VARS)
+debug-build: ADDITIONAL_GO_BUILD_FLAGS=-gcflags "all=-N -l"
+debug-build: build ## Build binary with debug info, symbols, and no optimizations
 
-debug-container: debug-build ## Build container with debug binary
-	@docker -v || (code=$$?; printf "\033[0;31mError\033[0m: there was a problem with Docker\n"; exit $$code)
-	docker build --platform linux/$(ARCH) $(strip $(DOCKER_BUILD_OPTIONS)) --target $(strip $(TARGET)) -f build/Dockerfile -t $(strip $(PREFIX)):$(strip $(TAG)) .
+.PHONY: debug-container
+debug-container: debug-build container ## Build container with debug binary
 
 .PHONY: dev-all
 dev-all: deps fmt njs-fmt vet lint unit-test njs-unit-test ## Run all the development checks
