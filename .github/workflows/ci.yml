@@ -27,6 +27,9 @@ concurrency:
 env:
   platforms: "linux/arm64, linux/amd64"
 
+permissions:
+  contents: read
+
 jobs:
   vars:
     name: Checks and variables
@@ -89,14 +92,22 @@ jobs:
           node-version: 18
       - run: npm --prefix ${{ github.workspace }}/internal/mode/static/nginx/modules install-ci-test
 
-  release:
-    name: Release
+  binary:
+    name: Build Binary
     runs-on: ubuntu-22.04
-    needs: [unit-tests, njs-unit-tests]
-    if: ${{ github.event_name == 'push' && github.ref != 'refs/heads/main' }}
+    needs: [vars, unit-tests, njs-unit-tests]
+    permissions:
+      contents: write # for goreleaser/goreleaser-action and lucacome/draft-release to create/update releases
     steps:
       - name: Checkout Repository
         uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+        with:
+          fetch-depth: 0
+
+      - name: Setup Golang Environment
+        uses: actions/setup-go@fac708d6674e30b6ba41289acaab6d4b75aa0753 # v4.0.1
+        with:
+          go-version-file: go.mod
 
       - name: Create/Update Draft
         uses: lucacome/draft-release@f6dc37dcdf44be100a649b72c62c628776750190 # v0.2.2
@@ -108,21 +119,7 @@ jobs:
           notes-header: |
             *Below is the auto-generated changelog, which includes all PRs that went into the release.
             For a shorter version that highlights only important changes, see [CHANGELOG.md](https://github.com/nginxinc/nginx-kubernetes-gateway/blob/{{version}}/CHANGELOG.md).*
-
-  binary:
-    name: Build Binary
-    runs-on: ubuntu-22.04
-    needs: vars
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
-        with:
-          fetch-depth: 0
-
-      - name: Setup Golang Environment
-        uses: actions/setup-go@fac708d6674e30b6ba41289acaab6d4b75aa0753 # v4.0.1
-        with:
-          go-version-file: go.mod
+        if: ${{ github.event_name == 'push' && github.ref != 'refs/heads/main' }}
 
       - name: Download Syft
         uses: anchore/sbom-action/download-syft@78fc58e266e87a38d4194b2137a3d4e9bcaf7ca1 # v0.14.3
@@ -151,6 +148,10 @@ jobs:
     name: Build Image
     runs-on: ubuntu-22.04
     needs: [vars, binary]
+    permissions:
+      contents: read # for docker/build-push-action to read repo content
+      security-events: write # for github/codeql-action/upload-sarif to upload SARIF results
+      packages: write # for docker/build-push-action to push to GHCR
     steps:
       - name: Checkout Repository
         uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
