@@ -6,7 +6,12 @@ This guide walks you through how to install NGINX Kubernetes Gateway on a generi
 
 - [kubectl](https://kubernetes.io/docs/tasks/tools/)
 
-## Deploy NGINX Kubernetes Gateway
+## Deploy NGINX Kubernetes Gateway using Helm
+
+To deploy NGINX Kubernetes Gateway using Helm, please follow the instructions on [this](/deploy/helm-chart/README.md)
+page.
+
+## Deploy NGINX Kubernetes Gateway from Manifests
 
 > Note: NGINX Kubernetes Gateway can only run in the `nginx-gateway` namespace.
 > This limitation will be addressed in the future releases.
@@ -33,7 +38,7 @@ This guide walks you through how to install NGINX Kubernetes Gateway on a generi
 1. Create the njs-modules ConfigMap:
 
     ```shell
-    kubectl create configmap njs-modules --from-file=internal/mode/static/nginx/modules/src/httpmatches.js -n nginx-gateway
+    kubectl apply -f deploy/manifests/njs-modules.yaml -n nginx-gateway
     ```
 
 1. Create the ConfigMap with the main NGINX configuration file:

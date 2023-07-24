@@ -2,12 +2,15 @@
 VERSION = edge
 GIT_COMMIT = $(shell git rev-parse HEAD || echo "unknown")
 DATE = $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
+MANIFEST_DIR = $(shell pwd)/deploy/manifests
+NJS_DIR = $(shell pwd)/internal/mode/static/nginx/modules/src
+CHART_DIR = $(shell pwd)/deploy/helm-chart
 
 # variables that can be overridden by the user
 PREFIX ?= nginx-kubernetes-gateway## The name of the image. For example, nginx-kubernetes-gateway
 TAG ?= $(VERSION:v%=%)## The tag of the image. For example, 0.3.0
 TARGET ?= local## The target of the build. Possible values: local and container
-KIND_KUBE_CONFIG_FOLDER = $${HOME}/.kube/kind## The folder where the kind kubeconfig is stored
+KIND_KUBE_CONFIG=$${HOME}/.kube/kind/config## The location of the kind kubeconfig
 OUT_DIR ?= $(shell pwd)/build/out## The folder where the binary will be stored
 ARCH ?= amd64## The architecture of the image and/or binary. For example: amd64 or arm64
 override DOCKER_BUILD_OPTIONS += --build-arg VERSION=$(VERSION) --build-arg GIT_COMMIT=$(GIT_COMMIT) --build-arg DATE=$(DATE)## The options for the docker build command. For example, --pull
@@ -56,7 +59,7 @@ deps: ## Add missing and remove unused modules, verify deps and download them to
 create-kind-cluster: ## Create a kind cluster
 	$(eval KIND_IMAGE=$(shell grep -m1 'FROM kindest/node' <conformance/tests/Dockerfile | awk -F'[ ]' '{print $$2}'))
 	kind create cluster --image $(KIND_IMAGE)
-	kind export kubeconfig --kubeconfig $(KIND_KUBE_CONFIG_FOLDER)/config
+	kind export kubeconfig --kubeconfig $(KIND_KUBE_CONFIG)
 
 .PHONY: delete-kind-cluster
 delete-kind-cluster: ## Delete kind cluster
@@ -91,6 +94,14 @@ njs-unit-test: ## Run unit tests for the njs httpmatches module
 		-v $(PWD)/internal/mode/static/nginx/modules:/modules/ \
 		node:18 \
 		/bin/bash -c "npm install && npm test && npm run clean"
+
+.PHONY: generate-njs-yaml
+generate-njs-yaml: ## Generate the njs-modules ConfigMap
+	kubectl create configmap njs-modules --from-file=$(NJS_DIR)/httpmatches.js --dry-run=client --output=yaml > $(strip $(MANIFEST_DIR))/njs-modules.yaml
+
+.PHONY: lint-helm
+lint-helm: ## Run the helm chart linter
+	helm lint $(CHART_DIR)
 
 .PHONY: dev-all
 dev-all: deps fmt njs-fmt vet lint unit-test njs-unit-test ## Run all the development checks

@@ -1,0 +1,79 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ include "nginx-gateway.serviceAccountName" . }}
+  labels:
+  {{- include "nginx-gateway.labels" . | nindent 4 }}
+  annotations:
+    {{- toYaml .Values.serviceAccount.annotations | nindent 4 }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "nginx-gateway.fullname" . }}
+  labels:
+  {{- include "nginx-gateway.labels" . | nindent 4 }}
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - namespaces
+  - services
+  - secrets
+  verbs:
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+  - patch
+- apiGroups:
+  - discovery.k8s.io
+  resources:
+  - endpointslices
+  verbs:
+  - list
+  - watch
+- apiGroups:
+  - gateway.networking.k8s.io
+  resources:
+  - gatewayclasses
+  - gateways
+  - httproutes
+  - referencegrants
+  verbs:
+  - list
+  - watch
+- apiGroups:
+  - gateway.nginx.org
+  resources:
+  - gatewayconfigs
+  verbs:
+  - list
+  - watch
+- apiGroups:
+  - gateway.networking.k8s.io
+  resources:
+  - httproutes/status
+  - gateways/status
+  - gatewayclasses/status
+  verbs:
+  - update
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "nginx-gateway.fullname" . }}
+  labels:
+  {{- include "nginx-gateway.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "nginx-gateway.fullname" . }}
+subjects:
+- kind: ServiceAccount
+  name: {{ include "nginx-gateway.serviceAccountName" . }}
+  namespace: {{ .Release.Namespace }}

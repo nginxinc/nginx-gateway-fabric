@@ -40,6 +40,8 @@ practices to ensure a successful feature development process.
       > For security, a Docker image used in an example must be either managed by F5/NGINX or be an [official image](https://docs.docker.com/docker-hub/official_images/).
     - **Installation Changes**: If your feature involves changes to the installation process of NKG, update
       the [installation](/docs/installation.md) documentation.
+    - **Helm Changes**: If your feature introduces or changes any values of the NKG Helm Chart, update the
+      [Helm README](/deploy/helm-chart/README.md).
     - **Command-line Changes**: If your feature introduces or changes a command-line flag or subcommand, update
       the [cli help](/docs/cli-help.md) documentation.
     - **Other Documentation Updates**: For any other changes that affect the behavior, usage, or configuration of NKG,
@@ -47,13 +49,16 @@ practices to ensure a successful feature development process.
       up to date with the latest changes.
 11. **Lint code**: See the [run the linter](/docs/developer/quickstart.md#run-the-linter) section of the quickstart
     guide for instructions.
-12. **Open pull request**: Open a pull request targeting the `main` branch of
+12. **Run generators**: See the [Run go generate](/docs/developer/quickstart.md#run-go-generate) and the
+    [Update NJS module ConfigMaps](/docs/developer/quickstart.md#update-njs-module-configmaps) sections of the
+    quickstart guide for instructions.
+13. **Open pull request**: Open a pull request targeting the `main` branch of
     the [nginx-kubernetes-gateway](https://github.com/nginxinc/nginx-kubernetes-gateway/tree/main) repository. The
     entire `nginx-kubernetes-gateway` group will be automatically requested for review. If you have a specific or
     different reviewer in mind, you can request them as well. Refer to
     the [pull request](/docs/developer/pull-request.md) documentation for expectations and guidelines.
-13. **Obtain the necessary approvals**: Work with code reviewers to maintain the required number of approvals.
-14. **Squash and merge**: Squash your commits locally, or use the GitHub UI to squash and merge. Only one commit per
+14. **Obtain the necessary approvals**: Work with code reviewers to maintain the required number of approvals.
+15. **Squash and merge**: Squash your commits locally, or use the GitHub UI to squash and merge. Only one commit per
     pull request should be merged. Make sure the first line of the final commit message includes the pull request
     number. For example, Fix supported gateway conditions in compatibility doc (#674).
     > **Note**:

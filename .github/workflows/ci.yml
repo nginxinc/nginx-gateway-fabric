@@ -55,6 +55,9 @@ jobs:
       - name: Check if generated files are up to date
         run: make generate && git diff --exit-code
 
+      - name: Check if njs-modules yaml is up to date
+        run: make generate-njs-yaml && git diff --exit-code
+
   unit-tests:
     name: Unit Tests
     runs-on: ubuntu-22.04
@@ -149,6 +152,71 @@ jobs:
           path: ${{ github.workspace }}/dist
           key: nginx-kubernetes-gateway-${{ github.run_id }}-${{ github.run_number }}
 
+  helm-tests:
+    name: Helm Tests
+    runs-on: ubuntu-22.04
+    needs: [vars, binary]
+    if: ${{ github.ref_type != 'tag' }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+
+      - name: Fetch Cached Artifacts
+        uses: actions/cache@88522ab9f39a2ea568f7027eddc7d8d8bc9d59c8 # v3.3.1
+        with:
+          path: ${{ github.workspace }}/dist
+          key: nginx-kubernetes-gateway-${{ github.run_id }}-${{ github.run_number }}
+
+      - name: Docker Buildx
+        uses: docker/setup-buildx-action@16c0bc4a6e6ada2cfd8afd41d22d95379cf7c32a # v2.8.0
+
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@818d4b7b91585d195f67373fd9cb0332e31a7175 # v4.6.0
+        with:
+          images: |
+            name=ghcr.io/nginxinc/nginx-kubernetes-gateway
+          tags: |
+            type=semver,pattern={{version}}
+            type=edge
+            type=ref,event=pr
+            type=ref,event=branch,suffix=-rc,enable=${{ startsWith(github.ref, 'refs/heads/release') }}
+
+      - name: Build Docker Image
+        uses: docker/build-push-action@2eb1c1961a95fc15694676618e422e8ba1d63825 # v4.1.1
+        with:
+          file: build/Dockerfile
+          tags: ${{ steps.meta.outputs.tags }}
+          context: "."
+          target: goreleaser
+          load: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          pull: true
+
+      - name: Deploy Kubernetes
+        id: k8s
+        run: |
+          kube_config=${{ github.workspace }}/deploy/helm-chart/kube-${{ github.run_id }}-helm
+          make create-kind-cluster KIND_KUBE_CONFIG=${kube_config}
+          echo "KUBECONFIG=${kube_config}" >> "$GITHUB_ENV"
+          kind load docker-image ${{ steps.meta.outputs.tags }}
+          kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v0.7.1/standard-install.yaml
+          kubectl wait --for=condition=complete job/gateway-api-admission-patch job/gateway-api-admission -n gateway-system
+
+      - name: Install Chart
+        run: >
+          helm install
+          helm-$(echo ${{ steps.meta.outputs.tags }} | cut -d ":" -f 2)
+          .
+          --wait
+          --create-namespace
+          --set controller.image.repository=$(echo ${{ steps.meta.outputs.tags }} | cut -d ":" -f 1)
+          --set controller.image.tag=$(echo ${{ steps.meta.outputs.tags }} | cut -d ":" -f 2)
+          --set service.type=NodePort
+          -n nginx-gateway
+        working-directory: ${{ github.workspace }}/deploy/helm-chart
+
   build:
     name: Build Image
     runs-on: ubuntu-22.04
@@ -235,3 +303,31 @@ jobs:
           name: "trivy-results-nginx-kubernetes-gateway.sarif"
           path: "trivy-results-nginx-kubernetes-gateway.sarif"
         if: always()
+
+  publish-helm:
+    name: Package and Publish Helm Chart
+    runs-on: ubuntu-22.04
+    needs: [vars, helm-tests]
+    if: ${{ github.event_name == 'push' && ! startsWith(github.ref, 'refs/heads/release-') }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+        with:
+          path: nkg
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@465a07811f14bebb1938fbed4728c6a1ff8901fc # v2.2.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Package
+        id: package
+        run: |
+          output=$(helm package ${{ ! startsWith(github.ref, 'refs/tags/') && '--app-version edge --version 0.0.0-edge' || '' }} nkg/deploy/helm-chart)
+          echo "path=$(basename -- $(echo $output | cut -d: -f2))" >> $GITHUB_OUTPUT
+
+      - name: Push to GitHub Container Registry
+        run: |
+          helm push ${{ steps.package.outputs.path }} oci://ghcr.io/nginxinc/charts

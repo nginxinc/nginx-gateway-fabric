@@ -12,6 +12,7 @@ Follow these steps to set up your development environment.
     - [Go](https://golang.org/doc/install)
     - [Docker](https://docs.docker.com/get-docker/) v18.09+
     - [Kind](https://kind.sigs.k8s.io/docs/user/quick-start/)
+    - [Helm](https://helm.sh/docs/intro/quickstart/#install-helm)
     - [git](https://git-scm.com/)
     - [GNU Make](https://www.gnu.org/software/software.html)
     - [yq](https://github.com/mikefarah/yq/#install)
@@ -124,3 +125,31 @@ make lint
 
 > **Note**
 > fieldalignment errors can be fixed by running: `fieldalignment -fix <path-to-package>`
+
+## Run the Helm Linter
+
+Run the following make command from the project's root directory to lint the Helm Chart code:
+
+```shell
+make lint-helm
+```
+
+## Run go generate
+
+To ensure all the generated code is up to date, run the following make command from the project's root directory:
+
+```shell
+make generate
+```
+
+## Update NJS module ConfigMaps
+
+To update the NJS ConfigMap yaml, run the following make command from the project's root directory:
+
+```shell
+make generate-njs-yaml
+```
+
+Additionally, the [NJS ConfigMap Helm template](/deploy/helm-chart/templates/njs-modules.yaml) will need to be updated.
+This is currently a manual process - ensure the content in the `data` field matches that in the
+[NJS ConfigMap manifest](/deploy/manifests/njs-modules.yaml) `data` field.
