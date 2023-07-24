@@ -32,6 +32,18 @@ blobs:
   - provider: azblob
     bucket: '{{.Env.AZURE_BUCKET_NAME}}'
 
+signs:
+  - cmd: cosign
+    artifacts: checksum
+    output: true
+    certificate: '${artifact}.pem'
+    args:
+      - sign-blob
+      - "--output-signature=${signature}"
+      - "--output-certificate=${certificate}"
+      - "${artifact}"
+      - "--yes"
+
 announce:
   slack:
     enabled: true
