@@ -40,7 +40,7 @@ practices to ensure a successful feature development process.
       > For security, a Docker image used in an example must be either managed by F5/NGINX or be an [official image](https://docs.docker.com/docker-hub/official_images/).
     - **Installation Changes**: If your feature involves changes to the installation process of NKG, update
       the [installation](/docs/installation.md) documentation.
-   - **Helm Changes**: If your feature introduces or changes any values of the NKG Helm Chart, update the
+    - **Helm Changes**: If your feature introduces or changes any values of the NKG Helm Chart, update the
       [Helm README](/deploy/helm-chart/README.md).
     - **Command-line Changes**: If your feature introduces or changes a command-line flag or subcommand, update
       the [cli help](/docs/cli-help.md) documentation.

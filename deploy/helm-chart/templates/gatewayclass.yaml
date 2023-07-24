@@ -5,4 +5,4 @@ metadata:
   labels:
   {{- include "nginx-gateway.labels" . | nindent 4 }}
 spec:
-  controllerName: k8s-gateway.nginx.org/nginx-gateway-controller
+  controllerName: {{ .Values.nginxGateway.gatewayControllerName }}

@@ -37,7 +37,7 @@ page.
 
 1. Create the njs-modules ConfigMap:
 
-    ```
+    ```shell
     kubectl apply -f deploy/manifests/njs-modules.yaml -n nginx-gateway
     ```
 
