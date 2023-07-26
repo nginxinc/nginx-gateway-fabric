@@ -31,10 +31,9 @@ preload-nginx-container        Preload NGINX container on configured kind cluste
 prepare-nkg-dependencies       Install NKG dependencies on configured kind cluster
 reset-go-modules               Reset the go modules changes
 run-conformance-tests          Run conformance tests
-undo-image-update              Undo the NKG image name and tag in deployment manifest
-uninstall-nkg                  Uninstall NKG on configured kind cluster
+undo-manifests-update          Undo the changes in the manifest files
+uninstall-nkg                  Uninstall NKG on configured kind cluster and undo manifest changes
 update-go-modules              Update the gateway-api go modules to latest main version
-update-nkg-manifest            Update the NKG deployment manifest image name and imagePullPolicy
 ```
 
 **Note:** The following variables are configurable when running the below `make` commands:
@@ -50,8 +49,11 @@ update-nkg-manifest            Update the NKG deployment manifest image name and
 | GATEWAY_CLASS           | nginx                                                                                                         | The gateway class that should be used for the tests                                                                       |
 | SUPPORTED_FEATURES      | HTTPRoute,HTTPRouteQueryParamMatching, HTTPRouteMethodMatching,HTTPRoutePortRedirect, HTTPRouteSchemeRedirect | The supported features that should be tested by the conformance tests. Ensure the list is comma separated with no spaces. |
 | EXEMPT_FEATURES         | ReferenceGrant                                                                                                | The features that should not be tested by the conformance tests                                                           |
-| NGINX_IMAGE             | as defined in the ../deploy/manifests/deployment.yaml file                                                    | The NGINX image for the NKG deployments                                                                                   |
-| NKG_DEPLOYMENT_MANIFEST | ../deploy/manifests/deployment.yaml                                                                           | The location of the NKG deployment manifest                                                                               |
+| NGINX_IMAGE             | as defined in the provisioner/static-deployment.yaml file                                                    | The NGINX image for the NKG deployments                                                                                   |
+| NKG_MANIFEST | ../deploy/manifests/nginx-gateway.yaml                                                                           | The location of the NKG manifest                                                                               |
+| SERVICE_MANIFEST | ../deploy/manifests/service/nodeport.yaml                                                                          | The location of the NKG Service manifest                                                                               |
+| STATIC_MANIFEST | provisioner/static-deployment.yaml                                                                           | The location of the NKG static deployment manifest                                                                               |
+| PROVISIONER_MANIFEST | provisioner/provisioner.yaml                                                                           | The location of the NKG provisioner manifest                                                                               |
 
 ### Step 1 - Create a kind Cluster
 
@@ -77,27 +79,17 @@ make install-nkg-local-build
 ```
 
 #### *Option 2* Install Nginx Kubernetes Gateway from local already built image to configured kind cluster
+You can optionally skip the actual *build* step.
 
 ```makefile
 make install-nkg-local-no-build
 ```
 
-**Note:** You can optionally skip the actual *build* step. However, if choosing
-this option, the following step *must* be completed manually *before* the build step:
+> Note:  If choosing this option, the following step *must* be completed manually *before* the build step:
 
-- Set NKG_PREFIX=<nkg_repo_name> NKG_TAG=<nkg_image_tag> to preferred values.
-- Navigate to `deploy/manifests` and update values in `deployment.yaml` as specified in below code-block.
-- Save the changes.
-
- ```text
- .
- ..
- containers:
- - image: <nkg_repo_name>:<nkg_image_tag>
-   imagePullPolicy: Never
- ..
- .
- ```
+```makefile
+make update-nkg-manifest NKG_PREFIX=<nkg_repo_name> NKG_TAG=<nkg_image_tag>
+```
 
 #### *Option 3* Install Nginx Kubernetes Gateway from edge to configured kind cluster
 You can also skip the build NKG image step and prepare the environment to instead use the `edge` image
@@ -153,15 +145,7 @@ make uninstall-nkg
 make reset-go-modules
 ```
 
-### Step 7 - Revert changes to the NKG deployment manifest
-**Optional** Not required if using `edge` image
-**Warning**: `make undo-image-update` will hard reset changes to the deploy/manifests/deployment.yaml file!
-
-```makefile
-make undo-image-update
-```
-
-### Step 8 - Delete kind cluster
+### Step 7 - Delete kind cluster
 
 ```makefile
 make delete-kind-cluster

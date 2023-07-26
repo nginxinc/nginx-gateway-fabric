@@ -87,9 +87,10 @@ To uninstall/delete the release `my-release`:
 
 ```shell
 helm uninstall my-release -n nginx-gateway
+kubectl delete ns nginx-gateway
 ```
 
-The command removes all the Kubernetes components associated with the release and deletes the release.
+These commands remove all the Kubernetes components associated with the release and deletes the release.
 
 ### Uninstalling the Gateway Resources
 
@@ -114,6 +115,7 @@ The following tables lists the configurable parameters of the NGINX Kubernetes G
 |`nginxGateway.image.pullPolicy` | The `imagePullPolicy` for the NGINX Kubernetes Gateway image. | Always |
 |`nginxGateway.gatewayClassName` | The name of the GatewayClass for the NGINX Kubernetes Gateway deployment. | nginx |
 |`nginxGateway.gatewayControllerName` | The name of the Gateway controller. The controller name must be of the form: DOMAIN/PATH. The controller's domain is k8s-gateway.nginx.org. | k8s-gateway.nginx.org/nginx-gateway-controller |
+|`nginxGateway.kind` | The kind of the NGINX Kubernetes Gateway installation - currently, only deployment is supported. | deployment |
 |`nginx.image.repository` | The repository for the NGINX image. | nginx |
 |`nginx.image.tag` | The tag for the NGINX image. | 1.25 |
 |`nginx.image.pullPolicy` | The `imagePullPolicy` for the NGINX image. | Always |

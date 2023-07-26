@@ -29,40 +29,10 @@ page.
    kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v0.7.1/standard-install.yaml
    ```
 
-1. Create the nginx-gateway Namespace:
-
-    ```shell
-    kubectl apply -f deploy/manifests/namespace.yaml
-    ```
-
-1. Create the njs-modules ConfigMap:
-
-    ```shell
-    kubectl apply -f deploy/manifests/njs-modules.yaml -n nginx-gateway
-    ```
-
-1. Create the ConfigMap with the main NGINX configuration file:
-
-    ```shell
-    kubectl apply -f deploy/manifests/nginx-conf.yaml
-    ```
-
-1. Configure RBAC:
-
-    ```shell
-    kubectl apply -f deploy/manifests/rbac.yaml
-    ```
-
-1. Create the GatewayClass resource:
-
-    ```shell
-    kubectl apply -f deploy/manifests/gatewayclass.yaml
-    ```
-
 1. Deploy the NGINX Kubernetes Gateway:
 
    ```shell
-   kubectl apply -f deploy/manifests/deployment.yaml
+   kubectl apply -f deploy/manifests/nginx-gateway.yaml
    ```
 
 1. Confirm the NGINX Kubernetes Gateway is running in `nginx-gateway` namespace:

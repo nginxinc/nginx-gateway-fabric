@@ -18,6 +18,8 @@ TARGET ?= local## The target of the build. Possible values: local and container
 KIND_KUBE_CONFIG=$${HOME}/.kube/kind/config## The location of the kind kubeconfig
 OUT_DIR ?= $(shell pwd)/build/out## The folder where the binary will be stored
 ARCH ?= amd64## The architecture of the image and/or binary. For example: amd64 or arm64
+override HELM_TEMPLATE_COMMON_ARGS += --set creator=template --set nameOverride=nginx-gateway ## The common options for the Helm template command.
+override HELM_TEMPLATE_EXTRA_ARGS += --set service.create=false ## The options to be passed to the full Helm templating command only.
 override DOCKER_BUILD_OPTIONS += --build-arg VERSION=$(VERSION) --build-arg GIT_COMMIT=$(GIT_COMMIT) --build-arg DATE=$(DATE)## The options for the docker build command. For example, --pull
 
 .DEFAULT_GOAL := help
@@ -116,6 +118,14 @@ debug-build: build ## Build binary with debug info, symbols, and no optimization
 
 .PHONY: debug-container
 debug-container: debug-build container ## Build container with debug binary
+
+.PHONY: generate-manifests
+generate-manifests: ## Generate manifests using Helm.
+	helm template nginx-gateway $(CHART_DIR) $(HELM_TEMPLATE_COMMON_ARGS) $(HELM_TEMPLATE_EXTRA_ARGS) -n nginx-gateway | cat $(strip $(MANIFEST_DIR))/namespace.yaml - > $(strip $(MANIFEST_DIR))/nginx-gateway.yaml
+	helm template nginx-gateway $(CHART_DIR) $(HELM_TEMPLATE_COMMON_ARGS) -n nginx-gateway -s templates/deployment.yaml > conformance/provisioner/static-deployment.yaml
+	helm template nginx-gateway $(CHART_DIR) $(HELM_TEMPLATE_COMMON_ARGS) -n nginx-gateway -s templates/service.yaml > $(strip $(MANIFEST_DIR))/service/loadbalancer.yaml
+	helm template nginx-gateway $(CHART_DIR) $(HELM_TEMPLATE_COMMON_ARGS) --set service.annotations.'service\.beta\.kubernetes\.io\/aws-load-balancer-type'="nlb" -n nginx-gateway -s templates/service.yaml > $(strip $(MANIFEST_DIR))/service/loadbalancer-aws-nlb.yaml
+	helm template nginx-gateway $(CHART_DIR) $(HELM_TEMPLATE_COMMON_ARGS) --set service.type=NodePort -n nginx-gateway -s templates/service.yaml > $(strip $(MANIFEST_DIR))/service/nodeport.yaml
 
 .PHONY: dev-all
 dev-all: deps fmt njs-fmt vet lint unit-test njs-unit-test ## Run all the development checks

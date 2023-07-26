@@ -6,8 +6,11 @@ SUPPORTED_FEATURES = HTTPRoute,HTTPRouteQueryParamMatching,HTTPRouteMethodMatchi
 KIND_KUBE_CONFIG=$${HOME}/.kube/kind/config
 TAG = latest
 PREFIX = conformance-test-runner
-NKG_DEPLOYMENT_MANIFEST=../deploy/manifests/deployment.yaml
-NGINX_IMAGE=$(shell yq '.spec.template.spec.containers[1].image as $$nginx_ver | $$nginx_ver' $(NKG_DEPLOYMENT_MANIFEST))
+NKG_MANIFEST=../deploy/manifests/nginx-gateway.yaml
+SERVICE_MANIFEST=../deploy/manifests/service/nodeport.yaml
+STATIC_MANIFEST=provisioner/static-deployment.yaml
+PROVISIONER_MANIFEST=provisioner/provisioner.yaml
+NGINX_IMAGE=$(shell yq '.spec.template.spec.containers[1].image as $$nginx_ver | $$nginx_ver' $(STATIC_MANIFEST))
 .DEFAULT_GOAL := help
 
 .PHONY: help
@@ -35,11 +38,11 @@ preload-nginx-container: ## Preload NGINX container on configured kind cluster
 	kind load docker-image $(NGINX_IMAGE)
 
 .PHONY: update-nkg-manifest
-update-nkg-manifest: ## Update the NKG deployment manifest image name and imagePullPolicy
-	yq -i 'with(.spec.template.spec.containers[0]; .image = "$(NKG_PREFIX):$(NKG_TAG)" | .imagePullPolicy = "Never")' $(NKG_DEPLOYMENT_MANIFEST)
+update-nkg-manifest:
+	cd .. && make generate-manifests HELM_TEMPLATE_EXTRA_ARGS="--set nginxGateway.kind=skip" HELM_TEMPLATE_COMMON_ARGS="--set nginxGateway.image.repository=$(NKG_PREFIX) --set nginxGateway.image.tag=$(NKG_TAG) --set nginxGateway.image.pullPolicy=Never" && cd -
 
 .PHONY: build-nkg-image
-build-nkg-image: update-nkg-manifest ## Build NKG container and load it and NGINX container on configured kind cluster
+build-nkg-image: ## Build NKG container and load it and NGINX container on configured kind cluster
 	cd .. && make PREFIX=$(NKG_PREFIX) TAG=$(NKG_TAG) container
 
 .PHONY: load-images
@@ -47,31 +50,26 @@ load-images: preload-nginx-container ## Load NKG and NGINX containers on configu
 	kind load docker-image $(NKG_PREFIX):$(NKG_TAG)
 
 .PHONY: prepare-nkg-dependencies
-prepare-nkg-dependencies: ## Install NKG dependencies on configured kind cluster
+prepare-nkg-dependencies: update-nkg-manifest ## Install NKG dependencies on configured kind cluster
 	./scripts/install-gateway.sh $(GW_API_VERSION)
 	kubectl wait --for=condition=available --timeout=60s deployment gateway-api-admission-server -n gateway-system
-	kubectl apply -f ../deploy/manifests/namespace.yaml
-	cd .. && make generate-njs-yaml && cd -
-	kubectl apply -f ../deploy/manifests/njs-modules.yaml -n nginx-gateway
-	kubectl apply -f ../deploy/manifests/nginx-conf.yaml
-	kubectl apply -f ../deploy/manifests/rbac.yaml
-	kubectl apply -f ../deploy/manifests/gatewayclass.yaml
-	kubectl apply -f ../deploy/manifests/service/nodeport.yaml
+	kubectl apply -f $(NKG_MANIFEST)
+	kubectl apply -f $(SERVICE_MANIFEST)
 
 .PHONY: deploy-updated-provisioner
 deploy-updated-provisioner: ## Update provisioner manifest and deploy to the configured kind cluster
-	yq '(select(di != 3))' provisioner/provisioner.yaml | kubectl apply -f -
-	yq '(select(.spec.template.spec.containers[].image) | .spec.template.spec.containers[].image="$(NKG_PREFIX):$(NKG_TAG)" | .spec.template.spec.containers[].imagePullPolicy = "Never")' provisioner/provisioner.yaml | kubectl apply -f -
+	yq '(select(di != 3))' $(PROVISIONER_MANIFEST) | kubectl apply -f -
+	yq '(select(.spec.template.spec.containers[].image) | .spec.template.spec.containers[].image="$(NKG_PREFIX):$(NKG_TAG)" | .spec.template.spec.containers[].imagePullPolicy = "Never")' $(PROVISIONER_MANIFEST) | kubectl apply -f -
 
 .PHONY: install-nkg-local-build
-install-nkg-local-build: build-nkg-image load-images prepare-nkg-dependencies deploy-updated-provisioner ## Install NKG from local build with provisioner on configured kind cluster
+install-nkg-local-build: prepare-nkg-dependencies build-nkg-image load-images deploy-updated-provisioner ## Install NKG from local build with provisioner on configured kind cluster
 
-.PHONY: install-nkg-local-build
-install-nkg-local-no-build: load-images prepare-nkg-dependencies deploy-updated-provisioner ## Install NKG from local build with provisioner on configured kind cluster but do not build the NKG image
+.PHONY: install-nkg-local-no-build
+install-nkg-local-no-build: prepare-nkg-dependencies load-images deploy-updated-provisioner ## Install NKG from local build with provisioner on configured kind cluster but do not build the NKG image
 
 .PHONY: install-nkg-edge
 install-nkg-edge: preload-nginx-container prepare-nkg-dependencies ## Install NKG with provisioner from edge on configured kind cluster
-	kubectl apply -f provisioner/provisioner.yaml
+	kubectl apply -f $(PROVISIONER_MANIFEST)
 
 .PHONY: run-conformance-tests
 run-conformance-tests: ## Run conformance tests
@@ -89,16 +87,18 @@ cleanup-conformance-tests: ## Clean up conformance tests fixtures
 	kubectl delete -f tests/conformance-rbac.yaml
 
 .PHONY: uninstall-nkg
-uninstall-nkg: ## Uninstall NKG on configured kind cluster
+uninstall-nkg: uninstall-k8s-components undo-manifests-update ## Uninstall NKG on configured kind cluster and undo manifest changes
+
+.PHONY: uninstall-k8s-components
+uninstall-k8s-components: ## Uninstall installed components on configured kind cluster
+	kubectl delete -f $(NKG_MANIFEST)
 	./scripts/uninstall-gateway.sh $(GW_API_VERSION)
-	kubectl delete -f ../deploy/manifests/rbac.yaml
-	kubectl delete -f ../deploy/manifests/namespace.yaml
 	kubectl delete clusterrole nginx-gateway-provisioner
 	kubectl delete clusterrolebinding nginx-gateway-provisioner
 
-.PHONY: undo-image-update
-undo-image-update: ## Undo the NKG image name and tag in deployment manifest
-	git checkout -- $(NKG_DEPLOYMENT_MANIFEST)
+.PHONY: undo-manifests-update
+undo-manifests-update: ## Undo the changes in the manifest files
+	cd .. && make generate-manifests && cd -
 
 .PHONY: reset-go-modules
 reset-go-modules: ## Reset the go modules changes
