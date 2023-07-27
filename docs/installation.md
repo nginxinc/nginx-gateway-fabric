@@ -13,8 +13,9 @@ page.
 
 ## Deploy NGINX Kubernetes Gateway from Manifests
 
-> Note: NGINX Kubernetes Gateway can only run in the `nginx-gateway` namespace.
-> This limitation will be addressed in the future releases.
+> Note: By default, NKG will be installed into the nginx-gateway Namespace.
+> It is possible to run NKG in a different Namespace, although you'll need to make modifications to the installation
+> manifests.
 
 1. Clone the repo and change into the `nginx-kubernetes-gateway` directory:
 
