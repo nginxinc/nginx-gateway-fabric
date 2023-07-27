@@ -8,14 +8,14 @@ metadata:
   labels:
     app.kubernetes.io/name: nginx-gateway
     app.kubernetes.io/instance: nginx-gateway
-    app.kubernetes.io/version: "0.5.0"
+    app.kubernetes.io/version: "edge"
 spec:
   externalTrafficPolicy: Local
   type: LoadBalancer
   selector:
     app.kubernetes.io/name: nginx-gateway
     app.kubernetes.io/instance: nginx-gateway
-  ports:
+  ports: # Update the following ports to match your Gateway Listener ports
   - name: http
     port: 80
     protocol: TCP

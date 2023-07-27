@@ -11,12 +11,10 @@ spec:
   replicas: 1
   selector:
     matchLabels:
-      app: nginx-gateway
     {{- include "nginx-gateway.selectorLabels" . | nindent 6 }}
   template:
     metadata:
       labels:
-        app: nginx-gateway
       {{- include "nginx-gateway.selectorLabels" . | nindent 8 }}
     spec:
       containers:

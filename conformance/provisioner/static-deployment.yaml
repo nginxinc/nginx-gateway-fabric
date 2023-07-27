@@ -8,19 +8,17 @@ metadata:
   labels:
     app.kubernetes.io/name: nginx-gateway
     app.kubernetes.io/instance: nginx-gateway
-    app.kubernetes.io/version: "0.5.0"
+    app.kubernetes.io/version: "edge"
 spec:
   # We only support a single replica for now
   replicas: 1
   selector:
     matchLabels:
-      app: nginx-gateway
       app.kubernetes.io/name: nginx-gateway
       app.kubernetes.io/instance: nginx-gateway
   template:
     metadata:
       labels:
-        app: nginx-gateway
         app.kubernetes.io/name: nginx-gateway
         app.kubernetes.io/instance: nginx-gateway
     spec:

@@ -110,3 +110,28 @@ Create a Service with type `LoadBalancer` using the appropriate manifest for you
 ### Use NGINX Kubernetes Gateway
 
 To get started, follow the tutorials in the [examples](../examples) directory.
+
+## Uninstalling NGINX Kubernetes Gateway
+
+### Uninstall NGINX Kubernetes Gateway from Manifests
+
+1. Uninstall the NGINX Kubernetes Gateway:
+
+   ```shell
+   kubectl delete -f deploy/manifests/nginx-gateway.yaml
+   ```
+
+1. Uninstall the Gateway API resources from the standard channel (the CRDs and the validating webhook):
+
+   >**Warning: This command will delete all the corresponding custom resources in your cluster across all namespaces!
+   Please ensure there are no custom resources that you want to keep and there are no other Gateway API implementations
+   running in the cluster!**
+
+   ```shell
+   kubectl delete -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v0.7.1/standard-install.yaml
+   ```
+
+### Uninstall NGINX Kubernetes Gateway using Helm
+
+To uninstall NGINX Kubernetes Gateway when the deployment method is Helm, please follow the instructions
+[here](/deploy/helm-chart/README.md#uninstalling-the-chart).

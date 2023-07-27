@@ -19,7 +19,7 @@ spec:
   type: {{ .Values.service.type }}
   selector:
     {{- include "nginx-gateway.selectorLabels" . | nindent 4 }}
-  ports:
+  ports: # Update the following ports to match your Gateway Listener ports
 {{- if .Values.service.ports }}
 {{ toYaml .Values.service.ports | indent 2 }}
 {{ end }}

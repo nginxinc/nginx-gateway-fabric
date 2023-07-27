@@ -84,40 +84,29 @@ This will build the docker image `nginx-kubernetes-gateway:<your-user>`.
    kind load docker-image nginx-kubernetes-gateway:$(whoami)
    ```
 
-3. You can use [Helm](/deploy/helm-chart/README.md) to install NKG on your `kind` cluster. Make sure to set the image
-   `repository` and `tag` to match your created image, and the `imagePullPolicy` to `Never` (so that Kubernetes will not
-   try to pull it from DockerHub). You can also use Helm to create a Service to expose the NKG deployment. For example,
-   to install NKG using the image created in the previous step, and deploy a NodePort Service to expose the deployment,
-   with the release name `my-release`, run the following:
+3. Install Gateway API Resources
 
    ```shell
-   helm install my-release ./deploy/helm-chart --create-namespace --wait --set service.type=NodePort --set nginxGateway.image.repository=nginx-kubernetes-gateway --set nginxGateway.image.tag=$(whoami) --set nginxGateway.image.pullPolicy=Never -n nginx-gateway
+   kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v0.7.1/standard-install.yaml
    ```
 
-   Make sure to first install the
-   [Gateway API Resources](/deploy/helm-chart/README.md#installing-the-gateway-api-resources).
+4. Install NKG using your custom image and expose NKG with a NodePort Service:
 
-4. As an alternative to deploying using Helm, you can use manifests to install  NKG on your `kind` cluster.
+   - To install with Helm (where your release name is `my-release`):
 
-   Modify the image name and image pull policy for the `nginx-gateway` container in the NKG
-   [deployment manifest](/deploy/manifests/nginx-gateway.yaml). Set the image name to the image you built in the
-   previous step and the image pull policy to `IfNotPresent`, so that Kubernetes will not try to pull it from DockerHub.
+      ```shell
+      helm install my-release ./deploy/helm-chart --create-namespace --wait --set service.type=NodePort --set nginxGateway.image.repository=nginx-kubernetes-gateway --set nginxGateway.image.tag=$(whoami) --set nginxGateway.image.pullPolicy=Never -n nginx-gateway
+      ```
 
-   This can be done using the following `make` command:
+      > For more information on helm configuration options see the Helm [README](/deploy/helm-chart/README.md).
 
-   ```makefile
-   make generate-manifests HELM_TEMPLATE_COMMON_ARGS="--set nginxGateway.image.repository=nginx-kubernetes-gateway --set nginxGateway.image.tag=$(whoami) --set nginxGateway.image.pullPolicy=Never"
-   ```
+   - To install with manifests:
 
-   Once the changes are made, follow the [installation instructions](/docs/installation.md) to install NKG on your
-   `kind` cluster.
-
-   Alternatively, you can update the image name and pull policy by using the following command when applying
-   `deploy/manifests/nginx-gateway.yaml`:
-
-   ```shell
-   cat deploy/manifests/nginx-gateway.yaml | sed "s|image: ghcr.io/nginxinc/nginx-kubernetes-gateway.*|image: nginx-kubernetes-gateway:$(whoami)|" | sed "s|imagePullPolicy: Always|imagePullPolicy: IfNotPresent|" | kubectl apply -f -
-   ```
+      ```shell
+      make generate-manifests HELM_TEMPLATE_COMMON_ARGS="--set nginxGateway.image.repository=nginx-kubernetes-gateway --set nginxGateway.image.tag=$(whoami) --set nginxGateway.image.pullPolicy=Never"
+      kubectl apply -f deploy/manifests/nginx-gateway.yaml
+      kubectl apply -f deploy/manifests/nodeport.yaml
+      ```
 
 ### Run Examples
 
@@ -164,7 +153,7 @@ To ensure all the generated code is up to date, run the following make command f
 make generate
 ```
 
-## Update NJS module ConfigMaps
+## Update Generated Manifests
 
 To update the NJS ConfigMap yaml, run the following make command from the project's root directory:
 
@@ -176,7 +165,7 @@ Additionally, the [NJS ConfigMap Helm template](/deploy/helm-chart/templates/njs
 This is currently a manual process - ensure the content in the `data` field matches that in the
 [NJS ConfigMap manifest](/deploy/manifests/njs-modules.yaml) `data` field.
 
-Finally, to update the combined generated manifest, run the following make command from the project's root directory:
+Finally, to update all other generated manifests, run the following make command from the project's root directory:
 
 ```shell
 make generate-manifests

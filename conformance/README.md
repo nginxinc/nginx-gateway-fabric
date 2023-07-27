@@ -34,6 +34,7 @@ run-conformance-tests          Run conformance tests
 undo-manifests-update          Undo the changes in the manifest files
 uninstall-nkg                  Uninstall NKG on configured kind cluster and undo manifest changes
 update-go-modules              Update the gateway-api go modules to latest main version
+update-nkg-manifest            Update the NKG deployment manifest image name and imagePullPolicy
 ```
 
 **Note:** The following variables are configurable when running the below `make` commands:
@@ -49,11 +50,11 @@ update-go-modules              Update the gateway-api go modules to latest main 
 | GATEWAY_CLASS           | nginx                                                                                                         | The gateway class that should be used for the tests                                                                       |
 | SUPPORTED_FEATURES      | HTTPRoute,HTTPRouteQueryParamMatching, HTTPRouteMethodMatching,HTTPRoutePortRedirect, HTTPRouteSchemeRedirect | The supported features that should be tested by the conformance tests. Ensure the list is comma separated with no spaces. |
 | EXEMPT_FEATURES         | ReferenceGrant                                                                                                | The features that should not be tested by the conformance tests                                                           |
-| NGINX_IMAGE             | as defined in the provisioner/static-deployment.yaml file                                                    | The NGINX image for the NKG deployments                                                                                   |
-| NKG_MANIFEST | ../deploy/manifests/nginx-gateway.yaml                                                                           | The location of the NKG manifest                                                                               |
-| SERVICE_MANIFEST | ../deploy/manifests/service/nodeport.yaml                                                                          | The location of the NKG Service manifest                                                                               |
-| STATIC_MANIFEST | provisioner/static-deployment.yaml                                                                           | The location of the NKG static deployment manifest                                                                               |
-| PROVISIONER_MANIFEST | provisioner/provisioner.yaml                                                                           | The location of the NKG provisioner manifest                                                                               |
+| NGINX_IMAGE             | as defined in the provisioner/static-deployment.yaml file                                                     | The NGINX image for the NKG deployments                                                                                   |
+| NKG_MANIFEST            | ../deploy/manifests/nginx-gateway.yaml                                                                        | The location of the NKG manifest                                                                                          |
+| SERVICE_MANIFEST        | ../deploy/manifests/service/nodeport.yaml                                                                     | The location of the NKG Service manifest                                                                                  |
+| STATIC_MANIFEST         | provisioner/static-deployment.yaml                                                                            | The location of the NKG static deployment manifest                                                                        |
+| PROVISIONER_MANIFEST    | provisioner/provisioner.yaml                                                                                  | The location of the NKG provisioner manifest                                                                              |
 
 ### Step 1 - Create a kind Cluster
 
@@ -85,7 +86,7 @@ You can optionally skip the actual *build* step.
 make install-nkg-local-no-build
 ```
 
-> Note:  If choosing this option, the following step *must* be completed manually *before* the build step:
+> Note:  If choosing this option, the following step *must* be completed manually *before* you build the image:
 
 ```makefile
 make update-nkg-manifest NKG_PREFIX=<nkg_repo_name> NKG_TAG=<nkg_image_tag>

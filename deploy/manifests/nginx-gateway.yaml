@@ -12,7 +12,7 @@ metadata:
   labels:
     app.kubernetes.io/name: nginx-gateway
     app.kubernetes.io/instance: nginx-gateway
-    app.kubernetes.io/version: "0.5.0"
+    app.kubernetes.io/version: "edge"
   annotations:
     {}
 ---
@@ -25,7 +25,7 @@ metadata:
   labels:
     app.kubernetes.io/name: nginx-gateway
     app.kubernetes.io/instance: nginx-gateway
-    app.kubernetes.io/version: "0.5.0"
+    app.kubernetes.io/version: "edge"
 data:
   nginx.conf: |-
     load_module /usr/lib/nginx/modules/ngx_http_js_module.so;
@@ -52,7 +52,7 @@ metadata:
   labels:
     app.kubernetes.io/name: nginx-gateway
     app.kubernetes.io/instance: nginx-gateway
-    app.kubernetes.io/version: "0.5.0"
+    app.kubernetes.io/version: "edge"
 data:
   httpmatches.js: |
     const MATCHES_VARIABLE = 'http_matches';
@@ -271,7 +271,7 @@ metadata:
   labels:
     app.kubernetes.io/name: nginx-gateway
     app.kubernetes.io/instance: nginx-gateway
-    app.kubernetes.io/version: "0.5.0"
+    app.kubernetes.io/version: "edge"
 rules:
 - apiGroups:
   - ""
@@ -330,7 +330,7 @@ metadata:
   labels:
     app.kubernetes.io/name: nginx-gateway
     app.kubernetes.io/instance: nginx-gateway
-    app.kubernetes.io/version: "0.5.0"
+    app.kubernetes.io/version: "edge"
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -349,19 +349,17 @@ metadata:
   labels:
     app.kubernetes.io/name: nginx-gateway
     app.kubernetes.io/instance: nginx-gateway
-    app.kubernetes.io/version: "0.5.0"
+    app.kubernetes.io/version: "edge"
 spec:
   # We only support a single replica for now
   replicas: 1
   selector:
     matchLabels:
-      app: nginx-gateway
       app.kubernetes.io/name: nginx-gateway
       app.kubernetes.io/instance: nginx-gateway
   template:
     metadata:
       labels:
-        app: nginx-gateway
         app.kubernetes.io/name: nginx-gateway
         app.kubernetes.io/instance: nginx-gateway
     spec:
@@ -449,6 +447,6 @@ metadata:
   labels:
     app.kubernetes.io/name: nginx-gateway
     app.kubernetes.io/instance: nginx-gateway
-    app.kubernetes.io/version: "0.5.0"
+    app.kubernetes.io/version: "edge"
 spec:
   controllerName: k8s-gateway.nginx.org/nginx-gateway-controller

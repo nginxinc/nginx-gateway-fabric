@@ -38,8 +38,8 @@ preload-nginx-container: ## Preload NGINX container on configured kind cluster
 	kind load docker-image $(NGINX_IMAGE)
 
 .PHONY: update-nkg-manifest
-update-nkg-manifest:
-	cd .. && make generate-manifests HELM_TEMPLATE_EXTRA_ARGS="--set nginxGateway.kind=skip" HELM_TEMPLATE_COMMON_ARGS="--set nginxGateway.image.repository=$(NKG_PREFIX) --set nginxGateway.image.tag=$(NKG_TAG) --set nginxGateway.image.pullPolicy=Never" && cd -
+update-nkg-manifest: ## Update the NKG deployment manifest image name and imagePullPolicy
+	cd .. && make generate-manifests HELM_TEMPLATE_EXTRA_ARGS_FOR_ALL_MANIFESTS_FILE="--set nginxGateway.kind=skip" HELM_TEMPLATE_COMMON_ARGS="--set nginxGateway.image.repository=$(NKG_PREFIX) --set nginxGateway.image.tag=$(NKG_TAG) --set nginxGateway.image.pullPolicy=Never" && cd -
 
 .PHONY: build-nkg-image
 build-nkg-image: ## Build NKG container and load it and NGINX container on configured kind cluster

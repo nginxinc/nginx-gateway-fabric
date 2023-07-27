@@ -3,7 +3,7 @@ name: nginx-kubernetes-gateway
 description: NGINX Kubernetes Gateway
 type: application
 version: 0.1.0
-appVersion: "0.5.0"
+appVersion: "edge"
 home: https://github.com/nginxinc/nginx-kubernetes-gateway
 icon: https://raw.githubusercontent.com/nginxinc/nginx-kubernetes-gateway/tree/main/deploy/helm-chart/chart-icon.png
 sources:

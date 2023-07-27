@@ -42,7 +42,7 @@ To create a new release, follow these steps:
        [provisioner manifest](../conformance/provisioner/provisioner.yaml)), and all docs to `X.Y.Z`.
     5. Ensure that the `imagePullPolicy` is `IfNotPresent` in the Helm [values.yaml](../deploy/helm-chart/values.yaml)
        file.
-    6. Generate the deployment manifests by running `make generate-manifests`.
+    6. Generate the installation manifests by running `make generate-manifests`.
     7. Modify any `git clone` instructions to use `vX.Y.Z` tag.
     8. Update the [README](../README.md) to include information about the release.
     9. Update the [changelog](../CHANGELOG.md). The changelog includes only important (from the user perspective)
