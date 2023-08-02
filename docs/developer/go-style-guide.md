@@ -352,12 +352,7 @@ panic(fmt.Errorf("unknown event type %T", e))
 
 ## Logging
 
-> **Note**
-> This section is a work in progress.
-
-NKG uses [logr](https://pkg.go.dev/github.com/go-logr/logr) for its logging library. Each component that logs should
-inherit their logger from the main process using
-the [`WithName`](https://pkg.go.dev/github.com/go-logr/logr#hdr-Logger_Names) function.
+See the [Logging guidelines](logging-guidelines.md) document.
 
 ## Concurrency
 
