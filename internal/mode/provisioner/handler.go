@@ -117,7 +117,8 @@ func (h *eventHandler) ensureDeploymentsMatchGateways(ctx context.Context) {
 
 		h.provisions[nsname] = deployment
 
-		h.logger.Info("Created deployment",
+		h.logger.Info(
+			"Created deployment",
 			"deployment", client.ObjectKeyFromObject(deployment),
 			"gateway", nsname,
 		)
@@ -135,7 +136,8 @@ func (h *eventHandler) ensureDeploymentsMatchGateways(ctx context.Context) {
 
 		delete(h.provisions, nsname)
 
-		h.logger.Info("Deleted deployment",
+		h.logger.Info(
+			"Deleted deployment",
 			"deployment", client.ObjectKeyFromObject(deployment),
 			"gateway", nsname,
 		)

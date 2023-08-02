@@ -133,7 +133,9 @@ func (upd *updaterImpl) update(
 	err := upd.cfg.Client.Get(ctx, nsname, obj)
 	if err != nil {
 		if !apierrors.IsNotFound(err) {
-			upd.cfg.Logger.Error(err, "Failed to get the recent version the resource when updating status",
+			upd.cfg.Logger.Error(
+				err,
+				"Failed to get the recent version the resource when updating status",
 				"namespace", nsname.Namespace,
 				"name", nsname.Name,
 				"kind", obj.GetObjectKind().GroupVersionKind().Kind)
@@ -145,7 +147,9 @@ func (upd *updaterImpl) update(
 
 	err = upd.cfg.Client.Status().Update(ctx, obj)
 	if err != nil {
-		upd.cfg.Logger.Error(err, "Failed to update status",
+		upd.cfg.Logger.Error(
+			err,
+			"Failed to update status",
 			"namespace", nsname.Namespace,
 			"name", nsname.Name,
 			"kind", obj.GetObjectKind().GroupVersionKind().Kind)

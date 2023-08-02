@@ -41,8 +41,11 @@ var escapedStringsNoVarExpansionFmtRegexp = regexp.MustCompile("^" + escapedStri
 // If the value is invalid, the function returns an error that includes the specified examples of valid values.
 func validateEscapedStringNoVarExpansion(value string, examples []string) error {
 	if !escapedStringsNoVarExpansionFmtRegexp.MatchString(value) {
-		msg := k8svalidation.RegexError(escapedStringsNoVarExpansionErrMsg, escapedStringsNoVarExpansionFmt,
-			examples...)
+		msg := k8svalidation.RegexError(
+			escapedStringsNoVarExpansionErrMsg,
+			escapedStringsNoVarExpansionFmt,
+			examples...,
+		)
 		return errors.New(msg)
 	}
 	return nil

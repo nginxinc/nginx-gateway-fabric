@@ -124,7 +124,8 @@ func createStaticModeCommand() *cobra.Command {
 		Short: "Configure NGINX in the scope of a single Gateway resource",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			logger := zap.New()
-			logger.Info("Starting NGINX Kubernetes Gateway in static mode",
+			logger.Info(
+				"Starting NGINX Kubernetes Gateway in static mode",
 				"version", version,
 				"commit", commit,
 				"date", date,
@@ -184,7 +185,8 @@ func createProvisionerModeCommand() *cobra.Command {
 		Hidden: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			logger := zap.New()
-			logger.Info("Starting NGINX Kubernetes Gateway Provisioner",
+			logger.Info(
+				"Starting NGINX Kubernetes Gateway Provisioner",
 				"version", version,
 				"commit", commit,
 				"date", date,
