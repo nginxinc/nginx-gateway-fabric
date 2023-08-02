@@ -13,8 +13,9 @@ page.
 
 ## Deploy NGINX Kubernetes Gateway from Manifests
 
-> Note: NGINX Kubernetes Gateway can only run in the `nginx-gateway` namespace.
-> This limitation will be addressed in the future releases.
+> Note: By default, NGINX Kubernetes Gateway (NKG) will be installed into the nginx-gateway Namespace.
+> It is possible to run NKG in a different Namespace, although you'll need to make modifications to the installation
+> manifests.
 
 1. Clone the repo and change into the `nginx-kubernetes-gateway` directory:
 
@@ -29,40 +30,10 @@ page.
    kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v0.7.1/standard-install.yaml
    ```
 
-1. Create the nginx-gateway Namespace:
-
-    ```shell
-    kubectl apply -f deploy/manifests/namespace.yaml
-    ```
-
-1. Create the njs-modules ConfigMap:
-
-    ```shell
-    kubectl apply -f deploy/manifests/njs-modules.yaml -n nginx-gateway
-    ```
-
-1. Create the ConfigMap with the main NGINX configuration file:
-
-    ```shell
-    kubectl apply -f deploy/manifests/nginx-conf.yaml
-    ```
-
-1. Configure RBAC:
-
-    ```shell
-    kubectl apply -f deploy/manifests/rbac.yaml
-    ```
-
-1. Create the GatewayClass resource:
-
-    ```shell
-    kubectl apply -f deploy/manifests/gatewayclass.yaml
-    ```
-
 1. Deploy the NGINX Kubernetes Gateway:
 
    ```shell
-   kubectl apply -f deploy/manifests/deployment.yaml
+   kubectl apply -f deploy/manifests/nginx-gateway.yaml
    ```
 
 1. Confirm the NGINX Kubernetes Gateway is running in `nginx-gateway` namespace:
@@ -140,3 +111,28 @@ Create a Service with type `LoadBalancer` using the appropriate manifest for you
 ### Use NGINX Kubernetes Gateway
 
 To get started, follow the tutorials in the [examples](../examples) directory.
+
+## Uninstalling NGINX Kubernetes Gateway
+
+### Uninstall NGINX Kubernetes Gateway from Manifests
+
+1. Uninstall the NGINX Kubernetes Gateway:
+
+   ```shell
+   kubectl delete -f deploy/manifests/nginx-gateway.yaml
+   ```
+
+1. Uninstall the Gateway API resources from the standard channel (the CRDs and the validating webhook):
+
+   >**Warning: This command will delete all the corresponding custom resources in your cluster across all namespaces!
+   Please ensure there are no custom resources that you want to keep and there are no other Gateway API implementations
+   running in the cluster!**
+
+   ```shell
+   kubectl delete -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v0.7.1/standard-install.yaml
+   ```
+
+### Uninstall NGINX Kubernetes Gateway using Helm
+
+To uninstall NGINX Kubernetes Gateway when the deployment method is Helm, please follow the instructions
+[here](/deploy/helm-chart/README.md#uninstalling-the-chart).

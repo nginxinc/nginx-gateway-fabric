@@ -50,7 +50,7 @@ practices to ensure a successful feature development process.
 11. **Lint code**: See the [run the linter](/docs/developer/quickstart.md#run-the-linter) section of the quickstart
     guide for instructions.
 12. **Run generators**: See the [Run go generate](/docs/developer/quickstart.md#run-go-generate) and the
-    [Update NJS module ConfigMaps](/docs/developer/quickstart.md#update-njs-module-configmaps) sections of the
+    [Update Generated Manifests](/docs/developer/quickstart.md#update-generated-manifests) sections of the
     quickstart guide for instructions.
 13. **Open pull request**: Open a pull request targeting the `main` branch of
     the [nginx-kubernetes-gateway](https://github.com/nginxinc/nginx-kubernetes-gateway/tree/main) repository. The

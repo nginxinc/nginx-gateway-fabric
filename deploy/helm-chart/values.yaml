@@ -1,4 +1,6 @@
 nginxGateway:
+  ## The kind of the NGINX Kubernetes Gateway installation - currently, only deployment is supported.
+  kind: deployment
   ## gatewayClassName is the name of the GatewayClass that will be created as part of this release. Every NGINX Gateway
   ## must have a unique corresponding GatewayClass resource. NGINX Kubernetes Gateway only processes resources that
   ## belong to its class - i.e. have the "gatewayClassName" field resource equal to the class.

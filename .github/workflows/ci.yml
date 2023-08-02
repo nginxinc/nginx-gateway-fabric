@@ -52,11 +52,14 @@ jobs:
       - name: Check if go.mod and go.sum are up to date
         run: go mod tidy && git diff --exit-code -- go.mod go.sum
 
-      - name: Check if generated files are up to date
+      - name: Check if generated go files are up to date
         run: make generate && git diff --exit-code
 
       - name: Check if njs-modules yaml is up to date
         run: make generate-njs-yaml && git diff --exit-code
+
+      - name: Check if generated manifests are up to date
+        run: make generate-manifests && git diff --exit-code
 
   unit-tests:
     name: Unit Tests
