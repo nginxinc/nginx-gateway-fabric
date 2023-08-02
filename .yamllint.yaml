@@ -6,6 +6,7 @@ yaml-files:
 
 ignore:
   - deploy/helm-chart/templates/
+  - deploy/helm-chart/crds/
 
 rules:
   braces: enable
@@ -28,7 +29,7 @@ rules:
     indent-sequences: consistent
     check-multi-line-strings: true
     ignore: |
-      deploy/manifests/nginx-conf.yaml
+      deploy/manifests/nginx-gateway.yaml
       deploy/manifests/njs-modules.yaml
   key-duplicates: enable
   key-ordering: disable
@@ -38,7 +39,7 @@ rules:
     allow-non-breakable-inline-mappings: true
     ignore: |
       .github/workflows/
-      deploy/manifests/deployment.yaml
+      deploy/manifests/nginx-gateway.yaml
   new-line-at-end-of-file: enable
   new-lines: enable
   octal-values: disable
