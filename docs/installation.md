@@ -13,7 +13,7 @@ page.
 
 ## Deploy NGINX Kubernetes Gateway from Manifests
 
-> Note: By default, NKG will be installed into the nginx-gateway Namespace.
+> Note: By default, NGINX Kubernetes Gateway (NKG) will be installed into the nginx-gateway Namespace.
 > It is possible to run NKG in a different Namespace, although you'll need to make modifications to the installation
 > manifests.
 
