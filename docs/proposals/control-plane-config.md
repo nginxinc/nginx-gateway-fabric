@@ -1,6 +1,6 @@
-# Enhancement Proposal-554: Control Plane Dynamic Configuration
+# Enhancement Proposal-928: Control Plane Dynamic Configuration
 
-- Issue: https://github.com/nginxinc/nginx-kubernetes-gateway/issues/554
+- Issue: https://github.com/nginxinc/nginx-kubernetes-gateway/issues/928
 - Status: Provisional
 
 ## Summary
