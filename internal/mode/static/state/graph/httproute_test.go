@@ -471,7 +471,8 @@ func TestBuildRoute(t *testing.T) {
 				Conditions: []conditions.Condition{
 					staticConds.NewRouteUnsupportedValue(
 						`All rules are invalid: spec.rules[0].filters[0].requestRedirect.hostname: ` +
-							`Invalid value: "invalid.example.com": invalid hostname`),
+							`Invalid value: "invalid.example.com": invalid hostname`,
+					),
 				},
 				Rules: []Rule{
 					{

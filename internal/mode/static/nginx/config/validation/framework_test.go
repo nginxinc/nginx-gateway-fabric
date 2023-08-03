@@ -43,11 +43,16 @@ func testValidValuesForSupportedValuesValidator[T configValue](
 	f supportedValuesValidatorFunc[T],
 	values ...T,
 ) {
-	runValidatorTests(t, func(g *WithT, v T) {
-		valid, supportedValues := f(v)
-		g.Expect(valid).To(BeTrue(), createFailureMessage(v))
-		g.Expect(supportedValues).To(BeNil(), createFailureMessage(v))
-	}, "valid_value", values...)
+	runValidatorTests(
+		t,
+		func(g *WithT, v T) {
+			valid, supportedValues := f(v)
+			g.Expect(valid).To(BeTrue(), createFailureMessage(v))
+			g.Expect(supportedValues).To(BeNil(), createFailureMessage(v))
+		},
+		"valid_value",
+		values...,
+	)
 }
 
 func testInvalidValuesForSupportedValuesValidator[T configValue](
@@ -56,11 +61,16 @@ func testInvalidValuesForSupportedValuesValidator[T configValue](
 	supportedValuesMap map[T]struct{},
 	values ...T,
 ) {
-	runValidatorTests(t, func(g *WithT, v T) {
-		valid, supportedValues := f(v)
-		g.Expect(valid).To(BeFalse(), createFailureMessage(v))
-		g.Expect(supportedValues).To(Equal(getSortedKeysAsString(supportedValuesMap)), createFailureMessage(v))
-	}, "invalid_value", values...)
+	runValidatorTests(
+		t,
+		func(g *WithT, v T) {
+			valid, supportedValues := f(v)
+			g.Expect(valid).To(BeFalse(), createFailureMessage(v))
+			g.Expect(supportedValues).To(Equal(getSortedKeysAsString(supportedValuesMap)), createFailureMessage(v))
+		},
+		"invalid_value",
+		values...,
+	)
 }
 
 func TestValidateInSupportedValues(t *testing.T) {
@@ -74,12 +84,19 @@ func TestValidateInSupportedValues(t *testing.T) {
 		return validateInSupportedValues(value, supportedValues)
 	}
 
-	testValidValuesForSupportedValuesValidator(t, validator,
+	testValidValuesForSupportedValuesValidator(
+		t,
+		validator,
 		"value1",
 		"value2",
-		"value3")
-	testInvalidValuesForSupportedValuesValidator(t, validator, supportedValues,
-		"value4")
+		"value3",
+	)
+	testInvalidValuesForSupportedValuesValidator(
+		t,
+		validator,
+		supportedValues,
+		"value4",
+	)
 }
 
 func TestGetSortedKeysAsString(t *testing.T) {

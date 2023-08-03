@@ -45,7 +45,8 @@ func TestGetBackendServiceNamesFromRoute(t *testing.T) {
 					BackendRefs: getNormalRefs("svc1"), // duplicate
 				},
 				{
-					BackendRefs: getModifiedRefs("invalid-kind",
+					BackendRefs: getModifiedRefs(
+						"invalid-kind",
 						func(refs []v1beta1.HTTPBackendRef) []v1beta1.HTTPBackendRef {
 							refs[0].Kind = (*v1beta1.Kind)(helpers.GetStringPointer("Invalid"))
 							return refs
@@ -53,7 +54,8 @@ func TestGetBackendServiceNamesFromRoute(t *testing.T) {
 					),
 				},
 				{
-					BackendRefs: getModifiedRefs("nil-namespace",
+					BackendRefs: getModifiedRefs(
+						"nil-namespace",
 						func(refs []v1beta1.HTTPBackendRef) []v1beta1.HTTPBackendRef {
 							refs[0].Namespace = nil
 							return refs
@@ -61,7 +63,8 @@ func TestGetBackendServiceNamesFromRoute(t *testing.T) {
 					),
 				},
 				{
-					BackendRefs: getModifiedRefs("diff-namespace",
+					BackendRefs: getModifiedRefs(
+						"diff-namespace",
 						func(refs []v1beta1.HTTPBackendRef) []v1beta1.HTTPBackendRef {
 							refs[0].Namespace = (*v1beta1.Namespace)(
 								helpers.GetStringPointer("not-test"),
@@ -159,8 +162,12 @@ func TestCapturerImpl_DecrementRouteCount(t *testing.T) {
 		}
 
 		if tc.expectedRefCount != count {
-			t.Errorf("decrementRefCount() test case %q expected ref count to be %d, got %d", tc.msg,
-				tc.expectedRefCount, count)
+			t.Errorf(
+				"decrementRefCount() test case %q expected ref count to be %d, got %d",
+				tc.msg,
+				tc.expectedRefCount,
+				count,
+			)
 		}
 	}
 }
