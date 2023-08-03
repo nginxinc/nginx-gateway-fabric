@@ -11,7 +11,7 @@ import (
 
 const (
 	// secretFileMode defines the default file mode for files with secrets.
-	secretFileMode = 0o600
+	secretFileMode = 0o640
 )
 
 // Type is the type of File.

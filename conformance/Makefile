@@ -1,5 +1,6 @@
 NKG_TAG = edge
 NKG_PREFIX = nginx-kubernetes-gateway
+NGINX_IMAGE_NAME = $(NKG_PREFIX)/nginx
 GW_API_VERSION ?= 0.7.1
 GATEWAY_CLASS = nginx
 SUPPORTED_FEATURES = HTTPRoute,HTTPRouteQueryParamMatching,HTTPRouteMethodMatching,HTTPRoutePortRedirect,HTTPRouteSchemeRedirect,GatewayClassObservedGenerationBump
@@ -32,22 +33,18 @@ create-kind-cluster: ## Create a kind cluster
 	kind create cluster --image $(KIND_IMAGE)
 	kind export kubeconfig --kubeconfig $(KIND_KUBE_CONFIG)
 
-.PHONY: preload-nginx-container
-preload-nginx-container: ## Preload NGINX container on configured kind cluster
-	docker pull $(NGINX_IMAGE)
-	kind load docker-image $(NGINX_IMAGE)
-
 .PHONY: update-nkg-manifest
-update-nkg-manifest: ## Update the NKG deployment manifest image name and imagePullPolicy
-	cd .. && make generate-manifests HELM_TEMPLATE_EXTRA_ARGS_FOR_ALL_MANIFESTS_FILE="--set nginxGateway.kind=skip" HELM_TEMPLATE_COMMON_ARGS="--set nginxGateway.image.repository=$(NKG_PREFIX) --set nginxGateway.image.tag=$(NKG_TAG) --set nginxGateway.image.pullPolicy=Never" && cd -
+update-nkg-manifest: ## Update the NKG deployment manifest image names and imagePullPolicies
+	cd .. && make generate-manifests HELM_TEMPLATE_EXTRA_ARGS_FOR_ALL_MANIFESTS_FILE="--set nginxGateway.kind=skip" HELM_TEMPLATE_COMMON_ARGS="--set nginxGateway.image.repository=$(NKG_PREFIX) --set nginxGateway.image.tag=$(NKG_TAG) --set nginxGateway.image.pullPolicy=Never --set nginx.image.repository=$(NGINX_IMAGE_NAME) --set nginx.image.tag=$(NKG_TAG) --set nginx.image.pullPolicy=Never" && cd -
 
 .PHONY: build-nkg-image
-build-nkg-image: ## Build NKG container and load it and NGINX container on configured kind cluster
-	cd .. && make PREFIX=$(NKG_PREFIX) TAG=$(NKG_TAG) container
+build-nkg-images: ## Build NKG and nginx images and load them on the kind cluster
+	cd .. && make PREFIX=$(NKG_PREFIX) TAG=$(NKG_TAG) build-images
 
 .PHONY: load-images
-load-images: preload-nginx-container ## Load NKG and NGINX containers on configured kind cluster
+load-images: ## Load NKG and NGINX containers on configured kind cluster
 	kind load docker-image $(NKG_PREFIX):$(NKG_TAG)
+	kind load docker-image $(NGINX_IMAGE_NAME):$(NKG_TAG)
 
 .PHONY: prepare-nkg-dependencies
 prepare-nkg-dependencies: update-nkg-manifest ## Install NKG dependencies on configured kind cluster
@@ -62,13 +59,13 @@ deploy-updated-provisioner: ## Update provisioner manifest and deploy to the con
 	yq '(select(.spec.template.spec.containers[].image) | .spec.template.spec.containers[].image="$(NKG_PREFIX):$(NKG_TAG)" | .spec.template.spec.containers[].imagePullPolicy = "Never")' $(PROVISIONER_MANIFEST) | kubectl apply -f -
 
 .PHONY: install-nkg-local-build
-install-nkg-local-build: prepare-nkg-dependencies build-nkg-image load-images deploy-updated-provisioner ## Install NKG from local build with provisioner on configured kind cluster
+install-nkg-local-build: prepare-nkg-dependencies build-nkg-images load-images deploy-updated-provisioner ## Install NKG from local build with provisioner on configured kind cluster
 
 .PHONY: install-nkg-local-no-build
 install-nkg-local-no-build: prepare-nkg-dependencies load-images deploy-updated-provisioner ## Install NKG from local build with provisioner on configured kind cluster but do not build the NKG image
 
 .PHONY: install-nkg-edge
-install-nkg-edge: preload-nginx-container prepare-nkg-dependencies ## Install NKG with provisioner from edge on configured kind cluster
+install-nkg-edge: prepare-nkg-dependencies ## Install NKG with provisioner from edge on configured kind cluster
 	kubectl apply -f $(PROVISIONER_MANIFEST)
 
 .PHONY: run-conformance-tests

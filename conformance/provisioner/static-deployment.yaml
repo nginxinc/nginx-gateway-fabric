@@ -41,11 +41,14 @@ spec:
             - KILL
             drop:
             - ALL
-          runAsUser: 1001
+          runAsUser: 102
+          runAsGroup: 1001
         volumeMounts:
-        - mountPath: /etc/nginx
-          name: nginx
-      - image: nginx:1.25
+        - name: nginx-conf
+          mountPath: /etc/nginx/conf.d
+        - name: nginx-secrets
+          mountPath: /etc/nginx/secrets
+      - image: ghcr.io/nginxinc/nginx-kubernetes-gateway/nginx:edge
         imagePullPolicy: Always
         name: nginx
         ports:
@@ -63,37 +66,19 @@ spec:
             - DAC_OVERRIDE
             drop:
             - ALL
+          runAsUser: 101
+          runAsGroup: 1001
         volumeMounts:
-        - mountPath: /etc/nginx
-          name: nginx
-        - mountPath: /etc/nginx/nginx.conf
-          name: nginx-conf
-          subPath: nginx.conf
-        - mountPath: /var/lib/nginx
-          name: var-lib-nginx
-        - mountPath: /usr/lib/nginx/modules/njs
-          name: njs-modules
-      initContainers:
-      - command:
-        - sh
-        - -c
-        - rm -r /etc/nginx/conf.d /etc/nginx/secrets; mkdir /etc/nginx/conf.d /etc/nginx/secrets
-          && chown 1001:0 /etc/nginx/conf.d /etc/nginx/secrets
-        image: busybox:1.36
-        name: set-permissions
-        volumeMounts:
-        - mountPath: /etc/nginx
-          name: nginx
+        - name: nginx-conf
+          mountPath: /etc/nginx/conf.d
+        - name: nginx-secrets
+          mountPath: /etc/nginx/secrets
       serviceAccountName: nginx-gateway
       shareProcessNamespace: true
+      securityContext:
+        fsGroup: 1001
       volumes:
-      - emptyDir: {}
-        name: nginx
-      - configMap:
-          name: nginx-gateway-conf
-        name: nginx-conf
-      - emptyDir: {}
-        name: var-lib-nginx
-      - configMap:
-          name: nginx-gateway-njs-modules
-        name: njs-modules
+      - name: nginx-conf
+        emptyDir: {}
+      - name: nginx-secrets
+        emptyDir: {}
