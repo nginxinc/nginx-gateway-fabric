@@ -25,6 +25,9 @@ limited to, log level, tracing, or metrics. For the best user experience, these 
 changed at runtime, to avoid having to restart NKG. The first option that we will allow users to configure is the
 log level. The easiest and most intuitive way to implement a Kubernetes-native API is through a CRD.
 
+In this doc, the term "user" will refer to the cluster operator (the person who installs and manages NKG). The
+cluster operator owns this CRD resource.
+
 ## API, Customer Driven Interfaces, and User Experience
 
 The API would be provided in a CRD. An authorized user would interact with this CRD using `kubectl` to `get`
@@ -33,20 +36,24 @@ or `edit` the configuration.
 Proposed configuration CRD example:
 
 ```yaml
-apiVersion: nginx.gateway.k8s.io/v1beta1
+apiVersion: nginx.gateway.k8s.io/v1alpha1
 kind: NGINXControlConfig
 metadata:
     name: nkg-config
     namespace: nginx-gateway
 spec:
-    logLevel: info
+    log:
+        level: info
+    ...
+status:
     ...
 ```
 
 - The CRD would be Namespace-scoped, living in the same Namespace as the controller that it applies to.
-- CRD is initialized and created when NKG is deployed
-- NKG references the name of this CRD via CLI arg, and only watches this CRD
-- If user deletes resource, NKG logs an error and creates an event. Last state is used until CRD is restored.
+- CRD is initialized and created when NKG is deployed.
+- NKG references the name of this CRD via CLI arg, and only watches this CRD. If the resource doesn't exist,
+then an error is logged and event created, and default values are used.
+- If user deletes resource, NKG logs an error and creates an event. NKG will revert to default values.
 
 For discussion with team:
 
@@ -79,7 +86,8 @@ be similar in behavior as the current unit tests that verify Gateway API resourc
 We need to ensure that any configurable fields that are exposed to a user are:
 
 - Properly validated. This means that the fields should be the correct type (integer, string, etc.), have appropriate
-length, and use regex patterns or enums to prevent any unwanted input.
+length, and use regex patterns or enums to prevent any unwanted input. This will initially be done through
+OpenAPI schema validation. If necessary as the CRD evolves, CEL or webhooks could be used.
 - Have a valid use case. The more fields we expose, the more attack vectors we create. We should only be exposing
 fields that are genuinely useful for a user to change dynamically.
 
