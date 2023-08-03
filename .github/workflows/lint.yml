@@ -81,13 +81,13 @@ jobs:
     name: Markdown Lint
     runs-on: ubuntu-22.04
     steps:
-    - name: Checkout Repository
-      uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+      - name: Checkout Repository
+        uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
 
-    - uses: DavidAnson/markdownlint-cli2-action@8f3516061301755c97ff833a8e933f09282cc5b5 # v11.0.0
-      with:
-        config: ${{ github.workspace }}/.markdownlint-cli2.yaml
-        globs: '**/*.md'
+      - uses: DavidAnson/markdownlint-cli2-action@8f3516061301755c97ff833a8e933f09282cc5b5 # v11.0.0
+        with:
+          config: ${{ github.workspace }}/.markdownlint-cli2.yaml
+          globs: '**/*.md'
 
   chart-lint:
     name: Chart Lint
@@ -97,3 +97,16 @@ jobs:
         uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
       - name: Lint chart
         run: make lint-helm
+
+  yaml-lint:
+    name: Yaml Lint
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+
+      - name: Install yamllint
+        run: pip install yamllint
+
+      - name: Lint YAML files
+        run: yamllint .

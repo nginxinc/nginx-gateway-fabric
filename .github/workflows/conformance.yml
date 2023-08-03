@@ -107,7 +107,7 @@ jobs:
           nkg_prefix=$(echo ${{ steps.meta.outputs.tags }} | cut -d ":" -f 1)
           nkg_tag=$(echo ${{ steps.meta.outputs.tags }} | cut -d ":" -f 2)
           if [ ${{ github.event_name }} == "schedule" ]; then
-            export GW_API_VERSION=main
+          export GW_API_VERSION=main
           fi
           make install-nkg-local-no-build NKG_PREFIX=${nkg_prefix} NKG_TAG=${nkg_tag}
         working-directory: ./conformance
