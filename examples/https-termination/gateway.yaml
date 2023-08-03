@@ -3,7 +3,7 @@ kind: Gateway
 metadata:
   name: gateway
   labels:
-    domain: k8s-gateway.nginx.org
+    domain: gateway.nginx.org
 spec:
   gatewayClassName: nginx
   listeners:

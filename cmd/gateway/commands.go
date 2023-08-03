@@ -1,13 +1,15 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 
 	"github.com/spf13/cobra"
+	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	ctlrZap "sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/provisioner"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static"
@@ -15,7 +17,7 @@ import (
 )
 
 const (
-	domain                = "k8s-gateway.nginx.org"
+	domain                = "gateway.nginx.org"
 	gatewayClassFlag      = "gatewayclass"
 	gatewayClassNameUsage = `The name of the GatewayClass resource. ` +
 		`Every NGINX Gateway must have a unique corresponding GatewayClass resource.`
@@ -118,12 +120,15 @@ func createStaticModeCommand() *cobra.Command {
 	// flag values
 	gateway := namespacedNameValue{}
 	var updateGCStatus bool
+	var configCRDName string
 
 	cmd := &cobra.Command{
 		Use:   "static-mode",
 		Short: "Configure NGINX in the scope of a single Gateway resource",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			logger := zap.New()
+			atom := zap.NewAtomicLevel()
+
+			logger := ctlrZap.New(ctlrZap.Level(atom))
 			logger.Info(
 				"Starting NGINX Kubernetes Gateway in static mode",
 				"version", version,
@@ -136,6 +141,11 @@ func createStaticModeCommand() *cobra.Command {
 				return fmt.Errorf("error validating POD_IP environment variable: %w", err)
 			}
 
+			namespace := os.Getenv("MY_NAMESPACE")
+			if namespace == "" {
+				return errors.New("MY_NAMESPACE environment variable must be set")
+			}
+
 			var gwNsName *types.NamespacedName
 			if cmd.Flags().Changed(gatewayFlag) {
 				gwNsName = &gateway.value
@@ -143,9 +153,12 @@ func createStaticModeCommand() *cobra.Command {
 
 			conf := config.Config{
 				GatewayCtlrName:          gatewayCtlrName.value,
+				ConfigCRDName:            configCRDName,
 				Logger:                   logger,
+				AtomicLevel:              atom,
 				GatewayClassName:         gatewayClassName.value,
 				PodIP:                    podIP,
+				Namespace:                namespace,
 				GatewayNsName:            gwNsName,
 				UpdateGatewayClassStatus: updateGCStatus,
 			}
@@ -168,6 +181,13 @@ func createStaticModeCommand() *cobra.Command {
 			"equal, it will choose the resource that appears first in alphabetical order by {namespace}/{name}.",
 	)
 
+	cmd.Flags().StringVar(
+		&configCRDName,
+		"nginx-gateway-config-name",
+		"nginx-gateway-config",
+		`The name of the NginxGateway CRD to be used for this controller's dynamic configuration.`,
+	)
+
 	cmd.Flags().BoolVar(
 		&updateGCStatus,
 		"update-gatewayclass-status",
@@ -184,7 +204,7 @@ func createProvisionerModeCommand() *cobra.Command {
 		Short:  "Provision a static-mode NGINX Gateway Deployment per Gateway resource",
 		Hidden: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			logger := zap.New()
+			logger := ctlrZap.New()
 			logger.Info(
 				"Starting NGINX Kubernetes Gateway Provisioner",
 				"version", version,

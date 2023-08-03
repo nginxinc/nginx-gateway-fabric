@@ -8,6 +8,8 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
+
+	nkgAPI "github.com/nginxinc/nginx-kubernetes-gateway/apis/v1alpha1"
 )
 
 //go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . Updater
@@ -115,6 +117,20 @@ func (upd *updaterImpl) Update(ctx context.Context, statuses Statuses) {
 				upd.cfg.GatewayCtlrName,
 				upd.cfg.Clock.Now(),
 			)
+		})
+	}
+
+	ngStatus := statuses.NginxGatewayStatus
+	if len(ngStatus.Conditions) > 0 {
+		upd.update(ctx, ngStatus.NSName, &nkgAPI.NginxGateway{}, func(object client.Object) {
+			ng := object.(*nkgAPI.NginxGateway)
+			ng.Status = nkgAPI.NginxGatewayStatus{
+				Conditions: convertConditions(
+					ngStatus.Conditions,
+					ngStatus.ObservedGeneration,
+					upd.cfg.Clock.Now(),
+				),
+			}
 		})
 	}
 }

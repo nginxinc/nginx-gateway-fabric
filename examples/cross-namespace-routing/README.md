@@ -128,7 +128,7 @@ Condtions:
       Reason:                RefNotPermitted
       Status:                False
       Type:                  ResolvedRefs
-      Controller Name:       k8s-gateway.nginx.org/nginx-gateway-controller
+      Controller Name:       gateway.nginx.org/nginx-gateway-controller
 ```
 
 ```shell
@@ -142,5 +142,5 @@ Condtions:
       Reason:                RefNotPermitted
       Status:                False
       Type:                  ResolvedRefs
-      Controller Name:       k8s-gateway.nginx.org/nginx-gateway-controller
+      Controller Name:       gateway.nginx.org/nginx-gateway-controller
 ```

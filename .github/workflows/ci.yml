@@ -55,6 +55,9 @@ jobs:
       - name: Check if generated go files are up to date
         run: make generate && git diff --exit-code
 
+      - name: Check if generated CRDs and types are up to date
+        run: make generate-crds && git diff --exit-code
+
       - name: Check if generated manifests are up to date
         run: make generate-manifests && git diff --exit-code
 
@@ -237,12 +240,18 @@ jobs:
           .
           --wait
           --create-namespace
+<<<<<<< HEAD
           --set nginxGateway.image.repository=$(echo ${{ steps.nkg-meta.outputs.tags }} | cut -d ":" -f 1)
           --set nginxGateway.image.tag=$(echo ${{ steps.nkg-meta.outputs.tags }} | cut -d ":" -f 2)
           --set nginxGateway.image.pullPolicy=Never
           --set nginx.image.repository=$(echo ${{ steps.nginx-meta.outputs.tags }} | cut -d ":" -f 1)
           --set nginx.image.tag=$(echo ${{ steps.nginx-meta.outputs.tags }} | cut -d ":" -f 2)
           --set nginx.image.pullPolicy=Never
+=======
+          --set nginxGateway.image.repository=$(echo ${{ steps.meta.outputs.tags }} | cut -d ":" -f 1)
+          --set nginxGateway.image.tag=$(echo ${{ steps.meta.outputs.tags }} | cut -d ":" -f 2)
+          --set nginxGateway.image.pullPolicy=Never
+>>>>>>> 606489f (Dynamic control plane configuration support)
           --set service.type=NodePort
           -n nginx-gateway
         working-directory: ${{ github.workspace }}/deploy/helm-chart

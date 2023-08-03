@@ -42,7 +42,7 @@ func TestRootCmdFlagValidation(t *testing.T) {
 		{
 			name: "valid flags",
 			args: []string{
-				"--gateway-ctlr-name=k8s-gateway.nginx.org/nginx-gateway",
+				"--gateway-ctlr-name=gateway.nginx.org/nginx-gateway",
 				"--gatewayclass=nginx",
 			},
 			wantErr: false,
@@ -77,7 +77,7 @@ func TestRootCmdFlagValidation(t *testing.T) {
 		{
 			name: "gatewayclass is not set",
 			args: []string{
-				"--gateway-ctlr-name=k8s-gateway.nginx.org/nginx-gateway",
+				"--gateway-ctlr-name=gateway.nginx.org/nginx-gateway",
 			},
 			wantErr:           true,
 			expectedErrPrefix: `required flag(s) "gatewayclass" not set`,
@@ -85,7 +85,7 @@ func TestRootCmdFlagValidation(t *testing.T) {
 		{
 			name: "gatewayclass is set to empty string",
 			args: []string{
-				"--gateway-ctlr-name=k8s-gateway.nginx.org/nginx-gateway",
+				"--gateway-ctlr-name=gateway.nginx.org/nginx-gateway",
 				"--gatewayclass=",
 			},
 			wantErr:           true,
@@ -94,7 +94,7 @@ func TestRootCmdFlagValidation(t *testing.T) {
 		{
 			name: "gatewayclass is invalid",
 			args: []string{
-				"--gateway-ctlr-name=k8s-gateway.nginx.org/nginx-gateway",
+				"--gateway-ctlr-name=gateway.nginx.org/nginx-gateway",
 				"--gatewayclass=@",
 			},
 			wantErr:           true,

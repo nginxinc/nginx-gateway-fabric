@@ -16,6 +16,7 @@ import (
 	k8spredicate "sigs.k8s.io/controller-runtime/pkg/predicate"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
+	nkgAPI "github.com/nginxinc/nginx-kubernetes-gateway/apis/v1alpha1"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/controller"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/controller/filter"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/controller/index"
@@ -44,6 +45,7 @@ func init() {
 	utilruntime.Must(gatewayv1beta1.AddToScheme(scheme))
 	utilruntime.Must(apiv1.AddToScheme(scheme))
 	utilruntime.Must(discoveryV1.AddToScheme(scheme))
+	utilruntime.Must(nkgAPI.AddToScheme(scheme))
 }
 
 func StartManager(cfg config.Config) error {
@@ -65,6 +67,11 @@ func StartManager(cfg config.Config) error {
 	mgr, err := manager.New(clusterCfg, options)
 	if err != nil {
 		return fmt.Errorf("cannot build runtime manager: %w", err)
+	}
+
+	controlConfigNSName := types.NamespacedName{
+		Namespace: cfg.Namespace,
+		Name:      cfg.ConfigCRDName,
 	}
 
 	// Note: for any new object type or a change to the existing one,
@@ -118,6 +125,17 @@ func StartManager(cfg config.Config) error {
 		{
 			objectType: &gatewayv1beta1.ReferenceGrant{},
 		},
+		{
+			objectType: &nkgAPI.NginxGateway{},
+			options: func() []controller.Option {
+				if cfg.ConfigCRDName != "" {
+					return []controller.Option{
+						controller.WithNamespacedNameFilter(filter.CreateSingleResourceFilter(controlConfigNSName)),
+					}
+				}
+				return nil
+			}(),
+		},
 	}
 
 	ctx := ctlr.SetupSignalHandler()
@@ -169,13 +187,16 @@ func StartManager(cfg config.Config) error {
 	})
 
 	eventHandler := newEventHandlerImpl(eventHandlerConfig{
-		processor:       processor,
-		serviceResolver: resolver.NewServiceResolverImpl(mgr.GetClient()),
-		generator:       configGenerator,
-		logger:          cfg.Logger.WithName("eventHandler"),
-		nginxFileMgr:    nginxFileMgr,
-		nginxRuntimeMgr: nginxRuntimeMgr,
-		statusUpdater:   statusUpdater,
+		processor:           processor,
+		serviceResolver:     resolver.NewServiceResolverImpl(mgr.GetClient()),
+		generator:           configGenerator,
+		logger:              cfg.Logger.WithName("eventHandler"),
+		atomicLevel:         cfg.AtomicLevel,
+		nginxFileMgr:        nginxFileMgr,
+		nginxRuntimeMgr:     nginxRuntimeMgr,
+		statusUpdater:       statusUpdater,
+		eventRecorder:       recorder,
+		controlConfigNSName: controlConfigNSName,
 	})
 
 	objects, objectLists := prepareFirstEventBatchPreparerArgs(cfg.GatewayClassName, cfg.GatewayNsName)

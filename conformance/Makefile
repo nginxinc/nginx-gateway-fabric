@@ -8,6 +8,7 @@ KIND_KUBE_CONFIG=$${HOME}/.kube/kind/config
 TAG = latest
 PREFIX = conformance-test-runner
 NKG_MANIFEST=../deploy/manifests/nginx-gateway.yaml
+CRDS=../deploy/helm-chart/crds/
 SERVICE_MANIFEST=../deploy/manifests/service/nodeport.yaml
 STATIC_MANIFEST=provisioner/static-deployment.yaml
 PROVISIONER_MANIFEST=provisioner/provisioner.yaml
@@ -49,6 +50,7 @@ load-images: ## Load NKG and NGINX images on configured kind cluster
 prepare-nkg-dependencies: update-nkg-manifest ## Install NKG dependencies on configured kind cluster
 	./scripts/install-gateway.sh $(GW_API_VERSION)
 	kubectl wait --for=condition=available --timeout=60s deployment gateway-api-admission-server -n gateway-system
+	kubectl apply -f $(CRDS)
 	kubectl apply -f $(NKG_MANIFEST)
 	kubectl apply -f $(SERVICE_MANIFEST)
 

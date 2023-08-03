@@ -2,12 +2,17 @@ package config
 
 import (
 	"github.com/go-logr/logr"
+	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/types"
 )
 
 type Config struct {
+	// GatewayCtlrName is the name of this controller.
 	GatewayCtlrName string
-	Logger          logr.Logger
+	// ConfigCRDName is the name of the NginxControlConfig CRD for this controller.
+	ConfigCRDName string
+	Logger        logr.Logger
+	AtomicLevel   zap.AtomicLevel
 	// GatewayNsName is the namespaced name of a Gateway resource that the Gateway will use.
 	// The Gateway will ignore all other Gateway resources.
 	GatewayNsName *types.NamespacedName
@@ -15,6 +20,8 @@ type Config struct {
 	GatewayClassName string
 	// PodIP is the IP address of this Pod.
 	PodIP string
+	// Namespace is the Namespace of this Pod.
+	Namespace string
 	// UpdateGatewayClassStatus enables updating the status of the GatewayClass resource.
 	UpdateGatewayClassStatus bool
 }
