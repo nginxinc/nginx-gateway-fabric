@@ -166,6 +166,9 @@ jobs:
             target: goreleaser
           - dockerfile: build/Dockerfile.nginx
             image: ghcr.io/nginxinc/nginx-kubernetes-gateway/nginx
+            build-args: |
+              NJS_DIR=internal/mode/static/nginx/modules/src
+              NGINX_CONF_DIR=internal/mode/static/nginx/conf
     steps:
       - name: Checkout Repository
         uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
@@ -202,6 +205,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           pull: true
+          build-args: ${{ matrix.build-args }}
 
       - name: Deploy Kubernetes
         id: k8s
@@ -241,6 +245,9 @@ jobs:
             target: goreleaser
           - dockerfile: build/Dockerfile.nginx
             image: ghcr.io/nginxinc/nginx-kubernetes-gateway/nginx
+            build-args: |
+              NJS_DIR=internal/mode/static/nginx/modules/src
+              NGINX_CONF_DIR=internal/mode/static/nginx/conf
     permissions:
       contents: read # for docker/build-push-action to read repo content
       security-events: write # for github/codeql-action/upload-sarif to upload SARIF results
@@ -300,6 +307,7 @@ jobs:
           no-cache: ${{ github.event_name != 'pull_request' }}
           sbom: ${{ github.event_name != 'pull_request' }}
           provenance: false
+          build-args: ${{ matrix.build-args }}
 
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@41f05d9ecffa2ed3f1580af306000f734b733e54 # 0.11.2
