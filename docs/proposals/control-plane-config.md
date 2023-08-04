@@ -36,7 +36,7 @@ or `edit` the configuration.
 Proposed configuration CRD example:
 
 ```yaml
-apiVersion: nginx.gateway.k8s.io/v1alpha1
+apiVersion: gateway.nginx.org/v1alpha1
 kind: NGINXControlConfig
 metadata:
     name: nkg-config
@@ -55,9 +55,13 @@ status:
 then an error is logged and event created, and default values are used.
 - If user deletes resource, NKG logs an error and creates an event. NKG will revert to default values.
 
+This resource won't be referenced in the `parametersRef` of the GatewayClass, reserving that option for a data
+plane CRD. The control plane may end up supporting multiple GatewayClasses, so linking the control CRD to a
+GatewayClass wouldn't make sense. Referencing the CRD via a CLI argument ensures we only support one instance of
+the CRD per control plane.
+
 For discussion with team:
 
-- API group name
 - kind name
 - default resource name
 
