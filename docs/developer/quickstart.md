@@ -78,11 +78,10 @@ This will build the docker images `nginx-kubernetes-gateway:<your-user>` and `ng
    make create-kind-cluster
    ```
 
-2. Load the previously built image onto your `kind` cluster:
+2. Load the previously built images onto your `kind` cluster:
 
    ```shell
-   kind load docker-image nginx-kubernetes-gateway:$(whoami)
-   kind load docker-image nginx-kubernetes-gateway/nginx:$(whoami)
+   kind load docker-image nginx-kubernetes-gateway:$(whoami) nginx-kubernetes-gateway/nginx:$(whoami)
    ```
 
 3. Install Gateway API Resources

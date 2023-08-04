@@ -43,8 +43,7 @@ build-nkg-images: ## Build NKG and nginx images and load them on the kind cluste
 
 .PHONY: load-images
 load-images: ## Load NKG and NGINX containers on configured kind cluster
-	kind load docker-image $(NKG_PREFIX):$(NKG_TAG)
-	kind load docker-image $(NGINX_IMAGE_NAME):$(NKG_TAG)
+	kind load docker-image $(NKG_PREFIX):$(NKG_TAG) $(NGINX_IMAGE_NAME):$(NKG_TAG)
 
 .PHONY: prepare-nkg-dependencies
 prepare-nkg-dependencies: update-nkg-manifest ## Install NKG dependencies on configured kind cluster
