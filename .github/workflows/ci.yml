@@ -161,11 +161,11 @@ jobs:
       fail-fast: false
       matrix:
         include:
-        - dockerfile: build/Dockerfile
-          image: ghcr.io/nginxinc/nginx-kubernetes-gateway
-          target: goreleaser
-        - dockerfile: build/Dockerfile.nginx
-          image: ghcr.io/nginxinc/nginx-kubernetes-gateway/nginx
+          - dockerfile: build/Dockerfile
+            image: ghcr.io/nginxinc/nginx-kubernetes-gateway
+            target: goreleaser
+          - dockerfile: build/Dockerfile.nginx
+            image: ghcr.io/nginxinc/nginx-kubernetes-gateway/nginx
     steps:
       - name: Checkout Repository
         uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
@@ -236,11 +236,11 @@ jobs:
       fail-fast: false
       matrix:
         include:
-        - dockerfile: build/Dockerfile
-          image: ghcr.io/nginxinc/nginx-kubernetes-gateway
-          target: goreleaser
-        - dockerfile: build/Dockerfile.nginx
-          image: ghcr.io/nginxinc/nginx-kubernetes-gateway/nginx
+          - dockerfile: build/Dockerfile
+            image: ghcr.io/nginxinc/nginx-kubernetes-gateway
+            target: goreleaser
+          - dockerfile: build/Dockerfile.nginx
+            image: ghcr.io/nginxinc/nginx-kubernetes-gateway/nginx
     permissions:
       contents: read # for docker/build-push-action to read repo content
       security-events: write # for github/codeql-action/upload-sarif to upload SARIF results
