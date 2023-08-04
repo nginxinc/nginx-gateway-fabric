@@ -170,12 +170,23 @@ jobs:
       - name: Docker Buildx
         uses: docker/setup-buildx-action@4c0219f9ac95b02789c1075625400b2acbff50b1 # v2.9.1
 
-      - name: Docker meta
-        id: meta
+      - name: NKG Docker meta
+        id: nkg-meta
         uses: docker/metadata-action@818d4b7b91585d195f67373fd9cb0332e31a7175 # v4.6.0
         with:
           images: |
             name=ghcr.io/nginxinc/nginx-kubernetes-gateway
+          tags: |
+            type=semver,pattern={{version}}
+            type=edge
+            type=ref,event=pr
+            type=ref,event=branch,suffix=-rc,enable=${{ startsWith(github.ref, 'refs/heads/release') }}
+
+      - name: NGINX Docker meta
+        id: nginx-meta
+        uses: docker/metadata-action@818d4b7b91585d195f67373fd9cb0332e31a7175 # v4.6.0
+        with:
+          images: |
             name=ghcr.io/nginxinc/nginx-kubernetes-gateway/nginx
           tags: |
             type=semver,pattern={{version}}
@@ -187,7 +198,7 @@ jobs:
         uses: docker/build-push-action@2eb1c1961a95fc15694676618e422e8ba1d63825 # v4.1.1
         with:
           file: build/Dockerfile
-          tags: ${{ steps.meta.outputs.tags }}
+          tags: ${{ steps.nkg-meta.outputs.tags }}
           context: "."
           target: goreleaser
           load: true
@@ -199,7 +210,7 @@ jobs:
         uses: docker/build-push-action@2eb1c1961a95fc15694676618e422e8ba1d63825 # v4.1.1
         with:
           file: build/Dockerfile.nginx
-          tags: ${{ steps.meta.outputs.tags }}
+          tags: ${{ steps.nginx-meta.outputs.tags }}
           context: "."
           load: true
           cache-from: type=gha
@@ -215,22 +226,21 @@ jobs:
           kube_config=${{ github.workspace }}/deploy/helm-chart/kube-${{ github.run_id }}-helm
           make create-kind-cluster KIND_KUBE_CONFIG=${kube_config}
           echo "KUBECONFIG=${kube_config}" >> "$GITHUB_ENV"
-          kind load docker-image ${{ steps.meta.outputs.tags[0] }}
-          kind load docker-image ${{ steps.meta.outputs.tags[1] }}
+          kind load docker-image ${{ steps.nkg-meta.outputs.tags }} ${{ steps.nginx-meta.outputs.tags }}
           kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v0.7.1/standard-install.yaml
           kubectl wait --for=condition=complete job/gateway-api-admission-patch job/gateway-api-admission -n gateway-system
 
       - name: Install Chart
         run: >
           helm install
-          helm-$(echo ${{ steps.meta.outputs.tags }} | cut -d ":" -f 2)
+          helm-$(echo ${{ steps.nkg-meta.outputs.tags }} | cut -d ":" -f 2)
           .
           --wait
           --create-namespace
-          --set nginxGateway.image.repository=$(echo ${{ steps.meta.outputs.tags[0] }} | cut -d ":" -f 1)
-          --set nginxGateway.image.tag=$(echo ${{ steps.meta.outputs.tags[0] }} | cut -d ":" -f 2)
-          --set nginx.image.repository=$(echo ${{ steps.meta.outputs.tags[1] }} | cut -d ":" -f 1)
-          --set nginx.image.tag=$(echo ${{ steps.meta.outputs.tags[1] }} | cut -d ":" -f 2)
+          --set nginxGateway.image.repository=$(echo ${{ steps.nkg-meta.outputs.tags }} | cut -d ":" -f 1)
+          --set nginxGateway.image.tag=$(echo ${{ steps.nkg-meta.outputs.tags }} | cut -d ":" -f 2)
+          --set nginx.image.repository=$(echo ${{ steps.nginx-meta.outputs.tags }} | cut -d ":" -f 1)
+          --set nginx.image.tag=$(echo ${{ steps.nginx-meta.outputs.tags }} | cut -d ":" -f 2)
           --set service.type=NodePort
           -n nginx-gateway
         working-directory: ${{ github.workspace }}/deploy/helm-chart
