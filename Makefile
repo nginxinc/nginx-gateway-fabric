@@ -124,8 +124,8 @@ debug-build: GO_LINKER_FLAGS=$(GO_LINKER_FlAGS_VARS)
 debug-build: ADDITIONAL_GO_BUILD_FLAGS=-gcflags "all=-N -l"
 debug-build: build ## Build binary with debug info, symbols, and no optimizations
 
-.PHONY: debug-image
-debug-image: debug-build build-nkg-image ## Build NKG image with debug binary
+.PHONY: build-nkg-debug-image
+build-nkg-debug-image: debug-build build-nkg-image ## Build NKG image with debug binary
 
 .PHONY: generate-manifests
 generate-manifests: ## Generate manifests using Helm.
