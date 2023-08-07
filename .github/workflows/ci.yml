@@ -258,8 +258,10 @@ jobs:
           - dockerfile: build/Dockerfile
             image: ghcr.io/nginxinc/nginx-kubernetes-gateway
             target: goreleaser
+            sarif-file: trivy-results-nginx-kubernetes-gateway.sarif
           - dockerfile: build/Dockerfile.nginx
             image: ghcr.io/nginxinc/nginx-kubernetes-gateway/nginx
+            sarif-file: trivy-results-nginx-kubernetes-gateway-nginx.sarif
             build-args: |
               NJS_DIR=internal/mode/static/nginx/modules/src
               NGINX_CONF_DIR=internal/mode/static/nginx/conf
@@ -330,21 +332,21 @@ jobs:
         with:
           image-ref: ${{ matrix.image }}:${{ steps.meta.outputs.version }}
           format: "sarif"
-          output: "trivy-results-${{ matrix.image }}.sarif"
+          output: ${{ matrix.sarif-file }}
           ignore-unfixed: "true"
 
       - name: Upload Trivy scan results to GitHub Security tab
         uses: github/codeql-action/upload-sarif@5b6282e01c62d02e720b81eb8a51204f527c3624 # v2.21.3
         continue-on-error: true
         with:
-          sarif_file: "trivy-results-${{ matrix.image }}.sarif"
+          sarif_file: ${{ matrix.sarif-file }}
 
       - name: Upload Scan Results
         uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
         continue-on-error: true
         with:
-          name: "trivy-results-${{ matrix.image }}.sarif"
-          path: "trivy-results-${{ matrix.image }}.sarif"
+          name: ${{ matrix.sarif-file }}
+          path: ${{ matrix.sarif-file }}
         if: always()
 
   publish-helm:
