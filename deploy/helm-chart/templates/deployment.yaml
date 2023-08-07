@@ -54,11 +54,7 @@ spec:
         securityContext:
           capabilities:
             add:
-            - CHOWN
             - NET_BIND_SERVICE
-            - SETGID
-            - SETUID
-            - DAC_OVERRIDE
             drop:
             - ALL
           runAsUser: 101
