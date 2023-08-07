@@ -8,6 +8,7 @@ installed on your machine:
 - [git](https://git-scm.com/)
 - [GNU Make](https://www.gnu.org/software/software.html)
 - [Docker](https://www.docker.com/) v18.09+
+- [Go](https://go.dev/doc/install) v1.20
 
 ## Steps
 
