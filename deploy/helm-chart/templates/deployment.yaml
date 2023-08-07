@@ -43,6 +43,8 @@ spec:
           mountPath: /etc/nginx/conf.d
         - name: nginx-secrets
           mountPath: /etc/nginx/secrets
+        - name: nginx-run
+          mountPath: /var/run/nginx
       - image: {{ .Values.nginx.image.repository }}:{{ .Values.nginx.image.tag | default .Chart.AppVersion }}
         imagePullPolicy: {{ .Values.nginx.image.pullPolicy }}
         name: nginx
@@ -64,6 +66,8 @@ spec:
           mountPath: /etc/nginx/conf.d
         - name: nginx-secrets
           mountPath: /etc/nginx/secrets
+        - name: nginx-run
+          mountPath: /var/run/nginx
       serviceAccountName: {{ include "nginx-gateway.serviceAccountName" . }}
       shareProcessNamespace: true
       securityContext:
@@ -72,5 +76,7 @@ spec:
       - name: nginx-conf
         emptyDir: {}
       - name: nginx-secrets
+        emptyDir: {}
+      - name: nginx-run
         emptyDir: {}
 {{- end }}

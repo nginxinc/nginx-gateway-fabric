@@ -142,6 +142,8 @@ spec:
           mountPath: /etc/nginx/conf.d
         - name: nginx-secrets
           mountPath: /etc/nginx/secrets
+        - name: nginx-run
+          mountPath: /var/run/nginx
       - image: ghcr.io/nginxinc/nginx-kubernetes-gateway/nginx:edge
         imagePullPolicy: Always
         name: nginx
@@ -163,6 +165,8 @@ spec:
           mountPath: /etc/nginx/conf.d
         - name: nginx-secrets
           mountPath: /etc/nginx/secrets
+        - name: nginx-run
+          mountPath: /var/run/nginx
       serviceAccountName: nginx-gateway
       shareProcessNamespace: true
       securityContext:
@@ -171,6 +175,8 @@ spec:
       - name: nginx-conf
         emptyDir: {}
       - name: nginx-secrets
+        emptyDir: {}
+      - name: nginx-run
         emptyDir: {}
 ---
 # Source: nginx-kubernetes-gateway/templates/gatewayclass.yaml
