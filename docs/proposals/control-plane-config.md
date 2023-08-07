@@ -37,22 +37,23 @@ Proposed configuration CRD example:
 
 ```yaml
 apiVersion: gateway.nginx.org/v1alpha1
-kind: NGINXControlConfig
+kind: NginxGateway
 metadata:
-    name: nkg-config
+    name: nginx-gateway-config
     namespace: nginx-gateway
 spec:
-    log:
+    logging:
         level: info
     ...
 status:
+    conditions:
     ...
 ```
 
 - The CRD would be Namespace-scoped, living in the same Namespace as the controller that it applies to.
 - CRD is initialized and created when NKG is deployed.
-- NKG references the name of this CRD via CLI arg, and only watches this CRD. If the resource doesn't exist,
-then an error is logged and event created, and default values are used.
+- NKG references the name of this CRD via CLI arg (`--nginx-gateway-config-name`), and only watches this CRD.
+  If the resource doesn't exist, then an error is logged and event created, and default values are used.
 - If user deletes resource, NKG logs an error and creates an event. NKG will revert to default values.
 
 This resource won't be referenced in the `parametersRef` of the GatewayClass, reserving that option for a data
