@@ -68,8 +68,8 @@ jobs:
 
       - name: Prepare NKG files
         run: |
-          nkg_prefix=$(echo ${{ steps.meta.outputs.tags }} | cut -d ":" -f 1)
-          nkg_tag=$(echo ${{ steps.meta.outputs.tags }} | cut -d ":" -f 2)
+          nkg_prefix=$(echo ${{ steps.nkg-meta.outputs.tags }} | cut -d ":" -f 1)
+          nkg_tag=$(echo ${{ steps.nkg-meta.outputs.tags }} | cut -d ":" -f 2)
           make update-nkg-manifest NKG_PREFIX=${nkg_prefix} NKG_TAG=${nkg_tag}
         working-directory: ./conformance
 
