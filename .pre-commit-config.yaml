@@ -28,7 +28,7 @@ repos:
       - id: gitleaks
 
   - repo: https://github.com/pre-commit/mirrors-prettier
-    rev: v3.0.0
+    rev: v3.0.1
     hooks:
       - id: prettier
         types:
@@ -59,7 +59,7 @@ repos:
   # Rules are in .yamllint.yaml file
   # See https://yamllint.readthedocs.io/en/stable/rules.html# for rule descriptions
   - repo: https://github.com/adrienverge/yamllint.git
-    rev: v1.29.0
+    rev: v1.32.0
     hooks:
       - id: yamllint
 
