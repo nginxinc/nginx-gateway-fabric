@@ -103,12 +103,12 @@ API to update the handled resources' statuses and emit events.
      mounted `nginx-conf` volume, located at `/etc/nginx/conf.d`. It also writes *TLS certificates* and *keys*
      from [TLS Secrets][secrets] referenced in the accepted Gateway resource to the `nginx-secrets` volume at the
      path `/etc/nginx/secrets`.
-   - Read: *NKG* reads the PID file `nginx.pid` from the `nginx-var-run` volume, located at `/var/run/nginx`. *NKG*
+   - Read: *NKG* reads the PID file `nginx.pid` from the `nginx-run` volume, located at `/var/run/nginx`. *NKG*
      extracts the PID of the nginx process from this file in order to send reload signals to *NGINX master*.
 3. (File I/O) *NKG* writes logs to its *stdout* and *stderr*, which are collected by the container runtime.
 4. (Signal) To reload NGINX, *NKG* sends the [reload signal][reload] to the **NGINX master**.
 5. (File I/O)
-   - Write: The *NGINX master* writes its PID to the `nginx.pid` file stored in the `nginx-var-run` volume.
+   - Write: The *NGINX master* writes its PID to the `nginx.pid` file stored in the `nginx-run` volume.
    - Read: The *NGINX master* reads *configuration files*  and the *TLS cert and keys* referenced in the configuration when
      it starts or during a reload. These files, certificates, and keys are stored in the `nginx-conf` and `nginx-secrets`
      volumes that are mounted to both the `nginx-gateway` and `nginx` containers.
