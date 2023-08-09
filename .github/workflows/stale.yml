@@ -24,8 +24,8 @@ jobs:
           stale-pr-label: "stale"
           exempt-all-assignees: true
           exempt-all-milestones: true
-          exempt-issue-labels: "backlog"
-          exempt-pr-labels: "backlog"
+          exempt-issue-labels: "backlog, backlog candidate"
+          exempt-pr-labels: "backlog, backlog candidate"
           operations-per-run: 100
           days-before-stale: 90
           days-before-close: 10
