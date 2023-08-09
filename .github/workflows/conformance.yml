@@ -87,8 +87,8 @@ jobs:
           context: "."
           target: goreleaser
           load: true
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=nkg
+          cache-to: type=gha,scope=nkg,mode=max
           pull: true
 
       - name: Build NGINX Docker Image
@@ -98,8 +98,8 @@ jobs:
           tags: ${{ steps.nginx-meta.outputs.tags }}
           context: "."
           load: true
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=nginx
+          cache-to: type=gha,scope=nginx,mode=max
           pull: true
           build-args: |
             NJS_DIR=internal/mode/static/nginx/modules/src

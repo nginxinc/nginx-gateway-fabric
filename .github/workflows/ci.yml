@@ -202,8 +202,8 @@ jobs:
           context: "."
           target: goreleaser
           load: true
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=nkg
+          cache-to: type=gha,scope=nkg,mode=max
           pull: true
 
       - name: Build NGINX Docker Image
@@ -213,8 +213,8 @@ jobs:
           tags: ${{ steps.nginx-meta.outputs.tags }}
           context: "."
           load: true
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=nginx
+          cache-to: type=gha,scope=nginx,mode=max
           pull: true
           build-args: |
             NJS_DIR=internal/mode/static/nginx/modules/src
@@ -254,17 +254,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - dockerfile: build/Dockerfile
-            image: ghcr.io/nginxinc/nginx-kubernetes-gateway
-            target: goreleaser
-            sarif-file: trivy-results-nginx-kubernetes-gateway.sarif
-          - dockerfile: build/Dockerfile.nginx
-            image: ghcr.io/nginxinc/nginx-kubernetes-gateway/nginx
-            sarif-file: trivy-results-nginx-kubernetes-gateway-nginx.sarif
-            build-args: |
-              NJS_DIR=internal/mode/static/nginx/modules/src
-              NGINX_CONF_DIR=internal/mode/static/nginx/conf
+        container: [nkg, nginx]
     permissions:
       contents: read # for docker/build-push-action to read repo content
       security-events: write # for github/codeql-action/upload-sarif to upload SARIF results
@@ -300,7 +290,7 @@ jobs:
         uses: docker/metadata-action@818d4b7b91585d195f67373fd9cb0332e31a7175 # v4.6.0
         with:
           images: |
-            name=${{ matrix.image }}
+            name=ghcr.io/nginxinc/nginx-kubernetes-gateway${{ matrix.container == 'nginx' && '/nginx' || '' }}
           tags: |
             type=semver,pattern={{version}}
             type=edge
@@ -310,43 +300,46 @@ jobs:
       - name: Build Docker Image
         uses: docker/build-push-action@2eb1c1961a95fc15694676618e422e8ba1d63825 # v4.1.1
         with:
-          file: ${{ matrix.dockerfile }}
+          file: ${{ matrix.container == 'nginx' && 'build/dockerfile.nginx' || 'build.dockerfile' }}
           context: "."
-          target: ${{ matrix.target }}
+          target: ${{ matrix.container == 'nkg' && 'goreleaser' || '' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           load: ${{ github.event_name == 'pull_request' }}
           push: ${{ github.event_name != 'pull_request' }}
           platforms: ${{ github.event_name != 'pull_request' && env.platforms || '' }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=${{ matrix.container }}
+          cache-to: type=gha,scope=${{ matrix.container }},mode=max
           pull: true
           no-cache: ${{ github.event_name != 'pull_request' }}
           sbom: ${{ github.event_name != 'pull_request' }}
           provenance: false
-          build-args: ${{ matrix.build-args }}
+          build-args: |
+            NJS_DIR=internal/mode/static/nginx/modules/src
+            NGINX_CONF_DIR=internal/mode/static/nginx/conf
+
 
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@41f05d9ecffa2ed3f1580af306000f734b733e54 # 0.11.2
         continue-on-error: true
         with:
-          image-ref: ${{ matrix.image }}:${{ steps.meta.outputs.version }}
+          image-ref: ghcr.io/nginxinc/nginx-kubernetes-gateway${{ matrix.container == 'nginx' && '/nginx' || '' }}:${{ steps.meta.outputs.version }}
           format: "sarif"
-          output: ${{ matrix.sarif-file }}
+          output: trivy-results-nginx-kubernetes-gateway{{$ matrix.container == 'nginx' && '-nginx' || '' }}.sarif
           ignore-unfixed: "true"
 
       - name: Upload Trivy scan results to GitHub Security tab
         uses: github/codeql-action/upload-sarif@5b6282e01c62d02e720b81eb8a51204f527c3624 # v2.21.3
         continue-on-error: true
         with:
-          sarif_file: ${{ matrix.sarif-file }}
+          sarif_file: trivy-results-nginx-kubernetes-gateway{{$ matrix.container == 'nginx' && '-nginx' || '' }}.sarif
 
       - name: Upload Scan Results
         uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
         continue-on-error: true
         with:
-          name: ${{ matrix.sarif-file }}
-          path: ${{ matrix.sarif-file }}
+          name: trivy-results-nginx-kubernetes-gateway{{$ matrix.container == 'nginx' && '-nginx' || '' }}.sarif
+          path: trivy-results-nginx-kubernetes-gateway{{$ matrix.container == 'nginx' && '-nginx' || '' }}.sarif
         if: always()
 
   publish-helm:
