@@ -325,21 +325,21 @@ jobs:
         with:
           image-ref: ghcr.io/nginxinc/nginx-kubernetes-gateway${{ matrix.container == 'nginx' && '/nginx' || '' }}:${{ steps.meta.outputs.version }}
           format: "sarif"
-          output: trivy-results-nginx-kubernetes-gateway{{$ matrix.container == 'nginx' && '-nginx' || '' }}.sarif
+          output: trivy-results-nginx-kubernetes-gateway${{ matrix.container == 'nginx' && '-nginx' || '' }}.sarif
           ignore-unfixed: "true"
 
       - name: Upload Trivy scan results to GitHub Security tab
         uses: github/codeql-action/upload-sarif@5b6282e01c62d02e720b81eb8a51204f527c3624 # v2.21.3
         continue-on-error: true
         with:
-          sarif_file: trivy-results-nginx-kubernetes-gateway{{$ matrix.container == 'nginx' && '-nginx' || '' }}.sarif
+          sarif_file: trivy-results-nginx-kubernetes-gateway${{ matrix.container == 'nginx' && '-nginx' || '' }}.sarif
 
       - name: Upload Scan Results
         uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
         continue-on-error: true
         with:
-          name: trivy-results-nginx-kubernetes-gateway{{$ matrix.container == 'nginx' && '-nginx' || '' }}.sarif
-          path: trivy-results-nginx-kubernetes-gateway{{$ matrix.container == 'nginx' && '-nginx' || '' }}.sarif
+          name: trivy-results-nginx-kubernetes-gateway${{ matrix.container == 'nginx' && '-nginx' || '' }}.sarif
+          path: trivy-results-nginx-kubernetes-gateway${{ matrix.container == 'nginx' && '-nginx' || '' }}.sarif
         if: always()
 
   publish-helm:
