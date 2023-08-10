@@ -9,10 +9,12 @@ import (
 type Config struct {
 	// GatewayCtlrName is the name of this controller.
 	GatewayCtlrName string
-	// ConfigCRDName is the name of the NginxControlConfig CRD for this controller.
-	ConfigCRDName string
-	Logger        logr.Logger
-	AtomicLevel   zap.AtomicLevel
+	// ConfigName is the name of the NginxGateway resource for this controller.
+	ConfigName string
+	// Logger is the Zap Logger used by all components.
+	Logger logr.Logger
+	// AtomicLevel is an atomically changeable, dynamic logging level.
+	AtomicLevel zap.AtomicLevel
 	// GatewayNsName is the namespaced name of a Gateway resource that the Gateway will use.
 	// The Gateway will ignore all other Gateway resources.
 	GatewayNsName *types.NamespacedName

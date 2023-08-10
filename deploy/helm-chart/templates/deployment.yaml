@@ -22,7 +22,7 @@ spec:
         - static-mode
         - --gateway-ctlr-name={{ .Values.nginxGateway.gatewayControllerName }}
         - --gatewayclass={{ .Values.nginxGateway.gatewayClassName }}
-        - --nginx-gateway-config-name={{ .Values.nginxGateway.crdConfig.name }}
+        - --config={{ include "nginx-gateway.config-name" . }}
         env:
         - name: POD_IP
           valueFrom:

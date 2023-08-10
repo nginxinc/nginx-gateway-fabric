@@ -109,12 +109,12 @@ var _ = Describe("Updater", func() {
 							},
 						},
 					},
-					NginxGatewayStatus: status.NginxGatewayStatus{
-						NSName: types.NamespacedName{
+					NginxGatewayStatus: &status.NginxGatewayStatus{
+						NsName: types.NamespacedName{
 							Namespace: "nginx-gateway",
 							Name:      "nginx-gateway-config",
 						},
-						ObservedGeneration: 0,
+						ObservedGeneration: 3,
 						Conditions:         status.CreateTestConditions("Test"),
 					},
 				}
@@ -364,7 +364,7 @@ var _ = Describe("Updater", func() {
 					APIVersion: "gateway.nginx.org/v1alpha1",
 				},
 				Status: nkgAPI.NginxGatewayStatus{
-					Conditions: status.CreateExpectedAPIConditions("Test", 0, fakeClockTime),
+					Conditions: status.CreateExpectedAPIConditions("Test", 3, fakeClockTime),
 				},
 			}
 

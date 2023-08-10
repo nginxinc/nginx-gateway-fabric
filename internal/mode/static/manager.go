@@ -1,15 +1,18 @@
 package static
 
 import (
+	"context"
 	"fmt"
 	"time"
 
+	"github.com/go-logr/logr"
 	apiv1 "k8s.io/api/core/v1"
 	discoveryV1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/client-go/tools/record"
 	ctlr "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -69,17 +72,17 @@ func StartManager(cfg config.Config) error {
 		return fmt.Errorf("cannot build runtime manager: %w", err)
 	}
 
-	controlConfigNSName := types.NamespacedName{
-		Namespace: cfg.Namespace,
-		Name:      cfg.ConfigCRDName,
-	}
+	recorderName := fmt.Sprintf("nginx-kubernetes-gateway-%s", cfg.GatewayClassName)
+	recorder := mgr.GetEventRecorderFor(recorderName)
+	logLevelSetter := newZapLogLevelSetter(cfg.AtomicLevel)
 
 	// Note: for any new object type or a change to the existing one,
 	// make sure to also update prepareFirstEventBatchPreparerArgs()
-	controllerRegCfgs := []struct {
+	type ctlrCfg struct {
 		objectType client.Object
 		options    []controller.Option
-	}{
+	}
+	controllerRegCfgs := []ctlrCfg{
 		{
 			objectType: &gatewayv1beta1.GatewayClass{},
 			options: []controller.Option{
@@ -125,17 +128,28 @@ func StartManager(cfg config.Config) error {
 		{
 			objectType: &gatewayv1beta1.ReferenceGrant{},
 		},
-		{
-			objectType: &nkgAPI.NginxGateway{},
-			options: func() []controller.Option {
-				if cfg.ConfigCRDName != "" {
-					return []controller.Option{
-						controller.WithNamespacedNameFilter(filter.CreateSingleResourceFilter(controlConfigNSName)),
-					}
-				}
-				return nil
-			}(),
-		},
+	}
+
+	controlConfigNSName := types.NamespacedName{
+		Namespace: cfg.Namespace,
+		Name:      cfg.ConfigName,
+	}
+	if cfg.ConfigName != "" {
+		controllerRegCfgs = append(controllerRegCfgs,
+			ctlrCfg{
+				objectType: &nkgAPI.NginxGateway{},
+				options: []controller.Option{
+					controller.WithNamespacedNameFilter(filter.CreateSingleResourceFilter(controlConfigNSName)),
+				},
+			})
+		if err := setInitialConfig(
+			mgr.GetAPIReader(),
+			logger, recorder,
+			logLevelSetter,
+			controlConfigNSName,
+		); err != nil {
+			return fmt.Errorf("error setting initial control plane configuration: %w", err)
+		}
 	}
 
 	ctx := ctlr.SetupSignalHandler()
@@ -146,9 +160,6 @@ func StartManager(cfg config.Config) error {
 			return fmt.Errorf("cannot register controller for %T: %w", regCfg.objectType, err)
 		}
 	}
-
-	recorderName := fmt.Sprintf("nginx-kubernetes-gateway-%s", cfg.GatewayClassName)
-	recorder := mgr.GetEventRecorderFor(recorderName)
 
 	processor := state.NewChangeProcessorImpl(state.ChangeProcessorConfig{
 		GatewayCtlrName:      cfg.GatewayCtlrName,
@@ -191,7 +202,7 @@ func StartManager(cfg config.Config) error {
 		serviceResolver:     resolver.NewServiceResolverImpl(mgr.GetClient()),
 		generator:           configGenerator,
 		logger:              cfg.Logger.WithName("eventHandler"),
-		atomicLevel:         cfg.AtomicLevel,
+		logLevelSetter:      logLevelSetter,
 		nginxFileMgr:        nginxFileMgr,
 		nginxRuntimeMgr:     nginxRuntimeMgr,
 		statusUpdater:       statusUpdater,
@@ -243,4 +254,22 @@ func prepareFirstEventBatchPreparerArgs(
 	}
 
 	return objects, objectLists
+}
+
+func setInitialConfig(
+	reader client.Reader,
+	logger logr.Logger,
+	eventRecorder record.EventRecorder,
+	logLevelSetter ZapLogLevelSetter,
+	configName types.NamespacedName,
+) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	var config nkgAPI.NginxGateway
+	if err := reader.Get(ctx, configName, &config); err != nil {
+		return err
+	}
+
+	return updateControlPlane(&config, logger, eventRecorder, configName, logLevelSetter)
 }

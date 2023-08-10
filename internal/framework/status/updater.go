@@ -121,8 +121,8 @@ func (upd *updaterImpl) Update(ctx context.Context, statuses Statuses) {
 	}
 
 	ngStatus := statuses.NginxGatewayStatus
-	if len(ngStatus.Conditions) > 0 {
-		upd.update(ctx, ngStatus.NSName, &nkgAPI.NginxGateway{}, func(object client.Object) {
+	if ngStatus != nil {
+		upd.update(ctx, ngStatus.NsName, &nkgAPI.NginxGateway{}, func(object client.Object) {
 			ng := object.(*nkgAPI.NginxGateway)
 			ng.Status = nkgAPI.NginxGatewayStatus{
 				Conditions: convertConditions(

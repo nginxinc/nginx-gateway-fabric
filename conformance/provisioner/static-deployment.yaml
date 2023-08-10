@@ -27,7 +27,7 @@ spec:
         - static-mode
         - --gateway-ctlr-name=gateway.nginx.org/nginx-gateway-controller
         - --gatewayclass=nginx
-        - --nginx-gateway-config-name=nginx-gateway-config
+        - --config=nginx-gateway-config
         env:
         - name: POD_IP
           valueFrom:

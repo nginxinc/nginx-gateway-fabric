@@ -125,7 +125,11 @@ spec:
                   - status
                   - type
                   type: object
+                maxItems: 8
                 type: array
+                x-kubernetes-list-map-keys:
+                - type
+                x-kubernetes-list-type: map
             type: object
         required:
         - spec
@@ -212,6 +216,7 @@ rules:
   resources:
   - nginxgateways
   verbs:
+  - get
   - list
   - watch
 - apiGroups:
@@ -267,7 +272,7 @@ spec:
         - static-mode
         - --gateway-ctlr-name=gateway.nginx.org/nginx-gateway-controller
         - --gatewayclass=nginx
-        - --nginx-gateway-config-name=nginx-gateway-config
+        - --config=nginx-gateway-config
         env:
         - name: POD_IP
           valueFrom:

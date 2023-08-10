@@ -68,6 +68,7 @@ rules:
   resources:
   - nginxgateways
   verbs:
+  - get
   - list
   - watch
 - apiGroups:

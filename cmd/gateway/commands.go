@@ -120,7 +120,9 @@ func createStaticModeCommand() *cobra.Command {
 	// flag values
 	gateway := namespacedNameValue{}
 	var updateGCStatus bool
-	var configCRDName string
+	configName := stringValidatingValue{
+		validator: validateResourceName,
+	}
 
 	cmd := &cobra.Command{
 		Use:   "static-mode",
@@ -153,7 +155,7 @@ func createStaticModeCommand() *cobra.Command {
 
 			conf := config.Config{
 				GatewayCtlrName:          gatewayCtlrName.value,
-				ConfigCRDName:            configCRDName,
+				ConfigName:               configName.String(),
 				Logger:                   logger,
 				AtomicLevel:              atom,
 				GatewayClassName:         gatewayClassName.value,
@@ -181,11 +183,12 @@ func createStaticModeCommand() *cobra.Command {
 			"equal, it will choose the resource that appears first in alphabetical order by {namespace}/{name}.",
 	)
 
-	cmd.Flags().StringVar(
-		&configCRDName,
-		"nginx-gateway-config-name",
-		"nginx-gateway-config",
-		`The name of the NginxGateway CRD to be used for this controller's dynamic configuration.`,
+	cmd.Flags().VarP(
+		&configName,
+		"config",
+		"c",
+		`The name of the NginxGateway resource to be used for this controller's dynamic configuration.`+
+			` Lives in the same Namespace as the controller.`,
 	)
 
 	cmd.Flags().BoolVar(

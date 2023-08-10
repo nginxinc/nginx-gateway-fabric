@@ -5,21 +5,34 @@ This document describes how to dynamically update the NGINX Kubernetes Gateway c
 ## Overview
 
 NGINX Kubernetes Gateway offers a way to update the control plane configuration dynamically without the need for a
-restart. These configuration options include:
+restart. The control plane configuration is stored in the NginxGateway custom resource. This resource is created
+during the installation of NGINX Kubernetes Gateway.
 
-| Option        | Available values   | Default value |
-|---------------|--------------------|---------------|
-| Logging Level | info, debug, error | info          |
+If using manifests, the default name of the resource is `nginx-gateway-config`. If using Helm, the default name
+of the resource is `<release-name>-config`. It is deployed in the same Namespace as the controller
+(default `nginx-gateway`).
 
+The control plane only watches this single instance of the custom resource. If the resource is invalid per the OpenAPI
+schema, the Kubernetes API server will reject the changes. If the resource is deleted or deemed invalid by NGINX
+Kubernetes Gateway, an error Event is created in the `nginx-gateway` Namespace, and the default values will be used by
+the control plane for its configuration.
 
-The control plane configuration is stored in the NginxGateway custom resource. This resource is created during the
-installation of NGINX Kubernetes Gateway. The default name of the resource is `nginx-gateway-config` and is deployed
-in the same Namespace as the controller (`nginx-gateway`).
+### Spec
 
-The control plane only watches this single instance of the custom resource. If the resource is deleted or invalid, an
-error is emitted and the default values will be used by the control plane for its configuration.
+| name    | description                                                     | type                     | required |
+|---------|-----------------------------------------------------------------|--------------------------|----------|
+| logging | Logging defines logging related settings for the control plane. | [logging](#speclogging) | no       |
+
+### Spec.Logging
+
+| name  | description                                                            | type   | required |
+|-------|------------------------------------------------------------------------|--------|----------|
+| level | Level defines the logging level. Supported values: info, debug, error. | string | no       |
 
 ## Viewing and Updating the Configuration
+
+> For the following examples, the name `nginx-gateway-config` should be updated to the name of the resource that
+> was created by your installation.
 
 To view the current configuration:
 
@@ -35,3 +48,9 @@ kubectl -n nginx-gateway edit nginxgateways nginx-gateway-config
 
 This will open the configuration in your default editor. You can then update and save the configuration, which is
 applied automatically to the control plane.
+
+To view the status of the configuration:
+
+```shell
+kubectl -n nginx-gateway describe nginxgateways nginx-gateway-config
+```

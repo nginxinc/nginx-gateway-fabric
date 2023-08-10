@@ -24,7 +24,7 @@ type Statuses struct {
 	GatewayClassStatuses GatewayClassStatuses
 	GatewayStatuses      GatewayStatuses
 	HTTPRouteStatuses    HTTPRouteStatuses
-	NginxGatewayStatus   NginxGatewayStatus
+	NginxGatewayStatus   *NginxGatewayStatus
 }
 
 // GatewayStatus holds the status of the winning Gateway resource.
@@ -75,8 +75,8 @@ type GatewayClassStatus struct {
 
 // NginxGatewayStatus holds status-related information about the NginxGateway resource.
 type NginxGatewayStatus struct {
-	// NSName is the NamespacedName of the NginxGateway resource.
-	NSName types.NamespacedName
+	// NsName is the NamespacedName of the NginxGateway resource.
+	NsName types.NamespacedName
 	// Conditions is the list of conditions for this NginxGateway.
 	Conditions []conditions.Condition
 	// ObservedGeneration is the generation of the resource that was processed.

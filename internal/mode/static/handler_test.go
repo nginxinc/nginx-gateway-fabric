@@ -68,7 +68,7 @@ var _ = Describe("eventHandler", func() {
 			processor:           fakeProcessor,
 			generator:           fakeGenerator,
 			logger:              ctlrZap.New(),
-			atomicLevel:         zap.NewAtomicLevel(),
+			logLevelSetter:      newZapLogLevelSetter(zap.NewAtomicLevel()),
 			nginxFileMgr:        fakeNginxFileMgr,
 			nginxRuntimeMgr:     fakeNginxRuntimeMgr,
 			statusUpdater:       fakeStatusUpdater,
@@ -164,8 +164,8 @@ var _ = Describe("eventHandler", func() {
 
 		expStatuses := func(cond conditions.Condition) status.Statuses {
 			return status.Statuses{
-				NginxGatewayStatus: status.NginxGatewayStatus{
-					NSName: types.NamespacedName{
+				NginxGatewayStatus: &status.NginxGatewayStatus{
+					NsName: types.NamespacedName{
 						Namespace: namespace,
 						Name:      configName,
 					},
@@ -176,12 +176,14 @@ var _ = Describe("eventHandler", func() {
 		}
 
 		It("handles a valid config", func() {
-			batch := []interface{}{&events.UpsertEvent{Resource: cfg(nkgAPI.ControllerLogLevelDebug)}}
+			batch := []interface{}{&events.UpsertEvent{Resource: cfg(nkgAPI.ControllerLogLevelError)}}
 			handler.HandleEventBatch(context.Background(), batch)
 
 			Expect(fakeStatusUpdater.UpdateCallCount()).Should(Equal(1))
 			_, statuses := fakeStatusUpdater.UpdateArgsForCall(0)
 			Expect(statuses).To(Equal(expStatuses(staticConds.NewNginxGatewayValid())))
+			Expect(handler.cfg.logLevelSetter.Enabled(zap.DebugLevel)).To(BeFalse())
+			Expect(handler.cfg.logLevelSetter.Enabled(zap.ErrorLevel)).To(BeTrue())
 		})
 
 		It("handles an invalid config", func() {
@@ -191,13 +193,15 @@ var _ = Describe("eventHandler", func() {
 			Expect(fakeStatusUpdater.UpdateCallCount()).Should(Equal(1))
 			_, statuses := fakeStatusUpdater.UpdateArgsForCall(0)
 			cond := staticConds.NewNginxGatewayInvalid(
-				"Failed to update control plane configuration: error parsing log level string: unrecognized level: \"invalid\"")
+				"Failed to update control plane configuration: logging.level: Unsupported value: " +
+					"\"invalid\": supported values: \"info\", \"debug\", \"error\"")
 			Expect(statuses).To(Equal(expStatuses(cond)))
 			Expect(len(fakeEventRecorder.Events)).To(Equal(1))
 			event := <-fakeEventRecorder.Events
 			Expect(event).To(Equal(
-				"Warning FailedUpdate error parsing log level string: " +
-					"unrecognized level: \"invalid\"; Failed to update control plane configuration"))
+				"Warning UpdateFailed logging.level: Unsupported value: " +
+					"\"invalid\": supported values: \"info\", \"debug\", \"error\"; " +
+					"Failed to update control plane configuration"))
 		})
 
 		It("handles a deleted config", func() {

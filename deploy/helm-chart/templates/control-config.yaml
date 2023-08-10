@@ -1,9 +1,9 @@
 apiVersion: gateway.nginx.org/v1alpha1
 kind: NginxGateway
 metadata:
-  name: {{ .Values.nginxGateway.crdConfig.name }}
+  name: {{ include "nginx-gateway.config-name" . }}
   namespace: {{ .Release.Namespace }}
   labels:
   {{- include "nginx-gateway.labels" . | nindent 4 }}
 spec:
-  {{- toYaml .Values.nginxGateway.crdConfig.spec | nindent 2 }}
+  {{- toYaml .Values.nginxGateway.config | nindent 2 }}

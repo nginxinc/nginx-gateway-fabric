@@ -63,6 +63,9 @@ const (
 // NginxGatewayStatus defines the state of the NginxGateway.
 type NginxGatewayStatus struct {
 	// +optional
+	// +listType=map
+	// +listMapKey=type
+	// +kubebuilder:validation:MaxItems=8
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
@@ -75,12 +78,13 @@ type NginxGatewayConditionType string
 type NginxGatewayConditionReason string
 
 const (
-	// This condition is true when the NginxGateway configuration is syntactically and semantically valid.
+	// NginxGatewayConditionValid is a condition that is true when the NginxGateway
+	// configuration is syntactically and semantically valid.
 	NginxGatewayConditionValid NginxGatewayConditionType = "Valid"
 
-	// This reason is used with the "Valid" condition when the condition is True.
+	// NginxGatewayReasonValid is a reason that is used with the "Valid" condition when the condition is True.
 	NginxGatewayReasonValid NginxGatewayConditionReason = "Valid"
 
-	// This reason is used with the "Valid" condition when the condition is False.
+	// NginxGatewayReasonInvalid is a reason that is used with the "Valid" condition when the condition is False.
 	NginxGatewayReasonInvalid NginxGatewayConditionReason = "Invalid"
 )
