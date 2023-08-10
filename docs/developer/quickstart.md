@@ -60,15 +60,15 @@ make build
 
 This command will build the binary and output it to the `/build/.out` directory.
 
-### Build the Image
+### Build the Images
 
-To build an NGINX Kubernetes Gateway container image from source run the following make command:
+To build the NGINX Kubernetes Gateway and NGINX container images from source run the following make command:
 
 ```makefile
-make TAG=$(whoami) container
+make TAG=$(whoami) build-images
 ```
 
-This will build the docker image `nginx-kubernetes-gateway:<your-user>`.
+This will build the docker images `nginx-kubernetes-gateway:<your-user>` and `nginx-kubernetes-gateway/nginx:<your-user>`.
 
 ## Deploy on Kind
 
@@ -78,10 +78,10 @@ This will build the docker image `nginx-kubernetes-gateway:<your-user>`.
    make create-kind-cluster
    ```
 
-2. Load the previously built image onto your `kind` cluster:
+2. Load the previously built images onto your `kind` cluster:
 
    ```shell
-   kind load docker-image nginx-kubernetes-gateway:$(whoami)
+   kind load docker-image nginx-kubernetes-gateway:$(whoami) nginx-kubernetes-gateway/nginx:$(whoami)
    ```
 
 3. Install Gateway API Resources
@@ -95,7 +95,7 @@ This will build the docker image `nginx-kubernetes-gateway:<your-user>`.
    - To install with Helm (where your release name is `my-release`):
 
       ```shell
-      helm install my-release ./deploy/helm-chart --create-namespace --wait --set service.type=NodePort --set nginxGateway.image.repository=nginx-kubernetes-gateway --set nginxGateway.image.tag=$(whoami) --set nginxGateway.image.pullPolicy=Never -n nginx-gateway
+      helm install my-release ./deploy/helm-chart --create-namespace --wait --set service.type=NodePort --set nginxGateway.image.repository=nginx-kubernetes-gateway --set nginxGateway.image.tag=$(whoami) --set nginxGateway.image.pullPolicy=Never --set nginx.image.repository=nginx-kubernetes-gateway/nginx --set nginx.image.tag=$(whoami) --set nginx.image.pullPolicy=Never -n nginx-gateway
       ```
 
       > For more information on helm configuration options see the Helm [README](/deploy/helm-chart/README.md).
@@ -103,9 +103,9 @@ This will build the docker image `nginx-kubernetes-gateway:<your-user>`.
    - To install with manifests:
 
       ```shell
-      make generate-manifests HELM_TEMPLATE_COMMON_ARGS="--set nginxGateway.image.repository=nginx-kubernetes-gateway --set nginxGateway.image.tag=$(whoami) --set nginxGateway.image.pullPolicy=Never"
+      make generate-manifests HELM_TEMPLATE_COMMON_ARGS="--set nginxGateway.image.repository=nginx-kubernetes-gateway --set nginxGateway.image.tag=$(whoami) --set nginxGateway.image.pullPolicy=Never --set nginx.image.repository=nginx-kubernetes-gateway/nginx --set nginx.image.tag=$(whoami) --set nginx.image.pullPolicy=Never"
       kubectl apply -f deploy/manifests/nginx-gateway.yaml
-      kubectl apply -f deploy/manifests/nodeport.yaml
+      kubectl apply -f deploy/manifests/service/nodeport.yaml
       ```
 
 ### Run Examples
@@ -155,17 +155,7 @@ make generate
 
 ## Update Generated Manifests
 
-To update the NJS ConfigMap yaml, run the following make command from the project's root directory:
-
-```shell
-make generate-njs-yaml
-```
-
-Additionally, the [NJS ConfigMap Helm template](/deploy/helm-chart/templates/njs-modules.yaml) will need to be updated.
-This is currently a manual process - ensure the content in the `data` field matches that in the
-[NJS ConfigMap manifest](/deploy/manifests/njs-modules.yaml) `data` field.
-
-Finally, to update all other generated manifests, run the following make command from the project's root directory:
+To update the generated manifests, run the following make command from the project's root directory:
 
 ```shell
 make generate-manifests

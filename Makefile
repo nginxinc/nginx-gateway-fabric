@@ -3,8 +3,9 @@ VERSION = edge
 GIT_COMMIT = $(shell git rev-parse HEAD || echo "unknown")
 DATE = $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 MANIFEST_DIR = $(shell pwd)/deploy/manifests
-NJS_DIR = $(shell pwd)/internal/mode/static/nginx/modules/src
 CHART_DIR = $(shell pwd)/deploy/helm-chart
+NGINX_CONF_DIR = internal/mode/static/nginx/conf
+NJS_DIR = internal/mode/static/nginx/modules/src
 
 # go build flags - should not be overridden by the user
 GO_LINKER_FlAGS_VARS = -X main.version=${VERSION} -X main.commit=${GIT_COMMIT} -X main.date=${DATE}
@@ -12,7 +13,8 @@ GO_LINKER_FLAGS_OPTIMIZATIONS = -s -w
 GO_LINKER_FLAGS = $(GO_LINKER_FLAGS_OPTIMIZATIONS) $(GO_LINKER_FlAGS_VARS)
 
 # variables that can be overridden by the user
-PREFIX ?= nginx-kubernetes-gateway## The name of the image. For example, nginx-kubernetes-gateway
+PREFIX ?= nginx-kubernetes-gateway## The name of the NKG image. For example, nginx-kubernetes-gateway
+NGINX_PREFIX ?= $(PREFIX)/nginx## The name of the nginx image. For example: nginx-kubernetes-gateway/nginx
 TAG ?= $(VERSION:v%=%)## The tag of the image. For example, 0.3.0
 TARGET ?= local## The target of the build. Possible values: local and container
 KIND_KUBE_CONFIG=$${HOME}/.kube/kind/config## The location of the kind kubeconfig
@@ -21,7 +23,7 @@ ARCH ?= amd64## The architecture of the image and/or binary. For example: amd64 
 override HELM_TEMPLATE_COMMON_ARGS += --set creator=template --set nameOverride=nginx-gateway## The common options for the Helm template command.
 override HELM_TEMPLATE_EXTRA_ARGS_FOR_ALL_MANIFESTS_FILE += --set service.create=false## The options to be passed to the full Helm templating command only.
 override DOCKER_BUILD_OPTIONS += --build-arg VERSION=$(VERSION) --build-arg GIT_COMMIT=$(GIT_COMMIT) --build-arg DATE=$(DATE)## The options for the docker build command. For example, --pull
-
+override NGINX_DOCKER_BUILD_OPTIONS += --build-arg NJS_DIR=$(NJS_DIR) --build-arg NGINX_CONF_DIR=$(NGINX_CONF_DIR)
 .DEFAULT_GOAL := help
 
 .PHONY: help
@@ -29,10 +31,20 @@ help: Makefile ## Display this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "; printf "Usage:\n\n    make \033[36m<target>\033[0m [VARIABLE=value...]\n\nTargets:\n\n"}; {printf "    \033[36m%-30s\033[0m %s\n", $$1, $$2}'
 	@grep -E '^(override )?[a-zA-Z_-]+ \??\+?= .*?## .*$$' $< | sort | awk 'BEGIN {FS = " \\??\\+?= .*?## "; printf "\nVariables:\n\n"}; {gsub(/override /, "", $$1); printf "    \033[36m%-30s\033[0m %s\n", $$1, $$2}'
 
-.PHONY: container
-container: build ## Build the container
-	@docker -v || (code=$$?; printf "\033[0;31mError\033[0m: there was a problem with Docker\n"; exit $$code)
+.PHONY: build-images
+build-images: build-nkg-image build-nginx-image ## Build the NKG and nginx docker images
+
+.PHONY: build-nkg-image
+build-nkg-image: check-for-docker build ## Build the NKG docker image
 	docker build --platform linux/$(ARCH) $(strip $(DOCKER_BUILD_OPTIONS)) --target $(strip $(TARGET)) -f build/Dockerfile -t $(strip $(PREFIX)):$(strip $(TAG)) .
+
+.PHONY: build-nginx-image
+build-nginx-image: check-for-docker ## Build the custom nginx image
+	docker build --platform linux/$(ARCH) $(strip $(NGINX_DOCKER_BUILD_OPTIONS)) -f build/Dockerfile.nginx -t $(strip $(NGINX_PREFIX)):$(strip $(TAG)) .
+
+.PHONY: check-for-docker
+check-for-docker: ## Check if Docker is installed
+	@docker -v || (code=$$?; printf "\033[0;31mError\033[0m: there was a problem with Docker\n"; exit $$code)
 
 .PHONY: build
 build: ## Build the binary
@@ -103,10 +115,6 @@ njs-unit-test: ## Run unit tests for the njs httpmatches module
 		node:18 \
 		/bin/bash -c "npm install && npm test && npm run clean"
 
-.PHONY: generate-njs-yaml
-generate-njs-yaml: ## Generate the njs-modules ConfigMap
-	kubectl create configmap njs-modules --from-file=$(NJS_DIR)/httpmatches.js --dry-run=client --output=yaml > $(strip $(MANIFEST_DIR))/njs-modules.yaml
-
 .PHONY: lint-helm
 lint-helm: ## Run the helm chart linter
 	helm lint $(CHART_DIR)
@@ -116,8 +124,8 @@ debug-build: GO_LINKER_FLAGS=$(GO_LINKER_FlAGS_VARS)
 debug-build: ADDITIONAL_GO_BUILD_FLAGS=-gcflags "all=-N -l"
 debug-build: build ## Build binary with debug info, symbols, and no optimizations
 
-.PHONY: debug-container
-debug-container: debug-build container ## Build container with debug binary
+.PHONY: build-nkg-debug-image
+build-nkg-debug-image: debug-build build-nkg-image ## Build NKG image with debug binary
 
 .PHONY: generate-manifests
 generate-manifests: ## Generate manifests using Helm.

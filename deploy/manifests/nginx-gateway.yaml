@@ -16,253 +16,6 @@ metadata:
   annotations:
     {}
 ---
-# Source: nginx-kubernetes-gateway/templates/nginx-conf.yaml
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: nginx-gateway-conf
-  namespace: nginx-gateway
-  labels:
-    app.kubernetes.io/name: nginx-gateway
-    app.kubernetes.io/instance: nginx-gateway
-    app.kubernetes.io/version: "edge"
-data:
-  nginx.conf: |-
-    load_module /usr/lib/nginx/modules/ngx_http_js_module.so;
-    events {}
-    pid /etc/nginx/nginx.pid;
-    error_log stderr debug;
-    http {
-      include /etc/nginx/conf.d/*.conf;
-      js_import /usr/lib/nginx/modules/njs/httpmatches.js;
-      proxy_headers_hash_bucket_size 512;
-      proxy_headers_hash_max_size 1024;
-      server_names_hash_bucket_size 256;
-      server_names_hash_max_size 1024;
-      variables_hash_bucket_size 512;
-      variables_hash_max_size 1024;
-    }
----
-# Source: nginx-kubernetes-gateway/templates/njs-modules.yaml
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: nginx-gateway-njs-modules
-  namespace: nginx-gateway
-  labels:
-    app.kubernetes.io/name: nginx-gateway
-    app.kubernetes.io/instance: nginx-gateway
-    app.kubernetes.io/version: "edge"
-data:
-  httpmatches.js: |
-    const MATCHES_VARIABLE = 'http_matches';
-    const HTTP_CODES = {
-      notFound: 404,
-      internalServerError: 500,
-    };
-
-    function redirect(r) {
-      let matches;
-
-      try {
-        matches = extractMatchesFromRequest(r);
-      } catch (e) {
-        r.error(e.message);
-        r.return(HTTP_CODES.internalServerError);
-        return;
-      }
-
-      // Matches is a list of http matches in order of precedence.
-      // We will accept the first match that the request satisfies.
-      // If there's a match, redirect request to internal location block.
-      // If an exception occurs, return 500.
-      // If no matches are found, return 404.
-      let match;
-      try {
-        match = findWinningMatch(r, matches);
-      } catch (e) {
-        r.error(e.message);
-        r.return(HTTP_CODES.internalServerError);
-        return;
-      }
-
-      if (!match) {
-        r.return(HTTP_CODES.notFound);
-        return;
-      }
-
-      if (!match.redirectPath) {
-        r.error(
-          `cannot redirect the request; the match ${JSON.stringify(
-            match,
-          )} does not have a redirectPath set`,
-        );
-        r.return(HTTP_CODES.internalServerError);
-        return;
-      }
-
-      r.internalRedirect(match.redirectPath);
-    }
-
-    function extractMatchesFromRequest(r) {
-      if (!r.variables[MATCHES_VARIABLE]) {
-        throw Error(
-          `cannot redirect the request; the variable ${MATCHES_VARIABLE} is not defined on the request object`,
-        );
-      }
-
-      let matches;
-
-      try {
-        matches = JSON.parse(r.variables[MATCHES_VARIABLE]);
-      } catch (e) {
-        throw Error(
-          `cannot redirect the request; error parsing ${r.variables[MATCHES_VARIABLE]} into a JSON object: ${e}`,
-        );
-      }
-
-      if (!Array.isArray(matches)) {
-        throw Error(`cannot redirect the request; expected a list of matches, got ${matches}`);
-      }
-
-      if (matches.length === 0) {
-        throw Error(`cannot redirect the request; matches is an empty list`);
-      }
-
-      return matches;
-    }
-
-    function findWinningMatch(r, matches) {
-      for (let i = 0; i < matches.length; i++) {
-        try {
-          let found = testMatch(r, matches[i]);
-          if (found) {
-            return matches[i];
-          }
-        } catch (e) {
-          throw e;
-        }
-      }
-
-      return null;
-    }
-
-    function testMatch(r, match) {
-      // check for any
-      if (match.any) {
-        return true;
-      }
-
-      // check method
-      if (match.method && r.method !== match.method) {
-        return false;
-      }
-
-      // check headers
-      if (match.headers) {
-        try {
-          let found = headersMatch(r.headersIn, match.headers);
-          if (!found) {
-            return false;
-          }
-        } catch (e) {
-          throw e;
-        }
-      }
-
-      // check params
-      if (match.params) {
-        try {
-          let found = paramsMatch(r.args, match.params);
-          if (!found) {
-            return false;
-          }
-        } catch (e) {
-          throw e;
-        }
-      }
-
-      // all match conditions are satisfied so return true
-      return true;
-    }
-
-    function headersMatch(requestHeaders, headers) {
-      for (let i = 0; i < headers.length; i++) {
-        const h = headers[i];
-        const kv = h.split(':');
-
-        if (kv.length !== 2) {
-          throw Error(`invalid header match: ${h}`);
-        }
-        // Header names are compared in a case-insensitive manner, meaning header name "FOO" is equivalent to "foo".
-        // The NGINX request's headersIn object lookup is case-insensitive as well.
-        // This means that requestHeaders['FOO'] is equivalent to requestHeaders['foo'].
-        let val = requestHeaders[kv[0]];
-
-        if (!val) {
-          return false;
-        }
-
-        // split on comma because nginx uses commas to delimit multiple header values
-        const values = val.split(',');
-        if (!values.includes(kv[1])) {
-          return false;
-        }
-      }
-
-      return true;
-    }
-
-    function paramsMatch(requestParams, params) {
-      for (let i = 0; i < params.length; i++) {
-        let p = params[i];
-        // We store query parameter matches as strings with the format "key=value"; however, there may be more than one
-        // instance of "=" in the string.
-        // To recover the key and value, we need to find the first occurrence of "=" in the string.
-        const idx = params[i].indexOf('=');
-        // Check for an improperly constructed query parameter match. There are three possible error cases:
-        // (1) if the index is -1, then there are no "=" in the string (e.g. "keyvalue")
-        // (2) if the index is 0, then there is no value in the string (e.g. "key=").
-        // (3) if the index is equal to length -1, then there is no key in the string (e.g. "=value").
-        if (idx === -1 || (idx === 0) | (idx === p.length - 1)) {
-          throw Error(`invalid query parameter: ${p}`);
-        }
-
-        // Divide string into key value using the index.
-        let kv = [p.slice(0, idx), p.slice(idx + 1)];
-
-        // val can either be a string or an array of strings.
-        // Also, the NGINX request's args object lookup is case-sensitive.
-        // For example, 'a=1&b=2&A=3&b=4' will be parsed into {a: "1", b: ["2", "4"], A: "3"}
-        let val = requestParams[kv[0]];
-        if (!val) {
-          return false;
-        }
-
-        // If val is an array, we will match against the first element in the array according to the Gateway API spec.
-        if (Array.isArray(val)) {
-          val = val[0];
-        }
-
-        if (val !== kv[1]) {
-          return false;
-        }
-      }
-
-      return true;
-    }
-
-    export default {
-      redirect,
-      testMatch,
-      findWinningMatch,
-      headersMatch,
-      paramsMatch,
-      extractMatchesFromRequest,
-      HTTP_CODES,
-      MATCHES_VARIABLE,
-    };
----
 # Source: nginx-kubernetes-gateway/templates/rbac.yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -382,11 +135,16 @@ spec:
             - KILL
             drop:
             - ALL
-          runAsUser: 1001
+          runAsUser: 102
+          runAsGroup: 1001
         volumeMounts:
-        - mountPath: /etc/nginx
-          name: nginx
-      - image: nginx:1.25
+        - name: nginx-conf
+          mountPath: /etc/nginx/conf.d
+        - name: nginx-secrets
+          mountPath: /etc/nginx/secrets
+        - name: nginx-run
+          mountPath: /var/run/nginx
+      - image: ghcr.io/nginxinc/nginx-kubernetes-gateway/nginx:edge
         imagePullPolicy: Always
         name: nginx
         ports:
@@ -397,47 +155,29 @@ spec:
         securityContext:
           capabilities:
             add:
-            - CHOWN
             - NET_BIND_SERVICE
-            - SETGID
-            - SETUID
-            - DAC_OVERRIDE
             drop:
             - ALL
+          runAsUser: 101
+          runAsGroup: 1001
         volumeMounts:
-        - mountPath: /etc/nginx
-          name: nginx
-        - mountPath: /etc/nginx/nginx.conf
-          name: nginx-conf
-          subPath: nginx.conf
-        - mountPath: /var/lib/nginx
-          name: var-lib-nginx
-        - mountPath: /usr/lib/nginx/modules/njs
-          name: njs-modules
-      initContainers:
-      - command:
-        - sh
-        - -c
-        - rm -r /etc/nginx/conf.d /etc/nginx/secrets; mkdir /etc/nginx/conf.d /etc/nginx/secrets
-          && chown 1001:0 /etc/nginx/conf.d /etc/nginx/secrets
-        image: busybox:1.36
-        name: set-permissions
-        volumeMounts:
-        - mountPath: /etc/nginx
-          name: nginx
+        - name: nginx-conf
+          mountPath: /etc/nginx/conf.d
+        - name: nginx-secrets
+          mountPath: /etc/nginx/secrets
+        - name: nginx-run
+          mountPath: /var/run/nginx
       serviceAccountName: nginx-gateway
       shareProcessNamespace: true
+      securityContext:
+        fsGroup: 1001
       volumes:
-      - emptyDir: {}
-        name: nginx
-      - configMap:
-          name: nginx-gateway-conf
-        name: nginx-conf
-      - emptyDir: {}
-        name: var-lib-nginx
-      - configMap:
-          name: nginx-gateway-njs-modules
-        name: njs-modules
+      - name: nginx-conf
+        emptyDir: {}
+      - name: nginx-secrets
+        emptyDir: {}
+      - name: nginx-run
+        emptyDir: {}
 ---
 # Source: nginx-kubernetes-gateway/templates/gatewayclass.yaml
 apiVersion: gateway.networking.k8s.io/v1beta1

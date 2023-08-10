@@ -43,7 +43,7 @@ var _ = Describe("EventHandler", func() {
 				if f.Type == file.TypeRegular {
 					Expect(info.Mode()).To(Equal(os.FileMode(0o644)))
 				} else {
-					Expect(info.Mode()).To(Equal(os.FileMode(0o600)))
+					Expect(info.Mode()).To(Equal(os.FileMode(0o640)))
 				}
 
 				bytes, err := os.ReadFile(f.Path)

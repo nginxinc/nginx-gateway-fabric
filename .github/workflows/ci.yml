@@ -55,9 +55,6 @@ jobs:
       - name: Check if generated go files are up to date
         run: make generate && git diff --exit-code
 
-      - name: Check if njs-modules yaml is up to date
-        run: make generate-njs-yaml && git diff --exit-code
-
       - name: Check if generated manifests are up to date
         run: make generate-manifests && git diff --exit-code
 
@@ -173,8 +170,8 @@ jobs:
       - name: Docker Buildx
         uses: docker/setup-buildx-action@4c0219f9ac95b02789c1075625400b2acbff50b1 # v2.9.1
 
-      - name: Docker meta
-        id: meta
+      - name: NKG Docker meta
+        id: nkg-meta
         uses: docker/metadata-action@818d4b7b91585d195f67373fd9cb0332e31a7175 # v4.6.0
         with:
           images: |
@@ -185,17 +182,43 @@ jobs:
             type=ref,event=pr
             type=ref,event=branch,suffix=-rc,enable=${{ startsWith(github.ref, 'refs/heads/release') }}
 
-      - name: Build Docker Image
+      - name: NGINX Docker meta
+        id: nginx-meta
+        uses: docker/metadata-action@818d4b7b91585d195f67373fd9cb0332e31a7175 # v4.6.0
+        with:
+          images: |
+            name=ghcr.io/nginxinc/nginx-kubernetes-gateway/nginx
+          tags: |
+            type=semver,pattern={{version}}
+            type=edge
+            type=ref,event=pr
+            type=ref,event=branch,suffix=-rc,enable=${{ startsWith(github.ref, 'refs/heads/release') }}
+
+      - name: Build NKG Docker Image
         uses: docker/build-push-action@2eb1c1961a95fc15694676618e422e8ba1d63825 # v4.1.1
         with:
           file: build/Dockerfile
-          tags: ${{ steps.meta.outputs.tags }}
+          tags: ${{ steps.nkg-meta.outputs.tags }}
           context: "."
           target: goreleaser
           load: true
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=nkg
+          cache-to: type=gha,scope=nkg,mode=max
           pull: true
+
+      - name: Build NGINX Docker Image
+        uses: docker/build-push-action@2eb1c1961a95fc15694676618e422e8ba1d63825 # v4.1.1
+        with:
+          file: build/Dockerfile.nginx
+          tags: ${{ steps.nginx-meta.outputs.tags }}
+          context: "."
+          load: true
+          cache-from: type=gha,scope=nginx
+          cache-to: type=gha,scope=nginx,mode=max
+          pull: true
+          build-args: |
+            NJS_DIR=internal/mode/static/nginx/modules/src
+            NGINX_CONF_DIR=internal/mode/static/nginx/conf
 
       - name: Deploy Kubernetes
         id: k8s
@@ -203,19 +226,23 @@ jobs:
           kube_config=${{ github.workspace }}/deploy/helm-chart/kube-${{ github.run_id }}-helm
           make create-kind-cluster KIND_KUBE_CONFIG=${kube_config}
           echo "KUBECONFIG=${kube_config}" >> "$GITHUB_ENV"
-          kind load docker-image ${{ steps.meta.outputs.tags }}
+          kind load docker-image ${{ steps.nkg-meta.outputs.tags }} ${{ steps.nginx-meta.outputs.tags }}
           kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v0.7.1/standard-install.yaml
           kubectl wait --for=condition=complete job/gateway-api-admission-patch job/gateway-api-admission -n gateway-system
 
       - name: Install Chart
         run: >
           helm install
-          helm-$(echo ${{ steps.meta.outputs.tags }} | cut -d ":" -f 2)
+          helm-$(echo ${{ steps.nkg-meta.outputs.tags }} | cut -d ":" -f 2)
           .
           --wait
           --create-namespace
-          --set controller.image.repository=$(echo ${{ steps.meta.outputs.tags }} | cut -d ":" -f 1)
-          --set controller.image.tag=$(echo ${{ steps.meta.outputs.tags }} | cut -d ":" -f 2)
+          --set nginxGateway.image.repository=$(echo ${{ steps.nkg-meta.outputs.tags }} | cut -d ":" -f 1)
+          --set nginxGateway.image.tag=$(echo ${{ steps.nkg-meta.outputs.tags }} | cut -d ":" -f 2)
+          --set nginxGateway.image.pullPolicy=Never
+          --set nginx.image.repository=$(echo ${{ steps.nginx-meta.outputs.tags }} | cut -d ":" -f 1)
+          --set nginx.image.tag=$(echo ${{ steps.nginx-meta.outputs.tags }} | cut -d ":" -f 2)
+          --set nginx.image.pullPolicy=Never
           --set service.type=NodePort
           -n nginx-gateway
         working-directory: ${{ github.workspace }}/deploy/helm-chart
@@ -224,6 +251,10 @@ jobs:
     name: Build Image
     runs-on: ubuntu-22.04
     needs: [vars, binary]
+    strategy:
+      fail-fast: false
+      matrix:
+        container: [nkg, nginx]
     permissions:
       contents: read # for docker/build-push-action to read repo content
       security-events: write # for github/codeql-action/upload-sarif to upload SARIF results
@@ -259,7 +290,7 @@ jobs:
         uses: docker/metadata-action@818d4b7b91585d195f67373fd9cb0332e31a7175 # v4.6.0
         with:
           images: |
-            name=ghcr.io/nginxinc/nginx-kubernetes-gateway
+            name=ghcr.io/nginxinc/nginx-kubernetes-gateway${{ matrix.container == 'nginx' && '/nginx' || '' }}
           tags: |
             type=semver,pattern={{version}}
             type=edge
@@ -269,42 +300,46 @@ jobs:
       - name: Build Docker Image
         uses: docker/build-push-action@2eb1c1961a95fc15694676618e422e8ba1d63825 # v4.1.1
         with:
-          file: build/Dockerfile
+          file: ${{ matrix.container == 'nginx' && 'build/Dockerfile.nginx' || 'build/Dockerfile' }}
           context: "."
-          target: goreleaser
+          target: ${{ matrix.container == 'nkg' && 'goreleaser' || '' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           load: ${{ github.event_name == 'pull_request' }}
           push: ${{ github.event_name != 'pull_request' }}
           platforms: ${{ github.event_name != 'pull_request' && env.platforms || '' }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=${{ matrix.container }}
+          cache-to: type=gha,scope=${{ matrix.container }},mode=max
           pull: true
           no-cache: ${{ github.event_name != 'pull_request' }}
           sbom: ${{ github.event_name != 'pull_request' }}
           provenance: false
+          build-args: |
+            NJS_DIR=internal/mode/static/nginx/modules/src
+            NGINX_CONF_DIR=internal/mode/static/nginx/conf
+
 
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@41f05d9ecffa2ed3f1580af306000f734b733e54 # 0.11.2
         continue-on-error: true
         with:
-          image-ref: ghcr.io/nginxinc/nginx-kubernetes-gateway:${{ steps.meta.outputs.version }}
+          image-ref: ghcr.io/nginxinc/nginx-kubernetes-gateway${{ matrix.container == 'nginx' && '/nginx' || '' }}:${{ steps.meta.outputs.version }}
           format: "sarif"
-          output: "trivy-results-nginx-kubernetes-gateway.sarif"
+          output: trivy-results-nginx-kubernetes-gateway${{ matrix.container == 'nginx' && '-nginx' || '' }}.sarif
           ignore-unfixed: "true"
 
       - name: Upload Trivy scan results to GitHub Security tab
         uses: github/codeql-action/upload-sarif@5b6282e01c62d02e720b81eb8a51204f527c3624 # v2.21.3
         continue-on-error: true
         with:
-          sarif_file: "trivy-results-nginx-kubernetes-gateway.sarif"
+          sarif_file: trivy-results-nginx-kubernetes-gateway${{ matrix.container == 'nginx' && '-nginx' || '' }}.sarif
 
       - name: Upload Scan Results
         uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
         continue-on-error: true
         with:
-          name: "trivy-results-nginx-kubernetes-gateway.sarif"
-          path: "trivy-results-nginx-kubernetes-gateway.sarif"
+          name: trivy-results-nginx-kubernetes-gateway${{ matrix.container == 'nginx' && '-nginx' || '' }}.sarif
+          path: trivy-results-nginx-kubernetes-gateway${{ matrix.container == 'nginx' && '-nginx' || '' }}.sarif
         if: always()
 
   publish-helm:

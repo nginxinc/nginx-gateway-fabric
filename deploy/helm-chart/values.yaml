@@ -17,15 +17,9 @@ nginxGateway:
 nginx:
   ## The NGINX image to use
   image:
-    repository: nginx
-    tag: "1.25"
+    repository: ghcr.io/nginxinc/nginx-kubernetes-gateway/nginx
+    tag: edge
     pullPolicy: Always
-
-initContainer:
-  image:
-    ## The image the init container should use.
-    repository: busybox
-    tag: "1.36"
 
 serviceAccount:
   annotations: {}

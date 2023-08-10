@@ -31,7 +31,7 @@ COPY dist/gateway_linux_$TARGETARCH*/gateway /usr/bin/
 RUN setcap 'cap_kill=+ep' /usr/bin/gateway
 
 FROM scratch as common
-USER 1001:1001
+USER 102:1001
 ENTRYPOINT [ "/usr/bin/gateway" ]
 
 FROM common as container

@@ -16,7 +16,7 @@ make
 ```
 
 ```text
-build-nkg-image                Build NKG container and load it and NGINX container on configured kind cluster
+build-images                   Build NKG and nginx images
 build-test-runner-image        Build conformance test runner image
 cleanup-conformance-tests      Clean up conformance tests fixtures
 create-kind-cluster            Create a kind cluster
@@ -26,15 +26,14 @@ help                           Display this help
 install-nkg-edge               Install NKG with provisioner from edge on configured kind cluster
 install-nkg-local-build        Install NKG from local build with provisioner on configured kind cluster
 install-nkg-local-no-build     Install NKG from local build with provisioner on configured kind cluster but do not build the NKG image
-load-images                    Load NKG and NGINX containers on configured kind cluster
-preload-nginx-container        Preload NGINX container on configured kind cluster
+load-images                    Load NKG and NGINX images on configured kind cluster
 prepare-nkg-dependencies       Install NKG dependencies on configured kind cluster
 reset-go-modules               Reset the go modules changes
 run-conformance-tests          Run conformance tests
 undo-manifests-update          Undo the changes in the manifest files
 uninstall-nkg                  Uninstall NKG on configured kind cluster and undo manifest changes
 update-go-modules              Update the gateway-api go modules to latest main version
-update-nkg-manifest            Update the NKG deployment manifest image name and imagePullPolicy
+update-nkg-manifest            Update the NKG deployment manifest image names and imagePullPolicies
 ```
 
 **Note:** The following variables are configurable when running the below `make` commands:

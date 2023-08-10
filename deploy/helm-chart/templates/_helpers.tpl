@@ -58,17 +58,3 @@ Create the name of the ServiceAccount to use
 {{- define "nginx-gateway.serviceAccountName" -}}
 {{- default (include "nginx-gateway.fullname" .) .Values.serviceAccount.name }}
 {{- end }}
-
-{{/*
-Expand default NGINX conf ConfigMap name.
-*/}}
-{{- define "nginx-gateway.nginx-conf" -}}
-{{- printf "%s-%s" (include "nginx-gateway.fullname" .) "conf" -}}
-{{- end -}}
-
-{{/*
-Expand default njs-modules ConfigMap name.
-*/}}
-{{- define "nginx-gateway.njs-modules" -}}
-{{- printf "%s-%s" (include "nginx-gateway.fullname" .) "njs-modules" -}}
-{{- end -}}
