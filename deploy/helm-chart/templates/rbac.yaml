@@ -63,6 +63,20 @@ rules:
   - gatewayclasses/status
   verbs:
   - update
+- apiGroups:
+  - gateway.nginx.org
+  resources:
+  - nginxgateways
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - gateway.nginx.org
+  resources:
+  - nginxgateways/status
+  verbs:
+  - update
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding

@@ -6,8 +6,14 @@ nginxGateway:
   ## belong to its class - i.e. have the "gatewayClassName" field resource equal to the class.
   gatewayClassName: nginx
   ## The name of the Gateway controller. The controller name must be of the form: DOMAIN/PATH. The controller's domain
-  ## is k8s-gateway.nginx.org.
-  gatewayControllerName: k8s-gateway.nginx.org/nginx-gateway-controller
+  ## is gateway.nginx.org.
+  gatewayControllerName: gateway.nginx.org/nginx-gateway-controller
+  ## The dynamic configuration for the control plane that is contained in the NginxGateway resource.
+  config:
+    logging:
+      ## Log level. Supported values "info", "debug", "error".
+      level: info
+
   image:
     ## The NGINX Kubernetes Gateway image to use
     repository: ghcr.io/nginxinc/nginx-kubernetes-gateway

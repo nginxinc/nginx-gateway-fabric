@@ -5,13 +5,20 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
+	apiv1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/tools/record"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	nkgAPI "github.com/nginxinc/nginx-kubernetes-gateway/apis/v1alpha1"
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/conditions"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/events"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/status"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/nginx/config"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/nginx/file"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/nginx/runtime"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/state"
+	staticConds "github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/state/conditions"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/state/dataplane"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/state/resolver"
 )
@@ -30,14 +37,21 @@ type eventHandlerConfig struct {
 	nginxRuntimeMgr runtime.Manager
 	// statusUpdater updates statuses on Kubernetes resources.
 	statusUpdater status.Updater
+	// eventRecorder records events for Kubernetes resources.
+	eventRecorder record.EventRecorder
+	// logLevelSetter is used to update the logging level.
+	logLevelSetter ZapLogLevelSetter
 	// logger is the logger to be used by the EventHandler.
 	logger logr.Logger
+	// controlConfigNSName is the NamespacedName of the NginxGateway config for this controller.
+	controlConfigNSName types.NamespacedName
 }
 
 // eventHandlerImpl implements EventHandler.
 // eventHandlerImpl is responsible for:
 // (1) Reconciling the Gateway API and Kubernetes built-in resources with the NGINX configuration.
 // (2) Keeping the statuses of the Gateway API resources updated.
+// (3) Updating control plane configuration.
 type eventHandlerImpl struct {
 	cfg eventHandlerConfig
 }
@@ -53,9 +67,17 @@ func (h *eventHandlerImpl) HandleEventBatch(ctx context.Context, batch events.Ev
 	for _, event := range batch {
 		switch e := event.(type) {
 		case *events.UpsertEvent:
-			h.cfg.processor.CaptureUpsertChange(e.Resource)
+			if cfg, ok := e.Resource.(*nkgAPI.NginxGateway); ok {
+				h.updateControlPlaneAndSetStatus(ctx, cfg)
+			} else {
+				h.cfg.processor.CaptureUpsertChange(e.Resource)
+			}
 		case *events.DeleteEvent:
-			h.cfg.processor.CaptureDeleteChange(e.Type, e.NamespacedName)
+			if _, ok := e.Type.(*nkgAPI.NginxGateway); ok {
+				h.updateControlPlaneAndSetStatus(ctx, nil)
+			} else {
+				h.cfg.processor.CaptureDeleteChange(e.Type, e.NamespacedName)
+			}
 		default:
 			panic(fmt.Errorf("unknown event type %T", e))
 		}
@@ -91,4 +113,43 @@ func (h *eventHandlerImpl) updateNginx(ctx context.Context, conf dataplane.Confi
 	}
 
 	return nil
+}
+
+// updateControlPlaneAndSetStatus updates the control plane configuration and then sets the status
+// based on the outcome
+func (h *eventHandlerImpl) updateControlPlaneAndSetStatus(ctx context.Context, cfg *nkgAPI.NginxGateway) {
+	var cond []conditions.Condition
+	if err := updateControlPlane(
+		cfg,
+		h.cfg.logger,
+		h.cfg.eventRecorder,
+		h.cfg.controlConfigNSName,
+		h.cfg.logLevelSetter,
+	); err != nil {
+		msg := "Failed to update control plane configuration"
+		h.cfg.logger.Error(err, msg)
+		h.cfg.eventRecorder.Eventf(
+			cfg,
+			apiv1.EventTypeWarning,
+			"UpdateFailed",
+			msg+": %s",
+			err.Error(),
+		)
+		cond = []conditions.Condition{staticConds.NewNginxGatewayInvalid(fmt.Sprintf("%s: %v", msg, err))}
+	} else {
+		cond = []conditions.Condition{staticConds.NewNginxGatewayValid()}
+	}
+
+	if cfg != nil {
+		statuses := status.Statuses{
+			NginxGatewayStatus: &status.NginxGatewayStatus{
+				NsName:             client.ObjectKeyFromObject(cfg),
+				Conditions:         cond,
+				ObservedGeneration: cfg.Generation,
+			},
+		}
+
+		h.cfg.statusUpdater.Update(ctx, statuses)
+		h.cfg.logger.Info("Reconfigured control plane.")
+	}
 }

@@ -39,7 +39,7 @@ helm install my-release oci://ghcr.io/nginxinc/charts/nginx-kubernetes-gateway -
 
 ```shell
 helm pull oci://ghcr.io/nginxinc/charts/nginx-kubernetes-gateway --untar --version 0.0.0-edge
-cd nginx-gateway
+cd nginx-kubernetes-gateway
 ```
 
 #### Installing the Chart
@@ -53,6 +53,7 @@ helm install my-release . --create-namespace --wait -n nginx-gateway
 
 ## Upgrading the Chart
 ### Upgrading the Gateway Resources
+
 Before you upgrade a release, ensure the Gateway API resources are the correct version as supported by the NGINX
 Kubernetes Gateway - [see the Technical Specifications](../../README.md#technical-specifications).:
 
@@ -62,7 +63,23 @@ To upgrade the Gateway resources from [the Gateway API repo](https://github.com/
 kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v0.7.1/standard-install.yaml
 ```
 
+### Upgrading the CRDs
+
+Helm does not upgrade the NGINX Kubernetes Gateway CRDs during a release upgrade. Before you upgrade a release,
+you must [pull the chart](#pulling-the-chart) from GitHub and run the following command to upgrade the CRDs:
+
+```shell
+kubectl apply -f crds/
+```
+
+The following warning is expected and can be ignored:
+
+```text
+Warning: kubectl apply should be used on resource created by either kubectl create --save-config or kubectl apply.
+```
+
 ### Upgrading the Chart from the OCI Registry
+
 To upgrade the release `my-release`, run:
 
 ```shell
@@ -85,6 +102,7 @@ To uninstall/delete the release `my-release`:
 ```shell
 helm uninstall my-release -n nginx-gateway
 kubectl delete ns nginx-gateway
+kubectl delete crd nginxgateways.gateway.nginx.org
 ```
 
 These commands remove all the Kubernetes components associated with the release and deletes the release.
@@ -111,8 +129,9 @@ The following tables lists the configurable parameters of the NGINX Kubernetes G
 | `nginxGateway.image.tag`             | The tag for the NGINX Kubernetes Gateway image.                                                                                                                                                              | edge                                                                                                            |
 | `nginxGateway.image.pullPolicy`      | The `imagePullPolicy` for the NGINX Kubernetes Gateway image.                                                                                                                                                | Always                                                                                                          |
 | `nginxGateway.gatewayClassName`      | The name of the GatewayClass for the NGINX Kubernetes Gateway deployment.                                                                                                                                    | nginx                                                                                                           |
-| `nginxGateway.gatewayControllerName` | The name of the Gateway controller. The controller name must be of the form: DOMAIN/PATH. The controller's domain is k8s-gateway.nginx.org.                                                                  | k8s-gateway.nginx.org/nginx-gateway-controller                                                                  |
+| `nginxGateway.gatewayControllerName` | The name of the Gateway controller. The controller name must be of the form: DOMAIN/PATH. The controller's domain is gateway.nginx.org.                                                                  | gateway.nginx.org/nginx-gateway-controller                                                                  |
 | `nginxGateway.kind`                  | The kind of the NGINX Kubernetes Gateway installation - currently, only Deployment is supported.                                                                                                             | deployment                                                                                                      |
+|`nginxGateway.config`                 | The dynamic configuration for the control plane that is contained in the NginxGateway resource                                                                                                               | [See nginxGateway.config section](values.yaml) |
 | `nginx.image.repository`             | The repository for the NGINX image.                                                                                                                                                                          | ghcr.io/nginxinc/nginx-kubernetes-gateway/nginx                                                                 |
 | `nginx.image.tag`                    | The tag for the NGINX image.                                                                                                                                                                                 | edge                                                                                                            |
 | `nginx.image.pullPolicy`             | The `imagePullPolicy` for the NGINX image.                                                                                                                                                                   | Always                                                                                                          |

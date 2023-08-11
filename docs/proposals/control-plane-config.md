@@ -1,7 +1,7 @@
 # Enhancement Proposal-928: Control Plane Dynamic Configuration
 
 - Issue: https://github.com/nginxinc/nginx-kubernetes-gateway/issues/928
-- Status: Implementable
+- Status: Completed
 
 ## Summary
 

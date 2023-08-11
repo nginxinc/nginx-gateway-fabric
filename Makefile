@@ -21,7 +21,7 @@ KIND_KUBE_CONFIG=$${HOME}/.kube/kind/config## The location of the kind kubeconfi
 OUT_DIR ?= $(shell pwd)/build/out## The folder where the binary will be stored
 ARCH ?= amd64## The architecture of the image and/or binary. For example: amd64 or arm64
 override HELM_TEMPLATE_COMMON_ARGS += --set creator=template --set nameOverride=nginx-gateway## The common options for the Helm template command.
-override HELM_TEMPLATE_EXTRA_ARGS_FOR_ALL_MANIFESTS_FILE += --set service.create=false## The options to be passed to the full Helm templating command only.
+override HELM_TEMPLATE_EXTRA_ARGS_FOR_ALL_MANIFESTS_FILE += --include-crds --set service.create=false## The options to be passed to the full Helm templating command only.
 override DOCKER_BUILD_OPTIONS += --build-arg VERSION=$(VERSION) --build-arg GIT_COMMIT=$(GIT_COMMIT) --build-arg DATE=$(DATE)## The options for the docker build command. For example, --pull
 override NGINX_DOCKER_BUILD_OPTIONS += --build-arg NJS_DIR=$(NJS_DIR) --build-arg NGINX_CONF_DIR=$(NGINX_CONF_DIR)
 .DEFAULT_GOAL := help
@@ -61,6 +61,11 @@ build-goreleaser: ## Build the binary using GoReleaser
 .PHONY: generate
 generate: ## Run go generate
 	go generate ./...
+
+.PHONY: generate-crds
+generate-crds: ## Generate CRDs and Go types using kubebuilder
+	go run sigs.k8s.io/controller-tools/cmd/controller-gen crd paths=./apis/... output:crd:dir=deploy/helm-chart/crds
+	go run sigs.k8s.io/controller-tools/cmd/controller-gen object paths=./apis/...
 
 .PHONY: clean
 clean: ## Clean the build

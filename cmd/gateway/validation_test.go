@@ -15,17 +15,17 @@ func TestValidateGatewayControllerName(t *testing.T) {
 	}{
 		{
 			name:   "valid",
-			value:  "k8s-gateway.nginx.org/nginx-gateway",
+			value:  "gateway.nginx.org/nginx-gateway",
 			expErr: false,
 		},
 		{
 			name:   "valid - with subpath",
-			value:  "k8s-gateway.nginx.org/nginx-gateway/my-gateway",
+			value:  "gateway.nginx.org/nginx-gateway/my-gateway",
 			expErr: false,
 		},
 		{
 			name:   "valid - with complex subpath",
-			value:  "k8s-gateway.nginx.org/nginx-gateway/my-gateway/v1",
+			value:  "gateway.nginx.org/nginx-gateway/my-gateway/v1",
 			expErr: false,
 		},
 		{
@@ -35,12 +35,12 @@ func TestValidateGatewayControllerName(t *testing.T) {
 		},
 		{
 			name:   "invalid - lacks path",
-			value:  "k8s-gateway.nginx.org",
+			value:  "gateway.nginx.org",
 			expErr: true,
 		},
 		{
 			name:   "invalid - lacks path, only slash is present",
-			value:  "k8s-gateway.nginx.org/",
+			value:  "gateway.nginx.org/",
 			expErr: true,
 		},
 		{

@@ -14,6 +14,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
+	nkgAPI "github.com/nginxinc/nginx-kubernetes-gateway/apis/v1alpha1"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/helpers"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/status"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/status/statusfakes"
@@ -34,6 +35,7 @@ var _ = Describe("Updater", func() {
 		scheme := runtime.NewScheme()
 
 		Expect(v1beta1.AddToScheme(scheme)).Should(Succeed())
+		Expect(nkgAPI.AddToScheme(scheme)).Should(Succeed())
 
 		client = fake.NewClientBuilder().
 			WithScheme(scheme).
@@ -41,6 +43,7 @@ var _ = Describe("Updater", func() {
 				&v1beta1.GatewayClass{},
 				&v1beta1.Gateway{},
 				&v1beta1.HTTPRoute{},
+				&nkgAPI.NginxGateway{},
 			).
 			Build()
 
@@ -62,6 +65,7 @@ var _ = Describe("Updater", func() {
 			gc            *v1beta1.GatewayClass
 			gw, ignoredGw *v1beta1.Gateway
 			hr            *v1beta1.HTTPRoute
+			ng            *nkgAPI.NginxGateway
 			ipAddrType    = v1beta1.IPAddressType
 			addr          = v1beta1.GatewayAddress{
 				Type:  &ipAddrType,
@@ -104,6 +108,14 @@ var _ = Describe("Updater", func() {
 								},
 							},
 						},
+					},
+					NginxGatewayStatus: &status.NginxGatewayStatus{
+						NsName: types.NamespacedName{
+							Namespace: "nginx-gateway",
+							Name:      "nginx-gateway-config",
+						},
+						ObservedGeneration: 3,
+						Conditions:         status.CreateTestConditions("Test"),
 					},
 				}
 			}
@@ -261,6 +273,16 @@ var _ = Describe("Updater", func() {
 					APIVersion: "gateway.networking.k8s.io/v1beta1",
 				},
 			}
+			ng = &nkgAPI.NginxGateway{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "nginx-gateway",
+					Name:      "nginx-gateway-config",
+				},
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "NginxGateway",
+					APIVersion: "gateway.nginx.org/v1alpha1",
+				},
+			}
 		})
 
 		It("should create resources in the API server", func() {
@@ -268,6 +290,7 @@ var _ = Describe("Updater", func() {
 			Expect(client.Create(context.Background(), gw)).Should(Succeed())
 			Expect(client.Create(context.Background(), ignoredGw)).Should(Succeed())
 			Expect(client.Create(context.Background(), hr)).Should(Succeed())
+			Expect(client.Create(context.Background(), ng)).Should(Succeed())
 		})
 
 		It("should update statuses", func() {
@@ -327,6 +350,34 @@ var _ = Describe("Updater", func() {
 			expectedHR.ResourceVersion = latestHR.ResourceVersion
 
 			Expect(helpers.Diff(expectedHR, latestHR)).To(BeEmpty())
+		})
+
+		It("should have the updated status of NginxGateway in the API server", func() {
+			latestNG := &nkgAPI.NginxGateway{}
+			expectedNG := &nkgAPI.NginxGateway{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "nginx-gateway",
+					Name:      "nginx-gateway-config",
+				},
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "NginxGateway",
+					APIVersion: "gateway.nginx.org/v1alpha1",
+				},
+				Status: nkgAPI.NginxGatewayStatus{
+					Conditions: status.CreateExpectedAPIConditions("Test", 3, fakeClockTime),
+				},
+			}
+
+			err := client.Get(
+				context.Background(),
+				types.NamespacedName{Namespace: "nginx-gateway", Name: "nginx-gateway-config"},
+				latestNG,
+			)
+			Expect(err).Should(Not(HaveOccurred()))
+
+			expectedNG.ResourceVersion = latestNG.ResourceVersion
+
+			Expect(helpers.Diff(expectedNG, latestNG)).To(BeEmpty())
 		})
 
 		It("should update statuses with canceled context - function normally returns", func() {

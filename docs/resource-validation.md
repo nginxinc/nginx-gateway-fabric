@@ -34,7 +34,7 @@ Status:
       Reason:                Accepted
       Status:                True
       Type:                  Accepted
-    Controller Name:         k8s-gateway.nginx.org/nginx-gateway-controller
+    Controller Name:         gateway.nginx.org/nginx-gateway-controller
     Parent Ref:
       Group:         gateway.networking.k8s.io
       Kind:          Gateway
@@ -138,7 +138,7 @@ Status:
       Reason:                UnsupportedValue
       Status:                False
       Type:                  Accepted
-    Controller Name:         k8s-gateway.nginx.org/nginx-gateway-controller
+    Controller Name:         gateway.nginx.org/nginx-gateway-controller
     Parent Ref:
       Group:         gateway.networking.k8s.io
       Kind:          Gateway

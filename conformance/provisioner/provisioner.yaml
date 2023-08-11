@@ -68,5 +68,5 @@ spec:
           runAsUser: 1001
         args:
         - provisioner-mode
-        - --gateway-ctlr-name=k8s-gateway.nginx.org/nginx-gateway-controller
+        - --gateway-ctlr-name=gateway.nginx.org/nginx-gateway-controller
         - --gatewayclass=nginx

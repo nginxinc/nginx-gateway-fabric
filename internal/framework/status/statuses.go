@@ -19,11 +19,12 @@ type GatewayStatuses map[types.NamespacedName]GatewayStatus
 // GatewayClassStatuses holds the statuses of GatewayClasses where the key is the namespaced name of a GatewayClass.
 type GatewayClassStatuses map[types.NamespacedName]GatewayClassStatus
 
-// Statuses holds the status-related information about Gateway API resources.
+// Statuses holds the status-related information about resources.
 type Statuses struct {
 	GatewayClassStatuses GatewayClassStatuses
 	GatewayStatuses      GatewayStatuses
 	HTTPRouteStatuses    HTTPRouteStatuses
+	NginxGatewayStatus   *NginxGatewayStatus
 }
 
 // GatewayStatus holds the status of the winning Gateway resource.
@@ -66,6 +67,18 @@ type ParentStatus struct {
 
 // GatewayClassStatus holds status-related information about the GatewayClass resource.
 type GatewayClassStatus struct {
-	Conditions         []conditions.Condition
+	// Conditions is the list of conditions for this GatewayClass.
+	Conditions []conditions.Condition
+	// ObservedGeneration is the generation of the resource that was processed.
+	ObservedGeneration int64
+}
+
+// NginxGatewayStatus holds status-related information about the NginxGateway resource.
+type NginxGatewayStatus struct {
+	// NsName is the NamespacedName of the NginxGateway resource.
+	NsName types.NamespacedName
+	// Conditions is the list of conditions for this NginxGateway.
+	Conditions []conditions.Condition
+	// ObservedGeneration is the generation of the resource that was processed.
 	ObservedGeneration int64
 }
