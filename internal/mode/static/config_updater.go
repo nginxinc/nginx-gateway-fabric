@@ -86,7 +86,7 @@ func updateControlPlane(
 		}
 	} else {
 		msg := "NginxGateway configuration was deleted; using defaults"
-		logger.Error(nil, msg)
+		logger.Info(msg)
 		eventRecorder.Event(
 			&nkgAPI.NginxGateway{
 				ObjectMeta: metav1.ObjectMeta{

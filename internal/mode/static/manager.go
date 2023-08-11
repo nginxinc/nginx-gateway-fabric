@@ -271,5 +271,7 @@ func setInitialConfig(
 		return err
 	}
 
+	// status is not updated until the status updater's cache is started and the
+	// resource is processed by the controller
 	return updateControlPlane(&config, logger, eventRecorder, configName, logLevelSetter)
 }

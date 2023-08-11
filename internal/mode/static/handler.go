@@ -132,7 +132,7 @@ func (h *eventHandlerImpl) updateControlPlaneAndSetStatus(ctx context.Context, c
 			cfg,
 			apiv1.EventTypeWarning,
 			"UpdateFailed",
-			"%s; "+msg,
+			msg+": %s",
 			err.Error(),
 		)
 		cond = []conditions.Condition{staticConds.NewNginxGatewayInvalid(fmt.Sprintf("%s: %v", msg, err))}

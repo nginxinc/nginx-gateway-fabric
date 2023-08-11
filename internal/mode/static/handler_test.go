@@ -199,9 +199,9 @@ var _ = Describe("eventHandler", func() {
 			Expect(len(fakeEventRecorder.Events)).To(Equal(1))
 			event := <-fakeEventRecorder.Events
 			Expect(event).To(Equal(
-				"Warning UpdateFailed logging.level: Unsupported value: " +
-					"\"invalid\": supported values: \"info\", \"debug\", \"error\"; " +
-					"Failed to update control plane configuration"))
+				"Warning UpdateFailed Failed to update control plane configuration: logging.level: Unsupported value: " +
+					"\"invalid\": supported values: \"info\", \"debug\", \"error\""))
+			Expect(handler.cfg.logLevelSetter.Enabled(zap.InfoLevel)).To(BeTrue())
 		})
 
 		It("handles a deleted config", func() {
@@ -210,6 +210,7 @@ var _ = Describe("eventHandler", func() {
 			Expect(len(fakeEventRecorder.Events)).To(Equal(1))
 			event := <-fakeEventRecorder.Events
 			Expect(event).To(Equal("Warning ResourceDeleted NginxGateway configuration was deleted; using defaults"))
+			Expect(handler.cfg.logLevelSetter.Enabled(zap.InfoLevel)).To(BeTrue())
 		})
 	})
 
