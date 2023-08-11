@@ -14,8 +14,9 @@ of the resource is `<release-name>-config`. It is deployed in the same Namespace
 
 The control plane only watches this single instance of the custom resource. If the resource is invalid per the OpenAPI
 schema, the Kubernetes API server will reject the changes. If the resource is deleted or deemed invalid by NGINX
-Kubernetes Gateway, an error Event is created in the `nginx-gateway` Namespace, and the default values will be used by
-the control plane for its configuration.
+Kubernetes Gateway, a warning Event is created in the `nginx-gateway` Namespace, and the default values will be used by
+the control plane for its configuration. Additionally, the control plane updates the status of the resource (if it exists)
+to reflect whether it is valid or not.
 
 ### Spec
 

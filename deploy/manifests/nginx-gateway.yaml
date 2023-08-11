@@ -347,7 +347,7 @@ metadata:
 spec:
   controllerName: gateway.nginx.org/nginx-gateway-controller
 ---
-# Source: nginx-kubernetes-gateway/templates/control-config.yaml
+# Source: nginx-kubernetes-gateway/templates/nginxgateway.yaml
 apiVersion: gateway.nginx.org/v1alpha1
 kind: NginxGateway
 metadata:

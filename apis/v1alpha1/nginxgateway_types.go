@@ -50,13 +50,13 @@ type Logging struct {
 type ControllerLogLevel string
 
 const (
-	// Info level for control plane logging.
+	// ControllerLogLevelInfo is the info level for control plane logging.
 	ControllerLogLevelInfo ControllerLogLevel = "info"
 
-	// Debug level for control plane logging.
+	// ControllerLogLevelDebug is the debug level for control plane logging.
 	ControllerLogLevelDebug ControllerLogLevel = "debug"
 
-	// Error level for control plane logging.
+	// ControllerLogLevelError is the error level for control plane logging.
 	ControllerLogLevelError ControllerLogLevel = "error"
 )
 
