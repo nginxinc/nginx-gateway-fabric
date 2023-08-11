@@ -25,6 +25,7 @@ Learn about our [design principles](/docs/developer/design-principles.md) and [a
    available
    on [GitHub Container Registry](https://github.com/nginxinc/nginx-kubernetes-gateway/pkgs/container/nginx-kubernetes-gateway).
 4. Deploy various [examples](examples).
+5. Read our [guides](/docs/guides).
 
 ## NGINX Kubernetes Gateway Releases
 
