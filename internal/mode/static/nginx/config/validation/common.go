@@ -52,8 +52,8 @@ func validateEscapedStringNoVarExpansion(value string, examples []string) error 
 }
 
 const (
-	invalidHostHeaderErrMsg string = "redefining the Host request header is not supported"
-	maxHeaderLength         int    = 256
+	invalidHeadersErrMsg string = "redefining the Host, Connection, or Upgrade request headers is not supported"
+	maxHeaderLength      int    = 256
 )
 
 func validateHeaderName(name string) error {
@@ -63,8 +63,8 @@ func validateHeaderName(name string) error {
 	if msg := k8svalidation.IsHTTPHeaderName(name); msg != nil {
 		return errors.New(msg[0])
 	}
-	if strings.ToLower(name) == "host" {
-		return errors.New(invalidHostHeaderErrMsg)
+	if strings.ToLower(name) == "host" || strings.ToLower(name) == "connection" || strings.ToLower(name) == "upgrade" {
+		return errors.New(invalidHeadersErrMsg)
 	}
 	return nil
 }

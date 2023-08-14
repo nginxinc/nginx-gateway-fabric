@@ -1836,7 +1836,7 @@ func TestValidateFilterRequestHeaderModifier(t *testing.T) {
 				Type: v1beta1.HTTPRouteFilterRequestHeaderModifier,
 				RequestHeaderModifier: &v1beta1.HTTPHeaderFilter{
 					Set: []v1beta1.HTTPHeader{
-						{Name: "Connection", Value: "close"},
+						{Name: "MyBespokeHeader", Value: "my-value"},
 					},
 					Add: []v1beta1.HTTPHeader{
 						{Name: "Accept-Encoding", Value: "gzip"},

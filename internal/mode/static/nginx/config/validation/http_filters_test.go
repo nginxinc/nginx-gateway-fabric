@@ -74,7 +74,7 @@ func TestValidateRequestHeaderName(t *testing.T) {
 		t,
 		validator.ValidateRequestHeaderName,
 		"Content-Encoding",
-		"Connection",
+		"MyBespokeHeader",
 	)
 
 	testInvalidValuesForSimpleValidator(t, validator.ValidateRequestHeaderName, "$Content-Encoding")
