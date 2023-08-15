@@ -52,9 +52,15 @@ func validateEscapedStringNoVarExpansion(value string, examples []string) error 
 }
 
 const (
-	invalidHeadersErrMsg string = "redefining the Host, Connection, or Upgrade request headers is not supported"
+	invalidHeadersErrMsg string = "unsupported header name configured, unsupported names are: "
 	maxHeaderLength      int    = 256
 )
+
+var invalidHeaders = map[string]struct{}{
+	"host":       {},
+	"connection": {},
+	"upgrade":    {},
+}
 
 func validateHeaderName(name string) error {
 	if len(name) > maxHeaderLength {
@@ -63,8 +69,8 @@ func validateHeaderName(name string) error {
 	if msg := k8svalidation.IsHTTPHeaderName(name); msg != nil {
 		return errors.New(msg[0])
 	}
-	if strings.ToLower(name) == "host" || strings.ToLower(name) == "connection" || strings.ToLower(name) == "upgrade" {
-		return errors.New(invalidHeadersErrMsg)
+	if valid, invalidHeadersAsStrings := validateNoUnsupportedValues(strings.ToLower(name), invalidHeaders); !valid {
+		return errors.New(invalidHeadersErrMsg + strings.Join(invalidHeadersAsStrings, ", "))
 	}
 	return nil
 }
