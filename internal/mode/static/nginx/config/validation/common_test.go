@@ -64,6 +64,8 @@ func TestValidateValidHeaderName(t *testing.T) {
 		`$test`,
 		"Host",
 		"host",
+		"connection",
+		"upgrade",
 		"my-header[]",
 		"my-header&",
 		strings.Repeat("very-long-header", 16)+"1",

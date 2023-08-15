@@ -51,6 +51,9 @@ server {
         proxy_set_header {{ $h.Name }} "{{ $h.Value }}";
             {{- end }}
         proxy_set_header Host $gw_api_compliant_host;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $connection_upgrade;
         proxy_pass {{ $l.ProxyPass }}$request_uri;
         {{- end }}
     }
