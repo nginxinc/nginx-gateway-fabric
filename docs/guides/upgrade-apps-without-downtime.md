@@ -2,31 +2,27 @@
 
 This guide explains how to use NGINX Kubernetes Gateway to upgrade applications without downtime.
 
-It ensures that clients attempting to access your application will receive standard response codes (such as `502`) instead of empty responses during upgrades.
-
-Multiple upgrade methods are metnioned, assuming existing familiarity: this guide focuses primarily on how to use NGINX Kubernetes Gateway to accomplish them.
+Multiple upgrade methods are mentioned, assuming existing familiarity: this guide focuses primarily on how to use NGINX Kubernetes Gateway to accomplish them.
 
 > See the [Architecture document](/docs/architecture.md) to learn more about NGINX Kubernetes Gateway architecture.
 
 ## NGINX Kubernetes Gateway Functionality
 
-To understand the upgrade methods, you should be aware of the NGINX features that help prevent application downtime: graceful configuration reloads and Endpoint switching.
+To understand the upgrade methods, you should be aware of the NGINX features that help prevent application downtime: graceful configuration reloads and upstream servers updates.
 
 ### Graceful Configuration Reloads
 
 If a relevant Gateway API or built-in Kubernetes resource is changed, NGINX Kubernetes Gateway will update NGINX by regenerating the NGINX configuration. 
-
-A signal is then sent to the master NGINX process to apply the new configuration. 
+NGINX Kubernetes Gateway then sends a reload signal to the master NGINX process to apply the new configuration. 
 
 We call such an operation a reload, during which client requests are not dropped - which defines it as a graceful reload.
 
 This process is further explained in [NGINX's documentation](https://nginx.org/en/docs/control.html?#reconfiguration).
 
-### Endpoint Switching
+### Upstream Servers Updates
 
-Many configuration changes affect Endpoints, which frequently occur during application upgrades. 
-
-During upgrades, Kubernetes creates Pods for the new application versions before removing the old ones, which includes their respective Endpoints.
+Endpoints frequently change during application upgrades: Kubernetes creates Pods for the new version of an application
+and removes the old ones, creating and removing the respective Endpoints as well.
 
 NGINX Kubernetes Gateway detects changes to Endpoints by watching their corresponding [EndpointSlices][endpoint-slices].
 
@@ -47,7 +43,7 @@ Two common cases are adding and removing Endpoints:
   a reload, NGINX will stop proxying traffic to it. However, it will finish proxying any pending requests to that
   server before switching to another Endpoint.
 
-As long you have more than one ready Endpoint, the clients should not experience any downtime during upgrades.
+As long as you have more than one ready Endpoint, the clients should not experience any downtime during upgrades.
 
 > It is good practice to configure a [Readiness probe][readiness-probe] in the Deployment so that a Pod can advertise
 > when it is ready to receive traffic. Note that NGINX Kubernetes Gateway will not add any Endpoint to NGINX that is not
@@ -86,11 +82,11 @@ For example, an application can be exposed using a routing rule like below:
 
 > See the [Cafe example](/examples/cafe-example) for a basic example.
 
-The upgrade methods in the next sections will change upstream servers in NGINX, and cover:
+The upgrade methods in the next sections cover:
 
 - Rolling Deployment Upgrades
 - Blue-green Deployments
-- Canary Celeases
+- Canary Releases
 
 ## Rolling Deployment Upgrade
 
