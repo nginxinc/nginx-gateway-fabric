@@ -99,6 +99,34 @@ func TestValidateInSupportedValues(t *testing.T) {
 	)
 }
 
+func TestValidateNoUnsupportedValues(t *testing.T) {
+	unsupportedValues := map[string]struct{}{
+		"badvalue1": {},
+		"badvalue2": {},
+		"badvalue3": {},
+	}
+
+	validator := func(value string) (bool, []string) {
+		return validateNoUnsupportedValues(value, unsupportedValues)
+	}
+
+	testValidValuesForSupportedValuesValidator(
+		t,
+		validator,
+		"value1",
+		"value2",
+		"value3",
+	)
+	testInvalidValuesForSupportedValuesValidator(
+		t,
+		validator,
+		unsupportedValues,
+		"badvalue1",
+		"badvalue2",
+		"badvalue3",
+	)
+}
+
 func TestGetSortedKeysAsString(t *testing.T) {
 	values := map[string]struct{}{
 		"value3": {},
