@@ -2,18 +2,21 @@
 
 This guide explains how to use NGINX Kubernetes Gateway to upgrade applications without downtime.
 
-Multiple upgrade methods are mentioned, assuming existing familiarity: this guide focuses primarily on how to use NGINX Kubernetes Gateway to accomplish them.
+Multiple upgrade methods are mentioned, assuming existing familiarity: this guide focuses primarily on how to use NGINX
+Kubernetes Gateway to accomplish them.
 
 > See the [Architecture document](/docs/architecture.md) to learn more about NGINX Kubernetes Gateway architecture.
 
 ## NGINX Kubernetes Gateway Functionality
 
-To understand the upgrade methods, you should be aware of the NGINX features that help prevent application downtime: graceful configuration reloads and upstream servers updates.
+To understand the upgrade methods, you should be aware of the NGINX features that help prevent application downtime:
+graceful configuration reloads and upstream servers updates.
 
 ### Graceful Configuration Reloads
 
-If a relevant Gateway API or built-in Kubernetes resource is changed, NGINX Kubernetes Gateway will update NGINX by regenerating the NGINX configuration. 
-NGINX Kubernetes Gateway then sends a reload signal to the master NGINX process to apply the new configuration. 
+If a relevant Gateway API or built-in Kubernetes resource is changed, NGINX Kubernetes Gateway will update NGINX by
+regenerating the NGINX configuration. NGINX Kubernetes Gateway then sends a reload signal to the master NGINX process to
+apply the new configuration.
 
 We call such an operation a reload, during which client requests are not dropped - which defines it as a graceful reload.
 
