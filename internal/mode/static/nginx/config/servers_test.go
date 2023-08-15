@@ -6,11 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/google/go-cmp/cmp"
 	. "github.com/onsi/gomega"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/helpers"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/nginx/config/http"
@@ -168,218 +165,7 @@ func TestCreateServers(t *testing.T) {
 		sslKeyPairID = "test-keypair"
 	)
 
-	hr := &v1beta1.HTTPRoute{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: "test",
-			Name:      "route1",
-		},
-		Spec: v1beta1.HTTPRouteSpec{
-			Hostnames: []v1beta1.Hostname{
-				"cafe.example.com",
-			},
-			Rules: []v1beta1.HTTPRouteRule{
-				{
-					// matches with path and methods
-					Matches: []v1beta1.HTTPRouteMatch{
-						{
-							Path: &v1beta1.HTTPPathMatch{
-								Value: helpers.GetStringPointer("/"),
-								Type:  helpers.GetPointer(v1beta1.PathMatchPathPrefix),
-							},
-							Method: helpers.GetHTTPMethodPointer(v1beta1.HTTPMethodPost),
-						},
-						{
-							Path: &v1beta1.HTTPPathMatch{
-								Value: helpers.GetStringPointer("/"),
-								Type:  helpers.GetPointer(v1beta1.PathMatchPathPrefix),
-							},
-							Method: helpers.GetHTTPMethodPointer(v1beta1.HTTPMethodPatch),
-						},
-						{
-							Path: &v1beta1.HTTPPathMatch{
-								Value: helpers.GetStringPointer(
-									"/", // should generate an "any" httpmatch since other matches exists for /
-								),
-								Type: helpers.GetPointer(v1beta1.PathMatchPathPrefix),
-							},
-						},
-					},
-				},
-				{
-					// A match with all possible fields set
-					Matches: []v1beta1.HTTPRouteMatch{
-						{
-							Path: &v1beta1.HTTPPathMatch{
-								Value: helpers.GetStringPointer("/test"),
-								Type:  helpers.GetPointer(v1beta1.PathMatchPathPrefix),
-							},
-							Method: helpers.GetHTTPMethodPointer(v1beta1.HTTPMethodGet),
-							Headers: []v1beta1.HTTPHeaderMatch{
-								{
-									Type:  helpers.GetHeaderMatchTypePointer(v1beta1.HeaderMatchExact),
-									Name:  "Version",
-									Value: "V1",
-								},
-								{
-									Type:  helpers.GetHeaderMatchTypePointer(v1beta1.HeaderMatchExact),
-									Name:  "test",
-									Value: "foo",
-								},
-								{
-									Type:  helpers.GetHeaderMatchTypePointer(v1beta1.HeaderMatchExact),
-									Name:  "my-header",
-									Value: "my-value",
-								},
-							},
-							QueryParams: []v1beta1.HTTPQueryParamMatch{
-								{
-									Type:  helpers.GetQueryParamMatchTypePointer(v1beta1.QueryParamMatchExact),
-									Name:  "GrEat", // query names and values should not be normalized to lowercase
-									Value: "EXAMPLE",
-								},
-								{
-									Type:  helpers.GetQueryParamMatchTypePointer(v1beta1.QueryParamMatchExact),
-									Name:  "test",
-									Value: "foo=bar",
-								},
-							},
-						},
-					},
-				},
-				{
-					// A match with just path
-					Matches: []v1beta1.HTTPRouteMatch{
-						{
-							Path: &v1beta1.HTTPPathMatch{
-								Value: helpers.GetStringPointer("/path-only"),
-								Type:  helpers.GetPointer(v1beta1.PathMatchPathPrefix),
-							},
-						},
-					},
-				},
-				{
-					// A match with a redirect with implicit port
-					Matches: []v1beta1.HTTPRouteMatch{
-						{
-							Path: &v1beta1.HTTPPathMatch{
-								Value: helpers.GetStringPointer("/redirect-implicit-port"),
-								Type:  helpers.GetPointer(v1beta1.PathMatchPathPrefix),
-							},
-						},
-					},
-					// redirect is set in the corresponding state.MatchRule
-				},
-				{
-					// A match with a redirect with explicit port
-					Matches: []v1beta1.HTTPRouteMatch{
-						{
-							Path: &v1beta1.HTTPPathMatch{
-								Value: helpers.GetStringPointer("/redirect-explicit-port"),
-								Type:  helpers.GetPointer(v1beta1.PathMatchPathPrefix),
-							},
-						},
-					},
-					// redirect is set in the corresponding state.MatchRule
-				},
-				{
-					// A match with a redirect and header matches
-					Matches: []v1beta1.HTTPRouteMatch{
-						{
-							Path: &v1beta1.HTTPPathMatch{
-								Value: helpers.GetStringPointer("/redirect-with-headers"),
-								Type:  helpers.GetPointer(v1beta1.PathMatchPathPrefix),
-							},
-							Headers: []v1beta1.HTTPHeaderMatch{
-								{
-									Type:  helpers.GetHeaderMatchTypePointer(v1beta1.HeaderMatchExact),
-									Name:  "redirect",
-									Value: "this",
-								},
-							},
-						},
-					},
-				},
-				{
-					// A match with an invalid filter
-					Matches: []v1beta1.HTTPRouteMatch{
-						{
-							Path: &v1beta1.HTTPPathMatch{
-								Value: helpers.GetPointer("/invalid-filter"),
-								Type:  helpers.GetPointer(v1beta1.PathMatchPathPrefix),
-							},
-						},
-					},
-				},
-				{
-					// A match with an invalid filter and headers
-					Matches: []v1beta1.HTTPRouteMatch{
-						{
-							Path: &v1beta1.HTTPPathMatch{
-								Value: helpers.GetPointer("/invalid-filter-with-headers"),
-								Type:  helpers.GetPointer(v1beta1.PathMatchPathPrefix),
-							},
-							Headers: []v1beta1.HTTPHeaderMatch{
-								{
-									Type:  helpers.GetHeaderMatchTypePointer(v1beta1.HeaderMatchExact),
-									Name:  "filter",
-									Value: "this",
-								},
-							},
-						},
-					},
-				},
-				{
-					// A match using type Exact
-					Matches: []v1beta1.HTTPRouteMatch{
-						{
-							Path: &v1beta1.HTTPPathMatch{
-								Value: helpers.GetPointer("/exact"),
-								Type:  helpers.GetPointer(v1beta1.PathMatchExact),
-							},
-						},
-					},
-				},
-				{
-					// A match using type Exact with method
-					Matches: []v1beta1.HTTPRouteMatch{
-						{
-							Path: &v1beta1.HTTPPathMatch{
-								Value: helpers.GetPointer("/test"),
-								Type:  helpers.GetPointer(v1beta1.PathMatchExact),
-							},
-							Method: helpers.GetHTTPMethodPointer(v1beta1.HTTPMethodGet),
-						},
-					},
-				},
-				{
-					// A match with requestHeaderModifier filter set
-					Matches: []v1beta1.HTTPRouteMatch{
-						{
-							Path: &v1beta1.HTTPPathMatch{
-								Value: helpers.GetStringPointer("/proxy-set-headers"),
-								Type:  helpers.GetPointer(v1beta1.PathMatchPathPrefix),
-							},
-						},
-					},
-					Filters: []v1beta1.HTTPRouteFilter{
-						{
-							Type: "RequestHeaderModifier",
-							RequestHeaderModifier: &v1beta1.HTTPHeaderFilter{
-								Add: []v1beta1.HTTPHeader{
-									{
-										Name:  "my-header",
-										Value: "some-value-123",
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-	}
-
-	hrNsName := types.NamespacedName{Namespace: hr.Namespace, Name: hr.Name}
+	hrNsName := types.NamespacedName{Namespace: "test", Name: "route1"}
 
 	fooGroup := dataplane.BackendGroup{
 		Source:  hrNsName,
@@ -436,22 +222,21 @@ func TestCreateServers(t *testing.T) {
 			PathType: dataplane.PathTypePrefix,
 			MatchRules: []dataplane.MatchRule{
 				{
-					MatchIdx:     0,
-					RuleIdx:      0,
+					Match: dataplane.Match{
+						Method: helpers.GetPointer("POST"),
+					},
 					BackendGroup: fooGroup,
-					Source:       hr,
 				},
 				{
-					MatchIdx:     1,
-					RuleIdx:      0,
+					Match: dataplane.Match{
+						Method: helpers.GetPointer("PATCH"),
+					},
 					BackendGroup: fooGroup,
-					Source:       hr,
 				},
 				{
-					MatchIdx:     2,
-					RuleIdx:      0,
+					// should generate an "any" httpmatch since other matches exists for /
+					Match:        dataplane.Match{},
 					BackendGroup: fooGroup,
-					Source:       hr,
 				},
 			},
 		},
@@ -460,10 +245,36 @@ func TestCreateServers(t *testing.T) {
 			PathType: dataplane.PathTypePrefix,
 			MatchRules: []dataplane.MatchRule{
 				{
-					MatchIdx:     0,
-					RuleIdx:      1,
+					// A match with all possible fields set
+					Match: dataplane.Match{
+						Method: helpers.GetPointer("GET"),
+						Headers: []dataplane.HTTPHeaderMatch{
+							{
+								Name:  "Version",
+								Value: "V1",
+							},
+							{
+								Name:  "test",
+								Value: "foo",
+							},
+							{
+								Name:  "my-header",
+								Value: "my-value",
+							},
+						},
+						QueryParams: []dataplane.HTTPQueryParamMatch{
+							{
+								// query names and values should not be normalized to lowercase
+								Name:  "GrEat",
+								Value: "EXAMPLE",
+							},
+							{
+								Name:  "test",
+								Value: "foo=bar",
+							},
+						},
+					},
 					BackendGroup: barGroup,
-					Source:       hr,
 				},
 			},
 		},
@@ -472,10 +283,8 @@ func TestCreateServers(t *testing.T) {
 			PathType: dataplane.PathTypePrefix,
 			MatchRules: []dataplane.MatchRule{
 				{
-					MatchIdx:     0,
-					RuleIdx:      2,
+					Match:        dataplane.Match{},
 					BackendGroup: bazGroup,
-					Source:       hr,
 				},
 			},
 		},
@@ -484,12 +293,10 @@ func TestCreateServers(t *testing.T) {
 			PathType: dataplane.PathTypePrefix,
 			MatchRules: []dataplane.MatchRule{
 				{
-					MatchIdx: 0,
-					RuleIdx:  3,
-					Source:   hr,
-					Filters: dataplane.Filters{
-						RequestRedirect: &v1beta1.HTTPRequestRedirectFilter{
-							Hostname: (*v1beta1.PreciseHostname)(helpers.GetStringPointer("foo.example.com")),
+					Match: dataplane.Match{},
+					Filters: dataplane.HTTPFilters{
+						RequestRedirect: &dataplane.HTTPRequestRedirectFilter{
+							Hostname: helpers.GetPointer("foo.example.com"),
 						},
 					},
 					BackendGroup: filterGroup1,
@@ -501,13 +308,11 @@ func TestCreateServers(t *testing.T) {
 			PathType: dataplane.PathTypePrefix,
 			MatchRules: []dataplane.MatchRule{
 				{
-					MatchIdx: 0,
-					RuleIdx:  4,
-					Source:   hr,
-					Filters: dataplane.Filters{
-						RequestRedirect: &v1beta1.HTTPRequestRedirectFilter{
-							Hostname: (*v1beta1.PreciseHostname)(helpers.GetStringPointer("bar.example.com")),
-							Port:     (*v1beta1.PortNumber)(helpers.GetInt32Pointer(8080)),
+					Match: dataplane.Match{},
+					Filters: dataplane.HTTPFilters{
+						RequestRedirect: &dataplane.HTTPRequestRedirectFilter{
+							Hostname: helpers.GetPointer("bar.example.com"),
+							Port:     helpers.GetPointer[int32](8080),
 						},
 					},
 					BackendGroup: filterGroup2,
@@ -519,13 +324,18 @@ func TestCreateServers(t *testing.T) {
 			PathType: dataplane.PathTypePrefix,
 			MatchRules: []dataplane.MatchRule{
 				{
-					MatchIdx: 0,
-					RuleIdx:  5,
-					Source:   hr,
-					Filters: dataplane.Filters{
-						RequestRedirect: &v1beta1.HTTPRequestRedirectFilter{
-							Hostname: helpers.GetPointer(v1beta1.PreciseHostname("foo.example.com")),
-							Port:     helpers.GetPointer(v1beta1.PortNumber(8080)),
+					Match: dataplane.Match{
+						Headers: []dataplane.HTTPHeaderMatch{
+							{
+								Name:  "redirect",
+								Value: "this",
+							},
+						},
+					},
+					Filters: dataplane.HTTPFilters{
+						RequestRedirect: &dataplane.HTTPRequestRedirectFilter{
+							Hostname: helpers.GetPointer("foo.example.com"),
+							Port:     helpers.GetPointer[int32](8080),
 						},
 					},
 					BackendGroup: filterGroup1,
@@ -537,11 +347,9 @@ func TestCreateServers(t *testing.T) {
 			PathType: dataplane.PathTypePrefix,
 			MatchRules: []dataplane.MatchRule{
 				{
-					MatchIdx: 0,
-					RuleIdx:  6,
-					Source:   hr,
-					Filters: dataplane.Filters{
-						InvalidFilter: &dataplane.InvalidFilter{},
+					Match: dataplane.Match{},
+					Filters: dataplane.HTTPFilters{
+						InvalidFilter: &dataplane.InvalidHTTPFilter{},
 					},
 					BackendGroup: invalidFilterGroup,
 				},
@@ -552,11 +360,16 @@ func TestCreateServers(t *testing.T) {
 			PathType: dataplane.PathTypePrefix,
 			MatchRules: []dataplane.MatchRule{
 				{
-					MatchIdx: 0,
-					RuleIdx:  7,
-					Source:   hr,
-					Filters: dataplane.Filters{
-						InvalidFilter: &dataplane.InvalidFilter{},
+					Match: dataplane.Match{
+						Headers: []dataplane.HTTPHeaderMatch{
+							{
+								Name:  "filter",
+								Value: "this",
+							},
+						},
+					},
+					Filters: dataplane.HTTPFilters{
+						InvalidFilter: &dataplane.InvalidHTTPFilter{},
 					},
 					BackendGroup: invalidFilterGroup,
 				},
@@ -567,9 +380,7 @@ func TestCreateServers(t *testing.T) {
 			PathType: dataplane.PathTypeExact,
 			MatchRules: []dataplane.MatchRule{
 				{
-					MatchIdx:     0,
-					RuleIdx:      8,
-					Source:       hr,
+					Match:        dataplane.Match{},
 					BackendGroup: fooGroup,
 				},
 			},
@@ -579,9 +390,9 @@ func TestCreateServers(t *testing.T) {
 			PathType: dataplane.PathTypeExact,
 			MatchRules: []dataplane.MatchRule{
 				{
-					MatchIdx:     0,
-					RuleIdx:      9,
-					Source:       hr,
+					Match: dataplane.Match{
+						Method: helpers.GetPointer("GET"),
+					},
 					BackendGroup: fooGroup,
 				},
 			},
@@ -591,11 +402,9 @@ func TestCreateServers(t *testing.T) {
 			PathType: dataplane.PathTypePrefix,
 			MatchRules: []dataplane.MatchRule{
 				{
-					MatchIdx:     0,
-					RuleIdx:      10,
-					Source:       hr,
+					Match:        dataplane.Match{},
 					BackendGroup: fooGroup,
-					Filters: dataplane.Filters{
+					Filters: dataplane.HTTPFilters{
 						RequestHeaderModifiers: &dataplane.HTTPHeaderFilter{
 							Add: []dataplane.HTTPHeader{
 								{
@@ -644,13 +453,13 @@ func TestCreateServers(t *testing.T) {
 	}
 
 	slashMatches := []httpMatch{
-		{Method: v1beta1.HTTPMethodPost, RedirectPath: "/_prefix_route0"},
-		{Method: v1beta1.HTTPMethodPatch, RedirectPath: "/_prefix_route1"},
+		{Method: "POST", RedirectPath: "/_prefix_route0"},
+		{Method: "PATCH", RedirectPath: "/_prefix_route1"},
 		{Any: true, RedirectPath: "/_prefix_route2"},
 	}
 	testMatches := []httpMatch{
 		{
-			Method:       v1beta1.HTTPMethodGet,
+			Method:       "GET",
 			Headers:      []string{"Version:V1", "test:foo", "my-header:my-value"},
 			QueryParams:  []string{"GrEat=EXAMPLE", "test=foo=bar"},
 			RedirectPath: "/test_prefix_route0",
@@ -658,7 +467,7 @@ func TestCreateServers(t *testing.T) {
 	}
 	exactMatches := []httpMatch{
 		{
-			Method:       v1beta1.HTTPMethodGet,
+			Method:       "GET",
 			RedirectPath: "/test_exact_route0",
 		},
 	}
@@ -859,74 +668,6 @@ func TestCreateServers(t *testing.T) {
 }
 
 func TestCreateServersConflicts(t *testing.T) {
-	type pathAndType struct {
-		path     string
-		pathType v1beta1.PathMatchType
-	}
-
-	createHR := func(pathsAndTypes []pathAndType) *v1beta1.HTTPRoute {
-		hr := &v1beta1.HTTPRoute{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: "test",
-				Name:      "route",
-			},
-			Spec: v1beta1.HTTPRouteSpec{
-				Hostnames: []v1beta1.Hostname{
-					"cafe.example.com",
-				},
-				Rules: []v1beta1.HTTPRouteRule{},
-			},
-		}
-		for _, pt := range pathsAndTypes {
-			match := v1beta1.HTTPRouteMatch{
-				Path: &v1beta1.HTTPPathMatch{
-					Value: helpers.GetPointer(pt.path),
-					Type:  helpers.GetPointer(pt.pathType),
-				},
-			}
-			hr.Spec.Rules = append(hr.Spec.Rules, v1beta1.HTTPRouteRule{
-				Matches: []v1beta1.HTTPRouteMatch{match},
-			})
-		}
-
-		return hr
-	}
-
-	hr1 := createHR([]pathAndType{
-		{
-			path:     "/coffee",
-			pathType: v1beta1.PathMatchPathPrefix,
-		},
-		{
-			path:     "/coffee",
-			pathType: v1beta1.PathMatchExact,
-		},
-	})
-	hr2 := createHR([]pathAndType{
-		{
-			path:     "/coffee",
-			pathType: v1beta1.PathMatchPathPrefix,
-		},
-		{
-			path:     "/coffee/",
-			pathType: v1beta1.PathMatchPathPrefix,
-		},
-	})
-	hr3 := createHR([]pathAndType{
-		{
-			path:     "/coffee",
-			pathType: v1beta1.PathMatchPathPrefix,
-		},
-		{
-			path:     "/coffee/",
-			pathType: v1beta1.PathMatchPathPrefix,
-		},
-		{
-			path:     "/coffee",
-			pathType: v1beta1.PathMatchExact,
-		},
-	})
-
 	fooGroup := dataplane.BackendGroup{
 		Source:  types.NamespacedName{Namespace: "test", Name: "route"},
 		RuleIdx: 0,
@@ -974,9 +715,7 @@ func TestCreateServersConflicts(t *testing.T) {
 					PathType: dataplane.PathTypePrefix,
 					MatchRules: []dataplane.MatchRule{
 						{
-							MatchIdx:     0,
-							RuleIdx:      0,
-							Source:       hr1,
+							Match:        dataplane.Match{},
 							BackendGroup: fooGroup,
 						},
 					},
@@ -986,9 +725,7 @@ func TestCreateServersConflicts(t *testing.T) {
 					PathType: dataplane.PathTypeExact,
 					MatchRules: []dataplane.MatchRule{
 						{
-							MatchIdx:     0,
-							RuleIdx:      0,
-							Source:       hr1,
+							Match:        dataplane.Match{},
 							BackendGroup: barGroup,
 						},
 					},
@@ -1014,9 +751,7 @@ func TestCreateServersConflicts(t *testing.T) {
 					PathType: dataplane.PathTypePrefix,
 					MatchRules: []dataplane.MatchRule{
 						{
-							MatchIdx:     0,
-							RuleIdx:      0,
-							Source:       hr2,
+							Match:        dataplane.Match{},
 							BackendGroup: fooGroup,
 						},
 					},
@@ -1026,9 +761,7 @@ func TestCreateServersConflicts(t *testing.T) {
 					PathType: dataplane.PathTypePrefix,
 					MatchRules: []dataplane.MatchRule{
 						{
-							MatchIdx:     0,
-							RuleIdx:      1,
-							Source:       hr2,
+							Match:        dataplane.Match{},
 							BackendGroup: barGroup,
 						},
 					},
@@ -1054,9 +787,7 @@ func TestCreateServersConflicts(t *testing.T) {
 					PathType: dataplane.PathTypePrefix,
 					MatchRules: []dataplane.MatchRule{
 						{
-							MatchIdx:     0,
-							RuleIdx:      0,
-							Source:       hr3,
+							Match:        dataplane.Match{},
 							BackendGroup: fooGroup,
 						},
 					},
@@ -1066,9 +797,7 @@ func TestCreateServersConflicts(t *testing.T) {
 					PathType: dataplane.PathTypePrefix,
 					MatchRules: []dataplane.MatchRule{
 						{
-							MatchIdx:     0,
-							RuleIdx:      1,
-							Source:       hr3,
+							Match:        dataplane.Match{},
 							BackendGroup: barGroup,
 						},
 					},
@@ -1078,22 +807,7 @@ func TestCreateServersConflicts(t *testing.T) {
 					PathType: dataplane.PathTypeExact,
 					MatchRules: []dataplane.MatchRule{
 						{
-							MatchIdx: 0,
-							RuleIdx:  2,
-							Source: createHR([]pathAndType{
-								{
-									path:     "/coffee",
-									pathType: v1beta1.PathMatchPathPrefix,
-								},
-								{
-									path:     "/coffee/",
-									pathType: v1beta1.PathMatchPathPrefix,
-								},
-								{
-									path:     "/coffee",
-									pathType: v1beta1.PathMatchExact,
-								},
-							}),
+							Match:        dataplane.Match{},
 							BackendGroup: bazGroup,
 						},
 					},
@@ -1149,53 +863,6 @@ func TestCreateServersConflicts(t *testing.T) {
 func TestCreateLocationsRootPath(t *testing.T) {
 	g := NewGomegaWithT(t)
 
-	createRoute := func(rootPath bool) *v1beta1.HTTPRoute {
-		route := &v1beta1.HTTPRoute{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: "test",
-				Name:      "route1",
-			},
-			Spec: v1beta1.HTTPRouteSpec{
-				Hostnames: []v1beta1.Hostname{
-					"cafe.example.com",
-				},
-				Rules: []v1beta1.HTTPRouteRule{
-					{
-						Matches: []v1beta1.HTTPRouteMatch{
-							{
-								Path: &v1beta1.HTTPPathMatch{
-									Value: helpers.GetStringPointer("/path-1"),
-									Type:  helpers.GetPointer(v1beta1.PathMatchPathPrefix),
-								},
-							},
-							{
-								Path: &v1beta1.HTTPPathMatch{
-									Value: helpers.GetStringPointer("/path-2"),
-									Type:  helpers.GetPointer(v1beta1.PathMatchPathPrefix),
-								},
-							},
-						},
-					},
-				},
-			},
-		}
-
-		if rootPath {
-			route.Spec.Rules[0].Matches = append(route.Spec.Rules[0].Matches, v1beta1.HTTPRouteMatch{
-				Path: &v1beta1.HTTPPathMatch{
-					Value: helpers.GetStringPointer("/"),
-					Type:  helpers.GetPointer(v1beta1.PathMatchPathPrefix),
-				},
-			})
-		}
-
-		return route
-	}
-
-	hrWithRootPathRule := createRoute(true)
-
-	hrWithoutRootPathRule := createRoute(false)
-
 	hrNsName := types.NamespacedName{Namespace: "test", Name: "route1"}
 
 	fooGroup := dataplane.BackendGroup{
@@ -1210,16 +877,14 @@ func TestCreateLocationsRootPath(t *testing.T) {
 		},
 	}
 
-	getPathRules := func(source *v1beta1.HTTPRoute, rootPath bool) []dataplane.PathRule {
+	getPathRules := func(rootPath bool) []dataplane.PathRule {
 		rules := []dataplane.PathRule{
 			{
 				Path: "/path-1",
 				MatchRules: []dataplane.MatchRule{
 					{
-						Source:       source,
+						Match:        dataplane.Match{},
 						BackendGroup: fooGroup,
-						MatchIdx:     0,
-						RuleIdx:      0,
 					},
 				},
 			},
@@ -1227,10 +892,8 @@ func TestCreateLocationsRootPath(t *testing.T) {
 				Path: "/path-2",
 				MatchRules: []dataplane.MatchRule{
 					{
-						Source:       source,
+						Match:        dataplane.Match{},
 						BackendGroup: fooGroup,
-						MatchIdx:     1,
-						RuleIdx:      0,
 					},
 				},
 			},
@@ -1241,10 +904,8 @@ func TestCreateLocationsRootPath(t *testing.T) {
 				Path: "/",
 				MatchRules: []dataplane.MatchRule{
 					{
-						Source:       source,
+						Match:        dataplane.Match{},
 						BackendGroup: fooGroup,
-						MatchIdx:     2,
-						RuleIdx:      0,
 					},
 				},
 			})
@@ -1260,7 +921,7 @@ func TestCreateLocationsRootPath(t *testing.T) {
 	}{
 		{
 			name:      "path rules with no root path should generate a default 404 root location",
-			pathRules: getPathRules(hrWithoutRootPathRule, false),
+			pathRules: getPathRules(false /* rootPath */),
 			expLocations: []http.Location{
 				{
 					Path:      "/path-1",
@@ -1280,7 +941,7 @@ func TestCreateLocationsRootPath(t *testing.T) {
 		},
 		{
 			name:      "path rules with a root path should not generate a default 404 root path",
-			pathRules: getPathRules(hrWithRootPathRule, true),
+			pathRules: getPathRules(true /* rootPath */),
 			expLocations: []http.Location{
 				{
 					Path:      "/path-1",
@@ -1322,7 +983,7 @@ func TestCreateReturnValForRedirectFilter(t *testing.T) {
 	const listenerPortHTTPS = 443
 
 	tests := []struct {
-		filter       *v1beta1.HTTPRequestRedirectFilter
+		filter       *dataplane.HTTPRequestRedirectFilter
 		expected     *http.Return
 		msg          string
 		listenerPort int32
@@ -1334,7 +995,7 @@ func TestCreateReturnValForRedirectFilter(t *testing.T) {
 			msg:          "filter is nil",
 		},
 		{
-			filter:       &v1beta1.HTTPRequestRedirectFilter{},
+			filter:       &dataplane.HTTPRequestRedirectFilter{},
 			listenerPort: listenerPortCustom,
 			expected: &http.Return{
 				Code: http.StatusFound,
@@ -1343,10 +1004,10 @@ func TestCreateReturnValForRedirectFilter(t *testing.T) {
 			msg: "all fields are empty",
 		},
 		{
-			filter: &v1beta1.HTTPRequestRedirectFilter{
+			filter: &dataplane.HTTPRequestRedirectFilter{
 				Scheme:     helpers.GetPointer("https"),
-				Hostname:   helpers.GetPointer(v1beta1.PreciseHostname("foo.example.com")),
-				Port:       (*v1beta1.PortNumber)(helpers.GetInt32Pointer(2022)),
+				Hostname:   helpers.GetPointer("foo.example.com"),
+				Port:       helpers.GetPointer[int32](2022),
 				StatusCode: helpers.GetPointer(301),
 			},
 			listenerPort: listenerPortCustom,
@@ -1357,9 +1018,9 @@ func TestCreateReturnValForRedirectFilter(t *testing.T) {
 			msg: "all fields are set",
 		},
 		{
-			filter: &v1beta1.HTTPRequestRedirectFilter{
+			filter: &dataplane.HTTPRequestRedirectFilter{
 				Scheme:     helpers.GetPointer("https"),
-				Hostname:   helpers.GetPointer(v1beta1.PreciseHostname("foo.example.com")),
+				Hostname:   helpers.GetPointer("foo.example.com"),
 				StatusCode: helpers.GetPointer(301),
 			},
 			listenerPort: listenerPortCustom,
@@ -1370,8 +1031,8 @@ func TestCreateReturnValForRedirectFilter(t *testing.T) {
 			msg: "listenerPort is custom, scheme is set, no port",
 		},
 		{
-			filter: &v1beta1.HTTPRequestRedirectFilter{
-				Hostname:   helpers.GetPointer(v1beta1.PreciseHostname("foo.example.com")),
+			filter: &dataplane.HTTPRequestRedirectFilter{
+				Hostname:   helpers.GetPointer("foo.example.com"),
 				StatusCode: helpers.GetPointer(301),
 			},
 			listenerPort: listenerPortHTTPS,
@@ -1382,9 +1043,9 @@ func TestCreateReturnValForRedirectFilter(t *testing.T) {
 			msg: "no scheme, listenerPort https, no port is set",
 		},
 		{
-			filter: &v1beta1.HTTPRequestRedirectFilter{
+			filter: &dataplane.HTTPRequestRedirectFilter{
 				Scheme:     helpers.GetPointer("https"),
-				Hostname:   helpers.GetPointer(v1beta1.PreciseHostname("foo.example.com")),
+				Hostname:   helpers.GetPointer("foo.example.com"),
 				StatusCode: helpers.GetPointer(301),
 			},
 			listenerPort: listenerPortHTTPS,
@@ -1395,9 +1056,9 @@ func TestCreateReturnValForRedirectFilter(t *testing.T) {
 			msg: "scheme is https, listenerPort https, no port is set",
 		},
 		{
-			filter: &v1beta1.HTTPRequestRedirectFilter{
+			filter: &dataplane.HTTPRequestRedirectFilter{
 				Scheme:     helpers.GetPointer("http"),
-				Hostname:   helpers.GetPointer(v1beta1.PreciseHostname("foo.example.com")),
+				Hostname:   helpers.GetPointer("foo.example.com"),
 				StatusCode: helpers.GetPointer(301),
 			},
 			listenerPort: listenerPortHTTP,
@@ -1408,10 +1069,10 @@ func TestCreateReturnValForRedirectFilter(t *testing.T) {
 			msg: "scheme is http, listenerPort http, no port is set",
 		},
 		{
-			filter: &v1beta1.HTTPRequestRedirectFilter{
+			filter: &dataplane.HTTPRequestRedirectFilter{
 				Scheme:     helpers.GetPointer("http"),
-				Hostname:   helpers.GetPointer(v1beta1.PreciseHostname("foo.example.com")),
-				Port:       (*v1beta1.PortNumber)(helpers.GetInt32Pointer(80)),
+				Hostname:   helpers.GetPointer("foo.example.com"),
+				Port:       helpers.GetPointer[int32](80),
 				StatusCode: helpers.GetPointer(301),
 			},
 			listenerPort: listenerPortCustom,
@@ -1422,10 +1083,10 @@ func TestCreateReturnValForRedirectFilter(t *testing.T) {
 			msg: "scheme is http, port http",
 		},
 		{
-			filter: &v1beta1.HTTPRequestRedirectFilter{
+			filter: &dataplane.HTTPRequestRedirectFilter{
 				Scheme:     helpers.GetPointer("https"),
-				Hostname:   helpers.GetPointer(v1beta1.PreciseHostname("foo.example.com")),
-				Port:       (*v1beta1.PortNumber)(helpers.GetInt32Pointer(443)),
+				Hostname:   helpers.GetPointer("foo.example.com"),
+				Port:       helpers.GetPointer[int32](443),
 				StatusCode: helpers.GetPointer(301),
 			},
 			listenerPort: listenerPortCustom,
@@ -1438,70 +1099,52 @@ func TestCreateReturnValForRedirectFilter(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		result := createReturnValForRedirectFilter(test.filter, test.listenerPort)
-		if diff := cmp.Diff(test.expected, result); diff != "" {
-			t.Errorf("createReturnValForRedirectFilter() mismatch %q (-want +got):\n%s", test.msg, diff)
-		}
+		t.Run(test.msg, func(t *testing.T) {
+			g := NewGomegaWithT(t)
+
+			result := createReturnValForRedirectFilter(test.filter, test.listenerPort)
+			g.Expect(helpers.Diff(test.expected, result)).To(BeEmpty())
+		})
 	}
 }
 
 func TestCreateHTTPMatch(t *testing.T) {
 	testPath := "/internal_loc"
 
-	testPathMatch := v1beta1.HTTPPathMatch{Value: helpers.GetStringPointer("/")}
-	testMethodMatch := helpers.GetHTTPMethodPointer(v1beta1.HTTPMethodPut)
-	testHeaderMatches := []v1beta1.HTTPHeaderMatch{
+	testMethodMatch := helpers.GetPointer("PUT")
+	testHeaderMatches := []dataplane.HTTPHeaderMatch{
 		{
-			Type:  helpers.GetHeaderMatchTypePointer(v1beta1.HeaderMatchExact),
 			Name:  "header-1",
 			Value: "val-1",
 		},
 		{
-			Type:  helpers.GetHeaderMatchTypePointer(v1beta1.HeaderMatchExact),
 			Name:  "header-2",
 			Value: "val-2",
 		},
 		{
-			// regex type is not supported. This should not be added to the httpMatch headers.
-			Type:  helpers.GetHeaderMatchTypePointer(v1beta1.HeaderMatchRegularExpression),
-			Name:  "ignore-this-header",
-			Value: "val",
-		},
-		{
-			Type:  helpers.GetHeaderMatchTypePointer(v1beta1.HeaderMatchExact),
 			Name:  "header-3",
 			Value: "val-3",
 		},
 	}
 
-	testDuplicateHeaders := make([]v1beta1.HTTPHeaderMatch, 0, 5)
-	duplicateHeaderMatch := v1beta1.HTTPHeaderMatch{
-		Type:  helpers.GetHeaderMatchTypePointer(v1beta1.HeaderMatchExact),
+	testDuplicateHeaders := make([]dataplane.HTTPHeaderMatch, 0, 4)
+	duplicateHeaderMatch := dataplane.HTTPHeaderMatch{
 		Name:  "HEADER-2", // header names are case-insensitive
 		Value: "val-2",
 	}
 	testDuplicateHeaders = append(testDuplicateHeaders, testHeaderMatches...)
 	testDuplicateHeaders = append(testDuplicateHeaders, duplicateHeaderMatch)
 
-	testQueryParamMatches := []v1beta1.HTTPQueryParamMatch{
+	testQueryParamMatches := []dataplane.HTTPQueryParamMatch{
 		{
-			Type:  helpers.GetQueryParamMatchTypePointer(v1beta1.QueryParamMatchExact),
 			Name:  "arg1",
 			Value: "val1",
 		},
 		{
-			Type:  helpers.GetQueryParamMatchTypePointer(v1beta1.QueryParamMatchExact),
 			Name:  "arg2",
 			Value: "val2=another-val",
 		},
 		{
-			// regex type is not supported. This should not be added to the httpMatch args
-			Type:  helpers.GetQueryParamMatchTypePointer(v1beta1.QueryParamMatchRegularExpression),
-			Name:  "ignore-this-arg",
-			Value: "val",
-		},
-		{
-			Type:  helpers.GetQueryParamMatchTypePointer(v1beta1.QueryParamMatchExact),
 			Name:  "arg3",
 			Value: "==val3",
 		},
@@ -1511,14 +1154,12 @@ func TestCreateHTTPMatch(t *testing.T) {
 	expectedArgs := []string{"arg1=val1", "arg2=val2=another-val", "arg3===val3"}
 
 	tests := []struct {
-		match    v1beta1.HTTPRouteMatch
+		match    dataplane.Match
 		msg      string
 		expected httpMatch
 	}{
 		{
-			match: v1beta1.HTTPRouteMatch{
-				Path: &testPathMatch,
-			},
+			match: dataplane.Match{},
 			expected: httpMatch{
 				Any:          true,
 				RedirectPath: testPath,
@@ -1526,9 +1167,8 @@ func TestCreateHTTPMatch(t *testing.T) {
 			msg: "path only match",
 		},
 		{
-			match: v1beta1.HTTPRouteMatch{
-				Path:   &testPathMatch, // A path match with a method should not set the Any field to true
-				Method: testMethodMatch,
+			match: dataplane.Match{
+				Method: testMethodMatch, // A path match with a method should not set the Any field to true
 			},
 			expected: httpMatch{
 				Method:       "PUT",
@@ -1537,7 +1177,7 @@ func TestCreateHTTPMatch(t *testing.T) {
 			msg: "method only match",
 		},
 		{
-			match: v1beta1.HTTPRouteMatch{
+			match: dataplane.Match{
 				Headers: testHeaderMatches,
 			},
 			expected: httpMatch{
@@ -1547,7 +1187,7 @@ func TestCreateHTTPMatch(t *testing.T) {
 			msg: "headers only match",
 		},
 		{
-			match: v1beta1.HTTPRouteMatch{
+			match: dataplane.Match{
 				QueryParams: testQueryParamMatches,
 			},
 			expected: httpMatch{
@@ -1557,7 +1197,7 @@ func TestCreateHTTPMatch(t *testing.T) {
 			msg: "query params only match",
 		},
 		{
-			match: v1beta1.HTTPRouteMatch{
+			match: dataplane.Match{
 				Method:      testMethodMatch,
 				QueryParams: testQueryParamMatches,
 			},
@@ -1569,7 +1209,7 @@ func TestCreateHTTPMatch(t *testing.T) {
 			msg: "method and query params match",
 		},
 		{
-			match: v1beta1.HTTPRouteMatch{
+			match: dataplane.Match{
 				Method:  testMethodMatch,
 				Headers: testHeaderMatches,
 			},
@@ -1581,7 +1221,7 @@ func TestCreateHTTPMatch(t *testing.T) {
 			msg: "method and headers match",
 		},
 		{
-			match: v1beta1.HTTPRouteMatch{
+			match: dataplane.Match{
 				QueryParams: testQueryParamMatches,
 				Headers:     testHeaderMatches,
 			},
@@ -1593,7 +1233,7 @@ func TestCreateHTTPMatch(t *testing.T) {
 			msg: "query params and headers match",
 		},
 		{
-			match: v1beta1.HTTPRouteMatch{
+			match: dataplane.Match{
 				Headers:     testHeaderMatches,
 				QueryParams: testQueryParamMatches,
 				Method:      testMethodMatch,
@@ -1607,7 +1247,7 @@ func TestCreateHTTPMatch(t *testing.T) {
 			msg: "method, headers, and query params match",
 		},
 		{
-			match: v1beta1.HTTPRouteMatch{
+			match: dataplane.Match{
 				Headers: testDuplicateHeaders,
 			},
 			expected: httpMatch{
@@ -1618,85 +1258,77 @@ func TestCreateHTTPMatch(t *testing.T) {
 		},
 	}
 	for _, tc := range tests {
-		result := createHTTPMatch(tc.match, testPath)
-		if diff := helpers.Diff(result, tc.expected); diff != "" {
-			t.Errorf("createHTTPMatch() returned incorrect httpMatch for test case: %q, diff: %+v", tc.msg, diff)
-		}
+		t.Run(tc.msg, func(t *testing.T) {
+			g := NewGomegaWithT(t)
+
+			result := createHTTPMatch(tc.match, testPath)
+			g.Expect(helpers.Diff(result, tc.expected)).To(BeEmpty())
+		})
 	}
 }
 
 func TestCreateQueryParamKeyValString(t *testing.T) {
+	g := NewGomegaWithT(t)
+
 	expected := "key=value"
 
 	result := createQueryParamKeyValString(
-		v1beta1.HTTPQueryParamMatch{
+		dataplane.HTTPQueryParamMatch{
 			Name:  "key",
 			Value: "value",
 		},
 	)
-	if result != expected {
-		t.Errorf("createQueryParamKeyValString() returned %q but expected %q", result, expected)
-	}
+
+	g.Expect(result).To(Equal(expected))
 
 	expected = "KeY=vaLUe=="
 
 	result = createQueryParamKeyValString(
-		v1beta1.HTTPQueryParamMatch{
+		dataplane.HTTPQueryParamMatch{
 			Name:  "KeY",
 			Value: "vaLUe==",
 		},
 	)
-	if result != expected {
-		t.Errorf("createQueryParamKeyValString() returned %q but expected %q", result, expected)
-	}
+
+	g.Expect(result).To(Equal(expected))
 }
 
 func TestCreateHeaderKeyValString(t *testing.T) {
+	g := NewGomegaWithT(t)
+
 	expected := "kEy:vALUe"
 
 	result := createHeaderKeyValString(
-		v1beta1.HTTPHeaderMatch{
+		dataplane.HTTPHeaderMatch{
 			Name:  "kEy",
 			Value: "vALUe",
 		},
 	)
 
-	if result != expected {
-		t.Errorf("createHeaderKeyValString() returned %q but expected %q", result, expected)
-	}
+	g.Expect(result).To(Equal(expected))
 }
 
 func TestIsPathOnlyMatch(t *testing.T) {
 	tests := []struct {
-		match    v1beta1.HTTPRouteMatch
+		match    dataplane.Match
 		msg      string
 		expected bool
 	}{
 		{
-			match: v1beta1.HTTPRouteMatch{
-				Path: &v1beta1.HTTPPathMatch{
-					Value: helpers.GetStringPointer("/path"),
-				},
-			},
+			match:    dataplane.Match{},
 			expected: true,
 			msg:      "path only match",
 		},
 		{
-			match: v1beta1.HTTPRouteMatch{
-				Path: &v1beta1.HTTPPathMatch{
-					Value: helpers.GetStringPointer("/path"),
-				},
-				Method: helpers.GetHTTPMethodPointer(v1beta1.HTTPMethodGet),
+			match: dataplane.Match{
+				Method: helpers.GetPointer("GET"),
 			},
 			expected: false,
 			msg:      "method defined in match",
 		},
 		{
-			match: v1beta1.HTTPRouteMatch{
-				Path: &v1beta1.HTTPPathMatch{
-					Value: helpers.GetStringPointer("/path"),
-				},
-				Headers: []v1beta1.HTTPHeaderMatch{
+			match: dataplane.Match{
+				Headers: []dataplane.HTTPHeaderMatch{
 					{
 						Name:  "header",
 						Value: "val",
@@ -1707,11 +1339,8 @@ func TestIsPathOnlyMatch(t *testing.T) {
 			msg:      "headers defined in match",
 		},
 		{
-			match: v1beta1.HTTPRouteMatch{
-				Path: &v1beta1.HTTPPathMatch{
-					Value: helpers.GetStringPointer("/path"),
-				},
-				QueryParams: []v1beta1.HTTPQueryParamMatch{
+			match: dataplane.Match{
+				QueryParams: []dataplane.HTTPQueryParamMatch{
 					{
 						Name:  "arg",
 						Value: "val",
@@ -1724,11 +1353,12 @@ func TestIsPathOnlyMatch(t *testing.T) {
 	}
 
 	for _, tc := range tests {
-		result := isPathOnlyMatch(tc.match)
+		t.Run(tc.msg, func(t *testing.T) {
+			g := NewGomegaWithT(t)
 
-		if result != tc.expected {
-			t.Errorf("isPathOnlyMatch() returned %t but expected %t for test case %q", result, tc.expected, tc.msg)
-		}
+			result := isPathOnlyMatch(tc.match)
+			g.Expect(result).To(Equal(tc.expected))
+		})
 	}
 }
 

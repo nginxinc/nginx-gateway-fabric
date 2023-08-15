@@ -6,8 +6,6 @@ import (
 	"strings"
 	gotemplate "text/template"
 
-	"sigs.k8s.io/gateway-api/apis/v1beta1"
-
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/nginx/config/http"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/state/dataplane"
 )
@@ -89,11 +87,9 @@ func createLocations(pathRules []dataplane.PathRule, listenerPort int32) []http.
 		extLocations := initializeExternalLocations(rule, pathsAndTypes)
 
 		for matchRuleIdx, r := range rule.MatchRules {
-			m := r.GetMatch()
-
 			buildLocations := extLocations
-			if len(rule.MatchRules) != 1 || !isPathOnlyMatch(m) {
-				intLocation, match := initializeInternalLocation(rule, matchRuleIdx, m)
+			if len(rule.MatchRules) != 1 || !isPathOnlyMatch(r.Match) {
+				intLocation, match := initializeInternalLocation(rule, matchRuleIdx, r.Match)
 				buildLocations = []http.Location{intLocation}
 				matches = append(matches, match)
 			}
@@ -228,20 +224,20 @@ func initializeExternalLocations(
 func initializeInternalLocation(
 	rule dataplane.PathRule,
 	matchRuleIdx int,
-	match v1beta1.HTTPRouteMatch,
+	match dataplane.Match,
 ) (http.Location, httpMatch) {
 	path := createPathForMatch(rule.Path, rule.PathType, matchRuleIdx)
 	return createMatchLocation(path), createHTTPMatch(match, path)
 }
 
-func createReturnValForRedirectFilter(filter *v1beta1.HTTPRequestRedirectFilter, listenerPort int32) *http.Return {
+func createReturnValForRedirectFilter(filter *dataplane.HTTPRequestRedirectFilter, listenerPort int32) *http.Return {
 	if filter == nil {
 		return nil
 	}
 
 	hostname := "$host"
 	if filter.Hostname != nil {
-		hostname = string(*filter.Hostname)
+		hostname = *filter.Hostname
 	}
 
 	code := http.StatusFound
@@ -251,7 +247,7 @@ func createReturnValForRedirectFilter(filter *v1beta1.HTTPRequestRedirectFilter,
 
 	port := listenerPort
 	if filter.Port != nil {
-		port = int32(*filter.Port)
+		port = *filter.Port
 	}
 
 	hostnamePort := fmt.Sprintf("%s:%d", hostname, port)
@@ -286,7 +282,7 @@ func createReturnValForRedirectFilter(filter *v1beta1.HTTPRequestRedirectFilter,
 // If the request satisfies the httpMatch, NGINX will redirect the request to the location RedirectPath.
 type httpMatch struct {
 	// Method is the HTTPMethod of the HTTPRouteMatch.
-	Method v1beta1.HTTPMethod `json:"method,omitempty"`
+	Method string `json:"method,omitempty"`
 	// RedirectPath is the path to redirect the request to if the request satisfies the match conditions.
 	RedirectPath string `json:"redirectPath,omitempty"`
 	// Headers is a list of HTTPHeaders name value pairs with the format "{name}:{value}".
@@ -297,7 +293,7 @@ type httpMatch struct {
 	Any bool `json:"any,omitempty"`
 }
 
-func createHTTPMatch(match v1beta1.HTTPRouteMatch, redirectPath string) httpMatch {
+func createHTTPMatch(match dataplane.Match, redirectPath string) httpMatch {
 	hm := httpMatch{
 		RedirectPath: redirectPath,
 	}
@@ -316,14 +312,12 @@ func createHTTPMatch(match v1beta1.HTTPRouteMatch, redirectPath string) httpMatc
 		headerNames := make(map[string]struct{})
 
 		for _, h := range match.Headers {
-			if *h.Type == v1beta1.HeaderMatchExact {
-				// duplicate header names are not permitted by the spec
-				// only configure the first entry for every header name (case-insensitive)
-				lowerName := strings.ToLower(string(h.Name))
-				if _, ok := headerNames[lowerName]; !ok {
-					headers = append(headers, createHeaderKeyValString(h))
-					headerNames[lowerName] = struct{}{}
-				}
+			// duplicate header names are not permitted by the spec
+			// only configure the first entry for every header name (case-insensitive)
+			lowerName := strings.ToLower(h.Name)
+			if _, ok := headerNames[lowerName]; !ok {
+				headers = append(headers, createHeaderKeyValString(h))
+				headerNames[lowerName] = struct{}{}
 			}
 		}
 		hm.Headers = headers
@@ -333,9 +327,7 @@ func createHTTPMatch(match v1beta1.HTTPRouteMatch, redirectPath string) httpMatc
 		params := make([]string, 0, len(match.QueryParams))
 
 		for _, p := range match.QueryParams {
-			if *p.Type == v1beta1.QueryParamMatchExact {
-				params = append(params, createQueryParamKeyValString(p))
-			}
+			params = append(params, createQueryParamKeyValString(p))
 		}
 		hm.QueryParams = params
 	}
@@ -345,7 +337,7 @@ func createHTTPMatch(match v1beta1.HTTPRouteMatch, redirectPath string) httpMatc
 
 // The name and values are delimited by "=". A name and value can always be recovered using strings.SplitN(arg,"=", 2).
 // Query Parameters are case-sensitive so case is preserved.
-func createQueryParamKeyValString(p v1beta1.HTTPQueryParamMatch) string {
+func createQueryParamKeyValString(p dataplane.HTTPQueryParamMatch) string {
 	return string(p.Name) + "=" + p.Value
 }
 
@@ -354,12 +346,12 @@ func createQueryParamKeyValString(p v1beta1.HTTPQueryParamMatch) string {
 // Ex. foo:bar == FOO:bar, but foo:bar != foo:BAR,
 // We preserve the case of the name here because NGINX allows us to look up the header names in a case-insensitive
 // manner.
-func createHeaderKeyValString(h v1beta1.HTTPHeaderMatch) string {
+func createHeaderKeyValString(h dataplane.HTTPHeaderMatch) string {
 	return string(h.Name) + HeaderMatchSeparator + h.Value
 }
 
-func isPathOnlyMatch(match v1beta1.HTTPRouteMatch) bool {
-	return match.Method == nil && match.Headers == nil && match.QueryParams == nil
+func isPathOnlyMatch(match dataplane.Match) bool {
+	return match.Method == nil && len(match.Headers) == 0 && len(match.QueryParams) == 0
 }
 
 func createProxyPass(backendGroup dataplane.BackendGroup) string {
