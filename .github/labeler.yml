@@ -18,5 +18,5 @@ documentation:
   - changed-files: '**/*.md'
 
 dependencies:
-  - head-branch: ['^deps/', '^dep/', '^dependabot/']
+  - head-branch: ['^deps/', '^dep/', '^dependabot/', 'pre-commit-ci-update-config']
   - changed-files: ['go.mod', 'go.sum']

@@ -30,7 +30,6 @@ rules:
     check-multi-line-strings: true
     ignore: |
       deploy/manifests/nginx-gateway.yaml
-      deploy/manifests/njs-modules.yaml
   key-duplicates: enable
   key-ordering: disable
   line-length:
