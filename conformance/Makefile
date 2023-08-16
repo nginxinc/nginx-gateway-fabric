@@ -89,7 +89,7 @@ uninstall-nkg: uninstall-k8s-components undo-manifests-update ## Uninstall NKG o
 
 .PHONY: uninstall-k8s-components
 uninstall-k8s-components: ## Uninstall installed components on configured kind cluster
-	kubectl delete -f $(NKG_MANIFEST)
+	-kubectl delete -f $(NKG_MANIFEST)
 	./scripts/uninstall-gateway.sh $(GW_API_VERSION)
 	kubectl delete clusterrole nginx-gateway-provisioner
 	kubectl delete clusterrolebinding nginx-gateway-provisioner

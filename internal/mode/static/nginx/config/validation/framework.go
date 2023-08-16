@@ -20,6 +20,16 @@ func validateInSupportedValues[T configValue](
 	return false, getSortedKeysAsString(supportedValues)
 }
 
+func validateNoUnsupportedValues[T configValue](
+	value T,
+	unsupportedValues map[T]struct{},
+) (valid bool, unsupportedValuesAsStrings []string) {
+	if _, exist := unsupportedValues[value]; exist {
+		return false, getSortedKeysAsString(unsupportedValues)
+	}
+	return true, nil
+}
+
 func getSortedKeysAsString[T configValue](m map[T]struct{}) []string {
 	keysAsString := make([]string, 0, len(m))
 
