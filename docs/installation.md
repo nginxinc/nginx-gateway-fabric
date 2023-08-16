@@ -58,6 +58,11 @@ You can gain access to NGINX Kubernetes Gateway by creating a `NodePort` Service
 > configured for those ports. If you'd like to use different ports in your listeners,
 > update the manifests accordingly.
 
+> Important
+>
+> NGINX Kubernetes Gateway will not listen on any ports until you configure a
+> [Gateway](https://gateway-api.sigs.k8s.io/api-types/gateway/#gateway) resource with a valid listener.
+
 ### Create a NodePort Service
 
 Create a Service with type `NodePort`:
