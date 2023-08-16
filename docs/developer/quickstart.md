@@ -48,7 +48,7 @@ Follow these steps to set up your development environment.
    make deps
    ```
 
-## Build the Binary and Image
+## Build the Binary and Images
 
 ### Build the Binary
 
@@ -69,6 +69,19 @@ make TAG=$(whoami) build-images
 ```
 
 This will build the docker images `nginx-gateway-fabric:<your-user>` and `nginx-gateway-fabric/nginx:<your-user>`.
+
+### Build the Images with NGINX Plus
+
+To build the NGINX Gateway Fabric and NGINX Plus container images from source run the following make command:
+
+```makefile
+make TAG=$(whoami) build-images-with-plus
+```
+
+This will build the docker images `nginx-gateway-fabric:<your-user>` and `nginx-gateway-fabric/nginxplus:<your-user>`.
+
+Please note that you will need a valid NGINX Plus license certificate and key named `nginx-repo.crt` and `nginx-repo.key` in the root
+of this repo to build the NGINX Plus image.
 
 ## Deploy on Kind
 

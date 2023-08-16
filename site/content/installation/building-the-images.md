@@ -21,6 +21,8 @@ installed on your machine:
 - [Docker](https://www.docker.com/) v18.09+
 - [Go](https://go.dev/doc/install) v1.20
 
+If building the NGINX Plus image, you will also need a valid NGINX Plus license certificate (`nginx-repo.crt`) and key (`nginx-repo.key`) in the root of the repo.
+
 ## Steps
 
 1. Clone the repo and change into the `nginx-gateway-fabric` directory:
@@ -37,6 +39,12 @@ installed on your machine:
       make PREFIX=myregistry.example.com/nginx-gateway-fabric build-images
       ```
 
+   - To build both the NGINX Gateway Fabric and NGINX Plus images:
+
+      ```makefile
+      make PREFIX=myregistry.example.com/nginx-gateway-fabric build-images-with-plus
+      ```
+
    - To build just the NGINX Gateway Fabric image:
 
      ```makefile
@@ -49,14 +57,27 @@ installed on your machine:
      make PREFIX=myregistry.example.com/nginx-gateway-fabric build-nginx-image
      ```
 
+   - To build just the NGINX Plus image:
+
+     ```makefile
+     make PREFIX=myregistry.example.com/nginx-gateway-fabric build-nginx-plus-image
+     ```
+
    Set the `PREFIX` variable to the name of the registry you'd like to push the image to. By default, the images will be
-   named `nginx-gateway-fabric:edge` and `nginx-gateway-fabric/nginx:edge`.
+   named `nginx-gateway-fabric:edge` and `nginx-gateway-fabric/nginx:edge` or `nginx-gateway-fabric/nginxplus:edge`.
 
 1. Push the images to your container registry:
 
    ```shell
    docker push myregistry.example.com/nginx-gateway-fabric:edge
    docker push myregistry.example.com/nginx-gateway-fabric/nginx:edge
+   ```
+
+   or
+
+   ```shell
+   docker push myregistry.example.com/nginx-gateway-fabric:edge
+   docker push myregistry.example.com/nginx-gateway-fabric/nginxplus:edge
    ```
 
    Make sure to substitute `myregistry.example.com/nginx-gateway-fabric` with your registry.

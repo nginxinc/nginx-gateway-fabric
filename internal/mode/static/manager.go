@@ -147,7 +147,7 @@ func StartManager(cfg config.Config) error {
 
 	if cfg.MetricsConfig.Enabled {
 		constLabels := map[string]string{"class": cfg.GatewayClassName}
-		ngxCollector, err := collectors.NewNginxMetricsCollector(constLabels)
+		ngxCollector, err := collectors.NewNginxMetricsCollector(constLabels, cfg.PlusEnabled)
 		if err != nil {
 			return fmt.Errorf("cannot create nginx metrics collector: %w", err)
 		}

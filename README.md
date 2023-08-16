@@ -62,17 +62,17 @@ the [Issue Lifecycle](ISSUE_LIFECYCLE.md) document for information on issue crea
 
 The following table lists the software versions NGINX Gateway Fabric supports.
 
-| NGINX Gateway Fabric | Gateway API | Kubernetes | NGINX OSS |
-|----------------------|-------------|------------|-----------|
-| Edge                 | 1.0.0       | 1.23+      | 1.25.3    |
-| 1.1.0                | 1.0.0       | 1.23+      | 1.25.3    |
-| 1.0.0                | 0.8.1       | 1.23+      | 1.25.2    |
-| 0.6.0                | 0.8.0       | 1.23+      | 1.25.2    |
-| 0.5.0                | 0.7.1       | 1.21+      | 1.25.x *  |
-| 0.4.0                | 0.7.1       | 1.21+      | 1.25.x *  |
-| 0.3.0                | 0.6.2       | 1.21+      | 1.23.x *  |
-| 0.2.0                | 0.5.1       | 1.21+      | 1.21.x *  |
-| 0.1.0                | 0.5.0       | 1.19+      | 1.21.3    |
+| NGINX Gateway Fabric | Gateway API | Kubernetes | NGINX OSS | NGINX Plus |
+|----------------------|-------------|------------|-----------|------------|
+| Edge                 | 1.0.0       | 1.23+      | 1.25.3    | R30        |
+| 1.1.0                | 1.0.0       | 1.23+      | 1.25.3    | n/a        |
+| 1.0.0                | 0.8.1       | 1.23+      | 1.25.2    | n/a        |
+| 0.6.0                | 0.8.0       | 1.23+      | 1.25.2    | n/a        |
+| 0.5.0                | 0.7.1       | 1.21+      | 1.25.x *  | n/a        |
+| 0.4.0                | 0.7.1       | 1.21+      | 1.25.x *  | n/a        |
+| 0.3.0                | 0.6.2       | 1.21+      | 1.23.x *  | n/a        |
+| 0.2.0                | 0.5.1       | 1.21+      | 1.21.x *  | n/a        |
+| 0.1.0                | 0.5.0       | 1.19+      | 1.21.3    | n/a        |
 
 \*the installation manifests use the minor version of NGINX container image (e.g. 1.25) and the patch version is not
 specified. This means that the latest available patch version is used.

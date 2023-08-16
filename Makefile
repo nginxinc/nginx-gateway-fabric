@@ -6,6 +6,8 @@ MANIFEST_DIR = $(shell pwd)/deploy/manifests
 CHART_DIR = $(shell pwd)/deploy/helm-chart
 NGINX_CONF_DIR = internal/mode/static/nginx/conf
 NJS_DIR = internal/mode/static/nginx/modules/src
+NGINX_DOCKER_BUILD_PLUS_ARGS = --secret id=nginx-repo.crt,src=nginx-repo.crt --secret id=nginx-repo.key,src=nginx-repo.key
+BUILD_AGENT=local
 
 # go build flags - should not be overridden by the user
 GO_LINKER_FlAGS_VARS = -X main.version=${VERSION} -X main.commit=${GIT_COMMIT} -X main.date=${DATE}
@@ -15,6 +17,7 @@ GO_LINKER_FLAGS = $(GO_LINKER_FLAGS_OPTIMIZATIONS) $(GO_LINKER_FlAGS_VARS)
 # variables that can be overridden by the user
 PREFIX ?= nginx-gateway-fabric## The name of the NGF image. For example, nginx-gateway-fabric
 NGINX_PREFIX ?= $(PREFIX)/nginx## The name of the nginx image. For example: nginx-gateway-fabric/nginx
+NGINX_PLUS_PREFIX ?= $(PREFIX)/nginxplus## The name of the nginx plus image. For example: nginx-gateway-fabric/nginxplus
 TAG ?= $(VERSION:v%=%)## The tag of the image. For example, 0.3.0
 TARGET ?= local## The target of the build. Possible values: local and container
 KIND_KUBE_CONFIG=$${HOME}/.kube/kind/config## The location of the kind kubeconfig
@@ -23,7 +26,7 @@ GOARCH ?= amd64## The architecture of the image and/or binary. For example: amd6
 GOOS ?= linux## The OS of the image and/or binary. For example: linux or darwin
 override HELM_TEMPLATE_COMMON_ARGS += --set creator=template --set nameOverride=nginx-gateway## The common options for the Helm template command.
 override HELM_TEMPLATE_EXTRA_ARGS_FOR_ALL_MANIFESTS_FILE += --set service.create=false## The options to be passed to the full Helm templating command only.
-override NGINX_DOCKER_BUILD_OPTIONS += --build-arg NJS_DIR=$(NJS_DIR) --build-arg NGINX_CONF_DIR=$(NGINX_CONF_DIR)
+override NGINX_DOCKER_BUILD_OPTIONS += --build-arg NJS_DIR=$(NJS_DIR) --build-arg NGINX_CONF_DIR=$(NGINX_CONF_DIR) --build-arg BUILD_AGENT=$(BUILD_AGENT)
 .DEFAULT_GOAL := help
 
 .PHONY: help
@@ -34,6 +37,9 @@ help: Makefile ## Display this help
 .PHONY: build-images
 build-images: build-ngf-image build-nginx-image ## Build the NGF and nginx docker images
 
+.PHONY: build-images-with-plus
+build-images-with-plus: build-ngf-image build-nginx-plus-image ## Build the NGF and NGINX Plus docker images
+
 .PHONY: build-ngf-image
 build-ngf-image: check-for-docker build ## Build the NGF docker image
 	docker build --platform linux/$(GOARCH) --target $(strip $(TARGET)) -f build/Dockerfile -t $(strip $(PREFIX)):$(strip $(TAG)) .
@@ -41,6 +47,10 @@ build-ngf-image: check-for-docker build ## Build the NGF docker image
 .PHONY: build-nginx-image
 build-nginx-image: check-for-docker ## Build the custom nginx image
 	docker build --platform linux/$(GOARCH) $(strip $(NGINX_DOCKER_BUILD_OPTIONS)) -f build/Dockerfile.nginx -t $(strip $(NGINX_PREFIX)):$(strip $(TAG)) .
+
+.PHONY: build-nginx-plus-image
+build-nginx-plus-image: check-for-docker ## Build the custom nginx plus image
+	docker build --platform linux/$(GOARCH) $(strip $(NGINX_DOCKER_BUILD_OPTIONS)) $(strip $(NGINX_DOCKER_BUILD_PLUS_ARGS))  -f build/Dockerfile.nginxplus -t $(strip $(NGINX_PLUS_PREFIX)):$(strip $(TAG)) .
 
 .PHONY: check-for-docker
 check-for-docker: ## Check if Docker is installed

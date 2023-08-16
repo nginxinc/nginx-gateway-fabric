@@ -215,6 +215,7 @@ jobs:
           build-args: |
             NJS_DIR=internal/mode/static/nginx/modules/src
             NGINX_CONF_DIR=internal/mode/static/nginx/conf
+            BUILD_AGENT=gha
 
       - name: Deploy Kubernetes
         id: k8s
