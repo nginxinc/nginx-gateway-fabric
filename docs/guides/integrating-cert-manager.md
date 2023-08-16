@@ -17,7 +17,7 @@ This guide will demonstrate how to:
 
 1. Administrator access to a Kubernetes cluster is required.
 2. [Helm](https://helm.sh) and [kubectl](https://kubernetes.io/docs/tasks/tools/#kubectl) must be installed locally.
-3. Deploy NGINX Kubernetes Gateway (NKG) following the [deployment instructions](../installation.md).
+3. Deploy NGINX Kubernetes Gateway (NKG) following the [deployment instructions](/docs/installation.md).
 4. A DNS resolvable domain name is required. It must resolve to the public endpoint of the NKG deployment, and this
    public endpoint must be an external IP address or alias accessible over the internet. The process here will depend
    on your DNS provider. This DNS name will need to be resolvable from the Let’s Encrypt servers, which may require
@@ -28,7 +28,7 @@ This guide will demonstrate how to:
 ![cert-manager ACME Challenge and certificate management with Gateway API](/docs/images/cert-manager-gateway-workflow.png)
 
 The diagram above shows a simplified representation of the cert-manager ACME Challenge and certificate issuance process
-using Gateway API. Please note not all of the Kubernetes objects created in this process are represented in
+using Gateway API. Please note that not all of the Kubernetes objects created in this process are represented in
 this diagram.
 
 At a high level, the process looks like this:
@@ -149,7 +149,7 @@ It's worth noting a couple of key details in this manifest:
 
 - The cert-manager annotation is present in the metadata – this enables the cert-manager integration, and tells
   cert-manager which ClusterIssuer configuration it should use for the certificates.
-- There are two Listeners configured, a http Listener on port 80, and a https Listener on port 443.
+- There are two Listeners configured, an HTTP Listener on port 80, and an HTTPS Listener on port 443.
   - The http Listener on port 80 is required for the HTTP01 ACME challenge to work. This is because as part of the
     HTTP01 Challenge, a temporary HTTPRoute will be created by cert-manager to solve the ACME challenge, and this
     HTTPRoute requires a Listener on port 80. See the [HTTP01 Gateway API solver documentation](https://cert-manager.io/docs/configuration/acme/http01/#configuring-the-http-01-gateway-api-solver)
@@ -165,7 +165,10 @@ been created successfully using `kubectl`. Note it will take a little bit of tim
 Secret to be created:
 
 ```shell
-❯ kubectl get secret cafe-secret
+kubectl get secret cafe-secret
+```
+
+```shell
 NAME          TYPE                DATA   AGE
 cafe-secret   kubernetes.io/tls   2      20s
 ```
@@ -241,6 +244,9 @@ presented certificate. The output will look something like this:
 
 ```shell
 curl https://cafe.example.com/coffee -v
+```
+
+```shell
 *   Trying 54.195.47.105:443...
 * Connected to cafe.example.com (54.195.47.105) port 443 (#0)
 * ALPN: offers h2,http/1.1
