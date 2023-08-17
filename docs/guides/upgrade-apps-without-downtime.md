@@ -10,7 +10,7 @@ Kubernetes Gateway to accomplish them.
 ## NGINX Kubernetes Gateway Functionality
 
 To understand the upgrade methods, you should be aware of the NGINX features that help prevent application downtime:
-graceful configuration reloads and upstream servers updates.
+graceful configuration reloads and upstream server updates.
 
 ### Graceful Configuration Reloads
 
@@ -22,7 +22,7 @@ We call such an operation a reload, during which client requests are not dropped
 
 This process is further explained in [NGINX's documentation](https://nginx.org/en/docs/control.html?#reconfiguration).
 
-### Upstream Servers Updates
+### Upstream Server Updates
 
 Endpoints frequently change during application upgrades: Kubernetes creates Pods for the new version of an application
 and removes the old ones, creating and removing the respective Endpoints as well.
