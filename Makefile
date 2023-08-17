@@ -22,7 +22,6 @@ OUT_DIR ?= $(shell pwd)/build/out## The folder where the binary will be stored
 ARCH ?= amd64## The architecture of the image and/or binary. For example: amd64 or arm64
 override HELM_TEMPLATE_COMMON_ARGS += --set creator=template --set nameOverride=nginx-gateway## The common options for the Helm template command.
 override HELM_TEMPLATE_EXTRA_ARGS_FOR_ALL_MANIFESTS_FILE += --include-crds --set service.create=false## The options to be passed to the full Helm templating command only.
-override DOCKER_BUILD_OPTIONS += --build-arg VERSION=$(VERSION) --build-arg GIT_COMMIT=$(GIT_COMMIT) --build-arg DATE=$(DATE)## The options for the docker build command. For example, --pull
 override NGINX_DOCKER_BUILD_OPTIONS += --build-arg NJS_DIR=$(NJS_DIR) --build-arg NGINX_CONF_DIR=$(NGINX_CONF_DIR)
 .DEFAULT_GOAL := help
 
@@ -36,7 +35,7 @@ build-images: build-nkg-image build-nginx-image ## Build the NKG and nginx docke
 
 .PHONY: build-nkg-image
 build-nkg-image: check-for-docker build ## Build the NKG docker image
-	docker build --platform linux/$(ARCH) $(strip $(DOCKER_BUILD_OPTIONS)) --target $(strip $(TARGET)) -f build/Dockerfile -t $(strip $(PREFIX)):$(strip $(TAG)) .
+	docker build --platform linux/$(ARCH) --target $(strip $(TARGET)) -f build/Dockerfile -t $(strip $(PREFIX)):$(strip $(TAG)) .
 
 .PHONY: build-nginx-image
 build-nginx-image: check-for-docker ## Build the custom nginx image
