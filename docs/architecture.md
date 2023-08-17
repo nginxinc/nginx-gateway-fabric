@@ -75,10 +75,8 @@ The NGINX Kubernetes Gateway consists of three containers:
 the worker processes. The worker processes handle the client traffic and load balance the traffic to the backend
 applications.
 2. `nginx-gateway`: the control plane. Watches Kubernetes objects and configures NGINX.
-3. `busybox`: initializes the NGINX config environment.
 
-These containers are deployed in a single Pod as a Kubernetes Deployment. The init container, `busybox`, runs before the
-`nginx` and `nginx-gateway` containers and creates directories and sets permissions for the NGINX process.
+These containers are deployed in a single Pod as a Kubernetes Deployment.
 
 The `nginx-gateway`, or the control plane, is a [Kubernetes controller][controller], written with
 the [controller-runtime][runtime] library. It watches Kubernetes objects (Services, Endpoints, Secrets, and Gateway API
@@ -89,7 +87,7 @@ containers [share a process namespace][share], which allows the NKG process to s
 
 The diagram below provides a visual representation of the interactions between processes within the `nginx` and
 `nginx-gateway` containers, as well as external processes/entities. It showcases the connections and relationships between
-these components. For the sake of simplicity, the `busybox` init container is not depicted in the diagram.
+these components.
 
 ![NKG pod](/docs/images/nkg-pod.png)
 
