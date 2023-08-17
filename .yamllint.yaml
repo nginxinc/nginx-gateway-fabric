@@ -30,6 +30,7 @@ rules:
     check-multi-line-strings: true
     ignore: |
       deploy/manifests/nginx-gateway.yaml
+      deploy/manifests/crds
   key-duplicates: enable
   key-ordering: disable
   line-length:
@@ -39,6 +40,7 @@ rules:
     ignore: |
       .github/workflows/
       deploy/manifests/nginx-gateway.yaml
+      deploy/manifests/crds
   new-line-at-end-of-file: enable
   new-lines: enable
   octal-values: disable
