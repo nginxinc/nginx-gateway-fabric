@@ -1,0 +1,359 @@
+# Routing to Applications Using HTTP Matching Conditions
+
+In this guide we will configure advanced routing rules for multiple applications. These rules will showcase request
+matching by path, headers, query parameters, and method. For an introduction to exposing your application, it is
+recommended to go through the [basic guide](/docs/guides/routing-traffic-to-your-app.md) first.
+
+The following image shows the traffic flow that we will be creating with these rules.
+
+![Traffic Flow Diagram](/docs/images/advanced-routing.png)
+
+The goal is to create a set of rules that will result in client requests being sent to specific backends based on
+the request attributes. In this diagram, we have two versions of the `coffee` service. Traffic for v1 needs to be
+directed to the old application, while traffic for v2 needs to be directed towards the new application. We also
+have two `tea` services, one that handles GET operations and one that handles POST operations. Both the `tea`
+and `coffee` applications share the same Gateway.
+
+## Prerequisites
+
+- [Install](/docs/installation.md) NGINX Kubernetes Gateway.
+- [Expose NGINX Kubernetes Gateway](/docs/installation.md#expose-nginx-kubernetes-gateway) and save the public IP
+  address and port of NGINX Kubernetes Gateway into shell variables:
+
+   ```text
+   GW_IP=XXX.YYY.ZZZ.III
+   GW_PORT=<port number>
+   ```
+
+> **Note**
+> In a production environment, you should have a DNS record for the external IP address that is exposed,
+> and it should refer to the hostname that the gateway will forward for.
+
+## Coffee Applications
+
+### Deploy the Coffee Applications
+
+Begin by deploying the `coffee-v1` and `coffee-v2` applications:
+
+```shell
+kubectl apply -f https://raw.githubusercontent.com/nginxinc/nginx-kubernetes-gateway/main/examples/advanced-routing/coffee.yaml
+```
+
+### Deploy the Gateway API Resources for the Coffee Applications
+
+The [Gateway](https://gateway-api.sigs.k8s.io/api-types/gateway/) resource is typically deployed by the
+[cluster operator][roles-and-personas]. To deploy the Gateway:
+
+```yaml
+kubectl apply -f - <<EOF
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: Gateway
+metadata:
+  name: cafe
+spec:
+  gatewayClassName: nginx
+  listeners:
+  - name: http
+    port: 80
+    protocol: HTTP
+EOF
+```
+
+This Gateway defines a single listener on port 80. Since no hostname is specified, this listener matches on all hostnames.
+
+The [HTTPRoute](https://gateway-api.sigs.k8s.io/api-types/httproute/) is typically deployed by the
+[application developer][roles-and-personas]. To deploy the `coffee` HTTPRoute:
+
+```yaml
+kubectl apply -f - <<EOF
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: HTTPRoute
+metadata:
+  name: coffee
+spec:
+  parentRefs:
+  - name: cafe
+    sectionName: http
+  hostnames:
+  - cafe.example.com
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /coffee
+    backendRefs:
+    - name: coffee-v1-svc
+      port: 80
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /coffee
+      headers:
+      - name: version
+        value: v2
+    - path:
+        type: PathPrefix
+        value: /coffee
+      queryParams:
+      - name: TEST
+        value: v2
+    backendRefs:
+    - name: coffee-v2-svc
+      port: 80
+EOF
+```
+
+This HTTPRoute has a few important properties:
+
+- The `parentRefs` references the Gateway resource that we created, and specifically defines the `http` listener
+to attach to, via the `sectionName` field.
+- `cafe.example.com` is the hostname that is matched for all requests to the backends defined in this HTTPRoute.
+- The first rule defines that all requests with the path prefix `/coffee` and no other matching conditions are sent
+to the `coffee-v1` Service.
+- The second rule defines two matching conditions. If *either* of these conditions match, requests are forwarded to
+the `coffee-v2` Service:
+  - Request with the path prefix `/coffee` and header `version=v2`
+  - Request with the path prefix `/coffee` and the query parameter `TEST=v2`
+    If you want both conditions to be required, you can define headers and queryParams in the same match object.
+
+[roles-and-personas]: https://gateway-api.sigs.k8s.io/concepts/roles-and-personas/#roles-and-personas_1
+
+### Send Traffic to Coffee
+
+Using the external IP address and port for NGINX Kubernetes Gateway, we can send traffic to our coffee
+applications.
+
+> **Note**
+> If you have a DNS record allocated for `cafe.example.com`, you can send the request directly to that
+> hostname, without needing to resolve.
+
+```shell
+curl --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/coffee
+```
+
+This request should receive a response from the `coffee-v1` Pod.
+
+```text
+Server address: 10.244.0.9:8080
+Server name: coffee-v2-68bd55f798-s9z5q
+```
+
+If we want our request to be routed to `coffee-v2`, then we need to meet the defined conditions. We can include
+a header:
+
+```shell
+curl --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/coffee -H "version:v2"
+```
+
+or include a query parameter:
+
+```shell
+curl --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/coffee?TEST=v2
+```
+
+Either request should result in a response from the `coffee-v2` Pod.
+
+```text
+Server address: 10.244.0.9:8080
+Server name: coffee-v2-68bd55f798-s9z5q
+```
+
+## Tea Applications
+
+Let's deploy a different set of applications now called `tea` and `tea-post`. These applications will
+have their own set of rules, but will still attach to the same Gateway listener as the `coffee` apps.
+
+### Deploy the Tea Applications
+
+```shell
+kubectl apply -f https://raw.githubusercontent.com/nginxinc/nginx-kubernetes-gateway/main/examples/advanced-routing/tea.yaml
+```
+
+### Deploy the HTTPRoute for the Tea Services
+
+We are reusing the previous Gateway for these applications, so all we need to create is the HTTPRoute.
+
+```yaml
+kubectl apply -f - <<EOF
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: HTTPRoute
+metadata:
+  name: tea
+spec:
+  parentRefs:
+  - name: cafe
+  hostnames:
+  - cafe.example.com
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /tea
+      method: POST
+    backendRefs:
+    - name: tea-post-svc
+      port: 80
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /tea
+      method: GET
+    backendRefs:
+    - name: tea-svc
+      port: 80
+EOF
+```
+
+The properties of this HTTPRoute include:
+
+- The same Gateway is referenced as before.
+- The same hostname is used as with the `coffee` apps.
+- The first rule defines that a POST request to the `/tea` path is routed to the `tea-post` Service.
+- The second rule defines that a GET request to the `/tea` path is routed to the `tea` Service.
+
+### Send Traffic to Tea
+
+Using the external IP address and port for NGINX Kubernetes Gateway, we can send traffic to our tea
+applications.
+
+> **Note**
+> If you have a DNS record allocated for `cafe.example.com`, you can send the request directly to that
+> hostname, without needing to resolve.
+
+```shell
+curl --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/tea
+```
+
+This GET request should receive a response from the `tea` Pod.
+
+```text
+Server address: 10.244.0.10:8080
+Server name: tea-df5655878-5fmfg
+```
+
+If we want our request to be routed to `tea-post`, then we need to send a POST request:
+
+```shell
+curl --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/tea -X POST
+```
+
+```text
+Server address: 10.244.0.7:8080
+Server name: tea-post-b59b8596b-g586r
+```
+
+This request should receive a response from the `tea-post` Pod. Any other type of method, such as PATCH, will
+result in a `404 Not Found` response.
+
+
+## Troubleshooting
+
+If you have any issues while sending traffic, try the following to debug your configuration and setup:
+
+- Make sure you set the shell variables $GW_IP and $GW_PORT to the public IP and port of the NGINX Kubernetes Gateway
+  Service. Instructions for finding those values are [here](/docs/installation.md#expose-nginx-kubernetes-gateway).
+
+- Check the status of the Gateway:
+
+  ```shell
+  kubectl describe gateway cafe
+  ```
+
+  The Gateway status should look like this:
+
+  ```text
+  Status:
+  Addresses:
+    Type:   IPAddress
+    Value:  10.244.0.85
+  Conditions:
+    Last Transition Time:  2023-08-15T20:57:21Z
+    Message:               Gateway is accepted
+    Observed Generation:   1
+    Reason:                Accepted
+    Status:                True
+    Type:                  Accepted
+    Last Transition Time:  2023-08-15T20:57:21Z
+    Message:               Gateway is programmed
+    Observed Generation:   1
+    Reason:                Programmed
+    Status:                True
+    Type:                  Programmed
+  Listeners:
+    Attached Routes:  2
+    Conditions:
+      Last Transition Time:  2023-08-15T20:57:21Z
+      Message:               Listener is accepted
+      Observed Generation:   1
+      Reason:                Accepted
+      Status:                True
+      Type:                  Accepted
+      Last Transition Time:  2023-08-15T20:57:21Z
+      Message:               Listener is programmed
+      Observed Generation:   1
+      Reason:                Programmed
+      Status:                True
+      Type:                  Programmed
+      Last Transition Time:  2023-08-15T20:57:21Z
+      Message:               All references are resolved
+      Observed Generation:   1
+      Reason:                ResolvedRefs
+      Status:                True
+      Type:                  ResolvedRefs
+      Last Transition Time:  2023-08-15T20:57:21Z
+      Message:               No conflicts
+      Observed Generation:   1
+      Reason:                NoConflicts
+      Status:                False
+      Type:                  Conflicted
+    Name:                    http
+  ```
+
+  Check that the conditions match and that the attached routes for the `http` listener equals 2. If it is less than
+  2, there may be an issue with the routes.
+
+- Check the status of the HTTPRoutes:
+
+  ```shell
+  kubectl describe httproute coffee
+  ```
+
+  ```shell
+  kubectl describe httproute tea
+  ```
+
+  Each HTTPRoute status should look like this:
+
+  ```text
+  Status:
+    Parents:
+      Conditions:
+        Last Transition Time:  2023-08-15T20:57:21Z
+        Message:               The route is accepted
+        Observed Generation:   1
+        Reason:                Accepted
+        Status:                True
+        Type:                  Accepted
+        Last Transition Time:  2023-08-15T20:57:21Z
+        Message:               All references are resolved
+        Observed Generation:   1
+        Reason:                ResolvedRefs
+        Status:                True
+        Type:                  ResolvedRefs
+      Controller Name:         gateway.nginx.org/nginx-gateway-controller
+      Parent Ref:
+        Group:      gateway.networking.k8s.io
+        Kind:       Gateway
+        Name:       cafe
+        Namespace:  default
+  ```
+
+  Check for any error messages in the conditions.
+
+## Further Reading
+
+To learn more about the Gateway API and the resources we created in this guide, check out the following resources:
+
+- [Gateway API Overview](https://gateway-api.sigs.k8s.io/concepts/api-overview/)
+- [Deploying a simple Gateway](https://gateway-api.sigs.k8s.io/guides/simple-gateway/)
+- [HTTP Routing](https://gateway-api.sigs.k8s.io/guides/http-routing/)
