@@ -4,6 +4,7 @@ FROM golang:1.21 as builder
 WORKDIR /go/src/github.com/nginxinc/nginx-kubernetes-gateway
 
 COPY . /go/src/github.com/nginxinc/nginx-kubernetes-gateway
+RUN go mod download
 RUN make build
 
 FROM alpine:3.18 as capabilizer
