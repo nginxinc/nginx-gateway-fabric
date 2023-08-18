@@ -39,7 +39,10 @@ type SSLKeyPairID string
 
 // SSLKeyPair is an SSL private/public key pair.
 type SSLKeyPair struct {
-	Cert, Key []byte
+	// Cert is the certificate.
+	Cert []byte
+	// Key is the private key.
+	Key []byte
 }
 
 // VirtualServer is a virtual server.
@@ -68,6 +71,7 @@ type Upstream struct {
 
 // SSL is the SSL configuration for a server.
 type SSL struct {
+	// KeyPairID is the ID of the corresponding SSLKeyPair for the server.
 	KeyPairID SSLKeyPairID
 }
 
@@ -93,34 +97,47 @@ type HTTPFilters struct {
 
 // HTTPHeader represents an HTTP header.
 type HTTPHeader struct {
-	Name  string
+	// Name is the name of the header.
+	Name string
+	// Value is the value of the header.
 	Value string
 }
 
 // HTTPHeaderFilter manipulates HTTP headers.
 type HTTPHeaderFilter struct {
-	Set    []HTTPHeader
-	Add    []HTTPHeader
+	// Set adds or replaces headers.
+	Set []HTTPHeader
+	// Add adds headers. It appends to any existing values associated with a header name.
+	Add []HTTPHeader
+	// Remove removes headers.
 	Remove []string
 }
 
 // HTTPRequestRedirectFilter redirects HTTP requests.
 type HTTPRequestRedirectFilter struct {
-	Scheme     *string
-	Hostname   *string
-	Port       *int32
+	// Scheme is the scheme of the redirect.
+	Scheme *string
+	// Hostname is the hostname of the redirect.
+	Hostname *string
+	// Port is the port of the redirect.
+	Port *int32
+	// StatusCode is the HTTP status code of the redirect.
 	StatusCode *int
 }
 
 // HTTPHeaderMatch matches an HTTP header.
 type HTTPHeaderMatch struct {
-	Name  string
+	// Name is the name of the header to match.
+	Name string
+	// Value is the value of the header to match.
 	Value string
 }
 
 // HTTPQueryParamMatch matches an HTTP query parameter.
 type HTTPQueryParamMatch struct {
-	Name  string
+	// Name is the name of the query parameter to match.
+	Name string
+	// Value is the value of the query parameter to match.
 	Value string
 }
 
@@ -141,8 +158,11 @@ type MatchRule struct {
 
 // Match represents a match for a routing rule which consist of matches against various HTTP request attributes.
 type Match struct {
-	Method      *string
-	Headers     []HTTPHeaderMatch
+	// Method matches against the HTTP method.
+	Method *string
+	// Headers matches against the HTTP headers.
+	Headers []HTTPHeaderMatch
+	// QueryParams matches against the HTTP query parameters.
 	QueryParams []HTTPQueryParamMatch
 }
 
