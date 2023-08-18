@@ -90,8 +90,12 @@ type InvalidHTTPFilter struct{}
 
 // HTTPFilters hold the filters for a MatchRule.
 type HTTPFilters struct {
-	InvalidFilter          *InvalidHTTPFilter
-	RequestRedirect        *HTTPRequestRedirectFilter
+	// InvalidFilter is a special filter that indicates whether the filters are invalid. If this is the case,
+	// the data plane must return 500 error, and all other filters are nil.
+	InvalidFilter *InvalidHTTPFilter
+	// RequestRedirect holds the HTTPRequestRedirectFilter.
+	RequestRedirect *HTTPRequestRedirectFilter
+	// RequestHeaderModifiers holds the HTTPHeaderFilter.
 	RequestHeaderModifiers *HTTPHeaderFilter
 }
 
