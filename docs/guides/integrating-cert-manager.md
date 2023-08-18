@@ -15,7 +15,7 @@ This guide will demonstrate how to:
 
 ## Prerequisities
 
-1. Administrator access to a Kubernetes cluster is required.
+1. Administrator access to a Kubernetes cluster.
 2. [Helm](https://helm.sh) and [kubectl](https://kubernetes.io/docs/tasks/tools/#kubectl) must be installed locally.
 3. Deploy NGINX Kubernetes Gateway (NKG) following the [deployment instructions](/docs/installation.md).
 4. A DNS resolvable domain name is required. It must resolve to the public endpoint of the NKG deployment, and this
@@ -44,9 +44,9 @@ At a high level, the process looks like this:
    that is referenced by the Gateway resource. As a result, NGINX is configured to terminate HTTPS traffic from clients
    using this signed keypair.
 5. We deploy our application and our HTTPRoute which defines our routing rules. The routing rules defined configure
-   NGINX to direct requests to https://www.cafe.example.com/coffee to our coffee-app application, and to use the https
+   NGINX to direct requests to https://cafe.example.com/coffee to our coffee-app application, and to use the https
    Listener defined in our Gateway resource.
-6. When the client connects to https://www.cafe.example.com/coffee, the request is routed to the coffee-app application
+6. When the client connects to https://cafe.example.com/coffee, the request is routed to the coffee-app application
    and the communication is secured using the signed keypair contained in the cafe-secret Secret.
 7. The certificate will be automatically renewed when it is close to expiry, the Secret will be updated using the new
    Certificate, and NKG will dynamically update the keypair on the filesystem used by NGINX for HTTPS termination once
@@ -58,24 +58,24 @@ At a high level, the process looks like this:
 
 The first step is to deploy cert-manager onto the cluster.
 
-1. Add the Helm repository
+- Add the Helm repository.
 
-```shell
+  ```shell
   helm repo add jetstack https://charts.jetstack.io
   helm repo update
-```
+  ```
 
-1. Install cert-manager, and enable the GatewayAPI feature gate:
+- Install cert-manager, and enable the GatewayAPI feature gate:
 
-```shell
-helm install \
-  cert-manager jetstack/cert-manager \
-  --namespace cert-manager \
-  --create-namespace \
-  --version v1.12.0 \
-  --set installCRDs=true \
-  --set "extraArgs={--feature-gates=ExperimentalGatewayAPISupport=true}"
-```
+  ```shell
+  helm install \
+    cert-manager jetstack/cert-manager \
+    --namespace cert-manager \
+    --create-namespace \
+    --version v1.12.0 \
+    --set installCRDs=true \
+    --set "extraArgs={--feature-gates=ExperimentalGatewayAPISupport=true}"
+  ```
 
 ### Step 2 – Create a ClusterIssuer
 
