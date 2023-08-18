@@ -20,5 +20,6 @@ container.
 
 ### Directories
 
+- [Guides](guides): Guides about configuring NGINX Kubernetes Gateway for various use cases.
 - [Developer](developer/): Docs for developers of the project. Contains guides relating to processes and workflows.
 - [Proposals](proposals/): Enhancement proposals for new features.
