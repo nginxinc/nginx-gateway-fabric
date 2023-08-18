@@ -168,7 +168,7 @@ Secret to be created:
 kubectl get secret cafe-secret
 ```
 
-```shell
+```text
 NAME          TYPE                DATA   AGE
 cafe-secret   kubernetes.io/tls   2      20s
 ```
@@ -246,7 +246,7 @@ presented certificate. The output will look something like this:
 curl https://cafe.example.com/coffee -v
 ```
 
-```shell
+```text
 *   Trying 54.195.47.105:443...
 * Connected to cafe.example.com (54.195.47.105) port 443 (#0)
 * ALPN: offers h2,http/1.1
