@@ -104,6 +104,7 @@ This will build the docker images `nginx-kubernetes-gateway:<your-user>` and `ng
 
       ```shell
       make generate-manifests HELM_TEMPLATE_COMMON_ARGS="--set nginxGateway.image.repository=nginx-kubernetes-gateway --set nginxGateway.image.tag=$(whoami) --set nginxGateway.image.pullPolicy=Never --set nginx.image.repository=nginx-kubernetes-gateway/nginx --set nginx.image.tag=$(whoami) --set nginx.image.pullPolicy=Never"
+      kubectl apply -f deploy/manifests/crds
       kubectl apply -f deploy/manifests/nginx-gateway.yaml
       kubectl apply -f deploy/manifests/service/nodeport.yaml
       ```

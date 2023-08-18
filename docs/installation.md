@@ -30,6 +30,12 @@ page.
    kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v0.7.1/standard-install.yaml
    ```
 
+1. Deploy the NGINX Kubernetes Gateway CRDs:
+
+   ```shell
+   kubectl apply -f deploy/manifests/crds
+   ```
+
 1. Deploy the NGINX Kubernetes Gateway:
 
    ```shell
@@ -120,6 +126,10 @@ To get started, follow the tutorials in the [examples](../examples) directory.
 
    ```shell
    kubectl delete -f deploy/manifests/nginx-gateway.yaml
+   ```
+
+   ```shell
+   kubectl delete -f deploy/manifests/crds
    ```
 
 1. Uninstall the Gateway API resources from the standard channel (the CRDs and the validating webhook):
