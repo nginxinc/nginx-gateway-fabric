@@ -16,7 +16,7 @@ func TestExecuteMaps(t *testing.T) {
 		{
 			MatchRules: []dataplane.MatchRule{
 				{
-					Filters: dataplane.Filters{
+					Filters: dataplane.HTTPFilters{
 						RequestHeaderModifiers: &dataplane.HTTPHeaderFilter{
 							Add: []dataplane.HTTPHeader{
 								{
@@ -28,7 +28,7 @@ func TestExecuteMaps(t *testing.T) {
 					},
 				},
 				{
-					Filters: dataplane.Filters{
+					Filters: dataplane.HTTPFilters{
 						RequestHeaderModifiers: &dataplane.HTTPHeaderFilter{
 							Add: []dataplane.HTTPHeader{
 								{
@@ -40,7 +40,7 @@ func TestExecuteMaps(t *testing.T) {
 					},
 				},
 				{
-					Filters: dataplane.Filters{
+					Filters: dataplane.HTTPFilters{
 						RequestHeaderModifiers: &dataplane.HTTPHeaderFilter{
 							Set: []dataplane.HTTPHeader{
 								{
@@ -100,7 +100,7 @@ func TestBuildAddHeaderMaps(t *testing.T) {
 		{
 			MatchRules: []dataplane.MatchRule{
 				{
-					Filters: dataplane.Filters{
+					Filters: dataplane.HTTPFilters{
 						RequestHeaderModifiers: &dataplane.HTTPHeaderFilter{
 							Add: []dataplane.HTTPHeader{
 								{
@@ -126,7 +126,7 @@ func TestBuildAddHeaderMaps(t *testing.T) {
 					},
 				},
 				{
-					Filters: dataplane.Filters{
+					Filters: dataplane.HTTPFilters{
 						RequestHeaderModifiers: &dataplane.HTTPHeaderFilter{
 							Set: []dataplane.HTTPHeader{
 								{
