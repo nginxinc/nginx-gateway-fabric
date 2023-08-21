@@ -1310,8 +1310,8 @@ func TestCreateHeaderKeyValString(t *testing.T) {
 
 func TestIsPathOnlyMatch(t *testing.T) {
 	tests := []struct {
-		match    dataplane.Match
 		msg      string
+		match    dataplane.Match
 		expected bool
 	}{
 		{
