@@ -74,7 +74,9 @@ func (r *secretResolver) getResolvedSecrets() map[types.NamespacedName]*Secret {
 	resolved := make(map[types.NamespacedName]*Secret)
 
 	for nsname, entry := range r.resolvedSecrets {
-		resolved[nsname] = &entry.Secret
+		// create iteration variable inside the loop to fix implicit memory aliasing
+		secret := entry.Secret
+		resolved[nsname] = &secret
 	}
 
 	return resolved
