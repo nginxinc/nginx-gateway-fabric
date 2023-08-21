@@ -248,8 +248,11 @@ func (hpr *hostPathRules) upsertListener(l *graph.Listener) {
 						rule.PathType = convertPathType(*m.Path.Type)
 					}
 
+					// create iteration variable inside the loop to fix implicit memory aliasing
+					om := r.Source.ObjectMeta
+
 					rule.MatchRules = append(rule.MatchRules, MatchRule{
-						Source:       &r.Source.ObjectMeta,
+						Source:       &om,
 						BackendGroup: newBackendGroup(r.Rules[i].BackendRefs, routeNsName, i),
 						Filters:      filters,
 						Match:        convertMatch(m),
