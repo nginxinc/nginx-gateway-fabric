@@ -10,7 +10,7 @@ COPY . /go/src/github.com/nginxinc/nginx-kubernetes-gateway
 RUN make build
 
 FROM alpine:3.18 as capabilizer
-RUN apk add --no-cache libcap
+RUN apk update && apk add --no-cache libcap
 
 FROM capabilizer as local-capabilizer
 COPY ./build/out/gateway /usr/bin/
