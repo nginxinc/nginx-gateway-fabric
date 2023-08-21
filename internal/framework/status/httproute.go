@@ -14,6 +14,8 @@ func prepareHTTPRouteStatus(
 	parents := make([]v1beta1.RouteParentStatus, 0, len(status.ParentStatuses))
 
 	for _, ps := range status.ParentStatuses {
+		// reassign the iteration variable inside the loop to fix implicit memory aliasing
+		ps := ps
 		p := v1beta1.RouteParentStatus{
 			ParentRef: v1beta1.ParentReference{
 				Namespace:   (*v1beta1.Namespace)(&ps.GatewayNsName.Namespace),

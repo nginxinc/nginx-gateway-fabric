@@ -364,10 +364,13 @@ func TestValidateListenerLabelSelector(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewGomegaWithT(t)
 
+			// create iteration variable inside the loop to fix implicit memory aliasing
+			from := test.from
+
 			listener := v1beta1.Listener{
 				AllowedRoutes: &v1beta1.AllowedRoutes{
 					Namespaces: &v1beta1.RouteNamespaces{
-						From:     &test.from,
+						From:     &from,
 						Selector: test.selector,
 					},
 				},
