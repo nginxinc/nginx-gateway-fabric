@@ -1,6 +1,6 @@
-# Directing Traffic to Your Application
+# Routing Traffic to Your Application
 
-In this guide, you will learn how to direct external traffic to your Kubernetes applications using the Gateway API and
+In this guide, you will learn how to route external traffic to your Kubernetes applications using the Gateway API and
 NGINX Kubernetes Gateway. Whether you're managing a web application or a REST backend API, you can use NGINX Kubernetes
 Gateway to expose your application outside the cluster.
 
@@ -19,7 +19,7 @@ Gateway to expose your application outside the cluster.
 
 The application we are going to use in this guide is a simple coffee application comprised of one Service and two Pods:
 
-![coffee app](/docs/images/direct-all-traffic-app.png)
+![coffee app](/docs/images/route-all-traffic-app.png)
 
 With this architecture, the coffee application is not accessible outside the cluster. We want to expose this application
 on the hostname `cafe.example.com` so that users outside the cluster can access it.
@@ -28,7 +28,7 @@ To do this, we will install NGINX Kubernetes Gateway and create two Gateway API 
 a [Gateway](https://gateway-api.sigs.k8s.io/v1alpha2/references/spec/#gateway.networking.k8s.io/v1beta1.Gateway) and
 an [HTTPRoute](https://gateway-api.sigs.k8s.io/v1alpha2/references/spec/#gateway.networking.k8s.io/v1beta1.HTTPRoute).
 With these resources, we will configure a simple routing rule to match all HTTP traffic with the
-hostname `cafe.example.com` and direct it to the coffee Service.
+hostname `cafe.example.com` and route it to the coffee Service.
 
 ## Setup
 
@@ -92,22 +92,22 @@ service/coffee       ClusterIP   10.96.75.77     <none>        80/TCP    77s
 
 ## Application Architecture with NGINX Kubernetes Gateway
 
-To direct traffic to the coffee application, we will create a Gateway and HTTPRoute. The following diagram shows the
+To route traffic to the coffee application, we will create a Gateway and HTTPRoute. The following diagram shows the
 configuration we'll be creating in the next step:
 
-![Configuration](/docs/images/direct-all-traffic-config.png)
+![Configuration](/docs/images/route-all-traffic-config.png)
 
 We need a Gateway to create an entry point for HTTP traffic coming into the cluster. The `cafe` Gateway we are going to
 create will open an entry point to the cluster on port 80 for HTTP traffic.
 
-To direct HTTP traffic from the Gateway to the coffee Service, we need to create an HTTPRoute named `coffee` and attach
-to the Gateway. This HTTPRoute will have a single routing rule that directs all traffic to the
+To route HTTP traffic from the Gateway to the coffee Service, we need to create an HTTPRoute named `coffee` and attach
+to the Gateway. This HTTPRoute will have a single routing rule that routes all traffic to the
 hostname `cafe.example.com` from the Gateway to the coffee Service.
 
 Once NGINX Kubernetes Gateway processes the `cafe` Gateway and `coffee` HTTPRoute, it will configure its dataplane, NGINX,
 to route all HTTP requests to `cafe.example.com` to the Pods that the `coffee` Service targets:
 
-![Traffic Flow](/docs/images/direct-all-traffic-flow.png)
+![Traffic Flow](/docs/images/route-all-traffic-flow.png)
 
 The coffee Service is omitted from the diagram above because the NGINX Kubernetes Gateway routes directly to the Pods
 that the coffee Service targets.
