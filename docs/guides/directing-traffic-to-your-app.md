@@ -97,8 +97,8 @@ configuration we'll be creating in the next step:
 
 ![Configuration](/docs/images/direct-all-traffic-config.png)
 
-We need a Gateway to create an access point for HTTP traffic coming into the cluster. The `cafe` Gateway we are going to
-create will open an access point to the cluster on port 80 for HTTP traffic.
+We need a Gateway to create an entry point for HTTP traffic coming into the cluster. The `cafe` Gateway we are going to
+create will open an entry point to the cluster on port 80 for HTTP traffic.
 
 To direct HTTP traffic from the Gateway to the coffee Service, we need to create an HTTPRoute named `coffee` and attach
 to the Gateway. This HTTPRoute will have a single routing rule that directs all traffic to the
@@ -142,7 +142,7 @@ installation of NGINX Kubernetes Gateway creates a GatewayClass with the name `n
 only configure Gateways with a `gatewayClassName` of `nginx` unless you change the name via the `--gatewayclass`
 [command-line flag](/docs/cli-help.md#static-mode).
 
-We specify a listener on the Gateway to open an access point on the cluster. In this case, since the coffee application
+We specify a listener on the Gateway to open an entry point on the cluster. In this case, since the coffee application
 accepts HTTP requests, we create an HTTP listener, named `http`, that listens on port 80.
 
 By default, Gateways only allow routes (such as HTTPRoutes) to attach if they are in the same namespace as the Gateway.
