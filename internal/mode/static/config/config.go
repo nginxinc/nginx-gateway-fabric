@@ -26,4 +26,15 @@ type Config struct {
 	Namespace string
 	// UpdateGatewayClassStatus enables updating the status of the GatewayClass resource.
 	UpdateGatewayClassStatus bool
+	// MetricsConfig specifies the metrics config.
+	MetricsConfig MetricsConfig
+}
+
+type MetricsConfig struct {
+	// MetricsPort is the port the metrics should be exposed on.
+	MetricsPort int
+	// MetricsEnabled is the flag for toggling metrics on or off.
+	MetricsEnabled bool
+	// Secure is the flag for toggling the metrics endpoint to https.
+	Secure bool
 }

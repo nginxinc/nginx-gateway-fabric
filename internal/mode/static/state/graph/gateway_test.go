@@ -145,6 +145,9 @@ func TestBuildGateway(t *testing.T) {
 	labelSet := map[string]string{
 		"key": "value",
 	}
+	protectedPorts := map[int32]string{
+		9113: "MetricsPort",
+	}
 	listenerAllowedRoutes := v1beta1.Listener{
 		Name:     "listener-with-allowed-routes",
 		Hostname: helpers.GetPointer[v1beta1.Hostname]("foo.example.com"),
@@ -279,6 +282,7 @@ func TestBuildGateway(t *testing.T) {
 	// invalid listeners
 	invalidProtocolListener := createTCPListener("invalid-protocol", "bar.example.com", 80)
 	invalidPortListener := createHTTPListener("invalid-port", "invalid-port", 0)
+	invalidProtectedPortListener := createHTTPListener("invalid-protected-port", "invalid-protected-port", 9113)
 	invalidHostnameListener := createHTTPListener("invalid-hostname", "$example.com", 80)
 	invalidHTTPSHostnameListener := createHTTPSListener(
 		"invalid-https-hostname",
@@ -532,7 +536,13 @@ func TestBuildGateway(t *testing.T) {
 		},
 		{
 			gateway: createGateway(
-				gatewayCfg{listeners: []v1beta1.Listener{invalidPortListener, invalidHTTPSPortListener}},
+				gatewayCfg{
+					listeners: []v1beta1.Listener{
+						invalidPortListener,
+						invalidHTTPSPortListener,
+						invalidProtectedPortListener,
+					},
+				},
 			),
 			gatewayClass: validGC,
 			expected: &Gateway{
@@ -554,6 +564,17 @@ func TestBuildGateway(t *testing.T) {
 						Conditions: staticConds.NewListenerUnsupportedValue(
 							`port: Invalid value: 0: port must be between 1-65535`,
 						),
+						SupportedKinds: []v1beta1.RouteGroupKind{
+							{Kind: "HTTPRoute"},
+						},
+					},
+					"invalid-protected-port": {
+						Source: invalidProtectedPortListener,
+						Valid:  false,
+						Conditions: staticConds.NewListenerUnsupportedValue(
+							`port: Invalid value: 9113: port is already in use as MetricsPort`,
+						),
+						Routes: map[types.NamespacedName]*Route{},
 						SupportedKinds: []v1beta1.RouteGroupKind{
 							{Kind: "HTTPRoute"},
 						},
@@ -843,7 +864,7 @@ func TestBuildGateway(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewGomegaWithT(t)
 			resolver := newReferenceGrantResolver(test.refGrants)
-			result := buildGateway(test.gateway, secretResolver, test.gatewayClass, resolver)
+			result := buildGateway(test.gateway, secretResolver, test.gatewayClass, resolver, protectedPorts)
 			g.Expect(helpers.Diff(test.expected, result)).To(BeEmpty())
 		})
 	}

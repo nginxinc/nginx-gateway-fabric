@@ -40,10 +40,11 @@ func buildListeners(
 	gw *v1beta1.Gateway,
 	secretResolver *secretResolver,
 	refGrantResolver *referenceGrantResolver,
+	protectedPorts map[int32]string,
 ) map[string]*Listener {
 	listeners := make(map[string]*Listener)
 
-	listenerFactory := newListenerConfiguratorFactory(gw, secretResolver, refGrantResolver)
+	listenerFactory := newListenerConfiguratorFactory(gw, secretResolver, refGrantResolver, protectedPorts)
 
 	for _, gl := range gw.Spec.Listeners {
 		configurator := listenerFactory.getConfiguratorForListener(gl)
@@ -72,8 +73,9 @@ func newListenerConfiguratorFactory(
 	gw *v1beta1.Gateway,
 	secretResolver *secretResolver,
 	refGrantResolver *referenceGrantResolver,
+	protectedPorts map[int32]string,
 ) *listenerConfiguratorFactory {
-	sharedPortConflictResolver := createPortConflictResolver()
+	sharedPortConflictResolver := createPortConflictResolver(protectedPorts)
 
 	return &listenerConfiguratorFactory{
 		unsupportedProtocol: &listenerConfigurator{
@@ -359,22 +361,33 @@ func createHTTPSListenerValidator() listenerValidator {
 	}
 }
 
-func createPortConflictResolver() listenerConflictResolver {
+func createPortConflictResolver(protectedPorts map[int32]string) listenerConflictResolver {
 	conflictedPorts := make(map[v1beta1.PortNumber]bool)
 	portProtocolOwner := make(map[v1beta1.PortNumber]v1beta1.ProtocolType)
 	listenersByPort := make(map[v1beta1.PortNumber][]*Listener)
 
-	format := "Multiple listeners for the same port %d specify incompatible protocols; " +
+	protcolConflictFormat := "Multiple listeners for the same port %d specify incompatible protocols; " +
 		"ensure only one protocol per port"
+	protectedPortsConflictFormat := "port: Invalid value: %d: port is already in use as %v"
 
 	return func(l *Listener) {
 		port := l.Source.Port
+
+		// if port is in the protected ports list, set current listener as invalid
+		if portName, ok := protectedPorts[int32(port)]; ok {
+			l.Valid = false
+
+			conflictedConds := staticConds.NewListenerUnsupportedValue(
+				fmt.Sprintf(protectedPortsConflictFormat, port, portName))
+			l.Conditions = append(l.Conditions, conflictedConds...)
+			return
+		}
 
 		// if port is in map of conflictedPorts then we only need to set the current listener to invalid
 		if conflictedPorts[port] {
 			l.Valid = false
 
-			conflictedConds := staticConds.NewListenerProtocolConflict(fmt.Sprintf(format, port))
+			conflictedConds := staticConds.NewListenerProtocolConflict(fmt.Sprintf(protcolConflictFormat, port))
 			l.Conditions = append(l.Conditions, conflictedConds...)
 			return
 		}
@@ -396,7 +409,7 @@ func createPortConflictResolver() listenerConflictResolver {
 			conflictedPorts[port] = true
 			for _, l := range listenersByPort[port] {
 				l.Valid = false
-				conflictedConds := staticConds.NewListenerProtocolConflict(fmt.Sprintf(format, port))
+				conflictedConds := staticConds.NewListenerProtocolConflict(fmt.Sprintf(protcolConflictFormat, port))
 				l.Conditions = append(l.Conditions, conflictedConds...)
 			}
 		}

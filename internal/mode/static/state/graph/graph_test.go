@@ -22,6 +22,10 @@ func TestBuildGraph(t *testing.T) {
 		controllerName = "my.controller"
 	)
 
+	protectedPorts := map[int32]string{
+		9113: "MetricsPort",
+	}
+
 	createValidRuleWithBackendRefs := func(refs []BackendRef) Rule {
 		return Rule{
 			ValidMatches: true,
@@ -343,6 +347,7 @@ func TestBuildGraph(t *testing.T) {
 				controllerName,
 				gcName,
 				validation.Validators{HTTPFieldsValidator: &validationfakes.FakeHTTPFieldsValidator{}},
+				protectedPorts,
 			)
 
 			g.Expect(helpers.Diff(test.expected, result)).To(BeEmpty())

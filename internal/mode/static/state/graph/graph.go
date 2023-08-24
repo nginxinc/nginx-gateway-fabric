@@ -65,6 +65,7 @@ func BuildGraph(
 	controllerName string,
 	gcName string,
 	validators validation.Validators,
+	protectedPorts map[int32]string,
 ) *Graph {
 	processedGwClasses, gcExists := processGatewayClasses(state.GatewayClasses, gcName, controllerName)
 	if gcExists && processedGwClasses.Winner == nil {
@@ -78,7 +79,7 @@ func BuildGraph(
 	processedGws := processGateways(state.Gateways, gcName)
 
 	refGrantResolver := newReferenceGrantResolver(state.ReferenceGrants)
-	gw := buildGateway(processedGws.Winner, secretResolver, gc, refGrantResolver)
+	gw := buildGateway(processedGws.Winner, secretResolver, gc, refGrantResolver, protectedPorts)
 
 	routes := buildRoutesForGateways(validators.HTTPFieldsValidator, state.HTTPRoutes, processedGws.GetAllNsNames())
 	bindRoutesToListeners(routes, gw, state.Namespaces)

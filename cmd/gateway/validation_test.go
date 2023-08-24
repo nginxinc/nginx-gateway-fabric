@@ -294,3 +294,40 @@ func TestValidateIP(t *testing.T) {
 		})
 	}
 }
+
+func TestValidatePort(t *testing.T) {
+	tests := []struct {
+		name   string
+		port   int
+		expErr bool
+	}{
+		{
+			name:   "port under minimum allowed value",
+			port:   1023,
+			expErr: true,
+		},
+		{
+			name:   "port over maximum allowed value",
+			port:   65536,
+			expErr: true,
+		},
+		{
+			name:   "valid port",
+			port:   9113,
+			expErr: false,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			g := NewGomegaWithT(t)
+
+			err := validatePort(tc.port)
+			if !tc.expErr {
+				g.Expect(err).ToNot(HaveOccurred())
+			} else {
+				g.Expect(err).To(HaveOccurred())
+			}
+		})
+	}
+}

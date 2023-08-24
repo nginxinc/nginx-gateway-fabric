@@ -123,6 +123,9 @@ func createStaticModeCommand() *cobra.Command {
 	configName := stringValidatingValue{
 		validator: validateResourceName,
 	}
+	var enableMetrics bool
+	var metricsListenPort int
+	var metricsSecure bool
 
 	cmd := &cobra.Command{
 		Use:   "static-mode",
@@ -153,6 +156,16 @@ func createStaticModeCommand() *cobra.Command {
 				gwNsName = &gateway.value
 			}
 
+			metricsConfig := config.MetricsConfig{}
+			if enableMetrics {
+				if err := validatePort(metricsListenPort); err != nil {
+					return fmt.Errorf("error validating metrics listen port: %w", err)
+				}
+				metricsConfig.MetricsEnabled = enableMetrics
+				metricsConfig.MetricsPort = metricsListenPort
+				metricsConfig.Secure = metricsSecure
+			}
+
 			conf := config.Config{
 				GatewayCtlrName:          gatewayCtlrName.value,
 				ConfigName:               configName.String(),
@@ -163,6 +176,7 @@ func createStaticModeCommand() *cobra.Command {
 				Namespace:                namespace,
 				GatewayNsName:            gwNsName,
 				UpdateGatewayClassStatus: updateGCStatus,
+				MetricsConfig:            metricsConfig,
 			}
 
 			if err := static.StartManager(conf); err != nil {
@@ -196,6 +210,27 @@ func createStaticModeCommand() *cobra.Command {
 		"update-gatewayclass-status",
 		true,
 		"Update the status of the GatewayClass resource.",
+	)
+
+	cmd.Flags().BoolVar(
+		&enableMetrics,
+		"enable-metrics",
+		false,
+		"Enable exposing metrics in the Prometheus format.",
+	)
+
+	cmd.Flags().IntVar(
+		&metricsListenPort,
+		"metrics-listen-port",
+		9113,
+		"Set the port where the metrics are exposed. [1023 - 65535]",
+	)
+
+	cmd.Flags().BoolVar(
+		&metricsSecure,
+		"metrics-secure-serving",
+		false,
+		"Enables serving metrics via https. By default metrics are served via http.",
 	)
 
 	return cmd

@@ -54,3 +54,11 @@ service:
     targetPort: 443
     protocol: TCP
     name: https
+
+metrics:
+  ## Expose metrics in the Prometheus format.
+  enable: false
+  ## Configures the port to scrape the metrics.
+  port: 9113
+  ## Configures if the metrics endpoint should be secured using https.
+  secure: false
