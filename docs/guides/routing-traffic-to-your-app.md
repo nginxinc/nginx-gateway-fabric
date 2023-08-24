@@ -192,9 +192,8 @@ To test the configuration, we will send a request to the public IP and port of N
 in the [prerequisites](#prerequisites) section and verify that the response comes from one of the coffee Pods.
 
 > **Note**
-> In a production environment, the coffee application would be accessible through the hostname `cafe.example.com`.
-> However, in this guide, we will be accessing the application through the public IP and port of the NGINX Kubernetes
-> Gateway Service and with curl's `--resolve` option.
+> Your clients should be able to resolve the domain name `cafe.example.com` to the public IP of the
+> NGINX Kubernetes Gateway. In this guide we will simulate that using curl's `--resolve` option.
 
 
 First, let's send a request to the path `/`:
