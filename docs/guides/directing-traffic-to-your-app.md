@@ -104,7 +104,7 @@ To direct HTTP traffic from the Gateway to the coffee Service, we need to create
 to the Gateway. This HTTPRoute will have a single routing rule that directs all traffic to the
 hostname `cafe.example.com` from the Gateway to the coffee Service.
 
-Once NGINX Kubernetes Gateway parses the `cafe` Gateway and `coffee` HTTPRoute, it will configure its dataplane, NGINX,
+Once NGINX Kubernetes Gateway processes the `cafe` Gateway and `coffee` HTTPRoute, it will configure its dataplane, NGINX,
 to route all HTTP requests to `cafe.example.com` to the Pods that the `coffee` Service targets:
 
 ![Traffic Flow](/docs/images/direct-all-traffic-flow.png)
