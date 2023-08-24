@@ -336,33 +336,38 @@ If you have any issues while testing the configuration, try the following to deb
   kubectl exec -it -n nginx-gateway <nginx gateway Pod> -c nginx -- nginx -T
   ```
 
-  The config should contain the following config blocks:
+  The config should contain a server block with the server name `cafe.example.com` that listens on port 80. This
+  server block should have a single location `/` that proxy passes to the coffee upstream:
 
   ```nginx configuration
-  upstream default_coffee_80 {
-    random two least_conn;
-    zone default_coffee_80 512k;
-
-    server 10.12.0.18:8080; # these should be the Pod IPs of the coffee Pods
-    server 10.12.0.19:8080;
-  }
-  ...
-
   server {
     listen 80;
 
     server_name cafe.example.com;
 
     location / {
-
-        proxy_set_header Host $gw_api_compliant_host;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection $connection_upgrade;
-        proxy_pass http://default_coffee_80$request_uri;
+        ...
+        proxy_pass http://default_coffee_80$request_uri; # the upstream is named default_coffee_80
+        ...
     }
   }
   ```
+
+  There should also be an upstream block with a name that matches the upstream in the `proxy_pass` directive. This
+  upstream block should contain the Pod IPs of the coffee Pods:
+
+  ```nginx configuration
+  upstream default_coffee_80 {
+    ...
+    server 10.12.0.18:8080; # these should be the Pod IPs of the coffee Pods
+    server 10.12.0.19:8080;
+    ...
+  }
+  ```
+
+  > **Note**:
+  > The entire configuration is not shown because it is subject to change.
+  > Ellipses indicate that there's configuration not shown.
 
 If your issue persists, [contact us](https://github.com/nginxinc/nginx-kubernetes-gateway#contacts).
 
