@@ -364,8 +364,7 @@ If you have any issues while testing the configuration, try the following to deb
   }
   ```
 
-If your issue persists, open an [issue](https://github.com/nginxinc/nginx-kubernetes-gateway/issues/new/choose) in the
-NGINX Kubernetes Gateway repo.
+If your issue persists, [contact us](https://github.com/nginxinc/nginx-kubernetes-gateway#contacts).
 
 ## Further Reading
 
