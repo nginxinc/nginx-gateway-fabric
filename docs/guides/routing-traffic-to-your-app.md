@@ -22,7 +22,7 @@ The application we are going to use in this guide is a simple coffee application
 ![coffee app](/docs/images/route-all-traffic-app.png)
 
 With this architecture, the coffee application is not accessible outside the cluster. We want to expose this application
-on the hostname `cafe.example.com` so that users outside the cluster can access it.
+on the hostname `cafe.example.com` so that clients outside the cluster can access it.
 
 To do this, we will install NGINX Kubernetes Gateway and create two Gateway API resources:
 a [Gateway](https://gateway-api.sigs.k8s.io/v1alpha2/references/spec/#gateway.networking.k8s.io/v1beta1.Gateway) and
