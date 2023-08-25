@@ -365,7 +365,7 @@ If you have any issues while testing the configuration, try the following to deb
   }
   ```
 
-  > **Note**:
+  > **Note**
   > The entire configuration is not shown because it is subject to change.
   > Ellipses indicate that there's configuration not shown.
 
