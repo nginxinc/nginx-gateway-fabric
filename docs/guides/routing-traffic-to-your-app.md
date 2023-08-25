@@ -230,6 +230,26 @@ Server address: 10.12.0.19:8080
 Server name: coffee-7dd75bc79b-dett3
 ```
 
+Requests to hostnames other than `cafe.example.com` should _not_ be routed to the coffee application, since the `cafe`
+application only matches requests with the `cafe.example.com` hostname. To verify this, send a request to the hostname
+`pub.example.com`:
+
+```shell
+curl --resolve pub.example.com:$GW_PORT:$GW_IP http://pub.example.com:$GW_PORT/
+```
+
+You should receive a 404 Not Found error:
+
+```text
+<html>
+<head><title>404 Not Found</title></head>
+<body>
+<center><h1>404 Not Found</h1></center>
+<hr><center>nginx/1.25.2</center>
+</body>
+</html>
+```
+
 ## Troubleshooting
 
 If you have any issues while testing the configuration, try the following to debug your configuration and setup:
