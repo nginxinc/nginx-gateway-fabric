@@ -1,7 +1,7 @@
 NKG_TAG = edge
 NKG_PREFIX = nginx-kubernetes-gateway
 NGINX_IMAGE_NAME = $(NKG_PREFIX)/nginx
-GW_API_VERSION ?= 0.7.1
+GW_API_VERSION ?= 0.8.0-rc2
 GATEWAY_CLASS = nginx
 SUPPORTED_FEATURES = HTTPRoute,HTTPRouteQueryParamMatching,HTTPRouteMethodMatching,HTTPRoutePortRedirect,HTTPRouteSchemeRedirect,GatewayClassObservedGenerationBump
 KIND_KUBE_CONFIG=$${HOME}/.kube/kind/config
