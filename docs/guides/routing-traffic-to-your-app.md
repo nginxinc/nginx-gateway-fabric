@@ -142,8 +142,10 @@ installation of NGINX Kubernetes Gateway creates a GatewayClass with the name `n
 only configure Gateways with a `gatewayClassName` of `nginx` unless you change the name via the `--gatewayclass`
 [command-line flag](/docs/cli-help.md#static-mode).
 
-We specify a listener on the Gateway to open an entry point on the cluster. In this case, since the coffee application
-accepts HTTP requests, we create an HTTP listener, named `http`, that listens on port 80.
+We specify
+a [listener](https://gateway-api.sigs.k8s.io/v1alpha2/references/spec/#gateway.networking.k8s.io/v1beta1.Listener) on
+the Gateway to open an entry point on the cluster. In this case, since the coffee application accepts HTTP requests, we
+create an HTTP listener, named `http`, that listens on port 80.
 
 By default, Gateways only allow routes (such as HTTPRoutes) to attach if they are in the same namespace as the Gateway.
 If you want to change this behavior, you can set
@@ -174,17 +176,20 @@ spec:
 EOF
 ```
 
-To attach the `coffee` HTTPRoute to the `cafe` Gateway, we specify the Gateway name in the `parentRefs` field. The
-attachment will succeed if the hostnames and protocol in the HTTPRoute are allowed by at least one of the
+To attach the `coffee` HTTPRoute to the `cafe` Gateway, we specify the Gateway name in
+the [`parentRefs`](https://gateway-api.sigs.k8s.io/v1alpha2/references/spec/#gateway.networking.k8s.io/v1beta1.CommonRouteSpec)
+field. The attachment will succeed if the hostnames and protocol in the HTTPRoute are allowed by at least one of the
 Gateway's listeners.
 
-The `hostnames` field allows you to list the hostnames that the HTTPRoute matches. In this case, incoming requests
-handled by the `http` listener with the HTTP host header `cafe.example.com` will match this HTTPRoute and will be routed
-according to the rules in the spec.
+The [`hostnames`](https://gateway-api.sigs.k8s.io/v1alpha2/references/spec/#gateway.networking.k8s.io/v1beta1.HTTPRouteSpec)
+field allows you to list the hostnames that the HTTPRoute matches. In this case, incoming requests handled by the `http`
+listener with the HTTP host header `cafe.example.com` will match this HTTPRoute and will be routed according to the
+rules in the spec.
 
-The `rules` field defines routing rules for the HTTPRoute. A rule is selected if the request satisfies one of the
-rule's `matches`. To forward traffic for all paths to the coffee Service we specify a match with the PathPrefix `/` and
-target the coffee Service using the `backendRef` field.
+The [`rules`](https://gateway-api.sigs.k8s.io/v1alpha2/references/spec/#gateway.networking.k8s.io/v1beta1.HTTPRouteRule)
+field defines routing rules for the HTTPRoute. A rule is selected if the request satisfies one of the rule's `matches`.
+To forward traffic for all paths to the coffee Service we specify a match with the PathPrefix `/` and target the coffee
+Service using the `backendRef` field.
 
 ## Test the Configuration
 
