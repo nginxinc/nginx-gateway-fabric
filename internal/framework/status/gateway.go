@@ -35,14 +35,14 @@ func prepareGatewayStatus(
 	}
 
 	ipAddrType := v1beta1.IPAddressType
-	gwPodIP := v1beta1.GatewayAddress{
+	gwPodIP := v1beta1.GatewayStatusAddress{
 		Type:  &ipAddrType,
 		Value: podIP,
 	}
 
 	return v1beta1.GatewayStatus{
 		Listeners:  listenerStatuses,
-		Addresses:  []v1beta1.GatewayAddress{gwPodIP},
+		Addresses:  []v1beta1.GatewayStatusAddress{gwPodIP},
 		Conditions: convertConditions(gatewayStatus.Conditions, gatewayStatus.ObservedGeneration, transitionTime),
 	}
 }
