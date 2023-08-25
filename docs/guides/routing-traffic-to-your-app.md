@@ -231,7 +231,7 @@ Server name: coffee-7dd75bc79b-dett3
 ```
 
 Requests to hostnames other than `cafe.example.com` should _not_ be routed to the coffee application, since the `cafe`
-application only matches requests with the `cafe.example.com` hostname. To verify this, send a request to the hostname
+HTTPRoute only matches requests with the `cafe.example.com` hostname. To verify this, send a request to the hostname
 `pub.example.com`:
 
 ```shell
