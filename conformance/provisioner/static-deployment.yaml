@@ -28,6 +28,7 @@ spec:
         - --gateway-ctlr-name=gateway.nginx.org/nginx-gateway-controller
         - --gatewayclass=nginx
         - --config=nginx-gateway-config
+        - --metrics-disable
         env:
         - name: POD_IP
           valueFrom:

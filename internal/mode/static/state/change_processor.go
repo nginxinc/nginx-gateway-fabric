@@ -59,8 +59,8 @@ type ChangeProcessorConfig struct {
 	EventRecorder record.EventRecorder
 	// Scheme is the Kubernetes scheme.
 	Scheme *runtime.Scheme
-	// ProtectedPorts are the ports that may not be configured by a listener.
-	ProtectedPorts map[int32]string
+	// ProtectedPorts are the ports that may not be configured by a listener with a descriptive name of the ports.
+	ProtectedPorts graph.ProtectedPorts
 	// Logger is the logger for this Change Processor.
 	Logger logr.Logger
 	// GatewayCtlrName is the name of the Gateway controller.

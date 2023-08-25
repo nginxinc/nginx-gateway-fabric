@@ -29,7 +29,7 @@ import (
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/events"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/status"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/config"
-	nkgMetrics "github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/metrics"
+	nkgmetrics "github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/metrics"
 	ngxcfg "github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/nginx/config"
 	ngxvalidation "github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/nginx/config/validation"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/nginx/file"
@@ -60,7 +60,7 @@ func StartManager(cfg config.Config) error {
 	options := manager.Options{
 		Scheme:  scheme,
 		Logger:  logger,
-		Metrics: getMetricsConfig(cfg.MetricsConfig),
+		Metrics: getMetricsOptions(cfg.MetricsConfig),
 	}
 
 	eventCh := make(chan interface{})
@@ -164,7 +164,7 @@ func StartManager(cfg config.Config) error {
 
 	// protectedPorts is the map of ports that may not be configured by a listener, and the name of what it is used for
 	protectedPorts := map[int32]string{
-		int32(cfg.MetricsConfig.MetricsPort): "MetricsPort",
+		int32(cfg.MetricsConfig.Port): "MetricsPort",
 	}
 
 	processor := state.NewChangeProcessorImpl(state.ChangeProcessorConfig{
@@ -231,8 +231,8 @@ func StartManager(cfg config.Config) error {
 		return fmt.Errorf("cannot register event loop: %w", err)
 	}
 
-	if cfg.MetricsConfig.MetricsEnabled {
-		err = configureNginxMetrics(cfg.GatewayClassName)
+	if cfg.MetricsConfig.Enabled {
+		err = configureNginxMetrics(ctx, cfg.GatewayClassName)
 		if err != nil {
 			return fmt.Errorf("cannot register nginx metrics: %w", err)
 		}
@@ -290,24 +290,23 @@ func setInitialConfig(
 	return updateControlPlane(&config, logger, eventRecorder, configName, logLevelSetter)
 }
 
-func configureNginxMetrics(gatewayClassName string) error {
+func configureNginxMetrics(ctx context.Context, gatewayClassName string) error {
 	constLabels := map[string]string{"class": gatewayClassName}
-	ngxCollector, err := nkgMetrics.NewNginxMetricsClient(constLabels)
+	ngxCollector, err := nkgmetrics.NewNginxMetricsCollector(ctx, constLabels)
 	if err != nil {
 		return fmt.Errorf("cannot get NGINX metrics: %w", err)
 	}
-	metrics.Registry.MustRegister(ngxCollector)
-	return nil
+	return metrics.Registry.Register(ngxCollector)
 }
 
-func getMetricsConfig(cfg config.MetricsConfig) metricsserver.Options {
+func getMetricsOptions(cfg config.MetricsConfig) metricsserver.Options {
 	metricsOptions := metricsserver.Options{BindAddress: "0"}
 
-	if cfg.MetricsEnabled {
+	if cfg.Enabled {
 		if cfg.Secure {
 			metricsOptions.SecureServing = true
 		}
-		metricsOptions.BindAddress = fmt.Sprintf(":%v", cfg.MetricsPort)
+		metricsOptions.BindAddress = fmt.Sprintf(":%v", cfg.Port)
 	}
 
 	return metricsOptions

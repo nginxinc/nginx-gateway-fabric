@@ -95,7 +95,7 @@ func buildGateway(
 	secretResolver *secretResolver,
 	gc *GatewayClass,
 	refGrantResolver *referenceGrantResolver,
-	protectedPorts map[int32]string,
+	protectedPorts ProtectedPorts,
 ) *Gateway {
 	if gw == nil {
 		return nil

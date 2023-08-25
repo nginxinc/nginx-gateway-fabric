@@ -30,11 +30,12 @@ type Config struct {
 	MetricsConfig MetricsConfig
 }
 
+// MetricsConfig specifies the metrics config.
 type MetricsConfig struct {
-	// MetricsPort is the port the metrics should be exposed on.
-	MetricsPort int
-	// MetricsEnabled is the flag for toggling metrics on or off.
-	MetricsEnabled bool
+	// Port is the port the metrics should be exposed on.
+	Port int
+	// Enabled is the flag for toggling metrics on or off.
+	Enabled bool
 	// Secure is the flag for toggling the metrics endpoint to https.
 	Secure bool
 }

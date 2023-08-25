@@ -40,7 +40,7 @@ func buildListeners(
 	gw *v1beta1.Gateway,
 	secretResolver *secretResolver,
 	refGrantResolver *referenceGrantResolver,
-	protectedPorts map[int32]string,
+	protectedPorts ProtectedPorts,
 ) map[string]*Listener {
 	listeners := make(map[string]*Listener)
 
@@ -73,9 +73,9 @@ func newListenerConfiguratorFactory(
 	gw *v1beta1.Gateway,
 	secretResolver *secretResolver,
 	refGrantResolver *referenceGrantResolver,
-	protectedPorts map[int32]string,
+	protectedPorts ProtectedPorts,
 ) *listenerConfiguratorFactory {
-	sharedPortConflictResolver := createPortConflictResolver(protectedPorts)
+	sharedPortConflictResolver := createPortConflictResolver()
 
 	return &listenerConfiguratorFactory{
 		unsupportedProtocol: &listenerConfigurator{
@@ -95,7 +95,7 @@ func newListenerConfiguratorFactory(
 				validateListenerAllowedRouteKind,
 				validateListenerLabelSelector,
 				validateListenerHostname,
-				validateHTTPListener,
+				createHTTPListenerValidator(protectedPorts),
 			},
 			conflictResolvers: []listenerConflictResolver{
 				sharedPortConflictResolver,
@@ -106,7 +106,7 @@ func newListenerConfiguratorFactory(
 				validateListenerAllowedRouteKind,
 				validateListenerLabelSelector,
 				validateListenerHostname,
-				createHTTPSListenerValidator(),
+				createHTTPSListenerValidator(protectedPorts),
 			},
 			conflictResolvers: []listenerConflictResolver{
 				sharedPortConflictResolver,
@@ -277,33 +277,41 @@ func validateListenerLabelSelector(listener v1beta1.Listener) []conditions.Condi
 	return nil
 }
 
-func validateHTTPListener(listener v1beta1.Listener) []conditions.Condition {
-	if err := validateListenerPort(listener.Port); err != nil {
-		path := field.NewPath("port")
-		valErr := field.Invalid(path, listener.Port, err.Error())
-		return staticConds.NewListenerUnsupportedValue(valErr.Error())
-	}
+func createHTTPListenerValidator(protectedPorts ProtectedPorts) listenerValidator {
+	return func(listener v1beta1.Listener) []conditions.Condition {
+		var conds []conditions.Condition
 
-	if listener.TLS != nil {
-		panicForBrokenWebhookAssumption(fmt.Errorf("tls is not nil for HTTP listener %q", listener.Name))
-	}
+		if err := validateListenerPort(listener.Port, protectedPorts); err != nil {
+			path := field.NewPath("port")
+			valErr := field.Invalid(path, listener.Port, err.Error())
+			conds = append(conds, staticConds.NewListenerUnsupportedValue(valErr.Error())...)
+		}
 
-	return nil
+		if listener.TLS != nil {
+			panicForBrokenWebhookAssumption(fmt.Errorf("tls is not nil for HTTP listener %q", listener.Name))
+		}
+
+		return conds
+	}
 }
 
-func validateListenerPort(port v1beta1.PortNumber) error {
+func validateListenerPort(port v1beta1.PortNumber, protectedPorts ProtectedPorts) error {
 	if port < 1 || port > 65535 {
 		return errors.New("port must be between 1-65535")
 	}
 
+	if portName, ok := protectedPorts[int32(port)]; ok {
+		return fmt.Errorf("port is already in use as %v", portName)
+	}
+
 	return nil
 }
 
-func createHTTPSListenerValidator() listenerValidator {
+func createHTTPSListenerValidator(protectedPorts ProtectedPorts) listenerValidator {
 	return func(listener v1beta1.Listener) []conditions.Condition {
 		var conds []conditions.Condition
 
-		if err := validateListenerPort(listener.Port); err != nil {
+		if err := validateListenerPort(listener.Port, protectedPorts); err != nil {
 			path := field.NewPath("port")
 			valErr := field.Invalid(path, listener.Port, err.Error())
 			conds = append(conds, staticConds.NewListenerUnsupportedValue(valErr.Error())...)
@@ -361,33 +369,22 @@ func createHTTPSListenerValidator() listenerValidator {
 	}
 }
 
-func createPortConflictResolver(protectedPorts map[int32]string) listenerConflictResolver {
+func createPortConflictResolver() listenerConflictResolver {
 	conflictedPorts := make(map[v1beta1.PortNumber]bool)
 	portProtocolOwner := make(map[v1beta1.PortNumber]v1beta1.ProtocolType)
 	listenersByPort := make(map[v1beta1.PortNumber][]*Listener)
 
-	protcolConflictFormat := "Multiple listeners for the same port %d specify incompatible protocols; " +
+	format := "Multiple listeners for the same port %d specify incompatible protocols; " +
 		"ensure only one protocol per port"
-	protectedPortsConflictFormat := "port: Invalid value: %d: port is already in use as %v"
 
 	return func(l *Listener) {
 		port := l.Source.Port
-
-		// if port is in the protected ports list, set current listener as invalid
-		if portName, ok := protectedPorts[int32(port)]; ok {
-			l.Valid = false
-
-			conflictedConds := staticConds.NewListenerUnsupportedValue(
-				fmt.Sprintf(protectedPortsConflictFormat, port, portName))
-			l.Conditions = append(l.Conditions, conflictedConds...)
-			return
-		}
 
 		// if port is in map of conflictedPorts then we only need to set the current listener to invalid
 		if conflictedPorts[port] {
 			l.Valid = false
 
-			conflictedConds := staticConds.NewListenerProtocolConflict(fmt.Sprintf(protcolConflictFormat, port))
+			conflictedConds := staticConds.NewListenerProtocolConflict(fmt.Sprintf(format, port))
 			l.Conditions = append(l.Conditions, conflictedConds...)
 			return
 		}
@@ -409,7 +406,7 @@ func createPortConflictResolver(protectedPorts map[int32]string) listenerConflic
 			conflictedPorts[port] = true
 			for _, l := range listenersByPort[port] {
 				l.Valid = false
-				conflictedConds := staticConds.NewListenerProtocolConflict(fmt.Sprintf(protcolConflictFormat, port))
+				conflictedConds := staticConds.NewListenerProtocolConflict(fmt.Sprintf(format, port))
 				l.Conditions = append(l.Conditions, conflictedConds...)
 			}
 		}

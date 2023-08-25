@@ -22,7 +22,7 @@ func TestBuildGraph(t *testing.T) {
 		controllerName = "my.controller"
 	)
 
-	protectedPorts := map[int32]string{
+	protectedPorts := ProtectedPorts{
 		9113: "MetricsPort",
 	}
 

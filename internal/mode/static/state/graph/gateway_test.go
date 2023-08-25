@@ -145,7 +145,7 @@ func TestBuildGateway(t *testing.T) {
 	labelSet := map[string]string{
 		"key": "value",
 	}
-	protectedPorts := map[int32]string{
+	protectedPorts := ProtectedPorts{
 		9113: "MetricsPort",
 	}
 	listenerAllowedRoutes := v1beta1.Listener{
@@ -574,7 +574,6 @@ func TestBuildGateway(t *testing.T) {
 						Conditions: staticConds.NewListenerUnsupportedValue(
 							`port: Invalid value: 9113: port is already in use as MetricsPort`,
 						),
-						Routes: map[types.NamespacedName]*Route{},
 						SupportedKinds: []v1beta1.RouteGroupKind{
 							{Kind: "HTTPRoute"},
 						},

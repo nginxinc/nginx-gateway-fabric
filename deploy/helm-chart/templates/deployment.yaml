@@ -16,7 +16,7 @@ spec:
     metadata:
       labels:
       {{- include "nginx-gateway.selectorLabels" . | nindent 8 }}
-      {{- if .Values.metrics.enable }}
+      {{- if not .Values.metrics.disable }}
       annotations:
         prometheus.io/scrape: "true"
         prometheus.io/port: "{{ .Values.metrics.port }}"
@@ -31,12 +31,13 @@ spec:
         - --gateway-ctlr-name={{ .Values.nginxGateway.gatewayControllerName }}
         - --gatewayclass={{ .Values.nginxGateway.gatewayClassName }}
         - --config={{ include "nginx-gateway.config-name" . }}
-        {{- if .Values.metrics.enable }}
-        - --enable-metrics=true
-        - --metrics-listen-port={{ .Values.metrics.port }}
+        {{- if not .Values.metrics.disable }}
+        - --metrics-port={{ .Values.metrics.port }}
         {{- if .Values.metrics.secure  }}
-        - --metrics-secure-serving=true
+        - --metrics-secure-serving
         {{- end }}
+        {{- else }}
+        - --metrics-disable
         {{- end }}
         env:
         - name: POD_IP
@@ -50,9 +51,9 @@ spec:
         image: {{ .Values.nginxGateway.image.repository }}:{{ .Values.nginxGateway.image.tag | default .Chart.AppVersion }}
         imagePullPolicy: {{ .Values.nginxGateway.image.pullPolicy }}
         name: nginx-gateway
-        {{- if .Values.metrics.enable }}
+        {{- if not .Values.metrics.disable }}
         ports:
-        - name: prometheus
+        - name: metrics
           containerPort: {{ .Values.metrics.port }}
         {{- end }}
         securityContext:

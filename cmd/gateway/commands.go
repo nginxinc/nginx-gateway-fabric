@@ -24,6 +24,7 @@ const (
 	gatewayCtrlNameFlag     = "gateway-ctlr-name"
 	gatewayCtrlNameUsageFmt = `The name of the Gateway controller. ` +
 		`The controller name must be of the form: DOMAIN/PATH. The controller's domain is '%s'`
+	gatewayFlag = "gateway"
 )
 
 var (
@@ -34,6 +35,17 @@ var (
 	}
 
 	gatewayClassName = stringValidatingValue{
+		validator: validateResourceName,
+	}
+
+	// Backing values for static subcommand cli flags.
+	updateGCStatus    bool
+	disableMetrics    bool
+	metricsListenPort int
+	metricsSecure     bool
+
+	gateway    = namespacedNameValue{}
+	configName = stringValidatingValue{
 		validator: validateResourceName,
 	}
 )
@@ -115,18 +127,6 @@ func createRootCommand() *cobra.Command {
 }
 
 func createStaticModeCommand() *cobra.Command {
-	const gatewayFlag = "gateway"
-
-	// flag values
-	gateway := namespacedNameValue{}
-	var updateGCStatus bool
-	configName := stringValidatingValue{
-		validator: validateResourceName,
-	}
-	var enableMetrics bool
-	var metricsListenPort int
-	var metricsSecure bool
-
 	cmd := &cobra.Command{
 		Use:   "static-mode",
 		Short: "Configure NGINX in the scope of a single Gateway resource",
@@ -157,12 +157,12 @@ func createStaticModeCommand() *cobra.Command {
 			}
 
 			metricsConfig := config.MetricsConfig{}
-			if enableMetrics {
+			if !disableMetrics {
 				if err := validatePort(metricsListenPort); err != nil {
 					return fmt.Errorf("error validating metrics listen port: %w", err)
 				}
-				metricsConfig.MetricsEnabled = enableMetrics
-				metricsConfig.MetricsPort = metricsListenPort
+				metricsConfig.Enabled = true
+				metricsConfig.Port = metricsListenPort
 				metricsConfig.Secure = metricsSecure
 			}
 
@@ -213,24 +213,25 @@ func createStaticModeCommand() *cobra.Command {
 	)
 
 	cmd.Flags().BoolVar(
-		&enableMetrics,
-		"enable-metrics",
+		&disableMetrics,
+		"metrics-disable",
 		false,
-		"Enable exposing metrics in the Prometheus format.",
+		"Disable exposing metrics in the Prometheus format.",
 	)
 
 	cmd.Flags().IntVar(
 		&metricsListenPort,
-		"metrics-listen-port",
+		"metrics-port",
 		9113,
-		"Set the port where the metrics are exposed. [1023 - 65535]",
+		"Set the port where the metrics are exposed. Format: [1023 - 65535]",
 	)
 
 	cmd.Flags().BoolVar(
 		&metricsSecure,
 		"metrics-secure-serving",
 		false,
-		"Enables serving metrics via https. By default metrics are served via http.",
+		"Enable serving metrics via https. By default metrics are served via http."+
+			" Please note that this endpoint will be secured with a self-signed certificate.",
 	)
 
 	return cmd
