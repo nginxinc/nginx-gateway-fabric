@@ -6,7 +6,7 @@ Gateway to expose your application outside the cluster.
 
 ## Prerequisites
 
-- NGINX Kubernetes Gateway is [installed](/docs/installation.md) on your cluster.
+- [Install](/docs/installation.md) NGINX Kubernetes Gateway.
 - [Expose NGINX Kubernetes Gateway](/docs/installation.md#expose-nginx-kubernetes-gateway) and save the public IP
   address and port of NGINX Kubernetes Gateway into shell variables:
 
