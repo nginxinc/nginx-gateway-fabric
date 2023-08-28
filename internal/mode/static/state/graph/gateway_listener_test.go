@@ -49,22 +49,22 @@ func TestValidateHTTPSListener(t *testing.T) {
 	secretNs := "secret-ns"
 
 	validSecretRef := v1beta1.SecretObjectReference{
-		Kind:      (*v1beta1.Kind)(helpers.GetStringPointer("Secret")),
+		Kind:      (*v1beta1.Kind)(helpers.GetPointer("Secret")),
 		Name:      "secret",
-		Namespace: (*v1beta1.Namespace)(helpers.GetStringPointer(secretNs)),
+		Namespace: (*v1beta1.Namespace)(helpers.GetPointer(secretNs)),
 	}
 
 	invalidSecretRefGroup := v1beta1.SecretObjectReference{
-		Group:     (*v1beta1.Group)(helpers.GetStringPointer("some-group")),
-		Kind:      (*v1beta1.Kind)(helpers.GetStringPointer("Secret")),
+		Group:     (*v1beta1.Group)(helpers.GetPointer("some-group")),
+		Kind:      (*v1beta1.Kind)(helpers.GetPointer("Secret")),
 		Name:      "secret",
-		Namespace: (*v1beta1.Namespace)(helpers.GetStringPointer(secretNs)),
+		Namespace: (*v1beta1.Namespace)(helpers.GetPointer(secretNs)),
 	}
 
 	invalidSecretRefKind := v1beta1.SecretObjectReference{
-		Kind:      (*v1beta1.Kind)(helpers.GetStringPointer("ConfigMap")),
+		Kind:      (*v1beta1.Kind)(helpers.GetPointer("ConfigMap")),
 		Name:      "secret",
-		Namespace: (*v1beta1.Namespace)(helpers.GetStringPointer(secretNs)),
+		Namespace: (*v1beta1.Namespace)(helpers.GetPointer(secretNs)),
 	}
 
 	tests := []struct {
@@ -184,22 +184,22 @@ func TestValidateListenerHostname(t *testing.T) {
 			name:      "nil hostname",
 		},
 		{
-			hostname:  (*v1beta1.Hostname)(helpers.GetStringPointer("")),
+			hostname:  (*v1beta1.Hostname)(helpers.GetPointer("")),
 			expectErr: false,
 			name:      "empty hostname",
 		},
 		{
-			hostname:  (*v1beta1.Hostname)(helpers.GetStringPointer("foo.example.com")),
+			hostname:  (*v1beta1.Hostname)(helpers.GetPointer("foo.example.com")),
 			expectErr: false,
 			name:      "valid hostname",
 		},
 		{
-			hostname:  (*v1beta1.Hostname)(helpers.GetStringPointer("*.example.com")),
+			hostname:  (*v1beta1.Hostname)(helpers.GetPointer("*.example.com")),
 			expectErr: false,
 			name:      "wildcard hostname",
 		},
 		{
-			hostname:  (*v1beta1.Hostname)(helpers.GetStringPointer("example$com")),
+			hostname:  (*v1beta1.Hostname)(helpers.GetPointer("example$com")),
 			expectErr: true,
 			name:      "invalid hostname",
 		},

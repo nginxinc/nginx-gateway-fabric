@@ -21,9 +21,9 @@ func createBackendRefs(backendNames ...v1beta1.ObjectName) []v1beta1.HTTPBackend
 		refs = append(refs, v1beta1.HTTPBackendRef{
 			BackendRef: v1beta1.BackendRef{
 				BackendObjectReference: v1beta1.BackendObjectReference{
-					Kind:      (*v1beta1.Kind)(helpers.GetStringPointer("Service")),
+					Kind:      (*v1beta1.Kind)(helpers.GetPointer("Service")),
 					Name:      name,
-					Namespace: (*v1beta1.Namespace)(helpers.GetStringPointer("test")),
+					Namespace: (*v1beta1.Namespace)(helpers.GetPointer("test")),
 				},
 			},
 		})

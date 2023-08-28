@@ -32,7 +32,7 @@ func TestBuildConfiguration(t *testing.T) {
 				Matches: []v1beta1.HTTPRouteMatch{
 					{
 						Path: &v1beta1.HTTPPathMatch{
-							Value: helpers.GetStringPointer(p.path),
+							Value: helpers.GetPointer(p.path),
 							Type:  helpers.GetPointer(p.pathType),
 						},
 					},
@@ -48,9 +48,9 @@ func TestBuildConfiguration(t *testing.T) {
 				CommonRouteSpec: v1beta1.CommonRouteSpec{
 					ParentRefs: []v1beta1.ParentReference{
 						{
-							Namespace:   (*v1beta1.Namespace)(helpers.GetStringPointer("test")),
+							Namespace:   (*v1beta1.Namespace)(helpers.GetPointer("test")),
 							Name:        "gateway",
-							SectionName: (*v1beta1.SectionName)(helpers.GetStringPointer(listenerName)),
+							SectionName: (*v1beta1.SectionName)(helpers.GetPointer(listenerName)),
 						},
 					},
 				},
@@ -218,7 +218,7 @@ func TestBuildConfiguration(t *testing.T) {
 	redirect := v1beta1.HTTPRouteFilter{
 		Type: v1beta1.HTTPRouteFilterRequestRedirect,
 		RequestRedirect: &v1beta1.HTTPRequestRedirectFilter{
-			Hostname: (*v1beta1.PreciseHostname)(helpers.GetStringPointer("foo.example.com")),
+			Hostname: (*v1beta1.PreciseHostname)(helpers.GetPointer("foo.example.com")),
 		},
 	}
 	addFilters(hr5, []v1beta1.HTTPRouteFilter{redirect})
@@ -350,7 +350,7 @@ func TestBuildConfiguration(t *testing.T) {
 			Mode: helpers.GetPointer(v1beta1.TLSModeTerminate),
 			CertificateRefs: []v1beta1.SecretObjectReference{
 				{
-					Kind:      (*v1beta1.Kind)(helpers.GetStringPointer("Secret")),
+					Kind:      (*v1beta1.Kind)(helpers.GetPointer("Secret")),
 					Namespace: helpers.GetPointer(v1beta1.Namespace(secret1NsName.Namespace)),
 					Name:      v1beta1.ObjectName(secret1NsName.Name),
 				},
@@ -367,7 +367,7 @@ func TestBuildConfiguration(t *testing.T) {
 			Mode: helpers.GetPointer(v1beta1.TLSModeTerminate),
 			CertificateRefs: []v1beta1.SecretObjectReference{
 				{
-					Kind:      (*v1beta1.Kind)(helpers.GetStringPointer("Secret")),
+					Kind:      (*v1beta1.Kind)(helpers.GetPointer("Secret")),
 					Namespace: helpers.GetPointer(v1beta1.Namespace(secret2NsName.Namespace)),
 					Name:      v1beta1.ObjectName(secret2NsName.Name),
 				},
@@ -386,7 +386,7 @@ func TestBuildConfiguration(t *testing.T) {
 			Mode: helpers.GetPointer(v1beta1.TLSModeTerminate),
 			CertificateRefs: []v1beta1.SecretObjectReference{
 				{
-					Kind:      (*v1beta1.Kind)(helpers.GetStringPointer("Secret")),
+					Kind:      (*v1beta1.Kind)(helpers.GetPointer("Secret")),
 					Namespace: helpers.GetPointer(v1beta1.Namespace(secret2NsName.Namespace)),
 					Name:      v1beta1.ObjectName(secret2NsName.Name),
 				},
@@ -1506,7 +1506,7 @@ func TestGetPath(t *testing.T) {
 		msg      string
 	}{
 		{
-			path:     &v1beta1.HTTPPathMatch{Value: helpers.GetStringPointer("/abc")},
+			path:     &v1beta1.HTTPPathMatch{Value: helpers.GetPointer("/abc")},
 			expected: "/abc",
 			msg:      "normal case",
 		},
@@ -1521,7 +1521,7 @@ func TestGetPath(t *testing.T) {
 			msg:      "nil value",
 		},
 		{
-			path:     &v1beta1.HTTPPathMatch{Value: helpers.GetStringPointer("")},
+			path:     &v1beta1.HTTPPathMatch{Value: helpers.GetPointer("")},
 			expected: "/",
 			msg:      "empty value",
 		},

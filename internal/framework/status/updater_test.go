@@ -210,9 +210,9 @@ var _ = Describe("Updater", func() {
 								{
 									ControllerName: v1beta1.GatewayController(gatewayCtrlName),
 									ParentRef: v1beta1.ParentReference{
-										Namespace:   (*v1beta1.Namespace)(helpers.GetStringPointer("test")),
+										Namespace:   (*v1beta1.Namespace)(helpers.GetPointer("test")),
 										Name:        "gateway",
-										SectionName: (*v1beta1.SectionName)(helpers.GetStringPointer("http")),
+										SectionName: (*v1beta1.SectionName)(helpers.GetPointer("http")),
 									},
 									Conditions: status.CreateExpectedAPIConditions("Test", 5, fakeClockTime),
 								},

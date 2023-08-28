@@ -75,7 +75,7 @@ var (
 		Endpoints:   []discoveryV1.Endpoint{readyEndpoint1},
 		Ports: []discoveryV1.EndpointPort{
 			{
-				Name: helpers.GetStringPointer("other-svc-port"),
+				Name: helpers.GetPointer("other-svc-port"),
 				Port: helpers.GetPointer(int32(8080)),
 			},
 		},
@@ -238,7 +238,7 @@ func TestIgnoreEndpointSlice(t *testing.T) {
 				AddressType: discoveryV1.AddressTypeIPv4,
 				Ports: []discoveryV1.EndpointPort{
 					{
-						Name: helpers.GetStringPointer("other-svc-port"),
+						Name: helpers.GetPointer("other-svc-port"),
 						Port: &port4000,
 					},
 				},
@@ -401,15 +401,15 @@ func TestFindPort(t *testing.T) {
 			msg: "no matching endpoint name",
 			ports: []discoveryV1.EndpointPort{
 				{
-					Name: helpers.GetStringPointer("other-svc-port"),
+					Name: helpers.GetPointer("other-svc-port"),
 					Port: helpers.GetPointer(int32(8080)),
 				},
 				{
-					Name: helpers.GetStringPointer("other-svc-port2"),
+					Name: helpers.GetPointer("other-svc-port2"),
 					Port: helpers.GetPointer(int32(8081)),
 				},
 				{
-					Name: helpers.GetStringPointer("other-svc-port3"),
+					Name: helpers.GetPointer("other-svc-port3"),
 					Port: helpers.GetPointer(int32(8082)),
 				},
 			},
@@ -424,11 +424,11 @@ func TestFindPort(t *testing.T) {
 			msg: "matching endpoint name",
 			ports: []discoveryV1.EndpointPort{
 				{
-					Name: helpers.GetStringPointer("other-svc-port"),
+					Name: helpers.GetPointer("other-svc-port"),
 					Port: helpers.GetPointer(int32(8080)),
 				},
 				{
-					Name: helpers.GetStringPointer("other-svc-port2"),
+					Name: helpers.GetPointer("other-svc-port2"),
 					Port: helpers.GetPointer(int32(8081)),
 				},
 				{
@@ -448,7 +448,7 @@ func TestFindPort(t *testing.T) {
 			ports: []discoveryV1.EndpointPort{
 				{
 					// If a service port is unnamed (empty string), then the endpoint port will also be empty string.
-					Name: helpers.GetStringPointer(""),
+					Name: helpers.GetPointer(""),
 					Port: helpers.GetPointer(int32(8080)),
 				},
 			},
