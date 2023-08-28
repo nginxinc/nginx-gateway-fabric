@@ -66,7 +66,7 @@ func TestBuildGraph(t *testing.T) {
 										Kind:      (*v1beta1.Kind)(helpers.GetStringPointer("Service")),
 										Name:      "foo",
 										Namespace: (*v1beta1.Namespace)(helpers.GetStringPointer("service")),
-										Port:      (*v1beta1.PortNumber)(helpers.GetInt32Pointer(80)),
+										Port:      (*v1beta1.PortNumber)(helpers.GetPointer(int32(80))),
 									},
 								},
 							},
