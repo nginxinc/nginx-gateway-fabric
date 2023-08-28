@@ -76,7 +76,7 @@ func TestValidateHTTPSListener(t *testing.T) {
 			l: v1beta1.Listener{
 				Port: 443,
 				TLS: &v1beta1.GatewayTLSConfig{
-					Mode:            helpers.GetTLSModePointer(v1beta1.TLSModeTerminate),
+					Mode:            helpers.GetPointer(v1beta1.TLSModeTerminate),
 					CertificateRefs: []v1beta1.SecretObjectReference{validSecretRef},
 				},
 			},
@@ -87,7 +87,7 @@ func TestValidateHTTPSListener(t *testing.T) {
 			l: v1beta1.Listener{
 				Port: 0,
 				TLS: &v1beta1.GatewayTLSConfig{
-					Mode:            helpers.GetTLSModePointer(v1beta1.TLSModeTerminate),
+					Mode:            helpers.GetPointer(v1beta1.TLSModeTerminate),
 					CertificateRefs: []v1beta1.SecretObjectReference{validSecretRef},
 				},
 			},
@@ -98,7 +98,7 @@ func TestValidateHTTPSListener(t *testing.T) {
 			l: v1beta1.Listener{
 				Port: 443,
 				TLS: &v1beta1.GatewayTLSConfig{
-					Mode:            helpers.GetTLSModePointer(v1beta1.TLSModeTerminate),
+					Mode:            helpers.GetPointer(v1beta1.TLSModeTerminate),
 					CertificateRefs: []v1beta1.SecretObjectReference{validSecretRef},
 					Options:         map[v1beta1.AnnotationKey]v1beta1.AnnotationValue{"key": "val"},
 				},
@@ -110,7 +110,7 @@ func TestValidateHTTPSListener(t *testing.T) {
 			l: v1beta1.Listener{
 				Port: 443,
 				TLS: &v1beta1.GatewayTLSConfig{
-					Mode:            helpers.GetTLSModePointer(v1beta1.TLSModePassthrough),
+					Mode:            helpers.GetPointer(v1beta1.TLSModePassthrough),
 					CertificateRefs: []v1beta1.SecretObjectReference{validSecretRef},
 				},
 			},
@@ -123,7 +123,7 @@ func TestValidateHTTPSListener(t *testing.T) {
 			l: v1beta1.Listener{
 				Port: 443,
 				TLS: &v1beta1.GatewayTLSConfig{
-					Mode:            helpers.GetTLSModePointer(v1beta1.TLSModeTerminate),
+					Mode:            helpers.GetPointer(v1beta1.TLSModeTerminate),
 					CertificateRefs: []v1beta1.SecretObjectReference{invalidSecretRefGroup},
 				},
 			},
@@ -136,7 +136,7 @@ func TestValidateHTTPSListener(t *testing.T) {
 			l: v1beta1.Listener{
 				Port: 443,
 				TLS: &v1beta1.GatewayTLSConfig{
-					Mode:            helpers.GetTLSModePointer(v1beta1.TLSModeTerminate),
+					Mode:            helpers.GetPointer(v1beta1.TLSModeTerminate),
 					CertificateRefs: []v1beta1.SecretObjectReference{invalidSecretRefKind},
 				},
 			},
@@ -149,7 +149,7 @@ func TestValidateHTTPSListener(t *testing.T) {
 			l: v1beta1.Listener{
 				Port: 443,
 				TLS: &v1beta1.GatewayTLSConfig{
-					Mode:            helpers.GetTLSModePointer(v1beta1.TLSModeTerminate),
+					Mode:            helpers.GetPointer(v1beta1.TLSModeTerminate),
 					CertificateRefs: []v1beta1.SecretObjectReference{validSecretRef, validSecretRef},
 				},
 			},

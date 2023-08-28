@@ -134,7 +134,7 @@ func TestBuildGraph(t *testing.T) {
 						Hostname: nil,
 						Port:     443,
 						TLS: &v1beta1.GatewayTLSConfig{
-							Mode: helpers.GetTLSModePointer(v1beta1.TLSModeTerminate),
+							Mode: helpers.GetPointer(v1beta1.TLSModeTerminate),
 							CertificateRefs: []v1beta1.SecretObjectReference{
 								{
 									Kind:      helpers.GetPointer[v1beta1.Kind]("Secret"),

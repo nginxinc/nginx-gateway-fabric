@@ -347,7 +347,7 @@ func TestBuildConfiguration(t *testing.T) {
 		Port:     443,
 		Protocol: v1beta1.HTTPSProtocolType,
 		TLS: &v1beta1.GatewayTLSConfig{
-			Mode: helpers.GetTLSModePointer(v1beta1.TLSModeTerminate),
+			Mode: helpers.GetPointer(v1beta1.TLSModeTerminate),
 			CertificateRefs: []v1beta1.SecretObjectReference{
 				{
 					Kind:      (*v1beta1.Kind)(helpers.GetStringPointer("Secret")),
@@ -364,7 +364,7 @@ func TestBuildConfiguration(t *testing.T) {
 		Port:     8443,
 		Protocol: v1beta1.HTTPSProtocolType,
 		TLS: &v1beta1.GatewayTLSConfig{
-			Mode: helpers.GetTLSModePointer(v1beta1.TLSModeTerminate),
+			Mode: helpers.GetPointer(v1beta1.TLSModeTerminate),
 			CertificateRefs: []v1beta1.SecretObjectReference{
 				{
 					Kind:      (*v1beta1.Kind)(helpers.GetStringPointer("Secret")),
@@ -383,7 +383,7 @@ func TestBuildConfiguration(t *testing.T) {
 		Port:     443,
 		Protocol: v1beta1.HTTPSProtocolType,
 		TLS: &v1beta1.GatewayTLSConfig{
-			Mode: helpers.GetTLSModePointer(v1beta1.TLSModeTerminate),
+			Mode: helpers.GetPointer(v1beta1.TLSModeTerminate),
 			CertificateRefs: []v1beta1.SecretObjectReference{
 				{
 					Kind:      (*v1beta1.Kind)(helpers.GetStringPointer("Secret")),
