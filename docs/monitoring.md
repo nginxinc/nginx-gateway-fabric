@@ -4,9 +4,10 @@ The NGINX Kubernetes Gateway exposes a number of metrics in the [Prometheus](htt
 include NGINX and the controller-runtime metrics. These are delivered using a metrics server orchestrated by the
 controller-runtime package. Metrics are enabled by default, and are served via http on port `9113`.
 
-> **Note:** By default metrics are served via http. Please note that if serving metrics via https is enabled, this
+> **Note**
+> By default metrics are served via http. Please note that if serving metrics via https is enabled, this
 > endpoint will be secured with a self-signed certificate. Since the metrics server is using a self-signed certificate,
-> the Prometheus pod scrape configuration will also require the `insecure_skip_verify` flag set. See
+> the Prometheus Pod scrape configuration will also require the `insecure_skip_verify` flag set. See
 > [the Prometheus documentation](https://prometheus.io/docs/prometheus/latest/configuration/configuration/#tls_config).
 
 ## Changing the default Metrics configuration

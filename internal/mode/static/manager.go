@@ -231,10 +231,14 @@ func StartManager(cfg config.Config) error {
 		return fmt.Errorf("cannot register event loop: %w", err)
 	}
 
+	// Ensure NGINX is running before registering metrics & starting the manager.
+	if err := ngxruntime.EnsureNginxRunning(ctx); err != nil {
+		return fmt.Errorf("NGINX is not running: %w", err)
+	}
+
 	if cfg.MetricsConfig.Enabled {
-		err = configureNginxMetrics(ctx, cfg.GatewayClassName)
-		if err != nil {
-			return fmt.Errorf("cannot register nginx metrics: %w", err)
+		if err := configureNginxMetrics(cfg.GatewayClassName); err != nil {
+			return err
 		}
 	}
 
@@ -290,9 +294,9 @@ func setInitialConfig(
 	return updateControlPlane(&config, logger, eventRecorder, configName, logLevelSetter)
 }
 
-func configureNginxMetrics(ctx context.Context, gatewayClassName string) error {
+func configureNginxMetrics(gatewayClassName string) error {
 	constLabels := map[string]string{"class": gatewayClassName}
-	ngxCollector, err := nkgmetrics.NewNginxMetricsCollector(ctx, constLabels)
+	ngxCollector, err := nkgmetrics.NewNginxMetricsCollector(constLabels)
 	if err != nil {
 		return fmt.Errorf("cannot get NGINX metrics: %w", err)
 	}

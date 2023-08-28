@@ -70,6 +70,13 @@ func (m *ManagerImpl) Reload(ctx context.Context) error {
 	return nil
 }
 
+func EnsureNginxRunning(ctx context.Context) error {
+	if _, err := findMainProcess(ctx, os.Stat, os.ReadFile, pidFileTimeout); err != nil {
+		return fmt.Errorf("failed to find NGINX main process: %w", err)
+	}
+	return nil
+}
+
 func findMainProcess(
 	ctx context.Context,
 	checkFile checkFileFunc,
