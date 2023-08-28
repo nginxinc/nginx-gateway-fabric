@@ -4,9 +4,9 @@ metadata:
   name: coffee
 spec:
   parentRefs:
-  - name: gateway
+  - name: cafe
   hostnames:
-  - "cafe.example.com"
+  - cafe.example.com
   rules:
   - matches:
     - path:
@@ -38,9 +38,9 @@ metadata:
   name: tea
 spec:
   parentRefs:
-  - name: gateway
+  - name: cafe
   hostnames:
-  - "cafe.example.com"
+  - cafe.example.com
   rules:
   - matches:
     - path:
