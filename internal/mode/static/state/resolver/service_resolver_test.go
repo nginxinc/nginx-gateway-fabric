@@ -38,7 +38,7 @@ func createSlice(
 			{
 				Addresses: addresses,
 				Conditions: discoveryV1.EndpointConditions{
-					Ready: helpers.GetBoolPointer(true),
+					Ready: helpers.GetPointer(true),
 				},
 			},
 			{
@@ -48,8 +48,8 @@ func createSlice(
 					"1.0.0.3",
 				}, // these endpoints should be ignored because they are not ready
 				Conditions: discoveryV1.EndpointConditions{
-					Serving:     helpers.GetBoolPointer(true),
-					Terminating: helpers.GetBoolPointer(true),
+					Serving:     helpers.GetPointer(true),
+					Terminating: helpers.GetPointer(true),
 				},
 			},
 			{

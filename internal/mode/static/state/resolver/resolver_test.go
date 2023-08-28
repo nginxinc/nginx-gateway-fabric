@@ -20,12 +20,12 @@ var (
 
 	readyEndpoint1 = discoveryV1.Endpoint{
 		Addresses:  addresses,
-		Conditions: discoveryV1.EndpointConditions{Ready: helpers.GetBoolPointer(true)},
+		Conditions: discoveryV1.EndpointConditions{Ready: helpers.GetPointer(true)},
 	}
 
 	notReadyEndpoint = discoveryV1.Endpoint{
 		Addresses:  addresses,
-		Conditions: discoveryV1.EndpointConditions{Ready: helpers.GetBoolPointer(false)},
+		Conditions: discoveryV1.EndpointConditions{Ready: helpers.GetPointer(false)},
 	}
 
 	mixedValidityEndpointSlice = discoveryV1.EndpointSlice{
@@ -303,7 +303,7 @@ func TestEndpointReady(t *testing.T) {
 			msg: "endpoint ready",
 			endpoint: discoveryV1.Endpoint{
 				Conditions: discoveryV1.EndpointConditions{
-					Ready: helpers.GetBoolPointer(true),
+					Ready: helpers.GetPointer(true),
 				},
 			},
 			ready: true,
@@ -321,7 +321,7 @@ func TestEndpointReady(t *testing.T) {
 			msg: "endpoint not ready",
 			endpoint: discoveryV1.Endpoint{
 				Conditions: discoveryV1.EndpointConditions{
-					Ready: helpers.GetBoolPointer(false),
+					Ready: helpers.GetPointer(false),
 				},
 			},
 			ready: false,
@@ -482,7 +482,7 @@ func TestCalculateReadyEndpoints(t *testing.T) {
 				{
 					Addresses: []string{"1.0.0.1"},
 					Conditions: discoveryV1.EndpointConditions{
-						Ready: helpers.GetBoolPointer(true),
+						Ready: helpers.GetPointer(true),
 					},
 				},
 				{
@@ -498,7 +498,7 @@ func TestCalculateReadyEndpoints(t *testing.T) {
 				{
 					Addresses: []string{"2.0.0.1", "2.0.0.2", "2.0.0.3"},
 					Conditions: discoveryV1.EndpointConditions{
-						Ready: helpers.GetBoolPointer(true),
+						Ready: helpers.GetPointer(true),
 					},
 				},
 			},
