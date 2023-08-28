@@ -41,11 +41,13 @@ spec:
         imagePullPolicy: Always
         name: nginx-gateway
         securityContext:
+          allowPrivilegeEscalation: false
           capabilities:
             add:
             - KILL
             drop:
             - ALL
+          readOnlyRootFilesystem: true
           runAsUser: 102
           runAsGroup: 1001
         volumeMounts:
@@ -82,6 +84,7 @@ spec:
       shareProcessNamespace: true
       securityContext:
         fsGroup: 1001
+        runAsNonRoot: true
       volumes:
       - name: nginx-conf
         emptyDir: {}
