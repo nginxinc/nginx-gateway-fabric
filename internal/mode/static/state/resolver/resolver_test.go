@@ -34,7 +34,7 @@ var (
 		Ports: []discoveryV1.EndpointPort{
 			{
 				Name: &svcPortName,
-				Port: helpers.GetPointer(int32(80)),
+				Port: helpers.GetPointer[int32](80),
 			},
 		},
 	}
@@ -54,7 +54,7 @@ var (
 		Ports: []discoveryV1.EndpointPort{
 			{
 				Name: &svcPortName,
-				Port: helpers.GetPointer(int32(80)),
+				Port: helpers.GetPointer[int32](80),
 			},
 		},
 	}
@@ -65,7 +65,7 @@ var (
 		Ports: []discoveryV1.EndpointPort{
 			{
 				Name: &svcPortName,
-				Port: helpers.GetPointer(int32(80)),
+				Port: helpers.GetPointer[int32](80),
 			},
 		},
 	}
@@ -76,7 +76,7 @@ var (
 		Ports: []discoveryV1.EndpointPort{
 			{
 				Name: helpers.GetPointer("other-svc-port"),
-				Port: helpers.GetPointer(int32(8080)),
+				Port: helpers.GetPointer[int32](8080),
 			},
 		},
 	}
@@ -387,7 +387,7 @@ func TestFindPort(t *testing.T) {
 			ports: []discoveryV1.EndpointPort{
 				{
 					Name: nil,
-					Port: helpers.GetPointer(int32(8080)),
+					Port: helpers.GetPointer[int32](8080),
 				},
 			},
 			svcPort: v1.ServicePort{
@@ -402,15 +402,15 @@ func TestFindPort(t *testing.T) {
 			ports: []discoveryV1.EndpointPort{
 				{
 					Name: helpers.GetPointer("other-svc-port"),
-					Port: helpers.GetPointer(int32(8080)),
+					Port: helpers.GetPointer[int32](8080),
 				},
 				{
 					Name: helpers.GetPointer("other-svc-port2"),
-					Port: helpers.GetPointer(int32(8081)),
+					Port: helpers.GetPointer[int32](8081),
 				},
 				{
 					Name: helpers.GetPointer("other-svc-port3"),
-					Port: helpers.GetPointer(int32(8082)),
+					Port: helpers.GetPointer[int32](8082),
 				},
 			},
 			svcPort: v1.ServicePort{
@@ -425,15 +425,15 @@ func TestFindPort(t *testing.T) {
 			ports: []discoveryV1.EndpointPort{
 				{
 					Name: helpers.GetPointer("other-svc-port"),
-					Port: helpers.GetPointer(int32(8080)),
+					Port: helpers.GetPointer[int32](8080),
 				},
 				{
 					Name: helpers.GetPointer("other-svc-port2"),
-					Port: helpers.GetPointer(int32(8081)),
+					Port: helpers.GetPointer[int32](8081),
 				},
 				{
 					Name: &svcPortName, // match
-					Port: helpers.GetPointer(int32(8082)),
+					Port: helpers.GetPointer[int32](8082),
 				},
 			},
 			svcPort: v1.ServicePort{
@@ -449,7 +449,7 @@ func TestFindPort(t *testing.T) {
 				{
 					// If a service port is unnamed (empty string), then the endpoint port will also be empty string.
 					Name: helpers.GetPointer(""),
-					Port: helpers.GetPointer(int32(8080)),
+					Port: helpers.GetPointer[int32](8080),
 				},
 			},
 			svcPort: v1.ServicePort{

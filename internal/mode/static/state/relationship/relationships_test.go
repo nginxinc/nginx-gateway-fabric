@@ -20,7 +20,7 @@ func TestGetBackendServiceNamesFromRoute(t *testing.T) {
 						Kind:      (*v1beta1.Kind)(helpers.GetPointer("Service")),
 						Name:      svcName,
 						Namespace: (*v1beta1.Namespace)(helpers.GetPointer("test")),
-						Port:      (*v1beta1.PortNumber)(helpers.GetPointer(int32(80))),
+						Port:      (*v1beta1.PortNumber)(helpers.GetPointer[int32](80)),
 					},
 				},
 			},
@@ -94,7 +94,7 @@ func TestGetBackendServiceNamesFromRoute(t *testing.T) {
 											helpers.GetPointer("test"),
 										),
 										Port: (*v1beta1.PortNumber)(
-											helpers.GetPointer(int32(80)),
+											helpers.GetPointer[int32](80),
 										),
 									},
 								},
