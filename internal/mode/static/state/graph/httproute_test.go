@@ -540,7 +540,7 @@ func TestBindRouteToListeners(t *testing.T) {
 		return &Listener{
 			Source: v1beta1.Listener{
 				Name:     v1beta1.SectionName(name),
-				Hostname: (*v1beta1.Hostname)(helpers.GetStringPointer("foo.example.com")),
+				Hostname: (*v1beta1.Hostname)(helpers.GetPointer("foo.example.com")),
 			},
 			Valid:  true,
 			Routes: map[types.NamespacedName]*Route{},
