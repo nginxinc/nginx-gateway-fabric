@@ -41,11 +41,13 @@ spec:
         imagePullPolicy: Always
         name: nginx-gateway
         securityContext:
+          allowPrivilegeEscalation: false
           capabilities:
             add:
             - KILL
             drop:
             - ALL
+          readOnlyRootFilesystem: true
           runAsUser: 102
           runAsGroup: 1001
         volumeMounts:
@@ -69,6 +71,7 @@ spec:
             - NET_BIND_SERVICE
             drop:
             - ALL
+          readOnlyRootFilesystem: true
           runAsUser: 101
           runAsGroup: 1001
         volumeMounts:
@@ -78,14 +81,23 @@ spec:
           mountPath: /etc/nginx/secrets
         - name: nginx-run
           mountPath: /var/run/nginx
+        - name: nginx-cache
+          mountPath: /var/cache/nginx
+        - name: nginx-lib
+          mountPath: /var/lib/nginx
       serviceAccountName: nginx-gateway
       shareProcessNamespace: true
       securityContext:
         fsGroup: 1001
+        runAsNonRoot: true
       volumes:
       - name: nginx-conf
         emptyDir: {}
       - name: nginx-secrets
         emptyDir: {}
       - name: nginx-run
+        emptyDir: {}
+      - name: nginx-cache
+        emptyDir: {}
+      - name: nginx-lib
         emptyDir: {}
