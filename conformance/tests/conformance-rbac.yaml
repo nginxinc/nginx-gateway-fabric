@@ -27,7 +27,6 @@ rules:
   - deployments
   verbs:
   - create
-  - update
   - delete
   - get
   - list
