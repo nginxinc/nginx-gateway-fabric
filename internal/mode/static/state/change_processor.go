@@ -22,11 +22,6 @@ import (
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/state/validation"
 )
 
-const (
-	webhookValidationErrorLogMsg = "the resource failed webhook validation, however the Gateway API webhook " +
-		"failed to reject it with the error; make sure the webhook is installed and running correctly"
-)
-
 //go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . ChangeProcessor
 
 type extractGVKFunc func(obj client.Object) schema.GroupVersionKind
@@ -176,7 +171,7 @@ func NewChangeProcessorImpl(cfg ChangeProcessorConfig) *ChangeProcessorImpl {
 			}
 
 			if err != nil {
-				return fmt.Errorf(webhookValidationErrorLogMsg+"; validation error: %w", err)
+				return fmt.Errorf("validation error: %w", err)
 			}
 
 			return nil

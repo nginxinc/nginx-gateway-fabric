@@ -87,7 +87,7 @@ This will build the docker images `nginx-kubernetes-gateway:<your-user>` and `ng
 3. Install Gateway API Resources
 
    ```shell
-   kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v0.7.1/standard-install.yaml
+   kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v0.8.0/standard-install.yaml
    ```
 
 4. Install NKG using your custom image and expose NKG with a NodePort Service:
