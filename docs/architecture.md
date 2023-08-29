@@ -96,33 +96,37 @@ parentheses. To enhance readability, the suffix "process" has been omitted from 
 
 1. (HTTPS) *NKG* reads the *Kubernetes API* to get the latest versions of the resources in the cluster and writes to the
 API to update the handled resources' statuses and emit events.
-2. (File I/O)
+2. (HTTP) *Prometheus* fetches the `controller-runtime` and NGINX metrics via an HTTP endpoint that *NKG* exposes.
+   The default is :9113/metrics. Note: Prometheus is not required by NKG, the endpoint can be turned off.
+3. (File I/O)
    - Write: *NKG* generates NGINX *configuration* based on the cluster resources and writes them as `.conf` files to the
      mounted `nginx-conf` volume, located at `/etc/nginx/conf.d`. It also writes *TLS certificates* and *keys*
      from [TLS Secrets][secrets] referenced in the accepted Gateway resource to the `nginx-secrets` volume at the
      path `/etc/nginx/secrets`.
    - Read: *NKG* reads the PID file `nginx.pid` from the `nginx-run` volume, located at `/var/run/nginx`. *NKG*
      extracts the PID of the nginx process from this file in order to send reload signals to *NGINX master*.
-3. (File I/O) *NKG* writes logs to its *stdout* and *stderr*, which are collected by the container runtime.
-4. (Signal) To reload NGINX, *NKG* sends the [reload signal][reload] to the **NGINX master**.
-5. (File I/O)
+4. (File I/O) *NKG* writes logs to its *stdout* and *stderr*, which are collected by the container runtime.
+5. (HTTP) *NKG* fetches the NGINX metrics via the unix:/var/lib/nginx/nginx-status.sock UNIX socket and converts it to
+   *Prometheus* format used in #2.
+6. (Signal) To reload NGINX, *NKG* sends the [reload signal][reload] to the **NGINX master**.
+7. (File I/O)
    - Write: The *NGINX master* writes its PID to the `nginx.pid` file stored in the `nginx-run` volume.
    - Read: The *NGINX master* reads *configuration files*  and the *TLS cert and keys* referenced in the configuration when
      it starts or during a reload. These files, certificates, and keys are stored in the `nginx-conf` and `nginx-secrets`
      volumes that are mounted to both the `nginx-gateway` and `nginx` containers.
-6. (File I/O)
+8. (File I/O)
    - Write: The *NGINX master* writes to the auxiliary Unix sockets folder, which is located in the `/var/lib/nginx`
      directory.
    - Read: The *NGINX master* reads the `nginx.conf` file from the `/etc/nginx` directory. This [file][conf-file] contains
      the global and http configuration settings for NGINX. In addition, *NGINX master*
      reads the NJS modules referenced in the configuration when it starts or during a reload. NJS modules are stored in
      the `/usr/lib/nginx/modules` directory.
-7. (File I/O) The *NGINX master* sends logs to its *stdout* and *stderr*, which are collected by the container runtime.
-8. (File I/O) An *NGINX worker* writes logs to its *stdout* and *stderr*, which are collected by the container runtime.
-9. (Signal) The *NGINX master* controls the [lifecycle of *NGINX workers*][lifecycle] it creates workers with the new
+9. (File I/O) The *NGINX master* sends logs to its *stdout* and *stderr*, which are collected by the container runtime.
+10. (File I/O) An *NGINX worker* writes logs to its *stdout* and *stderr*, which are collected by the container runtime.
+11. (Signal) The *NGINX master* controls the [lifecycle of *NGINX workers*][lifecycle] it creates workers with the new
 configuration and shutdowns workers with the old configuration.
-10. (HTTP,HTTPS) A *client* sends traffic to and receives traffic from any of the *NGINX workers* on ports 80 and 443.
-11. (HTTP,HTTPS) An *NGINX worker* sends traffic to and receives traffic from the *backends*.
+12. (HTTP,HTTPS) A *client* sends traffic to and receives traffic from any of the *NGINX workers* on ports 80 and 443.
+13. (HTTP,HTTPS) An *NGINX worker* sends traffic to and receives traffic from the *backends*.
 
 [controller]: https://kubernetes.io/docs/concepts/architecture/controller/
 
