@@ -22,6 +22,13 @@ import (
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/state/validation"
 )
 
+const (
+	validationErrorLogMsg = "the resource failed validation: Gateway API CEL validation (Kubernetes 1.25+) " +
+		"by the Kubernetes API server and/or the Gateway API webhook validation (if installed) failed to reject " +
+		"the resource with the error; make sure Gateway API CRDs include CEL validation and/or (if installed) the " +
+		"webhook is running correctly."
+)
+
 //go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . ChangeProcessor
 
 type extractGVKFunc func(obj client.Object) schema.GroupVersionKind
@@ -160,10 +167,11 @@ func NewChangeProcessorImpl(cfg ChangeProcessorConfig) *ChangeProcessorImpl {
 
 			var err error
 			switch o := obj.(type) {
-			// We don't validate GatewayClass or ReferenceGrant, because as of 0.7.1, the webhook doesn't validate them.
+			// We don't validate GatewayClass or ReferenceGrant, because as of the latest version,
+			// the webhook doesn't validate them.
 			// It only validates a GatewayClass update that requires the previous version of the resource,
 			// which NKG cannot reliably provide - for example, after NKG restarts).
-			// https://github.com/kubernetes-sigs/gateway-api/blob/v0.7.1/apis/v1beta1/validation/gatewayclass.go#L28
+			// https://github.com/kubernetes-sigs/gateway-api/blob/v0.8.0/apis/v1beta1/validation/gatewayclass.go#L28
 			case *v1beta1.Gateway:
 				err = gwapivalidation.ValidateGateway(o).ToAggregate()
 			case *v1beta1.HTTPRoute:
@@ -171,7 +179,7 @@ func NewChangeProcessorImpl(cfg ChangeProcessorConfig) *ChangeProcessorImpl {
 			}
 
 			if err != nil {
-				return fmt.Errorf("validation error: %w", err)
+				return fmt.Errorf(validationErrorLogMsg+": %w", err)
 			}
 
 			return nil
