@@ -5,6 +5,8 @@ on:
     branches:
       - main
       - release-*
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+*"
   pull_request:
     branches:
       - main
@@ -27,6 +29,8 @@ jobs:
   conformance-tests:
     name: Gateway Conformance Tests
     runs-on: ubuntu-22.04
+    permissions:
+      contents: write # needed for uploading release artifacts
     steps:
       - name: Checkout Repository
         uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3.6.0
@@ -139,5 +143,20 @@ jobs:
         working-directory: ./conformance
 
       - name: Run conformance tests
-        run: make run-conformance-tests TAG=${{ github.sha }}
+        run: make run-conformance-tests TAG=${{ github.sha }} VERSION=${{ github.ref_name }}
+        working-directory: ./conformance
+
+      - name: Wait for release to exist
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: lewagon/wait-on-check-action@e106e5c43e8ca1edea6383a39a01c5ca495fd812 # v1.3.1
+        with:
+          ref: ${{ github.ref }}
+          check-name: 'Build Binary'
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload profile to release
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload ${{ github.ref_name }} conformance-profile.yaml
         working-directory: ./conformance
