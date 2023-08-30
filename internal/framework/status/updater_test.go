@@ -2,6 +2,7 @@ package status_test
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -61,7 +62,8 @@ var _ = Describe("Updater", func() {
 		}
 
 		var (
-			updater       status.Updater
+			updater       *status.UpdaterImpl
+			fakeElector   *statusfakes.FakeLeaderElector
 			gc            *v1beta1.GatewayClass
 			gw, ignoredGw *v1beta1.Gateway
 			hr            *v1beta1.HTTPRoute
@@ -283,6 +285,8 @@ var _ = Describe("Updater", func() {
 					APIVersion: "gateway.nginx.org/v1alpha1",
 				},
 			}
+
+			fakeElector = &statusfakes.FakeLeaderElector{}
 		})
 
 		It("should create resources in the API server", func() {
@@ -450,6 +454,114 @@ var _ = Describe("Updater", func() {
 
 				// if the status was updated, we would see the route rejected (Accepted = false)
 				Expect(helpers.Diff(expectedHR, latestHR)).To(BeEmpty())
+			})
+
+			It("should register a leader elector", func() {
+				updater.SetLeaderElector(fakeElector)
+			})
+		})
+		When("the Pod is not the current leader", func() {
+			It("should not update any statuses", func() {
+				updater.Update(context.Background(), createStatuses(generations{
+					gateways: 3,
+				}))
+			})
+
+			It("should not have the updated status of Gateway in the API server", func() {
+				latestGw := &v1beta1.Gateway{}
+				// testing that the generation has not changed from 2 to 3
+				expectedGw := createExpectedGwWithGeneration(2)
+
+				err := client.Get(
+					context.Background(),
+					types.NamespacedName{Namespace: "test", Name: "gateway"},
+					latestGw,
+				)
+				Expect(err).Should(Not(HaveOccurred()))
+
+				expectedGw.ResourceVersion = latestGw.ResourceVersion
+
+				Expect(helpers.Diff(expectedGw, latestGw)).To(BeEmpty())
+			})
+		})
+		When("the Pod starts leading", func() {
+			It("writes the last statuses", func() {
+				fakeElector.IsLeaderReturns(true)
+				updater.WriteLastStatuses(context.Background())
+			})
+
+			It("should have the updated status of Gateway in the API server", func() {
+				latestGw := &v1beta1.Gateway{}
+				expectedGw := createExpectedGwWithGeneration(3)
+
+				err := client.Get(
+					context.Background(),
+					types.NamespacedName{Namespace: "test", Name: "gateway"},
+					latestGw,
+				)
+				Expect(err).Should(Not(HaveOccurred()))
+
+				expectedGw.ResourceVersion = latestGw.ResourceVersion
+
+				Expect(helpers.Diff(expectedGw, latestGw)).To(BeEmpty())
+			})
+		})
+
+		When("the Pod is the current leader", func() {
+			It("should update statuses", func() {
+				updater.Update(context.Background(), createStatuses(generations{
+					gateways: 4,
+				}))
+			})
+
+			It("should have the updated status of Gateway in the API server", func() {
+				latestGw := &v1beta1.Gateway{}
+				expectedGw := createExpectedGwWithGeneration(4)
+
+				err := client.Get(
+					context.Background(),
+					types.NamespacedName{Namespace: "test", Name: "gateway"},
+					latestGw,
+				)
+				Expect(err).Should(Not(HaveOccurred()))
+
+				expectedGw.ResourceVersion = latestGw.ResourceVersion
+
+				Expect(helpers.Diff(expectedGw, latestGw)).To(BeEmpty())
+			})
+			It("updates and writes last statuses synchronously", func() {
+				wg := &sync.WaitGroup{}
+				ctx := context.Background()
+
+				// spin up 10 goroutines that Update and 10 that WriteLastStatuses
+				// and make sure that 20 updates were made to the Gateway resource.
+				for i := 0; i < 10; i++ {
+					wg.Add(2)
+					go func() {
+						updater.Update(ctx, createStatuses(generations{gateways: 5}))
+						wg.Done()
+					}()
+
+					go func() {
+						updater.WriteLastStatuses(ctx)
+						wg.Done()
+					}()
+				}
+
+				wg.Wait()
+
+				latestGw := &v1beta1.Gateway{}
+
+				err := client.Get(
+					context.Background(),
+					types.NamespacedName{Namespace: "test", Name: "gateway"},
+					latestGw,
+				)
+				Expect(err).Should(Not(HaveOccurred()))
+
+				// Before this test there were 5 updates to the Gateway resource.
+				// So now the resource version should equal 25.
+				Expect(latestGw.ResourceVersion).To(Equal("25"))
 			})
 		})
 	})

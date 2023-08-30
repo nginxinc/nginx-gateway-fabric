@@ -66,3 +66,14 @@ Create the name of the ServiceAccount to use
 {{- define "nginx-gateway.serviceAccountName" -}}
 {{- default (include "nginx-gateway.fullname" .) .Values.serviceAccount.name }}
 {{- end }}
+
+{{/*
+Expand leader election lock name.
+*/}}
+{{- define "nginx-gateway.leaderElectionName" -}}
+{{- if .Values.nginxGateway.leaderElection.lockName -}}
+{{ .Values.nginxGateway.leaderElection.lockName }}
+{{- else -}}
+{{- printf "%s-%s" (include "nginx-gateway.fullname" .) "leader-election" -}}
+{{- end -}}
+{{- end -}}

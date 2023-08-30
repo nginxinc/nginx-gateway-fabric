@@ -15,6 +15,11 @@ type FakeUpdater struct {
 		arg1 context.Context
 		arg2 status.Statuses
 	}
+	WriteLastStatusesStub        func(context.Context)
+	writeLastStatusesMutex       sync.RWMutex
+	writeLastStatusesArgsForCall []struct {
+		arg1 context.Context
+	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
@@ -52,11 +57,45 @@ func (fake *FakeUpdater) UpdateArgsForCall(i int) (context.Context, status.Statu
 	return argsForCall.arg1, argsForCall.arg2
 }
 
+func (fake *FakeUpdater) WriteLastStatuses(arg1 context.Context) {
+	fake.writeLastStatusesMutex.Lock()
+	fake.writeLastStatusesArgsForCall = append(fake.writeLastStatusesArgsForCall, struct {
+		arg1 context.Context
+	}{arg1})
+	stub := fake.WriteLastStatusesStub
+	fake.recordInvocation("WriteLastStatuses", []interface{}{arg1})
+	fake.writeLastStatusesMutex.Unlock()
+	if stub != nil {
+		fake.WriteLastStatusesStub(arg1)
+	}
+}
+
+func (fake *FakeUpdater) WriteLastStatusesCallCount() int {
+	fake.writeLastStatusesMutex.RLock()
+	defer fake.writeLastStatusesMutex.RUnlock()
+	return len(fake.writeLastStatusesArgsForCall)
+}
+
+func (fake *FakeUpdater) WriteLastStatusesCalls(stub func(context.Context)) {
+	fake.writeLastStatusesMutex.Lock()
+	defer fake.writeLastStatusesMutex.Unlock()
+	fake.WriteLastStatusesStub = stub
+}
+
+func (fake *FakeUpdater) WriteLastStatusesArgsForCall(i int) context.Context {
+	fake.writeLastStatusesMutex.RLock()
+	defer fake.writeLastStatusesMutex.RUnlock()
+	argsForCall := fake.writeLastStatusesArgsForCall[i]
+	return argsForCall.arg1
+}
+
 func (fake *FakeUpdater) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
 	fake.updateMutex.RLock()
 	defer fake.updateMutex.RUnlock()
+	fake.writeLastStatusesMutex.RLock()
+	defer fake.writeLastStatusesMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

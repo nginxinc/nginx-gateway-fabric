@@ -136,12 +136,15 @@ func StartManager(cfg config.Config) error {
 	})
 
 	eventHandler := newEventHandlerImpl(eventHandlerConfig{
-		processor:           processor,
-		serviceResolver:     resolver.NewServiceResolverImpl(mgr.GetClient()),
-		generator:           ngxcfg.NewGeneratorImpl(),
-		logger:              cfg.Logger.WithName("eventHandler"),
-		logLevelSetter:      logLevelSetter,
-		nginxFileMgr:        file.NewManagerImpl(cfg.Logger.WithName("nginxFileManager"), file.NewStdLibOSFileManager()),
+		processor:       processor,
+		serviceResolver: resolver.NewServiceResolverImpl(mgr.GetClient()),
+		generator:       ngxcfg.NewGeneratorImpl(),
+		logger:          cfg.Logger.WithName("eventHandler"),
+		logLevelSetter:  logLevelSetter,
+		nginxFileMgr: file.NewManagerImpl(
+			cfg.Logger.WithName("nginxFileManager"),
+			file.NewStdLibOSFileManager(),
+		),
 		nginxRuntimeMgr:     ngxruntime.NewManagerImpl(),
 		statusUpdater:       statusUpdater,
 		eventRecorder:       recorder,
@@ -160,6 +163,31 @@ func StartManager(cfg config.Config) error {
 
 	if err = mgr.Add(eventLoop); err != nil {
 		return fmt.Errorf("cannot register event loop: %w", err)
+	}
+
+	if cfg.LeaderElection.Enabled {
+		leaderElector, err := newLeaderElector(leaderElectorConfig{
+			kubeConfig: clusterCfg,
+			recorder:   recorder,
+			onStartedLeading: func(ctx context.Context) {
+				cfg.Logger.Info("Started leading")
+				statusUpdater.WriteLastStatuses(ctx)
+			},
+			onStoppedLeading: func() {
+				cfg.Logger.Info("Stopped leading")
+			},
+			lockNs:   cfg.Namespace,
+			lockName: cfg.LeaderElection.LockName,
+			identity: cfg.LeaderElection.Identity,
+		})
+		if err != nil {
+			return err
+		}
+
+		statusUpdater.SetLeaderElector(leaderElector)
+		go func() {
+			leaderElector.Run(ctx)
+		}()
 	}
 
 	// Ensure NGINX is running before registering metrics & starting the manager.

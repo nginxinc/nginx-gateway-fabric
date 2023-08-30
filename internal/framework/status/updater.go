@@ -2,6 +2,7 @@ package status
 
 import (
 	"context"
+	"sync"
 
 	"github.com/go-logr/logr"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -13,11 +14,19 @@ import (
 )
 
 //go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . Updater
+//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . LeaderElector
+
+// LeaderElector reports whether the current Pod is the leader.
+type LeaderElector interface {
+	IsLeader() bool
+}
 
 // Updater updates statuses of the Gateway API resources.
 type Updater interface {
 	// Update updates the statuses of the resources.
 	Update(context.Context, Statuses)
+	// WriteLastStatuses writes the last statuses of the resources.
+	WriteLastStatuses(ctx context.Context)
 }
 
 // UpdaterConfig holds configuration parameters for Updater.
@@ -38,7 +47,7 @@ type UpdaterConfig struct {
 	UpdateGatewayClassStatus bool
 }
 
-// updaterImpl updates statuses of the Gateway API resources.
+// UpdaterImpl updates statuses of the Gateway API resources.
 //
 // It has the following limitations:
 //
@@ -52,7 +61,7 @@ type UpdaterConfig struct {
 // (a) Sometimes the Gateway will need to update statuses of all resources it handles, which could be ~1000. Making 1000
 // status API calls sequentially will take time.
 // (b) k8s API can become slow or even timeout. This will increase every update status API call.
-// Making updaterImpl asynchronous will prevent it from adding variable delays to the event loop.
+// Making UpdaterImpl asynchronous will prevent it from adding variable delays to the event loop.
 //
 // (4) It doesn't retry on failures. This means there is a chance that some resources will not have up-to-do statuses.
 // Statuses are important part of the Gateway API, so we need to ensure that the Gateway always keep the resources
@@ -68,26 +77,66 @@ type UpdaterConfig struct {
 // FIXME(pleshakov): Make updater production ready
 // https://github.com/nginxinc/nginx-kubernetes-gateway/issues/691
 
-// To support new resources, updaterImpl needs to be modified. Consider making updaterImpl extendable, so that it
+// UpdaterImpl needs to be modified to support new resources. Consider making UpdaterImpl extendable, so that it
 // goes along the Open-closed principle.
-type updaterImpl struct {
-	cfg UpdaterConfig
+type UpdaterImpl struct {
+	leaderElector LeaderElector
+	lastStatuses  *Statuses
+	cfg           UpdaterConfig
+
+	statusLock sync.Mutex
 }
 
 // NewUpdater creates a new Updater.
-func NewUpdater(cfg UpdaterConfig) Updater {
-	return &updaterImpl{
+func NewUpdater(cfg UpdaterConfig) *UpdaterImpl {
+	return &UpdaterImpl{
 		cfg: cfg,
 	}
 }
 
-func (upd *updaterImpl) Update(ctx context.Context, statuses Statuses) {
+// SetLeaderElector sets the LeaderElector of the updater.
+func (upd *UpdaterImpl) SetLeaderElector(elector LeaderElector) {
+	upd.leaderElector = elector
+}
+
+// WriteLastStatuses writes the last saved statuses for the Gateway API resources.
+// Used in leader election when the Pod starts leading. It's possible that during a leader change,
+// some statuses are missed. This will ensure that the latest statuses are written when a new leader takes over.
+func (upd *UpdaterImpl) WriteLastStatuses(ctx context.Context) {
+	defer upd.statusLock.Unlock()
+	upd.statusLock.Lock()
+
+	if upd.lastStatuses == nil {
+		upd.cfg.Logger.Info("No statuses to write")
+		return
+	}
+
+	upd.cfg.Logger.Info("Writing last statuses")
+	upd.update(ctx, *upd.lastStatuses)
+}
+
+func (upd *UpdaterImpl) Update(ctx context.Context, statuses Statuses) {
 	// FIXME(pleshakov) Merge the new Conditions in the status with the existing Conditions
 	// https://github.com/nginxinc/nginx-kubernetes-gateway/issues/558
 
+	defer upd.statusLock.Unlock()
+	upd.statusLock.Lock()
+
+	upd.lastStatuses = &statuses
+
+	if !upd.shouldWriteStatus() {
+		upd.cfg.Logger.Info("Skipping updating statuses because not leader")
+		return
+	}
+
+	upd.cfg.Logger.Info("Updating statuses")
+	upd.update(ctx, statuses)
+}
+
+func (upd *UpdaterImpl) update(ctx context.Context, statuses Statuses) {
 	if upd.cfg.UpdateGatewayClassStatus {
 		for nsname, gcs := range statuses.GatewayClassStatuses {
-			upd.update(ctx, nsname, &v1beta1.GatewayClass{}, func(object client.Object) {
+			upd.writeStatuses(ctx, nsname, &v1beta1.GatewayClass{}, func(object client.Object) {
 				gc := object.(*v1beta1.GatewayClass)
 				gc.Status = prepareGatewayClassStatus(gcs, upd.cfg.Clock.Now())
 			},
@@ -96,7 +145,7 @@ func (upd *updaterImpl) Update(ctx context.Context, statuses Statuses) {
 	}
 
 	for nsname, gs := range statuses.GatewayStatuses {
-		upd.update(ctx, nsname, &v1beta1.Gateway{}, func(object client.Object) {
+		upd.writeStatuses(ctx, nsname, &v1beta1.Gateway{}, func(object client.Object) {
 			gw := object.(*v1beta1.Gateway)
 			gw.Status = prepareGatewayStatus(gs, upd.cfg.PodIP, upd.cfg.Clock.Now())
 		})
@@ -109,7 +158,7 @@ func (upd *updaterImpl) Update(ctx context.Context, statuses Statuses) {
 		default:
 		}
 
-		upd.update(ctx, nsname, &v1beta1.HTTPRoute{}, func(object client.Object) {
+		upd.writeStatuses(ctx, nsname, &v1beta1.HTTPRoute{}, func(object client.Object) {
 			hr := object.(*v1beta1.HTTPRoute)
 			// statuses.GatewayStatus is never nil when len(statuses.HTTPRouteStatuses) > 0
 			hr.Status = prepareHTTPRouteStatus(
@@ -122,7 +171,7 @@ func (upd *updaterImpl) Update(ctx context.Context, statuses Statuses) {
 
 	ngStatus := statuses.NginxGatewayStatus
 	if ngStatus != nil {
-		upd.update(ctx, ngStatus.NsName, &nkgAPI.NginxGateway{}, func(object client.Object) {
+		upd.writeStatuses(ctx, ngStatus.NsName, &nkgAPI.NginxGateway{}, func(object client.Object) {
 			ng := object.(*nkgAPI.NginxGateway)
 			ng.Status = nkgAPI.NginxGatewayStatus{
 				Conditions: convertConditions(
@@ -135,7 +184,11 @@ func (upd *updaterImpl) Update(ctx context.Context, statuses Statuses) {
 	}
 }
 
-func (upd *updaterImpl) update(
+func (upd *UpdaterImpl) shouldWriteStatus() bool {
+	return upd.leaderElector == nil || upd.leaderElector.IsLeader()
+}
+
+func (upd *UpdaterImpl) writeStatuses(
 	ctx context.Context,
 	nsname types.NamespacedName,
 	obj client.Object,
