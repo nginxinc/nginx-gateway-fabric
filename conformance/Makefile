@@ -76,8 +76,11 @@ run-conformance-tests: ## Run conformance tests
 	kubectl run -i conformance \
 		--image=$(PREFIX):$(TAG) --image-pull-policy=Never \
 		--overrides='{ "spec": { "serviceAccountName": "conformance" }  }' \
-		--restart=Never -- go test -v . -tags conformance -args --gateway-class=$(GATEWAY_CLASS) --debug \
-						        --supported-features=$(SUPPORTED_FEATURES)
+		--restart=Never -- sh -c "go test -v . -tags conformance,experimental -args --gateway-class=$(GATEWAY_CLASS) \
+						        --supported-features=$(SUPPORTED_FEATURES) --version=$(VERSION) \
+								--report-output=output.txt; cat output.txt" | tee output.txt
+	sed -e '1,/CONFORMANCE PROFILE/d' output.txt > conformance-profile.yaml
+	rm output.txt
 
 .PHONY: cleanup-conformance-tests
 cleanup-conformance-tests: ## Clean up conformance tests fixtures

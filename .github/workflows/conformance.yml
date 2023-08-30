@@ -5,6 +5,8 @@ on:
     branches:
       - main
       - release-*
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+*"
   pull_request:
     branches:
       - main
@@ -21,7 +23,7 @@ concurrency:
   cancel-in-progress: true
 
 permissions:
-  contents: read
+  contents: write # needed for uploading release artifacts
 
 jobs:
   conformance-tests:
@@ -139,5 +141,20 @@ jobs:
         working-directory: ./conformance
 
       - name: Run conformance tests
-        run: make run-conformance-tests TAG=${{ github.sha }}
+        run: make run-conformance-tests TAG=${{ github.sha }} VERSION=${{ github.ref_name }}
+        working-directory: ./conformance
+
+      - name: Wait for release to exist
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: lewagon/wait-on-check-action@e106e5c43e8ca1edea6383a39a01c5ca495fd812 # v1.3.1
+        with:
+          ref: ${{ github.ref }}
+          check-name: 'Build Binary'
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload profile to release
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload ${{ github.ref_name }} conformance-profile.yaml
         working-directory: ./conformance
