@@ -49,22 +49,22 @@ func TestValidateHTTPSListener(t *testing.T) {
 	secretNs := "secret-ns"
 
 	validSecretRef := v1beta1.SecretObjectReference{
-		Kind:      (*v1beta1.Kind)(helpers.GetStringPointer("Secret")),
+		Kind:      (*v1beta1.Kind)(helpers.GetPointer("Secret")),
 		Name:      "secret",
-		Namespace: (*v1beta1.Namespace)(helpers.GetStringPointer(secretNs)),
+		Namespace: (*v1beta1.Namespace)(helpers.GetPointer(secretNs)),
 	}
 
 	invalidSecretRefGroup := v1beta1.SecretObjectReference{
-		Group:     (*v1beta1.Group)(helpers.GetStringPointer("some-group")),
-		Kind:      (*v1beta1.Kind)(helpers.GetStringPointer("Secret")),
+		Group:     (*v1beta1.Group)(helpers.GetPointer("some-group")),
+		Kind:      (*v1beta1.Kind)(helpers.GetPointer("Secret")),
 		Name:      "secret",
-		Namespace: (*v1beta1.Namespace)(helpers.GetStringPointer(secretNs)),
+		Namespace: (*v1beta1.Namespace)(helpers.GetPointer(secretNs)),
 	}
 
 	invalidSecretRefKind := v1beta1.SecretObjectReference{
-		Kind:      (*v1beta1.Kind)(helpers.GetStringPointer("ConfigMap")),
+		Kind:      (*v1beta1.Kind)(helpers.GetPointer("ConfigMap")),
 		Name:      "secret",
-		Namespace: (*v1beta1.Namespace)(helpers.GetStringPointer(secretNs)),
+		Namespace: (*v1beta1.Namespace)(helpers.GetPointer(secretNs)),
 	}
 
 	tests := []struct {
@@ -76,7 +76,7 @@ func TestValidateHTTPSListener(t *testing.T) {
 			l: v1beta1.Listener{
 				Port: 443,
 				TLS: &v1beta1.GatewayTLSConfig{
-					Mode:            helpers.GetTLSModePointer(v1beta1.TLSModeTerminate),
+					Mode:            helpers.GetPointer(v1beta1.TLSModeTerminate),
 					CertificateRefs: []v1beta1.SecretObjectReference{validSecretRef},
 				},
 			},
@@ -87,7 +87,7 @@ func TestValidateHTTPSListener(t *testing.T) {
 			l: v1beta1.Listener{
 				Port: 0,
 				TLS: &v1beta1.GatewayTLSConfig{
-					Mode:            helpers.GetTLSModePointer(v1beta1.TLSModeTerminate),
+					Mode:            helpers.GetPointer(v1beta1.TLSModeTerminate),
 					CertificateRefs: []v1beta1.SecretObjectReference{validSecretRef},
 				},
 			},
@@ -98,7 +98,7 @@ func TestValidateHTTPSListener(t *testing.T) {
 			l: v1beta1.Listener{
 				Port: 443,
 				TLS: &v1beta1.GatewayTLSConfig{
-					Mode:            helpers.GetTLSModePointer(v1beta1.TLSModeTerminate),
+					Mode:            helpers.GetPointer(v1beta1.TLSModeTerminate),
 					CertificateRefs: []v1beta1.SecretObjectReference{validSecretRef},
 					Options:         map[v1beta1.AnnotationKey]v1beta1.AnnotationValue{"key": "val"},
 				},
@@ -110,7 +110,7 @@ func TestValidateHTTPSListener(t *testing.T) {
 			l: v1beta1.Listener{
 				Port: 443,
 				TLS: &v1beta1.GatewayTLSConfig{
-					Mode:            helpers.GetTLSModePointer(v1beta1.TLSModePassthrough),
+					Mode:            helpers.GetPointer(v1beta1.TLSModePassthrough),
 					CertificateRefs: []v1beta1.SecretObjectReference{validSecretRef},
 				},
 			},
@@ -123,7 +123,7 @@ func TestValidateHTTPSListener(t *testing.T) {
 			l: v1beta1.Listener{
 				Port: 443,
 				TLS: &v1beta1.GatewayTLSConfig{
-					Mode:            helpers.GetTLSModePointer(v1beta1.TLSModeTerminate),
+					Mode:            helpers.GetPointer(v1beta1.TLSModeTerminate),
 					CertificateRefs: []v1beta1.SecretObjectReference{invalidSecretRefGroup},
 				},
 			},
@@ -136,7 +136,7 @@ func TestValidateHTTPSListener(t *testing.T) {
 			l: v1beta1.Listener{
 				Port: 443,
 				TLS: &v1beta1.GatewayTLSConfig{
-					Mode:            helpers.GetTLSModePointer(v1beta1.TLSModeTerminate),
+					Mode:            helpers.GetPointer(v1beta1.TLSModeTerminate),
 					CertificateRefs: []v1beta1.SecretObjectReference{invalidSecretRefKind},
 				},
 			},
@@ -149,7 +149,7 @@ func TestValidateHTTPSListener(t *testing.T) {
 			l: v1beta1.Listener{
 				Port: 443,
 				TLS: &v1beta1.GatewayTLSConfig{
-					Mode:            helpers.GetTLSModePointer(v1beta1.TLSModeTerminate),
+					Mode:            helpers.GetPointer(v1beta1.TLSModeTerminate),
 					CertificateRefs: []v1beta1.SecretObjectReference{validSecretRef, validSecretRef},
 				},
 			},
@@ -184,22 +184,22 @@ func TestValidateListenerHostname(t *testing.T) {
 			name:      "nil hostname",
 		},
 		{
-			hostname:  (*v1beta1.Hostname)(helpers.GetStringPointer("")),
+			hostname:  (*v1beta1.Hostname)(helpers.GetPointer("")),
 			expectErr: false,
 			name:      "empty hostname",
 		},
 		{
-			hostname:  (*v1beta1.Hostname)(helpers.GetStringPointer("foo.example.com")),
+			hostname:  (*v1beta1.Hostname)(helpers.GetPointer("foo.example.com")),
 			expectErr: false,
 			name:      "valid hostname",
 		},
 		{
-			hostname:  (*v1beta1.Hostname)(helpers.GetStringPointer("*.example.com")),
+			hostname:  (*v1beta1.Hostname)(helpers.GetPointer("*.example.com")),
 			expectErr: false,
 			name:      "wildcard hostname",
 		},
 		{
-			hostname:  (*v1beta1.Hostname)(helpers.GetStringPointer("example$com")),
+			hostname:  (*v1beta1.Hostname)(helpers.GetPointer("example$com")),
 			expectErr: true,
 			name:      "invalid hostname",
 		},

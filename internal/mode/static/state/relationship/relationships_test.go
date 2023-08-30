@@ -17,10 +17,10 @@ func TestGetBackendServiceNamesFromRoute(t *testing.T) {
 			{
 				BackendRef: v1beta1.BackendRef{
 					BackendObjectReference: v1beta1.BackendObjectReference{
-						Kind:      (*v1beta1.Kind)(helpers.GetStringPointer("Service")),
+						Kind:      (*v1beta1.Kind)(helpers.GetPointer("Service")),
 						Name:      svcName,
-						Namespace: (*v1beta1.Namespace)(helpers.GetStringPointer("test")),
-						Port:      (*v1beta1.PortNumber)(helpers.GetInt32Pointer(80)),
+						Namespace: (*v1beta1.Namespace)(helpers.GetPointer("test")),
+						Port:      (*v1beta1.PortNumber)(helpers.GetPointer[int32](80)),
 					},
 				},
 			},
@@ -48,7 +48,7 @@ func TestGetBackendServiceNamesFromRoute(t *testing.T) {
 					BackendRefs: getModifiedRefs(
 						"invalid-kind",
 						func(refs []v1beta1.HTTPBackendRef) []v1beta1.HTTPBackendRef {
-							refs[0].Kind = (*v1beta1.Kind)(helpers.GetStringPointer("Invalid"))
+							refs[0].Kind = (*v1beta1.Kind)(helpers.GetPointer("Invalid"))
 							return refs
 						},
 					),
@@ -67,7 +67,7 @@ func TestGetBackendServiceNamesFromRoute(t *testing.T) {
 						"diff-namespace",
 						func(refs []v1beta1.HTTPBackendRef) []v1beta1.HTTPBackendRef {
 							refs[0].Namespace = (*v1beta1.Namespace)(
-								helpers.GetStringPointer("not-test"),
+								helpers.GetPointer("not-test"),
 							)
 							return refs
 						},
@@ -87,14 +87,14 @@ func TestGetBackendServiceNamesFromRoute(t *testing.T) {
 								BackendRef: v1beta1.BackendRef{
 									BackendObjectReference: v1beta1.BackendObjectReference{
 										Kind: (*v1beta1.Kind)(
-											helpers.GetStringPointer("Service"),
+											helpers.GetPointer("Service"),
 										),
 										Name: "multiple-refs2",
 										Namespace: (*v1beta1.Namespace)(
-											helpers.GetStringPointer("test"),
+											helpers.GetPointer("test"),
 										),
 										Port: (*v1beta1.PortNumber)(
-											helpers.GetInt32Pointer(80),
+											helpers.GetPointer[int32](80),
 										),
 									},
 								},
