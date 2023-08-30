@@ -23,12 +23,14 @@ concurrency:
   cancel-in-progress: true
 
 permissions:
-  contents: write # needed for uploading release artifacts
+  contents: read
 
 jobs:
   conformance-tests:
     name: Gateway Conformance Tests
     runs-on: ubuntu-22.04
+    permissions:
+      contents: write # needed for uploading release artifacts
     steps:
       - name: Checkout Repository
         uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3.6.0
