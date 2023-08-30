@@ -16,6 +16,7 @@ import (
 	ctlr "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	k8spredicate "sigs.k8s.io/controller-runtime/pkg/predicate"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
@@ -59,7 +60,9 @@ func StartManager(cfg config.Config) error {
 		Logger: logger,
 		// We disable the metrics server because we reserve all ports (1-65535) for the data plane.
 		// Once we add support for Prometheus, we can make this port configurable by the user.
-		MetricsBindAddress: "0",
+		Metrics: metricsserver.Options{
+			BindAddress: "0",
+		},
 	}
 
 	eventCh := make(chan interface{})

@@ -13,7 +13,7 @@ import (
 
 const (
 	// nolint:lll
-	// Regex from: https://github.com/kubernetes-sigs/gateway-api/blob/v0.7.1/apis/v1beta1/shared_types.go#L495
+	// Regex from: https://github.com/kubernetes-sigs/gateway-api/blob/v0.8.0/apis/v1beta1/shared_types.go#L551
 	controllerNameRegex = `^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*\/[A-Za-z0-9\/\-._~%!$&'()*+,;=:]+$` //nolint:lll
 )
 

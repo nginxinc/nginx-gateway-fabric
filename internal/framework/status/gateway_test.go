@@ -13,7 +13,7 @@ import (
 
 func TestPrepareGatewayStatus(t *testing.T) {
 	ipAddrType := v1beta1.IPAddressType
-	podIP := v1beta1.GatewayAddress{
+	podIP := v1beta1.GatewayStatusAddress{
 		Type:  &ipAddrType,
 		Value: "1.2.3.4",
 	}
@@ -49,7 +49,7 @@ func TestPrepareGatewayStatus(t *testing.T) {
 				Conditions:     CreateExpectedAPIConditions("ListenerTest", 1, transitionTime),
 			},
 		},
-		Addresses: []v1beta1.GatewayAddress{podIP},
+		Addresses: []v1beta1.GatewayStatusAddress{podIP},
 	}
 
 	g := NewGomegaWithT(t)

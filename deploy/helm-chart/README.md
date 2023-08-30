@@ -19,7 +19,7 @@ correct version as supported by the NGINX Kubernetes Gateway -
 To install the Gateway resources from [the Gateway API repo](https://github.com/kubernetes-sigs/gateway-api), run:
 
 ```shell
-kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v0.7.1/standard-install.yaml
+kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v0.8.0/standard-install.yaml
 ```
 
 ## Installing the Chart
@@ -60,7 +60,7 @@ Kubernetes Gateway - [see the Technical Specifications](../../README.md#technica
 To upgrade the Gateway resources from [the Gateway API repo](https://github.com/kubernetes-sigs/gateway-api), run:
 
 ```shell
-kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v0.7.1/standard-install.yaml
+kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v0.8.0/standard-install.yaml
 ```
 
 ### Upgrading the CRDs
@@ -116,7 +116,7 @@ running in the cluster!**
 To delete the Gateway resources using [the Gateway API repo](https://github.com/kubernetes-sigs/gateway-api), run:
 
 ```shell
-kubectl delete -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v0.7.1/standard-install.yaml
+kubectl delete -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v0.8.0/standard-install.yaml
 ```
 
 ## Configuration

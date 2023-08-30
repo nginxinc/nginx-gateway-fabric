@@ -43,18 +43,6 @@ type FakeManager struct {
 	addHealthzCheckReturnsOnCall map[int]struct {
 		result1 error
 	}
-	AddMetricsExtraHandlerStub        func(string, http.Handler) error
-	addMetricsExtraHandlerMutex       sync.RWMutex
-	addMetricsExtraHandlerArgsForCall []struct {
-		arg1 string
-		arg2 http.Handler
-	}
-	addMetricsExtraHandlerReturns struct {
-		result1 error
-	}
-	addMetricsExtraHandlerReturnsOnCall map[int]struct {
-		result1 error
-	}
 	AddReadyzCheckStub        func(string, healthz.Checker) error
 	addReadyzCheckMutex       sync.RWMutex
 	addReadyzCheckArgsForCall []struct {
@@ -332,68 +320,6 @@ func (fake *FakeManager) AddHealthzCheckReturnsOnCall(i int, result1 error) {
 		})
 	}
 	fake.addHealthzCheckReturnsOnCall[i] = struct {
-		result1 error
-	}{result1}
-}
-
-func (fake *FakeManager) AddMetricsExtraHandler(arg1 string, arg2 http.Handler) error {
-	fake.addMetricsExtraHandlerMutex.Lock()
-	ret, specificReturn := fake.addMetricsExtraHandlerReturnsOnCall[len(fake.addMetricsExtraHandlerArgsForCall)]
-	fake.addMetricsExtraHandlerArgsForCall = append(fake.addMetricsExtraHandlerArgsForCall, struct {
-		arg1 string
-		arg2 http.Handler
-	}{arg1, arg2})
-	stub := fake.AddMetricsExtraHandlerStub
-	fakeReturns := fake.addMetricsExtraHandlerReturns
-	fake.recordInvocation("AddMetricsExtraHandler", []interface{}{arg1, arg2})
-	fake.addMetricsExtraHandlerMutex.Unlock()
-	if stub != nil {
-		return stub(arg1, arg2)
-	}
-	if specificReturn {
-		return ret.result1
-	}
-	return fakeReturns.result1
-}
-
-func (fake *FakeManager) AddMetricsExtraHandlerCallCount() int {
-	fake.addMetricsExtraHandlerMutex.RLock()
-	defer fake.addMetricsExtraHandlerMutex.RUnlock()
-	return len(fake.addMetricsExtraHandlerArgsForCall)
-}
-
-func (fake *FakeManager) AddMetricsExtraHandlerCalls(stub func(string, http.Handler) error) {
-	fake.addMetricsExtraHandlerMutex.Lock()
-	defer fake.addMetricsExtraHandlerMutex.Unlock()
-	fake.AddMetricsExtraHandlerStub = stub
-}
-
-func (fake *FakeManager) AddMetricsExtraHandlerArgsForCall(i int) (string, http.Handler) {
-	fake.addMetricsExtraHandlerMutex.RLock()
-	defer fake.addMetricsExtraHandlerMutex.RUnlock()
-	argsForCall := fake.addMetricsExtraHandlerArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2
-}
-
-func (fake *FakeManager) AddMetricsExtraHandlerReturns(result1 error) {
-	fake.addMetricsExtraHandlerMutex.Lock()
-	defer fake.addMetricsExtraHandlerMutex.Unlock()
-	fake.AddMetricsExtraHandlerStub = nil
-	fake.addMetricsExtraHandlerReturns = struct {
-		result1 error
-	}{result1}
-}
-
-func (fake *FakeManager) AddMetricsExtraHandlerReturnsOnCall(i int, result1 error) {
-	fake.addMetricsExtraHandlerMutex.Lock()
-	defer fake.addMetricsExtraHandlerMutex.Unlock()
-	fake.AddMetricsExtraHandlerStub = nil
-	if fake.addMetricsExtraHandlerReturnsOnCall == nil {
-		fake.addMetricsExtraHandlerReturnsOnCall = make(map[int]struct {
-			result1 error
-		})
-	}
-	fake.addMetricsExtraHandlerReturnsOnCall[i] = struct {
 		result1 error
 	}{result1}
 }
@@ -1225,8 +1151,6 @@ func (fake *FakeManager) Invocations() map[string][][]interface{} {
 	defer fake.addMutex.RUnlock()
 	fake.addHealthzCheckMutex.RLock()
 	defer fake.addHealthzCheckMutex.RUnlock()
-	fake.addMetricsExtraHandlerMutex.RLock()
-	defer fake.addMetricsExtraHandlerMutex.RUnlock()
 	fake.addReadyzCheckMutex.RLock()
 	defer fake.addReadyzCheckMutex.RUnlock()
 	fake.electedMutex.RLock()

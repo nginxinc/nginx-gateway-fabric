@@ -67,7 +67,7 @@ var _ = Describe("Updater", func() {
 			hr            *v1beta1.HTTPRoute
 			ng            *nkgAPI.NginxGateway
 			ipAddrType    = v1beta1.IPAddressType
-			addr          = v1beta1.GatewayAddress{
+			addr          = v1beta1.GatewayStatusAddress{
 				Type:  &ipAddrType,
 				Value: "1.2.3.4",
 			}
@@ -155,7 +155,7 @@ var _ = Describe("Updater", func() {
 								SupportedKinds: []v1beta1.RouteGroupKind{{Kind: "HTTPRoute"}},
 							},
 						},
-						Addresses: []v1beta1.GatewayAddress{addr},
+						Addresses: []v1beta1.GatewayStatusAddress{addr},
 					},
 				}
 			}
@@ -189,7 +189,7 @@ var _ = Describe("Updater", func() {
 								Message:            staticConds.GatewayMessageGatewayConflict,
 							},
 						},
-						Addresses: []v1beta1.GatewayAddress{addr},
+						Addresses: []v1beta1.GatewayStatusAddress{addr},
 					},
 				}
 			}

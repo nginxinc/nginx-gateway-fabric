@@ -27,7 +27,7 @@ page.
 1. Install the Gateway API resources from the standard channel (the CRDs and the validating webhook):
 
    ```shell
-   kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v0.7.1/standard-install.yaml
+   kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v0.8.0/standard-install.yaml
    ```
 
 1. Deploy the NGINX Kubernetes Gateway CRDs:
@@ -135,7 +135,7 @@ Create a Service with type `LoadBalancer` using the appropriate manifest for you
    running in the cluster!**
 
    ```shell
-   kubectl delete -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v0.7.1/standard-install.yaml
+   kubectl delete -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v0.8.0/standard-install.yaml
    ```
 
 ### Uninstall NGINX Kubernetes Gateway using Helm
