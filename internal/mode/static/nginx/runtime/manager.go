@@ -70,6 +70,7 @@ func (m *ManagerImpl) Reload(ctx context.Context) error {
 	return nil
 }
 
+// EnsureNginxRunning ensures NGINX is running by locating the main process.
 func EnsureNginxRunning(ctx context.Context) error {
 	if _, err := findMainProcess(ctx, os.Stat, os.ReadFile, pidFileTimeout); err != nil {
 		return fmt.Errorf("failed to find NGINX main process: %w", err)

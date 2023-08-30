@@ -114,7 +114,7 @@ func TestValidateHTTPSListener(t *testing.T) {
 			l: v1beta1.Listener{
 				Port: 9113,
 				TLS: &v1beta1.GatewayTLSConfig{
-					Mode:            helpers.GetTLSModePointer(v1beta1.TLSModeTerminate),
+					Mode:            helpers.GetPointer(v1beta1.TLSModeTerminate),
 					CertificateRefs: []v1beta1.SecretObjectReference{validSecretRef},
 				},
 			},

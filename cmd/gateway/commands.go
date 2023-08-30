@@ -39,67 +39,19 @@ var (
 	}
 
 	// Backing values for static subcommand cli flags.
-	updateGCStatus    bool
-	disableMetrics    bool
-	metricsListenPort int
-	metricsSecure     bool
+	updateGCStatus bool
+	disableMetrics bool
+	metricsSecure  bool
 
+	metricsListenPort = intValidatingValue{
+		validator: validatePort,
+		value:     9113,
+	}
 	gateway    = namespacedNameValue{}
 	configName = stringValidatingValue{
 		validator: validateResourceName,
 	}
 )
-
-// stringValidatingValue is a string flag value with custom validation logic.
-// it implements the pflag.Value interface.
-type stringValidatingValue struct {
-	validator func(v string) error
-	value     string
-}
-
-func (v *stringValidatingValue) String() string {
-	return v.value
-}
-
-func (v *stringValidatingValue) Set(param string) error {
-	if err := v.validator(param); err != nil {
-		return err
-	}
-	v.value = param
-	return nil
-}
-
-func (v *stringValidatingValue) Type() string {
-	return "string"
-}
-
-// namespacedNameValue is a string flag value that represents a namespaced name.
-// it implements the pflag.Value interface.
-type namespacedNameValue struct {
-	value types.NamespacedName
-}
-
-func (v *namespacedNameValue) String() string {
-	if (v.value == types.NamespacedName{}) {
-		// if we don't do that, the default value in the help message will be printed as "/"
-		return ""
-	}
-	return v.value.String()
-}
-
-func (v *namespacedNameValue) Set(param string) error {
-	nsname, err := parseNamespacedResourceName(param)
-	if err != nil {
-		return err
-	}
-
-	v.value = nsname
-	return nil
-}
-
-func (v *namespacedNameValue) Type() string {
-	return "string"
-}
 
 func createRootCommand() *cobra.Command {
 	rootCmd := &cobra.Command{
@@ -158,11 +110,8 @@ func createStaticModeCommand() *cobra.Command {
 
 			metricsConfig := config.MetricsConfig{}
 			if !disableMetrics {
-				if err := validatePort(metricsListenPort); err != nil {
-					return fmt.Errorf("error validating metrics listen port: %w", err)
-				}
 				metricsConfig.Enabled = true
-				metricsConfig.Port = metricsListenPort
+				metricsConfig.Port = metricsListenPort.value
 				metricsConfig.Secure = metricsSecure
 			}
 
@@ -219,10 +168,9 @@ func createStaticModeCommand() *cobra.Command {
 		"Disable exposing metrics in the Prometheus format.",
 	)
 
-	cmd.Flags().IntVar(
+	cmd.Flags().Var(
 		&metricsListenPort,
 		"metrics-port",
-		9113,
 		"Set the port where the metrics are exposed. Format: [1023 - 65535]",
 	)
 

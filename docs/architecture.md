@@ -96,7 +96,7 @@ parentheses. To enhance readability, the suffix "process" has been omitted from 
 
 1. (HTTPS) *NKG* reads the *Kubernetes API* to get the latest versions of the resources in the cluster and writes to the
 API to update the handled resources' statuses and emit events.
-2. (HTTP) *Prometheus* fetches the `controller-runtime` and NGINX metrics via an HTTP endpoint that *NKG* exposes.
+2. (HTTP, HTTPS) *Prometheus* fetches the `controller-runtime` and NGINX metrics via an HTTP endpoint that *NKG* exposes.
    The default is :9113/metrics. Note: Prometheus is not required by NKG, the endpoint can be turned off.
 3. (File I/O)
    - Write: *NKG* generates NGINX *configuration* based on the cluster resources and writes them as `.conf` files to the
