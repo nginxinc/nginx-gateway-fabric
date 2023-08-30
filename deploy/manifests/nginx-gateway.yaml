@@ -122,6 +122,9 @@ spec:
       labels:
         app.kubernetes.io/name: nginx-gateway
         app.kubernetes.io/instance: nginx-gateway
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9113"
     spec:
       containers:
       - args:
@@ -129,6 +132,7 @@ spec:
         - --gateway-ctlr-name=gateway.nginx.org/nginx-gateway-controller
         - --gatewayclass=nginx
         - --config=nginx-gateway-config
+        - --metrics-port=9113
         env:
         - name: POD_IP
           valueFrom:
@@ -141,6 +145,9 @@ spec:
         image: ghcr.io/nginxinc/nginx-kubernetes-gateway:edge
         imagePullPolicy: Always
         name: nginx-gateway
+        ports:
+        - name: metrics
+          containerPort: 9113
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:

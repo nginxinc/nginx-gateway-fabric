@@ -9,7 +9,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+
+	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/config"
 )
 
 func TestPrepareFirstEventBatchPreparerArgs(t *testing.T) {
@@ -66,6 +69,54 @@ func TestPrepareFirstEventBatchPreparerArgs(t *testing.T) {
 
 			g.Expect(objects).To(ConsistOf(test.expectedObjects))
 			g.Expect(objectLists).To(ConsistOf(test.expectedObjectLists))
+		})
+	}
+}
+
+func TestGetMetricsOptions(t *testing.T) {
+	tests := []struct {
+		name            string
+		expectedOptions metricsserver.Options
+		metricsConfig   config.MetricsConfig
+	}{
+		{
+			name:            "Metrics disabled",
+			metricsConfig:   config.MetricsConfig{Enabled: false},
+			expectedOptions: metricsserver.Options{BindAddress: "0"},
+		},
+		{
+			name: "Metrics enabled, not secure",
+			metricsConfig: config.MetricsConfig{
+				Port:    9113,
+				Enabled: true,
+				Secure:  false,
+			},
+			expectedOptions: metricsserver.Options{
+				SecureServing: false,
+				BindAddress:   ":9113",
+			},
+		},
+		{
+			name: "Metrics enabled, secure",
+			metricsConfig: config.MetricsConfig{
+				Port:    9113,
+				Enabled: true,
+				Secure:  true,
+			},
+			expectedOptions: metricsserver.Options{
+				SecureServing: true,
+				BindAddress:   ":9113",
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			g := NewGomegaWithT(t)
+
+			metricsServerOptions := getMetricsOptions(test.metricsConfig)
+
+			g.Expect(metricsServerOptions).To(Equal(test.expectedOptions))
 		})
 	}
 }

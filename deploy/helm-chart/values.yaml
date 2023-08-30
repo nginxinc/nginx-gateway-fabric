@@ -54,3 +54,12 @@ service:
     targetPort: 443
     protocol: TCP
     name: https
+
+metrics:
+  ## Disable exposing metrics in the Prometheus format.
+  disable: false
+  ## Set the port where the Prometheus metrics are exposed. Format: [1024 - 65535]
+  port: 9113
+  ## Enable serving metrics via https. By default metrics are served via http.
+  ## Please note that this endpoint will be secured with a self-signed certificate.
+  secure: false

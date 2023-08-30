@@ -99,3 +99,11 @@ func validateIP(ip string) error {
 
 	return nil
 }
+
+// validatePort makes sure a given port is inside the valid port range for its usage
+func validatePort(port int) error {
+	if port < 1024 || port > 65535 {
+		return fmt.Errorf("port outside of valid port range [1024 - 65535]: %v", port)
+	}
+	return nil
+}

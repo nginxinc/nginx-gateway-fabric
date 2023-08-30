@@ -95,6 +95,7 @@ func buildGateway(
 	secretResolver *secretResolver,
 	gc *GatewayClass,
 	refGrantResolver *referenceGrantResolver,
+	protectedPorts ProtectedPorts,
 ) *Gateway {
 	if gw == nil {
 		return nil
@@ -112,7 +113,7 @@ func buildGateway(
 
 	return &Gateway{
 		Source:    gw,
-		Listeners: buildListeners(gw, secretResolver, refGrantResolver),
+		Listeners: buildListeners(gw, secretResolver, refGrantResolver, protectedPorts),
 		Valid:     true,
 	}
 }

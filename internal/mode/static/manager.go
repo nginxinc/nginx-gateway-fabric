@@ -16,6 +16,7 @@ import (
 	ctlr "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/metrics"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	k8spredicate "sigs.k8s.io/controller-runtime/pkg/predicate"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
@@ -28,6 +29,7 @@ import (
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/events"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/status"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/config"
+	nkgmetrics "github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/metrics"
 	ngxcfg "github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/nginx/config"
 	ngxvalidation "github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/nginx/config/validation"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/nginx/file"
@@ -56,13 +58,9 @@ func StartManager(cfg config.Config) error {
 	logger := cfg.Logger
 
 	options := manager.Options{
-		Scheme: scheme,
-		Logger: logger,
-		// We disable the metrics server because we reserve all ports (1-65535) for the data plane.
-		// Once we add support for Prometheus, we can make this port configurable by the user.
-		Metrics: metricsserver.Options{
-			BindAddress: "0",
-		},
+		Scheme:  scheme,
+		Logger:  logger,
+		Metrics: getMetricsOptions(cfg.MetricsConfig),
 	}
 
 	eventCh := make(chan interface{})
@@ -164,6 +162,11 @@ func StartManager(cfg config.Config) error {
 		}
 	}
 
+	// protectedPorts is the map of ports that may not be configured by a listener, and the name of what it is used for
+	protectedPorts := map[int32]string{
+		int32(cfg.MetricsConfig.Port): "MetricsPort",
+	}
+
 	processor := state.NewChangeProcessorImpl(state.ChangeProcessorConfig{
 		GatewayCtlrName:      cfg.GatewayCtlrName,
 		GatewayClassName:     cfg.GatewayClassName,
@@ -172,8 +175,9 @@ func StartManager(cfg config.Config) error {
 		Validators: validation.Validators{
 			HTTPFieldsValidator: ngxvalidation.HTTPValidator{},
 		},
-		EventRecorder: recorder,
-		Scheme:        scheme,
+		EventRecorder:  recorder,
+		Scheme:         scheme,
+		ProtectedPorts: protectedPorts,
 	})
 
 	configGenerator := ngxcfg.NewGeneratorImpl()
@@ -227,6 +231,17 @@ func StartManager(cfg config.Config) error {
 		return fmt.Errorf("cannot register event loop: %w", err)
 	}
 
+	// Ensure NGINX is running before registering metrics & starting the manager.
+	if err := ngxruntime.EnsureNginxRunning(ctx); err != nil {
+		return fmt.Errorf("NGINX is not running: %w", err)
+	}
+
+	if cfg.MetricsConfig.Enabled {
+		if err := configureNginxMetrics(cfg.GatewayClassName); err != nil {
+			return err
+		}
+	}
+
 	logger.Info("Starting manager")
 	return mgr.Start(ctx)
 }
@@ -277,4 +292,26 @@ func setInitialConfig(
 	// status is not updated until the status updater's cache is started and the
 	// resource is processed by the controller
 	return updateControlPlane(&config, logger, eventRecorder, configName, logLevelSetter)
+}
+
+func configureNginxMetrics(gatewayClassName string) error {
+	constLabels := map[string]string{"class": gatewayClassName}
+	ngxCollector, err := nkgmetrics.NewNginxMetricsCollector(constLabels)
+	if err != nil {
+		return fmt.Errorf("cannot get NGINX metrics: %w", err)
+	}
+	return metrics.Registry.Register(ngxCollector)
+}
+
+func getMetricsOptions(cfg config.MetricsConfig) metricsserver.Options {
+	metricsOptions := metricsserver.Options{BindAddress: "0"}
+
+	if cfg.Enabled {
+		if cfg.Secure {
+			metricsOptions.SecureServing = true
+		}
+		metricsOptions.BindAddress = fmt.Sprintf(":%v", cfg.Port)
+	}
+
+	return metricsOptions
 }

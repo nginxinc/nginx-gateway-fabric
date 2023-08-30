@@ -14,6 +14,8 @@ import (
 )
 
 func TestValidateHTTPListener(t *testing.T) {
+	protectedPorts := ProtectedPorts{9113: "MetricsPort"}
+
 	tests := []struct {
 		l        v1beta1.Listener
 		name     string
@@ -33,13 +35,25 @@ func TestValidateHTTPListener(t *testing.T) {
 			expected: staticConds.NewListenerUnsupportedValue(`port: Invalid value: 0: port must be between 1-65535`),
 			name:     "invalid port",
 		},
+		{
+			l: v1beta1.Listener{
+				Port: 9113,
+			},
+			expected: staticConds.NewListenerUnsupportedValue(
+				`port: Invalid value: 9113: port is already in use as MetricsPort`,
+			),
+			name: "invalid protected port",
+		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewGomegaWithT(t)
 
-			result := validateHTTPListener(test.l)
+			v := createHTTPListenerValidator(protectedPorts)
+
+			result := v(test.l)
+
 			g.Expect(result).To(Equal(test.expected))
 		})
 	}
@@ -67,6 +81,8 @@ func TestValidateHTTPSListener(t *testing.T) {
 		Namespace: (*v1beta1.Namespace)(helpers.GetPointer(secretNs)),
 	}
 
+	protectedPorts := ProtectedPorts{9113: "MetricsPort"}
+
 	tests := []struct {
 		l        v1beta1.Listener
 		name     string
@@ -93,6 +109,19 @@ func TestValidateHTTPSListener(t *testing.T) {
 			},
 			expected: staticConds.NewListenerUnsupportedValue(`port: Invalid value: 0: port must be between 1-65535`),
 			name:     "invalid port",
+		},
+		{
+			l: v1beta1.Listener{
+				Port: 9113,
+				TLS: &v1beta1.GatewayTLSConfig{
+					Mode:            helpers.GetPointer(v1beta1.TLSModeTerminate),
+					CertificateRefs: []v1beta1.SecretObjectReference{validSecretRef},
+				},
+			},
+			expected: staticConds.NewListenerUnsupportedValue(
+				`port: Invalid value: 9113: port is already in use as MetricsPort`,
+			),
+			name: "invalid protected port",
 		},
 		{
 			l: v1beta1.Listener{
@@ -164,7 +193,7 @@ func TestValidateHTTPSListener(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewGomegaWithT(t)
 
-			v := createHTTPSListenerValidator()
+			v := createHTTPSListenerValidator(protectedPorts)
 
 			result := v(test.l)
 			g.Expect(result).To(Equal(test.expected))
@@ -388,19 +417,20 @@ func TestValidateListenerLabelSelector(t *testing.T) {
 
 func TestValidateListenerPort(t *testing.T) {
 	validPorts := []v1beta1.PortNumber{1, 80, 443, 1000, 50000, 65535}
-	invalidPorts := []v1beta1.PortNumber{-1, 0, 65536, 80000}
+	invalidPorts := []v1beta1.PortNumber{-1, 0, 65536, 80000, 9113}
+	protectedPorts := ProtectedPorts{9113: "MetricsPort"}
 
 	for _, p := range validPorts {
 		t.Run(fmt.Sprintf("valid port %d", p), func(t *testing.T) {
 			g := NewWithT(t)
-			g.Expect(validateListenerPort(p)).To(Succeed())
+			g.Expect(validateListenerPort(p, protectedPorts)).To(Succeed())
 		})
 	}
 
 	for _, p := range invalidPorts {
 		t.Run(fmt.Sprintf("invalid port %d", p), func(t *testing.T) {
 			g := NewWithT(t)
-			g.Expect(validateListenerPort(p)).ToNot(Succeed())
+			g.Expect(validateListenerPort(p, protectedPorts)).ToNot(Succeed())
 		})
 	}
 }

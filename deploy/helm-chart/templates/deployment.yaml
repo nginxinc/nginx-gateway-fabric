@@ -16,6 +16,14 @@ spec:
     metadata:
       labels:
       {{- include "nginx-gateway.selectorLabels" . | nindent 8 }}
+      {{- if not .Values.metrics.disable }}
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "{{ .Values.metrics.port }}"
+        {{- if .Values.metrics.secure }}
+        prometheus.io/scheme: "https"
+        {{- end }}
+      {{- end }}
     spec:
       containers:
       - args:
@@ -23,6 +31,14 @@ spec:
         - --gateway-ctlr-name={{ .Values.nginxGateway.gatewayControllerName }}
         - --gatewayclass={{ .Values.nginxGateway.gatewayClassName }}
         - --config={{ include "nginx-gateway.config-name" . }}
+        {{- if not .Values.metrics.disable }}
+        - --metrics-port={{ .Values.metrics.port }}
+        {{- if .Values.metrics.secure  }}
+        - --metrics-secure-serving
+        {{- end }}
+        {{- else }}
+        - --metrics-disable
+        {{- end }}
         env:
         - name: POD_IP
           valueFrom:
@@ -35,6 +51,11 @@ spec:
         image: {{ .Values.nginxGateway.image.repository }}:{{ .Values.nginxGateway.image.tag | default .Chart.AppVersion }}
         imagePullPolicy: {{ .Values.nginxGateway.image.pullPolicy }}
         name: nginx-gateway
+        {{- if not .Values.metrics.disable }}
+        ports:
+        - name: metrics
+          containerPort: {{ .Values.metrics.port }}
+        {{- end }}
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:

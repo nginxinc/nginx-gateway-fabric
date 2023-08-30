@@ -118,6 +118,9 @@ func TestStaticModeCmdFlagValidation(t *testing.T) {
 				"--gateway=nginx-gateway/nginx",
 				"--config=nginx-gateway-config",
 				"--update-gatewayclass-status=true",
+				"--metrics-port=9114",
+				"--metrics-disable",
+				"--metrics-secure-serving",
 			},
 			wantErr: false,
 		},
@@ -174,6 +177,42 @@ func TestStaticModeCmdFlagValidation(t *testing.T) {
 			},
 			wantErr:           true,
 			expectedErrPrefix: `invalid argument "invalid" for "--update-gatewayclass-status" flag: strconv.ParseBool`,
+		},
+		{
+			name: "metrics-port is invalid type",
+			args: []string{
+				"--metrics-port=invalid", // not an int
+			},
+			wantErr: true,
+			expectedErrPrefix: `invalid argument "invalid" for "--metrics-port" flag: failed to parse int value:` +
+				` strconv.ParseInt: parsing "invalid": invalid syntax`,
+		},
+		{
+			name: "metrics-port is outside of range",
+			args: []string{
+				"--metrics-port=999", // outside of range
+			},
+			wantErr: true,
+			expectedErrPrefix: `invalid argument "999" for "--metrics-port" flag:` +
+				` port outside of valid port range [1024 - 65535]: 999`,
+		},
+		{
+			name: "metrics-disable is not a bool",
+			args: []string{
+				"--metrics-disable=999", // not a bool
+			},
+			wantErr: true,
+			expectedErrPrefix: `invalid argument "999" for "--metrics-disable" flag: strconv.ParseBool:` +
+				` parsing "999": invalid syntax`,
+		},
+		{
+			name: "metrics-secure-serving is not a bool",
+			args: []string{
+				"--metrics-secure-serving=999", // not a bool
+			},
+			wantErr: true,
+			expectedErrPrefix: `invalid argument "999" for "--metrics-secure-serving" flag: strconv.ParseBool:` +
+				` parsing "999": invalid syntax`,
 		},
 	}
 

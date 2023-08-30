@@ -55,12 +55,14 @@ type ChangeProcessorConfig struct {
 	RelationshipCapturer relationship.Capturer
 	// Validators validate resources according to data-plane specific rules.
 	Validators validation.Validators
-	// Logger is the logger for this Change Processor.
-	Logger logr.Logger
 	// EventRecorder records events for Kubernetes resources.
 	EventRecorder record.EventRecorder
 	// Scheme is the Kubernetes scheme.
 	Scheme *runtime.Scheme
+	// ProtectedPorts are the ports that may not be configured by a listener with a descriptive name of the ports.
+	ProtectedPorts graph.ProtectedPorts
+	// Logger is the logger for this Change Processor.
+	Logger logr.Logger
 	// GatewayCtlrName is the name of the Gateway controller.
 	GatewayCtlrName string
 	// GatewayClassName is the name of the GatewayClass resource.
@@ -230,6 +232,7 @@ func (c *ChangeProcessorImpl) Process() (bool, *graph.Graph) {
 		c.cfg.GatewayCtlrName,
 		c.cfg.GatewayClassName,
 		c.cfg.Validators,
+		c.cfg.ProtectedPorts,
 	)
 
 	return true, c.latestGraph

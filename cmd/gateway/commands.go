@@ -24,6 +24,7 @@ const (
 	gatewayCtrlNameFlag     = "gateway-ctlr-name"
 	gatewayCtrlNameUsageFmt = `The name of the Gateway controller. ` +
 		`The controller name must be of the form: DOMAIN/PATH. The controller's domain is '%s'`
+	gatewayFlag = "gateway"
 )
 
 var (
@@ -36,58 +37,21 @@ var (
 	gatewayClassName = stringValidatingValue{
 		validator: validateResourceName,
 	}
+
+	// Backing values for static subcommand cli flags.
+	updateGCStatus bool
+	disableMetrics bool
+	metricsSecure  bool
+
+	metricsListenPort = intValidatingValue{
+		validator: validatePort,
+		value:     9113,
+	}
+	gateway    = namespacedNameValue{}
+	configName = stringValidatingValue{
+		validator: validateResourceName,
+	}
 )
-
-// stringValidatingValue is a string flag value with custom validation logic.
-// it implements the pflag.Value interface.
-type stringValidatingValue struct {
-	validator func(v string) error
-	value     string
-}
-
-func (v *stringValidatingValue) String() string {
-	return v.value
-}
-
-func (v *stringValidatingValue) Set(param string) error {
-	if err := v.validator(param); err != nil {
-		return err
-	}
-	v.value = param
-	return nil
-}
-
-func (v *stringValidatingValue) Type() string {
-	return "string"
-}
-
-// namespacedNameValue is a string flag value that represents a namespaced name.
-// it implements the pflag.Value interface.
-type namespacedNameValue struct {
-	value types.NamespacedName
-}
-
-func (v *namespacedNameValue) String() string {
-	if (v.value == types.NamespacedName{}) {
-		// if we don't do that, the default value in the help message will be printed as "/"
-		return ""
-	}
-	return v.value.String()
-}
-
-func (v *namespacedNameValue) Set(param string) error {
-	nsname, err := parseNamespacedResourceName(param)
-	if err != nil {
-		return err
-	}
-
-	v.value = nsname
-	return nil
-}
-
-func (v *namespacedNameValue) Type() string {
-	return "string"
-}
 
 func createRootCommand() *cobra.Command {
 	rootCmd := &cobra.Command{
@@ -115,15 +79,6 @@ func createRootCommand() *cobra.Command {
 }
 
 func createStaticModeCommand() *cobra.Command {
-	const gatewayFlag = "gateway"
-
-	// flag values
-	gateway := namespacedNameValue{}
-	var updateGCStatus bool
-	configName := stringValidatingValue{
-		validator: validateResourceName,
-	}
-
 	cmd := &cobra.Command{
 		Use:   "static-mode",
 		Short: "Configure NGINX in the scope of a single Gateway resource",
@@ -153,6 +108,13 @@ func createStaticModeCommand() *cobra.Command {
 				gwNsName = &gateway.value
 			}
 
+			metricsConfig := config.MetricsConfig{}
+			if !disableMetrics {
+				metricsConfig.Enabled = true
+				metricsConfig.Port = metricsListenPort.value
+				metricsConfig.Secure = metricsSecure
+			}
+
 			conf := config.Config{
 				GatewayCtlrName:          gatewayCtlrName.value,
 				ConfigName:               configName.String(),
@@ -163,6 +125,7 @@ func createStaticModeCommand() *cobra.Command {
 				Namespace:                namespace,
 				GatewayNsName:            gwNsName,
 				UpdateGatewayClassStatus: updateGCStatus,
+				MetricsConfig:            metricsConfig,
 			}
 
 			if err := static.StartManager(conf); err != nil {
@@ -196,6 +159,27 @@ func createStaticModeCommand() *cobra.Command {
 		"update-gatewayclass-status",
 		true,
 		"Update the status of the GatewayClass resource.",
+	)
+
+	cmd.Flags().BoolVar(
+		&disableMetrics,
+		"metrics-disable",
+		false,
+		"Disable exposing metrics in the Prometheus format.",
+	)
+
+	cmd.Flags().Var(
+		&metricsListenPort,
+		"metrics-port",
+		"Set the port where the metrics are exposed. Format: [1023 - 65535]",
+	)
+
+	cmd.Flags().BoolVar(
+		&metricsSecure,
+		"metrics-secure-serving",
+		false,
+		"Enable serving metrics via https. By default metrics are served via http."+
+			" Please note that this endpoint will be secured with a self-signed certificate.",
 	)
 
 	return cmd

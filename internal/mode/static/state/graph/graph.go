@@ -43,6 +43,9 @@ type Graph struct {
 	ReferencedSecrets map[types.NamespacedName]*Secret
 }
 
+// ProtectedPorts are the ports that may not be configured by a listener with a descriptive name of each port.
+type ProtectedPorts map[int32]string
+
 // IsReferenced returns true if the Graph references the resource.
 func (g *Graph) IsReferenced(resourceType client.Object, nsname types.NamespacedName) bool {
 	// FIMXE(pleshakov): For now, only works with Secrets.
@@ -65,6 +68,7 @@ func BuildGraph(
 	controllerName string,
 	gcName string,
 	validators validation.Validators,
+	protectedPorts ProtectedPorts,
 ) *Graph {
 	processedGwClasses, gcExists := processGatewayClasses(state.GatewayClasses, gcName, controllerName)
 	if gcExists && processedGwClasses.Winner == nil {
@@ -78,7 +82,7 @@ func BuildGraph(
 	processedGws := processGateways(state.Gateways, gcName)
 
 	refGrantResolver := newReferenceGrantResolver(state.ReferenceGrants)
-	gw := buildGateway(processedGws.Winner, secretResolver, gc, refGrantResolver)
+	gw := buildGateway(processedGws.Winner, secretResolver, gc, refGrantResolver, protectedPorts)
 
 	routes := buildRoutesForGateways(validators.HTTPFieldsValidator, state.HTTPRoutes, processedGws.GetAllNsNames())
 	bindRoutesToListeners(routes, gw, state.Namespaces)
