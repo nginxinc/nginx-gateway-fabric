@@ -236,7 +236,7 @@ jobs:
       - name: Install Chart
         run: >
           helm install
-          helm-$(echo ${{ steps.nkg-meta.outputs.tags }} | cut -d ":" -f 2)
+          helm-$(echo ${{ steps.nkg-meta.outputs.tags }} | tr '.' '-' | cut -d ":" -f 2)
           .
           --wait
           --create-namespace
