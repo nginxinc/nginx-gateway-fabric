@@ -132,6 +132,14 @@ jobs:
           echo "KUBECONFIG=${{ github.workspace }}/kube-${{ github.run_id }}" >> "$GITHUB_ENV"
         working-directory: ./conformance
 
+      - name: Wait for release to exist
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: lewagon/wait-on-check-action@e106e5c43e8ca1edea6383a39a01c5ca495fd812 # v1.3.1
+        with:
+          ref: ${{ github.ref }}
+          check-name: 'Build Image'
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Setup conformance tests
         run: |
           nkg_prefix=$(echo ${{ steps.nkg-meta.outputs.tags }} | cut -d ":" -f 1)
@@ -145,14 +153,6 @@ jobs:
       - name: Run conformance tests
         run: make run-conformance-tests TAG=${{ github.sha }} VERSION=${{ github.ref_name }}
         working-directory: ./conformance
-
-      - name: Wait for release to exist
-        if: startsWith(github.ref, 'refs/tags/')
-        uses: lewagon/wait-on-check-action@e106e5c43e8ca1edea6383a39a01c5ca495fd812 # v1.3.1
-        with:
-          ref: ${{ github.ref }}
-          check-name: 'Build Binary'
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload profile to release
         if: startsWith(github.ref, 'refs/tags/')
