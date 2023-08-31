@@ -82,8 +82,7 @@ func Register(
 	}
 
 	for field, indexerFunc := range cfg.fieldIndices {
-		err := addIndex(ctx, mgr.GetFieldIndexer(), objectType, field, indexerFunc)
-		if err != nil {
+		if err := addIndex(ctx, mgr.GetFieldIndexer(), objectType, field, indexerFunc); err != nil {
 			return err
 		}
 	}
@@ -101,8 +100,7 @@ func Register(
 		NamespacedNameFilter: cfg.namespacedNameFilter,
 	}
 
-	err := builder.Complete(cfg.newReconciler(recCfg))
-	if err != nil {
+	if err := builder.Complete(cfg.newReconciler(recCfg)); err != nil {
 		return fmt.Errorf("cannot build a controller for %T: %w", objectType, err)
 	}
 
@@ -119,8 +117,7 @@ func addIndex(
 	c, cancel := context.WithTimeout(ctx, addIndexFieldTimeout)
 	defer cancel()
 
-	err := indexer.IndexField(c, objectType, field, indexerFunc)
-	if err != nil {
+	if err := indexer.IndexField(c, objectType, field, indexerFunc); err != nil {
 		return fmt.Errorf("failed to add index for %T for field %s: %w", objectType, field, err)
 	}
 

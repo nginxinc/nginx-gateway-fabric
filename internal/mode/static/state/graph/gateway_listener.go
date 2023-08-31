@@ -206,8 +206,7 @@ func validateListenerHostname(listener v1beta1.Listener) []conditions.Condition 
 		return nil
 	}
 
-	err := validateHostname(h)
-	if err != nil {
+	if err := validateHostname(h); err != nil {
 		path := field.NewPath("hostname")
 		valErr := field.Invalid(path, listener.Hostname, err.Error())
 		return staticConds.NewListenerUnsupportedValue(valErr.Error())

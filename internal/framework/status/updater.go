@@ -146,8 +146,7 @@ func (upd *updaterImpl) update(
 	// Otherwise, the Update status API call can fail.
 	// Note: the default client uses a cache for reads, so we're not making an unnecessary API call here.
 	// the default is configurable in the Manager options.
-	err := upd.cfg.Client.Get(ctx, nsname, obj)
-	if err != nil {
+	if err := upd.cfg.Client.Get(ctx, nsname, obj); err != nil {
 		if !apierrors.IsNotFound(err) {
 			upd.cfg.Logger.Error(
 				err,
@@ -161,8 +160,7 @@ func (upd *updaterImpl) update(
 
 	statusSetter(obj)
 
-	err = upd.cfg.Client.Status().Update(ctx, obj)
-	if err != nil {
+	if err := upd.cfg.Client.Status().Update(ctx, obj); err != nil {
 		upd.cfg.Logger.Error(
 			err,
 			"Failed to update status",

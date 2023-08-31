@@ -35,8 +35,7 @@ func PrepareTimeForFakeClient(t metav1.Time) metav1.Time {
 		panic(fmt.Errorf("failed to marshal time: %w", err))
 	}
 
-	err = t.Unmarshal(bytes)
-	if err != nil {
+	if err = t.Unmarshal(bytes); err != nil {
 		panic(fmt.Errorf("failed to unmarshal time: %w", err))
 	}
 

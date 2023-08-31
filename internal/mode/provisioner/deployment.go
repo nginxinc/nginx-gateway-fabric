@@ -14,8 +14,7 @@ import (
 // It will configure the Deployment to use the Gateway with the given NamespacedName.
 func prepareDeployment(depYAML []byte, id string, gwNsName types.NamespacedName) (*v1.Deployment, error) {
 	dep := &v1.Deployment{}
-	err := yaml.Unmarshal(depYAML, dep)
-	if err != nil {
+	if err := yaml.Unmarshal(depYAML, dep); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal deployment: %w", err)
 	}
 

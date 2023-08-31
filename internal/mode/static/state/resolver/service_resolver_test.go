@@ -72,8 +72,7 @@ func createSlice(
 
 func createFakeK8sClient(initObjs ...client.Object) (client.Client, error) {
 	scheme := runtime.NewScheme()
-	err := discoveryV1.AddToScheme(scheme)
-	if err != nil {
+	if err := discoveryV1.AddToScheme(scheme); err != nil {
 		return nil, err
 	}
 

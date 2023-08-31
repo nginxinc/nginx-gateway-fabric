@@ -74,8 +74,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	}
 
 	obj := newObject(r.cfg.ObjectType)
-	err := r.cfg.Getter.Get(ctx, req.NamespacedName, obj)
-	if err != nil {
+	if err := r.cfg.Getter.Get(ctx, req.NamespacedName, obj); err != nil {
 		if !apierrors.IsNotFound(err) {
 			logger.Error(err, "Failed to get the resource")
 			return reconcile.Result{}, err

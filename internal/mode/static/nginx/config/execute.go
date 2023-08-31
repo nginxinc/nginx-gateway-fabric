@@ -9,8 +9,7 @@ import (
 func execute(template *template.Template, data interface{}) []byte {
 	var buf bytes.Buffer
 
-	err := template.Execute(&buf, data)
-	if err != nil {
+	if err := template.Execute(&buf, data); err != nil {
 		panic(err)
 	}
 

@@ -113,8 +113,7 @@ func StartManager(cfg Config) error {
 		firstBatchPreparer,
 	)
 
-	err = mgr.Add(eventLoop)
-	if err != nil {
+	if err := mgr.Add(eventLoop); err != nil {
 		return fmt.Errorf("cannot register event loop: %w", err)
 	}
 
