@@ -15,7 +15,7 @@ installed on your machine:
 1. Clone the repo and change into the `nginx-kubernetes-gateway` directory:
 
    ```shell
-   git clone https://github.com/nginxinc/nginx-kubernetes-gateway.git
+   git clone https://github.com/nginxinc/nginx-kubernetes-gateway.git --branch v0.6.0
    cd nginx-kubernetes-gateway
    ```
 
@@ -39,13 +39,13 @@ installed on your machine:
      ```
 
    Set the `PREFIX` variable to the name of the registry you'd like to push the image to. By default, the images will be
-   named `nginx-kubernetes-gateway:edge` and `nginx-kubernetes-gateway/nginx:edge`.
+   named `nginx-kubernetes-gateway:0.6.0` and `nginx-kubernetes-gateway/nginx:0.6.0`.
 
 1. Push the images to your container registry:
 
    ```shell
-   docker push myregistry.example.com/nginx-kubernetes-gateway:edge
-   docker push myregistry.example.com/nginx-kubernetes-gateway/nginx:edge
+   docker push myregistry.example.com/nginx-kubernetes-gateway:0.6.0
+   docker push myregistry.example.com/nginx-kubernetes-gateway/nginx:0.6.0
    ```
 
    Make sure to substitute `myregistry.example.com/nginx-kubernetes-gateway` with your registry.

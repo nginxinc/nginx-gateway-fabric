@@ -20,7 +20,7 @@ page.
 1. Clone the repo and change into the `nginx-kubernetes-gateway` directory:
 
    ```shell
-   git clone https://github.com/nginxinc/nginx-kubernetes-gateway.git
+   git clone https://github.com/nginxinc/nginx-kubernetes-gateway.git --branch v0.6.0
    cd nginx-kubernetes-gateway
    ```
 
