@@ -35,11 +35,11 @@ To create a new release, follow these steps:
     1. Update the Helm [Chart.yaml](../deploy/helm-chart/Chart.yaml): the `appVersion` to `X.Y.Z`, the icon and source
        URLs to point at `vX.Y.Z`, and bump the `version`.
     2. Update the Helm [README](../deploy/helm-chart/README.md) `--version` flags in the helm commands to use the stable
-       `appVersion` from the previous step.
+       `version` from the previous step.
     3. Adjust the `VERSION` variable in the [Makefile](../Makefile) and the `NKG_TAG` in the
        [conformance tests Makefile](../conformance/Makefile) to `X.Y.Z`.
     4. Update the tag of NKG container images used in the Helm [values.yaml](../deploy/helm-chart/values.yaml) file, the
-       [provisioner manifest](../conformance/provisioner/provisioner.yaml)), and all docs to `X.Y.Z`.
+       [provisioner manifest](../conformance/provisioner/provisioner.yaml), and all docs to `X.Y.Z`.
     5. Ensure that the `imagePullPolicy` is `IfNotPresent` in the Helm [values.yaml](../deploy/helm-chart/values.yaml)
        file.
     6. Generate the installation manifests by running `make generate-manifests`.
@@ -59,6 +59,12 @@ To create a new release, follow these steps:
 8. Prepare and merge a PR into the main branch to update the [README](../README.md) to include the information about the
    latest release and also the [changelog](../CHANGELOG.md).
 9. Close the issue created in Step 1.
+10. Submit the `conformance-profile.yaml` artifact from the release to the [Gateway API repo](https://github.com/kubernetes-sigs/gateway-api/tree/main/conformance/reports).
+    - Create a fork of the repository
+    - Name the file `nginxinc-nginx-kubernetes-gateway.yaml` and set `gatewayAPIVersion` in the file to the
+    supported version by NKG. Also update the site source if necessary (see following example).
+    - Open a PR. [Example](https://github.com/kubernetes-sigs/gateway-api/pull/2368)
+    If it's your first time submitting a PR, you will need to sign a CLA using F5, Inc. as the organization.
 
 ### Patch Release
 
