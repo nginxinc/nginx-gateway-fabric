@@ -82,7 +82,13 @@ func Register(
 	}
 
 	for field, indexerFunc := range cfg.fieldIndices {
-		if err := addIndex(ctx, mgr.GetFieldIndexer(), objectType, field, indexerFunc); err != nil {
+		if err := addIndex(
+			ctx,
+			mgr.GetFieldIndexer(),
+			objectType,
+			field,
+			indexerFunc,
+		); err != nil {
 			return err
 		}
 	}

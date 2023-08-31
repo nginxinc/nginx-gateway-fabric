@@ -180,8 +180,10 @@ func buildRoute(
 		ParentRefs: sectionNameRefs,
 	}
 
-	err := validateHostnames(ghr.Spec.Hostnames, field.NewPath("spec").Child("hostnames"))
-	if err != nil {
+	if err := validateHostnames(
+		ghr.Spec.Hostnames,
+		field.NewPath("spec").Child("hostnames"),
+	); err != nil {
 		r.Valid = false
 		r.Conditions = append(r.Conditions, staticConds.NewRouteUnsupportedValue(err.Error()))
 
@@ -550,7 +552,11 @@ func validateMatch(
 		allErrs = append(allErrs, validateQueryParamMatch(validator, q, queryParamPath)...)
 	}
 
-	if err := validateMethodMatch(validator, match.Method, matchPath.Child("method")); err != nil {
+	if err := validateMethodMatch(
+		validator,
+		match.Method,
+		matchPath.Child("method"),
+	); err != nil {
 		allErrs = append(allErrs, err)
 	}
 

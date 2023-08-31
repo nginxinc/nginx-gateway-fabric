@@ -156,8 +156,13 @@ func StartManager(cfg config.Config) error {
 	ctx := ctlr.SetupSignalHandler()
 
 	for _, regCfg := range controllerRegCfgs {
-		err := controller.Register(ctx, regCfg.objectType, mgr, eventCh, regCfg.options...)
-		if err != nil {
+		if err := controller.Register(
+			ctx,
+			regCfg.objectType,
+			mgr,
+			eventCh,
+			regCfg.options...,
+		); err != nil {
 			return fmt.Errorf("cannot register controller for %T: %w", regCfg.objectType, err)
 		}
 	}
