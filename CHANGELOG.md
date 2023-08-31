@@ -4,6 +4,28 @@ This document includes a curated changelog for each release. We also publish a c
 a [GitHub release](https://github.com/nginxinc/nginx-kubernetes-gateway/releases), which, by contrast, is auto-generated
 and includes links to all PRs that went into the release.
 
+## Release 0.6.0
+
+*August 31, 2023*
+
+This release adds a Helm chart, dynamic control plane logging, Prometheus metrics, and in-depth guides for various use cases.
+
+FEATURES:
+
+- Helm chart. [PR-840](https://github.com/nginxinc/nginx-kubernetes-gateway/pull/840)
+- Use custom nginx container. [PR-934](https://github.com/nginxinc/nginx-kubernetes-gateway/pull/911)
+- Support dynamic control plane configuration. [PR-943](https://github.com/nginxinc/nginx-kubernetes-gateway/pull/943)
+- Support websocket connections. [PR-962](https://github.com/nginxinc/nginx-kubernetes-gateway/pull/962)
+- Support Prometheus metrics. [PR-999](https://github.com/nginxinc/nginx-kubernetes-gateway/pull/999)
+
+BUG FIXES:
+
+- Ensure NGINX Kubernetes Gateway hast least privileges. [PR-1004](https://github.com/nginxinc/nginx-kubernetes-gateway/pull/1004)
+
+DOCUMENTATION:
+
+- Use case guides: https://github.com/nginxinc/nginx-kubernetes-gateway/tree/v0.6.0/docs/guides
+
 ## Release 0.5.0
 
 *July 17, 2023*

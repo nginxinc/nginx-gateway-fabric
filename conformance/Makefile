@@ -1,4 +1,4 @@
-NKG_TAG = edge
+NKG_TAG = 0.6.0
 NKG_PREFIX = nginx-kubernetes-gateway
 NGINX_IMAGE_NAME = $(NKG_PREFIX)/nginx
 GW_API_VERSION ?= 0.8.0

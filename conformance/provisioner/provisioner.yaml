@@ -61,7 +61,7 @@ spec:
     spec:
       serviceAccountName: nginx-gateway-provisioner
       containers:
-      - image: ghcr.io/nginxinc/nginx-kubernetes-gateway:edge
+      - image: ghcr.io/nginxinc/nginx-kubernetes-gateway:0.6.0
         imagePullPolicy: Always
         name: nginx-gateway-provisioner
         securityContext:

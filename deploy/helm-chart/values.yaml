@@ -17,15 +17,15 @@ nginxGateway:
   image:
     ## The NGINX Kubernetes Gateway image to use
     repository: ghcr.io/nginxinc/nginx-kubernetes-gateway
-    tag: edge
-    pullPolicy: Always
+    tag: 0.6.0
+    pullPolicy: IfNotPresent
 
 nginx:
   ## The NGINX image to use
   image:
     repository: ghcr.io/nginxinc/nginx-kubernetes-gateway/nginx
-    tag: edge
-    pullPolicy: Always
+    tag: 0.6.0
+    pullPolicy: IfNotPresent
 
 serviceAccount:
   annotations: {}
