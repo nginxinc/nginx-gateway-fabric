@@ -4,6 +4,7 @@ NGINX_IMAGE_NAME = $(NKG_PREFIX)/nginx
 GW_API_VERSION ?= 0.8.0
 GATEWAY_CLASS = nginx
 SUPPORTED_FEATURES = HTTPRoute,HTTPRouteQueryParamMatching,HTTPRouteMethodMatching,HTTPRoutePortRedirect,HTTPRouteSchemeRedirect,GatewayClassObservedGenerationBump
+KIND_IMAGE ?= $(shell grep -m1 'FROM kindest/node' <tests/Dockerfile | awk -F'[ ]' '{print $$2}')
 KIND_KUBE_CONFIG=$${HOME}/.kube/kind/config
 TAG = latest
 PREFIX = conformance-test-runner
@@ -30,7 +31,6 @@ build-test-runner-image: ## Build conformance test runner image
 
 .PHONY: create-kind-cluster
 create-kind-cluster: ## Create a kind cluster
-	$(eval KIND_IMAGE=$(shell grep -m1 'FROM kindest/node' <tests/Dockerfile | awk -F'[ ]' '{print $$2}'))
 	kind create cluster --image $(KIND_IMAGE)
 	kind export kubeconfig --kubeconfig $(KIND_KUBE_CONFIG)
 

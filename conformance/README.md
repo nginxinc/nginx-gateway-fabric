@@ -45,6 +45,7 @@ update-nkg-manifest            Update the NKG deployment manifest image names an
 | NKG_TAG                 | edge                                                                                                          | The tag for the locally built NKG image                                                                                   |
 | NKG_PREFIX              | nginx-kubernetes-gateway                                                                                      | The prefix for the locally built NKG image                                                                                |
 | GW_API_VERSION          | 0.8.0                                                                                                         | Tag for the Gateway API version to check out. Set to `main` to get the latest version                                     |
+| KIND_IMAGE              | Latest kind image, as defined in the tests/Dockerfile                                                         | The kind image to use                                                                                            |
 | KIND_KUBE_CONFIG        | ~/.kube/kind/config                                                                                           | The location of the kubeconfig                                                                                            |
 | GATEWAY_CLASS           | nginx                                                                                                         | The gateway class that should be used for the tests                                                                       |
 | SUPPORTED_FEATURES      | HTTPRoute,HTTPRouteQueryParamMatching, HTTPRouteMethodMatching,HTTPRoutePortRedirect, HTTPRouteSchemeRedirect | The supported features that should be tested by the conformance tests. Ensure the list is comma separated with no spaces. |
@@ -59,6 +60,13 @@ update-nkg-manifest            Update the NKG deployment manifest image names an
 
 ```makefile
 make create-kind-cluster
+```
+
+> Note: The default kind cluster deployed is the latest available version. You can specify a different version by
+> defining the kind image to use through the KIND_IMAGE variable, e.g.
+
+```makefile
+make create-kind-cluster KIND_IMAGE=kindest/node:v1.27.3
 ```
 
 ### Step 2 - Install Nginx Kubernetes Gateway to configured kind cluster
