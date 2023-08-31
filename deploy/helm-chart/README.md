@@ -30,7 +30,7 @@ To install the chart with the release name `my-release` (`my-release` is the nam
 nginx-gateway namespace (with optional `--create-namespace` flag - you can omit if the namespace already exists):
 
 ```shell
-helm install my-release oci://ghcr.io/nginxinc/charts/nginx-kubernetes-gateway --version 0.6.0 --create-namespace --wait -n nginx-gateway
+helm install my-release oci://ghcr.io/nginxinc/charts/nginx-kubernetes-gateway --version 0.1.0 --create-namespace --wait -n nginx-gateway
 ```
 
 ### Installing the Chart via Sources
@@ -38,7 +38,7 @@ helm install my-release oci://ghcr.io/nginxinc/charts/nginx-kubernetes-gateway -
 #### Pulling the Chart
 
 ```shell
-helm pull oci://ghcr.io/nginxinc/charts/nginx-kubernetes-gateway --untar --version 0.6.0
+helm pull oci://ghcr.io/nginxinc/charts/nginx-kubernetes-gateway --untar --version 0.1.0
 cd nginx-kubernetes-gateway
 ```
 
@@ -83,7 +83,7 @@ Warning: kubectl apply should be used on resource created by either kubectl crea
 To upgrade the release `my-release`, run:
 
 ```shell
-helm upgrade my-release oci://ghcr.io/nginxinc/charts/nginx-kubernetes-gateway --version 0.6.0 -n nginx-gateway
+helm upgrade my-release oci://ghcr.io/nginxinc/charts/nginx-kubernetes-gateway --version 0.1.0 -n nginx-gateway
 ```
 
 ### Upgrading the Chart from the Sources
