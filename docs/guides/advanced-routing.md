@@ -36,7 +36,7 @@ and `coffee` applications share the same Gateway.
 Begin by deploying the `coffee-v1` and `coffee-v2` applications:
 
 ```shell
-kubectl apply -f https://raw.githubusercontent.com/nginxinc/nginx-kubernetes-gateway/main/examples/advanced-routing/coffee.yaml
+kubectl apply -f https://raw.githubusercontent.com/nginxinc/nginx-kubernetes-gateway/v0.6.0/examples/advanced-routing/coffee.yaml
 ```
 
 ### Deploy the Gateway API Resources for the Coffee Applications
@@ -166,7 +166,7 @@ have their own set of rules, but will still attach to the same Gateway listener 
 ### Deploy the Tea Applications
 
 ```shell
-kubectl apply -f https://raw.githubusercontent.com/nginxinc/nginx-kubernetes-gateway/main/examples/advanced-routing/tea.yaml
+kubectl apply -f https://raw.githubusercontent.com/nginxinc/nginx-kubernetes-gateway/v0.6.0/examples/advanced-routing/tea.yaml
 ```
 
 ### Deploy the HTTPRoute for the Tea Services

@@ -39,7 +39,7 @@ installed on your machine:
      ```
 
    Set the `PREFIX` variable to the name of the registry you'd like to push the image to. By default, the images will be
-   named `nginx-kubernetes-gateway:edge` and `nginx-kubernetes-gateway/nginx:0.6.0`.
+   named `nginx-kubernetes-gateway:0.6.0` and `nginx-kubernetes-gateway/nginx:0.6.0`.
 
 1. Push the images to your container registry:
 

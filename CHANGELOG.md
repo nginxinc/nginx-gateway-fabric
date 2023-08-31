@@ -14,13 +14,13 @@ FEATURES:
 
 - Helm chart. [PR-840](https://github.com/nginxinc/nginx-kubernetes-gateway/pull/840)
 - Use custom nginx container. [PR-934](https://github.com/nginxinc/nginx-kubernetes-gateway/pull/911)
-- Support dynamic control plane configuration. [PR-943](https://github.com/nginxinc/nginx-kubernetes-gateway/pull/943)
+- Support dynamic control plane logging. [PR-943](https://github.com/nginxinc/nginx-kubernetes-gateway/pull/943)
 - Support websocket connections. [PR-962](https://github.com/nginxinc/nginx-kubernetes-gateway/pull/962)
 - Support Prometheus metrics. [PR-999](https://github.com/nginxinc/nginx-kubernetes-gateway/pull/999)
 
 BUG FIXES:
 
-- Ensure NGINX Kubernetes Gateway hast least privileges. [PR-1004](https://github.com/nginxinc/nginx-kubernetes-gateway/pull/1004)
+- Ensure NGINX Kubernetes Gateway has least privileges. [PR-1004](https://github.com/nginxinc/nginx-kubernetes-gateway/pull/1004)
 
 DOCUMENTATION:
 
