@@ -121,7 +121,7 @@ This step catches the following cases of invalid values:
 - Malicious values that inject unrestricted NGINX config into the NGINX configuration (similar to an SQL injection
   attack).
 
-Below is an example of how NGK rejects an invalid resource. The validation error is reported via the status:
+Below is an example of how NKG rejects an invalid resource. The validation error is reported via the status:
 
 ```shell
 kubectl describe httproutes.gateway.networking.k8s.io coffee
