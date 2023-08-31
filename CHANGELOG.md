@@ -13,7 +13,7 @@ This release adds a Helm chart, dynamic control plane logging, Prometheus metric
 FEATURES:
 
 - Helm chart. [PR-840](https://github.com/nginxinc/nginx-kubernetes-gateway/pull/840)
-- Use custom nginx container. [PR-934](https://github.com/nginxinc/nginx-kubernetes-gateway/pull/911)
+- Use custom nginx container. [PR-934](https://github.com/nginxinc/nginx-kubernetes-gateway/pull/934)
 - Support dynamic control plane logging. [PR-943](https://github.com/nginxinc/nginx-kubernetes-gateway/pull/943)
 - Support websocket connections. [PR-962](https://github.com/nginxinc/nginx-kubernetes-gateway/pull/962)
 - Support Prometheus metrics. [PR-999](https://github.com/nginxinc/nginx-kubernetes-gateway/pull/999)
