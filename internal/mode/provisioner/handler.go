@@ -110,8 +110,7 @@ func (h *eventHandler) ensureDeploymentsMatchGateways(ctx context.Context) {
 			panic(fmt.Errorf("failed to prepare deployment: %w", err))
 		}
 
-		err = h.k8sClient.Create(ctx, deployment)
-		if err != nil {
+		if err = h.k8sClient.Create(ctx, deployment); err != nil {
 			panic(fmt.Errorf("failed to create deployment: %w", err))
 		}
 
@@ -129,8 +128,7 @@ func (h *eventHandler) ensureDeploymentsMatchGateways(ctx context.Context) {
 	for _, nsname := range removedGwsWithDeps {
 		deployment := h.provisions[nsname]
 
-		err := h.k8sClient.Delete(ctx, deployment)
-		if err != nil {
+		if err := h.k8sClient.Delete(ctx, deployment); err != nil {
 			panic(fmt.Errorf("failed to delete deployment: %w", err))
 		}
 

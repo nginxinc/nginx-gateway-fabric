@@ -49,8 +49,7 @@ func (m *ManagerImpl) Reload(ctx context.Context) error {
 
 	// send HUP signal to the NGINX main process reload configuration
 	// See https://nginx.org/en/docs/control.html
-	err = syscall.Kill(pid, syscall.SIGHUP)
-	if err != nil {
+	if err := syscall.Kill(pid, syscall.SIGHUP); err != nil {
 		return fmt.Errorf("failed to send the HUP signal to NGINX main: %w", err)
 	}
 

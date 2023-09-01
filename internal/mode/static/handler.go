@@ -90,8 +90,7 @@ func (h *eventHandlerImpl) HandleEventBatch(ctx context.Context, batch events.Ev
 	}
 
 	var nginxReloadRes nginxReloadResult
-	err := h.updateNginx(ctx, dataplane.BuildConfiguration(ctx, graph, h.cfg.serviceResolver))
-	if err != nil {
+	if err := h.updateNginx(ctx, dataplane.BuildConfiguration(ctx, graph, h.cfg.serviceResolver)); err != nil {
 		h.cfg.logger.Error(err, "Failed to update NGINX configuration")
 		nginxReloadRes.error = err
 	} else {
