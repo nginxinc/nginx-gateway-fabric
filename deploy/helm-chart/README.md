@@ -30,17 +30,23 @@ To install the chart with the release name `my-release` (`my-release` is the nam
 nginx-gateway namespace (with optional `--create-namespace` flag - you can omit if the namespace already exists):
 
 ```shell
-helm install my-release oci://ghcr.io/nginxinc/charts/nginx-kubernetes-gateway --version 0.0.0-edge --create-namespace --wait -n nginx-gateway
+helm install my-release oci://ghcr.io/nginxinc/charts/nginx-kubernetes-gateway  --create-namespace --wait -n nginx-gateway
 ```
+
+This will install the latest stable release. To install the latest version from the `main` branch, specify the
+`--version 0.0.0-edge` flag when installing.
 
 ### Installing the Chart via Sources
 
 #### Pulling the Chart
 
 ```shell
-helm pull oci://ghcr.io/nginxinc/charts/nginx-kubernetes-gateway --untar --version 0.0.0-edge
+helm pull oci://ghcr.io/nginxinc/charts/nginx-kubernetes-gateway --untar
 cd nginx-kubernetes-gateway
 ```
+
+This will pull the latest stable release. To pull the latest version from the `main` branch, specify the
+`--version 0.0.0-edge` flag when pulling.
 
 #### Installing the Chart
 
@@ -83,8 +89,11 @@ Warning: kubectl apply should be used on resource created by either kubectl crea
 To upgrade the release `my-release`, run:
 
 ```shell
-helm upgrade my-release oci://ghcr.io/nginxinc/charts/nginx-kubernetes-gateway --version 0.0.0-edge -n nginx-gateway
+helm upgrade my-release oci://ghcr.io/nginxinc/charts/nginx-kubernetes-gateway -n nginx-gateway
 ```
+
+This will upgrade to the latest stable release. To upgrade to the latest version from the `main` branch,
+specify the `--version 0.0.0-edge` flag when upgrading.
 
 ### Upgrading the Chart from the Sources
 
