@@ -29,6 +29,9 @@ jobs:
   conformance-tests:
     name: Gateway Conformance Tests
     runs-on: ubuntu-22.04
+    strategy:
+      matrix:
+        k8s-version: ["1.23.17", "latest"]
     permissions:
       contents: write # needed for uploading release artifacts
     steps:
@@ -128,7 +131,8 @@ jobs:
       - name: Deploy Kubernetes
         id: k8s
         run: |
-          make create-kind-cluster KIND_KUBE_CONFIG=${{ github.workspace }}/kube-${{ github.run_id }}
+          k8s_version=${{ matrix.k8s-version }}
+          make create-kind-cluster KIND_KUBE_CONFIG=${{ github.workspace }}/kube-${{ github.run_id }} ${{ ! contains(matrix.k8s-version, 'latest') && 'KIND_IMAGE=kindest/node:v${k8s_version}' || '' }}
           echo "KUBECONFIG=${{ github.workspace }}/kube-${{ github.run_id }}" >> "$GITHUB_ENV"
         working-directory: ./conformance
 
@@ -155,7 +159,7 @@ jobs:
         working-directory: ./conformance
 
       - name: Upload profile to release
-        if: startsWith(github.ref, 'refs/tags/')
+        if: ${{ matrix.k8s-version == 'latest' && startsWith(github.ref, 'refs/tags/') }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: gh release upload ${{ github.ref_name }} conformance-profile.yaml
