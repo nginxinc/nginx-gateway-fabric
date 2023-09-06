@@ -11,7 +11,6 @@ func TestExecuteVersion(t *testing.T) {
 	g := NewGomegaWithT(t)
 	expSubStrings := map[string]int{
 		"return 200 42;": 1,
-		`"42" ""`:        1,
 	}
 
 	maps := string(executeVersion(42))

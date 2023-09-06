@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"testing"
 	"time"
+
+	. "github.com/onsi/gomega"
 )
 
 type Transport struct{}
@@ -40,7 +42,7 @@ func TestVerifyClient(t *testing.T) {
 
 	tests := []struct {
 		ctx             context.Context
-		msg             string
+		name            string
 		expectedVersion int
 		expectError     bool
 	}{
@@ -48,27 +50,27 @@ func TestVerifyClient(t *testing.T) {
 			ctx:             ctx,
 			expectedVersion: 42,
 			expectError:     false,
-			msg:             "normal case",
+			name:            "normal case",
 		},
 		{
 			ctx:             cancellingCtx,
 			expectedVersion: 0,
 			expectError:     true,
-			msg:             "context canceled",
+			name:            "context canceled",
 		},
 	}
 
 	for _, test := range tests {
-		err := c.WaitForCorrectVersion(test.ctx, test.expectedVersion)
+		t.Run(test.name, func(t *testing.T) {
+			g := NewGomegaWithT(t)
 
-		if test.expectError {
-			if err == nil {
-				t.Errorf("WaitForCorrectVersion() didn't return error for case %q", test.msg)
+			err := c.WaitForCorrectVersion(test.ctx, test.expectedVersion)
+
+			if test.expectError {
+				g.Expect(err).To(HaveOccurred())
+			} else {
+				g.Expect(err).ToNot(HaveOccurred())
 			}
-		} else {
-			if err != nil {
-				t.Errorf("WaitForCorrectVersion() returned unexpected error %v for case %q", err, test.msg)
-			}
-		}
+		})
 	}
 }

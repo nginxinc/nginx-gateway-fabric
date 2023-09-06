@@ -12,6 +12,8 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 )
 
+const configVersionURI = "/var/run/nginx/nginx-config-version.sock"
+
 // verifyClient is a client for verifying the config version.
 type verifyClient struct {
 	client  *http.Client
@@ -24,7 +26,7 @@ func newVerifyClient(timeout time.Duration) *verifyClient {
 		client: &http.Client{
 			Transport: &http.Transport{
 				DialContext: func(_ context.Context, _, _ string) (net.Conn, error) {
-					return net.Dial("unix", "/var/run/nginx/nginx-config-version.sock")
+					return net.Dial("unix", configVersionURI)
 				},
 			},
 		},
@@ -35,10 +37,9 @@ func newVerifyClient(timeout time.Duration) *verifyClient {
 // GetConfigVersion gets the version number that we put in the nginx config to verify that we're using
 // the correct config.
 func (c *verifyClient) GetConfigVersion() (int, error) {
-	ctx := context.Background()
-	reqContext, cancel := context.WithTimeout(ctx, c.timeout)
+	ctx, cancel := context.WithTimeout(context.Background(), c.timeout)
 	defer cancel()
-	req, err := http.NewRequestWithContext(reqContext, "GET", "http://config-version/configVersion", nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", "http://config-version/version", nil)
 	if err != nil {
 		return 0, fmt.Errorf("error creating request: %w", err)
 	}
@@ -70,7 +71,7 @@ func (c *verifyClient) WaitForCorrectVersion(ctx context.Context, expectedVersio
 	ctx, cancel := context.WithTimeout(ctx, c.timeout)
 	defer cancel()
 
-	err := wait.PollUntilContextCancel(
+	if err := wait.PollUntilContextCancel(
 		ctx,
 		25*time.Millisecond,
 		true, /* poll immediately */
@@ -83,8 +84,7 @@ func (c *verifyClient) WaitForCorrectVersion(ctx context.Context, expectedVersio
 				return true, nil
 			}
 			return false, nil
-		})
-	if err != nil {
+		}); err != nil {
 		return fmt.Errorf("could not get expected version %v: %w", expectedVersion, err)
 	}
 

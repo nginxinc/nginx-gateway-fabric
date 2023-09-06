@@ -54,8 +54,8 @@ func (m *ManagerImpl) Reload(ctx context.Context, configVersion int) error {
 		return fmt.Errorf("failed to find NGINX main process: %w", err)
 	}
 
-	childProcFile := fmt.Sprintf("/proc/%d/task/%d/children", pid, pid)
-	currentChildProcesses, err := os.ReadFile(childProcFile)
+	childProcFile := fmt.Sprintf("/proc/%[1]v/task/%[1]v/children", pid)
+	previousChildProcesses, err := os.ReadFile(childProcFile)
 	if err != nil {
 		return err
 	}
@@ -67,13 +67,12 @@ func (m *ManagerImpl) Reload(ctx context.Context, configVersion int) error {
 	}
 
 	newProcsStarted, err := ensureNewNginxWorkers(
-		ctx, childProcFile, currentChildProcesses, os.ReadFile, childProcsTimeout)
+		ctx, childProcFile, previousChildProcesses, os.ReadFile, childProcsTimeout)
 	if !newProcsStarted {
 		return fmt.Errorf("reload unsuccessful: no new NGINX worker processes started: %w", err)
 	}
 
-	err = m.verifyClient.WaitForCorrectVersion(ctx, configVersion)
-	if err != nil {
+	if err = m.verifyClient.WaitForCorrectVersion(ctx, configVersion); err != nil {
 		return fmt.Errorf("could not get newest config version: %w", err)
 	}
 
@@ -138,9 +137,7 @@ func ensureNewNginxWorkers(
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
-	newWorkersStarted := true
-
-	err := wait.PollUntilContextCancel(
+	if err := wait.PollUntilContextCancel(
 		ctx,
 		25*time.Millisecond,
 		true, /* poll immediately */
@@ -153,10 +150,9 @@ func ensureNewNginxWorkers(
 				return true, nil
 			}
 			return false, nil
-		})
-	if err != nil {
+		}); err != nil {
 		return false, err
 	}
 
-	return newWorkersStarted, nil
+	return true, nil
 }

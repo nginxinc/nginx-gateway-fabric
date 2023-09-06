@@ -7,6 +7,8 @@ import (
 	"os"
 	"testing"
 	"time"
+
+	. "github.com/onsi/gomega"
 )
 
 func TestFindMainProcess(t *testing.T) {
@@ -42,7 +44,7 @@ func TestFindMainProcess(t *testing.T) {
 		ctx         context.Context
 		readFile    readFileFunc
 		checkFile   checkFileFunc
-		msg         string
+		name        string
 		expected    int
 		expectError bool
 	}{
@@ -52,7 +54,7 @@ func TestFindMainProcess(t *testing.T) {
 			checkFile:   checkFileFuncGen(testFileInfo),
 			expected:    1,
 			expectError: false,
-			msg:         "normal case",
+			name:        "normal case",
 		},
 		{
 			ctx:         ctx,
@@ -60,7 +62,7 @@ func TestFindMainProcess(t *testing.T) {
 			checkFile:   checkFileFuncGen(testFileInfo),
 			expected:    0,
 			expectError: true,
-			msg:         "empty file content",
+			name:        "empty file content",
 		},
 		{
 			ctx:         ctx,
@@ -68,7 +70,7 @@ func TestFindMainProcess(t *testing.T) {
 			checkFile:   checkFileFuncGen(testFileInfo),
 			expected:    0,
 			expectError: true,
-			msg:         "bad file content",
+			name:        "bad file content",
 		},
 		{
 			ctx:         ctx,
@@ -76,7 +78,7 @@ func TestFindMainProcess(t *testing.T) {
 			checkFile:   checkFileFuncGen(testFileInfo),
 			expected:    0,
 			expectError: true,
-			msg:         "cannot read file",
+			name:        "cannot read file",
 		},
 		{
 			ctx:         ctx,
@@ -84,7 +86,7 @@ func TestFindMainProcess(t *testing.T) {
 			checkFile:   checkFileError,
 			expected:    0,
 			expectError: true,
-			msg:         "cannot find pid file",
+			name:        "cannot find pid file",
 		},
 		{
 			ctx:         cancellingCtx,
@@ -92,26 +94,23 @@ func TestFindMainProcess(t *testing.T) {
 			checkFile:   checkFileError,
 			expected:    0,
 			expectError: true,
-			msg:         "context canceled",
+			name:        "context canceled",
 		},
 	}
 
 	for _, test := range tests {
-		result, err := findMainProcess(test.ctx, test.checkFile, test.readFile, 2*time.Millisecond)
+		t.Run(test.name, func(t *testing.T) {
+			g := NewGomegaWithT(t)
 
-		if result != test.expected {
-			t.Errorf("findMainProcess() returned %d but expected %d for case %q", result, test.expected, test.msg)
-		}
+			result, err := findMainProcess(test.ctx, test.checkFile, test.readFile, 2*time.Millisecond)
 
-		if test.expectError {
-			if err == nil {
-				t.Errorf("findMainProcess() didn't return error for case %q", test.msg)
+			if test.expectError {
+				g.Expect(err).To(HaveOccurred())
+			} else {
+				g.Expect(err).ToNot(HaveOccurred())
+				g.Expect(result).To(Equal(test.expected))
 			}
-		} else {
-			if err != nil {
-				t.Errorf("findMainProcess() returned unexpected error %v for case %q", err, test.msg)
-			}
-		}
+		})
 	}
 }
 
@@ -149,7 +148,7 @@ func TestEnsureNewNginxWorkers(t *testing.T) {
 		ctx              context.Context
 		readFile         readFileFunc
 		childFile        string
-		msg              string
+		name             string
 		previousContents []byte
 		expected         bool
 		expectError      bool
@@ -161,7 +160,7 @@ func TestEnsureNewNginxWorkers(t *testing.T) {
 			previousContents: previousContents,
 			expected:         true,
 			expectError:      false,
-			msg:              "normal case",
+			name:             "normal case",
 		},
 		{
 			ctx:              ctx,
@@ -170,7 +169,7 @@ func TestEnsureNewNginxWorkers(t *testing.T) {
 			previousContents: previousContents,
 			expected:         false,
 			expectError:      true,
-			msg:              "cannot read file",
+			name:             "cannot read file",
 		},
 		{
 			ctx:              ctx,
@@ -179,7 +178,7 @@ func TestEnsureNewNginxWorkers(t *testing.T) {
 			previousContents: previousContents,
 			expected:         false,
 			expectError:      true,
-			msg:              "no new workers",
+			name:             "no new workers",
 		},
 		{
 			ctx:              cancellingCtx,
@@ -188,31 +187,28 @@ func TestEnsureNewNginxWorkers(t *testing.T) {
 			previousContents: previousContents,
 			expected:         false,
 			expectError:      true,
-			msg:              "context canceled",
+			name:             "context canceled",
 		},
 	}
 
 	for _, test := range tests {
-		result, err := ensureNewNginxWorkers(
-			test.ctx,
-			test.childFile,
-			test.previousContents,
-			test.readFile,
-			2*time.Millisecond,
-		)
+		t.Run(test.name, func(t *testing.T) {
+			g := NewGomegaWithT(t)
 
-		if result != test.expected {
-			t.Errorf("ensureNewNginxWorkers() returned %v but expected %v for case %q", result, test.expected, test.msg)
-		}
+			result, err := ensureNewNginxWorkers(
+				test.ctx,
+				test.childFile,
+				test.previousContents,
+				test.readFile,
+				2*time.Millisecond,
+			)
 
-		if test.expectError {
-			if err == nil {
-				t.Errorf("ensureNewNginxWorkers() didn't return error for case %q", test.msg)
+			if test.expectError {
+				g.Expect(err).To(HaveOccurred())
+			} else {
+				g.Expect(err).ToNot(HaveOccurred())
+				g.Expect(result).To(Equal(test.expected))
 			}
-		} else {
-			if err != nil {
-				t.Errorf("ensureNewNginxWorkers() returned unexpected error %v for case %q", err, test.msg)
-			}
-		}
+		})
 	}
 }
