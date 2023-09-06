@@ -17,6 +17,7 @@ yourself.
 - [Running on Kind](running-on-kind.md): Walkthrough on how to run NGINX Kubernetes Gateway on a `kind` cluster.
 - [CLI Help](cli-help.md): Describes the commands available in the `gateway` binary of `nginx-kubernetes-gateway`
 container.
+- [Monitoring](monitoring.md): Information on monitoring NGINX Kubernetes Gateway using Prometheus metrics.
 
 ### Directories
 

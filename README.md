@@ -54,6 +54,19 @@ to the correct versions:
 | Latest release | For experimental use                     | Use the 0.6.0 image from [GitHub](https://github.com/nginxinc/nginx-kubernetes-gateway/pkgs/container/nginx-kubernetes-gateway)                                                                                                                                                        | [Manifests](https://github.com/nginxinc/nginx-kubernetes-gateway/tree/v0.6.0/deploy). | [Documentation](https://github.com/nginxinc/nginx-kubernetes-gateway/tree/v0.6.0/docs). [Examples](https://github.com/nginxinc/nginx-kubernetes-gateway/tree/v0.6.0/examples). |
 | Edge           | For experimental use and latest features | Use the edge image                                                                                                                                                         from [GitHub](https://github.com/nginxinc/nginx-kubernetes-gateway/pkgs/container/nginx-kubernetes-gateway) | [Manifests](https://github.com/nginxinc/nginx-kubernetes-gateway/tree/main/deploy).   | [Documentation](https://github.com/nginxinc/nginx-kubernetes-gateway/tree/main/docs). [Examples](https://github.com/nginxinc/nginx-kubernetes-gateway/tree/main/examples).     |
 
+### Versioning
+
+NKG uses semantic versioning for its releases. For more information, see https://semver.org.
+
+> Major version zero `(0.Y.Z)` is reserved for development, anything MAY change at any time. The public API is not stable.
+
+### Release Planning and Development
+
+The features that will go into the next release are reflected in the
+corresponding [milestone](https://github.com/nginxinc/nginx-kubernetes-gateway/milestones). Refer to
+the [Issue Lifecycle](../ISSUE_LIFECYCLE.md) document for information on issues creation and assignment to releases.
+
+
 ## Technical Specifications
 
 The following table lists the software versions NGINX Kubernetes Gateway supports.
