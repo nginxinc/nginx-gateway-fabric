@@ -100,7 +100,7 @@ var _ = Describe("eventHandler", func() {
 		BeforeEach(func() {
 			fakeProcessor.ProcessReturns(true /* changed */, &graph.Graph{})
 
-			fakeGenerator.GenerateReturns(fakeCfgFiles)
+			fakeGenerator.GenerateReturns(fakeCfgFiles, 1)
 		})
 
 		When("a batch has one event", func() {

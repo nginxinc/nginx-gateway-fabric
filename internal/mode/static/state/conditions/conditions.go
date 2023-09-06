@@ -18,7 +18,7 @@ const (
 	// ListenerMessageFailedNginxReload is a message used with ListenerConditionProgrammed (false)
 	// when nginx fails to reload.
 	ListenerMessageFailedNginxReload = "The Listener is not programmed due to a failure to " +
-		"reload nginx with the configuration"
+		"reload nginx with the configuration. Please see the nginx container logs for any possible configuration issues."
 
 	// RouteReasonBackendRefUnsupportedValue is used with the "ResolvedRefs" condition when one of the
 	// Route rules has a backendRef with an unsupported value.
@@ -50,7 +50,7 @@ const (
 	// GatewayMessageFailedNginxReload is a message used with GatewayConditionProgrammed (false)
 	// when nginx fails to reload.
 	GatewayMessageFailedNginxReload = "The Gateway is not programmed due to a failure to " +
-		"reload nginx with the configuration"
+		"reload nginx with the configuration. Please see the nginx container logs for any possible configuration issues"
 
 	// RouteMessageFailedNginxReload is a message used with RouteReasonGatewayNotProgrammed
 	// when nginx fails to reload.

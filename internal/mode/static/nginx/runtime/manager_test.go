@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"io/fs"
+	"os"
 	"testing"
 	"time"
 )
@@ -109,6 +110,108 @@ func TestFindMainProcess(t *testing.T) {
 		} else {
 			if err != nil {
 				t.Errorf("findMainProcess() returned unexpected error %v for case %q", err, test.msg)
+			}
+		}
+	}
+}
+
+func TestEnsureNewNginxWorkers(t *testing.T) {
+	readFileError := func(string) ([]byte, error) {
+		return nil, errors.New("error")
+	}
+
+	tempFileFunc := func(contents []byte) *os.File {
+		tempFile, err := os.CreateTemp("", "tmpfile-")
+		if err != nil {
+			return nil
+		}
+		if _, err = tempFile.Write(contents); err != nil {
+			return nil
+		}
+		return tempFile
+	}
+
+	previousContents := []byte("1 2 3")
+
+	childFileSame := tempFileFunc(previousContents)
+	childFileDifferent := tempFileFunc([]byte("4 5 6"))
+
+	defer childFileSame.Close()
+	defer os.Remove(childFileSame.Name())
+	defer childFileDifferent.Close()
+	defer os.Remove(childFileDifferent.Name())
+
+	ctx := context.Background()
+	cancellingCtx, cancel := context.WithCancel(ctx)
+	time.AfterFunc(1*time.Millisecond, cancel)
+
+	tests := []struct {
+		ctx              context.Context
+		readFile         readFileFunc
+		childFile        string
+		msg              string
+		previousContents []byte
+		expected         bool
+		expectError      bool
+	}{
+		{
+			ctx:              ctx,
+			readFile:         os.ReadFile,
+			childFile:        childFileDifferent.Name(),
+			previousContents: previousContents,
+			expected:         true,
+			expectError:      false,
+			msg:              "normal case",
+		},
+		{
+			ctx:              ctx,
+			readFile:         readFileError,
+			childFile:        childFileDifferent.Name(),
+			previousContents: previousContents,
+			expected:         false,
+			expectError:      true,
+			msg:              "cannot read file",
+		},
+		{
+			ctx:              ctx,
+			readFile:         os.ReadFile,
+			childFile:        childFileSame.Name(),
+			previousContents: previousContents,
+			expected:         false,
+			expectError:      true,
+			msg:              "no new workers",
+		},
+		{
+			ctx:              cancellingCtx,
+			readFile:         os.ReadFile,
+			childFile:        childFileSame.Name(),
+			previousContents: previousContents,
+			expected:         false,
+			expectError:      true,
+			msg:              "context canceled",
+		},
+	}
+
+	for _, test := range tests {
+		result, err := ensureNewNginxWorkers(
+			test.ctx,
+			test.childFile,
+			test.previousContents,
+			test.readFile,
+			2*time.Millisecond,
+		)
+
+		if result != test.expected {
+			t.Errorf("ensureNewNginxWorkers() returned %v but expected %v for case %q", result, test.expected, test.msg)
+		}
+
+		if test.expectError {
+			if err == nil {
+				t.Errorf("ensureNewNginxWorkers() didn't return error for case %q", test.msg)
+			}
+		} else {
+			if err != nil {
+				t.Errorf("ensureNewNginxWorkers() returned unexpected error %v for case %q", err, test.msg)
 			}
 		}
 	}

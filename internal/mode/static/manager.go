@@ -212,7 +212,7 @@ func StartManager(cfg config.Config) error {
 	eventHandler := newEventHandlerImpl(eventHandlerConfig{
 		processor:           processor,
 		serviceResolver:     resolver.NewServiceResolverImpl(mgr.GetClient()),
-		generator:           configGenerator,
+		generator:           &configGenerator,
 		logger:              cfg.Logger.WithName("eventHandler"),
 		logLevelSetter:      logLevelSetter,
 		nginxFileMgr:        nginxFileMgr,

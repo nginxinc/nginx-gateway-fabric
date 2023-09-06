@@ -1,6 +1,7 @@
 package runtime
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -15,8 +16,10 @@ import (
 )
 
 const (
-	pidFile        = "/var/run/nginx/nginx.pid"
-	pidFileTimeout = 10 * time.Second
+	pidFile            = "/var/run/nginx/nginx.pid"
+	pidFileTimeout     = 10000 * time.Millisecond
+	childProcsTimeout  = 1000 * time.Millisecond
+	nginxReloadTimeout = 60000 * time.Millisecond
 )
 
 type (
@@ -29,22 +32,32 @@ type (
 // Manager manages the runtime of NGINX.
 type Manager interface {
 	// Reload reloads NGINX configuration. It is a blocking operation.
-	Reload(ctx context.Context) error
+	Reload(ctx context.Context, configVersion int) error
 }
 
 // ManagerImpl implements Manager.
-type ManagerImpl struct{}
+type ManagerImpl struct {
+	verifyClient *verifyClient
+}
 
 // NewManagerImpl creates a new ManagerImpl.
 func NewManagerImpl() *ManagerImpl {
-	return &ManagerImpl{}
+	return &ManagerImpl{
+		verifyClient: newVerifyClient(nginxReloadTimeout),
+	}
 }
 
-func (m *ManagerImpl) Reload(ctx context.Context) error {
+func (m *ManagerImpl) Reload(ctx context.Context, configVersion int) error {
 	// We find the main NGINX PID on every reload because it will change if the NGINX container is restarted.
 	pid, err := findMainProcess(ctx, os.Stat, os.ReadFile, pidFileTimeout)
 	if err != nil {
 		return fmt.Errorf("failed to find NGINX main process: %w", err)
+	}
+
+	childProcFile := fmt.Sprintf("/proc/%d/task/%d/children", pid, pid)
+	currentChildProcesses, err := os.ReadFile(childProcFile)
+	if err != nil {
+		return err
 	}
 
 	// send HUP signal to the NGINX main process reload configuration
@@ -53,17 +66,15 @@ func (m *ManagerImpl) Reload(ctx context.Context) error {
 		return fmt.Errorf("failed to send the HUP signal to NGINX main: %w", err)
 	}
 
-	// FIXME(pleshakov)
-	// (1) ensure the reload actually happens.
-	// https://github.com/nginxinc/nginx-kubernetes-gateway/issues/664
+	newProcsStarted, err := ensureNewNginxWorkers(
+		ctx, childProcFile, currentChildProcesses, os.ReadFile, childProcsTimeout)
+	if !newProcsStarted {
+		return fmt.Errorf("reload unsuccessful: no new NGINX worker processes started: %w", err)
+	}
 
-	// for now, to prevent a subsequent reload starting before the in-flight reload finishes, we simply sleep.
-	// Fixing (1) will make the sleep unnecessary.
-
-	select {
-	case <-ctx.Done():
-		return nil
-	case <-time.After(1 * time.Second):
+	err = m.verifyClient.WaitForCorrectVersion(ctx, configVersion)
+	if err != nil {
+		return fmt.Errorf("could not get newest config version: %w", err)
 	}
 
 	return nil
@@ -115,4 +126,37 @@ func findMainProcess(
 	}
 
 	return pid, nil
+}
+
+func ensureNewNginxWorkers(
+	ctx context.Context,
+	childProcFile string,
+	previousContents []byte,
+	readFile readFileFunc,
+	timeout time.Duration,
+) (bool, error) {
+	ctx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+
+	newWorkersStarted := true
+
+	err := wait.PollUntilContextCancel(
+		ctx,
+		25*time.Millisecond,
+		true, /* poll immediately */
+		func(ctx context.Context) (bool, error) {
+			content, err := readFile(childProcFile)
+			if err != nil {
+				return false, err
+			}
+			if !bytes.Equal(previousContents, content) {
+				return true, nil
+			}
+			return false, nil
+		})
+	if err != nil {
+		return false, err
+	}
+
+	return newWorkersStarted, nil
 }

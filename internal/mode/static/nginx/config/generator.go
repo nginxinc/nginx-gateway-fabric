@@ -20,6 +20,9 @@ const (
 
 	// httpConfigFile is the path to the configuration file with HTTP configuration.
 	httpConfigFile = httpFolder + "/http.conf"
+
+	// configVersionFile is the path to the config version configuration file.
+	configVersionFile = httpFolder + "/config-version.conf"
 )
 
 // ConfigFolders is a list of folders where NGINX configuration files are stored.
@@ -29,7 +32,7 @@ var ConfigFolders = []string{httpFolder, secretsFolder}
 // This interface is used for testing purposes only.
 type Generator interface {
 	// Generate generates NGINX configuration files from internal representation.
-	Generate(configuration dataplane.Configuration) []file.File
+	Generate(configuration dataplane.Configuration) ([]file.File, int)
 }
 
 // GeneratorImpl is an implementation of Generator.
@@ -40,11 +43,15 @@ type Generator interface {
 //
 // It also expects that the main NGINX configuration file nginx.conf is located in configFolder and nginx.conf
 // includes (https://nginx.org/en/docs/ngx_core_module.html#include) the files from httpFolder.
-type GeneratorImpl struct{}
+type GeneratorImpl struct {
+	configVersion int
+}
 
 // NewGeneratorImpl creates a new GeneratorImpl.
 func NewGeneratorImpl() GeneratorImpl {
-	return GeneratorImpl{}
+	return GeneratorImpl{
+		configVersion: 0,
+	}
 }
 
 // executeFunc is a function that generates NGINX configuration from internal representation.
@@ -54,7 +61,8 @@ type executeFunc func(configuration dataplane.Configuration) []byte
 // It is the responsibility of the caller to validate the configuration before calling this function.
 // In case of invalid configuration, NGINX will fail to reload or could be configured with malicious configuration.
 // To validate, use the validators from the validation package.
-func (g GeneratorImpl) Generate(conf dataplane.Configuration) []file.File {
+func (g *GeneratorImpl) Generate(conf dataplane.Configuration) ([]file.File, int) {
+	g.configVersion++
 	files := make([]file.File, 0, len(conf.SSLKeyPairs)+1 /* http config */)
 
 	for id, pair := range conf.SSLKeyPairs {
@@ -63,7 +71,9 @@ func (g GeneratorImpl) Generate(conf dataplane.Configuration) []file.File {
 
 	files = append(files, generateHTTPConfig(conf))
 
-	return files
+	files = append(files, generateConfigVersion(g.configVersion))
+
+	return files, g.configVersion
 }
 
 func generatePEM(id dataplane.SSLKeyPairID, cert []byte, key []byte) file.File {
@@ -102,5 +112,16 @@ func getExecuteFuncs() []executeFunc {
 		executeSplitClients,
 		executeServers,
 		executeMaps,
+	}
+}
+
+// generateConfigVersion writes the config version file.
+func generateConfigVersion(configVersion int) file.File {
+	c := executeVersion(configVersion)
+
+	return file.File{
+		Content: c,
+		Path:    configVersionFile,
+		Type:    file.TypeRegular,
 	}
 }
