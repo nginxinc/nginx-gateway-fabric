@@ -11,9 +11,9 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-type Transport struct{}
+type transport struct{}
 
-func (c Transport) RoundTrip(_ *http.Request) (*http.Response, error) {
+func (c transport) RoundTrip(_ *http.Request) (*http.Response, error) {
 	return &http.Response{
 		StatusCode: 200,
 		Body:       io.NopCloser(bytes.NewBufferString("42")),
@@ -22,15 +22,13 @@ func (c Transport) RoundTrip(_ *http.Request) (*http.Response, error) {
 }
 
 func getTestHTTPClient() *http.Client {
-	ts := Transport{}
-	tClient := &http.Client{
+	ts := transport{}
+	return &http.Client{
 		Transport: ts,
 	}
-	return tClient
 }
 
 func TestVerifyClient(t *testing.T) {
-	t.Parallel()
 	c := verifyClient{
 		client:  getTestHTTPClient(),
 		timeout: 25 * time.Millisecond,
@@ -53,6 +51,12 @@ func TestVerifyClient(t *testing.T) {
 			name:            "normal case",
 		},
 		{
+			ctx:             ctx,
+			expectedVersion: 43,
+			expectError:     true,
+			name:            "wrong version",
+		},
+		{
 			ctx:             cancellingCtx,
 			expectedVersion: 0,
 			expectError:     true,
@@ -64,7 +68,7 @@ func TestVerifyClient(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewGomegaWithT(t)
 
-			err := c.WaitForCorrectVersion(test.ctx, test.expectedVersion)
+			err := c.waitForCorrectVersion(test.ctx, test.expectedVersion)
 
 			if test.expectError {
 				g.Expect(err).To(HaveOccurred())

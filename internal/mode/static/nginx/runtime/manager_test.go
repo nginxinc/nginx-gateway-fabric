@@ -150,7 +150,6 @@ func TestEnsureNewNginxWorkers(t *testing.T) {
 		childFile        string
 		name             string
 		previousContents []byte
-		expected         bool
 		expectError      bool
 	}{
 		{
@@ -158,7 +157,6 @@ func TestEnsureNewNginxWorkers(t *testing.T) {
 			readFile:         os.ReadFile,
 			childFile:        childFileDifferent.Name(),
 			previousContents: previousContents,
-			expected:         true,
 			expectError:      false,
 			name:             "normal case",
 		},
@@ -167,7 +165,6 @@ func TestEnsureNewNginxWorkers(t *testing.T) {
 			readFile:         readFileError,
 			childFile:        childFileDifferent.Name(),
 			previousContents: previousContents,
-			expected:         false,
 			expectError:      true,
 			name:             "cannot read file",
 		},
@@ -176,7 +173,6 @@ func TestEnsureNewNginxWorkers(t *testing.T) {
 			readFile:         os.ReadFile,
 			childFile:        childFileSame.Name(),
 			previousContents: previousContents,
-			expected:         false,
 			expectError:      true,
 			name:             "no new workers",
 		},
@@ -185,7 +181,6 @@ func TestEnsureNewNginxWorkers(t *testing.T) {
 			readFile:         os.ReadFile,
 			childFile:        childFileSame.Name(),
 			previousContents: previousContents,
-			expected:         false,
 			expectError:      true,
 			name:             "context canceled",
 		},
@@ -195,7 +190,7 @@ func TestEnsureNewNginxWorkers(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewGomegaWithT(t)
 
-			result, err := ensureNewNginxWorkers(
+			err := ensureNewNginxWorkers(
 				test.ctx,
 				test.childFile,
 				test.previousContents,
@@ -207,7 +202,6 @@ func TestEnsureNewNginxWorkers(t *testing.T) {
 				g.Expect(err).To(HaveOccurred())
 			} else {
 				g.Expect(err).ToNot(HaveOccurred())
-				g.Expect(result).To(Equal(test.expected))
 			}
 		})
 	}

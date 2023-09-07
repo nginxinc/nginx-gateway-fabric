@@ -27,6 +27,12 @@ type (
 	checkFileFunc func(string) (fs.FileInfo, error)
 )
 
+var (
+	noNewWorkersErr = "reload unsuccessful: no new NGINX worker processes started for config version %d." +
+		" Please check the NGINX container logs for possible configuration issues: %w"
+	childProcPath = "/proc/%[1]v/task/%[1]v/children"
+)
+
 //go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . Manager
 
 // Manager manages the runtime of NGINX.
@@ -54,7 +60,7 @@ func (m *ManagerImpl) Reload(ctx context.Context, configVersion int) error {
 		return fmt.Errorf("failed to find NGINX main process: %w", err)
 	}
 
-	childProcFile := fmt.Sprintf("/proc/%[1]v/task/%[1]v/children", pid)
+	childProcFile := fmt.Sprintf(childProcPath, pid)
 	previousChildProcesses, err := os.ReadFile(childProcFile)
 	if err != nil {
 		return err
@@ -66,17 +72,17 @@ func (m *ManagerImpl) Reload(ctx context.Context, configVersion int) error {
 		return fmt.Errorf("failed to send the HUP signal to NGINX main: %w", err)
 	}
 
-	newProcsStarted, err := ensureNewNginxWorkers(
-		ctx, childProcFile, previousChildProcesses, os.ReadFile, childProcsTimeout)
-	if !newProcsStarted {
-		return fmt.Errorf("reload unsuccessful: no new NGINX worker processes started: %w", err)
+	if err := ensureNewNginxWorkers(
+		ctx,
+		childProcFile,
+		previousChildProcesses,
+		os.ReadFile,
+		childProcsTimeout,
+	); err != nil {
+		return fmt.Errorf(noNewWorkersErr, configVersion, err)
 	}
 
-	if err = m.verifyClient.WaitForCorrectVersion(ctx, configVersion); err != nil {
-		return fmt.Errorf("could not get newest config version: %w", err)
-	}
-
-	return nil
+	return m.verifyClient.waitForCorrectVersion(ctx, configVersion)
 }
 
 // EnsureNginxRunning ensures NGINX is running by locating the main process.
@@ -133,11 +139,11 @@ func ensureNewNginxWorkers(
 	previousContents []byte,
 	readFile readFileFunc,
 	timeout time.Duration,
-) (bool, error) {
+) error {
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
-	if err := wait.PollUntilContextCancel(
+	return wait.PollUntilContextCancel(
 		ctx,
 		25*time.Millisecond,
 		true, /* poll immediately */
@@ -150,9 +156,6 @@ func ensureNewNginxWorkers(
 				return true, nil
 			}
 			return false, nil
-		}); err != nil {
-		return false, err
-	}
-
-	return true, nil
+		},
+	)
 }

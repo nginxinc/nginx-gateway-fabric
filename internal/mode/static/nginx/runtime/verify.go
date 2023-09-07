@@ -2,6 +2,7 @@ package runtime
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -34,9 +35,9 @@ func newVerifyClient(timeout time.Duration) *verifyClient {
 	}
 }
 
-// GetConfigVersion gets the version number that we put in the nginx config to verify that we're using
+// getConfigVersion gets the version number that we put in the nginx config to verify that we're using
 // the correct config.
-func (c *verifyClient) GetConfigVersion() (int, error) {
+func (c *verifyClient) getConfigVersion() (int, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), c.timeout)
 	defer cancel()
 	req, err := http.NewRequestWithContext(ctx, "GET", "http://config-version/version", nil)
@@ -65,9 +66,9 @@ func (c *verifyClient) GetConfigVersion() (int, error) {
 	return v, nil
 }
 
-// WaitForCorrectVersion calls the config version endpoint until it gets the expectedVersion,
+// waitForCorrectVersion calls the config version endpoint until it gets the expectedVersion,
 // which ensures that a new worker process has been started for that config version.
-func (c *verifyClient) WaitForCorrectVersion(ctx context.Context, expectedVersion int) error {
+func (c *verifyClient) waitForCorrectVersion(ctx context.Context, expectedVersion int) error {
 	ctx, cancel := context.WithTimeout(ctx, c.timeout)
 	defer cancel()
 
@@ -76,17 +77,13 @@ func (c *verifyClient) WaitForCorrectVersion(ctx context.Context, expectedVersio
 		25*time.Millisecond,
 		true, /* poll immediately */
 		func(ctx context.Context) (bool, error) {
-			version, err := c.GetConfigVersion()
-			if err != nil {
-				return false, err
-			}
-			if version == expectedVersion {
-				return true, nil
-			}
-			return false, nil
+			version, err := c.getConfigVersion()
+			return version == expectedVersion, err
 		}); err != nil {
-		return fmt.Errorf("could not get expected version %v: %w", expectedVersion, err)
+		if errors.Is(err, context.DeadlineExceeded) {
+			err = fmt.Errorf("config version check didn't return expected version within the deadline")
+		}
+		return fmt.Errorf("could not get expected config version %d: %w", expectedVersion, err)
 	}
-
 	return nil
 }

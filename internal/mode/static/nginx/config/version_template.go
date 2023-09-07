@@ -6,7 +6,7 @@ server {
     access_log off;
 
     location /version {
-        return 200 {{.Version}};
+        return 200 {{.}};
     }
 }
 `
