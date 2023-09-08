@@ -1529,10 +1529,9 @@ func TestGetPath(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		g := NewGomegaWithT(t)
 		result := getPath(test.path)
-		if result != test.expected {
-			t.Errorf("getPath() returned %q but expected %q for the case of %q", result, test.expected, test.msg)
-		}
+		g.Expect(result).To(Equal(test.expected))
 	}
 }
 
@@ -1677,15 +1676,9 @@ func TestGetListenerHostname(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		g := NewGomegaWithT(t)
 		result := getListenerHostname(test.hostname)
-		if result != test.expected {
-			t.Errorf(
-				"getListenerHostname() returned %q but expected %q for the case of %q",
-				result,
-				test.expected,
-				test.msg,
-			)
-		}
+		g.Expect(result).To(Equal(test.expected))
 	}
 }
 

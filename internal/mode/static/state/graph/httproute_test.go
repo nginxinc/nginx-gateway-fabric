@@ -4,7 +4,6 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/google/go-cmp/cmp"
 	. "github.com/onsi/gomega"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -1293,10 +1292,9 @@ func TestFindAcceptedHostnames(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		g := NewGomegaWithT(t)
 		result := findAcceptedHostnames(test.listenerHostname, test.routeHostnames)
-		if diff := cmp.Diff(test.expected, result); diff != "" {
-			t.Errorf("findAcceptedHostnames() %q  mismatch (-want +got):\n%s", test.msg, diff)
-		}
+		g.Expect(result).To(Equal(test.expected))
 	}
 }
 
@@ -1327,10 +1325,9 @@ func TestGetHostname(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		g := NewGomegaWithT(t)
 		result := getHostname(test.h)
-		if result != test.expected {
-			t.Errorf("getHostname() returned %q but expected %q for the case of %q", result, test.expected, test.msg)
-		}
+		g.Expect(result).To(Equal(test.expected))
 	}
 }
 

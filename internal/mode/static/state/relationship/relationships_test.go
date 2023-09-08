@@ -3,7 +3,7 @@ package relationship
 import (
 	"testing"
 
-	"github.com/google/go-cmp/cmp"
+	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
@@ -113,10 +113,10 @@ func TestGetBackendServiceNamesFromRoute(t *testing.T) {
 		{Namespace: "test", Name: "multiple-refs"}:      {},
 		{Namespace: "test", Name: "multiple-refs2"}:     {},
 	}
+
+	g := NewGomegaWithT(t)
 	names := getBackendServiceNamesFromRoute(hr)
-	if diff := cmp.Diff(expNames, names); diff != "" {
-		t.Errorf("getBackendServiceNamesFromRoute() mismatch (-want +got):\n%s", diff)
-	}
+	g.Expect(names).To(Equal(expNames))
 }
 
 func TestCapturerImpl_DecrementRouteCount(t *testing.T) {
@@ -150,6 +150,7 @@ func TestCapturerImpl_DecrementRouteCount(t *testing.T) {
 	svc := types.NamespacedName{Namespace: "test", Name: "svc"}
 
 	for _, tc := range testcases {
+		g := NewGomegaWithT(t)
 		if tc.startingRefCount > 0 {
 			capturer.serviceRefCount[svc] = tc.startingRefCount
 		}
@@ -157,17 +158,7 @@ func TestCapturerImpl_DecrementRouteCount(t *testing.T) {
 		capturer.decrementRefCount(svc)
 
 		count, exists := capturer.serviceRefCount[svc]
-		if tc.exists != exists {
-			t.Errorf("decrementRefCount() test case %q expected exists to be %t", tc.msg, tc.exists)
-		}
-
-		if tc.expectedRefCount != count {
-			t.Errorf(
-				"decrementRefCount() test case %q expected ref count to be %d, got %d",
-				tc.msg,
-				tc.expectedRefCount,
-				count,
-			)
-		}
+		g.Expect(exists).To(Equal(tc.exists))
+		g.Expect(count).To(Equal(tc.expectedRefCount))
 	}
 }

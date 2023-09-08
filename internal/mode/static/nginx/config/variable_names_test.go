@@ -24,14 +24,8 @@ func TestConvertStringToSafeVariableName(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
-		if result := convertStringToSafeVariableName(test.s); result != test.expected {
-			t.Errorf(
-				"convertStringToSafeVariableName() mismatch for test %q; expected %s, got %s",
-				test.msg,
-				test.expected,
-				result,
-			)
-		}
+		g := NewGomegaWithT(t)
+		g.Expect(convertStringToSafeVariableName(test.s)).To(Equal(test.expected))
 	}
 }
 

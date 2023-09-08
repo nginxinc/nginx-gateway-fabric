@@ -62,17 +62,10 @@ func TestExecuteServers(t *testing.T) {
 		"ssl_certificate /etc/nginx/secrets/test-keypair.pem;":     2,
 		"ssl_certificate_key /etc/nginx/secrets/test-keypair.pem;": 2,
 	}
-
+	g := NewGomegaWithT(t)
 	servers := string(executeServers(conf))
 	for expSubStr, expCount := range expSubStrings {
-		if expCount != strings.Count(servers, expSubStr) {
-			t.Errorf(
-				"executeServers() did not generate servers with substring %q %d times. Servers: %v",
-				expSubStr,
-				expCount,
-				servers,
-			)
-		}
+		g.Expect(strings.Count(servers, expSubStr)).To(Equal(expCount))
 	}
 }
 
@@ -445,10 +438,9 @@ func TestCreateServers(t *testing.T) {
 	}
 
 	expectedMatchString := func(m []httpMatch) string {
+		g := NewGomegaWithT(t)
 		b, err := json.Marshal(m)
-		if err != nil {
-			t.Errorf("error marshaling test match: %v", err)
-		}
+		g.Expect(err).ShouldNot(HaveOccurred())
 		return string(b)
 	}
 

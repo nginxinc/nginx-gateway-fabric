@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/google/go-cmp/cmp"
+	. "github.com/onsi/gomega"
 	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/nginx/config/http"
@@ -97,28 +97,15 @@ func TestExecuteSplitClients(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		g := NewGomegaWithT(t)
 		sc := string(executeSplitClients(dataplane.Configuration{BackendGroups: test.backendGroups}))
 
 		for _, expSubString := range test.expStrings {
-			if !strings.Contains(sc, expSubString) {
-				t.Errorf(
-					"executeSplitClients() did not generate split clients with substring %q for test %q. Got: %v",
-					expSubString,
-					test.msg,
-					sc,
-				)
-			}
+			g.Expect(strings.Contains(sc, expSubString)).To(BeTrue())
 		}
 
 		for _, notExpString := range test.notExpStrings {
-			if strings.Contains(sc, notExpString) {
-				t.Errorf(
-					"executeSplitClients() generated split clients with unexpected substring %q for test %q. Got: %v",
-					notExpString,
-					test.msg,
-					sc,
-				)
-			}
+			g.Expect(strings.Contains(sc, notExpString)).To(BeFalse())
 		}
 	}
 }
@@ -249,10 +236,9 @@ func TestCreateSplitClients(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		g := NewGomegaWithT(t)
 		result := createSplitClients(test.backendGroups)
-		if diff := cmp.Diff(test.expSplitClients, result); diff != "" {
-			t.Errorf("createSplitClients() mismatch for %q (-want +got):\n%s", test.msg, diff)
-		}
+		g.Expect(result).To(Equal(test.expSplitClients))
 	}
 }
 
@@ -395,10 +381,9 @@ func TestCreateSplitClientDistributions(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		g := NewGomegaWithT(t)
 		result := createSplitClientDistributions(dataplane.BackendGroup{Backends: test.backends})
-		if diff := cmp.Diff(test.expDistributions, result); diff != "" {
-			t.Errorf("createSplitClientDistributions() mismatch for %q (-want +got):\n%s", test.msg, diff)
-		}
+		g.Expect(result).To(Equal(test.expDistributions))
 	}
 }
 
@@ -427,13 +412,9 @@ func TestGetSplitClientValue(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		g := NewGomegaWithT(t)
 		result := getSplitClientValue(test.backend)
-		if result != test.expValue {
-			t.Errorf(
-				"getSplitClientValue() mismatch for %q; expected %s, got %s",
-				test.msg, test.expValue, result,
-			)
-		}
+		g.Expect(result).To(Equal(test.expValue))
 	}
 }
 
@@ -501,13 +482,9 @@ func TestPercentOf(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		g := NewGomegaWithT(t)
 		percent := percentOf(test.weight, test.totalWeight)
-		if percent != test.expPercent {
-			t.Errorf(
-				"percentOf() mismatch for test %q; expected %f, got %f",
-				test.msg, test.expPercent, percent,
-			)
-		}
+		g.Expect(percent).To(Equal(test.expPercent))
 	}
 }
 
@@ -584,14 +561,13 @@ func TestBackendGroupNeedsSplit(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		g := NewGomegaWithT(t)
 		bg := dataplane.BackendGroup{
 			Source:   types.NamespacedName{Namespace: "test", Name: "hr"},
 			Backends: test.backends,
 		}
 		result := backendGroupNeedsSplit(bg)
-		if result != test.expSplit {
-			t.Errorf("backendGroupNeedsSplit() mismatch for %q; expected %t", test.msg, result)
-		}
+		g.Expect(result).To(Equal(test.expSplit))
 	}
 }
 
@@ -679,14 +655,13 @@ func TestBackendGroupName(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		g := NewGomegaWithT(t)
 		bg := dataplane.BackendGroup{
 			Source:   types.NamespacedName{Namespace: "test", Name: "hr"},
 			RuleIdx:  0,
 			Backends: test.backends,
 		}
 		result := backendGroupName(bg)
-		if result != test.expName {
-			t.Errorf("backendGroupName() mismatch for %q; expected %s, got %s", test.msg, test.expName, result)
-		}
+		g.Expect(result).To(Equal(test.expName))
 	}
 }

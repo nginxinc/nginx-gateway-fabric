@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/google/go-cmp/cmp"
+	. "github.com/onsi/gomega"
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/nginx/config/http"
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/state/dataplane"
@@ -48,14 +48,9 @@ func TestExecuteUpstreams(t *testing.T) {
 	}
 
 	upstreams := string(executeUpstreams(dataplane.Configuration{Upstreams: stateUpstreams}))
+	g := NewGomegaWithT(t)
 	for _, expSubString := range expectedSubStrings {
-		if !strings.Contains(upstreams, expSubString) {
-			t.Errorf(
-				"executeUpstreams() did not generate upstreams with expected substring %q, got %q",
-				expSubString,
-				upstreams,
-			)
-		}
+		g.Expect(strings.Contains(upstreams, expSubString)).To(BeTrue())
 	}
 }
 
@@ -134,10 +129,9 @@ func TestCreateUpstreams(t *testing.T) {
 		},
 	}
 
+	g := NewGomegaWithT(t)
 	result := createUpstreams(stateUpstreams)
-	if diff := cmp.Diff(expUpstreams, result); diff != "" {
-		t.Errorf("createUpstreams() mismatch (-want +got):\n%s", diff)
-	}
+	g.Expect(result).To(Equal(expUpstreams))
 }
 
 func TestCreateUpstream(t *testing.T) {
@@ -213,9 +207,8 @@ func TestCreateUpstream(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		g := NewGomegaWithT(t)
 		result := createUpstream(test.stateUpstream)
-		if diff := cmp.Diff(test.expectedUpstream, result); diff != "" {
-			t.Errorf("createUpstream() %q mismatch (-want +got):\n%s", test.msg, diff)
-		}
+		g.Expect(result).To(Equal(test.expectedUpstream))
 	}
 }
