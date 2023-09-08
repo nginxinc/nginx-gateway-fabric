@@ -121,6 +121,8 @@ func TestStaticModeCmdFlagValidation(t *testing.T) {
 				"--metrics-port=9114",
 				"--metrics-disable",
 				"--metrics-secure-serving",
+				"--health-port=8081",
+				"--health-disable",
 			},
 			wantErr: false,
 		},
@@ -212,6 +214,33 @@ func TestStaticModeCmdFlagValidation(t *testing.T) {
 			},
 			wantErr: true,
 			expectedErrPrefix: `invalid argument "999" for "--metrics-secure-serving" flag: strconv.ParseBool:` +
+				` parsing "999": invalid syntax`,
+		},
+		{
+			name: "health-port is invalid type",
+			args: []string{
+				"--health-port=invalid", // not an int
+			},
+			wantErr: true,
+			expectedErrPrefix: `invalid argument "invalid" for "--health-port" flag: failed to parse int value:` +
+				` strconv.ParseInt: parsing "invalid": invalid syntax`,
+		},
+		{
+			name: "health-port is outside of range",
+			args: []string{
+				"--health-port=999", // outside of range
+			},
+			wantErr: true,
+			expectedErrPrefix: `invalid argument "999" for "--health-port" flag:` +
+				` port outside of valid port range [1024 - 65535]: 999`,
+		},
+		{
+			name: "health-disable is not a bool",
+			args: []string{
+				"--health-disable=999", // not a bool
+			},
+			wantErr: true,
+			expectedErrPrefix: `invalid argument "999" for "--health-disable" flag: strconv.ParseBool:` +
 				` parsing "999": invalid syntax`,
 		},
 	}

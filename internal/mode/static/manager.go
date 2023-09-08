@@ -45,6 +45,11 @@ const (
 	clusterTimeout = 10 * time.Second
 )
 
+type ctlrCfg struct {
+	objectType client.Object
+	options    []controller.Option
+}
+
 var scheme = runtime.NewScheme()
 
 func init() {
@@ -55,12 +60,14 @@ func init() {
 }
 
 func StartManager(cfg config.Config) error {
-	logger := cfg.Logger
-
 	options := manager.Options{
 		Scheme:  scheme,
-		Logger:  logger,
+		Logger:  cfg.Logger,
 		Metrics: getMetricsOptions(cfg.MetricsConfig),
+	}
+
+	if cfg.HealthConfig.Enabled {
+		options.HealthProbeBindAddress = fmt.Sprintf(":%d", cfg.HealthConfig.Port)
 	}
 
 	eventCh := make(chan interface{})
@@ -73,16 +80,118 @@ func StartManager(cfg config.Config) error {
 		return fmt.Errorf("cannot build runtime manager: %w", err)
 	}
 
+	hc := &healthChecker{}
+	if cfg.HealthConfig.Enabled {
+		if err := mgr.AddReadyzCheck("readyz", hc.readyCheck); err != nil {
+			return fmt.Errorf("error adding ready check: %w", err)
+		}
+	}
+
 	recorderName := fmt.Sprintf("nginx-kubernetes-gateway-%s", cfg.GatewayClassName)
 	recorder := mgr.GetEventRecorderFor(recorderName)
 	logLevelSetter := newZapLogLevelSetter(cfg.AtomicLevel)
 
+	ctx := ctlr.SetupSignalHandler()
+
+	controlConfigNSName := types.NamespacedName{
+		Namespace: cfg.Namespace,
+		Name:      cfg.ConfigName,
+	}
+	if err := registerControllers(ctx, cfg, mgr, recorder, logLevelSetter, eventCh, controlConfigNSName); err != nil {
+		return err
+	}
+
+	// protectedPorts is the map of ports that may not be configured by a listener, and the name of what it is used for
+	protectedPorts := map[int32]string{
+		int32(cfg.MetricsConfig.Port): "MetricsPort",
+	}
+
+	processor := state.NewChangeProcessorImpl(state.ChangeProcessorConfig{
+		GatewayCtlrName:      cfg.GatewayCtlrName,
+		GatewayClassName:     cfg.GatewayClassName,
+		RelationshipCapturer: relationship.NewCapturerImpl(),
+		Logger:               cfg.Logger.WithName("changeProcessor"),
+		Validators: validation.Validators{
+			HTTPFieldsValidator: ngxvalidation.HTTPValidator{},
+		},
+		EventRecorder:  recorder,
+		Scheme:         scheme,
+		ProtectedPorts: protectedPorts,
+	})
+
+	// Clear the configuration folders to ensure that no files are left over in case the control plane was restarted
+	// (this assumes the folders are in a shared volume).
+	removedPaths, err := file.ClearFolders(file.NewStdLibOSFileManager(), ngxcfg.ConfigFolders)
+	for _, path := range removedPaths {
+		cfg.Logger.Info("removed configuration file", "path", path)
+	}
+	if err != nil {
+		return fmt.Errorf("cannot clear NGINX configuration folders: %w", err)
+	}
+
+	statusUpdater := status.NewUpdater(status.UpdaterConfig{
+		GatewayCtlrName:          cfg.GatewayCtlrName,
+		GatewayClassName:         cfg.GatewayClassName,
+		Client:                   mgr.GetClient(),
+		PodIP:                    cfg.PodIP,
+		Logger:                   cfg.Logger.WithName("statusUpdater"),
+		Clock:                    status.NewRealClock(),
+		UpdateGatewayClassStatus: cfg.UpdateGatewayClassStatus,
+	})
+
+	eventHandler := newEventHandlerImpl(eventHandlerConfig{
+		processor:           processor,
+		serviceResolver:     resolver.NewServiceResolverImpl(mgr.GetClient()),
+		generator:           ngxcfg.NewGeneratorImpl(),
+		logger:              cfg.Logger.WithName("eventHandler"),
+		logLevelSetter:      logLevelSetter,
+		nginxFileMgr:        file.NewManagerImpl(cfg.Logger.WithName("nginxFileManager"), file.NewStdLibOSFileManager()),
+		nginxRuntimeMgr:     ngxruntime.NewManagerImpl(),
+		statusUpdater:       statusUpdater,
+		eventRecorder:       recorder,
+		healthChecker:       hc,
+		controlConfigNSName: controlConfigNSName,
+	})
+
+	objects, objectLists := prepareFirstEventBatchPreparerArgs(cfg.GatewayClassName, cfg.GatewayNsName)
+	firstBatchPreparer := events.NewFirstEventBatchPreparerImpl(mgr.GetCache(), objects, objectLists)
+	eventLoop := events.NewEventLoop(
+		eventCh,
+		cfg.Logger.WithName("eventLoop"),
+		eventHandler,
+		firstBatchPreparer,
+	)
+
+	if err = mgr.Add(eventLoop); err != nil {
+		return fmt.Errorf("cannot register event loop: %w", err)
+	}
+
+	// Ensure NGINX is running before registering metrics & starting the manager.
+	if err := ngxruntime.EnsureNginxRunning(ctx); err != nil {
+		return fmt.Errorf("NGINX is not running: %w", err)
+	}
+
+	if cfg.MetricsConfig.Enabled {
+		if err := configureNginxMetrics(cfg.GatewayClassName); err != nil {
+			return err
+		}
+	}
+
+	cfg.Logger.Info("Starting manager")
+	return mgr.Start(ctx)
+}
+
+func registerControllers(
+	ctx context.Context,
+	cfg config.Config,
+	mgr manager.Manager,
+	recorder record.EventRecorder,
+	logLevelSetter zapSetterImpl,
+	eventCh chan interface{},
+	controlConfigNSName types.NamespacedName,
+) error {
 	// Note: for any new object type or a change to the existing one,
 	// make sure to also update prepareFirstEventBatchPreparerArgs()
-	type ctlrCfg struct {
-		objectType client.Object
-		options    []controller.Option
-	}
 	controllerRegCfgs := []ctlrCfg{
 		{
 			objectType: &gatewayv1beta1.GatewayClass{},
@@ -131,10 +240,6 @@ func StartManager(cfg config.Config) error {
 		},
 	}
 
-	controlConfigNSName := types.NamespacedName{
-		Namespace: cfg.Namespace,
-		Name:      cfg.ConfigName,
-	}
 	if cfg.ConfigName != "" {
 		controllerRegCfgs = append(controllerRegCfgs,
 			ctlrCfg{
@@ -145,15 +250,14 @@ func StartManager(cfg config.Config) error {
 			})
 		if err := setInitialConfig(
 			mgr.GetAPIReader(),
-			logger, recorder,
+			cfg.Logger,
+			recorder,
 			logLevelSetter,
 			controlConfigNSName,
 		); err != nil {
 			return fmt.Errorf("error setting initial control plane configuration: %w", err)
 		}
 	}
-
-	ctx := ctlr.SetupSignalHandler()
 
 	for _, regCfg := range controllerRegCfgs {
 		if err := controller.Register(
@@ -167,87 +271,7 @@ func StartManager(cfg config.Config) error {
 		}
 	}
 
-	// protectedPorts is the map of ports that may not be configured by a listener, and the name of what it is used for
-	protectedPorts := map[int32]string{
-		int32(cfg.MetricsConfig.Port): "MetricsPort",
-	}
-
-	processor := state.NewChangeProcessorImpl(state.ChangeProcessorConfig{
-		GatewayCtlrName:      cfg.GatewayCtlrName,
-		GatewayClassName:     cfg.GatewayClassName,
-		RelationshipCapturer: relationship.NewCapturerImpl(),
-		Logger:               cfg.Logger.WithName("changeProcessor"),
-		Validators: validation.Validators{
-			HTTPFieldsValidator: ngxvalidation.HTTPValidator{},
-		},
-		EventRecorder:  recorder,
-		Scheme:         scheme,
-		ProtectedPorts: protectedPorts,
-	})
-
-	configGenerator := ngxcfg.NewGeneratorImpl()
-
-	// Clear the configuration folders to ensure that no files are left over in case the control plane was restarted
-	// (this assumes the folders are in a shared volume).
-	removedPaths, err := file.ClearFolders(file.NewStdLibOSFileManager(), ngxcfg.ConfigFolders)
-	for _, path := range removedPaths {
-		logger.Info("removed configuration file", "path", path)
-	}
-	if err != nil {
-		return fmt.Errorf("cannot clear NGINX configuration folders: %w", err)
-	}
-
-	nginxFileMgr := file.NewManagerImpl(logger.WithName("nginxFileManager"), file.NewStdLibOSFileManager())
-	nginxRuntimeMgr := ngxruntime.NewManagerImpl()
-	statusUpdater := status.NewUpdater(status.UpdaterConfig{
-		GatewayCtlrName:          cfg.GatewayCtlrName,
-		GatewayClassName:         cfg.GatewayClassName,
-		Client:                   mgr.GetClient(),
-		PodIP:                    cfg.PodIP,
-		Logger:                   cfg.Logger.WithName("statusUpdater"),
-		Clock:                    status.NewRealClock(),
-		UpdateGatewayClassStatus: cfg.UpdateGatewayClassStatus,
-	})
-
-	eventHandler := newEventHandlerImpl(eventHandlerConfig{
-		processor:           processor,
-		serviceResolver:     resolver.NewServiceResolverImpl(mgr.GetClient()),
-		generator:           configGenerator,
-		logger:              cfg.Logger.WithName("eventHandler"),
-		logLevelSetter:      logLevelSetter,
-		nginxFileMgr:        nginxFileMgr,
-		nginxRuntimeMgr:     nginxRuntimeMgr,
-		statusUpdater:       statusUpdater,
-		eventRecorder:       recorder,
-		controlConfigNSName: controlConfigNSName,
-	})
-
-	objects, objectLists := prepareFirstEventBatchPreparerArgs(cfg.GatewayClassName, cfg.GatewayNsName)
-	firstBatchPreparer := events.NewFirstEventBatchPreparerImpl(mgr.GetCache(), objects, objectLists)
-
-	eventLoop := events.NewEventLoop(
-		eventCh,
-		cfg.Logger.WithName("eventLoop"),
-		eventHandler,
-		firstBatchPreparer)
-
-	if err = mgr.Add(eventLoop); err != nil {
-		return fmt.Errorf("cannot register event loop: %w", err)
-	}
-
-	// Ensure NGINX is running before registering metrics & starting the manager.
-	if err := ngxruntime.EnsureNginxRunning(ctx); err != nil {
-		return fmt.Errorf("NGINX is not running: %w", err)
-	}
-
-	if cfg.MetricsConfig.Enabled {
-		if err := configureNginxMetrics(cfg.GatewayClassName); err != nil {
-			return err
-		}
-	}
-
-	logger.Info("Starting manager")
-	return mgr.Start(ctx)
+	return nil
 }
 
 func prepareFirstEventBatchPreparerArgs(

@@ -73,8 +73,10 @@ var _ = Describe("eventHandler", func() {
 			nginxRuntimeMgr:     fakeNginxRuntimeMgr,
 			statusUpdater:       fakeStatusUpdater,
 			eventRecorder:       fakeEventRecorder,
+			healthChecker:       &healthChecker{},
 			controlConfigNSName: types.NamespacedName{Namespace: namespace, Name: configName},
 		})
+		Expect(handler.cfg.healthChecker.ready).To(BeFalse())
 	})
 
 	Describe("Process the Gateway API resources events", func() {
@@ -101,6 +103,10 @@ var _ = Describe("eventHandler", func() {
 			fakeProcessor.ProcessReturns(true /* changed */, &graph.Graph{})
 
 			fakeGenerator.GenerateReturns(fakeCfgFiles)
+		})
+
+		AfterEach(func() {
+			Expect(handler.cfg.healthChecker.ready).To(BeTrue())
 		})
 
 		When("a batch has one event", func() {

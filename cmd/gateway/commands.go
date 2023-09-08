@@ -9,6 +9,7 @@ import (
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 	ctlrZap "sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/provisioner"
@@ -42,10 +43,15 @@ var (
 	updateGCStatus bool
 	disableMetrics bool
 	metricsSecure  bool
+	disableHealth  bool
 
 	metricsListenPort = intValidatingValue{
 		validator: validatePort,
 		value:     9113,
+	}
+	healthListenPort = intValidatingValue{
+		validator: validatePort,
+		value:     8081,
 	}
 	gateway    = namespacedNameValue{}
 	configName = stringValidatingValue{
@@ -92,6 +98,7 @@ func createStaticModeCommand() *cobra.Command {
 				"commit", commit,
 				"date", date,
 			)
+			log.SetLogger(logger)
 
 			podIP := os.Getenv("POD_IP")
 			if err := validateIP(podIP); err != nil {
@@ -115,6 +122,12 @@ func createStaticModeCommand() *cobra.Command {
 				metricsConfig.Secure = metricsSecure
 			}
 
+			healthConfig := config.HealthConfig{}
+			if !disableHealth {
+				healthConfig.Enabled = true
+				healthConfig.Port = healthListenPort.value
+			}
+
 			conf := config.Config{
 				GatewayCtlrName:          gatewayCtlrName.value,
 				ConfigName:               configName.String(),
@@ -126,6 +139,7 @@ func createStaticModeCommand() *cobra.Command {
 				GatewayNsName:            gwNsName,
 				UpdateGatewayClassStatus: updateGCStatus,
 				MetricsConfig:            metricsConfig,
+				HealthConfig:             healthConfig,
 			}
 
 			if err := static.StartManager(conf); err != nil {
@@ -171,7 +185,7 @@ func createStaticModeCommand() *cobra.Command {
 	cmd.Flags().Var(
 		&metricsListenPort,
 		"metrics-port",
-		"Set the port where the metrics are exposed. Format: [1023 - 65535]",
+		"Set the port where the metrics are exposed. Format: [1024 - 65535]",
 	)
 
 	cmd.Flags().BoolVar(
@@ -180,6 +194,19 @@ func createStaticModeCommand() *cobra.Command {
 		false,
 		"Enable serving metrics via https. By default metrics are served via http."+
 			" Please note that this endpoint will be secured with a self-signed certificate.",
+	)
+
+	cmd.Flags().BoolVar(
+		&disableHealth,
+		"health-disable",
+		false,
+		"Disable running the health probe server.",
+	)
+
+	cmd.Flags().Var(
+		&healthListenPort,
+		"health-port",
+		"Set the port where the health probe server is exposed. Format: [1024 - 65535]",
 	)
 
 	return cmd

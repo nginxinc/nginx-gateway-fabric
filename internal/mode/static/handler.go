@@ -41,12 +41,14 @@ type eventHandlerConfig struct {
 	eventRecorder record.EventRecorder
 	// logLevelSetter is used to update the logging level.
 	logLevelSetter ZapLogLevelSetter
-	// logger is the logger to be used by the EventHandler.
-	logger logr.Logger
+	// healthChecker sets the health of the Pod to Ready once we've written out our initial config
+	healthChecker *healthChecker
 	// controlConfigNSName is the NamespacedName of the NginxGateway config for this controller.
 	controlConfigNSName types.NamespacedName
 	// version is the current version number of the nginx config.
 	version int
+	// logger is the logger to be used by the EventHandler.
+	logger logr.Logger
 }
 
 // eventHandlerImpl implements EventHandler.
@@ -88,6 +90,7 @@ func (h *eventHandlerImpl) HandleEventBatch(ctx context.Context, batch events.Ev
 	changed, graph := h.cfg.processor.Process()
 	if !changed {
 		h.cfg.logger.Info("Handling events didn't result into NGINX configuration changes")
+		h.cfg.healthChecker.ready = true
 		return
 	}
 
@@ -101,6 +104,7 @@ func (h *eventHandlerImpl) HandleEventBatch(ctx context.Context, batch events.Ev
 		nginxReloadRes.error = err
 	} else {
 		h.cfg.logger.Info("NGINX configuration was successfully updated")
+		h.cfg.healthChecker.ready = true
 	}
 
 	h.cfg.statusUpdater.Update(ctx, buildStatuses(graph, nginxReloadRes))

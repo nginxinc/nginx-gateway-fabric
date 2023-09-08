@@ -29,6 +29,7 @@ spec:
         - --gatewayclass=nginx
         - --config=nginx-gateway-config
         - --metrics-disable
+        - --health-port=8081
         env:
         - name: POD_IP
           valueFrom:
@@ -41,6 +42,15 @@ spec:
         image: ghcr.io/nginxinc/nginx-kubernetes-gateway:edge
         imagePullPolicy: Always
         name: nginx-gateway
+        ports:
+        - name: health
+          containerPort: 8081
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: health
+          initialDelaySeconds: 3
+          periodSeconds: 1
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:

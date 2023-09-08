@@ -133,6 +133,7 @@ spec:
         - --gatewayclass=nginx
         - --config=nginx-gateway-config
         - --metrics-port=9113
+        - --health-port=8081
         env:
         - name: POD_IP
           valueFrom:
@@ -148,6 +149,14 @@ spec:
         ports:
         - name: metrics
           containerPort: 9113
+        - name: health
+          containerPort: 8081
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: health
+          initialDelaySeconds: 3
+          periodSeconds: 1
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:
