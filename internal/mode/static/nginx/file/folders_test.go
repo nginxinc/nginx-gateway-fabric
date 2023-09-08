@@ -17,7 +17,7 @@ func writeFile(t *testing.T, name string, data []byte) {
 	g := NewWithT(t)
 
 	//nolint:gosec // the file permission is ok for unit testing
-	g.Expect(os.WriteFile(name, data, 0o644)).Should(Succeed())
+	g.Expect(os.WriteFile(name, data, 0o644)).To(Succeed())
 }
 
 func TestClearFoldersRemoves(t *testing.T) {

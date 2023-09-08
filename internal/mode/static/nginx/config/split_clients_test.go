@@ -1,7 +1,6 @@
 package config
 
 import (
-	"strings"
 	"testing"
 
 	. "github.com/onsi/gomega"
@@ -101,11 +100,11 @@ func TestExecuteSplitClients(t *testing.T) {
 		sc := string(executeSplitClients(dataplane.Configuration{BackendGroups: test.backendGroups}))
 
 		for _, expSubString := range test.expStrings {
-			g.Expect(strings.Contains(sc, expSubString)).To(BeTrue())
+			g.Expect(sc).To(ContainSubstring(expSubString))
 		}
 
 		for _, notExpString := range test.notExpStrings {
-			g.Expect(strings.Contains(sc, notExpString)).To(BeFalse())
+			g.Expect(sc).ToNot(ContainSubstring(notExpString))
 		}
 	}
 }

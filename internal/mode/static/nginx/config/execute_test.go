@@ -9,11 +9,10 @@ import (
 )
 
 func TestExecute(t *testing.T) {
+	g := NewWithT(t)
 	defer func() {
-		g := NewWithT(t)
 		g.Expect(recover()).Should(BeNil())
 	}()
-	g := NewWithT(t)
 	bytes := execute(serversTemplate, []http.Server{})
 	g.Expect(len(bytes)).ToNot(Equal(0))
 }

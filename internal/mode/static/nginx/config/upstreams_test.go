@@ -1,7 +1,6 @@
 package config
 
 import (
-	"strings"
 	"testing"
 
 	. "github.com/onsi/gomega"
@@ -50,7 +49,7 @@ func TestExecuteUpstreams(t *testing.T) {
 	upstreams := string(executeUpstreams(dataplane.Configuration{Upstreams: stateUpstreams}))
 	g := NewWithT(t)
 	for _, expSubString := range expectedSubStrings {
-		g.Expect(strings.Contains(upstreams, expSubString)).To(BeTrue())
+		g.Expect(upstreams).To(ContainSubstring(expSubString))
 	}
 }
 
