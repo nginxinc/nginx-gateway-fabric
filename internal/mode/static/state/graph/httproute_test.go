@@ -127,7 +127,7 @@ func TestBuildRoutes(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			g := NewGomegaWithT(t)
+			g := NewWithT(t)
 			routes := buildRoutesForGateways(validator, hrRoutes, test.gwNsNames)
 			g.Expect(helpers.Diff(test.expected, routes)).To(BeEmpty())
 		})
@@ -188,7 +188,7 @@ func TestBuildSectionNameRefs(t *testing.T) {
 		},
 	}
 
-	g := NewGomegaWithT(t)
+	g := NewWithT(t)
 
 	result := buildSectionNameRefs(parentRefs, routeNamespace, gwNsNames)
 	g.Expect(result).To(Equal(expected))
@@ -233,7 +233,7 @@ func TestBuildSectionNameRefsPanicsForDuplicateParentRefs(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			g := NewGomegaWithT(t)
+			g := NewWithT(t)
 			run := func() { buildSectionNameRefs(test.parentRefs, gwNsName.Namespace, gwNsNames) }
 			g.Expect(run).To(Panic())
 		})
@@ -316,7 +316,7 @@ func TestFindGatewayForParentRef(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			g := NewGomegaWithT(t)
+			g := NewWithT(t)
 
 			gw, found := findGatewayForParentRef(test.ref, routeNamespace, gwNsNames)
 			g.Expect(found).To(Equal(test.expectedFound))
@@ -525,7 +525,7 @@ func TestBuildRoute(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			g := NewGomegaWithT(t)
+			g := NewWithT(t)
 
 			route := buildRoute(test.validator, test.hr, gatewayNsNames)
 			g.Expect(helpers.Diff(test.expected, route)).To(BeEmpty())
@@ -1207,7 +1207,7 @@ func TestBindRouteToListeners(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			g := NewGomegaWithT(t)
+			g := NewWithT(t)
 
 			bindRouteToListeners(test.route, test.gateway, namespaces)
 
@@ -1292,7 +1292,7 @@ func TestFindAcceptedHostnames(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		g := NewGomegaWithT(t)
+		g := NewWithT(t)
 		result := findAcceptedHostnames(test.listenerHostname, test.routeHostnames)
 		g.Expect(result).To(Equal(test.expected))
 	}
@@ -1325,7 +1325,7 @@ func TestGetHostname(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		g := NewGomegaWithT(t)
+		g := NewWithT(t)
 		result := getHostname(test.h)
 		g.Expect(result).To(Equal(test.expected))
 	}
@@ -1362,7 +1362,7 @@ func TestValidateHostnames(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			g := NewGomegaWithT(t)
+			g := NewWithT(t)
 
 			err := validateHostnames(test.hostnames, path)
 
@@ -1620,7 +1620,7 @@ func TestValidateMatch(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			g := NewGomegaWithT(t)
+			g := NewWithT(t)
 			allErrs := validateMatch(test.validator, test.match, field.NewPath("test"))
 			g.Expect(allErrs).To(HaveLen(test.expectErrCount))
 		})
@@ -1662,7 +1662,7 @@ func TestValidateFilter(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			g := NewGomegaWithT(t)
+			g := NewWithT(t)
 			allErrs := validateFilter(&validationfakes.FakeHTTPFieldsValidator{}, test.filter, filterPath)
 			g.Expect(allErrs).To(HaveLen(test.expectErrCount))
 		})
@@ -1808,7 +1808,7 @@ func TestValidateFilterRedirect(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			g := NewGomegaWithT(t)
+			g := NewWithT(t)
 			allErrs := validateFilterRedirect(test.validator, test.filter, filterPath)
 			g.Expect(allErrs).To(HaveLen(test.expectErrCount))
 		})
@@ -1922,7 +1922,7 @@ func TestValidateFilterRequestHeaderModifier(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			g := NewGomegaWithT(t)
+			g := NewWithT(t)
 			allErrs := validateFilterHeaderModifier(test.validator, test.filter, filterPath)
 			g.Expect(allErrs).To(HaveLen(test.expectErrCount))
 		})

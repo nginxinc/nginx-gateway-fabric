@@ -79,7 +79,7 @@ func TestValidateHTTPBackendRef(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			g := NewGomegaWithT(t)
+			g := NewWithT(t)
 			resolver := newReferenceGrantResolver(nil)
 
 			valid, cond := validateHTTPBackendRef(test.ref, "test", resolver, field.NewPath("test"))
@@ -210,7 +210,7 @@ func TestValidateBackendRef(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			g := NewGomegaWithT(t)
+			g := NewWithT(t)
 
 			resolver := newReferenceGrantResolver(test.refGrants)
 			valid, cond := validateBackendRef(test.ref, "test", resolver, field.NewPath("test"))
@@ -225,7 +225,7 @@ func TestValidateWeight(t *testing.T) {
 	validWeights := []int32{0, 1, 1000000}
 	invalidWeights := []int32{-1, 1000001}
 
-	g := NewGomegaWithT(t)
+	g := NewWithT(t)
 
 	for _, w := range validWeights {
 		err := validateWeight(w)
@@ -284,7 +284,7 @@ func TestGetServiceAndPortFromRef(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			g := NewGomegaWithT(t)
+			g := NewWithT(t)
 
 			svc, port, err := getServiceAndPortFromRef(test.ref, "test", services, refPath)
 
@@ -488,7 +488,7 @@ func TestAddBackendRefsToRulesTest(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			g := NewGomegaWithT(t)
+			g := NewWithT(t)
 			resolver := newReferenceGrantResolver(nil)
 			addBackendRefsToRules(test.route, resolver, services)
 
@@ -616,7 +616,7 @@ func TestCreateBackend(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			g := NewGomegaWithT(t)
+			g := NewWithT(t)
 
 			resolver := newReferenceGrantResolver(nil)
 			backend, cond := createBackendRef(test.ref, sourceNamespace, resolver, services, refPath)

@@ -114,7 +114,7 @@ func TestGetBackendServiceNamesFromRoute(t *testing.T) {
 		{Namespace: "test", Name: "multiple-refs2"}:     {},
 	}
 
-	g := NewGomegaWithT(t)
+	g := NewWithT(t)
 	names := getBackendServiceNamesFromRoute(hr)
 	g.Expect(names).To(Equal(expNames))
 }
@@ -150,7 +150,7 @@ func TestCapturerImpl_DecrementRouteCount(t *testing.T) {
 	svc := types.NamespacedName{Namespace: "test", Name: "svc"}
 
 	for _, tc := range testcases {
-		g := NewGomegaWithT(t)
+		g := NewWithT(t)
 		if tc.startingRefCount > 0 {
 			capturer.serviceRefCount[svc] = tc.startingRefCount
 		}

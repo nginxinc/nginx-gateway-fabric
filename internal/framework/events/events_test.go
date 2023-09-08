@@ -8,7 +8,7 @@ import (
 )
 
 func TestEventLoop_SwapBatches(t *testing.T) {
-	g := NewGomegaWithT(t)
+	g := NewWithT(t)
 	eventLoop := NewEventLoop(nil, zap.New(), nil, nil)
 
 	eventLoop.currentBatch = EventBatch{

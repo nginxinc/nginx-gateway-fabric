@@ -62,7 +62,7 @@ func TestExecuteServers(t *testing.T) {
 		"ssl_certificate /etc/nginx/secrets/test-keypair.pem;":     2,
 		"ssl_certificate_key /etc/nginx/secrets/test-keypair.pem;": 2,
 	}
-	g := NewGomegaWithT(t)
+	g := NewWithT(t)
 	servers := string(executeServers(conf))
 	for expSubStr, expCount := range expSubStrings {
 		g.Expect(strings.Count(servers, expSubStr)).To(Equal(expCount))
@@ -138,7 +138,7 @@ func TestExecuteForDefaultServers(t *testing.T) {
 
 	for _, tc := range testcases {
 		t.Run(tc.msg, func(t *testing.T) {
-			g := NewGomegaWithT(t)
+			g := NewWithT(t)
 
 			cfg := string(executeServers(tc.conf))
 
@@ -438,7 +438,7 @@ func TestCreateServers(t *testing.T) {
 	}
 
 	expectedMatchString := func(m []httpMatch) string {
-		g := NewGomegaWithT(t)
+		g := NewWithT(t)
 		b, err := json.Marshal(m)
 		g.Expect(err).ShouldNot(HaveOccurred())
 		return string(b)
@@ -653,7 +653,7 @@ func TestCreateServers(t *testing.T) {
 		},
 	}
 
-	g := NewGomegaWithT(t)
+	g := NewWithT(t)
 
 	result := createServers(httpServers, sslServers)
 	g.Expect(helpers.Diff(expectedServers, result)).To(BeEmpty())
@@ -844,7 +844,7 @@ func TestCreateServersConflicts(t *testing.T) {
 				},
 			}
 
-			g := NewGomegaWithT(t)
+			g := NewWithT(t)
 
 			result := createServers(httpServers, []dataplane.VirtualServer{})
 			g.Expect(helpers.Diff(expectedServers, result)).To(BeEmpty())
@@ -853,7 +853,7 @@ func TestCreateServersConflicts(t *testing.T) {
 }
 
 func TestCreateLocationsRootPath(t *testing.T) {
-	g := NewGomegaWithT(t)
+	g := NewWithT(t)
 
 	hrNsName := types.NamespacedName{Namespace: "test", Name: "route1"}
 
@@ -1092,7 +1092,7 @@ func TestCreateReturnValForRedirectFilter(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.msg, func(t *testing.T) {
-			g := NewGomegaWithT(t)
+			g := NewWithT(t)
 
 			result := createReturnValForRedirectFilter(test.filter, test.listenerPort)
 			g.Expect(helpers.Diff(test.expected, result)).To(BeEmpty())
@@ -1251,7 +1251,7 @@ func TestCreateHTTPMatch(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.msg, func(t *testing.T) {
-			g := NewGomegaWithT(t)
+			g := NewWithT(t)
 
 			result := createHTTPMatch(tc.match, testPath)
 			g.Expect(helpers.Diff(result, tc.expected)).To(BeEmpty())
@@ -1260,7 +1260,7 @@ func TestCreateHTTPMatch(t *testing.T) {
 }
 
 func TestCreateQueryParamKeyValString(t *testing.T) {
-	g := NewGomegaWithT(t)
+	g := NewWithT(t)
 
 	expected := "key=value"
 
@@ -1286,7 +1286,7 @@ func TestCreateQueryParamKeyValString(t *testing.T) {
 }
 
 func TestCreateHeaderKeyValString(t *testing.T) {
-	g := NewGomegaWithT(t)
+	g := NewWithT(t)
 
 	expected := "kEy:vALUe"
 
@@ -1346,7 +1346,7 @@ func TestIsPathOnlyMatch(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.msg, func(t *testing.T) {
-			g := NewGomegaWithT(t)
+			g := NewWithT(t)
 
 			result := isPathOnlyMatch(tc.match)
 			g.Expect(result).To(Equal(tc.expected))
@@ -1355,7 +1355,7 @@ func TestIsPathOnlyMatch(t *testing.T) {
 }
 
 func TestCreateProxyPass(t *testing.T) {
-	g := NewGomegaWithT(t)
+	g := NewWithT(t)
 
 	tests := []struct {
 		expected string
@@ -1400,7 +1400,7 @@ func TestCreateProxyPass(t *testing.T) {
 }
 
 func TestCreateMatchLocation(t *testing.T) {
-	g := NewGomegaWithT(t)
+	g := NewWithT(t)
 
 	expected := http.Location{
 		Path:     "/path",
@@ -1412,7 +1412,7 @@ func TestCreateMatchLocation(t *testing.T) {
 }
 
 func TestCreatePathForMatch(t *testing.T) {
-	g := NewGomegaWithT(t)
+	g := NewWithT(t)
 
 	tests := []struct {
 		expected string
@@ -1436,7 +1436,7 @@ func TestCreatePathForMatch(t *testing.T) {
 }
 
 func TestGenerateProxySetHeaders(t *testing.T) {
-	g := NewGomegaWithT(t)
+	g := NewWithT(t)
 
 	filters := dataplane.HTTPHeaderFilter{
 		Add: []dataplane.HTTPHeader{

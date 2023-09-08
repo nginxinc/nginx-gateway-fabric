@@ -11,7 +11,7 @@ import (
 )
 
 func TestExecuteMaps(t *testing.T) {
-	g := NewGomegaWithT(t)
+	g := NewWithT(t)
 	pathRules := []dataplane.PathRule{
 		{
 			MatchRules: []dataplane.MatchRule{
@@ -95,7 +95,7 @@ func TestExecuteMaps(t *testing.T) {
 }
 
 func TestBuildAddHeaderMaps(t *testing.T) {
-	g := NewGomegaWithT(t)
+	g := NewWithT(t)
 	pathRules := []dataplane.PathRule{
 		{
 			MatchRules: []dataplane.MatchRule{

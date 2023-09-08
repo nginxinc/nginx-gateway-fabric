@@ -226,7 +226,7 @@ func TestServicePortsChangedPredicate_Update(t *testing.T) {
 
 	for _, tc := range testcases {
 		t.Run(tc.msg, func(t *testing.T) {
-			g := NewGomegaWithT(t)
+			g := NewWithT(t)
 			update := p.Update(event.UpdateEvent{
 				ObjectOld: tc.objectOld,
 				ObjectNew: tc.objectNew,
@@ -238,7 +238,7 @@ func TestServicePortsChangedPredicate_Update(t *testing.T) {
 }
 
 func TestServicePortsChangedPredicate(t *testing.T) {
-	g := NewGomegaWithT(t)
+	g := NewWithT(t)
 
 	p := ServicePortsChangedPredicate{}
 

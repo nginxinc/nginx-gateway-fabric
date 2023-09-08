@@ -10,17 +10,17 @@ import (
 
 func TestExecute(t *testing.T) {
 	defer func() {
-		g := NewGomegaWithT(t)
+		g := NewWithT(t)
 		g.Expect(recover()).Should(BeNil())
 	}()
-	g := NewGomegaWithT(t)
+	g := NewWithT(t)
 	bytes := execute(serversTemplate, []http.Server{})
 	g.Expect(len(bytes)).ToNot(Equal(0))
 }
 
 func TestExecutePanics(t *testing.T) {
 	defer func() {
-		g := NewGomegaWithT(t)
+		g := NewWithT(t)
 		g.Expect(recover()).ShouldNot(BeNil())
 	}()
 

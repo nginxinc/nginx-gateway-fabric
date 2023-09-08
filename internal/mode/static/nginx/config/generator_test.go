@@ -60,7 +60,7 @@ func TestGenerate(t *testing.T) {
 			},
 		},
 	}
-	g := NewGomegaWithT(t)
+	g := NewWithT(t)
 
 	generator := config.NewGeneratorImpl()
 

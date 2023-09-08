@@ -98,7 +98,7 @@ func TestRegister(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.msg, func(t *testing.T) {
-			g := NewGomegaWithT(t)
+			g := NewWithT(t)
 
 			newReconciler := func(c controller.ReconcilerConfig) *controller.Reconciler {
 				g.Expect(c.Getter).To(BeIdenticalTo(test.fakes.mgr.GetClient()))

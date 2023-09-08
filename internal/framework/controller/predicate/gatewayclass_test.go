@@ -9,7 +9,7 @@ import (
 )
 
 func TestGatewayClassPredicate(t *testing.T) {
-	g := NewGomegaWithT(t)
+	g := NewWithT(t)
 
 	p := GatewayClassPredicate{ControllerName: "nginx-ctlr"}
 

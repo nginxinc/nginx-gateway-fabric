@@ -52,7 +52,7 @@ func TestValidateGatewayControllerName(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			g := NewGomegaWithT(t)
+			g := NewWithT(t)
 
 			err := validateGatewayControllerName(test.value)
 
@@ -115,7 +115,7 @@ func TestValidateResourceName(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			g := NewGomegaWithT(t)
+			g := NewWithT(t)
 
 			err := validateResourceName(test.value)
 
@@ -178,7 +178,7 @@ func TestValidateNamespaceName(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			g := NewGomegaWithT(t)
+			g := NewWithT(t)
 
 			err := validateNamespaceName(test.value)
 
@@ -240,7 +240,7 @@ func TestParseNamespacedResourceName(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			g := NewGomegaWithT(t)
+			g := NewWithT(t)
 
 			nsName, err := parseNamespacedResourceName(test.value)
 
@@ -283,7 +283,7 @@ func TestValidateIP(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			g := NewGomegaWithT(t)
+			g := NewWithT(t)
 
 			err := validateIP(tc.ip)
 			if !tc.expErr {
@@ -320,7 +320,7 @@ func TestValidatePort(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			g := NewGomegaWithT(t)
+			g := NewWithT(t)
 
 			err := validatePort(tc.port)
 			if !tc.expErr {

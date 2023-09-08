@@ -10,7 +10,7 @@ import (
 func TestCreateSingleResourceFilter(t *testing.T) {
 	targetNsName := types.NamespacedName{Namespace: "test", Name: "resource"}
 
-	g := NewGomegaWithT(t)
+	g := NewWithT(t)
 	filter := CreateSingleResourceFilter(targetNsName)
 	g.Expect(filter).ToNot(BeNil())
 

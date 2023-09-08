@@ -22,7 +22,7 @@ func TestPrepareGatewayClassStatus(t *testing.T) {
 		Conditions: CreateExpectedAPIConditions("Test", 1, transitionTime),
 	}
 
-	g := NewGomegaWithT(t)
+	g := NewWithT(t)
 
 	result := prepareGatewayClassStatus(status, transitionTime)
 	g.Expect(helpers.Diff(expected, result)).To(BeEmpty())

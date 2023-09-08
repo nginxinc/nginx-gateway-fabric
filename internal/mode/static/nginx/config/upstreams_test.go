@@ -48,7 +48,7 @@ func TestExecuteUpstreams(t *testing.T) {
 	}
 
 	upstreams := string(executeUpstreams(dataplane.Configuration{Upstreams: stateUpstreams}))
-	g := NewGomegaWithT(t)
+	g := NewWithT(t)
 	for _, expSubString := range expectedSubStrings {
 		g.Expect(strings.Contains(upstreams, expSubString)).To(BeTrue())
 	}
@@ -129,7 +129,7 @@ func TestCreateUpstreams(t *testing.T) {
 		},
 	}
 
-	g := NewGomegaWithT(t)
+	g := NewWithT(t)
 	result := createUpstreams(stateUpstreams)
 	g.Expect(result).To(Equal(expUpstreams))
 }
@@ -207,7 +207,7 @@ func TestCreateUpstream(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		g := NewGomegaWithT(t)
+		g := NewWithT(t)
 		result := createUpstream(test.stateUpstream)
 		g.Expect(result).To(Equal(test.expectedUpstream))
 	}

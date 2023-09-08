@@ -101,7 +101,7 @@ func TestFilterEndpointSliceList(t *testing.T) {
 	expFilteredList := []discoveryV1.EndpointSlice{validEndpointSlice, mixedValidityEndpointSlice}
 
 	filteredSliceList := filterEndpointSliceList(sliceList, svcPort)
-	g := NewGomegaWithT(t)
+	g := NewWithT(t)
 	g.Expect(filteredSliceList).To(Equal(expFilteredList))
 }
 
@@ -122,7 +122,7 @@ func TestGetServicePort(t *testing.T) {
 		},
 	}
 
-	g := NewGomegaWithT(t)
+	g := NewWithT(t)
 	// ports exist
 	for _, p := range []int32{80, 81, 82} {
 		port, err := getServicePort(svc, p)
@@ -167,7 +167,7 @@ func TestGetDefaultPort(t *testing.T) {
 		},
 	}
 	for _, tc := range testcases {
-		g := NewGomegaWithT(t)
+		g := NewWithT(t)
 		port := getDefaultPort(tc.svcPort)
 		g.Expect(port).To(Equal(tc.expPort))
 	}
@@ -276,7 +276,7 @@ func TestIgnoreEndpointSlice(t *testing.T) {
 		},
 	}
 	for _, tc := range testcases {
-		g := NewGomegaWithT(t)
+		g := NewWithT(t)
 		g.Expect(ignoreEndpointSlice(tc.slice, tc.servicePort)).To(Equal(tc.ignore))
 	}
 }
@@ -316,7 +316,7 @@ func TestEndpointReady(t *testing.T) {
 		},
 	}
 	for _, tc := range testcases {
-		g := NewGomegaWithT(t)
+		g := NewWithT(t)
 		g.Expect(endpointReady(tc.endpoint)).To(Equal(tc.ready))
 	}
 }
@@ -447,14 +447,14 @@ func TestFindPort(t *testing.T) {
 		},
 	}
 	for _, tc := range testcases {
-		g := NewGomegaWithT(t)
+		g := NewWithT(t)
 		port := findPort(tc.ports, tc.svcPort)
 		g.Expect(port).To(Equal(tc.expPort))
 	}
 }
 
 func TestCalculateReadyEndpoints(t *testing.T) {
-	g := NewGomegaWithT(t)
+	g := NewWithT(t)
 
 	slices := []discoveryV1.EndpointSlice{
 		{

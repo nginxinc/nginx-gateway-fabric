@@ -24,13 +24,13 @@ func TestConvertStringToSafeVariableName(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
-		g := NewGomegaWithT(t)
+		g := NewWithT(t)
 		g.Expect(convertStringToSafeVariableName(test.s)).To(Equal(test.expected))
 	}
 }
 
 func TestGenerateAddHeaderMapVariableName(t *testing.T) {
-	g := NewGomegaWithT(t)
+	g := NewWithT(t)
 	tests := []struct {
 		msg        string
 		headerName string

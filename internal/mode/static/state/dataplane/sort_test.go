@@ -158,6 +158,6 @@ func TestSort(t *testing.T) {
 
 	sortMatchRules(rules)
 
-	g := NewGomegaWithT(t)
+	g := NewWithT(t)
 	g.Expect(cmp.Diff(sortedRules, rules)).To(BeEmpty())
 }

@@ -42,7 +42,7 @@ func TestServiceNameIndexFunc(t *testing.T) {
 	}
 
 	for _, tc := range testcases {
-		g := NewGomegaWithT(t)
+		g := NewWithT(t)
 		output := ServiceNameIndexFunc(tc.obj)
 		g.Expect(output).To(Equal(tc.expOutput))
 	}
@@ -50,7 +50,7 @@ func TestServiceNameIndexFunc(t *testing.T) {
 
 func TestServiceNameIndexFuncPanics(t *testing.T) {
 	defer func() {
-		g := NewGomegaWithT(t)
+		g := NewWithT(t)
 		g.Expect(recover()).ShouldNot(BeNil())
 	}()
 

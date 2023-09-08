@@ -186,7 +186,7 @@ func TestSecretResolver(t *testing.T) {
 	// Not running tests with t.Run(...) because the last one (getResolvedSecrets) depends on the execution of
 	// all cases.
 
-	g := NewGomegaWithT(t)
+	g := NewWithT(t)
 
 	for _, test := range tests {
 		err := resolver.resolve(test.nsname)
