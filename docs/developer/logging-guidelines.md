@@ -405,7 +405,7 @@ As NKG evolves, we might change the logging. For example:
 - Change the default key-value pairs and their representation.
 
 Such changes should be considered a breaking change and handled according
-to our [release process](/docs/release-process.md) because they will require users to update their log processing
+to our [release process](/docs/developer/release-process.md) because they will require users to update their log processing
 pipelines.
 
 At the same time, changes to individual log messages are not breaking changes.
