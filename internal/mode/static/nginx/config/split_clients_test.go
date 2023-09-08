@@ -96,16 +96,18 @@ func TestExecuteSplitClients(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		g := NewWithT(t)
-		sc := string(executeSplitClients(dataplane.Configuration{BackendGroups: test.backendGroups}))
+		t.Run(test.msg, func(t *testing.T) {
+			g := NewWithT(t)
+			sc := string(executeSplitClients(dataplane.Configuration{BackendGroups: test.backendGroups}))
 
-		for _, expSubString := range test.expStrings {
-			g.Expect(sc).To(ContainSubstring(expSubString))
-		}
+			for _, expSubString := range test.expStrings {
+				g.Expect(sc).To(ContainSubstring(expSubString))
+			}
 
-		for _, notExpString := range test.notExpStrings {
-			g.Expect(sc).ToNot(ContainSubstring(notExpString))
-		}
+			for _, notExpString := range test.notExpStrings {
+				g.Expect(sc).ToNot(ContainSubstring(notExpString))
+			}
+		})
 	}
 }
 
@@ -235,9 +237,11 @@ func TestCreateSplitClients(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		g := NewWithT(t)
-		result := createSplitClients(test.backendGroups)
-		g.Expect(result).To(Equal(test.expSplitClients))
+		t.Run(test.msg, func(t *testing.T) {
+			g := NewWithT(t)
+			result := createSplitClients(test.backendGroups)
+			g.Expect(result).To(Equal(test.expSplitClients))
+		})
 	}
 }
 
@@ -380,9 +384,11 @@ func TestCreateSplitClientDistributions(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		g := NewWithT(t)
-		result := createSplitClientDistributions(dataplane.BackendGroup{Backends: test.backends})
-		g.Expect(result).To(Equal(test.expDistributions))
+		t.Run(test.msg, func(t *testing.T) {
+			g := NewWithT(t)
+			result := createSplitClientDistributions(dataplane.BackendGroup{Backends: test.backends})
+			g.Expect(result).To(Equal(test.expDistributions))
+		})
 	}
 }
 
@@ -411,9 +417,11 @@ func TestGetSplitClientValue(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		g := NewWithT(t)
-		result := getSplitClientValue(test.backend)
-		g.Expect(result).To(Equal(test.expValue))
+		t.Run(test.msg, func(t *testing.T) {
+			g := NewWithT(t)
+			result := getSplitClientValue(test.backend)
+			g.Expect(result).To(Equal(test.expValue))
+		})
 	}
 }
 
@@ -481,9 +489,11 @@ func TestPercentOf(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		g := NewWithT(t)
-		percent := percentOf(test.weight, test.totalWeight)
-		g.Expect(percent).To(Equal(test.expPercent))
+		t.Run(test.msg, func(t *testing.T) {
+			g := NewWithT(t)
+			percent := percentOf(test.weight, test.totalWeight)
+			g.Expect(percent).To(Equal(test.expPercent))
+		})
 	}
 }
 
@@ -560,13 +570,15 @@ func TestBackendGroupNeedsSplit(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		g := NewWithT(t)
-		bg := dataplane.BackendGroup{
-			Source:   types.NamespacedName{Namespace: "test", Name: "hr"},
-			Backends: test.backends,
-		}
-		result := backendGroupNeedsSplit(bg)
-		g.Expect(result).To(Equal(test.expSplit))
+		t.Run(test.msg, func(t *testing.T) {
+			g := NewWithT(t)
+			bg := dataplane.BackendGroup{
+				Source:   types.NamespacedName{Namespace: "test", Name: "hr"},
+				Backends: test.backends,
+			}
+			result := backendGroupNeedsSplit(bg)
+			g.Expect(result).To(Equal(test.expSplit))
+		})
 	}
 }
 
@@ -654,13 +666,15 @@ func TestBackendGroupName(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		g := NewWithT(t)
-		bg := dataplane.BackendGroup{
-			Source:   types.NamespacedName{Namespace: "test", Name: "hr"},
-			RuleIdx:  0,
-			Backends: test.backends,
-		}
-		result := backendGroupName(bg)
-		g.Expect(result).To(Equal(test.expName))
+		t.Run(test.msg, func(t *testing.T) {
+			g := NewWithT(t)
+			bg := dataplane.BackendGroup{
+				Source:   types.NamespacedName{Namespace: "test", Name: "hr"},
+				RuleIdx:  0,
+				Backends: test.backends,
+			}
+			result := backendGroupName(bg)
+			g.Expect(result).To(Equal(test.expName))
+		})
 	}
 }

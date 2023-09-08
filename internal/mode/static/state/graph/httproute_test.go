@@ -1292,9 +1292,11 @@ func TestFindAcceptedHostnames(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		g := NewWithT(t)
-		result := findAcceptedHostnames(test.listenerHostname, test.routeHostnames)
-		g.Expect(result).To(Equal(test.expected))
+		t.Run(test.msg, func(t *testing.T) {
+			g := NewWithT(t)
+			result := findAcceptedHostnames(test.listenerHostname, test.routeHostnames)
+			g.Expect(result).To(Equal(test.expected))
+		})
 	}
 }
 
@@ -1325,9 +1327,11 @@ func TestGetHostname(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		g := NewWithT(t)
-		result := getHostname(test.h)
-		g.Expect(result).To(Equal(test.expected))
+		t.Run(test.msg, func(t *testing.T) {
+			g := NewWithT(t)
+			result := getHostname(test.h)
+			g.Expect(result).To(Equal(test.expected))
+		})
 	}
 }
 

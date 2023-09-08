@@ -206,8 +206,10 @@ func TestCreateUpstream(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		g := NewWithT(t)
-		result := createUpstream(test.stateUpstream)
-		g.Expect(result).To(Equal(test.expectedUpstream))
+		t.Run(test.msg, func(t *testing.T) {
+			g := NewWithT(t)
+			result := createUpstream(test.stateUpstream)
+			g.Expect(result).To(Equal(test.expectedUpstream))
+		})
 	}
 }

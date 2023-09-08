@@ -14,7 +14,7 @@ func TestExecute(t *testing.T) {
 		g.Expect(recover()).Should(BeNil())
 	}()
 	bytes := execute(serversTemplate, []http.Server{})
-	g.Expect(len(bytes)).ToNot(Equal(0))
+	g.Expect(bytes).ToNot(BeEmpty())
 }
 
 func TestExecutePanics(t *testing.T) {

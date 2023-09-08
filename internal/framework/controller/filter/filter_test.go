@@ -51,6 +51,7 @@ func TestCreateSingleResourceFilter(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			g := NewWithT(t)
 			shouldProcess, msg := filter(test.nsname)
 			g.Expect(shouldProcess).To(Equal(test.expectedShouldProcess))
 			g.Expect(msg).To(Equal(test.expectedMsg))
