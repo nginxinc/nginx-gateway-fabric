@@ -14,11 +14,10 @@ import (
 
 func writeFile(t *testing.T, name string, data []byte) {
 	t.Helper()
+	g := NewGomegaWithT(t)
 
 	//nolint:gosec // the file permission is ok for unit testing
-	if err := os.WriteFile(name, data, 0o644); err != nil {
-		t.Fatal(err)
-	}
+	g.Expect(os.WriteFile(name, data, 0o644)).Should(Succeed())
 }
 
 func TestClearFoldersRemoves(t *testing.T) {
