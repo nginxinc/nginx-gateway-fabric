@@ -81,7 +81,10 @@ func (c *verifyClient) waitForCorrectVersion(ctx context.Context, expectedVersio
 			return version == expectedVersion, err
 		}); err != nil {
 		if errors.Is(err, context.DeadlineExceeded) {
-			err = fmt.Errorf("config version check didn't return expected version within the deadline")
+			err = fmt.Errorf(
+				"config version check didn't return expected version %d within the deadline",
+				expectedVersion,
+			)
 		}
 		return fmt.Errorf("could not get expected config version %d: %w", expectedVersion, err)
 	}

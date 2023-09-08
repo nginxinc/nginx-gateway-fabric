@@ -28,9 +28,9 @@ type (
 )
 
 var (
-	noNewWorkersErr = "reload unsuccessful: no new NGINX worker processes started for config version %d." +
+	noNewWorkersErrFmt = "reload unsuccessful: no new NGINX worker processes started for config version %d." +
 		" Please check the NGINX container logs for possible configuration issues: %w"
-	childProcPath = "/proc/%[1]v/task/%[1]v/children"
+	childProcPathFmt = "/proc/%[1]v/task/%[1]v/children"
 )
 
 //go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . Manager
@@ -60,7 +60,7 @@ func (m *ManagerImpl) Reload(ctx context.Context, configVersion int) error {
 		return fmt.Errorf("failed to find NGINX main process: %w", err)
 	}
 
-	childProcFile := fmt.Sprintf(childProcPath, pid)
+	childProcFile := fmt.Sprintf(childProcPathFmt, pid)
 	previousChildProcesses, err := os.ReadFile(childProcFile)
 	if err != nil {
 		return err
@@ -79,7 +79,7 @@ func (m *ManagerImpl) Reload(ctx context.Context, configVersion int) error {
 		os.ReadFile,
 		childProcsTimeout,
 	); err != nil {
-		return fmt.Errorf(noNewWorkersErr, configVersion, err)
+		return fmt.Errorf(noNewWorkersErrFmt, configVersion, err)
 	}
 
 	return m.verifyClient.waitForCorrectVersion(ctx, configVersion)
