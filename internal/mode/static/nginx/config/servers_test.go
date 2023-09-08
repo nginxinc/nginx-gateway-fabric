@@ -79,9 +79,9 @@ func TestExecuteServers(t *testing.T) {
 func TestExecuteForDefaultServers(t *testing.T) {
 	testcases := []struct {
 		msg       string
-		conf      dataplane.Configuration
 		httpPorts []int
 		sslPorts  []int
+		conf      dataplane.Configuration
 	}{
 		{
 			conf: dataplane.Configuration{},

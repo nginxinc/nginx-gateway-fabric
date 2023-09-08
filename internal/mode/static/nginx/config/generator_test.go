@@ -64,7 +64,7 @@ func TestGenerate(t *testing.T) {
 
 	generator := config.NewGeneratorImpl()
 
-	files, version := generator.Generate(conf)
+	files := generator.Generate(&conf)
 
 	g.Expect(files).To(HaveLen(3))
 
@@ -87,5 +87,5 @@ func TestGenerate(t *testing.T) {
 	g.Expect(files[2].Type).To(Equal(file.TypeRegular))
 	g.Expect(files[2].Path).To(Equal("/etc/nginx/conf.d/config-version.conf"))
 	configVersion := string(files[2].Content)
-	g.Expect(configVersion).To(ContainSubstring(fmt.Sprintf("return 200 %d", version)))
+	g.Expect(configVersion).To(ContainSubstring(fmt.Sprintf("return 200 %d", conf.Version)))
 }

@@ -45,7 +45,7 @@ var _ = Describe("eventHandler", func() {
 		Expect(fakeProcessor.ProcessCallCount()).Should(Equal(1))
 
 		Expect(fakeGenerator.GenerateCallCount()).Should(Equal(1))
-		Expect(fakeGenerator.GenerateArgsForCall(0)).Should(Equal(expectedConf))
+		Expect(fakeGenerator.GenerateArgsForCall(0)).Should(Equal(&expectedConf))
 
 		Expect(fakeNginxFileMgr.ReplaceFilesCallCount()).Should(Equal(1))
 		files := fakeNginxFileMgr.ReplaceFilesArgsForCall(0)
@@ -100,7 +100,7 @@ var _ = Describe("eventHandler", func() {
 		BeforeEach(func() {
 			fakeProcessor.ProcessReturns(true /* changed */, &graph.Graph{})
 
-			fakeGenerator.GenerateReturns(fakeCfgFiles, 1)
+			fakeGenerator.GenerateReturns(fakeCfgFiles)
 		})
 
 		When("a batch has one event", func() {

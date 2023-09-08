@@ -100,14 +100,14 @@ func (h *eventHandlerImpl) HandleEventBatch(ctx context.Context, batch events.Ev
 	h.cfg.statusUpdater.Update(ctx, buildStatuses(graph, nginxReloadRes))
 }
 
-func (h *eventHandlerImpl) updateNginx(ctx context.Context, conf dataplane.Configuration) error {
-	files, configVersion := h.cfg.generator.Generate(conf)
+func (h *eventHandlerImpl) updateNginx(ctx context.Context, conf *dataplane.Configuration) error {
+	files := h.cfg.generator.Generate(conf)
 
 	if err := h.cfg.nginxFileMgr.ReplaceFiles(files); err != nil {
 		return fmt.Errorf("failed to replace NGINX configuration files: %w", err)
 	}
 
-	if err := h.cfg.nginxRuntimeMgr.Reload(ctx, configVersion); err != nil {
+	if err := h.cfg.nginxRuntimeMgr.Reload(ctx, conf.Version); err != nil {
 		return fmt.Errorf("failed to reload NGINX: %w", err)
 	}
 

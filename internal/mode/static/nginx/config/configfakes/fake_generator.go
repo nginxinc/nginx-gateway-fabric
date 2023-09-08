@@ -10,28 +10,26 @@ import (
 )
 
 type FakeGenerator struct {
-	GenerateStub        func(dataplane.Configuration) ([]file.File, int)
+	GenerateStub        func(*dataplane.Configuration) []file.File
 	generateMutex       sync.RWMutex
 	generateArgsForCall []struct {
-		arg1 dataplane.Configuration
+		arg1 *dataplane.Configuration
 	}
 	generateReturns struct {
 		result1 []file.File
-		result2 int
 	}
 	generateReturnsOnCall map[int]struct {
 		result1 []file.File
-		result2 int
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeGenerator) Generate(arg1 dataplane.Configuration) ([]file.File, int) {
+func (fake *FakeGenerator) Generate(arg1 *dataplane.Configuration) []file.File {
 	fake.generateMutex.Lock()
 	ret, specificReturn := fake.generateReturnsOnCall[len(fake.generateArgsForCall)]
 	fake.generateArgsForCall = append(fake.generateArgsForCall, struct {
-		arg1 dataplane.Configuration
+		arg1 *dataplane.Configuration
 	}{arg1})
 	stub := fake.GenerateStub
 	fakeReturns := fake.generateReturns
@@ -41,9 +39,9 @@ func (fake *FakeGenerator) Generate(arg1 dataplane.Configuration) ([]file.File, 
 		return stub(arg1)
 	}
 	if specificReturn {
-		return ret.result1, ret.result2
+		return ret.result1
 	}
-	return fakeReturns.result1, fakeReturns.result2
+	return fakeReturns.result1
 }
 
 func (fake *FakeGenerator) GenerateCallCount() int {
@@ -52,43 +50,40 @@ func (fake *FakeGenerator) GenerateCallCount() int {
 	return len(fake.generateArgsForCall)
 }
 
-func (fake *FakeGenerator) GenerateCalls(stub func(dataplane.Configuration) ([]file.File, int)) {
+func (fake *FakeGenerator) GenerateCalls(stub func(*dataplane.Configuration) []file.File) {
 	fake.generateMutex.Lock()
 	defer fake.generateMutex.Unlock()
 	fake.GenerateStub = stub
 }
 
-func (fake *FakeGenerator) GenerateArgsForCall(i int) dataplane.Configuration {
+func (fake *FakeGenerator) GenerateArgsForCall(i int) *dataplane.Configuration {
 	fake.generateMutex.RLock()
 	defer fake.generateMutex.RUnlock()
 	argsForCall := fake.generateArgsForCall[i]
 	return argsForCall.arg1
 }
 
-func (fake *FakeGenerator) GenerateReturns(result1 []file.File, result2 int) {
+func (fake *FakeGenerator) GenerateReturns(result1 []file.File) {
 	fake.generateMutex.Lock()
 	defer fake.generateMutex.Unlock()
 	fake.GenerateStub = nil
 	fake.generateReturns = struct {
 		result1 []file.File
-		result2 int
-	}{result1, result2}
+	}{result1}
 }
 
-func (fake *FakeGenerator) GenerateReturnsOnCall(i int, result1 []file.File, result2 int) {
+func (fake *FakeGenerator) GenerateReturnsOnCall(i int, result1 []file.File) {
 	fake.generateMutex.Lock()
 	defer fake.generateMutex.Unlock()
 	fake.GenerateStub = nil
 	if fake.generateReturnsOnCall == nil {
 		fake.generateReturnsOnCall = make(map[int]struct {
 			result1 []file.File
-			result2 int
 		})
 	}
 	fake.generateReturnsOnCall[i] = struct {
 		result1 []file.File
-		result2 int
-	}{result1, result2}
+	}{result1}
 }
 
 func (fake *FakeGenerator) Invocations() map[string][][]interface{} {
