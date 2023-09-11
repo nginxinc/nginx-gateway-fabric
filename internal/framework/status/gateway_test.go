@@ -52,7 +52,7 @@ func TestPrepareGatewayStatus(t *testing.T) {
 		Addresses: []v1beta1.GatewayStatusAddress{podIP},
 	}
 
-	g := NewGomegaWithT(t)
+	g := NewWithT(t)
 
 	result := prepareGatewayStatus(status, "1.2.3.4", transitionTime)
 	g.Expect(helpers.Diff(expected, result)).To(BeEmpty())

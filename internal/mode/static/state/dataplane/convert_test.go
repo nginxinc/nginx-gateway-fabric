@@ -115,7 +115,7 @@ func TestConvertMatch(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			g := NewGomegaWithT(t)
+			g := NewWithT(t)
 
 			result := convertMatch(test.match)
 			g.Expect(helpers.Diff(result, test.expected)).To(BeEmpty())
@@ -153,7 +153,7 @@ func TestConvertHTTPRequestRedirectFilter(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			g := NewGomegaWithT(t)
+			g := NewWithT(t)
 
 			result := convertHTTPRequestRedirectFilter(test.filter)
 			g.Expect(result).To(Equal(test.expected))
@@ -201,7 +201,7 @@ func TestConvertHTTPHeaderFilter(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			g := NewGomegaWithT(t)
+			g := NewWithT(t)
 
 			result := convertHTTPHeaderFilter(test.filter)
 			g.Expect(result).To(Equal(test.expected))
@@ -210,7 +210,7 @@ func TestConvertHTTPHeaderFilter(t *testing.T) {
 }
 
 func TestConvertPathType(t *testing.T) {
-	g := NewGomegaWithT(t)
+	g := NewWithT(t)
 
 	tests := []struct {
 		pathType v1beta1.PathMatchType

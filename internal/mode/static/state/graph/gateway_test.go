@@ -57,7 +57,7 @@ func TestProcessedGatewaysGetAllNsNames(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			g := NewGomegaWithT(t)
+			g := NewWithT(t)
 			result := test.gws.GetAllNsNames()
 			g.Expect(result).To(Equal(test.expected))
 		})
@@ -132,7 +132,7 @@ func TestProcessGateways(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			g := NewGomegaWithT(t)
+			g := NewWithT(t)
 			result := processGateways(test.gws, gcName)
 			g.Expect(helpers.Diff(test.expected, result)).To(BeEmpty())
 		})
@@ -861,7 +861,7 @@ func TestBuildGateway(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			g := NewGomegaWithT(t)
+			g := NewWithT(t)
 			resolver := newReferenceGrantResolver(test.refGrants)
 			result := buildGateway(test.gateway, secretResolver, test.gatewayClass, resolver, protectedPorts)
 			g.Expect(helpers.Diff(test.expected, result)).To(BeEmpty())

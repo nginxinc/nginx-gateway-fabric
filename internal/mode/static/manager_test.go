@@ -63,7 +63,7 @@ func TestPrepareFirstEventBatchPreparerArgs(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			g := NewGomegaWithT(t)
+			g := NewWithT(t)
 
 			objects, objectLists := prepareFirstEventBatchPreparerArgs(gcName, test.gwNsName)
 
@@ -112,7 +112,7 @@ func TestGetMetricsOptions(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			g := NewGomegaWithT(t)
+			g := NewWithT(t)
 
 			metricsServerOptions := getMetricsOptions(test.metricsConfig)
 

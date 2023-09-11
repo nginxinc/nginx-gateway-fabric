@@ -1486,7 +1486,7 @@ func TestBuildConfiguration(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.msg, func(t *testing.T) {
-			g := NewGomegaWithT(t)
+			g := NewWithT(t)
 
 			result := BuildConfiguration(context.TODO(), test.graph, fakeResolver, 1)
 
@@ -1529,10 +1529,11 @@ func TestGetPath(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		result := getPath(test.path)
-		if result != test.expected {
-			t.Errorf("getPath() returned %q but expected %q for the case of %q", result, test.expected, test.msg)
-		}
+		t.Run(test.msg, func(t *testing.T) {
+			g := NewWithT(t)
+			result := getPath(test.path)
+			g.Expect(result).To(Equal(test.expected))
+		})
 	}
 }
 
@@ -1642,7 +1643,7 @@ func TestCreateFilters(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.msg, func(t *testing.T) {
-			g := NewGomegaWithT(t)
+			g := NewWithT(t)
 			result := createHTTPFilters(test.filters)
 
 			g.Expect(helpers.Diff(test.expected, result)).To(BeEmpty())
@@ -1677,15 +1678,11 @@ func TestGetListenerHostname(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		result := getListenerHostname(test.hostname)
-		if result != test.expected {
-			t.Errorf(
-				"getListenerHostname() returned %q but expected %q for the case of %q",
-				result,
-				test.expected,
-				test.msg,
-			)
-		}
+		t.Run(test.msg, func(t *testing.T) {
+			g := NewWithT(t)
+			result := getListenerHostname(test.hostname)
+			g.Expect(result).To(Equal(test.expected))
+		})
 	}
 }
 
@@ -1871,7 +1868,7 @@ func TestBuildUpstreams(t *testing.T) {
 		}
 	})
 
-	g := NewGomegaWithT(t)
+	g := NewWithT(t)
 
 	upstreams := buildUpstreams(context.TODO(), listeners, fakeResolver)
 	g.Expect(upstreams).To(ConsistOf(expUpstreams))
@@ -1942,7 +1939,7 @@ func TestBuildBackendGroups(t *testing.T) {
 		hrNoBackends,
 	}
 
-	g := NewGomegaWithT(t)
+	g := NewWithT(t)
 
 	result := buildBackendGroups(servers)
 
@@ -2002,7 +1999,7 @@ func TestHostnameMoreSpecific(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.msg, func(t *testing.T) {
-			g := NewGomegaWithT(t)
+			g := NewWithT(t)
 
 			g.Expect(listenerHostnameMoreSpecific(tc.host1, tc.host2)).To(Equal(tc.host1Wins))
 		})

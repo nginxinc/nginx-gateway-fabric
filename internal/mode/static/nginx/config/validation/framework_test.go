@@ -14,7 +14,7 @@ type supportedValuesValidatorFunc[T configValue] func(v T) (bool, []string)
 func runValidatorTests[T configValue](t *testing.T, run func(g *WithT, v T), caseNamePrefix string, values ...T) {
 	for i, v := range values {
 		t.Run(fmt.Sprintf("%s_case_#%d", caseNamePrefix, i), func(t *testing.T) {
-			g := NewGomegaWithT(t)
+			g := NewWithT(t)
 			run(g, v)
 		})
 	}
@@ -136,7 +136,7 @@ func TestGetSortedKeysAsString(t *testing.T) {
 
 	expected := []string{"value1", "value2", "value3"}
 
-	g := NewGomegaWithT(t)
+	g := NewWithT(t)
 
 	result := getSortedKeysAsString(values)
 	g.Expect(result).To(Equal(expected))

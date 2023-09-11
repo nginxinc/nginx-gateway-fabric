@@ -3,7 +3,7 @@ package index
 import (
 	"testing"
 
-	"github.com/google/go-cmp/cmp"
+	. "github.com/onsi/gomega"
 	v1 "k8s.io/api/core/v1"
 	discoveryV1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -42,18 +42,16 @@ func TestServiceNameIndexFunc(t *testing.T) {
 	}
 
 	for _, tc := range testcases {
+		g := NewWithT(t)
 		output := ServiceNameIndexFunc(tc.obj)
-		if diff := cmp.Diff(tc.expOutput, output); diff != "" {
-			t.Errorf("ServiceNameIndexFunc() mismatch on %q (-want +got):\n%s", tc.msg, diff)
-		}
+		g.Expect(output).To(Equal(tc.expOutput))
 	}
 }
 
 func TestServiceNameIndexFuncPanics(t *testing.T) {
 	defer func() {
-		if r := recover(); r == nil {
-			t.Errorf("ServiceNameIndexFunc() did not panic")
-		}
+		g := NewWithT(t)
+		g.Expect(recover()).ShouldNot(BeNil())
 	}()
 
 	ServiceNameIndexFunc(&v1.Namespace{})

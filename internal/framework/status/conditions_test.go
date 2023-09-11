@@ -54,7 +54,7 @@ func CreateExpectedAPIConditions(
 }
 
 func TestConvertRouteConditions(t *testing.T) {
-	g := NewGomegaWithT(t)
+	g := NewWithT(t)
 
 	var generation int64 = 1
 	transitionTime := metav1.NewTime(time.Now())

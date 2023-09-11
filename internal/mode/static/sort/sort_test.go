@@ -79,7 +79,7 @@ func TestLessObjectMeta(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			g := NewGomegaWithT(t)
+			g := NewWithT(t)
 
 			result := LessObjectMeta(test.meta1, test.meta2)
 			invertedResult := LessObjectMeta(test.meta2, test.meta1)

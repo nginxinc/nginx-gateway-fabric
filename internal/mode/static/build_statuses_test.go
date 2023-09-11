@@ -193,7 +193,7 @@ func TestBuildStatuses(t *testing.T) {
 		},
 	}
 
-	g := NewGomegaWithT(t)
+	g := NewWithT(t)
 
 	var nginxReloadRes nginxReloadResult
 	result := buildStatuses(graph, nginxReloadRes)
@@ -285,7 +285,7 @@ func TestBuildStatusesNginxErr(t *testing.T) {
 		},
 	}
 
-	g := NewGomegaWithT(t)
+	g := NewWithT(t)
 
 	nginxReloadRes := nginxReloadResult{error: errors.New("test error")}
 	result := buildStatuses(graph, nginxReloadRes)
@@ -349,7 +349,7 @@ func TestBuildGatewayClassStatuses(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			g := NewGomegaWithT(t)
+			g := NewWithT(t)
 
 			result := buildGatewayClassStatuses(test.gc, test.ignoredClasses)
 			g.Expect(helpers.Diff(test.expected, result)).To(BeEmpty())
@@ -556,7 +556,7 @@ func TestBuildGatewayStatuses(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			g := NewGomegaWithT(t)
+			g := NewWithT(t)
 
 			result := buildGatewayStatuses(test.gateway, test.ignoredGateways, test.nginxReloadRes)
 			g.Expect(helpers.Diff(test.expected, result)).To(BeEmpty())

@@ -48,7 +48,7 @@ func TestValidateHTTPListener(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			g := NewGomegaWithT(t)
+			g := NewWithT(t)
 
 			v := createHTTPListenerValidator(protectedPorts)
 
@@ -191,7 +191,7 @@ func TestValidateHTTPSListener(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			g := NewGomegaWithT(t)
+			g := NewWithT(t)
 
 			v := createHTTPSListenerValidator(protectedPorts)
 
@@ -236,7 +236,7 @@ func TestValidateListenerHostname(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			g := NewGomegaWithT(t)
+			g := NewWithT(t)
 
 			conds := validateListenerHostname(v1beta1.Listener{Hostname: test.hostname})
 
@@ -339,7 +339,7 @@ func TestGetAndValidateListenerSupportedKinds(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			g := NewGomegaWithT(t)
+			g := NewWithT(t)
 
 			listener := v1beta1.Listener{
 				Protocol: test.protocol,
@@ -391,7 +391,7 @@ func TestValidateListenerLabelSelector(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			g := NewGomegaWithT(t)
+			g := NewWithT(t)
 
 			// create iteration variable inside the loop to fix implicit memory aliasing
 			from := test.from

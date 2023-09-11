@@ -60,7 +60,7 @@ func TestPrepareHTTPRouteStatus(t *testing.T) {
 		},
 	}
 
-	g := NewGomegaWithT(t)
+	g := NewWithT(t)
 
 	result := prepareHTTPRouteStatus(status, gatewayCtlrName, transitionTime)
 	g.Expect(helpers.Diff(expected, result)).To(BeEmpty())

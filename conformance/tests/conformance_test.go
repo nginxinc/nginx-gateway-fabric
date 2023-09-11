@@ -35,7 +35,7 @@ import (
 )
 
 func TestConformance(t *testing.T) {
-	g := NewGomegaWithT(t)
+	g := NewWithT(t)
 	cfg, err := config.GetConfig()
 	g.Expect(err).To(BeNil())
 

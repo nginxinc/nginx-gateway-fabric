@@ -10,10 +10,9 @@ import (
 func TestCreateSingleResourceFilter(t *testing.T) {
 	targetNsName := types.NamespacedName{Namespace: "test", Name: "resource"}
 
+	g := NewWithT(t)
 	filter := CreateSingleResourceFilter(targetNsName)
-	if filter == nil {
-		t.Fatal("TestCreateSingleResourceFilter() returned nil filter")
-	}
+	g.Expect(filter).ToNot(BeNil())
 
 	const expectedMsg = "Resource is ignored because this controller only supports a single resource " +
 		"test/resource of that type"
@@ -52,8 +51,7 @@ func TestCreateSingleResourceFilter(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			g := NewGomegaWithT(t)
-
+			g := NewWithT(t)
 			shouldProcess, msg := filter(test.nsname)
 			g.Expect(shouldProcess).To(Equal(test.expectedShouldProcess))
 			g.Expect(msg).To(Equal(test.expectedMsg))

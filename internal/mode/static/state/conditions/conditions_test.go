@@ -10,7 +10,7 @@ import (
 )
 
 func TestDeduplicateConditions(t *testing.T) {
-	g := NewGomegaWithT(t)
+	g := NewWithT(t)
 
 	conds := []conditions.Condition{
 		{
