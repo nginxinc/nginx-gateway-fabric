@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/go-logr/logr"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -64,15 +65,11 @@ type UpdaterConfig struct {
 // (b) k8s API can become slow or even timeout. This will increase every update status API call.
 // Making UpdaterImpl asynchronous will prevent it from adding variable delays to the event loop.
 //
-// (3) It doesn't retry on failures. This means there is a chance that some resources will not have up-to-do statuses.
-// Statuses are important part of the Gateway API, so we need to ensure that the Gateway always keep the resources
-// statuses up-to-date.
-//
-// (4) It doesn't clear the statuses of a resources that are no longer handled by the Gateway. For example, if
+// (3) It doesn't clear the statuses of a resources that are no longer handled by the Gateway. For example, if
 // an HTTPRoute resource no longer has the parentRef to the Gateway resources, the Gateway must update the status
 // of the resource to remove the status about the removed parentRef.
 //
-// (5) If another controllers changes the status of the Gateway/HTTPRoute resource so that the information set by our
+// (4) If another controllers changes the status of the Gateway/HTTPRoute resource so that the information set by our
 // Gateway is removed, our Gateway will not restore the status until the EventLoop invokes the StatusUpdater as a
 // result of processing some other new change to a resource(s).
 // FIXME(pleshakov): Make updater production ready
@@ -154,16 +151,29 @@ func (upd *UpdaterImpl) updateNginxGateway(ctx context.Context, status *NginxGat
 	upd.cfg.Logger.Info("Updating Nginx Gateway status")
 
 	if status != nil {
-		upd.writeStatuses(ctx, status.NsName, &ngfAPI.NginxGateway{}, func(object client.Object) {
-			ng := object.(*ngfAPI.NginxGateway)
-			ng.Status = ngfAPI.NginxGatewayStatus{
-				Conditions: convertConditions(
-					status.Conditions,
-					status.ObservedGeneration,
-					upd.cfg.Clock.Now(),
-				),
-			}
-		})
+		statusUpdatedCh := make(chan struct{})
+
+		go func() {
+			upd.writeStatuses(ctx, status.NsName, &ngfAPI.NginxGateway{}, func(object client.Object) {
+				ng := object.(*ngfAPI.NginxGateway)
+				ng.Status = ngfAPI.NginxGatewayStatus{
+					Conditions: convertConditions(
+						status.Conditions,
+						status.ObservedGeneration,
+						upd.cfg.Clock.Now(),
+					),
+				}
+			})
+			statusUpdatedCh <- struct{}{}
+		}()
+		// Block here as the above goroutine runs. If the context gets canceled, we unblock and the method
+		// returns. The goroutine continues but is canceled when the controller exits. If the goroutine
+		// finishes and writes to the channel "statusUpdatedCh", we know that it is done updating
+		// and this method exits.
+		select {
+		case <-ctx.Done():
+		case <-statusUpdatedCh:
+		}
 	}
 }
 
@@ -177,40 +187,48 @@ func (upd *UpdaterImpl) updateGatewayAPI(ctx context.Context, statuses GatewayAP
 
 	upd.cfg.Logger.Info("Updating Gateway API statuses")
 
-	if upd.cfg.UpdateGatewayClassStatus {
-		for nsname, gcs := range statuses.GatewayClassStatuses {
-			upd.writeStatuses(ctx, nsname, &v1beta1.GatewayClass{}, func(object client.Object) {
-				gc := object.(*v1beta1.GatewayClass)
-				gc.Status = prepareGatewayClassStatus(gcs, upd.cfg.Clock.Now())
-			},
-			)
-		}
-	}
+	statusUpdatedCh := make(chan struct{})
 
-	for nsname, gs := range statuses.GatewayStatuses {
-		upd.writeStatuses(ctx, nsname, &v1beta1.Gateway{}, func(object client.Object) {
-			gw := object.(*v1beta1.Gateway)
-			gw.Status = prepareGatewayStatus(gs, upd.cfg.PodIP, upd.cfg.Clock.Now())
-		})
-	}
-
-	for nsname, rs := range statuses.HTTPRouteStatuses {
-		select {
-		case <-ctx.Done():
-			return
-		default:
+	go func() {
+		if upd.cfg.UpdateGatewayClassStatus {
+			for nsname, gcs := range statuses.GatewayClassStatuses {
+				upd.writeStatuses(ctx, nsname, &v1beta1.GatewayClass{}, func(object client.Object) {
+					gc := object.(*v1beta1.GatewayClass)
+					gc.Status = prepareGatewayClassStatus(gcs, upd.cfg.Clock.Now())
+				},
+				)
+			}
 		}
 
-		upd.writeStatuses(ctx, nsname, &v1beta1.HTTPRoute{}, func(object client.Object) {
-			hr := object.(*v1beta1.HTTPRoute)
-			// statuses.GatewayStatus is never nil when len(statuses.HTTPRouteStatuses) > 0
-			hr.Status = prepareHTTPRouteStatus(
-				rs,
-				upd.cfg.GatewayCtlrName,
-				upd.cfg.Clock.Now(),
-			)
-		})
+		for nsname, gs := range statuses.GatewayStatuses {
+			upd.writeStatuses(ctx, nsname, &v1beta1.Gateway{}, func(object client.Object) {
+				gw := object.(*v1beta1.Gateway)
+				gw.Status = prepareGatewayStatus(gs, upd.cfg.PodIP, upd.cfg.Clock.Now())
+			})
+		}
+
+		for nsname, rs := range statuses.HTTPRouteStatuses {
+			upd.writeStatuses(ctx, nsname, &v1beta1.HTTPRoute{}, func(object client.Object) {
+				hr := object.(*v1beta1.HTTPRoute)
+				// statuses.GatewayStatus is never nil when len(statuses.HTTPRouteStatuses) > 0
+				hr.Status = prepareHTTPRouteStatus(
+					rs,
+					upd.cfg.GatewayCtlrName,
+					upd.cfg.Clock.Now(),
+				)
+			})
+		}
+		statusUpdatedCh <- struct{}{}
+	}()
+	// Block here as the above goroutine runs. If the context gets canceled, we unblock and the method
+	// returns. The goroutine continues but is canceled when the controller exits. If the goroutine
+	// finishes and writes to the channel "statusUpdatedCh", we know that it is done updating
+	// and this method exits.
+	select {
+	case <-ctx.Done():
+	case <-statusUpdatedCh:
 	}
+
 }
 
 func (upd *UpdaterImpl) writeStatuses(
@@ -219,26 +237,35 @@ func (upd *UpdaterImpl) writeStatuses(
 	obj client.Object,
 	statusSetter func(client.Object),
 ) {
+	// As a safety net, if the context is canceled we exit the function.
+	if ctx.Err() != nil {
+		return
+	}
+
+	// Using exponential backoff, 200 + 400 + 800 + 1600 ~ 3000ms total wait time.
+	attempts := 5
+	sleep := time.Millisecond * 200
+
 	// The function handles errors by reporting them in the logs.
 	// We need to get the latest version of the resource.
 	// Otherwise, the Update status API call can fail.
 	// Note: the default client uses a cache for reads, so we're not making an unnecessary API call here.
 	// the default is configurable in the Manager options.
-	if err := upd.cfg.Client.Get(ctx, nsname, obj); err != nil {
-		if !apierrors.IsNotFound(err) {
-			upd.cfg.Logger.Error(
-				err,
-				"Failed to get the recent version the resource when updating status",
-				"namespace", nsname.Namespace,
-				"name", nsname.Name,
-				"kind", obj.GetObjectKind().GroupVersionKind().Kind)
-		}
+	if err := GetObj(ctx, attempts, sleep, obj, upd, nsname); err != nil {
+		upd.cfg.Logger.Error(
+			err,
+			"Failed to get the recent version the resource when updating status",
+			"namespace", nsname.Namespace,
+			"name", nsname.Name,
+			"kind", obj.GetObjectKind().GroupVersionKind().Kind)
+		// If we can't get the resource, especially after retrying,
+		// log the error and exit the function as we cannot continue.
 		return
 	}
 
 	statusSetter(obj)
 
-	if err := upd.cfg.Client.Status().Update(ctx, obj); err != nil {
+	if err := UpdateObjStatus(ctx, attempts, sleep, obj, upd); err != nil {
 		upd.cfg.Logger.Error(
 			err,
 			"Failed to update status",
@@ -246,4 +273,44 @@ func (upd *UpdaterImpl) writeStatuses(
 			"name", nsname.Name,
 			"kind", obj.GetObjectKind().GroupVersionKind().Kind)
 	}
+}
+
+func UpdateObjStatus(
+	ctx context.Context,
+	attempts int,
+	sleep time.Duration,
+	obj client.Object,
+	upd *UpdaterImpl,
+) (err error) {
+	for i := 0; i < attempts; i++ {
+		if i > 0 {
+			time.Sleep(sleep)
+			sleep *= 2
+		}
+		if err = upd.cfg.Client.Status().Update(ctx, obj); err == nil {
+			return nil
+		}
+	}
+	return err
+}
+
+func GetObj(
+	ctx context.Context,
+	attempts int,
+	sleep time.Duration,
+	obj client.Object,
+	upd *UpdaterImpl,
+	nsname types.NamespacedName,
+) (err error) {
+	for i := 0; i < attempts; i++ {
+		if i > 0 {
+			time.Sleep(sleep)
+			sleep *= 2
+		}
+		// apierrors.IsNotFound(err) can happen when the resource is deleted, so no need to retry or return an error.
+		if err = upd.cfg.Client.Get(ctx, nsname, obj); err == nil || apierrors.IsNotFound(err) {
+			return nil
+		}
+	}
+	return err
 }

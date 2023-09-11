@@ -3,6 +3,7 @@ package status_test
 import (
 	"context"
 	"sync"
+	"testing"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -398,7 +399,7 @@ var _ = Describe("Updater", func() {
 			Expect(helpers.Diff(expectedNG, latestNG)).To(BeEmpty())
 		})
 
-		It("should update statuses with canceled context - function normally returns", func() {
+		It("should not update Gateway API statuses with canceled context - function normally returns", func() {
 			ctx, cancel := context.WithCancel(context.Background())
 			cancel()
 			updater.Update(ctx, createGwAPIStatuses(generations{
@@ -408,7 +409,7 @@ var _ = Describe("Updater", func() {
 		})
 
 		When("updating with canceled context", func() {
-			It("should have the updated status of GatewayClass in the API server", func() {
+			It("should not have the updated status of GatewayClass in the API server", func() {
 				latestGc := &v1beta1.GatewayClass{}
 				expectedGc := createExpectedGCWithGeneration(2)
 
@@ -417,10 +418,10 @@ var _ = Describe("Updater", func() {
 
 				expectedGc.ResourceVersion = latestGc.ResourceVersion
 
-				Expect(helpers.Diff(expectedGc, latestGc)).To(BeEmpty())
+				Expect(helpers.Diff(expectedGc, latestGc)).ToNot(BeEmpty())
 			})
 
-			It("should have the updated status of Gateway in the API server", func() {
+			It("should not have the updated status of Gateway in the API server", func() {
 				latestGw := &v1beta1.Gateway{}
 				expectedGw := createExpectedGwWithGeneration(2)
 
@@ -433,7 +434,7 @@ var _ = Describe("Updater", func() {
 
 				expectedGw.ResourceVersion = latestGw.ResourceVersion
 
-				Expect(helpers.Diff(expectedGw, latestGw)).To(BeEmpty())
+				Expect(helpers.Diff(expectedGw, latestGw)).ToNot(BeEmpty())
 			})
 
 			It("should not have the updated status of ignored Gateway in the API server", func() {
@@ -470,6 +471,31 @@ var _ = Describe("Updater", func() {
 				Expect(helpers.Diff(expectedHR, latestHR)).To(BeEmpty())
 			})
 		})
+
+		It("should not update NginxGateway status with canceled context - function normally returns", func() {
+			ctx, cancel := context.WithCancel(context.Background())
+			cancel()
+			updater.Update(ctx, createNGStatus(2))
+		})
+
+		When("updating with canceled context", func() {
+			It("should not have the updated status of the NginxGateway in the API server", func() {
+				latestNG := &nkgAPI.NginxGateway{}
+				expectedNG := createExpectedNGWithGeneration(1)
+
+				err := client.Get(
+					context.Background(),
+					types.NamespacedName{Namespace: "nginx-gateway", Name: "nginx-gateway-config"},
+					latestNG,
+				)
+				Expect(err).Should(Not(HaveOccurred()))
+
+				expectedNG.ResourceVersion = latestNG.ResourceVersion
+
+				Expect(helpers.Diff(expectedNG, latestNG)).To(BeEmpty())
+			})
+		})
+
 		When("the Pod is not the current leader", func() {
 			It("should not update any statuses", func() {
 				updater.Disable()
@@ -481,8 +507,8 @@ var _ = Describe("Updater", func() {
 
 			It("should not have the updated status of Gateway in the API server", func() {
 				latestGw := &v1beta1.Gateway{}
-				// testing that the generation has not changed from 2 to 3
-				expectedGw := createExpectedGwWithGeneration(2)
+				// testing that the generation has not changed from 1 to 3
+				expectedGw := createExpectedGwWithGeneration(1)
 
 				err := client.Get(
 					context.Background(),
@@ -621,9 +647,9 @@ var _ = Describe("Updater", func() {
 				)
 				Expect(err).Should(Not(HaveOccurred()))
 
-				// Before this test there were 5 updates to the Gateway resource.
-				// So now the resource version should equal 25.
-				Expect(latestGw.ResourceVersion).To(Equal("25"))
+				// Before this test there were 4 updates to the Gateway resource.
+				// So now the resource version should equal 24.
+				Expect(latestGw.ResourceVersion).To(Equal("24"))
 			})
 		})
 	})
@@ -702,3 +728,119 @@ var _ = Describe("Updater", func() {
 		})
 	})
 })
+
+func TestUpdateObjStatus(t *testing.T) {
+	// totalFailedAttempts: How many times the fake client fails before returning nil.
+	// allowedFailedAttempts: The total amount of times the function gets run before the
+	//						  status updater stops retrying and errors.
+	tests := []struct {
+		name                  string
+		totalFailedAttempts   int
+		allowedFailedAttempts int
+		expError              bool
+	}{
+		{
+			name:                  "fails when allowedFailedAttempts is less than totalFailedAttempts",
+			totalFailedAttempts:   5,
+			allowedFailedAttempts: 4,
+			expError:              true,
+		},
+		{
+			name:                  "passes when allowedFailedAttempts is greater than totalFailedAttempts",
+			totalFailedAttempts:   5,
+			allowedFailedAttempts: 6,
+			expError:              false,
+		},
+		{
+			name:                  "fails when allowedFailedAttempts is equal to totalFailedAttempts",
+			totalFailedAttempts:   5,
+			allowedFailedAttempts: 5,
+			expError:              true,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			g := NewWithT(t)
+			fakeClient := statusfakes.NewFakeClient(test.totalFailedAttempts)
+			upd := status.NewUpdater(status.UpdaterConfig{
+				Client: fakeClient,
+			})
+			if test.expError {
+				g.Expect(status.UpdateObjStatus(
+					context.Background(),
+					test.allowedFailedAttempts,
+					time.Millisecond*100,
+					nil,
+					upd,
+				)).ToNot(Succeed())
+			} else {
+				g.Expect(status.UpdateObjStatus(
+					context.Background(),
+					test.allowedFailedAttempts,
+					time.Millisecond*100,
+					nil,
+					upd,
+				)).To(Succeed())
+			}
+		})
+	}
+}
+
+func TestGetObj(t *testing.T) {
+	// totalFailedAttempts: How many times the fake client fails before returning nil.
+	// allowedFailedAttempts: The total amount of times the function gets run before the
+	//						  status updater stops retrying and errors.
+	tests := []struct {
+		name                  string
+		totalFailedAttempts   int
+		allowedFailedAttempts int
+		expError              bool
+	}{
+		{
+			name:                  "fails when allowedFailedAttempts is less than totalFailedAttempts",
+			totalFailedAttempts:   5,
+			allowedFailedAttempts: 4,
+			expError:              true,
+		},
+		{
+			name:                  "passes when allowedFailedAttempts is greater than totalFailedAttempts",
+			totalFailedAttempts:   5,
+			allowedFailedAttempts: 6,
+			expError:              false,
+		},
+		{
+			name:                  "fails when allowedFailedAttempts is equal to totalFailedAttempts",
+			totalFailedAttempts:   5,
+			allowedFailedAttempts: 5,
+			expError:              true,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			g := NewWithT(t)
+			fakeClient := statusfakes.NewFakeClient(test.totalFailedAttempts)
+			upd := status.NewUpdater(status.UpdaterConfig{
+				Client: fakeClient,
+			})
+			if test.expError {
+				g.Expect(status.GetObj(
+					context.Background(),
+					test.allowedFailedAttempts,
+					time.Millisecond*100,
+					nil,
+					upd,
+					types.NamespacedName{},
+				)).ToNot(Succeed())
+			} else {
+				g.Expect(status.GetObj(
+					context.Background(),
+					test.allowedFailedAttempts,
+					time.Millisecond*100,
+					nil,
+					upd,
+					types.NamespacedName{},
+				)).To(Succeed())
+			}
+		})
+	}
+}
