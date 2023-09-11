@@ -8,7 +8,7 @@ import (
 )
 
 func TestExecuteVersion(t *testing.T) {
-	g := NewGomegaWithT(t)
+	g := NewWithT(t)
 	expSubStrings := map[string]int{
 		"return 200 42;": 1,
 	}

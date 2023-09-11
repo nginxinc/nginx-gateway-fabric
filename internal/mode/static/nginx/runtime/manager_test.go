@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"io/fs"
-	"os"
 	"testing"
 	"time"
 
@@ -100,7 +99,7 @@ func TestFindMainProcess(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			g := NewGomegaWithT(t)
+			g := NewWithT(t)
 
 			result, err := findMainProcess(test.ctx, test.checkFile, test.readFile, 2*time.Millisecond)
 
@@ -115,30 +114,20 @@ func TestFindMainProcess(t *testing.T) {
 }
 
 func TestEnsureNewNginxWorkers(t *testing.T) {
+	previousContents := []byte("1 2 3")
+	newContents := []byte("4 5 6")
+
 	readFileError := func(string) ([]byte, error) {
 		return nil, errors.New("error")
 	}
 
-	tempFileFunc := func(contents []byte) *os.File {
-		tempFile, err := os.CreateTemp("", "tmpfile-")
-		if err != nil {
-			return nil
-		}
-		if _, err = tempFile.Write(contents); err != nil {
-			return nil
-		}
-		return tempFile
+	readFilePrevious := func(string) ([]byte, error) {
+		return previousContents, nil
 	}
 
-	previousContents := []byte("1 2 3")
-
-	childFileSame := tempFileFunc(previousContents)
-	childFileDifferent := tempFileFunc([]byte("4 5 6"))
-
-	defer childFileSame.Close()
-	defer os.Remove(childFileSame.Name())
-	defer childFileDifferent.Close()
-	defer os.Remove(childFileDifferent.Name())
+	readFileNew := func(string) ([]byte, error) {
+		return newContents, nil
+	}
 
 	ctx := context.Background()
 	cancellingCtx, cancel := context.WithCancel(ctx)
@@ -147,15 +136,13 @@ func TestEnsureNewNginxWorkers(t *testing.T) {
 	tests := []struct {
 		ctx              context.Context
 		readFile         readFileFunc
-		childFile        string
 		name             string
 		previousContents []byte
 		expectError      bool
 	}{
 		{
 			ctx:              ctx,
-			readFile:         os.ReadFile,
-			childFile:        childFileDifferent.Name(),
+			readFile:         readFileNew,
 			previousContents: previousContents,
 			expectError:      false,
 			name:             "normal case",
@@ -163,23 +150,20 @@ func TestEnsureNewNginxWorkers(t *testing.T) {
 		{
 			ctx:              ctx,
 			readFile:         readFileError,
-			childFile:        childFileDifferent.Name(),
 			previousContents: previousContents,
 			expectError:      true,
 			name:             "cannot read file",
 		},
 		{
 			ctx:              ctx,
-			readFile:         os.ReadFile,
-			childFile:        childFileSame.Name(),
+			readFile:         readFilePrevious,
 			previousContents: previousContents,
 			expectError:      true,
 			name:             "no new workers",
 		},
 		{
 			ctx:              cancellingCtx,
-			readFile:         os.ReadFile,
-			childFile:        childFileSame.Name(),
+			readFile:         readFilePrevious,
 			previousContents: previousContents,
 			expectError:      true,
 			name:             "context canceled",
@@ -188,11 +172,11 @@ func TestEnsureNewNginxWorkers(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			g := NewGomegaWithT(t)
+			g := NewWithT(t)
 
 			err := ensureNewNginxWorkers(
 				test.ctx,
-				test.childFile,
+				"/childfile",
 				test.previousContents,
 				test.readFile,
 				2*time.Millisecond,

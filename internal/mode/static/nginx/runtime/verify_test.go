@@ -66,7 +66,7 @@ func TestVerifyClient(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			g := NewGomegaWithT(t)
+			g := NewWithT(t)
 
 			err := c.waitForCorrectVersion(test.ctx, test.expectedVersion)
 
