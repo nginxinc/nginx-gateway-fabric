@@ -1,16 +1,16 @@
 package static
 
 import (
-	. "github.com/onsi/ginkgo/v2"
+	"testing"
+
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("health", func() {
-	It("returns an error if not ready", func() {
-		hc := healthChecker{}
-		Expect(hc.readyCheck(nil)).ToNot(Succeed())
+func TestReadyCheck(t *testing.T) {
+	g := NewWithT(t)
+	hc := healthChecker{}
+	g.Expect(hc.readyCheck(nil)).ToNot(Succeed())
 
-		hc.ready = true
-		Expect(hc.readyCheck(nil)).To(Succeed())
-	})
-})
+	hc.ready = true
+	g.Expect(hc.readyCheck(nil)).To(Succeed())
+}

@@ -45,11 +45,6 @@ const (
 	clusterTimeout = 10 * time.Second
 )
 
-type ctlrCfg struct {
-	objectType client.Object
-	options    []controller.Option
-}
-
 var scheme = runtime.NewScheme()
 
 func init() {
@@ -104,6 +99,7 @@ func StartManager(cfg config.Config) error {
 	// protectedPorts is the map of ports that may not be configured by a listener, and the name of what it is used for
 	protectedPorts := map[int32]string{
 		int32(cfg.MetricsConfig.Port): "MetricsPort",
+		int32(cfg.HealthConfig.Port):  "HealthPort",
 	}
 
 	processor := state.NewChangeProcessorImpl(state.ChangeProcessorConfig{
@@ -190,6 +186,11 @@ func registerControllers(
 	eventCh chan interface{},
 	controlConfigNSName types.NamespacedName,
 ) error {
+	type ctlrCfg struct {
+		objectType client.Object
+		options    []controller.Option
+	}
+
 	// Note: for any new object type or a change to the existing one,
 	// make sure to also update prepareFirstEventBatchPreparerArgs()
 	controllerRegCfgs := []ctlrCfg{
