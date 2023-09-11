@@ -16,13 +16,18 @@ import (
 const wildcardHostname = "~^"
 
 // BuildConfiguration builds the Configuration from the Graph.
-func BuildConfiguration(ctx context.Context, g *graph.Graph, resolver resolver.ServiceResolver) *Configuration {
+func BuildConfiguration(
+	ctx context.Context,
+	g *graph.Graph,
+	resolver resolver.ServiceResolver,
+	configVersion int,
+) Configuration {
 	if g.GatewayClass == nil || !g.GatewayClass.Valid {
-		return &Configuration{}
+		return Configuration{Version: configVersion}
 	}
 
 	if g.Gateway == nil {
-		return &Configuration{}
+		return Configuration{Version: configVersion}
 	}
 
 	upstreams := buildUpstreams(ctx, g.Gateway.Listeners, resolver)
@@ -36,9 +41,10 @@ func BuildConfiguration(ctx context.Context, g *graph.Graph, resolver resolver.S
 		Upstreams:     upstreams,
 		BackendGroups: backendGroups,
 		SSLKeyPairs:   keyPairs,
+		Version:       configVersion,
 	}
 
-	return &config
+	return config
 }
 
 // buildSSLKeyPairs builds the SSLKeyPairs from the Secrets. It will only include Secrets that are referenced by

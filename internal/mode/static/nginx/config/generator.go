@@ -32,7 +32,7 @@ var ConfigFolders = []string{httpFolder, secretsFolder}
 // This interface is used for testing purposes only.
 type Generator interface {
 	// Generate generates NGINX configuration files from internal representation.
-	Generate(configuration *dataplane.Configuration) []file.File
+	Generate(configuration dataplane.Configuration) []file.File
 }
 
 // GeneratorImpl is an implementation of Generator.
@@ -43,15 +43,11 @@ type Generator interface {
 //
 // It also expects that the main NGINX configuration file nginx.conf is located in configFolder and nginx.conf
 // includes (https://nginx.org/en/docs/ngx_core_module.html#include) the files from httpFolder.
-type GeneratorImpl struct {
-	configVersion int
-}
+type GeneratorImpl struct{}
 
 // NewGeneratorImpl creates a new GeneratorImpl.
 func NewGeneratorImpl() GeneratorImpl {
-	return GeneratorImpl{
-		configVersion: 0,
-	}
+	return GeneratorImpl{}
 }
 
 // executeFunc is a function that generates NGINX configuration from internal representation.
@@ -61,18 +57,16 @@ type executeFunc func(configuration dataplane.Configuration) []byte
 // It is the responsibility of the caller to validate the configuration before calling this function.
 // In case of invalid configuration, NGINX will fail to reload or could be configured with malicious configuration.
 // To validate, use the validators from the validation package.
-func (g *GeneratorImpl) Generate(conf *dataplane.Configuration) []file.File {
-	g.configVersion++
-	conf.Version = g.configVersion
+func (g GeneratorImpl) Generate(conf dataplane.Configuration) []file.File {
 	files := make([]file.File, 0, len(conf.SSLKeyPairs)+1 /* http config */)
 
 	for id, pair := range conf.SSLKeyPairs {
 		files = append(files, generatePEM(id, pair.Cert, pair.Key))
 	}
 
-	files = append(files, generateHTTPConfig(*conf))
+	files = append(files, generateHTTPConfig(conf))
 
-	files = append(files, generateConfigVersion(g.configVersion))
+	files = append(files, generateConfigVersion(conf.Version))
 
 	return files
 }

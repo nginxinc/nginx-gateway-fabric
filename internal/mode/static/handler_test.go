@@ -45,7 +45,7 @@ var _ = Describe("eventHandler", func() {
 		Expect(fakeProcessor.ProcessCallCount()).Should(Equal(1))
 
 		Expect(fakeGenerator.GenerateCallCount()).Should(Equal(1))
-		Expect(fakeGenerator.GenerateArgsForCall(0)).Should(Equal(&expectedConf))
+		Expect(fakeGenerator.GenerateArgsForCall(0)).Should(Equal(expectedConf))
 
 		Expect(fakeNginxFileMgr.ReplaceFilesCallCount()).Should(Equal(1))
 		files := fakeNginxFileMgr.ReplaceFilesArgsForCall(0)
@@ -111,7 +111,7 @@ var _ = Describe("eventHandler", func() {
 				handler.HandleEventBatch(context.Background(), batch)
 
 				checkUpsertEventExpectations(e)
-				expectReconfig(dataplane.Configuration{}, fakeCfgFiles)
+				expectReconfig(dataplane.Configuration{Version: 1}, fakeCfgFiles)
 			})
 
 			It("should process Delete", func() {
@@ -124,7 +124,7 @@ var _ = Describe("eventHandler", func() {
 				handler.HandleEventBatch(context.Background(), batch)
 
 				checkDeleteEventExpectations(e)
-				expectReconfig(dataplane.Configuration{}, fakeCfgFiles)
+				expectReconfig(dataplane.Configuration{Version: 1}, fakeCfgFiles)
 			})
 		})
 

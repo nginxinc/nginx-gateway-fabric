@@ -64,7 +64,7 @@ func TestGenerate(t *testing.T) {
 
 	generator := config.NewGeneratorImpl()
 
-	files := generator.Generate(&conf)
+	files := generator.Generate(conf)
 
 	g.Expect(files).To(HaveLen(3))
 
