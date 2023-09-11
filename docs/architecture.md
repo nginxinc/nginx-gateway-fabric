@@ -106,7 +106,7 @@ API to update the handled resources' statuses and emit events.
    - Read: *NKG* reads the PID file `nginx.pid` from the `nginx-run` volume, located at `/var/run/nginx`. *NKG*
      extracts the PID of the nginx process from this file in order to send reload signals to *NGINX master*.
 4. (File I/O) *NKG* writes logs to its *stdout* and *stderr*, which are collected by the container runtime.
-5. (HTTP) *NKG* fetches the NGINX metrics via the unix:/var/lib/nginx/nginx-status.sock UNIX socket and converts it to
+5. (HTTP) *NKG* fetches the NGINX metrics via the unix:/var/run/nginx/nginx-status.sock UNIX socket and converts it to
    *Prometheus* format used in #2.
 6. (Signal) To reload NGINX, *NKG* sends the [reload signal][reload] to the **NGINX master**.
 7. (File I/O)
@@ -124,9 +124,12 @@ API to update the handled resources' statuses and emit events.
 9. (File I/O) The *NGINX master* sends logs to its *stdout* and *stderr*, which are collected by the container runtime.
 10. (File I/O) An *NGINX worker* writes logs to its *stdout* and *stderr*, which are collected by the container runtime.
 11. (Signal) The *NGINX master* controls the [lifecycle of *NGINX workers*][lifecycle] it creates workers with the new
-configuration and shutdowns workers with the old configuration.
-12. (HTTP,HTTPS) A *client* sends traffic to and receives traffic from any of the *NGINX workers* on ports 80 and 443.
-13. (HTTP,HTTPS) An *NGINX worker* sends traffic to and receives traffic from the *backends*.
+    configuration and shutdowns workers with the old configuration.
+12. (HTTP) To consider a configuration reload a success, *NKG* ensures that at least one NGINX worker has the new
+    configuration. To do that, *NKG* checks a particular endpoint via the unix:/var/run/nginx/nginx-config-version.sock
+    UNIX socket.
+13. (HTTP,HTTPS) A *client* sends traffic to and receives traffic from any of the *NGINX workers* on ports 80 and 443.
+14. (HTTP,HTTPS) An *NGINX worker* sends traffic to and receives traffic from the *backends*.
 
 [controller]: https://kubernetes.io/docs/concepts/architecture/controller/
 

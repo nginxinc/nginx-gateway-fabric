@@ -31,6 +31,8 @@ type Configuration struct {
 	Upstreams []Upstream
 	// BackendGroups holds all unique BackendGroups.
 	BackendGroups []BackendGroup
+	// Version represents the version of the generated configuration.
+	Version int
 }
 
 // SSLKeyPairID is a unique identifier for a SSLKeyPair.

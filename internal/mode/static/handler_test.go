@@ -111,7 +111,7 @@ var _ = Describe("eventHandler", func() {
 				handler.HandleEventBatch(context.Background(), batch)
 
 				checkUpsertEventExpectations(e)
-				expectReconfig(dataplane.Configuration{}, fakeCfgFiles)
+				expectReconfig(dataplane.Configuration{Version: 1}, fakeCfgFiles)
 			})
 
 			It("should process Delete", func() {
@@ -124,7 +124,7 @@ var _ = Describe("eventHandler", func() {
 				handler.HandleEventBatch(context.Background(), batch)
 
 				checkDeleteEventExpectations(e)
-				expectReconfig(dataplane.Configuration{}, fakeCfgFiles)
+				expectReconfig(dataplane.Configuration{Version: 1}, fakeCfgFiles)
 			})
 		})
 

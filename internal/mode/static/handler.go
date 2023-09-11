@@ -45,6 +45,8 @@ type eventHandlerConfig struct {
 	logger logr.Logger
 	// controlConfigNSName is the NamespacedName of the NginxGateway config for this controller.
 	controlConfigNSName types.NamespacedName
+	// version is the current version number of the nginx config.
+	version int
 }
 
 // eventHandlerImpl implements EventHandler.
@@ -90,7 +92,11 @@ func (h *eventHandlerImpl) HandleEventBatch(ctx context.Context, batch events.Ev
 	}
 
 	var nginxReloadRes nginxReloadResult
-	if err := h.updateNginx(ctx, dataplane.BuildConfiguration(ctx, graph, h.cfg.serviceResolver)); err != nil {
+	h.cfg.version++
+	if err := h.updateNginx(
+		ctx,
+		dataplane.BuildConfiguration(ctx, graph, h.cfg.serviceResolver, h.cfg.version),
+	); err != nil {
 		h.cfg.logger.Error(err, "Failed to update NGINX configuration")
 		nginxReloadRes.error = err
 	} else {
@@ -107,7 +113,7 @@ func (h *eventHandlerImpl) updateNginx(ctx context.Context, conf dataplane.Confi
 		return fmt.Errorf("failed to replace NGINX configuration files: %w", err)
 	}
 
-	if err := h.cfg.nginxRuntimeMgr.Reload(ctx); err != nil {
+	if err := h.cfg.nginxRuntimeMgr.Reload(ctx, conf.Version); err != nil {
 		return fmt.Errorf("failed to reload NGINX: %w", err)
 	}
 

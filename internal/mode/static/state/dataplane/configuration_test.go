@@ -1488,13 +1488,14 @@ func TestBuildConfiguration(t *testing.T) {
 		t.Run(test.msg, func(t *testing.T) {
 			g := NewGomegaWithT(t)
 
-			result := BuildConfiguration(context.TODO(), test.graph, fakeResolver)
+			result := BuildConfiguration(context.TODO(), test.graph, fakeResolver, 1)
 
 			g.Expect(result.BackendGroups).To(ConsistOf(test.expConf.BackendGroups))
 			g.Expect(result.Upstreams).To(ConsistOf(test.expConf.Upstreams))
 			g.Expect(result.HTTPServers).To(ConsistOf(test.expConf.HTTPServers))
 			g.Expect(result.SSLServers).To(ConsistOf(test.expConf.SSLServers))
 			g.Expect(result.SSLKeyPairs).To(Equal(test.expConf.SSLKeyPairs))
+			g.Expect(result.Version).To(Equal(1))
 		})
 	}
 }
