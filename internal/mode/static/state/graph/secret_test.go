@@ -189,14 +189,12 @@ func TestSecretResolver(t *testing.T) {
 	g := NewWithT(t)
 
 	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			err := resolver.resolve(test.nsname)
-			if test.expectedErrMsg == "" {
-				g.Expect(err).To(BeNil(), fmt.Sprintf("case %q", test.name))
-			} else {
-				g.Expect(err).To(MatchError(test.expectedErrMsg), fmt.Sprintf("case %q", test.name))
-			}
-		})
+		err := resolver.resolve(test.nsname)
+		if test.expectedErrMsg == "" {
+			g.Expect(err).To(BeNil(), fmt.Sprintf("case %q", test.name))
+		} else {
+			g.Expect(err).To(MatchError(test.expectedErrMsg), fmt.Sprintf("case %q", test.name))
+		}
 	}
 
 	expectedResolved := map[types.NamespacedName]*Secret{

@@ -966,7 +966,7 @@ func TestCreateLocationsRootPath(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			locs := createLocations(test.pathRules, 80)
-			g.Expect(locs).To(Equal(test.expLocations), fmt.Sprintf("test case: %s", test.name))
+			g.Expect(locs).To(Equal(test.expLocations))
 		})
 	}
 }
