@@ -13,6 +13,8 @@ import (
 	"time"
 
 	"k8s.io/apimachinery/pkg/util/wait"
+
+	nkgmetrics "github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/metrics"
 )
 
 const (
@@ -43,32 +45,38 @@ type Manager interface {
 
 // ManagerImpl implements Manager.
 type ManagerImpl struct {
-	verifyClient *verifyClient
+	verifyClient     *verifyClient
+	metricsCollector nkgmetrics.ManagerCollector
 }
 
 // NewManagerImpl creates a new ManagerImpl.
-func NewManagerImpl() *ManagerImpl {
+func NewManagerImpl(mgrCollector nkgmetrics.ManagerCollector) *ManagerImpl {
 	return &ManagerImpl{
-		verifyClient: newVerifyClient(nginxReloadTimeout),
+		verifyClient:     newVerifyClient(nginxReloadTimeout),
+		metricsCollector: mgrCollector,
 	}
 }
 
 func (m *ManagerImpl) Reload(ctx context.Context, configVersion int) error {
+	t1 := time.Now()
 	// We find the main NGINX PID on every reload because it will change if the NGINX container is restarted.
 	pid, err := findMainProcess(ctx, os.Stat, os.ReadFile, pidFileTimeout)
 	if err != nil {
+		m.metricsCollector.IncNginxReloadErrors()
 		return fmt.Errorf("failed to find NGINX main process: %w", err)
 	}
 
 	childProcFile := fmt.Sprintf(childProcPathFmt, pid)
 	previousChildProcesses, err := os.ReadFile(childProcFile)
 	if err != nil {
+		m.metricsCollector.IncNginxReloadErrors()
 		return err
 	}
 
 	// send HUP signal to the NGINX main process reload configuration
 	// See https://nginx.org/en/docs/control.html
 	if err := syscall.Kill(pid, syscall.SIGHUP); err != nil {
+		m.metricsCollector.IncNginxReloadErrors()
 		return fmt.Errorf("failed to send the HUP signal to NGINX main: %w", err)
 	}
 
@@ -79,10 +87,19 @@ func (m *ManagerImpl) Reload(ctx context.Context, configVersion int) error {
 		os.ReadFile,
 		childProcsTimeout,
 	); err != nil {
+		m.metricsCollector.IncNginxReloadErrors()
 		return fmt.Errorf(noNewWorkersErrFmt, configVersion, err)
 	}
 
-	return m.verifyClient.waitForCorrectVersion(ctx, configVersion)
+	if err = m.verifyClient.waitForCorrectVersion(ctx, configVersion); err != nil {
+		m.metricsCollector.IncNginxReloadErrors()
+		return err
+	}
+	m.metricsCollector.IncNginxReloadCount()
+
+	t2 := time.Now()
+	m.metricsCollector.UpdateLastReloadTime(t2.Sub(t1))
+	return nil
 }
 
 // EnsureNginxRunning ensures NGINX is running by locating the main process.
