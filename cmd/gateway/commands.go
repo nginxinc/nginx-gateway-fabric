@@ -100,6 +100,10 @@ func createStaticModeCommand() *cobra.Command {
 			)
 			log.SetLogger(logger)
 
+			if err := ensureNoPortCollisions(metricsListenPort.value, healthListenPort.value); err != nil {
+				return fmt.Errorf("error validating ports: %w", err)
+			}
+
 			podIP := os.Getenv("POD_IP")
 			if err := validateIP(podIP); err != nil {
 				return fmt.Errorf("error validating POD_IP environment variable: %w", err)
@@ -122,12 +126,6 @@ func createStaticModeCommand() *cobra.Command {
 				metricsConfig.Secure = metricsSecure
 			}
 
-			healthConfig := config.HealthConfig{}
-			if !disableHealth {
-				healthConfig.Enabled = true
-				healthConfig.Port = healthListenPort.value
-			}
-
 			conf := config.Config{
 				GatewayCtlrName:          gatewayCtlrName.value,
 				ConfigName:               configName.String(),
@@ -139,7 +137,10 @@ func createStaticModeCommand() *cobra.Command {
 				GatewayNsName:            gwNsName,
 				UpdateGatewayClassStatus: updateGCStatus,
 				MetricsConfig:            metricsConfig,
-				HealthConfig:             healthConfig,
+				HealthConfig: config.HealthConfig{
+					Enabled: !disableHealth,
+					Port:    healthListenPort.value,
+				},
 			}
 
 			if err := static.StartManager(conf); err != nil {

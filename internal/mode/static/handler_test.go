@@ -2,6 +2,7 @@ package static
 
 import (
 	"context"
+	"errors"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -218,6 +219,45 @@ var _ = Describe("eventHandler", func() {
 			Expect(event).To(Equal("Warning ResourceDeleted NginxGateway configuration was deleted; using defaults"))
 			Expect(handler.cfg.logLevelSetter.Enabled(zap.InfoLevel)).To(BeTrue())
 		})
+	})
+
+	It("should set the health checker status properly when there are changes", func() {
+		e := &events.UpsertEvent{Resource: &v1beta1.HTTPRoute{}}
+		batch := []interface{}{e}
+
+		fakeProcessor.ProcessReturns(true, &graph.Graph{})
+
+		Expect(handler.cfg.healthChecker.readyCheck(nil)).ToNot(Succeed())
+		handler.HandleEventBatch(context.Background(), batch)
+		Expect(handler.cfg.healthChecker.readyCheck(nil)).To(Succeed())
+	})
+
+	It("should set the health checker status properly when there are no changes or errors", func() {
+		e := &events.UpsertEvent{Resource: &v1beta1.HTTPRoute{}}
+		batch := []interface{}{e}
+
+		Expect(handler.cfg.healthChecker.readyCheck(nil)).ToNot(Succeed())
+		handler.HandleEventBatch(context.Background(), batch)
+		Expect(handler.cfg.healthChecker.readyCheck(nil)).To(Succeed())
+	})
+
+	It("should set the health checker status properly when there is an error", func() {
+		e := &events.UpsertEvent{Resource: &v1beta1.HTTPRoute{}}
+		batch := []interface{}{e}
+
+		fakeProcessor.ProcessReturns(true, &graph.Graph{})
+		fakeNginxRuntimeMgr.ReloadReturns(errors.New("reload error"))
+
+		handler.HandleEventBatch(context.Background(), batch)
+
+		Expect(handler.cfg.healthChecker.readyCheck(nil)).ToNot(Succeed())
+
+		// now send an update with no changes; should still return an error
+		fakeProcessor.ProcessReturns(false, &graph.Graph{})
+
+		handler.HandleEventBatch(context.Background(), batch)
+
+		Expect(handler.cfg.healthChecker.readyCheck(nil)).ToNot(Succeed())
 	})
 
 	It("should panic for an unknown event type", func() {

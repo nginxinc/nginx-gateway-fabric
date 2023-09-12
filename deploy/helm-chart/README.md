@@ -143,7 +143,7 @@ The following tables lists the configurable parameters of the NGINX Kubernetes G
 | `nginxGateway.config` | The dynamic configuration for the control plane that is contained in the NginxGateway resource. | [See nginxGateway.config section](values.yaml) |
 | `nginxGateway.readinessProbe.enable` | Enable the /readyz endpoint on the control plane. | true |
 | `nginxGateway.readinessProbe.port` | Port in which the readiness endpoint is exposed. | 8081 |
-| `nginxGateway.readinessProbe.initialDelaySeconds` | PThe number of seconds after the Pod has started before the readiness probes are initiated. | 3 |
+| `nginxGateway.readinessProbe.initialDelaySeconds` | The number of seconds after the Pod has started before the readiness probes are initiated. | 3 |
 | `nginx.image.repository` | The repository for the NGINX image. | ghcr.io/nginxinc/nginx-kubernetes-gateway/nginx |
 | `nginx.image.tag` | The tag for the NGINX image.  | edge |
 | `nginx.image.pullPolicy` | The `imagePullPolicy` for the NGINX image. | Always  |
