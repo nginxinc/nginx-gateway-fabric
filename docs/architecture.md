@@ -94,8 +94,11 @@ these components.
 The following list provides a description of each connection, along with its corresponding type indicated in
 parentheses. To enhance readability, the suffix "process" has been omitted from the process descriptions below.
 
-1. (HTTPS) *NKG* reads the *Kubernetes API* to get the latest versions of the resources in the cluster and writes to the
-API to update the handled resources' statuses and emit events.
+1. (HTTPS)
+   - Read: *NKG* reads the *Kubernetes API* to get the latest versions of the resources in the cluster.
+   - Write: *NKG* writes to the *Kubernetes API* to update the handled resources' statuses and emit events. If there's
+     more than one replica of *NKG* and [leader election](/deploy/helm-chart/README.md#configuration) is enabled, only
+     the *NKG* Pod that is leading will write statuses to the *Kubernetes API*.
 2. (HTTP, HTTPS) *Prometheus* fetches the `controller-runtime` and NGINX metrics via an HTTP endpoint that *NKG* exposes.
    The default is :9113/metrics. Note: Prometheus is not required by NKG, the endpoint can be turned off.
 3. (File I/O)
