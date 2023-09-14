@@ -26,7 +26,7 @@ type Updater interface {
 	// Update updates the statuses of the resources.
 	Update(context.Context, Statuses)
 	// WriteLastStatuses writes the last statuses of the resources.
-	WriteLastStatuses(ctx context.Context)
+	WriteLastStatuses(context.Context)
 }
 
 // UpdaterConfig holds configuration parameters for Updater.
