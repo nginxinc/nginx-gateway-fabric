@@ -165,16 +165,18 @@ func StartManager(cfg config.Config) error {
 		return fmt.Errorf("cannot register event loop: %w", err)
 	}
 
+	leaderElectorLogger := cfg.Logger.WithName("leaderElector")
+
 	if cfg.LeaderElection.Enabled {
 		leaderElector, err := newLeaderElector(leaderElectorConfig{
 			kubeConfig: clusterCfg,
 			recorder:   recorder,
 			onStartedLeading: func(ctx context.Context) {
-				cfg.Logger.Info("Started leading")
+				leaderElectorLogger.Info("Started leading")
 				statusUpdater.WriteLastStatuses(ctx)
 			},
 			onStoppedLeading: func() {
-				cfg.Logger.Info("Stopped leading")
+				leaderElectorLogger.Info("Stopped leading")
 			},
 			lockNs:   cfg.Namespace,
 			lockName: cfg.LeaderElection.LockName,
