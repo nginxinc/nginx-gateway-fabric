@@ -129,14 +129,14 @@ func createStaticModeCommand() *cobra.Command {
 				return fmt.Errorf("error validating POD_IP environment variable: %w", err)
 			}
 
-			namespace := os.Getenv("MY_NAMESPACE")
+			namespace := os.Getenv("POD_NAMESPACE")
 			if namespace == "" {
-				return errors.New("MY_NAMESPACE environment variable must be set")
+				return errors.New("POD_NAMESPACE environment variable must be set")
 			}
 
-			podName := os.Getenv("MY_NAME")
+			podName := os.Getenv("POD_NAME")
 			if podName == "" {
-				return errors.New("MY_NAME environment variable must be set")
+				return errors.New("POD_NAME environment variable must be set")
 			}
 
 			var gwNsName *types.NamespacedName
