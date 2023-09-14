@@ -17,8 +17,8 @@ const (
 	retryPeriod   = 2 * time.Second
 )
 
-// leaderElectorConfig holds all the configuration for the leaderElector struct.
-type leaderElectorConfig struct {
+// leaderElectorRunnableConfig holds all the configuration for the leaderElector struct.
+type leaderElectorRunnableConfig struct {
 	// kubeConfig is the kube config for the cluster. Used to create coreV1 and coordinationV1 clients which are needed
 	// for leader election.
 	kubeConfig *rest.Config
@@ -36,8 +36,25 @@ type leaderElectorConfig struct {
 	identity string
 }
 
+// leaderElectorRunnable wraps a leaderelection.LeaderElector so that it implements the manager.Runnable interface
+// and can be managed by the manager.
+type leaderElectorRunnable struct {
+	le *leaderelection.LeaderElector
+}
+
+// Start runs the leaderelection.LeaderElector and blocks until the context is canceled or Run returns.
+func (l *leaderElectorRunnable) Start(ctx context.Context) error {
+	l.le.Run(ctx)
+	return nil
+}
+
+// IsLeader returns if the Pod is the current leader.
+func (l *leaderElectorRunnable) IsLeader() bool {
+	return l.le.IsLeader()
+}
+
 // newLeaderElector returns a new leader elector client.
-func newLeaderElector(config leaderElectorConfig) (*leaderelection.LeaderElector, error) {
+func newLeaderElectorRunnable(config leaderElectorRunnableConfig) (*leaderElectorRunnable, error) {
 	lock, err := resourcelock.NewFromKubeconfig(
 		resourcelock.LeasesResourceLock,
 		config.lockNs,
@@ -68,5 +85,5 @@ func newLeaderElector(config leaderElectorConfig) (*leaderelection.LeaderElector
 		return nil, fmt.Errorf("error creating leader elector: %w", err)
 	}
 
-	return leaderElector, nil
+	return &leaderElectorRunnable{le: leaderElector}, nil
 }

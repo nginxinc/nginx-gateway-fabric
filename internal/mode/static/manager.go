@@ -168,7 +168,7 @@ func StartManager(cfg config.Config) error {
 	leaderElectorLogger := cfg.Logger.WithName("leaderElector")
 
 	if cfg.LeaderElection.Enabled {
-		leaderElector, err := newLeaderElector(leaderElectorConfig{
+		leaderElector, err := newLeaderElectorRunnable(leaderElectorRunnableConfig{
 			kubeConfig: clusterCfg,
 			recorder:   recorder,
 			onStartedLeading: func(ctx context.Context) {
@@ -187,9 +187,10 @@ func StartManager(cfg config.Config) error {
 		}
 
 		statusUpdater.SetLeaderElector(leaderElector)
-		go func() {
-			leaderElector.Run(ctx)
-		}()
+
+		if err = mgr.Add(leaderElector); err != nil {
+			return fmt.Errorf("cannot register leader elector: %w", err)
+		}
 	}
 
 	// Ensure NGINX is running before registering metrics & starting the manager.
