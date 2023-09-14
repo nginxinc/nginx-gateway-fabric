@@ -249,7 +249,8 @@ func createStaticModeCommand() *cobra.Command {
 	cmd.Flags().Var(
 		&leaderElectionLockName,
 		leaderElectionLockNameFlag,
-		"The name of the leader election lock. Lives in the same Namespace as the controller.",
+		"The name of the leader election lock. "+
+			"A Lease object with this name will be created in the same Namespace as the controller.",
 	)
 
 	return cmd
