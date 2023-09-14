@@ -19,7 +19,7 @@ TAG ?= $(VERSION:v%=%)## The tag of the image. For example, 0.3.0
 TARGET ?= local## The target of the build. Possible values: local and container
 KIND_KUBE_CONFIG=$${HOME}/.kube/kind/config## The location of the kind kubeconfig
 OUT_DIR ?= $(shell pwd)/build/out## The folder where the binary will be stored
-ARCH ?= amd64## The architecture of the image and/or binary. For example: amd64 or arm64
+GO_ARCH ?= amd64## The architecture of the image and/or binary. For example: amd64 or arm64
 GOOS ?= linux## The OS of the image and/or binary. For example: linux or darwin
 override HELM_TEMPLATE_COMMON_ARGS += --set creator=template --set nameOverride=nginx-gateway## The common options for the Helm template command.
 override HELM_TEMPLATE_EXTRA_ARGS_FOR_ALL_MANIFESTS_FILE += --set service.create=false## The options to be passed to the full Helm templating command only.
@@ -36,11 +36,11 @@ build-images: build-nkg-image build-nginx-image ## Build the NKG and nginx docke
 
 .PHONY: build-nkg-image
 build-nkg-image: check-for-docker build ## Build the NKG docker image
-	docker build --platform linux/$(ARCH) --target $(strip $(TARGET)) -f build/Dockerfile -t $(strip $(PREFIX)):$(strip $(TAG)) .
+	docker build --platform linux/$(GO_ARCH) --target $(strip $(TARGET)) -f build/Dockerfile -t $(strip $(PREFIX)):$(strip $(TAG)) .
 
 .PHONY: build-nginx-image
 build-nginx-image: check-for-docker ## Build the custom nginx image
-	docker build --platform linux/$(ARCH) $(strip $(NGINX_DOCKER_BUILD_OPTIONS)) -f build/Dockerfile.nginx -t $(strip $(NGINX_PREFIX)):$(strip $(TAG)) .
+	docker build --platform linux/$(GO_ARCH) $(strip $(NGINX_DOCKER_BUILD_OPTIONS)) -f build/Dockerfile.nginx -t $(strip $(NGINX_PREFIX)):$(strip $(TAG)) .
 
 .PHONY: check-for-docker
 check-for-docker: ## Check if Docker is installed
@@ -50,13 +50,13 @@ check-for-docker: ## Check if Docker is installed
 build: ## Build the binary
 ifeq (${TARGET},local)
 	@go version || (code=$$?; printf "\033[0;31mError\033[0m: unable to build locally\n"; exit $$code)
-	CGO_ENABLED=0 GOOS=$(GOOS) GOARCH=$(ARCH) go build -trimpath -a -ldflags "$(GO_LINKER_FLAGS)" $(ADDITIONAL_GO_BUILD_FLAGS) -o $(OUT_DIR)/gateway github.com/nginxinc/nginx-kubernetes-gateway/cmd/gateway
+	CGO_ENABLED=0 GOOS=$(GOOS) GOARCH=$(GO_ARCH) go build -trimpath -a -ldflags "$(GO_LINKER_FLAGS)" $(ADDITIONAL_GO_BUILD_FLAGS) -o $(OUT_DIR)/gateway github.com/nginxinc/nginx-kubernetes-gateway/cmd/gateway
 endif
 
 .PHONY: build-goreleaser
 build-goreleaser: ## Build the binary using GoReleaser
 	@goreleaser -v || (code=$$?; printf "\033[0;31mError\033[0m: there was a problem with GoReleaser. Follow the docs to install it https://goreleaser.com/install\n"; exit $$code)
-	GOOS=linux GOPATH=$(shell go env GOPATH) GOARCH=$(ARCH) goreleaser build --clean --snapshot --single-target
+	GOOS=linux GOPATH=$(shell go env GOPATH) GOARCH=$(GO_ARCH) goreleaser build --clean --snapshot --single-target
 
 .PHONY: generate
 generate: ## Run go generate
