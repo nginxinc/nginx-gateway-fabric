@@ -81,27 +81,24 @@ func createStaticModeCommand() *cobra.Command {
 
 	// flag values
 	var (
-		updateGCStatus        bool
-		disableMetrics        bool
-		disableHealth         bool
-		metricsSecure         bool
-		leaderElectionDisable bool
-
-		gateway = namespacedNameValue{}
-
+		updateGCStatus bool
+		gateway        = namespacedNameValue{}
+		configName     = stringValidatingValue{
+			validator: validateResourceName,
+		}
+		disableMetrics    bool
+		metricsSecure     bool
 		metricsListenPort = intValidatingValue{
 			validator: validatePort,
 			value:     9113,
 		}
-
+		disableHealth    bool
 		healthListenPort = intValidatingValue{
 			validator: validatePort,
 			value:     8081,
 		}
 
-		configName = stringValidatingValue{
-			validator: validateResourceName,
-		}
+		leaderElectionDisable  bool
 		leaderElectionLockName = stringValidatingValue{
 			validator: validateResourceName,
 			value:     "nginx-gateway-leader-election-lock",
