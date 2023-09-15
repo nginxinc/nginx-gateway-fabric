@@ -130,7 +130,7 @@ func StartManager(cfg config.Config) error {
 		return fmt.Errorf("NGINX is not running: %w", err)
 	}
 
-	var mgrCollector nkgmetrics.ManagerCollector
+	var mgrCollector ngxruntime.ManagerCollector
 	mgrCollector = nkgmetrics.NewManagerFakeCollector()
 	if cfg.MetricsConfig.Enabled {
 		mgrCollector, err = configureNginxMetrics(cfg.GatewayClassName)

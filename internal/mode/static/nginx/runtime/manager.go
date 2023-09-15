@@ -13,8 +13,6 @@ import (
 	"time"
 
 	"k8s.io/apimachinery/pkg/util/wait"
-
-	nkgmetrics "github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/metrics"
 )
 
 const (
@@ -43,14 +41,21 @@ type Manager interface {
 	Reload(ctx context.Context, configVersion int) error
 }
 
+// ManagerCollector is an interface for the metrics of the NGINX runtime manager.
+type ManagerCollector interface {
+	IncNginxReloadCount()
+	IncNginxReloadErrors()
+	UpdateLastReloadTime(ms time.Duration)
+}
+
 // ManagerImpl implements Manager.
 type ManagerImpl struct {
 	verifyClient     *verifyClient
-	metricsCollector nkgmetrics.ManagerCollector
+	metricsCollector ManagerCollector
 }
 
 // NewManagerImpl creates a new ManagerImpl.
-func NewManagerImpl(mgrCollector nkgmetrics.ManagerCollector) *ManagerImpl {
+func NewManagerImpl(mgrCollector ManagerCollector) *ManagerImpl {
 	return &ManagerImpl{
 		verifyClient:     newVerifyClient(nginxReloadTimeout),
 		metricsCollector: mgrCollector,
@@ -62,14 +67,12 @@ func (m *ManagerImpl) Reload(ctx context.Context, configVersion int) error {
 	// We find the main NGINX PID on every reload because it will change if the NGINX container is restarted.
 	pid, err := findMainProcess(ctx, os.Stat, os.ReadFile, pidFileTimeout)
 	if err != nil {
-		m.metricsCollector.IncNginxReloadErrors()
 		return fmt.Errorf("failed to find NGINX main process: %w", err)
 	}
 
 	childProcFile := fmt.Sprintf(childProcPathFmt, pid)
 	previousChildProcesses, err := os.ReadFile(childProcFile)
 	if err != nil {
-		m.metricsCollector.IncNginxReloadErrors()
 		return err
 	}
 

@@ -89,8 +89,9 @@ NGINX Kubernetes Gateway exports the following metrics:
 - NGINX Kubernetes Gateway metrics:
   - nginx_reloads_total. Number of successful NGINX reloads.
   - nginx_reload_errors_total. Number of unsuccessful NGINX reloads.
-  - nginx_last_reload_status. Status of the last NGINX reload, 0 meaning down and 1 up.
-  - nginx_last_reload_milliseconds. Duration in milliseconds of the last NGINX reload.
+  - nginx_stale_config. 1 means NKG failed to configure NGINX with the latest version of the configuration, which means
+    NGINX is running with a stale version.
+  - nginx_last_reload_milliseconds. Duration in milliseconds of NGINX reloads.
   - These metrics have the namespace `nginx_kubernetes_gateway`, and include the label `class` which is set to the
     Gateway class of NKG. For example, `nginx_kubernetes_gateway_nginx_reloads_total{class="nginx"}`.
 
