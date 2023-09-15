@@ -173,9 +173,10 @@ func StartManager(cfg config.Config) error {
 			recorder:   recorder,
 			onStartedLeading: func(ctx context.Context) {
 				leaderElectorLogger.Info("Started leading")
-				statusUpdater.WriteLastStatuses(ctx)
+				statusUpdater.Enable(ctx)
 			},
 			onStoppedLeading: func() {
+				statusUpdater.Disable()
 				leaderElectorLogger.Info("Stopped leading")
 			},
 			lockNs:   cfg.Namespace,
@@ -185,8 +186,6 @@ func StartManager(cfg config.Config) error {
 		if err != nil {
 			return err
 		}
-
-		statusUpdater.SetLeaderElector(leaderElector)
 
 		if err = mgr.Add(leaderElector); err != nil {
 			return fmt.Errorf("cannot register leader elector: %w", err)
@@ -302,7 +301,6 @@ func registerControllers(
 			return fmt.Errorf("cannot register controller for %T: %w", regCfg.objectType, err)
 		}
 	}
-
 	return nil
 }
 

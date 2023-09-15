@@ -14,19 +14,19 @@ import (
 )
 
 //go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . Updater
-//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . LeaderElector
-
-// LeaderElector reports whether the current Pod is the leader.
-type LeaderElector interface {
-	IsLeader() bool
-}
 
 // Updater updates statuses of the Gateway API resources.
+// Updater can be disabled. In this case, it will stop updating the statuses of resources, while
+// always saving the statuses of the last Update call. This is used to support multiple replicas of
+// control plane being able to run simultaneously where only the leader will update statuses.
 type Updater interface {
 	// Update updates the statuses of the resources.
 	Update(context.Context, Statuses)
-	// WriteLastStatuses writes the last statuses of the resources.
-	WriteLastStatuses(context.Context)
+	// Enable enables status updates. The updater will update the statuses in Kubernetes API to ensure they match the
+	// statuses of the last Update invocation.
+	Enable(ctx context.Context)
+	// Disable disables status updates.
+	Disable()
 }
 
 // UpdaterConfig holds configuration parameters for Updater.
@@ -45,6 +45,9 @@ type UpdaterConfig struct {
 	PodIP string
 	// UpdateGatewayClassStatus enables updating the status of the GatewayClass resource.
 	UpdateGatewayClassStatus bool
+	// LeaderElectionEnabled indicates whether Leader Election is enabled.
+	// If it is not enabled, the updater will always write statuses to the Kubernetes API.
+	LeaderElectionEnabled bool
 }
 
 // UpdaterImpl updates statuses of the Gateway API resources.
@@ -77,31 +80,20 @@ type UpdaterConfig struct {
 // UpdaterImpl needs to be modified to support new resources. Consider making UpdaterImpl extendable, so that it
 // goes along the Open-closed principle.
 type UpdaterImpl struct {
-	leaderElector LeaderElector
-	lastStatuses  *Statuses
-	cfg           UpdaterConfig
+	lastStatuses *Statuses
+	cfg          UpdaterConfig
+	isLeader     bool
 
-	statusLock sync.Mutex
+	lock sync.Mutex
 }
 
-// NewUpdater creates a new Updater.
-func NewUpdater(cfg UpdaterConfig) *UpdaterImpl {
-	return &UpdaterImpl{
-		cfg: cfg,
-	}
-}
-
-// SetLeaderElector sets the LeaderElector of the updater.
-func (upd *UpdaterImpl) SetLeaderElector(elector LeaderElector) {
-	upd.leaderElector = elector
-}
-
-// WriteLastStatuses writes the last saved statuses for the Gateway API resources.
+// Enable writes the last saved statuses for the Gateway API resources.
 // Used in leader election when the Pod starts leading. It's possible that during a leader change,
 // some statuses are missed. This will ensure that the latest statuses are written when a new leader takes over.
-func (upd *UpdaterImpl) WriteLastStatuses(ctx context.Context) {
-	defer upd.statusLock.Unlock()
-	upd.statusLock.Lock()
+func (upd *UpdaterImpl) Enable(ctx context.Context) {
+	defer upd.lock.Unlock()
+	upd.lock.Lock()
+	upd.isLeader = true
 
 	if upd.lastStatuses == nil {
 		upd.cfg.Logger.Info("No statuses to write")
@@ -112,16 +104,33 @@ func (upd *UpdaterImpl) WriteLastStatuses(ctx context.Context) {
 	upd.update(ctx, *upd.lastStatuses)
 }
 
+func (upd *UpdaterImpl) Disable() {
+	defer upd.lock.Unlock()
+	upd.lock.Lock()
+
+	upd.isLeader = false
+}
+
+// NewUpdater creates a new Updater.
+func NewUpdater(cfg UpdaterConfig) *UpdaterImpl {
+	return &UpdaterImpl{
+		cfg: cfg,
+		// If leader election is enabled then we should not start running as a leader. Instead,
+		// we wait for Enable to be invoked by the Leader Elector goroutine.
+		isLeader: !cfg.LeaderElectionEnabled,
+	}
+}
+
 func (upd *UpdaterImpl) Update(ctx context.Context, statuses Statuses) {
 	// FIXME(pleshakov) Merge the new Conditions in the status with the existing Conditions
 	// https://github.com/nginxinc/nginx-kubernetes-gateway/issues/558
 
-	defer upd.statusLock.Unlock()
-	upd.statusLock.Lock()
+	defer upd.lock.Unlock()
+	upd.lock.Lock()
 
 	upd.lastStatuses = &statuses
 
-	if !upd.shouldWriteStatus() {
+	if !upd.isLeader {
 		upd.cfg.Logger.Info("Skipping updating statuses because not leader")
 		return
 	}
@@ -179,10 +188,6 @@ func (upd *UpdaterImpl) update(ctx context.Context, statuses Statuses) {
 			}
 		})
 	}
-}
-
-func (upd *UpdaterImpl) shouldWriteStatus() bool {
-	return upd.leaderElector == nil || upd.leaderElector.IsLeader()
 }
 
 func (upd *UpdaterImpl) writeStatuses(

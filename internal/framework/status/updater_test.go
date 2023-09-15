@@ -63,7 +63,6 @@ var _ = Describe("Updater", func() {
 
 		var (
 			updater       *status.UpdaterImpl
-			fakeElector   *statusfakes.FakeLeaderElector
 			gc            *v1beta1.GatewayClass
 			gw, ignoredGw *v1beta1.Gateway
 			hr            *v1beta1.HTTPRoute
@@ -285,8 +284,6 @@ var _ = Describe("Updater", func() {
 					APIVersion: "gateway.nginx.org/v1alpha1",
 				},
 			}
-
-			fakeElector = &statusfakes.FakeLeaderElector{}
 		})
 
 		It("should create resources in the API server", func() {
@@ -455,13 +452,10 @@ var _ = Describe("Updater", func() {
 				// if the status was updated, we would see the route rejected (Accepted = false)
 				Expect(helpers.Diff(expectedHR, latestHR)).To(BeEmpty())
 			})
-
-			It("should register a leader elector", func() {
-				updater.SetLeaderElector(fakeElector)
-			})
 		})
 		When("the Pod is not the current leader", func() {
 			It("should not update any statuses", func() {
+				updater.Disable()
 				updater.Update(context.Background(), createStatuses(generations{
 					gateways: 3,
 				}))
@@ -486,8 +480,7 @@ var _ = Describe("Updater", func() {
 		})
 		When("the Pod starts leading", func() {
 			It("writes the last statuses", func() {
-				fakeElector.IsLeaderReturns(true)
-				updater.WriteLastStatuses(context.Background())
+				updater.Enable(context.Background())
 			})
 
 			It("should have the updated status of Gateway in the API server", func() {
@@ -543,7 +536,7 @@ var _ = Describe("Updater", func() {
 					}()
 
 					go func() {
-						updater.WriteLastStatuses(ctx)
+						updater.Enable(ctx)
 						wg.Done()
 					}()
 				}
