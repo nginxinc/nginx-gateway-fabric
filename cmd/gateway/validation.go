@@ -107,3 +107,17 @@ func validatePort(port int) error {
 	}
 	return nil
 }
+
+// ensureNoPortCollisions checks if the same port has been defined multiple times
+func ensureNoPortCollisions(ports ...int) error {
+	seen := make(map[int]struct{})
+
+	for _, port := range ports {
+		if _, ok := seen[port]; ok {
+			return fmt.Errorf("port %d has been defined multiple times", port)
+		}
+		seen[port] = struct{}{}
+	}
+
+	return nil
+}

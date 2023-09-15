@@ -331,3 +331,10 @@ func TestValidatePort(t *testing.T) {
 		})
 	}
 }
+
+func TestEnsureNoPortCollisions(t *testing.T) {
+	g := NewWithT(t)
+
+	g.Expect(ensureNoPortCollisions(9113, 8081)).To(Succeed())
+	g.Expect(ensureNoPortCollisions(9113, 9113)).ToNot(Succeed())
+}

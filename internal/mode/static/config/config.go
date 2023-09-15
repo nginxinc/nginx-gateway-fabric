@@ -28,6 +28,8 @@ type Config struct {
 	UpdateGatewayClassStatus bool
 	// MetricsConfig specifies the metrics config.
 	MetricsConfig MetricsConfig
+	// HealthConfig specifies the health probe config.
+	HealthConfig HealthConfig
 }
 
 // MetricsConfig specifies the metrics config.
@@ -38,4 +40,12 @@ type MetricsConfig struct {
 	Enabled bool
 	// Secure is the flag for toggling the metrics endpoint to https.
 	Secure bool
+}
+
+// HealthConfig specifies the health probe config.
+type HealthConfig struct {
+	// Port is the port that the health probe server listens on.
+	Port int
+	// Enabled is the flag for toggling the health probe server on or off.
+	Enabled bool
 }

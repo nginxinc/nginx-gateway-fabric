@@ -24,6 +24,7 @@ func TestBuildGraph(t *testing.T) {
 
 	protectedPorts := ProtectedPorts{
 		9113: "MetricsPort",
+		8081: "HealthPort",
 	}
 
 	createValidRuleWithBackendRefs := func(refs []BackendRef) Rule {

@@ -144,3 +144,13 @@ API to update the handled resources' statuses and emit events.
 [conf-file]: https://github.com/nginxinc/nginx-kubernetes-gateway/blob/main/internal/mode/static/nginx/conf/nginx.conf
 
 [share]: https://kubernetes.io/docs/tasks/configure-pod-container/share-process-namespace/
+
+## Pod Readiness
+
+The `nginx-gateway` container includes a readiness endpoint available via the `/readyz` path. This endpoint
+is periodically checked by a [readiness probe][readiness] on startup, and returns a 200 OK response when the Pod is
+ready to accept traffic for the data plane. The Pod will become Ready after the control plane successfully starts.
+If there are relevant Gateway API resources in the cluster, the control plane will also generate the first NGINX
+configuration and successfully reload NGINX before the Pod is considered Ready.
+
+[readiness]: (https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-readiness-probes)
