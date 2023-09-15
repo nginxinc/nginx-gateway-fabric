@@ -40,10 +40,11 @@ The figure shows:
 cluster through the Kubernetes API by creating Kubernetes objects.
 - *Clients A* and *Clients B* connect to *Applications A* and *B*, respectively. This applications have been deployed by
 the corresponding users.
-- The *NKG Pod*, [deployed by *Cluster Operator*](/docs/installation.md) in the Namespace *nginx-gateway*. This Pod
-consists of two containers: `NGINX` and `NKG`. The *NKG* container interacts with the Kubernetes API to retrieve the
-most up-to-date Gateway API resources created within the cluster. It then dynamically configures the *NGINX*
-container based on these resources, ensuring proper alignment between the cluster state and the NGINX configuration.
+- The *NKG Pod*, [deployed by *Cluster Operator*](/docs/installation.md) in the Namespace *nginx-gateway*. For
+scalability and availability, you can have multiple replicas. This Pod consists of two containers: `NGINX` and `NKG`.
+The *NKG* container interacts with the Kubernetes API to retrieve the most up-to-date Gateway API resources created
+within the cluster. It then dynamically configures the *NGINX* container based on these resources, ensuring proper
+alignment between the cluster state and the NGINX configuration.
 - *Gateway AB*, created by *Cluster Operator*, requests a point where traffic can be translated to Services within the
 cluster. This Gateway includes a listener with a hostname `*.example.com`. Application Developers have the ability to
 attach their application's routes to this Gateway if their application's hostname matches `*.example.com`.
@@ -69,7 +70,7 @@ Next, let's explore the NKG Pod.
 
 ## The NGINX Kubernetes Gateway Pod
 
-The NGINX Kubernetes Gateway consists of three containers:
+The NGINX Kubernetes Gateway consists of two containers:
 
 1. `nginx`: the data plane. Consists of an NGINX master process and NGINX worker processes. The master process controls
 the worker processes. The worker processes handle the client traffic and load balance the traffic to the backend
