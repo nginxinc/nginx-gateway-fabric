@@ -12,6 +12,7 @@ import (
 )
 
 const (
+	// These values are the defaults used by the core client.
 	renewDeadline = 10 * time.Second
 	leaseDuration = 15 * time.Second
 	retryPeriod   = 2 * time.Second
