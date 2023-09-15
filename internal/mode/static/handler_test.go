@@ -258,6 +258,14 @@ var _ = Describe("eventHandler", func() {
 		handler.HandleEventBatch(context.Background(), batch)
 
 		Expect(handler.cfg.healthChecker.readyCheck(nil)).ToNot(Succeed())
+
+		// error goes away
+		fakeProcessor.ProcessReturns(true, &graph.Graph{})
+		fakeNginxRuntimeMgr.ReloadReturns(nil)
+
+		handler.HandleEventBatch(context.Background(), batch)
+
+		Expect(handler.cfg.healthChecker.readyCheck(nil)).To(Succeed())
 	})
 
 	It("should panic for an unknown event type", func() {
