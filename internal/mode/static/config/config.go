@@ -58,6 +58,6 @@ type LeaderElection struct {
 	LockName string
 	// Identity is the unique name of the controller used for identifying the leader.
 	Identity string
-	// Enabled indicates whether leader election is enabled
+	// Enabled indicates whether leader election is enabled.
 	Enabled bool
 }
