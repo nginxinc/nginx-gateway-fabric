@@ -30,6 +30,10 @@ nginxGateway:
     tag: edge
     pullPolicy: Always
 
+  securityContext:
+    ## Some environments may need this set to true in order for the control plane to successfully reload NGINX.
+    allowPrivilegeEscalation: false
+
 nginx:
   ## The NGINX image to use
   image:
