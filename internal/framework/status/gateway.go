@@ -16,7 +16,7 @@ func prepareGatewayStatus(
 	listenerStatuses := make([]v1beta1.ListenerStatus, 0, len(gatewayStatus.ListenerStatuses))
 
 	// FIXME(pleshakov) Maintain the order from the Gateway resource
-	// https://github.com/nginxinc/nginx-kubernetes-gateway/issues/689
+	// https://github.com/nginxinc/nginx-gateway-fabric/issues/689
 	names := make([]string, 0, len(gatewayStatus.ListenerStatuses))
 	for name := range gatewayStatus.ListenerStatuses {
 		names = append(names, name)

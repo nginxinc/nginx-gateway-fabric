@@ -10,8 +10,8 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/conditions"
-	staticConds "github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/state/conditions"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
+	staticConds "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/conditions"
 )
 
 // Listener represents a Listener of the Gateway resource.
@@ -32,7 +32,7 @@ type Listener struct {
 	// SupportedKinds is the list of RouteGroupKinds allowed by the listener.
 	SupportedKinds []v1beta1.RouteGroupKind
 	// Valid shows whether the Listener is valid.
-	// A Listener is considered valid if NKG can generate valid NGINX configuration for it.
+	// A Listener is considered valid if NGF can generate valid NGINX configuration for it.
 	Valid bool
 }
 

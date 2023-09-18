@@ -6,7 +6,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/state/validation"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/validation"
 )
 
 // ClusterState includes cluster resources necessary to build the Graph.
@@ -26,13 +26,13 @@ type Graph struct {
 	GatewayClass *GatewayClass
 	// Gateway holds the winning Gateway resource.
 	Gateway *Gateway
-	// IgnoredGatewayClasses holds the ignored GatewayClass resources, which reference NGINX Gateway in the
-	// controllerName, but are not configured via the NGINX Gateway CLI argument. It doesn't hold the GatewayClass
-	// resources that do not belong to the NGINX Gateway.
+	// IgnoredGatewayClasses holds the ignored GatewayClass resources, which reference NGINX Gateway Fabric in the
+	// controllerName, but are not configured via the NGINX Gateway Fabric CLI argument. It doesn't hold the GatewayClass
+	// resources that do not belong to the NGINX Gateway Fabric.
 	IgnoredGatewayClasses map[types.NamespacedName]*v1beta1.GatewayClass
-	// IgnoredGateways holds the ignored Gateway resources, which belong to the NGINX Gateway (based on the
+	// IgnoredGateways holds the ignored Gateway resources, which belong to the NGINX Gateway Fabric (based on the
 	// GatewayClassName field of the resource) but ignored. It doesn't hold the Gateway resources that do not belong to
-	// the NGINX Gateway.
+	// the NGINX Gateway Fabric.
 	IgnoredGateways map[types.NamespacedName]*v1beta1.Gateway
 	// Routes holds Route resources.
 	Routes map[types.NamespacedName]*Route
@@ -51,7 +51,7 @@ func (g *Graph) IsReferenced(resourceType client.Object, nsname types.Namespaced
 	// FIMXE(pleshakov): For now, only works with Secrets.
 	// Support EndpointSlices and Namespaces so that we can remove relationship.Capturer and use the Graph
 	// as source to determine the relationships.
-	// See https://github.com/nginxinc/nginx-kubernetes-gateway/issues/824
+	// See https://github.com/nginxinc/nginx-gateway-fabric/issues/824
 
 	switch resourceType.(type) {
 	case *v1.Secret:

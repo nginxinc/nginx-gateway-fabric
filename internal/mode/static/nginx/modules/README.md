@@ -1,6 +1,6 @@
 # NGINX JavaScript Modules
 
-This directory contains the [njs](http://nginx.org/en/docs/njs/) modules for NGINX Kubernetes Gateway.
+This directory contains the [njs](http://nginx.org/en/docs/njs/) modules for NGINX Gateway Fabric.
 
 ## Prerequisites
 

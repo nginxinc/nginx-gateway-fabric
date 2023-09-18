@@ -4,8 +4,8 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	nkgAPI "github.com/nginxinc/nginx-kubernetes-gateway/apis/v1alpha1"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/conditions"
+	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
 )
 
 // Status is the status of one or more Kubernetes resources that the StatusUpdater will update.
@@ -36,7 +36,7 @@ type NginxGatewayStatus struct {
 }
 
 func (n *NginxGatewayStatus) APIGroup() string {
-	return nkgAPI.GroupName
+	return ngfAPI.GroupName
 }
 
 // ListenerStatuses holds the statuses of listeners where the key is the name of a listener in the Gateway resource.

@@ -14,7 +14,7 @@ practices to ensure a successful feature development process.
    visibility. If any discussions regarding the issue occur outside the issue thread, provide a summary of the
    conversation as a comment on the issue itself. This ensures that all relevant information and discussions are
    consolidated in one place for easy reference.
-3. **Fork the repo**: NKG follows a fork workflow, which you can learn more about in
+3. **Fork the repo**: NGF follows a fork workflow, which you can learn more about in
    the [branching and workflow](/docs/developer/branching-and-workflow.md) documentation.
 4. **Branch**: Create a branch following
    the [naming conventions](/docs/developer/branching-and-workflow.md#branch-naming-conventions).
@@ -38,13 +38,13 @@ practices to ensure a successful feature development process.
     - **New Use Case:** If your feature introduces a new use case, add an example of how to use it in
       the [examples](/examples) directory. This example will help users understand how to leverage the new feature.
       > For security, a Docker image used in an example must be either managed by F5/NGINX or be an [official image](https://docs.docker.com/docker-hub/official_images/).
-    - **Installation Changes**: If your feature involves changes to the installation process of NKG, update
+    - **Installation Changes**: If your feature involves changes to the installation process of NGF, update
       the [installation](/docs/installation.md) documentation.
-    - **Helm Changes**: If your feature introduces or changes any values of the NKG Helm Chart, update the
+    - **Helm Changes**: If your feature introduces or changes any values of the NGF Helm Chart, update the
       [Helm README](/deploy/helm-chart/README.md).
     - **Command-line Changes**: If your feature introduces or changes a command-line flag or subcommand, update
       the [cli help](/docs/cli-help.md) documentation.
-    - **Other Documentation Updates**: For any other changes that affect the behavior, usage, or configuration of NKG,
+    - **Other Documentation Updates**: For any other changes that affect the behavior, usage, or configuration of NGF,
       review the existing documentation and update it as necessary. Ensure that the documentation remains accurate and
       up to date with the latest changes.
 11. **Lint code**: See the [run the linter](/docs/developer/quickstart.md#run-the-linter) section of the quickstart
@@ -53,8 +53,8 @@ practices to ensure a successful feature development process.
     [Update Generated Manifests](/docs/developer/quickstart.md#update-generated-manifests) sections of the
     quickstart guide for instructions.
 13. **Open pull request**: Open a pull request targeting the `main` branch of
-    the [nginx-kubernetes-gateway](https://github.com/nginxinc/nginx-kubernetes-gateway/tree/main) repository. The
-    entire `nginx-kubernetes-gateway` group will be automatically requested for review. If you have a specific or
+    the [nginx-gateway-fabric](https://github.com/nginxinc/nginx-gateway-fabric/tree/main) repository. The
+    entire `nginx-gateway-fabric` group will be automatically requested for review. If you have a specific or
     different reviewer in mind, you can request them as well. Refer to
     the [pull request](/docs/developer/pull-request.md) documentation for expectations and guidelines.
 14. **Obtain the necessary approvals**: Work with code reviewers to maintain the required number of approvals.

@@ -11,7 +11,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	nkgAPI "github.com/nginxinc/nginx-kubernetes-gateway/apis/v1alpha1"
+	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
 )
 
 //go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . Updater
@@ -76,7 +76,7 @@ type UpdaterConfig struct {
 // Gateway is removed, our Gateway will not restore the status until the EventLoop invokes the StatusUpdater as a
 // result of processing some other new change to a resource(s).
 // FIXME(pleshakov): Make updater production ready
-// https://github.com/nginxinc/nginx-kubernetes-gateway/issues/691
+// https://github.com/nginxinc/nginx-gateway-fabric/issues/691
 
 // UpdaterImpl needs to be modified to support new resources. Consider making UpdaterImpl extendable, so that it
 // goes along the Open-closed principle.
@@ -128,7 +128,7 @@ func NewUpdater(cfg UpdaterConfig) *UpdaterImpl {
 
 func (upd *UpdaterImpl) Update(ctx context.Context, status Status) {
 	// FIXME(pleshakov) Merge the new Conditions in the status with the existing Conditions
-	// https://github.com/nginxinc/nginx-kubernetes-gateway/issues/558
+	// https://github.com/nginxinc/nginx-gateway-fabric/issues/558
 
 	defer upd.lock.Unlock()
 	upd.lock.Lock()
@@ -154,9 +154,9 @@ func (upd *UpdaterImpl) updateNginxGateway(ctx context.Context, status *NginxGat
 	upd.cfg.Logger.Info("Updating Nginx Gateway status")
 
 	if status != nil {
-		upd.writeStatuses(ctx, status.NsName, &nkgAPI.NginxGateway{}, func(object client.Object) {
-			ng := object.(*nkgAPI.NginxGateway)
-			ng.Status = nkgAPI.NginxGatewayStatus{
+		upd.writeStatuses(ctx, status.NsName, &ngfAPI.NginxGateway{}, func(object client.Object) {
+			ng := object.(*ngfAPI.NginxGateway)
+			ng.Status = ngfAPI.NginxGatewayStatus{
 				Conditions: convertConditions(
 					status.Conditions,
 					status.ObservedGeneration,

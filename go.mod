@@ -1,4 +1,4 @@
-module github.com/nginxinc/nginx-kubernetes-gateway
+module github.com/nginxinc/nginx-gateway-fabric
 
 go 1.21.1
 

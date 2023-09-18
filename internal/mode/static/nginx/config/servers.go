@@ -6,8 +6,8 @@ import (
 	"strings"
 	gotemplate "text/template"
 
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/nginx/config/http"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/state/dataplane"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/http"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/dataplane"
 )
 
 var serversTemplate = gotemplate.Must(gotemplate.New("servers").Parse(serversTemplateText))
@@ -109,7 +109,7 @@ func createLocations(pathRules []dataplane.PathRule, listenerPort int32) []http.
 			// FIXME(pleshakov): Ensure dataplane.Configuration -related types don't include v1beta1 types, so that
 			// we don't need to make any assumptions like above here. After fixing this, ensure that there is a test
 			// for checking the imported Webhook validation catches the case above.
-			// https://github.com/nginxinc/nginx-kubernetes-gateway/issues/660
+			// https://github.com/nginxinc/nginx-gateway-fabric/issues/660
 
 			// RequestRedirect and proxying are mutually exclusive.
 			if r.Filters.RequestRedirect != nil {
@@ -419,7 +419,7 @@ func convertSetHeaders(headers []dataplane.HTTPHeader) []http.Header {
 func convertMatchesToString(matches []httpMatch) string {
 	// FIXME(sberman): De-dupe matches and associated locations
 	// so we don't need nginx/njs to perform unnecessary matching.
-	// https://github.com/nginxinc/nginx-kubernetes-gateway/issues/662
+	// https://github.com/nginxinc/nginx-gateway-fabric/issues/662
 	b, err := json.Marshal(matches)
 	if err != nil {
 		// panic is safe here because we should never fail to marshal the match unless we constructed it incorrectly.

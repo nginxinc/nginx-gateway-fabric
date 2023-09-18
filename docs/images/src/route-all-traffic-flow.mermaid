@@ -1,14 +1,14 @@
 %% mermaid source for route-all-traffic-flow.png diagram
 graph LR
   clients[Clients]
-  nkgSvc["Public IP Address\nfor\ncafe.example.com"]
+  ngfSvc["Public IP Address\nfor\ncafe.example.com"]
 
     subgraph cluster [Kubernetes Cluster]
         style cluster fill:#FFFFFF,stroke:#000000
         subgraph clusterPadding [" "]
             subgraph clusterPadding2 [" "]
                 subgraph gwNS [Namespace\nnginx-gateway]
-                    nkgPod[Pod\nnginx-gateway]
+                    ngfPod[Pod\nnginx-gateway]
                 end
             end
         end
@@ -23,13 +23,13 @@ graph LR
 
 
 
-  nkgSvc --> nkgPod
-  nkgPod --> coffeePod1 & coffeePod2
-  clients --> nkgSvc
+  ngfSvc --> ngfPod
+  ngfPod --> coffeePod1 & coffeePod2
+  clients --> ngfSvc
 
   class clusterPadding,nsPadding,clusterPadding2 noBorder
   class gwNS,appNs namespace
-  class nkgPod,nkgSvc nginxNode
+  class ngfPod,ngfSvc nginxNode
   class coffeePod1,coffeePod2 coffeeNode
   class clients clientNode
 

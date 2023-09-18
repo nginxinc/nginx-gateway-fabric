@@ -359,7 +359,7 @@ func main() {
 
 Panics should be used in the following cases:
 
-1. Unrecoverable errors. An unrecoverable error is when NKG cannot continue running or its behavior or internal state
+1. Unrecoverable errors. An unrecoverable error is when NGF cannot continue running or its behavior or internal state
    cannot be guaranteed. One example of this is if an error occurs when adding the Kubernetes API types to the Scheme,
    or if an error occurs when marking a CLI flag as required.
 2. Programming errors. A programming error is an error that is only possible if there was a programming mistake. For

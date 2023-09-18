@@ -1,12 +1,12 @@
 %% mermaid source for advanced-routing.png diagram
 graph LR
     users[Users]
-    nkgSvc["Public Endpoint\nfor\ncafe.example.com"]
+    ngfSvc["Public Endpoint\nfor\ncafe.example.com"]
     subgraph cluster [Kubernetes Cluster]
         subgraph clusterPadding [" "]
             subgraph clusterPadding2 [" "]
                 subgraph gwNS [Namespace\nnginx-gateway]
-                    nkgPod[Pod\nnginx-gateway]
+                    ngfPod[Pod\nnginx-gateway]
                 end
             end
         end
@@ -19,15 +19,15 @@ graph LR
             end
         end
     end
-  nkgSvc --> nkgPod
-  nkgPod --/coffee--> coffeeV1Pod
-  nkgPod --/coffee\nheader: version=v2\nOR\n/coffee?TEST=v2--> coffeeV2Pod
-  nkgPod --GET /tea--> teaPod
-  nkgPod --POST /tea--> teaPostPod
-  users --> nkgSvc
+  ngfSvc --> ngfPod
+  ngfPod --/coffee--> coffeeV1Pod
+  ngfPod --/coffee\nheader: version=v2\nOR\n/coffee?TEST=v2--> coffeeV2Pod
+  ngfPod --GET /tea--> teaPod
+  ngfPod --POST /tea--> teaPostPod
+  users --> ngfSvc
   class clusterPadding,nsPadding,clusterPadding2 noBorder
   class gwNS,appNs namespace
-  class nkgSvc,nkgPod nginxNode
+  class ngfSvc,ngfPod nginxNode
   class coffeeV1Pod,coffeeV2Pod coffeeNode
   class teaPod,teaPostPod teaNode
   classDef noBorder stroke:none,fill:none

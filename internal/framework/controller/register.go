@@ -10,7 +10,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/controller/index"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/controller/index"
 )
 
 const (

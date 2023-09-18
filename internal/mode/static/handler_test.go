@@ -13,20 +13,20 @@ import (
 	ctlrZap "sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	nkgAPI "github.com/nginxinc/nginx-kubernetes-gateway/apis/v1alpha1"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/conditions"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/events"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/helpers"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/status"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/status/statusfakes"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/nginx/config/configfakes"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/nginx/file"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/nginx/file/filefakes"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/nginx/runtime/runtimefakes"
-	staticConds "github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/state/conditions"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/state/dataplane"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/state/graph"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/state/statefakes"
+	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/events"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/status"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/status/statusfakes"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/configfakes"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/file"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/file/filefakes"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/runtime/runtimefakes"
+	staticConds "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/conditions"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/dataplane"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/graph"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/statefakes"
 )
 
 var _ = Describe("eventHandler", func() {
@@ -155,14 +155,14 @@ var _ = Describe("eventHandler", func() {
 	})
 
 	When("receiving control plane configuration updates", func() {
-		cfg := func(level nkgAPI.ControllerLogLevel) *nkgAPI.NginxGateway {
-			return &nkgAPI.NginxGateway{
+		cfg := func(level ngfAPI.ControllerLogLevel) *ngfAPI.NginxGateway {
+			return &ngfAPI.NginxGateway{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: namespace,
 					Name:      configName,
 				},
-				Spec: nkgAPI.NginxGatewaySpec{
-					Logging: &nkgAPI.Logging{
+				Spec: ngfAPI.NginxGatewaySpec{
+					Logging: &ngfAPI.Logging{
 						Level: helpers.GetPointer(level),
 					},
 				},
@@ -181,7 +181,7 @@ var _ = Describe("eventHandler", func() {
 		}
 
 		It("handles a valid config", func() {
-			batch := []interface{}{&events.UpsertEvent{Resource: cfg(nkgAPI.ControllerLogLevelError)}}
+			batch := []interface{}{&events.UpsertEvent{Resource: cfg(ngfAPI.ControllerLogLevelError)}}
 			handler.HandleEventBatch(context.Background(), batch)
 
 			Expect(fakeStatusUpdater.UpdateCallCount()).Should(Equal(1))
@@ -192,7 +192,7 @@ var _ = Describe("eventHandler", func() {
 		})
 
 		It("handles an invalid config", func() {
-			batch := []interface{}{&events.UpsertEvent{Resource: cfg(nkgAPI.ControllerLogLevel("invalid"))}}
+			batch := []interface{}{&events.UpsertEvent{Resource: cfg(ngfAPI.ControllerLogLevel("invalid"))}}
 			handler.HandleEventBatch(context.Background(), batch)
 
 			Expect(fakeStatusUpdater.UpdateCallCount()).Should(Equal(1))
@@ -211,7 +211,7 @@ var _ = Describe("eventHandler", func() {
 		})
 
 		It("handles a deleted config", func() {
-			batch := []interface{}{&events.DeleteEvent{Type: &nkgAPI.NginxGateway{}}}
+			batch := []interface{}{&events.DeleteEvent{Type: &ngfAPI.NginxGateway{}}}
 			handler.HandleEventBatch(context.Background(), batch)
 			Expect(len(fakeEventRecorder.Events)).To(Equal(1))
 			event := <-fakeEventRecorder.Events

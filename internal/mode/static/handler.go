@@ -10,17 +10,17 @@ import (
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	nkgAPI "github.com/nginxinc/nginx-kubernetes-gateway/apis/v1alpha1"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/conditions"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/events"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/status"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/nginx/config"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/nginx/file"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/nginx/runtime"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/state"
-	staticConds "github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/state/conditions"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/state/dataplane"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/state/resolver"
+	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/events"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/status"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/file"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/runtime"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state"
+	staticConds "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/conditions"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/dataplane"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/resolver"
 )
 
 // eventHandlerConfig holds configuration parameters for eventHandlerImpl.
@@ -71,13 +71,13 @@ func (h *eventHandlerImpl) HandleEventBatch(ctx context.Context, batch events.Ev
 	for _, event := range batch {
 		switch e := event.(type) {
 		case *events.UpsertEvent:
-			if cfg, ok := e.Resource.(*nkgAPI.NginxGateway); ok {
+			if cfg, ok := e.Resource.(*ngfAPI.NginxGateway); ok {
 				h.updateControlPlaneAndSetStatus(ctx, cfg)
 			} else {
 				h.cfg.processor.CaptureUpsertChange(e.Resource)
 			}
 		case *events.DeleteEvent:
-			if _, ok := e.Type.(*nkgAPI.NginxGateway); ok {
+			if _, ok := e.Type.(*ngfAPI.NginxGateway); ok {
 				h.updateControlPlaneAndSetStatus(ctx, nil)
 			} else {
 				h.cfg.processor.CaptureDeleteChange(e.Type, e.NamespacedName)
@@ -133,7 +133,7 @@ func (h *eventHandlerImpl) updateNginx(ctx context.Context, conf dataplane.Confi
 
 // updateControlPlaneAndSetStatus updates the control plane configuration and then sets the status
 // based on the outcome
-func (h *eventHandlerImpl) updateControlPlaneAndSetStatus(ctx context.Context, cfg *nkgAPI.NginxGateway) {
+func (h *eventHandlerImpl) updateControlPlaneAndSetStatus(ctx context.Context, cfg *ngfAPI.NginxGateway) {
 	var cond []conditions.Condition
 	if err := updateControlPlane(
 		cfg,

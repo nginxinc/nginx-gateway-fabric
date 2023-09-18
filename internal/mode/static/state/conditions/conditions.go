@@ -6,8 +6,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	nkgAPI "github.com/nginxinc/nginx-kubernetes-gateway/apis/v1alpha1"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/conditions"
+	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
 )
 
 const (
@@ -546,9 +546,9 @@ func NewGatewayConflictNotProgrammed() conditions.Condition {
 // NewNginxGatewayValid returns a Condition that indicates that the NginxGateway config is valid.
 func NewNginxGatewayValid() conditions.Condition {
 	return conditions.Condition{
-		Type:    string(nkgAPI.NginxGatewayConditionValid),
+		Type:    string(ngfAPI.NginxGatewayConditionValid),
 		Status:  metav1.ConditionTrue,
-		Reason:  string(nkgAPI.NginxGatewayReasonValid),
+		Reason:  string(ngfAPI.NginxGatewayReasonValid),
 		Message: "NginxGateway is valid",
 	}
 }
@@ -556,9 +556,9 @@ func NewNginxGatewayValid() conditions.Condition {
 // NewNginxGatewayInvalid returns a Condition that indicates that the NginxGateway config is invalid.
 func NewNginxGatewayInvalid(msg string) conditions.Condition {
 	return conditions.Condition{
-		Type:    string(nkgAPI.NginxGatewayConditionValid),
+		Type:    string(ngfAPI.NginxGatewayConditionValid),
 		Status:  metav1.ConditionFalse,
-		Reason:  string(nkgAPI.NginxGatewayReasonInvalid),
+		Reason:  string(ngfAPI.NginxGatewayReasonInvalid),
 		Message: msg,
 	}
 }

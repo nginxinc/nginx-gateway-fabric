@@ -5,17 +5,17 @@ in a different namespace from our HTTPRoutes.
 
 ## Running the Example
 
-## 1. Deploy NGINX Kubernetes Gateway
+## 1. Deploy NGINX Gateway Fabric
 
-1. Follow the [installation instructions](/docs/installation.md) to deploy NGINX Kubernetes Gateway.
+1. Follow the [installation instructions](/docs/installation.md) to deploy NGINX Gateway Fabric.
 
-1. Save the public IP address of NGINX Kubernetes Gateway into a shell variable:
+1. Save the public IP address of NGINX Gateway Fabric into a shell variable:
 
    ```text
    GW_IP=XXX.YYY.ZZZ.III
    ```
 
-1. Save the port of NGINX Kubernetes Gateway:
+1. Save the port of NGINX Gateway Fabric:
 
    ```text
    GW_PORT=<port number>

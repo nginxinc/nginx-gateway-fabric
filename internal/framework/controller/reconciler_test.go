@@ -14,9 +14,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/controller"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/controller/controllerfakes"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/events"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/controller"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/controller/controllerfakes"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/events"
 )
 
 type getFunc func(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error

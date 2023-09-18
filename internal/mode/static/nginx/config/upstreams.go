@@ -4,8 +4,8 @@ import (
 	"fmt"
 	gotemplate "text/template"
 
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/nginx/config/http"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/state/dataplane"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/http"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/dataplane"
 )
 
 var upstreamsTemplate = gotemplate.Must(gotemplate.New("upstreams").Parse(upstreamsTemplateText))

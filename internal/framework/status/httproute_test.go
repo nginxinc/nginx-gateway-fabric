@@ -9,7 +9,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/helpers"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 )
 
 func TestPrepareHTTPRouteStatus(t *testing.T) {

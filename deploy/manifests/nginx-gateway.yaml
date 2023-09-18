@@ -3,7 +3,7 @@ kind: Namespace
 metadata:
   name: nginx-gateway
 ---
-# Source: nginx-kubernetes-gateway/templates/rbac.yaml
+# Source: nginx-gateway-fabric/templates/rbac.yaml
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -16,7 +16,7 @@ metadata:
   annotations:
     {}
 ---
-# Source: nginx-kubernetes-gateway/templates/rbac.yaml
+# Source: nginx-gateway-fabric/templates/rbac.yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
@@ -90,7 +90,7 @@ rules:
   - get
   - update
 ---
-# Source: nginx-kubernetes-gateway/templates/rbac.yaml
+# Source: nginx-gateway-fabric/templates/rbac.yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
@@ -108,7 +108,7 @@ subjects:
   name: nginx-gateway
   namespace: nginx-gateway
 ---
-# Source: nginx-kubernetes-gateway/templates/deployment.yaml
+# Source: nginx-gateway-fabric/templates/deployment.yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -155,7 +155,7 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.name
-        image: ghcr.io/nginxinc/nginx-kubernetes-gateway:edge
+        image: ghcr.io/nginxinc/nginx-gateway-fabric:edge
         imagePullPolicy: Always
         name: nginx-gateway
         ports:
@@ -186,7 +186,7 @@ spec:
           mountPath: /etc/nginx/secrets
         - name: nginx-run
           mountPath: /var/run/nginx
-      - image: ghcr.io/nginxinc/nginx-kubernetes-gateway/nginx:edge
+      - image: ghcr.io/nginxinc/nginx-gateway-fabric/nginx:edge
         imagePullPolicy: Always
         name: nginx
         ports:
@@ -231,7 +231,7 @@ spec:
       - name: nginx-lib
         emptyDir: {}
 ---
-# Source: nginx-kubernetes-gateway/templates/gatewayclass.yaml
+# Source: nginx-gateway-fabric/templates/gatewayclass.yaml
 apiVersion: gateway.networking.k8s.io/v1beta1
 kind: GatewayClass
 metadata:
@@ -243,7 +243,7 @@ metadata:
 spec:
   controllerName: gateway.nginx.org/nginx-gateway-controller
 ---
-# Source: nginx-kubernetes-gateway/templates/nginxgateway.yaml
+# Source: nginx-gateway-fabric/templates/nginxgateway.yaml
 apiVersion: gateway.nginx.org/v1alpha1
 kind: NginxGateway
 metadata:

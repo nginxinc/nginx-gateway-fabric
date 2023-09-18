@@ -5,9 +5,9 @@ import (
 
 	. "github.com/onsi/gomega"
 
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/nginx/config/http"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/state/dataplane"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/state/resolver"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/http"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/dataplane"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/resolver"
 )
 
 func TestExecuteUpstreams(t *testing.T) {

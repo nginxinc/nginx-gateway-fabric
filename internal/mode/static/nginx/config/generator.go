@@ -3,8 +3,8 @@ package config
 import (
 	"path/filepath"
 
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/nginx/file"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/state/dataplane"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/file"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/dataplane"
 )
 
 //go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . Generator

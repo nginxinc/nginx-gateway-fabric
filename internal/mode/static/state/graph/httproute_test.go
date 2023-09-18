@@ -13,10 +13,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/conditions"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/helpers"
-	staticConds "github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/state/conditions"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/state/validation/validationfakes"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
+	staticConds "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/conditions"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/validation/validationfakes"
 )
 
 const (
@@ -348,7 +348,7 @@ func TestBuildRoute(t *testing.T) {
 	addFilterToPath(hr, "/filter", validFilter)
 
 	hrInvalidHostname := createHTTPRoute("hr", gatewayNsName.Name, "", "/")
-	hrNotNKG := createHTTPRoute("hr", "some-gateway", "example.com", "/")
+	hrNotNGF := createHTTPRoute("hr", "some-gateway", "example.com", "/")
 	hrInvalidMatches := createHTTPRoute("hr", gatewayNsName.Name, "example.com", invalidPath)
 
 	hrInvalidFilters := createHTTPRoute("hr", gatewayNsName.Name, "example.com", "/filter")
@@ -405,9 +405,9 @@ func TestBuildRoute(t *testing.T) {
 		},
 		{
 			validator: &validationfakes.FakeHTTPFieldsValidator{},
-			hr:        hrNotNKG,
+			hr:        hrNotNGF,
 			expected:  nil,
-			name:      "not NKG route",
+			name:      "not NGF route",
 		},
 		{
 			validator: &validationfakes.FakeHTTPFieldsValidator{},

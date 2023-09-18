@@ -1,14 +1,14 @@
 # Routing Traffic to Your Application
 
 In this guide, you will learn how to route external traffic to your Kubernetes applications using the Gateway API and
-NGINX Kubernetes Gateway. Whether you're managing a web application or a REST backend API, you can use NGINX Kubernetes
-Gateway to expose your application outside the cluster.
+NGINX Gateway Fabric. Whether you're managing a web application or a REST backend API, you can use NGINX Gateway
+Fabric to expose your application outside the cluster.
 
 ## Prerequisites
 
-- [Install](/docs/installation.md) NGINX Kubernetes Gateway.
-- [Expose NGINX Kubernetes Gateway](/docs/installation.md#expose-nginx-kubernetes-gateway) and save the public IP
-  address and port of NGINX Kubernetes Gateway into shell variables:
+- [Install](/docs/installation.md) NGINX Gateway Fabric.
+- [Expose NGINX Gateway Fabric](/docs/installation.md#expose-nginx-gateway-fabric) and save the public IP
+  address and port of NGINX Gateway Fabric into shell variables:
 
    ```text
    GW_IP=XXX.YYY.ZZZ.III
@@ -24,7 +24,7 @@ The application we are going to use in this guide is a simple coffee application
 With this architecture, the coffee application is not accessible outside the cluster. We want to expose this application
 on the hostname `cafe.example.com` so that clients outside the cluster can access it.
 
-To do this, we will install NGINX Kubernetes Gateway and create two Gateway API resources:
+To do this, we will install NGINX Gateway Fabric and create two Gateway API resources:
 a [Gateway](https://gateway-api.sigs.k8s.io/v1alpha2/references/spec/#gateway.networking.k8s.io/v1beta1.Gateway) and
 an [HTTPRoute](https://gateway-api.sigs.k8s.io/v1alpha2/references/spec/#gateway.networking.k8s.io/v1beta1.HTTPRoute).
 With these resources, we will configure a simple routing rule to match all HTTP traffic with the
@@ -90,7 +90,7 @@ NAME                 TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)   AGE
 service/coffee       ClusterIP   10.96.75.77     <none>        80/TCP    77s
 ```
 
-## Application Architecture with NGINX Kubernetes Gateway
+## Application Architecture with NGINX Gateway Fabric
 
 To route traffic to the coffee application, we will create a Gateway and HTTPRoute. The following diagram shows the
 configuration we'll be creating in the next step:
@@ -104,12 +104,12 @@ To route HTTP traffic from the Gateway to the coffee Service, we need to create 
 to the Gateway. This HTTPRoute will have a single routing rule that routes all traffic to the
 hostname `cafe.example.com` from the Gateway to the coffee Service.
 
-Once NGINX Kubernetes Gateway processes the `cafe` Gateway and `coffee` HTTPRoute, it will configure its dataplane, NGINX,
+Once NGINX Gateway Fabric processes the `cafe` Gateway and `coffee` HTTPRoute, it will configure its dataplane, NGINX,
 to route all HTTP requests to `cafe.example.com` to the Pods that the `coffee` Service targets:
 
 ![Traffic Flow](/docs/images/route-all-traffic-flow.png)
 
-The coffee Service is omitted from the diagram above because the NGINX Kubernetes Gateway routes directly to the Pods
+The coffee Service is omitted from the diagram above because the NGINX Gateway Fabric routes directly to the Pods
 that the coffee Service targets.
 
 > **Note**
@@ -137,8 +137,8 @@ spec:
 EOF
 ```
 
-This Gateway is associated with the NGINX Kubernetes Gateway through the `gatewayClassName` field. The default
-installation of NGINX Kubernetes Gateway creates a GatewayClass with the name `nginx`. NGINX Kubernetes Gateway will
+This Gateway is associated with the NGINX Gateway Fabric through the `gatewayClassName` field. The default
+installation of NGINX Gateway Fabric creates a GatewayClass with the name `nginx`. NGINX Gateway Fabric will
 only configure Gateways with a `gatewayClassName` of `nginx` unless you change the name via the `--gatewayclass`
 [command-line flag](/docs/cli-help.md#static-mode).
 
@@ -193,12 +193,12 @@ Service using the `backendRef` field.
 
 ## Test the Configuration
 
-To test the configuration, we will send a request to the public IP and port of NGINX Kubernetes Gateway that you saved
+To test the configuration, we will send a request to the public IP and port of NGINX Gateway Fabric that you saved
 in the [prerequisites](#prerequisites) section and verify that the response comes from one of the coffee Pods.
 
 > **Note**
 > Your clients should be able to resolve the domain name `cafe.example.com` to the public IP of the
-> NGINX Kubernetes Gateway. In this guide we will simulate that using curl's `--resolve` option.
+> NGINX Gateway Fabric. In this guide we will simulate that using curl's `--resolve` option.
 
 
 First, let's send a request to the path `/`:
@@ -259,8 +259,8 @@ You should receive a 404 Not Found error:
 
 If you have any issues while testing the configuration, try the following to debug your configuration and setup:
 
-- Make sure you set the shell variables $GW_IP and $GW_PORT to the public IP and port of the NGINX Kubernetes Gateway
-  Service. Instructions for finding those values are [here](/docs/installation.md#expose-nginx-kubernetes-gateway).
+- Make sure you set the shell variables $GW_IP and $GW_PORT to the public IP and port of the NGINX Gateway Fabric
+  Service. Instructions for finding those values are [here](/docs/installation.md#expose-nginx-gateway-fabric).
 
 - Check the status of the Gateway:
 
@@ -394,7 +394,7 @@ If you have any issues while testing the configuration, try the following to deb
   > The entire configuration is not shown because it is subject to change.
   > Ellipses indicate that there's configuration not shown.
 
-If your issue persists, [contact us](https://github.com/nginxinc/nginx-kubernetes-gateway#contacts).
+If your issue persists, [contact us](https://github.com/nginxinc/nginx-gateway-fabric#contacts).
 
 ## Further Reading
 

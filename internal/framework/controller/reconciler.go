@@ -11,7 +11,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/events"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/events"
 )
 
 // NamespacedNameFilterFunc is a function that returns true if the resource should be processed by the reconciler.

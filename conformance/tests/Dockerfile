@@ -4,10 +4,10 @@ FROM kindest/node:v1.28.0
 
 FROM golang:1.21
 
-WORKDIR /go/src/github.com/nginxinc/nginx-kubernetes-gateway/conformance/tests/
+WORKDIR /go/src/github.com/nginxinc/nginx-gateway-fabric/conformance/tests/
 
-COPY --link go.mod /go/src/github.com/nginxinc/nginx-kubernetes-gateway/
-COPY --link go.sum /go/src/github.com/nginxinc/nginx-kubernetes-gateway/
+COPY --link go.mod /go/src/github.com/nginxinc/nginx-gateway-fabric/
+COPY --link go.sum /go/src/github.com/nginxinc/nginx-gateway-fabric/
 RUN go mod download
 
-COPY --link conformance/tests /go/src/github.com/nginxinc/nginx-kubernetes-gateway/conformance/tests/
+COPY --link conformance/tests /go/src/github.com/nginxinc/nginx-gateway-fabric/conformance/tests/

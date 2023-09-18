@@ -3,7 +3,7 @@ package status
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/conditions"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
 )
 
 func convertConditions(

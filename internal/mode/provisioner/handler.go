@@ -9,13 +9,13 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/conditions"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/events"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/status"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/events"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/status"
 )
 
 // eventHandler ensures each Gateway for the specific GatewayClass has a corresponding Deployment
-// of NKG configured to use that specific Gateway.
+// of NGF configured to use that specific Gateway.
 //
 // eventHandler implements events.Handler interface.
 type eventHandler struct {

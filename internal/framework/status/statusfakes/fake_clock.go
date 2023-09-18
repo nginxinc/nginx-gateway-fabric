@@ -4,7 +4,7 @@ package statusfakes
 import (
 	"sync"
 
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/status"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/status"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 

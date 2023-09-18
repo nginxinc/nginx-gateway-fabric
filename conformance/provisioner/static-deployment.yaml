@@ -1,5 +1,5 @@
 ---
-# Source: nginx-kubernetes-gateway/templates/deployment.yaml
+# Source: nginx-gateway-fabric/templates/deployment.yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -43,7 +43,7 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.name
-        image: ghcr.io/nginxinc/nginx-kubernetes-gateway:edge
+        image: ghcr.io/nginxinc/nginx-gateway-fabric:edge
         imagePullPolicy: Always
         name: nginx-gateway
         ports:
@@ -72,7 +72,7 @@ spec:
           mountPath: /etc/nginx/secrets
         - name: nginx-run
           mountPath: /var/run/nginx
-      - image: ghcr.io/nginxinc/nginx-kubernetes-gateway/nginx:edge
+      - image: ghcr.io/nginxinc/nginx-gateway-fabric/nginx:edge
         imagePullPolicy: Always
         name: nginx
         ports:

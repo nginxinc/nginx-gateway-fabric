@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-Before you can build the NGINX Kubernetes Gateway and NGINX images, make sure you have the following software
+Before you can build the NGINX Gateway Fabric and NGINX images, make sure you have the following software
 installed on your machine:
 
 - [git](https://git-scm.com/)
@@ -12,40 +12,40 @@ installed on your machine:
 
 ## Steps
 
-1. Clone the repo and change into the `nginx-kubernetes-gateway` directory:
+1. Clone the repo and change into the `nginx-gateway-fabric` directory:
 
    ```shell
-   git clone https://github.com/nginxinc/nginx-kubernetes-gateway.git
-   cd nginx-kubernetes-gateway
+   git clone https://github.com/nginxinc/nginx-gateway-fabric.git
+   cd nginx-gateway-fabric
    ```
 
 1. Build the images:
-   - To build both the NGINX Kubernetes Gateway and NGINX images:
+   - To build both the NGINX Gateway Fabric and NGINX images:
 
       ```makefile
-      make PREFIX=myregistry.example.com/nginx-kubernetes-gateway build-images
+      make PREFIX=myregistry.example.com/nginx-gateway-fabric build-images
       ```
 
-   - To build just the NGINX Kubernetes Gateway image:
+   - To build just the NGINX Gateway Fabric image:
 
      ```makefile
-     make PREFIX=myregistry.example.com/nginx-kubernetes-gateway build-nkg-image
+     make PREFIX=myregistry.example.com/nginx-gateway-fabric build-ngf-image
      ```
 
    - To build just the NGINX image:
 
      ```makefile
-     make PREFIX=myregistry.example.com/nginx-kubernetes-gateway build-nginx-image
+     make PREFIX=myregistry.example.com/nginx-gateway-fabric build-nginx-image
      ```
 
    Set the `PREFIX` variable to the name of the registry you'd like to push the image to. By default, the images will be
-   named `nginx-kubernetes-gateway:edge` and `nginx-kubernetes-gateway/nginx:edge`.
+   named `nginx-gateway-fabric:edge` and `nginx-gateway-fabric/nginx:edge`.
 
 1. Push the images to your container registry:
 
    ```shell
-   docker push myregistry.example.com/nginx-kubernetes-gateway:edge
-   docker push myregistry.example.com/nginx-kubernetes-gateway/nginx:edge
+   docker push myregistry.example.com/nginx-gateway-fabric:edge
+   docker push myregistry.example.com/nginx-gateway-fabric/nginx:edge
    ```
 
-   Make sure to substitute `myregistry.example.com/nginx-kubernetes-gateway` with your registry.
+   Make sure to substitute `myregistry.example.com/nginx-gateway-fabric` with your registry.

@@ -17,8 +17,8 @@ This guide will demonstrate how to:
 
 1. Administrator access to a Kubernetes cluster.
 2. [Helm](https://helm.sh) and [kubectl](https://kubernetes.io/docs/tasks/tools/#kubectl) must be installed locally.
-3. Deploy NGINX Kubernetes Gateway (NKG) following the [deployment instructions](/docs/installation.md).
-4. A DNS resolvable domain name is required. It must resolve to the public endpoint of the NKG deployment, and this
+3. Deploy NGINX Gateway Fabric (NGF) following the [deployment instructions](/docs/installation.md).
+4. A DNS resolvable domain name is required. It must resolve to the public endpoint of the NGF deployment, and this
    public endpoint must be an external IP address or alias accessible over the internet. The process here will depend
    on your DNS provider. This DNS name will need to be resolvable from the Let’s Encrypt servers, which may require
    that you wait for the record to propagate before it will work.
@@ -39,7 +39,7 @@ At a high level, the process looks like this:
    annotation.
 3. This kicks off the certificate issuance process – cert-manager contacts Let’s Encrypt to obtain a certificate, and
    Let’s Encrypt starts the ACME challenge. As part of this challenge, a temporary HTTPRoute resource is created by
-   cert-manager which directs the traffic through NKG to verify we control the domain name in the certificate request.
+   cert-manager which directs the traffic through NGF to verify we control the domain name in the certificate request.
 4. Once the domain has been verified, the certificate is issued. Cert-manager stores the keypair in a Kubernetes secret
    that is referenced by the Gateway resource. As a result, NGINX is configured to terminate HTTPS traffic from clients
    using this signed keypair.
@@ -49,7 +49,7 @@ At a high level, the process looks like this:
 6. When the client connects to https://cafe.example.com/coffee, the request is routed to the coffee-app application
    and the communication is secured using the signed keypair contained in the cafe-secret Secret.
 7. The certificate will be automatically renewed when it is close to expiry, the Secret will be updated using the new
-   Certificate, and NKG will dynamically update the keypair on the filesystem used by NGINX for HTTPS termination once
+   Certificate, and NGF will dynamically update the keypair on the filesystem used by NGINX for HTTPS termination once
    the Secret is updated.
 
 ## Details
@@ -105,7 +105,7 @@ spec:
     privateKeySecretRef:
       # Secret resource that will be used to store the account's private key.
       name: issuer-account-key
-    # Add a single challenge solver, HTTP01 using NKG
+    # Add a single challenge solver, HTTP01 using NGF
     solvers:
     - http01:
         gatewayHTTPRoute:
@@ -299,7 +299,7 @@ Request ID: e64c54a2ac253375ac085d48980f000a
   [ACME troubleshooting guide](https://cert-manager.io/docs/troubleshooting/acme/).
   - Note that for the HTTP01 Challenge to work using the Gateway resource, HTTPS redirect must not be configured.
   - The temporary HTTPRoute created by cert-manager routes the traffic between cert-manager and the Let's Encrypt server
-    through NKG. If the Challenge is not successful, it may be useful to inspect the NGINX logs to see the ACME
+    through NGF. If the Challenge is not successful, it may be useful to inspect the NGINX logs to see the ACME
     Challenge requests. You should see something like the following:
 
     ```shell
