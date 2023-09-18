@@ -107,6 +107,10 @@ can run the following command:
 docker buildx imagetools inspect ghcr.io/nginxinc/nginx-kubernetes-gateway:edge --format '{{ json (index .SBOM "linux/amd64").SPDX }}' | grype
 ```
 
+## Troubleshooting
+
+For troubleshooting help, see the [Troubleshooting](/docs/troubleshooting.md) document.
+
 ## Contacts
 
 We’d like to hear your feedback! If you experience issues with our Gateway Controller, please [open a bug][bug] in

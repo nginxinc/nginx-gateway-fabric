@@ -72,7 +72,7 @@ spec:
           periodSeconds: 1
         {{- end }}
         securityContext:
-          allowPrivilegeEscalation: false
+          allowPrivilegeEscalation: {{ .Values.nginxGateway.securityContext.allowPrivilegeEscalation }}
           capabilities:
             add:
             - KILL

@@ -18,6 +18,7 @@ yourself.
 - [CLI Help](cli-help.md): Describes the commands available in the `gateway` binary of `nginx-kubernetes-gateway`
 container.
 - [Monitoring](monitoring.md): Information on monitoring NGINX Kubernetes Gateway using Prometheus metrics.
+- [Troubleshooting](troubleshooting.md): Troubleshooting guide for common or known issues.
 
 ### Directories
 
