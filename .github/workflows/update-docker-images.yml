@@ -1,0 +1,146 @@
+name: Update Docker Images
+
+on:
+  schedule:
+    - cron: "0 2 * * *" # run every day at 02:00 UTC
+
+defaults:
+  run:
+    shell: bash
+
+concurrency:
+  group: ${{ github.ref_name }}-update-images
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  platforms: "linux/arm64, linux/amd64"
+
+jobs:
+  variables:
+    name: Get versions of base images
+    runs-on: ubuntu-22.04
+    outputs:
+      nkg_tag: ${{ steps.nkg.outputs.tag }}
+      nginx_version: ${{ steps.nginx.outputs.nginx_version }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+        with:
+          fetch-depth: 0
+
+      - name: Set NKG version
+        id: nkg
+        run: |
+          tag="$(git tag --sort=-version:refname | head -n1)"
+          echo "tag=${tag//v}" >> $GITHUB_OUTPUT
+
+      - name: Checkout Repository at ${{ steps.nkg.outputs.tag }}
+        uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+        with:
+          ref: refs/tags/v${{ steps.nkg.outputs.tag }}
+
+      - name: Set NGINX version
+        id: nginx
+        run: |
+          version=library/nginx:$(grep -m1 "FROM.*nginx:.*alpine" < build/Dockerfile.nginx | awk -F"[ :]" '{print $3}')
+          echo nginx_version=${version} >> $GITHUB_OUTPUT
+
+  check:
+    name: Check if updates are needed
+    runs-on: ubuntu-22.04
+    needs: variables
+    outputs:
+      needs-updating: ${{ steps.needs.outputs.needs-updating }}
+    steps:
+      - name: Check if update available for nginx image
+        id: update
+        uses: lucacome/docker-image-update-checker@f50d56412b948cfdbb842c5419372681e0db3df1 # v1.2.1
+        with:
+          base-image: ${{ needs.variables.outputs.nginx_version }}
+          image: ghcr.io/nginxinc/nginx-kubernetes-gateway/nginx:${{ needs.variables.outputs.nkg_tag }}
+          platforms: ${{ env.platforms }}
+
+      - id: needs
+        run: echo "needs-updating=${{ steps.update.outputs.needs-updating }}" >> $GITHUB_OUTPUT
+
+  build:
+    name: Build Image
+    runs-on: ubuntu-22.04
+    needs: [variables, check]
+    if: ${{ needs.check.outputs.needs-updating }}
+    strategy:
+      fail-fast: false
+    permissions:
+      contents: read # for docker/build-push-action to read repo content
+      security-events: write # for github/codeql-action/upload-sarif to upload SARIF results
+      packages: write # for docker/build-push-action to push to GHCR
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3.6.0
+
+      - name: Docker Buildx
+        uses: docker/setup-buildx-action@885d1462b80bc1c1c7f0b00334ad271f09369c55 # v2.10.0
+
+      - name: Setup QEMU
+        uses: docker/setup-qemu-action@2b82ce82d56a2a04d2637cd93a637ae1b359c0a7 # v2.2.0
+        with:
+          platforms: arm64
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@465a07811f14bebb1938fbed4728c6a1ff8901fc # v2.2.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@818d4b7b91585d195f67373fd9cb0332e31a7175 # v4.6.0
+        with:
+          images: |
+            name=ghcr.io/nginxinc/nginx-kubernetes-gateway/nginx
+          tags: |
+            ${{ needs.variables.outputs.nkg_tag }}
+
+      - name: Build Docker Image
+        uses: docker/build-push-action@2eb1c1961a95fc15694676618e422e8ba1d63825 # v4.1.1
+        with:
+          file: 'build/Dockerfile.nginx'
+          context: "."
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          push: true
+          platforms: ${{ env.platforms }}
+          pull: true
+          no-cache: true
+          sbom: true
+          provenance: false
+          build-args: |
+            NJS_DIR=internal/mode/static/nginx/modules/src
+            NGINX_CONF_DIR=internal/mode/static/nginx/conf
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@41f05d9ecffa2ed3f1580af306000f734b733e54 # 0.11.2
+        continue-on-error: true
+        with:
+          image-ref: ghcr.io/nginxinc/nginx-kubernetes-gateway/nginx:${{ needs.variables.outputs.nkg_tag }}
+          format: "sarif"
+          output: trivy-results-nginx-kubernetes-gateway-nginx
+          ignore-unfixed: "true"
+
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@00e563ead9f72a8461b24876bee2d0c2e8bd2ee8 # v2.21.5
+        continue-on-error: true
+        with:
+          sarif_file: trivy-results-nginx-kubernetes-gateway-nginx
+
+      - name: Upload Scan Results
+        uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
+        continue-on-error: true
+        with:
+          name: trivy-results-nginx-kubernetes-gateway-nginx
+          path: trivy-results-nginx-kubernetes-gateway-nginx
+        if: always()
