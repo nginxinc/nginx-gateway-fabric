@@ -213,7 +213,7 @@ func createStaticModeCommand() *cobra.Command {
 	cmd.Flags().Var(
 		&metricsListenPort,
 		metricsPortFlag,
-		"Set the port where the metrics are exposed. Format: [1023 - 65535]",
+		"Set the port where the metrics are exposed. Format: [1024 - 65535]",
 	)
 
 	cmd.Flags().BoolVar(
