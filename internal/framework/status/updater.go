@@ -2,6 +2,7 @@ package status
 
 import (
 	"context"
+	"fmt"
 	"sync"
 
 	"github.com/go-logr/logr"
@@ -21,7 +22,7 @@ import (
 // control plane being able to run simultaneously where only the leader will update statuses.
 type Updater interface {
 	// Update updates the statuses of the resources.
-	Update(context.Context, Statuses)
+	Update(context.Context, Status)
 	// Enable enables status updates. The updater will update the statuses in Kubernetes API to ensure they match the
 	// statuses of the last Update invocation.
 	Enable(ctx context.Context)
@@ -80,11 +81,18 @@ type UpdaterConfig struct {
 // UpdaterImpl needs to be modified to support new resources. Consider making UpdaterImpl extendable, so that it
 // goes along the Open-closed principle.
 type UpdaterImpl struct {
-	lastStatuses *Statuses
+	lastStatuses lastStatuses
 	cfg          UpdaterConfig
 	isLeader     bool
 
 	lock sync.Mutex
+}
+
+// lastStatuses hold the last saved statuses. Used when leader election is enabled to write the last saved statuses on
+// a leader change.
+type lastStatuses struct {
+	nginxGateway *NginxGatewayStatus
+	gatewayAPI   GatewayAPIStatuses
 }
 
 // Enable writes the last saved statuses for the Gateway API resources.
@@ -93,15 +101,12 @@ type UpdaterImpl struct {
 func (upd *UpdaterImpl) Enable(ctx context.Context) {
 	defer upd.lock.Unlock()
 	upd.lock.Lock()
+
 	upd.isLeader = true
 
-	if upd.lastStatuses == nil {
-		upd.cfg.Logger.Info("No statuses to write")
-		return
-	}
-
 	upd.cfg.Logger.Info("Writing last statuses")
-	upd.update(ctx, *upd.lastStatuses)
+	upd.updateGatewayAPI(ctx, upd.lastStatuses.gatewayAPI)
+	upd.updateNginxGateway(ctx, upd.lastStatuses.nginxGateway)
 }
 
 func (upd *UpdaterImpl) Disable() {
@@ -121,25 +126,57 @@ func NewUpdater(cfg UpdaterConfig) *UpdaterImpl {
 	}
 }
 
-func (upd *UpdaterImpl) Update(ctx context.Context, statuses Statuses) {
+func (upd *UpdaterImpl) Update(ctx context.Context, status Status) {
 	// FIXME(pleshakov) Merge the new Conditions in the status with the existing Conditions
 	// https://github.com/nginxinc/nginx-kubernetes-gateway/issues/558
 
 	defer upd.lock.Unlock()
 	upd.lock.Lock()
 
-	upd.lastStatuses = &statuses
+	switch s := status.(type) {
+	case *NginxGatewayStatus:
+		upd.updateNginxGateway(ctx, s)
+	case GatewayAPIStatuses:
+		upd.updateGatewayAPI(ctx, s)
+	default:
+		panic(fmt.Sprintf("unknown status type %T with group name %s", s, status.APIGroup()))
+	}
+}
+
+func (upd *UpdaterImpl) updateNginxGateway(ctx context.Context, status *NginxGatewayStatus) {
+	upd.lastStatuses.nginxGateway = status
 
 	if !upd.isLeader {
-		upd.cfg.Logger.Info("Skipping updating statuses because not leader")
+		upd.cfg.Logger.Info("Skipping updating Nginx Gateway status because not leader")
 		return
 	}
 
-	upd.cfg.Logger.Info("Updating statuses")
-	upd.update(ctx, statuses)
+	upd.cfg.Logger.Info("Updating Nginx Gateway status")
+
+	if status != nil {
+		upd.writeStatuses(ctx, status.NsName, &nkgAPI.NginxGateway{}, func(object client.Object) {
+			ng := object.(*nkgAPI.NginxGateway)
+			ng.Status = nkgAPI.NginxGatewayStatus{
+				Conditions: convertConditions(
+					status.Conditions,
+					status.ObservedGeneration,
+					upd.cfg.Clock.Now(),
+				),
+			}
+		})
+	}
 }
 
-func (upd *UpdaterImpl) update(ctx context.Context, statuses Statuses) {
+func (upd *UpdaterImpl) updateGatewayAPI(ctx context.Context, statuses GatewayAPIStatuses) {
+	upd.lastStatuses.gatewayAPI = statuses
+
+	if !upd.isLeader {
+		upd.cfg.Logger.Info("Skipping updating Gateway API status because not leader")
+		return
+	}
+
+	upd.cfg.Logger.Info("Updating Gateway API statuses")
+
 	if upd.cfg.UpdateGatewayClassStatus {
 		for nsname, gcs := range statuses.GatewayClassStatuses {
 			upd.writeStatuses(ctx, nsname, &v1beta1.GatewayClass{}, func(object client.Object) {
@@ -172,20 +209,6 @@ func (upd *UpdaterImpl) update(ctx context.Context, statuses Statuses) {
 				upd.cfg.GatewayCtlrName,
 				upd.cfg.Clock.Now(),
 			)
-		})
-	}
-
-	ngStatus := statuses.NginxGatewayStatus
-	if ngStatus != nil {
-		upd.writeStatuses(ctx, ngStatus.NsName, &nkgAPI.NginxGateway{}, func(object client.Object) {
-			ng := object.(*nkgAPI.NginxGateway)
-			ng.Status = nkgAPI.NginxGatewayStatus{
-				Conditions: convertConditions(
-					ngStatus.Conditions,
-					ngStatus.ObservedGeneration,
-					upd.cfg.Clock.Now(),
-				),
-			}
 		})
 	}
 }

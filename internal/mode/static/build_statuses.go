@@ -15,9 +15,9 @@ type nginxReloadResult struct {
 	error error
 }
 
-// buildStatuses builds status.Statuses from a Graph.
-func buildStatuses(graph *graph.Graph, nginxReloadRes nginxReloadResult) status.Statuses {
-	statuses := status.Statuses{
+// buildGatewayAPIStatuses builds status.Statuses from a Graph.
+func buildGatewayAPIStatuses(graph *graph.Graph, nginxReloadRes nginxReloadResult) status.GatewayAPIStatuses {
+	statuses := status.GatewayAPIStatuses{
 		HTTPRouteStatuses: make(status.HTTPRouteStatuses),
 	}
 
