@@ -42,6 +42,7 @@ spec:
         - --health-port={{ .Values.nginxGateway.readinessProbe.port }}
         {{- else }}
         - --health-disable
+        {{- end }}
         {{- if .Values.nginxGateway.leaderElection.enable }}
         - --leader-election-lock-name={{ include "nginx-gateway.leaderElectionName" . }}
         {{- else }}

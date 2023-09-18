@@ -133,6 +133,7 @@ func StartManager(cfg config.Config) error {
 		Logger:                   cfg.Logger.WithName("statusUpdater"),
 		Clock:                    status.NewRealClock(),
 		UpdateGatewayClassStatus: cfg.UpdateGatewayClassStatus,
+		LeaderElectionEnabled:    cfg.LeaderElection.Enabled,
 	})
 
 	eventHandler := newEventHandlerImpl(eventHandlerConfig{
