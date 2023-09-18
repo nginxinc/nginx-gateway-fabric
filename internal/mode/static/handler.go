@@ -114,7 +114,7 @@ func (h *eventHandlerImpl) HandleEventBatch(ctx context.Context, batch events.Ev
 		}
 	}
 
-	h.cfg.statusUpdater.Update(ctx, buildStatuses(graph, nginxReloadRes))
+	h.cfg.statusUpdater.Update(ctx, buildGatewayAPIStatuses(graph, nginxReloadRes))
 }
 
 func (h *eventHandlerImpl) updateNginx(ctx context.Context, conf dataplane.Configuration) error {
@@ -157,15 +157,13 @@ func (h *eventHandlerImpl) updateControlPlaneAndSetStatus(ctx context.Context, c
 	}
 
 	if cfg != nil {
-		statuses := status.Statuses{
-			NginxGatewayStatus: &status.NginxGatewayStatus{
-				NsName:             client.ObjectKeyFromObject(cfg),
-				Conditions:         cond,
-				ObservedGeneration: cfg.Generation,
-			},
+		nginxGatewayStatus := &status.NginxGatewayStatus{
+			NsName:             client.ObjectKeyFromObject(cfg),
+			Conditions:         cond,
+			ObservedGeneration: cfg.Generation,
 		}
 
-		h.cfg.statusUpdater.Update(ctx, statuses)
+		h.cfg.statusUpdater.Update(ctx, nginxGatewayStatus)
 		h.cfg.logger.Info("Reconfigured control plane.")
 	}
 }

@@ -25,7 +25,6 @@ const (
 	gatewayCtrlNameFlag     = "gateway-ctlr-name"
 	gatewayCtrlNameUsageFmt = `The name of the Gateway controller. ` +
 		`The controller name must be of the form: DOMAIN/PATH. The controller's domain is '%s'`
-	gatewayFlag = "gateway"
 )
 
 var (
@@ -36,25 +35,6 @@ var (
 	}
 
 	gatewayClassName = stringValidatingValue{
-		validator: validateResourceName,
-	}
-
-	// Backing values for static subcommand cli flags.
-	updateGCStatus bool
-	disableMetrics bool
-	metricsSecure  bool
-	disableHealth  bool
-
-	metricsListenPort = intValidatingValue{
-		validator: validatePort,
-		value:     9113,
-	}
-	healthListenPort = intValidatingValue{
-		validator: validatePort,
-		value:     8081,
-	}
-	gateway    = namespacedNameValue{}
-	configName = stringValidatingValue{
 		validator: validateResourceName,
 	}
 )
@@ -85,6 +65,46 @@ func createRootCommand() *cobra.Command {
 }
 
 func createStaticModeCommand() *cobra.Command {
+	// flag names
+	const (
+		gatewayFlag                = "gateway"
+		configFlag                 = "config"
+		updateGCStatusFlag         = "update-gatewayclass-status"
+		metricsDisableFlag         = "metrics-disable"
+		metricsSecureFlag          = "metrics-secure-serving"
+		metricsPortFlag            = "metrics-port"
+		healthDisableFlag          = "health-disable"
+		healthPortFlag             = "health-port"
+		leaderElectionDisableFlag  = "leader-election-disable"
+		leaderElectionLockNameFlag = "leader-election-lock-name"
+	)
+
+	// flag values
+	var (
+		updateGCStatus bool
+		gateway        = namespacedNameValue{}
+		configName     = stringValidatingValue{
+			validator: validateResourceName,
+		}
+		disableMetrics    bool
+		metricsSecure     bool
+		metricsListenPort = intValidatingValue{
+			validator: validatePort,
+			value:     9113,
+		}
+		disableHealth    bool
+		healthListenPort = intValidatingValue{
+			validator: validatePort,
+			value:     8081,
+		}
+
+		disableLeaderElection  bool
+		leaderElectionLockName = stringValidatingValue{
+			validator: validateResourceName,
+			value:     "nginx-gateway-leader-election-lock",
+		}
+	)
+
 	cmd := &cobra.Command{
 		Use:   "static-mode",
 		Short: "Configure NGINX in the scope of a single Gateway resource",
@@ -109,21 +129,19 @@ func createStaticModeCommand() *cobra.Command {
 				return fmt.Errorf("error validating POD_IP environment variable: %w", err)
 			}
 
-			namespace := os.Getenv("MY_NAMESPACE")
+			namespace := os.Getenv("POD_NAMESPACE")
 			if namespace == "" {
-				return errors.New("MY_NAMESPACE environment variable must be set")
+				return errors.New("POD_NAMESPACE environment variable must be set")
+			}
+
+			podName := os.Getenv("POD_NAME")
+			if podName == "" {
+				return errors.New("POD_NAME environment variable must be set")
 			}
 
 			var gwNsName *types.NamespacedName
 			if cmd.Flags().Changed(gatewayFlag) {
 				gwNsName = &gateway.value
-			}
-
-			metricsConfig := config.MetricsConfig{}
-			if !disableMetrics {
-				metricsConfig.Enabled = true
-				metricsConfig.Port = metricsListenPort.value
-				metricsConfig.Secure = metricsSecure
 			}
 
 			conf := config.Config{
@@ -136,10 +154,19 @@ func createStaticModeCommand() *cobra.Command {
 				Namespace:                namespace,
 				GatewayNsName:            gwNsName,
 				UpdateGatewayClassStatus: updateGCStatus,
-				MetricsConfig:            metricsConfig,
 				HealthConfig: config.HealthConfig{
 					Enabled: !disableHealth,
 					Port:    healthListenPort.value,
+				},
+				MetricsConfig: config.MetricsConfig{
+					Enabled: !disableMetrics,
+					Port:    metricsListenPort.value,
+					Secure:  metricsSecure,
+				},
+				LeaderElection: config.LeaderElection{
+					Enabled:  !disableLeaderElection,
+					LockName: leaderElectionLockName.String(),
+					Identity: podName,
 				},
 			}
 
@@ -163,7 +190,7 @@ func createStaticModeCommand() *cobra.Command {
 
 	cmd.Flags().VarP(
 		&configName,
-		"config",
+		configFlag,
 		"c",
 		`The name of the NginxGateway resource to be used for this controller's dynamic configuration.`+
 			` Lives in the same Namespace as the controller.`,
@@ -171,27 +198,27 @@ func createStaticModeCommand() *cobra.Command {
 
 	cmd.Flags().BoolVar(
 		&updateGCStatus,
-		"update-gatewayclass-status",
+		updateGCStatusFlag,
 		true,
 		"Update the status of the GatewayClass resource.",
 	)
 
 	cmd.Flags().BoolVar(
 		&disableMetrics,
-		"metrics-disable",
+		metricsDisableFlag,
 		false,
 		"Disable exposing metrics in the Prometheus format.",
 	)
 
 	cmd.Flags().Var(
 		&metricsListenPort,
-		"metrics-port",
+		metricsPortFlag,
 		"Set the port where the metrics are exposed. Format: [1024 - 65535]",
 	)
 
 	cmd.Flags().BoolVar(
 		&metricsSecure,
-		"metrics-secure-serving",
+		metricsSecureFlag,
 		false,
 		"Enable serving metrics via https. By default metrics are served via http."+
 			" Please note that this endpoint will be secured with a self-signed certificate.",
@@ -199,15 +226,31 @@ func createStaticModeCommand() *cobra.Command {
 
 	cmd.Flags().BoolVar(
 		&disableHealth,
-		"health-disable",
+		healthDisableFlag,
 		false,
 		"Disable running the health probe server.",
 	)
 
 	cmd.Flags().Var(
 		&healthListenPort,
-		"health-port",
+		healthPortFlag,
 		"Set the port where the health probe server is exposed. Format: [1024 - 65535]",
+	)
+
+	cmd.Flags().BoolVar(
+		&disableLeaderElection,
+		leaderElectionDisableFlag,
+		false,
+		"Disable leader election. Leader election is used to avoid multiple replicas of the NGINX Kubernetes Gateway"+
+			" reporting the status of the Gateway API resources. If disabled, "+
+			"all replicas of NGINX Kubernetes Gateway will update the statuses of the Gateway API resources.",
+	)
+
+	cmd.Flags().Var(
+		&leaderElectionLockName,
+		leaderElectionLockNameFlag,
+		"The name of the leader election lock. "+
+			"A Lease object with this name will be created in the same Namespace as the controller.",
 	)
 
 	return cmd

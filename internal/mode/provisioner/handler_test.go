@@ -144,6 +144,8 @@ var _ = Describe("handler", func() {
 		expectedGwFlag := fmt.Sprintf("--gateway=%s", gwNsName.String())
 		Expect(dep.Spec.Template.Spec.Containers[0].Args).To(ContainElement(expectedGwFlag))
 		Expect(dep.Spec.Template.Spec.Containers[0].Args).To(ContainElement("--update-gatewayclass-status=false"))
+		expectedLockFlag := fmt.Sprintf("--leader-election-lock-name=%s", gwNsName.Name)
+		Expect(dep.Spec.Template.Spec.Containers[0].Args).To(ContainElement(expectedLockFlag))
 	}
 
 	itShouldPanicWhenUpsertingGateway := func(gwNsName types.NamespacedName) {

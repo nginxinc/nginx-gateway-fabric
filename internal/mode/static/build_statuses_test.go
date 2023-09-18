@@ -135,7 +135,7 @@ func TestBuildStatuses(t *testing.T) {
 		Routes: routes,
 	}
 
-	expected := status.Statuses{
+	expected := status.GatewayAPIStatuses{
 		GatewayClassStatuses: status.GatewayClassStatuses{
 			{Name: ""}: {
 				ObservedGeneration: 1,
@@ -196,7 +196,7 @@ func TestBuildStatuses(t *testing.T) {
 	g := NewWithT(t)
 
 	var nginxReloadRes nginxReloadResult
-	result := buildStatuses(graph, nginxReloadRes)
+	result := buildGatewayAPIStatuses(graph, nginxReloadRes)
 	g.Expect(helpers.Diff(expected, result)).To(BeEmpty())
 }
 
@@ -246,7 +246,7 @@ func TestBuildStatusesNginxErr(t *testing.T) {
 		Routes: routes,
 	}
 
-	expected := status.Statuses{
+	expected := status.GatewayAPIStatuses{
 		GatewayClassStatuses: status.GatewayClassStatuses{},
 		GatewayStatuses: status.GatewayStatuses{
 			{Namespace: "test", Name: "gateway"}: {
@@ -288,7 +288,7 @@ func TestBuildStatusesNginxErr(t *testing.T) {
 	g := NewWithT(t)
 
 	nginxReloadRes := nginxReloadResult{error: errors.New("test error")}
-	result := buildStatuses(graph, nginxReloadRes)
+	result := buildGatewayAPIStatuses(graph, nginxReloadRes)
 	g.Expect(helpers.Diff(expected, result)).To(BeEmpty())
 }
 

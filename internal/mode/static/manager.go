@@ -133,15 +133,19 @@ func StartManager(cfg config.Config) error {
 		Logger:                   cfg.Logger.WithName("statusUpdater"),
 		Clock:                    status.NewRealClock(),
 		UpdateGatewayClassStatus: cfg.UpdateGatewayClassStatus,
+		LeaderElectionEnabled:    cfg.LeaderElection.Enabled,
 	})
 
 	eventHandler := newEventHandlerImpl(eventHandlerConfig{
-		processor:           processor,
-		serviceResolver:     resolver.NewServiceResolverImpl(mgr.GetClient()),
-		generator:           ngxcfg.NewGeneratorImpl(),
-		logger:              cfg.Logger.WithName("eventHandler"),
-		logLevelSetter:      logLevelSetter,
-		nginxFileMgr:        file.NewManagerImpl(cfg.Logger.WithName("nginxFileManager"), file.NewStdLibOSFileManager()),
+		processor:       processor,
+		serviceResolver: resolver.NewServiceResolverImpl(mgr.GetClient()),
+		generator:       ngxcfg.NewGeneratorImpl(),
+		logger:          cfg.Logger.WithName("eventHandler"),
+		logLevelSetter:  logLevelSetter,
+		nginxFileMgr: file.NewManagerImpl(
+			cfg.Logger.WithName("nginxFileManager"),
+			file.NewStdLibOSFileManager(),
+		),
 		nginxRuntimeMgr:     ngxruntime.NewManagerImpl(),
 		statusUpdater:       statusUpdater,
 		eventRecorder:       recorder,
@@ -160,6 +164,33 @@ func StartManager(cfg config.Config) error {
 
 	if err = mgr.Add(eventLoop); err != nil {
 		return fmt.Errorf("cannot register event loop: %w", err)
+	}
+
+	leaderElectorLogger := cfg.Logger.WithName("leaderElector")
+
+	if cfg.LeaderElection.Enabled {
+		leaderElector, err := newLeaderElectorRunnable(leaderElectorRunnableConfig{
+			kubeConfig: clusterCfg,
+			recorder:   recorder,
+			onStartedLeading: func(ctx context.Context) {
+				leaderElectorLogger.Info("Started leading")
+				statusUpdater.Enable(ctx)
+			},
+			onStoppedLeading: func() {
+				leaderElectorLogger.Info("Stopped leading")
+				statusUpdater.Disable()
+			},
+			lockNs:   cfg.Namespace,
+			lockName: cfg.LeaderElection.LockName,
+			identity: cfg.LeaderElection.Identity,
+		})
+		if err != nil {
+			return err
+		}
+
+		if err = mgr.Add(leaderElector); err != nil {
+			return fmt.Errorf("cannot register leader elector: %w", err)
+		}
 	}
 
 	// Ensure NGINX is running before registering metrics & starting the manager.
@@ -271,7 +302,6 @@ func registerControllers(
 			return fmt.Errorf("cannot register controller for %T: %w", regCfg.objectType, err)
 		}
 	}
-
 	return nil
 }
 

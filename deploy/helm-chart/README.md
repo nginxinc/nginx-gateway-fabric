@@ -12,9 +12,9 @@ This chart deploys the NGINX Kubernetes Gateway in your Kubernetes cluster.
 ### Installing the Gateway API resources
 
 > Note: The Gateway API resources from the standard channel (the CRDs and the validating webhook) must be installed
-before deploying NGINX Kubernetes Gateway. If they are already installed in your cluster, please ensure they are the
-correct version as supported by the NGINX Kubernetes Gateway -
-[see the Technical Specifications](../../README.md#technical-specifications).
+> before deploying NGINX Kubernetes Gateway. If they are already installed in your cluster, please ensure they are
+> the correct version as supported by the NGINX Kubernetes Gateway -
+> [see the Technical Specifications](../../README.md#technical-specifications).
 
 To install the Gateway resources from [the Gateway API repo](https://github.com/kubernetes-sigs/gateway-api), run:
 
@@ -58,6 +58,7 @@ helm install my-release . --create-namespace --wait -n nginx-gateway
 ```
 
 ## Upgrading the Chart
+
 ### Upgrading the Gateway Resources
 
 Before you upgrade a release, ensure the Gateway API resources are the correct version as supported by the NGINX
@@ -71,8 +72,8 @@ kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/downloa
 
 ### Upgrading the CRDs
 
-Helm does not upgrade the NGINX Kubernetes Gateway CRDs during a release upgrade. Before you upgrade a release,
-you must [pull the chart](#pulling-the-chart) from GitHub and run the following command to upgrade the CRDs:
+Helm does not upgrade the NGINX Kubernetes Gateway CRDs during a release upgrade. Before you upgrade a release, you
+must [pull the chart](#pulling-the-chart) from GitHub and run the following command to upgrade the CRDs:
 
 ```shell
 kubectl apply -f crds/
@@ -92,8 +93,8 @@ To upgrade the release `my-release`, run:
 helm upgrade my-release oci://ghcr.io/nginxinc/charts/nginx-kubernetes-gateway -n nginx-gateway
 ```
 
-This will upgrade to the latest stable release. To upgrade to the latest version from the `main` branch,
-specify the `--version 0.0.0-edge` flag when upgrading.
+This will upgrade to the latest stable release. To upgrade to the latest version from the `main` branch, specify
+the `--version 0.0.0-edge` flag when upgrading.
 
 ### Upgrading the Chart from the Sources
 
@@ -118,7 +119,7 @@ These commands remove all the Kubernetes components associated with the release 
 
 ### Uninstalling the Gateway Resources
 
->**Warning: This command will delete all the corresponding custom resources in your cluster across all namespaces!
+> **Warning: This command will delete all the corresponding custom resources in your cluster across all namespaces!
 Please ensure there are no custom resources that you want to keep and there are no other Gateway API implementations
 running in the cluster!**
 
@@ -132,28 +133,31 @@ kubectl delete -f https://github.com/kubernetes-sigs/gateway-api/releases/downlo
 
 The following tables lists the configurable parameters of the NGINX Kubernetes Gateway chart and their default values.
 
-| Parameter | Description | Default Value |
-|-----------|-------------|---------------|
-| `nginxGateway.image.repository` | The repository for the NGINX Kubernetes Gateway image. | ghcr.io/nginxinc/nginx-kubernetes-gateway |
-| `nginxGateway.image.tag` | The tag for the NGINX Kubernetes Gateway image. | edge |
-| `nginxGateway.image.pullPolicy` | The `imagePullPolicy` for the NGINX Kubernetes Gateway image. | Always |
-| `nginxGateway.gatewayClassName` | The name of the GatewayClass for the NGINX Kubernetes Gateway deployment. | nginx |
-| `nginxGateway.gatewayControllerName` | The name of the Gateway controller. The controller name must be of the form: DOMAIN/PATH. The controller's domain is gateway.nginx.org. | gateway.nginx.org/nginx-gateway-controller |
-| `nginxGateway.kind` | The kind of the NGINX Kubernetes Gateway installation - currently, only Deployment is supported. | deployment |
-| `nginxGateway.config` | The dynamic configuration for the control plane that is contained in the NginxGateway resource. | [See nginxGateway.config section](values.yaml) |
-| `nginxGateway.readinessProbe.enable` | Enable the /readyz endpoint on the control plane. | true |
-| `nginxGateway.readinessProbe.port` | Port in which the readiness endpoint is exposed. | 8081 |
-| `nginxGateway.readinessProbe.initialDelaySeconds` | The number of seconds after the Pod has started before the readiness probes are initiated. | 3 |
-| `nginx.image.repository` | The repository for the NGINX image. | ghcr.io/nginxinc/nginx-kubernetes-gateway/nginx |
-| `nginx.image.tag` | The tag for the NGINX image.  | edge |
-| `nginx.image.pullPolicy` | The `imagePullPolicy` for the NGINX image. | Always  |
-| `serviceAccount.annotations` | The `annotations` for the ServiceAccount used by the NGINX Kubernetes Gateway deployment. | {} |
-| `serviceAccount.name` | Name of the ServiceAccount used by the NGINX Kubernetes Gateway deployment. | Autogenerated |
-| `service.create` | Creates a service to expose the NGINX Kubernetes Gateway pods. | true |
-| `service.type` | The type of service to create for the NGINX Kubernetes Gateway. | Loadbalancer |
-| `service.externalTrafficPolicy` | The `externalTrafficPolicy` of the service. The value `Local` preserves the client source IP. | Local |
-| `service.annotations` | The `annotations` of the NGINX Kubernetes Gateway service. | {} |
-| `service.ports` | A list of ports to expose through the NGINX Kubernetes Gateway service. Update it to match the listener ports from your Gateway resource. Follows the conventional Kubernetes yaml syntax for service ports. | [ port: 80, targetPort: 80, protocol: TCP, name: http; port: 443, targetPort: 443, protocol: TCP, name: https ] |
-| `metrics.enable` | Enable exposing metrics in the Prometheus format. | true |
-| `metrics.port` | Set the port where the Prometheus metrics are exposed. Format: [1024 - 65535] | 9113 |
-| `metrics.secure` | Enable serving metrics via https. By default metrics are served via http. Please note that this endpoint will be secured with a self-signed certificate. | false |
+| Parameter                                         | Description                                                                                                                                                                                                  | Default Value                                                                                                   |
+|---------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------|
+| `nginxGateway.image.repository`                   | The repository for the NGINX Kubernetes Gateway image.                                                                                                                                                       | ghcr.io/nginxinc/nginx-kubernetes-gateway                                                                       |
+| `nginxGateway.image.tag`                          | The tag for the NGINX Kubernetes Gateway image.                                                                                                                                                              | edge                                                                                                            |
+| `nginxGateway.image.pullPolicy`                   | The `imagePullPolicy` for the NGINX Kubernetes Gateway image.                                                                                                                                                | Always                                                                                                          |
+| `nginxGateway.gatewayClassName`                   | The name of the GatewayClass for the NGINX Kubernetes Gateway deployment.                                                                                                                                    | nginx                                                                                                           |
+| `nginxGateway.gatewayControllerName`              | The name of the Gateway controller. The controller name must be of the form: DOMAIN/PATH. The controller's domain is gateway.nginx.org.                                                                      | gateway.nginx.org/nginx-gateway-controller                                                                      |
+| `nginxGateway.kind`                               | The kind of the NGINX Kubernetes Gateway installation - currently, only Deployment is supported.                                                                                                             | deployment                                                                                                      |
+| `nginxGateway.config`                             | The dynamic configuration for the control plane that is contained in the NginxGateway resource                                                                                                               | [See nginxGateway.config section](values.yaml)                                                                  |
+| `nginxGateway.readinessProbe.enable`              | Enable the /readyz endpoint on the control plane.                                                                                                                                                            | true                                                                                                            |
+| `nginxGateway.readinessProbe.port`                | Port in which the readiness endpoint is exposed.                                                                                                                                                             | 8081                                                                                                            |
+| `nginxGateway.readinessProbe.initialDelaySeconds` | The number of seconds after the Pod has started before the readiness probes are initiated.                                                                                                                   | 3                                                                                                               |
+| `nginxGateway.replicaCount`                       | The number of replicas of the NGINX Kubernetes Gateway Deployment.                                                                                                                                           | 1                                                                                                               |
+| `nginxGateway.leaderElection.enable`              | Enable leader election. Leader election is used to avoid multiple replicas of the NGINX Kubernetes Gateway reporting the status of the Gateway API resources.                                                | true                                                                                                            |
+| `nginxGateway.leaderElection.lockName`            | The name of the leader election lock. A Lease object with this name will be created in the same Namespace as the controller.                                                                                 | Autogenerated                                                                                                   |
+| `nginx.image.repository`                          | The repository for the NGINX image.                                                                                                                                                                          | ghcr.io/nginxinc/nginx-kubernetes-gateway/nginx                                                                 |
+| `nginx.image.tag`                                 | The tag for the NGINX image.                                                                                                                                                                                 | edge                                                                                                            |
+| `nginx.image.pullPolicy`                          | The `imagePullPolicy` for the NGINX image.                                                                                                                                                                   | Always                                                                                                          |
+| `serviceAccount.annotations`                      | The `annotations` for the ServiceAccount used by the NGINX Kubernetes Gateway deployment.                                                                                                                    | {}                                                                                                              |
+| `serviceAccount.name`                             | Name of the ServiceAccount used by the NGINX Kubernetes Gateway deployment.                                                                                                                                  | Autogenerated                                                                                                   |
+| `service.create`                                  | Creates a service to expose the NGINX Kubernetes Gateway pods.                                                                                                                                               | true                                                                                                            |
+| `service.type`                                    | The type of service to create for the NGINX Kubernetes Gateway.                                                                                                                                              | Loadbalancer                                                                                                    |
+| `service.externalTrafficPolicy`                   | The `externalTrafficPolicy` of the service. The value `Local` preserves the client source IP.                                                                                                                | Local                                                                                                           |
+| `service.annotations`                             | The `annotations` of the NGINX Kubernetes Gateway service.                                                                                                                                                   | {}                                                                                                              |
+| `service.ports`                                   | A list of ports to expose through the NGINX Kubernetes Gateway service. Update it to match the listener ports from your Gateway resource. Follows the conventional Kubernetes yaml syntax for service ports. | [ port: 80, targetPort: 80, protocol: TCP, name: http; port: 443, targetPort: 443, protocol: TCP, name: https ] |
+| `metrics.disable`                                 | Disable exposing metrics in the Prometheus format.                                                                                                                                                           | false                                                                                                           |
+| `metrics.port`                                    | Set the port where the Prometheus metrics are exposed. Format: [1024 - 65535]                                                                                                                                | 9113                                                                                                            |
+| `metrics.secure`                                  | Enable serving metrics via https. By default metrics are served via http. Please note that this endpoint will be secured with a self-signed certificate.                                                     | false                                                                                                           |

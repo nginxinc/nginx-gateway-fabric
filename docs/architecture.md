@@ -40,10 +40,11 @@ The figure shows:
 cluster through the Kubernetes API by creating Kubernetes objects.
 - *Clients A* and *Clients B* connect to *Applications A* and *B*, respectively. This applications have been deployed by
 the corresponding users.
-- The *NKG Pod*, [deployed by *Cluster Operator*](/docs/installation.md) in the Namespace *nginx-gateway*. This Pod
-consists of two containers: `NGINX` and `NKG`. The *NKG* container interacts with the Kubernetes API to retrieve the
-most up-to-date Gateway API resources created within the cluster. It then dynamically configures the *NGINX*
-container based on these resources, ensuring proper alignment between the cluster state and the NGINX configuration.
+- The *NKG Pod*, [deployed by *Cluster Operator*](/docs/installation.md) in the Namespace *nginx-gateway*. For
+scalability and availability, you can have multiple replicas. This Pod consists of two containers: `NGINX` and `NKG`.
+The *NKG* container interacts with the Kubernetes API to retrieve the most up-to-date Gateway API resources created
+within the cluster. It then dynamically configures the *NGINX* container based on these resources, ensuring proper
+alignment between the cluster state and the NGINX configuration.
 - *Gateway AB*, created by *Cluster Operator*, requests a point where traffic can be translated to Services within the
 cluster. This Gateway includes a listener with a hostname `*.example.com`. Application Developers have the ability to
 attach their application's routes to this Gateway if their application's hostname matches `*.example.com`.
@@ -69,7 +70,7 @@ Next, let's explore the NKG Pod.
 
 ## The NGINX Kubernetes Gateway Pod
 
-The NGINX Kubernetes Gateway consists of three containers:
+The NGINX Kubernetes Gateway consists of two containers:
 
 1. `nginx`: the data plane. Consists of an NGINX master process and NGINX worker processes. The master process controls
 the worker processes. The worker processes handle the client traffic and load balance the traffic to the backend
@@ -94,8 +95,11 @@ these components.
 The following list provides a description of each connection, along with its corresponding type indicated in
 parentheses. To enhance readability, the suffix "process" has been omitted from the process descriptions below.
 
-1. (HTTPS) *NKG* reads the *Kubernetes API* to get the latest versions of the resources in the cluster and writes to the
-API to update the handled resources' statuses and emit events.
+1. (HTTPS)
+   - Read: *NKG* reads the *Kubernetes API* to get the latest versions of the resources in the cluster.
+   - Write: *NKG* writes to the *Kubernetes API* to update the handled resources' statuses and emit events. If there's
+     more than one replica of *NKG* and [leader election](/deploy/helm-chart/README.md#configuration) is enabled, only
+     the *NKG* Pod that is leading will write statuses to the *Kubernetes API*.
 2. (HTTP, HTTPS) *Prometheus* fetches the `controller-runtime` and NGINX metrics via an HTTP endpoint that *NKG* exposes.
    The default is :9113/metrics. Note: Prometheus is not required by NKG, the endpoint can be turned off.
 3. (File I/O)

@@ -123,6 +123,8 @@ func TestStaticModeCmdFlagValidation(t *testing.T) {
 				"--metrics-secure-serving",
 				"--health-port=8081",
 				"--health-disable",
+				"--leader-election-lock-name=my-lock",
+				"--leader-election-disable=false",
 			},
 			wantErr: false,
 		},
@@ -242,6 +244,22 @@ func TestStaticModeCmdFlagValidation(t *testing.T) {
 			wantErr: true,
 			expectedErrPrefix: `invalid argument "999" for "--health-disable" flag: strconv.ParseBool:` +
 				` parsing "999": invalid syntax`,
+		},
+		{
+			name: "leader-election-lock-name is set to invalid string",
+			args: []string{
+				"--leader-election-lock-name=!@#$",
+			},
+			wantErr:           true,
+			expectedErrPrefix: `invalid argument "!@#$" for "--leader-election-lock-name" flag: invalid format`,
+		},
+		{
+			name: "leader-election-disable is set to empty string",
+			args: []string{
+				"--leader-election-disable=",
+			},
+			wantErr:           true,
+			expectedErrPrefix: `invalid argument "" for "--leader-election-disable" flag: strconv.ParseBool`,
 		},
 	}
 

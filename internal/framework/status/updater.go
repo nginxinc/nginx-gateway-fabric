@@ -2,6 +2,8 @@ package status
 
 import (
 	"context"
+	"fmt"
+	"sync"
 
 	"github.com/go-logr/logr"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -15,9 +17,17 @@ import (
 //go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . Updater
 
 // Updater updates statuses of the Gateway API resources.
+// Updater can be disabled. In this case, it will stop updating the statuses of resources, while
+// always saving the statuses of the last Update call. This is used to support multiple replicas of
+// control plane being able to run simultaneously where only the leader will update statuses.
 type Updater interface {
 	// Update updates the statuses of the resources.
-	Update(context.Context, Statuses)
+	Update(context.Context, Status)
+	// Enable enables status updates. The updater will update the statuses in Kubernetes API to ensure they match the
+	// statuses of the last Update invocation.
+	Enable(ctx context.Context)
+	// Disable disables status updates.
+	Disable()
 }
 
 // UpdaterConfig holds configuration parameters for Updater.
@@ -36,58 +46,140 @@ type UpdaterConfig struct {
 	PodIP string
 	// UpdateGatewayClassStatus enables updating the status of the GatewayClass resource.
 	UpdateGatewayClassStatus bool
+	// LeaderElectionEnabled indicates whether Leader Election is enabled.
+	// If it is not enabled, the updater will always write statuses to the Kubernetes API.
+	LeaderElectionEnabled bool
 }
 
-// updaterImpl updates statuses of the Gateway API resources.
+// UpdaterImpl updates statuses of the Gateway API resources.
 //
 // It has the following limitations:
 //
-// (1) It doesn't understand the leader election. Only the leader must report the statuses of the resources. Otherwise,
-// multiple replicas will step on each other when trying to report statuses for the same resources.
+// (1) It is not smart. It will update the status of a resource (make an API call) even if it hasn't changed.
 //
-// (2) It is not smart. It will update the status of a resource (make an API call) even if it hasn't changed.
-//
-// (3) It is synchronous, which means the status reporter can slow down the event loop.
+// (2) It is synchronous, which means the status reporter can slow down the event loop.
 // Consider the following cases:
 // (a) Sometimes the Gateway will need to update statuses of all resources it handles, which could be ~1000. Making 1000
 // status API calls sequentially will take time.
 // (b) k8s API can become slow or even timeout. This will increase every update status API call.
-// Making updaterImpl asynchronous will prevent it from adding variable delays to the event loop.
+// Making UpdaterImpl asynchronous will prevent it from adding variable delays to the event loop.
 //
-// (4) It doesn't retry on failures. This means there is a chance that some resources will not have up-to-do statuses.
+// (3) It doesn't retry on failures. This means there is a chance that some resources will not have up-to-do statuses.
 // Statuses are important part of the Gateway API, so we need to ensure that the Gateway always keep the resources
 // statuses up-to-date.
 //
-// (5) It doesn't clear the statuses of a resources that are no longer handled by the Gateway. For example, if
+// (4) It doesn't clear the statuses of a resources that are no longer handled by the Gateway. For example, if
 // an HTTPRoute resource no longer has the parentRef to the Gateway resources, the Gateway must update the status
 // of the resource to remove the status about the removed parentRef.
 //
-// (6) If another controllers changes the status of the Gateway/HTTPRoute resource so that the information set by our
+// (5) If another controllers changes the status of the Gateway/HTTPRoute resource so that the information set by our
 // Gateway is removed, our Gateway will not restore the status until the EventLoop invokes the StatusUpdater as a
 // result of processing some other new change to a resource(s).
 // FIXME(pleshakov): Make updater production ready
 // https://github.com/nginxinc/nginx-kubernetes-gateway/issues/691
 
-// To support new resources, updaterImpl needs to be modified. Consider making updaterImpl extendable, so that it
+// UpdaterImpl needs to be modified to support new resources. Consider making UpdaterImpl extendable, so that it
 // goes along the Open-closed principle.
-type updaterImpl struct {
-	cfg UpdaterConfig
+type UpdaterImpl struct {
+	lastStatuses lastStatuses
+	cfg          UpdaterConfig
+	isLeader     bool
+
+	lock sync.Mutex
+}
+
+// lastStatuses hold the last saved statuses. Used when leader election is enabled to write the last saved statuses on
+// a leader change.
+type lastStatuses struct {
+	nginxGateway *NginxGatewayStatus
+	gatewayAPI   GatewayAPIStatuses
+}
+
+// Enable writes the last saved statuses for the Gateway API resources.
+// Used in leader election when the Pod starts leading. It's possible that during a leader change,
+// some statuses are missed. This will ensure that the latest statuses are written when a new leader takes over.
+func (upd *UpdaterImpl) Enable(ctx context.Context) {
+	defer upd.lock.Unlock()
+	upd.lock.Lock()
+
+	upd.isLeader = true
+
+	upd.cfg.Logger.Info("Writing last statuses")
+	upd.updateGatewayAPI(ctx, upd.lastStatuses.gatewayAPI)
+	upd.updateNginxGateway(ctx, upd.lastStatuses.nginxGateway)
+}
+
+func (upd *UpdaterImpl) Disable() {
+	defer upd.lock.Unlock()
+	upd.lock.Lock()
+
+	upd.isLeader = false
 }
 
 // NewUpdater creates a new Updater.
-func NewUpdater(cfg UpdaterConfig) Updater {
-	return &updaterImpl{
+func NewUpdater(cfg UpdaterConfig) *UpdaterImpl {
+	return &UpdaterImpl{
 		cfg: cfg,
+		// If leader election is enabled then we should not start running as a leader. Instead,
+		// we wait for Enable to be invoked by the Leader Elector goroutine.
+		isLeader: !cfg.LeaderElectionEnabled,
 	}
 }
 
-func (upd *updaterImpl) Update(ctx context.Context, statuses Statuses) {
+func (upd *UpdaterImpl) Update(ctx context.Context, status Status) {
 	// FIXME(pleshakov) Merge the new Conditions in the status with the existing Conditions
 	// https://github.com/nginxinc/nginx-kubernetes-gateway/issues/558
 
+	defer upd.lock.Unlock()
+	upd.lock.Lock()
+
+	switch s := status.(type) {
+	case *NginxGatewayStatus:
+		upd.updateNginxGateway(ctx, s)
+	case GatewayAPIStatuses:
+		upd.updateGatewayAPI(ctx, s)
+	default:
+		panic(fmt.Sprintf("unknown status type %T with group name %s", s, status.APIGroup()))
+	}
+}
+
+func (upd *UpdaterImpl) updateNginxGateway(ctx context.Context, status *NginxGatewayStatus) {
+	upd.lastStatuses.nginxGateway = status
+
+	if !upd.isLeader {
+		upd.cfg.Logger.Info("Skipping updating Nginx Gateway status because not leader")
+		return
+	}
+
+	upd.cfg.Logger.Info("Updating Nginx Gateway status")
+
+	if status != nil {
+		upd.writeStatuses(ctx, status.NsName, &nkgAPI.NginxGateway{}, func(object client.Object) {
+			ng := object.(*nkgAPI.NginxGateway)
+			ng.Status = nkgAPI.NginxGatewayStatus{
+				Conditions: convertConditions(
+					status.Conditions,
+					status.ObservedGeneration,
+					upd.cfg.Clock.Now(),
+				),
+			}
+		})
+	}
+}
+
+func (upd *UpdaterImpl) updateGatewayAPI(ctx context.Context, statuses GatewayAPIStatuses) {
+	upd.lastStatuses.gatewayAPI = statuses
+
+	if !upd.isLeader {
+		upd.cfg.Logger.Info("Skipping updating Gateway API status because not leader")
+		return
+	}
+
+	upd.cfg.Logger.Info("Updating Gateway API statuses")
+
 	if upd.cfg.UpdateGatewayClassStatus {
 		for nsname, gcs := range statuses.GatewayClassStatuses {
-			upd.update(ctx, nsname, &v1beta1.GatewayClass{}, func(object client.Object) {
+			upd.writeStatuses(ctx, nsname, &v1beta1.GatewayClass{}, func(object client.Object) {
 				gc := object.(*v1beta1.GatewayClass)
 				gc.Status = prepareGatewayClassStatus(gcs, upd.cfg.Clock.Now())
 			},
@@ -96,7 +188,7 @@ func (upd *updaterImpl) Update(ctx context.Context, statuses Statuses) {
 	}
 
 	for nsname, gs := range statuses.GatewayStatuses {
-		upd.update(ctx, nsname, &v1beta1.Gateway{}, func(object client.Object) {
+		upd.writeStatuses(ctx, nsname, &v1beta1.Gateway{}, func(object client.Object) {
 			gw := object.(*v1beta1.Gateway)
 			gw.Status = prepareGatewayStatus(gs, upd.cfg.PodIP, upd.cfg.Clock.Now())
 		})
@@ -109,7 +201,7 @@ func (upd *updaterImpl) Update(ctx context.Context, statuses Statuses) {
 		default:
 		}
 
-		upd.update(ctx, nsname, &v1beta1.HTTPRoute{}, func(object client.Object) {
+		upd.writeStatuses(ctx, nsname, &v1beta1.HTTPRoute{}, func(object client.Object) {
 			hr := object.(*v1beta1.HTTPRoute)
 			// statuses.GatewayStatus is never nil when len(statuses.HTTPRouteStatuses) > 0
 			hr.Status = prepareHTTPRouteStatus(
@@ -119,23 +211,9 @@ func (upd *updaterImpl) Update(ctx context.Context, statuses Statuses) {
 			)
 		})
 	}
-
-	ngStatus := statuses.NginxGatewayStatus
-	if ngStatus != nil {
-		upd.update(ctx, ngStatus.NsName, &nkgAPI.NginxGateway{}, func(object client.Object) {
-			ng := object.(*nkgAPI.NginxGateway)
-			ng.Status = nkgAPI.NginxGatewayStatus{
-				Conditions: convertConditions(
-					ngStatus.Conditions,
-					ngStatus.ObservedGeneration,
-					upd.cfg.Clock.Now(),
-				),
-			}
-		})
-	}
 }
 
-func (upd *updaterImpl) update(
+func (upd *UpdaterImpl) writeStatuses(
 	ctx context.Context,
 	nsname types.NamespacedName,
 	obj client.Object,

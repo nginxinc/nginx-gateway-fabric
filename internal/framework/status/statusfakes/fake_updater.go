@@ -9,21 +9,86 @@ import (
 )
 
 type FakeUpdater struct {
-	UpdateStub        func(context.Context, status.Statuses)
+	DisableStub        func()
+	disableMutex       sync.RWMutex
+	disableArgsForCall []struct {
+	}
+	EnableStub        func(context.Context)
+	enableMutex       sync.RWMutex
+	enableArgsForCall []struct {
+		arg1 context.Context
+	}
+	UpdateStub        func(context.Context, status.Status)
 	updateMutex       sync.RWMutex
 	updateArgsForCall []struct {
 		arg1 context.Context
-		arg2 status.Statuses
+		arg2 status.Status
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeUpdater) Update(arg1 context.Context, arg2 status.Statuses) {
+func (fake *FakeUpdater) Disable() {
+	fake.disableMutex.Lock()
+	fake.disableArgsForCall = append(fake.disableArgsForCall, struct {
+	}{})
+	stub := fake.DisableStub
+	fake.recordInvocation("Disable", []interface{}{})
+	fake.disableMutex.Unlock()
+	if stub != nil {
+		fake.DisableStub()
+	}
+}
+
+func (fake *FakeUpdater) DisableCallCount() int {
+	fake.disableMutex.RLock()
+	defer fake.disableMutex.RUnlock()
+	return len(fake.disableArgsForCall)
+}
+
+func (fake *FakeUpdater) DisableCalls(stub func()) {
+	fake.disableMutex.Lock()
+	defer fake.disableMutex.Unlock()
+	fake.DisableStub = stub
+}
+
+func (fake *FakeUpdater) Enable(arg1 context.Context) {
+	fake.enableMutex.Lock()
+	fake.enableArgsForCall = append(fake.enableArgsForCall, struct {
+		arg1 context.Context
+	}{arg1})
+	stub := fake.EnableStub
+	fake.recordInvocation("Enable", []interface{}{arg1})
+	fake.enableMutex.Unlock()
+	if stub != nil {
+		fake.EnableStub(arg1)
+	}
+}
+
+func (fake *FakeUpdater) EnableCallCount() int {
+	fake.enableMutex.RLock()
+	defer fake.enableMutex.RUnlock()
+	return len(fake.enableArgsForCall)
+}
+
+func (fake *FakeUpdater) EnableCalls(stub func(context.Context)) {
+	fake.enableMutex.Lock()
+	defer fake.enableMutex.Unlock()
+	fake.EnableStub = stub
+}
+
+func (fake *FakeUpdater) EnableArgsForCall(i int) context.Context {
+	fake.enableMutex.RLock()
+	defer fake.enableMutex.RUnlock()
+	argsForCall := fake.enableArgsForCall[i]
+	return argsForCall.arg1
+}
+
+func (fake *FakeUpdater) Update(arg1 context.Context, arg2 status.Status) {
 	fake.updateMutex.Lock()
 	fake.updateArgsForCall = append(fake.updateArgsForCall, struct {
 		arg1 context.Context
-		arg2 status.Statuses
+		arg2 status.Status
 	}{arg1, arg2})
 	stub := fake.UpdateStub
 	fake.recordInvocation("Update", []interface{}{arg1, arg2})
@@ -39,13 +104,13 @@ func (fake *FakeUpdater) UpdateCallCount() int {
 	return len(fake.updateArgsForCall)
 }
 
-func (fake *FakeUpdater) UpdateCalls(stub func(context.Context, status.Statuses)) {
+func (fake *FakeUpdater) UpdateCalls(stub func(context.Context, status.Status)) {
 	fake.updateMutex.Lock()
 	defer fake.updateMutex.Unlock()
 	fake.UpdateStub = stub
 }
 
-func (fake *FakeUpdater) UpdateArgsForCall(i int) (context.Context, status.Statuses) {
+func (fake *FakeUpdater) UpdateArgsForCall(i int) (context.Context, status.Status) {
 	fake.updateMutex.RLock()
 	defer fake.updateMutex.RUnlock()
 	argsForCall := fake.updateArgsForCall[i]
@@ -55,6 +120,10 @@ func (fake *FakeUpdater) UpdateArgsForCall(i int) (context.Context, status.Statu
 func (fake *FakeUpdater) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
+	fake.disableMutex.RLock()
+	defer fake.disableMutex.RUnlock()
+	fake.enableMutex.RLock()
+	defer fake.enableMutex.RUnlock()
 	fake.updateMutex.RLock()
 	defer fake.updateMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}

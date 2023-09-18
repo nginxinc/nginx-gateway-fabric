@@ -169,16 +169,14 @@ var _ = Describe("eventHandler", func() {
 			}
 		}
 
-		expStatuses := func(cond conditions.Condition) status.Statuses {
-			return status.Statuses{
-				NginxGatewayStatus: &status.NginxGatewayStatus{
-					NsName: types.NamespacedName{
-						Namespace: namespace,
-						Name:      configName,
-					},
-					Conditions:         []conditions.Condition{cond},
-					ObservedGeneration: 0,
+		expStatuses := func(cond conditions.Condition) *status.NginxGatewayStatus {
+			return &status.NginxGatewayStatus{
+				NsName: types.NamespacedName{
+					Namespace: namespace,
+					Name:      configName,
 				},
+				Conditions:         []conditions.Condition{cond},
+				ObservedGeneration: 0,
 			}
 		}
 
@@ -207,7 +205,8 @@ var _ = Describe("eventHandler", func() {
 			event := <-fakeEventRecorder.Events
 			Expect(event).To(Equal(
 				"Warning UpdateFailed Failed to update control plane configuration: logging.level: Unsupported value: " +
-					"\"invalid\": supported values: \"info\", \"debug\", \"error\""))
+					"\"invalid\": supported values: \"info\", \"debug\", \"error\"",
+			))
 			Expect(handler.cfg.logLevelSetter.Enabled(zap.InfoLevel)).To(BeTrue())
 		})
 

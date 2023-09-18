@@ -54,7 +54,7 @@ func newEventHandler(
 }
 
 func (h *eventHandler) setGatewayClassStatuses(ctx context.Context) {
-	statuses := status.Statuses{
+	statuses := status.GatewayAPIStatuses{
 		GatewayClassStatuses: make(status.GatewayClassStatuses),
 	}
 
