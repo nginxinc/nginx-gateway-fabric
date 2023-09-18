@@ -1,6 +1,6 @@
 module github.com/nginxinc/nginx-kubernetes-gateway
 
-go 1.21
+go 1.21.1
 
 // Pinned to a version that is properly licensed.
 replace github.com/chzyer/logex v1.1.10 => github.com/chzyer/logex v1.2.0
@@ -46,7 +46,7 @@ require (
 	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/google/pprof v0.0.0-20210720184732-4bb14d4b1be1 // indirect
 	github.com/google/uuid v1.3.0 // indirect
-	github.com/imdario/mergo v0.3.12 // indirect
+	github.com/imdario/mergo v0.3.6 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
