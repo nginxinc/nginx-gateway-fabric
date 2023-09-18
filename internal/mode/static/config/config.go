@@ -24,7 +24,7 @@ type Config struct {
 	PodIP string
 	// Namespace is the Namespace of this Pod.
 	Namespace string
-	// LeaderElection contains the configuration for leader election
+	// LeaderElection contains the configuration for leader election.
 	LeaderElection LeaderElection
 	// UpdateGatewayClassStatus enables updating the status of the GatewayClass resource.
 	UpdateGatewayClassStatus bool
