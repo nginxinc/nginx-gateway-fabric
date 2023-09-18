@@ -98,7 +98,7 @@ func createStaticModeCommand() *cobra.Command {
 			value:     8081,
 		}
 
-		leaderElectionDisable  bool
+		disableLeaderElection  bool
 		leaderElectionLockName = stringValidatingValue{
 			validator: validateResourceName,
 			value:     "nginx-gateway-leader-election-lock",
@@ -164,7 +164,7 @@ func createStaticModeCommand() *cobra.Command {
 					Secure:  metricsSecure,
 				},
 				LeaderElection: config.LeaderElection{
-					Enabled:  !leaderElectionDisable,
+					Enabled:  !disableLeaderElection,
 					LockName: leaderElectionLockName.String(),
 					Identity: podName,
 				},
@@ -238,7 +238,7 @@ func createStaticModeCommand() *cobra.Command {
 	)
 
 	cmd.Flags().BoolVar(
-		&leaderElectionDisable,
+		&disableLeaderElection,
 		leaderElectionDisableFlag,
 		false,
 		"Disable leader election. Leader election is used to avoid multiple replicas of the NGINX Kubernetes Gateway"+
