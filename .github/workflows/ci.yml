@@ -11,10 +11,6 @@ on:
     branches:
       - main
       - release-*
-    types:
-      - opened
-      - reopened
-      - synchronize
 
 defaults:
   run:
@@ -121,7 +117,7 @@ jobs:
         with:
           minor-label: "enhancement"
           major-label: "change"
-          publish: ${{ startsWith(github.ref, 'refs/tags/') }}
+          publish: ${{ github.ref_type == 'tag' }}
           collapse-after: 20
           notes-header: |
             *Below is the auto-generated changelog, which includes all PRs that went into the release.
@@ -130,17 +126,17 @@ jobs:
 
       - name: Download Syft
         uses: anchore/sbom-action/download-syft@78fc58e266e87a38d4194b2137a3d4e9bcaf7ca1 # v0.14.3
-        if: startsWith(github.ref, 'refs/tags/')
+        if: github.ref_type == 'tag'
 
       - name: Install Cosign
         uses: sigstore/cosign-installer@11086d25041f77fe8fe7b9ea4e48e3b9192b8f19 # v3.1.2
-        if: startsWith(github.ref, 'refs/tags/')
+        if: github.ref_type == 'tag'
 
       - name: Build binary
         uses: goreleaser/goreleaser-action@7ec5c2b0c6cdda6e8bbb49444bc797dd33d74dd8 # v5.0.0
         with:
           version: latest
-          args: ${{ startsWith(github.ref, 'refs/tags/') && 'release' || 'build --snapshot' }} --clean
+          args: ${{ github.ref_type == 'tag' && 'release' || 'build --snapshot' }} --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GOPATH: ${{ needs.vars.outputs.go_path }}
@@ -320,7 +316,6 @@ jobs:
             NJS_DIR=internal/mode/static/nginx/modules/src
             NGINX_CONF_DIR=internal/mode/static/nginx/conf
 
-
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@fbd16365eb88e12433951383f5e99bd901fc618f # 0.12.0
         continue-on-error: true
@@ -366,7 +361,7 @@ jobs:
       - name: Package
         id: package
         run: |
-          output=$(helm package ${{ ! startsWith(github.ref, 'refs/tags/') && '--app-version edge --version 0.0.0-edge' || '' }} deploy/helm-chart)
+          output=$(helm package ${{ github.ref_type != 'tag' && '--app-version edge --version 0.0.0-edge' || '' }} deploy/helm-chart)
           echo "path=$(basename -- $(echo $output | cut -d: -f2))" >> $GITHUB_OUTPUT
 
       - name: Push to GitHub Container Registry
