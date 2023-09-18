@@ -157,14 +157,13 @@ func (h *eventHandlerImpl) updateControlPlaneAndSetStatus(ctx context.Context, c
 	}
 
 	if cfg != nil {
-
-		NginxGatewayStatus := &status.NginxGatewayStatus{
+		nginxGatewayStatus := &status.NginxGatewayStatus{
 			NsName:             client.ObjectKeyFromObject(cfg),
 			Conditions:         cond,
 			ObservedGeneration: cfg.Generation,
 		}
 
-		h.cfg.statusUpdater.Update(ctx, NginxGatewayStatus)
+		h.cfg.statusUpdater.Update(ctx, nginxGatewayStatus)
 		h.cfg.logger.Info("Reconfigured control plane.")
 	}
 }
