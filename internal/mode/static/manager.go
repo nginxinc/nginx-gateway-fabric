@@ -177,8 +177,8 @@ func StartManager(cfg config.Config) error {
 				statusUpdater.Enable(ctx)
 			},
 			onStoppedLeading: func() {
-				statusUpdater.Disable()
 				leaderElectorLogger.Info("Stopped leading")
+				statusUpdater.Disable()
 			},
 			lockNs:   cfg.Namespace,
 			lockName: cfg.LeaderElection.LockName,
