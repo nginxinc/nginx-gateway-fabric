@@ -43,27 +43,27 @@ type Manager interface {
 
 // ManagerCollector is an interface for the metrics of the NGINX runtime manager.
 type ManagerCollector interface {
-	IncNginxReloadCount()
-	IncNginxReloadErrors()
-	UpdateLastReloadTime(ms time.Duration)
+	IncReloadCount()
+	IncReloadErrors()
+	ObserveLastReloadTime(ms time.Duration)
 }
 
 // ManagerImpl implements Manager.
 type ManagerImpl struct {
 	verifyClient     *verifyClient
-	metricsCollector ManagerCollector
+	managerCollector ManagerCollector
 }
 
 // NewManagerImpl creates a new ManagerImpl.
-func NewManagerImpl(mgrCollector ManagerCollector) *ManagerImpl {
+func NewManagerImpl(managerCollector ManagerCollector) *ManagerImpl {
 	return &ManagerImpl{
 		verifyClient:     newVerifyClient(nginxReloadTimeout),
-		metricsCollector: mgrCollector,
+		managerCollector: managerCollector,
 	}
 }
 
 func (m *ManagerImpl) Reload(ctx context.Context, configVersion int) error {
-	t1 := time.Now()
+	start := time.Now()
 	// We find the main NGINX PID on every reload because it will change if the NGINX container is restarted.
 	pid, err := findMainProcess(ctx, os.Stat, os.ReadFile, pidFileTimeout)
 	if err != nil {
@@ -79,7 +79,7 @@ func (m *ManagerImpl) Reload(ctx context.Context, configVersion int) error {
 	// send HUP signal to the NGINX main process reload configuration
 	// See https://nginx.org/en/docs/control.html
 	if err := syscall.Kill(pid, syscall.SIGHUP); err != nil {
-		m.metricsCollector.IncNginxReloadErrors()
+		m.managerCollector.IncReloadErrors()
 		return fmt.Errorf("failed to send the HUP signal to NGINX main: %w", err)
 	}
 
@@ -90,18 +90,18 @@ func (m *ManagerImpl) Reload(ctx context.Context, configVersion int) error {
 		os.ReadFile,
 		childProcsTimeout,
 	); err != nil {
-		m.metricsCollector.IncNginxReloadErrors()
+		m.managerCollector.IncReloadErrors()
 		return fmt.Errorf(noNewWorkersErrFmt, configVersion, err)
 	}
 
 	if err = m.verifyClient.waitForCorrectVersion(ctx, configVersion); err != nil {
-		m.metricsCollector.IncNginxReloadErrors()
+		m.managerCollector.IncReloadErrors()
 		return err
 	}
-	m.metricsCollector.IncNginxReloadCount()
+	m.managerCollector.IncReloadCount()
 
-	t2 := time.Now()
-	m.metricsCollector.UpdateLastReloadTime(t2.Sub(t1))
+	finish := time.Now()
+	m.managerCollector.ObserveLastReloadTime(finish.Sub(start))
 	return nil
 }
 

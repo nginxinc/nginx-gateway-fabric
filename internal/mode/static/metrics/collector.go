@@ -47,7 +47,7 @@ func NewManagerMetricsCollector(constLabels map[string]string) *ManagerMetricsCo
 				Namespace:   metricsNamespace,
 				Help:        "Duration in milliseconds of NGINX reloads",
 				ConstLabels: constLabels,
-				Buckets:     []float64{100.0, 200.0, 300.0, 400.0, 500.0},
+				Buckets:     []float64{500, 1000, 5000, 10000, 30000},
 			},
 		),
 	}
@@ -55,13 +55,13 @@ func NewManagerMetricsCollector(constLabels map[string]string) *ManagerMetricsCo
 }
 
 // IncNginxReloadCount increments the counter of successful NGINX reloads and sets the stale config status to false.
-func (mc *ManagerMetricsCollector) IncNginxReloadCount() {
+func (mc *ManagerMetricsCollector) IncReloadCount() {
 	mc.reloadsTotal.Inc()
 	mc.updateConfigStaleStatus(false)
 }
 
 // IncNginxReloadErrors increments the counter of NGINX reload errors and sets the stale config status to true.
-func (mc *ManagerMetricsCollector) IncNginxReloadErrors() {
+func (mc *ManagerMetricsCollector) IncReloadErrors() {
 	mc.reloadsError.Inc()
 	mc.updateConfigStaleStatus(true)
 }
@@ -75,8 +75,8 @@ func (mc *ManagerMetricsCollector) updateConfigStaleStatus(stale bool) {
 	mc.configStale.Set(status)
 }
 
-// UpdateLastReloadTime updates the last NGINX reload time.
-func (mc *ManagerMetricsCollector) UpdateLastReloadTime(duration time.Duration) {
+// ObserveLastReloadTime adds the last NGINX reload time to the histogram.
+func (mc *ManagerMetricsCollector) ObserveLastReloadTime(duration time.Duration) {
 	mc.reloadsDuration.Observe(float64(duration / time.Millisecond))
 }
 
@@ -96,20 +96,20 @@ func (mc *ManagerMetricsCollector) Collect(ch chan<- prometheus.Metric) {
 	mc.reloadsDuration.Collect(ch)
 }
 
-// ManagerFakeCollector is a fake collector that will implement ManagerCollector interface.
+// ManagerNoopCollector is a no-op collector that will implement ManagerCollector interface.
 // Used to initialize the ManagerCollector when metrics are disabled to avoid nil pointer errors.
-type ManagerFakeCollector struct{}
+type ManagerNoopCollector struct{}
 
-// NewManagerFakeCollector creates a fake collector that implements ManagerCollector interface.
-func NewManagerFakeCollector() *ManagerFakeCollector {
-	return &ManagerFakeCollector{}
+// NewManagerNoopCollector creates a no-op collector that implements ManagerCollector interface.
+func NewManagerNoopCollector() *ManagerNoopCollector {
+	return &ManagerNoopCollector{}
 }
 
-// IncNginxReloadCount implements a fake IncNginxReloadCount.
-func (mc *ManagerFakeCollector) IncNginxReloadCount() {}
+// IncReloadCount implements a no-op IncReloadCount.
+func (mc *ManagerNoopCollector) IncReloadCount() {}
 
-// IncNginxReloadErrors implements a fake IncNginxReloadErrors.
-func (mc *ManagerFakeCollector) IncNginxReloadErrors() {}
+// IncReloadErrors implements a no-op IncReloadErrors.
+func (mc *ManagerNoopCollector) IncReloadErrors() {}
 
-// UpdateLastReloadTime implements a fake UpdateLastReloadTime.
-func (mc *ManagerFakeCollector) UpdateLastReloadTime(_ time.Duration) {}
+// ObserveLastReloadTime implements a no-op ObserveLastReloadTime.
+func (mc *ManagerNoopCollector) ObserveLastReloadTime(_ time.Duration) {}

@@ -130,13 +130,9 @@ func StartManager(cfg config.Config) error {
 		return fmt.Errorf("NGINX is not running: %w", err)
 	}
 
-	var mgrCollector ngxruntime.ManagerCollector
-	mgrCollector = nkgmetrics.NewManagerFakeCollector()
-	if cfg.MetricsConfig.Enabled {
-		mgrCollector, err = configureNginxMetrics(cfg.GatewayClassName)
-		if err != nil {
-			return err
-		}
+	mgrCollector, err := createAndRegisterMetricsCollectors(cfg.MetricsConfig.Enabled, cfg.GatewayClassName)
+	if err != nil {
+		return fmt.Errorf("cannot create and register metrics collectors: %w", err)
 	}
 
 	statusUpdater := status.NewUpdater(status.UpdaterConfig{
@@ -356,19 +352,26 @@ func setInitialConfig(
 	return updateControlPlane(&config, logger, eventRecorder, configName, logLevelSetter)
 }
 
-func configureNginxMetrics(gatewayClassName string) (*nkgmetrics.ManagerMetricsCollector, error) {
-	constLabels := map[string]string{"class": gatewayClassName}
+// createAndRegisterMetricsCollectors creates the NGINX status and NGINX runtime manager collectors, registers them,
+// and returns the runtime manager collector to be used in the nginxRuntimeMgr.
+func createAndRegisterMetricsCollectors(metricsEnabled bool, gwClassName string) (ngxruntime.ManagerCollector, error) {
+	if !metricsEnabled {
+		// return a no-op collector to avoid nil pointer errors when metrics are disabled
+		return nkgmetrics.NewManagerNoopCollector(), nil
+	}
+	constLabels := map[string]string{"class": gwClassName}
+
 	ngxCollector, err := nkgmetrics.NewNginxMetricsCollector(constLabels)
 	if err != nil {
-		return nil, fmt.Errorf("cannot get NGINX metrics: %w", err)
+		return nil, fmt.Errorf("cannot create NGINX status metrics collector: %w", err)
 	}
-	mgrCollector := nkgmetrics.NewManagerMetricsCollector(constLabels)
-	if err = metrics.Registry.Register(mgrCollector); err != nil {
-		return nil, fmt.Errorf("failed to register manager metrics collector: %w", err)
+	if err := metrics.Registry.Register(ngxCollector); err != nil {
+		return nil, fmt.Errorf("failed to register NGINX status metrics collector: %w", err)
 	}
 
-	if err = metrics.Registry.Register(ngxCollector); err != nil {
-		return nil, fmt.Errorf("failed to register NGINX metrics collector: %w", err)
+	mgrCollector := nkgmetrics.NewManagerMetricsCollector(constLabels)
+	if err := metrics.Registry.Register(mgrCollector); err != nil {
+		return nil, fmt.Errorf("failed to register NGINX manager runtime metrics collector: %w", err)
 	}
 
 	return mgrCollector, nil
