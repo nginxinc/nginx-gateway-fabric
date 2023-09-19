@@ -41,19 +41,29 @@ type Manager interface {
 	Reload(ctx context.Context, configVersion int) error
 }
 
+// ManagerCollector is an interface for the metrics of the NGINX runtime manager.
+type ManagerCollector interface {
+	IncReloadCount()
+	IncReloadErrors()
+	ObserveLastReloadTime(ms time.Duration)
+}
+
 // ManagerImpl implements Manager.
 type ManagerImpl struct {
-	verifyClient *verifyClient
+	verifyClient     *verifyClient
+	managerCollector ManagerCollector
 }
 
 // NewManagerImpl creates a new ManagerImpl.
-func NewManagerImpl() *ManagerImpl {
+func NewManagerImpl(managerCollector ManagerCollector) *ManagerImpl {
 	return &ManagerImpl{
-		verifyClient: newVerifyClient(nginxReloadTimeout),
+		verifyClient:     newVerifyClient(nginxReloadTimeout),
+		managerCollector: managerCollector,
 	}
 }
 
 func (m *ManagerImpl) Reload(ctx context.Context, configVersion int) error {
+	start := time.Now()
 	// We find the main NGINX PID on every reload because it will change if the NGINX container is restarted.
 	pid, err := findMainProcess(ctx, os.Stat, os.ReadFile, pidFileTimeout)
 	if err != nil {
@@ -69,6 +79,7 @@ func (m *ManagerImpl) Reload(ctx context.Context, configVersion int) error {
 	// send HUP signal to the NGINX main process reload configuration
 	// See https://nginx.org/en/docs/control.html
 	if err := syscall.Kill(pid, syscall.SIGHUP); err != nil {
+		m.managerCollector.IncReloadErrors()
 		return fmt.Errorf("failed to send the HUP signal to NGINX main: %w", err)
 	}
 
@@ -79,10 +90,19 @@ func (m *ManagerImpl) Reload(ctx context.Context, configVersion int) error {
 		os.ReadFile,
 		childProcsTimeout,
 	); err != nil {
+		m.managerCollector.IncReloadErrors()
 		return fmt.Errorf(noNewWorkersErrFmt, configVersion, err)
 	}
 
-	return m.verifyClient.waitForCorrectVersion(ctx, configVersion)
+	if err = m.verifyClient.waitForCorrectVersion(ctx, configVersion); err != nil {
+		m.managerCollector.IncReloadErrors()
+		return err
+	}
+	m.managerCollector.IncReloadCount()
+
+	finish := time.Now()
+	m.managerCollector.ObserveLastReloadTime(finish.Sub(start))
+	return nil
 }
 
 // EnsureNginxRunning ensures NGINX is running by locating the main process.

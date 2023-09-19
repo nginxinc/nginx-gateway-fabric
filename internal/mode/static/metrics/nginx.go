@@ -24,7 +24,7 @@ func NewNginxMetricsCollector(constLabels map[string]string) (prometheus.Collect
 	if err != nil {
 		return nil, err
 	}
-	return nginxCollector.NewNginxCollector(client, "nginx_kubernetes_gateway", constLabels), nil
+	return nginxCollector.NewNginxCollector(client, metricsNamespace, constLabels), nil
 }
 
 // getSocketClient gets an http.Client with a unix socket transport.
