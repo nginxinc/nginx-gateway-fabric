@@ -31,6 +31,6 @@ jobs:
         run: jarsigner -verify wss-unified-agent.jar
       - name: Scan and upload
         env:
-          PRODUCT_NAME: nginx-kubernetes-gateway_${{ github.ref_name }}
-          PROJECT_NAME: nginx-kubernetes-gateway
+          PRODUCT_NAME: nginx-gateway-fabric_${{ github.ref_name }}
+          PROJECT_NAME: nginx-gateway-fabric
         run: java -jar wss-unified-agent.jar -noConfig true -wss.url ${{ secrets.WSS_URL }} -apiKey ${{ secrets.WSS_NGINX_TOKEN }} -product $PRODUCT_NAME -project $PROJECT_NAME -d .

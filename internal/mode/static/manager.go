@@ -21,23 +21,23 @@ import (
 	k8spredicate "sigs.k8s.io/controller-runtime/pkg/predicate"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	nkgAPI "github.com/nginxinc/nginx-kubernetes-gateway/apis/v1alpha1"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/controller"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/controller/filter"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/controller/index"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/controller/predicate"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/events"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/status"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/config"
-	nkgmetrics "github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/metrics"
-	ngxcfg "github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/nginx/config"
-	ngxvalidation "github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/nginx/config/validation"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/nginx/file"
-	ngxruntime "github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/nginx/runtime"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/state"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/state/relationship"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/state/resolver"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/state/validation"
+	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/controller"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/controller/filter"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/controller/index"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/controller/predicate"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/events"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/status"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/config"
+	ngfmetrics "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/metrics"
+	ngxcfg "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config"
+	ngxvalidation "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/validation"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/file"
+	ngxruntime "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/runtime"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/relationship"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/resolver"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/validation"
 )
 
 const (
@@ -51,7 +51,7 @@ func init() {
 	utilruntime.Must(gatewayv1beta1.AddToScheme(scheme))
 	utilruntime.Must(apiv1.AddToScheme(scheme))
 	utilruntime.Must(discoveryV1.AddToScheme(scheme))
-	utilruntime.Must(nkgAPI.AddToScheme(scheme))
+	utilruntime.Must(ngfAPI.AddToScheme(scheme))
 }
 
 func StartManager(cfg config.Config) error {
@@ -82,7 +82,7 @@ func StartManager(cfg config.Config) error {
 		}
 	}
 
-	recorderName := fmt.Sprintf("nginx-kubernetes-gateway-%s", cfg.GatewayClassName)
+	recorderName := fmt.Sprintf("nginx-gateway-fabric-%s", cfg.GatewayClassName)
 	recorder := mgr.GetEventRecorderFor(recorderName)
 	logLevelSetter := newZapLogLevelSetter(cfg.AtomicLevel)
 
@@ -274,7 +274,7 @@ func registerControllers(
 	if cfg.ConfigName != "" {
 		controllerRegCfgs = append(controllerRegCfgs,
 			ctlrCfg{
-				objectType: &nkgAPI.NginxGateway{},
+				objectType: &ngfAPI.NginxGateway{},
 				options: []controller.Option{
 					controller.WithNamespacedNameFilter(filter.CreateSingleResourceFilter(controlConfigNSName)),
 				},
@@ -342,7 +342,7 @@ func setInitialConfig(
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	var config nkgAPI.NginxGateway
+	var config ngfAPI.NginxGateway
 	if err := reader.Get(ctx, configName, &config); err != nil {
 		return err
 	}
@@ -357,11 +357,11 @@ func setInitialConfig(
 func createAndRegisterMetricsCollectors(metricsEnabled bool, gwClassName string) (ngxruntime.ManagerCollector, error) {
 	if !metricsEnabled {
 		// return a no-op collector to avoid nil pointer errors when metrics are disabled
-		return nkgmetrics.NewManagerNoopCollector(), nil
+		return ngfmetrics.NewManagerNoopCollector(), nil
 	}
 	constLabels := map[string]string{"class": gwClassName}
 
-	ngxCollector, err := nkgmetrics.NewNginxMetricsCollector(constLabels)
+	ngxCollector, err := ngfmetrics.NewNginxMetricsCollector(constLabels)
 	if err != nil {
 		return nil, fmt.Errorf("cannot create NGINX status metrics collector: %w", err)
 	}
@@ -369,7 +369,7 @@ func createAndRegisterMetricsCollectors(metricsEnabled bool, gwClassName string)
 		return nil, fmt.Errorf("failed to register NGINX status metrics collector: %w", err)
 	}
 
-	mgrCollector := nkgmetrics.NewManagerMetricsCollector(constLabels)
+	mgrCollector := ngfmetrics.NewManagerMetricsCollector(constLabels)
 	if err := metrics.Registry.Register(mgrCollector); err != nil {
 		return nil, fmt.Errorf("failed to register NGINX manager runtime metrics collector: %w", err)
 	}

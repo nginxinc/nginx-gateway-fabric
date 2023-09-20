@@ -5,7 +5,7 @@ import (
 	"context"
 	"sync"
 
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/events"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/events"
 )
 
 type FakeEventHandler struct {

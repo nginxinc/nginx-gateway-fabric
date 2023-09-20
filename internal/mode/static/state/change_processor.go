@@ -17,9 +17,9 @@ import (
 
 	gwapivalidation "sigs.k8s.io/gateway-api/apis/v1beta1/validation"
 
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/state/graph"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/state/relationship"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/state/validation"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/graph"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/relationship"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/validation"
 )
 
 const (
@@ -172,7 +172,7 @@ func NewChangeProcessorImpl(cfg ChangeProcessorConfig) *ChangeProcessorImpl {
 			// We don't validate GatewayClass or ReferenceGrant, because as of the latest version,
 			// the webhook doesn't validate them.
 			// It only validates a GatewayClass update that requires the previous version of the resource,
-			// which NKG cannot reliably provide - for example, after NKG restarts).
+			// which NGF cannot reliably provide - for example, after NGF restarts).
 			// https://github.com/kubernetes-sigs/gateway-api/blob/v0.8.0/apis/v1beta1/validation/gatewayclass.go#L28
 			case *v1beta1.Gateway:
 				err = gwapivalidation.ValidateGateway(o).ToAggregate()
@@ -196,8 +196,9 @@ func NewChangeProcessorImpl(cfg ChangeProcessorConfig) *ChangeProcessorImpl {
 
 // Currently, changes (upserts/delete) trigger rebuilding of the configuration, even if the change doesn't change
 // the configuration or the statuses of the resources. For example, a change in a Gateway resource that doesn't
-// belong to the NGINX Gateway or an HTTPRoute that doesn't belong to any of the Gateways of the NGINX Gateway.
-// Find a way to ignore changes that don't affect the configuration and/or statuses of the resources.
+// belong to the NGINX Gateway Fabric or an HTTPRoute that doesn't belong to any of the Gateways of the
+// NGINX Gateway Fabric. Find a way to ignore changes that don't affect the configuration and/or statuses of
+// the resources.
 
 // FIXME(pleshakov)
 // Remove CaptureUpsertChange() and CaptureDeleteChange() from ChangeProcessor and pass all changes directly to

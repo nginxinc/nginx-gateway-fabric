@@ -6,7 +6,7 @@ import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 // +kubebuilder:storageversion
 // +kubebuilder:subresource:status
 
-// NginxGateway represents the dynamic configuration for an NGINX Kubernetes Gateway control plane.
+// NginxGateway represents the dynamic configuration for an NGINX Gateway Fabric control plane.
 type NginxGateway struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

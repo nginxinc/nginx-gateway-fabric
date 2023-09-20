@@ -2,13 +2,13 @@
 
 This document proposes a design for separating the control and data planes.
 
-Issue #292: https://github.com/nginxinc/nginx-kubernetes-gateway/issues/292
+Issue #292: https://github.com/nginxinc/nginx-gateway-fabric/issues/292
 
 > Note: I use data plane and agent interchangeably in this document.
 
 ## Background
 
-NKG composes its control and data plane containers into a single Kubernetes Pod. The control plane uses OS signals and a
+NGF composes its control and data plane containers into a single Kubernetes Pod. The control plane uses OS signals and a
 shared file system to configure and reload nginx. This architecture is problematic because the same RBAC policies govern
 the control and data planes and share CVE potential. A compromised control plane may impact the customer’s traffic. The
 Kubernetes API server may be affected if the data plane is compromised. In addition to security concerns, this
@@ -39,7 +39,7 @@ I propose using the [nginx agent](https://github.com/nginx/agent) as our data pl
 
 #### Evaluation of Requirements
 
-The following list outlines all of NKG's requirements for an agent and whether the nginx agent meets them:
+The following list outlines all of NGF's requirements for an agent and whether the nginx agent meets them:
 
 - [x] It is open source.
 - [x] It supports both OSS and Plus versions of nginx.
@@ -202,7 +202,7 @@ this option as a last resort that we can decide to adopt if we hit a roadblock w
 
 ![Deployment architecture](deployment-architecture.png)
 
-- _Control Plane Deployment_: The control plane is a Kubernetes Deployment with one container running the NKG
+- _Control Plane Deployment_: The control plane is a Kubernetes Deployment with one container running the NGF
   controller. Initially, the control plane will be limited to a single Pod. Once we add leader election, the control
   plane will be able to scale. The control plane will perform the same functions as it does today, but instead of
   configuring nginx by writing files to a shared volume, it will send the configuration to the agent via gRPC.
@@ -223,11 +223,11 @@ the control plane. In the future, we may reconsider this model if there’s a us
 multiple `Gateway` resources. For example, in that model, it might make sense for the control plane to be responsible
 for provisioning a separate data plane for each `Gateway.`
 
-### Running Multiple NKG Controllers
+### Running Multiple NGF Controllers
 
-Users can run multiple NKG controllers in the same cluster by leveraging the `GatewayClass` resource. Multiple NKG
+Users can run multiple NGF controllers in the same cluster by leveraging the `GatewayClass` resource. Multiple NGF
 controllers will be able to coexist in the same cluster as long as they each have a unique corresponding `GatewayClass`
-resource. In this case, each installation of NKG will contain a unique `GatewayClass` resource, a control plane
+resource. In this case, each installation of NGF will contain a unique `GatewayClass` resource, a control plane
 Deployment, and a data plane Deployment/DaemonSet.
 
 ### Communication Channels
@@ -388,7 +388,7 @@ message NginxConfig {
   comparing configuration against previous deployments) and to interrogate the file system before applying the
   configuration.
 
-I found that for NKG’s use case, the `access_logs,` `error_logs,` and `ssl` fields are unnecessary. For more details on
+I found that for NGF’s use case, the `access_logs,` `error_logs,` and `ssl` fields are unnecessary. For more details on
 how the control plane pushes nginx config to the agent, see the [Configuration Download](#configuration-download)
 section.
 
@@ -408,7 +408,7 @@ following names:
 The Secrets will be mounted to the control plane and agent containers, respectively. If desired, we can make the Secret
 names and mount path configurable via flags. For production, we will direct the user to provide their own certificates.
 For development and testing purposes, we will provide a self-signed default certificate. In order to be secure by
-default, NKG should generate the default certificates and keypair during installation using a Kubernetes Job.
+default, NGF should generate the default certificates and keypair during installation using a Kubernetes Job.
 
 #### Certificate Rotation
 
@@ -535,7 +535,7 @@ the enabled features, extensions, tags, log configuration, and alias for the age
 
 #### Building the NginxConfig message
 
-Currently, NKG configures nginx by translating the Gateway API resources into
+Currently, NGF configures nginx by translating the Gateway API resources into
 an [internal representation of the nginx config][internal-config], executing a template with this data to generate the
 nginx configuration as bytes, and then writing the bytes to the filesystem.
 
@@ -573,7 +573,7 @@ The TLS certificates and keys specified in the [`GatewayTLSConfig`][gw-tls-confi
 to Kubernetes Secrets. In the future, we will support other forms of authentication data, such as JWT tokens and
 user/pass files. Users will also store this secret data in Kubernetes Secrets.
 
-Currently, NKG watches all Secrets, stores them in memory, and then selectively writes them to the filesystem. We only
+Currently, NGF watches all Secrets, stores them in memory, and then selectively writes them to the filesystem. We only
 write Secrets that are referenced by `Listeners` to the filesystem. As part of the separation work, we need to figure
 out a way for the data plane to have access to these TLS certificates and keys.
 
@@ -664,7 +664,7 @@ command and then download the config chunks over the `DownloadChannel .`It will 
 configuration and attempt to apply it. It will send the status of the configuration application over
 the `CommandChannel` in a `NginxConfigResponse` message.
 
-[internal-config]: https://github.com/nginxinc/nginx-kubernetes-gateway/blob/main/internal/nginx/config/http/config.go
+[internal-config]: https://github.com/nginxinc/nginx-gateway-fabric/blob/main/internal/nginx/config/http/config.go
 
 [zip-file]: https://github.com/nginx/agent/blob/ea3a1b4df5d7ecf95bd3d9297d26e420f5e1dd57/sdk/proto/common.pb.go#L668
 
@@ -729,7 +729,7 @@ Since the data plane is deployed in its own Pod, a user can horizontally scale t
 control plane. When a new agent Pod spins up, the agent will register itself with the control plane. The control plane
 will have to keep track of all the agents.
 
-We will need to figure out how many agent instances can be supported by NKG’s control plane. As an example data point,
+We will need to figure out how many agent instances can be supported by NGF’s control plane. As an example data point,
 NGINX Controller can monitor and manage up to 100 N+ instances or up to 30 N+ instances with App Protect enabled. Since
 our use case for the agent is much simpler than NGINX Controller, we may be able to support more instances of the agent.
 
@@ -776,8 +776,8 @@ ok  	command-line-arguments	17.727s
 
 ### Performance goals
 
-- NKG can handle frequent configuration changes (1 change per second)
-- NKG can handle large configurations:
+- NGF can handle frequent configuration changes (1 change per second)
+- NGF can handle large configurations:
   - 5000 server blocks
   - 64 TLS certs/keys
   - 50 JWT keys
@@ -785,6 +785,6 @@ ok  	command-line-arguments	17.727s
   - 50 CA certs
   - 50 basic auth files
   - 50 OIDC secrets
-- NKG can scale to X number of data plane pods (we need to figure out what X is)
+- NGF can scale to X number of data plane pods (we need to figure out what X is)
 
 [performance]: https://github.com/nginx/agent/blob/main/test/performance/user_workflow_test.go

@@ -9,7 +9,7 @@ import (
 	discoveryV1 "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/helpers"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 )
 
 var (

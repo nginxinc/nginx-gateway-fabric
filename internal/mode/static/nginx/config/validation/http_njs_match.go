@@ -8,7 +8,7 @@ import (
 
 	k8svalidation "k8s.io/apimachinery/pkg/util/validation"
 
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/nginx/config"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config"
 )
 
 // HTTPNJSMatchValidator validates values used for matching a request.
@@ -38,7 +38,7 @@ func (HTTPNJSMatchValidator) ValidatePathInMatch(path string) error {
 	}
 
 	// FIXME(pleshakov): This function will no longer be
-	// needed once https://github.com/nginxinc/nginx-kubernetes-gateway/issues/428 is fixed.
+	// needed once https://github.com/nginxinc/nginx-gateway-fabric/issues/428 is fixed.
 	// That's because the location path gets into the set directive in the location block.
 	// Example: set $http_matches "[{\"redirectPath\":\"/coffee_route0\" ...
 	// Where /coffee is tha path.

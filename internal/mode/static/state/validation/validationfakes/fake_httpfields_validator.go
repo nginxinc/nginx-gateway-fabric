@@ -4,7 +4,7 @@ package validationfakes
 import (
 	"sync"
 
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/state/validation"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/validation"
 )
 
 type FakeHTTPFieldsValidator struct {

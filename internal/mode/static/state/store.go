@@ -9,7 +9,7 @@ import (
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/state/relationship"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/relationship"
 )
 
 // Updater updates the cluster state.
@@ -214,7 +214,7 @@ func (s *changeTrackingUpdater) Upsert(obj client.Object) {
 	// FIXME(pleshakov): Check generation in all cases to minimize the number of Graph regeneration.
 	// s.changed can be true even if the generation of the object did not change, because
 	// capturer and triggerStateChange don't take the generation into account.
-	// See https://github.com/nginxinc/nginx-kubernetes-gateway/issues/825
+	// See https://github.com/nginxinc/nginx-gateway-fabric/issues/825
 
 	s.changed = s.changed || changingUpsert || relationshipExisted || relationshipExists || forceChanged
 }
@@ -285,7 +285,7 @@ func (u *validatingUpsertUpdater) Upsert(obj client.Object) {
 			obj,
 			apiv1.EventTypeWarning,
 			"Rejected",
-			"%s; NKG will delete any existing NGINX configuration that corresponds to the resource",
+			"%s; NGF will delete any existing NGINX configuration that corresponds to the resource",
 			err.Error(),
 		)
 

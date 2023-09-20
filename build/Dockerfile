@@ -1,12 +1,12 @@
 # syntax=docker/dockerfile:1.4
 FROM golang:1.21 as builder
 
-WORKDIR /go/src/github.com/nginxinc/nginx-kubernetes-gateway
+WORKDIR /go/src/github.com/nginxinc/nginx-gateway-fabric
 
-COPY go.mod go.sum /go/src/github.com/nginxinc/nginx-kubernetes-gateway
+COPY go.mod go.sum /go/src/github.com/nginxinc/nginx-gateway-fabric
 RUN go mod download
 
-COPY . /go/src/github.com/nginxinc/nginx-kubernetes-gateway
+COPY . /go/src/github.com/nginxinc/nginx-gateway-fabric
 RUN make build
 
 FROM alpine:3.18 as capabilizer
@@ -17,7 +17,7 @@ COPY ./build/out/gateway /usr/bin/
 RUN setcap 'cap_kill=+ep' /usr/bin/gateway
 
 FROM capabilizer as container-capabilizer
-COPY --from=builder /go/src/github.com/nginxinc/nginx-kubernetes-gateway/build/out/gateway /usr/bin/
+COPY --from=builder /go/src/github.com/nginxinc/nginx-gateway-fabric/build/out/gateway /usr/bin/
 RUN setcap 'cap_kill=+ep' /usr/bin/gateway
 
 FROM capabilizer as goreleaser-capabilizer

@@ -16,9 +16,9 @@ and `coffee` applications share the same Gateway.
 
 ## Prerequisites
 
-- [Install](/docs/installation.md) NGINX Kubernetes Gateway.
-- [Expose NGINX Kubernetes Gateway](/docs/installation.md#expose-nginx-kubernetes-gateway) and save the public IP
-  address and port of NGINX Kubernetes Gateway into shell variables:
+- [Install](/docs/installation.md) NGINX Gateway Fabric.
+- [Expose NGINX Gateway Fabric](/docs/installation.md#expose-nginx-gateway-fabric) and save the public IP
+  address and port of NGINX Gateway Fabric into shell variables:
 
    ```text
    GW_IP=XXX.YYY.ZZZ.III
@@ -36,7 +36,7 @@ and `coffee` applications share the same Gateway.
 Begin by deploying the `coffee-v1` and `coffee-v2` applications:
 
 ```shell
-kubectl apply -f https://raw.githubusercontent.com/nginxinc/nginx-kubernetes-gateway/main/examples/advanced-routing/coffee.yaml
+kubectl apply -f https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric/main/examples/advanced-routing/coffee.yaml
 ```
 
 ### Deploy the Gateway API Resources for the Coffee Applications
@@ -120,7 +120,7 @@ the `coffee-v2` Service:
 
 ### Send Traffic to Coffee
 
-Using the external IP address and port for NGINX Kubernetes Gateway, we can send traffic to our coffee
+Using the external IP address and port for NGINX Gateway Fabric, we can send traffic to our coffee
 applications.
 
 > **Note**
@@ -166,7 +166,7 @@ have their own set of rules, but will still attach to the same Gateway listener 
 ### Deploy the Tea Applications
 
 ```shell
-kubectl apply -f https://raw.githubusercontent.com/nginxinc/nginx-kubernetes-gateway/main/examples/advanced-routing/tea.yaml
+kubectl apply -f https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric/main/examples/advanced-routing/tea.yaml
 ```
 
 ### Deploy the HTTPRoute for the Tea Services
@@ -213,7 +213,7 @@ The properties of this HTTPRoute include:
 
 ### Send Traffic to Tea
 
-Using the external IP address and port for NGINX Kubernetes Gateway, we can send traffic to our tea
+Using the external IP address and port for NGINX Gateway Fabric, we can send traffic to our tea
 applications.
 
 > **Note**
@@ -250,8 +250,8 @@ result in a `404 Not Found` response.
 
 If you have any issues while sending traffic, try the following to debug your configuration and setup:
 
-- Make sure you set the shell variables $GW_IP and $GW_PORT to the public IP and port of the NGINX Kubernetes Gateway
-  Service. Instructions for finding those values are [here](/docs/installation.md#expose-nginx-kubernetes-gateway).
+- Make sure you set the shell variables $GW_IP and $GW_PORT to the public IP and port of the NGINX Gateway Fabric
+  Service. Instructions for finding those values are [here](/docs/installation.md#expose-nginx-gateway-fabric).
 
 - Check the status of the Gateway:
 

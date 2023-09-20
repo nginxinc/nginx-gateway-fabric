@@ -20,10 +20,10 @@ Steps to reproduce the behavior:
 A clear and concise description of what you expected to happen.
 
 **Your environment**
-* Version of the NGINX Kubernetes Gateway - release version or a specific commit. The first line of the nginx-gateway container logs includes the commit info.
+* Version of the NGINX Gateway Fabric - release version or a specific commit. The first line of the nginx-gateway container logs includes the commit info.
 * Version of Kubernetes
 * Kubernetes platform (e.g. Mini-kube or GCP)
-* Details on how you expose the NGINX Gateway Pod (e.g. Service of type LoadBalancer or port-forward)
+* Details on how you expose the NGINX Gateway Fabric Pod (e.g. Service of type LoadBalancer or port-forward)
 * Logs of NGINX container: `kubectl -n nginx-gateway logs -l app=nginx-gateway -c nginx`
 * NGINX Configuration: `kubectl -n nginx-gateway exec <gateway-pod> -c nginx -- nginx -T`
 

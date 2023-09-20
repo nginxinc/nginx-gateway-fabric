@@ -12,16 +12,16 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	ctlrZap "sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/provisioner"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/config"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/provisioner"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/config"
 )
 
 const (
 	domain                = "gateway.nginx.org"
 	gatewayClassFlag      = "gatewayclass"
 	gatewayClassNameUsage = `The name of the GatewayClass resource. ` +
-		`Every NGINX Gateway must have a unique corresponding GatewayClass resource.`
+		`Every NGINX Gateway Fabric must have a unique corresponding GatewayClass resource.`
 	gatewayCtrlNameFlag     = "gateway-ctlr-name"
 	gatewayCtrlNameUsageFmt = `The name of the Gateway controller. ` +
 		`The controller name must be of the form: DOMAIN/PATH. The controller's domain is '%s'`
@@ -113,7 +113,7 @@ func createStaticModeCommand() *cobra.Command {
 
 			logger := ctlrZap.New(ctlrZap.Level(atom))
 			logger.Info(
-				"Starting NGINX Kubernetes Gateway in static mode",
+				"Starting NGINX Gateway Fabric in static mode",
 				"version", version,
 				"commit", commit,
 				"date", date,
@@ -241,9 +241,9 @@ func createStaticModeCommand() *cobra.Command {
 		&disableLeaderElection,
 		leaderElectionDisableFlag,
 		false,
-		"Disable leader election. Leader election is used to avoid multiple replicas of the NGINX Kubernetes Gateway"+
+		"Disable leader election. Leader election is used to avoid multiple replicas of the NGINX Gateway Fabric"+
 			" reporting the status of the Gateway API resources. If disabled, "+
-			"all replicas of NGINX Kubernetes Gateway will update the statuses of the Gateway API resources.",
+			"all replicas of NGINX Gateway Fabric will update the statuses of the Gateway API resources.",
 	)
 
 	cmd.Flags().Var(
@@ -259,12 +259,12 @@ func createStaticModeCommand() *cobra.Command {
 func createProvisionerModeCommand() *cobra.Command {
 	return &cobra.Command{
 		Use:    "provisioner-mode",
-		Short:  "Provision a static-mode NGINX Gateway Deployment per Gateway resource",
+		Short:  "Provision a static-mode NGINX Gateway Fabric Deployment per Gateway resource",
 		Hidden: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			logger := ctlrZap.New()
 			logger.Info(
-				"Starting NGINX Kubernetes Gateway Provisioner",
+				"Starting NGINX Gateway Fabric Provisioner",
 				"version", version,
 				"commit", commit,
 				"date", date,

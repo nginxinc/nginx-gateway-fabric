@@ -1,8 +1,8 @@
 # Logging Guidelines
 
-This document describes the logging guidelines for the control plane of NGINX Kubernetes Gateway (NKG).
+This document describes the logging guidelines for the control plane of NGINX Gateway Fabric (NGF).
 
-> The data plane logging is not covered here: such a concern is owned by NGINX developers, and NKG developers
+> The data plane logging is not covered here: such a concern is owned by NGINX developers, and NGF developers
 > don't have control over it.
 
 ## Table of Contents
@@ -50,11 +50,11 @@ understanding of what these guidelines intend to address:
 
 ### User Stories
 
-There are two distinct personas of NKG:
+There are two distinct personas of NGF:
 
-- *User*, who uses NKG. For logging, the user persona maps to the cluster operator from
+- *User*, who uses NGF. For logging, the user persona maps to the cluster operator from
   the [Gateway API personas](https://gateway-api.sigs.k8s.io/concepts/security-model/#roles-and-personas).
-- *Developer*, who develops NKG.
+- *Developer*, who develops NGF.
 
 Below are common user stories for both personas and also persona-specific stories.
 
@@ -365,7 +365,7 @@ because the runtime adds context to that logger with the group, kind, namespace 
 more key-value pairs. Note that the runtime creates that logger from the one we inject into it during the runtime
 initialization (see [External Libraries](#external-libraries)). Also note that logger is compatible with our logging guidelines.
 
-[reconciler-logger]:https://github.com/nginxinc/nginx-kubernetes-gateway/blob/5547fe5472d1742a937c8adbbd399893ee30f9e1/internal/framework/controller/reconciler.go#L63
+[reconciler-logger]:https://github.com/nginxinc/nginx-gateway-fabric/blob/5547fe5472d1742a937c8adbbd399893ee30f9e1/internal/framework/controller/reconciler.go#L63
 
 #### Unit Tests
 
@@ -375,7 +375,7 @@ To initialize a logger, use `zap.New()` from [controller-runtime helpers][cr-zap
 
 ### External Libraries
 
-There are two critical libraries for NKG that log:
+There are two critical libraries for NGF that log:
 
 - [controller-runtime](https://github.com/kubernetes-sigs/controller-runtime).
   - The [log levels][cr-log-levels] are compatible with our project.
@@ -389,17 +389,17 @@ There are two critical libraries for NKG that log:
       verbosity. However, errors are logged at the default verbosity like
       in [this line](https://github.com/kubernetes/client-go/blob/c5b1c13ccbedeb03c00ba162ef27566b0dfb512d/tools/record/event.go#L240).
 
-[inject]:https://github.com/nginxinc/nginx-kubernetes-gateway/blob/9b3ae2c7c59f28213a7690e049d9996443dbd3fc/internal/mode/static/manager.go#L54
+[inject]:https://github.com/nginxinc/nginx-gateway-fabric/blob/9b3ae2c7c59f28213a7690e049d9996443dbd3fc/internal/mode/static/manager.go#L54
 
 [cr-logging-guidelines]:https://github.com/kubernetes-sigs/controller-runtime/blob/b1d6919d3e12fa85a119dd9792bdfdc17bdf8c3b/TMP-LOGGING.md
 
 When adding a new library, evaluate if it does logging and how. If it is possible, configure the library logging to
-be compatible with NKG logging. If not, document the logs in the user documentation for control plane logging, so that
+be compatible with NGF logging. If not, document the logs in the user documentation for control plane logging, so that
 the users are prepared for them.
 
 ### Evolution
 
-As NKG evolves, we might change the logging. For example:
+As NGF evolves, we might change the logging. For example:
 
 - Change the meaning of levels.
 - Change the default key-value pairs and their representation.

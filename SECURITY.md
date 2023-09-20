@@ -2,7 +2,7 @@
 
 ## Supported Versions
 
-We advise users to run the most recent release of the NGINX Kubernetes Gateway. A table with the supported versions can
+We advise users to run the most recent release of the NGINX Gateway Fabric. A table with the supported versions can
 be found in the [README](README.md#technical-specifications).
 
 ## Reporting a Vulnerability

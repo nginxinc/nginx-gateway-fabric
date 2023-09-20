@@ -1,27 +1,35 @@
 # Installation
 
-This guide walks you through how to install NGINX Kubernetes Gateway on a generic Kubernetes cluster.
+This guide walks you through how to install NGINX Gateway Fabric on a generic Kubernetes cluster.
 
 ## Prerequisites
 
 - [kubectl](https://kubernetes.io/docs/tasks/tools/)
 
-## Deploy NGINX Kubernetes Gateway using Helm
+## Deploy NGINX Gateway Fabric using Helm
 
-To deploy NGINX Kubernetes Gateway using Helm, please follow the instructions on [this](/deploy/helm-chart/README.md)
+To deploy NGINX Gateway Fabric using Helm, please follow the instructions on [this](/deploy/helm-chart/README.md)
 page.
 
-## Deploy NGINX Kubernetes Gateway from Manifests
+## Deploy NGINX Gateway Fabric from Manifests
 
-> Note: By default, NGINX Kubernetes Gateway (NKG) will be installed into the nginx-gateway Namespace.
-> It is possible to run NKG in a different Namespace, although you'll need to make modifications to the installation
+> Note: By default, NGINX Gateway Fabric (NGF) will be installed into the nginx-gateway Namespace.
+> It is possible to run NGF in a different Namespace, although you'll need to make modifications to the installation
 > manifests.
 
-1. Clone the repo and change into the `nginx-kubernetes-gateway` directory:
+1. Clone the repo and change into the `nginx-gateway-fabric` directory:
 
    ```shell
-   git clone https://github.com/nginxinc/nginx-kubernetes-gateway.git
-   cd nginx-kubernetes-gateway
+   git clone https://github.com/nginxinc/nginx-gateway-fabric.git
+   cd nginx-gateway-fabric
+   ```
+
+1. Check out the latest tag (unless you are installing the `edge` version from the `main` branch):
+
+   ```shell
+   git fetch --tags
+   latestTag=$(git describe --tags `git rev-list --tags --max-count=1`)
+   git checkout $latestTag
    ```
 
 1. Install the Gateway API resources from the standard channel (the CRDs and the validating webhook):
@@ -30,19 +38,19 @@ page.
    kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v0.8.0/standard-install.yaml
    ```
 
-1. Deploy the NGINX Kubernetes Gateway CRDs:
+1. Deploy the NGINX Gateway Fabric CRDs:
 
    ```shell
    kubectl apply -f deploy/manifests/crds
    ```
 
-1. Deploy the NGINX Kubernetes Gateway:
+1. Deploy the NGINX Gateway Fabric:
 
    ```shell
    kubectl apply -f deploy/manifests/nginx-gateway.yaml
    ```
 
-1. Confirm the NGINX Kubernetes Gateway is running in `nginx-gateway` namespace:
+1. Confirm the NGINX Gateway Fabric is running in `nginx-gateway` namespace:
 
    ```shell
    kubectl get pods -n nginx-gateway
@@ -53,13 +61,13 @@ page.
    nginx-gateway-5d4f4c7db7-xk2kq   2/2     Running   0          112s
    ```
 
-## Expose NGINX Kubernetes Gateway
+## Expose NGINX Gateway Fabric
 
-You can gain access to NGINX Kubernetes Gateway by creating a `NodePort` Service or a `LoadBalancer` Service.
+You can gain access to NGINX Gateway Fabric by creating a `NodePort` Service or a `LoadBalancer` Service.
 
 > Important
 >
-> The Service manifests expose NGINX Kubernetes Gateway on ports 80 and 443, which exposes any
+> The Service manifests expose NGINX Gateway Fabric on ports 80 and 443, which exposes any
 > Gateway [Listener](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.Listener)
 > configured for those ports. If you'd like to use different ports in your listeners,
 > update the manifests accordingly.
@@ -72,7 +80,7 @@ Create a Service with type `NodePort`:
 kubectl apply -f deploy/manifests/service/nodeport.yaml
 ```
 
-A `NodePort` Service will randomly allocate one port on every Node of the cluster. To access NGINX Kubernetes Gateway,
+A `NodePort` Service will randomly allocate one port on every Node of the cluster. To access NGINX Gateway Fabric,
 use an IP address of any Node in the cluster along with the allocated port.
 
 ### Create a LoadBalancer Service
@@ -92,7 +100,7 @@ Create a Service with type `LoadBalancer` using the appropriate manifest for you
    kubectl get svc nginx-gateway -n nginx-gateway
    ```
 
-  Use the public IP of the load balancer to access NGINX Kubernetes Gateway.
+  Use the public IP of the load balancer to access NGINX Gateway Fabric.
 
 - For AWS:
 
@@ -114,11 +122,11 @@ Create a Service with type `LoadBalancer` using the appropriate manifest for you
    nslookup <dns-name>
    ```
 
-## Uninstalling NGINX Kubernetes Gateway
+## Uninstalling NGINX Gateway Fabric
 
-### Uninstall NGINX Kubernetes Gateway from Manifests
+### Uninstall NGINX Gateway Fabric from Manifests
 
-1. Uninstall the NGINX Kubernetes Gateway:
+1. Uninstall the NGINX Gateway Fabric:
 
    ```shell
    kubectl delete -f deploy/manifests/nginx-gateway.yaml
@@ -138,7 +146,7 @@ Create a Service with type `LoadBalancer` using the appropriate manifest for you
    kubectl delete -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v0.8.0/standard-install.yaml
    ```
 
-### Uninstall NGINX Kubernetes Gateway using Helm
+### Uninstall NGINX Gateway Fabric using Helm
 
-To uninstall NGINX Kubernetes Gateway when the deployment method is Helm, please follow the instructions
+To uninstall NGINX Gateway Fabric when the deployment method is Helm, please follow the instructions
 [here](/deploy/helm-chart/README.md#uninstalling-the-chart).

@@ -1,12 +1,12 @@
 # Control Plane Configuration
 
-This document describes how to dynamically update the NGINX Kubernetes Gateway control plane configuration.
+This document describes how to dynamically update the NGINX Gateway Fabric control plane configuration.
 
 ## Overview
 
-NGINX Kubernetes Gateway offers a way to update the control plane configuration dynamically without the need for a
+NGINX Gateway Fabric offers a way to update the control plane configuration dynamically without the need for a
 restart. The control plane configuration is stored in the NginxGateway custom resource. This resource is created
-during the installation of NGINX Kubernetes Gateway.
+during the installation of NGINX Gateway Fabric.
 
 If using manifests, the default name of the resource is `nginx-gateway-config`. If using Helm, the default name
 of the resource is `<release-name>-config`. It is deployed in the same Namespace as the controller
@@ -14,7 +14,7 @@ of the resource is `<release-name>-config`. It is deployed in the same Namespace
 
 The control plane only watches this single instance of the custom resource. If the resource is invalid per the OpenAPI
 schema, the Kubernetes API server will reject the changes. If the resource is deleted or deemed invalid by NGINX
-Kubernetes Gateway, a warning Event is created in the `nginx-gateway` Namespace, and the default values will be used by
+Gateway Fabric, a warning Event is created in the `nginx-gateway` Namespace, and the default values will be used by
 the control plane for its configuration. Additionally, the control plane updates the status of the resource (if it exists)
 to reflect whether it is valid or not.
 

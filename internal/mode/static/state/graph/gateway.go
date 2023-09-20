@@ -8,9 +8,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/conditions"
-	nkgsort "github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/sort"
-	staticConds "github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/state/conditions"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
+	ngfsort "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/sort"
+	staticConds "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/conditions"
 )
 
 // Gateway represents the winning Gateway resource.
@@ -25,13 +25,13 @@ type Gateway struct {
 	Valid bool
 }
 
-// processedGateways holds the resources that belong to NKG.
+// processedGateways holds the resources that belong to NGF.
 type processedGateways struct {
 	Winner  *v1beta1.Gateway
 	Ignored map[types.NamespacedName]*v1beta1.Gateway
 }
 
-// GetAllNsNames returns all the NamespacedNames of the Gateway resources that belong to NKG
+// GetAllNsNames returns all the NamespacedNames of the Gateway resources that belong to NGF
 func (gws processedGateways) GetAllNsNames() []types.NamespacedName {
 	winnerCnt := 0
 	if gws.Winner != nil {
@@ -55,7 +55,7 @@ func (gws processedGateways) GetAllNsNames() []types.NamespacedName {
 	return allNsNames
 }
 
-// processGateways determines which Gateway resource belong to NKG (determined by the Gateway GatewayClassName field).
+// processGateways determines which Gateway resource belong to NGF (determined by the Gateway GatewayClassName field).
 func processGateways(
 	gws map[types.NamespacedName]*v1beta1.Gateway,
 	gcName string,
@@ -75,7 +75,7 @@ func processGateways(
 	}
 
 	sort.Slice(referencedGws, func(i, j int) bool {
-		return nkgsort.LessObjectMeta(&referencedGws[i].ObjectMeta, &referencedGws[j].ObjectMeta)
+		return ngfsort.LessObjectMeta(&referencedGws[i].ObjectMeta, &referencedGws[j].ObjectMeta)
 	})
 
 	ignoredGws := make(map[types.NamespacedName]*v1beta1.Gateway)

@@ -1,10 +1,10 @@
 # Gateway API Resource Validation
 
-This document describes how NGINX Kubernetes Gateway (NKG) validates Gateway API resources.
+This document describes how NGINX Gateway Fabric (NGF) validates Gateway API resources.
 
 ## Overview
 
-There are several reasons why NKG validates Gateway API resources:
+There are several reasons why NGF validates Gateway API resources:
 
 - *Robustness*: to gracefully handle invalid resources.
 - *Security*: to prevent malicious input from propagating to the NGINX configuration.
@@ -17,11 +17,11 @@ A Gateway API resource (a new resource or an update for the existing one) is val
 
 1. OpenAPI schema validation by the Kubernetes API server.
 2. Webhook validation by the Gateway API webhook.
-3. Webhook validation by NKG.
-4. Validation by NKG.
+3. Webhook validation by NGF.
+4. Validation by NGF.
 
-To confirm that a resource is valid and accepted by NKG, check that the `Accepted` condition in the resource status
-has the Status field set to `True`. For example, in a status of a valid HTTPRoute, if NKG accepts a parentRef,
+To confirm that a resource is valid and accepted by NGF, check that the `Accepted` condition in the resource status
+has the Status field set to `True`. For example, in a status of a valid HTTPRoute, if NGF accepts a parentRef,
 the status of that parentRef will look like this:
 
 ```text
@@ -82,13 +82,13 @@ Error from server: error when creating "prod-gateway.yaml": admission webhook "v
 > Bypassing this validation step is possible if the webhook is not running in the cluster.
 > If this happens, Step 3 will reject the invalid values.
 
-### Step 3 - Webhook validation by NKG
+### Step 3 - Webhook validation by NGF
 
 The previous step relies on the Gateway API webhook running in the cluster. To ensure that the resources are validated
-with the webhook validation rules, even if the webhook is not running, NKG performs the same validation. However, NKG
+with the webhook validation rules, even if the webhook is not running, NGF performs the same validation. However, NGF
 performs the validation *after* the Kubernetes API server accepts the resource.
 
-Below is an example of how NKG rejects an invalid resource (a Gateway resource with a TCP listener that configures a
+Below is an example of how NGF rejects an invalid resource (a Gateway resource with a TCP listener that configures a
 hostname) with a Kubernetes event:
 
 ```shell
@@ -100,18 +100,18 @@ kubectl describe gateway prod-gateway
 Events:
   Type     Reason    Age   From                            Message
   ----     ------    ----  ----                            -------
-  Warning  Rejected  6s    nginx-kubernetes-gateway-nginx  the resource failed webhook validation, however the Gateway API webhook failed to reject it with the error; make sure the webhook is installed and running correctly; validation error: spec.listeners[1].hostname: Forbidden: should be empty for protocol TCP; NKG will delete any existing NGINX configuration that corresponds to the resource
+  Warning  Rejected  6s    nginx-gateway-fabric-nginx  the resource failed webhook validation, however the Gateway API webhook failed to reject it with the error; make sure the webhook is installed and running correctly; validation error: spec.listeners[1].hostname: Forbidden: should be empty for protocol TCP; NGF will delete any existing NGINX configuration that corresponds to the resource
 ```
 
 > This validation step always runs and cannot be bypassed.
-> NKG will ignore any resources that fail the webhook validation, like in the example above.
-> If the resource previously existed, NKG will remove any existing NGINX configuration for that resource.
+> NGF will ignore any resources that fail the webhook validation, like in the example above.
+> If the resource previously existed, NGF will remove any existing NGINX configuration for that resource.
 
-### Step 4 - Validation by NKG
+### Step 4 - Validation by NGF
 
 This step catches the following cases of invalid values:
 
-- Valid values from the Gateway API perspective but not supported by NKG yet. For example, a feature in an
+- Valid values from the Gateway API perspective but not supported by NGF yet. For example, a feature in an
   HTTPRoute routing rule. Note: for the list of supported features,
   see [Gateway API Compatibility](gateway-api-compatibility.md) doc.
 - Valid values from the Gateway API perspective, but invalid for NGINX, because NGINX has stricter validation
@@ -121,7 +121,7 @@ This step catches the following cases of invalid values:
 - Malicious values that inject unrestricted NGINX config into the NGINX configuration (similar to an SQL injection
   attack).
 
-Below is an example of how NKG rejects an invalid resource. The validation error is reported via the status:
+Below is an example of how NGF rejects an invalid resource. The validation error is reported via the status:
 
 ```shell
 kubectl describe httproutes.gateway.networking.k8s.io coffee

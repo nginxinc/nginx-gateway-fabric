@@ -48,7 +48,7 @@ announce:
   slack:
     enabled: true
     channel: '#announcements'
-    message_template: 'NGINX Kubernetes Gateway {{ .Tag }} is out! Check it out: {{ .ReleaseURL }}'
+    message_template: 'NGINX Gateway Fabric {{ .Tag }} is out! Check it out: {{ .ReleaseURL }}'
 
 milestones:
   - close: true

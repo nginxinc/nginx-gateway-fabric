@@ -13,8 +13,8 @@ GO_LINKER_FLAGS_OPTIMIZATIONS = -s -w
 GO_LINKER_FLAGS = $(GO_LINKER_FLAGS_OPTIMIZATIONS) $(GO_LINKER_FlAGS_VARS)
 
 # variables that can be overridden by the user
-PREFIX ?= nginx-kubernetes-gateway## The name of the NKG image. For example, nginx-kubernetes-gateway
-NGINX_PREFIX ?= $(PREFIX)/nginx## The name of the nginx image. For example: nginx-kubernetes-gateway/nginx
+PREFIX ?= nginx-gateway-fabric## The name of the NGF image. For example, nginx-gateway-fabric
+NGINX_PREFIX ?= $(PREFIX)/nginx## The name of the nginx image. For example: nginx-gateway-fabric/nginx
 TAG ?= $(VERSION:v%=%)## The tag of the image. For example, 0.3.0
 TARGET ?= local## The target of the build. Possible values: local and container
 KIND_KUBE_CONFIG=$${HOME}/.kube/kind/config## The location of the kind kubeconfig
@@ -32,10 +32,10 @@ help: Makefile ## Display this help
 	@grep -E '^(override )?[a-zA-Z_-]+ \??\+?= .*?## .*$$' $< | sort | awk 'BEGIN {FS = " \\??\\+?= .*?## "; printf "\nVariables:\n\n"}; {gsub(/override /, "", $$1); printf "    \033[36m%-30s\033[0m %s\n", $$1, $$2}'
 
 .PHONY: build-images
-build-images: build-nkg-image build-nginx-image ## Build the NKG and nginx docker images
+build-images: build-ngf-image build-nginx-image ## Build the NGF and nginx docker images
 
-.PHONY: build-nkg-image
-build-nkg-image: check-for-docker build ## Build the NKG docker image
+.PHONY: build-ngf-image
+build-ngf-image: check-for-docker build ## Build the NGF docker image
 	docker build --platform linux/$(GOARCH) --target $(strip $(TARGET)) -f build/Dockerfile -t $(strip $(PREFIX)):$(strip $(TAG)) .
 
 .PHONY: build-nginx-image
@@ -50,7 +50,7 @@ check-for-docker: ## Check if Docker is installed
 build: ## Build the binary
 ifeq (${TARGET},local)
 	@go version || (code=$$?; printf "\033[0;31mError\033[0m: unable to build locally\n"; exit $$code)
-	CGO_ENABLED=0 GOOS=$(GOOS) GOARCH=$(GOARCH) go build -trimpath -a -ldflags "$(GO_LINKER_FLAGS)" $(ADDITIONAL_GO_BUILD_FLAGS) -o $(OUT_DIR)/gateway github.com/nginxinc/nginx-kubernetes-gateway/cmd/gateway
+	CGO_ENABLED=0 GOOS=$(GOOS) GOARCH=$(GOARCH) go build -trimpath -a -ldflags "$(GO_LINKER_FLAGS)" $(ADDITIONAL_GO_BUILD_FLAGS) -o $(OUT_DIR)/gateway github.com/nginxinc/nginx-gateway-fabric/cmd/gateway
 endif
 
 .PHONY: build-goreleaser
@@ -106,7 +106,7 @@ vet: ## Run go vet against code
 
 .PHONY: lint
 lint: ## Run golangci-lint against code
-	docker run --pull always --rm -v $(shell pwd):/nginx-kubernetes-gateway -w /nginx-kubernetes-gateway -v $(shell go env GOCACHE):/cache/go -e GOCACHE=/cache/go -e GOLANGCI_LINT_CACHE=/cache/go -v $(shell go env GOPATH)/pkg:/go/pkg golangci/golangci-lint:latest golangci-lint --color always run
+	docker run --pull always --rm -v $(shell pwd):/nginx-gateway-fabric -w /nginx-gateway-fabric -v $(shell go env GOCACHE):/cache/go -e GOCACHE=/cache/go -e GOLANGCI_LINT_CACHE=/cache/go -v $(shell go env GOPATH)/pkg:/go/pkg golangci/golangci-lint:latest golangci-lint --color always run
 
 .PHONY: unit-test
 unit-test: ## Run unit tests for the go code
@@ -129,8 +129,8 @@ debug-build: GO_LINKER_FLAGS=$(GO_LINKER_FlAGS_VARS)
 debug-build: ADDITIONAL_GO_BUILD_FLAGS=-gcflags "all=-N -l"
 debug-build: build ## Build binary with debug info, symbols, and no optimizations
 
-.PHONY: build-nkg-debug-image
-build-nkg-debug-image: debug-build build-nkg-image ## Build NKG image with debug binary
+.PHONY: build-ngf-debug-image
+build-ngf-debug-image: debug-build build-ngf-image ## Build NGF image with debug binary
 
 .PHONY: generate-manifests
 generate-manifests: ## Generate manifests using Helm.

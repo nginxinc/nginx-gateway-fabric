@@ -13,8 +13,8 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/client-go/tools/record"
 
-	nkgAPI "github.com/nginxinc/nginx-kubernetes-gateway/apis/v1alpha1"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/helpers"
+	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 )
 
 // ZapLogLevelSetter defines an interface for setting the logging level of a zap logger.
@@ -41,9 +41,9 @@ func (z zapSetterImpl) SetLevel(level string) error {
 			field.NewPath("logging.level"),
 			level,
 			[]string{
-				string(nkgAPI.ControllerLogLevelInfo),
-				string(nkgAPI.ControllerLogLevelDebug),
-				string(nkgAPI.ControllerLogLevelError),
+				string(ngfAPI.ControllerLogLevelInfo),
+				string(ngfAPI.ControllerLogLevelDebug),
+				string(ngfAPI.ControllerLogLevelError),
 			})
 		return fieldErr
 	}
@@ -60,16 +60,16 @@ func (z zapSetterImpl) Enabled(level zapcore.Level) bool {
 // updateControlPlane updates the control plane configuration with the given user spec.
 // If any fields are not set within the user spec, the default configuration values are used.
 func updateControlPlane(
-	cfg *nkgAPI.NginxGateway,
+	cfg *ngfAPI.NginxGateway,
 	logger logr.Logger,
 	eventRecorder record.EventRecorder,
 	configNSName types.NamespacedName,
 	logLevelSetter ZapLogLevelSetter,
 ) error {
 	// build up default configuration
-	controlConfig := nkgAPI.NginxGatewaySpec{
-		Logging: &nkgAPI.Logging{
-			Level: helpers.GetPointer(nkgAPI.ControllerLogLevelInfo),
+	controlConfig := ngfAPI.NginxGatewaySpec{
+		Logging: &ngfAPI.Logging{
+			Level: helpers.GetPointer(ngfAPI.ControllerLogLevelInfo),
 		},
 	}
 
@@ -88,7 +88,7 @@ func updateControlPlane(
 		msg := "NginxGateway configuration was deleted; using defaults"
 		logger.Info(msg)
 		eventRecorder.Event(
-			&nkgAPI.NginxGateway{
+			&ngfAPI.NginxGateway{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: configNSName.Namespace,
 					Name:      configNSName.Name,

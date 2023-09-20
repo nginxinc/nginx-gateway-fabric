@@ -65,11 +65,11 @@ func TestConformance(t *testing.T) {
 		},
 		Implementation: v1alpha1.Implementation{
 			Organization: "nginxinc",
-			Project:      "nginx-kubernetes-gateway",
-			URL:          "https://github.com/nginxinc/nginx-kubernetes-gateway",
+			Project:      "nginx-gateway-fabric",
+			URL:          "https://github.com/nginxinc/nginx-gateway-fabric",
 			Version:      *flags.ImplementationVersion,
 			Contact: []string{
-				"https://github.com/nginxinc/nginx-kubernetes-gateway/discussions/new/choose",
+				"https://github.com/nginxinc/nginx-gateway-fabric/discussions/new/choose",
 			},
 		},
 		ConformanceProfiles: sets.New(suite.HTTPConformanceProfileName),

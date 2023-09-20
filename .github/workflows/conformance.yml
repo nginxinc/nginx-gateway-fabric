@@ -45,12 +45,12 @@ jobs:
       - name: Docker Buildx
         uses: docker/setup-buildx-action@f95db51fddba0c2d1ec667646a06c2ce06100226 # v3.0.0
 
-      - name: NKG Docker meta
-        id: nkg-meta
+      - name: NGF Docker meta
+        id: ngf-meta
         uses: docker/metadata-action@96383f45573cb7f253c731d3b3ab81c87ef81934 # v5.0.0
         with:
           images: |
-            name=ghcr.io/nginxinc/nginx-kubernetes-gateway
+            name=ghcr.io/nginxinc/nginx-gateway-fabric
           tags: |
             type=semver,pattern={{version}}
             type=edge
@@ -62,18 +62,18 @@ jobs:
         uses: docker/metadata-action@96383f45573cb7f253c731d3b3ab81c87ef81934 # v5.0.0
         with:
           images: |
-            name=ghcr.io/nginxinc/nginx-kubernetes-gateway/nginx
+            name=ghcr.io/nginxinc/nginx-gateway-fabric/nginx
           tags: |
             type=semver,pattern={{version}}
             type=edge
             type=ref,event=pr
             type=ref,event=branch,suffix=-rc,enable=${{ startsWith(github.ref, 'refs/heads/release') }}
 
-      - name: Prepare NKG files
+      - name: Prepare NGF files
         run: |
-          nkg_prefix=$(echo ${{ steps.nkg-meta.outputs.tags }} | cut -d ":" -f 1)
-          nkg_tag=$(echo ${{ steps.nkg-meta.outputs.tags }} | cut -d ":" -f 2)
-          make update-nkg-manifest NKG_PREFIX=${nkg_prefix} NKG_TAG=${nkg_tag}
+          ngf_prefix=$(echo ${{ steps.ngf-meta.outputs.tags }} | cut -d ":" -f 1)
+          ngf_tag=$(echo ${{ steps.ngf-meta.outputs.tags }} | cut -d ":" -f 2)
+          make update-ngf-manifest NGF_PREFIX=${ngf_prefix} NGF_TAG=${ngf_tag}
         working-directory: ./conformance
 
       - name: Build binary
@@ -82,16 +82,16 @@ jobs:
           version: latest
           args: build --snapshot --clean
 
-      - name: Build NKG Docker Image
+      - name: Build NGF Docker Image
         uses: docker/build-push-action@0565240e2d4ab88bba5387d719585280857ece09 # v5.0.0
         with:
           file: build/Dockerfile
-          tags: ${{ steps.nkg-meta.outputs.tags }}
+          tags: ${{ steps.ngf-meta.outputs.tags }}
           context: "."
           target: goreleaser
           load: true
-          cache-from: type=gha,scope=nkg
-          cache-to: type=gha,scope=nkg,mode=max
+          cache-from: type=gha,scope=ngf
+          cache-to: type=gha,scope=ngf,mode=max
           pull: true
 
       - name: Build NGINX Docker Image
@@ -142,12 +142,12 @@ jobs:
 
       - name: Setup conformance tests
         run: |
-          nkg_prefix=$(echo ${{ steps.nkg-meta.outputs.tags }} | cut -d ":" -f 1)
-          nkg_tag=$(echo ${{ steps.nkg-meta.outputs.tags }} | cut -d ":" -f 2)
+          ngf_prefix=$(echo ${{ steps.ngf-meta.outputs.tags }} | cut -d ":" -f 1)
+          ngf_tag=$(echo ${{ steps.ngf-meta.outputs.tags }} | cut -d ":" -f 2)
           if [ ${{ github.event_name }} == "schedule" ]; then
           export GW_API_VERSION=main
           fi
-          make install-nkg-local-no-build NKG_PREFIX=${nkg_prefix} NKG_TAG=${nkg_tag}
+          make install-ngf-local-no-build NGF_PREFIX=${ngf_prefix} NGF_TAG=${ngf_tag}
         working-directory: ./conformance
 
       - name: Run conformance tests

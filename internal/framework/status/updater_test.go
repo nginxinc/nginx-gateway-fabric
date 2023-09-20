@@ -15,11 +15,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	nkgAPI "github.com/nginxinc/nginx-kubernetes-gateway/apis/v1alpha1"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/helpers"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/status"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/status/statusfakes"
-	staticConds "github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/state/conditions"
+	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/status"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/status/statusfakes"
+	staticConds "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/conditions"
 )
 
 type unsupportedStatus struct{}
@@ -42,7 +42,7 @@ var _ = Describe("Updater", func() {
 		scheme := runtime.NewScheme()
 
 		Expect(v1beta1.AddToScheme(scheme)).Should(Succeed())
-		Expect(nkgAPI.AddToScheme(scheme)).Should(Succeed())
+		Expect(ngfAPI.AddToScheme(scheme)).Should(Succeed())
 
 		client = fake.NewClientBuilder().
 			WithScheme(scheme).
@@ -50,7 +50,7 @@ var _ = Describe("Updater", func() {
 				&v1beta1.GatewayClass{},
 				&v1beta1.Gateway{},
 				&v1beta1.HTTPRoute{},
-				&nkgAPI.NginxGateway{},
+				&ngfAPI.NginxGateway{},
 			).
 			Build()
 
@@ -72,7 +72,7 @@ var _ = Describe("Updater", func() {
 			gc            *v1beta1.GatewayClass
 			gw, ignoredGw *v1beta1.Gateway
 			hr            *v1beta1.HTTPRoute
-			ng            *nkgAPI.NginxGateway
+			ng            *ngfAPI.NginxGateway
 			ipAddrType    = v1beta1.IPAddressType
 			addr          = v1beta1.GatewayStatusAddress{
 				Type:  &ipAddrType,
@@ -232,8 +232,8 @@ var _ = Describe("Updater", func() {
 				}
 			}
 
-			createExpectedNGWithGeneration = func(gen int64) *nkgAPI.NginxGateway {
-				return &nkgAPI.NginxGateway{
+			createExpectedNGWithGeneration = func(gen int64) *ngfAPI.NginxGateway {
+				return &ngfAPI.NginxGateway{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "nginx-gateway",
 						Name:      "nginx-gateway-config",
@@ -242,7 +242,7 @@ var _ = Describe("Updater", func() {
 						Kind:       "NginxGateway",
 						APIVersion: "gateway.nginx.org/v1alpha1",
 					},
-					Status: nkgAPI.NginxGatewayStatus{
+					Status: ngfAPI.NginxGatewayStatus{
 						Conditions: status.CreateExpectedAPIConditions("Test", gen, fakeClockTime),
 					},
 				}
@@ -299,7 +299,7 @@ var _ = Describe("Updater", func() {
 					APIVersion: "gateway.networking.k8s.io/v1beta1",
 				},
 			}
-			ng = &nkgAPI.NginxGateway{
+			ng = &ngfAPI.NginxGateway{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "nginx-gateway",
 					Name:      "nginx-gateway-config",
@@ -383,7 +383,7 @@ var _ = Describe("Updater", func() {
 		})
 
 		It("should have the updated status of NginxGateway in the API server", func() {
-			latestNG := &nkgAPI.NginxGateway{}
+			latestNG := &ngfAPI.NginxGateway{}
 			expectedNG := createExpectedNGWithGeneration(1)
 
 			err := client.Get(
@@ -497,7 +497,7 @@ var _ = Describe("Updater", func() {
 			})
 
 			It("should not have the updated status of the Nginx Gateway resource in the API server", func() {
-				latestNG := &nkgAPI.NginxGateway{}
+				latestNG := &ngfAPI.NginxGateway{}
 				expectedNG := createExpectedNGWithGeneration(1)
 
 				err := client.Get(
@@ -534,7 +534,7 @@ var _ = Describe("Updater", func() {
 			})
 
 			It("should have the updated status of the Nginx Gateway resource in the API server", func() {
-				latestNG := &nkgAPI.NginxGateway{}
+				latestNG := &ngfAPI.NginxGateway{}
 				expectedNG := createExpectedNGWithGeneration(2)
 
 				err := client.Get(
@@ -577,7 +577,7 @@ var _ = Describe("Updater", func() {
 				updater.Update(context.Background(), createNGStatus(3))
 			})
 			It("should have the updated status of Nginx Gateway in the API server", func() {
-				latestNG := &nkgAPI.NginxGateway{}
+				latestNG := &ngfAPI.NginxGateway{}
 				expectedNG := createExpectedNGWithGeneration(3)
 
 				err := client.Get(

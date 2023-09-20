@@ -1,6 +1,6 @@
 # Monitoring
 
-The NGINX Kubernetes Gateway exposes a number of metrics in the [Prometheus](https://prometheus.io/) format. Those
+The NGINX Gateway Fabric exposes a number of metrics in the [Prometheus](https://prometheus.io/) format. Those
 include NGINX and the controller-runtime metrics. These are delivered using a metrics server orchestrated by the
 controller-runtime package. Metrics are enabled by default, and are served via http on port `9113`.
 
@@ -14,12 +14,12 @@ controller-runtime package. Metrics are enabled by default, and are served via h
 
 ### Using Helm
 
-If you're using *Helm* to install the NGINX Kubernetes Gateway, set the `metrics.*` parameters to the required values
+If you're using *Helm* to install the NGINX Gateway Fabric, set the `metrics.*` parameters to the required values
 for your environment. See the [Helm README](/deploy/helm-chart/README.md).
 
 ### Using Manifests
 
-If you're using *Kubernetes manifests* to install NGINX Kubernetes Gateway, you can modify the
+If you're using *Kubernetes manifests* to install NGINX Gateway Fabric, you can modify the
 [manifest](/deploy/manifests/nginx-gateway.yaml) to change the default metrics configuration:
 
 #### Disabling metrics
@@ -27,15 +27,15 @@ If you're using *Kubernetes manifests* to install NGINX Kubernetes Gateway, you 
 1. Set the `-metrics-disable` [command-line argument](/docs/cli-help.md) to `true` and remove the other `-metrics-*`
    command line arguments.
 
-2. Remove the metrics port entry from the list of the ports of the NGINX Kubernetes Gateway container in the template
-   of the NGINX Kubernetes Gateway Pod:
+2. Remove the metrics port entry from the list of the ports of the NGINX Gateway Fabric container in the template
+   of the NGINX Gateway Fabric Pod:
 
     ```yaml
     - name: metrics
       containerPort: 9113
     ```
 
-3. Remove the following annotations from the template of the NGINX Kubernetes Gateway Pod:
+3. Remove the following annotations from the template of the NGINX Gateway Fabric Pod:
 
     ```yaml
     annotations:
@@ -47,15 +47,15 @@ If you're using *Kubernetes manifests* to install NGINX Kubernetes Gateway, you 
 
 1. Set the `-metrics-port` [command-line argument](/docs/cli-help.md) to the required value.
 
-2. Change the metrics port entry in the list of the ports of the NGINX Kubernetes Gateway container in the template
-   of the NGINX Kubernetes Gateway Pod:
+2. Change the metrics port entry in the list of the ports of the NGINX Gateway Fabric container in the template
+   of the NGINX Gateway Fabric Pod:
 
     ```yaml
     - name: metrics
       containerPort: <new-port>
     ```
 
-3. Change the following annotation in the template of the NGINX Kubernetes Gateway Pod:
+3. Change the following annotation in the template of the NGINX Gateway Fabric Pod:
 
     ```yaml
     annotations:
@@ -68,7 +68,7 @@ If you're using *Kubernetes manifests* to install NGINX Kubernetes Gateway, you 
 
 1. Set the `-metrics-secure-serving` [command-line argument](/docs/cli-help.md) to `true`.
 
-2. Add the following annotation in the template of the NGINX Kubernetes Gateway Pod:
+2. Add the following annotation in the template of the NGINX Gateway Fabric Pod:
 
     ```yaml
     annotations:
@@ -79,21 +79,21 @@ If you're using *Kubernetes manifests* to install NGINX Kubernetes Gateway, you 
 
 ## Available Metrics
 
-NGINX Kubernetes Gateway exports the following metrics:
+NGINX Gateway Fabric exports the following metrics:
 
 - NGINX metrics:
   - Exported by NGINX. Refer to the [NGINX Prometheus Exporter developer docs](https://github.com/nginxinc/nginx-prometheus-exporter#metrics-for-nginx-oss)
-  - These metrics have the namespace `nginx_kubernetes_gateway`, and include the label `class` which is set to the
-    Gateway class of NKG. For example, `nginx_kubernetes_gateway_connections_accepted{class="nginx"}`.
+  - These metrics have the namespace `nginx_gateway_fabric`, and include the label `class` which is set to the
+    Gateway class of NGF. For example, `nginx_gateway_fabric_connections_accepted{class="nginx"}`.
 
-- NGINX Kubernetes Gateway metrics:
+- NGINX Gateway Fabric metrics:
   - nginx_reloads_total. Number of successful NGINX reloads.
   - nginx_reload_errors_total. Number of unsuccessful NGINX reloads.
-  - nginx_stale_config. 1 means NKG failed to configure NGINX with the latest version of the configuration, which means
+  - nginx_stale_config. 1 means NGF failed to configure NGINX with the latest version of the configuration, which means
     NGINX is running with a stale version.
   - nginx_last_reload_milliseconds. Duration in milliseconds of NGINX reloads (histogram).
-  - These metrics have the namespace `nginx_kubernetes_gateway`, and include the label `class` which is set to the
-    Gateway class of NKG. For example, `nginx_kubernetes_gateway_nginx_reloads_total{class="nginx"}`.
+  - These metrics have the namespace `nginx_gateway_fabric`, and include the label `class` which is set to the
+    Gateway class of NGF. For example, `nginx_gateway_fabric_nginx_reloads_total{class="nginx"}`.
 
 - [controller-runtime](https://github.com/kubernetes-sigs/controller-runtime) metrics. These include:
   - Total number of reconciliation errors per controller

@@ -1,6 +1,6 @@
 linters-settings:
   goimports:
-    local-prefixes: github.com/nginxinc/nginx-kubernetes-gateway
+    local-prefixes: github.com/nginxinc/nginx-gateway-fabric
   misspell:
     locale: US
   revive:

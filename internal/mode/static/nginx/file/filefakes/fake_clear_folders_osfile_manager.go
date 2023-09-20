@@ -5,7 +5,7 @@ import (
 	"io/fs"
 	"sync"
 
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/nginx/file"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/file"
 )
 
 type FakeClearFoldersOSFileManager struct {
