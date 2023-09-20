@@ -129,7 +129,7 @@ Create a Service with type `LoadBalancer` using the appropriate manifest for you
 1. Upgrade the Gateway Resources
 
     Before you upgrade, ensure the Gateway API resources are the correct version as supported by the
-    NGINX Gateway Fabric - [see the Technical Specifications](/README.md#technical-specifications).:
+    NGINX Gateway Fabric - [see the Technical Specifications](/README.md#technical-specifications).
 
     To upgrade the Gateway resources from [the Gateway API repo](https://github.com/kubernetes-sigs/gateway-api), run:
 
@@ -143,12 +143,6 @@ Create a Service with type `LoadBalancer` using the appropriate manifest for you
 
     ```shell
     kubectl apply -f deploy/manifests/crds
-    ```
-
-    The following warning is expected and can be ignored:
-
-    ```text
-    Warning: kubectl apply should be used on resource created by either kubectl create --save-config or kubectl apply.
     ```
 
 1. Upgrade NGINX Gateway Fabric Deployment
