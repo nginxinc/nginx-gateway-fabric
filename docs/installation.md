@@ -122,6 +122,48 @@ Create a Service with type `LoadBalancer` using the appropriate manifest for you
    nslookup <dns-name>
    ```
 
+## Upgrading NGINX Gateway Fabric
+
+### Upgrade NGINX Gateway Fabric from Manifests
+
+1. Upgrade the Gateway Resources
+
+    Before you upgrade, ensure the Gateway API resources are the correct version as supported by the
+    NGINX Gateway Fabric - [see the Technical Specifications](/README.md#technical-specifications).:
+
+    To upgrade the Gateway resources from [the Gateway API repo](https://github.com/kubernetes-sigs/gateway-api), run:
+
+    ```shell
+    kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v0.8.0/standard-install.yaml
+    ```
+
+1. Upgrade the NGINX Gateway Fabric CRDs
+
+    Run the following command to upgrade the NGINX Gateway Fabric CRDs:
+
+    ```shell
+    kubectl apply -f deploy/manifests/crds
+    ```
+
+    The following warning is expected and can be ignored:
+
+    ```text
+    Warning: kubectl apply should be used on resource created by either kubectl create --save-config or kubectl apply.
+    ```
+
+1. Upgrade NGINX Gateway Fabric Deployment
+
+    Run the following command to upgrade NGINX Gateway Fabric:
+
+    ```shell
+    kubectl apply -f deploy/manifests/nginx-gateway.yaml
+    ```
+
+### Upgrade NGINX Gateway Fabric using Helm
+
+To upgrade NGINX Gateway Fabric when the deployment method is Helm, please follow the instructions
+[here](/deploy/helm-chart/README.md#upgrading-the-chart).
+
 ## Uninstalling NGINX Gateway Fabric
 
 ### Uninstall NGINX Gateway Fabric from Manifests
