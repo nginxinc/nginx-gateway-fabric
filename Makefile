@@ -67,6 +67,19 @@ generate-crds: ## Generate CRDs and Go types using kubebuilder
 	go run sigs.k8s.io/controller-tools/cmd/controller-gen crd paths=./apis/... output:crd:dir=deploy/helm-chart/crds
 	go run sigs.k8s.io/controller-tools/cmd/controller-gen object paths=./apis/...
 
+.PHONY: generate-manifests
+generate-manifests: ## Generate manifests using Helm.
+	cp $(CHART_DIR)/crds/* $(MANIFEST_DIR)/crds/
+	helm template nginx-gateway $(CHART_DIR) $(HELM_TEMPLATE_COMMON_ARGS) $(HELM_TEMPLATE_EXTRA_ARGS_FOR_ALL_MANIFESTS_FILE) -n nginx-gateway | cat $(strip $(MANIFEST_DIR))/namespace.yaml - > $(strip $(MANIFEST_DIR))/nginx-gateway.yaml
+	helm template nginx-gateway $(CHART_DIR) $(HELM_TEMPLATE_COMMON_ARGS) --set metrics.enable=false -n nginx-gateway -s templates/deployment.yaml > conformance/provisioner/static-deployment.yaml
+	helm template nginx-gateway $(CHART_DIR) $(HELM_TEMPLATE_COMMON_ARGS) -n nginx-gateway -s templates/service.yaml > $(strip $(MANIFEST_DIR))/service/loadbalancer.yaml
+	helm template nginx-gateway $(CHART_DIR) $(HELM_TEMPLATE_COMMON_ARGS) --set service.annotations.'service\.beta\.kubernetes\.io\/aws-load-balancer-type'="nlb" -n nginx-gateway -s templates/service.yaml > $(strip $(MANIFEST_DIR))/service/loadbalancer-aws-nlb.yaml
+	helm template nginx-gateway $(CHART_DIR) $(HELM_TEMPLATE_COMMON_ARGS) --set service.type=NodePort --set service.externalTrafficPolicy="" -n nginx-gateway -s templates/service.yaml > $(strip $(MANIFEST_DIR))/service/nodeport.yaml
+
+.PHONY: crds-release-file
+crds-release-file: ## Generate combined crds file for releases
+	scripts/combine-crds.sh
+
 .PHONY: clean
 clean: ## Clean the build
 	-rm -r $(OUT_DIR)
@@ -131,15 +144,6 @@ debug-build: build ## Build binary with debug info, symbols, and no optimization
 
 .PHONY: build-ngf-debug-image
 build-ngf-debug-image: debug-build build-ngf-image ## Build NGF image with debug binary
-
-.PHONY: generate-manifests
-generate-manifests: ## Generate manifests using Helm.
-	cp $(CHART_DIR)/crds/* $(MANIFEST_DIR)/crds/
-	helm template nginx-gateway $(CHART_DIR) $(HELM_TEMPLATE_COMMON_ARGS) $(HELM_TEMPLATE_EXTRA_ARGS_FOR_ALL_MANIFESTS_FILE) -n nginx-gateway | cat $(strip $(MANIFEST_DIR))/namespace.yaml - > $(strip $(MANIFEST_DIR))/nginx-gateway.yaml
-	helm template nginx-gateway $(CHART_DIR) $(HELM_TEMPLATE_COMMON_ARGS) --set metrics.enable=false -n nginx-gateway -s templates/deployment.yaml > conformance/provisioner/static-deployment.yaml
-	helm template nginx-gateway $(CHART_DIR) $(HELM_TEMPLATE_COMMON_ARGS) -n nginx-gateway -s templates/service.yaml > $(strip $(MANIFEST_DIR))/service/loadbalancer.yaml
-	helm template nginx-gateway $(CHART_DIR) $(HELM_TEMPLATE_COMMON_ARGS) --set service.annotations.'service\.beta\.kubernetes\.io\/aws-load-balancer-type'="nlb" -n nginx-gateway -s templates/service.yaml > $(strip $(MANIFEST_DIR))/service/loadbalancer-aws-nlb.yaml
-	helm template nginx-gateway $(CHART_DIR) $(HELM_TEMPLATE_COMMON_ARGS) --set service.type=NodePort --set service.externalTrafficPolicy="" -n nginx-gateway -s templates/service.yaml > $(strip $(MANIFEST_DIR))/service/nodeport.yaml
 
 .PHONY: dev-all
 dev-all: deps fmt njs-fmt vet lint unit-test njs-unit-test ## Run all the development checks
