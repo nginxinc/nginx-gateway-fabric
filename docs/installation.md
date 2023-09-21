@@ -128,8 +128,11 @@ Create a Service with type `LoadBalancer` using the appropriate manifest for you
 
 1. Upgrade the Gateway Resources
 
-    Before you upgrade, ensure the Gateway API resources are the correct version as supported by the
-    NGINX Gateway Fabric - [see the Technical Specifications](/README.md#technical-specifications).
+   Before you upgrade, ensure the Gateway API resources are the correct version as supported by the NGINX Gateway
+   Fabric - [see the Technical Specifications](/README.md#technical-specifications).
+   The [release notes](https://github.com/kubernetes-sigs/gateway-api/releases/tag/v0.8.0) of the new version of the
+   Gateway API might include important upgrade-specific notes and instructions. We advise to check the release notes of
+   all versions between the one you're using and the new one.
 
     To upgrade the Gateway resources from [the Gateway API repo](https://github.com/kubernetes-sigs/gateway-api), run:
 
