@@ -258,7 +258,7 @@ func (upd *UpdaterImpl) writeStatuses(
 	obj client.Object,
 	statusSetter func(client.Object),
 ) {
-	// To preserve the error message inside of wait.ExponentialBackoffWithContext
+	// To preserve and log the error message inside the function in wait.ExponentialBackoffWithContext
 	var lastError error
 
 	err := wait.ExponentialBackoffWithContext(
@@ -266,7 +266,7 @@ func (upd *UpdaterImpl) writeStatuses(
 		wait.Backoff{
 			Duration: time.Millisecond * 200,
 			Factor:   2,
-			Jitter:   1,
+			Jitter:   0.5,
 			Steps:    4,
 			Cap:      time.Millisecond * 3000,
 		},
@@ -289,7 +289,7 @@ func (upd *UpdaterImpl) writeStatuses(
 			return true, nil
 		},
 	)
-	if !errors.Is(err, context.Canceled) {
+	if err != nil && !errors.Is(err, context.Canceled) {
 		upd.cfg.Logger.Error(
 			fmt.Errorf("%s : %w", err.Error(), lastError),
 			"Failed to update status",

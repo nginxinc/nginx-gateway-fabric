@@ -410,19 +410,19 @@ var _ = Describe("Updater", func() {
 		When("updating with canceled context", func() {
 			It("should not have the updated status of GatewayClass in the API server", func() {
 				latestGc := &v1beta1.GatewayClass{}
-				expectedGc := createExpectedGCWithGeneration(2)
+				expectedGc := createExpectedGCWithGeneration(1)
 
 				err := client.Get(context.Background(), types.NamespacedName{Name: gcName}, latestGc)
 				Expect(err).Should(Not(HaveOccurred()))
 
 				expectedGc.ResourceVersion = latestGc.ResourceVersion
 
-				Expect(helpers.Diff(expectedGc, latestGc)).ToNot(BeEmpty())
+				Expect(helpers.Diff(expectedGc, latestGc)).To(BeEmpty())
 			})
 
 			It("should not have the updated status of Gateway in the API server", func() {
 				latestGw := &v1beta1.Gateway{}
-				expectedGw := createExpectedGwWithGeneration(2)
+				expectedGw := createExpectedGwWithGeneration(1)
 
 				err := client.Get(
 					context.Background(),
@@ -433,7 +433,7 @@ var _ = Describe("Updater", func() {
 
 				expectedGw.ResourceVersion = latestGw.ResourceVersion
 
-				Expect(helpers.Diff(expectedGw, latestGw)).ToNot(BeEmpty())
+				Expect(helpers.Diff(expectedGw, latestGw)).To(BeEmpty())
 			})
 
 			It("should not have the updated status of ignored Gateway in the API server", func() {
@@ -479,7 +479,7 @@ var _ = Describe("Updater", func() {
 
 		When("updating with canceled context", func() {
 			It("should not have the updated status of the NginxGateway in the API server", func() {
-				latestNG := &nkgAPI.NginxGateway{}
+				latestNG := &ngfAPI.NginxGateway{}
 				expectedNG := createExpectedNGWithGeneration(1)
 
 				err := client.Get(
