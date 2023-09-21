@@ -331,7 +331,7 @@ var _ = Describe("Updater", func() {
 			expectedGc := createExpectedGCWithGeneration(1)
 
 			err := client.Get(context.Background(), types.NamespacedName{Name: gcName}, latestGc)
-			Expect(err).Should(Not(HaveOccurred()))
+			Expect(err).ToNot(HaveOccurred())
 
 			expectedGc.ResourceVersion = latestGc.ResourceVersion // updating the status changes the ResourceVersion
 
@@ -343,7 +343,7 @@ var _ = Describe("Updater", func() {
 			expectedGw := createExpectedGwWithGeneration(1)
 
 			err := client.Get(context.Background(), types.NamespacedName{Namespace: "test", Name: "gateway"}, latestGw)
-			Expect(err).Should(Not(HaveOccurred()))
+			Expect(err).ToNot(HaveOccurred())
 
 			expectedGw.ResourceVersion = latestGw.ResourceVersion
 
@@ -359,7 +359,7 @@ var _ = Describe("Updater", func() {
 				types.NamespacedName{Namespace: "test", Name: "ignored-gateway"},
 				latestGw,
 			)
-			Expect(err).Should(Not(HaveOccurred()))
+			Expect(err).ToNot(HaveOccurred())
 
 			expectedGw.ResourceVersion = latestGw.ResourceVersion
 
@@ -371,7 +371,7 @@ var _ = Describe("Updater", func() {
 			expectedHR := createExpectedHR()
 
 			err := client.Get(context.Background(), types.NamespacedName{Namespace: "test", Name: "route1"}, latestHR)
-			Expect(err).Should(Not(HaveOccurred()))
+			Expect(err).ToNot(HaveOccurred())
 
 			expectedHR.ResourceVersion = latestHR.ResourceVersion
 
@@ -391,7 +391,7 @@ var _ = Describe("Updater", func() {
 				types.NamespacedName{Namespace: "nginx-gateway", Name: "nginx-gateway-config"},
 				latestNG,
 			)
-			Expect(err).Should(Not(HaveOccurred()))
+			Expect(err).ToNot(HaveOccurred())
 
 			expectedNG.ResourceVersion = latestNG.ResourceVersion
 
@@ -413,7 +413,7 @@ var _ = Describe("Updater", func() {
 				expectedGc := createExpectedGCWithGeneration(1)
 
 				err := client.Get(context.Background(), types.NamespacedName{Name: gcName}, latestGc)
-				Expect(err).Should(Not(HaveOccurred()))
+				Expect(err).ToNot(HaveOccurred())
 
 				expectedGc.ResourceVersion = latestGc.ResourceVersion
 
@@ -429,7 +429,7 @@ var _ = Describe("Updater", func() {
 					types.NamespacedName{Namespace: "test", Name: "gateway"},
 					latestGw,
 				)
-				Expect(err).Should(Not(HaveOccurred()))
+				Expect(err).ToNot(HaveOccurred())
 
 				expectedGw.ResourceVersion = latestGw.ResourceVersion
 
@@ -445,7 +445,7 @@ var _ = Describe("Updater", func() {
 					types.NamespacedName{Namespace: "test", Name: "ignored-gateway"},
 					latestGw,
 				)
-				Expect(err).Should(Not(HaveOccurred()))
+				Expect(err).ToNot(HaveOccurred())
 
 				expectedGw.ResourceVersion = latestGw.ResourceVersion
 
@@ -462,7 +462,7 @@ var _ = Describe("Updater", func() {
 					types.NamespacedName{Namespace: "test", Name: "route1"},
 					latestHR,
 				)
-				Expect(err).Should(Not(HaveOccurred()))
+				Expect(err).ToNot(HaveOccurred())
 
 				expectedHR.ResourceVersion = latestHR.ResourceVersion
 
@@ -487,7 +487,7 @@ var _ = Describe("Updater", func() {
 					types.NamespacedName{Namespace: "nginx-gateway", Name: "nginx-gateway-config"},
 					latestNG,
 				)
-				Expect(err).Should(Not(HaveOccurred()))
+				Expect(err).ToNot(HaveOccurred())
 
 				expectedNG.ResourceVersion = latestNG.ResourceVersion
 
@@ -514,7 +514,7 @@ var _ = Describe("Updater", func() {
 					types.NamespacedName{Namespace: "test", Name: "gateway"},
 					latestGw,
 				)
-				Expect(err).Should(Not(HaveOccurred()))
+				Expect(err).ToNot(HaveOccurred())
 
 				expectedGw.ResourceVersion = latestGw.ResourceVersion
 
@@ -530,7 +530,7 @@ var _ = Describe("Updater", func() {
 					types.NamespacedName{Namespace: "nginx-gateway", Name: "nginx-gateway-config"},
 					latestNG,
 				)
-				Expect(err).Should(Not(HaveOccurred()))
+				Expect(err).ToNot(HaveOccurred())
 
 				expectedNG.ResourceVersion = latestNG.ResourceVersion
 
@@ -551,7 +551,7 @@ var _ = Describe("Updater", func() {
 					types.NamespacedName{Namespace: "test", Name: "gateway"},
 					latestGw,
 				)
-				Expect(err).Should(Not(HaveOccurred()))
+				Expect(err).ToNot(HaveOccurred())
 
 				expectedGw.ResourceVersion = latestGw.ResourceVersion
 
@@ -567,7 +567,7 @@ var _ = Describe("Updater", func() {
 					types.NamespacedName{Namespace: "nginx-gateway", Name: "nginx-gateway-config"},
 					latestNG,
 				)
-				Expect(err).Should(Not(HaveOccurred()))
+				Expect(err).ToNot(HaveOccurred())
 
 				expectedNG.ResourceVersion = latestNG.ResourceVersion
 
@@ -591,7 +591,7 @@ var _ = Describe("Updater", func() {
 					types.NamespacedName{Namespace: "test", Name: "gateway"},
 					latestGw,
 				)
-				Expect(err).Should(Not(HaveOccurred()))
+				Expect(err).ToNot(HaveOccurred())
 
 				expectedGw.ResourceVersion = latestGw.ResourceVersion
 
@@ -610,7 +610,7 @@ var _ = Describe("Updater", func() {
 					types.NamespacedName{Namespace: "nginx-gateway", Name: "nginx-gateway-config"},
 					latestNG,
 				)
-				Expect(err).Should(Not(HaveOccurred()))
+				Expect(err).ToNot(HaveOccurred())
 
 				expectedNG.ResourceVersion = latestNG.ResourceVersion
 
@@ -644,7 +644,7 @@ var _ = Describe("Updater", func() {
 					types.NamespacedName{Namespace: "test", Name: "gateway"},
 					latestGw,
 				)
-				Expect(err).Should(Not(HaveOccurred()))
+				Expect(err).ToNot(HaveOccurred())
 
 				// Before this test there were 4 updates to the Gateway resource.
 				// So now the resource version should equal 24.
@@ -701,7 +701,7 @@ var _ = Describe("Updater", func() {
 			latestGc := &v1beta1.GatewayClass{}
 
 			err := client.Get(context.Background(), types.NamespacedName{Name: gcName}, latestGc)
-			Expect(err).Should(Not(HaveOccurred()))
+			Expect(err).ToNot(HaveOccurred())
 
 			Expect(latestGc.Status).To(BeZero())
 		})
