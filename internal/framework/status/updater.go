@@ -75,7 +75,7 @@ type UpdaterConfig struct {
 // Gateway is removed, our Gateway will not restore the status until the EventLoop invokes the StatusUpdater as a
 // result of processing some other new change to a resource(s).
 // FIXME(pleshakov): Make updater production ready
-// https://github.com/nginxinc/nginx-kubernetes-gateway/issues/691
+// https://github.com/nginxinc/nginx-gateway-fabric/issues/691
 
 // UpdaterImpl needs to be modified to support new resources. Consider making UpdaterImpl extendable, so that it
 // goes along the Open-closed principle.
@@ -127,7 +127,7 @@ func NewUpdater(cfg UpdaterConfig) *UpdaterImpl {
 
 func (upd *UpdaterImpl) Update(ctx context.Context, status Status) {
 	// FIXME(pleshakov) Merge the new Conditions in the status with the existing Conditions
-	// https://github.com/nginxinc/nginx-kubernetes-gateway/issues/558
+	// https://github.com/nginxinc/nginx-gateway-fabric/issues/558
 
 	defer upd.lock.Unlock()
 	upd.lock.Lock()
