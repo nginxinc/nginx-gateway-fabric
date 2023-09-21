@@ -153,29 +153,16 @@ func (upd *UpdaterImpl) updateNginxGateway(ctx context.Context, status *NginxGat
 	upd.cfg.Logger.Info("Updating Nginx Gateway status")
 
 	if status != nil {
-		statusUpdatedCh := make(chan struct{})
-
-		go func() {
-			upd.writeStatuses(ctx, status.NsName, &ngfAPI.NginxGateway{}, func(object client.Object) {
-				ng := object.(*ngfAPI.NginxGateway)
-				ng.Status = ngfAPI.NginxGatewayStatus{
-					Conditions: convertConditions(
-						status.Conditions,
-						status.ObservedGeneration,
-						upd.cfg.Clock.Now(),
-					),
-				}
-			})
-			statusUpdatedCh <- struct{}{}
-		}()
-		// Block here as the above goroutine runs. If the context gets canceled, we unblock and the method
-		// returns. The goroutine continues but is canceled when the controller exits. If the goroutine
-		// finishes and writes to the channel "statusUpdatedCh", we know that it is done updating
-		// and this method exits.
-		select {
-		case <-ctx.Done():
-		case <-statusUpdatedCh:
-		}
+		upd.writeStatuses(ctx, status.NsName, &ngfAPI.NginxGateway{}, func(object client.Object) {
+			ng := object.(*ngfAPI.NginxGateway)
+			ng.Status = ngfAPI.NginxGatewayStatus{
+				Conditions: convertConditions(
+					status.Conditions,
+					status.ObservedGeneration,
+					upd.cfg.Clock.Now(),
+				),
+			}
+		})
 	}
 }
 
@@ -189,61 +176,48 @@ func (upd *UpdaterImpl) updateGatewayAPI(ctx context.Context, statuses GatewayAP
 
 	upd.cfg.Logger.Info("Updating Gateway API statuses")
 
-	statusUpdatedCh := make(chan struct{})
-
-	go func() {
-		if upd.cfg.UpdateGatewayClassStatus {
-			for nsname, gcs := range statuses.GatewayClassStatuses {
-				select {
-				case <-ctx.Done():
-					return
-				default:
-				}
-				upd.writeStatuses(ctx, nsname, &v1beta1.GatewayClass{}, func(object client.Object) {
-					gc := object.(*v1beta1.GatewayClass)
-					gc.Status = prepareGatewayClassStatus(gcs, upd.cfg.Clock.Now())
-				},
-				)
-			}
-		}
-
-		for nsname, gs := range statuses.GatewayStatuses {
+	if upd.cfg.UpdateGatewayClassStatus {
+		for nsname, gcs := range statuses.GatewayClassStatuses {
 			select {
 			case <-ctx.Done():
 				return
 			default:
 			}
-			upd.writeStatuses(ctx, nsname, &v1beta1.Gateway{}, func(object client.Object) {
-				gw := object.(*v1beta1.Gateway)
-				gw.Status = prepareGatewayStatus(gs, upd.cfg.PodIP, upd.cfg.Clock.Now())
-			})
+			upd.writeStatuses(ctx, nsname, &v1beta1.GatewayClass{}, func(object client.Object) {
+				gc := object.(*v1beta1.GatewayClass)
+				gc.Status = prepareGatewayClassStatus(gcs, upd.cfg.Clock.Now())
+			},
+			)
 		}
+	}
 
-		for nsname, rs := range statuses.HTTPRouteStatuses {
-			select {
-			case <-ctx.Done():
-				return
-			default:
-			}
-			upd.writeStatuses(ctx, nsname, &v1beta1.HTTPRoute{}, func(object client.Object) {
-				hr := object.(*v1beta1.HTTPRoute)
-				// statuses.GatewayStatus is never nil when len(statuses.HTTPRouteStatuses) > 0
-				hr.Status = prepareHTTPRouteStatus(
-					rs,
-					upd.cfg.GatewayCtlrName,
-					upd.cfg.Clock.Now(),
-				)
-			})
+	for nsname, gs := range statuses.GatewayStatuses {
+		select {
+		case <-ctx.Done():
+			return
+		default:
 		}
-		statusUpdatedCh <- struct{}{}
-	}()
-	// Block here as the above goroutine runs. If the context gets canceled, we unblock and the method
-	// returns. The goroutine continues but is canceled when the controller exits. If the goroutine
-	// finishes and writes to the channel "statusUpdatedCh", we know that it is done updating
-	// and this method exits.
-	select {
-	case <-ctx.Done():
-	case <-statusUpdatedCh:
+		upd.writeStatuses(ctx, nsname, &v1beta1.Gateway{}, func(object client.Object) {
+			gw := object.(*v1beta1.Gateway)
+			gw.Status = prepareGatewayStatus(gs, upd.cfg.PodIP, upd.cfg.Clock.Now())
+		})
+	}
+
+	for nsname, rs := range statuses.HTTPRouteStatuses {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
+		upd.writeStatuses(ctx, nsname, &v1beta1.HTTPRoute{}, func(object client.Object) {
+			hr := object.(*v1beta1.HTTPRoute)
+			// statuses.GatewayStatus is never nil when len(statuses.HTTPRouteStatuses) > 0
+			hr.Status = prepareHTTPRouteStatus(
+				rs,
+				upd.cfg.GatewayCtlrName,
+				upd.cfg.Clock.Now(),
+			)
+		})
 	}
 }
 
