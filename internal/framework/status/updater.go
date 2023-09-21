@@ -261,6 +261,7 @@ func (upd *UpdaterImpl) writeStatuses(
 	// To preserve and log the error message inside the function in wait.ExponentialBackoffWithContext
 	var lastError error
 
+	// Inline function returns true if the condition is satisfied, or an error if the loop should be aborted.
 	err := wait.ExponentialBackoffWithContext(
 		ctx,
 		wait.Backoff{
@@ -271,6 +272,11 @@ func (upd *UpdaterImpl) writeStatuses(
 			Cap:      time.Millisecond * 3000,
 		},
 		func(ctx context.Context) (bool, error) {
+			// The function handles errors by reporting them in the logs.
+			// We need to get the latest version of the resource.
+			// Otherwise, the Update status API call can fail.
+			// Note: the default client uses a cache for reads, so we're not making an unnecessary API call here.
+			// the default is configurable in the Manager options.
 			if lastError = upd.cfg.Client.Get(ctx, nsname, obj); lastError != nil {
 				// apierrors.IsNotFound(err) can happen when the resource is deleted,
 				// so no need to retry or return an error.
