@@ -261,7 +261,6 @@ func (upd *UpdaterImpl) writeStatuses(
 	// To preserve and log the error message inside the function in wait.ExponentialBackoffWithContext
 	var lastError error
 
-	// Inline function returns true if the condition is satisfied, or an error if the loop should be aborted.
 	err := wait.ExponentialBackoffWithContext(
 		ctx,
 		wait.Backoff{
@@ -271,6 +270,7 @@ func (upd *UpdaterImpl) writeStatuses(
 			Steps:    4,
 			Cap:      time.Millisecond * 3000,
 		},
+		// Function returns true if the condition is satisfied, or an error if the loop should be aborted.
 		func(ctx context.Context) (bool, error) {
 			// The function handles errors by reporting them in the logs.
 			// We need to get the latest version of the resource.
