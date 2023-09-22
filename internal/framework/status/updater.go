@@ -254,6 +254,7 @@ func (upd *UpdaterImpl) writeStatuses(
 				if apierrors.IsNotFound(err) {
 					upd.cfg.Logger.V(1).Info(
 						"Resource was not found when trying to update status",
+						"error", err,
 						"namespace", nsname.Namespace,
 						"name", nsname.Name,
 						"kind", obj.GetObjectKind().GroupVersionKind().Kind)
@@ -261,6 +262,7 @@ func (upd *UpdaterImpl) writeStatuses(
 				}
 				upd.cfg.Logger.V(1).Info(
 					"Encountered error when getting resource to update status",
+					"error", err,
 					"namespace", nsname.Namespace,
 					"name", nsname.Name,
 					"kind", obj.GetObjectKind().GroupVersionKind().Kind)
@@ -272,6 +274,7 @@ func (upd *UpdaterImpl) writeStatuses(
 			if err := upd.cfg.Client.Status().Update(ctx, obj); err != nil {
 				upd.cfg.Logger.V(1).Info(
 					"Encountered error updating status",
+					"error", err,
 					"namespace", nsname.Namespace,
 					"name", nsname.Name,
 					"kind", obj.GetObjectKind().GroupVersionKind().Kind)
