@@ -232,9 +232,6 @@ func (upd *UpdaterImpl) writeStatuses(
 	obj client.Object,
 	statusSetter func(client.Object),
 ) {
-	// To preserve and log the error message inside the function in wait.ExponentialBackoffWithContext
-	var lastError error
-
 	err := wait.ExponentialBackoffWithContext(
 		ctx,
 		wait.Backoff{
@@ -251,18 +248,33 @@ func (upd *UpdaterImpl) writeStatuses(
 			// Otherwise, the Update status API call can fail.
 			// Note: the default client uses a cache for reads, so we're not making an unnecessary API call here.
 			// the default is configurable in the Manager options.
-			if lastError = upd.cfg.Client.Get(ctx, nsname, obj); lastError != nil {
+			if err := upd.cfg.Client.Get(ctx, nsname, obj); err != nil {
 				// apierrors.IsNotFound(err) can happen when the resource is deleted,
 				// so no need to retry or return an error.
-				if apierrors.IsNotFound(lastError) {
+				if apierrors.IsNotFound(err) {
+					upd.cfg.Logger.V(1).Info(
+						"Resource was not found when trying to update status",
+						"namespace", nsname.Namespace,
+						"name", nsname.Name,
+						"kind", obj.GetObjectKind().GroupVersionKind().Kind)
 					return true, nil
 				}
+				upd.cfg.Logger.V(1).Info(
+					"Encountered error when getting resource to update status",
+					"namespace", nsname.Namespace,
+					"name", nsname.Name,
+					"kind", obj.GetObjectKind().GroupVersionKind().Kind)
 				return false, nil
 			}
 
 			statusSetter(obj)
 
-			if lastError = upd.cfg.Client.Status().Update(ctx, obj); lastError != nil {
+			if err := upd.cfg.Client.Status().Update(ctx, obj); err != nil {
+				upd.cfg.Logger.V(1).Info(
+					"Encountered error updating status",
+					"namespace", nsname.Namespace,
+					"name", nsname.Name,
+					"kind", obj.GetObjectKind().GroupVersionKind().Kind)
 				return false, nil
 			}
 
@@ -271,7 +283,7 @@ func (upd *UpdaterImpl) writeStatuses(
 	)
 	if err != nil && !errors.Is(err, context.Canceled) {
 		upd.cfg.Logger.Error(
-			fmt.Errorf("%s : %w", err.Error(), lastError),
+			err,
 			"Failed to update status",
 			"namespace", nsname.Namespace,
 			"name", nsname.Name,
