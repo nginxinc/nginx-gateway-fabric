@@ -35,7 +35,7 @@ page.
 1. Install the Gateway API resources from the standard channel (the CRDs and the validating webhook):
 
    ```shell
-   kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v0.8.0/standard-install.yaml
+   kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v0.8.1/standard-install.yaml
    ```
 
 1. Deploy the NGINX Gateway Fabric CRDs:
@@ -130,14 +130,14 @@ Create a Service with type `LoadBalancer` using the appropriate manifest for you
 
    Before you upgrade, ensure the Gateway API resources are the correct version as supported by the NGINX Gateway
    Fabric - [see the Technical Specifications](/README.md#technical-specifications).
-   The [release notes](https://github.com/kubernetes-sigs/gateway-api/releases/tag/v0.8.0) of the new version of the
+   The [release notes](https://github.com/kubernetes-sigs/gateway-api/releases/tag/v0.8.1) of the new version of the
    Gateway API might include important upgrade-specific notes and instructions. We advise to check the release notes of
    all versions between the one you're using and the new one.
 
     To upgrade the Gateway resources from [the Gateway API repo](https://github.com/kubernetes-sigs/gateway-api), run:
 
     ```shell
-    kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v0.8.0/standard-install.yaml
+    kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v0.8.1/standard-install.yaml
     ```
 
 1. Upgrade the NGINX Gateway Fabric CRDs
@@ -182,7 +182,7 @@ To upgrade NGINX Gateway Fabric when the deployment method is Helm, please follo
    running in the cluster!**
 
    ```shell
-   kubectl delete -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v0.8.0/standard-install.yaml
+   kubectl delete -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v0.8.1/standard-install.yaml
    ```
 
 ### Uninstall NGINX Gateway Fabric using Helm

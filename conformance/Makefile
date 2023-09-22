@@ -1,7 +1,7 @@
 NGF_TAG = edge
 NGF_PREFIX = nginx-gateway-fabric
 NGINX_IMAGE_NAME = $(NGF_PREFIX)/nginx
-GW_API_VERSION ?= 0.8.0
+GW_API_VERSION ?= 0.8.1
 GATEWAY_CLASS = nginx
 SUPPORTED_FEATURES = HTTPRoute,HTTPRouteQueryParamMatching,HTTPRouteMethodMatching,HTTPRoutePortRedirect,HTTPRouteSchemeRedirect,GatewayClassObservedGenerationBump
 KIND_IMAGE ?= $(shell grep -m1 'FROM kindest/node' <tests/Dockerfile | awk -F'[ ]' '{print $$2}')
