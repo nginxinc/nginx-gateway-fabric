@@ -15,6 +15,7 @@ import (
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/controller"
 )
 
 //go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . Updater
@@ -242,47 +243,7 @@ func (upd *UpdaterImpl) writeStatuses(
 			Cap:      time.Millisecond * 3000,
 		},
 		// Function returns true if the condition is satisfied, or an error if the loop should be aborted.
-		func(ctx context.Context) (bool, error) {
-			// The function handles errors by reporting them in the logs.
-			// We need to get the latest version of the resource.
-			// Otherwise, the Update status API call can fail.
-			// Note: the default client uses a cache for reads, so we're not making an unnecessary API call here.
-			// the default is configurable in the Manager options.
-			if err := upd.cfg.Client.Get(ctx, nsname, obj); err != nil {
-				// apierrors.IsNotFound(err) can happen when the resource is deleted,
-				// so no need to retry or return an error.
-				if apierrors.IsNotFound(err) {
-					upd.cfg.Logger.V(1).Info(
-						"Resource was not found when trying to update status",
-						"error", err,
-						"namespace", nsname.Namespace,
-						"name", nsname.Name,
-						"kind", obj.GetObjectKind().GroupVersionKind().Kind)
-					return true, nil
-				}
-				upd.cfg.Logger.V(1).Info(
-					"Encountered error when getting resource to update status",
-					"error", err,
-					"namespace", nsname.Namespace,
-					"name", nsname.Name,
-					"kind", obj.GetObjectKind().GroupVersionKind().Kind)
-				return false, nil
-			}
-
-			statusSetter(obj)
-
-			if err := upd.cfg.Client.Status().Update(ctx, obj); err != nil {
-				upd.cfg.Logger.V(1).Info(
-					"Encountered error updating status",
-					"error", err,
-					"namespace", nsname.Namespace,
-					"name", nsname.Name,
-					"kind", obj.GetObjectKind().GroupVersionKind().Kind)
-				return false, nil
-			}
-
-			return true, nil
-		},
+		ConditionWithContextFunc(upd.cfg.Client, upd.cfg.Client.Status(), nsname, obj, upd.cfg.Logger, statusSetter),
 	)
 	if err != nil && !errors.Is(err, context.Canceled) {
 		upd.cfg.Logger.Error(
@@ -291,5 +252,58 @@ func (upd *UpdaterImpl) writeStatuses(
 			"namespace", nsname.Namespace,
 			"name", nsname.Name,
 			"kind", obj.GetObjectKind().GroupVersionKind().Kind)
+	}
+}
+
+// ConditionWithContextFunc returns a function which will be used in wait.ExponentialBackoffWithContext.
+// Exported for testing purposes.
+func ConditionWithContextFunc(
+	getter controller.Getter,
+	updater StatusUpdater,
+	nsname types.NamespacedName,
+	obj client.Object,
+	logger logr.Logger,
+	statusSetter func(client.Object),
+) func(ctx context.Context) (bool, error) {
+	return func(ctx context.Context) (bool, error) {
+		// The function handles errors by reporting them in the logs.
+		// We need to get the latest version of the resource.
+		// Otherwise, the Update status API call can fail.
+		// Note: the default client uses a cache for reads, so we're not making an unnecessary API call here.
+		// the default is configurable in the Manager options.
+		if err := getter.Get(ctx, nsname, obj); err != nil {
+			// apierrors.IsNotFound(err) can happen when the resource is deleted,
+			// so no need to retry or return an error.
+			if apierrors.IsNotFound(err) {
+				logger.V(1).Info(
+					"Resource was not found when trying to update status",
+					"error", err,
+					"namespace", nsname.Namespace,
+					"name", nsname.Name,
+					"kind", obj.GetObjectKind().GroupVersionKind().Kind)
+				return true, nil
+			}
+			logger.V(1).Info(
+				"Encountered error when getting resource to update status",
+				"error", err,
+				"namespace", nsname.Namespace,
+				"name", nsname.Name,
+				"kind", obj.GetObjectKind().GroupVersionKind().Kind)
+			return false, nil
+		}
+
+		statusSetter(obj)
+
+		if err := updater.Update(ctx, obj); err != nil {
+			logger.V(1).Info(
+				"Encountered error updating status",
+				"error", err,
+				"namespace", nsname.Namespace,
+				"name", nsname.Name,
+				"kind", obj.GetObjectKind().GroupVersionKind().Kind)
+			return false, nil
+		}
+
+		return true, nil
 	}
 }
