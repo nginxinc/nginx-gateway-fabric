@@ -238,7 +238,7 @@ func (upd *UpdaterImpl) writeStatuses(
 			Cap:      time.Millisecond * 3000,
 		},
 		// Function returns true if the condition is satisfied, or an error if the loop should be aborted.
-		ConditionWithContextFunc(upd.cfg.Client, upd.cfg.Client.Status(), nsname, obj, upd.cfg.Logger, statusSetter),
+		NewRetryUpdateFunc(upd.cfg.Client, upd.cfg.Client.Status(), nsname, obj, upd.cfg.Logger, statusSetter),
 	)
 	if err != nil && !errors.Is(err, context.Canceled) {
 		upd.cfg.Logger.Error(
@@ -250,7 +250,7 @@ func (upd *UpdaterImpl) writeStatuses(
 	}
 }
 
-// ConditionWithContextFunc returns a function which will be used in wait.ExponentialBackoffWithContext.
+// NewRetryUpdateFunc returns a function which will be used in wait.ExponentialBackoffWithContext.
 // The function will attempt to Update a kubernetes resource and will be retried in
 // wait.ExponentialBackoffWithContext if an error occurs. Exported for testing purposes.
 //
@@ -259,9 +259,9 @@ func (upd *UpdaterImpl) writeStatuses(
 // the linter will complain if we return nil if an error was found.
 //
 //nolint:nilerr
-func ConditionWithContextFunc(
+func NewRetryUpdateFunc(
 	getter controller.Getter,
-	updater StatusUpdater,
+	updater K8sUpdater,
 	nsname types.NamespacedName,
 	obj client.Object,
 	logger logr.Logger,

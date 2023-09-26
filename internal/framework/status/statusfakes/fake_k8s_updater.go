@@ -9,7 +9,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-type FakeStatusUpdater struct {
+type FakeK8sUpdater struct {
 	UpdateStub        func(context.Context, client.Object, ...client.SubResourceUpdateOption) error
 	updateMutex       sync.RWMutex
 	updateArgsForCall []struct {
@@ -27,7 +27,7 @@ type FakeStatusUpdater struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeStatusUpdater) Update(arg1 context.Context, arg2 client.Object, arg3 ...client.SubResourceUpdateOption) error {
+func (fake *FakeK8sUpdater) Update(arg1 context.Context, arg2 client.Object, arg3 ...client.SubResourceUpdateOption) error {
 	fake.updateMutex.Lock()
 	ret, specificReturn := fake.updateReturnsOnCall[len(fake.updateArgsForCall)]
 	fake.updateArgsForCall = append(fake.updateArgsForCall, struct {
@@ -48,26 +48,26 @@ func (fake *FakeStatusUpdater) Update(arg1 context.Context, arg2 client.Object, 
 	return fakeReturns.result1
 }
 
-func (fake *FakeStatusUpdater) UpdateCallCount() int {
+func (fake *FakeK8sUpdater) UpdateCallCount() int {
 	fake.updateMutex.RLock()
 	defer fake.updateMutex.RUnlock()
 	return len(fake.updateArgsForCall)
 }
 
-func (fake *FakeStatusUpdater) UpdateCalls(stub func(context.Context, client.Object, ...client.SubResourceUpdateOption) error) {
+func (fake *FakeK8sUpdater) UpdateCalls(stub func(context.Context, client.Object, ...client.SubResourceUpdateOption) error) {
 	fake.updateMutex.Lock()
 	defer fake.updateMutex.Unlock()
 	fake.UpdateStub = stub
 }
 
-func (fake *FakeStatusUpdater) UpdateArgsForCall(i int) (context.Context, client.Object, []client.SubResourceUpdateOption) {
+func (fake *FakeK8sUpdater) UpdateArgsForCall(i int) (context.Context, client.Object, []client.SubResourceUpdateOption) {
 	fake.updateMutex.RLock()
 	defer fake.updateMutex.RUnlock()
 	argsForCall := fake.updateArgsForCall[i]
 	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
 }
 
-func (fake *FakeStatusUpdater) UpdateReturns(result1 error) {
+func (fake *FakeK8sUpdater) UpdateReturns(result1 error) {
 	fake.updateMutex.Lock()
 	defer fake.updateMutex.Unlock()
 	fake.UpdateStub = nil
@@ -76,7 +76,7 @@ func (fake *FakeStatusUpdater) UpdateReturns(result1 error) {
 	}{result1}
 }
 
-func (fake *FakeStatusUpdater) UpdateReturnsOnCall(i int, result1 error) {
+func (fake *FakeK8sUpdater) UpdateReturnsOnCall(i int, result1 error) {
 	fake.updateMutex.Lock()
 	defer fake.updateMutex.Unlock()
 	fake.UpdateStub = nil
@@ -90,7 +90,7 @@ func (fake *FakeStatusUpdater) UpdateReturnsOnCall(i int, result1 error) {
 	}{result1}
 }
 
-func (fake *FakeStatusUpdater) Invocations() map[string][][]interface{} {
+func (fake *FakeK8sUpdater) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
 	fake.updateMutex.RLock()
@@ -102,7 +102,7 @@ func (fake *FakeStatusUpdater) Invocations() map[string][][]interface{} {
 	return copiedInvocations
 }
 
-func (fake *FakeStatusUpdater) recordInvocation(key string, args []interface{}) {
+func (fake *FakeK8sUpdater) recordInvocation(key string, args []interface{}) {
 	fake.invocationsMutex.Lock()
 	defer fake.invocationsMutex.Unlock()
 	if fake.invocations == nil {
@@ -114,4 +114,4 @@ func (fake *FakeStatusUpdater) recordInvocation(key string, args []interface{}) 
 	fake.invocations[key] = append(fake.invocations[key], args)
 }
 
-var _ status.StatusUpdater = new(FakeStatusUpdater)
+var _ status.K8sUpdater = new(FakeK8sUpdater)
