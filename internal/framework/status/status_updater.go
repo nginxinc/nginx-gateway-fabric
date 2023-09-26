@@ -11,6 +11,9 @@ import (
 // StatusUpdater updates a resource from the k8s API.
 // It allows us to mock the client.Reader.Status.Update method.
 //
+// There already is an interface in updater.go that is named "Updater"
+// so naming this StatusUpdater works, but the linter does not like
+// the interface name starting with the package name.
 // nolint:revive
 type StatusUpdater interface {
 	// Update is from client.StatusClient.SubResourceWriter.

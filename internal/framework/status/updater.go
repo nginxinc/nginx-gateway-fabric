@@ -222,11 +222,6 @@ func (upd *UpdaterImpl) updateGatewayAPI(ctx context.Context, statuses GatewayAP
 	}
 }
 
-// The function in wait.ExponentialBackoffWithContext will retry if it returns nil as its error,
-// which is what we want if we encounter an error from the functions we call. However,
-// the linter will complain if we return nil if an error was found.
-//
-//nolint:nilerr
 func (upd *UpdaterImpl) writeStatuses(
 	ctx context.Context,
 	nsname types.NamespacedName,
@@ -256,7 +251,14 @@ func (upd *UpdaterImpl) writeStatuses(
 }
 
 // ConditionWithContextFunc returns a function which will be used in wait.ExponentialBackoffWithContext.
-// Exported for testing purposes.
+// The function will attempt to Update a kubernetes resource and will be retried in
+// wait.ExponentialBackoffWithContext if an error occurs. Exported for testing purposes.
+//
+// wait.ExponentialBackoffWithContext will retry if this function returns nil as its error,
+// which is what we want if we encounter an error from the functions we call. However,
+// the linter will complain if we return nil if an error was found.
+//
+//nolint:nilerr
 func ConditionWithContextFunc(
 	getter controller.Getter,
 	updater StatusUpdater,

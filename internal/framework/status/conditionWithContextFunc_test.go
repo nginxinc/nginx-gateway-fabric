@@ -22,6 +22,7 @@ func TestConditionWithContextFunc_GetFails(t *testing.T) {
 	g := NewWithT(t)
 	fakeStatusUpdater := &statusfakes.FakeStatusUpdater{}
 	fakeGetter := &controllerfakes.FakeGetter{}
+
 	fakeGetter.GetReturns(errors.New("failed to get resource"))
 	f := status.ConditionWithContextFunc(
 		fakeGetter,
@@ -31,6 +32,7 @@ func TestConditionWithContextFunc_GetFails(t *testing.T) {
 		logr.New(nil),
 		func(client.Object) {})
 	boolean, err := f(context.Background())
+
 	g.Expect(err).ToNot(HaveOccurred())
 	g.Expect(boolean).To(BeFalse())
 }
@@ -39,6 +41,7 @@ func TestConditionWithContextFunc_GetFailsIsNotFound(t *testing.T) {
 	g := NewWithT(t)
 	fakeStatusUpdater := &statusfakes.FakeStatusUpdater{}
 	fakeGetter := &controllerfakes.FakeGetter{}
+
 	fakeGetter.GetReturns(apierrors.NewNotFound(schema.GroupResource{}, "not found"))
 	f := status.ConditionWithContextFunc(
 		fakeGetter,
@@ -48,6 +51,7 @@ func TestConditionWithContextFunc_GetFailsIsNotFound(t *testing.T) {
 		logr.New(nil),
 		func(client.Object) {})
 	boolean, err := f(context.Background())
+
 	g.Expect(err).ToNot(HaveOccurred())
 	g.Expect(boolean).To(BeTrue())
 }
@@ -56,6 +60,7 @@ func TestConditionWithContextFunc_UpdateFails(t *testing.T) {
 	g := NewWithT(t)
 	fakeStatusUpdater := &statusfakes.FakeStatusUpdater{}
 	fakeGetter := &controllerfakes.FakeGetter{}
+
 	fakeStatusUpdater.UpdateReturns(errors.New("failed to update resource"))
 	f := status.ConditionWithContextFunc(
 		fakeGetter,
@@ -65,6 +70,7 @@ func TestConditionWithContextFunc_UpdateFails(t *testing.T) {
 		logr.New(nil),
 		func(client.Object) {})
 	boolean, err := f(context.Background())
+
 	g.Expect(err).ToNot(HaveOccurred())
 	g.Expect(boolean).To(BeFalse())
 }
@@ -73,6 +79,7 @@ func TestConditionWithContextFunc_NothingFails(t *testing.T) {
 	g := NewWithT(t)
 	fakeStatusUpdater := &statusfakes.FakeStatusUpdater{}
 	fakeGetter := &controllerfakes.FakeGetter{}
+
 	f := status.ConditionWithContextFunc(
 		fakeGetter,
 		fakeStatusUpdater,
@@ -81,6 +88,7 @@ func TestConditionWithContextFunc_NothingFails(t *testing.T) {
 		logr.New(nil),
 		func(client.Object) {})
 	boolean, err := f(context.Background())
+
 	g.Expect(err).ToNot(HaveOccurred())
 	g.Expect(boolean).To(BeTrue())
 }
