@@ -331,7 +331,7 @@ var _ = Describe("Updater", func() {
 			expectedGc := createExpectedGCWithGeneration(1)
 
 			err := client.Get(context.Background(), types.NamespacedName{Name: gcName}, latestGc)
-			Expect(err).Should(Not(HaveOccurred()))
+			Expect(err).ToNot(HaveOccurred())
 
 			expectedGc.ResourceVersion = latestGc.ResourceVersion // updating the status changes the ResourceVersion
 
@@ -343,7 +343,7 @@ var _ = Describe("Updater", func() {
 			expectedGw := createExpectedGwWithGeneration(1)
 
 			err := client.Get(context.Background(), types.NamespacedName{Namespace: "test", Name: "gateway"}, latestGw)
-			Expect(err).Should(Not(HaveOccurred()))
+			Expect(err).ToNot(HaveOccurred())
 
 			expectedGw.ResourceVersion = latestGw.ResourceVersion
 
@@ -359,7 +359,7 @@ var _ = Describe("Updater", func() {
 				types.NamespacedName{Namespace: "test", Name: "ignored-gateway"},
 				latestGw,
 			)
-			Expect(err).Should(Not(HaveOccurred()))
+			Expect(err).ToNot(HaveOccurred())
 
 			expectedGw.ResourceVersion = latestGw.ResourceVersion
 
@@ -371,7 +371,7 @@ var _ = Describe("Updater", func() {
 			expectedHR := createExpectedHR()
 
 			err := client.Get(context.Background(), types.NamespacedName{Namespace: "test", Name: "route1"}, latestHR)
-			Expect(err).Should(Not(HaveOccurred()))
+			Expect(err).ToNot(HaveOccurred())
 
 			expectedHR.ResourceVersion = latestHR.ResourceVersion
 
@@ -391,14 +391,14 @@ var _ = Describe("Updater", func() {
 				types.NamespacedName{Namespace: "nginx-gateway", Name: "nginx-gateway-config"},
 				latestNG,
 			)
-			Expect(err).Should(Not(HaveOccurred()))
+			Expect(err).ToNot(HaveOccurred())
 
 			expectedNG.ResourceVersion = latestNG.ResourceVersion
 
 			Expect(helpers.Diff(expectedNG, latestNG)).To(BeEmpty())
 		})
 
-		It("should update statuses with canceled context - function normally returns", func() {
+		It("should not update Gateway API statuses with canceled context - function normally returns", func() {
 			ctx, cancel := context.WithCancel(context.Background())
 			cancel()
 			updater.Update(ctx, createGwAPIStatuses(generations{
@@ -408,28 +408,28 @@ var _ = Describe("Updater", func() {
 		})
 
 		When("updating with canceled context", func() {
-			It("should have the updated status of GatewayClass in the API server", func() {
+			It("should not have the updated status of GatewayClass in the API server", func() {
 				latestGc := &v1beta1.GatewayClass{}
-				expectedGc := createExpectedGCWithGeneration(2)
+				expectedGc := createExpectedGCWithGeneration(1)
 
 				err := client.Get(context.Background(), types.NamespacedName{Name: gcName}, latestGc)
-				Expect(err).Should(Not(HaveOccurred()))
+				Expect(err).ToNot(HaveOccurred())
 
 				expectedGc.ResourceVersion = latestGc.ResourceVersion
 
 				Expect(helpers.Diff(expectedGc, latestGc)).To(BeEmpty())
 			})
 
-			It("should have the updated status of Gateway in the API server", func() {
+			It("should not have the updated status of Gateway in the API server", func() {
 				latestGw := &v1beta1.Gateway{}
-				expectedGw := createExpectedGwWithGeneration(2)
+				expectedGw := createExpectedGwWithGeneration(1)
 
 				err := client.Get(
 					context.Background(),
 					types.NamespacedName{Namespace: "test", Name: "gateway"},
 					latestGw,
 				)
-				Expect(err).Should(Not(HaveOccurred()))
+				Expect(err).ToNot(HaveOccurred())
 
 				expectedGw.ResourceVersion = latestGw.ResourceVersion
 
@@ -445,7 +445,7 @@ var _ = Describe("Updater", func() {
 					types.NamespacedName{Namespace: "test", Name: "ignored-gateway"},
 					latestGw,
 				)
-				Expect(err).Should(Not(HaveOccurred()))
+				Expect(err).ToNot(HaveOccurred())
 
 				expectedGw.ResourceVersion = latestGw.ResourceVersion
 
@@ -462,7 +462,7 @@ var _ = Describe("Updater", func() {
 					types.NamespacedName{Namespace: "test", Name: "route1"},
 					latestHR,
 				)
-				Expect(err).Should(Not(HaveOccurred()))
+				Expect(err).ToNot(HaveOccurred())
 
 				expectedHR.ResourceVersion = latestHR.ResourceVersion
 
@@ -470,6 +470,31 @@ var _ = Describe("Updater", func() {
 				Expect(helpers.Diff(expectedHR, latestHR)).To(BeEmpty())
 			})
 		})
+
+		It("should not update NginxGateway status with canceled context - function normally returns", func() {
+			ctx, cancel := context.WithCancel(context.Background())
+			cancel()
+			updater.Update(ctx, createNGStatus(2))
+		})
+
+		When("updating with canceled context", func() {
+			It("should not have the updated status of the NginxGateway in the API server", func() {
+				latestNG := &ngfAPI.NginxGateway{}
+				expectedNG := createExpectedNGWithGeneration(1)
+
+				err := client.Get(
+					context.Background(),
+					types.NamespacedName{Namespace: "nginx-gateway", Name: "nginx-gateway-config"},
+					latestNG,
+				)
+				Expect(err).ToNot(HaveOccurred())
+
+				expectedNG.ResourceVersion = latestNG.ResourceVersion
+
+				Expect(helpers.Diff(expectedNG, latestNG)).To(BeEmpty())
+			})
+		})
+
 		When("the Pod is not the current leader", func() {
 			It("should not update any statuses", func() {
 				updater.Disable()
@@ -481,15 +506,15 @@ var _ = Describe("Updater", func() {
 
 			It("should not have the updated status of Gateway in the API server", func() {
 				latestGw := &v1beta1.Gateway{}
-				// testing that the generation has not changed from 2 to 3
-				expectedGw := createExpectedGwWithGeneration(2)
+				// testing that the generation has not changed from 1 to 3
+				expectedGw := createExpectedGwWithGeneration(1)
 
 				err := client.Get(
 					context.Background(),
 					types.NamespacedName{Namespace: "test", Name: "gateway"},
 					latestGw,
 				)
-				Expect(err).Should(Not(HaveOccurred()))
+				Expect(err).ToNot(HaveOccurred())
 
 				expectedGw.ResourceVersion = latestGw.ResourceVersion
 
@@ -505,7 +530,7 @@ var _ = Describe("Updater", func() {
 					types.NamespacedName{Namespace: "nginx-gateway", Name: "nginx-gateway-config"},
 					latestNG,
 				)
-				Expect(err).Should(Not(HaveOccurred()))
+				Expect(err).ToNot(HaveOccurred())
 
 				expectedNG.ResourceVersion = latestNG.ResourceVersion
 
@@ -526,7 +551,7 @@ var _ = Describe("Updater", func() {
 					types.NamespacedName{Namespace: "test", Name: "gateway"},
 					latestGw,
 				)
-				Expect(err).Should(Not(HaveOccurred()))
+				Expect(err).ToNot(HaveOccurred())
 
 				expectedGw.ResourceVersion = latestGw.ResourceVersion
 
@@ -542,7 +567,7 @@ var _ = Describe("Updater", func() {
 					types.NamespacedName{Namespace: "nginx-gateway", Name: "nginx-gateway-config"},
 					latestNG,
 				)
-				Expect(err).Should(Not(HaveOccurred()))
+				Expect(err).ToNot(HaveOccurred())
 
 				expectedNG.ResourceVersion = latestNG.ResourceVersion
 
@@ -566,7 +591,7 @@ var _ = Describe("Updater", func() {
 					types.NamespacedName{Namespace: "test", Name: "gateway"},
 					latestGw,
 				)
-				Expect(err).Should(Not(HaveOccurred()))
+				Expect(err).ToNot(HaveOccurred())
 
 				expectedGw.ResourceVersion = latestGw.ResourceVersion
 
@@ -585,7 +610,7 @@ var _ = Describe("Updater", func() {
 					types.NamespacedName{Namespace: "nginx-gateway", Name: "nginx-gateway-config"},
 					latestNG,
 				)
-				Expect(err).Should(Not(HaveOccurred()))
+				Expect(err).ToNot(HaveOccurred())
 
 				expectedNG.ResourceVersion = latestNG.ResourceVersion
 
@@ -619,11 +644,11 @@ var _ = Describe("Updater", func() {
 					types.NamespacedName{Namespace: "test", Name: "gateway"},
 					latestGw,
 				)
-				Expect(err).Should(Not(HaveOccurred()))
+				Expect(err).ToNot(HaveOccurred())
 
-				// Before this test there were 5 updates to the Gateway resource.
-				// So now the resource version should equal 25.
-				Expect(latestGw.ResourceVersion).To(Equal("25"))
+				// Before this test there were 4 updates to the Gateway resource.
+				// So now the resource version should equal 24.
+				Expect(latestGw.ResourceVersion).To(Equal("24"))
 			})
 		})
 	})
@@ -676,7 +701,7 @@ var _ = Describe("Updater", func() {
 			latestGc := &v1beta1.GatewayClass{}
 
 			err := client.Get(context.Background(), types.NamespacedName{Name: gcName}, latestGc)
-			Expect(err).Should(Not(HaveOccurred()))
+			Expect(err).ToNot(HaveOccurred())
 
 			Expect(latestGc.Status).To(BeZero())
 		})
