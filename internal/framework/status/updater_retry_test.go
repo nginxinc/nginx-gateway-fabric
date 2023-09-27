@@ -50,11 +50,12 @@ func TestNewRetryUpdateFunc(t *testing.T) {
 			expConditionPassed: true,
 		},
 	}
+
+	fakeStatusUpdater := &statusfakes.FakeK8sUpdater{}
+	fakeGetter := &controllerfakes.FakeGetter{}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewWithT(t)
-			fakeStatusUpdater := &statusfakes.FakeK8sUpdater{}
-			fakeGetter := &controllerfakes.FakeGetter{}
 			fakeStatusUpdater.UpdateReturns(test.updateReturns)
 			fakeGetter.GetReturns(test.getReturns)
 			f := status.NewRetryUpdateFunc(
@@ -68,11 +69,7 @@ func TestNewRetryUpdateFunc(t *testing.T) {
 
 			// For now, the function should always return nil
 			g.Expect(err).ToNot(HaveOccurred())
-			if test.expConditionPassed {
-				g.Expect(conditionPassed).To(BeTrue())
-			} else {
-				g.Expect(conditionPassed).To(BeFalse())
-			}
+			g.Expect(conditionPassed).To(Equal(test.expConditionPassed))
 		})
 	}
 }

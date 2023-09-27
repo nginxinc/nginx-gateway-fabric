@@ -277,12 +277,6 @@ func NewRetryUpdateFunc(
 			// apierrors.IsNotFound(err) can happen when the resource is deleted,
 			// so no need to retry or return an error.
 			if apierrors.IsNotFound(err) {
-				logger.V(1).Info(
-					"Resource was not found when trying to update status",
-					"error", err,
-					"namespace", nsname.Namespace,
-					"name", nsname.Name,
-					"kind", obj.GetObjectKind().GroupVersionKind().Kind)
 				return true, nil
 			}
 			logger.V(1).Info(
