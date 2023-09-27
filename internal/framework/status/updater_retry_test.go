@@ -67,7 +67,7 @@ func TestNewRetryUpdateFunc(t *testing.T) {
 				func(client.Object) {})
 			conditionPassed, err := f(context.Background())
 
-			// For now, the function should always return nil
+			// The function should always return nil.
 			g.Expect(err).ToNot(HaveOccurred())
 			g.Expect(conditionPassed).To(Equal(test.expConditionPassed))
 		})
