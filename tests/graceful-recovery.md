@@ -70,7 +70,7 @@ if the configuration and version were correctly updated.
 4. Open up the nginx-container logs and check for errors.
 5. Exec back into the nginx container and check that `http.conf` and `config-version.conf` were not changed.
 
-## Testing when the NGF Pod restarts through a docker container restart with a graceful exit on node
+## Testing when the NGF Pod restarts through node shutdown with cleaning up of resources
 
 1. Switch over to a one-node Kind cluster. Can run `make create-kind-cluster` from main directory.
 2. Run steps 4-12 of the Setup section above using [this guide]
@@ -92,6 +92,6 @@ if the configuration and version were correctly updated.
     `config-version.conf` were correctly updated.
     6. Send traffic through the example application using the updated resources and ensure traffic flows correctly.
 
-## Testing when the NGF Pod restarts through a docker container restart without cleaning up the node prior
+## Testing when the NGF Pod restarts through node shutdown without cleaning up of resources
 
 1. Repeat the above test but remove steps 4-5 which include draining and deleting the node.
