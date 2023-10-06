@@ -68,7 +68,7 @@ Follow the steps below to run the test:
 
 - [Collect and Record Metrics](#collecting-metrics).
 
-- Cleanup:
+- Clean up::
 
   Delete resources from cluster:
 
@@ -118,7 +118,7 @@ Follow the steps below to run the test:
 
 - [Collect and Record Metrics](#collecting-metrics).
 
-- Cleanup
+- Clean up:
 
   Delete resources from cluster:
 
@@ -168,7 +168,7 @@ Follow the steps below to run the test:
 
 - [Collect and Record Metrics](#collecting-metrics).
 
-- Cleanup
+- Clean up:
 
   Delete resources from cluster:
 
@@ -329,7 +329,7 @@ Follow these steps to run the test:
 
 - Copy and paste the results to the [summary](/tests/scale/results/summary.md#scale-http-matches).
 
-- Cleanup:
+- Clean up::
 
   ```console
   kubectl delete -f manifests/scale-matches.yaml
