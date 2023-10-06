@@ -36,7 +36,7 @@ func TestScale_Listeners(t *testing.T) {
 		t,
 		[]string{"# Listeners", "Time to Ready (s)", "Error"},
 		func(dir string) error {
-			return generateScaleListenerManifests(*numIterations, dir, false)
+			return generateScaleListenerManifests(*numIterations, dir, false /*non-tls*/)
 		},
 		url,
 	)
@@ -50,7 +50,7 @@ func TestScale_HTTPSListeners(t *testing.T) {
 		t,
 		[]string{"# HTTPS Listeners", "Time to Ready (s)", "Error"},
 		func(dir string) error {
-			return generateScaleListenerManifests(*numIterations, dir, true)
+			return generateScaleListenerManifests(*numIterations, dir, true /*tls*/)
 		},
 		url,
 	)
