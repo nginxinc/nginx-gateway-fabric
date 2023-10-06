@@ -1,12 +1,7 @@
 # Graceful recovery from restarts
 
-## Description
-When one of the containers in the NGF Pod fails, the Gateway API configuration
-should be reapplied to the new container so that when either container
-fails, NGF should be able to recover without any assistance.
-
 ## Goal
-Ensure that NGF can recover gracefully from container failures without any intervention.
+Ensure that NGF can recover gracefully from container failures without any user intervention.
 
 ## Cluster Details
 
