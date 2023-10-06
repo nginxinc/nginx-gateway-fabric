@@ -1,3 +1,6 @@
+//go:build scale
+// +build scale
+
 package scale
 
 import (

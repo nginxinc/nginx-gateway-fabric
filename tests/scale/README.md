@@ -63,7 +63,7 @@ Follow the steps below to run the test:
 - Run the test:
 
   ```console
-  go test -v -run TestScale_Listeners -i 64
+  go test -v -tags scale -run TestScale_Listeners -i 64
   ```
 
 - [Collect and Record Metrics](#collecting-metrics).
@@ -113,7 +113,7 @@ Follow the steps below to run the test:
 - Run the test:
 
   ```console
-  go test -v -run TestScale_HTTPSListeners -i 64
+  go test -v -tags scale -run TestScale_HTTPSListeners -i 64
   ```
 
 - [Collect and Record Metrics](#collecting-metrics).
@@ -163,7 +163,7 @@ Follow the steps below to run the test:
 - Run the test:
 
   ```console
-  go test -v -timeout 600m -run TestScale_HTTPRoutes -i 1000 -delay 2s
+  go test -v -tags scale -timeout 600m -run TestScale_HTTPRoutes -i 1000 -delay 2s
   ```
 
 - [Collect and Record Metrics](#collecting-metrics).
