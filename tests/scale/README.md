@@ -218,7 +218,7 @@ Follow the steps below to run the test:
   kubectl apply -f manifests/scale-upstreams.yaml
   ```
 
-- Check the status of the gateway and httproute to make sure everything is OK before scaling.
+- Check the status of the Gateway and HTTPRoute to make sure everything is OK before scaling.
 
   ```console
   kubectl describe gateway gateway
