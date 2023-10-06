@@ -41,6 +41,7 @@ rules:
       .github/workflows/
       deploy/manifests/nginx-gateway.yaml
       deploy/manifests/crds
+      tests/longevity/manifests/cronjob.yaml
   new-line-at-end-of-file: enable
   new-lines: enable
   octal-values: disable
