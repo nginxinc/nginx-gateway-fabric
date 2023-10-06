@@ -17,12 +17,12 @@ Ensure that NGF can recover gracefully from container failures without any user 
 3. Check out the latest tag (unless you are installing the edge version from the main branch).
 4. Go into `deploy/manifests/nginx-gateway.yaml` and change `runAsNonRoot` from `true` to `false`.
 5. Follow the [installation instructions](https://github.com/nginxinc/nginx-gateway-fabric/blob/main/docs/installation.md)
-to deploy NGINX Gateway Fabric.
+to deploy NGINX Gateway Fabric using manifests and expose it through a LoadBalancer Service.
 6. In a separate terminal track NGF logs by running `kubectl -n nginx-gateway logs -f deploy/nginx-gateway`
 7. In a separate terminal track NGINX container logs by running
 `kubectl -n nginx-gateway logs -f <NGF_POD> -c nginx`
 8. Exec into the NGINX container inside of the NGF pod by running
-`kubectl exec -it -n nginx-gateway <NGF_POD> --container nginx -- bin/sh`
+`kubectl exec -it -n nginx-gateway <NGF_POD> --container nginx -- sh`
 9. Inside the NGINX container, navigate to `/etc/nginx/conf.d` and ensure that
 `http.conf` and `config-version.conf` look correct.
 10. In a different terminal, deploy the
