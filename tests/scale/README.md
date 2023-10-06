@@ -327,7 +327,7 @@ Follow these steps to run the test:
    ./wrk -t2 -c10 -d30 http://cafe.example.com -H "header-50: header-50-val"
   ```
 
-- Copy and paste the results to the [summary](/tests/scale/results/summary.md#scale-http-matches)
+- Copy and paste the results to the [summary](/tests/scale/results/summary.md#scale-http-matches).
 
 - Cleanup:
 
