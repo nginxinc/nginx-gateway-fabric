@@ -83,7 +83,7 @@ Follow the steps below to run the test:
   ```
 
 - Check for any errors or restarts after cleanup.
-- Check nginx conf to make sure it looks correct.
+- Check NGINX conf to make sure it looks correct.
 
 #### Scale HTTPS Listeners to Max of 64
 
@@ -133,7 +133,7 @@ Follow the steps below to run the test:
   ```
 
 - Check for any errors or restarts after cleanup.
-- Check nginx conf to make sure it looks correct.
+- Check NGINX conf to make sure it looks correct.
 
 #### Scale HTTPRoutes
 
@@ -183,7 +183,7 @@ Follow the steps below to run the test:
   ```
 
 - Check for any errors or restarts after cleanup.
-- Check nginx conf to make sure it looks correct.
+- Check NGINX conf to make sure it looks correct.
 
 #### Scale Upstream Servers
 
@@ -277,7 +277,7 @@ Follow the steps below to run the test:
   ```
 
 - Check for any errors or restarts after cleanup.
-- Check nginx conf to make sure it looks correct.
+- Check NGINX conf to make sure it looks correct.
 
 #### Scale HTTP Matches
 
@@ -395,4 +395,4 @@ Follow these steps to run the test:
 
 - Check for errors or restarts and record in the [results summary](/tests/scale/results/summary.md) doc. File a bug if
   there's unexpected errors or restarts.
-- Check nginx conf and make sure it looks correct. File a bug if there is an issue.
+- Check NGINX conf and make sure it looks correct. File a bug if there is an issue.
