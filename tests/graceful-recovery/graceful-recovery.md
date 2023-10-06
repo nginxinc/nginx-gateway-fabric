@@ -16,6 +16,7 @@ Ensure that NGF can recover gracefully from container failures without any user 
 2. Clone the repo and change into the nginx-gateway-fabric directory.
 3. Check out the latest tag (unless you are installing the edge version from the main branch).
 4. Go into `deploy/manifests/nginx-gateway.yaml` and change `runAsNonRoot` from `true` to `false`.
+This allows us to insert our ephemeral container as root which enables us to restart the nginx-gateway container.
 5. Follow the [installation instructions](https://github.com/nginxinc/nginx-gateway-fabric/blob/main/docs/installation.md)
 to deploy NGINX Gateway Fabric using manifests and expose it through a LoadBalancer Service.
 6. In a separate terminal track NGF logs by running `kubectl -n nginx-gateway logs -f deploy/nginx-gateway`
@@ -43,7 +44,7 @@ if the configuration and version were correctly updated.
 5. Open up the NGF and NGINX container logs and check for errors.
 6. Inside the NGINX container, check that `http.conf` was not changed and `config-version.conf` had its version set to `2`.
 7. Send traffic through the example application and ensure it is working correctly.
-8. Check that NGF can still update statuses of resources.
+8. Check that NGF can still process changes of resources.
    1. Delete the HTTPRoute resources by running `kubectl delete -f cafe-routes.yaml` in `/examples/https-termination`
    2. Inside the terminal which is inside the NGINX container, check that `http.conf` and
    `config-version.conf` were correctly updated.
@@ -77,7 +78,7 @@ if the configuration and version were correctly updated.
 7. Open up both NGF and NGINX container logs and check for errors.
 8. Exec back into the NGINX container and check that `http.conf` and `config-version.conf` were not changed.
 9. Send traffic through the example application and ensure it is working correctly.
-10. Check that NGF can still update statuses of resources.
+10. Check that NGF can still process changes of resources.
     1. Delete the HTTPRoute resources by running `kubectl delete -f cafe-routes.yaml` in `/examples/https-termination`
     2. Inside the terminal which is inside the NGINX container, check that `http.conf` and
     `config-version.conf` were correctly updated.
