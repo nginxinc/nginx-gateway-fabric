@@ -129,5 +129,11 @@ Requests/sec:  214.61
 Transfer/sec:  32.49KB
 ```
 
-**Findings**: There's not a noticeable difference between the response times for the first match and last match. In
+**Findings**:
+
+- There's not a noticeable difference between the response times for the first match and last match. In
 fact, the latency of the last match is slightly lower than the latency of the first match.
+- If you add one more match to the [manifest](/tests/scale/manifests/scale-matches.yaml) nginx will fail to reload
+  because the generate `http_matches` variable is too long.
+
+Issue Filed: https://github.com/nginxinc/nginx-gateway-fabric/issues/1107
