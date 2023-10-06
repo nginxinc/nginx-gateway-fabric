@@ -23,13 +23,11 @@ to deploy NGINX Gateway Fabric using manifests and expose it through a LoadBalan
 `kubectl -n nginx-gateway logs -f <NGF_POD> -c nginx`
 8. Exec into the NGINX container inside of the NGF pod by running
 `kubectl exec -it -n nginx-gateway <NGF_POD> --container nginx -- sh`
-9. Inside the NGINX container, navigate to `/etc/nginx/conf.d` and ensure that
-`http.conf` and `config-version.conf` look correct.
-10. In a different terminal, deploy the
+9. In a different terminal, deploy the
 [https-termination example](https://github.com/nginxinc/nginx-gateway-fabric/tree/main/examples/https-termination).
-11. Inside the NGINX container, check `http.conf` and `config-version.config` to see
+10. Inside the NGINX container, navigate to `/etc/nginx/conf.d` and check `http.conf` and `config-version.config` to see
 if the configuration and version were correctly updated.
-12. Send traffic through the example application and ensure it is working correctly.
+11. Send traffic through the example application and ensure it is working correctly.
 
 ## Tests
 
