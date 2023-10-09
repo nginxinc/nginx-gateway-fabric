@@ -105,7 +105,7 @@ Follow the steps below to run the test:
 
 - [Analyze](#analyze) the results.
 
-- Clean up::
+- Clean up:
 
   Delete resources from cluster:
 
@@ -364,7 +364,7 @@ Follow these steps to run the test:
 
 - Copy and paste the results into the results file.
 
-- Clean up::
+- Clean up:
 
   ```console
   kubectl delete -f manifests/scale-matches.yaml
