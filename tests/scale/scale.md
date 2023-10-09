@@ -38,11 +38,6 @@ For most of the tests, the following cluster will be sufficient:
 The Upstream Server scale test requires a bigger cluster to accommodate the large number of Pods. Those cluster details
 are listed in the [Scale Upstream Servers](#scale-upstream-servers) test steps.
 
-- 32 vCPUs
-- 128 GB total memory
-- us-west2-b
-- 1.27.5-gke.200
-
 ## Steps
 
 ### Setup
