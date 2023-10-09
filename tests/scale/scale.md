@@ -295,7 +295,7 @@ Follow the steps below to run the test:
 - Check the NGINX config for 648 upstream servers:
 
   ```console
-  k exec -it -n nginx-gateway $NGF_POD -c nginx -- nginx -T | grep -E "server (?:[0-9]{1,3}\.){3}[0-9]{1,3}:8080" | wc -l
+  kubectl exec -it -n nginx-gateway $NGF_POD -c nginx -- nginx -T | grep -E "server (?:[0-9]{1,3}\.){3}[0-9]{1,3}:8080" | wc -l
   ```
 
 - Get the end time as a UNIX timestamp and make a note of it:
@@ -313,7 +313,7 @@ Follow the steps below to run the test:
 - Clean up:
 
   ```console
-  kdelf manifests/scale-upstreams.yaml
+  kubectl delete -f manifests/scale-upstreams.yaml
   ```
 
 - Check for any errors or restarts after cleanup.
