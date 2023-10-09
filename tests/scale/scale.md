@@ -418,7 +418,12 @@ Follow these steps to run the test:
   To Monitor memory and CPU usage, navigate to the Kubernetes Engine > Workloads > Filter by `nginx-gateway` namespace >
   click on NGF Pod name. You should see graphs for CPU, Memory, and Disk.
 
-  - Convert the `Start Time` and `End Time` UNIX timestamps to a date time using: https://www.epochconverter.com/.
+  - Convert the `Start Time` and `End Time` UNIX timestamps to your local date time:
+
+  ```console
+  date -r <UNIX Timestamp>
+  ```
+
   - Create a custom time frame for the graphs in GKE.
   - Take a screenshot of the CPU and Memory graphs individually. Store them in the `results/<NGF_VERSION>/<TEST_NAME>`
     directory.
