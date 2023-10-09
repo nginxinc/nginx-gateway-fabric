@@ -56,7 +56,7 @@ Test duration - 4 days.
 
 1. Create a Kubernetes cluster on GKE.
 2. Deploy NGF.
-3. Expose NFG via a Load Balancer Service with `"networking.gke.io/load-balancer-type":"Internal"` annotation to
+3. Expose NFG via a LoadBalancer Service with `"networking.gke.io/load-balancer-type":"Internal"` annotation to
    allocate an internal load balancer.
 4. Apply the manifests which will:
     1. Deploy the coffee and tea backends.
@@ -64,7 +64,7 @@ Test duration - 4 days.
     3. Expose coffee via HTTP listener and tea via HTTPS listener.
     4. Create two CronJobs to re-rollout backends:
         1. Coffee - every minute for an hour every 6 hours
-        2. Tea - every minute for an hour every 6 hours, 3 ours apart from coffee.
+        2. Tea - every minute for an hour every 6 hours, 3 hours apart from coffee.
     5. Configure Prometheus on GKE to pick up NGF metrics.
 
     ```shell
@@ -78,7 +78,7 @@ Test duration - 4 days.
    10.128.0.10 cafe.example.com
    ```
 
-6. In Tester VMs, start a tmux session (this is needed so that even if you disconnect from the VM, any launched command:
+6. In Tester VMs, start a tmux session (this is needed so that even if you disconnect from the VM, any launched command
    will keep running):
 
    ```shell
@@ -100,14 +100,14 @@ Test duration - 4 days.
 Notes:
 
 - The updated coffee and tea backends in cafe.yaml include extra configuration for zero time upgrades, so that
-  wrk in Tester VMs don't get 502 from NGF. Based on https://learnk8s.io/graceful-shutdown
+  wrk in Tester VMs doesn't get 502 from NGF. Based on https://learnk8s.io/graceful-shutdown
 
 ### Check the Test is Running Correctly
 
 Check that you don't see any errors:
 
 1. Traffic is flowing - look at the access logs of NGINX.
-2. Check that cron job can run.
+2. Check that CronJob can run.
 
    ```shell
    kubectl create job --from=cronjob/coffee-rollout-mgr coffee-test
