@@ -137,10 +137,8 @@ func runScaleTest(
 		{startUnix, endUnix, endUnixPlusTen, endTime.Sub(startTime).String()},
 	}
 
-	for _, r := range records {
-		if err := writer.Write(r); err != nil {
-			t.Logf("failed to write record to csv")
-		}
+	if err := writer.WriteAll(records); err != nil {
+		t.Logf("failed to write records to csv")
 	}
 }
 
