@@ -1,13 +1,51 @@
 # Scale Tests
 
-## Setup
+This document describes how we scale test NGF.
 
-- Create a GKE Cluster using the following details as a guide:
-  - 4 n2d-standard-8 nodes
-  - 32 vCPUs
-  - 128 GB total memory
-  - us-west2-b
-  - 1.27.5-gke.200
+<!-- TOC -->
+- [Scale Tests](#scale-tests)
+  - [Goals](#goals)
+  - [Test Environment](#test-environment)
+  - [Steps](#steps)
+    - [Setup](#setup)
+    - [Run the tests](#run-the-tests)
+      - [Scale Listeners to Max of 64](#scale-listeners-to-max-of-64)
+      - [Scale HTTPS Listeners to Max of 64](#scale-https-listeners-to-max-of-64)
+      - [Scale HTTPRoutes](#scale-httproutes)
+      - [Scale Upstream Servers](#scale-upstream-servers)
+      - [Scale HTTP Matches](#scale-http-matches)
+    - [Analyze](#analyze)
+    - [Results](#results)
+<!-- TOC -->
+
+## Goals
+
+- Measure how NGF performs when the number of Gateway API and referenced core Kubernetes resources are scaled.
+- Test the following number of resources:
+  - Max number of HTTP and HTTPS Listeners (64)
+  - Max number of Upstream Servers (648)
+  - Max number of HTTPMatches
+  - 1000 HTTPRoutes
+
+## Test Environment
+
+For most of the tests, the following cluster will be sufficient:
+
+- A Kubernetes cluster with 4 nodes on GKE
+  - Node: n2d-standard-8 (8 vCPU, 32GB memory)
+  - Enabled GKE logging
+
+The Upstream Server scale test requires a bigger cluster to accommodate the large number of Pods. Those cluster details
+are listed in the [Scale Upstream Servers](#scale-upstream-servers) test steps.
+
+- 32 vCPUs
+- 128 GB total memory
+- us-west2-b
+- 1.27.5-gke.200
+
+## Steps
+
+### Setup
 
 - Install Gateway API Resources:
 
@@ -29,11 +67,15 @@
 - Install Prometheus:
 
   ```console
-  kubectl apply -f prom-clusterrole.yaml
+  kubectl apply -f manifets/prom-clusterrole.yaml
   helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
   helm repo update
   helm install prom prometheus-community/prometheus --set useExistingClusterRoleName=prometheus -n prom
   ```
+
+- Create a directory under [results](/tests/scale/results) and name it after the version of NGF you are testing. Then
+  create a file for the result summary, also named after the NGF version. For
+  example: [1.0.0.md](/tests/scale/results/1.0.0/1.0.0.md).
 
 ### Run the tests
 
@@ -66,7 +108,7 @@ Follow the steps below to run the test:
   go test -v -tags scale -run TestScale_Listeners -i 64
   ```
 
-- [Collect and Record Metrics](#collecting-metrics).
+- [Analyze](#analyze) the results.
 
 - Clean up::
 
@@ -116,7 +158,7 @@ Follow the steps below to run the test:
   go test -v -tags scale -run TestScale_HTTPSListeners -i 64
   ```
 
-- [Collect and Record Metrics](#collecting-metrics).
+- [Analyze](#analyze) the results.
 
 - Clean up:
 
@@ -166,7 +208,7 @@ Follow the steps below to run the test:
   go test -v -tags scale -timeout 600m -run TestScale_HTTPRoutes -i 1000 -delay 2s
   ```
 
-- [Collect and Record Metrics](#collecting-metrics).
+- [Analyze](#analyze) the results.
 
 - Clean up:
 
@@ -201,14 +243,13 @@ Total Resources Created:
 - 1 HTTPRoutes
 - 1 Service, 1 Deployment, 648 Pods
 
-For this test you must use a much bigger cluster in order to create 648 Pods. Use the following cluster details as a
-guide:
+Test Environment:
 
-- 12 n2d-standard-16
-- 192 vCPUs
-- 768 GB total memory
-- us-west2-b
-- 1.27.6-gke.1248000
+For this test you must use a much bigger cluster in order to create 648 Pods.
+
+- A Kubernetes cluster with 12 nodes on GKE
+  - Node: n2d-standard-16 (16 vCPU, 64GB memory)
+  - Enabled GKE logging
 
 Follow the steps below to run the test:
 
@@ -225,8 +266,7 @@ Follow the steps below to run the test:
   kubectl describe httproute route
   ```
 
-- Get the start time as a UNIX timestamp and record it in the
-  results [summary](/tests/scale/results/summary.md#upstream-servers):
+- Get the start time as a UNIX timestamp and record it in the results.
 
   ```console
   date +%s
@@ -265,9 +305,9 @@ Follow the steps below to run the test:
   ```
 
 - In the terminal you started the request loop, kill the loop if it's still running and check the request.log to see if
-  any of the requests failed. Record any failures in the [summary](/tests/scale/results/summary.md#upstream-servers).
+  any of the requests failed. Record any failures in the results file.
 
-- [Collect and Record Metrics](#collecting-metrics). Use the start time and end time you made note of earlier for the
+- [Analyze](#analyze) the results. Use the start time and end time you made note of earlier for the
   queries. You can calculate the test duration in seconds by subtracting the start time from the end time.
 
 - Clean up:
@@ -327,7 +367,7 @@ Follow these steps to run the test:
    ./wrk -t2 -c10 -d30 http://cafe.example.com -H "header-50: header-50-val"
   ```
 
-- Copy and paste the results to the [summary](/tests/scale/results/summary.md#scale-http-matches).
+- Copy and paste the results into the results file.
 
 - Clean up::
 
@@ -335,7 +375,7 @@ Follow these steps to run the test:
   kubectl delete -f manifests/scale-matches.yaml
   ```
 
-### Collecting Metrics
+### Analyze
 
 - Query Prometheus for reload metrics. To access the Prometheus Server, run:
 
@@ -349,7 +389,7 @@ Follow these steps to run the test:
 
   > Note:
   > For the tests that write to a csv file, the `Test Start`, `Test End + 10s`, and `Duration` are at the
-  > end of the results.csv file in the results/<NGF_VERSION/<TEST_NAME> directory.
+  > end of the results.csv file in the `results/<NGF_VERSION>/<TEST_NAME>` directory.
   > We are using `Test End + 10s` in the Prometheus query to account for the 10s scraping interval.
 
   Total number of reloads:
@@ -371,7 +411,7 @@ Follow these steps to run the test:
     rate(nginx_gateway_fabric_nginx_reloads_milliseconds_count[<Duration>] @ <Test End + 10s>)
     ```
 
-  Record these numbers in a table in the [results summary](/tests/scale/results/summary.md) doc.
+  Record these numbers in a table in the results file.
 
 - Take screenshots of memory and CPU usage in GKE Dashboard
 
@@ -380,7 +420,7 @@ Follow these steps to run the test:
 
   - Convert the `Start Time` and `End Time` UNIX timestamps to a date time using: https://www.epochconverter.com/.
   - Create a custom time frame for the graphs in GKE.
-  - Take a screenshot of the CPU and Memory graphs individually. Store them in the results/<NGF_VERSION>/<TEST_NAME>
+  - Take a screenshot of the CPU and Memory graphs individually. Store them in the `results/<NGF_VERSION>/<TEST_NAME>`
     directory.
 
 - If the test writes time to ready numbers to a csv, create a time to ready graph.
@@ -391,8 +431,11 @@ Follow these steps to run the test:
     - Set the Y axis to the Time to Ready column.
     - Set the X axis to the number of resources column.
     - Label the graph and take a screenshot.
-    - Store the graph in the results/<TEST_NAME> directory.
+    - Store the graph in the `results/<NGF_VERSION>/<TEST_NAME>` directory.
 
-- Check for errors or restarts and record in the [results summary](/tests/scale/results/summary.md) doc. File a bug if
-  there's unexpected errors or restarts.
+- Check for errors or restarts and record in the results file. File a bug if there's unexpected errors or restarts.
 - Check NGINX conf and make sure it looks correct. File a bug if there is an issue.
+
+### Results
+
+- [1.0.0](/tests/scale/results/1.0.0/1.0.0.md)
