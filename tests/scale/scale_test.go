@@ -118,8 +118,7 @@ func runScaleTest(
 			record = append(record, err.Error())
 		}
 
-		err = writer.Write(record)
-		if err != nil {
+		if err = writer.Write(record); err != nil {
 			t.Fatalf("failed to write time to ready to csv file: %s", err)
 		}
 
@@ -173,8 +172,7 @@ func newResultsWriter(t *testing.T, testName string, resultHeaders ...string) *c
 
 	writer := csv.NewWriter(file)
 
-	err = writer.Write(resultHeaders)
-	if err != nil {
+	if err = writer.Write(resultHeaders); err != nil {
 		t.Fatalf("failed to write headers to csv file: %s", err)
 	}
 
