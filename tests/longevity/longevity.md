@@ -30,7 +30,7 @@ This document describes how we test NGF for longevity.
     - Enabled GKE Cloud monitoring with managed Prometheus service, with enabled:
         - system.
         - kube state - pods, deployments.
-- Tester VMs:
+- Tester VMs on Google Cloud:
     - Configuration:
         - Debian
         - Install packages: tmux, wrk
