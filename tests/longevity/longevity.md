@@ -5,14 +5,14 @@ This document describes how we test NGF for longevity.
 <!-- TOC -->
 
 - [Longevity Test](#longevity-test)
-    - [Goals](#goals)
-    - [Test Environment](#test-environment)
-    - [Steps](#steps)
-        - [Start](#start)
-        - [Check the Test is Running Correctly](#check-the-test-is-running-correctly)
-        - [End](#end)
-    - [Analyze](#analyze)
-    - [Results](#results)
+  - [Goals](#goals)
+  - [Test Environment](#test-environment)
+  - [Steps](#steps)
+    - [Start](#start)
+    - [Check the Test is Running Correctly](#check-the-test-is-running-correctly)
+    - [End](#end)
+  - [Analyze](#analyze)
+  - [Results](#results)
 
 <!-- TOC -->
 
@@ -25,28 +25,28 @@ This document describes how we test NGF for longevity.
 ## Test Environment
 
 - A Kubernetes cluster with 3 nodes on GKE
-    - Node: e2-medium (2 vCPU, 4GB memory)
-    - Enabled GKE logging.
-    - Enabled GKE Cloud monitoring with managed Prometheus service, with enabled:
-        - system.
-        - kube state - pods, deployments.
+  - Node: e2-medium (2 vCPU, 4GB memory)
+  - Enabled GKE logging.
+  - Enabled GKE Cloud monitoring with managed Prometheus service, with enabled:
+    - system.
+    - kube state - pods, deployments.
 - Tester VMs on Google Cloud:
-    - Configuration:
-        - Debian
-        - Install packages: tmux, wrk
-    - Location - same zone as the Kubernetes cluster.
-    - First VM - for HTTP traffic
-    - Second VM - for sending HTTPs traffic
+  - Configuration:
+    - Debian
+    - Install packages: tmux, wrk
+  - Location - same zone as the Kubernetes cluster.
+  - First VM - for HTTP traffic
+  - Second VM - for sending HTTPs traffic
 - NGF
-    - Deployment with 1 replica
-    - Exposed via a Service with type LoadBalancer, private IP
-    - Gateway, two listeners - HTTP and HTTPs
-    - Two apps:
-        - Coffee - 3 replicas
-        - Tea - 3 replicas
-    - Two HTTPRoutes
-        - Coffee (HTTP)
-        - Tea (HTTPS)
+  - Deployment with 1 replica
+  - Exposed via a Service with type LoadBalancer, private IP
+  - Gateway, two listeners - HTTP and HTTPs
+  - Two apps:
+    - Coffee - 3 replicas
+    - Tea - 3 replicas
+  - Two HTTPRoutes
+    - Coffee (HTTP)
+    - Tea (HTTPS)
 
 ## Steps
 
@@ -125,24 +125,24 @@ In case of errors, double check if you prepared the environment and launched the
 ## Analyze
 
 - Traffic
-    - Tester VMs (clients)
-        - As wrk stop, they will print output upon termination. To connect to the tmux session with wrk,
+  - Tester VMs (clients)
+    - As wrk stop, they will print output upon termination. To connect to the tmux session with wrk,
           run `tmux attach -t 0`
-        - Check for errors, latency, RPS
+    - Check for errors, latency, RPS
 - Logs
-    - Check the logs for errors in Google Cloud Operations Logging.
-        - NGF
-        - NGINX
-- Check metrics in Google Cloud Monitoring.
+  - Check the logs for errors in Google Cloud Operations Logging.
     - NGF
-        - CPU usage
-            - NGINX
-            - NGF
-        - Memory usage
-            - NGINX
-            - NGF
-        - NGINX metrics
-        - Reloads
+    - NGINX
+- Check metrics in Google Cloud Monitoring.
+  - NGF
+    - CPU usage
+      - NGINX
+      - NGF
+    - Memory usage
+      - NGINX
+      - NGF
+    - NGINX metrics
+    - Reloads
 
 ## Results
 
