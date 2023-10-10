@@ -80,11 +80,21 @@ if the configuration and version were correctly updated.
 7. Inside the NGINX container, check that `http.conf` was not changed and `config-version.conf` had its version set to `2`.
 8. Send traffic through the example application and ensure it is working correctly.
 9. Check that NGF can still process changes of resources.
-   1. Delete the HTTPRoute resources by running `kubectl delete -f ../../examples/https-termination/cafe-routes.yaml`
+   1. Delete the HTTPRoute resources
+
+       ```console
+        kubectl delete -f ../../examples/https-termination/cafe-routes.yaml
+       ```
+
    2. Inside the terminal which is inside the NGINX container, check that `http.conf` and
    `config-version.conf` were correctly updated.
    3. Send traffic through the example application using the updated resources and ensure traffic does not flow.
-   4. Apply the HTTPRoute resources by running `kubectl apply -f ../../examples/https-termination/cafe-routes.yaml`
+   4. Apply the HTTPRoute resources
+
+       ```console
+       kubectl apply -f ../../examples/https-termination/cafe-routes.yaml
+       ```
+
    5. Inside the terminal which is inside the NGINX container, check that `http.conf` and
    `config-version.conf` were correctly updated.
    6. Send traffic through the example application using the updated resources and ensure traffic flows correctly.
@@ -103,37 +113,72 @@ if the configuration and version were correctly updated.
 5. Open up the NGINX container logs and check for errors.
 6. Exec back into the NGINX container and check that `http.conf` and `config-version.conf` were not changed.
 7. Check that NGF can still process changes of resources.
-   1. Delete the HTTPRoute resources by running `kubectl delete -f ../../examples/https-termination/cafe-routes.yaml`
-   2. Inside the terminal which is inside the NGINX container, check that `http.conf` and
-      `config-version.conf` were correctly updated.
-   3. Send traffic through the example application using the updated resources and ensure traffic does not flow.
-   4. Apply the HTTPRoute resources by running `kubectl apply -f ../../examples/https-termination/cafe-routes.yaml`
-   5. Inside the terminal which is inside the NGINX container, check that `http.conf` and
-      `config-version.conf` were correctly updated.
-   6. Send traffic through the example application using the updated resources and ensure traffic flows correctly.
+    1. Delete the HTTPRoute resources
+
+        ```console
+         kubectl delete -f ../../examples/https-termination/cafe-routes.yaml
+        ```
+
+    2. Inside the terminal which is inside the NGINX container, check that `http.conf` and
+       `config-version.conf` were correctly updated.
+    3. Send traffic through the example application using the updated resources and ensure traffic does not flow.
+    4. Apply the HTTPRoute resources
+
+        ```console
+        kubectl apply -f ../../examples/https-termination/cafe-routes.yaml
+        ```
+
+    5. Inside the terminal which is inside the NGINX container, check that `http.conf` and
+       `config-version.conf` were correctly updated.
+    6. Send traffic through the example application using the updated resources and ensure traffic flows correctly.
 
 ### Restart Node with draining
 
-1. Switch over to a one-node Kind cluster. Can run `make create-kind-cluster` from main directory.
+1. Switch over to a one-Node Kind cluster. Can run `make create-kind-cluster` from main directory.
 2. Run steps 4-12 of the Setup section above using [this guide]
 (https://github.com/nginxinc/nginx-gateway-fabric/blob/main/docs/running-on-kind.md) for running on Kind.
 3. Ensure NGF and NGINX container logs are set up and traffic flows through the example application correctly.
-4. Drain the node of its resources by running `kubectl drain kind-control-plane --ignore-daemonsets --delete-local-data`
-5. Delete the node by running `kubectl delete node kind-control-plane`
-6. Restart the docker container by running `docker restart kind-control-plane`
+4. Drain the Node of its resources
+
+    ```console
+    kubectl drain kind-control-plane --ignore-daemonsets --delete-local-data
+    ```
+
+5. Delete the Node
+
+    ```console
+    kubectl delete node kind-control-plane
+    ```
+
+6. Restart the Docker container
+
+    ```console
+    docker restart kind-control-plane
+    ```
+
 7. Open up both NGF and NGINX container logs and check for errors.
 8. Exec back into the NGINX container and check that `http.conf` and `config-version.conf` were not changed.
 9. Send traffic through the example application and ensure it is working correctly.
 10. Check that NGF can still process changes of resources.
-    1. Delete the HTTPRoute resources by running `kubectl delete -f ../../examples/https-termination/cafe-routes.yaml`
+    1. Delete the HTTPRoute resources
+
+        ```console
+         kubectl delete -f ../../examples/https-termination/cafe-routes.yaml
+        ```
+
     2. Inside the terminal which is inside the NGINX container, check that `http.conf` and
-    `config-version.conf` were correctly updated.
+       `config-version.conf` were correctly updated.
     3. Send traffic through the example application using the updated resources and ensure traffic does not flow.
-    4. Apply the HTTPRoute resources by running `kubectl apply -f ../../examples/https-termination/cafe-routes.yaml`
+    4. Apply the HTTPRoute resources
+
+        ```console
+        kubectl apply -f ../../examples/https-termination/cafe-routes.yaml
+        ```
+
     5. Inside the terminal which is inside the NGINX container, check that `http.conf` and
-    `config-version.conf` were correctly updated.
+       `config-version.conf` were correctly updated.
     6. Send traffic through the example application using the updated resources and ensure traffic flows correctly.
 
 ### Restart Node without draining
 
-1. Repeat the above test but remove steps 4-5 which include draining and deleting the node.
+1. Repeat the above test but remove steps 4-5 which include draining and deleting the Node.
