@@ -5,26 +5,29 @@ This document describes how we test graceful recovery from restarts on NGF.
 <!-- TOC -->
 - [Graceful recovery from restarts](#graceful-recovery-from-restarts)
   - [Goal](#goal)
-  - [Cluster Details](#cluster-details)
-  - [Setup](#setup)
-  - [Tests](#tests)
-    - [Restart nginx-gateway container](#restart-nginx-gateway-container)
-    - [Restart NGINX container](#restart-nginx-container)
-    - [Restart Node with draining](#restart-node-with-draining)
-    - [Restart Node without draining](#restart-node-without-draining)
+  - [Test Environment](#test-environment)
+  - [Steps](#steps)
+    - [Setup](#setup)
+    - [Run the tests](#run-the-tests)
+      - [Restart nginx-gateway container](#restart-nginx-gateway-container)
+      - [Restart NGINX container](#restart-nginx-container)
+      - [Restart Node with draining](#restart-node-with-draining)
+      - [Restart Node without draining](#restart-node-without-draining)
 <!-- TOC -->
 
 ## Goal
+
 Ensure that NGF can recover gracefully from container failures without any user intervention.
 
-## Cluster Details
+## Test Environment
 
-- GKE 1.27.3-gke.100
-- us-central1-c
-- Machine type of node is e2-medium
-- 3 nodes
+- A Kubernetes cluster with 3 nodes on GKE
+  - Node: e2-medium (2 vCPU, 4GB memory)
+- A Kind cluster
 
-## Setup
+## Steps
+
+### Setup
 
 1. Setup GKE Cluster.
 2. Clone the repo and change into the nginx-gateway-fabric directory.
@@ -57,18 +60,18 @@ to deploy NGINX Gateway Fabric using manifests and expose it through a LoadBalan
 if the configuration and version were correctly updated.
 11. Send traffic through the example application and ensure it is working correctly.
 
-## Tests
+### Run the tests
 
-### Restart nginx-gateway container
+#### Restart nginx-gateway container
 
 1. Ensure NGF and NGINX container logs are set up and traffic flows through the example application correctly.
-2. Insert ephemeral container in NGF Pod
+2. Insert ephemeral container in NGF Pod.
 
     ```console
     kubectl debug -it -n nginx-gateway <NGF_POD> --image=busybox:1.28 --target=nginx-gateway
     ```
 
-3. Kill nginx-gateway process through SIGKILL (Command should start with `/usr/bin/gateway`)
+3. Kill nginx-gateway process through a SIGKILL signal (Process command should start with `/usr/bin/gateway`).
 
     ```console
     kill -9 <nginx-gateway_PID>
@@ -80,30 +83,29 @@ if the configuration and version were correctly updated.
 7. Inside the NGINX container, check that `http.conf` was not changed and `config-version.conf` had its version set to `2`.
 8. Send traffic through the example application and ensure it is working correctly.
 9. Check that NGF can still process changes of resources.
-   1. Delete the HTTPRoute resources
+   1. Delete the HTTPRoute resources.
 
        ```console
         kubectl delete -f ../../examples/https-termination/cafe-routes.yaml
        ```
 
-   2. Inside the terminal which is inside the NGINX container, check that `http.conf` and
-   `config-version.conf` were correctly updated.
+   2. Inside the NGINX container, check that `http.conf` and `config-version.conf` were correctly updated.
    3. Send traffic through the example application using the updated resources and ensure traffic does not flow.
-   4. Apply the HTTPRoute resources
+   4. Apply the HTTPRoute resources.
 
        ```console
        kubectl apply -f ../../examples/https-termination/cafe-routes.yaml
        ```
 
-   5. Inside the terminal which is inside the NGINX container, check that `http.conf` and
-   `config-version.conf` were correctly updated.
+   5. Inside the NGINX container, check that `http.conf` and `config-version.conf` were correctly updated.
    6. Send traffic through the example application using the updated resources and ensure traffic flows correctly.
 
-### Restart NGINX container
+#### Restart NGINX container
 
 1. Ensure NGF and NGINX container logs are set up and traffic flows through the example application correctly.
 2. If the terminal inside the NGINX container is no longer running, Exec back into the NGINX container.
-3. Inside the NGINX container, kill the nginx-master process through SIGKILL (Command should start with `nginx: master process`).
+3. Inside the NGINX container, kill the nginx-master process through a SIGKILL signal
+(Process command should start with `nginx: master process`).
 
     ```console
     kill -9 <nginx-master_PID>
@@ -113,44 +115,42 @@ if the configuration and version were correctly updated.
 5. Open up the NGINX container logs and check for errors.
 6. Exec back into the NGINX container and check that `http.conf` and `config-version.conf` were not changed.
 7. Check that NGF can still process changes of resources.
-    1. Delete the HTTPRoute resources
+    1. Delete the HTTPRoute resources.
 
         ```console
          kubectl delete -f ../../examples/https-termination/cafe-routes.yaml
         ```
 
-    2. Inside the terminal which is inside the NGINX container, check that `http.conf` and
-       `config-version.conf` were correctly updated.
+    2. Inside the NGINX container, check that `http.conf` and `config-version.conf` were correctly updated.
     3. Send traffic through the example application using the updated resources and ensure traffic does not flow.
-    4. Apply the HTTPRoute resources
+    4. Apply the HTTPRoute resources.
 
         ```console
         kubectl apply -f ../../examples/https-termination/cafe-routes.yaml
         ```
 
-    5. Inside the terminal which is inside the NGINX container, check that `http.conf` and
-       `config-version.conf` were correctly updated.
+    5. Inside the NGINX container, check that `http.conf` and `config-version.conf` were correctly updated.
     6. Send traffic through the example application using the updated resources and ensure traffic flows correctly.
 
-### Restart Node with draining
+#### Restart Node with draining
 
 1. Switch over to a one-Node Kind cluster. Can run `make create-kind-cluster` from main directory.
-2. Run steps 4-12 of the Setup section above using [this guide]
-(https://github.com/nginxinc/nginx-gateway-fabric/blob/main/docs/running-on-kind.md) for running on Kind.
+2. Run steps 4-11 of the [Setup](#setup) section above using
+[this guide](https://github.com/nginxinc/nginx-gateway-fabric/blob/main/docs/running-on-kind.md) for running on Kind.
 3. Ensure NGF and NGINX container logs are set up and traffic flows through the example application correctly.
-4. Drain the Node of its resources
+4. Drain the Node of its resources.
 
     ```console
     kubectl drain kind-control-plane --ignore-daemonsets --delete-local-data
     ```
 
-5. Delete the Node
+5. Delete the Node.
 
     ```console
     kubectl delete node kind-control-plane
     ```
 
-6. Restart the Docker container
+6. Restart the Docker container.
 
     ```console
     docker restart kind-control-plane
@@ -160,25 +160,23 @@ if the configuration and version were correctly updated.
 8. Exec back into the NGINX container and check that `http.conf` and `config-version.conf` were not changed.
 9. Send traffic through the example application and ensure it is working correctly.
 10. Check that NGF can still process changes of resources.
-    1. Delete the HTTPRoute resources
+    1. Delete the HTTPRoute resources.
 
         ```console
          kubectl delete -f ../../examples/https-termination/cafe-routes.yaml
         ```
 
-    2. Inside the terminal which is inside the NGINX container, check that `http.conf` and
-       `config-version.conf` were correctly updated.
+    2. Inside the NGINX container, check that `http.conf` and `config-version.conf` were correctly updated.
     3. Send traffic through the example application using the updated resources and ensure traffic does not flow.
-    4. Apply the HTTPRoute resources
+    4. Apply the HTTPRoute resources.
 
         ```console
         kubectl apply -f ../../examples/https-termination/cafe-routes.yaml
         ```
 
-    5. Inside the terminal which is inside the NGINX container, check that `http.conf` and
-       `config-version.conf` were correctly updated.
+    5. Inside the NGINX container, check that `http.conf` and `config-version.conf` were correctly updated.
     6. Send traffic through the example application using the updated resources and ensure traffic flows correctly.
 
-### Restart Node without draining
+#### Restart Node without draining
 
 1. Repeat the above test but remove steps 4-5 which include draining and deleting the Node.
