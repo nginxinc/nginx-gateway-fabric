@@ -56,7 +56,7 @@ Test duration - 4 days.
 
 1. Create a Kubernetes cluster on GKE.
 2. Deploy NGF.
-3. Expose NFG via a LoadBalancer Service with `"networking.gke.io/load-balancer-type":"Internal"` annotation to
+3. Expose NGF via a LoadBalancer Service with `"networking.gke.io/load-balancer-type":"Internal"` annotation to
    allocate an internal load balancer.
 4. Apply the manifests which will:
     1. Deploy the coffee and tea backends.
