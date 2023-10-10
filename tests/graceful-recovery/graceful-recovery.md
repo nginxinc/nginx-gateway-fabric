@@ -62,16 +62,16 @@ if the configuration and version were correctly updated.
 ### Restart nginx-gateway container
 
 1. Ensure NGF and NGINX container logs are set up and traffic flows through the example application correctly.
-2. Insert ephemeral container in NGF Pod and kill the nginx-gateway process.
+2. Insert ephemeral container in NGF Pod
 
     ```console
     kubectl debug -it -n nginx-gateway <NGF_POD> --image=busybox:1.28 --target=nginx-gateway
     ```
 
-3. Kill nginx-gateway process (Command should start with `/usr/bin/gateway`)
+3. Kill nginx-gateway process through SIGKILL (Command should start with `/usr/bin/gateway`)
 
     ```console
-    kill <nginx-gateway_PID>
+    kill -9 <nginx-gateway_PID>
     ```
 
 4. Check for errors in the NGF and NGINX container logs.
@@ -93,15 +93,24 @@ if the configuration and version were correctly updated.
 
 1. Ensure NGF and NGINX container logs are set up and traffic flows through the example application correctly.
 2. If the terminal inside the NGINX container is no longer running, Exec back into the NGINX container.
-3. Inside the NGINX container, kill the nginx-master process (Command should start with `nginx: master process`).
+3. Inside the NGINX container, kill the nginx-master process through SIGKILL (Command should start with `nginx: master process`).
 
     ```console
-    kill <nginx-master_PID>
+    kill -9 <nginx-master_PID>
     ```
 
 4. When NGINX container is back up, ensure traffic flows through the example application correctly.
 5. Open up the NGINX container logs and check for errors.
 6. Exec back into the NGINX container and check that `http.conf` and `config-version.conf` were not changed.
+7. Check that NGF can still process changes of resources.
+   1. Delete the HTTPRoute resources by running `kubectl delete -f ../../examples/https-termination/cafe-routes.yaml`
+   2. Inside the terminal which is inside the NGINX container, check that `http.conf` and
+      `config-version.conf` were correctly updated.
+   3. Send traffic through the example application using the updated resources and ensure traffic does not flow.
+   4. Apply the HTTPRoute resources by running `kubectl apply -f ../../examples/https-termination/cafe-routes.yaml`
+   5. Inside the terminal which is inside the NGINX container, check that `http.conf` and
+      `config-version.conf` were correctly updated.
+   6. Send traffic through the example application using the updated resources and ensure traffic flows correctly.
 
 ### Restart Node with draining
 
