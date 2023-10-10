@@ -36,19 +36,19 @@ Ensure that NGF can recover gracefully from container failures without any user 
 This allows us to insert our ephemeral container as root which enables us to restart the nginx-gateway container.
 5. Follow the [installation instructions](https://github.com/nginxinc/nginx-gateway-fabric/blob/main/docs/installation.md)
 to deploy NGINX Gateway Fabric using manifests and expose it through a LoadBalancer Service.
-6. In a separate terminal track NGF logs by running
+6. In a separate terminal track NGF logs.
 
     ```console
     kubectl -n nginx-gateway logs -f deploy/nginx-gateway
     ```
 
-7. In a separate terminal track NGINX container logs by running
+7. In a separate terminal track NGINX container logs.
 
     ```console
     kubectl -n nginx-gateway logs -f <NGF_POD> -c nginx
     ```
 
-8. Exec into the NGINX container inside of the NGF pod by running
+8. In a separate terminal Exec into the NGINX container inside the NGF pod.
 
     ```console
     kubectl exec -it -n nginx-gateway <NGF_POD> --container nginx -- sh
