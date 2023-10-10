@@ -1,7 +1,6 @@
 package runtime
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -18,7 +17,6 @@ import (
 const (
 	pidFile            = "/var/run/nginx/nginx.pid"
 	pidFileTimeout     = 10000 * time.Millisecond
-	childProcsTimeout  = 1000 * time.Millisecond
 	nginxReloadTimeout = 60000 * time.Millisecond
 )
 
@@ -27,11 +25,7 @@ type (
 	checkFileFunc func(string) (fs.FileInfo, error)
 )
 
-var (
-	noNewWorkersErrFmt = "reload unsuccessful: no new NGINX worker processes started for config version %d." +
-		" Please check the NGINX container logs for possible configuration issues: %w"
-	childProcPathFmt = "/proc/%[1]v/task/%[1]v/children"
-)
+var childProcPathFmt = "/proc/%[1]v/task/%[1]v/children"
 
 //go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . Manager
 
@@ -83,18 +77,13 @@ func (m *ManagerImpl) Reload(ctx context.Context, configVersion int) error {
 		return fmt.Errorf("failed to send the HUP signal to NGINX main: %w", err)
 	}
 
-	if err := ensureNewNginxWorkers(
+	if err = m.verifyClient.waitForCorrectVersion(
 		ctx,
+		configVersion,
 		childProcFile,
 		previousChildProcesses,
 		os.ReadFile,
-		childProcsTimeout,
 	); err != nil {
-		m.managerCollector.IncReloadErrors()
-		return fmt.Errorf(noNewWorkersErrFmt, configVersion, err)
-	}
-
-	if err = m.verifyClient.waitForCorrectVersion(ctx, configVersion); err != nil {
 		m.managerCollector.IncReloadErrors()
 		return err
 	}
@@ -151,31 +140,4 @@ func findMainProcess(
 	}
 
 	return pid, nil
-}
-
-func ensureNewNginxWorkers(
-	ctx context.Context,
-	childProcFile string,
-	previousContents []byte,
-	readFile readFileFunc,
-	timeout time.Duration,
-) error {
-	ctx, cancel := context.WithTimeout(ctx, timeout)
-	defer cancel()
-
-	return wait.PollUntilContextCancel(
-		ctx,
-		25*time.Millisecond,
-		true, /* poll immediately */
-		func(ctx context.Context) (bool, error) {
-			content, err := readFile(childProcFile)
-			if err != nil {
-				return false, err
-			}
-			if !bytes.Equal(previousContents, content) {
-				return true, nil
-			}
-			return false, nil
-		},
-	)
 }
