@@ -88,7 +88,11 @@ func NewManagerImpl(logger logr.Logger, osFileManager OSFileManager) *ManagerImp
 func (m *ManagerImpl) ReplaceFiles(files []File) error {
 	for _, path := range m.lastWrittenPaths {
 		if err := m.osFileManager.Remove(path); err != nil {
-			return fmt.Errorf("failed to delete file %q: %w", path, err)
+			if os.IsNotExist(err) {
+				m.logger.V(1).Info("file not found, failed to delete file %q: %w", path, err)
+			} else {
+				return fmt.Errorf("failed to delete file %q: %w", path, err)
+			}
 		}
 
 		m.logger.Info("deleted file", "path", path)
