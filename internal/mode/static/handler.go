@@ -3,6 +3,7 @@ package static
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/go-logr/logr"
 	apiv1 "k8s.io/api/core/v1"
@@ -22,6 +23,10 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/dataplane"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/resolver"
 )
+
+type controllerMetricsCollector interface {
+	ObserveLastEventBatchProcessTime(time.Duration)
+}
 
 // eventHandlerConfig holds configuration parameters for eventHandlerImpl.
 type eventHandlerConfig struct {
@@ -45,6 +50,8 @@ type eventHandlerConfig struct {
 	healthChecker *healthChecker
 	// controlConfigNSName is the NamespacedName of the NginxGateway config for this controller.
 	controlConfigNSName types.NamespacedName
+	// metricsCollector collects metrics for this controller.
+	metricsCollector controllerMetricsCollector
 	// logger is the logger to be used by the EventHandler.
 	logger logr.Logger
 	// version is the current version number of the nginx config.
@@ -68,6 +75,18 @@ func newEventHandlerImpl(cfg eventHandlerConfig) *eventHandlerImpl {
 }
 
 func (h *eventHandlerImpl) HandleEventBatch(ctx context.Context, batch events.EventBatch) {
+	start := time.Now()
+	h.cfg.logger.V(1).Info("Started processing event batch")
+
+	defer func() {
+		duration := time.Since(start)
+		h.cfg.logger.V(1).Info(
+			"Finished processing event batch",
+			"duration", duration.String(),
+		)
+		h.cfg.metricsCollector.ObserveLastEventBatchProcessTime(duration)
+	}()
+
 	for _, event := range batch {
 		switch e := event.(type) {
 		case *events.UpsertEvent:

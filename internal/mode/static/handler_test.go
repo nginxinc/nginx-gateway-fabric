@@ -19,6 +19,7 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/status"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/status/statusfakes"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/metrics/collectors"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/configfakes"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/file"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/file/filefakes"
@@ -76,6 +77,7 @@ var _ = Describe("eventHandler", func() {
 			eventRecorder:       fakeEventRecorder,
 			healthChecker:       &healthChecker{},
 			controlConfigNSName: types.NamespacedName{Namespace: namespace, Name: configName},
+			metricsCollector:    collectors.NewControllerNoopCollector(),
 		})
 		Expect(handler.cfg.healthChecker.ready).To(BeFalse())
 	})

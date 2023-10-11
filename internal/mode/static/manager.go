@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	"github.com/prometheus/client_golang/prometheus"
 	apiv1 "k8s.io/api/core/v1"
 	discoveryV1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -29,7 +30,7 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/events"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/status"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/config"
-	ngfmetrics "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/metrics"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/metrics/collectors"
 	ngxcfg "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config"
 	ngxvalidation "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/validation"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/file"
@@ -130,9 +131,26 @@ func StartManager(cfg config.Config) error {
 		return fmt.Errorf("NGINX is not running: %w", err)
 	}
 
-	mgrCollector, err := createAndRegisterMetricsCollectors(cfg.MetricsConfig.Enabled, cfg.GatewayClassName)
-	if err != nil {
-		return fmt.Errorf("cannot create and register metrics collectors: %w", err)
+	var (
+		mgrCollector ngxruntime.MetricsCollector = collectors.NewManagerNoopCollector()
+		// nolint:ineffassign // not an ineffectual assignment. Will be used if metrics are disabled.
+		ctrlCollector controllerMetricsCollector = collectors.NewControllerNoopCollector()
+	)
+
+	if cfg.MetricsConfig.Enabled {
+		constLabels := map[string]string{"class": cfg.GatewayClassName}
+		ngxCollector, err := collectors.NewNginxMetricsCollector(constLabels)
+		if err != nil {
+			return fmt.Errorf("cannot create nginx metrics collector: %w", err)
+		}
+
+		mgrCollector = collectors.NewManagerMetricsCollector(constLabels)
+		ctrlCollector = collectors.NewControllerCollector(constLabels)
+		metrics.Registry.MustRegister(
+			ngxCollector,
+			mgrCollector.(prometheus.Collector),
+			ctrlCollector.(prometheus.Collector),
+		)
 	}
 
 	statusUpdater := status.NewUpdater(status.UpdaterConfig{
@@ -161,6 +179,7 @@ func StartManager(cfg config.Config) error {
 		eventRecorder:       recorder,
 		healthChecker:       hc,
 		controlConfigNSName: controlConfigNSName,
+		metricsCollector:    ctrlCollector,
 	})
 
 	objects, objectLists := prepareFirstEventBatchPreparerArgs(cfg.GatewayClassName, cfg.GatewayNsName)
@@ -350,31 +369,6 @@ func setInitialConfig(
 	// status is not updated until the status updater's cache is started and the
 	// resource is processed by the controller
 	return updateControlPlane(&config, logger, eventRecorder, configName, logLevelSetter)
-}
-
-// createAndRegisterMetricsCollectors creates the NGINX status and NGINX runtime manager collectors, registers them,
-// and returns the runtime manager collector to be used in the nginxRuntimeMgr.
-func createAndRegisterMetricsCollectors(metricsEnabled bool, gwClassName string) (ngxruntime.ManagerCollector, error) {
-	if !metricsEnabled {
-		// return a no-op collector to avoid nil pointer errors when metrics are disabled
-		return ngfmetrics.NewManagerNoopCollector(), nil
-	}
-	constLabels := map[string]string{"class": gwClassName}
-
-	ngxCollector, err := ngfmetrics.NewNginxMetricsCollector(constLabels)
-	if err != nil {
-		return nil, fmt.Errorf("cannot create NGINX status metrics collector: %w", err)
-	}
-	if err := metrics.Registry.Register(ngxCollector); err != nil {
-		return nil, fmt.Errorf("failed to register NGINX status metrics collector: %w", err)
-	}
-
-	mgrCollector := ngfmetrics.NewManagerMetricsCollector(constLabels)
-	if err := metrics.Registry.Register(mgrCollector); err != nil {
-		return nil, fmt.Errorf("failed to register NGINX manager runtime metrics collector: %w", err)
-	}
-
-	return mgrCollector, nil
 }
 
 func getMetricsOptions(cfg config.MetricsConfig) metricsserver.Options {
