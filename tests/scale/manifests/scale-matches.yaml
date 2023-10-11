@@ -1,0 +1,233 @@
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: Gateway
+metadata:
+  name: gateway
+spec:
+  gatewayClassName: nginx
+  listeners:
+  - name: listener
+    port: 80
+    protocol: HTTP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      containers:
+      - name: nginx
+        image: nginxdemos/nginx-hello:plain-text
+        ports:
+        - containerPort: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend
+spec:
+  ports:
+  - port: 80
+    targetPort: 8080
+    protocol: TCP
+    name: http
+  selector:
+    app: backend
+---
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: HTTPRoute
+metadata:
+  name: route
+spec:
+  parentRefs:
+  - name: gateway
+    sectionName: listener
+  hostnames:
+  - "cafe.example.com"
+  rules:
+  - matches: # Max of 8 matches per rule
+    - headers:
+      - name: header-1
+        value: header-1-val
+    - headers:
+      - name: header-2
+        value: header-2-val
+    - headers:
+      - name: header-3
+        value: header-3-val
+    - headers:
+      - name: header-4
+        value: header-4-val
+    - headers:
+      - name: header-5
+        value: header-5-val
+    - headers:
+      - name: header-6
+        value: header-6-val
+    - headers:
+      - name: header-7
+        value: header-7-val
+    - headers:
+      - name: header-8
+        value: header-8-val
+    backendRefs:
+    - name: backend
+      port: 80
+  - matches:
+    - headers:
+      - name: header-9
+        value: header-9-val
+    - headers:
+      - name: header-10
+        value: header-10-val
+    - headers:
+      - name: header-11
+        value: header-11-val
+    - headers:
+      - name: header-12
+        value: header-12-val
+    - headers:
+      - name: header-13
+        value: header-13-val
+    - headers:
+      - name: header-14
+        value: header-14-val
+    - headers:
+      - name: header-15
+        value: header-15-val
+    - headers:
+      - name: header-16
+        value: header-16-val
+    backendRefs:
+    - name: backend
+      port: 80
+  - matches:
+    - headers:
+      - name: header-17
+        value: header-17-val
+    - headers:
+      - name: header-18
+        value: header-18-val
+    - headers:
+      - name: header-19
+        value: header-19-val
+    - headers:
+      - name: header-20
+        value: header-20-val
+    - headers:
+      - name: header-21
+        value: header-21-val
+    - headers:
+      - name: header-22
+        value: header-22-val
+    - headers:
+      - name: header-23
+        value: header-23-val
+    - headers:
+      - name: header-24
+        value: header-24-val
+    backendRefs:
+    - name: backend
+      port: 80
+  - matches:
+    - headers:
+      - name: header-25
+        value: header-25-val
+    - headers:
+      - name: header-26
+        value: header-26-val
+    - headers:
+      - name: header-27
+        value: header-27-val
+    - headers:
+      - name: header-28
+        value: header-28-val
+    - headers:
+      - name: header-29
+        value: header-29-val
+    - headers:
+      - name: header-30
+        value: header-30-val
+    - headers:
+      - name: header-31
+        value: header-31-val
+    - headers:
+      - name: header-32
+        value: header-32-val
+    backendRefs:
+    - name: backend
+      port: 80
+  - matches:
+    - headers:
+      - name: header-33
+        value: header-33-val
+    - headers:
+      - name: header-34
+        value: header-34-val
+    - headers:
+      - name: header-35
+        value: header-35-val
+    - headers:
+      - name: header-36
+        value: header-36-val
+    - headers:
+      - name: header-37
+        value: header-37-val
+    - headers:
+      - name: header-38
+        value: header-38-val
+    - headers:
+      - name: header-39
+        value: header-39-val
+    - headers:
+      - name: header-40
+        value: header-40-val
+    backendRefs:
+    - name: backend
+      port: 80
+  - matches:
+    - headers:
+      - name: header-41
+        value: header-41-val
+    - headers:
+      - name: header-42
+        value: header-42-val
+    - headers:
+      - name: header-43
+        value: header-43-val
+    - headers:
+      - name: header-44
+        value: header-44-val
+    - headers:
+      - name: header-45
+        value: header-45-val
+    - headers:
+      - name: header-46
+        value: header-46-val
+    - headers:
+      - name: header-47
+        value: header-47-val
+    - headers:
+      - name: header-48
+        value: header-48-val
+    backendRefs:
+    - name: backend
+      port: 80
+  - matches:
+    - headers:
+      - name: header-49
+        value: header-49-val
+    - headers:
+      - name: header-50
+        value: header-50-val # max number of headers allowed for a single hostname/path b/c of nginx var limit
+    backendRefs:
+    - name: backend
+      port: 80
