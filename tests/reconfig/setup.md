@@ -1,5 +1,16 @@
 # Reconfig tests
 
+<!-- TOC -->
+- [Reconfig tests](#reconfig-tests)
+  - [Goals](#goals)
+  - [Test Environment](#test-environment)
+  - [Setup](#setup)
+  - [Tests](#tests)
+    - [Test 1: Resources exist before start-up](#test-1-resources-exist-before-start-up)
+    - [Test 2: Start NGF, deploy Gateway, create many resources attached to GW](#test-2-start-ngf-deploy-gateway-create-many-resources-attached-to-gw)
+    - [Test 3: Start NGF, create many resources attached to a Gateway, deploy the Gateway](#test-3-start-ngf-create-many-resources-attached-to-a-gateway-deploy-the-gateway)
+<!-- TOC -->
+
 ## Goals
 
 - Measure how long it takes NGF to reconfigure NGINX when a number of Gateway API and referenced core Kubernetes
@@ -29,7 +40,7 @@
 
 3. Deploy NGF from edge using Helm install (NOTE: For Test 1, deploy AFTER resources):
 
-   ```bash
+   ```console
    helm install my-release oci://ghcr.io/nginxinc/charts/nginx-gateway-fabric  --version 0.0.0-edge \
       --create-namespace --wait -n nginx-gateway
    ```
@@ -49,7 +60,7 @@
 5. After each individual test run, grab logs of both NGF containers and grab metrics.
    Note: You can expose metrics by running the below snippet and then navigating to `127.0.0.1:9113/metrics`:
 
-   ```bash
+   ```console
    GW_POD=$(k get pods -n nginx-gateway | sed -n '2s/^\([^[:space:]]*\).*$/\1/p')
    kubectl port-forward $GW_POD -n nginx-gateway 9113:9113 &
    ```
