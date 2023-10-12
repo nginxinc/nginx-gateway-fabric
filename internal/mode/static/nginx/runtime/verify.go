@@ -1,6 +1,7 @@
 package runtime
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -14,6 +15,9 @@ import (
 )
 
 const configVersionURI = "/var/run/nginx/nginx-config-version.sock"
+
+var noNewWorkersErrFmt = "reload unsuccessful: no new NGINX worker processes started for config version %d." +
+	" Please check the NGINX container logs for possible configuration issues: %w"
 
 // verifyClient is a client for verifying the config version.
 type verifyClient struct {
@@ -67,20 +71,29 @@ func (c *verifyClient) getConfigVersion() (int, error) {
 	return v, nil
 }
 
-// waitForCorrectVersion calls the config version endpoint until it gets the expectedVersion,
-// which ensures that a new worker process has been started for that config version.
-func (c *verifyClient) waitForCorrectVersion(ctx context.Context, expectedVersion int) error {
+// waitForCorrectVersion first ensures any new worker processes have been started, and then calls the config version
+// endpoint until it gets the expectedVersion, which ensures that a new worker process has been started for that config
+// version.
+func (c *verifyClient) waitForCorrectVersion(
+	ctx context.Context,
+	expectedVersion int,
+	childProcFile string,
+	previousChildProcesses []byte,
+	readFile readFileFunc,
+) error {
 	ctx, cancel := context.WithTimeout(ctx, c.timeout)
 	defer cancel()
 
-	if err := wait.PollUntilContextCancel(
+	if err := ensureNewNginxWorkers(
 		ctx,
-		25*time.Millisecond,
-		true, /* poll immediately */
-		func(ctx context.Context) (bool, error) {
-			version, err := c.getConfigVersion()
-			return version == expectedVersion, err
-		}); err != nil {
+		childProcFile,
+		previousChildProcesses,
+		readFile,
+	); err != nil {
+		return fmt.Errorf(noNewWorkersErrFmt, expectedVersion, err)
+	}
+
+	if err := c.ensureConfigVersion(ctx, expectedVersion); err != nil {
 		if errors.Is(err, context.DeadlineExceeded) {
 			err = fmt.Errorf(
 				"config version check didn't return expected version %d within the deadline",
@@ -90,4 +103,39 @@ func (c *verifyClient) waitForCorrectVersion(ctx context.Context, expectedVersio
 		return fmt.Errorf("could not get expected config version %d: %w", expectedVersion, err)
 	}
 	return nil
+}
+
+func (c *verifyClient) ensureConfigVersion(ctx context.Context, expectedVersion int) error {
+	return wait.PollUntilContextCancel(
+		ctx,
+		25*time.Millisecond,
+		true, /* poll immediately */
+		func(ctx context.Context) (bool, error) {
+			version, err := c.getConfigVersion()
+			return version == expectedVersion, err
+		},
+	)
+}
+
+func ensureNewNginxWorkers(
+	ctx context.Context,
+	childProcFile string,
+	previousContents []byte,
+	readFile readFileFunc,
+) error {
+	return wait.PollUntilContextCancel(
+		ctx,
+		25*time.Millisecond,
+		true, /* poll immediately */
+		func(ctx context.Context) (bool, error) {
+			content, err := readFile(childProcFile)
+			if err != nil {
+				return false, err
+			}
+			if !bytes.Equal(previousContents, content) {
+				return true, nil
+			}
+			return false, nil
+		},
+	)
 }
