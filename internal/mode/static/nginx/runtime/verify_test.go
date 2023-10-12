@@ -119,7 +119,7 @@ func TestEnsureNewNginxWorkers(t *testing.T) {
 	ctx := context.Background()
 
 	cancellingCtx, cancel := context.WithCancel(ctx)
-	time.AfterFunc(10000*time.Millisecond, cancel)
+	time.AfterFunc(100*time.Millisecond, cancel)
 
 	cancellingCtx2, cancel2 := context.WithCancel(ctx)
 	time.AfterFunc(1*time.Millisecond, cancel2)
@@ -150,7 +150,7 @@ func TestEnsureNewNginxWorkers(t *testing.T) {
 			readFile:         readFilePrevious,
 			previousContents: previousContents,
 			expectError:      true,
-			name:             "no new workers",
+			name:             "timed out waiting for new workers",
 		},
 		{
 			ctx:              cancellingCtx2,

@@ -93,14 +93,7 @@ func (c *verifyClient) waitForCorrectVersion(
 		return fmt.Errorf(noNewWorkersErrFmt, expectedVersion, err)
 	}
 
-	if err := wait.PollUntilContextCancel(
-		ctx,
-		25*time.Millisecond,
-		true, /* poll immediately */
-		func(ctx context.Context) (bool, error) {
-			version, err := c.getConfigVersion()
-			return version == expectedVersion, err
-		}); err != nil {
+	if err := c.ensureConfigVersion(ctx, expectedVersion); err != nil {
 		if errors.Is(err, context.DeadlineExceeded) {
 			err = fmt.Errorf(
 				"config version check didn't return expected version %d within the deadline",
@@ -110,6 +103,18 @@ func (c *verifyClient) waitForCorrectVersion(
 		return fmt.Errorf("could not get expected config version %d: %w", expectedVersion, err)
 	}
 	return nil
+}
+
+func (c *verifyClient) ensureConfigVersion(ctx context.Context, expectedVersion int) error {
+	return wait.PollUntilContextCancel(
+		ctx,
+		25*time.Millisecond,
+		true, /* poll immediately */
+		func(ctx context.Context) (bool, error) {
+			version, err := c.getConfigVersion()
+			return version == expectedVersion, err
+		},
+	)
 }
 
 func ensureNewNginxWorkers(
