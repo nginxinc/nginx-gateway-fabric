@@ -2,6 +2,7 @@ package static
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -43,10 +44,21 @@ type leaderElectorRunnable struct {
 	le *leaderelection.LeaderElector
 }
 
-// Start runs the leaderelection.LeaderElector and blocks until the context is canceled or Run returns.
+// Start runs the leaderelection.LeaderElector and blocks until the context is canceled or the leader lease is lost.
+// If the leader lease is lost, Start returns an error, and the controller-runtime manager will exit, causing the Pod
+// to restart. This is necessary otherwise components that need leader election might continue to run after the leader
+// lease was lost.
 func (l *leaderElectorRunnable) Start(ctx context.Context) error {
 	l.le.Run(ctx)
-	return nil
+
+	// Run exits if the context is canceled or the leader lease is lost. We only want to return an error if the
+	// context is not canceled.
+	select {
+	case <-ctx.Done():
+		return nil
+	default:
+		return errors.New("leader election lost")
+	}
 }
 
 // IsLeader returns if the Pod is the current leader.
