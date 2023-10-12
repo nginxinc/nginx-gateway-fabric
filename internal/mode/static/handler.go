@@ -46,12 +46,12 @@ type eventHandlerConfig struct {
 	eventRecorder record.EventRecorder
 	// logLevelSetter is used to update the logging level.
 	logLevelSetter ZapLogLevelSetter
+	// metricsCollector collects metrics for this controller.
+	metricsCollector handlerMetricsCollector
 	// healthChecker sets the health of the Pod to Ready once we've written out our initial config
 	healthChecker *healthChecker
 	// controlConfigNSName is the NamespacedName of the NginxGateway config for this controller.
 	controlConfigNSName types.NamespacedName
-	// metricsCollector collects metrics for this controller.
-	metricsCollector handlerMetricsCollector
 	// version is the current version number of the nginx config.
 	version int
 }
