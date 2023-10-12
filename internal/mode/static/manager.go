@@ -132,9 +132,9 @@ func StartManager(cfg config.Config) error {
 	}
 
 	var (
-		mgrCollector ngxruntime.MetricsCollector = collectors.NewManagerNoopCollector()
+		ngxruntimeCollector ngxruntime.MetricsCollector = collectors.NewManagerNoopCollector()
 		// nolint:ineffassign // not an ineffectual assignment. Will be used if metrics are disabled.
-		ctlrCollector controllerMetricsCollector = collectors.NewControllerNoopCollector()
+		handlerCollector handlerMetricsCollector = collectors.NewControllerNoopCollector()
 	)
 
 	if cfg.MetricsConfig.Enabled {
@@ -144,12 +144,12 @@ func StartManager(cfg config.Config) error {
 			return fmt.Errorf("cannot create nginx metrics collector: %w", err)
 		}
 
-		mgrCollector = collectors.NewManagerMetricsCollector(constLabels)
-		ctlrCollector = collectors.NewControllerCollector(constLabels)
+		ngxruntimeCollector = collectors.NewManagerMetricsCollector(constLabels)
+		handlerCollector = collectors.NewControllerCollector(constLabels)
 		metrics.Registry.MustRegister(
 			ngxCollector,
-			mgrCollector.(prometheus.Collector),
-			ctlrCollector.(prometheus.Collector),
+			ngxruntimeCollector.(prometheus.Collector),
+			handlerCollector.(prometheus.Collector),
 		)
 	}
 
@@ -174,12 +174,12 @@ func StartManager(cfg config.Config) error {
 			cfg.Logger.WithName("nginxFileManager"),
 			file.NewStdLibOSFileManager(),
 		),
-		nginxRuntimeMgr:     ngxruntime.NewManagerImpl(mgrCollector),
+		nginxRuntimeMgr:     ngxruntime.NewManagerImpl(ngxruntimeCollector),
 		statusUpdater:       statusUpdater,
 		eventRecorder:       recorder,
 		healthChecker:       hc,
 		controlConfigNSName: controlConfigNSName,
-		metricsCollector:    ctlrCollector,
+		metricsCollector:    handlerCollector,
 	})
 
 	objects, objectLists := prepareFirstEventBatchPreparerArgs(cfg.GatewayClassName, cfg.GatewayNsName)

@@ -24,7 +24,7 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/resolver"
 )
 
-type controllerMetricsCollector interface {
+type handlerMetricsCollector interface {
 	ObserveLastEventBatchProcessTime(time.Duration)
 }
 
@@ -51,7 +51,7 @@ type eventHandlerConfig struct {
 	// controlConfigNSName is the NamespacedName of the NginxGateway config for this controller.
 	controlConfigNSName types.NamespacedName
 	// metricsCollector collects metrics for this controller.
-	metricsCollector controllerMetricsCollector
+	metricsCollector handlerMetricsCollector
 	// logger is the logger to be used by the EventHandler.
 	logger logr.Logger
 	// version is the current version number of the nginx config.
