@@ -36,6 +36,13 @@ var (
 )
 
 func TestBuildStatuses(t *testing.T) {
+	addr := []v1beta1.GatewayStatusAddress{
+		{
+			Type:  helpers.GetPointer(v1beta1.IPAddressType),
+			Value: "1.2.3.4",
+		},
+	}
+
 	invalidRouteCondition := conditions.Condition{
 		Type:   "TestInvalidRoute",
 		Status: metav1.ConditionTrue,
@@ -151,11 +158,13 @@ func TestBuildStatuses(t *testing.T) {
 						Conditions:     staticConds.NewDefaultListenerConditions(),
 					},
 				},
+				Addresses:          addr,
 				ObservedGeneration: 2,
 			},
 			{Namespace: "test", Name: "ignored-gateway"}: {
 				Conditions:         staticConds.NewGatewayConflict(),
 				ObservedGeneration: 1,
+				Ignored:            true,
 			},
 		},
 		HTTPRouteStatuses: status.HTTPRouteStatuses{
@@ -196,11 +205,18 @@ func TestBuildStatuses(t *testing.T) {
 	g := NewWithT(t)
 
 	var nginxReloadRes nginxReloadResult
-	result := buildGatewayAPIStatuses(graph, nginxReloadRes)
+	result := buildGatewayAPIStatuses(graph, addr, nginxReloadRes)
 	g.Expect(helpers.Diff(expected, result)).To(BeEmpty())
 }
 
 func TestBuildStatusesNginxErr(t *testing.T) {
+	addr := []v1beta1.GatewayStatusAddress{
+		{
+			Type:  helpers.GetPointer(v1beta1.IPAddressType),
+			Value: "1.2.3.4",
+		},
+	}
+
 	routes := map[types.NamespacedName]*graph.Route{
 		{Namespace: "test", Name: "hr-valid"}: {
 			Valid: true,
@@ -265,6 +281,7 @@ func TestBuildStatusesNginxErr(t *testing.T) {
 						},
 					},
 				},
+				Addresses:          addr,
 				ObservedGeneration: 2,
 			},
 		},
@@ -288,7 +305,7 @@ func TestBuildStatusesNginxErr(t *testing.T) {
 	g := NewWithT(t)
 
 	nginxReloadRes := nginxReloadResult{error: errors.New("test error")}
-	result := buildGatewayAPIStatuses(graph, nginxReloadRes)
+	result := buildGatewayAPIStatuses(graph, addr, nginxReloadRes)
 	g.Expect(helpers.Diff(expected, result)).To(BeEmpty())
 }
 
@@ -358,6 +375,13 @@ func TestBuildGatewayClassStatuses(t *testing.T) {
 }
 
 func TestBuildGatewayStatuses(t *testing.T) {
+	addr := []v1beta1.GatewayStatusAddress{
+		{
+			Type:  helpers.GetPointer(v1beta1.IPAddressType),
+			Value: "1.2.3.4",
+		},
+	}
+
 	tests := []struct {
 		nginxReloadRes  nginxReloadResult
 		gateway         *graph.Gateway
@@ -387,10 +411,12 @@ func TestBuildGatewayStatuses(t *testing.T) {
 				{Namespace: "test", Name: "ignored-1"}: {
 					Conditions:         staticConds.NewGatewayConflict(),
 					ObservedGeneration: 1,
+					Ignored:            true,
 				},
 				{Namespace: "test", Name: "ignored-2"}: {
 					Conditions:         staticConds.NewGatewayConflict(),
 					ObservedGeneration: 2,
+					Ignored:            true,
 				},
 			},
 		},
@@ -427,6 +453,7 @@ func TestBuildGatewayStatuses(t *testing.T) {
 							Conditions:     staticConds.NewDefaultListenerConditions(),
 						},
 					},
+					Addresses:          addr,
 					ObservedGeneration: 2,
 				},
 			},
@@ -464,6 +491,7 @@ func TestBuildGatewayStatuses(t *testing.T) {
 							Conditions: staticConds.NewListenerUnsupportedValue("unsupported value"),
 						},
 					},
+					Addresses:          addr,
 					ObservedGeneration: 2,
 				},
 			},
@@ -495,6 +523,7 @@ func TestBuildGatewayStatuses(t *testing.T) {
 							Conditions: staticConds.NewListenerUnsupportedValue("unsupported value"),
 						},
 					},
+					Addresses:          addr,
 					ObservedGeneration: 2,
 				},
 			},
@@ -547,6 +576,7 @@ func TestBuildGatewayStatuses(t *testing.T) {
 							},
 						},
 					},
+					Addresses:          addr,
 					ObservedGeneration: 2,
 				},
 			},
@@ -558,7 +588,7 @@ func TestBuildGatewayStatuses(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewWithT(t)
 
-			result := buildGatewayStatuses(test.gateway, test.ignoredGateways, test.nginxReloadRes)
+			result := buildGatewayStatuses(test.gateway, test.ignoredGateways, addr, test.nginxReloadRes)
 			g.Expect(helpers.Diff(test.expected, result)).To(BeEmpty())
 		})
 	}

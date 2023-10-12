@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/status"
+	v1 "k8s.io/api/core/v1"
 )
 
 type FakeUpdater struct {
@@ -23,6 +24,12 @@ type FakeUpdater struct {
 	updateArgsForCall []struct {
 		arg1 context.Context
 		arg2 status.Status
+	}
+	UpdateAddressesStub        func(context.Context, *v1.Service)
+	updateAddressesMutex       sync.RWMutex
+	updateAddressesArgsForCall []struct {
+		arg1 context.Context
+		arg2 *v1.Service
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
@@ -117,6 +124,39 @@ func (fake *FakeUpdater) UpdateArgsForCall(i int) (context.Context, status.Statu
 	return argsForCall.arg1, argsForCall.arg2
 }
 
+func (fake *FakeUpdater) UpdateAddresses(arg1 context.Context, arg2 *v1.Service) {
+	fake.updateAddressesMutex.Lock()
+	fake.updateAddressesArgsForCall = append(fake.updateAddressesArgsForCall, struct {
+		arg1 context.Context
+		arg2 *v1.Service
+	}{arg1, arg2})
+	stub := fake.UpdateAddressesStub
+	fake.recordInvocation("UpdateAddresses", []interface{}{arg1, arg2})
+	fake.updateAddressesMutex.Unlock()
+	if stub != nil {
+		fake.UpdateAddressesStub(arg1, arg2)
+	}
+}
+
+func (fake *FakeUpdater) UpdateAddressesCallCount() int {
+	fake.updateAddressesMutex.RLock()
+	defer fake.updateAddressesMutex.RUnlock()
+	return len(fake.updateAddressesArgsForCall)
+}
+
+func (fake *FakeUpdater) UpdateAddressesCalls(stub func(context.Context, *v1.Service)) {
+	fake.updateAddressesMutex.Lock()
+	defer fake.updateAddressesMutex.Unlock()
+	fake.UpdateAddressesStub = stub
+}
+
+func (fake *FakeUpdater) UpdateAddressesArgsForCall(i int) (context.Context, *v1.Service) {
+	fake.updateAddressesMutex.RLock()
+	defer fake.updateAddressesMutex.RUnlock()
+	argsForCall := fake.updateAddressesArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
+}
+
 func (fake *FakeUpdater) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
@@ -126,6 +166,8 @@ func (fake *FakeUpdater) Invocations() map[string][][]interface{} {
 	defer fake.enableMutex.RUnlock()
 	fake.updateMutex.RLock()
 	defer fake.updateMutex.RUnlock()
+	fake.updateAddressesMutex.RLock()
+	defer fake.updateAddressesMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

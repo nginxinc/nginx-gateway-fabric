@@ -7,6 +7,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -19,6 +20,7 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/status"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/status/statusfakes"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/config"
 	staticConds "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/conditions"
 )
 
@@ -73,9 +75,8 @@ var _ = Describe("Updater", func() {
 			gw, ignoredGw *v1beta1.Gateway
 			hr            *v1beta1.HTTPRoute
 			ng            *ngfAPI.NginxGateway
-			ipAddrType    = v1beta1.IPAddressType
 			addr          = v1beta1.GatewayStatusAddress{
-				Type:  &ipAddrType,
+				Type:  helpers.GetPointer(v1beta1.IPAddressType),
 				Value: "1.2.3.4",
 			}
 
@@ -97,11 +98,13 @@ var _ = Describe("Updater", func() {
 									SupportedKinds: []v1beta1.RouteGroupKind{{Kind: "HTTPRoute"}},
 								},
 							},
+							Addresses:          []v1beta1.GatewayStatusAddress{addr},
 							ObservedGeneration: gens.gateways,
 						},
 						{Namespace: "test", Name: "ignored-gateway"}: {
 							Conditions:         staticConds.NewGatewayConflict(),
 							ObservedGeneration: 1,
+							Ignored:            true,
 						},
 					},
 					HTTPRouteStatuses: status.HTTPRouteStatuses{
@@ -199,7 +202,6 @@ var _ = Describe("Updater", func() {
 								Message:            staticConds.GatewayMessageGatewayConflict,
 							},
 						},
-						Addresses: []v1beta1.GatewayStatusAddress{addr},
 					},
 				}
 			}
@@ -251,12 +253,14 @@ var _ = Describe("Updater", func() {
 
 		BeforeAll(func() {
 			updater = status.NewUpdater(status.UpdaterConfig{
-				GatewayCtlrName:          gatewayCtrlName,
-				GatewayClassName:         gcName,
-				Client:                   client,
-				Logger:                   zap.New(),
-				Clock:                    fakeClock,
-				PodIP:                    "1.2.3.4",
+				GatewayCtlrName:  gatewayCtrlName,
+				GatewayClassName: gcName,
+				Client:           client,
+				Logger:           zap.New(),
+				Clock:            fakeClock,
+				GatewayPodConfig: config.GatewayPodConfig{
+					PodIP: "1.2.3.4",
+				},
 				UpdateGatewayClassStatus: true,
 			})
 
@@ -396,6 +400,44 @@ var _ = Describe("Updater", func() {
 			expectedNG.ResourceVersion = latestNG.ResourceVersion
 
 			Expect(helpers.Diff(expectedNG, latestNG)).To(BeEmpty())
+		})
+
+		When("the Gateway Service is updated with a new address", func() {
+			svc := &v1.Service{
+				Spec: v1.ServiceSpec{
+					Type: v1.ServiceTypeLoadBalancer,
+				},
+				Status: v1.ServiceStatus{
+					LoadBalancer: v1.LoadBalancerStatus{
+						Ingress: []v1.LoadBalancerIngress{
+							{
+								IP: "5.6.7.8",
+							},
+						},
+					},
+				},
+			}
+
+			AfterEach(func() {
+				// reset the IP for the remaining tests
+				svc.Status.LoadBalancer.Ingress[0].IP = "1.2.3.4"
+				updater.UpdateAddresses(context.Background(), svc)
+			})
+
+			It("should update the previous Gateway statuses with new address", func() {
+				latestGw := &v1beta1.Gateway{}
+				expectedGw := createExpectedGwWithGeneration(1)
+				expectedGw.Status.Addresses[0].Value = "5.6.7.8"
+
+				updater.UpdateAddresses(context.Background(), svc)
+
+				err := client.Get(context.Background(), types.NamespacedName{Namespace: "test", Name: "gateway"}, latestGw)
+				Expect(err).ToNot(HaveOccurred())
+
+				expectedGw.ResourceVersion = latestGw.ResourceVersion
+
+				Expect(helpers.Diff(expectedGw, latestGw)).To(BeEmpty())
+			})
 		})
 
 		It("should not update Gateway API statuses with canceled context - function normally returns", func() {
@@ -646,9 +688,9 @@ var _ = Describe("Updater", func() {
 				)
 				Expect(err).ToNot(HaveOccurred())
 
-				// Before this test there were 4 updates to the Gateway resource.
-				// So now the resource version should equal 24.
-				Expect(latestGw.ResourceVersion).To(Equal("24"))
+				// Before this test there were 6 updates to the Gateway resource.
+				// So now the resource version should equal 26.
+				Expect(latestGw.ResourceVersion).To(Equal("26"))
 			})
 		})
 	})
@@ -661,12 +703,14 @@ var _ = Describe("Updater", func() {
 
 		BeforeAll(func() {
 			updater = status.NewUpdater(status.UpdaterConfig{
-				GatewayCtlrName:          gatewayCtrlName,
-				GatewayClassName:         gcName,
-				Client:                   client,
-				Logger:                   zap.New(),
-				Clock:                    fakeClock,
-				PodIP:                    "1.2.3.4",
+				GatewayCtlrName:  gatewayCtrlName,
+				GatewayClassName: gcName,
+				Client:           client,
+				Logger:           zap.New(),
+				Clock:            fakeClock,
+				GatewayPodConfig: config.GatewayPodConfig{
+					PodIP: "1.2.3.4",
+				},
 				UpdateGatewayClassStatus: false,
 			})
 
@@ -710,12 +754,14 @@ var _ = Describe("Updater", func() {
 	Describe("Edge cases", func() {
 		It("panics on update if status type is unknown", func() {
 			updater := status.NewUpdater(status.UpdaterConfig{
-				GatewayCtlrName:          gatewayCtrlName,
-				GatewayClassName:         gcName,
-				Client:                   client,
-				Logger:                   zap.New(),
-				Clock:                    fakeClock,
-				PodIP:                    "1.2.3.4",
+				GatewayCtlrName:  gatewayCtrlName,
+				GatewayClassName: gcName,
+				Client:           client,
+				Logger:           zap.New(),
+				Clock:            fakeClock,
+				GatewayPodConfig: config.GatewayPodConfig{
+					PodIP: "1.2.3.4",
+				},
 				UpdateGatewayClassStatus: true,
 			})
 

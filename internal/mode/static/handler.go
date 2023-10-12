@@ -15,6 +15,7 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/events"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/status"
+	ngfConfig "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/config"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/file"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/runtime"
@@ -30,6 +31,10 @@ type handlerMetricsCollector interface {
 
 // eventHandlerConfig holds configuration parameters for eventHandlerImpl.
 type eventHandlerConfig struct {
+	// k8sClient is a Kubernetes API client
+	k8sClient client.Client
+	// gatewayPodConfig contains information about this Pod.
+	gatewayPodConfig ngfConfig.GatewayPodConfig
 	// processor is the state ChangeProcessor.
 	processor state.ChangeProcessor
 	// serviceResolver resolves Services to Endpoints.
@@ -86,22 +91,7 @@ func (h *eventHandlerImpl) HandleEventBatch(ctx context.Context, logger logr.Log
 	}()
 
 	for _, event := range batch {
-		switch e := event.(type) {
-		case *events.UpsertEvent:
-			if cfg, ok := e.Resource.(*ngfAPI.NginxGateway); ok {
-				h.updateControlPlaneAndSetStatus(ctx, logger, cfg)
-			} else {
-				h.cfg.processor.CaptureUpsertChange(e.Resource)
-			}
-		case *events.DeleteEvent:
-			if _, ok := e.Type.(*ngfAPI.NginxGateway); ok {
-				h.updateControlPlaneAndSetStatus(ctx, logger, nil)
-			} else {
-				h.cfg.processor.CaptureDeleteChange(e.Type, e.NamespacedName)
-			}
-		default:
-			panic(fmt.Errorf("unknown event type %T", e))
-		}
+		h.handleEvent(ctx, logger, event)
 	}
 
 	changed, graph := h.cfg.processor.Process()
@@ -131,7 +121,47 @@ func (h *eventHandlerImpl) HandleEventBatch(ctx context.Context, logger logr.Log
 		}
 	}
 
-	h.cfg.statusUpdater.Update(ctx, buildGatewayAPIStatuses(graph, nginxReloadRes))
+	gwAddresses, err := status.GetGatewayAddresses(ctx, h.cfg.k8sClient, nil, h.cfg.gatewayPodConfig)
+	if err != nil {
+		logger.Error(err, "Setting GatewayStatusAddress to Pod IP Address")
+	}
+
+	h.cfg.statusUpdater.Update(ctx, buildGatewayAPIStatuses(graph, gwAddresses, nginxReloadRes))
+}
+
+func (h *eventHandlerImpl) handleEvent(ctx context.Context, logger logr.Logger, event interface{}) {
+	switch e := event.(type) {
+	case *events.UpsertEvent:
+		switch obj := e.Resource.(type) {
+		case *ngfAPI.NginxGateway:
+			h.updateControlPlaneAndSetStatus(ctx, logger, obj)
+		case *apiv1.Service:
+			podConfig := h.cfg.gatewayPodConfig
+			if obj.Name == podConfig.ServiceName && obj.Namespace == podConfig.Namespace {
+				h.cfg.statusUpdater.UpdateAddresses(ctx, obj)
+			} else {
+				h.cfg.processor.CaptureUpsertChange(e.Resource)
+			}
+		default:
+			h.cfg.processor.CaptureUpsertChange(e.Resource)
+		}
+	case *events.DeleteEvent:
+		switch e.Type.(type) {
+		case *ngfAPI.NginxGateway:
+			h.updateControlPlaneAndSetStatus(ctx, logger, nil)
+		case *apiv1.Service:
+			podConfig := h.cfg.gatewayPodConfig
+			if e.NamespacedName.Name == podConfig.ServiceName && e.NamespacedName.Namespace == podConfig.Namespace {
+				h.cfg.statusUpdater.UpdateAddresses(ctx, nil)
+			} else {
+				h.cfg.processor.CaptureDeleteChange(e.Type, e.NamespacedName)
+			}
+		default:
+			h.cfg.processor.CaptureDeleteChange(e.Type, e.NamespacedName)
+		}
+	default:
+		panic(fmt.Errorf("unknown event type %T", e))
+	}
 }
 
 func (h *eventHandlerImpl) updateNginx(ctx context.Context, conf dataplane.Configuration) error {

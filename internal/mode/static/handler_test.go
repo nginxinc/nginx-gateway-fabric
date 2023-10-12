@@ -7,9 +7,11 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go.uber.org/zap"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	ctlrZap "sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
@@ -19,6 +21,7 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/status"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/status/statusfakes"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/config"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/metrics/collectors"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/configfakes"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/file"
@@ -67,6 +70,7 @@ var _ = Describe("eventHandler", func() {
 		fakeEventRecorder = record.NewFakeRecorder(1)
 
 		handler = newEventHandlerImpl(eventHandlerConfig{
+			k8sClient:           fake.NewFakeClient(),
 			processor:           fakeProcessor,
 			generator:           fakeGenerator,
 			logLevelSetter:      newZapLogLevelSetter(zap.NewAtomicLevel()),
@@ -76,7 +80,11 @@ var _ = Describe("eventHandler", func() {
 			eventRecorder:       fakeEventRecorder,
 			healthChecker:       &healthChecker{},
 			controlConfigNSName: types.NamespacedName{Namespace: namespace, Name: configName},
-			metricsCollector:    collectors.NewControllerNoopCollector(),
+			gatewayPodConfig: config.GatewayPodConfig{
+				ServiceName: "nginx-gateway",
+				Namespace:   "nginx-gateway",
+			},
+			metricsCollector: collectors.NewControllerNoopCollector(),
 		})
 		Expect(handler.cfg.healthChecker.ready).To(BeFalse())
 	})
@@ -218,6 +226,55 @@ var _ = Describe("eventHandler", func() {
 			event := <-fakeEventRecorder.Events
 			Expect(event).To(Equal("Warning ResourceDeleted NginxGateway configuration was deleted; using defaults"))
 			Expect(handler.cfg.logLevelSetter.Enabled(zap.InfoLevel)).To(BeTrue())
+		})
+	})
+
+	When("receiving Service updates", func() {
+		It("should not call UpdateAddresses if the Service is not for the Gateway Pod", func() {
+			e := &events.UpsertEvent{Resource: &v1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "not-nginx-gateway",
+				},
+			}}
+			batch := []interface{}{e}
+
+			handler.HandleEventBatch(context.Background(), ctlrZap.New(), batch)
+
+			Expect(fakeStatusUpdater.UpdateAddressesCallCount()).To(BeZero())
+
+			de := &events.DeleteEvent{Type: &v1.Service{}}
+			batch = []interface{}{de}
+
+			handler.HandleEventBatch(context.Background(), ctlrZap.New(), batch)
+
+			Expect(fakeStatusUpdater.UpdateAddressesCallCount()).To(BeZero())
+		})
+
+		It("should update the addresses when the Gateway Service is upserted", func() {
+			e := &events.UpsertEvent{Resource: &v1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "nginx-gateway",
+					Namespace: "nginx-gateway",
+				},
+			}}
+			batch := []interface{}{e}
+
+			handler.HandleEventBatch(context.Background(), ctlrZap.New(), batch)
+			Expect(fakeStatusUpdater.UpdateAddressesCallCount()).ToNot(BeZero())
+		})
+
+		It("should update the addresses when the Gateway Service is deleted", func() {
+			e := &events.DeleteEvent{
+				Type: &v1.Service{},
+				NamespacedName: types.NamespacedName{
+					Name:      "nginx-gateway",
+					Namespace: "nginx-gateway",
+				},
+			}
+			batch := []interface{}{e}
+
+			handler.HandleEventBatch(context.Background(), ctlrZap.New(), batch)
+			Expect(fakeStatusUpdater.UpdateAddressesCallCount()).ToNot(BeZero())
 		})
 	})
 

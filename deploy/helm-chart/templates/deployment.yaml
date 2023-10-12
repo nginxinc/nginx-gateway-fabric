@@ -30,6 +30,7 @@ spec:
         - --gateway-ctlr-name={{ .Values.nginxGateway.gatewayControllerName }}
         - --gatewayclass={{ .Values.nginxGateway.gatewayClassName }}
         - --config={{ include "nginx-gateway.config-name" . }}
+        - --service-name={{ include "nginx-gateway.fullname" . }}
         {{- if .Values.metrics.enable }}
         - --metrics-port={{ .Values.metrics.port }}
         {{- if .Values.metrics.secure  }}

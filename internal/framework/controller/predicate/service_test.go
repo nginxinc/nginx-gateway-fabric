@@ -246,3 +246,185 @@ func TestServicePortsChangedPredicate(t *testing.T) {
 	g.Expect(p.Create(event.CreateEvent{Object: &v1.Service{}})).To(BeTrue())
 	g.Expect(p.Generic(event.GenericEvent{Object: &v1.Service{}})).To(BeTrue())
 }
+
+func TestGatewayServicePredicate_Update(t *testing.T) {
+	testcases := []struct {
+		objectOld client.Object
+		objectNew client.Object
+		msg       string
+		expUpdate bool
+	}{
+		{
+			msg:       "nil objectOld",
+			objectOld: nil,
+			objectNew: &v1.Service{},
+			expUpdate: false,
+		},
+		{
+			msg:       "nil objectNew",
+			objectOld: &v1.Service{},
+			objectNew: nil,
+			expUpdate: false,
+		},
+		{
+			msg:       "non-Service objectOld",
+			objectOld: &v1.Namespace{},
+			objectNew: &v1.Service{},
+			expUpdate: false,
+		},
+		{
+			msg:       "non-Service objectNew",
+			objectOld: &v1.Service{},
+			objectNew: &v1.Namespace{},
+			expUpdate: false,
+		},
+		{
+			msg: "something irrelevant changed",
+			objectOld: &v1.Service{
+				Spec: v1.ServiceSpec{
+					ClusterIP: "1.2.3.4",
+				},
+			},
+			objectNew: &v1.Service{
+				Spec: v1.ServiceSpec{
+					ClusterIP: "5.6.7.8",
+				},
+			},
+			expUpdate: false,
+		},
+		{
+			msg: "type changed",
+			objectOld: &v1.Service{
+				Spec: v1.ServiceSpec{
+					Type: v1.ServiceTypeLoadBalancer,
+				},
+			},
+			objectNew: &v1.Service{
+				Spec: v1.ServiceSpec{
+					Type: v1.ServiceTypeNodePort,
+				},
+			},
+			expUpdate: true,
+		},
+		{
+			msg: "ingress changed length",
+			objectOld: &v1.Service{
+				Spec: v1.ServiceSpec{
+					Type: v1.ServiceTypeLoadBalancer,
+				},
+				Status: v1.ServiceStatus{
+					LoadBalancer: v1.LoadBalancerStatus{
+						Ingress: []v1.LoadBalancerIngress{
+							{
+								IP: "1.2.3.4",
+							},
+						},
+					},
+				},
+			},
+			objectNew: &v1.Service{
+				Spec: v1.ServiceSpec{
+					Type: v1.ServiceTypeNodePort,
+				}, Status: v1.ServiceStatus{
+					LoadBalancer: v1.LoadBalancerStatus{
+						Ingress: []v1.LoadBalancerIngress{
+							{
+								IP: "1.2.3.4",
+							},
+							{
+								IP: "5.6.7.8",
+							},
+						},
+					},
+				},
+			},
+			expUpdate: true,
+		},
+		{
+			msg: "IP address changed",
+			objectOld: &v1.Service{
+				Spec: v1.ServiceSpec{
+					Type: v1.ServiceTypeLoadBalancer,
+				},
+				Status: v1.ServiceStatus{
+					LoadBalancer: v1.LoadBalancerStatus{
+						Ingress: []v1.LoadBalancerIngress{
+							{
+								IP: "1.2.3.4",
+							},
+						},
+					},
+				},
+			},
+			objectNew: &v1.Service{
+				Spec: v1.ServiceSpec{
+					Type: v1.ServiceTypeNodePort,
+				}, Status: v1.ServiceStatus{
+					LoadBalancer: v1.LoadBalancerStatus{
+						Ingress: []v1.LoadBalancerIngress{
+							{
+								IP: "5.6.7.8",
+							},
+						},
+					},
+				},
+			},
+			expUpdate: true,
+		},
+		{
+			msg: "Hostname changed",
+			objectOld: &v1.Service{
+				Spec: v1.ServiceSpec{
+					Type: v1.ServiceTypeLoadBalancer,
+				},
+				Status: v1.ServiceStatus{
+					LoadBalancer: v1.LoadBalancerStatus{
+						Ingress: []v1.LoadBalancerIngress{
+							{
+								Hostname: "one",
+							},
+						},
+					},
+				},
+			},
+			objectNew: &v1.Service{
+				Spec: v1.ServiceSpec{
+					Type: v1.ServiceTypeNodePort,
+				}, Status: v1.ServiceStatus{
+					LoadBalancer: v1.LoadBalancerStatus{
+						Ingress: []v1.LoadBalancerIngress{
+							{
+								Hostname: "two",
+							},
+						},
+					},
+				},
+			},
+			expUpdate: true,
+		},
+	}
+
+	p := GatewayServicePredicate{}
+
+	for _, tc := range testcases {
+		t.Run(tc.msg, func(t *testing.T) {
+			g := NewWithT(t)
+			update := p.Update(event.UpdateEvent{
+				ObjectOld: tc.objectOld,
+				ObjectNew: tc.objectNew,
+			})
+
+			g.Expect(update).To(Equal(tc.expUpdate))
+		})
+	}
+}
+
+func TestGatewayServicePredicate(t *testing.T) {
+	g := NewWithT(t)
+
+	p := GatewayServicePredicate{}
+
+	g.Expect(p.Delete(event.DeleteEvent{Object: &v1.Service{}})).To(BeTrue())
+	g.Expect(p.Create(event.CreateEvent{Object: &v1.Service{}})).To(BeTrue())
+	g.Expect(p.Generic(event.GenericEvent{Object: &v1.Service{}})).To(BeTrue())
+}

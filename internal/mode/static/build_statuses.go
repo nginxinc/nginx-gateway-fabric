@@ -16,14 +16,18 @@ type nginxReloadResult struct {
 }
 
 // buildGatewayAPIStatuses builds status.Statuses from a Graph.
-func buildGatewayAPIStatuses(graph *graph.Graph, nginxReloadRes nginxReloadResult) status.GatewayAPIStatuses {
+func buildGatewayAPIStatuses(
+	graph *graph.Graph,
+	gwAddresses []v1beta1.GatewayStatusAddress,
+	nginxReloadRes nginxReloadResult,
+) status.GatewayAPIStatuses {
 	statuses := status.GatewayAPIStatuses{
 		HTTPRouteStatuses: make(status.HTTPRouteStatuses),
 	}
 
 	statuses.GatewayClassStatuses = buildGatewayClassStatuses(graph.GatewayClass, graph.IgnoredGatewayClasses)
 
-	statuses.GatewayStatuses = buildGatewayStatuses(graph.Gateway, graph.IgnoredGateways, nginxReloadRes)
+	statuses.GatewayStatuses = buildGatewayStatuses(graph.Gateway, graph.IgnoredGateways, gwAddresses, nginxReloadRes)
 
 	for nsname, r := range graph.Routes {
 		parentStatuses := make([]status.ParentStatus, 0, len(r.ParentRefs))
@@ -105,25 +109,31 @@ func buildGatewayClassStatuses(
 func buildGatewayStatuses(
 	gateway *graph.Gateway,
 	ignoredGateways map[types.NamespacedName]*v1beta1.Gateway,
+	gwAddresses []v1beta1.GatewayStatusAddress,
 	nginxReloadRes nginxReloadResult,
 ) status.GatewayStatuses {
 	statuses := make(status.GatewayStatuses)
 
 	if gateway != nil {
-		statuses[client.ObjectKeyFromObject(gateway.Source)] = buildGatewayStatus(gateway, nginxReloadRes)
+		statuses[client.ObjectKeyFromObject(gateway.Source)] = buildGatewayStatus(gateway, gwAddresses, nginxReloadRes)
 	}
 
 	for nsname, gw := range ignoredGateways {
 		statuses[nsname] = status.GatewayStatus{
 			Conditions:         staticConds.NewGatewayConflict(),
 			ObservedGeneration: gw.Generation,
+			Ignored:            true,
 		}
 	}
 
 	return statuses
 }
 
-func buildGatewayStatus(gateway *graph.Gateway, nginxReloadRes nginxReloadResult) status.GatewayStatus {
+func buildGatewayStatus(
+	gateway *graph.Gateway,
+	gwAddresses []v1beta1.GatewayStatusAddress,
+	nginxReloadRes nginxReloadResult,
+) status.GatewayStatus {
 	if !gateway.Valid {
 		return status.GatewayStatus{
 			Conditions:         staticConds.DeduplicateConditions(gateway.Conditions),
@@ -175,6 +185,7 @@ func buildGatewayStatus(gateway *graph.Gateway, nginxReloadRes nginxReloadResult
 	return status.GatewayStatus{
 		Conditions:         staticConds.DeduplicateConditions(gwConds),
 		ListenerStatuses:   listenerStatuses,
+		Addresses:          gwAddresses,
 		ObservedGeneration: gateway.Source.Generation,
 	}
 }

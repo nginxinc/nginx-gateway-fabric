@@ -91,7 +91,7 @@ Fields:
     - `allowedRoutes` - supported.
   - `addresses` - not supported.
 - `status`
-  - `addresses` - Pod IPAddress supported.
+  - `addresses` - supported.
   - `conditions` - supported (Condition/Status/Reason):
     - `Accepted/True/Accepted`
     - `Accepted/True/ListenersNotValid`

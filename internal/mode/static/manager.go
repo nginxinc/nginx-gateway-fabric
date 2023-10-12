@@ -157,14 +157,15 @@ func StartManager(cfg config.Config) error {
 		GatewayCtlrName:          cfg.GatewayCtlrName,
 		GatewayClassName:         cfg.GatewayClassName,
 		Client:                   mgr.GetClient(),
-		PodIP:                    cfg.PodIP,
 		Logger:                   cfg.Logger.WithName("statusUpdater"),
 		Clock:                    status.NewRealClock(),
 		UpdateGatewayClassStatus: cfg.UpdateGatewayClassStatus,
 		LeaderElectionEnabled:    cfg.LeaderElection.Enabled,
+		GatewayPodConfig:         cfg.GatewayPodConfig,
 	})
 
 	eventHandler := newEventHandlerImpl(eventHandlerConfig{
+		k8sClient:       mgr.GetClient(),
 		processor:       processor,
 		serviceResolver: resolver.NewServiceResolverImpl(mgr.GetClient()),
 		generator:       ngxcfg.NewGeneratorImpl(),
@@ -178,6 +179,7 @@ func StartManager(cfg config.Config) error {
 		eventRecorder:       recorder,
 		healthChecker:       hc,
 		controlConfigNSName: controlConfigNSName,
+		gatewayPodConfig:    cfg.GatewayPodConfig,
 		metricsCollector:    handlerCollector,
 	})
 
@@ -267,6 +269,16 @@ func registerControllers(
 			options: []controller.Option{
 				controller.WithK8sPredicate(predicate.ServicePortsChangedPredicate{}),
 			},
+		},
+		{
+			objectType: &apiv1.Service{},
+			options: func() []controller.Option {
+				svcNSName := types.NamespacedName{Namespace: cfg.Namespace, Name: cfg.GatewayPodConfig.ServiceName}
+				return []controller.Option{
+					controller.WithNamespacedNameFilter(filter.CreateSingleResourceFilter(svcNSName)),
+					controller.WithK8sPredicate(predicate.GatewayServicePredicate{}),
+				}
+			}(),
 		},
 		{
 			objectType: &apiv1.Secret{},

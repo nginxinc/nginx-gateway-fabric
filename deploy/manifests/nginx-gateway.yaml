@@ -32,6 +32,7 @@ rules:
   - namespaces
   - services
   - secrets
+  - nodes
   verbs:
   - list
   - watch
@@ -139,6 +140,7 @@ spec:
         - --gateway-ctlr-name=gateway.nginx.org/nginx-gateway-controller
         - --gatewayclass=nginx
         - --config=nginx-gateway-config
+        - --service-name=nginx-gateway
         - --metrics-port=9113
         - --health-port=8081
         - --leader-election-lock-name=nginx-gateway-leader-election
