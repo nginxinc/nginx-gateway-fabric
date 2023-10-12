@@ -92,8 +92,9 @@ NGINX Gateway Fabric exports the following metrics:
   - nginx_stale_config. 1 means NGF failed to configure NGINX with the latest version of the configuration, which means
     NGINX is running with a stale version.
   - nginx_last_reload_milliseconds. Duration in milliseconds of NGINX reloads (histogram).
-  - event_batch_processing_milliseconds: Duration in milliseconds of event batch processing (histogram). The time it
-    takes NGF to process batches of Kubernetes events.
+  - event_batch_processing_milliseconds: Duration in milliseconds of event batch processing (histogram), which is the
+    time it takes NGF to process batches of Kubernetes events (changes to cluster resources). Note that NGF processes
+    events in batches, and while processing the current batch, it accumulates events for the next batch.
   - These metrics have the namespace `nginx_gateway_fabric`, and include the label `class` which is set to the
     Gateway class of NGF. For example, `nginx_gateway_fabric_nginx_reloads_total{class="nginx"}`.
 
