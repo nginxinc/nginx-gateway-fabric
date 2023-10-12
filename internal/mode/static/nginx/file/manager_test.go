@@ -60,7 +60,7 @@ var _ = Describe("EventHandler", func() {
 		}
 
 		BeforeAll(func() {
-			mgr = file.NewManagerImpl(zap.New(), file.NewStdLibOSFileManager())
+			mgr = file.NewManagerImpl(zap.New(), file.NewStdLibOSFileManager(), nil)
 			tmpDir = GinkgoT().TempDir()
 
 			regular1 = file.File{
@@ -116,9 +116,28 @@ var _ = Describe("EventHandler", func() {
 		})
 	})
 
+	When("file does not exist", func() {
+		It("should not error", func() {
+			tmpDir := GinkgoT().TempDir()
+			mgr := file.NewManagerImpl(
+				zap.New(),
+				file.NewStdLibOSFileManager(),
+				[]string{filepath.Join(tmpDir, "file-does-not-exist.md")})
+			files := []file.File{
+				{
+					Type:    file.TypeRegular,
+					Path:    filepath.Join(tmpDir, "regular-1.conf"),
+					Content: []byte("regular-1"),
+				},
+			}
+
+			Expect(mgr.ReplaceFiles(files)).ShouldNot(HaveOccurred())
+		})
+	})
+
 	When("file type is not supported", func() {
 		It("should panic", func() {
-			mgr := file.NewManagerImpl(zap.New(), nil)
+			mgr := file.NewManagerImpl(zap.New(), nil, nil)
 
 			files := []file.File{
 				{
@@ -155,7 +174,7 @@ var _ = Describe("EventHandler", func() {
 		DescribeTable(
 			"should return error on file IO error",
 			func(fakeOSMgr *filefakes.FakeOSFileManager) {
-				mgr := file.NewManagerImpl(zap.New(), fakeOSMgr)
+				mgr := file.NewManagerImpl(zap.New(), fakeOSMgr, nil)
 
 				// special case for Remove
 				// to kick off removing, we need to successfully write files beforehand
