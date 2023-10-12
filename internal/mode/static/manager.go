@@ -134,7 +134,7 @@ func StartManager(cfg config.Config) error {
 	var (
 		mgrCollector ngxruntime.MetricsCollector = collectors.NewManagerNoopCollector()
 		// nolint:ineffassign // not an ineffectual assignment. Will be used if metrics are disabled.
-		ctrlCollector controllerMetricsCollector = collectors.NewControllerNoopCollector()
+		ctlrCollector controllerMetricsCollector = collectors.NewControllerNoopCollector()
 	)
 
 	if cfg.MetricsConfig.Enabled {
@@ -145,11 +145,11 @@ func StartManager(cfg config.Config) error {
 		}
 
 		mgrCollector = collectors.NewManagerMetricsCollector(constLabels)
-		ctrlCollector = collectors.NewControllerCollector(constLabels)
+		ctlrCollector = collectors.NewControllerCollector(constLabels)
 		metrics.Registry.MustRegister(
 			ngxCollector,
 			mgrCollector.(prometheus.Collector),
-			ctrlCollector.(prometheus.Collector),
+			ctlrCollector.(prometheus.Collector),
 		)
 	}
 
@@ -179,7 +179,7 @@ func StartManager(cfg config.Config) error {
 		eventRecorder:       recorder,
 		healthChecker:       hc,
 		controlConfigNSName: controlConfigNSName,
-		metricsCollector:    ctrlCollector,
+		metricsCollector:    ctlrCollector,
 	})
 
 	objects, objectLists := prepareFirstEventBatchPreparerArgs(cfg.GatewayClassName, cfg.GatewayNsName)
