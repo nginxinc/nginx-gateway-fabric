@@ -34,6 +34,9 @@ type EventLoop struct {
 	// The batches are swapped before starting the handler goroutine.
 	currentBatch EventBatch
 	nextBatch    EventBatch
+
+	// the ID of the current batch
+	currentBatchID int
 }
 
 // NewEventLoop creates a new EventLoop.
@@ -63,11 +66,14 @@ func (el *EventLoop) Start(ctx context.Context) error {
 
 	handleBatch := func() {
 		go func(batch EventBatch) {
-			el.logger.Info("Handling events from the batch", "total", len(batch))
+			el.currentBatchID++
+			batchLogger := el.logger.WithName("eventHandler").WithValues("batchID", el.currentBatchID)
 
-			el.handler.HandleEventBatch(ctx, batch)
+			batchLogger.Info("Handling events from the batch", "total", len(batch))
 
-			el.logger.Info("Finished handling the batch")
+			el.handler.HandleEventBatch(ctx, batchLogger, batch)
+
+			batchLogger.Info("Finished handling the batch")
 			handlingDone <- struct{}{}
 		}(el.currentBatch)
 	}

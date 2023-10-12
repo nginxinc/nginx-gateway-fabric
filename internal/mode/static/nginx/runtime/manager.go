@@ -35,8 +35,8 @@ type Manager interface {
 	Reload(ctx context.Context, configVersion int) error
 }
 
-// ManagerCollector is an interface for the metrics of the NGINX runtime manager.
-type ManagerCollector interface {
+// MetricsCollector is an interface for the metrics of the NGINX runtime manager.
+type MetricsCollector interface {
 	IncReloadCount()
 	IncReloadErrors()
 	ObserveLastReloadTime(ms time.Duration)
@@ -45,14 +45,14 @@ type ManagerCollector interface {
 // ManagerImpl implements Manager.
 type ManagerImpl struct {
 	verifyClient     *verifyClient
-	managerCollector ManagerCollector
+	metricsCollector MetricsCollector
 }
 
 // NewManagerImpl creates a new ManagerImpl.
-func NewManagerImpl(managerCollector ManagerCollector) *ManagerImpl {
+func NewManagerImpl(collector MetricsCollector) *ManagerImpl {
 	return &ManagerImpl{
 		verifyClient:     newVerifyClient(nginxReloadTimeout),
-		managerCollector: managerCollector,
+		metricsCollector: collector,
 	}
 }
 
@@ -73,7 +73,7 @@ func (m *ManagerImpl) Reload(ctx context.Context, configVersion int) error {
 	// send HUP signal to the NGINX main process reload configuration
 	// See https://nginx.org/en/docs/control.html
 	if err := syscall.Kill(pid, syscall.SIGHUP); err != nil {
-		m.managerCollector.IncReloadErrors()
+		m.metricsCollector.IncReloadErrors()
 		return fmt.Errorf("failed to send the HUP signal to NGINX main: %w", err)
 	}
 
@@ -84,13 +84,13 @@ func (m *ManagerImpl) Reload(ctx context.Context, configVersion int) error {
 		previousChildProcesses,
 		os.ReadFile,
 	); err != nil {
-		m.managerCollector.IncReloadErrors()
+		m.metricsCollector.IncReloadErrors()
 		return err
 	}
-	m.managerCollector.IncReloadCount()
+	m.metricsCollector.IncReloadCount()
 
 	finish := time.Now()
-	m.managerCollector.ObserveLastReloadTime(finish.Sub(start))
+	m.metricsCollector.ObserveLastReloadTime(finish.Sub(start))
 	return nil
 }
 

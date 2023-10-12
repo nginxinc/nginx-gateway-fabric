@@ -1,20 +1,20 @@
-package metrics
+package collectors
 
 import (
 	"context"
 	"net"
 	"net/http"
-	"time"
 
 	prometheusClient "github.com/nginxinc/nginx-prometheus-exporter/client"
 	nginxCollector "github.com/nginxinc/nginx-prometheus-exporter/collector"
 	"github.com/prometheus/client_golang/prometheus"
+
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/metrics"
 )
 
 const (
-	nginxStatusSock        = "/var/run/nginx/nginx-status.sock"
-	nginxStatusURI         = "http://config-status/stub_status"
-	nginxStatusSockTimeout = 10 * time.Second
+	nginxStatusSock = "/var/run/nginx/nginx-status.sock"
+	nginxStatusURI  = "http://config-status/stub_status"
 )
 
 // NewNginxMetricsCollector creates an NginxCollector which fetches stats from NGINX over a unix socket
@@ -24,7 +24,7 @@ func NewNginxMetricsCollector(constLabels map[string]string) (prometheus.Collect
 	if err != nil {
 		return nil, err
 	}
-	return nginxCollector.NewNginxCollector(client, metricsNamespace, constLabels), nil
+	return nginxCollector.NewNginxCollector(client, metrics.Namespace, constLabels), nil
 }
 
 // getSocketClient gets an http.Client with a unix socket transport.

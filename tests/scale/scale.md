@@ -62,7 +62,7 @@ are listed in the [Scale Upstream Servers](#scale-upstream-servers) test steps.
 - Install Prometheus:
 
   ```console
-  kubectl apply -f manifets/prom-clusterrole.yaml
+  kubectl apply -f manifests/prom-clusterrole.yaml
   helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
   helm repo update
   helm install prom prometheus-community/prometheus --set useExistingClusterRoleName=prometheus -n prom
