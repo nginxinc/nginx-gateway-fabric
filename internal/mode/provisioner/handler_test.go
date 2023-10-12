@@ -96,7 +96,7 @@ var _ = Describe("handler", func() {
 				Resource: gc,
 			},
 		}
-		handler.HandleEventBatch(context.Background(), batch)
+		handler.HandleEventBatch(context.Background(), zap.New(), batch)
 
 		// Ensure GatewayClass is accepted
 
@@ -126,7 +126,7 @@ var _ = Describe("handler", func() {
 			},
 		}
 
-		handler.HandleEventBatch(context.Background(), batch)
+		handler.HandleEventBatch(context.Background(), zap.New(), batch)
 
 		depNsName := types.NamespacedName{
 			Namespace: "nginx-gateway",
@@ -156,7 +156,7 @@ var _ = Describe("handler", func() {
 		}
 
 		handle := func() {
-			handler.HandleEventBatch(context.Background(), batch)
+			handler.HandleEventBatch(context.Background(), zap.New(), batch)
 		}
 
 		Expect(handle).Should(Panic())
@@ -179,7 +179,6 @@ var _ = Describe("handler", func() {
 				gcName,
 				statusUpdater,
 				k8sclient,
-				zap.New(),
 				embeddedfiles.StaticModeDeploymentYAML,
 			)
 		})
@@ -217,7 +216,7 @@ var _ = Describe("handler", func() {
 					},
 				}
 
-				handler.HandleEventBatch(context.Background(), batch)
+				handler.HandleEventBatch(context.Background(), zap.New(), batch)
 				deps := &v1.DeploymentList{}
 
 				err := k8sclient.List(context.Background(), deps)
@@ -237,7 +236,7 @@ var _ = Describe("handler", func() {
 					},
 				}
 
-				handler.HandleEventBatch(context.Background(), batch)
+				handler.HandleEventBatch(context.Background(), zap.New(), batch)
 
 				deps := &v1.DeploymentList{}
 
@@ -266,7 +265,7 @@ var _ = Describe("handler", func() {
 					},
 				}
 
-				handler.HandleEventBatch(context.Background(), batch)
+				handler.HandleEventBatch(context.Background(), zap.New(), batch)
 
 				deps := &v1.DeploymentList{}
 				err := k8sclient.List(context.Background(), deps)
@@ -295,7 +294,7 @@ var _ = Describe("handler", func() {
 					},
 				}
 
-				handler.HandleEventBatch(context.Background(), batch)
+				handler.HandleEventBatch(context.Background(), zap.New(), batch)
 
 				unknownGC := &v1beta1.GatewayClass{}
 				err = k8sclient.Get(context.Background(), client.ObjectKeyFromObject(gc), unknownGC)
@@ -330,7 +329,6 @@ var _ = Describe("handler", func() {
 				gcName,
 				statusUpdater,
 				k8sclient,
-				zap.New(),
 				embeddedfiles.StaticModeDeploymentYAML,
 			)
 		})
@@ -340,7 +338,7 @@ var _ = Describe("handler", func() {
 				batch := []interface{}{e}
 
 				handle := func() {
-					handler.HandleEventBatch(context.TODO(), batch)
+					handler.HandleEventBatch(context.Background(), zap.New(), batch)
 				}
 
 				Expect(handle).Should(Panic())
@@ -408,7 +406,7 @@ var _ = Describe("handler", func() {
 				}
 
 				handle := func() {
-					handler.HandleEventBatch(context.Background(), batch)
+					handler.HandleEventBatch(context.Background(), zap.New(), batch)
 				}
 
 				Expect(handle).Should(Panic())
@@ -429,7 +427,7 @@ var _ = Describe("handler", func() {
 				}
 
 				handle := func() {
-					handler.HandleEventBatch(context.Background(), batch)
+					handler.HandleEventBatch(context.Background(), zap.New(), batch)
 				}
 
 				Expect(handle).Should(Panic())
@@ -442,7 +440,6 @@ var _ = Describe("handler", func() {
 					gcName,
 					statusUpdater,
 					k8sclient,
-					zap.New(),
 					[]byte("broken YAML"),
 				)
 

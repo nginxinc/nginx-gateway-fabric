@@ -69,7 +69,6 @@ var _ = Describe("eventHandler", func() {
 		handler = newEventHandlerImpl(eventHandlerConfig{
 			processor:           fakeProcessor,
 			generator:           fakeGenerator,
-			logger:              ctlrZap.New(),
 			logLevelSetter:      newZapLogLevelSetter(zap.NewAtomicLevel()),
 			nginxFileMgr:        fakeNginxFileMgr,
 			nginxRuntimeMgr:     fakeNginxRuntimeMgr,
@@ -117,7 +116,7 @@ var _ = Describe("eventHandler", func() {
 				e := &events.UpsertEvent{Resource: &v1beta1.HTTPRoute{}}
 				batch := []interface{}{e}
 
-				handler.HandleEventBatch(context.Background(), batch)
+				handler.HandleEventBatch(context.Background(), ctlrZap.New(), batch)
 
 				checkUpsertEventExpectations(e)
 				expectReconfig(dataplane.Configuration{Version: 1}, fakeCfgFiles)
@@ -130,7 +129,7 @@ var _ = Describe("eventHandler", func() {
 				}
 				batch := []interface{}{e}
 
-				handler.HandleEventBatch(context.Background(), batch)
+				handler.HandleEventBatch(context.Background(), ctlrZap.New(), batch)
 
 				checkDeleteEventExpectations(e)
 				expectReconfig(dataplane.Configuration{Version: 1}, fakeCfgFiles)
@@ -146,12 +145,12 @@ var _ = Describe("eventHandler", func() {
 				}
 				batch := []interface{}{upsertEvent, deleteEvent}
 
-				handler.HandleEventBatch(context.Background(), batch)
+				handler.HandleEventBatch(context.Background(), ctlrZap.New(), batch)
 
 				checkUpsertEventExpectations(upsertEvent)
 				checkDeleteEventExpectations(deleteEvent)
 
-				handler.HandleEventBatch(context.Background(), batch)
+				handler.HandleEventBatch(context.Background(), ctlrZap.New(), batch)
 			})
 		})
 	})
@@ -184,7 +183,7 @@ var _ = Describe("eventHandler", func() {
 
 		It("handles a valid config", func() {
 			batch := []interface{}{&events.UpsertEvent{Resource: cfg(ngfAPI.ControllerLogLevelError)}}
-			handler.HandleEventBatch(context.Background(), batch)
+			handler.HandleEventBatch(context.Background(), ctlrZap.New(), batch)
 
 			Expect(fakeStatusUpdater.UpdateCallCount()).Should(Equal(1))
 			_, statuses := fakeStatusUpdater.UpdateArgsForCall(0)
@@ -195,7 +194,7 @@ var _ = Describe("eventHandler", func() {
 
 		It("handles an invalid config", func() {
 			batch := []interface{}{&events.UpsertEvent{Resource: cfg(ngfAPI.ControllerLogLevel("invalid"))}}
-			handler.HandleEventBatch(context.Background(), batch)
+			handler.HandleEventBatch(context.Background(), ctlrZap.New(), batch)
 
 			Expect(fakeStatusUpdater.UpdateCallCount()).Should(Equal(1))
 			_, statuses := fakeStatusUpdater.UpdateArgsForCall(0)
@@ -214,7 +213,7 @@ var _ = Describe("eventHandler", func() {
 
 		It("handles a deleted config", func() {
 			batch := []interface{}{&events.DeleteEvent{Type: &ngfAPI.NginxGateway{}}}
-			handler.HandleEventBatch(context.Background(), batch)
+			handler.HandleEventBatch(context.Background(), ctlrZap.New(), batch)
 			Expect(len(fakeEventRecorder.Events)).To(Equal(1))
 			event := <-fakeEventRecorder.Events
 			Expect(event).To(Equal("Warning ResourceDeleted NginxGateway configuration was deleted; using defaults"))
@@ -229,7 +228,7 @@ var _ = Describe("eventHandler", func() {
 		fakeProcessor.ProcessReturns(true, &graph.Graph{})
 
 		Expect(handler.cfg.healthChecker.readyCheck(nil)).ToNot(Succeed())
-		handler.HandleEventBatch(context.Background(), batch)
+		handler.HandleEventBatch(context.Background(), ctlrZap.New(), batch)
 		Expect(handler.cfg.healthChecker.readyCheck(nil)).To(Succeed())
 	})
 
@@ -238,7 +237,7 @@ var _ = Describe("eventHandler", func() {
 		batch := []interface{}{e}
 
 		Expect(handler.cfg.healthChecker.readyCheck(nil)).ToNot(Succeed())
-		handler.HandleEventBatch(context.Background(), batch)
+		handler.HandleEventBatch(context.Background(), ctlrZap.New(), batch)
 		Expect(handler.cfg.healthChecker.readyCheck(nil)).To(Succeed())
 	})
 
@@ -249,14 +248,14 @@ var _ = Describe("eventHandler", func() {
 		fakeProcessor.ProcessReturns(true, &graph.Graph{})
 		fakeNginxRuntimeMgr.ReloadReturns(errors.New("reload error"))
 
-		handler.HandleEventBatch(context.Background(), batch)
+		handler.HandleEventBatch(context.Background(), ctlrZap.New(), batch)
 
 		Expect(handler.cfg.healthChecker.readyCheck(nil)).ToNot(Succeed())
 
 		// now send an update with no changes; should still return an error
 		fakeProcessor.ProcessReturns(false, &graph.Graph{})
 
-		handler.HandleEventBatch(context.Background(), batch)
+		handler.HandleEventBatch(context.Background(), ctlrZap.New(), batch)
 
 		Expect(handler.cfg.healthChecker.readyCheck(nil)).ToNot(Succeed())
 
@@ -264,7 +263,7 @@ var _ = Describe("eventHandler", func() {
 		fakeProcessor.ProcessReturns(true, &graph.Graph{})
 		fakeNginxRuntimeMgr.ReloadReturns(nil)
 
-		handler.HandleEventBatch(context.Background(), batch)
+		handler.HandleEventBatch(context.Background(), ctlrZap.New(), batch)
 
 		Expect(handler.cfg.healthChecker.readyCheck(nil)).To(Succeed())
 	})
@@ -274,7 +273,7 @@ var _ = Describe("eventHandler", func() {
 
 		handle := func() {
 			batch := []interface{}{e}
-			handler.HandleEventBatch(context.TODO(), batch)
+			handler.HandleEventBatch(context.Background(), ctlrZap.New(), batch)
 		}
 
 		Expect(handle).Should(Panic())

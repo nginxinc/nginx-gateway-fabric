@@ -107,7 +107,6 @@ func StartManager(cfg Config) error {
 		cfg.GatewayClassName,
 		statusUpdater,
 		mgr.GetClient(),
-		cfg.Logger.WithName("eventHandler"),
 		embeddedfiles.StaticModeDeploymentYAML,
 	)
 

@@ -52,8 +52,6 @@ type eventHandlerConfig struct {
 	controlConfigNSName types.NamespacedName
 	// metricsCollector collects metrics for this controller.
 	metricsCollector handlerMetricsCollector
-	// logger is the logger to be used by the EventHandler.
-	logger logr.Logger
 	// version is the current version number of the nginx config.
 	version int
 }
@@ -74,13 +72,13 @@ func newEventHandlerImpl(cfg eventHandlerConfig) *eventHandlerImpl {
 	}
 }
 
-func (h *eventHandlerImpl) HandleEventBatch(ctx context.Context, batch events.EventBatch) {
+func (h *eventHandlerImpl) HandleEventBatch(ctx context.Context, logger logr.Logger, batch events.EventBatch) {
 	start := time.Now()
-	h.cfg.logger.V(1).Info("Started processing event batch")
+	logger.V(1).Info("Started processing event batch")
 
 	defer func() {
 		duration := time.Since(start)
-		h.cfg.logger.V(1).Info(
+		logger.V(1).Info(
 			"Finished processing event batch",
 			"duration", duration.String(),
 		)
@@ -91,13 +89,13 @@ func (h *eventHandlerImpl) HandleEventBatch(ctx context.Context, batch events.Ev
 		switch e := event.(type) {
 		case *events.UpsertEvent:
 			if cfg, ok := e.Resource.(*ngfAPI.NginxGateway); ok {
-				h.updateControlPlaneAndSetStatus(ctx, cfg)
+				h.updateControlPlaneAndSetStatus(ctx, logger, cfg)
 			} else {
 				h.cfg.processor.CaptureUpsertChange(e.Resource)
 			}
 		case *events.DeleteEvent:
 			if _, ok := e.Type.(*ngfAPI.NginxGateway); ok {
-				h.updateControlPlaneAndSetStatus(ctx, nil)
+				h.updateControlPlaneAndSetStatus(ctx, logger, nil)
 			} else {
 				h.cfg.processor.CaptureDeleteChange(e.Type, e.NamespacedName)
 			}
@@ -108,7 +106,7 @@ func (h *eventHandlerImpl) HandleEventBatch(ctx context.Context, batch events.Ev
 
 	changed, graph := h.cfg.processor.Process()
 	if !changed {
-		h.cfg.logger.Info("Handling events didn't result into NGINX configuration changes")
+		logger.Info("Handling events didn't result into NGINX configuration changes")
 		if !h.cfg.healthChecker.ready && h.cfg.healthChecker.firstBatchError == nil {
 			h.cfg.healthChecker.setAsReady()
 		}
@@ -121,13 +119,13 @@ func (h *eventHandlerImpl) HandleEventBatch(ctx context.Context, batch events.Ev
 		ctx,
 		dataplane.BuildConfiguration(ctx, graph, h.cfg.serviceResolver, h.cfg.version),
 	); err != nil {
-		h.cfg.logger.Error(err, "Failed to update NGINX configuration")
+		logger.Error(err, "Failed to update NGINX configuration")
 		nginxReloadRes.error = err
 		if !h.cfg.healthChecker.ready {
 			h.cfg.healthChecker.firstBatchError = err
 		}
 	} else {
-		h.cfg.logger.Info("NGINX configuration was successfully updated")
+		logger.Info("NGINX configuration was successfully updated")
 		if !h.cfg.healthChecker.ready {
 			h.cfg.healthChecker.setAsReady()
 		}
@@ -152,17 +150,21 @@ func (h *eventHandlerImpl) updateNginx(ctx context.Context, conf dataplane.Confi
 
 // updateControlPlaneAndSetStatus updates the control plane configuration and then sets the status
 // based on the outcome
-func (h *eventHandlerImpl) updateControlPlaneAndSetStatus(ctx context.Context, cfg *ngfAPI.NginxGateway) {
+func (h *eventHandlerImpl) updateControlPlaneAndSetStatus(
+	ctx context.Context,
+	logger logr.Logger,
+	cfg *ngfAPI.NginxGateway,
+) {
 	var cond []conditions.Condition
 	if err := updateControlPlane(
 		cfg,
-		h.cfg.logger,
+		logger,
 		h.cfg.eventRecorder,
 		h.cfg.controlConfigNSName,
 		h.cfg.logLevelSetter,
 	); err != nil {
 		msg := "Failed to update control plane configuration"
-		h.cfg.logger.Error(err, msg)
+		logger.Error(err, msg)
 		h.cfg.eventRecorder.Eventf(
 			cfg,
 			apiv1.EventTypeWarning,
@@ -183,6 +185,6 @@ func (h *eventHandlerImpl) updateControlPlaneAndSetStatus(ctx context.Context, c
 		}
 
 		h.cfg.statusUpdater.Update(ctx, nginxGatewayStatus)
-		h.cfg.logger.Info("Reconfigured control plane.")
+		logger.Info("Reconfigured control plane.")
 	}
 }

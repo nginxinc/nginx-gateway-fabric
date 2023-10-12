@@ -168,7 +168,6 @@ func StartManager(cfg config.Config) error {
 		processor:       processor,
 		serviceResolver: resolver.NewServiceResolverImpl(mgr.GetClient()),
 		generator:       ngxcfg.NewGeneratorImpl(),
-		logger:          cfg.Logger.WithName("eventHandler"),
 		logLevelSetter:  logLevelSetter,
 		nginxFileMgr: file.NewManagerImpl(
 			cfg.Logger.WithName("nginxFileManager"),

@@ -27,7 +27,6 @@ type eventHandler struct {
 
 	statusUpdater status.Updater
 	k8sClient     client.Client
-	logger        logr.Logger
 
 	staticModeDeploymentYAML []byte
 
@@ -38,7 +37,6 @@ func newEventHandler(
 	gcName string,
 	statusUpdater status.Updater,
 	k8sClient client.Client,
-	logger logr.Logger,
 	staticModeDeploymentYAML []byte,
 ) *eventHandler {
 	return &eventHandler{
@@ -47,7 +45,6 @@ func newEventHandler(
 		statusUpdater:            statusUpdater,
 		gcName:                   gcName,
 		k8sClient:                k8sClient,
-		logger:                   logger,
 		staticModeDeploymentYAML: staticModeDeploymentYAML,
 		gatewayNextID:            1,
 	}
@@ -80,7 +77,7 @@ func (h *eventHandler) setGatewayClassStatuses(ctx context.Context) {
 	h.statusUpdater.Update(ctx, statuses)
 }
 
-func (h *eventHandler) ensureDeploymentsMatchGateways(ctx context.Context) {
+func (h *eventHandler) ensureDeploymentsMatchGateways(ctx context.Context, logger logr.Logger) {
 	var gwsWithoutDeps, removedGwsWithDeps []types.NamespacedName
 
 	for nsname, gw := range h.store.gateways {
@@ -116,7 +113,7 @@ func (h *eventHandler) ensureDeploymentsMatchGateways(ctx context.Context) {
 
 		h.provisions[nsname] = deployment
 
-		h.logger.Info(
+		logger.Info(
 			"Created deployment",
 			"deployment", client.ObjectKeyFromObject(deployment),
 			"gateway", nsname,
@@ -134,7 +131,7 @@ func (h *eventHandler) ensureDeploymentsMatchGateways(ctx context.Context) {
 
 		delete(h.provisions, nsname)
 
-		h.logger.Info(
+		logger.Info(
 			"Deleted deployment",
 			"deployment", client.ObjectKeyFromObject(deployment),
 			"gateway", nsname,
@@ -142,10 +139,10 @@ func (h *eventHandler) ensureDeploymentsMatchGateways(ctx context.Context) {
 	}
 }
 
-func (h *eventHandler) HandleEventBatch(ctx context.Context, batch events.EventBatch) {
+func (h *eventHandler) HandleEventBatch(ctx context.Context, logger logr.Logger, batch events.EventBatch) {
 	h.store.update(batch)
 	h.setGatewayClassStatuses(ctx)
-	h.ensureDeploymentsMatchGateways(ctx)
+	h.ensureDeploymentsMatchGateways(ctx, logger)
 }
 
 func (h *eventHandler) generateDeploymentID() string {
