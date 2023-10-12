@@ -91,7 +91,7 @@ func (m *ManagerImpl) ReplaceFiles(files []File) error {
 		if err := m.osFileManager.Remove(path); err != nil {
 			if os.IsNotExist(err) {
 				m.logger.V(1).Info(
-					"File not found when attempting to replace",
+					"File not found when attempting to delete",
 					"path", path,
 					"error", err,
 				)
