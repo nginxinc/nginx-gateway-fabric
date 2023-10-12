@@ -90,14 +90,14 @@ func (m *ManagerImpl) ReplaceFiles(files []File) error {
 	for _, path := range m.lastWrittenPaths {
 		if err := m.osFileManager.Remove(path); err != nil {
 			if os.IsNotExist(err) {
-				m.logger.V(1).Info(
+				m.logger.Info(
 					"File not found when attempting to delete",
 					"path", path,
 					"error", err,
 				)
-			} else {
-				return fmt.Errorf("failed to delete file %q: %w", path, err)
+				continue
 			}
+			return fmt.Errorf("failed to delete file %q: %w", path, err)
 		}
 
 		m.logger.Info("Deleted file", "path", path)
