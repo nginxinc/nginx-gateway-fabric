@@ -76,11 +76,10 @@ type ManagerImpl struct {
 }
 
 // NewManagerImpl creates a new NewManagerImpl.
-func NewManagerImpl(logger logr.Logger, osFileManager OSFileManager, lastWrittenPaths []string) *ManagerImpl {
+func NewManagerImpl(logger logr.Logger, osFileManager OSFileManager) *ManagerImpl {
 	return &ManagerImpl{
-		logger:           logger,
-		osFileManager:    osFileManager,
-		lastWrittenPaths: lastWrittenPaths,
+		logger:        logger,
+		osFileManager: osFileManager,
 	}
 }
 

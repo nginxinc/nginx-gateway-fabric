@@ -172,7 +172,6 @@ func StartManager(cfg config.Config) error {
 		nginxFileMgr: file.NewManagerImpl(
 			cfg.Logger.WithName("nginxFileManager"),
 			file.NewStdLibOSFileManager(),
-			nil,
 		),
 		nginxRuntimeMgr:     ngxruntime.NewManagerImpl(ngxruntimeCollector),
 		statusUpdater:       statusUpdater,
