@@ -119,20 +119,19 @@ var _ = Describe("EventHandler", func() {
 	When("file does not exist", func() {
 		It("should not error", func() {
 			fakeOSMgr := &filefakes.FakeOSFileManager{}
-			tmpDir := GinkgoT().TempDir()
 			mgr := file.NewManagerImpl(zap.New(), fakeOSMgr)
 
 			files := []file.File{
 				{
 					Type:    file.TypeRegular,
-					Path:    filepath.Join(tmpDir, "regular-1.conf"),
+					Path:    "regular-1.conf",
 					Content: []byte("regular-1"),
 				},
 			}
 
 			Expect(mgr.ReplaceFiles(files)).ToNot(HaveOccurred())
-			fakeOSMgr.RemoveReturns(os.ErrNotExist)
 
+			fakeOSMgr.RemoveReturns(os.ErrNotExist)
 			Expect(mgr.ReplaceFiles(files)).ToNot(HaveOccurred())
 		})
 	})
