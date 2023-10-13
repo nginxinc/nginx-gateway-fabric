@@ -16,7 +16,6 @@ import (
 
 	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/controller"
-	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/config"
 )
 
 //go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . Updater
@@ -43,8 +42,6 @@ type UpdaterConfig struct {
 	Client client.Client
 	// Clock is used as a source of time for the LastTransitionTime field in Conditions in resource statuses.
 	Clock Clock
-	// GatewayPodConfig contains information about this Pod.
-	GatewayPodConfig config.GatewayPodConfig
 	// Logger holds a logger to be used.
 	Logger logr.Logger
 	// GatewayCtlrName is the name of the Gateway controller.
@@ -62,20 +59,18 @@ type UpdaterConfig struct {
 //
 // It has the following limitations:
 //
-// (1) It is not smart. It will update the status of a resource (make an API call) even if it hasn't changed.
-//
-// (2) It is synchronous, which means the status reporter can slow down the event loop.
+// (1) It is synchronous, which means the status reporter can slow down the event loop.
 // Consider the following cases:
 // (a) Sometimes the Gateway will need to update statuses of all resources it handles, which could be ~1000. Making 1000
 // status API calls sequentially will take time.
 // (b) k8s API can become slow or even timeout. This will increase every update status API call.
 // Making UpdaterImpl asynchronous will prevent it from adding variable delays to the event loop.
 //
-// (3) It doesn't clear the statuses of a resources that are no longer handled by the Gateway. For example, if
+// (2) It doesn't clear the statuses of a resources that are no longer handled by the Gateway. For example, if
 // an HTTPRoute resource no longer has the parentRef to the Gateway resources, the Gateway must update the status
 // of the resource to remove the status about the removed parentRef.
 //
-// (4) If another controllers changes the status of the Gateway/HTTPRoute resource so that the information set by our
+// (3) If another controllers changes the status of the Gateway/HTTPRoute resource so that the information set by our
 // Gateway is removed, our Gateway will not restore the status until the EventLoop invokes the StatusUpdater as a
 // result of processing some other new change to a resource(s).
 // FIXME(pleshakov): Make updater production ready
@@ -157,16 +152,12 @@ func (upd *UpdaterImpl) updateNginxGateway(ctx context.Context, status *NginxGat
 	upd.cfg.Logger.Info("Updating Nginx Gateway status")
 
 	if status != nil {
-		upd.writeStatuses(ctx, status.NsName, &ngfAPI.NginxGateway{}, func(object client.Object) {
-			ng := object.(*ngfAPI.NginxGateway)
-			ng.Status = ngfAPI.NginxGatewayStatus{
-				Conditions: convertConditions(
-					status.Conditions,
-					status.ObservedGeneration,
-					upd.cfg.Clock.Now(),
-				),
-			}
-		})
+		upd.writeStatuses(
+			ctx,
+			status.NsName,
+			&ngfAPI.NginxGateway{},
+			newNginxGatewayStatusSetter(upd.cfg.Clock, *status),
+		)
 	}
 }
 
@@ -187,11 +178,8 @@ func (upd *UpdaterImpl) updateGatewayAPI(ctx context.Context, statuses GatewayAP
 				return
 			default:
 			}
-			upd.writeStatuses(ctx, nsname, &v1beta1.GatewayClass{}, func(object client.Object) {
-				gc := object.(*v1beta1.GatewayClass)
-				gc.Status = prepareGatewayClassStatus(gcs, upd.cfg.Clock.Now())
-			},
-			)
+
+			upd.writeStatuses(ctx, nsname, &v1beta1.GatewayClass{}, newGatewayClassStatusSetter(upd.cfg.Clock, gcs))
 		}
 	}
 
@@ -201,10 +189,8 @@ func (upd *UpdaterImpl) updateGatewayAPI(ctx context.Context, statuses GatewayAP
 			return
 		default:
 		}
-		upd.writeStatuses(ctx, nsname, &v1beta1.Gateway{}, func(object client.Object) {
-			gw := object.(*v1beta1.Gateway)
-			gw.Status = prepareGatewayStatus(gs, upd.cfg.Clock.Now())
-		})
+
+		upd.writeStatuses(ctx, nsname, &v1beta1.Gateway{}, newGatewayStatusSetter(upd.cfg.Clock, gs))
 	}
 
 	for nsname, rs := range statuses.HTTPRouteStatuses {
@@ -213,15 +199,13 @@ func (upd *UpdaterImpl) updateGatewayAPI(ctx context.Context, statuses GatewayAP
 			return
 		default:
 		}
-		upd.writeStatuses(ctx, nsname, &v1beta1.HTTPRoute{}, func(object client.Object) {
-			hr := object.(*v1beta1.HTTPRoute)
-			// statuses.GatewayStatus is never nil when len(statuses.HTTPRouteStatuses) > 0
-			hr.Status = prepareHTTPRouteStatus(
-				rs,
-				upd.cfg.GatewayCtlrName,
-				upd.cfg.Clock.Now(),
-			)
-		})
+
+		upd.writeStatuses(
+			ctx,
+			nsname,
+			&v1beta1.HTTPRoute{},
+			newHTTPRouteStatusSetter(upd.cfg.GatewayCtlrName, upd.cfg.Clock, rs),
+		)
 	}
 }
 
@@ -229,7 +213,7 @@ func (upd *UpdaterImpl) writeStatuses(
 	ctx context.Context,
 	nsname types.NamespacedName,
 	obj client.Object,
-	statusSetter func(client.Object),
+	statusSetter setter,
 ) {
 	err := wait.ExponentialBackoffWithContext(
 		ctx,
@@ -284,7 +268,7 @@ func NewRetryUpdateFunc(
 	nsname types.NamespacedName,
 	obj client.Object,
 	logger logr.Logger,
-	statusSetter func(client.Object),
+	statusSetter func(client.Object) bool,
 ) func(ctx context.Context) (bool, error) {
 	return func(ctx context.Context) (bool, error) {
 		// The function handles errors by reporting them in the logs.
@@ -298,16 +282,28 @@ func NewRetryUpdateFunc(
 			if apierrors.IsNotFound(err) {
 				return true, nil
 			}
+
 			logger.V(1).Info(
 				"Encountered error when getting resource to update status",
 				"error", err,
 				"namespace", nsname.Namespace,
 				"name", nsname.Name,
-				"kind", obj.GetObjectKind().GroupVersionKind().Kind)
+				"kind", obj.GetObjectKind().GroupVersionKind().Kind,
+			)
+
 			return false, nil
 		}
 
-		statusSetter(obj)
+		if !statusSetter(obj) {
+			logger.V(1).Info(
+				"Skipping status update because there's no change",
+				"namespace", nsname.Namespace,
+				"name", nsname.Name,
+				"kind", obj.GetObjectKind().GroupVersionKind().Kind,
+			)
+
+			return true, nil
+		}
 
 		if err := updater.Update(ctx, obj); err != nil {
 			logger.V(1).Info(
@@ -315,7 +311,9 @@ func NewRetryUpdateFunc(
 				"error", err,
 				"namespace", nsname.Namespace,
 				"name", nsname.Name,
-				"kind", obj.GetObjectKind().GroupVersionKind().Kind)
+				"kind", obj.GetObjectKind().GroupVersionKind().Kind,
+			)
+
 			return false, nil
 		}
 
