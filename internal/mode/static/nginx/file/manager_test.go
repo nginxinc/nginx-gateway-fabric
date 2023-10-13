@@ -116,6 +116,26 @@ var _ = Describe("EventHandler", func() {
 		})
 	})
 
+	When("file does not exist", func() {
+		It("should not error", func() {
+			fakeOSMgr := &filefakes.FakeOSFileManager{}
+			mgr := file.NewManagerImpl(zap.New(), fakeOSMgr)
+
+			files := []file.File{
+				{
+					Type:    file.TypeRegular,
+					Path:    "regular-1.conf",
+					Content: []byte("regular-1"),
+				},
+			}
+
+			Expect(mgr.ReplaceFiles(files)).ToNot(HaveOccurred())
+
+			fakeOSMgr.RemoveReturns(os.ErrNotExist)
+			Expect(mgr.ReplaceFiles(files)).ToNot(HaveOccurred())
+		})
+	})
+
 	When("file type is not supported", func() {
 		It("should panic", func() {
 			mgr := file.NewManagerImpl(zap.New(), nil)

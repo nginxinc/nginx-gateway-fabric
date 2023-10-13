@@ -88,10 +88,18 @@ func NewManagerImpl(logger logr.Logger, osFileManager OSFileManager) *ManagerImp
 func (m *ManagerImpl) ReplaceFiles(files []File) error {
 	for _, path := range m.lastWrittenPaths {
 		if err := m.osFileManager.Remove(path); err != nil {
+			if os.IsNotExist(err) {
+				m.logger.Info(
+					"File not found when attempting to delete",
+					"path", path,
+					"error", err,
+				)
+				continue
+			}
 			return fmt.Errorf("failed to delete file %q: %w", path, err)
 		}
 
-		m.logger.Info("deleted file", "path", path)
+		m.logger.Info("Deleted file", "path", path)
 	}
 
 	// In some cases, NGINX reads files in runtime, like a JWK. If you remove such file, NGINX will fail
@@ -106,7 +114,7 @@ func (m *ManagerImpl) ReplaceFiles(files []File) error {
 		}
 
 		m.lastWrittenPaths = append(m.lastWrittenPaths, file.Path)
-		m.logger.Info("wrote file", "path", file.Path)
+		m.logger.Info("Wrote file", "path", file.Path)
 	}
 
 	return nil
