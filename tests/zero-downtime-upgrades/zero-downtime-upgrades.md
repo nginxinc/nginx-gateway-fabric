@@ -164,7 +164,7 @@ Notes:
 2. Check that at NGF has a leader elected among the new Pods:
 
     ```console
-    kubectl -n nginx-gateway logs <nkg-pod> | grep leader
+    kubectl -n nginx-gateway get lease
     ```
 
 3. Ensure the status of the Gateway resource includes the new listener.
