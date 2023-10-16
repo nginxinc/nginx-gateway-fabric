@@ -13,10 +13,13 @@
 
 ## Test Environment
 
- The following cluster will be sufficient:
-
 - A Kubernetes cluster with 3 nodes on GKE
   - Node: e2-medium (2 vCPU, 4GB memory)
+- Tester VM on Google Cloud:
+  - Configuration:
+    - Debian
+    - Install packages: wrk
+  - Location - same zone as the Kubernetes cluster.
 
 ## Setup
 
@@ -27,11 +30,12 @@
    kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v0.8.1/standard-install.yaml
    ```
 
-3. Deploy NGF from edge using Helm install:
+3. Deploy NGF from edge using Helm install, and expose using an internal LoadBalancer service:
 
    ```console
    helm install my-release oci://ghcr.io/nginxinc/charts/nginx-gateway-fabric  --version 0.0.0-edge \
-      --create-namespace --wait -n nginx-gateway
+      --set service.annotations.'networking\.gke\.io\/load-balancer-type'="Internal" --create-namespace \
+      --wait -n nginx-gateway
    ```
 
 ## Tests
@@ -53,16 +57,17 @@
    --output jsonpath='{.status.loadBalancer.ingress[0].ip}'
    ```
 
-3. Run tests using `wrk` (change the file output name to version under test). The tests use `wrk` to send requests to
-   coffee application using each of the configured routing rules, capturing the number of requests and the average
-   latency.
+3. Copy the scripts in the `scripts/` directory to the test VM. Run tests using `wrk` (change the file output name to
+   version under test). The tests use `wrk` to send requests to coffee application using each of the configured routing
+   rules, capturing the number of requests and the average latency.
 
    ```console
-   bash scripts/wrk-latency.sh > results/1.0.0.md
+   bash wrk-latency.sh > 1.0.0.md
    ```
 
-4. Analyse the results and check for anomolies. Append any findings or observations to the generated results document.
-   Add test environment information to the generated document.
+4. Analyse the results and check for anomolies. Copy the results file from the test VM into the `results/` directory.
+   Append any findings or observations to the generated results document. Add test environment information to the
+   generated document.
 
 5. Cleanup the deployed resources
 
