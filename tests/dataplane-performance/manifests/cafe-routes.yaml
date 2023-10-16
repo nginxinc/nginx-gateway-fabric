@@ -11,7 +11,7 @@ spec:
   - matches:
     - path:
         type: PathPrefix
-        value: /coffee
+        value: /latte
     backendRefs:
     - name: coffee-svc
       port: 80
