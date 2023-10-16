@@ -90,7 +90,7 @@ func StartManager(cfg config.Config) error {
 	ctx := ctlr.SetupSignalHandler()
 
 	controlConfigNSName := types.NamespacedName{
-		Namespace: cfg.Namespace,
+		Namespace: cfg.GatewayPodConfig.Namespace,
 		Name:      cfg.ConfigName,
 	}
 	if err := registerControllers(ctx, cfg, mgr, recorder, logLevelSetter, eventCh, controlConfigNSName); err != nil {
@@ -210,7 +210,7 @@ func StartManager(cfg config.Config) error {
 				leaderElectorLogger.Info("Stopped leading")
 				statusUpdater.Disable()
 			},
-			lockNs:   cfg.Namespace,
+			lockNs:   cfg.GatewayPodConfig.Namespace,
 			lockName: cfg.LeaderElection.LockName,
 			identity: cfg.LeaderElection.Identity,
 		})
@@ -273,7 +273,7 @@ func registerControllers(
 		{
 			objectType: &apiv1.Service{},
 			options: func() []controller.Option {
-				svcNSName := types.NamespacedName{Namespace: cfg.Namespace, Name: cfg.GatewayPodConfig.ServiceName}
+				svcNSName := types.NamespacedName{Namespace: cfg.GatewayPodConfig.Namespace, Name: cfg.GatewayPodConfig.ServiceName}
 				return []controller.Option{
 					controller.WithNamespacedNameFilter(filter.CreateSingleResourceFilter(svcNSName)),
 					controller.WithK8sPredicate(predicate.GatewayServicePredicate{}),

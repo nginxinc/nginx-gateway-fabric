@@ -336,3 +336,51 @@ var _ = Describe("eventHandler", func() {
 		Expect(handle).Should(Panic())
 	})
 })
+
+var _ = Describe("getGatewayAddresses", func() {
+	It("gets gateway addresses from a Service", func() {
+		fakeClient := fake.NewFakeClient()
+		podConfig := config.GatewayPodConfig{
+			PodIP:       "1.2.3.4",
+			ServiceName: "my-service",
+			Namespace:   "nginx-gateway",
+		}
+
+		// no Service exists yet, should get error and Pod Address
+		addrs, err := getGatewayAddresses(context.Background(), fakeClient, nil, podConfig)
+		Expect(err).To(HaveOccurred())
+		Expect(addrs).To(HaveLen(1))
+		Expect(addrs[0].Value).To(Equal("1.2.3.4"))
+
+		// Create LoadBalancer Service
+		svc := v1.Service{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "my-service",
+				Namespace: "nginx-gateway",
+			},
+			Spec: v1.ServiceSpec{
+				Type: v1.ServiceTypeLoadBalancer,
+			},
+			Status: v1.ServiceStatus{
+				LoadBalancer: v1.LoadBalancerStatus{
+					Ingress: []v1.LoadBalancerIngress{
+						{
+							IP: "34.35.36.37",
+						},
+						{
+							Hostname: "myhost",
+						},
+					},
+				},
+			},
+		}
+
+		Expect(fakeClient.Create(context.Background(), &svc)).To(Succeed())
+
+		addrs, err = getGatewayAddresses(context.Background(), fakeClient, &svc, podConfig)
+		Expect(err).ToNot(HaveOccurred())
+		Expect(addrs).To(HaveLen(2))
+		Expect(addrs[0].Value).To(Equal("34.35.36.37"))
+		Expect(addrs[1].Value).To(Equal("myhost"))
+	})
+})

@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	v1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -30,7 +29,7 @@ type Updater interface {
 	// Update updates the statuses of the resources.
 	Update(context.Context, Status)
 	// UpdateAddresses updates the Gateway Addresses when the Gateway Service changes.
-	UpdateAddresses(context.Context, *v1.Service)
+	UpdateAddresses(context.Context, []v1beta1.GatewayStatusAddress)
 	// Enable enables status updates. The updater will update the statuses in Kubernetes API to ensure they match the
 	// statuses of the last Update invocation.
 	Enable(ctx context.Context)
@@ -255,12 +254,8 @@ func (upd *UpdaterImpl) writeStatuses(
 }
 
 // UpdateAddresses is called when the Gateway Status needs its addresses updated.
-func (upd *UpdaterImpl) UpdateAddresses(ctx context.Context, svc *v1.Service) {
-	addresses, err := GetGatewayAddresses(ctx, upd.cfg.Client, svc, upd.cfg.GatewayPodConfig)
-	if err != nil {
-		upd.cfg.Logger.Error(err, "Setting GatewayStatusAddress to Pod IP Address")
-	}
-
+func (upd *UpdaterImpl) UpdateAddresses(ctx context.Context, addresses []v1beta1.GatewayStatusAddress) {
+	upd.lock.Lock()
 	for name, status := range upd.lastStatuses.gatewayAPI.GatewayStatuses {
 		if status.Ignored {
 			continue
@@ -268,6 +263,7 @@ func (upd *UpdaterImpl) UpdateAddresses(ctx context.Context, svc *v1.Service) {
 		status.Addresses = addresses
 		upd.lastStatuses.gatewayAPI.GatewayStatuses[name] = status
 	}
+	upd.lock.Unlock()
 
 	upd.Update(ctx, upd.lastStatuses.gatewayAPI)
 }

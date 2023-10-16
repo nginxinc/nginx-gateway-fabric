@@ -7,16 +7,20 @@ import (
 
 	"github.com/go-logr/logr"
 	apiv1 "k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/events"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/status"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/config"
 	ngfConfig "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/config"
-	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config"
+	ngxConfig "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/file"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/runtime"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state"
@@ -40,7 +44,7 @@ type eventHandlerConfig struct {
 	// serviceResolver resolves Services to Endpoints.
 	serviceResolver resolver.ServiceResolver
 	// generator is the nginx config generator.
-	generator config.Generator
+	generator ngxConfig.Generator
 	// nginxFileMgr is the file Manager for nginx.
 	nginxFileMgr file.Manager
 	// nginxRuntimeMgr manages nginx runtime.
@@ -121,7 +125,7 @@ func (h *eventHandlerImpl) HandleEventBatch(ctx context.Context, logger logr.Log
 		}
 	}
 
-	gwAddresses, err := status.GetGatewayAddresses(ctx, h.cfg.k8sClient, nil, h.cfg.gatewayPodConfig)
+	gwAddresses, err := getGatewayAddresses(ctx, h.cfg.k8sClient, nil, h.cfg.gatewayPodConfig)
 	if err != nil {
 		logger.Error(err, "Setting GatewayStatusAddress to Pod IP Address")
 	}
@@ -138,7 +142,11 @@ func (h *eventHandlerImpl) handleEvent(ctx context.Context, logger logr.Logger, 
 		case *apiv1.Service:
 			podConfig := h.cfg.gatewayPodConfig
 			if obj.Name == podConfig.ServiceName && obj.Namespace == podConfig.Namespace {
-				h.cfg.statusUpdater.UpdateAddresses(ctx, obj)
+				gwAddresses, err := getGatewayAddresses(ctx, h.cfg.k8sClient, obj, h.cfg.gatewayPodConfig)
+				if err != nil {
+					logger.Error(err, "Setting GatewayStatusAddress to Pod IP Address")
+				}
+				h.cfg.statusUpdater.UpdateAddresses(ctx, gwAddresses)
 			} else {
 				h.cfg.processor.CaptureUpsertChange(e.Resource)
 			}
@@ -152,7 +160,11 @@ func (h *eventHandlerImpl) handleEvent(ctx context.Context, logger logr.Logger, 
 		case *apiv1.Service:
 			podConfig := h.cfg.gatewayPodConfig
 			if e.NamespacedName.Name == podConfig.ServiceName && e.NamespacedName.Namespace == podConfig.Namespace {
-				h.cfg.statusUpdater.UpdateAddresses(ctx, nil)
+				gwAddresses, err := getGatewayAddresses(ctx, h.cfg.k8sClient, nil, h.cfg.gatewayPodConfig)
+				if err != nil {
+					logger.Error(err, "Setting GatewayStatusAddress to Pod IP Address")
+				}
+				h.cfg.statusUpdater.UpdateAddresses(ctx, gwAddresses)
 			} else {
 				h.cfg.processor.CaptureDeleteChange(e.Type, e.NamespacedName)
 			}
@@ -217,4 +229,60 @@ func (h *eventHandlerImpl) updateControlPlaneAndSetStatus(
 		h.cfg.statusUpdater.Update(ctx, nginxGatewayStatus)
 		logger.Info("Reconfigured control plane.")
 	}
+}
+
+// getGatewayAddresses gets the addresses for the Gateway.
+func getGatewayAddresses(
+	ctx context.Context,
+	k8sClient client.Client,
+	svc *v1.Service,
+	podConfig config.GatewayPodConfig,
+) ([]v1beta1.GatewayStatusAddress, error) {
+	podAddress := []v1beta1.GatewayStatusAddress{
+		{
+			Type:  helpers.GetPointer(v1beta1.IPAddressType),
+			Value: podConfig.PodIP,
+		},
+	}
+
+	var gwSvc v1.Service
+	if svc == nil {
+		key := types.NamespacedName{Name: podConfig.ServiceName, Namespace: podConfig.Namespace}
+		if err := k8sClient.Get(ctx, key, &gwSvc); err != nil {
+			return podAddress, fmt.Errorf("error finding Service for Gateway: %w", err)
+		}
+	} else {
+		gwSvc = *svc
+	}
+
+	var addresses, hostnames []string
+	switch gwSvc.Spec.Type {
+	case v1.ServiceTypeLoadBalancer:
+		for _, ingress := range gwSvc.Status.LoadBalancer.Ingress {
+			if ingress.IP != "" {
+				addresses = append(addresses, ingress.IP)
+			} else if ingress.Hostname != "" {
+				hostnames = append(hostnames, ingress.Hostname)
+			}
+		}
+	}
+
+	gwAddresses := make([]v1beta1.GatewayStatusAddress, 0, len(addresses)+len(hostnames))
+	for _, addr := range addresses {
+		statusAddr := v1beta1.GatewayStatusAddress{
+			Type:  helpers.GetPointer(v1beta1.IPAddressType),
+			Value: addr,
+		}
+		gwAddresses = append(gwAddresses, statusAddr)
+	}
+
+	for _, hostname := range hostnames {
+		statusAddr := v1beta1.GatewayStatusAddress{
+			Type:  helpers.GetPointer(v1beta1.HostnameAddressType),
+			Value: hostname,
+		}
+		gwAddresses = append(gwAddresses, statusAddr)
+	}
+
+	return gwAddresses, nil
 }

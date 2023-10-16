@@ -22,8 +22,6 @@ type Config struct {
 	ConfigName string
 	// GatewayClassName is the name of the GatewayClass resource that the Gateway will use.
 	GatewayClassName string
-	// Namespace is the Namespace of this Pod.
-	Namespace string
 	// LeaderElection contains the configuration for leader election.
 	LeaderElection LeaderElection
 	// UpdateGatewayClassStatus enables updating the status of the GatewayClass resource.

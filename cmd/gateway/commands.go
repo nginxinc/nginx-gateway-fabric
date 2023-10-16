@@ -69,7 +69,7 @@ func createStaticModeCommand() *cobra.Command {
 	const (
 		gatewayFlag                = "gateway"
 		configFlag                 = "config"
-		serviceNameFlag            = "service-name"
+		serviceFlag                = "service"
 		updateGCStatusFlag         = "update-gatewayclass-status"
 		metricsDisableFlag         = "metrics-disable"
 		metricsSecureFlag          = "metrics-secure-serving"
@@ -154,7 +154,6 @@ func createStaticModeCommand() *cobra.Command {
 				Logger:                   logger,
 				AtomicLevel:              atom,
 				GatewayClassName:         gatewayClassName.value,
-				Namespace:                namespace,
 				GatewayNsName:            gwNsName,
 				UpdateGatewayClassStatus: updateGCStatus,
 				GatewayPodConfig: config.GatewayPodConfig{
@@ -206,7 +205,7 @@ func createStaticModeCommand() *cobra.Command {
 
 	cmd.Flags().Var(
 		&serviceName,
-		serviceNameFlag,
+		serviceFlag,
 		`The name of the Service that fronts this NGINX Gateway Fabric Pod.`+
 			` Lives in the same Namespace as the controller.`,
 	)

@@ -7,7 +7,6 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -403,25 +402,14 @@ var _ = Describe("Updater", func() {
 		})
 
 		When("the Gateway Service is updated with a new address", func() {
-			svc := &v1.Service{
-				Spec: v1.ServiceSpec{
-					Type: v1.ServiceTypeLoadBalancer,
-				},
-				Status: v1.ServiceStatus{
-					LoadBalancer: v1.LoadBalancerStatus{
-						Ingress: []v1.LoadBalancerIngress{
-							{
-								IP: "5.6.7.8",
-							},
-						},
-					},
-				},
-			}
-
 			AfterEach(func() {
 				// reset the IP for the remaining tests
-				svc.Status.LoadBalancer.Ingress[0].IP = "1.2.3.4"
-				updater.UpdateAddresses(context.Background(), svc)
+				updater.UpdateAddresses(context.Background(), []v1beta1.GatewayStatusAddress{
+					{
+						Type:  helpers.GetPointer(v1beta1.IPAddressType),
+						Value: "1.2.3.4",
+					},
+				})
 			})
 
 			It("should update the previous Gateway statuses with new address", func() {
@@ -429,7 +417,12 @@ var _ = Describe("Updater", func() {
 				expectedGw := createExpectedGwWithGeneration(1)
 				expectedGw.Status.Addresses[0].Value = "5.6.7.8"
 
-				updater.UpdateAddresses(context.Background(), svc)
+				updater.UpdateAddresses(context.Background(), []v1beta1.GatewayStatusAddress{
+					{
+						Type:  helpers.GetPointer(v1beta1.IPAddressType),
+						Value: "5.6.7.8",
+					},
+				})
 
 				err := client.Get(context.Background(), types.NamespacedName{Namespace: "test", Name: "gateway"}, latestGw)
 				Expect(err).ToNot(HaveOccurred())
