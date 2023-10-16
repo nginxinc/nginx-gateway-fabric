@@ -25,7 +25,7 @@ interruptions to the traffic they send to applications exposed via NGF.
 
 ## Goals
 
-- Ensure that upgrading NFG doesn't lead to any loss of traffic flowing through the data plane.
+- Ensure that upgrading NGF doesn't lead to any loss of traffic flowing through the data plane.
 - Ensure that after an upgrade, NGF can process changes to resources.
 - Detect if any special instructions will be required to provide to users to perform
   an upgrade.
@@ -148,7 +148,7 @@ Notes:
           for i in `seq 1 600`; do printf  "\nRequest $i\n" && date --rfc-3339=ns && curl -k -sS --connect-timeout 2 https://cafe.example.com/tea 2>&1  && sleep 0.1s; done > results.txt
           ```
 
-3. **Immediately** upgrade NFG manifests by
+3. **Immediately** upgrade NGF manifests by
    following [upgrade instructions](/docs/installation.md#upgrade-nginx-gateway-fabric-from-manifests).
    > Don't forget to modify the manifests to have 2 replicas and pod affinity.
 4. Ensure the new pods are running and the old ones terminate.
@@ -193,7 +193,7 @@ Notes:
       ```
 
   - NGF logs - we expect no errors
-  - Specifically look at the NFG logs before it exited, to make sure all components shutdown correctly.
+  - Specifically look at the NGF logs before it exited, to make sure all components shutdown correctly.
 - Check the new pods (in Google Monitoring)
   - NGINX Access logs - only 200 responses.
   - NGINX Error logs - no errors or warnings.
@@ -207,7 +207,7 @@ Notes:
 
 ### Pod Affinity
 
-- To ensure Kubernetes doesn't schedule NFG pods on the same nodes, use an anti-affinity rule:
+- To ensure Kubernetes doesn't schedule NGF pods on the same nodes, use an anti-affinity rule:
 
     ```yaml
         spec:
