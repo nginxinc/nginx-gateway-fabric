@@ -32,7 +32,7 @@ interruptions to the traffic they send to applications exposed via NGF.
 
 ## Non-Goals
 
-During an upgrade, Kubernetes will shut down existing NGF pods by sending a SIGTERM. If the pod doesn't terminate in 30
+During an upgrade, Kubernetes will shut down existing NGF Pods by sending a SIGTERM. If the Pod doesn't terminate in 30
 seconds (the default period) , Kubernetes will send a SIGKILL.
 
 When proxying Websocket or any long-lived connections, NGINX will not terminate until
@@ -74,10 +74,10 @@ Notes:
       (however small) periods of downtime.
   - *curl* will generate 1 request every 0.1s. While it might not catch small periods of downtime, it will
       give us timeline of failed request for big periods of downtime, which wrk doesn't do.
-- We use pod anti-affinity to tell Kubernetes to schedule NGF pods on different nodes. We also use a 10 node cluster so
-  that the chance of Kubernetes scheduling new pods on the same
-  nodes is minimal. Scheduling new pods on different nodes will help better catch
-  any interdependencies with an external load balancer (typically the node of a new pod will be added
+- We use Pod anti-affinity to tell Kubernetes to schedule NGF Pods on different nodes. We also use a 10 node cluster so
+  that the chance of Kubernetes scheduling new Pods on the same
+  nodes is minimal. Scheduling new Pods on different nodes will help better catch
+  any interdependencies with an external load balancer (typically the node of a new Pod will be added
   to the pool in the load balancer, and the node of an old one will be removed).
 
 ## Steps
@@ -150,8 +150,8 @@ Notes:
 
 3. **Immediately** upgrade NGF manifests by
    following [upgrade instructions](/docs/installation.md#upgrade-nginx-gateway-fabric-from-manifests).
-   > Don't forget to modify the manifests to have 2 replicas and pod affinity.
-4. Ensure the new pods are running and the old ones terminate.
+   > Don't forget to modify the manifests to have 2 replicas and Pod affinity.
+4. Ensure the new Pods are running and the old ones terminate.
 
 ### After Upgrade
 
@@ -161,7 +161,7 @@ Notes:
     kubectl apply -f manifests/gateway-updated.yaml
     ```
 
-2. Check that at NGF has a leader elected among the new pods:
+2. Check that at NGF has a leader elected among the new Pods:
 
     ```console
     kubectl -n nginx-gateway logs <nkg-pod> | grep leader
@@ -175,7 +175,7 @@ Notes:
   - Analyze the output of wrk commands for errors and latencies.
   - Create graphs from curl output (see [instructions](#converting-curl-output-to-a-graph) in Appendix) and check for
       any failures on them.
-- Check the old pods logs in Google Monitoring
+- Check the old Pods logs in Google Monitoring
   - NGINX Access logs - we expect only 200 responses.
       Google Monitoring query:
 
@@ -194,7 +194,7 @@ Notes:
 
   - NGF logs - we expect no errors
   - Specifically look at the NGF logs before it exited, to make sure all components shutdown correctly.
-- Check the new pods (in Google Monitoring)
+- Check the new Pods (in Google Monitoring)
   - NGINX Access logs - only 200 responses.
   - NGINX Error logs - no errors or warnings.
   - NGF logs - no errors
@@ -207,7 +207,7 @@ Notes:
 
 ### Pod Affinity
 
-- To ensure Kubernetes doesn't schedule NGF pods on the same nodes, use an anti-affinity rule:
+- To ensure Kubernetes doesn't schedule NGF Pods on the same nodes, use an anti-affinity rule:
 
     ```yaml
         spec:
