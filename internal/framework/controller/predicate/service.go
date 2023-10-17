@@ -2,7 +2,9 @@ package predicate
 
 import (
 	apiv1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 )
@@ -67,6 +69,16 @@ func (ServicePortsChangedPredicate) Update(e event.UpdateEvent) bool {
 // GatewayServicePredicate implements predicate functions for this Pod's Service.
 type GatewayServicePredicate struct {
 	predicate.Funcs
+	NSName types.NamespacedName
+}
+
+// Create implements the default CreateEvent filter for the Gateway Service.
+func (gsp GatewayServicePredicate) Create(e event.CreateEvent) bool {
+	if e.Object == nil {
+		return false
+	}
+
+	return client.ObjectKeyFromObject(e.Object) == gsp.NSName
 }
 
 // Update implements the default UpdateEvent filter for the Gateway Service.
@@ -85,6 +97,10 @@ func (gsp GatewayServicePredicate) Update(e event.UpdateEvent) bool {
 
 	newSvc, ok := e.ObjectNew.(*apiv1.Service)
 	if !ok {
+		return false
+	}
+
+	if client.ObjectKeyFromObject(newSvc) != gsp.NSName {
 		return false
 	}
 
@@ -108,4 +124,22 @@ func (gsp GatewayServicePredicate) Update(e event.UpdateEvent) bool {
 	}
 
 	return false
+}
+
+// Delete implements the default DeleteEvent filter for the Gateway Service.
+func (gsp GatewayServicePredicate) Delete(e event.DeleteEvent) bool {
+	if e.Object == nil {
+		return false
+	}
+
+	return client.ObjectKeyFromObject(e.Object) == gsp.NSName
+}
+
+// Generic implements the default GenericEvent filter for the Gateway Service.
+func (gsp GatewayServicePredicate) Generic(e event.GenericEvent) bool {
+	if e.Object == nil {
+		return false
+	}
+
+	return client.ObjectKeyFromObject(e.Object) == gsp.NSName
 }

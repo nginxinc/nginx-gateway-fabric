@@ -5,6 +5,8 @@ import (
 
 	. "github.com/onsi/gomega"
 	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -240,11 +242,21 @@ func TestServicePortsChangedPredicate_Update(t *testing.T) {
 func TestServicePortsChangedPredicate(t *testing.T) {
 	g := NewWithT(t)
 
-	p := ServicePortsChangedPredicate{}
+	p := GatewayServicePredicate{NSName: types.NamespacedName{Namespace: "nginx-gateway", Name: "nginx"}}
 
-	g.Expect(p.Delete(event.DeleteEvent{Object: &v1.Service{}})).To(BeTrue())
-	g.Expect(p.Create(event.CreateEvent{Object: &v1.Service{}})).To(BeTrue())
-	g.Expect(p.Generic(event.GenericEvent{Object: &v1.Service{}})).To(BeTrue())
+	g.Expect(p.Delete(event.DeleteEvent{Object: &v1.Service{}})).To(BeFalse())
+	g.Expect(p.Create(event.CreateEvent{Object: &v1.Service{}})).To(BeFalse())
+	g.Expect(p.Generic(event.GenericEvent{Object: &v1.Service{}})).To(BeFalse())
+
+	correctSvc := &v1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "nginx-gateway",
+			Name:      "nginx",
+		},
+	}
+	g.Expect(p.Delete(event.DeleteEvent{Object: correctSvc})).To(BeTrue())
+	g.Expect(p.Create(event.CreateEvent{Object: correctSvc})).To(BeTrue())
+	g.Expect(p.Generic(event.GenericEvent{Object: correctSvc})).To(BeTrue())
 }
 
 func TestGatewayServicePredicate_Update(t *testing.T) {
@@ -279,6 +291,17 @@ func TestGatewayServicePredicate_Update(t *testing.T) {
 			expUpdate: false,
 		},
 		{
+			msg:       "Service not watched",
+			objectOld: &v1.Service{},
+			objectNew: &v1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "nginx-gateway",
+					Name:      "not-watched",
+				},
+			},
+			expUpdate: false,
+		},
+		{
 			msg: "something irrelevant changed",
 			objectOld: &v1.Service{
 				Spec: v1.ServiceSpec{
@@ -286,6 +309,10 @@ func TestGatewayServicePredicate_Update(t *testing.T) {
 				},
 			},
 			objectNew: &v1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "nginx-gateway",
+					Name:      "nginx",
+				},
 				Spec: v1.ServiceSpec{
 					ClusterIP: "5.6.7.8",
 				},
@@ -300,6 +327,10 @@ func TestGatewayServicePredicate_Update(t *testing.T) {
 				},
 			},
 			objectNew: &v1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "nginx-gateway",
+					Name:      "nginx",
+				},
 				Spec: v1.ServiceSpec{
 					Type: v1.ServiceTypeNodePort,
 				},
@@ -323,6 +354,10 @@ func TestGatewayServicePredicate_Update(t *testing.T) {
 				},
 			},
 			objectNew: &v1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "nginx-gateway",
+					Name:      "nginx",
+				},
 				Spec: v1.ServiceSpec{
 					Type: v1.ServiceTypeNodePort,
 				}, Status: v1.ServiceStatus{
@@ -357,6 +392,10 @@ func TestGatewayServicePredicate_Update(t *testing.T) {
 				},
 			},
 			objectNew: &v1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "nginx-gateway",
+					Name:      "nginx",
+				},
 				Spec: v1.ServiceSpec{
 					Type: v1.ServiceTypeNodePort,
 				}, Status: v1.ServiceStatus{
@@ -388,6 +427,10 @@ func TestGatewayServicePredicate_Update(t *testing.T) {
 				},
 			},
 			objectNew: &v1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "nginx-gateway",
+					Name:      "nginx",
+				},
 				Spec: v1.ServiceSpec{
 					Type: v1.ServiceTypeNodePort,
 				}, Status: v1.ServiceStatus{
@@ -404,7 +447,7 @@ func TestGatewayServicePredicate_Update(t *testing.T) {
 		},
 	}
 
-	p := GatewayServicePredicate{}
+	p := GatewayServicePredicate{NSName: types.NamespacedName{Namespace: "nginx-gateway", Name: "nginx"}}
 
 	for _, tc := range testcases {
 		t.Run(tc.msg, func(t *testing.T) {

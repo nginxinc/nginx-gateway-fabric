@@ -255,7 +255,9 @@ func (upd *UpdaterImpl) writeStatuses(
 
 // UpdateAddresses is called when the Gateway Status needs its addresses updated.
 func (upd *UpdaterImpl) UpdateAddresses(ctx context.Context, addresses []v1beta1.GatewayStatusAddress) {
+	defer upd.lock.Unlock()
 	upd.lock.Lock()
+
 	for name, status := range upd.lastStatuses.gatewayAPI.GatewayStatuses {
 		if status.Ignored {
 			continue
@@ -263,9 +265,8 @@ func (upd *UpdaterImpl) UpdateAddresses(ctx context.Context, addresses []v1beta1
 		status.Addresses = addresses
 		upd.lastStatuses.gatewayAPI.GatewayStatuses[name] = status
 	}
-	upd.lock.Unlock()
 
-	upd.Update(ctx, upd.lastStatuses.gatewayAPI)
+	upd.updateGatewayAPI(ctx, upd.lastStatuses.gatewayAPI)
 }
 
 // NewRetryUpdateFunc returns a function which will be used in wait.ExponentialBackoffWithContext.

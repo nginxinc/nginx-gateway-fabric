@@ -275,8 +275,7 @@ func registerControllers(
 			options: func() []controller.Option {
 				svcNSName := types.NamespacedName{Namespace: cfg.GatewayPodConfig.Namespace, Name: cfg.GatewayPodConfig.ServiceName}
 				return []controller.Option{
-					controller.WithNamespacedNameFilter(filter.CreateSingleResourceFilter(svcNSName)),
-					controller.WithK8sPredicate(predicate.GatewayServicePredicate{}),
+					controller.WithK8sPredicate(predicate.GatewayServicePredicate{NSName: svcNSName}),
 				}
 			}(),
 		},

@@ -147,9 +147,8 @@ func (h *eventHandlerImpl) handleEvent(ctx context.Context, logger logr.Logger, 
 					logger.Error(err, "Setting GatewayStatusAddress to Pod IP Address")
 				}
 				h.cfg.statusUpdater.UpdateAddresses(ctx, gwAddresses)
-			} else {
-				h.cfg.processor.CaptureUpsertChange(e.Resource)
 			}
+			h.cfg.processor.CaptureUpsertChange(e.Resource)
 		default:
 			h.cfg.processor.CaptureUpsertChange(e.Resource)
 		}
@@ -165,9 +164,8 @@ func (h *eventHandlerImpl) handleEvent(ctx context.Context, logger logr.Logger, 
 					logger.Error(err, "Setting GatewayStatusAddress to Pod IP Address")
 				}
 				h.cfg.statusUpdater.UpdateAddresses(ctx, gwAddresses)
-			} else {
-				h.cfg.processor.CaptureDeleteChange(e.Type, e.NamespacedName)
 			}
+			h.cfg.processor.CaptureDeleteChange(e.Type, e.NamespacedName)
 		default:
 			h.cfg.processor.CaptureDeleteChange(e.Type, e.NamespacedName)
 		}
