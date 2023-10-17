@@ -16,6 +16,7 @@
 - A Kubernetes cluster with 3 nodes on GKE
   - Node: e2-medium (2 vCPU, 4GB memory)
 - Tester VM on Google Cloud:
+  - Instance Type: e2-medium (2 vCPU, 4GB memory)
   - Configuration:
     - Debian
     - Install packages: wrk
