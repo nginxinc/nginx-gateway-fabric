@@ -72,15 +72,6 @@ type GatewayServicePredicate struct {
 	NSName types.NamespacedName
 }
 
-// Create implements the default CreateEvent filter for the Gateway Service.
-func (gsp GatewayServicePredicate) Create(e event.CreateEvent) bool {
-	if e.Object == nil {
-		return false
-	}
-
-	return client.ObjectKeyFromObject(e.Object) == gsp.NSName
-}
-
 // Update implements the default UpdateEvent filter for the Gateway Service.
 func (gsp GatewayServicePredicate) Update(e event.UpdateEvent) bool {
 	if e.ObjectOld == nil {
@@ -124,22 +115,4 @@ func (gsp GatewayServicePredicate) Update(e event.UpdateEvent) bool {
 	}
 
 	return false
-}
-
-// Delete implements the default DeleteEvent filter for the Gateway Service.
-func (gsp GatewayServicePredicate) Delete(e event.DeleteEvent) bool {
-	if e.Object == nil {
-		return false
-	}
-
-	return client.ObjectKeyFromObject(e.Object) == gsp.NSName
-}
-
-// Generic implements the default GenericEvent filter for the Gateway Service.
-func (gsp GatewayServicePredicate) Generic(e event.GenericEvent) bool {
-	if e.Object == nil {
-		return false
-	}
-
-	return client.ObjectKeyFromObject(e.Object) == gsp.NSName
 }

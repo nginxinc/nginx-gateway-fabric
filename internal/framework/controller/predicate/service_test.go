@@ -242,21 +242,11 @@ func TestServicePortsChangedPredicate_Update(t *testing.T) {
 func TestServicePortsChangedPredicate(t *testing.T) {
 	g := NewWithT(t)
 
-	p := GatewayServicePredicate{NSName: types.NamespacedName{Namespace: "nginx-gateway", Name: "nginx"}}
+	p := GatewayServicePredicate{}
 
-	g.Expect(p.Delete(event.DeleteEvent{Object: &v1.Service{}})).To(BeFalse())
-	g.Expect(p.Create(event.CreateEvent{Object: &v1.Service{}})).To(BeFalse())
-	g.Expect(p.Generic(event.GenericEvent{Object: &v1.Service{}})).To(BeFalse())
-
-	correctSvc := &v1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: "nginx-gateway",
-			Name:      "nginx",
-		},
-	}
-	g.Expect(p.Delete(event.DeleteEvent{Object: correctSvc})).To(BeTrue())
-	g.Expect(p.Create(event.CreateEvent{Object: correctSvc})).To(BeTrue())
-	g.Expect(p.Generic(event.GenericEvent{Object: correctSvc})).To(BeTrue())
+	g.Expect(p.Delete(event.DeleteEvent{Object: &v1.Service{}})).To(BeTrue())
+	g.Expect(p.Create(event.CreateEvent{Object: &v1.Service{}})).To(BeTrue())
+	g.Expect(p.Generic(event.GenericEvent{Object: &v1.Service{}})).To(BeTrue())
 }
 
 func TestGatewayServicePredicate_Update(t *testing.T) {
