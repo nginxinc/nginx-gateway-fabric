@@ -67,12 +67,14 @@ You can gain access to NGINX Gateway Fabric by creating a `NodePort` Service or 
 This Service must live in the same Namespace as the controller. The name of this Service is provided in
 the `--service` argument to the controller.
 
-> Important
->
+> **Important**
 > The Service manifests expose NGINX Gateway Fabric on ports 80 and 443, which exposes any
 > Gateway [Listener](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.Listener)
 > configured for those ports. If you'd like to use different ports in your listeners,
 > update the manifests accordingly.
+>
+> Additionally, NGINX Gateway Fabric will not listen on any ports until you configure a
+[Gateway](https://gateway-api.sigs.k8s.io/api-types/gateway/#gateway) resource with a valid listener.
 
 NGINX Gateway Fabric will use this Service to set the Addresses field in the Gateway Status resource. A LoadBalancer
 Service sets the status field to the IP address and/or Hostname. If no Service exists, the Pod IP address is used.
