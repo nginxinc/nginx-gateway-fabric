@@ -10,7 +10,6 @@ TAG = latest
 PREFIX = conformance-test-runner
 NGF_MANIFEST=../deploy/manifests/nginx-gateway.yaml
 CRDS=../deploy/manifests/crds/
-SERVICE_MANIFEST=../deploy/manifests/service/nodeport.yaml
 STATIC_MANIFEST=provisioner/static-deployment.yaml
 PROVISIONER_MANIFEST=provisioner/provisioner.yaml
 NGINX_IMAGE=$(shell yq '.spec.template.spec.containers[1].image as $$nginx_ver | $$nginx_ver' $(STATIC_MANIFEST))
@@ -52,7 +51,6 @@ prepare-ngf-dependencies: update-ngf-manifest ## Install NGF dependencies on con
 	kubectl wait --for=condition=available --timeout=60s deployment gateway-api-admission-server -n gateway-system
 	kubectl apply -f $(CRDS)
 	kubectl apply -f $(NGF_MANIFEST)
-	kubectl apply -f $(SERVICE_MANIFEST)
 
 .PHONY: deploy-updated-provisioner
 deploy-updated-provisioner: ## Update provisioner manifest and deploy to the configured kind cluster

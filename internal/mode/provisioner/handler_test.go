@@ -60,7 +60,6 @@ var _ = Describe("handler", func() {
 			Logger:                   zap.New(),
 			GatewayCtlrName:          "test.example.com",
 			GatewayClassName:         gcName,
-			PodIP:                    "1.2.3.4",
 			UpdateGatewayClassStatus: true,
 		})
 	})

@@ -117,6 +117,7 @@ func TestStaticModeCmdFlagValidation(t *testing.T) {
 			args: []string{
 				"--gateway=nginx-gateway/nginx",
 				"--config=nginx-gateway-config",
+				"--service=nginx-gateway",
 				"--update-gatewayclass-status=true",
 				"--metrics-port=9114",
 				"--metrics-disable",
@@ -165,6 +166,22 @@ func TestStaticModeCmdFlagValidation(t *testing.T) {
 			},
 			wantErr:           true,
 			expectedErrPrefix: `invalid argument "!@#$" for "-c, --config" flag: invalid format`,
+		},
+		{
+			name: "service is set to empty string",
+			args: []string{
+				"--service=",
+			},
+			wantErr:           true,
+			expectedErrPrefix: `invalid argument "" for "--service" flag: must be set`,
+		},
+		{
+			name: "service is set to invalid string",
+			args: []string{
+				"--service=!@#$",
+			},
+			wantErr:           true,
+			expectedErrPrefix: `invalid argument "!@#$" for "--service" flag: invalid format`,
 		},
 		{
 			name: "update-gatewayclass-status is set to empty string",

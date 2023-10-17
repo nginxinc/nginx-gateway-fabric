@@ -12,9 +12,8 @@ import (
 )
 
 func TestPrepareGatewayStatus(t *testing.T) {
-	ipAddrType := v1beta1.IPAddressType
 	podIP := v1beta1.GatewayStatusAddress{
-		Type:  &ipAddrType,
+		Type:  helpers.GetPointer(v1beta1.IPAddressType),
 		Value: "1.2.3.4",
 	}
 	status := GatewayStatus{
@@ -30,6 +29,7 @@ func TestPrepareGatewayStatus(t *testing.T) {
 				},
 			},
 		},
+		Addresses:          []v1beta1.GatewayStatusAddress{podIP},
 		ObservedGeneration: 1,
 	}
 
@@ -54,6 +54,6 @@ func TestPrepareGatewayStatus(t *testing.T) {
 
 	g := NewWithT(t)
 
-	result := prepareGatewayStatus(status, "1.2.3.4", transitionTime)
+	result := prepareGatewayStatus(status, transitionTime)
 	g.Expect(helpers.Diff(expected, result)).To(BeEmpty())
 }

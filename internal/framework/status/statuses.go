@@ -57,8 +57,12 @@ type GatewayStatus struct {
 	ListenerStatuses ListenerStatuses
 	// Conditions is the list of conditions for this Gateway.
 	Conditions []conditions.Condition
+	// Addresses holds the list of GatewayStatusAddresses.
+	Addresses []v1beta1.GatewayStatusAddress
 	// ObservedGeneration is the generation of the resource that was processed.
 	ObservedGeneration int64
+	// Ignored tells whether or not this Gateway is ignored.
+	Ignored bool
 }
 
 // ListenerStatus holds the status-related information about a listener in the Gateway resource.

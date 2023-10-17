@@ -12,6 +12,8 @@ type Config struct {
 	// GatewayNsName is the namespaced name of a Gateway resource that the Gateway will use.
 	// The Gateway will ignore all other Gateway resources.
 	GatewayNsName *types.NamespacedName
+	// GatewayPodConfig contains information about this Pod.
+	GatewayPodConfig GatewayPodConfig
 	// Logger is the Zap Logger used by all components.
 	Logger logr.Logger
 	// GatewayCtlrName is the name of this controller.
@@ -20,10 +22,6 @@ type Config struct {
 	ConfigName string
 	// GatewayClassName is the name of the GatewayClass resource that the Gateway will use.
 	GatewayClassName string
-	// PodIP is the IP address of this Pod.
-	PodIP string
-	// Namespace is the Namespace of this Pod.
-	Namespace string
 	// LeaderElection contains the configuration for leader election.
 	LeaderElection LeaderElection
 	// UpdateGatewayClassStatus enables updating the status of the GatewayClass resource.
@@ -32,6 +30,16 @@ type Config struct {
 	MetricsConfig MetricsConfig
 	// HealthConfig specifies the health probe config.
 	HealthConfig HealthConfig
+}
+
+// GatewayPodConfig contains information about this Pod.
+type GatewayPodConfig struct {
+	// PodIP is the IP address of this Pod.
+	PodIP string
+	// ServiceName is the name of the Service that fronts this Pod.
+	ServiceName string
+	// Namespace is the namespace of this Pod.
+	Namespace string
 }
 
 // MetricsConfig specifies the metrics config.

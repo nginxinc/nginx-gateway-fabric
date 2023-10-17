@@ -68,7 +68,7 @@ Fields:
 > Support Levels:
 >
 > - Core: Supported.
-> - Extended: Not supported.
+> - Extended: Partially supported.
 > - Implementation-specific: Not supported.
 
 NGINX Gateway Fabric supports only a single Gateway resource. The Gateway resource must reference NGINX Gateway
@@ -91,7 +91,7 @@ Fields:
     - `allowedRoutes` - supported.
   - `addresses` - not supported.
 - `status`
-  - `addresses` - Pod IPAddress supported.
+  - `addresses` - partially supported. LoadBalancer and Pod IP.
   - `conditions` - supported (Condition/Status/Reason):
     - `Accepted/True/Accepted`
     - `Accepted/True/ListenersNotValid`

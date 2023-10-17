@@ -16,6 +16,7 @@ import (
 
 	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/controller"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/config"
 )
 
 //go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . Updater
@@ -27,6 +28,8 @@ import (
 type Updater interface {
 	// Update updates the statuses of the resources.
 	Update(context.Context, Status)
+	// UpdateAddresses updates the Gateway Addresses when the Gateway Service changes.
+	UpdateAddresses(context.Context, []v1beta1.GatewayStatusAddress)
 	// Enable enables status updates. The updater will update the statuses in Kubernetes API to ensure they match the
 	// statuses of the last Update invocation.
 	Enable(ctx context.Context)
@@ -40,14 +43,14 @@ type UpdaterConfig struct {
 	Client client.Client
 	// Clock is used as a source of time for the LastTransitionTime field in Conditions in resource statuses.
 	Clock Clock
+	// GatewayPodConfig contains information about this Pod.
+	GatewayPodConfig config.GatewayPodConfig
 	// Logger holds a logger to be used.
 	Logger logr.Logger
 	// GatewayCtlrName is the name of the Gateway controller.
 	GatewayCtlrName string
 	// GatewayClassName is the name of the GatewayClass resource.
 	GatewayClassName string
-	// PodIP is the IP address of this Pod.
-	PodIP string
 	// UpdateGatewayClassStatus enables updating the status of the GatewayClass resource.
 	UpdateGatewayClassStatus bool
 	// LeaderElectionEnabled indicates whether Leader Election is enabled.
@@ -200,7 +203,7 @@ func (upd *UpdaterImpl) updateGatewayAPI(ctx context.Context, statuses GatewayAP
 		}
 		upd.writeStatuses(ctx, nsname, &v1beta1.Gateway{}, func(object client.Object) {
 			gw := object.(*v1beta1.Gateway)
-			gw.Status = prepareGatewayStatus(gs, upd.cfg.PodIP, upd.cfg.Clock.Now())
+			gw.Status = prepareGatewayStatus(gs, upd.cfg.Clock.Now())
 		})
 	}
 
@@ -248,6 +251,22 @@ func (upd *UpdaterImpl) writeStatuses(
 			"name", nsname.Name,
 			"kind", obj.GetObjectKind().GroupVersionKind().Kind)
 	}
+}
+
+// UpdateAddresses is called when the Gateway Status needs its addresses updated.
+func (upd *UpdaterImpl) UpdateAddresses(ctx context.Context, addresses []v1beta1.GatewayStatusAddress) {
+	defer upd.lock.Unlock()
+	upd.lock.Lock()
+
+	for name, status := range upd.lastStatuses.gatewayAPI.GatewayStatuses {
+		if status.Ignored {
+			continue
+		}
+		status.Addresses = addresses
+		upd.lastStatuses.gatewayAPI.GatewayStatuses[name] = status
+	}
+
+	upd.updateGatewayAPI(ctx, upd.lastStatuses.gatewayAPI)
 }
 
 // NewRetryUpdateFunc returns a function which will be used in wait.ExponentialBackoffWithContext.
