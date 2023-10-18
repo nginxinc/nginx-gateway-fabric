@@ -57,6 +57,9 @@ const (
 	RouteMessageFailedNginxReload = GatewayMessageFailedNginxReload + ". NGINX may still be configured " +
 		"for this HTTPRoute. However, future updates to this resource will not be configured until the Gateway " +
 		"is programmed again"
+	// RouteConditionPartiallyInvalid is a condition which indicates that the Route contains
+	// a combination of both valid and invalid rules.
+	RouteConditionPartiallyInvalid v1beta1.RouteConditionType = "PartiallyInvalid"
 )
 
 // DeduplicateConditions removes duplicate conditions based on the condition type.
@@ -146,6 +149,17 @@ func NewRouteUnsupportedValue(msg string) conditions.Condition {
 	return conditions.Condition{
 		Type:    string(v1beta1.RouteConditionAccepted),
 		Status:  metav1.ConditionFalse,
+		Reason:  string(v1beta1.RouteReasonUnsupportedValue),
+		Message: msg,
+	}
+}
+
+// NewRoutePartiallyInvalid returns a Condition that indicates that the HTTPRoute contains a combination
+// of both valid and invalid rules.
+func NewRoutePartiallyInvalid(msg string) conditions.Condition {
+	return conditions.Condition{
+		Type:    string(RouteConditionPartiallyInvalid),
+		Status:  metav1.ConditionTrue,
 		Reason:  string(v1beta1.RouteReasonUnsupportedValue),
 		Message: msg,
 	}

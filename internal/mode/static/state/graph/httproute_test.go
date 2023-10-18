@@ -355,7 +355,21 @@ func TestBuildRoute(t *testing.T) {
 	addFilterToPath(hrInvalidFilters, "/filter", invalidFilter)
 
 	hrInvalidValidRules := createHTTPRoute("hr", gatewayNsName.Name, "example.com", invalidPath, "/filter", "/")
-	addFilterToPath(hrInvalidValidRules, "/filter", invalidFilter)
+
+	hrInvalidValidRulesWithInvalidFilter := createHTTPRoute(
+		"hr",
+		gatewayNsName.Name,
+		"example.com",
+		invalidPath, "/filter", "/")
+	addFilterToPath(hrInvalidValidRulesWithInvalidFilter, "/filter", invalidFilter)
+
+	hrInvalidValidFilter := createHTTPRoute("hr", gatewayNsName.Name, "example.com", "/filter", "/")
+	addFilterToPath(hrInvalidValidFilter, "/filter", validFilter)
+	addFilterToPath(hrInvalidValidFilter, "/", invalidFilter)
+
+	hrInvalidValidRuleAndFilter := createHTTPRoute("hr", gatewayNsName.Name, "example.com", invalidPath, "/filter", "/")
+	addFilterToPath(hrInvalidValidRuleAndFilter, "/filter", validFilter)
+	addFilterToPath(hrInvalidValidRuleAndFilter, "/", invalidFilter)
 
 	validatorInvalidFieldsInRule := &validationfakes.FakeHTTPFieldsValidator{
 		ValidatePathInMatchStub: func(path string) error {
@@ -495,8 +509,44 @@ func TestBuildRoute(t *testing.T) {
 					},
 				},
 				Conditions: []conditions.Condition{
-					staticConds.NewTODO(
-						`Some rules are invalid: ` +
+					staticConds.NewRoutePartiallyInvalid(
+						`Dropped Rule(s): ` +
+							`spec.rules[0].matches[0].path.value: Invalid value: "/invalid": invalid path`,
+					),
+				},
+				Rules: []Rule{
+					{
+						ValidMatches: false,
+						ValidFilters: true,
+					},
+					{
+						ValidMatches: true,
+						ValidFilters: true,
+					},
+					{
+						ValidMatches: true,
+						ValidFilters: true,
+					},
+				},
+			},
+			name: "invalid and valid rules",
+		},
+
+		{
+			validator: validatorInvalidFieldsInRule,
+			hr:        hrInvalidValidRulesWithInvalidFilter,
+			expected: &Route{
+				Source: hrInvalidValidRulesWithInvalidFilter,
+				Valid:  true,
+				ParentRefs: []ParentRef{
+					{
+						Idx:     0,
+						Gateway: gatewayNsName,
+					},
+				},
+				Conditions: []conditions.Condition{
+					staticConds.NewRoutePartiallyInvalid(
+						`Dropped Rule(s): ` +
 							`[spec.rules[0].matches[0].path.value: Invalid value: "/invalid": invalid path, ` +
 							`spec.rules[1].filters[0].requestRedirect.hostname: Invalid value: ` +
 							`"invalid.example.com": invalid hostname]`,
@@ -517,7 +567,76 @@ func TestBuildRoute(t *testing.T) {
 					},
 				},
 			},
-			name: "invalid with invalid and valid rules",
+			name: "invalid filter with invalid and valid rules",
+		},
+		{
+			validator: validatorInvalidFieldsInRule,
+			hr:        hrInvalidValidFilter,
+			expected: &Route{
+				Source: hrInvalidValidFilter,
+				Valid:  true,
+				ParentRefs: []ParentRef{
+					{
+						Idx:     0,
+						Gateway: gatewayNsName,
+					},
+				},
+				Conditions: []conditions.Condition{
+					staticConds.NewRoutePartiallyInvalid(
+						`Dropped Rule(s): ` +
+							`spec.rules[1].filters[0].requestRedirect.hostname: Invalid value: ` +
+							`"invalid.example.com": invalid hostname`,
+					),
+				},
+				Rules: []Rule{
+					{
+						ValidMatches: true,
+						ValidFilters: true,
+					},
+					{
+						ValidMatches: true,
+						ValidFilters: false,
+					},
+				},
+			},
+			name: "invalid and valid filter with valid rules",
+		},
+		{
+			validator: validatorInvalidFieldsInRule,
+			hr:        hrInvalidValidRuleAndFilter,
+			expected: &Route{
+				Source: hrInvalidValidRuleAndFilter,
+				Valid:  true,
+				ParentRefs: []ParentRef{
+					{
+						Idx:     0,
+						Gateway: gatewayNsName,
+					},
+				},
+				Conditions: []conditions.Condition{
+					staticConds.NewRoutePartiallyInvalid(
+						`Dropped Rule(s): ` +
+							`[spec.rules[0].matches[0].path.value: Invalid value: "/invalid": invalid path, ` +
+							`spec.rules[2].filters[0].requestRedirect.hostname: Invalid value: ` +
+							`"invalid.example.com": invalid hostname]`,
+					),
+				},
+				Rules: []Rule{
+					{
+						ValidMatches: false,
+						ValidFilters: true,
+					},
+					{
+						ValidMatches: true,
+						ValidFilters: true,
+					},
+					{
+						ValidMatches: true,
+						ValidFilters: false,
+					},
+				},
+			},
+			name: "invalid filter and rules with valid filter and rules",
 		},
 	}
 
