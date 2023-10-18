@@ -5,7 +5,7 @@ This guide explains how to use NGINX Gateway Fabric to upgrade applications with
 Multiple upgrade methods are mentioned, assuming existing familiarity: this guide focuses primarily on how to use NGINX
 Gateway Fabric to accomplish them.
 
-> See the [Architecture document](/docs/architecture.md) to learn more about NGINX Gateway Fabric architecture.
+> See the [Architecture document](../architecture.md) to learn more about NGINX Gateway Fabric architecture.
 
 ## NGINX Gateway Fabric Functionality
 
@@ -83,7 +83,7 @@ For example, an application can be exposed using a routing rule like below:
     port: 80
 ```
 
-> See the [Cafe example](/examples/cafe-example) for a basic example.
+> See the [Cafe example](../../examples/cafe-example) for a basic example.
 
 The upgrade methods in the next sections cover:
 

@@ -14,7 +14,7 @@ This chart deploys the NGINX Gateway Fabric in your Kubernetes cluster.
 > Note: The Gateway API resources from the standard channel (the CRDs and the validating webhook) must be installed
 > before deploying NGINX Gateway Fabric. If they are already installed in your cluster, please ensure they are
 > the correct version as supported by the NGINX Gateway Fabric -
-> [see the Technical Specifications](../../README.md#technical-specifications).
+> [see the Technical Specifications](https://github.com/nginxinc/nginx-gateway-fabric/blob/main/README.md#technical-specifications).
 
 To install the Gateway resources from [the Gateway API repo](https://github.com/kubernetes-sigs/gateway-api), run:
 
