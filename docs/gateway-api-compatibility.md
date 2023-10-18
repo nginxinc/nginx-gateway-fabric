@@ -174,6 +174,7 @@ Fields:
       - `ResolvedRefs/False/BackendNotFound`
       - `ResolvedRefs/False/UnsupportedValue` - custom reason for when one of the HTTPRoute rules has a backendRef
               with an unsupported value.
+      - `PartiallyInvalid/True/UnsupportedValue`
 
 ### ReferenceGrant
 
