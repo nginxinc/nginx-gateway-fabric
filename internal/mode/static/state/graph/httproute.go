@@ -233,7 +233,6 @@ func buildRoute(
 		msg := allRulesErrs.ToAggregate().Error()
 
 		if atLeastOneValid {
-			msg = "Dropped Rule(s): " + msg
 			r.Conditions = append(r.Conditions, staticConds.NewRoutePartiallyInvalid(msg))
 		} else {
 			msg = "All rules are invalid: " + msg

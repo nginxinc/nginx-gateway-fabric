@@ -510,8 +510,7 @@ func TestBuildRoute(t *testing.T) {
 				},
 				Conditions: []conditions.Condition{
 					staticConds.NewRoutePartiallyInvalid(
-						`Dropped Rule(s): ` +
-							`spec.rules[0].matches[0].path.value: Invalid value: "/invalid": invalid path`,
+						`spec.rules[0].matches[0].path.value: Invalid value: "/invalid": invalid path`,
 					),
 				},
 				Rules: []Rule{
@@ -546,8 +545,7 @@ func TestBuildRoute(t *testing.T) {
 				},
 				Conditions: []conditions.Condition{
 					staticConds.NewRoutePartiallyInvalid(
-						`Dropped Rule(s): ` +
-							`[spec.rules[0].matches[0].path.value: Invalid value: "/invalid": invalid path, ` +
+						`[spec.rules[0].matches[0].path.value: Invalid value: "/invalid": invalid path, ` +
 							`spec.rules[1].filters[0].requestRedirect.hostname: Invalid value: ` +
 							`"invalid.example.com": invalid hostname]`,
 					),
@@ -583,8 +581,7 @@ func TestBuildRoute(t *testing.T) {
 				},
 				Conditions: []conditions.Condition{
 					staticConds.NewRoutePartiallyInvalid(
-						`Dropped Rule(s): ` +
-							`spec.rules[1].filters[0].requestRedirect.hostname: Invalid value: ` +
+						`spec.rules[1].filters[0].requestRedirect.hostname: Invalid value: ` +
 							`"invalid.example.com": invalid hostname`,
 					),
 				},
@@ -615,8 +612,7 @@ func TestBuildRoute(t *testing.T) {
 				},
 				Conditions: []conditions.Condition{
 					staticConds.NewRoutePartiallyInvalid(
-						`Dropped Rule(s): ` +
-							`[spec.rules[0].matches[0].path.value: Invalid value: "/invalid": invalid path, ` +
+						`[spec.rules[0].matches[0].path.value: Invalid value: "/invalid": invalid path, ` +
 							`spec.rules[2].filters[0].requestRedirect.hostname: Invalid value: ` +
 							`"invalid.example.com": invalid hostname]`,
 					),

@@ -156,12 +156,16 @@ func NewRouteUnsupportedValue(msg string) conditions.Condition {
 
 // NewRoutePartiallyInvalid returns a Condition that indicates that the HTTPRoute contains a combination
 // of both valid and invalid rules.
+//
+// // nolint:lll
+// The message must start with "Dropped Rules(s)" according to the Gateway API spec
+// See https://github.com/kubernetes-sigs/gateway-api/blob/37d81593e5a965ed76582dbc1a2f56bbd57c0622/apis/v1/shared_types.go#L408-L413
 func NewRoutePartiallyInvalid(msg string) conditions.Condition {
 	return conditions.Condition{
 		Type:    string(RouteConditionPartiallyInvalid),
 		Status:  metav1.ConditionTrue,
 		Reason:  string(v1beta1.RouteReasonUnsupportedValue),
-		Message: msg,
+		Message: "Dropped Rule(s): " + msg,
 	}
 }
 
