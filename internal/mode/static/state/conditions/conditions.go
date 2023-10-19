@@ -59,6 +59,9 @@ const (
 		"is programmed again"
 	// RouteConditionPartiallyInvalid is a condition which indicates that the Route contains
 	// a combination of both valid and invalid rules.
+	//
+	// FIXME(Jee): Update to Gateway sig v1 version when released.
+	// https://github.com/nginxinc/nginx-gateway-fabric/issues/1168
 	RouteConditionPartiallyInvalid v1beta1.RouteConditionType = "PartiallyInvalid"
 )
 
