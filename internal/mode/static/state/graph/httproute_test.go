@@ -354,8 +354,18 @@ func TestBuildRoute(t *testing.T) {
 	hrInvalidFilters := createHTTPRoute("hr", gatewayNsName.Name, "example.com", "/filter")
 	addFilterToPath(hrInvalidFilters, "/filter", invalidFilter)
 
-	hrInvalidValidRules := createHTTPRoute("hr", gatewayNsName.Name, "example.com", invalidPath, "/filter", "/")
-	addFilterToPath(hrInvalidValidRules, "/filter", invalidFilter)
+	hrDroppedInvalidMatches := createHTTPRoute("hr", gatewayNsName.Name, "example.com", invalidPath, "/")
+
+	hrDroppedInvalidMatchesAndInvalidFilters := createHTTPRoute(
+		"hr",
+		gatewayNsName.Name,
+		"example.com",
+		invalidPath, "/filter", "/")
+	addFilterToPath(hrDroppedInvalidMatchesAndInvalidFilters, "/filter", invalidFilter)
+
+	hrDroppedInvalidFilters := createHTTPRoute("hr", gatewayNsName.Name, "example.com", "/filter", "/")
+	addFilterToPath(hrDroppedInvalidFilters, "/filter", validFilter)
+	addFilterToPath(hrDroppedInvalidFilters, "/", invalidFilter)
 
 	validatorInvalidFieldsInRule := &validationfakes.FakeHTTPFieldsValidator{
 		ValidatePathInMatchStub: func(path string) error {
@@ -484,9 +494,9 @@ func TestBuildRoute(t *testing.T) {
 		},
 		{
 			validator: validatorInvalidFieldsInRule,
-			hr:        hrInvalidValidRules,
+			hr:        hrDroppedInvalidMatches,
 			expected: &Route{
-				Source: hrInvalidValidRules,
+				Source: hrDroppedInvalidMatches,
 				Valid:  true,
 				ParentRefs: []ParentRef{
 					{
@@ -495,9 +505,39 @@ func TestBuildRoute(t *testing.T) {
 					},
 				},
 				Conditions: []conditions.Condition{
-					staticConds.NewTODO(
-						`Some rules are invalid: ` +
-							`[spec.rules[0].matches[0].path.value: Invalid value: "/invalid": invalid path, ` +
+					staticConds.NewRoutePartiallyInvalid(
+						`spec.rules[0].matches[0].path.value: Invalid value: "/invalid": invalid path`,
+					),
+				},
+				Rules: []Rule{
+					{
+						ValidMatches: false,
+						ValidFilters: true,
+					},
+					{
+						ValidMatches: true,
+						ValidFilters: true,
+					},
+				},
+			},
+			name: "dropped invalid rule with invalid matches",
+		},
+
+		{
+			validator: validatorInvalidFieldsInRule,
+			hr:        hrDroppedInvalidMatchesAndInvalidFilters,
+			expected: &Route{
+				Source: hrDroppedInvalidMatchesAndInvalidFilters,
+				Valid:  true,
+				ParentRefs: []ParentRef{
+					{
+						Idx:     0,
+						Gateway: gatewayNsName,
+					},
+				},
+				Conditions: []conditions.Condition{
+					staticConds.NewRoutePartiallyInvalid(
+						`[spec.rules[0].matches[0].path.value: Invalid value: "/invalid": invalid path, ` +
 							`spec.rules[1].filters[0].requestRedirect.hostname: Invalid value: ` +
 							`"invalid.example.com": invalid hostname]`,
 					),
@@ -517,7 +557,38 @@ func TestBuildRoute(t *testing.T) {
 					},
 				},
 			},
-			name: "invalid with invalid and valid rules",
+			name: "dropped invalid rule with invalid filters and invalid rule with invalid matches",
+		},
+		{
+			validator: validatorInvalidFieldsInRule,
+			hr:        hrDroppedInvalidFilters,
+			expected: &Route{
+				Source: hrDroppedInvalidFilters,
+				Valid:  true,
+				ParentRefs: []ParentRef{
+					{
+						Idx:     0,
+						Gateway: gatewayNsName,
+					},
+				},
+				Conditions: []conditions.Condition{
+					staticConds.NewRoutePartiallyInvalid(
+						`spec.rules[1].filters[0].requestRedirect.hostname: Invalid value: ` +
+							`"invalid.example.com": invalid hostname`,
+					),
+				},
+				Rules: []Rule{
+					{
+						ValidMatches: true,
+						ValidFilters: true,
+					},
+					{
+						ValidMatches: true,
+						ValidFilters: false,
+					},
+				},
+			},
+			name: "dropped invalid rule with invalid filters",
 		},
 	}
 

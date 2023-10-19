@@ -233,10 +233,7 @@ func buildRoute(
 		msg := allRulesErrs.ToAggregate().Error()
 
 		if atLeastOneValid {
-			// FIXME(pleshakov): Partial validity for HTTPRoute rules is not defined in the Gateway API spec yet.
-			// See https://github.com/nginxinc/nginx-gateway-fabric/issues/485
-			msg = "Some rules are invalid: " + msg
-			r.Conditions = append(r.Conditions, staticConds.NewTODO(msg))
+			r.Conditions = append(r.Conditions, staticConds.NewRoutePartiallyInvalid(msg))
 		} else {
 			msg = "All rules are invalid: " + msg
 			r.Conditions = append(r.Conditions, staticConds.NewRouteUnsupportedValue(msg))
