@@ -65,6 +65,10 @@ spec:
         image: {{ .Values.nginxGateway.image.repository }}:{{ .Values.nginxGateway.image.tag | default .Chart.AppVersion }}
         imagePullPolicy: {{ .Values.nginxGateway.image.pullPolicy }}
         name: nginx-gateway
+        {{- if .Values.nginxGateway.lifecycle }}
+        lifecycle:
+        {{- toYaml .Values.nginxGateway.lifecycle | nindent 10 }}
+        {{- end }}
         ports:
         {{- if .Values.metrics.enable }}
         - name: metrics
@@ -100,6 +104,10 @@ spec:
       - image: {{ .Values.nginx.image.repository }}:{{ .Values.nginx.image.tag | default .Chart.AppVersion }}
         imagePullPolicy: {{ .Values.nginx.image.pullPolicy }}
         name: nginx
+        {{- if .Values.nginx.lifecycle }}
+        lifecycle:
+        {{- toYaml .Values.nginx.lifecycle | nindent 10 }}
+        {{- end }}
         ports:
         - containerPort: 80
           name: http
@@ -125,6 +133,11 @@ spec:
           mountPath: /var/cache/nginx
         - name: nginx-lib
           mountPath: /var/lib/nginx
+      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
+      {{- if .Values.affinity }}
+      affinity:
+      {{- toYaml .Values.affinity | nindent 8 }}
+      {{- end }}
       serviceAccountName: {{ include "nginx-gateway.serviceAccountName" . }}
       shareProcessNamespace: true
       securityContext:

@@ -45,12 +45,24 @@ nginxGateway:
     ## Some environments may need this set to true in order for the control plane to successfully reload NGINX.
     allowPrivilegeEscalation: false
 
+  ## The lifecycle of the nginx-gateway container.
+  lifecycle: {}
+
 nginx:
   ## The NGINX image to use
   image:
     repository: ghcr.io/nginxinc/nginx-gateway-fabric/nginx
     tag: edge
     pullPolicy: Always
+
+  ## The lifecycle of the nginx container.
+  lifecycle: {}
+
+## The termination grace period of the NGINX Gateway Fabric pod.
+terminationGracePeriodSeconds: 30
+
+## The affinity of the NGINX Gateway Fabric pod.
+affinity: {}
 
 serviceAccount:
   annotations: {}

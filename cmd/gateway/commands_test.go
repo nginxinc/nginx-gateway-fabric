@@ -37,7 +37,17 @@ func testFlag(t *testing.T, cmd *cobra.Command, test flagTestCase) {
 	}
 }
 
-func TestRootCmdFlagValidation(t *testing.T) {
+func TestRootCmd(t *testing.T) {
+	testCase := flagTestCase{
+		name:    "no flags",
+		args:    nil,
+		wantErr: false,
+	}
+
+	testFlag(t, createRootCommand(), testCase)
+}
+
+func TestCommonFlagsValidation(t *testing.T) {
 	tests := []flagTestCase{
 		{
 			name: "valid flags",
@@ -103,9 +113,11 @@ func TestRootCmdFlagValidation(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			rootCmd := createRootCommand()
-			testFlag(t, rootCmd, test)
+		t.Run(test.name+"_static_mode", func(t *testing.T) {
+			testFlag(t, createStaticModeCommand(), test)
+		})
+		t.Run(test.name+"_provisioner_mode", func(t *testing.T) {
+			testFlag(t, createProvisionerModeCommand(), test)
 		})
 	}
 }
@@ -115,6 +127,8 @@ func TestStaticModeCmdFlagValidation(t *testing.T) {
 		{
 			name: "valid flags",
 			args: []string{
+				"--gateway-ctlr-name=gateway.nginx.org/nginx-gateway", // common and required flag
+				"--gatewayclass=nginx",                                // common and required flag
 				"--gateway=nginx-gateway/nginx",
 				"--config=nginx-gateway-config",
 				"--service=nginx-gateway",
@@ -130,8 +144,11 @@ func TestStaticModeCmdFlagValidation(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:    "valid flags, not set",
-			args:    nil,
+			name: "valid flags, non-required not set",
+			args: []string{
+				"--gateway-ctlr-name=gateway.nginx.org/nginx-gateway", // common and required flag
+				"--gatewayclass=nginx",                                // common and required flag,
+			},
 			wantErr: false,
 		},
 		{
@@ -280,9 +297,66 @@ func TestStaticModeCmdFlagValidation(t *testing.T) {
 		},
 	}
 
+	// common flags validation is tested separately
+
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			cmd := createStaticModeCommand()
+			testFlag(t, cmd, test)
+		})
+	}
+}
+
+func TestProvisionerModeCmdFlagValidation(t *testing.T) {
+	testCase := flagTestCase{
+		name: "valid flags",
+		args: []string{
+			"--gateway-ctlr-name=gateway.nginx.org/nginx-gateway", // common and required flag
+			"--gatewayclass=nginx",                                // common and required flag
+		},
+		wantErr: false,
+	}
+
+	// common flags validation is tested separately
+
+	testFlag(t, createProvisionerModeCommand(), testCase)
+}
+
+func TestSleepCmdFlagValidation(t *testing.T) {
+	tests := []flagTestCase{
+		{
+			name: "valid flags",
+			args: []string{
+				"--duration=1s",
+			},
+			wantErr: false,
+		},
+		{
+			name:    "omitted flags",
+			args:    nil,
+			wantErr: false,
+		},
+		{
+			name: "duration is set to empty string",
+			args: []string{
+				"--duration=",
+			},
+			wantErr:           true,
+			expectedErrPrefix: `invalid argument "" for "--duration" flag: time: invalid duration ""`,
+		},
+		{
+			name: "duration is invalid",
+			args: []string{
+				"--duration=invalid",
+			},
+			wantErr:           true,
+			expectedErrPrefix: `invalid argument "invalid" for "--duration" flag: time: invalid duration "invalid"`,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			cmd := createSleepCommand()
 			testFlag(t, cmd, test)
 		})
 	}

@@ -29,3 +29,18 @@ Flags:
 | `health-port`                | `int`    | Set the port where the health probe server is exposed. Format: `[1024 - 65535]` (default `8081`)                                                                                                                                                                                                                                                                                                  |
 | `leader-election-disable`    | `bool`   | Disable leader election. Leader election is used to avoid multiple replicas of the NGINX Gateway Fabric reporting the status of the Gateway API resources. If disabled, all replicas of NGINX Gateway Fabric will update the statuses of the Gateway API resources. (default false)                                                                                                       |
 | `leader-election-lock-name`  | `string` | The name of the leader election lock. A Lease object with this name will be created in the same Namespace as the controller. (default "nginx-gateway-leader-election-lock")                                                                                                                                                                                                                       |
+
+## Sleep
+
+This command sleeps for specified duration and exits.
+
+Usage:
+
+```text
+Usage:
+  gateway sleep [flags]
+```
+
+| Name     | Type       | Description                               |
+|----------|------------|-------------------------------------------|
+| duration | `duration` | Set the duration of sleep (default `30s`) |
