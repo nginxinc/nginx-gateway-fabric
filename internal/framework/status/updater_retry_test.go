@@ -20,56 +20,80 @@ import (
 
 func TestNewRetryUpdateFunc(t *testing.T) {
 	tests := []struct {
-		getReturns         error
-		updateReturns      error
-		name               string
-		expConditionPassed bool
+		getReturns          error
+		updateReturns       error
+		name                string
+		expUpdateCallCount  int
+		statusSetterReturns bool
+		expConditionPassed  bool
 	}{
 		{
-			getReturns:         errors.New("failed to get resource"),
-			updateReturns:      nil,
-			name:               "get fails",
-			expConditionPassed: false,
+			getReturns:          errors.New("failed to get resource"),
+			updateReturns:       nil,
+			statusSetterReturns: true,
+			expUpdateCallCount:  0,
+			name:                "get fails",
+			expConditionPassed:  false,
 		},
 		{
-			getReturns:         apierrors.NewNotFound(schema.GroupResource{}, "not found"),
-			updateReturns:      nil,
-			name:               "get fails and apierrors is not found",
-			expConditionPassed: true,
+			getReturns:          apierrors.NewNotFound(schema.GroupResource{}, "not found"),
+			updateReturns:       nil,
+			statusSetterReturns: true,
+			expUpdateCallCount:  0,
+			name:                "get fails and apierrors is not found",
+			expConditionPassed:  true,
 		},
 		{
-			getReturns:         nil,
-			updateReturns:      errors.New("failed to update resource"),
-			name:               "update fails",
-			expConditionPassed: false,
+			getReturns:          nil,
+			updateReturns:       errors.New("failed to update resource"),
+			statusSetterReturns: true,
+			expUpdateCallCount:  1,
+			name:                "update fails",
+			expConditionPassed:  false,
 		},
 		{
-			getReturns:         nil,
-			updateReturns:      nil,
-			name:               "nothing fails",
-			expConditionPassed: true,
+			getReturns:          nil,
+			updateReturns:       nil,
+			statusSetterReturns: false,
+			expUpdateCallCount:  0,
+			name:                "status not set",
+			expConditionPassed:  true,
+		},
+		{
+			getReturns:          nil,
+			updateReturns:       nil,
+			statusSetterReturns: true,
+			expUpdateCallCount:  1,
+			name:                "nothing fails",
+			expConditionPassed:  true,
 		},
 	}
 
-	fakeStatusUpdater := &statusfakes.FakeK8sUpdater{}
-	fakeGetter := &controllerfakes.FakeGetter{}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewWithT(t)
+
+			fakeStatusUpdater := &statusfakes.FakeK8sUpdater{}
+			fakeGetter := &controllerfakes.FakeGetter{}
+
 			fakeStatusUpdater.UpdateReturns(test.updateReturns)
 			fakeGetter.GetReturns(test.getReturns)
+
 			f := status.NewRetryUpdateFunc(
 				fakeGetter,
 				fakeStatusUpdater,
 				types.NamespacedName{},
 				&v1beta1.GatewayClass{},
 				zap.New(),
-				func(client.Object) {})
+				func(client.Object) bool { return test.statusSetterReturns },
+			)
+
 			conditionPassed, err := f(context.Background())
 
 			// The function should always return nil.
 			g.Expect(err).ToNot(HaveOccurred())
 			g.Expect(conditionPassed).To(Equal(test.expConditionPassed))
+			g.Expect(fakeStatusUpdater.UpdateCallCount()).To(Equal(test.expUpdateCallCount))
 		})
 	}
 }

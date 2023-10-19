@@ -51,7 +51,7 @@ are listed in the [Scale Upstream Servers](#scale-upstream-servers) test steps.
 - Install edge NGF and save the Pod Name and LoadBalancer IP for tests:
 
   ```console
-  helm install scale-test oci://ghcr.io/nginxinc/charts/nginx-gateway-fabric  --create-namespace --wait -n nginx-gateway --version=0.0.0-edge
+  helm install scale-test oci://ghcr.io/nginxinc/charts/nginx-gateway-fabric  --create-namespace --wait -n nginx-gateway --version=0.0.0-edge --set nginxGateway.config.logging.level=debug
   ```
 
   ```console
@@ -192,16 +192,22 @@ Total Resources Created:
 - 1000 HTTPRoutes
 - 1 Service, Deployment, Pod
 
-This test takes around 7 hours to run, so I recommend running it on a VM, or overnight with the aid of
-[caffeinate](https://www.theapplegeek.co.uk/blog/caffeinate) for MAC users.
-
 Follow the steps below to run the test:
 
 - Run the test:
 
   ```console
-  go test -v -tags scale -timeout 600m -run TestScale_HTTPRoutes -i 1000 -delay 2s
+  go test -v -tags scale -timeout 30m -run TestScale_HTTPRoutes -i 1000
   ```
+
+  To test with a delay in between each new HTTPRoute, you can add the `-delay` flag to the above command. For example,
+  to add a 2-second delay:
+
+  ```console
+  go test -v -tags scale -timeout 60m -run TestScale_HTTPRoutes -i 1000 -delay 2s
+  ```
+
+  The test takes longer to run with a delay so make sure to adjust the timeout value.
 
 - [Analyze](#analyze) the results.
 
@@ -350,6 +356,8 @@ Follow these steps to run the test:
   kubectl describe httproute route
   ```
 
+- Edit your /etc/hosts file and add an entry for "NGF_IP cafe.example.com".
+
 - Test the first match:
 
   ```console
@@ -404,6 +412,31 @@ Follow these steps to run the test:
     ```console
     rate(nginx_gateway_fabric_nginx_reloads_milliseconds_sum[<Duration>] @ <Test End + 10s>) /
     rate(nginx_gateway_fabric_nginx_reloads_milliseconds_count[<Duration>] @ <Test End + 10s>)
+    ```
+
+  Reload Time Distribution:
+
+    ```console
+    nginx_gateway_fabric_nginx_reloads_milliseconds_bucket - nginx_gateway_fabric_nginx_reloads_milliseconds_bucket @ <Test Start>
+    ```
+
+  Total number of event batches processed:
+
+    ```console
+    nginx_gateway_fabric_event_batch_processing_milliseconds_count - nginx_gateway_fabric_event_batch_processing_milliseconds_count @ <Test Start>
+    ```
+
+  Average event batch processing time (ms):
+
+    ```console
+    rate(nginx_gateway_fabric_event_batch_processing_milliseconds_sum[<Duration>] @ <Test End + 10s>) /
+    rate(nginx_gateway_fabric_event_batch_processing_milliseconds_count[<Duration>] @ <Test End + 10s>)
+    ```
+
+  Event Batch Processing Time Distribution:
+
+    ```console
+    nginx_gateway_fabric_event_batch_processing_milliseconds_bucket - nginx_gateway_fabric_event_batch_processing_milliseconds_bucket @ <Test Start>
     ```
 
   Record these numbers in a table in the results file.
