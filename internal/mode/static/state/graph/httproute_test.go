@@ -356,12 +356,12 @@ func TestBuildRoute(t *testing.T) {
 
 	hrDroppedInvalidMatches := createHTTPRoute("hr", gatewayNsName.Name, "example.com", invalidPath, "/")
 
-	hrDroppedInvalidMatchesAndInvalidFilter := createHTTPRoute(
+	hrDroppedInvalidMatchesAndInvalidFilters := createHTTPRoute(
 		"hr",
 		gatewayNsName.Name,
 		"example.com",
 		invalidPath, "/filter", "/")
-	addFilterToPath(hrDroppedInvalidMatchesAndInvalidFilter, "/filter", invalidFilter)
+	addFilterToPath(hrDroppedInvalidMatchesAndInvalidFilters, "/filter", invalidFilter)
 
 	hrDroppedInvalidFilters := createHTTPRoute("hr", gatewayNsName.Name, "example.com", "/filter", "/")
 	addFilterToPath(hrDroppedInvalidFilters, "/filter", validFilter)
@@ -525,9 +525,9 @@ func TestBuildRoute(t *testing.T) {
 
 		{
 			validator: validatorInvalidFieldsInRule,
-			hr:        hrDroppedInvalidMatchesAndInvalidFilter,
+			hr:        hrDroppedInvalidMatchesAndInvalidFilters,
 			expected: &Route{
-				Source: hrDroppedInvalidMatchesAndInvalidFilter,
+				Source: hrDroppedInvalidMatchesAndInvalidFilters,
 				Valid:  true,
 				ParentRefs: []ParentRef{
 					{
