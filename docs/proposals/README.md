@@ -80,7 +80,8 @@ with the changes and update the status field of the corresponding Enhancement Pr
 
 > Note:
 >
-> Make sure to read the [Development Guide](/CONTRIBUTING.md#development-guide) before making any code changes.
+> Make sure to read the [Development Guide](https://github.com/nginxinc/nginx-gateway-fabric/blob/main/CONTRIBUTING.md#development-guide)
+> before making any code changes.
 
 ## Status
 

@@ -98,7 +98,7 @@ This will build the docker images `nginx-gateway-fabric:<your-user>` and `nginx-
       helm install my-release ./deploy/helm-chart --create-namespace --wait --set service.type=NodePort --set nginxGateway.image.repository=nginx-gateway-fabric --set nginxGateway.image.tag=$(whoami) --set nginxGateway.image.pullPolicy=Never --set nginx.image.repository=nginx-gateway-fabric/nginx --set nginx.image.tag=$(whoami) --set nginx.image.pullPolicy=Never -n nginx-gateway
       ```
 
-      > For more information on helm configuration options see the Helm [README](/deploy/helm-chart/README.md).
+      > For more information on helm configuration options see the Helm [README](../../deploy/helm-chart/README.md).
 
    - To install with manifests:
 
