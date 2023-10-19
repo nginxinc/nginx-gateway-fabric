@@ -4,7 +4,7 @@ FROM nginx:1.25.2-alpine
 ARG NJS_DIR
 ARG NGINX_CONF_DIR
 
-RUN apk update && apk add --no-cache libcap \
+RUN apk update && apk upgrade && apk add --no-cache libcap \
     && mkdir -p /var/lib/nginx /usr/lib/nginx/modules \
     && setcap 'cap_net_bind_service=+ep' /usr/sbin/nginx \
     && setcap -v 'cap_net_bind_service=+ep' /usr/sbin/nginx \
