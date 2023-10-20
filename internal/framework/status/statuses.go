@@ -2,7 +2,7 @@ package status
 
 import (
 	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/gateway-api/apis/v1beta1"
+	v1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
@@ -22,7 +22,7 @@ type GatewayAPIStatuses struct {
 }
 
 func (g GatewayAPIStatuses) APIGroup() string {
-	return v1beta1.GroupName
+	return v1.GroupName
 }
 
 // NginxGatewayStatus holds status-related information about the NginxGateway resource.
@@ -58,7 +58,7 @@ type GatewayStatus struct {
 	// Conditions is the list of conditions for this Gateway.
 	Conditions []conditions.Condition
 	// Addresses holds the list of GatewayStatusAddresses.
-	Addresses []v1beta1.GatewayStatusAddress
+	Addresses []v1.GatewayStatusAddress
 	// ObservedGeneration is the generation of the resource that was processed.
 	ObservedGeneration int64
 	// Ignored tells whether or not this Gateway is ignored.
@@ -70,7 +70,7 @@ type ListenerStatus struct {
 	// Conditions is the list of conditions for this listener.
 	Conditions []conditions.Condition
 	// SupportedKinds is the list of SupportedKinds for this listener.
-	SupportedKinds []v1beta1.RouteGroupKind
+	SupportedKinds []v1.RouteGroupKind
 	// AttachedRoutes is the number of routes attached to the listener.
 	AttachedRoutes int32
 }
@@ -88,7 +88,7 @@ type ParentStatus struct {
 	// GatewayNsName is the Namespaced name of the Gateway, which the parentRef references.
 	GatewayNsName types.NamespacedName
 	// SectionName is the SectionName of the parentRef.
-	SectionName *v1beta1.SectionName
+	SectionName *v1.SectionName
 	// Conditions is the list of conditions that are relevant to the parentRef.
 	Conditions []conditions.Condition
 }

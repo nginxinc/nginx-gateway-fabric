@@ -11,7 +11,7 @@ import (
 	ctlr "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	embeddedfiles "github.com/nginxinc/nginx-gateway-fabric"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/controller"
@@ -37,7 +37,7 @@ type Config struct {
 // many important features. See https://github.com/nginxinc/nginx-gateway-fabric/issues/634 for more details.
 func StartManager(cfg Config) error {
 	scheme := runtime.NewScheme()
-	utilruntime.Must(gatewayv1beta1.AddToScheme(scheme))
+	utilruntime.Must(gatewayv1.AddToScheme(scheme))
 	utilruntime.Must(v1.AddToScheme(scheme))
 
 	options := manager.Options{
@@ -58,13 +58,13 @@ func StartManager(cfg Config) error {
 		options    []controller.Option
 	}{
 		{
-			objectType: &gatewayv1beta1.GatewayClass{},
+			objectType: &gatewayv1.GatewayClass{},
 			options: []controller.Option{
 				controller.WithK8sPredicate(predicate.GatewayClassPredicate{ControllerName: cfg.GatewayCtlrName}),
 			},
 		},
 		{
-			objectType: &gatewayv1beta1.Gateway{},
+			objectType: &gatewayv1.Gateway{},
 		},
 	}
 
@@ -86,10 +86,10 @@ func StartManager(cfg Config) error {
 	firstBatchPreparer := events.NewFirstEventBatchPreparerImpl(
 		mgr.GetCache(),
 		[]client.Object{
-			&gatewayv1beta1.GatewayClass{ObjectMeta: metav1.ObjectMeta{Name: cfg.GatewayClassName}},
+			&gatewayv1.GatewayClass{ObjectMeta: metav1.ObjectMeta{Name: cfg.GatewayClassName}},
 		},
 		[]client.ObjectList{
-			&gatewayv1beta1.GatewayList{},
+			&gatewayv1.GatewayList{},
 		},
 	)
 

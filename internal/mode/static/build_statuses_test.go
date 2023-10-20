@@ -8,7 +8,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/gateway-api/apis/v1beta1"
+	v1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
@@ -18,7 +18,7 @@ import (
 )
 
 var (
-	gw = &v1beta1.Gateway{
+	gw = &v1.Gateway{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:  "test",
 			Name:       "gateway",
@@ -26,7 +26,7 @@ var (
 		},
 	}
 
-	ignoredGw = &v1beta1.Gateway{
+	ignoredGw = &v1.Gateway{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:  "test",
 			Name:       "ignored-gateway",
@@ -36,9 +36,9 @@ var (
 )
 
 func TestBuildStatuses(t *testing.T) {
-	addr := []v1beta1.GatewayStatusAddress{
+	addr := []v1.GatewayStatusAddress{
 		{
-			Type:  helpers.GetPointer(v1beta1.IPAddressType),
+			Type:  helpers.GetPointer(v1.IPAddressType),
 			Value: "1.2.3.4",
 		},
 	}
@@ -55,18 +55,18 @@ func TestBuildStatuses(t *testing.T) {
 	routes := map[types.NamespacedName]*graph.Route{
 		{Namespace: "test", Name: "hr-valid"}: {
 			Valid: true,
-			Source: &v1beta1.HTTPRoute{
+			Source: &v1.HTTPRoute{
 				ObjectMeta: metav1.ObjectMeta{
 					Generation: 3,
 				},
-				Spec: v1beta1.HTTPRouteSpec{
-					CommonRouteSpec: v1beta1.CommonRouteSpec{
-						ParentRefs: []v1beta1.ParentReference{
+				Spec: v1.HTTPRouteSpec{
+					CommonRouteSpec: v1.CommonRouteSpec{
+						ParentRefs: []v1.ParentReference{
 							{
-								SectionName: helpers.GetPointer[v1beta1.SectionName]("listener-80-1"),
+								SectionName: helpers.GetPointer[v1.SectionName]("listener-80-1"),
 							},
 							{
-								SectionName: helpers.GetPointer[v1beta1.SectionName]("listener-80-2"),
+								SectionName: helpers.GetPointer[v1.SectionName]("listener-80-2"),
 							},
 						},
 					},
@@ -93,15 +93,15 @@ func TestBuildStatuses(t *testing.T) {
 		{Namespace: "test", Name: "hr-invalid"}: {
 			Valid:      false,
 			Conditions: []conditions.Condition{invalidRouteCondition},
-			Source: &v1beta1.HTTPRoute{
+			Source: &v1.HTTPRoute{
 				ObjectMeta: metav1.ObjectMeta{
 					Generation: 3,
 				},
-				Spec: v1beta1.HTTPRouteSpec{
-					CommonRouteSpec: v1beta1.CommonRouteSpec{
-						ParentRefs: []v1beta1.ParentReference{
+				Spec: v1.HTTPRouteSpec{
+					CommonRouteSpec: v1.CommonRouteSpec{
+						ParentRefs: []v1.ParentReference{
 							{
-								SectionName: helpers.GetPointer[v1beta1.SectionName]("listener-80-1"),
+								SectionName: helpers.GetPointer[v1.SectionName]("listener-80-1"),
 							},
 						},
 					},
@@ -119,7 +119,7 @@ func TestBuildStatuses(t *testing.T) {
 
 	graph := &graph.Graph{
 		GatewayClass: &graph.GatewayClass{
-			Source: &v1beta1.GatewayClass{
+			Source: &v1.GatewayClass{
 				ObjectMeta: metav1.ObjectMeta{Generation: 1},
 			},
 			Valid: true,
@@ -136,7 +136,7 @@ func TestBuildStatuses(t *testing.T) {
 			},
 			Valid: true,
 		},
-		IgnoredGateways: map[types.NamespacedName]*v1beta1.Gateway{
+		IgnoredGateways: map[types.NamespacedName]*v1.Gateway{
 			client.ObjectKeyFromObject(ignoredGw): ignoredGw,
 		},
 		Routes: routes,
@@ -173,12 +173,12 @@ func TestBuildStatuses(t *testing.T) {
 				ParentStatuses: []status.ParentStatus{
 					{
 						GatewayNsName: client.ObjectKeyFromObject(gw),
-						SectionName:   helpers.GetPointer[v1beta1.SectionName]("listener-80-1"),
+						SectionName:   helpers.GetPointer[v1.SectionName]("listener-80-1"),
 						Conditions:    staticConds.NewDefaultRouteConditions(),
 					},
 					{
 						GatewayNsName: client.ObjectKeyFromObject(gw),
-						SectionName:   helpers.GetPointer[v1beta1.SectionName]("listener-80-2"),
+						SectionName:   helpers.GetPointer[v1.SectionName]("listener-80-2"),
 						Conditions: append(
 							staticConds.NewDefaultRouteConditions(),
 							invalidAttachmentCondition,
@@ -191,7 +191,7 @@ func TestBuildStatuses(t *testing.T) {
 				ParentStatuses: []status.ParentStatus{
 					{
 						GatewayNsName: client.ObjectKeyFromObject(gw),
-						SectionName:   helpers.GetPointer[v1beta1.SectionName]("listener-80-1"),
+						SectionName:   helpers.GetPointer[v1.SectionName]("listener-80-1"),
 						Conditions: append(
 							staticConds.NewDefaultRouteConditions(),
 							invalidRouteCondition,
@@ -210,9 +210,9 @@ func TestBuildStatuses(t *testing.T) {
 }
 
 func TestBuildStatusesNginxErr(t *testing.T) {
-	addr := []v1beta1.GatewayStatusAddress{
+	addr := []v1.GatewayStatusAddress{
 		{
-			Type:  helpers.GetPointer(v1beta1.IPAddressType),
+			Type:  helpers.GetPointer(v1.IPAddressType),
 			Value: "1.2.3.4",
 		},
 	}
@@ -220,15 +220,15 @@ func TestBuildStatusesNginxErr(t *testing.T) {
 	routes := map[types.NamespacedName]*graph.Route{
 		{Namespace: "test", Name: "hr-valid"}: {
 			Valid: true,
-			Source: &v1beta1.HTTPRoute{
+			Source: &v1.HTTPRoute{
 				ObjectMeta: metav1.ObjectMeta{
 					Generation: 3,
 				},
-				Spec: v1beta1.HTTPRouteSpec{
-					CommonRouteSpec: v1beta1.CommonRouteSpec{
-						ParentRefs: []v1beta1.ParentReference{
+				Spec: v1.HTTPRouteSpec{
+					CommonRouteSpec: v1.CommonRouteSpec{
+						ParentRefs: []v1.ParentReference{
 							{
-								SectionName: helpers.GetPointer[v1beta1.SectionName]("listener-80-1"),
+								SectionName: helpers.GetPointer[v1.SectionName]("listener-80-1"),
 							},
 						},
 					},
@@ -291,7 +291,7 @@ func TestBuildStatusesNginxErr(t *testing.T) {
 				ParentStatuses: []status.ParentStatus{
 					{
 						GatewayNsName: client.ObjectKeyFromObject(gw),
-						SectionName:   helpers.GetPointer[v1beta1.SectionName]("listener-80-1"),
+						SectionName:   helpers.GetPointer[v1.SectionName]("listener-80-1"),
 						Conditions: []conditions.Condition{
 							staticConds.NewRouteResolvedRefs(),
 							staticConds.NewRouteGatewayNotProgrammed(staticConds.RouteMessageFailedNginxReload),
@@ -312,7 +312,7 @@ func TestBuildStatusesNginxErr(t *testing.T) {
 func TestBuildGatewayClassStatuses(t *testing.T) {
 	tests := []struct {
 		gc             *graph.GatewayClass
-		ignoredClasses map[types.NamespacedName]*v1beta1.GatewayClass
+		ignoredClasses map[types.NamespacedName]*v1.GatewayClass
 		expected       status.GatewayClassStatuses
 		name           string
 	}{
@@ -322,7 +322,7 @@ func TestBuildGatewayClassStatuses(t *testing.T) {
 		},
 		{
 			name: "nil gatewayclass and ignored gatewayclasses",
-			ignoredClasses: map[types.NamespacedName]*v1beta1.GatewayClass{
+			ignoredClasses: map[types.NamespacedName]*v1.GatewayClass{
 				{Name: "ignored-1"}: {
 					ObjectMeta: metav1.ObjectMeta{
 						Generation: 1,
@@ -348,7 +348,7 @@ func TestBuildGatewayClassStatuses(t *testing.T) {
 		{
 			name: "valid gatewayclass",
 			gc: &graph.GatewayClass{
-				Source: &v1beta1.GatewayClass{
+				Source: &v1.GatewayClass{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:       "valid-gc",
 						Generation: 1,
@@ -375,9 +375,9 @@ func TestBuildGatewayClassStatuses(t *testing.T) {
 }
 
 func TestBuildGatewayStatuses(t *testing.T) {
-	addr := []v1beta1.GatewayStatusAddress{
+	addr := []v1.GatewayStatusAddress{
 		{
-			Type:  helpers.GetPointer(v1beta1.IPAddressType),
+			Type:  helpers.GetPointer(v1.IPAddressType),
 			Value: "1.2.3.4",
 		},
 	}
@@ -385,7 +385,7 @@ func TestBuildGatewayStatuses(t *testing.T) {
 	tests := []struct {
 		nginxReloadRes  nginxReloadResult
 		gateway         *graph.Gateway
-		ignoredGateways map[types.NamespacedName]*v1beta1.Gateway
+		ignoredGateways map[types.NamespacedName]*v1.Gateway
 		expected        status.GatewayStatuses
 		name            string
 	}{
@@ -395,7 +395,7 @@ func TestBuildGatewayStatuses(t *testing.T) {
 		},
 		{
 			name: "nil gateway and ignored gateways",
-			ignoredGateways: map[types.NamespacedName]*v1beta1.Gateway{
+			ignoredGateways: map[types.NamespacedName]*v1.Gateway{
 				{Namespace: "test", Name: "ignored-1"}: {
 					ObjectMeta: metav1.ObjectMeta{
 						Generation: 1,

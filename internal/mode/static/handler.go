@@ -11,7 +11,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/gateway-api/apis/v1beta1"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
@@ -235,10 +235,10 @@ func getGatewayAddresses(
 	k8sClient client.Client,
 	svc *v1.Service,
 	podConfig config.GatewayPodConfig,
-) ([]v1beta1.GatewayStatusAddress, error) {
-	podAddress := []v1beta1.GatewayStatusAddress{
+) ([]gatewayv1.GatewayStatusAddress, error) {
+	podAddress := []gatewayv1.GatewayStatusAddress{
 		{
-			Type:  helpers.GetPointer(v1beta1.IPAddressType),
+			Type:  helpers.GetPointer(gatewayv1.IPAddressType),
 			Value: podConfig.PodIP,
 		},
 	}
@@ -265,18 +265,18 @@ func getGatewayAddresses(
 		}
 	}
 
-	gwAddresses := make([]v1beta1.GatewayStatusAddress, 0, len(addresses)+len(hostnames))
+	gwAddresses := make([]gatewayv1.GatewayStatusAddress, 0, len(addresses)+len(hostnames))
 	for _, addr := range addresses {
-		statusAddr := v1beta1.GatewayStatusAddress{
-			Type:  helpers.GetPointer(v1beta1.IPAddressType),
+		statusAddr := gatewayv1.GatewayStatusAddress{
+			Type:  helpers.GetPointer(gatewayv1.IPAddressType),
 			Value: addr,
 		}
 		gwAddresses = append(gwAddresses, statusAddr)
 	}
 
 	for _, hostname := range hostnames {
-		statusAddr := v1beta1.GatewayStatusAddress{
-			Type:  helpers.GetPointer(v1beta1.HostnameAddressType),
+		statusAddr := gatewayv1.GatewayStatusAddress{
+			Type:  helpers.GetPointer(gatewayv1.HostnameAddressType),
 			Value: hostname,
 		}
 		gwAddresses = append(gwAddresses, statusAddr)

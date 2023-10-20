@@ -103,10 +103,10 @@ func createLocations(pathRules []dataplane.PathRule, listenerPort int32) []http.
 			}
 
 			// There could be a case when the filter has the type set but not the corresponding field.
-			// For example, type is v1beta1.HTTPRouteFilterRequestRedirect, but RequestRedirect field is nil.
+			// For example, type is v1.HTTPRouteFilterRequestRedirect, but RequestRedirect field is nil.
 			// The imported Webhook validation webhook catches that.
 
-			// FIXME(pleshakov): Ensure dataplane.Configuration -related types don't include v1beta1 types, so that
+			// FIXME(pleshakov): Ensure dataplane.Configuration -related types don't include v1 types, so that
 			// we don't need to make any assumptions like above here. After fixing this, ensure that there is a test
 			// for checking the imported Webhook validation catches the case above.
 			// https://github.com/nginxinc/nginx-gateway-fabric/issues/660

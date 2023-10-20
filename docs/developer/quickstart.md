@@ -84,10 +84,10 @@ This will build the docker images `nginx-gateway-fabric:<your-user>` and `nginx-
    kind load docker-image nginx-gateway-fabric:$(whoami) nginx-gateway-fabric/nginx:$(whoami)
    ```
 
-3. Install Gateway API Resources
+3. Install Gateway API CRDs:
 
    ```shell
-   kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v0.8.1/standard-install.yaml
+   kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/standard-install.yaml
    ```
 
 4. Install NGF using your custom image and expose NGF with a NodePort Service:

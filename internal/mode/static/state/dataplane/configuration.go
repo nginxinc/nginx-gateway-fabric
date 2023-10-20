@@ -7,7 +7,7 @@ import (
 
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/gateway-api/apis/v1beta1"
+	v1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/graph"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/resolver"
@@ -132,9 +132,9 @@ func newBackendGroup(refs []graph.BackendRef, sourceNsName types.NamespacedName,
 }
 
 func buildServers(listeners map[string]*graph.Listener) (http, ssl []VirtualServer) {
-	rulesForProtocol := map[v1beta1.ProtocolType]portPathRules{
-		v1beta1.HTTPProtocolType:  make(portPathRules),
-		v1beta1.HTTPSProtocolType: make(portPathRules),
+	rulesForProtocol := map[v1.ProtocolType]portPathRules{
+		v1.HTTPProtocolType:  make(portPathRules),
+		v1.HTTPSProtocolType: make(portPathRules),
 	}
 
 	for _, l := range listeners {
@@ -149,14 +149,14 @@ func buildServers(listeners map[string]*graph.Listener) (http, ssl []VirtualServ
 		}
 	}
 
-	httpRules := rulesForProtocol[v1beta1.HTTPProtocolType]
-	sslRules := rulesForProtocol[v1beta1.HTTPSProtocolType]
+	httpRules := rulesForProtocol[v1.HTTPProtocolType]
+	sslRules := rulesForProtocol[v1.HTTPSProtocolType]
 
 	return httpRules.buildServers(), sslRules.buildServers()
 }
 
 // portPathRules keeps track of hostPathRules per port
-type portPathRules map[v1beta1.PortNumber]*hostPathRules
+type portPathRules map[v1.PortNumber]*hostPathRules
 
 func (p portPathRules) buildServers() []VirtualServer {
 	serverCount := 0
@@ -175,7 +175,7 @@ func (p portPathRules) buildServers() []VirtualServer {
 
 type pathAndType struct {
 	path     string
-	pathType v1beta1.PathMatchType
+	pathType v1.PathMatchType
 }
 
 type hostPathRules struct {
@@ -198,7 +198,7 @@ func (hpr *hostPathRules) upsertListener(l *graph.Listener) {
 	hpr.listenersExist = true
 	hpr.port = int32(l.Source.Port)
 
-	if l.Source.Protocol == v1beta1.HTTPSProtocolType {
+	if l.Source.Protocol == v1.HTTPSProtocolType {
 		hpr.httpsListeners = append(hpr.httpsListeners, l)
 	}
 
@@ -415,7 +415,7 @@ func buildUpstreams(
 	return upstreams
 }
 
-func getListenerHostname(h *v1beta1.Hostname) string {
+func getListenerHostname(h *v1.Hostname) string {
 	if h == nil || *h == "" {
 		return wildcardHostname
 	}
@@ -423,24 +423,24 @@ func getListenerHostname(h *v1beta1.Hostname) string {
 	return string(*h)
 }
 
-func getPath(path *v1beta1.HTTPPathMatch) string {
+func getPath(path *v1.HTTPPathMatch) string {
 	if path == nil || path.Value == nil || *path.Value == "" {
 		return "/"
 	}
 	return *path.Value
 }
 
-func createHTTPFilters(filters []v1beta1.HTTPRouteFilter) HTTPFilters {
+func createHTTPFilters(filters []v1.HTTPRouteFilter) HTTPFilters {
 	var result HTTPFilters
 
 	for _, f := range filters {
 		switch f.Type {
-		case v1beta1.HTTPRouteFilterRequestRedirect:
+		case v1.HTTPRouteFilterRequestRedirect:
 			if result.RequestRedirect == nil {
 				// using the first filter
 				result.RequestRedirect = convertHTTPRequestRedirectFilter(f.RequestRedirect)
 			}
-		case v1beta1.HTTPRouteFilterRequestHeaderModifier:
+		case v1.HTTPRouteFilterRequestHeaderModifier:
 			if result.RequestHeaderModifiers == nil {
 				// using the first filter
 				result.RequestHeaderModifiers = convertHTTPHeaderFilter(f.RequestHeaderModifier)
@@ -451,7 +451,7 @@ func createHTTPFilters(filters []v1beta1.HTTPRouteFilter) HTTPFilters {
 }
 
 // listenerHostnameMoreSpecific returns true if host1 is more specific than host2.
-func listenerHostnameMoreSpecific(host1, host2 *v1beta1.Hostname) bool {
+func listenerHostnameMoreSpecific(host1, host2 *v1.Hostname) bool {
 	var host1Str, host2Str string
 	if host1 != nil {
 		host1Str = string(*host1)

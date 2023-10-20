@@ -1,10 +1,10 @@
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
   name: cafe-tls-redirect
 spec:
   parentRefs:
-  - name: gateway.networking.k8s.io/v1beta1
+  - name: gateway.networking.k8s.io/v1
     namespace: default
     sectionName: http
   hostnames:
@@ -16,7 +16,7 @@ spec:
         scheme: https
         port: 443
 ---
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
   name: coffee
@@ -36,7 +36,7 @@ spec:
     - name: coffee
       port: 80
 ---
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
   name: tea

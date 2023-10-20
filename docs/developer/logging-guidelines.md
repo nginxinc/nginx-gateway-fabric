@@ -188,7 +188,7 @@ The next section shows how to add context.
 
    ```go
    // hr implements client.Object (controller-runtime)
-   // hr is *v1beta1.HTTPRoute
+   // hr is *v1.HTTPRoute
     logger.Info(
         "Processed resource",
         "resource", hr,
@@ -196,7 +196,7 @@ The next section shows how to add context.
    ```
 
    ```json
-   {"level":"info","ts":"2023-07-20T15:10:03-04:00","msg":"Processed resource","resource":{"apiVersion":"gateway.networking.k8s.io/v1beta1","kind":"HTTPRoute","namespace":"test","name":"hr-1"}}
+   {"level":"info","ts":"2023-07-20T15:10:03-04:00","msg":"Processed resource","resource":{"apiVersion":"gateway.networking.k8s.io/v1","kind":"HTTPRoute","namespace":"test","name":"hr-1"}}
    ```
 
    > The resource must include `TypeMeta`, otherwise its `apiVersion` and `kind` will not be printed.
@@ -276,7 +276,7 @@ For the developer, log messages are formatted as text strings (except key/values
 example:
 
 ```text
-2023-07-21T12:41:37.640-0400    INFO    Processed resource      {"resource": {"apiVersion": "gateway.networking.k8s.io/v1beta1", "kind": "HTTPRoute", "namespace": "test", "name": "hr-1"}}
+2023-07-21T12:41:37.640-0400    INFO    Processed resource      {"resource": {"apiVersion": "gateway.networking.k8s.io/v1", "kind": "HTTPRoute", "namespace": "test", "name": "hr-1"}}
 ```
 
 The formatting is controlled during the logger initialization.

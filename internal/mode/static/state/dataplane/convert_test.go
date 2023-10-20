@@ -4,33 +4,33 @@ import (
 	"testing"
 
 	. "github.com/onsi/gomega"
-	"sigs.k8s.io/gateway-api/apis/v1beta1"
+	v1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 )
 
 func TestConvertMatch(t *testing.T) {
-	path := v1beta1.HTTPPathMatch{
-		Type:  helpers.GetPointer(v1beta1.PathMatchPathPrefix),
+	path := v1.HTTPPathMatch{
+		Type:  helpers.GetPointer(v1.PathMatchPathPrefix),
 		Value: helpers.GetPointer("/"),
 	}
 
 	tests := []struct {
-		match    v1beta1.HTTPRouteMatch
+		match    v1.HTTPRouteMatch
 		name     string
 		expected Match
 	}{
 		{
-			match: v1beta1.HTTPRouteMatch{
+			match: v1.HTTPRouteMatch{
 				Path: &path,
 			},
 			expected: Match{},
 			name:     "path only",
 		},
 		{
-			match: v1beta1.HTTPRouteMatch{
+			match: v1.HTTPRouteMatch{
 				Path:   &path,
-				Method: helpers.GetPointer(v1beta1.HTTPMethodGet),
+				Method: helpers.GetPointer(v1.HTTPMethodGet),
 			},
 			expected: Match{
 				Method: helpers.GetPointer("GET"),
@@ -38,9 +38,9 @@ func TestConvertMatch(t *testing.T) {
 			name: "path and method",
 		},
 		{
-			match: v1beta1.HTTPRouteMatch{
+			match: v1.HTTPRouteMatch{
 				Path: &path,
-				Headers: []v1beta1.HTTPHeaderMatch{
+				Headers: []v1.HTTPHeaderMatch{
 					{
 						Name:  "Test-Header",
 						Value: "test-header-value",
@@ -58,9 +58,9 @@ func TestConvertMatch(t *testing.T) {
 			name: "path and header",
 		},
 		{
-			match: v1beta1.HTTPRouteMatch{
+			match: v1.HTTPRouteMatch{
 				Path: &path,
-				QueryParams: []v1beta1.HTTPQueryParamMatch{
+				QueryParams: []v1.HTTPQueryParamMatch{
 					{
 						Name:  "Test-Param",
 						Value: "test-param-value",
@@ -78,16 +78,16 @@ func TestConvertMatch(t *testing.T) {
 			name: "path and query param",
 		},
 		{
-			match: v1beta1.HTTPRouteMatch{
+			match: v1.HTTPRouteMatch{
 				Path:   &path,
-				Method: helpers.GetPointer(v1beta1.HTTPMethodGet),
-				Headers: []v1beta1.HTTPHeaderMatch{
+				Method: helpers.GetPointer(v1.HTTPMethodGet),
+				Headers: []v1.HTTPHeaderMatch{
 					{
 						Name:  "Test-Header",
 						Value: "test-header-value",
 					},
 				},
-				QueryParams: []v1beta1.HTTPQueryParamMatch{
+				QueryParams: []v1.HTTPQueryParamMatch{
 					{
 						Name:  "Test-Param",
 						Value: "test-param-value",
@@ -125,20 +125,20 @@ func TestConvertMatch(t *testing.T) {
 
 func TestConvertHTTPRequestRedirectFilter(t *testing.T) {
 	tests := []struct {
-		filter   *v1beta1.HTTPRequestRedirectFilter
+		filter   *v1.HTTPRequestRedirectFilter
 		expected *HTTPRequestRedirectFilter
 		name     string
 	}{
 		{
-			filter:   &v1beta1.HTTPRequestRedirectFilter{},
+			filter:   &v1.HTTPRequestRedirectFilter{},
 			expected: &HTTPRequestRedirectFilter{},
 			name:     "empty",
 		},
 		{
-			filter: &v1beta1.HTTPRequestRedirectFilter{
+			filter: &v1.HTTPRequestRedirectFilter{
 				Scheme:     helpers.GetPointer("https"),
-				Hostname:   helpers.GetPointer[v1beta1.PreciseHostname]("example.com"),
-				Port:       helpers.GetPointer[v1beta1.PortNumber](8443),
+				Hostname:   helpers.GetPointer[v1.PreciseHostname]("example.com"),
+				Port:       helpers.GetPointer[v1.PortNumber](8443),
 				StatusCode: helpers.GetPointer(302),
 			},
 			expected: &HTTPRequestRedirectFilter{
@@ -163,22 +163,22 @@ func TestConvertHTTPRequestRedirectFilter(t *testing.T) {
 
 func TestConvertHTTPHeaderFilter(t *testing.T) {
 	tests := []struct {
-		filter   *v1beta1.HTTPHeaderFilter
+		filter   *v1.HTTPHeaderFilter
 		expected *HTTPHeaderFilter
 		name     string
 	}{
 		{
-			filter:   &v1beta1.HTTPHeaderFilter{},
+			filter:   &v1.HTTPHeaderFilter{},
 			expected: &HTTPHeaderFilter{},
 			name:     "empty",
 		},
 		{
-			filter: &v1beta1.HTTPHeaderFilter{
-				Set: []v1beta1.HTTPHeader{{
+			filter: &v1.HTTPHeaderFilter{
+				Set: []v1.HTTPHeader{{
 					Name:  "My-Set-Header",
 					Value: "my-value",
 				}},
-				Add: []v1beta1.HTTPHeader{{
+				Add: []v1.HTTPHeader{{
 					Name:  "My-Add-Header",
 					Value: "my-value",
 				}},
@@ -213,20 +213,20 @@ func TestConvertPathType(t *testing.T) {
 	g := NewWithT(t)
 
 	tests := []struct {
-		pathType v1beta1.PathMatchType
+		pathType v1.PathMatchType
 		expected PathType
 		panic    bool
 	}{
 		{
 			expected: PathTypePrefix,
-			pathType: v1beta1.PathMatchPathPrefix,
+			pathType: v1.PathMatchPathPrefix,
 		},
 		{
 			expected: PathTypeExact,
-			pathType: v1beta1.PathMatchExact,
+			pathType: v1.PathMatchExact,
 		},
 		{
-			pathType: v1beta1.PathMatchRegularExpression,
+			pathType: v1.PathMatchRegularExpression,
 			panic:    true,
 		},
 	}

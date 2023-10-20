@@ -11,7 +11,7 @@ import (
 	"text/template"
 )
 
-var gwTmplTxt = `apiVersion: gateway.networking.k8s.io/v1beta1
+var gwTmplTxt = `apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
   name: gateway
@@ -33,7 +33,7 @@ spec:
 	{{- end -}}
 {{- end -}}`
 
-var hrTmplTxt = `apiVersion: gateway.networking.k8s.io/v1beta1
+var hrTmplTxt = `apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
   name: {{ .Name }}

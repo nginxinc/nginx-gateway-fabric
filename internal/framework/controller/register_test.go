@@ -14,7 +14,8 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
-	"sigs.k8s.io/gateway-api/apis/v1beta1"
+	v1 "sigs.k8s.io/gateway-api/apis/v1"
+	v1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/controller"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/controller/controllerfakes"
@@ -30,6 +31,7 @@ func TestRegister(t *testing.T) {
 
 	getDefaultFakes := func() fakes {
 		scheme := runtime.NewScheme()
+		utilruntime.Must(v1.AddToScheme(scheme))
 		utilruntime.Must(v1beta1.AddToScheme(scheme))
 
 		indexer := &controllerfakes.FakeFieldIndexer{}
@@ -80,7 +82,7 @@ func TestRegister(t *testing.T) {
 		},
 	}
 
-	objectType := &v1beta1.HTTPRoute{}
+	objectType := &v1.HTTPRoute{}
 	nsNameFilter := func(nsname types.NamespacedName) (bool, string) {
 		return true, ""
 	}

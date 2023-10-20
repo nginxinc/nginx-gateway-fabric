@@ -38,9 +38,9 @@ from the main branch.
 The table below summarizes the options regarding the images, manifests, documentation and examples and gives your links
 to the correct versions:
 
-| Version        | Description                              | Installation Manifests                                                                | Documentation and Examples                                                                                                                                                     |
-|----------------|------------------------------------------|---------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Latest release | For production use                     | [Manifests](https://github.com/nginxinc/nginx-gateway-fabric/tree/v1.0.0/deploy). | [Documentation](https://github.com/nginxinc/nginx-gateway-fabric/tree/v1.0.0/docs). [Examples](https://github.com/nginxinc/nginx-gateway-fabric/tree/v1.0.0/examples). |
+| Version        | Description                              | Installation Manifests                                                            | Documentation and Examples                                                                                                                                             |
+|----------------|------------------------------------------|-----------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Latest release | For production use                       | [Manifests](https://github.com/nginxinc/nginx-gateway-fabric/tree/v1.0.0/deploy). | [Documentation](https://github.com/nginxinc/nginx-gateway-fabric/tree/v1.0.0/docs). [Examples](https://github.com/nginxinc/nginx-gateway-fabric/tree/v1.0.0/examples). |
 | Edge           | For experimental use and latest features | [Manifests](https://github.com/nginxinc/nginx-gateway-fabric/tree/main/deploy).   | [Documentation](https://github.com/nginxinc/nginx-gateway-fabric/tree/main/docs). [Examples](https://github.com/nginxinc/nginx-gateway-fabric/tree/main/examples).     |
 
 ### Versioning
@@ -61,15 +61,15 @@ the [Issue Lifecycle](ISSUE_LIFECYCLE.md) document for information on issue crea
 The following table lists the software versions NGINX Gateway Fabric supports.
 
 | NGINX Gateway Fabric | Gateway API | Kubernetes | NGINX OSS |
-|--------------------------|-------------|------------|-----------|
-| Edge                     | 0.8.1       | 1.23+      | 1.25.2    |
-| 1.0.0                    | 0.8.1       | 1.23+      | 1.25.2    |
-| 0.6.0                    | 0.8.0       | 1.23+      | 1.25.2    |
-| 0.5.0                    | 0.7.1       | 1.21+      | 1.25.x *  |
-| 0.4.0                    | 0.7.1       | 1.21+      | 1.25.x *  |
-| 0.3.0                    | 0.6.2       | 1.21+      | 1.23.x *  |
-| 0.2.0                    | 0.5.1       | 1.21+      | 1.21.x *  |
-| 0.1.0                    | 0.5.0       | 1.19+      | 1.21.3    |
+|----------------------|-------------|------------|-----------|
+| Edge                 | 1.0.0       | 1.23+      | 1.25.2    |
+| 1.0.0                | 0.8.1       | 1.23+      | 1.25.2    |
+| 0.6.0                | 0.8.0       | 1.23+      | 1.25.2    |
+| 0.5.0                | 0.7.1       | 1.21+      | 1.25.x *  |
+| 0.4.0                | 0.7.1       | 1.21+      | 1.25.x *  |
+| 0.3.0                | 0.6.2       | 1.21+      | 1.23.x *  |
+| 0.2.0                | 0.5.1       | 1.21+      | 1.21.x *  |
+| 0.1.0                | 0.5.0       | 1.19+      | 1.21.3    |
 
 \*the installation manifests use the minor version of NGINX container image (e.g. 1.25) and the patch version is not
 specified. This means that the latest available patch version is used.

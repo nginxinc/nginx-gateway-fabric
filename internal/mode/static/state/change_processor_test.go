@@ -13,6 +13,7 @@ import (
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	v1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
@@ -37,42 +38,42 @@ func createRoute(
 	name string,
 	gateway string,
 	hostname string,
-	backendRefs ...v1beta1.HTTPBackendRef,
-) *v1beta1.HTTPRoute {
-	return &v1beta1.HTTPRoute{
+	backendRefs ...v1.HTTPBackendRef,
+) *v1.HTTPRoute {
+	return &v1.HTTPRoute{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:  "test",
 			Name:       name,
 			Generation: 1,
 		},
-		Spec: v1beta1.HTTPRouteSpec{
-			CommonRouteSpec: v1beta1.CommonRouteSpec{
-				ParentRefs: []v1beta1.ParentReference{
+		Spec: v1.HTTPRouteSpec{
+			CommonRouteSpec: v1.CommonRouteSpec{
+				ParentRefs: []v1.ParentReference{
 					{
-						Namespace: (*v1beta1.Namespace)(helpers.GetPointer("test")),
-						Name:      v1beta1.ObjectName(gateway),
-						SectionName: (*v1beta1.SectionName)(
+						Namespace: (*v1.Namespace)(helpers.GetPointer("test")),
+						Name:      v1.ObjectName(gateway),
+						SectionName: (*v1.SectionName)(
 							helpers.GetPointer("listener-80-1"),
 						),
 					},
 					{
-						Namespace: (*v1beta1.Namespace)(helpers.GetPointer("test")),
-						Name:      v1beta1.ObjectName(gateway),
-						SectionName: (*v1beta1.SectionName)(
+						Namespace: (*v1.Namespace)(helpers.GetPointer("test")),
+						Name:      v1.ObjectName(gateway),
+						SectionName: (*v1.SectionName)(
 							helpers.GetPointer("listener-443-1"),
 						),
 					},
 				},
 			},
-			Hostnames: []v1beta1.Hostname{
-				v1beta1.Hostname(hostname),
+			Hostnames: []v1.Hostname{
+				v1.Hostname(hostname),
 			},
-			Rules: []v1beta1.HTTPRouteRule{
+			Rules: []v1.HTTPRouteRule{
 				{
-					Matches: []v1beta1.HTTPRouteMatch{
+					Matches: []v1.HTTPRouteMatch{
 						{
-							Path: &v1beta1.HTTPPathMatch{
-								Type:  helpers.GetPointer(v1beta1.PathMatchPathPrefix),
+							Path: &v1.HTTPPathMatch{
+								Type:  helpers.GetPointer(v1.PathMatchPathPrefix),
 								Value: helpers.GetPointer("/"),
 							},
 						},
@@ -84,42 +85,42 @@ func createRoute(
 	}
 }
 
-func createGateway(name string) *v1beta1.Gateway {
-	return &v1beta1.Gateway{
+func createGateway(name string) *v1.Gateway {
+	return &v1.Gateway{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:  "test",
 			Name:       name,
 			Generation: 1,
 		},
-		Spec: v1beta1.GatewaySpec{
+		Spec: v1.GatewaySpec{
 			GatewayClassName: gcName,
-			Listeners: []v1beta1.Listener{
+			Listeners: []v1.Listener{
 				{
 					Name:     "listener-80-1",
 					Hostname: nil,
 					Port:     80,
-					Protocol: v1beta1.HTTPProtocolType,
+					Protocol: v1.HTTPProtocolType,
 				},
 			},
 		},
 	}
 }
 
-func createGatewayWithTLSListener(name string, tlsSecret *apiv1.Secret) *v1beta1.Gateway {
+func createGatewayWithTLSListener(name string, tlsSecret *apiv1.Secret) *v1.Gateway {
 	gw := createGateway(name)
 
-	l := v1beta1.Listener{
+	l := v1.Listener{
 		Name:     "listener-443-1",
 		Hostname: nil,
 		Port:     443,
-		Protocol: v1beta1.HTTPSProtocolType,
-		TLS: &v1beta1.GatewayTLSConfig{
-			Mode: helpers.GetPointer(v1beta1.TLSModeTerminate),
-			CertificateRefs: []v1beta1.SecretObjectReference{
+		Protocol: v1.HTTPSProtocolType,
+		TLS: &v1.GatewayTLSConfig{
+			Mode: helpers.GetPointer(v1.TLSModeTerminate),
+			CertificateRefs: []v1.SecretObjectReference{
 				{
-					Kind:      (*v1beta1.Kind)(helpers.GetPointer("Secret")),
-					Name:      v1beta1.ObjectName(tlsSecret.Name),
-					Namespace: (*v1beta1.Namespace)(&tlsSecret.Namespace),
+					Kind:      (*v1.Kind)(helpers.GetPointer("Secret")),
+					Name:      v1.ObjectName(tlsSecret.Name),
+					Namespace: (*v1.Namespace)(&tlsSecret.Namespace),
 				},
 			},
 		},
@@ -131,20 +132,20 @@ func createGatewayWithTLSListener(name string, tlsSecret *apiv1.Secret) *v1beta1
 
 func createRouteWithMultipleRules(
 	name, gateway, hostname string,
-	rules []v1beta1.HTTPRouteRule,
-) *v1beta1.HTTPRoute {
+	rules []v1.HTTPRouteRule,
+) *v1.HTTPRoute {
 	hr := createRoute(name, gateway, hostname)
 	hr.Spec.Rules = rules
 
 	return hr
 }
 
-func createHTTPRule(path string, backendRefs ...v1beta1.HTTPBackendRef) v1beta1.HTTPRouteRule {
-	return v1beta1.HTTPRouteRule{
-		Matches: []v1beta1.HTTPRouteMatch{
+func createHTTPRule(path string, backendRefs ...v1.HTTPBackendRef) v1.HTTPRouteRule {
+	return v1.HTTPRouteRule{
+		Matches: []v1.HTTPRouteMatch{
 			{
-				Path: &v1beta1.HTTPPathMatch{
-					Type:  helpers.GetPointer(v1beta1.PathMatchPathPrefix),
+				Path: &v1.HTTPPathMatch{
+					Type:  helpers.GetPointer(v1.PathMatchPathPrefix),
 					Value: &path,
 				},
 			},
@@ -154,17 +155,17 @@ func createHTTPRule(path string, backendRefs ...v1beta1.HTTPBackendRef) v1beta1.
 }
 
 func createBackendRef(
-	kind *v1beta1.Kind,
-	name v1beta1.ObjectName,
-	namespace *v1beta1.Namespace,
-) v1beta1.HTTPBackendRef {
-	return v1beta1.HTTPBackendRef{
-		BackendRef: v1beta1.BackendRef{
-			BackendObjectReference: v1beta1.BackendObjectReference{
+	kind *v1.Kind,
+	name v1.ObjectName,
+	namespace *v1.Namespace,
+) v1.HTTPBackendRef {
+	return v1.HTTPBackendRef{
+		BackendRef: v1.BackendRef{
+			BackendObjectReference: v1.BackendObjectReference{
 				Kind:      kind,
 				Name:      name,
 				Namespace: namespace,
-				Port:      helpers.GetPointer[v1beta1.PortNumber](80),
+				Port:      helpers.GetPointer[v1.PortNumber](80),
 			},
 		},
 	}
@@ -181,6 +182,7 @@ func createAlwaysValidValidators() validation.Validators {
 func createScheme() *runtime.Scheme {
 	scheme := runtime.NewScheme()
 
+	utilruntime.Must(v1.AddToScheme(scheme))
 	utilruntime.Must(v1beta1.AddToScheme(scheme))
 	utilruntime.Must(apiv1.AddToScheme(scheme))
 	utilruntime.Must(discoveryV1.AddToScheme(scheme))
@@ -243,12 +245,12 @@ var _ = Describe("ChangeProcessor", func() {
 	format.MaxLength = 0
 	Describe("Normal cases of processing changes", func() {
 		var (
-			gc = &v1beta1.GatewayClass{
+			gc = &v1.GatewayClass{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:       gcName,
 					Generation: 1,
 				},
-				Spec: v1beta1.GatewayClassSpec{
+				Spec: v1.GatewayClassSpec{
 					ControllerName: controllerName,
 				},
 			}
@@ -268,10 +270,10 @@ var _ = Describe("ChangeProcessor", func() {
 
 		Describe("Process gateway resources", Ordered, func() {
 			var (
-				gcUpdated                        *v1beta1.GatewayClass
+				gcUpdated                        *v1.GatewayClass
 				diffNsTLSSecret, sameNsTLSSecret *apiv1.Secret
-				hr1, hr1Updated, hr2             *v1beta1.HTTPRoute
-				gw1, gw1Updated, gw2             *v1beta1.Gateway
+				hr1, hr1Updated, hr2             *v1.HTTPRoute
+				gw1, gw1Updated, gw2             *v1.Gateway
 				refGrant1, refGrant2             *v1beta1.ReferenceGrant
 				expGraph                         *graph.Graph
 				expRouteHR1, expRouteHR2         *graph.Route
@@ -281,13 +283,13 @@ var _ = Describe("ChangeProcessor", func() {
 				gcUpdated = gc.DeepCopy()
 				gcUpdated.Generation++
 
-				crossNsBackendRef := v1beta1.HTTPBackendRef{
-					BackendRef: v1beta1.BackendRef{
-						BackendObjectReference: v1beta1.BackendObjectReference{
-							Kind:      helpers.GetPointer[v1beta1.Kind]("Service"),
+				crossNsBackendRef := v1.HTTPBackendRef{
+					BackendRef: v1.BackendRef{
+						BackendObjectReference: v1.BackendObjectReference{
+							Kind:      helpers.GetPointer[v1.Kind]("Service"),
 							Name:      "service",
-							Namespace: helpers.GetPointer[v1beta1.Namespace]("service-ns"),
-							Port:      helpers.GetPointer[v1beta1.PortNumber](80),
+							Namespace: helpers.GetPointer[v1.Namespace]("service-ns"),
+							Port:      helpers.GetPointer[v1.PortNumber](80),
 						},
 					},
 				}
@@ -309,7 +311,7 @@ var _ = Describe("ChangeProcessor", func() {
 					Spec: v1beta1.ReferenceGrantSpec{
 						From: []v1beta1.ReferenceGrantFrom{
 							{
-								Group:     v1beta1.GroupName,
+								Group:     v1.GroupName,
 								Kind:      "Gateway",
 								Namespace: "test",
 							},
@@ -330,7 +332,7 @@ var _ = Describe("ChangeProcessor", func() {
 					Spec: v1beta1.ReferenceGrantSpec{
 						From: []v1beta1.ReferenceGrantFrom{
 							{
-								Group:     v1beta1.GroupName,
+								Group:     v1.GroupName,
 								Kind:      "HTTPRoute",
 								Namespace: "test",
 							},
@@ -452,7 +454,7 @@ var _ = Describe("ChangeProcessor", func() {
 								Routes: map[types.NamespacedName]*graph.Route{
 									{Namespace: "test", Name: "hr-1"}: expRouteHR1,
 								},
-								SupportedKinds: []v1beta1.RouteGroupKind{{Kind: "HTTPRoute"}},
+								SupportedKinds: []v1.RouteGroupKind{{Kind: "HTTPRoute"}},
 							},
 							"listener-443-1": {
 								Source: gw1.Spec.Listeners[1],
@@ -461,12 +463,12 @@ var _ = Describe("ChangeProcessor", func() {
 									{Namespace: "test", Name: "hr-1"}: expRouteHR1,
 								},
 								ResolvedSecret: helpers.GetPointer(client.ObjectKeyFromObject(diffNsTLSSecret)),
-								SupportedKinds: []v1beta1.RouteGroupKind{{Kind: "HTTPRoute"}},
+								SupportedKinds: []v1.RouteGroupKind{{Kind: "HTTPRoute"}},
 							},
 						},
 						Valid: true,
 					},
-					IgnoredGateways: map[types.NamespacedName]*v1beta1.Gateway{},
+					IgnoredGateways: map[types.NamespacedName]*v1.Gateway{},
 					Routes: map[types.NamespacedName]*graph.Route{
 						{Namespace: "test", Name: "hr-1"}: expRouteHR1,
 					},
@@ -547,7 +549,7 @@ var _ = Describe("ChangeProcessor", func() {
 						Conditions: staticConds.NewListenerRefNotPermitted(
 							"Certificate ref to secret cert-ns/different-ns-tls-secret not permitted by any ReferenceGrant",
 						),
-						SupportedKinds: []v1beta1.RouteGroupKind{{Kind: "HTTPRoute"}},
+						SupportedKinds: []v1.RouteGroupKind{{Kind: "HTTPRoute"}},
 					}
 
 					expAttachment := &graph.ParentRefAttachmentStatus{
@@ -718,7 +720,7 @@ var _ = Describe("ChangeProcessor", func() {
 				It("returns populated graph using first gateway", func() {
 					processor.CaptureUpsertChange(gw2)
 
-					expGraph.IgnoredGateways = map[types.NamespacedName]*v1beta1.Gateway{
+					expGraph.IgnoredGateways = map[types.NamespacedName]*v1.Gateway{
 						{Namespace: "test", Name: "gateway-2"}: gw2,
 					}
 					expGraph.ReferencedSecrets[client.ObjectKeyFromObject(diffNsTLSSecret)] = &graph.Secret{
@@ -734,7 +736,7 @@ var _ = Describe("ChangeProcessor", func() {
 				It("returns populated graph", func() {
 					processor.CaptureUpsertChange(hr2)
 
-					expGraph.IgnoredGateways = map[types.NamespacedName]*v1beta1.Gateway{
+					expGraph.IgnoredGateways = map[types.NamespacedName]*v1.Gateway{
 						{Namespace: "test", Name: "gateway-2"}: gw2,
 					}
 					expGraph.Routes[hr2Name] = expRouteHR2
@@ -758,7 +760,7 @@ var _ = Describe("ChangeProcessor", func() {
 			When("the first Gateway is deleted", func() {
 				It("returns updated graph", func() {
 					processor.CaptureDeleteChange(
-						&v1beta1.Gateway{},
+						&v1.Gateway{},
 						types.NamespacedName{Namespace: "test", Name: "gateway-1"},
 					)
 
@@ -787,7 +789,7 @@ var _ = Describe("ChangeProcessor", func() {
 			When("the second HTTPRoute is deleted", func() {
 				It("returns updated graph", func() {
 					processor.CaptureDeleteChange(
-						&v1beta1.HTTPRoute{},
+						&v1.HTTPRoute{},
 						types.NamespacedName{Namespace: "test", Name: "hr-2"},
 					)
 
@@ -813,7 +815,7 @@ var _ = Describe("ChangeProcessor", func() {
 			When("the GatewayClass is deleted", func() {
 				It("returns updated graph", func() {
 					processor.CaptureDeleteChange(
-						&v1beta1.GatewayClass{},
+						&v1.GatewayClass{},
 						types.NamespacedName{Name: gcName},
 					)
 
@@ -833,7 +835,7 @@ var _ = Describe("ChangeProcessor", func() {
 			When("the second Gateway is deleted", func() {
 				It("returns empty graph", func() {
 					processor.CaptureDeleteChange(
-						&v1beta1.Gateway{},
+						&v1.Gateway{},
 						types.NamespacedName{Namespace: "test", Name: "gateway-2"},
 					)
 
@@ -845,7 +847,7 @@ var _ = Describe("ChangeProcessor", func() {
 			When("the first HTTPRoute is deleted", func() {
 				It("returns empty graph", func() {
 					processor.CaptureDeleteChange(
-						&v1beta1.HTTPRoute{},
+						&v1.HTTPRoute{},
 						types.NamespacedName{Namespace: "test", Name: "hr-1"},
 					)
 
@@ -857,7 +859,7 @@ var _ = Describe("ChangeProcessor", func() {
 		})
 		Describe("Process services and endpoints", Ordered, func() {
 			var (
-				hr1, hr2, hr3, hrInvalidBackendRef, hrMultipleRules                 *v1beta1.HTTPRoute
+				hr1, hr2, hr3, hrInvalidBackendRef, hrMultipleRules                 *v1.HTTPRoute
 				hr1svc, sharedSvc, bazSvc1, bazSvc2, bazSvc3, invalidSvc, notRefSvc *apiv1.Service
 				hr1slice1, hr1slice2, noRefSlice, missingSvcNameSlice               *discoveryV1.EndpointSlice
 			)
@@ -882,9 +884,9 @@ var _ = Describe("ChangeProcessor", func() {
 			}
 
 			BeforeAll(func() {
-				testNamespace := v1beta1.Namespace("test")
-				kindService := v1beta1.Kind("Service")
-				kindInvalid := v1beta1.Kind("Invalid")
+				testNamespace := v1.Namespace("test")
+				kindService := v1.Kind("Service")
+				kindInvalid := v1.Kind("Invalid")
 
 				// backend Refs
 				fooRef := createBackendRef(&kindService, "foo-svc", &testNamespace)
@@ -904,7 +906,7 @@ var _ = Describe("ChangeProcessor", func() {
 					"hr-multiple-rules",
 					"gw",
 					"mutli.example.com",
-					[]v1beta1.HTTPRouteRule{
+					[]v1.HTTPRouteRule{
 						createHTTPRule("/baz-v1", baz1NilNamespace),
 						createHTTPRule("/baz-v2", baz2Ref),
 						createHTTPRule("/baz-v3", baz3Ref),
@@ -1198,16 +1200,16 @@ var _ = Describe("ChangeProcessor", func() {
 							},
 						},
 					}
-					gw := &v1beta1.Gateway{
+					gw := &v1.Gateway{
 						ObjectMeta: metav1.ObjectMeta{
 							Name: "gw",
 						},
-						Spec: v1beta1.GatewaySpec{
-							Listeners: []v1beta1.Listener{
+						Spec: v1.GatewaySpec{
+							Listeners: []v1.Listener{
 								{
-									AllowedRoutes: &v1beta1.AllowedRoutes{
-										Namespaces: &v1beta1.RouteNamespaces{
-											From: helpers.GetPointer(v1beta1.NamespacesFromSelector),
+									AllowedRoutes: &v1.AllowedRoutes{
+										Namespaces: &v1.RouteNamespaces{
+											From: helpers.GetPointer(v1.NamespacesFromSelector),
 											Selector: &metav1.LabelSelector{
 												MatchLabels: map[string]string{
 													"app": "allowed",
@@ -1246,9 +1248,9 @@ var _ = Describe("ChangeProcessor", func() {
 			fakeRelationshipCapturer                          *relationshipfakes.FakeCapturer
 			gcNsName, gwNsName, hrNsName, hr2NsName, rgNsName types.NamespacedName
 			svcNsName, sliceNsName, secretNsName              types.NamespacedName
-			gc, gcUpdated                                     *v1beta1.GatewayClass
-			gw1, gw1Updated, gw2                              *v1beta1.Gateway
-			hr1, hr1Updated, hr2                              *v1beta1.HTTPRoute
+			gc, gcUpdated                                     *v1.GatewayClass
+			gw1, gw1Updated, gw2                              *v1.Gateway
+			hr1, hr1Updated, hr2                              *v1.HTTPRoute
 			rg1, rg1Updated, rg2                              *v1beta1.ReferenceGrant
 			svc                                               *apiv1.Service
 			slice                                             *discoveryV1.EndpointSlice
@@ -1268,11 +1270,11 @@ var _ = Describe("ChangeProcessor", func() {
 
 			gcNsName = types.NamespacedName{Name: "my-class"}
 
-			gc = &v1beta1.GatewayClass{
+			gc = &v1.GatewayClass{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: gcNsName.Name,
 				},
-				Spec: v1beta1.GatewayClassSpec{
+				Spec: v1.GatewayClassSpec{
 					ControllerName: "test.controller",
 				},
 			}
@@ -1282,7 +1284,7 @@ var _ = Describe("ChangeProcessor", func() {
 
 			gwNsName = types.NamespacedName{Namespace: "test", Name: "gw-1"}
 
-			gw1 = &v1beta1.Gateway{
+			gw1 = &v1.Gateway{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: gwNsName.Namespace,
 					Name:      gwNsName.Name,
@@ -1297,7 +1299,7 @@ var _ = Describe("ChangeProcessor", func() {
 
 			hrNsName = types.NamespacedName{Namespace: "test", Name: "hr-1"}
 
-			hr1 = &v1beta1.HTTPRoute{
+			hr1 = &v1.HTTPRoute{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: hrNsName.Namespace,
 					Name:      hrNsName.Name,
@@ -1410,9 +1412,9 @@ var _ = Describe("ChangeProcessor", func() {
 			When("resources are deleted followed by upserts with the same generations", func() {
 				It("should report changed", func() {
 					// these are changing changes
-					processor.CaptureDeleteChange(&v1beta1.GatewayClass{}, gcNsName)
-					processor.CaptureDeleteChange(&v1beta1.Gateway{}, gwNsName)
-					processor.CaptureDeleteChange(&v1beta1.HTTPRoute{}, hrNsName)
+					processor.CaptureDeleteChange(&v1.GatewayClass{}, gcNsName)
+					processor.CaptureDeleteChange(&v1.Gateway{}, gwNsName)
+					processor.CaptureDeleteChange(&v1.HTTPRoute{}, hrNsName)
 					processor.CaptureDeleteChange(&v1beta1.ReferenceGrant{}, rgNsName)
 
 					// these are non-changing changes
@@ -1425,7 +1427,7 @@ var _ = Describe("ChangeProcessor", func() {
 				})
 			})
 			It("should report changed after deleting resources", func() {
-				processor.CaptureDeleteChange(&v1beta1.HTTPRoute{}, hr2NsName)
+				processor.CaptureDeleteChange(&v1.HTTPRoute{}, hr2NsName)
 
 				changed, _ := processor.Process()
 				Expect(changed).To(BeTrue())
@@ -1433,10 +1435,10 @@ var _ = Describe("ChangeProcessor", func() {
 		})
 		Describe("Deleting non-existing Gateway API resource", func() {
 			It("should not report changed after deleting non-existing", func() {
-				processor.CaptureDeleteChange(&v1beta1.GatewayClass{}, gcNsName)
-				processor.CaptureDeleteChange(&v1beta1.Gateway{}, gwNsName)
-				processor.CaptureDeleteChange(&v1beta1.HTTPRoute{}, hrNsName)
-				processor.CaptureDeleteChange(&v1beta1.HTTPRoute{}, hr2NsName)
+				processor.CaptureDeleteChange(&v1.GatewayClass{}, gcNsName)
+				processor.CaptureDeleteChange(&v1.Gateway{}, gwNsName)
+				processor.CaptureDeleteChange(&v1.HTTPRoute{}, hrNsName)
+				processor.CaptureDeleteChange(&v1.HTTPRoute{}, hr2NsName)
 				processor.CaptureDeleteChange(&v1beta1.ReferenceGrant{}, rgNsName)
 
 				changed, _ := processor.Process()
@@ -1602,11 +1604,11 @@ var _ = Describe("ChangeProcessor", func() {
 			processor         state.ChangeProcessor
 			fakeEventRecorder *record.FakeRecorder
 
-			gc *v1beta1.GatewayClass
+			gc *v1.GatewayClass
 
 			gwNsName, hrNsName types.NamespacedName
-			gw, gwInvalid      *v1beta1.Gateway
-			hr, hrInvalid      *v1beta1.HTTPRoute
+			gw, gwInvalid      *v1.Gateway
+			hr, hrInvalid      *v1.HTTPRoute
 		)
 		BeforeAll(func() {
 			fakeEventRecorder = record.NewFakeRecorder(2 /* number of buffered events */)
@@ -1621,12 +1623,12 @@ var _ = Describe("ChangeProcessor", func() {
 				Scheme:               createScheme(),
 			})
 
-			gc = &v1beta1.GatewayClass{
+			gc = &v1.GatewayClass{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:       gcName,
 					Generation: 1,
 				},
-				Spec: v1beta1.GatewayClassSpec{
+				Spec: v1.GatewayClassSpec{
 					ControllerName: controllerName,
 				},
 			}
@@ -1634,19 +1636,19 @@ var _ = Describe("ChangeProcessor", func() {
 			gwNsName = types.NamespacedName{Namespace: "test", Name: "gateway"}
 			hrNsName = types.NamespacedName{Namespace: "test", Name: "hr"}
 
-			gw = &v1beta1.Gateway{
+			gw = &v1.Gateway{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: gwNsName.Namespace,
 					Name:      gwNsName.Name,
 				},
-				Spec: v1beta1.GatewaySpec{
+				Spec: v1.GatewaySpec{
 					GatewayClassName: gcName,
-					Listeners: []v1beta1.Listener{
+					Listeners: []v1.Listener{
 						{
 							Name:     "listener-80-1",
-							Hostname: helpers.GetPointer[v1beta1.Hostname]("foo.example.com"),
+							Hostname: helpers.GetPointer[v1.Hostname]("foo.example.com"),
 							Port:     80,
-							Protocol: v1beta1.HTTPProtocolType,
+							Protocol: v1.HTTPProtocolType,
 						},
 					},
 				},
@@ -1654,34 +1656,34 @@ var _ = Describe("ChangeProcessor", func() {
 
 			gwInvalid = gw.DeepCopy()
 			// cannot have hostname for TCP protocol
-			gwInvalid.Spec.Listeners[0].Protocol = v1beta1.TCPProtocolType
+			gwInvalid.Spec.Listeners[0].Protocol = v1.TCPProtocolType
 
-			hr = &v1beta1.HTTPRoute{
+			hr = &v1.HTTPRoute{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: hrNsName.Namespace,
 					Name:      hrNsName.Name,
 				},
-				Spec: v1beta1.HTTPRouteSpec{
-					CommonRouteSpec: v1beta1.CommonRouteSpec{
-						ParentRefs: []v1beta1.ParentReference{
+				Spec: v1.HTTPRouteSpec{
+					CommonRouteSpec: v1.CommonRouteSpec{
+						ParentRefs: []v1.ParentReference{
 							{
-								Namespace: (*v1beta1.Namespace)(&gw.Namespace),
-								Name:      v1beta1.ObjectName(gw.Name),
-								SectionName: (*v1beta1.SectionName)(
+								Namespace: (*v1.Namespace)(&gw.Namespace),
+								Name:      v1.ObjectName(gw.Name),
+								SectionName: (*v1.SectionName)(
 									helpers.GetPointer("listener-80-1"),
 								),
 							},
 						},
 					},
-					Hostnames: []v1beta1.Hostname{
+					Hostnames: []v1.Hostname{
 						"foo.example.com",
 					},
-					Rules: []v1beta1.HTTPRouteRule{
+					Rules: []v1.HTTPRouteRule{
 						{
-							Matches: []v1beta1.HTTPRouteMatch{
+							Matches: []v1.HTTPRouteMatch{
 								{
-									Path: &v1beta1.HTTPPathMatch{
-										Type:  helpers.GetPointer(v1beta1.PathMatchPathPrefix),
+									Path: &v1.HTTPPathMatch{
+										Type:  helpers.GetPointer(v1.PathMatchPathPrefix),
 										Value: helpers.GetPointer("/"),
 									},
 								},
@@ -1795,22 +1797,22 @@ var _ = Describe("ChangeProcessor", func() {
 				})
 			})
 
-			createInvalidHTTPRoute := func(invalidator func(hr *v1beta1.HTTPRoute)) *v1beta1.HTTPRoute {
+			createInvalidHTTPRoute := func(invalidator func(hr *v1.HTTPRoute)) *v1.HTTPRoute {
 				hr := createRoute(
 					"hr",
 					"gateway",
 					"foo.example.com",
 					createBackendRef(
-						helpers.GetPointer[v1beta1.Kind]("Service"),
+						helpers.GetPointer[v1.Kind]("Service"),
 						"test",
-						helpers.GetPointer[v1beta1.Namespace]("namespace"),
+						helpers.GetPointer[v1.Namespace]("namespace"),
 					),
 				)
 				invalidator(hr)
 				return hr
 			}
 
-			createInvalidGateway := func(invalidator func(gw *v1beta1.Gateway)) *v1beta1.Gateway {
+			createInvalidGateway := func(invalidator func(gw *v1.Gateway)) *v1.Gateway {
 				gw := createGateway("gateway")
 				invalidator(gw)
 				return gw
@@ -1821,7 +1823,7 @@ var _ = Describe("ChangeProcessor", func() {
 			}
 
 			DescribeTable("Invalid HTTPRoutes",
-				func(hr *v1beta1.HTTPRoute) {
+				func(hr *v1.HTTPRoute) {
 					processor.CaptureUpsertChange(hr)
 
 					changed, graphCfg := processor.Process()
@@ -1833,39 +1835,39 @@ var _ = Describe("ChangeProcessor", func() {
 				},
 				Entry(
 					"duplicate parentRefs",
-					createInvalidHTTPRoute(func(hr *v1beta1.HTTPRoute) {
+					createInvalidHTTPRoute(func(hr *v1.HTTPRoute) {
 						hr.Spec.ParentRefs = append(hr.Spec.ParentRefs, hr.Spec.ParentRefs[len(hr.Spec.ParentRefs)-1])
 					}),
 				),
 				Entry(
 					"nil path.Type",
-					createInvalidHTTPRoute(func(hr *v1beta1.HTTPRoute) {
+					createInvalidHTTPRoute(func(hr *v1.HTTPRoute) {
 						hr.Spec.Rules[0].Matches[0].Path.Type = nil
 					}),
 				),
 				Entry("nil path.Value",
-					createInvalidHTTPRoute(func(hr *v1beta1.HTTPRoute) {
+					createInvalidHTTPRoute(func(hr *v1.HTTPRoute) {
 						hr.Spec.Rules[0].Matches[0].Path.Value = nil
 					}),
 				),
 				Entry(
 					"nil request.Redirect",
-					createInvalidHTTPRoute(func(hr *v1beta1.HTTPRoute) {
-						hr.Spec.Rules[0].Filters = append(hr.Spec.Rules[0].Filters, v1beta1.HTTPRouteFilter{
-							Type:            v1beta1.HTTPRouteFilterRequestRedirect,
+					createInvalidHTTPRoute(func(hr *v1.HTTPRoute) {
+						hr.Spec.Rules[0].Filters = append(hr.Spec.Rules[0].Filters, v1.HTTPRouteFilter{
+							Type:            v1.HTTPRouteFilterRequestRedirect,
 							RequestRedirect: nil,
 						})
 					}),
 				),
 				Entry("nil port in BackendRef",
-					createInvalidHTTPRoute(func(hr *v1beta1.HTTPRoute) {
+					createInvalidHTTPRoute(func(hr *v1.HTTPRoute) {
 						hr.Spec.Rules[0].BackendRefs[0].Port = nil
 					}),
 				),
 			)
 
 			DescribeTable("Invalid Gateway resources",
-				func(gw *v1beta1.Gateway) {
+				func(gw *v1.Gateway) {
 					processor.CaptureUpsertChange(gw)
 
 					changed, graphCfg := processor.Process()
@@ -1876,32 +1878,32 @@ var _ = Describe("ChangeProcessor", func() {
 					assertRejectedEvent()
 				},
 				Entry("tls in HTTP listener",
-					createInvalidGateway(func(gw *v1beta1.Gateway) {
-						gw.Spec.Listeners[0].TLS = &v1beta1.GatewayTLSConfig{}
+					createInvalidGateway(func(gw *v1.Gateway) {
+						gw.Spec.Listeners[0].TLS = &v1.GatewayTLSConfig{}
 					}),
 				),
 				Entry("tls is nil in HTTPS listener",
-					createInvalidGateway(func(gw *v1beta1.Gateway) {
-						gw.Spec.Listeners[0].Protocol = v1beta1.HTTPSProtocolType
+					createInvalidGateway(func(gw *v1.Gateway) {
+						gw.Spec.Listeners[0].Protocol = v1.HTTPSProtocolType
 						gw.Spec.Listeners[0].TLS = nil
 					}),
 				),
 				Entry("zero certificateRefs in HTTPS listener",
-					createInvalidGateway(func(gw *v1beta1.Gateway) {
-						gw.Spec.Listeners[0].Protocol = v1beta1.HTTPSProtocolType
-						gw.Spec.Listeners[0].TLS = &v1beta1.GatewayTLSConfig{
-							Mode:            helpers.GetPointer(v1beta1.TLSModeTerminate),
+					createInvalidGateway(func(gw *v1.Gateway) {
+						gw.Spec.Listeners[0].Protocol = v1.HTTPSProtocolType
+						gw.Spec.Listeners[0].TLS = &v1.GatewayTLSConfig{
+							Mode:            helpers.GetPointer(v1.TLSModeTerminate),
 							CertificateRefs: nil,
 						}
 					}),
 				),
 				Entry("listener hostnames conflict",
-					createInvalidGateway(func(gw *v1beta1.Gateway) {
-						gw.Spec.Listeners = append(gw.Spec.Listeners, v1beta1.Listener{
+					createInvalidGateway(func(gw *v1.Gateway) {
+						gw.Spec.Listeners = append(gw.Spec.Listeners, v1.Listener{
 							Name:     "listener-80-2",
 							Hostname: nil,
 							Port:     80,
-							Protocol: v1beta1.HTTPProtocolType,
+							Protocol: v1.HTTPProtocolType,
 						})
 					}),
 				),

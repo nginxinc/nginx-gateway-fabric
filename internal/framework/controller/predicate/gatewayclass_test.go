@@ -5,7 +5,7 @@ import (
 
 	. "github.com/onsi/gomega"
 	"sigs.k8s.io/controller-runtime/pkg/event"
-	"sigs.k8s.io/gateway-api/apis/v1beta1"
+	v1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
 func TestGatewayClassPredicate(t *testing.T) {
@@ -13,8 +13,8 @@ func TestGatewayClassPredicate(t *testing.T) {
 
 	p := GatewayClassPredicate{ControllerName: "nginx-ctlr"}
 
-	gc := &v1beta1.GatewayClass{
-		Spec: v1beta1.GatewayClassSpec{
+	gc := &v1.GatewayClass{
+		Spec: v1.GatewayClassSpec{
 			ControllerName: "nginx-ctlr",
 		},
 	}
@@ -22,8 +22,8 @@ func TestGatewayClassPredicate(t *testing.T) {
 	g.Expect(p.Create(event.CreateEvent{Object: gc})).To(BeTrue())
 	g.Expect(p.Update(event.UpdateEvent{ObjectNew: gc})).To(BeTrue())
 
-	gc2 := &v1beta1.GatewayClass{
-		Spec: v1beta1.GatewayClassSpec{
+	gc2 := &v1.GatewayClass{
+		Spec: v1.GatewayClassSpec{
 			ControllerName: "unknown",
 		},
 	}

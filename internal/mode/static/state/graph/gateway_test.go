@@ -10,20 +10,21 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/gateway-api/apis/v1beta1"
+	v1 "sigs.k8s.io/gateway-api/apis/v1"
+	v1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 	staticConds "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/conditions"
 )
 
 func TestProcessedGatewaysGetAllNsNames(t *testing.T) {
-	winner := &v1beta1.Gateway{
+	winner := &v1.Gateway{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: "test",
 			Name:      "gateway-1",
 		},
 	}
-	loser := &v1beta1.Gateway{
+	loser := &v1.Gateway{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: "test",
 			Name:      "gateway-2",
@@ -43,7 +44,7 @@ func TestProcessedGatewaysGetAllNsNames(t *testing.T) {
 		{
 			gws: processedGateways{
 				Winner: winner,
-				Ignored: map[types.NamespacedName]*v1beta1.Gateway{
+				Ignored: map[types.NamespacedName]*v1.Gateway{
 					client.ObjectKeyFromObject(loser): loser,
 				},
 			},
@@ -67,27 +68,27 @@ func TestProcessedGatewaysGetAllNsNames(t *testing.T) {
 func TestProcessGateways(t *testing.T) {
 	const gcName = "test-gc"
 
-	winner := &v1beta1.Gateway{
+	winner := &v1.Gateway{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: "test",
 			Name:      "gateway-1",
 		},
-		Spec: v1beta1.GatewaySpec{
+		Spec: v1.GatewaySpec{
 			GatewayClassName: gcName,
 		},
 	}
-	loser := &v1beta1.Gateway{
+	loser := &v1.Gateway{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: "test",
 			Name:      "gateway-2",
 		},
-		Spec: v1beta1.GatewaySpec{
+		Spec: v1.GatewaySpec{
 			GatewayClassName: gcName,
 		},
 	}
 
 	tests := []struct {
-		gws      map[types.NamespacedName]*v1beta1.Gateway
+		gws      map[types.NamespacedName]*v1.Gateway
 		expected processedGateways
 		name     string
 	}{
@@ -97,32 +98,32 @@ func TestProcessGateways(t *testing.T) {
 			name:     "no gateways",
 		},
 		{
-			gws: map[types.NamespacedName]*v1beta1.Gateway{
+			gws: map[types.NamespacedName]*v1.Gateway{
 				{Namespace: "test", Name: "some-gateway"}: {
-					Spec: v1beta1.GatewaySpec{GatewayClassName: "some-class"},
+					Spec: v1.GatewaySpec{GatewayClassName: "some-class"},
 				},
 			},
 			expected: processedGateways{},
 			name:     "unrelated gateway",
 		},
 		{
-			gws: map[types.NamespacedName]*v1beta1.Gateway{
+			gws: map[types.NamespacedName]*v1.Gateway{
 				{Namespace: "test", Name: "gateway-1"}: winner,
 			},
 			expected: processedGateways{
 				Winner:  winner,
-				Ignored: map[types.NamespacedName]*v1beta1.Gateway{},
+				Ignored: map[types.NamespacedName]*v1.Gateway{},
 			},
 			name: "one gateway",
 		},
 		{
-			gws: map[types.NamespacedName]*v1beta1.Gateway{
+			gws: map[types.NamespacedName]*v1.Gateway{
 				{Namespace: "test", Name: "gateway-1"}: winner,
 				{Namespace: "test", Name: "gateway-2"}: loser,
 			},
 			expected: processedGateways{
 				Winner: winner,
-				Ignored: map[types.NamespacedName]*v1beta1.Gateway{
+				Ignored: map[types.NamespacedName]*v1.Gateway{
 					{Namespace: "test", Name: "gateway-2"}: loser,
 				},
 			},
@@ -148,17 +149,17 @@ func TestBuildGateway(t *testing.T) {
 	protectedPorts := ProtectedPorts{
 		9113: "MetricsPort",
 	}
-	listenerAllowedRoutes := v1beta1.Listener{
+	listenerAllowedRoutes := v1.Listener{
 		Name:     "listener-with-allowed-routes",
-		Hostname: helpers.GetPointer[v1beta1.Hostname]("foo.example.com"),
+		Hostname: helpers.GetPointer[v1.Hostname]("foo.example.com"),
 		Port:     80,
-		Protocol: v1beta1.HTTPProtocolType,
-		AllowedRoutes: &v1beta1.AllowedRoutes{
-			Kinds: []v1beta1.RouteGroupKind{
-				{Kind: "HTTPRoute", Group: helpers.GetPointer[v1beta1.Group](v1beta1.GroupName)},
+		Protocol: v1.HTTPProtocolType,
+		AllowedRoutes: &v1.AllowedRoutes{
+			Kinds: []v1.RouteGroupKind{
+				{Kind: "HTTPRoute", Group: helpers.GetPointer[v1.Group](v1.GroupName)},
 			},
-			Namespaces: &v1beta1.RouteNamespaces{
-				From:     helpers.GetPointer(v1beta1.NamespacesFromSelector),
+			Namespaces: &v1.RouteNamespaces{
+				From:     helpers.GetPointer(v1.NamespacesFromSelector),
 				Selector: &metav1.LabelSelector{MatchLabels: labelSet},
 			},
 		},
@@ -183,24 +184,24 @@ func TestBuildGateway(t *testing.T) {
 		Type: apiv1.SecretTypeTLS,
 	}
 
-	gatewayTLSConfigSameNs := &v1beta1.GatewayTLSConfig{
-		Mode: helpers.GetPointer(v1beta1.TLSModeTerminate),
-		CertificateRefs: []v1beta1.SecretObjectReference{
+	gatewayTLSConfigSameNs := &v1.GatewayTLSConfig{
+		Mode: helpers.GetPointer(v1.TLSModeTerminate),
+		CertificateRefs: []v1.SecretObjectReference{
 			{
-				Kind:      helpers.GetPointer[v1beta1.Kind]("Secret"),
-				Name:      v1beta1.ObjectName(secretSameNs.Name),
-				Namespace: (*v1beta1.Namespace)(&secretSameNs.Namespace),
+				Kind:      helpers.GetPointer[v1.Kind]("Secret"),
+				Name:      v1.ObjectName(secretSameNs.Name),
+				Namespace: (*v1.Namespace)(&secretSameNs.Namespace),
 			},
 		},
 	}
 
-	tlsConfigInvalidSecret := &v1beta1.GatewayTLSConfig{
-		Mode: helpers.GetPointer(v1beta1.TLSModeTerminate),
-		CertificateRefs: []v1beta1.SecretObjectReference{
+	tlsConfigInvalidSecret := &v1.GatewayTLSConfig{
+		Mode: helpers.GetPointer(v1.TLSModeTerminate),
+		CertificateRefs: []v1.SecretObjectReference{
 			{
-				Kind:      helpers.GetPointer[v1beta1.Kind]("Secret"),
+				Kind:      helpers.GetPointer[v1.Kind]("Secret"),
 				Name:      "does-not-exist",
-				Namespace: helpers.GetPointer[v1beta1.Namespace]("test"),
+				Namespace: helpers.GetPointer[v1.Namespace]("test"),
 			},
 		},
 	}
@@ -217,13 +218,13 @@ func TestBuildGateway(t *testing.T) {
 		Type: apiv1.SecretTypeTLS,
 	}
 
-	gatewayTLSConfigDiffNs := &v1beta1.GatewayTLSConfig{
-		Mode: helpers.GetPointer(v1beta1.TLSModeTerminate),
-		CertificateRefs: []v1beta1.SecretObjectReference{
+	gatewayTLSConfigDiffNs := &v1.GatewayTLSConfig{
+		Mode: helpers.GetPointer(v1.TLSModeTerminate),
+		CertificateRefs: []v1.SecretObjectReference{
 			{
-				Kind:      helpers.GetPointer[v1beta1.Kind]("Secret"),
-				Name:      v1beta1.ObjectName(secretDiffNamespace.Name),
-				Namespace: (*v1beta1.Namespace)(&secretDiffNamespace.Namespace),
+				Kind:      helpers.GetPointer[v1.Kind]("Secret"),
+				Name:      v1.ObjectName(secretDiffNamespace.Name),
+				Namespace: (*v1.Namespace)(&secretDiffNamespace.Namespace),
 			},
 		},
 	}
@@ -232,25 +233,25 @@ func TestBuildGateway(t *testing.T) {
 		name string,
 		hostname string,
 		port int,
-		protocol v1beta1.ProtocolType,
-		tls *v1beta1.GatewayTLSConfig,
-	) v1beta1.Listener {
-		return v1beta1.Listener{
-			Name:     v1beta1.SectionName(name),
-			Hostname: (*v1beta1.Hostname)(helpers.GetPointer(hostname)),
-			Port:     v1beta1.PortNumber(port),
+		protocol v1.ProtocolType,
+		tls *v1.GatewayTLSConfig,
+	) v1.Listener {
+		return v1.Listener{
+			Name:     v1.SectionName(name),
+			Hostname: (*v1.Hostname)(helpers.GetPointer(hostname)),
+			Port:     v1.PortNumber(port),
 			Protocol: protocol,
 			TLS:      tls,
 		}
 	}
-	createHTTPListener := func(name, hostname string, port int) v1beta1.Listener {
-		return createListener(name, hostname, port, v1beta1.HTTPProtocolType, nil)
+	createHTTPListener := func(name, hostname string, port int) v1.Listener {
+		return createListener(name, hostname, port, v1.HTTPProtocolType, nil)
 	}
-	createTCPListener := func(name, hostname string, port int) v1beta1.Listener {
-		return createListener(name, hostname, port, v1beta1.TCPProtocolType, nil)
+	createTCPListener := func(name, hostname string, port int) v1.Listener {
+		return createListener(name, hostname, port, v1.TCPProtocolType, nil)
 	}
-	createHTTPSListener := func(name, hostname string, port int, tls *v1beta1.GatewayTLSConfig) v1beta1.Listener {
-		return createListener(name, hostname, port, v1beta1.HTTPSProtocolType, tls)
+	createHTTPSListener := func(name, hostname string, port int, tls *v1.GatewayTLSConfig) v1.Listener {
+		return createListener(name, hostname, port, v1.HTTPSProtocolType, tls)
 	}
 
 	// foo http listeners
@@ -312,17 +313,17 @@ func TestBuildGateway(t *testing.T) {
 	)
 
 	type gatewayCfg struct {
-		listeners []v1beta1.Listener
-		addresses []v1beta1.GatewayAddress
+		listeners []v1.Listener
+		addresses []v1.GatewayAddress
 	}
 
-	var lastCreatedGateway *v1beta1.Gateway
-	createGateway := func(cfg gatewayCfg) *v1beta1.Gateway {
-		lastCreatedGateway = &v1beta1.Gateway{
+	var lastCreatedGateway *v1.Gateway
+	createGateway := func(cfg gatewayCfg) *v1.Gateway {
+		lastCreatedGateway = &v1.Gateway{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: "test",
 			},
-			Spec: v1beta1.GatewaySpec{
+			Spec: v1.GatewaySpec{
 				GatewayClassName: gcName,
 				Listeners:        cfg.listeners,
 				Addresses:        cfg.addresses,
@@ -330,7 +331,7 @@ func TestBuildGateway(t *testing.T) {
 		}
 		return lastCreatedGateway
 	}
-	getLastCreatedGetaway := func() *v1beta1.Gateway {
+	getLastCreatedGetaway := func() *v1.Gateway {
 		return lastCreatedGateway
 	}
 
@@ -342,14 +343,14 @@ func TestBuildGateway(t *testing.T) {
 	}
 
 	tests := []struct {
-		gateway      *v1beta1.Gateway
+		gateway      *v1.Gateway
 		gatewayClass *GatewayClass
 		refGrants    map[types.NamespacedName]*v1beta1.ReferenceGrant
 		expected     *Gateway
 		name         string
 	}{
 		{
-			gateway:      createGateway(gatewayCfg{listeners: []v1beta1.Listener{foo80Listener1, foo8080Listener}}),
+			gateway:      createGateway(gatewayCfg{listeners: []v1.Listener{foo80Listener1, foo8080Listener}}),
 			gatewayClass: validGC,
 			expected: &Gateway{
 				Source: getLastCreatedGetaway(),
@@ -358,7 +359,7 @@ func TestBuildGateway(t *testing.T) {
 						Source: foo80Listener1,
 						Valid:  true,
 						Routes: map[types.NamespacedName]*Route{},
-						SupportedKinds: []v1beta1.RouteGroupKind{
+						SupportedKinds: []v1.RouteGroupKind{
 							{Kind: "HTTPRoute"},
 						},
 					},
@@ -366,7 +367,7 @@ func TestBuildGateway(t *testing.T) {
 						Source: foo8080Listener,
 						Valid:  true,
 						Routes: map[types.NamespacedName]*Route{},
-						SupportedKinds: []v1beta1.RouteGroupKind{
+						SupportedKinds: []v1.RouteGroupKind{
 							{Kind: "HTTPRoute"},
 						},
 					},
@@ -377,7 +378,7 @@ func TestBuildGateway(t *testing.T) {
 		},
 		{
 			gateway: createGateway(
-				gatewayCfg{listeners: []v1beta1.Listener{foo443HTTPSListener1, foo8443HTTPSListener}},
+				gatewayCfg{listeners: []v1.Listener{foo443HTTPSListener1, foo8443HTTPSListener}},
 			),
 			gatewayClass: validGC,
 			expected: &Gateway{
@@ -388,7 +389,7 @@ func TestBuildGateway(t *testing.T) {
 						Valid:          true,
 						Routes:         map[types.NamespacedName]*Route{},
 						ResolvedSecret: helpers.GetPointer(client.ObjectKeyFromObject(secretSameNs)),
-						SupportedKinds: []v1beta1.RouteGroupKind{
+						SupportedKinds: []v1.RouteGroupKind{
 							{Kind: "HTTPRoute"},
 						},
 					},
@@ -397,7 +398,7 @@ func TestBuildGateway(t *testing.T) {
 						Valid:          true,
 						Routes:         map[types.NamespacedName]*Route{},
 						ResolvedSecret: helpers.GetPointer(client.ObjectKeyFromObject(secretSameNs)),
-						SupportedKinds: []v1beta1.RouteGroupKind{
+						SupportedKinds: []v1.RouteGroupKind{
 							{Kind: "HTTPRoute"},
 						},
 					},
@@ -407,7 +408,7 @@ func TestBuildGateway(t *testing.T) {
 			name: "valid https listeners",
 		},
 		{
-			gateway:      createGateway(gatewayCfg{listeners: []v1beta1.Listener{listenerAllowedRoutes}}),
+			gateway:      createGateway(gatewayCfg{listeners: []v1.Listener{listenerAllowedRoutes}}),
 			gatewayClass: validGC,
 			expected: &Gateway{
 				Source: getLastCreatedGetaway(),
@@ -417,8 +418,8 @@ func TestBuildGateway(t *testing.T) {
 						Valid:                     true,
 						AllowedRouteLabelSelector: labels.SelectorFromSet(labels.Set(labelSet)),
 						Routes:                    map[types.NamespacedName]*Route{},
-						SupportedKinds: []v1beta1.RouteGroupKind{
-							{Kind: "HTTPRoute", Group: helpers.GetPointer[v1beta1.Group](v1beta1.GroupName)},
+						SupportedKinds: []v1.RouteGroupKind{
+							{Kind: "HTTPRoute", Group: helpers.GetPointer[v1.Group](v1.GroupName)},
 						},
 					},
 				},
@@ -427,7 +428,7 @@ func TestBuildGateway(t *testing.T) {
 			name: "valid http listener with allowed routes label selector",
 		},
 		{
-			gateway:      createGateway(gatewayCfg{listeners: []v1beta1.Listener{crossNamespaceSecretListener}}),
+			gateway:      createGateway(gatewayCfg{listeners: []v1.Listener{crossNamespaceSecretListener}}),
 			gatewayClass: validGC,
 			refGrants: map[types.NamespacedName]*v1beta1.ReferenceGrant{
 				{Name: "ref-grant", Namespace: "diff-ns"}: {
@@ -438,7 +439,7 @@ func TestBuildGateway(t *testing.T) {
 					Spec: v1beta1.ReferenceGrantSpec{
 						From: []v1beta1.ReferenceGrantFrom{
 							{
-								Group:     v1beta1.GroupName,
+								Group:     v1.GroupName,
 								Kind:      "Gateway",
 								Namespace: "test",
 							},
@@ -447,7 +448,7 @@ func TestBuildGateway(t *testing.T) {
 							{
 								Group: "core",
 								Kind:  "Secret",
-								Name:  helpers.GetPointer[v1beta1.ObjectName]("secret"),
+								Name:  helpers.GetPointer[v1.ObjectName]("secret"),
 							},
 						},
 					},
@@ -461,7 +462,7 @@ func TestBuildGateway(t *testing.T) {
 						Valid:          true,
 						Routes:         map[types.NamespacedName]*Route{},
 						ResolvedSecret: helpers.GetPointer(client.ObjectKeyFromObject(secretDiffNamespace)),
-						SupportedKinds: []v1beta1.RouteGroupKind{
+						SupportedKinds: []v1.RouteGroupKind{
 							{Kind: "HTTPRoute"},
 						},
 					},
@@ -471,7 +472,7 @@ func TestBuildGateway(t *testing.T) {
 			name: "valid https listener with cross-namespace secret; allowed by reference grant",
 		},
 		{
-			gateway:      createGateway(gatewayCfg{listeners: []v1beta1.Listener{crossNamespaceSecretListener}}),
+			gateway:      createGateway(gatewayCfg{listeners: []v1.Listener{crossNamespaceSecretListener}}),
 			gatewayClass: validGC,
 			expected: &Gateway{
 				Source: getLastCreatedGetaway(),
@@ -483,7 +484,7 @@ func TestBuildGateway(t *testing.T) {
 							`Certificate ref to secret diff-ns/secret not permitted by any ReferenceGrant`,
 						),
 						Routes: map[types.NamespacedName]*Route{},
-						SupportedKinds: []v1beta1.RouteGroupKind{
+						SupportedKinds: []v1.RouteGroupKind{
 							{Kind: "HTTPRoute"},
 						},
 					},
@@ -493,7 +494,7 @@ func TestBuildGateway(t *testing.T) {
 			name: "invalid https listener with cross-namespace secret; no reference grant",
 		},
 		{
-			gateway:      createGateway(gatewayCfg{listeners: []v1beta1.Listener{listenerInvalidSelector}}),
+			gateway:      createGateway(gatewayCfg{listeners: []v1.Listener{listenerInvalidSelector}}),
 			gatewayClass: validGC,
 			expected: &Gateway{
 				Source: getLastCreatedGetaway(),
@@ -504,8 +505,8 @@ func TestBuildGateway(t *testing.T) {
 						Conditions: staticConds.NewListenerUnsupportedValue(
 							`invalid label selector: "invalid" is not a valid label selector operator`,
 						),
-						SupportedKinds: []v1beta1.RouteGroupKind{
-							{Kind: "HTTPRoute", Group: helpers.GetPointer[v1beta1.Group](v1beta1.GroupName)},
+						SupportedKinds: []v1.RouteGroupKind{
+							{Kind: "HTTPRoute", Group: helpers.GetPointer[v1.Group](v1.GroupName)},
 						},
 					},
 				},
@@ -514,7 +515,7 @@ func TestBuildGateway(t *testing.T) {
 			name: "http listener with invalid label selector",
 		},
 		{
-			gateway:      createGateway(gatewayCfg{listeners: []v1beta1.Listener{invalidProtocolListener}}),
+			gateway:      createGateway(gatewayCfg{listeners: []v1.Listener{invalidProtocolListener}}),
 			gatewayClass: validGC,
 			expected: &Gateway{
 				Source: getLastCreatedGetaway(),
@@ -525,7 +526,7 @@ func TestBuildGateway(t *testing.T) {
 						Conditions: staticConds.NewListenerUnsupportedProtocol(
 							`protocol: Unsupported value: "TCP": supported values: "HTTP", "HTTPS"`,
 						),
-						SupportedKinds: []v1beta1.RouteGroupKind{
+						SupportedKinds: []v1.RouteGroupKind{
 							{Kind: "HTTPRoute"},
 						},
 					},
@@ -537,7 +538,7 @@ func TestBuildGateway(t *testing.T) {
 		{
 			gateway: createGateway(
 				gatewayCfg{
-					listeners: []v1beta1.Listener{
+					listeners: []v1.Listener{
 						invalidPortListener,
 						invalidHTTPSPortListener,
 						invalidProtectedPortListener,
@@ -554,7 +555,7 @@ func TestBuildGateway(t *testing.T) {
 						Conditions: staticConds.NewListenerUnsupportedValue(
 							`port: Invalid value: 0: port must be between 1-65535`,
 						),
-						SupportedKinds: []v1beta1.RouteGroupKind{
+						SupportedKinds: []v1.RouteGroupKind{
 							{Kind: "HTTPRoute"},
 						},
 					},
@@ -564,7 +565,7 @@ func TestBuildGateway(t *testing.T) {
 						Conditions: staticConds.NewListenerUnsupportedValue(
 							`port: Invalid value: 0: port must be between 1-65535`,
 						),
-						SupportedKinds: []v1beta1.RouteGroupKind{
+						SupportedKinds: []v1.RouteGroupKind{
 							{Kind: "HTTPRoute"},
 						},
 					},
@@ -574,7 +575,7 @@ func TestBuildGateway(t *testing.T) {
 						Conditions: staticConds.NewListenerUnsupportedValue(
 							`port: Invalid value: 9113: port is already in use as MetricsPort`,
 						),
-						SupportedKinds: []v1beta1.RouteGroupKind{
+						SupportedKinds: []v1.RouteGroupKind{
 							{Kind: "HTTPRoute"},
 						},
 					},
@@ -585,7 +586,7 @@ func TestBuildGateway(t *testing.T) {
 		},
 		{
 			gateway: createGateway(
-				gatewayCfg{listeners: []v1beta1.Listener{invalidHostnameListener, invalidHTTPSHostnameListener}},
+				gatewayCfg{listeners: []v1.Listener{invalidHostnameListener, invalidHTTPSHostnameListener}},
 			),
 			gatewayClass: validGC,
 			expected: &Gateway{
@@ -595,7 +596,7 @@ func TestBuildGateway(t *testing.T) {
 						Source:     invalidHostnameListener,
 						Valid:      false,
 						Conditions: staticConds.NewListenerUnsupportedValue(invalidHostnameMsg),
-						SupportedKinds: []v1beta1.RouteGroupKind{
+						SupportedKinds: []v1.RouteGroupKind{
 							{Kind: "HTTPRoute"},
 						},
 					},
@@ -603,7 +604,7 @@ func TestBuildGateway(t *testing.T) {
 						Source:     invalidHTTPSHostnameListener,
 						Valid:      false,
 						Conditions: staticConds.NewListenerUnsupportedValue(invalidHostnameMsg),
-						SupportedKinds: []v1beta1.RouteGroupKind{
+						SupportedKinds: []v1.RouteGroupKind{
 							{Kind: "HTTPRoute"},
 						},
 					},
@@ -613,7 +614,7 @@ func TestBuildGateway(t *testing.T) {
 			name: "invalid hostnames",
 		},
 		{
-			gateway:      createGateway(gatewayCfg{listeners: []v1beta1.Listener{invalidTLSConfigListener}}),
+			gateway:      createGateway(gatewayCfg{listeners: []v1.Listener{invalidTLSConfigListener}}),
 			gatewayClass: validGC,
 			expected: &Gateway{
 				Source: getLastCreatedGetaway(),
@@ -625,7 +626,7 @@ func TestBuildGateway(t *testing.T) {
 						Conditions: staticConds.NewListenerInvalidCertificateRef(
 							`tls.certificateRefs[0]: Invalid value: test/does-not-exist: secret does not exist`,
 						),
-						SupportedKinds: []v1beta1.RouteGroupKind{
+						SupportedKinds: []v1.RouteGroupKind{
 							{Kind: "HTTPRoute"},
 						},
 					},
@@ -637,7 +638,7 @@ func TestBuildGateway(t *testing.T) {
 		{
 			gateway: createGateway(
 				gatewayCfg{
-					listeners: []v1beta1.Listener{
+					listeners: []v1.Listener{
 						foo80Listener1,
 						foo8080Listener,
 						foo8081Listener,
@@ -657,7 +658,7 @@ func TestBuildGateway(t *testing.T) {
 						Source: foo80Listener1,
 						Valid:  true,
 						Routes: map[types.NamespacedName]*Route{},
-						SupportedKinds: []v1beta1.RouteGroupKind{
+						SupportedKinds: []v1.RouteGroupKind{
 							{Kind: "HTTPRoute"},
 						},
 					},
@@ -665,7 +666,7 @@ func TestBuildGateway(t *testing.T) {
 						Source: foo8080Listener,
 						Valid:  true,
 						Routes: map[types.NamespacedName]*Route{},
-						SupportedKinds: []v1beta1.RouteGroupKind{
+						SupportedKinds: []v1.RouteGroupKind{
 							{Kind: "HTTPRoute"},
 						},
 					},
@@ -673,7 +674,7 @@ func TestBuildGateway(t *testing.T) {
 						Source: foo8081Listener,
 						Valid:  true,
 						Routes: map[types.NamespacedName]*Route{},
-						SupportedKinds: []v1beta1.RouteGroupKind{
+						SupportedKinds: []v1.RouteGroupKind{
 							{Kind: "HTTPRoute"},
 						},
 					},
@@ -681,7 +682,7 @@ func TestBuildGateway(t *testing.T) {
 						Source: bar80Listener,
 						Valid:  true,
 						Routes: map[types.NamespacedName]*Route{},
-						SupportedKinds: []v1beta1.RouteGroupKind{
+						SupportedKinds: []v1.RouteGroupKind{
 							{Kind: "HTTPRoute"},
 						},
 					},
@@ -690,7 +691,7 @@ func TestBuildGateway(t *testing.T) {
 						Valid:          true,
 						Routes:         map[types.NamespacedName]*Route{},
 						ResolvedSecret: helpers.GetPointer(client.ObjectKeyFromObject(secretSameNs)),
-						SupportedKinds: []v1beta1.RouteGroupKind{
+						SupportedKinds: []v1.RouteGroupKind{
 							{Kind: "HTTPRoute"},
 						},
 					},
@@ -699,7 +700,7 @@ func TestBuildGateway(t *testing.T) {
 						Valid:          true,
 						Routes:         map[types.NamespacedName]*Route{},
 						ResolvedSecret: helpers.GetPointer(client.ObjectKeyFromObject(secretSameNs)),
-						SupportedKinds: []v1beta1.RouteGroupKind{
+						SupportedKinds: []v1.RouteGroupKind{
 							{Kind: "HTTPRoute"},
 						},
 					},
@@ -708,7 +709,7 @@ func TestBuildGateway(t *testing.T) {
 						Valid:          true,
 						Routes:         map[types.NamespacedName]*Route{},
 						ResolvedSecret: helpers.GetPointer(client.ObjectKeyFromObject(secretSameNs)),
-						SupportedKinds: []v1beta1.RouteGroupKind{
+						SupportedKinds: []v1.RouteGroupKind{
 							{Kind: "HTTPRoute"},
 						},
 					},
@@ -717,7 +718,7 @@ func TestBuildGateway(t *testing.T) {
 						Valid:          true,
 						Routes:         map[types.NamespacedName]*Route{},
 						ResolvedSecret: helpers.GetPointer(client.ObjectKeyFromObject(secretSameNs)),
-						SupportedKinds: []v1beta1.RouteGroupKind{
+						SupportedKinds: []v1.RouteGroupKind{
 							{Kind: "HTTPRoute"},
 						},
 					},
@@ -729,7 +730,7 @@ func TestBuildGateway(t *testing.T) {
 		{
 			gateway: createGateway(
 				gatewayCfg{
-					listeners: []v1beta1.Listener{
+					listeners: []v1.Listener{
 						foo80Listener1,
 						bar80Listener,
 						foo443Listener,
@@ -748,7 +749,7 @@ func TestBuildGateway(t *testing.T) {
 						Valid:      false,
 						Routes:     map[types.NamespacedName]*Route{},
 						Conditions: staticConds.NewListenerProtocolConflict(conflict80PortMsg),
-						SupportedKinds: []v1beta1.RouteGroupKind{
+						SupportedKinds: []v1.RouteGroupKind{
 							{Kind: "HTTPRoute"},
 						},
 					},
@@ -757,7 +758,7 @@ func TestBuildGateway(t *testing.T) {
 						Valid:      false,
 						Routes:     map[types.NamespacedName]*Route{},
 						Conditions: staticConds.NewListenerProtocolConflict(conflict80PortMsg),
-						SupportedKinds: []v1beta1.RouteGroupKind{
+						SupportedKinds: []v1.RouteGroupKind{
 							{Kind: "HTTPRoute"},
 						},
 					},
@@ -766,7 +767,7 @@ func TestBuildGateway(t *testing.T) {
 						Valid:      false,
 						Routes:     map[types.NamespacedName]*Route{},
 						Conditions: staticConds.NewListenerProtocolConflict(conflict443PortMsg),
-						SupportedKinds: []v1beta1.RouteGroupKind{
+						SupportedKinds: []v1.RouteGroupKind{
 							{Kind: "HTTPRoute"},
 						},
 					},
@@ -776,7 +777,7 @@ func TestBuildGateway(t *testing.T) {
 						Routes:         map[types.NamespacedName]*Route{},
 						Conditions:     staticConds.NewListenerProtocolConflict(conflict80PortMsg),
 						ResolvedSecret: helpers.GetPointer(client.ObjectKeyFromObject(secretSameNs)),
-						SupportedKinds: []v1beta1.RouteGroupKind{
+						SupportedKinds: []v1.RouteGroupKind{
 							{Kind: "HTTPRoute"},
 						},
 					},
@@ -786,7 +787,7 @@ func TestBuildGateway(t *testing.T) {
 						Routes:         map[types.NamespacedName]*Route{},
 						Conditions:     staticConds.NewListenerProtocolConflict(conflict443PortMsg),
 						ResolvedSecret: helpers.GetPointer(client.ObjectKeyFromObject(secretSameNs)),
-						SupportedKinds: []v1beta1.RouteGroupKind{
+						SupportedKinds: []v1.RouteGroupKind{
 							{Kind: "HTTPRoute"},
 						},
 					},
@@ -796,7 +797,7 @@ func TestBuildGateway(t *testing.T) {
 						Routes:         map[types.NamespacedName]*Route{},
 						Conditions:     staticConds.NewListenerProtocolConflict(conflict443PortMsg),
 						ResolvedSecret: helpers.GetPointer(client.ObjectKeyFromObject(secretSameNs)),
-						SupportedKinds: []v1beta1.RouteGroupKind{
+						SupportedKinds: []v1.RouteGroupKind{
 							{Kind: "HTTPRoute"},
 						},
 					},
@@ -808,8 +809,8 @@ func TestBuildGateway(t *testing.T) {
 		{
 			gateway: createGateway(
 				gatewayCfg{
-					listeners: []v1beta1.Listener{foo80Listener1, foo443HTTPSListener1},
-					addresses: []v1beta1.GatewayAddress{{}},
+					listeners: []v1.Listener{foo80Listener1, foo443HTTPSListener1},
+					addresses: []v1.GatewayAddress{{}},
 				},
 			),
 			gatewayClass: validGC,
@@ -829,7 +830,7 @@ func TestBuildGateway(t *testing.T) {
 		},
 		{
 			gateway: createGateway(
-				gatewayCfg{listeners: []v1beta1.Listener{foo80Listener1, invalidProtocolListener}},
+				gatewayCfg{listeners: []v1.Listener{foo80Listener1, invalidProtocolListener}},
 			),
 			gatewayClass: invalidGC,
 			expected: &Gateway{
@@ -841,7 +842,7 @@ func TestBuildGateway(t *testing.T) {
 		},
 		{
 			gateway: createGateway(
-				gatewayCfg{listeners: []v1beta1.Listener{foo80Listener1, invalidProtocolListener}},
+				gatewayCfg{listeners: []v1.Listener{foo80Listener1, invalidProtocolListener}},
 			),
 			gatewayClass: nil,
 			expected: &Gateway{

@@ -28,7 +28,7 @@
 2. Deploy CRDs:
 
    ```bash
-   kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v0.8.1/standard-install.yaml
+   kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/standard-install.yaml
    ```
 
 3. Deploy NGF from edge using Helm install, and expose using an internal LoadBalancer service:

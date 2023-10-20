@@ -45,7 +45,7 @@ are listed in the [Scale Upstream Servers](#scale-upstream-servers) test steps.
 - Install Gateway API Resources:
 
   ```console
-  kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v0.8.1/standard-install.yaml
+  kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/standard-install.yaml
   ```
 
 - Install edge NGF and save the Pod Name and LoadBalancer IP for tests:

@@ -30,16 +30,30 @@ This chart deploys the NGINX Gateway Fabric in your Kubernetes cluster.
 
 ### Installing the Gateway API resources
 
-> Note: The Gateway API resources from the standard channel (the CRDs and the validating webhook) must be installed
+> **Note**
+>
+> The Gateway API resources from the standard channel must be installed
 > before deploying NGINX Gateway Fabric. If they are already installed in your cluster, please ensure they are
 > the correct version as supported by the NGINX Gateway Fabric -
 > [see the Technical Specifications](https://github.com/nginxinc/nginx-gateway-fabric/blob/main/README.md#technical-specifications).
 
-To install the Gateway resources from [the Gateway API repo](https://github.com/kubernetes-sigs/gateway-api), run:
+To install the Gateway API CRDs from [the Gateway API repo](https://github.com/kubernetes-sigs/gateway-api), run:
 
 ```shell
-kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v0.8.1/standard-install.yaml
+kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/standard-install.yaml
 ```
+
+If you are running on Kubernetes 1.23 or 1.24 you also need to install the validating webhook. To do so, run:
+
+```shell
+kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/webhook-install.yaml
+```
+
+> **Important**
+>
+> The validating webhook is not needed if you are running Kubernetes 1.25+. Validation is done using CEL on the
+> CRDs. See the [resource validation doc](https://github.com/nginxinc/nginx-gateway-fabric/blob/main/docs/resource-validation.md)
+> for more information.
 
 ## Installing the Chart
 
@@ -79,6 +93,7 @@ helm install my-release . --create-namespace --wait -n nginx-gateway
 ## Upgrading the Chart
 
 > **Note**
+>
 > See [below](#configure-delayed-termination-for-zero-downtime-upgrades) for instructions on how to configure delayed
 > termination if required for zero downtime upgrades in your environment.
 
@@ -87,10 +102,16 @@ helm install my-release . --create-namespace --wait -n nginx-gateway
 Before you upgrade a release, ensure the Gateway API resources are the correct version as supported by the NGINX
 Gateway Fabric - [see the Technical Specifications](../../README.md#technical-specifications).:
 
-To upgrade the Gateway resources from [the Gateway API repo](https://github.com/kubernetes-sigs/gateway-api), run:
+To upgrade the Gateway CRDs from [the Gateway API repo](https://github.com/kubernetes-sigs/gateway-api), run:
 
 ```shell
-kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v0.8.1/standard-install.yaml
+kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/standard-install.yaml
+```
+
+If you are running on Kubernetes 1.23 or 1.24 you also need to update the validating webhook. To do so, run:
+
+```shell
+kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/webhook-install.yaml
 ```
 
 ### Upgrading the CRDs
@@ -134,6 +155,7 @@ To achieve zero downtime upgrades (meaning clients will not see any interruption
 being performed on NGF), you may need to configure delayed termination on the NGF Pod, depending on your environment.
 
 > **Note**
+>
 > When proxying Websocket or any long-lived connections, NGINX will not terminate until that connection is closed
 > by either the client or the backend. This means that unless all those connections are closed by clients/backends
 > before or during an upgrade, NGINX will not terminate, which means Kubernetes will kill NGINX. As a result, the
@@ -172,6 +194,7 @@ being performed on NGF), you may need to configure delayed termination on the NG
    ```
 
 > **Note**
+>
 > More information on container lifecycle hooks can be found
 > [here](https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/#container-hooks) and a detailed
 > description of Pod termination behavior can be found in
@@ -195,49 +218,55 @@ These commands remove all the Kubernetes components associated with the release 
 Please ensure there are no custom resources that you want to keep and there are no other Gateway API implementations
 running in the cluster!**
 
-To delete the Gateway resources using [the Gateway API repo](https://github.com/kubernetes-sigs/gateway-api), run:
+To delete the Gateway API CRDs from [the Gateway API repo](https://github.com/kubernetes-sigs/gateway-api), run:
 
 ```shell
-kubectl delete -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v0.8.1/standard-install.yaml
+kubectl delete -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/standard-install.yaml
+```
+
+If you are running on Kubernetes 1.23 or 1.24 you also need to delete the validating webhook. To do so, run:
+
+```shell
+kubectl delete -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/webhook-install.yaml
 ```
 
 ## Configuration
 
 The following tables lists the configurable parameters of the NGINX Gateway Fabric chart and their default values.
 
-| Parameter                                         | Description                                                                                                                                                                                                  | Default Value                                                                                                   |
-|---------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------|
-| `nginxGateway.image.repository`                   | The repository for the NGINX Gateway Fabric image.                                                                                                                                                       | ghcr.io/nginxinc/nginx-gateway-fabric                                                                       |
+| Parameter                                         | Description                                                                                                                                                                                              | Default Value                                                                                                   |
+|---------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------|
+| `nginxGateway.image.repository`                   | The repository for the NGINX Gateway Fabric image.                                                                                                                                                       | ghcr.io/nginxinc/nginx-gateway-fabric                                                                           |
 | `nginxGateway.image.tag`                          | The tag for the NGINX Gateway Fabric image.                                                                                                                                                              | edge                                                                                                            |
 | `nginxGateway.image.pullPolicy`                   | The `imagePullPolicy` for the NGINX Gateway Fabric image.                                                                                                                                                | Always                                                                                                          |
-| `nginxGateway.lifecycle`                          | The `lifecycle` of the nginx-gateway container.                                                                                                                                              | {}                                                                                                              |
-| `nginxGateway.extraVolumeMounts`                  | Extra `volumeMounts` for the nginxGateway container.                                                                                                                                                         | {}                                                                                                              |
+| `nginxGateway.lifecycle`                          | The `lifecycle` of the nginx-gateway container.                                                                                                                                                          | {}                                                                                                              |
+| `nginxGateway.extraVolumeMounts`                  | Extra `volumeMounts` for the nginxGateway container.                                                                                                                                                     | {}                                                                                                              |
 | `nginxGateway.gatewayClassName`                   | The name of the GatewayClass for the NGINX Gateway Fabric deployment.                                                                                                                                    | nginx                                                                                                           |
-| `nginxGateway.gatewayControllerName`              | The name of the Gateway controller. The controller name must be of the form: DOMAIN/PATH. The controller's domain is gateway.nginx.org.                                                                      | gateway.nginx.org/nginx-gateway-controller                                                                      |
+| `nginxGateway.gatewayControllerName`              | The name of the Gateway controller. The controller name must be of the form: DOMAIN/PATH. The controller's domain is gateway.nginx.org.                                                                  | gateway.nginx.org/nginx-gateway-controller                                                                      |
 | `nginxGateway.kind`                               | The kind of the NGINX Gateway Fabric installation - currently, only Deployment is supported.                                                                                                             | deployment                                                                                                      |
-| `nginxGateway.config`                             | The dynamic configuration for the control plane that is contained in the NginxGateway resource                                                                                                               | [See nginxGateway.config section](values.yaml)                                                                  |
-| `nginxGateway.readinessProbe.enable`              | Enable the /readyz endpoint on the control plane.                                                                                                                                                            | true                                                                                                            |
-| `nginxGateway.readinessProbe.port`                | Port in which the readiness endpoint is exposed.                                                                                                                                                             | 8081                                                                                                            |
-| `nginxGateway.readinessProbe.initialDelaySeconds` | The number of seconds after the Pod has started before the readiness probes are initiated.                                                                                                                   | 3                                                                                                               |
+| `nginxGateway.config`                             | The dynamic configuration for the control plane that is contained in the NginxGateway resource                                                                                                           | [See nginxGateway.config section](values.yaml)                                                                  |
+| `nginxGateway.readinessProbe.enable`              | Enable the /readyz endpoint on the control plane.                                                                                                                                                        | true                                                                                                            |
+| `nginxGateway.readinessProbe.port`                | Port in which the readiness endpoint is exposed.                                                                                                                                                         | 8081                                                                                                            |
+| `nginxGateway.readinessProbe.initialDelaySeconds` | The number of seconds after the Pod has started before the readiness probes are initiated.                                                                                                               | 3                                                                                                               |
 | `nginxGateway.replicaCount`                       | The number of replicas of the NGINX Gateway Fabric Deployment.                                                                                                                                           | 1                                                                                                               |
 | `nginxGateway.leaderElection.enable`              | Enable leader election. Leader election is used to avoid multiple replicas of the NGINX Gateway Fabric reporting the status of the Gateway API resources.                                                | true                                                                                                            |
-| `nginxGateway.leaderElection.lockName`            | The name of the leader election lock. A Lease object with this name will be created in the same Namespace as the controller.                                                                                 | Autogenerated                                                                                                   |
-| `nginx.image.repository`                          | The repository for the NGINX image.                                                                                                                                                                          | ghcr.io/nginxinc/nginx-gateway-fabric/nginx                                                                 |
-| `nginx.image.tag`                                 | The tag for the NGINX image.                                                                                                                                                                                 | edge                                                                                                            |
-| `nginx.image.pullPolicy`                          | The `imagePullPolicy` for the NGINX image.                                                                                                                                                                   | Always                                                                                                          |
-| `nginx.lifecycle`                                 | The `lifecycle` of the nginx container.                                                                                                                                                            | {}                                                                                                              |
+| `nginxGateway.leaderElection.lockName`            | The name of the leader election lock. A Lease object with this name will be created in the same Namespace as the controller.                                                                             | Autogenerated                                                                                                   |
+| `nginx.image.repository`                          | The repository for the NGINX image.                                                                                                                                                                      | ghcr.io/nginxinc/nginx-gateway-fabric/nginx                                                                     |
+| `nginx.image.tag`                                 | The tag for the NGINX image.                                                                                                                                                                             | edge                                                                                                            |
+| `nginx.image.pullPolicy`                          | The `imagePullPolicy` for the NGINX image.                                                                                                                                                               | Always                                                                                                          |
+| `nginx.lifecycle`                                 | The `lifecycle` of the nginx container.                                                                                                                                                                  | {}                                                                                                              |
 | `nginx.extraVolumeMounts`                         | Extra `volumeMounts` for the nginx container.                                                                                                                                                            | {}                                                                                                              |
-| `terminationGracePeriodSeconds`                   | The termination grace period of the NGINX Gateway Fabric pod.                                                                                                                                                            | 30                                                                                                              |
-| `tolerations`                                     | The `tolerations` of the NGINX Gateway Fabric pod.                                                                                                                                                           | []                                                                                                              |
-| `affinity`                                        | The `affinity` of the NGINX Gateway Fabric pod.                                                                                                                                                            | {}                                                                                                              |
+| `terminationGracePeriodSeconds`                   | The termination grace period of the NGINX Gateway Fabric pod.                                                                                                                                            | 30                                                                                                              |
+| `tolerations`                                     | The `tolerations` of the NGINX Gateway Fabric pod.                                                                                                                                                       | []                                                                                                              |
+| `affinity`                                        | The `affinity` of the NGINX Gateway Fabric pod.                                                                                                                                                          | {}                                                                                                              |
 | `serviceAccount.annotations`                      | The `annotations` for the ServiceAccount used by the NGINX Gateway Fabric deployment.                                                                                                                    | {}                                                                                                              |
 | `serviceAccount.name`                             | Name of the ServiceAccount used by the NGINX Gateway Fabric deployment.                                                                                                                                  | Autogenerated                                                                                                   |
 | `service.create`                                  | Creates a service to expose the NGINX Gateway Fabric pods.                                                                                                                                               | true                                                                                                            |
 | `service.type`                                    | The type of service to create for the NGINX Gateway Fabric.                                                                                                                                              | Loadbalancer                                                                                                    |
-| `service.externalTrafficPolicy`                   | The `externalTrafficPolicy` of the service. The value `Local` preserves the client source IP.                                                                                                                | Local                                                                                                           |
+| `service.externalTrafficPolicy`                   | The `externalTrafficPolicy` of the service. The value `Local` preserves the client source IP.                                                                                                            | Local                                                                                                           |
 | `service.annotations`                             | The `annotations` of the NGINX Gateway Fabric service.                                                                                                                                                   | {}                                                                                                              |
 | `service.ports`                                   | A list of ports to expose through the NGINX Gateway Fabric service. Update it to match the listener ports from your Gateway resource. Follows the conventional Kubernetes yaml syntax for service ports. | [ port: 80, targetPort: 80, protocol: TCP, name: http; port: 443, targetPort: 443, protocol: TCP, name: https ] |
-| `metrics.disable`                                 | Disable exposing metrics in the Prometheus format.                                                                                                                                                           | false                                                                                                           |
-| `metrics.port`                                    | Set the port where the Prometheus metrics are exposed. Format: [1024 - 65535]                                                                                                                                | 9113                                                                                                            |
-| `metrics.secure`                                  | Enable serving metrics via https. By default metrics are served via http. Please note that this endpoint will be secured with a self-signed certificate.                                                     | false                                                                                                           |
-| `extraVolumes`                                    | Extra `volumes` for the NGINX Gateway Fabric pod.                                                                                                                                                            | []                                                                                                              |
+| `metrics.disable`                                 | Disable exposing metrics in the Prometheus format.                                                                                                                                                       | false                                                                                                           |
+| `metrics.port`                                    | Set the port where the Prometheus metrics are exposed. Format: [1024 - 65535]                                                                                                                            | 9113                                                                                                            |
+| `metrics.secure`                                  | Enable serving metrics via https. By default metrics are served via http. Please note that this endpoint will be secured with a self-signed certificate.                                                 | false                                                                                                           |
+| `extraVolumes`                                    | Extra `volumes` for the NGINX Gateway Fabric pod.                                                                                                                                                        | []                                                                                                              |

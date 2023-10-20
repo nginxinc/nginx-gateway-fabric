@@ -6,7 +6,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	"sigs.k8s.io/gateway-api/apis/v1beta1"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
 	staticConds "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/conditions"
@@ -85,7 +85,7 @@ func addBackendRefsToRules(
 }
 
 func createBackendRef(
-	ref v1beta1.HTTPBackendRef,
+	ref gatewayv1.HTTPBackendRef,
 	sourceNamespace string,
 	refGrantResolver *referenceGrantResolver,
 	services map[types.NamespacedName]*v1.Service,
@@ -138,7 +138,7 @@ func createBackendRef(
 }
 
 func getServiceAndPortFromRef(
-	ref v1beta1.BackendRef,
+	ref gatewayv1.BackendRef,
 	routeNamespace string,
 	services map[types.NamespacedName]*v1.Service,
 	refPath *field.Path,
@@ -160,7 +160,7 @@ func getServiceAndPortFromRef(
 }
 
 func validateHTTPBackendRef(
-	ref v1beta1.HTTPBackendRef,
+	ref gatewayv1.HTTPBackendRef,
 	routeNs string,
 	refGrantResolver *referenceGrantResolver,
 	path *field.Path,
@@ -176,7 +176,7 @@ func validateHTTPBackendRef(
 }
 
 func validateBackendRef(
-	ref v1beta1.BackendRef,
+	ref gatewayv1.BackendRef,
 	routeNs string,
 	refGrantResolver *referenceGrantResolver,
 	path *field.Path,

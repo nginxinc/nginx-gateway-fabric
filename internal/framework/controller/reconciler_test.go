@@ -12,7 +12,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/gateway-api/apis/v1beta1"
+	v1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/controller"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/controller/controllerfakes"
@@ -37,7 +37,7 @@ var _ = Describe("Reconciler", func() {
 			Name:      "hr-1",
 		}
 
-		hr1 = &v1beta1.HTTPRoute{
+		hr1 = &v1.HTTPRoute{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: hr1NsName.Namespace,
 				Name:      hr1NsName.Name,
@@ -49,7 +49,7 @@ var _ = Describe("Reconciler", func() {
 			Name:      "hr-2",
 		}
 
-		hr2 = &v1beta1.HTTPRoute{
+		hr2 = &v1.HTTPRoute{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: hr2NsName.Namespace,
 				Name:      hr2NsName.Name,
@@ -57,30 +57,30 @@ var _ = Describe("Reconciler", func() {
 		}
 	)
 
-	getReturnsHRForHR := func(hr *v1beta1.HTTPRoute) getFunc {
+	getReturnsHRForHR := func(hr *v1.HTTPRoute) getFunc {
 		return func(
 			ctx context.Context,
 			nsname types.NamespacedName,
 			object client.Object,
 			option ...client.GetOption,
 		) error {
-			Expect(object).To(BeAssignableToTypeOf(&v1beta1.HTTPRoute{}))
+			Expect(object).To(BeAssignableToTypeOf(&v1.HTTPRoute{}))
 			Expect(nsname).To(Equal(client.ObjectKeyFromObject(hr)))
 
-			hr.DeepCopyInto(object.(*v1beta1.HTTPRoute))
+			hr.DeepCopyInto(object.(*v1.HTTPRoute))
 
 			return nil
 		}
 	}
 
-	getReturnsNotFoundErrorForHR := func(hr *v1beta1.HTTPRoute) getFunc {
+	getReturnsNotFoundErrorForHR := func(hr *v1.HTTPRoute) getFunc {
 		return func(
 			ctx context.Context,
 			nsname types.NamespacedName,
 			object client.Object,
 			option ...client.GetOption,
 		) error {
-			Expect(object).To(BeAssignableToTypeOf(&v1beta1.HTTPRoute{}))
+			Expect(object).To(BeAssignableToTypeOf(&v1.HTTPRoute{}))
 			Expect(nsname).To(Equal(client.ObjectKeyFromObject(hr)))
 
 			return apierrors.NewNotFound(schema.GroupResource{}, "not found")
@@ -112,7 +112,7 @@ var _ = Describe("Reconciler", func() {
 	})
 
 	Describe("Normal cases", func() {
-		testUpsert := func(hr *v1beta1.HTTPRoute) {
+		testUpsert := func(hr *v1.HTTPRoute) {
 			fakeGetter.GetCalls(getReturnsHRForHR(hr))
 
 			resultCh := startReconciling(client.ObjectKeyFromObject(hr))
@@ -121,14 +121,14 @@ var _ = Describe("Reconciler", func() {
 			Eventually(resultCh).Should(Receive(Equal(result{err: nil, reconcileResult: reconcile.Result{}})))
 		}
 
-		testDelete := func(hr *v1beta1.HTTPRoute) {
+		testDelete := func(hr *v1.HTTPRoute) {
 			fakeGetter.GetCalls(getReturnsNotFoundErrorForHR(hr))
 
 			resultCh := startReconciling(client.ObjectKeyFromObject(hr))
 
 			Eventually(eventCh).Should(Receive(Equal(&events.DeleteEvent{
 				NamespacedName: client.ObjectKeyFromObject(hr),
-				Type:           &v1beta1.HTTPRoute{},
+				Type:           &v1.HTTPRoute{},
 			})))
 			Eventually(resultCh).Should(Receive(Equal(result{err: nil, reconcileResult: reconcile.Result{}})))
 		}
@@ -137,7 +137,7 @@ var _ = Describe("Reconciler", func() {
 			BeforeEach(func() {
 				rec = controller.NewReconciler(controller.ReconcilerConfig{
 					Getter:     fakeGetter,
-					ObjectType: &v1beta1.HTTPRoute{},
+					ObjectType: &v1.HTTPRoute{},
 					EventCh:    eventCh,
 				})
 			})
@@ -162,7 +162,7 @@ var _ = Describe("Reconciler", func() {
 
 				rec = controller.NewReconciler(controller.ReconcilerConfig{
 					Getter:               fakeGetter,
-					ObjectType:           &v1beta1.HTTPRoute{},
+					ObjectType:           &v1.HTTPRoute{},
 					EventCh:              eventCh,
 					NamespacedNameFilter: filter,
 				})
@@ -204,7 +204,7 @@ var _ = Describe("Reconciler", func() {
 		BeforeEach(func() {
 			rec = controller.NewReconciler(controller.ReconcilerConfig{
 				Getter:     fakeGetter,
-				ObjectType: &v1beta1.HTTPRoute{},
+				ObjectType: &v1.HTTPRoute{},
 				EventCh:    eventCh,
 			})
 		})

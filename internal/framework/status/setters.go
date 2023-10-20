@@ -5,7 +5,7 @@ import (
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/gateway-api/apis/v1beta1"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
 )
@@ -37,7 +37,7 @@ func newNginxGatewayStatusSetter(clock Clock, status NginxGatewayStatus) func(cl
 
 func newGatewayClassStatusSetter(clock Clock, gcs GatewayClassStatus) func(client.Object) bool {
 	return func(object client.Object) bool {
-		gc := object.(*v1beta1.GatewayClass)
+		gc := object.(*gatewayv1.GatewayClass)
 		status := prepareGatewayClassStatus(gcs, clock.Now())
 
 		if conditionsEqual(gc.Status.Conditions, status.Conditions) {
@@ -52,7 +52,7 @@ func newGatewayClassStatusSetter(clock Clock, gcs GatewayClassStatus) func(clien
 
 func newGatewayStatusSetter(clock Clock, gs GatewayStatus) func(client.Object) bool {
 	return func(object client.Object) bool {
-		gw := object.(*v1beta1.Gateway)
+		gw := object.(*gatewayv1.Gateway)
 		status := prepareGatewayStatus(gs, clock.Now())
 
 		if gwStatusEqual(gw.Status, status) {
@@ -67,7 +67,7 @@ func newGatewayStatusSetter(clock Clock, gs GatewayStatus) func(client.Object) b
 
 func newHTTPRouteStatusSetter(gatewayCtlrName string, clock Clock, rs HTTPRouteStatus) func(client.Object) bool {
 	return func(object client.Object) bool {
-		hr := object.(*v1beta1.HTTPRoute)
+		hr := object.(*gatewayv1.HTTPRoute)
 		status := prepareHTTPRouteStatus(
 			hr.Status,
 			rs,
@@ -85,9 +85,9 @@ func newHTTPRouteStatusSetter(gatewayCtlrName string, clock Clock, rs HTTPRouteS
 	}
 }
 
-func gwStatusEqual(prev, cur v1beta1.GatewayStatus) bool {
-	addressesEqual := slices.EqualFunc(prev.Addresses, cur.Addresses, func(a1, a2 v1beta1.GatewayStatusAddress) bool {
-		if !equalPointers[v1beta1.AddressType](a1.Type, a2.Type) {
+func gwStatusEqual(prev, cur gatewayv1.GatewayStatus) bool {
+	addressesEqual := slices.EqualFunc(prev.Addresses, cur.Addresses, func(a1, a2 gatewayv1.GatewayStatusAddress) bool {
+		if !equalPointers[gatewayv1.AddressType](a1.Type, a2.Type) {
 			return false
 		}
 
@@ -102,7 +102,7 @@ func gwStatusEqual(prev, cur v1beta1.GatewayStatus) bool {
 		return false
 	}
 
-	return slices.EqualFunc(prev.Listeners, cur.Listeners, func(s1, s2 v1beta1.ListenerStatus) bool {
+	return slices.EqualFunc(prev.Listeners, cur.Listeners, func(s1, s2 gatewayv1.ListenerStatus) bool {
 		if s1.Name != s2.Name {
 			return false
 		}
@@ -115,7 +115,7 @@ func gwStatusEqual(prev, cur v1beta1.GatewayStatus) bool {
 			return false
 		}
 
-		return slices.EqualFunc(s1.SupportedKinds, s2.SupportedKinds, func(k1, k2 v1beta1.RouteGroupKind) bool {
+		return slices.EqualFunc(s1.SupportedKinds, s2.SupportedKinds, func(k1, k2 gatewayv1.RouteGroupKind) bool {
 			if k1.Kind != k2.Kind {
 				return false
 			}
@@ -125,18 +125,18 @@ func gwStatusEqual(prev, cur v1beta1.GatewayStatus) bool {
 	})
 }
 
-func hrStatusEqual(gatewayCtlrName string, prev, cur v1beta1.HTTPRouteStatus) bool {
+func hrStatusEqual(gatewayCtlrName string, prev, cur gatewayv1.HTTPRouteStatus) bool {
 	// Since other controllers may update HTTPRoute status we can't assume anything about the order of the statuses,
 	// and we have to ignore statuses written by other controllers when checking for equality.
 	// Therefore, we can't use slices.EqualFunc here because it cares about the order.
 
 	// First, we check if the prev status has any RouteParentStatuses that are no longer present in the cur status.
 	for _, prevParent := range prev.Parents {
-		if prevParent.ControllerName != v1beta1.GatewayController(gatewayCtlrName) {
+		if prevParent.ControllerName != gatewayv1.GatewayController(gatewayCtlrName) {
 			continue
 		}
 
-		exists := slices.ContainsFunc(cur.Parents, func(curParent v1beta1.RouteParentStatus) bool {
+		exists := slices.ContainsFunc(cur.Parents, func(curParent gatewayv1.RouteParentStatus) bool {
 			return routeParentStatusEqual(prevParent, curParent)
 		})
 
@@ -147,7 +147,7 @@ func hrStatusEqual(gatewayCtlrName string, prev, cur v1beta1.HTTPRouteStatus) bo
 
 	// Then, we check if the cur status has any RouteParentStatuses that are no longer present in the prev status.
 	for _, curParent := range cur.Parents {
-		exists := slices.ContainsFunc(prev.Parents, func(prevParent v1beta1.RouteParentStatus) bool {
+		exists := slices.ContainsFunc(prev.Parents, func(prevParent gatewayv1.RouteParentStatus) bool {
 			return routeParentStatusEqual(curParent, prevParent)
 		})
 
@@ -159,7 +159,7 @@ func hrStatusEqual(gatewayCtlrName string, prev, cur v1beta1.HTTPRouteStatus) bo
 	return true
 }
 
-func routeParentStatusEqual(p1, p2 v1beta1.RouteParentStatus) bool {
+func routeParentStatusEqual(p1, p2 gatewayv1.RouteParentStatus) bool {
 	if p1.ControllerName != p2.ControllerName {
 		return false
 	}

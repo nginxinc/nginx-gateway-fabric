@@ -13,7 +13,7 @@ import (
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	ctlrZap "sigs.k8s.io/controller-runtime/pkg/log/zap"
-	"sigs.k8s.io/gateway-api/apis/v1beta1"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
@@ -121,7 +121,7 @@ var _ = Describe("eventHandler", func() {
 
 		When("a batch has one event", func() {
 			It("should process Upsert", func() {
-				e := &events.UpsertEvent{Resource: &v1beta1.HTTPRoute{}}
+				e := &events.UpsertEvent{Resource: &gatewayv1.HTTPRoute{}}
 				batch := []interface{}{e}
 
 				handler.HandleEventBatch(context.Background(), ctlrZap.New(), batch)
@@ -132,7 +132,7 @@ var _ = Describe("eventHandler", func() {
 
 			It("should process Delete", func() {
 				e := &events.DeleteEvent{
-					Type:           &v1beta1.HTTPRoute{},
+					Type:           &gatewayv1.HTTPRoute{},
 					NamespacedName: types.NamespacedName{Namespace: "test", Name: "route"},
 				}
 				batch := []interface{}{e}
@@ -146,9 +146,9 @@ var _ = Describe("eventHandler", func() {
 
 		When("a batch has multiple events", func() {
 			It("should process events", func() {
-				upsertEvent := &events.UpsertEvent{Resource: &v1beta1.HTTPRoute{}}
+				upsertEvent := &events.UpsertEvent{Resource: &gatewayv1.HTTPRoute{}}
 				deleteEvent := &events.DeleteEvent{
-					Type:           &v1beta1.HTTPRoute{},
+					Type:           &gatewayv1.HTTPRoute{},
 					NamespacedName: types.NamespacedName{Namespace: "test", Name: "route"},
 				}
 				batch := []interface{}{upsertEvent, deleteEvent}
@@ -279,7 +279,7 @@ var _ = Describe("eventHandler", func() {
 	})
 
 	It("should set the health checker status properly when there are changes", func() {
-		e := &events.UpsertEvent{Resource: &v1beta1.HTTPRoute{}}
+		e := &events.UpsertEvent{Resource: &gatewayv1.HTTPRoute{}}
 		batch := []interface{}{e}
 
 		fakeProcessor.ProcessReturns(true, &graph.Graph{})
@@ -290,7 +290,7 @@ var _ = Describe("eventHandler", func() {
 	})
 
 	It("should set the health checker status properly when there are no changes or errors", func() {
-		e := &events.UpsertEvent{Resource: &v1beta1.HTTPRoute{}}
+		e := &events.UpsertEvent{Resource: &gatewayv1.HTTPRoute{}}
 		batch := []interface{}{e}
 
 		Expect(handler.cfg.healthChecker.readyCheck(nil)).ToNot(Succeed())
@@ -299,7 +299,7 @@ var _ = Describe("eventHandler", func() {
 	})
 
 	It("should set the health checker status properly when there is an error", func() {
-		e := &events.UpsertEvent{Resource: &v1beta1.HTTPRoute{}}
+		e := &events.UpsertEvent{Resource: &gatewayv1.HTTPRoute{}}
 		batch := []interface{}{e}
 
 		fakeProcessor.ProcessReturns(true, &graph.Graph{})
