@@ -25,6 +25,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
+	"sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 	"sigs.k8s.io/gateway-api/conformance/apis/v1alpha1"
@@ -43,6 +44,7 @@ func TestConformance(t *testing.T) {
 	g.Expect(err).To(BeNil())
 
 	g.Expect(v1alpha2.AddToScheme(client.Scheme())).To(Succeed())
+	g.Expect(v1.AddToScheme(client.Scheme())).To(Succeed())
 	g.Expect(v1beta1.AddToScheme(client.Scheme())).To(Succeed())
 
 	supportedFeatures := suite.ParseSupportedFeatures(*flags.SupportedFeatures)

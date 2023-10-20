@@ -6,9 +6,9 @@ This document describes which Gateway API resources NGINX Gateway Fabric support
 
 | Resource                            | Core Support Level | Extended Support Level | Implementation-Specific Support Level | API Version |
 |-------------------------------------|--------------------|------------------------|---------------------------------------|-------------|
-| [GatewayClass](#gatewayclass)       | Supported          | Not supported          | Not Supported                         | v1beta1     |
-| [Gateway](#gateway)                 | Supported          | Not supported          | Not Supported                         | v1beta1     |
-| [HTTPRoute](#httproute)             | Supported          | Partially supported    | Not Supported                         | v1beta1     |
+| [GatewayClass](#gatewayclass)       | Supported          | Not supported          | Not Supported                         | v1          |
+| [Gateway](#gateway)                 | Supported          | Not supported          | Not Supported                         | v1          |
+| [HTTPRoute](#httproute)             | Supported          | Partially supported    | Not Supported                         | v1          |
 | [ReferenceGrant](#referencegrant)   | Supported          | N/A                    | Not Supported                         | v1beta1     |
 | [Custom policies](#custom-policies) | Not supported      | N/A                    | Not Supported                         | N/A         |
 | [TLSRoute](#tlsroute)               | Not supported      | Not supported          | Not Supported                         | N/A         |

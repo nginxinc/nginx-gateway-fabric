@@ -8,20 +8,21 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/gateway-api/apis/v1beta1"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
+	v1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/controller/index"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/relationship"
 )
 
-func createBackendRefs(backendNames ...v1beta1.ObjectName) []v1beta1.HTTPBackendRef {
-	refs := make([]v1beta1.HTTPBackendRef, 0, len(backendNames))
+func createBackendRefs(backendNames ...gatewayv1.ObjectName) []gatewayv1.HTTPBackendRef {
+	refs := make([]gatewayv1.HTTPBackendRef, 0, len(backendNames))
 	for _, name := range backendNames {
-		refs = append(refs, v1beta1.HTTPBackendRef{
-			BackendRef: v1beta1.BackendRef{
-				BackendObjectReference: v1beta1.BackendObjectReference{
-					Kind:      (*v1beta1.Kind)(helpers.GetPointer("Service")),
+		refs = append(refs, gatewayv1.HTTPBackendRef{
+			BackendRef: gatewayv1.BackendRef{
+				BackendObjectReference: gatewayv1.BackendObjectReference{
+					Kind:      (*gatewayv1.Kind)(helpers.GetPointer("Service")),
 					Name:      name,
 					Namespace: (*v1beta1.Namespace)(helpers.GetPointer("test")),
 				},
@@ -32,19 +33,19 @@ func createBackendRefs(backendNames ...v1beta1.ObjectName) []v1beta1.HTTPBackend
 	return refs
 }
 
-func createRules(backendRefs ...[]v1beta1.HTTPBackendRef) []v1beta1.HTTPRouteRule {
-	rules := make([]v1beta1.HTTPRouteRule, 0, len(backendRefs))
+func createRules(backendRefs ...[]gatewayv1.HTTPBackendRef) []gatewayv1.HTTPRouteRule {
+	rules := make([]gatewayv1.HTTPRouteRule, 0, len(backendRefs))
 	for _, refs := range backendRefs {
-		rules = append(rules, v1beta1.HTTPRouteRule{BackendRefs: refs})
+		rules = append(rules, gatewayv1.HTTPRouteRule{BackendRefs: refs})
 	}
 
 	return rules
 }
 
-func createRoute(name string, rules []v1beta1.HTTPRouteRule) *v1beta1.HTTPRoute {
-	return &v1beta1.HTTPRoute{
+func createRoute(name string, rules []gatewayv1.HTTPRouteRule) *gatewayv1.HTTPRoute {
+	return &gatewayv1.HTTPRoute{
 		ObjectMeta: metav1.ObjectMeta{Namespace: "test", Name: name},
-		Spec:       v1beta1.HTTPRouteSpec{Rules: rules},
+		Spec:       gatewayv1.HTTPRouteSpec{Rules: rules},
 	}
 }
 
@@ -129,7 +130,7 @@ var _ = Describe("Capturer", func() {
 			})
 			When("a route with multiple backend services is removed", func() {
 				It("removes all service relationships", func() {
-					capturer.Remove(&v1beta1.HTTPRoute{}, hr2Name)
+					capturer.Remove(&gatewayv1.HTTPRoute{}, hr2Name)
 
 					assertServiceExists(svc2, false, 0)
 					assertServiceExists(svc3, false, 0)
@@ -141,7 +142,7 @@ var _ = Describe("Capturer", func() {
 			})
 			When("a route is removed", func() {
 				It("removes service relationships", func() {
-					capturer.Remove(&v1beta1.HTTPRoute{}, hr1Name)
+					capturer.Remove(&gatewayv1.HTTPRoute{}, hr1Name)
 
 					assertServiceExists(svc1, false, 0)
 				})
@@ -163,7 +164,7 @@ var _ = Describe("Capturer", func() {
 			})
 			When("one route is removed", func() {
 				It("reports remaining service relationships", func() {
-					capturer.Remove(&v1beta1.HTTPRoute{}, hr1Name)
+					capturer.Remove(&gatewayv1.HTTPRoute{}, hr1Name)
 
 					// ref count for svc1 should decrease by one
 					assertServiceExists(svc1, true, 3)
@@ -176,7 +177,7 @@ var _ = Describe("Capturer", func() {
 			})
 			When("another route is removed", func() {
 				It("reports remaining service relationships", func() {
-					capturer.Remove(&v1beta1.HTTPRoute{}, hrSvc1AndSvc2Name)
+					capturer.Remove(&gatewayv1.HTTPRoute{}, hrSvc1AndSvc2Name)
 
 					// svc2 should no longer exist
 					assertServiceExists(svc2, false, 0)
@@ -191,7 +192,7 @@ var _ = Describe("Capturer", func() {
 			})
 			When("another route is removed", func() {
 				It("reports remaining service relationships", func() {
-					capturer.Remove(&v1beta1.HTTPRoute{}, hrSvc1AndSvc3Name)
+					capturer.Remove(&gatewayv1.HTTPRoute{}, hrSvc1AndSvc3Name)
 
 					// svc3 should no longer exist
 					assertServiceExists(svc3, false, 0)
@@ -207,7 +208,7 @@ var _ = Describe("Capturer", func() {
 				})
 				When("final route is removed", func() {
 					It("removes all service relationships", func() {
-						capturer.Remove(&v1beta1.HTTPRoute{}, hrSvc1AndSvc4Name)
+						capturer.Remove(&gatewayv1.HTTPRoute{}, hrSvc1AndSvc4Name)
 
 						// no services should exist and all ref counts should be 0
 						assertServiceExists(svc1, false, 0)
@@ -218,7 +219,7 @@ var _ = Describe("Capturer", func() {
 				})
 				When("route is removed again", func() {
 					It("service ref counts remain at 0", func() {
-						capturer.Remove(&v1beta1.HTTPRoute{}, hrSvc1AndSvc4Name)
+						capturer.Remove(&gatewayv1.HTTPRoute{}, hrSvc1AndSvc4Name)
 
 						// no services should exist and all ref counts should still be 0
 						assertServiceExists(svc1, false, 0)
@@ -307,7 +308,7 @@ var _ = Describe("Capturer", func() {
 				})
 				When("service relationship is removed", func() {
 					It("removes the endpoint slice relationship", func() {
-						capturer.Remove(&v1beta1.HTTPRoute{}, hr1Name)
+						capturer.Remove(&gatewayv1.HTTPRoute{}, hr1Name)
 
 						Expect(capturer.Exists(&discoveryV1.EndpointSlice{}, slice1Name)).To(BeFalse())
 					})
@@ -316,21 +317,21 @@ var _ = Describe("Capturer", func() {
 		})
 	})
 	Describe("Capture namespace and gateway relationships", func() {
-		var gw *v1beta1.Gateway
+		var gw *gatewayv1.Gateway
 		var nsNoLabels, ns *v1.Namespace
 
 		BeforeEach(func() {
 			capturer = relationship.NewCapturerImpl()
-			gw = &v1beta1.Gateway{
+			gw = &gatewayv1.Gateway{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "gw",
 				},
-				Spec: v1beta1.GatewaySpec{
-					Listeners: []v1beta1.Listener{
+				Spec: gatewayv1.GatewaySpec{
+					Listeners: []gatewayv1.Listener{
 						{
-							AllowedRoutes: &v1beta1.AllowedRoutes{
-								Namespaces: &v1beta1.RouteNamespaces{
-									From: helpers.GetPointer(v1beta1.NamespacesFromSelector),
+							AllowedRoutes: &gatewayv1.AllowedRoutes{
+								Namespaces: &gatewayv1.RouteNamespaces{
+									From: helpers.GetPointer(gatewayv1.NamespacesFromSelector),
 									Selector: &metav1.LabelSelector{
 										MatchLabels: map[string]string{
 											"app": "valid",
@@ -447,16 +448,16 @@ var _ = Describe("Capturer", func() {
 		})
 		It("Capture does not panic when passed an unsupported resource type", func() {
 			Expect(func() {
-				capturer.Capture(&v1beta1.GatewayClass{})
+				capturer.Capture(&gatewayv1.GatewayClass{})
 			}).ToNot(Panic())
 		})
 		It("Remove does not panic when passed an unsupported resource type", func() {
 			Expect(func() {
-				capturer.Remove(&v1beta1.GatewayClass{}, types.NamespacedName{})
+				capturer.Remove(&gatewayv1.GatewayClass{}, types.NamespacedName{})
 			}).ToNot(Panic())
 		})
 		It("Exist returns false if passed an unsupported resource type", func() {
-			Expect(capturer.Exists(&v1beta1.GatewayClass{}, types.NamespacedName{})).To(BeFalse())
+			Expect(capturer.Exists(&gatewayv1.GatewayClass{}, types.NamespacedName{})).To(BeFalse())
 		})
 	})
 })

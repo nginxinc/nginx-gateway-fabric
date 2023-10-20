@@ -26,7 +26,7 @@ type objectStore interface {
 }
 
 // objectStoreMapAdapter wraps maps of types.NamespacedName to Kubernetes resources
-// (e.g. map[types.NamespacedName]*v1beta1.Gateway) so that they can be used through objectStore interface.
+// (e.g. map[types.NamespacedName]*v1.Gateway) so that they can be used through objectStore interface.
 type objectStoreMapAdapter[T client.Object] struct {
 	objects map[types.NamespacedName]T
 }

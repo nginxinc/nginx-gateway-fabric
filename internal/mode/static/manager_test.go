@@ -10,6 +10,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/config"
@@ -28,15 +29,15 @@ func TestPrepareFirstEventBatchPreparerArgs(t *testing.T) {
 			name:     "gwNsName is nil",
 			gwNsName: nil,
 			expectedObjects: []client.Object{
-				&gatewayv1beta1.GatewayClass{ObjectMeta: metav1.ObjectMeta{Name: "nginx"}},
+				&gatewayv1.GatewayClass{ObjectMeta: metav1.ObjectMeta{Name: "nginx"}},
 			},
 			expectedObjectLists: []client.ObjectList{
 				&apiv1.ServiceList{},
 				&apiv1.SecretList{},
 				&apiv1.NamespaceList{},
 				&discoveryV1.EndpointSliceList{},
-				&gatewayv1beta1.HTTPRouteList{},
-				&gatewayv1beta1.GatewayList{},
+				&gatewayv1.HTTPRouteList{},
+				&gatewayv1.GatewayList{},
 				&gatewayv1beta1.ReferenceGrantList{},
 			},
 		},
@@ -47,15 +48,15 @@ func TestPrepareFirstEventBatchPreparerArgs(t *testing.T) {
 				Name:      "my-gateway",
 			},
 			expectedObjects: []client.Object{
-				&gatewayv1beta1.GatewayClass{ObjectMeta: metav1.ObjectMeta{Name: "nginx"}},
-				&gatewayv1beta1.Gateway{ObjectMeta: metav1.ObjectMeta{Name: "my-gateway", Namespace: "test"}},
+				&gatewayv1.GatewayClass{ObjectMeta: metav1.ObjectMeta{Name: "nginx"}},
+				&gatewayv1.Gateway{ObjectMeta: metav1.ObjectMeta{Name: "my-gateway", Namespace: "test"}},
 			},
 			expectedObjectLists: []client.ObjectList{
 				&apiv1.ServiceList{},
 				&apiv1.SecretList{},
 				&apiv1.NamespaceList{},
 				&discoveryV1.EndpointSliceList{},
-				&gatewayv1beta1.HTTPRouteList{},
+				&gatewayv1.HTTPRouteList{},
 				&gatewayv1beta1.ReferenceGrantList{},
 			},
 		},

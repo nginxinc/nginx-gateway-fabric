@@ -12,7 +12,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/gateway-api/apis/v1beta1"
+	v1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/controller"
@@ -28,7 +28,7 @@ type Updater interface {
 	// Update updates the statuses of the resources.
 	Update(context.Context, Status)
 	// UpdateAddresses updates the Gateway Addresses when the Gateway Service changes.
-	UpdateAddresses(context.Context, []v1beta1.GatewayStatusAddress)
+	UpdateAddresses(context.Context, []v1.GatewayStatusAddress)
 	// Enable enables status updates. The updater will update the statuses in Kubernetes API to ensure they match the
 	// statuses of the last Update invocation.
 	Enable(ctx context.Context)
@@ -176,7 +176,7 @@ func (upd *UpdaterImpl) updateGatewayAPI(ctx context.Context, statuses GatewayAP
 			default:
 			}
 
-			upd.writeStatuses(ctx, nsname, &v1beta1.GatewayClass{}, newGatewayClassStatusSetter(upd.cfg.Clock, gcs))
+			upd.writeStatuses(ctx, nsname, &v1.GatewayClass{}, newGatewayClassStatusSetter(upd.cfg.Clock, gcs))
 		}
 	}
 
@@ -187,7 +187,7 @@ func (upd *UpdaterImpl) updateGatewayAPI(ctx context.Context, statuses GatewayAP
 		default:
 		}
 
-		upd.writeStatuses(ctx, nsname, &v1beta1.Gateway{}, newGatewayStatusSetter(upd.cfg.Clock, gs))
+		upd.writeStatuses(ctx, nsname, &v1.Gateway{}, newGatewayStatusSetter(upd.cfg.Clock, gs))
 	}
 
 	for nsname, rs := range statuses.HTTPRouteStatuses {
@@ -200,7 +200,7 @@ func (upd *UpdaterImpl) updateGatewayAPI(ctx context.Context, statuses GatewayAP
 		upd.writeStatuses(
 			ctx,
 			nsname,
-			&v1beta1.HTTPRoute{},
+			&v1.HTTPRoute{},
 			newHTTPRouteStatusSetter(upd.cfg.GatewayCtlrName, upd.cfg.Clock, rs),
 		)
 	}
@@ -235,7 +235,7 @@ func (upd *UpdaterImpl) writeStatuses(
 }
 
 // UpdateAddresses is called when the Gateway Status needs its addresses updated.
-func (upd *UpdaterImpl) UpdateAddresses(ctx context.Context, addresses []v1beta1.GatewayStatusAddress) {
+func (upd *UpdaterImpl) UpdateAddresses(ctx context.Context, addresses []v1.GatewayStatusAddress) {
 	defer upd.lock.Unlock()
 	upd.lock.Lock()
 

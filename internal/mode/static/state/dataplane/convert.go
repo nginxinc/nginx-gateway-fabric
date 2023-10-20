@@ -3,10 +3,10 @@ package dataplane
 import (
 	"fmt"
 
-	"sigs.k8s.io/gateway-api/apis/v1beta1"
+	v1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
-func convertMatch(m v1beta1.HTTPRouteMatch) Match {
+func convertMatch(m v1.HTTPRouteMatch) Match {
 	match := Match{}
 
 	if m.Method != nil {
@@ -37,7 +37,7 @@ func convertMatch(m v1beta1.HTTPRouteMatch) Match {
 	return match
 }
 
-func convertHTTPRequestRedirectFilter(filter *v1beta1.HTTPRequestRedirectFilter) *HTTPRequestRedirectFilter {
+func convertHTTPRequestRedirectFilter(filter *v1.HTTPRequestRedirectFilter) *HTTPRequestRedirectFilter {
 	return &HTTPRequestRedirectFilter{
 		Scheme:     filter.Scheme,
 		Hostname:   (*string)(filter.Hostname),
@@ -46,7 +46,7 @@ func convertHTTPRequestRedirectFilter(filter *v1beta1.HTTPRequestRedirectFilter)
 	}
 }
 
-func convertHTTPHeaderFilter(filter *v1beta1.HTTPHeaderFilter) *HTTPHeaderFilter {
+func convertHTTPHeaderFilter(filter *v1.HTTPHeaderFilter) *HTTPHeaderFilter {
 	result := &HTTPHeaderFilter{
 		Remove: filter.Remove,
 	}
@@ -68,11 +68,11 @@ func convertHTTPHeaderFilter(filter *v1beta1.HTTPHeaderFilter) *HTTPHeaderFilter
 	return result
 }
 
-func convertPathType(pathType v1beta1.PathMatchType) PathType {
+func convertPathType(pathType v1.PathMatchType) PathType {
 	switch pathType {
-	case v1beta1.PathMatchPathPrefix:
+	case v1.PathMatchPathPrefix:
 		return PathTypePrefix
-	case v1beta1.PathMatchExact:
+	case v1.PathMatchExact:
 		return PathTypeExact
 	default:
 		panic(fmt.Sprintf("unsupported path type: %s", pathType))

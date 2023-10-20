@@ -6,7 +6,7 @@ import (
 	"sync"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/status"
-	"sigs.k8s.io/gateway-api/apis/v1beta1"
+	v1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
 type FakeUpdater struct {
@@ -25,11 +25,11 @@ type FakeUpdater struct {
 		arg1 context.Context
 		arg2 status.Status
 	}
-	UpdateAddressesStub        func(context.Context, []v1beta1.GatewayStatusAddress)
+	UpdateAddressesStub        func(context.Context, []v1.GatewayStatusAddress)
 	updateAddressesMutex       sync.RWMutex
 	updateAddressesArgsForCall []struct {
 		arg1 context.Context
-		arg2 []v1beta1.GatewayStatusAddress
+		arg2 []v1.GatewayStatusAddress
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
@@ -124,16 +124,16 @@ func (fake *FakeUpdater) UpdateArgsForCall(i int) (context.Context, status.Statu
 	return argsForCall.arg1, argsForCall.arg2
 }
 
-func (fake *FakeUpdater) UpdateAddresses(arg1 context.Context, arg2 []v1beta1.GatewayStatusAddress) {
-	var arg2Copy []v1beta1.GatewayStatusAddress
+func (fake *FakeUpdater) UpdateAddresses(arg1 context.Context, arg2 []v1.GatewayStatusAddress) {
+	var arg2Copy []v1.GatewayStatusAddress
 	if arg2 != nil {
-		arg2Copy = make([]v1beta1.GatewayStatusAddress, len(arg2))
+		arg2Copy = make([]v1.GatewayStatusAddress, len(arg2))
 		copy(arg2Copy, arg2)
 	}
 	fake.updateAddressesMutex.Lock()
 	fake.updateAddressesArgsForCall = append(fake.updateAddressesArgsForCall, struct {
 		arg1 context.Context
-		arg2 []v1beta1.GatewayStatusAddress
+		arg2 []v1.GatewayStatusAddress
 	}{arg1, arg2Copy})
 	stub := fake.UpdateAddressesStub
 	fake.recordInvocation("UpdateAddresses", []interface{}{arg1, arg2Copy})
@@ -149,13 +149,13 @@ func (fake *FakeUpdater) UpdateAddressesCallCount() int {
 	return len(fake.updateAddressesArgsForCall)
 }
 
-func (fake *FakeUpdater) UpdateAddressesCalls(stub func(context.Context, []v1beta1.GatewayStatusAddress)) {
+func (fake *FakeUpdater) UpdateAddressesCalls(stub func(context.Context, []v1.GatewayStatusAddress)) {
 	fake.updateAddressesMutex.Lock()
 	defer fake.updateAddressesMutex.Unlock()
 	fake.UpdateAddressesStub = stub
 }
 
-func (fake *FakeUpdater) UpdateAddressesArgsForCall(i int) (context.Context, []v1beta1.GatewayStatusAddress) {
+func (fake *FakeUpdater) UpdateAddressesArgsForCall(i int) (context.Context, []v1.GatewayStatusAddress) {
 	fake.updateAddressesMutex.RLock()
 	defer fake.updateAddressesMutex.RUnlock()
 	argsForCall := fake.updateAddressesArgsForCall[i]

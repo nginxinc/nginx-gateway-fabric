@@ -9,7 +9,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/gateway-api/apis/v1beta1"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
+	v1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/validation"
@@ -35,43 +36,43 @@ func TestBuildGraph(t *testing.T) {
 		}
 	}
 
-	createRoute := func(name string, gatewayName string, listenerName string) *v1beta1.HTTPRoute {
-		return &v1beta1.HTTPRoute{
+	createRoute := func(name string, gatewayName string, listenerName string) *gatewayv1.HTTPRoute {
+		return &gatewayv1.HTTPRoute{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: "test",
 				Name:      name,
 			},
-			Spec: v1beta1.HTTPRouteSpec{
-				CommonRouteSpec: v1beta1.CommonRouteSpec{
-					ParentRefs: []v1beta1.ParentReference{
+			Spec: gatewayv1.HTTPRouteSpec{
+				CommonRouteSpec: gatewayv1.CommonRouteSpec{
+					ParentRefs: []gatewayv1.ParentReference{
 						{
-							Namespace:   (*v1beta1.Namespace)(helpers.GetPointer("test")),
-							Name:        v1beta1.ObjectName(gatewayName),
-							SectionName: (*v1beta1.SectionName)(helpers.GetPointer(listenerName)),
+							Namespace:   (*gatewayv1.Namespace)(helpers.GetPointer("test")),
+							Name:        gatewayv1.ObjectName(gatewayName),
+							SectionName: (*gatewayv1.SectionName)(helpers.GetPointer(listenerName)),
 						},
 					},
 				},
-				Hostnames: []v1beta1.Hostname{
+				Hostnames: []gatewayv1.Hostname{
 					"foo.example.com",
 				},
-				Rules: []v1beta1.HTTPRouteRule{
+				Rules: []gatewayv1.HTTPRouteRule{
 					{
-						Matches: []v1beta1.HTTPRouteMatch{
+						Matches: []gatewayv1.HTTPRouteMatch{
 							{
-								Path: &v1beta1.HTTPPathMatch{
-									Type:  helpers.GetPointer(v1beta1.PathMatchPathPrefix),
+								Path: &gatewayv1.HTTPPathMatch{
+									Type:  helpers.GetPointer(gatewayv1.PathMatchPathPrefix),
 									Value: helpers.GetPointer("/"),
 								},
 							},
 						},
-						BackendRefs: []v1beta1.HTTPBackendRef{
+						BackendRefs: []gatewayv1.HTTPBackendRef{
 							{
-								BackendRef: v1beta1.BackendRef{
-									BackendObjectReference: v1beta1.BackendObjectReference{
-										Kind:      (*v1beta1.Kind)(helpers.GetPointer("Service")),
+								BackendRef: gatewayv1.BackendRef{
+									BackendObjectReference: gatewayv1.BackendObjectReference{
+										Kind:      (*gatewayv1.Kind)(helpers.GetPointer("Service")),
 										Name:      "foo",
-										Namespace: (*v1beta1.Namespace)(helpers.GetPointer("service")),
-										Port:      (*v1beta1.PortNumber)(helpers.GetPointer[int32](80)),
+										Namespace: (*gatewayv1.Namespace)(helpers.GetPointer("service")),
+										Port:      (*gatewayv1.PortNumber)(helpers.GetPointer[int32](80)),
 									},
 								},
 							},
@@ -118,37 +119,37 @@ func TestBuildGraph(t *testing.T) {
 		Type: v1.SecretTypeTLS,
 	}
 
-	createGateway := func(name string) *v1beta1.Gateway {
-		return &v1beta1.Gateway{
+	createGateway := func(name string) *gatewayv1.Gateway {
+		return &gatewayv1.Gateway{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: "test",
 				Name:      name,
 			},
-			Spec: v1beta1.GatewaySpec{
+			Spec: gatewayv1.GatewaySpec{
 				GatewayClassName: gcName,
-				Listeners: []v1beta1.Listener{
+				Listeners: []gatewayv1.Listener{
 					{
 						Name:     "listener-80-1",
 						Hostname: nil,
 						Port:     80,
-						Protocol: v1beta1.HTTPProtocolType,
+						Protocol: gatewayv1.HTTPProtocolType,
 					},
 
 					{
 						Name:     "listener-443-1",
 						Hostname: nil,
 						Port:     443,
-						TLS: &v1beta1.GatewayTLSConfig{
-							Mode: helpers.GetPointer(v1beta1.TLSModeTerminate),
-							CertificateRefs: []v1beta1.SecretObjectReference{
+						TLS: &gatewayv1.GatewayTLSConfig{
+							Mode: helpers.GetPointer(gatewayv1.TLSModeTerminate),
+							CertificateRefs: []gatewayv1.SecretObjectReference{
 								{
-									Kind:      helpers.GetPointer[v1beta1.Kind]("Secret"),
-									Name:      v1beta1.ObjectName(secret.Name),
+									Kind:      helpers.GetPointer[gatewayv1.Kind]("Secret"),
+									Name:      gatewayv1.ObjectName(secret.Name),
 									Namespace: helpers.GetPointer(v1beta1.Namespace(secret.Namespace)),
 								},
 							},
 						},
-						Protocol: v1beta1.HTTPSProtocolType,
+						Protocol: gatewayv1.HTTPSProtocolType,
 					},
 				},
 			},
@@ -168,7 +169,7 @@ func TestBuildGraph(t *testing.T) {
 		Spec: v1beta1.ReferenceGrantSpec{
 			From: []v1beta1.ReferenceGrantFrom{
 				{
-					Group:     v1beta1.GroupName,
+					Group:     gatewayv1.GroupName,
 					Kind:      "Gateway",
 					Namespace: "test",
 				},
@@ -189,7 +190,7 @@ func TestBuildGraph(t *testing.T) {
 		Spec: v1beta1.ReferenceGrantSpec{
 			From: []v1beta1.ReferenceGrantFrom{
 				{
-					Group:     v1beta1.GroupName,
+					Group:     gatewayv1.GroupName,
 					Kind:      "HTTPRoute",
 					Namespace: "test",
 				},
@@ -202,16 +203,16 @@ func TestBuildGraph(t *testing.T) {
 		},
 	}
 
-	createStateWithGatewayClass := func(gc *v1beta1.GatewayClass) ClusterState {
+	createStateWithGatewayClass := func(gc *gatewayv1.GatewayClass) ClusterState {
 		return ClusterState{
-			GatewayClasses: map[types.NamespacedName]*v1beta1.GatewayClass{
+			GatewayClasses: map[types.NamespacedName]*gatewayv1.GatewayClass{
 				client.ObjectKeyFromObject(gc): gc,
 			},
-			Gateways: map[types.NamespacedName]*v1beta1.Gateway{
+			Gateways: map[types.NamespacedName]*gatewayv1.Gateway{
 				client.ObjectKeyFromObject(gw1): gw1,
 				client.ObjectKeyFromObject(gw2): gw2,
 			},
-			HTTPRoutes: map[types.NamespacedName]*v1beta1.HTTPRoute{
+			HTTPRoutes: map[types.NamespacedName]*gatewayv1.HTTPRoute{
 				client.ObjectKeyFromObject(hr1): hr1,
 				client.ObjectKeyFromObject(hr2): hr2,
 				client.ObjectKeyFromObject(hr3): hr3,
@@ -261,7 +262,7 @@ func TestBuildGraph(t *testing.T) {
 		Rules: []Rule{createValidRuleWithBackendRefs(hr3Refs)},
 	}
 
-	createExpectedGraphWithGatewayClass := func(gc *v1beta1.GatewayClass) *Graph {
+	createExpectedGraphWithGatewayClass := func(gc *gatewayv1.GatewayClass) *Graph {
 		return &Graph{
 			GatewayClass: &GatewayClass{
 				Source: gc,
@@ -276,7 +277,7 @@ func TestBuildGraph(t *testing.T) {
 						Routes: map[types.NamespacedName]*Route{
 							{Namespace: "test", Name: "hr-1"}: routeHR1,
 						},
-						SupportedKinds: []v1beta1.RouteGroupKind{{Kind: "HTTPRoute"}},
+						SupportedKinds: []gatewayv1.RouteGroupKind{{Kind: "HTTPRoute"}},
 					},
 					"listener-443-1": {
 						Source: gw1.Spec.Listeners[1],
@@ -285,12 +286,12 @@ func TestBuildGraph(t *testing.T) {
 							{Namespace: "test", Name: "hr-3"}: routeHR3,
 						},
 						ResolvedSecret: helpers.GetPointer(client.ObjectKeyFromObject(secret)),
-						SupportedKinds: []v1beta1.RouteGroupKind{{Kind: "HTTPRoute"}},
+						SupportedKinds: []gatewayv1.RouteGroupKind{{Kind: "HTTPRoute"}},
 					},
 				},
 				Valid: true,
 			},
-			IgnoredGateways: map[types.NamespacedName]*v1beta1.Gateway{
+			IgnoredGateways: map[types.NamespacedName]*gatewayv1.Gateway{
 				{Namespace: "test", Name: "gateway-2"}: gw2,
 			},
 			Routes: map[types.NamespacedName]*Route{
@@ -305,19 +306,19 @@ func TestBuildGraph(t *testing.T) {
 		}
 	}
 
-	normalGC := &v1beta1.GatewayClass{
+	normalGC := &gatewayv1.GatewayClass{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: gcName,
 		},
-		Spec: v1beta1.GatewayClassSpec{
+		Spec: gatewayv1.GatewayClassSpec{
 			ControllerName: controllerName,
 		},
 	}
-	differentControllerGC := &v1beta1.GatewayClass{
+	differentControllerGC := &gatewayv1.GatewayClass{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: gcName,
 		},
-		Spec: v1beta1.GatewayClassSpec{
+		Spec: gatewayv1.GatewayClassSpec{
 			ControllerName: "different-controller",
 		},
 	}

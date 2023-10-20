@@ -2,7 +2,7 @@ package conditions
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/gateway-api/apis/v1beta1"
+	v1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
 const (
@@ -10,7 +10,7 @@ const (
 	// that reference this controller, and we ignored the resource in question and picked the
 	// GatewayClass that is referenced in the command-line argument.
 	// This reason is used with GatewayClassConditionAccepted (false).
-	GatewayClassReasonGatewayClassConflict v1beta1.GatewayClassConditionReason = "GatewayClassConflict"
+	GatewayClassReasonGatewayClassConflict v1.GatewayClassConditionReason = "GatewayClassConflict"
 
 	// GatewayClassMessageGatewayClassConflict is a message that describes GatewayClassReasonGatewayClassConflict.
 	GatewayClassMessageGatewayClassConflict = "The resource is ignored due to a conflicting GatewayClass resource"
@@ -28,9 +28,9 @@ type Condition struct {
 func NewDefaultGatewayClassConditions() []Condition {
 	return []Condition{
 		{
-			Type:    string(v1beta1.GatewayClassConditionStatusAccepted),
+			Type:    string(v1.GatewayClassConditionStatusAccepted),
 			Status:  metav1.ConditionTrue,
-			Reason:  string(v1beta1.GatewayClassReasonAccepted),
+			Reason:  string(v1.GatewayClassReasonAccepted),
 			Message: "GatewayClass is accepted",
 		},
 	}
@@ -40,7 +40,7 @@ func NewDefaultGatewayClassConditions() []Condition {
 // due to a conflict with another GatewayClass.
 func NewGatewayClassConflict() Condition {
 	return Condition{
-		Type:    string(v1beta1.GatewayClassConditionStatusAccepted),
+		Type:    string(v1.GatewayClassConditionStatusAccepted),
 		Status:  metav1.ConditionFalse,
 		Reason:  string(GatewayClassReasonGatewayClassConflict),
 		Message: GatewayClassMessageGatewayClassConflict,

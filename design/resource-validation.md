@@ -88,7 +88,7 @@ We will introduce two validation methods to be run by NGF control plane:
 ### Re-run of Webhook Validation
 
 Before processing a resource, NGF will validate it using the functions from
-the [validation package](https://github.com/kubernetes-sigs/gateway-api/tree/b241afc88e68c952cc0a59a5c72a51358dc2bada/apis/v1beta1/validation)
+the [validation package](https://github.com/kubernetes-sigs/gateway-api/tree/b241afc88e68c952cc0a59a5c72a51358dc2bada/apis/v1/validation)
 from the Gateway API. This will ensure that the webhook validation cannot be bypassed (it can be bypassed if the webhook
 is not installed, misconfigured, or running a different version), and it will allow us to avoid repeating the same
 validation in our code.

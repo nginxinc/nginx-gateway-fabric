@@ -2,8 +2,11 @@ module github.com/nginxinc/nginx-gateway-fabric
 
 go 1.21.3
 
-// Pinned to a version that is properly licensed.
-replace github.com/chzyer/logex v1.1.10 => github.com/chzyer/logex v1.2.0
+replace (
+	// Pinned to a version that is properly licensed.
+	github.com/chzyer/logex v1.1.10 => github.com/chzyer/logex v1.2.0
+	sigs.k8s.io/gateway-api => sigs.k8s.io/gateway-api v1.0.0-rc1
+)
 
 require (
 	github.com/go-logr/logr v1.3.0

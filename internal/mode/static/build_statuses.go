@@ -3,7 +3,7 @@ package static
 import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/gateway-api/apis/v1beta1"
+	v1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/status"
@@ -18,7 +18,7 @@ type nginxReloadResult struct {
 // buildGatewayAPIStatuses builds status.Statuses from a Graph.
 func buildGatewayAPIStatuses(
 	graph *graph.Graph,
-	gwAddresses []v1beta1.GatewayStatusAddress,
+	gwAddresses []v1.GatewayStatusAddress,
 	nginxReloadRes nginxReloadResult,
 ) status.GatewayAPIStatuses {
 	statuses := status.GatewayAPIStatuses{
@@ -76,7 +76,7 @@ func buildGatewayAPIStatuses(
 
 func buildGatewayClassStatuses(
 	gc *graph.GatewayClass,
-	ignoredGwClasses map[types.NamespacedName]*v1beta1.GatewayClass,
+	ignoredGwClasses map[types.NamespacedName]*v1.GatewayClass,
 ) status.GatewayClassStatuses {
 	statuses := make(status.GatewayClassStatuses)
 
@@ -108,8 +108,8 @@ func buildGatewayClassStatuses(
 
 func buildGatewayStatuses(
 	gateway *graph.Gateway,
-	ignoredGateways map[types.NamespacedName]*v1beta1.Gateway,
-	gwAddresses []v1beta1.GatewayStatusAddress,
+	ignoredGateways map[types.NamespacedName]*v1.Gateway,
+	gwAddresses []v1.GatewayStatusAddress,
 	nginxReloadRes nginxReloadResult,
 ) status.GatewayStatuses {
 	statuses := make(status.GatewayStatuses)
@@ -131,7 +131,7 @@ func buildGatewayStatuses(
 
 func buildGatewayStatus(
 	gateway *graph.Gateway,
-	gwAddresses []v1beta1.GatewayStatusAddress,
+	gwAddresses []v1.GatewayStatusAddress,
 	nginxReloadRes nginxReloadResult,
 ) status.GatewayStatus {
 	if !gateway.Valid {

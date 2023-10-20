@@ -1,7 +1,7 @@
 NGF_TAG = edge
 NGF_PREFIX = nginx-gateway-fabric
 NGINX_IMAGE_NAME = $(NGF_PREFIX)/nginx
-GW_API_VERSION ?= 0.8.1
+GW_API_VERSION ?= 1.0.0-rc1
 GATEWAY_CLASS = nginx
 SUPPORTED_FEATURES = HTTPRoute,HTTPRouteQueryParamMatching,HTTPRouteMethodMatching,HTTPRoutePortRedirect,HTTPRouteSchemeRedirect,GatewayClassObservedGenerationBump
 KIND_IMAGE ?= $(shell grep -m1 'FROM kindest/node' <tests/Dockerfile | awk -F'[ ]' '{print $$2}')
@@ -48,7 +48,6 @@ load-images: ## Load NGF and NGINX images on configured kind cluster
 .PHONY: prepare-ngf-dependencies
 prepare-ngf-dependencies: update-ngf-manifest ## Install NGF dependencies on configured kind cluster
 	./scripts/install-gateway.sh $(GW_API_VERSION)
-	kubectl wait --for=condition=available --timeout=60s deployment gateway-api-admission-server -n gateway-system
 	kubectl apply -f $(CRDS)
 	kubectl apply -f $(NGF_MANIFEST)
 

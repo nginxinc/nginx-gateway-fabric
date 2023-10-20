@@ -71,7 +71,7 @@ the `--service` argument to the controller.
 
 > **Important**
 > The Service manifests expose NGINX Gateway Fabric on ports 80 and 443, which exposes any
-> Gateway [Listener](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.Listener)
+> Gateway [Listener](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.Listener)
 > configured for those ports. If you'd like to use different ports in your listeners,
 > update the manifests accordingly.
 >

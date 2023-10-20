@@ -4,6 +4,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/validation"
@@ -11,9 +12,9 @@ import (
 
 // ClusterState includes cluster resources necessary to build the Graph.
 type ClusterState struct {
-	GatewayClasses  map[types.NamespacedName]*v1beta1.GatewayClass
-	Gateways        map[types.NamespacedName]*v1beta1.Gateway
-	HTTPRoutes      map[types.NamespacedName]*v1beta1.HTTPRoute
+	GatewayClasses  map[types.NamespacedName]*gatewayv1.GatewayClass
+	Gateways        map[types.NamespacedName]*gatewayv1.Gateway
+	HTTPRoutes      map[types.NamespacedName]*gatewayv1.HTTPRoute
 	Services        map[types.NamespacedName]*v1.Service
 	Namespaces      map[types.NamespacedName]*v1.Namespace
 	ReferenceGrants map[types.NamespacedName]*v1beta1.ReferenceGrant
@@ -29,11 +30,11 @@ type Graph struct {
 	// IgnoredGatewayClasses holds the ignored GatewayClass resources, which reference NGINX Gateway Fabric in the
 	// controllerName, but are not configured via the NGINX Gateway Fabric CLI argument. It doesn't hold the GatewayClass
 	// resources that do not belong to the NGINX Gateway Fabric.
-	IgnoredGatewayClasses map[types.NamespacedName]*v1beta1.GatewayClass
+	IgnoredGatewayClasses map[types.NamespacedName]*gatewayv1.GatewayClass
 	// IgnoredGateways holds the ignored Gateway resources, which belong to the NGINX Gateway Fabric (based on the
 	// GatewayClassName field of the resource) but ignored. It doesn't hold the Gateway resources that do not belong to
 	// the NGINX Gateway Fabric.
-	IgnoredGateways map[types.NamespacedName]*v1beta1.Gateway
+	IgnoredGateways map[types.NamespacedName]*gatewayv1.Gateway
 	// Routes holds Route resources.
 	Routes map[types.NamespacedName]*Route
 	// ReferencedSecrets includes Secrets referenced by Gateway Listeners, including invalid ones.

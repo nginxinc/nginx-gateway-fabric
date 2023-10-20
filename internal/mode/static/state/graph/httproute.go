@@ -10,7 +10,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/gateway-api/apis/v1beta1"
+	v1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
 	staticConds "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/conditions"
@@ -57,7 +57,7 @@ type ParentRefAttachmentStatus struct {
 // Route represents an HTTPRoute.
 type Route struct {
 	// Source is the source resource of the Route.
-	Source *v1beta1.HTTPRoute
+	Source *v1.HTTPRoute
 	// ParentRefs includes ParentRefs with NGF Gateways only.
 	ParentRefs []ParentRef
 	// Conditions include Conditions for the HTTPRoute.
@@ -73,7 +73,7 @@ type Route struct {
 // buildRoutesForGateways builds routes from HTTPRoutes that reference any of the specified Gateways.
 func buildRoutesForGateways(
 	validator validation.HTTPFieldsValidator,
-	httpRoutes map[types.NamespacedName]*v1beta1.HTTPRoute,
+	httpRoutes map[types.NamespacedName]*v1.HTTPRoute,
 	gatewayNsNames []types.NamespacedName,
 ) map[types.NamespacedName]*Route {
 	if len(gatewayNsNames) == 0 {
@@ -93,7 +93,7 @@ func buildRoutesForGateways(
 }
 
 func buildSectionNameRefs(
-	parentRefs []v1beta1.ParentReference,
+	parentRefs []v1.ParentReference,
 	routeNamespace string,
 	gatewayNsNames []types.NamespacedName,
 ) []ParentRef {
@@ -138,14 +138,14 @@ func buildSectionNameRefs(
 }
 
 func findGatewayForParentRef(
-	ref v1beta1.ParentReference,
+	ref v1.ParentReference,
 	routeNamespace string,
 	gatewayNsNames []types.NamespacedName,
 ) (gwNsName types.NamespacedName, found bool) {
 	if ref.Kind != nil && *ref.Kind != "Gateway" {
 		return types.NamespacedName{}, false
 	}
-	if ref.Group != nil && *ref.Group != v1beta1.GroupName {
+	if ref.Group != nil && *ref.Group != v1.GroupName {
 		return types.NamespacedName{}, false
 	}
 
@@ -166,7 +166,7 @@ func findGatewayForParentRef(
 
 func buildRoute(
 	validator validation.HTTPFieldsValidator,
-	ghr *v1beta1.HTTPRoute,
+	ghr *v1.HTTPRoute,
 	gatewayNsNames []types.NamespacedName,
 ) *Route {
 	sectionNameRefs := buildSectionNameRefs(ghr.Spec.ParentRefs, ghr.Namespace, gatewayNsNames)
@@ -317,7 +317,7 @@ func bindRouteToListeners(r *Route, gw *Gateway, namespaces map[types.Namespaced
 // If it fails to attach the route, it will return false and the failure condition.
 func tryToAttachRouteToListeners(
 	refStatus *ParentRefAttachmentStatus,
-	sectionName *v1beta1.SectionName,
+	sectionName *v1.SectionName,
 	route *Route,
 	gw *Gateway,
 	namespaces map[types.NamespacedName]*apiv1.Namespace,
@@ -392,7 +392,7 @@ func findValidListeners(sectionName string, listeners map[string]*Listener) ([]*
 	return validListeners, true
 }
 
-func findAcceptedHostnames(listenerHostname *v1beta1.Hostname, routeHostnames []v1beta1.Hostname) []string {
+func findAcceptedHostnames(listenerHostname *v1.Hostname, routeHostnames []v1.Hostname) []string {
 	hostname := getHostname(listenerHostname)
 
 	if len(routeHostnames) == 0 {
@@ -483,11 +483,11 @@ func routeAllowedByListener(
 ) bool {
 	if listener.Source.AllowedRoutes != nil {
 		switch *listener.Source.AllowedRoutes.Namespaces.From {
-		case v1beta1.NamespacesFromAll:
+		case v1.NamespacesFromAll:
 			return true
-		case v1beta1.NamespacesFromSame:
+		case v1.NamespacesFromSame:
 			return routeNS == gwNS
-		case v1beta1.NamespacesFromSelector:
+		case v1.NamespacesFromSelector:
 			if listener.AllowedRouteLabelSelector == nil {
 				return false
 			}
@@ -502,21 +502,21 @@ func routeAllowedByListener(
 	return true
 }
 
-func getHostname(h *v1beta1.Hostname) string {
+func getHostname(h *v1.Hostname) string {
 	if h == nil {
 		return ""
 	}
 	return string(*h)
 }
 
-func getSectionName(s *v1beta1.SectionName) string {
+func getSectionName(s *v1.SectionName) string {
 	if s == nil {
 		return ""
 	}
 	return string(*s)
 }
 
-func validateHostnames(hostnames []v1beta1.Hostname, path *field.Path) error {
+func validateHostnames(hostnames []v1.Hostname, path *field.Path) error {
 	var allErrs field.ErrorList
 
 	for i := range hostnames {
@@ -531,7 +531,7 @@ func validateHostnames(hostnames []v1beta1.Hostname, path *field.Path) error {
 
 func validateMatch(
 	validator validation.HTTPFieldsValidator,
-	match v1beta1.HTTPRouteMatch,
+	match v1.HTTPRouteMatch,
 	matchPath *field.Path,
 ) field.ErrorList {
 	var allErrs field.ErrorList
@@ -562,7 +562,7 @@ func validateMatch(
 
 func validateMethodMatch(
 	validator validation.HTTPFieldsValidator,
-	method *v1beta1.HTTPMethod,
+	method *v1.HTTPMethod,
 	methodPath *field.Path,
 ) *field.Error {
 	if method == nil {
@@ -578,15 +578,15 @@ func validateMethodMatch(
 
 func validateQueryParamMatch(
 	validator validation.HTTPFieldsValidator,
-	q v1beta1.HTTPQueryParamMatch,
+	q v1.HTTPQueryParamMatch,
 	queryParamPath *field.Path,
 ) field.ErrorList {
 	var allErrs field.ErrorList
 
 	if q.Type == nil {
 		allErrs = append(allErrs, field.Required(queryParamPath.Child("type"), "cannot be empty"))
-	} else if *q.Type != v1beta1.QueryParamMatchExact {
-		valErr := field.NotSupported(queryParamPath.Child("type"), *q.Type, []string{string(v1beta1.QueryParamMatchExact)})
+	} else if *q.Type != v1.QueryParamMatchExact {
+		valErr := field.NotSupported(queryParamPath.Child("type"), *q.Type, []string{string(v1.QueryParamMatchExact)})
 		allErrs = append(allErrs, valErr)
 	}
 
@@ -605,18 +605,18 @@ func validateQueryParamMatch(
 
 func validateHeaderMatch(
 	validator validation.HTTPFieldsValidator,
-	header v1beta1.HTTPHeaderMatch,
+	header v1.HTTPHeaderMatch,
 	headerPath *field.Path,
 ) field.ErrorList {
 	var allErrs field.ErrorList
 
 	if header.Type == nil {
 		allErrs = append(allErrs, field.Required(headerPath.Child("type"), "cannot be empty"))
-	} else if *header.Type != v1beta1.HeaderMatchExact {
+	} else if *header.Type != v1.HeaderMatchExact {
 		valErr := field.NotSupported(
 			headerPath.Child("type"),
 			*header.Type,
-			[]string{string(v1beta1.HeaderMatchExact)},
+			[]string{string(v1.HeaderMatchExact)},
 		)
 		allErrs = append(allErrs, valErr)
 	}
@@ -636,7 +636,7 @@ func validateHeaderMatch(
 
 func validatePathMatch(
 	validator validation.HTTPFieldsValidator,
-	path *v1beta1.HTTPPathMatch,
+	path *v1.HTTPPathMatch,
 	fieldPath *field.Path,
 ) field.ErrorList {
 	var allErrs field.ErrorList
@@ -652,9 +652,9 @@ func validatePathMatch(
 		panicForBrokenWebhookAssumption(errors.New("path value cannot be nil"))
 	}
 
-	if *path.Type != v1beta1.PathMatchPathPrefix && *path.Type != v1beta1.PathMatchExact {
+	if *path.Type != v1.PathMatchPathPrefix && *path.Type != v1.PathMatchExact {
 		valErr := field.NotSupported(fieldPath.Child("type"), *path.Type,
-			[]string{string(v1beta1.PathMatchExact), string(v1beta1.PathMatchPathPrefix)})
+			[]string{string(v1.PathMatchExact), string(v1.PathMatchPathPrefix)})
 		allErrs = append(allErrs, valErr)
 	}
 
@@ -668,23 +668,23 @@ func validatePathMatch(
 
 func validateFilter(
 	validator validation.HTTPFieldsValidator,
-	filter v1beta1.HTTPRouteFilter,
+	filter v1.HTTPRouteFilter,
 	filterPath *field.Path,
 ) field.ErrorList {
 	var allErrs field.ErrorList
 
 	switch filter.Type {
-	case v1beta1.HTTPRouteFilterRequestRedirect:
+	case v1.HTTPRouteFilterRequestRedirect:
 		return validateFilterRedirect(validator, filter, filterPath)
-	case v1beta1.HTTPRouteFilterRequestHeaderModifier:
+	case v1.HTTPRouteFilterRequestHeaderModifier:
 		return validateFilterHeaderModifier(validator, filter, filterPath)
 	default:
 		valErr := field.NotSupported(
 			filterPath.Child("type"),
 			filter.Type,
 			[]string{
-				string(v1beta1.HTTPRouteFilterRequestRedirect),
-				string(v1beta1.HTTPRouteFilterRequestHeaderModifier),
+				string(v1.HTTPRouteFilterRequestRedirect),
+				string(v1.HTTPRouteFilterRequestHeaderModifier),
 			},
 		)
 		allErrs = append(allErrs, valErr)
@@ -694,7 +694,7 @@ func validateFilter(
 
 func validateFilterRedirect(
 	validator validation.HTTPFieldsValidator,
-	filter v1beta1.HTTPRouteFilter,
+	filter v1.HTTPRouteFilter,
 	filterPath *field.Path,
 ) field.ErrorList {
 	var allErrs field.ErrorList
@@ -745,7 +745,7 @@ func validateFilterRedirect(
 
 func validateFilterHeaderModifier(
 	validator validation.HTTPFieldsValidator,
-	filter v1beta1.HTTPRouteFilter,
+	filter v1.HTTPRouteFilter,
 	filterPath *field.Path,
 ) field.ErrorList {
 	headerModifier := filter.RequestHeaderModifier
@@ -761,7 +761,7 @@ func validateFilterHeaderModifier(
 
 func validateFilterHeaderModifierFields(
 	validator validation.HTTPFieldsValidator,
-	headerModifier *v1beta1.HTTPHeaderFilter,
+	headerModifier *v1.HTTPHeaderFilter,
 	headerModifierPath *field.Path,
 ) field.ErrorList {
 	var allErrs field.ErrorList
