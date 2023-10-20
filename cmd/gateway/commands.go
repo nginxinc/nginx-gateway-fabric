@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
@@ -22,21 +23,9 @@ const (
 	gatewayClassFlag      = "gatewayclass"
 	gatewayClassNameUsage = `The name of the GatewayClass resource. ` +
 		`Every NGINX Gateway Fabric must have a unique corresponding GatewayClass resource.`
-	gatewayCtrlNameFlag     = "gateway-ctlr-name"
-	gatewayCtrlNameUsageFmt = `The name of the Gateway controller. ` +
+	gatewayCtlrNameFlag     = "gateway-ctlr-name"
+	gatewayCtlrNameUsageFmt = `The name of the Gateway controller. ` +
 		`The controller name must be of the form: DOMAIN/PATH. The controller's domain is '%s'`
-)
-
-var (
-	// Backing values for common cli flags shared among all subcommands
-	// The values are managed by the Root command.
-	gatewayCtlrName = stringValidatingValue{
-		validator: validateGatewayControllerName,
-	}
-
-	gatewayClassName = stringValidatingValue{
-		validator: validateResourceName,
-	}
 )
 
 func createRootCommand() *cobra.Command {
@@ -46,20 +35,6 @@ func createRootCommand() *cobra.Command {
 			return cmd.Help()
 		},
 	}
-
-	rootCmd.PersistentFlags().Var(
-		&gatewayCtlrName,
-		gatewayCtrlNameFlag,
-		fmt.Sprintf(gatewayCtrlNameUsageFmt, domain),
-	)
-	utilruntime.Must(rootCmd.MarkPersistentFlagRequired(gatewayCtrlNameFlag))
-
-	rootCmd.PersistentFlags().Var(
-		&gatewayClassName,
-		gatewayClassFlag,
-		gatewayClassNameUsage,
-	)
-	utilruntime.Must(rootCmd.MarkPersistentFlagRequired(gatewayClassFlag))
 
 	return rootCmd
 }
@@ -82,6 +57,14 @@ func createStaticModeCommand() *cobra.Command {
 
 	// flag values
 	var (
+		gatewayCtlrName = stringValidatingValue{
+			validator: validateGatewayControllerName,
+		}
+
+		gatewayClassName = stringValidatingValue{
+			validator: validateResourceName,
+		}
+
 		updateGCStatus bool
 		gateway        = namespacedNameValue{}
 		configName     = stringValidatingValue{
@@ -186,6 +169,20 @@ func createStaticModeCommand() *cobra.Command {
 	}
 
 	cmd.Flags().Var(
+		&gatewayCtlrName,
+		gatewayCtlrNameFlag,
+		fmt.Sprintf(gatewayCtlrNameUsageFmt, domain),
+	)
+	utilruntime.Must(cmd.MarkFlagRequired(gatewayCtlrNameFlag))
+
+	cmd.Flags().Var(
+		&gatewayClassName,
+		gatewayClassFlag,
+		gatewayClassNameUsage,
+	)
+	utilruntime.Must(cmd.MarkFlagRequired(gatewayClassFlag))
+
+	cmd.Flags().Var(
 		&gateway,
 		gatewayFlag,
 		"The namespaced name of the Gateway resource to use. "+
@@ -271,7 +268,16 @@ func createStaticModeCommand() *cobra.Command {
 }
 
 func createProvisionerModeCommand() *cobra.Command {
-	return &cobra.Command{
+	var (
+		gatewayCtlrName = stringValidatingValue{
+			validator: validateGatewayControllerName,
+		}
+		gatewayClassName = stringValidatingValue{
+			validator: validateResourceName,
+		}
+	)
+
+	cmd := &cobra.Command{
 		Use:    "provisioner-mode",
 		Short:  "Provision a static-mode NGINX Gateway Fabric Deployment per Gateway resource",
 		Hidden: true,
@@ -291,4 +297,50 @@ func createProvisionerModeCommand() *cobra.Command {
 			})
 		},
 	}
+
+	cmd.Flags().Var(
+		&gatewayCtlrName,
+		gatewayCtlrNameFlag,
+		fmt.Sprintf(gatewayCtlrNameUsageFmt, domain),
+	)
+	utilruntime.Must(cmd.MarkFlagRequired(gatewayCtlrNameFlag))
+
+	cmd.Flags().Var(
+		&gatewayClassName,
+		gatewayClassFlag,
+		gatewayClassNameUsage,
+	)
+	utilruntime.Must(cmd.MarkFlagRequired(gatewayClassFlag))
+
+	return cmd
+}
+
+// FIXME(pleshakov): Remove this command once NGF min supported Kubernetes version supports sleep action in
+// preStop hook.
+// nolint:lll
+// See https://github.com/kubernetes/enhancements/tree/4ec371d92dcd4f56a2ab18c8ba20bb85d8d20efe/keps/sig-node/3960-pod-lifecycle-sleep-action
+func createSleepCommand() *cobra.Command {
+	// flag names
+	const durationFlag = "duration"
+	// flag values
+	var duration time.Duration
+
+	cmd := &cobra.Command{
+		Use:   "sleep",
+		Short: "Sleep for specified duration and exit",
+		Run: func(cmd *cobra.Command, args []string) {
+			// It is expected that this command is run from lifecycle hook.
+			// Because logs from hooks are not visible in the container logs, we don't log here at all.
+			time.Sleep(duration)
+		},
+	}
+
+	cmd.Flags().DurationVar(
+		&duration,
+		durationFlag,
+		30*time.Second,
+		"Set the duration of sleep. Must be parsable by https://pkg.go.dev/time#ParseDuration",
+	)
+
+	return cmd
 }

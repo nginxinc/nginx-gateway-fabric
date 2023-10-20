@@ -101,6 +101,7 @@ spec:
           mountPath: /var/cache/nginx
         - name: nginx-lib
           mountPath: /var/lib/nginx
+      terminationGracePeriodSeconds: 30
       serviceAccountName: nginx-gateway
       shareProcessNamespace: true
       securityContext:

@@ -18,6 +18,7 @@ func main() {
 	rootCmd.AddCommand(
 		createStaticModeCommand(),
 		createProvisionerModeCommand(),
+		createSleepCommand(),
 	)
 
 	if err := rootCmd.Execute(); err != nil {
