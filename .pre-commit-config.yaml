@@ -44,10 +44,9 @@ repos:
         pass_filenames: false
 
   - repo: https://github.com/golangci/golangci-lint
-    rev: v1.54.2
+    rev: v1.55.0
     hooks:
-      - id: golangci-lint
-        args: [--new-from-patch=/tmp/diff.patch]
+      - id: golangci-lint-full
 
   # Rules are in .markdownlint-cli2.yaml file
   # See https://github.com/DavidAnson/markdownlint/blob/main/doc/Rules.md for rule descriptions

@@ -36,7 +36,6 @@ jobs:
         uses: golangci/golangci-lint-action@3a919529898de77ec3da873e3063ca4b10e7f5cc # v3.7.0
         with:
           args: --timeout 10m0s
-          only-new-issues: true
 
   njs-lint:
     name: NJS Lint
