@@ -19,7 +19,6 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/status"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/status/statusfakes"
-	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/config"
 	staticConds "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/conditions"
 )
 
@@ -252,14 +251,11 @@ var _ = Describe("Updater", func() {
 
 		BeforeAll(func() {
 			updater = status.NewUpdater(status.UpdaterConfig{
-				GatewayCtlrName:  gatewayCtrlName,
-				GatewayClassName: gcName,
-				Client:           client,
-				Logger:           zap.New(),
-				Clock:            fakeClock,
-				GatewayPodConfig: config.GatewayPodConfig{
-					PodIP: "1.2.3.4",
-				},
+				GatewayCtlrName:          gatewayCtrlName,
+				GatewayClassName:         gcName,
+				Client:                   client,
+				Logger:                   zap.New(),
+				Clock:                    fakeClock,
 				UpdateGatewayClassStatus: true,
 			})
 
@@ -424,7 +420,11 @@ var _ = Describe("Updater", func() {
 					},
 				})
 
-				err := client.Get(context.Background(), types.NamespacedName{Namespace: "test", Name: "gateway"}, latestGw)
+				err := client.Get(
+					context.Background(),
+					types.NamespacedName{Namespace: "test", Name: "gateway"},
+					latestGw,
+				)
 				Expect(err).ToNot(HaveOccurred())
 
 				expectedGw.ResourceVersion = latestGw.ResourceVersion
@@ -655,12 +655,16 @@ var _ = Describe("Updater", func() {
 				wg := &sync.WaitGroup{}
 				ctx := context.Background()
 
-				// spin up 10 goroutines that Update and 10 that WriteLastStatuses
-				// and make sure that 20 updates were made to the Gateway resource.
+				// Spin up 10 goroutines that Update and 10 that call Enable which writes the last statuses.
+				// Since we only write statuses when they've changed, we will only update the status 10 times.
+				// The purpose of this test is to exercise the locking mechanism embedded in the updater.
+				// If there is a data race, this test combined with the -race flag that we run tests with,
+				// should catch it.
 				for i := 0; i < 10; i++ {
 					wg.Add(2)
+					gen := 5 + i
 					go func() {
-						updater.Update(ctx, createGwAPIStatuses(generations{gateways: 5}))
+						updater.Update(ctx, createGwAPIStatuses(generations{gateways: int64(gen)}))
 						wg.Done()
 					}()
 
@@ -682,8 +686,8 @@ var _ = Describe("Updater", func() {
 				Expect(err).ToNot(HaveOccurred())
 
 				// Before this test there were 6 updates to the Gateway resource.
-				// So now the resource version should equal 26.
-				Expect(latestGw.ResourceVersion).To(Equal("26"))
+				// So now the resource version should equal 16.
+				Expect(latestGw.ResourceVersion).To(Equal("16"))
 			})
 		})
 	})
@@ -696,14 +700,11 @@ var _ = Describe("Updater", func() {
 
 		BeforeAll(func() {
 			updater = status.NewUpdater(status.UpdaterConfig{
-				GatewayCtlrName:  gatewayCtrlName,
-				GatewayClassName: gcName,
-				Client:           client,
-				Logger:           zap.New(),
-				Clock:            fakeClock,
-				GatewayPodConfig: config.GatewayPodConfig{
-					PodIP: "1.2.3.4",
-				},
+				GatewayCtlrName:          gatewayCtrlName,
+				GatewayClassName:         gcName,
+				Client:                   client,
+				Logger:                   zap.New(),
+				Clock:                    fakeClock,
 				UpdateGatewayClassStatus: false,
 			})
 
@@ -747,14 +748,11 @@ var _ = Describe("Updater", func() {
 	Describe("Edge cases", func() {
 		It("panics on update if status type is unknown", func() {
 			updater := status.NewUpdater(status.UpdaterConfig{
-				GatewayCtlrName:  gatewayCtrlName,
-				GatewayClassName: gcName,
-				Client:           client,
-				Logger:           zap.New(),
-				Clock:            fakeClock,
-				GatewayPodConfig: config.GatewayPodConfig{
-					PodIP: "1.2.3.4",
-				},
+				GatewayCtlrName:          gatewayCtrlName,
+				GatewayClassName:         gcName,
+				Client:                   client,
+				Logger:                   zap.New(),
+				Clock:                    fakeClock,
 				UpdateGatewayClassStatus: true,
 			})
 

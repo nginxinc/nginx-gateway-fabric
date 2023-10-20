@@ -161,7 +161,6 @@ func StartManager(cfg config.Config) error {
 		Clock:                    status.NewRealClock(),
 		UpdateGatewayClassStatus: cfg.UpdateGatewayClassStatus,
 		LeaderElectionEnabled:    cfg.LeaderElection.Enabled,
-		GatewayPodConfig:         cfg.GatewayPodConfig,
 	})
 
 	eventHandler := newEventHandlerImpl(eventHandlerConfig{
@@ -273,7 +272,10 @@ func registerControllers(
 		{
 			objectType: &apiv1.Service{},
 			options: func() []controller.Option {
-				svcNSName := types.NamespacedName{Namespace: cfg.GatewayPodConfig.Namespace, Name: cfg.GatewayPodConfig.ServiceName}
+				svcNSName := types.NamespacedName{
+					Namespace: cfg.GatewayPodConfig.Namespace,
+					Name:      cfg.GatewayPodConfig.ServiceName,
+				}
 				return []controller.Option{
 					controller.WithK8sPredicate(predicate.GatewayServicePredicate{NSName: svcNSName}),
 				}

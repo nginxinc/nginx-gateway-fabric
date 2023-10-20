@@ -25,7 +25,7 @@ import (
 var (
 	numIterations = flag.Int("i", 1, "number of times to scale the resource")
 	delay         = flag.Duration("delay", 0, "delay between each scaling iteration")
-	version       = flag.String("version", "1.0", "version of NGF under test")
+	version       = flag.String("version", "1.0.0", "version of NGF under test")
 )
 
 func TestScale_Listeners(t *testing.T) {
@@ -202,7 +202,8 @@ func kubectlWaitAllPodsReady() error {
 
 func kubectlExec(arg ...string) error {
 	cmd := exec.Command("kubectl", arg...)
-	return cmd.Err
+
+	return cmd.Run()
 }
 
 func waitForResponseForHost(url, host string) (time.Duration, error) {
