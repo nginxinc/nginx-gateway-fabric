@@ -1,0 +1,116 @@
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: Gateway
+metadata:
+  name: gateway
+spec:
+  gatewayClassName: nginx
+  listeners:
+  - name: http
+    port: 80
+    protocol: HTTP
+    hostname: "cafe.example.com"
+  - name: http-2
+    port: 80
+    protocol: HTTP
+    hostname: "2.example.com"
+  - name: http-3
+    port: 80
+    protocol: HTTP
+    hostname: "3.example.com"
+  - name: http-4
+    port: 80
+    protocol: HTTP
+    hostname: "4.example.com"
+  - name: http-5
+    port: 80
+    protocol: HTTP
+    hostname: "5.example.com"
+  - name: http-6
+    port: 80
+    protocol: HTTP
+    hostname: "6.example.com"
+  - name: http-7
+    port: 80
+    protocol: HTTP
+    hostname: "7.example.com"
+  - name: http-8
+    port: 80
+    protocol: HTTP
+    hostname: "8.example.com"
+  - name: http-9
+    port: 80
+    protocol: HTTP
+    hostname: "9.example.com"
+  - name: http-10
+    port: 80
+    protocol: HTTP
+    hostname: "10.example.com"
+  - name: http-11
+    port: 80
+    protocol: HTTP
+    hostname: "11.example.com"
+  - name: http-12
+    port: 80
+    protocol: HTTP
+    hostname: "12.example.com"
+  - name: http-13
+    port: 80
+    protocol: HTTP
+    hostname: "13.example.com"
+  - name: http-14
+    port: 80
+    protocol: HTTP
+    hostname: "14.example.com"
+  - name: http-15
+    port: 80
+    protocol: HTTP
+    hostname: "15.example.com"
+  - name: http-16
+    port: 80
+    protocol: HTTP
+    hostname: "16.example.com"
+  - name: http-17
+    port: 80
+    protocol: HTTP
+    hostname: "17.example.com"
+  - name: http-18
+    port: 80
+    protocol: HTTP
+    hostname: "18.example.com"
+  - name: http-19
+    port: 80
+    protocol: HTTP
+    hostname: "19.example.com"
+  - name: http-20
+    port: 80
+    protocol: HTTP
+    hostname: "20.example.com"
+  - name: http-21
+    port: 80
+    protocol: HTTP
+    hostname: "21.example.com"
+  - name: http-22
+    port: 80
+    protocol: HTTP
+    hostname: "22.example.com"
+  - name: http-23
+    port: 80
+    protocol: HTTP
+    hostname: "23.example.com"
+  - name: http-24
+    port: 80
+    protocol: HTTP
+    hostname: "24.example.com"
+  - name: http-25
+    port: 80
+    protocol: HTTP
+    hostname: "25.example.com"
+  - name: https
+    port: 443
+    protocol: HTTPS
+    hostname: "*.example.com"
+    tls:
+      mode: Terminate
+      certificateRefs:
+      - kind: Secret
+        name: cafe-secret
