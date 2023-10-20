@@ -2,6 +2,23 @@
 
 This guide walks you through how to install NGINX Gateway Fabric on a generic Kubernetes cluster.
 
+- [Installation](#installation)
+  - [Prerequisites](#prerequisites)
+  - [Deploy NGINX Gateway Fabric using Helm](#deploy-nginx-gateway-fabric-using-helm)
+  - [Deploy NGINX Gateway Fabric from Manifests](#deploy-nginx-gateway-fabric-from-manifests)
+  - [Expose NGINX Gateway Fabric](#expose-nginx-gateway-fabric)
+    - [Create a NodePort Service](#create-a-nodeport-service)
+    - [Create a LoadBalancer Service](#create-a-loadbalancer-service)
+  - [Upgrading NGINX Gateway Fabric](#upgrading-nginx-gateway-fabric)
+    - [Upgrade NGINX Gateway Fabric from Manifests](#upgrade-nginx-gateway-fabric-from-manifests)
+    - [Upgrade NGINX Gateway Fabric using Helm](#upgrade-nginx-gateway-fabric-using-helm)
+    - [Configure Delayed Termination for Zero Downtime Upgrades](#configure-delayed-termination-for-zero-downtime-upgrades)
+      - [Configure Delayed Termination Using Manifests](#configure-delayed-termination-using-manifests)
+      - [Configure Delayed Termination Using Helm](#configure-delayed-termination-using-helm)
+  - [Uninstalling NGINX Gateway Fabric](#uninstalling-nginx-gateway-fabric)
+    - [Uninstall NGINX Gateway Fabric from Manifests](#uninstall-nginx-gateway-fabric-from-manifests)
+    - [Uninstall NGINX Gateway Fabric using Helm](#uninstall-nginx-gateway-fabric-using-helm)
+
 ## Prerequisites
 
 - [kubectl](https://kubernetes.io/docs/tasks/tools/)
@@ -167,6 +184,54 @@ Create a Service with type `LoadBalancer` using the appropriate manifest for you
 
 To upgrade NGINX Gateway Fabric when the deployment method is Helm, please follow the instructions
 [here](/deploy/helm-chart/README.md#upgrading-the-chart).
+
+### Configure Delayed Termination for Zero Downtime Upgrades
+
+To achieve zero downtime upgrades (meaning clients will not see any interruption in traffic while a rolling upgrade is
+being performed on NGF), you may need to configure delayed termination on the NGF pod, depending on your environment.
+
+> Note: When proxying Websocket or any long-lived connections, NGINX will not terminate until that connection is closed
+> by either the client or the backend. This means that unless all those connections are closed by clients/backends
+> before or during an upgrade, NGINX will not terminate, which means Kubernetes will kill NGINX. As a result, the
+> clients will see the connections abruptly closed and thus experience downtime.
+
+#### Configure Delayed Termination Using Manifests
+
+Edit the `deploy/manifests/nginx-gateway.yaml` to include the following:
+
+1. Add `lifecycle` to both the nginx and the nginx-gateway container definition:
+
+   ```yaml
+   <...>
+   lifecycle:
+   preStop:
+      exec:
+      command:
+      - /usr/bin/gateway
+      - sleep
+      - --duration=40s # This flag is optional, the default is 30s
+   <...>
+   lifecycle:
+   preStop:
+      exec:
+      command:
+      - /bin/sleep
+      - "40"
+   <...>
+   ```
+
+2. Ensure the `terminationGracePeriodSeconds` matches or exceeds the `sleep` value from the `preStopHook` (the default
+   is 30). This is to ensure Kubernetes does not terminate the pod before the `preStopHook` is complete.
+
+> Note: More information on container lifecycle hooks can be found
+> [here](https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/#container-hooks) and a detailed
+> description of Pod termination behavior can be found in
+> [Termination of Pods](https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#pod-termination).
+
+#### Configure Delayed Termination Using Helm
+
+To to configure delayed termination on the NGF pod when the deployment method is Helm, please follow the instructions
+[here](/deploy/helm-chart/README.md#configure-delayed-termination-for-zero-downtime-upgrades).
 
 ## Uninstalling NGINX Gateway Fabric
 
