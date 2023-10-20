@@ -54,5 +54,5 @@ repos:
       - id: yamllint
 
 ci:
-  skip: [golang-diff, golangci-lint, prettier, markdownlint-cli2-fix, yamllint]
+  skip: [golangci-lint-full, prettier, markdownlint-cli2-fix, yamllint]
   autofix_prs: false
