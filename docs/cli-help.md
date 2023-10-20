@@ -41,6 +41,9 @@ Usage:
   gateway sleep [flags]
 ```
 
-| Name     | Type       | Description                               |
-|----------|------------|-------------------------------------------|
-| duration | `duration` | Set the duration of sleep (default `30s`) |
+| Name     | Type            | Description                                                                                           |
+|----------|-----------------|-------------------------------------------------------------------------------------------------------|
+| duration | `time.Duration` | Set the duration of sleep. Must be parsable by [`time.ParseDuration`][parseDuration]. (default `30s`) |
+
+
+[parseDuration]:https://pkg.go.dev/time#ParseDuration

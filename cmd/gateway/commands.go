@@ -339,7 +339,7 @@ func createSleepCommand() *cobra.Command {
 		&duration,
 		durationFlag,
 		30*time.Second,
-		"Set the duration of sleep",
+		"Set the duration of sleep. Must be parsable by https://pkg.go.dev/time#ParseDuration",
 	)
 
 	return cmd
