@@ -79,6 +79,9 @@ run-conformance-tests: ## Run conformance tests
 								--report-output=output.txt; cat output.txt" | tee output.txt
 	sed -e '1,/CONFORMANCE PROFILE/d' output.txt > conformance-profile.yaml
 	rm output.txt
+	$(eval result_core=$(shell cat conformance-profile.yaml | yq '.profiles[0].core.result'))
+	$(eval result_extended=$(shell cat conformance-profile.yaml | yq '.profiles[0].extended.result'))
+	[ "$(result_core)" != "failure" ] && [ "$(result_extended)" != "failure" ] || exit 2
 
 .PHONY: cleanup-conformance-tests
 cleanup-conformance-tests: ## Clean up conformance tests fixtures
