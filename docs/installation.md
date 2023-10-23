@@ -37,7 +37,7 @@ page.
 1. Clone the repo and change into the `nginx-gateway-fabric` directory:
 
    ```shell
-   git clone https://github.com/nginxinc/nginx-gateway-fabric.git
+   git clone https://github.com/nginxinc/nginx-gateway-fabric.git --branch v1.0.0
    cd nginx-gateway-fabric
    ```
 

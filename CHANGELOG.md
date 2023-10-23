@@ -4,6 +4,43 @@ This document includes a curated changelog for each release. We also publish a c
 a [GitHub release](https://github.com/nginxinc/nginx-gateway-fabric/releases), which, by contrast, is auto-generated
 and includes links to all PRs that went into the release.
 
+## Release 1.0.0
+
+*October 24, 2023*
+
+This is the official v1.0.0 release of NGINX Gateway Fabric.
+
+FEATURES:
+
+- Rename the product from NGINX Kubernetes Gateway to NGINX Gateway Fabric. [PR-1070](https://github.com/nginxinc/nginx-gateway-fabric/pull/1070)
+- Add readiness probe. [PR-1047](https://github.com/nginxinc/nginx-gateway-fabric/pull/1047)
+- Support horizontal scaling. [PR-1048](https://github.com/nginxinc/nginx-gateway-fabric/pull/1048)
+- Add NGINX reload counters. [PR-1049](https://github.com/nginxinc/nginx-gateway-fabric/pull/1049)
+- Retry status updater on failures. [PR-1062](https://github.com/nginxinc/nginx-gateway-fabric/pull/1062)
+- Set Service address in Gateway Status. [PR-1141](https://github.com/nginxinc/nginx-gateway-fabric/pull/1141)
+
+BUG FIXES:
+
+- Optimize default NGINX config. [PR-1040](https://github.com/nginxinc/nginx-gateway-fabric/pull/1040)
+- Ensure NGINX reload occurs. [PR-1033](https://github.com/nginxinc/nginx-gateway-fabric/pull/1033)
+- Fix failure to recover if conf files are unexpectedly removed. [PR-1132](https://github.com/nginxinc/nginx-gateway-fabric/pull/1132)
+- Only update a resource's status if it has changed. [PR-1151](https://github.com/nginxinc/nginx-gateway-fabric/pull/1151)
+
+DOCUMENTATION:
+
+- Non-functional testing guides and results. [Link](https://github.com/nginxinc/nginx-gateway-fabric/tree/main/tests)
+
+COMPATIBILITY:
+
+- The Gateway API version: `0.8.1`
+- NGINX version: `1.25.2`
+- Kubernetes version: `1.23+`
+
+CONTAINER IMAGES:
+
+- Control plane: `ghcr.io/nginxinc/nginx-gateway-fabric:1.0.0`
+- Data plane: `ghcr.io/nginxinc/nginx-gateway-fabric/nginx:1.0.0`
+
 ## Release 0.6.0
 
 *August 31, 2023*
