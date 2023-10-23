@@ -148,6 +148,10 @@ Create a Service with type `LoadBalancer` using the appropriate manifest for you
 
 ## Upgrading NGINX Gateway Fabric
 
+> **Note**
+> See [below](#configure-delayed-termination-for-zero-downtime-upgrades) for instructions on how to configure delayed
+> termination if required for zero downtime upgrades in your environment.
+
 ### Upgrade NGINX Gateway Fabric from Manifests
 
 1. Upgrade the Gateway Resources
@@ -188,7 +192,7 @@ To upgrade NGINX Gateway Fabric when the deployment method is Helm, please follo
 ### Configure Delayed Termination for Zero Downtime Upgrades
 
 To achieve zero downtime upgrades (meaning clients will not see any interruption in traffic while a rolling upgrade is
-being performed on NGF), you may need to configure delayed termination on the NGF pod, depending on your environment.
+being performed on NGF), you may need to configure delayed termination on the NGF Pod, depending on your environment.
 
 > **Note**
 > When proxying Websocket or any long-lived connections, NGINX will not terminate until that connection is closed
@@ -226,17 +230,17 @@ Edit the `deploy/manifests/nginx-gateway.yaml` to include the following:
    ```
 
 2. Ensure the `terminationGracePeriodSeconds` matches or exceeds the `sleep` value from the `preStopHook` (the default
-   is 30). This is to ensure Kubernetes does not terminate the pod before the `preStopHook` is complete.
+   is 30). This is to ensure Kubernetes does not terminate the Pod before the `preStopHook` is complete.
 
 > **Note**
 > More information on container lifecycle hooks can be found
 > [here](https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/#container-hooks) and a detailed
 > description of Pod termination behavior can be found in
-> [Termination of Pods](https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#pod-termination).
+> [Termination of Pods](https://kubernetes.io/docs/concepts/workloads/Pods/Pod-lifecycle/#Pod-termination).
 
 #### Configure Delayed Termination Using Helm
 
-To configure delayed termination on the NGF pod when the deployment method is Helm, please follow the instructions
+To configure delayed termination on the NGF Pod when the deployment method is Helm, please follow the instructions
 [here](/deploy/helm-chart/README.md#configure-delayed-termination-for-zero-downtime-upgrades).
 
 ## Uninstalling NGINX Gateway Fabric
