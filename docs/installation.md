@@ -190,7 +190,8 @@ To upgrade NGINX Gateway Fabric when the deployment method is Helm, please follo
 To achieve zero downtime upgrades (meaning clients will not see any interruption in traffic while a rolling upgrade is
 being performed on NGF), you may need to configure delayed termination on the NGF pod, depending on your environment.
 
-> Note: When proxying Websocket or any long-lived connections, NGINX will not terminate until that connection is closed
+> **Note**
+> When proxying Websocket or any long-lived connections, NGINX will not terminate until that connection is closed
 > by either the client or the backend. This means that unless all those connections are closed by clients/backends
 > before or during an upgrade, NGINX will not terminate, which means Kubernetes will kill NGINX. As a result, the
 > clients will see the connections abruptly closed and thus experience downtime.
@@ -199,9 +200,11 @@ being performed on NGF), you may need to configure delayed termination on the NG
 
 Edit the `deploy/manifests/nginx-gateway.yaml` to include the following:
 
-1. Add `lifecycle` to both the nginx and the nginx-gateway container definition:
+1. Add `lifecycle` prestop hooks to both the nginx and the nginx-gateway container definitions:
 
    ```yaml
+   <...>
+   name: nginx-gateway
    <...>
    lifecycle:
    preStop:
@@ -210,6 +213,8 @@ Edit the `deploy/manifests/nginx-gateway.yaml` to include the following:
       - /usr/bin/gateway
       - sleep
       - --duration=40s # This flag is optional, the default is 30s
+   <...>
+   name: nginx
    <...>
    lifecycle:
    preStop:
@@ -223,7 +228,8 @@ Edit the `deploy/manifests/nginx-gateway.yaml` to include the following:
 2. Ensure the `terminationGracePeriodSeconds` matches or exceeds the `sleep` value from the `preStopHook` (the default
    is 30). This is to ensure Kubernetes does not terminate the pod before the `preStopHook` is complete.
 
-> Note: More information on container lifecycle hooks can be found
+> **Note**
+> More information on container lifecycle hooks can be found
 > [here](https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/#container-hooks) and a detailed
 > description of Pod termination behavior can be found in
 > [Termination of Pods](https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#pod-termination).

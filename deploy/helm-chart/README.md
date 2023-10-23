@@ -129,7 +129,8 @@ helm upgrade my-release . -n nginx-gateway
 To achieve zero downtime upgrades (meaning clients will not see any interruption in traffic while a rolling upgrade is
 being performed on NGF), you may need to configure delayed termination on the NGF pod, depending on your environment.
 
-> Note: When proxying Websocket or any long-lived connections, NGINX will not terminate until that connection is closed
+> **Note**
+> When proxying Websocket or any long-lived connections, NGINX will not terminate until that connection is closed
 > by either the client or the backend. This means that unless all those connections are closed by clients/backends
 > before or during an upgrade, NGINX will not terminate, which means Kubernetes will kill NGINX. As a result, the
 > clients will see the connections abruptly closed and thus experience downtime.
@@ -166,7 +167,8 @@ being performed on NGF), you may need to configure delayed termination on the NG
    terminationGracePeriodSeconds: 50
    ```
 
-> Note: More information on container lifecycle hooks can be found
+> **Note**
+> More information on container lifecycle hooks can be found
 > [here](https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/#container-hooks) and a detailed
 > description of Pod termination behavior can be found in
 > [Termination of Pods](https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#pod-termination).
