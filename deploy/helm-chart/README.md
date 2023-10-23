@@ -78,6 +78,10 @@ helm install my-release . --create-namespace --wait -n nginx-gateway
 
 ## Upgrading the Chart
 
+> **Note**
+> See [below](#configure-delayed-termination-for-zero-downtime-upgrades) for instructions on how to configure delayed
+> termination if required for zero downtime upgrades in your environment.
+
 ### Upgrading the Gateway Resources
 
 Before you upgrade a release, ensure the Gateway API resources are the correct version as supported by the NGINX
