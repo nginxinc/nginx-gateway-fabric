@@ -236,7 +236,7 @@ Edit the `deploy/manifests/nginx-gateway.yaml` to include the following:
 
 #### Configure Delayed Termination Using Helm
 
-To to configure delayed termination on the NGF pod when the deployment method is Helm, please follow the instructions
+To configure delayed termination on the NGF pod when the deployment method is Helm, please follow the instructions
 [here](/deploy/helm-chart/README.md#configure-delayed-termination-for-zero-downtime-upgrades).
 
 ## Uninstalling NGINX Gateway Fabric
