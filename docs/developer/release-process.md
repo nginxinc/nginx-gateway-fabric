@@ -62,7 +62,7 @@ To create a new release, follow these steps:
     - Create a fork of the repository
     - Name the file `nginxinc-nginx-gateway-fabric.yaml` and set `gatewayAPIVersion` in the file to the
     supported version by NGF. Also update the site source if necessary (see following example).
-    - Open a PR. [Example](https://github.com/kubernetes-sigs/gateway-api/pull/2368)
+    - Open a PR. [Example](https://github.com/kubernetes-sigs/gateway-api/pull/2514)
     If it's your first time submitting a PR, you will need to sign a CLA using F5, Inc. as the organization.
 
 ### Patch Release
