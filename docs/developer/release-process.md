@@ -57,8 +57,9 @@ To create a new release, follow these steps:
 8. Prepare and merge a PR into the main branch to update the [README](/README.md) to include the information about the
    latest release and also the [changelog](/CHANGELOG.md).
 9. Close the issue created in Step 1.
-10. Verify that published artifacts in the release can be installed properly.
-11. Submit the `conformance-profile.yaml` artifact from the release to the [Gateway API repo](https://github.com/kubernetes-sigs/gateway-api/tree/main/conformance/reports).
+10. Ensure that the [associated milestone](https://github.com/nginxinc/nginx-gateway-fabric/milestones) is closed.
+11. Verify that published artifacts in the release can be installed properly.
+12. Submit the `conformance-profile.yaml` artifact from the release to the [Gateway API repo](https://github.com/kubernetes-sigs/gateway-api/tree/main/conformance/reports).
     - Create a fork of the repository
     - Name the file `nginxinc-nginx-gateway-fabric.yaml` and set `gatewayAPIVersion` in the file to the
     supported version by NGF. Also update the site source if necessary (see following example).
