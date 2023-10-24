@@ -158,7 +158,7 @@ Create a Service with type `LoadBalancer` using the appropriate manifest for you
     Run the following command to upgrade the NGINX Gateway Fabric CRDs:
 
     ```shell
-    kubectl apply -f deploy/manifests/crds
+    kubectl apply -f https://github.com/nginxinc/nginx-gateway-fabric/releases/download/v1.0.0/crds.yaml
     ```
 
 1. Upgrade NGINX Gateway Fabric Deployment
@@ -166,7 +166,7 @@ Create a Service with type `LoadBalancer` using the appropriate manifest for you
     Run the following command to upgrade NGINX Gateway Fabric:
 
     ```shell
-    kubectl apply -f deploy/manifests/nginx-gateway.yaml
+    kubectl apply -f https://github.com/nginxinc/nginx-gateway-fabric/releases/download/v1.0.0/nginx-gateway.yaml
     ```
 
 ### Upgrade NGINX Gateway Fabric using Helm
