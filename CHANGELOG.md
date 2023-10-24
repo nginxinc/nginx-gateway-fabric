@@ -20,6 +20,7 @@ FEATURES:
 - Support horizontal scaling. [PR-1048](https://github.com/nginxinc/nginx-gateway-fabric/pull/1048)
 - Add NGINX reload counters. [PR-1049](https://github.com/nginxinc/nginx-gateway-fabric/pull/1049)
 - Retry status updater on failures. [PR-1062](https://github.com/nginxinc/nginx-gateway-fabric/pull/1062)
+- Add event processing histogram metric. [PR-1134](https://github.com/nginxinc/nginx-gateway-fabric/pull/1134)
 - Set Service address in Gateway Status. [PR-1141](https://github.com/nginxinc/nginx-gateway-fabric/pull/1141)
 
 BUG FIXES:
