@@ -10,9 +10,12 @@ and includes links to all PRs that went into the release.
 
 This is the official v1.0.0 release of NGINX Gateway Fabric.
 
-FEATURES:
+BREAKING CHANGES:
 
 - Rename the product from NGINX Kubernetes Gateway to NGINX Gateway Fabric. [PR-1070](https://github.com/nginxinc/nginx-gateway-fabric/pull/1070)
+
+FEATURES:
+
 - Add readiness probe. [PR-1047](https://github.com/nginxinc/nginx-gateway-fabric/pull/1047)
 - Support horizontal scaling. [PR-1048](https://github.com/nginxinc/nginx-gateway-fabric/pull/1048)
 - Add NGINX reload counters. [PR-1049](https://github.com/nginxinc/nginx-gateway-fabric/pull/1049)
