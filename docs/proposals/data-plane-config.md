@@ -11,8 +11,7 @@ define data plane configuration.
 
 ## Goals
 
-Define a CRD to dynamically configure various settings for the NKG data plane. The only initial option available will be
-log format.
+Define a CRD to dynamically configure various settings for the NKG data plane.
 
 ## Non-Goals
 
