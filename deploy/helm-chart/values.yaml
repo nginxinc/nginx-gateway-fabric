@@ -48,6 +48,13 @@ nginxGateway:
   ## The lifecycle of the nginx-gateway container.
   lifecycle: {}
 
+  # extraVolumeMounts are the additional volume mounts.
+  extraVolumeMounts:
+    # - name: root-certificates
+    #   mountPath: /etc/ssl/certs/internal-ca.pem
+    #   subPath: internal-ca.pem
+    #   readOnly: true
+
 nginx:
   ## The NGINX image to use
   image:
@@ -57,6 +64,13 @@ nginx:
 
   ## The lifecycle of the nginx container.
   lifecycle: {}
+
+  # extraVolumeMounts are the additional volume mounts.
+  extraVolumeMounts:
+    # - name: root-certificates
+    #   mountPath: /etc/ssl/certs/internal-ca.pem
+    #   subPath: internal-ca.pem
+    #   readOnly: true
 
 ## The termination grace period of the NGINX Gateway Fabric pod.
 terminationGracePeriodSeconds: 30
@@ -83,14 +97,14 @@ service:
   ## A list of ports to expose through the NGINX Gateway Fabric service. Update it to match the listener ports from
   ## your Gateway resource. Follows the conventional Kubernetes yaml syntax for service ports.
   ports:
-  - port: 80
-    targetPort: 80
-    protocol: TCP
-    name: http
-  - port: 443
-    targetPort: 443
-    protocol: TCP
-    name: https
+    - port: 80
+      targetPort: 80
+      protocol: TCP
+      name: http
+    - port: 443
+      targetPort: 443
+      protocol: TCP
+      name: https
 
 metrics:
   ## Enable exposing metrics in the Prometheus format.
@@ -100,3 +114,9 @@ metrics:
   ## Enable serving metrics via https. By default metrics are served via http.
   ## Please note that this endpoint will be secured with a self-signed certificate.
   secure: false
+
+# extraVolumes for the extraVolumeMounts. Useful to mount internal root certificates for example.
+extraVolumes:
+  # - name: root-certificates
+  #   configMap:
+  #    name: trusted-root-certs
