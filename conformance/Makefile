@@ -1,4 +1,4 @@
-NGF_TAG = edge
+NGF_TAG = 1.0.0
 NGF_PREFIX = nginx-gateway-fabric
 NGINX_IMAGE_NAME = $(NGF_PREFIX)/nginx
 GW_API_VERSION ?= 0.8.1

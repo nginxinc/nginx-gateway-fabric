@@ -3,11 +3,11 @@ name: nginx-gateway-fabric
 description: NGINX Gateway Fabric
 type: application
 version: 1.0.0
-appVersion: "edge"
+appVersion: 1.0.0
 home: https://github.com/nginxinc/nginx-gateway-fabric
-icon: https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric/tree/main/deploy/helm-chart/chart-icon.png
+icon: https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric/tree/v1.0.0/deploy/helm-chart/chart-icon.png
 sources:
-  - https://github.com/nginxinc/nginx-gateway-fabric/tree/main/deploy/helm-chart
+  - https://github.com/nginxinc/nginx-gateway-fabric/tree/v1.0.0/deploy/helm-chart
 keywords:
   - kubernetes
   - gateway
