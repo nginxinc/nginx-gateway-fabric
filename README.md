@@ -7,13 +7,10 @@ NGINX Gateway Fabric is an open-source project that provides an implementation o
 the [Gateway API](https://gateway-api.sigs.k8s.io/) using [NGINX](https://nginx.org/) as the data plane. The goal of
 this project is to implement the core Gateway APIs -- `Gateway`, `GatewayClass`, `HTTPRoute`, `TCPRoute`, `TLSRoute`,
 and `UDPRoute` -- to configure an HTTP or TCP/UDP load balancer, reverse-proxy, or API gateway for applications running
-on Kubernetes. NGINX Gateway Fabric is currently under development and supports a subset of the Gateway API.
+on Kubernetes. NGINX Gateway Fabric supports a subset of the Gateway API.
 
 For a list of supported Gateway API resources and features, see
 the [Gateway API Compatibility](docs/gateway-api-compatibility.md) doc.
-
-> Warning: This project is actively in development (beta feature state) and should not be deployed in a
-> production environment. All APIs, SDKs, designs, and packages are subject to change.
 
 Learn about our [design principles](/docs/developer/design-principles.md) and [architecture](/docs/architecture.md).
 
@@ -32,7 +29,7 @@ Learn about our [design principles](/docs/developer/design-principles.md) and [a
 We publish NGINX Gateway Fabric releases on GitHub. See
 our [releases page](https://github.com/nginxinc/nginx-gateway-fabric/releases).
 
-The latest release is [0.6.0](https://github.com/nginxinc/nginx-gateway-fabric/releases/tag/v0.6.0).
+The latest release is [1.0.0](https://github.com/nginxinc/nginx-gateway-fabric/releases/tag/v1.0.0).
 
 The edge version is useful for experimenting with new features that are not yet published in a release. To use, choose
 the *edge* version built from the [latest commit](https://github.com/nginxinc/nginx-gateway-fabric/commits/main)
@@ -43,7 +40,7 @@ to the correct versions:
 
 | Version        | Description                              | Installation Manifests                                                                | Documentation and Examples                                                                                                                                                     |
 |----------------|------------------------------------------|---------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Latest release | For experimental use                     | [Manifests](https://github.com/nginxinc/nginx-gateway-fabric/tree/v0.6.0/deploy). | [Documentation](https://github.com/nginxinc/nginx-gateway-fabric/tree/v0.6.0/docs). [Examples](https://github.com/nginxinc/nginx-gateway-fabric/tree/v0.6.0/examples). |
+| Latest release | For production use                     | [Manifests](https://github.com/nginxinc/nginx-gateway-fabric/tree/v1.0.0/deploy). | [Documentation](https://github.com/nginxinc/nginx-gateway-fabric/tree/v1.0.0/docs). [Examples](https://github.com/nginxinc/nginx-gateway-fabric/tree/v1.0.0/examples). |
 | Edge           | For experimental use and latest features | [Manifests](https://github.com/nginxinc/nginx-gateway-fabric/tree/main/deploy).   | [Documentation](https://github.com/nginxinc/nginx-gateway-fabric/tree/main/docs). [Examples](https://github.com/nginxinc/nginx-gateway-fabric/tree/main/examples).     |
 
 ### Versioning
@@ -66,6 +63,7 @@ The following table lists the software versions NGINX Gateway Fabric supports.
 | NGINX Gateway Fabric | Gateway API | Kubernetes | NGINX OSS |
 |--------------------------|-------------|------------|-----------|
 | Edge                     | 0.8.1       | 1.23+      | 1.25.2    |
+| 1.0.0                    | 0.8.1       | 1.23+      | 1.25.2    |
 | 0.6.0                    | 0.8.0       | 1.23+      | 1.25.2    |
 | 0.5.0                    | 0.7.1       | 1.21+      | 1.25.x *  |
 | 0.4.0                    | 0.7.1       | 1.21+      | 1.25.x *  |

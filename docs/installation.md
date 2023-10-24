@@ -34,21 +34,6 @@ page.
 > It is possible to run NGF in a different Namespace, although you'll need to make modifications to the installation
 > manifests.
 
-1. Clone the repo and change into the `nginx-gateway-fabric` directory:
-
-   ```shell
-   git clone https://github.com/nginxinc/nginx-gateway-fabric.git
-   cd nginx-gateway-fabric
-   ```
-
-1. Check out the latest tag (unless you are installing the `edge` version from the `main` branch):
-
-   ```shell
-   git fetch --tags
-   latestTag=$(git describe --tags `git rev-list --tags --max-count=1`)
-   git checkout $latestTag
-   ```
-
 1. Install the Gateway API resources from the standard channel (the CRDs and the validating webhook):
 
    ```shell
@@ -58,13 +43,13 @@ page.
 1. Deploy the NGINX Gateway Fabric CRDs:
 
    ```shell
-   kubectl apply -f deploy/manifests/crds
+   kubectl apply -f https://github.com/nginxinc/nginx-gateway-fabric/releases/download/v1.0.0/crds.yaml
    ```
 
 1. Deploy the NGINX Gateway Fabric:
 
    ```shell
-   kubectl apply -f deploy/manifests/nginx-gateway.yaml
+   kubectl apply -f https://github.com/nginxinc/nginx-gateway-fabric/releases/download/v1.0.0/nginx-gateway.yaml
    ```
 
 1. Confirm the NGINX Gateway Fabric is running in `nginx-gateway` namespace:
@@ -101,7 +86,7 @@ Service sets the status field to the IP address and/or Hostname. If no Service e
 Create a Service with type `NodePort`:
 
 ```shell
-kubectl apply -f deploy/manifests/service/nodeport.yaml
+kubectl apply -f https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric/v1.0.0/deploy/manifests/service/nodeport.yaml
 ```
 
 A `NodePort` Service will randomly allocate one port on every Node of the cluster. To access NGINX Gateway Fabric,
@@ -114,7 +99,7 @@ Create a Service with type `LoadBalancer` using the appropriate manifest for you
 - For GCP or Azure:
 
    ```shell
-   kubectl apply -f deploy/manifests/service/loadbalancer.yaml
+   kubectl apply -f https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric/v1.0.0/deploy/manifests/service/loadbalancer.yaml
    ```
 
   Lookup the public IP of the load balancer, which is reported in the `EXTERNAL-IP` column in the output of the
