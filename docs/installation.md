@@ -187,7 +187,7 @@ being performed on NGF), you may need to configure delayed termination on the NG
 
 #### Configure Delayed Termination Using Manifests
 
-Edit the `deploy/manifests/nginx-gateway.yaml` to include the following:
+Edit the `nginx-gateway.yaml` to include the following:
 
 1. Add `lifecycle` prestop hooks to both the nginx and the nginx-gateway container definitions:
 
