@@ -69,14 +69,14 @@
 6. Measure NGINX Reloads and Time to Ready Results
    1. TimeToReadyTotal as described in each test - NGF logs.
    2. TimeToReadyAvgSingle which is the average time between updating any resource and the
-      NGINX configuration being reloaded - NGF logs
+      NGINX configuration being reloaded - NGF logs.
    3. NGINX Reload count - metrics.
    4. Average NGINX reload duration - metrics.
       1. The average reload duration can be computed by taking the `nginx_gateway_fabric_nginx_reloads_milliseconds_sum`
          metric value and dividing it by the `nginx_gateway_fabric_nginx_reloads_milliseconds_count` metric value.
 7. Measure Event Batch Processing Results
-   1. Event Batch Total - metrics
-   2. Average Event Batch Processing duration - metrics
+   1. Event Batch Total - metrics.
+   2. Average Event Batch Processing duration - metrics.
       1. The average event batch processing duraiton can be computed by taking the `nginx_gateway_fabric_event_batch_processing_milliseconds_sum`
          metric value and dividing it by the `nginx_gateway_fabric_event_batch_processing_milliseconds_count` metric value.
 8. For accuracy, repeat the test suite once or twice, take the averages, and look for any anomolies or outliers.
