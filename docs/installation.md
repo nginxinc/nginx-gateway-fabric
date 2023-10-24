@@ -114,7 +114,7 @@ Create a Service with type `LoadBalancer` using the appropriate manifest for you
 - For AWS:
 
    ```shell
-   kubectl apply -f deploy/manifests/service/loadbalancer-aws-nlb.yaml
+   kubectl apply -f https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric/v1.0.0/deploy/manifests/service/loadbalancer-aws-nlb.yaml
    ```
 
   In AWS, the NLB DNS name will be reported by Kubernetes in lieu of a public IP in the `EXTERNAL-IP` column. To get the
@@ -235,11 +235,11 @@ To configure delayed termination on the NGF Pod when the deployment method is He
 1. Uninstall the NGINX Gateway Fabric:
 
    ```shell
-   kubectl delete -f deploy/manifests/nginx-gateway.yaml
+   kubectl delete -f https://github.com/nginxinc/nginx-gateway-fabric/releases/download/v1.0.0/nginx-gateway.yaml
    ```
 
    ```shell
-   kubectl delete -f deploy/manifests/crds
+   kubectl delete -f https://github.com/nginxinc/nginx-gateway-fabric/releases/download/v1.0.0/crds.yaml
    ```
 
 1. Uninstall the Gateway API resources from the standard channel (the CRDs and the validating webhook):
