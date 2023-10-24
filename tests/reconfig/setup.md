@@ -13,8 +13,8 @@
 
 ## Goals
 
-- Measure how long it takes NGF to reconfigure NGINX when a number of Gateway API and referenced core Kubernetes
-  resources are created at once.
+- Measure how long it takes NGF to reconfigure NGINX and update statuses when a number of Gateway API and
+  referenced core Kubernetes resources are created at once.
 - Two runs of each test should be ran with differing numbers of resources. Each run will deploy:
   - a single Gateway, Secret, and ReferenceGrant resources
   - `x+1` number of namespaces
@@ -38,7 +38,8 @@
    kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v0.8.1/standard-install.yaml
    ```
 
-3. Deploy NGF from edge using Helm install (NOTE: For Test 1, deploy AFTER resources):
+3. Deploy NGF from edge using Helm install and wait for LoadBalancer Service to be ready
+   (NOTE: For Test 1, deploy AFTER resources):
 
    ```console
    helm install my-release oci://ghcr.io/nginxinc/charts/nginx-gateway-fabric  --version 0.0.0-edge \
@@ -65,10 +66,20 @@
    kubectl port-forward $GW_POD -n nginx-gateway 9113:9113 &
    ```
 
-6. Measure Time To Ready as described in each test, get the reload count, and get the average NGINX reload duration.
-   The average reload duration can be computed by taking the `nginx_gateway_fabric_nginx_reloads_milliseconds_sum`
-   metric value and dividing it by the `nginx_gateway_fabric_nginx_reloads_milliseconds_count` metric value.
-7. For accuracy, repeat the test suite once or twice, take the averages, and look for any anomolies or outliers.
+6. Measure NGINX Reloads and Time to Ready Results
+   1. TimeToReadyTotal as described in each test - NGF logs.
+   2. TimeToReadyAvgSingle which is the average time between updating any resource and the
+      NGINX configuration being reloaded - NGF logs.
+   3. NGINX Reload count - metrics.
+   4. Average NGINX reload duration - metrics.
+      1. The average reload duration can be computed by taking the `nginx_gateway_fabric_nginx_reloads_milliseconds_sum`
+         metric value and dividing it by the `nginx_gateway_fabric_nginx_reloads_milliseconds_count` metric value.
+7. Measure Event Batch Processing Results
+   1. Event Batch Total - metrics.
+   2. Average Event Batch Processing duration - metrics.
+      1. The average event batch processing duraiton can be computed by taking the `nginx_gateway_fabric_event_batch_processing_milliseconds_sum`
+         metric value and dividing it by the `nginx_gateway_fabric_event_batch_processing_milliseconds_count` metric value.
+8. For accuracy, repeat the test suite once or twice, take the averages, and look for any anomolies or outliers.
 
 ## Tests
 
@@ -79,8 +90,8 @@
       e.g. `cd scripts && bash create-resources-gw-last.sh 30`. The script will deploy backend apps and services, wait
       60 seconds for them to be ready, and deploy 1 Gateway, 1 RefGrant, 1 Secret, and HTTPRoutes.
    2. Deploy NGF
-   3. Check logs for time it takes from start-up -> config written and NGINX reloaded. Get reload count and average reload
-      duration from metrics and logs.
+   3. Measure TimeToReadyTotal as the time it takes from start-up -> config written and
+      NGINX reloaded. Measure the other results as described in steps 6-7 of the [Setup](#setup) section.
 
 ### Test 2: Start NGF, deploy Gateway, create many resources attached to GW
 
@@ -89,9 +100,8 @@
    2. Run the provided script with the required number of resources,
       e.g. `cd scripts && bash create-resources-routes-last.sh 30`. The script will deploy backend apps and services,
       wait 60 seconds for them to be ready, and deploy 1 Gateway, 1 Secret, 1 RefGrant, and HTTPRoutes at the same time.
-   3. Check logs for time it takes from NGF receiving first resource update -> final config written, and NGINX's final
-      reload. Check logs for average individual HTTPRoute TTR also. Get reload count and average reload duration from
-      metrics and logs.
+   3. Measure TimeToReadyTotal as the time it takes from NGF receiving the first HTTPRoute resource update -> final
+      config written and NGINX reloaded. Measure the other results as described in steps 6-7 of the [Setup](#setup) section.
 
 ### Test 3: Start NGF, create many resources attached to a Gateway, deploy the Gateway
 
@@ -101,5 +111,5 @@
       e.g. `cd scripts && bash create-resources-gw-last.sh 30`.
       The script will deploy the namespaces, backend apps and services, 1 Secret, 1 ReferenceGrant, and the HTTPRoutes;
       wait 60 seconds for the backend apps to be ready, and then deploy 1 Gateway for all HTTPRoutes.
-   3. Check logs for time it takes from NGF receiving gateway resource -> config written and NGINX reloaded. Get reload
-      count and average reload duration from metrics and logs.
+   3. Measure TimeToReadyTotal as the time it takes from NGF receiving gateway resource -> config written and NGINX reloaded.
+      Measure the other results as described in steps 6-7 of the [Setup](#setup) section.
