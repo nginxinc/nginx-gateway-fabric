@@ -49,11 +49,7 @@ nginxGateway:
   lifecycle: {}
 
   # extraVolumeMounts are the additional volume mounts.
-  extraVolumeMounts:
-    # - name: root-certificates
-    #   mountPath: /etc/ssl/certs/internal-ca.pem
-    #   subPath: internal-ca.pem
-    #   readOnly: true
+  extraVolumeMounts: []
 
 nginx:
   ## The NGINX image to use
@@ -66,11 +62,7 @@ nginx:
   lifecycle: {}
 
   # extraVolumeMounts are the additional volume mounts.
-  extraVolumeMounts:
-    # - name: root-certificates
-    #   mountPath: /etc/ssl/certs/internal-ca.pem
-    #   subPath: internal-ca.pem
-    #   readOnly: true
+  extraVolumeMounts: []
 
 ## The termination grace period of the NGINX Gateway Fabric pod.
 terminationGracePeriodSeconds: 30
@@ -116,7 +108,4 @@ metrics:
   secure: false
 
 # extraVolumes for the extraVolumeMounts. Useful to mount internal root certificates for example.
-extraVolumes:
-  # - name: root-certificates
-  #   configMap:
-  #    name: trusted-root-certs
+extraVolumes: []
