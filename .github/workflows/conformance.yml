@@ -14,6 +14,10 @@ on:
   schedule:
     - cron: "0 4 * * *" # run every day at 4am UTC
 
+defaults:
+  run:
+    shell: bash
+
 concurrency:
   group: ${{ github.ref_name }}-conformance
   cancel-in-progress: true
@@ -134,19 +138,16 @@ jobs:
 
       - name: Wait for release to exist
         if: startsWith(github.ref, 'refs/tags/')
-        uses: lewagon/wait-on-check-action@e106e5c43e8ca1edea6383a39a01c5ca495fd812 # v1.3.1
-        with:
-          ref: ${{ github.ref }}
-          check-name: 'Build Image'
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          REF=${{ github.ref_name }}
+          until docker pull ghcr.io/nginxinc/nginx-gateway-fabric:${REF#v}; do sleep 5; done
+          until docker pull ghcr.io/nginxinc/nginx-gateway-fabric/nginx:${REF#v}; do sleep 5; done
 
       - name: Setup conformance tests
         run: |
           ngf_prefix=$(echo ${{ steps.ngf-meta.outputs.tags }} | cut -d ":" -f 1)
           ngf_tag=$(echo ${{ steps.ngf-meta.outputs.tags }} | cut -d ":" -f 2)
-          if [ ${{ github.event_name }} == "schedule" ]; then
-          export GW_API_VERSION=main
-          fi
+          if [ ${{ github.event_name }} == "schedule" ]; then export GW_API_VERSION=main; fi
           make install-ngf-local-no-build NGF_PREFIX=${ngf_prefix} NGF_TAG=${ngf_tag}
         working-directory: ./conformance
 
