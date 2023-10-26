@@ -174,7 +174,7 @@ func NewChangeProcessorImpl(cfg ChangeProcessorConfig) *ChangeProcessorImpl {
 			// the webhook doesn't validate them.
 			// It only validates a GatewayClass update that requires the previous version of the resource,
 			// which NGF cannot reliably provide - for example, after NGF restarts).
-			// https://github.com/kubernetes-sigs/gateway-api/blob/v0.8.1/apis/v1/validation/gatewayclass.go#L28
+			// https://github.com/kubernetes-sigs/gateway-api/blob/v1.0.0-rc2/apis/v1/validation/gatewayclass.go#L28
 			case *v1.Gateway:
 				err = gwapivalidation.ValidateGateway(o).ToAggregate()
 			case *v1.HTTPRoute:

@@ -1,7 +1,7 @@
 NGF_TAG = edge
 NGF_PREFIX = nginx-gateway-fabric
 NGINX_IMAGE_NAME = $(NGF_PREFIX)/nginx
-GW_API_VERSION ?= 1.0.0-rc1
+GW_API_VERSION ?= 1.0.0-rc2
 GATEWAY_CLASS = nginx
 SUPPORTED_FEATURES = HTTPRoute,HTTPRouteQueryParamMatching,HTTPRouteMethodMatching,HTTPRoutePortRedirect,HTTPRouteSchemeRedirect,GatewayClassObservedGenerationBump
 KIND_IMAGE ?= $(shell grep -m1 'FROM kindest/node' <tests/Dockerfile | awk -F'[ ]' '{print $$2}')
@@ -78,9 +78,8 @@ run-conformance-tests: ## Run conformance tests
 								--report-output=output.txt; cat output.txt" | tee output.txt
 	sed -e '1,/CONFORMANCE PROFILE/d' output.txt > conformance-profile.yaml
 	rm output.txt
-	$(eval result_core=$(shell cat conformance-profile.yaml | yq '.profiles[0].core.result'))
-	$(eval result_extended=$(shell cat conformance-profile.yaml | yq '.profiles[0].extended.result'))
-	[ "$(result_core)" != "failure" ] && [ "$(result_extended)" != "failure" ] || exit 2
+	[ $(shell cat conformance-profile.yaml | yq '.profiles[0].core.result') != "failure" ] \
+		&& [ $(shell cat conformance-profile.yaml | yq '.profiles[0].extended.result') != "failure" ] || exit 2
 
 .PHONY: cleanup-conformance-tests
 cleanup-conformance-tests: ## Clean up conformance tests fixtures
