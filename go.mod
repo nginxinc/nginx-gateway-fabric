@@ -5,7 +5,7 @@ go 1.21.3
 replace (
 	// Pinned to a version that is properly licensed.
 	github.com/chzyer/logex v1.1.10 => github.com/chzyer/logex v1.2.0
-	sigs.k8s.io/gateway-api => sigs.k8s.io/gateway-api v1.0.0-rc1
+	sigs.k8s.io/gateway-api => sigs.k8s.io/gateway-api v1.0.0-rc2
 )
 
 require (
