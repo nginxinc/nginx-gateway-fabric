@@ -178,7 +178,7 @@ debug-load-images: load-images ## Load all images used in debugging to kind clus
 	kind load docker-image dlv-debug:$(TAG)
 
 .PHONY: debug-install-local-build
-debug-install-local-build: debug-build-images load-images helm-install-local ## Install NGF from local build using debug NGF binary on configured kind cluster
+debug-install-local-build: debug-build-images debug-load-images helm-install-local ## Install NGF from local build using debug NGF binary on configured kind cluster
 
 .PHONY: dev-all
 dev-all: deps fmt njs-fmt vet lint unit-test njs-unit-test ## Run all the development checks
