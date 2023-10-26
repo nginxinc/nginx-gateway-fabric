@@ -168,7 +168,7 @@ debug-build: build ## Build binary with debug info, symbols, and no optimization
 
 .PHONY: debug-build-dlv-image
 debug-build-dlv-image: check-for-docker
-	docker build -f debug/Dockerfile -t dlv-debug:$(TAG) .
+	docker build -f debug/Dockerfile -t dlv-debug:edge .
 
 .PHONY: debug-build-images
 debug-build-images: debug-build build-ngf-image build-nginx-image debug-build-dlv-image ## Build all images used in debugging.
