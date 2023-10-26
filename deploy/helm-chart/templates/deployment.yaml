@@ -160,7 +160,7 @@ spec:
         emptyDir: {}
       - name: nginx-lib
         emptyDir: {}
-      {{- with .Values.extraVolumes }}
+      {{- with .Values.extraVolumes -}}
       {{ toYaml . | nindent 6 }}
       {{- end }}
 {{- end }}
