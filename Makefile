@@ -158,6 +158,7 @@ install-ngf-local-build: build-images load-images helm-install-local ## Install 
 .PHONY: helm-install-local
 helm-install-local: ## Helm install NGF on configured kind cluster with local images. To build, load, and install with helm run make install-ngf-local-build
 	./conformance/scripts/install-gateway.sh $(GW_API_VERSION)
+	kubectl wait --for=condition=available --timeout=60s deployment gateway-api-admission-server -n gateway-system
 	helm install dev ./deploy/helm-chart --create-namespace --wait --set service.type=NodePort --set nginxGateway.image.repository=$(PREFIX) --set nginxGateway.image.tag=$(TAG) --set nginxGateway.image.pullPolicy=Never --set nginx.image.repository=$(NGINX_PREFIX) --set nginx.image.tag=$(TAG) --set nginx.image.pullPolicy=Never -n nginx-gateway
 
 # Debug Targets
