@@ -48,7 +48,7 @@ nginxGateway:
   ## The lifecycle of the nginx-gateway container.
   lifecycle: {}
 
-  # extraVolumeMounts are the additional volume mounts.
+  # extraVolumeMounts are the additional volume mounts for the nginx-gateway container.
   extraVolumeMounts: []
 
 nginx:
