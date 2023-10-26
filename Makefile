@@ -176,7 +176,7 @@ debug-build-images: debug-build build-ngf-image build-nginx-image debug-build-dl
 
 .PHONY: debug-load-images
 debug-load-images: load-images ## Load all images used in debugging to kind cluster.
-	kind load docker-image dlv-debug:$(TAG)
+	kind load docker-image dlv-debug:edge
 
 .PHONY: debug-install-local-build
 debug-install-local-build: debug-build-images debug-load-images helm-install-local ## Install NGF from local build using debug NGF binary on configured kind cluster
