@@ -136,7 +136,7 @@ spec:
           mountPath: /var/cache/nginx
         - name: nginx-lib
           mountPath: /var/lib/nginx
-        {{- with .Values.nginx.extraVolumeMounts }}
+        {{- with .Values.nginx.extraVolumeMounts -}}
         {{ toYaml . | nindent 8 }}
         {{- end }}
       terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
