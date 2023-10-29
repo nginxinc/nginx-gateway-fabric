@@ -143,9 +143,9 @@ spec:
       securityContext:
         fsGroup: 1001
         runAsNonRoot: true
-      {{- with .Values.tolerations -}}
+      {{- if .Values.tolerations }}
       tolerations:
-        {{- toYaml . | nindent 8 }}
+      {{- toYaml .Values.tolerations | nindent 6 }}
       {{- end }}
       volumes:
       - name: nginx-conf
