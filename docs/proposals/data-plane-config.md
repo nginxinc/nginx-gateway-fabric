@@ -5,12 +5,15 @@
 
 ## Summary
 
-This proposal is intended to contain the design for how to dynamically configure the data plane for the NGINX Gateway Fabric (NGF) project. Similar to control plane configuration,
-we should be able to leverage a custom resource definition to define data plane configuration, considering fields such as telemetry and upstream zone size.
+This proposal is intended to contain the design for how to dynamically configure the data plane for the
+NGINX Gateway Fabric (NGF) project. Similar to control plane configuration, we should be able to leverage
+a custom resource definition to define data plane configuration, considering fields such as telemetry and
+upstream zone size.
 
 ## Goals
 
-Define a CRD to dynamically configure various settings for the NGF data plane. The initial configurable options will be for telemetry (tracing) and upstream zone size.
+Define a CRD to dynamically configure various settings for the NGF data plane. The initial configurable options
+will be for telemetry (tracing) and upstream zone size.
 
 ## Non-Goals
 
