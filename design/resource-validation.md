@@ -30,9 +30,20 @@ To help the implementations with the validation, the Gateway API already include
   X must be a string) and the contents of the fields (for example, field Y only allows values 'a' and 'b').
   Additionally, it enforces the limits like max lengths on field values. Note:
   Kubernetes API server enforces this validation. To bypass it, a user needs to change the CRDs.
-- *The webhook validation*. This validation is written in go and run as part of the webhook, which is included in the
-  Gateway API installation files. The validation covers additional logic, not possible to implement in the CRDs. It does
-  not repeat the validation from the CRDs. Note: a user can bypass this validation if the webhook is not installed.
+
+#### For Kubernetes 1.25+
+
+- *CEL Validation*. This validation is embedded in the Gateway API CRDs and covers additional logic not available in the
+  OpenAPI schema validation. Note: Kubernetes API server enforces this validation. To bypass it, a user
+  needs to change the CRDs.
+
+#### For Kubernetes 1.23 and 1.24
+
+- *The webhook validation*. This validation is written in go and ran as part of the webhook, which is included in the
+  Gateway API installation files. The validation covers additional logic, not possible to implement in the OpenAPI
+  schema validation.
+  It does not repeat the OpenAPI schema validation from the CRDs. Note: a user can bypass this validation if the webhook
+  is not installed.
 
 However, the built-in validation rules do not cover all validation needs of NGF:
 
@@ -80,36 +91,9 @@ Design a validation mechanism for Gateway API resources.
 
 ## Design
 
-We will introduce two validation methods to be run by NGF control plane:
-
-1. Re-run of the Gateway API webhook validation
-2. NGF-specific field validation
-
-### Re-run of Webhook Validation
-
-Before processing a resource, NGF will validate it using the functions from
-the [validation package](https://github.com/kubernetes-sigs/gateway-api/tree/b241afc88e68c952cc0a59a5c72a51358dc2bada/apis/v1beta1/validation)
-from the Gateway API. This will ensure that the webhook validation cannot be bypassed (it can be bypassed if the webhook
-is not installed, misconfigured, or running a different version), and it will allow us to avoid repeating the same
-validation in our code.
-
-If a resource is invalid:
-
-- NGF will not process it -- it will treat it as if the resource didn't exist. This also means that if the resource was
-  updated from a valid to an invalid state, NGF will also ignore any previous valid state. For example, it will remove
-  the generation configuration for an HTTPRoute resource.
-- NGF will report the validation error as a
-  Warning [Event](https://kubernetes.io/docs/reference/kubernetes-api/cluster-resources/event-v1/)
-  for that resource. The Event message will describe the error and explain that the resource was ignored. We chose to
-  report an Event instead of updating the status, because to update the status, NGF first needs to look inside the
-  resource to determine whether it belongs to it or not. However, since the webhook validation applies to all parts of
-  the spec of resource, it means NGF has to look inside the invalid resource and parse potentially invalid parts. To
-  avoid that, NGF will report an Event. The owner of the resource will be able to see the Event.
-- NGF will also report the validation error in the NGF logs.
-
 ### NGF-specific validation
 
-After re-running the webhook validation, NGF will run NGF-specific validation, written in go.
+NGF will run NGF-specific validation written in go.
 
 NGF-specific validation will:
 
@@ -121,21 +105,31 @@ NGF-specific validation will not include:
 
 - *All* validation done by CRDs. NGF will only repeat the validation that addresses (1) and (2) in the list above with
   extra rules required by NGINX but missing in the CRDs. For example, NGF will not ensure the limits of field values.
-- The validation done by the webhook (because it is done in the previous step).
+- The validation done by the webhook.
 
 If a resource is invalid, NGF will report the error in its status.
 
 ### Summary of Validation
 
-The table below summarizes the validation methods NGF will use. Any Gateway API resource will be validated by the
+The tables below summarize the validation methods NGF will use. Any Gateway API resource will be validated by the
 following methods in order of their appearance in the table.
+
+#### For Kubernetes 1.25+
+
+| Name                         | Type                       | Component             | Scope                   | Feedback loop for errors                                                         | Can be bypassed?               |
+|------------------------------|----------------------------|-----------------------|-------------------------|----------------------------------------------------------------------------------|--------------------------------|
+| CRD validation               | OpenAPI and CEL validation | Kubernetes API server | Structure, field values | Kubernetes API server returns any errors a response for an API call.             | Yes, if the CRDs are modified. |
+| NGF-specific validation      | Go code                    | NGF control plane     | Field values            | Errors are reported in the status of a resource after its creation/modification. | No                             |
+
+
+#### For Kubernetes 1.23 and 1.24
 
 | Name                         | Type    | Component             | Scope                   | Feedback loop for errors                                                         | Can be bypassed?                                                                     |
 |------------------------------|---------|-----------------------|-------------------------|----------------------------------------------------------------------------------|--------------------------------------------------------------------------------------|
 | CRD validation               | OpenAPI | Kubernetes API server | Structure, field values | Kubernetes API server returns any errors a response for an API call.             | Yes, if the CRDs are modified.                                                       |
 | Webhook validation           | Go code | Gateway API webhook   | Field values            | Kubernetes API server returns any errors a response for an API call.             | Yes, if the webhook is not installed, misconfigured, or running a different version. |
-| Re-run of webhook validation | Go code | NGF control plane     | Field values            | Errors are reported as Event for the resource.                                   | No                                                                                   |
 | NGF-specific validation      | Go code | NGF control plane     | Field values            | Errors are reported in the status of a resource after its creation/modification. | No                                                                                   |
+
 
 Notes:
 
@@ -148,7 +142,7 @@ Notes:
 
 NGF will support more resources:
 
-- More Gateway API resources. For those, NGF will use the four validation methods from the table in the previous
+- More Gateway API resources. For those, NGF will use the validation methods from the table in the previous
   section.
 - Introduce NGF resources. For those, NGF will use CRD validation (the rules of which are fully controlled by us). The
   CRD validation will include the validation to prevent invalid NGINX configuration values and malicious values. Because
@@ -158,14 +152,6 @@ NGF will support more resources:
 We will not introduce any NGF webhook in the cluster (it adds operational complexity for the cluster admin and is a
 source of potential downtime -- a webhook failure disables CRUD operations on the relevant resources) unless we find
 good reasons for that.
-
-### Upgrades
-
-Since NGF will use the validation package from the Gateway API project, when a new release happens, we will need to
-upgrade the dependency and release a new version of NGF, provided that the validation code changed. However, if it did
-not change, we do not need to release a new version. Note: other things from a new Gateway API release might prompt us
-to release a new version like supporting a new field. See also
-[GEP-922](https://gateway-api.sigs.k8s.io/geps/gep-922/#).
 
 ### Reliability
 
