@@ -107,5 +107,4 @@ metrics:
   ## Please note that this endpoint will be secured with a self-signed certificate.
   secure: false
 
-# extraVolumes for the NGINX Gateway Fabric pod. Use in conjunction with nginxGateway.extraVolumeMounts and nginx.extraVolumeMounts to mount additional volumes to the containers.
 extraVolumes: []
