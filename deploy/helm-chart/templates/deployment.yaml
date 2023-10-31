@@ -149,6 +149,10 @@ spec:
       securityContext:
         fsGroup: 1001
         runAsNonRoot: true
+      {{- if .Values.tolerations }}
+      tolerations:
+      {{- toYaml .Values.tolerations | nindent 6 }}
+      {{- end }}
       volumes:
       - name: nginx-conf
         emptyDir: {}

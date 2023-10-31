@@ -12,6 +12,9 @@ changelog:
     - title: 🐛 Bug Fixes
       labels:
         - bug
+    - title: 📦 Helm Chart
+      labels:
+        - helm-chart
     - title: 📝 Documentation
       labels:
         - documentation
