@@ -48,7 +48,7 @@ spec:
   - name: http-11
     port: 80
     protocol: HTTP
-    hostname: "12.example.com"
+    hostname: "11.example.com"
   - name: https
     port: 443
     protocol: HTTPS
