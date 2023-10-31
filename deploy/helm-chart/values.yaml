@@ -61,6 +61,9 @@ nginx:
 ## The termination grace period of the NGINX Gateway Fabric pod.
 terminationGracePeriodSeconds: 30
 
+## Tolerations for the NGINX Gateway Fabric pod.
+tolerations: []
+
 ## The affinity of the NGINX Gateway Fabric pod.
 affinity: {}
 
