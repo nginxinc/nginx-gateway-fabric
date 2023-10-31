@@ -16,12 +16,12 @@ import (
 
 	. "github.com/onsi/gomega"
 
-	embeddedfiles "github.com/nginxinc/nginx-kubernetes-gateway"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/conditions"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/events"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/helpers"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/status"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/status/statusfakes"
+	embeddedfiles "github.com/nginxinc/nginx-gateway-fabric"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/events"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/status"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/status/statusfakes"
 )
 
 var _ = Describe("handler", func() {
@@ -60,7 +60,6 @@ var _ = Describe("handler", func() {
 			Logger:                   zap.New(),
 			GatewayCtlrName:          "test.example.com",
 			GatewayClassName:         gcName,
-			PodIP:                    "1.2.3.4",
 			UpdateGatewayClassStatus: true,
 		})
 	})
@@ -96,7 +95,7 @@ var _ = Describe("handler", func() {
 				Resource: gc,
 			},
 		}
-		handler.HandleEventBatch(context.Background(), batch)
+		handler.HandleEventBatch(context.Background(), zap.New(), batch)
 
 		// Ensure GatewayClass is accepted
 
@@ -126,7 +125,7 @@ var _ = Describe("handler", func() {
 			},
 		}
 
-		handler.HandleEventBatch(context.Background(), batch)
+		handler.HandleEventBatch(context.Background(), zap.New(), batch)
 
 		depNsName := types.NamespacedName{
 			Namespace: "nginx-gateway",
@@ -144,6 +143,8 @@ var _ = Describe("handler", func() {
 		expectedGwFlag := fmt.Sprintf("--gateway=%s", gwNsName.String())
 		Expect(dep.Spec.Template.Spec.Containers[0].Args).To(ContainElement(expectedGwFlag))
 		Expect(dep.Spec.Template.Spec.Containers[0].Args).To(ContainElement("--update-gatewayclass-status=false"))
+		expectedLockFlag := fmt.Sprintf("--leader-election-lock-name=%s", gwNsName.Name)
+		Expect(dep.Spec.Template.Spec.Containers[0].Args).To(ContainElement(expectedLockFlag))
 	}
 
 	itShouldPanicWhenUpsertingGateway := func(gwNsName types.NamespacedName) {
@@ -154,7 +155,7 @@ var _ = Describe("handler", func() {
 		}
 
 		handle := func() {
-			handler.HandleEventBatch(context.Background(), batch)
+			handler.HandleEventBatch(context.Background(), zap.New(), batch)
 		}
 
 		Expect(handle).Should(Panic())
@@ -177,7 +178,6 @@ var _ = Describe("handler", func() {
 				gcName,
 				statusUpdater,
 				k8sclient,
-				zap.New(),
 				embeddedfiles.StaticModeDeploymentYAML,
 			)
 		})
@@ -215,7 +215,7 @@ var _ = Describe("handler", func() {
 					},
 				}
 
-				handler.HandleEventBatch(context.Background(), batch)
+				handler.HandleEventBatch(context.Background(), zap.New(), batch)
 				deps := &v1.DeploymentList{}
 
 				err := k8sclient.List(context.Background(), deps)
@@ -235,7 +235,7 @@ var _ = Describe("handler", func() {
 					},
 				}
 
-				handler.HandleEventBatch(context.Background(), batch)
+				handler.HandleEventBatch(context.Background(), zap.New(), batch)
 
 				deps := &v1.DeploymentList{}
 
@@ -264,7 +264,7 @@ var _ = Describe("handler", func() {
 					},
 				}
 
-				handler.HandleEventBatch(context.Background(), batch)
+				handler.HandleEventBatch(context.Background(), zap.New(), batch)
 
 				deps := &v1.DeploymentList{}
 				err := k8sclient.List(context.Background(), deps)
@@ -293,7 +293,7 @@ var _ = Describe("handler", func() {
 					},
 				}
 
-				handler.HandleEventBatch(context.Background(), batch)
+				handler.HandleEventBatch(context.Background(), zap.New(), batch)
 
 				unknownGC := &v1beta1.GatewayClass{}
 				err = k8sclient.Get(context.Background(), client.ObjectKeyFromObject(gc), unknownGC)
@@ -328,7 +328,6 @@ var _ = Describe("handler", func() {
 				gcName,
 				statusUpdater,
 				k8sclient,
-				zap.New(),
 				embeddedfiles.StaticModeDeploymentYAML,
 			)
 		})
@@ -338,7 +337,7 @@ var _ = Describe("handler", func() {
 				batch := []interface{}{e}
 
 				handle := func() {
-					handler.HandleEventBatch(context.TODO(), batch)
+					handler.HandleEventBatch(context.Background(), zap.New(), batch)
 				}
 
 				Expect(handle).Should(Panic())
@@ -406,7 +405,7 @@ var _ = Describe("handler", func() {
 				}
 
 				handle := func() {
-					handler.HandleEventBatch(context.Background(), batch)
+					handler.HandleEventBatch(context.Background(), zap.New(), batch)
 				}
 
 				Expect(handle).Should(Panic())
@@ -427,7 +426,7 @@ var _ = Describe("handler", func() {
 				}
 
 				handle := func() {
-					handler.HandleEventBatch(context.Background(), batch)
+					handler.HandleEventBatch(context.Background(), zap.New(), batch)
 				}
 
 				Expect(handle).Should(Panic())
@@ -440,7 +439,6 @@ var _ = Describe("handler", func() {
 					gcName,
 					statusUpdater,
 					k8sclient,
-					zap.New(),
 					[]byte("broken YAML"),
 				)
 

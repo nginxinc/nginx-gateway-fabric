@@ -22,7 +22,7 @@ spec:
         add:
         - name: Accept-Encoding
           value: compress
-        - name:  My-cool-header
+        - name: My-cool-header
           value: this-is-an-appended-value
         remove:
         - User-Agent

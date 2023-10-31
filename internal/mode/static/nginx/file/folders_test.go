@@ -8,21 +8,20 @@ import (
 
 	. "github.com/onsi/gomega"
 
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/nginx/file"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/nginx/file/filefakes"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/file"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/file/filefakes"
 )
 
 func writeFile(t *testing.T, name string, data []byte) {
 	t.Helper()
+	g := NewWithT(t)
 
 	//nolint:gosec // the file permission is ok for unit testing
-	if err := os.WriteFile(name, data, 0o644); err != nil {
-		t.Fatal(err)
-	}
+	g.Expect(os.WriteFile(name, data, 0o644)).To(Succeed())
 }
 
 func TestClearFoldersRemoves(t *testing.T) {
-	g := NewGomegaWithT(t)
+	g := NewWithT(t)
 
 	tempDir := t.TempDir()
 
@@ -79,7 +78,7 @@ func TestClearFoldersFails(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			g := NewGomegaWithT(t)
+			g := NewWithT(t)
 
 			removedFiles, err := file.ClearFolders(test.fileMgr, files)
 

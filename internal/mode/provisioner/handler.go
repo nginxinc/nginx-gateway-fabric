@@ -9,13 +9,13 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/conditions"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/events"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/status"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/events"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/status"
 )
 
 // eventHandler ensures each Gateway for the specific GatewayClass has a corresponding Deployment
-// of NKG configured to use that specific Gateway.
+// of NGF configured to use that specific Gateway.
 //
 // eventHandler implements events.Handler interface.
 type eventHandler struct {
@@ -27,7 +27,6 @@ type eventHandler struct {
 
 	statusUpdater status.Updater
 	k8sClient     client.Client
-	logger        logr.Logger
 
 	staticModeDeploymentYAML []byte
 
@@ -38,7 +37,6 @@ func newEventHandler(
 	gcName string,
 	statusUpdater status.Updater,
 	k8sClient client.Client,
-	logger logr.Logger,
 	staticModeDeploymentYAML []byte,
 ) *eventHandler {
 	return &eventHandler{
@@ -47,14 +45,13 @@ func newEventHandler(
 		statusUpdater:            statusUpdater,
 		gcName:                   gcName,
 		k8sClient:                k8sClient,
-		logger:                   logger,
 		staticModeDeploymentYAML: staticModeDeploymentYAML,
 		gatewayNextID:            1,
 	}
 }
 
 func (h *eventHandler) setGatewayClassStatuses(ctx context.Context) {
-	statuses := status.Statuses{
+	statuses := status.GatewayAPIStatuses{
 		GatewayClassStatuses: make(status.GatewayClassStatuses),
 	}
 
@@ -80,7 +77,7 @@ func (h *eventHandler) setGatewayClassStatuses(ctx context.Context) {
 	h.statusUpdater.Update(ctx, statuses)
 }
 
-func (h *eventHandler) ensureDeploymentsMatchGateways(ctx context.Context) {
+func (h *eventHandler) ensureDeploymentsMatchGateways(ctx context.Context, logger logr.Logger) {
 	var gwsWithoutDeps, removedGwsWithDeps []types.NamespacedName
 
 	for nsname, gw := range h.store.gateways {
@@ -110,14 +107,14 @@ func (h *eventHandler) ensureDeploymentsMatchGateways(ctx context.Context) {
 			panic(fmt.Errorf("failed to prepare deployment: %w", err))
 		}
 
-		err = h.k8sClient.Create(ctx, deployment)
-		if err != nil {
+		if err = h.k8sClient.Create(ctx, deployment); err != nil {
 			panic(fmt.Errorf("failed to create deployment: %w", err))
 		}
 
 		h.provisions[nsname] = deployment
 
-		h.logger.Info("Created deployment",
+		logger.Info(
+			"Created deployment",
 			"deployment", client.ObjectKeyFromObject(deployment),
 			"gateway", nsname,
 		)
@@ -128,24 +125,24 @@ func (h *eventHandler) ensureDeploymentsMatchGateways(ctx context.Context) {
 	for _, nsname := range removedGwsWithDeps {
 		deployment := h.provisions[nsname]
 
-		err := h.k8sClient.Delete(ctx, deployment)
-		if err != nil {
+		if err := h.k8sClient.Delete(ctx, deployment); err != nil {
 			panic(fmt.Errorf("failed to delete deployment: %w", err))
 		}
 
 		delete(h.provisions, nsname)
 
-		h.logger.Info("Deleted deployment",
+		logger.Info(
+			"Deleted deployment",
 			"deployment", client.ObjectKeyFromObject(deployment),
 			"gateway", nsname,
 		)
 	}
 }
 
-func (h *eventHandler) HandleEventBatch(ctx context.Context, batch events.EventBatch) {
+func (h *eventHandler) HandleEventBatch(ctx context.Context, logger logr.Logger, batch events.EventBatch) {
 	h.store.update(batch)
 	h.setGatewayClassStatuses(ctx)
-	h.ensureDeploymentsMatchGateways(ctx)
+	h.ensureDeploymentsMatchGateways(ctx, logger)
 }
 
 func (h *eventHandler) generateDeploymentID() string {

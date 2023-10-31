@@ -17,14 +17,16 @@ import (
 
 	gwapivalidation "sigs.k8s.io/gateway-api/apis/v1beta1/validation"
 
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/state/graph"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/state/relationship"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/state/validation"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/graph"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/relationship"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/validation"
 )
 
 const (
-	webhookValidationErrorLogMsg = "the resource failed webhook validation, however the Gateway API webhook " +
-		"failed to reject it with the error; make sure the webhook is installed and running correctly"
+	validationErrorLogMsg = "the resource failed validation: Gateway API CEL validation (Kubernetes 1.25+) " +
+		"by the Kubernetes API server and/or the Gateway API webhook validation (if installed) failed to reject " +
+		"the resource with the error; make sure Gateway API CRDs include CEL validation and/or (if installed) the " +
+		"webhook is running correctly."
 )
 
 //go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . ChangeProcessor
@@ -53,12 +55,14 @@ type ChangeProcessorConfig struct {
 	RelationshipCapturer relationship.Capturer
 	// Validators validate resources according to data-plane specific rules.
 	Validators validation.Validators
-	// Logger is the logger for this Change Processor.
-	Logger logr.Logger
 	// EventRecorder records events for Kubernetes resources.
 	EventRecorder record.EventRecorder
 	// Scheme is the Kubernetes scheme.
 	Scheme *runtime.Scheme
+	// ProtectedPorts are the ports that may not be configured by a listener with a descriptive name of the ports.
+	ProtectedPorts graph.ProtectedPorts
+	// Logger is the logger for this Change Processor.
+	Logger logr.Logger
 	// GatewayCtlrName is the name of the Gateway controller.
 	GatewayCtlrName string
 	// GatewayClassName is the name of the GatewayClass resource.
@@ -165,10 +169,11 @@ func NewChangeProcessorImpl(cfg ChangeProcessorConfig) *ChangeProcessorImpl {
 
 			var err error
 			switch o := obj.(type) {
-			// We don't validate GatewayClass or ReferenceGrant, because as of 0.7.1, the webhook doesn't validate them.
+			// We don't validate GatewayClass or ReferenceGrant, because as of the latest version,
+			// the webhook doesn't validate them.
 			// It only validates a GatewayClass update that requires the previous version of the resource,
-			// which NKG cannot reliably provide - for example, after NKG restarts).
-			// https://github.com/kubernetes-sigs/gateway-api/blob/v0.7.1/apis/v1beta1/validation/gatewayclass.go#L28
+			// which NGF cannot reliably provide - for example, after NGF restarts).
+			// https://github.com/kubernetes-sigs/gateway-api/blob/v0.8.1/apis/v1beta1/validation/gatewayclass.go#L28
 			case *v1beta1.Gateway:
 				err = gwapivalidation.ValidateGateway(o).ToAggregate()
 			case *v1beta1.HTTPRoute:
@@ -176,7 +181,7 @@ func NewChangeProcessorImpl(cfg ChangeProcessorConfig) *ChangeProcessorImpl {
 			}
 
 			if err != nil {
-				return fmt.Errorf(webhookValidationErrorLogMsg+"; validation error: %w", err)
+				return fmt.Errorf(validationErrorLogMsg+": %w", err)
 			}
 
 			return nil
@@ -191,8 +196,9 @@ func NewChangeProcessorImpl(cfg ChangeProcessorConfig) *ChangeProcessorImpl {
 
 // Currently, changes (upserts/delete) trigger rebuilding of the configuration, even if the change doesn't change
 // the configuration or the statuses of the resources. For example, a change in a Gateway resource that doesn't
-// belong to the NGINX Gateway or an HTTPRoute that doesn't belong to any of the Gateways of the NGINX Gateway.
-// Find a way to ignore changes that don't affect the configuration and/or statuses of the resources.
+// belong to the NGINX Gateway Fabric or an HTTPRoute that doesn't belong to any of the Gateways of the
+// NGINX Gateway Fabric. Find a way to ignore changes that don't affect the configuration and/or statuses of
+// the resources.
 
 // FIXME(pleshakov)
 // Remove CaptureUpsertChange() and CaptureDeleteChange() from ChangeProcessor and pass all changes directly to
@@ -227,6 +233,7 @@ func (c *ChangeProcessorImpl) Process() (bool, *graph.Graph) {
 		c.cfg.GatewayCtlrName,
 		c.cfg.GatewayClassName,
 		c.cfg.Validators,
+		c.cfg.ProtectedPorts,
 	)
 
 	return true, c.latestGraph

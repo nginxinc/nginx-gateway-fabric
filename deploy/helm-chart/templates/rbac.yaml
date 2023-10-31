@@ -49,13 +49,6 @@ rules:
   - list
   - watch
 - apiGroups:
-  - gateway.nginx.org
-  resources:
-  - gatewayconfigs
-  verbs:
-  - list
-  - watch
-- apiGroups:
   - gateway.networking.k8s.io
   resources:
   - httproutes/status
@@ -63,6 +56,30 @@ rules:
   - gatewayclasses/status
   verbs:
   - update
+- apiGroups:
+  - gateway.nginx.org
+  resources:
+  - nginxgateways
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - gateway.nginx.org
+  resources:
+  - nginxgateways/status
+  verbs:
+  - update
+{{- if .Values.nginxGateway.leaderElection.enable }}
+- apiGroups:
+  - coordination.k8s.io
+  resources:
+  - leases
+  verbs:
+  - create
+  - get
+  - update
+{{- end }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding

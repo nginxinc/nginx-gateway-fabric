@@ -4,8 +4,40 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/conditions"
+	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
 )
+
+// Status is the status of one or more Kubernetes resources that the StatusUpdater will update.
+type Status interface {
+	// APIGroup returns the GroupName of the resources contained in the status
+	APIGroup() string
+}
+
+// GatewayAPIStatuses holds the status-related information about Gateway API resources.
+type GatewayAPIStatuses struct {
+	GatewayClassStatuses GatewayClassStatuses
+	GatewayStatuses      GatewayStatuses
+	HTTPRouteStatuses    HTTPRouteStatuses
+}
+
+func (g GatewayAPIStatuses) APIGroup() string {
+	return v1beta1.GroupName
+}
+
+// NginxGatewayStatus holds status-related information about the NginxGateway resource.
+type NginxGatewayStatus struct {
+	// NsName is the NamespacedName of the NginxGateway resource.
+	NsName types.NamespacedName
+	// Conditions is the list of conditions for this NginxGateway.
+	Conditions []conditions.Condition
+	// ObservedGeneration is the generation of the resource that was processed.
+	ObservedGeneration int64
+}
+
+func (n *NginxGatewayStatus) APIGroup() string {
+	return ngfAPI.GroupName
+}
 
 // ListenerStatuses holds the statuses of listeners where the key is the name of a listener in the Gateway resource.
 type ListenerStatuses map[string]ListenerStatus
@@ -19,21 +51,18 @@ type GatewayStatuses map[types.NamespacedName]GatewayStatus
 // GatewayClassStatuses holds the statuses of GatewayClasses where the key is the namespaced name of a GatewayClass.
 type GatewayClassStatuses map[types.NamespacedName]GatewayClassStatus
 
-// Statuses holds the status-related information about Gateway API resources.
-type Statuses struct {
-	GatewayClassStatuses GatewayClassStatuses
-	GatewayStatuses      GatewayStatuses
-	HTTPRouteStatuses    HTTPRouteStatuses
-}
-
 // GatewayStatus holds the status of the winning Gateway resource.
 type GatewayStatus struct {
 	// ListenerStatuses holds the statuses of listeners defined on the Gateway.
 	ListenerStatuses ListenerStatuses
 	// Conditions is the list of conditions for this Gateway.
 	Conditions []conditions.Condition
+	// Addresses holds the list of GatewayStatusAddresses.
+	Addresses []v1beta1.GatewayStatusAddress
 	// ObservedGeneration is the generation of the resource that was processed.
 	ObservedGeneration int64
+	// Ignored tells whether or not this Gateway is ignored.
+	Ignored bool
 }
 
 // ListenerStatus holds the status-related information about a listener in the Gateway resource.
@@ -66,6 +95,8 @@ type ParentStatus struct {
 
 // GatewayClassStatus holds status-related information about the GatewayClass resource.
 type GatewayClassStatus struct {
-	Conditions         []conditions.Condition
+	// Conditions is the list of conditions for this GatewayClass.
+	Conditions []conditions.Condition
+	// ObservedGeneration is the generation of the resource that was processed.
 	ObservedGeneration int64
 }

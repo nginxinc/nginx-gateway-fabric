@@ -9,8 +9,8 @@ import (
 	. "github.com/onsi/gomega"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/nginx/file"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/nginx/file/filefakes"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/file"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/file/filefakes"
 )
 
 var _ = Describe("EventHandler", func() {
@@ -43,7 +43,7 @@ var _ = Describe("EventHandler", func() {
 				if f.Type == file.TypeRegular {
 					Expect(info.Mode()).To(Equal(os.FileMode(0o644)))
 				} else {
-					Expect(info.Mode()).To(Equal(os.FileMode(0o600)))
+					Expect(info.Mode()).To(Equal(os.FileMode(0o640)))
 				}
 
 				bytes, err := os.ReadFile(f.Path)
@@ -113,6 +113,26 @@ var _ = Describe("EventHandler", func() {
 			Expect(err).ShouldNot(HaveOccurred())
 
 			ensureNotExist(regular2, regular3, secret)
+		})
+	})
+
+	When("file does not exist", func() {
+		It("should not error", func() {
+			fakeOSMgr := &filefakes.FakeOSFileManager{}
+			mgr := file.NewManagerImpl(zap.New(), fakeOSMgr)
+
+			files := []file.File{
+				{
+					Type:    file.TypeRegular,
+					Path:    "regular-1.conf",
+					Content: []byte("regular-1"),
+				},
+			}
+
+			Expect(mgr.ReplaceFiles(files)).ToNot(HaveOccurred())
+
+			fakeOSMgr.RemoveReturns(os.ErrNotExist)
+			Expect(mgr.ReplaceFiles(files)).ToNot(HaveOccurred())
 		})
 	})
 

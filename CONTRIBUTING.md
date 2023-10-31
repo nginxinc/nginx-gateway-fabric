@@ -1,6 +1,6 @@
 # Contributing Guidelines
 
-The following is a set of guidelines for contributing to NGINX Kubernetes Gateway. We really appreciate that you are
+The following is a set of guidelines for contributing to NGINX Gateway Fabric. We really appreciate that you are
 considering contributing!
 
 ## Table Of Contents
@@ -20,20 +20,20 @@ considering contributing!
 
 ## Ask a Question
 
-To ask a question, use [Github Discussions](https://github.com/nginxinc/nginx-kubernetes-gateway/discussions).
+To ask a question, use [Github Discussions](https://github.com/nginxinc/nginx-gateway-fabric/discussions).
 
 [NGINX Community Slack](https://community.nginx.org/joinslack) has a dedicated channel for this
-project -- `#nginx-kubernetes-gateway`.
+project -- `#nginx-gateway-fabric`.
 
 Reserve GitHub issues for feature requests and bugs rather than general questions.
 
 ## Getting Started
 
-Follow our [Installation Instructions](/docs/installation.md) to get the NGINX Kubernetes Gateway up and running.
+Follow our [Installation Instructions](/docs/installation.md) to get the NGINX Gateway Fabric up and running.
 
 ### Project Structure
 
-- NGINX Kubernetes Gateway is written in Go and uses the open source NGINX software as the data plane.
+- NGINX Gateway Fabric is written in Go and uses the open source NGINX software as the data plane.
 - The project follows a standard Go project layout
   - The main code is found at `cmd/gateway/`
   - The internal code is found at `internal/`
@@ -51,7 +51,7 @@ Follow our [Installation Instructions](/docs/installation.md) to get the NGINX K
 #### Open a Discussion
 
 If you have any questions, ideas, or simply want to engage in a conversation with the community and maintainers, we
-encourage you to open a [discussion](https://github.com/nginxinc/nginx-kubernetes-gateway/discussions) on GitHub.
+encourage you to open a [discussion](https://github.com/nginxinc/nginx-gateway-fabric/discussions) on GitHub.
 
 #### Report a Bug
 
@@ -67,7 +67,7 @@ regarding the idea and its use cases, while also giving the community an opportu
 In some cases, the maintainers may ask you to write an Enhancement Proposal. For details on this process, see
 the [Enhancement Proposal](/docs/proposals/README.md) README.
 
-[idea]: https://github.com/nginxinc/nginx-kubernetes-gateway/discussions/new?category=ideas
+[idea]: https://github.com/nginxinc/nginx-gateway-fabric/discussions/new?category=ideas
 
 #### Issue lifecycle
 

@@ -4,12 +4,13 @@ import (
 	"context"
 	"errors"
 
+	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/events"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/events/eventsfakes"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/events"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/events/eventsfakes"
 )
 
 var _ = Describe("EventLoop", func() {
@@ -47,7 +48,7 @@ var _ = Describe("EventLoop", func() {
 
 			// Ensure  the first batch is handled
 			Eventually(fakeHandler.HandleEventBatchCallCount).Should(Equal(1))
-			_, batch = fakeHandler.HandleEventBatchArgsForCall(0)
+			_, _, batch = fakeHandler.HandleEventBatchArgsForCall(0)
 
 			var expectedBatch events.EventBatch = []interface{}{"event0"}
 			Expect(batch).Should(Equal(expectedBatch))
@@ -70,7 +71,7 @@ var _ = Describe("EventLoop", func() {
 			eventCh <- e
 
 			Eventually(fakeHandler.HandleEventBatchCallCount).Should(Equal(2))
-			_, batch := fakeHandler.HandleEventBatchArgsForCall(1)
+			_, _, batch := fakeHandler.HandleEventBatchArgsForCall(1)
 
 			var expectedBatch events.EventBatch = []interface{}{e}
 			Expect(batch).Should(Equal(expectedBatch))
@@ -82,7 +83,7 @@ var _ = Describe("EventLoop", func() {
 
 			// The func below will pause the handler goroutine while it is processing the batch with e1 until
 			// sentSecondAndThirdEvents is closed. This way we can add e2 and e3 to the current batch in the meantime.
-			fakeHandler.HandleEventBatchCalls(func(ctx context.Context, batch events.EventBatch) {
+			fakeHandler.HandleEventBatchCalls(func(ctx context.Context, logger logr.Logger, batch events.EventBatch) {
 				close(firstHandleEventBatchCallInProgress)
 				<-sentSecondAndThirdEvents
 			})
@@ -106,14 +107,14 @@ var _ = Describe("EventLoop", func() {
 			close(sentSecondAndThirdEvents)
 
 			Eventually(fakeHandler.HandleEventBatchCallCount).Should(Equal(3))
-			_, batch := fakeHandler.HandleEventBatchArgsForCall(1)
+			_, _, batch := fakeHandler.HandleEventBatchArgsForCall(1)
 
 			var expectedBatch events.EventBatch = []interface{}{e1}
 
 			// the first HandleEventBatch() call must have handled a batch with e1
 			Expect(batch).Should(Equal(expectedBatch))
 
-			_, batch = fakeHandler.HandleEventBatchArgsForCall(2)
+			_, _, batch = fakeHandler.HandleEventBatchArgsForCall(2)
 
 			expectedBatch = []interface{}{e2, e3}
 			// the second HandleEventBatch() call must have handled a batch with e2 and e3

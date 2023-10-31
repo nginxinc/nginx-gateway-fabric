@@ -24,6 +24,14 @@ If release name contains chart name it will be used as a full name.
 {{- end }}
 
 {{/*
+Create control plane config name.
+*/}}
+{{- define "nginx-gateway.config-name" -}}
+{{- $name := default .Release.Name .Values.nameOverride }}
+{{- printf "%s-config" $name | trunc 63 | trimSuffix "-" }}
+{{- end }}
+
+{{/*
 Create chart name and version as used by the chart label.
 */}}
 {{- define "nginx-gateway.chart" -}}
@@ -60,15 +68,12 @@ Create the name of the ServiceAccount to use
 {{- end }}
 
 {{/*
-Expand default NGINX conf ConfigMap name.
+Expand leader election lock name.
 */}}
-{{- define "nginx-gateway.nginx-conf" -}}
-{{- printf "%s-%s" (include "nginx-gateway.fullname" .) "conf" -}}
+{{- define "nginx-gateway.leaderElectionName" -}}
+{{- if .Values.nginxGateway.leaderElection.lockName -}}
+{{ .Values.nginxGateway.leaderElection.lockName }}
+{{- else -}}
+{{- printf "%s-%s" (include "nginx-gateway.fullname" .) "leader-election" -}}
 {{- end -}}
-
-{{/*
-Expand default njs-modules ConfigMap name.
-*/}}
-{{- define "nginx-gateway.njs-modules" -}}
-{{- printf "%s-%s" (include "nginx-gateway.fullname" .) "njs-modules" -}}
 {{- end -}}

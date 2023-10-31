@@ -1,18 +1,13 @@
 # syntax=docker/dockerfile:1.4
-FROM golang:1.20 as builder
-ARG VERSION
-ARG GIT_COMMIT
-ARG DATE
+FROM golang:1.21 as builder
 
-WORKDIR /go/src/github.com/nginxinc/nginx-kubernetes-gateway/cmd/gateway
+WORKDIR /go/src/github.com/nginxinc/nginx-gateway-fabric
 
-COPY go.mod go.sum /go/src/github.com/nginxinc/nginx-kubernetes-gateway
+COPY go.mod go.sum /go/src/github.com/nginxinc/nginx-gateway-fabric
 RUN go mod download
 
-COPY cmd /go/src/github.com/nginxinc/nginx-kubernetes-gateway/cmd
-COPY internal /go/src/github.com/nginxinc/nginx-kubernetes-gateway/internal
-COPY pkg /go/src/github.com/nginxinc/nginx-kubernetes-gateway/pkg
-RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -a -ldflags "-s -w -X main.version=${VERSION} -X main.commit=${GIT_COMMIT} -X main.date=${DATE}" -o gateway .
+COPY . /go/src/github.com/nginxinc/nginx-gateway-fabric
+RUN make build
 
 FROM alpine:3.18 as capabilizer
 RUN apk add --no-cache libcap
@@ -22,7 +17,7 @@ COPY ./build/out/gateway /usr/bin/
 RUN setcap 'cap_kill=+ep' /usr/bin/gateway
 
 FROM capabilizer as container-capabilizer
-COPY --from=builder /go/src/github.com/nginxinc/nginx-kubernetes-gateway/cmd/gateway/gateway /usr/bin/
+COPY --from=builder /go/src/github.com/nginxinc/nginx-gateway-fabric/build/out/gateway /usr/bin/
 RUN setcap 'cap_kill=+ep' /usr/bin/gateway
 
 FROM capabilizer as goreleaser-capabilizer
@@ -31,7 +26,7 @@ COPY dist/gateway_linux_$TARGETARCH*/gateway /usr/bin/
 RUN setcap 'cap_kill=+ep' /usr/bin/gateway
 
 FROM scratch as common
-USER 1001:1001
+USER 102:1001
 ENTRYPOINT [ "/usr/bin/gateway" ]
 
 FROM common as container

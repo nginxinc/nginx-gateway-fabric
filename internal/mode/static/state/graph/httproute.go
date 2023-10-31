@@ -12,9 +12,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/conditions"
-	staticConds "github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/state/conditions"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/state/validation"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
+	staticConds "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/conditions"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/validation"
 )
 
 const wildcardHostname = "~^"
@@ -24,7 +24,7 @@ type Rule struct {
 	// BackendRefs is a list of BackendRefs for the rule.
 	BackendRefs []BackendRef
 	// ValidMatches indicates whether the matches of the rule are valid.
-	// If the matches are invalid, NGK should not generate any configuration for the rule.
+	// If the matches are invalid, NGF should not generate any configuration for the rule.
 	ValidMatches bool
 	// ValidFilters indicates whether the filters of the rule are valid.
 	// If the filters are invalid, the data-plane should return 500 error provided that the matches are valid.
@@ -33,7 +33,7 @@ type Rule struct {
 
 // ParentRef describes a reference to a parent in an HTTPRoute.
 type ParentRef struct {
-	// Attachment is the attachment status of the ParentRef. It could be nil. In that case, NGK didn't attempt to
+	// Attachment is the attachment status of the ParentRef. It could be nil. In that case, NGF didn't attempt to
 	// attach because of problems with the Route.
 	Attachment *ParentRefAttachmentStatus
 	// Gateway is the NamespacedName of the referenced Gateway
@@ -58,7 +58,7 @@ type ParentRefAttachmentStatus struct {
 type Route struct {
 	// Source is the source resource of the Route.
 	Source *v1beta1.HTTPRoute
-	// ParentRefs includes ParentRefs with NKG Gateways only.
+	// ParentRefs includes ParentRefs with NGF Gateways only.
 	ParentRefs []ParentRef
 	// Conditions include Conditions for the HTTPRoute.
 	Conditions []conditions.Condition
@@ -66,7 +66,7 @@ type Route struct {
 	// If the Route is invalid, this field is nil
 	Rules []Rule
 	// Valid tells if the Route is valid.
-	// If it is invalid, NGK should not generate any configuration for it.
+	// If it is invalid, NGF should not generate any configuration for it.
 	Valid bool
 }
 
@@ -180,8 +180,10 @@ func buildRoute(
 		ParentRefs: sectionNameRefs,
 	}
 
-	err := validateHostnames(ghr.Spec.Hostnames, field.NewPath("spec").Child("hostnames"))
-	if err != nil {
+	if err := validateHostnames(
+		ghr.Spec.Hostnames,
+		field.NewPath("spec").Child("hostnames"),
+	); err != nil {
 		r.Valid = false
 		r.Conditions = append(r.Conditions, staticConds.NewRouteUnsupportedValue(err.Error()))
 
@@ -231,10 +233,7 @@ func buildRoute(
 		msg := allRulesErrs.ToAggregate().Error()
 
 		if atLeastOneValid {
-			// FIXME(pleshakov): Partial validity for HTTPRoute rules is not defined in the Gateway API spec yet.
-			// See https://github.com/nginxinc/nginx-kubernetes-gateway/issues/485
-			msg = "Some rules are invalid: " + msg
-			r.Conditions = append(r.Conditions, staticConds.NewTODO(msg))
+			r.Conditions = append(r.Conditions, staticConds.NewRoutePartiallyInvalid(msg))
 		} else {
 			msg = "All rules are invalid: " + msg
 			r.Conditions = append(r.Conditions, staticConds.NewRouteUnsupportedValue(msg))
@@ -550,7 +549,11 @@ func validateMatch(
 		allErrs = append(allErrs, validateQueryParamMatch(validator, q, queryParamPath)...)
 	}
 
-	if err := validateMethodMatch(validator, match.Method, matchPath.Child("method")); err != nil {
+	if err := validateMethodMatch(
+		validator,
+		match.Method,
+		matchPath.Child("method"),
+	); err != nil {
 		allErrs = append(allErrs, err)
 	}
 

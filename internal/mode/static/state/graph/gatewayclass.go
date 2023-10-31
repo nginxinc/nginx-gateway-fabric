@@ -6,8 +6,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/conditions"
-	staticConds "github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/state/conditions"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
+	staticConds "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/conditions"
 )
 
 // GatewayClass represents the GatewayClass resource.
@@ -20,7 +20,7 @@ type GatewayClass struct {
 	Valid bool
 }
 
-// processedGatewayClasses holds the resources that belong to NKG.
+// processedGatewayClasses holds the resources that belong to NGF.
 type processedGatewayClasses struct {
 	Winner  *v1beta1.GatewayClass
 	Ignored map[types.NamespacedName]*v1beta1.GatewayClass

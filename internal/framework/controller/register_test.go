@@ -16,10 +16,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/controller"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/controller/controllerfakes"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/controller/index"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/controller/predicate"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/controller"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/controller/controllerfakes"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/controller/index"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/controller/predicate"
 )
 
 func TestRegister(t *testing.T) {
@@ -98,7 +98,7 @@ func TestRegister(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.msg, func(t *testing.T) {
-			g := NewGomegaWithT(t)
+			g := NewWithT(t)
 
 			newReconciler := func(c controller.ReconcilerConfig) *controller.Reconciler {
 				g.Expect(c.Getter).To(BeIdenticalTo(test.fakes.mgr.GetClient()))

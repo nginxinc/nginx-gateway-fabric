@@ -6,11 +6,11 @@ import (
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/conditions"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
 )
 
 func TestDeduplicateConditions(t *testing.T) {
-	g := NewGomegaWithT(t)
+	g := NewWithT(t)
 
 	conds := []conditions.Condition{
 		{

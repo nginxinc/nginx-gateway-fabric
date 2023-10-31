@@ -13,11 +13,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	embeddedfiles "github.com/nginxinc/nginx-kubernetes-gateway"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/controller"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/controller/predicate"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/events"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/status"
+	embeddedfiles "github.com/nginxinc/nginx-gateway-fabric"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/controller"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/controller/predicate"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/events"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/status"
 )
 
 // Config is configuration for the provisioner mode.
@@ -28,13 +28,13 @@ type Config struct {
 }
 
 // StartManager starts a Manager for the provisioner mode, which provisions
-// a Deployment of NKG (static mode) for each Gateway of the provisioner GatewayClass.
+// a Deployment of NGF (static mode) for each Gateway of the provisioner GatewayClass.
 //
-// The provisioner mode is introduced to allow running Gateway API conformance tests for NKG, which expects
+// The provisioner mode is introduced to allow running Gateway API conformance tests for NGF, which expects
 // an independent data plane instance being provisioned for each Gateway.
 //
 // The provisioner mode is not intended to be used in production (in the short term), as it lacks support for
-// many important features. See https://github.com/nginxinc/nginx-kubernetes-gateway/issues/634 for more details.
+// many important features. See https://github.com/nginxinc/nginx-gateway-fabric/issues/634 for more details.
 func StartManager(cfg Config) error {
 	scheme := runtime.NewScheme()
 	utilruntime.Must(gatewayv1beta1.AddToScheme(scheme))
@@ -72,8 +72,13 @@ func StartManager(cfg Config) error {
 	eventCh := make(chan interface{})
 
 	for _, regCfg := range controllerRegCfgs {
-		err := controller.Register(ctx, regCfg.objectType, mgr, eventCh, regCfg.options...)
-		if err != nil {
+		if err := controller.Register(
+			ctx,
+			regCfg.objectType,
+			mgr,
+			eventCh,
+			regCfg.options...,
+		); err != nil {
 			return fmt.Errorf("cannot register controller for %T: %w", regCfg.objectType, err)
 		}
 	}
@@ -102,7 +107,6 @@ func StartManager(cfg Config) error {
 		cfg.GatewayClassName,
 		statusUpdater,
 		mgr.GetClient(),
-		cfg.Logger.WithName("eventHandler"),
 		embeddedfiles.StaticModeDeploymentYAML,
 	)
 
@@ -113,8 +117,7 @@ func StartManager(cfg Config) error {
 		firstBatchPreparer,
 	)
 
-	err = mgr.Add(eventLoop)
-	if err != nil {
+	if err := mgr.Add(eventLoop); err != nil {
 		return fmt.Errorf("cannot register event loop: %w", err)
 	}
 

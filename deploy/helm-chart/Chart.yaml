@@ -1,13 +1,13 @@
 apiVersion: v2
-name: nginx-kubernetes-gateway
-description: NGINX Kubernetes Gateway
+name: nginx-gateway-fabric
+description: NGINX Gateway Fabric
 type: application
-version: 0.1.0
+version: 1.0.0
 appVersion: "edge"
-home: https://github.com/nginxinc/nginx-kubernetes-gateway
-icon: https://raw.githubusercontent.com/nginxinc/nginx-kubernetes-gateway/tree/main/deploy/helm-chart/chart-icon.png
+home: https://github.com/nginxinc/nginx-gateway-fabric
+icon: https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric/tree/main/deploy/helm-chart/chart-icon.png
 sources:
-  - https://github.com/nginxinc/nginx-kubernetes-gateway/tree/main/deploy/helm-chart
+  - https://github.com/nginxinc/nginx-gateway-fabric/tree/main/deploy/helm-chart
 keywords:
   - kubernetes
   - gateway

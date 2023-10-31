@@ -10,13 +10,12 @@ import (
 // prepareGatewayStatus prepares the status for a Gateway resource.
 func prepareGatewayStatus(
 	gatewayStatus GatewayStatus,
-	podIP string,
 	transitionTime metav1.Time,
 ) v1beta1.GatewayStatus {
 	listenerStatuses := make([]v1beta1.ListenerStatus, 0, len(gatewayStatus.ListenerStatuses))
 
 	// FIXME(pleshakov) Maintain the order from the Gateway resource
-	// https://github.com/nginxinc/nginx-kubernetes-gateway/issues/689
+	// https://github.com/nginxinc/nginx-gateway-fabric/issues/689
 	names := make([]string, 0, len(gatewayStatus.ListenerStatuses))
 	for name := range gatewayStatus.ListenerStatuses {
 		names = append(names, name)
@@ -34,15 +33,9 @@ func prepareGatewayStatus(
 		})
 	}
 
-	ipAddrType := v1beta1.IPAddressType
-	gwPodIP := v1beta1.GatewayAddress{
-		Type:  &ipAddrType,
-		Value: podIP,
-	}
-
 	return v1beta1.GatewayStatus{
 		Listeners:  listenerStatuses,
-		Addresses:  []v1beta1.GatewayAddress{gwPodIP},
+		Addresses:  gatewayStatus.Addresses,
 		Conditions: convertConditions(gatewayStatus.Conditions, gatewayStatus.ObservedGeneration, transitionTime),
 	}
 }

@@ -3,12 +3,12 @@ package relationship
 import (
 	"testing"
 
-	"github.com/google/go-cmp/cmp"
+	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/helpers"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 )
 
 func TestGetBackendServiceNamesFromRoute(t *testing.T) {
@@ -17,10 +17,10 @@ func TestGetBackendServiceNamesFromRoute(t *testing.T) {
 			{
 				BackendRef: v1beta1.BackendRef{
 					BackendObjectReference: v1beta1.BackendObjectReference{
-						Kind:      (*v1beta1.Kind)(helpers.GetStringPointer("Service")),
+						Kind:      (*v1beta1.Kind)(helpers.GetPointer("Service")),
 						Name:      svcName,
-						Namespace: (*v1beta1.Namespace)(helpers.GetStringPointer("test")),
-						Port:      (*v1beta1.PortNumber)(helpers.GetInt32Pointer(80)),
+						Namespace: (*v1beta1.Namespace)(helpers.GetPointer("test")),
+						Port:      (*v1beta1.PortNumber)(helpers.GetPointer[int32](80)),
 					},
 				},
 			},
@@ -45,15 +45,17 @@ func TestGetBackendServiceNamesFromRoute(t *testing.T) {
 					BackendRefs: getNormalRefs("svc1"), // duplicate
 				},
 				{
-					BackendRefs: getModifiedRefs("invalid-kind",
+					BackendRefs: getModifiedRefs(
+						"invalid-kind",
 						func(refs []v1beta1.HTTPBackendRef) []v1beta1.HTTPBackendRef {
-							refs[0].Kind = (*v1beta1.Kind)(helpers.GetStringPointer("Invalid"))
+							refs[0].Kind = (*v1beta1.Kind)(helpers.GetPointer("Invalid"))
 							return refs
 						},
 					),
 				},
 				{
-					BackendRefs: getModifiedRefs("nil-namespace",
+					BackendRefs: getModifiedRefs(
+						"nil-namespace",
 						func(refs []v1beta1.HTTPBackendRef) []v1beta1.HTTPBackendRef {
 							refs[0].Namespace = nil
 							return refs
@@ -61,10 +63,11 @@ func TestGetBackendServiceNamesFromRoute(t *testing.T) {
 					),
 				},
 				{
-					BackendRefs: getModifiedRefs("diff-namespace",
+					BackendRefs: getModifiedRefs(
+						"diff-namespace",
 						func(refs []v1beta1.HTTPBackendRef) []v1beta1.HTTPBackendRef {
 							refs[0].Namespace = (*v1beta1.Namespace)(
-								helpers.GetStringPointer("not-test"),
+								helpers.GetPointer("not-test"),
 							)
 							return refs
 						},
@@ -84,14 +87,14 @@ func TestGetBackendServiceNamesFromRoute(t *testing.T) {
 								BackendRef: v1beta1.BackendRef{
 									BackendObjectReference: v1beta1.BackendObjectReference{
 										Kind: (*v1beta1.Kind)(
-											helpers.GetStringPointer("Service"),
+											helpers.GetPointer("Service"),
 										),
 										Name: "multiple-refs2",
 										Namespace: (*v1beta1.Namespace)(
-											helpers.GetStringPointer("test"),
+											helpers.GetPointer("test"),
 										),
 										Port: (*v1beta1.PortNumber)(
-											helpers.GetInt32Pointer(80),
+											helpers.GetPointer[int32](80),
 										),
 									},
 								},
@@ -110,10 +113,10 @@ func TestGetBackendServiceNamesFromRoute(t *testing.T) {
 		{Namespace: "test", Name: "multiple-refs"}:      {},
 		{Namespace: "test", Name: "multiple-refs2"}:     {},
 	}
+
+	g := NewWithT(t)
 	names := getBackendServiceNamesFromRoute(hr)
-	if diff := cmp.Diff(expNames, names); diff != "" {
-		t.Errorf("getBackendServiceNamesFromRoute() mismatch (-want +got):\n%s", diff)
-	}
+	g.Expect(names).To(Equal(expNames))
 }
 
 func TestCapturerImpl_DecrementRouteCount(t *testing.T) {
@@ -147,6 +150,7 @@ func TestCapturerImpl_DecrementRouteCount(t *testing.T) {
 	svc := types.NamespacedName{Namespace: "test", Name: "svc"}
 
 	for _, tc := range testcases {
+		g := NewWithT(t)
 		if tc.startingRefCount > 0 {
 			capturer.serviceRefCount[svc] = tc.startingRefCount
 		}
@@ -154,13 +158,7 @@ func TestCapturerImpl_DecrementRouteCount(t *testing.T) {
 		capturer.decrementRefCount(svc)
 
 		count, exists := capturer.serviceRefCount[svc]
-		if tc.exists != exists {
-			t.Errorf("decrementRefCount() test case %q expected exists to be %t", tc.msg, tc.exists)
-		}
-
-		if tc.expectedRefCount != count {
-			t.Errorf("decrementRefCount() test case %q expected ref count to be %d, got %d", tc.msg,
-				tc.expectedRefCount, count)
-		}
+		g.Expect(exists).To(Equal(tc.exists))
+		g.Expect(count).To(Equal(tc.expectedRefCount))
 	}
 }

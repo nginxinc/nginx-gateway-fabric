@@ -7,8 +7,8 @@ import (
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/conditions"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/helpers"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 )
 
 func CreateTestConditions(condType string) []conditions.Condition {
@@ -54,7 +54,7 @@ func CreateExpectedAPIConditions(
 }
 
 func TestConvertRouteConditions(t *testing.T) {
-	g := NewGomegaWithT(t)
+	g := NewWithT(t)
 
 	var generation int64 = 1
 	transitionTime := metav1.NewTime(time.Now())

@@ -32,7 +32,7 @@ func validateHostname(hostname string) error {
 }
 
 // panicForBrokenWebhookAssumption panics with the error message because an assumption about the webhook validation
-// (run by NKG) is broken.
+// (run by NGF) is broken.
 // Use it when you expect a validated Gateway API resource, but the actual resource breaks the validation constraints.
 // For example, a field that must not be nil is nil.
 func panicForBrokenWebhookAssumption(err error) {

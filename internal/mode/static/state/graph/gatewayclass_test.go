@@ -9,9 +9,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/conditions"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/helpers"
-	staticConds "github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/state/conditions"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
+	staticConds "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/conditions"
 )
 
 func TestProcessGatewayClasses(t *testing.T) {
@@ -110,7 +110,7 @@ func TestProcessGatewayClasses(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			g := NewGomegaWithT(t)
+			g := NewWithT(t)
 			result, exists := processGatewayClasses(test.gcs, gcName, ctlrName)
 			g.Expect(helpers.Diff(test.expected, result)).To(BeEmpty())
 			g.Expect(exists).To(Equal(test.exists))
@@ -162,7 +162,7 @@ func TestBuildGatewayClass(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			g := NewGomegaWithT(t)
+			g := NewWithT(t)
 
 			result := buildGatewayClass(test.gc)
 			g.Expect(helpers.Diff(test.expected, result)).To(BeEmpty())

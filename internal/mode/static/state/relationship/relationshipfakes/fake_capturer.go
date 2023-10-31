@@ -4,7 +4,7 @@ package relationshipfakes
 import (
 	"sync"
 
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/state/relationship"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/relationship"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )

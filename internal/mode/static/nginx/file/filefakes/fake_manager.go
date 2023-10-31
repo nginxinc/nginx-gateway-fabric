@@ -4,7 +4,7 @@ package filefakes
 import (
 	"sync"
 
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/nginx/file"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/file"
 )
 
 type FakeManager struct {

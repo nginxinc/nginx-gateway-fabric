@@ -5,14 +5,15 @@ import (
 	"context"
 	"sync"
 
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/nginx/runtime"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/runtime"
 )
 
 type FakeManager struct {
-	ReloadStub        func(context.Context) error
+	ReloadStub        func(context.Context, int) error
 	reloadMutex       sync.RWMutex
 	reloadArgsForCall []struct {
 		arg1 context.Context
+		arg2 int
 	}
 	reloadReturns struct {
 		result1 error
@@ -24,18 +25,19 @@ type FakeManager struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeManager) Reload(arg1 context.Context) error {
+func (fake *FakeManager) Reload(arg1 context.Context, arg2 int) error {
 	fake.reloadMutex.Lock()
 	ret, specificReturn := fake.reloadReturnsOnCall[len(fake.reloadArgsForCall)]
 	fake.reloadArgsForCall = append(fake.reloadArgsForCall, struct {
 		arg1 context.Context
-	}{arg1})
+		arg2 int
+	}{arg1, arg2})
 	stub := fake.ReloadStub
 	fakeReturns := fake.reloadReturns
-	fake.recordInvocation("Reload", []interface{}{arg1})
+	fake.recordInvocation("Reload", []interface{}{arg1, arg2})
 	fake.reloadMutex.Unlock()
 	if stub != nil {
-		return stub(arg1)
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1
@@ -49,17 +51,17 @@ func (fake *FakeManager) ReloadCallCount() int {
 	return len(fake.reloadArgsForCall)
 }
 
-func (fake *FakeManager) ReloadCalls(stub func(context.Context) error) {
+func (fake *FakeManager) ReloadCalls(stub func(context.Context, int) error) {
 	fake.reloadMutex.Lock()
 	defer fake.reloadMutex.Unlock()
 	fake.ReloadStub = stub
 }
 
-func (fake *FakeManager) ReloadArgsForCall(i int) context.Context {
+func (fake *FakeManager) ReloadArgsForCall(i int) (context.Context, int) {
 	fake.reloadMutex.RLock()
 	defer fake.reloadMutex.RUnlock()
 	argsForCall := fake.reloadArgsForCall[i]
-	return argsForCall.arg1
+	return argsForCall.arg1, argsForCall.arg2
 }
 
 func (fake *FakeManager) ReloadReturns(result1 error) {

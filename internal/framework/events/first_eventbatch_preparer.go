@@ -70,8 +70,7 @@ func (p *FirstEventBatchPreparerImpl) Prepare(ctx context.Context) (EventBatch, 
 	total := 0
 
 	for _, list := range p.objectLists {
-		err := p.reader.List(ctx, list)
-		if err != nil {
+		if err := p.reader.List(ctx, list); err != nil {
 			return nil, err
 		}
 
@@ -85,8 +84,7 @@ func (p *FirstEventBatchPreparerImpl) Prepare(ctx context.Context) (EventBatch, 
 	for _, obj := range p.objects {
 		key := types.NamespacedName{Namespace: obj.GetNamespace(), Name: obj.GetName()}
 
-		err := p.reader.Get(ctx, key, obj)
-		if err != nil {
+		if err := p.reader.Get(ctx, key, obj); err != nil {
 			if !apierrors.IsNotFound(err) {
 				return nil, err
 			}

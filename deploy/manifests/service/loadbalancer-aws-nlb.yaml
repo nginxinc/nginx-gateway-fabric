@@ -1,5 +1,5 @@
 ---
-# Source: nginx-kubernetes-gateway/templates/service.yaml
+# Source: nginx-gateway-fabric/templates/service.yaml
 apiVersion: v1
 kind: Service
 metadata:

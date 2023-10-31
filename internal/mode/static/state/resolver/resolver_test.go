@@ -4,13 +4,12 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/google/go-cmp/cmp"
 	. "github.com/onsi/gomega"
 	v1 "k8s.io/api/core/v1"
 	discoveryV1 "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/helpers"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 )
 
 var (
@@ -20,12 +19,12 @@ var (
 
 	readyEndpoint1 = discoveryV1.Endpoint{
 		Addresses:  addresses,
-		Conditions: discoveryV1.EndpointConditions{Ready: helpers.GetBoolPointer(true)},
+		Conditions: discoveryV1.EndpointConditions{Ready: helpers.GetPointer(true)},
 	}
 
 	notReadyEndpoint = discoveryV1.Endpoint{
 		Addresses:  addresses,
-		Conditions: discoveryV1.EndpointConditions{Ready: helpers.GetBoolPointer(false)},
+		Conditions: discoveryV1.EndpointConditions{Ready: helpers.GetPointer(false)},
 	}
 
 	mixedValidityEndpointSlice = discoveryV1.EndpointSlice{
@@ -34,7 +33,7 @@ var (
 		Ports: []discoveryV1.EndpointPort{
 			{
 				Name: &svcPortName,
-				Port: helpers.GetInt32Pointer(80),
+				Port: helpers.GetPointer[int32](80),
 			},
 		},
 	}
@@ -54,7 +53,7 @@ var (
 		Ports: []discoveryV1.EndpointPort{
 			{
 				Name: &svcPortName,
-				Port: helpers.GetInt32Pointer(80),
+				Port: helpers.GetPointer[int32](80),
 			},
 		},
 	}
@@ -65,7 +64,7 @@ var (
 		Ports: []discoveryV1.EndpointPort{
 			{
 				Name: &svcPortName,
-				Port: helpers.GetInt32Pointer(80),
+				Port: helpers.GetPointer[int32](80),
 			},
 		},
 	}
@@ -75,8 +74,8 @@ var (
 		Endpoints:   []discoveryV1.Endpoint{readyEndpoint1},
 		Ports: []discoveryV1.EndpointPort{
 			{
-				Name: helpers.GetStringPointer("other-svc-port"),
-				Port: helpers.GetInt32Pointer(8080),
+				Name: helpers.GetPointer("other-svc-port"),
+				Port: helpers.GetPointer[int32](8080),
 			},
 		},
 	}
@@ -102,9 +101,8 @@ func TestFilterEndpointSliceList(t *testing.T) {
 	expFilteredList := []discoveryV1.EndpointSlice{validEndpointSlice, mixedValidityEndpointSlice}
 
 	filteredSliceList := filterEndpointSliceList(sliceList, svcPort)
-	if diff := cmp.Diff(expFilteredList, filteredSliceList); diff != "" {
-		t.Errorf("filterEndpointSliceList() mismatch (-want +got):\n%s", diff)
-	}
+	g := NewWithT(t)
+	g.Expect(filteredSliceList).To(Equal(expFilteredList))
 }
 
 func TestGetServicePort(t *testing.T) {
@@ -124,25 +122,18 @@ func TestGetServicePort(t *testing.T) {
 		},
 	}
 
+	g := NewWithT(t)
 	// ports exist
 	for _, p := range []int32{80, 81, 82} {
 		port, err := getServicePort(svc, p)
-		if err != nil {
-			t.Errorf("getServicePort() returned an error for port %d: %v", p, err)
-		}
-		if port.Port != p {
-			t.Errorf("getServicePort() returned the wrong port for port %d; expected %d, got %d", p, p, port.Port)
-		}
+		g.Expect(err).ShouldNot(HaveOccurred())
+		g.Expect(port.Port).To(Equal(p))
 	}
 
 	// port doesn't exist
 	port, err := getServicePort(svc, 83)
-	if err == nil {
-		t.Errorf("getServicePort() didn't return an error for port 83")
-	}
-	if port.Port != 0 {
-		t.Errorf("getServicePort() returned the wrong port for port 83; expected 0, got %d", port.Port)
-	}
+	g.Expect(err).Should(HaveOccurred())
+	g.Expect(port.Port).To(Equal(int32(0)))
 }
 
 func TestGetDefaultPort(t *testing.T) {
@@ -176,11 +167,9 @@ func TestGetDefaultPort(t *testing.T) {
 		},
 	}
 	for _, tc := range testcases {
+		g := NewWithT(t)
 		port := getDefaultPort(tc.svcPort)
-
-		if tc.expPort != port {
-			t.Errorf("getTargetPort() mismatch on port for %q; expected %d, got %d", tc.msg, tc.expPort, port)
-		}
+		g.Expect(port).To(Equal(tc.expPort))
 	}
 }
 
@@ -238,7 +227,7 @@ func TestIgnoreEndpointSlice(t *testing.T) {
 				AddressType: discoveryV1.AddressTypeIPv4,
 				Ports: []discoveryV1.EndpointPort{
 					{
-						Name: helpers.GetStringPointer("other-svc-port"),
+						Name: helpers.GetPointer("other-svc-port"),
 						Port: &port4000,
 					},
 				},
@@ -287,9 +276,8 @@ func TestIgnoreEndpointSlice(t *testing.T) {
 		},
 	}
 	for _, tc := range testcases {
-		if ignoreEndpointSlice(tc.slice, tc.servicePort) != tc.ignore {
-			t.Errorf("ignoreEndpointSlice() mismatch for %q; expected %t", tc.msg, tc.ignore)
-		}
+		g := NewWithT(t)
+		g.Expect(ignoreEndpointSlice(tc.slice, tc.servicePort)).To(Equal(tc.ignore))
 	}
 }
 
@@ -303,7 +291,7 @@ func TestEndpointReady(t *testing.T) {
 			msg: "endpoint ready",
 			endpoint: discoveryV1.Endpoint{
 				Conditions: discoveryV1.EndpointConditions{
-					Ready: helpers.GetBoolPointer(true),
+					Ready: helpers.GetPointer(true),
 				},
 			},
 			ready: true,
@@ -321,16 +309,15 @@ func TestEndpointReady(t *testing.T) {
 			msg: "endpoint not ready",
 			endpoint: discoveryV1.Endpoint{
 				Conditions: discoveryV1.EndpointConditions{
-					Ready: helpers.GetBoolPointer(false),
+					Ready: helpers.GetPointer(false),
 				},
 			},
 			ready: false,
 		},
 	}
 	for _, tc := range testcases {
-		if endpointReady(tc.endpoint) != tc.ready {
-			t.Errorf("endpointReady() mismatch for %q; expected %t", tc.msg, tc.ready)
-		}
+		g := NewWithT(t)
+		g.Expect(endpointReady(tc.endpoint)).To(Equal(tc.ready))
 	}
 }
 
@@ -387,7 +374,7 @@ func TestFindPort(t *testing.T) {
 			ports: []discoveryV1.EndpointPort{
 				{
 					Name: nil,
-					Port: helpers.GetInt32Pointer(8080),
+					Port: helpers.GetPointer[int32](8080),
 				},
 			},
 			svcPort: v1.ServicePort{
@@ -401,16 +388,16 @@ func TestFindPort(t *testing.T) {
 			msg: "no matching endpoint name",
 			ports: []discoveryV1.EndpointPort{
 				{
-					Name: helpers.GetStringPointer("other-svc-port"),
-					Port: helpers.GetInt32Pointer(8080),
+					Name: helpers.GetPointer("other-svc-port"),
+					Port: helpers.GetPointer[int32](8080),
 				},
 				{
-					Name: helpers.GetStringPointer("other-svc-port2"),
-					Port: helpers.GetInt32Pointer(8081),
+					Name: helpers.GetPointer("other-svc-port2"),
+					Port: helpers.GetPointer[int32](8081),
 				},
 				{
-					Name: helpers.GetStringPointer("other-svc-port3"),
-					Port: helpers.GetInt32Pointer(8082),
+					Name: helpers.GetPointer("other-svc-port3"),
+					Port: helpers.GetPointer[int32](8082),
 				},
 			},
 			svcPort: v1.ServicePort{
@@ -424,16 +411,16 @@ func TestFindPort(t *testing.T) {
 			msg: "matching endpoint name",
 			ports: []discoveryV1.EndpointPort{
 				{
-					Name: helpers.GetStringPointer("other-svc-port"),
-					Port: helpers.GetInt32Pointer(8080),
+					Name: helpers.GetPointer("other-svc-port"),
+					Port: helpers.GetPointer[int32](8080),
 				},
 				{
-					Name: helpers.GetStringPointer("other-svc-port2"),
-					Port: helpers.GetInt32Pointer(8081),
+					Name: helpers.GetPointer("other-svc-port2"),
+					Port: helpers.GetPointer[int32](8081),
 				},
 				{
 					Name: &svcPortName, // match
-					Port: helpers.GetInt32Pointer(8082),
+					Port: helpers.GetPointer[int32](8082),
 				},
 			},
 			svcPort: v1.ServicePort{
@@ -448,8 +435,8 @@ func TestFindPort(t *testing.T) {
 			ports: []discoveryV1.EndpointPort{
 				{
 					// If a service port is unnamed (empty string), then the endpoint port will also be empty string.
-					Name: helpers.GetStringPointer(""),
-					Port: helpers.GetInt32Pointer(8080),
+					Name: helpers.GetPointer(""),
+					Port: helpers.GetPointer[int32](8080),
 				},
 			},
 			svcPort: v1.ServicePort{
@@ -460,21 +447,14 @@ func TestFindPort(t *testing.T) {
 		},
 	}
 	for _, tc := range testcases {
+		g := NewWithT(t)
 		port := findPort(tc.ports, tc.svcPort)
-
-		if port != tc.expPort {
-			t.Errorf(
-				"findPort() mismatch on %q; expected port %d; got port %d",
-				tc.msg,
-				tc.expPort,
-				port,
-			)
-		}
+		g.Expect(port).To(Equal(tc.expPort))
 	}
 }
 
 func TestCalculateReadyEndpoints(t *testing.T) {
-	g := NewGomegaWithT(t)
+	g := NewWithT(t)
 
 	slices := []discoveryV1.EndpointSlice{
 		{
@@ -482,7 +462,7 @@ func TestCalculateReadyEndpoints(t *testing.T) {
 				{
 					Addresses: []string{"1.0.0.1"},
 					Conditions: discoveryV1.EndpointConditions{
-						Ready: helpers.GetBoolPointer(true),
+						Ready: helpers.GetPointer(true),
 					},
 				},
 				{
@@ -498,7 +478,7 @@ func TestCalculateReadyEndpoints(t *testing.T) {
 				{
 					Addresses: []string{"2.0.0.1", "2.0.0.2", "2.0.0.3"},
 					Conditions: discoveryV1.EndpointConditions{
-						Ready: helpers.GetBoolPointer(true),
+						Ready: helpers.GetPointer(true),
 					},
 				},
 			},

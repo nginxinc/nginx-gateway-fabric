@@ -8,13 +8,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/helpers"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 )
 
 func TestPrepareGatewayStatus(t *testing.T) {
-	ipAddrType := v1beta1.IPAddressType
-	podIP := v1beta1.GatewayAddress{
-		Type:  &ipAddrType,
+	podIP := v1beta1.GatewayStatusAddress{
+		Type:  helpers.GetPointer(v1beta1.IPAddressType),
 		Value: "1.2.3.4",
 	}
 	status := GatewayStatus{
@@ -30,6 +29,7 @@ func TestPrepareGatewayStatus(t *testing.T) {
 				},
 			},
 		},
+		Addresses:          []v1beta1.GatewayStatusAddress{podIP},
 		ObservedGeneration: 1,
 	}
 
@@ -49,11 +49,11 @@ func TestPrepareGatewayStatus(t *testing.T) {
 				Conditions:     CreateExpectedAPIConditions("ListenerTest", 1, transitionTime),
 			},
 		},
-		Addresses: []v1beta1.GatewayAddress{podIP},
+		Addresses: []v1beta1.GatewayStatusAddress{podIP},
 	}
 
-	g := NewGomegaWithT(t)
+	g := NewWithT(t)
 
-	result := prepareGatewayStatus(status, "1.2.3.4", transitionTime)
+	result := prepareGatewayStatus(status, transitionTime)
 	g.Expect(helpers.Diff(expected, result)).To(BeEmpty())
 }

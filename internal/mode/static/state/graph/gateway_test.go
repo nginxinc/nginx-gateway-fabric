@@ -12,8 +12,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/helpers"
-	staticConds "github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/state/conditions"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
+	staticConds "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/conditions"
 )
 
 func TestProcessedGatewaysGetAllNsNames(t *testing.T) {
@@ -57,7 +57,7 @@ func TestProcessedGatewaysGetAllNsNames(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			g := NewGomegaWithT(t)
+			g := NewWithT(t)
 			result := test.gws.GetAllNsNames()
 			g.Expect(result).To(Equal(test.expected))
 		})
@@ -132,7 +132,7 @@ func TestProcessGateways(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			g := NewGomegaWithT(t)
+			g := NewWithT(t)
 			result := processGateways(test.gws, gcName)
 			g.Expect(helpers.Diff(test.expected, result)).To(BeEmpty())
 		})
@@ -144,6 +144,9 @@ func TestBuildGateway(t *testing.T) {
 
 	labelSet := map[string]string{
 		"key": "value",
+	}
+	protectedPorts := ProtectedPorts{
+		9113: "MetricsPort",
 	}
 	listenerAllowedRoutes := v1beta1.Listener{
 		Name:     "listener-with-allowed-routes",
@@ -279,6 +282,7 @@ func TestBuildGateway(t *testing.T) {
 	// invalid listeners
 	invalidProtocolListener := createTCPListener("invalid-protocol", "bar.example.com", 80)
 	invalidPortListener := createHTTPListener("invalid-port", "invalid-port", 0)
+	invalidProtectedPortListener := createHTTPListener("invalid-protected-port", "invalid-protected-port", 9113)
 	invalidHostnameListener := createHTTPListener("invalid-hostname", "$example.com", 80)
 	invalidHTTPSHostnameListener := createHTTPSListener(
 		"invalid-https-hostname",
@@ -532,7 +536,13 @@ func TestBuildGateway(t *testing.T) {
 		},
 		{
 			gateway: createGateway(
-				gatewayCfg{listeners: []v1beta1.Listener{invalidPortListener, invalidHTTPSPortListener}},
+				gatewayCfg{
+					listeners: []v1beta1.Listener{
+						invalidPortListener,
+						invalidHTTPSPortListener,
+						invalidProtectedPortListener,
+					},
+				},
 			),
 			gatewayClass: validGC,
 			expected: &Gateway{
@@ -553,6 +563,16 @@ func TestBuildGateway(t *testing.T) {
 						Valid:  false,
 						Conditions: staticConds.NewListenerUnsupportedValue(
 							`port: Invalid value: 0: port must be between 1-65535`,
+						),
+						SupportedKinds: []v1beta1.RouteGroupKind{
+							{Kind: "HTTPRoute"},
+						},
+					},
+					"invalid-protected-port": {
+						Source: invalidProtectedPortListener,
+						Valid:  false,
+						Conditions: staticConds.NewListenerUnsupportedValue(
+							`port: Invalid value: 9113: port is already in use as MetricsPort`,
 						),
 						SupportedKinds: []v1beta1.RouteGroupKind{
 							{Kind: "HTTPRoute"},
@@ -841,9 +861,9 @@ func TestBuildGateway(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			g := NewGomegaWithT(t)
+			g := NewWithT(t)
 			resolver := newReferenceGrantResolver(test.refGrants)
-			result := buildGateway(test.gateway, secretResolver, test.gatewayClass, resolver)
+			result := buildGateway(test.gateway, secretResolver, test.gatewayClass, resolver, protectedPorts)
 			g.Expect(helpers.Diff(test.expected, result)).To(BeEmpty())
 		})
 	}

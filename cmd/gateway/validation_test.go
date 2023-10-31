@@ -15,17 +15,17 @@ func TestValidateGatewayControllerName(t *testing.T) {
 	}{
 		{
 			name:   "valid",
-			value:  "k8s-gateway.nginx.org/nginx-gateway",
+			value:  "gateway.nginx.org/nginx-gateway",
 			expErr: false,
 		},
 		{
 			name:   "valid - with subpath",
-			value:  "k8s-gateway.nginx.org/nginx-gateway/my-gateway",
+			value:  "gateway.nginx.org/nginx-gateway/my-gateway",
 			expErr: false,
 		},
 		{
 			name:   "valid - with complex subpath",
-			value:  "k8s-gateway.nginx.org/nginx-gateway/my-gateway/v1",
+			value:  "gateway.nginx.org/nginx-gateway/my-gateway/v1",
 			expErr: false,
 		},
 		{
@@ -35,12 +35,12 @@ func TestValidateGatewayControllerName(t *testing.T) {
 		},
 		{
 			name:   "invalid - lacks path",
-			value:  "k8s-gateway.nginx.org",
+			value:  "gateway.nginx.org",
 			expErr: true,
 		},
 		{
 			name:   "invalid - lacks path, only slash is present",
-			value:  "k8s-gateway.nginx.org/",
+			value:  "gateway.nginx.org/",
 			expErr: true,
 		},
 		{
@@ -52,7 +52,7 @@ func TestValidateGatewayControllerName(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			g := NewGomegaWithT(t)
+			g := NewWithT(t)
 
 			err := validateGatewayControllerName(test.value)
 
@@ -115,7 +115,7 @@ func TestValidateResourceName(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			g := NewGomegaWithT(t)
+			g := NewWithT(t)
 
 			err := validateResourceName(test.value)
 
@@ -178,7 +178,7 @@ func TestValidateNamespaceName(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			g := NewGomegaWithT(t)
+			g := NewWithT(t)
 
 			err := validateNamespaceName(test.value)
 
@@ -240,7 +240,7 @@ func TestParseNamespacedResourceName(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			g := NewGomegaWithT(t)
+			g := NewWithT(t)
 
 			nsName, err := parseNamespacedResourceName(test.value)
 
@@ -283,7 +283,7 @@ func TestValidateIP(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			g := NewGomegaWithT(t)
+			g := NewWithT(t)
 
 			err := validateIP(tc.ip)
 			if !tc.expErr {
@@ -293,4 +293,48 @@ func TestValidateIP(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestValidatePort(t *testing.T) {
+	tests := []struct {
+		name   string
+		port   int
+		expErr bool
+	}{
+		{
+			name:   "port under minimum allowed value",
+			port:   1023,
+			expErr: true,
+		},
+		{
+			name:   "port over maximum allowed value",
+			port:   65536,
+			expErr: true,
+		},
+		{
+			name:   "valid port",
+			port:   9113,
+			expErr: false,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			g := NewWithT(t)
+
+			err := validatePort(tc.port)
+			if !tc.expErr {
+				g.Expect(err).ToNot(HaveOccurred())
+			} else {
+				g.Expect(err).To(HaveOccurred())
+			}
+		})
+	}
+}
+
+func TestEnsureNoPortCollisions(t *testing.T) {
+	g := NewWithT(t)
+
+	g.Expect(ensureNoPortCollisions(9113, 8081)).To(Succeed())
+	g.Expect(ensureNoPortCollisions(9113, 9113)).ToNot(Succeed())
 }

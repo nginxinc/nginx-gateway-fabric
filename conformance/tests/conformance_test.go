@@ -18,7 +18,7 @@ limitations under the License.
 package tests
 
 import (
-	"strings"
+	"os"
 	"testing"
 
 	. "github.com/onsi/gomega"
@@ -27,13 +27,15 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
+	"sigs.k8s.io/gateway-api/conformance/apis/v1alpha1"
 	"sigs.k8s.io/gateway-api/conformance/tests"
 	"sigs.k8s.io/gateway-api/conformance/utils/flags"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
+	"sigs.k8s.io/yaml"
 )
 
 func TestConformance(t *testing.T) {
-	g := NewGomegaWithT(t)
+	g := NewWithT(t)
 	cfg, err := config.GetConfig()
 	g.Expect(err).To(BeNil())
 
@@ -43,39 +45,54 @@ func TestConformance(t *testing.T) {
 	g.Expect(v1alpha2.AddToScheme(client.Scheme())).To(Succeed())
 	g.Expect(v1beta1.AddToScheme(client.Scheme())).To(Succeed())
 
-	supportedFeatures := parseSupportedFeatures(*flags.SupportedFeatures)
-	exemptFeatures := parseSupportedFeatures(*flags.ExemptFeatures)
+	supportedFeatures := suite.ParseSupportedFeatures(*flags.SupportedFeatures)
+	exemptFeatures := suite.ParseSupportedFeatures(*flags.ExemptFeatures)
 
 	t.Logf(`Running conformance tests with %s GatewayClass\n cleanup: %t\n`+
 		`debug: %t\n enable all features: %t \n supported features: [%v]\n exempt features: [%v]`,
 		*flags.GatewayClassName, *flags.CleanupBaseResources, *flags.ShowDebug,
 		*flags.EnableAllSupportedFeatures, *flags.SupportedFeatures, *flags.ExemptFeatures)
 
-	cSuite := suite.New(suite.Options{
-		Client:                     client,
-		GatewayClassName:           *flags.GatewayClassName,
-		Debug:                      *flags.ShowDebug,
-		CleanupBaseResources:       *flags.CleanupBaseResources,
-		SupportedFeatures:          supportedFeatures,
-		ExemptFeatures:             exemptFeatures,
-		EnableAllSupportedFeatures: *flags.EnableAllSupportedFeatures,
+	expSuite, err := suite.NewExperimentalConformanceTestSuite(suite.ExperimentalConformanceOptions{
+		Options: suite.Options{
+			Client:                     client,
+			GatewayClassName:           *flags.GatewayClassName,
+			Debug:                      *flags.ShowDebug,
+			CleanupBaseResources:       *flags.CleanupBaseResources,
+			SupportedFeatures:          supportedFeatures,
+			ExemptFeatures:             exemptFeatures,
+			EnableAllSupportedFeatures: *flags.EnableAllSupportedFeatures,
+		},
+		Implementation: v1alpha1.Implementation{
+			Organization: "nginxinc",
+			Project:      "nginx-gateway-fabric",
+			URL:          "https://github.com/nginxinc/nginx-gateway-fabric",
+			Version:      *flags.ImplementationVersion,
+			Contact: []string{
+				"https://github.com/nginxinc/nginx-gateway-fabric/discussions/new/choose",
+			},
+		},
+		ConformanceProfiles: sets.New(suite.HTTPConformanceProfileName),
 	})
-	cSuite.Setup(t)
-	cSuite.Run(t, tests.ConformanceTests)
-}
+	g.Expect(err).To(Not(HaveOccurred()))
 
-// parseSupportedFeatures parses flag arguments and converts the string to
-// sets.Set[suite.SupportedFeature]
-// FIXME(kate-osborn): Use exported ParseSupportedFeatures function
-// https://github.com/kubernetes-sigs/gateway-api/blob/63e423cf1b837991d2747742199d90863a98b0c3/conformance/utils/suite/suite.go#L235
-// once it's released. https://github.com/nginxinc/nginx-kubernetes-gateway/issues/779
-func parseSupportedFeatures(f string) sets.Set[suite.SupportedFeature] {
-	if f == "" {
-		return nil
-	}
-	res := sets.Set[suite.SupportedFeature]{}
-	for _, value := range strings.Split(f, ",") {
-		res.Insert(suite.SupportedFeature(value))
-	}
-	return res
+	expSuite.Setup(t)
+	err = expSuite.Run(t, tests.ConformanceTests)
+	g.Expect(err).To(Not(HaveOccurred()))
+
+	report, err := expSuite.Report()
+	g.Expect(err).To(Not(HaveOccurred()))
+
+	yamlReport, err := yaml.Marshal(report)
+	g.Expect(err).ToNot(HaveOccurred())
+
+	f, err := os.Create(*flags.ReportOutput)
+	g.Expect(err).ToNot(HaveOccurred())
+	defer f.Close()
+
+	_, err = f.WriteString("CONFORMANCE PROFILE\n")
+	g.Expect(err).ToNot(HaveOccurred())
+
+	_, err = f.Write(yamlReport)
+	g.Expect(err).ToNot(HaveOccurred())
 }

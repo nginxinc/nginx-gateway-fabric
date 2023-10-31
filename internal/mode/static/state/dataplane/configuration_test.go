@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/google/go-cmp/cmp"
 	. "github.com/onsi/gomega"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -14,10 +13,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/helpers"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/state/graph"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/state/resolver"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/state/resolver/resolverfakes"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/graph"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/resolver"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/resolver/resolverfakes"
 )
 
 func TestBuildConfiguration(t *testing.T) {
@@ -33,7 +32,7 @@ func TestBuildConfiguration(t *testing.T) {
 				Matches: []v1beta1.HTTPRouteMatch{
 					{
 						Path: &v1beta1.HTTPPathMatch{
-							Value: helpers.GetStringPointer(p.path),
+							Value: helpers.GetPointer(p.path),
 							Type:  helpers.GetPointer(p.pathType),
 						},
 					},
@@ -49,9 +48,9 @@ func TestBuildConfiguration(t *testing.T) {
 				CommonRouteSpec: v1beta1.CommonRouteSpec{
 					ParentRefs: []v1beta1.ParentReference{
 						{
-							Namespace:   (*v1beta1.Namespace)(helpers.GetStringPointer("test")),
+							Namespace:   (*v1beta1.Namespace)(helpers.GetPointer("test")),
 							Name:        "gateway",
-							SectionName: (*v1beta1.SectionName)(helpers.GetStringPointer(listenerName)),
+							SectionName: (*v1beta1.SectionName)(helpers.GetPointer(listenerName)),
 						},
 					},
 				},
@@ -219,10 +218,13 @@ func TestBuildConfiguration(t *testing.T) {
 	redirect := v1beta1.HTTPRouteFilter{
 		Type: v1beta1.HTTPRouteFilterRequestRedirect,
 		RequestRedirect: &v1beta1.HTTPRequestRedirectFilter{
-			Hostname: (*v1beta1.PreciseHostname)(helpers.GetStringPointer("foo.example.com")),
+			Hostname: (*v1beta1.PreciseHostname)(helpers.GetPointer("foo.example.com")),
 		},
 	}
 	addFilters(hr5, []v1beta1.HTTPRouteFilter{redirect})
+	expRedirect := HTTPRequestRedirectFilter{
+		Hostname: helpers.GetPointer("foo.example.com"),
+	}
 
 	hr6, expHR6Groups, routeHR6 := createTestResources(
 		"hr-6",
@@ -345,10 +347,10 @@ func TestBuildConfiguration(t *testing.T) {
 		Port:     443,
 		Protocol: v1beta1.HTTPSProtocolType,
 		TLS: &v1beta1.GatewayTLSConfig{
-			Mode: helpers.GetTLSModePointer(v1beta1.TLSModeTerminate),
+			Mode: helpers.GetPointer(v1beta1.TLSModeTerminate),
 			CertificateRefs: []v1beta1.SecretObjectReference{
 				{
-					Kind:      (*v1beta1.Kind)(helpers.GetStringPointer("Secret")),
+					Kind:      (*v1beta1.Kind)(helpers.GetPointer("Secret")),
 					Namespace: helpers.GetPointer(v1beta1.Namespace(secret1NsName.Namespace)),
 					Name:      v1beta1.ObjectName(secret1NsName.Name),
 				},
@@ -362,10 +364,10 @@ func TestBuildConfiguration(t *testing.T) {
 		Port:     8443,
 		Protocol: v1beta1.HTTPSProtocolType,
 		TLS: &v1beta1.GatewayTLSConfig{
-			Mode: helpers.GetTLSModePointer(v1beta1.TLSModeTerminate),
+			Mode: helpers.GetPointer(v1beta1.TLSModeTerminate),
 			CertificateRefs: []v1beta1.SecretObjectReference{
 				{
-					Kind:      (*v1beta1.Kind)(helpers.GetStringPointer("Secret")),
+					Kind:      (*v1beta1.Kind)(helpers.GetPointer("Secret")),
 					Namespace: helpers.GetPointer(v1beta1.Namespace(secret2NsName.Namespace)),
 					Name:      v1beta1.ObjectName(secret2NsName.Name),
 				},
@@ -381,10 +383,10 @@ func TestBuildConfiguration(t *testing.T) {
 		Port:     443,
 		Protocol: v1beta1.HTTPSProtocolType,
 		TLS: &v1beta1.GatewayTLSConfig{
-			Mode: helpers.GetTLSModePointer(v1beta1.TLSModeTerminate),
+			Mode: helpers.GetPointer(v1beta1.TLSModeTerminate),
 			CertificateRefs: []v1beta1.SecretObjectReference{
 				{
-					Kind:      (*v1beta1.Kind)(helpers.GetStringPointer("Secret")),
+					Kind:      (*v1beta1.Kind)(helpers.GetPointer("Secret")),
 					Namespace: helpers.GetPointer(v1beta1.Namespace(secret2NsName.Namespace)),
 					Name:      v1beta1.ObjectName(secret2NsName.Name),
 				},
@@ -592,10 +594,8 @@ func TestBuildConfiguration(t *testing.T) {
 								PathType: PathTypePrefix,
 								MatchRules: []MatchRule{
 									{
-										MatchIdx:     0,
-										RuleIdx:      0,
 										BackendGroup: expHR2Groups[0],
-										Source:       hr2,
+										Source:       &hr2.ObjectMeta,
 									},
 								},
 							},
@@ -610,10 +610,8 @@ func TestBuildConfiguration(t *testing.T) {
 								PathType: PathTypePrefix,
 								MatchRules: []MatchRule{
 									{
-										MatchIdx:     0,
-										RuleIdx:      0,
 										BackendGroup: expHR1Groups[0],
-										Source:       hr1,
+										Source:       &hr1.ObjectMeta,
 									},
 								},
 							},
@@ -681,10 +679,8 @@ func TestBuildConfiguration(t *testing.T) {
 								PathType: PathTypePrefix,
 								MatchRules: []MatchRule{
 									{
-										MatchIdx:     0,
-										RuleIdx:      0,
 										BackendGroup: expHTTPSHR2Groups[0],
-										Source:       httpsHR2,
+										Source:       &httpsHR2.ObjectMeta,
 									},
 								},
 							},
@@ -700,10 +696,8 @@ func TestBuildConfiguration(t *testing.T) {
 								PathType: PathTypePrefix,
 								MatchRules: []MatchRule{
 									{
-										MatchIdx:     0,
-										RuleIdx:      0,
 										BackendGroup: expHTTPSHR5Groups[0],
-										Source:       httpsHR5,
+										Source:       &httpsHR5.ObjectMeta,
 									},
 								},
 							},
@@ -719,10 +713,8 @@ func TestBuildConfiguration(t *testing.T) {
 								PathType: PathTypePrefix,
 								MatchRules: []MatchRule{
 									{
-										MatchIdx:     0,
-										RuleIdx:      0,
 										BackendGroup: expHTTPSHR1Groups[0],
-										Source:       httpsHR1,
+										Source:       &httpsHR1.ObjectMeta,
 									},
 								},
 							},
@@ -803,16 +795,12 @@ func TestBuildConfiguration(t *testing.T) {
 								PathType: PathTypePrefix,
 								MatchRules: []MatchRule{
 									{
-										MatchIdx:     0,
-										RuleIdx:      0,
 										BackendGroup: expHR3Groups[0],
-										Source:       hr3,
+										Source:       &hr3.ObjectMeta,
 									},
 									{
-										MatchIdx:     0,
-										RuleIdx:      1,
 										BackendGroup: expHR4Groups[1],
-										Source:       hr4,
+										Source:       &hr4.ObjectMeta,
 									},
 								},
 							},
@@ -821,10 +809,8 @@ func TestBuildConfiguration(t *testing.T) {
 								PathType: PathTypePrefix,
 								MatchRules: []MatchRule{
 									{
-										MatchIdx:     0,
-										RuleIdx:      0,
 										BackendGroup: expHR4Groups[0],
-										Source:       hr4,
+										Source:       &hr4.ObjectMeta,
 									},
 								},
 							},
@@ -833,10 +819,8 @@ func TestBuildConfiguration(t *testing.T) {
 								PathType: PathTypePrefix,
 								MatchRules: []MatchRule{
 									{
-										MatchIdx:     0,
-										RuleIdx:      1,
 										BackendGroup: expHR3Groups[1],
-										Source:       hr3,
+										Source:       &hr3.ObjectMeta,
 									},
 								},
 							},
@@ -858,16 +842,12 @@ func TestBuildConfiguration(t *testing.T) {
 								PathType: PathTypePrefix,
 								MatchRules: []MatchRule{
 									{
-										MatchIdx:     0,
-										RuleIdx:      0,
 										BackendGroup: expHTTPSHR3Groups[0],
-										Source:       httpsHR3,
+										Source:       &httpsHR3.ObjectMeta,
 									},
 									{
-										MatchIdx:     0,
-										RuleIdx:      1,
 										BackendGroup: expHTTPSHR4Groups[1],
-										Source:       httpsHR4,
+										Source:       &httpsHR4.ObjectMeta,
 									},
 								},
 							},
@@ -876,10 +856,8 @@ func TestBuildConfiguration(t *testing.T) {
 								PathType: PathTypePrefix,
 								MatchRules: []MatchRule{
 									{
-										MatchIdx:     0,
-										RuleIdx:      0,
 										BackendGroup: expHTTPSHR4Groups[0],
-										Source:       httpsHR4,
+										Source:       &httpsHR4.ObjectMeta,
 									},
 								},
 							},
@@ -888,10 +866,8 @@ func TestBuildConfiguration(t *testing.T) {
 								PathType: PathTypePrefix,
 								MatchRules: []MatchRule{
 									{
-										MatchIdx:     0,
-										RuleIdx:      1,
 										BackendGroup: expHTTPSHR3Groups[1],
-										Source:       httpsHR3,
+										Source:       &httpsHR3.ObjectMeta,
 									},
 								},
 							},
@@ -989,10 +965,8 @@ func TestBuildConfiguration(t *testing.T) {
 								PathType: PathTypePrefix,
 								MatchRules: []MatchRule{
 									{
-										MatchIdx:     0,
-										RuleIdx:      0,
 										BackendGroup: expHR3Groups[0],
-										Source:       hr3,
+										Source:       &hr3.ObjectMeta,
 									},
 								},
 							},
@@ -1001,10 +975,8 @@ func TestBuildConfiguration(t *testing.T) {
 								PathType: PathTypePrefix,
 								MatchRules: []MatchRule{
 									{
-										MatchIdx:     0,
-										RuleIdx:      1,
 										BackendGroup: expHR3Groups[1],
-										Source:       hr3,
+										Source:       &hr3.ObjectMeta,
 									},
 								},
 							},
@@ -1023,10 +995,8 @@ func TestBuildConfiguration(t *testing.T) {
 								PathType: PathTypePrefix,
 								MatchRules: []MatchRule{
 									{
-										MatchIdx:     0,
-										RuleIdx:      0,
 										BackendGroup: expHR8Groups[0],
-										Source:       hr8,
+										Source:       &hr8.ObjectMeta,
 									},
 								},
 							},
@@ -1035,10 +1005,8 @@ func TestBuildConfiguration(t *testing.T) {
 								PathType: PathTypePrefix,
 								MatchRules: []MatchRule{
 									{
-										MatchIdx:     0,
-										RuleIdx:      1,
 										BackendGroup: expHR8Groups[1],
-										Source:       hr8,
+										Source:       &hr8.ObjectMeta,
 									},
 								},
 							},
@@ -1060,10 +1028,8 @@ func TestBuildConfiguration(t *testing.T) {
 								PathType: PathTypePrefix,
 								MatchRules: []MatchRule{
 									{
-										MatchIdx:     0,
-										RuleIdx:      0,
 										BackendGroup: expHTTPSHR3Groups[0],
-										Source:       httpsHR3,
+										Source:       &httpsHR3.ObjectMeta,
 									},
 								},
 							},
@@ -1072,10 +1038,8 @@ func TestBuildConfiguration(t *testing.T) {
 								PathType: PathTypePrefix,
 								MatchRules: []MatchRule{
 									{
-										MatchIdx:     0,
-										RuleIdx:      1,
 										BackendGroup: expHTTPSHR3Groups[1],
-										Source:       httpsHR3,
+										Source:       &httpsHR3.ObjectMeta,
 									},
 								},
 							},
@@ -1100,10 +1064,8 @@ func TestBuildConfiguration(t *testing.T) {
 								PathType: PathTypePrefix,
 								MatchRules: []MatchRule{
 									{
-										MatchIdx:     0,
-										RuleIdx:      0,
 										BackendGroup: expHTTPSHR7Groups[0],
-										Source:       httpsHR7,
+										Source:       &httpsHR7.ObjectMeta,
 									},
 								},
 							},
@@ -1112,10 +1074,8 @@ func TestBuildConfiguration(t *testing.T) {
 								PathType: PathTypePrefix,
 								MatchRules: []MatchRule{
 									{
-										MatchIdx:     0,
-										RuleIdx:      1,
 										BackendGroup: expHTTPSHR7Groups[1],
-										Source:       httpsHR7,
+										Source:       &httpsHR7.ObjectMeta,
 									},
 								},
 							},
@@ -1244,12 +1204,10 @@ func TestBuildConfiguration(t *testing.T) {
 								PathType: PathTypePrefix,
 								MatchRules: []MatchRule{
 									{
-										MatchIdx:     0,
-										RuleIdx:      0,
-										Source:       hr5,
+										Source:       &hr5.ObjectMeta,
 										BackendGroup: expHR5Groups[0],
-										Filters: Filters{
-											RequestRedirect: redirect.RequestRedirect,
+										Filters: HTTPFilters{
+											RequestRedirect: &expRedirect,
 										},
 									},
 								},
@@ -1259,12 +1217,10 @@ func TestBuildConfiguration(t *testing.T) {
 								PathType: PathTypePrefix,
 								MatchRules: []MatchRule{
 									{
-										MatchIdx:     0,
-										RuleIdx:      1,
-										Source:       hr5,
+										Source:       &hr5.ObjectMeta,
 										BackendGroup: expHR5Groups[1],
-										Filters: Filters{
-											InvalidFilter: &InvalidFilter{},
+										Filters: HTTPFilters{
+											InvalidFilter: &InvalidHTTPFilter{},
 										},
 									},
 								},
@@ -1328,10 +1284,8 @@ func TestBuildConfiguration(t *testing.T) {
 								PathType: PathTypePrefix,
 								MatchRules: []MatchRule{
 									{
-										MatchIdx:     0,
-										RuleIdx:      0,
 										BackendGroup: expHR6Groups[0],
-										Source:       hr6,
+										Source:       &hr6.ObjectMeta,
 									},
 								},
 							},
@@ -1353,10 +1307,8 @@ func TestBuildConfiguration(t *testing.T) {
 								PathType: PathTypePrefix,
 								MatchRules: []MatchRule{
 									{
-										MatchIdx:     0,
-										RuleIdx:      0,
 										BackendGroup: expHTTPSHR6Groups[0],
-										Source:       httpsHR6,
+										Source:       &httpsHR6.ObjectMeta,
 									},
 								},
 							},
@@ -1419,10 +1371,8 @@ func TestBuildConfiguration(t *testing.T) {
 								PathType: PathTypeExact,
 								MatchRules: []MatchRule{
 									{
-										MatchIdx:     0,
-										RuleIdx:      1,
 										BackendGroup: expHR7Groups[1],
-										Source:       hr7,
+										Source:       &hr7.ObjectMeta,
 									},
 								},
 							},
@@ -1431,10 +1381,8 @@ func TestBuildConfiguration(t *testing.T) {
 								PathType: PathTypePrefix,
 								MatchRules: []MatchRule{
 									{
-										MatchIdx:     0,
-										RuleIdx:      0,
 										BackendGroup: expHR7Groups[0],
-										Source:       hr7,
+										Source:       &hr7.ObjectMeta,
 									},
 								},
 							},
@@ -1500,16 +1448,12 @@ func TestBuildConfiguration(t *testing.T) {
 								MatchRules: []MatchRule{
 									// duplicate match rules since two listeners both match this route's hostname
 									{
-										MatchIdx:     0,
-										RuleIdx:      0,
 										BackendGroup: expHTTPSHR5Groups[0],
-										Source:       httpsHR5,
+										Source:       &httpsHR5.ObjectMeta,
 									},
 									{
-										MatchIdx:     0,
-										RuleIdx:      0,
 										BackendGroup: expHTTPSHR5Groups[0],
-										Source:       httpsHR5,
+										Source:       &httpsHR5.ObjectMeta,
 									},
 								},
 							},
@@ -1542,15 +1486,16 @@ func TestBuildConfiguration(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.msg, func(t *testing.T) {
-			g := NewGomegaWithT(t)
+			g := NewWithT(t)
 
-			result := BuildConfiguration(context.TODO(), test.graph, fakeResolver)
+			result := BuildConfiguration(context.TODO(), test.graph, fakeResolver, 1)
 
 			g.Expect(result.BackendGroups).To(ConsistOf(test.expConf.BackendGroups))
 			g.Expect(result.Upstreams).To(ConsistOf(test.expConf.Upstreams))
 			g.Expect(result.HTTPServers).To(ConsistOf(test.expConf.HTTPServers))
 			g.Expect(result.SSLServers).To(ConsistOf(test.expConf.SSLServers))
 			g.Expect(result.SSLKeyPairs).To(Equal(test.expConf.SSLKeyPairs))
+			g.Expect(result.Version).To(Equal(1))
 		})
 	}
 }
@@ -1562,7 +1507,7 @@ func TestGetPath(t *testing.T) {
 		msg      string
 	}{
 		{
-			path:     &v1beta1.HTTPPathMatch{Value: helpers.GetStringPointer("/abc")},
+			path:     &v1beta1.HTTPPathMatch{Value: helpers.GetPointer("/abc")},
 			expected: "/abc",
 			msg:      "normal case",
 		},
@@ -1577,17 +1522,18 @@ func TestGetPath(t *testing.T) {
 			msg:      "nil value",
 		},
 		{
-			path:     &v1beta1.HTTPPathMatch{Value: helpers.GetStringPointer("")},
+			path:     &v1beta1.HTTPPathMatch{Value: helpers.GetPointer("")},
 			expected: "/",
 			msg:      "empty value",
 		},
 	}
 
 	for _, test := range tests {
-		result := getPath(test.path)
-		if result != test.expected {
-			t.Errorf("getPath() returned %q but expected %q for the case of %q", result, test.expected, test.msg)
-		}
+		t.Run(test.msg, func(t *testing.T) {
+			g := NewWithT(t)
+			result := getPath(test.path)
+			g.Expect(result).To(Equal(test.expected))
+		})
 	}
 }
 
@@ -1595,13 +1541,13 @@ func TestCreateFilters(t *testing.T) {
 	redirect1 := v1beta1.HTTPRouteFilter{
 		Type: v1beta1.HTTPRouteFilterRequestRedirect,
 		RequestRedirect: &v1beta1.HTTPRequestRedirectFilter{
-			Hostname: (*v1beta1.PreciseHostname)(helpers.GetStringPointer("foo.example.com")),
+			Hostname: helpers.GetPointer[v1beta1.PreciseHostname]("foo.example.com"),
 		},
 	}
 	redirect2 := v1beta1.HTTPRouteFilter{
 		Type: v1beta1.HTTPRouteFilterRequestRedirect,
 		RequestRedirect: &v1beta1.HTTPRequestRedirectFilter{
-			Hostname: (*v1beta1.PreciseHostname)(helpers.GetStringPointer("bar.example.com")),
+			Hostname: helpers.GetPointer[v1beta1.PreciseHostname]("bar.example.com"),
 		},
 	}
 	requestHeaderModifiers1 := v1beta1.HTTPRouteFilter{
@@ -1609,8 +1555,8 @@ func TestCreateFilters(t *testing.T) {
 		RequestHeaderModifier: &v1beta1.HTTPHeaderFilter{
 			Set: []v1beta1.HTTPHeader{
 				{
-					Name:  "Connection",
-					Value: "close",
+					Name:  "MyBespokeHeader",
+					Value: "my-value",
 				},
 			},
 		},
@@ -1627,22 +1573,34 @@ func TestCreateFilters(t *testing.T) {
 		},
 	}
 
+	expectedRedirect1 := HTTPRequestRedirectFilter{
+		Hostname: helpers.GetPointer("foo.example.com"),
+	}
+	expectedHeaderModifier1 := HTTPHeaderFilter{
+		Set: []HTTPHeader{
+			{
+				Name:  "MyBespokeHeader",
+				Value: "my-value",
+			},
+		},
+	}
+
 	tests := []struct {
-		expected Filters
+		expected HTTPFilters
 		msg      string
 		filters  []v1beta1.HTTPRouteFilter
 	}{
 		{
 			filters:  []v1beta1.HTTPRouteFilter{},
-			expected: Filters{},
+			expected: HTTPFilters{},
 			msg:      "no filters",
 		},
 		{
 			filters: []v1beta1.HTTPRouteFilter{
 				redirect1,
 			},
-			expected: Filters{
-				RequestRedirect: redirect1.RequestRedirect,
+			expected: HTTPFilters{
+				RequestRedirect: &expectedRedirect1,
 			},
 			msg: "one filter",
 		},
@@ -1651,8 +1609,8 @@ func TestCreateFilters(t *testing.T) {
 				redirect1,
 				redirect2,
 			},
-			expected: Filters{
-				RequestRedirect: redirect1.RequestRedirect,
+			expected: HTTPFilters{
+				RequestRedirect: &expectedRedirect1,
 			},
 			msg: "two filters, first wins",
 		},
@@ -1662,9 +1620,9 @@ func TestCreateFilters(t *testing.T) {
 				redirect2,
 				requestHeaderModifiers1,
 			},
-			expected: Filters{
-				RequestRedirect:        redirect1.RequestRedirect,
-				RequestHeaderModifiers: convertHTTPFilter(requestHeaderModifiers1.RequestHeaderModifier),
+			expected: HTTPFilters{
+				RequestRedirect:        &expectedRedirect1,
+				RequestHeaderModifiers: &expectedHeaderModifier1,
 			},
 			msg: "two redirect filters, one request header modifier, first redirect wins",
 		},
@@ -1675,90 +1633,21 @@ func TestCreateFilters(t *testing.T) {
 				requestHeaderModifiers1,
 				requestHeaderModifiers2,
 			},
-			expected: Filters{
-				RequestRedirect:        redirect1.RequestRedirect,
-				RequestHeaderModifiers: convertHTTPFilter(requestHeaderModifiers1.RequestHeaderModifier),
+			expected: HTTPFilters{
+				RequestRedirect:        &expectedRedirect1,
+				RequestHeaderModifiers: &expectedHeaderModifier1,
 			},
 			msg: "two redirect filters, two request header modifier, first value for each wins",
 		},
 	}
 
 	for _, test := range tests {
-		result := createFilters(test.filters)
-		if diff := cmp.Diff(test.expected, result); diff != "" {
-			t.Errorf("createFilters() %q mismatch (-want +got):\n%s", test.msg, diff)
-		}
-	}
-}
+		t.Run(test.msg, func(t *testing.T) {
+			g := NewWithT(t)
+			result := createHTTPFilters(test.filters)
 
-func TestMatchRuleGetMatch(t *testing.T) {
-	hr := &v1beta1.HTTPRoute{
-		Spec: v1beta1.HTTPRouteSpec{
-			Rules: []v1beta1.HTTPRouteRule{
-				{
-					Matches: []v1beta1.HTTPRouteMatch{
-						{
-							Path: &v1beta1.HTTPPathMatch{
-								Value: helpers.GetStringPointer("/path-1"),
-							},
-						},
-						{
-							Path: &v1beta1.HTTPPathMatch{
-								Value: helpers.GetStringPointer("/path-2"),
-							},
-						},
-					},
-				},
-				{
-					Matches: []v1beta1.HTTPRouteMatch{
-						{
-							Path: &v1beta1.HTTPPathMatch{
-								Value: helpers.GetStringPointer("/path-3"),
-							},
-						},
-						{
-							Path: &v1beta1.HTTPPathMatch{
-								Value: helpers.GetStringPointer("/path-4"),
-							},
-						},
-					},
-				},
-			},
-		},
-	}
-
-	tests := []struct {
-		name    string
-		expPath string
-		rule    MatchRule
-	}{
-		{
-			name:    "first match in first rule",
-			expPath: "/path-1",
-			rule:    MatchRule{MatchIdx: 0, RuleIdx: 0, Source: hr},
-		},
-		{
-			name:    "second match in first rule",
-			expPath: "/path-2",
-			rule:    MatchRule{MatchIdx: 1, RuleIdx: 0, Source: hr},
-		},
-		{
-			name:    "second match in second rule",
-			expPath: "/path-4",
-			rule:    MatchRule{MatchIdx: 1, RuleIdx: 1, Source: hr},
-		},
-	}
-
-	for _, tc := range tests {
-		actual := tc.rule.GetMatch()
-		if *actual.Path.Value != tc.expPath {
-			t.Errorf(
-				"MatchRule.GetMatch() returned incorrect match with path: %s, expected path: %s for test case: %q",
-				*actual.Path.Value,
-				tc.expPath,
-				tc.name,
-			)
-		}
+			g.Expect(helpers.Diff(test.expected, result)).To(BeEmpty())
+		})
 	}
 }
 
@@ -1789,15 +1678,11 @@ func TestGetListenerHostname(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		result := getListenerHostname(test.hostname)
-		if result != test.expected {
-			t.Errorf(
-				"getListenerHostname() returned %q but expected %q for the case of %q",
-				result,
-				test.expected,
-				test.msg,
-			)
-		}
+		t.Run(test.msg, func(t *testing.T) {
+			g := NewWithT(t)
+			result := getListenerHostname(test.hostname)
+			g.Expect(result).To(Equal(test.expected))
+		})
 	}
 }
 
@@ -1983,7 +1868,7 @@ func TestBuildUpstreams(t *testing.T) {
 		}
 	})
 
-	g := NewGomegaWithT(t)
+	g := NewWithT(t)
 
 	upstreams := buildUpstreams(context.TODO(), listeners, fakeResolver)
 	g.Expect(upstreams).To(ConsistOf(expUpstreams))
@@ -2054,43 +1939,11 @@ func TestBuildBackendGroups(t *testing.T) {
 		hrNoBackends,
 	}
 
-	g := NewGomegaWithT(t)
+	g := NewWithT(t)
 
 	result := buildBackendGroups(servers)
 
 	g.Expect(result).To(ConsistOf(expGroups))
-}
-
-func TestConvertPathType(t *testing.T) {
-	g := NewGomegaWithT(t)
-
-	tests := []struct {
-		expected PathType
-		pathType v1beta1.PathMatchType
-		panic    bool
-	}{
-		{
-			expected: PathTypePrefix,
-			pathType: v1beta1.PathMatchPathPrefix,
-		},
-		{
-			expected: PathTypeExact,
-			pathType: v1beta1.PathMatchExact,
-		},
-		{
-			pathType: v1beta1.PathMatchRegularExpression,
-			panic:    true,
-		},
-	}
-
-	for _, tc := range tests {
-		if tc.panic {
-			g.Expect(func() { convertPathType(tc.pathType) }).To(Panic())
-		} else {
-			result := convertPathType(tc.pathType)
-			g.Expect(result).To(Equal(tc.expected))
-		}
-	}
 }
 
 func TestHostnameMoreSpecific(t *testing.T) {
@@ -2146,40 +1999,9 @@ func TestHostnameMoreSpecific(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.msg, func(t *testing.T) {
-			g := NewGomegaWithT(t)
+			g := NewWithT(t)
 
 			g.Expect(listenerHostnameMoreSpecific(tc.host1, tc.host2)).To(Equal(tc.host1Wins))
 		})
 	}
-}
-
-func TestConvertHTTPFilter(t *testing.T) {
-	g := NewGomegaWithT(t)
-
-	httpFilter := &v1beta1.HTTPHeaderFilter{
-		Set: []v1beta1.HTTPHeader{{
-			Name:  "My-Set-Header",
-			Value: "my-value",
-		}},
-		Add: []v1beta1.HTTPHeader{{
-			Name:  "My-Add-Header",
-			Value: "my-value",
-		}},
-		Remove: []string{"My-remove-header"},
-	}
-
-	expected := HTTPHeaderFilter{
-		Set: []HTTPHeader{{
-			Name:  "My-Set-Header",
-			Value: "my-value",
-		}},
-		Add: []HTTPHeader{{
-			Name:  "My-Add-Header",
-			Value: "my-value",
-		}},
-		Remove: []string{"My-remove-header"},
-	}
-
-	result := convertHTTPFilter(httpFilter)
-	g.Expect(*result).To(Equal(expected))
 }

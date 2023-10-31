@@ -48,10 +48,19 @@ announce:
   slack:
     enabled: true
     channel: '#announcements'
-    message_template: 'NGINX Kubernetes Gateway {{ .Tag }} is out! Check it out: {{ .ReleaseURL }}'
+    message_template: 'NGINX Gateway Fabric {{ .Tag }} is out! Check it out: {{ .ReleaseURL }}'
 
 milestones:
   - close: true
 
 snapshot:
   name_template: 'edge'
+
+before:
+  hooks:
+    - make crds-release-file
+
+release:
+  extra_files:
+    - glob: ./build/out/crds.yaml
+    - glob: ./deploy/manifests/nginx-gateway.yaml

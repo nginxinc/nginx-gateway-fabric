@@ -2,7 +2,7 @@
 # See https://pre-commit.com/hooks.html for more hooks
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.4.0
+    rev: v4.5.0
     hooks:
       - id: trailing-whitespace
       - id: end-of-file-fixer
@@ -23,39 +23,36 @@ repos:
         exclude: (^examples/|^docs/|.*_test.go$)
 
   - repo: https://github.com/gitleaks/gitleaks
-    rev: v8.17.0
+    rev: v8.18.0
     hooks:
       - id: gitleaks
 
   - repo: https://github.com/pre-commit/mirrors-prettier
-    rev: v3.0.0
+    rev: v3.0.3
     hooks:
       - id: prettier
         types:
           - javascript
 
-  - repo: local
-    hooks:
-      - id: golang-diff
-        name: create-go-diff
-        entry: bash -c 'git diff -p origin/main > /tmp/diff.patch'
-        language: system
-        types: [go]
-        pass_filenames: false
-
   - repo: https://github.com/golangci/golangci-lint
-    rev: v1.53.3
+    rev: v1.55.0
     hooks:
-      - id: golangci-lint
-        args: [--new-from-patch=/tmp/diff.patch]
+      - id: golangci-lint-full
 
-    # Rules are in .markdownlint-cli2.yaml file
-    # See https://github.com/DavidAnson/markdownlint/blob/main/doc/Rules.md for rule descriptions
+  # Rules are in .markdownlint-cli2.yaml file
+  # See https://github.com/DavidAnson/markdownlint/blob/main/doc/Rules.md for rule descriptions
   - repo: https://github.com/DavidAnson/markdownlint-cli2
-    rev: v0.8.1
+    rev: v0.10.0
     hooks:
-    - id: markdownlint-cli2-fix
+      - id: markdownlint-cli2-fix
+
+  # Rules are in .yamllint.yaml file
+  # See https://yamllint.readthedocs.io/en/stable/rules.html# for rule descriptions
+  - repo: https://github.com/adrienverge/yamllint.git
+    rev: v1.32.0
+    hooks:
+      - id: yamllint
 
 ci:
-  skip: [golang-diff, golangci-lint, prettier, markdownlint-cli2-fix]
+  skip: [golangci-lint-full, prettier, markdownlint-cli2-fix, yamllint]
   autofix_prs: false

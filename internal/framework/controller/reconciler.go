@@ -11,7 +11,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/events"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/events"
 )
 
 // NamespacedNameFilterFunc is a function that returns true if the resource should be processed by the reconciler.
@@ -74,8 +74,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	}
 
 	obj := newObject(r.cfg.ObjectType)
-	err := r.cfg.Getter.Get(ctx, req.NamespacedName, obj)
-	if err != nil {
+	if err := r.cfg.Getter.Get(ctx, req.NamespacedName, obj); err != nil {
 		if !apierrors.IsNotFound(err) {
 			logger.Error(err, "Failed to get the resource")
 			return reconcile.Result{}, err

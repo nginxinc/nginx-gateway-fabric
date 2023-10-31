@@ -13,9 +13,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/controller/index"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/helpers"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/state/resolver"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/controller/index"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/resolver"
 )
 
 func createSlice(
@@ -38,7 +38,7 @@ func createSlice(
 			{
 				Addresses: addresses,
 				Conditions: discoveryV1.EndpointConditions{
-					Ready: helpers.GetBoolPointer(true),
+					Ready: helpers.GetPointer(true),
 				},
 			},
 			{
@@ -48,8 +48,8 @@ func createSlice(
 					"1.0.0.3",
 				}, // these endpoints should be ignored because they are not ready
 				Conditions: discoveryV1.EndpointConditions{
-					Serving:     helpers.GetBoolPointer(true),
-					Terminating: helpers.GetBoolPointer(true),
+					Serving:     helpers.GetPointer(true),
+					Terminating: helpers.GetPointer(true),
 				},
 			},
 			{
@@ -72,8 +72,7 @@ func createSlice(
 
 func createFakeK8sClient(initObjs ...client.Object) (client.Client, error) {
 	scheme := runtime.NewScheme()
-	err := discoveryV1.AddToScheme(scheme)
-	if err != nil {
+	if err := discoveryV1.AddToScheme(scheme); err != nil {
 		return nil, err
 	}
 

@@ -1,6 +1,6 @@
 # Gateway API Compatibility
 
-This document describes which Gateway API resources NGINX Kubernetes Gateway supports and the extent of that support.
+This document describes which Gateway API resources NGINX Gateway Fabric supports and the extent of that support.
 
 ## Summary
 
@@ -27,10 +27,10 @@ resource field:
 - *Not supported*. The resource or field is not yet supported. It will become partially or fully supported in future
   releases.
 
-> Note: it might be possible that NGINX Kubernetes Gateway will never support some resources
+> Note: it might be possible that NGINX Gateway Fabric will never support some resources
 > and/or fields of the Gateway API. We will document these decisions on a case by case basis.
 >
-> NGINX Kubernetes Gateway doesn't support any features from the experimental release channel.
+> NGINX Gateway Fabric doesn't support any features from the experimental release channel.
 
 ## Resources
 
@@ -47,7 +47,7 @@ the [Gateway API documentation](https://gateway-api.sigs.k8s.io/references/spec/
 > - Extended: Not supported.
 > - Implementation-specific: Not supported.
 
-NGINX Kubernetes Gateway supports only a single GatewayClass resource configured via `--gatewayclass` flag of
+NGINX Gateway Fabric supports only a single GatewayClass resource configured via `--gatewayclass` flag of
 the [static-mode](./cli-help.md#static-mode) command.
 
 Fields:
@@ -68,11 +68,11 @@ Fields:
 > Support Levels:
 >
 > - Core: Supported.
-> - Extended: Not supported.
+> - Extended: Partially supported.
 > - Implementation-specific: Not supported.
 
-NGINX Kubernetes Gateway supports only a single Gateway resource. The Gateway resource must reference NGINX Kubernetes
-Gateway's corresponding GatewayClass. See [static-mode](./cli-help.md#static-mode) command for more info.
+NGINX Gateway Fabric supports only a single Gateway resource. The Gateway resource must reference NGINX Gateway
+Fabric's corresponding GatewayClass. See [static-mode](./cli-help.md#static-mode) command for more info.
 
 Fields:
 
@@ -91,7 +91,7 @@ Fields:
     - `allowedRoutes` - supported.
   - `addresses` - not supported.
 - `status`
-  - `addresses` - Pod IPAddress supported.
+  - `addresses` - partially supported. LoadBalancer and Pod IP.
   - `conditions` - supported (Condition/Status/Reason):
     - `Accepted/True/Accepted`
     - `Accepted/True/ListenersNotValid`
@@ -100,11 +100,11 @@ Fields:
     - `Accepted/False/UnsupportedValue`- custom reason for when a value of a field in a Gateway is invalid or not
           supported.
     - `Accepted/False/GatewayConflict`- custom reason for when the Gateway is ignored due to a conflicting Gateway.
-          NKG only supports a single Gateway.
+          NGF only supports a single Gateway.
     - `Programmed/True/Programmed`
     - `Programmed/False/Invalid`
     - `Programmed/False/GatewayConflict`- custom reason for when the Gateway is ignored due to a conflicting
-          Gateway. NKG only supports a single Gateway.
+          Gateway. NGF only supports a single Gateway.
   - `listeners`
     - `name` - supported.
     - `supportedKinds` - supported.
@@ -117,7 +117,7 @@ Fields:
       - `Accepted/False/UnsupportedValue`- custom reason for when a value of a field in a Listener is invalid or
               not supported.
       - `Accepted/False/GatewayConflict` - custom reason for when the Gateway is ignored due to a conflicting
-              Gateway. NKG only supports a single Gateway.
+              Gateway. NGF only supports a single Gateway.
       - `Programmed/True/Programmed`
       - `Programmed/False/Invalid`
       - `ResolvedRefs/True/ResolvedRefs`
@@ -148,10 +148,10 @@ Fields:
     - `filters`
       - `type` - supported.
       - `requestRedirect` - supported except for the experimental `path` field. If multiple filters
-              with `requestRedirect` are configured, NGINX Kubernetes Gateway will choose the first one and ignore the
+              with `requestRedirect` are configured, NGINX Gateway Fabric will choose the first one and ignore the
               rest.
       - `requestHeaderModifier` - supported. If multiple filters with `requestHeaderModifier` are configured,
-              NGINX Kubernetes Gateway will choose the first one and ignore the rest.
+              NGINX Gateway Fabric will choose the first one and ignore the rest.
       - `responseHeaderModifier`, `requestMirror`, `urlRewrite`, `extensionRef` - not supported.
     - `backendRefs` - partially supported. Backend ref `filters` are not supported.
 - `status`
@@ -174,6 +174,7 @@ Fields:
       - `ResolvedRefs/False/BackendNotFound`
       - `ResolvedRefs/False/UnsupportedValue` - custom reason for when one of the HTTPRoute rules has a backendRef
               with an unsupported value.
+      - `PartiallyInvalid/True/UnsupportedValue`
 
 ### ReferenceGrant
 
@@ -211,7 +212,7 @@ Fields:
 
 > Status: Not supported.
 
-Custom policies will be NGINX Kubernetes Gateway-specific CRDs that will allow supporting features like timeouts,
+Custom policies will be NGINX Gateway Fabric-specific CRDs that will allow supporting features like timeouts,
 load-balancing methods, authentication, etc. - important data-plane features that are not part of the Gateway API spec.
 
 While those CRDs are not part of the Gateway API, the mechanism of attaching them to Gateway API resources is part of

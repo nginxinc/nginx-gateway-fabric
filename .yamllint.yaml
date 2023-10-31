@@ -1,0 +1,52 @@
+---
+
+yaml-files:
+  - '*.yaml'
+  - '*.yml'
+
+ignore:
+  - deploy/helm-chart/templates/
+  - deploy/helm-chart/crds/
+
+rules:
+  braces: enable
+  brackets: enable
+  colons: enable
+  commas: enable
+  comments:
+    require-starting-space: true
+    ignore-shebangs: true
+    min-spaces-from-content: 1
+  comments-indentation: enable
+  document-end: disable
+  document-start: disable
+  empty-lines: enable
+  empty-values: enable
+  float-values: disable
+  hyphens: enable
+  indentation:
+    spaces: consistent
+    indent-sequences: consistent
+    check-multi-line-strings: true
+    ignore: |
+      deploy/manifests/nginx-gateway.yaml
+      deploy/manifests/crds
+  key-duplicates: enable
+  key-ordering: disable
+  line-length:
+    max: 120
+    allow-non-breakable-words: true
+    allow-non-breakable-inline-mappings: true
+    ignore: |
+      .github/workflows/
+      deploy/manifests/nginx-gateway.yaml
+      deploy/manifests/crds
+      tests/longevity/manifests/cronjob.yaml
+  new-line-at-end-of-file: enable
+  new-lines: enable
+  octal-values: disable
+  quoted-strings: disable
+  trailing-spaces: enable
+  truthy:
+    ignore: |
+      .github/workflows/

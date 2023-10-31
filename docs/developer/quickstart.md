@@ -1,6 +1,6 @@
 # Development Quickstart
 
-This guide will assist you in setting up your development environment for NGINX Kubernetes Gateway, covering the steps
+This guide will assist you in setting up your development environment for NGINX Gateway Fabric, covering the steps
 to build, install, and execute tasks necessary for submitting pull requests. By following this guide, you'll have a
 fully prepared development environment that allows you to contribute to the project effectively.
 
@@ -36,12 +36,12 @@ Follow these steps to set up your development environment.
 
      in the project root directory to install the git hooks.
 
-2. [Fork the project repository](https://github.com/nginxinc/nginx-kubernetes-gateway/fork)
+2. [Fork the project repository](https://github.com/nginxinc/nginx-gateway-fabric/fork)
 3. Clone your repository, and install the project dependencies:
 
    ```shell
-   git clone https://github.com/<YOUR-USERNAME>/nginx-kubernetes-gateway.git
-   cd nginx-kubernetes-gateway
+   git clone https://github.com/<YOUR-USERNAME>/nginx-gateway-fabric.git
+   cd nginx-gateway-fabric
    ```
 
    ```makefile
@@ -60,15 +60,15 @@ make build
 
 This command will build the binary and output it to the `/build/.out` directory.
 
-### Build the Image
+### Build the Images
 
-To build an NGINX Kubernetes Gateway container image from source run the following make command:
+To build the NGINX Gateway Fabric and NGINX container images from source run the following make command:
 
 ```makefile
-make TAG=$(whoami) container
+make TAG=$(whoami) build-images
 ```
 
-This will build the docker image `nginx-kubernetes-gateway:<your-user>`.
+This will build the docker images `nginx-gateway-fabric:<your-user>` and `nginx-gateway-fabric/nginx:<your-user>`.
 
 ## Deploy on Kind
 
@@ -78,39 +78,40 @@ This will build the docker image `nginx-kubernetes-gateway:<your-user>`.
    make create-kind-cluster
    ```
 
-2. Load the previously built image onto your `kind` cluster:
+2. Load the previously built images onto your `kind` cluster:
 
    ```shell
-   kind load docker-image nginx-kubernetes-gateway:$(whoami)
+   kind load docker-image nginx-gateway-fabric:$(whoami) nginx-gateway-fabric/nginx:$(whoami)
    ```
 
 3. Install Gateway API Resources
 
    ```shell
-   kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v0.7.1/standard-install.yaml
+   kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v0.8.1/standard-install.yaml
    ```
 
-4. Install NKG using your custom image and expose NKG with a NodePort Service:
+4. Install NGF using your custom image and expose NGF with a NodePort Service:
 
    - To install with Helm (where your release name is `my-release`):
 
       ```shell
-      helm install my-release ./deploy/helm-chart --create-namespace --wait --set service.type=NodePort --set nginxGateway.image.repository=nginx-kubernetes-gateway --set nginxGateway.image.tag=$(whoami) --set nginxGateway.image.pullPolicy=Never -n nginx-gateway
+      helm install my-release ./deploy/helm-chart --create-namespace --wait --set service.type=NodePort --set nginxGateway.image.repository=nginx-gateway-fabric --set nginxGateway.image.tag=$(whoami) --set nginxGateway.image.pullPolicy=Never --set nginx.image.repository=nginx-gateway-fabric/nginx --set nginx.image.tag=$(whoami) --set nginx.image.pullPolicy=Never -n nginx-gateway
       ```
 
-      > For more information on helm configuration options see the Helm [README](/deploy/helm-chart/README.md).
+      > For more information on helm configuration options see the Helm [README](../../deploy/helm-chart/README.md).
 
    - To install with manifests:
 
       ```shell
-      make generate-manifests HELM_TEMPLATE_COMMON_ARGS="--set nginxGateway.image.repository=nginx-kubernetes-gateway --set nginxGateway.image.tag=$(whoami) --set nginxGateway.image.pullPolicy=Never"
+      make generate-manifests HELM_TEMPLATE_COMMON_ARGS="--set nginxGateway.image.repository=nginx-gateway-fabric --set nginxGateway.image.tag=$(whoami) --set nginxGateway.image.pullPolicy=Never --set nginx.image.repository=nginx-gateway-fabric/nginx --set nginx.image.tag=$(whoami) --set nginx.image.pullPolicy=Never"
+      kubectl apply -f deploy/manifests/crds
       kubectl apply -f deploy/manifests/nginx-gateway.yaml
-      kubectl apply -f deploy/manifests/nodeport.yaml
+      kubectl apply -f deploy/manifests/service/nodeport.yaml
       ```
 
 ### Run Examples
 
-To make sure NKG is running properly, try out the [examples](/examples).
+To make sure NGF is running properly, try out the [examples](/examples).
 
 ## Run the Unit Tests
 
@@ -155,17 +156,7 @@ make generate
 
 ## Update Generated Manifests
 
-To update the NJS ConfigMap yaml, run the following make command from the project's root directory:
-
-```shell
-make generate-njs-yaml
-```
-
-Additionally, the [NJS ConfigMap Helm template](/deploy/helm-chart/templates/njs-modules.yaml) will need to be updated.
-This is currently a manual process - ensure the content in the `data` field matches that in the
-[NJS ConfigMap manifest](/deploy/manifests/njs-modules.yaml) `data` field.
-
-Finally, to update all other generated manifests, run the following make command from the project's root directory:
+To update the generated manifests, run the following make command from the project's root directory:
 
 ```shell
 make generate-manifests

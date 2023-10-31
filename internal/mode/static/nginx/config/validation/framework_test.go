@@ -14,7 +14,7 @@ type supportedValuesValidatorFunc[T configValue] func(v T) (bool, []string)
 func runValidatorTests[T configValue](t *testing.T, run func(g *WithT, v T), caseNamePrefix string, values ...T) {
 	for i, v := range values {
 		t.Run(fmt.Sprintf("%s_case_#%d", caseNamePrefix, i), func(t *testing.T) {
-			g := NewGomegaWithT(t)
+			g := NewWithT(t)
 			run(g, v)
 		})
 	}
@@ -43,11 +43,16 @@ func testValidValuesForSupportedValuesValidator[T configValue](
 	f supportedValuesValidatorFunc[T],
 	values ...T,
 ) {
-	runValidatorTests(t, func(g *WithT, v T) {
-		valid, supportedValues := f(v)
-		g.Expect(valid).To(BeTrue(), createFailureMessage(v))
-		g.Expect(supportedValues).To(BeNil(), createFailureMessage(v))
-	}, "valid_value", values...)
+	runValidatorTests(
+		t,
+		func(g *WithT, v T) {
+			valid, supportedValues := f(v)
+			g.Expect(valid).To(BeTrue(), createFailureMessage(v))
+			g.Expect(supportedValues).To(BeNil(), createFailureMessage(v))
+		},
+		"valid_value",
+		values...,
+	)
 }
 
 func testInvalidValuesForSupportedValuesValidator[T configValue](
@@ -56,11 +61,16 @@ func testInvalidValuesForSupportedValuesValidator[T configValue](
 	supportedValuesMap map[T]struct{},
 	values ...T,
 ) {
-	runValidatorTests(t, func(g *WithT, v T) {
-		valid, supportedValues := f(v)
-		g.Expect(valid).To(BeFalse(), createFailureMessage(v))
-		g.Expect(supportedValues).To(Equal(getSortedKeysAsString(supportedValuesMap)), createFailureMessage(v))
-	}, "invalid_value", values...)
+	runValidatorTests(
+		t,
+		func(g *WithT, v T) {
+			valid, supportedValues := f(v)
+			g.Expect(valid).To(BeFalse(), createFailureMessage(v))
+			g.Expect(supportedValues).To(Equal(getSortedKeysAsString(supportedValuesMap)), createFailureMessage(v))
+		},
+		"invalid_value",
+		values...,
+	)
 }
 
 func TestValidateInSupportedValues(t *testing.T) {
@@ -74,12 +84,47 @@ func TestValidateInSupportedValues(t *testing.T) {
 		return validateInSupportedValues(value, supportedValues)
 	}
 
-	testValidValuesForSupportedValuesValidator(t, validator,
+	testValidValuesForSupportedValuesValidator(
+		t,
+		validator,
 		"value1",
 		"value2",
-		"value3")
-	testInvalidValuesForSupportedValuesValidator(t, validator, supportedValues,
-		"value4")
+		"value3",
+	)
+	testInvalidValuesForSupportedValuesValidator(
+		t,
+		validator,
+		supportedValues,
+		"value4",
+	)
+}
+
+func TestValidateNoUnsupportedValues(t *testing.T) {
+	unsupportedValues := map[string]struct{}{
+		"badvalue1": {},
+		"badvalue2": {},
+		"badvalue3": {},
+	}
+
+	validator := func(value string) (bool, []string) {
+		return validateNoUnsupportedValues(value, unsupportedValues)
+	}
+
+	testValidValuesForSupportedValuesValidator(
+		t,
+		validator,
+		"value1",
+		"value2",
+		"value3",
+	)
+	testInvalidValuesForSupportedValuesValidator(
+		t,
+		validator,
+		unsupportedValues,
+		"badvalue1",
+		"badvalue2",
+		"badvalue3",
+	)
 }
 
 func TestGetSortedKeysAsString(t *testing.T) {
@@ -91,7 +136,7 @@ func TestGetSortedKeysAsString(t *testing.T) {
 
 	expected := []string{"value1", "value2", "value3"}
 
-	g := NewGomegaWithT(t)
+	g := NewWithT(t)
 
 	result := getSortedKeysAsString(values)
 	g.Expect(result).To(Equal(expected))

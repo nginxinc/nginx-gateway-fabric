@@ -2,6 +2,7 @@ package status_test
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -14,11 +15,18 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/helpers"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/status"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/status/statusfakes"
-	staticConds "github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/state/conditions"
+	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/status"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/status/statusfakes"
+	staticConds "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/conditions"
 )
+
+type unsupportedStatus struct{}
+
+func (u unsupportedStatus) APIGroup() string {
+	return "unsupported"
+}
 
 var _ = Describe("Updater", func() {
 	const gcName = "my-class"
@@ -34,6 +42,7 @@ var _ = Describe("Updater", func() {
 		scheme := runtime.NewScheme()
 
 		Expect(v1beta1.AddToScheme(scheme)).Should(Succeed())
+		Expect(ngfAPI.AddToScheme(scheme)).Should(Succeed())
 
 		client = fake.NewClientBuilder().
 			WithScheme(scheme).
@@ -41,6 +50,7 @@ var _ = Describe("Updater", func() {
 				&v1beta1.GatewayClass{},
 				&v1beta1.Gateway{},
 				&v1beta1.HTTPRoute{},
+				&ngfAPI.NginxGateway{},
 			).
 			Build()
 
@@ -58,18 +68,18 @@ var _ = Describe("Updater", func() {
 		}
 
 		var (
-			updater       status.Updater
+			updater       *status.UpdaterImpl
 			gc            *v1beta1.GatewayClass
 			gw, ignoredGw *v1beta1.Gateway
 			hr            *v1beta1.HTTPRoute
-			ipAddrType    = v1beta1.IPAddressType
-			addr          = v1beta1.GatewayAddress{
-				Type:  &ipAddrType,
+			ng            *ngfAPI.NginxGateway
+			addr          = v1beta1.GatewayStatusAddress{
+				Type:  helpers.GetPointer(v1beta1.IPAddressType),
 				Value: "1.2.3.4",
 			}
 
-			createStatuses = func(gens generations) status.Statuses {
-				return status.Statuses{
+			createGwAPIStatuses = func(gens generations) status.GatewayAPIStatuses {
+				return status.GatewayAPIStatuses{
 					GatewayClassStatuses: status.GatewayClassStatuses{
 						{Name: gcName}: {
 							ObservedGeneration: gens.gatewayClass,
@@ -86,11 +96,13 @@ var _ = Describe("Updater", func() {
 									SupportedKinds: []v1beta1.RouteGroupKind{{Kind: "HTTPRoute"}},
 								},
 							},
+							Addresses:          []v1beta1.GatewayStatusAddress{addr},
 							ObservedGeneration: gens.gateways,
 						},
 						{Namespace: "test", Name: "ignored-gateway"}: {
 							Conditions:         staticConds.NewGatewayConflict(),
 							ObservedGeneration: 1,
+							Ignored:            true,
 						},
 					},
 					HTTPRouteStatuses: status.HTTPRouteStatuses{
@@ -105,6 +117,17 @@ var _ = Describe("Updater", func() {
 							},
 						},
 					},
+				}
+			}
+
+			createNGStatus = func(gen int64) *status.NginxGatewayStatus {
+				return &status.NginxGatewayStatus{
+					NsName: types.NamespacedName{
+						Namespace: "nginx-gateway",
+						Name:      "nginx-gateway-config",
+					},
+					ObservedGeneration: gen,
+					Conditions:         status.CreateTestConditions("Test"),
 				}
 			}
 
@@ -143,7 +166,7 @@ var _ = Describe("Updater", func() {
 								SupportedKinds: []v1beta1.RouteGroupKind{{Kind: "HTTPRoute"}},
 							},
 						},
-						Addresses: []v1beta1.GatewayAddress{addr},
+						Addresses: []v1beta1.GatewayStatusAddress{addr},
 					},
 				}
 			}
@@ -177,7 +200,6 @@ var _ = Describe("Updater", func() {
 								Message:            staticConds.GatewayMessageGatewayConflict,
 							},
 						},
-						Addresses: []v1beta1.GatewayAddress{addr},
 					},
 				}
 			}
@@ -198,14 +220,30 @@ var _ = Describe("Updater", func() {
 								{
 									ControllerName: v1beta1.GatewayController(gatewayCtrlName),
 									ParentRef: v1beta1.ParentReference{
-										Namespace:   (*v1beta1.Namespace)(helpers.GetStringPointer("test")),
+										Namespace:   (*v1beta1.Namespace)(helpers.GetPointer("test")),
 										Name:        "gateway",
-										SectionName: (*v1beta1.SectionName)(helpers.GetStringPointer("http")),
+										SectionName: (*v1beta1.SectionName)(helpers.GetPointer("http")),
 									},
 									Conditions: status.CreateExpectedAPIConditions("Test", 5, fakeClockTime),
 								},
 							},
 						},
+					},
+				}
+			}
+
+			createExpectedNGWithGeneration = func(gen int64) *ngfAPI.NginxGateway {
+				return &ngfAPI.NginxGateway{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "nginx-gateway",
+						Name:      "nginx-gateway-config",
+					},
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "NginxGateway",
+						APIVersion: "gateway.nginx.org/v1alpha1",
+					},
+					Status: ngfAPI.NginxGatewayStatus{
+						Conditions: status.CreateExpectedAPIConditions("Test", gen, fakeClockTime),
 					},
 				}
 			}
@@ -218,7 +256,6 @@ var _ = Describe("Updater", func() {
 				Client:                   client,
 				Logger:                   zap.New(),
 				Clock:                    fakeClock,
-				PodIP:                    "1.2.3.4",
 				UpdateGatewayClassStatus: true,
 			})
 
@@ -261,6 +298,16 @@ var _ = Describe("Updater", func() {
 					APIVersion: "gateway.networking.k8s.io/v1beta1",
 				},
 			}
+			ng = &ngfAPI.NginxGateway{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "nginx-gateway",
+					Name:      "nginx-gateway-config",
+				},
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "NginxGateway",
+					APIVersion: "gateway.nginx.org/v1alpha1",
+				},
+			}
 		})
 
 		It("should create resources in the API server", func() {
@@ -268,10 +315,11 @@ var _ = Describe("Updater", func() {
 			Expect(client.Create(context.Background(), gw)).Should(Succeed())
 			Expect(client.Create(context.Background(), ignoredGw)).Should(Succeed())
 			Expect(client.Create(context.Background(), hr)).Should(Succeed())
+			Expect(client.Create(context.Background(), ng)).Should(Succeed())
 		})
 
-		It("should update statuses", func() {
-			updater.Update(context.Background(), createStatuses(generations{
+		It("should update gateway API statuses", func() {
+			updater.Update(context.Background(), createGwAPIStatuses(generations{
 				gatewayClass: 1,
 				gateways:     1,
 			}))
@@ -282,7 +330,7 @@ var _ = Describe("Updater", func() {
 			expectedGc := createExpectedGCWithGeneration(1)
 
 			err := client.Get(context.Background(), types.NamespacedName{Name: gcName}, latestGc)
-			Expect(err).Should(Not(HaveOccurred()))
+			Expect(err).ToNot(HaveOccurred())
 
 			expectedGc.ResourceVersion = latestGc.ResourceVersion // updating the status changes the ResourceVersion
 
@@ -294,7 +342,7 @@ var _ = Describe("Updater", func() {
 			expectedGw := createExpectedGwWithGeneration(1)
 
 			err := client.Get(context.Background(), types.NamespacedName{Namespace: "test", Name: "gateway"}, latestGw)
-			Expect(err).Should(Not(HaveOccurred()))
+			Expect(err).ToNot(HaveOccurred())
 
 			expectedGw.ResourceVersion = latestGw.ResourceVersion
 
@@ -310,7 +358,7 @@ var _ = Describe("Updater", func() {
 				types.NamespacedName{Namespace: "test", Name: "ignored-gateway"},
 				latestGw,
 			)
-			Expect(err).Should(Not(HaveOccurred()))
+			Expect(err).ToNot(HaveOccurred())
 
 			expectedGw.ResourceVersion = latestGw.ResourceVersion
 
@@ -322,45 +370,101 @@ var _ = Describe("Updater", func() {
 			expectedHR := createExpectedHR()
 
 			err := client.Get(context.Background(), types.NamespacedName{Namespace: "test", Name: "route1"}, latestHR)
-			Expect(err).Should(Not(HaveOccurred()))
+			Expect(err).ToNot(HaveOccurred())
 
 			expectedHR.ResourceVersion = latestHR.ResourceVersion
 
 			Expect(helpers.Diff(expectedHR, latestHR)).To(BeEmpty())
 		})
 
-		It("should update statuses with canceled context - function normally returns", func() {
-			ctx, cancel := context.WithCancel(context.Background())
-			cancel()
-			updater.Update(ctx, createStatuses(generations{
-				gatewayClass: 2,
-				gateways:     2,
-			}))
+		It("should update nginx gateway status", func() {
+			updater.Update(context.Background(), createNGStatus(1))
 		})
 
-		When("updating with canceled context", func() {
-			It("should have the updated status of GatewayClass in the API server", func() {
-				latestGc := &v1beta1.GatewayClass{}
-				expectedGc := createExpectedGCWithGeneration(2)
+		It("should have the updated status of NginxGateway in the API server", func() {
+			latestNG := &ngfAPI.NginxGateway{}
+			expectedNG := createExpectedNGWithGeneration(1)
 
-				err := client.Get(context.Background(), types.NamespacedName{Name: gcName}, latestGc)
-				Expect(err).Should(Not(HaveOccurred()))
+			err := client.Get(
+				context.Background(),
+				types.NamespacedName{Namespace: "nginx-gateway", Name: "nginx-gateway-config"},
+				latestNG,
+			)
+			Expect(err).ToNot(HaveOccurred())
 
-				expectedGc.ResourceVersion = latestGc.ResourceVersion
+			expectedNG.ResourceVersion = latestNG.ResourceVersion
 
-				Expect(helpers.Diff(expectedGc, latestGc)).To(BeEmpty())
+			Expect(helpers.Diff(expectedNG, latestNG)).To(BeEmpty())
+		})
+
+		When("the Gateway Service is updated with a new address", func() {
+			AfterEach(func() {
+				// reset the IP for the remaining tests
+				updater.UpdateAddresses(context.Background(), []v1beta1.GatewayStatusAddress{
+					{
+						Type:  helpers.GetPointer(v1beta1.IPAddressType),
+						Value: "1.2.3.4",
+					},
+				})
 			})
 
-			It("should have the updated status of Gateway in the API server", func() {
+			It("should update the previous Gateway statuses with new address", func() {
 				latestGw := &v1beta1.Gateway{}
-				expectedGw := createExpectedGwWithGeneration(2)
+				expectedGw := createExpectedGwWithGeneration(1)
+				expectedGw.Status.Addresses[0].Value = "5.6.7.8"
+
+				updater.UpdateAddresses(context.Background(), []v1beta1.GatewayStatusAddress{
+					{
+						Type:  helpers.GetPointer(v1beta1.IPAddressType),
+						Value: "5.6.7.8",
+					},
+				})
 
 				err := client.Get(
 					context.Background(),
 					types.NamespacedName{Namespace: "test", Name: "gateway"},
 					latestGw,
 				)
-				Expect(err).Should(Not(HaveOccurred()))
+				Expect(err).ToNot(HaveOccurred())
+
+				expectedGw.ResourceVersion = latestGw.ResourceVersion
+
+				Expect(helpers.Diff(expectedGw, latestGw)).To(BeEmpty())
+			})
+		})
+
+		It("should not update Gateway API statuses with canceled context - function normally returns", func() {
+			ctx, cancel := context.WithCancel(context.Background())
+			cancel()
+			updater.Update(ctx, createGwAPIStatuses(generations{
+				gatewayClass: 2,
+				gateways:     2,
+			}))
+		})
+
+		When("updating with canceled context", func() {
+			It("should not have the updated status of GatewayClass in the API server", func() {
+				latestGc := &v1beta1.GatewayClass{}
+				expectedGc := createExpectedGCWithGeneration(1)
+
+				err := client.Get(context.Background(), types.NamespacedName{Name: gcName}, latestGc)
+				Expect(err).ToNot(HaveOccurred())
+
+				expectedGc.ResourceVersion = latestGc.ResourceVersion
+
+				Expect(helpers.Diff(expectedGc, latestGc)).To(BeEmpty())
+			})
+
+			It("should not have the updated status of Gateway in the API server", func() {
+				latestGw := &v1beta1.Gateway{}
+				expectedGw := createExpectedGwWithGeneration(1)
+
+				err := client.Get(
+					context.Background(),
+					types.NamespacedName{Namespace: "test", Name: "gateway"},
+					latestGw,
+				)
+				Expect(err).ToNot(HaveOccurred())
 
 				expectedGw.ResourceVersion = latestGw.ResourceVersion
 
@@ -376,7 +480,7 @@ var _ = Describe("Updater", func() {
 					types.NamespacedName{Namespace: "test", Name: "ignored-gateway"},
 					latestGw,
 				)
-				Expect(err).Should(Not(HaveOccurred()))
+				Expect(err).ToNot(HaveOccurred())
 
 				expectedGw.ResourceVersion = latestGw.ResourceVersion
 
@@ -393,12 +497,197 @@ var _ = Describe("Updater", func() {
 					types.NamespacedName{Namespace: "test", Name: "route1"},
 					latestHR,
 				)
-				Expect(err).Should(Not(HaveOccurred()))
+				Expect(err).ToNot(HaveOccurred())
 
 				expectedHR.ResourceVersion = latestHR.ResourceVersion
 
 				// if the status was updated, we would see the route rejected (Accepted = false)
 				Expect(helpers.Diff(expectedHR, latestHR)).To(BeEmpty())
+			})
+		})
+
+		It("should not update NginxGateway status with canceled context - function normally returns", func() {
+			ctx, cancel := context.WithCancel(context.Background())
+			cancel()
+			updater.Update(ctx, createNGStatus(2))
+		})
+
+		When("updating with canceled context", func() {
+			It("should not have the updated status of the NginxGateway in the API server", func() {
+				latestNG := &ngfAPI.NginxGateway{}
+				expectedNG := createExpectedNGWithGeneration(1)
+
+				err := client.Get(
+					context.Background(),
+					types.NamespacedName{Namespace: "nginx-gateway", Name: "nginx-gateway-config"},
+					latestNG,
+				)
+				Expect(err).ToNot(HaveOccurred())
+
+				expectedNG.ResourceVersion = latestNG.ResourceVersion
+
+				Expect(helpers.Diff(expectedNG, latestNG)).To(BeEmpty())
+			})
+		})
+
+		When("the Pod is not the current leader", func() {
+			It("should not update any statuses", func() {
+				updater.Disable()
+				updater.Update(context.Background(), createGwAPIStatuses(generations{
+					gateways: 3,
+				}))
+				updater.Update(context.Background(), createNGStatus(2))
+			})
+
+			It("should not have the updated status of Gateway in the API server", func() {
+				latestGw := &v1beta1.Gateway{}
+				// testing that the generation has not changed from 1 to 3
+				expectedGw := createExpectedGwWithGeneration(1)
+
+				err := client.Get(
+					context.Background(),
+					types.NamespacedName{Namespace: "test", Name: "gateway"},
+					latestGw,
+				)
+				Expect(err).ToNot(HaveOccurred())
+
+				expectedGw.ResourceVersion = latestGw.ResourceVersion
+
+				Expect(helpers.Diff(expectedGw, latestGw)).To(BeEmpty())
+			})
+
+			It("should not have the updated status of the Nginx Gateway resource in the API server", func() {
+				latestNG := &ngfAPI.NginxGateway{}
+				expectedNG := createExpectedNGWithGeneration(1)
+
+				err := client.Get(
+					context.Background(),
+					types.NamespacedName{Namespace: "nginx-gateway", Name: "nginx-gateway-config"},
+					latestNG,
+				)
+				Expect(err).ToNot(HaveOccurred())
+
+				expectedNG.ResourceVersion = latestNG.ResourceVersion
+
+				Expect(helpers.Diff(expectedNG, latestNG)).To(BeEmpty())
+			})
+		})
+		When("the Pod starts leading", func() {
+			It("writes the last statuses", func() {
+				updater.Enable(context.Background())
+			})
+
+			It("should have the updated status of Gateway in the API server", func() {
+				latestGw := &v1beta1.Gateway{}
+				expectedGw := createExpectedGwWithGeneration(3)
+
+				err := client.Get(
+					context.Background(),
+					types.NamespacedName{Namespace: "test", Name: "gateway"},
+					latestGw,
+				)
+				Expect(err).ToNot(HaveOccurred())
+
+				expectedGw.ResourceVersion = latestGw.ResourceVersion
+
+				Expect(helpers.Diff(expectedGw, latestGw)).To(BeEmpty())
+			})
+
+			It("should have the updated status of the Nginx Gateway resource in the API server", func() {
+				latestNG := &ngfAPI.NginxGateway{}
+				expectedNG := createExpectedNGWithGeneration(2)
+
+				err := client.Get(
+					context.Background(),
+					types.NamespacedName{Namespace: "nginx-gateway", Name: "nginx-gateway-config"},
+					latestNG,
+				)
+				Expect(err).ToNot(HaveOccurred())
+
+				expectedNG.ResourceVersion = latestNG.ResourceVersion
+
+				Expect(helpers.Diff(expectedNG, latestNG)).To(BeEmpty())
+			})
+		})
+
+		When("the Pod is the current leader", func() {
+			It("should update Gateway API statuses", func() {
+				updater.Update(context.Background(), createGwAPIStatuses(generations{
+					gateways: 4,
+				}))
+			})
+
+			It("should have the updated status of Gateway in the API server", func() {
+				latestGw := &v1beta1.Gateway{}
+				expectedGw := createExpectedGwWithGeneration(4)
+
+				err := client.Get(
+					context.Background(),
+					types.NamespacedName{Namespace: "test", Name: "gateway"},
+					latestGw,
+				)
+				Expect(err).ToNot(HaveOccurred())
+
+				expectedGw.ResourceVersion = latestGw.ResourceVersion
+
+				Expect(helpers.Diff(expectedGw, latestGw)).To(BeEmpty())
+			})
+
+			It("should update Nginx Gateway status", func() {
+				updater.Update(context.Background(), createNGStatus(3))
+			})
+			It("should have the updated status of Nginx Gateway in the API server", func() {
+				latestNG := &ngfAPI.NginxGateway{}
+				expectedNG := createExpectedNGWithGeneration(3)
+
+				err := client.Get(
+					context.Background(),
+					types.NamespacedName{Namespace: "nginx-gateway", Name: "nginx-gateway-config"},
+					latestNG,
+				)
+				Expect(err).ToNot(HaveOccurred())
+
+				expectedNG.ResourceVersion = latestNG.ResourceVersion
+
+				Expect(helpers.Diff(expectedNG, latestNG)).To(BeEmpty())
+			})
+			It("updates and writes last statuses synchronously", func() {
+				wg := &sync.WaitGroup{}
+				ctx := context.Background()
+
+				// Spin up 10 goroutines that Update and 10 that call Enable which writes the last statuses.
+				// Since we only write statuses when they've changed, we will only update the status 10 times.
+				// The purpose of this test is to exercise the locking mechanism embedded in the updater.
+				// If there is a data race, this test combined with the -race flag that we run tests with,
+				// should catch it.
+				for i := 0; i < 10; i++ {
+					wg.Add(2)
+					gen := 5 + i
+					go func() {
+						updater.Update(ctx, createGwAPIStatuses(generations{gateways: int64(gen)}))
+						wg.Done()
+					}()
+
+					go func() {
+						updater.Enable(ctx)
+						wg.Done()
+					}()
+				}
+
+				wg.Wait()
+
+				latestGw := &v1beta1.Gateway{}
+
+				err := client.Get(
+					context.Background(),
+					types.NamespacedName{Namespace: "test", Name: "gateway"},
+					latestGw,
+				)
+				Expect(err).ToNot(HaveOccurred())
+
+				// Before this test there were 6 updates to the Gateway resource.
+				// So now the resource version should equal 16.
+				Expect(latestGw.ResourceVersion).To(Equal("16"))
 			})
 		})
 	})
@@ -416,7 +705,6 @@ var _ = Describe("Updater", func() {
 				Client:                   client,
 				Logger:                   zap.New(),
 				Clock:                    fakeClock,
-				PodIP:                    "1.2.3.4",
 				UpdateGatewayClassStatus: false,
 			})
 
@@ -438,7 +726,7 @@ var _ = Describe("Updater", func() {
 		It("should not update GatewayClass status", func() {
 			updater.Update(
 				context.Background(),
-				status.Statuses{
+				status.GatewayAPIStatuses{
 					GatewayClassStatuses: status.GatewayClassStatuses{
 						{Name: gcName}: {
 							ObservedGeneration: 1,
@@ -451,9 +739,28 @@ var _ = Describe("Updater", func() {
 			latestGc := &v1beta1.GatewayClass{}
 
 			err := client.Get(context.Background(), types.NamespacedName{Name: gcName}, latestGc)
-			Expect(err).Should(Not(HaveOccurred()))
+			Expect(err).ToNot(HaveOccurred())
 
 			Expect(latestGc.Status).To(BeZero())
+		})
+	})
+
+	Describe("Edge cases", func() {
+		It("panics on update if status type is unknown", func() {
+			updater := status.NewUpdater(status.UpdaterConfig{
+				GatewayCtlrName:          gatewayCtrlName,
+				GatewayClassName:         gcName,
+				Client:                   client,
+				Logger:                   zap.New(),
+				Clock:                    fakeClock,
+				UpdateGatewayClassStatus: true,
+			})
+
+			update := func() {
+				updater.Update(context.Background(), unsupportedStatus{})
+			}
+
+			Expect(update).Should(Panic())
 		})
 	})
 })

@@ -6,17 +6,17 @@ import (
 
 	. "github.com/onsi/gomega"
 
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/nginx/config/http"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/state/dataplane"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/http"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/dataplane"
 )
 
 func TestExecuteMaps(t *testing.T) {
-	g := NewGomegaWithT(t)
+	g := NewWithT(t)
 	pathRules := []dataplane.PathRule{
 		{
 			MatchRules: []dataplane.MatchRule{
 				{
-					Filters: dataplane.Filters{
+					Filters: dataplane.HTTPFilters{
 						RequestHeaderModifiers: &dataplane.HTTPHeaderFilter{
 							Add: []dataplane.HTTPHeader{
 								{
@@ -28,7 +28,7 @@ func TestExecuteMaps(t *testing.T) {
 					},
 				},
 				{
-					Filters: dataplane.Filters{
+					Filters: dataplane.HTTPFilters{
 						RequestHeaderModifiers: &dataplane.HTTPHeaderFilter{
 							Add: []dataplane.HTTPHeader{
 								{
@@ -40,7 +40,7 @@ func TestExecuteMaps(t *testing.T) {
 					},
 				},
 				{
-					Filters: dataplane.Filters{
+					Filters: dataplane.HTTPFilters{
 						RequestHeaderModifiers: &dataplane.HTTPHeaderFilter{
 							Set: []dataplane.HTTPHeader{
 								{
@@ -85,6 +85,7 @@ func TestExecuteMaps(t *testing.T) {
 		"~.* ${http_my_second_add_header},;":                                  1,
 		"map ${http_my_set_header} $my_set_header_header_var {":               0,
 		"map $http_host $gw_api_compliant_host {":                             1,
+		"map $http_upgrade $connection_upgrade {":                             1,
 	}
 
 	maps := string(executeMaps(conf))
@@ -94,12 +95,12 @@ func TestExecuteMaps(t *testing.T) {
 }
 
 func TestBuildAddHeaderMaps(t *testing.T) {
-	g := NewGomegaWithT(t)
+	g := NewWithT(t)
 	pathRules := []dataplane.PathRule{
 		{
 			MatchRules: []dataplane.MatchRule{
 				{
-					Filters: dataplane.Filters{
+					Filters: dataplane.HTTPFilters{
 						RequestHeaderModifiers: &dataplane.HTTPHeaderFilter{
 							Add: []dataplane.HTTPHeader{
 								{
@@ -125,7 +126,7 @@ func TestBuildAddHeaderMaps(t *testing.T) {
 					},
 				},
 				{
-					Filters: dataplane.Filters{
+					Filters: dataplane.HTTPFilters{
 						RequestHeaderModifiers: &dataplane.HTTPHeaderFilter{
 							Set: []dataplane.HTTPHeader{
 								{

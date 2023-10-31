@@ -3,8 +3,8 @@ package config
 import (
 	"path/filepath"
 
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/nginx/file"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/state/dataplane"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/file"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/dataplane"
 )
 
 //go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . Generator
@@ -20,6 +20,9 @@ const (
 
 	// httpConfigFile is the path to the configuration file with HTTP configuration.
 	httpConfigFile = httpFolder + "/http.conf"
+
+	// configVersionFile is the path to the config version configuration file.
+	configVersionFile = httpFolder + "/config-version.conf"
 )
 
 // ConfigFolders is a list of folders where NGINX configuration files are stored.
@@ -63,6 +66,8 @@ func (g GeneratorImpl) Generate(conf dataplane.Configuration) []file.File {
 
 	files = append(files, generateHTTPConfig(conf))
 
+	files = append(files, generateConfigVersion(conf.Version))
+
 	return files
 }
 
@@ -102,5 +107,16 @@ func getExecuteFuncs() []executeFunc {
 		executeSplitClients,
 		executeServers,
 		executeMaps,
+	}
+}
+
+// generateConfigVersion writes the config version file.
+func generateConfigVersion(configVersion int) file.File {
+	c := executeVersion(configVersion)
+
+	return file.File{
+		Content: c,
+		Path:    configVersionFile,
+		Type:    file.TypeRegular,
 	}
 }

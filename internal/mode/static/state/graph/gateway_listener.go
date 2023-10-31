@@ -10,8 +10,8 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/conditions"
-	staticConds "github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/state/conditions"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
+	staticConds "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/conditions"
 )
 
 // Listener represents a Listener of the Gateway resource.
@@ -32,7 +32,7 @@ type Listener struct {
 	// SupportedKinds is the list of RouteGroupKinds allowed by the listener.
 	SupportedKinds []v1beta1.RouteGroupKind
 	// Valid shows whether the Listener is valid.
-	// A Listener is considered valid if NKG can generate valid NGINX configuration for it.
+	// A Listener is considered valid if NGF can generate valid NGINX configuration for it.
 	Valid bool
 }
 
@@ -40,10 +40,11 @@ func buildListeners(
 	gw *v1beta1.Gateway,
 	secretResolver *secretResolver,
 	refGrantResolver *referenceGrantResolver,
+	protectedPorts ProtectedPorts,
 ) map[string]*Listener {
 	listeners := make(map[string]*Listener)
 
-	listenerFactory := newListenerConfiguratorFactory(gw, secretResolver, refGrantResolver)
+	listenerFactory := newListenerConfiguratorFactory(gw, secretResolver, refGrantResolver, protectedPorts)
 
 	for _, gl := range gw.Spec.Listeners {
 		configurator := listenerFactory.getConfiguratorForListener(gl)
@@ -72,6 +73,7 @@ func newListenerConfiguratorFactory(
 	gw *v1beta1.Gateway,
 	secretResolver *secretResolver,
 	refGrantResolver *referenceGrantResolver,
+	protectedPorts ProtectedPorts,
 ) *listenerConfiguratorFactory {
 	sharedPortConflictResolver := createPortConflictResolver()
 
@@ -93,7 +95,7 @@ func newListenerConfiguratorFactory(
 				validateListenerAllowedRouteKind,
 				validateListenerLabelSelector,
 				validateListenerHostname,
-				validateHTTPListener,
+				createHTTPListenerValidator(protectedPorts),
 			},
 			conflictResolvers: []listenerConflictResolver{
 				sharedPortConflictResolver,
@@ -104,7 +106,7 @@ func newListenerConfiguratorFactory(
 				validateListenerAllowedRouteKind,
 				validateListenerLabelSelector,
 				validateListenerHostname,
-				createHTTPSListenerValidator(),
+				createHTTPSListenerValidator(protectedPorts),
 			},
 			conflictResolvers: []listenerConflictResolver{
 				sharedPortConflictResolver,
@@ -204,8 +206,7 @@ func validateListenerHostname(listener v1beta1.Listener) []conditions.Condition 
 		return nil
 	}
 
-	err := validateHostname(h)
-	if err != nil {
+	if err := validateHostname(h); err != nil {
 		path := field.NewPath("hostname")
 		valErr := field.Invalid(path, listener.Hostname, err.Error())
 		return staticConds.NewListenerUnsupportedValue(valErr.Error())
@@ -275,33 +276,41 @@ func validateListenerLabelSelector(listener v1beta1.Listener) []conditions.Condi
 	return nil
 }
 
-func validateHTTPListener(listener v1beta1.Listener) []conditions.Condition {
-	if err := validateListenerPort(listener.Port); err != nil {
-		path := field.NewPath("port")
-		valErr := field.Invalid(path, listener.Port, err.Error())
-		return staticConds.NewListenerUnsupportedValue(valErr.Error())
-	}
+func createHTTPListenerValidator(protectedPorts ProtectedPorts) listenerValidator {
+	return func(listener v1beta1.Listener) []conditions.Condition {
+		var conds []conditions.Condition
 
-	if listener.TLS != nil {
-		panicForBrokenWebhookAssumption(fmt.Errorf("tls is not nil for HTTP listener %q", listener.Name))
-	}
+		if err := validateListenerPort(listener.Port, protectedPorts); err != nil {
+			path := field.NewPath("port")
+			valErr := field.Invalid(path, listener.Port, err.Error())
+			conds = append(conds, staticConds.NewListenerUnsupportedValue(valErr.Error())...)
+		}
 
-	return nil
+		if listener.TLS != nil {
+			panicForBrokenWebhookAssumption(fmt.Errorf("tls is not nil for HTTP listener %q", listener.Name))
+		}
+
+		return conds
+	}
 }
 
-func validateListenerPort(port v1beta1.PortNumber) error {
+func validateListenerPort(port v1beta1.PortNumber, protectedPorts ProtectedPorts) error {
 	if port < 1 || port > 65535 {
 		return errors.New("port must be between 1-65535")
 	}
 
+	if portName, ok := protectedPorts[int32(port)]; ok {
+		return fmt.Errorf("port is already in use as %v", portName)
+	}
+
 	return nil
 }
 
-func createHTTPSListenerValidator() listenerValidator {
+func createHTTPSListenerValidator(protectedPorts ProtectedPorts) listenerValidator {
 	return func(listener v1beta1.Listener) []conditions.Condition {
 		var conds []conditions.Condition
 
-		if err := validateListenerPort(listener.Port); err != nil {
+		if err := validateListenerPort(listener.Port, protectedPorts); err != nil {
 			path := field.NewPath("port")
 			valErr := field.Invalid(path, listener.Port, err.Error())
 			conds = append(conds, staticConds.NewListenerUnsupportedValue(valErr.Error())...)

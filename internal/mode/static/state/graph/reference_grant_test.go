@@ -7,7 +7,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/helpers"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 )
 
 func TestReferenceGrantResolver(t *testing.T) {
@@ -160,7 +160,7 @@ func TestReferenceGrantResolver(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.msg, func(t *testing.T) {
-			g := NewGomegaWithT(t)
+			g := NewWithT(t)
 
 			g.Expect(resolver.refAllowed(test.to, test.from)).To(Equal(test.allowed))
 		})
@@ -176,7 +176,7 @@ func TestToSecret(t *testing.T) {
 		name:      "secret",
 	}
 
-	g := NewGomegaWithT(t)
+	g := NewWithT(t)
 	g.Expect(ref).To(Equal(exp))
 }
 
@@ -189,7 +189,7 @@ func TestToService(t *testing.T) {
 		name:      "service",
 	}
 
-	g := NewGomegaWithT(t)
+	g := NewWithT(t)
 	g.Expect(ref).To(Equal(exp))
 }
 
@@ -202,7 +202,7 @@ func TestFromGateway(t *testing.T) {
 		namespace: "ns",
 	}
 
-	g := NewGomegaWithT(t)
+	g := NewWithT(t)
 	g.Expect(ref).To(Equal(exp))
 }
 
@@ -215,6 +215,6 @@ func TestFromHTTPRoute(t *testing.T) {
 		namespace: "ns",
 	}
 
-	g := NewGomegaWithT(t)
+	g := NewWithT(t)
 	g.Expect(ref).To(Equal(exp))
 }

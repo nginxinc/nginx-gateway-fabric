@@ -3,7 +3,7 @@ package dataplane
 import (
 	"sort"
 
-	nkgsort "github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/sort"
+	ngfsort "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/sort"
 )
 
 func sortMatchRules(matchRules []MatchRule) {
@@ -37,39 +37,35 @@ If ties still exist within the Route that has been given precedence,
 matching precedence MUST be granted to the first matching rule meeting the above criteria.
 
 higherPriority will determine precedence by comparing len(headers), len(query parameters), creation timestamp,
-and namespace name. The other criteria are handled by NGINX.
+and namespace name. It gives higher priority to rules with a method match. The other criteria are handled by NGINX.
 */
 func higherPriority(rule1, rule2 MatchRule) bool {
-	// Get the matches from the rules
-	match1 := rule1.GetMatch()
-	match2 := rule2.GetMatch()
-
 	// Compare if a method exists on one of the matches but not the other.
 	// The match with the method specified wins.
-	if match1.Method != nil && match2.Method == nil {
+	if rule1.Match.Method != nil && rule2.Match.Method == nil {
 		return true
 	}
-	if match2.Method != nil && match1.Method == nil {
+	if rule2.Match.Method != nil && rule1.Match.Method == nil {
 		return false
 	}
 
 	// Compare the number of header matches.
 	// The match with the largest number of header matches wins.
-	l1 := len(match1.Headers)
-	l2 := len(match2.Headers)
+	l1 := len(rule1.Match.Headers)
+	l2 := len(rule2.Match.Headers)
 
 	if l1 != l2 {
 		return l1 > l2
 	}
 	// If the number of headers is equal then compare the number of query param matches.
 	// The match with the most query param matches wins.
-	l1 = len(match1.QueryParams)
-	l2 = len(match2.QueryParams)
+	l1 = len(rule1.Match.QueryParams)
+	l2 = len(rule2.Match.QueryParams)
 
 	if l1 != l2 {
 		return l1 > l2
 	}
 
 	// If still tied, compare the object meta of the two routes.
-	return nkgsort.LessObjectMeta(&rule1.Source.ObjectMeta, &rule2.Source.ObjectMeta)
+	return ngfsort.LessObjectMeta(rule1.Source, rule2.Source)
 }

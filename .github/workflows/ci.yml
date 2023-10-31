@@ -11,10 +11,6 @@ on:
     branches:
       - main
       - release-*
-    types:
-      - opened
-      - reopened
-      - synchronize
 
 defaults:
   run:
@@ -38,10 +34,10 @@ jobs:
       go_path: ${{ steps.vars.outputs.go_path }}
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
 
       - name: Setup Golang Environment
-        uses: actions/setup-go@fac708d6674e30b6ba41289acaab6d4b75aa0753 # v4.0.1
+        uses: actions/setup-go@93397bea11091df50f3d7e59dc26a7711a8bcfbe # v4.1.0
         with:
           go-version-file: go.mod
 
@@ -55,8 +51,8 @@ jobs:
       - name: Check if generated go files are up to date
         run: make generate && git diff --exit-code
 
-      - name: Check if njs-modules yaml is up to date
-        run: make generate-njs-yaml && git diff --exit-code
+      - name: Check if generated CRDs and types are up to date
+        run: make generate-crds && git diff --exit-code
 
       - name: Check if generated manifests are up to date
         run: make generate-manifests && git diff --exit-code
@@ -67,10 +63,10 @@ jobs:
     needs: vars
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
 
       - name: Setup Golang Environment
-        uses: actions/setup-go@fac708d6674e30b6ba41289acaab6d4b75aa0753 # v4.0.1
+        uses: actions/setup-go@93397bea11091df50f3d7e59dc26a7711a8bcfbe # v4.1.0
         with:
           go-version-file: go.mod
 
@@ -78,7 +74,7 @@ jobs:
         run: make unit-test
 
       - name: Upload Coverage Report
-        uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
+        uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32 # v3.1.3
         with:
           name: cover-${{ github.run_id }}.html
           path: ${{ github.workspace }}/cover.html
@@ -90,10 +86,10 @@ jobs:
     needs: vars
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
 
       - name: Setup Node.js Environment
-        uses: actions/setup-node@e33196f7422957bea03ed53f6fbb155025ffc7b8 # v3.7.0
+        uses: actions/setup-node@8f152de45cc393bb48ce5d89d36b731f54556e65 # v4.0.0
         with:
           node-version: 18
       - run: npm --prefix ${{ github.workspace }}/internal/mode/static/nginx/modules install-ci-test
@@ -107,40 +103,40 @@ jobs:
       id-token: write # for goreleaser/goreleaser-action to sign artifacts
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
         with:
           fetch-depth: 0
 
       - name: Setup Golang Environment
-        uses: actions/setup-go@fac708d6674e30b6ba41289acaab6d4b75aa0753 # v4.0.1
+        uses: actions/setup-go@93397bea11091df50f3d7e59dc26a7711a8bcfbe # v4.1.0
         with:
           go-version-file: go.mod
 
       - name: Create/Update Draft
-        uses: lucacome/draft-release@f6dc37dcdf44be100a649b72c62c628776750190 # v0.2.2
+        uses: lucacome/draft-release@785af55296512c907875513e397320ae3f1306bb # v1.0.1
         with:
           minor-label: "enhancement"
           major-label: "change"
-          publish: ${{ startsWith(github.ref, 'refs/tags/') }}
+          publish: ${{ github.ref_type == 'tag' }}
           collapse-after: 20
           notes-header: |
             *Below is the auto-generated changelog, which includes all PRs that went into the release.
-            For a shorter version that highlights only important changes, see [CHANGELOG.md](https://github.com/nginxinc/nginx-kubernetes-gateway/blob/{{version}}/CHANGELOG.md).*
+            For a shorter version that highlights only important changes, see [CHANGELOG.md](https://github.com/nginxinc/nginx-gateway-fabric/blob/{{version}}/CHANGELOG.md).*
         if: ${{ github.event_name == 'push' && github.ref != 'refs/heads/main' }}
 
       - name: Download Syft
         uses: anchore/sbom-action/download-syft@78fc58e266e87a38d4194b2137a3d4e9bcaf7ca1 # v0.14.3
-        if: startsWith(github.ref, 'refs/tags/')
+        if: github.ref_type == 'tag'
 
       - name: Install Cosign
-        uses: sigstore/cosign-installer@6e04d228eb30da1757ee4e1dd75a0ec73a653e06 # v3.1.1
-        if: startsWith(github.ref, 'refs/tags/')
+        uses: sigstore/cosign-installer@11086d25041f77fe8fe7b9ea4e48e3b9192b8f19 # v3.1.2
+        if: github.ref_type == 'tag'
 
       - name: Build binary
-        uses: goreleaser/goreleaser-action@336e29918d653399e599bfca99fadc1d7ffbc9f7 # v4.3.0
+        uses: goreleaser/goreleaser-action@7ec5c2b0c6cdda6e8bbb49444bc797dd33d74dd8 # v5.0.0
         with:
           version: latest
-          args: ${{ startsWith(github.ref, 'refs/tags/') && 'release' || 'build --snapshot' }} --clean
+          args: ${{ github.ref_type == 'tag' && 'release' || 'build --snapshot' }} --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GOPATH: ${{ needs.vars.outputs.go_path }}
@@ -150,52 +146,77 @@ jobs:
           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_COMMUNITY }}
 
       - name: Cache Artifacts
-        uses: actions/cache@88522ab9f39a2ea568f7027eddc7d8d8bc9d59c8 # v3.3.1
+        uses: actions/cache@704facf57e6136b1bc63b828d79edcd491f0ee84 # v3.3.2
         with:
           path: ${{ github.workspace }}/dist
-          key: nginx-kubernetes-gateway-${{ github.run_id }}-${{ github.run_number }}
+          key: nginx-gateway-fabric-${{ github.run_id }}-${{ github.run_number }}
 
   helm-tests:
     name: Helm Tests
     runs-on: ubuntu-22.04
     needs: [vars, binary]
-    if: ${{ github.ref_type != 'tag' }}
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
 
       - name: Fetch Cached Artifacts
-        uses: actions/cache@88522ab9f39a2ea568f7027eddc7d8d8bc9d59c8 # v3.3.1
+        uses: actions/cache@704facf57e6136b1bc63b828d79edcd491f0ee84 # v3.3.2
         with:
           path: ${{ github.workspace }}/dist
-          key: nginx-kubernetes-gateway-${{ github.run_id }}-${{ github.run_number }}
+          key: nginx-gateway-fabric-${{ github.run_id }}-${{ github.run_number }}
 
       - name: Docker Buildx
-        uses: docker/setup-buildx-action@4c0219f9ac95b02789c1075625400b2acbff50b1 # v2.9.1
+        uses: docker/setup-buildx-action@f95db51fddba0c2d1ec667646a06c2ce06100226 # v3.0.0
 
-      - name: Docker meta
-        id: meta
-        uses: docker/metadata-action@818d4b7b91585d195f67373fd9cb0332e31a7175 # v4.6.0
+      - name: NGF Docker meta
+        id: ngf-meta
+        uses: docker/metadata-action@96383f45573cb7f253c731d3b3ab81c87ef81934 # v5.0.0
         with:
           images: |
-            name=ghcr.io/nginxinc/nginx-kubernetes-gateway
+            name=ghcr.io/nginxinc/nginx-gateway-fabric
           tags: |
             type=semver,pattern={{version}}
             type=edge
             type=ref,event=pr
             type=ref,event=branch,suffix=-rc,enable=${{ startsWith(github.ref, 'refs/heads/release') }}
 
-      - name: Build Docker Image
-        uses: docker/build-push-action@2eb1c1961a95fc15694676618e422e8ba1d63825 # v4.1.1
+      - name: NGINX Docker meta
+        id: nginx-meta
+        uses: docker/metadata-action@96383f45573cb7f253c731d3b3ab81c87ef81934 # v5.0.0
+        with:
+          images: |
+            name=ghcr.io/nginxinc/nginx-gateway-fabric/nginx
+          tags: |
+            type=semver,pattern={{version}}
+            type=edge
+            type=ref,event=pr
+            type=ref,event=branch,suffix=-rc,enable=${{ startsWith(github.ref, 'refs/heads/release') }}
+
+      - name: Build NGF Docker Image
+        uses: docker/build-push-action@0565240e2d4ab88bba5387d719585280857ece09 # v5.0.0
         with:
           file: build/Dockerfile
-          tags: ${{ steps.meta.outputs.tags }}
+          tags: ${{ steps.ngf-meta.outputs.tags }}
           context: "."
           target: goreleaser
           load: true
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=ngf
+          cache-to: type=gha,scope=ngf,mode=max
           pull: true
+
+      - name: Build NGINX Docker Image
+        uses: docker/build-push-action@0565240e2d4ab88bba5387d719585280857ece09 # v5.0.0
+        with:
+          file: build/Dockerfile.nginx
+          tags: ${{ steps.nginx-meta.outputs.tags }}
+          context: "."
+          load: true
+          cache-from: type=gha,scope=nginx
+          cache-to: type=gha,scope=nginx,mode=max
+          pull: true
+          build-args: |
+            NJS_DIR=internal/mode/static/nginx/modules/src
+            NGINX_CONF_DIR=internal/mode/static/nginx/conf
 
       - name: Deploy Kubernetes
         id: k8s
@@ -203,19 +224,23 @@ jobs:
           kube_config=${{ github.workspace }}/deploy/helm-chart/kube-${{ github.run_id }}-helm
           make create-kind-cluster KIND_KUBE_CONFIG=${kube_config}
           echo "KUBECONFIG=${kube_config}" >> "$GITHUB_ENV"
-          kind load docker-image ${{ steps.meta.outputs.tags }}
-          kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v0.7.1/standard-install.yaml
+          kind load docker-image ${{ steps.ngf-meta.outputs.tags }} ${{ steps.nginx-meta.outputs.tags }}
+          kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v0.8.1/standard-install.yaml
           kubectl wait --for=condition=complete job/gateway-api-admission-patch job/gateway-api-admission -n gateway-system
 
       - name: Install Chart
         run: >
           helm install
-          helm-$(echo ${{ steps.meta.outputs.tags }} | cut -d ":" -f 2)
+          helm-$(echo ${{ steps.ngf-meta.outputs.tags }} | tr '.' '-' | cut -d ":" -f 2)
           .
           --wait
           --create-namespace
-          --set controller.image.repository=$(echo ${{ steps.meta.outputs.tags }} | cut -d ":" -f 1)
-          --set controller.image.tag=$(echo ${{ steps.meta.outputs.tags }} | cut -d ":" -f 2)
+          --set nginxGateway.image.repository=$(echo ${{ steps.ngf-meta.outputs.tags }} | cut -d ":" -f 1)
+          --set nginxGateway.image.tag=$(echo ${{ steps.ngf-meta.outputs.tags }} | cut -d ":" -f 2)
+          --set nginxGateway.image.pullPolicy=Never
+          --set nginx.image.repository=$(echo ${{ steps.nginx-meta.outputs.tags }} | cut -d ":" -f 1)
+          --set nginx.image.tag=$(echo ${{ steps.nginx-meta.outputs.tags }} | cut -d ":" -f 2)
+          --set nginx.image.pullPolicy=Never
           --set service.type=NodePort
           -n nginx-gateway
         working-directory: ${{ github.workspace }}/deploy/helm-chart
@@ -224,30 +249,34 @@ jobs:
     name: Build Image
     runs-on: ubuntu-22.04
     needs: [vars, binary]
+    strategy:
+      fail-fast: false
+      matrix:
+        container: [ngf, nginx]
     permissions:
       contents: read # for docker/build-push-action to read repo content
       security-events: write # for github/codeql-action/upload-sarif to upload SARIF results
       packages: write # for docker/build-push-action to push to GHCR
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
 
       - name: Fetch Cached Artifacts
-        uses: actions/cache@88522ab9f39a2ea568f7027eddc7d8d8bc9d59c8 # v3.3.1
+        uses: actions/cache@704facf57e6136b1bc63b828d79edcd491f0ee84 # v3.3.2
         with:
           path: ${{ github.workspace }}/dist
-          key: nginx-kubernetes-gateway-${{ github.run_id }}-${{ github.run_number }}
+          key: nginx-gateway-fabric-${{ github.run_id }}-${{ github.run_number }}
 
       - name: Docker Buildx
-        uses: docker/setup-buildx-action@4c0219f9ac95b02789c1075625400b2acbff50b1 # v2.9.1
+        uses: docker/setup-buildx-action@f95db51fddba0c2d1ec667646a06c2ce06100226 # v3.0.0
 
       - name: Setup QEMU
-        uses: docker/setup-qemu-action@2b82ce82d56a2a04d2637cd93a637ae1b359c0a7 # v2.2.0
+        uses: docker/setup-qemu-action@68827325e0b33c7199eb31dd4e31fbe9023e06e3 # v3.0.0
         with:
           platforms: arm64
 
       - name: Login to GitHub Container Registry
-        uses: docker/login-action@465a07811f14bebb1938fbed4728c6a1ff8901fc # v2.2.0
+        uses: docker/login-action@343f7c4344506bcbf9b4de18042ae17996df046d # v3.0.0
         if: ${{ github.event_name != 'pull_request' }}
         with:
           registry: ghcr.io
@@ -256,10 +285,10 @@ jobs:
 
       - name: Docker meta
         id: meta
-        uses: docker/metadata-action@818d4b7b91585d195f67373fd9cb0332e31a7175 # v4.6.0
+        uses: docker/metadata-action@96383f45573cb7f253c731d3b3ab81c87ef81934 # v5.0.0
         with:
           images: |
-            name=ghcr.io/nginxinc/nginx-kubernetes-gateway
+            name=ghcr.io/nginxinc/nginx-gateway-fabric${{ matrix.container == 'nginx' && '/nginx' || '' }}
           tags: |
             type=semver,pattern={{version}}
             type=edge
@@ -267,44 +296,47 @@ jobs:
             type=ref,event=branch,suffix=-rc,enable=${{ startsWith(github.ref, 'refs/heads/release') }}
 
       - name: Build Docker Image
-        uses: docker/build-push-action@2eb1c1961a95fc15694676618e422e8ba1d63825 # v4.1.1
+        uses: docker/build-push-action@0565240e2d4ab88bba5387d719585280857ece09 # v5.0.0
         with:
-          file: build/Dockerfile
+          file: ${{ matrix.container == 'nginx' && 'build/Dockerfile.nginx' || 'build/Dockerfile' }}
           context: "."
-          target: goreleaser
+          target: ${{ matrix.container == 'ngf' && 'goreleaser' || '' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           load: ${{ github.event_name == 'pull_request' }}
           push: ${{ github.event_name != 'pull_request' }}
           platforms: ${{ github.event_name != 'pull_request' && env.platforms || '' }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=${{ matrix.container }}
+          cache-to: type=gha,scope=${{ matrix.container }},mode=max
           pull: true
           no-cache: ${{ github.event_name != 'pull_request' }}
           sbom: ${{ github.event_name != 'pull_request' }}
           provenance: false
+          build-args: |
+            NJS_DIR=internal/mode/static/nginx/modules/src
+            NGINX_CONF_DIR=internal/mode/static/nginx/conf
 
       - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@41f05d9ecffa2ed3f1580af306000f734b733e54 # 0.11.2
+        uses: aquasecurity/trivy-action@fbd16365eb88e12433951383f5e99bd901fc618f # 0.12.0
         continue-on-error: true
         with:
-          image-ref: ghcr.io/nginxinc/nginx-kubernetes-gateway:${{ steps.meta.outputs.version }}
+          image-ref: ghcr.io/nginxinc/nginx-gateway-fabric${{ matrix.container == 'nginx' && '/nginx' || '' }}:${{ steps.meta.outputs.version }}
           format: "sarif"
-          output: "trivy-results-nginx-kubernetes-gateway.sarif"
+          output: trivy-results-nginx-gateway-fabric${{ matrix.container == 'nginx' && '-nginx' || '' }}.sarif
           ignore-unfixed: "true"
 
       - name: Upload Trivy scan results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@0ba4244466797eb048eb91a6cd43d5c03ca8bd05 # v2.21.2
+        uses: github/codeql-action/upload-sarif@49abf0ba24d0b7953cb586944e918a0b92074c80 # v2.22.4
         continue-on-error: true
         with:
-          sarif_file: "trivy-results-nginx-kubernetes-gateway.sarif"
+          sarif_file: trivy-results-nginx-gateway-fabric${{ matrix.container == 'nginx' && '-nginx' || '' }}.sarif
 
       - name: Upload Scan Results
-        uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
+        uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32 # v3.1.3
         continue-on-error: true
         with:
-          name: "trivy-results-nginx-kubernetes-gateway.sarif"
-          path: "trivy-results-nginx-kubernetes-gateway.sarif"
+          name: trivy-results-nginx-gateway-fabric${{ matrix.container == 'nginx' && '-nginx' || '' }}.sarif
+          path: trivy-results-nginx-gateway-fabric${{ matrix.container == 'nginx' && '-nginx' || '' }}.sarif
         if: always()
 
   publish-helm:
@@ -317,10 +349,10 @@ jobs:
       packages: write # for helm to push to GHCR
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
 
       - name: Login to GitHub Container Registry
-        uses: docker/login-action@465a07811f14bebb1938fbed4728c6a1ff8901fc # v2.2.0
+        uses: docker/login-action@343f7c4344506bcbf9b4de18042ae17996df046d # v3.0.0
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
@@ -329,7 +361,7 @@ jobs:
       - name: Package
         id: package
         run: |
-          output=$(helm package ${{ ! startsWith(github.ref, 'refs/tags/') && '--app-version edge --version 0.0.0-edge' || '' }} deploy/helm-chart)
+          output=$(helm package ${{ github.ref_type != 'tag' && '--app-version edge --version 0.0.0-edge' || '' }} deploy/helm-chart)
           echo "path=$(basename -- $(echo $output | cut -d: -f2))" >> $GITHUB_OUTPUT
 
       - name: Push to GitHub Container Registry

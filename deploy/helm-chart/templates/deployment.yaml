@@ -7,8 +7,7 @@ metadata:
   labels:
   {{- include "nginx-gateway.labels" . | nindent 4 }}
 spec:
-  # We only support a single replica for now
-  replicas: 1
+  replicas: {{ .Values.nginxGateway.replicaCount }}
   selector:
     matchLabels:
     {{- include "nginx-gateway.selectorLabels" . | nindent 6 }}
@@ -16,33 +15,99 @@ spec:
     metadata:
       labels:
       {{- include "nginx-gateway.selectorLabels" . | nindent 8 }}
+      {{- if .Values.metrics.enable }}
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "{{ .Values.metrics.port }}"
+        {{- if .Values.metrics.secure }}
+        prometheus.io/scheme: "https"
+        {{- end }}
+      {{- end }}
     spec:
       containers:
       - args:
         - static-mode
         - --gateway-ctlr-name={{ .Values.nginxGateway.gatewayControllerName }}
         - --gatewayclass={{ .Values.nginxGateway.gatewayClassName }}
+        - --config={{ include "nginx-gateway.config-name" . }}
+        - --service={{ include "nginx-gateway.fullname" . }}
+        {{- if .Values.metrics.enable }}
+        - --metrics-port={{ .Values.metrics.port }}
+        {{- if .Values.metrics.secure  }}
+        - --metrics-secure-serving
+        {{- end }}
+        {{- else }}
+        - --metrics-disable
+        {{- end }}
+        {{- if .Values.nginxGateway.readinessProbe.enable }}
+        - --health-port={{ .Values.nginxGateway.readinessProbe.port }}
+        {{- else }}
+        - --health-disable
+        {{- end }}
+        {{- if .Values.nginxGateway.leaderElection.enable }}
+        - --leader-election-lock-name={{ include "nginx-gateway.leaderElectionName" . }}
+        {{- else }}
+        - --leader-election-disable
+        {{- end }}
         env:
         - name: POD_IP
           valueFrom:
             fieldRef:
               fieldPath: status.podIP
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
         image: {{ .Values.nginxGateway.image.repository }}:{{ .Values.nginxGateway.image.tag | default .Chart.AppVersion }}
         imagePullPolicy: {{ .Values.nginxGateway.image.pullPolicy }}
         name: nginx-gateway
+        {{- if .Values.nginxGateway.lifecycle }}
+        lifecycle:
+        {{- toYaml .Values.nginxGateway.lifecycle | nindent 10 }}
+        {{- end }}
+        ports:
+        {{- if .Values.metrics.enable }}
+        - name: metrics
+          containerPort: {{ .Values.metrics.port }}
+        {{- end }}
+        {{- if .Values.nginxGateway.readinessProbe.enable }}
+        - name: health
+          containerPort: {{ .Values.nginxGateway.readinessProbe.port }}
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: health
+          initialDelaySeconds: {{ .Values.nginxGateway.readinessProbe.initialDelaySeconds }}
+          periodSeconds: 1
+        {{- end }}
         securityContext:
+          allowPrivilegeEscalation: {{ .Values.nginxGateway.securityContext.allowPrivilegeEscalation }}
           capabilities:
             add:
             - KILL
             drop:
             - ALL
-          runAsUser: 1001
+          readOnlyRootFilesystem: true
+          runAsUser: 102
+          runAsGroup: 1001
         volumeMounts:
-        - mountPath: /etc/nginx
-          name: nginx
-      - image: {{ .Values.nginx.image.repository }}:{{ .Values.nginx.image.tag }}
+        - name: nginx-conf
+          mountPath: /etc/nginx/conf.d
+        - name: nginx-secrets
+          mountPath: /etc/nginx/secrets
+        - name: nginx-run
+          mountPath: /var/run/nginx
+      - image: {{ .Values.nginx.image.repository }}:{{ .Values.nginx.image.tag | default .Chart.AppVersion }}
         imagePullPolicy: {{ .Values.nginx.image.pullPolicy }}
         name: nginx
+        {{- if .Values.nginx.lifecycle }}
+        lifecycle:
+        {{- toYaml .Values.nginx.lifecycle | nindent 10 }}
+        {{- end }}
         ports:
         - containerPort: 80
           name: http
@@ -51,45 +116,42 @@ spec:
         securityContext:
           capabilities:
             add:
-            - CHOWN
             - NET_BIND_SERVICE
-            - SETGID
-            - SETUID
-            - DAC_OVERRIDE
             drop:
             - ALL
+          readOnlyRootFilesystem: true
+          runAsUser: 101
+          runAsGroup: 1001
         volumeMounts:
-        - mountPath: /etc/nginx
-          name: nginx
-        - mountPath: /etc/nginx/nginx.conf
-          name: nginx-conf
-          subPath: nginx.conf
-        - mountPath: /var/lib/nginx
-          name: var-lib-nginx
-        - mountPath: /usr/lib/nginx/modules/njs
-          name: njs-modules
-      initContainers:
-      - command:
-        - sh
-        - -c
-        - rm -r /etc/nginx/conf.d /etc/nginx/secrets; mkdir /etc/nginx/conf.d /etc/nginx/secrets
-          && chown 1001:0 /etc/nginx/conf.d /etc/nginx/secrets
-        image: {{ .Values.initContainer.image.repository }}:{{ .Values.initContainer.image.tag }}
-        name: set-permissions
-        volumeMounts:
-        - mountPath: /etc/nginx
-          name: nginx
+        - name: nginx-conf
+          mountPath: /etc/nginx/conf.d
+        - name: nginx-secrets
+          mountPath: /etc/nginx/secrets
+        - name: nginx-run
+          mountPath: /var/run/nginx
+        - name: nginx-cache
+          mountPath: /var/cache/nginx
+        - name: nginx-lib
+          mountPath: /var/lib/nginx
+      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
+      {{- if .Values.affinity }}
+      affinity:
+      {{- toYaml .Values.affinity | nindent 8 }}
+      {{- end }}
       serviceAccountName: {{ include "nginx-gateway.serviceAccountName" . }}
       shareProcessNamespace: true
+      securityContext:
+        fsGroup: 1001
+        runAsNonRoot: true
       volumes:
-      - emptyDir: {}
-        name: nginx
-      - configMap:
-          name: {{ include "nginx-gateway.nginx-conf" . }}
-        name: nginx-conf
-      - emptyDir: {}
-        name: var-lib-nginx
-      - configMap:
-          name: {{ include "nginx-gateway.njs-modules" . }}
-        name: njs-modules
+      - name: nginx-conf
+        emptyDir: {}
+      - name: nginx-secrets
+        emptyDir: {}
+      - name: nginx-run
+        emptyDir: {}
+      - name: nginx-cache
+        emptyDir: {}
+      - name: nginx-lib
+        emptyDir: {}
 {{- end }}

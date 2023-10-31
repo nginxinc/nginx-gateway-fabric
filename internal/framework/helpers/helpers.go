@@ -6,7 +6,6 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/gateway-api/apis/v1beta1"
 )
 
 // Diff prints the diff between two structs.
@@ -19,46 +18,6 @@ func Diff(want, got any) string {
 		return "(-want +got)\n" + r
 	}
 	return r
-}
-
-// GetStringPointer takes a string and returns a pointer to it.
-func GetStringPointer(s string) *string {
-	return &s
-}
-
-// GetIntPointer takes an int and returns a pointer to it.
-func GetIntPointer(i int) *int {
-	return &i
-}
-
-// GetInt32Pointer takes an int32 and returns a pointer to it.
-func GetInt32Pointer(i int32) *int32 {
-	return &i
-}
-
-// GetHTTPMethodPointer takes an HTTPMethod and returns a pointer to it.
-func GetHTTPMethodPointer(m v1beta1.HTTPMethod) *v1beta1.HTTPMethod {
-	return &m
-}
-
-// GetHeaderMatchTypePointer takes an HeaderMatchType and returns a pointer to it.
-func GetHeaderMatchTypePointer(t v1beta1.HeaderMatchType) *v1beta1.HeaderMatchType {
-	return &t
-}
-
-// GetQueryParamMatchTypePointer takes an QueryParamMatchType and returns a pointer to it.
-func GetQueryParamMatchTypePointer(t v1beta1.QueryParamMatchType) *v1beta1.QueryParamMatchType {
-	return &t
-}
-
-// GetTLSModePointer takes a TLSModeType and returns a pointer to it.
-func GetTLSModePointer(t v1beta1.TLSModeType) *v1beta1.TLSModeType {
-	return &t
-}
-
-// GetBoolPointer takes a bool and returns a pointer to it.
-func GetBoolPointer(b bool) *bool {
-	return &b
 }
 
 // GetPointer takes a value of any type and returns a pointer to it.
@@ -76,8 +35,7 @@ func PrepareTimeForFakeClient(t metav1.Time) metav1.Time {
 		panic(fmt.Errorf("failed to marshal time: %w", err))
 	}
 
-	err = t.Unmarshal(bytes)
-	if err != nil {
+	if err = t.Unmarshal(bytes); err != nil {
 		panic(fmt.Errorf("failed to unmarshal time: %w", err))
 	}
 

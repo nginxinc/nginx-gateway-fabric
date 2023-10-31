@@ -45,20 +45,27 @@ signaller <- false // is this a signal? is this an error?
 
 ### Consistent Line Breaks
 
-When breaking up a long function definition, call, or struct initialization, choose to break after each parameter,
+When breaking up a (1) long function definition, (2) call, or (3) struct initialization, choose to break after each parameter,
 argument, or field.
 
 DO:
 
 ```go
+// 1
 func longFunctionDefinition(
   paramX int,
   paramY string,
   paramZ bool,
 ) (string, error){}
 
-// and
+// 2
+callWithManyArguments(
+    arg1,
+    arg2,
+    arg3,
+)
 
+// 3
 s := myStruct{
   field1: 1,
   field2: 2,
@@ -69,6 +76,7 @@ s := myStruct{
 DO NOT:
 
 ```go
+// 1
 func longFunctionDefinition(paramX int, paramY string,
   paramZ bool,
 ) (string, error){}
@@ -80,11 +88,24 @@ func longFunctionDefinition(
   paramZ bool,
 ) (string, error){}
 
-// or
+// 2
+callWithManyArguments(arg1, arg2,
+    arg3)
+
+// 3
 s := myStruct{field1: 1, field2: 2,
 field3: 3}
 
 ```
+
+> **Exception**: Calls to ginkgo helper functions like below in tests are OK (because of the readability):
+>
+>```go
+>DescribeTable("Edge cases for events",
+>    func(e interface{}) {
+>    . . .
+>)
+>```
 
 When constructing structs pass members during initialization.
 
@@ -338,7 +359,7 @@ func main() {
 
 Panics should be used in the following cases:
 
-1. Unrecoverable errors. An unrecoverable error is when NKG cannot continue running or its behavior or internal state
+1. Unrecoverable errors. An unrecoverable error is when NGF cannot continue running or its behavior or internal state
    cannot be guaranteed. One example of this is if an error occurs when adding the Kubernetes API types to the Scheme,
    or if an error occurs when marking a CLI flag as required.
 2. Programming errors. A programming error is an error that is only possible if there was a programming mistake. For

@@ -11,9 +11,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/helpers"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/state/validation"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/state/validation/validationfakes"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/validation"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/validation/validationfakes"
 )
 
 func TestBuildGraph(t *testing.T) {
@@ -21,6 +21,11 @@ func TestBuildGraph(t *testing.T) {
 		gcName         = "my-class"
 		controllerName = "my.controller"
 	)
+
+	protectedPorts := ProtectedPorts{
+		9113: "MetricsPort",
+		8081: "HealthPort",
+	}
 
 	createValidRuleWithBackendRefs := func(refs []BackendRef) Rule {
 		return Rule{
@@ -40,9 +45,9 @@ func TestBuildGraph(t *testing.T) {
 				CommonRouteSpec: v1beta1.CommonRouteSpec{
 					ParentRefs: []v1beta1.ParentReference{
 						{
-							Namespace:   (*v1beta1.Namespace)(helpers.GetStringPointer("test")),
+							Namespace:   (*v1beta1.Namespace)(helpers.GetPointer("test")),
 							Name:        v1beta1.ObjectName(gatewayName),
-							SectionName: (*v1beta1.SectionName)(helpers.GetStringPointer(listenerName)),
+							SectionName: (*v1beta1.SectionName)(helpers.GetPointer(listenerName)),
 						},
 					},
 				},
@@ -55,7 +60,7 @@ func TestBuildGraph(t *testing.T) {
 							{
 								Path: &v1beta1.HTTPPathMatch{
 									Type:  helpers.GetPointer(v1beta1.PathMatchPathPrefix),
-									Value: helpers.GetStringPointer("/"),
+									Value: helpers.GetPointer("/"),
 								},
 							},
 						},
@@ -63,10 +68,10 @@ func TestBuildGraph(t *testing.T) {
 							{
 								BackendRef: v1beta1.BackendRef{
 									BackendObjectReference: v1beta1.BackendObjectReference{
-										Kind:      (*v1beta1.Kind)(helpers.GetStringPointer("Service")),
+										Kind:      (*v1beta1.Kind)(helpers.GetPointer("Service")),
 										Name:      "foo",
-										Namespace: (*v1beta1.Namespace)(helpers.GetStringPointer("service")),
-										Port:      (*v1beta1.PortNumber)(helpers.GetInt32Pointer(80)),
+										Namespace: (*v1beta1.Namespace)(helpers.GetPointer("service")),
+										Port:      (*v1beta1.PortNumber)(helpers.GetPointer[int32](80)),
 									},
 								},
 							},
@@ -134,7 +139,7 @@ func TestBuildGraph(t *testing.T) {
 						Hostname: nil,
 						Port:     443,
 						TLS: &v1beta1.GatewayTLSConfig{
-							Mode: helpers.GetTLSModePointer(v1beta1.TLSModeTerminate),
+							Mode: helpers.GetPointer(v1beta1.TLSModeTerminate),
 							CertificateRefs: []v1beta1.SecretObjectReference{
 								{
 									Kind:      helpers.GetPointer[v1beta1.Kind]("Secret"),
@@ -336,13 +341,14 @@ func TestBuildGraph(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			g := NewGomegaWithT(t)
+			g := NewWithT(t)
 
 			result := BuildGraph(
 				test.store,
 				controllerName,
 				gcName,
 				validation.Validators{HTTPFieldsValidator: &validationfakes.FakeHTTPFieldsValidator{}},
+				protectedPorts,
 			)
 
 			g.Expect(helpers.Diff(test.expected, result)).To(BeEmpty())

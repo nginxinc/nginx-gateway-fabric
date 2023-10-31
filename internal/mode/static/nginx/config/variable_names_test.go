@@ -24,19 +24,14 @@ func TestConvertStringToSafeVariableName(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
-		if result := convertStringToSafeVariableName(test.s); result != test.expected {
-			t.Errorf(
-				"convertStringToSafeVariableName() mismatch for test %q; expected %s, got %s",
-				test.msg,
-				test.expected,
-				result,
-			)
-		}
+		t.Run(test.msg, func(t *testing.T) {
+			g := NewWithT(t)
+			g.Expect(convertStringToSafeVariableName(test.s)).To(Equal(test.expected))
+		})
 	}
 }
 
 func TestGenerateAddHeaderMapVariableName(t *testing.T) {
-	g := NewGomegaWithT(t)
 	tests := []struct {
 		msg        string
 		headerName string
@@ -53,8 +48,11 @@ func TestGenerateAddHeaderMapVariableName(t *testing.T) {
 			expected:   "my_cool_header_header_var",
 		},
 	}
-	for _, tc := range tests {
-		actual := generateAddHeaderMapVariableName(tc.headerName)
-		g.Expect(actual).To(Equal(tc.expected))
+	for _, test := range tests {
+		t.Run(test.msg, func(t *testing.T) {
+			g := NewWithT(t)
+			actual := generateAddHeaderMapVariableName(test.headerName)
+			g.Expect(actual).To(Equal(test.expected))
+		})
 	}
 }

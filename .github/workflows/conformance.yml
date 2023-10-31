@@ -5,16 +5,18 @@ on:
     branches:
       - main
       - release-*
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+*"
   pull_request:
     branches:
       - main
       - release-*
-    types:
-      - opened
-      - reopened
-      - synchronize
   schedule:
-    - cron: '0 4 * * *'
+    - cron: "0 4 * * *" # run every day at 4am UTC
+
+defaults:
+  run:
+    shell: bash
 
 concurrency:
   group: ${{ github.ref_name }}-conformance
@@ -27,12 +29,17 @@ jobs:
   conformance-tests:
     name: Gateway Conformance Tests
     runs-on: ubuntu-22.04
+    strategy:
+      matrix:
+        k8s-version: ["1.23.17", "latest"]
+    permissions:
+      contents: write # needed for uploading release artifacts
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
 
       - name: Setup Golang Environment
-        uses: actions/setup-go@fac708d6674e30b6ba41289acaab6d4b75aa0753 # v4.0.1
+        uses: actions/setup-go@93397bea11091df50f3d7e59dc26a7711a8bcfbe # v4.1.0
         with:
           go-version-file: go.mod
 
@@ -40,44 +47,70 @@ jobs:
         run: echo "GOPATH=$(go env GOPATH)" >> $GITHUB_ENV
 
       - name: Docker Buildx
-        uses: docker/setup-buildx-action@4c0219f9ac95b02789c1075625400b2acbff50b1 # v2.9.1
+        uses: docker/setup-buildx-action@f95db51fddba0c2d1ec667646a06c2ce06100226 # v3.0.0
 
-      - name: Docker meta
-        id: meta
-        uses: docker/metadata-action@818d4b7b91585d195f67373fd9cb0332e31a7175 # v4.6.0
+      - name: NGF Docker meta
+        id: ngf-meta
+        uses: docker/metadata-action@96383f45573cb7f253c731d3b3ab81c87ef81934 # v5.0.0
         with:
           images: |
-            name=ghcr.io/nginxinc/nginx-kubernetes-gateway
+            name=ghcr.io/nginxinc/nginx-gateway-fabric
           tags: |
             type=semver,pattern={{version}}
             type=edge
             type=ref,event=pr
             type=ref,event=branch,suffix=-rc,enable=${{ startsWith(github.ref, 'refs/heads/release') }}
 
-      - name: Prepare NKG files
+      - name: NGINX Docker meta
+        id: nginx-meta
+        uses: docker/metadata-action@96383f45573cb7f253c731d3b3ab81c87ef81934 # v5.0.0
+        with:
+          images: |
+            name=ghcr.io/nginxinc/nginx-gateway-fabric/nginx
+          tags: |
+            type=semver,pattern={{version}}
+            type=edge
+            type=ref,event=pr
+            type=ref,event=branch,suffix=-rc,enable=${{ startsWith(github.ref, 'refs/heads/release') }}
+
+      - name: Prepare NGF files
         run: |
-          nkg_prefix=$(echo ${{ steps.meta.outputs.tags }} | cut -d ":" -f 1)
-          nkg_tag=$(echo ${{ steps.meta.outputs.tags }} | cut -d ":" -f 2)
-          make update-nkg-manifest NKG_PREFIX=${nkg_prefix} NKG_TAG=${nkg_tag}
+          ngf_prefix=$(echo ${{ steps.ngf-meta.outputs.tags }} | cut -d ":" -f 1)
+          ngf_tag=$(echo ${{ steps.ngf-meta.outputs.tags }} | cut -d ":" -f 2)
+          make update-ngf-manifest NGF_PREFIX=${ngf_prefix} NGF_TAG=${ngf_tag}
         working-directory: ./conformance
 
       - name: Build binary
-        uses: goreleaser/goreleaser-action@336e29918d653399e599bfca99fadc1d7ffbc9f7 # v4.3.0
+        uses: goreleaser/goreleaser-action@7ec5c2b0c6cdda6e8bbb49444bc797dd33d74dd8 # v5.0.0
         with:
           version: latest
           args: build --snapshot --clean
 
-      - name: Build Docker Image
-        uses: docker/build-push-action@2eb1c1961a95fc15694676618e422e8ba1d63825 # v4.1.1
+      - name: Build NGF Docker Image
+        uses: docker/build-push-action@0565240e2d4ab88bba5387d719585280857ece09 # v5.0.0
         with:
           file: build/Dockerfile
-          tags: ${{ steps.meta.outputs.tags }}
+          tags: ${{ steps.ngf-meta.outputs.tags }}
           context: "."
           target: goreleaser
           load: true
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=ngf
+          cache-to: type=gha,scope=ngf,mode=max
           pull: true
+
+      - name: Build NGINX Docker Image
+        uses: docker/build-push-action@0565240e2d4ab88bba5387d719585280857ece09 # v5.0.0
+        with:
+          file: build/Dockerfile.nginx
+          tags: ${{ steps.nginx-meta.outputs.tags }}
+          context: "."
+          load: true
+          cache-from: type=gha,scope=nginx
+          cache-to: type=gha,scope=nginx,mode=max
+          pull: true
+          build-args: |
+            NJS_DIR=internal/mode/static/nginx/modules/src
+            NGINX_CONF_DIR=internal/mode/static/nginx/conf
 
       - name: Update Go Modules
         if: ${{ github.event_name == 'schedule' }}
@@ -85,7 +118,7 @@ jobs:
         working-directory: ./conformance
 
       - name: Build Test Docker Image
-        uses: docker/build-push-action@2eb1c1961a95fc15694676618e422e8ba1d63825 # v4.1.1
+        uses: docker/build-push-action@0565240e2d4ab88bba5387d719585280857ece09 # v5.0.0
         with:
           file: conformance/tests/Dockerfile
           tags: conformance-test-runner:${{ github.sha }}
@@ -98,20 +131,33 @@ jobs:
       - name: Deploy Kubernetes
         id: k8s
         run: |
-          make create-kind-cluster KIND_KUBE_CONFIG=${{ github.workspace }}/kube-${{ github.run_id }}
+          k8s_version=${{ matrix.k8s-version }}
+          make create-kind-cluster KIND_KUBE_CONFIG=${{ github.workspace }}/kube-${{ github.run_id }} ${{ ! contains(matrix.k8s-version, 'latest') && 'KIND_IMAGE=kindest/node:v${k8s_version}' || '' }}
           echo "KUBECONFIG=${{ github.workspace }}/kube-${{ github.run_id }}" >> "$GITHUB_ENV"
         working-directory: ./conformance
 
+      - name: Wait for release to exist
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          REF=${{ github.ref_name }}
+          until docker pull ghcr.io/nginxinc/nginx-gateway-fabric:${REF#v}; do sleep 5; done
+          until docker pull ghcr.io/nginxinc/nginx-gateway-fabric/nginx:${REF#v}; do sleep 5; done
+
       - name: Setup conformance tests
         run: |
-          nkg_prefix=$(echo ${{ steps.meta.outputs.tags }} | cut -d ":" -f 1)
-          nkg_tag=$(echo ${{ steps.meta.outputs.tags }} | cut -d ":" -f 2)
-          if [ ${{ github.event_name }} == "schedule" ]; then
-            export GW_API_VERSION=main
-          fi
-          make install-nkg-local-no-build NKG_PREFIX=${nkg_prefix} NKG_TAG=${nkg_tag}
+          ngf_prefix=$(echo ${{ steps.ngf-meta.outputs.tags }} | cut -d ":" -f 1)
+          ngf_tag=$(echo ${{ steps.ngf-meta.outputs.tags }} | cut -d ":" -f 2)
+          if [ ${{ github.event_name }} == "schedule" ]; then export GW_API_VERSION=main; fi
+          make install-ngf-local-no-build NGF_PREFIX=${ngf_prefix} NGF_TAG=${ngf_tag}
         working-directory: ./conformance
 
       - name: Run conformance tests
-        run: make run-conformance-tests TAG=${{ github.sha }}
+        run: make run-conformance-tests TAG=${{ github.sha }} VERSION=${{ github.ref_name }}
+        working-directory: ./conformance
+
+      - name: Upload profile to release
+        if: ${{ matrix.k8s-version == 'latest' && startsWith(github.ref, 'refs/tags/') }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload ${{ github.ref_name }} conformance-profile.yaml
         working-directory: ./conformance

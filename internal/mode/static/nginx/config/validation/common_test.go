@@ -8,46 +8,66 @@ import (
 func TestValidateEscapedString(t *testing.T) {
 	validator := func(value string) error { return validateEscapedString(value, []string{"example"}) }
 
-	testValidValuesForSimpleValidator(t, validator,
+	testValidValuesForSimpleValidator(
+		t,
+		validator,
 		`test`,
 		`test test`,
 		`\"`,
-		`\\`)
-	testInvalidValuesForSimpleValidator(t, validator,
+		`\\`,
+	)
+	testInvalidValuesForSimpleValidator(
+		t,
+		validator,
 		`\`,
-		`test"test`)
+		`test"test`,
+	)
 }
 
 func TestValidateEscapedStringNoVarExpansion(t *testing.T) {
 	validator := func(value string) error { return validateEscapedStringNoVarExpansion(value, []string{"example"}) }
 
-	testValidValuesForSimpleValidator(t, validator,
+	testValidValuesForSimpleValidator(
+		t,
+		validator,
 		`test`,
 		`test test`,
 		`\"`,
-		`\\`)
-	testInvalidValuesForSimpleValidator(t, validator,
+		`\\`,
+	)
+	testInvalidValuesForSimpleValidator(
+		t,
+		validator,
 		`\`,
 		`test"test`,
-		`$test`)
+		`$test`,
+	)
 }
 
 func TestValidateValidHeaderName(t *testing.T) {
 	validator := func(value string) error { return validateHeaderName(value) }
 
-	testValidValuesForSimpleValidator(t, validator,
+	testValidValuesForSimpleValidator(
+		t,
+		validator,
 		`Content-Encoding`,
 		`X-Forwarded-For`,
 		// max supported length is 256, generate string with 16*16 chars (256)
-		strings.Repeat("very-long-header", 16))
-	testInvalidValuesForSimpleValidator(t, validator,
+		strings.Repeat("very-long-header", 16),
+	)
+	testInvalidValuesForSimpleValidator(
+		t,
+		validator,
 		`\`,
 		`test test`,
 		`test"test`,
 		`$test`,
 		"Host",
 		"host",
+		"connection",
+		"upgrade",
 		"my-header[]",
 		"my-header&",
-		strings.Repeat("very-long-header", 16)+"1")
+		strings.Repeat("very-long-header", 16)+"1",
+	)
 }

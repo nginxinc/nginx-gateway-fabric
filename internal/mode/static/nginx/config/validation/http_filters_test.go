@@ -8,49 +8,74 @@ import (
 func TestValidateRedirectScheme(t *testing.T) {
 	validator := HTTPRedirectValidator{}
 
-	testValidValuesForSupportedValuesValidator(t, validator.ValidateRedirectScheme,
+	testValidValuesForSupportedValuesValidator(
+		t,
+		validator.ValidateRedirectScheme,
 		"http",
-		"https")
+		"https",
+	)
 
-	testInvalidValuesForSupportedValuesValidator(t, validator.ValidateRedirectScheme, supportedRedirectSchemes,
-		"test")
+	testInvalidValuesForSupportedValuesValidator(
+		t,
+		validator.ValidateRedirectScheme,
+		supportedRedirectSchemes,
+		"test",
+	)
 }
 
 func TestValidateRedirectHostname(t *testing.T) {
 	validator := HTTPRedirectValidator{}
 
-	testValidValuesForSimpleValidator(t, validator.ValidateRedirectHostname,
-		"example.com")
+	testValidValuesForSimpleValidator(
+		t,
+		validator.ValidateRedirectHostname,
+		"example.com",
+	)
 
-	testInvalidValuesForSimpleValidator(t, validator.ValidateRedirectHostname,
-		"example.com$")
+	testInvalidValuesForSimpleValidator(
+		t,
+		validator.ValidateRedirectHostname,
+		"example.com$",
+	)
 }
 
 func TestValidateRedirectPort(t *testing.T) {
 	validator := HTTPRedirectValidator{}
 
-	testValidValuesForSimpleValidator(t, validator.ValidateRedirectPort,
+	testValidValuesForSimpleValidator(
+		t,
+		validator.ValidateRedirectPort,
 		math.MinInt32,
-		math.MaxInt32)
+		math.MaxInt32,
+	)
 }
 
 func TestValidateRedirectStatusCode(t *testing.T) {
 	validator := HTTPRedirectValidator{}
 
-	testValidValuesForSupportedValuesValidator(t, validator.ValidateRedirectStatusCode,
+	testValidValuesForSupportedValuesValidator(
+		t,
+		validator.ValidateRedirectStatusCode,
 		301,
 		302)
 
-	testInvalidValuesForSupportedValuesValidator(t, validator.ValidateRedirectStatusCode, supportedRedirectStatusCodes,
-		404)
+	testInvalidValuesForSupportedValuesValidator(
+		t,
+		validator.ValidateRedirectStatusCode,
+		supportedRedirectStatusCodes,
+		404,
+	)
 }
 
 func TestValidateRequestHeaderName(t *testing.T) {
 	validator := HTTPRequestHeaderValidator{}
 
-	testValidValuesForSimpleValidator(t, validator.ValidateRequestHeaderName,
+	testValidValuesForSimpleValidator(
+		t,
+		validator.ValidateRequestHeaderName,
 		"Content-Encoding",
-		"Connection")
+		"MyBespokeHeader",
+	)
 
 	testInvalidValuesForSimpleValidator(t, validator.ValidateRequestHeaderName, "$Content-Encoding")
 }
@@ -58,13 +83,19 @@ func TestValidateRequestHeaderName(t *testing.T) {
 func TestValidateRequestHeaderValue(t *testing.T) {
 	validator := HTTPRequestHeaderValidator{}
 
-	testValidValuesForSimpleValidator(t, validator.ValidateRequestHeaderValue,
+	testValidValuesForSimpleValidator(
+		t,
+		validator.ValidateRequestHeaderValue,
 		"my-cookie-name",
 		"ssl_(server_name}",
 		"example/1234==",
-		"1234:3456")
+		"1234:3456",
+	)
 
-	testInvalidValuesForSimpleValidator(t, validator.ValidateRequestHeaderValue,
+	testInvalidValuesForSimpleValidator(
+		t,
+		validator.ValidateRequestHeaderValue,
 		"$Content-Encoding",
-		`"example"`)
+		`"example"`,
+	)
 }

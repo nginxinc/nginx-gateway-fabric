@@ -1,14 +1,13 @@
 package config
 
 import (
-	"strings"
 	"testing"
 
-	"github.com/google/go-cmp/cmp"
+	. "github.com/onsi/gomega"
 	"k8s.io/apimachinery/pkg/types"
 
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/nginx/config/http"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/state/dataplane"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/http"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/dataplane"
 )
 
 func TestExecuteSplitClients(t *testing.T) {
@@ -97,29 +96,18 @@ func TestExecuteSplitClients(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		sc := string(executeSplitClients(dataplane.Configuration{BackendGroups: test.backendGroups}))
+		t.Run(test.msg, func(t *testing.T) {
+			g := NewWithT(t)
+			sc := string(executeSplitClients(dataplane.Configuration{BackendGroups: test.backendGroups}))
 
-		for _, expSubString := range test.expStrings {
-			if !strings.Contains(sc, expSubString) {
-				t.Errorf(
-					"executeSplitClients() did not generate split clients with substring %q for test %q. Got: %v",
-					expSubString,
-					test.msg,
-					sc,
-				)
+			for _, expSubString := range test.expStrings {
+				g.Expect(sc).To(ContainSubstring(expSubString))
 			}
-		}
 
-		for _, notExpString := range test.notExpStrings {
-			if strings.Contains(sc, notExpString) {
-				t.Errorf(
-					"executeSplitClients() generated split clients with unexpected substring %q for test %q. Got: %v",
-					notExpString,
-					test.msg,
-					sc,
-				)
+			for _, notExpString := range test.notExpStrings {
+				g.Expect(sc).ToNot(ContainSubstring(notExpString))
 			}
-		}
+		})
 	}
 }
 
@@ -249,10 +237,11 @@ func TestCreateSplitClients(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		result := createSplitClients(test.backendGroups)
-		if diff := cmp.Diff(test.expSplitClients, result); diff != "" {
-			t.Errorf("createSplitClients() mismatch for %q (-want +got):\n%s", test.msg, diff)
-		}
+		t.Run(test.msg, func(t *testing.T) {
+			g := NewWithT(t)
+			result := createSplitClients(test.backendGroups)
+			g.Expect(result).To(Equal(test.expSplitClients))
+		})
 	}
 }
 
@@ -395,10 +384,11 @@ func TestCreateSplitClientDistributions(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		result := createSplitClientDistributions(dataplane.BackendGroup{Backends: test.backends})
-		if diff := cmp.Diff(test.expDistributions, result); diff != "" {
-			t.Errorf("createSplitClientDistributions() mismatch for %q (-want +got):\n%s", test.msg, diff)
-		}
+		t.Run(test.msg, func(t *testing.T) {
+			g := NewWithT(t)
+			result := createSplitClientDistributions(dataplane.BackendGroup{Backends: test.backends})
+			g.Expect(result).To(Equal(test.expDistributions))
+		})
 	}
 }
 
@@ -427,13 +417,11 @@ func TestGetSplitClientValue(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		result := getSplitClientValue(test.backend)
-		if result != test.expValue {
-			t.Errorf(
-				"getSplitClientValue() mismatch for %q; expected %s, got %s",
-				test.msg, test.expValue, result,
-			)
-		}
+		t.Run(test.msg, func(t *testing.T) {
+			g := NewWithT(t)
+			result := getSplitClientValue(test.backend)
+			g.Expect(result).To(Equal(test.expValue))
+		})
 	}
 }
 
@@ -501,13 +489,11 @@ func TestPercentOf(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		percent := percentOf(test.weight, test.totalWeight)
-		if percent != test.expPercent {
-			t.Errorf(
-				"percentOf() mismatch for test %q; expected %f, got %f",
-				test.msg, test.expPercent, percent,
-			)
-		}
+		t.Run(test.msg, func(t *testing.T) {
+			g := NewWithT(t)
+			percent := percentOf(test.weight, test.totalWeight)
+			g.Expect(percent).To(Equal(test.expPercent))
+		})
 	}
 }
 
@@ -584,14 +570,15 @@ func TestBackendGroupNeedsSplit(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		bg := dataplane.BackendGroup{
-			Source:   types.NamespacedName{Namespace: "test", Name: "hr"},
-			Backends: test.backends,
-		}
-		result := backendGroupNeedsSplit(bg)
-		if result != test.expSplit {
-			t.Errorf("backendGroupNeedsSplit() mismatch for %q; expected %t", test.msg, result)
-		}
+		t.Run(test.msg, func(t *testing.T) {
+			g := NewWithT(t)
+			bg := dataplane.BackendGroup{
+				Source:   types.NamespacedName{Namespace: "test", Name: "hr"},
+				Backends: test.backends,
+			}
+			result := backendGroupNeedsSplit(bg)
+			g.Expect(result).To(Equal(test.expSplit))
+		})
 	}
 }
 
@@ -679,14 +666,15 @@ func TestBackendGroupName(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		bg := dataplane.BackendGroup{
-			Source:   types.NamespacedName{Namespace: "test", Name: "hr"},
-			RuleIdx:  0,
-			Backends: test.backends,
-		}
-		result := backendGroupName(bg)
-		if result != test.expName {
-			t.Errorf("backendGroupName() mismatch for %q; expected %s, got %s", test.msg, test.expName, result)
-		}
+		t.Run(test.msg, func(t *testing.T) {
+			g := NewWithT(t)
+			bg := dataplane.BackendGroup{
+				Source:   types.NamespacedName{Namespace: "test", Name: "hr"},
+				RuleIdx:  0,
+				Backends: test.backends,
+			}
+			result := backendGroupName(bg)
+			g.Expect(result).To(Equal(test.expName))
+		})
 	}
 }

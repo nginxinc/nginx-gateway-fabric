@@ -1,6 +1,6 @@
 linters-settings:
   goimports:
-    local-prefixes: github.com/nginxinc/nginx-kubernetes-gateway
+    local-prefixes: github.com/nginxinc/nginx-gateway-fabric
   misspell:
     locale: US
   revive:
@@ -9,7 +9,6 @@ linters-settings:
       - name: blank-imports
       - name: context-as-argument
       - name: context-keys-type
-      - name: dot-imports
       - name: empty-block
       - name: error-naming
       - name: error-return
@@ -34,11 +33,11 @@ linters-settings:
     min-complexity: 15
   govet:
     enable:
-    - fieldalignment
+      - fieldalignment
   lll:
     line-length: 120
 linters:
-    enable:
+  enable:
     - asciicheck
     - errcheck
     - errorlint
@@ -63,7 +62,7 @@ linters:
     - unparam
     - unused
     - wastedassign
-    disable-all: true
+  disable-all: true
 issues:
   max-issues-per-linter: 0
   max-same-issues: 0

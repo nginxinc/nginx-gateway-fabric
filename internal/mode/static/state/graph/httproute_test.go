@@ -4,7 +4,6 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/google/go-cmp/cmp"
 	. "github.com/onsi/gomega"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -14,10 +13,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/conditions"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/helpers"
-	staticConds "github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/state/conditions"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/state/validation/validationfakes"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
+	staticConds "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/conditions"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/validation/validationfakes"
 )
 
 const (
@@ -128,7 +127,7 @@ func TestBuildRoutes(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			g := NewGomegaWithT(t)
+			g := NewWithT(t)
 			routes := buildRoutesForGateways(validator, hrRoutes, test.gwNsNames)
 			g.Expect(helpers.Diff(test.expected, routes)).To(BeEmpty())
 		})
@@ -189,7 +188,7 @@ func TestBuildSectionNameRefs(t *testing.T) {
 		},
 	}
 
-	g := NewGomegaWithT(t)
+	g := NewWithT(t)
 
 	result := buildSectionNameRefs(parentRefs, routeNamespace, gwNsNames)
 	g.Expect(result).To(Equal(expected))
@@ -234,7 +233,7 @@ func TestBuildSectionNameRefsPanicsForDuplicateParentRefs(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			g := NewGomegaWithT(t)
+			g := NewWithT(t)
 			run := func() { buildSectionNameRefs(test.parentRefs, gwNsName.Namespace, gwNsNames) }
 			g.Expect(run).To(Panic())
 		})
@@ -317,7 +316,7 @@ func TestFindGatewayForParentRef(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			g := NewGomegaWithT(t)
+			g := NewWithT(t)
 
 			gw, found := findGatewayForParentRef(test.ref, routeNamespace, gwNsNames)
 			g.Expect(found).To(Equal(test.expectedFound))
@@ -349,14 +348,24 @@ func TestBuildRoute(t *testing.T) {
 	addFilterToPath(hr, "/filter", validFilter)
 
 	hrInvalidHostname := createHTTPRoute("hr", gatewayNsName.Name, "", "/")
-	hrNotNKG := createHTTPRoute("hr", "some-gateway", "example.com", "/")
+	hrNotNGF := createHTTPRoute("hr", "some-gateway", "example.com", "/")
 	hrInvalidMatches := createHTTPRoute("hr", gatewayNsName.Name, "example.com", invalidPath)
 
 	hrInvalidFilters := createHTTPRoute("hr", gatewayNsName.Name, "example.com", "/filter")
 	addFilterToPath(hrInvalidFilters, "/filter", invalidFilter)
 
-	hrInvalidValidRules := createHTTPRoute("hr", gatewayNsName.Name, "example.com", invalidPath, "/filter", "/")
-	addFilterToPath(hrInvalidValidRules, "/filter", invalidFilter)
+	hrDroppedInvalidMatches := createHTTPRoute("hr", gatewayNsName.Name, "example.com", invalidPath, "/")
+
+	hrDroppedInvalidMatchesAndInvalidFilters := createHTTPRoute(
+		"hr",
+		gatewayNsName.Name,
+		"example.com",
+		invalidPath, "/filter", "/")
+	addFilterToPath(hrDroppedInvalidMatchesAndInvalidFilters, "/filter", invalidFilter)
+
+	hrDroppedInvalidFilters := createHTTPRoute("hr", gatewayNsName.Name, "example.com", "/filter", "/")
+	addFilterToPath(hrDroppedInvalidFilters, "/filter", validFilter)
+	addFilterToPath(hrDroppedInvalidFilters, "/", invalidFilter)
 
 	validatorInvalidFieldsInRule := &validationfakes.FakeHTTPFieldsValidator{
 		ValidatePathInMatchStub: func(path string) error {
@@ -406,9 +415,9 @@ func TestBuildRoute(t *testing.T) {
 		},
 		{
 			validator: &validationfakes.FakeHTTPFieldsValidator{},
-			hr:        hrNotNKG,
+			hr:        hrNotNGF,
 			expected:  nil,
-			name:      "not NKG route",
+			name:      "not NGF route",
 		},
 		{
 			validator: &validationfakes.FakeHTTPFieldsValidator{},
@@ -471,7 +480,8 @@ func TestBuildRoute(t *testing.T) {
 				Conditions: []conditions.Condition{
 					staticConds.NewRouteUnsupportedValue(
 						`All rules are invalid: spec.rules[0].filters[0].requestRedirect.hostname: ` +
-							`Invalid value: "invalid.example.com": invalid hostname`),
+							`Invalid value: "invalid.example.com": invalid hostname`,
+					),
 				},
 				Rules: []Rule{
 					{
@@ -484,9 +494,9 @@ func TestBuildRoute(t *testing.T) {
 		},
 		{
 			validator: validatorInvalidFieldsInRule,
-			hr:        hrInvalidValidRules,
+			hr:        hrDroppedInvalidMatches,
 			expected: &Route{
-				Source: hrInvalidValidRules,
+				Source: hrDroppedInvalidMatches,
 				Valid:  true,
 				ParentRefs: []ParentRef{
 					{
@@ -495,9 +505,39 @@ func TestBuildRoute(t *testing.T) {
 					},
 				},
 				Conditions: []conditions.Condition{
-					staticConds.NewTODO(
-						`Some rules are invalid: ` +
-							`[spec.rules[0].matches[0].path.value: Invalid value: "/invalid": invalid path, ` +
+					staticConds.NewRoutePartiallyInvalid(
+						`spec.rules[0].matches[0].path.value: Invalid value: "/invalid": invalid path`,
+					),
+				},
+				Rules: []Rule{
+					{
+						ValidMatches: false,
+						ValidFilters: true,
+					},
+					{
+						ValidMatches: true,
+						ValidFilters: true,
+					},
+				},
+			},
+			name: "dropped invalid rule with invalid matches",
+		},
+
+		{
+			validator: validatorInvalidFieldsInRule,
+			hr:        hrDroppedInvalidMatchesAndInvalidFilters,
+			expected: &Route{
+				Source: hrDroppedInvalidMatchesAndInvalidFilters,
+				Valid:  true,
+				ParentRefs: []ParentRef{
+					{
+						Idx:     0,
+						Gateway: gatewayNsName,
+					},
+				},
+				Conditions: []conditions.Condition{
+					staticConds.NewRoutePartiallyInvalid(
+						`[spec.rules[0].matches[0].path.value: Invalid value: "/invalid": invalid path, ` +
 							`spec.rules[1].filters[0].requestRedirect.hostname: Invalid value: ` +
 							`"invalid.example.com": invalid hostname]`,
 					),
@@ -517,7 +557,38 @@ func TestBuildRoute(t *testing.T) {
 					},
 				},
 			},
-			name: "invalid with invalid and valid rules",
+			name: "dropped invalid rule with invalid filters and invalid rule with invalid matches",
+		},
+		{
+			validator: validatorInvalidFieldsInRule,
+			hr:        hrDroppedInvalidFilters,
+			expected: &Route{
+				Source: hrDroppedInvalidFilters,
+				Valid:  true,
+				ParentRefs: []ParentRef{
+					{
+						Idx:     0,
+						Gateway: gatewayNsName,
+					},
+				},
+				Conditions: []conditions.Condition{
+					staticConds.NewRoutePartiallyInvalid(
+						`spec.rules[1].filters[0].requestRedirect.hostname: Invalid value: ` +
+							`"invalid.example.com": invalid hostname`,
+					),
+				},
+				Rules: []Rule{
+					{
+						ValidMatches: true,
+						ValidFilters: true,
+					},
+					{
+						ValidMatches: true,
+						ValidFilters: false,
+					},
+				},
+			},
+			name: "dropped invalid rule with invalid filters",
 		},
 	}
 
@@ -525,7 +596,7 @@ func TestBuildRoute(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			g := NewGomegaWithT(t)
+			g := NewWithT(t)
 
 			route := buildRoute(test.validator, test.hr, gatewayNsNames)
 			g.Expect(helpers.Diff(test.expected, route)).To(BeEmpty())
@@ -539,7 +610,7 @@ func TestBindRouteToListeners(t *testing.T) {
 		return &Listener{
 			Source: v1beta1.Listener{
 				Name:     v1beta1.SectionName(name),
-				Hostname: (*v1beta1.Hostname)(helpers.GetStringPointer("foo.example.com")),
+				Hostname: (*v1beta1.Hostname)(helpers.GetPointer("foo.example.com")),
 			},
 			Valid:  true,
 			Routes: map[types.NamespacedName]*Route{},
@@ -1207,7 +1278,7 @@ func TestBindRouteToListeners(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			g := NewGomegaWithT(t)
+			g := NewWithT(t)
 
 			bindRouteToListeners(test.route, test.gateway, namespaces)
 
@@ -1292,10 +1363,11 @@ func TestFindAcceptedHostnames(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		result := findAcceptedHostnames(test.listenerHostname, test.routeHostnames)
-		if diff := cmp.Diff(test.expected, result); diff != "" {
-			t.Errorf("findAcceptedHostnames() %q  mismatch (-want +got):\n%s", test.msg, diff)
-		}
+		t.Run(test.msg, func(t *testing.T) {
+			g := NewWithT(t)
+			result := findAcceptedHostnames(test.listenerHostname, test.routeHostnames)
+			g.Expect(result).To(Equal(test.expected))
+		})
 	}
 }
 
@@ -1326,10 +1398,11 @@ func TestGetHostname(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		result := getHostname(test.h)
-		if result != test.expected {
-			t.Errorf("getHostname() returned %q but expected %q for the case of %q", result, test.expected, test.msg)
-		}
+		t.Run(test.msg, func(t *testing.T) {
+			g := NewWithT(t)
+			result := getHostname(test.h)
+			g.Expect(result).To(Equal(test.expected))
+		})
 	}
 }
 
@@ -1364,7 +1437,7 @@ func TestValidateHostnames(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			g := NewGomegaWithT(t)
+			g := NewWithT(t)
 
 			err := validateHostnames(test.hostnames, path)
 
@@ -1622,7 +1695,7 @@ func TestValidateMatch(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			g := NewGomegaWithT(t)
+			g := NewWithT(t)
 			allErrs := validateMatch(test.validator, test.match, field.NewPath("test"))
 			g.Expect(allErrs).To(HaveLen(test.expectErrCount))
 		})
@@ -1664,7 +1737,7 @@ func TestValidateFilter(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			g := NewGomegaWithT(t)
+			g := NewWithT(t)
 			allErrs := validateFilter(&validationfakes.FakeHTTPFieldsValidator{}, test.filter, filterPath)
 			g.Expect(allErrs).To(HaveLen(test.expectErrCount))
 		})
@@ -1810,7 +1883,7 @@ func TestValidateFilterRedirect(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			g := NewGomegaWithT(t)
+			g := NewWithT(t)
 			allErrs := validateFilterRedirect(test.validator, test.filter, filterPath)
 			g.Expect(allErrs).To(HaveLen(test.expectErrCount))
 		})
@@ -1835,7 +1908,7 @@ func TestValidateFilterRequestHeaderModifier(t *testing.T) {
 				Type: v1beta1.HTTPRouteFilterRequestHeaderModifier,
 				RequestHeaderModifier: &v1beta1.HTTPHeaderFilter{
 					Set: []v1beta1.HTTPHeader{
-						{Name: "Connection", Value: "close"},
+						{Name: "MyBespokeHeader", Value: "my-value"},
 					},
 					Add: []v1beta1.HTTPHeader{
 						{Name: "Accept-Encoding", Value: "gzip"},
@@ -1924,7 +1997,7 @@ func TestValidateFilterRequestHeaderModifier(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			g := NewGomegaWithT(t)
+			g := NewWithT(t)
 			allErrs := validateFilterHeaderModifier(test.validator, test.filter, filterPath)
 			g.Expect(allErrs).To(HaveLen(test.expectErrCount))
 		})

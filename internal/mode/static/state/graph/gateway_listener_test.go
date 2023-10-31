@@ -8,12 +8,14 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/conditions"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/framework/helpers"
-	staticConds "github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/state/conditions"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
+	staticConds "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/conditions"
 )
 
 func TestValidateHTTPListener(t *testing.T) {
+	protectedPorts := ProtectedPorts{9113: "MetricsPort"}
+
 	tests := []struct {
 		l        v1beta1.Listener
 		name     string
@@ -33,13 +35,25 @@ func TestValidateHTTPListener(t *testing.T) {
 			expected: staticConds.NewListenerUnsupportedValue(`port: Invalid value: 0: port must be between 1-65535`),
 			name:     "invalid port",
 		},
+		{
+			l: v1beta1.Listener{
+				Port: 9113,
+			},
+			expected: staticConds.NewListenerUnsupportedValue(
+				`port: Invalid value: 9113: port is already in use as MetricsPort`,
+			),
+			name: "invalid protected port",
+		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			g := NewGomegaWithT(t)
+			g := NewWithT(t)
 
-			result := validateHTTPListener(test.l)
+			v := createHTTPListenerValidator(protectedPorts)
+
+			result := v(test.l)
+
 			g.Expect(result).To(Equal(test.expected))
 		})
 	}
@@ -49,23 +63,25 @@ func TestValidateHTTPSListener(t *testing.T) {
 	secretNs := "secret-ns"
 
 	validSecretRef := v1beta1.SecretObjectReference{
-		Kind:      (*v1beta1.Kind)(helpers.GetStringPointer("Secret")),
+		Kind:      (*v1beta1.Kind)(helpers.GetPointer("Secret")),
 		Name:      "secret",
-		Namespace: (*v1beta1.Namespace)(helpers.GetStringPointer(secretNs)),
+		Namespace: (*v1beta1.Namespace)(helpers.GetPointer(secretNs)),
 	}
 
 	invalidSecretRefGroup := v1beta1.SecretObjectReference{
-		Group:     (*v1beta1.Group)(helpers.GetStringPointer("some-group")),
-		Kind:      (*v1beta1.Kind)(helpers.GetStringPointer("Secret")),
+		Group:     (*v1beta1.Group)(helpers.GetPointer("some-group")),
+		Kind:      (*v1beta1.Kind)(helpers.GetPointer("Secret")),
 		Name:      "secret",
-		Namespace: (*v1beta1.Namespace)(helpers.GetStringPointer(secretNs)),
+		Namespace: (*v1beta1.Namespace)(helpers.GetPointer(secretNs)),
 	}
 
 	invalidSecretRefKind := v1beta1.SecretObjectReference{
-		Kind:      (*v1beta1.Kind)(helpers.GetStringPointer("ConfigMap")),
+		Kind:      (*v1beta1.Kind)(helpers.GetPointer("ConfigMap")),
 		Name:      "secret",
-		Namespace: (*v1beta1.Namespace)(helpers.GetStringPointer(secretNs)),
+		Namespace: (*v1beta1.Namespace)(helpers.GetPointer(secretNs)),
 	}
+
+	protectedPorts := ProtectedPorts{9113: "MetricsPort"}
 
 	tests := []struct {
 		l        v1beta1.Listener
@@ -76,7 +92,7 @@ func TestValidateHTTPSListener(t *testing.T) {
 			l: v1beta1.Listener{
 				Port: 443,
 				TLS: &v1beta1.GatewayTLSConfig{
-					Mode:            helpers.GetTLSModePointer(v1beta1.TLSModeTerminate),
+					Mode:            helpers.GetPointer(v1beta1.TLSModeTerminate),
 					CertificateRefs: []v1beta1.SecretObjectReference{validSecretRef},
 				},
 			},
@@ -87,7 +103,7 @@ func TestValidateHTTPSListener(t *testing.T) {
 			l: v1beta1.Listener{
 				Port: 0,
 				TLS: &v1beta1.GatewayTLSConfig{
-					Mode:            helpers.GetTLSModePointer(v1beta1.TLSModeTerminate),
+					Mode:            helpers.GetPointer(v1beta1.TLSModeTerminate),
 					CertificateRefs: []v1beta1.SecretObjectReference{validSecretRef},
 				},
 			},
@@ -96,9 +112,22 @@ func TestValidateHTTPSListener(t *testing.T) {
 		},
 		{
 			l: v1beta1.Listener{
+				Port: 9113,
+				TLS: &v1beta1.GatewayTLSConfig{
+					Mode:            helpers.GetPointer(v1beta1.TLSModeTerminate),
+					CertificateRefs: []v1beta1.SecretObjectReference{validSecretRef},
+				},
+			},
+			expected: staticConds.NewListenerUnsupportedValue(
+				`port: Invalid value: 9113: port is already in use as MetricsPort`,
+			),
+			name: "invalid protected port",
+		},
+		{
+			l: v1beta1.Listener{
 				Port: 443,
 				TLS: &v1beta1.GatewayTLSConfig{
-					Mode:            helpers.GetTLSModePointer(v1beta1.TLSModeTerminate),
+					Mode:            helpers.GetPointer(v1beta1.TLSModeTerminate),
 					CertificateRefs: []v1beta1.SecretObjectReference{validSecretRef},
 					Options:         map[v1beta1.AnnotationKey]v1beta1.AnnotationValue{"key": "val"},
 				},
@@ -110,7 +139,7 @@ func TestValidateHTTPSListener(t *testing.T) {
 			l: v1beta1.Listener{
 				Port: 443,
 				TLS: &v1beta1.GatewayTLSConfig{
-					Mode:            helpers.GetTLSModePointer(v1beta1.TLSModePassthrough),
+					Mode:            helpers.GetPointer(v1beta1.TLSModePassthrough),
 					CertificateRefs: []v1beta1.SecretObjectReference{validSecretRef},
 				},
 			},
@@ -123,7 +152,7 @@ func TestValidateHTTPSListener(t *testing.T) {
 			l: v1beta1.Listener{
 				Port: 443,
 				TLS: &v1beta1.GatewayTLSConfig{
-					Mode:            helpers.GetTLSModePointer(v1beta1.TLSModeTerminate),
+					Mode:            helpers.GetPointer(v1beta1.TLSModeTerminate),
 					CertificateRefs: []v1beta1.SecretObjectReference{invalidSecretRefGroup},
 				},
 			},
@@ -136,7 +165,7 @@ func TestValidateHTTPSListener(t *testing.T) {
 			l: v1beta1.Listener{
 				Port: 443,
 				TLS: &v1beta1.GatewayTLSConfig{
-					Mode:            helpers.GetTLSModePointer(v1beta1.TLSModeTerminate),
+					Mode:            helpers.GetPointer(v1beta1.TLSModeTerminate),
 					CertificateRefs: []v1beta1.SecretObjectReference{invalidSecretRefKind},
 				},
 			},
@@ -149,7 +178,7 @@ func TestValidateHTTPSListener(t *testing.T) {
 			l: v1beta1.Listener{
 				Port: 443,
 				TLS: &v1beta1.GatewayTLSConfig{
-					Mode:            helpers.GetTLSModePointer(v1beta1.TLSModeTerminate),
+					Mode:            helpers.GetPointer(v1beta1.TLSModeTerminate),
 					CertificateRefs: []v1beta1.SecretObjectReference{validSecretRef, validSecretRef},
 				},
 			},
@@ -162,9 +191,9 @@ func TestValidateHTTPSListener(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			g := NewGomegaWithT(t)
+			g := NewWithT(t)
 
-			v := createHTTPSListenerValidator()
+			v := createHTTPSListenerValidator(protectedPorts)
 
 			result := v(test.l)
 			g.Expect(result).To(Equal(test.expected))
@@ -184,22 +213,22 @@ func TestValidateListenerHostname(t *testing.T) {
 			name:      "nil hostname",
 		},
 		{
-			hostname:  (*v1beta1.Hostname)(helpers.GetStringPointer("")),
+			hostname:  (*v1beta1.Hostname)(helpers.GetPointer("")),
 			expectErr: false,
 			name:      "empty hostname",
 		},
 		{
-			hostname:  (*v1beta1.Hostname)(helpers.GetStringPointer("foo.example.com")),
+			hostname:  (*v1beta1.Hostname)(helpers.GetPointer("foo.example.com")),
 			expectErr: false,
 			name:      "valid hostname",
 		},
 		{
-			hostname:  (*v1beta1.Hostname)(helpers.GetStringPointer("*.example.com")),
+			hostname:  (*v1beta1.Hostname)(helpers.GetPointer("*.example.com")),
 			expectErr: false,
 			name:      "wildcard hostname",
 		},
 		{
-			hostname:  (*v1beta1.Hostname)(helpers.GetStringPointer("example$com")),
+			hostname:  (*v1beta1.Hostname)(helpers.GetPointer("example$com")),
 			expectErr: true,
 			name:      "invalid hostname",
 		},
@@ -207,7 +236,7 @@ func TestValidateListenerHostname(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			g := NewGomegaWithT(t)
+			g := NewWithT(t)
 
 			conds := validateListenerHostname(v1beta1.Listener{Hostname: test.hostname})
 
@@ -310,7 +339,7 @@ func TestGetAndValidateListenerSupportedKinds(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			g := NewGomegaWithT(t)
+			g := NewWithT(t)
 
 			listener := v1beta1.Listener{
 				Protocol: test.protocol,
@@ -362,12 +391,15 @@ func TestValidateListenerLabelSelector(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			g := NewGomegaWithT(t)
+			g := NewWithT(t)
+
+			// create iteration variable inside the loop to fix implicit memory aliasing
+			from := test.from
 
 			listener := v1beta1.Listener{
 				AllowedRoutes: &v1beta1.AllowedRoutes{
 					Namespaces: &v1beta1.RouteNamespaces{
-						From:     &test.from,
+						From:     &from,
 						Selector: test.selector,
 					},
 				},
@@ -385,19 +417,20 @@ func TestValidateListenerLabelSelector(t *testing.T) {
 
 func TestValidateListenerPort(t *testing.T) {
 	validPorts := []v1beta1.PortNumber{1, 80, 443, 1000, 50000, 65535}
-	invalidPorts := []v1beta1.PortNumber{-1, 0, 65536, 80000}
+	invalidPorts := []v1beta1.PortNumber{-1, 0, 65536, 80000, 9113}
+	protectedPorts := ProtectedPorts{9113: "MetricsPort"}
 
 	for _, p := range validPorts {
 		t.Run(fmt.Sprintf("valid port %d", p), func(t *testing.T) {
 			g := NewWithT(t)
-			g.Expect(validateListenerPort(p)).To(Succeed())
+			g.Expect(validateListenerPort(p, protectedPorts)).To(Succeed())
 		})
 	}
 
 	for _, p := range invalidPorts {
 		t.Run(fmt.Sprintf("invalid port %d", p), func(t *testing.T) {
 			g := NewWithT(t)
-			g.Expect(validateListenerPort(p)).ToNot(Succeed())
+			g.Expect(validateListenerPort(p, protectedPorts)).ToNot(Succeed())
 		})
 	}
 }

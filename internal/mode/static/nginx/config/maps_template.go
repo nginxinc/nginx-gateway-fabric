@@ -17,4 +17,11 @@ map $http_host $gw_api_compliant_host {
     '' $host;
     default $http_host;
 }
+
+# Set $connection_header variable to upgrade when the $http_upgrade header is set, otherwise, set it to close. This
+# allows support for websocket connections. See https://nginx.org/en/docs/http/websocket.html.
+map $http_upgrade $connection_upgrade {
+    default upgrade;
+    '' close;
+}
 `

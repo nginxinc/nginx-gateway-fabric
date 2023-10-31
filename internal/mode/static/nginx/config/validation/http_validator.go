@@ -1,7 +1,7 @@
 package validation
 
 import (
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/state/validation"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/validation"
 )
 
 // HTTPValidator validates values that will propagate into the NGINX configuration http context.

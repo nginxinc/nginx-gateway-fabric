@@ -1,14 +1,15 @@
 package config_test
 
 import (
+	"fmt"
 	"testing"
 
 	. "github.com/onsi/gomega"
 	"k8s.io/apimachinery/pkg/types"
 
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/nginx/config"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/nginx/file"
-	"github.com/nginxinc/nginx-kubernetes-gateway/internal/mode/static/state/dataplane"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/file"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/dataplane"
 )
 
 func TestGenerate(t *testing.T) {
@@ -59,13 +60,13 @@ func TestGenerate(t *testing.T) {
 			},
 		},
 	}
-	g := NewGomegaWithT(t)
+	g := NewWithT(t)
 
 	generator := config.NewGeneratorImpl()
 
 	files := generator.Generate(conf)
 
-	g.Expect(files).To(HaveLen(2))
+	g.Expect(files).To(HaveLen(3))
 
 	g.Expect(files[0]).To(Equal(file.File{
 		Type:    file.TypeSecret,
@@ -82,4 +83,9 @@ func TestGenerate(t *testing.T) {
 	g.Expect(httpCfg).To(ContainSubstring("listen 443"))
 	g.Expect(httpCfg).To(ContainSubstring("upstream"))
 	g.Expect(httpCfg).To(ContainSubstring("split_clients"))
+
+	g.Expect(files[2].Type).To(Equal(file.TypeRegular))
+	g.Expect(files[2].Path).To(Equal("/etc/nginx/conf.d/config-version.conf"))
+	configVersion := string(files[2].Content)
+	g.Expect(configVersion).To(ContainSubstring(fmt.Sprintf("return 200 %d", conf.Version)))
 }

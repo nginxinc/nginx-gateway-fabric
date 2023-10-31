@@ -61,12 +61,12 @@ spec:
     spec:
       serviceAccountName: nginx-gateway-provisioner
       containers:
-      - image: ghcr.io/nginxinc/nginx-kubernetes-gateway:edge
+      - image: ghcr.io/nginxinc/nginx-gateway-fabric:edge
         imagePullPolicy: Always
         name: nginx-gateway-provisioner
         securityContext:
           runAsUser: 1001
         args:
         - provisioner-mode
-        - --gateway-ctlr-name=k8s-gateway.nginx.org/nginx-gateway-controller
+        - --gateway-ctlr-name=gateway.nginx.org/nginx-gateway-controller
         - --gatewayclass=nginx
