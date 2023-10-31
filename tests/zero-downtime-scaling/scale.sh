@@ -45,7 +45,7 @@ scale_deployment() {
     fi
   done
 
-  kubectl get gateway gateway -o=jsonpath='{.status.conditions}' | jq .
+  kubectl get gateway gateway -o=jsonpath='{.status.conditions}'
 }
 
 if [ "$#" -ne 1 ]; then
