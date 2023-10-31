@@ -104,30 +104,28 @@ Run the following tests on both the 10 and 25 node clusters.
      helm install my-release oci://ghcr.io/nginxinc/charts/nginx-gateway-fabric  --create-namespace --wait -n nginx-gateway --version 0.0.0-edge --values ./values-10-node.yaml
     ```
 
-3. Expose NGF via a Service Load Balancer, internal (only accessible within the Google Cloud region) by adding
-   `networking.gke.io/load-balancer-type: "Internal"` annotation to the Service.
-4. Deploy backend apps:
+3. Deploy backend apps:
 
     ```console
     kubectl apply -f manifests/cafe.yaml
     ```
 
-5. Configure Gateway:
+4. Configure Gateway:
 
     ```console
     kubectl apply -f manifests/cafe-secret.yaml
     kubectl apply -f manifests/gateway.yaml
     ```
 
-6. Expose apps via HTTPRoutes
+5. Expose apps via HTTPRoutes
 
     ```console
     kubectl apply -f manifests/cafe-routes.yaml
     ```
 
-7. Check statuses of the Gateway and HTTPRoutes for errors.
-8. In Google Monitoring, check NGF and NGINX error logs for errors.
-9. In Tester VMs, update `/etc/hosts` to have an entry with the External IP of the NGF Service (`10.128.0.10` in this
+6. Check statuses of the Gateway and HTTPRoutes for errors.
+7. In Google Monitoring, check NGF and NGINX error logs for errors.
+8. In Tester VMs, update `/etc/hosts` to have an entry with the External IP of the NGF Service (`10.128.0.10` in this
    case):
 
    ```text
