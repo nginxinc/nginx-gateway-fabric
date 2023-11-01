@@ -1,0 +1,40 @@
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: Gateway
+metadata:
+  name: gateway
+spec:
+  gatewayClassName: nginx
+  listeners:
+  - name: http
+    port: 80
+    protocol: HTTP
+    hostname: "cafe.example.com"
+  - name: http-2
+    port: 80
+    protocol: HTTP
+    hostname: "2.example.com"
+  - name: http-3
+    port: 80
+    protocol: HTTP
+    hostname: "3.example.com"
+  - name: http-4
+    port: 80
+    protocol: HTTP
+    hostname: "4.example.com"
+  - name: http-5
+    port: 80
+    protocol: HTTP
+    hostname: "5.example.com"
+  - name: http-6
+    port: 80
+    protocol: HTTP
+    hostname: "6.example.com"
+  - name: https
+    port: 443
+    protocol: HTTPS
+    hostname: "*.example.com"
+    tls:
+      mode: Terminate
+      certificateRefs:
+      - kind: Secret
+        name: cafe-secret
