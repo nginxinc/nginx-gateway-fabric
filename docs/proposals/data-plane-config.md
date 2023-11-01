@@ -1,18 +1,18 @@
-# Enhancement Proposal-929: Data Plane Dynamic Configuration
+# Enhancement Proposal-929: Data Plane Configuration
 
 - Issue: https://github.com/nginxinc/nginx-kubernetes-gateway/issues/929
 - Status: Implementable
 
 ## Summary
 
-This proposal is intended to contain the design for how to dynamically configure global settings for the data plane
+This proposal is intended to contain the design for how to configure global settings for the data plane
 of the NGINX Gateway Fabric (NGF) product. Similar to control plane configuration, we should be able to leverage
 a custom resource definition to define data plane configuration, considering fields such as telemetry and
 upstream zone size.
 
 ## Goals
 
-Define a CRD to dynamically configure various global settings for the NGF data plane. The initial configurable
+Define a CRD to configure various global settings for the NGF data plane. The initial configurable
 options will be for telemetry (tracing) and upstream zone size.
 
 ## Non-Goals
@@ -31,6 +31,8 @@ API is through a CRD.
 The purpose of this CRD is to contain "global" configuration options for the data plane, and not focused on policy
 per route or backend.
 
+NGF will reload NGINX when configuration changes are made.
+
 In this doc, the term "user" will refer to the cluster operator (the person who installs and manages NGF). The
 cluster operator owns this CRD resource.
 
@@ -48,14 +50,15 @@ metadata:
     name: nginx-proxy-config
     namespace: nginx-gateway
 spec:
-    telemetry:
-        exporters:
-            otlp:
-                endpoint: my-otel-collector.svc:4317
-                interval: 5s
-                batchSize: 512
-                batchCount: 4
-    upstreamZoneSize: 1024k
+    http:
+        upstreamZoneSize: 512k # default
+        telemetry:
+            tracing:
+                enabled: true # default false
+                endpoint: my-otel-collector.svc:4317 # required
+                interval: 5s # default
+                batchSize: 512 # default
+                batchCount: 4 # default
 status:
     conditions:
     ...
@@ -63,15 +66,15 @@ status:
 
 - The CRD would be Namespace-scoped.
 - CRD is initialized and created when NGF is deployed, in the `nginx-gateway` Namespace.
-- CRD would be referenced in the [ParametersReference][ref]
-of the NGF GatewayClass.
+- CRD would be referenced in the [ParametersReference][ref] of the NGF GatewayClass.
+- Conditions are either `Valid` or `Invalid` if the configuration was properly set.
 
 [ref]:https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.ParametersReference
 
 ## Use Cases
 
-The high level use case for dynamically changing settings in the NGF data plane is to allow users to alter
-behavior without the need for restarting NGF and experiencing downtime.
+The high level use case is to configure options in the NGF data plane that are not currently configurable. The
+CRD also allows for these to change without the need to restart the NGF Pod.
 
 ### Tracing
 
@@ -105,7 +108,7 @@ We need to ensure that any configurable fields that are exposed to a user are:
 
 - Properly validated. This means that the fields should be the correct type (integer, string, etc.), have appropriate
 length, and use regex patterns or enums to prevent any unwanted input. This will initially be done through
-OpenAPI schema validation. If necessary as the CRD evolves, CEL or webhooks could be used.
+OpenAPI schema validation. If necessary as the CRD evolves, CEL or control plane validation could be used.
 - Have a valid use case. The more fields we expose, the more attack vectors we create. We should only be exposing
 fields that are genuinely useful for a user to change dynamically.
 
@@ -122,6 +125,10 @@ benefits of a CRD, specifically built-in schema validation, versioning, and conv
 The NGF control plane could implement its own custom API server. However the overhead of implementing this, which
 would include auth, validation, endpoints, and so on, would not be worth it due to the fact that the Kubernetes
 API server already does all of these things for us.
+
+- Policies CRD for granular control
+Being that these are global settings, a user may have a need for more granular control, in other words, changing
+the settings at a per-route or per-backend basis. A new Policy CRD could accomplish this in future work.
 
 ## References
 
