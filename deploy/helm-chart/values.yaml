@@ -61,7 +61,7 @@ nginx:
   ## The lifecycle of the nginx container.
   lifecycle: {}
 
-  # extraVolumeMounts are the additional volume mounts for the nginx container.
+  ## extraVolumeMounts are the additional volume mounts for the nginx container.
   extraVolumeMounts: []
 
 ## The termination grace period of the NGINX Gateway Fabric pod.
