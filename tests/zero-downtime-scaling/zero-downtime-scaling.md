@@ -81,7 +81,7 @@ Notes:
   - *wrk* will generate a lot of traffic continuously and it will have a high chance of catching any
     (however small) periods of downtime.
   - *curl* will generate 1 request every 0.1s. While it might not catch small periods of downtime, it will give us
-    timeline of failed request for big periods of downtime, which wrk doesn't do.
+    a timeline of failed requests for big periods of downtime, which wrk doesn't do.
 
 ## Tests
 
