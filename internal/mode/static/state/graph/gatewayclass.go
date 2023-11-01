@@ -6,6 +6,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
+	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
 	staticConds "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/conditions"
 )
@@ -56,14 +57,14 @@ func processGatewayClasses(
 	return processedGwClasses, gcExists
 }
 
-func buildGatewayClass(gc *v1beta1.GatewayClass) *GatewayClass {
+func buildGatewayClass(gc *v1beta1.GatewayClass, npCfg *ngfAPI.NginxProxy) *GatewayClass {
 	if gc == nil {
 		return nil
 	}
 
 	var conds []conditions.Condition
 
-	valErr := validateGatewayClass(gc)
+	valErr := validateGatewayClass(gc, npCfg)
 	if valErr != nil {
 		conds = append(conds, staticConds.NewGatewayClassInvalidParameters(valErr.Error()))
 	}
@@ -75,10 +76,10 @@ func buildGatewayClass(gc *v1beta1.GatewayClass) *GatewayClass {
 	}
 }
 
-func validateGatewayClass(gc *v1beta1.GatewayClass) error {
-	if gc.Spec.ParametersRef != nil {
+func validateGatewayClass(gc *v1beta1.GatewayClass, npCfg *ngfAPI.NginxProxy) error {
+	if gc.Spec.ParametersRef != nil && npCfg == nil {
 		path := field.NewPath("spec").Child("parametersRef")
-		return field.Forbidden(path, "parametersRef is not supported")
+		return field.NotFound(path, "parametersRef resource not found")
 	}
 
 	return nil

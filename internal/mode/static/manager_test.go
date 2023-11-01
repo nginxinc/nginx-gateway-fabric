@@ -12,6 +12,7 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
+	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/config"
 )
 
@@ -38,6 +39,7 @@ func TestPrepareFirstEventBatchPreparerArgs(t *testing.T) {
 				&gatewayv1beta1.HTTPRouteList{},
 				&gatewayv1beta1.GatewayList{},
 				&gatewayv1beta1.ReferenceGrantList{},
+				&ngfAPI.NginxProxyList{},
 			},
 		},
 		{
@@ -57,6 +59,7 @@ func TestPrepareFirstEventBatchPreparerArgs(t *testing.T) {
 				&discoveryV1.EndpointSliceList{},
 				&gatewayv1beta1.HTTPRouteList{},
 				&gatewayv1beta1.ReferenceGrantList{},
+				&ngfAPI.NginxProxyList{},
 			},
 		},
 	}

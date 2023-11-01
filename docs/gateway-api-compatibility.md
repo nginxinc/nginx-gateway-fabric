@@ -54,7 +54,7 @@ Fields:
 
 - `spec`
   - `controllerName` - supported.
-  - `parametersRef` - not supported.
+  - `parametersRef` - supported.
   - `description` - supported.
 - `status`
   - `conditions` - supported (Condition/Status/Reason):

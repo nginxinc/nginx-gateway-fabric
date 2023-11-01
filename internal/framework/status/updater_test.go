@@ -51,6 +51,7 @@ var _ = Describe("Updater", func() {
 				&v1beta1.Gateway{},
 				&v1beta1.HTTPRoute{},
 				&ngfAPI.NginxGateway{},
+				&ngfAPI.NginxProxy{},
 			).
 			Build()
 
@@ -73,6 +74,7 @@ var _ = Describe("Updater", func() {
 			gw, ignoredGw *v1beta1.Gateway
 			hr            *v1beta1.HTTPRoute
 			ng            *ngfAPI.NginxGateway
+			np            *ngfAPI.NginxProxy
 			addr          = v1beta1.GatewayStatusAddress{
 				Type:  helpers.GetPointer(v1beta1.IPAddressType),
 				Value: "1.2.3.4",
@@ -125,6 +127,17 @@ var _ = Describe("Updater", func() {
 					NsName: types.NamespacedName{
 						Namespace: "nginx-gateway",
 						Name:      "nginx-gateway-config",
+					},
+					ObservedGeneration: gen,
+					Conditions:         status.CreateTestConditions("Test"),
+				}
+			}
+
+			createNPStatus = func(gen int64) *status.NginxProxyStatus {
+				return &status.NginxProxyStatus{
+					NsName: types.NamespacedName{
+						Namespace: "nginx-gateway",
+						Name:      "nginx-gateway-proxy-config",
 					},
 					ObservedGeneration: gen,
 					Conditions:         status.CreateTestConditions("Test"),
@@ -247,6 +260,22 @@ var _ = Describe("Updater", func() {
 					},
 				}
 			}
+
+			createExpectedNPWithGeneration = func(gen int64) *ngfAPI.NginxProxy {
+				return &ngfAPI.NginxProxy{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "nginx-gateway",
+						Name:      "nginx-gateway-proxy-config",
+					},
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "NginxProxy",
+						APIVersion: "gateway.nginx.org/v1alpha1",
+					},
+					Status: ngfAPI.NginxProxyStatus{
+						Conditions: status.CreateExpectedAPIConditions("Test", gen, fakeClockTime),
+					},
+				}
+			}
 		)
 
 		BeforeAll(func() {
@@ -308,6 +337,16 @@ var _ = Describe("Updater", func() {
 					APIVersion: "gateway.nginx.org/v1alpha1",
 				},
 			}
+			np = &ngfAPI.NginxProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "nginx-gateway",
+					Name:      "nginx-gateway-proxy-config",
+				},
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "NginxProxy",
+					APIVersion: "gateway.nginx.org/v1alpha1",
+				},
+			}
 		})
 
 		It("should create resources in the API server", func() {
@@ -316,6 +355,7 @@ var _ = Describe("Updater", func() {
 			Expect(client.Create(context.Background(), ignoredGw)).Should(Succeed())
 			Expect(client.Create(context.Background(), hr)).Should(Succeed())
 			Expect(client.Create(context.Background(), ng)).Should(Succeed())
+			Expect(client.Create(context.Background(), np)).Should(Succeed())
 		})
 
 		It("should update gateway API statuses", func() {
@@ -395,6 +435,26 @@ var _ = Describe("Updater", func() {
 			expectedNG.ResourceVersion = latestNG.ResourceVersion
 
 			Expect(helpers.Diff(expectedNG, latestNG)).To(BeEmpty())
+		})
+
+		It("should update nginx proxy status", func() {
+			updater.Update(context.Background(), createNPStatus(1))
+		})
+
+		It("should have the updated status of NginxProxy in the API server", func() {
+			latestNP := &ngfAPI.NginxProxy{}
+			expectedNP := createExpectedNPWithGeneration(1)
+
+			err := client.Get(
+				context.Background(),
+				types.NamespacedName{Namespace: "nginx-gateway", Name: "nginx-gateway-proxy-config"},
+				latestNP,
+			)
+			Expect(err).ToNot(HaveOccurred())
+
+			expectedNP.ResourceVersion = latestNP.ResourceVersion
+
+			Expect(helpers.Diff(expectedNP, latestNP)).To(BeEmpty())
 		})
 
 		When("the Gateway Service is updated with a new address", func() {

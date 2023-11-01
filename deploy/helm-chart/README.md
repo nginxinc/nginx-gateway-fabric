@@ -184,7 +184,7 @@ To uninstall/delete the release `my-release`:
 ```shell
 helm uninstall my-release -n nginx-gateway
 kubectl delete ns nginx-gateway
-kubectl delete crd nginxgateways.gateway.nginx.org
+kubectl delete crd nginxgateways.gateway.nginx.org nginxproxies.gateway.nginx.org
 ```
 
 These commands remove all the Kubernetes components associated with the release and deletes the release.

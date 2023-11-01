@@ -35,6 +35,27 @@ func newNginxGatewayStatusSetter(clock Clock, status NginxGatewayStatus) func(cl
 	}
 }
 
+func newNginxProxyStatusSetter(clock Clock, status NginxProxyStatus) func(client.Object) bool {
+	return func(object client.Object) bool {
+		ng := object.(*ngfAPI.NginxProxy)
+		conds := convertConditions(
+			status.Conditions,
+			status.ObservedGeneration,
+			clock.Now(),
+		)
+
+		if conditionsEqual(ng.Status.Conditions, conds) {
+			return false
+		}
+
+		ng.Status = ngfAPI.NginxProxyStatus{
+			Conditions: conds,
+		}
+
+		return true
+	}
+}
+
 func newGatewayClassStatusSetter(clock Clock, gcs GatewayClassStatus) func(client.Object) bool {
 	return func(object client.Object) bool {
 		gc := object.(*v1beta1.GatewayClass)

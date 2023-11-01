@@ -71,6 +71,7 @@ rules:
   - gateway.nginx.org
   resources:
   - nginxgateways
+  - nginxproxies
   verbs:
   - get
   - list
@@ -79,6 +80,7 @@ rules:
   - gateway.nginx.org
   resources:
   - nginxgateways/status
+  - nginxproxies/status
   verbs:
   - update
 - apiGroups:
@@ -244,6 +246,11 @@ metadata:
     app.kubernetes.io/version: "edge"
 spec:
   controllerName: gateway.nginx.org/nginx-gateway-controller
+  parametersRef:
+    group: gateway.nginx.org
+    kind: NginxProxy
+    name: nginx-gateway-proxy-config
+    namespace: nginx-gateway
 ---
 # Source: nginx-gateway-fabric/templates/nginxgateway.yaml
 apiVersion: gateway.nginx.org/v1alpha1
@@ -258,3 +265,16 @@ metadata:
 spec:
   logging:
     level: info
+---
+# Source: nginx-gateway-fabric/templates/nginxproxy.yaml
+apiVersion: gateway.nginx.org/v1alpha1
+kind: NginxProxy
+metadata:
+  name: nginx-gateway-proxy-config
+  namespace: nginx-gateway
+  labels:
+    app.kubernetes.io/name: nginx-gateway
+    app.kubernetes.io/instance: nginx-gateway
+    app.kubernetes.io/version: "edge"
+spec:
+  {}

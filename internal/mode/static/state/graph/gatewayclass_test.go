@@ -9,6 +9,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
+	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 	staticConds "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/conditions"
@@ -121,7 +122,7 @@ func TestProcessGatewayClasses(t *testing.T) {
 func TestBuildGatewayClass(t *testing.T) {
 	validGC := &v1beta1.GatewayClass{}
 
-	invalidGC := &v1beta1.GatewayClass{
+	gcWithParams := &v1beta1.GatewayClass{
 		Spec: v1beta1.GatewayClassSpec{
 			ParametersRef: &v1beta1.ParametersReference{},
 		},
@@ -129,6 +130,7 @@ func TestBuildGatewayClass(t *testing.T) {
 
 	tests := []struct {
 		gc       *v1beta1.GatewayClass
+		np       *ngfAPI.NginxProxy
 		expected *GatewayClass
 		name     string
 	}{
@@ -146,13 +148,22 @@ func TestBuildGatewayClass(t *testing.T) {
 			name:     "no gatewayclass",
 		},
 		{
-			gc: invalidGC,
+			gc: gcWithParams,
+			np: &ngfAPI.NginxProxy{},
 			expected: &GatewayClass{
-				Source: invalidGC,
+				Source: gcWithParams,
+				Valid:  true,
+			},
+			name: "valid gatewayclass with paramsRef",
+		},
+		{
+			gc: gcWithParams,
+			expected: &GatewayClass{
+				Source: gcWithParams,
 				Valid:  false,
 				Conditions: []conditions.Condition{
 					staticConds.NewGatewayClassInvalidParameters(
-						"spec.parametersRef: Forbidden: parametersRef is not supported",
+						"spec.parametersRef: Not found: \"parametersRef resource not found\"",
 					),
 				},
 			},
@@ -164,7 +175,7 @@ func TestBuildGatewayClass(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewWithT(t)
 
-			result := buildGatewayClass(test.gc)
+			result := buildGatewayClass(test.gc, test.np)
 			g.Expect(helpers.Diff(test.expected, result)).To(BeEmpty())
 		})
 	}

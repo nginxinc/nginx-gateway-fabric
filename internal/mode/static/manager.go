@@ -300,6 +300,15 @@ func registerControllers(
 		{
 			objectType: &gatewayv1beta1.ReferenceGrant{},
 		},
+		{
+			objectType: &ngfAPI.NginxProxy{},
+			options: []controller.Option{
+				controller.WithK8sPredicate(predicate.NginxProxyPredicate{
+					Client:         mgr.GetClient(),
+					ControllerName: cfg.GatewayCtlrName,
+				}),
+			},
+		},
 	}
 
 	if cfg.ConfigName != "" {
@@ -349,6 +358,7 @@ func prepareFirstEventBatchPreparerArgs(
 		&discoveryV1.EndpointSliceList{},
 		&gatewayv1beta1.HTTPRouteList{},
 		&gatewayv1beta1.ReferenceGrantList{},
+		&ngfAPI.NginxProxyList{},
 	}
 
 	if gwNsName == nil {

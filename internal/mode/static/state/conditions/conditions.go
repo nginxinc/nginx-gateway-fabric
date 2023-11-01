@@ -63,6 +63,11 @@ const (
 	// FIXME(bjee19): Update to Gateway sig v1 version when released.
 	// https://github.com/nginxinc/nginx-gateway-fabric/issues/1168
 	RouteConditionPartiallyInvalid v1beta1.RouteConditionType = "PartiallyInvalid"
+
+	// NginxProxyMessageFailedNginxReload is a message used when nginx fails to reload.
+	NginxProxyMessageFailedNginxReload = "There was a failure to reload nginx with the configuration. " +
+		"The issue could be due to this resource, Gateway resource, or Route resource. Please see the nginx " +
+		"container logs for any possible configuration issues"
 )
 
 // DeduplicateConditions removes duplicate conditions based on the condition type.
@@ -580,6 +585,26 @@ func NewNginxGatewayInvalid(msg string) conditions.Condition {
 		Type:    string(ngfAPI.NginxGatewayConditionValid),
 		Status:  metav1.ConditionFalse,
 		Reason:  string(ngfAPI.NginxGatewayReasonInvalid),
+		Message: msg,
+	}
+}
+
+// NewNginxProxyValid returns a Condition that indicates that the NginxProxy config is valid.
+func NewNginxProxyValid() conditions.Condition {
+	return conditions.Condition{
+		Type:    string(ngfAPI.NginxProxyConditionValid),
+		Status:  metav1.ConditionTrue,
+		Reason:  string(ngfAPI.NginxProxyReasonValid),
+		Message: "NginxProxy is valid",
+	}
+}
+
+// NewNginxProxyInvalid returns a Condition that indicates that the NginxProxy config is invalid.
+func NewNginxProxyInvalid(msg string) conditions.Condition {
+	return conditions.Condition{
+		Type:    string(ngfAPI.NginxProxyConditionValid),
+		Status:  metav1.ConditionFalse,
+		Reason:  string(ngfAPI.NginxProxyReasonInvalid),
 		Message: msg,
 	}
 }

@@ -58,7 +58,8 @@ var _ = Describe("eventHandler", func() {
 
 		Expect(fakeNginxRuntimeMgr.ReloadCallCount()).Should(Equal(1))
 
-		Expect(fakeStatusUpdater.UpdateCallCount()).Should(Equal(1))
+		// One call for Gateway API resource statuses, one call for NginxProxy status
+		Expect(fakeStatusUpdater.UpdateCallCount()).Should(Equal(2))
 	}
 
 	BeforeEach(func() {

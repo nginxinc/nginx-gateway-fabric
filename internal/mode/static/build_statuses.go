@@ -5,6 +5,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
+	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/status"
 	staticConds "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/conditions"
@@ -188,4 +189,28 @@ func buildGatewayStatus(
 		Addresses:          gwAddresses,
 		ObservedGeneration: gateway.Source.Generation,
 	}
+}
+
+func buildNginxProxyStatus(np *ngfAPI.NginxProxy, nginxReloadRes nginxReloadResult) *status.NginxProxyStatus {
+	if np == nil {
+		return nil
+	}
+
+	conds := []conditions.Condition{
+		staticConds.NewNginxProxyValid(),
+	}
+
+	if nginxReloadRes.error != nil {
+		conds = []conditions.Condition{
+			staticConds.NewNginxProxyInvalid(staticConds.NginxProxyMessageFailedNginxReload),
+		}
+	}
+
+	npStatus := &status.NginxProxyStatus{
+		NsName:             client.ObjectKeyFromObject(np),
+		Conditions:         conds,
+		ObservedGeneration: np.Generation,
+	}
+
+	return npStatus
 }

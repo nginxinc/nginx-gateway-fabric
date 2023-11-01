@@ -90,6 +90,7 @@ type UpdaterImpl struct {
 // a leader change.
 type lastStatuses struct {
 	nginxGateway *NginxGatewayStatus
+	nginxProxy   *NginxProxyStatus
 	gatewayAPI   GatewayAPIStatuses
 }
 
@@ -104,6 +105,7 @@ func (upd *UpdaterImpl) Enable(ctx context.Context) {
 
 	upd.cfg.Logger.Info("Writing last statuses")
 	upd.updateGatewayAPI(ctx, upd.lastStatuses.gatewayAPI)
+	upd.updateNginxProxy(ctx, upd.lastStatuses.nginxProxy)
 	upd.updateNginxGateway(ctx, upd.lastStatuses.nginxGateway)
 }
 
@@ -134,6 +136,8 @@ func (upd *UpdaterImpl) Update(ctx context.Context, status Status) {
 	switch s := status.(type) {
 	case *NginxGatewayStatus:
 		upd.updateNginxGateway(ctx, s)
+	case *NginxProxyStatus:
+		upd.updateNginxProxy(ctx, s)
 	case GatewayAPIStatuses:
 		upd.updateGatewayAPI(ctx, s)
 	default:
@@ -145,18 +149,38 @@ func (upd *UpdaterImpl) updateNginxGateway(ctx context.Context, status *NginxGat
 	upd.lastStatuses.nginxGateway = status
 
 	if !upd.isLeader {
-		upd.cfg.Logger.Info("Skipping updating Nginx Gateway status because not leader")
+		upd.cfg.Logger.Info("Skipping updating NginxGateway status because not leader")
 		return
 	}
 
-	upd.cfg.Logger.Info("Updating Nginx Gateway status")
-
 	if status != nil {
+		upd.cfg.Logger.Info("Updating NginxGateway status")
+
 		upd.writeStatuses(
 			ctx,
 			status.NsName,
 			&ngfAPI.NginxGateway{},
 			newNginxGatewayStatusSetter(upd.cfg.Clock, *status),
+		)
+	}
+}
+
+func (upd *UpdaterImpl) updateNginxProxy(ctx context.Context, status *NginxProxyStatus) {
+	upd.lastStatuses.nginxProxy = status
+
+	if !upd.isLeader {
+		upd.cfg.Logger.Info("Skipping updating NginxProxy status because not leader")
+		return
+	}
+
+	if status != nil {
+		upd.cfg.Logger.Info("Updating NginxProxy status")
+
+		upd.writeStatuses(
+			ctx,
+			status.NsName,
+			&ngfAPI.NginxProxy{},
+			newNginxProxyStatusSetter(upd.cfg.Clock, *status),
 		)
 	}
 }

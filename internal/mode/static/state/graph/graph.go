@@ -6,6 +6,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
+	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/validation"
 )
 
@@ -18,6 +19,7 @@ type ClusterState struct {
 	Namespaces      map[types.NamespacedName]*v1.Namespace
 	ReferenceGrants map[types.NamespacedName]*v1beta1.ReferenceGrant
 	Secrets         map[types.NamespacedName]*v1.Secret
+	NginxProxies    map[types.NamespacedName]*ngfAPI.NginxProxy
 }
 
 // Graph is a Graph-like representation of Gateway API resources.
@@ -41,6 +43,8 @@ type Graph struct {
 	// in the cluster. We need such entries so that we can query the Graph to determine if a Secret is referenced
 	// by the Gateway, including the case when the Secret is newly created.
 	ReferencedSecrets map[types.NamespacedName]*Secret
+	// NginxProxy holds the NginxProxy config for the GatewayClass.
+	NginxProxy *ngfAPI.NginxProxy
 }
 
 // ProtectedPorts are the ports that may not be configured by a listener with a descriptive name of each port.
@@ -75,7 +79,9 @@ func BuildGraph(
 		// configured GatewayClass does not reference this controller
 		return &Graph{}
 	}
-	gc := buildGatewayClass(processedGwClasses.Winner)
+
+	npCfg := getNginxProxyConfig(state.NginxProxies, processedGwClasses.Winner)
+	gc := buildGatewayClass(processedGwClasses.Winner, npCfg)
 
 	secretResolver := newSecretResolver(state.Secrets)
 
@@ -95,6 +101,7 @@ func BuildGraph(
 		IgnoredGatewayClasses: processedGwClasses.Ignored,
 		IgnoredGateways:       processedGws.Ignored,
 		ReferencedSecrets:     secretResolver.getResolvedSecrets(),
+		NginxProxy:            npCfg,
 	}
 
 	return g
