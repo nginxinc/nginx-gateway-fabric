@@ -101,6 +101,9 @@ spec:
           mountPath: /etc/nginx/secrets
         - name: nginx-run
           mountPath: /var/run/nginx
+        {{- with .Values.nginxGateway.extraVolumeMounts -}}
+        {{ toYaml . | nindent 8 }}
+        {{- end }}
       - image: {{ .Values.nginx.image.repository }}:{{ .Values.nginx.image.tag | default .Chart.AppVersion }}
         imagePullPolicy: {{ .Values.nginx.image.pullPolicy }}
         name: nginx
@@ -133,6 +136,9 @@ spec:
           mountPath: /var/cache/nginx
         - name: nginx-lib
           mountPath: /var/lib/nginx
+        {{- with .Values.nginx.extraVolumeMounts -}}
+        {{ toYaml . | nindent 8 }}
+        {{- end }}
       terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
       {{- if .Values.affinity }}
       affinity:
@@ -158,4 +164,7 @@ spec:
         emptyDir: {}
       - name: nginx-lib
         emptyDir: {}
+      {{- with .Values.extraVolumes -}}
+      {{ toYaml . | nindent 6 }}
+      {{- end }}
 {{- end }}

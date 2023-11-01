@@ -48,6 +48,9 @@ nginxGateway:
   ## The lifecycle of the nginx-gateway container.
   lifecycle: {}
 
+  ## extraVolumeMounts are the additional volume mounts for the nginx-gateway container.
+  extraVolumeMounts: []
+
 nginx:
   ## The NGINX image to use
   image:
@@ -57,6 +60,9 @@ nginx:
 
   ## The lifecycle of the nginx container.
   lifecycle: {}
+
+  ## extraVolumeMounts are the additional volume mounts for the nginx container.
+  extraVolumeMounts: []
 
 ## The termination grace period of the NGINX Gateway Fabric pod.
 terminationGracePeriodSeconds: 30
@@ -103,3 +109,7 @@ metrics:
   ## Enable serving metrics via https. By default metrics are served via http.
   ## Please note that this endpoint will be secured with a self-signed certificate.
   secure: false
+
+## extraVolumes for the NGINX Gateway Fabric pod. Use in conjunction with
+## nginxGateway.extraVolumeMounts and nginx.extraVolumeMounts to mount additional volumes to the containers.
+extraVolumes: []
