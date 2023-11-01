@@ -23,3 +23,7 @@ dependencies:
 
 tests:
   - head-branch: ['^test/', '^tests/']
+
+helm-chart:
+  - head-branch: ['^helm/', '^helm-chart/']
+  - changed-files: ['deploy/helm-chart/**/*']
