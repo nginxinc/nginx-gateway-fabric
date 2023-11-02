@@ -1,12 +1,18 @@
-# Routing to Applications Using HTTP Matching Conditions
+---
+title: "Routing to Applications Using HTTP Matching Conditions"
+description: "Learn how to deploy multiple applications and HTTPRoutes with request conditions such as paths, methods, headers, and query parameters"
+weight: 100
+toc: true
+docs: "DOCS-000"
+---
 
 In this guide we will configure advanced routing rules for multiple applications. These rules will showcase request
 matching by path, headers, query parameters, and method. For an introduction to exposing your application, it is
-recommended to go through the [basic guide](/docs/guides/routing-traffic-to-your-app.md) first.
+recommended to go through the [basic guide]({{< relref "/guides/routing-traffic-to-your-app.md" >}}) first.
 
 The following image shows the traffic flow that we will be creating with these rules.
 
-![Traffic Flow Diagram](/docs/images/advanced-routing.png)
+![Traffic Flow Diagram](/img/advanced-routing.png)
 
 The goal is to create a set of rules that will result in client requests being sent to specific backends based on
 the request attributes. In this diagram, we have two versions of the `coffee` service. Traffic for v1 needs to be
@@ -16,8 +22,8 @@ and `coffee` applications share the same Gateway.
 
 ## Prerequisites
 
-- [Install](/docs/installation.md) NGINX Gateway Fabric.
-- [Expose NGINX Gateway Fabric](/docs/installation.md#expose-nginx-gateway-fabric) and save the public IP
+- [Install]({{< relref "/installation.md" >}}) NGINX Gateway Fabric.
+- [Expose NGINX Gateway Fabric]({{< relref "/installation.md#expose-nginx-gateway-fabric" >}}) and save the public IP
   address and port of NGINX Gateway Fabric into shell variables:
 
    ```text
@@ -25,9 +31,7 @@ and `coffee` applications share the same Gateway.
    GW_PORT=<port number>
    ```
 
-> **Note**
-> In a production environment, you should have a DNS record for the external IP address that is exposed,
-> and it should refer to the hostname that the gateway will forward for.
+{{< note >}}In a production environment, you should have a DNS record for the external IP address that is exposed, and it should refer to the hostname that the gateway will forward for.{{< /note >}}
 
 ## Coffee Applications
 
@@ -42,7 +46,7 @@ kubectl apply -f https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric
 ### Deploy the Gateway API Resources for the Coffee Applications
 
 The [Gateway](https://gateway-api.sigs.k8s.io/api-types/gateway/) resource is typically deployed by the
-[cluster operator][roles-and-personas]. To deploy the Gateway:
+[cluster operator](https://gateway-api.sigs.k8s.io/concepts/roles-and-personas/#roles-and-personas_1). To deploy the Gateway:
 
 ```yaml
 kubectl apply -f - <<EOF
@@ -62,7 +66,7 @@ EOF
 This Gateway defines a single listener on port 80. Since no hostname is specified, this listener matches on all hostnames.
 
 The [HTTPRoute](https://gateway-api.sigs.k8s.io/api-types/httproute/) is typically deployed by the
-[application developer][roles-and-personas]. To deploy the `coffee` HTTPRoute:
+[application developer](https://gateway-api.sigs.k8s.io/concepts/roles-and-personas/#roles-and-personas_1). To deploy the `coffee` HTTPRoute:
 
 ```yaml
 kubectl apply -f - <<EOF
@@ -116,16 +120,12 @@ the `coffee-v2` Service:
   - Request with the path prefix `/coffee` and the query parameter `TEST=v2`
     If you want both conditions to be required, you can define headers and queryParams in the same match object.
 
-[roles-and-personas]: https://gateway-api.sigs.k8s.io/concepts/roles-and-personas/#roles-and-personas_1
-
 ### Send Traffic to Coffee
 
 Using the external IP address and port for NGINX Gateway Fabric, we can send traffic to our coffee
 applications.
 
-> **Note**
-> If you have a DNS record allocated for `cafe.example.com`, you can send the request directly to that
-> hostname, without needing to resolve.
+{{< note >}}If you have a DNS record allocated for `cafe.example.com`, you can send the request directly to that hostname, without needing to resolve.{{< /note >}}
 
 ```shell
 curl --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/coffee
@@ -216,9 +216,7 @@ The properties of this HTTPRoute include:
 Using the external IP address and port for NGINX Gateway Fabric, we can send traffic to our tea
 applications.
 
-> **Note**
-> If you have a DNS record allocated for `cafe.example.com`, you can send the request directly to that
-> hostname, without needing to resolve.
+{{< note >}}If you have a DNS record allocated for `cafe.example.com`, you can send the request directly to that hostname, without needing to resolve.{{< /note >}}
 
 ```shell
 curl --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/tea
@@ -352,7 +350,7 @@ If you have any issues while sending traffic, try the following to debug your co
 
 ## Further Reading
 
-To learn more about the Gateway API and the resources we created in this guide, check out the following resources:
+To learn more about the Gateway API and the resources we created in this guide, check out the following Kubernetes documentation resources:
 
 - [Gateway API Overview](https://gateway-api.sigs.k8s.io/concepts/api-overview/)
 - [Deploying a simple Gateway](https://gateway-api.sigs.k8s.io/guides/simple-gateway/)

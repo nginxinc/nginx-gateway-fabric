@@ -1,0 +1,34 @@
+[build]
+  base = "docs/"
+  publish = "public"
+
+[context.production]
+  command = "make all"   
+
+[context.docs-development]
+  command = "make all-dev"
+
+[context.docs-staging]
+  command = "make all-staging"
+
+[context.branch-deploy]
+  command = "make deploy-preview"
+
+[context.deploy-preview]
+  command = "make deploy-preview"
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    Access-Control-Allow-Origin = "https://docs.nginx.com"
+
+[[redirects]]
+  from = "/"
+  to = "/nginx-gateway-fabric/"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "/nginx-gateway-fabric/*"
+  to = "/nginx-gateway-fabric/404.html"
+  status = 404
