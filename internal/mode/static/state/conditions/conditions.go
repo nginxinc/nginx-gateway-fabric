@@ -589,20 +589,31 @@ func NewNginxGatewayInvalid(msg string) conditions.Condition {
 	}
 }
 
-// NewNginxProxyValid returns a Condition that indicates that the NginxProxy config is valid.
-func NewNginxProxyValid() conditions.Condition {
+// NewNginxProxyAccepted returns a Condition that indicates that the NginxProxy config is accepted.
+func NewNginxProxyAccepted() conditions.Condition {
 	return conditions.Condition{
-		Type:    string(ngfAPI.NginxProxyConditionValid),
+		Type:    string(ngfAPI.NginxProxyConditionAccepted),
 		Status:  metav1.ConditionTrue,
-		Reason:  string(ngfAPI.NginxProxyReasonValid),
-		Message: "NginxProxy is valid",
+		Reason:  string(ngfAPI.NginxProxyReasonAccepted),
+		Message: "NginxProxy is accepted",
 	}
 }
 
-// NewNginxProxyInvalid returns a Condition that indicates that the NginxProxy config is invalid.
-func NewNginxProxyInvalid(msg string) conditions.Condition {
+// NewNginxProxyProgrammed returns a Condition that indicates that the NginxProxy config is programmed.
+func NewNginxProxyProgrammed() conditions.Condition {
 	return conditions.Condition{
-		Type:    string(ngfAPI.NginxProxyConditionValid),
+		Type:    string(ngfAPI.NginxProxyConditionProgrammed),
+		Status:  metav1.ConditionTrue,
+		Reason:  string(ngfAPI.NginxProxyReasonProgrammed),
+		Message: "NginxProxy is programmed",
+	}
+}
+
+// NewNginxProxyNotProgrammed returns a Condition that indicates that the NginxProxy config is not
+// programmed due to an error to reload nginx.
+func NewNginxProxyNotProgrammed(msg string) conditions.Condition {
+	return conditions.Condition{
+		Type:    string(ngfAPI.NginxProxyConditionProgrammed),
 		Status:  metav1.ConditionFalse,
 		Reason:  string(ngfAPI.NginxProxyReasonInvalid),
 		Message: msg,

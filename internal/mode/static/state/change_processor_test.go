@@ -1250,9 +1250,6 @@ var _ = Describe("ChangeProcessor", func() {
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "np",
 					Namespace: "test",
-					Annotations: map[string]string{
-						"some-key": "some-value",
-					},
 				},
 			}
 			It("handles upserts for an NginxProxy", func() {

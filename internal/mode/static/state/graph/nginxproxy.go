@@ -11,20 +11,15 @@ func getNginxProxyConfig(
 	nps map[types.NamespacedName]*ngfAPI.NginxProxy,
 	gc *v1beta1.GatewayClass,
 ) *ngfAPI.NginxProxy {
-	var cfg *ngfAPI.NginxProxy
-	for _, np := range nps {
+	if gc != nil {
 		ref := gc.Spec.ParametersRef
-		if ref != nil {
-			if ref.Group == ngfAPI.GroupName &&
-				ref.Kind == v1beta1.Kind("NginxProxy") &&
-				ref.Name == np.Name &&
-				ref.Namespace != nil &&
-				*ref.Namespace == v1beta1.Namespace(np.Namespace) {
-				cfg = np
-				break
+		if ref != nil && ref.Namespace != nil {
+			nsName := types.NamespacedName{Name: ref.Name, Namespace: string(*ref.Namespace)}
+			if np, ok := nps[nsName]; ok {
+				return np
 			}
 		}
 	}
 
-	return cfg
+	return nil
 }

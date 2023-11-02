@@ -197,13 +197,13 @@ func buildNginxProxyStatus(np *ngfAPI.NginxProxy, nginxReloadRes nginxReloadResu
 	}
 
 	conds := []conditions.Condition{
-		staticConds.NewNginxProxyValid(),
+		staticConds.NewNginxProxyAccepted(),
 	}
 
 	if nginxReloadRes.error != nil {
-		conds = []conditions.Condition{
-			staticConds.NewNginxProxyInvalid(staticConds.NginxProxyMessageFailedNginxReload),
-		}
+		conds = append(conds, staticConds.NewNginxProxyNotProgrammed(staticConds.NginxProxyMessageFailedNginxReload))
+	} else {
+		conds = append(conds, staticConds.NewNginxProxyProgrammed())
 	}
 
 	npStatus := &status.NginxProxyStatus{

@@ -620,7 +620,10 @@ func TestBuildNginxProxyStatus(t *testing.T) {
 			expected: &status.NginxProxyStatus{
 				NsName:             types.NamespacedName{Namespace: "test", Name: "np"},
 				ObservedGeneration: 1,
-				Conditions:         []conditions.Condition{staticConds.NewNginxProxyValid()},
+				Conditions: []conditions.Condition{
+					staticConds.NewNginxProxyAccepted(),
+					staticConds.NewNginxProxyProgrammed(),
+				},
 			},
 		},
 		{
@@ -631,7 +634,8 @@ func TestBuildNginxProxyStatus(t *testing.T) {
 				NsName:             types.NamespacedName{Namespace: "test", Name: "np"},
 				ObservedGeneration: 1,
 				Conditions: []conditions.Condition{
-					staticConds.NewNginxProxyInvalid(staticConds.NginxProxyMessageFailedNginxReload),
+					staticConds.NewNginxProxyAccepted(),
+					staticConds.NewNginxProxyNotProgrammed(staticConds.NginxProxyMessageFailedNginxReload),
 				},
 			},
 		},

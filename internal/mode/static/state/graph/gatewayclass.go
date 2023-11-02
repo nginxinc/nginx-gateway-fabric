@@ -77,10 +77,21 @@ func buildGatewayClass(gc *v1beta1.GatewayClass, npCfg *ngfAPI.NginxProxy) *Gate
 }
 
 func validateGatewayClass(gc *v1beta1.GatewayClass, npCfg *ngfAPI.NginxProxy) error {
-	if gc.Spec.ParametersRef != nil && npCfg == nil {
-		path := field.NewPath("spec").Child("parametersRef")
-		return field.NotFound(path, "parametersRef resource not found")
+	if gc.Spec.ParametersRef != nil {
+		if _, ok := supportedParamKinds[string(gc.Spec.ParametersRef.Kind)]; !ok {
+			path := field.NewPath("spec").Child("parametersRef")
+			return field.Forbidden(path, "parametersRef resource not allowed")
+		}
+
+		if npCfg == nil {
+			path := field.NewPath("spec").Child("parametersRef")
+			return field.NotFound(path, "parametersRef resource not found")
+		}
 	}
 
 	return nil
+}
+
+var supportedParamKinds = map[string]struct{}{
+	"NginxProxy": {},
 }

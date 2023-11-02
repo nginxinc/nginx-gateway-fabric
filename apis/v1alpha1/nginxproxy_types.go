@@ -48,13 +48,21 @@ type NginxProxyConditionType string
 type NginxProxyConditionReason string
 
 const (
-	// NginxProxyConditionValid is a condition that is true when the NginxProxy
+	// NginxProxyConditionAccepted is a condition that is true when the NginxProxy
 	// configuration is syntactically and semantically valid.
-	NginxProxyConditionValid NginxProxyConditionType = "Valid"
+	NginxProxyConditionAccepted NginxProxyConditionType = "Accepted"
 
-	// NginxProxyReasonValid is a reason that is used with the "Valid" condition when the condition is True.
-	NginxProxyReasonValid NginxProxyConditionReason = "Valid"
+	// NginxProxyReasonAccepted is a reason that is used with the "Accepted" condition when the condition is True.
+	NginxProxyReasonAccepted NginxProxyConditionReason = "Accepted"
 
-	// NginxProxyReasonInvalid is a reason that is used with the "Valid" condition when the condition is False.
+	// NginxProxyConditionProgrammed is a condition that is true when the NginxProxy has resulted in
+	// successful nginx configuration.
+	NginxProxyConditionProgrammed NginxProxyConditionType = "Programmed"
+
+	// NginxProxyReasonProgrammed is a reason that is used with the "Programmed" condition when the condition is True.
+	NginxProxyReasonProgrammed NginxProxyConditionReason = "Programmed"
+
+	// NginxProxyReasonInvalid is a reason that is used with the "Accepted" or "Programmed" condition when
+	// an error occurs with validation or reloading nginx.
 	NginxProxyReasonInvalid NginxProxyConditionReason = "Invalid"
 )

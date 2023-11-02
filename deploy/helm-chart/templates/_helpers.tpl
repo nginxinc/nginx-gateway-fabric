@@ -34,7 +34,7 @@ Create control plane config name.
 {{/*
 Create data plane config name.
 */}}
-{{- define "nginx-proxy.config-name" -}}
+{{- define "nginx-gateway.proxy-config-name" -}}
 {{- $name := default .Release.Name .Values.nameOverride }}
 {{- printf "%s-proxy-config" $name | trunc 63 | trimSuffix "-" }}
 {{- end }}

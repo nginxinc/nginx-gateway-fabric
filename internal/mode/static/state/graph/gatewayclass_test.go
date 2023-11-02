@@ -124,7 +124,17 @@ func TestBuildGatewayClass(t *testing.T) {
 
 	gcWithParams := &v1beta1.GatewayClass{
 		Spec: v1beta1.GatewayClassSpec{
-			ParametersRef: &v1beta1.ParametersReference{},
+			ParametersRef: &v1beta1.ParametersReference{
+				Kind: v1beta1.Kind("NginxProxy"),
+			},
+		},
+	}
+
+	gcWithInvalidParams := &v1beta1.GatewayClass{
+		Spec: v1beta1.GatewayClassSpec{
+			ParametersRef: &v1beta1.ParametersReference{
+				Kind: v1beta1.Kind("Invalid"),
+			},
 		},
 	}
 
@@ -149,12 +159,34 @@ func TestBuildGatewayClass(t *testing.T) {
 		},
 		{
 			gc: gcWithParams,
-			np: &ngfAPI.NginxProxy{},
+			np: &ngfAPI.NginxProxy{
+				TypeMeta: metav1.TypeMeta{
+					Kind: "NginxProxy",
+				},
+			},
 			expected: &GatewayClass{
 				Source: gcWithParams,
 				Valid:  true,
 			},
 			name: "valid gatewayclass with paramsRef",
+		},
+		{
+			gc: gcWithInvalidParams,
+			np: &ngfAPI.NginxProxy{
+				TypeMeta: metav1.TypeMeta{
+					Kind: "NginxProxy",
+				},
+			},
+			expected: &GatewayClass{
+				Source: gcWithInvalidParams,
+				Valid:  false,
+				Conditions: []conditions.Condition{
+					staticConds.NewGatewayClassInvalidParameters(
+						"spec.parametersRef: Forbidden: parametersRef resource not allowed",
+					),
+				},
+			},
+			name: "invalid gatewayclass with unsupported paramsRef",
 		},
 		{
 			gc: gcWithParams,

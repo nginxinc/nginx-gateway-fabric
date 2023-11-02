@@ -63,6 +63,56 @@ func TestNewNginxGatewayStatusSetter(t *testing.T) {
 	}
 }
 
+func TestNewNginxProxyStatusSetter(t *testing.T) {
+	tests := []struct {
+		name         string
+		status       ngfAPI.NginxProxyStatus
+		newStatus    NginxProxyStatus
+		expStatusSet bool
+	}{
+		{
+			name:         "NginxProxyStatus has no status",
+			expStatusSet: true,
+			newStatus: NginxProxyStatus{
+				Conditions: []conditions.Condition{{Message: "new condition"}},
+			},
+		},
+		{
+			name:         "NginxProxyStatus has old status",
+			expStatusSet: true,
+			newStatus: NginxProxyStatus{
+				Conditions: []conditions.Condition{{Message: "new condition"}},
+			},
+			status: ngfAPI.NginxProxyStatus{
+				Conditions: []v1.Condition{{Message: "old condition"}},
+			},
+		},
+		{
+			name:         "NginxProxyStatus has same status",
+			expStatusSet: false,
+			newStatus: NginxProxyStatus{
+				Conditions: []conditions.Condition{{Message: "same condition"}},
+			},
+			status: ngfAPI.NginxProxyStatus{
+				Conditions: []v1.Condition{{Message: "same condition"}},
+			},
+		},
+	}
+
+	clock := &RealClock{}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			g := NewWithT(t)
+
+			setter := newNginxProxyStatusSetter(clock, test.newStatus)
+
+			statusSet := setter(&ngfAPI.NginxProxy{Status: test.status})
+			g.Expect(statusSet).To(Equal(test.expStatusSet))
+		})
+	}
+}
+
 func TestNewGatewayClassStatusSetter(t *testing.T) {
 	tests := []struct {
 		name         string
