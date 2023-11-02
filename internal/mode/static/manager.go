@@ -302,12 +302,6 @@ func registerControllers(
 		},
 		{
 			objectType: &ngfAPI.NginxProxy{},
-			options: []controller.Option{
-				controller.WithK8sPredicate(predicate.NginxProxyPredicate{
-					Client:         mgr.GetClient(),
-					ControllerName: cfg.GatewayCtlrName,
-				}),
-			},
 		},
 	}
 
