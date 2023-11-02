@@ -67,7 +67,8 @@ status:
 - The CRD would be Namespace-scoped.
 - CRD is initialized and created when NGF is deployed, in the `nginx-gateway` Namespace.
 - CRD would be referenced in the [ParametersReference][ref] of the NGF GatewayClass.
-- Conditions are either `Valid` or `Invalid` if the configuration was properly set.
+- Conditions include `Accepted` if the CRD config is valid, and `Programmed` to determine if an nginx
+reload was successful.
 
 [ref]:https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.ParametersReference
 
