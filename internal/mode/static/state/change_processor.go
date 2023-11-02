@@ -162,7 +162,7 @@ func NewChangeProcessorImpl(cfg ChangeProcessorConfig) *ChangeProcessorImpl {
 			{
 				gvk:               extractGVK(&ngfAPI.NginxProxy{}),
 				store:             newObjectStoreMapAdapter(clusterStore.NginxProxies),
-				trackUpsertDelete: true,
+				trackUpsertDelete: false,
 			},
 		},
 	)

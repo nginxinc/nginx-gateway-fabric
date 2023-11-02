@@ -10,6 +10,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
+	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/controller/index"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/relationship"
@@ -78,7 +79,7 @@ var _ = Describe("Capturer", func() {
 
 	Describe("Capture service relationships for routes", func() {
 		BeforeEach(OncePerOrdered, func() {
-			capturer = relationship.NewCapturerImpl()
+			capturer = relationship.NewCapturerImpl("")
 		})
 
 		assertServiceExists := func(svcName types.NamespacedName, exists bool, refCount int) {
@@ -252,7 +253,7 @@ var _ = Describe("Capturer", func() {
 			)
 
 			BeforeEach(OncePerOrdered, func() {
-				capturer = relationship.NewCapturerImpl()
+				capturer = relationship.NewCapturerImpl("")
 			})
 
 			Describe("Normal cases", Ordered, func() {
@@ -320,7 +321,7 @@ var _ = Describe("Capturer", func() {
 		var nsNoLabels, ns *v1.Namespace
 
 		BeforeEach(func() {
-			capturer = relationship.NewCapturerImpl()
+			capturer = relationship.NewCapturerImpl("")
 			gw = &v1beta1.Gateway{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "gw",
@@ -441,9 +442,100 @@ var _ = Describe("Capturer", func() {
 			})
 		})
 	})
+	Describe("Capture gatewayclass relationships for nginxproxies", Ordered, func() {
+		BeforeEach(func() {
+			capturer = relationship.NewCapturerImpl("nginx-ctlr")
+		})
+
+		referencedNP := &ngfAPI.NginxProxy{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "valid",
+				Namespace: "test",
+			},
+		}
+
+		nonReferencedNP := &ngfAPI.NginxProxy{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "invalid",
+				Namespace: "test",
+			},
+		}
+
+		When("a gatewayclass is created without paramRefs", func() {
+			It("does not report a relationship", func() {
+				gc := &v1beta1.GatewayClass{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "gc",
+					},
+					Spec: v1beta1.GatewayClassSpec{
+						ControllerName: "nginx-ctlr",
+					},
+				}
+				capturer.Capture(gc)
+
+				Expect(capturer.Exists(referencedNP, client.ObjectKeyFromObject(referencedNP))).To(BeFalse())
+			})
+		})
+		When("a gatewayclass is created with paramRefs but wrong controller name", func() {
+			It("does not report a relationship", func() {
+				gc := &v1beta1.GatewayClass{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "gc",
+					},
+					Spec: v1beta1.GatewayClassSpec{
+						ControllerName: "wrong",
+						ParametersRef: &v1beta1.ParametersReference{
+							Group:     ngfAPI.GroupName,
+							Kind:      v1beta1.Kind("NginxProxy"),
+							Name:      referencedNP.Name,
+							Namespace: helpers.GetPointer(v1beta1.Namespace(referencedNP.Namespace)),
+						},
+					},
+				}
+				capturer.Capture(gc)
+
+				Expect(capturer.Exists(referencedNP, client.ObjectKeyFromObject(referencedNP))).To(BeFalse())
+			})
+		})
+		When("a gatewayclass is created with paramRefs", func() {
+			gc := &v1beta1.GatewayClass{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "gc",
+				},
+				Spec: v1beta1.GatewayClassSpec{
+					ControllerName: "nginx-ctlr",
+					ParametersRef: &v1beta1.ParametersReference{
+						Group:     ngfAPI.GroupName,
+						Kind:      v1beta1.Kind("NginxProxy"),
+						Name:      referencedNP.Name,
+						Namespace: helpers.GetPointer(v1beta1.Namespace(referencedNP.Namespace)),
+					},
+				},
+			}
+
+			When("an NginxProxy is created that isn't referenced", func() {
+				It("does not report a relationship", func() {
+					capturer.Capture(gc)
+					Expect(capturer.Exists(nonReferencedNP, client.ObjectKeyFromObject(nonReferencedNP))).To(BeFalse())
+				})
+			})
+			When("an NginxProxy is created that is referenced", func() {
+				It("reports a relationship", func() {
+					capturer.Capture(gc)
+					Expect(capturer.Exists(referencedNP, client.ObjectKeyFromObject(referencedNP))).To(BeTrue())
+				})
+			})
+			When("a gatewayclass is deleted", func() {
+				It("does not report a relationship", func() {
+					capturer.Remove(gc, client.ObjectKeyFromObject(gc))
+					Expect(capturer.Exists(referencedNP, client.ObjectKeyFromObject(referencedNP))).To(BeFalse())
+				})
+			})
+		})
+	})
 	Describe("Edge cases", func() {
 		BeforeEach(func() {
-			capturer = relationship.NewCapturerImpl()
+			capturer = relationship.NewCapturerImpl("")
 		})
 		It("Capture does not panic when passed an unsupported resource type", func() {
 			Expect(func() {

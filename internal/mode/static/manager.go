@@ -106,7 +106,7 @@ func StartManager(cfg config.Config) error {
 	processor := state.NewChangeProcessorImpl(state.ChangeProcessorConfig{
 		GatewayCtlrName:      cfg.GatewayCtlrName,
 		GatewayClassName:     cfg.GatewayClassName,
-		RelationshipCapturer: relationship.NewCapturerImpl(),
+		RelationshipCapturer: relationship.NewCapturerImpl(cfg.GatewayCtlrName),
 		Logger:               cfg.Logger.WithName("changeProcessor"),
 		Validators: validation.Validators{
 			HTTPFieldsValidator: ngxvalidation.HTTPValidator{},
@@ -302,6 +302,9 @@ func registerControllers(
 		},
 		{
 			objectType: &ngfAPI.NginxProxy{},
+			options: []controller.Option{
+				controller.WithK8sPredicate(k8spredicate.GenerationChangedPredicate{}),
+			},
 		},
 	}
 

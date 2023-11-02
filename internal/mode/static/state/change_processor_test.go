@@ -261,7 +261,7 @@ var _ = Describe("ChangeProcessor", func() {
 			processor = state.NewChangeProcessorImpl(state.ChangeProcessorConfig{
 				GatewayCtlrName:      controllerName,
 				GatewayClassName:     gcName,
-				RelationshipCapturer: relationship.NewCapturerImpl(),
+				RelationshipCapturer: relationship.NewCapturerImpl(controllerName),
 				Logger:               zap.New(),
 				Validators:           createAlwaysValidValidators(),
 				Scheme:               createScheme(),
@@ -1650,7 +1650,7 @@ var _ = Describe("ChangeProcessor", func() {
 			processor = state.NewChangeProcessorImpl(state.ChangeProcessorConfig{
 				GatewayCtlrName:      controllerName,
 				GatewayClassName:     gcName,
-				RelationshipCapturer: relationship.NewCapturerImpl(),
+				RelationshipCapturer: relationship.NewCapturerImpl(controllerName),
 				Logger:               zap.New(),
 				Validators:           createAlwaysValidValidators(),
 				EventRecorder:        fakeEventRecorder,
@@ -1823,7 +1823,7 @@ var _ = Describe("ChangeProcessor", func() {
 				processor = state.NewChangeProcessorImpl(state.ChangeProcessorConfig{
 					GatewayCtlrName:      controllerName,
 					GatewayClassName:     gcName,
-					RelationshipCapturer: relationship.NewCapturerImpl(),
+					RelationshipCapturer: relationship.NewCapturerImpl(controllerName),
 					Logger:               zap.New(),
 					Validators:           createAlwaysValidValidators(),
 					EventRecorder:        fakeEventRecorder,
