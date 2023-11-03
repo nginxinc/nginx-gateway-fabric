@@ -47,9 +47,6 @@ type (
 	}
 	// namespaces is a collection of namespaces in the system
 	namespaces map[types.NamespacedName]namespaceCfg
-	// gatewayClasses is a collection of gatewayclass that reference this controller, with
-	// their associated ParametersReferences
-	gatewayClasses map[types.NamespacedName]*v1beta1.ParametersReference
 )
 
 func (n namespaceCfg) match() bool {
@@ -62,7 +59,7 @@ type CapturerImpl struct {
 	serviceRefCount       serviceRefCountMap
 	gatewayLabelSelectors gatewayLabelSelectorsMap
 	namespaces            namespaces
-	gatewayClasses        gatewayClasses
+	paramsRef             *v1beta1.ParametersReference
 	endpointSliceOwners   map[types.NamespacedName]types.NamespacedName
 	gcName                string
 }
@@ -74,7 +71,6 @@ func NewCapturerImpl(gcName string) *CapturerImpl {
 		serviceRefCount:       make(serviceRefCountMap),
 		gatewayLabelSelectors: make(gatewayLabelSelectorsMap),
 		namespaces:            make(namespaces),
-		gatewayClasses:        make(gatewayClasses),
 		endpointSliceOwners:   make(map[types.NamespacedName]types.NamespacedName),
 		gcName:                gcName,
 	}
@@ -105,7 +101,7 @@ func (c *CapturerImpl) Capture(obj client.Object) {
 		c.namespaces[client.ObjectKeyFromObject(o)] = nsCfg
 	case *v1beta1.GatewayClass:
 		if o.Spec.ParametersRef != nil && o.Name == c.gcName {
-			c.gatewayClasses[client.ObjectKeyFromObject(o)] = o.Spec.ParametersRef
+			c.paramsRef = o.Spec.ParametersRef
 		}
 	}
 }
@@ -122,7 +118,9 @@ func (c *CapturerImpl) Remove(resourceType client.Object, nsname types.Namespace
 	case *v1.Namespace:
 		delete(c.namespaces, nsname)
 	case *v1beta1.GatewayClass:
-		delete(c.gatewayClasses, nsname)
+		if nsname.Name == c.gcName {
+			c.paramsRef = nil
+		}
 	}
 }
 
@@ -138,12 +136,12 @@ func (c *CapturerImpl) Exists(resourceType client.Object, nsname types.Namespace
 		cfg, exists := c.namespaces[nsname]
 		return exists && cfg.match()
 	case *ngfAPI.NginxProxy:
-		for _, ref := range c.gatewayClasses {
-			if ref.Namespace != nil &&
-				ref.Group == ngfAPI.GroupName &&
-				ref.Kind == v1beta1.Kind("NginxProxy") &&
-				ref.Name == nsname.Name &&
-				string(*ref.Namespace) == nsname.Namespace {
+		if c.paramsRef != nil {
+			if c.paramsRef.Namespace != nil &&
+				c.paramsRef.Group == ngfAPI.GroupName &&
+				c.paramsRef.Kind == v1beta1.Kind("NginxProxy") &&
+				c.paramsRef.Name == nsname.Name &&
+				string(*c.paramsRef.Namespace) == nsname.Namespace {
 				return true
 			}
 		}

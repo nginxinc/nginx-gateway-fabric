@@ -83,14 +83,14 @@ func validateGatewayClass(gc *v1beta1.GatewayClass, npCfg *ngfAPI.NginxProxy) er
 			return field.Forbidden(path, "parametersRef resource not allowed")
 		}
 
-		if npCfg == nil {
-			path := field.NewPath("spec").Child("parametersRef")
-			return field.NotFound(path, "parametersRef resource not found")
-		}
-
 		if gc.Spec.ParametersRef.Namespace == nil {
 			path := field.NewPath("spec").Child("parametersRef")
 			return field.Required(path, "parametersRef namespace must be specified for NginxProxy")
+		}
+
+		if npCfg == nil {
+			path := field.NewPath("spec").Child("parametersRef")
+			return field.NotFound(path, "parametersRef resource not found")
 		}
 	}
 
