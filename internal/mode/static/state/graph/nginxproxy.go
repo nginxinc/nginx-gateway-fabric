@@ -16,9 +16,7 @@ func getNginxProxyConfig(
 		if ref != nil && ref.Namespace != nil &&
 			ref.Group == ngfAPI.GroupName && ref.Kind == v1beta1.Kind("NginxProxy") {
 			nsName := types.NamespacedName{Name: ref.Name, Namespace: string(*ref.Namespace)}
-			if np, ok := nps[nsName]; ok {
-				return np
-			}
+			return nps[nsName]
 		}
 	}
 

@@ -137,13 +137,11 @@ func (c *CapturerImpl) Exists(resourceType client.Object, nsname types.Namespace
 		return exists && cfg.match()
 	case *ngfAPI.NginxProxy:
 		if c.paramsRef != nil {
-			if c.paramsRef.Namespace != nil &&
+			return c.paramsRef.Namespace != nil &&
 				c.paramsRef.Group == ngfAPI.GroupName &&
 				c.paramsRef.Kind == v1beta1.Kind("NginxProxy") &&
 				c.paramsRef.Name == nsname.Name &&
-				string(*c.paramsRef.Namespace) == nsname.Namespace {
-				return true
-			}
+				string(*c.paramsRef.Namespace) == nsname.Namespace
 		}
 	}
 

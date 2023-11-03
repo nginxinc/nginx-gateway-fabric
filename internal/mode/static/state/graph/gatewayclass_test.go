@@ -127,6 +127,7 @@ func TestBuildGatewayClass(t *testing.T) {
 			ParametersRef: &v1beta1.ParametersReference{
 				Kind:      v1beta1.Kind("NginxProxy"),
 				Namespace: helpers.GetPointer(v1beta1.Namespace("test")),
+				Name:      "does-not-exist",
 			},
 		},
 	}
@@ -192,7 +193,7 @@ func TestBuildGatewayClass(t *testing.T) {
 				Valid:  false,
 				Conditions: []conditions.Condition{
 					staticConds.NewGatewayClassInvalidParameters(
-						"spec.parametersRef: Forbidden: parametersRef resource not allowed",
+						"spec.parametersRef.kind: Unsupported value: \"Invalid\": supported values: \"NginxProxy\"",
 					),
 				},
 			},
@@ -205,7 +206,7 @@ func TestBuildGatewayClass(t *testing.T) {
 				Valid:  false,
 				Conditions: []conditions.Condition{
 					staticConds.NewGatewayClassInvalidParameters(
-						"spec.parametersRef: Not found: \"parametersRef resource not found\"",
+						"spec.parametersRef.name: Not found: \"does-not-exist\"",
 					),
 				},
 			},
@@ -223,7 +224,7 @@ func TestBuildGatewayClass(t *testing.T) {
 				Valid:  false,
 				Conditions: []conditions.Condition{
 					staticConds.NewGatewayClassInvalidParameters(
-						"spec.parametersRef: Required value: parametersRef namespace must be specified for NginxProxy",
+						"spec.parametersRef.namespace: Required value: parametersRef.namespace must be specified for NginxProxy",
 					),
 				},
 			},
