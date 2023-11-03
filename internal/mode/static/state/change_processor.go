@@ -18,6 +18,7 @@ import (
 
 	gwapivalidation "sigs.k8s.io/gateway-api/apis/v1/validation"
 
+	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/graph"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/relationship"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/validation"
@@ -95,6 +96,7 @@ func NewChangeProcessorImpl(cfg ChangeProcessorConfig) *ChangeProcessorImpl {
 		Namespaces:      make(map[types.NamespacedName]*apiv1.Namespace),
 		ReferenceGrants: make(map[types.NamespacedName]*v1beta1.ReferenceGrant),
 		Secrets:         make(map[types.NamespacedName]*apiv1.Secret),
+		NginxProxies:    make(map[types.NamespacedName]*ngfAPI.NginxProxy),
 	}
 
 	extractGVK := func(obj client.Object) schema.GroupVersionKind {
@@ -157,6 +159,11 @@ func NewChangeProcessorImpl(cfg ChangeProcessorConfig) *ChangeProcessorImpl {
 			{
 				gvk:               extractGVK(&apiv1.Secret{}),
 				store:             newObjectStoreMapAdapter(clusterStore.Secrets),
+				trackUpsertDelete: false,
+			},
+			{
+				gvk:               extractGVK(&ngfAPI.NginxProxy{}),
+				store:             newObjectStoreMapAdapter(clusterStore.NginxProxies),
 				trackUpsertDelete: false,
 			},
 		},

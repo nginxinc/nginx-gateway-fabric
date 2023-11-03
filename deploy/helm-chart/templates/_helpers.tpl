@@ -32,6 +32,14 @@ Create control plane config name.
 {{- end }}
 
 {{/*
+Create data plane config name.
+*/}}
+{{- define "nginx-gateway.proxy-config-name" -}}
+{{- $name := default .Release.Name .Values.nameOverride }}
+{{- printf "%s-proxy-config" $name | trunc 63 | trimSuffix "-" }}
+{{- end }}
+
+{{/*
 Create chart name and version as used by the chart label.
 */}}
 {{- define "nginx-gateway.chart" -}}

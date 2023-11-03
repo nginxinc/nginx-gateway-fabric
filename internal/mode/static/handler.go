@@ -131,6 +131,7 @@ func (h *eventHandlerImpl) HandleEventBatch(ctx context.Context, logger logr.Log
 	}
 
 	h.cfg.statusUpdater.Update(ctx, buildGatewayAPIStatuses(graph, gwAddresses, nginxReloadRes))
+	h.cfg.statusUpdater.Update(ctx, buildNginxProxyStatus(graph.NginxProxy, nginxReloadRes))
 }
 
 func (h *eventHandlerImpl) handleEvent(ctx context.Context, logger logr.Logger, event interface{}) {

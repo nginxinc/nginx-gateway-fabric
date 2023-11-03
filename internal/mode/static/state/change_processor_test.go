@@ -17,6 +17,7 @@ import (
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
+	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/controller/index"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
@@ -186,6 +187,7 @@ func createScheme() *runtime.Scheme {
 	utilruntime.Must(v1beta1.AddToScheme(scheme))
 	utilruntime.Must(apiv1.AddToScheme(scheme))
 	utilruntime.Must(discoveryV1.AddToScheme(scheme))
+	utilruntime.Must(ngfAPI.AddToScheme(scheme))
 
 	return scheme
 }
@@ -261,7 +263,7 @@ var _ = Describe("ChangeProcessor", func() {
 			processor = state.NewChangeProcessorImpl(state.ChangeProcessorConfig{
 				GatewayCtlrName:      controllerName,
 				GatewayClassName:     gcName,
-				RelationshipCapturer: relationship.NewCapturerImpl(),
+				RelationshipCapturer: relationship.NewCapturerImpl(gcName),
 				Logger:               zap.New(),
 				Validators:           createAlwaysValidValidators(),
 				Scheme:               createScheme(),
@@ -1237,6 +1239,40 @@ var _ = Describe("ChangeProcessor", func() {
 				})
 			})
 		})
+		Describe("NginxProxy resource changes", Ordered, func() {
+			paramGC := gc.DeepCopy()
+			paramGC.Spec.ParametersRef = &v1beta1.ParametersReference{
+				Group:     ngfAPI.GroupName,
+				Kind:      v1beta1.Kind("NginxProxy"),
+				Name:      "np",
+				Namespace: helpers.GetPointer(v1beta1.Namespace("test")),
+			}
+
+			np := &ngfAPI.NginxProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "np",
+					Namespace: "test",
+				},
+			}
+			It("handles upserts for an NginxProxy", func() {
+				processor.CaptureUpsertChange(np)
+				processor.CaptureUpsertChange(paramGC)
+
+				changed, graph := processor.Process()
+				Expect(changed).To(BeTrue())
+				Expect(graph.NginxProxy).To(Equal(np))
+
+				// TODO(sberman): Once some fields actually exist
+				// for this resource, verify that an update occurs.
+			})
+			It("handles deletes for an NginxProxy", func() {
+				processor.CaptureDeleteChange(np, client.ObjectKeyFromObject(np))
+
+				changed, graph := processor.Process()
+				Expect(changed).To(BeTrue())
+				Expect(graph.NginxProxy).To(BeNil())
+			})
+		})
 	})
 
 	Describe("Ensuring non-changing changes don't override previously changing changes", func() {
@@ -1616,7 +1652,7 @@ var _ = Describe("ChangeProcessor", func() {
 			processor = state.NewChangeProcessorImpl(state.ChangeProcessorConfig{
 				GatewayCtlrName:      controllerName,
 				GatewayClassName:     gcName,
-				RelationshipCapturer: relationship.NewCapturerImpl(),
+				RelationshipCapturer: relationship.NewCapturerImpl(gcName),
 				Logger:               zap.New(),
 				Validators:           createAlwaysValidValidators(),
 				EventRecorder:        fakeEventRecorder,
@@ -1789,7 +1825,7 @@ var _ = Describe("ChangeProcessor", func() {
 				processor = state.NewChangeProcessorImpl(state.ChangeProcessorConfig{
 					GatewayCtlrName:      controllerName,
 					GatewayClassName:     gcName,
-					RelationshipCapturer: relationship.NewCapturerImpl(),
+					RelationshipCapturer: relationship.NewCapturerImpl(gcName),
 					Logger:               zap.New(),
 					Validators:           createAlwaysValidValidators(),
 					EventRecorder:        fakeEventRecorder,

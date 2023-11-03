@@ -10,6 +10,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	v1 "sigs.k8s.io/gateway-api/apis/v1"
 
+	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/status"
@@ -589,6 +590,62 @@ func TestBuildGatewayStatuses(t *testing.T) {
 			g := NewWithT(t)
 
 			result := buildGatewayStatuses(test.gateway, test.ignoredGateways, addr, test.nginxReloadRes)
+			g.Expect(helpers.Diff(test.expected, result)).To(BeEmpty())
+		})
+	}
+}
+
+func TestBuildNginxProxyStatus(t *testing.T) {
+	np := &ngfAPI.NginxProxy{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:       "np",
+			Namespace:  "test",
+			Generation: 1,
+		},
+	}
+
+	tests := []struct {
+		nginxReloadRes nginxReloadResult
+		np             *ngfAPI.NginxProxy
+		expected       *status.NginxProxyStatus
+		name           string
+	}{
+		{
+			name:     "nil NginxProxy",
+			expected: nil,
+		},
+		{
+			name: "valid",
+			np:   np,
+			expected: &status.NginxProxyStatus{
+				NsName:             types.NamespacedName{Namespace: "test", Name: "np"},
+				ObservedGeneration: 1,
+				Conditions: []conditions.Condition{
+					staticConds.NewNginxProxyAccepted(),
+					staticConds.NewNginxProxyProgrammed(),
+				},
+			},
+		},
+		{
+			name:           "invalid",
+			nginxReloadRes: nginxReloadResult{error: errors.New("test error")},
+			np:             np,
+			expected: &status.NginxProxyStatus{
+				NsName:             types.NamespacedName{Namespace: "test", Name: "np"},
+				ObservedGeneration: 1,
+				Conditions: []conditions.Condition{
+					staticConds.NewNginxProxyAccepted(),
+					staticConds.NewNginxProxyNotProgrammed(staticConds.NginxProxyMessageFailedNginxReload),
+				},
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			g := NewWithT(t)
+
+			result := buildNginxProxyStatus(test.np, test.nginxReloadRes)
 			g.Expect(helpers.Diff(test.expected, result)).To(BeEmpty())
 		})
 	}

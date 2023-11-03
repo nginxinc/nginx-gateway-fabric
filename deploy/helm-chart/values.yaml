@@ -58,6 +58,9 @@ nginx:
     tag: edge
     pullPolicy: Always
 
+  ## The configuration for the data plane that is contained in the NginxProxy resource.
+  config: {}
+
   ## The lifecycle of the nginx container.
   lifecycle: {}
 

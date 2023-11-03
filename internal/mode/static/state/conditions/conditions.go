@@ -57,6 +57,11 @@ const (
 	RouteMessageFailedNginxReload = GatewayMessageFailedNginxReload + ". NGINX may still be configured " +
 		"for this HTTPRoute. However, future updates to this resource will not be configured until the Gateway " +
 		"is programmed again"
+
+	// NginxProxyMessageFailedNginxReload is a message used when nginx fails to reload.
+	NginxProxyMessageFailedNginxReload = "There was a failure to reload nginx with the configuration. " +
+		"The issue could be due to this resource, Gateway resource, or Route resource. Please see the nginx " +
+		"container logs for any possible configuration issues"
 )
 
 // DeduplicateConditions removes duplicate conditions based on the condition type.
@@ -574,6 +579,37 @@ func NewNginxGatewayInvalid(msg string) conditions.Condition {
 		Type:    string(ngfAPI.NginxGatewayConditionValid),
 		Status:  metav1.ConditionFalse,
 		Reason:  string(ngfAPI.NginxGatewayReasonInvalid),
+		Message: msg,
+	}
+}
+
+// NewNginxProxyAccepted returns a Condition that indicates that the NginxProxy config is accepted.
+func NewNginxProxyAccepted() conditions.Condition {
+	return conditions.Condition{
+		Type:    string(ngfAPI.NginxProxyConditionAccepted),
+		Status:  metav1.ConditionTrue,
+		Reason:  string(ngfAPI.NginxProxyReasonAccepted),
+		Message: "NginxProxy is accepted",
+	}
+}
+
+// NewNginxProxyProgrammed returns a Condition that indicates that the NginxProxy config is programmed.
+func NewNginxProxyProgrammed() conditions.Condition {
+	return conditions.Condition{
+		Type:    string(ngfAPI.NginxProxyConditionProgrammed),
+		Status:  metav1.ConditionTrue,
+		Reason:  string(ngfAPI.NginxProxyReasonProgrammed),
+		Message: "NginxProxy is programmed",
+	}
+}
+
+// NewNginxProxyNotProgrammed returns a Condition that indicates that the NginxProxy config is not
+// programmed due to an error to reload nginx.
+func NewNginxProxyNotProgrammed(msg string) conditions.Condition {
+	return conditions.Condition{
+		Type:    string(ngfAPI.NginxProxyConditionProgrammed),
+		Status:  metav1.ConditionFalse,
+		Reason:  string(ngfAPI.NginxProxyReasonInvalid),
 		Message: msg,
 	}
 }

@@ -214,7 +214,7 @@ To uninstall/delete the release `my-release`:
 ```shell
 helm uninstall my-release -n nginx-gateway
 kubectl delete ns nginx-gateway
-kubectl delete crd nginxgateways.gateway.nginx.org
+kubectl delete crd nginxgateways.gateway.nginx.org nginxproxies.gateway.nginx.org
 ```
 
 These commands remove all the Kubernetes components associated with the release and deletes the release.
@@ -261,6 +261,7 @@ The following tables lists the configurable parameters of the NGINX Gateway Fabr
 | `nginx.image.repository`                          | The repository for the NGINX image.                                                                                                                                                                      | ghcr.io/nginxinc/nginx-gateway-fabric/nginx                                                                     |
 | `nginx.image.tag`                                 | The tag for the NGINX image.                                                                                                                                                                             | edge                                                                                                            |
 | `nginx.image.pullPolicy`                          | The `imagePullPolicy` for the NGINX image.                                                                                                                                                               | Always                                                                                                          |
+| `nginx.config`                                    | The configuration for the data plane that is contained in the NginxProxy resource. | [See nginx.config section](values.yaml) |
 | `nginx.lifecycle`                                 | The `lifecycle` of the nginx container.                                                                                                                                                                  | {}                                                                                                              |
 | `nginx.extraVolumeMounts`                         | Extra `volumeMounts` for the nginx container.                                                                                                                                                            | {}                                                                                                              |
 | `terminationGracePeriodSeconds`                   | The termination grace period of the NGINX Gateway Fabric pod.                                                                                                                                            | 30                                                                                                              |

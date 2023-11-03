@@ -54,7 +54,7 @@ Fields:
 
 - `spec`
   - `controllerName` - supported.
-  - `parametersRef` - not supported.
+  - `parametersRef` - NginxProxy resource supported.
   - `description` - supported.
 - `status`
   - `conditions` - supported (Condition/Status/Reason):

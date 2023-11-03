@@ -146,7 +146,7 @@ func TestCapturerImpl_DecrementRouteCount(t *testing.T) {
 		},
 	}
 
-	capturer := NewCapturerImpl()
+	capturer := NewCapturerImpl("") // gcName is not used in this test
 	svc := types.NamespacedName{Namespace: "test", Name: "svc"}
 
 	for _, tc := range testcases {

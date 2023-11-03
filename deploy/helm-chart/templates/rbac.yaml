@@ -60,6 +60,7 @@ rules:
   - gateway.nginx.org
   resources:
   - nginxgateways
+  - nginxproxies
   verbs:
   - get
   - list
@@ -68,6 +69,7 @@ rules:
   - gateway.nginx.org
   resources:
   - nginxgateways/status
+  - nginxproxies/status
   verbs:
   - update
 {{- if .Values.nginxGateway.leaderElection.enable }}

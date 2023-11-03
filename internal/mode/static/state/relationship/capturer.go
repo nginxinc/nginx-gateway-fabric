@@ -9,6 +9,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
+	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/controller/index"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/graph"
 )
@@ -58,17 +59,20 @@ type CapturerImpl struct {
 	serviceRefCount       serviceRefCountMap
 	gatewayLabelSelectors gatewayLabelSelectorsMap
 	namespaces            namespaces
+	paramsRef             *gatewayv1.ParametersReference
 	endpointSliceOwners   map[types.NamespacedName]types.NamespacedName
+	gcName                string
 }
 
 // NewCapturerImpl creates a new instance of CapturerImpl.
-func NewCapturerImpl() *CapturerImpl {
+func NewCapturerImpl(gcName string) *CapturerImpl {
 	return &CapturerImpl{
 		routesToServices:      make(routeToServicesMap),
 		serviceRefCount:       make(serviceRefCountMap),
 		gatewayLabelSelectors: make(gatewayLabelSelectorsMap),
 		namespaces:            make(namespaces),
 		endpointSliceOwners:   make(map[types.NamespacedName]types.NamespacedName),
+		gcName:                gcName,
 	}
 }
 
@@ -86,38 +90,7 @@ func (c *CapturerImpl) Capture(obj client.Object) {
 			}
 		}
 	case *gatewayv1.Gateway:
-		var selectors []labels.Selector
-		for _, listener := range o.Spec.Listeners {
-			if selector := graph.GetAllowedRouteLabelSelector(listener); selector != nil {
-				convertedSelector, err := metav1.LabelSelectorAsSelector(selector)
-				if err == nil {
-					selectors = append(selectors, convertedSelector)
-				}
-			}
-		}
-
-		gatewayName := client.ObjectKeyFromObject(o)
-		if len(selectors) > 0 {
-			c.gatewayLabelSelectors[gatewayName] = selectors
-			for ns, cfg := range c.namespaces {
-				var gatewayMatches bool
-				for _, selector := range selectors {
-					if selector.Matches(labels.Set(cfg.labelMap)) {
-						gatewayMatches = true
-						cfg.gateways[gatewayName] = struct{}{}
-						break
-					}
-				}
-				if !gatewayMatches {
-					// if gateway was previously referenced by this namespace, clean it up
-					delete(cfg.gateways, gatewayName)
-				}
-				c.namespaces[ns] = cfg
-			}
-		} else if _, exists := c.gatewayLabelSelectors[gatewayName]; exists {
-			// label selectors existed previously for this gateway, so clean up any references to them
-			c.removeGatewayLabelSelector(gatewayName)
-		}
+		c.upsertForGateway(o)
 	case *v1.Namespace:
 		nsLabels := o.GetLabels()
 		gateways := c.matchingGateways(nsLabels)
@@ -126,6 +99,10 @@ func (c *CapturerImpl) Capture(obj client.Object) {
 			gateways: gateways,
 		}
 		c.namespaces[client.ObjectKeyFromObject(o)] = nsCfg
+	case *gatewayv1.GatewayClass:
+		if o.Spec.ParametersRef != nil && o.Name == c.gcName {
+			c.paramsRef = o.Spec.ParametersRef
+		}
 	}
 }
 
@@ -140,6 +117,10 @@ func (c *CapturerImpl) Remove(resourceType client.Object, nsname types.Namespace
 		c.removeGatewayLabelSelector(nsname)
 	case *v1.Namespace:
 		delete(c.namespaces, nsname)
+	case *gatewayv1.GatewayClass:
+		if nsname.Name == c.gcName {
+			c.paramsRef = nil
+		}
 	}
 }
 
@@ -154,6 +135,14 @@ func (c *CapturerImpl) Exists(resourceType client.Object, nsname types.Namespace
 	case *v1.Namespace:
 		cfg, exists := c.namespaces[nsname]
 		return exists && cfg.match()
+	case *ngfAPI.NginxProxy:
+		if c.paramsRef != nil {
+			return c.paramsRef.Namespace != nil &&
+				c.paramsRef.Group == ngfAPI.GroupName &&
+				c.paramsRef.Kind == gatewayv1.Kind("NginxProxy") &&
+				c.paramsRef.Name == nsname.Name &&
+				string(*c.paramsRef.Namespace) == nsname.Namespace
+		}
 	}
 
 	return false
@@ -224,6 +213,41 @@ func getBackendServiceNamesFromRoute(hr *gatewayv1.HTTPRoute) map[types.Namespac
 	}
 
 	return svcNames
+}
+
+func (c *CapturerImpl) upsertForGateway(gw *gatewayv1.Gateway) {
+	var selectors []labels.Selector
+	for _, listener := range gw.Spec.Listeners {
+		if selector := graph.GetAllowedRouteLabelSelector(listener); selector != nil {
+			convertedSelector, err := metav1.LabelSelectorAsSelector(selector)
+			if err == nil {
+				selectors = append(selectors, convertedSelector)
+			}
+		}
+	}
+
+	gatewayName := client.ObjectKeyFromObject(gw)
+	if len(selectors) > 0 {
+		c.gatewayLabelSelectors[gatewayName] = selectors
+		for ns, cfg := range c.namespaces {
+			var gatewayMatches bool
+			for _, selector := range selectors {
+				if selector.Matches(labels.Set(cfg.labelMap)) {
+					gatewayMatches = true
+					cfg.gateways[gatewayName] = struct{}{}
+					break
+				}
+			}
+			if !gatewayMatches {
+				// if gateway was previously referenced by this namespace, clean it up
+				delete(cfg.gateways, gatewayName)
+			}
+			c.namespaces[ns] = cfg
+		}
+	} else if _, exists := c.gatewayLabelSelectors[gatewayName]; exists {
+		// label selectors existed previously for this gateway, so clean up any references to them
+		c.removeGatewayLabelSelector(gatewayName)
+	}
 }
 
 // matchingGateways looks through all existing label selectors defined by listeners in a gateway,

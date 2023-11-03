@@ -39,6 +39,20 @@ func (n *NginxGatewayStatus) APIGroup() string {
 	return ngfAPI.GroupName
 }
 
+// NginxProxyStatus holds status-related information about the NginxProxy resource.
+type NginxProxyStatus struct {
+	// NsName is the NamespacedName of the NginxProxy resource.
+	NsName types.NamespacedName
+	// Conditions is the list of conditions for this NginxProxy.
+	Conditions []conditions.Condition
+	// ObservedGeneration is the generation of the resource that was processed.
+	ObservedGeneration int64
+}
+
+func (n *NginxProxyStatus) APIGroup() string {
+	return ngfAPI.GroupName
+}
+
 // ListenerStatuses holds the statuses of listeners where the key is the name of a listener in the Gateway resource.
 type ListenerStatuses map[string]ListenerStatus
 
