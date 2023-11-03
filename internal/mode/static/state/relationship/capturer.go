@@ -64,11 +64,11 @@ type CapturerImpl struct {
 	namespaces            namespaces
 	gatewayClasses        gatewayClasses
 	endpointSliceOwners   map[types.NamespacedName]types.NamespacedName
-	gwCtlrName            string
+	gcName                string
 }
 
 // NewCapturerImpl creates a new instance of CapturerImpl.
-func NewCapturerImpl(gwCtlrName string) *CapturerImpl {
+func NewCapturerImpl(gcName string) *CapturerImpl {
 	return &CapturerImpl{
 		routesToServices:      make(routeToServicesMap),
 		serviceRefCount:       make(serviceRefCountMap),
@@ -76,7 +76,7 @@ func NewCapturerImpl(gwCtlrName string) *CapturerImpl {
 		namespaces:            make(namespaces),
 		gatewayClasses:        make(gatewayClasses),
 		endpointSliceOwners:   make(map[types.NamespacedName]types.NamespacedName),
-		gwCtlrName:            gwCtlrName,
+		gcName:                gcName,
 	}
 }
 
@@ -104,7 +104,7 @@ func (c *CapturerImpl) Capture(obj client.Object) {
 		}
 		c.namespaces[client.ObjectKeyFromObject(o)] = nsCfg
 	case *v1beta1.GatewayClass:
-		if o.Spec.ParametersRef != nil && string(o.Spec.ControllerName) == c.gwCtlrName {
+		if o.Spec.ParametersRef != nil && o.Name == c.gcName {
 			c.gatewayClasses[client.ObjectKeyFromObject(o)] = o.Spec.ParametersRef
 		}
 	}

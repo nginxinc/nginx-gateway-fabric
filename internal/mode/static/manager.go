@@ -106,7 +106,7 @@ func StartManager(cfg config.Config) error {
 	processor := state.NewChangeProcessorImpl(state.ChangeProcessorConfig{
 		GatewayCtlrName:      cfg.GatewayCtlrName,
 		GatewayClassName:     cfg.GatewayClassName,
-		RelationshipCapturer: relationship.NewCapturerImpl(cfg.GatewayCtlrName),
+		RelationshipCapturer: relationship.NewCapturerImpl(cfg.GatewayClassName),
 		Logger:               cfg.Logger.WithName("changeProcessor"),
 		Validators: validation.Validators{
 			HTTPFieldsValidator: ngxvalidation.HTTPValidator{},

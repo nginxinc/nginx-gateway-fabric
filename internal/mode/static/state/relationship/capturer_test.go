@@ -444,7 +444,7 @@ var _ = Describe("Capturer", func() {
 	})
 	Describe("Capture gatewayclass relationships for nginxproxies", Ordered, func() {
 		BeforeEach(func() {
-			capturer = relationship.NewCapturerImpl("nginx-ctlr")
+			capturer = relationship.NewCapturerImpl("gc")
 		})
 
 		referencedNP := &ngfAPI.NginxProxy{
@@ -467,23 +467,19 @@ var _ = Describe("Capturer", func() {
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "gc",
 					},
-					Spec: v1beta1.GatewayClassSpec{
-						ControllerName: "nginx-ctlr",
-					},
 				}
 				capturer.Capture(gc)
 
 				Expect(capturer.Exists(referencedNP, client.ObjectKeyFromObject(referencedNP))).To(BeFalse())
 			})
 		})
-		When("a gatewayclass is created with paramRefs but wrong controller name", func() {
+		When("a gatewayclass is created with paramRefs but wrong name", func() {
 			It("does not report a relationship", func() {
 				gc := &v1beta1.GatewayClass{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: "gc",
+						Name: "gc2",
 					},
 					Spec: v1beta1.GatewayClassSpec{
-						ControllerName: "wrong",
 						ParametersRef: &v1beta1.ParametersReference{
 							Group:     ngfAPI.GroupName,
 							Kind:      v1beta1.Kind("NginxProxy"),
@@ -503,7 +499,6 @@ var _ = Describe("Capturer", func() {
 					Name: "gc",
 				},
 				Spec: v1beta1.GatewayClassSpec{
-					ControllerName: "nginx-ctlr",
 					ParametersRef: &v1beta1.ParametersReference{
 						Group:     ngfAPI.GroupName,
 						Kind:      v1beta1.Kind("NginxProxy"),

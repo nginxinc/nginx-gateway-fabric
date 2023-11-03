@@ -125,15 +125,25 @@ func TestBuildGatewayClass(t *testing.T) {
 	gcWithParams := &v1beta1.GatewayClass{
 		Spec: v1beta1.GatewayClassSpec{
 			ParametersRef: &v1beta1.ParametersReference{
-				Kind: v1beta1.Kind("NginxProxy"),
+				Kind:      v1beta1.Kind("NginxProxy"),
+				Namespace: helpers.GetPointer(v1beta1.Namespace("test")),
 			},
 		},
 	}
 
-	gcWithInvalidParams := &v1beta1.GatewayClass{
+	gcWithInvalidKind := &v1beta1.GatewayClass{
 		Spec: v1beta1.GatewayClassSpec{
 			ParametersRef: &v1beta1.ParametersReference{
-				Kind: v1beta1.Kind("Invalid"),
+				Kind:      v1beta1.Kind("Invalid"),
+				Namespace: helpers.GetPointer(v1beta1.Namespace("test")),
+			},
+		},
+	}
+
+	gcWithNoNamespace := &v1beta1.GatewayClass{
+		Spec: v1beta1.GatewayClassSpec{
+			ParametersRef: &v1beta1.ParametersReference{
+				Kind: v1beta1.Kind("NginxProxy"),
 			},
 		},
 	}
@@ -171,14 +181,14 @@ func TestBuildGatewayClass(t *testing.T) {
 			name: "valid gatewayclass with paramsRef",
 		},
 		{
-			gc: gcWithInvalidParams,
+			gc: gcWithInvalidKind,
 			np: &ngfAPI.NginxProxy{
 				TypeMeta: metav1.TypeMeta{
 					Kind: "NginxProxy",
 				},
 			},
 			expected: &GatewayClass{
-				Source: gcWithInvalidParams,
+				Source: gcWithInvalidKind,
 				Valid:  false,
 				Conditions: []conditions.Condition{
 					staticConds.NewGatewayClassInvalidParameters(
@@ -186,7 +196,7 @@ func TestBuildGatewayClass(t *testing.T) {
 					),
 				},
 			},
-			name: "invalid gatewayclass with unsupported paramsRef",
+			name: "invalid gatewayclass with unsupported paramsRef Kind",
 		},
 		{
 			gc: gcWithParams,
@@ -199,7 +209,25 @@ func TestBuildGatewayClass(t *testing.T) {
 					),
 				},
 			},
-			name: "invalid gatewayclass",
+			name: "invalid gatewayclass with paramsRef resource that doesn't exist",
+		},
+		{
+			gc: gcWithNoNamespace,
+			np: &ngfAPI.NginxProxy{
+				TypeMeta: metav1.TypeMeta{
+					Kind: "NginxProxy",
+				},
+			},
+			expected: &GatewayClass{
+				Source: gcWithNoNamespace,
+				Valid:  false,
+				Conditions: []conditions.Condition{
+					staticConds.NewGatewayClassInvalidParameters(
+						"spec.parametersRef: Required value: parametersRef namespace must be specified for NginxProxy",
+					),
+				},
+			},
+			name: "invalid gatewayclass without required paramsRef Namespace",
 		},
 	}
 
