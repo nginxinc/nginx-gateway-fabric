@@ -125,9 +125,6 @@ func NewUpdater(cfg UpdaterConfig) *UpdaterImpl {
 }
 
 func (upd *UpdaterImpl) Update(ctx context.Context, status Status) {
-	// FIXME(pleshakov) Merge the new Conditions in the status with the existing Conditions
-	// https://github.com/nginxinc/nginx-gateway-fabric/issues/558
-
 	defer upd.lock.Unlock()
 	upd.lock.Lock()
 

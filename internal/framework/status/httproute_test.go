@@ -35,9 +35,70 @@ func TestPrepareHTTPRouteStatus(t *testing.T) {
 	gatewayCtlrName := "test.example.com"
 	transitionTime := metav1.NewTime(time.Now())
 
+	oldStatus := v1beta1.HTTPRouteStatus{
+		RouteStatus: v1beta1.RouteStatus{
+			Parents: []v1beta1.RouteParentStatus{
+				{
+					ParentRef: v1beta1.ParentReference{
+						Namespace:   helpers.GetPointer(v1beta1.Namespace(gwNsName1.Namespace)),
+						Name:        v1beta1.ObjectName(gwNsName1.Name),
+						SectionName: helpers.GetPointer[v1beta1.SectionName]("http"),
+					},
+					ControllerName: v1beta1.GatewayController(gatewayCtlrName),
+					Conditions:     CreateExpectedAPIConditions("Old", 1, transitionTime),
+				},
+				{
+					ParentRef: v1beta1.ParentReference{
+						Namespace:   helpers.GetPointer(v1beta1.Namespace(gwNsName1.Namespace)),
+						Name:        v1beta1.ObjectName(gwNsName1.Name),
+						SectionName: helpers.GetPointer[v1beta1.SectionName]("http"),
+					},
+					ControllerName: v1beta1.GatewayController("not-our-controller"),
+					Conditions:     CreateExpectedAPIConditions("Test", 1, transitionTime),
+				},
+				{
+					ParentRef: v1beta1.ParentReference{
+						Namespace:   helpers.GetPointer(v1beta1.Namespace(gwNsName2.Namespace)),
+						Name:        v1beta1.ObjectName(gwNsName2.Name),
+						SectionName: nil,
+					},
+					ControllerName: v1beta1.GatewayController(gatewayCtlrName),
+					Conditions:     CreateExpectedAPIConditions("Old", 1, transitionTime),
+				},
+				{
+					ParentRef: v1beta1.ParentReference{
+						Namespace:   helpers.GetPointer(v1beta1.Namespace(gwNsName2.Namespace)),
+						Name:        v1beta1.ObjectName(gwNsName2.Name),
+						SectionName: nil,
+					},
+					ControllerName: v1beta1.GatewayController("not-our-controller"),
+					Conditions:     CreateExpectedAPIConditions("Test", 1, transitionTime),
+				},
+			},
+		},
+	}
+
 	expected := v1beta1.HTTPRouteStatus{
 		RouteStatus: v1beta1.RouteStatus{
 			Parents: []v1beta1.RouteParentStatus{
+				{
+					ParentRef: v1beta1.ParentReference{
+						Namespace:   helpers.GetPointer(v1beta1.Namespace(gwNsName1.Namespace)),
+						Name:        v1beta1.ObjectName(gwNsName1.Name),
+						SectionName: helpers.GetPointer[v1beta1.SectionName]("http"),
+					},
+					ControllerName: v1beta1.GatewayController("not-our-controller"),
+					Conditions:     CreateExpectedAPIConditions("Test", 1, transitionTime),
+				},
+				{
+					ParentRef: v1beta1.ParentReference{
+						Namespace:   helpers.GetPointer(v1beta1.Namespace(gwNsName2.Namespace)),
+						Name:        v1beta1.ObjectName(gwNsName2.Name),
+						SectionName: nil,
+					},
+					ControllerName: v1beta1.GatewayController("not-our-controller"),
+					Conditions:     CreateExpectedAPIConditions("Test", 1, transitionTime),
+				},
 				{
 					ParentRef: v1beta1.ParentReference{
 						Namespace:   helpers.GetPointer(v1beta1.Namespace(gwNsName1.Namespace)),
@@ -62,6 +123,6 @@ func TestPrepareHTTPRouteStatus(t *testing.T) {
 
 	g := NewWithT(t)
 
-	result := prepareHTTPRouteStatus(status, gatewayCtlrName, transitionTime)
+	result := prepareHTTPRouteStatus(oldStatus, status, gatewayCtlrName, transitionTime)
 	g.Expect(helpers.Diff(expected, result)).To(BeEmpty())
 }
