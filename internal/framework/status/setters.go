@@ -69,6 +69,7 @@ func newHTTPRouteStatusSetter(gatewayCtlrName string, clock Clock, rs HTTPRouteS
 	return func(object client.Object) bool {
 		hr := object.(*v1beta1.HTTPRoute)
 		status := prepareHTTPRouteStatus(
+			hr.Status,
 			rs,
 			gatewayCtlrName,
 			clock.Now(),
