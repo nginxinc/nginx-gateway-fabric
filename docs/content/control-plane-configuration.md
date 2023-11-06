@@ -1,6 +1,10 @@
-# Control Plane Configuration
-
-This document describes how to dynamically update the NGINX Gateway Fabric control plane configuration.
+---
+title: "Control Plane Configuration"
+description: "Learn how to dynamically update the NGINX Gateway Fabric control plane configuration."
+weight: 500
+toc: true
+docs: "DOCS-000"
+---
 
 ## Overview
 

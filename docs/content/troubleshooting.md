@@ -1,6 +1,10 @@
-# Troubleshooting
-
-This document contains common or known issues and how to troubleshoot them.
+---
+title: "Troubleshooting"
+description: "Learn how to troubleshoot common NGINX Gateway Fabric issues."
+weight: 1100
+toc: true
+docs: "DOCS-000"
+---
 
 ## failed to reload NGINX: failed to send the HUP signal to NGINX main: operation not permitted
 

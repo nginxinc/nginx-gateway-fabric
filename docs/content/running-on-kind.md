@@ -1,6 +1,10 @@
-# Running on `kind`
-
-This guide walks you through how to run NGINX Gateway Fabric on a [kind](https://kind.sigs.k8s.io/) cluster.
+---
+title: "Running on kind"
+description: "Learn how to run NGINX Gateway Fabric on a kind cluster."
+weight: 900
+toc: true
+docs: "DOCS-000"
+---
 
 ## Prerequisites
 

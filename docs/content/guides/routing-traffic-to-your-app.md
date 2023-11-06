@@ -1,3 +1,11 @@
+---
+title: "Routing Traffic to Your Application"
+description: "Learn how to route external traffic to your Kubernetes applications using NGINX Gateway Fabric."
+weight: 300
+toc: true
+docs: "DOCS-000"
+---
+
 # Routing Traffic to Your Application
 
 In this guide, you will learn how to route external traffic to your Kubernetes applications using the Gateway API and

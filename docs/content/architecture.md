@@ -1,7 +1,14 @@
+---
+title: "Architecture"
+description: "Learn about the architecture and design principles of NGINX Gateway Fabric."
+weight: 100
+toc: true
+docs: "DOCS-000"
+---
+
 # Architecture
 
-This document provides an overview of the architecture and design principles of the NGINX Gateway Fabric. The target
-audience includes the following groups:
+The target audience of this architecture document includes the following groups:
 
 - *Cluster Operators* who would like to know how the software works and also better understand how it can fail.
 - *Developers* who would like to [contribute][contribute] to the project.

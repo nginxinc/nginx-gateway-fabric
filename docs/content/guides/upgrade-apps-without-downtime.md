@@ -1,3 +1,11 @@
+---
+title: "Upgrade Applications without Downtime"
+description: "Learn how to use NGINX Gateway Fabric to upgrade applications without downtime."
+weight: 300
+toc: true
+docs: "DOCS-000"
+---
+
 # Using NGINX Gateway Fabric to Upgrade Applications without Downtime
 
 This guide explains how to use NGINX Gateway Fabric to upgrade applications without downtime.

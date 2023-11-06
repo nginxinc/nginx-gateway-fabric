@@ -6,19 +6,13 @@ toc: true
 docs: "DOCS-000"
 ---
 
-In this guide we will configure advanced routing rules for multiple applications. These rules will showcase request
-matching by path, headers, query parameters, and method. For an introduction to exposing your application, it is
-recommended to go through the [basic guide]({{< relref "/guides/routing-traffic-to-your-app.md" >}}) first.
+In this guide we will configure advanced routing rules for multiple applications. These rules will showcase request matching by path, headers, query parameters, and method. For an introduction to exposing your application, we recommend that you go through the [basic guide]({{< relref "/guides/routing-traffic-to-your-app.md" >}}) first.
 
 The following image shows the traffic flow that we will be creating with these rules.
 
 ![Traffic Flow Diagram](/img/advanced-routing.png)
 
-The goal is to create a set of rules that will result in client requests being sent to specific backends based on
-the request attributes. In this diagram, we have two versions of the `coffee` service. Traffic for v1 needs to be
-directed to the old application, while traffic for v2 needs to be directed towards the new application. We also
-have two `tea` services, one that handles GET operations and one that handles POST operations. Both the `tea`
-and `coffee` applications share the same Gateway.
+The goal is to create a set of rules that will result in client requests being sent to specific backends based on the request attributes. In this diagram, we have two versions of the `coffee` service. Traffic for v1 needs to be directed to the old application, while traffic for v2 needs to be directed towards the new application. We also have two `tea` services, one that handles GET operations and one that handles POST operations. Both the `tea` and `coffee` applications share the same Gateway.
 
 ## Prerequisites
 
@@ -45,8 +39,7 @@ kubectl apply -f https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric
 
 ### Deploy the Gateway API Resources for the Coffee Applications
 
-The [Gateway](https://gateway-api.sigs.k8s.io/api-types/gateway/) resource is typically deployed by the
-[cluster operator](https://gateway-api.sigs.k8s.io/concepts/roles-and-personas/#roles-and-personas_1). To deploy the Gateway:
+The [Gateway](https://gateway-api.sigs.k8s.io/api-types/gateway/) resource is typically deployed by the [cluster operator](https://gateway-api.sigs.k8s.io/concepts/roles-and-personas/#roles-and-personas_1). To deploy the Gateway:
 
 ```yaml
 kubectl apply -f - <<EOF
@@ -65,8 +58,7 @@ EOF
 
 This Gateway defines a single listener on port 80. Since no hostname is specified, this listener matches on all hostnames.
 
-The [HTTPRoute](https://gateway-api.sigs.k8s.io/api-types/httproute/) is typically deployed by the
-[application developer](https://gateway-api.sigs.k8s.io/concepts/roles-and-personas/#roles-and-personas_1). To deploy the `coffee` HTTPRoute:
+The [HTTPRoute](https://gateway-api.sigs.k8s.io/api-types/httproute/) is typically deployed by the [application developer](https://gateway-api.sigs.k8s.io/concepts/roles-and-personas/#roles-and-personas_1). To deploy the `coffee` HTTPRoute:
 
 ```yaml
 kubectl apply -f - <<EOF
@@ -109,21 +101,19 @@ EOF
 
 This HTTPRoute has a few important properties:
 
-- The `parentRefs` references the Gateway resource that we created, and specifically defines the `http` listener
-to attach to, via the `sectionName` field.
+- The `parentRefs` references the Gateway resource that we created, and specifically defines the `http` listener to attach to, via the `sectionName` field.
 - `cafe.example.com` is the hostname that is matched for all requests to the backends defined in this HTTPRoute.
-- The first rule defines that all requests with the path prefix `/coffee` and no other matching conditions are sent
-to the `coffee-v1` Service.
-- The second rule defines two matching conditions. If *either* of these conditions match, requests are forwarded to
-the `coffee-v2` Service:
+- The first rule defines that all requests with the path prefix `/coffee` and no other matching conditions are sent to the `coffee-v1` Service.
+- The second rule defines two matching conditions. If *either* of these conditions match, requests are forwarded to the `coffee-v2` Service:
+
   - Request with the path prefix `/coffee` and header `version=v2`
   - Request with the path prefix `/coffee` and the query parameter `TEST=v2`
-    If you want both conditions to be required, you can define headers and queryParams in the same match object.
+
+  If you want both conditions to be required, you can define headers and queryParams in the same match object.
 
 ### Send Traffic to Coffee
 
-Using the external IP address and port for NGINX Gateway Fabric, we can send traffic to our coffee
-applications.
+Using the external IP address and port for NGINX Gateway Fabric, we can send traffic to our coffee applications.
 
 {{< note >}}If you have a DNS record allocated for `cafe.example.com`, you can send the request directly to that hostname, without needing to resolve.{{< /note >}}
 
@@ -138,8 +128,7 @@ Server address: 10.244.0.9:8080
 Server name: coffee-v2-68bd55f798-s9z5q
 ```
 
-If we want our request to be routed to `coffee-v2`, then we need to meet the defined conditions. We can include
-a header:
+If we want our request to be routed to `coffee-v2`, then we need to meet the defined conditions. We can include a header:
 
 ```shell
 curl --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/coffee -H "version:v2"
@@ -160,8 +149,7 @@ Server name: coffee-v2-68bd55f798-s9z5q
 
 ## Tea Applications
 
-Let's deploy a different set of applications now called `tea` and `tea-post`. These applications will
-have their own set of rules, but will still attach to the same Gateway listener as the `coffee` apps.
+Let's deploy a different set of applications now called `tea` and `tea-post`. These applications will have their own set of rules, but will still attach to the same Gateway listener as the `coffee` apps.
 
 ### Deploy the Tea Applications
 
@@ -213,8 +201,7 @@ The properties of this HTTPRoute include:
 
 ### Send Traffic to Tea
 
-Using the external IP address and port for NGINX Gateway Fabric, we can send traffic to our tea
-applications.
+Using the external IP address and port for NGINX Gateway Fabric, we can send traffic to our tea applications.
 
 {{< note >}}If you have a DNS record allocated for `cafe.example.com`, you can send the request directly to that hostname, without needing to resolve.{{< /note >}}
 
@@ -240,16 +227,14 @@ Server address: 10.244.0.7:8080
 Server name: tea-post-b59b8596b-g586r
 ```
 
-This request should receive a response from the `tea-post` Pod. Any other type of method, such as PATCH, will
-result in a `404 Not Found` response.
+This request should receive a response from the `tea-post` Pod. Any other type of method, such as PATCH, will result in a `404 Not Found` response.
 
 
 ## Troubleshooting
 
 If you have any issues while sending traffic, try the following to debug your configuration and setup:
 
-- Make sure you set the shell variables $GW_IP and $GW_PORT to the public IP and port of the NGINX Gateway Fabric
-  Service. Instructions for finding those values are [here](/docs/installation.md#expose-nginx-gateway-fabric).
+- Make sure you set the shell variables $GW_IP and $GW_PORT to the public IP and port of the NGINX Gateway Fabric Service. Instructions for finding those values are [here](/docs/installation.md#expose-nginx-gateway-fabric).
 
 - Check the status of the Gateway:
 
@@ -307,8 +292,7 @@ If you have any issues while sending traffic, try the following to debug your co
     Name:                    http
   ```
 
-  Check that the conditions match and that the attached routes for the `http` listener equals 2. If it is less than
-  2, there may be an issue with the routes.
+  Check that the conditions match and that the attached routes for the `http` listener equals 2. If it is less than 2, there may be an issue with the routes.
 
 - Check the status of the HTTPRoutes:
 

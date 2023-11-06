@@ -1,5 +1,5 @@
 ---
-title: "Guides"
+title: "How-To Guides"
 description: 
 linkTitle: "Guides"
 menu: 

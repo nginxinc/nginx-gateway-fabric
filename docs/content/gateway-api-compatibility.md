@@ -1,6 +1,10 @@
-# Gateway API Compatibility
-
-This document describes which Gateway API resources NGINX Gateway Fabric supports and the extent of that support.
+---
+title: "Gateway API Compatibility"
+description: "Learn which Gateway API resources NGINX Gateway Fabric supports and the extent of that support."
+weight: 700
+toc: true
+docs: "DOCS-000"
+---
 
 ## Summary
 

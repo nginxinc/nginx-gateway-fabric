@@ -1,6 +1,10 @@
-# Command-line Help
-
-This document describes the commands available in the `gateway` binary of the `nginx-gateway` container.
+---
+title: "Command line help"
+description: "Learn about the commands available in the gateway binary of the nginx-gateway container."
+weight: 400
+toc: true
+docs: "DOCS-000"
+---
 
 ## Static Mode
 

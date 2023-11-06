@@ -1,3 +1,11 @@
+---
+title: "Monitoring"
+description: "Learn how to monitor NGINX Gateway Fabric."
+weight: 600
+toc: true
+docs: "DOCS-000"
+---
+
 # Monitoring
 
 The NGINX Gateway Fabric exposes a number of metrics in the [Prometheus](https://prometheus.io/) format. Those

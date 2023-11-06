@@ -1,23 +1,10 @@
-# Installation
-
-This guide walks you through how to install NGINX Gateway Fabric on a generic Kubernetes cluster.
-
-- [Installation](#installation)
-  - [Prerequisites](#prerequisites)
-  - [Deploy NGINX Gateway Fabric using Helm](#deploy-nginx-gateway-fabric-using-helm)
-  - [Deploy NGINX Gateway Fabric from Manifests](#deploy-nginx-gateway-fabric-from-manifests)
-  - [Expose NGINX Gateway Fabric](#expose-nginx-gateway-fabric)
-    - [Create a NodePort Service](#create-a-nodeport-service)
-    - [Create a LoadBalancer Service](#create-a-loadbalancer-service)
-  - [Upgrading NGINX Gateway Fabric](#upgrading-nginx-gateway-fabric)
-    - [Upgrade NGINX Gateway Fabric from Manifests](#upgrade-nginx-gateway-fabric-from-manifests)
-    - [Upgrade NGINX Gateway Fabric using Helm](#upgrade-nginx-gateway-fabric-using-helm)
-    - [Configure Delayed Termination for Zero Downtime Upgrades](#configure-delayed-termination-for-zero-downtime-upgrades)
-      - [Configure Delayed Termination Using Manifests](#configure-delayed-termination-using-manifests)
-      - [Configure Delayed Termination Using Helm](#configure-delayed-termination-using-helm)
-  - [Uninstalling NGINX Gateway Fabric](#uninstalling-nginx-gateway-fabric)
-    - [Uninstall NGINX Gateway Fabric from Manifests](#uninstall-nginx-gateway-fabric-from-manifests)
-    - [Uninstall NGINX Gateway Fabric using Helm](#uninstall-nginx-gateway-fabric-using-helm)
+---
+title: "Installation"
+description: "Learn how to install NGINX Gateway Fabric on a generic Kubernetes cluster."
+weight: 200
+toc: true
+docs: "DOCS-000"
+---
 
 ## Prerequisites
 

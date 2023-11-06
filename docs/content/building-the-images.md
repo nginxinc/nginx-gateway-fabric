@@ -1,3 +1,11 @@
+---
+title: "Building the Images"
+description: "Learn how to build the NGINX Gateway Fabric and NGINX images."
+weight: 300
+toc: true
+docs: "DOCS-000"
+---
+
 # Building the Images
 
 ## Prerequisites

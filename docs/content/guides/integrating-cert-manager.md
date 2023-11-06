@@ -1,13 +1,14 @@
-# Securing Traffic using Let's Encrypt and Cert-Manager
+---
+title: "Securing Traffic using Let's Encrypt and Cert-Manager"
+description: "Learn how to issue and mange certificates using Let's Encrypt and cert-manager."
+weight: 200
+toc: true
+docs: "DOCS-000"
+---
 
-Securing client server communication is a crucial part of modern application architectures. One of the most important
-steps in this process is implementing HTTPS (HTTP over TLS/SSL) for all communications. This encrypts the data
-transmitted between the client and server, preventing eavesdropping and tampering. To do this, you need an SSL/TLS
-certificate from a trusted Certificate Authority (CA). However, issuing and managing certificates can be a complicated
-manual process. Luckily, there are many services and tools available to simplify and automate certificate issuance and
-management.
+Securing client server communication is a crucial part of modern application architectures. One of the most important steps in this process is implementing HTTPS (HTTP over TLS/SSL) for all communications. This encrypts the data transmitted between the client and server, preventing eavesdropping and tampering. To do this, you need an SSL/TLS certificate from a trusted Certificate Authority (CA). However, issuing and managing certificates can be a complicated manual process. Luckily, there are many services and tools available to simplify and automate certificate issuance and management.
 
-This guide will demonstrate how to:
+Follow the steps in this guide to:
 
 - Configure HTTPS for your application using a [Gateway](https://gateway-api.sigs.k8s.io/api-types/gateway/).
 - Use [Let’s Encrypt](https://letsencrypt.org) as the Certificate Authority (CA) issuing the TLS certificate.
@@ -15,46 +16,30 @@ This guide will demonstrate how to:
 
 ## Prerequisities
 
-1. Administrator access to a Kubernetes cluster.
-2. [Helm](https://helm.sh) and [kubectl](https://kubernetes.io/docs/tasks/tools/#kubectl) must be installed locally.
-3. Deploy NGINX Gateway Fabric (NGF) following the [deployment instructions](/docs/installation.md).
-4. A DNS resolvable domain name is required. It must resolve to the public endpoint of the NGF deployment, and this
-   public endpoint must be an external IP address or alias accessible over the internet. The process here will depend
-   on your DNS provider. This DNS name will need to be resolvable from the Let’s Encrypt servers, which may require
-   that you wait for the record to propagate before it will work.
+- Administrator access to a Kubernetes cluster.
+- [Helm](https://helm.sh) and [kubectl](https://kubernetes.io/docs/tasks/tools/#kubectl) must be installed locally.
+- [NGINX Gateway Fabric deployed]({{< relref "/installation.md" >}}) in the Kubernetes cluster.
+- A DNS-resolvable domain name is required. It must resolve to the public endpoint of the NGINX Gateway Fabric deployment, and this public endpoint must be an external IP address or alias accessible over the internet. The process here will depend on your DNS provider. This DNS name will need to be resolvable from the Let’s Encrypt servers, which may require that you wait for the record to propagate before it will work.
 
 ## Overview
 
-![cert-manager ACME Challenge and certificate management with Gateway API](/docs/images/cert-manager-gateway-workflow.png)
+![cert-manager ACME Challenge and certificate management with Gateway API](/img/cert-manager-gateway-workflow.png)
 
-The diagram above shows a simplified representation of the cert-manager ACME Challenge and certificate issuance process
-using Gateway API. Please note that not all of the Kubernetes objects created in this process are represented in
-this diagram.
+The diagram above shows a simplified representation of the cert-manager ACME Challenge and certificate issuance process using Gateway API. Please note that not all of the kubernetes objects created in this process are represented in this diagram.
 
 At a high level, the process looks like this:
 
-1. We deploy cert-manager and create a ClusterIssuer which specifies Let’s Encrypt as our CA and Gateway as our ACME
-   HTTP01 Challenge solver.
-2. We create a Gateway resource for our domain (cafe.example.com) and configure cert-manager integration using an
-   annotation.
-3. This kicks off the certificate issuance process – cert-manager contacts Let’s Encrypt to obtain a certificate, and
-   Let’s Encrypt starts the ACME challenge. As part of this challenge, a temporary HTTPRoute resource is created by
-   cert-manager which directs the traffic through NGF to verify we control the domain name in the certificate request.
-4. Once the domain has been verified, the certificate is issued. Cert-manager stores the keypair in a Kubernetes secret
-   that is referenced by the Gateway resource. As a result, NGINX is configured to terminate HTTPS traffic from clients
-   using this signed keypair.
-5. We deploy our application and our HTTPRoute which defines our routing rules. The routing rules defined configure
-   NGINX to direct requests to https://cafe.example.com/coffee to our coffee-app application, and to use the https
-   Listener defined in our Gateway resource.
-6. When the client connects to https://cafe.example.com/coffee, the request is routed to the coffee-app application
-   and the communication is secured using the signed keypair contained in the cafe-secret Secret.
-7. The certificate will be automatically renewed when it is close to expiry, the Secret will be updated using the new
-   Certificate, and NGF will dynamically update the keypair on the filesystem used by NGINX for HTTPS termination once
-   the Secret is updated.
+1. We deploy cert-manager and create a ClusterIssuer which specifies Let’s Encrypt as our CA and Gateway as our ACME HTTP01 Challenge solver.
+1. We create a Gateway resource for our domain (cafe.example.com) and configure cert-manager integration using an annotation.
+1. This starts the certificate issuance process – cert-manager contacts Let’s Encrypt to obtain a certificate, and Let’s Encrypt starts the ACME challenge. As part of this challenge, cert-manager creates a temporary HTTPRoute resource which directs the traffic through NGINX Gateway Fabric to verify we control the domain name in the certificate request.
+1. Once the domain has been verified, the certificate is issued. Cert-manager stores the keypair in a Kubernetes secret that is referenced by the Gateway resource. As a result, NGINX is configured to terminate HTTPS traffic from clients using this signed keypair.
+1. We deploy our application and our HTTPRoute which defines our routing rules. The routing rules defined configure NGINX to direct requests to https://cafe.example.com/coffee to our coffee-app application, and to use the HTTPS Listener defined in our Gateway resource.
+1. When the client connects to https://cafe.example.com/coffee, the request is routed to the coffee-app application and the communication is secured using the signed keypair contained in the cafe-secret Secret.
+1. The certificate will be automatically renewed when it is close to expiry, the Secret will be updated using the new Certificate, and NGINX Gateway Fabric will dynamically update the keypair on the filesystem used by NGINX for HTTPS termination once the Secret is updated.
 
-## Details
+## Securing Traffic
 
-### Step 1 – Deploy cert-manager
+### Deploy cert-manager
 
 The first step is to deploy cert-manager onto the cluster.
 
@@ -77,18 +62,11 @@ The first step is to deploy cert-manager onto the cluster.
     --set "extraArgs={--feature-gates=ExperimentalGatewayAPISupport=true}"
   ```
 
-### Step 2 – Create a ClusterIssuer
+### Create a ClusterIssuer
 
-Next we need to create a [ClusterIssuer](https://cert-manager.io/docs/concepts/issuer/), a Kubernetes resource that
-represents the certificate authority (CA) that will generate the signed certificates by honouring certificate signing
-requests.
+Next we need to create a [ClusterIssuer](https://cert-manager.io/docs/concepts/issuer/), a Kubernetes resource that represents the certificate authority (CA) that will generate the signed certificates by honouring certificate signing requests.
 
-We are using the ACME Issuer type, and Let's Encrypt as the CA server. In order for Let's Encypt to verify that we own
-the domain a certificate is being requested for, we must complete "challenges". This is to ensure clients are
-unable to request certificates for domains they do not own. We will configure the Issuer to use a HTTP01 challenge, and
-our Gateway resource that we will create in the next step as the solver. To read more about HTTP01 challenges, see
-[here](https://cert-manager.io/docs/configuration/acme/http01/). Use the following YAML definition to create the
-resource, but please note the `email` field must be updated to your own email address.
+We are using the ACME Issuer type, and Let's Encrypt as the CA server. In order for Let's Encypt to verify that we own the domain a certificate is being requested for, we must complete "challenges". This is to ensure clients are unable to request certificates for domains they do not own. We will configure the Issuer to use a HTTP01 challenge, and our Gateway resource that we will create in the next step as the solver. To read more about HTTP01 challenges, see the [cert-manager documentation](https://cert-manager.io/docs/configuration/acme/http01/). Use the following YAML definition to create the resource, but please note the `email` field must be updated to your own email address.
 
 ```yaml
 apiVersion: cert-manager.io/v1
@@ -105,7 +83,7 @@ spec:
     privateKeySecretRef:
       # Secret resource that will be used to store the account's private key.
       name: issuer-account-key
-    # Add a single challenge solver, HTTP01 using NGF
+    # Add a single challenge solver, HTTP01 using NGINX Gateway Fabric
     solvers:
     - http01:
         gatewayHTTPRoute:
@@ -115,10 +93,9 @@ spec:
             kind: Gateway
 ```
 
-### Step 3 – Deploy our Gateway with the cert-manager annotation
+### Deploy our Gateway with the cert-manager annotation
 
-Next we need to deploy our Gateway. Use can use the below YAML manifest, updating the `spec.listeners[1].hostname`
-field to the required value for your environment.
+Next we need to deploy our Gateway. You can use the YAML manifest bewlo, updating the `spec.listeners[1].hostname` field to the required value for your environment.
 
 ```yaml
 apiVersion: gateway.networking.k8s.io/v1beta1
@@ -147,22 +124,13 @@ spec:
 
 It's worth noting a couple of key details in this manifest:
 
-- The cert-manager annotation is present in the metadata – this enables the cert-manager integration, and tells
-  cert-manager which ClusterIssuer configuration it should use for the certificates.
+- The cert-manager annotation is present in the metadata – this enables the cert-manager integration, and tells cert-manager which ClusterIssuer configuration it should use for the certificates.
 - There are two Listeners configured, an HTTP Listener on port 80, and an HTTPS Listener on port 443.
-  - The http Listener on port 80 is required for the HTTP01 ACME challenge to work. This is because as part of the
-    HTTP01 Challenge, a temporary HTTPRoute will be created by cert-manager to solve the ACME challenge, and this
-    HTTPRoute requires a Listener on port 80. See the [HTTP01 Gateway API solver documentation](https://cert-manager.io/docs/configuration/acme/http01/#configuring-the-http-01-gateway-api-solver)
-    for more information.
-  - The https Listener on port 443 is the Listener we will use in our HTTPRoute in the next step. Cert-manager will
-    create a Certificate for this Listener block.
-- The hostname needs to set to the required value. A new certificate will be issued from the `letsencrypt-prod`
-  ClusterIssuer for the domain, e.g. "cafe.example.com", once the ACME challenge is successful.
+  - The http Listener on port 80 is required for the HTTP01 ACME challenge to work. This is because as part of the HTTP01 Challenge, a temporary HTTPRoute will be created by cert-manager to solve the ACME challenge, and this HTTPRoute requires a Listener on port 80. See the [HTTP01 Gateway API solver documentation](https://cert-manager.io/docs/configuration/acme/http01/#configuring-the-http-01-gateway-api-solver) for more information.
+  - The https Listener on port 443 is the Listener we will use in our HTTPRoute in the next step. Cert-manager will create a Certificate for this Listener block.
+- The hostname needs to set to the required value. A new certificate will be issued from the `letsencrypt-prod` ClusterIssuer for the domain, e.g. "cafe.example.com", once the ACME challenge is successful.
 
-Once the certificate has been issued, cert-manager will create a Certificate resource on the cluster and the
-`cafe-secret` Secret containing the signed keypair in the same Namespace as the Gateway. We can verify the Secret has
-been created successfully using `kubectl`. Note it will take a little bit of time for the Challenge to complete and the
-Secret to be created:
+Once the certificate has been issued, cert-manager will create a Certificate resource on the cluster and the `cafe-secret` Secret containing the signed keypair in the same Namespace as the Gateway. We can verify the Secret has been created successfully using `kubectl`. Note it will take a little bit of time for the Challenge to complete and the Secret to be created:
 
 ```shell
 kubectl get secret cafe-secret
@@ -173,9 +141,8 @@ NAME          TYPE                DATA   AGE
 cafe-secret   kubernetes.io/tls   2      20s
 ```
 
-### Step 4 – Deploy our application and HTTPRoute
-Now we can create our coffee Deployment and Service, and configure the routing rules. You can use the following manifest
-to create the Deployment and Service:
+### Deploy our application and HTTPRoute
+Now we can create our coffee Deployment and Service, and configure the routing rules. You can use the following manifest to create the Deployment and Service:
 
 ```yaml
 apiVersion: apps/v1
@@ -212,8 +179,7 @@ spec:
     app: coffee
 ```
 
-Deploy our HTTPRoute to configure our routing rules for the coffee application. Note the `parentRefs` section in the
-spec refers to the Listener configured in the previous step.
+Deploy our HTTPRoute to configure our routing rules for the coffee application. Note the `parentRefs` section in the spec refers to the Listener configured in the previous step.
 
 ```yaml
 apiVersion: gateway.networking.k8s.io/v1beta1
@@ -238,13 +204,13 @@ spec:
 
 ## Testing
 
-To test everything has worked correctly, we can use curl to the navigate to our endpoint, e.g.
-https://cafe.example.com/coffee. To verify using curl, we can use the `-v` option to increase verbosity and inspect the
-presented certificate. The output will look something like this:
+To test everything has worked correctly, we can use curl to the navigate to our endpoint, for example, https://cafe.example.com/coffee. To verify using curl, we can use the `-v` option to increase verbosity and inspect the presented certificate.
 
 ```shell
 curl https://cafe.example.com/coffee -v
 ```
+
+The output will look similar to this:
 
 ```text
 *   Trying 54.195.47.105:443...
@@ -293,14 +259,10 @@ Request ID: e64c54a2ac253375ac085d48980f000a
 
 ## Troubleshooting
 
-- For troubeshooting anything related to the cert-manager installation or Issuer setup, see
-  [the cert-manager troubleshooting guide](https://cert-manager.io/docs/troubleshooting/).
-- For troubleshooting the HTTP01 ACME Challenge, please see the cert-manager
-  [ACME troubleshooting guide](https://cert-manager.io/docs/troubleshooting/acme/).
+- To troubleshoot any issues related to the cert-manager installation or Issuer setup, see [the cert-manager troubleshooting guide](https://cert-manager.io/docs/troubleshooting/).
+- To troubleshoot the HTTP01 ACME Challenge, please see the cert-manager [ACME troubleshooting guide](https://cert-manager.io/docs/troubleshooting/acme/).
   - Note that for the HTTP01 Challenge to work using the Gateway resource, HTTPS redirect must not be configured.
-  - The temporary HTTPRoute created by cert-manager routes the traffic between cert-manager and the Let's Encrypt server
-    through NGF. If the Challenge is not successful, it may be useful to inspect the NGINX logs to see the ACME
-    Challenge requests. You should see something like the following:
+  - The temporary HTTPRoute created by cert-manager routes the traffic between cert-manager and the Let's Encrypt server through NGINX Gateway Fabric. If the Challenge is not successful, it may be useful to inspect the NGINX logs to see the ACME Challenge requests. You should see something like the following:
 
     ```shell
     kubectl logs <pod-name> -n nginx-gateway -c nginx
@@ -318,8 +280,8 @@ Request ID: e64c54a2ac253375ac085d48980f000a
 
 ## Links
 
-- Gateway docs: https://gateway-api.sigs.k8s.io
-- Cert-manager Gateway usage: https://cert-manager.io/docs/usage/gateway/
-- Cert-manager ACME: https://cert-manager.io/docs/configuration/acme/
-- Let’s Encrypt: https://letsencrypt.org
-- NGINX HTTPS docs: https://docs.nginx.com/nginx/admin-guide/security-controls/terminating-ssl-http/
+- [Gateway docs](https://gateway-api.sigs.k8s.io)
+- [Cert-manager Gateway usage](https://cert-manager.io/docs/usage/gateway/)
+- [Cert-manager ACME](https://cert-manager.io/docs/configuration/acme/)
+- [Let’s Encrypt](https://letsencrypt.org)
+- [NGINX HTTPS docs](https://docs.nginx.com/nginx/admin-guide/security-controls/terminating-ssl-http/)

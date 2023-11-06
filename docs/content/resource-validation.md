@@ -1,6 +1,10 @@
-# Gateway API Resource Validation
-
-This document describes how NGINX Gateway Fabric (NGF) validates Gateway API resources.
+---
+title: "Gateway API Resource Validation"
+description: "Learn how NGINX Gateway Fabric validates Gateway API resources."
+weight: 800
+toc: true
+docs: "DOCS-000"
+---
 
 ## Overview
 
