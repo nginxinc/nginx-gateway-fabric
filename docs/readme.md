@@ -12,15 +12,62 @@ In this directory, you will find the following files:
 - configuration files for [markdownlint](https://github.com/DavidAnson/markdownlint/) and [markdown-link-check](https://github.com/tcort/markdown-link-check)
 - a `./config` directory that contains the [Hugo](https://gohugo.io) configuration.
 
-## Git workflow
+## Git Guidelines
 
-To contribute to the documentation, create your work branch from the `main` branch. Once you have added your changes, open a PR to merge your changes back to `main`.
+- Keep a clean, concise and meaningful git commit history on your branch (within reason), rebasing locally and squashing before submitting a PR.
+- Use the [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) format when writing a commit message, so that changelogs can be automatically generated
+- Follow the guidelines of writing a good commit message as described here <https://chris.beams.io/posts/git-commit/> and summarised in the next few points:
+  - In the subject line, use the present tense ("Add feature" not "Added feature").
+  - In the subject line, use the imperative mood ("Move cursor to..." not "Moves cursor to...").
+  - Limit the subject line to 72 characters or less.
+  - Reference issues and pull requests liberally after the subject line.
+  - Add more detailed description in the body of the git message (`git commit -a` to give you more space and time in your text editor to write a good message instead of `git commit -am`).
 
-Netlify will create a preview of the documentation and add a link to the GitHub PR page.
+### Forking and Pull Requests
 
-Once the preview and the changes have been reviewed, merge the request to the `main` branch.
+This repo uses a [forking workflow](https://www.atlassian.com/git/tutorials/comparing-workflows/forking-workflow). Take the steps below to fork the repo, check out a feature branch, and open a pull request with your changes.
 
-> NOTE: If you want to test changes in an environment that emulates the production site before updating `main`, you can push your changes to `docs-development` or `docs-staging`. These branches deploy to the nginx docs [dev](https://docs-dev.nginx.com) and [staging](https://docs-staging.nginx.com) sites, respectively. Ping the NGINX DocOps team in Slack if you need the password to these sites.
+1. In the GitHub UI, select the **Fork** button.
+   
+    - On the **Create a new fork** page, select the **Owner** (the account where the fork of the repo will be placed).
+    - Select the **Create fork** button.
+
+2. If you plan to work on docs in your local development environment, clone your fork. 
+   For example, to clone the repo using SSH, you would run the following command:
+    
+    ```shell
+    git clone git@github.com:<your-account>/nginx-gateway-fabric.git
+    ```
+
+3. Check out a new feature branch in your fork. This is where you will work on your docs. 
+
+   To do this via the command line, you would run the following command:
+
+    ```shell
+    git checkout -b <branch-name>
+    ```
+
+    **CAUTION**: Do not work on the main branch in your fork. This can cause issues when the NGINX Docs team needs to check out your feature branch for editing work.
+
+4. Make atomic, [conventional commits](https://www.conventionalcommits.org/en/v1.0.0/) on your feature branch. 
+
+5. When ready, open a pull request into the **main** branch or a release branch in the **nginxinc/nginx-gateway-fabric** repo.
+    
+    - Fill in [our pull request template](https://github.com/nginxinc/nginx-gateway-fabric/blob/main/.github/PULL_REQUEST_TEMPLATE.md) when opening your PR.
+    - Tag the appropriate reviewers for your subject area.  
+      Technical reviewers should be able to verify that the information provided is accurate.  
+      Documentation reviewers ensure that the content conforms to the NGINX Style Guide, is grammatically correct, and adheres to the NGINX content templates. 
+
+## Release Management and Publishing
+
+**`Main`** is the default branch in this repo. Main should always be releaseable. 
+**Do not merge any content into main that is not approved for release.**
+
+If you are working on content that isn't for a specific release (i.e., it can be published upon completion), open your pull request into the `main` branch.
+
+### Prepare Content for Future Releases
+
+If you are working on content for a future release, create a release branch from `main` that uses the naming format *ngf-release-x.y.x* (for example, `ngf-release-4.0.0`). Work on your docs in feature branches off of the release branch. Open pull requests into the release branch when you are ready to merge your work.
 
 ## Setup
 
