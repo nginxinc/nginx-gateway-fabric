@@ -149,7 +149,11 @@ jobs:
         working-directory: ./conformance
 
       - name: Run conformance tests
-        run: make run-conformance-tests TAG=${{ github.sha }} VERSION=${{ github.ref_name }}
+        run: |
+          make run-conformance-tests TAG=${{ github.sha }} VERSION=${{ github.ref_name }}
+          core_result=$(cat conformance-profile.yaml | yq '.profiles[0].core.result')
+          extended_result=$(cat conformance-profile.yaml | yq '.profiles[0].extended.result')
+          if [ "${core_result}" == "failure" ] || [ "${extended_result}" == "failure" ]; then echo "Conformance test failed, see above for details." && exit 2; fi
         working-directory: ./conformance
 
       - name: Upload profile to release
