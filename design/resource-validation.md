@@ -34,8 +34,8 @@ To help the implementations with the validation, the Gateway API already include
 #### For Kubernetes 1.25+
 
 - *CEL Validation*. This validation is embedded in the Gateway API CRDs and covers additional logic not available in the
-  OpenAPI schema validation. Note: Kubernetes API server enforces this validation. To bypass it, a user
-  needs to change the CRDs.
+  OpenAPI schema validation. For example, the field X must be specified when type is set to Y; or X must be nil if
+  Y is not Z. Note: Kubernetes API server enforces this validation. To bypass it, a user needs to change the CRDs.
 
 #### For Kubernetes 1.23 and 1.24
 
