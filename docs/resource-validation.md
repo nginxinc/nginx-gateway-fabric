@@ -19,13 +19,15 @@ A Gateway API resource (a new resource or an update for the existing one) is val
 
 1. OpenAPI schema validation by the Kubernetes API server.
 2. CEL validation by the Kubernetes API server.
-3. Validation by NGF.
+3. Webhook validation by NGF.
+4. Validation by NGF.
 
 ### For Kubernetes 1.23 and 1.24
 
 1. OpenAPI schema validation by the Kubernetes API server.
 2. Webhook validation by the Gateway API webhook.
-3. Validation by NGF.
+3. Webhook validation by NGF.
+4. Validation by NGF.
 
 To confirm that a resource is valid and accepted by NGF, check that the `Accepted` condition in the resource status
 has the Status field set to `True`. For example, in a status of a valid HTTPRoute, if NGF accepts a parentRef,
@@ -69,7 +71,7 @@ The HTTPRoute "coffee" is invalid: spec.hostnames[0]: Invalid value: "cafe.!@#$%
 ```
 
 > While unlikely, bypassing this validation step is possible if the Gateway API CRDs are modified to remove the validation.
-> If this happens, Step 3 will reject any invalid values (from NGINX perspective).
+> If this happens, Step 4 will reject any invalid values (from NGINX perspective).
 
 ### Step 2 - For Kubernetes 1.25+ - CEL Validation by Kubernetes API Server
 
@@ -104,7 +106,34 @@ kubectl apply -f some-gateway.yaml
 Error from server: error when creating "some-gateway.yaml": admission webhook "validate.gateway.networking.k8s.io" denied the request: spec.listeners[1].hostname: Forbidden: should be empty for protocol TCP
 ```
 
-### Step 3 - Validation by NGF
+> Bypassing this validation step is possible if the webhook is not running in the cluster.
+> If this happens, Step 3 will reject the invalid values.
+
+### Step 3 - Webhook validation by NGF
+To ensure that the resources are validated with the webhook validation rules, even if the webhook is not running,
+NGF performs the same validation. However, NGF performs the validation *after* the Kubernetes API server accepts
+the resource.
+
+Below is an example of how NGF rejects an invalid resource (a Gateway resource with a TCP listener that configures a
+hostname) with a Kubernetes event:
+
+```shell
+kubectl describe gateway some-gateway
+```
+
+```text
+. . .
+Events:
+  Type     Reason    Age   From                            Message
+  ----     ------    ----  ----                            -------
+  Warning  Rejected  6s    nginx-gateway-fabric-nginx  the resource failed webhook validation, however the Gateway API webhook failed to reject it with the error; make sure the webhook is installed and running correctly; validation error: spec.listeners[1].hostname: Forbidden: should be empty for protocol TCP; NGF will delete any existing NGINX configuration that corresponds to the resource
+```
+
+> This validation step always runs and cannot be bypassed.
+> NGF will ignore any resources that fail the webhook validation, like in the example above.
+> If the resource previously existed, NGF will remove any existing NGINX configuration for that resource.
+
+### Step 4 - Validation by NGF
 
 This step catches the following cases of invalid values:
 
