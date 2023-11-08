@@ -1,4 +1,4 @@
-module github.com/nginxinc/nalb-shared/docs
+module github.com/nginxinc/nginx-gateway-fabric/hugo
 
 go 1.18
 

@@ -38,7 +38,7 @@ ifeq (, $(shell docker version 2> /dev/null))
 ifneq (, $(shell $(NETLIFY) "true"))
     $(error Docker and markdown-link-check are not installed. markdown-link-check or Docker are required to check links.)
 else
-    MARKDOWNLINKCHECK=docker run --rm -it -v ${CURDIR}:/docs --workdir /docs ${MARKDOWNLINKCHECK_IMG}
+    MARKDOWNLINKCHECK=docker run --rm -it -v ${CURDIR}:/hugo --workdir /hugo ${MARKDOWNLINKCHECK_IMG}
 endif
 endif
 endif
