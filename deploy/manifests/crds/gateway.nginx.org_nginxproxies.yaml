@@ -34,6 +34,48 @@ spec:
             type: object
           spec:
             description: NginxProxySpec defines the desired state of the NginxProxy.
+            properties:
+              http:
+                description: Http defines the Http configuration.
+                properties:
+                  telemetry:
+                    description: Telemetry defines the telemetry configuration.
+                    properties:
+                      tracing:
+                        description: Tracing defines the tracing configuration.
+                        properties:
+                          batchCount:
+                            default: 4
+                            description: BatchCount specifies the number of pending
+                              batches per worker, spans exceeding the limit are dropped.
+                              Default is 4.
+                            type: integer
+                          batchSize:
+                            default: 512
+                            description: BatchSize specifies the maximum number of
+                              spans to be sent in one batch per worker. Default is
+                              512.
+                            type: integer
+                          enabled:
+                            default: false
+                            description: Enabled enables or disables OpenTelemetry
+                              tracing at the HTTP context. Default is false.
+                            type: boolean
+                          endpoint:
+                            description: Endpoint specifies the address of OTLP/gRPC
+                              endpoint that will accept telemetry data.
+                            type: string
+                          interval:
+                            default: 5s
+                            description: Interval specifies the tracing interval.
+                              Default is 5s.
+                            pattern: ^(\d+y)??\s*(\d+M)??\s*(\d+w)??\s*(\d+d)??\s*(\d+h)??\s*(\d+m)??\s*(\d+s?)??\s*(\d+ms)??$
+                            type: string
+                        required:
+                        - endpoint
+                        type: object
+                    type: object
+                type: object
             type: object
           status:
             description: NginxProxyStatus defines the state of the NginxProxy.

@@ -1254,16 +1254,41 @@ var _ = Describe("ChangeProcessor", func() {
 					Namespace: "test",
 				},
 			}
+
+			npUpdated := &ngfAPI.NginxProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "np",
+					Namespace: "test",
+				},
+				Spec: ngfAPI.NginxProxySpec{
+					HTTP: &ngfAPI.HTTP{
+						Telemetry: &ngfAPI.Telemetry{
+							Tracing: &ngfAPI.Tracing{
+								Endpoint:   "my-svc:123",
+								BatchSize:  512,
+								BatchCount: 4,
+								Interval:   "5s",
+								Enabled:    true,
+							},
+						},
+					},
+				},
+			}
 			It("handles upserts for an NginxProxy", func() {
 				processor.CaptureUpsertChange(np)
 				processor.CaptureUpsertChange(paramGC)
 
 				changed, graph := processor.Process()
 				Expect(changed).To(BeTrue())
-				Expect(graph.NginxProxy).To(Equal(np))
+				Expect(graph.NginxProxy.Source).To(Equal(np))
+			})
+			It("captures changes for an NginxProxy", func() {
+				processor.CaptureUpsertChange(npUpdated)
+				processor.CaptureUpsertChange(paramGC)
 
-				// TODO(sberman): Once some fields actually exist
-				// for this resource, verify that an update occurs.
+				changed, graph := processor.Process()
+				Expect(changed).To(BeTrue())
+				Expect(graph.NginxProxy.Source).To(Equal(npUpdated))
 			})
 			It("handles deletes for an NginxProxy", func() {
 				processor.CaptureDeleteChange(np, client.ObjectKeyFromObject(np))

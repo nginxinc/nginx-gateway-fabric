@@ -107,6 +107,7 @@ func getExecuteFuncs() []executeFunc {
 		executeSplitClients,
 		executeServers,
 		executeMaps,
+		executeTracing,
 	}
 }
 

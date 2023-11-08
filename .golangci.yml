@@ -66,5 +66,9 @@ linters:
 issues:
   max-issues-per-linter: 0
   max-same-issues: 0
+  exclude-rules:
+    - path: apis/v1alpha1/nginxproxy_types.go
+      linters:
+        - lll
 run:
   timeout: 3m

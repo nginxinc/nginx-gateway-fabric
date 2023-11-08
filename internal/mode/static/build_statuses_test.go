@@ -596,17 +596,19 @@ func TestBuildGatewayStatuses(t *testing.T) {
 }
 
 func TestBuildNginxProxyStatus(t *testing.T) {
-	np := &ngfAPI.NginxProxy{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:       "np",
-			Namespace:  "test",
-			Generation: 1,
+	np := &graph.NginxProxy{
+		Source: &ngfAPI.NginxProxy{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:       "np",
+				Namespace:  "test",
+				Generation: 1,
+			},
 		},
 	}
 
 	tests := []struct {
 		nginxReloadRes nginxReloadResult
-		np             *ngfAPI.NginxProxy
+		np             *graph.NginxProxy
 		expected       *status.NginxProxyStatus
 		name           string
 	}{

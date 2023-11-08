@@ -5,7 +5,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	v1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/status"
 	staticConds "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/conditions"
@@ -191,7 +190,7 @@ func buildGatewayStatus(
 	}
 }
 
-func buildNginxProxyStatus(np *ngfAPI.NginxProxy, nginxReloadRes nginxReloadResult) *status.NginxProxyStatus {
+func buildNginxProxyStatus(np *graph.NginxProxy, nginxReloadRes nginxReloadResult) *status.NginxProxyStatus {
 	if np == nil {
 		return nil
 	}
@@ -207,9 +206,9 @@ func buildNginxProxyStatus(np *ngfAPI.NginxProxy, nginxReloadRes nginxReloadResu
 	}
 
 	npStatus := &status.NginxProxyStatus{
-		NsName:             client.ObjectKeyFromObject(np),
+		NsName:             client.ObjectKeyFromObject(np.Source),
 		Conditions:         conds,
-		ObservedGeneration: np.Generation,
+		ObservedGeneration: np.Source.Generation,
 	}
 
 	return npStatus

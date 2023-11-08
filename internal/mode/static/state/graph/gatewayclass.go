@@ -6,7 +6,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	v1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
 	staticConds "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/conditions"
 )
@@ -57,7 +56,7 @@ func processGatewayClasses(
 	return processedGwClasses, gcExists
 }
 
-func buildGatewayClass(gc *v1.GatewayClass, npCfg *ngfAPI.NginxProxy) *GatewayClass {
+func buildGatewayClass(gc *v1.GatewayClass, npCfg *NginxProxy) *GatewayClass {
 	if gc == nil {
 		return nil
 	}
@@ -76,7 +75,7 @@ func buildGatewayClass(gc *v1.GatewayClass, npCfg *ngfAPI.NginxProxy) *GatewayCl
 	}
 }
 
-func validateGatewayClass(gc *v1.GatewayClass, npCfg *ngfAPI.NginxProxy) error {
+func validateGatewayClass(gc *v1.GatewayClass, npCfg *NginxProxy) error {
 	if gc.Spec.ParametersRef != nil {
 		path := field.NewPath("spec").Child("parametersRef")
 		if _, ok := supportedParamKinds[string(gc.Spec.ParametersRef.Kind)]; !ok {
@@ -87,7 +86,7 @@ func validateGatewayClass(gc *v1.GatewayClass, npCfg *ngfAPI.NginxProxy) error {
 			return field.Required(path.Child("namespace"), "parametersRef.namespace must be specified for NginxProxy")
 		}
 
-		if npCfg == nil {
+		if npCfg == nil || npCfg.Source == nil {
 			return field.NotFound(path.Child("name"), gc.Spec.ParametersRef.Name)
 		}
 	}

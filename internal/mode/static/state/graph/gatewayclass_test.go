@@ -151,7 +151,7 @@ func TestBuildGatewayClass(t *testing.T) {
 
 	tests := []struct {
 		gc       *v1.GatewayClass
-		np       *ngfAPI.NginxProxy
+		np       *NginxProxy
 		expected *GatewayClass
 		name     string
 	}{
@@ -170,11 +170,11 @@ func TestBuildGatewayClass(t *testing.T) {
 		},
 		{
 			gc: gcWithParams,
-			np: &ngfAPI.NginxProxy{
+			np: &NginxProxy{Source: &ngfAPI.NginxProxy{
 				TypeMeta: metav1.TypeMeta{
 					Kind: "NginxProxy",
 				},
-			},
+			}},
 			expected: &GatewayClass{
 				Source: gcWithParams,
 				Valid:  true,
@@ -183,11 +183,11 @@ func TestBuildGatewayClass(t *testing.T) {
 		},
 		{
 			gc: gcWithInvalidKind,
-			np: &ngfAPI.NginxProxy{
+			np: &NginxProxy{Source: &ngfAPI.NginxProxy{
 				TypeMeta: metav1.TypeMeta{
 					Kind: "NginxProxy",
 				},
-			},
+			}},
 			expected: &GatewayClass{
 				Source: gcWithInvalidKind,
 				Valid:  false,
@@ -214,11 +214,11 @@ func TestBuildGatewayClass(t *testing.T) {
 		},
 		{
 			gc: gcWithNoNamespace,
-			np: &ngfAPI.NginxProxy{
+			np: &NginxProxy{Source: &ngfAPI.NginxProxy{
 				TypeMeta: metav1.TypeMeta{
 					Kind: "NginxProxy",
 				},
-			},
+			}},
 			expected: &GatewayClass{
 				Source: gcWithNoNamespace,
 				Valid:  false,

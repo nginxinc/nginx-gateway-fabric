@@ -59,6 +59,14 @@ func TestGenerate(t *testing.T) {
 				Key:  []byte("test-key"),
 			},
 		},
+		Tracing: dataplane.Tracing{
+			ExporterEndpoint: "1.2.3.4:123",
+			Enabled:          true,
+			ServiceName:      "ngf:my-name",
+			Interval:         "5s",
+			BatchSize:        512,
+			BatchCount:       4,
+		},
 	}
 	g := NewWithT(t)
 
@@ -83,6 +91,11 @@ func TestGenerate(t *testing.T) {
 	g.Expect(httpCfg).To(ContainSubstring("listen 443"))
 	g.Expect(httpCfg).To(ContainSubstring("upstream"))
 	g.Expect(httpCfg).To(ContainSubstring("split_clients"))
+	g.Expect(httpCfg).To(ContainSubstring("endpoint 1.2.3.4:123;"))
+	g.Expect(httpCfg).To(ContainSubstring("interval 5s;"))
+	g.Expect(httpCfg).To(ContainSubstring("batch_size  512;"))
+	g.Expect(httpCfg).To(ContainSubstring("batch_count 4;"))
+	g.Expect(httpCfg).To(ContainSubstring("otel_trace on"))
 
 	g.Expect(files[2].Type).To(Equal(file.TypeRegular))
 	g.Expect(files[2].Path).To(Equal("/etc/nginx/conf.d/config-version.conf"))

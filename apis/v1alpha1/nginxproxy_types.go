@@ -28,7 +28,52 @@ type NginxProxyList struct {
 }
 
 // NginxProxySpec defines the desired state of the NginxProxy.
-type NginxProxySpec struct{}
+type NginxProxySpec struct {
+	HTTP *HTTP `json:"http,omitempty"`
+}
+
+// Http defines the Http configuration.
+type HTTP struct {
+	Telemetry *Telemetry `json:"telemetry,omitempty"`
+}
+
+// Telemetry defines the telemetry configuration.
+type Telemetry struct {
+	Tracing *Tracing `json:"tracing,omitempty"`
+}
+
+// TODO(ciarams87): need to figure out why the pattern validation for endpoint isn't adding to schema.
+
+// Tracing defines the tracing configuration.
+type Tracing struct {
+	// Endpoint specifies the address of OTLP/gRPC endpoint that will accept telemetry data.
+	//
+	// +required
+	// ++kubebuilder:validation:Required
+	// ++kubebuilder:validation:Pattern=`^(?:(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}|(?:\d{1,3}\.){3}\d{1,3}):\d{1,5}$`
+	Endpoint string `json:"endpoint"`
+	// Interval specifies the tracing interval. Default is 5s.
+	//
+	// +optional
+	// +kubebuilder:default="5s"
+	// +kubebuilder:validation:Pattern=`^(\d+y)??\s*(\d+M)??\s*(\d+w)??\s*(\d+d)??\s*(\d+h)??\s*(\d+m)??\s*(\d+s?)??\s*(\d+ms)??$`
+	Interval string `json:"interval,omitempty"`
+	// BatchSize specifies the maximum number of spans to be sent in one batch per worker. Default is 512.
+	//
+	// +optional
+	// +kubebuilder:default=512
+	BatchSize int `json:"batchSize,omitempty"`
+	// BatchCount specifies the number of pending batches per worker, spans exceeding the limit are dropped. Default is 4.
+	//
+	// +optional
+	// +kubebuilder:default=4
+	BatchCount int `json:"batchCount,omitempty"`
+	// Enabled enables or disables OpenTelemetry tracing at the HTTP context. Default is false.
+	//
+	// +optional
+	// +kubebuilder:default=false
+	Enabled bool `json:"enabled,omitempty"`
+}
 
 // NginxProxyStatus defines the state of the NginxProxy.
 type NginxProxyStatus struct {

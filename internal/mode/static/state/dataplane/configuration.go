@@ -34,6 +34,7 @@ func BuildConfiguration(
 	httpServers, sslServers := buildServers(g.Gateway.Listeners)
 	backendGroups := buildBackendGroups(append(httpServers, sslServers...))
 	keyPairs := buildSSLKeyPairs(g.ReferencedSecrets, g.Gateway.Listeners)
+	tracing := buildTracing(g.NginxProxy)
 
 	config := Configuration{
 		HTTPServers:   httpServers,
@@ -42,6 +43,7 @@ func BuildConfiguration(
 		BackendGroups: backendGroups,
 		SSLKeyPairs:   keyPairs,
 		Version:       configVersion,
+		Tracing:       tracing,
 	}
 
 	return config
@@ -469,4 +471,19 @@ func listenerHostnameMoreSpecific(host1, host2 *v1.Hostname) bool {
 // The ID is safe to use as a file name.
 func generateSSLKeyPairID(secret types.NamespacedName) SSLKeyPairID {
 	return SSLKeyPairID(fmt.Sprintf("ssl_keypair_%s_%s", secret.Namespace, secret.Name))
+}
+
+// buildTracing generates the Otel Tracing configuration.
+func buildTracing(proxy *graph.NginxProxy) Tracing {
+	if proxy != nil && proxy.Tracing != nil {
+		return Tracing{
+			ExporterEndpoint: proxy.Tracing.Endpoint,
+			ServiceName:      proxy.Tracing.ServiceName,
+			Enabled:          proxy.Tracing.Enabled,
+			Interval:         proxy.Tracing.Interval,
+			BatchSize:        proxy.Tracing.BatchSize,
+			BatchCount:       proxy.Tracing.BatchCount,
+		}
+	}
+	return Tracing{}
 }

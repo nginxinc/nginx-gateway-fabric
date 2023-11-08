@@ -12,6 +12,7 @@ import (
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	v1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
+	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/validation"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/validation/validationfakes"
@@ -203,6 +204,38 @@ func TestBuildGraph(t *testing.T) {
 		},
 	}
 
+	proxy := &ngfAPI.NginxProxy{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "nginx-proxy",
+			Namespace: "nginx-gateway",
+		},
+		Spec: ngfAPI.NginxProxySpec{
+			HTTP: &ngfAPI.HTTP{
+				Telemetry: &ngfAPI.Telemetry{
+					Tracing: &ngfAPI.Tracing{
+						Enabled:    true,
+						Endpoint:   "1.2.3.4:123",
+						Interval:   "5s",
+						BatchSize:  512,
+						BatchCount: 4,
+					},
+				},
+			},
+		},
+	}
+
+	ngxProxy := &NginxProxy{
+		Source: proxy,
+		Tracing: &Tracing{
+			Enabled:     true,
+			Endpoint:    "1.2.3.4:123",
+			Interval:    "5s",
+			BatchSize:   512,
+			BatchCount:  4,
+			ServiceName: gcName + ":ngf",
+		},
+	}
+
 	createStateWithGatewayClass := func(gc *gatewayv1.GatewayClass) ClusterState {
 		return ClusterState{
 			GatewayClasses: map[types.NamespacedName]*gatewayv1.GatewayClass{
@@ -226,6 +259,9 @@ func TestBuildGraph(t *testing.T) {
 			},
 			Secrets: map[types.NamespacedName]*v1.Secret{
 				client.ObjectKeyFromObject(secret): secret,
+			},
+			NginxProxies: map[types.NamespacedName]*ngfAPI.NginxProxy{
+				client.ObjectKeyFromObject(proxy): proxy,
 			},
 		}
 	}
@@ -303,8 +339,11 @@ func TestBuildGraph(t *testing.T) {
 					Source: secret,
 				},
 			},
+			NginxProxy: ngxProxy,
 		}
 	}
+
+	ns := gatewayv1.Namespace("nginx-gateway")
 
 	normalGC := &gatewayv1.GatewayClass{
 		ObjectMeta: metav1.ObjectMeta{
@@ -312,6 +351,12 @@ func TestBuildGraph(t *testing.T) {
 		},
 		Spec: gatewayv1.GatewayClassSpec{
 			ControllerName: controllerName,
+			ParametersRef: &gatewayv1.ParametersReference{
+				Group:     gatewayv1.Group("gateway.nginx.org"),
+				Kind:      gatewayv1.Kind("NginxProxy"),
+				Name:      "nginx-proxy",
+				Namespace: &ns,
+			},
 		},
 	}
 	differentControllerGC := &gatewayv1.GatewayClass{

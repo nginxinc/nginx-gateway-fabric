@@ -13,6 +13,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	v1 "sigs.k8s.io/gateway-api/apis/v1"
 
+	"github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/graph"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/resolver"
@@ -408,6 +409,17 @@ func TestBuildConfiguration(t *testing.T) {
 					Name:      v1.ObjectName(secret1NsName.Name),
 				},
 			},
+		},
+	}
+
+	nginxProxy := &graph.NginxProxy{
+		Tracing: &graph.Tracing{
+			Endpoint:    "my-otel.svc:4563",
+			ServiceName: "my-class:ngf",
+			Enabled:     true,
+			BatchSize:   512,
+			BatchCount:  4,
+			Interval:    "5s",
 		},
 	}
 
@@ -1482,6 +1494,45 @@ func TestBuildConfiguration(t *testing.T) {
 			},
 			msg: "two https listeners with different hostnames but same route; chooses listener with more specific hostname",
 		},
+		{
+			graph: &graph.Graph{
+				GatewayClass: &graph.GatewayClass{
+					Source: &v1beta1.GatewayClass{},
+					Valid:  true,
+				},
+				Gateway: &graph.Gateway{
+					Source: &v1beta1.Gateway{},
+					Listeners: map[string]*graph.Listener{
+						"listener-80-1": {
+							Source: listener80,
+							Valid:  true,
+							Routes: map[types.NamespacedName]*graph.Route{},
+						},
+					},
+				},
+				Routes:     map[types.NamespacedName]*graph.Route{},
+				NginxProxy: nginxProxy,
+			},
+			expConf: Configuration{
+				HTTPServers: []VirtualServer{
+					{
+						IsDefault: true,
+						Port:      80,
+					},
+				},
+				SSLServers:  []VirtualServer{},
+				SSLKeyPairs: map[SSLKeyPairID]SSLKeyPair{},
+				Tracing: Tracing{
+					ExporterEndpoint: "my-otel.svc:4563",
+					Interval:         "5s",
+					BatchSize:        512,
+					BatchCount:       4,
+					Enabled:          true,
+					ServiceName:      "my-class:ngf",
+				},
+			},
+			msg: "NginxProxy with tracing config",
+		},
 	}
 
 	for _, test := range tests {
@@ -1496,6 +1547,7 @@ func TestBuildConfiguration(t *testing.T) {
 			g.Expect(result.SSLServers).To(ConsistOf(test.expConf.SSLServers))
 			g.Expect(result.SSLKeyPairs).To(Equal(test.expConf.SSLKeyPairs))
 			g.Expect(result.Version).To(Equal(1))
+			g.Expect(result.Tracing).To(Equal(test.expConf.Tracing))
 		})
 	}
 }
@@ -2002,6 +2054,53 @@ func TestHostnameMoreSpecific(t *testing.T) {
 			g := NewWithT(t)
 
 			g.Expect(listenerHostnameMoreSpecific(tc.host1, tc.host2)).To(Equal(tc.host1Wins))
+		})
+	}
+}
+
+func TestBuildTracing(t *testing.T) {
+	tracingConfigured := &graph.NginxProxy{
+		Source: &v1alpha1.NginxProxy{},
+		Tracing: &graph.Tracing{
+			Endpoint:    "1.2.3.4:1123",
+			Interval:    "5s",
+			BatchSize:   512,
+			BatchCount:  4,
+			Enabled:     true,
+			ServiceName: "my-class:ngf",
+		},
+	}
+
+	expTracingConfigured := Tracing{
+		ExporterEndpoint: "1.2.3.4:1123",
+		ServiceName:      "my-class:ngf",
+		Interval:         "5s",
+		BatchSize:        512,
+		BatchCount:       4,
+		Enabled:          true,
+	}
+
+	tests := []struct {
+		proxy      *graph.NginxProxy
+		msg        string
+		expTracing Tracing
+	}{
+		{
+			proxy:      &graph.NginxProxy{},
+			expTracing: Tracing{},
+			msg:        "No tracing configured",
+		},
+		{
+			proxy:      tracingConfigured,
+			expTracing: expTracingConfigured,
+			msg:        "Tracing configured",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.msg, func(t *testing.T) {
+			g := NewWithT(t)
+			g.Expect(buildTracing(tc.proxy)).To(Equal(tc.expTracing))
 		})
 	}
 }

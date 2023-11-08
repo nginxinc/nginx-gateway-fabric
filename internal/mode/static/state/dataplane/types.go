@@ -31,6 +31,8 @@ type Configuration struct {
 	Upstreams []Upstream
 	// BackendGroups holds all unique BackendGroups.
 	BackendGroups []BackendGroup
+	// Tracing holds the Otel tracing configuration for the Dataplane.
+	Tracing Tracing
 	// Version represents the version of the generated configuration.
 	Version int
 }
@@ -201,4 +203,20 @@ type Backend struct {
 	Weight int32
 	// Valid indicates whether the Backend is valid.
 	Valid bool
+}
+
+// Tracing represents Otel tracing configuration for the dataplane.
+type Tracing struct {
+	// ExporterEndpoint specifies the address of OTLP/gRPC endpoint that will accept telemetry data.
+	ExporterEndpoint string
+	// ServiceName is the “service.name” attribute of the OTel resource.
+	ServiceName string
+	// Interval specifies the tracing interval.
+	Interval string
+	// BatchSize specifies the maximum number of spans to be sent in one batch per worker.
+	BatchSize int
+	// BatchCount specifies the number of pending batches per worker, spans exceeding the limit are dropped.
+	BatchCount int
+	// Enabled specifies if tracing is enabled.
+	Enabled bool
 }

@@ -45,7 +45,7 @@ type Graph struct {
 	// by the Gateway, including the case when the Secret is newly created.
 	ReferencedSecrets map[types.NamespacedName]*Secret
 	// NginxProxy holds the NginxProxy config for the GatewayClass.
-	NginxProxy *ngfAPI.NginxProxy
+	NginxProxy *NginxProxy
 }
 
 // ProtectedPorts are the ports that may not be configured by a listener with a descriptive name of each port.
