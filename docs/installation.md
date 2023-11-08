@@ -1,3 +1,4 @@
+
 # Installation
 
 This guide walks you through how to install NGINX Gateway Fabric on a generic Kubernetes cluster.
@@ -36,32 +37,47 @@ page.
 
 1. Install the Gateway API resources from the standard channel (the CRDs and the validating webhook):
 
-   ```shell
-   kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v0.8.1/standard-install.yaml
-   ```
+---
+```shell
+   kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/standard-install.yaml
+
+```
+---
 
 1. Deploy the NGINX Gateway Fabric CRDs:
 
-   ```shell
+---
+```shell
    kubectl apply -f https://github.com/nginxinc/nginx-gateway-fabric/releases/download/v1.0.0/crds.yaml
-   ```
+
+```
+---
 
 1. Deploy the NGINX Gateway Fabric:
 
-   ```shell
+---
+```shell
    kubectl apply -f https://github.com/nginxinc/nginx-gateway-fabric/releases/download/v1.0.0/nginx-gateway.yaml
-   ```
+
+```
+---
 
 1. Confirm the NGINX Gateway Fabric is running in `nginx-gateway` namespace:
 
-   ```shell
+---
+```shell
    kubectl get pods -n nginx-gateway
-   ```
 
-   ```text
+```
+---
+
+---
+```text
    NAME                             READY   STATUS    RESTARTS   AGE
    nginx-gateway-5d4f4c7db7-xk2kq   2/2     Running   0          112s
-   ```
+
+```
+---
 
 ## Expose NGINX Gateway Fabric
 
@@ -85,9 +101,12 @@ Service sets the status field to the IP address and/or Hostname. If no Service e
 
 Create a Service with type `NodePort`:
 
+---
 ```shell
 kubectl apply -f https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric/v1.0.0/deploy/manifests/service/nodeport.yaml
+
 ```
+---
 
 A `NodePort` Service will randomly allocate one port on every Node of the cluster. To access NGINX Gateway Fabric,
 use an IP address of any Node in the cluster along with the allocated port.
@@ -98,38 +117,53 @@ Create a Service with type `LoadBalancer` using the appropriate manifest for you
 
 - For GCP or Azure:
 
-   ```shell
+---
+```shell
    kubectl apply -f https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric/v1.0.0/deploy/manifests/service/loadbalancer.yaml
-   ```
+
+```
+---
 
   Lookup the public IP of the load balancer, which is reported in the `EXTERNAL-IP` column in the output of the
   following command:
 
-   ```shell
+---
+```shell
    kubectl get svc nginx-gateway -n nginx-gateway
-   ```
+
+```
+---
 
   Use the public IP of the load balancer to access NGINX Gateway Fabric.
 
 - For AWS:
 
-   ```shell
+---
+```shell
    kubectl apply -f https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric/v1.0.0/deploy/manifests/service/loadbalancer-aws-nlb.yaml
-   ```
+
+```
+---
 
   In AWS, the NLB DNS name will be reported by Kubernetes in lieu of a public IP in the `EXTERNAL-IP` column. To get the
   DNS name run:
 
-   ```shell
+---
+```shell
    kubectl get svc nginx-gateway -n nginx-gateway
-   ```
+
+```
+---
 
   In general, you should rely on the NLB DNS name, however for testing purposes you can resolve the DNS name to get the
   IP address of the load balancer:
 
-   ```shell
+---
+```shell
    nslookup <dns-name>
-   ```
+
+```
+---
 
 ## Upgrading NGINX Gateway Fabric
 
@@ -149,25 +183,34 @@ Create a Service with type `LoadBalancer` using the appropriate manifest for you
 
     To upgrade the Gateway resources from [the Gateway API repo](https://github.com/kubernetes-sigs/gateway-api), run:
 
-    ```shell
+---    
+```shell
     kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v0.8.1/standard-install.yaml
+    
     ```
+---
 
 1. Upgrade the NGINX Gateway Fabric CRDs
 
     Run the following command to upgrade the NGINX Gateway Fabric CRDs:
 
-    ```shell
+---    
+```shell
     kubectl apply -f https://github.com/nginxinc/nginx-gateway-fabric/releases/download/v1.0.0/crds.yaml
+    
     ```
+---
 
 1. Upgrade NGINX Gateway Fabric Deployment
 
     Run the following command to upgrade NGINX Gateway Fabric:
 
-    ```shell
+---    
+```shell
     kubectl apply -f https://github.com/nginxinc/nginx-gateway-fabric/releases/download/v1.0.0/nginx-gateway.yaml
+    
     ```
+---
 
 ### Upgrade NGINX Gateway Fabric using Helm
 
@@ -191,7 +234,8 @@ Edit the `nginx-gateway.yaml` to include the following:
 
 1. Add `lifecycle` prestop hooks to both the nginx and the nginx-gateway container definitions:
 
-   ```yaml
+---
+```yaml
    <...>
    name: nginx-gateway
    <...>
@@ -212,7 +256,9 @@ Edit the `nginx-gateway.yaml` to include the following:
       - /bin/sleep
       - "40"
    <...>
-   ```
+
+```
+---
 
 2. Ensure the `terminationGracePeriodSeconds` matches or exceeds the `sleep` value from the `preStopHook` (the default
    is 30). This is to ensure Kubernetes does not terminate the Pod before the `preStopHook` is complete.
@@ -234,13 +280,19 @@ To configure delayed termination on the NGF Pod when the deployment method is He
 
 1. Uninstall the NGINX Gateway Fabric:
 
-   ```shell
+---
+```shell
    kubectl delete -f https://github.com/nginxinc/nginx-gateway-fabric/releases/download/v1.0.0/nginx-gateway.yaml
-   ```
 
-   ```shell
+```
+---
+
+---
+```shell
    kubectl delete -f https://github.com/nginxinc/nginx-gateway-fabric/releases/download/v1.0.0/crds.yaml
-   ```
+
+```
+---
 
 1. Uninstall the Gateway API resources from the standard channel (the CRDs and the validating webhook):
 
@@ -248,9 +300,12 @@ To configure delayed termination on the NGF Pod when the deployment method is He
    Please ensure there are no custom resources that you want to keep and there are no other Gateway API implementations
    running in the cluster!**
 
-   ```shell
+---
+```shell
    kubectl delete -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v0.8.1/standard-install.yaml
-   ```
+
+```
+---
 
 ### Uninstall NGINX Gateway Fabric using Helm
 
