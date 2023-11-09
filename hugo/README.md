@@ -51,7 +51,7 @@ This repo uses a [forking workflow](https://www.atlassian.com/git/tutorials/comp
 
 4. Make atomic, [conventional commits](https://www.conventionalcommits.org/en/v1.0.0/) on your feature branch. 
 
-5. When ready, open a pull request into the **main** branch or a release branch in the **nginxinc/nginx-gateway-fabric** repo.
+5. When ready, open a pull request into the **main** branch in the **nginxinc/nginx-gateway-fabric** repo.
     
     - Fill in [our pull request template](https://github.com/nginxinc/nginx-gateway-fabric/blob/main/.github/PULL_REQUEST_TEMPLATE.md) when opening your PR.
     - Tag the appropriate reviewers for your subject area.  
@@ -60,14 +60,14 @@ This repo uses a [forking workflow](https://www.atlassian.com/git/tutorials/comp
 
 ## Release Management and Publishing
 
-**`Main`** is the default branch in this repo. Main should always be releaseable. 
-**Do not merge any content into main that is not approved for release.**
+**`Main`** is the default branch in this repo. All the latest content updates are merged into this branch. 
 
-If you are working on content that isn't for a specific release (i.e., it can be published upon completion), open your pull request into the `main` branch.
+The documentation is published from the latest public release branch, (for example, `ngf-release-4.0.0`). Work on your docs in feature branches off of the main branch. Open pull requests into the `main` when you are ready to merge your work.
 
-### Prepare Content for Future Releases
+If you are working on content for immediate publication in the docs site, cherrypick your changes to the current public release branch.
 
-If you are working on content for a future release, create a release branch from `main` that uses the naming format *ngf-release-x.y.x* (for example, `ngf-release-4.0.0`). Work on your docs in feature branches off of the release branch. Open pull requests into the release branch when you are ready to merge your work.
+If you are working on content for a future release, cherrypick your changes to the appropriate upcoming release branch.
+
 
 ## Setup
 
