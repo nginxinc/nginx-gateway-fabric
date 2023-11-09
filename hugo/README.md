@@ -62,11 +62,11 @@ This repo uses a [forking workflow](https://www.atlassian.com/git/tutorials/comp
 
 **`Main`** is the default branch in this repo. All the latest content updates are merged into this branch. 
 
-The documentation is published from the latest public release branch, (for example, `ngf-release-4.0.0`). Work on your docs in feature branches off of the main branch. Open pull requests into the `main` when you are ready to merge your work.
+The documentation is published from the latest public release branch, (for example, `release-4.0`). Work on your docs in feature branches off of the main branch. Open pull requests into the `main` when you are ready to merge your work.
 
 If you are working on content for immediate publication in the docs site, cherrypick your changes to the current public release branch.
 
-If you are working on content for a future release, cherrypick your changes to the appropriate upcoming release branch.
+If you are working on content for a future release, make sure that you **do not** cherrypick them to the current public release branch, as this will publish them automatically.
 
 
 ## Setup
