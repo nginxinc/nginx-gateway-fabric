@@ -38,7 +38,7 @@ To start, let's take a high-level look at the NGINX Gateway Fabric (NGF). The ac
 example scenario where NGF exposes two web applications hosted within a Kubernetes cluster to external clients on the
 internet:
 
-![NGF High Level](/docs/images/ngf-high-level.png)
+![NGF High Level](/img/ngf-high-level.png)
 
 The figure shows:
 
@@ -97,7 +97,7 @@ The diagram below provides a visual representation of the interactions between p
 `nginx-gateway` containers, as well as external processes/entities. It showcases the connections and relationships between
 these components.
 
-![NGF pod](/docs/images/ngf-pod.png)
+![NGF pod](/img/ngf-pod.png)
 
 The following list provides a description of each connection, along with its corresponding type indicated in
 parentheses. To enhance readability, the suffix "process" has been omitted from the process descriptions below.
