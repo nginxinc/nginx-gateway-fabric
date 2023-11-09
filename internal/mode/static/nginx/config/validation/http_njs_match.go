@@ -46,6 +46,10 @@ func (HTTPNJSMatchValidator) ValidatePathInMatch(path string) error {
 }
 
 func (HTTPNJSMatchValidator) ValidateHeaderNameInMatch(name string) error {
+	if err := k8svalidation.IsHTTPHeaderName(name); err != nil {
+		return fmt.Errorf(err[0])
+	}
+
 	return validateNJSHeaderPart(name)
 }
 
