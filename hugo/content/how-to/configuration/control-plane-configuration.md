@@ -1,7 +1,7 @@
 ---
 title: "Control Plane Configuration"
 description: "Learn how to dynamically update the NGINX Gateway Fabric control plane configuration."
-weight: 500
+weight: 100
 toc: true
 docs: "DOCS-000"
 ---

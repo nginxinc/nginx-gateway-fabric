@@ -47,7 +47,7 @@ The figure shows:
 cluster through the Kubernetes API by creating Kubernetes objects.
 - *Clients A* and *Clients B* connect to *Applications A* and *B*, respectively. This applications have been deployed by
 the corresponding users.
-- The *NGF Pod*, [deployed by *Cluster Operator*](/docs/installation.md) in the Namespace *nginx-gateway*. For
+- The *NGF Pod*, [deployed by *Cluster Operator*](/docs/how-to/installation/installation.md) in the Namespace *nginx-gateway*. For
 scalability and availability, you can have multiple replicas. This Pod consists of two containers: `NGINX` and `NGF`.
 The *NGF* container interacts with the Kubernetes API to retrieve the most up-to-date Gateway API resources created
 within the cluster. It then dynamically configures the *NGINX* container based on these resources, ensuring proper
