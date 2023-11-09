@@ -19,6 +19,15 @@ created.
 
 A Gateway API resource (a new resource or an update for the existing one) is validated by the following steps:
 
+### For Kubernetes 1.25+
+
+1. OpenAPI schema validation by the Kubernetes API server.
+2. CEL validation by the Kubernetes API server.
+3. Webhook validation by NGF.
+4. Validation by NGF.
+
+### For Kubernetes 1.23 and 1.24
+
 1. OpenAPI schema validation by the Kubernetes API server.
 2. Webhook validation by the Gateway API webhook.
 3. Webhook validation by NGF.
@@ -68,7 +77,25 @@ The HTTPRoute "coffee" is invalid: spec.hostnames[0]: Invalid value: "cafe.!@#$%
 > While unlikely, bypassing this validation step is possible if the Gateway API CRDs are modified to remove the validation.
 > If this happens, Step 4 will reject any invalid values (from NGINX perspective).
 
-### Step 2 - Webhook Validation by Gateway API Webhook
+### Step 2 - For Kubernetes 1.25+ - CEL Validation by Kubernetes API Server
+
+The Kubernetes API server validates Gateway API resources using CEL validation embedded in the Gateway API CRDs.
+It validates Gateway API resources using advanced rules unavailable in the OpenAPI schema validation.
+For example, if you create a Gateway resource with a TCP listener that configures a hostname, the CEL validation will
+reject it with the following error:
+
+
+```shell
+kubectl apply -f some-gateway.yaml
+```
+
+```text
+The Gateway "some-gateway" is invalid: spec.listeners: Invalid value: "array": hostname must not be specified for protocols ['TCP', 'UDP']
+```
+
+More information on CEL in Kubernetes can be found [here](https://kubernetes.io/docs/reference/using-api/cel/).
+
+### Step 2 - For Kubernetes 1.23 and 1.24 - Webhook Validation by Gateway API Webhook
 
 The Gateway API comes with a validating webhook which is enabled by default in the Gateway API installation manifests.
 It validates Gateway API resources using advanced rules unavailable in the OpenAPI schema validation. For example, if
@@ -76,27 +103,26 @@ you create a Gateway resource with a TCP listener that configures a hostname, th
 following error:
 
 ```shell
-kubectl apply -f prod-gateway.yaml
+kubectl apply -f some-gateway.yaml
 ```
 
 ```text
-Error from server: error when creating "prod-gateway.yaml": admission webhook "validate.gateway.networking.k8s.io" denied the request: spec.listeners[1].hostname: Forbidden: should be empty for protocol TCP
+Error from server: error when creating "some-gateway.yaml": admission webhook "validate.gateway.networking.k8s.io" denied the request: spec.listeners[1].hostname: Forbidden: should be empty for protocol TCP
 ```
 
 > Bypassing this validation step is possible if the webhook is not running in the cluster.
 > If this happens, Step 3 will reject the invalid values.
 
 ### Step 3 - Webhook validation by NGF
-
-The previous step relies on the Gateway API webhook running in the cluster. To ensure that the resources are validated
-with the webhook validation rules, even if the webhook is not running, NGF performs the same validation. However, NGF
-performs the validation *after* the Kubernetes API server accepts the resource.
+To ensure that the resources are validated with the webhook validation rules, even if the webhook is not running,
+NGF performs the same validation. However, NGF performs the validation *after* the Kubernetes API server accepts
+the resource.
 
 Below is an example of how NGF rejects an invalid resource (a Gateway resource with a TCP listener that configures a
 hostname) with a Kubernetes event:
 
 ```shell
-kubectl describe gateway prod-gateway
+kubectl describe gateway some-gateway
 ```
 
 ```text
