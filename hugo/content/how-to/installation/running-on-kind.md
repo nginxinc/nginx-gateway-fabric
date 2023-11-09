@@ -1,7 +1,7 @@
 ---
 title: "Running on kind"
 description: "Learn how to run NGINX Gateway Fabric on a kind cluster."
-weight: 900
+weight: 300
 toc: true
 docs: "DOCS-000"
 ---
@@ -23,7 +23,7 @@ make create-kind-cluster
 
 ## Deploy NGINX Gateway Fabric
 
-Follow the [installation](./installation.md) instructions to deploy NGINX Gateway Fabric on your Kind cluster.
+Follow the [installation](./how-to/installation/installation.md) instructions to deploy NGINX Gateway Fabric on your Kind cluster.
 
 ## Access NGINX Gateway Fabric
 

@@ -1,7 +1,7 @@
 ---
 title: "Routing Traffic to Your Application"
 description: "Learn how to route external traffic to your Kubernetes applications using NGINX Gateway Fabric."
-weight: 300
+weight: 100
 toc: true
 docs: "DOCS-000"
 ---
@@ -10,8 +10,8 @@ In this guide you will learn how to route external traffic to your Kubernetes ap
 
 ## Prerequisites
 
-- [Install]({{< relref "/installation.md" >}}) NGINX Gateway Fabric.
-- [Expose NGINX Gateway Fabric]({{< relref "/installation.md#expose-nginx-gateway-fabric" >}}) and save the public IP address and port of NGINX Gateway Fabric into shell variables:
+- [Install]({{< relref "/how-to/installation/installation.md" >}}) NGINX Gateway Fabric.
+- [Expose NGINX Gateway Fabric]({{< relref "/how-to/installation/installation.md#expose-nginx-gateway-fabric" >}}) and save the public IP address and port of NGINX Gateway Fabric into shell variables:
 
    ```text
    GW_IP=XXX.YYY.ZZZ.III
@@ -227,7 +227,7 @@ You should receive a 404 Not Found error:
 
 If you have any issues while testing the configuration, try the following to debug your configuration and setup:
 
-- Make sure you set the shell variables $GW_IP and $GW_PORT to the public IP and port of the NGINX Gateway Fabric Service. Instructions for finding those values are in the [installation documentation]({{< relref "/installation.md#expose-nginx-gateway-fabric" >}}).
+- Make sure you set the shell variables $GW_IP and $GW_PORT to the public IP and port of the NGINX Gateway Fabric Service. Instructions for finding those values are in the [installation documentation]({{< relref "/how-to/installation/installation.md#expose-nginx-gateway-fabric" >}}).
 
 - Check the status of the Gateway:
 

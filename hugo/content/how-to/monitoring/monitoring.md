@@ -1,7 +1,7 @@
 ---
 title: "Monitoring"
 description: "Learn how to monitor NGINX Gateway Fabric."
-weight: 600
+weight: 100
 toc: true
 docs: "DOCS-000"
 ---

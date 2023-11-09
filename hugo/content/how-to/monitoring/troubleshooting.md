@@ -1,7 +1,7 @@
 ---
 title: "Troubleshooting"
 description: "Learn how to troubleshoot common NGINX Gateway Fabric issues."
-weight: 1100
+weight: 200
 toc: true
 docs: "DOCS-000"
 ---

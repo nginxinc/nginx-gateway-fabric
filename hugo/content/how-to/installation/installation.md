@@ -1,7 +1,7 @@
 ---
-title: "Installation"
+title: "Installing NGINX Gateway Fabric"
 description: "Learn how to install NGINX Gateway Fabric on a generic Kubernetes cluster."
-weight: 200
+weight: 100
 toc: true
 docs: "DOCS-000"
 ---

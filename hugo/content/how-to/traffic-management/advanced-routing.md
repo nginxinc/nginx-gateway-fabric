@@ -1,12 +1,12 @@
 ---
 title: "Routing to Applications Using HTTP Matching Conditions"
 description: "Learn how to deploy multiple applications and HTTPRoutes with request conditions such as paths, methods, headers, and query parameters"
-weight: 100
+weight: 200
 toc: true
 docs: "DOCS-000"
 ---
 
-In this guide we will configure advanced routing rules for multiple applications. These rules will showcase request matching by path, headers, query parameters, and method. For an introduction to exposing your application, we recommend that you go through the [basic guide]({{< relref "/guides/routing-traffic-to-your-app.md" >}}) first.
+In this guide we will configure advanced routing rules for multiple applications. These rules will showcase request matching by path, headers, query parameters, and method. For an introduction to exposing your application, we recommend that you go through the [basic guide]({{< relref "/how-to/traffic-management/routing-traffic-to-your-app.md" >}}) first.
 
 The following image shows the traffic flow that we will be creating with these rules.
 
@@ -16,8 +16,8 @@ The goal is to create a set of rules that will result in client requests being s
 
 ## Prerequisites
 
-- [Install]({{< relref "/installation.md" >}}) NGINX Gateway Fabric.
-- [Expose NGINX Gateway Fabric]({{< relref "/installation.md#expose-nginx-gateway-fabric" >}}) and save the public IP
+- [Install]({{< relref "/how-to/installation/installation.md" >}}) NGINX Gateway Fabric.
+- [Expose NGINX Gateway Fabric]({{< relref "/how-to/installation/installation.md#expose-nginx-gateway-fabric" >}}) and save the public IP
   address and port of NGINX Gateway Fabric into shell variables:
 
    ```text
@@ -234,7 +234,7 @@ This request should receive a response from the `tea-post` Pod. Any other type o
 
 If you have any issues while sending traffic, try the following to debug your configuration and setup:
 
-- Make sure you set the shell variables $GW_IP and $GW_PORT to the public IP and port of the NGINX Gateway Fabric Service. Instructions for finding those values are [here](/docs/installation.md#expose-nginx-gateway-fabric).
+- Make sure you set the shell variables $GW_IP and $GW_PORT to the public IP and port of the NGINX Gateway Fabric Service. Instructions for finding those values are [here](/docs/how-to/installation/installation.md#expose-nginx-gateway-fabric).
 
 - Check the status of the Gateway:
 
