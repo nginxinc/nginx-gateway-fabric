@@ -34,12 +34,18 @@ func TestValidateHeaderNameInMatch(t *testing.T) {
 		t,
 		validator.ValidateHeaderNameInMatch,
 		"header",
+		"version",
+		"version-2",
 	)
 	testInvalidValuesForSimpleValidator(
 		t,
 		validator.ValidateHeaderNameInMatch,
 		":",
 		"",
+		"version%!",
+		"version_2",
+		"hello$world",
+		"   ",
 	)
 }
 
@@ -50,12 +56,16 @@ func TestValidateHeaderValueInMatch(t *testing.T) {
 		t,
 		validator.ValidateHeaderValueInMatch,
 		"value",
+		"version%!",
+		"version-2",
 	)
 	testInvalidValuesForSimpleValidator(
 		t,
 		validator.ValidateHeaderValueInMatch,
 		":",
 		"",
+		"hello$world",
+		"   ",
 	)
 }
 
