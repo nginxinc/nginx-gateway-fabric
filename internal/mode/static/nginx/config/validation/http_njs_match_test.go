@@ -57,6 +57,7 @@ func TestValidateHeaderValueInMatch(t *testing.T) {
 		validator.ValidateHeaderValueInMatch,
 		"value",
 		"version%!",
+		"version-2",
 	)
 	testInvalidValuesForSimpleValidator(
 		t,
