@@ -93,8 +93,9 @@ func createStaticModeCommand() *cobra.Command {
 	)
 
 	cmd := &cobra.Command{
-		Use:   "static-mode",
-		Short: "Configure NGINX in the scope of a single Gateway resource",
+		Use:          "static-mode",
+		Short:        "Configure NGINX in the scope of a single Gateway resource",
+		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			atom := zap.NewAtomicLevel()
 
