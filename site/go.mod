@@ -1,4 +1,4 @@
-module github.com/nginxinc/nginx-gateway-fabric/hugo
+module github.com/nginxinc/nginx-gateway-fabric/site
 
 go 1.21
 

@@ -1,5 +1,5 @@
 [build]
-  base = "hugo/"
+  base = "site/"
   publish = "public"
 
 [context.production]
