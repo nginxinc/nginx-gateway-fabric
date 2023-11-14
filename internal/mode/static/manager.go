@@ -222,6 +222,14 @@ func StartManager(cfg config.Config) error {
 		}
 	}
 
+	err = mgr.Add(&telemetryReporter{
+		k8sClient: mgr.GetClient(),
+		logger:    cfg.Logger.WithName("telemetryReporter"),
+	})
+	if err != nil {
+		return err
+	}
+
 	cfg.Logger.Info("Starting manager")
 	return mgr.Start(ctx)
 }

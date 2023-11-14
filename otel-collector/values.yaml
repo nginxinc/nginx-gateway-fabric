@@ -1,0 +1,27 @@
+mode: deployment
+replicaCount: 1
+config:
+  exporters:
+    debug:
+      verbosity: detailed
+  receivers:
+    jaeger:
+    prometheus:
+    zipkin:
+    otlp:
+      protocols:
+        grpc:
+          endpoint: 0.0.0.0:4317
+  service:
+    telemetry:
+    extensions:
+      - health_check
+    pipelines:
+      logs:
+      metrics:
+      traces:
+        exporters:
+          - debug
+        processors:
+        receivers:
+          - otlp
