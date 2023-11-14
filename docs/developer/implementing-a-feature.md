@@ -32,18 +32,19 @@ practices to ensure a successful feature development process.
    the [testing](/docs/developer/testing.md#unit-test-guidelines) documentation.
 9. **Manually verify your changes**: Refer to the [manual testing](/docs/developer/testing.md#manual-testing) section of
    the testing documentation for instructions on how to manually test your changes.
-10. **Update any relevant documentation**: Here are some guidelines for updating documentation:
+10. **Update any relevant documentation**: See the [documentation](/docs/developer/documentation.md) guide for in-depth information about the workflow to update the docs and how we publish them.
+   Here are some basic guidelines for updating documentation:
     - **Gateway API Feature**: If you are implementing a Gateway API feature, make sure to update
-      the [Gateway API Compatibility](/docs/gateway-api-compatibility.md) documentation.
+      the [Gateway API Compatibility](/site/content/concepts/gateway-api-compatibility.md) documentation.
     - **New Use Case:** If your feature introduces a new use case, add an example of how to use it in
       the [examples](/examples) directory. This example will help users understand how to leverage the new feature.
       > For security, a Docker image used in an example must be either managed by F5/NGINX or be an [official image](https://docs.docker.com/docker-hub/official_images/).
     - **Installation Changes**: If your feature involves changes to the installation process of NGF, update
-      the [installation](/docs/installation.md) documentation.
+      the [installation](/site/content/how-to/installation/installation.md) documentation.
     - **Helm Changes**: If your feature introduces or changes any values of the NGF Helm Chart, update the
       [Helm README](/deploy/helm-chart/README.md).
     - **Command-line Changes**: If your feature introduces or changes a command-line flag or subcommand, update
-      the [cli help](/docs/cli-help.md) documentation.
+      the [cli help](/site/content/reference/cli-help.md) documentation.
     - **Other Documentation Updates**: For any other changes that affect the behavior, usage, or configuration of NGF,
       review the existing documentation and update it as necessary. Ensure that the documentation remains accurate and
       up to date with the latest changes.

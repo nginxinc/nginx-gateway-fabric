@@ -1,12 +1,12 @@
 # NGINX Gateway Fabric Docs
 
-This directory contains the user documentation for NGINX Gateway Fabric and the requirements for linting, building, and publishing the docs.
+The `/site` directory contains the user documentation for NGINX Gateway Fabric and the requirements for linting, building, and publishing the docs.
 
 We use [Hugo](https://gohugo.io/) to build the docs for NGINX, with the [nginx-hugo-theme](https://github.com/nginxinc/nginx-hugo-theme).
 
 Docs should be written in Markdown.
 
-In this directory, you will find the following files:
+In the `/site` directory, you will find the following files:
 
 - a [Netlify](https://netlify.com) configuration file;
 - configuration files for [markdownlint](https://github.com/DavidAnson/markdownlint/) and [markdown-link-check](https://github.com/tcort/markdown-link-check)
@@ -14,59 +14,21 @@ In this directory, you will find the following files:
 
 ## Git Guidelines
 
-- Keep a clean, concise and meaningful git commit history on your branch (within reason), rebasing locally and squashing before submitting a PR.
-- Use the [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) format when writing a commit message, so that changelogs can be automatically generated
-- Follow the guidelines of writing a good commit message as described here <https://chris.beams.io/posts/git-commit/> and summarised in the next few points:
-  - In the subject line, use the present tense ("Add feature" not "Added feature").
-  - In the subject line, use the imperative mood ("Move cursor to..." not "Moves cursor to...").
-  - Limit the subject line to 72 characters or less.
-  - Reference issues and pull requests liberally after the subject line.
-  - Add more detailed description in the body of the git message (`git commit -a` to give you more space and time in your text editor to write a good message instead of `git commit -am`).
+See the [Pull Request Guide](pull-request.md) for specfic instructions on how to submit a pull request.
 
-### Forking and Pull Requests
+### Branching and Workflow
 
-This repo uses a [forking workflow](https://www.atlassian.com/git/tutorials/comparing-workflows/forking-workflow). Take the steps below to fork the repo, check out a feature branch, and open a pull request with your changes.
+This repo uses a [forking workflow](https://www.atlassian.com/git/tutorials/comparing-workflows/forking-workflow). See our [Branching and Workflow](branching-and-workflow.md) documentation for more information.
 
-1. In the GitHub UI, select the **Fork** button.
-   
-    - On the **Create a new fork** page, select the **Owner** (the account where the fork of the repo will be placed).
-    - Select the **Create fork** button.
-
-2. If you plan to work on docs in your local development environment, clone your fork. 
-   For example, to clone the repo using SSH, you would run the following command:
-    
-    ```shell
-    git clone git@github.com:<your-account>/nginx-gateway-fabric.git
-    ```
-
-3. Check out a new feature branch in your fork. This is where you will work on your docs. 
-
-   To do this via the command line, you would run the following command:
-
-    ```shell
-    git checkout -b <branch-name>
-    ```
-
-    **CAUTION**: Do not work on the main branch in your fork. This can cause issues when the NGINX Docs team needs to check out your feature branch for editing work.
-
-4. Make atomic, [conventional commits](https://www.conventionalcommits.org/en/v1.0.0/) on your feature branch. 
-
-5. When ready, open a pull request into the **main** branch in the **nginxinc/nginx-gateway-fabric** repo.
-    
-    - Fill in [our pull request template](https://github.com/nginxinc/nginx-gateway-fabric/blob/main/.github/PULL_REQUEST_TEMPLATE.md) when opening your PR.
-    - Tag the appropriate reviewers for your subject area.  
-      Technical reviewers should be able to verify that the information provided is accurate.  
-      Documentation reviewers ensure that the content conforms to the NGINX Style Guide, is grammatically correct, and adheres to the NGINX content templates. 
-
-## Release Management and Publishing
+### Publishing Documentation Updates
 
 **`main`** is the default branch in this repo. All the latest content updates are merged into this branch. 
 
-The documentation is published from the latest public release branch, (for example, `release-4.0`). Work on your docs in feature branches off of the main branch. Open pull requests into the `main` when you are ready to merge your work.
+The documentation is published from the latest public release branch, (for example, `release-4.0`). Work on your docs in a feature branch in your fork of the repo. Open pull requests into the `main` branch when you are ready to merge your work.
 
 If you are working on content for immediate publication in the docs site, cherrypick your changes to the current public release branch.
 
-If you are working on content for a future release, make sure that you **do not** cherrypick them to the current public release branch, as this will publish them automatically.
+If you are working on content for a future release, make sure that you **do not** cherrypick them to the current public release branch, as this will publish them automatically. See the [Release Process documentation](release-process.md) for more information.
 
 
 ## Setup
@@ -122,27 +84,27 @@ Format links as [Hugo relrefs](https://gohugo.io/content-management/cross-refere
 
 > Note: Using file extensions when linking to internal docs with `relref` is optional.
   
-- You can use relative paths or just the filename. 
+- You can use relative paths or just the filename. We recommend using the filename
 - Paths without a leading `/` are first resolved relative to the current page, then to the remainder of the site.
 - Anchors are supported.
 
 For example:
 
 ```md
-To install NGINX Gateway Fabric, refer to the [installation instructions]({{< ref "install" >}}).
+To install NGINX Gateway Fabric, refer to the [installation instructions]({{< relref "/installation/install.md#section-1" >}}).
 ```
 
 ### Add images
 
 You can use the `img` [shortcode](#shortcodes) to insert images into your documentation.
 
-1. Add the image to the static/img directory, or to the same directory as the doc you want to use it in.
+1. Add the image to the static/img directory.
    DO NOT include a forward slash at the beginning of the file path. This will break the image when it's rendered.
    See the docs for the [Hugo relURL Function](https://gohugo.io/functions/relurl/#input-begins-with-a-slash) to learn more.
 
 1. Add the img shortcode:
 
-    {{< img src="<img-file.png>" >}}
+    {{< img src="img/<img-file.png>" >}}
  
 > Note: The shortcode accepts all of the same parameters as the [Hugo figure shortcode](https://gohugo.io/content-management/shortcodes/#figure). 
 
