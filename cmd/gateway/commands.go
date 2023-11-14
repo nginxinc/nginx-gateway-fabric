@@ -30,7 +30,9 @@ const (
 
 func createRootCommand() *cobra.Command {
 	rootCmd := &cobra.Command{
-		Use: "gateway",
+		Use:           "gateway",
+		SilenceUsage:  true,
+		SilenceErrors: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return cmd.Help()
 		},
