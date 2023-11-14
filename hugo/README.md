@@ -129,7 +129,7 @@ Format links as [Hugo relrefs](https://gohugo.io/content-management/cross-refere
 For example:
 
 ```md
-To install NGINX Controller, refer to the [installation instructions]({{< ref "install" >}}).
+To install NGINX Gateway Fabric, refer to the [installation instructions]({{< ref "install" >}}).
 ```
 
 ### Add images
