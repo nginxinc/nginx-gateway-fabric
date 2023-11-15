@@ -86,8 +86,6 @@ For enhanced security with HTTPS:
         <...>
     ```
 
-Thank you for pointing that out. Let's include that important detail in the NGINX Gateway Fabric metrics subsection. Here's the revised section:
-
 ## Available metrics in NGINX Gateway Fabric
 
 NGINX Gateway Fabric provides a variety of metrics to assist in monitoring and analyzing performance. These metrics are categorized as follows:
