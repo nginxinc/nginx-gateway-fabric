@@ -86,7 +86,7 @@ func validateGatewayClass(gc *v1.GatewayClass, npCfg *NginxProxy) error {
 			return field.Required(path.Child("namespace"), "parametersRef.namespace must be specified for NginxProxy")
 		}
 
-		if npCfg == nil || npCfg.Source == nil {
+		if npCfg == nil {
 			return field.NotFound(path.Child("name"), gc.Spec.ParametersRef.Name)
 		}
 	}

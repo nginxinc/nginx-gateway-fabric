@@ -1265,10 +1265,10 @@ var _ = Describe("ChangeProcessor", func() {
 						Telemetry: &ngfAPI.Telemetry{
 							Tracing: &ngfAPI.Tracing{
 								Endpoint:   "my-svc:123",
-								BatchSize:  512,
-								BatchCount: 4,
-								Interval:   "5s",
-								Enabled:    true,
+								BatchSize:  helpers.GetPointer(int32(512)),
+								BatchCount: helpers.GetPointer(int32(4)),
+								Interval:   helpers.GetPointer("5s"),
+								Enable:     helpers.GetPointer(true),
 							},
 						},
 					},

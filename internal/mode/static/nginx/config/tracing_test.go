@@ -31,9 +31,8 @@ func TestExecuteTracing(t *testing.T) {
 		"batch_count 4;":                 1,
 	}
 
-	maps := string(executeTracing(conf))
 	for expSubStr, expCount := range expSubStrings {
-		g.Expect(expCount).To(Equal(strings.Count(maps, expSubStr)))
+		g.Expect(expCount).To(Equal(strings.Count(string(executeTracing(conf)), expSubStr)))
 	}
 }
 
@@ -43,12 +42,6 @@ func TestExecuteTracingNil(t *testing.T) {
 	}
 
 	g := NewWithT(t)
-	expSubStrings := map[string]int{
-		"endpoint ;": 0,
-	}
 
-	maps := string(executeTracing(conf))
-	for expSubStr, expCount := range expSubStrings {
-		g.Expect(expCount).To(Equal(strings.Count(maps, expSubStr)))
-	}
+	g.Expect(string(executeTracing(conf))).To(BeEmpty())
 }

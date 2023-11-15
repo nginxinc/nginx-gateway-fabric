@@ -36,7 +36,7 @@ spec:
             description: NginxProxySpec defines the desired state of the NginxProxy.
             properties:
               http:
-                description: Http defines the Http configuration.
+                description: HTTP defines the HTTP configuration.
                 properties:
                   telemetry:
                     description: Telemetry defines the telemetry configuration.
@@ -49,21 +49,26 @@ spec:
                             description: BatchCount specifies the number of pending
                               batches per worker, spans exceeding the limit are dropped.
                               Default is 4.
+                            format: int32
                             type: integer
                           batchSize:
                             default: 512
                             description: BatchSize specifies the maximum number of
                               spans to be sent in one batch per worker. Default is
                               512.
+                            format: int32
                             type: integer
-                          enabled:
+                          enable:
                             default: false
-                            description: Enabled enables or disables OpenTelemetry
+                            description: Enable enables or disables OpenTelemetry
                               tracing at the HTTP context. Default is false.
                             type: boolean
                           endpoint:
                             description: Endpoint specifies the address of OTLP/gRPC
-                              endpoint that will accept telemetry data.
+                              endpoint that will accept telemetry data. It should
+                              be in the form 'hostname.my.domain:<port>' or '<IP:<port>'
+                              e.g. 'simplest-collector.default.svc.cluster.local:4317'
+                              or '10.7.8.9:4318'
                             type: string
                           interval:
                             default: 5s

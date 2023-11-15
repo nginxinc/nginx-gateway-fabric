@@ -1,7 +1,6 @@
 # Example
 
-In this example we deploy NGINX Gateway Fabric, a simple web application, configure NGINX Gateway Fabric
-to route traffic to that application using HTTPRoute resources, and configure NGINX Gateway Fabric to enable tracing on
+In this example we configure NGINX Gateway Fabric to enable tracing on
 all requests using the [NGINX OTel module](https://nginx.org/en/docs/ngx_otel_module.html).
 
 ## Running the Example
@@ -23,7 +22,7 @@ all requests using the [NGINX OTel module](https://nginx.org/en/docs/ngx_otel_mo
 1. Get the local DNS name of the all in one Jaegar collector service. It will follow the standard
    [Kubernetes DNS naming conventions](https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/#a-aaaa-records)
    e.g. `simplest-collector.default.svc.cluster.local`.
-   Also get the number of either the `grpc-otlp` port or the `http-otlp` port of the collector service, e.g.
+   Also, get the number of either the `grpc-otlp` port or the `http-otlp` port of the collector service, e.g.
 
    ```shell
    k describe svc simplest-collector
@@ -77,11 +76,11 @@ all requests using the [NGINX OTel module](https://nginx.org/en/docs/ngx_otel_mo
       http:
          telemetry:
             tracing:
-            enabled: true # default false
-            endpoint: simplest-collector.default.svc.cluster.local:4317 # required
-            interval: "5s" # default
-            batchSize: 512 # default
-            batchCount: 4 # default
+               enable: true # default false
+               endpoint: simplest-collector.default.svc.cluster.local:4317 # required
+               interval: "5s" # default
+               batchSize: 512 # default
+               batchCount: 4 # default
    <...>
    ```
 
@@ -98,14 +97,14 @@ all requests using the [NGINX OTel module](https://nginx.org/en/docs/ngx_otel_mo
    Namespace:    nginx-gateway
    <...>
    Spec:
-   Http:
-      Telemetry:
-         Tracing:
-         Batch Count:  4
-         Batch Size:   512
-         Enabled:      true
-         Endpoint:     simplest-collector.default.svc.cluster.local:4317
-         Interval:     5s
+      Http:
+         Telemetry:
+            Tracing:
+               Batch Count:  4
+               Batch Size:   512
+               Enabled:      true
+               Endpoint:     simplest-collector.default.svc.cluster.local:4317
+               Interval:     5s
    Status:
    Conditions:
       Last Transition Time:  2023-11-08T16:37:17Z
@@ -124,7 +123,7 @@ all requests using the [NGINX OTel module](https://nginx.org/en/docs/ngx_otel_mo
    ```
 
 
-## 2. Deploy the Cafe Application
+## 3. Deploy the Cafe Application
 
 1. Create the coffee and the tea Deployments and Services:
 
@@ -144,7 +143,7 @@ all requests using the [NGINX OTel module](https://nginx.org/en/docs/ngx_otel_mo
    tea-6fb46d899f-fm7zr      1/1     Running   0          12s
    ```
 
-## 3. Configure Routing
+## 4. Configure Routing
 
 1. Create the Gateway:
 
@@ -158,7 +157,7 @@ all requests using the [NGINX OTel module](https://nginx.org/en/docs/ngx_otel_mo
    kubectl apply -f cafe-routes.yaml
    ```
 
-## 4. Test the Application
+## 5. Test the Application
 
 To access the application, we will use `curl` to send requests to the `coffee` and `tea` Services.
 
@@ -184,7 +183,7 @@ Server address: 10.12.0.19:80
 Server name: tea-7cd44fcb4d-xfw2x
 ```
 
-## 5. View tracing
+## 6. View tracing
 
 Log into your Jaegar instance and view the traces for your requests. The service will follow the naming pattern
 `gateway-class-name:ngf`, so for this example it will be `nginx:ngf`.

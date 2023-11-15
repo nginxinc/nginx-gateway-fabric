@@ -213,11 +213,11 @@ func TestBuildGraph(t *testing.T) {
 			HTTP: &ngfAPI.HTTP{
 				Telemetry: &ngfAPI.Telemetry{
 					Tracing: &ngfAPI.Tracing{
-						Enabled:    true,
+						Enable:     helpers.GetPointer(true),
 						Endpoint:   "1.2.3.4:123",
-						Interval:   "5s",
-						BatchSize:  512,
-						BatchCount: 4,
+						Interval:   helpers.GetPointer("5s"),
+						BatchSize:  helpers.GetPointer(int32(512)),
+						BatchCount: helpers.GetPointer(int32(4)),
 					},
 				},
 			},
@@ -232,8 +232,9 @@ func TestBuildGraph(t *testing.T) {
 			Interval:    "5s",
 			BatchSize:   512,
 			BatchCount:  4,
-			ServiceName: gcName + ":ngf",
+			ServiceName: gw1.Namespace + "/" + gw1.Name + ":ngf",
 		},
+		Valid: true,
 	}
 
 	createStateWithGatewayClass := func(gc *gatewayv1.GatewayClass) ClusterState {

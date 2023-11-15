@@ -54,7 +54,7 @@ spec:
         upstreamZoneSize: 512k # default
         telemetry:
             tracing:
-                enabled: true # default false
+                enable: true # default false
                 endpoint: my-otel-collector.svc:4317 # required
                 interval: 5s # default
                 batchSize: 512 # default

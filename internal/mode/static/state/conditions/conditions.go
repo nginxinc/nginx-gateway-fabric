@@ -604,7 +604,7 @@ func NewNginxProxyProgrammed() conditions.Condition {
 }
 
 // NewNginxProxyNotProgrammed returns a Condition that indicates that the NginxProxy config is not
-// programmed due to an error to reload nginx.
+// programmed due to an error to reload nginx or because it is semantically or syntactically invalid.
 func NewNginxProxyNotProgrammed(msg string) conditions.Condition {
 	return conditions.Condition{
 		Type:    string(ngfAPI.NginxProxyConditionProgrammed),

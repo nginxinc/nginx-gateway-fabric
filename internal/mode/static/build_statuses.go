@@ -195,6 +195,14 @@ func buildNginxProxyStatus(np *graph.NginxProxy, nginxReloadRes nginxReloadResul
 		return nil
 	}
 
+	if !np.Valid {
+		return &status.NginxProxyStatus{
+			NsName:             client.ObjectKeyFromObject(np.Source),
+			Conditions:         np.Conditions,
+			ObservedGeneration: np.Source.Generation,
+		}
+	}
+
 	conds := []conditions.Condition{
 		staticConds.NewNginxProxyAccepted(),
 	}

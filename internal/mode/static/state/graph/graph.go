@@ -81,12 +81,12 @@ func BuildGraph(
 		return &Graph{}
 	}
 
-	npCfg := getNginxProxyConfig(state.NginxProxies, processedGwClasses.Winner)
+	processedGws := processGateways(state.Gateways, gcName)
+
+	npCfg := buildNginxProxyConfig(state.NginxProxies, processedGwClasses.Winner, processedGws.Winner)
 	gc := buildGatewayClass(processedGwClasses.Winner, npCfg)
 
 	secretResolver := newSecretResolver(state.Secrets)
-
-	processedGws := processGateways(state.Gateways, gcName)
 
 	refGrantResolver := newReferenceGrantResolver(state.ReferenceGrants)
 	gw := buildGateway(processedGws.Winner, secretResolver, gc, refGrantResolver, protectedPorts)

@@ -596,13 +596,28 @@ func TestBuildGatewayStatuses(t *testing.T) {
 }
 
 func TestBuildNginxProxyStatus(t *testing.T) {
-	np := &graph.NginxProxy{
+	npValid := &graph.NginxProxy{
+		Valid: true,
 		Source: &ngfAPI.NginxProxy{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:       "np",
 				Namespace:  "test",
 				Generation: 1,
 			},
+		},
+	}
+
+	npInvalid := &graph.NginxProxy{
+		Valid: false,
+		Source: &ngfAPI.NginxProxy{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:       "np",
+				Namespace:  "test",
+				Generation: 1,
+			},
+		},
+		Conditions: []conditions.Condition{
+			staticConds.NewNginxProxyNotProgrammed("error validating NginxProxy"),
 		},
 	}
 
@@ -618,7 +633,7 @@ func TestBuildNginxProxyStatus(t *testing.T) {
 		},
 		{
 			name: "valid",
-			np:   np,
+			np:   npValid,
 			expected: &status.NginxProxyStatus{
 				NsName:             types.NamespacedName{Namespace: "test", Name: "np"},
 				ObservedGeneration: 1,
@@ -629,9 +644,9 @@ func TestBuildNginxProxyStatus(t *testing.T) {
 			},
 		},
 		{
-			name:           "invalid",
+			name:           "valid failed reload",
 			nginxReloadRes: nginxReloadResult{error: errors.New("test error")},
-			np:             np,
+			np:             npValid,
 			expected: &status.NginxProxyStatus{
 				NsName:             types.NamespacedName{Namespace: "test", Name: "np"},
 				ObservedGeneration: 1,
@@ -639,6 +654,15 @@ func TestBuildNginxProxyStatus(t *testing.T) {
 					staticConds.NewNginxProxyAccepted(),
 					staticConds.NewNginxProxyNotProgrammed(staticConds.NginxProxyMessageFailedNginxReload),
 				},
+			},
+		},
+		{
+			name: "invalid",
+			np:   npInvalid,
+			expected: &status.NginxProxyStatus{
+				NsName:             types.NamespacedName{Namespace: "test", Name: "np"},
+				ObservedGeneration: 1,
+				Conditions:         npInvalid.Conditions,
 			},
 		},
 	}

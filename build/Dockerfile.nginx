@@ -5,7 +5,7 @@ ARG NJS_DIR
 ARG NGINX_CONF_DIR
 
 RUN apk update && apk upgrade && apk add --no-cache libcap curl ca-certificates \
-    && printf "%s%s%s\n" "http://nginx.org/packages/mainline/alpine/v" `egrep -o '^[0-9]+\.[0-9]+' /etc/alpine-release` "/main" | tee -a /etc/apk/repositories \
+    && printf "%s\n" "http://nginx.org/packages/mainline/alpine/v$(egrep -o '^[0-9]+\.[0-9]+' /etc/alpine-release)/main" >> /etc/apk/repositories \
     && curl -o /tmp/nginx_signing.rsa.pub https://nginx.org/keys/nginx_signing.rsa.pub \
     && mv /tmp/nginx_signing.rsa.pub /etc/apk/keys/ \
     && apk add nginx-module-otel \

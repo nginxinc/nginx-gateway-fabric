@@ -1,12 +1,12 @@
 # Data Plane Configuration
 
-This document describes how to dynamically update the NGINX Gateway Fabric data plane configuration.
+This document describes how to enable or customize various NGINX features.
 
 ## Overview
 
-NGINX Gateway Fabric offers a way to update the data plane configuration dynamically without the need for a
-restart. The data plane configuration is stored in the NginxProxy custom resource. This resource is created
-during the installation of NGINX Gateway Fabric.
+NGINX Gateway Fabric supports enabling or customizing various NGINX features via NginxProxy resource.
+The resource is created during the installation of NGINX Gateway Fabric. An update to the resource will make
+NGINX Gateway Fabric regenerate NGINX configuration and reload NGINX.
 
 If using manifests, the default name of the resource is `nginx-proxy-config`. If using Helm, the default name
 of the resource is `<release-name>-proxy-config`. It is deployed in the same Namespace as the controller
@@ -28,19 +28,19 @@ to reflect whether it is valid or not.
 
 | name      | description                                    | type                        | required |
 | --------- | ---------------------------------------------- | --------------------------- | -------- |
-| telemetry | Telemetry defines the telemetry configuration. | [telemetry](#spectelemetry) | no       |
+| telemetry | Telemetry defines the telemetry configuration. | [telemetry](#spechttptelemetry) | no       |
 
-### Spec.Telemetry
+### Spec.HTTP.Telemetry
 
 | name    | description                                | type                    | required |
 | ------- | ------------------------------------------ | ----------------------- | -------- |
-| tracing | Tracing defines the tracing configuration. | [tracing](#spectracing) | no       |
+| tracing | Tracing defines the tracing configuration. | [tracing](#spechttptelemetrytracing) | no       |
 
-### Spec.Tracing
+### Spec.HTTP.Telemetry.Tracing
 
 | name       | description                                                                                                         | type   | required |
 | ---------- | ------------------------------------------------------------------------------------------------------------------- | ------ | -------- |
-| enabled    | Enabled enables or disables OpenTelemetry tracing at the HTTP context. Default is false.                            | bool   | no       |
+| enable    | Enabled enables or disables OpenTelemetry tracing at the HTTP context. Default is false.                            | bool   | no       |
 | endpoint   | Endpoint specifies the address of OTLP/gRPC endpoint that will accept telemetry data.                               | bool   | yes      |
 | interval   | Interval specifies the tracing interval. Default is 5s.                                                             | string | no       |
 | batchSize  | BatchSize specifies the maximum number of spans to be sent in one batch per worker. Default is 512.                 | int    | no       |

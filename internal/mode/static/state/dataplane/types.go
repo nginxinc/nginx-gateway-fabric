@@ -214,9 +214,9 @@ type Tracing struct {
 	// Interval specifies the tracing interval.
 	Interval string
 	// BatchSize specifies the maximum number of spans to be sent in one batch per worker.
-	BatchSize int
+	BatchSize int32
 	// BatchCount specifies the number of pending batches per worker, spans exceeding the limit are dropped.
-	BatchCount int
+	BatchCount int32
 	// Enabled specifies if tracing is enabled.
 	Enabled bool
 }
