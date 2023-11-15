@@ -1497,11 +1497,11 @@ func TestBuildConfiguration(t *testing.T) {
 		{
 			graph: &graph.Graph{
 				GatewayClass: &graph.GatewayClass{
-					Source: &v1beta1.GatewayClass{},
+					Source: &v1.GatewayClass{},
 					Valid:  true,
 				},
 				Gateway: &graph.Gateway{
-					Source: &v1beta1.Gateway{},
+					Source: &v1.Gateway{},
 					Listeners: map[string]*graph.Listener{
 						"listener-80-1": {
 							Source: listener80,

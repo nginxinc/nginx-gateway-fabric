@@ -1,7 +1,7 @@
 # Enhancement Proposal-929: Data Plane Configuration
 
 - Issue: https://github.com/nginxinc/nginx-kubernetes-gateway/issues/929
-- Status: Implementable
+- Status: Completed
 
 ## Summary
 

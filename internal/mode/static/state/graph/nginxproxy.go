@@ -5,7 +5,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	"sigs.k8s.io/gateway-api/apis/v1beta1"
+	v1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
@@ -42,8 +42,8 @@ type Tracing struct {
 
 func buildNginxProxyConfig(
 	nps map[types.NamespacedName]*ngfAPI.NginxProxy,
-	gc *v1beta1.GatewayClass,
-	gw *v1beta1.Gateway,
+	gc *v1.GatewayClass,
+	gw *v1.Gateway,
 ) *NginxProxy {
 	gwNsName := "unknown"
 	if gw != nil {
@@ -52,7 +52,7 @@ func buildNginxProxyConfig(
 	if gc != nil {
 		ref := gc.Spec.ParametersRef
 		if ref != nil && ref.Namespace != nil &&
-			ref.Group == ngfAPI.GroupName && ref.Kind == v1beta1.Kind("NginxProxy") {
+			ref.Group == ngfAPI.GroupName && ref.Kind == v1.Kind("NginxProxy") {
 			nsName := types.NamespacedName{Name: ref.Name, Namespace: string(*ref.Namespace)}
 			return convertProxyConfig(nps[nsName], gwNsName)
 		}
