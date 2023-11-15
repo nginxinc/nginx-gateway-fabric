@@ -145,6 +145,7 @@ jobs:
           ngf_prefix=$(echo ${{ steps.ngf-meta.outputs.tags }} | cut -d ":" -f 1)
           ngf_tag=$(echo ${{ steps.ngf-meta.outputs.tags }} | cut -d ":" -f 2)
           if [ ${{ github.event_name }} == "schedule" ]; then export GW_API_VERSION=main; fi
+          if [ ${{ startsWith(matrix.k8s-version, '1.23') ||  startsWith(matrix.k8s-version, '1.24') }} == "true" ]; then export INSTALL_WEBHOOK=true; fi
           make install-ngf-local-no-build NGF_PREFIX=${ngf_prefix} NGF_TAG=${ngf_tag}
         working-directory: ./conformance
 
