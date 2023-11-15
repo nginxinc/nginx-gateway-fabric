@@ -57,12 +57,6 @@ const (
 	RouteMessageFailedNginxReload = GatewayMessageFailedNginxReload + ". NGINX may still be configured " +
 		"for this HTTPRoute. However, future updates to this resource will not be configured until the Gateway " +
 		"is programmed again"
-	// RouteConditionPartiallyInvalid is a condition which indicates that the Route contains
-	// a combination of both valid and invalid rules.
-	//
-	// FIXME(bjee19): Update to Gateway sig v1 version when released.
-	// https://github.com/nginxinc/nginx-gateway-fabric/issues/1168
-	RouteConditionPartiallyInvalid v1.RouteConditionType = "PartiallyInvalid"
 )
 
 // DeduplicateConditions removes duplicate conditions based on the condition type.
@@ -165,7 +159,7 @@ func NewRouteUnsupportedValue(msg string) conditions.Condition {
 // See https://github.com/kubernetes-sigs/gateway-api/blob/37d81593e5a965ed76582dbc1a2f56bbd57c0622/apis/v1/shared_types.go#L408-L413
 func NewRoutePartiallyInvalid(msg string) conditions.Condition {
 	return conditions.Condition{
-		Type:    string(RouteConditionPartiallyInvalid),
+		Type:    string(v1.RouteConditionPartiallyInvalid),
 		Status:  metav1.ConditionTrue,
 		Reason:  string(v1.RouteReasonUnsupportedValue),
 		Message: "Dropped Rule(s): " + msg,
