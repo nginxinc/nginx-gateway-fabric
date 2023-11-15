@@ -75,7 +75,7 @@ To change the default port for metrics:
 
 For enhanced security with HTTPS:
 
-1. Turn on secure serving by setting the `-metrics-secure-serving` [command-line argument]({{< relref "reference/cli-help.md">}}) to `true` in the NGINX Gateway Fabric Pod's configuration.
+1. Enable HTTPS security by setting the `-metrics-secure-serving` [command-line argument]({{< relref "reference/cli-help.md">}}) to `true` in the NGINX Gateway Fabric Pod's configuration.
 
 2. Add an HTTPS scheme annotation to the Pod template:
 
