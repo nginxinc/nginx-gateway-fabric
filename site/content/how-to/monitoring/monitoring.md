@@ -18,7 +18,7 @@ NGINX Gateway Fabric metrics are displayed in [Prometheus](https://prometheus.io
 Metrics are served over HTTP by default. Enabling HTTPS will secure the metrics endpoint with a self-signed certificate. When using HTTPS, adjust the Prometheus Pod scrape settings by adding the `insecure_skip_verify` flag to handle the self-signed certificate. For further details, refer to the [Prometheus documentation](https://prometheus.io/docs/prometheus/latest/configuration/configuration/#tls_config).
 {{</call-out>}}
 
-## How to Change the Default Metrics Configuration
+## How to change the default metrics configuration
 
 Configuring NGINX Gateway Fabric for monitoring is straightforward. You can change metric settings using Helm or Kubernetes manifests, depending on your setup.
 
@@ -26,11 +26,11 @@ Configuring NGINX Gateway Fabric for monitoring is straightforward. You can chan
 
 If you're setting up NGINX Gateway Fabric with Helm, you can adjust the `metrics.*` parameters to fit your needs. For detailed options and instructions, see the [Helm README](/deploy/helm-chart/README.md).
 
-### Using Kubernetes Manifests
+### Using Kubernetes manifests
 
 For setups using Kubernetes manifests, change the metrics configuration by editing the [NGINX Gateway manifest](/deploy/manifests/nginx-gateway.yaml).
 
-#### Disabling Metrics
+#### Disabling metrics
 
 If you need to disable metrics:
 
@@ -50,7 +50,7 @@ If you need to disable metrics:
         prometheus.io/port: "9113"
     ```
 
-#### Changing the Default Port
+#### Changing the default port
 
 To change the default port for metrics:
 
@@ -71,7 +71,7 @@ To change the default port for metrics:
         <...>
     ```
 
-#### Enabling HTTPS for Metrics
+#### Enabling HTTPS for metrics
 
 For enhanced security with HTTPS:
 
@@ -88,17 +88,17 @@ For enhanced security with HTTPS:
 
 Thank you for pointing that out. Let's include that important detail in the NGINX Gateway Fabric metrics subsection. Here's the revised section:
 
-## Available Metrics in NGINX Gateway Fabric
+## Available metrics in NGINX Gateway Fabric
 
 NGINX Gateway Fabric provides a variety of metrics to assist in monitoring and analyzing performance. These metrics are categorized as follows:
 
-### NGINX Metrics
+### NGINX metrics
 
 NGINX metrics, essential for monitoring specific NGINX operations, include details like the total number of accepted client connections. For a complete list of available NGINX metrics, refer to the [NGINX Prometheus Exporter developer docs](https://github.com/nginxinc/nginx-prometheus-exporter#metrics-for-nginx-oss).
 
 These metrics use  the `nginx_gateway_fabric` namespace and include the `class` label, indicating the NGINX Gateway class. For example, `nginx_gateway_fabric_connections_accepted{class="nginx"}`.
 
-### NGINX Gateway Fabric Metrics
+### NGINX Gateway Fabric metrics
 
 Metrics specific to the NGINX Gateway Fabric include:
 
@@ -110,7 +110,7 @@ Metrics specific to the NGINX Gateway Fabric include:
 
 All these metrics are under the `nginx_gateway_fabric` namespace and include a `class` label set to the Gateway class of NGINX Gateway Fabric. For example, `nginx_gateway_fabric_nginx_reloads_total{class="nginx"}`.
 
-### Controller-runtime Metrics
+### Controller-runtime metrics
 
 Provided by the [controller-runtime](https://github.com/kubernetes-sigs/controller-runtime) library, these metrics cover a range of aspects:
 
