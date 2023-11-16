@@ -6,6 +6,8 @@ toc: true
 docs: "DOCS-000"
 ---
 
+{{<custom-styles>}}
+
 ## Overview
 
 NGINX Gateway Fabric allows to upgrade applications without downtime. 
