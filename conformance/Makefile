@@ -1,13 +1,13 @@
-NGF_TAG = edge
-NGF_PREFIX = nginx-gateway-fabric
-NGINX_IMAGE_NAME = $(NGF_PREFIX)/nginx
+TAG = edge
+PREFIX = nginx-gateway-fabric
+NGINX_PREFIX = $(PREFIX)/nginx
 GW_API_VERSION ?= 1.0.0
 GATEWAY_CLASS = nginx
 SUPPORTED_FEATURES = HTTPRoute,HTTPRouteQueryParamMatching,HTTPRouteMethodMatching,HTTPRoutePortRedirect,HTTPRouteSchemeRedirect,GatewayClassObservedGenerationBump
 KIND_IMAGE ?= $(shell grep -m1 'FROM kindest/node' <tests/Dockerfile | awk -F'[ ]' '{print $$2}')
 KIND_KUBE_CONFIG=$${HOME}/.kube/kind/config
-TAG = latest
-PREFIX = conformance-test-runner
+CONFORMANCE_TAG = latest
+CONFORMANCE_PREFIX = conformance-test-runner
 NGF_MANIFEST=../deploy/manifests/nginx-gateway.yaml
 CRDS=../deploy/manifests/crds/
 STATIC_MANIFEST=provisioner/static-deployment.yaml
@@ -27,7 +27,7 @@ update-go-modules: ## Update the gateway-api go modules to latest main version
 
 .PHONY: build-test-runner-image
 build-test-runner-image: ## Build conformance test runner image
-	docker build -t $(PREFIX):$(TAG) -f tests/Dockerfile ..
+	docker build -t $(CONFORMANCE_PREFIX):$(CONFORMANCE_TAG) -f tests/Dockerfile ..
 
 .PHONY: create-kind-cluster
 create-kind-cluster: ## Create a kind cluster
@@ -36,15 +36,15 @@ create-kind-cluster: ## Create a kind cluster
 
 .PHONY: update-ngf-manifest
 update-ngf-manifest: ## Update the NGF deployment manifest image names and imagePullPolicies
-	cd .. && make generate-manifests HELM_TEMPLATE_EXTRA_ARGS_FOR_ALL_MANIFESTS_FILE="--set nginxGateway.kind=skip" HELM_TEMPLATE_COMMON_ARGS="--set nginxGateway.image.repository=$(NGF_PREFIX) --set nginxGateway.image.tag=$(NGF_TAG) --set nginxGateway.image.pullPolicy=Never --set nginx.image.repository=$(NGINX_IMAGE_NAME) --set nginx.image.tag=$(NGF_TAG) --set nginx.image.pullPolicy=Never" && cd -
+	cd .. && make generate-manifests HELM_TEMPLATE_EXTRA_ARGS_FOR_ALL_MANIFESTS_FILE="--set nginxGateway.kind=skip" HELM_TEMPLATE_COMMON_ARGS="--set nginxGateway.image.repository=$(PREFIX) --set nginxGateway.image.tag=$(TAG) --set nginxGateway.image.pullPolicy=Never --set nginx.image.repository=$(NGINX_PREFIX) --set nginx.image.tag=$(TAG) --set nginx.image.pullPolicy=Never" && cd -
 
 .PHONY: build-images
 build-images: ## Build NGF and nginx images
-	cd .. && make PREFIX=$(NGF_PREFIX) TAG=$(NGF_TAG) build-images
+	cd .. && make PREFIX=$(PREFIX) TAG=$(TAG) build-images
 
 .PHONY: load-images
 load-images: ## Load NGF and NGINX images on configured kind cluster
-	kind load docker-image $(NGF_PREFIX):$(NGF_TAG) $(NGINX_IMAGE_NAME):$(NGF_TAG)
+	kind load docker-image $(PREFIX):$(TAG) $(NGINX_PREFIX):$(TAG)
 
 .PHONY: prepare-ngf-dependencies
 prepare-ngf-dependencies: update-ngf-manifest ## Install NGF dependencies on configured kind cluster
@@ -55,7 +55,7 @@ prepare-ngf-dependencies: update-ngf-manifest ## Install NGF dependencies on con
 .PHONY: deploy-updated-provisioner
 deploy-updated-provisioner: ## Update provisioner manifest and deploy to the configured kind cluster
 	yq '(select(di != 3))' $(PROVISIONER_MANIFEST) | kubectl apply -f -
-	yq '(select(.spec.template.spec.containers[].image) | .spec.template.spec.containers[].image="$(NGF_PREFIX):$(NGF_TAG)" | .spec.template.spec.containers[].imagePullPolicy = "Never")' $(PROVISIONER_MANIFEST) | kubectl apply -f -
+	yq '(select(.spec.template.spec.containers[].image) | .spec.template.spec.containers[].image="$(PREFIX):$(TAG)" | .spec.template.spec.containers[].imagePullPolicy = "Never")' $(PROVISIONER_MANIFEST) | kubectl apply -f -
 
 .PHONY: install-ngf-local-build
 install-ngf-local-build: prepare-ngf-dependencies build-images load-images deploy-updated-provisioner ## Install NGF from local build with provisioner on configured kind cluster
@@ -69,10 +69,10 @@ install-ngf-edge: prepare-ngf-dependencies ## Install NGF with provisioner from 
 
 .PHONY: run-conformance-tests
 run-conformance-tests: ## Run conformance tests
-	kind load docker-image $(PREFIX):$(TAG)
+	kind load docker-image $(CONFORMANCE_PREFIX):$(CONFORMANCE_TAG)
 	kubectl apply -f tests/conformance-rbac.yaml
 	kubectl run -i conformance \
-		--image=$(PREFIX):$(TAG) --image-pull-policy=Never \
+		--image=$(CONFORMANCE_PREFIX):$(CONFORMANCE_TAG) --image-pull-policy=Never \
 		--overrides='{ "spec": { "serviceAccountName": "conformance" }  }' \
 		--restart=Never -- sh -c "go test -v . -tags conformance,experimental -args --gateway-class=$(GATEWAY_CLASS) \
 						        --supported-features=$(SUPPORTED_FEATURES) --version=$(VERSION) \

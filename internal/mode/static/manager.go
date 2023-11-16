@@ -13,6 +13,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/tools/record"
 	ctlr "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -376,8 +377,18 @@ func setInitialConfig(
 	defer cancel()
 
 	var config ngfAPI.NginxGateway
-	if err := reader.Get(ctx, configName, &config); err != nil {
-		return err
+	if err := wait.PollUntilContextCancel(
+		ctx,
+		500*time.Millisecond,
+		true, /* poll immediately */
+		func(ctx context.Context) (bool, error) {
+			if err := reader.Get(ctx, configName, &config); err != nil {
+				return false, nil //nolint:nilerr // returning an error cancels the polling
+			}
+			return true, nil
+		},
+	); err != nil {
+		return fmt.Errorf("NginxGateway %s not found: %w", configName, err)
 	}
 
 	// status is not updated until the status updater's cache is started and the
