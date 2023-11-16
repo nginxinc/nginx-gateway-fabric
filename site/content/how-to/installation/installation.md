@@ -6,14 +6,115 @@ toc: true
 docs: "DOCS-000"
 ---
 
+{{<custom-styles>}}
+
 ## Prerequisites
 
-- [kubectl](https://kubernetes.io/docs/tasks/tools/)
+- Install [kubectl](https://kubernetes.io/docs/tasks/tools/)
 
 ## Deploy NGINX Gateway Fabric using Helm
 
-To deploy NGINX Gateway Fabric using Helm, please follow the instructions on [this](/deploy/helm-chart/README.md)
-page.
+Follow the instructions [to deploy NGINX Gateway Fabric using Helm](/deploy/helm-chart/README.md).
+
+
+## Deploy NGINX Gateway Fabric from Manifests
+
+> **Note:** NGINX Gateway Fabric installs into the _nginx-gateway_ namespace by default. To run NGINX Gateway Fabric in a different namespace, modify the installation manifests.
+
+1. Install the Gateway API resources (Custom Resource Definitions [CRDs] and validating webhook) from the standard channel:
+
+   ```shell
+   kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v0.8.1/standard-install.yaml
+   ```
+
+2. Deploy the NGINX Gateway Fabric CRDs:
+
+   ```shell
+   kubectl apply -f https://github.com/nginxinc/nginx-gateway-fabric/releases/download/v1.0.0/crds.yaml
+   ```
+
+3. Deploy NGINX Gateway Fabric:
+
+   ```shell
+   kubectl apply -f https://github.com/nginxinc/nginx-gateway-fabric/releases/download/v1.0.0/nginx-gateway.yaml
+   ```
+
+4. Verify NGINX Gateway Fabric is running in the `nginx-gateway` namespace:
+
+   ```shell
+   kubectl get pods -n nginx-gateway
+   ```
+
+   Expected output (note that _5d4f4c7db7-xk2kq_ is a randomly generated string and will vary):
+
+   ```text
+   NAME                             READY   STATUS    RESTARTS   AGE
+   nginx-gateway-5d4f4c7db7-xk2kq   2/2     Running   0          112s
+   ```
+
+
+## Expose NGINX Gateway Fabric
+
+Gain access to NGINX Gateway Fabric by creating either a **NodePort** service or a **LoadBalancer** service in the same namespace as the controller. The service name is specified in the **--service** argument of the controller.
+
+{{<important>}}
+The service manifests configure NGINX Gateway Fabric on ports `80` and `443`, affecting any Gateway [Listeners](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.Listener) on these ports. To use different ports, update the manifests. NGINX Gateway Fabric requires a configured [Gateway](https://gateway-api.sigs.k8s.io/api-types/gateway/#gateway) resource with a valid listener to listen on any ports.
+{{</important>}}
+
+NGINX Gateway Fabric utilizes this service to update the **Addresses** field in the **Gateway Status** resource. A LoadBalancer service sets this field to the IP address and/or hostname. Without a service, the Pod IP address is used.
+
+### Create a NodePort service
+
+To create a `NodePort` service:
+
+```shell
+kubectl apply -f https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric/v1.0.0/deploy/manifests/service/nodeport.yaml
+```
+
+A `NodePort` service allocates a port on every cluster node. Access NGINX Gateway Fabric using any node's IP address and the allocated port.
+
+### Create a LoadBalancer Service
+
+To create a `LoadBalancer` service, use the appropriate manifest for your cloud provider:
+
+- For GCP or Azure:
+   ```shell
+   kubectl apply -f https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric/v1.0.0/deploy/manifests/service/loadbalancer.yaml
+   ```
+
+  Lookup the public IP of the load balancer, which is reported in the `EXTERNAL-IP` column in the output of the following command:
+
+   ```shell
+   kubectl get svc nginx-gateway -n nginx-gateway
+   ```
+
+  Use the public IP of the load balancer to access NGINX Gateway Fabric.
+
+- For AWS:
+   ```shell
+   kubectl apply -f https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric/v1.0.0/deploy/manifests/service/loadbalancer-aws-nlb.yaml
+   ```
+
+  In AWS, the NLB DNS name will be reported by Kubernetes instead of a public IP in the `EXTERNAL-IP` column. To get the DNS name, run:
+
+   ```shell
+   kubectl get svc nginx-gateway -n nginx-gateway
+   ```
+
+  Generally, use the NLB DNS name, but for testing purposes, you can resolve the DNS name to get the IP address of the load balancer:
+
+   ```shell
+   nslookup <dns-name>
+   ```
+
+---
+
+This revision ensures that 'service,' 'hostname,' and 'namespace' are treated as common nouns and are in lowercase, as per your instruction. Let me know if this meets your needs or if we should proceed to the next section!
+---
+
+Feel free to copy this text. Let me know if you need any further modifications or if we should proceed to the next section!
+
+%%%%
 
 ## Deploy NGINX Gateway Fabric from Manifests
 
