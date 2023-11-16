@@ -20,6 +20,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/metrics"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	k8spredicate "sigs.k8s.io/controller-runtime/pkg/predicate"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
@@ -50,6 +51,7 @@ var scheme = runtime.NewScheme()
 
 func init() {
 	utilruntime.Must(gatewayv1beta1.AddToScheme(scheme))
+	utilruntime.Must(gatewayv1.AddToScheme(scheme))
 	utilruntime.Must(apiv1.AddToScheme(scheme))
 	utilruntime.Must(discoveryV1.AddToScheme(scheme))
 	utilruntime.Must(ngfAPI.AddToScheme(scheme))
@@ -244,13 +246,13 @@ func registerControllers(
 	// make sure to also update prepareFirstEventBatchPreparerArgs()
 	controllerRegCfgs := []ctlrCfg{
 		{
-			objectType: &gatewayv1beta1.GatewayClass{},
+			objectType: &gatewayv1.GatewayClass{},
 			options: []controller.Option{
 				controller.WithK8sPredicate(predicate.GatewayClassPredicate{ControllerName: cfg.GatewayCtlrName}),
 			},
 		},
 		{
-			objectType: &gatewayv1beta1.Gateway{},
+			objectType: &gatewayv1.Gateway{},
 			options: func() []controller.Option {
 				if cfg.GatewayNsName != nil {
 					return []controller.Option{
@@ -261,7 +263,7 @@ func registerControllers(
 			}(),
 		},
 		{
-			objectType: &gatewayv1beta1.HTTPRoute{},
+			objectType: &gatewayv1.HTTPRoute{},
 		},
 		{
 			objectType: &apiv1.Service{},
@@ -340,23 +342,23 @@ func prepareFirstEventBatchPreparerArgs(
 	gwNsName *types.NamespacedName,
 ) ([]client.Object, []client.ObjectList) {
 	objects := []client.Object{
-		&gatewayv1beta1.GatewayClass{ObjectMeta: metav1.ObjectMeta{Name: gcName}},
+		&gatewayv1.GatewayClass{ObjectMeta: metav1.ObjectMeta{Name: gcName}},
 	}
 	objectLists := []client.ObjectList{
 		&apiv1.ServiceList{},
 		&apiv1.SecretList{},
 		&apiv1.NamespaceList{},
 		&discoveryV1.EndpointSliceList{},
-		&gatewayv1beta1.HTTPRouteList{},
+		&gatewayv1.HTTPRouteList{},
 		&gatewayv1beta1.ReferenceGrantList{},
 	}
 
 	if gwNsName == nil {
-		objectLists = append(objectLists, &gatewayv1beta1.GatewayList{})
+		objectLists = append(objectLists, &gatewayv1.GatewayList{})
 	} else {
 		objects = append(
 			objects,
-			&gatewayv1beta1.Gateway{ObjectMeta: metav1.ObjectMeta{Name: gwNsName.Name, Namespace: gwNsName.Namespace}},
+			&gatewayv1.Gateway{ObjectMeta: metav1.ObjectMeta{Name: gwNsName.Name, Namespace: gwNsName.Namespace}},
 		)
 	}
 

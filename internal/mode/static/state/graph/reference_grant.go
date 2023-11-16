@@ -2,7 +2,8 @@ package graph
 
 import (
 	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/gateway-api/apis/v1beta1"
+	v1 "sigs.k8s.io/gateway-api/apis/v1"
+	v1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 )
 
 // referenceGrantResolver resolves references from one resource to another.
@@ -17,7 +18,7 @@ type allowedReference struct {
 }
 
 // toResource represents the resource that the ReferenceGrant is granting access to.
-// Maps to the v1beta1.ReferenceGrantTo.
+// Maps to the v1.ReferenceGrantTo.
 type toResource struct {
 	// if group is core, this should be set to "".
 	group     string
@@ -27,7 +28,7 @@ type toResource struct {
 }
 
 // fromResource represents the resource that the ReferenceGrant is granting access from.
-// Maps to the v1beta1.ReferenceGrantFrom.
+// Maps to the v1.ReferenceGrantFrom.
 type fromResource struct {
 	group     string
 	kind      string
@@ -56,7 +57,7 @@ func toService(nsname types.NamespacedName) toResource {
 
 func fromGateway(namespace string) fromResource {
 	return fromResource{
-		group:     v1beta1.GroupName,
+		group:     v1.GroupName,
 		kind:      "Gateway",
 		namespace: namespace,
 	}
@@ -64,7 +65,7 @@ func fromGateway(namespace string) fromResource {
 
 func fromHTTPRoute(namespace string) fromResource {
 	return fromResource{
-		group:     v1beta1.GroupName,
+		group:     v1.GroupName,
 		kind:      "HTTPRoute",
 		namespace: namespace,
 	}

@@ -11,7 +11,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
-	"sigs.k8s.io/gateway-api/apis/v1beta1"
+	v1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/controller/controllerfakes"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/status"
@@ -83,7 +83,7 @@ func TestNewRetryUpdateFunc(t *testing.T) {
 				fakeGetter,
 				fakeStatusUpdater,
 				types.NamespacedName{},
-				&v1beta1.GatewayClass{},
+				&v1.GatewayClass{},
 				zap.New(),
 				func(client.Object) bool { return test.statusSetterReturns },
 			)

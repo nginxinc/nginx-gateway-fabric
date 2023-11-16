@@ -7,7 +7,7 @@ import (
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/gateway-api/apis/v1beta1"
+	v1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 )
@@ -21,7 +21,7 @@ func TestPrepareHTTPRouteStatus(t *testing.T) {
 		ParentStatuses: []ParentStatus{
 			{
 				GatewayNsName: gwNsName1,
-				SectionName:   helpers.GetPointer[v1beta1.SectionName]("http"),
+				SectionName:   helpers.GetPointer[v1.SectionName]("http"),
 				Conditions:    CreateTestConditions("Test"),
 			},
 			{
@@ -35,86 +35,86 @@ func TestPrepareHTTPRouteStatus(t *testing.T) {
 	gatewayCtlrName := "test.example.com"
 	transitionTime := metav1.NewTime(time.Now())
 
-	oldStatus := v1beta1.HTTPRouteStatus{
-		RouteStatus: v1beta1.RouteStatus{
-			Parents: []v1beta1.RouteParentStatus{
+	oldStatus := v1.HTTPRouteStatus{
+		RouteStatus: v1.RouteStatus{
+			Parents: []v1.RouteParentStatus{
 				{
-					ParentRef: v1beta1.ParentReference{
-						Namespace:   helpers.GetPointer(v1beta1.Namespace(gwNsName1.Namespace)),
-						Name:        v1beta1.ObjectName(gwNsName1.Name),
-						SectionName: helpers.GetPointer[v1beta1.SectionName]("http"),
+					ParentRef: v1.ParentReference{
+						Namespace:   helpers.GetPointer(v1.Namespace(gwNsName1.Namespace)),
+						Name:        v1.ObjectName(gwNsName1.Name),
+						SectionName: helpers.GetPointer[v1.SectionName]("http"),
 					},
-					ControllerName: v1beta1.GatewayController(gatewayCtlrName),
+					ControllerName: v1.GatewayController(gatewayCtlrName),
 					Conditions:     CreateExpectedAPIConditions("Old", 1, transitionTime),
 				},
 				{
-					ParentRef: v1beta1.ParentReference{
-						Namespace:   helpers.GetPointer(v1beta1.Namespace(gwNsName1.Namespace)),
-						Name:        v1beta1.ObjectName(gwNsName1.Name),
-						SectionName: helpers.GetPointer[v1beta1.SectionName]("http"),
+					ParentRef: v1.ParentReference{
+						Namespace:   helpers.GetPointer(v1.Namespace(gwNsName1.Namespace)),
+						Name:        v1.ObjectName(gwNsName1.Name),
+						SectionName: helpers.GetPointer[v1.SectionName]("http"),
 					},
-					ControllerName: v1beta1.GatewayController("not-our-controller"),
+					ControllerName: v1.GatewayController("not-our-controller"),
 					Conditions:     CreateExpectedAPIConditions("Test", 1, transitionTime),
 				},
 				{
-					ParentRef: v1beta1.ParentReference{
-						Namespace:   helpers.GetPointer(v1beta1.Namespace(gwNsName2.Namespace)),
-						Name:        v1beta1.ObjectName(gwNsName2.Name),
+					ParentRef: v1.ParentReference{
+						Namespace:   helpers.GetPointer(v1.Namespace(gwNsName2.Namespace)),
+						Name:        v1.ObjectName(gwNsName2.Name),
 						SectionName: nil,
 					},
-					ControllerName: v1beta1.GatewayController(gatewayCtlrName),
+					ControllerName: v1.GatewayController(gatewayCtlrName),
 					Conditions:     CreateExpectedAPIConditions("Old", 1, transitionTime),
 				},
 				{
-					ParentRef: v1beta1.ParentReference{
-						Namespace:   helpers.GetPointer(v1beta1.Namespace(gwNsName2.Namespace)),
-						Name:        v1beta1.ObjectName(gwNsName2.Name),
+					ParentRef: v1.ParentReference{
+						Namespace:   helpers.GetPointer(v1.Namespace(gwNsName2.Namespace)),
+						Name:        v1.ObjectName(gwNsName2.Name),
 						SectionName: nil,
 					},
-					ControllerName: v1beta1.GatewayController("not-our-controller"),
+					ControllerName: v1.GatewayController("not-our-controller"),
 					Conditions:     CreateExpectedAPIConditions("Test", 1, transitionTime),
 				},
 			},
 		},
 	}
 
-	expected := v1beta1.HTTPRouteStatus{
-		RouteStatus: v1beta1.RouteStatus{
-			Parents: []v1beta1.RouteParentStatus{
+	expected := v1.HTTPRouteStatus{
+		RouteStatus: v1.RouteStatus{
+			Parents: []v1.RouteParentStatus{
 				{
-					ParentRef: v1beta1.ParentReference{
-						Namespace:   helpers.GetPointer(v1beta1.Namespace(gwNsName1.Namespace)),
-						Name:        v1beta1.ObjectName(gwNsName1.Name),
-						SectionName: helpers.GetPointer[v1beta1.SectionName]("http"),
+					ParentRef: v1.ParentReference{
+						Namespace:   helpers.GetPointer(v1.Namespace(gwNsName1.Namespace)),
+						Name:        v1.ObjectName(gwNsName1.Name),
+						SectionName: helpers.GetPointer[v1.SectionName]("http"),
 					},
-					ControllerName: v1beta1.GatewayController("not-our-controller"),
+					ControllerName: v1.GatewayController("not-our-controller"),
 					Conditions:     CreateExpectedAPIConditions("Test", 1, transitionTime),
 				},
 				{
-					ParentRef: v1beta1.ParentReference{
-						Namespace:   helpers.GetPointer(v1beta1.Namespace(gwNsName2.Namespace)),
-						Name:        v1beta1.ObjectName(gwNsName2.Name),
+					ParentRef: v1.ParentReference{
+						Namespace:   helpers.GetPointer(v1.Namespace(gwNsName2.Namespace)),
+						Name:        v1.ObjectName(gwNsName2.Name),
 						SectionName: nil,
 					},
-					ControllerName: v1beta1.GatewayController("not-our-controller"),
+					ControllerName: v1.GatewayController("not-our-controller"),
 					Conditions:     CreateExpectedAPIConditions("Test", 1, transitionTime),
 				},
 				{
-					ParentRef: v1beta1.ParentReference{
-						Namespace:   helpers.GetPointer(v1beta1.Namespace(gwNsName1.Namespace)),
-						Name:        v1beta1.ObjectName(gwNsName1.Name),
-						SectionName: helpers.GetPointer[v1beta1.SectionName]("http"),
+					ParentRef: v1.ParentReference{
+						Namespace:   helpers.GetPointer(v1.Namespace(gwNsName1.Namespace)),
+						Name:        v1.ObjectName(gwNsName1.Name),
+						SectionName: helpers.GetPointer[v1.SectionName]("http"),
 					},
-					ControllerName: v1beta1.GatewayController(gatewayCtlrName),
+					ControllerName: v1.GatewayController(gatewayCtlrName),
 					Conditions:     CreateExpectedAPIConditions("Test", 1, transitionTime),
 				},
 				{
-					ParentRef: v1beta1.ParentReference{
-						Namespace:   helpers.GetPointer(v1beta1.Namespace(gwNsName2.Namespace)),
-						Name:        v1beta1.ObjectName(gwNsName2.Name),
+					ParentRef: v1.ParentReference{
+						Namespace:   helpers.GetPointer(v1.Namespace(gwNsName2.Namespace)),
+						Name:        v1.ObjectName(gwNsName2.Name),
 						SectionName: nil,
 					},
-					ControllerName: v1beta1.GatewayController(gatewayCtlrName),
+					ControllerName: v1.GatewayController(gatewayCtlrName),
 					Conditions:     CreateExpectedAPIConditions("Test", 1, transitionTime),
 				},
 			},

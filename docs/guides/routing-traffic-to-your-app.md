@@ -25,8 +25,8 @@ With this architecture, the coffee application is not accessible outside the clu
 on the hostname `cafe.example.com` so that clients outside the cluster can access it.
 
 To do this, we will install NGINX Gateway Fabric and create two Gateway API resources:
-a [Gateway](https://gateway-api.sigs.k8s.io/v1alpha2/references/spec/#gateway.networking.k8s.io/v1beta1.Gateway) and
-an [HTTPRoute](https://gateway-api.sigs.k8s.io/v1alpha2/references/spec/#gateway.networking.k8s.io/v1beta1.HTTPRoute).
+a [Gateway](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.Gateway) and
+an [HTTPRoute](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.HTTPRoute).
 With these resources, we will configure a simple routing rule to match all HTTP traffic with the
 hostname `cafe.example.com` and route it to the coffee Service.
 
@@ -124,7 +124,7 @@ To create the `cafe` Gateway, copy and paste the following into your terminal:
 
 ```yaml
 kubectl apply -f - <<EOF
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
   name: cafe
@@ -143,20 +143,20 @@ only configure Gateways with a `gatewayClassName` of `nginx` unless you change t
 [command-line flag](/docs/cli-help.md#static-mode).
 
 We specify
-a [listener](https://gateway-api.sigs.k8s.io/v1alpha2/references/spec/#gateway.networking.k8s.io/v1beta1.Listener) on
+a [Listener](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.Listener) on
 the Gateway to open an entry point on the cluster. In this case, since the coffee application accepts HTTP requests, we
 create an HTTP listener, named `http`, that listens on port 80.
 
 By default, Gateways only allow routes (such as HTTPRoutes) to attach if they are in the same namespace as the Gateway.
 If you want to change this behavior, you can set
-the [`allowedRoutes`](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.AllowedRoutes)
+the [`allowedRoutes`](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.AllowedRoutes)
 field.
 
 Now, let's create the HTTPRoute by copying and pasting the following into your terminal:
 
 ```yaml
 kubectl apply -f - <<EOF
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
   name: coffee
@@ -177,16 +177,16 @@ EOF
 ```
 
 To attach the `coffee` HTTPRoute to the `cafe` Gateway, we specify the Gateway name in
-the [`parentRefs`](https://gateway-api.sigs.k8s.io/v1alpha2/references/spec/#gateway.networking.k8s.io/v1beta1.CommonRouteSpec)
+the [`parentRefs`](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.CommonRouteSpec)
 field. The attachment will succeed if the hostnames and protocol in the HTTPRoute are allowed by at least one of the
 Gateway's listeners.
 
-The [`hostnames`](https://gateway-api.sigs.k8s.io/v1alpha2/references/spec/#gateway.networking.k8s.io/v1beta1.HTTPRouteSpec)
+The [`hostnames`](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.HTTPRouteSpec)
 field allows you to list the hostnames that the HTTPRoute matches. In this case, incoming requests handled by the `http`
 listener with the HTTP host header `cafe.example.com` will match this HTTPRoute and will be routed according to the
 rules in the spec.
 
-The [`rules`](https://gateway-api.sigs.k8s.io/v1alpha2/references/spec/#gateway.networking.k8s.io/v1beta1.HTTPRouteRule)
+The [`rules`](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.HTTPRouteRule)
 field defines routing rules for the HTTPRoute. A rule is selected if the request satisfies one of the rule's `matches`.
 To forward traffic for all paths to the coffee Service we specify a match with the PathPrefix `/` and target the coffee
 Service using the `backendRef` field.

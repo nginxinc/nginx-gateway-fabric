@@ -6,7 +6,7 @@ import (
 
 	. "github.com/onsi/gomega"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/gateway-api/apis/v1beta1"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
@@ -66,7 +66,7 @@ func TestNewNginxGatewayStatusSetter(t *testing.T) {
 func TestNewGatewayClassStatusSetter(t *testing.T) {
 	tests := []struct {
 		name         string
-		status       v1beta1.GatewayClassStatus
+		status       gatewayv1.GatewayClassStatus
 		newStatus    GatewayClassStatus
 		expStatusSet bool
 	}{
@@ -82,7 +82,7 @@ func TestNewGatewayClassStatusSetter(t *testing.T) {
 			newStatus: GatewayClassStatus{
 				Conditions: []conditions.Condition{{Message: "new condition"}},
 			},
-			status: v1beta1.GatewayClassStatus{
+			status: gatewayv1.GatewayClassStatus{
 				Conditions: []v1.Condition{{Message: "old condition"}},
 			},
 			expStatusSet: true,
@@ -92,7 +92,7 @@ func TestNewGatewayClassStatusSetter(t *testing.T) {
 			newStatus: GatewayClassStatus{
 				Conditions: []conditions.Condition{{Message: "same condition"}},
 			},
-			status: v1beta1.GatewayClassStatus{
+			status: gatewayv1.GatewayClassStatus{
 				Conditions: []v1.Condition{{Message: "same condition"}},
 			},
 			expStatusSet: false,
@@ -106,21 +106,21 @@ func TestNewGatewayClassStatusSetter(t *testing.T) {
 			g := NewWithT(t)
 
 			setter := newGatewayClassStatusSetter(clock, test.newStatus)
-			statusSet := setter(&v1beta1.GatewayClass{Status: test.status})
+			statusSet := setter(&gatewayv1.GatewayClass{Status: test.status})
 			g.Expect(statusSet).To(Equal(test.expStatusSet))
 		})
 	}
 }
 
 func TestNewGatewayStatusSetter(t *testing.T) {
-	expAddress := v1beta1.GatewayStatusAddress{
-		Type:  helpers.GetPointer(v1beta1.IPAddressType),
+	expAddress := gatewayv1.GatewayStatusAddress{
+		Type:  helpers.GetPointer(gatewayv1.IPAddressType),
 		Value: "10.0.0.0",
 	}
 
 	tests := []struct {
 		name         string
-		status       v1beta1.GatewayStatus
+		status       gatewayv1.GatewayStatus
 		newStatus    GatewayStatus
 		expStatusSet bool
 	}{
@@ -128,7 +128,7 @@ func TestNewGatewayStatusSetter(t *testing.T) {
 			name: "Gateway has no status",
 			newStatus: GatewayStatus{
 				Conditions: []conditions.Condition{{Message: "new condition"}},
-				Addresses:  []v1beta1.GatewayStatusAddress{expAddress},
+				Addresses:  []gatewayv1.GatewayStatusAddress{expAddress},
 			},
 			expStatusSet: true,
 		},
@@ -136,11 +136,11 @@ func TestNewGatewayStatusSetter(t *testing.T) {
 			name: "Gateway has old status",
 			newStatus: GatewayStatus{
 				Conditions: []conditions.Condition{{Message: "new condition"}},
-				Addresses:  []v1beta1.GatewayStatusAddress{expAddress},
+				Addresses:  []gatewayv1.GatewayStatusAddress{expAddress},
 			},
-			status: v1beta1.GatewayStatus{
+			status: gatewayv1.GatewayStatus{
 				Conditions: []v1.Condition{{Message: "old condition"}},
-				Addresses:  []v1beta1.GatewayStatusAddress{expAddress},
+				Addresses:  []gatewayv1.GatewayStatusAddress{expAddress},
 			},
 			expStatusSet: true,
 		},
@@ -148,11 +148,11 @@ func TestNewGatewayStatusSetter(t *testing.T) {
 			name: "Gateway has same status",
 			newStatus: GatewayStatus{
 				Conditions: []conditions.Condition{{Message: "same condition"}},
-				Addresses:  []v1beta1.GatewayStatusAddress{expAddress},
+				Addresses:  []gatewayv1.GatewayStatusAddress{expAddress},
 			},
-			status: v1beta1.GatewayStatus{
+			status: gatewayv1.GatewayStatus{
 				Conditions: []v1.Condition{{Message: "same condition"}},
-				Addresses:  []v1beta1.GatewayStatusAddress{expAddress},
+				Addresses:  []gatewayv1.GatewayStatusAddress{expAddress},
 			},
 			expStatusSet: false,
 		},
@@ -166,7 +166,7 @@ func TestNewGatewayStatusSetter(t *testing.T) {
 
 			setter := newGatewayStatusSetter(clock, test.newStatus)
 
-			statusSet := setter(&v1beta1.Gateway{Status: test.status})
+			statusSet := setter(&gatewayv1.Gateway{Status: test.status})
 			g.Expect(statusSet).To(Equal(test.expStatusSet))
 		})
 	}
@@ -177,7 +177,7 @@ func TestNewHTTPRouteStatusSetter(t *testing.T) {
 
 	tests := []struct {
 		name         string
-		status       v1beta1.HTTPRouteStatus
+		status       gatewayv1.HTTPRouteStatus
 		newStatus    HTTPRouteStatus
 		expStatusSet bool
 	}{
@@ -201,12 +201,12 @@ func TestNewHTTPRouteStatusSetter(t *testing.T) {
 					},
 				},
 			},
-			status: v1beta1.HTTPRouteStatus{
-				RouteStatus: v1beta1.RouteStatus{
-					Parents: []v1beta1.RouteParentStatus{
+			status: gatewayv1.HTTPRouteStatus{
+				RouteStatus: gatewayv1.RouteStatus{
+					Parents: []gatewayv1.RouteParentStatus{
 						{
-							ParentRef:      v1beta1.ParentReference{},
-							ControllerName: v1beta1.GatewayController(controllerName),
+							ParentRef:      gatewayv1.ParentReference{},
+							ControllerName: gatewayv1.GatewayController(controllerName),
 							Conditions:     []v1.Condition{{Message: "old condition"}},
 						},
 					},
@@ -223,12 +223,12 @@ func TestNewHTTPRouteStatusSetter(t *testing.T) {
 					},
 				},
 			},
-			status: v1beta1.HTTPRouteStatus{
-				RouteStatus: v1beta1.RouteStatus{
-					Parents: []v1beta1.RouteParentStatus{
+			status: gatewayv1.HTTPRouteStatus{
+				RouteStatus: gatewayv1.RouteStatus{
+					Parents: []gatewayv1.RouteParentStatus{
 						{
-							ParentRef:      v1beta1.ParentReference{},
-							ControllerName: v1beta1.GatewayController(controllerName),
+							ParentRef:      gatewayv1.ParentReference{},
+							ControllerName: gatewayv1.GatewayController(controllerName),
 							Conditions:     []v1.Condition{{Message: "same condition"}},
 						},
 					},
@@ -246,22 +246,22 @@ func TestNewHTTPRouteStatusSetter(t *testing.T) {
 
 			setter := newHTTPRouteStatusSetter(controllerName, clock, test.newStatus)
 
-			statusSet := setter(&v1beta1.HTTPRoute{Status: test.status})
+			statusSet := setter(&gatewayv1.HTTPRoute{Status: test.status})
 			g.Expect(statusSet).To(Equal(test.expStatusSet))
 		})
 	}
 }
 
 func TestGWStatusEqual(t *testing.T) {
-	getDefaultStatus := func() v1beta1.GatewayStatus {
-		return v1beta1.GatewayStatus{
-			Addresses: []v1beta1.GatewayStatusAddress{
+	getDefaultStatus := func() gatewayv1.GatewayStatus {
+		return gatewayv1.GatewayStatus{
+			Addresses: []gatewayv1.GatewayStatusAddress{
 				{
-					Type:  helpers.GetPointer(v1beta1.IPAddressType),
+					Type:  helpers.GetPointer(gatewayv1.IPAddressType),
 					Value: "10.0.0.0",
 				},
 				{
-					Type:  helpers.GetPointer(v1beta1.IPAddressType),
+					Type:  helpers.GetPointer(gatewayv1.IPAddressType),
 					Value: "11.0.0.0",
 				},
 			},
@@ -270,16 +270,16 @@ func TestGWStatusEqual(t *testing.T) {
 					Type: "type", /* conditions are covered by another test*/
 				},
 			},
-			Listeners: []v1beta1.ListenerStatus{
+			Listeners: []gatewayv1.ListenerStatus{
 				{
 					Name: "listener1",
-					SupportedKinds: []v1beta1.RouteGroupKind{
+					SupportedKinds: []gatewayv1.RouteGroupKind{
 						{
-							Group: helpers.GetPointer[v1beta1.Group](v1beta1.GroupName),
+							Group: helpers.GetPointer[gatewayv1.Group](gatewayv1.GroupName),
 							Kind:  "HTTPRoute",
 						},
 						{
-							Group: helpers.GetPointer[v1beta1.Group](v1beta1.GroupName),
+							Group: helpers.GetPointer[gatewayv1.Group](gatewayv1.GroupName),
 							Kind:  "TCPRoute",
 						},
 					},
@@ -292,9 +292,9 @@ func TestGWStatusEqual(t *testing.T) {
 				},
 				{
 					Name: "listener2",
-					SupportedKinds: []v1beta1.RouteGroupKind{
+					SupportedKinds: []gatewayv1.RouteGroupKind{
 						{
-							Group: helpers.GetPointer[v1beta1.Group](v1beta1.GroupName),
+							Group: helpers.GetPointer[gatewayv1.Group](gatewayv1.GroupName),
 							Kind:  "HTTPRoute",
 						},
 					},
@@ -307,9 +307,9 @@ func TestGWStatusEqual(t *testing.T) {
 				},
 				{
 					Name: "listener3",
-					SupportedKinds: []v1beta1.RouteGroupKind{
+					SupportedKinds: []gatewayv1.RouteGroupKind{
 						{
-							Group: helpers.GetPointer[v1beta1.Group](v1beta1.GroupName),
+							Group: helpers.GetPointer[gatewayv1.Group](gatewayv1.GroupName),
 							Kind:  "HTTPRoute",
 						},
 					},
@@ -324,20 +324,20 @@ func TestGWStatusEqual(t *testing.T) {
 		}
 	}
 
-	getModifiedStatus := func(mod func(v1beta1.GatewayStatus) v1beta1.GatewayStatus) v1beta1.GatewayStatus {
+	getModifiedStatus := func(mod func(gatewayv1.GatewayStatus) gatewayv1.GatewayStatus) gatewayv1.GatewayStatus {
 		return mod(getDefaultStatus())
 	}
 
 	tests := []struct {
 		name       string
-		prevStatus v1beta1.GatewayStatus
-		curStatus  v1beta1.GatewayStatus
+		prevStatus gatewayv1.GatewayStatus
+		curStatus  gatewayv1.GatewayStatus
 		expEqual   bool
 	}{
 		{
 			name:       "different number of addresses",
 			prevStatus: getDefaultStatus(),
-			curStatus: getModifiedStatus(func(status v1beta1.GatewayStatus) v1beta1.GatewayStatus {
+			curStatus: getModifiedStatus(func(status gatewayv1.GatewayStatus) gatewayv1.GatewayStatus {
 				status.Addresses = status.Addresses[:1]
 				return status
 			}),
@@ -346,8 +346,8 @@ func TestGWStatusEqual(t *testing.T) {
 		{
 			name:       "different address type",
 			prevStatus: getDefaultStatus(),
-			curStatus: getModifiedStatus(func(status v1beta1.GatewayStatus) v1beta1.GatewayStatus {
-				status.Addresses[1].Type = helpers.GetPointer(v1beta1.HostnameAddressType)
+			curStatus: getModifiedStatus(func(status gatewayv1.GatewayStatus) gatewayv1.GatewayStatus {
+				status.Addresses[1].Type = helpers.GetPointer(gatewayv1.HostnameAddressType)
 				return status
 			}),
 			expEqual: false,
@@ -355,7 +355,7 @@ func TestGWStatusEqual(t *testing.T) {
 		{
 			name:       "different address value",
 			prevStatus: getDefaultStatus(),
-			curStatus: getModifiedStatus(func(status v1beta1.GatewayStatus) v1beta1.GatewayStatus {
+			curStatus: getModifiedStatus(func(status gatewayv1.GatewayStatus) gatewayv1.GatewayStatus {
 				status.Addresses[0].Value = "12.0.0.0"
 				return status
 			}),
@@ -364,7 +364,7 @@ func TestGWStatusEqual(t *testing.T) {
 		{
 			name:       "different conditions",
 			prevStatus: getDefaultStatus(),
-			curStatus: getModifiedStatus(func(status v1beta1.GatewayStatus) v1beta1.GatewayStatus {
+			curStatus: getModifiedStatus(func(status gatewayv1.GatewayStatus) gatewayv1.GatewayStatus {
 				status.Conditions[0].Type = "different"
 				return status
 			}),
@@ -373,7 +373,7 @@ func TestGWStatusEqual(t *testing.T) {
 		{
 			name:       "different number of listener statuses",
 			prevStatus: getDefaultStatus(),
-			curStatus: getModifiedStatus(func(status v1beta1.GatewayStatus) v1beta1.GatewayStatus {
+			curStatus: getModifiedStatus(func(status gatewayv1.GatewayStatus) gatewayv1.GatewayStatus {
 				status.Listeners = status.Listeners[:2]
 				return status
 			}),
@@ -382,7 +382,7 @@ func TestGWStatusEqual(t *testing.T) {
 		{
 			name:       "different listener status name",
 			prevStatus: getDefaultStatus(),
-			curStatus: getModifiedStatus(func(status v1beta1.GatewayStatus) v1beta1.GatewayStatus {
+			curStatus: getModifiedStatus(func(status gatewayv1.GatewayStatus) gatewayv1.GatewayStatus {
 				status.Listeners[2].Name = "different"
 				return status
 			}),
@@ -391,7 +391,7 @@ func TestGWStatusEqual(t *testing.T) {
 		{
 			name:       "different listener status attached routes",
 			prevStatus: getDefaultStatus(),
-			curStatus: getModifiedStatus(func(status v1beta1.GatewayStatus) v1beta1.GatewayStatus {
+			curStatus: getModifiedStatus(func(status gatewayv1.GatewayStatus) gatewayv1.GatewayStatus {
 				status.Listeners[1].AttachedRoutes++
 				return status
 			}),
@@ -400,7 +400,7 @@ func TestGWStatusEqual(t *testing.T) {
 		{
 			name:       "different listener status conditions",
 			prevStatus: getDefaultStatus(),
-			curStatus: getModifiedStatus(func(status v1beta1.GatewayStatus) v1beta1.GatewayStatus {
+			curStatus: getModifiedStatus(func(status gatewayv1.GatewayStatus) gatewayv1.GatewayStatus {
 				status.Listeners[0].Conditions[0].Type = "different"
 				return status
 			}),
@@ -409,7 +409,7 @@ func TestGWStatusEqual(t *testing.T) {
 		{
 			name:       "different listener status supported kinds (different number)",
 			prevStatus: getDefaultStatus(),
-			curStatus: getModifiedStatus(func(status v1beta1.GatewayStatus) v1beta1.GatewayStatus {
+			curStatus: getModifiedStatus(func(status gatewayv1.GatewayStatus) gatewayv1.GatewayStatus {
 				status.Listeners[0].SupportedKinds = status.Listeners[0].SupportedKinds[:1]
 				return status
 			}),
@@ -418,7 +418,7 @@ func TestGWStatusEqual(t *testing.T) {
 		{
 			name:       "different listener status supported kinds (different kind)",
 			prevStatus: getDefaultStatus(),
-			curStatus: getModifiedStatus(func(status v1beta1.GatewayStatus) v1beta1.GatewayStatus {
+			curStatus: getModifiedStatus(func(status gatewayv1.GatewayStatus) gatewayv1.GatewayStatus {
 				status.Listeners[1].SupportedKinds[0].Kind = "TCPRoute"
 				return status
 			}),
@@ -427,8 +427,8 @@ func TestGWStatusEqual(t *testing.T) {
 		{
 			name:       "different listener status supported kinds (different group)",
 			prevStatus: getDefaultStatus(),
-			curStatus: getModifiedStatus(func(status v1beta1.GatewayStatus) v1beta1.GatewayStatus {
-				status.Listeners[1].SupportedKinds[0].Group = helpers.GetPointer[v1beta1.Group]("different")
+			curStatus: getModifiedStatus(func(status gatewayv1.GatewayStatus) gatewayv1.GatewayStatus {
+				status.Listeners[1].SupportedKinds[0].Group = helpers.GetPointer[gatewayv1.Group]("different")
 				return status
 			}),
 			expEqual: false,
@@ -458,41 +458,41 @@ func TestHRStatusEqual(t *testing.T) {
 		},
 	}
 
-	previousStatus := v1beta1.HTTPRouteStatus{
-		RouteStatus: v1beta1.RouteStatus{
-			Parents: []v1beta1.RouteParentStatus{
+	previousStatus := gatewayv1.HTTPRouteStatus{
+		RouteStatus: gatewayv1.RouteStatus{
+			Parents: []gatewayv1.RouteParentStatus{
 				{
-					ParentRef: v1beta1.ParentReference{
-						Namespace:   helpers.GetPointer[v1beta1.Namespace]("test"),
+					ParentRef: gatewayv1.ParentReference{
+						Namespace:   helpers.GetPointer[gatewayv1.Namespace]("test"),
 						Name:        "our-parent",
-						SectionName: helpers.GetPointer[v1beta1.SectionName]("section1"),
+						SectionName: helpers.GetPointer[gatewayv1.SectionName]("section1"),
 					},
 					ControllerName: "ours",
 					Conditions:     testConds,
 				},
 				{
-					ParentRef: v1beta1.ParentReference{
-						Namespace:   helpers.GetPointer[v1beta1.Namespace]("test"),
+					ParentRef: gatewayv1.ParentReference{
+						Namespace:   helpers.GetPointer[gatewayv1.Namespace]("test"),
 						Name:        "not-our-parent",
-						SectionName: helpers.GetPointer[v1beta1.SectionName]("section1"),
+						SectionName: helpers.GetPointer[gatewayv1.SectionName]("section1"),
 					},
 					ControllerName: "not-ours",
 					Conditions:     testConds,
 				},
 				{
-					ParentRef: v1beta1.ParentReference{
-						Namespace:   helpers.GetPointer[v1beta1.Namespace]("test"),
+					ParentRef: gatewayv1.ParentReference{
+						Namespace:   helpers.GetPointer[gatewayv1.Namespace]("test"),
 						Name:        "our-parent",
-						SectionName: helpers.GetPointer[v1beta1.SectionName]("section2"),
+						SectionName: helpers.GetPointer[gatewayv1.SectionName]("section2"),
 					},
 					ControllerName: "ours",
 					Conditions:     testConds,
 				},
 				{
-					ParentRef: v1beta1.ParentReference{
-						Namespace:   helpers.GetPointer[v1beta1.Namespace]("test"),
+					ParentRef: gatewayv1.ParentReference{
+						Namespace:   helpers.GetPointer[gatewayv1.Namespace]("test"),
 						Name:        "not-our-parent",
-						SectionName: helpers.GetPointer[v1beta1.SectionName]("section2"),
+						SectionName: helpers.GetPointer[gatewayv1.SectionName]("section2"),
 					},
 					ControllerName: "not-ours",
 					Conditions:     testConds,
@@ -501,24 +501,24 @@ func TestHRStatusEqual(t *testing.T) {
 		},
 	}
 
-	getDefaultStatus := func() v1beta1.HTTPRouteStatus {
-		return v1beta1.HTTPRouteStatus{
-			RouteStatus: v1beta1.RouteStatus{
-				Parents: []v1beta1.RouteParentStatus{
+	getDefaultStatus := func() gatewayv1.HTTPRouteStatus {
+		return gatewayv1.HTTPRouteStatus{
+			RouteStatus: gatewayv1.RouteStatus{
+				Parents: []gatewayv1.RouteParentStatus{
 					{
-						ParentRef: v1beta1.ParentReference{
-							Namespace:   helpers.GetPointer[v1beta1.Namespace]("test"),
+						ParentRef: gatewayv1.ParentReference{
+							Namespace:   helpers.GetPointer[gatewayv1.Namespace]("test"),
 							Name:        "our-parent",
-							SectionName: helpers.GetPointer[v1beta1.SectionName]("section1"),
+							SectionName: helpers.GetPointer[gatewayv1.SectionName]("section1"),
 						},
 						ControllerName: "ours",
 						Conditions:     testConds,
 					},
 					{
-						ParentRef: v1beta1.ParentReference{
-							Namespace:   helpers.GetPointer[v1beta1.Namespace]("test"),
+						ParentRef: gatewayv1.ParentReference{
+							Namespace:   helpers.GetPointer[gatewayv1.Namespace]("test"),
 							Name:        "our-parent",
-							SectionName: helpers.GetPointer[v1beta1.SectionName]("section2"),
+							SectionName: helpers.GetPointer[gatewayv1.SectionName]("section2"),
 						},
 						ControllerName: "ours",
 						Conditions:     testConds,
@@ -528,30 +528,32 @@ func TestHRStatusEqual(t *testing.T) {
 		}
 	}
 
-	newParentStatus := v1beta1.RouteParentStatus{
-		ParentRef: v1beta1.ParentReference{
-			Namespace:   helpers.GetPointer[v1beta1.Namespace]("test"),
+	newParentStatus := gatewayv1.RouteParentStatus{
+		ParentRef: gatewayv1.ParentReference{
+			Namespace:   helpers.GetPointer[gatewayv1.Namespace]("test"),
 			Name:        "our-parent",
-			SectionName: helpers.GetPointer[v1beta1.SectionName]("section3"),
+			SectionName: helpers.GetPointer[gatewayv1.SectionName]("section3"),
 		},
 		ControllerName: "ours",
 		Conditions:     testConds,
 	}
 
-	getModifiedStatus := func(mod func(status v1beta1.HTTPRouteStatus) v1beta1.HTTPRouteStatus) v1beta1.HTTPRouteStatus {
+	getModifiedStatus := func(
+		mod func(status gatewayv1.HTTPRouteStatus) gatewayv1.HTTPRouteStatus,
+	) gatewayv1.HTTPRouteStatus {
 		return mod(getDefaultStatus())
 	}
 
 	tests := []struct {
 		name       string
-		prevStatus v1beta1.HTTPRouteStatus
-		curStatus  v1beta1.HTTPRouteStatus
+		prevStatus gatewayv1.HTTPRouteStatus
+		curStatus  gatewayv1.HTTPRouteStatus
 		expEqual   bool
 	}{
 		{
 			name:       "stale status",
 			prevStatus: previousStatus,
-			curStatus: getModifiedStatus(func(status v1beta1.HTTPRouteStatus) v1beta1.HTTPRouteStatus {
+			curStatus: getModifiedStatus(func(status gatewayv1.HTTPRouteStatus) gatewayv1.HTTPRouteStatus {
 				// remove last parent status
 				status.Parents = status.Parents[:1]
 				return status
@@ -561,7 +563,7 @@ func TestHRStatusEqual(t *testing.T) {
 		{
 			name:       "new status",
 			prevStatus: previousStatus,
-			curStatus: getModifiedStatus(func(status v1beta1.HTTPRouteStatus) v1beta1.HTTPRouteStatus {
+			curStatus: getModifiedStatus(func(status gatewayv1.HTTPRouteStatus) gatewayv1.HTTPRouteStatus {
 				// add another parent status
 				status.Parents = append(status.Parents, newParentStatus)
 				return status
@@ -586,12 +588,12 @@ func TestHRStatusEqual(t *testing.T) {
 }
 
 func TestRouteParentStatusEqual(t *testing.T) {
-	getDefaultStatus := func() v1beta1.RouteParentStatus {
-		return v1beta1.RouteParentStatus{
-			ParentRef: v1beta1.ParentReference{
-				Namespace:   helpers.GetPointer[v1beta1.Namespace]("test"),
+	getDefaultStatus := func() gatewayv1.RouteParentStatus {
+		return gatewayv1.RouteParentStatus{
+			ParentRef: gatewayv1.ParentReference{
+				Namespace:   helpers.GetPointer[gatewayv1.Namespace]("test"),
 				Name:        "parent",
-				SectionName: helpers.GetPointer[v1beta1.SectionName]("section"),
+				SectionName: helpers.GetPointer[gatewayv1.SectionName]("section"),
 			},
 			ControllerName: "controller",
 			Conditions: []v1.Condition{
@@ -602,20 +604,22 @@ func TestRouteParentStatusEqual(t *testing.T) {
 		}
 	}
 
-	getModifiedStatus := func(mod func(v1beta1.RouteParentStatus) v1beta1.RouteParentStatus) v1beta1.RouteParentStatus {
+	getModifiedStatus := func(
+		mod func(gatewayv1.RouteParentStatus) gatewayv1.RouteParentStatus,
+	) gatewayv1.RouteParentStatus {
 		return mod(getDefaultStatus())
 	}
 
 	tests := []struct {
 		name     string
-		p1       v1beta1.RouteParentStatus
-		p2       v1beta1.RouteParentStatus
+		p1       gatewayv1.RouteParentStatus
+		p2       gatewayv1.RouteParentStatus
 		expEqual bool
 	}{
 		{
 			name: "different controller name",
 			p1:   getDefaultStatus(),
-			p2: getModifiedStatus(func(status v1beta1.RouteParentStatus) v1beta1.RouteParentStatus {
+			p2: getModifiedStatus(func(status gatewayv1.RouteParentStatus) gatewayv1.RouteParentStatus {
 				status.ControllerName = "different"
 				return status
 			}),
@@ -624,7 +628,7 @@ func TestRouteParentStatusEqual(t *testing.T) {
 		{
 			name: "different parentRef name",
 			p1:   getDefaultStatus(),
-			p2: getModifiedStatus(func(status v1beta1.RouteParentStatus) v1beta1.RouteParentStatus {
+			p2: getModifiedStatus(func(status gatewayv1.RouteParentStatus) gatewayv1.RouteParentStatus {
 				status.ParentRef.Name = "different"
 				return status
 			}),
@@ -633,8 +637,8 @@ func TestRouteParentStatusEqual(t *testing.T) {
 		{
 			name: "different parentRef namespace",
 			p1:   getDefaultStatus(),
-			p2: getModifiedStatus(func(status v1beta1.RouteParentStatus) v1beta1.RouteParentStatus {
-				status.ParentRef.Namespace = helpers.GetPointer[v1beta1.Namespace]("different")
+			p2: getModifiedStatus(func(status gatewayv1.RouteParentStatus) gatewayv1.RouteParentStatus {
+				status.ParentRef.Namespace = helpers.GetPointer[gatewayv1.Namespace]("different")
 				return status
 			}),
 			expEqual: false,
@@ -642,8 +646,8 @@ func TestRouteParentStatusEqual(t *testing.T) {
 		{
 			name: "different parentRef section name",
 			p1:   getDefaultStatus(),
-			p2: getModifiedStatus(func(status v1beta1.RouteParentStatus) v1beta1.RouteParentStatus {
-				status.ParentRef.SectionName = helpers.GetPointer[v1beta1.SectionName]("different")
+			p2: getModifiedStatus(func(status gatewayv1.RouteParentStatus) gatewayv1.RouteParentStatus {
+				status.ParentRef.SectionName = helpers.GetPointer[gatewayv1.SectionName]("different")
 				return status
 			}),
 			expEqual: false,
@@ -651,7 +655,7 @@ func TestRouteParentStatusEqual(t *testing.T) {
 		{
 			name: "different conditions",
 			p1:   getDefaultStatus(),
-			p2: getModifiedStatus(func(status v1beta1.RouteParentStatus) v1beta1.RouteParentStatus {
+			p2: getModifiedStatus(func(status gatewayv1.RouteParentStatus) gatewayv1.RouteParentStatus {
 				status.Conditions[0].Type = "different"
 				return status
 			}),

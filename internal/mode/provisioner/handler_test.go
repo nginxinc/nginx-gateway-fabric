@@ -12,7 +12,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
-	"sigs.k8s.io/gateway-api/apis/v1beta1"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	. "github.com/onsi/gomega"
 
@@ -39,14 +39,14 @@ var _ = Describe("handler", func() {
 	BeforeEach(OncePerOrdered, func() {
 		scheme := runtime.NewScheme()
 
-		Expect(v1beta1.AddToScheme(scheme)).Should(Succeed())
+		Expect(gatewayv1.AddToScheme(scheme)).Should(Succeed())
 		Expect(v1.AddToScheme(scheme)).Should(Succeed())
 
 		k8sclient = fake.NewClientBuilder().
 			WithScheme(scheme).
 			WithStatusSubresource(
-				&v1beta1.Gateway{},
-				&v1beta1.GatewayClass{},
+				&gatewayv1.Gateway{},
+				&gatewayv1.GatewayClass{},
 			).
 			Build()
 
@@ -64,13 +64,13 @@ var _ = Describe("handler", func() {
 		})
 	})
 
-	createGateway := func(gwNsName types.NamespacedName) *v1beta1.Gateway {
-		return &v1beta1.Gateway{
+	createGateway := func(gwNsName types.NamespacedName) *gatewayv1.Gateway {
+		return &gatewayv1.Gateway{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: gwNsName.Namespace,
 				Name:      gwNsName.Name,
 			},
-			Spec: v1beta1.GatewaySpec{
+			Spec: gatewayv1.GatewaySpec{
 				GatewayClassName: gcName,
 			},
 		}
@@ -79,7 +79,7 @@ var _ = Describe("handler", func() {
 	itShouldUpsertGatewayClass := func() {
 		// Add GatewayClass to the cluster
 
-		gc := &v1beta1.GatewayClass{
+		gc := &gatewayv1.GatewayClass{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: gcName,
 			},
@@ -99,14 +99,14 @@ var _ = Describe("handler", func() {
 
 		// Ensure GatewayClass is accepted
 
-		clusterGc := &v1beta1.GatewayClass{}
+		clusterGc := &gatewayv1.GatewayClass{}
 		err = k8sclient.Get(context.Background(), client.ObjectKeyFromObject(gc), clusterGc)
 
 		Expect(err).ShouldNot(HaveOccurred())
 
 		expectedConditions := []metav1.Condition{
 			{
-				Type:               string(v1beta1.GatewayClassConditionStatusAccepted),
+				Type:               string(gatewayv1.GatewayClassConditionStatusAccepted),
 				Status:             metav1.ConditionTrue,
 				ObservedGeneration: 0,
 				LastTransitionTime: fakeClockTime,
@@ -210,7 +210,7 @@ var _ = Describe("handler", func() {
 			It("should remove first Deployment", func() {
 				batch := []interface{}{
 					&events.DeleteEvent{
-						Type:           &v1beta1.Gateway{},
+						Type:           &gatewayv1.Gateway{},
 						NamespacedName: gwNsName1,
 					},
 				}
@@ -230,7 +230,7 @@ var _ = Describe("handler", func() {
 			It("should remove second Deployment", func() {
 				batch := []interface{}{
 					&events.DeleteEvent{
-						Type:           &v1beta1.Gateway{},
+						Type:           &gatewayv1.Gateway{},
 						NamespacedName: gwNsName2,
 					},
 				}
@@ -248,12 +248,12 @@ var _ = Describe("handler", func() {
 
 		When("upserting Gateway for a different GatewayClass", func() {
 			It("should not create Deployment", func() {
-				gw := &v1beta1.Gateway{
+				gw := &gatewayv1.Gateway{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test-gw-3",
 						Namespace: "test-ns-3",
 					},
-					Spec: v1beta1.GatewaySpec{
+					Spec: gatewayv1.GatewaySpec{
 						GatewayClassName: "some-class",
 					},
 				}
@@ -276,11 +276,11 @@ var _ = Describe("handler", func() {
 
 		When("upserting GatewayClass that is not set in command-line argument", func() {
 			It("should set the proper status if this controller is referenced", func() {
-				gc := &v1beta1.GatewayClass{
+				gc := &gatewayv1.GatewayClass{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "unknown-gc",
 					},
-					Spec: v1beta1.GatewayClassSpec{
+					Spec: gatewayv1.GatewayClassSpec{
 						ControllerName: "test.example.com",
 					},
 				}
@@ -295,13 +295,13 @@ var _ = Describe("handler", func() {
 
 				handler.HandleEventBatch(context.Background(), zap.New(), batch)
 
-				unknownGC := &v1beta1.GatewayClass{}
+				unknownGC := &gatewayv1.GatewayClass{}
 				err = k8sclient.Get(context.Background(), client.ObjectKeyFromObject(gc), unknownGC)
 				Expect(err).ShouldNot(HaveOccurred())
 
 				expectedConditions := []metav1.Condition{
 					{
-						Type:               string(v1beta1.GatewayClassConditionStatusAccepted),
+						Type:               string(gatewayv1.GatewayClassConditionStatusAccepted),
 						Status:             metav1.ConditionFalse,
 						ObservedGeneration: 0,
 						LastTransitionTime: fakeClockTime,
@@ -346,11 +346,11 @@ var _ = Describe("handler", func() {
 				&struct{}{}),
 			Entry("should panic for an unknown type of resource in upsert event",
 				&events.UpsertEvent{
-					Resource: &v1beta1.HTTPRoute{},
+					Resource: &gatewayv1.HTTPRoute{},
 				}),
 			Entry("should panic for an unknown type of resource in delete event",
 				&events.DeleteEvent{
-					Type: &v1beta1.HTTPRoute{},
+					Type: &gatewayv1.HTTPRoute{},
 				}),
 		)
 
@@ -399,7 +399,7 @@ var _ = Describe("handler", func() {
 
 				batch := []interface{}{
 					&events.DeleteEvent{
-						Type:           &v1beta1.Gateway{},
+						Type:           &gatewayv1.Gateway{},
 						NamespacedName: gwNsName,
 					},
 				}
@@ -418,7 +418,7 @@ var _ = Describe("handler", func() {
 
 				batch := []interface{}{
 					&events.DeleteEvent{
-						Type: &v1beta1.GatewayClass{},
+						Type: &gatewayv1.GatewayClass{},
 						NamespacedName: types.NamespacedName{
 							Name: gcName,
 						},

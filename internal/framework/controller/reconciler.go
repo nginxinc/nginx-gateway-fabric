@@ -50,7 +50,7 @@ func NewReconciler(cfg ReconcilerConfig) *Reconciler {
 }
 
 func newObject(objectType client.Object) client.Object {
-	// without Elem(), t will be a pointer to the type. For example, *v1beta1.Gateway, not v1beta1.Gateway
+	// without Elem(), t will be a pointer to the type. For example, *v1.Gateway, not v1.Gateway
 	t := reflect.TypeOf(objectType).Elem()
 
 	// We could've used objectType.DeepCopyObject() here, but it's a bit slower confirmed by benchmarks.

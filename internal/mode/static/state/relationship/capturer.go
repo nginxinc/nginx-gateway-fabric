@@ -7,7 +7,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/gateway-api/apis/v1beta1"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/controller/index"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/graph"
@@ -75,7 +75,7 @@ func NewCapturerImpl() *CapturerImpl {
 // Capture captures relationships for the given object.
 func (c *CapturerImpl) Capture(obj client.Object) {
 	switch o := obj.(type) {
-	case *v1beta1.HTTPRoute:
+	case *gatewayv1.HTTPRoute:
 		c.upsertForRoute(o)
 	case *discoveryV1.EndpointSlice:
 		svcName := index.GetServiceNameFromEndpointSlice(o)
@@ -85,7 +85,7 @@ func (c *CapturerImpl) Capture(obj client.Object) {
 				Name:      svcName,
 			}
 		}
-	case *v1beta1.Gateway:
+	case *gatewayv1.Gateway:
 		var selectors []labels.Selector
 		for _, listener := range o.Spec.Listeners {
 			if selector := graph.GetAllowedRouteLabelSelector(listener); selector != nil {
@@ -132,11 +132,11 @@ func (c *CapturerImpl) Capture(obj client.Object) {
 // Remove removes the relationship for the given object from the CapturerImpl.
 func (c *CapturerImpl) Remove(resourceType client.Object, nsname types.NamespacedName) {
 	switch resourceType.(type) {
-	case *v1beta1.HTTPRoute:
+	case *gatewayv1.HTTPRoute:
 		c.deleteForRoute(nsname)
 	case *discoveryV1.EndpointSlice:
 		delete(c.endpointSliceOwners, nsname)
-	case *v1beta1.Gateway:
+	case *gatewayv1.Gateway:
 		c.removeGatewayLabelSelector(nsname)
 	case *v1.Namespace:
 		delete(c.namespaces, nsname)
@@ -164,7 +164,7 @@ func (c *CapturerImpl) GetRefCountForService(svcName types.NamespacedName) int {
 	return c.serviceRefCount[svcName]
 }
 
-func (c *CapturerImpl) upsertForRoute(route *v1beta1.HTTPRoute) {
+func (c *CapturerImpl) upsertForRoute(route *gatewayv1.HTTPRoute) {
 	oldServices := c.routesToServices[client.ObjectKeyFromObject(route)]
 	newServices := getBackendServiceNamesFromRoute(route)
 
@@ -205,7 +205,7 @@ func (c *CapturerImpl) decrementRefCount(svcName types.NamespacedName) {
 	}
 }
 
-func getBackendServiceNamesFromRoute(hr *v1beta1.HTTPRoute) map[types.NamespacedName]struct{} {
+func getBackendServiceNamesFromRoute(hr *gatewayv1.HTTPRoute) map[types.NamespacedName]struct{} {
 	svcNames := make(map[types.NamespacedName]struct{})
 
 	for _, rule := range hr.Spec.Rules {

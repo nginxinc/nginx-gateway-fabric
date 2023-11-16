@@ -4,7 +4,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/gateway-api/apis/v1beta1"
+	v1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
 	staticConds "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/conditions"
@@ -13,7 +13,7 @@ import (
 // GatewayClass represents the GatewayClass resource.
 type GatewayClass struct {
 	// Source is the source resource.
-	Source *v1beta1.GatewayClass
+	Source *v1.GatewayClass
 	// Conditions include Conditions for the GatewayClass.
 	Conditions []conditions.Condition
 	// Valid shows whether the GatewayClass is valid.
@@ -22,8 +22,8 @@ type GatewayClass struct {
 
 // processedGatewayClasses holds the resources that belong to NGF.
 type processedGatewayClasses struct {
-	Winner  *v1beta1.GatewayClass
-	Ignored map[types.NamespacedName]*v1beta1.GatewayClass
+	Winner  *v1.GatewayClass
+	Ignored map[types.NamespacedName]*v1.GatewayClass
 }
 
 // processGatewayClasses returns the "Winner" GatewayClass, which is defined in
@@ -32,7 +32,7 @@ type processedGatewayClasses struct {
 // Also returns a boolean that says whether or not the GatewayClass defined
 // in the command-line argument exists, regardless of which controller it references.
 func processGatewayClasses(
-	gcs map[types.NamespacedName]*v1beta1.GatewayClass,
+	gcs map[types.NamespacedName]*v1.GatewayClass,
 	gcName string,
 	controllerName string,
 ) (processedGatewayClasses, bool) {
@@ -47,7 +47,7 @@ func processGatewayClasses(
 			}
 		} else if string(gc.Spec.ControllerName) == controllerName {
 			if processedGwClasses.Ignored == nil {
-				processedGwClasses.Ignored = make(map[types.NamespacedName]*v1beta1.GatewayClass)
+				processedGwClasses.Ignored = make(map[types.NamespacedName]*v1.GatewayClass)
 			}
 			processedGwClasses.Ignored[client.ObjectKeyFromObject(gc)] = gc
 		}
@@ -56,7 +56,7 @@ func processGatewayClasses(
 	return processedGwClasses, gcExists
 }
 
-func buildGatewayClass(gc *v1beta1.GatewayClass) *GatewayClass {
+func buildGatewayClass(gc *v1.GatewayClass) *GatewayClass {
 	if gc == nil {
 		return nil
 	}
@@ -75,7 +75,7 @@ func buildGatewayClass(gc *v1beta1.GatewayClass) *GatewayClass {
 	}
 }
 
-func validateGatewayClass(gc *v1beta1.GatewayClass) error {
+func validateGatewayClass(gc *v1.GatewayClass) error {
 	if gc.Spec.ParametersRef != nil {
 		path := field.NewPath("spec").Child("parametersRef")
 		return field.Forbidden(path, "parametersRef is not supported")

@@ -6,21 +6,21 @@ import (
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/gateway-api/apis/v1beta1"
+	v1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 )
 
 func TestGetBackendServiceNamesFromRoute(t *testing.T) {
-	getNormalRefs := func(svcName v1beta1.ObjectName) []v1beta1.HTTPBackendRef {
-		return []v1beta1.HTTPBackendRef{
+	getNormalRefs := func(svcName v1.ObjectName) []v1.HTTPBackendRef {
+		return []v1.HTTPBackendRef{
 			{
-				BackendRef: v1beta1.BackendRef{
-					BackendObjectReference: v1beta1.BackendObjectReference{
-						Kind:      (*v1beta1.Kind)(helpers.GetPointer("Service")),
+				BackendRef: v1.BackendRef{
+					BackendObjectReference: v1.BackendObjectReference{
+						Kind:      (*v1.Kind)(helpers.GetPointer("Service")),
 						Name:      svcName,
-						Namespace: (*v1beta1.Namespace)(helpers.GetPointer("test")),
-						Port:      (*v1beta1.PortNumber)(helpers.GetPointer[int32](80)),
+						Namespace: (*v1.Namespace)(helpers.GetPointer("test")),
+						Port:      (*v1.PortNumber)(helpers.GetPointer[int32](80)),
 					},
 				},
 			},
@@ -28,16 +28,16 @@ func TestGetBackendServiceNamesFromRoute(t *testing.T) {
 	}
 
 	getModifiedRefs := func(
-		svcName v1beta1.ObjectName,
-		mod func([]v1beta1.HTTPBackendRef) []v1beta1.HTTPBackendRef,
-	) []v1beta1.HTTPBackendRef {
+		svcName v1.ObjectName,
+		mod func([]v1.HTTPBackendRef) []v1.HTTPBackendRef,
+	) []v1.HTTPBackendRef {
 		return mod(getNormalRefs(svcName))
 	}
 
-	hr := &v1beta1.HTTPRoute{
+	hr := &v1.HTTPRoute{
 		ObjectMeta: metav1.ObjectMeta{Namespace: "test"},
-		Spec: v1beta1.HTTPRouteSpec{
-			Rules: []v1beta1.HTTPRouteRule{
+		Spec: v1.HTTPRouteSpec{
+			Rules: []v1.HTTPRouteRule{
 				{
 					BackendRefs: getNormalRefs("svc1"),
 				},
@@ -47,8 +47,8 @@ func TestGetBackendServiceNamesFromRoute(t *testing.T) {
 				{
 					BackendRefs: getModifiedRefs(
 						"invalid-kind",
-						func(refs []v1beta1.HTTPBackendRef) []v1beta1.HTTPBackendRef {
-							refs[0].Kind = (*v1beta1.Kind)(helpers.GetPointer("Invalid"))
+						func(refs []v1.HTTPBackendRef) []v1.HTTPBackendRef {
+							refs[0].Kind = (*v1.Kind)(helpers.GetPointer("Invalid"))
 							return refs
 						},
 					),
@@ -56,7 +56,7 @@ func TestGetBackendServiceNamesFromRoute(t *testing.T) {
 				{
 					BackendRefs: getModifiedRefs(
 						"nil-namespace",
-						func(refs []v1beta1.HTTPBackendRef) []v1beta1.HTTPBackendRef {
+						func(refs []v1.HTTPBackendRef) []v1.HTTPBackendRef {
 							refs[0].Namespace = nil
 							return refs
 						},
@@ -65,8 +65,8 @@ func TestGetBackendServiceNamesFromRoute(t *testing.T) {
 				{
 					BackendRefs: getModifiedRefs(
 						"diff-namespace",
-						func(refs []v1beta1.HTTPBackendRef) []v1beta1.HTTPBackendRef {
-							refs[0].Namespace = (*v1beta1.Namespace)(
+						func(refs []v1.HTTPBackendRef) []v1.HTTPBackendRef {
+							refs[0].Namespace = (*v1.Namespace)(
 								helpers.GetPointer("not-test"),
 							)
 							return refs
@@ -82,18 +82,18 @@ func TestGetBackendServiceNamesFromRoute(t *testing.T) {
 				{
 					BackendRefs: getModifiedRefs(
 						"multiple-refs",
-						func(refs []v1beta1.HTTPBackendRef) []v1beta1.HTTPBackendRef {
-							return append(refs, v1beta1.HTTPBackendRef{
-								BackendRef: v1beta1.BackendRef{
-									BackendObjectReference: v1beta1.BackendObjectReference{
-										Kind: (*v1beta1.Kind)(
+						func(refs []v1.HTTPBackendRef) []v1.HTTPBackendRef {
+							return append(refs, v1.HTTPBackendRef{
+								BackendRef: v1.BackendRef{
+									BackendObjectReference: v1.BackendObjectReference{
+										Kind: (*v1.Kind)(
 											helpers.GetPointer("Service"),
 										),
 										Name: "multiple-refs2",
-										Namespace: (*v1beta1.Namespace)(
+										Namespace: (*v1.Namespace)(
 											helpers.GetPointer("test"),
 										),
-										Port: (*v1beta1.PortNumber)(
+										Port: (*v1.PortNumber)(
 											helpers.GetPointer[int32](80),
 										),
 									},

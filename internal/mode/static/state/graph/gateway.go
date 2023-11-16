@@ -6,7 +6,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/gateway-api/apis/v1beta1"
+	v1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
 	ngfsort "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/sort"
@@ -16,7 +16,7 @@ import (
 // Gateway represents the winning Gateway resource.
 type Gateway struct {
 	// Source is the corresponding Gateway resource.
-	Source *v1beta1.Gateway
+	Source *v1.Gateway
 	// Listeners include the listeners of the Gateway.
 	Listeners map[string]*Listener
 	// Conditions holds the conditions for the Gateway.
@@ -27,8 +27,8 @@ type Gateway struct {
 
 // processedGateways holds the resources that belong to NGF.
 type processedGateways struct {
-	Winner  *v1beta1.Gateway
-	Ignored map[types.NamespacedName]*v1beta1.Gateway
+	Winner  *v1.Gateway
+	Ignored map[types.NamespacedName]*v1.Gateway
 }
 
 // GetAllNsNames returns all the NamespacedNames of the Gateway resources that belong to NGF
@@ -57,10 +57,10 @@ func (gws processedGateways) GetAllNsNames() []types.NamespacedName {
 
 // processGateways determines which Gateway resource belong to NGF (determined by the Gateway GatewayClassName field).
 func processGateways(
-	gws map[types.NamespacedName]*v1beta1.Gateway,
+	gws map[types.NamespacedName]*v1.Gateway,
 	gcName string,
 ) processedGateways {
-	referencedGws := make([]*v1beta1.Gateway, 0, len(gws))
+	referencedGws := make([]*v1.Gateway, 0, len(gws))
 
 	for _, gw := range gws {
 		if string(gw.Spec.GatewayClassName) != gcName {
@@ -78,7 +78,7 @@ func processGateways(
 		return ngfsort.LessObjectMeta(&referencedGws[i].ObjectMeta, &referencedGws[j].ObjectMeta)
 	})
 
-	ignoredGws := make(map[types.NamespacedName]*v1beta1.Gateway)
+	ignoredGws := make(map[types.NamespacedName]*v1.Gateway)
 
 	for _, gw := range referencedGws[1:] {
 		ignoredGws[client.ObjectKeyFromObject(gw)] = gw
@@ -91,7 +91,7 @@ func processGateways(
 }
 
 func buildGateway(
-	gw *v1beta1.Gateway,
+	gw *v1.Gateway,
 	secretResolver *secretResolver,
 	gc *GatewayClass,
 	refGrantResolver *referenceGrantResolver,
@@ -118,7 +118,7 @@ func buildGateway(
 	}
 }
 
-func validateGateway(gw *v1beta1.Gateway, gc *GatewayClass) []conditions.Condition {
+func validateGateway(gw *v1.Gateway, gc *GatewayClass) []conditions.Condition {
 	var conds []conditions.Condition
 
 	if gc == nil {

@@ -30,29 +30,43 @@ page.
 
 ## Deploy NGINX Gateway Fabric from Manifests
 
-> Note: By default, NGINX Gateway Fabric (NGF) will be installed into the nginx-gateway Namespace.
+> **Note**
+>
+> By default, NGINX Gateway Fabric (NGF) will be installed into the nginx-gateway Namespace.
 > It is possible to run NGF in a different Namespace, although you'll need to make modifications to the installation
 > manifests.
 
-1. Install the Gateway API resources from the standard channel (the CRDs and the validating webhook):
+1. To install the Gateway API CRDs from [the Gateway API repo](https://github.com/kubernetes-sigs/gateway-api), run:
 
-   ```shell
-   kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v0.8.1/standard-install.yaml
-   ```
+    ```shell
+    kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/standard-install.yaml
+    ```
 
-1. Deploy the NGINX Gateway Fabric CRDs:
+    If you are running on Kubernetes 1.23 or 1.24, you also need to install the validating webhook. To do so, run:
+
+    ```shell
+    kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/webhook-install.yaml
+    ```
+
+    > **Important**
+    >
+    > The validating webhook is not needed if you are running Kubernetes 1.25+. Validation is done using CEL on the
+    > CRDs. See the [resource validation doc](https://github.com/nginxinc/nginx-gateway-fabric/blob/main/docs/resource-validation.md)
+    > for more information.
+
+2. Deploy the NGINX Gateway Fabric CRDs:
 
    ```shell
    kubectl apply -f https://github.com/nginxinc/nginx-gateway-fabric/releases/download/v1.0.0/crds.yaml
    ```
 
-1. Deploy the NGINX Gateway Fabric:
+3. Deploy the NGINX Gateway Fabric:
 
    ```shell
    kubectl apply -f https://github.com/nginxinc/nginx-gateway-fabric/releases/download/v1.0.0/nginx-gateway.yaml
    ```
 
-1. Confirm the NGINX Gateway Fabric is running in `nginx-gateway` namespace:
+4. Confirm the NGINX Gateway Fabric is running in `nginx-gateway` namespace:
 
    ```shell
    kubectl get pods -n nginx-gateway
@@ -70,8 +84,9 @@ This Service must live in the same Namespace as the controller. The name of this
 the `--service` argument to the controller.
 
 > **Important**
+>
 > The Service manifests expose NGINX Gateway Fabric on ports 80 and 443, which exposes any
-> Gateway [Listener](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.Listener)
+> Gateway [Listener](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.Listener)
 > configured for those ports. If you'd like to use different ports in your listeners,
 > update the manifests accordingly.
 >
@@ -134,6 +149,7 @@ Create a Service with type `LoadBalancer` using the appropriate manifest for you
 ## Upgrading NGINX Gateway Fabric
 
 > **Note**
+>
 > See [below](#configure-delayed-termination-for-zero-downtime-upgrades) for instructions on how to configure delayed
 > termination if required for zero downtime upgrades in your environment.
 
@@ -141,19 +157,32 @@ Create a Service with type `LoadBalancer` using the appropriate manifest for you
 
 1. Upgrade the Gateway Resources
 
-   Before you upgrade, ensure the Gateway API resources are the correct version as supported by the NGINX Gateway
-   Fabric - [see the Technical Specifications](/README.md#technical-specifications).
-   The [release notes](https://github.com/kubernetes-sigs/gateway-api/releases/tag/v0.8.1) of the new version of the
-   Gateway API might include important upgrade-specific notes and instructions. We advise to check the release notes of
-   all versions between the one you're using and the new one.
+    Before you upgrade, ensure the Gateway API resources are the correct version as supported by the NGINX Gateway
+    Fabric - [see the Technical Specifications](/README.md#technical-specifications).
+    The [release notes](https://github.com/kubernetes-sigs/gateway-api/releases/tag/v1.0.0) of the new version of the
+    Gateway API might include important upgrade-specific notes and instructions. We advise to check the release notes of
+    all versions between the one you're using and the new one.
 
-    To upgrade the Gateway resources from [the Gateway API repo](https://github.com/kubernetes-sigs/gateway-api), run:
+    To upgrade the Gateway CRDs from [the Gateway API repo](https://github.com/kubernetes-sigs/gateway-api), run:
 
     ```shell
-    kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v0.8.1/standard-install.yaml
+    kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/standard-install.yaml
     ```
 
-1. Upgrade the NGINX Gateway Fabric CRDs
+    If you are running on Kubernetes 1.23 or 1.24, you also need to update the validating webhook. To do so, run:
+
+    ```shell
+    kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/webhook-install.yaml
+    ```
+
+    If you are running on Kubernetes 1.25 or newer and have the validating webhook installed, you should remove the
+    webhook. To do so, run:
+
+    ```shell
+    kubectl delete -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/webhook-install.yaml
+    ```
+
+2. Upgrade the NGINX Gateway Fabric CRDs
 
     Run the following command to upgrade the NGINX Gateway Fabric CRDs:
 
@@ -161,7 +190,7 @@ Create a Service with type `LoadBalancer` using the appropriate manifest for you
     kubectl apply -f https://github.com/nginxinc/nginx-gateway-fabric/releases/download/v1.0.0/crds.yaml
     ```
 
-1. Upgrade NGINX Gateway Fabric Deployment
+3. Upgrade NGINX Gateway Fabric Deployment
 
     Run the following command to upgrade NGINX Gateway Fabric:
 
@@ -180,6 +209,7 @@ To achieve zero downtime upgrades (meaning clients will not see any interruption
 being performed on NGF), you may need to configure delayed termination on the NGF Pod, depending on your environment.
 
 > **Note**
+>
 > When proxying Websocket or any long-lived connections, NGINX will not terminate until that connection is closed
 > by either the client or the backend. This means that unless all those connections are closed by clients/backends
 > before or during an upgrade, NGINX will not terminate, which means Kubernetes will kill NGINX. As a result, the
@@ -218,6 +248,7 @@ Edit the `nginx-gateway.yaml` to include the following:
    is 30). This is to ensure Kubernetes does not terminate the Pod before the `preStopHook` is complete.
 
 > **Note**
+>
 > More information on container lifecycle hooks can be found
 > [here](https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/#container-hooks) and a detailed
 > description of Pod termination behavior can be found in
@@ -242,15 +273,23 @@ To configure delayed termination on the NGF Pod when the deployment method is He
    kubectl delete -f https://github.com/nginxinc/nginx-gateway-fabric/releases/download/v1.0.0/crds.yaml
    ```
 
-1. Uninstall the Gateway API resources from the standard channel (the CRDs and the validating webhook):
+2. Uninstall the Gateway API CRDs:
 
-   >**Warning: This command will delete all the corresponding custom resources in your cluster across all namespaces!
-   Please ensure there are no custom resources that you want to keep and there are no other Gateway API implementations
-   running in the cluster!**
+   >**Warning**
+   >
+   > This command will delete all the corresponding custom resources in your cluster across all namespaces!
+   > Please ensure there are no custom resources that you want to keep and there are no other Gateway API
+   > implementations running in the cluster!
 
-   ```shell
-   kubectl delete -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v0.8.1/standard-install.yaml
-   ```
+    ```shell
+    kubectl delete -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/standard-install.yaml
+    ```
+
+    If you are running on Kubernetes 1.23 or 1.24, you also need to delete the validating webhook. To do so, run:
+
+    ```shell
+    kubectl delete -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/webhook-install.yaml
+    ```
 
 ### Uninstall NGINX Gateway Fabric using Helm
 

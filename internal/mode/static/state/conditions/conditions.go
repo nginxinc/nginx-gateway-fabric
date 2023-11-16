@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/gateway-api/apis/v1beta1"
+	v1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
@@ -13,7 +13,7 @@ import (
 const (
 	// ListenerReasonUnsupportedValue is used with the "Accepted" condition when a value of a field in a Listener
 	// is invalid or not supported.
-	ListenerReasonUnsupportedValue v1beta1.ListenerConditionReason = "UnsupportedValue"
+	ListenerReasonUnsupportedValue v1.ListenerConditionReason = "UnsupportedValue"
 
 	// ListenerMessageFailedNginxReload is a message used with ListenerConditionProgrammed (false)
 	// when nginx fails to reload.
@@ -29,23 +29,23 @@ const (
 	RouteReasonInvalidGateway = "InvalidGateway"
 
 	// RouteReasonInvalidListener is used with the "Accepted" condition when the Route references an invalid listener.
-	RouteReasonInvalidListener v1beta1.RouteConditionReason = "InvalidListener"
+	RouteReasonInvalidListener v1.RouteConditionReason = "InvalidListener"
 
 	// RouteReasonGatewayNotProgrammed is used when the associated Gateway is not programmed.
 	// Used with Accepted (false).
-	RouteReasonGatewayNotProgrammed v1beta1.RouteConditionReason = "GatewayNotProgrammed"
+	RouteReasonGatewayNotProgrammed v1.RouteConditionReason = "GatewayNotProgrammed"
 
 	// GatewayReasonGatewayConflict indicates there are multiple Gateway resources to choose from,
 	// and we ignored the resource in question and picked another Gateway as the winner.
 	// This reason is used with GatewayConditionAccepted (false).
-	GatewayReasonGatewayConflict v1beta1.GatewayConditionReason = "GatewayConflict"
+	GatewayReasonGatewayConflict v1.GatewayConditionReason = "GatewayConflict"
 
 	// GatewayMessageGatewayConflict is a message that describes GatewayReasonGatewayConflict.
 	GatewayMessageGatewayConflict = "The resource is ignored due to a conflicting Gateway resource"
 
 	// GatewayReasonUnsupportedValue is used with GatewayConditionAccepted (false) when a value of a field in a Gateway
 	// is invalid or not supported.
-	GatewayReasonUnsupportedValue v1beta1.GatewayConditionReason = "UnsupportedValue"
+	GatewayReasonUnsupportedValue v1.GatewayConditionReason = "UnsupportedValue"
 
 	// GatewayMessageFailedNginxReload is a message used with GatewayConditionProgrammed (false)
 	// when nginx fails to reload.
@@ -57,12 +57,6 @@ const (
 	RouteMessageFailedNginxReload = GatewayMessageFailedNginxReload + ". NGINX may still be configured " +
 		"for this HTTPRoute. However, future updates to this resource will not be configured until the Gateway " +
 		"is programmed again"
-	// RouteConditionPartiallyInvalid is a condition which indicates that the Route contains
-	// a combination of both valid and invalid rules.
-	//
-	// FIXME(bjee19): Update to Gateway sig v1 version when released.
-	// https://github.com/nginxinc/nginx-gateway-fabric/issues/1168
-	RouteConditionPartiallyInvalid v1beta1.RouteConditionType = "PartiallyInvalid"
 )
 
 // DeduplicateConditions removes duplicate conditions based on the condition type.
@@ -119,9 +113,9 @@ func NewDefaultRouteConditions() []conditions.Condition {
 // any listener.
 func NewRouteNotAllowedByListeners() conditions.Condition {
 	return conditions.Condition{
-		Type:    string(v1beta1.RouteConditionAccepted),
+		Type:    string(v1.RouteConditionAccepted),
 		Status:  metav1.ConditionFalse,
-		Reason:  string(v1beta1.RouteReasonNotAllowedByListeners),
+		Reason:  string(v1.RouteReasonNotAllowedByListeners),
 		Message: "HTTPRoute is not allowed by any listener",
 	}
 }
@@ -130,9 +124,9 @@ func NewRouteNotAllowedByListeners() conditions.Condition {
 // does not match the hostnames of the HTTPRoute.
 func NewRouteNoMatchingListenerHostname() conditions.Condition {
 	return conditions.Condition{
-		Type:    string(v1beta1.RouteConditionAccepted),
+		Type:    string(v1.RouteConditionAccepted),
 		Status:  metav1.ConditionFalse,
-		Reason:  string(v1beta1.RouteReasonNoMatchingListenerHostname),
+		Reason:  string(v1.RouteReasonNoMatchingListenerHostname),
 		Message: "Listener hostname does not match the HTTPRoute hostnames",
 	}
 }
@@ -140,9 +134,9 @@ func NewRouteNoMatchingListenerHostname() conditions.Condition {
 // NewRouteAccepted returns a Condition that indicates that the HTTPRoute is accepted.
 func NewRouteAccepted() conditions.Condition {
 	return conditions.Condition{
-		Type:    string(v1beta1.RouteConditionAccepted),
+		Type:    string(v1.RouteConditionAccepted),
 		Status:  metav1.ConditionTrue,
-		Reason:  string(v1beta1.RouteReasonAccepted),
+		Reason:  string(v1.RouteReasonAccepted),
 		Message: "The route is accepted",
 	}
 }
@@ -150,9 +144,9 @@ func NewRouteAccepted() conditions.Condition {
 // NewRouteUnsupportedValue returns a Condition that indicates that the HTTPRoute includes an unsupported value.
 func NewRouteUnsupportedValue(msg string) conditions.Condition {
 	return conditions.Condition{
-		Type:    string(v1beta1.RouteConditionAccepted),
+		Type:    string(v1.RouteConditionAccepted),
 		Status:  metav1.ConditionFalse,
-		Reason:  string(v1beta1.RouteReasonUnsupportedValue),
+		Reason:  string(v1.RouteReasonUnsupportedValue),
 		Message: msg,
 	}
 }
@@ -165,9 +159,9 @@ func NewRouteUnsupportedValue(msg string) conditions.Condition {
 // See https://github.com/kubernetes-sigs/gateway-api/blob/37d81593e5a965ed76582dbc1a2f56bbd57c0622/apis/v1/shared_types.go#L408-L413
 func NewRoutePartiallyInvalid(msg string) conditions.Condition {
 	return conditions.Condition{
-		Type:    string(RouteConditionPartiallyInvalid),
+		Type:    string(v1.RouteConditionPartiallyInvalid),
 		Status:  metav1.ConditionTrue,
-		Reason:  string(v1beta1.RouteReasonUnsupportedValue),
+		Reason:  string(v1.RouteReasonUnsupportedValue),
 		Message: "Dropped Rule(s): " + msg,
 	}
 }
@@ -176,7 +170,7 @@ func NewRoutePartiallyInvalid(msg string) conditions.Condition {
 // invalid listener.
 func NewRouteInvalidListener() conditions.Condition {
 	return conditions.Condition{
-		Type:    string(v1beta1.RouteConditionAccepted),
+		Type:    string(v1.RouteConditionAccepted),
 		Status:  metav1.ConditionFalse,
 		Reason:  string(RouteReasonInvalidListener),
 		Message: "Listener is invalid for this parent ref",
@@ -186,9 +180,9 @@ func NewRouteInvalidListener() conditions.Condition {
 // NewRouteResolvedRefs returns a Condition that indicates that all the references on the Route are resolved.
 func NewRouteResolvedRefs() conditions.Condition {
 	return conditions.Condition{
-		Type:    string(v1beta1.RouteConditionResolvedRefs),
+		Type:    string(v1.RouteConditionResolvedRefs),
 		Status:  metav1.ConditionTrue,
-		Reason:  string(v1beta1.RouteReasonResolvedRefs),
+		Reason:  string(v1.RouteReasonResolvedRefs),
 		Message: "All references are resolved",
 	}
 }
@@ -197,9 +191,9 @@ func NewRouteResolvedRefs() conditions.Condition {
 // invalid kind.
 func NewRouteBackendRefInvalidKind(msg string) conditions.Condition {
 	return conditions.Condition{
-		Type:    string(v1beta1.RouteConditionResolvedRefs),
+		Type:    string(v1.RouteConditionResolvedRefs),
 		Status:  metav1.ConditionFalse,
-		Reason:  string(v1beta1.RouteReasonInvalidKind),
+		Reason:  string(v1.RouteReasonInvalidKind),
 		Message: msg,
 	}
 }
@@ -208,9 +202,9 @@ func NewRouteBackendRefInvalidKind(msg string) conditions.Condition {
 // is not permitted.
 func NewRouteBackendRefRefNotPermitted(msg string) conditions.Condition {
 	return conditions.Condition{
-		Type:    string(v1beta1.RouteConditionResolvedRefs),
+		Type:    string(v1.RouteConditionResolvedRefs),
 		Status:  metav1.ConditionFalse,
-		Reason:  string(v1beta1.RouteReasonRefNotPermitted),
+		Reason:  string(v1.RouteReasonRefNotPermitted),
 		Message: msg,
 	}
 }
@@ -219,9 +213,9 @@ func NewRouteBackendRefRefNotPermitted(msg string) conditions.Condition {
 // points to non-existing backend.
 func NewRouteBackendRefRefBackendNotFound(msg string) conditions.Condition {
 	return conditions.Condition{
-		Type:    string(v1beta1.RouteConditionResolvedRefs),
+		Type:    string(v1.RouteConditionResolvedRefs),
 		Status:  metav1.ConditionFalse,
-		Reason:  string(v1beta1.RouteReasonBackendNotFound),
+		Reason:  string(v1.RouteReasonBackendNotFound),
 		Message: msg,
 	}
 }
@@ -230,7 +224,7 @@ func NewRouteBackendRefRefBackendNotFound(msg string) conditions.Condition {
 // an unsupported value.
 func NewRouteBackendRefUnsupportedValue(msg string) conditions.Condition {
 	return conditions.Condition{
-		Type:    string(v1beta1.RouteConditionResolvedRefs),
+		Type:    string(v1.RouteConditionResolvedRefs),
 		Status:  metav1.ConditionFalse,
 		Reason:  RouteReasonBackendRefUnsupportedValue,
 		Message: msg,
@@ -241,7 +235,7 @@ func NewRouteBackendRefUnsupportedValue(msg string) conditions.Condition {
 // references is invalid.
 func NewRouteInvalidGateway() conditions.Condition {
 	return conditions.Condition{
-		Type:    string(v1beta1.RouteConditionAccepted),
+		Type:    string(v1.RouteConditionAccepted),
 		Status:  metav1.ConditionFalse,
 		Reason:  RouteReasonInvalidGateway,
 		Message: "Gateway is invalid",
@@ -252,9 +246,9 @@ func NewRouteInvalidGateway() conditions.Condition {
 // it specifies a Port and/or SectionName that does not match any Listeners in the Gateway.
 func NewRouteNoMatchingParent() conditions.Condition {
 	return conditions.Condition{
-		Type:    string(v1beta1.RouteConditionAccepted),
+		Type:    string(v1.RouteConditionAccepted),
 		Status:  metav1.ConditionFalse,
-		Reason:  string(v1beta1.RouteReasonNoMatchingParent),
+		Reason:  string(v1.RouteReasonNoMatchingParent),
 		Message: "Listener is not found for this parent ref",
 	}
 }
@@ -263,7 +257,7 @@ func NewRouteNoMatchingParent() conditions.Condition {
 // which does not guarantee that the HTTPRoute has been configured.
 func NewRouteGatewayNotProgrammed(msg string) conditions.Condition {
 	return conditions.Condition{
-		Type:    string(v1beta1.RouteConditionAccepted),
+		Type:    string(v1.RouteConditionAccepted),
 		Status:  metav1.ConditionFalse,
 		Reason:  string(RouteReasonGatewayNotProgrammed),
 		Message: msg,
@@ -283,9 +277,9 @@ func NewDefaultListenerConditions() []conditions.Condition {
 // NewListenerAccepted returns a Condition that indicates that the Listener is accepted.
 func NewListenerAccepted() conditions.Condition {
 	return conditions.Condition{
-		Type:    string(v1beta1.ListenerConditionAccepted),
+		Type:    string(v1.ListenerConditionAccepted),
 		Status:  metav1.ConditionTrue,
-		Reason:  string(v1beta1.ListenerReasonAccepted),
+		Reason:  string(v1.ListenerReasonAccepted),
 		Message: "Listener is accepted",
 	}
 }
@@ -293,9 +287,9 @@ func NewListenerAccepted() conditions.Condition {
 // NewListenerProgrammed returns a Condition that indicates the Listener is programmed.
 func NewListenerProgrammed() conditions.Condition {
 	return conditions.Condition{
-		Type:    string(v1beta1.ListenerConditionProgrammed),
+		Type:    string(v1.ListenerConditionProgrammed),
 		Status:  metav1.ConditionTrue,
-		Reason:  string(v1beta1.ListenerReasonProgrammed),
+		Reason:  string(v1.ListenerReasonProgrammed),
 		Message: "Listener is programmed",
 	}
 }
@@ -303,9 +297,9 @@ func NewListenerProgrammed() conditions.Condition {
 // NewListenerResolvedRefs returns a Condition that indicates that all references in a Listener are resolved.
 func NewListenerResolvedRefs() conditions.Condition {
 	return conditions.Condition{
-		Type:    string(v1beta1.ListenerConditionResolvedRefs),
+		Type:    string(v1.ListenerConditionResolvedRefs),
 		Status:  metav1.ConditionTrue,
-		Reason:  string(v1beta1.ListenerReasonResolvedRefs),
+		Reason:  string(v1.ListenerReasonResolvedRefs),
 		Message: "All references are resolved",
 	}
 }
@@ -313,9 +307,9 @@ func NewListenerResolvedRefs() conditions.Condition {
 // NewListenerNoConflicts returns a Condition that indicates that there are no conflicts in a Listener.
 func NewListenerNoConflicts() conditions.Condition {
 	return conditions.Condition{
-		Type:    string(v1beta1.ListenerConditionConflicted),
+		Type:    string(v1.ListenerConditionConflicted),
 		Status:  metav1.ConditionFalse,
-		Reason:  string(v1beta1.ListenerReasonNoConflicts),
+		Reason:  string(v1.ListenerReasonNoConflicts),
 		Message: "No conflicts",
 	}
 }
@@ -324,9 +318,9 @@ func NewListenerNoConflicts() conditions.Condition {
 // semantically or syntactically invalid. The provided message contains the details of why the Listener is invalid.
 func NewListenerNotProgrammedInvalid(msg string) conditions.Condition {
 	return conditions.Condition{
-		Type:    string(v1beta1.ListenerConditionProgrammed),
+		Type:    string(v1.ListenerConditionProgrammed),
 		Status:  metav1.ConditionFalse,
-		Reason:  string(v1beta1.ListenerReasonInvalid),
+		Reason:  string(v1.ListenerReasonInvalid),
 		Message: msg,
 	}
 }
@@ -336,7 +330,7 @@ func NewListenerNotProgrammedInvalid(msg string) conditions.Condition {
 func NewListenerUnsupportedValue(msg string) []conditions.Condition {
 	return []conditions.Condition{
 		{
-			Type:    string(v1beta1.ListenerConditionAccepted),
+			Type:    string(v1.ListenerConditionAccepted),
 			Status:  metav1.ConditionFalse,
 			Reason:  string(ListenerReasonUnsupportedValue),
 			Message: msg,
@@ -349,15 +343,15 @@ func NewListenerUnsupportedValue(msg string) []conditions.Condition {
 func NewListenerInvalidCertificateRef(msg string) []conditions.Condition {
 	return []conditions.Condition{
 		{
-			Type:    string(v1beta1.ListenerConditionAccepted),
+			Type:    string(v1.ListenerConditionAccepted),
 			Status:  metav1.ConditionFalse,
-			Reason:  string(v1beta1.ListenerReasonInvalidCertificateRef),
+			Reason:  string(v1.ListenerReasonInvalidCertificateRef),
 			Message: msg,
 		},
 		{
-			Type:    string(v1beta1.ListenerReasonResolvedRefs),
+			Type:    string(v1.ListenerReasonResolvedRefs),
 			Status:  metav1.ConditionFalse,
-			Reason:  string(v1beta1.ListenerReasonInvalidCertificateRef),
+			Reason:  string(v1.ListenerReasonInvalidCertificateRef),
 			Message: msg,
 		},
 		NewListenerNotProgrammedInvalid(msg),
@@ -369,9 +363,9 @@ func NewListenerInvalidCertificateRef(msg string) []conditions.Condition {
 func NewListenerInvalidRouteKinds(msg string) []conditions.Condition {
 	return []conditions.Condition{
 		{
-			Type:    string(v1beta1.ListenerReasonResolvedRefs),
+			Type:    string(v1.ListenerReasonResolvedRefs),
 			Status:  metav1.ConditionFalse,
-			Reason:  string(v1beta1.ListenerReasonInvalidRouteKinds),
+			Reason:  string(v1.ListenerReasonInvalidRouteKinds),
 			Message: msg,
 		},
 		NewListenerNotProgrammedInvalid(msg),
@@ -383,15 +377,15 @@ func NewListenerInvalidRouteKinds(msg string) []conditions.Condition {
 func NewListenerProtocolConflict(msg string) []conditions.Condition {
 	return []conditions.Condition{
 		{
-			Type:    string(v1beta1.ListenerConditionAccepted),
+			Type:    string(v1.ListenerConditionAccepted),
 			Status:  metav1.ConditionFalse,
-			Reason:  string(v1beta1.ListenerReasonProtocolConflict),
+			Reason:  string(v1.ListenerReasonProtocolConflict),
 			Message: msg,
 		},
 		{
-			Type:    string(v1beta1.ListenerConditionConflicted),
+			Type:    string(v1.ListenerConditionConflicted),
 			Status:  metav1.ConditionTrue,
-			Reason:  string(v1beta1.ListenerReasonProtocolConflict),
+			Reason:  string(v1.ListenerReasonProtocolConflict),
 			Message: msg,
 		},
 		NewListenerNotProgrammedInvalid(msg),
@@ -402,9 +396,9 @@ func NewListenerProtocolConflict(msg string) []conditions.Condition {
 func NewListenerUnsupportedProtocol(msg string) []conditions.Condition {
 	return []conditions.Condition{
 		{
-			Type:    string(v1beta1.ListenerConditionAccepted),
+			Type:    string(v1.ListenerConditionAccepted),
 			Status:  metav1.ConditionFalse,
-			Reason:  string(v1beta1.ListenerReasonUnsupportedProtocol),
+			Reason:  string(v1.ListenerReasonUnsupportedProtocol),
 			Message: msg,
 		},
 		NewListenerNotProgrammedInvalid(msg),
@@ -416,15 +410,15 @@ func NewListenerUnsupportedProtocol(msg string) []conditions.Condition {
 func NewListenerRefNotPermitted(msg string) []conditions.Condition {
 	return []conditions.Condition{
 		{
-			Type:    string(v1beta1.ListenerConditionAccepted),
+			Type:    string(v1.ListenerConditionAccepted),
 			Status:  metav1.ConditionFalse,
-			Reason:  string(v1beta1.ListenerReasonRefNotPermitted),
+			Reason:  string(v1.ListenerReasonRefNotPermitted),
 			Message: msg,
 		},
 		{
-			Type:    string(v1beta1.ListenerReasonResolvedRefs),
+			Type:    string(v1.ListenerReasonResolvedRefs),
 			Status:  metav1.ConditionFalse,
-			Reason:  string(v1beta1.ListenerReasonRefNotPermitted),
+			Reason:  string(v1.ListenerReasonRefNotPermitted),
 			Message: msg,
 		},
 		NewListenerNotProgrammedInvalid(msg),
@@ -434,9 +428,9 @@ func NewListenerRefNotPermitted(msg string) []conditions.Condition {
 // NewGatewayClassInvalidParameters returns a Condition that indicates that the GatewayClass has invalid parameters.
 func NewGatewayClassInvalidParameters(msg string) conditions.Condition {
 	return conditions.Condition{
-		Type:    string(v1beta1.GatewayClassConditionStatusAccepted),
+		Type:    string(v1.GatewayClassConditionStatusAccepted),
 		Status:  metav1.ConditionFalse,
-		Reason:  string(v1beta1.GatewayClassReasonInvalidParameters),
+		Reason:  string(v1.GatewayClassReasonInvalidParameters),
 		Message: msg,
 	}
 }
@@ -452,9 +446,9 @@ func NewDefaultGatewayConditions() []conditions.Condition {
 // NewGatewayAccepted returns a Condition that indicates the Gateway is accepted.
 func NewGatewayAccepted() conditions.Condition {
 	return conditions.Condition{
-		Type:    string(v1beta1.GatewayConditionAccepted),
+		Type:    string(v1.GatewayConditionAccepted),
 		Status:  metav1.ConditionTrue,
-		Reason:  string(v1beta1.GatewayReasonAccepted),
+		Reason:  string(v1.GatewayReasonAccepted),
 		Message: "Gateway is accepted",
 	}
 }
@@ -463,7 +457,7 @@ func NewGatewayAccepted() conditions.Condition {
 func NewGatewayConflict() []conditions.Condition {
 	return []conditions.Condition{
 		{
-			Type:    string(v1beta1.GatewayConditionAccepted),
+			Type:    string(v1.GatewayConditionAccepted),
 			Status:  metav1.ConditionFalse,
 			Reason:  string(GatewayReasonGatewayConflict),
 			Message: GatewayMessageGatewayConflict,
@@ -476,9 +470,9 @@ func NewGatewayConflict() []conditions.Condition {
 // but has at least one listener that is invalid.
 func NewGatewayAcceptedListenersNotValid() conditions.Condition {
 	return conditions.Condition{
-		Type:    string(v1beta1.GatewayConditionAccepted),
+		Type:    string(v1.GatewayConditionAccepted),
 		Status:  metav1.ConditionTrue,
-		Reason:  string(v1beta1.GatewayReasonListenersNotValid),
+		Reason:  string(v1.GatewayReasonListenersNotValid),
 		Message: "Gateway has at least one valid listener",
 	}
 }
@@ -489,9 +483,9 @@ func NewGatewayNotAcceptedListenersNotValid() []conditions.Condition {
 	msg := "Gateway has no valid listeners"
 	return []conditions.Condition{
 		{
-			Type:    string(v1beta1.GatewayConditionAccepted),
+			Type:    string(v1.GatewayConditionAccepted),
 			Status:  metav1.ConditionFalse,
-			Reason:  string(v1beta1.GatewayReasonListenersNotValid),
+			Reason:  string(v1.GatewayReasonListenersNotValid),
 			Message: msg,
 		},
 		NewGatewayNotProgrammedInvalid(msg),
@@ -503,9 +497,9 @@ func NewGatewayNotAcceptedListenersNotValid() []conditions.Condition {
 func NewGatewayInvalid(msg string) []conditions.Condition {
 	return []conditions.Condition{
 		{
-			Type:    string(v1beta1.GatewayConditionAccepted),
+			Type:    string(v1.GatewayConditionAccepted),
 			Status:  metav1.ConditionFalse,
-			Reason:  string(v1beta1.GatewayReasonInvalid),
+			Reason:  string(v1.GatewayReasonInvalid),
 			Message: msg,
 		},
 		NewGatewayNotProgrammedInvalid(msg),
@@ -517,13 +511,13 @@ func NewGatewayInvalid(msg string) []conditions.Condition {
 func NewGatewayUnsupportedValue(msg string) []conditions.Condition {
 	return []conditions.Condition{
 		{
-			Type:    string(v1beta1.GatewayConditionAccepted),
+			Type:    string(v1.GatewayConditionAccepted),
 			Status:  metav1.ConditionFalse,
 			Reason:  string(GatewayReasonUnsupportedValue),
 			Message: msg,
 		},
 		{
-			Type:    string(v1beta1.GatewayConditionProgrammed),
+			Type:    string(v1.GatewayConditionProgrammed),
 			Status:  metav1.ConditionFalse,
 			Reason:  string(GatewayReasonUnsupportedValue),
 			Message: msg,
@@ -534,9 +528,9 @@ func NewGatewayUnsupportedValue(msg string) []conditions.Condition {
 // NewGatewayProgrammed returns a Condition that indicates the Gateway is programmed.
 func NewGatewayProgrammed() conditions.Condition {
 	return conditions.Condition{
-		Type:    string(v1beta1.GatewayConditionProgrammed),
+		Type:    string(v1.GatewayConditionProgrammed),
 		Status:  metav1.ConditionTrue,
-		Reason:  string(v1beta1.GatewayReasonProgrammed),
+		Reason:  string(v1.GatewayReasonProgrammed),
 		Message: "Gateway is programmed",
 	}
 }
@@ -546,9 +540,9 @@ func NewGatewayProgrammed() conditions.Condition {
 // why the Gateway is invalid.
 func NewGatewayNotProgrammedInvalid(msg string) conditions.Condition {
 	return conditions.Condition{
-		Type:    string(v1beta1.GatewayConditionProgrammed),
+		Type:    string(v1.GatewayConditionProgrammed),
 		Status:  metav1.ConditionFalse,
-		Reason:  string(v1beta1.GatewayReasonInvalid),
+		Reason:  string(v1.GatewayReasonInvalid),
 		Message: msg,
 	}
 }
@@ -557,7 +551,7 @@ func NewGatewayNotProgrammedInvalid(msg string) conditions.Condition {
 // conflict with another Gateway.
 func NewGatewayConflictNotProgrammed() conditions.Condition {
 	return conditions.Condition{
-		Type:    string(v1beta1.GatewayConditionProgrammed),
+		Type:    string(v1.GatewayConditionProgrammed),
 		Status:  metav1.ConditionFalse,
 		Reason:  string(GatewayReasonGatewayConflict),
 		Message: GatewayMessageGatewayConflict,

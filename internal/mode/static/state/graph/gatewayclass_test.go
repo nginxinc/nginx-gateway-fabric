@@ -7,7 +7,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/gateway-api/apis/v1beta1"
+	v1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
@@ -17,26 +17,26 @@ import (
 func TestProcessGatewayClasses(t *testing.T) {
 	gcName := "test-gc"
 	ctlrName := "test-ctlr"
-	winner := &v1beta1.GatewayClass{
+	winner := &v1.GatewayClass{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: gcName,
 		},
-		Spec: v1beta1.GatewayClassSpec{
-			ControllerName: v1beta1.GatewayController(ctlrName),
+		Spec: v1.GatewayClassSpec{
+			ControllerName: v1.GatewayController(ctlrName),
 		},
 	}
-	ignored := &v1beta1.GatewayClass{
+	ignored := &v1.GatewayClass{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "test-gc-ignored",
 		},
-		Spec: v1beta1.GatewayClassSpec{
-			ControllerName: v1beta1.GatewayController(ctlrName),
+		Spec: v1.GatewayClassSpec{
+			ControllerName: v1.GatewayController(ctlrName),
 		},
 	}
 
 	tests := []struct {
 		expected processedGatewayClasses
-		gcs      map[types.NamespacedName]*v1beta1.GatewayClass
+		gcs      map[types.NamespacedName]*v1.GatewayClass
 		name     string
 		exists   bool
 	}{
@@ -46,7 +46,7 @@ func TestProcessGatewayClasses(t *testing.T) {
 			name:     "no gatewayclasses",
 		},
 		{
-			gcs: map[types.NamespacedName]*v1beta1.GatewayClass{
+			gcs: map[types.NamespacedName]*v1.GatewayClass{
 				{Name: gcName}: winner,
 			},
 			expected: processedGatewayClasses{
@@ -56,13 +56,13 @@ func TestProcessGatewayClasses(t *testing.T) {
 			name:   "one valid gatewayclass",
 		},
 		{
-			gcs: map[types.NamespacedName]*v1beta1.GatewayClass{
+			gcs: map[types.NamespacedName]*v1.GatewayClass{
 				{Name: gcName}: {
 					ObjectMeta: metav1.ObjectMeta{
 						Name: gcName,
 					},
-					Spec: v1beta1.GatewayClassSpec{
-						ControllerName: v1beta1.GatewayController("not ours"),
+					Spec: v1.GatewayClassSpec{
+						ControllerName: v1.GatewayController("not ours"),
 					},
 				},
 			},
@@ -71,21 +71,21 @@ func TestProcessGatewayClasses(t *testing.T) {
 			name:     "one valid gatewayclass, but references wrong controller",
 		},
 		{
-			gcs: map[types.NamespacedName]*v1beta1.GatewayClass{
+			gcs: map[types.NamespacedName]*v1.GatewayClass{
 				{Name: ignored.Name}: ignored,
 			},
 			expected: processedGatewayClasses{
-				Ignored: map[types.NamespacedName]*v1beta1.GatewayClass{
+				Ignored: map[types.NamespacedName]*v1.GatewayClass{
 					client.ObjectKeyFromObject(ignored): ignored,
 				},
 			},
 			name: "one non-referenced gatewayclass with our controller",
 		},
 		{
-			gcs: map[types.NamespacedName]*v1beta1.GatewayClass{
+			gcs: map[types.NamespacedName]*v1.GatewayClass{
 				{Name: "completely ignored"}: {
-					Spec: v1beta1.GatewayClassSpec{
-						ControllerName: v1beta1.GatewayController("not ours"),
+					Spec: v1.GatewayClassSpec{
+						ControllerName: v1.GatewayController("not ours"),
 					},
 				},
 			},
@@ -93,13 +93,13 @@ func TestProcessGatewayClasses(t *testing.T) {
 			name:     "one non-referenced gatewayclass without our controller",
 		},
 		{
-			gcs: map[types.NamespacedName]*v1beta1.GatewayClass{
+			gcs: map[types.NamespacedName]*v1.GatewayClass{
 				{Name: gcName}:       winner,
 				{Name: ignored.Name}: ignored,
 			},
 			expected: processedGatewayClasses{
 				Winner: winner,
-				Ignored: map[types.NamespacedName]*v1beta1.GatewayClass{
+				Ignored: map[types.NamespacedName]*v1.GatewayClass{
 					client.ObjectKeyFromObject(ignored): ignored,
 				},
 			},
@@ -119,16 +119,16 @@ func TestProcessGatewayClasses(t *testing.T) {
 }
 
 func TestBuildGatewayClass(t *testing.T) {
-	validGC := &v1beta1.GatewayClass{}
+	validGC := &v1.GatewayClass{}
 
-	invalidGC := &v1beta1.GatewayClass{
-		Spec: v1beta1.GatewayClassSpec{
-			ParametersRef: &v1beta1.ParametersReference{},
+	invalidGC := &v1.GatewayClass{
+		Spec: v1.GatewayClassSpec{
+			ParametersRef: &v1.ParametersReference{},
 		},
 	}
 
 	tests := []struct {
-		gc       *v1beta1.GatewayClass
+		gc       *v1.GatewayClass
 		expected *GatewayClass
 		name     string
 	}{

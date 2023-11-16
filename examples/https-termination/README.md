@@ -81,7 +81,7 @@ reference a Secret in a different Namespace.
 
    To configure HTTPS termination for our cafe application, we will bind our `coffee` and `tea` HTTPRoutes to
    the `https` listener in [cafe-routes.yaml](./cafe-routes.yaml) using
-   the [`parentReference`](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.ParentReference)
+   the [`parentReference`](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.ParentReference)
    field:
 
    ```yaml
@@ -91,7 +91,7 @@ reference a Secret in a different Namespace.
    ```
 
    To configure an HTTPS redirect from port 80 to 443, we will bind the special `cafe-tls-redirect` HTTPRoute with
-   a [`HTTPRequestRedirectFilter`](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.HTTPRequestRedirectFilter)
+   a [`HTTPRequestRedirectFilter`](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.HTTPRequestRedirectFilter)
    to the `http` listener:
 
    ```yaml
