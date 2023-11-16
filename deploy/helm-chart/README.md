@@ -114,6 +114,13 @@ If you are running on Kubernetes 1.23 or 1.24 you also need to update the valida
 kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/webhook-install.yaml
 ```
 
+If you are running on Kubernetes 1.25 or newer, and you have the validating webhook installed, you should remove the
+webhook. To do so, run:
+
+```shell
+kubectl delete -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/webhook-install.yaml
+```
+
 ### Upgrading the CRDs
 
 Helm does not upgrade the NGINX Gateway Fabric CRDs during a release upgrade. Before you upgrade a release, you

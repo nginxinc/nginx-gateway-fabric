@@ -175,6 +175,13 @@ Create a Service with type `LoadBalancer` using the appropriate manifest for you
     kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/webhook-install.yaml
     ```
 
+    If you are running on Kubernetes 1.25 or newer, and you have the validating webhook installed, you should remove the
+    webhook. To do so, run:
+
+    ```shell
+    kubectl delete -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/webhook-install.yaml
+    ```
+
 2. Upgrade the NGINX Gateway Fabric CRDs
 
     Run the following command to upgrade the NGINX Gateway Fabric CRDs:
