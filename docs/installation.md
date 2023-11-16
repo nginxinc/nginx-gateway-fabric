@@ -42,7 +42,7 @@ page.
     kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/standard-install.yaml
     ```
 
-    If you are running on Kubernetes 1.23 or 1.24 you also need to install the validating webhook. To do so, run:
+    If you are running on Kubernetes 1.23 or 1.24, you also need to install the validating webhook. To do so, run:
 
     ```shell
     kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/webhook-install.yaml
@@ -169,13 +169,13 @@ Create a Service with type `LoadBalancer` using the appropriate manifest for you
     kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/standard-install.yaml
     ```
 
-    If you are running on Kubernetes 1.23 or 1.24 you also need to update the validating webhook. To do so, run:
+    If you are running on Kubernetes 1.23 or 1.24, you also need to update the validating webhook. To do so, run:
 
     ```shell
     kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/webhook-install.yaml
     ```
 
-    If you are running on Kubernetes 1.25 or newer, and you have the validating webhook installed, you should remove the
+    If you are running on Kubernetes 1.25 or newer and have the validating webhook installed, you should remove the
     webhook. To do so, run:
 
     ```shell
@@ -285,7 +285,7 @@ To configure delayed termination on the NGF Pod when the deployment method is He
     kubectl delete -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/standard-install.yaml
     ```
 
-    If you are running on Kubernetes 1.23 or 1.24 you also need to delete the validating webhook. To do so, run:
+    If you are running on Kubernetes 1.23 or 1.24, you also need to delete the validating webhook. To do so, run:
 
     ```shell
     kubectl delete -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/webhook-install.yaml
