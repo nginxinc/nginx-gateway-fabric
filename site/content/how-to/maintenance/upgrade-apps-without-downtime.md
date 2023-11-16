@@ -6,78 +6,46 @@ toc: true
 docs: "DOCS-000"
 ---
 
-# Using NGINX Gateway Fabric to Upgrade Applications without Downtime
+## Overview
 
-This guide explains how to use NGINX Gateway Fabric to upgrade applications without downtime.
+NGINX Gateway Fabric allows to upgrade applications without downtime. 
 
-Multiple upgrade methods are mentioned, assuming existing familiarity: this guide focuses primarily on how to use NGINX
-Gateway Fabric to accomplish them.
+{{< note >}}See the [Architecture document]({{< relref "/concepts/architecture.md" >}}) to learn more about NGINX Gateway Fabric architecture.{{< /note >}}
 
-> See the [Architecture document](../architecture.md) to learn more about NGINX Gateway Fabric architecture.
+## NGINX Gateway Fabric functionality
 
-## NGINX Gateway Fabric Functionality
+To understand the upgrade methods, you need to be familiar with the NGINX features that help prevent application downtime: Graceful configuration reloads and upstream server updates.
 
-To understand the upgrade methods, you should be aware of the NGINX features that help prevent application downtime:
-graceful configuration reloads and upstream server updates.
+### Graceful configuration reloads
 
-### Graceful Configuration Reloads
+If a relevant gateway API or built-in Kubernetes resource is changed, NGINX Gateway Fabric will update NGINX by regenerating the NGINX configuration. NGINX Gateway Fabric then sends a reload signal to the master NGINX process to apply the new configuration.
 
-If a relevant Gateway API or built-in Kubernetes resource is changed, NGINX Gateway Fabric will update NGINX by
-regenerating the NGINX configuration. NGINX Gateway Fabric then sends a reload signal to the master NGINX process to
-apply the new configuration.
+We call such an operation a "reload", during which client requests are not dropped - which defines it as a graceful reload.
 
-We call such an operation a reload, during which client requests are not dropped - which defines it as a graceful reload.
+This process is further explained in the [NGINX configuration documentation](https://nginx.org/en/docs/control.html?#reconfiguration).
 
-This process is further explained in [NGINX's documentation](https://nginx.org/en/docs/control.html?#reconfiguration).
+### Upstream server updates
 
-### Upstream Server Updates
+Endpoints frequently change during application upgrades: Kubernetes creates pods for the new version of an application and removes the old ones, creating and removing the respective endpoints as well.
 
-Endpoints frequently change during application upgrades: Kubernetes creates Pods for the new version of an application
-and removes the old ones, creating and removing the respective Endpoints as well.
+NGINX Gateway Fabric detects changes to endpoints by watching their corresponding [EndpointSlices](https://kubernetes.io/docs/concepts/services-networking/endpoint-slices/).
 
-NGINX Gateway Fabric detects changes to Endpoints by watching their corresponding [EndpointSlices][endpoint-slices].
+In NGINX configuration, a service is represented as an [upstream](https://nginx.org/en/docs/http/ngx_http_upstream_module.html#upstream), and an endpoint as an [upstream server](https://nginx.org/en/docs/http/ngx_http_upstream_module.html#server).
 
-[endpoint-slices]:https://kubernetes.io/docs/concepts/services-networking/endpoint-slices/
+Adding and removing endpoints are two of the most common cases:
 
-In NGINX configuration, a Service is represented as an [upstream][upstream], and an Endpoint as an
-[upstream server][upstream-server].
+- If an endpoint is added, NGINX Gateway Fabric adds an upstream server to NGINX that corresponds to the endpoint, then reloads NGINX. Next, NGINX will start proxying traffic to that endpoint.
+- If an endpoint is removed, NGINX Gateway Fabric removes the corresponding upstream server from NGINX. After a reload, NGINX will stop proxying traffic to that server. However, it will finish proxying any pending requests to that server before switching to another endpoint.
 
-[upstream]:https://nginx.org/en/docs/http/ngx_http_upstream_module.html#upstream
+As long as you have more than one endpoint ready, the clients will not experience any downtime during upgrades.
 
-[upstream-server]:https://nginx.org/en/docs/http/ngx_http_upstream_module.html#server
+{{< note >}}It is good practice to configure a [Readiness probe](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/) in the deployment so that a pod can advertise when it is ready to receive traffic. Note that NGINX Gateway Fabric will not add any endpoint to NGINX that is not ready.{{< /note >}}
 
-Two common cases are adding and removing Endpoints:
+## Prerequisites
 
-- If an Endpoint is added, NGINX Gateway Fabric adds an upstream server to NGINX that corresponds to the Endpoint,
-  then reload NGINX. After that, NGINX will start proxying traffic to that Endpoint.
-- If an Endpoint is removed, NGINX Gateway Fabric removes the corresponding upstream server from NGINX. After
-  a reload, NGINX will stop proxying traffic to it. However, it will finish proxying any pending requests to that
-  server before switching to another Endpoint.
-
-As long as you have more than one ready Endpoint, the clients should not experience any downtime during upgrades.
-
-> It is good practice to configure a [Readiness probe][readiness-probe] in the Deployment so that a Pod can advertise
-> when it is ready to receive traffic. Note that NGINX Gateway Fabric will not add any Endpoint to NGINX that is not
-> ready.
-
-[readiness-probe]:https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/
-
-## Before You Begin
-
-For the upgrade methods covered in the next sections, we make the following assumptions:
-
-- You deploy your application as a [Deployment][deployment].
-- The Pods of the Deployment belong to a [Service][service] so that Kubernetes creates an [Endpoint][endpoints] for
-  each Pod.
-- You expose the application to the clients via an [HTTPRoute][httproute] resource that references that Service.
-
-[deployment]:https://kubernetes.io/docs/concepts/workloads/controllers/deployment/
-
-[service]:https://kubernetes.io/docs/concepts/services-networking/service/
-
-[httproute]:https://gateway-api.sigs.k8s.io/api-types/httproute/
-
-[endpoints]:https://kubernetes.io/docs/reference/kubernetes-api/service-resources/endpoints-v1/
+- You have deployed your application as a [deployment](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/)
+- The pods of the deployment belong to a [service](https://kubernetes.io/docs/concepts/services-networking/service/) so that Kubernetes creates an [endpoint](https://kubernetes.io/docs/reference/kubernetes-api/service-resources/endpoints-v1/) for each pod.
+- You have exposed the application to the clients via an [HTTPRoute](https://gateway-api.sigs.k8s.io/api-types/httproute/) resource that references that service.
 
 For example, an application can be exposed using a routing rule like below:
 
@@ -91,58 +59,36 @@ For example, an application can be exposed using a routing rule like below:
     port: 80
 ```
 
-> See the [Cafe example](../../examples/cafe-example) for a basic example.
+{{< note >}}See the [Cafe example](https://github.com/nginxinc/nginx-gateway-fabric/blob/main/examples/cafe-example) for a basic example.{{< /note >}}
 
 The upgrade methods in the next sections cover:
 
-- Rolling Deployment Upgrades
-- Blue-green Deployments
-- Canary Releases
+- Rolling deployment upgrades
+- Blue-green deployments
+- Canary releases
 
-## Rolling Deployment Upgrade
+## Rolling deployment upgrade
 
-To start a [rolling Deployment upgrade][rolling-upgrade], you update the Deployment to use the new version tag of
-the application. As a result, Kubernetes terminates the Pods with the old version and create new ones. By default,
-Kubernetes also ensures that some number of Pods always stay available during the upgrade.
+To start a [rolling deployment upgrade](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#rolling-update-deployment), you update the deployment to use the new version tag of the application. As a result, Kubernetes terminates the pods with the old version and create new ones. By default, Kubernetes also ensures that some number of pods always stay available during the upgrade.
 
-[rolling-upgrade]:https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#rolling-update-deployment
+This upgrade will add new upstream servers to NGINX and remove the old ones. As long as the number of pods (ready endpoints) during an upgrade does not reach zero, NGINX will be able to proxy traffic, and therefore prevent any downtime.
 
-Such an upgrade will add new upstream servers to NGINX and remove the old ones. As long as the number
-of Pods (ready Endpoints) during an upgrade does not reach zero, NGINX will be able to proxy traffic, and thus prevent
-any downtime.
+This method does not require you to update the **HTTPRoute**.
 
-This method does not require you to update the HTTPRoute.
+## Blue-green deployments
 
-## Blue-Green Deployments
-
-With this method, you deploy a new version of the application (blue version) as a separate Deployment,
-while the old version (green) keeps running and handling client traffic. Next, you switch the traffic from the
-green version to the blue. If the blue works as expected, you terminate the green. Otherwise, you switch the traffic
-back to the green.
+With this method, you deploy a new version of the application (blue version) as a separate deployment, while the old version (green) keeps running and handling client traffic. Next, you switch the traffic from the green version to the blue. If the blue works as expected, you terminate the green. Otherwise, you switch the traffic back to the green.
 
 There are two ways to switch the traffic:
 
-- Update the Service selector to select the Pods of the blue version instead of the green. As a result, NGINX Gateway
-  Fabric removes the green upstream servers from NGINX and add the blue ones. With this approach, it is not
-  necessary to update the HTTPRoute.
-- Create a separate Service for the blue version and update the backend reference in the HTTPRoute to reference this
-  Service, which leads to the same result as with the previous option.
+- Update the service selector to select the pods of the blue version instead of the green. As a result, NGINX Gateway Fabric removes the green upstream servers from NGINX and add the blue ones. With this approach, it is not necessary to update the **HTTPRoute**.
+- Create a separate service for the blue version and update the backend reference in the **HTTPRoute** to reference this service, which leads to the same result as with the previous option.
 
-## Canary Releases
+## Canary releases
 
-To support canary releases, you can implement an approach with two Deployments behind the same Service (see
-[Canary deployment][canary] in the Kubernetes documentation). However, this approach lacks precision for defining the
-traffic split between the old and the canary version. You can greatly influence it by controlling the number of Pods
-(for example, four Pods of the old version and one Pod of the canary). However, note that NGINX Gateway Fabric uses
-[`random two least_conn`][random-method] load balancing method, which doesn't guarantee an exact split based on the
-number of Pods (80/20 in the given example).
+To support canary releases, you can implement an approach with two deployments behind the same service (see [Canary deployment](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#canary-deployment) in the Kubernetes documentation). However, this approach lacks precision for defining the traffic split between the old and the canary version. You can greatly influence it by controlling the number of pods (for example, four pods of the old version and one pod of the canary). However, note that NGINX Gateway Fabric uses [`random two least_conn`](https://nginx.org/en/docs/http/ngx_http_upstream_module.html#random) load balancing method, which doesn't guarantee an exact split based on the number of pods (80/20 in the given example).
 
-[canary]:https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#canary-deployment
-[random-method]:https://nginx.org/en/docs/http/ngx_http_upstream_module.html#random
-
-A more flexible and precise way to implement canary releases is to configure a traffic split in an HTTPRoute. In this
-case, you create a separate Deployment for the new version with a separate Service. For example, for the rule below,
-NGINX will proxy 95% of the traffic to the old version Endpoints and only 5% to the new ones.
+A more flexible and precise way to implement canary releases is to configure a traffic split in an **HTTPRoute**. In this case, you create a separate deployment for the new version with a separate service. For example, for the rule below, NGINX will proxy 95% of the traffic to the old version endpoints and only 5% to the new ones.
 
 ```yaml
 - matches:
@@ -158,11 +104,9 @@ NGINX will proxy 95% of the traffic to the old version Endpoints and only 5% to 
     weight: 5
 ```
 
-> There is no stickiness for the requests from the same client. NGINX will independently split each request among
-> the backend references.
+{{< note >}}There is no stickiness for the requests from the same client. NGINX will independently split each request among the backend references.{{< /note >}}
 
-By updating the rule you can further increase the share of traffic the new version gets and finally completely switch
-to the new version:
+By updating the rule you can further increase the share of traffic the new version gets and finally completely switch to the new version:
 
 ```yaml
 - matches:
@@ -178,4 +122,4 @@ to the new version:
     weight: 1
 ```
 
-See the [Traffic splitting example](/examples/traffic-splitting) from our repository.
+See the [Traffic splitting example](https://github.com/nginxinc/nginx-gateway-fabric/blob/main/examples/traffic-splitting) from our repository.
