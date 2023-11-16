@@ -1,6 +1,6 @@
 # NGINX Gateway Fabric Docs
 
-The `/site` directory contains the user documentation for NGINX Gateway Fabric and the requirements for linting, building, and publishing the docs.
+The `/site` directory contains the user documentation for NGINX Gateway Fabric and the requirements for linting, building, and publishing the docs. Run all the `hugo` commands below from this directory.
 
 We use [Hugo](https://gohugo.io/) to build the docs for NGINX, with the [nginx-hugo-theme](https://github.com/nginxinc/nginx-hugo-theme).
 
