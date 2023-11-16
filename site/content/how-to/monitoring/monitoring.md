@@ -1,49 +1,48 @@
 ---
-title: "Monitoring"
-description: "Learn how to monitor NGINX Gateway Fabric."
+title: "Monitoring NGINX Gateway Fabric"
+description: "Learn how to monitor your NGINX Gateway Fabric effectively. This guide provides easy steps for configuring monitoring settings and understanding key performance metrics."
 weight: 100
 toc: true
 docs: "DOCS-000"
 ---
 
-# Monitoring
+{{<custom-styles>}}
 
-The NGINX Gateway Fabric exposes a number of metrics in the [Prometheus](https://prometheus.io/) format. Those
-include NGINX and the controller-runtime metrics. These are delivered using a metrics server orchestrated by the
-controller-runtime package. Metrics are enabled by default, and are served via http on port `9113`.
+## Overview
 
-> **Note**
-> By default metrics are served via http. Please note that if serving metrics via https is enabled, this
-> endpoint will be secured with a self-signed certificate. Since the metrics server is using a self-signed certificate,
-> the Prometheus Pod scrape configuration will also require the `insecure_skip_verify` flag set. See
-> [the Prometheus documentation](https://prometheus.io/docs/prometheus/latest/configuration/configuration/#tls_config).
 
-## Changing the default Metrics configuration
+NGINX Gateway Fabric metrics are displayed in [Prometheus](https://prometheus.io/) format, simplifying monitoring. You can track NGINX and controller-runtime metrics through a metrics server orchestrated by the controller-runtime package. These metrics are enabled by default and can be accessed on HTTP port `9113`.
+
+
+{{<call-out "important" "Security note for metrics">}}
+Metrics are served over HTTP by default. Enabling HTTPS will secure the metrics endpoint with a self-signed certificate. When using HTTPS, adjust the Prometheus Pod scrape settings by adding the `insecure_skip_verify` flag to handle the self-signed certificate. For further details, refer to the [Prometheus documentation](https://prometheus.io/docs/prometheus/latest/configuration/configuration/#tls_config).
+{{</call-out>}}
+
+## How to change the default metrics configuration
+
+Configuring NGINX Gateway Fabric for monitoring is straightforward. You can change metric settings using Helm or Kubernetes manifests, depending on your setup.
 
 ### Using Helm
 
-If you're using *Helm* to install the NGINX Gateway Fabric, set the `metrics.*` parameters to the required values
-for your environment. See the [Helm README](/deploy/helm-chart/README.md).
+If you're setting up NGINX Gateway Fabric with Helm, you can adjust the `metrics.*` parameters to fit your needs. For detailed options and instructions, see the [Helm README](/deploy/helm-chart/README.md).
 
-### Using Manifests
+### Using Kubernetes manifests
 
-If you're using *Kubernetes manifests* to install NGINX Gateway Fabric, you can modify the
-[manifest](/deploy/manifests/nginx-gateway.yaml) to change the default metrics configuration:
+For setups using Kubernetes manifests, change the metrics configuration by editing the [NGINX Gateway manifest](/deploy/manifests/nginx-gateway.yaml).
 
 #### Disabling metrics
 
-1. Set the `-metrics-disable` [command-line argument](/docs/cli-help.md) to `true` and remove the other `-metrics-*`
-   command line arguments.
+If you need to disable metrics:
 
-2. Remove the metrics port entry from the list of the ports of the NGINX Gateway Fabric container in the template
-   of the NGINX Gateway Fabric Pod:
+1. Set the `-metrics-disable` [command-line argument]({{< relref "reference/cli-help.md">}}) to `true` in the NGINX Gateway Fabric Pod's configuration. Remove any other `-metrics-*` arguments.
+2. In the Pod template for NGINX Gateway Fabric, delete the metrics port entry from the container ports list:
 
     ```yaml
     - name: metrics
       containerPort: 9113
     ```
 
-3. Remove the following annotations from the template of the NGINX Gateway Fabric Pod:
+3. Also, remove the following annotations from the NGINX Gateway Fabric Pod template:
 
     ```yaml
     annotations:
@@ -53,17 +52,17 @@ If you're using *Kubernetes manifests* to install NGINX Gateway Fabric, you can 
 
 #### Changing the default port
 
-1. Set the `-metrics-port` [command-line argument](/docs/cli-help.md) to the required value.
+To change the default port for metrics:
 
-2. Change the metrics port entry in the list of the ports of the NGINX Gateway Fabric container in the template
-   of the NGINX Gateway Fabric Pod:
+1. Update the `-metrics-port` [command-line argument]({{< relref "reference/cli-help.md">}}) in the NGINX Gateway Fabric Pod's configuration to your chosen port number.
+2. In the Pod template, change the metrics port entry to reflect the new port:
 
     ```yaml
     - name: metrics
       containerPort: <new-port>
     ```
 
-3. Change the following annotation in the template of the NGINX Gateway Fabric Pod:
+3. Modify the `prometheus.io/port` annotation in the Pod template to match the new port:
 
     ```yaml
     annotations:
@@ -72,11 +71,13 @@ If you're using *Kubernetes manifests* to install NGINX Gateway Fabric, you can 
         <...>
     ```
 
-#### Enable serving metrics via https
+#### Enabling HTTPS for metrics
 
-1. Set the `-metrics-secure-serving` [command-line argument](/docs/cli-help.md) to `true`.
+For enhanced security with HTTPS:
 
-2. Add the following annotation in the template of the NGINX Gateway Fabric Pod:
+1. Enable HTTPS security by setting the `-metrics-secure-serving` [command-line argument]({{< relref "reference/cli-help.md">}}) to `true` in the NGINX Gateway Fabric Pod's configuration.
+
+2. Add an HTTPS scheme annotation to the Pod template:
 
     ```yaml
     annotations:
@@ -85,30 +86,32 @@ If you're using *Kubernetes manifests* to install NGINX Gateway Fabric, you can 
         <...>
     ```
 
-## Available Metrics
+## Available metrics in NGINX Gateway Fabric
 
-NGINX Gateway Fabric exports the following metrics:
+NGINX Gateway Fabric provides a variety of metrics to assist in monitoring and analyzing performance. These metrics are categorized as follows:
 
-- NGINX metrics:
-  - Exported by NGINX. Refer to the [NGINX Prometheus Exporter developer docs](https://github.com/nginxinc/nginx-prometheus-exporter#metrics-for-nginx-oss)
-  - These metrics have the namespace `nginx_gateway_fabric`, and include the label `class` which is set to the
-    Gateway class of NGF. For example, `nginx_gateway_fabric_connections_accepted{class="nginx"}`.
+### NGINX metrics
 
-- NGINX Gateway Fabric metrics:
-  - nginx_reloads_total. Number of successful NGINX reloads.
-  - nginx_reload_errors_total. Number of unsuccessful NGINX reloads.
-  - nginx_stale_config. 1 means NGF failed to configure NGINX with the latest version of the configuration, which means
-    NGINX is running with a stale version.
-  - nginx_last_reload_milliseconds. Duration in milliseconds of NGINX reloads (histogram).
-  - event_batch_processing_milliseconds: Duration in milliseconds of event batch processing (histogram), which is the
-    time it takes NGF to process batches of Kubernetes events (changes to cluster resources). Note that NGF processes
-    events in batches, and while processing the current batch, it accumulates events for the next batch.
-  - These metrics have the namespace `nginx_gateway_fabric`, and include the label `class` which is set to the
-    Gateway class of NGF. For example, `nginx_gateway_fabric_nginx_reloads_total{class="nginx"}`.
+NGINX metrics, essential for monitoring specific NGINX operations, include details like the total number of accepted client connections. For a complete list of available NGINX metrics, refer to the [NGINX Prometheus Exporter developer docs](https://github.com/nginxinc/nginx-prometheus-exporter#metrics-for-nginx-oss).
 
-- [controller-runtime](https://github.com/kubernetes-sigs/controller-runtime) metrics. These include:
-  - Total number of reconciliation errors per controller
-  - Length of reconcile queue per controller
-  - Reconciliation latency
-  - Usual resource metrics such as CPU, memory usage, file descriptor usage
-  - Go runtime metrics such as number of Go routines, GC duration, and Go version information
+These metrics use  the `nginx_gateway_fabric` namespace and include the `class` label, indicating the NGINX Gateway class. For example, `nginx_gateway_fabric_connections_accepted{class="nginx"}`.
+
+### NGINX Gateway Fabric metrics
+
+Metrics specific to the NGINX Gateway Fabric include:
+
+- `nginx_reloads_total`: Counts successful NGINX reloads.
+- `nginx_reload_errors_total`: Counts NGINX reload failures.
+- `nginx_stale_config`: Indicates if NGINX Gateway Fabric couldn't update NGINX with the latest configuration, resulting in a stale version.
+- `nginx_last_reload_milliseconds`: Time in milliseconds for NGINX reloads.
+- `event_batch_processing_milliseconds`: Time in milliseconds to process batches of Kubernetes events.
+
+All these metrics are under the `nginx_gateway_fabric` namespace and include a `class` label set to the Gateway class of NGINX Gateway Fabric. For example, `nginx_gateway_fabric_nginx_reloads_total{class="nginx"}`.
+
+### Controller-runtime metrics
+
+Provided by the [controller-runtime](https://github.com/kubernetes-sigs/controller-runtime) library, these metrics cover a range of aspects:
+
+- General resource usage like CPU and memory.
+- Go runtime metrics such as the number of Go routines, garbage collection duration, and Go version.
+- Controller-specific metrics, including reconciliation errors per controller, length of the reconcile queue, and reconciliation latency.
