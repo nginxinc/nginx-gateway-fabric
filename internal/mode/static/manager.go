@@ -9,6 +9,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	apiv1 "k8s.io/api/core/v1"
 	discoveryV1 "k8s.io/api/discovery/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -377,13 +378,17 @@ func setInitialConfig(
 	defer cancel()
 
 	var config ngfAPI.NginxGateway
+	// Polling to wait for CRD to exist if the Deployment is created first.
 	if err := wait.PollUntilContextCancel(
 		ctx,
 		500*time.Millisecond,
 		true, /* poll immediately */
 		func(ctx context.Context) (bool, error) {
 			if err := reader.Get(ctx, configName, &config); err != nil {
-				return false, nil //nolint:nilerr // returning an error cancels the polling
+				if !apierrors.IsNotFound(err) {
+					return false, err
+				}
+				return false, nil
 			}
 			return true, nil
 		},

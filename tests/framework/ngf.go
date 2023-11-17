@@ -172,7 +172,7 @@ func formatValueSet(key, value string) []string {
 	return []string{"--set", fmt.Sprintf("%s=%s", key, value)}
 }
 
-// webookRequired returns true if the k8s version is less than 1.25.
+// webhookRequired returns true if the k8s version is less than 1.25.
 func webhookRequired(k8sVersion string) bool {
 	// contains the supported versions of K8s that require the gateway webhook
 	webhookK8sVersions := map[string]struct{}{
