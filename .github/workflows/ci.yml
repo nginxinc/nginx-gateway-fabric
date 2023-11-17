@@ -227,15 +227,15 @@ jobs:
       - name: Install Chart
         run: >
           helm install
-          helm-$(echo ${{ steps.ngf-meta.outputs.tags }} | tr '.' '-' | cut -d ":" -f 2)
+          helm-$(echo ${{ steps.nginx-meta.outputs.version }} | tr '.' '-')
           .
           --wait
           --create-namespace
-          --set nginxGateway.image.repository=$(echo ${{ steps.ngf-meta.outputs.tags }} | cut -d ":" -f 1)
-          --set nginxGateway.image.tag=$(echo ${{ steps.ngf-meta.outputs.tags }} | cut -d ":" -f 2)
+          --set nginxGateway.image.repository=ghcr.io/nginxinc/nginx-gateway-fabric
+          --set nginxGateway.image.tag=${{ steps.ngf-meta.outputs.version }}
           --set nginxGateway.image.pullPolicy=Never
-          --set nginx.image.repository=$(echo ${{ steps.nginx-meta.outputs.tags }} | cut -d ":" -f 1)
-          --set nginx.image.tag=$(echo ${{ steps.nginx-meta.outputs.tags }} | cut -d ":" -f 2)
+          --set nginx.image.repository=ghcr.io/nginxinc/nginx-gateway-fabric/nginx
+          --set nginx.image.tag=${{ steps.nginx-meta.outputs.version }}
           --set nginx.image.pullPolicy=Never
           --set service.type=NodePort
           -n nginx-gateway
