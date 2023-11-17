@@ -2,7 +2,7 @@
 title: "Technical Specifications"
 draft: false
 description: "NGINX Gateway Fabric technical specifications."
-weight: 800
+weight: 200
 toc: true
 tags: [ "docs" ]
 docs: "DOCS-000"

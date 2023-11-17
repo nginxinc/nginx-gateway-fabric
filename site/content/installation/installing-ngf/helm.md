@@ -1,5 +1,5 @@
 ---
-title: "Installing NGINX Gateway Fabric"
+title: "Installation with Helm NGINX"
 description: "Learn how to install NGINX Gateway Fabric on a generic Kubernetes cluster."
 weight: 100
 toc: true
@@ -12,14 +12,25 @@ docs: "DOCS-000"
 
 - Install [kubectl](https://kubernetes.io/docs/tasks/tools/)
 
-## Deploy NGINX Gateway Fabric using Helm
+## Deploying NGINX Gateway Fabric 
+
+{{<tabs name="deploy-ngf">}}
+
+{{%tab name="Helm"%}}
+
+### Deploying NGINX Gateway Fabric using Helm
+
 
 Follow the instructions [to deploy NGINX Gateway Fabric using Helm](/deploy/helm-chart/README.md).
 
 
-## Deploy NGINX Gateway Fabric from Manifests
+{{%/tab%}}
 
-> **Note:** NGINX Gateway Fabric installs into the _nginx-gateway_ namespace by default. To run NGINX Gateway Fabric in a different namespace, modify the installation manifests.
+{{%tab name="Manifest"%}}
+
+### Deploy NGINX Gateway Fabric from Manifests
+
+{{<note>}}NGINX Gateway Fabric installs into the **nginx-gateway** namespace by default. To run NGINX Gateway Fabric in a different namespace, modify the installation manifests.{{</note>}}
 
 1. Install the Gateway API resources (Custom Resource Definitions [CRDs] and validating webhook) from the standard channel:
 
@@ -45,7 +56,7 @@ Follow the instructions [to deploy NGINX Gateway Fabric using Helm](/deploy/helm
    kubectl get pods -n nginx-gateway
    ```
 
-   Expected output (note that _5d4f4c7db7-xk2kq_ is a randomly generated string and will vary):
+   Expected output (note that `5d4f4c7db7-xk2kq` is a randomly generated string and will vary):
 
    ```text
    NAME                             READY   STATUS    RESTARTS   AGE
@@ -53,31 +64,72 @@ Follow the instructions [to deploy NGINX Gateway Fabric using Helm](/deploy/helm
    ```
 
 
+
+### Upgrade NGINX Gateway Fabric from Manifests
+
+Upgrading NGINX Gateway Fabric from manifests involves several steps to ensure all components are updated to their latest versions.
+
+1. **Upgrade Gateway Resources:**
+   - Check that the **Gateway API** resources are compatible with your version of NGINX Gateway Fabric ([Technical Specifications](/README.md#technical-specifications)).
+   - Review the [release notes](https://github.com/kubernetes-sigs/gateway-api/releases/tag/v0.8.1) for any important upgrade-specific information.
+   - To upgrade the gateway resources, run:
+
+     ```shell
+     kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v0.8.1/standard-install.yaml
+     ```
+
+2. **Upgrade NGINX Gateway Fabric CRDs:**
+   - To upgrade the Custom Resource Definitions (CRDs), run:
+
+     ```shell
+     kubectl apply -f https://github.com/nginxinc/nginx-gateway-fabric/releases/download/v1.0.0/crds.yaml
+     ```
+
+3. **Upgrade NGINX Gateway Fabric Deployment:**
+   - To upgrade the deployment, run:
+
+     ```shell
+     kubectl apply -f https://github.com/nginxinc/nginx-gateway-fabric/releases/download/v1.0.0/nginx-gateway.yaml
+     ```
+
+{{%/tab%}}
+
+{{</tabs>}}
+
+
+
+
+
+
+
 ## Expose NGINX Gateway Fabric
 
-Gain access to NGINX Gateway Fabric by creating either a **NodePort** service or a **LoadBalancer** service in the same namespace as the controller. The service name is specified in the **--service** argument of the controller.
+Gain access to NGINX Gateway Fabric by creating either a **NodePort** service or a **LoadBalancer** service in the same namespace as the controller. The service name is specified in the `--service` argument of the controller.
 
 {{<important>}}
 The service manifests configure NGINX Gateway Fabric on ports `80` and `443`, affecting any Gateway [Listeners](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.Listener) on these ports. To use different ports, update the manifests. NGINX Gateway Fabric requires a configured [Gateway](https://gateway-api.sigs.k8s.io/api-types/gateway/#gateway) resource with a valid listener to listen on any ports.
 {{</important>}}
 
-NGINX Gateway Fabric utilizes this service to update the **Addresses** field in the **Gateway Status** resource. A LoadBalancer service sets this field to the IP address and/or hostname. Without a service, the Pod IP address is used.
+NGINX Gateway Fabric uses this service to update the **Addresses** field in the **Gateway Status** resource. A **LoadBalancer** service sets this field to the IP address and/or hostname. Without a service, the Pod IP address is used.
+
+This gateway is associated with the NGINX Gateway Fabric through the **gatewayClassName** field. The default installation of NGINX Gateway Fabric creates a **GatewayClass** with the name **nginx**. NGINX Gateway Fabric will only configure gateways with a **gatewayClassName** of **nginx** unless you change the name via the `--gatewayclass` [command-line flag](/docs/cli-help.md#static-mode).
 
 ### Create a NodePort service
 
-To create a `NodePort` service:
+To create a **NodePort** service:
 
 ```shell
 kubectl apply -f https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric/v1.0.0/deploy/manifests/service/nodeport.yaml
 ```
 
-A `NodePort` service allocates a port on every cluster node. Access NGINX Gateway Fabric using any node's IP address and the allocated port.
+A **NodePort** service allocates a port on every cluster node. Access NGINX Gateway Fabric using any node's IP address and the allocated port.
 
 ### Create a LoadBalancer Service
 
-To create a `LoadBalancer` service, use the appropriate manifest for your cloud provider:
+To create a **LoadBalancer** service, use the appropriate manifest for your cloud provider:
 
-- For GCP or Azure:
+- For GCP (Google Cloud Platform) or Azure:
+
    ```shell
    kubectl apply -f https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric/v1.0.0/deploy/manifests/service/loadbalancer.yaml
    ```
@@ -90,12 +142,13 @@ To create a `LoadBalancer` service, use the appropriate manifest for your cloud 
 
   Use the public IP of the load balancer to access NGINX Gateway Fabric.
 
-- For AWS:
+- For AWS (Amazon Web Services):
+
    ```shell
    kubectl apply -f https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric/v1.0.0/deploy/manifests/service/loadbalancer-aws-nlb.yaml
    ```
 
-  In AWS, the NLB DNS name will be reported by Kubernetes instead of a public IP in the `EXTERNAL-IP` column. To get the DNS name, run:
+  In AWS, the NLB (Network Load Balancer) DNS (directory name system) name will be reported by Kubernetes instead of a public IP in the `EXTERNAL-IP` column. To get the DNS name, run:
 
    ```shell
    kubectl get svc nginx-gateway -n nginx-gateway
@@ -107,12 +160,71 @@ To create a `LoadBalancer` service, use the appropriate manifest for your cloud 
    nslookup <dns-name>
    ```
 
+
 ---
 
-This revision ensures that 'service,' 'hostname,' and 'namespace' are treated as common nouns and are in lowercase, as per your instruction. Let me know if this meets your needs or if we should proceed to the next section!
+## Upgrading NGINX Gateway Fabric
+
+This section provides guidelines for upgrading your NGINX Gateway Fabric deployment to ensure you are using the latest features and improvements.
+
+{{<tip>}}For zero-downtime upgrades, follow the instructions to [configure a delayed pod termination](#configure-delayed-pod-termination-for-zero-downtime-upgrades) for the NGINX Gateway Fabric pod.{{</tip>}}
+
+
+
+### Upgrade NGINX Gateway Fabric Using Helm
+
+For Helm-managed deployments, follow the [Helm upgrade instructions](/deploy/helm-chart/README.md#upgrading-the-chart).
+
+### Configure Delayed Pod Termination {#configure-delayed-pod-termination-for-zero-downtime-upgrades}
+
+Configuring delayed pod termination is crucial for ensuring zero downtime during upgrades, particularly in environments handling persistent or long-lived connections. The configuration settings required are the same for both Helm- and Manifest-based deployments, although the specific file to update will depend on your deployment type.
+
+{{<note>}}NGINX won't shut down until all websocket or long-lived connections are closed. Keeping these connections open during an upgrade can lead to Kubernetes forcibly shutting down NGINX, potentially causing downtime for clients.{{</note>}}
+
+#### For Helm-Based Deployments
+
+To configure delayed pod termination, follow these steps:
+
+1. Depending on your deployment type, update the `values.yaml` file for Helm-based deployments or the `nginx-gateway.yaml` file for Manifest-based deployments.
+
+1. Add `lifecycle: preStop` hooks to both `nginx` and `nginx-gateway` container definitions. These hooks delay the shutdown process to allow time for connections to close gracefully.
+
+   ```yaml
+   <...>
+   name: nginx-gateway
+   <...>
+   lifecycle:
+     preStop:
+       exec:
+         command:
+         - /usr/bin/gateway
+         - sleep
+         - --duration=40s # This flag is optional, the default is 30s
+   <...>
+   name: nginx
+   <...>
+   lifecycle:
+     preStop:
+       exec:
+         command:
+         - /bin/sleep
+         - "40"
+   <...>
+   ```
+
+1. Ensure `terminationGracePeriodSeconds` is equal to or greater than the `sleep` duration in the preStop hook (default is `30`). This is to ensure Kubernetes does not terminate the pod before the `preStop` Hook is complete. To do so, update your `values.yaml` or `nginx-gateway.yaml` file to include the following (update the value to what is required in your environment):
+
+   ```yaml
+   terminationGracePeriodSeconds: 50
+   ```
+
+#### Using Helm to Configure Delayed Pod Termination
+
+For Helm-based deployments, follow the [Helm-specific instructions for extending the termination period](/deploy/helm-chart/README.md#configure-delayed-termination-for-zero-downtime-upgrades).
+
 ---
 
-Feel free to copy this text. Let me know if you need any further modifications or if we should proceed to the next section!
+Feel free to copy this revised section. Let me know if you need any further modifications or if we should proceed to the next section!
 
 %%%%
 
@@ -153,7 +265,7 @@ Feel free to copy this text. Let me know if you need any further modifications o
 
 ## Expose NGINX Gateway Fabric
 
-You can gain access to NGINX Gateway Fabric by creating a `NodePort` Service or a `LoadBalancer` Service.
+You can gain access to NGINX Gateway Fabric by creating a **NodePort** Service or a **LoadBalancer** Service.
 This Service must live in the same Namespace as the controller. The name of this Service is provided in
 the `--service` argument to the controller.
 
@@ -171,18 +283,18 @@ Service sets the status field to the IP address and/or Hostname. If no Service e
 
 ### Create a NodePort Service
 
-Create a Service with type `NodePort`:
+Create a Service with type **NodePort**:
 
 ```shell
 kubectl apply -f https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric/v1.0.0/deploy/manifests/service/nodeport.yaml
 ```
 
-A `NodePort` Service will randomly allocate one port on every Node of the cluster. To access NGINX Gateway Fabric,
+A **NodePort** Service will randomly allocate one port on every Node of the cluster. To access NGINX Gateway Fabric,
 use an IP address of any Node in the cluster along with the allocated port.
 
 ### Create a LoadBalancer Service
 
-Create a Service with type `LoadBalancer` using the appropriate manifest for your cloud provider.
+Create a Service with type **LoadBalancer** using the appropriate manifest for your cloud provider.
 
 - For GCP or Azure:
 
