@@ -22,7 +22,7 @@ load-images: ## Load NGF and NGINX images on configured kind cluster
 	kind load docker-image $(PREFIX):$(TAG) $(NGINX_PREFIX):$(TAG)
 
 test: ## Run the system tests against your default k8s cluster
-	go test -v . -args --gateway-api-version=$(GW_API_VERSION) --image-tag=$(TAG) \
+	go test -v ./suite -args --gateway-api-version=$(GW_API_VERSION) --image-tag=$(TAG) \
 		--ngf-image-repo=$(PREFIX) --nginx-image-repo=$(NGINX_PREFIX) --pull-policy=$(PULL_POLICY) \
 		--k8s-version=$(K8S_VERSION)
 
