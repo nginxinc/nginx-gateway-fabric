@@ -1,7 +1,7 @@
 ---
-title: "Installation with Helm NGINX"
+title: "Installation with Helm"
 description: "Learn how to install NGINX Gateway Fabric on a generic Kubernetes cluster."
-weight: 100
+weight: 200
 toc: true
 docs: "DOCS-000"
 ---
