@@ -14,7 +14,7 @@ create-kind-cluster: ## Create a kind cluster
 	cd .. && make create-kind-cluster
 
 .PHONY: build-images
-build-images: ## Build NGF and nginx images
+build-images: ## Build NGF and NGINX images
 	cd .. && make PREFIX=$(PREFIX) TAG=$(TAG) build-images
 
 .PHONY: load-images
