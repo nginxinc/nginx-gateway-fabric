@@ -28,30 +28,30 @@ sboms:
     documents:
       - "${artifact}.spdx.json"
 
-# blobs:
-#  - provider: azblob
-#    bucket: '{{.Env.AZURE_BUCKET_NAME}}'
-#
-# signs:
-#  - cmd: cosign
-#    artifacts: checksum
-#    output: true
-#    certificate: '${artifact}.pem'
-#    args:
-#      - sign-blob
-#      - "--output-signature=${signature}"
-#      - "--output-certificate=${certificate}"
-#      - "${artifact}"
-#      - "--yes"
-#
-# announce:
-#  slack:
-#    enabled: true
-#    channel: '#announcements'
-#    message_template: 'NGINX Gateway Fabric {{ .Tag }} is out! Check it out: {{ .ReleaseURL }}'
-#
-# milestones:
-#  - close: true
+blobs:
+  - provider: azblob
+    bucket: '{{.Env.AZURE_BUCKET_NAME}}'
+
+signs:
+  - cmd: cosign
+    artifacts: checksum
+    output: true
+    certificate: '${artifact}.pem'
+    args:
+      - sign-blob
+      - "--output-signature=${signature}"
+      - "--output-certificate=${certificate}"
+      - "${artifact}"
+      - "--yes"
+
+announce:
+  slack:
+    enabled: true
+    channel: '#announcements'
+    message_template: 'NGINX Gateway Fabric {{ .Tag }} is out! Check it out: {{ .ReleaseURL }}'
+
+milestones:
+  - close: true
 
 snapshot:
   name_template: 'edge'
