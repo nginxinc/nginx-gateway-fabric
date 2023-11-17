@@ -151,7 +151,7 @@ jobs:
   helm-tests:
     name: Helm Tests
     runs-on: ubuntu-22.04
-    needs: [vars]
+    needs: [vars, binary]
     steps:
       - name: Checkout Repository
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
@@ -244,7 +244,7 @@ jobs:
   build:
     name: Build Image
     runs-on: ubuntu-22.04
-    needs: [vars]
+    needs: [vars, binary]
     strategy:
       fail-fast: false
       matrix:
