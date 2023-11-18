@@ -15,7 +15,7 @@ You can route traffic to your Kubernetes applications using the Gateway API and 
 ## Prerequisites
 
 - [Install]({{< relref "installation/" >}}) NGINX Gateway Fabric.
-- [Expose NGINX Gateway Fabric]({{< relref "installation/" >}}) and save the public IP address and port of NGINX Gateway Fabric into shell variables:
+- [Expose NGINX Gateway Fabric]({{< relref "installation/expose-nginx-gateway-fabric.md" >}}) and save the public IP address and port of NGINX Gateway Fabric into shell variables:
 
    ```text
    GW_IP=XXX.YYY.ZZZ.III
