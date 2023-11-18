@@ -10,9 +10,9 @@ docs: "DOCS-000"
 
 ## Prerequisites
 
-To complete this guide, you'll need to:
+To complete this guide, you'll need to install:
 
-- Install [kubectl](https://kubernetes.io/docs/tasks/tools/), a command-line interface for managing Kubernetes clusters.
+- [kubectl](https://kubernetes.io/docs/tasks/tools/), a command-line interface for managing Kubernetes clusters.
 
 
 ## Deploy NGINX Gateway Fabric from Manifests
@@ -57,9 +57,9 @@ Deploying NGINX Gateway Fabric with Kubernetes manifests takes only a few steps.
 
 To upgrade NGINX Gateway Fabric and get the latest features and improvements, take the following steps:
 
-1. **Upgrade Gateway Resources:**
+1. **Upgrade Gateway API Resources:**
 
-    - Verify that your NGINX Gateway Fabric version is compatible with the Gateway API resources. Refer to the [Technical Specifications]({{< relref "reference/technical-specifications.md" >}}) for details.
+   - Verify that your NGINX Gateway Fabric version is compatible with the Gateway API resources. Refer to the [Technical Specifications]({{< relref "reference/technical-specifications.md" >}}) for details.
    - Review the [release notes](https://github.com/kubernetes-sigs/gateway-api/releases/tag/v0.8.1) for any important upgrade-specific information.
    - To upgrade the Gateway API resources, run:
 
@@ -139,11 +139,11 @@ For additional information on configuring and understanding the behavior of cont
 
 ## Uninstall NGINX Gateway Fabric from Manifests
 
-Uninstalling NGINX Gateway Fabric from your Kubernetes cluster involves removing the deployed NGINX Gateway Fabric components and the Gateway API resources. This procedure should be followed carefully to ensure that all relevant components are cleanly removed from your system.
+To uninstall NGINX Gateway Fabric from your Kubernetes cluster, you must delete both the Gateway API resources and the NGINX Gateway Fabric components. Follow the steps carefully to ensure that everything related to NGINX Gateway Fabric is completely removed.
 
 1. **Uninstall NGINX Gateway Fabric:**
 
-   - Run the following commands to remove the NGINX Gateway Fabric and its Custom Resource Definitions (CRDs):
+   - Run the following commands to remove NGINX Gateway Fabric its custom resource definitions (CRDs) from your system:
 
      ```shell
      kubectl delete -f https://github.com/nginxinc/nginx-gateway-fabric/releases/download/v1.0.0/nginx-gateway.yaml
@@ -159,7 +159,5 @@ Uninstalling NGINX Gateway Fabric from your Kubernetes cluster involves removing
 
 ## Expose NGINX Gateway Fabric
 
-Once NGINX Gateway Fabric is installed, the next step is to make it accessible. Refer to the following instructions for guidance on configuring access and creating the necessary services:
-
-- [Expose the NGINX Gateway Fabric]({{< relref "installation/expose-nginx-gateway-fabric.md" >}}).
+After installing NGINX Gateway Fabric, the next step is to ensure it's accessible. For directions on configuring access and creating the required services, follow the directions in [Expose the NGINX Gateway Fabric]({{< relref "installation/expose-nginx-gateway-fabric.md" >}}).
 

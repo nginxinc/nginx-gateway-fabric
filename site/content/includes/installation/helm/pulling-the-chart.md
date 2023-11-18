@@ -2,11 +2,11 @@
 docs:
 ---
 
-Pull the latest stable release:
+Pull the latest stable release of the NGINX Gateway Fabric chart:
 
    ```shell
    helm pull oci://ghcr.io/nginxinc/charts/nginx-gateway-fabric --untar
    cd nginx-gateway-fabric
    ```
 
-   For the latest **main** branch version, add `--version 0.0.0-edge`.
+   If you want the latest version from the **main** branch, add `--version 0.0.0-edge` to your pull command.

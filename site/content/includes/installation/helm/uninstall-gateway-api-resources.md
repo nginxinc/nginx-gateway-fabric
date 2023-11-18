@@ -2,9 +2,9 @@
 docs:
 ---
 
-To remove the Gateway resources using the Gateway API repository, use the following command:
+To uninstall the Gateway API resources, including the CRDs and the validating webhook, run:
 
-   {{<warning>}}This action will delete all corresponding custom resources in your cluster across all namespaces. Ensure no custom resources you want to keep or other Gateway API implementations are running in your cluster before proceeding!{{</warning>}}
+   {{<warning>}}This will remove all corresponding custom resources in your entire cluster, across all namespaces. Double-check to make sure you don't have any custom resources you need to keep, and confirm that there are no other Gateway API implementations active in your cluster.{{</warning>}}
 
    ```shell
    kubectl delete -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v0.8.1/standard-install.yaml

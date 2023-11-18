@@ -10,7 +10,7 @@ docs: "DOCS-000"
 
 ## Prerequisites
 
-Before starting this guide, ensure you've installed:
+To complete this guide, you'll need to install:
 
 - [kubectl](https://kubernetes.io/docs/tasks/tools/), a command-line tool for managing Kubernetes clusters.
 - [Helm 3.0 or later](https://helm.sh/docs/intro/install/), for deploying and managing applications on Kubernetes.
@@ -20,27 +20,24 @@ Before starting this guide, ensure you've installed:
 
 ### Install from the OCI Registry
 
-- To install the latest stable release of NGINX Gateway Fabric, use the following command, replacing `<my-release>` with your chosen release name:
+- To install the latest stable release of the NGINX Gateway Fabric in the **nginx-gateway** namespace, run the following command. Change `<my-release>` to the name you want for your release. If the namespace already exists, you can omit the optional `--create-namespace` flag.
 
    ```shell
    helm install <my-release> oci://ghcr.io/nginxinc/charts/nginx-gateway-fabric --create-namespace --wait -n nginx-gateway
    ```
 
-   For the latest **main** branch version, add `--version 0.0.0-edge`.
+   If you want the latest version from the **main** branch, add `--version 0.0.0-edge` to your install command.
 
 ### Install from Sources{#install-from-sources}
 
-Installing NGINX Gateway Fabric from sources offers more control and flexibility, which is especially useful in environments where customization is key. Follow these steps to install the latest stable release or the cutting-edge version directly from the sources.
-
 1. {{<include "installation/helm/pulling-the-chart.md" >}}
 
-2. To install the chart into the **nginx-gateway** namespace, run the following command, replacing `<my-release>` with your chosen release name:
+2. To install the chart into the **nginx-gateway** namespace, run the following command. Change `<my-release>` to the name you want for your release. If the namespace already exists, you can omit the optional `--create-namespace` flag.
 
    ```shell
    helm install <my-release> . --create-namespace --wait -n nginx-gateway
    ```
 
-   Omit the `--create-namespace` flag if the namespace already exists.
 
 
 
