@@ -53,7 +53,7 @@ Deploying NGINX Gateway Fabric with Kubernetes manifests takes only a few steps.
 
 ## Upgrade NGINX Gateway Fabric from Manifests
 
-{{<tip>}}For guidance on zero downtime upgrades, see the [Configure Delayed Pod Termination](#configure-delayed-pod-termination-for-zero-downtime-upgrades) section below.{{</tip>}}
+{{<tip>}}For guidance on zero downtime upgrades, see the [Delay Pod Termination](#configure-delayed-pod-termination-for-zero-downtime-upgrades) section below.{{</tip>}}
 
 To upgrade NGINX Gateway Fabric and get the latest features and improvements, take the following steps:
 
@@ -81,13 +81,15 @@ To upgrade NGINX Gateway Fabric and get the latest features and improvements, ta
      kubectl apply -f https://github.com/nginxinc/nginx-gateway-fabric/releases/download/v1.0.0/nginx-gateway.yaml
      ```
 
-## Configure Delayed Pod Termination for Zero-Downtime Upgrades {#configure-delayed-pod-termination-for-zero-downtime-upgrades}
+## Delay Pod Termination for Zero Downtime Upgrades {#configure-delayed-pod-termination-for-zero-downtime-upgrades}
 
-To avoid client service interruptions during an upgrade, you might need to configure delayed termination for your NGINX Gateway Fabric pod. This ensures a smooth upgrade without any downtime, also known as a zero downtime upgrade.
+To avoid client service interruptions when upgrading NGINX Gateway Fabric, you can configure [`PreStop` hooks](https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/) to delay terminating the NGINX Gateway Fabric pod, allowing the pod to complete certain actions before shutting down. This ensures a smooth upgrade without any downtime, also known as a zero downtime upgrade. 
 
-{{<note>}}Keep in mind that NGINX won't shut down while WebSocket or other long-lived connections are open. NGINX will only stop when these connections are closed by the client or the backend. If these connections stay open during an upgrade, Kubernetes might need to shut down NGINX forcefully. This sudden shutdown could interrupt service for clients.{{</note>}}}
+For an in-depth explanation of how Kubernetes handles pod termination, see the [Termination of Pods](https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#pod-termination) topic on their official website.
 
-To configure delayed pod termination, take the following steps:
+{{<note>}}Keep in mind that NGINX won't shut down while WebSocket or other long-lived connections are open. NGINX will only stop when these connections are closed by the client or the backend. If these connections stay open during an upgrade, Kubernetes might need to shut down NGINX forcefully. This sudden shutdown could interrupt service for clients.{{</note>}}
+
+Follow these steps to configure delayed pod termination:
 
 1. Open the `nginx-gateway.yaml` for editing.
 
