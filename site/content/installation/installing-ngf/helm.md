@@ -108,7 +108,7 @@ Choose the method that best fits your setup and follow the corresponding steps t
 2. To upgrade your release, run the following command, replacing `<my-release>` with your chosen release name:
 
    ```shell
-   helm upgrade my-release . -n nginx-gateway
+   helm upgrade <my-release> . -n nginx-gateway
    ```
 
 ## Configure Delayed Pod Termination for Zero-Downtime Upgrades {#configure-delayed-pod-termination-for-zero-downtime-upgrades}
@@ -121,7 +121,7 @@ In order to achieve zero-downtime upgrades and maintain continuous service avail
 
 1. **Add delayed shutdown hooks**:
 
-   In the `nginx-gateway.yaml` file, add `lifecycle: preStop` hooks to both the `nginx` and `nginxGateway` container definitions. These hooks instruct the containers to delay their shutdown process, allowing time for connections to close gracefully.
+   In the `values.yaml` file, add `lifecycle: preStop` hooks to both the `nginx` and `nginxGateway` container definitions. These hooks instruct the containers to delay their shutdown process, allowing time for connections to close gracefully.
 
    ```yaml
     nginxGateway:
@@ -167,7 +167,7 @@ Uninstalling NGINX Gateway Fabric is a straightforward process but requires care
 
 1. **Uninstall NGINX Gateway Fabric:**
 
-   - Run the following command uninstall the NGINX Gateway Fabric release, replacing `my-release` with your chosen release name:
+   - Run the following command uninstall the NGINX Gateway Fabric release, replacing `<my-release>` with your chosen release name:
 
       ```shell
       helm uninstall <my-release> -n nginx-gateway
