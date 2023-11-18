@@ -1,6 +1,6 @@
 ---
 title: "Installation with Helm"
-description: "Learn how to install, upgrade, and uninstall NGINX Gateway Fabric using Helm in a Kubernetes cluster. This guide offers clear, step-by-step instructions to get you started."
+description: "Learn how to install, upgrade, and uninstall NGINX Gateway Fabric in a Kubernetes cluster with using Helm."
 weight: 200
 toc: true
 docs: "DOCS-000"

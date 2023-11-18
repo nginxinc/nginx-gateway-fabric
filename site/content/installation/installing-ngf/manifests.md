@@ -1,6 +1,6 @@
 ---
 title: "Installation with Manifests"
-description: "Learn how to install, upgrade, and uninstall NGINX Gateway Fabric using Manifest deployments in a Kubernetes cluster. This guide offers clear, step-by-step instructions to get you started."
+description: "Learn how to install, upgrade, and uninstall NGINX Gateway Fabric using Kubernetes manifests."
 weight: 100
 toc: true
 docs: "DOCS-000"
@@ -10,55 +10,52 @@ docs: "DOCS-000"
 
 ## Prerequisites
 
-In order to complete the steps in this guide, you must first:
+To complete this guide, you'll need to:
 
 - Install [kubectl](https://kubernetes.io/docs/tasks/tools/), a command-line interface for managing Kubernetes clusters.
 
 
 ## Deploy NGINX Gateway Fabric from Manifests
 
-Deploying NGINX Gateway Fabric using Kubernetes manifests is a straightforward process that involves setting up necessary resources and deploying NGINX Gateway Fabric components within your cluster. This method allows for a detailed and controlled deployment, suitable for environments where customization and precise configuration are required.
+Deploying NGINX Gateway Fabric with Kubernetes manifests takes only a few steps. With manifests, you can configure your deployment exactly how you want. Manifests also make it easy to replicate deployments across environments or clusters, ensuring consistency.
 
-{{<note>}}NGINX Gateway Fabric installs into the **nginx-gateway** namespace by default. To run NGINX Gateway Fabric in a different namespace, modify the installation manifests.{{</note>}}
+{{<note>}}By default, NGINX Gateway Fabric is installed in the **nginx-gateway** namespace. You can deploy in another namespace by modifying the installation manifests.{{</note>}}
 
-1. Install the Gateway API resources from the standard channel (the CRDs and validating webhook):
+1. **Install the Gateway API Resources:**
+   - Start by installing the Gateway API resources, including the CRDs and the validating webhook:
+     ```shell
+     kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v0.8.1/standard-install.yaml
+     ```
 
-   ```shell
-   kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v0.8.1/standard-install.yaml
-   ```
+2. **Deploy the NGINX Gateway Fabric CRDs:**
+   - Next, deploy the NGINX Gateway Fabric CRDs:
+     ```shell
+     kubectl apply -f https://github.com/nginxinc/nginx-gateway-fabric/releases/download/v1.0.0/crds.yaml
+     ```
 
-2. Deploy the NGINX Gateway Fabric CRDs:
+3. **Deploy NGINX Gateway Fabric:**
+   - Then, deploy NGINX Gateway Fabric:
+     ```shell
+     kubectl apply -f https://github.com/nginxinc/nginx-gateway-fabric/releases/download/v1.0.0/nginx-gateway.yaml
+     ```
 
-   ```shell
-   kubectl apply -f https://github.com/nginxinc/nginx-gateway-fabric/releases/download/v1.0.0/crds.yaml
-   ```
+4. **Verify the Deployment:**
+   - To confirm that NGINX Gateway Fabric is running, check the pods in the `nginx-gateway` namespace:
+     ```shell
+     kubectl get pods -n nginx-gateway
+     ```
+     The output should look similar to this (note that the pod name will include a unique string):
+     ```text
+     NAME                             READY   STATUS    RESTARTS   AGE
+     nginx-gateway-5d4f4c7db7-xk2kq   2/2     Running   0          112s
+     ```
 
-3. Deploy NGINX Gateway Fabric:
-
-   ```shell
-   kubectl apply -f https://github.com/nginxinc/nginx-gateway-fabric/releases/download/v1.0.0/nginx-gateway.yaml
-   ```
-
-4. Confirm the NGINX Gateway Fabric is running in the `nginx-gateway` namespace:
-
-   ```shell
-   kubectl get pods -n nginx-gateway
-   ```
-
-   Expected output (note that `5d4f4c7db7-xk2kq` is a randomly generated string and will vary):
-
-   ```text
-   NAME                             READY   STATUS    RESTARTS   AGE
-   nginx-gateway-5d4f4c7db7-xk2kq   2/2     Running   0          112s
-   ```
 
 ## Upgrade NGINX Gateway Fabric from Manifests
 
-This section provides guidelines for upgrading your NGINX Gateway Fabric deployment to ensure you are using the latest features and improvements.
-
 {{<tip>}}For guidance on zero-downtime upgrades (ensuring service continuity without interruptions during upgrades), see [Configure Delayed Pod Termination](#configure-delayed-pod-termination-for-zero-downtime-upgrades).{{</tip>}}
 
-Upgrading NGINX Gateway Fabric from manifests involves several steps to ensure all components are updated to their latest versions.
+Follow these steps to upgrade NGINX Gateway Fabric and get the latest features and improvements:
 
 1. **Upgrade Gateway Resources:**
 
