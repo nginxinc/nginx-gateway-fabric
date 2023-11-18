@@ -1,6 +1,6 @@
 ---
 title: "Installation with Manifests"
-description: "Learn how to install, upgrade, and uninstall NGINX Gateway Fabric using manifest deployments in a Kubernetes cluster. This guide offers clear, step-by-step instructions to get you started."
+description: "Learn how to install, upgrade, and uninstall NGINX Gateway Fabric using Manifest deployments in a Kubernetes cluster. This guide offers clear, step-by-step instructions to get you started."
 weight: 100
 toc: true
 docs: "DOCS-000"
@@ -56,18 +56,19 @@ Deploying NGINX Gateway Fabric using Kubernetes manifests is a straightforward p
 
 This section provides guidelines for upgrading your NGINX Gateway Fabric deployment to ensure you are using the latest features and improvements.
 
-{{<tip>}}For zero-downtime upgrades, follow the instructions to [configure a delayed pod termination](#configure-delayed-pod-termination-for-zero-downtime-upgrades) for the NGINX Gateway Fabric pod.{{</tip>}}
+{{<tip>}}For guidance on zero-downtime upgrades (ensuring service continuity without interruptions during upgrades), see [Configure Delayed Pod Termination](#configure-delayed-pod-termination-for-zero-downtime-upgrades).{{</tip>}}
 
 Upgrading NGINX Gateway Fabric from manifests involves several steps to ensure all components are updated to their latest versions.
 
 1. **Upgrade Gateway Resources:**
-   - Check that the **Gateway API** resources are compatible with your version of NGINX Gateway Fabric ([Technical Specifications](/README.md#technical-specifications)).
-   - Review the [release notes](https://github.com/kubernetes-sigs/gateway-api/releases/tag/v0.8.1) for any important upgrade-specific information.
-   - To upgrade the gateway resources, run:
 
-     ```shell
-     kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v0.8.1/standard-install.yaml
-     ```
+    - Verify the Gateway API resources are compatible with your NGINX Gateway Fabric version. Refer to the [Technical Specifications]({{< relref "reference/technical-specifications.md" >}}) for details.
+   - Review the [release notes](https://github.com/kubernetes-sigs/gateway-api/releases/tag/v0.8.1) for any important upgrade-specific information.
+   - To upgrade the Gateway API resources, run:
+
+      ```shell
+      kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v0.8.1/standard-install.yaml
+      ```
 
 2. **Upgrade NGINX Gateway Fabric CRDs:**
    - To upgrade the Custom Resource Definitions (CRDs), run:
@@ -83,9 +84,7 @@ Upgrading NGINX Gateway Fabric from manifests involves several steps to ensure a
      kubectl apply -f https://github.com/nginxinc/nginx-gateway-fabric/releases/download/v1.0.0/nginx-gateway.yaml
      ```
 
-
-
-### Configure Delayed Pod Termination for Zero-Downtime Upgrades {#configure-delayed-pod-termination-for-zero-downtime-upgrades}
+## Configure Delayed Pod Termination for Zero-Downtime Upgrades {#configure-delayed-pod-termination-for-zero-downtime-upgrades}
 
 In order to achieve zero-downtime upgrades and maintain continuous service availability, it's important to configure delayed pod termination. This setup is especially critical in environments that manage persistent or long-lived connections.
 
@@ -130,8 +129,6 @@ In order to achieve zero-downtime upgrades and maintain continuous service avail
 
 1. Save the changes.
 
-
-
 {{<see-also>}} 
 For additional information on configuring and understanding the behavior of containers and pods during their lifecycle, refer to the following Kubernetes documentation:
 - [Container Lifecycle Hooks](https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/#container-hooks)
@@ -157,10 +154,11 @@ Uninstalling NGINX Gateway Fabric from your Kubernetes cluster involves removing
 
 2. **Remove the Gateway API resources:**
 
-   - To uninstall the Gateway API resources, including the CRDs and the validating webhook, use the command below. Ensure no custom resources you wish to keep or other Gateway API implementations are running in the cluster before proceeding:
+   - {{<include "installation/helm/uninstall-gateway-api-resources.md" >}}
 
-     {{<warning>}}This command will remove all corresponding custom resources in your cluster across all namespaces!{{</warning>}}
+## Expose NGINX Gateway Fabric
 
-     ```shell
-     kubectl delete -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v0.8.1/standard-install.yaml
-     ```
+Once NGINX Gateway Fabric is installed, the next step is to make it accessible. Refer to the following instructions for guidance on configuring access and creating the necessary services:
+
+- [Expose the NGINX Gateway Fabric]({{< relref "installation/expose-nginx-gateway-fabric.md" >}}).
+
