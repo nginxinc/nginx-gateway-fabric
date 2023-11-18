@@ -19,7 +19,7 @@ To complete this guide, you'll need to:
 
 Deploying NGINX Gateway Fabric with Kubernetes manifests takes only a few steps. With manifests, you can configure your deployment exactly how you want. Manifests also make it easy to replicate deployments across environments or clusters, ensuring consistency.
 
-{{<note>}}By default, NGINX Gateway Fabric is installed in the **nginx-gateway** namespace. You can deploy in another namespace by modifying the installation manifests.{{</note>}}
+{{<note>}}By default, NGINX Gateway Fabric is installed in the **nginx-gateway** namespace. You can deploy in another namespace by modifying the manifest files.{{</note>}}
 
 1. **Install the Gateway API Resources:**
    - Start by installing the Gateway API resources, including the CRDs and the validating webhook:
@@ -53,13 +53,13 @@ Deploying NGINX Gateway Fabric with Kubernetes manifests takes only a few steps.
 
 ## Upgrade NGINX Gateway Fabric from Manifests
 
-{{<tip>}}For guidance on zero-downtime upgrades (ensuring service continuity without interruptions during upgrades), see [Configure Delayed Pod Termination](#configure-delayed-pod-termination-for-zero-downtime-upgrades).{{</tip>}}
+{{<tip>}}For guidance on zero downtime upgrades, see the [Configure Delayed Pod Termination](#configure-delayed-pod-termination-for-zero-downtime-upgrades) section below.{{</tip>}}
 
-Follow these steps to upgrade NGINX Gateway Fabric and get the latest features and improvements:
+To upgrade NGINX Gateway Fabric and get the latest features and improvements, take the following steps:
 
 1. **Upgrade Gateway Resources:**
 
-    - Verify the Gateway API resources are compatible with your NGINX Gateway Fabric version. Refer to the [Technical Specifications]({{< relref "reference/technical-specifications.md" >}}) for details.
+    - Verify that your NGINX Gateway Fabric version is compatible with the Gateway API resources. Refer to the [Technical Specifications]({{< relref "reference/technical-specifications.md" >}}) for details.
    - Review the [release notes](https://github.com/kubernetes-sigs/gateway-api/releases/tag/v0.8.1) for any important upgrade-specific information.
    - To upgrade the Gateway API resources, run:
 
@@ -83,15 +83,17 @@ Follow these steps to upgrade NGINX Gateway Fabric and get the latest features a
 
 ## Configure Delayed Pod Termination for Zero-Downtime Upgrades {#configure-delayed-pod-termination-for-zero-downtime-upgrades}
 
-In order to achieve zero-downtime upgrades and maintain continuous service availability, it's important to configure delayed pod termination. This setup is especially critical in environments that manage persistent or long-lived connections.
+To avoid client service interruptions during an upgrade, you might need to configure delayed termination for your NGINX Gateway Fabric pod. This ensures a smooth upgrade without any downtime, also known as a zero downtime upgrade.
 
-{{<note>}}NGINX won't shut down until all websocket or long-lived connections are closed. Keeping these connections open during an upgrade can lead to Kubernetes forcibly shutting down NGINX, potentially causing downtime for clients.{{</note>}}
+{{<note>}}Keep in mind that NGINX won't shut down while WebSocket or other long-lived connections are open. NGINX will only stop when these connections are closed by the client or the backend. If these connections stay open during an upgrade, Kubernetes might need to shut down NGINX forcefully. This sudden shutdown could interrupt service for clients.{{</note>}}}
+
+To configure delayed pod termination, take the following steps:
 
 1. Open the `nginx-gateway.yaml` for editing.
 
-1. **Add delayed shutdown hooks**:
+2. **Add delayed shutdown hooks**:
 
-   In the `nginx-gateway.yaml` file, add `lifecycle: preStop` hooks to both the `nginx` and `nginx-gateway` container definitions. These hooks instruct the containers to delay their shutdown process, allowing time for connections to close gracefully.
+   In the `nginx-gateway.yaml` file, add `lifecycle: preStop` hooks to both the `nginx` and `nginx-gateway` container definitions. These hooks instruct the containers to delay their shutdown process, allowing time for connections to close gracefully. Update the `sleep` value to what works for your environment.
 
    ```yaml
    <...>
@@ -116,7 +118,7 @@ In order to achieve zero-downtime upgrades and maintain continuous service avail
    <...>
    ```
 
-1. **Set the termination grace period**:
+3. **Set the termination grace period**:
 
    Set `terminationGracePeriodSeconds` to a value that is equal to or greater than the `sleep` duration specified in the `preStop` hook (default is `30`). This setting prevents Kubernetes from terminating the pod before before the `preStop` hook has completed running.
 
@@ -124,7 +126,7 @@ In order to achieve zero-downtime upgrades and maintain continuous service avail
    terminationGracePeriodSeconds: 50
    ```
 
-1. Save the changes.
+4. Save the changes.
 
 {{<see-also>}} 
 For additional information on configuring and understanding the behavior of containers and pods during their lifecycle, refer to the following Kubernetes documentation:
