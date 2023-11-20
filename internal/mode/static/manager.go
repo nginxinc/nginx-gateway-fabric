@@ -9,10 +9,12 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	apiv1 "k8s.io/api/core/v1"
 	discoveryV1 "k8s.io/api/discovery/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/tools/record"
 	ctlr "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -376,8 +378,22 @@ func setInitialConfig(
 	defer cancel()
 
 	var config ngfAPI.NginxGateway
-	if err := reader.Get(ctx, configName, &config); err != nil {
-		return err
+	// Polling to wait for CRD to exist if the Deployment is created first.
+	if err := wait.PollUntilContextCancel(
+		ctx,
+		500*time.Millisecond,
+		true, /* poll immediately */
+		func(ctx context.Context) (bool, error) {
+			if err := reader.Get(ctx, configName, &config); err != nil {
+				if !apierrors.IsNotFound(err) {
+					return false, err
+				}
+				return false, nil
+			}
+			return true, nil
+		},
+	); err != nil {
+		return fmt.Errorf("NginxGateway %s not found: %w", configName, err)
 	}
 
 	// status is not updated until the status updater's cache is started and the

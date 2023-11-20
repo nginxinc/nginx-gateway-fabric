@@ -74,7 +74,7 @@ jobs:
         run: |
           ngf_prefix=$(echo ${{ steps.ngf-meta.outputs.tags }} | cut -d ":" -f 1)
           ngf_tag=$(echo ${{ steps.ngf-meta.outputs.tags }} | cut -d ":" -f 2)
-          make update-ngf-manifest NGF_PREFIX=${ngf_prefix} NGF_TAG=${ngf_tag}
+          make update-ngf-manifest PREFIX=${ngf_prefix} TAG=${ngf_tag}
         working-directory: ./conformance
 
       - name: Build binary
@@ -146,12 +146,12 @@ jobs:
           ngf_tag=$(echo ${{ steps.ngf-meta.outputs.tags }} | cut -d ":" -f 2)
           if [ ${{ github.event_name }} == "schedule" ]; then export GW_API_VERSION=main; fi
           if [ ${{ startsWith(matrix.k8s-version, '1.23') ||  startsWith(matrix.k8s-version, '1.24') }} == "true" ]; then export INSTALL_WEBHOOK=true; fi
-          make install-ngf-local-no-build NGF_PREFIX=${ngf_prefix} NGF_TAG=${ngf_tag}
+          make install-ngf-local-no-build PREFIX=${ngf_prefix} TAG=${ngf_tag}
         working-directory: ./conformance
 
       - name: Run conformance tests
         run: |
-          make run-conformance-tests TAG=${{ github.sha }} VERSION=${{ github.ref_name }}
+          make run-conformance-tests CONFORMANCE_TAG=${{ github.sha }} VERSION=${{ github.ref_name }}
           core_result=$(cat conformance-profile.yaml | yq '.profiles[0].core.result')
           extended_result=$(cat conformance-profile.yaml | yq '.profiles[0].extended.result')
           if [ "${core_result}" == "failure" ] || [ "${extended_result}" == "failure" ]; then echo "Conformance test failed, see above for details." && exit 2; fi

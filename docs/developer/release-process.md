@@ -34,7 +34,7 @@ To create a new release, follow these steps:
 6. Prepare and merge a PR into the release branch to update the repo files for the release:
     1. Update the Helm [Chart.yaml](/deploy/helm-chart/Chart.yaml): the `appVersion` to `X.Y.Z`, the icon and source
        URLs to point at `vX.Y.Z`, and bump the `version`.
-    2. Adjust the `VERSION` variable in the [Makefile](/Makefile) and the `NGF_TAG` in the
+    2. Adjust the `VERSION` variable in the [Makefile](/Makefile) and the `TAG` in the
        [conformance tests Makefile](/conformance/Makefile) to `X.Y.Z`.
     3. Update the tag of NGF container images used in the Helm [values.yaml](/deploy/helm-chart/values.yaml) file, the
        [provisioner manifest](/conformance/provisioner/provisioner.yaml), and all docs to `X.Y.Z`.
