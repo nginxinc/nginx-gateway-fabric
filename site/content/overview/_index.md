@@ -1,8 +1,8 @@
 ---
-title: "Concepts"
+title: "Overview"
 description: 
 weight: 100
-linkTitle: "Concepts"
+linkTitle: "Overview"
 menu: 
   docs:
     parent: NGINX Gateway Fabric
