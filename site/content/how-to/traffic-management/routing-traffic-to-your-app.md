@@ -6,33 +6,37 @@ toc: true
 docs: "DOCS-000"
 ---
 
-In this guide you will learn how to route external traffic to your Kubernetes applications using the Gateway API and NGINX Gateway Fabric. Whether you're managing a web application or a REST backend API, you can use NGINX Gateway Fabric to expose your application outside the cluster.
+{{<custom-styles>}}
+
+## Overview
+
+You can route traffic to your Kubernetes applications using the Gateway API and NGINX Gateway Fabric. Whether you're managing a web application or a REST backend API, you can use NGINX Gateway Fabric to expose your application outside the cluster.
 
 ## Prerequisites
 
-- [Install]({{< relref "/how-to/installation/installation.md" >}}) NGINX Gateway Fabric.
-- [Expose NGINX Gateway Fabric]({{< relref "/how-to/installation/installation.md#expose-nginx-gateway-fabric" >}}) and save the public IP address and port of NGINX Gateway Fabric into shell variables:
+- [Install]({{< relref "installation/" >}}) NGINX Gateway Fabric.
+- [Expose NGINX Gateway Fabric]({{< relref "installation/expose-nginx-gateway-fabric.md" >}}) and save the public IP address and port of NGINX Gateway Fabric into shell variables:
 
    ```text
    GW_IP=XXX.YYY.ZZZ.III
    GW_PORT=<port number>
    ```
 
-## The Application
+## Example application
 
-The application we are going to use in this guide is a simple coffee application comprised of one Service and two Pods:
+The application we are going to use in this guide is a simple **coffee** application comprised of one service and two pods:
 
 ![coffee app](/img/route-all-traffic-app.png)
 
-Using this architecture, the coffee application is not accessible outside the cluster. We want to expose this application on the hostname `cafe.example.com` so that clients outside the cluster can access it.
+Using this architecture, the **coffee** application is not accessible outside the cluster. We want to expose this application on the hostname "cafe.example.com" so that clients outside the cluster can access it.
 
-To do this, we will install NGINX Gateway Fabric and create two Gateway API resources: a [Gateway](https://gateway-api.sigs.k8s.io/v1alpha2/references/spec/#gateway.networking.k8s.io/v1beta1.Gateway) and an [HTTPRoute](https://gateway-api.sigs.k8s.io/v1alpha2/references/spec/#gateway.networking.k8s.io/v1beta1.HTTPRoute).
+Install NGINX Gateway Fabric and create two gateway API resources: a [gateway](https://gateway-api.sigs.k8s.io/v1alpha2/references/spec/#gateway.networking.k8s.io/v1beta1.Gateway) and an [HTTPRoute](https://gateway-api.sigs.k8s.io/v1alpha2/references/spec/#gateway.networking.k8s.io/v1beta1.HTTPRoute).
 
-With these resources, we will configure a simple routing rule to match all HTTP traffic with the hostname `cafe.example.com` and route it to the coffee Service.
+Using these resources we will configure a simple routing rule to match all HTTP traffic with the hostname "cafe.example.com" and route it to the **coffee** service.
 
-## Setup
+## Set up
 
-Create the coffee application in Kubernetes by copying and pasting the following into your terminal:
+Create the **coffee** application in Kubernetes by copying and pasting the following block into your terminal:
 
 ```yaml
 kubectl apply -f - <<EOF
@@ -71,13 +75,13 @@ spec:
 EOF
 ```
 
-This will create the coffee Service and a Deployment with two Pods. Run the following command to verify the resources were created:
+This will create the **coffee** service and a deployment with two pods. Run the following command to verify the resources were created:
 
 ```shell
 kubectl get pods,svc
 ```
 
-Your output should include 2 coffee Pods and the coffee Service:
+Your output should include 2 **coffee** pods and the **coffee** service:
 
 ```text
 NAME                          READY   STATUS      RESTARTS   AGE
@@ -89,29 +93,29 @@ NAME                 TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)   AGE
 service/coffee       ClusterIP   10.96.75.77     <none>        80/TCP    77s
 ```
 
-## Application Architecture with NGINX Gateway Fabric
+## Application architecture with NGINX Gateway Fabric
 
-To route traffic to the coffee application, we will create a Gateway and HTTPRoute. The following diagram shows the configuration we'll be creating in the next step:
+To route traffic to the **coffee** application, we will create a gateway and HTTPRoute. The following diagram shows the configuration we'll be creating in the next step:
 
 ![Configuration](/img/route-all-traffic-config.png)
 
-We need a Gateway to create an entry point for HTTP traffic coming into the cluster. The `cafe` Gateway we are going to create will open an entry point to the cluster on port 80 for HTTP traffic.
+We need a gateway to create an entry point for HTTP traffic coming into the cluster. The **cafe** gateway we are going to create will open an entry point to the cluster on port 80 for HTTP traffic.
 
-To route HTTP traffic from the Gateway to the coffee Service, we need to create an HTTPRoute named `coffee` and attach to the Gateway. This HTTPRoute will have a single routing rule that routes all traffic to the hostname `cafe.example.com` from the Gateway to the coffee Service.
+To route HTTP traffic from the gateway to the **coffee** service, we need to create an HTTPRoute named **coffee** and attach to the gateway. This HTTPRoute will have a single routing rule that routes all traffic to the hostname "cafe.example.com" from the gateway to the **coffee** service.
 
-Once NGINX Gateway Fabric processes the `cafe` Gateway and `coffee` HTTPRoute, it will configure its dataplane, NGINX, to route all HTTP requests to `cafe.example.com` to the Pods that the `coffee` Service targets:
+Once NGINX Gateway Fabric processes the **cafe** gateway and **coffee** HTTPRoute, it will configure its dataplane, NGINX, to route all HTTP requests to "cafe.example.com" to the pods that the **coffee** service targets:
 
 ![Traffic Flow](/img/route-all-traffic-flow.png)
 
-The coffee Service is omitted from the diagram above because the NGINX Gateway Fabric routes directly to the Pods that the coffee Service targets.
+The **coffee** service is omitted from the diagram above because the NGINX Gateway Fabric routes directly to the pods that the **coffee** service targets.
 
 {{< note >}}In the diagrams above, all resources that are the responsibility of the cluster operator are shown in green. The orange resources are the responsibility of the application developers. 
 
-See the [roles and personas](https://gateway-api.sigs.k8s.io/concepts/roles-and-personas/#roles-and-personas_1) Gateway API document for more information on these roles.{{< /note >}}
+See the [roles and personas](https://gateway-api.sigs.k8s.io/concepts/roles-and-personas/#roles-and-personas_1) gateway API document for more information on these roles.{{< /note >}}
 
-## Create the Gateway API Resources
+## Create the gateway API resources
 
-To create the `cafe` Gateway, copy and paste the following into your terminal:
+To create the **cafe** gateway, copy and paste the following into your terminal:
 
 ```yaml
 kubectl apply -f - <<EOF
@@ -128,12 +132,12 @@ spec:
 EOF
 ```
 
-This Gateway is associated with the NGINX Gateway Fabric through the `gatewayClassName` field. The default installation of NGINX Gateway Fabric creates a GatewayClass with the name `nginx`. NGINX Gateway Fabric will only configure Gateways with a `gatewayClassName` of `nginx` unless you change the name via the `--gatewayclass` [command-line flag](/docs/cli-help.md#static-mode).
+This gateway is associated with the NGINX Gateway Fabric through the **gatewayClassName** field. The default installation of NGINX Gateway Fabric creates a GatewayClass with the name **nginx**. NGINX Gateway Fabric will only configure gateways with a **gatewayClassName** of **nginx** unless you change the name via the `--gatewayclass` [command-line flag](/docs/cli-help.md#static-mode).
 
-We specify a [listener](https://gateway-api.sigs.k8s.io/v1alpha2/references/spec/#gateway.networking.k8s.io/v1beta1.Listener) on the Gateway to open an entry point on the cluster. In this case, since the coffee application accepts HTTP requests, we create an HTTP listener, named `http`, that listens on port 80.
+We specify a [listener](https://gateway-api.sigs.k8s.io/v1alpha2/references/spec/#gateway.networking.k8s.io/v1beta1.Listener) on the gateway to open an entry point on the cluster. In this case, since the coffee application accepts HTTP requests, we create an HTTP listener, named **http**, that listens on port 80.
 
-By default, Gateways only allow routes (such as HTTPRoutes) to attach if they are in the same namespace as the Gateway. If you want to change this behavior, you can set
-the [`allowedRoutes`](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.AllowedRoutes) field.
+By default, gateways only allow routes (such as HTTPRoutes) to attach if they are in the same namespace as the gateway. If you want to change this behavior, you can set
+the [**allowedRoutes**](https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1beta1.AllowedRoutes) field.
 
 Next you will create the HTTPRoute by copying and pasting the following into your terminal:
 
@@ -159,33 +163,33 @@ spec:
 EOF
 ```
 
-To attach the `coffee` HTTPRoute to the `cafe` Gateway, we specify the Gateway name in the [`parentRefs`](https://gateway-api.sigs.k8s.io/v1alpha2/references/spec/#gateway.networking.k8s.io/v1beta1.CommonRouteSpec) field. The attachment will succeed if the hostnames and protocol in the HTTPRoute are allowed by at least one of the Gateway's listeners.
+To attach the **coffee** HTTPRoute to the **cafe** gateway, we specify the gateway name in the [**parentRefs**](https://gateway-api.sigs.k8s.io/v1alpha2/references/spec/#gateway.networking.k8s.io/v1beta1.CommonRouteSpec) field. The attachment will succeed if the hostnames and protocol in the HTTPRoute are allowed by at least one of the gateway's listeners.
 
-The [`hostnames`](https://gateway-api.sigs.k8s.io/v1alpha2/references/spec/#gateway.networking.k8s.io/v1beta1.HTTPRouteSpec) field allows you to list the hostnames that the HTTPRoute matches. In this case, incoming requests handled by the `http` listener with the HTTP host header `cafe.example.com` will match this HTTPRoute and will be routed according to the rules in the spec.
+The [**hostnames**](https://gateway-api.sigs.k8s.io/v1alpha2/references/spec/#gateway.networking.k8s.io/v1beta1.HTTPRouteSpec) field allows you to list the hostnames that the HTTPRoute matches. In this case, incoming requests handled by the **http** listener with the HTTP host header "cafe.example.com" will match this HTTPRoute and will be routed according to the rules in the spec.
 
-The [`rules`](https://gateway-api.sigs.k8s.io/v1alpha2/references/spec/#gateway.networking.k8s.io/v1beta1.HTTPRouteRule) field defines routing rules for the HTTPRoute. A rule is selected if the request satisfies one of the rule's `matches`. To forward traffic for all paths to the coffee Service we specify a match with the PathPrefix `/` and target the coffee Service using the `backendRef` field.
+The [**rules**](https://gateway-api.sigs.k8s.io/v1alpha2/references/spec/#gateway.networking.k8s.io/v1beta1.HTTPRouteRule) field defines routing rules for the HTTPRoute. A rule is selected if the request satisfies one of the rule's **matches**. To forward traffic for all paths to the coffee service we specify a match with the PathPrefix "/" and target the coffee service using the **backendRef** field.
 
-## Test the Configuration
+## Test the configuration
 
-To test the configuration, we will send a request to the public IP and port of NGINX Gateway Fabric that you saved in the [prerequisites](#prerequisites) section and verify that the response comes from one of the coffee Pods.
+To test the configuration, we will send a request to the public IP and port of NGINX Gateway Fabric that you saved in the [prerequisites](#prerequisites) section and verify that the response comes from one of the **coffee** pods.
 
-{{< note >}}Your clients should be able to resolve the domain name `cafe.example.com` to the public IP of the NGINX Gateway Fabric. In this guide we will simulate that using curl's `--resolve` option. {{< /note >}}
+{{< note >}}Your clients should be able to resolve the domain name "cafe.example.com" to the public IP of the NGINX Gateway Fabric. In this guide we will simulate that using curl's `--resolve` option. {{< /note >}}
 
 
-First, let's send a request to the path `/`:
+First, let's send a request to the path "/":
 
 ```shell
 curl --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/
 ```
 
-We should get a response from one of the coffee Pods:
+We should get a response from one of the **coffee** pods:
 
 ```text
 Server address: 10.12.0.18:8080
 Server name: coffee-7dd75bc79b-cqvb7
 ```
 
-Since the `cafe` HTTPRoute routes all traffic on any path to the coffee application, the following requests should also be handled by the coffee Pods:
+Since the **cafe** HTTPRoute routes all traffic on any path to the **coffee** application, the following requests should also be handled by the **coffee** pods:
 
 ```shell
 curl --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/some-path
@@ -205,7 +209,7 @@ Server address: 10.12.0.19:8080
 Server name: coffee-7dd75bc79b-dett3
 ```
 
-Requests to hostnames other than `cafe.example.com` should _not_ be routed to the coffee application, since the `cafe` HTTPRoute only matches requests with the `cafe.example.com` hostname. To verify this, send a request to the hostname `pub.example.com`:
+Requests to hostnames other than "cafe.example.com" should _not_ be routed to the coffee application, since the **cafe** HTTPRoute only matches requests with the "cafe.example.com"need  hostname. To verify this, send a request to the hostname "pub.example.com":
 
 ```shell
 curl --resolve pub.example.com:$GW_PORT:$GW_IP http://pub.example.com:$GW_PORT/
@@ -227,15 +231,15 @@ You should receive a 404 Not Found error:
 
 If you have any issues while testing the configuration, try the following to debug your configuration and setup:
 
-- Make sure you set the shell variables $GW_IP and $GW_PORT to the public IP and port of the NGINX Gateway Fabric Service. Instructions for finding those values are in the [installation documentation]({{< relref "/how-to/installation/installation.md#expose-nginx-gateway-fabric" >}}).
+- Make sure you set the shell variables $GW_IP and $GW_PORT to the public IP and port of the NGINX Gateway Fabric Service. Instructions for finding those values are in the [Expose NGINX Gateway Fabric]({{< relref "installation/expose-nginx-gateway-fabric.md" >}}) guide.
 
-- Check the status of the Gateway:
+- Check the status of the gateway:
 
   ```shell
   kubectl describe gateway cafe
   ```
 
-  The Gateway status should look similar to this:
+  The gateway status should look similar to this:
 
   ```text
   Status:
@@ -285,7 +289,7 @@ If you have any issues while testing the configuration, try the following to deb
     Name:                    http
   ```
 
-  Check that the conditions match and that the attached routes for the `http` listener equals 1. If it is 0, there may be an issue with the HTTPRoute.
+  Check that the conditions match and that the attached routes for the **http** listener equals 1. If it is 0, there may be an issue with the HTTPRoute.
 
 - Check the status of the HTTPRoute:
 
@@ -324,10 +328,10 @@ If you have any issues while testing the configuration, try the following to deb
 - Check the generated nginx config:
 
   ```shell
-  kubectl exec -it -n nginx-gateway <nginx gateway Pod> -c nginx -- nginx -T
+  kubectl exec -it -n nginx-gateway <nginx gateway pod> -c nginx -- nginx -T
   ```
 
-  The config should contain a server block with the server name `cafe.example.com` that listens on port 80. This server block should have a single location `/` that proxy passes to the coffee upstream:
+  The config should contain a server block with the server name "cafe.example.com" that listens on port 80. This server block should have a single location `/` that proxy passes to the coffee upstream:
 
   ```nginx configuration
   server {
@@ -343,12 +347,12 @@ If you have any issues while testing the configuration, try the following to deb
   }
   ```
 
-  There should also be an upstream block with a name that matches the upstream in the `proxy_pass` directive. This upstream block should contain the Pod IPs of the coffee Pods:
+  There should also be an upstream block with a name that matches the upstream in the **proxy_pass** directive. This upstream block should contain the pod IPs of the **coffee** pods:
 
   ```nginx configuration
   upstream default_coffee_80 {
     ...
-    server 10.12.0.18:8080; # these should be the Pod IPs of the coffee Pods
+    server 10.12.0.18:8080; # these should be the pod IPs of the coffee pods
     server 10.12.0.19:8080;
     ...
   }
@@ -360,7 +364,7 @@ If your issue persists, [contact us](https://github.com/nginxinc/nginx-gateway-f
 
 ## Further Reading
 
-To learn more about the Gateway API and the resources we created in this guide, check out the following resources:
+To learn more about the gateway API and the resources we created in this guide, check out the following resources:
 
 - [Gateway API Overview](https://gateway-api.sigs.k8s.io/concepts/api-overview/)
 - [Deploying a simple Gateway](https://gateway-api.sigs.k8s.io/guides/simple-gateway/)

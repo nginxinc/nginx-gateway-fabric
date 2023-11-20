@@ -5,10 +5,7 @@ config:
     style: dash
   no-hard-tabs: false
   no-multiple-blanks: false
-  line-length:
-    line_length: 120
-    code_blocks: false
-    tables: false
+  line-length: false
   blanks-around-headers: false
   no-duplicate-heading:
     siblings_only: true

@@ -18,7 +18,7 @@ Follow the steps in this guide to:
 
 - Administrator access to a Kubernetes cluster.
 - [Helm](https://helm.sh) and [kubectl](https://kubernetes.io/docs/tasks/tools/#kubectl) must be installed locally.
-- [NGINX Gateway Fabric deployed]({{< relref "/how-to/installation/installation.md" >}}) in the Kubernetes cluster.
+- [NGINX Gateway Fabric deployed]({{< relref "/installation/" >}}) in the Kubernetes cluster.
 - A DNS-resolvable domain name is required. It must resolve to the public endpoint of the NGINX Gateway Fabric deployment, and this public endpoint must be an external IP address or alias accessible over the internet. The process here will depend on your DNS provider. This DNS name will need to be resolvable from the Let’s Encrypt servers, which may require that you wait for the record to propagate before it will work.
 
 ## Overview
