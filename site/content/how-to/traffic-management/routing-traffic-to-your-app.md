@@ -90,7 +90,7 @@ pod/coffee-7dd75bc79b-dett3   1/1     Running     0          77s
 
 
 NAME                 TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)   AGE
-service/coffee       ClusterIP   10.96.75.77     <none>        80/TCP    77s
+service/coffee       ClusterIP   198.51.100.1     <none>        80/TCP    77s
 ```
 
 ## Application architecture with NGINX Gateway Fabric
