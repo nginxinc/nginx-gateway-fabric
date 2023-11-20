@@ -81,7 +81,7 @@ This will create the **coffee** service and a deployment with two pods. Run the 
 kubectl get pods,svc
 ```
 
-Your output should include 2 **coffee** pods and the **coffee** service:
+Your output should include two **coffee** pods and the **coffee** service:
 
 ```text
 NAME                          READY   STATUS      RESTARTS   AGE
@@ -101,9 +101,9 @@ To route traffic to the **coffee** application, we will create a gateway and HTT
 
 We need a gateway to create an entry point for HTTP traffic coming into the cluster. The **cafe** gateway we are going to create will open an entry point to the cluster on port 80 for HTTP traffic.
 
-To route HTTP traffic from the gateway to the **coffee** service, we need to create an HTTPRoute named **coffee** and attach to the gateway. This HTTPRoute will have a single routing rule that routes all traffic to the hostname "cafe.example.com" from the gateway to the **coffee** service.
+To route HTTP traffic from the gateway to the **coffee** service, we need to create an HTTPRoute named **coffee** and attach it to the gateway. This HTTPRoute will have a single routing rule that routes all traffic to the hostname "cafe.example.com" from the gateway to the **coffee** service.
 
-Once NGINX Gateway Fabric processes the **cafe** gateway and **coffee** HTTPRoute, it will configure its data plane, NGINX, to route all HTTP requests to "cafe.example.com" to the pods that the **coffee** service targets:
+Once NGINX Gateway Fabric processes the **cafe** gateway and **coffee** HTTPRoute, it will configure its data plane (NGINX) to route all HTTP requests sent to "cafe.example.com" to the pods that the **coffee** service targets:
 
 ![Traffic Flow](/img/route-all-traffic-flow.png)
 
