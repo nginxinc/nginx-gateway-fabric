@@ -39,7 +39,7 @@ Adding and removing endpoints are two of the most common cases:
 - If an endpoint is added, NGINX Gateway Fabric adds an upstream server to NGINX that corresponds to the endpoint, then reloads NGINX. Next, NGINX will start proxying traffic to that endpoint.
 - If an endpoint is removed, NGINX Gateway Fabric removes the corresponding upstream server from NGINX. After a reload, NGINX will stop proxying traffic to that server. However, it will finish proxying any pending requests to that server before switching to another endpoint.
 
-As long as you have more than one endpoint ready, the clients will not experience any downtime during upgrades.
+As long as you have more than one endpoint ready, clients won't experience downtime during upgrades.
 
 {{< note >}}It is good practice to configure a [Readiness probe](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/) in the deployment so that a pod can advertise when it is ready to receive traffic. Note that NGINX Gateway Fabric will not add any endpoint to NGINX that is not ready.{{< /note >}}
 
