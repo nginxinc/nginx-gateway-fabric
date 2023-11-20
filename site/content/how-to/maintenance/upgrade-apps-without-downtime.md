@@ -41,7 +41,7 @@ Adding and removing endpoints are two of the most common cases:
 
 As long as you have more than one endpoint ready, clients won't experience downtime during upgrades.
 
-{{< note >}}It is good practice to configure a [Readiness probe](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/) in the deployment so that a pod can advertise when it is ready to receive traffic. Note that NGINX Gateway Fabric will not add any endpoint to NGINX that is not ready.{{< /note >}}
+{{< note >}}It is good practice to configure a [Readiness probe](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/) in the deployment so that a pod can report when it is ready to receive traffic. Note that NGINX Gateway Fabric will not add any endpoint to NGINX that is not ready.{{< /note >}}
 
 ## Prerequisites
 
