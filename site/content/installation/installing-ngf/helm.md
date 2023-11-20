@@ -18,7 +18,7 @@ To complete this guide, you'll need to install:
 
 ## Deploy NGINX Gateway Fabric
 
-### Install from the OCI Registry
+### Install from the OCI registry
 
 - To install the latest stable release of NGINX Gateway Fabric in the **nginx-gateway** namespace, run the following command:
 
@@ -28,7 +28,7 @@ To complete this guide, you'll need to install:
 
    Change `<my-release>` to the name you want for your release. If the namespace already exists, you can omit the optional `--create-namespace` flag. If you want the latest version from the **main** branch, add `--version 0.0.0-edge` to your install command.
 
-### Install from Sources{#install-from-sources}
+### Install from sources {#install-from-sources}
 
 1. {{<include "installation/helm/pulling-the-chart.md" >}}
 
@@ -46,7 +46,7 @@ To complete this guide, you'll need to install:
 
 To upgrade NGINX Gateway Fabric and get the latest features and improvements, take the following steps:
 
-### Upgrade Gateway Resources
+### Upgrade Gateway resources
 
 To upgrade your Gateway API resources, take the following steps:
 
@@ -78,9 +78,9 @@ To upgrade the CRDs, take the following steps:
       Warning: kubectl apply should be used on resource created by either kubectl create --save-config or kubectl apply.
       ```
 
-### Upgrade NGINX Gateway Fabric Release
+### Upgrade NGINX Gateway Fabric release
 
-#### Upgrade from the OCI Registry
+#### Upgrade from the OCI registry
 
 - To upgrade to the latest stable release of NGINX Gateway Fabric, run:
 
@@ -90,7 +90,7 @@ To upgrade the CRDs, take the following steps:
 
    Replace `<my-release>` with your chosen release name.
 
-#### Upgrade from Sources
+#### Upgrade from sources
 
 1. {{<include "installation/helm/pulling-the-chart.md" >}}
 
@@ -102,7 +102,7 @@ To upgrade the CRDs, take the following steps:
 
    Replace `<my-release>` with your chosen release name.
 
-## Delay Pod Termination for Zero Downtime Upgrades {#configure-delayed-pod-termination-for-zero-downtime-upgrades}
+## Delay pod termination for zero downtime upgrades {#configure-delayed-pod-termination-for-zero-downtime-upgrades}
 
 {{< include "installation/delay-pod-termination/delay-pod-termination-overview.md" >}}
 
@@ -175,7 +175,7 @@ Follow these steps to uninstall NGINX Gateway Fabric and Gateway API from your K
 
    - {{<include "installation/helm/uninstall-gateway-api-resources.md" >}}
 
-## Next Steps
+## Next steps
 
 ### Expose NGINX Gateway Fabric
 

@@ -21,7 +21,7 @@ Deploying NGINX Gateway Fabric with Kubernetes manifests takes only a few steps.
 
 {{<note>}}By default, NGINX Gateway Fabric is installed in the **nginx-gateway** namespace. You can deploy in another namespace by modifying the manifest files.{{</note>}}
 
-1. **Install the Gateway API Resources:**
+1. **Install the Gateway API resources:**
    - Start by installing the Gateway API resources, including the CRDs and the validating webhook:
      ```shell
      kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v0.8.1/standard-install.yaml
@@ -57,7 +57,7 @@ Deploying NGINX Gateway Fabric with Kubernetes manifests takes only a few steps.
 
 To upgrade NGINX Gateway Fabric and get the latest features and improvements, take the following steps:
 
-1. **Upgrade Gateway API Resources:**
+1. **Upgrade Gateway API resources:**
 
    - Verify that your NGINX Gateway Fabric version is compatible with the Gateway API resources. Refer to the [Technical Specifications]({{< relref "reference/technical-specifications.md" >}}) for details.
    - Review the [release notes](https://github.com/kubernetes-sigs/gateway-api/releases/tag/v0.8.1) for any important upgrade-specific information.
@@ -74,14 +74,14 @@ To upgrade NGINX Gateway Fabric and get the latest features and improvements, ta
      kubectl apply -f https://github.com/nginxinc/nginx-gateway-fabric/releases/download/v1.0.0/crds.yaml
      ```
 
-3. **Upgrade NGINX Gateway Fabric Deployment:**
+3. **Upgrade NGINX Gateway Fabric deployment:**
    - To upgrade the deployment, run:
 
      ```shell
      kubectl apply -f https://github.com/nginxinc/nginx-gateway-fabric/releases/download/v1.0.0/nginx-gateway.yaml
      ```
 
-## Delay Pod Termination for Zero Downtime Upgrades {#configure-delayed-pod-termination-for-zero-downtime-upgrades}
+## Delay pod termination for zero downtime upgrades {#configure-delayed-pod-termination-for-zero-downtime-upgrades}
 
 {{< include "installation/delay-pod-termination/delay-pod-termination-overview.md" >}}
 
@@ -149,7 +149,7 @@ Follow these steps to uninstall NGINX Gateway Fabric and Gateway API from your K
 
    - {{<include "installation/helm/uninstall-gateway-api-resources.md" >}}
 
-## Next Steps
+## Next steps
 
 ### Expose NGINX Gateway Fabric
 
