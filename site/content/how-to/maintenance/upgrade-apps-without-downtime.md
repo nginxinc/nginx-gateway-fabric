@@ -83,7 +83,7 @@ With this method, you deploy a new version of the application (blue version) as 
 
 There are two ways to switch the traffic:
 
-- Update the service selector to select the pods of the blue version instead of the green. As a result, NGINX Gateway Fabric removes the green upstream servers from NGINX and add the blue ones. With this approach, it is not necessary to update the **HTTPRoute**.
+- Update the service selector to select the pods of the blue version instead of the green. As a result, NGINX Gateway Fabric removes the green upstream servers from NGINX and adds the blue ones. With this approach, it is not necessary to update the **HTTPRoute**.
 - Create a separate service for the blue version and update the backend reference in the **HTTPRoute** to reference this service, which leads to the same result as with the previous option.
 
 ## Canary releases
