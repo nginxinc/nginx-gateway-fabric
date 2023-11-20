@@ -32,7 +32,7 @@ type NginxProxySpec struct {
 	HTTP *HTTP `json:"http,omitempty"`
 }
 
-// HTTP defines the HTTP configuration.
+// HTTP defines the NGINX HTTP block configuration.
 type HTTP struct {
 	Telemetry *Telemetry `json:"telemetry,omitempty"`
 }
@@ -56,12 +56,14 @@ type Tracing struct {
 	//
 	// +optional
 	// +kubebuilder:default=512
+	// +kubebuilder:validation:Minimum=1
 	BatchSize *int32 `json:"batchSize,omitempty"`
 	//
 	// BatchCount specifies the number of pending batches per worker, spans exceeding the limit are dropped. Default is 4.
 	//
 	// +optional
 	// +kubebuilder:default=4
+	// +kubebuilder:validation:Minimum=1
 	BatchCount *int32 `json:"batchCount,omitempty"`
 	//
 	// Enable enables or disables OpenTelemetry tracing at the HTTP context. Default is false.
@@ -76,7 +78,6 @@ type Tracing struct {
 	//
 	// +required
 	// ++kubebuilder:validation:Required
-	// ++kubebuilder:validation:Pattern=`^(?:(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}|(?:\d{1,3}\.){3}\d{1,3}):\d{1,5}$`
 	Endpoint string `json:"endpoint"`
 }
 

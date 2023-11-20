@@ -119,6 +119,14 @@ func validateTracing(ngfTracing *ngfAPI.Tracing, gwNsName string) (*Tracing, []e
 		valErr = append(valErr, field.Invalid(
 			path.Child("interval"), *ngfTracing.Interval, "tracing.interval must be a valid time string"))
 	}
+	if ngfTracing.BatchCount != nil && *ngfTracing.BatchCount < 1 {
+		valErr = append(valErr, field.Invalid(
+			path.Child("batchCount"), *ngfTracing.BatchCount, "tracing.batchCount must be a positive integer"))
+	}
+	if ngfTracing.BatchSize != nil && *ngfTracing.BatchSize < 1 {
+		valErr = append(valErr, field.Invalid(
+			path.Child("batchSize"), *ngfTracing.BatchSize, "tracing.batchSize must be a positive integer"))
+	}
 
 	if len(valErr) == 0 {
 		tracing = &Tracing{

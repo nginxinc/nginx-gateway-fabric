@@ -36,7 +36,7 @@ spec:
             description: NginxProxySpec defines the desired state of the NginxProxy.
             properties:
               http:
-                description: HTTP defines the HTTP configuration.
+                description: HTTP defines the NGINX HTTP block configuration.
                 properties:
                   telemetry:
                     description: Telemetry defines the telemetry configuration.
@@ -50,6 +50,7 @@ spec:
                               batches per worker, spans exceeding the limit are dropped.
                               Default is 4.
                             format: int32
+                            minimum: 1
                             type: integer
                           batchSize:
                             default: 512
@@ -57,6 +58,7 @@ spec:
                               spans to be sent in one batch per worker. Default is
                               512.
                             format: int32
+                            minimum: 1
                             type: integer
                           enable:
                             default: false
