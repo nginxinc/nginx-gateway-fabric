@@ -32,7 +32,7 @@ Endpoints frequently change during application upgrades: Kubernetes creates pods
 
 NGINX Gateway Fabric detects changes to endpoints by watching their corresponding [EndpointSlices](https://kubernetes.io/docs/concepts/services-networking/endpoint-slices/).
 
-In NGINX configuration, a service is represented as an [upstream](https://nginx.org/en/docs/http/ngx_http_upstream_module.html#upstream), and an endpoint as an [upstream server](https://nginx.org/en/docs/http/ngx_http_upstream_module.html#server).
+In an NGINX configuration, a service is represented as an [upstream](https://nginx.org/en/docs/http/ngx_http_upstream_module.html#upstream), and an endpoint as an [upstream server](https://nginx.org/en/docs/http/ngx_http_upstream_module.html#server).
 
 Adding and removing endpoints are two of the most common cases:
 
