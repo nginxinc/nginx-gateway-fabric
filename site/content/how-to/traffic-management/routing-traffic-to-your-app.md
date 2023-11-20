@@ -14,8 +14,8 @@ You can route traffic to your Kubernetes applications using the Gateway API and 
 
 ## Prerequisites
 
-- [Install]({{< relref "/how-to/installation/installation.md" >}}) NGINX Gateway Fabric.
-- [Expose NGINX Gateway Fabric]({{< relref "/how-to/installation/installation.md#expose-nginx-gateway-fabric" >}}) and save the public IP address and port of NGINX Gateway Fabric into shell variables:
+- [Install]({{< relref "installation/" >}}) NGINX Gateway Fabric.
+- [Expose NGINX Gateway Fabric]({{< relref "installation/expose-nginx-gateway-fabric.md" >}}) and save the public IP address and port of NGINX Gateway Fabric into shell variables:
 
    ```text
    GW_IP=XXX.YYY.ZZZ.III
@@ -231,7 +231,7 @@ You should receive a 404 Not Found error:
 
 If you have any issues while testing the configuration, try the following to debug your configuration and setup:
 
-- Make sure you set the shell variables $GW_IP and $GW_PORT to the public IP and port of the NGINX Gateway Fabric service. Instructions for finding those values are in the [installation documentation]({{< relref "/how-to/installation/installation.md#expose-nginx-gateway-fabric" >}}).
+- Make sure you set the shell variables $GW_IP and $GW_PORT to the public IP and port of the NGINX Gateway Fabric Service. Instructions for finding those values are in the [Expose NGINX Gateway Fabric]({{< relref "installation/expose-nginx-gateway-fabric.md" >}}) guide.
 
 - Check the status of the gateway:
 

@@ -1,7 +1,7 @@
 ---
 title: "Command-line Reference Guide"
 description: "Learn about the commands available in the gateway binary of the nginx-gateway container."
-weight: 400
+weight: 100
 toc: true
 docs: "DOCS-000"
 ---
