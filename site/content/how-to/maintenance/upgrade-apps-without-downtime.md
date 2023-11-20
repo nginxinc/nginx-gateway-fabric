@@ -88,6 +88,8 @@ There are two ways to switch the traffic:
 
 ## Canary releases
 
+Canary releases involve gradually introducing a new version of your application to a subset of nodes in a controlled manner, splitting the traffic between the old are new (canary) release. This allows for monitoring and testing the new release's performance and reliability before full deployment, helping to identify and address issues without impacting the entire user base.
+
 To support canary releases, you can implement an approach with two deployments behind the same service (see [Canary deployment](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#canary-deployment) in the Kubernetes documentation). However, this approach lacks precision for defining the traffic split between the old and the canary version. You can greatly influence it by controlling the number of pods (for example, four pods of the old version and one pod of the canary). However, note that NGINX Gateway Fabric uses [`random two least_conn`](https://nginx.org/en/docs/http/ngx_http_upstream_module.html#random) load balancing method, which doesn't guarantee an exact split based on the number of pods (80/20 in the given example).
 
 A more flexible and precise way to implement canary releases is to configure a traffic split in an **HTTPRoute**. In this case, you create a separate deployment for the new version with a separate service. For example, for the rule below, NGINX will proxy 95% of the traffic to the old version endpoints and only 5% to the new ones.
