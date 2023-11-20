@@ -15,7 +15,7 @@ To complete this guide, you'll need to install:
 - [kubectl](https://kubernetes.io/docs/tasks/tools/), a command-line interface for managing Kubernetes clusters.
 
 
-## Deploy NGINX Gateway Fabric from Manifests
+## Deploy NGINX Gateway Fabric
 
 Deploying NGINX Gateway Fabric with Kubernetes manifests takes only a few steps. With manifests, you can configure your deployment exactly how you want. Manifests also make it easy to replicate deployments across environments or clusters, ensuring consistency.
 
@@ -51,7 +51,7 @@ Deploying NGINX Gateway Fabric with Kubernetes manifests takes only a few steps.
      ```
 
 
-## Upgrade NGINX Gateway Fabric from Manifests
+## Upgrade NGINX Gateway Fabric
 
 {{<tip>}}For guidance on zero downtime upgrades, see the [Delay Pod Termination](#configure-delayed-pod-termination-for-zero-downtime-upgrades) section below.{{</tip>}}
 
@@ -83,52 +83,44 @@ To upgrade NGINX Gateway Fabric and get the latest features and improvements, ta
 
 ## Delay Pod Termination for Zero Downtime Upgrades {#configure-delayed-pod-termination-for-zero-downtime-upgrades}
 
-To avoid client service interruptions when upgrading NGINX Gateway Fabric, you can configure [`PreStop` hooks](https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/) to delay terminating the NGINX Gateway Fabric pod, allowing the pod to complete certain actions before shutting down. This ensures a smooth upgrade without any downtime, also known as a zero downtime upgrade. 
-
-For an in-depth explanation of how Kubernetes handles pod termination, see the [Termination of Pods](https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#pod-termination) topic on their official website.
-
-{{<note>}}Keep in mind that NGINX won't shut down while WebSocket or other long-lived connections are open. NGINX will only stop when these connections are closed by the client or the backend. If these connections stay open during an upgrade, Kubernetes might need to shut down NGINX forcefully. This sudden shutdown could interrupt service for clients.{{</note>}}
+{{< include "installation/delay-pod-termination/delay-pod-termination-overview.md" >}}
 
 Follow these steps to configure delayed pod termination:
 
 1. Open the `nginx-gateway.yaml` for editing.
 
-2. **Add delayed shutdown hooks**:
+1. **Add delayed shutdown hooks**:
 
-   In the `nginx-gateway.yaml` file, add `lifecycle: preStop` hooks to both the `nginx` and `nginx-gateway` container definitions. These hooks instruct the containers to delay their shutdown process, allowing time for connections to close gracefully. Update the `sleep` value to what works for your environment.
+   - In the `nginx-gateway.yaml` file, add `lifecycle: preStop` hooks to both the `nginx` and `nginx-gateway` container definitions. These hooks instruct the containers to delay their shutdown process, allowing time for connections to close gracefully. Update the `sleep` value to what works for your environment.
 
-   ```yaml
-   <...>
-   name: nginx-gateway
-   <...>
-   lifecycle:
-     preStop:
-       exec:
-         command:
-         - /usr/bin/gateway
-         - sleep
-         - --duration=40s # This flag is optional, the default is 30s
-   <...>
-   name: nginx
-   <...>
-   lifecycle:
-     preStop:
-       exec:
-         command:
-         - /bin/sleep
-         - "40"
-   <...>
-   ```
+      ```yaml
+      <...>
+      name: nginx-gateway
+      <...>
+      lifecycle:
+        preStop:
+          exec:
+            command:
+            - /usr/bin/gateway
+            - sleep
+            - --duration=40s # This flag is optional, the default is 30s
+      <...>
+      name: nginx
+      <...>
+      lifecycle:
+        preStop:
+          exec:
+            command:
+            - /bin/sleep
+            - "40"
+      <...>
+      ```
 
-3. **Set the termination grace period**:
+1. **Set the termination grace period**:
 
-   Set `terminationGracePeriodSeconds` to a value that is equal to or greater than the `sleep` duration specified in the `preStop` hook (default is `30`). This setting prevents Kubernetes from terminating the pod before before the `preStop` hook has completed running.
+   - {{<include "installation/delay-pod-termination/termination-grace-period.md">}}
 
-   ```yaml
-   terminationGracePeriodSeconds: 50
-   ```
-
-4. Save the changes.
+1. Save the changes.
 
 {{<see-also>}} 
 For additional information on configuring and understanding the behavior of containers and pods during their lifecycle, refer to the following Kubernetes documentation:
@@ -137,13 +129,13 @@ For additional information on configuring and understanding the behavior of cont
 {{</see-also>}} 
 
 
-## Uninstall NGINX Gateway Fabric from Manifests
+## Uninstall NGINX Gateway Fabric
 
-To uninstall NGINX Gateway Fabric from your Kubernetes cluster, you must delete both the Gateway API resources and the NGINX Gateway Fabric components. Follow the steps carefully to ensure that everything related to NGINX Gateway Fabric is completely removed.
+Follow these steps to uninstall NGINX Gateway Fabric and Gateway API from your Kubernetes cluster:
 
 1. **Uninstall NGINX Gateway Fabric:**
 
-   - Run the following commands to remove NGINX Gateway Fabric its custom resource definitions (CRDs) from your system:
+   - To remove NGINX Gateway Fabric and its custom resource definitions (CRDs), run:
 
      ```shell
      kubectl delete -f https://github.com/nginxinc/nginx-gateway-fabric/releases/download/v1.0.0/nginx-gateway.yaml
@@ -157,7 +149,9 @@ To uninstall NGINX Gateway Fabric from your Kubernetes cluster, you must delete 
 
    - {{<include "installation/helm/uninstall-gateway-api-resources.md" >}}
 
-## Expose NGINX Gateway Fabric
+## Next Steps
 
-After installing NGINX Gateway Fabric, the next step is to ensure it's accessible. For directions on configuring access and creating the required services, follow the directions in [Expose the NGINX Gateway Fabric]({{< relref "installation/expose-nginx-gateway-fabric.md" >}}).
+### Expose NGINX Gateway Fabric
+
+{{<include "installation/next-step-expose-fabric.md">}}
 
