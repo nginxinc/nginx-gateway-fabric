@@ -30,7 +30,7 @@ The application we are going to use in this guide is a simple **coffee** applica
 
 Using this architecture, the **coffee** application is not accessible outside the cluster. We want to expose this application on the hostname "cafe.example.com" so that clients outside the cluster can access it.
 
-Install NGINX Gateway Fabric and create two gateway API resources: a [gateway](https://gateway-api.sigs.k8s.io/v1alpha2/references/spec/#gateway.networking.k8s.io/v1beta1.Gateway) and an [HTTPRoute](https://gateway-api.sigs.k8s.io/v1alpha2/references/spec/#gateway.networking.k8s.io/v1beta1.HTTPRoute).
+Install NGINX Gateway Fabric and create two Gateway API resources: a [gateway](https://gateway-api.sigs.k8s.io/v1alpha2/references/spec/#gateway.networking.k8s.io/v1beta1.Gateway) and an [HTTPRoute](https://gateway-api.sigs.k8s.io/v1alpha2/references/spec/#gateway.networking.k8s.io/v1beta1.HTTPRoute).
 
 Using these resources we will configure a simple routing rule to match all HTTP traffic with the hostname "cafe.example.com" and route it to the **coffee** service.
 
@@ -95,7 +95,7 @@ service/coffee       ClusterIP   10.96.75.77     <none>        80/TCP    77s
 
 ## Application architecture with NGINX Gateway Fabric
 
-To route traffic to the **coffee** application, we will create a gateway and HTTPRoute. The following diagram shows the configuration we'll be creating in the next step:
+To route traffic to the **coffee** application, we will create a gateway and HTTPRoute. The following diagram shows the configuration we are creating in the next step:
 
 ![Configuration](/img/route-all-traffic-config.png)
 
@@ -103,7 +103,7 @@ We need a gateway to create an entry point for HTTP traffic coming into the clus
 
 To route HTTP traffic from the gateway to the **coffee** service, we need to create an HTTPRoute named **coffee** and attach to the gateway. This HTTPRoute will have a single routing rule that routes all traffic to the hostname "cafe.example.com" from the gateway to the **coffee** service.
 
-Once NGINX Gateway Fabric processes the **cafe** gateway and **coffee** HTTPRoute, it will configure its dataplane, NGINX, to route all HTTP requests to "cafe.example.com" to the pods that the **coffee** service targets:
+Once NGINX Gateway Fabric processes the **cafe** gateway and **coffee** HTTPRoute, it will configure its data plane, NGINX, to route all HTTP requests to "cafe.example.com" to the pods that the **coffee** service targets:
 
 ![Traffic Flow](/img/route-all-traffic-flow.png)
 
@@ -111,9 +111,9 @@ The **coffee** service is omitted from the diagram above because the NGINX Gatew
 
 {{< note >}}In the diagrams above, all resources that are the responsibility of the cluster operator are shown in green. The orange resources are the responsibility of the application developers. 
 
-See the [roles and personas](https://gateway-api.sigs.k8s.io/concepts/roles-and-personas/#roles-and-personas_1) gateway API document for more information on these roles.{{< /note >}}
+See the [roles and personas](https://gateway-api.sigs.k8s.io/concepts/roles-and-personas/#roles-and-personas_1) Gateway API document for more information on these roles.{{< /note >}}
 
-## Create the gateway API resources
+## Create the Gateway API resources
 
 To create the **cafe** gateway, copy and paste the following into your terminal:
 
@@ -364,7 +364,7 @@ If your issue persists, [contact us](https://github.com/nginxinc/nginx-gateway-f
 
 ## Further Reading
 
-To learn more about the gateway API and the resources we created in this guide, check out the following resources:
+To learn more about the Gateway API and the resources we created in this guide, check out the following resources:
 
 - [Gateway API Overview](https://gateway-api.sigs.k8s.io/concepts/api-overview/)
 - [Deploying a simple Gateway](https://gateway-api.sigs.k8s.io/guides/simple-gateway/)

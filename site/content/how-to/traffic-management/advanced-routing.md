@@ -6,11 +6,11 @@ toc: true
 docs: "DOCS-000"
 ---
 
-In this guide we will configure advanced routing rules for multiple applications. These rules will showcase request matching by path, headers, query parameters, and method. For an introduction to exposing your application, we recommend that you go through the [basic guide]({{< relref "/how-to/traffic-management/routing-traffic-to-your-app.md" >}}) first.
+In this guide we will configure advanced routing rules for multiple applications. These rules will showcase request matching by path, headers, query parameters, and method. For an introduction to exposing your application, we recommend that you follow the [basic guide]({{< relref "/how-to/traffic-management/routing-traffic-to-your-app.md" >}}) first.
 
 The following image shows the traffic flow that we will be creating with these rules.
 
-![Traffic Flow Diagram](/img/advanced-routing.png)
+{{<img src="/img/advanced-routing.png" alt="Traffic Flow Diagram">}}
 
 The goal is to create a set of rules that will result in client requests being sent to specific backends based on the request attributes. In this diagram, we have two versions of the `coffee` service. Traffic for v1 needs to be directed to the old application, while traffic for v2 needs to be directed towards the new application. We also have two `tea` services, one that handles GET operations and one that handles POST operations. Both the `tea` and `coffee` applications share the same Gateway.
 
@@ -39,7 +39,7 @@ kubectl apply -f https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric
 
 ### Deploy the Gateway API Resources for the Coffee Applications
 
-The [Gateway](https://gateway-api.sigs.k8s.io/api-types/gateway/) resource is typically deployed by the [cluster operator](https://gateway-api.sigs.k8s.io/concepts/roles-and-personas/#roles-and-personas_1). To deploy the Gateway:
+The [gateway](https://gateway-api.sigs.k8s.io/api-types/gateway/) resource is typically deployed by the [cluster operator](https://gateway-api.sigs.k8s.io/concepts/roles-and-personas/#roles-and-personas_1). To deploy the gateway:
 
 ```yaml
 kubectl apply -f - <<EOF
@@ -56,7 +56,7 @@ spec:
 EOF
 ```
 
-This Gateway defines a single listener on port 80. Since no hostname is specified, this listener matches on all hostnames.
+This gateway defines a single listener on port 80. Since no hostname is specified, this listener matches on all hostnames.
 
 The [HTTPRoute](https://gateway-api.sigs.k8s.io/api-types/httproute/) is typically deployed by the [application developer](https://gateway-api.sigs.k8s.io/concepts/roles-and-personas/#roles-and-personas_1). To deploy the `coffee` HTTPRoute:
 
@@ -101,7 +101,7 @@ EOF
 
 This HTTPRoute has a few important properties:
 
-- The `parentRefs` references the Gateway resource that we created, and specifically defines the `http` listener to attach to, via the `sectionName` field.
+- The `parentRefs` references the gateway resource that we created, and specifically defines the `http` listener to attach to, via the `sectionName` field.
 - `cafe.example.com` is the hostname that is matched for all requests to the backends defined in this HTTPRoute.
 - The first rule defines that all requests with the path prefix `/coffee` and no other matching conditions are sent to the `coffee-v1` Service.
 - The second rule defines two matching conditions. If *either* of these conditions match, requests are forwarded to the `coffee-v2` Service:
@@ -149,7 +149,7 @@ Server name: coffee-v2-68bd55f798-s9z5q
 
 ## Tea Applications
 
-Let's deploy a different set of applications now called `tea` and `tea-post`. These applications will have their own set of rules, but will still attach to the same Gateway listener as the `coffee` apps.
+Let's deploy a different set of applications now called `tea` and `tea-post`. These applications will have their own set of rules, but will still attach to the same gateway listener as the `coffee` apps.
 
 ### Deploy the Tea Applications
 
@@ -159,7 +159,7 @@ kubectl apply -f https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric
 
 ### Deploy the HTTPRoute for the Tea Services
 
-We are reusing the previous Gateway for these applications, so all we need to create is the HTTPRoute.
+We are reusing the previous gateway for these applications, so all we need to create is the HTTPRoute.
 
 ```yaml
 kubectl apply -f - <<EOF
@@ -194,7 +194,7 @@ EOF
 
 The properties of this HTTPRoute include:
 
-- The same Gateway is referenced as before.
+- The same gateway is referenced as before.
 - The same hostname is used as with the `coffee` apps.
 - The first rule defines that a POST request to the `/tea` path is routed to the `tea-post` Service.
 - The second rule defines that a GET request to the `/tea` path is routed to the `tea` Service.
