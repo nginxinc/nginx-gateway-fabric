@@ -33,7 +33,7 @@ The figure shows:
 - Users _Cluster Operator_, _Application Developer A_ and _Application Developer B_. These users interact with the
 cluster through the Kubernetes API by creating Kubernetes objects.
 - _Clients A_ and _Clients B_ connect to _Applications A_ and _B_, respectively, which they have deployed.
-- The _NGF Pod_, [deployed by _Cluster Operator_]({{< relref "how-to/installation/installation.md">}}) in the Namespace _nginx-gateway_. For
+- The _NGF Pod_, [deployed by _Cluster Operator_]({{< relref "installation">}}) in the Namespace _nginx-gateway_. For
 scalability and availability, you can have multiple replicas. This Pod consists of two containers: `NGINX` and `NGF`.
 The _NGF_ container interacts with the Kubernetes API to retrieve the most up-to-date Gateway API resources created
 within the cluster. It then dynamically configures the _NGINX_ container based on these resources, ensuring proper
