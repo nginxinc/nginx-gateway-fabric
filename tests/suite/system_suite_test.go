@@ -17,7 +17,6 @@ import (
 	ctlr "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	v1 "sigs.k8s.io/gateway-api/apis/v1"
-	configUtils "sigs.k8s.io/gateway-api/conformance/utils/config"
 
 	"github.com/nginxinc/nginx-gateway-fabric/tests/framework"
 )
@@ -44,12 +43,12 @@ var (
 
 var (
 	//go:embed manifests/*
-	manifests       embed.FS
-	k8sClient       client.Client
-	resourceManager framework.ResourceManager
-	stopCh          = make(chan struct{}, 1)
-	portFwdPort     int
-	timeoutConfig   configUtils.TimeoutConfig
+	manifests         embed.FS
+	k8sClient         client.Client
+	resourceManager   framework.ResourceManager
+	portForwardStopCh = make(chan struct{}, 1)
+	portFwdPort       int
+	timeoutConfig     framework.TimeoutConfig
 )
 
 var _ = BeforeSuite(func() {
@@ -68,7 +67,7 @@ var _ = BeforeSuite(func() {
 	k8sClient, err = client.New(k8sConfig, options)
 	Expect(err).ToNot(HaveOccurred())
 
-	timeoutConfig = configUtils.DefaultTimeoutConfig()
+	timeoutConfig = framework.DefaultTimeoutConfig()
 	resourceManager = framework.ResourceManager{
 		K8sClient:     k8sClient,
 		FS:            manifests,
@@ -99,13 +98,12 @@ var _ = BeforeSuite(func() {
 	podName, err := framework.GetNGFPodName(k8sClient, cfg.Namespace, cfg.ReleaseName, timeoutConfig.CreateTimeout)
 	Expect(err).ToNot(HaveOccurred())
 
-	portFwdPort, err = framework.PortForward(k8sConfig, cfg.Namespace, podName, stopCh)
+	portFwdPort, err = framework.PortForward(k8sConfig, cfg.Namespace, podName, portForwardStopCh)
 	Expect(err).ToNot(HaveOccurred())
 })
 
 var _ = AfterSuite(func() {
-	// close the port forward
-	stopCh <- struct{}{}
+	portForwardStopCh <- struct{}{}
 
 	cfg := framework.InstallationConfig{
 		ReleaseName: "ngf-test",

@@ -27,14 +27,19 @@ func GetNGFPodName(
 	defer cancel()
 
 	var podList core.PodList
-	if err := k8sClient.List(ctx, &podList, client.InNamespace(namespace)); err != nil {
+	if err := k8sClient.List(
+		ctx,
+		&podList,
+		client.InNamespace(namespace),
+		client.MatchingLabels{
+			"app.kubernetes.io/instance": releaseName,
+		},
+	); err != nil {
 		return "", fmt.Errorf("error getting list of Pods: %w", err)
 	}
 
-	for _, pod := range podList.Items {
-		if val, ok := pod.Labels["app.kubernetes.io/instance"]; ok && val == releaseName {
-			return pod.Name, nil
-		}
+	if len(podList.Items) > 0 {
+		return podList.Items[0].Name, nil
 	}
 
 	return "", fmt.Errorf("unable to find NGF Pod")

@@ -4,10 +4,10 @@ The tests in this directory are meant to be run on a live Kubernetes environment
 are similar to the existing [conformance tests](../conformance/README.md), but will verify things such as:
 
 - NGF-specific functionality
-- performance
-- scale
+- Non-Functional requirements testing (such as performance, scale, etc.)
 
-When running, the tests create a port-forward from your NGF Pod to localhost. Traffic is sent over this port.
+When running, the tests create a port-forward from your NGF Pod to localhost, using a port chosen by the
+test framework. Traffic is sent over this port.
 
 Directory structure is as follows:
 

@@ -2,6 +2,7 @@ package suite
 
 import (
 	"fmt"
+	"net/http"
 	"strconv"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -28,7 +29,7 @@ var _ = Describe("Basic test example", func() {
 	BeforeEach(func() {
 		Expect(resourceManager.Apply([]client.Object{ns})).To(Succeed())
 		Expect(resourceManager.ApplyFromFiles(files, ns.Name)).To(Succeed())
-		Expect(resourceManager.WaitForAppsReady(k8sClient, ns.Name)).To(Succeed())
+		Expect(resourceManager.WaitForAppsToBeReady(ns.Name)).To(Succeed())
 	})
 
 	AfterEach(func() {
@@ -38,8 +39,9 @@ var _ = Describe("Basic test example", func() {
 
 	It("sends traffic", func() {
 		url := fmt.Sprintf("http://hello.example.com:%s/hello", strconv.Itoa(portFwdPort))
-		body, err := framework.GET(url, timeoutConfig.RequestTimeout)
+		status, body, err := framework.Get(url, timeoutConfig.RequestTimeout)
 		Expect(err).ToNot(HaveOccurred())
+		Expect(status).To(Equal(http.StatusOK))
 		Expect(body).To(ContainSubstring("URI: /hello"))
 	})
 })

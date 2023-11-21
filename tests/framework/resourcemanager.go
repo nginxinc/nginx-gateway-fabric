@@ -39,14 +39,13 @@ import (
 	"k8s.io/apimachinery/pkg/util/yaml"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	v1 "sigs.k8s.io/gateway-api/apis/v1"
-	configUtils "sigs.k8s.io/gateway-api/conformance/utils/config"
 )
 
 // ResourceManager handles creating/updating/deleting Kubernetes resources.
 type ResourceManager struct {
 	K8sClient     client.Client
 	FS            embed.FS
-	TimeoutConfig configUtils.TimeoutConfig
+	TimeoutConfig TimeoutConfig
 }
 
 // Apply creates or updates Kubernetes resources defined as Go objects.
@@ -55,8 +54,20 @@ func (rm *ResourceManager) Apply(resources []client.Object) error {
 	defer cancel()
 
 	for _, resource := range resources {
-		if err := rm.K8sClient.Create(ctx, resource); err != nil && !apierrors.IsAlreadyExists(err) {
-			return fmt.Errorf("error applying resource: %w", err)
+		if err := rm.K8sClient.Get(ctx, client.ObjectKeyFromObject(resource), resource); err != nil {
+			if !apierrors.IsNotFound(err) {
+				return fmt.Errorf("error getting resource: %w", err)
+			}
+
+			if err := rm.K8sClient.Create(ctx, resource); err != nil {
+				return fmt.Errorf("error creating resource: %w", err)
+			}
+
+			continue
+		}
+
+		if err := rm.K8sClient.Update(ctx, resource); err != nil {
+			return fmt.Errorf("error updating resource: %w", err)
 		}
 	}
 
@@ -179,6 +190,10 @@ func (rm *ResourceManager) getFileContents(file string) (*bytes.Buffer, error) {
 		}
 		defer resp.Body.Close()
 
+		if resp.StatusCode != http.StatusOK {
+			return nil, fmt.Errorf("%d response when getting %s file contents", resp.StatusCode, file)
+		}
+
 		manifests := new(bytes.Buffer)
 		count, err := manifests.ReadFrom(resp.Body)
 		if err != nil {
@@ -203,19 +218,28 @@ func (rm *ResourceManager) getFileContents(file string) (*bytes.Buffer, error) {
 	return bytes.NewBuffer(b), nil
 }
 
-// WaitForAppsReady waits for all apps in the specified namespace to be ready, or until the ctx timeout is reached.
-func (rm *ResourceManager) WaitForAppsReady(k8sClient client.Client, namespace string) error {
+// WaitForAppsToBeReady waits for all apps in the specified namespace to be ready,
+// or until the ctx timeout is reached.
+
+func (rm *ResourceManager) WaitForAppsToBeReady(namespace string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), rm.TimeoutConfig.CreateTimeout)
 	defer cancel()
 
+	if err := rm.waitForPodsToBeReady(ctx, namespace); err != nil {
+		return err
+	}
+
+	return rm.waitForGatewaysToBeReady(ctx, namespace)
+}
+
+func (rm *ResourceManager) waitForPodsToBeReady(ctx context.Context, namespace string) error {
 	return wait.PollUntilContextCancel(
 		ctx,
 		500*time.Millisecond,
 		true, /* poll immediately */
 		func(ctx context.Context) (bool, error) {
-			// first check for Pods to be ready
 			var podList core.PodList
-			if err := k8sClient.List(ctx, &podList, client.InNamespace(namespace)); err != nil {
+			if err := rm.K8sClient.List(ctx, &podList, client.InNamespace(namespace)); err != nil {
 				return false, err
 			}
 
@@ -228,13 +252,23 @@ func (rm *ResourceManager) WaitForAppsReady(k8sClient client.Client, namespace s
 				}
 			}
 
-			if podsReady != len(podList.Items) {
-				return false, nil
+			if podsReady == len(podList.Items) {
+				return true, nil
 			}
 
-			// now check for Gateway to be programmed
+			return false, nil
+		},
+	)
+}
+
+func (rm *ResourceManager) waitForGatewaysToBeReady(ctx context.Context, namespace string) error {
+	return wait.PollUntilContextCancel(
+		ctx,
+		500*time.Millisecond,
+		true, /* poll immediately */
+		func(ctx context.Context) (bool, error) {
 			var gatewayList v1.GatewayList
-			if err := k8sClient.List(ctx, &gatewayList, client.InNamespace(namespace)); err != nil {
+			if err := rm.K8sClient.List(ctx, &gatewayList, client.InNamespace(namespace)); err != nil {
 				return false, err
 			}
 

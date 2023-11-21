@@ -10,10 +10,10 @@ import (
 	"time"
 )
 
-// GET sends a GET request to the specified url.
+// Get sends a GET request to the specified url.
 // It resolves to localhost (where the NGF port forward is running) instead of using DNS.
-// The body of the response is returned, or an error.
-func GET(url string, timeout time.Duration) (string, error) {
+// The status and body of the response is returned, or an error.
+func Get(url string, timeout time.Duration) (int, string, error) {
 	dialer := &net.Dialer{}
 
 	http.DefaultTransport.(*http.Transport).DialContext = func(
@@ -31,20 +31,20 @@ func GET(url string, timeout time.Duration) (string, error) {
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
-		return "", err
+		return 0, "", err
 	}
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return "", err
+		return 0, "", err
 	}
 	defer resp.Body.Close()
 
 	body := new(bytes.Buffer)
 	_, err = body.ReadFrom(resp.Body)
 	if err != nil {
-		return "", err
+		return resp.StatusCode, "", err
 	}
 
-	return body.String(), nil
+	return resp.StatusCode, body.String(), nil
 }
