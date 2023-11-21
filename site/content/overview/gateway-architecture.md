@@ -11,21 +11,21 @@ The intended audience for this information is primarily the two following groups
 - _Cluster Operators_ who would like to know how the software works and understand how it can fail.
 - _Developers_ who would like to [contribute](https://github.com/nginxinc/nginx-gateway-fabric/blob/main/CONTRIBUTING.md) to the project.
 
-We assume that the reader is familiar with core Kubernetes concepts, such as Pods, Deployments, Services, and Endpoints. For an understanding of how NGINX itself works, you can read the ["Inside NGINX: How We Designed for Performance & Scale"](https://www.nginx.com/blog/inside-nginx-how-we-designed-for-performance-scale/) blog post.
+The reader needs to be familiar with core Kubernetes concepts, such as Pods, Deployments, Services, and Endpoints. For an understanding of how NGINX itself works, you can read the ["Inside NGINX: How We Designed for Performance & Scale"](https://www.nginx.com/blog/inside-nginx-how-we-designed-for-performance-scale/) blog post.
 
 ## What is NGINX Gateway Fabric?
 
-NGINX Gateway Fabric (NGF) is a Kubernetes cluster component that uses Gateway API Resources to configure an HTTP load balancer with NGINX as its data plane.
+NGINX Gateway Fabric is a Kubernetes cluster component that uses Gateway API Resources to configure an HTTP load balancer with NGINX as its data plane.
 
 {{< note >}} To learn more about the Gateway API, you can read the [official Kubernetes documentation](https://gateway-api.sigs.k8s.io/). {{< /note >}}
 
-## NGINX Gateway Fabric at a High Level
+## NGINX Gateway Fabric at a high level
 
 This figure depicts an example of NGINX Gateway Fabric exposing two web applications within a Kubernetes cluster to clients on the internet:
 
 {{<img src="/img/ngf-high-level.png" alt="">}}
 
-{{< note >}} For simplicity, many necessary Kubernetes resources like Deployment and Services aren't shown, which the Cluster Operator and the Application Developers also need to create. {{< /note >}} 
+{{< note >}} For simplicity, the figure does not show many of the necessary Kubernetes resources like deployment and services that the the Cluster Operator and the Application Developers also need to create {{< /note >}} 
 
 The figure shows:
 
@@ -55,9 +55,9 @@ The yellow and purple arrows represent connections related to the client traffic
 
 For example, the Cluster Operator is denoted by the color green, indicating they create and manage all the green resources.
 
-## The NGINX Gateway Fabric Pod
+## The NGINX Gateway Fabric pod
 
-The NGINX Gateway Fabric consists of two containers:
+NGINX Gateway Fabric consists of two containers:
 
 1. `nginx`: the data plane. Consists of an NGINX master process and NGINX worker processes. The master process controls the worker processes. The worker processes handle the client traffic and load balance traffic to the backend applications.
 1. `nginx-gateway`: the control plane. Watches Kubernetes objects and configures NGINX.
@@ -70,10 +70,9 @@ This configuration happens in two stages:
 
 1. NGINX configuration files are written to the NGINX configuration volume shared by the `nginx-gateway` and `nginx`
 containers. 
-2. The control plane reloads the NGINX process. 
+1. The control plane reloads the NGINX process. 
 
-This is possible because the two
-containers [share a process namespace](https://kubernetes.io/docs/tasks/configure-pod-container/share-process-namespace/), allowing the NGF process to send signals to the NGINX master process.
+This is possible because the two containers [share a process namespace](https://kubernetes.io/docs/tasks/configure-pod-container/share-process-namespace/), allowing the NGF process to send signals to the NGINX main process.
 
 The following diagram represents the connections, relationships and interactions between process with the `nginx` and `nginx-gateway` containers, as well as external processes/entities.
 
@@ -121,9 +120,8 @@ The following list describes the connections, preceeded by their types in parent
 13. (HTTP, HTTPS) A _client_ sends traffic to and receives traffic from any of the _NGINX workers_ on ports 80 and 443.
 14. (HTTP, HTTPS) An _NGINX worker_ sends traffic to and receives traffic from the _backends_.
 
-## Pod Readiness
+## Pod readiness
 
-The `nginx-gateway` container includes a readiness endpoint available via the `/readyz` path. The endpoint
-is periodically checked by a [readiness probe](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-readiness-probes) on startup, returning a `200 OK` response when the Pod can accept traffic for the data plane. After the control plane successfully starts, the Pod becomes ready.
+The `nginx-gateway` container includes a readiness endpoint available via the `/readyz` path. A [readiness probe](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-readiness-probes) periodically checks the endpoint on startup, returning a `200 OK` response when the Pod can accept traffic for the data plane. After the control plane successfully starts, the Pod becomes ready.
 
 If there are relevant Gateway API resources in the cluster, the control plane will generate the first NGINX configuration and successfully reload NGINX before the Pod is considered ready.
