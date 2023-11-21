@@ -227,7 +227,7 @@ jobs:
       - name: Install Chart
         run: >
           helm install
-          helm-$(echo ${{ steps.nginx-meta.outputs.version }} | tr '.' '-')
+          helm-$(echo ${{ steps.ngf-meta.outputs.version }} | tr '.' '-')
           .
           --wait
           --create-namespace

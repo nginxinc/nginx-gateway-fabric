@@ -74,7 +74,7 @@ jobs:
         run: |
           ngf_prefix=ghcr.io/nginxinc/nginx-gateway-fabric
           ngf_tag=${{ steps.ngf-meta.outputs.version }}
-          make update-ngf-manifest NGF_PREFIX=${ngf_prefix} NGF_TAG=${ngf_tag}
+          make update-ngf-manifest PREFIX=${ngf_prefix} TAG=${ngf_tag}
         working-directory: ./conformance
 
       - name: Build binary
