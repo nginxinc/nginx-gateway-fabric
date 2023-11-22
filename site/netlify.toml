@@ -21,14 +21,3 @@
   for = "/*"
   [headers.values]
     Access-Control-Allow-Origin = "https://docs.nginx.com"
-
-[[redirects]]
-  from = "/"
-  to = "/nginx-gateway-fabric/"
-  status = 301
-  force = true
-
-[[redirects]]
-  from = "/nginx-gateway-fabric/*"
-  to = "/nginx-gateway-fabric/404.html"
-  status = 404
