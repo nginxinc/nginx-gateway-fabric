@@ -81,16 +81,12 @@ hugo-mod:
 
 build-production:
 	hugo --gc -e production
-	cp _redirects public/_redirects
 	
 build-staging:
 	hugo --gc -e staging
-	cp _redirects_staging public/_redirects
 
 build-dev:
 	hugo --gc -e development
-	cp _redirects_dev public/_redirects
 
 deploy-preview: hugo-mod
 	hugo --gc -b ${NETLIFY_DEPLOY_URL}
-	cp _redirects_dev public/_redirects
