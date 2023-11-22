@@ -1,4 +1,4 @@
-baseURL = "https://docs.nginx.com/nginx-gateway-fabric"
+baseURL = "/"
 title = "NGINX Gateway Fabric"
 publishDir = "public/nginx-gateway-fabric"
 canonifyURLs = false
