@@ -10,7 +10,7 @@ In this guide we will configure advanced routing rules for multiple applications
 
 The following image shows the traffic flow that we will be creating with these rules.
 
-{{<img src="/img/advanced-routing.png" alt="Traffic Flow Diagram">}}
+{{<img src="img/advanced-routing.png" alt="Traffic Flow Diagram">}}
 
 The goal is to create a set of rules that will result in client requests being sent to specific backends based on the request attributes. In this diagram, we have two versions of the `coffee` service. Traffic for v1 needs to be directed to the old application, while traffic for v2 needs to be directed towards the new application. We also have two `tea` services, one that handles GET operations and one that handles POST operations. Both the `tea` and `coffee` applications share the same Gateway.
 
