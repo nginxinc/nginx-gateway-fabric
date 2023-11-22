@@ -26,7 +26,7 @@ You can route traffic to your Kubernetes applications using the Gateway API and 
 
 The application we are going to use in this guide is a simple **coffee** application comprised of one service and two pods:
 
-{{<img src="/img/route-all-traffic-app.png" alt="coffee app">}}
+{{<img src="img/route-all-traffic-app.png" alt="coffee app">}}
 
 Using this architecture, the **coffee** application is not accessible outside the cluster. We want to expose this application on the hostname "cafe.example.com" so that clients outside the cluster can access it.
 
@@ -97,7 +97,7 @@ service/coffee       ClusterIP   198.51.100.1     <none>        80/TCP    77s
 
 To route traffic to the **coffee** application, we will create a gateway and HTTPRoute. The following diagram shows the configuration we are creating in the next step:
 
-{{<img src="/img/route-all-traffic-config.png" alt="Configuration">}}
+{{<img src="img/route-all-traffic-config.png" alt="Configuration">}}
 
 We need a gateway to create an entry point for HTTP traffic coming into the cluster. The **cafe** gateway we are going to create will open an entry point to the cluster on port 80 for HTTP traffic.
 
@@ -105,7 +105,7 @@ To route HTTP traffic from the gateway to the **coffee** service, we need to cre
 
 Once NGINX Gateway Fabric processes the **cafe** gateway and **coffee** HTTPRoute, it will configure its data plane (NGINX) to route all HTTP requests sent to "cafe.example.com" to the pods that the **coffee** service targets:
 
-{{<img src="/img/route-all-traffic-flow.png" alt="Traffic Flow">}}
+{{<img src="img/route-all-traffic-flow.png" alt="Traffic Flow">}}
 
 The **coffee** service is omitted from the diagram above because the NGINX Gateway Fabric routes directly to the pods that the **coffee** service targets.
 

@@ -23,7 +23,7 @@ NGINX Gateway Fabric is a Kubernetes cluster component that uses Gateway API Res
 
 This figure depicts an example of NGINX Gateway Fabric exposing two web applications within a Kubernetes cluster to clients on the internet:
 
-{{<img src="/img/ngf-high-level.png" alt="">}}
+{{<img src="img/ngf-high-level.png" alt="">}}
 
 {{< note >}} The figure does not show many of the necessary Kubernetes resources the Cluster Operators and Application Developers need to create, like deployment and services. {{< /note >}} 
 
@@ -62,7 +62,7 @@ This is possible because the two containers [share a process namespace](https://
 
 The following diagram represents the connections, relationships and interactions between process with the `nginx` and `nginx-gateway` containers, as well as external processes/entities.
 
-{{<img src="/img/ngf-pod.png" alt="">}}
+{{<img src="img/ngf-pod.png" alt="">}}
 
 The following list describes the connections, preceeded by their types in parentheses. For brevity, the suffix "process" has been omitted from the process descriptions.
 
