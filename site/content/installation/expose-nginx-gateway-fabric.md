@@ -6,6 +6,8 @@ toc: true
 docs: "DOCS-000"
 ---
 
+{{<custom-styles>}}
+
 ## Overview
 
 Gain access to NGINX Gateway Fabric by creating either a **NodePort** service or a **LoadBalancer** service in the same namespace as the controller. The service name is specified in the `--service` argument of the controller.
@@ -59,9 +61,9 @@ To create a **LoadBalancer** service, use the appropriate manifest for your clou
    ```shell
    kubectl get svc nginx-gateway -n nginx-gateway
    ```
-
-3. We recommend using the NLB DNS whenever possible, but for testing purposes, you can resolve the DNS name to get the IP address of the load balancer:
+   {{< note >}} We recommend using the NLB DNS whenever possible, but for testing purposes, you can resolve the DNS name to get the IP address of the load balancer:
 
    ```shell
    nslookup <dns-name>
    ```
+   {{< /note >}}
