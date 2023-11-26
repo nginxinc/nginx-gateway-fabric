@@ -71,6 +71,12 @@ nginx-gateway namespace (with optional `--create-namespace` flag - you can omit 
 
 ```shell
 helm install my-release oci://ghcr.io/nginxinc/charts/nginx-gateway-fabric  --create-namespace --wait -n nginx-gateway
+
+# For kind clusters, NodePort services require extra configuration and LoadBalancer services need a third-party controller like
+# MetalLB for external IP assignment. However, the Helm chart creates a LoadBalancer service by default. Therefore, the `--wait`
+# flag will hang until timeout. To avoid this, you can disable service creation using the below command and use port-forwarding
+# as described in the `running-on-kind.md` guide instead to try out the examples:
+helm install my-release oci://ghcr.io/nginxinc/charts/nginx-gateway-fabric  --create-namespace --wait -n nginx-gateway --set service.create=false
 ```
 
 This will install the latest stable release. To install the latest version from the `main` branch, specify the
