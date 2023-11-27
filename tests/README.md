@@ -22,7 +22,7 @@ Directory structure is as follows:
 - Docker.
 - Golang.
 
-**Note**: all commands in steps below are executed from the ```tests``` directory
+**Note**: all commands in steps below are executed from the `tests` directory
 
 ```shell
 make

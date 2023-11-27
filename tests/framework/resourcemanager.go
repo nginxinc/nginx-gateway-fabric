@@ -220,12 +220,15 @@ func (rm *ResourceManager) getFileContents(file string) (*bytes.Buffer, error) {
 
 // WaitForAppsToBeReady waits for all apps in the specified namespace to be ready,
 // or until the ctx timeout is reached.
-
 func (rm *ResourceManager) WaitForAppsToBeReady(namespace string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), rm.TimeoutConfig.CreateTimeout)
 	defer cancel()
 
 	if err := rm.waitForPodsToBeReady(ctx, namespace); err != nil {
+		return err
+	}
+
+	if err := rm.waitForRoutesToBeReady(ctx, namespace); err != nil {
 		return err
 	}
 
@@ -252,11 +255,7 @@ func (rm *ResourceManager) waitForPodsToBeReady(ctx context.Context, namespace s
 				}
 			}
 
-			if podsReady == len(podList.Items) {
-				return true, nil
-			}
-
-			return false, nil
+			return podsReady == len(podList.Items), nil
 		},
 	)
 }
@@ -281,6 +280,34 @@ func (rm *ResourceManager) waitForGatewaysToBeReady(ctx context.Context, namespa
 			}
 
 			return false, nil
+		},
+	)
+}
+
+func (rm *ResourceManager) waitForRoutesToBeReady(ctx context.Context, namespace string) error {
+	return wait.PollUntilContextCancel(
+		ctx,
+		500*time.Millisecond,
+		true, /* poll immediately */
+		func(ctx context.Context) (bool, error) {
+			var routeList v1.HTTPRouteList
+			if err := rm.K8sClient.List(ctx, &routeList, client.InNamespace(namespace)); err != nil {
+				return false, err
+			}
+
+			var numParents, readyCount int
+			for _, route := range routeList.Items {
+				numParents += len(route.Status.Parents)
+				for _, parent := range route.Status.Parents {
+					for _, cond := range parent.Conditions {
+						if cond.Type == string(v1.RouteConditionAccepted) && cond.Status == metav1.ConditionTrue {
+							readyCount++
+						}
+					}
+				}
+			}
+
+			return numParents == readyCount, nil
 		},
 	)
 }
