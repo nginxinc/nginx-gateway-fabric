@@ -53,13 +53,16 @@ func (r *telemetryReporter) Start(ctx context.Context) error {
 	// NGF version
 	ngfVersion := "product-tel-prototype-0.0.1"
 
-	// configure OTel
+	// Step 1
+	// configure OTel global options
 	otel.SetLogger(r.logger)
 	otel.SetErrorHandler(errorHandler{
 		logger: r.logger,
 	})
 
-	// create resource
+	// Step 2
+	// create a resource.
+	// the resource represents the entity producing telemetry data.
 	res, err := resource.Merge(
 		resource.Default(),
 		resource.NewWithAttributes(
@@ -72,24 +75,40 @@ func (r *telemetryReporter) Start(ctx context.Context) error {
 		return err
 	}
 
+	// Step 3
+	// Create exporters
+
+	// stdout exporter will not be needed in production.
 	stdoutExporter, err := newStdoutExporter()
 	if err != nil {
 		return err
 	}
 
+	// this creates an exporter with a GRPC connection to the collector
+	// however, it will not establish a network connection until we start sending data.
+	// see the comment inside newOTLPExporter()
 	otelExporter, err := newOTLPExporter(ctx, endpoint, secure, headers)
 	if err != nil {
 		return err
 	}
 
+	// Step 4
+	// Create provider
+	// Batchers batch exporting multiple spans together for performance.
+	// We don't need that, since we only need to send one span.
 	provider := sdktrace.NewTracerProvider(
-		sdktrace.WithBatcher(stdoutExporter), // prints to stdout
-		sdktrace.WithBatcher(otelExporter),   // sends to a collector
+		//sdktrace.WithBatcher(stdoutExporter),
+		//sdktrace.WithBatcher(otelExporter),
+		sdktrace.WithSyncer(stdoutExporter), // prints to stdout
+		sdktrace.WithSyncer(otelExporter),   // sends to a collector
 		sdktrace.WithResource(res),
 	)
 
+	// Step 5
+	// Create tracer
 	tracer := provider.Tracer("product-telemetry")
 
+	// Step 6
 	// create span
 	_, span := tracer.Start(ctx, "report")
 
@@ -98,8 +117,12 @@ func (r *telemetryReporter) Start(ctx context.Context) error {
 		attribute.String("ngfVersion", ngfVersion),
 	)
 
-	// send
-	span.End() // exits immediately and sends asynchronously
+	// Step 7
+	// End span (send a trace).
+	// if sdktrace.WithSyncer is used, this will block until the data is sent.
+	// if sdktrace.WithBatcher is used, this will not block. However, the data will not be sent immediately.
+	// Any errors will be passed to the errorHandler configured above.
+	span.End()
 
 	return nil
 }
@@ -117,6 +140,11 @@ func newOTLPExporter(
 	options := []otlptracegrpc.Option{
 		otlptracegrpc.WithEndpoint(endpoint),
 		otlptracegrpc.WithHeaders(headers),
+		// Uncomment the block bellow to make sure a connection to the endpoint is established before otlptrace.New() returns.
+		// Not recommended. See https://github.com/grpc/grpc-go/blob/master/Documentation/anti-patterns.md#dialing-in-grpc
+		//otlptracegrpc.WithDialOption(
+		//	grpc.WithBlock(),
+		//),
 	}
 
 	if !secure {
