@@ -105,7 +105,8 @@ func TestBuildRoutes(t *testing.T) {
 							Gateway: gwNsName,
 						},
 					},
-					Valid: true,
+					Valid:      true,
+					Attachable: true,
 					Rules: []Rule{
 						{
 							ValidMatches: true,
@@ -399,7 +400,8 @@ func TestBuildRoute(t *testing.T) {
 						Gateway: gatewayNsName,
 					},
 				},
-				Valid: true,
+				Valid:      true,
+				Attachable: true,
 				Rules: []Rule{
 					{
 						ValidMatches: true,
@@ -423,8 +425,9 @@ func TestBuildRoute(t *testing.T) {
 			validator: &validationfakes.FakeHTTPFieldsValidator{},
 			hr:        hrInvalidHostname,
 			expected: &Route{
-				Source: hrInvalidHostname,
-				Valid:  false,
+				Source:     hrInvalidHostname,
+				Valid:      false,
+				Attachable: false,
 				ParentRefs: []ParentRef{
 					{
 						Idx:     0,
@@ -443,8 +446,9 @@ func TestBuildRoute(t *testing.T) {
 			validator: validatorInvalidFieldsInRule,
 			hr:        hrInvalidMatches,
 			expected: &Route{
-				Source: hrInvalidMatches,
-				Valid:  false,
+				Source:     hrInvalidMatches,
+				Valid:      false,
+				Attachable: true,
 				ParentRefs: []ParentRef{
 					{
 						Idx:     0,
@@ -469,8 +473,9 @@ func TestBuildRoute(t *testing.T) {
 			validator: validatorInvalidFieldsInRule,
 			hr:        hrInvalidFilters,
 			expected: &Route{
-				Source: hrInvalidFilters,
-				Valid:  false,
+				Source:     hrInvalidFilters,
+				Valid:      false,
+				Attachable: true,
 				ParentRefs: []ParentRef{
 					{
 						Idx:     0,
@@ -496,8 +501,9 @@ func TestBuildRoute(t *testing.T) {
 			validator: validatorInvalidFieldsInRule,
 			hr:        hrDroppedInvalidMatches,
 			expected: &Route{
-				Source: hrDroppedInvalidMatches,
-				Valid:  true,
+				Source:     hrDroppedInvalidMatches,
+				Valid:      true,
+				Attachable: true,
 				ParentRefs: []ParentRef{
 					{
 						Idx:     0,
@@ -527,8 +533,9 @@ func TestBuildRoute(t *testing.T) {
 			validator: validatorInvalidFieldsInRule,
 			hr:        hrDroppedInvalidMatchesAndInvalidFilters,
 			expected: &Route{
-				Source: hrDroppedInvalidMatchesAndInvalidFilters,
-				Valid:  true,
+				Source:     hrDroppedInvalidMatchesAndInvalidFilters,
+				Valid:      true,
+				Attachable: true,
 				ParentRefs: []ParentRef{
 					{
 						Idx:     0,
@@ -563,8 +570,9 @@ func TestBuildRoute(t *testing.T) {
 			validator: validatorInvalidFieldsInRule,
 			hr:        hrDroppedInvalidFilters,
 			expected: &Route{
-				Source: hrDroppedInvalidFilters,
-				Valid:  true,
+				Source:     hrDroppedInvalidFilters,
+				Valid:      true,
+				Attachable: true,
 				ParentRefs: []ParentRef{
 					{
 						Idx:     0,
@@ -612,8 +620,9 @@ func TestBindRouteToListeners(t *testing.T) {
 				Name:     gatewayv1.SectionName(name),
 				Hostname: (*gatewayv1.Hostname)(helpers.GetPointer("foo.example.com")),
 			},
-			Valid:  true,
-			Routes: map[types.NamespacedName]*Route{},
+			Valid:      true,
+			Attachable: true,
+			Routes:     map[types.NamespacedName]*Route{},
 		}
 	}
 	createModifiedListener := func(name string, m func(*Listener)) *Listener {
@@ -676,8 +685,9 @@ func TestBindRouteToListeners(t *testing.T) {
 	var normalRoute *Route
 	createNormalRoute := func(gateway *gatewayv1.Gateway) *Route {
 		normalRoute = &Route{
-			Source: hr,
-			Valid:  true,
+			Source:     hr,
+			Valid:      true,
+			Attachable: true,
 			ParentRefs: []ParentRef{
 				{
 					Idx:     0,
@@ -691,9 +701,33 @@ func TestBindRouteToListeners(t *testing.T) {
 		return normalRoute
 	}
 
+	invalidAttachableRoute1 := &Route{
+		Source:     hr,
+		Valid:      false,
+		Attachable: true,
+		ParentRefs: []ParentRef{
+			{
+				Idx:     0,
+				Gateway: client.ObjectKeyFromObject(gw),
+			},
+		},
+	}
+	invalidAttachableRoute2 := &Route{
+		Source:     hr,
+		Valid:      false,
+		Attachable: true,
+		ParentRefs: []ParentRef{
+			{
+				Idx:     0,
+				Gateway: client.ObjectKeyFromObject(gw),
+			},
+		},
+	}
+
 	routeWithMissingSectionName := &Route{
-		Source: hrWithNilSectionName,
-		Valid:  true,
+		Source:     hrWithNilSectionName,
+		Valid:      true,
+		Attachable: true,
 		ParentRefs: []ParentRef{
 			{
 				Idx:     0,
@@ -702,8 +736,9 @@ func TestBindRouteToListeners(t *testing.T) {
 		},
 	}
 	routeWithEmptySectionName := &Route{
-		Source: hrWithEmptySectionName,
-		Valid:  true,
+		Source:     hrWithEmptySectionName,
+		Valid:      true,
+		Attachable: true,
 		ParentRefs: []ParentRef{
 			{
 				Idx:     0,
@@ -712,8 +747,9 @@ func TestBindRouteToListeners(t *testing.T) {
 		},
 	}
 	routeWithNonExistingListener := &Route{
-		Source: hrWithNonExistingListener,
-		Valid:  true,
+		Source:     hrWithNonExistingListener,
+		Valid:      true,
+		Attachable: true,
 		ParentRefs: []ParentRef{
 			{
 				Idx:     0,
@@ -722,8 +758,9 @@ func TestBindRouteToListeners(t *testing.T) {
 		},
 	}
 	routeWithPort := &Route{
-		Source: hrWithPort,
-		Valid:  true,
+		Source:     hrWithPort,
+		Valid:      true,
+		Attachable: true,
 		ParentRefs: []ParentRef{
 			{
 				Idx:     0,
@@ -733,8 +770,9 @@ func TestBindRouteToListeners(t *testing.T) {
 	}
 	ignoredGwNsName := types.NamespacedName{Namespace: "test", Name: "ignored-gateway"}
 	routeWithIgnoredGateway := &Route{
-		Source: hr,
-		Valid:  true,
+		Source:     hr,
+		Valid:      true,
+		Attachable: true,
 		ParentRefs: []ParentRef{
 			{
 				Idx:     0,
@@ -742,7 +780,7 @@ func TestBindRouteToListeners(t *testing.T) {
 			},
 		},
 	}
-	notValidRoute := &Route{
+	invalidRoute := &Route{
 		Valid: false,
 		ParentRefs: []ParentRef{
 			{
@@ -752,8 +790,9 @@ func TestBindRouteToListeners(t *testing.T) {
 		},
 	}
 
-	notValidListener := createModifiedListener("", func(l *Listener) {
+	invalidNotAttachableListener := createModifiedListener("", func(l *Listener) {
 		l.Valid = false
+		l.Attachable = false
 	})
 	nonMatchingHostnameListener := createModifiedListener("", func(l *Listener) {
 		l.Source.Hostname = helpers.GetPointer[gatewayv1.Hostname]("bar.example.com")
@@ -765,6 +804,7 @@ func TestBindRouteToListeners(t *testing.T) {
 		expectedGatewayListeners map[string]*Listener
 		name                     string
 		expectedSectionNameRefs  []ParentRef
+		expectedConditions       []conditions.Condition
 	}{
 		{
 			route: createNormalRoute(gw),
@@ -869,7 +909,7 @@ func TestBindRouteToListeners(t *testing.T) {
 				Source: gw,
 				Valid:  true,
 				Listeners: map[string]*Listener{
-					"listener-80-1": notValidListener,
+					"listener-80-1": invalidNotAttachableListener,
 				},
 			},
 			expectedSectionNameRefs: []ParentRef{
@@ -884,9 +924,9 @@ func TestBindRouteToListeners(t *testing.T) {
 				},
 			},
 			expectedGatewayListeners: map[string]*Listener{
-				"listener-80-1": notValidListener,
+				"listener-80-1": invalidNotAttachableListener,
 			},
-			name: "empty section name with no valid listeners",
+			name: "empty section name with no valid and attachable listeners",
 		},
 		{
 			route: routeWithPort,
@@ -946,7 +986,7 @@ func TestBindRouteToListeners(t *testing.T) {
 				Source: gw,
 				Valid:  true,
 				Listeners: map[string]*Listener{
-					"listener-80-1": notValidListener,
+					"listener-80-1": invalidNotAttachableListener,
 				},
 			},
 			expectedSectionNameRefs: []ParentRef{
@@ -961,9 +1001,9 @@ func TestBindRouteToListeners(t *testing.T) {
 				},
 			},
 			expectedGatewayListeners: map[string]*Listener{
-				"listener-80-1": notValidListener,
+				"listener-80-1": invalidNotAttachableListener,
 			},
-			name: "listener isn't valid",
+			name: "listener isn't valid and attachable",
 		},
 		{
 			route: createNormalRoute(gw),
@@ -1016,7 +1056,7 @@ func TestBindRouteToListeners(t *testing.T) {
 			name: "gateway is ignored",
 		},
 		{
-			route: notValidRoute,
+			route: invalidRoute,
 			gateway: &Gateway{
 				Source: gw,
 				Valid:  true,
@@ -1060,6 +1100,104 @@ func TestBindRouteToListeners(t *testing.T) {
 				"listener-80-1": createListener("listener-80-1"),
 			},
 			name: "invalid gateway",
+		},
+		{
+			route: createNormalRoute(gw),
+			gateway: &Gateway{
+				Source: gw,
+				Valid:  true,
+				Listeners: map[string]*Listener{
+					"listener-80-1": createModifiedListener("listener-80-1", func(l *Listener) {
+						l.Valid = false
+					}),
+				},
+			},
+			expectedSectionNameRefs: []ParentRef{
+				{
+					Idx:     0,
+					Gateway: client.ObjectKeyFromObject(gw),
+					Attachment: &ParentRefAttachmentStatus{
+						Attached: true,
+						AcceptedHostnames: map[string][]string{
+							"listener-80-1": {"foo.example.com"},
+						},
+					},
+				},
+			},
+			expectedGatewayListeners: map[string]*Listener{
+				"listener-80-1": createModifiedListener("listener-80-1", func(l *Listener) {
+					l.Valid = false
+					l.Routes = map[types.NamespacedName]*Route{
+						client.ObjectKeyFromObject(hr): getLastNormalRoute(),
+					}
+				}),
+			},
+			expectedConditions: []conditions.Condition{staticConds.NewRouteInvalidListener()},
+			name:               "invalid attachable listener",
+		},
+		{
+			route: invalidAttachableRoute1,
+			gateway: &Gateway{
+				Source: gw,
+				Valid:  true,
+				Listeners: map[string]*Listener{
+					"listener-80-1": createListener("listener-80-1"),
+				},
+			},
+			expectedSectionNameRefs: []ParentRef{
+				{
+					Idx:     0,
+					Gateway: client.ObjectKeyFromObject(gw),
+					Attachment: &ParentRefAttachmentStatus{
+						Attached: true,
+						AcceptedHostnames: map[string][]string{
+							"listener-80-1": {"foo.example.com"},
+						},
+					},
+				},
+			},
+			expectedGatewayListeners: map[string]*Listener{
+				"listener-80-1": createModifiedListener("listener-80-1", func(l *Listener) {
+					l.Routes = map[types.NamespacedName]*Route{
+						client.ObjectKeyFromObject(hr): invalidAttachableRoute1,
+					}
+				}),
+			},
+			name: "invalid attachable route",
+		},
+		{
+			route: invalidAttachableRoute2,
+			gateway: &Gateway{
+				Source: gw,
+				Valid:  true,
+				Listeners: map[string]*Listener{
+					"listener-80-1": createModifiedListener("listener-80-1", func(l *Listener) {
+						l.Valid = false
+					}),
+				},
+			},
+			expectedSectionNameRefs: []ParentRef{
+				{
+					Idx:     0,
+					Gateway: client.ObjectKeyFromObject(gw),
+					Attachment: &ParentRefAttachmentStatus{
+						Attached: true,
+						AcceptedHostnames: map[string][]string{
+							"listener-80-1": {"foo.example.com"},
+						},
+					},
+				},
+			},
+			expectedGatewayListeners: map[string]*Listener{
+				"listener-80-1": createModifiedListener("listener-80-1", func(l *Listener) {
+					l.Valid = false
+					l.Routes = map[types.NamespacedName]*Route{
+						client.ObjectKeyFromObject(hr): invalidAttachableRoute2,
+					}
+				}),
+			},
+			expectedConditions: []conditions.Condition{staticConds.NewRouteInvalidListener()},
+			name:               "invalid attachable listener with invalid attachable route",
 		},
 		{
 			route: createNormalRoute(gw),
@@ -1284,6 +1422,7 @@ func TestBindRouteToListeners(t *testing.T) {
 
 			g.Expect(test.route.ParentRefs).To(Equal(test.expectedSectionNameRefs))
 			g.Expect(helpers.Diff(test.gateway.Listeners, test.expectedGatewayListeners)).To(BeEmpty())
+			g.Expect(helpers.Diff(test.route.Conditions, test.expectedConditions)).To(BeEmpty())
 		})
 	}
 }

@@ -68,6 +68,9 @@ type Route struct {
 	// Valid tells if the Route is valid.
 	// If it is invalid, NGF should not generate any configuration for it.
 	Valid bool
+	// Attachable tells if the Route can be attached to any of the Gateways.
+	// Route can be invalid but still attachable.
+	Attachable bool
 }
 
 // buildRoutesForGateways builds routes from HTTPRoutes that reference any of the specified Gateways.
@@ -191,6 +194,7 @@ func buildRoute(
 	}
 
 	r.Valid = true
+	r.Attachable = true
 
 	r.Rules = make([]Rule, len(ghr.Spec.Rules))
 
@@ -260,7 +264,7 @@ func bindRoutesToListeners(
 }
 
 func bindRouteToListeners(r *Route, gw *Gateway, namespaces map[types.NamespacedName]*apiv1.Namespace) {
-	if !r.Valid {
+	if !r.Attachable {
 		return
 	}
 
@@ -302,10 +306,14 @@ func bindRouteToListeners(r *Route, gw *Gateway, namespaces map[types.Namespaced
 		// Case 4 - winning Gateway
 
 		// Try to attach Route to all matching listeners
+
 		cond, attached := tryToAttachRouteToListeners(ref.Attachment, routeRef.SectionName, r, gw, namespaces)
 		if !attached {
 			attachment.FailedCondition = cond
 			continue
+		}
+		if cond != (conditions.Condition{}) {
+			r.Conditions = append(r.Conditions, cond)
 		}
 
 		attachment.Attached = true
@@ -313,8 +321,10 @@ func bindRouteToListeners(r *Route, gw *Gateway, namespaces map[types.Namespaced
 }
 
 // tryToAttachRouteToListeners tries to attach the route to the listeners that match the parentRef and the hostnames.
-// If it succeeds in attaching at least one listener it will return true and the condition will be empty.
-// If it fails to attach the route, it will return false and the failure condition.
+// There are two cases:
+// (1) If it succeeds in attaching at least one listener it will return true. The returned condition will be empty if
+// at least one of the listeners is valid. Otherwise, it will return the failure condition.
+// (2) If it fails to attach the route, it will return false and the failure condition.
 func tryToAttachRouteToListeners(
 	refStatus *ParentRefAttachmentStatus,
 	sectionName *v1.SectionName,
@@ -322,13 +332,13 @@ func tryToAttachRouteToListeners(
 	gw *Gateway,
 	namespaces map[types.NamespacedName]*apiv1.Namespace,
 ) (conditions.Condition, bool) {
-	validListeners, listenerExists := findValidListeners(getSectionName(sectionName), gw.Listeners)
+	attachableListeners, listenerExists := findAttachableListeners(getSectionName(sectionName), gw.Listeners)
 
 	if !listenerExists {
 		return staticConds.NewRouteNoMatchingParent(), false
 	}
 
-	if len(validListeners) == 0 {
+	if len(attachableListeners) == 0 {
 		return staticConds.NewRouteInvalidListener(), false
 	}
 
@@ -348,11 +358,14 @@ func tryToAttachRouteToListeners(
 		return true, true
 	}
 
+	var attachedToAtLeastOneValidListener bool
+
 	var allowed, attached bool
-	for _, l := range validListeners {
+	for _, l := range attachableListeners {
 		routeAllowed, routeAttached := bind(l)
 		allowed = allowed || routeAllowed
 		attached = attached || routeAttached
+		attachedToAtLeastOneValidListener = attachedToAtLeastOneValidListener || (routeAttached && l.Valid)
 	}
 
 	if !attached {
@@ -362,34 +375,39 @@ func tryToAttachRouteToListeners(
 		return staticConds.NewRouteNoMatchingListenerHostname(), false
 	}
 
+	if !attachedToAtLeastOneValidListener {
+		return staticConds.NewRouteInvalidListener(), true
+	}
+
 	return conditions.Condition{}, true
 }
 
-// findValidListeners returns a list of valid listeners and whether the listener exists for a non-empty sectionName.
-func findValidListeners(sectionName string, listeners map[string]*Listener) ([]*Listener, bool) {
+// findAttachableListeners returns a list of attachable listeners and whether the listener exists for a non-empty
+// sectionName.
+func findAttachableListeners(sectionName string, listeners map[string]*Listener) ([]*Listener, bool) {
 	if sectionName != "" {
 		l, exists := listeners[sectionName]
 		if !exists {
 			return nil, false
 		}
 
-		if l.Valid {
+		if l.Attachable {
 			return []*Listener{l}, true
 		}
 
 		return nil, true
 	}
 
-	validListeners := make([]*Listener, 0, len(listeners))
+	attachableListeners := make([]*Listener, 0, len(listeners))
 	for _, l := range listeners {
-		if !l.Valid {
+		if !l.Attachable {
 			continue
 		}
 
-		validListeners = append(validListeners, l)
+		attachableListeners = append(attachableListeners, l)
 	}
 
-	return validListeners, true
+	return attachableListeners, true
 }
 
 func findAcceptedHostnames(listenerHostname *v1.Hostname, routeHostnames []v1.Hostname) []string {
