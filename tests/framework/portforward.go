@@ -3,6 +3,7 @@ package framework
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -42,10 +43,10 @@ func GetNGFPodName(
 		return podList.Items[0].Name, nil
 	}
 
-	return "", fmt.Errorf("unable to find NGF Pod")
+	return "", errors.New("unable to find NGF Pod")
 }
 
-// PortForward starts a port forward to the specified Pod and returns the local port being forwarded.
+// PortForward starts a port-forward to the specified Pod and returns the local port being forwarded.
 func PortForward(config *rest.Config, namespace, podName string, stopCh chan struct{}) (int, error) {
 	roundTripper, upgrader, err := spdy.RoundTripperFor(config)
 	if err != nil {

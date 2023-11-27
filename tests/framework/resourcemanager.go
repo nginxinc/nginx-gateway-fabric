@@ -170,7 +170,7 @@ func (rm *ResourceManager) readAndHandleObjects(
 	return nil
 }
 
-// getContents takes a string that can either be a local file
+// getFileContents takes a string that can either be a local file
 // path or an https:// URL to YAML manifests and provides the contents.
 func (rm *ResourceManager) getFileContents(file string) (*bytes.Buffer, error) {
 	if strings.HasPrefix(file, "http://") {
