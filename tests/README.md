@@ -6,7 +6,7 @@ are similar to the existing [conformance tests](../conformance/README.md), but w
 - NGF-specific functionality
 - Non-Functional requirements testing (such as performance, scale, etc.)
 
-When running, the tests create a port-forward from your NGF Pod to localhost, using a port chosen by the
+When running, the tests create a port-forward from your NGF Pod to localhost using a port chosen by the
 test framework. Traffic is sent over this port.
 
 Directory structure is as follows:
@@ -45,12 +45,12 @@ test                           Run the system tests against your default k8s clu
 | PREFIX   | nginx-gateway-fabric | prefix for the locally built NGF image |
 | NGINX_PREFIX | nginx-gateway-fabric/nginx | prefix for the locally built NGINX image |
 | PULL_POLICY | Never | NGF image pull policy |
-| GW_API_VERSION | 1.0.0 | Version of Gateway API resources to install |
-| K8S_VERSION | latest | Version of k8s that the tests are run on. |
+| GW_API_VERSION | 1.0.0 | version of Gateway API resources to install |
+| K8S_VERSION | latest | version of k8s that the tests are run on |
 
 ## Step 1 - Create a Kubernetes cluster
 
-This can be done in a cloud provider of choice, or locally using `kind``:
+This can be done in a cloud provider of choice, or locally using `kind`:
 
 ```makefile
 make create-kind-cluster
