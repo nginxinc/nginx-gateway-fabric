@@ -407,7 +407,8 @@ var _ = Describe("ChangeProcessor", func() {
 							ValidFilters: true,
 						},
 					},
-					Valid: true,
+					Valid:      true,
+					Attachable: true,
 					Conditions: []conditions.Condition{
 						staticConds.NewRouteBackendRefRefBackendNotFound(
 							"spec.rules[0].backendRefs[0].name: Not found: \"service\"",
@@ -434,8 +435,9 @@ var _ = Describe("ChangeProcessor", func() {
 							Idx:     1,
 						},
 					},
-					Rules: []graph.Rule{{ValidMatches: true, ValidFilters: true}},
-					Valid: true,
+					Rules:      []graph.Rule{{ValidMatches: true, ValidFilters: true}},
+					Valid:      true,
+					Attachable: true,
 				}
 
 				// This is the base case expected graph. Tests will manipulate this to add or remove elements
@@ -449,16 +451,18 @@ var _ = Describe("ChangeProcessor", func() {
 						Source: gw1,
 						Listeners: map[string]*graph.Listener{
 							"listener-80-1": {
-								Source: gw1.Spec.Listeners[0],
-								Valid:  true,
+								Source:     gw1.Spec.Listeners[0],
+								Valid:      true,
+								Attachable: true,
 								Routes: map[types.NamespacedName]*graph.Route{
 									{Namespace: "test", Name: "hr-1"}: expRouteHR1,
 								},
 								SupportedKinds: []v1.RouteGroupKind{{Kind: "HTTPRoute"}},
 							},
 							"listener-443-1": {
-								Source: gw1.Spec.Listeners[1],
-								Valid:  true,
+								Source:     gw1.Spec.Listeners[1],
+								Valid:      true,
+								Attachable: true,
 								Routes: map[types.NamespacedName]*graph.Route{
 									{Namespace: "test", Name: "hr-1"}: expRouteHR1,
 								},
@@ -541,32 +545,40 @@ var _ = Describe("ChangeProcessor", func() {
 				It("returns updated graph", func() {
 					processor.CaptureUpsertChange(gc)
 
-					// no ref grant exists yet for gw1
-					expGraph.Gateway.Listeners["listener-443-1"] = &graph.Listener{
-						Source: gw1.Spec.Listeners[1],
-						Valid:  false,
-						Routes: map[types.NamespacedName]*graph.Route{},
-						Conditions: staticConds.NewListenerRefNotPermitted(
-							"Certificate ref to secret cert-ns/different-ns-tls-secret not permitted by any ReferenceGrant",
-						),
-						SupportedKinds: []v1.RouteGroupKind{{Kind: "HTTPRoute"}},
+					// No ref grant exists yet for gw1
+					// so the listener is not valid, but still attachable
+					expGraph.Gateway.Listeners["listener-443-1"].Valid = false
+					expGraph.Gateway.Listeners["listener-443-1"].ResolvedSecret = nil
+					expGraph.Gateway.Listeners["listener-443-1"].Conditions = staticConds.NewListenerRefNotPermitted(
+						"Certificate ref to secret cert-ns/different-ns-tls-secret not permitted by any ReferenceGrant",
+					)
+
+					expAttachment80 := &graph.ParentRefAttachmentStatus{
+						AcceptedHostnames: map[string][]string{
+							"listener-80-1": {"foo.example.com"},
+						},
+						Attached: true,
 					}
 
-					expAttachment := &graph.ParentRefAttachmentStatus{
-						AcceptedHostnames: map[string][]string{},
-						FailedCondition:   staticConds.NewRouteInvalidListener(),
-						Attached:          false,
+					expAttachment443 := &graph.ParentRefAttachmentStatus{
+						AcceptedHostnames: map[string][]string{
+							"listener-443-1": {"foo.example.com"},
+						},
+						Attached: true,
 					}
 
-					expGraph.Gateway.Listeners["listener-80-1"].Routes[hr1Name].ParentRefs[1].Attachment = expAttachment
+					expGraph.Gateway.Listeners["listener-80-1"].Routes[hr1Name].ParentRefs[0].Attachment = expAttachment80
+					expGraph.Gateway.Listeners["listener-443-1"].Routes[hr1Name].ParentRefs[1].Attachment = expAttachment443
 
 					// no ref grant exists yet for hr1
-					expGraph.Routes[hr1Name].ParentRefs[1].Attachment = expAttachment
 					expGraph.Routes[hr1Name].Conditions = []conditions.Condition{
+						staticConds.NewRouteInvalidListener(),
 						staticConds.NewRouteBackendRefRefNotPermitted(
 							"Backend ref to Service service-ns/service not permitted by any ReferenceGrant",
 						),
 					}
+					expGraph.Routes[hr1Name].ParentRefs[0].Attachment = expAttachment80
+					expGraph.Routes[hr1Name].ParentRefs[1].Attachment = expAttachment443
 
 					expGraph.ReferencedSecrets = nil
 

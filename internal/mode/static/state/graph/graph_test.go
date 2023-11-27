@@ -231,8 +231,9 @@ func TestBuildGraph(t *testing.T) {
 	}
 
 	routeHR1 := &Route{
-		Valid:  true,
-		Source: hr1,
+		Valid:      true,
+		Attachable: true,
+		Source:     hr1,
 		ParentRefs: []ParentRef{
 			{
 				Idx:     0,
@@ -247,8 +248,9 @@ func TestBuildGraph(t *testing.T) {
 	}
 
 	routeHR3 := &Route{
-		Valid:  true,
-		Source: hr3,
+		Valid:      true,
+		Attachable: true,
+		Source:     hr3,
 		ParentRefs: []ParentRef{
 			{
 				Idx:     0,
@@ -272,16 +274,18 @@ func TestBuildGraph(t *testing.T) {
 				Source: gw1,
 				Listeners: map[string]*Listener{
 					"listener-80-1": {
-						Source: gw1.Spec.Listeners[0],
-						Valid:  true,
+						Source:     gw1.Spec.Listeners[0],
+						Valid:      true,
+						Attachable: true,
 						Routes: map[types.NamespacedName]*Route{
 							{Namespace: "test", Name: "hr-1"}: routeHR1,
 						},
 						SupportedKinds: []gatewayv1.RouteGroupKind{{Kind: "HTTPRoute"}},
 					},
 					"listener-443-1": {
-						Source: gw1.Spec.Listeners[1],
-						Valid:  true,
+						Source:     gw1.Spec.Listeners[1],
+						Valid:      true,
+						Attachable: true,
 						Routes: map[types.NamespacedName]*Route{
 							{Namespace: "test", Name: "hr-3"}: routeHR3,
 						},

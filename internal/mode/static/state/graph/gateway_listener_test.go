@@ -52,9 +52,10 @@ func TestValidateHTTPListener(t *testing.T) {
 
 			v := createHTTPListenerValidator(protectedPorts)
 
-			result := v(test.l)
+			result, attachable := v(test.l)
 
 			g.Expect(result).To(Equal(test.expected))
+			g.Expect(attachable).To(BeTrue())
 		})
 	}
 }
@@ -195,8 +196,9 @@ func TestValidateHTTPSListener(t *testing.T) {
 
 			v := createHTTPSListenerValidator(protectedPorts)
 
-			result := v(test.l)
+			result, attachable := v(test.l)
 			g.Expect(result).To(Equal(test.expected))
+			g.Expect(attachable).To(BeTrue())
 		})
 	}
 }
@@ -238,12 +240,14 @@ func TestValidateListenerHostname(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewWithT(t)
 
-			conds := validateListenerHostname(v1.Listener{Hostname: test.hostname})
+			conds, attachable := validateListenerHostname(v1.Listener{Hostname: test.hostname})
 
 			if test.expectErr {
 				g.Expect(conds).ToNot(BeEmpty())
+				g.Expect(attachable).To(BeFalse())
 			} else {
 				g.Expect(conds).To(BeEmpty())
+				g.Expect(attachable).To(BeTrue())
 			}
 		})
 	}
@@ -405,11 +409,13 @@ func TestValidateListenerLabelSelector(t *testing.T) {
 				},
 			}
 
-			conds := validateListenerLabelSelector(listener)
+			conds, attachable := validateListenerLabelSelector(listener)
 			if test.expectErr {
 				g.Expect(conds).ToNot(BeEmpty())
+				g.Expect(attachable).To(BeFalse())
 			} else {
 				g.Expect(conds).To(BeEmpty())
+				g.Expect(attachable).To(BeTrue())
 			}
 		})
 	}

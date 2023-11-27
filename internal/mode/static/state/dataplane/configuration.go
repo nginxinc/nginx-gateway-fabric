@@ -7,6 +7,7 @@ import (
 
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	v1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/graph"
@@ -202,70 +203,80 @@ func (hpr *hostPathRules) upsertListener(l *graph.Listener) {
 		hpr.httpsListeners = append(hpr.httpsListeners, l)
 	}
 
-	for routeNsName, r := range l.Routes {
-		var hostnames []string
-		for _, p := range r.ParentRefs {
-			if val, exist := p.Attachment.AcceptedHostnames[string(l.Source.Name)]; exist {
-				hostnames = val
+	for _, r := range l.Routes {
+		if !r.Valid {
+			continue
+		}
+
+		hpr.upsertRoute(r, l)
+	}
+}
+
+func (hpr *hostPathRules) upsertRoute(route *graph.Route, listener *graph.Listener) {
+	var hostnames []string
+	for _, p := range route.ParentRefs {
+		if val, exist := p.Attachment.AcceptedHostnames[string(listener.Source.Name)]; exist {
+			hostnames = val
+		}
+	}
+
+	for _, h := range hostnames {
+		if prevListener, exists := hpr.listenersForHost[h]; exists {
+			// override the previous listener if the new one has a more specific hostname
+			if listenerHostnameMoreSpecific(listener.Source.Hostname, prevListener.Source.Hostname) {
+				hpr.listenersForHost[h] = listener
+			}
+		} else {
+			hpr.listenersForHost[h] = listener
+		}
+
+		if _, exist := hpr.rulesPerHost[h]; !exist {
+			hpr.rulesPerHost[h] = make(map[pathAndType]PathRule)
+		}
+	}
+
+	for i, rule := range route.Source.Spec.Rules {
+		if !route.Rules[i].ValidMatches {
+			continue
+		}
+
+		var filters HTTPFilters
+		if route.Rules[i].ValidFilters {
+			filters = createHTTPFilters(rule.Filters)
+		} else {
+			filters = HTTPFilters{
+				InvalidFilter: &InvalidHTTPFilter{},
 			}
 		}
 
 		for _, h := range hostnames {
-			if prevListener, exists := hpr.listenersForHost[h]; exists {
-				// override the previous listener if the new one has a more specific hostname
-				if listenerHostnameMoreSpecific(l.Source.Hostname, prevListener.Source.Hostname) {
-					hpr.listenersForHost[h] = l
+			for _, m := range rule.Matches {
+				path := getPath(m.Path)
+
+				key := pathAndType{
+					path:     path,
+					pathType: *m.Path.Type,
 				}
-			} else {
-				hpr.listenersForHost[h] = l
-			}
 
-			if _, exist := hpr.rulesPerHost[h]; !exist {
-				hpr.rulesPerHost[h] = make(map[pathAndType]PathRule)
-			}
-		}
-
-		for i, rule := range r.Source.Spec.Rules {
-			if !r.Rules[i].ValidMatches {
-				continue
-			}
-
-			var filters HTTPFilters
-			if r.Rules[i].ValidFilters {
-				filters = createHTTPFilters(rule.Filters)
-			} else {
-				filters = HTTPFilters{
-					InvalidFilter: &InvalidHTTPFilter{},
+				rule, exist := hpr.rulesPerHost[h][key]
+				if !exist {
+					rule.Path = path
+					rule.PathType = convertPathType(*m.Path.Type)
 				}
-			}
 
-			for _, h := range hostnames {
-				for _, m := range rule.Matches {
-					path := getPath(m.Path)
+				// create iteration variable inside the loop to fix implicit memory aliasing
+				om := route.Source.ObjectMeta
 
-					key := pathAndType{
-						path:     path,
-						pathType: *m.Path.Type,
-					}
+				routeNsName := client.ObjectKeyFromObject(route.Source)
 
-					rule, exist := hpr.rulesPerHost[h][key]
-					if !exist {
-						rule.Path = path
-						rule.PathType = convertPathType(*m.Path.Type)
-					}
+				rule.MatchRules = append(rule.MatchRules, MatchRule{
+					Source:       &om,
+					BackendGroup: newBackendGroup(route.Rules[i].BackendRefs, routeNsName, i),
+					Filters:      filters,
+					Match:        convertMatch(m),
+				})
 
-					// create iteration variable inside the loop to fix implicit memory aliasing
-					om := r.Source.ObjectMeta
-
-					rule.MatchRules = append(rule.MatchRules, MatchRule{
-						Source:       &om,
-						BackendGroup: newBackendGroup(r.Rules[i].BackendRefs, routeNsName, i),
-						Filters:      filters,
-						Match:        convertMatch(m),
-					})
-
-					hpr.rulesPerHost[h][key] = rule
-				}
+				hpr.rulesPerHost[h][key] = rule
 			}
 		}
 	}
@@ -371,6 +382,10 @@ func buildUpstreams(
 		}
 
 		for _, route := range l.Routes {
+			if !route.Valid {
+				continue
+			}
+
 			for _, rule := range route.Rules {
 				if !rule.ValidMatches || !rule.ValidFilters {
 					// don't generate upstreams for rules that have invalid matches or filters

@@ -138,6 +138,7 @@ func TestBuildConfiguration(t *testing.T) {
 		r := &graph.Route{
 			Source: source,
 			Rules:  createRules(source, paths),
+			Valid:  true,
 			ParentRefs: []graph.ParentRef{
 				{
 					Attachment: &graph.ParentRefAttachmentStatus{
@@ -187,6 +188,14 @@ func TestBuildConfiguration(t *testing.T) {
 		"listener-80-1",
 		pathAndType{path: "/", pathType: prefix},
 	)
+	hr1Invalid, _, routeHR1Invalid := createTestResources(
+		"hr-1",
+		"foo.example.com",
+		"listener-80-1",
+		pathAndType{path: "/", pathType: prefix},
+	)
+	routeHR1Invalid.Valid = false
+
 	hr2, expHR2Groups, routeHR2 := createTestResources(
 		"hr-2",
 		"bar.example.com",
@@ -254,6 +263,13 @@ func TestBuildConfiguration(t *testing.T) {
 		"listener-443-1",
 		pathAndType{path: "/", pathType: prefix},
 	)
+	httpsHR1Invalid, _, httpsRouteHR1Invalid := createTestResources(
+		"https-hr-1",
+		"foo.example.com",
+		"listener-443-1",
+		pathAndType{path: "/", pathType: prefix},
+	)
+	httpsRouteHR1Invalid.Valid = false
 
 	httpsHR2, expHTTPSHR2Groups, httpsRouteHR2 := createTestResources(
 		"https-hr-2",
@@ -464,6 +480,66 @@ func TestBuildConfiguration(t *testing.T) {
 				SSLKeyPairs: map[SSLKeyPairID]SSLKeyPair{},
 			},
 			msg: "http listener with no routes",
+		},
+		{
+			graph: &graph.Graph{
+				GatewayClass: &graph.GatewayClass{
+					Source: &v1.GatewayClass{},
+					Valid:  true,
+				},
+				Gateway: &graph.Gateway{
+					Source: &v1.Gateway{},
+					Listeners: map[string]*graph.Listener{
+						"listener-80-1": {
+							Source: listener80,
+							Valid:  true,
+							Routes: map[types.NamespacedName]*graph.Route{
+								client.ObjectKeyFromObject(hr1Invalid): routeHR1Invalid,
+							},
+						},
+						"listener-443-1": {
+							Source: listener443, // nil hostname
+							Valid:  true,
+							Routes: map[types.NamespacedName]*graph.Route{
+								client.ObjectKeyFromObject(httpsHR1Invalid): httpsRouteHR1Invalid,
+							},
+							ResolvedSecret: &secret1NsName,
+						},
+					},
+				},
+				Routes: map[types.NamespacedName]*graph.Route{
+					client.ObjectKeyFromObject(hr1Invalid): routeHR1Invalid,
+				},
+				ReferencedSecrets: map[types.NamespacedName]*graph.Secret{
+					secret1NsName: secret1,
+				},
+			},
+			expConf: Configuration{
+				HTTPServers: []VirtualServer{
+					{
+						IsDefault: true,
+						Port:      80,
+					},
+				},
+				SSLServers: []VirtualServer{
+					{
+						IsDefault: true,
+						Port:      443,
+					},
+					{
+						Hostname: wildcardHostname,
+						SSL:      &SSL{KeyPairID: "ssl_keypair_test_secret-1"},
+						Port:     443,
+					},
+				},
+				SSLKeyPairs: map[SSLKeyPairID]SSLKeyPair{
+					"ssl_keypair_test_secret-1": {
+						Cert: []byte("cert-1"),
+						Key:  []byte("privateKey-1"),
+					},
+				},
+			},
+			msg: "http and https listeners with no valid routes",
 		},
 		{
 			graph: &graph.Graph{
@@ -1749,6 +1825,13 @@ func TestBuildUpstreams(t *testing.T) {
 		},
 	}
 
+	abcEndpoints := []resolver.Endpoint{
+		{
+			Address: "14.0.0.0",
+			Port:    80,
+		},
+	}
+
 	createBackendRefs := func(serviceNames ...string) []graph.BackendRef {
 		var backends []graph.BackendRef
 		for _, name := range serviceNames {
@@ -1775,36 +1858,50 @@ func TestBuildUpstreams(t *testing.T) {
 
 	hr4Refs1 := createBackendRefs("baz2")
 
-	invalidRefs := createBackendRefs("invalid")
+	nonExistingRefs := createBackendRefs("non-existing")
+
+	invalidHRRefs := createBackendRefs("abc")
 
 	routes := map[types.NamespacedName]*graph.Route{
 		{Name: "hr1", Namespace: "test"}: {
+			Valid: true,
 			Rules: refsToValidRules(hr1Refs0, hr1Refs1),
 		},
 		{Name: "hr2", Namespace: "test"}: {
+			Valid: true,
 			Rules: refsToValidRules(hr2Refs0, hr2Refs1),
 		},
 		{Name: "hr3", Namespace: "test"}: {
+			Valid: true,
 			Rules: refsToValidRules(hr3Refs0),
 		},
 	}
 
 	routes2 := map[types.NamespacedName]*graph.Route{
 		{Name: "hr4", Namespace: "test"}: {
+			Valid: true,
 			Rules: refsToValidRules(hr4Refs0, hr4Refs1),
+		},
+	}
+
+	routesWithNonExistingRefs := map[types.NamespacedName]*graph.Route{
+		{Name: "non-existing", Namespace: "test"}: {
+			Valid: true,
+			Rules: refsToValidRules(nonExistingRefs),
 		},
 	}
 
 	invalidRoutes := map[types.NamespacedName]*graph.Route{
 		{Name: "invalid", Namespace: "test"}: {
-			Rules: refsToValidRules(invalidRefs),
+			Valid: false,
+			Rules: refsToValidRules(invalidHRRefs),
 		},
 	}
 
 	listeners := map[string]*graph.Listener{
 		"invalid-listener": {
 			Valid:  false,
-			Routes: invalidRoutes, // shouldn't be included since listener is invalid
+			Routes: routesWithNonExistingRefs, // shouldn't be included since listener is invalid
 		},
 		"listener-1": {
 			Valid:  true,
@@ -1813,6 +1910,10 @@ func TestBuildUpstreams(t *testing.T) {
 		"listener-2": {
 			Valid:  true,
 			Routes: routes2,
+		},
+		"listener-3": {
+			Valid:  true,
+			Routes: invalidRoutes, // shouldn't be included since routes are invalid
 		},
 	}
 
@@ -1863,6 +1964,8 @@ func TestBuildUpstreams(t *testing.T) {
 			return fooEndpoints, nil
 		case "nil-endpoints":
 			return nil, errors.New(nilEndpointsErrMsg)
+		case "abc":
+			return abcEndpoints, nil
 		default:
 			return nil, fmt.Errorf("unexpected service %s", svc.Name)
 		}
