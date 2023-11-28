@@ -9,7 +9,7 @@ docs: "DOCS-000"
 
 ## Overview
 
-While most users will install NGINX Gateway Fabric [with Helm]({{< relref "/installation/installing-ngf/helm.md" >}}) or [Kubernetes manifests]({{< relref "/installation/installing-ngf/manifests.md" >}}), manually building the images can be helpful for testing and development purposes. Follow the steps in this document to build the NGINX Gateway Fabric and NGINX images.
+While most users will install NGINX Gateway Fabric [with Helm]({{< relref "/installation/installing-ngf/helm.md" >}}) or [Kubernetes manifests]({{< relref "/installation/installing-ngf/manifests.md" >}}), manually building the [NGINX Gateway Fabric and NGINX images]({{< relref "/overview/gateway-architecture.md#the-nginx-gateway-fabric-pod" >}}) can be helpful for testing and development purposes. Follow the steps in this document to build the NGINX Gateway Fabric and NGINX images.
 
 ## Prerequisites
 
