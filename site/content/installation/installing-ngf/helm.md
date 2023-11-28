@@ -51,11 +51,11 @@ To upgrade NGINX Gateway Fabric and get the latest features and improvements, ta
 To upgrade your Gateway API resources, take the following steps:
 
 - Verify the Gateway API resources are compatible with your NGINX Gateway Fabric version. Refer to the [Technical Specifications]({{< relref "reference/technical-specifications.md" >}}) for details.
-- Review the [release notes](https://github.com/kubernetes-sigs/gateway-api/releases/tag/v0.8.1) for any important upgrade-specific information.
+- Review the [release notes](https://github.com/kubernetes-sigs/gateway-api/releases/tag/v1.0.0) for any important upgrade-specific information.
 - To upgrade the Gateway API resources, run:
 
    ```shell
-   kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v0.8.1/standard-install.yaml
+   kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/standard-install.yaml
    ```
 
 ### Upgrade NGINX Gateway Fabric CRDs
