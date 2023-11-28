@@ -51,7 +51,7 @@ NGINX Gateway Fabric consists of two containers:
 
 These containers are deployed in a single pod as a Kubernetes Deployment.
 
-The `nginx-gateway`, or the control plane, is a [Kubernetes controller](https://kubernetes.io/docs/concepts/architecture/controller/), written with the [controller-runtime](https://github.com/kubernetes-sigs/controller-runtime) library. It watches Kubernetes objects (Services, Endpoints, Secrets, and Gateway API CRDs), translates them to NGINX configuration, and configures NGINX. 
+The `nginx-gateway`, or the control plane, is a [Kubernetes controller](https://kubernetes.io/docs/concepts/architecture/controller/), written with the [controller-runtime](https://github.com/kubernetes-sigs/controller-runtime) library. It watches Kubernetes objects (services, endpoints, secrets, and Gateway API CRDs), translates them to NGINX configuration, and configures NGINX. 
 
 This configuration happens in two stages:
 
