@@ -32,7 +32,7 @@ Deploying NGINX Gateway Fabric with Kubernetes manifests takes only a few steps.
    ```shell
    kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/webhook-install.yaml
    ```
-{{< important >}}The validating webhook is not needed if you are running Kubernetes 1.25+. Validation is done using CEL on the CRDs. See the [resource validation doc]({{< relref "/overview/resource-validation.md" >}}) for more information.
+{{< important >}}The validating webhook is not needed if you are running Kubernetes 1.25+. Validation is done using CEL on the CRDs. See the [resource validation doc]({{< relref "/overview/resource-validation.md" >}}) for more information. {{< /important >}}
 
 2. **Deploy the NGINX Gateway Fabric CRDs:**
    - Next, deploy the NGINX Gateway Fabric CRDs:
