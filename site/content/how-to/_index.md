@@ -1,7 +1,7 @@
 ---
 title: "How-To Guides"
 description: 
-weight: 200
+weight: 300
 linkTitle: "Guides"
 menu: 
   docs:

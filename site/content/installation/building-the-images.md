@@ -1,12 +1,15 @@
 ---
 title: "Building NGINX Gateway Fabric and NGINX Images"
-description: "Learn how to build the NGINX Gateway Fabric and NGINX images."
 weight: 300
 toc: true
 docs: "DOCS-000"
 ---
+   
+{{<custom-styles>}}
 
-# Building the Images
+## Overview
+
+While most users will install NGINX Gateway Fabric [with Helm]({{< relref "/installation/installing-ngf/helm.md" >}}) or [Kubernetes manifests]({{< relref "/installation/installing-ngf/manifests.md" >}}), manually building the images can be helpful for testing and development purposes. Follow the steps in this document to build the NGINX Gateway Fabric and NGINX images.
 
 ## Prerequisites
 
