@@ -227,7 +227,7 @@ Server address: 10.244.0.7:8080
 Server name: tea-post-b59b8596b-g586r
 ```
 
-This request should receive a response from the `tea-post` Pod. Any other type of method, such as PATCH, will result in a `404 Not Found` response.
+This request should receive a response from the `tea-post` pod. Any other type of method, such as PATCH, will result in a `404 Not Found` response.
 
 
 ## Troubleshooting
