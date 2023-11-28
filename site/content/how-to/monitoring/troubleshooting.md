@@ -8,7 +8,7 @@ docs: "DOCS-000"
 
 {{< custom-styles >}}
 
-This topic describes possible issues users might encounter when using Instance Manager. When possible, suggested workarounds are provided.
+This topic describes possible issues users might encounter when using NGINX Gateway Fabric. When possible, suggested workarounds are provided.
 
 ## NGINX fails to reload
 
