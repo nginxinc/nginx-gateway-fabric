@@ -24,7 +24,7 @@ Learn about our [design principles](/docs/developer/design-principles.md) and [a
 4. Deploy various [examples](examples).
 5. Read our [How-to guides](https://docs.nginx.com/nginx-gateway-fabric/how-to/).
 
-You can find the comprehensive user documentation in the [NGINX Documentation](https://docs.nginx.com/nginx-gateway-fabric/) website.
+You can find the comprehensive NGINX Gateway Fabric user documentation on the [NGINX Documentation](https://docs.nginx.com/nginx-gateway-fabric/) website.
 
 ## NGINX Gateway Fabric Releases
 
