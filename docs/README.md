@@ -1,6 +1,8 @@
 # NGINX Gateway Fabric Documentation
 
-This directory contains the developer documentation and the Enhancement proposals relating to NGINX Gateway Fabric.
+This directory contains the developer documentation and the enhancement proposals relating to NGINX Gateway Fabric.
+
+_Please note: You can find the user documentation for NGINX Gateway Fabric in the [NGINX Documentation](https://docs.nginx.com/nginx-gateway-fabric/) website._
 
 ## Contents
 
