@@ -36,7 +36,7 @@ The figure shows:
 - _Gateway AB_, created by _Cluster Operator_, requests a point where traffic can be translated to Services within the cluster. This Gateway includes a listener with a hostname `*.example.com`. Application Developers have the ability to attach their application's routes to this Gateway if their application's hostname matches `*.example.com`.
 - _Application A_ with two pods deployed in the _applications_ namespace by _Application Developer A_. To expose the application to its clients (_Clients A_) via the host `a.example.com`, _Application Developer A_ creates _HTTPRoute A_ and attaches it to `Gateway AB`.
 - _Application B_ with one pod deployed in the _applications_ namespace by _Application Developer B_. To expose the application to its clients (_Clients B_) via the host `b.example.com`, _Application Developer B_ creates _HTTPRoute B_ and attaches it to `Gateway AB`.
-- _Public Endpoint_, which fronts the _NGF_ pod. This is typically a TCP load balancer (cloud, software, or hardware) or a combination of such load balancer with a NodePort Service. _Clients A_ and _B_ connect to their applications via the _Public Endpoint_.
+- _Public Endpoint_, which fronts the _NGF_ pod. This is typically a TCP load balancer (cloud, software, or hardware) or a combination of such load balancer with a NodePort service. _Clients A_ and _B_ connect to their applications via the _Public Endpoint_.
 
 The yellow and purple arrows represent connections related to the client traffic, and the black arrows represent access to the Kubernetes API. The resources within the cluster are color-coded based on the user responsible for their creation.  
 
