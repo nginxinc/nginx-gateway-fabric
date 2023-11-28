@@ -122,7 +122,7 @@ jobs:
         if: ${{ github.event_name == 'push' && github.ref != 'refs/heads/main' }}
 
       - name: Download Syft
-        uses: anchore/sbom-action/download-syft@78fc58e266e87a38d4194b2137a3d4e9bcaf7ca1 # v0.14.3
+        uses: anchore/sbom-action/download-syft@fd74a6fb98a204a1ad35bbfae0122c1a302ff88b # v0.15.0
         if: github.ref_type == 'tag'
 
       - name: Install Cosign
@@ -190,7 +190,7 @@ jobs:
             type=ref,event=branch,suffix=-rc,enable=${{ startsWith(github.ref, 'refs/heads/release') }}
 
       - name: Build NGF Docker Image
-        uses: docker/build-push-action@0565240e2d4ab88bba5387d719585280857ece09 # v5.0.0
+        uses: docker/build-push-action@4a13e500e55cf31b7a5d59a38ab2040ab0f42f56 # v5.1.0
         with:
           file: build/Dockerfile
           tags: ${{ steps.ngf-meta.outputs.tags }}
@@ -202,7 +202,7 @@ jobs:
           pull: true
 
       - name: Build NGINX Docker Image
-        uses: docker/build-push-action@0565240e2d4ab88bba5387d719585280857ece09 # v5.0.0
+        uses: docker/build-push-action@4a13e500e55cf31b7a5d59a38ab2040ab0f42f56 # v5.1.0
         with:
           file: build/Dockerfile.nginx
           tags: ${{ steps.nginx-meta.outputs.tags }}
@@ -221,22 +221,21 @@ jobs:
           kube_config=${{ github.workspace }}/deploy/helm-chart/kube-${{ github.run_id }}-helm
           make create-kind-cluster KIND_KUBE_CONFIG=${kube_config}
           echo "KUBECONFIG=${kube_config}" >> "$GITHUB_ENV"
-          kind load docker-image ${{ steps.ngf-meta.outputs.tags }} ${{ steps.nginx-meta.outputs.tags }}
-          kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v0.8.1/standard-install.yaml
-          kubectl wait --for=condition=complete job/gateway-api-admission-patch job/gateway-api-admission -n gateway-system
+          kind load docker-image ghcr.io/nginxinc/nginx-gateway-fabric:${{ steps.ngf-meta.outputs.version }} ghcr.io/nginxinc/nginx-gateway-fabric/nginx:${{ steps.nginx-meta.outputs.version }}
+          kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/standard-install.yaml
 
       - name: Install Chart
         run: >
           helm install
-          helm-$(echo ${{ steps.ngf-meta.outputs.tags }} | tr '.' '-' | cut -d ":" -f 2)
+          helm-$(echo ${{ steps.ngf-meta.outputs.version }} | tr '.' '-')
           .
           --wait
           --create-namespace
-          --set nginxGateway.image.repository=$(echo ${{ steps.ngf-meta.outputs.tags }} | cut -d ":" -f 1)
-          --set nginxGateway.image.tag=$(echo ${{ steps.ngf-meta.outputs.tags }} | cut -d ":" -f 2)
+          --set nginxGateway.image.repository=ghcr.io/nginxinc/nginx-gateway-fabric
+          --set nginxGateway.image.tag=${{ steps.ngf-meta.outputs.version }}
           --set nginxGateway.image.pullPolicy=Never
-          --set nginx.image.repository=$(echo ${{ steps.nginx-meta.outputs.tags }} | cut -d ":" -f 1)
-          --set nginx.image.tag=$(echo ${{ steps.nginx-meta.outputs.tags }} | cut -d ":" -f 2)
+          --set nginx.image.repository=ghcr.io/nginxinc/nginx-gateway-fabric/nginx
+          --set nginx.image.tag=${{ steps.nginx-meta.outputs.version }}
           --set nginx.image.pullPolicy=Never
           --set service.type=NodePort
           -n nginx-gateway
@@ -293,7 +292,7 @@ jobs:
             type=ref,event=branch,suffix=-rc,enable=${{ startsWith(github.ref, 'refs/heads/release') }}
 
       - name: Build Docker Image
-        uses: docker/build-push-action@0565240e2d4ab88bba5387d719585280857ece09 # v5.0.0
+        uses: docker/build-push-action@4a13e500e55cf31b7a5d59a38ab2040ab0f42f56 # v5.1.0
         with:
           file: ${{ matrix.container == 'nginx' && 'build/Dockerfile.nginx' || 'build/Dockerfile' }}
           context: "."
@@ -323,7 +322,7 @@ jobs:
           ignore-unfixed: "true"
 
       - name: Upload Trivy scan results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@689fdc5193eeb735ecb2e52e819e3382876f93f4 # v2.22.6
+        uses: github/codeql-action/upload-sarif@407ffafae6a767df3e0230c3df91b6443ae8df75 # v2.22.8
         continue-on-error: true
         with:
           sarif_file: trivy-results-nginx-gateway-fabric${{ matrix.container == 'nginx' && '-nginx' || '' }}.sarif

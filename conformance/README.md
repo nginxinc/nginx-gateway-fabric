@@ -38,23 +38,24 @@ update-ngf-manifest            Update the NGF deployment manifest image names an
 
 **Note:** The following variables are configurable when running the below `make` commands:
 
-| Variable                | Default                                                                                                       | Description                                                                                                               |
-|-------------------------|---------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------|
-| TAG                     | latest                                                                                                        | The tag for the conformance test image                                                                                    |
-| PREFIX                  | conformance-test-runner                                                                                       | The prefix for the conformance test image                                                                                 |
-| NGF_TAG                 | edge                                                                                                          | The tag for the locally built NGF image                                                                                   |
-| NGF_PREFIX              | nginx-gateway-fabric                                                                                      | The prefix for the locally built NGF image                                                                                |
-| GW_API_VERSION          | 0.8.1                                                                                                         | Tag for the Gateway API version to check out. Set to `main` to get the latest version                                     |
-| KIND_IMAGE              | Latest kind image, as defined in the tests/Dockerfile                                                         | The kind image to use                                                                                            |
-| KIND_KUBE_CONFIG        | ~/.kube/kind/config                                                                                           | The location of the kubeconfig                                                                                            |
-| GATEWAY_CLASS           | nginx                                                                                                         | The gateway class that should be used for the tests                                                                       |
-| SUPPORTED_FEATURES      | HTTPRoute,HTTPRouteQueryParamMatching, HTTPRouteMethodMatching,HTTPRoutePortRedirect, HTTPRouteSchemeRedirect | The supported features that should be tested by the conformance tests. Ensure the list is comma separated with no spaces. |
-| EXEMPT_FEATURES         | ReferenceGrant                                                                                                | The features that should not be tested by the conformance tests                                                           |
-| NGINX_IMAGE             | as defined in the provisioner/static-deployment.yaml file                                                     | The NGINX image for the NGF deployments                                                                                   |
-| NGF_MANIFEST            | ../deploy/manifests/nginx-gateway.yaml                                                                        | The location of the NGF manifest                                                                                          |
-| SERVICE_MANIFEST        | ../deploy/manifests/service/nodeport.yaml                                                                     | The location of the NGF Service manifest                                                                                  |
-| STATIC_MANIFEST         | provisioner/static-deployment.yaml                                                                            | The location of the NGF static deployment manifest                                                                        |
-| PROVISIONER_MANIFEST    | provisioner/provisioner.yaml                                                                                  | The location of the NGF provisioner manifest                                                                              |
+| Variable             | Default                                                                                                       | Description                                                                                                               |
+|----------------------|---------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------|
+| CONFORMANCE_TAG                  | latest                                                                                                        | The tag for the conformance test image                                                                                    |
+| CONFORMANCE_PREFIX               | conformance-test-runner                                                                                       | The prefix for the conformance test image                                                                                 |
+| TAG              | edge                                                                                                          | The tag for the locally built NGF image                                                                                   |
+| PREFIX           | nginx-gateway-fabric                                                                                          | The prefix for the locally built NGF image                                                                                |
+| GW_API_VERSION       | 1.0.0                                                                                                         | Tag for the Gateway API version to check out. Set to `main` to get the latest version                                     |
+| KIND_IMAGE           | Latest kind image, as defined in the tests/Dockerfile                                                         | The kind image to use                                                                                                     |
+| KIND_KUBE_CONFIG     | ~/.kube/kind/config                                                                                           | The location of the kubeconfig                                                                                            |
+| GATEWAY_CLASS        | nginx                                                                                                         | The gateway class that should be used for the tests                                                                       |
+| SUPPORTED_FEATURES   | HTTPRoute,HTTPRouteQueryParamMatching, HTTPRouteMethodMatching,HTTPRoutePortRedirect, HTTPRouteSchemeRedirect | The supported features that should be tested by the conformance tests. Ensure the list is comma separated with no spaces. |
+| EXEMPT_FEATURES      | ReferenceGrant                                                                                                | The features that should not be tested by the conformance tests                                                           |
+| NGINX_IMAGE          | as defined in the provisioner/static-deployment.yaml file                                                     | The NGINX image for the NGF deployments                                                                                   |
+| NGF_MANIFEST         | ../deploy/manifests/nginx-gateway.yaml                                                                        | The location of the NGF manifest                                                                                          |
+| SERVICE_MANIFEST     | ../deploy/manifests/service/nodeport.yaml                                                                     | The location of the NGF Service manifest                                                                                  |
+| STATIC_MANIFEST      | provisioner/static-deployment.yaml                                                                            | The location of the NGF static deployment manifest                                                                        |
+| PROVISIONER_MANIFEST | provisioner/provisioner.yaml                                                                                  | The location of the NGF provisioner manifest                                                                              |
+| INSTALL_WEBHOOK      | false                                                                                                         | Install the Gateway API Validating Webhook. Necessary for Kubernetes versions < 1.25.                                     |
 
 ### Step 1 - Create a kind Cluster
 
@@ -96,7 +97,7 @@ make install-ngf-local-no-build
 > Note:  If choosing this option, the following step *must* be completed manually *before* you build the image:
 
 ```makefile
-make update-ngf-manifest NGF_PREFIX=<ngf_repo_name> NGF_TAG=<ngf_image_tag>
+make update-ngf-manifest PREFIX=<ngf_repo_name> TAG=<ngf_image_tag>
 ```
 
 #### *Option 3* Install NGINX Gateway Fabric from edge to configured kind cluster

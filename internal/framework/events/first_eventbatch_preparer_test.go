@@ -14,7 +14,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/gateway-api/apis/v1beta1"
+	v1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/events"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/events/eventsfakes"
@@ -32,9 +32,9 @@ var _ = Describe("FirstEventBatchPreparer", func() {
 		fakeReader = &eventsfakes.FakeReader{}
 		preparer = events.NewFirstEventBatchPreparerImpl(
 			fakeReader,
-			[]client.Object{&v1beta1.GatewayClass{ObjectMeta: metav1.ObjectMeta{Name: gcName}}},
+			[]client.Object{&v1.GatewayClass{ObjectMeta: metav1.ObjectMeta{Name: gcName}}},
 			[]client.ObjectList{
-				&v1beta1.HTTPRouteList{},
+				&v1.HTTPRouteList{},
 			})
 	})
 
@@ -48,7 +48,7 @@ var _ = Describe("FirstEventBatchPreparer", func() {
 			fakeReader.GetCalls(
 				func(ctx context.Context, name types.NamespacedName, object client.Object, opts ...client.GetOption) error {
 					Expect(name).Should(Equal(types.NamespacedName{Name: gcName}))
-					Expect(object).Should(BeAssignableToTypeOf(&v1beta1.GatewayClass{}))
+					Expect(object).Should(BeAssignableToTypeOf(&v1.GatewayClass{}))
 
 					return apierrors.NewNotFound(schema.GroupResource{}, "test")
 				},
@@ -62,25 +62,25 @@ var _ = Describe("FirstEventBatchPreparer", func() {
 		})
 
 		It("should prepare one event for each resource type", func() {
-			gatewayClass := v1beta1.GatewayClass{ObjectMeta: metav1.ObjectMeta{Name: gcName}}
+			gatewayClass := v1.GatewayClass{ObjectMeta: metav1.ObjectMeta{Name: gcName}}
 
 			fakeReader.GetCalls(
 				func(ctx context.Context, name types.NamespacedName, object client.Object, opts ...client.GetOption) error {
 					Expect(name).Should(Equal(types.NamespacedName{Name: gcName}))
-					Expect(object).Should(BeAssignableToTypeOf(&v1beta1.GatewayClass{}))
+					Expect(object).Should(BeAssignableToTypeOf(&v1.GatewayClass{}))
 
 					reflect.Indirect(reflect.ValueOf(object)).Set(reflect.Indirect(reflect.ValueOf(&gatewayClass)))
 					return nil
 				},
 			)
 
-			httpRoute := v1beta1.HTTPRoute{ObjectMeta: metav1.ObjectMeta{Name: "test"}}
+			httpRoute := v1.HTTPRoute{ObjectMeta: metav1.ObjectMeta{Name: "test"}}
 
 			fakeReader.ListCalls(func(ctx context.Context, list client.ObjectList, option ...client.ListOption) error {
 				Expect(option).To(BeEmpty())
 
 				switch typedList := list.(type) {
-				case *v1beta1.HTTPRouteList:
+				case *v1.HTTPRouteList:
 					typedList.Items = append(typedList.Items, httpRoute)
 				default:
 					Fail(fmt.Sprintf("unknown type: %T", typedList))
@@ -107,8 +107,8 @@ var _ = Describe("FirstEventBatchPreparer", func() {
 				fakeReader.GetReturns(apierrors.NewNotFound(schema.GroupResource{}, "test"))
 				fakeReader.ListCalls(
 					func(ctx context.Context, list client.ObjectList, option ...client.ListOption) error {
-						httpRoute := v1beta1.HTTPRoute{ObjectMeta: metav1.ObjectMeta{Name: "test"}}
-						typedList := list.(*v1beta1.HTTPRouteList)
+						httpRoute := v1.HTTPRoute{ObjectMeta: metav1.ObjectMeta{Name: "test"}}
+						typedList := list.(*v1.HTTPRouteList)
 						typedList.Items = append(typedList.Items, httpRoute)
 
 						return nil
@@ -147,9 +147,9 @@ var _ = Describe("FirstEventBatchPreparer", func() {
 				fakeReader.ListReturns(nil)
 
 				switch obj.(type) {
-				case *v1beta1.GatewayClass:
+				case *v1.GatewayClass:
 					fakeReader.GetReturns(readerError)
-				case *v1beta1.HTTPRoute:
+				case *v1.HTTPRoute:
 					fakeReader.ListReturnsOnCall(0, readerError)
 				default:
 					Fail(fmt.Sprintf("Unknown type: %T", obj))
@@ -159,8 +159,8 @@ var _ = Describe("FirstEventBatchPreparer", func() {
 				Expect(batch).To(BeNil())
 				Expect(err).To(MatchError(readerError))
 			},
-			Entry("GatewayClass", &v1beta1.GatewayClass{}),
-			Entry("HTTPRoute", &v1beta1.HTTPRoute{}),
+			Entry("GatewayClass", &v1.GatewayClass{}),
+			Entry("HTTPRoute", &v1.HTTPRoute{}),
 		)
 	})
 })

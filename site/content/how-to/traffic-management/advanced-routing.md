@@ -43,7 +43,7 @@ The [gateway](https://gateway-api.sigs.k8s.io/api-types/gateway/) resource is ty
 
 ```yaml
 kubectl apply -f - <<EOF
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
   name: cafe
@@ -62,7 +62,7 @@ The [HTTPRoute](https://gateway-api.sigs.k8s.io/api-types/httproute/) is typical
 
 ```yaml
 kubectl apply -f - <<EOF
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
   name: coffee
@@ -163,7 +163,7 @@ We are reusing the previous gateway for these applications, so all we need to cr
 
 ```yaml
 kubectl apply -f - <<EOF
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
   name: tea

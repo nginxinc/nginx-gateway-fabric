@@ -97,7 +97,7 @@ spec:
 Next we need to deploy our gateway. You can use the YAML manifest below, updating the `spec.listeners[1].hostname` field to the required value for your environment.
 
 ```yaml
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
   name: gateway
@@ -181,7 +181,7 @@ spec:
 Deploy our HTTPRoute to configure our routing rules for the coffee application. Note the `parentRefs` section in the spec refers to the listener configured in the previous step.
 
 ```yaml
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
   name: coffee

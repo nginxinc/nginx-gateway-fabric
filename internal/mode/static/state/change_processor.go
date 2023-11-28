@@ -13,9 +13,10 @@ import (
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
+	v1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	gwapivalidation "sigs.k8s.io/gateway-api/apis/v1beta1/validation"
+	gwapivalidation "sigs.k8s.io/gateway-api/apis/v1/validation"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/graph"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/relationship"
@@ -87,9 +88,9 @@ type ChangeProcessorImpl struct {
 // NewChangeProcessorImpl creates a new ChangeProcessorImpl for the Gateway resource with the configured namespace name.
 func NewChangeProcessorImpl(cfg ChangeProcessorConfig) *ChangeProcessorImpl {
 	clusterStore := graph.ClusterState{
-		GatewayClasses:  make(map[types.NamespacedName]*v1beta1.GatewayClass),
-		Gateways:        make(map[types.NamespacedName]*v1beta1.Gateway),
-		HTTPRoutes:      make(map[types.NamespacedName]*v1beta1.HTTPRoute),
+		GatewayClasses:  make(map[types.NamespacedName]*v1.GatewayClass),
+		Gateways:        make(map[types.NamespacedName]*v1.Gateway),
+		HTTPRoutes:      make(map[types.NamespacedName]*v1.HTTPRoute),
 		Services:        make(map[types.NamespacedName]*apiv1.Service),
 		Namespaces:      make(map[types.NamespacedName]*apiv1.Namespace),
 		ReferenceGrants: make(map[types.NamespacedName]*v1beta1.ReferenceGrant),
@@ -119,17 +120,17 @@ func NewChangeProcessorImpl(cfg ChangeProcessorConfig) *ChangeProcessorImpl {
 		extractGVK,
 		[]changeTrackingUpdaterObjectTypeCfg{
 			{
-				gvk:               extractGVK(&v1beta1.GatewayClass{}),
+				gvk:               extractGVK(&v1.GatewayClass{}),
 				store:             newObjectStoreMapAdapter(clusterStore.GatewayClasses),
 				trackUpsertDelete: true,
 			},
 			{
-				gvk:               extractGVK(&v1beta1.Gateway{}),
+				gvk:               extractGVK(&v1.Gateway{}),
 				store:             newObjectStoreMapAdapter(clusterStore.Gateways),
 				trackUpsertDelete: true,
 			},
 			{
-				gvk:               extractGVK(&v1beta1.HTTPRoute{}),
+				gvk:               extractGVK(&v1.HTTPRoute{}),
 				store:             newObjectStoreMapAdapter(clusterStore.HTTPRoutes),
 				trackUpsertDelete: true,
 			},
@@ -173,10 +174,10 @@ func NewChangeProcessorImpl(cfg ChangeProcessorConfig) *ChangeProcessorImpl {
 			// the webhook doesn't validate them.
 			// It only validates a GatewayClass update that requires the previous version of the resource,
 			// which NGF cannot reliably provide - for example, after NGF restarts).
-			// https://github.com/kubernetes-sigs/gateway-api/blob/v0.8.1/apis/v1beta1/validation/gatewayclass.go#L28
-			case *v1beta1.Gateway:
+			// https://github.com/kubernetes-sigs/gateway-api/blob/v1.0.0/apis/v1/validation/gatewayclass.go#L28
+			case *v1.Gateway:
 				err = gwapivalidation.ValidateGateway(o).ToAggregate()
-			case *v1beta1.HTTPRoute:
+			case *v1.HTTPRoute:
 				err = gwapivalidation.ValidateHTTPRoute(o).ToAggregate()
 			}
 

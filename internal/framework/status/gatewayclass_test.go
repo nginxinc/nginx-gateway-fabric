@@ -6,7 +6,7 @@ import (
 
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/gateway-api/apis/v1beta1"
+	v1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 )
@@ -18,7 +18,7 @@ func TestPrepareGatewayClassStatus(t *testing.T) {
 		ObservedGeneration: 1,
 		Conditions:         CreateTestConditions("Test"),
 	}
-	expected := v1beta1.GatewayClassStatus{
+	expected := v1.GatewayClassStatus{
 		Conditions: CreateExpectedAPIConditions("Test", 1, transitionTime),
 	}
 

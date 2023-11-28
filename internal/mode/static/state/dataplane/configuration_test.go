@@ -11,7 +11,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/gateway-api/apis/v1beta1"
+	v1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/graph"
@@ -25,13 +25,13 @@ func TestBuildConfiguration(t *testing.T) {
 		invalidFiltersPath = "/not-valid-filters"
 	)
 
-	createRoute := func(name, hostname, listenerName string, paths ...pathAndType) *v1beta1.HTTPRoute {
-		rules := make([]v1beta1.HTTPRouteRule, 0, len(paths))
+	createRoute := func(name, hostname, listenerName string, paths ...pathAndType) *v1.HTTPRoute {
+		rules := make([]v1.HTTPRouteRule, 0, len(paths))
 		for _, p := range paths {
-			rules = append(rules, v1beta1.HTTPRouteRule{
-				Matches: []v1beta1.HTTPRouteMatch{
+			rules = append(rules, v1.HTTPRouteRule{
+				Matches: []v1.HTTPRouteMatch{
 					{
-						Path: &v1beta1.HTTPPathMatch{
+						Path: &v1.HTTPPathMatch{
 							Value: helpers.GetPointer(p.path),
 							Type:  helpers.GetPointer(p.pathType),
 						},
@@ -39,30 +39,30 @@ func TestBuildConfiguration(t *testing.T) {
 				},
 			})
 		}
-		return &v1beta1.HTTPRoute{
+		return &v1.HTTPRoute{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: "test",
 				Name:      name,
 			},
-			Spec: v1beta1.HTTPRouteSpec{
-				CommonRouteSpec: v1beta1.CommonRouteSpec{
-					ParentRefs: []v1beta1.ParentReference{
+			Spec: v1.HTTPRouteSpec{
+				CommonRouteSpec: v1.CommonRouteSpec{
+					ParentRefs: []v1.ParentReference{
 						{
-							Namespace:   (*v1beta1.Namespace)(helpers.GetPointer("test")),
+							Namespace:   (*v1.Namespace)(helpers.GetPointer("test")),
 							Name:        "gateway",
-							SectionName: (*v1beta1.SectionName)(helpers.GetPointer(listenerName)),
+							SectionName: (*v1.SectionName)(helpers.GetPointer(listenerName)),
 						},
 					},
 				},
-				Hostnames: []v1beta1.Hostname{
-					v1beta1.Hostname(hostname),
+				Hostnames: []v1.Hostname{
+					v1.Hostname(hostname),
 				},
 				Rules: rules,
 			},
 		}
 	}
 
-	addFilters := func(hr *v1beta1.HTTPRoute, filters []v1beta1.HTTPRouteFilter) {
+	addFilters := func(hr *v1.HTTPRoute, filters []v1.HTTPRouteFilter) {
 		for i := range hr.Spec.Rules {
 			hr.Spec.Rules[i].Filters = filters
 		}
@@ -108,7 +108,7 @@ func TestBuildConfiguration(t *testing.T) {
 		return []graph.BackendRef{validBackendRef}
 	}
 
-	createRules := func(hr *v1beta1.HTTPRoute, paths []pathAndType) []graph.Rule {
+	createRules := func(hr *v1.HTTPRoute, paths []pathAndType) []graph.Rule {
 		rules := make([]graph.Rule, len(hr.Spec.Rules))
 
 		for i := range paths {
@@ -127,7 +127,7 @@ func TestBuildConfiguration(t *testing.T) {
 	}
 
 	createInternalRoute := func(
-		source *v1beta1.HTTPRoute,
+		source *v1.HTTPRoute,
 		listenerName string,
 		paths []pathAndType,
 	) *graph.Route {
@@ -138,6 +138,7 @@ func TestBuildConfiguration(t *testing.T) {
 		r := &graph.Route{
 			Source: source,
 			Rules:  createRules(source, paths),
+			Valid:  true,
 			ParentRefs: []graph.ParentRef{
 				{
 					Attachment: &graph.ParentRefAttachmentStatus{
@@ -171,7 +172,7 @@ func TestBuildConfiguration(t *testing.T) {
 	}
 
 	createTestResources := func(name, hostname, listenerName string, paths ...pathAndType) (
-		*v1beta1.HTTPRoute, []BackendGroup, *graph.Route,
+		*v1.HTTPRoute, []BackendGroup, *graph.Route,
 	) {
 		hr := createRoute(name, hostname, listenerName, paths...)
 		route := createInternalRoute(hr, listenerName, paths)
@@ -179,7 +180,7 @@ func TestBuildConfiguration(t *testing.T) {
 		return hr, groups, route
 	}
 
-	prefix := v1beta1.PathMatchPathPrefix
+	prefix := v1.PathMatchPathPrefix
 
 	hr1, expHR1Groups, routeHR1 := createTestResources(
 		"hr-1",
@@ -187,6 +188,14 @@ func TestBuildConfiguration(t *testing.T) {
 		"listener-80-1",
 		pathAndType{path: "/", pathType: prefix},
 	)
+	hr1Invalid, _, routeHR1Invalid := createTestResources(
+		"hr-1",
+		"foo.example.com",
+		"listener-80-1",
+		pathAndType{path: "/", pathType: prefix},
+	)
+	routeHR1Invalid.Valid = false
+
 	hr2, expHR2Groups, routeHR2 := createTestResources(
 		"hr-2",
 		"bar.example.com",
@@ -215,13 +224,13 @@ func TestBuildConfiguration(t *testing.T) {
 		pathAndType{path: "/", pathType: prefix}, pathAndType{path: invalidFiltersPath, pathType: prefix},
 	)
 
-	redirect := v1beta1.HTTPRouteFilter{
-		Type: v1beta1.HTTPRouteFilterRequestRedirect,
-		RequestRedirect: &v1beta1.HTTPRequestRedirectFilter{
-			Hostname: (*v1beta1.PreciseHostname)(helpers.GetPointer("foo.example.com")),
+	redirect := v1.HTTPRouteFilter{
+		Type: v1.HTTPRouteFilterRequestRedirect,
+		RequestRedirect: &v1.HTTPRequestRedirectFilter{
+			Hostname: (*v1.PreciseHostname)(helpers.GetPointer("foo.example.com")),
 		},
 	}
-	addFilters(hr5, []v1beta1.HTTPRouteFilter{redirect})
+	addFilters(hr5, []v1.HTTPRouteFilter{redirect})
 	expRedirect := HTTPRequestRedirectFilter{
 		Hostname: helpers.GetPointer("foo.example.com"),
 	}
@@ -237,7 +246,7 @@ func TestBuildConfiguration(t *testing.T) {
 		"hr-7",
 		"foo.example.com",
 		"listener-80-1",
-		pathAndType{path: "/valid", pathType: prefix}, pathAndType{path: "/valid", pathType: v1beta1.PathMatchExact},
+		pathAndType{path: "/valid", pathType: prefix}, pathAndType{path: "/valid", pathType: v1.PathMatchExact},
 	)
 
 	hr8, expHR8Groups, routeHR8 := createTestResources(
@@ -254,6 +263,13 @@ func TestBuildConfiguration(t *testing.T) {
 		"listener-443-1",
 		pathAndType{path: "/", pathType: prefix},
 	)
+	httpsHR1Invalid, _, httpsRouteHR1Invalid := createTestResources(
+		"https-hr-1",
+		"foo.example.com",
+		"listener-443-1",
+		pathAndType{path: "/", pathType: prefix},
+	)
+	httpsRouteHR1Invalid.Valid = false
 
 	httpsHR2, expHTTPSHR2Groups, httpsRouteHR2 := createTestResources(
 		"https-hr-2",
@@ -327,85 +343,85 @@ func TestBuildConfiguration(t *testing.T) {
 		},
 	}
 
-	listener80 := v1beta1.Listener{
+	listener80 := v1.Listener{
 		Name:     "listener-80-1",
 		Hostname: nil,
 		Port:     80,
-		Protocol: v1beta1.HTTPProtocolType,
+		Protocol: v1.HTTPProtocolType,
 	}
 
-	listener8080 := v1beta1.Listener{
+	listener8080 := v1.Listener{
 		Name:     "listener-8080",
 		Hostname: nil,
 		Port:     8080,
-		Protocol: v1beta1.HTTPProtocolType,
+		Protocol: v1.HTTPProtocolType,
 	}
 
-	listener443 := v1beta1.Listener{
+	listener443 := v1.Listener{
 		Name:     "listener-443-1",
 		Hostname: nil,
 		Port:     443,
-		Protocol: v1beta1.HTTPSProtocolType,
-		TLS: &v1beta1.GatewayTLSConfig{
-			Mode: helpers.GetPointer(v1beta1.TLSModeTerminate),
-			CertificateRefs: []v1beta1.SecretObjectReference{
+		Protocol: v1.HTTPSProtocolType,
+		TLS: &v1.GatewayTLSConfig{
+			Mode: helpers.GetPointer(v1.TLSModeTerminate),
+			CertificateRefs: []v1.SecretObjectReference{
 				{
-					Kind:      (*v1beta1.Kind)(helpers.GetPointer("Secret")),
-					Namespace: helpers.GetPointer(v1beta1.Namespace(secret1NsName.Namespace)),
-					Name:      v1beta1.ObjectName(secret1NsName.Name),
+					Kind:      (*v1.Kind)(helpers.GetPointer("Secret")),
+					Namespace: helpers.GetPointer(v1.Namespace(secret1NsName.Namespace)),
+					Name:      v1.ObjectName(secret1NsName.Name),
 				},
 			},
 		},
 	}
 
-	listener8443 := v1beta1.Listener{
+	listener8443 := v1.Listener{
 		Name:     "listener-8443",
 		Hostname: nil,
 		Port:     8443,
-		Protocol: v1beta1.HTTPSProtocolType,
-		TLS: &v1beta1.GatewayTLSConfig{
-			Mode: helpers.GetPointer(v1beta1.TLSModeTerminate),
-			CertificateRefs: []v1beta1.SecretObjectReference{
+		Protocol: v1.HTTPSProtocolType,
+		TLS: &v1.GatewayTLSConfig{
+			Mode: helpers.GetPointer(v1.TLSModeTerminate),
+			CertificateRefs: []v1.SecretObjectReference{
 				{
-					Kind:      (*v1beta1.Kind)(helpers.GetPointer("Secret")),
-					Namespace: helpers.GetPointer(v1beta1.Namespace(secret2NsName.Namespace)),
-					Name:      v1beta1.ObjectName(secret2NsName.Name),
+					Kind:      (*v1.Kind)(helpers.GetPointer("Secret")),
+					Namespace: helpers.GetPointer(v1.Namespace(secret2NsName.Namespace)),
+					Name:      v1.ObjectName(secret2NsName.Name),
 				},
 			},
 		},
 	}
 
-	hostname := v1beta1.Hostname("example.com")
+	hostname := v1.Hostname("example.com")
 
-	listener443WithHostname := v1beta1.Listener{
+	listener443WithHostname := v1.Listener{
 		Name:     "listener-443-with-hostname",
 		Hostname: &hostname,
 		Port:     443,
-		Protocol: v1beta1.HTTPSProtocolType,
-		TLS: &v1beta1.GatewayTLSConfig{
-			Mode: helpers.GetPointer(v1beta1.TLSModeTerminate),
-			CertificateRefs: []v1beta1.SecretObjectReference{
+		Protocol: v1.HTTPSProtocolType,
+		TLS: &v1.GatewayTLSConfig{
+			Mode: helpers.GetPointer(v1.TLSModeTerminate),
+			CertificateRefs: []v1.SecretObjectReference{
 				{
-					Kind:      (*v1beta1.Kind)(helpers.GetPointer("Secret")),
-					Namespace: helpers.GetPointer(v1beta1.Namespace(secret2NsName.Namespace)),
-					Name:      v1beta1.ObjectName(secret2NsName.Name),
+					Kind:      (*v1.Kind)(helpers.GetPointer("Secret")),
+					Namespace: helpers.GetPointer(v1.Namespace(secret2NsName.Namespace)),
+					Name:      v1.ObjectName(secret2NsName.Name),
 				},
 			},
 		},
 	}
 
-	invalidListener := v1beta1.Listener{
+	invalidListener := v1.Listener{
 		Name:     "invalid-listener",
 		Hostname: nil,
 		Port:     443,
-		Protocol: v1beta1.HTTPSProtocolType,
-		TLS: &v1beta1.GatewayTLSConfig{
+		Protocol: v1.HTTPSProtocolType,
+		TLS: &v1.GatewayTLSConfig{
 			// Mode is missing, that's why invalid
-			CertificateRefs: []v1beta1.SecretObjectReference{
+			CertificateRefs: []v1.SecretObjectReference{
 				{
-					Kind:      helpers.GetPointer[v1beta1.Kind]("Secret"),
-					Namespace: helpers.GetPointer(v1beta1.Namespace(secret1NsName.Namespace)),
-					Name:      v1beta1.ObjectName(secret1NsName.Name),
+					Kind:      helpers.GetPointer[v1.Kind]("Secret"),
+					Namespace: helpers.GetPointer(v1.Namespace(secret1NsName.Namespace)),
+					Name:      v1.ObjectName(secret1NsName.Name),
 				},
 			},
 		},
@@ -419,11 +435,11 @@ func TestBuildConfiguration(t *testing.T) {
 		{
 			graph: &graph.Graph{
 				GatewayClass: &graph.GatewayClass{
-					Source: &v1beta1.GatewayClass{},
+					Source: &v1.GatewayClass{},
 					Valid:  true,
 				},
 				Gateway: &graph.Gateway{
-					Source:    &v1beta1.Gateway{},
+					Source:    &v1.Gateway{},
 					Listeners: map[string]*graph.Listener{},
 				},
 				Routes: map[types.NamespacedName]*graph.Route{},
@@ -438,11 +454,11 @@ func TestBuildConfiguration(t *testing.T) {
 		{
 			graph: &graph.Graph{
 				GatewayClass: &graph.GatewayClass{
-					Source: &v1beta1.GatewayClass{},
+					Source: &v1.GatewayClass{},
 					Valid:  true,
 				},
 				Gateway: &graph.Gateway{
-					Source: &v1beta1.Gateway{},
+					Source: &v1.Gateway{},
 					Listeners: map[string]*graph.Listener{
 						"listener-80-1": {
 							Source: listener80,
@@ -468,11 +484,71 @@ func TestBuildConfiguration(t *testing.T) {
 		{
 			graph: &graph.Graph{
 				GatewayClass: &graph.GatewayClass{
-					Source: &v1beta1.GatewayClass{},
+					Source: &v1.GatewayClass{},
 					Valid:  true,
 				},
 				Gateway: &graph.Gateway{
-					Source: &v1beta1.Gateway{},
+					Source: &v1.Gateway{},
+					Listeners: map[string]*graph.Listener{
+						"listener-80-1": {
+							Source: listener80,
+							Valid:  true,
+							Routes: map[types.NamespacedName]*graph.Route{
+								client.ObjectKeyFromObject(hr1Invalid): routeHR1Invalid,
+							},
+						},
+						"listener-443-1": {
+							Source: listener443, // nil hostname
+							Valid:  true,
+							Routes: map[types.NamespacedName]*graph.Route{
+								client.ObjectKeyFromObject(httpsHR1Invalid): httpsRouteHR1Invalid,
+							},
+							ResolvedSecret: &secret1NsName,
+						},
+					},
+				},
+				Routes: map[types.NamespacedName]*graph.Route{
+					client.ObjectKeyFromObject(hr1Invalid): routeHR1Invalid,
+				},
+				ReferencedSecrets: map[types.NamespacedName]*graph.Secret{
+					secret1NsName: secret1,
+				},
+			},
+			expConf: Configuration{
+				HTTPServers: []VirtualServer{
+					{
+						IsDefault: true,
+						Port:      80,
+					},
+				},
+				SSLServers: []VirtualServer{
+					{
+						IsDefault: true,
+						Port:      443,
+					},
+					{
+						Hostname: wildcardHostname,
+						SSL:      &SSL{KeyPairID: "ssl_keypair_test_secret-1"},
+						Port:     443,
+					},
+				},
+				SSLKeyPairs: map[SSLKeyPairID]SSLKeyPair{
+					"ssl_keypair_test_secret-1": {
+						Cert: []byte("cert-1"),
+						Key:  []byte("privateKey-1"),
+					},
+				},
+			},
+			msg: "http and https listeners with no valid routes",
+		},
+		{
+			graph: &graph.Graph{
+				GatewayClass: &graph.GatewayClass{
+					Source: &v1.GatewayClass{},
+					Valid:  true,
+				},
+				Gateway: &graph.Gateway{
+					Source: &v1.Gateway{},
 					Listeners: map[string]*graph.Listener{
 						"listener-443-1": {
 							Source:         listener443, // nil hostname
@@ -528,11 +604,11 @@ func TestBuildConfiguration(t *testing.T) {
 		{
 			graph: &graph.Graph{
 				GatewayClass: &graph.GatewayClass{
-					Source: &v1beta1.GatewayClass{},
+					Source: &v1.GatewayClass{},
 					Valid:  true,
 				},
 				Gateway: &graph.Gateway{
-					Source: &v1beta1.Gateway{},
+					Source: &v1.Gateway{},
 					Listeners: map[string]*graph.Listener{
 						"invalid-listener": {
 							Source:         invalidListener,
@@ -559,11 +635,11 @@ func TestBuildConfiguration(t *testing.T) {
 		{
 			graph: &graph.Graph{
 				GatewayClass: &graph.GatewayClass{
-					Source: &v1beta1.GatewayClass{},
+					Source: &v1.GatewayClass{},
 					Valid:  true,
 				},
 				Gateway: &graph.Gateway{
-					Source: &v1beta1.Gateway{},
+					Source: &v1.Gateway{},
 					Listeners: map[string]*graph.Listener{
 						"listener-80-1": {
 							Source: listener80,
@@ -629,11 +705,11 @@ func TestBuildConfiguration(t *testing.T) {
 		{
 			graph: &graph.Graph{
 				GatewayClass: &graph.GatewayClass{
-					Source: &v1beta1.GatewayClass{},
+					Source: &v1.GatewayClass{},
 					Valid:  true,
 				},
 				Gateway: &graph.Gateway{
-					Source: &v1beta1.Gateway{},
+					Source: &v1.Gateway{},
 					Listeners: map[string]*graph.Listener{
 						"listener-443-1": {
 							Source: listener443,
@@ -746,11 +822,11 @@ func TestBuildConfiguration(t *testing.T) {
 		{
 			graph: &graph.Graph{
 				GatewayClass: &graph.GatewayClass{
-					Source: &v1beta1.GatewayClass{},
+					Source: &v1.GatewayClass{},
 					Valid:  true,
 				},
 				Gateway: &graph.Gateway{
-					Source: &v1beta1.Gateway{},
+					Source: &v1.Gateway{},
 					Listeners: map[string]*graph.Listener{
 						"listener-80-1": {
 							Source: listener80,
@@ -903,11 +979,11 @@ func TestBuildConfiguration(t *testing.T) {
 		{
 			graph: &graph.Graph{
 				GatewayClass: &graph.GatewayClass{
-					Source: &v1beta1.GatewayClass{},
+					Source: &v1.GatewayClass{},
 					Valid:  true,
 				},
 				Gateway: &graph.Gateway{
-					Source: &v1beta1.Gateway{},
+					Source: &v1.Gateway{},
 					Listeners: map[string]*graph.Listener{
 						"listener-80-1": {
 							Source: listener80,
@@ -1112,11 +1188,11 @@ func TestBuildConfiguration(t *testing.T) {
 		{
 			graph: &graph.Graph{
 				GatewayClass: &graph.GatewayClass{
-					Source: &v1beta1.GatewayClass{},
+					Source: &v1.GatewayClass{},
 					Valid:  false,
 				},
 				Gateway: &graph.Gateway{
-					Source: &v1beta1.Gateway{},
+					Source: &v1.Gateway{},
 					Listeners: map[string]*graph.Listener{
 						"listener-80-1": {
 							Source: listener80,
@@ -1138,7 +1214,7 @@ func TestBuildConfiguration(t *testing.T) {
 			graph: &graph.Graph{
 				GatewayClass: nil,
 				Gateway: &graph.Gateway{
-					Source: &v1beta1.Gateway{},
+					Source: &v1.Gateway{},
 					Listeners: map[string]*graph.Listener{
 						"listener-80-1": {
 							Source: listener80,
@@ -1159,7 +1235,7 @@ func TestBuildConfiguration(t *testing.T) {
 		{
 			graph: &graph.Graph{
 				GatewayClass: &graph.GatewayClass{
-					Source: &v1beta1.GatewayClass{},
+					Source: &v1.GatewayClass{},
 					Valid:  true,
 				},
 				Gateway: nil,
@@ -1171,11 +1247,11 @@ func TestBuildConfiguration(t *testing.T) {
 		{
 			graph: &graph.Graph{
 				GatewayClass: &graph.GatewayClass{
-					Source: &v1beta1.GatewayClass{},
+					Source: &v1.GatewayClass{},
 					Valid:  true,
 				},
 				Gateway: &graph.Gateway{
-					Source: &v1beta1.Gateway{},
+					Source: &v1.Gateway{},
 					Listeners: map[string]*graph.Listener{
 						"listener-80-1": {
 							Source: listener80,
@@ -1239,11 +1315,11 @@ func TestBuildConfiguration(t *testing.T) {
 		{
 			graph: &graph.Graph{
 				GatewayClass: &graph.GatewayClass{
-					Source: &v1beta1.GatewayClass{},
+					Source: &v1.GatewayClass{},
 					Valid:  true,
 				},
 				Gateway: &graph.Gateway{
-					Source: &v1beta1.Gateway{},
+					Source: &v1.Gateway{},
 					Listeners: map[string]*graph.Listener{
 						"listener-80-1": {
 							Source: listener80,
@@ -1338,11 +1414,11 @@ func TestBuildConfiguration(t *testing.T) {
 		{
 			graph: &graph.Graph{
 				GatewayClass: &graph.GatewayClass{
-					Source: &v1beta1.GatewayClass{},
+					Source: &v1.GatewayClass{},
 					Valid:  true,
 				},
 				Gateway: &graph.Gateway{
-					Source: &v1beta1.Gateway{},
+					Source: &v1.Gateway{},
 					Listeners: map[string]*graph.Listener{
 						"listener-80-1": {
 							Source: listener80,
@@ -1400,11 +1476,11 @@ func TestBuildConfiguration(t *testing.T) {
 		{
 			graph: &graph.Graph{
 				GatewayClass: &graph.GatewayClass{
-					Source: &v1beta1.GatewayClass{},
+					Source: &v1.GatewayClass{},
 					Valid:  true,
 				},
 				Gateway: &graph.Gateway{
-					Source: &v1beta1.Gateway{},
+					Source: &v1.Gateway{},
 					Listeners: map[string]*graph.Listener{
 						"listener-443-with-hostname": {
 							Source: listener443WithHostname,
@@ -1502,12 +1578,12 @@ func TestBuildConfiguration(t *testing.T) {
 
 func TestGetPath(t *testing.T) {
 	tests := []struct {
-		path     *v1beta1.HTTPPathMatch
+		path     *v1.HTTPPathMatch
 		expected string
 		msg      string
 	}{
 		{
-			path:     &v1beta1.HTTPPathMatch{Value: helpers.GetPointer("/abc")},
+			path:     &v1.HTTPPathMatch{Value: helpers.GetPointer("/abc")},
 			expected: "/abc",
 			msg:      "normal case",
 		},
@@ -1517,12 +1593,12 @@ func TestGetPath(t *testing.T) {
 			msg:      "nil path",
 		},
 		{
-			path:     &v1beta1.HTTPPathMatch{Value: nil},
+			path:     &v1.HTTPPathMatch{Value: nil},
 			expected: "/",
 			msg:      "nil value",
 		},
 		{
-			path:     &v1beta1.HTTPPathMatch{Value: helpers.GetPointer("")},
+			path:     &v1.HTTPPathMatch{Value: helpers.GetPointer("")},
 			expected: "/",
 			msg:      "empty value",
 		},
@@ -1538,22 +1614,22 @@ func TestGetPath(t *testing.T) {
 }
 
 func TestCreateFilters(t *testing.T) {
-	redirect1 := v1beta1.HTTPRouteFilter{
-		Type: v1beta1.HTTPRouteFilterRequestRedirect,
-		RequestRedirect: &v1beta1.HTTPRequestRedirectFilter{
-			Hostname: helpers.GetPointer[v1beta1.PreciseHostname]("foo.example.com"),
+	redirect1 := v1.HTTPRouteFilter{
+		Type: v1.HTTPRouteFilterRequestRedirect,
+		RequestRedirect: &v1.HTTPRequestRedirectFilter{
+			Hostname: helpers.GetPointer[v1.PreciseHostname]("foo.example.com"),
 		},
 	}
-	redirect2 := v1beta1.HTTPRouteFilter{
-		Type: v1beta1.HTTPRouteFilterRequestRedirect,
-		RequestRedirect: &v1beta1.HTTPRequestRedirectFilter{
-			Hostname: helpers.GetPointer[v1beta1.PreciseHostname]("bar.example.com"),
+	redirect2 := v1.HTTPRouteFilter{
+		Type: v1.HTTPRouteFilterRequestRedirect,
+		RequestRedirect: &v1.HTTPRequestRedirectFilter{
+			Hostname: helpers.GetPointer[v1.PreciseHostname]("bar.example.com"),
 		},
 	}
-	requestHeaderModifiers1 := v1beta1.HTTPRouteFilter{
-		Type: v1beta1.HTTPRouteFilterRequestHeaderModifier,
-		RequestHeaderModifier: &v1beta1.HTTPHeaderFilter{
-			Set: []v1beta1.HTTPHeader{
+	requestHeaderModifiers1 := v1.HTTPRouteFilter{
+		Type: v1.HTTPRouteFilterRequestHeaderModifier,
+		RequestHeaderModifier: &v1.HTTPHeaderFilter{
+			Set: []v1.HTTPHeader{
 				{
 					Name:  "MyBespokeHeader",
 					Value: "my-value",
@@ -1561,10 +1637,10 @@ func TestCreateFilters(t *testing.T) {
 			},
 		},
 	}
-	requestHeaderModifiers2 := v1beta1.HTTPRouteFilter{
-		Type: v1beta1.HTTPRouteFilterRequestHeaderModifier,
-		RequestHeaderModifier: &v1beta1.HTTPHeaderFilter{
-			Add: []v1beta1.HTTPHeader{
+	requestHeaderModifiers2 := v1.HTTPRouteFilter{
+		Type: v1.HTTPRouteFilterRequestHeaderModifier,
+		RequestHeaderModifier: &v1.HTTPHeaderFilter{
+			Add: []v1.HTTPHeader{
 				{
 					Name:  "Content-Accepted",
 					Value: "gzip",
@@ -1588,15 +1664,15 @@ func TestCreateFilters(t *testing.T) {
 	tests := []struct {
 		expected HTTPFilters
 		msg      string
-		filters  []v1beta1.HTTPRouteFilter
+		filters  []v1.HTTPRouteFilter
 	}{
 		{
-			filters:  []v1beta1.HTTPRouteFilter{},
+			filters:  []v1.HTTPRouteFilter{},
 			expected: HTTPFilters{},
 			msg:      "no filters",
 		},
 		{
-			filters: []v1beta1.HTTPRouteFilter{
+			filters: []v1.HTTPRouteFilter{
 				redirect1,
 			},
 			expected: HTTPFilters{
@@ -1605,7 +1681,7 @@ func TestCreateFilters(t *testing.T) {
 			msg: "one filter",
 		},
 		{
-			filters: []v1beta1.HTTPRouteFilter{
+			filters: []v1.HTTPRouteFilter{
 				redirect1,
 				redirect2,
 			},
@@ -1615,7 +1691,7 @@ func TestCreateFilters(t *testing.T) {
 			msg: "two filters, first wins",
 		},
 		{
-			filters: []v1beta1.HTTPRouteFilter{
+			filters: []v1.HTTPRouteFilter{
 				redirect1,
 				redirect2,
 				requestHeaderModifiers1,
@@ -1627,7 +1703,7 @@ func TestCreateFilters(t *testing.T) {
 			msg: "two redirect filters, one request header modifier, first redirect wins",
 		},
 		{
-			filters: []v1beta1.HTTPRouteFilter{
+			filters: []v1.HTTPRouteFilter{
 				redirect1,
 				redirect2,
 				requestHeaderModifiers1,
@@ -1652,11 +1728,11 @@ func TestCreateFilters(t *testing.T) {
 }
 
 func TestGetListenerHostname(t *testing.T) {
-	var emptyHostname v1beta1.Hostname
-	var hostname v1beta1.Hostname = "example.com"
+	var emptyHostname v1.Hostname
+	var hostname v1.Hostname = "example.com"
 
 	tests := []struct {
-		hostname *v1beta1.Hostname
+		hostname *v1.Hostname
 		expected string
 		msg      string
 	}{
@@ -1749,6 +1825,13 @@ func TestBuildUpstreams(t *testing.T) {
 		},
 	}
 
+	abcEndpoints := []resolver.Endpoint{
+		{
+			Address: "14.0.0.0",
+			Port:    80,
+		},
+	}
+
 	createBackendRefs := func(serviceNames ...string) []graph.BackendRef {
 		var backends []graph.BackendRef
 		for _, name := range serviceNames {
@@ -1775,36 +1858,50 @@ func TestBuildUpstreams(t *testing.T) {
 
 	hr4Refs1 := createBackendRefs("baz2")
 
-	invalidRefs := createBackendRefs("invalid")
+	nonExistingRefs := createBackendRefs("non-existing")
+
+	invalidHRRefs := createBackendRefs("abc")
 
 	routes := map[types.NamespacedName]*graph.Route{
 		{Name: "hr1", Namespace: "test"}: {
+			Valid: true,
 			Rules: refsToValidRules(hr1Refs0, hr1Refs1),
 		},
 		{Name: "hr2", Namespace: "test"}: {
+			Valid: true,
 			Rules: refsToValidRules(hr2Refs0, hr2Refs1),
 		},
 		{Name: "hr3", Namespace: "test"}: {
+			Valid: true,
 			Rules: refsToValidRules(hr3Refs0),
 		},
 	}
 
 	routes2 := map[types.NamespacedName]*graph.Route{
 		{Name: "hr4", Namespace: "test"}: {
+			Valid: true,
 			Rules: refsToValidRules(hr4Refs0, hr4Refs1),
+		},
+	}
+
+	routesWithNonExistingRefs := map[types.NamespacedName]*graph.Route{
+		{Name: "non-existing", Namespace: "test"}: {
+			Valid: true,
+			Rules: refsToValidRules(nonExistingRefs),
 		},
 	}
 
 	invalidRoutes := map[types.NamespacedName]*graph.Route{
 		{Name: "invalid", Namespace: "test"}: {
-			Rules: refsToValidRules(invalidRefs),
+			Valid: false,
+			Rules: refsToValidRules(invalidHRRefs),
 		},
 	}
 
 	listeners := map[string]*graph.Listener{
 		"invalid-listener": {
 			Valid:  false,
-			Routes: invalidRoutes, // shouldn't be included since listener is invalid
+			Routes: routesWithNonExistingRefs, // shouldn't be included since listener is invalid
 		},
 		"listener-1": {
 			Valid:  true,
@@ -1813,6 +1910,10 @@ func TestBuildUpstreams(t *testing.T) {
 		"listener-2": {
 			Valid:  true,
 			Routes: routes2,
+		},
+		"listener-3": {
+			Valid:  true,
+			Routes: invalidRoutes, // shouldn't be included since routes are invalid
 		},
 	}
 
@@ -1863,6 +1964,8 @@ func TestBuildUpstreams(t *testing.T) {
 			return fooEndpoints, nil
 		case "nil-endpoints":
 			return nil, errors.New(nilEndpointsErrMsg)
+		case "abc":
+			return abcEndpoints, nil
 		default:
 			return nil, fmt.Errorf("unexpected service %s", svc.Name)
 		}
@@ -1948,50 +2051,50 @@ func TestBuildBackendGroups(t *testing.T) {
 
 func TestHostnameMoreSpecific(t *testing.T) {
 	tests := []struct {
-		host1     *v1beta1.Hostname
-		host2     *v1beta1.Hostname
+		host1     *v1.Hostname
+		host2     *v1.Hostname
 		msg       string
 		host1Wins bool
 	}{
 		{
 			host1:     nil,
-			host2:     helpers.GetPointer(v1beta1.Hostname("")),
+			host2:     helpers.GetPointer(v1.Hostname("")),
 			host1Wins: true,
 			msg:       "host1 nil; host2 empty",
 		},
 		{
-			host1:     helpers.GetPointer(v1beta1.Hostname("")),
+			host1:     helpers.GetPointer(v1.Hostname("")),
 			host2:     nil,
 			host1Wins: true,
 			msg:       "host1 empty; host2 nil",
 		},
 		{
-			host1:     helpers.GetPointer(v1beta1.Hostname("")),
-			host2:     helpers.GetPointer(v1beta1.Hostname("")),
+			host1:     helpers.GetPointer(v1.Hostname("")),
+			host2:     helpers.GetPointer(v1.Hostname("")),
 			host1Wins: true,
 			msg:       "both hosts empty",
 		},
 		{
-			host1:     helpers.GetPointer(v1beta1.Hostname("example.com")),
-			host2:     helpers.GetPointer(v1beta1.Hostname("")),
+			host1:     helpers.GetPointer(v1.Hostname("example.com")),
+			host2:     helpers.GetPointer(v1.Hostname("")),
 			host1Wins: true,
 			msg:       "host1 has value; host2 empty",
 		},
 		{
-			host1:     helpers.GetPointer(v1beta1.Hostname("")),
-			host2:     helpers.GetPointer(v1beta1.Hostname("example.com")),
+			host1:     helpers.GetPointer(v1.Hostname("")),
+			host2:     helpers.GetPointer(v1.Hostname("example.com")),
 			host1Wins: false,
 			msg:       "host2 has value; host1 empty",
 		},
 		{
-			host1:     helpers.GetPointer(v1beta1.Hostname("foo.example.com")),
-			host2:     helpers.GetPointer(v1beta1.Hostname("*.example.com")),
+			host1:     helpers.GetPointer(v1.Hostname("foo.example.com")),
+			host2:     helpers.GetPointer(v1.Hostname("*.example.com")),
 			host1Wins: true,
 			msg:       "host1 more specific than host2",
 		},
 		{
-			host1:     helpers.GetPointer(v1beta1.Hostname("*.example.com")),
-			host2:     helpers.GetPointer(v1beta1.Hostname("foo.example.com")),
+			host1:     helpers.GetPointer(v1.Hostname("*.example.com")),
+			host2:     helpers.GetPointer(v1.Hostname("foo.example.com")),
 			host1Wins: false,
 			msg:       "host2 more specific than host1",
 		},

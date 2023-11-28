@@ -7,7 +7,8 @@ import (
 
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/gateway-api/apis/v1beta1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	v1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/graph"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/resolver"
@@ -132,9 +133,9 @@ func newBackendGroup(refs []graph.BackendRef, sourceNsName types.NamespacedName,
 }
 
 func buildServers(listeners map[string]*graph.Listener) (http, ssl []VirtualServer) {
-	rulesForProtocol := map[v1beta1.ProtocolType]portPathRules{
-		v1beta1.HTTPProtocolType:  make(portPathRules),
-		v1beta1.HTTPSProtocolType: make(portPathRules),
+	rulesForProtocol := map[v1.ProtocolType]portPathRules{
+		v1.HTTPProtocolType:  make(portPathRules),
+		v1.HTTPSProtocolType: make(portPathRules),
 	}
 
 	for _, l := range listeners {
@@ -149,14 +150,14 @@ func buildServers(listeners map[string]*graph.Listener) (http, ssl []VirtualServ
 		}
 	}
 
-	httpRules := rulesForProtocol[v1beta1.HTTPProtocolType]
-	sslRules := rulesForProtocol[v1beta1.HTTPSProtocolType]
+	httpRules := rulesForProtocol[v1.HTTPProtocolType]
+	sslRules := rulesForProtocol[v1.HTTPSProtocolType]
 
 	return httpRules.buildServers(), sslRules.buildServers()
 }
 
 // portPathRules keeps track of hostPathRules per port
-type portPathRules map[v1beta1.PortNumber]*hostPathRules
+type portPathRules map[v1.PortNumber]*hostPathRules
 
 func (p portPathRules) buildServers() []VirtualServer {
 	serverCount := 0
@@ -175,7 +176,7 @@ func (p portPathRules) buildServers() []VirtualServer {
 
 type pathAndType struct {
 	path     string
-	pathType v1beta1.PathMatchType
+	pathType v1.PathMatchType
 }
 
 type hostPathRules struct {
@@ -198,74 +199,84 @@ func (hpr *hostPathRules) upsertListener(l *graph.Listener) {
 	hpr.listenersExist = true
 	hpr.port = int32(l.Source.Port)
 
-	if l.Source.Protocol == v1beta1.HTTPSProtocolType {
+	if l.Source.Protocol == v1.HTTPSProtocolType {
 		hpr.httpsListeners = append(hpr.httpsListeners, l)
 	}
 
-	for routeNsName, r := range l.Routes {
-		var hostnames []string
-		for _, p := range r.ParentRefs {
-			if val, exist := p.Attachment.AcceptedHostnames[string(l.Source.Name)]; exist {
-				hostnames = val
+	for _, r := range l.Routes {
+		if !r.Valid {
+			continue
+		}
+
+		hpr.upsertRoute(r, l)
+	}
+}
+
+func (hpr *hostPathRules) upsertRoute(route *graph.Route, listener *graph.Listener) {
+	var hostnames []string
+	for _, p := range route.ParentRefs {
+		if val, exist := p.Attachment.AcceptedHostnames[string(listener.Source.Name)]; exist {
+			hostnames = val
+		}
+	}
+
+	for _, h := range hostnames {
+		if prevListener, exists := hpr.listenersForHost[h]; exists {
+			// override the previous listener if the new one has a more specific hostname
+			if listenerHostnameMoreSpecific(listener.Source.Hostname, prevListener.Source.Hostname) {
+				hpr.listenersForHost[h] = listener
+			}
+		} else {
+			hpr.listenersForHost[h] = listener
+		}
+
+		if _, exist := hpr.rulesPerHost[h]; !exist {
+			hpr.rulesPerHost[h] = make(map[pathAndType]PathRule)
+		}
+	}
+
+	for i, rule := range route.Source.Spec.Rules {
+		if !route.Rules[i].ValidMatches {
+			continue
+		}
+
+		var filters HTTPFilters
+		if route.Rules[i].ValidFilters {
+			filters = createHTTPFilters(rule.Filters)
+		} else {
+			filters = HTTPFilters{
+				InvalidFilter: &InvalidHTTPFilter{},
 			}
 		}
 
 		for _, h := range hostnames {
-			if prevListener, exists := hpr.listenersForHost[h]; exists {
-				// override the previous listener if the new one has a more specific hostname
-				if listenerHostnameMoreSpecific(l.Source.Hostname, prevListener.Source.Hostname) {
-					hpr.listenersForHost[h] = l
+			for _, m := range rule.Matches {
+				path := getPath(m.Path)
+
+				key := pathAndType{
+					path:     path,
+					pathType: *m.Path.Type,
 				}
-			} else {
-				hpr.listenersForHost[h] = l
-			}
 
-			if _, exist := hpr.rulesPerHost[h]; !exist {
-				hpr.rulesPerHost[h] = make(map[pathAndType]PathRule)
-			}
-		}
-
-		for i, rule := range r.Source.Spec.Rules {
-			if !r.Rules[i].ValidMatches {
-				continue
-			}
-
-			var filters HTTPFilters
-			if r.Rules[i].ValidFilters {
-				filters = createHTTPFilters(rule.Filters)
-			} else {
-				filters = HTTPFilters{
-					InvalidFilter: &InvalidHTTPFilter{},
+				rule, exist := hpr.rulesPerHost[h][key]
+				if !exist {
+					rule.Path = path
+					rule.PathType = convertPathType(*m.Path.Type)
 				}
-			}
 
-			for _, h := range hostnames {
-				for _, m := range rule.Matches {
-					path := getPath(m.Path)
+				// create iteration variable inside the loop to fix implicit memory aliasing
+				om := route.Source.ObjectMeta
 
-					key := pathAndType{
-						path:     path,
-						pathType: *m.Path.Type,
-					}
+				routeNsName := client.ObjectKeyFromObject(route.Source)
 
-					rule, exist := hpr.rulesPerHost[h][key]
-					if !exist {
-						rule.Path = path
-						rule.PathType = convertPathType(*m.Path.Type)
-					}
+				rule.MatchRules = append(rule.MatchRules, MatchRule{
+					Source:       &om,
+					BackendGroup: newBackendGroup(route.Rules[i].BackendRefs, routeNsName, i),
+					Filters:      filters,
+					Match:        convertMatch(m),
+				})
 
-					// create iteration variable inside the loop to fix implicit memory aliasing
-					om := r.Source.ObjectMeta
-
-					rule.MatchRules = append(rule.MatchRules, MatchRule{
-						Source:       &om,
-						BackendGroup: newBackendGroup(r.Rules[i].BackendRefs, routeNsName, i),
-						Filters:      filters,
-						Match:        convertMatch(m),
-					})
-
-					hpr.rulesPerHost[h][key] = rule
-				}
+				hpr.rulesPerHost[h][key] = rule
 			}
 		}
 	}
@@ -371,6 +382,10 @@ func buildUpstreams(
 		}
 
 		for _, route := range l.Routes {
+			if !route.Valid {
+				continue
+			}
+
 			for _, rule := range route.Rules {
 				if !rule.ValidMatches || !rule.ValidFilters {
 					// don't generate upstreams for rules that have invalid matches or filters
@@ -415,7 +430,7 @@ func buildUpstreams(
 	return upstreams
 }
 
-func getListenerHostname(h *v1beta1.Hostname) string {
+func getListenerHostname(h *v1.Hostname) string {
 	if h == nil || *h == "" {
 		return wildcardHostname
 	}
@@ -423,24 +438,24 @@ func getListenerHostname(h *v1beta1.Hostname) string {
 	return string(*h)
 }
 
-func getPath(path *v1beta1.HTTPPathMatch) string {
+func getPath(path *v1.HTTPPathMatch) string {
 	if path == nil || path.Value == nil || *path.Value == "" {
 		return "/"
 	}
 	return *path.Value
 }
 
-func createHTTPFilters(filters []v1beta1.HTTPRouteFilter) HTTPFilters {
+func createHTTPFilters(filters []v1.HTTPRouteFilter) HTTPFilters {
 	var result HTTPFilters
 
 	for _, f := range filters {
 		switch f.Type {
-		case v1beta1.HTTPRouteFilterRequestRedirect:
+		case v1.HTTPRouteFilterRequestRedirect:
 			if result.RequestRedirect == nil {
 				// using the first filter
 				result.RequestRedirect = convertHTTPRequestRedirectFilter(f.RequestRedirect)
 			}
-		case v1beta1.HTTPRouteFilterRequestHeaderModifier:
+		case v1.HTTPRouteFilterRequestHeaderModifier:
 			if result.RequestHeaderModifiers == nil {
 				// using the first filter
 				result.RequestHeaderModifiers = convertHTTPHeaderFilter(f.RequestHeaderModifier)
@@ -451,7 +466,7 @@ func createHTTPFilters(filters []v1beta1.HTTPRouteFilter) HTTPFilters {
 }
 
 // listenerHostnameMoreSpecific returns true if host1 is more specific than host2.
-func listenerHostnameMoreSpecific(host1, host2 *v1beta1.Hostname) bool {
+func listenerHostnameMoreSpecific(host1, host2 *v1.Hostname) bool {
 	var host1Str, host2Str string
 	if host1 != nil {
 		host1Str = string(*host1)
