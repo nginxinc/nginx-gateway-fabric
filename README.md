@@ -10,19 +10,21 @@ and `UDPRoute` -- to configure an HTTP or TCP/UDP load balancer, reverse-proxy, 
 on Kubernetes. NGINX Gateway Fabric supports a subset of the Gateway API.
 
 For a list of supported Gateway API resources and features, see
-the [Gateway API Compatibility](docs/gateway-api-compatibility.md) doc.
+the [Gateway API Compatibility](https://docs.nginx.com/nginx-gateway-fabric/gateway-api-compatibility.md) doc.
 
-Learn about our [design principles](/docs/developer/design-principles.md) and [architecture](/docs/architecture.md).
+Learn about our [design principles](/docs/developer/design-principles.md) and [architecture](https://docs.nginx.com/nginx-gateway-fabric/overview/gateway-architecture.md).
 
 ## Getting Started
 
-1. [Quick Start on a kind cluster](docs/running-on-kind.md).
-2. [Install](docs/installation.md) NGINX Gateway Fabric.
-3. [Build](docs/building-the-images.md) an NGINX Gateway Fabric container image from source or use a pre-built image
+1. [Quick Start on a kind cluster](https://docs.nginx.com/nginx-gateway-fabric/installation/running-on-kind.md).
+2. [Install](https://docs.nginx.com/nginx-gateway-fabric/installation/) NGINX Gateway Fabric.
+3. [Build](https://docs.nginx.com/nginx-gateway-fabric/installation/building-the-images.md) an NGINX Gateway Fabric container image from source or use a pre-built image
    available
    on [GitHub Container Registry](https://github.com/nginxinc/nginx-gateway-fabric/pkgs/container/nginx-gateway-fabric).
 4. Deploy various [examples](examples).
-5. Read our [guides](/docs/guides).
+5. Read our [How-to guides](https://docs.nginx.com/nginx-gateway-fabric/how-to/).
+
+You can find the comprehensive user documentation in the [NGINX Documentation](https://docs.nginx.com/nginx-gateway-fabric/) website.
 
 ## NGINX Gateway Fabric Releases
 
@@ -99,7 +101,7 @@ docker buildx imagetools inspect ghcr.io/nginxinc/nginx-gateway-fabric:edge --fo
 
 ## Troubleshooting
 
-For troubleshooting help, see the [Troubleshooting](/docs/troubleshooting.md) document.
+For troubleshooting help, see the [Troubleshooting](https://docs.nginx.com/nginx-gateway-fabric/how-to/monitoring/troubleshooting.md) document.
 
 ## Contacts
 
