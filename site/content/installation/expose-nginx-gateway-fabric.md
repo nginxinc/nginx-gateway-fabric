@@ -67,5 +67,5 @@ To create a **LoadBalancer** service, use the appropriate manifest for your clou
    ```shell
    nslookup <dns-name>
    ```
-   
+
    {{< /note >}}

@@ -8,6 +8,6 @@ tags: [ "docs" ]
 docs: "DOCS-000"
 ---
 
-See the NGINX Gateway Fabric changelog page: 
+See the NGINX Gateway Fabric changelog page:
 
 https://github.com/nginxinc/nginx-gateway-fabric/blob/main/CHANGELOG.md

@@ -16,4 +16,3 @@ If you are running on Kubernetes 1.23 or 1.24, you also need to delete the valid
    ```shell
    kubectl delete -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/webhook-install.yaml
    ```
-   

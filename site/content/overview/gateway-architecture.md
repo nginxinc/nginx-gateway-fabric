@@ -25,7 +25,7 @@ This figure depicts an example of NGINX Gateway Fabric exposing two web applicat
 
 {{<img src="img/ngf-high-level.png" alt="">}}
 
-{{< note >}} The figure does not show many of the necessary Kubernetes resources the Cluster Operators and Application Developers need to create, like deployment and services. {{< /note >}} 
+{{< note >}} The figure does not show many of the necessary Kubernetes resources the Cluster Operators and Application Developers need to create, like deployment and services. {{< /note >}}
 
 The figure shows:
 
@@ -51,12 +51,12 @@ NGINX Gateway Fabric consists of two containers:
 
 These containers are deployed in a single pod as a Kubernetes Deployment.
 
-The `nginx-gateway`, or the control plane, is a [Kubernetes controller](https://kubernetes.io/docs/concepts/architecture/controller/), written with the [controller-runtime](https://github.com/kubernetes-sigs/controller-runtime) library. It watches Kubernetes objects (services, endpoints, secrets, and Gateway API CRDs), translates them to NGINX configuration, and configures NGINX. 
+The `nginx-gateway`, or the control plane, is a [Kubernetes controller](https://kubernetes.io/docs/concepts/architecture/controller/), written with the [controller-runtime](https://github.com/kubernetes-sigs/controller-runtime) library. It watches Kubernetes objects (services, endpoints, secrets, and Gateway API CRDs), translates them to NGINX configuration, and configures NGINX.
 
 This configuration happens in two stages:
 
-1. NGINX configuration files are written to the NGINX configuration volume shared by the `nginx-gateway` and `nginx` containers. 
-1. The control plane reloads the NGINX process. 
+1. NGINX configuration files are written to the NGINX configuration volume shared by the `nginx-gateway` and `nginx` containers.
+1. The control plane reloads the NGINX process.
 
 This is possible because the two containers [share a process namespace](https://kubernetes.io/docs/tasks/configure-pod-container/share-process-namespace/), allowing the NGF process to send signals to the NGINX main process.
 

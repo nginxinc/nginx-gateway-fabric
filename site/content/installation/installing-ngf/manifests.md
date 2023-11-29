@@ -35,16 +35,16 @@ Deploying NGINX Gateway Fabric with Kubernetes manifests takes only a few steps.
    kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/webhook-install.yaml
    ```
 
-{{< important >}}The validating webhook is not needed if you are running Kubernetes 1.25+. Validation is done using CEL on the CRDs. See the [resource validation doc]({{< relref "/overview/resource-validation.md" >}}) for more information. {{< /important >}}
+   {{< important >}}The validating webhook is not needed if you are running Kubernetes 1.25+. Validation is done using CEL on the CRDs. See the [resource validation doc]({{< relref "/overview/resource-validation.md" >}}) for more information. {{< /important >}}
 
-2. **Deploy the NGINX Gateway Fabric CRDs:**
+1. **Deploy the NGINX Gateway Fabric CRDs:**
 
    - Next, deploy the NGINX Gateway Fabric CRDs:
      ```shell
      kubectl apply -f https://github.com/nginxinc/nginx-gateway-fabric/releases/download/v1.0.0/crds.yaml
      ```
 
-3. **Deploy NGINX Gateway Fabric:**
+1. **Deploy NGINX Gateway Fabric:**
 
    - Then, deploy NGINX Gateway Fabric:
 
@@ -52,15 +52,15 @@ Deploying NGINX Gateway Fabric with Kubernetes manifests takes only a few steps.
      kubectl apply -f https://github.com/nginxinc/nginx-gateway-fabric/releases/download/v1.0.0/nginx-gateway.yaml
      ```
 
-4. **Verify the Deployment:**
+1. **Verify the Deployment:**
    - To confirm that NGINX Gateway Fabric is running, check the pods in the `nginx-gateway` namespace:
 
      ```shell
      kubectl get pods -n nginx-gateway
      ```
-     
+
      The output should look similar to this (note that the pod name will include a unique string):
-     
+
      ```text
      NAME                             READY   STATUS    RESTARTS   AGE
      nginx-gateway-5d4f4c7db7-xk2kq   2/2     Running   0          112s
@@ -90,20 +90,20 @@ To upgrade NGINX Gateway Fabric and get the latest features and improvements, ta
    ```
 
    - If you are running on Kubernetes 1.25 or newer and have the validating webhook installed, you should remove the
-   webhook: 
+   webhook:
 
    ```shell
     kubectl delete -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/webhook-install.yaml
    ```
 
-2. **Upgrade NGINX Gateway Fabric CRDs:**
+1. **Upgrade NGINX Gateway Fabric CRDs:**
    - To upgrade the Custom Resource Definitions (CRDs), run:
 
      ```shell
      kubectl apply -f https://github.com/nginxinc/nginx-gateway-fabric/releases/download/v1.0.0/crds.yaml
      ```
 
-3. **Upgrade NGINX Gateway Fabric deployment:**
+1. **Upgrade NGINX Gateway Fabric deployment:**
    - To upgrade the deployment, run:
 
      ```shell
@@ -151,11 +151,13 @@ Follow these steps to configure delayed pod termination:
 
 1. Save the changes.
 
-{{<see-also>}} 
+{{<see-also>}}
 For additional information on configuring and understanding the behavior of containers and pods during their lifecycle, refer to the following Kubernetes documentation:
+
 - [Container Lifecycle Hooks](https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/#container-hooks)
 - [Pod Lifecycle](https://kubernetes.io/docs/concepts/workloads/Pods/Pod-lifecycle/#Pod-termination)
-{{</see-also>}} 
+
+{{</see-also>}}
 
 
 ## Uninstall NGINX Gateway Fabric
@@ -174,7 +176,7 @@ Follow these steps to uninstall NGINX Gateway Fabric and Gateway API from your K
      kubectl delete -f https://github.com/nginxinc/nginx-gateway-fabric/releases/download/v1.0.0/crds.yaml
      ```
 
-2. **Remove the Gateway API resources:**
+1. **Remove the Gateway API resources:**
 
    - {{<include "installation/helm/uninstall-gateway-api-resources.md" >}}
 

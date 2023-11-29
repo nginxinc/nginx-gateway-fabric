@@ -96,7 +96,7 @@ To install NGINX Gateway Fabric, refer to the [installation instructions]({{< re
 
 ### Add images
 
-You can use the `img` [shortcode](#Use-Hugo-shortcodes) to insert images into your documentation.
+You can use the `img` [shortcode](#use-hugo-shortcodes to insert images into your documentation.
 
 1. Add the image to the static/img directory.
    DO NOT include a forward slash at the beginning of the file path. This will break the image when it's rendered.
