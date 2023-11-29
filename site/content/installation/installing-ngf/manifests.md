@@ -186,4 +186,3 @@ Follow these steps to uninstall NGINX Gateway Fabric and Gateway API from your K
 ### Expose NGINX Gateway Fabric
 
 {{<include "installation/next-step-expose-fabric.md">}}
-

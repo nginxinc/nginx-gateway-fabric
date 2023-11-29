@@ -50,7 +50,7 @@ Follow the instructions here to install Hugo: [Hugo Installation](https://gohugo
 We use markdownlint to check that Markdown files are correctly formatted. You can use `npm` to install markdownlint-cli:
 
 ```shell
-npm install -g markdownlint-cli   
+npm install -g markdownlint-cli
 ```
 
 ## How to write docs with Hugo
@@ -83,7 +83,7 @@ The available kinds are:
 Format links as [Hugo relrefs](https://gohugo.io/content-management/cross-references/).
 
 > Note: Using file extensions when linking to internal docs with `relref` is optional.
-  
+
 - You can use relative paths or just the filename. We recommend using the filename
 - Paths without a leading `/` are first resolved relative to the current page, then to the remainder of the site.
 - Anchors are supported.
@@ -109,6 +109,7 @@ You can use the `img` [shortcode](#use-hugo-shortcodes to insert images into you
 > Note: The shortcode accepts all of the same parameters as the [Hugo figure shortcode](https://gohugo.io/content-management/shortcodes/#figure).
 
 ### Use Hugo shortcodes
+
 You can use Hugo [shortcodes](https://gohugo.io/content-management/shortcodes) to do things like format callouts, add images, and reuse content across different docs.
 
 For example, to use the note callout:
