@@ -104,7 +104,7 @@ A more flexible and precise way to implement canary releases is to configure a t
     weight: 5
 ```
 
-{{< note >}}Every requests coming from the same client won't necessarily be sent to the same backend. NGINX will independently split each request among the backend references.{{< /note >}}
+{{< note >}}Every request coming from the same client won't necessarily be sent to the same backend. NGINX will independently split each request among the backend references.{{< /note >}}
 
 By updating the rule you can further increase the share of traffic the new version gets and finally completely switch to the new version:
 
