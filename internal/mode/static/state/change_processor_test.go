@@ -6,6 +6,7 @@ import (
 	"github.com/onsi/gomega/format"
 	apiv1 "k8s.io/api/core/v1"
 	discoveryV1 "k8s.io/api/discovery/v1"
+	apiext "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -19,6 +20,7 @@ import (
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/controller/index"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/gatewayclass"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state"
 	staticConds "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/conditions"
@@ -186,6 +188,7 @@ func createScheme() *runtime.Scheme {
 	utilruntime.Must(v1beta1.AddToScheme(scheme))
 	utilruntime.Must(apiv1.AddToScheme(scheme))
 	utilruntime.Must(discoveryV1.AddToScheme(scheme))
+	utilruntime.Must(apiext.AddToScheme(scheme))
 
 	return scheme
 }
@@ -270,14 +273,15 @@ var _ = Describe("ChangeProcessor", func() {
 
 		Describe("Process gateway resources", Ordered, func() {
 			var (
-				gcUpdated                        *v1.GatewayClass
-				diffNsTLSSecret, sameNsTLSSecret *apiv1.Secret
-				hr1, hr1Updated, hr2             *v1.HTTPRoute
-				gw1, gw1Updated, gw2             *v1.Gateway
-				refGrant1, refGrant2             *v1beta1.ReferenceGrant
-				expGraph                         *graph.Graph
-				expRouteHR1, expRouteHR2         *graph.Route
-				hr1Name, hr2Name                 types.NamespacedName
+				gcUpdated                           *v1.GatewayClass
+				diffNsTLSSecret, sameNsTLSSecret    *apiv1.Secret
+				hr1, hr1Updated, hr2                *v1.HTTPRoute
+				gw1, gw1Updated, gw2                *v1.Gateway
+				refGrant1, refGrant2                *v1beta1.ReferenceGrant
+				expGraph                            *graph.Graph
+				expRouteHR1, expRouteHR2            *graph.Route
+				hr1Name, hr2Name                    types.NamespacedName
+				gatewayAPICRD, gatewayAPICRDUpdated *metav1.PartialObjectMetadata
 			)
 			BeforeAll(func() {
 				gcUpdated = gc.DeepCopy()
@@ -375,6 +379,22 @@ var _ = Describe("ChangeProcessor", func() {
 				gw1Updated.Generation++
 
 				gw2 = createGatewayWithTLSListener("gateway-2", sameNsTLSSecret)
+
+				gatewayAPICRD = &metav1.PartialObjectMetadata{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "CustomResourceDefinition",
+						APIVersion: "apiextensions.k8s.io/v1",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "gatewayclasses.gateway.networking.k8s.io",
+						Annotations: map[string]string{
+							gatewayclass.BundleVersionAnnotation: gatewayclass.RecommendedVersion,
+						},
+					},
+				}
+
+				gatewayAPICRDUpdated = gatewayAPICRD.DeepCopy()
+				gatewayAPICRDUpdated.Annotations[gatewayclass.BundleVersionAnnotation] = "v1.99.0"
 			})
 			BeforeEach(func() {
 				expRouteHR1 = &graph.Route{
@@ -479,7 +499,6 @@ var _ = Describe("ChangeProcessor", func() {
 					ReferencedSecrets: map[types.NamespacedName]*graph.Secret{},
 				}
 			})
-
 			When("no upsert has occurred", func() {
 				It("returns nil graph", func() {
 					changed, graphCfg := processor.Process()
@@ -488,6 +507,15 @@ var _ = Describe("ChangeProcessor", func() {
 				})
 			})
 			When("GatewayClass doesn't exist", func() {
+				When("Gateway API CRD is added", func() {
+					It("returns empty graph", func() {
+						processor.CaptureUpsertChange(gatewayAPICRD)
+
+						changed, graphCfg := processor.Process()
+						Expect(changed).To(BeTrue())
+						Expect(helpers.Diff(&graph.Graph{}, graphCfg)).To(BeEmpty())
+					})
+				})
 				When("Gateways don't exist", func() {
 					When("the first HTTPRoute is upserted", func() {
 						It("returns empty graph", func() {
@@ -606,10 +634,51 @@ var _ = Describe("ChangeProcessor", func() {
 					Expect(helpers.Diff(expGraph, graphCfg)).To(BeEmpty())
 				})
 			})
-
 			When("the ReferenceGrant allowing the hr1 to reference the Service in different ns is upserted", func() {
 				It("returns updated graph", func() {
 					processor.CaptureUpsertChange(refGrant2)
+
+					expGraph.ReferencedSecrets[client.ObjectKeyFromObject(diffNsTLSSecret)] = &graph.Secret{
+						Source: diffNsTLSSecret,
+					}
+
+					changed, graphCfg := processor.Process()
+					Expect(changed).To(BeTrue())
+					Expect(helpers.Diff(expGraph, graphCfg)).To(BeEmpty())
+				})
+			})
+			When("the Gateway API CRD with bundle version annotation change is processed", func() {
+				It("returns updated graph", func() {
+					processor.CaptureUpsertChange(gatewayAPICRDUpdated)
+
+					expGraph.ReferencedSecrets[client.ObjectKeyFromObject(diffNsTLSSecret)] = &graph.Secret{
+						Source: diffNsTLSSecret,
+					}
+
+					expGraph.GatewayClass.Conditions = conditions.NewGatewayClassSupportedVersionBestEffort(
+						gatewayclass.RecommendedVersion,
+					)
+
+					changed, graphCfg := processor.Process()
+					Expect(changed).To(BeTrue())
+					Expect(helpers.Diff(expGraph, graphCfg)).To(BeEmpty())
+				})
+			})
+			When("the Gateway API CRD without bundle version annotation change is processed", func() {
+				It("returns nil graph", func() {
+					gatewayAPICRDSameVersion := gatewayAPICRDUpdated.DeepCopy()
+
+					processor.CaptureUpsertChange(gatewayAPICRDSameVersion)
+
+					changed, graphCfg := processor.Process()
+					Expect(changed).To(BeFalse())
+					Expect(graphCfg).To(BeNil())
+				})
+			})
+			When("the Gateway API CRD with bundle version annotation change is processed", func() {
+				It("returns updated graph", func() {
+					// change back to supported version
+					processor.CaptureUpsertChange(gatewayAPICRD)
 
 					expGraph.ReferencedSecrets[client.ObjectKeyFromObject(diffNsTLSSecret)] = &graph.Secret{
 						Source: diffNsTLSSecret,

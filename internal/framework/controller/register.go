@@ -6,6 +6,7 @@ import (
 	"time"
 
 	ctlr "sigs.k8s.io/controller-runtime"
+	ctlrBuilder "sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -23,6 +24,7 @@ type config struct {
 	k8sPredicate         predicate.Predicate
 	fieldIndices         index.FieldIndices
 	newReconciler        NewReconcilerFunc
+	onlyMetadata         bool
 }
 
 // NewReconcilerFunc defines a function that creates a new Reconciler. Used for unit-testing.
@@ -56,6 +58,16 @@ func WithFieldIndices(fieldIndices index.FieldIndices) Option {
 func WithNewReconciler(newReconciler NewReconcilerFunc) Option {
 	return func(cfg *config) {
 		cfg.newReconciler = newReconciler
+	}
+}
+
+// WithOnlyMetadata tells the controller to only cache metadata, and to watch the API server in metadata-only form.
+// If using this option, you must set the GroupVersionKind on the ObjectType you pass into the Register function.
+// If watching a resource with OnlyMetadata, for example the v1.Pod, you must not Get and List using the v1.Pod type.
+// Instead, you must use the special metav1.PartialObjectMetadata type.
+func WithOnlyMetadata() Option {
+	return func(cfg *config) {
+		cfg.onlyMetadata = true
 	}
 }
 
@@ -93,7 +105,12 @@ func Register(
 		}
 	}
 
-	builder := ctlr.NewControllerManagedBy(mgr).For(objectType)
+	var forOpts []ctlrBuilder.ForOption
+	if cfg.onlyMetadata {
+		forOpts = append(forOpts, ctlrBuilder.OnlyMetadata)
+	}
+
+	builder := ctlr.NewControllerManagedBy(mgr).For(objectType, forOpts...)
 
 	if cfg.k8sPredicate != nil {
 		builder = builder.WithEventFilter(cfg.k8sPredicate)
@@ -104,6 +121,7 @@ func Register(
 		ObjectType:           objectType,
 		EventCh:              eventCh,
 		NamespacedNameFilter: cfg.namespacedNameFilter,
+		OnlyMetadata:         cfg.onlyMetadata,
 	}
 
 	if err := builder.Complete(cfg.newReconciler(recCfg)); err != nil {
