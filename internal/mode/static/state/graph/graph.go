@@ -63,7 +63,14 @@ func (g *Graph) IsReferenced(resourceType client.Object, nsname types.Namespaced
 		_, exists := g.ReferencedSecrets[nsname]
 		return exists
 	case *v1.Namespace:
+		// still thinking of why we would need this... aka when existed == true but exists == false
+		//
+		// changes when Gateway listener label changes OR when Namespace changes label. Does this handle the case
+		// when its good -> bad label on the Namespace?
 		_, existed := g.ReferencedNamespaces[nsname]
+		// Checks if the new resource would be referenced in the new graph
+		//
+		// checks the latestGraph's Gateway so even if the gateway changes it'll trigger the change anyways
 		exists := checkNamespace(obj, g.Gateway)
 		return existed || exists
 	default:

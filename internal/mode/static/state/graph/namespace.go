@@ -30,6 +30,8 @@ func resolveNamespaces(namespaceResolver namespaceResolver, gw *Gateway) {
 	}
 }
 
+// checkNamespaces returns a boolean that represents whether a given Namespace resource has a label
+// that matches any of the Gateway Listener's label selector.
 func checkNamespace(ns *v1.Namespace, gw *Gateway) bool {
 	nsLabels := ns.GetLabels()
 	if gw == nil {
