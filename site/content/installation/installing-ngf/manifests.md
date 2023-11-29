@@ -40,6 +40,7 @@ Deploying NGINX Gateway Fabric with Kubernetes manifests takes only a few steps.
 1. **Deploy the NGINX Gateway Fabric CRDs:**
 
    - Next, deploy the NGINX Gateway Fabric CRDs:
+   
      ```shell
      kubectl apply -f https://github.com/nginxinc/nginx-gateway-fabric/releases/download/v1.0.0/crds.yaml
      ```
