@@ -1,9 +1,9 @@
 ---
 title: "How-To Guides"
-description: 
+description:
 weight: 300
 linkTitle: "Guides"
-menu: 
+menu:
   docs:
     parent: NGINX Gateway Fabric
 ---

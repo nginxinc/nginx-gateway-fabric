@@ -5,7 +5,7 @@ description: "NGINX Gateway Fabric releases."
 weight: 1200
 toc: true
 tags: [ "docs" ]
-docs: "DOCS-000"
+docs: "DOCS-1359"
 ---
 
 See the NGINX Gateway Fabric changelog page:

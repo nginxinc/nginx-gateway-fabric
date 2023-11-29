@@ -1,9 +1,9 @@
 ---
 title: "Reference"
-description: 
+description:
 weight: 400
 linkTitle: "Reference"
-menu: 
+menu:
   docs:
     parent: NGINX Gateway Fabric
 ---
