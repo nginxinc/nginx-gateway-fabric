@@ -48,9 +48,9 @@ type (
 	namespaces map[types.NamespacedName]namespaceCfg
 )
 
-func (n namespaceCfg) match() bool {
-	return len(n.gateways) > 0
-}
+//func (n namespaceCfg) match() bool {
+//	return len(n.gateways) > 0
+//}
 
 // CapturerImpl implements the Capturer interface.
 type CapturerImpl struct {
@@ -152,8 +152,9 @@ func (c *CapturerImpl) Exists(resourceType client.Object, nsname types.Namespace
 		svcOwner, exists := c.endpointSliceOwners[nsname]
 		return exists && c.serviceRefCount[svcOwner] > 0
 	case *v1.Namespace:
-		cfg, exists := c.namespaces[nsname]
-		return exists && cfg.match()
+		// cfg, exists := c.namespaces[nsname]
+		// return exists && cfg.match()
+		return false
 	}
 
 	return false

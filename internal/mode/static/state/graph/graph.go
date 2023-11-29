@@ -44,6 +44,8 @@ type Graph struct {
 	// in the cluster. We need such entries so that we can query the Graph to determine if a Secret is referenced
 	// by the Gateway, including the case when the Secret is newly created.
 	ReferencedSecrets map[types.NamespacedName]*Secret
+	// ReferencedNamespaces includes Namespaces that have labels that match Gateway listener's label selector.
+	ReferencedNamespaces map[types.NamespacedName]*Namespace
 }
 
 // ProtectedPorts are the ports that may not be configured by a listener with a descriptive name of each port.
@@ -56,10 +58,14 @@ func (g *Graph) IsReferenced(resourceType client.Object, nsname types.Namespaced
 	// as source to determine the relationships.
 	// See https://github.com/nginxinc/nginx-gateway-fabric/issues/824
 
-	switch resourceType.(type) {
+	switch obj := resourceType.(type) {
 	case *v1.Secret:
 		_, exists := g.ReferencedSecrets[nsname]
 		return exists
+	case *v1.Namespace:
+		_, existed := g.ReferencedNamespaces[nsname]
+		exists := checkNamespace(obj, g.Gateway)
+		return existed || exists
 	default:
 		return false
 	}
@@ -92,6 +98,9 @@ func BuildGraph(
 	bindRoutesToListeners(routes, gw, state.Namespaces)
 	addBackendRefsToRouteRules(routes, refGrantResolver, state.Services)
 
+	namespaceResolver := newNamespaceResolver(state.Namespaces)
+	resolveNamespaces(namespaceResolver, gw)
+
 	g := &Graph{
 		GatewayClass:          gc,
 		Gateway:               gw,
@@ -99,6 +108,7 @@ func BuildGraph(
 		IgnoredGatewayClasses: processedGwClasses.Ignored,
 		IgnoredGateways:       processedGws.Ignored,
 		ReferencedSecrets:     secretResolver.getResolvedSecrets(),
+		ReferencedNamespaces:  namespaceResolver.getResolvedNamespaces(),
 	}
 
 	return g

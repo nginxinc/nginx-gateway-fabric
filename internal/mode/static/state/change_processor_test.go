@@ -1309,8 +1309,11 @@ var _ = Describe("ChangeProcessor", func() {
 							Name: "gw",
 						},
 						Spec: v1.GatewaySpec{
+							GatewayClassName: gcName,
 							Listeners: []v1.Listener{
 								{
+									Port:     80,
+									Protocol: v1.HTTPProtocolType,
 									AllowedRoutes: &v1.AllowedRoutes{
 										Namespaces: &v1.RouteNamespaces{
 											From: helpers.GetPointer(v1.NamespacesFromSelector),
@@ -1325,7 +1328,7 @@ var _ = Describe("ChangeProcessor", func() {
 							},
 						},
 					}
-
+					processor.CaptureUpsertChange(gc)
 					processor.CaptureUpsertChange(gw)
 					processor.CaptureUpsertChange(ns)
 
