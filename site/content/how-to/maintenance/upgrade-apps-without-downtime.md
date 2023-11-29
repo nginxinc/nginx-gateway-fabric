@@ -10,7 +10,7 @@ docs: "DOCS-000"
 
 ## Overview
 
-NGINX Gateway Fabric allows upgrading applications without downtime. 
+NGINX Gateway Fabric allows upgrading applications without downtime.
 
 {{< note >}} See the [Architecture document]({{< relref "/overview/gateway-architecture.md" >}}) to learn more about NGINX Gateway Fabric architecture.{{< /note >}}
 

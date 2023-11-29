@@ -8,6 +8,7 @@ docs: "DOCS-000"
 
 ## Summary
 
+{{< bootstrap-table "table table-striped table-bordered" >}}
 | Resource                            | Core Support Level | Extended Support Level | Implementation-Specific Support Level | API Version |
 |-------------------------------------|--------------------|------------------------|---------------------------------------|-------------|
 | [GatewayClass](#gatewayclass)       | Supported          | Not supported          | Not Supported                         | v1          |
@@ -18,6 +19,7 @@ docs: "DOCS-000"
 | [TLSRoute](#tlsroute)               | Not supported      | Not supported          | Not Supported                         | N/A         |
 | [TCPRoute](#tcproute)               | Not supported      | Not supported          | Not Supported                         | N/A         |
 | [UDPRoute](#udproute)               | Not supported      | Not supported          | Not Supported                         | N/A         |
+{{< /bootstrap-table >}}
 
 ## Terminology
 

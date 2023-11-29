@@ -22,7 +22,7 @@ This repo uses a [forking workflow](https://www.atlassian.com/git/tutorials/comp
 
 ### Publishing Documentation Updates
 
-**`main`** is the default branch in this repo. All the latest content updates are merged into this branch. 
+**`main`** is the default branch in this repo. All the latest content updates are merged into this branch.
 
 The documentation is published from the latest public release branch, (for example, `release-4.0`). Work on your docs in a feature branch in your fork of the repo. Open pull requests into the `main` branch when you are ready to merge your work.
 
@@ -49,7 +49,7 @@ Follow the instructions here to install Hugo: [Hugo Installation](https://gohugo
 
 We use markdownlint to check that Markdown files are correctly formatted. You can use `npm` to install markdownlint-cli:
 
-```
+```shell
 npm install -g markdownlint-cli   
 ```
 
@@ -74,13 +74,13 @@ The available kinds are:
 
 - Task: Enable the customer to achieve a specific goal, based on use case scenarios.
 - Concept: Help a customer learn about a specific feature or feature set.
-- Reference: Describes an API, command line tool, config options, etc.; should be generated automatically from source code. 
+- Reference: Describes an API, command line tool, config options, etc.; should be generated automatically from source code.
 - Troubleshooting: Helps a customer solve a specific problem.
 - Tutorial: Walk a customer through an example use case scenario; results in a functional PoC environment.
 
 ### Format internal links
 
-Format links as [Hugo relrefs](https://gohugo.io/content-management/cross-references/). 
+Format links as [Hugo relrefs](https://gohugo.io/content-management/cross-references/).
 
 > Note: Using file extensions when linking to internal docs with `relref` is optional.
   
@@ -96,7 +96,7 @@ To install NGINX Gateway Fabric, refer to the [installation instructions]({{< re
 
 ### Add images
 
-You can use the `img` [shortcode](#shortcodes) to insert images into your documentation.
+You can use the `img` [shortcode](#Use-Hugo-shortcodes) to insert images into your documentation.
 
 1. Add the image to the static/img directory.
    DO NOT include a forward slash at the beginning of the file path. This will break the image when it's rendered.
@@ -105,17 +105,17 @@ You can use the `img` [shortcode](#shortcodes) to insert images into your docume
 1. Add the img shortcode:
 
     {{< img src="img/<img-file.png>" >}}
- 
-> Note: The shortcode accepts all of the same parameters as the [Hugo figure shortcode](https://gohugo.io/content-management/shortcodes/#figure). 
+
+> Note: The shortcode accepts all of the same parameters as the [Hugo figure shortcode](https://gohugo.io/content-management/shortcodes/#figure).
 
 ### Use Hugo shortcodes
-You can use Hugo [shortcodes](https://gohugo.io/content-management/shortcodes) to do things like format callouts, add images, and reuse content across different docs. 
+You can use Hugo [shortcodes](https://gohugo.io/content-management/shortcodes) to do things like format callouts, add images, and reuse content across different docs.
 
 For example, to use the note callout:
 
 ```md
 {{< note >}}Provide the text of the note here. {{< /note >}}
-``` 
+```
 
 The callout shortcodes also support multi-line blocks:
 
@@ -126,6 +126,7 @@ You should probably never do this specific thing in a production environment. If
 ```
 
 Supported callouts:
+
 - caution
 - important
 - note
@@ -148,16 +149,16 @@ A few more useful shortcodes:
 
 To view the docs in a browser, run the Hugo server. This will reload the docs automatically so you can view updates as you work.
 
-> Note: The docs use build environments to control the baseURL that will be used for things like internal references and resource (CSS and JS) loading. 
+> Note: The docs use build environments to control the baseURL that will be used for things like internal references and resource (CSS and JS) loading.
 > You can view the config for each environment in the [config](./config) directory of this repo.
 When running the Hugo server, you can specify the environment and baseURL if desired, but it's not necessary.
 
 For example:
 
-```
+```shell
 hugo server
 ```
 
-```
+```shell
 hugo server -e development -b "http://127.0.0.1/nginx-gateway-fabric/"
 ```

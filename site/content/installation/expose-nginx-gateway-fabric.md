@@ -32,7 +32,7 @@ A **NodePort** service allocates a port on every cluster node. Access NGINX Gate
 
 To create a **LoadBalancer** service, use the appropriate manifest for your cloud provider:
 
-### GCP (Google Cloud Platform) and Azure 
+### GCP (Google Cloud Platform) and Azure
 
 1. Run the following command:
 
@@ -48,7 +48,7 @@ To create a **LoadBalancer** service, use the appropriate manifest for your clou
 
 3. Use the public IP of the load balancer to access NGINX Gateway Fabric.
 
-### AWS (Amazon Web Services):
+### AWS (Amazon Web Services)
 
 1. Run the following command:
 
@@ -61,9 +61,11 @@ To create a **LoadBalancer** service, use the appropriate manifest for your clou
    ```shell
    kubectl get svc nginx-gateway -n nginx-gateway
    ```
+
    {{< note >}} We recommend using the NLB DNS whenever possible, but for testing purposes, you can resolve the DNS name to get the IP address of the load balancer:
 
    ```shell
    nslookup <dns-name>
    ```
+   
    {{< /note >}}

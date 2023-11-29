@@ -109,7 +109,7 @@ Once NGINX Gateway Fabric processes the **cafe** gateway and **coffee** HTTPRout
 
 The **coffee** service is omitted from the diagram above because the NGINX Gateway Fabric routes directly to the pods that the **coffee** service targets.
 
-{{< note >}}In the diagrams above, all resources that are the responsibility of the cluster operator are shown in blue. The orange resources are the responsibility of the application developers. 
+{{< note >}}In the diagrams above, all resources that are the responsibility of the cluster operator are shown in blue. The orange resources are the responsibility of the application developers.
 
 See the [roles and personas](https://gateway-api.sigs.k8s.io/concepts/roles-and-personas/#roles-and-personas_1) Gateway API document for more information on these roles.{{< /note >}}
 

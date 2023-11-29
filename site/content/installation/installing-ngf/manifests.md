@@ -22,36 +22,45 @@ Deploying NGINX Gateway Fabric with Kubernetes manifests takes only a few steps.
 {{<note>}}By default, NGINX Gateway Fabric is installed in the **nginx-gateway** namespace. You can deploy in another namespace by modifying the manifest files.{{</note>}}
 
 1. **Install the Gateway API resources:**
+
    - Install the Gateway API CRDs from [the Gateway API repo](https://github.com/kubernetes-sigs/gateway-api):
 
    ```shell
    kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/standard-install.yaml
    ```
+
    - If you are running on Kubernetes 1.23 or 1.24, you also need to install the validating webhook. To do so, run:
 
    ```shell
    kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/webhook-install.yaml
    ```
+
 {{< important >}}The validating webhook is not needed if you are running Kubernetes 1.25+. Validation is done using CEL on the CRDs. See the [resource validation doc]({{< relref "/overview/resource-validation.md" >}}) for more information. {{< /important >}}
 
 2. **Deploy the NGINX Gateway Fabric CRDs:**
+
    - Next, deploy the NGINX Gateway Fabric CRDs:
      ```shell
      kubectl apply -f https://github.com/nginxinc/nginx-gateway-fabric/releases/download/v1.0.0/crds.yaml
      ```
 
 3. **Deploy NGINX Gateway Fabric:**
+
    - Then, deploy NGINX Gateway Fabric:
+
      ```shell
      kubectl apply -f https://github.com/nginxinc/nginx-gateway-fabric/releases/download/v1.0.0/nginx-gateway.yaml
      ```
 
 4. **Verify the Deployment:**
    - To confirm that NGINX Gateway Fabric is running, check the pods in the `nginx-gateway` namespace:
+
      ```shell
      kubectl get pods -n nginx-gateway
      ```
+     
      The output should look similar to this (note that the pod name will include a unique string):
+     
      ```text
      NAME                             READY   STATUS    RESTARTS   AGE
      nginx-gateway-5d4f4c7db7-xk2kq   2/2     Running   0          112s

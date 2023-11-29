@@ -24,15 +24,19 @@ to reflect whether it is valid or not.
 
 ### Spec
 
+{{< bootstrap-table "table table-striped table-bordered" >}}
 | name    | description                                                     | type                     | required |
 |---------|-----------------------------------------------------------------|--------------------------|----------|
 | logging | Logging defines logging related settings for the control plane. | [logging](#speclogging) | no       |
+{{< /bootstrap-table >}}
 
 ### Spec.Logging
 
+{{< bootstrap-table "table table-striped table-bordered" >}}
 | name  | description                                                            | type   | required |
 |-------|------------------------------------------------------------------------|--------|----------|
 | level | Level defines the logging level. Supported values: info, debug, error. | string | no       |
+{{< /bootstrap-table >}}
 
 ## Viewing and Updating the Configuration
 

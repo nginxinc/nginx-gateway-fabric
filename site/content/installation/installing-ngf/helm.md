@@ -141,11 +141,13 @@ Follow these steps to configure delayed pod termination:
 
 1. Save the changes.
 
-{{<see-also>}} 
+{{<see-also>}}
 For additional information on configuring and understanding the behavior of containers and pods during their lifecycle, refer to the following Kubernetes documentation:
+
 - [Container Lifecycle Hooks](https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/#container-hooks)
 - [Pod Lifecycle](https://kubernetes.io/docs/concepts/workloads/Pods/Pod-lifecycle/#Pod-termination)
-{{</see-also>}} 
+
+{{</see-also>}}
 
 
 ## Uninstall NGINX Gateway Fabric
