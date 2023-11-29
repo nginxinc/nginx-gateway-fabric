@@ -1,9 +1,9 @@
 ---
 title: "Installation"
-description: 
+description:
 weight: 200
 linkTitle: "Installation"
-menu: 
+menu:
   docs:
     parent: NGINX Gateway Fabric
 ---

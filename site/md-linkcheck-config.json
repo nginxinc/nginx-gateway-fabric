@@ -1,14 +1,13 @@
 {
-    "replacementPatterns": [
-      {
-          "pattern": "^\/",
-          "replacement": "<abs-path>/"
-      }
-    ],
-    "ignorePatterns": [
-      {
-        "pattern": "^.+localhost.+$|\/.+yaml"
-      }
-    ]
-  }
-  
+  "replacementPatterns": [
+    {
+      "pattern": "^/",
+      "replacement": "<abs-path>/"
+    }
+  ],
+  "ignorePatterns": [
+    {
+      "pattern": "^.+localhost.+$|/.+yaml"
+    }
+  ]
+}

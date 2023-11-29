@@ -3,7 +3,7 @@
   publish = "public"
 
 [context.production]
-  command = "make all"   
+  command = "make all"
 
 [context.docs-development]
   command = "make all-dev"

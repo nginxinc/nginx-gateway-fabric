@@ -1,9 +1,9 @@
 ---
 title: "Configuration"
-description: 
+description:
 weight: 200
 linkTitle: "Configuration"
-menu: 
+menu:
   docs:
     parent: How-To Guides
 ---
