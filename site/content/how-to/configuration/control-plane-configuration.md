@@ -1,6 +1,6 @@
 ---
 title: "Control Plane Configuration"
-description: "Learn how to dynamically update the NGINX Gateway Fabric control plane configuration."
+description: "Learn how to dynamically update the F5 NGINX Gateway Fabric control plane configuration."
 weight: 100
 toc: true
 docs: "DOCS-000"
@@ -8,19 +8,18 @@ docs: "DOCS-000"
 
 ## Overview
 
-NGINX Gateway Fabric offers a way to update the control plane configuration dynamically without the need for a
-restart. The control plane configuration is stored in the NginxGateway custom resource. This resource is created
-during the installation of NGINX Gateway Fabric.
+NGINX Gateway Fabric can dynamically update the control plane configuration without restarting. The control plane configuration is stored in the NginxGateway custom resource, created during the installation of NGINX Gateway Fabric.
 
-If using manifests, the default name of the resource is `nginx-gateway-config`. If using Helm, the default name
-of the resource is `<release-name>-config`. It is deployed in the same Namespace as the controller
-(default `nginx-gateway`).
+NginxGateway is deployed in the same namespace as the controller (Default: `nginx-gateway`). The resource's default name is based on your [installation method]({{<relref "/installation/installing-ngf">}}):
 
-The control plane only watches this single instance of the custom resource. If the resource is invalid per the OpenAPI
-schema, the Kubernetes API server will reject the changes. If the resource is deleted or deemed invalid by NGINX
-Gateway Fabric, a warning Event is created in the `nginx-gateway` Namespace, and the default values will be used by
-the control plane for its configuration. Additionally, the control plane updates the status of the resource (if it exists)
-to reflect whether it is valid or not.
+- Helm: `<release-name>-config`
+- Manifests: `nginx-gateway-config`
+
+The control plane only watches this single instance of the custom resource. 
+
+If the resource is invalid to the OpenAPI schema, the Kubernetes API server will reject the changes. If the resource is deleted or deemed invalid by NGINX Gateway Fabric, a warning event is created in the `nginx-gateway` namespace, and the default values will be used by the control plane for its configuration. 
+
+Additionally, the control plane updates the status of the resource (if it exists) to reflect whether it is valid or not.
 
 ### Spec
 
@@ -40,8 +39,7 @@ to reflect whether it is valid or not.
 
 ## Viewing and Updating the Configuration
 
-> For the following examples, the name `nginx-gateway-config` should be updated to the name of the resource that
-> was created by your installation.
+{{< note >}} For the following examples, the name `nginx-gateway-config` should be updated to the name of the resource created for your installation. {{< /note >}}
 
 To view the current configuration:
 
@@ -55,8 +53,7 @@ To update the configuration:
 kubectl -n nginx-gateway edit nginxgateways nginx-gateway-config
 ```
 
-This will open the configuration in your default editor. You can then update and save the configuration, which is
-applied automatically to the control plane.
+This will open the configuration in your default editor. You can then update and save the configuration, which is applied automatically to the control plane.
 
 To view the status of the configuration:
 
