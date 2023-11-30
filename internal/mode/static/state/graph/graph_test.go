@@ -485,39 +485,39 @@ func TestIsReferenced(t *testing.T) {
 	}{
 		{
 			name:     "Namespace in graph's ReferencedNamespaces passes",
+			resource: nsInGraph,
 			graph:    graph,
 			expected: true,
-			resource: nsInGraph,
 		},
 		{
 			name:     "Namespace with a different name but same labels fails",
+			resource: nsNotInGraph,
 			graph:    graph,
 			expected: false,
-			resource: nsNotInGraph,
 		},
 		{
 			name:     "Secret in graph's ReferencedSecrets passes",
+			resource: baseSecret,
 			graph:    graph,
 			expected: true,
-			resource: baseSecret,
 		},
 		{
 			name:     "Secret not in ReferencedSecrets with same Namespace and different Name fails",
+			resource: sameNamespaceDifferentNameSecret,
 			graph:    graph,
 			expected: false,
-			resource: sameNamespaceDifferentNameSecret,
 		},
 		{
 			name:     "Secret not in ReferencedSecrets with different Namespace and same Name fails",
+			resource: differentNamespaceSameNameSecret,
 			graph:    graph,
 			expected: false,
-			resource: differentNamespaceSameNameSecret,
 		},
 		{
 			name:     "Namespace not in ReferencedNamespaces but in Gateway Listener's AllowedRouteLabelSelector passes",
+			resource: nsNotInGraphButInGateway,
 			graph:    graph,
 			expected: true,
-			resource: nsNotInGraphButInGateway,
 		},
 	}
 	for _, test := range tests {
