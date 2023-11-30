@@ -3,11 +3,12 @@
 In this example we will deploy NGINX Gateway Fabric and configure traffic routing for a simple echo server.
 We will use HTTPRoute resources to route traffic to the echo server, using the `RequestHeaderModifier` filter to modify
 headers to the request.
+
 ## Running the Example
 
 ## 1. Deploy NGINX Gateway Fabric
 
-1. Follow the [installation instructions](/docs/installation.md) to deploy NGINX Gateway Fabric.
+1. Follow the [installation instructions](https://docs.nginx.com/nginx-gateway-fabric/installation/) to deploy NGINX Gateway Fabric.
 
 1. Save the public IP address of NGINX Gateway Fabric into a shell variable:
 
