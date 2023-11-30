@@ -19,53 +19,59 @@ To complete this guide, you'll need to install:
 
 Deploying NGINX Gateway Fabric with Kubernetes manifests takes only a few steps. With manifests, you can configure your deployment exactly how you want. Manifests also make it easy to replicate deployments across environments or clusters, ensuring consistency.
 
-{{<note>}}By default, NGINX Gateway Fabric is installed in the **nginx-gateway** namespace. You can deploy in another namespace by modifying the manifest files.{{</note>}}
+### 1. Install the Gateway API resources
 
-1. **Install the Gateway API resources:**
+{{<include "installation/install-gateway-api-resources.md" >}}
 
-   - Install the Gateway API CRDs from [the Gateway API repo](https://github.com/kubernetes-sigs/gateway-api):
+### 2. Deploy the NGINX Gateway Fabric CRDs
 
-   ```shell
-   kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/standard-install.yaml
-   ```
-
-   - If you are running on Kubernetes 1.23 or 1.24, you also need to install the validating webhook. To do so, run:
+#### Stable release
 
    ```shell
-   kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/webhook-install.yaml
+   kubectl apply -f https://github.com/nginxinc/nginx-gateway-fabric/releases/download/v1.0.0/crds.yaml
    ```
 
-   {{< important >}}The validating webhook is not needed if you are running Kubernetes 1.25+. Validation is done using CEL on the CRDs. See the [resource validation doc]({{< relref "/overview/resource-validation.md" >}}) for more information. {{< /important >}}
+#### Edge version
 
-1. **Deploy the NGINX Gateway Fabric CRDs:**
+   ```shell
+   git clone https://github.com/nginxinc/nginx-gateway-fabric.git
+   cd nginx-gateway-fabric
+   ```
 
-   - Next, deploy the NGINX Gateway Fabric CRDs:
+   ```shell
+   kubectl apply -f deploy/manifests/crds
+   ```
 
-     ```shell
-     kubectl apply -f https://github.com/nginxinc/nginx-gateway-fabric/releases/download/v1.0.0/crds.yaml
-     ```
+### 3. Deploy NGINX Gateway Fabric
 
-1. **Deploy NGINX Gateway Fabric:**
+   {{<note>}}By default, NGINX Gateway Fabric is installed in the **nginx-gateway** namespace. You can deploy in another namespace by modifying the manifest files.{{</note>}}
 
-   - Then, deploy NGINX Gateway Fabric:
+#### Stable release
 
-     ```shell
-     kubectl apply -f https://github.com/nginxinc/nginx-gateway-fabric/releases/download/v1.0.0/nginx-gateway.yaml
-     ```
+   ```shell
+   kubectl apply -f https://github.com/nginxinc/nginx-gateway-fabric/releases/download/v1.0.0/nginx-gateway.yaml
+   ```
 
-1. **Verify the Deployment:**
-   - To confirm that NGINX Gateway Fabric is running, check the pods in the `nginx-gateway` namespace:
+#### Edge version
 
-     ```shell
-     kubectl get pods -n nginx-gateway
-     ```
+   ```shell
+   kubectl apply -f deploy/manifests/nginx-gateway.yaml
+   ```
 
-     The output should look similar to this (note that the pod name will include a unique string):
+### 4. Verify the Deployment
 
-     ```text
-     NAME                             READY   STATUS    RESTARTS   AGE
-     nginx-gateway-5d4f4c7db7-xk2kq   2/2     Running   0          112s
-     ```
+To confirm that NGINX Gateway Fabric is running, check the pods in the `nginx-gateway` namespace:
+
+   ```shell
+   kubectl get pods -n nginx-gateway
+   ```
+
+   The output should look similar to this (note that the pod name will include a unique string):
+
+   ```text
+   NAME                             READY   STATUS    RESTARTS   AGE
+   nginx-gateway-5d4f4c7db7-xk2kq   2/2     Running   0          112s
+   ```
 
 
 ## Upgrade NGINX Gateway Fabric
@@ -77,7 +83,7 @@ To upgrade NGINX Gateway Fabric and get the latest features and improvements, ta
 1. **Upgrade Gateway API resources:**
 
    - Verify that your NGINX Gateway Fabric version is compatible with the Gateway API resources. Refer to the [Technical Specifications]({{< relref "reference/technical-specifications.md" >}}) for details.
-   - Review the [release notes](https://github.com/kubernetes-sigs/gateway-api/releases/tag/v1.0.0) for any important upgrade-specific information.
+   - Review the [release notes](https://github.com/kubernetes-sigs/gateway-api/releases) for any important upgrade-specific information.
    - To upgrade the Gateway API resources, run:
 
       ```shell
@@ -86,30 +92,30 @@ To upgrade NGINX Gateway Fabric and get the latest features and improvements, ta
 
    - If you are running on Kubernetes 1.23 or 1.24, you also need to update the validating webhook:
 
-   ```shell
-    kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/webhook-install.yaml
-   ```
+      ```shell
+      kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/webhook-install.yaml
+      ```
 
    - If you are running on Kubernetes 1.25 or newer and have the validating webhook installed, you should remove the
    webhook:
 
-   ```shell
-    kubectl delete -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/webhook-install.yaml
-   ```
+      ```shell
+      kubectl delete -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/webhook-install.yaml
+      ```
 
 1. **Upgrade NGINX Gateway Fabric CRDs:**
    - To upgrade the Custom Resource Definitions (CRDs), run:
 
-     ```shell
-     kubectl apply -f https://github.com/nginxinc/nginx-gateway-fabric/releases/download/v1.0.0/crds.yaml
-     ```
+      ```shell
+      kubectl apply -f https://github.com/nginxinc/nginx-gateway-fabric/releases/download/v1.0.0/crds.yaml
+      ```
 
 1. **Upgrade NGINX Gateway Fabric deployment:**
    - To upgrade the deployment, run:
 
-     ```shell
-     kubectl apply -f https://github.com/nginxinc/nginx-gateway-fabric/releases/download/v1.0.0/nginx-gateway.yaml
-     ```
+      ```shell
+      kubectl apply -f https://github.com/nginxinc/nginx-gateway-fabric/releases/download/v1.0.0/nginx-gateway.yaml
+      ```
 
 ## Delay pod termination for zero downtime upgrades {#configure-delayed-pod-termination-for-zero-downtime-upgrades}
 
@@ -179,7 +185,7 @@ Follow these steps to uninstall NGINX Gateway Fabric and Gateway API from your K
 
 1. **Remove the Gateway API resources:**
 
-   - {{<include "installation/helm/uninstall-gateway-api-resources.md" >}}
+   - {{<include "installation/uninstall-gateway-api-resources.md" >}}
 
 ## Next steps
 
