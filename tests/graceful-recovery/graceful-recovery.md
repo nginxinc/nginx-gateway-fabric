@@ -136,7 +136,7 @@ if the configuration and version were correctly updated.
 
 1. Switch over to a one-Node Kind cluster. Can run `make create-kind-cluster` from main directory.
 2. Run steps 4-11 of the [Setup](#setup) section above using
-[this guide](https://github.com/nginxinc/nginx-gateway-fabric/blob/main/docs/running-on-kind.md) for running on Kind.
+[this guide](https://docs.nginx.com/nginx-gateway-fabric/installation/running-on-kind/) for running on Kind.
 3. Ensure NGF and NGINX container logs are set up and traffic flows through the example application correctly.
 4. Drain the Node of its resources.
 

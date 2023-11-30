@@ -26,7 +26,7 @@ manifest and **re-build** NGF.
 
 How to deploy:
 
-1. Follow the [installation](/docs/installation.md) instructions up until the Deploy the NGINX Gateway Fabric step
+1. Follow the [installation](https://docs.nginx.com/nginx-gateway-fabric/installation/) instructions up until the Deploy the NGINX Gateway Fabric step
    to deploy prerequisites for both the static mode Deployments and the provisioner.
 1. Deploy provisioner:
 

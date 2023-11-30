@@ -52,7 +52,7 @@ kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/downloa
 > **Important**
 >
 > The validating webhook is not needed if you are running Kubernetes 1.25+. Validation is done using CEL on the
-> CRDs. See the [resource validation doc](https://github.com/nginxinc/nginx-gateway-fabric/blob/main/docs/resource-validation.md)
+> CRDs. See the [resource validation doc](https://docs.nginx.com/nginx-gateway-fabric/overview/resource-validation/)
 > for more information.
 
 ## Installing the Chart
