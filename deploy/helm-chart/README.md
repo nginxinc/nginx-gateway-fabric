@@ -76,16 +76,6 @@ helm install my-release oci://ghcr.io/nginxinc/charts/nginx-gateway-fabric  --cr
 This will install the latest stable release. To install the latest version from the `main` branch, specify the
 `--version 0.0.0-edge` flag when installing.
 
-> **Note**
->
-> For kind clusters, NodePort services require [extra configuration](https://kind.sigs.k8s.io/docs/user/configuration/#nodeport-with-port-mappings)
-> and LoadBalancer services need [a third-party controller](https://kind.sigs.k8s.io/docs/user/loadbalancer/)
-> like MetalLB for external IP assignment.
-> However, the Helm chart creates a LoadBalancer service by default. Therefore, the `--wait`
-> flag will hang until timeout. To avoid this, you can disable service creation by adding `--set service.create=false`
-> to your Helm command and use port-forwarding as described in the [running-on-kind.md](https://github.com/nginxinc/nginx-gateway-fabric/blob/main/docs/running-on-kind.md)
-> guide instead to try out the examples.
-
 ### Installing the Chart via Sources
 
 #### Pulling the Chart
