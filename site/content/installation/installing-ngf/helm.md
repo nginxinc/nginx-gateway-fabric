@@ -18,6 +18,10 @@ To complete this guide, you'll need to install:
 
 ## Deploy NGINX Gateway Fabric
 
+### Installing the Gateway API resources
+
+{{<include "installation/install-gateway-api-resources.md" >}}
+
 ### Install from the OCI registry
 
 - To install the latest stable release of NGINX Gateway Fabric in the **nginx-gateway** namespace, run the following command:
@@ -175,7 +179,7 @@ Follow these steps to uninstall NGINX Gateway Fabric and Gateway API from your K
 
 3. **Remove the Gateway API resources:**
 
-   - {{<include "installation/helm/uninstall-gateway-api-resources.md" >}}
+   - {{<include "installation/uninstall-gateway-api-resources.md" >}}
 
 ## Next steps
 
