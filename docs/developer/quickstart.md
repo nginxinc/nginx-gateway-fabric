@@ -10,6 +10,17 @@ Follow these steps to set up your development environment.
 
 1. Install:
     - [Go](https://golang.org/doc/install)
+
+      ```shell
+      # `go.mod` requires Go 1.21.3.
+      go install golang.org/dl/go1.21.3@latest
+      go1.21.3 download
+      export GOROOT=$(go1.21.3 env GOROOT)
+      export PATH="$GOROOT/bin:$PATH"
+      # Verify the installation.
+      go version
+      ```
+
     - [Docker](https://docs.docker.com/get-docker/) v18.09+
     - [Kind](https://kind.sigs.k8s.io/docs/user/quick-start/)
     - [Helm](https://helm.sh/docs/intro/quickstart/#install-helm)
