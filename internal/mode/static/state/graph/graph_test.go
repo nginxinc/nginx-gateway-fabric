@@ -7,10 +7,11 @@ import (
 	. "github.com/onsi/gomega"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
-	v1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/validation"
@@ -119,6 +120,15 @@ func TestBuildGraph(t *testing.T) {
 		Type: v1.SecretTypeTLS,
 	}
 
+	ns := &v1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "test",
+			Labels: map[string]string{
+				"app": "allowed",
+			},
+		},
+	}
+
 	createGateway := func(name string) *gatewayv1.Gateway {
 		return &gatewayv1.Gateway{
 			ObjectMeta: metav1.ObjectMeta{
@@ -133,6 +143,16 @@ func TestBuildGraph(t *testing.T) {
 						Hostname: nil,
 						Port:     80,
 						Protocol: gatewayv1.HTTPProtocolType,
+						AllowedRoutes: &gatewayv1.AllowedRoutes{
+							Namespaces: &gatewayv1.RouteNamespaces{
+								From: helpers.GetPointer(gatewayv1.NamespacesFromSelector),
+								Selector: &metav1.LabelSelector{
+									MatchLabels: map[string]string{
+										"app": "allowed",
+									},
+								},
+							},
+						},
 					},
 
 					{
@@ -220,6 +240,9 @@ func TestBuildGraph(t *testing.T) {
 			Services: map[types.NamespacedName]*v1.Service{
 				client.ObjectKeyFromObject(svc): svc,
 			},
+			Namespaces: map[types.NamespacedName]*v1.Namespace{
+				client.ObjectKeyFromObject(ns): ns,
+			},
 			ReferenceGrants: map[types.NamespacedName]*v1beta1.ReferenceGrant{
 				client.ObjectKeyFromObject(rgSecret):  rgSecret,
 				client.ObjectKeyFromObject(rgService): rgService,
@@ -281,7 +304,8 @@ func TestBuildGraph(t *testing.T) {
 						Routes: map[types.NamespacedName]*Route{
 							{Namespace: "test", Name: "hr-1"}: routeHR1,
 						},
-						SupportedKinds: []gatewayv1.RouteGroupKind{{Kind: "HTTPRoute"}},
+						SupportedKinds:            []gatewayv1.RouteGroupKind{{Kind: "HTTPRoute"}},
+						AllowedRouteLabelSelector: labels.SelectorFromSet(map[string]string{"app": "allowed"}),
 					},
 					{
 						Name:       "listener-443-1",
@@ -307,6 +331,11 @@ func TestBuildGraph(t *testing.T) {
 			ReferencedSecrets: map[types.NamespacedName]*Secret{
 				client.ObjectKeyFromObject(secret): {
 					Source: secret,
+				},
+			},
+			ReferencedNamespaces: map[types.NamespacedName]*Namespace{
+				client.ObjectKeyFromObject(ns): {
+					Source: ns,
 				},
 			},
 		}
@@ -360,5 +389,140 @@ func TestBuildGraph(t *testing.T) {
 
 			g.Expect(helpers.Diff(test.expected, result)).To(BeEmpty())
 		})
+	}
+}
+
+func TestIsReferenced(t *testing.T) {
+	baseSecret := &v1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "test",
+			Name:      "secret",
+		},
+		Data: map[string][]byte{
+			v1.TLSCertKey:       cert,
+			v1.TLSPrivateKeyKey: key,
+		},
+		Type: v1.SecretTypeTLS,
+	}
+	sameNamespaceDifferentNameSecret := &v1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "test",
+			Name:      "secret-different-name",
+		},
+		Data: map[string][]byte{
+			v1.TLSCertKey:       cert,
+			v1.TLSPrivateKeyKey: key,
+		},
+		Type: v1.SecretTypeTLS,
+	}
+	differentNamespaceSameNameSecret := &v1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "test-different-namespace",
+			Name:      "secret",
+		},
+		Data: map[string][]byte{
+			v1.TLSCertKey:       cert,
+			v1.TLSPrivateKeyKey: key,
+		},
+		Type: v1.SecretTypeTLS,
+	}
+
+	nsInGraph := &v1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "test",
+			Labels: map[string]string{
+				"app": "allowed",
+			},
+		},
+	}
+	nsNotInGraph := &v1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "different-name",
+			Labels: map[string]string{
+				"app": "allowed",
+			},
+		},
+	}
+
+	gw := &Gateway{
+		Listeners: map[string]*Listener{
+			"listener-1": {
+				Valid:                     true,
+				AllowedRouteLabelSelector: labels.SelectorFromSet(map[string]string{"apples": "oranges"}),
+			},
+		},
+		Valid: true,
+	}
+
+	nsNotInGraphButInGateway := &v1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "notInGraphButInGateway",
+			Labels: map[string]string{
+				"apples": "oranges",
+			},
+		},
+	}
+
+	graph := &Graph{
+		Gateway: gw,
+		ReferencedSecrets: map[types.NamespacedName]*Secret{
+			client.ObjectKeyFromObject(baseSecret): {
+				Source: baseSecret,
+			},
+		},
+		ReferencedNamespaces: map[types.NamespacedName]*Namespace{
+			client.ObjectKeyFromObject(nsInGraph): {
+				Source: nsInGraph,
+			},
+		},
+	}
+
+	tests := []struct {
+		graph    *Graph
+		resource client.Object
+		name     string
+		expected bool
+	}{
+		{
+			name:     "Namespace in graph's ReferencedNamespaces passes",
+			graph:    graph,
+			expected: true,
+			resource: nsInGraph,
+		},
+		{
+			name:     "Namespace with a different name but same labels fails",
+			graph:    graph,
+			expected: false,
+			resource: nsNotInGraph,
+		},
+		{
+			name:     "Secret in graph's ReferencedSecrets passes",
+			graph:    graph,
+			expected: true,
+			resource: baseSecret,
+		},
+		{
+			name:     "Secret not in ReferencedSecrets with same Namespace and different Name fails",
+			graph:    graph,
+			expected: false,
+			resource: sameNamespaceDifferentNameSecret,
+		},
+		{
+			name:     "Secret not in ReferencedSecrets with different Namespace and same Name fails",
+			graph:    graph,
+			expected: false,
+			resource: differentNamespaceSameNameSecret,
+		},
+		{
+			name:     "Namespace not in ReferencedNamespaces but in Gateway Listener's AllowedRouteLabelSelector passes",
+			graph:    graph,
+			expected: true,
+			resource: nsNotInGraphButInGateway,
+		},
+	}
+	for _, test := range tests {
+		g := NewWithT(t)
+		result := test.graph.IsReferenced(test.resource, client.ObjectKeyFromObject(test.resource))
+		g.Expect(result).To(Equal(test.expected))
 	}
 }

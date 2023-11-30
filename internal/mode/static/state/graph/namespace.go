@@ -39,7 +39,8 @@ func checkNamespace(ns *v1.Namespace, gw *Gateway) bool {
 	}
 	for _, listener := range gw.Listeners {
 		if listener.AllowedRouteLabelSelector == nil {
-			return false
+			// Can have some listeners with AllowedRouteLabelSelector not set
+			continue
 		}
 		if listener.AllowedRouteLabelSelector.Matches(labels.Set(nsLabels)) {
 			return true
