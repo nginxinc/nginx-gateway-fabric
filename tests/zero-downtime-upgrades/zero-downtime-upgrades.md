@@ -118,7 +118,7 @@ Notes:
 
 ### Upgrade
 
-1. Follow the [upgrade instructions](/docs/installation.md#upgrade-nginx-gateway-fabric-from-manifests) to:
+1. Follow the [upgrade instructions](https://docs.nginx.com/nginx-gateway-fabric/installation/installing-ngf/manifests/) to:
     1. Upgrade Gateway API version to the one that matches the supported version of new release.
     2. Upgrade NGF CRDs.
 2. Start sending traffic using wrk from tester VMs for 1 minute:
@@ -149,7 +149,7 @@ Notes:
           ```
 
 3. **Immediately** upgrade NGF manifests by
-   following [upgrade instructions](/docs/installation.md#upgrade-nginx-gateway-fabric-from-manifests).
+   following [upgrade instructions](https://docs.nginx.com/nginx-gateway-fabric/installation/installing-ngf/manifests/).
    > Don't forget to modify the manifests to have 2 replicas and Pod affinity.
 4. Ensure the new Pods are running and the old ones terminate.
 

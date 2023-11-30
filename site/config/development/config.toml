@@ -1,0 +1,3 @@
+baseURL = "https://docs-dev.nginx.com/nginx-gateway-fabric"
+title = "DEV -- NGINX Gateway Fabric"
+canonifyURLs = false

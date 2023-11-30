@@ -7,7 +7,7 @@ to route traffic to that application using HTTPRoute resources.
 
 ## 1. Deploy NGINX Gateway Fabric
 
-1. Follow the [installation instructions](/docs/installation.md) to deploy NGINX Gateway Fabric.
+1. Follow the [installation instructions](https://docs.nginx.com/nginx-gateway-fabric/installation/) to deploy NGINX Gateway Fabric.
 
 1. Save the public IP address of NGINX Gateway Fabric into a shell variable:
 
