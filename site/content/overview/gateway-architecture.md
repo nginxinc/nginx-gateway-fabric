@@ -1,6 +1,6 @@
 ---
 title: "Gateway Architecture"
-description: "Learn about the architecture and design principles of F5 NGINX Gateway Fabric."
+description: "Learn about the architecture and design principles of NGINX Gateway Fabric."
 weight: 100
 toc: true
 docs: "DOCS-000"
