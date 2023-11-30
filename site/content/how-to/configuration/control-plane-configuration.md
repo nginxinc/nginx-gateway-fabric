@@ -1,6 +1,6 @@
 ---
 title: "Control Plane Configuration"
-description: "Learn how to dynamically update the F5 NGINX Gateway Fabric control plane configuration."
+description: "Learn how to dynamically update the Gateway Fabric control plane configuration."
 weight: 100
 toc: true
 docs: "DOCS-000"
@@ -15,9 +15,9 @@ NginxGateway is deployed in the same namespace as the controller (Default: `ngin
 - Helm: `<release-name>-config`
 - Manifests: `nginx-gateway-config`
 
-The control plane only watches this single instance of the custom resource. 
+The control plane only watches this single instance of the custom resource.
 
-If the resource is invalid to the OpenAPI schema, the Kubernetes API server will reject the changes. If the resource is deleted or deemed invalid by NGINX Gateway Fabric, a warning event is created in the `nginx-gateway` namespace, and the default values will be used by the control plane for its configuration. 
+If the resource is invalid to the OpenAPI schema, the Kubernetes API server will reject the changes. If the resource is deleted or deemed invalid by NGINX Gateway Fabric, a warning event is created in the `nginx-gateway` namespace, and the default values will be used by the control plane for its configuration.
 
 Additionally, the control plane updates the status of the resource (if it exists) to reflect whether it is valid or not.
 
