@@ -29,7 +29,7 @@ Reserve GitHub issues for feature requests and bugs rather than general question
 
 ## Getting Started
 
-Follow our [Installation Instructions](/docs/installation.md) to get the NGINX Gateway Fabric up and running.
+Follow our [Installation Instructions](https://docs.nginx.com/nginx-gateway-fabric/installation/) to get the NGINX Gateway Fabric up and running.
 
 ### Project Structure
 
@@ -91,7 +91,7 @@ Before beginning development, familiarize yourself with the following documents:
   outlining guidelines and best practices to ensure smooth and efficient pull request processes.
 - [Go Style Guide](/docs/developer/go-style-guide.md): A coding style guide for Go. Contains best practices and
   conventions to follow when writing Go code for the project.
-- [Architecture](/docs/architecture.md): A high-level overview of the project's architecture.
+- [Architecture](https://docs.nginx.com/nginx-gateway-fabric/overview/gateway-architecture/): A high-level overview of the project's architecture.
 - [Design Principles](/docs/developer/design-principles.md): An overview of the project's design principles.
 
 ## Contributor License Agreement
