@@ -388,7 +388,7 @@ var _ = Describe("ChangeProcessor", func() {
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "gatewayclasses.gateway.networking.k8s.io",
 						Annotations: map[string]string{
-							gatewayclass.BundleVersionAnnotation: gatewayclass.RecommendedVersion,
+							gatewayclass.BundleVersionAnnotation: gatewayclass.SupportedVersion,
 						},
 					},
 				}
@@ -656,7 +656,7 @@ var _ = Describe("ChangeProcessor", func() {
 					}
 
 					expGraph.GatewayClass.Conditions = conditions.NewGatewayClassSupportedVersionBestEffort(
-						gatewayclass.RecommendedVersion,
+						gatewayclass.SupportedVersion,
 					)
 
 					changed, graphCfg := processor.Process()

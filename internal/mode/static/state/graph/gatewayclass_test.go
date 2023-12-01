@@ -132,7 +132,7 @@ func TestBuildGatewayClass(t *testing.T) {
 		{Name: "gateways.gateway.networking.k8s.io"}: {
 			ObjectMeta: metav1.ObjectMeta{
 				Annotations: map[string]string{
-					gatewayclass.BundleVersionAnnotation: gatewayclass.RecommendedVersion,
+					gatewayclass.BundleVersionAnnotation: gatewayclass.SupportedVersion,
 				},
 			},
 		},
@@ -188,7 +188,7 @@ func TestBuildGatewayClass(t *testing.T) {
 			expected: &GatewayClass{
 				Source:     validGC,
 				Valid:      false,
-				Conditions: conditions.NewGatewayClassUnsupportedVersion(gatewayclass.RecommendedVersion),
+				Conditions: conditions.NewGatewayClassUnsupportedVersion(gatewayclass.SupportedVersion),
 			},
 			name: "invalid gatewayclass; unsupported version",
 		},

@@ -10,8 +10,10 @@ import (
 )
 
 const (
+	// BundleVersionAnnotation is the annotation on Gateway API CRDs that contains the installed version.
 	BundleVersionAnnotation = "gateway.networking.k8s.io/bundle-version"
-	RecommendedVersion      = "v1.0.0"
+	// SupportedVersion is the supported version of the Gateway API CRDs.
+	SupportedVersion = "v1.0.0"
 )
 
 var gatewayCRDs = map[string]apiVersion{
@@ -30,7 +32,7 @@ func ValidateCRDVersions(
 	crdMetadata map[types.NamespacedName]*metav1.PartialObjectMetadata,
 ) ([]conditions.Condition, bool) {
 	installedAPIVersions := getBundleVersions(crdMetadata)
-	supportedAPIVersion := parseVersionString(RecommendedVersion)
+	supportedAPIVersion := parseVersionString(SupportedVersion)
 
 	var unsupported, bestEffort bool
 
@@ -43,11 +45,11 @@ func ValidateCRDVersions(
 	}
 
 	if unsupported {
-		return conditions.NewGatewayClassUnsupportedVersion(RecommendedVersion), false
+		return conditions.NewGatewayClassUnsupportedVersion(SupportedVersion), false
 	}
 
 	if bestEffort {
-		return conditions.NewGatewayClassSupportedVersionBestEffort(RecommendedVersion), true
+		return conditions.NewGatewayClassSupportedVersionBestEffort(SupportedVersion), true
 	}
 
 	return nil, true

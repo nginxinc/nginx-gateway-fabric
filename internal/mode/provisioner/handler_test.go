@@ -77,7 +77,7 @@ var _ = Describe("handler", func() {
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "gatewayclasses.gateway.networking.k8s.io",
 				Annotations: map[string]string{
-					gatewayclass.BundleVersionAnnotation: gatewayclass.RecommendedVersion,
+					gatewayclass.BundleVersionAnnotation: gatewayclass.SupportedVersion,
 				},
 			},
 		}
@@ -210,7 +210,7 @@ var _ = Describe("handler", func() {
 					LastTransitionTime: fakeClockTime,
 					Reason:             string(gatewayv1.GatewayClassReasonUnsupportedVersion),
 					Message: fmt.Sprintf("Gateway API CRD versions are not supported. "+
-						"Please install version %s", gatewayclass.RecommendedVersion),
+						"Please install version %s", gatewayclass.SupportedVersion),
 				},
 				{
 					Type:               string(gatewayv1.GatewayClassReasonSupportedVersion),
@@ -219,7 +219,7 @@ var _ = Describe("handler", func() {
 					LastTransitionTime: fakeClockTime,
 					Reason:             string(gatewayv1.GatewayClassReasonUnsupportedVersion),
 					Message: fmt.Sprintf("Gateway API CRD versions are not supported. "+
-						"Please install version %s", gatewayclass.RecommendedVersion),
+						"Please install version %s", gatewayclass.SupportedVersion),
 				},
 			}
 		} else {
@@ -239,7 +239,7 @@ var _ = Describe("handler", func() {
 					LastTransitionTime: fakeClockTime,
 					Reason:             string(gatewayv1.GatewayClassReasonUnsupportedVersion),
 					Message: fmt.Sprintf("Gateway API CRD versions are not recommended. "+
-						"Recommended version is %s", gatewayclass.RecommendedVersion),
+						"Recommended version is %s", gatewayclass.SupportedVersion),
 				},
 			}
 		}

@@ -23,8 +23,8 @@ func TestValidateCRDVersions(t *testing.T) {
 		}
 	}
 
-	// Adding patch version to RecommendedVersion to try and avoid having to update these tests with every release.
-	fields := strings.Split(gatewayclass.RecommendedVersion, ".")
+	// Adding patch version to SupportedVersion to try and avoid having to update these tests with every release.
+	fields := strings.Split(gatewayclass.SupportedVersion, ".")
 	fields[2] = "99"
 
 	validVersionWithPatch := createCRDMetadata(strings.Join(fields, "."))
@@ -67,7 +67,7 @@ func TestValidateCRDVersions(t *testing.T) {
 				{Name: "referencegrants.gateway.networking.k8s.io"}: bestEffortVersion,
 			},
 			valid:    true,
-			expConds: conditions.NewGatewayClassSupportedVersionBestEffort(gatewayclass.RecommendedVersion),
+			expConds: conditions.NewGatewayClassSupportedVersionBestEffort(gatewayclass.SupportedVersion),
 		},
 		{
 			name: "valid; mix of supported and best effort versions",
@@ -78,7 +78,7 @@ func TestValidateCRDVersions(t *testing.T) {
 				{Name: "referencegrants.gateway.networking.k8s.io"}: validVersionWithPatch,
 			},
 			valid:    true,
-			expConds: conditions.NewGatewayClassSupportedVersionBestEffort(gatewayclass.RecommendedVersion),
+			expConds: conditions.NewGatewayClassSupportedVersionBestEffort(gatewayclass.SupportedVersion),
 		},
 		{
 			name: "invalid; all unsupported versions",
@@ -89,7 +89,7 @@ func TestValidateCRDVersions(t *testing.T) {
 				{Name: "referencegrants.gateway.networking.k8s.io"}: unsupportedVersion,
 			},
 			valid:    false,
-			expConds: conditions.NewGatewayClassUnsupportedVersion(gatewayclass.RecommendedVersion),
+			expConds: conditions.NewGatewayClassUnsupportedVersion(gatewayclass.SupportedVersion),
 		},
 		{
 			name: "invalid; mix unsupported and best effort versions",
@@ -100,7 +100,7 @@ func TestValidateCRDVersions(t *testing.T) {
 				{Name: "referencegrants.gateway.networking.k8s.io"}: bestEffortVersion,
 			},
 			valid:    false,
-			expConds: conditions.NewGatewayClassUnsupportedVersion(gatewayclass.RecommendedVersion),
+			expConds: conditions.NewGatewayClassUnsupportedVersion(gatewayclass.SupportedVersion),
 		},
 		{
 			name: "invalid; bad version string",
@@ -108,7 +108,7 @@ func TestValidateCRDVersions(t *testing.T) {
 				{Name: "gatewayclasses.gateway.networking.k8s.io"}: createCRDMetadata("v"),
 			},
 			valid:    false,
-			expConds: conditions.NewGatewayClassUnsupportedVersion(gatewayclass.RecommendedVersion),
+			expConds: conditions.NewGatewayClassUnsupportedVersion(gatewayclass.SupportedVersion),
 		},
 	}
 
