@@ -38,15 +38,9 @@ func newObjectStoreMapAdapter[T client.Object](objects map[types.NamespacedName]
 }
 
 func (m *objectStoreMapAdapter[T]) get(nsname types.NamespacedName) client.Object {
-	var zeroVal client.Object
-
 	obj, exist := m.objects[nsname]
 	if !exist {
-		// we return zeroVal here instead of obj because we need to be able to compare the return value to nil.
-		// obj has a value of nil, but its type is a pointer to the concrete type (e.g. *v1.Pod).
-		// This means that obj != nil.
-		// However, the value **and** type of zeroVal are nil, which means zeroVal == nil.
-		return zeroVal
+		return nil
 	}
 
 	return obj

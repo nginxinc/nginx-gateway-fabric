@@ -14,6 +14,13 @@ const (
 	RecommendedVersion      = "v1.0.0"
 )
 
+var gatewayCRDs = map[string]apiVersion{
+	"gatewayclasses.gateway.networking.k8s.io":  {},
+	"gateways.gateway.networking.k8s.io":        {},
+	"httproutes.gateway.networking.k8s.io":      {},
+	"referencegrants.gateway.networking.k8s.io": {},
+}
+
 type apiVersion struct {
 	major string
 	minor string
@@ -25,8 +32,7 @@ func ValidateCRDVersions(
 	installedAPIVersions := getBundleVersions(crdMetadata)
 	supportedAPIVersion := parseVersionString(RecommendedVersion)
 
-	unsupported := false
-	bestEffort := false
+	var unsupported, bestEffort bool
 
 	for _, version := range installedAPIVersions {
 		if version.major != supportedAPIVersion.major {
@@ -62,13 +68,6 @@ func parseVersionString(version string) apiVersion {
 }
 
 func getBundleVersions(crdMetadata map[types.NamespacedName]*metav1.PartialObjectMetadata) map[string]apiVersion {
-	gatewayCRDs := map[string]apiVersion{
-		"gatewayclasses.gateway.networking.k8s.io":  {},
-		"gateways.gateway.networking.k8s.io":        {},
-		"httproutes.gateway.networking.k8s.io":      {},
-		"referencegrants.gateway.networking.k8s.io": {},
-	}
-
 	versions := make(map[string]apiVersion)
 
 	for nsname, md := range crdMetadata {

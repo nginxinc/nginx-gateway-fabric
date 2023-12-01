@@ -83,7 +83,7 @@ var _ = Describe("handler", func() {
 		}
 
 		err := k8sclient.Create(context.Background(), crd)
-		Expect(err).ShouldNot(HaveOccurred())
+		Expect(err).ToNot(HaveOccurred())
 
 		gc = &gatewayv1.GatewayClass{
 			ObjectMeta: metav1.ObjectMeta{
@@ -108,7 +108,7 @@ var _ = Describe("handler", func() {
 		// Add GatewayClass to the cluster
 
 		err := k8sclient.Create(context.Background(), gc)
-		Expect(err).ShouldNot(HaveOccurred())
+		Expect(err).ToNot(HaveOccurred())
 
 		// UpsertGatewayClass and CRD
 
@@ -127,7 +127,7 @@ var _ = Describe("handler", func() {
 		clusterGc := &gatewayv1.GatewayClass{}
 		err = k8sclient.Get(context.Background(), client.ObjectKeyFromObject(gc), clusterGc)
 
-		Expect(err).ShouldNot(HaveOccurred())
+		Expect(err).ToNot(HaveOccurred())
 
 		expectedConditions := []metav1.Condition{
 			{
@@ -168,7 +168,7 @@ var _ = Describe("handler", func() {
 		dep := &v1.Deployment{}
 		err := k8sclient.Get(context.Background(), depNsName, dep)
 
-		Expect(err).ShouldNot(HaveOccurred())
+		Expect(err).ToNot(HaveOccurred())
 
 		Expect(dep.ObjectMeta.Namespace).To(Equal("nginx-gateway"))
 		Expect(dep.ObjectMeta.Name).To(Equal(depNsName.Name))
@@ -185,7 +185,7 @@ var _ = Describe("handler", func() {
 		updatedCRD.Annotations[gatewayclass.BundleVersionAnnotation] = version
 
 		err := k8sclient.Update(context.Background(), updatedCRD)
-		Expect(err).ShouldNot(HaveOccurred())
+		Expect(err).ToNot(HaveOccurred())
 
 		batch := []interface{}{
 			&events.UpsertEvent{
@@ -198,7 +198,7 @@ var _ = Describe("handler", func() {
 		updatedGC := &gatewayv1.GatewayClass{}
 
 		err = k8sclient.Get(context.Background(), client.ObjectKeyFromObject(gc), updatedGC)
-		Expect(err).ShouldNot(HaveOccurred())
+		Expect(err).ToNot(HaveOccurred())
 
 		var expConds []metav1.Condition
 		if !accepted {
@@ -320,7 +320,7 @@ var _ = Describe("handler", func() {
 
 				err := k8sclient.List(context.Background(), deps)
 
-				Expect(err).ShouldNot(HaveOccurred())
+				Expect(err).ToNot(HaveOccurred())
 				Expect(deps.Items).To(HaveLen(1))
 				Expect(deps.Items[0].ObjectMeta.Name).To(Equal("nginx-gateway-2"))
 			})
@@ -341,7 +341,7 @@ var _ = Describe("handler", func() {
 
 				err := k8sclient.List(context.Background(), deps)
 
-				Expect(err).ShouldNot(HaveOccurred())
+				Expect(err).ToNot(HaveOccurred())
 				Expect(deps.Items).To(HaveLen(0))
 			})
 		})
@@ -369,7 +369,7 @@ var _ = Describe("handler", func() {
 				deps := &v1.DeploymentList{}
 				err := k8sclient.List(context.Background(), deps)
 
-				Expect(err).ShouldNot(HaveOccurred())
+				Expect(err).ToNot(HaveOccurred())
 				Expect(deps.Items).To(HaveLen(0))
 			})
 		})
@@ -386,7 +386,7 @@ var _ = Describe("handler", func() {
 				}
 
 				err := k8sclient.Create(context.Background(), newGC)
-				Expect(err).ShouldNot(HaveOccurred())
+				Expect(err).ToNot(HaveOccurred())
 
 				batch := []interface{}{
 					&events.UpsertEvent{
@@ -401,7 +401,7 @@ var _ = Describe("handler", func() {
 
 				unknownGC := &gatewayv1.GatewayClass{}
 				err = k8sclient.Get(context.Background(), client.ObjectKeyFromObject(newGC), unknownGC)
-				Expect(err).ShouldNot(HaveOccurred())
+				Expect(err).ToNot(HaveOccurred())
 
 				expectedConditions := []metav1.Condition{
 					{
@@ -497,7 +497,7 @@ var _ = Describe("handler", func() {
 				}
 
 				err := k8sclient.Create(context.Background(), dep)
-				Expect(err).ShouldNot(HaveOccurred())
+				Expect(err).ToNot(HaveOccurred())
 
 				itShouldPanicWhenUpsertingGateway(gwNsName)
 			})
@@ -518,7 +518,7 @@ var _ = Describe("handler", func() {
 				}
 
 				err := k8sclient.Delete(context.Background(), dep)
-				Expect(err).ShouldNot(HaveOccurred())
+				Expect(err).ToNot(HaveOccurred())
 
 				batch := []interface{}{
 					&events.DeleteEvent{

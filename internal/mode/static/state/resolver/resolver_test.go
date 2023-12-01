@@ -126,7 +126,7 @@ func TestGetServicePort(t *testing.T) {
 	// ports exist
 	for _, p := range []int32{80, 81, 82} {
 		port, err := getServicePort(svc, p)
-		g.Expect(err).ShouldNot(HaveOccurred())
+		g.Expect(err).ToNot(HaveOccurred())
 		g.Expect(port.Port).To(Equal(p))
 	}
 
