@@ -51,7 +51,7 @@ func checkNamespace(ns *v1.Namespace, gw *Gateway) bool {
 	return false
 }
 
-func (r *namespaceHolder) getResolvedNamespaces() map[types.NamespacedName]*Namespace {
+func (r *namespaceHolder) getReferencedNamespaces() map[types.NamespacedName]*Namespace {
 	if len(r.referencedNamespaces) == 0 {
 		return nil
 	}

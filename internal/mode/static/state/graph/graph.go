@@ -120,7 +120,7 @@ func BuildGraph(
 		IgnoredGatewayClasses: processedGwClasses.Ignored,
 		IgnoredGateways:       processedGws.Ignored,
 		ReferencedSecrets:     secretResolver.getResolvedSecrets(),
-		ReferencedNamespaces:  namespaceHolder.getResolvedNamespaces(),
+		ReferencedNamespaces:  namespaceHolder.getReferencedNamespaces(),
 	}
 
 	return g
