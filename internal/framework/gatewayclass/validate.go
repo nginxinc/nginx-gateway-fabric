@@ -30,7 +30,7 @@ type apiVersion struct {
 
 func ValidateCRDVersions(
 	crdMetadata map[types.NamespacedName]*metav1.PartialObjectMetadata,
-) ([]conditions.Condition, bool) {
+) (conds []conditions.Condition, valid bool) {
 	installedAPIVersions := getBundleVersions(crdMetadata)
 	supportedAPIVersion := parseVersionString(SupportedVersion)
 
