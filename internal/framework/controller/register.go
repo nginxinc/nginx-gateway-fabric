@@ -107,6 +107,9 @@ func Register(
 
 	var forOpts []ctlrBuilder.ForOption
 	if cfg.onlyMetadata {
+		if objectType.GetObjectKind().GroupVersionKind().Empty() {
+			panic("the object must have its GVK set")
+		}
 		forOpts = append(forOpts, ctlrBuilder.OnlyMetadata)
 	}
 
