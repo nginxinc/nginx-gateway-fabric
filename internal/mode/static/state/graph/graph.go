@@ -63,14 +63,19 @@ func (g *Graph) IsReferenced(resourceType client.Object, nsname types.Namespaced
 		_, exists := g.ReferencedSecrets[nsname]
 		return exists
 	case *v1.Namespace:
-		// still thinking of why we would need this... aka when existed == true but exists == false
+		// `existed` is needed as it checks the graph's ReferencedNamespaces which stores all the namespaces that
+		// match the Gateway listener's label selector when the graph was created. This covers the case when
+		// a Namespace changes its label so it no longer matches a Gateway listener's label selector, but because
+		// it was in the graph's ReferencedNamespaces we know that the Graph did reference the Namespace.
 		//
-		// changes when Gateway listener label changes OR when Namespace changes label. Does this handle the case
-		// when its good -> bad label on the Namespace?
+		// However, if there is a Namespace which changes its label (previously it did not match) to match a Gateway
+		// listener's label selector, it will not be in the current graph's ReferencedNamespaces until it is rebuilt
+		// and thus not be caught in `existed`. Therefore, we need `exists` to check the graph's Gateway and see if the
+		// new Namespace actually matches any of the Gateway listener's label selector.
+		//
+		// `exists` does not cover the case highlighted above by `existed` and vice versa so both are needed.
+
 		_, existed := g.ReferencedNamespaces[nsname]
-		// Checks if the new resource would be referenced in the new graph
-		//
-		// checks the latestGraph's Gateway so even if the gateway changes it'll trigger the change anyways
 		exists := checkNamespace(obj, g.Gateway)
 		return existed || exists
 	default:
@@ -105,8 +110,8 @@ func BuildGraph(
 	bindRoutesToListeners(routes, gw, state.Namespaces)
 	addBackendRefsToRouteRules(routes, refGrantResolver, state.Services)
 
-	namespaceResolver := newNamespaceResolver(state.Namespaces)
-	resolveNamespaces(namespaceResolver, gw)
+	namespaceHolder := newNamespaceHolder(state.Namespaces)
+	buildReferencedNamespaces(namespaceHolder, gw)
 
 	g := &Graph{
 		GatewayClass:          gc,
@@ -115,7 +120,7 @@ func BuildGraph(
 		IgnoredGatewayClasses: processedGwClasses.Ignored,
 		IgnoredGateways:       processedGws.Ignored,
 		ReferencedSecrets:     secretResolver.getResolvedSecrets(),
-		ReferencedNamespaces:  namespaceResolver.getResolvedNamespaces(),
+		ReferencedNamespaces:  namespaceHolder.getResolvedNamespaces(),
 	}
 
 	return g

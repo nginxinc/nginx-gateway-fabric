@@ -6,26 +6,28 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
+// Namespace represents a Namespace resource.
 type Namespace struct {
+	// Source holds the actual Namespace resource. Can be nil if the Namespace does not exist.
 	Source *v1.Namespace
 }
 
-type namespaceResolver struct {
-	clusterNamespaces  map[types.NamespacedName]*v1.Namespace
-	resolvedNamespaces map[types.NamespacedName]*Namespace
+type namespaceHolder struct {
+	clusterNamespaces    map[types.NamespacedName]*v1.Namespace
+	referencedNamespaces map[types.NamespacedName]*Namespace
 }
 
-func newNamespaceResolver(namespaces map[types.NamespacedName]*v1.Namespace) namespaceResolver {
-	return namespaceResolver{
-		clusterNamespaces:  namespaces,
-		resolvedNamespaces: make(map[types.NamespacedName]*Namespace),
+func newNamespaceHolder(namespaces map[types.NamespacedName]*v1.Namespace) namespaceHolder {
+	return namespaceHolder{
+		clusterNamespaces:    namespaces,
+		referencedNamespaces: make(map[types.NamespacedName]*Namespace),
 	}
 }
 
-func resolveNamespaces(namespaceResolver namespaceResolver, gw *Gateway) {
-	for name, ns := range namespaceResolver.clusterNamespaces {
+func buildReferencedNamespaces(namespaceHolder namespaceHolder, gw *Gateway) {
+	for name, ns := range namespaceHolder.clusterNamespaces {
 		if checkNamespace(ns, gw) {
-			namespaceResolver.resolvedNamespaces[name] = &Namespace{Source: ns}
+			namespaceHolder.referencedNamespaces[name] = &Namespace{Source: ns}
 		}
 	}
 }
@@ -33,13 +35,13 @@ func resolveNamespaces(namespaceResolver namespaceResolver, gw *Gateway) {
 // checkNamespaces returns a boolean that represents whether a given Namespace resource has a label
 // that matches any of the Gateway Listener's label selector.
 func checkNamespace(ns *v1.Namespace, gw *Gateway) bool {
-	nsLabels := ns.GetLabels()
-	if gw == nil {
+	if gw == nil || ns == nil {
 		return false
 	}
+	nsLabels := ns.GetLabels()
 	for _, listener := range gw.Listeners {
 		if listener.AllowedRouteLabelSelector == nil {
-			// Can have some listeners with AllowedRouteLabelSelector not set
+			// Can have listeners with AllowedRouteLabelSelector not set.
 			continue
 		}
 		if listener.AllowedRouteLabelSelector.Matches(labels.Set(nsLabels)) {
@@ -49,9 +51,9 @@ func checkNamespace(ns *v1.Namespace, gw *Gateway) bool {
 	return false
 }
 
-func (r *namespaceResolver) getResolvedNamespaces() map[types.NamespacedName]*Namespace {
-	if len(r.resolvedNamespaces) == 0 {
+func (r *namespaceHolder) getResolvedNamespaces() map[types.NamespacedName]*Namespace {
+	if len(r.referencedNamespaces) == 0 {
 		return nil
 	}
-	return r.resolvedNamespaces
+	return r.referencedNamespaces
 }
