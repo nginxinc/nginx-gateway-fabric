@@ -1,10 +1,12 @@
 ---
-title: "Running on kind"
-description: "Learn how to run NGINX Gateway Fabric on a kind cluster."
+title: "Deploying NGINX Gateway Fabric on a kind Cluster"
+description: "Learn how to run NGINX Gateway Fabric on a kind (Kubernetes in Docker) cluster."
 weight: 300
 toc: true
 docs: "DOCS-000"
 ---
+
+{{< custom-styles >}}
 
 ## Prerequisites
 
@@ -13,29 +15,35 @@ docs: "DOCS-000"
 
 ## Prepare Cluster
 
-Create a cluster with `kind`. You can follow
-their [instructions](https://kind.sigs.k8s.io/docs/user/quick-start/#creating-a-cluster), or run the following make
-command at the root of the repository:
+To create a cluster, use the `kind` tool. For detailed instructions, refer to the kind quick start guide [Creating a Cluster](https://kind.sigs.k8s.io/docs/user/quick-start/#creating-a-cluster).
+
+Alternatively, run the following `make` command in the root of your repository:
 
 ```makefile
 make create-kind-cluster
 ```
 
+This command creates the cluster using settings from your makefile.
+
+
 ## Deploy NGINX Gateway Fabric
 
-Follow the [installation](./how-to/installation/installation.md) instructions to deploy NGINX Gateway Fabric on your Kind cluster.
+Follow the instructions to deploy NGINX Gateway Fabric on your kind cluster:
+
+- [Installation with Helm]({{< relref "installation/installing-ngf/helm.md" >}})
+- [Installation with Kubernetes manifests]({{< relref "installation/installing-ngf/manifests.md" >}})
+
 
 ## Access NGINX Gateway Fabric
 
-Forward local ports 8080 and 8443 to ports 80 and 443 of the nginx-gateway Pod:
+Forward your local ports **8080** and **8443** to ports **80** and **443** on the **nginx-gateway** Pod:
 
 ```shell
 kubectl -n nginx-gateway port-forward <pod-name> 8080:80 8443:443
 ```
 
-> Note: NGINX will not listen on any ports until you configure a
-> [Gateway](https://gateway-api.sigs.k8s.io/api-types/gateway/#gateway) resource with a valid listener.
+{{< note >}}NGINX will only start listening on these ports after you set up a [Gateway](https://gateway-api.sigs.k8s.io/api-types/gateway/#gateway) resource with a valid listener.{{</note>}}
 
 ## Use NGINX Gateway Fabric
 
-To get started, follow the tutorials in the [examples](../examples) directory.
+See the tutorials in the [examples](https://github.com/nginxinc/nginx-gateway-fabric/tree/main/examples) directory to get started.
