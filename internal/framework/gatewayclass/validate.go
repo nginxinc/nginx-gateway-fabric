@@ -69,13 +69,13 @@ func parseVersionString(version string) apiVersion {
 	}
 }
 
-func getBundleVersions(crdMetadata map[types.NamespacedName]*metav1.PartialObjectMetadata) map[string]apiVersion {
-	versions := make(map[string]apiVersion)
+func getBundleVersions(crdMetadata map[types.NamespacedName]*metav1.PartialObjectMetadata) []apiVersion {
+	versions := make([]apiVersion, 0, len(gatewayCRDs))
 
 	for nsname, md := range crdMetadata {
 		if _, ok := gatewayCRDs[nsname.Name]; ok {
 			bundleVersion := md.Annotations[BundleVersionAnnotation]
-			versions[bundleVersion] = parseVersionString(bundleVersion)
+			versions = append(versions, parseVersionString(bundleVersion))
 		}
 	}
 
