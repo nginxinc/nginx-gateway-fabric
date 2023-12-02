@@ -9,13 +9,13 @@ fully prepared development environment that allows you to contribute to the proj
 Follow these steps to set up your development environment.
 
 1. Install:
-    - [Go](https://golang.org/doc/install)
+    - [Go](https://golang.org/doc/install) v1.21.0+
 
       ```shell
-      # `go.mod` requires Go 1.21.3.
-      go install golang.org/dl/go1.21.3@latest
-      go1.21.3 download
-      export GOROOT=$(go1.21.3 env GOROOT)
+      # Install Go X.Y.Z, which needs to be version 1.21.0 or higher (e.g. 1.21.4).
+      go install golang.org/dl/goX.Y.Z@latest
+      goX.Y.Z download
+      export GOROOT=$(goX.Y.Z env GOROOT)
       export PATH="$GOROOT/bin:$PATH"
       # Verify the installation.
       go version
