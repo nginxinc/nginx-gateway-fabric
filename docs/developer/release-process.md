@@ -30,9 +30,9 @@ To create a new release, follow these steps:
 3. Test the main branch for release-readiness. For that, use the `edge` containers, which are built from the main
    branch, and the [example applications](/examples).
 4. If a problem is found, prepare a fix PR, merge it into the main branch and return to the previous step.
-5. If the supported Gateway API minor version has changed since the last release, test NGF with the previous version of the Gateway API CRDs.
-6. If a problem is found, add a note to the release notes explaining that the previous version is not supported.
-7. Create a release branch with a name that follows the `release-X.Y` format.
+5. If the supported Gateway API minor version has changed since the last release, test NGINX Gateway Fabric with the previous version of the Gateway API CRDs.
+6. If a compatibility issue is found, add a note to the release notes explaining that the previous version is not supported.
+7. Create a release branch following the `release-X.Y` naming convention.
 8. Prepare and merge a PR into the release branch to update the repo files for the release:
     1. Update the Helm [Chart.yaml](/deploy/helm-chart/Chart.yaml): the `appVersion` to `X.Y.Z`, the icon and source
        URLs to point at `vX.Y.Z`, and bump the `version`.
