@@ -44,8 +44,8 @@ type Graph struct {
 	// in the cluster. We need such entries so that we can query the Graph to determine if a Secret is referenced
 	// by the Gateway, including the case when the Secret is newly created.
 	ReferencedSecrets map[types.NamespacedName]*Secret
-	// ReferencedNamespaces includes Namespaces that have labels that match Gateway listener's label selector.
-	ReferencedNamespaces map[types.NamespacedName]*Namespace
+	// ReferencedNamespaces includes Namespaces that have labels which match the Gateway Listener's label selector.
+	ReferencedNamespaces map[types.NamespacedName]*v1.Namespace
 }
 
 // ProtectedPorts are the ports that may not be configured by a listener with a descriptive name of each port.
@@ -110,8 +110,7 @@ func BuildGraph(
 	bindRoutesToListeners(routes, gw, state.Namespaces)
 	addBackendRefsToRouteRules(routes, refGrantResolver, state.Services)
 
-	namespaceHolder := newNamespaceHolder(state.Namespaces)
-	buildReferencedNamespaces(namespaceHolder, gw)
+	referencedNamespaces := buildReferencedNamespaces(state.Namespaces, gw)
 
 	g := &Graph{
 		GatewayClass:          gc,
@@ -120,7 +119,7 @@ func BuildGraph(
 		IgnoredGatewayClasses: processedGwClasses.Ignored,
 		IgnoredGateways:       processedGws.Ignored,
 		ReferencedSecrets:     secretResolver.getResolvedSecrets(),
-		ReferencedNamespaces:  namespaceHolder.getReferencedNamespaces(),
+		ReferencedNamespaces:  referencedNamespaces,
 	}
 
 	return g

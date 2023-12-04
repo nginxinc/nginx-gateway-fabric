@@ -333,10 +333,8 @@ func TestBuildGraph(t *testing.T) {
 					Source: secret,
 				},
 			},
-			ReferencedNamespaces: map[types.NamespacedName]*Namespace{
-				client.ObjectKeyFromObject(ns): {
-					Source: ns,
-				},
+			ReferencedNamespaces: map[types.NamespacedName]*v1.Namespace{
+				client.ObjectKeyFromObject(ns): ns,
 			},
 		}
 	}
@@ -470,10 +468,8 @@ func TestIsReferenced(t *testing.T) {
 				Source: baseSecret,
 			},
 		},
-		ReferencedNamespaces: map[types.NamespacedName]*Namespace{
-			client.ObjectKeyFromObject(nsInGraph): {
-				Source: nsInGraph,
-			},
+		ReferencedNamespaces: map[types.NamespacedName]*v1.Namespace{
+			client.ObjectKeyFromObject(nsInGraph): nsInGraph,
 		},
 	}
 

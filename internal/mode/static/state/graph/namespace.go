@@ -6,30 +6,21 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
-// Namespace represents a Namespace resource.
-type Namespace struct {
-	// Source holds the actual Namespace resource. Can be nil if the Namespace does not exist.
-	Source *v1.Namespace
-}
-
-type namespaceHolder struct {
-	clusterNamespaces    map[types.NamespacedName]*v1.Namespace
-	referencedNamespaces map[types.NamespacedName]*Namespace
-}
-
-func newNamespaceHolder(namespaces map[types.NamespacedName]*v1.Namespace) namespaceHolder {
-	return namespaceHolder{
-		clusterNamespaces:    namespaces,
-		referencedNamespaces: make(map[types.NamespacedName]*Namespace),
-	}
-}
-
-func buildReferencedNamespaces(namespaceHolder namespaceHolder, gw *Gateway) {
-	for name, ns := range namespaceHolder.clusterNamespaces {
+// buildReferencedNamespaces returns a map of all the Namespace resources in the current clusterState with a label
+// that matches any of the Gateway Listener's label selector.
+func buildReferencedNamespaces(clusterNamespaces map[types.NamespacedName]*v1.Namespace,
+	gw *Gateway,
+) map[types.NamespacedName]*v1.Namespace {
+	referencedNamespaces := make(map[types.NamespacedName]*v1.Namespace)
+	for name, ns := range clusterNamespaces {
 		if checkNamespace(ns, gw) {
-			namespaceHolder.referencedNamespaces[name] = &Namespace{Source: ns}
+			referencedNamespaces[name] = ns
 		}
 	}
+	if len(referencedNamespaces) == 0 {
+		return nil
+	}
+	return referencedNamespaces
 }
 
 // checkNamespaces returns a boolean that represents whether a given Namespace resource has a label
@@ -49,11 +40,4 @@ func checkNamespace(ns *v1.Namespace, gw *Gateway) bool {
 		}
 	}
 	return false
-}
-
-func (r *namespaceHolder) getReferencedNamespaces() map[types.NamespacedName]*Namespace {
-	if len(r.referencedNamespaces) == 0 {
-		return nil
-	}
-	return r.referencedNamespaces
 }
