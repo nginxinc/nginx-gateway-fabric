@@ -10,7 +10,7 @@ and `UDPRoute` -- to configure an HTTP or TCP/UDP load balancer, reverse-proxy, 
 on Kubernetes. NGINX Gateway Fabric supports a subset of the Gateway API.
 
 For a list of supported Gateway API resources and features, see
-the [Gateway API Compatibility](https://docs.nginx.com/nginx-gateway-fabric/gateway-api-compatibility/) doc.
+the [Gateway API Compatibility](https://docs.nginx.com/nginx-gateway-fabric/overview/gateway-api-compatibility/) doc.
 
 Learn about our [design principles](/docs/developer/design-principles.md) and [architecture](https://docs.nginx.com/nginx-gateway-fabric/overview/gateway-architecture/).
 
