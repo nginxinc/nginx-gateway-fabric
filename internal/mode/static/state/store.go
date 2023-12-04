@@ -123,6 +123,8 @@ type changeTrackingUpdaterObjectTypeCfg struct {
 //
 // A change is tracked when:
 // - An object with a GVK with a non-nil store and the stateChangedPredicate for that object returns true.
+// - An object is upserted or deleted, and it is related to another object,
+// based on the decision by the relationship capturer.
 type changeTrackingUpdater struct {
 	store                  *multiObjectStore
 	capturer               relationship.Capturer
