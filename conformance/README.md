@@ -88,6 +88,7 @@ make install-ngf-local-build
 ```
 
 #### *Option 2* Install NGINX Gateway Fabric from local already built image to configured kind cluster
+
 You can optionally skip the actual *build* step.
 
 ```makefile
@@ -101,6 +102,7 @@ make update-ngf-manifest PREFIX=<ngf_repo_name> TAG=<ngf_image_tag>
 ```
 
 #### *Option 3* Install NGINX Gateway Fabric from edge to configured kind cluster
+
 You can also skip the build NGF image step and prepare the environment to instead use the `edge` image
 
 ```makefile
@@ -148,6 +150,7 @@ make uninstall-ngf
 ```
 
 ### Step 6 - Revert changes to Go modules
+
 **Optional** Not required if you aren't running the `main` Gateway API tests.
 
 ```makefile
