@@ -161,7 +161,7 @@ func NewChangeProcessorImpl(cfg ChangeProcessorConfig) *ChangeProcessorImpl {
 			{
 				gvk:       extractGVK(&apiv1.Secret{}),
 				store:     newObjectStoreMapAdapter(clusterStore.Secrets),
-				predicate: newStateChangedPredicateFuncs(isReferenced),
+				predicate: funcPredicate{stateChanged: isReferenced},
 			},
 			{
 				gvk:       extractGVK(&apiext.CustomResourceDefinition{}),

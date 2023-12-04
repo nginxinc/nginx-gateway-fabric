@@ -10,31 +10,18 @@ type stateChangedPredicate interface {
 	delete(object client.Object) bool
 }
 
-// funcs is a function that implements stateChangedPredicate.
-type funcs struct {
-	upsertStateChangeFunc func(oldObject, newObject client.Object) bool
-	deleteStateChangeFunc func(object client.Object) bool
+// funcPredicate applies the stateChanged function on upsert and delete. On upsert, the newObject is passed.
+// Implements stateChangedPredicate.
+type funcPredicate struct {
+	stateChanged func(object client.Object) bool
 }
 
-func (f funcs) upsert(oldObject, newObject client.Object) bool {
-	return f.upsertStateChangeFunc(oldObject, newObject)
+func (f funcPredicate) upsert(_, newObject client.Object) bool {
+	return f.stateChanged(newObject)
 }
 
-func (f funcs) delete(object client.Object) bool {
-	return f.deleteStateChangeFunc(object)
-}
-
-// newStateChangedPredicateFuncs returns a predicate funcs that applies the given function on calls to upsert and
-// delete.
-func newStateChangedPredicateFuncs(stateChangedFunc func(object client.Object) bool) funcs {
-	return funcs{
-		upsertStateChangeFunc: func(oldObject, newObject client.Object) bool {
-			return stateChangedFunc(newObject)
-		},
-		deleteStateChangeFunc: func(object client.Object) bool {
-			return stateChangedFunc(object)
-		},
-	}
+func (f funcPredicate) delete(object client.Object) bool {
+	return f.stateChanged(object)
 }
 
 // generationChangedPredicate implements stateChangedPredicate based on the generation of the object.

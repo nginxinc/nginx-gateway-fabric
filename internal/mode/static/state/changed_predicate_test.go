@@ -9,10 +9,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func TestFuncsPredicate(t *testing.T) {
+func TestFuncPredicate(t *testing.T) {
 	alwaysTrueFunc := func(object client.Object) bool { return true }
 
-	p := newStateChangedPredicateFuncs(alwaysTrueFunc)
+	p := funcPredicate{stateChanged: alwaysTrueFunc}
 
 	g := NewWithT(t)
 
