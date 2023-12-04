@@ -10,17 +10,6 @@ Follow these steps to set up your development environment.
 
 1. Install:
     - [Go](https://golang.org/doc/install) v1.21.0+
-
-      ```shell
-      # Install Go X.Y.Z, which needs to be version 1.21.0 or higher (e.g. 1.21.4).
-      go install golang.org/dl/goX.Y.Z@latest
-      goX.Y.Z download
-      export GOROOT=$(goX.Y.Z env GOROOT)
-      export PATH="$GOROOT/bin:$PATH"
-      # Verify the installation.
-      go version
-      ```
-
     - [Docker](https://docs.docker.com/get-docker/) v18.09+
     - [Kind](https://kind.sigs.k8s.io/docs/user/quick-start/)
     - [Helm](https://helm.sh/docs/intro/quickstart/#install-helm)
