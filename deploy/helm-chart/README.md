@@ -66,15 +66,22 @@ If you are installing the edge version of NGINX Gateway Fabric:
 
 ### Installing the Chart from the OCI Registry
 
-To install the chart with the release name `my-release` (`my-release` is the name that you choose) into the
-nginx-gateway namespace (with optional `--create-namespace` flag - you can omit if the namespace already exists):
+To install the latest stable release of NGINX Gateway Fabric in the `nginx-gateway` namespace, run the following command:
 
 ```shell
-helm install my-release oci://ghcr.io/nginxinc/charts/nginx-gateway-fabric  --create-namespace --wait -n nginx-gateway
+helm install ngf oci://ghcr.io/nginxinc/charts/nginx-gateway-fabric --create-namespace -n nginx-gateway
 ```
 
-This will install the latest stable release. To install the latest version from the `main` branch, specify the
-`--version 0.0.0-edge` flag when installing.
+`ngf` is the name of the release, and can be changed to any name you want. This name is added as a prefix to the Deployment name.
+
+If the namespace already exists, you can omit the optional `--create-namespace` flag. If you want the latest version from the `main` branch, add `--version 0.0.0-edge` to your install command.
+
+To wait for the Deployment to be ready, you can either add the `--wait` flag to the `helm install` command, or run
+the following after installing:
+
+```shell
+kubectl wait --timeout=5m -n nginx-gateway deployment/ngf-nginx-gateway-fabric --for=condition=Available
+```
 
 ### Installing the Chart via Sources
 
@@ -90,11 +97,39 @@ This will pull the latest stable release. To pull the latest version from the `m
 
 #### Installing the Chart
 
-To install the chart with the release name `my-release` (`my-release` is the name that you choose) into the
-nginx-gateway namespace (with optional `--create-namespace` flag - you can omit if the namespace already exists):
+To install the chart into the `nginx-gateway` namespace, run the following command.
 
 ```shell
-helm install my-release . --create-namespace --wait -n nginx-gateway
+helm install ngf . --create-namespace -n nginx-gateway
+```
+
+`ngf` is the name of the release, and can be changed to any name you want. This name is added as a prefix to the Deployment name.
+
+If the namespace already exists, you can omit the optional `--create-namespace` flag.
+
+To wait for the Deployment to be ready, you can either add the `--wait` flag to the `helm install` command, or run
+the following after installing:
+
+```shell
+kubectl wait --timeout=5m -n nginx-gateway deployment/ngf-nginx-gateway-fabric --for=condition=Available
+```
+
+### Custom installation options
+
+#### Service type
+
+By default, the NGINX Gateway Fabric helm chart deploys a LoadBalancer Service.
+
+To use a NodePort Service instead:
+
+```shell
+helm install ngf oci://ghcr.io/nginxinc/charts/nginx-gateway-fabric --create-namespace -n nginx-gateway --set service.type=NodePort
+```
+
+To disable the creation of a Service:
+
+```shell
+helm install ngf oci://ghcr.io/nginxinc/charts/nginx-gateway-fabric --create-namespace -n nginx-gateway --set service.create=false
 ```
 
 ## Upgrading the Chart
@@ -145,10 +180,10 @@ Warning: kubectl apply should be used on resource created by either kubectl crea
 
 ### Upgrading the Chart from the OCI Registry
 
-To upgrade the release `my-release`, run:
+To upgrade the release `ngf`, run:
 
 ```shell
-helm upgrade my-release oci://ghcr.io/nginxinc/charts/nginx-gateway-fabric -n nginx-gateway
+helm upgrade ngf oci://ghcr.io/nginxinc/charts/nginx-gateway-fabric -n nginx-gateway
 ```
 
 This will upgrade to the latest stable release. To upgrade to the latest version from the `main` branch, specify
@@ -157,10 +192,10 @@ the `--version 0.0.0-edge` flag when upgrading.
 ### Upgrading the Chart from the Sources
 
 Pull the chart sources as described in [Pulling the Chart](#pulling-the-chart), if not already present. Then, to upgrade
-the release `my-release`, run:
+the release `ngf`, run:
 
 ```shell
-helm upgrade my-release . -n nginx-gateway
+helm upgrade ngf . -n nginx-gateway
 ```
 
 ### Configure Delayed Termination for Zero Downtime Upgrades
@@ -216,10 +251,10 @@ being performed on NGF), you may need to configure delayed termination on the NG
 
 ## Uninstalling the Chart
 
-To uninstall/delete the release `my-release`:
+To uninstall/delete the release `ngf`:
 
 ```shell
-helm uninstall my-release -n nginx-gateway
+helm uninstall ngf -n nginx-gateway
 kubectl delete ns nginx-gateway
 kubectl delete crd nginxgateways.gateway.nginx.org
 ```
