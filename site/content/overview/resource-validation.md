@@ -114,6 +114,7 @@ Error from server: error when creating "some-gateway.yaml": admission webhook "v
 > If this happens, Step 3 will reject the invalid values.
 
 ### Step 3 - Webhook validation by NGF
+
 To ensure that the resources are validated with the webhook validation rules, even if the webhook is not running,
 NGF performs the same validation. However, NGF performs the validation *after* the Kubernetes API server accepts
 the resource.
