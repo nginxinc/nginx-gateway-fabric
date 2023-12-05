@@ -28,7 +28,7 @@ To create a kind cluster, choose from the following options:
    make create-kind-cluster
    ```
 
-   This command creates a kind cluster using the settings from your makefile.
+   This command creates a kind cluster using the settings from your Makefile.
 
 
 ## Deploy NGINX Gateway Fabric
