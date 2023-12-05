@@ -61,7 +61,8 @@ The HTTPRoute "coffee" is invalid: spec.hostnames[0]: Invalid value: "cafe.!@#$%
 {{< note >}}Bypassing this validation step is possible if the webhook is not running in the cluster. If this happens, Step 3 will reject the invalid values.{{< /note >}}
 
 ## Step 3 - Webhook validation by NGINX Gateway Fabric
-To ensure that the resources are validated with the webhook validation rules, even if the webhook is not running, NGINX Gateway Fabric performs the same validation. However, NGINX Gateway Fabric performs the validation *after* the Kubernetes API server accepts the resource.
+
+To ensure that the resources are validated with the webhook validation rules, even if the webhook is not running, NGINX Gateway Fabric performs the same validation. However, NGINX Gateway Fabric performs the validation __after_ the Kubernetes API server accepts the resource.
 
 Below is an example of how NGINX Gateway Fabric rejects an invalid resource (a Gateway resource with a TCP listener that configures a hostname) with a Kubernetes event:
 
