@@ -27,10 +27,18 @@ To complete this guide, you'll need to install:
 - To install the latest stable release of NGINX Gateway Fabric in the **nginx-gateway** namespace, run the following command:
 
    ```shell
-   helm install <my-release> oci://ghcr.io/nginxinc/charts/nginx-gateway-fabric --create-namespace --wait -n nginx-gateway
+   helm install ngf oci://ghcr.io/nginxinc/charts/nginx-gateway-fabric --create-namespace -n nginx-gateway
    ```
 
-   Change `<my-release>` to the name you want for your release. If the namespace already exists, you can omit the optional `--create-namespace` flag. If you want the latest version from the **main** branch, add `--version 0.0.0-edge` to your install command.
+   `ngf` is the name of the release, and can be changed to any name you want. This name is added as a prefix to the Deployment name.
+
+   If the namespace already exists, you can omit the optional `--create-namespace` flag. If you want the latest version from the **main** branch, add `--version 0.0.0-edge` to your install command.
+
+   To wait for the Deployment to be ready, you can either add the `--wait` flag to the `helm install` command, or run the following after installing:
+
+   ```shell
+   kubectl wait --timeout=5m -n nginx-gateway deployment/ngf-nginx-gateway-fabric --for=condition=Available
+   ```
 
 ### Install from sources {#install-from-sources}
 
@@ -39,10 +47,36 @@ To complete this guide, you'll need to install:
 2. To install the chart into the **nginx-gateway** namespace, run the following command.
 
    ```shell
-   helm install <my-release> . --create-namespace --wait -n nginx-gateway
+   helm install ngf . --create-namespace -n nginx-gateway
    ```
 
-   Change `<my-release>` to the name you want for your release. If the namespace already exists, you can omit the optional `--create-namespace` flag.
+   `ngf` is the name of the release, and can be changed to any name you want. This name is added as a prefix to the Deployment name.
+
+   If the namespace already exists, you can omit the optional `--create-namespace` flag.
+
+   To wait for the Deployment to be ready, you can either add the `--wait` flag to the `helm install` command, or run the following after installing:
+
+   ```shell
+   kubectl wait --timeout=5m -n nginx-gateway deployment/ngf-nginx-gateway-fabric --for=condition=Available
+   ```
+
+### Custom installation options
+
+#### Service type
+
+By default, the NGINX Gateway Fabric helm chart deploys a LoadBalancer Service.
+
+To use a NodePort Service instead:
+
+```shell
+helm install ngf oci://ghcr.io/nginxinc/charts/nginx-gateway-fabric --create-namespace -n nginx-gateway --set service.type=NodePort
+```
+
+To disable the creation of a Service:
+
+```shell
+helm install ngf oci://ghcr.io/nginxinc/charts/nginx-gateway-fabric --create-namespace -n nginx-gateway --set service.create=false
+```
 
 ## Upgrade NGINX Gateway Fabric
 
@@ -89,10 +123,10 @@ To upgrade the CRDs, take the following steps:
 - To upgrade to the latest stable release of NGINX Gateway Fabric, run:
 
    ```shell
-   helm upgrade <my-release> oci://ghcr.io/nginxinc/charts/nginx-gateway-fabric -n nginx-gateway
+   helm upgrade ngf oci://ghcr.io/nginxinc/charts/nginx-gateway-fabric -n nginx-gateway
    ```
 
-   Replace `<my-release>` with your chosen release name.
+   If needed, replace `ngf` with your chosen release name.
 
 #### Upgrade from sources
 
@@ -101,10 +135,10 @@ To upgrade the CRDs, take the following steps:
 1. To upgrade, run: the following command:
 
    ```shell
-   helm upgrade <my-release> . -n nginx-gateway
+   helm upgrade ngf . -n nginx-gateway
    ```
 
-   Replace `<my-release>` with your chosen release name.
+   If needed, replace `ngf` with your chosen release name.
 
 ## Delay pod termination for zero downtime upgrades {#configure-delayed-pod-termination-for-zero-downtime-upgrades}
 
@@ -163,10 +197,10 @@ Follow these steps to uninstall NGINX Gateway Fabric and Gateway API from your K
    - To uninstall NGINX Gateway Fabric, run:
 
       ```shell
-      helm uninstall <my-release> -n nginx-gateway
+      helm uninstall ngf -n nginx-gateway
       ```
 
-      Replace `<my-release>` with your chosen release name.
+      If needed, replace `ngf` with your chosen release name.
 
 2. **Remove namespace and CRDs:**
 
