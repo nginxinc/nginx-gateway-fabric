@@ -11,6 +11,7 @@ import (
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/events"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/gatewayclass"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/status"
 )
 
@@ -56,20 +57,29 @@ func (h *eventHandler) setGatewayClassStatuses(ctx context.Context) {
 	}
 
 	var gcExists bool
+
 	for nsname, gc := range h.store.gatewayClasses {
-		var conds []conditions.Condition
+		// The order of conditions matters. Default conditions are added first so that any additional conditions will
+		// override them, which is ensured by DeduplicateConditions.
+		conds := conditions.NewDefaultGatewayClassConditions()
+
 		if gc.Name == h.gcName {
 			gcExists = true
-			conds = conditions.NewDefaultGatewayClassConditions()
 		} else {
-			conds = []conditions.Condition{conditions.NewGatewayClassConflict()}
+			conds = append(conds, conditions.NewGatewayClassConflict())
 		}
 
+		// We ignore the boolean return value here because the provisioner only sets status,
+		// it does not generate config.
+		supportedVersionConds, _ := gatewayclass.ValidateCRDVersions(h.store.crdMetadata)
+		conds = append(conds, supportedVersionConds...)
+
 		statuses.GatewayClassStatuses[nsname] = status.GatewayClassStatus{
-			Conditions:         conds,
+			Conditions:         conditions.DeduplicateConditions(conds),
 			ObservedGeneration: gc.Generation,
 		}
 	}
+
 	if !gcExists {
 		panic(fmt.Errorf("GatewayClass %s must exist", h.gcName))
 	}

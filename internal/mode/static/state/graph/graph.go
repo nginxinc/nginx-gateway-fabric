@@ -2,6 +2,7 @@ package graph
 
 import (
 	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -19,6 +20,7 @@ type ClusterState struct {
 	Namespaces      map[types.NamespacedName]*v1.Namespace
 	ReferenceGrants map[types.NamespacedName]*v1beta1.ReferenceGrant
 	Secrets         map[types.NamespacedName]*v1.Secret
+	CRDMetadata     map[types.NamespacedName]*metav1.PartialObjectMetadata
 }
 
 // Graph is a Graph-like representation of Gateway API resources.
@@ -76,7 +78,8 @@ func BuildGraph(
 		// configured GatewayClass does not reference this controller
 		return &Graph{}
 	}
-	gc := buildGatewayClass(processedGwClasses.Winner)
+
+	gc := buildGatewayClass(processedGwClasses.Winner, state.CRDMetadata)
 
 	secretResolver := newSecretResolver(state.Secrets)
 

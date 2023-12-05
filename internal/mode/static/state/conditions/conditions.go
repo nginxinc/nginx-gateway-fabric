@@ -59,38 +59,6 @@ const (
 		"is programmed again"
 )
 
-// DeduplicateConditions removes duplicate conditions based on the condition type.
-// The last condition wins. The order of conditions is preserved.
-func DeduplicateConditions(conds []conditions.Condition) []conditions.Condition {
-	type elem struct {
-		cond       conditions.Condition
-		reverseIdx int
-	}
-
-	uniqueElems := make(map[string]elem)
-
-	idx := 0
-	for i := len(conds) - 1; i >= 0; i-- {
-		if _, exist := uniqueElems[conds[i].Type]; exist {
-			continue
-		}
-
-		uniqueElems[conds[i].Type] = elem{
-			cond:       conds[i],
-			reverseIdx: idx,
-		}
-		idx++
-	}
-
-	result := make([]conditions.Condition, len(uniqueElems))
-
-	for _, el := range uniqueElems {
-		result[len(result)-el.reverseIdx-1] = el.cond
-	}
-
-	return result
-}
-
 // NewTODO returns a Condition that can be used as a placeholder for a condition that is not yet implemented.
 func NewTODO(msg string) conditions.Condition {
 	return conditions.Condition{

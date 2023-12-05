@@ -66,8 +66,11 @@ Fields:
   - `conditions` - supported (Condition/Status/Reason):
     - `Accepted/True/Accepted`
     - `Accepted/False/InvalidParameters`
+    - `Accepted/False/UnsupportedVersion`
     - `Accepted/False/GatewayClassConflict`: Custom reason for when the GatewayClass references this controller, but
           a different GatewayClass name is provided to the controller via the command-line argument.
+    - `SupportedVersion/True/SupportedVersion`
+    - `SupportedVersion/False/UnsupportedVersion`
 
 ### Gateway
 

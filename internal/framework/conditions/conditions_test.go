@@ -5,14 +5,12 @@ import (
 
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
 )
 
 func TestDeduplicateConditions(t *testing.T) {
 	g := NewWithT(t)
 
-	conds := []conditions.Condition{
+	conds := []Condition{
 		{
 			Type:    "Type1",
 			Status:  metav1.ConditionTrue,
@@ -40,7 +38,7 @@ func TestDeduplicateConditions(t *testing.T) {
 		},
 	}
 
-	expected := []conditions.Condition{
+	expected := []Condition{
 		{
 			Type:    "Type1",
 			Status:  metav1.ConditionFalse,

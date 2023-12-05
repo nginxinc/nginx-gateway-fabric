@@ -10,6 +10,7 @@ import (
 	v1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/gatewayclass"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 	staticConds "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/conditions"
 )
@@ -127,13 +128,35 @@ func TestBuildGatewayClass(t *testing.T) {
 		},
 	}
 
+	validCRDs := map[types.NamespacedName]*metav1.PartialObjectMetadata{
+		{Name: "gateways.gateway.networking.k8s.io"}: {
+			ObjectMeta: metav1.ObjectMeta{
+				Annotations: map[string]string{
+					gatewayclass.BundleVersionAnnotation: gatewayclass.SupportedVersion,
+				},
+			},
+		},
+	}
+
+	invalidCRDs := map[types.NamespacedName]*metav1.PartialObjectMetadata{
+		{Name: "gateways.gateway.networking.k8s.io"}: {
+			ObjectMeta: metav1.ObjectMeta{
+				Annotations: map[string]string{
+					gatewayclass.BundleVersionAnnotation: "v99.0.0",
+				},
+			},
+		},
+	}
+
 	tests := []struct {
-		gc       *v1.GatewayClass
-		expected *GatewayClass
-		name     string
+		gc          *v1.GatewayClass
+		crdMetadata map[types.NamespacedName]*metav1.PartialObjectMetadata
+		expected    *GatewayClass
+		name        string
 	}{
 		{
-			gc: validGC,
+			gc:          validGC,
+			crdMetadata: validCRDs,
 			expected: &GatewayClass{
 				Source: validGC,
 				Valid:  true,
@@ -146,7 +169,8 @@ func TestBuildGatewayClass(t *testing.T) {
 			name:     "no gatewayclass",
 		},
 		{
-			gc: invalidGC,
+			gc:          invalidGC,
+			crdMetadata: validCRDs,
 			expected: &GatewayClass{
 				Source: invalidGC,
 				Valid:  false,
@@ -156,7 +180,17 @@ func TestBuildGatewayClass(t *testing.T) {
 					),
 				},
 			},
-			name: "invalid gatewayclass",
+			name: "invalid gatewayclass; parameters ref",
+		},
+		{
+			gc:          validGC,
+			crdMetadata: invalidCRDs,
+			expected: &GatewayClass{
+				Source:     validGC,
+				Valid:      false,
+				Conditions: conditions.NewGatewayClassUnsupportedVersion(gatewayclass.SupportedVersion),
+			},
+			name: "invalid gatewayclass; unsupported version",
 		},
 	}
 
@@ -164,7 +198,7 @@ func TestBuildGatewayClass(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewWithT(t)
 
-			result := buildGatewayClass(test.gc)
+			result := buildGatewayClass(test.gc, test.crdMetadata)
 			g.Expect(helpers.Diff(test.expected, result)).To(BeEmpty())
 		})
 	}
