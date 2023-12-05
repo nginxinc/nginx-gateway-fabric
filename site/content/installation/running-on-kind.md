@@ -40,8 +40,11 @@ To install NGINX Gateway Fabric, choose the appropriate installation guide that 
 - [Installation with Helm]({{< relref "installation/installing-ngf/helm.md" >}})
 - [Installation with Kubernetes manifests]({{< relref "installation/installing-ngf/manifests.md" >}})
 
+{{<note>}}
+When using kind clusters, be aware that NodePort services require [additional setup]((https://kind.sigs.k8s.io/docs/user/configuration/#nodeport-with-port-mappings)). Also, for LoadBalancer services, you’ll need a [third-party controller](https://kind.sigs.k8s.io/docs/user/loadbalancer/) like MetalLB to assign external IPs. The default Helm chart creates a LoadBalancer service; however, you can disable this by adding `--set service.create=false` to your Helm command. Afterward, you can [configure port forwarding](#configure-port-forwarding) as described below to access the examples.
+{{</note>}}
 
-## Configure Access to NGINX Gateway Fabric
+## Configure Port Forwarding {#configure-port-forwarding}
 
 Once NGINX Gateway Fabric has been installed, you need to configure port forwarding from local ports **8080** and **8443** to ports **80** and **443** on the **nginx-gateway** Pod.
 

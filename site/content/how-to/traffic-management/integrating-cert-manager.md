@@ -22,6 +22,7 @@ Follow the steps in this guide to:
 - A DNS-resolvable domain name is required. It must resolve to the public endpoint of the NGINX Gateway Fabric deployment, and this public endpoint must be an external IP address or alias accessible over the internet. The process here will depend on your DNS provider. This DNS name will need to be resolvable from the Let’s Encrypt servers, which may require that you wait for the record to propagate before it will work.
 
 ## Overview
+
 {{<img src="img/cert-manager-gateway-workflow.png" alt="cert-manager ACME challenge and certificate management with Gateway API">}}
 
 The diagram above shows a simplified representation of the cert-manager ACME challenge and certificate issuance process using Gateway API. Please note that not all of the kubernetes objects created in this process are represented in this diagram.
@@ -141,6 +142,7 @@ cafe-secret   kubernetes.io/tls   2      20s
 ```
 
 ### Deploy our application and HTTPRoute
+
 Now we can create our coffee deployment and service, and configure the routing rules. You can use the following manifest to create the deployment and service:
 
 ```yaml
