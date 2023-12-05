@@ -53,7 +53,7 @@ For a description of each field, visit the [Gateway API documentation](https://g
 | Gateway              | Supported          | Not supported          | Not supported                         | v1          |
 {{< /bootstrap-table >}}
 
-NGINX Gateway Fabric supports a single Gateway resource. The Gateway resource must reference NGINX Gateway Fabric's corresponding GatewayClass. 
+NGINX Gateway Fabric supports a single Gateway resource. The Gateway resource must reference NGINX Gateway Fabric's corresponding GatewayClass.
 
 See the [static-mode]({{< relref "/reference/cli-help.md#static-mode">}}) command for more information.
 
