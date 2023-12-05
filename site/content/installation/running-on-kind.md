@@ -10,33 +10,42 @@ docs: "DOCS-000"
 
 ## Prerequisites
 
-- [kubectl](https://kubernetes.io/docs/tasks/tools/)
-- [kind](https://kind.sigs.k8s.io/)
+To complete the steps in this guide, you first need to install the following tools for Kubernetes management and development:
 
-## Prepare Cluster
+- [kubectl](https://kubernetes.io/docs/tasks/tools/): A command-line interface for Kubernetes that allows you to manage and inspect cluster resources, and control containerized applications.
+- [kind](https://kind.sigs.k8s.io/): Short for _Kubernetes in Docker_, this tool lets you run Kubernetes clusters locally using Docker containers, ideal for testing and development purposes.
 
-To create a cluster, use the `kind` tool. For detailed instructions, refer to the kind quick start guide [Creating a Cluster](https://kind.sigs.k8s.io/docs/user/quick-start/#creating-a-cluster).
 
-Alternatively, run the following `make` command in the root of your repository:
+## Create a kind Cluster
 
-```makefile
-make create-kind-cluster
-```
+To create a kind cluster, choose from the following options:
 
-This command creates the cluster using settings from your makefile.
+- **Option 1**: Use the `kind` tool. For detailed instructions, refer to the kind quick start guide [Creating a Cluster](https://kind.sigs.k8s.io/docs/user/quick-start/#creating-a-cluster).
+
+- **Option 2**: Run the following `make` command in the root of your repository:
+
+   ```makefile
+   make create-kind-cluster
+   ```
+
+   This command creates a kind cluster using the settings from your makefile.
 
 
 ## Deploy NGINX Gateway Fabric
 
-Follow the instructions to deploy NGINX Gateway Fabric on your kind cluster:
+Now that you've created a kind cluster, the next step is to install NGINX Gateway Fabric.
+
+To install NGINX Gateway Fabric, choose the appropriate installation guide that suits your setup:
 
 - [Installation with Helm]({{< relref "installation/installing-ngf/helm.md" >}})
 - [Installation with Kubernetes manifests]({{< relref "installation/installing-ngf/manifests.md" >}})
 
 
-## Access NGINX Gateway Fabric
+## Configure Access to NGINX Gateway Fabric
 
-Forward your local ports **8080** and **8443** to ports **80** and **443** on the **nginx-gateway** Pod:
+Once NGINX Gateway Fabric has been installed, you need to configure port forwarding from your local **8080** and **8443** ports to ports **80** and **443** on the **nginx-gateway** Pod.
+
+To configure port forwarding, run the following command:
 
 ```shell
 kubectl -n nginx-gateway port-forward <pod-name> 8080:80 8443:443
@@ -44,6 +53,6 @@ kubectl -n nginx-gateway port-forward <pod-name> 8080:80 8443:443
 
 {{< note >}}NGINX will only start listening on these ports after you set up a [Gateway](https://gateway-api.sigs.k8s.io/api-types/gateway/#gateway) resource with a valid listener.{{</note>}}
 
-## Use NGINX Gateway Fabric
+## Getting Started with NGINX Gateway Fabric
 
-See the tutorials in the [examples](https://github.com/nginxinc/nginx-gateway-fabric/tree/main/examples) directory to get started.
+Learn how to use NGINX Gateway Fabric by exploring the tutorials in the [examples](https://github.com/nginxinc/nginx-gateway-fabric/tree/main/examples) directory. The guides provide practical instructions and scenarios to help you use NGINX Gateway Fabric effectively.
