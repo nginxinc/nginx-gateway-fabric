@@ -3,6 +3,7 @@ package provisioner
 import (
 	"fmt"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	v1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -14,12 +15,14 @@ import (
 type store struct {
 	gatewayClasses map[types.NamespacedName]*v1.GatewayClass
 	gateways       map[types.NamespacedName]*v1.Gateway
+	crdMetadata    map[types.NamespacedName]*metav1.PartialObjectMetadata
 }
 
 func newStore() *store {
 	return &store{
 		gatewayClasses: make(map[types.NamespacedName]*v1.GatewayClass),
 		gateways:       make(map[types.NamespacedName]*v1.Gateway),
+		crdMetadata:    make(map[types.NamespacedName]*metav1.PartialObjectMetadata),
 	}
 }
 
@@ -32,6 +35,8 @@ func (s *store) update(batch events.EventBatch) {
 				s.gatewayClasses[client.ObjectKeyFromObject(obj)] = obj
 			case *v1.Gateway:
 				s.gateways[client.ObjectKeyFromObject(obj)] = obj
+			case *metav1.PartialObjectMetadata:
+				s.crdMetadata[client.ObjectKeyFromObject(obj)] = obj
 			default:
 				panic(fmt.Errorf("unknown resource type %T", e.Resource))
 			}
@@ -41,6 +46,8 @@ func (s *store) update(batch events.EventBatch) {
 				delete(s.gatewayClasses, e.NamespacedName)
 			case *v1.Gateway:
 				delete(s.gateways, e.NamespacedName)
+			case *metav1.PartialObjectMetadata:
+				delete(s.crdMetadata, e.NamespacedName)
 			default:
 				panic(fmt.Errorf("unknown resource type %T", e.Type))
 			}

@@ -6,7 +6,9 @@ import (
 	. "github.com/onsi/gomega"
 	apiv1 "k8s.io/api/core/v1"
 	discoveryV1 "k8s.io/api/discovery/v1"
+	apiext "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
@@ -18,6 +20,15 @@ import (
 
 func TestPrepareFirstEventBatchPreparerArgs(t *testing.T) {
 	const gcName = "nginx"
+
+	partialObjectMetadataList := &metav1.PartialObjectMetadataList{}
+	partialObjectMetadataList.SetGroupVersionKind(
+		schema.GroupVersionKind{
+			Group:   apiext.GroupName,
+			Version: "v1",
+			Kind:    "CustomResourceDefinition",
+		},
+	)
 
 	tests := []struct {
 		name                string
@@ -39,6 +50,7 @@ func TestPrepareFirstEventBatchPreparerArgs(t *testing.T) {
 				&gatewayv1.HTTPRouteList{},
 				&gatewayv1.GatewayList{},
 				&gatewayv1beta1.ReferenceGrantList{},
+				partialObjectMetadataList,
 			},
 		},
 		{
@@ -58,6 +70,7 @@ func TestPrepareFirstEventBatchPreparerArgs(t *testing.T) {
 				&discoveryV1.EndpointSliceList{},
 				&gatewayv1.HTTPRouteList{},
 				&gatewayv1beta1.ReferenceGrantList{},
+				partialObjectMetadataList,
 			},
 		},
 	}

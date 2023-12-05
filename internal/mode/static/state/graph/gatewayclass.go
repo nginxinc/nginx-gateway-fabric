@@ -1,12 +1,14 @@
 package graph
 
 import (
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	v1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/gatewayclass"
 	staticConds "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/conditions"
 )
 
@@ -56,30 +58,39 @@ func processGatewayClasses(
 	return processedGwClasses, gcExists
 }
 
-func buildGatewayClass(gc *v1.GatewayClass) *GatewayClass {
+func buildGatewayClass(
+	gc *v1.GatewayClass,
+	crdVersions map[types.NamespacedName]*metav1.PartialObjectMetadata,
+) *GatewayClass {
 	if gc == nil {
 		return nil
 	}
 
-	var conds []conditions.Condition
-
-	valErr := validateGatewayClass(gc)
-	if valErr != nil {
-		conds = append(conds, staticConds.NewGatewayClassInvalidParameters(valErr.Error()))
-	}
+	conds, valid := validateGatewayClass(gc, crdVersions)
 
 	return &GatewayClass{
 		Source:     gc,
-		Valid:      valErr == nil,
+		Valid:      valid,
 		Conditions: conds,
 	}
 }
 
-func validateGatewayClass(gc *v1.GatewayClass) error {
+func validateGatewayClass(
+	gc *v1.GatewayClass,
+	crdVersions map[types.NamespacedName]*metav1.PartialObjectMetadata,
+) ([]conditions.Condition, bool) {
+	var conds []conditions.Condition
+
+	valid := true
+
 	if gc.Spec.ParametersRef != nil {
 		path := field.NewPath("spec").Child("parametersRef")
-		return field.Forbidden(path, "parametersRef is not supported")
+		err := field.Forbidden(path, "parametersRef is not supported")
+		conds = append(conds, staticConds.NewGatewayClassInvalidParameters(err.Error()))
+		valid = false
 	}
 
-	return nil
+	supportedVersionConds, versionsValid := gatewayclass.ValidateCRDVersions(crdVersions)
+
+	return append(conds, supportedVersionConds...), valid && versionsValid
 }
