@@ -43,7 +43,7 @@ To install NGINX Gateway Fabric, choose the appropriate installation guide that 
 
 ## Configure Access to NGINX Gateway Fabric
 
-Once NGINX Gateway Fabric has been installed, you need to configure port forwarding from your local **8080** and **8443** ports to ports **80** and **443** on the **nginx-gateway** Pod.
+Once NGINX Gateway Fabric has been installed, you need to configure port forwarding from local ports **8080** and **8443** ports to ports **80** and **443** on the **nginx-gateway** Pod.
 
 To configure port forwarding, run the following command:
 
