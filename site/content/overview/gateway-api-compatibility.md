@@ -250,6 +250,6 @@ Fields:
 | Custom policies | Not supported      | N/A                    | Not supported                         | N/A         |
 {{< /bootstrap-table >}}
 
-Custom policies will be NGINX Gateway Fabric-specific CRDs (Custom Resource Definitions) that will supporting features such as timeouts, load-balancing methods, authentication, etc. These important data-plane features are not part of the Gateway API specifications.
+Custom policies will be NGINX Gateway Fabric-specific CRDs (Custom Resource Definitions) that will support features such as timeouts, load-balancing methods, authentication, etc. These important data-plane features are not part of the Gateway API specifications.
 
 While these CRDs are not part of the Gateway API, the mechanism to attach them to Gateway API resources is part of the Gateway API. See the [Policy Attachment documentation](https://gateway-api.sigs.k8s.io/references/policy-attachment/).
