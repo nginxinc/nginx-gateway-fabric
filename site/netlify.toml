@@ -1,6 +1,7 @@
 [build]
   base = "site/"
   publish = "public"
+  command = "hugo --gc -b $DEPLOY_PRIME_URL/nginx-gateway-fabric"
 
 [context.production]
   command = "make all"
