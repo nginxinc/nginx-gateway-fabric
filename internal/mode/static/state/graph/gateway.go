@@ -18,7 +18,7 @@ type Gateway struct {
 	// Source is the corresponding Gateway resource.
 	Source *v1.Gateway
 	// Listeners include the listeners of the Gateway.
-	Listeners map[string]*Listener
+	Listeners []*Listener
 	// Conditions holds the conditions for the Gateway.
 	Conditions []conditions.Condition
 	// Valid indicates whether the Gateway Spec is valid.

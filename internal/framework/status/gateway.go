@@ -1,8 +1,6 @@
 package status
 
 import (
-	"sort"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "sigs.k8s.io/gateway-api/apis/v1"
 )
@@ -14,19 +12,9 @@ func prepareGatewayStatus(
 ) v1.GatewayStatus {
 	listenerStatuses := make([]v1.ListenerStatus, 0, len(gatewayStatus.ListenerStatuses))
 
-	// FIXME(pleshakov) Maintain the order from the Gateway resource
-	// https://github.com/nginxinc/nginx-gateway-fabric/issues/689
-	names := make([]string, 0, len(gatewayStatus.ListenerStatuses))
-	for name := range gatewayStatus.ListenerStatuses {
-		names = append(names, name)
-	}
-	sort.Strings(names)
-
-	for _, name := range names {
-		s := gatewayStatus.ListenerStatuses[name]
-
+	for _, s := range gatewayStatus.ListenerStatuses {
 		listenerStatuses = append(listenerStatuses, v1.ListenerStatus{
-			Name:           v1.SectionName(name),
+			Name:           s.Name,
 			SupportedKinds: s.SupportedKinds,
 			AttachedRoutes: s.AttachedRoutes,
 			Conditions:     convertConditions(s.Conditions, gatewayStatus.ObservedGeneration, transitionTime),

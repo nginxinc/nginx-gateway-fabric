@@ -52,7 +52,7 @@ func BuildConfiguration(
 // valid listeners, so that we don't include unused Secrets in the configuration of the data plane.
 func buildSSLKeyPairs(
 	secrets map[types.NamespacedName]*graph.Secret,
-	listeners map[string]*graph.Listener,
+	listeners []*graph.Listener,
 ) map[SSLKeyPairID]SSLKeyPair {
 	keyPairs := make(map[SSLKeyPairID]SSLKeyPair)
 
@@ -132,7 +132,7 @@ func newBackendGroup(refs []graph.BackendRef, sourceNsName types.NamespacedName,
 	}
 }
 
-func buildServers(listeners map[string]*graph.Listener) (http, ssl []VirtualServer) {
+func buildServers(listeners []*graph.Listener) (http, ssl []VirtualServer) {
 	rulesForProtocol := map[v1.ProtocolType]portPathRules{
 		v1.HTTPProtocolType:  make(portPathRules),
 		v1.HTTPSProtocolType: make(portPathRules),
@@ -368,7 +368,7 @@ func (hpr *hostPathRules) maxServerCount() int {
 
 func buildUpstreams(
 	ctx context.Context,
-	listeners map[string]*graph.Listener,
+	listeners []*graph.Listener,
 	resolver resolver.ServiceResolver,
 ) []Upstream {
 	// There can be duplicate upstreams if multiple routes reference the same upstream.

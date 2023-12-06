@@ -616,6 +616,7 @@ func TestBindRouteToListeners(t *testing.T) {
 	// we create a new listener each time because the function under test can modify it
 	createListener := func(name string) *Listener {
 		return &Listener{
+			Name: name,
 			Source: gatewayv1.Listener{
 				Name:     gatewayv1.SectionName(name),
 				Hostname: (*gatewayv1.Hostname)(helpers.GetPointer("foo.example.com")),
@@ -790,18 +791,22 @@ func TestBindRouteToListeners(t *testing.T) {
 		},
 	}
 
-	invalidNotAttachableListener := createModifiedListener("", func(l *Listener) {
-		l.Valid = false
-		l.Attachable = false
-	})
-	nonMatchingHostnameListener := createModifiedListener("", func(l *Listener) {
-		l.Source.Hostname = helpers.GetPointer[gatewayv1.Hostname]("bar.example.com")
-	})
+	invalidNotAttachableListener := func(name string) *Listener {
+		return createModifiedListener(name, func(l *Listener) {
+			l.Valid = false
+			l.Attachable = false
+		})
+	}
+	nonMatchingHostnameListener := func(name string) *Listener {
+		return createModifiedListener(name, func(l *Listener) {
+			l.Source.Hostname = helpers.GetPointer[gatewayv1.Hostname]("bar.example.com")
+		})
+	}
 
 	tests := []struct {
 		route                    *Route
 		gateway                  *Gateway
-		expectedGatewayListeners map[string]*Listener
+		expectedGatewayListeners []*Listener
 		name                     string
 		expectedSectionNameRefs  []ParentRef
 		expectedConditions       []conditions.Condition
@@ -811,8 +816,8 @@ func TestBindRouteToListeners(t *testing.T) {
 			gateway: &Gateway{
 				Source: gw,
 				Valid:  true,
-				Listeners: map[string]*Listener{
-					"listener-80-1": createListener("listener-80-1"),
+				Listeners: []*Listener{
+					createListener("listener-80-1"),
 				},
 			},
 			expectedSectionNameRefs: []ParentRef{
@@ -827,8 +832,8 @@ func TestBindRouteToListeners(t *testing.T) {
 					},
 				},
 			},
-			expectedGatewayListeners: map[string]*Listener{
-				"listener-80-1": createModifiedListener("listener-80-1", func(l *Listener) {
+			expectedGatewayListeners: []*Listener{
+				createModifiedListener("listener-80-1", func(l *Listener) {
 					l.Routes = map[types.NamespacedName]*Route{
 						client.ObjectKeyFromObject(hr): getLastNormalRoute(),
 					}
@@ -841,8 +846,8 @@ func TestBindRouteToListeners(t *testing.T) {
 			gateway: &Gateway{
 				Source: gw,
 				Valid:  true,
-				Listeners: map[string]*Listener{
-					"listener-80-1": createListener("listener-80-1"),
+				Listeners: []*Listener{
+					createListener("listener-80-1"),
 				},
 			},
 			expectedSectionNameRefs: []ParentRef{
@@ -857,8 +862,8 @@ func TestBindRouteToListeners(t *testing.T) {
 					},
 				},
 			},
-			expectedGatewayListeners: map[string]*Listener{
-				"listener-80-1": createModifiedListener("listener-80-1", func(l *Listener) {
+			expectedGatewayListeners: []*Listener{
+				createModifiedListener("listener-80-1", func(l *Listener) {
 					l.Routes = map[types.NamespacedName]*Route{
 						client.ObjectKeyFromObject(hr): routeWithMissingSectionName,
 					}
@@ -871,9 +876,9 @@ func TestBindRouteToListeners(t *testing.T) {
 			gateway: &Gateway{
 				Source: gw,
 				Valid:  true,
-				Listeners: map[string]*Listener{
-					"listener-80":   createListener("listener-80"),
-					"listener-8080": createListener("listener-8080"),
+				Listeners: []*Listener{
+					createListener("listener-80"),
+					createListener("listener-8080"),
 				},
 			},
 			expectedSectionNameRefs: []ParentRef{
@@ -889,13 +894,13 @@ func TestBindRouteToListeners(t *testing.T) {
 					},
 				},
 			},
-			expectedGatewayListeners: map[string]*Listener{
-				"listener-80": createModifiedListener("listener-80", func(l *Listener) {
+			expectedGatewayListeners: []*Listener{
+				createModifiedListener("listener-80", func(l *Listener) {
 					l.Routes = map[types.NamespacedName]*Route{
 						client.ObjectKeyFromObject(hr): routeWithEmptySectionName,
 					}
 				}),
-				"listener-8080": createModifiedListener("listener-8080", func(l *Listener) {
+				createModifiedListener("listener-8080", func(l *Listener) {
 					l.Routes = map[types.NamespacedName]*Route{
 						client.ObjectKeyFromObject(hr): routeWithEmptySectionName,
 					}
@@ -908,8 +913,8 @@ func TestBindRouteToListeners(t *testing.T) {
 			gateway: &Gateway{
 				Source: gw,
 				Valid:  true,
-				Listeners: map[string]*Listener{
-					"listener-80-1": invalidNotAttachableListener,
+				Listeners: []*Listener{
+					invalidNotAttachableListener("listener-80-1"),
 				},
 			},
 			expectedSectionNameRefs: []ParentRef{
@@ -923,8 +928,8 @@ func TestBindRouteToListeners(t *testing.T) {
 					},
 				},
 			},
-			expectedGatewayListeners: map[string]*Listener{
-				"listener-80-1": invalidNotAttachableListener,
+			expectedGatewayListeners: []*Listener{
+				invalidNotAttachableListener("listener-80-1"),
 			},
 			name: "empty section name with no valid and attachable listeners",
 		},
@@ -933,8 +938,8 @@ func TestBindRouteToListeners(t *testing.T) {
 			gateway: &Gateway{
 				Source: gw,
 				Valid:  true,
-				Listeners: map[string]*Listener{
-					"listener-80-1": createListener("listener-80-1"),
+				Listeners: []*Listener{
+					createListener("listener-80-1"),
 				},
 			},
 			expectedSectionNameRefs: []ParentRef{
@@ -950,8 +955,8 @@ func TestBindRouteToListeners(t *testing.T) {
 					},
 				},
 			},
-			expectedGatewayListeners: map[string]*Listener{
-				"listener-80-1": createListener("listener-80-1"),
+			expectedGatewayListeners: []*Listener{
+				createListener("listener-80-1"),
 			},
 			name: "port is configured",
 		},
@@ -960,8 +965,8 @@ func TestBindRouteToListeners(t *testing.T) {
 			gateway: &Gateway{
 				Source: gw,
 				Valid:  true,
-				Listeners: map[string]*Listener{
-					"listener-80-1": createListener("listener-80-1"),
+				Listeners: []*Listener{
+					createListener("listener-80-1"),
 				},
 			},
 			expectedSectionNameRefs: []ParentRef{
@@ -975,8 +980,8 @@ func TestBindRouteToListeners(t *testing.T) {
 					},
 				},
 			},
-			expectedGatewayListeners: map[string]*Listener{
-				"listener-80-1": createListener("listener-80-1"),
+			expectedGatewayListeners: []*Listener{
+				createListener("listener-80-1"),
 			},
 			name: "listener doesn't exist",
 		},
@@ -985,8 +990,8 @@ func TestBindRouteToListeners(t *testing.T) {
 			gateway: &Gateway{
 				Source: gw,
 				Valid:  true,
-				Listeners: map[string]*Listener{
-					"listener-80-1": invalidNotAttachableListener,
+				Listeners: []*Listener{
+					invalidNotAttachableListener("listener-80-1"),
 				},
 			},
 			expectedSectionNameRefs: []ParentRef{
@@ -1000,8 +1005,8 @@ func TestBindRouteToListeners(t *testing.T) {
 					},
 				},
 			},
-			expectedGatewayListeners: map[string]*Listener{
-				"listener-80-1": invalidNotAttachableListener,
+			expectedGatewayListeners: []*Listener{
+				invalidNotAttachableListener("listener-80-1"),
 			},
 			name: "listener isn't valid and attachable",
 		},
@@ -1010,8 +1015,8 @@ func TestBindRouteToListeners(t *testing.T) {
 			gateway: &Gateway{
 				Source: gw,
 				Valid:  true,
-				Listeners: map[string]*Listener{
-					"listener-80-1": nonMatchingHostnameListener,
+				Listeners: []*Listener{
+					nonMatchingHostnameListener("listener-80-1"),
 				},
 			},
 			expectedSectionNameRefs: []ParentRef{
@@ -1025,8 +1030,8 @@ func TestBindRouteToListeners(t *testing.T) {
 					},
 				},
 			},
-			expectedGatewayListeners: map[string]*Listener{
-				"listener-80-1": nonMatchingHostnameListener,
+			expectedGatewayListeners: []*Listener{
+				nonMatchingHostnameListener("listener-80-1"),
 			},
 			name: "no matching listener hostname",
 		},
@@ -1035,8 +1040,8 @@ func TestBindRouteToListeners(t *testing.T) {
 			gateway: &Gateway{
 				Source: gw,
 				Valid:  true,
-				Listeners: map[string]*Listener{
-					"listener-80-1": createListener("listener-80-1"),
+				Listeners: []*Listener{
+					createListener("listener-80-1"),
 				},
 			},
 			expectedSectionNameRefs: []ParentRef{
@@ -1050,8 +1055,8 @@ func TestBindRouteToListeners(t *testing.T) {
 					},
 				},
 			},
-			expectedGatewayListeners: map[string]*Listener{
-				"listener-80-1": createListener("listener-80-1"),
+			expectedGatewayListeners: []*Listener{
+				createListener("listener-80-1"),
 			},
 			name: "gateway is ignored",
 		},
@@ -1060,8 +1065,8 @@ func TestBindRouteToListeners(t *testing.T) {
 			gateway: &Gateway{
 				Source: gw,
 				Valid:  true,
-				Listeners: map[string]*Listener{
-					"listener-80-1": createListener("listener-80-1"),
+				Listeners: []*Listener{
+					createListener("listener-80-1"),
 				},
 			},
 			expectedSectionNameRefs: []ParentRef{
@@ -1071,8 +1076,8 @@ func TestBindRouteToListeners(t *testing.T) {
 					Attachment: nil,
 				},
 			},
-			expectedGatewayListeners: map[string]*Listener{
-				"listener-80-1": createListener("listener-80-1"),
+			expectedGatewayListeners: []*Listener{
+				createListener("listener-80-1"),
 			},
 			name: "route isn't valid",
 		},
@@ -1081,8 +1086,8 @@ func TestBindRouteToListeners(t *testing.T) {
 			gateway: &Gateway{
 				Source: gw,
 				Valid:  false,
-				Listeners: map[string]*Listener{
-					"listener-80-1": createListener("listener-80-1"),
+				Listeners: []*Listener{
+					createListener("listener-80-1"),
 				},
 			},
 			expectedSectionNameRefs: []ParentRef{
@@ -1096,8 +1101,8 @@ func TestBindRouteToListeners(t *testing.T) {
 					},
 				},
 			},
-			expectedGatewayListeners: map[string]*Listener{
-				"listener-80-1": createListener("listener-80-1"),
+			expectedGatewayListeners: []*Listener{
+				createListener("listener-80-1"),
 			},
 			name: "invalid gateway",
 		},
@@ -1106,8 +1111,8 @@ func TestBindRouteToListeners(t *testing.T) {
 			gateway: &Gateway{
 				Source: gw,
 				Valid:  true,
-				Listeners: map[string]*Listener{
-					"listener-80-1": createModifiedListener("listener-80-1", func(l *Listener) {
+				Listeners: []*Listener{
+					createModifiedListener("listener-80-1", func(l *Listener) {
 						l.Valid = false
 					}),
 				},
@@ -1124,8 +1129,8 @@ func TestBindRouteToListeners(t *testing.T) {
 					},
 				},
 			},
-			expectedGatewayListeners: map[string]*Listener{
-				"listener-80-1": createModifiedListener("listener-80-1", func(l *Listener) {
+			expectedGatewayListeners: []*Listener{
+				createModifiedListener("listener-80-1", func(l *Listener) {
 					l.Valid = false
 					l.Routes = map[types.NamespacedName]*Route{
 						client.ObjectKeyFromObject(hr): getLastNormalRoute(),
@@ -1140,8 +1145,8 @@ func TestBindRouteToListeners(t *testing.T) {
 			gateway: &Gateway{
 				Source: gw,
 				Valid:  true,
-				Listeners: map[string]*Listener{
-					"listener-80-1": createListener("listener-80-1"),
+				Listeners: []*Listener{
+					createListener("listener-80-1"),
 				},
 			},
 			expectedSectionNameRefs: []ParentRef{
@@ -1156,8 +1161,8 @@ func TestBindRouteToListeners(t *testing.T) {
 					},
 				},
 			},
-			expectedGatewayListeners: map[string]*Listener{
-				"listener-80-1": createModifiedListener("listener-80-1", func(l *Listener) {
+			expectedGatewayListeners: []*Listener{
+				createModifiedListener("listener-80-1", func(l *Listener) {
 					l.Routes = map[types.NamespacedName]*Route{
 						client.ObjectKeyFromObject(hr): invalidAttachableRoute1,
 					}
@@ -1170,8 +1175,8 @@ func TestBindRouteToListeners(t *testing.T) {
 			gateway: &Gateway{
 				Source: gw,
 				Valid:  true,
-				Listeners: map[string]*Listener{
-					"listener-80-1": createModifiedListener("listener-80-1", func(l *Listener) {
+				Listeners: []*Listener{
+					createModifiedListener("listener-80-1", func(l *Listener) {
 						l.Valid = false
 					}),
 				},
@@ -1188,8 +1193,8 @@ func TestBindRouteToListeners(t *testing.T) {
 					},
 				},
 			},
-			expectedGatewayListeners: map[string]*Listener{
-				"listener-80-1": createModifiedListener("listener-80-1", func(l *Listener) {
+			expectedGatewayListeners: []*Listener{
+				createModifiedListener("listener-80-1", func(l *Listener) {
 					l.Valid = false
 					l.Routes = map[types.NamespacedName]*Route{
 						client.ObjectKeyFromObject(hr): invalidAttachableRoute2,
@@ -1204,8 +1209,8 @@ func TestBindRouteToListeners(t *testing.T) {
 			gateway: &Gateway{
 				Source: gw,
 				Valid:  true,
-				Listeners: map[string]*Listener{
-					"listener-80-1": createModifiedListener("listener-80-1", func(l *Listener) {
+				Listeners: []*Listener{
+					createModifiedListener("listener-80-1", func(l *Listener) {
 						l.Source.AllowedRoutes = &gatewayv1.AllowedRoutes{
 							Namespaces: &gatewayv1.RouteNamespaces{
 								From: helpers.GetPointer(gatewayv1.NamespacesFromSelector),
@@ -1227,8 +1232,8 @@ func TestBindRouteToListeners(t *testing.T) {
 					},
 				},
 			},
-			expectedGatewayListeners: map[string]*Listener{
-				"listener-80-1": createModifiedListener("listener-80-1", func(l *Listener) {
+			expectedGatewayListeners: []*Listener{
+				createModifiedListener("listener-80-1", func(l *Listener) {
 					l.Source.AllowedRoutes = &gatewayv1.AllowedRoutes{
 						Namespaces: &gatewayv1.RouteNamespaces{
 							From: helpers.GetPointer(gatewayv1.NamespacesFromSelector),
@@ -1245,8 +1250,8 @@ func TestBindRouteToListeners(t *testing.T) {
 			gateway: &Gateway{
 				Source: gw,
 				Valid:  true,
-				Listeners: map[string]*Listener{
-					"listener-80-1": createModifiedListener("listener-80-1", func(l *Listener) {
+				Listeners: []*Listener{
+					createModifiedListener("listener-80-1", func(l *Listener) {
 						l.Source.AllowedRoutes = &gatewayv1.AllowedRoutes{
 							Namespaces: &gatewayv1.RouteNamespaces{
 								From: helpers.GetPointer(gatewayv1.NamespacesFromSelector),
@@ -1269,8 +1274,8 @@ func TestBindRouteToListeners(t *testing.T) {
 					},
 				},
 			},
-			expectedGatewayListeners: map[string]*Listener{
-				"listener-80-1": createModifiedListener("listener-80-1", func(l *Listener) {
+			expectedGatewayListeners: []*Listener{
+				createModifiedListener("listener-80-1", func(l *Listener) {
 					allowedLabels := map[string]string{"app": "allowed"}
 					l.AllowedRouteLabelSelector = labels.SelectorFromSet(allowedLabels)
 					l.Source.AllowedRoutes = &gatewayv1.AllowedRoutes{
@@ -1290,8 +1295,8 @@ func TestBindRouteToListeners(t *testing.T) {
 			gateway: &Gateway{
 				Source: gwDiffNamespace,
 				Valid:  true,
-				Listeners: map[string]*Listener{
-					"listener-80-1": createModifiedListener("listener-80-1", func(l *Listener) {
+				Listeners: []*Listener{
+					createModifiedListener("listener-80-1", func(l *Listener) {
 						l.Source.AllowedRoutes = &gatewayv1.AllowedRoutes{
 							Namespaces: &gatewayv1.RouteNamespaces{
 								From: helpers.GetPointer(gatewayv1.NamespacesFromSame),
@@ -1311,8 +1316,8 @@ func TestBindRouteToListeners(t *testing.T) {
 					},
 				},
 			},
-			expectedGatewayListeners: map[string]*Listener{
-				"listener-80-1": createModifiedListener("listener-80-1", func(l *Listener) {
+			expectedGatewayListeners: []*Listener{
+				createModifiedListener("listener-80-1", func(l *Listener) {
 					l.Source.AllowedRoutes = &gatewayv1.AllowedRoutes{
 						Namespaces: &gatewayv1.RouteNamespaces{
 							From: helpers.GetPointer(gatewayv1.NamespacesFromSame),
@@ -1327,8 +1332,8 @@ func TestBindRouteToListeners(t *testing.T) {
 			gateway: &Gateway{
 				Source: gw,
 				Valid:  true,
-				Listeners: map[string]*Listener{
-					"listener-80-1": createModifiedListener("listener-80-1", func(l *Listener) {
+				Listeners: []*Listener{
+					createModifiedListener("listener-80-1", func(l *Listener) {
 						l.Source.AllowedRoutes = &gatewayv1.AllowedRoutes{
 							Namespaces: &gatewayv1.RouteNamespaces{
 								From: helpers.GetPointer(gatewayv1.NamespacesFromSame),
@@ -1349,8 +1354,8 @@ func TestBindRouteToListeners(t *testing.T) {
 					},
 				},
 			},
-			expectedGatewayListeners: map[string]*Listener{
-				"listener-80-1": createModifiedListener("listener-80-1", func(l *Listener) {
+			expectedGatewayListeners: []*Listener{
+				createModifiedListener("listener-80-1", func(l *Listener) {
 					l.Source.AllowedRoutes = &gatewayv1.AllowedRoutes{
 						Namespaces: &gatewayv1.RouteNamespaces{
 							From: helpers.GetPointer(gatewayv1.NamespacesFromSame),
@@ -1368,8 +1373,8 @@ func TestBindRouteToListeners(t *testing.T) {
 			gateway: &Gateway{
 				Source: gwDiffNamespace,
 				Valid:  true,
-				Listeners: map[string]*Listener{
-					"listener-80-1": createModifiedListener("listener-80-1", func(l *Listener) {
+				Listeners: []*Listener{
+					createModifiedListener("listener-80-1", func(l *Listener) {
 						l.Source.AllowedRoutes = &gatewayv1.AllowedRoutes{
 							Namespaces: &gatewayv1.RouteNamespaces{
 								From: helpers.GetPointer(gatewayv1.NamespacesFromAll),
@@ -1390,8 +1395,8 @@ func TestBindRouteToListeners(t *testing.T) {
 					},
 				},
 			},
-			expectedGatewayListeners: map[string]*Listener{
-				"listener-80-1": createModifiedListener("listener-80-1", func(l *Listener) {
+			expectedGatewayListeners: []*Listener{
+				createModifiedListener("listener-80-1", func(l *Listener) {
 					l.Source.AllowedRoutes = &gatewayv1.AllowedRoutes{
 						Namespaces: &gatewayv1.RouteNamespaces{
 							From: helpers.GetPointer(gatewayv1.NamespacesFromAll),

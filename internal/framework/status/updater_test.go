@@ -89,8 +89,9 @@ var _ = Describe("Updater", func() {
 					GatewayStatuses: status.GatewayStatuses{
 						{Namespace: "test", Name: "gateway"}: {
 							Conditions: status.CreateTestConditions("Test"),
-							ListenerStatuses: map[string]status.ListenerStatus{
-								"http": {
+							ListenerStatuses: []status.ListenerStatus{
+								{
+									Name:           "http",
 									AttachedRoutes: 1,
 									Conditions:     status.CreateTestConditions("Test"),
 									SupportedKinds: []v1.RouteGroupKind{{Kind: "HTTPRoute"}},

@@ -354,8 +354,9 @@ func TestBuildGateway(t *testing.T) {
 			gatewayClass: validGC,
 			expected: &Gateway{
 				Source: getLastCreatedGetaway(),
-				Listeners: map[string]*Listener{
-					"foo-80-1": {
+				Listeners: []*Listener{
+					{
+						Name:       "foo-80-1",
 						Source:     foo80Listener1,
 						Valid:      true,
 						Attachable: true,
@@ -364,7 +365,8 @@ func TestBuildGateway(t *testing.T) {
 							{Kind: "HTTPRoute"},
 						},
 					},
-					"foo-8080": {
+					{
+						Name:       "foo-8080",
 						Source:     foo8080Listener,
 						Valid:      true,
 						Attachable: true,
@@ -385,8 +387,9 @@ func TestBuildGateway(t *testing.T) {
 			gatewayClass: validGC,
 			expected: &Gateway{
 				Source: getLastCreatedGetaway(),
-				Listeners: map[string]*Listener{
-					"foo-443-https-1": {
+				Listeners: []*Listener{
+					{
+						Name:           "foo-443-https-1",
 						Source:         foo443HTTPSListener1,
 						Valid:          true,
 						Attachable:     true,
@@ -396,7 +399,8 @@ func TestBuildGateway(t *testing.T) {
 							{Kind: "HTTPRoute"},
 						},
 					},
-					"foo-8443-https": {
+					{
+						Name:           "foo-8443-https",
 						Source:         foo8443HTTPSListener,
 						Valid:          true,
 						Attachable:     true,
@@ -416,8 +420,9 @@ func TestBuildGateway(t *testing.T) {
 			gatewayClass: validGC,
 			expected: &Gateway{
 				Source: getLastCreatedGetaway(),
-				Listeners: map[string]*Listener{
-					"listener-with-allowed-routes": {
+				Listeners: []*Listener{
+					{
+						Name:                      "listener-with-allowed-routes",
 						Source:                    listenerAllowedRoutes,
 						Valid:                     true,
 						Attachable:                true,
@@ -461,8 +466,9 @@ func TestBuildGateway(t *testing.T) {
 			},
 			expected: &Gateway{
 				Source: getLastCreatedGetaway(),
-				Listeners: map[string]*Listener{
-					"listener-cross-ns-secret": {
+				Listeners: []*Listener{
+					{
+						Name:           "listener-cross-ns-secret",
 						Source:         crossNamespaceSecretListener,
 						Valid:          true,
 						Attachable:     true,
@@ -482,8 +488,9 @@ func TestBuildGateway(t *testing.T) {
 			gatewayClass: validGC,
 			expected: &Gateway{
 				Source: getLastCreatedGetaway(),
-				Listeners: map[string]*Listener{
-					"listener-cross-ns-secret": {
+				Listeners: []*Listener{
+					{
+						Name:       "listener-cross-ns-secret",
 						Source:     crossNamespaceSecretListener,
 						Valid:      false,
 						Attachable: true,
@@ -505,8 +512,9 @@ func TestBuildGateway(t *testing.T) {
 			gatewayClass: validGC,
 			expected: &Gateway{
 				Source: getLastCreatedGetaway(),
-				Listeners: map[string]*Listener{
-					"listener-with-invalid-selector": {
+				Listeners: []*Listener{
+					{
+						Name:       "listener-with-invalid-selector",
 						Source:     listenerInvalidSelector,
 						Valid:      false,
 						Attachable: true,
@@ -528,8 +536,9 @@ func TestBuildGateway(t *testing.T) {
 			gatewayClass: validGC,
 			expected: &Gateway{
 				Source: getLastCreatedGetaway(),
-				Listeners: map[string]*Listener{
-					"invalid-protocol": {
+				Listeners: []*Listener{
+					{
+						Name:       "invalid-protocol",
 						Source:     invalidProtocolListener,
 						Valid:      false,
 						Attachable: false,
@@ -559,8 +568,9 @@ func TestBuildGateway(t *testing.T) {
 			gatewayClass: validGC,
 			expected: &Gateway{
 				Source: getLastCreatedGetaway(),
-				Listeners: map[string]*Listener{
-					"invalid-port": {
+				Listeners: []*Listener{
+					{
+						Name:       "invalid-port",
 						Source:     invalidPortListener,
 						Valid:      false,
 						Attachable: true,
@@ -572,7 +582,8 @@ func TestBuildGateway(t *testing.T) {
 							{Kind: "HTTPRoute"},
 						},
 					},
-					"invalid-https-port": {
+					{
+						Name:       "invalid-https-port",
 						Source:     invalidHTTPSPortListener,
 						Valid:      false,
 						Attachable: true,
@@ -584,7 +595,8 @@ func TestBuildGateway(t *testing.T) {
 							{Kind: "HTTPRoute"},
 						},
 					},
-					"invalid-protected-port": {
+					{
+						Name:       "invalid-protected-port",
 						Source:     invalidProtectedPortListener,
 						Valid:      false,
 						Attachable: true,
@@ -608,8 +620,9 @@ func TestBuildGateway(t *testing.T) {
 			gatewayClass: validGC,
 			expected: &Gateway{
 				Source: getLastCreatedGetaway(),
-				Listeners: map[string]*Listener{
-					"invalid-hostname": {
+				Listeners: []*Listener{
+					{
+						Name:       "invalid-hostname",
 						Source:     invalidHostnameListener,
 						Valid:      false,
 						Conditions: staticConds.NewListenerUnsupportedValue(invalidHostnameMsg),
@@ -618,7 +631,8 @@ func TestBuildGateway(t *testing.T) {
 							{Kind: "HTTPRoute"},
 						},
 					},
-					"invalid-https-hostname": {
+					{
+						Name:       "invalid-https-hostname",
 						Source:     invalidHTTPSHostnameListener,
 						Valid:      false,
 						Conditions: staticConds.NewListenerUnsupportedValue(invalidHostnameMsg),
@@ -637,8 +651,9 @@ func TestBuildGateway(t *testing.T) {
 			gatewayClass: validGC,
 			expected: &Gateway{
 				Source: getLastCreatedGetaway(),
-				Listeners: map[string]*Listener{
-					"invalid-tls-config": {
+				Listeners: []*Listener{
+					{
+						Name:       "invalid-tls-config",
 						Source:     invalidTLSConfigListener,
 						Valid:      false,
 						Attachable: true,
@@ -673,8 +688,9 @@ func TestBuildGateway(t *testing.T) {
 			gatewayClass: validGC,
 			expected: &Gateway{
 				Source: getLastCreatedGetaway(),
-				Listeners: map[string]*Listener{
-					"foo-80-1": {
+				Listeners: []*Listener{
+					{
+						Name:       "foo-80-1",
 						Source:     foo80Listener1,
 						Valid:      true,
 						Attachable: true,
@@ -683,7 +699,8 @@ func TestBuildGateway(t *testing.T) {
 							{Kind: "HTTPRoute"},
 						},
 					},
-					"foo-8080": {
+					{
+						Name:       "foo-8080",
 						Source:     foo8080Listener,
 						Valid:      true,
 						Attachable: true,
@@ -692,7 +709,8 @@ func TestBuildGateway(t *testing.T) {
 							{Kind: "HTTPRoute"},
 						},
 					},
-					"foo-8081": {
+					{
+						Name:       "foo-8081",
 						Source:     foo8081Listener,
 						Valid:      true,
 						Attachable: true,
@@ -701,16 +719,8 @@ func TestBuildGateway(t *testing.T) {
 							{Kind: "HTTPRoute"},
 						},
 					},
-					"bar-80": {
-						Source:     bar80Listener,
-						Valid:      true,
-						Attachable: true,
-						Routes:     map[types.NamespacedName]*Route{},
-						SupportedKinds: []v1.RouteGroupKind{
-							{Kind: "HTTPRoute"},
-						},
-					},
-					"foo-443-https-1": {
+					{
+						Name:           "foo-443-https-1",
 						Source:         foo443HTTPSListener1,
 						Valid:          true,
 						Attachable:     true,
@@ -720,7 +730,8 @@ func TestBuildGateway(t *testing.T) {
 							{Kind: "HTTPRoute"},
 						},
 					},
-					"foo-8443-https": {
+					{
+						Name:           "foo-8443-https",
 						Source:         foo8443HTTPSListener,
 						Valid:          true,
 						Attachable:     true,
@@ -730,7 +741,18 @@ func TestBuildGateway(t *testing.T) {
 							{Kind: "HTTPRoute"},
 						},
 					},
-					"bar-443-https": {
+					{
+						Name:       "bar-80",
+						Source:     bar80Listener,
+						Valid:      true,
+						Attachable: true,
+						Routes:     map[types.NamespacedName]*Route{},
+						SupportedKinds: []v1.RouteGroupKind{
+							{Kind: "HTTPRoute"},
+						},
+					},
+					{
+						Name:           "bar-443-https",
 						Source:         bar443HTTPSListener,
 						Valid:          true,
 						Attachable:     true,
@@ -740,7 +762,8 @@ func TestBuildGateway(t *testing.T) {
 							{Kind: "HTTPRoute"},
 						},
 					},
-					"bar-8443-https": {
+					{
+						Name:           "bar-8443-https",
 						Source:         bar8443HTTPSListener,
 						Valid:          true,
 						Attachable:     true,
@@ -771,8 +794,9 @@ func TestBuildGateway(t *testing.T) {
 			gatewayClass: validGC,
 			expected: &Gateway{
 				Source: getLastCreatedGetaway(),
-				Listeners: map[string]*Listener{
-					"foo-80-1": {
+				Listeners: []*Listener{
+					{
+						Name:       "foo-80-1",
 						Source:     foo80Listener1,
 						Valid:      false,
 						Attachable: true,
@@ -782,7 +806,8 @@ func TestBuildGateway(t *testing.T) {
 							{Kind: "HTTPRoute"},
 						},
 					},
-					"bar-80": {
+					{
+						Name:       "bar-80",
 						Source:     bar80Listener,
 						Valid:      false,
 						Attachable: true,
@@ -792,7 +817,8 @@ func TestBuildGateway(t *testing.T) {
 							{Kind: "HTTPRoute"},
 						},
 					},
-					"foo-443": {
+					{
+						Name:       "foo-443",
 						Source:     foo443Listener,
 						Valid:      false,
 						Attachable: true,
@@ -802,7 +828,8 @@ func TestBuildGateway(t *testing.T) {
 							{Kind: "HTTPRoute"},
 						},
 					},
-					"foo-80-https": {
+					{
+						Name:           "foo-80-https",
 						Source:         foo80HTTPSListener,
 						Valid:          false,
 						Attachable:     true,
@@ -813,7 +840,8 @@ func TestBuildGateway(t *testing.T) {
 							{Kind: "HTTPRoute"},
 						},
 					},
-					"foo-443-https-1": {
+					{
+						Name:           "foo-443-https-1",
 						Source:         foo443HTTPSListener1,
 						Valid:          false,
 						Attachable:     true,
@@ -824,7 +852,8 @@ func TestBuildGateway(t *testing.T) {
 							{Kind: "HTTPRoute"},
 						},
 					},
-					"bar-443-https": {
+					{
+						Name:           "bar-443-https",
 						Source:         bar443HTTPSListener,
 						Valid:          false,
 						Attachable:     true,
