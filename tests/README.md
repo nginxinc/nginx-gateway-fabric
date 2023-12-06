@@ -33,20 +33,24 @@ build-images                   Build NGF and NGINX images
 create-kind-cluster            Create a kind cluster
 delete-kind-cluster            Delete kind cluster
 help                           Display this help
+install-gcp-deps               Install dependencies on a GCP VM. To be ran only from a VM.
 load-images                    Load NGF and NGINX images on configured kind cluster
+reset-etc-hosts                Reset the /etc/hosts file to delete the entry for cafe.example.com
 test                           Run the system tests against your default k8s cluster
 ```
 
 **Note:** The following variables are configurable when running the below `make` commands:
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| TAG      | edge    | tag for the locally built NGF images |
-| PREFIX   | nginx-gateway-fabric | prefix for the locally built NGF image |
-| NGINX_PREFIX | nginx-gateway-fabric/nginx | prefix for the locally built NGINX image |
-| PULL_POLICY | Never | NGF image pull policy |
-| GW_API_VERSION | 1.0.0 | version of Gateway API resources to install |
-| K8S_VERSION | latest | version of k8s that the tests are run on |
+| Variable            | Default                    | Description                                                    |
+| ------------------- | -------------------------- | -------------------------------------------------------------- |
+| TAG                 | edge                       | tag for the locally built NGF images                           |
+| PREFIX              | nginx-gateway-fabric       | prefix for the locally built NGF image                         |
+| NGINX_PREFIX        | nginx-gateway-fabric/nginx | prefix for the locally built NGINX image                       |
+| PULL_POLICY         | Never                      | NGF image pull policy                                          |
+| GW_API_VERSION      | 1.0.0                      | version of Gateway API resources to install                    |
+| K8S_VERSION         | latest                     | version of k8s that the tests are run on                       |
+| GW_SERVICE_TYPE     | NodePort                   | Type of Service that should be created                         |
+| GW_SVC_GKE_INTERNAL | false                      | Specifies if the LoadBalancer should be a GKE internal service |
 
 ## Step 1 - Create a Kubernetes cluster
 
@@ -74,9 +78,27 @@ make build-images load-images TAG=$(whoami)
 
 ## Step 3 - Run the tests
 
+### 3a - Run the tests locally
+
+The tests require `sudo` access locally to create an entry in the `/etc/hosts` file.
+
 ```makefile
-make test TAG=$(whoami)
+sudo make test TAG=$(whoami)
 ```
+
+### 3b - Run the tests on a GKE cluster from a GCP VM
+
+This step only applies if you would like to run the tests from a GCP based VM. The VM should be created in the same
+zone as your GKE cluster, and requires a service account that has Kubernetes admin permissions. Additionally, you need
+ssh access to the VM and the VM needs to have network access to the Kubernetes control node.
+
+Before running the below `make` command, populate the required env vars in `utils/vars.env`.
+
+```makefile
+make run-tests-on-vm
+```
+
+### Common test amendments
 
 To run a specific test, you can "focus" it by adding the `F` prefix to the name. For example:
 
@@ -112,8 +134,22 @@ XIt("runs some test", func(){
 })
 ```
 
-## Step 4 - Delete kind cluster
+## Step 4 - Cleanup
 
-```makefile
-make delete-kind-cluster
-```
+1. Delete kind cluster, if required
+
+    ```makefile
+    make delete-kind-cluster
+    ```
+
+2. Remove entries from `/etc/hosts`, if required
+
+    ```makefile
+    make reset-etc-hosts
+    ```
+
+3. Delete the cloud VM, if required
+
+    ```makefile
+    make cleanup-vm
+    ```

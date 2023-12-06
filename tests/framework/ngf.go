@@ -29,6 +29,7 @@ type InstallationConfig struct {
 	ImageTag             string
 	ImagePullPolicy      string
 	ServiceType          string
+	IsGKEInternalLB      bool
 }
 
 // InstallGatewayAPI installs the specified version of the Gateway API resources.
@@ -110,6 +111,9 @@ func InstallNGF(cfg InstallationConfig, extraArgs ...string) ([]byte, error) {
 
 	if cfg.ServiceType != "" {
 		args = append(args, formatValueSet("service.type", cfg.ServiceType)...)
+		if cfg.ServiceType == "LoadBalancer" && cfg.IsGKEInternalLB {
+			args = append(args, formatValueSet(`service.annotations.networking\.gke\.io\/load-balancer-type`, "Internal")...)
+		}
 	}
 
 	fullArgs := append(args, extraArgs...)

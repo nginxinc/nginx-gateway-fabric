@@ -4,6 +4,8 @@ NGINX_PREFIX = $(PREFIX)/nginx
 PULL_POLICY=Never
 GW_API_VERSION ?= 1.0.0
 K8S_VERSION ?= latest ## Expected format: 1.24 (major.minor) or latest
+GW_SERVICE_TYPE=NodePort
+GW_SVC_GKE_INTERNAL=false
 
 .PHONY: help
 help: Makefile ## Display this help
@@ -24,8 +26,20 @@ load-images: ## Load NGF and NGINX images on configured kind cluster
 test: ## Run the system tests against your default k8s cluster
 	go test -v ./suite -args --gateway-api-version=$(GW_API_VERSION) --image-tag=$(TAG) \
 		--ngf-image-repo=$(PREFIX) --nginx-image-repo=$(NGINX_PREFIX) --pull-policy=$(PULL_POLICY) \
-		--k8s-version=$(K8S_VERSION)
+		--k8s-version=$(K8S_VERSION) --service-type=$(GW_SERVICE_TYPE) --is-gke-internal-lb=$(GW_SVC_GKE_INTERNAL)
 
 .PHONY: delete-kind-cluster
 delete-kind-cluster: ## Delete kind cluster
 	kind delete cluster
+
+.PHONY: reset-etc-hosts
+reset-etc-hosts: ## Reset the /etc/hosts file to delete the entry for cafe.example.com
+	sudo sed -i -e '/cafe.example.com/d' /etc/hosts
+
+.PHONY: run-tests-on-vm
+run-tests-on-vm: ## Run the tests on a GCP VM
+	bash utils/run-tests-gcp-vm.sh
+
+.PHONY: cleanup-vm
+cleanup-vm: ## Delete the test GCP VM
+	bash utils/cleanup-vm.sh

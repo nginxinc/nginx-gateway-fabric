@@ -48,6 +48,18 @@ type ResourceManager struct {
 	TimeoutConfig TimeoutConfig
 }
 
+// ClusterInfo holds the cluster metadata
+type ClusterInfo struct {
+	K8sVersion      string
+	MemoryPerNode   string
+	GkeInstanceType string
+	GkeZone         string
+	NodeCount       int
+	CPUCountPerNode int64
+	MaxPodsPerNode  int64
+	IsGKE           bool
+}
+
 // Apply creates or updates Kubernetes resources defined as Go objects.
 func (rm *ResourceManager) Apply(resources []client.Object) error {
 	ctx, cancel := context.WithTimeout(context.Background(), rm.TimeoutConfig.CreateTimeout)
@@ -310,4 +322,87 @@ func (rm *ResourceManager) waitForRoutesToBeReady(ctx context.Context, namespace
 			return numParents == readyCount, nil
 		},
 	)
+}
+
+// GetLBIPAddress gets the IP or Hostname from the Loadbalancer service.
+func (rm *ResourceManager) GetLBIPAddress(namespace string) (string, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), rm.TimeoutConfig.CreateTimeout)
+	defer cancel()
+	var serviceList core.ServiceList
+	var address string
+	if err := rm.K8sClient.List(ctx, &serviceList, client.InNamespace(namespace)); err != nil {
+		return "", err
+	}
+	var nsName types.NamespacedName
+
+	for _, svc := range serviceList.Items {
+		if svc.Spec.Type == core.ServiceTypeLoadBalancer {
+			nsName = types.NamespacedName{Namespace: svc.GetNamespace(), Name: svc.GetName()}
+			if err := rm.waitForLBStatusToBeReady(ctx, nsName); err != nil {
+				return "", fmt.Errorf("Error getting status from LoadBalancer service: %w", err)
+			}
+		}
+	}
+
+	if nsName.Name != "" {
+		var lbService core.Service
+
+		if err := rm.K8sClient.Get(ctx, nsName, &lbService); err != nil {
+			return "", fmt.Errorf("Error getting LoadBalancer service: %w", err)
+		}
+		if lbService.Status.LoadBalancer.Ingress[0].IP != "" {
+			address = lbService.Status.LoadBalancer.Ingress[0].IP
+		} else if lbService.Status.LoadBalancer.Ingress[0].Hostname != "" {
+			address = lbService.Status.LoadBalancer.Ingress[0].Hostname
+		}
+		return address, nil
+	}
+	return "", nil
+}
+
+func (rm *ResourceManager) waitForLBStatusToBeReady(ctx context.Context, svcNsName types.NamespacedName) error {
+	return wait.PollUntilContextCancel(
+		ctx,
+		500*time.Millisecond,
+		true, /* poll immediately */
+		func(ctx context.Context) (bool, error) {
+			var svc core.Service
+			if err := rm.K8sClient.Get(ctx, svcNsName, &svc); err != nil {
+				return false, err
+			}
+			if len(svc.Status.LoadBalancer.Ingress) > 0 {
+				return true, nil
+			}
+
+			return false, nil
+		},
+	)
+}
+
+// GetClusterInfo retrieves node info and Kubernetes version from the cluster
+func (rm *ResourceManager) GetClusterInfo() (ClusterInfo, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), rm.TimeoutConfig.GetTimeout)
+	defer cancel()
+	var nodes core.NodeList
+	ci := &ClusterInfo{}
+	if err := rm.K8sClient.List(ctx, &nodes); err != nil {
+		return *ci, fmt.Errorf("error getting nodes: %w", err)
+	}
+
+	ci.NodeCount = len(nodes.Items)
+
+	node := nodes.Items[0]
+	ci.K8sVersion = node.Status.NodeInfo.KubeletVersion
+	ci.CPUCountPerNode, _ = node.Status.Capacity.Cpu().AsInt64()
+	ci.MemoryPerNode = node.Status.Capacity.Memory().String()
+	ci.MaxPodsPerNode, _ = node.Status.Capacity.Pods().AsInt64()
+	providerID := node.Spec.ProviderID
+
+	if strings.Split(providerID, "://")[0] == "gce" {
+		ci.IsGKE = true
+		ci.GkeInstanceType = node.Labels["beta.kubernetes.io/instance-type"]
+		ci.GkeZone = node.Labels["topology.kubernetes.io/zone"]
+	}
+
+	return *ci, nil
 }

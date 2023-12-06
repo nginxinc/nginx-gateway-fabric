@@ -11,9 +11,9 @@ import (
 )
 
 // Get sends a GET request to the specified url.
-// It resolves to localhost (where the NGF port-forward is running) instead of using DNS.
+// It resolves to the specified address instead of using DNS.
 // The status and body of the response is returned, or an error.
-func Get(url string, timeout time.Duration) (int, string, error) {
+func Get(url string, address string, timeout time.Duration) (int, string, error) {
 	dialer := &net.Dialer{}
 
 	http.DefaultTransport.(*http.Transport).DialContext = func(
@@ -23,7 +23,7 @@ func Get(url string, timeout time.Duration) (int, string, error) {
 	) (net.Conn, error) {
 		split := strings.Split(addr, ":")
 		port := split[len(split)-1]
-		return dialer.DialContext(ctx, network, fmt.Sprintf("127.0.0.1:%s", port))
+		return dialer.DialContext(ctx, network, fmt.Sprintf("%s:%s", address, port))
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
