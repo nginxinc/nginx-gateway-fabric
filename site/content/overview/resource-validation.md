@@ -27,7 +27,7 @@ kubectl apply -f coffee-route.yaml
 The HTTPRoute "coffee" is invalid: spec.hostnames[0]: Invalid value: "cafe.!@#$%example.com": spec.hostnames[0] in body should match '^(\*\.)?[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
 ```
 
-{{< note >}}While unlikely, bypassing this validation step is possible if the Gateway API CRDs are modified to remove the validation.If this happens, Step 4 will reject any invalid values (from NGINX perspective).{{< /note >}}
+{{< note >}}While unlikely, bypassing this validation step is possible if the Gateway API CRDs are modified to remove the validation. If this happens, Step 4 will reject any invalid values (from NGINX perspective).{{< /note >}}
 
 ## Step 2 - CEL or Webhook validation by Kubernetes
 
@@ -62,7 +62,7 @@ The HTTPRoute "coffee" is invalid: spec.hostnames[0]: Invalid value: "cafe.!@#$%
 
 ## Step 3 - Webhook validation by NGINX Gateway Fabric
 
-To ensure that the resources are validated with the webhook validation rules, even if the webhook is not running, NGINX Gateway Fabric performs the same validation. However, NGINX Gateway Fabric performs the validation __after_ the Kubernetes API server accepts the resource.
+To ensure that the resources are validated with the webhook validation rules, even if the webhook is not running, NGINX Gateway Fabric performs the same validation. However, NGINX Gateway Fabric performs the validation _after_ the Kubernetes API server accepts the resource.
 
 Below is an example of how NGINX Gateway Fabric rejects an invalid resource (a Gateway resource with a TCP listener that configures a hostname) with a Kubernetes event:
 
