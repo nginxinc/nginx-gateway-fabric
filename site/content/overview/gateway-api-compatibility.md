@@ -43,6 +43,20 @@ Each resource below includes the support status of their corresponding fields.
 
 For a description of each field, visit the [Gateway API documentation](https://gateway-api.sigs.k8s.io/references/spec/).
 
+- `spec`
+  - `controllerName` - supported.
+  - `parametersRef` - not supported.
+  - `description` - supported.
+- `status`
+  - `conditions` - supported (Condition/Status/Reason):
+    - `Accepted/True/Accepted`
+    - `Accepted/False/InvalidParameters`
+    - `Accepted/False/UnsupportedVersion`
+    - `Accepted/False/GatewayClassConflict`: Custom reason for when the GatewayClass references this controller, but
+          a different GatewayClass name is provided to the controller via the command-line argument.
+    - `SupportedVersion/True/SupportedVersion`
+    - `SupportedVersion/False/UnsupportedVersion`
+
 ---
 
 ### Gateway
