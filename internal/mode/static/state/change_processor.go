@@ -146,7 +146,7 @@ func NewChangeProcessorImpl(cfg ChangeProcessorConfig) *ChangeProcessorImpl {
 			{
 				gvk:       extractGVK(&apiv1.Namespace{}),
 				store:     newObjectStoreMapAdapter(clusterStore.Namespaces),
-				predicate: nil,
+				predicate: funcPredicate{stateChanged: isReferenced},
 			},
 			{
 				gvk:       extractGVK(&apiv1.Service{}),
