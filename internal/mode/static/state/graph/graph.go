@@ -53,8 +53,8 @@ type ProtectedPorts map[int32]string
 
 // IsReferenced returns true if the Graph references the resource.
 func (g *Graph) IsReferenced(resourceType client.Object, nsname types.NamespacedName) bool {
-	// FIMXE(pleshakov): For now, only works with Secrets.
-	// Support EndpointSlices and Namespaces so that we can remove relationship.Capturer and use the Graph
+	// FIMXE(pleshakov): For now, only works with Secrets and Namespaces.
+	// Support EndpointSlices so that we can remove relationship.Capturer and use the Graph
 	// as source to determine the relationships.
 	// See https://github.com/nginxinc/nginx-gateway-fabric/issues/824
 
