@@ -44,7 +44,7 @@ type Graph struct {
 	// in the cluster. We need such entries so that we can query the Graph to determine if a Secret is referenced
 	// by the Gateway, including the case when the Secret is newly created.
 	ReferencedSecrets map[types.NamespacedName]*Secret
-	// ReferencedNamespaces includes Namespaces that have labels which match the Gateway Listener's label selector.
+	// ReferencedNamespaces includes Namespaces with labels that match the Gateway Listener's label selector.
 	ReferencedNamespaces map[types.NamespacedName]*v1.Namespace
 }
 
