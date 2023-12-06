@@ -1294,52 +1294,57 @@ var _ = Describe("ChangeProcessor", func() {
 			})
 		})
 		Describe("namespace changes", func() {
-			ns := &apiv1.Namespace{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "ns",
-					Labels: map[string]string{
-						"app": "allowed",
+			var (
+				ns, nsDifferentLabels, nsNoLabels *apiv1.Namespace
+				gw                                *v1.Gateway
+			)
+
+			BeforeEach(func() {
+				ns = &apiv1.Namespace{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "ns",
+						Labels: map[string]string{
+							"app": "allowed",
+						},
 					},
-				},
-			}
-			nsDifferentLabels := &apiv1.Namespace{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "ns-different-labels",
-					Labels: map[string]string{
-						"oranges": "bananas",
+				}
+				nsDifferentLabels = &apiv1.Namespace{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "ns-different-labels",
+						Labels: map[string]string{
+							"oranges": "bananas",
+						},
 					},
-				},
-			}
-			nsNoLabels := &apiv1.Namespace{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "no-labels",
-				},
-			}
-			gw := &v1.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "gw",
-				},
-				Spec: v1.GatewaySpec{
-					GatewayClassName: gcName,
-					Listeners: []v1.Listener{
-						{
-							Port:     80,
-							Protocol: v1.HTTPProtocolType,
-							AllowedRoutes: &v1.AllowedRoutes{
-								Namespaces: &v1.RouteNamespaces{
-									From: helpers.GetPointer(v1.NamespacesFromSelector),
-									Selector: &metav1.LabelSelector{
-										MatchLabels: map[string]string{
-											"app": "allowed",
+				}
+				nsNoLabels = &apiv1.Namespace{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "no-labels",
+					},
+				}
+				gw = &v1.Gateway{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "gw",
+					},
+					Spec: v1.GatewaySpec{
+						GatewayClassName: gcName,
+						Listeners: []v1.Listener{
+							{
+								Port:     80,
+								Protocol: v1.HTTPProtocolType,
+								AllowedRoutes: &v1.AllowedRoutes{
+									Namespaces: &v1.RouteNamespaces{
+										From: helpers.GetPointer(v1.NamespacesFromSelector),
+										Selector: &metav1.LabelSelector{
+											MatchLabels: map[string]string{
+												"app": "allowed",
+											},
 										},
 									},
 								},
 							},
 						},
 					},
-				},
-			}
-			BeforeEach(func() {
+				}
 				processor = state.NewChangeProcessorImpl(state.ChangeProcessorConfig{
 					GatewayCtlrName:      controllerName,
 					GatewayClassName:     gcName,
@@ -1410,6 +1415,33 @@ var _ = Describe("ChangeProcessor", func() {
 					processor.CaptureUpsertChange(nsDifferentLabels)
 
 					changed, _ := processor.Process()
+					Expect(changed).To(BeTrue())
+				})
+			})
+			When("a gateway changes its listener's labels", func() {
+				It("triggers an update when a namespace that matches the new labels is created", func() {
+					processor.CaptureUpsertChange(ns)
+					changed, _ := processor.Process()
+					Expect(changed).To(BeTrue())
+
+					processor.CaptureUpsertChange(nsDifferentLabels)
+					changed, _ = processor.Process()
+					Expect(changed).To(BeFalse())
+
+					gwChangedLabel := gw.DeepCopy()
+					gwChangedLabel.Spec.Listeners[0].AllowedRoutes.Namespaces.Selector.MatchLabels = map[string]string{
+						"oranges": "bananas",
+					}
+					gwChangedLabel.Generation++
+					processor.CaptureUpsertChange(gwChangedLabel)
+					processor.Process()
+
+					processor.CaptureUpsertChange(ns)
+					changed, _ = processor.Process()
+					Expect(changed).To(BeFalse())
+
+					processor.CaptureUpsertChange(nsDifferentLabels)
+					changed, _ = processor.Process()
 					Expect(changed).To(BeTrue())
 				})
 			})
