@@ -15,15 +15,18 @@ tech-debt:
 
 documentation:
   - head-branch: ['^docs/', '^doc/']
-  - changed-files: '**/*.md'
+  - changed-files:
+      - any-glob-to-any-file: '**/*.md'
 
 dependencies:
   - head-branch: ['^deps/', '^dep/', '^dependabot/', 'pre-commit-ci-update-config']
-  - changed-files: ['go.mod', 'go.sum']
+  - changed-files:
+      - any-glob-to-any-file: ['go.mod', 'go.sum']
 
 tests:
-  - head-branch: ['^test/', '^tests/']
+  - head-branch: ['^tests/', '^test/']
 
 helm-chart:
   - head-branch: ['^helm/', '^helm-chart/']
-  - changed-files: ['deploy/helm-chart/**/*']
+  - changed-files:
+      - any-glob-to-any-file: ['deploy/helm-chart/**/*']
