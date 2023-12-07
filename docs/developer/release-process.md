@@ -33,7 +33,7 @@ To create a new release, follow these steps:
 5. If the supported Gateway API minor version has changed since the last release, test NGINX Gateway Fabric with the previous version of the Gateway API CRDs.
 6. If a compatibility issue is found, add a note to the release notes explaining that the previous version is not supported.
 7. Create a release branch following the `release-X.Y` naming convention.
-8. Prepare and merge a PR into the release branch to update the repo files for the release:
+8. Prepare and merge a PR into the **release branch** to update the repo files for the release:
     1. Update the Helm [Chart.yaml](/deploy/helm-chart/Chart.yaml): the `appVersion` to `X.Y.Z`, the icon and source
        URLs to point at `vX.Y.Z`, and bump the `version`.
     2. Adjust the `VERSION` variable in the [Makefile](/Makefile) and the `TAG` in the
@@ -61,10 +61,11 @@ To create a new release, follow these steps:
 10. Prepare and merge a PR into the main branch to update the [README](/README.md) to include the information about
     the latest release and also the [changelog](/CHANGELOG.md). Also update any installation instructions to ensure
     that the supported Gateway API and NGF versions are correct. Specifically, helm README and `site/content/includes/installation/install-gateway-api-resources.md`.
-11. Close the issue created in Step 1.
-12. Ensure that the [associated milestone](https://github.com/nginxinc/nginx-gateway-fabric/milestones) is closed.
-13. Verify that published artifacts in the release can be installed properly.
-14. Submit the `conformance-profile.yaml` artifact from the release to the [Gateway API repo](https://github.com/kubernetes-sigs/gateway-api/tree/main/conformance/reports).
+11. Update the production branch to the latest release branch in [Netlify](https://app.netlify.com/sites/nginx-gateway-fabric/configuration/deploys#branches-and-deploy-contexts). Log in using Gitlab SSO and ask the docs team for permission to access the NGF project.
+12. Close the issue created in Step 1.
+13. Ensure that the [associated milestone](https://github.com/nginxinc/nginx-gateway-fabric/milestones) is closed.
+14. Verify that published artifacts in the release can be installed properly.
+15. Submit the `conformance-profile.yaml` artifact from the release to the [Gateway API repo](https://github.com/kubernetes-sigs/gateway-api/tree/main/conformance/reports).
     - Create a fork of the repository
     - Name the file `nginxinc-nginx-gateway-fabric.yaml` and set `gatewayAPIVersion` in the file to the
     supported version by NGF. Also update the site source if necessary (see following example).
