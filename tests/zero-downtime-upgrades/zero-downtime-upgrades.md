@@ -85,9 +85,14 @@ Notes:
 ### Start
 
 1. Create a cluster.
-2. Deploy a previous latest stable version with 2 replicas with added [anti-affinity](#pod-affinity).
-3. Expose NGF via a Service Load Balancer, internal (only accessible within the Google Cloud region) by adding
-   `networking.gke.io/load-balancer-type: "Internal"` annotation to the Service.
+2. Install the Gateway API resources that are supported by the latest release of NGF.
+3. Install the latest release of NGF:
+
+    ```console
+    helm install ngf-test oci://ghcr.io/nginxinc/charts/nginx-gateway-fabric  --create-namespace --wait -n nginx-gateway --values values.yaml
+    ```
+
+   This deploys NGF with 2 replicas with added [anti-affinity](#pod-affinity).
 4. Deploy backend apps:
 
     ```console
@@ -118,7 +123,7 @@ Notes:
 
 ### Upgrade
 
-1. Follow the [upgrade instructions](https://docs.nginx.com/nginx-gateway-fabric/installation/installing-ngf/manifests/) to:
+1. Follow the [upgrade instructions](https://docs.nginx.com/nginx-gateway-fabric/installation/installing-ngf/helm/#upgrade-nginx-gateway-fabric) to:
     1. Upgrade Gateway API version to the one that matches the supported version of new release.
     2. Upgrade NGF CRDs.
 2. Start sending traffic using wrk from tester VMs for 1 minute:
@@ -148,9 +153,12 @@ Notes:
           for i in `seq 1 600`; do printf  "\nRequest $i\n" && date --rfc-3339=ns && curl -k -sS --connect-timeout 2 https://cafe.example.com/tea 2>&1  && sleep 0.1s; done > results.txt
           ```
 
-3. **Immediately** upgrade NGF manifests by
-   following [upgrade instructions](https://docs.nginx.com/nginx-gateway-fabric/installation/installing-ngf/manifests/).
-   > Don't forget to modify the manifests to have 2 replicas and Pod affinity.
+3. **Immediately** upgrade NGF:
+
+    ```console
+    helm upgrade ngf-test oci://ghcr.io/nginxinc/charts/nginx-gateway-fabric -n nginx-gateway --version 0.0.0-edge --values values.yaml --wait
+    ```
+
 4. Ensure the new Pods are running and the old ones terminate.
 
 ### After Upgrade
@@ -203,6 +211,7 @@ Notes:
 
 - [1.0.0](results/1.0.0/1.0.0.md)
 - [1.0.0-special](results/1.0.0-special/1.0.0-special.md)
+- [1.1.0](results/1.1.0/1.1.0.md)
 
 ## Appendix
 
