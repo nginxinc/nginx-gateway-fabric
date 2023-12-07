@@ -36,7 +36,7 @@ jobs:
       - name: Setup Golang Environment
         uses: actions/setup-go@0c52d547c9bc32b1aa3301fd7a9cb496313a4491 # v5.0.0
         with:
-          go-version-file: go.mod
+          go-version: stable
 
       - name: Output Variables
         id: vars
@@ -65,7 +65,7 @@ jobs:
       - name: Setup Golang Environment
         uses: actions/setup-go@0c52d547c9bc32b1aa3301fd7a9cb496313a4491 # v5.0.0
         with:
-          go-version-file: go.mod
+          go-version: stable
 
       - name: Run Tests
         run: make unit-test
@@ -107,7 +107,7 @@ jobs:
       - name: Setup Golang Environment
         uses: actions/setup-go@0c52d547c9bc32b1aa3301fd7a9cb496313a4491 # v5.0.0
         with:
-          go-version-file: go.mod
+          go-version: stable
 
       - name: Create/Update Draft
         uses: lucacome/draft-release@785af55296512c907875513e397320ae3f1306bb # v1.0.1
@@ -322,7 +322,7 @@ jobs:
           ignore-unfixed: "true"
 
       - name: Upload Trivy scan results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@407ffafae6a767df3e0230c3df91b6443ae8df75 # v2.22.8
+        uses: github/codeql-action/upload-sarif@c0d1daa7f7e14667747d73a7dbbe8c074bc8bfe2 # v2.22.9
         continue-on-error: true
         with:
           sarif_file: trivy-results-nginx-gateway-fabric${{ matrix.container == 'nginx' && '-nginx' || '' }}.sarif
