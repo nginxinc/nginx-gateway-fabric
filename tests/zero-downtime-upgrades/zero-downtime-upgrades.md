@@ -153,7 +153,7 @@ Notes:
           for i in `seq 1 600`; do printf  "\nRequest $i\n" && date --rfc-3339=ns && curl -k -sS --connect-timeout 2 https://cafe.example.com/tea 2>&1  && sleep 0.1s; done > results.txt
           ```
 
-3. **Immediately** upgrade NGF:
+3. **Immediately** upgrade NGF to the edge version:
 
     ```console
     helm upgrade ngf-test oci://ghcr.io/nginxinc/charts/nginx-gateway-fabric -n nginx-gateway --version 0.0.0-edge --values values.yaml --wait
