@@ -26,7 +26,7 @@
 
  The following cluster will be sufficient:
 
-- A Kubernetes cluster with 3 nodes on GKE
+- A Kubernetes cluster with 4 nodes on GKE
   - Node: e2-medium (2 vCPU, 4GB memory)
 
 ## Setup
@@ -43,7 +43,7 @@
 
    ```console
    helm install my-release oci://ghcr.io/nginxinc/charts/nginx-gateway-fabric  --version 0.0.0-edge \
-      --create-namespace --wait -n nginx-gateway
+      --create-namespace --wait -n nginx-gateway --set nginxGateway.config.logging.level=debug
    ```
 
 4. Run tests:
@@ -75,11 +75,11 @@
       1. The average reload duration can be computed by taking the `nginx_gateway_fabric_nginx_reloads_milliseconds_sum`
          metric value and dividing it by the `nginx_gateway_fabric_nginx_reloads_milliseconds_count` metric value.
 7. Measure Event Batch Processing Results
-   1. Event Batch Total - metrics.
+   1. Event Batch Total - `nginx_gateway_fabric_event_batch_processing_milliseconds_count` metric.
    2. Average Event Batch Processing duration - metrics.
-      1. The average event batch processing duraiton can be computed by taking the `nginx_gateway_fabric_event_batch_processing_milliseconds_sum`
+      1. The average event batch processing duration can be computed by taking the `nginx_gateway_fabric_event_batch_processing_milliseconds_sum`
          metric value and dividing it by the `nginx_gateway_fabric_event_batch_processing_milliseconds_count` metric value.
-8. For accuracy, repeat the test suite once or twice, take the averages, and look for any anomolies or outliers.
+8. For accuracy, repeat the test suite once or twice, take the averages, and look for any anomalies or outliers.
 
 ## Tests
 
