@@ -1,9 +1,5 @@
 nginxGateway:
   replicaCount: 2
-  image:
-    repository: gcr.io/<your-project>/nginx-gateway-fabric
-    tag: <your-tag>
-    pullPolicy: Always
   lifecycle:
     preStop:
       exec:
