@@ -58,13 +58,17 @@
       - Note: Clean up after each test run for isolated results. There's a script provided for removing all the test
         fixtures `scripts/delete-multiple.sh` which takes a number (needs to be the same number as what was used in the
         create script.)
-5. After each individual test run, grab logs of both NGF containers and grab metrics.
-   Note: You can expose metrics by running the below snippet and then navigating to `127.0.0.1:9113/metrics`:
+5. After each individual test:
+    - Describe the Gateway resource and make sure the status is correct.
+    - Check the logs of both NGF containers for errors.
+    - Parse the logs for TimeToReady numbers (see steps 6-7 below).
+    - Grab metrics.
+      Note: You can expose metrics by running the below snippet and then navigating to `127.0.0.1:9113/metrics`:
 
-   ```console
-   GW_POD=$(k get pods -n nginx-gateway | sed -n '2s/^\([^[:space:]]*\).*$/\1/p')
-   kubectl port-forward $GW_POD -n nginx-gateway 9113:9113 &
-   ```
+       ```console
+       GW_POD=$(k get pods -n nginx-gateway | sed -n '2s/^\([^[:space:]]*\).*$/\1/p')
+       kubectl port-forward $GW_POD -n nginx-gateway 9113:9113 &
+       ```
 
 6. Measure NGINX Reloads and Time to Ready Results
    1. TimeToReadyTotal as described in each test - NGF logs.
@@ -90,7 +94,7 @@
       e.g. `cd scripts && bash create-resources-gw-last.sh 30`. The script will deploy backend apps and services, wait
       60 seconds for them to be ready, and deploy 1 Gateway, 1 RefGrant, 1 Secret, and HTTPRoutes.
    2. Deploy NGF
-   3. Measure TimeToReadyTotal as the time it takes from start-up -> config written and
+   3. Measure TimeToReadyTotal as the time it takes from start-up -> final config written and
       NGINX reloaded. Measure the other results as described in steps 6-7 of the [Setup](#setup) section.
 
 ### Test 2: Start NGF, deploy Gateway, create many resources attached to GW
