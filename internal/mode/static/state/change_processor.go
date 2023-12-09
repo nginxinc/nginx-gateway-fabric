@@ -145,12 +145,12 @@ func NewChangeProcessorImpl(cfg ChangeProcessorConfig) *ChangeProcessorImpl {
 			},
 			{
 				gvk:       extractGVK(&apiv1.Namespace{}),
-				store:     newObjectStoreMapAdapter(clusterStore.Namespaces),
+				store:     nil,
 				predicate: nil,
 			},
 			{
 				gvk:       extractGVK(&apiv1.Service{}),
-				store:     newObjectStoreMapAdapter(clusterStore.Services),
+				store:     nil,
 				predicate: nil,
 			},
 			{
