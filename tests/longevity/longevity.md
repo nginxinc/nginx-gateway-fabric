@@ -65,7 +65,8 @@ Test duration - 4 days.
     4. Create two CronJobs to re-rollout backends:
         1. Coffee - every minute for an hour every 6 hours
         2. Tea - every minute for an hour every 6 hours, 3 hours apart from coffee.
-    5. Configure Prometheus on GKE to pick up NGF metrics.
+    5. Configure Prometheus on GKE to pick up NGF metrics (NB: Ensure that the `app.kubernetes.io/name` label matches
+       your NGF deployment).
 
     ```shell
     kubectl apply -f files
@@ -147,3 +148,4 @@ In case of errors, double check if you prepared the environment and launched the
 ## Results
 
 - [1.0.0](results/1.0.0/1.0.0.md)
+- [1.1.0](results/1.1.0/1.1.0.md)
