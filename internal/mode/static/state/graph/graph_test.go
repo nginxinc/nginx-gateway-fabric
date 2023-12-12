@@ -502,8 +502,10 @@ func TestIsReferenced(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
-		g := NewWithT(t)
-		result := test.graph.IsReferenced(test.resource, client.ObjectKeyFromObject(test.resource))
-		g.Expect(result).To(Equal(test.expected))
+		t.Run(test.name, func(t *testing.T) {
+			g := NewWithT(t)
+			result := test.graph.IsReferenced(test.resource, client.ObjectKeyFromObject(test.resource))
+			g.Expect(result).To(Equal(test.expected))
+		})
 	}
 }

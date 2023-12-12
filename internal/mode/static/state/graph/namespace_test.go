@@ -107,7 +107,9 @@ func TestBuildReferencedNamespaces(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		g := NewWithT(t)
-		g.Expect(buildReferencedNamespaces(clusterNamespaces, test.gw)).To(Equal(test.expectedRefNS))
+		t.Run(test.name, func(t *testing.T) {
+			g := NewWithT(t)
+			g.Expect(buildReferencedNamespaces(clusterNamespaces, test.gw)).To(Equal(test.expectedRefNS))
+		})
 	}
 }
