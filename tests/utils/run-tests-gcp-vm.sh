@@ -3,6 +3,7 @@
 set -e
 
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+PARENT_DIR=$(dirname "$SCRIPT_DIR")
 
 source utils/vars.env
 
@@ -19,6 +20,4 @@ gcloud compute scp --zone ${GKE_CLUSTER_ZONE} ${SCRIPT_DIR}/vars.env ${VM_NAME}:
 
 gcloud compute ssh --zone ${GKE_CLUSTER_ZONE} ${VM_NAME} --command="bash -s" < ${SCRIPT_DIR}/remote-scripts/install-deps-and-run-tests.sh
 
-gcloud compute scp --zone ${GKE_CLUSTER_ZONE} --recurse ${VM_NAME}:~/nginx-gateway-fabric/tests/suite/results .
-
-cp -r results/* suite/results && rm -rf results/
+gcloud compute scp --zone ${GKE_CLUSTER_ZONE} --recurse ${VM_NAME}:~/nginx-gateway-fabric/tests/results .

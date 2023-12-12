@@ -32,10 +32,6 @@ test: ## Run the system tests against your default k8s cluster
 delete-kind-cluster: ## Delete kind cluster
 	kind delete cluster
 
-.PHONY: reset-etc-hosts
-reset-etc-hosts: ## Reset the /etc/hosts file to delete the entry for cafe.example.com
-	sudo sed -i -e '/cafe.example.com/d' /etc/hosts
-
 .PHONY: run-tests-on-vm
 run-tests-on-vm: ## Run the tests on a GCP VM
 	bash utils/run-tests-gcp-vm.sh

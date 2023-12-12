@@ -30,12 +30,12 @@ make
 
 ```text
 build-images                   Build NGF and NGINX images
+cleanup-vm                     Delete the test GCP VM
 create-kind-cluster            Create a kind cluster
 delete-kind-cluster            Delete kind cluster
 help                           Display this help
-install-gcp-deps               Install dependencies on a GCP VM. To be ran only from a VM.
 load-images                    Load NGF and NGINX images on configured kind cluster
-reset-etc-hosts                Reset the /etc/hosts file to delete the entry for cafe.example.com
+run-tests-on-vm                Run the tests on a GCP VM
 test                           Run the system tests against your default k8s cluster
 ```
 
@@ -80,10 +80,8 @@ make build-images load-images TAG=$(whoami)
 
 ### 3a - Run the tests locally
 
-The tests require `sudo` access locally to create an entry in the `/etc/hosts` file.
-
 ```makefile
-sudo make test TAG=$(whoami)
+make test TAG=$(whoami)
 ```
 
 ### 3b - Run the tests on a GKE cluster from a GCP VM
@@ -142,13 +140,7 @@ XIt("runs some test", func(){
     make delete-kind-cluster
     ```
 
-2. Remove entries from `/etc/hosts`, if required
-
-    ```makefile
-    make reset-etc-hosts
-    ```
-
-3. Delete the cloud VM, if required
+2. Delete the cloud VM, if required
 
     ```makefile
     make cleanup-vm
