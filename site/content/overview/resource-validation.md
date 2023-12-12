@@ -75,7 +75,7 @@ kubectl describe gateway some-gateway
 Events:
   Type     Reason    Age   From                            Message
   ----     ------    ----  ----                            -------
-  Warning  Rejected  6s    nginx-gateway-fabric-nginx  the resource failed webhook validation, however the Gateway API webhook failed to reject it with the error; make sure the webhook is installed and running correctly; validation error: spec.listeners[1].hostname: Forbidden: should be empty for protocol TCP; NGINX Gateway Fabric will delete any existing NGINX configuration that corresponds to the resource
+  Warning  Rejected  6s    nginx-gateway-fabric-nginx  the resource failed webhook validation, however the Gateway API webhook failed to reject it with the error; make sure the webhook is installed and running correctly; validation error: spec.listeners[1].hostname: Forbidden: should be empty for protocol TCP; NGF will delete any existing NGINX configuration that corresponds to the resource
 ```
 
 {{< note >}}This validation step always runs and cannot be bypassed. NGINX Gateway Fabric will ignore any resources that fail the webhook validation, like in the example above. If the resource previously existed, NGINX Gateway Fabric will remove any existing NGINX configuration for that resource.{{< /note >}}
