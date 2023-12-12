@@ -76,7 +76,7 @@ func (g *Graph) IsReferenced(resourceType client.Object, nsname types.Namespaced
 		// `exists` does not cover the case highlighted above by `existed` and vice versa so both are needed.
 
 		_, existed := g.ReferencedNamespaces[nsname]
-		exists := checkNamespace(obj, g.Gateway)
+		exists := isNamespaceReferenced(obj, g.Gateway)
 		return existed || exists
 	default:
 		return false

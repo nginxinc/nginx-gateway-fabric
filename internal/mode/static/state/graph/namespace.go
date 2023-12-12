@@ -13,7 +13,7 @@ func buildReferencedNamespaces(clusterNamespaces map[types.NamespacedName]*v1.Na
 ) map[types.NamespacedName]*v1.Namespace {
 	referencedNamespaces := make(map[types.NamespacedName]*v1.Namespace)
 	for name, ns := range clusterNamespaces {
-		if checkNamespace(ns, gw) {
+		if isNamespaceReferenced(ns, gw) {
 			referencedNamespaces[name] = ns
 		}
 	}
@@ -23,9 +23,9 @@ func buildReferencedNamespaces(clusterNamespaces map[types.NamespacedName]*v1.Na
 	return referencedNamespaces
 }
 
-// checkNamespaces returns a boolean that represents whether a given Namespace resource has a label
+// isNamespaceReferenced returns a boolean that represents whether a given Namespace resource has a label
 // that matches any of the Gateway Listener's label selector.
-func checkNamespace(ns *v1.Namespace, gw *Gateway) bool {
+func isNamespaceReferenced(ns *v1.Namespace, gw *Gateway) bool {
 	if gw == nil || ns == nil {
 		return false
 	}
