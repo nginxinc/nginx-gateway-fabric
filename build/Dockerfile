@@ -9,7 +9,7 @@ RUN go mod download
 COPY . /go/src/github.com/nginxinc/nginx-gateway-fabric
 RUN make build
 
-FROM alpine:3.18 as capabilizer
+FROM alpine:3.19 as capabilizer
 RUN apk add --no-cache libcap
 
 FROM capabilizer as local-capabilizer

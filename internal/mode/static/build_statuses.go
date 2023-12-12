@@ -61,7 +61,7 @@ func buildGatewayAPIStatuses(
 			parentStatuses = append(parentStatuses, status.ParentStatus{
 				GatewayNsName: ref.Gateway,
 				SectionName:   routeRef.SectionName,
-				Conditions:    staticConds.DeduplicateConditions(allConds),
+				Conditions:    conditions.DeduplicateConditions(allConds),
 			})
 		}
 
@@ -91,7 +91,7 @@ func buildGatewayClassStatuses(
 		conds = append(conds, gc.Conditions...)
 
 		statuses[client.ObjectKeyFromObject(gc.Source)] = status.GatewayClassStatus{
-			Conditions:         staticConds.DeduplicateConditions(conds),
+			Conditions:         conditions.DeduplicateConditions(conds),
 			ObservedGeneration: gc.Source.Generation,
 		}
 	}
@@ -136,7 +136,7 @@ func buildGatewayStatus(
 ) status.GatewayStatus {
 	if !gateway.Valid {
 		return status.GatewayStatus{
-			Conditions:         staticConds.DeduplicateConditions(gateway.Conditions),
+			Conditions:         conditions.DeduplicateConditions(gateway.Conditions),
 			ObservedGeneration: gateway.Source.Generation,
 		}
 	}
@@ -163,7 +163,7 @@ func buildGatewayStatus(
 
 		listenerStatuses[name] = status.ListenerStatus{
 			AttachedRoutes: int32(len(l.Routes)),
-			Conditions:     staticConds.DeduplicateConditions(conds),
+			Conditions:     conditions.DeduplicateConditions(conds),
 			SupportedKinds: l.SupportedKinds,
 		}
 	}
@@ -183,7 +183,7 @@ func buildGatewayStatus(
 	}
 
 	return status.GatewayStatus{
-		Conditions:         staticConds.DeduplicateConditions(gwConds),
+		Conditions:         conditions.DeduplicateConditions(gwConds),
 		ListenerStatuses:   listenerStatuses,
 		Addresses:          gwAddresses,
 		ObservedGeneration: gateway.Source.Generation,

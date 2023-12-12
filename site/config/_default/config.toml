@@ -1,7 +1,6 @@
 title = "NGINX Gateway Fabric"
 enableGitInfo = false
 baseURL = "/"
-publishDir = "public/nginx-gateway-fabric"
 staticDir = ["static"]
 languageCode = "en-us"
 description = "NGINX Gateway Fabric."

@@ -9,9 +9,11 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	apiv1 "k8s.io/api/core/v1"
 	discoveryV1 "k8s.io/api/discovery/v1"
+	apiext "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -31,6 +33,7 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/controller/index"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/controller/predicate"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/events"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/gatewayclass"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/status"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/config"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/metrics/collectors"
@@ -57,6 +60,7 @@ func init() {
 	utilruntime.Must(apiv1.AddToScheme(scheme))
 	utilruntime.Must(discoveryV1.AddToScheme(scheme))
 	utilruntime.Must(ngfAPI.AddToScheme(scheme))
+	utilruntime.Must(apiext.AddToScheme(scheme))
 }
 
 func StartManager(cfg config.Config) error {
@@ -244,6 +248,11 @@ func registerControllers(
 		options    []controller.Option
 	}
 
+	crdWithGVK := apiext.CustomResourceDefinition{}
+	crdWithGVK.SetGroupVersionKind(
+		schema.GroupVersionKind{Group: apiext.GroupName, Version: "v1", Kind: "CustomResourceDefinition"},
+	)
+
 	// Note: for any new object type or a change to the existing one,
 	// make sure to also update prepareFirstEventBatchPreparerArgs()
 	controllerRegCfgs := []ctlrCfg{
@@ -304,6 +313,15 @@ func registerControllers(
 		{
 			objectType: &gatewayv1beta1.ReferenceGrant{},
 		},
+		{
+			objectType: &crdWithGVK,
+			options: []controller.Option{
+				controller.WithOnlyMetadata(),
+				controller.WithK8sPredicate(
+					predicate.AnnotationPredicate{Annotation: gatewayclass.BundleVersionAnnotation},
+				),
+			},
+		},
 	}
 
 	if cfg.ConfigName != "" {
@@ -346,6 +364,16 @@ func prepareFirstEventBatchPreparerArgs(
 	objects := []client.Object{
 		&gatewayv1.GatewayClass{ObjectMeta: metav1.ObjectMeta{Name: gcName}},
 	}
+
+	partialObjectMetadataList := &metav1.PartialObjectMetadataList{}
+	partialObjectMetadataList.SetGroupVersionKind(
+		schema.GroupVersionKind{
+			Group:   apiext.GroupName,
+			Version: "v1",
+			Kind:    "CustomResourceDefinition",
+		},
+	)
+
 	objectLists := []client.ObjectList{
 		&apiv1.ServiceList{},
 		&apiv1.SecretList{},
@@ -353,6 +381,7 @@ func prepareFirstEventBatchPreparerArgs(
 		&discoveryV1.EndpointSliceList{},
 		&gatewayv1.HTTPRouteList{},
 		&gatewayv1beta1.ReferenceGrantList{},
+		partialObjectMetadataList,
 	}
 
 	if gwNsName == nil {

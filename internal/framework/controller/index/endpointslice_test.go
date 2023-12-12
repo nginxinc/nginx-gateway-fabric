@@ -51,7 +51,7 @@ func TestServiceNameIndexFunc(t *testing.T) {
 func TestServiceNameIndexFuncPanics(t *testing.T) {
 	defer func() {
 		g := NewWithT(t)
-		g.Expect(recover()).ShouldNot(BeNil())
+		g.Expect(recover()).ToNot(BeNil())
 	}()
 
 	ServiceNameIndexFunc(&v1.Namespace{})

@@ -5,8 +5,10 @@ import (
 
 	"github.com/go-logr/logr"
 	v1 "k8s.io/api/apps/v1"
+	apiext "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	ctlr "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -17,6 +19,7 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/controller"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/controller/predicate"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/events"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/gatewayclass"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/status"
 )
 
@@ -39,6 +42,7 @@ func StartManager(cfg Config) error {
 	scheme := runtime.NewScheme()
 	utilruntime.Must(gatewayv1.AddToScheme(scheme))
 	utilruntime.Must(v1.AddToScheme(scheme))
+	utilruntime.Must(apiext.AddToScheme(scheme))
 
 	options := manager.Options{
 		Scheme: scheme,
@@ -50,6 +54,11 @@ func StartManager(cfg Config) error {
 	if err != nil {
 		return fmt.Errorf("cannot build runtime manager: %w", err)
 	}
+
+	crdWithGVK := apiext.CustomResourceDefinition{}
+	crdWithGVK.SetGroupVersionKind(
+		schema.GroupVersionKind{Group: apiext.GroupName, Version: "v1", Kind: "CustomResourceDefinition"},
+	)
 
 	// Note: for any new object type or a change to the existing one,
 	// make sure to also update firstBatchPreparer creation below
@@ -65,6 +74,15 @@ func StartManager(cfg Config) error {
 		},
 		{
 			objectType: &gatewayv1.Gateway{},
+		},
+		{
+			objectType: &crdWithGVK,
+			options: []controller.Option{
+				controller.WithOnlyMetadata(),
+				controller.WithK8sPredicate(
+					predicate.AnnotationPredicate{Annotation: gatewayclass.BundleVersionAnnotation},
+				),
+			},
 		},
 	}
 
@@ -83,6 +101,15 @@ func StartManager(cfg Config) error {
 		}
 	}
 
+	partialObjectMetadataList := &metav1.PartialObjectMetadataList{}
+	partialObjectMetadataList.SetGroupVersionKind(
+		schema.GroupVersionKind{
+			Group:   apiext.GroupName,
+			Version: "v1",
+			Kind:    "CustomResourceDefinition",
+		},
+	)
+
 	firstBatchPreparer := events.NewFirstEventBatchPreparerImpl(
 		mgr.GetCache(),
 		[]client.Object{
@@ -90,6 +117,7 @@ func StartManager(cfg Config) error {
 		},
 		[]client.ObjectList{
 			&gatewayv1.GatewayList{},
+			partialObjectMetadataList,
 		},
 	)
 

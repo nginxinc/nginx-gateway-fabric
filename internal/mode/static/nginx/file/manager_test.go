@@ -23,7 +23,7 @@ var _ = Describe("EventHandler", func() {
 
 		ensureFiles := func(files []file.File) {
 			entries, err := os.ReadDir(tmpDir)
-			Expect(err).ShouldNot(HaveOccurred())
+			Expect(err).ToNot(HaveOccurred())
 			Expect(entries).Should(HaveLen(len(files)))
 
 			entriesMap := make(map[string]os.DirEntry)
@@ -36,7 +36,7 @@ var _ = Describe("EventHandler", func() {
 				Expect(ok).Should(BeTrue())
 
 				info, err := os.Stat(f.Path)
-				Expect(err).ShouldNot(HaveOccurred())
+				Expect(err).ToNot(HaveOccurred())
 
 				Expect(info.IsDir()).To(BeFalse())
 
@@ -47,7 +47,7 @@ var _ = Describe("EventHandler", func() {
 				}
 
 				bytes, err := os.ReadFile(f.Path)
-				Expect(err).ShouldNot(HaveOccurred())
+				Expect(err).ToNot(HaveOccurred())
 				Expect(bytes).To(Equal(f.Content))
 			}
 		}
@@ -89,7 +89,7 @@ var _ = Describe("EventHandler", func() {
 			files := []file.File{regular1, regular2, secret}
 
 			err := mgr.ReplaceFiles(files)
-			Expect(err).ShouldNot(HaveOccurred())
+			Expect(err).ToNot(HaveOccurred())
 
 			ensureFiles(files)
 		})
@@ -102,7 +102,7 @@ var _ = Describe("EventHandler", func() {
 			}
 
 			err := mgr.ReplaceFiles(files)
-			Expect(err).ShouldNot(HaveOccurred())
+			Expect(err).ToNot(HaveOccurred())
 
 			ensureFiles(files)
 			ensureNotExist(regular1)
@@ -110,7 +110,7 @@ var _ = Describe("EventHandler", func() {
 
 		It("should remove all files", func() {
 			err := mgr.ReplaceFiles(nil)
-			Expect(err).ShouldNot(HaveOccurred())
+			Expect(err).ToNot(HaveOccurred())
 
 			ensureNotExist(regular2, regular3, secret)
 		})
@@ -181,7 +181,7 @@ var _ = Describe("EventHandler", func() {
 				// to kick off removing, we need to successfully write files beforehand
 				if fakeOSMgr.RemoveStub != nil {
 					err := mgr.ReplaceFiles(files)
-					Expect(err).ShouldNot(HaveOccurred())
+					Expect(err).ToNot(HaveOccurred())
 				}
 
 				err := mgr.ReplaceFiles(files)

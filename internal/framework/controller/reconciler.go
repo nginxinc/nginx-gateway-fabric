@@ -6,6 +6,7 @@ import (
 	"reflect"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -28,6 +29,8 @@ type ReconcilerConfig struct {
 	EventCh chan<- interface{}
 	// NamespacedNameFilter filters resources the controller will process. Can be nil.
 	NamespacedNameFilter NamespacedNameFilterFunc
+	// OnlyMetadata indicates that this controller for this resource is only caching metadata for the resource.
+	OnlyMetadata bool
 }
 
 // Reconciler reconciles Kubernetes resources of a specific type.
@@ -49,12 +52,18 @@ func NewReconciler(cfg ReconcilerConfig) *Reconciler {
 	}
 }
 
-func newObject(objectType client.Object) client.Object {
+func (r *Reconciler) newObject(objectType client.Object) client.Object {
+	if r.cfg.OnlyMetadata {
+		partialObj := &metav1.PartialObjectMetadata{}
+		partialObj.SetGroupVersionKind(objectType.GetObjectKind().GroupVersionKind())
+
+		return partialObj
+	}
+
 	// without Elem(), t will be a pointer to the type. For example, *v1.Gateway, not v1.Gateway
 	t := reflect.TypeOf(objectType).Elem()
 
 	// We could've used objectType.DeepCopyObject() here, but it's a bit slower confirmed by benchmarks.
-
 	return reflect.New(t).Interface().(client.Object)
 }
 
@@ -73,7 +82,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		}
 	}
 
-	obj := newObject(r.cfg.ObjectType)
+	obj := r.newObject(r.cfg.ObjectType)
+
 	if err := r.cfg.Getter.Get(ctx, req.NamespacedName, obj); err != nil {
 		if !apierrors.IsNotFound(err) {
 			logger.Error(err, "Failed to get the resource")

@@ -7,6 +7,8 @@ import (
 	"github.com/go-logr/logr"
 	apiv1 "k8s.io/api/core/v1"
 	discoveryV1 "k8s.io/api/discovery/v1"
+	apiext "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
@@ -18,6 +20,7 @@ import (
 
 	gwapivalidation "sigs.k8s.io/gateway-api/apis/v1/validation"
 
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/gatewayclass"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/graph"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/relationship"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/validation"
@@ -95,6 +98,7 @@ func NewChangeProcessorImpl(cfg ChangeProcessorConfig) *ChangeProcessorImpl {
 		Namespaces:      make(map[types.NamespacedName]*apiv1.Namespace),
 		ReferenceGrants: make(map[types.NamespacedName]*v1beta1.ReferenceGrant),
 		Secrets:         make(map[types.NamespacedName]*apiv1.Secret),
+		CRDMetadata:     make(map[types.NamespacedName]*metav1.PartialObjectMetadata),
 	}
 
 	extractGVK := func(obj client.Object) schema.GroupVersionKind {
@@ -110,54 +114,59 @@ func NewChangeProcessorImpl(cfg ChangeProcessorConfig) *ChangeProcessorImpl {
 		clusterState: clusterStore,
 	}
 
-	triggerStateChange := func(objType client.Object, nsname types.NamespacedName) bool {
-		return processor.latestGraph != nil && processor.latestGraph.IsReferenced(objType, nsname)
+	isReferenced := func(obj client.Object) bool {
+		nsname := types.NamespacedName{Name: obj.GetName(), Namespace: obj.GetNamespace()}
+		return processor.latestGraph != nil && processor.latestGraph.IsReferenced(obj, nsname)
 	}
 
 	trackingUpdater := newChangeTrackingUpdater(
 		cfg.RelationshipCapturer,
-		triggerStateChange,
 		extractGVK,
 		[]changeTrackingUpdaterObjectTypeCfg{
 			{
-				gvk:               extractGVK(&v1.GatewayClass{}),
-				store:             newObjectStoreMapAdapter(clusterStore.GatewayClasses),
-				trackUpsertDelete: true,
+				gvk:       extractGVK(&v1.GatewayClass{}),
+				store:     newObjectStoreMapAdapter(clusterStore.GatewayClasses),
+				predicate: generationChangedPredicate{},
 			},
 			{
-				gvk:               extractGVK(&v1.Gateway{}),
-				store:             newObjectStoreMapAdapter(clusterStore.Gateways),
-				trackUpsertDelete: true,
+				gvk:       extractGVK(&v1.Gateway{}),
+				store:     newObjectStoreMapAdapter(clusterStore.Gateways),
+				predicate: generationChangedPredicate{},
 			},
 			{
-				gvk:               extractGVK(&v1.HTTPRoute{}),
-				store:             newObjectStoreMapAdapter(clusterStore.HTTPRoutes),
-				trackUpsertDelete: true,
+				gvk:       extractGVK(&v1.HTTPRoute{}),
+				store:     newObjectStoreMapAdapter(clusterStore.HTTPRoutes),
+				predicate: generationChangedPredicate{},
 			},
 			{
-				gvk:               extractGVK(&v1beta1.ReferenceGrant{}),
-				store:             newObjectStoreMapAdapter(clusterStore.ReferenceGrants),
-				trackUpsertDelete: true,
+				gvk:       extractGVK(&v1beta1.ReferenceGrant{}),
+				store:     newObjectStoreMapAdapter(clusterStore.ReferenceGrants),
+				predicate: generationChangedPredicate{},
 			},
 			{
-				gvk:               extractGVK(&apiv1.Namespace{}),
-				store:             newObjectStoreMapAdapter(clusterStore.Namespaces),
-				trackUpsertDelete: false,
+				gvk:       extractGVK(&apiv1.Namespace{}),
+				store:     newObjectStoreMapAdapter(clusterStore.Namespaces),
+				predicate: nil,
 			},
 			{
-				gvk:               extractGVK(&apiv1.Service{}),
-				store:             newObjectStoreMapAdapter(clusterStore.Services),
-				trackUpsertDelete: false,
+				gvk:       extractGVK(&apiv1.Service{}),
+				store:     newObjectStoreMapAdapter(clusterStore.Services),
+				predicate: nil,
 			},
 			{
-				gvk:               extractGVK(&discoveryV1.EndpointSlice{}),
-				store:             nil,
-				trackUpsertDelete: false,
+				gvk:       extractGVK(&discoveryV1.EndpointSlice{}),
+				store:     nil,
+				predicate: nil,
 			},
 			{
-				gvk:               extractGVK(&apiv1.Secret{}),
-				store:             newObjectStoreMapAdapter(clusterStore.Secrets),
-				trackUpsertDelete: false,
+				gvk:       extractGVK(&apiv1.Secret{}),
+				store:     newObjectStoreMapAdapter(clusterStore.Secrets),
+				predicate: funcPredicate{stateChanged: isReferenced},
+			},
+			{
+				gvk:       extractGVK(&apiext.CustomResourceDefinition{}),
+				store:     newObjectStoreMapAdapter(clusterStore.CRDMetadata),
+				predicate: annotationChangedPredicate{annotation: gatewayclass.BundleVersionAnnotation},
 			},
 		},
 	)

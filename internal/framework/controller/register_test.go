@@ -10,8 +10,10 @@ import (
 	"github.com/onsi/gomega/gcustom"
 	gtypes "github.com/onsi/gomega/types"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	v1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -50,14 +52,24 @@ func TestRegister(t *testing.T) {
 
 	testError := errors.New("test error")
 
+	objectTypeWithGVK := &v1.HTTPRoute{}
+	objectTypeWithGVK.SetGroupVersionKind(
+		schema.GroupVersionKind{Group: v1.GroupName, Version: "v1", Kind: "HTTPRoute"},
+	)
+
+	objectTypeNoGVK := &v1.HTTPRoute{}
+
 	tests := []struct {
 		fakes                   fakes
+		objectType              client.Object
 		expectedErr             error
 		msg                     string
 		expectedMgrAddCallCount int
+		expectPanic             bool
 	}{
 		{
 			fakes:                   getDefaultFakes(),
+			objectType:              objectTypeWithGVK,
 			expectedErr:             nil,
 			expectedMgrAddCallCount: 1,
 			msg:                     "normal case",
@@ -67,6 +79,7 @@ func TestRegister(t *testing.T) {
 				f.indexer.IndexFieldReturns(testError)
 				return f
 			}(getDefaultFakes()),
+			objectType:              objectTypeWithGVK,
 			expectedErr:             testError,
 			expectedMgrAddCallCount: 0,
 			msg:                     "preparing index fails",
@@ -76,13 +89,20 @@ func TestRegister(t *testing.T) {
 				f.mgr.AddReturns(testError)
 				return f
 			}(getDefaultFakes()),
+			objectType:              objectTypeWithGVK,
 			expectedErr:             testError,
 			expectedMgrAddCallCount: 1,
 			msg:                     "building controller fails",
 		},
+		{
+			fakes:                   getDefaultFakes(),
+			objectType:              objectTypeNoGVK,
+			expectPanic:             true,
+			expectedMgrAddCallCount: 0,
+			msg:                     "adding OnlyMetadata option panics",
+		},
 	}
 
-	objectType := &v1.HTTPRoute{}
 	nsNameFilter := func(nsname types.NamespacedName) (bool, string) {
 		return true, ""
 	}
@@ -104,28 +124,36 @@ func TestRegister(t *testing.T) {
 
 			newReconciler := func(c controller.ReconcilerConfig) *controller.Reconciler {
 				g.Expect(c.Getter).To(BeIdenticalTo(test.fakes.mgr.GetClient()))
-				g.Expect(c.ObjectType).To(BeIdenticalTo(objectType))
+				g.Expect(c.ObjectType).To(BeIdenticalTo(test.objectType))
 				g.Expect(c.EventCh).To(BeIdenticalTo(eventCh))
 				g.Expect(c.NamespacedNameFilter).Should(beSameFunctionPointer(nsNameFilter))
 
 				return controller.NewReconciler(c)
 			}
 
-			err := controller.Register(
-				context.Background(),
-				objectType,
-				test.fakes.mgr,
-				eventCh,
-				controller.WithNamespacedNameFilter(nsNameFilter),
-				controller.WithK8sPredicate(predicate.ServicePortsChangedPredicate{}),
-				controller.WithFieldIndices(fieldIndexes),
-				controller.WithNewReconciler(newReconciler),
-			)
+			register := func() error {
+				return controller.Register(
+					context.Background(),
+					test.objectType,
+					test.fakes.mgr,
+					eventCh,
+					controller.WithNamespacedNameFilter(nsNameFilter),
+					controller.WithK8sPredicate(predicate.ServicePortsChangedPredicate{}),
+					controller.WithFieldIndices(fieldIndexes),
+					controller.WithNewReconciler(newReconciler),
+					controller.WithOnlyMetadata(),
+				)
+			}
 
-			if test.expectedErr == nil {
-				g.Expect(err).To(BeNil())
+			if test.expectPanic {
+				g.Expect(func() { _ = register() }).To(Panic())
 			} else {
-				g.Expect(err).To(MatchError(test.expectedErr))
+				err := register()
+				if test.expectedErr == nil {
+					g.Expect(err).To(BeNil())
+				} else {
+					g.Expect(err).To(MatchError(test.expectedErr))
+				}
 			}
 
 			indexCallCount := test.fakes.indexer.IndexFieldCallCount()
@@ -134,7 +162,7 @@ func TestRegister(t *testing.T) {
 
 			_, objType, field, indexFunc := test.fakes.indexer.IndexFieldArgsForCall(0)
 
-			g.Expect(objType).To(BeIdenticalTo(objectType))
+			g.Expect(objType).To(BeIdenticalTo(test.objectType))
 			g.Expect(field).To(BeIdenticalTo(index.KubernetesServiceNameIndexField))
 
 			expectedIndexFunc := fieldIndexes[index.KubernetesServiceNameIndexField]
