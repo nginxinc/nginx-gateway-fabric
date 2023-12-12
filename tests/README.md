@@ -22,6 +22,12 @@ Directory structure is as follows:
 - Docker.
 - Golang.
 
+If running the tests on a VM (`make run-tests-on-vm`):
+
+- A GKE cluster allowing network access from VMs in the same region
+- Access to GCP Service Account with Kubernetes admin permissions
+- SSH access to GCP VMs in the same region as your cluster
+
 **Note**: all commands in steps below are executed from the `tests` directory
 
 ```shell
@@ -90,7 +96,7 @@ This step only applies if you would like to run the tests from a GCP based VM. T
 zone as your GKE cluster, and requires a service account that has Kubernetes admin permissions. Additionally, you need
 ssh access to the VM and the VM needs to have network access to the Kubernetes control node.
 
-Before running the below `make` command, populate the required env vars in `utils/vars.env`.
+Before running the below `make` command, populate the required env vars in `scripts/vars.env`.
 
 ```makefile
 make run-tests-on-vm

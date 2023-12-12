@@ -34,8 +34,8 @@ delete-kind-cluster: ## Delete kind cluster
 
 .PHONY: run-tests-on-vm
 run-tests-on-vm: ## Run the tests on a GCP VM
-	bash utils/run-tests-gcp-vm.sh
+	bash scripts/run-tests-gcp-vm.sh
 
 .PHONY: cleanup-vm
 cleanup-vm: ## Delete the test GCP VM
-	bash utils/cleanup-vm.sh
+	bash scripts/cleanup-vm.sh

@@ -21,7 +21,7 @@ func RunLoadTest(
 	targeter := vegeta.NewStaticTargeter(targets...)
 	proxyURL, err := url.Parse(proxy)
 	if err != nil {
-		return fmt.Errorf("Error getting proxy URL: %w", err)
+		return fmt.Errorf("error getting proxy URL: %w", err)
 	}
 
 	attacker := vegeta.NewAttacker(
@@ -37,9 +37,8 @@ func RunLoadTest(
 
 	reporter := vegeta.NewTextReporter(&metrics)
 
-	err = reporter.Report(outFile)
-	if err != nil {
-		return fmt.Errorf("Error reporting results: %w", err)
+	if err = reporter.Report(outFile); err != nil {
+		return fmt.Errorf("error reporting results: %w", err)
 	}
 	return nil
 }
