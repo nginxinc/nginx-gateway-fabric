@@ -114,7 +114,7 @@ Run the following tests on both the 10 and 25 node clusters.
 
     ```console
     kubectl apply -f manifests/cafe-secret.yaml
-    kubectl apply -f manifests/gateway.yaml
+    kubectl apply -f manifests/gateway-1.yaml
     ```
 
 5. Expose apps via HTTPRoutes
@@ -253,7 +253,7 @@ Run the following tests on both the 10 and 25 node clusters.
           for i in `seq 1 600`; do printf  "\nRequest $i\n" && date --rfc-3339=ns && curl -k -sS --connect-timeout 2 https://cafe.example.com/tea 2>&1  && sleep 0.1s; done > results.txt
           ```
 
-   2. Scale NGF up to 25 Pods:
+   2. **Immediately** Scale NGF up to 25 Pods:
 
       ```console
       kubectl scale -n nginx-gateway deployment <NGF deployment name> --replicas 25
@@ -271,7 +271,9 @@ Run the following tests on both the 10 and 25 node clusters.
       kubectl describe gateway
       ```
 
-   5. [Analyze](#analyze) the results.
+   5. Once all the NGF Pods are ready, kill wrk and the curl for loops.
+
+   6. [Analyze](#analyze) the results.
 2. Scale down
    1. Start sending traffic using wrk from tester VMs for 2 minutes:
       - Tester VM 1:
@@ -300,7 +302,7 @@ Run the following tests on both the 10 and 25 node clusters.
           for i in `seq 1 600`; do printf  "\nRequest $i\n" && date --rfc-3339=ns && curl -k -sS --connect-timeout 2 https://cafe.example.com/tea 2>&1  && sleep 0.1s; done > results.txt
           ```
 
-   2. Scale NGF down to 1 Pods:
+   2. **Immediately** Scale NGF down to 1 Pods:
 
       ```console
       kubectl scale -n nginx-gateway deployment <NGF deployment name> --replicas 1
@@ -318,7 +320,9 @@ Run the following tests on both the 10 and 25 node clusters.
       kubectl describe gateway
       ```
 
-   5. [Analyze](#analyze) the results.
+   5. Once the NGF Pods have been scaled down, kill wrk and the curl for loops.
+
+   6. [Analyze](#analyze) the results.
 
 ### Analyze
 
@@ -336,7 +340,6 @@ After each test analyze and record the following:
           resource.labels.cluster_name="<your cluster name>"
           resource.labels.container_name="nginx"
           resource.labels.namespace_name="nginx-gateway"
-          labels.k8s-pod/app_kubernetes_io/instance="<your instance name>"
           severity=INFO
           SEARCH("200")
           ```
@@ -348,7 +351,6 @@ After each test analyze and record the following:
          resource.labels.cluster_name="<your cluster name>"
          resource.labels.container_name="nginx"
          resource.labels.namespace_name="nginx-gateway"
-         labels.k8s-pod/app_kubernetes_io/instance="<your instance name>"
          severity=INFO
          NOT SEARCH("200")
          ```
@@ -361,7 +363,6 @@ After each test analyze and record the following:
           resource.labels.cluster_name="<your cluster name>"
           resource.labels.container_name="nginx"
           resource.labels.namespace_name="nginx-gateway"
-          labels.k8s-pod/app_kubernetes_io/instance="<your instance name>"
           severity=ERROR
           SEARCH("`[warn]`") OR SEARCH("`[error]`")
           ```
@@ -373,7 +374,6 @@ After each test analyze and record the following:
         resource.labels.cluster_name="<your cluster name>"
         resource.labels.container_name="nginx-gateway"
         resource.labels.namespace_name="nginx-gateway"
-        labels.k8s-pod/app_kubernetes_io/instance="<your instance name>"
         severity="ERROR"
         SEARCH("error")
         ```
