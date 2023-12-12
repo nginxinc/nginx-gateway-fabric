@@ -396,33 +396,18 @@ func TestIsReferenced(t *testing.T) {
 			Namespace: "test",
 			Name:      "secret",
 		},
-		Data: map[string][]byte{
-			v1.TLSCertKey:       cert,
-			v1.TLSPrivateKeyKey: key,
-		},
-		Type: v1.SecretTypeTLS,
 	}
 	sameNamespaceDifferentNameSecret := &v1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: "test",
 			Name:      "secret-different-name",
 		},
-		Data: map[string][]byte{
-			v1.TLSCertKey:       cert,
-			v1.TLSPrivateKeyKey: key,
-		},
-		Type: v1.SecretTypeTLS,
 	}
 	differentNamespaceSameNameSecret := &v1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: "test-different-namespace",
 			Name:      "secret",
 		},
-		Data: map[string][]byte{
-			v1.TLSCertKey:       cert,
-			v1.TLSPrivateKeyKey: key,
-		},
-		Type: v1.SecretTypeTLS,
 	}
 
 	nsInGraph := &v1.Namespace{
