@@ -1405,7 +1405,7 @@ var _ = Describe("ChangeProcessor", func() {
 				})
 			})
 			When("a namespace that is not linked to a listener has its labels changed to match a listener", func() {
-				It("does triggers an update", func() {
+				It("triggers an update", func() {
 					processor.CaptureUpsertChange(nsDifferentLabels)
 					processor.Process()
 
