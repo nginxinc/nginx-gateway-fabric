@@ -48,7 +48,7 @@ The HTTPRoute "coffee" is invalid: spec.hostnames[0]: Invalid value: "cafe.!@#$%
 
 - **Kubernetes 1.23 and 1.24 - Webhook validation by Gateway API Webhook**
 
-   The Gateway API comes with a validating webhook which is enabled by default in the Gateway API installation manifests. It validates Gateway API resources using advanced rules unavailable in the OpenAPI schema validation. For example, if you create a Gateway resource with a TCP listener that configures a hostname, the webhook will reject it with the following error:
+   The validating webhook must be installed for these Kubernetes versions {{link to installation doc}}. It validates Gateway API resources using advanced rules unavailable in the OpenAPI schema validation. For example, if you create a Gateway resource with a TCP listener that configures a hostname, the webhook will reject it with the following error:
 
    ```shell
    kubectl apply -f some-gateway.yaml
