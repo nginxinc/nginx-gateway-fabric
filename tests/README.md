@@ -22,7 +22,7 @@ Directory structure is as follows:
 - Docker.
 - Golang.
 
-If running the tests on a VM (`make run-tests-on-vm`):
+If running the tests on a VM (`make create-vm-and-run-tests` or `make run-tests-on-vm`):
 
 - A GKE cluster allowing network access from VMs in the same region
 - Access to GCP Service Account with Kubernetes admin permissions
@@ -37,7 +37,9 @@ make
 ```text
 build-images                   Build NGF and NGINX images
 cleanup-vm                     Delete the test GCP VM
+create-and-setup-vm            Create and setup a GCP VM for tests
 create-kind-cluster            Create a kind cluster
+create-vm-and-run-tests        Create and setup a GCP VM for tests and run the tests
 delete-kind-cluster            Delete kind cluster
 help                           Display this help
 load-images                    Load NGF and NGINX images on configured kind cluster
@@ -55,8 +57,9 @@ test                           Run the system tests against your default k8s clu
 | PULL_POLICY         | Never                      | NGF image pull policy                                          |
 | GW_API_VERSION      | 1.0.0                      | version of Gateway API resources to install                    |
 | K8S_VERSION         | latest                     | version of k8s that the tests are run on                       |
-| GW_SERVICE_TYPE     | NodePort                   | Type of Service that should be created                         |
-| GW_SVC_GKE_INTERNAL | false                      | Specifies if the LoadBalancer should be a GKE internal service |
+| GW_SERVICE_TYPE     | NodePort                   | type of Service that should be created                         |
+| GW_SVC_GKE_INTERNAL | false                      | specifies if the LoadBalancer should be a GKE internal service |
+| GINKGO_FLAGS        | ""                         | ginkgo flags to pass to the go test command                    |
 
 ## Step 1 - Create a Kubernetes cluster
 
@@ -98,6 +101,14 @@ ssh access to the VM and the VM needs to have network access to the Kubernetes c
 
 Before running the below `make` command, populate the required env vars in `scripts/vars.env`.
 
+To create the VM and run the tests, run the following
+
+```makefile
+make create-vm-and-run-tests
+```
+
+To use an existing VM to run the tests, run the following
+
 ```makefile
 make run-tests-on-vm
 ```
@@ -137,6 +148,24 @@ XIt("runs some test", func(){
     ...
 })
 ```
+
+The same can be achieved by using Ginkgo flags. To run a specific test using flags, use the GINKGO_FLAGS variable, e.g.:
+
+```makefile
+make test TAG=$(whoami) GINKGO_FLAGS='-ginkgo.focus "writes the system info to a results file"'
+```
+
+or to run all tests with the label "performance":
+
+```makefile
+make test TAG=$(whoami) GINKGO_FLAGS='-ginkgo.label-filter "performance"'
+```
+
+If you are running the tests in GCP, add your required flags to `scripts/var.env`.
+You can also modify the test command in `scripts/remote-scripts/run-tests.sh` to set the GINKGO_FLAGS variable before
+running `make run-tests-on-vm`.
+
+For more information of filtering specs, see [the docs here](https://onsi.github.io/ginkgo/#filtering-specs).
 
 ## Step 4 - Cleanup
 

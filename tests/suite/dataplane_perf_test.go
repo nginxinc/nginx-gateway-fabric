@@ -18,7 +18,7 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/tests/framework"
 )
 
-var _ = Describe("Dataplane performance", Ordered, func() {
+var _ = Describe("Dataplane performance", Ordered, Label("performance"), func() {
 	files := []string{
 		"dp-perf/coffee.yaml",
 		"dp-perf/gateway.yaml",
