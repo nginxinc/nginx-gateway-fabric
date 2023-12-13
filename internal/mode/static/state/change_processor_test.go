@@ -1293,64 +1293,70 @@ var _ = Describe("ChangeProcessor", func() {
 				})
 			})
 		})
-		Describe("namespace changes", func() {
-			ns := &apiv1.Namespace{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "ns",
-					Labels: map[string]string{
-						"app": "allowed",
+		Describe("namespace changes", Ordered, func() {
+			var (
+				ns, nsDifferentLabels, nsNoLabels *apiv1.Namespace
+				gw                                *v1.Gateway
+			)
+
+			BeforeAll(func() {
+				ns = &apiv1.Namespace{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "ns",
+						Labels: map[string]string{
+							"app": "allowed",
+						},
 					},
-				},
-			}
-			nsDifferentLabels := &apiv1.Namespace{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "ns-different-labels",
-					Labels: map[string]string{
-						"oranges": "bananas",
+				}
+				nsDifferentLabels = &apiv1.Namespace{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "ns-different-labels",
+						Labels: map[string]string{
+							"oranges": "bananas",
+						},
 					},
-				},
-			}
-			nsNoLabels := &apiv1.Namespace{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "no-labels",
-				},
-			}
-			gw := &v1.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "gw",
-				},
-				Spec: v1.GatewaySpec{
-					GatewayClassName: gcName,
-					Listeners: []v1.Listener{
-						{
-							Port:     80,
-							Protocol: v1.HTTPProtocolType,
-							AllowedRoutes: &v1.AllowedRoutes{
-								Namespaces: &v1.RouteNamespaces{
-									From: helpers.GetPointer(v1.NamespacesFromSelector),
-									Selector: &metav1.LabelSelector{
-										MatchLabels: map[string]string{
-											"app": "allowed",
+				}
+				nsNoLabels = &apiv1.Namespace{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "no-labels",
+					},
+				}
+				gw = &v1.Gateway{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "gw",
+					},
+					Spec: v1.GatewaySpec{
+						GatewayClassName: gcName,
+						Listeners: []v1.Listener{
+							{
+								Port:     80,
+								Protocol: v1.HTTPProtocolType,
+								AllowedRoutes: &v1.AllowedRoutes{
+									Namespaces: &v1.RouteNamespaces{
+										From: helpers.GetPointer(v1.NamespacesFromSelector),
+										Selector: &metav1.LabelSelector{
+											MatchLabels: map[string]string{
+												"app": "allowed",
+											},
 										},
 									},
 								},
 							},
 						},
 					},
-				},
-			}
-			processor := state.NewChangeProcessorImpl(state.ChangeProcessorConfig{
-				GatewayCtlrName:      controllerName,
-				GatewayClassName:     gcName,
-				RelationshipCapturer: relationship.NewCapturerImpl(),
-				Logger:               zap.New(),
-				Validators:           createAlwaysValidValidators(),
-				Scheme:               createScheme(),
+				}
+				processor = state.NewChangeProcessorImpl(state.ChangeProcessorConfig{
+					GatewayCtlrName:      controllerName,
+					GatewayClassName:     gcName,
+					RelationshipCapturer: relationship.NewCapturerImpl(),
+					Logger:               zap.New(),
+					Validators:           createAlwaysValidValidators(),
+					Scheme:               createScheme(),
+				})
+				processor.CaptureUpsertChange(gc)
+				processor.CaptureUpsertChange(gw)
+				processor.Process()
 			})
-
-			processor.CaptureUpsertChange(gc)
-			processor.CaptureUpsertChange(gw)
-			processor.Process()
 
 			When("a namespace is created that is not linked to a listener", func() {
 				It("does not trigger an update", func() {

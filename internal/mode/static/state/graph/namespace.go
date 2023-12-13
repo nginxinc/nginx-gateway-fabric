@@ -6,8 +6,8 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
-// buildReferencedNamespaces returns a map of all the Namespace resources in the current clusterState with a label
-// that matches any of the Gateway Listener's label selector.
+// buildReferencedNamespaces returns a map of all the Namespace resources from the current clusterNamespaces with
+// a label that matches any of the Gateway Listener's label selector.
 func buildReferencedNamespaces(
 	clusterNamespaces map[types.NamespacedName]*v1.Namespace,
 	gw *Gateway,
@@ -24,7 +24,7 @@ func buildReferencedNamespaces(
 	return referencedNamespaces
 }
 
-// isNamespaceReferenced returns a boolean that represents whether a given Namespace resource has a label
+// isNamespaceReferenced returns true if a given Namespace resource has a label
 // that matches any of the Gateway Listener's label selector.
 func isNamespaceReferenced(ns *v1.Namespace, gw *Gateway) bool {
 	if gw == nil || ns == nil {
