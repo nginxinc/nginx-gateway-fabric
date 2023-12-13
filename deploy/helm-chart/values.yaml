@@ -38,8 +38,8 @@ nginxGateway:
   image:
     ## The NGINX Gateway Fabric image to use
     repository: ghcr.io/nginxinc/nginx-gateway-fabric
-    tag: edge
-    pullPolicy: Always
+    tag: 1.1.0
+    pullPolicy: IfNotPresent
 
   securityContext:
     ## Some environments may need this set to true in order for the control plane to successfully reload NGINX.
@@ -55,8 +55,8 @@ nginx:
   ## The NGINX image to use
   image:
     repository: ghcr.io/nginxinc/nginx-gateway-fabric/nginx
-    tag: edge
-    pullPolicy: Always
+    tag: 1.1.0
+    pullPolicy: IfNotPresent
 
   ## The lifecycle of the nginx container.
   lifecycle: {}

@@ -10,14 +10,6 @@ If installing the latest stable release of NGINX Gateway Fabric, ensure you are 
 the Gateway API resources:
 
 ```shell
-kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v0.8.1/standard-install.yaml
-```
-
-**Edge version**
-
-If installing the edge version of NGINX Gateway Fabric from the **main** branch:
-
-```shell
 kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/standard-install.yaml
 ```
 

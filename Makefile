@@ -1,5 +1,5 @@
 # variables that should not be overridden by the user
-VERSION = edge
+VERSION = 1.1.0
 GIT_COMMIT = $(shell git rev-parse HEAD || echo "unknown")
 DATE = $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 MANIFEST_DIR = $(shell pwd)/deploy/manifests
