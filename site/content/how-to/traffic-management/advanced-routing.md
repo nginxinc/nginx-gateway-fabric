@@ -125,7 +125,7 @@ This request should receive a response from the `coffee-v1` Pod.
 
 ```text
 Server address: 10.244.0.9:8080
-Server name: coffee-v2-68bd55f798-s9z5q
+Server name: coffee-v1-76c7c85bbd-cf8nz
 ```
 
 If we want our request to be routed to `coffee-v2`, then we need to meet the defined conditions. We can include a header:
