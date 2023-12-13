@@ -64,14 +64,6 @@ func TestBuildReferencedNamespaces(t *testing.T) {
 		},
 		{
 			gw: &Gateway{
-				Listeners: map[string]*Listener{},
-				Valid:     true,
-			},
-			expectedRefNS: nil,
-			name:          "gateway has no Listeners",
-		},
-		{
-			gw: &Gateway{
 				Listeners: map[string]*Listener{
 					"listener-1": {
 						Valid:                     true,
@@ -92,6 +84,29 @@ func TestBuildReferencedNamespaces(t *testing.T) {
 		},
 		{
 			gw: &Gateway{
+				Listeners: map[string]*Listener{},
+				Valid:     true,
+			},
+			expectedRefNS: nil,
+			name:          "gateway has no Listeners",
+		},
+		{
+			gw: &Gateway{
+				Listeners: map[string]*Listener{
+					"listener-1": {
+						Valid: true,
+					},
+					"listener-2": {
+						Valid: true,
+					},
+				},
+				Valid: true,
+			},
+			expectedRefNS: nil,
+			name:          "gateway has multiple listeners with no AllowedRouteLabelSelector set",
+		},
+		{
+			gw: &Gateway{
 				Listeners: map[string]*Listener{
 					"listener-1": {
 						Valid:                     true,
@@ -103,6 +118,43 @@ func TestBuildReferencedNamespaces(t *testing.T) {
 
 			expectedRefNS: nil,
 			name:          "gateway doesn't match labels with any namespace",
+		},
+		{
+			gw: &Gateway{
+				Listeners: map[string]*Listener{
+					"listener-1": {
+						Valid:                     true,
+						AllowedRouteLabelSelector: labels.SelectorFromSet(map[string]string{"apples": "oranges"}),
+					},
+					"listener-2": {
+						Valid:                     true,
+						AllowedRouteLabelSelector: labels.SelectorFromSet(map[string]string{"not": "matching"}),
+					},
+				},
+				Valid: true,
+			},
+			expectedRefNS: map[types.NamespacedName]*v1.Namespace{
+				{Name: "ns2"}: ns2,
+			},
+			name: "gateway has two listeners and only matches labels with one namespace",
+		},
+		{
+			gw: &Gateway{
+				Listeners: map[string]*Listener{
+					"listener-1": {
+						Valid:                     true,
+						AllowedRouteLabelSelector: labels.SelectorFromSet(map[string]string{"apples": "oranges"}),
+					},
+					"listener-2": {
+						Valid: true,
+					},
+				},
+				Valid: true,
+			},
+			expectedRefNS: map[types.NamespacedName]*v1.Namespace{
+				{Name: "ns2"}: ns2,
+			},
+			name: "gateway has two listeners, one with a matching AllowedRouteLabelSelector and one without the field set",
 		},
 	}
 
