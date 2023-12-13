@@ -477,6 +477,12 @@ func TestIsReferenced(t *testing.T) {
 			expected: false,
 		},
 		{
+			name:     "Namespace not in ReferencedNamespaces but in Gateway Listener's AllowedRouteLabelSelector passes",
+			resource: nsNotInGraphButInGateway,
+			graph:    graph,
+			expected: true,
+		},
+		{
 			name:     "Secret in graph's ReferencedSecrets passes",
 			resource: baseSecret,
 			graph:    graph,
@@ -495,10 +501,10 @@ func TestIsReferenced(t *testing.T) {
 			expected: false,
 		},
 		{
-			name:     "Namespace not in ReferencedNamespaces but in Gateway Listener's AllowedRouteLabelSelector passes",
-			resource: nsNotInGraphButInGateway,
+			name:     "Resource is not supported by IsReferenced",
+			resource: &v1.Service{},
 			graph:    graph,
-			expected: true,
+			expected: false,
 		},
 	}
 	for _, test := range tests {
