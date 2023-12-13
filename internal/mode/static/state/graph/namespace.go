@@ -13,11 +13,13 @@ func buildReferencedNamespaces(
 	gw *Gateway,
 ) map[types.NamespacedName]*v1.Namespace {
 	referencedNamespaces := make(map[types.NamespacedName]*v1.Namespace)
+
 	for name, ns := range clusterNamespaces {
 		if isNamespaceReferenced(ns, gw) {
 			referencedNamespaces[name] = ns
 		}
 	}
+
 	if len(referencedNamespaces) == 0 {
 		return nil
 	}
@@ -30,6 +32,7 @@ func isNamespaceReferenced(ns *v1.Namespace, gw *Gateway) bool {
 	if gw == nil || ns == nil {
 		return false
 	}
+
 	nsLabels := ns.GetLabels()
 	for _, listener := range gw.Listeners {
 		if listener.AllowedRouteLabelSelector == nil {
@@ -40,5 +43,6 @@ func isNamespaceReferenced(ns *v1.Namespace, gw *Gateway) bool {
 			return true
 		}
 	}
+
 	return false
 }
