@@ -40,10 +40,10 @@ from the main branch.
 The table below summarizes the options regarding the images, manifests, documentation and examples and gives your links
 to the correct versions:
 
-| Version        | Description                              | Installation Manifests                                                            | Documentation and Examples                                                                                                                                             |
-|----------------|------------------------------------------|-----------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Latest release | For production use                       | [Manifests](https://github.com/nginxinc/nginx-gateway-fabric/tree/v1.1.0/deploy). | [Documentation](https://github.com/nginxinc/nginx-gateway-fabric/tree/v1.1.0/docs). [Examples](https://github.com/nginxinc/nginx-gateway-fabric/tree/v1.1.0/examples). |
-| Edge           | For experimental use and latest features | [Manifests](https://github.com/nginxinc/nginx-gateway-fabric/tree/main/deploy).   | [Documentation](https://docs.nginx.com/nginx-gateway-fabric/). [Examples](https://github.com/nginxinc/nginx-gateway-fabric/tree/main/examples).                        |
+| Version        | Description                              | Installation Manifests                                                            | Documentation and Examples                                                                                                                                                     |
+|----------------|------------------------------------------|-----------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Latest release | For production use                       | [Manifests](https://github.com/nginxinc/nginx-gateway-fabric/tree/v1.1.0/deploy). | [Documentation](https://github.com/nginxinc/nginx-gateway-fabric/tree/v1.1.0/site/content). [Examples](https://github.com/nginxinc/nginx-gateway-fabric/tree/v1.1.0/examples). |
+| Edge           | For experimental use and latest features | [Manifests](https://github.com/nginxinc/nginx-gateway-fabric/tree/main/deploy).   | [Documentation](https://docs.nginx.com/nginx-gateway-fabric/). [Examples](https://github.com/nginxinc/nginx-gateway-fabric/tree/main/examples).                                |
 
 ### Versioning
 
