@@ -33,13 +33,13 @@ func isNamespaceReferenced(ns *v1.Namespace, gw *Gateway) bool {
 		return false
 	}
 
-	nsLabels := ns.GetLabels()
+	nsLabels := labels.Set(ns.GetLabels())
 	for _, listener := range gw.Listeners {
 		if listener.AllowedRouteLabelSelector == nil {
 			// Can have listeners with AllowedRouteLabelSelector not set.
 			continue
 		}
-		if listener.AllowedRouteLabelSelector.Matches(labels.Set(nsLabels)) {
+		if listener.AllowedRouteLabelSelector.Matches(nsLabels) {
 			return true
 		}
 	}
