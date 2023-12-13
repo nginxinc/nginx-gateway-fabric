@@ -20,7 +20,7 @@ BUG FIXES:
 - Merge HTTPRoute conditions from all Gateway controllers. [PR-1220](https://github.com/nginxinc/nginx-gateway-fabric/pull/1220)
 - Validate header names and report validation errors in the HTTPRoute status. [PR-1239](https://github.com/nginxinc/nginx-gateway-fabric/pull/1239)
 - Remove usage info from log output. [PR-1242](https://github.com/nginxinc/nginx-gateway-fabric/pull/1242)
-- Fix attaching of HTTPRoutes to Gateway Listeners. [PR-1275](https://github.com/nginxinc/nginx-gateway-fabric/pull/1275)
+- Set the Gateway Listener status AttachedRoutes field to the number of Routes associated with a Listener regardless of Gateway or Route status. [PR-1275](https://github.com/nginxinc/nginx-gateway-fabric/pull/1275)
 - Set file mode explicitly for regular NGINX configuration files. [PR-1323](https://github.com/nginxinc/nginx-gateway-fabric/pull/1323). Thanks to [Kai-Hsun Chen](https://github.com/kevin85421).
 
 DOCUMENTATION:
