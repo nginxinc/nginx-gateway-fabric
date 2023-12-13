@@ -8,7 +8,8 @@ import (
 
 // buildReferencedNamespaces returns a map of all the Namespace resources in the current clusterState with a label
 // that matches any of the Gateway Listener's label selector.
-func buildReferencedNamespaces(clusterNamespaces map[types.NamespacedName]*v1.Namespace,
+func buildReferencedNamespaces(
+	clusterNamespaces map[types.NamespacedName]*v1.Namespace,
 	gw *Gateway,
 ) map[types.NamespacedName]*v1.Namespace {
 	referencedNamespaces := make(map[types.NamespacedName]*v1.Namespace)

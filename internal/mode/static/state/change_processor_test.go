@@ -1436,6 +1436,13 @@ var _ = Describe("ChangeProcessor", func() {
 					processor.CaptureUpsertChange(gwChangedLabel)
 					processor.Process()
 
+					// After changing the gateway's labels and generation, the processor should be marked to update
+					// the nginx configuration and build a new graph. When processor.Process() gets called,
+					// the nginx configuration gets updated and a new graph is built with an updated
+					// referencedNamespaces. Thus, when the namespace "ns" is upserted with labels that no longer match
+					// the new labels on the gateway, it would not trigger a change as the namespace would no longer
+					// be in the updated referencedNamespaces and the labels no longer match the new labels on the
+					// gateway.
 					processor.CaptureUpsertChange(ns)
 					changed, _ = processor.Process()
 					Expect(changed).To(BeFalse())
