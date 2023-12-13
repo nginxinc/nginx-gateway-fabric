@@ -5,6 +5,7 @@ import (
 	"os"
 )
 
+// WriteSystemInfoToFile writes the cluster system info to the given file
 func WriteSystemInfoToFile(file *os.File, ci ClusterInfo) error {
 	clusterType := "Local"
 	if ci.IsGKE {

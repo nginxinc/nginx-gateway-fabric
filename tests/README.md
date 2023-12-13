@@ -6,15 +6,17 @@ are similar to the existing [conformance tests](../conformance/README.md), but w
 - NGF-specific functionality
 - Non-Functional requirements testing (such as performance, scale, etc.)
 
-When running, the tests create a port-forward from your NGF Pod to localhost using a port chosen by the
-test framework. Traffic is sent over this port.
+When running locally, the tests create a port-forward from your NGF Pod to localhost using a port chosen by the
+test framework. Traffic is sent over this port. If running on a GCP VM targeting a GKE cluster, the tests will create an
+internal LoadBalancer service which will receive the test traffic.
 
 Directory structure is as follows:
 
 - `framework`: contains utility functions for running the tests
 - `suite`: contains the test files
+- `results`: contains the results files
 
-**Note**: Existing NFR tests will be migrated into this testing `suite` and results stored in a `results` directory.
+**Note**: Existing NFR tests will be migrated into this testing `suite` and results stored in the `results` directory.
 
 ## Prerequisites
 
@@ -101,7 +103,7 @@ ssh access to the VM and the VM needs to have network access to the Kubernetes c
 
 Before running the below `make` command, populate the required env vars in `scripts/vars.env`.
 
-To create the VM and run the tests, run the following
+To create and setup the VM, and run the tests, run the following
 
 ```makefile
 make create-vm-and-run-tests
