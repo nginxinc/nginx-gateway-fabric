@@ -1434,7 +1434,8 @@ var _ = Describe("ChangeProcessor", func() {
 					}
 					gwChangedLabel.Generation++
 					processor.CaptureUpsertChange(gwChangedLabel)
-					processor.Process()
+					changed, _ = processor.Process()
+					Expect(changed).To(BeTrue())
 
 					// After changing the gateway's labels and generation, the processor should be marked to update
 					// the nginx configuration and build a new graph. When processor.Process() gets called,
