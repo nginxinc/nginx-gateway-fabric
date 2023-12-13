@@ -1294,70 +1294,64 @@ var _ = Describe("ChangeProcessor", func() {
 			})
 		})
 		Describe("namespace changes", func() {
-			var (
-				ns, nsDifferentLabels, nsNoLabels *apiv1.Namespace
-				gw                                *v1.Gateway
-			)
-
-			BeforeEach(func() {
-				ns = &apiv1.Namespace{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "ns",
-						Labels: map[string]string{
-							"app": "allowed",
-						},
+			ns := &apiv1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "ns",
+					Labels: map[string]string{
+						"app": "allowed",
 					},
-				}
-				nsDifferentLabels = &apiv1.Namespace{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "ns-different-labels",
-						Labels: map[string]string{
-							"oranges": "bananas",
-						},
+				},
+			}
+			nsDifferentLabels := &apiv1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "ns-different-labels",
+					Labels: map[string]string{
+						"oranges": "bananas",
 					},
-				}
-				nsNoLabels = &apiv1.Namespace{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "no-labels",
-					},
-				}
-				gw = &v1.Gateway{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "gw",
-					},
-					Spec: v1.GatewaySpec{
-						GatewayClassName: gcName,
-						Listeners: []v1.Listener{
-							{
-								Port:     80,
-								Protocol: v1.HTTPProtocolType,
-								AllowedRoutes: &v1.AllowedRoutes{
-									Namespaces: &v1.RouteNamespaces{
-										From: helpers.GetPointer(v1.NamespacesFromSelector),
-										Selector: &metav1.LabelSelector{
-											MatchLabels: map[string]string{
-												"app": "allowed",
-											},
+				},
+			}
+			nsNoLabels := &apiv1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "no-labels",
+				},
+			}
+			gw := &v1.Gateway{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "gw",
+				},
+				Spec: v1.GatewaySpec{
+					GatewayClassName: gcName,
+					Listeners: []v1.Listener{
+						{
+							Port:     80,
+							Protocol: v1.HTTPProtocolType,
+							AllowedRoutes: &v1.AllowedRoutes{
+								Namespaces: &v1.RouteNamespaces{
+									From: helpers.GetPointer(v1.NamespacesFromSelector),
+									Selector: &metav1.LabelSelector{
+										MatchLabels: map[string]string{
+											"app": "allowed",
 										},
 									},
 								},
 							},
 						},
 					},
-				}
-				processor = state.NewChangeProcessorImpl(state.ChangeProcessorConfig{
-					GatewayCtlrName:      controllerName,
-					GatewayClassName:     gcName,
-					RelationshipCapturer: relationship.NewCapturerImpl(),
-					Logger:               zap.New(),
-					Validators:           createAlwaysValidValidators(),
-					Scheme:               createScheme(),
-				})
-
-				processor.CaptureUpsertChange(gc)
-				processor.CaptureUpsertChange(gw)
-				processor.Process()
+				},
+			}
+			processor := state.NewChangeProcessorImpl(state.ChangeProcessorConfig{
+				GatewayCtlrName:      controllerName,
+				GatewayClassName:     gcName,
+				RelationshipCapturer: relationship.NewCapturerImpl(),
+				Logger:               zap.New(),
+				Validators:           createAlwaysValidValidators(),
+				Scheme:               createScheme(),
 			})
+
+			processor.CaptureUpsertChange(gc)
+			processor.CaptureUpsertChange(gw)
+			processor.Process()
+
 			When("a namespace is created that is not linked to a listener", func() {
 				It("does not trigger an update", func() {
 					processor.CaptureUpsertChange(nsNoLabels)
@@ -1374,9 +1368,6 @@ var _ = Describe("ChangeProcessor", func() {
 			})
 			When("a namespace is deleted that is not linked to a listener", func() {
 				It("does not trigger an update", func() {
-					processor.CaptureUpsertChange(nsNoLabels)
-					processor.Process()
-
 					processor.CaptureDeleteChange(nsNoLabels, types.NamespacedName{Name: "no-labels"})
 					changed, _ := processor.Process()
 					Expect(changed).To(BeFalse())
@@ -1384,36 +1375,31 @@ var _ = Describe("ChangeProcessor", func() {
 			})
 			When("a namespace is deleted that is linked to a listener", func() {
 				It("triggers an update", func() {
-					processor.CaptureUpsertChange(ns)
-					processor.Process()
-
-					processor.CaptureDeleteChange(nsNoLabels, types.NamespacedName{Name: "ns"})
+					processor.CaptureDeleteChange(ns, types.NamespacedName{Name: "ns"})
 					changed, _ := processor.Process()
 					Expect(changed).To(BeTrue())
-				})
-			})
-			When("a namespace that is not linked to a listener has its labels removed", func() {
-				It("does not trigger an update", func() {
-					processor.CaptureUpsertChange(nsDifferentLabels)
-					processor.Process()
-
-					nsDifferentLabels.Labels = nil
-					processor.CaptureUpsertChange(nsDifferentLabels)
-
-					changed, _ := processor.Process()
-					Expect(changed).To(BeFalse())
 				})
 			})
 			When("a namespace that is not linked to a listener has its labels changed to match a listener", func() {
 				It("triggers an update", func() {
 					processor.CaptureUpsertChange(nsDifferentLabels)
-					processor.Process()
+					changed, _ := processor.Process()
+					Expect(changed).To(BeFalse())
 
 					nsDifferentLabels.Labels = map[string]string{
 						"app": "allowed",
 					}
 					processor.CaptureUpsertChange(nsDifferentLabels)
-
+					changed, _ = processor.Process()
+					Expect(changed).To(BeTrue())
+				})
+			})
+			When("a namespace that is linked to a listener has its labels changed to no longer match a listener", func() {
+				It("triggers an update", func() {
+					nsDifferentLabels.Labels = map[string]string{
+						"oranges": "bananas",
+					}
+					processor.CaptureUpsertChange(nsDifferentLabels)
 					changed, _ := processor.Process()
 					Expect(changed).To(BeTrue())
 				})
@@ -1453,15 +1439,18 @@ var _ = Describe("ChangeProcessor", func() {
 					Expect(changed).To(BeTrue())
 				})
 			})
-			When("a namespace is linked via label selectors", func() {
-				It("triggers an update when labels are removed", func() {
+			When("a namespace that is not linked to a listener has its labels removed", func() {
+				It("does not trigger an update", func() {
+					ns.Labels = nil
 					processor.CaptureUpsertChange(ns)
-					processor.Process()
-
-					newNS := ns.DeepCopy()
-					newNS.Labels = nil
-					processor.CaptureUpsertChange(newNS)
-
+					changed, _ := processor.Process()
+					Expect(changed).To(BeFalse())
+				})
+			})
+			When("a namespace that is linked to a listener has its labels removed", func() {
+				It("triggers an update when labels are removed", func() {
+					nsDifferentLabels.Labels = nil
+					processor.CaptureUpsertChange(nsDifferentLabels)
 					changed, _ := processor.Process()
 					Expect(changed).To(BeTrue())
 				})
