@@ -37,15 +37,6 @@ This chart deploys the NGINX Gateway Fabric in your Kubernetes cluster.
 > they are the correct version as supported by the NGINX Gateway Fabric -
 > [see the Technical Specifications](https://github.com/nginxinc/nginx-gateway-fabric/blob/main/README.md#technical-specifications).
 
-If installing the latest stable release of NGINX Gateway Fabric, ensure you are deploying its supported version of
-the Gateway API resources:
-
-  ```shell
-  kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v0.8.1/standard-install.yaml
-  ```
-
-If you are installing the edge version of NGINX Gateway Fabric:
-
   ```shell
   kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/standard-install.yaml
   ```

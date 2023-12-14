@@ -72,6 +72,7 @@ Headers:
   header 'My-cool-header' is 'my-client-value, this-is-an-appended-value'
   header 'My-Overwrite-Header' is 'this-is-the-only-value'
   header 'Host' is 'echo.example.com:$GW_PORT'
+  header 'X-Forwarded-For' is '$GW_IP'
   header 'Connection' is 'close'
   header 'Accept' is '*/*'
 ```
