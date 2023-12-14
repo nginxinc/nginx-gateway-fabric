@@ -384,18 +384,17 @@ func tryToAttachRouteToListeners(
 
 // findAttachableListeners returns a list of attachable listeners and whether the listener exists for a non-empty
 // sectionName.
-func findAttachableListeners(sectionName string, listeners map[string]*Listener) ([]*Listener, bool) {
+func findAttachableListeners(sectionName string, listeners []*Listener) ([]*Listener, bool) {
 	if sectionName != "" {
-		l, exists := listeners[sectionName]
-		if !exists {
-			return nil, false
+		for _, l := range listeners {
+			if l.Name == sectionName {
+				if l.Attachable {
+					return []*Listener{l}, true
+				}
+				return nil, true
+			}
 		}
-
-		if l.Attachable {
-			return []*Listener{l}, true
-		}
-
-		return nil, true
+		return nil, false
 	}
 
 	attachableListeners := make([]*Listener, 0, len(listeners))

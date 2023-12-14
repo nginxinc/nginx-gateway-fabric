@@ -440,7 +440,7 @@ func TestBuildConfiguration(t *testing.T) {
 				},
 				Gateway: &graph.Gateway{
 					Source:    &v1.Gateway{},
-					Listeners: map[string]*graph.Listener{},
+					Listeners: []*graph.Listener{},
 				},
 				Routes: map[types.NamespacedName]*graph.Route{},
 			},
@@ -459,8 +459,9 @@ func TestBuildConfiguration(t *testing.T) {
 				},
 				Gateway: &graph.Gateway{
 					Source: &v1.Gateway{},
-					Listeners: map[string]*graph.Listener{
-						"listener-80-1": {
+					Listeners: []*graph.Listener{
+						{
+							Name:   "listener-80-1",
 							Source: listener80,
 							Valid:  true,
 							Routes: map[types.NamespacedName]*graph.Route{},
@@ -489,15 +490,17 @@ func TestBuildConfiguration(t *testing.T) {
 				},
 				Gateway: &graph.Gateway{
 					Source: &v1.Gateway{},
-					Listeners: map[string]*graph.Listener{
-						"listener-80-1": {
+					Listeners: []*graph.Listener{
+						{
+							Name:   "listener-80-1",
 							Source: listener80,
 							Valid:  true,
 							Routes: map[types.NamespacedName]*graph.Route{
 								client.ObjectKeyFromObject(hr1Invalid): routeHR1Invalid,
 							},
 						},
-						"listener-443-1": {
+						{
+							Name:   "listener-443-1",
 							Source: listener443, // nil hostname
 							Valid:  true,
 							Routes: map[types.NamespacedName]*graph.Route{
@@ -549,14 +552,16 @@ func TestBuildConfiguration(t *testing.T) {
 				},
 				Gateway: &graph.Gateway{
 					Source: &v1.Gateway{},
-					Listeners: map[string]*graph.Listener{
-						"listener-443-1": {
+					Listeners: []*graph.Listener{
+						{
+							Name:           "listener-443-1",
 							Source:         listener443, // nil hostname
 							Valid:          true,
 							Routes:         map[types.NamespacedName]*graph.Route{},
 							ResolvedSecret: &secret1NsName,
 						},
-						"listener-443-with-hostname": {
+						{
+							Name:           "listener-443-with-hostname",
 							Source:         listener443WithHostname, // non-nil hostname
 							Valid:          true,
 							Routes:         map[types.NamespacedName]*graph.Route{},
@@ -609,8 +614,9 @@ func TestBuildConfiguration(t *testing.T) {
 				},
 				Gateway: &graph.Gateway{
 					Source: &v1.Gateway{},
-					Listeners: map[string]*graph.Listener{
-						"invalid-listener": {
+					Listeners: []*graph.Listener{
+						{
+							Name:           "invalid-listener",
 							Source:         invalidListener,
 							Valid:          false,
 							ResolvedSecret: &secret1NsName,
@@ -640,8 +646,9 @@ func TestBuildConfiguration(t *testing.T) {
 				},
 				Gateway: &graph.Gateway{
 					Source: &v1.Gateway{},
-					Listeners: map[string]*graph.Listener{
-						"listener-80-1": {
+					Listeners: []*graph.Listener{
+						{
+							Name:   "listener-80-1",
 							Source: listener80,
 							Valid:  true,
 							Routes: map[types.NamespacedName]*graph.Route{
@@ -710,8 +717,9 @@ func TestBuildConfiguration(t *testing.T) {
 				},
 				Gateway: &graph.Gateway{
 					Source: &v1.Gateway{},
-					Listeners: map[string]*graph.Listener{
-						"listener-443-1": {
+					Listeners: []*graph.Listener{
+						{
+							Name:   "listener-443-1",
 							Source: listener443,
 							Valid:  true,
 							Routes: map[types.NamespacedName]*graph.Route{
@@ -720,7 +728,8 @@ func TestBuildConfiguration(t *testing.T) {
 							},
 							ResolvedSecret: &secret1NsName,
 						},
-						"listener-443-with-hostname": {
+						{
+							Name:   "listener-443-with-hostname",
 							Source: listener443WithHostname,
 							Valid:  true,
 							Routes: map[types.NamespacedName]*graph.Route{
@@ -827,8 +836,9 @@ func TestBuildConfiguration(t *testing.T) {
 				},
 				Gateway: &graph.Gateway{
 					Source: &v1.Gateway{},
-					Listeners: map[string]*graph.Listener{
-						"listener-80-1": {
+					Listeners: []*graph.Listener{
+						{
+							Name:   "listener-80-1",
 							Source: listener80,
 							Valid:  true,
 							Routes: map[types.NamespacedName]*graph.Route{
@@ -836,7 +846,8 @@ func TestBuildConfiguration(t *testing.T) {
 								{Namespace: "test", Name: "hr-4"}: routeHR4,
 							},
 						},
-						"listener-443-1": {
+						{
+							Name:   "listener-443-1",
 							Source: listener443,
 							Valid:  true,
 							Routes: map[types.NamespacedName]*graph.Route{
@@ -984,22 +995,25 @@ func TestBuildConfiguration(t *testing.T) {
 				},
 				Gateway: &graph.Gateway{
 					Source: &v1.Gateway{},
-					Listeners: map[string]*graph.Listener{
-						"listener-80-1": {
+					Listeners: []*graph.Listener{
+						{
+							Name:   "listener-80-1",
 							Source: listener80,
 							Valid:  true,
 							Routes: map[types.NamespacedName]*graph.Route{
 								{Namespace: "test", Name: "hr-3"}: routeHR3,
 							},
 						},
-						"listener-8080": {
+						{
+							Name:   "listener-8080",
 							Source: listener8080,
 							Valid:  true,
 							Routes: map[types.NamespacedName]*graph.Route{
 								{Namespace: "test", Name: "hr-8"}: routeHR8,
 							},
 						},
-						"listener-443-1": {
+						{
+							Name:   "listener-443-1",
 							Source: listener443,
 							Valid:  true,
 							Routes: map[types.NamespacedName]*graph.Route{
@@ -1007,7 +1021,8 @@ func TestBuildConfiguration(t *testing.T) {
 							},
 							ResolvedSecret: &secret1NsName,
 						},
-						"listener-8443": {
+						{
+							Name:   "listener-8443",
 							Source: listener8443,
 							Valid:  true,
 							Routes: map[types.NamespacedName]*graph.Route{
@@ -1193,8 +1208,9 @@ func TestBuildConfiguration(t *testing.T) {
 				},
 				Gateway: &graph.Gateway{
 					Source: &v1.Gateway{},
-					Listeners: map[string]*graph.Listener{
-						"listener-80-1": {
+					Listeners: []*graph.Listener{
+						{
+							Name:   "listener-80-1",
 							Source: listener80,
 							Valid:  true,
 							Routes: map[types.NamespacedName]*graph.Route{
@@ -1215,8 +1231,9 @@ func TestBuildConfiguration(t *testing.T) {
 				GatewayClass: nil,
 				Gateway: &graph.Gateway{
 					Source: &v1.Gateway{},
-					Listeners: map[string]*graph.Listener{
-						"listener-80-1": {
+					Listeners: []*graph.Listener{
+						{
+							Name:   "listener-80-1",
 							Source: listener80,
 							Valid:  true,
 							Routes: map[types.NamespacedName]*graph.Route{
@@ -1252,8 +1269,9 @@ func TestBuildConfiguration(t *testing.T) {
 				},
 				Gateway: &graph.Gateway{
 					Source: &v1.Gateway{},
-					Listeners: map[string]*graph.Listener{
-						"listener-80-1": {
+					Listeners: []*graph.Listener{
+						{
+							Name:   "listener-80-1",
 							Source: listener80,
 							Valid:  true,
 							Routes: map[types.NamespacedName]*graph.Route{
@@ -1320,15 +1338,17 @@ func TestBuildConfiguration(t *testing.T) {
 				},
 				Gateway: &graph.Gateway{
 					Source: &v1.Gateway{},
-					Listeners: map[string]*graph.Listener{
-						"listener-80-1": {
+					Listeners: []*graph.Listener{
+						{
+							Name:   "listener-80-1",
 							Source: listener80,
 							Valid:  true,
 							Routes: map[types.NamespacedName]*graph.Route{
 								{Namespace: "test", Name: "hr-6"}: routeHR6,
 							},
 						},
-						"listener-443-1": {
+						{
+							Name:   "listener-443-1",
 							Source: listener443,
 							Valid:  true,
 							Routes: map[types.NamespacedName]*graph.Route{
@@ -1419,8 +1439,9 @@ func TestBuildConfiguration(t *testing.T) {
 				},
 				Gateway: &graph.Gateway{
 					Source: &v1.Gateway{},
-					Listeners: map[string]*graph.Listener{
-						"listener-80-1": {
+					Listeners: []*graph.Listener{
+						{
+							Name:   "listener-80-1",
 							Source: listener80,
 							Valid:  true,
 							Routes: map[types.NamespacedName]*graph.Route{
@@ -1481,8 +1502,9 @@ func TestBuildConfiguration(t *testing.T) {
 				},
 				Gateway: &graph.Gateway{
 					Source: &v1.Gateway{},
-					Listeners: map[string]*graph.Listener{
-						"listener-443-with-hostname": {
+					Listeners: []*graph.Listener{
+						{
+							Name:   "listener-443-with-hostname",
 							Source: listener443WithHostname,
 							Valid:  true,
 							Routes: map[types.NamespacedName]*graph.Route{
@@ -1490,7 +1512,8 @@ func TestBuildConfiguration(t *testing.T) {
 							},
 							ResolvedSecret: &secret2NsName,
 						},
-						"listener-443-1": {
+						{
+							Name:   "listener-443-1",
 							Source: listener443,
 							Valid:  true,
 							Routes: map[types.NamespacedName]*graph.Route{
@@ -1898,20 +1921,24 @@ func TestBuildUpstreams(t *testing.T) {
 		},
 	}
 
-	listeners := map[string]*graph.Listener{
-		"invalid-listener": {
+	listeners := []*graph.Listener{
+		{
+			Name:   "invalid-listener",
 			Valid:  false,
 			Routes: routesWithNonExistingRefs, // shouldn't be included since listener is invalid
 		},
-		"listener-1": {
+		{
+			Name:   "listener-1",
 			Valid:  true,
 			Routes: routes,
 		},
-		"listener-2": {
+		{
+			Name:   "listener-2",
 			Valid:  true,
 			Routes: routes2,
 		},
-		"listener-3": {
+		{
+			Name:   "listener-3",
 			Valid:  true,
 			Routes: invalidRoutes, // shouldn't be included since routes are invalid
 		},

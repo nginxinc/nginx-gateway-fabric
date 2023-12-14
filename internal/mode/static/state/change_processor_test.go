@@ -193,6 +193,16 @@ func createScheme() *runtime.Scheme {
 	return scheme
 }
 
+func getListenerByName(gw *graph.Gateway, name string) *graph.Listener {
+	for _, l := range gw.Listeners {
+		if l.Name == name {
+			return l
+		}
+	}
+
+	return nil
+}
+
 var (
 	cert = []byte(`-----BEGIN CERTIFICATE-----
 MIIDLjCCAhYCCQDAOF9tLsaXWjANBgkqhkiG9w0BAQsFADBaMQswCQYDVQQGEwJV
@@ -469,8 +479,9 @@ var _ = Describe("ChangeProcessor", func() {
 					},
 					Gateway: &graph.Gateway{
 						Source: gw1,
-						Listeners: map[string]*graph.Listener{
-							"listener-80-1": {
+						Listeners: []*graph.Listener{
+							{
+								Name:       "listener-80-1",
 								Source:     gw1.Spec.Listeners[0],
 								Valid:      true,
 								Attachable: true,
@@ -479,7 +490,8 @@ var _ = Describe("ChangeProcessor", func() {
 								},
 								SupportedKinds: []v1.RouteGroupKind{{Kind: "HTTPRoute"}},
 							},
-							"listener-443-1": {
+							{
+								Name:       "listener-443-1",
 								Source:     gw1.Spec.Listeners[1],
 								Valid:      true,
 								Attachable: true,
@@ -575,9 +587,10 @@ var _ = Describe("ChangeProcessor", func() {
 
 					// No ref grant exists yet for gw1
 					// so the listener is not valid, but still attachable
-					expGraph.Gateway.Listeners["listener-443-1"].Valid = false
-					expGraph.Gateway.Listeners["listener-443-1"].ResolvedSecret = nil
-					expGraph.Gateway.Listeners["listener-443-1"].Conditions = staticConds.NewListenerRefNotPermitted(
+					listener443 := getListenerByName(expGraph.Gateway, "listener-443-1")
+					listener443.Valid = false
+					listener443.ResolvedSecret = nil
+					listener443.Conditions = staticConds.NewListenerRefNotPermitted(
 						"Certificate ref to secret cert-ns/different-ns-tls-secret not permitted by any ReferenceGrant",
 					)
 
@@ -595,8 +608,9 @@ var _ = Describe("ChangeProcessor", func() {
 						Attached: true,
 					}
 
-					expGraph.Gateway.Listeners["listener-80-1"].Routes[hr1Name].ParentRefs[0].Attachment = expAttachment80
-					expGraph.Gateway.Listeners["listener-443-1"].Routes[hr1Name].ParentRefs[1].Attachment = expAttachment443
+					listener80 := getListenerByName(expGraph.Gateway, "listener-80-1")
+					listener80.Routes[hr1Name].ParentRefs[0].Attachment = expAttachment80
+					listener443.Routes[hr1Name].ParentRefs[1].Attachment = expAttachment443
 
 					// no ref grant exists yet for hr1
 					expGraph.Routes[hr1Name].Conditions = []conditions.Condition{
@@ -704,8 +718,11 @@ var _ = Describe("ChangeProcessor", func() {
 				It("returns populated graph", func() {
 					processor.CaptureUpsertChange(hr1Updated)
 
-					expGraph.Gateway.Listeners["listener-443-1"].Routes[hr1Name].Source.Generation = hr1Updated.Generation
-					expGraph.Gateway.Listeners["listener-80-1"].Routes[hr1Name].Source.Generation = hr1Updated.Generation
+					listener443 := getListenerByName(expGraph.Gateway, "listener-443-1")
+					listener443.Routes[hr1Name].Source.Generation = hr1Updated.Generation
+
+					listener80 := getListenerByName(expGraph.Gateway, "listener-80-1")
+					listener80.Routes[hr1Name].Source.Generation = hr1Updated.Generation
 					expGraph.ReferencedSecrets[client.ObjectKeyFromObject(diffNsTLSSecret)] = &graph.Secret{
 						Source: diffNsTLSSecret,
 					}
@@ -847,17 +864,20 @@ var _ = Describe("ChangeProcessor", func() {
 
 					// gateway 2 takes over;
 					// route 1 has been replaced by route 2
+					listener80 := getListenerByName(expGraph.Gateway, "listener-80-1")
+					listener443 := getListenerByName(expGraph.Gateway, "listener-443-1")
+
 					expGraph.Gateway.Source = gw2
-					expGraph.Gateway.Listeners["listener-80-1"].Source = gw2.Spec.Listeners[0]
-					expGraph.Gateway.Listeners["listener-443-1"].Source = gw2.Spec.Listeners[1]
-					delete(expGraph.Gateway.Listeners["listener-80-1"].Routes, hr1Name)
-					delete(expGraph.Gateway.Listeners["listener-443-1"].Routes, hr1Name)
-					expGraph.Gateway.Listeners["listener-80-1"].Routes[hr2Name] = expRouteHR2
-					expGraph.Gateway.Listeners["listener-443-1"].Routes[hr2Name] = expRouteHR2
+					listener80.Source = gw2.Spec.Listeners[0]
+					listener443.Source = gw2.Spec.Listeners[1]
+					delete(listener80.Routes, hr1Name)
+					delete(listener443.Routes, hr1Name)
+					listener80.Routes[hr2Name] = expRouteHR2
+					listener443.Routes[hr2Name] = expRouteHR2
 					delete(expGraph.Routes, hr1Name)
 					expGraph.Routes[hr2Name] = expRouteHR2
 					sameNsTLSSecretRef := helpers.GetPointer(client.ObjectKeyFromObject(sameNsTLSSecret))
-					expGraph.Gateway.Listeners["listener-443-1"].ResolvedSecret = sameNsTLSSecretRef
+					listener443.ResolvedSecret = sameNsTLSSecretRef
 					expGraph.ReferencedSecrets[client.ObjectKeyFromObject(sameNsTLSSecret)] = &graph.Secret{
 						Source: sameNsTLSSecret,
 					}
@@ -876,14 +896,17 @@ var _ = Describe("ChangeProcessor", func() {
 
 					// gateway 2 still in charge;
 					// no routes remain
+					listener80 := getListenerByName(expGraph.Gateway, "listener-80-1")
+					listener443 := getListenerByName(expGraph.Gateway, "listener-443-1")
+
 					expGraph.Gateway.Source = gw2
-					expGraph.Gateway.Listeners["listener-80-1"].Source = gw2.Spec.Listeners[0]
-					expGraph.Gateway.Listeners["listener-443-1"].Source = gw2.Spec.Listeners[1]
-					delete(expGraph.Gateway.Listeners["listener-80-1"].Routes, hr1Name)
-					delete(expGraph.Gateway.Listeners["listener-443-1"].Routes, hr1Name)
+					listener80.Source = gw2.Spec.Listeners[0]
+					listener443.Source = gw2.Spec.Listeners[1]
+					delete(listener80.Routes, hr1Name)
+					delete(listener443.Routes, hr1Name)
 					expGraph.Routes = map[types.NamespacedName]*graph.Route{}
 					sameNsTLSSecretRef := helpers.GetPointer(client.ObjectKeyFromObject(sameNsTLSSecret))
-					expGraph.Gateway.Listeners["listener-443-1"].ResolvedSecret = sameNsTLSSecretRef
+					listener443.ResolvedSecret = sameNsTLSSecretRef
 					expGraph.ReferencedSecrets[client.ObjectKeyFromObject(sameNsTLSSecret)] = &graph.Secret{
 						Source: sameNsTLSSecret,
 					}

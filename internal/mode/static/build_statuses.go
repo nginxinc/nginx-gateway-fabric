@@ -141,10 +141,10 @@ func buildGatewayStatus(
 		}
 	}
 
-	listenerStatuses := make(map[string]status.ListenerStatus)
+	listenerStatuses := make([]status.ListenerStatus, 0, len(gateway.Listeners))
 
 	validListenerCount := 0
-	for name, l := range gateway.Listeners {
+	for _, l := range gateway.Listeners {
 		var conds []conditions.Condition
 
 		if l.Valid {
@@ -161,11 +161,12 @@ func buildGatewayStatus(
 			)
 		}
 
-		listenerStatuses[name] = status.ListenerStatus{
+		listenerStatuses = append(listenerStatuses, status.ListenerStatus{
+			Name:           v1.SectionName(l.Name),
 			AttachedRoutes: int32(len(l.Routes)),
 			Conditions:     conditions.DeduplicateConditions(conds),
 			SupportedKinds: l.SupportedKinds,
-		}
+		})
 	}
 
 	gwConds := staticConds.NewDefaultGatewayConditions()

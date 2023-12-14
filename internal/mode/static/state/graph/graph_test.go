@@ -272,8 +272,9 @@ func TestBuildGraph(t *testing.T) {
 			},
 			Gateway: &Gateway{
 				Source: gw1,
-				Listeners: map[string]*Listener{
-					"listener-80-1": {
+				Listeners: []*Listener{
+					{
+						Name:       "listener-80-1",
 						Source:     gw1.Spec.Listeners[0],
 						Valid:      true,
 						Attachable: true,
@@ -282,7 +283,8 @@ func TestBuildGraph(t *testing.T) {
 						},
 						SupportedKinds: []gatewayv1.RouteGroupKind{{Kind: "HTTPRoute"}},
 					},
-					"listener-443-1": {
+					{
+						Name:       "listener-443-1",
 						Source:     gw1.Spec.Listeners[1],
 						Valid:      true,
 						Attachable: true,
