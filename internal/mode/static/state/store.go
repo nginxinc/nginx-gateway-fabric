@@ -286,7 +286,7 @@ func (u *validatingUpsertUpdater) Upsert(obj client.Object) {
 			obj,
 			apiv1.EventTypeWarning,
 			"Rejected",
-			"%s; NGF will delete any existing NGINX configuration that corresponds to the resource",
+			"%s; NGINX Gateway Fabric will delete any existing NGINX configuration that corresponds to the resource",
 			err.Error(),
 		)
 

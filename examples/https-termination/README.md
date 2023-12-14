@@ -8,7 +8,7 @@ reference a Secret in a different Namespace.
 
 ## 1. Deploy NGINX Gateway Fabric
 
-1. Follow the [installation instructions](/docs/installation.md) to deploy NGINX Gateway Fabric.
+1. Follow the [installation instructions](https://docs.nginx.com/nginx-gateway-fabric/installation/) to deploy NGINX Gateway Fabric.
 
 1. Save the public IP address of NGINX Gateway Fabric into a shell variable:
 
@@ -195,19 +195,19 @@ You can also check the conditions of the Gateway `https` Listener to verify the 
  Conditions:
    Last Transition Time:  2023-06-26T20:23:56Z
    Message:               Certificate ref to secret certificate/cafe-secret not permitted by any ReferenceGrant
-   Observed Generation:   2
+   Observed Generation:   1
    Reason:                RefNotPermitted
    Status:                False
    Type:                  Accepted
    Last Transition Time:  2023-06-26T20:23:56Z
    Message:               Certificate ref to secret certificate/cafe-secret not permitted by any ReferenceGrant
-   Observed Generation:   2
+   Observed Generation:   1
    Reason:                RefNotPermitted
    Status:                False
    Type:                  ResolvedRefs
    Last Transition Time:  2023-06-26T20:23:56Z
    Message:               Certificate ref to secret certificate/cafe-secret not permitted by any ReferenceGrant
-   Observed Generation:   2
+   Observed Generation:   1
    Reason:                Invalid
    Status:                False
    Type:                  Programmed
