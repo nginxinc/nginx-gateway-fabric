@@ -45,6 +45,7 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/relationship"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/resolver"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/validation"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/telemetry"
 )
 
 const (
@@ -63,6 +64,8 @@ func init() {
 	utilruntime.Must(apiext.AddToScheme(scheme))
 }
 
+// StartManager starts the controller manager.
+// nolint: gocyclo
 func StartManager(cfg config.Config) error {
 	options := manager.Options{
 		Scheme:  scheme,
@@ -205,12 +208,15 @@ func StartManager(cfg config.Config) error {
 
 	leaderElectorLogger := cfg.Logger.WithName("leaderElector")
 
+	electedCh := make(chan struct{})
+
 	if cfg.LeaderElection.Enabled {
 		leaderElector, err := newLeaderElectorRunnable(leaderElectorRunnableConfig{
 			kubeConfig: clusterCfg,
 			recorder:   recorder,
 			onStartedLeading: func(ctx context.Context) {
 				leaderElectorLogger.Info("Started leading")
+				close(electedCh)
 				statusUpdater.Enable(ctx)
 			},
 			onStoppedLeading: func() {
@@ -228,6 +234,19 @@ func StartManager(cfg config.Config) error {
 		if err = mgr.Add(leaderElector); err != nil {
 			return fmt.Errorf("cannot register leader elector: %w", err)
 		}
+	} else {
+		close(electedCh)
+	}
+
+	telemetryJob := newLeaderOnlyRunnable(
+		electedCh,
+		telemetry.NewJob(
+			&telemetry.StdoutExporter{},
+			cfg.Logger.WithName("telemetryExporter"),
+		),
+	)
+	if err = mgr.Add(telemetryJob); err != nil {
+		return fmt.Errorf("cannot register telemetry job: %w", err)
 	}
 
 	cfg.Logger.Info("Starting manager")
