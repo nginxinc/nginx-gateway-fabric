@@ -20,6 +20,7 @@ import (
 	"k8s.io/client-go/tools/record"
 	ctlr "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	ctrlcfg "sigs.k8s.io/controller-runtime/pkg/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/metrics"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
@@ -34,6 +35,7 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/controller/predicate"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/events"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/gatewayclass"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/status"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/config"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/metrics/collectors"
@@ -45,6 +47,7 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/relationship"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/resolver"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/validation"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/telemetry"
 )
 
 const (
@@ -65,9 +68,17 @@ func init() {
 
 func StartManager(cfg config.Config) error {
 	options := manager.Options{
-		Scheme:  scheme,
-		Logger:  cfg.Logger,
-		Metrics: getMetricsOptions(cfg.MetricsConfig),
+		Scheme:                        scheme,
+		Logger:                        cfg.Logger,
+		Metrics:                       getMetricsOptions(cfg.MetricsConfig),
+		LeaderElection:                true,
+		LeaderElectionNamespace:       cfg.GatewayPodConfig.Namespace,
+		LeaderElectionID:              cfg.LeaderElection.LockName,
+		LeaderElectionReleaseOnCancel: true,
+		Controller: ctrlcfg.Controller{
+			// All of our controllers still need to work in case of non-leader pods
+			NeedLeaderElection: helpers.GetPointer(false),
+		},
 	}
 
 	if cfg.HealthConfig.Enabled {
@@ -199,40 +210,57 @@ func StartManager(cfg config.Config) error {
 		firstBatchPreparer,
 	)
 
-	if err = mgr.Add(eventLoop); err != nil {
+	if err = mgr.Add(&leaderOrNonLeaderRunnable{eventLoop}); err != nil {
 		return fmt.Errorf("cannot register event loop: %w", err)
 	}
 
-	leaderElectorLogger := cfg.Logger.WithName("leaderElector")
+	if err = mgr.Add(&enableOnLeaderElectedJob{enable: statusUpdater.Enable}); err != nil {
+		return err
+	}
 
-	if cfg.LeaderElection.Enabled {
-		leaderElector, err := newLeaderElectorRunnable(leaderElectorRunnableConfig{
-			kubeConfig: clusterCfg,
-			recorder:   recorder,
-			onStartedLeading: func(ctx context.Context) {
-				leaderElectorLogger.Info("Started leading")
-				statusUpdater.Enable(ctx)
-			},
-			onStoppedLeading: func() {
-				leaderElectorLogger.Info("Stopped leading")
-				statusUpdater.Disable()
-			},
-			lockNs:   cfg.GatewayPodConfig.Namespace,
-			lockName: cfg.LeaderElection.LockName,
-			identity: cfg.LeaderElection.Identity,
-		})
-		if err != nil {
-			return err
-		}
-
-		if err = mgr.Add(leaderElector); err != nil {
-			return fmt.Errorf("cannot register leader elector: %w", err)
-		}
+	telemetryJob := telemetry.NewJob(
+		&telemetry.StdoutExporter{},
+		cfg.Logger.WithName("telemetryExporter"),
+	)
+	if err = mgr.Add(&leaderRunnable{telemetryJob}); err != nil {
+		return fmt.Errorf("cannot register telemetry job: %w", err)
 	}
 
 	cfg.Logger.Info("Starting manager")
 	return mgr.Start(ctx)
 }
+
+type leaderRunnable struct {
+	manager.Runnable
+}
+
+func (r *leaderRunnable) NeedLeaderElection() bool {
+	return true
+}
+
+type leaderOrNonLeaderRunnable struct {
+	manager.Runnable
+}
+
+func (r *leaderOrNonLeaderRunnable) NeedLeaderElection() bool {
+	return false
+}
+
+// implements manager.LeaderElectorRunnable
+type enableOnLeaderElectedJob struct {
+	enable func(context.Context)
+}
+
+func (j *enableOnLeaderElectedJob) Start(ctx context.Context) error {
+	j.enable(ctx)
+	return nil
+}
+
+func (j *enableOnLeaderElectedJob) NeedLeaderElection() bool {
+	return true
+}
+
+var _ manager.LeaderElectionRunnable = &enableOnLeaderElectedJob{}
 
 func registerControllers(
 	ctx context.Context,
