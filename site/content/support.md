@@ -12,12 +12,13 @@ docs: "DOCS-OOO"
 NGINX Gateway Fabric adheres to the support policy detailed at [nginx.com/support](https://nginx.com/support).
 
 ## Commercial Support
+
 For paid customers of NGINX Gateway Fabric, commercial support is available by opening a support case at the [MyF5](https://my.f5.com/) portal.
 
 Generate a Support Package
 To generate a support package, run the following command:
 
-   - (TBD)
+- (TBD)
 
 ## Community Support
 
