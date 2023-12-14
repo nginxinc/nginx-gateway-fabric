@@ -428,8 +428,9 @@ func TestIsReferenced(t *testing.T) {
 	}
 
 	gw := &Gateway{
-		Listeners: map[string]*Listener{
-			"listener-1": {
+		Listeners: []*Listener{
+			{
+				Name:                      "listener-1",
 				Valid:                     true,
 				AllowedRouteLabelSelector: labels.SelectorFromSet(map[string]string{"apples": "oranges"}),
 			},
