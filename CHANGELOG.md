@@ -34,6 +34,7 @@ HELM CHART:
 - The version of the Helm chart is now 1.1.0.
 - Add tolerations to the helm chart. [PR-1192](https://github.com/nginxinc/nginx-gateway-fabric/pull/1192). Thanks to [Jerome Brown](https://github.com/oWretch).
 - Add extra volume mounts to the helm chart. [PR-1193](https://github.com/nginxinc/nginx-gateway-fabric/pull/1193). Thanks to [Jerome Brown](https://github.com/oWretch).
+- Fix broken helm chart icon links. [PR-1289](https://github.com/nginxinc/nginx-gateway-fabric/pull/1290). Thanks to [arukiidou](https://github.com/arukiidou).
 
 UPGRADE:
 
