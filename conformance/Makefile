@@ -1,4 +1,4 @@
-TAG = edge
+TAG = 1.1.0
 PREFIX = nginx-gateway-fabric
 NGINX_PREFIX = $(PREFIX)/nginx
 GW_API_VERSION ?= 1.0.0

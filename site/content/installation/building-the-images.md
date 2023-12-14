@@ -26,7 +26,7 @@ installed on your machine:
 1. Clone the repo and change into the `nginx-gateway-fabric` directory:
 
    ```shell
-   git clone https://github.com/nginxinc/nginx-gateway-fabric.git
+   git clone https://github.com/nginxinc/nginx-gateway-fabric.git --branch v1.1.0
    cd nginx-gateway-fabric
    ```
 
@@ -50,13 +50,13 @@ installed on your machine:
      ```
 
    Set the `PREFIX` variable to the name of the registry you'd like to push the image to. By default, the images will be
-   named `nginx-gateway-fabric:edge` and `nginx-gateway-fabric/nginx:edge`.
+   named `nginx-gateway-fabric:1.1.0` and `nginx-gateway-fabric/nginx:1.1.0`.
 
 1. Push the images to your container registry:
 
    ```shell
-   docker push myregistry.example.com/nginx-gateway-fabric:edge
-   docker push myregistry.example.com/nginx-gateway-fabric/nginx:edge
+   docker push myregistry.example.com/nginx-gateway-fabric:1.1.0
+   docker push myregistry.example.com/nginx-gateway-fabric/nginx:1.1.0
    ```
 
    Make sure to substitute `myregistry.example.com/nginx-gateway-fabric` with your registry.

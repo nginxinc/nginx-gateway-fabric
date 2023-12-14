@@ -28,7 +28,7 @@ Deploying NGINX Gateway Fabric with Kubernetes manifests takes only a few steps.
 #### Stable release
 
    ```shell
-   kubectl apply -f https://github.com/nginxinc/nginx-gateway-fabric/releases/download/v1.0.0/crds.yaml
+   kubectl apply -f https://github.com/nginxinc/nginx-gateway-fabric/releases/download/v1.1.0/crds.yaml
    ```
 
 #### Edge version
@@ -49,7 +49,7 @@ Deploying NGINX Gateway Fabric with Kubernetes manifests takes only a few steps.
 #### Stable release
 
    ```shell
-   kubectl apply -f https://github.com/nginxinc/nginx-gateway-fabric/releases/download/v1.0.0/nginx-gateway.yaml
+   kubectl apply -f https://github.com/nginxinc/nginx-gateway-fabric/releases/download/v1.1.0/nginx-gateway.yaml
    ```
 
 #### Edge version
@@ -107,14 +107,14 @@ To upgrade NGINX Gateway Fabric and get the latest features and improvements, ta
    - To upgrade the Custom Resource Definitions (CRDs), run:
 
       ```shell
-      kubectl apply -f https://github.com/nginxinc/nginx-gateway-fabric/releases/download/v1.0.0/crds.yaml
+      kubectl apply -f https://github.com/nginxinc/nginx-gateway-fabric/releases/download/v1.1.0/crds.yaml
       ```
 
 1. **Upgrade NGINX Gateway Fabric deployment:**
    - To upgrade the deployment, run:
 
       ```shell
-      kubectl apply -f https://github.com/nginxinc/nginx-gateway-fabric/releases/download/v1.0.0/nginx-gateway.yaml
+      kubectl apply -f https://github.com/nginxinc/nginx-gateway-fabric/releases/download/v1.1.0/nginx-gateway.yaml
       ```
 
 ## Delay pod termination for zero downtime upgrades {#configure-delayed-pod-termination-for-zero-downtime-upgrades}
@@ -171,21 +171,27 @@ For additional information on configuring and understanding the behavior of cont
 
 Follow these steps to uninstall NGINX Gateway Fabric and Gateway API from your Kubernetes cluster:
 
-1. **Uninstall NGINX Gateway Fabric:**
+### 1. Uninstall NGINX Gateway Fabric
 
-   - To remove NGINX Gateway Fabric and its custom resource definitions (CRDs), run:
+#### Stable release
 
-     ```shell
-     kubectl delete -f https://github.com/nginxinc/nginx-gateway-fabric/releases/download/v1.0.0/nginx-gateway.yaml
-     ```
+   ```shell
+   kubectl delete -f https://github.com/nginxinc/nginx-gateway-fabric/releases/download/v1.1.0/nginx-gateway.yaml
+   ```
 
-     ```shell
-     kubectl delete -f https://github.com/nginxinc/nginx-gateway-fabric/releases/download/v1.0.0/crds.yaml
-     ```
+#### Edge version
 
-1. **Remove the Gateway API resources:**
+   ```shell
+   kubectl delete -f deploy/manifests/nginx-gateway.yaml
+   ```
 
-   - {{<include "installation/uninstall-gateway-api-resources.md" >}}
+   ```shell
+   kubectl delete -f deploy/manifests/crds
+   ```
+
+### 2. Remove the Gateway API resources
+
+- {{<include "installation/uninstall-gateway-api-resources.md" >}}
 
 ## Next steps
 
