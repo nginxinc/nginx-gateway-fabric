@@ -791,17 +791,13 @@ func TestBindRouteToListeners(t *testing.T) {
 		},
 	}
 
-	invalidNotAttachableListener := func(name string) *Listener {
-		return createModifiedListener(name, func(l *Listener) {
-			l.Valid = false
-			l.Attachable = false
-		})
-	}
-	nonMatchingHostnameListener := func(name string) *Listener {
-		return createModifiedListener(name, func(l *Listener) {
-			l.Source.Hostname = helpers.GetPointer[gatewayv1.Hostname]("bar.example.com")
-		})
-	}
+	invalidNotAttachableListener := createModifiedListener("listener-80-1", func(l *Listener) {
+		l.Valid = false
+		l.Attachable = false
+	})
+	nonMatchingHostnameListener := createModifiedListener("listener-80-1", func(l *Listener) {
+		l.Source.Hostname = helpers.GetPointer[gatewayv1.Hostname]("bar.example.com")
+	})
 
 	tests := []struct {
 		route                    *Route
@@ -914,7 +910,7 @@ func TestBindRouteToListeners(t *testing.T) {
 				Source: gw,
 				Valid:  true,
 				Listeners: []*Listener{
-					invalidNotAttachableListener("listener-80-1"),
+					invalidNotAttachableListener,
 				},
 			},
 			expectedSectionNameRefs: []ParentRef{
@@ -929,7 +925,7 @@ func TestBindRouteToListeners(t *testing.T) {
 				},
 			},
 			expectedGatewayListeners: []*Listener{
-				invalidNotAttachableListener("listener-80-1"),
+				invalidNotAttachableListener,
 			},
 			name: "empty section name with no valid and attachable listeners",
 		},
@@ -991,7 +987,7 @@ func TestBindRouteToListeners(t *testing.T) {
 				Source: gw,
 				Valid:  true,
 				Listeners: []*Listener{
-					invalidNotAttachableListener("listener-80-1"),
+					invalidNotAttachableListener,
 				},
 			},
 			expectedSectionNameRefs: []ParentRef{
@@ -1006,7 +1002,7 @@ func TestBindRouteToListeners(t *testing.T) {
 				},
 			},
 			expectedGatewayListeners: []*Listener{
-				invalidNotAttachableListener("listener-80-1"),
+				invalidNotAttachableListener,
 			},
 			name: "listener isn't valid and attachable",
 		},
@@ -1016,7 +1012,7 @@ func TestBindRouteToListeners(t *testing.T) {
 				Source: gw,
 				Valid:  true,
 				Listeners: []*Listener{
-					nonMatchingHostnameListener("listener-80-1"),
+					nonMatchingHostnameListener,
 				},
 			},
 			expectedSectionNameRefs: []ParentRef{
@@ -1031,7 +1027,7 @@ func TestBindRouteToListeners(t *testing.T) {
 				},
 			},
 			expectedGatewayListeners: []*Listener{
-				nonMatchingHostnameListener("listener-80-1"),
+				nonMatchingHostnameListener,
 			},
 			name: "no matching listener hostname",
 		},
