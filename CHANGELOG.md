@@ -8,7 +8,7 @@ and includes links to all PRs that went into the release.
 
 *December 13, 2023*
 
-This is the official v1.1.0 release of NGINX Gateway Fabric.
+This release updates NGINX Gateway Fabric to support version 1.0.0 of the Gateway API in addition to bug fixes and documentation updates. Our docs are now available at docs.nginx.com/nginx-gateway-fabric.
 
 FEATURES:
 
