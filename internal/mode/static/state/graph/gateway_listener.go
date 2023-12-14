@@ -17,6 +17,7 @@ import (
 // Listener represents a Listener of the Gateway resource.
 // For now, we only support HTTP and HTTPS listeners.
 type Listener struct {
+	Name string
 	// Source holds the source of the Listener from the Gateway resource.
 	Source v1.Listener
 	// Routes holds the routes attached to the Listener.
@@ -44,14 +45,14 @@ func buildListeners(
 	secretResolver *secretResolver,
 	refGrantResolver *referenceGrantResolver,
 	protectedPorts ProtectedPorts,
-) map[string]*Listener {
-	listeners := make(map[string]*Listener)
+) []*Listener {
+	listeners := make([]*Listener, 0, len(gw.Spec.Listeners))
 
 	listenerFactory := newListenerConfiguratorFactory(gw, secretResolver, refGrantResolver, protectedPorts)
 
 	for _, gl := range gw.Spec.Listeners {
 		configurator := listenerFactory.getConfiguratorForListener(gl)
-		listeners[string(gl.Name)] = configurator.configure(gl)
+		listeners = append(listeners, configurator.configure(gl))
 	}
 
 	return listeners
@@ -176,6 +177,7 @@ func (c *listenerConfigurator) configure(listener v1.Listener) *Listener {
 	supportedKinds := getListenerSupportedKinds(listener)
 
 	l := &Listener{
+		Name:                      string(listener.Name),
 		Source:                    listener,
 		Conditions:                conds,
 		AllowedRouteLabelSelector: allowedRouteSelector,

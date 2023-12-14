@@ -126,8 +126,9 @@ func TestBuildStatuses(t *testing.T) {
 		},
 		Gateway: &graph.Gateway{
 			Source: gw,
-			Listeners: map[string]*graph.Listener{
-				"listener-80-1": {
+			Listeners: []*graph.Listener{
+				{
+					Name:  "listener-80-1",
 					Valid: true,
 					Routes: map[types.NamespacedName]*graph.Route{
 						{Namespace: "test", Name: "hr-1"}: {},
@@ -152,8 +153,9 @@ func TestBuildStatuses(t *testing.T) {
 		GatewayStatuses: status.GatewayStatuses{
 			{Namespace: "test", Name: "gateway"}: {
 				Conditions: staticConds.NewDefaultGatewayConditions(),
-				ListenerStatuses: map[string]status.ListenerStatus{
-					"listener-80-1": {
+				ListenerStatuses: []status.ListenerStatus{
+					{
+						Name:           "listener-80-1",
 						AttachedRoutes: 1,
 						Conditions:     staticConds.NewDefaultListenerConditions(),
 					},
@@ -249,8 +251,9 @@ func TestBuildStatusesNginxErr(t *testing.T) {
 	graph := &graph.Graph{
 		Gateway: &graph.Gateway{
 			Source: gw,
-			Listeners: map[string]*graph.Listener{
-				"listener-80-1": {
+			Listeners: []*graph.Listener{
+				{
+					Name:  "listener-80-1",
 					Valid: true,
 					Routes: map[types.NamespacedName]*graph.Route{
 						{Namespace: "test", Name: "hr-1"}: {},
@@ -270,8 +273,9 @@ func TestBuildStatusesNginxErr(t *testing.T) {
 					staticConds.NewGatewayAccepted(),
 					staticConds.NewGatewayNotProgrammedInvalid(staticConds.GatewayMessageFailedNginxReload),
 				},
-				ListenerStatuses: map[string]status.ListenerStatus{
-					"listener-80-1": {
+				ListenerStatuses: []status.ListenerStatus{
+					{
+						Name:           "listener-80-1",
 						AttachedRoutes: 1,
 						Conditions: []conditions.Condition{
 							staticConds.NewListenerAccepted(),
@@ -424,14 +428,16 @@ func TestBuildGatewayStatuses(t *testing.T) {
 			name: "valid gateway; all valid listeners",
 			gateway: &graph.Gateway{
 				Source: gw,
-				Listeners: map[string]*graph.Listener{
-					"listener-valid-1": {
+				Listeners: []*graph.Listener{
+					{
+						Name:  "listener-valid-1",
 						Valid: true,
 						Routes: map[types.NamespacedName]*graph.Route{
 							{Namespace: "test", Name: "hr-1"}: {},
 						},
 					},
-					"listener-valid-2": {
+					{
+						Name:  "listener-valid-2",
 						Valid: true,
 						Routes: map[types.NamespacedName]*graph.Route{
 							{Namespace: "test", Name: "hr-1"}: {},
@@ -443,12 +449,14 @@ func TestBuildGatewayStatuses(t *testing.T) {
 			expected: status.GatewayStatuses{
 				{Namespace: "test", Name: "gateway"}: {
 					Conditions: staticConds.NewDefaultGatewayConditions(),
-					ListenerStatuses: map[string]status.ListenerStatus{
-						"listener-valid-1": {
+					ListenerStatuses: []status.ListenerStatus{
+						{
+							Name:           "listener-valid-1",
 							AttachedRoutes: 1,
 							Conditions:     staticConds.NewDefaultListenerConditions(),
 						},
-						"listener-valid-2": {
+						{
+							Name:           "listener-valid-2",
 							AttachedRoutes: 1,
 							Conditions:     staticConds.NewDefaultListenerConditions(),
 						},
@@ -462,14 +470,16 @@ func TestBuildGatewayStatuses(t *testing.T) {
 			name: "valid gateway; some valid listeners",
 			gateway: &graph.Gateway{
 				Source: gw,
-				Listeners: map[string]*graph.Listener{
-					"listener-valid": {
+				Listeners: []*graph.Listener{
+					{
+						Name:  "listener-valid",
 						Valid: true,
 						Routes: map[types.NamespacedName]*graph.Route{
 							{Namespace: "test", Name: "hr-1"}: {},
 						},
 					},
-					"listener-invalid": {
+					{
+						Name:       "listener-invalid",
 						Valid:      false,
 						Conditions: staticConds.NewListenerUnsupportedValue("unsupported value"),
 					},
@@ -482,12 +492,14 @@ func TestBuildGatewayStatuses(t *testing.T) {
 						staticConds.NewGatewayProgrammed(),
 						staticConds.NewGatewayAcceptedListenersNotValid(),
 					},
-					ListenerStatuses: map[string]status.ListenerStatus{
-						"listener-valid": {
+					ListenerStatuses: []status.ListenerStatus{
+						{
+							Name:           "listener-valid",
 							AttachedRoutes: 1,
 							Conditions:     staticConds.NewDefaultListenerConditions(),
 						},
-						"listener-invalid": {
+						{
+							Name:       "listener-invalid",
 							Conditions: staticConds.NewListenerUnsupportedValue("unsupported value"),
 						},
 					},
@@ -500,12 +512,14 @@ func TestBuildGatewayStatuses(t *testing.T) {
 			name: "valid gateway; no valid listeners",
 			gateway: &graph.Gateway{
 				Source: gw,
-				Listeners: map[string]*graph.Listener{
-					"listener-invalid-1": {
+				Listeners: []*graph.Listener{
+					{
+						Name:       "listener-invalid-1",
 						Valid:      false,
 						Conditions: staticConds.NewListenerUnsupportedProtocol("unsupported protocol"),
 					},
-					"listener-invalid-2": {
+					{
+						Name:       "listener-invalid-2",
 						Valid:      false,
 						Conditions: staticConds.NewListenerUnsupportedValue("unsupported value"),
 					},
@@ -515,11 +529,13 @@ func TestBuildGatewayStatuses(t *testing.T) {
 			expected: status.GatewayStatuses{
 				{Namespace: "test", Name: "gateway"}: {
 					Conditions: staticConds.NewGatewayNotAcceptedListenersNotValid(),
-					ListenerStatuses: map[string]status.ListenerStatus{
-						"listener-invalid-1": {
+					ListenerStatuses: []status.ListenerStatus{
+						{
+							Name:       "listener-invalid-1",
 							Conditions: staticConds.NewListenerUnsupportedProtocol("unsupported protocol"),
 						},
-						"listener-invalid-2": {
+						{
+							Name:       "listener-invalid-2",
 							Conditions: staticConds.NewListenerUnsupportedValue("unsupported value"),
 						},
 					},
@@ -548,8 +564,9 @@ func TestBuildGatewayStatuses(t *testing.T) {
 				Source:     gw,
 				Valid:      true,
 				Conditions: staticConds.NewDefaultGatewayConditions(),
-				Listeners: map[string]*graph.Listener{
-					"listener-valid": {
+				Listeners: []*graph.Listener{
+					{
+						Name:  "listener-valid",
 						Valid: true,
 						Routes: map[types.NamespacedName]*graph.Route{
 							{Namespace: "test", Name: "hr-1"}: {},
@@ -563,8 +580,9 @@ func TestBuildGatewayStatuses(t *testing.T) {
 						staticConds.NewGatewayAccepted(),
 						staticConds.NewGatewayNotProgrammedInvalid(staticConds.GatewayMessageFailedNginxReload),
 					},
-					ListenerStatuses: map[string]status.ListenerStatus{
-						"listener-valid": {
+					ListenerStatuses: []status.ListenerStatus{
+						{
+							Name:           "listener-valid",
 							AttachedRoutes: 1,
 							Conditions: []conditions.Condition{
 								staticConds.NewListenerAccepted(),

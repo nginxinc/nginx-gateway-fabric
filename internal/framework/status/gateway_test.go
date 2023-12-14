@@ -19,7 +19,8 @@ func TestPrepareGatewayStatus(t *testing.T) {
 	status := GatewayStatus{
 		Conditions: CreateTestConditions("GatewayTest"),
 		ListenerStatuses: ListenerStatuses{
-			"listener": {
+			{
+				Name:           "listener",
 				AttachedRoutes: 3,
 				Conditions:     CreateTestConditions("ListenerTest"),
 				SupportedKinds: []v1.RouteGroupKind{

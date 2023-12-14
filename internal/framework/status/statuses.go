@@ -39,8 +39,8 @@ func (n *NginxGatewayStatus) APIGroup() string {
 	return ngfAPI.GroupName
 }
 
-// ListenerStatuses holds the statuses of listeners where the key is the name of a listener in the Gateway resource.
-type ListenerStatuses map[string]ListenerStatus
+// ListenerStatuses holds the statuses of listeners.
+type ListenerStatuses []ListenerStatus
 
 // HTTPRouteStatuses holds the statuses of HTTPRoutes where the key is the namespaced name of an HTTPRoute.
 type HTTPRouteStatuses map[types.NamespacedName]HTTPRouteStatus
@@ -67,6 +67,8 @@ type GatewayStatus struct {
 
 // ListenerStatus holds the status-related information about a listener in the Gateway resource.
 type ListenerStatus struct {
+	// Name is the name of the Listener that this status corresponds to.
+	Name v1.SectionName
 	// Conditions is the list of conditions for this listener.
 	Conditions []conditions.Condition
 	// SupportedKinds is the list of SupportedKinds for this listener.

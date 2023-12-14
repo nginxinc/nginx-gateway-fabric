@@ -10,6 +10,8 @@ import (
 )
 
 const (
+	// regularFileMode defines the default file mode for regular files.
+	regularFileMode = 0o644
 	// secretFileMode defines the default file mode for files with secrets.
 	secretFileMode = 0o640
 )
@@ -136,11 +138,20 @@ func writeFile(fileMgr OSFileManager, file File) error {
 		}
 	}()
 
-	if file.Type == TypeSecret {
-		if err := fileMgr.Chmod(f, secretFileMode); err != nil {
-			resultErr = fmt.Errorf("failed to set file mode for %q: %w", file.Path, err)
+	switch file.Type {
+	case TypeRegular:
+		if err := fileMgr.Chmod(f, regularFileMode); err != nil {
+			resultErr = fmt.Errorf(
+				"failed to set file mode to %#o for %q: %w", regularFileMode, file.Path, err)
 			return resultErr
 		}
+	case TypeSecret:
+		if err := fileMgr.Chmod(f, secretFileMode); err != nil {
+			resultErr = fmt.Errorf("failed to set file mode to %#o for %q: %w", secretFileMode, file.Path, err)
+			return resultErr
+		}
+	default:
+		panic(fmt.Sprintf("unknown file type %d", file.Type))
 	}
 
 	if err := fileMgr.Write(f, file.Content); err != nil {

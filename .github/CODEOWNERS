@@ -1,1 +1,3 @@
 * @nginxinc/nginx-gateway-fabric
+/site/ @nginxinc/nginx-gateway-fabric @nginxinc/nginx-docs
+/docs/ @nginxinc/nginx-gateway-fabric @nginxinc/nginx-docs

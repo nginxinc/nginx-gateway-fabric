@@ -361,13 +361,13 @@ Follow these steps to run the test:
 - Test the first match:
 
   ```console
-  ./wrk -t2 -c10 -d30 http://cafe.example.com -H "header-1: header-1-val"
+  wrk -t2 -c10 -d30 http://cafe.example.com -H "header-1: header-1-val"
   ```
 
 - Test the last match:
 
   ```console
-   ./wrk -t2 -c10 -d30 http://cafe.example.com -H "header-50: header-50-val"
+   wrk -t2 -c10 -d30 http://cafe.example.com -H "header-50: header-50-val"
   ```
 
 - Copy and paste the results into the results file.
@@ -472,3 +472,4 @@ Follow these steps to run the test:
 ### Results
 
 - [1.0.0](/tests/scale/results/1.0.0/1.0.0.md)
+- [1.1.0](/tests/scale/results/1.1.0/1.1.0.md)

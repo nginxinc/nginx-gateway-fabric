@@ -20,7 +20,7 @@ func TestExecute(t *testing.T) {
 func TestExecutePanics(t *testing.T) {
 	defer func() {
 		g := NewWithT(t)
-		g.Expect(recover()).ShouldNot(BeNil())
+		g.Expect(recover()).ToNot(BeNil())
 	}()
 
 	_ = execute(serversTemplate, "not-correct-data")
