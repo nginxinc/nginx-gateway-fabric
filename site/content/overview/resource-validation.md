@@ -1,11 +1,15 @@
 ---
-title: "Gateway API Resource Validation"
+title: "Resource Validation"
 weight: 800
 toc: true
 docs: "DOCS-000"
 ---
 
 ## Overview
+
+This document describes how NGINX Gateway Fabric validates Gateway API and NGINX Gateway Fabric Kubernetes resources.
+
+## Gateway API Resource Validation
 
 NGINX Gateway Fabric validates Gateway API resources for several reasons:
 
@@ -15,7 +19,7 @@ NGINX Gateway Fabric validates Gateway API resources for several reasons:
 
 The process involves four different steps, explained in detail in this document, with the goal of making sure that NGINX continues to handle traffic even if invalid Gateway API resources were created.
 
-## Step 1 - OpenAPI Scheme validation by Kubernetes API Server
+### Step 1 - OpenAPI Scheme validation by Kubernetes API Server
 
 The Kubernetes API server validates Gateway API resources against the OpenAPI schema embedded in the Gateway API CRDs. For example, if you create an HTTPRoute with an invalid hostname "cafe.!@#$%example.com", the API server will reject it with the following error:
 
@@ -29,7 +33,7 @@ The HTTPRoute "coffee" is invalid: spec.hostnames[0]: Invalid value: "cafe.!@#$%
 
 {{< note >}}While unlikely, bypassing this validation step is possible if the Gateway API CRDs are modified to remove the validation. If this happens, Step 4 will reject any invalid values (from NGINX perspective).{{< /note >}}
 
-## Step 2 - CEL or Webhook validation by Kubernetes
+### Step 2 - CEL or Webhook validation by Kubernetes
 
 - **Kubernetes 1.25 and later - CEL validation by Kubernetes API Server**
 
@@ -60,7 +64,7 @@ The HTTPRoute "coffee" is invalid: spec.hostnames[0]: Invalid value: "cafe.!@#$%
 
 {{< note >}}Bypassing this validation step is possible if the webhook is not running in the cluster. If this happens, Step 3 will reject the invalid values.{{< /note >}}
 
-## Step 3 - Webhook validation by NGINX Gateway Fabric
+### Step 3 - Webhook validation by NGINX Gateway Fabric
 
 To ensure that the resources are validated with the webhook validation rules, even if the webhook is not running, NGINX Gateway Fabric performs the same validation. However, NGINX Gateway Fabric performs the validation _after_ the Kubernetes API server accepts the resource.
 
@@ -80,7 +84,7 @@ Events:
 
 {{< note >}}This validation step always runs and cannot be bypassed. NGINX Gateway Fabric will ignore any resources that fail the webhook validation, like in the example above. If the resource previously existed, NGINX Gateway Fabric will remove any existing NGINX configuration for that resource.{{< /note >}}
 
-## Step 4 - Validation by NGINX Gateway Fabric
+### Step 4 - Validation by NGINX Gateway Fabric
 
 This step catches the following cases of invalid values:
 
@@ -117,7 +121,7 @@ Status:
 
 {{< note >}}This validation step always runs and cannot be bypassed.{{< /note >}}
 
-## Confirm validation
+### Confirm validation
 
 To confirm that a resource is valid and accepted by NGINX Gateway Fabric, check that the **Accepted** condition in the resource status has the Status field set to **True**. For example, in a status of a valid HTTPRoute, if NGINX Gateway Fabric accepts a parentRef, the status of that parentRef will look like this:
 
@@ -141,3 +145,62 @@ Status:
 ```
 
 {{< note>}}Make sure the reported observed generation is the same as the resource generation.{{< /note >}}
+
+## NGINX Gateway Fabric Resource Validation
+
+### Step 1 - OpenAPI Scheme validation by Kubernetes API Server
+
+The Kubernetes API server validates NGINX Gateway Fabric resources against the OpenAPI schema embedded in the NGINX Gateway Fabric CRDs. For example, if you create an NginxGateway with an invalid logging level, "some-level", the API server will reject it with the following error:
+
+```shell
+kubectl apply -f nginx-gateway-config.yaml
+```
+
+```text
+The NginxGateway "nginx-gateway-config" is invalid: spec.logging.level: Unsupported value: "some-level": supported values: "info", "debug", "error"
+```
+
+{{< note >}}While unlikely, bypassing this validation step is possible if the NGINX Gateway Fabric CRDs are modified to remove the validation. If this happens, Step 2 will report an error in the resource's status.{{< /note >}}
+
+### Step 2 - Validation by NGINX Gateway Fabric
+
+This step validates the settings in the NGINX Gateway Fabric CRDs and rejects invalid resources. The validation error is reported via the status and as an event. For example:
+
+```shell
+kubectl describe nginxgateways.gateway.nginx.org nginx-gateway-config
+```
+
+Status:
+
+```text
+...
+Status:
+  Conditions:
+    Last Transition Time:  2023-12-15T21:02:30Z
+    Message:               Failed to update control plane configuration: logging.level: Unsupported value: "some-level": supported values: "info", "debug", "error"
+    Observed Generation:   1
+    Reason:                Invalid
+    Status:                False
+    Type:                  Valid
+```
+
+Event:
+
+```text
+Warning  UpdateFailed  1s (x2 over 1s)  nginx-gateway-fabric-nginx  Failed to update control plane configuration: logging.level: Unsupported value: "some-level": supported values: "info", "debug", "error"
+```
+
+### Confirm validation
+
+To confirm that a resource is valid and accepted by NGINX Gateway Fabric, check that the **Valid** condition in the resource status has the Status field set to **True**. For example, the status of a valid NginxGateway will look like this:
+
+```text
+Status:
+  Conditions:
+    Last Transition Time:  2023-12-15T21:04:49Z
+    Message:               NginxGateway is valid
+    Observed Generation:   1
+    Reason:                Valid
+    Status:                True
+    Type:                  Valid
+```
