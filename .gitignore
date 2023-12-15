@@ -41,3 +41,6 @@ internal/mode/static/nginx/modules/coverage
 # Certs and keys
 *.crt
 *.key
+
+# Dotenv files
+**/*.env
