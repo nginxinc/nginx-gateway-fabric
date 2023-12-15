@@ -6,7 +6,12 @@ GW_API_VERSION ?= 1.0.0
 K8S_VERSION ?= latest ## Expected format: 1.24 (major.minor) or latest
 GW_SERVICE_TYPE=NodePort
 GW_SVC_GKE_INTERNAL=false
+GINKGO_LABEL=
 GINKGO_FLAGS=
+
+ifneq ($(GINKGO_LABEL),)
+    override GINKGO_FLAGS += -ginkgo.label-filter "$(GINKGO_LABEL)"
+endif
 
 .PHONY: help
 help: Makefile ## Display this help
@@ -45,5 +50,6 @@ create-and-setup-vm: ## Create and setup a GCP VM for tests
 create-vm-and-run-tests: create-and-setup-vm run-tests-on-vm ## Create and setup a GCP VM for tests and run the tests
 
 .PHONY: cleanup-vm
-cleanup-vm: ## Delete the test GCP VM
-	source utils/vars.env && gcloud compute instances delete ${VM_NAME} --project=${GKE_PROJECT} --zone=${GKE_CLUSTER_ZONE}
+cleanup-vm: ## Delete the test GCP VM and delete the firewall rule
+	source scripts/vars.env && gcloud compute instances delete $${VM_NAME} --project=$${GKE_PROJECT} --zone=$${GKE_CLUSTER_ZONE}
+	source scripts/vars.env && gcloud compute firewall-rules delete $${FIREWALL_RULE_NAME} --project=$${GKE_PROJECT}

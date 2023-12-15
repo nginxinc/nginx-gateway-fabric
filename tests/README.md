@@ -26,9 +26,9 @@ Directory structure is as follows:
 
 If running the tests on a VM (`make create-vm-and-run-tests` or `make run-tests-on-vm`):
 
-- A GKE cluster allowing network access from VMs in the same region
+- The [gcloud CLI](https://cloud.google.com/sdk/docs/install)
+- A GKE cluster allowing control plane network access from VMs in the same region
 - Access to GCP Service Account with Kubernetes admin permissions
-- SSH access to GCP VMs in the same region as your cluster
 
 **Note**: all commands in steps below are executed from the `tests` directory
 
@@ -61,7 +61,8 @@ test                           Run the system tests against your default k8s clu
 | K8S_VERSION         | latest                     | version of k8s that the tests are run on                       |
 | GW_SERVICE_TYPE     | NodePort                   | type of Service that should be created                         |
 | GW_SVC_GKE_INTERNAL | false                      | specifies if the LoadBalancer should be a GKE internal service |
-| GINKGO_FLAGS        | ""                         | ginkgo flags to pass to the go test command                    |
+| GINKGO_LABEL        | ""                         | name of the ginkgo label that will filter the tests to run     |
+| GINKGO_FLAGS        | ""                         | other ginkgo flags to pass to the go test command              |
 
 ## Step 1 - Create a Kubernetes cluster
 
@@ -97,13 +98,14 @@ make test TAG=$(whoami)
 
 ### 3b - Run the tests on a GKE cluster from a GCP VM
 
-This step only applies if you would like to run the tests from a GCP based VM. The VM should be created in the same
-zone as your GKE cluster, and requires a service account that has Kubernetes admin permissions. Additionally, you need
-ssh access to the VM and the VM needs to have network access to the Kubernetes control node.
+This step only applies if you would like to run the tests from a GCP based VM.
 
-Before running the below `make` command, populate the required env vars in `scripts/vars.env`.
+Before running the below `make` command, copy the `scripts/vars.env-example` file to `scripts/vars.env` and populate the
+required env vars. The `GKE_CLUSTER_ZONE` needs to be the zone of your GKE cluster, and `GKE_SVC_ACCOUNT` needs to be
+the name of a service account that has Kubernetes admin permissions.
 
-To create and setup the VM, and run the tests, run the following
+To create and setup the VM, including creating a firewall rule allowing SSH access from your local machine, and run the
+tests, run the following
 
 ```makefile
 make create-vm-and-run-tests
@@ -117,7 +119,22 @@ make run-tests-on-vm
 
 ### Common test amendments
 
-To run a specific test, you can "focus" it by adding the `F` prefix to the name. For example:
+To run all tests with the label "performance", use the GINKGO_LABEL variable:
+
+```makefile
+make test TAG=$(whoami) GINKGO_LABEL=performance
+```
+
+or to pass a specific flag, e.g. run a specific test, use the GINKGO_FLAGS variable:
+
+```makefile
+make test TAG=$(whoami) GINKGO_FLAGS='-ginkgo.focus "writes the system info to a results file"'
+```
+
+If you are running the tests in GCP, add your required label/ flags to `scripts/var.env`.
+
+You can also modify the tests code for a similar outcome. To run a specific test, you can "focus" it by adding the `F`
+prefix to the name. For example:
 
 ```go
 It("runs some test", func(){
@@ -151,22 +168,6 @@ XIt("runs some test", func(){
 })
 ```
 
-The same can be achieved by using Ginkgo flags. To run a specific test using flags, use the GINKGO_FLAGS variable, e.g.:
-
-```makefile
-make test TAG=$(whoami) GINKGO_FLAGS='-ginkgo.focus "writes the system info to a results file"'
-```
-
-or to run all tests with the label "performance":
-
-```makefile
-make test TAG=$(whoami) GINKGO_FLAGS='-ginkgo.label-filter "performance"'
-```
-
-If you are running the tests in GCP, add your required flags to `scripts/var.env`.
-You can also modify the test command in `scripts/remote-scripts/run-tests.sh` to set the GINKGO_FLAGS variable before
-running `make run-tests-on-vm`.
-
 For more information of filtering specs, see [the docs here](https://onsi.github.io/ginkgo/#filtering-specs).
 
 ## Step 4 - Cleanup
@@ -177,7 +178,7 @@ For more information of filtering specs, see [the docs here](https://onsi.github
     make delete-kind-cluster
     ```
 
-2. Delete the cloud VM, if required
+2. Delete the cloud VM and cleanup the firewall rule, if required
 
     ```makefile
     make cleanup-vm

@@ -5,6 +5,16 @@ PARENT_DIR=$(dirname "$SCRIPT_DIR")
 
 source scripts/vars.env
 
+gcloud compute firewall-rules create ${FIREWALL_RULE_NAME} \
+    --project=${GKE_PROJECT} \
+    --direction=INGRESS \
+    --priority=1000 \
+    --network=default \
+    --action=ALLOW \
+    --rules=tcp:22 \
+    --source-ranges=$(curl -sS -4 icanhazip.com)/32 \
+    --target-tags=${TAGS}
+
 gcloud compute instances create ${VM_NAME} --project=${GKE_PROJECT} --zone=${GKE_CLUSTER_ZONE} --machine-type=e2-medium \
     --network-interface=network-tier=PREMIUM,stack-type=IPV4_ONLY,subnet=default --maintenance-policy=MIGRATE \
     --provisioning-model=STANDARD --service-account=${GKE_SVC_ACCOUNT} \
