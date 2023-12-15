@@ -1412,21 +1412,13 @@ var _ = Describe("ChangeProcessor", func() {
 			})
 			When("a gateway changes its listener's labels", func() {
 				It("triggers an update when a namespace that matches the new labels is created", func() {
-					processor.CaptureUpsertChange(ns)
-					changed, _ := processor.Process()
-					Expect(changed).To(BeTrue())
-
-					processor.CaptureUpsertChange(nsDifferentLabels)
-					changed, _ = processor.Process()
-					Expect(changed).To(BeFalse())
-
 					gwChangedLabel := gw.DeepCopy()
 					gwChangedLabel.Spec.Listeners[0].AllowedRoutes.Namespaces.Selector.MatchLabels = map[string]string{
 						"oranges": "bananas",
 					}
 					gwChangedLabel.Generation++
 					processor.CaptureUpsertChange(gwChangedLabel)
-					changed, _ = processor.Process()
+					changed, _ := processor.Process()
 					Expect(changed).To(BeTrue())
 
 					// After changing the gateway's labels and generation, the processor should be marked to update
