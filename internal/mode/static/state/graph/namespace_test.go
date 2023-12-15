@@ -175,3 +175,46 @@ func TestBuildReferencedNamespaces(t *testing.T) {
 		})
 	}
 }
+
+func TestIsNamespaceReferenced(t *testing.T) {
+	tests := []struct {
+		ns   *v1.Namespace
+		gw   *Gateway
+		name string
+		exp  bool
+	}{
+		{
+			ns:   nil,
+			gw:   nil,
+			exp:  false,
+			name: "namespace and gateway are nil",
+		},
+		{
+			ns: &v1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "ns1",
+				},
+			},
+			gw:   nil,
+			exp:  false,
+			name: "namespace is valid but gateway is nil",
+		},
+		{
+			ns: nil,
+			gw: &Gateway{
+				Listeners: []*Listener{},
+				Valid:     true,
+			},
+			exp:  false,
+			name: "gateway is valid but namespace is nil",
+		},
+	}
+
+	// Other test cases should be covered by testing of BuildReferencedNamespaces
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			g := NewWithT(t)
+			g.Expect(isNamespaceReferenced(test.ns, test.gw)).To(Equal(test.exp))
+		})
+	}
+}
