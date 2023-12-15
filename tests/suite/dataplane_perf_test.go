@@ -10,7 +10,6 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	vegeta "github.com/tsenart/vegeta/v12/lib"
 	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -34,24 +33,24 @@ var _ = Describe("Dataplane performance", Ordered, Label("performance"), func() 
 	targetURL := "http://cafe.example.com"
 	var outFile *os.File
 
-	t1 := vegeta.Target{
+	t1 := framework.Target{
 		Method: "GET",
 		URL:    fmt.Sprintf("%s%s", targetURL, "/latte"),
 	}
-	t2 := vegeta.Target{
+	t2 := framework.Target{
 		Method: "GET",
 		URL:    fmt.Sprintf("%s%s", targetURL, "/coffee"),
 		Header: http.Header{"version": []string{"v2"}},
 	}
-	t3 := vegeta.Target{
+	t3 := framework.Target{
 		Method: "GET",
 		URL:    fmt.Sprintf("%s%s", targetURL, "/coffee?TEST=v2"),
 	}
-	t4 := vegeta.Target{
+	t4 := framework.Target{
 		Method: "GET",
 		URL:    fmt.Sprintf("%s%s", targetURL, "/tea"),
 	}
-	t5 := vegeta.Target{
+	t5 := framework.Target{
 		Method: "POST",
 		URL:    fmt.Sprintf("%s%s", targetURL, "/tea"),
 	}
@@ -78,13 +77,13 @@ var _ = Describe("Dataplane performance", Ordered, Label("performance"), func() 
 		Expect(framework.WriteSystemInfoToFile(outFile, clusterInfo)).To(Succeed())
 	})
 
-	DescribeTable("Run each vegeta test",
-		func(target vegeta.Target, description string, counter int) {
+	DescribeTable("Run each load test",
+		func(target framework.Target, description string, counter int) {
 			text := fmt.Sprintf("\n## Test%d: %s\n\n```text\n", counter, description)
 			_, err := fmt.Fprint(outFile, text)
 			Expect(err).To(BeNil())
 			Expect(framework.RunLoadTest(
-				[]vegeta.Target{target},
+				[]framework.Target{target},
 				1000,
 				30*time.Second,
 				description,

@@ -328,6 +328,7 @@ func (rm *ResourceManager) waitForRoutesToBeReady(ctx context.Context, namespace
 func (rm *ResourceManager) GetLBIPAddress(namespace string) (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), rm.TimeoutConfig.CreateTimeout)
 	defer cancel()
+
 	var serviceList core.ServiceList
 	var address string
 	if err := rm.K8sClient.List(ctx, &serviceList, client.InNamespace(namespace)); err != nil {
@@ -339,7 +340,7 @@ func (rm *ResourceManager) GetLBIPAddress(namespace string) (string, error) {
 		if svc.Spec.Type == core.ServiceTypeLoadBalancer {
 			nsName = types.NamespacedName{Namespace: svc.GetNamespace(), Name: svc.GetName()}
 			if err := rm.waitForLBStatusToBeReady(ctx, nsName); err != nil {
-				return "", fmt.Errorf("Error getting status from LoadBalancer service: %w", err)
+				return "", fmt.Errorf("error getting status from LoadBalancer service: %w", err)
 			}
 		}
 	}
@@ -348,7 +349,7 @@ func (rm *ResourceManager) GetLBIPAddress(namespace string) (string, error) {
 		var lbService core.Service
 
 		if err := rm.K8sClient.Get(ctx, nsName, &lbService); err != nil {
-			return "", fmt.Errorf("Error getting LoadBalancer service: %w", err)
+			return "", fmt.Errorf("error getting LoadBalancer service: %w", err)
 		}
 		if lbService.Status.LoadBalancer.Ingress[0].IP != "" {
 			address = lbService.Status.LoadBalancer.Ingress[0].IP
@@ -383,6 +384,7 @@ func (rm *ResourceManager) waitForLBStatusToBeReady(ctx context.Context, svcNsNa
 func (rm *ResourceManager) GetClusterInfo() (ClusterInfo, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), rm.TimeoutConfig.GetTimeout)
 	defer cancel()
+
 	var nodes core.NodeList
 	ci := &ClusterInfo{}
 	if err := rm.K8sClient.List(ctx, &nodes); err != nil {
