@@ -44,6 +44,8 @@ type Graph struct {
 	// in the cluster. We need such entries so that we can query the Graph to determine if a Secret is referenced
 	// by the Gateway, including the case when the Secret is newly created.
 	ReferencedSecrets map[types.NamespacedName]*Secret
+	// ReferencedNamespaces includes Namespaces with labels that match the Gateway Listener's label selector.
+	ReferencedNamespaces map[types.NamespacedName]*v1.Namespace
 }
 
 // ProtectedPorts are the ports that may not be configured by a listener with a descriptive name of each port.
@@ -51,15 +53,31 @@ type ProtectedPorts map[int32]string
 
 // IsReferenced returns true if the Graph references the resource.
 func (g *Graph) IsReferenced(resourceType client.Object, nsname types.NamespacedName) bool {
-	// FIMXE(pleshakov): For now, only works with Secrets.
-	// Support EndpointSlices and Namespaces so that we can remove relationship.Capturer and use the Graph
+	// FIMXE(bjee19): For now, only works with Secrets and Namespaces.
+	// Support EndpointSlices so that we can remove relationship.Capturer and use the Graph
 	// as source to determine the relationships.
 	// See https://github.com/nginxinc/nginx-gateway-fabric/issues/824
 
-	switch resourceType.(type) {
+	switch obj := resourceType.(type) {
 	case *v1.Secret:
 		_, exists := g.ReferencedSecrets[nsname]
 		return exists
+	case *v1.Namespace:
+		// `existed` is needed as it checks the graph's ReferencedNamespaces which stores all the namespaces that
+		// match the Gateway listener's label selector when the graph was created. This covers the case when
+		// a Namespace changes its label so it no longer matches a Gateway listener's label selector, but because
+		// it was in the graph's ReferencedNamespaces we know that the Graph did reference the Namespace.
+		//
+		// However, if there is a Namespace which changes its label (previously it did not match) to match a Gateway
+		// listener's label selector, it will not be in the current graph's ReferencedNamespaces until it is rebuilt
+		// and thus not be caught in `existed`. Therefore, we need `exists` to check the graph's Gateway and see if the
+		// new Namespace actually matches any of the Gateway listener's label selector.
+		//
+		// `exists` does not cover the case highlighted above by `existed` and vice versa so both are needed.
+
+		_, existed := g.ReferencedNamespaces[nsname]
+		exists := isNamespaceReferenced(obj, g.Gateway)
+		return existed || exists
 	default:
 		return false
 	}
@@ -92,6 +110,8 @@ func BuildGraph(
 	bindRoutesToListeners(routes, gw, state.Namespaces)
 	addBackendRefsToRouteRules(routes, refGrantResolver, state.Services)
 
+	referencedNamespaces := buildReferencedNamespaces(state.Namespaces, gw)
+
 	g := &Graph{
 		GatewayClass:          gc,
 		Gateway:               gw,
@@ -99,6 +119,7 @@ func BuildGraph(
 		IgnoredGatewayClasses: processedGwClasses.Ignored,
 		IgnoredGateways:       processedGws.Ignored,
 		ReferencedSecrets:     secretResolver.getResolvedSecrets(),
+		ReferencedNamespaces:  referencedNamespaces,
 	}
 
 	return g
