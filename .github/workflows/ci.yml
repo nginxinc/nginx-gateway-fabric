@@ -98,6 +98,7 @@ jobs:
     permissions:
       contents: write # for goreleaser/goreleaser-action and lucacome/draft-release to create/update releases
       id-token: write # for goreleaser/goreleaser-action to sign artifacts
+      issues: write # for goreleaser/goreleaser-action to close milestone
     steps:
       - name: Checkout Repository
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
