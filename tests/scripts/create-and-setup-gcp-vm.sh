@@ -12,14 +12,14 @@ gcloud compute firewall-rules create ${FIREWALL_RULE_NAME} \
     --network=default \
     --action=ALLOW \
     --rules=tcp:22 \
-    --source-ranges=$(curl -sS -4 icanhazip.com)/32 \
-    --target-tags=${TAGS}
+    --source-ranges=${SOURCE_IP_RANGE} \
+    --target-tags=${NETWORK_TAGS}
 
 gcloud compute instances create ${VM_NAME} --project=${GKE_PROJECT} --zone=${GKE_CLUSTER_ZONE} --machine-type=e2-medium \
     --network-interface=network-tier=PREMIUM,stack-type=IPV4_ONLY,subnet=default --maintenance-policy=MIGRATE \
     --provisioning-model=STANDARD --service-account=${GKE_SVC_ACCOUNT} \
     --scopes=https://www.googleapis.com/auth/devstorage.read_only,https://www.googleapis.com/auth/logging.write,https://www.googleapis.com/auth/monitoring.write,https://www.googleapis.com/auth/servicecontrol,https://www.googleapis.com/auth/service.management.readonly,https://www.googleapis.com/auth/trace.append,https://www.googleapis.com/auth/cloud-platform \
-    --tags=${TAGS} --create-disk=auto-delete=yes,boot=yes,device-name=${VM_NAME},image=${IMAGE},mode=rw,size=10 --no-shielded-secure-boot --shielded-vtpm --shielded-integrity-monitoring --labels=goog-ec-src=vm_add-gcloud --reservation-affinity=any
+    --tags=${NETWORK_TAGS} --create-disk=auto-delete=yes,boot=yes,device-name=${VM_NAME},image=${IMAGE},mode=rw,size=10 --no-shielded-secure-boot --shielded-vtpm --shielded-integrity-monitoring --labels=goog-ec-src=vm_add-gcloud --reservation-affinity=any
 
 # Poll for SSH connectivity
 MAX_RETRIES=30

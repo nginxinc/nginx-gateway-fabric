@@ -51,5 +51,4 @@ create-vm-and-run-tests: create-and-setup-vm run-tests-on-vm ## Create and setup
 
 .PHONY: cleanup-vm
 cleanup-vm: ## Delete the test GCP VM and delete the firewall rule
-	source scripts/vars.env && gcloud compute instances delete $${VM_NAME} --project=$${GKE_PROJECT} --zone=$${GKE_CLUSTER_ZONE}
-	source scripts/vars.env && gcloud compute firewall-rules delete $${FIREWALL_RULE_NAME} --project=$${GKE_PROJECT}
+	bash scripts/cleanup-vm.sh

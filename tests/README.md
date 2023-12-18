@@ -38,7 +38,7 @@ make
 
 ```text
 build-images                   Build NGF and NGINX images
-cleanup-vm                     Delete the test GCP VM
+cleanup-vm                     Delete the test GCP VM and the firewall rule
 create-and-setup-vm            Create and setup a GCP VM for tests
 create-kind-cluster            Create a kind cluster
 create-vm-and-run-tests        Create and setup a GCP VM for tests and run the tests

@@ -71,9 +71,6 @@ var _ = Describe("Dataplane performance", Ordered, Label("performance"), func() 
 		Expect(resourceManager.WaitForAppsToBeReady(ns.Name)).To(Succeed())
 		outFile, err = os.OpenFile(resultsFilePath, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0o777)
 		Expect(err).To(BeNil())
-	})
-
-	It("writes the system info to a results file", func() {
 		Expect(framework.WriteSystemInfoToFile(outFile, clusterInfo)).To(Succeed())
 	})
 
