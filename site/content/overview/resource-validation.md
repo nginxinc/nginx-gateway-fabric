@@ -164,7 +164,7 @@ The NginxGateway "nginx-gateway-config" is invalid: spec.logging.level: Unsuppor
 
 ### Step 2 - Validation by NGINX Gateway Fabric
 
-This step validates the settings in the NGINX Gateway Fabric CRDs and rejects invalid resources. The validation error is reported via the status and as an event. For example:
+This step validates the settings in the NGINX Gateway Fabric CRDs and rejects invalid resources. The validation error is reported via the status and as an Event. For example:
 
 ```shell
 kubectl describe nginxgateways.gateway.nginx.org nginx-gateway-config
