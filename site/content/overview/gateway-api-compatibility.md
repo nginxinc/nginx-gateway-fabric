@@ -43,6 +43,18 @@ Each resource below includes the support status of their corresponding fields.
 
 For a description of each field, visit the [Gateway API documentation](https://gateway-api.sigs.k8s.io/references/spec/).
 
+### GatewayClass
+
+{{< bootstrap-table "table table-striped table-bordered" >}}
+| Resource                            | Core Support Level | Extended Support Level | Implementation-Specific Support Level | API Version |
+|-------------------------------------|--------------------|------------------------|---------------------------------------|-------------|
+| GatewayClass   | Supported          | Not supported       | Not supported          | v1          |
+{{< /bootstrap-table >}}
+
+NGINX Gateway Fabric supports a single GatewayClass resource configured with the `--gatewayclass` flag of the [static-mode]({{< relref "/reference/cli-help.md#static-mode">}}) command.
+
+**Fields**:
+
 - `spec`
   - `controllerName` - supported.
   - `parametersRef` - not supported.
@@ -117,30 +129,6 @@ See the [static-mode]({{< relref "/reference/cli-help.md#static-mode">}}) comman
       - `ResolvedRefs/False/InvalidRouteKinds`
       - `Conflicted/True/ProtocolConflict`
       - `Conflicted/False/NoConflicts`
-
----
-
-### GatewayClass
-
-{{< bootstrap-table "table table-striped table-bordered" >}}
-| Resource                            | Core Support Level | Extended Support Level | Implementation-Specific Support Level | API Version |
-|-------------------------------------|--------------------|------------------------|---------------------------------------|-------------|
-| GatewayClass   | Supported          | Not supported       | Not supported          | v1          |
-{{< /bootstrap-table >}}
-
-NGINX Gateway Fabric supports a single GatewayClass resource configured with the `--gatewayclass` flag of the [static-mode]({{< relref "/reference/cli-help.md#static-mode">}}) command.
-
-**Fields**:
-
-- `spec`
-  - `controllerName`: Supported.
-  - `parametersRef`: Not supported.
-  - `description`: Supported.
-- `status`
-  - `conditions` - Supported (Condition/Status/Reason):
-    - `Accepted/True/Accepted`
-    - `Accepted/False/InvalidParameters`
-    - `Accepted/False/GatewayClassConflict`: Custom status for when GatewayClass references this controller, but a different GatewayClass name is provided to the controller via the command-line argument.
 
 ---
 
