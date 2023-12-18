@@ -21,6 +21,15 @@ gcloud compute instances create ${VM_NAME} --project=${GKE_PROJECT} --zone=${GKE
     --scopes=https://www.googleapis.com/auth/devstorage.read_only,https://www.googleapis.com/auth/logging.write,https://www.googleapis.com/auth/monitoring.write,https://www.googleapis.com/auth/servicecontrol,https://www.googleapis.com/auth/service.management.readonly,https://www.googleapis.com/auth/trace.append,https://www.googleapis.com/auth/cloud-platform \
     --tags=${NETWORK_TAGS} --create-disk=auto-delete=yes,boot=yes,device-name=${VM_NAME},image=${IMAGE},mode=rw,size=10 --no-shielded-secure-boot --shielded-vtpm --shielded-integrity-monitoring --labels=goog-ec-src=vm_add-gcloud --reservation-affinity=any
 
+# Add VM IP to GKE master control node access, if required
+if [ "${ADD_VM_IP_AUTH_NETWORKS}" = "true" ]; then
+    EXTERNAL_IP=$(gcloud compute instances describe ${VM_NAME} --project=${GKE_PROJECT} --zone=${GKE_CLUSTER_ZONE} \
+                    --format='value(networkInterfaces[0].accessConfigs[0].natIP)')
+    CURRENT_AUTH_NETWORK=$(gcloud container clusters describe ${GKE_CLUSTER_NAME} \
+                            --format="value(masterAuthorizedNetworksConfig.cidrBlocks[0])" | sed 's/cidrBlock=//')
+    gcloud container clusters update ${GKE_CLUSTER_NAME} --enable-master-authorized-networks --master-authorized-networks=${CURRENT_AUTH_NETWORK},${EXTERNAL_IP}/32
+fi
+
 # Poll for SSH connectivity
 MAX_RETRIES=30
 RETRY_INTERVAL=10

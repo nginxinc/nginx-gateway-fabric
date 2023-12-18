@@ -27,7 +27,7 @@ Directory structure is as follows:
 If running the tests on a VM (`make create-vm-and-run-tests` or `make run-tests-on-vm`):
 
 - The [gcloud CLI](https://cloud.google.com/sdk/docs/install)
-- A GKE cluster allowing control plane network access from VMs in the same region
+- A GKE cluster (if `master-authorized-networks` is enabled, please set `ADD_VM_IP_AUTH_NETWORKS=true` in your vars.env file)
 - Access to GCP Service Account with Kubernetes admin permissions
 
 **Note**: all commands in steps below are executed from the `tests` directory
@@ -104,8 +104,9 @@ Before running the below `make` command, copy the `scripts/vars.env-example` fil
 required env vars. The `GKE_CLUSTER_ZONE` needs to be the zone of your GKE cluster, and `GKE_SVC_ACCOUNT` needs to be
 the name of a service account that has Kubernetes admin permissions.
 
-To create and setup the VM, including creating a firewall rule allowing SSH access from your local machine, and run the
-tests, run the following
+To create and setup the VM (including creating a firewall rule allowing SSH access from your local machine, and
+optionally adding the VM IP to the `master-authorized-networks` list of your GKE cluster if
+`ADD_VM_IP_AUTH_NETWORKS` is set to `true`) and run the tests, run the following
 
 ```makefile
 make create-vm-and-run-tests
