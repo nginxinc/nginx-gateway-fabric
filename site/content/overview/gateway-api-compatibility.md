@@ -11,8 +11,8 @@ docs: "DOCS-000"
 {{< bootstrap-table "table table-striped table-bordered" >}}
 | Resource                            | Core Support Level | Extended Support Level | Implementation-Specific Support Level | API Version |
 |-------------------------------------|--------------------|------------------------|---------------------------------------|-------------|
-| [Gateway](#gateway)                 | Supported          | Not supported          | Not supported                         | v1          |
 | [GatewayClass](#gatewayclass)       | Supported          | Not supported          | Not supported                         | v1          |
+| [Gateway](#gateway)                 | Supported          | Not supported          | Not supported                         | v1          |
 | [HTTPRoute](#httproute)             | Supported          | Partially supported    | Not supported                         | v1          |
 | [ReferenceGrant](#referencegrant)   | Supported          | N/A                    | Not supported                         | v1beta1     |
 | [TLSRoute](#tlsroute)               | Not supported      | Not supported          | Not supported                         | N/A         |
