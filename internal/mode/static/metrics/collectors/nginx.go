@@ -24,35 +24,16 @@ const (
 )
 
 var (
-	upstreamServerVariableLabels = []string{
-		"service", "resource_type", "resource_name", "resource_namespace",
-	}
-	upstreamServerPeerVariableLabelNames = []string{"pod_name"}
-	streamUpstreamServerVariableLabels   = []string{
-		"service", "resource_type", "resource_name", "resource_namespace",
-	}
-	streamUpstreamServerPeerVariableLabelNames = []string{"pod_name"}
-	serverZoneVariableLabels                   = []string{"resource_type", "resource_name", "resource_namespace"}
-	streamServerZoneVariableLabels             = []string{"resource_type", "resource_name", "resource_namespace"}
+	upstreamServerVariableLabels               = []string{}
+	upstreamServerPeerVariableLabelNames       = []string{}
+	streamUpstreamServerVariableLabels         = []string{}
+	streamUpstreamServerPeerVariableLabelNames = []string{}
+	serverZoneVariableLabels                   = []string{}
+	streamServerZoneVariableLabels             = []string{}
 )
 
 // NewNginxMetricsCollector creates an NginxCollector which fetches stats from NGINX over a unix socket
-func NewNginxMetricsCollector(constLabels map[string]string, isPlus bool) (prometheus.Collector, error) {
-	if isPlus {
-		plusClient, err := createPlusClient()
-		if err != nil {
-			return nil, err
-		}
-		variableLabelNames := nginxCollector.NewVariableLabelNames(
-			upstreamServerVariableLabels,
-			serverZoneVariableLabels,
-			upstreamServerPeerVariableLabelNames,
-			streamUpstreamServerVariableLabels,
-			streamServerZoneVariableLabels,
-			streamUpstreamServerPeerVariableLabelNames,
-		)
-		return nginxCollector.NewNginxPlusCollector(plusClient, metrics.Namespace, variableLabelNames, constLabels), nil
-	}
+func NewNginxMetricsCollector(constLabels map[string]string) (prometheus.Collector, error) {
 	httpClient := getSocketClient(nginxStatusSock)
 
 	client, err := prometheusClient.NewNginxClient(&httpClient, nginxStatusURI)
@@ -60,6 +41,23 @@ func NewNginxMetricsCollector(constLabels map[string]string, isPlus bool) (prome
 		return nil, err
 	}
 	return nginxCollector.NewNginxCollector(client, metrics.Namespace, constLabels), nil
+}
+
+// NewNginxMetricsCollector creates an NginxCollector which fetches stats from NGINX over a unix socket
+func NewNginxPlusMetricsCollector(constLabels map[string]string) (prometheus.Collector, error) {
+	plusClient, err := createPlusClient()
+	if err != nil {
+		return nil, err
+	}
+	variableLabelNames := nginxCollector.NewVariableLabelNames(
+		upstreamServerVariableLabels,
+		serverZoneVariableLabels,
+		upstreamServerPeerVariableLabelNames,
+		streamUpstreamServerVariableLabels,
+		streamServerZoneVariableLabels,
+		streamUpstreamServerPeerVariableLabelNames,
+	)
+	return nginxCollector.NewNginxPlusCollector(plusClient, metrics.Namespace, variableLabelNames, constLabels), nil
 }
 
 // getSocketClient gets an http.Client with a unix socket transport.
@@ -80,7 +78,7 @@ func createPlusClient() (*client.NginxClient, error) {
 	httpClient := getSocketClient(nginxPlusAPISock)
 	plusClient, err = client.NewNginxClient(&httpClient, nginxPlusAPIURI)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to create NginxClient for Plus: %w", err)
+		return nil, fmt.Errorf("failed to create NginxClient for Plus: %w", err)
 	}
 	return plusClient, nil
 }

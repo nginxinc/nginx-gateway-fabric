@@ -90,9 +90,9 @@ For enhanced security with HTTPS:
 
 NGINX Gateway Fabric provides a variety of metrics to assist in monitoring and analyzing performance. These metrics are categorized as follows:
 
-### NGINX/ NGINX Plus metrics
+### NGINX/NGINX Plus metrics
 
-NGINX metrics, essential for monitoring specific NGINX operations, include details like the total number of accepted client connections. For a complete list of available NGINX/ NGINX Plus metrics, refer to the [NGINX Prometheus Exporter developer docs](https://github.com/nginxinc/nginx-prometheus-exporter#exported-metrics).
+NGINX metrics, essential for monitoring specific NGINX operations, include details like the total number of accepted client connections. For a complete list of available NGINX/NGINX Plus metrics, refer to the [NGINX Prometheus Exporter developer docs](https://github.com/nginxinc/nginx-prometheus-exporter#exported-metrics).
 
 These metrics use  the `nginx_gateway_fabric` namespace and include the `class` label, indicating the NGINX Gateway class. For example, `nginx_gateway_fabric_connections_accepted{class="nginx"}`.
 

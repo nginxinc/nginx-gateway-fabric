@@ -31,7 +31,7 @@ spec:
         - --gatewayclass={{ .Values.nginxGateway.gatewayClassName }}
         - --config={{ include "nginx-gateway.config-name" . }}
         - --service={{ include "nginx-gateway.fullname" . }}
-        {{- if .Values.nginx.isPlus }}
+        {{- if .Values.nginx.plus }}
         - --nginx-plus
         {{- end }}
         {{- if .Values.metrics.enable }}

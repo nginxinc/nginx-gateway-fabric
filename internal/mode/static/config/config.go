@@ -26,8 +26,8 @@ type Config struct {
 	LeaderElection LeaderElection
 	// UpdateGatewayClassStatus enables updating the status of the GatewayClass resource.
 	UpdateGatewayClassStatus bool
-	// PlusEnabled indicates whether NGINX Plus is being used.
-	PlusEnabled bool
+	// Plus indicates whether NGINX Plus is being used.
+	Plus bool
 	// MetricsConfig specifies the metrics config.
 	MetricsConfig MetricsConfig
 	// HealthConfig specifies the health probe config.

@@ -59,7 +59,7 @@ nginx:
     pullPolicy: Always
 
   ## Is NGINX Plus image being used
-  isPlus: false
+  plus: false
 
   ## The lifecycle of the nginx container.
   lifecycle: {}

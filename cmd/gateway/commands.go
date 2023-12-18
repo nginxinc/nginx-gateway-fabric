@@ -55,7 +55,7 @@ func createStaticModeCommand() *cobra.Command {
 		healthPortFlag             = "health-port"
 		leaderElectionDisableFlag  = "leader-election-disable"
 		leaderElectionLockNameFlag = "leader-election-lock-name"
-		isPlusFlag                 = "nginx-plus"
+		plusFlag                   = "nginx-plus"
 	)
 
 	// flag values
@@ -94,7 +94,7 @@ func createStaticModeCommand() *cobra.Command {
 			value:     "nginx-gateway-leader-election-lock",
 		}
 
-		isPlus bool
+		plus bool
 	)
 
 	cmd := &cobra.Command{
@@ -163,7 +163,7 @@ func createStaticModeCommand() *cobra.Command {
 					LockName: leaderElectionLockName.String(),
 					Identity: podName,
 				},
-				PlusEnabled: isPlus,
+				Plus: plus,
 			}
 
 			if err := static.StartManager(conf); err != nil {
@@ -271,8 +271,8 @@ func createStaticModeCommand() *cobra.Command {
 	)
 
 	cmd.Flags().BoolVar(
-		&isPlus,
-		isPlusFlag,
+		&plus,
+		plusFlag,
 		false,
 		"Use NGINX Plus",
 	)

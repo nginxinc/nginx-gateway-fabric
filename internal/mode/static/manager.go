@@ -63,6 +63,7 @@ func init() {
 	utilruntime.Must(apiext.AddToScheme(scheme))
 }
 
+// nolint:gocyclo
 func StartManager(cfg config.Config) error {
 	options := manager.Options{
 		Scheme:  scheme,
@@ -147,7 +148,12 @@ func StartManager(cfg config.Config) error {
 
 	if cfg.MetricsConfig.Enabled {
 		constLabels := map[string]string{"class": cfg.GatewayClassName}
-		ngxCollector, err := collectors.NewNginxMetricsCollector(constLabels, cfg.PlusEnabled)
+		var ngxCollector prometheus.Collector
+		if cfg.Plus {
+			ngxCollector, err = collectors.NewNginxPlusMetricsCollector(constLabels)
+		} else {
+			ngxCollector, err = collectors.NewNginxMetricsCollector(constLabels)
+		}
 		if err != nil {
 			return fmt.Errorf("cannot create nginx metrics collector: %w", err)
 		}
