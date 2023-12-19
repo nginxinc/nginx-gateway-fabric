@@ -23,15 +23,6 @@ const (
 	nginxStatusSockTimeout = 10 * time.Second
 )
 
-var (
-	upstreamServerVariableLabels               = []string{}
-	upstreamServerPeerVariableLabelNames       = []string{}
-	streamUpstreamServerVariableLabels         = []string{}
-	streamUpstreamServerPeerVariableLabelNames = []string{}
-	serverZoneVariableLabels                   = []string{}
-	streamServerZoneVariableLabels             = []string{}
-)
-
 // NewNginxMetricsCollector creates an NginxCollector which fetches stats from NGINX over a unix socket
 func NewNginxMetricsCollector(constLabels map[string]string) (prometheus.Collector, error) {
 	httpClient := getSocketClient(nginxStatusSock)
@@ -43,20 +34,13 @@ func NewNginxMetricsCollector(constLabels map[string]string) (prometheus.Collect
 	return nginxCollector.NewNginxCollector(client, metrics.Namespace, constLabels), nil
 }
 
-// NewNginxMetricsCollector creates an NginxCollector which fetches stats from NGINX over a unix socket
+// NewNginxPlusMetricsCollector creates an NginxCollector which fetches stats from NGINX Plus API over a unix socket
 func NewNginxPlusMetricsCollector(constLabels map[string]string) (prometheus.Collector, error) {
 	plusClient, err := createPlusClient()
 	if err != nil {
 		return nil, err
 	}
-	variableLabelNames := nginxCollector.NewVariableLabelNames(
-		upstreamServerVariableLabels,
-		serverZoneVariableLabels,
-		upstreamServerPeerVariableLabelNames,
-		streamUpstreamServerVariableLabels,
-		streamServerZoneVariableLabels,
-		streamUpstreamServerPeerVariableLabelNames,
-	)
+	variableLabelNames := nginxCollector.VariableLabelNames{}
 	return nginxCollector.NewNginxPlusCollector(plusClient, metrics.Namespace, variableLabelNames, constLabels), nil
 }
 
