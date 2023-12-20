@@ -11,6 +11,7 @@ Follow these steps to set up your development environment.
 1. Install:
     - [Go](https://golang.org/doc/install) v1.21.0+
     - [Docker](https://docs.docker.com/get-docker/) v18.09+
+    - [Kubectl](https://kubernetes.io/docs/tasks/tools/#kubectl)
     - [Kind](https://kind.sigs.k8s.io/docs/user/quick-start/)
     - [Helm](https://helm.sh/docs/intro/quickstart/#install-helm)
     - [git](https://git-scm.com/)
