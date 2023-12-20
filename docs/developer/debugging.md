@@ -12,22 +12,22 @@ using your IDE.
    make create-kind-cluster
    ```
 
-- Install NGF with the debug images on your kind cluster:
+- Build debug images and install NGF on your kind cluster:
 
-  **For x86:**
+  - **For NGINX OSS:**
 
-  ```console
-  make debug-install-local-build
-  ```
+    ```console
+    make GOARCH=$GOARCH debug-install-local-build
+    ```
 
-  **For ARM64:**
+  - **For NGINX Plus:**
 
-  ```console
-  make GOARCH=arm64 debug-install-local-build
-  ```
+    ```console
+    make GOARCH=$GOARCH debug-install-local-build-with-plus
+    ```
 
-  > Note: If you try and debug an amd64 container on ARM you will see the following error in the dlv container logs: `could not attach to pid <pid>: function not implemented`.
-  > This is a known issue and the only workaround is to create an arm64 image by specifying `GOARCH=arm64` shown in the above command.
+  > Note: The default value of GOARCH in the [Makefile](/Makefile) is `amd64`. If you try and debug an amd64 container on an ARM machine you will see the following error in the dlv container logs: `could not attach to pid <pid>: function not implemented`.
+  > This is a known issue and the only workaround is to create an arm64 image by specifying `GOARCH=arm64` the above commands.
   > For more information, see this [issue](https://github.com/docker/for-mac/issues/5191)
 
 - Start kubectl proxy in the background:

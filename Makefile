@@ -153,13 +153,25 @@ lint-helm: ## Run the helm chart linter
 load-images: ## Load NGF and NGINX images on configured kind cluster.
 	kind load docker-image $(PREFIX):$(TAG) $(NGINX_PREFIX):$(TAG)
 
+.PHONY: load-images-with-plus
+load-images-with-plus: ## Load NGF and NGINX Plus images on configured kind cluster.
+	kind load docker-image $(PREFIX):$(TAG) $(NGINX_PLUS_PREFIX):$(TAG)
+
 .PHONY: install-ngf-local-build
 install-ngf-local-build: build-images load-images helm-install-local ## Install NGF from local build on configured kind cluster.
 
+.PHONY: install-ngf-local-build
+install-ngf-local-build-with-plus: build-images-with-plus load-images-with-plus helm-install-local-with-plus ## Install NGF with NGINX Plus from local build on configured kind cluster.
+
 .PHONY: helm-install-local
-helm-install-local: ## Helm install NGF on configured kind cluster with local images. To build, load, and install with helm run make install-ngf-local-build
+helm-install-local: ## Helm install NGF on configured kind cluster with local images. To build, load, and install with helm run make install-ngf-local-build.
 	./conformance/scripts/install-gateway.sh $(GW_API_VERSION) $(INSTALL_WEBHOOK)
 	helm install dev ./deploy/helm-chart --create-namespace --wait --set service.type=NodePort --set nginxGateway.image.repository=$(PREFIX) --set nginxGateway.image.tag=$(TAG) --set nginxGateway.image.pullPolicy=Never --set nginx.image.repository=$(NGINX_PREFIX) --set nginx.image.tag=$(TAG) --set nginx.image.pullPolicy=Never -n nginx-gateway
+
+.PHONY: helm-install-local
+helm-install-local-with-plus: ## Helm install NGF with NGINX Plus on configured kind cluster with local images. To build, load, and install with helm run make install-ngf-local-build-with-plus.
+	./conformance/scripts/install-gateway.sh $(GW_API_VERSION) $(INSTALL_WEBHOOK)
+	helm install dev ./deploy/helm-chart --create-namespace --wait --set service.type=NodePort --set nginxGateway.image.repository=$(PREFIX) --set nginxGateway.image.tag=$(TAG) --set nginxGateway.image.pullPolicy=Never --set nginx.image.repository=$(NGINX_PLUS_PREFIX) --set nginx.image.tag=$(TAG) --set nginx.image.pullPolicy=Never --set nginx.plus=true -n nginx-gateway
 
 # Debug Targets
 .PHONY: debug-build
@@ -174,12 +186,22 @@ debug-build-dlv-image: check-for-docker
 .PHONY: debug-build-images
 debug-build-images: debug-build build-ngf-image build-nginx-image debug-build-dlv-image ## Build all images used in debugging.
 
+.PHONY: debug-build-images-with-plus
+debug-build-images-with-plus: debug-build build-ngf-image build-nginx-plus-image debug-build-dlv-image ## Build all images with NGINX plus used in debugging.
+
 .PHONY: debug-load-images
 debug-load-images: load-images ## Load all images used in debugging to kind cluster.
 	kind load docker-image dlv-debug:edge
 
+.PHONY: debug-load-images-with-plus
+debug-load-images-with-plus: load-images-with-plus ## Load all images with NGINX Plus used in debugging to kind cluster.
+	kind load docker-image dlv-debug:edge
+
 .PHONY: debug-install-local-build
-debug-install-local-build: debug-build-images debug-load-images helm-install-local ## Install NGF from local build using debug NGF binary on configured kind cluster
+debug-install-local-build: debug-build-images debug-load-images helm-install-local ## Install NGF from local build using debug NGF binary on configured kind cluster.
+
+.PHONY: debug-install-local-build-with-plus
+debug-install-local-build-with-plus: debug-build-images-with-plus debug-load-images-with-plus helm-install-local-with-plus ## Install NGF with NGINX Plus from local build using debug NGF binary on configured kind cluster.
 
 .PHONY: dev-all
 dev-all: deps fmt njs-fmt vet lint unit-test njs-unit-test ## Run all the development checks
