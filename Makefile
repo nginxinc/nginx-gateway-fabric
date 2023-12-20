@@ -9,6 +9,7 @@ NJS_DIR = internal/mode/static/nginx/modules/src
 NGINX_DOCKER_BUILD_PLUS_ARGS = --secret id=nginx-repo.crt,src=nginx-repo.crt --secret id=nginx-repo.key,src=nginx-repo.key
 BUILD_AGENT=local
 GW_API_VERSION = 1.0.0
+INSTALL_WEBHOOK = false
 
 # go build flags - should not be overridden by the user
 GO_LINKER_FlAGS_VARS = -X main.version=${VERSION} -X main.commit=${GIT_COMMIT} -X main.date=${DATE}
@@ -157,8 +158,7 @@ install-ngf-local-build: build-images load-images helm-install-local ## Install 
 
 .PHONY: helm-install-local
 helm-install-local: ## Helm install NGF on configured kind cluster with local images. To build, load, and install with helm run make install-ngf-local-build
-	./conformance/scripts/install-gateway.sh $(GW_API_VERSION)
-	kubectl wait --for=condition=available --timeout=60s deployment gateway-api-admission-server -n gateway-system
+	./conformance/scripts/install-gateway.sh $(GW_API_VERSION) $(INSTALL_WEBHOOK)
 	helm install dev ./deploy/helm-chart --create-namespace --wait --set service.type=NodePort --set nginxGateway.image.repository=$(PREFIX) --set nginxGateway.image.tag=$(TAG) --set nginxGateway.image.pullPolicy=Never --set nginx.image.repository=$(NGINX_PREFIX) --set nginx.image.tag=$(TAG) --set nginx.image.pullPolicy=Never -n nginx-gateway
 
 # Debug Targets
@@ -169,7 +169,7 @@ debug-build: build ## Build binary with debug info, symbols, and no optimization
 
 .PHONY: debug-build-dlv-image
 debug-build-dlv-image: check-for-docker
-	docker build -f debug/Dockerfile -t dlv-debug:edge .
+	docker build --platform linux/$(GOARCH) -f debug/Dockerfile -t dlv-debug:edge .
 
 .PHONY: debug-build-images
 debug-build-images: debug-build build-ngf-image build-nginx-image debug-build-dlv-image ## Build all images used in debugging.

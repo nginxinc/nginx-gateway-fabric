@@ -3,7 +3,7 @@
 # on how to use it.
 FROM golang:1.21-alpine AS builder
 
-RUN go install -ldflags "-extldflags \"-fno-PIC -static\"" -buildmode pie -tags 'osusergo netgo static_build' github.com/go-delve/delve/cmd/dlv@latest
+RUN go install github.com/go-delve/delve/cmd/dlv@latest
 
 FROM alpine:latest
 

@@ -6,17 +6,29 @@ This section will walk you through how to attach an ephemeral [dlv](https://gith
 container to NGF while it's running in Kubernetes. This will allow you to remotely debug NGF running in Kubernetes
 using your IDE.
 
-> **Note**
-> These instructions assume you are installing NGF on an existing kind cluster.
+- Create a `kind` cluster:
 
-- Build debug images and install NGF:
+   ```makefile
+   make create-kind-cluster
+   ```
 
-  Run the following make command which will build the debug images, load them onto the kind cluster, and install NGF
-  using the debug NGF image:
+- Install NGF with the debug images on your kind cluster:
+
+  **For x86:**
 
   ```console
   make debug-install-local-build
   ```
+
+  **For ARM64:**
+
+  ```console
+  make GOARCH=arm64 debug-install-local-build
+  ```
+
+  > Note: If you try and debug an amd64 container on ARM you will see the following error in the dlv container logs: `could not attach to pid <pid>: function not implemented`.
+  > This is a known issue and the only workaround is to create an arm64 image by specifying `GOARCH=arm64` shown in the above command.
+  > For more information, see this [issue](https://github.com/docker/for-mac/issues/5191)
 
 - Start kubectl proxy in the background:
 
