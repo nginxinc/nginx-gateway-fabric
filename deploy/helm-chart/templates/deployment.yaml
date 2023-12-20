@@ -1,4 +1,20 @@
 {{- if eq .Values.nginxGateway.kind "deployment" }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "nginx-gateway.fullname" . }}-control-plane
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "nginx-gateway.labels" . | nindent 4 }}
+spec:
+  selector:
+    {{- include "nginx-gateway.selectorLabels" . | nindent 4 }}
+  ports:
+  - name: control-plane
+    port: 9001
+    targetPort: 9001
+    protocol: TCP
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -98,48 +114,7 @@ spec:
           runAsUser: 102
           runAsGroup: 1001
         volumeMounts:
-        - name: nginx-conf
-          mountPath: /etc/nginx/conf.d
-        - name: nginx-secrets
-          mountPath: /etc/nginx/secrets
-        - name: nginx-run
-          mountPath: /var/run/nginx
         {{- with .Values.nginxGateway.extraVolumeMounts -}}
-        {{ toYaml . | nindent 8 }}
-        {{- end }}
-      - image: {{ .Values.nginx.image.repository }}:{{ .Values.nginx.image.tag | default .Chart.AppVersion }}
-        imagePullPolicy: {{ .Values.nginx.image.pullPolicy }}
-        name: nginx
-        {{- if .Values.nginx.lifecycle }}
-        lifecycle:
-        {{- toYaml .Values.nginx.lifecycle | nindent 10 }}
-        {{- end }}
-        ports:
-        - containerPort: 80
-          name: http
-        - containerPort: 443
-          name: https
-        securityContext:
-          capabilities:
-            add:
-            - NET_BIND_SERVICE
-            drop:
-            - ALL
-          readOnlyRootFilesystem: true
-          runAsUser: 101
-          runAsGroup: 1001
-        volumeMounts:
-        - name: nginx-conf
-          mountPath: /etc/nginx/conf.d
-        - name: nginx-secrets
-          mountPath: /etc/nginx/secrets
-        - name: nginx-run
-          mountPath: /var/run/nginx
-        - name: nginx-cache
-          mountPath: /var/cache/nginx
-        - name: nginx-lib
-          mountPath: /var/lib/nginx
-        {{- with .Values.nginx.extraVolumeMounts -}}
         {{ toYaml . | nindent 8 }}
         {{- end }}
       terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
@@ -157,16 +132,6 @@ spec:
       {{- toYaml .Values.tolerations | nindent 6 }}
       {{- end }}
       volumes:
-      - name: nginx-conf
-        emptyDir: {}
-      - name: nginx-secrets
-        emptyDir: {}
-      - name: nginx-run
-        emptyDir: {}
-      - name: nginx-cache
-        emptyDir: {}
-      - name: nginx-lib
-        emptyDir: {}
       {{- with .Values.extraVolumes -}}
       {{ toYaml . | nindent 6 }}
       {{- end }}

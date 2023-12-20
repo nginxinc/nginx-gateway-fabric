@@ -3,6 +3,17 @@ kind: Namespace
 metadata:
   name: nginx-gateway
 ---
+# Source: nginx-gateway-fabric/templates/agent.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: nginx-gateway-nginx
+  namespace: nginx-gateway
+  labels:
+    app.kubernetes.io/name: nginx-gateway-nginx
+    app.kubernetes.io/instance: nginx-gateway
+    app.kubernetes.io/version: "edge"
+---
 # Source: nginx-gateway-fabric/templates/rbac.yaml
 apiVersion: v1
 kind: ServiceAccount
@@ -116,6 +127,147 @@ subjects:
   namespace: nginx-gateway
 ---
 # Source: nginx-gateway-fabric/templates/deployment.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-gateway-control-plane
+  namespace: nginx-gateway
+  labels:
+    app.kubernetes.io/name: nginx-gateway
+    app.kubernetes.io/instance: nginx-gateway
+    app.kubernetes.io/version: "edge"
+spec:
+  selector:
+    app.kubernetes.io/name: nginx-gateway
+    app.kubernetes.io/instance: nginx-gateway
+  ports:
+  - name: control-plane
+    port: 9001
+    targetPort: 9001
+    protocol: TCP
+---
+# Source: nginx-gateway-fabric/templates/agent.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-gateway-nginx
+  namespace: nginx-gateway
+  labels:
+    app.kubernetes.io/name: nginx-gateway-nginx
+    app.kubernetes.io/instance: nginx-gateway
+    app.kubernetes.io/version: "edge"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: nginx-gateway-nginx
+      app.kubernetes.io/instance: nginx-gateway
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: nginx-gateway-nginx
+        app.kubernetes.io/instance: nginx-gateway
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9113"
+    spec:
+      containers:
+      - args:
+        - agent
+        - --control-plane-endpoint=nginx-gateway-control-plane:9001
+        env:
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        image: ghcr.io/nginxinc/nginx-gateway-fabric:edge
+        imagePullPolicy: Always
+        name: nginx-gateway
+        ports:
+        - name: metrics
+          containerPort: 9113
+        #
+        #        - name: health
+        #          containerPort: 8081
+        #        readinessProbe:
+        #          httpGet:
+        #            path: /readyz
+        #            port: health
+        #          initialDelaySeconds: 3
+        #          periodSeconds: 1
+        #
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            add:
+            - KILL
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+          runAsUser: 102
+          runAsGroup: 1001
+        volumeMounts:
+        - name: nginx-conf
+          mountPath: /etc/nginx/conf.d
+        - name: nginx-secrets
+          mountPath: /etc/nginx/secrets
+        - name: nginx-run
+          mountPath: /var/run/nginx
+      - image: ghcr.io/nginxinc/nginx-gateway-fabric/nginx:edge
+        imagePullPolicy: Always
+        name: nginx
+        ports:
+        - containerPort: 80
+          name: http
+        - containerPort: 443
+          name: https
+        securityContext:
+          capabilities:
+            add:
+            - NET_BIND_SERVICE
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+          runAsUser: 101
+          runAsGroup: 1001
+        volumeMounts:
+        - name: nginx-conf
+          mountPath: /etc/nginx/conf.d
+        - name: nginx-secrets
+          mountPath: /etc/nginx/secrets
+        - name: nginx-run
+          mountPath: /var/run/nginx
+        - name: nginx-cache
+          mountPath: /var/cache/nginx
+        - name: nginx-lib
+          mountPath: /var/lib/nginx
+      terminationGracePeriodSeconds: 30
+      serviceAccountName: nginx-gateway-nginx
+      shareProcessNamespace: true
+      securityContext:
+        fsGroup: 1001
+        runAsNonRoot: true
+      volumes:
+      - name: nginx-conf
+        emptyDir: {}
+      - name: nginx-secrets
+        emptyDir: {}
+      - name: nginx-run
+        emptyDir: {}
+      - name: nginx-cache
+        emptyDir: {}
+      - name: nginx-lib
+        emptyDir: {}
+---
+# Source: nginx-gateway-fabric/templates/deployment.yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -188,40 +340,6 @@ spec:
           runAsUser: 102
           runAsGroup: 1001
         volumeMounts:
-        - name: nginx-conf
-          mountPath: /etc/nginx/conf.d
-        - name: nginx-secrets
-          mountPath: /etc/nginx/secrets
-        - name: nginx-run
-          mountPath: /var/run/nginx
-      - image: ghcr.io/nginxinc/nginx-gateway-fabric/nginx:edge
-        imagePullPolicy: Always
-        name: nginx
-        ports:
-        - containerPort: 80
-          name: http
-        - containerPort: 443
-          name: https
-        securityContext:
-          capabilities:
-            add:
-            - NET_BIND_SERVICE
-            drop:
-            - ALL
-          readOnlyRootFilesystem: true
-          runAsUser: 101
-          runAsGroup: 1001
-        volumeMounts:
-        - name: nginx-conf
-          mountPath: /etc/nginx/conf.d
-        - name: nginx-secrets
-          mountPath: /etc/nginx/secrets
-        - name: nginx-run
-          mountPath: /var/run/nginx
-        - name: nginx-cache
-          mountPath: /var/cache/nginx
-        - name: nginx-lib
-          mountPath: /var/lib/nginx
       terminationGracePeriodSeconds: 30
       serviceAccountName: nginx-gateway
       shareProcessNamespace: true
@@ -229,16 +347,6 @@ spec:
         fsGroup: 1001
         runAsNonRoot: true
       volumes:
-      - name: nginx-conf
-        emptyDir: {}
-      - name: nginx-secrets
-        emptyDir: {}
-      - name: nginx-run
-        emptyDir: {}
-      - name: nginx-cache
-        emptyDir: {}
-      - name: nginx-lib
-        emptyDir: {}
 ---
 # Source: nginx-gateway-fabric/templates/gatewayclass.yaml
 apiVersion: gateway.networking.k8s.io/v1

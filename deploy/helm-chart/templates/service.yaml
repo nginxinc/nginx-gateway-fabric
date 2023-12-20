@@ -5,7 +5,7 @@ metadata:
   name: {{ include "nginx-gateway.fullname" . }}
   namespace: {{ .Release.Namespace }}
   labels:
-    {{- include "nginx-gateway.labels" . | nindent 4 }}
+    {{- include "nginx-gateway.nginx-labels" . | nindent 4 }}
 {{- if .Values.service.annotations }}
   annotations:
 {{ toYaml .Values.service.annotations | indent 4 }}
@@ -18,7 +18,7 @@ spec:
 {{- end }}
   type: {{ .Values.service.type }}
   selector:
-    {{- include "nginx-gateway.selectorLabels" . | nindent 4 }}
+    {{- include "nginx-gateway.nginx-selectorLabels" . | nindent 4 }}
   ports: # Update the following ports to match your Gateway Listener ports
 {{- if .Values.service.ports }}
 {{ toYaml .Values.service.ports | indent 2 }}

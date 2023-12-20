@@ -18,11 +18,10 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/events"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/status"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/grpc/sdk/server"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/config"
 	ngfConfig "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/config"
 	ngxConfig "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config"
-	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/file"
-	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/runtime"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state"
 	staticConds "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/conditions"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/dataplane"
@@ -45,10 +44,6 @@ type eventHandlerConfig struct {
 	serviceResolver resolver.ServiceResolver
 	// generator is the nginx config generator.
 	generator ngxConfig.Generator
-	// nginxFileMgr is the file Manager for nginx.
-	nginxFileMgr file.Manager
-	// nginxRuntimeMgr manages nginx runtime.
-	nginxRuntimeMgr runtime.Manager
 	// statusUpdater updates statuses on Kubernetes resources.
 	statusUpdater status.Updater
 	// eventRecorder records events for Kubernetes resources.
@@ -57,12 +52,12 @@ type eventHandlerConfig struct {
 	logLevelSetter ZapLogLevelSetter
 	// metricsCollector collects metrics for this controller.
 	metricsCollector handlerMetricsCollector
-	// healthChecker sets the health of the Pod to Ready once we've written out our initial config
-	healthChecker *healthChecker
 	// controlConfigNSName is the NamespacedName of the NginxGateway config for this controller.
 	controlConfigNSName types.NamespacedName
 	// version is the current version number of the nginx config.
 	version int
+	// controlPlane
+	controlPlane *server.ControlPlane
 }
 
 // eventHandlerImpl implements EventHandler.
@@ -71,13 +66,15 @@ type eventHandlerConfig struct {
 // (2) Keeping the statuses of the Gateway API resources updated.
 // (3) Updating control plane configuration.
 type eventHandlerImpl struct {
-	cfg eventHandlerConfig
+	cfg        eventHandlerConfig
+	generation uint32
 }
 
 // newEventHandlerImpl creates a new eventHandlerImpl.
 func newEventHandlerImpl(cfg eventHandlerConfig) *eventHandlerImpl {
 	return &eventHandlerImpl{
-		cfg: cfg,
+		cfg:        cfg,
+		generation: 1,
 	}
 }
 
@@ -101,9 +98,6 @@ func (h *eventHandlerImpl) HandleEventBatch(ctx context.Context, logger logr.Log
 	changed, graph := h.cfg.processor.Process()
 	if !changed {
 		logger.Info("Handling events didn't result into NGINX configuration changes")
-		if !h.cfg.healthChecker.ready && h.cfg.healthChecker.firstBatchError == nil {
-			h.cfg.healthChecker.setAsReady()
-		}
 		return
 	}
 
@@ -115,14 +109,8 @@ func (h *eventHandlerImpl) HandleEventBatch(ctx context.Context, logger logr.Log
 	); err != nil {
 		logger.Error(err, "Failed to update NGINX configuration")
 		nginxReloadRes.error = err
-		if !h.cfg.healthChecker.ready {
-			h.cfg.healthChecker.firstBatchError = err
-		}
 	} else {
 		logger.Info("NGINX configuration was successfully updated")
-		if !h.cfg.healthChecker.ready {
-			h.cfg.healthChecker.setAsReady()
-		}
 	}
 
 	gwAddresses, err := getGatewayAddresses(ctx, h.cfg.k8sClient, nil, h.cfg.gatewayPodConfig)
@@ -177,12 +165,16 @@ func (h *eventHandlerImpl) handleEvent(ctx context.Context, logger logr.Logger, 
 func (h *eventHandlerImpl) updateNginx(ctx context.Context, conf dataplane.Configuration) error {
 	files := h.cfg.generator.Generate(conf)
 
-	if err := h.cfg.nginxFileMgr.ReplaceFiles(files); err != nil {
-		return fmt.Errorf("failed to replace NGINX configuration files: %w", err)
+	cfg := server.Config{
+		Generation: uint32(h.cfg.version),
+		Files:      files,
 	}
 
-	if err := h.cfg.nginxRuntimeMgr.Reload(ctx, conf.Version); err != nil {
-		return fmt.Errorf("failed to reload NGINX: %w", err)
+	updateCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+
+	if err := h.cfg.controlPlane.UpdateConfig(updateCtx, cfg); err != nil {
+		return fmt.Errorf("failed to update control plane configuration: %w", err)
 	}
 
 	return nil

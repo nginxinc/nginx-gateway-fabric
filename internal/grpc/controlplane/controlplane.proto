@@ -1,0 +1,48 @@
+syntax = "proto3";
+
+option go_package = "github.com/nginxinc/nginx-gateway-fabric/internal/grpc/controlplane";
+
+package controlplane;
+
+service ControlPlane {
+  rpc StreamMessages(stream DataPlaneMessage) returns (stream ControlPlaneMessage);
+}
+
+message ConnectionRequest {
+  string host = 1;
+}
+
+message ConfigurationApplyResult {
+  uint32 generation = 1;
+  bool success = 2;
+  string error = 3;
+}
+
+message DataPlaneMessage {
+  oneof message {
+    ConnectionRequest connection_request = 1;
+    ConfigurationApplyResult configuration_apply_result = 2;
+  }
+}
+
+message Configuration {
+  uint32 generation = 1;
+  repeated File files = 2;
+}
+
+enum FileType {
+  FILE_TYPE_REGULAR = 0;
+  FILE_TYPE_SECRET = 1;
+}
+
+message File {
+  string path = 1;
+  bytes content = 2;
+  FileType type = 3;
+}
+
+message ControlPlaneMessage {
+  oneof message {
+    Configuration configuration = 1;
+  }
+}

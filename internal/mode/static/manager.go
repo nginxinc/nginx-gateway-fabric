@@ -3,10 +3,13 @@ package static
 import (
 	"context"
 	"fmt"
+	"log"
+	"net"
 	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/prometheus/client_golang/prometheus"
+	"google.golang.org/grpc"
 	apiv1 "k8s.io/api/core/v1"
 	discoveryV1 "k8s.io/api/discovery/v1"
 	apiext "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -28,6 +31,7 @@ import (
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
+	ngxruntime "github.com/nginxinc/nginx-gateway-fabric/internal/agent/runtime"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/controller"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/controller/filter"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/controller/index"
@@ -35,12 +39,12 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/events"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/gatewayclass"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/status"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/grpc/controlplane"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/grpc/sdk/server"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/config"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/metrics/collectors"
 	ngxcfg "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config"
 	ngxvalidation "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/validation"
-	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/file"
-	ngxruntime "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/runtime"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/relationship"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/resolver"
@@ -87,6 +91,7 @@ func StartManager(cfg config.Config) error {
 
 	hc := &healthChecker{}
 	if cfg.HealthConfig.Enabled {
+		hc.setAsReady()
 		if err := mgr.AddReadyzCheck("readyz", hc.readyCheck); err != nil {
 			return fmt.Errorf("error adding ready check: %w", err)
 		}
@@ -125,21 +130,6 @@ func StartManager(cfg config.Config) error {
 		ProtectedPorts: protectedPorts,
 	})
 
-	// Clear the configuration folders to ensure that no files are left over in case the control plane was restarted
-	// (this assumes the folders are in a shared volume).
-	removedPaths, err := file.ClearFolders(file.NewStdLibOSFileManager(), ngxcfg.ConfigFolders)
-	for _, path := range removedPaths {
-		cfg.Logger.Info("removed configuration file", "path", path)
-	}
-	if err != nil {
-		return fmt.Errorf("cannot clear NGINX configuration folders: %w", err)
-	}
-
-	// Ensure NGINX is running before registering metrics & starting the manager.
-	if err := ngxruntime.EnsureNginxRunning(ctx); err != nil {
-		return fmt.Errorf("NGINX is not running: %w", err)
-	}
-
 	var (
 		ngxruntimeCollector ngxruntime.MetricsCollector = collectors.NewManagerNoopCollector()
 		// nolint:ineffassign // not an ineffectual assignment. Will be used if metrics are disabled.
@@ -148,20 +138,9 @@ func StartManager(cfg config.Config) error {
 
 	if cfg.MetricsConfig.Enabled {
 		constLabels := map[string]string{"class": cfg.GatewayClassName}
-		var ngxCollector prometheus.Collector
-		if cfg.Plus {
-			ngxCollector, err = collectors.NewNginxPlusMetricsCollector(constLabels)
-		} else {
-			ngxCollector, err = collectors.NewNginxMetricsCollector(constLabels)
-		}
-		if err != nil {
-			return fmt.Errorf("cannot create nginx metrics collector: %w", err)
-		}
-
 		ngxruntimeCollector = collectors.NewManagerMetricsCollector(constLabels)
 		handlerCollector = collectors.NewControllerCollector(constLabels)
 		metrics.Registry.MustRegister(
-			ngxCollector,
 			ngxruntimeCollector.(prometheus.Collector),
 			handlerCollector.(prometheus.Collector),
 		)
@@ -177,23 +156,20 @@ func StartManager(cfg config.Config) error {
 		LeaderElectionEnabled:    cfg.LeaderElection.Enabled,
 	})
 
+	controlPlane := server.NewControlPlane()
+
 	eventHandler := newEventHandlerImpl(eventHandlerConfig{
-		k8sClient:       mgr.GetClient(),
-		processor:       processor,
-		serviceResolver: resolver.NewServiceResolverImpl(mgr.GetClient()),
-		generator:       ngxcfg.NewGeneratorImpl(),
-		logLevelSetter:  logLevelSetter,
-		nginxFileMgr: file.NewManagerImpl(
-			cfg.Logger.WithName("nginxFileManager"),
-			file.NewStdLibOSFileManager(),
-		),
-		nginxRuntimeMgr:     ngxruntime.NewManagerImpl(ngxruntimeCollector),
+		k8sClient:           mgr.GetClient(),
+		processor:           processor,
+		serviceResolver:     resolver.NewServiceResolverImpl(mgr.GetClient()),
+		generator:           ngxcfg.NewGeneratorImpl(),
+		logLevelSetter:      logLevelSetter,
 		statusUpdater:       statusUpdater,
 		eventRecorder:       recorder,
-		healthChecker:       hc,
 		controlConfigNSName: controlConfigNSName,
 		gatewayPodConfig:    cfg.GatewayPodConfig,
 		metricsCollector:    handlerCollector,
+		controlPlane:        controlPlane,
 	})
 
 	objects, objectLists := prepareFirstEventBatchPreparerArgs(cfg.GatewayClassName, cfg.GatewayNsName)
@@ -235,6 +211,25 @@ func StartManager(cfg config.Config) error {
 			return fmt.Errorf("cannot register leader elector: %w", err)
 		}
 	}
+
+	go func() {
+		if err := controlPlane.Start(context.Background()); err != nil {
+			log.Fatalf("failed to start control plane: %v", err)
+		}
+	}()
+
+	l, err := net.Listen("tcp", ":9001")
+	if err != nil {
+		log.Fatalf("failed to listen: %v", err)
+	}
+	s := grpc.NewServer()
+	controlplane.RegisterControlPlaneServer(s, controlPlane)
+
+	go func() {
+		if err := s.Serve(l); err != nil {
+			log.Fatalf("failed to serve: %v", err)
+		}
+	}()
 
 	cfg.Logger.Info("Starting manager")
 	return mgr.Start(ctx)

@@ -1,5 +1,25 @@
 ---
 # Source: nginx-gateway-fabric/templates/deployment.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-gateway-control-plane
+  namespace: nginx-gateway
+  labels:
+    app.kubernetes.io/name: nginx-gateway
+    app.kubernetes.io/instance: nginx-gateway
+    app.kubernetes.io/version: "edge"
+spec:
+  selector:
+    app.kubernetes.io/name: nginx-gateway
+    app.kubernetes.io/instance: nginx-gateway
+  ports:
+  - name: control-plane
+    port: 9001
+    targetPort: 9001
+    protocol: TCP
+---
+# Source: nginx-gateway-fabric/templates/deployment.yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -67,40 +87,6 @@ spec:
           runAsUser: 102
           runAsGroup: 1001
         volumeMounts:
-        - name: nginx-conf
-          mountPath: /etc/nginx/conf.d
-        - name: nginx-secrets
-          mountPath: /etc/nginx/secrets
-        - name: nginx-run
-          mountPath: /var/run/nginx
-      - image: ghcr.io/nginxinc/nginx-gateway-fabric/nginx:edge
-        imagePullPolicy: Always
-        name: nginx
-        ports:
-        - containerPort: 80
-          name: http
-        - containerPort: 443
-          name: https
-        securityContext:
-          capabilities:
-            add:
-            - NET_BIND_SERVICE
-            drop:
-            - ALL
-          readOnlyRootFilesystem: true
-          runAsUser: 101
-          runAsGroup: 1001
-        volumeMounts:
-        - name: nginx-conf
-          mountPath: /etc/nginx/conf.d
-        - name: nginx-secrets
-          mountPath: /etc/nginx/secrets
-        - name: nginx-run
-          mountPath: /var/run/nginx
-        - name: nginx-cache
-          mountPath: /var/cache/nginx
-        - name: nginx-lib
-          mountPath: /var/lib/nginx
       terminationGracePeriodSeconds: 30
       serviceAccountName: nginx-gateway
       shareProcessNamespace: true
@@ -108,13 +94,3 @@ spec:
         fsGroup: 1001
         runAsNonRoot: true
       volumes:
-      - name: nginx-conf
-        emptyDir: {}
-      - name: nginx-secrets
-        emptyDir: {}
-      - name: nginx-run
-        emptyDir: {}
-      - name: nginx-cache
-        emptyDir: {}
-      - name: nginx-lib
-        emptyDir: {}

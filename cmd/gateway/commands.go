@@ -13,6 +13,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	ctlrZap "sigs.k8s.io/controller-runtime/pkg/log/zap"
 
+	"github.com/nginxinc/nginx-gateway-fabric/internal/agent"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/provisioner"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/config"
@@ -354,6 +355,40 @@ func createSleepCommand() *cobra.Command {
 		30*time.Second,
 		"Set the duration of sleep. Must be parsable by https://pkg.go.dev/time#ParseDuration",
 	)
+
+	return cmd
+}
+
+func createAgentCommand() *cobra.Command {
+	var controlPlaneEndpoint string
+
+	cmd := &cobra.Command{
+		Use:   "agent",
+		Short: "Start the NGINX Gateway Fabric agent",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			logger := ctlrZap.New()
+			logger.Info(
+				"Starting NGINX Gateway Fabric agent",
+				"version", version,
+				"commit", commit,
+				"date", date,
+			)
+
+			return agent.Start(agent.Config{
+				ControlPlaneEndpoint: controlPlaneEndpoint,
+				Logger:               logger,
+			})
+		},
+	}
+
+	cmd.Flags().StringVar(
+		&controlPlaneEndpoint,
+		"control-plane-endpoint",
+		"",
+		"The address of the NGINX Gateway Fabric control plane.",
+	)
+
+	utilruntime.Must(cmd.MarkFlagRequired("control-plane-endpoint"))
 
 	return cmd
 }

@@ -9,19 +9,19 @@ import (
 	. "github.com/onsi/gomega"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/file"
-	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/file/filefakes"
+	file2 "github.com/nginxinc/nginx-gateway-fabric/internal/agent/file"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/agent/file/filefakes"
 )
 
 var _ = Describe("EventHandler", func() {
 	Describe("Replace files", Ordered, func() {
 		var (
-			mgr                                  *file.ManagerImpl
+			mgr                                  *file2.ManagerImpl
 			tmpDir                               string
-			regular1, regular2, regular3, secret file.File
+			regular1, regular2, regular3, secret file2.File
 		)
 
-		ensureFiles := func(files []file.File) {
+		ensureFiles := func(files []file2.File) {
 			entries, err := os.ReadDir(tmpDir)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(entries).Should(HaveLen(len(files)))
@@ -40,7 +40,7 @@ var _ = Describe("EventHandler", func() {
 
 				Expect(info.IsDir()).To(BeFalse())
 
-				if f.Type == file.TypeRegular {
+				if f.Type == file2.TypeRegular {
 					Expect(info.Mode()).To(Equal(os.FileMode(0o644)))
 				} else {
 					Expect(info.Mode()).To(Equal(os.FileMode(0o640)))
@@ -52,7 +52,7 @@ var _ = Describe("EventHandler", func() {
 			}
 		}
 
-		ensureNotExist := func(files ...file.File) {
+		ensureNotExist := func(files ...file2.File) {
 			for _, f := range files {
 				_, err := os.Stat(f.Path)
 				Expect(os.IsNotExist(err)).To(BeTrue())
@@ -60,33 +60,33 @@ var _ = Describe("EventHandler", func() {
 		}
 
 		BeforeAll(func() {
-			mgr = file.NewManagerImpl(zap.New(), file.NewStdLibOSFileManager())
+			mgr = file2.NewManagerImpl(zap.New(), file2.NewStdLibOSFileManager())
 			tmpDir = GinkgoT().TempDir()
 
-			regular1 = file.File{
-				Type:    file.TypeRegular,
+			regular1 = file2.File{
+				Type:    file2.TypeRegular,
 				Path:    filepath.Join(tmpDir, "regular-1.conf"),
 				Content: []byte("regular-1"),
 			}
-			regular2 = file.File{
-				Type:    file.TypeRegular,
+			regular2 = file2.File{
+				Type:    file2.TypeRegular,
 				Path:    filepath.Join(tmpDir, "regular-2.conf"),
 				Content: []byte("regular-2"),
 			}
-			regular3 = file.File{
-				Type:    file.TypeRegular,
+			regular3 = file2.File{
+				Type:    file2.TypeRegular,
 				Path:    filepath.Join(tmpDir, "regular-3.conf"),
 				Content: []byte("regular-3"),
 			}
-			secret = file.File{
-				Type:    file.TypeSecret,
+			secret = file2.File{
+				Type:    file2.TypeSecret,
 				Path:    filepath.Join(tmpDir, "secret.conf"),
 				Content: []byte("secret"),
 			}
 		})
 
 		It("should write initial config", func() {
-			files := []file.File{regular1, regular2, secret}
+			files := []file2.File{regular1, regular2, secret}
 
 			err := mgr.ReplaceFiles(files)
 			Expect(err).ToNot(HaveOccurred())
@@ -95,7 +95,7 @@ var _ = Describe("EventHandler", func() {
 		})
 
 		It("should write subsequent config", func() {
-			files := []file.File{
+			files := []file2.File{
 				regular2, // overwriting
 				regular3, // adding
 				secret,   // overwriting
@@ -119,11 +119,11 @@ var _ = Describe("EventHandler", func() {
 	When("file does not exist", func() {
 		It("should not error", func() {
 			fakeOSMgr := &filefakes.FakeOSFileManager{}
-			mgr := file.NewManagerImpl(zap.New(), fakeOSMgr)
+			mgr := file2.NewManagerImpl(zap.New(), fakeOSMgr)
 
-			files := []file.File{
+			files := []file2.File{
 				{
-					Type:    file.TypeRegular,
+					Type:    file2.TypeRegular,
 					Path:    "regular-1.conf",
 					Content: []byte("regular-1"),
 				},
@@ -138,9 +138,9 @@ var _ = Describe("EventHandler", func() {
 
 	When("file type is not supported", func() {
 		It("should panic", func() {
-			mgr := file.NewManagerImpl(zap.New(), nil)
+			mgr := file2.NewManagerImpl(zap.New(), nil)
 
-			files := []file.File{
+			files := []file2.File{
 				{
 					Type: 123,
 					Path: "unsupported.conf",
@@ -157,14 +157,14 @@ var _ = Describe("EventHandler", func() {
 
 	Describe("Edge cases with IO errors", func() {
 		var (
-			files = []file.File{
+			files = []file2.File{
 				{
-					Type:    file.TypeRegular,
+					Type:    file2.TypeRegular,
 					Path:    "regular.conf",
 					Content: []byte("regular"),
 				},
 				{
-					Type:    file.TypeSecret,
+					Type:    file2.TypeSecret,
 					Path:    "secret.conf",
 					Content: []byte("secret"),
 				},
@@ -175,7 +175,7 @@ var _ = Describe("EventHandler", func() {
 		DescribeTable(
 			"should return error on file IO error",
 			func(fakeOSMgr *filefakes.FakeOSFileManager) {
-				mgr := file.NewManagerImpl(zap.New(), fakeOSMgr)
+				mgr := file2.NewManagerImpl(zap.New(), fakeOSMgr)
 
 				// special case for Remove
 				// to kick off removing, we need to successfully write files beforehand

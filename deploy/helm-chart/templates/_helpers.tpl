@@ -52,11 +52,27 @@ helm.sh/chart: {{ include "nginx-gateway.chart" . }}
 {{- end -}}
 {{- end }}
 
+{{- define "nginx-gateway.nginx-labels" -}}
+{{ include "nginx-gateway.nginx-selectorLabels" . }}
+{{- if .Chart.AppVersion }}
+app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
+{{- end }}
+{{- if eq (default "helm" .Values.creator) "helm" }}
+app.kubernetes.io/managed-by: {{ .Release.Service }}
+helm.sh/chart: {{ include "nginx-gateway.chart" . }}
+{{- end -}}
+{{- end }}
+
 {{/*
 Selector labels
 */}}
 {{- define "nginx-gateway.selectorLabels" -}}
 app.kubernetes.io/name: {{ include "nginx-gateway.name" . }}
+app.kubernetes.io/instance: {{ .Release.Name }}
+{{- end }}
+
+{{- define "nginx-gateway.nginx-selectorLabels" -}}
+app.kubernetes.io/name: {{ include "nginx-gateway.name" . }}-nginx
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 

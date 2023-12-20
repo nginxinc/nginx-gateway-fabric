@@ -8,8 +8,8 @@ import (
 
 	. "github.com/onsi/gomega"
 
-	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/file"
-	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/file/filefakes"
+	file2 "github.com/nginxinc/nginx-gateway-fabric/internal/agent/file"
+	filefakes2 "github.com/nginxinc/nginx-gateway-fabric/internal/agent/file/filefakes"
 )
 
 func writeFile(t *testing.T, name string, data []byte) {
@@ -30,7 +30,7 @@ func TestClearFoldersRemoves(t *testing.T) {
 	path2 := filepath.Join(tempDir, "path2")
 	writeFile(t, path2, []byte("test"))
 
-	removedFiles, err := file.ClearFolders(file.NewStdLibOSFileManager(), []string{tempDir})
+	removedFiles, err := file2.ClearFolders(file2.NewStdLibOSFileManager(), []string{tempDir})
 
 	g.Expect(err).ToNot(HaveOccurred())
 	g.Expect(removedFiles).To(ConsistOf(path1, path2))
@@ -46,11 +46,11 @@ func TestClearFoldersFails(t *testing.T) {
 	testErr := errors.New("test error")
 
 	tests := []struct {
-		fileMgr *filefakes.FakeClearFoldersOSFileManager
+		fileMgr *filefakes2.FakeClearFoldersOSFileManager
 		name    string
 	}{
 		{
-			fileMgr: &filefakes.FakeClearFoldersOSFileManager{
+			fileMgr: &filefakes2.FakeClearFoldersOSFileManager{
 				ReadDirStub: func(dirname string) ([]os.DirEntry, error) {
 					return nil, testErr
 				},
@@ -58,10 +58,10 @@ func TestClearFoldersFails(t *testing.T) {
 			name: "ReadDir fails",
 		},
 		{
-			fileMgr: &filefakes.FakeClearFoldersOSFileManager{
+			fileMgr: &filefakes2.FakeClearFoldersOSFileManager{
 				ReadDirStub: func(dirname string) ([]os.DirEntry, error) {
 					return []os.DirEntry{
-						&filefakes.FakeDirEntry{
+						&filefakes2.FakeDirEntry{
 							NameStub: func() string {
 								return "file"
 							},
@@ -80,7 +80,7 @@ func TestClearFoldersFails(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewWithT(t)
 
-			removedFiles, err := file.ClearFolders(test.fileMgr, files)
+			removedFiles, err := file2.ClearFolders(test.fileMgr, files)
 
 			g.Expect(err).To(MatchError(testErr))
 			g.Expect(removedFiles).To(BeNil())
