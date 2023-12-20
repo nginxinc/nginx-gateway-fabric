@@ -92,6 +92,7 @@ This step catches the following cases of invalid values:
 - Valid values from the Gateway API perspective, but invalid for NGINX, because NGINX has stricter validation requirements for certain fields. These values will cause NGINX to fail to reload or operate erroneously.
 - Invalid values (both from the Gateway API and NGINX perspectives) that were not rejected because Step 1 was bypassed. Similar to the previous case, these values will cause NGINX to fail to reload or operate erroneously.
 - Malicious values that inject unrestricted NGINX config into the NGINX configuration (similar to an SQL injection attack).
+- Valid values from the Gateway API perspective, but invalid for NGINX Gateway Fabric, because such values can prevent generating NGINX configuration.
 
 Below is an example of how NGINX Gateway Fabric rejects an invalid resource. The validation error is reported via the status:
 

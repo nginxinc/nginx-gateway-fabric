@@ -86,3 +86,8 @@ type MapParameter struct {
 	Value  string
 	Result string
 }
+
+const (
+	// InternalLocationPrefix indicates that the path is internal type.
+	InternalLocationPrefix string = "/ngf-internal"
+)

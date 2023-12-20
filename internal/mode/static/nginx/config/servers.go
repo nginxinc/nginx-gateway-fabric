@@ -106,7 +106,7 @@ func createLocations(pathRules []dataplane.PathRule, listenerPort int32) []http.
 	locs := make([]http.Location, 0, maxLocs)
 	var rootPathExists bool
 
-	for _, rule := range pathRules {
+	for pathRuleIdx, rule := range pathRules {
 		matches := make([]httpMatch, 0, len(rule.MatchRules))
 
 		if rule.Path == rootPath {
@@ -118,7 +118,7 @@ func createLocations(pathRules []dataplane.PathRule, listenerPort int32) []http.
 		for matchRuleIdx, r := range rule.MatchRules {
 			buildLocations := extLocations
 			if len(rule.MatchRules) != 1 || !isPathOnlyMatch(r.Match) {
-				intLocation, match := initializeInternalLocation(rule, matchRuleIdx, r.Match)
+				intLocation, match := initializeInternalLocation(pathRuleIdx, matchRuleIdx, r.Match)
 				buildLocations = []http.Location{intLocation}
 				matches = append(matches, match)
 			}
@@ -216,11 +216,11 @@ func initializeExternalLocations(
 }
 
 func initializeInternalLocation(
-	rule dataplane.PathRule,
+	pathruleIdx int,
 	matchRuleIdx int,
 	match dataplane.Match,
 ) (http.Location, httpMatch) {
-	path := createPathForMatch(rule.Path, rule.PathType, matchRuleIdx)
+	path := createPathForMatch(pathruleIdx, matchRuleIdx)
 	return createMatchLocation(path), createHTTPMatch(match, path)
 }
 
@@ -544,8 +544,8 @@ func createPath(rule dataplane.PathRule) string {
 	}
 }
 
-func createPathForMatch(path string, pathType dataplane.PathType, routeIdx int) string {
-	return fmt.Sprintf("%s_%s_route%d", path, pathType, routeIdx)
+func createPathForMatch(ruleIdx, routeIdx int) string {
+	return fmt.Sprintf("%s-rule%d-route%d", http.InternalLocationPrefix, ruleIdx, routeIdx)
 }
 
 func createDefaultRootLocation() http.Location {

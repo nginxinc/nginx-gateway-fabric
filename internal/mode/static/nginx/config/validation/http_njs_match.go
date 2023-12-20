@@ -8,12 +8,17 @@ import (
 	k8svalidation "k8s.io/apimachinery/pkg/util/validation"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/http"
 )
 
 // HTTPNJSMatchValidator validates values used for matching a request.
 // The matching is implemented in NJS (except for path matching),
 // so changes to the implementation change the validation rules here.
 type HTTPNJSMatchValidator struct{}
+
+const (
+	internalPathErrMsgFmt = "paths starting with %q are reserved for internal use"
+)
 
 // ValidatePathInMatch a path used in the location directive.
 func (HTTPNJSMatchValidator) ValidatePathInMatch(path string) error {
@@ -26,12 +31,12 @@ func (HTTPNJSMatchValidator) ValidatePathInMatch(path string) error {
 		return errors.New(msg)
 	}
 
-	// FIXME(pleshakov): This function will no longer be
-	// needed once https://github.com/nginxinc/nginx-gateway-fabric/issues/428 is fixed.
-	// That's because the location path gets into the set directive in the location block.
-	// Example: set $http_matches "[{\"redirectPath\":\"/coffee_route0\" ...
-	// Where /coffee is tha path.
-	return validateCommonNJSMatchPart(path)
+	// should not match the prefix for internal location
+	if strings.HasPrefix(path, http.InternalLocationPrefix) {
+		return fmt.Errorf(internalPathErrMsgFmt, http.InternalLocationPrefix)
+	}
+
+	return nil
 }
 
 func (HTTPNJSMatchValidator) ValidateHeaderNameInMatch(name string) error {

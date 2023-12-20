@@ -490,34 +490,34 @@ func TestCreateServers(t *testing.T) {
 	}
 
 	slashMatches := []httpMatch{
-		{Method: "POST", RedirectPath: "/_prefix_route0"},
-		{Method: "PATCH", RedirectPath: "/_prefix_route1"},
-		{Any: true, RedirectPath: "/_prefix_route2"},
+		{Method: "POST", RedirectPath: "/ngf-internal-rule0-route0"},
+		{Method: "PATCH", RedirectPath: "/ngf-internal-rule0-route1"},
+		{Any: true, RedirectPath: "/ngf-internal-rule0-route2"},
 	}
 	testMatches := []httpMatch{
 		{
 			Method:       "GET",
 			Headers:      []string{"Version:V1", "test:foo", "my-header:my-value"},
 			QueryParams:  []string{"GrEat=EXAMPLE", "test=foo=bar"},
-			RedirectPath: "/test_prefix_route0",
+			RedirectPath: "/ngf-internal-rule1-route0",
 		},
 	}
 	exactMatches := []httpMatch{
 		{
 			Method:       "GET",
-			RedirectPath: "/test_exact_route0",
+			RedirectPath: "/ngf-internal-rule11-route0",
 		},
 	}
 	redirectHeaderMatches := []httpMatch{
 		{
 			Headers:      []string{"redirect:this"},
-			RedirectPath: "/redirect-with-headers_prefix_route0",
+			RedirectPath: "/ngf-internal-rule5-route0",
 		},
 	}
 	rewriteHeaderMatches := []httpMatch{
 		{
 			Headers:      []string{"rewrite:this"},
-			RedirectPath: "/rewrite-with-headers_prefix_route0",
+			RedirectPath: "/ngf-internal-rule7-route0",
 		},
 	}
 	rewriteProxySetHeaders := []http.Header{
@@ -541,7 +541,7 @@ func TestCreateServers(t *testing.T) {
 	invalidFilterHeaderMatches := []httpMatch{
 		{
 			Headers:      []string{"filter:this"},
-			RedirectPath: "/invalid-filter-with-headers_prefix_route0",
+			RedirectPath: "/ngf-internal-rule9-route0",
 		},
 	}
 
@@ -553,19 +553,19 @@ func TestCreateServers(t *testing.T) {
 
 		return []http.Location{
 			{
-				Path:            "/_prefix_route0",
+				Path:            "/ngf-internal-rule0-route0",
 				Internal:        true,
 				ProxyPass:       "http://test_foo_80$request_uri",
 				ProxySetHeaders: baseHeaders,
 			},
 			{
-				Path:            "/_prefix_route1",
+				Path:            "/ngf-internal-rule0-route1",
 				Internal:        true,
 				ProxyPass:       "http://test_foo_80$request_uri",
 				ProxySetHeaders: baseHeaders,
 			},
 			{
-				Path:            "/_prefix_route2",
+				Path:            "/ngf-internal-rule0-route2",
 				Internal:        true,
 				ProxyPass:       "http://test_foo_80$request_uri",
 				ProxySetHeaders: baseHeaders,
@@ -575,7 +575,7 @@ func TestCreateServers(t *testing.T) {
 				HTTPMatchVar: expectedMatchString(slashMatches),
 			},
 			{
-				Path:            "/test_prefix_route0",
+				Path:            "/ngf-internal-rule1-route0",
 				Internal:        true,
 				ProxyPass:       "http://$test__route1_rule1$request_uri",
 				ProxySetHeaders: baseHeaders,
@@ -623,7 +623,7 @@ func TestCreateServers(t *testing.T) {
 				},
 			},
 			{
-				Path: "/redirect-with-headers_prefix_route0",
+				Path: "/ngf-internal-rule5-route0",
 				Return: &http.Return{
 					Body: "$scheme://foo.example.com:8080$request_uri",
 					Code: 302,
@@ -651,7 +651,7 @@ func TestCreateServers(t *testing.T) {
 				ProxySetHeaders: rewriteProxySetHeaders,
 			},
 			{
-				Path:            "/rewrite-with-headers_prefix_route0",
+				Path:            "/ngf-internal-rule7-route0",
 				Rewrites:        []string{"^ $request_uri", "^/rewrite-with-headers(.*)$ /prefix-replacement$1 break"},
 				Internal:        true,
 				ProxyPass:       "http://test_foo_80",
@@ -678,7 +678,7 @@ func TestCreateServers(t *testing.T) {
 				},
 			},
 			{
-				Path: "/invalid-filter-with-headers_prefix_route0",
+				Path: "/ngf-internal-rule9-route0",
 				Return: &http.Return{
 					Code: http.StatusInternalServerError,
 				},
@@ -698,7 +698,7 @@ func TestCreateServers(t *testing.T) {
 				ProxySetHeaders: baseHeaders,
 			},
 			{
-				Path:            "/test_exact_route0",
+				Path:            "/ngf-internal-rule11-route0",
 				ProxyPass:       "http://test_foo_80$request_uri",
 				ProxySetHeaders: baseHeaders,
 				Internal:        true,
@@ -1711,17 +1711,17 @@ func TestCreatePathForMatch(t *testing.T) {
 		panic    bool
 	}{
 		{
-			expected: "/path_prefix_route1",
+			expected: "/ngf-internal-rule0-route1",
 			pathType: dataplane.PathTypePrefix,
 		},
 		{
-			expected: "/path_exact_route1",
+			expected: "/ngf-internal-rule0-route1",
 			pathType: dataplane.PathTypeExact,
 		},
 	}
 
 	for _, tc := range tests {
-		result := createPathForMatch("/path", tc.pathType, 1)
+		result := createPathForMatch(0, 1)
 		g.Expect(result).To(Equal(tc.expected))
 	}
 }
