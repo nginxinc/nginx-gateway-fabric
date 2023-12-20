@@ -39,6 +39,8 @@ var (
 	nginxImageRepository = flag.String("nginx-image-repo", "", "Image repo for NGF data plane")
 	imageTag             = flag.String("image-tag", "", "Image tag for NGF images")
 	imagePullPolicy      = flag.String("pull-policy", "", "Image pull policy for NGF images")
+	serviceType          = flag.String("service-type", "NodePort", "Type of service fronting NGF to be deployed")
+	isGKEInternalLB      = flag.Bool("is-gke-internal-lb", false, "Is the LB service GKE internal only")
 )
 
 var (
@@ -49,6 +51,9 @@ var (
 	portForwardStopCh = make(chan struct{}, 1)
 	portFwdPort       int
 	timeoutConfig     framework.TimeoutConfig
+	address           string
+	version           string
+	clusterInfo       framework.ClusterInfo
 )
 
 var _ = BeforeSuite(func() {
@@ -86,8 +91,18 @@ var _ = BeforeSuite(func() {
 		NginxImageRepository: *nginxImageRepository,
 		ImageTag:             *imageTag,
 		ImagePullPolicy:      *imagePullPolicy,
-		ServiceType:          "NodePort",
+		ServiceType:          *serviceType,
+		IsGKEInternalLB:      *isGKEInternalLB,
 	}
+
+	if *imageTag != "" {
+		version = *imageTag
+	} else {
+		version = "edge"
+	}
+
+	clusterInfo, err = resourceManager.GetClusterInfo()
+	Expect(err).ToNot(HaveOccurred())
 
 	output, err := framework.InstallGatewayAPI(k8sClient, *gatewayAPIVersion, *k8sVersion)
 	Expect(err).ToNot(HaveOccurred(), string(output))
@@ -98,7 +113,12 @@ var _ = BeforeSuite(func() {
 	podName, err := framework.GetNGFPodName(k8sClient, cfg.Namespace, cfg.ReleaseName, timeoutConfig.CreateTimeout)
 	Expect(err).ToNot(HaveOccurred())
 
-	portFwdPort, err = framework.PortForward(k8sConfig, cfg.Namespace, podName, portForwardStopCh)
+	if *serviceType != "LoadBalancer" {
+		portFwdPort, err = framework.PortForward(k8sConfig, cfg.Namespace, podName, portForwardStopCh)
+		address = "127.0.0.1"
+	} else {
+		address, err = resourceManager.GetLBIPAddress(cfg.Namespace)
+	}
 	Expect(err).ToNot(HaveOccurred())
 })
 
