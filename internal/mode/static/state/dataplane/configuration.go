@@ -455,6 +455,11 @@ func createHTTPFilters(filters []v1.HTTPRouteFilter) HTTPFilters {
 				// using the first filter
 				result.RequestRedirect = convertHTTPRequestRedirectFilter(f.RequestRedirect)
 			}
+		case v1.HTTPRouteFilterURLRewrite:
+			if result.RequestURLRewrite == nil {
+				// using the first filter
+				result.RequestURLRewrite = convertHTTPURLRewriteFilter(f.URLRewrite)
+			}
 		case v1.HTTPRouteFilterRequestHeaderModifier:
 			if result.RequestHeaderModifiers == nil {
 				// using the first filter

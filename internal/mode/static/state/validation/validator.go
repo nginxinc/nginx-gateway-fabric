@@ -20,9 +20,10 @@ type HTTPFieldsValidator interface {
 	ValidateQueryParamValueInMatch(name string) error
 	ValidateMethodInMatch(method string) (valid bool, supportedValues []string)
 	ValidateRedirectScheme(scheme string) (valid bool, supportedValues []string)
-	ValidateRedirectHostname(hostname string) error
 	ValidateRedirectPort(port int32) error
 	ValidateRedirectStatusCode(statusCode int) (valid bool, supportedValues []string)
+	ValidateHostname(hostname string) error
+	ValidateRewritePath(path string) error
 	ValidateRequestHeaderName(name string) error
 	ValidateRequestHeaderValue(value string) error
 }

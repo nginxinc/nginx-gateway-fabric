@@ -3,7 +3,6 @@ package validation
 import (
 	"errors"
 	"fmt"
-	"regexp"
 	"strings"
 
 	k8svalidation "k8s.io/apimachinery/pkg/util/validation"
@@ -15,16 +14,6 @@ import (
 // The matching is implemented in NJS (except for path matching),
 // so changes to the implementation change the validation rules here.
 type HTTPNJSMatchValidator struct{}
-
-const (
-	pathFmt    = `/[^\s{};]*`
-	pathErrMsg = "must start with / and must not include any whitespace character, `{`, `}` or `;`"
-)
-
-var (
-	pathRegexp   = regexp.MustCompile("^" + pathFmt + "$")
-	pathExamples = []string{"/", "/path", "/path/subpath-123"}
-)
 
 // ValidatePathInMatch a path used in the location directive.
 func (HTTPNJSMatchValidator) ValidatePathInMatch(path string) error {
