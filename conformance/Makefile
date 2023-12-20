@@ -44,7 +44,7 @@ build-images: ## Build NGF and nginx images
 
 .PHONY: load-images
 load-images: ## Load NGF and NGINX images on configured kind cluster
-	cd .. && make PREFIX=$(NGF_PREFIX) TAG=$(NGF_TAG) load-images
+	cd .. && make PREFIX=$(PREFIX) TAG=$(TAG) load-images
 
 .PHONY: prepare-ngf-dependencies
 prepare-ngf-dependencies: update-ngf-manifest ## Install NGF dependencies on configured kind cluster

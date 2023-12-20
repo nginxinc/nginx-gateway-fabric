@@ -160,7 +160,7 @@ load-images-with-plus: ## Load NGF and NGINX Plus images on configured kind clus
 .PHONY: install-ngf-local-build
 install-ngf-local-build: build-images load-images helm-install-local ## Install NGF from local build on configured kind cluster.
 
-.PHONY: install-ngf-local-build
+.PHONY: install-ngf-local-build-with-plus
 install-ngf-local-build-with-plus: build-images-with-plus load-images-with-plus helm-install-local-with-plus ## Install NGF with NGINX Plus from local build on configured kind cluster.
 
 .PHONY: helm-install-local
@@ -168,7 +168,7 @@ helm-install-local: ## Helm install NGF on configured kind cluster with local im
 	./conformance/scripts/install-gateway.sh $(GW_API_VERSION) $(INSTALL_WEBHOOK)
 	helm install dev ./deploy/helm-chart --create-namespace --wait --set service.type=NodePort --set nginxGateway.image.repository=$(PREFIX) --set nginxGateway.image.tag=$(TAG) --set nginxGateway.image.pullPolicy=Never --set nginx.image.repository=$(NGINX_PREFIX) --set nginx.image.tag=$(TAG) --set nginx.image.pullPolicy=Never -n nginx-gateway
 
-.PHONY: helm-install-local
+.PHONY: helm-install-local-with-plus
 helm-install-local-with-plus: ## Helm install NGF with NGINX Plus on configured kind cluster with local images. To build, load, and install with helm run make install-ngf-local-build-with-plus.
 	./conformance/scripts/install-gateway.sh $(GW_API_VERSION) $(INSTALL_WEBHOOK)
 	helm install dev ./deploy/helm-chart --create-namespace --wait --set service.type=NodePort --set nginxGateway.image.repository=$(PREFIX) --set nginxGateway.image.tag=$(TAG) --set nginxGateway.image.pullPolicy=Never --set nginx.image.repository=$(NGINX_PLUS_PREFIX) --set nginx.image.tag=$(TAG) --set nginx.image.pullPolicy=Never --set nginx.plus=true -n nginx-gateway
@@ -180,7 +180,7 @@ debug-build: ADDITIONAL_GO_BUILD_FLAGS=-gcflags "all=-N -l"
 debug-build: build ## Build binary with debug info, symbols, and no optimizations
 
 .PHONY: debug-build-dlv-image
-debug-build-dlv-image: check-for-docker
+debug-build-dlv-image: check-for-docker ## Build the dlv debugger image.
 	docker build --platform linux/$(GOARCH) -f debug/Dockerfile -t dlv-debug:edge .
 
 .PHONY: debug-build-images
