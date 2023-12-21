@@ -94,7 +94,13 @@ func StartManager(cfg config.Config) error {
 
 	recorderName := fmt.Sprintf("nginx-gateway-fabric-%s", cfg.GatewayClassName)
 	recorder := mgr.GetEventRecorderFor(recorderName)
-	logLevelSetter := newZapLogLevelSetter(cfg.AtomicLevel)
+
+	promLogger, err := newLeveledPrometheusLogger()
+	if err != nil {
+		return fmt.Errorf("error creating leveled prometheus logger: %w", err)
+	}
+
+	logLevelSetter := newMultiLogLevelSetter(newZapLogLevelSetter(cfg.AtomicLevel), newPromLogLevelSetter(promLogger))
 
 	ctx := ctlr.SetupSignalHandler()
 
@@ -150,9 +156,9 @@ func StartManager(cfg config.Config) error {
 		constLabels := map[string]string{"class": cfg.GatewayClassName}
 		var ngxCollector prometheus.Collector
 		if cfg.Plus {
-			ngxCollector, err = collectors.NewNginxPlusMetricsCollector(constLabels)
+			ngxCollector, err = collectors.NewNginxPlusMetricsCollector(constLabels, promLogger)
 		} else {
-			ngxCollector, err = collectors.NewNginxMetricsCollector(constLabels)
+			ngxCollector, err = collectors.NewNginxMetricsCollector(constLabels, promLogger)
 		}
 		if err != nil {
 			return fmt.Errorf("cannot create nginx metrics collector: %w", err)
@@ -245,7 +251,7 @@ func registerControllers(
 	cfg config.Config,
 	mgr manager.Manager,
 	recorder record.EventRecorder,
-	logLevelSetter zapSetterImpl,
+	logLevelSetter logLevelSetter,
 	eventCh chan interface{},
 	controlConfigNSName types.NamespacedName,
 ) error {
@@ -406,7 +412,7 @@ func setInitialConfig(
 	reader client.Reader,
 	logger logr.Logger,
 	eventRecorder record.EventRecorder,
-	logLevelSetter ZapLogLevelSetter,
+	logLevelSetter logLevelSetter,
 	configName types.NamespacedName,
 ) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)

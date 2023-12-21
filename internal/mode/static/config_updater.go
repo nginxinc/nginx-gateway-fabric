@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/go-kit/log"
 	"github.com/go-logr/logr"
+	"github.com/prometheus/common/promlog"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	apiv1 "k8s.io/api/core/v1"
@@ -17,24 +19,43 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 )
 
-// ZapLogLevelSetter defines an interface for setting the logging level of a zap logger.
-type ZapLogLevelSetter interface {
+// logLevelSetter defines an interface for setting the logging level of a logger.
+type logLevelSetter interface {
 	SetLevel(string) error
-	Enabled(zapcore.Level) bool
 }
 
-type zapSetterImpl struct {
+// multiLogLevelSetter sets the log level for multiple logLevelSetters.
+type multiLogLevelSetter struct {
+	setters []logLevelSetter
+}
+
+func newMultiLogLevelSetter(setters ...logLevelSetter) multiLogLevelSetter {
+	return multiLogLevelSetter{setters: setters}
+}
+
+func (m multiLogLevelSetter) SetLevel(level string) error {
+	for _, s := range m.setters {
+		if err := s.SetLevel(level); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// zapLogLevelSetter sets the level for a zap logger.
+type zapLogLevelSetter struct {
 	atomicLevel zap.AtomicLevel
 }
 
-func newZapLogLevelSetter(atomicLevel zap.AtomicLevel) zapSetterImpl {
-	return zapSetterImpl{
+func newZapLogLevelSetter(atomicLevel zap.AtomicLevel) zapLogLevelSetter {
+	return zapLogLevelSetter{
 		atomicLevel: atomicLevel,
 	}
 }
 
 // SetLevel sets the logging level for the zap logger.
-func (z zapSetterImpl) SetLevel(level string) error {
+func (z zapLogLevelSetter) SetLevel(level string) error {
 	parsedLevel, err := zapcore.ParseLevel(level)
 	if err != nil {
 		fieldErr := field.NotSupported(
@@ -53,8 +74,54 @@ func (z zapSetterImpl) SetLevel(level string) error {
 }
 
 // Enabled returns true if the given level is at or above the current level.
-func (z zapSetterImpl) Enabled(level zapcore.Level) bool {
+func (z zapLogLevelSetter) Enabled(level zapcore.Level) bool {
 	return z.atomicLevel.Enabled(level)
+}
+
+// leveledPrometheusLogger is a leveled prometheus logger.
+// This interface is required because the promlog.NewDynamic returns an unexported type *logger.
+type leveledPrometheusLogger interface {
+	log.Logger
+	SetLevel(level *promlog.AllowedLevel)
+}
+
+type promLogLevelSetter struct {
+	logger leveledPrometheusLogger
+}
+
+func newPromLogLevelSetter(logger leveledPrometheusLogger) promLogLevelSetter {
+	return promLogLevelSetter{logger: logger}
+}
+
+func newLeveledPrometheusLogger() (leveledPrometheusLogger, error) {
+	logFormat := &promlog.AllowedFormat{}
+
+	if err := logFormat.Set("json"); err != nil {
+		return nil, err
+	}
+
+	logConfig := &promlog.Config{Format: logFormat}
+	logger := promlog.NewDynamic(logConfig)
+
+	return logger, nil
+}
+
+func (p promLogLevelSetter) SetLevel(level string) error {
+	al := &promlog.AllowedLevel{}
+	if err := al.Set(level); err != nil {
+		fieldErr := field.NotSupported(
+			field.NewPath("logging.level"),
+			level,
+			[]string{
+				string(ngfAPI.ControllerLogLevelInfo),
+				string(ngfAPI.ControllerLogLevelDebug),
+				string(ngfAPI.ControllerLogLevelError),
+			})
+		return fieldErr
+	}
+
+	p.logger.SetLevel(al)
+	return nil
 }
 
 // updateControlPlane updates the control plane configuration with the given user spec.
@@ -64,7 +131,7 @@ func updateControlPlane(
 	logger logr.Logger,
 	eventRecorder record.EventRecorder,
 	configNSName types.NamespacedName,
-	logLevelSetter ZapLogLevelSetter,
+	logLevelSetter logLevelSetter,
 ) error {
 	// build up default configuration
 	controlConfig := ngfAPI.NginxGatewaySpec{

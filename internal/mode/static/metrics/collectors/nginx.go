@@ -11,7 +11,6 @@ import (
 	prometheusClient "github.com/nginxinc/nginx-prometheus-exporter/client"
 	nginxCollector "github.com/nginxinc/nginx-prometheus-exporter/collector"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/common/promlog"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/metrics"
 )
@@ -24,27 +23,17 @@ const (
 )
 
 // NewNginxMetricsCollector creates an NginxCollector which fetches stats from NGINX over a unix socket
-func NewNginxMetricsCollector(constLabels map[string]string) (prometheus.Collector, error) {
+func NewNginxMetricsCollector(constLabels map[string]string, logger log.Logger) (prometheus.Collector, error) {
 	httpClient := getSocketClient(nginxStatusSock)
 
 	ngxClient := prometheusClient.NewNginxClient(&httpClient, nginxStatusURI)
 
-	promLogger, err := newPromLogger()
-	if err != nil {
-		return nil, err
-	}
-
-	return nginxCollector.NewNginxCollector(ngxClient, metrics.Namespace, constLabels, promLogger), nil
+	return nginxCollector.NewNginxCollector(ngxClient, metrics.Namespace, constLabels, logger), nil
 }
 
 // NewNginxPlusMetricsCollector creates an NginxCollector which fetches stats from NGINX Plus API over a unix socket
-func NewNginxPlusMetricsCollector(constLabels map[string]string) (prometheus.Collector, error) {
+func NewNginxPlusMetricsCollector(constLabels map[string]string, logger log.Logger) (prometheus.Collector, error) {
 	plusClient, err := createPlusClient()
-	if err != nil {
-		return nil, err
-	}
-
-	promLogger, err := newPromLogger()
 	if err != nil {
 		return nil, err
 	}
@@ -54,23 +43,10 @@ func NewNginxPlusMetricsCollector(constLabels map[string]string) (prometheus.Col
 		metrics.Namespace,
 		nginxCollector.VariableLabelNames{},
 		constLabels,
-		promLogger,
+		logger,
 	)
 
 	return collector, nil
-}
-
-// newPromLogger creates a Prometheus logger that implements to go-kit log.Logger that the prometheus exporter requires.
-func newPromLogger() (log.Logger, error) {
-	logFormat := &promlog.AllowedFormat{}
-
-	if err := logFormat.Set("json"); err != nil {
-		return nil, err
-	}
-
-	logConfig := &promlog.Config{Format: logFormat}
-
-	return promlog.New(logConfig), nil
 }
 
 // getSocketClient gets an http.Client with a unix socket transport.
