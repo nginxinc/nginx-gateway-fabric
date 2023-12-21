@@ -6,7 +6,7 @@ go 1.21.3
 replace github.com/chzyer/logex v1.1.10 => github.com/chzyer/logex v1.2.0
 
 require (
-	github.com/go-logr/logr v1.3.0
+	github.com/go-logr/logr v1.4.0
 	github.com/google/go-cmp v0.6.0
 	github.com/maxbrunsfeld/counterfeiter/v6 v6.7.0
 	github.com/nginxinc/nginx-plus-go-client v0.10.0
