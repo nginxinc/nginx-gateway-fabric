@@ -24,25 +24,6 @@ func (f funcPredicate) delete(object client.Object) bool {
 	return f.stateChanged(object)
 }
 
-// generationChangedPredicate implements stateChangedPredicate based on the generation of the object.
-// This predicate will return true on upsert if the object's generation has changed.
-// It always returns true on delete.
-type generationChangedPredicate struct{}
-
-func (generationChangedPredicate) delete(_ client.Object) bool { return true }
-
-func (generationChangedPredicate) upsert(oldObject, newObject client.Object) bool {
-	if oldObject == nil {
-		return true
-	}
-
-	if newObject == nil {
-		panic("Cannot determine if generation has changed on upsert because new object is nil")
-	}
-
-	return newObject.GetGeneration() != oldObject.GetGeneration()
-}
-
 // annotationChangedPredicate implements stateChangedPredicate based on the value of the annotation provided.
 // This predicate will return true on upsert if the annotation's value has changed.
 // It always returns true on delete.
