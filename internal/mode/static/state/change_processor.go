@@ -126,22 +126,22 @@ func NewChangeProcessorImpl(cfg ChangeProcessorConfig) *ChangeProcessorImpl {
 			{
 				gvk:       extractGVK(&v1.GatewayClass{}),
 				store:     newObjectStoreMapAdapter(clusterStore.GatewayClasses),
-				predicate: nil,
+				predicate: generationChangedPredicate{},
 			},
 			{
 				gvk:       extractGVK(&v1.Gateway{}),
 				store:     newObjectStoreMapAdapter(clusterStore.Gateways),
-				predicate: nil,
+				predicate: generationChangedPredicate{},
 			},
 			{
 				gvk:       extractGVK(&v1.HTTPRoute{}),
 				store:     newObjectStoreMapAdapter(clusterStore.HTTPRoutes),
-				predicate: nil,
+				predicate: generationChangedPredicate{},
 			},
 			{
 				gvk:       extractGVK(&v1beta1.ReferenceGrant{}),
 				store:     newObjectStoreMapAdapter(clusterStore.ReferenceGrants),
-				predicate: nil,
+				predicate: generationChangedPredicate{},
 			},
 			{
 				gvk:       extractGVK(&apiv1.Namespace{}),
