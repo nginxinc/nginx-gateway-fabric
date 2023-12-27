@@ -6,21 +6,29 @@ are similar to the existing [conformance tests](../conformance/README.md), but w
 - NGF-specific functionality
 - Non-Functional requirements testing (such as performance, scale, etc.)
 
-When running, the tests create a port-forward from your NGF Pod to localhost using a port chosen by the
-test framework. Traffic is sent over this port.
+When running locally, the tests create a port-forward from your NGF Pod to localhost using a port chosen by the
+test framework. Traffic is sent over this port. If running on a GCP VM targeting a GKE cluster, the tests will create an
+internal LoadBalancer service which will receive the test traffic.
 
 Directory structure is as follows:
 
 - `framework`: contains utility functions for running the tests
 - `suite`: contains the test files
+- `results`: contains the results files
 
-**Note**: Existing NFR tests will be migrated into this testing `suite` and results stored in a `results` directory.
+**Note**: Existing NFR tests will be migrated into this testing `suite` and results stored in the `results` directory.
 
 ## Prerequisites
 
 - Kubernetes cluster.
 - Docker.
 - Golang.
+
+If running the tests on a VM (`make create-vm-and-run-tests` or `make run-tests-on-vm`):
+
+- The [gcloud CLI](https://cloud.google.com/sdk/docs/install)
+- A GKE cluster (if `master-authorized-networks` is enabled, please set `ADD_VM_IP_AUTH_NETWORKS=true` in your vars.env file)
+- Access to GCP Service Account with Kubernetes admin permissions
 
 **Note**: all commands in steps below are executed from the `tests` directory
 
@@ -30,23 +38,31 @@ make
 
 ```text
 build-images                   Build NGF and NGINX images
+cleanup-vm                     Delete the test GCP VM and the firewall rule
+create-and-setup-vm            Create and setup a GCP VM for tests
 create-kind-cluster            Create a kind cluster
+create-vm-and-run-tests        Create and setup a GCP VM for tests and run the tests
 delete-kind-cluster            Delete kind cluster
 help                           Display this help
 load-images                    Load NGF and NGINX images on configured kind cluster
+run-tests-on-vm                Run the tests on a GCP VM
 test                           Run the system tests against your default k8s cluster
 ```
 
 **Note:** The following variables are configurable when running the below `make` commands:
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| TAG      | edge    | tag for the locally built NGF images |
-| PREFIX   | nginx-gateway-fabric | prefix for the locally built NGF image |
-| NGINX_PREFIX | nginx-gateway-fabric/nginx | prefix for the locally built NGINX image |
-| PULL_POLICY | Never | NGF image pull policy |
-| GW_API_VERSION | 1.0.0 | version of Gateway API resources to install |
-| K8S_VERSION | latest | version of k8s that the tests are run on |
+| Variable            | Default                    | Description                                                    |
+| ------------------- | -------------------------- | -------------------------------------------------------------- |
+| TAG                 | edge                       | tag for the locally built NGF images                           |
+| PREFIX              | nginx-gateway-fabric       | prefix for the locally built NGF image                         |
+| NGINX_PREFIX        | nginx-gateway-fabric/nginx | prefix for the locally built NGINX image                       |
+| PULL_POLICY         | Never                      | NGF image pull policy                                          |
+| GW_API_VERSION      | 1.0.0                      | version of Gateway API resources to install                    |
+| K8S_VERSION         | latest                     | version of k8s that the tests are run on                       |
+| GW_SERVICE_TYPE     | NodePort                   | type of Service that should be created                         |
+| GW_SVC_GKE_INTERNAL | false                      | specifies if the LoadBalancer should be a GKE internal service |
+| GINKGO_LABEL        | ""                         | name of the ginkgo label that will filter the tests to run     |
+| GINKGO_FLAGS        | ""                         | other ginkgo flags to pass to the go test command              |
 
 ## Step 1 - Create a Kubernetes cluster
 
@@ -74,11 +90,52 @@ make build-images load-images TAG=$(whoami)
 
 ## Step 3 - Run the tests
 
+### 3a - Run the tests locally
+
 ```makefile
 make test TAG=$(whoami)
 ```
 
-To run a specific test, you can "focus" it by adding the `F` prefix to the name. For example:
+### 3b - Run the tests on a GKE cluster from a GCP VM
+
+This step only applies if you would like to run the tests from a GCP based VM.
+
+Before running the below `make` command, copy the `scripts/vars.env-example` file to `scripts/vars.env` and populate the
+required env vars. The `GKE_CLUSTER_ZONE` needs to be the zone of your GKE cluster, and `GKE_SVC_ACCOUNT` needs to be
+the name of a service account that has Kubernetes admin permissions.
+
+To create and setup the VM (including creating a firewall rule allowing SSH access from your local machine, and
+optionally adding the VM IP to the `master-authorized-networks` list of your GKE cluster if
+`ADD_VM_IP_AUTH_NETWORKS` is set to `true`) and run the tests, run the following
+
+```makefile
+make create-vm-and-run-tests
+```
+
+To use an existing VM to run the tests, run the following
+
+```makefile
+make run-tests-on-vm
+```
+
+### Common test amendments
+
+To run all tests with the label "performance", use the GINKGO_LABEL variable:
+
+```makefile
+make test TAG=$(whoami) GINKGO_LABEL=performance
+```
+
+or to pass a specific flag, e.g. run a specific test, use the GINKGO_FLAGS variable:
+
+```makefile
+make test TAG=$(whoami) GINKGO_FLAGS='-ginkgo.focus "writes the system info to a results file"'
+```
+
+If you are running the tests in GCP, add your required label/ flags to `scripts/var.env`.
+
+You can also modify the tests code for a similar outcome. To run a specific test, you can "focus" it by adding the `F`
+prefix to the name. For example:
 
 ```go
 It("runs some test", func(){
@@ -112,8 +169,18 @@ XIt("runs some test", func(){
 })
 ```
 
-## Step 4 - Delete kind cluster
+For more information of filtering specs, see [the docs here](https://onsi.github.io/ginkgo/#filtering-specs).
 
-```makefile
-make delete-kind-cluster
-```
+## Step 4 - Cleanup
+
+1. Delete kind cluster, if required
+
+    ```makefile
+    make delete-kind-cluster
+    ```
+
+2. Delete the cloud VM and cleanup the firewall rule, if required
+
+    ```makefile
+    make cleanup-vm
+    ```
