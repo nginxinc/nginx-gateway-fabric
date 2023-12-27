@@ -8,8 +8,6 @@ docs: "DOCS-000"
 
 {{<custom-styles>}}
 
-## Overview
-
 You can route traffic to your Kubernetes applications using the Gateway API and NGINX Gateway Fabric. Whether you're managing a web application or a REST backend API, you can use NGINX Gateway Fabric to expose your application outside the cluster.
 
 ## Prerequisites
@@ -119,7 +117,7 @@ To create the **cafe** gateway, copy and paste the following into your terminal:
 
 ```yaml
 kubectl apply -f - <<EOF
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
   name: cafe
@@ -143,7 +141,7 @@ Next you will create the HTTPRoute by copying and pasting the following into you
 
 ```yaml
 kubectl apply -f - <<EOF
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
   name: coffee

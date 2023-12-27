@@ -97,6 +97,8 @@ type HTTPFilters struct {
 	InvalidFilter *InvalidHTTPFilter
 	// RequestRedirect holds the HTTPRequestRedirectFilter.
 	RequestRedirect *HTTPRequestRedirectFilter
+	// RequestURLRewrite holds the HTTPURLRewriteFilter.
+	RequestURLRewrite *HTTPURLRewriteFilter
 	// RequestHeaderModifiers holds the HTTPHeaderFilter.
 	RequestHeaderModifiers *HTTPHeaderFilter
 }
@@ -129,6 +131,33 @@ type HTTPRequestRedirectFilter struct {
 	Port *int32
 	// StatusCode is the HTTP status code of the redirect.
 	StatusCode *int
+}
+
+// HTTPURLRewriteFilter rewrites HTTP requests.
+type HTTPURLRewriteFilter struct {
+	// Hostname is the hostname of the rewrite.
+	Hostname *string
+	// Path is the path of the rewrite.
+	Path *HTTPPathModifier
+}
+
+// PathModifierType is the type of the PathModifier in a redirect or rewrite rule.
+type PathModifierType string
+
+const (
+	// ReplaceFullPath indicates that we replace the full path.
+	ReplaceFullPath PathModifierType = "ReplaceFullPath"
+	// ReplacePrefixMatch indicates that we replace a prefix match.
+	ReplacePrefixMatch PathModifierType = "ReplacePrefixMatch"
+)
+
+// HTTPPathModifier defines configuration for path modifiers.
+type HTTPPathModifier struct {
+	// Replacement specifies the value with which to replace the full path or prefix match of a request during
+	// a rewrite or redirect.
+	Replacement string
+	// Type indicates the type of path modifier.
+	Type PathModifierType
 }
 
 // HTTPHeaderMatch matches an HTTP header.

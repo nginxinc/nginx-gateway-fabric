@@ -46,6 +46,13 @@ func convertHTTPRequestRedirectFilter(filter *v1.HTTPRequestRedirectFilter) *HTT
 	}
 }
 
+func convertHTTPURLRewriteFilter(filter *v1.HTTPURLRewriteFilter) *HTTPURLRewriteFilter {
+	return &HTTPURLRewriteFilter{
+		Hostname: (*string)(filter.Hostname),
+		Path:     convertPathModifier(filter.Path),
+	}
+}
+
 func convertHTTPHeaderFilter(filter *v1.HTTPHeaderFilter) *HTTPHeaderFilter {
 	result := &HTTPHeaderFilter{
 		Remove: filter.Remove,
@@ -77,4 +84,23 @@ func convertPathType(pathType v1.PathMatchType) PathType {
 	default:
 		panic(fmt.Sprintf("unsupported path type: %s", pathType))
 	}
+}
+
+func convertPathModifier(path *v1.HTTPPathModifier) *HTTPPathModifier {
+	if path != nil {
+		switch path.Type {
+		case v1.FullPathHTTPPathModifier:
+			return &HTTPPathModifier{
+				Type:        ReplaceFullPath,
+				Replacement: *path.ReplaceFullPath,
+			}
+		case v1.PrefixMatchHTTPPathModifier:
+			return &HTTPPathModifier{
+				Type:        ReplacePrefixMatch,
+				Replacement: *path.ReplacePrefixMatch,
+			}
+		}
+	}
+
+	return nil
 }

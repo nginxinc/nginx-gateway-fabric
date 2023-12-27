@@ -693,6 +693,8 @@ func validateFilter(
 	switch filter.Type {
 	case v1.HTTPRouteFilterRequestRedirect:
 		return validateFilterRedirect(validator, filter, filterPath)
+	case v1.HTTPRouteFilterURLRewrite:
+		return validateFilterRewrite(validator, filter, filterPath)
 	case v1.HTTPRouteFilterRequestHeaderModifier:
 		return validateFilterHeaderModifier(validator, filter, filterPath)
 	default:
@@ -701,6 +703,7 @@ func validateFilter(
 			filter.Type,
 			[]string{
 				string(v1.HTTPRouteFilterRequestRedirect),
+				string(v1.HTTPRouteFilterURLRewrite),
 				string(v1.HTTPRouteFilterRequestHeaderModifier),
 			},
 		)
@@ -721,7 +724,6 @@ func validateFilterRedirect(
 	}
 
 	redirect := filter.RequestRedirect
-
 	redirectPath := filterPath.Child("requestRedirect")
 
 	if redirect.Scheme != nil {
@@ -732,7 +734,7 @@ func validateFilterRedirect(
 	}
 
 	if redirect.Hostname != nil {
-		if err := validator.ValidateRedirectHostname(string(*redirect.Hostname)); err != nil {
+		if err := validator.ValidateHostname(string(*redirect.Hostname)); err != nil {
 			valErr := field.Invalid(redirectPath.Child("hostname"), *redirect.Hostname, err.Error())
 			allErrs = append(allErrs, valErr)
 		}
@@ -753,6 +755,49 @@ func validateFilterRedirect(
 	if redirect.StatusCode != nil {
 		if valid, supportedValues := validator.ValidateRedirectStatusCode(*redirect.StatusCode); !valid {
 			valErr := field.NotSupported(redirectPath.Child("statusCode"), *redirect.StatusCode, supportedValues)
+			allErrs = append(allErrs, valErr)
+		}
+	}
+
+	return allErrs
+}
+
+func validateFilterRewrite(
+	validator validation.HTTPFieldsValidator,
+	filter v1.HTTPRouteFilter,
+	filterPath *field.Path,
+) field.ErrorList {
+	var allErrs field.ErrorList
+
+	if filter.URLRewrite == nil {
+		panicForBrokenWebhookAssumption(errors.New("urlRewrite cannot be nil"))
+	}
+
+	rewrite := filter.URLRewrite
+	rewritePath := filterPath.Child("urlRewrite")
+
+	if rewrite.Hostname != nil {
+		if err := validator.ValidateHostname(string(*rewrite.Hostname)); err != nil {
+			valErr := field.Invalid(rewritePath.Child("hostname"), *rewrite.Hostname, err.Error())
+			allErrs = append(allErrs, valErr)
+		}
+	}
+
+	if rewrite.Path != nil {
+		var path string
+		switch rewrite.Path.Type {
+		case v1.FullPathHTTPPathModifier:
+			path = *rewrite.Path.ReplaceFullPath
+		case v1.PrefixMatchHTTPPathModifier:
+			path = *rewrite.Path.ReplacePrefixMatch
+		default:
+			msg := fmt.Sprintf("urlRewrite path type %s not supported", rewrite.Path.Type)
+			valErr := field.Invalid(rewritePath.Child("path"), *rewrite.Path, msg)
+			return append(allErrs, valErr)
+		}
+
+		if err := validator.ValidateRewritePath(path); err != nil {
+			valErr := field.Invalid(rewritePath.Child("path"), *rewrite.Path, err.Error())
 			allErrs = append(allErrs, valErr)
 		}
 	}

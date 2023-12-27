@@ -13,6 +13,7 @@ type Server struct {
 // Location holds all configuration for an HTTP location.
 type Location struct {
 	Return          *Return
+	Rewrites        []string
 	Path            string
 	ProxyPass       string
 	HTTPMatchVar    string
