@@ -29,6 +29,9 @@ build/.out
 build/out
 dist/
 
+# Test artifacts
+tests/**/*.csv
+
 # Node modules
 node_modules/
 

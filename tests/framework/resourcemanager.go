@@ -408,3 +408,40 @@ func (rm *ResourceManager) GetClusterInfo() (ClusterInfo, error) {
 
 	return *ci, nil
 }
+
+// GetNGFPodNames returns the name(s) of the NGF Pod(s).
+func GetNGFPodNames(
+	k8sClient client.Client,
+	namespace,
+	releaseName string,
+	timeout time.Duration,
+) ([]string, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	var podList core.PodList
+	if err := k8sClient.List(
+		ctx,
+		&podList,
+		client.InNamespace(namespace),
+		client.MatchingLabels{
+			"app.kubernetes.io/instance": releaseName,
+		},
+	); err != nil {
+		return nil, fmt.Errorf("error getting list of Pods: %w", err)
+	}
+
+	if len(podList.Items) > 0 {
+		var names []string
+		for _, pod := range podList.Items {
+			for _, cond := range pod.Status.Conditions {
+				if cond.Type == core.PodReady && cond.Status == core.ConditionTrue {
+					names = append(names, pod.Name)
+				}
+			}
+		}
+		return names, nil
+	}
+
+	return nil, errors.New("unable to find NGF Pod(s)")
+}

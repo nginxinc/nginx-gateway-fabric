@@ -35,7 +35,7 @@ MAX_RETRIES=30
 RETRY_INTERVAL=10
 for ((i=1; i<=MAX_RETRIES; i++)); do
     echo "Attempt $i to connect to the VM..."
-    gcloud compute ssh ${VM_NAME} --zone=${GKE_CLUSTER_ZONE} --quiet --command="echo 'VM is ready'"
+    gcloud compute ssh ${VM_NAME} --zone=${GKE_CLUSTER_ZONE} --project=${GKE_PROJECT} --quiet --command="echo 'VM is ready'"
     if [ $? -eq 0 ]; then
         echo "SSH connection successful. VM is ready."
         break
@@ -44,6 +44,6 @@ for ((i=1; i<=MAX_RETRIES; i++)); do
     sleep ${RETRY_INTERVAL}
 done
 
-gcloud compute scp --zone ${GKE_CLUSTER_ZONE} ${SCRIPT_DIR}/vars.env ${VM_NAME}:~
+gcloud compute scp --zone ${GKE_CLUSTER_ZONE} --project=${GKE_PROJECT} ${SCRIPT_DIR}/vars.env ${VM_NAME}:~
 
-gcloud compute ssh --zone ${GKE_CLUSTER_ZONE} ${VM_NAME} --command="bash -s" < ${SCRIPT_DIR}/remote-scripts/install-deps.sh
+gcloud compute ssh --zone ${GKE_CLUSTER_ZONE} --project=${GKE_PROJECT} ${VM_NAME} --command="bash -s" < ${SCRIPT_DIR}/remote-scripts/install-deps.sh

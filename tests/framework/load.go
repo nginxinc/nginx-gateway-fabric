@@ -1,10 +1,10 @@
 package framework
 
 import (
-	"fmt"
+	"context"
+	"crypto/tls"
+	"net"
 	"net/http"
-	"net/url"
-	"os"
 	"time"
 
 	vegeta "github.com/tsenart/vegeta/v12/lib"
@@ -37,32 +37,43 @@ func RunLoadTest(
 	targets []Target,
 	rate int,
 	duration time.Duration,
-	desc string,
-	outFile *os.File,
-	proxy string,
-) error {
+	desc,
+	proxy,
+	serverName string,
+) (vegeta.Results, vegeta.Metrics) {
 	vegTargets := convertTargetToVegetaTarget(targets)
 	targeter := vegeta.NewStaticTargeter(vegTargets...)
-	proxyURL, err := url.Parse(proxy)
-	if err != nil {
-		return fmt.Errorf("error getting proxy URL: %w", err)
+
+	dialer := &net.Dialer{
+		LocalAddr: &net.TCPAddr{IP: vegeta.DefaultLocalAddr.IP, Zone: vegeta.DefaultLocalAddr.Zone},
+		KeepAlive: 30 * time.Second,
 	}
 
-	attacker := vegeta.NewAttacker(
-		vegeta.Proxy(http.ProxyURL(proxyURL)),
-	)
+	httpClient := http.Client{
+		Timeout: vegeta.DefaultTimeout,
+		Transport: &http.Transport{
+			DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
+				return dialer.DialContext(ctx, network, proxy)
+			},
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: true, //nolint:gosec // self-signed cert for testing
+				ServerName:         serverName,
+			},
+			MaxIdleConnsPerHost: vegeta.DefaultConnections,
+			MaxConnsPerHost:     vegeta.DefaultMaxConnections,
+		},
+	}
+
+	attacker := vegeta.NewAttacker(vegeta.Client(&httpClient))
 
 	r := vegeta.Rate{Freq: rate, Per: time.Second}
+	var results vegeta.Results
 	var metrics vegeta.Metrics
 	for res := range attacker.Attack(targeter, r, duration, desc) {
+		results = append(results, *res)
 		metrics.Add(res)
 	}
 	metrics.Close()
 
-	reporter := vegeta.NewTextReporter(&metrics)
-
-	if err = reporter.Report(outFile); err != nil {
-		return fmt.Errorf("error reporting results: %w", err)
-	}
-	return nil
+	return results, metrics
 }
