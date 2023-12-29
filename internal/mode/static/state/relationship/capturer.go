@@ -75,13 +75,15 @@ func (c *CapturerImpl) Remove(resourceType client.Object, nsname types.Namespace
 }
 
 // Exists returns true if the given object has a relationship with another object.
-func (c *CapturerImpl) Exists(resourceType client.Object, nsname types.NamespacedName) bool {
+func (c *CapturerImpl) Exists(resourceType client.Object, _ types.NamespacedName) bool {
 	switch resourceType.(type) {
 	case *v1.Service:
-		return c.serviceRefCount[nsname] > 0
+		return false
+		// return c.serviceRefCount[nsname] > 0
 	case *discoveryV1.EndpointSlice:
-		svcOwner, exists := c.endpointSliceOwners[nsname]
-		return exists && c.serviceRefCount[svcOwner] > 0
+		return false
+		// svcOwner, exists := c.endpointSliceOwners[nsname]
+		// return exists && c.serviceRefCount[svcOwner] > 0
 	}
 
 	return false

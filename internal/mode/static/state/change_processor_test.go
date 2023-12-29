@@ -283,15 +283,15 @@ var _ = Describe("ChangeProcessor", func() {
 
 		Describe("Process gateway resources", Ordered, func() {
 			var (
-				gcUpdated                           *v1.GatewayClass
-				diffNsTLSSecret, sameNsTLSSecret    *apiv1.Secret
-				hr1, hr1Updated, hr2                *v1.HTTPRoute
-				gw1, gw1Updated, gw2                *v1.Gateway
-				refGrant1, refGrant2                *v1beta1.ReferenceGrant
-				expGraph                            *graph.Graph
-				expRouteHR1, expRouteHR2            *graph.Route
-				hr1Name, hr2Name                    types.NamespacedName
-				gatewayAPICRD, gatewayAPICRDUpdated *metav1.PartialObjectMetadata
+				gcUpdated                                      *v1.GatewayClass
+				diffNsTLSSecret, sameNsTLSSecret               *apiv1.Secret
+				hr1, hr1Updated, hr2                           *v1.HTTPRoute
+				gw1, gw1Updated, gw2                           *v1.Gateway
+				refGrant1, refGrant2                           *v1beta1.ReferenceGrant
+				expGraph, graphWithJustReferencedServicesNames *graph.Graph
+				expRouteHR1, expRouteHR2                       *graph.Route
+				hr1Name, hr2Name                               types.NamespacedName
+				gatewayAPICRD, gatewayAPICRDUpdated            *metav1.PartialObjectMetadata
 			)
 			BeforeAll(func() {
 				gcUpdated = gc.DeepCopy()
@@ -509,6 +509,20 @@ var _ = Describe("ChangeProcessor", func() {
 						{Namespace: "test", Name: "hr-1"}: expRouteHR1,
 					},
 					ReferencedSecrets: map[types.NamespacedName]*graph.Secret{},
+					ReferencedServicesNames: map[types.NamespacedName]struct{}{
+						{
+							Namespace: "service-ns",
+							Name:      "service",
+						}: {},
+					},
+				}
+				graphWithJustReferencedServicesNames = &graph.Graph{
+					ReferencedServicesNames: map[types.NamespacedName]struct{}{
+						{
+							Namespace: "service-ns",
+							Name:      "service",
+						}: {},
+					},
 				}
 			})
 			When("no upsert has occurred", func() {
@@ -535,7 +549,7 @@ var _ = Describe("ChangeProcessor", func() {
 
 							changed, graphCfg := processor.Process()
 							Expect(changed).To(BeTrue())
-							Expect(helpers.Diff(&graph.Graph{}, graphCfg)).To(BeEmpty())
+							Expect(helpers.Diff(graphWithJustReferencedServicesNames, graphCfg)).To(BeEmpty())
 						})
 					})
 					When("the different namespace TLS Secret is upserted", func() {
@@ -912,7 +926,7 @@ var _ = Describe("ChangeProcessor", func() {
 
 					changed, graphCfg := processor.Process()
 					Expect(changed).To(BeTrue())
-					Expect(helpers.Diff(&graph.Graph{}, graphCfg)).To(BeEmpty())
+					Expect(helpers.Diff(graphWithJustReferencedServicesNames, graphCfg)).To(BeEmpty())
 				})
 			})
 			When("the first HTTPRoute is deleted", func() {

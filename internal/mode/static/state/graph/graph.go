@@ -23,6 +23,7 @@ type ClusterState struct {
 	ReferenceGrants map[types.NamespacedName]*v1beta1.ReferenceGrant
 	Secrets         map[types.NamespacedName]*v1.Secret
 	CRDMetadata     map[types.NamespacedName]*metav1.PartialObjectMetadata
+	EndpointSlices  map[types.NamespacedName]*discoveryV1.EndpointSlice
 }
 
 // Graph is a Graph-like representation of Gateway API resources.

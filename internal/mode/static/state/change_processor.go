@@ -99,6 +99,7 @@ func NewChangeProcessorImpl(cfg ChangeProcessorConfig) *ChangeProcessorImpl {
 		ReferenceGrants: make(map[types.NamespacedName]*v1beta1.ReferenceGrant),
 		Secrets:         make(map[types.NamespacedName]*apiv1.Secret),
 		CRDMetadata:     make(map[types.NamespacedName]*metav1.PartialObjectMetadata),
+		EndpointSlices:  make(map[types.NamespacedName]*discoveryV1.EndpointSlice),
 	}
 
 	extractGVK := func(obj client.Object) schema.GroupVersionKind {
@@ -151,12 +152,12 @@ func NewChangeProcessorImpl(cfg ChangeProcessorConfig) *ChangeProcessorImpl {
 			{
 				gvk:       extractGVK(&apiv1.Service{}),
 				store:     newObjectStoreMapAdapter(clusterStore.Services),
-				predicate: nil,
+				predicate: funcPredicate{stateChanged: isReferenced},
 			},
 			{
 				gvk:       extractGVK(&discoveryV1.EndpointSlice{}),
-				store:     nil,
-				predicate: nil,
+				store:     newObjectStoreMapAdapter(clusterStore.EndpointSlices),
+				predicate: funcPredicate{stateChanged: isReferenced},
 			},
 			{
 				gvk:       extractGVK(&apiv1.Secret{}),
