@@ -15,6 +15,7 @@ To install Hugo locally, follow the [official Hugo instructions](https://gohugo.
 If you have [Docker](https://www.docker.com/get-started/) installed, there is a fallback in the [Makefile](Makefile) which means you do need to install Hugo locally.
 
 ## Developing documentation locally
+
 To build the docs locally, run the `make` command inside this `/docs` directory:
 
 ```text
@@ -26,6 +27,7 @@ make hugo-mod-tidy  -   Removes unused entries in go.mod and go.sum, then verifi
 ```
 
 ## Adding new documentation
+
 ### Using Hugo to generate a new documentation file
 
 To create a new documentation file with the pre-configured Hugo front-matter for the task template, run the following command inside this `/docs` directory:
@@ -53,7 +55,9 @@ The available content templates (`kind`) are:
 - openapi: A template with the requirements to render an openapi.yaml specification.
 
 ## Documentation formatting
+
 ### Basic markdown formatting
+
 There are multiple ways to format text: for consistency and clarity, these are our conventions:
 
 - Bold: Two asterisks on each side - `**Bolded text**`.
@@ -70,7 +74,7 @@ Close every section with a horizontal line by using three dashes: `---`.
 Internal links should use Hugo [ref and relref shortcodes](https://gohugo.io/content-management/cross-references/).
 
 - Although file extensions are optional for Hugo, we include them as best practice for page anchors.
-- Relative paths are preferred, but just the filename is permissible. 
+- Relative paths are preferred, but just the filename is permissible.
 - Paths without a leading forward slash (`/`) are first resolved relative to the current page, then the remainder of the website.
 
 Here are two examples:
@@ -82,7 +86,7 @@ To install <integation>, refer to the [integration instructions]({{< relref "/in
 
 ### How to add images
 
-Use the `img` [shortcode](#how-to-use-hugo-shortcodes) to add images into your documentation.
+Use the `img` [shortcode](#using-hugo-shortcodes) to add images into your documentation.
 
 1. Add the image to the `/static/img` directory.
 1. Add the `img` shortcode:
