@@ -30,6 +30,17 @@ type FakeHTTPFieldsValidator struct {
 	validateHeaderValueInMatchReturnsOnCall map[int]struct {
 		result1 error
 	}
+	ValidateHostnameStub        func(string) error
+	validateHostnameMutex       sync.RWMutex
+	validateHostnameArgsForCall []struct {
+		arg1 string
+	}
+	validateHostnameReturns struct {
+		result1 error
+	}
+	validateHostnameReturnsOnCall map[int]struct {
+		result1 error
+	}
 	ValidateMethodInMatchStub        func(string) (bool, []string)
 	validateMethodInMatchMutex       sync.RWMutex
 	validateMethodInMatchArgsForCall []struct {
@@ -74,17 +85,6 @@ type FakeHTTPFieldsValidator struct {
 		result1 error
 	}
 	validateQueryParamValueInMatchReturnsOnCall map[int]struct {
-		result1 error
-	}
-	ValidateRedirectHostnameStub        func(string) error
-	validateRedirectHostnameMutex       sync.RWMutex
-	validateRedirectHostnameArgsForCall []struct {
-		arg1 string
-	}
-	validateRedirectHostnameReturns struct {
-		result1 error
-	}
-	validateRedirectHostnameReturnsOnCall map[int]struct {
 		result1 error
 	}
 	ValidateRedirectPortStub        func(int32) error
@@ -144,6 +144,17 @@ type FakeHTTPFieldsValidator struct {
 		result1 error
 	}
 	validateRequestHeaderValueReturnsOnCall map[int]struct {
+		result1 error
+	}
+	ValidateRewritePathStub        func(string) error
+	validateRewritePathMutex       sync.RWMutex
+	validateRewritePathArgsForCall []struct {
+		arg1 string
+	}
+	validateRewritePathReturns struct {
+		result1 error
+	}
+	validateRewritePathReturnsOnCall map[int]struct {
 		result1 error
 	}
 	invocations      map[string][][]interface{}
@@ -268,6 +279,67 @@ func (fake *FakeHTTPFieldsValidator) ValidateHeaderValueInMatchReturnsOnCall(i i
 		})
 	}
 	fake.validateHeaderValueInMatchReturnsOnCall[i] = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *FakeHTTPFieldsValidator) ValidateHostname(arg1 string) error {
+	fake.validateHostnameMutex.Lock()
+	ret, specificReturn := fake.validateHostnameReturnsOnCall[len(fake.validateHostnameArgsForCall)]
+	fake.validateHostnameArgsForCall = append(fake.validateHostnameArgsForCall, struct {
+		arg1 string
+	}{arg1})
+	stub := fake.ValidateHostnameStub
+	fakeReturns := fake.validateHostnameReturns
+	fake.recordInvocation("ValidateHostname", []interface{}{arg1})
+	fake.validateHostnameMutex.Unlock()
+	if stub != nil {
+		return stub(arg1)
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fakeReturns.result1
+}
+
+func (fake *FakeHTTPFieldsValidator) ValidateHostnameCallCount() int {
+	fake.validateHostnameMutex.RLock()
+	defer fake.validateHostnameMutex.RUnlock()
+	return len(fake.validateHostnameArgsForCall)
+}
+
+func (fake *FakeHTTPFieldsValidator) ValidateHostnameCalls(stub func(string) error) {
+	fake.validateHostnameMutex.Lock()
+	defer fake.validateHostnameMutex.Unlock()
+	fake.ValidateHostnameStub = stub
+}
+
+func (fake *FakeHTTPFieldsValidator) ValidateHostnameArgsForCall(i int) string {
+	fake.validateHostnameMutex.RLock()
+	defer fake.validateHostnameMutex.RUnlock()
+	argsForCall := fake.validateHostnameArgsForCall[i]
+	return argsForCall.arg1
+}
+
+func (fake *FakeHTTPFieldsValidator) ValidateHostnameReturns(result1 error) {
+	fake.validateHostnameMutex.Lock()
+	defer fake.validateHostnameMutex.Unlock()
+	fake.ValidateHostnameStub = nil
+	fake.validateHostnameReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *FakeHTTPFieldsValidator) ValidateHostnameReturnsOnCall(i int, result1 error) {
+	fake.validateHostnameMutex.Lock()
+	defer fake.validateHostnameMutex.Unlock()
+	fake.ValidateHostnameStub = nil
+	if fake.validateHostnameReturnsOnCall == nil {
+		fake.validateHostnameReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.validateHostnameReturnsOnCall[i] = struct {
 		result1 error
 	}{result1}
 }
@@ -515,67 +587,6 @@ func (fake *FakeHTTPFieldsValidator) ValidateQueryParamValueInMatchReturnsOnCall
 		})
 	}
 	fake.validateQueryParamValueInMatchReturnsOnCall[i] = struct {
-		result1 error
-	}{result1}
-}
-
-func (fake *FakeHTTPFieldsValidator) ValidateRedirectHostname(arg1 string) error {
-	fake.validateRedirectHostnameMutex.Lock()
-	ret, specificReturn := fake.validateRedirectHostnameReturnsOnCall[len(fake.validateRedirectHostnameArgsForCall)]
-	fake.validateRedirectHostnameArgsForCall = append(fake.validateRedirectHostnameArgsForCall, struct {
-		arg1 string
-	}{arg1})
-	stub := fake.ValidateRedirectHostnameStub
-	fakeReturns := fake.validateRedirectHostnameReturns
-	fake.recordInvocation("ValidateRedirectHostname", []interface{}{arg1})
-	fake.validateRedirectHostnameMutex.Unlock()
-	if stub != nil {
-		return stub(arg1)
-	}
-	if specificReturn {
-		return ret.result1
-	}
-	return fakeReturns.result1
-}
-
-func (fake *FakeHTTPFieldsValidator) ValidateRedirectHostnameCallCount() int {
-	fake.validateRedirectHostnameMutex.RLock()
-	defer fake.validateRedirectHostnameMutex.RUnlock()
-	return len(fake.validateRedirectHostnameArgsForCall)
-}
-
-func (fake *FakeHTTPFieldsValidator) ValidateRedirectHostnameCalls(stub func(string) error) {
-	fake.validateRedirectHostnameMutex.Lock()
-	defer fake.validateRedirectHostnameMutex.Unlock()
-	fake.ValidateRedirectHostnameStub = stub
-}
-
-func (fake *FakeHTTPFieldsValidator) ValidateRedirectHostnameArgsForCall(i int) string {
-	fake.validateRedirectHostnameMutex.RLock()
-	defer fake.validateRedirectHostnameMutex.RUnlock()
-	argsForCall := fake.validateRedirectHostnameArgsForCall[i]
-	return argsForCall.arg1
-}
-
-func (fake *FakeHTTPFieldsValidator) ValidateRedirectHostnameReturns(result1 error) {
-	fake.validateRedirectHostnameMutex.Lock()
-	defer fake.validateRedirectHostnameMutex.Unlock()
-	fake.ValidateRedirectHostnameStub = nil
-	fake.validateRedirectHostnameReturns = struct {
-		result1 error
-	}{result1}
-}
-
-func (fake *FakeHTTPFieldsValidator) ValidateRedirectHostnameReturnsOnCall(i int, result1 error) {
-	fake.validateRedirectHostnameMutex.Lock()
-	defer fake.validateRedirectHostnameMutex.Unlock()
-	fake.ValidateRedirectHostnameStub = nil
-	if fake.validateRedirectHostnameReturnsOnCall == nil {
-		fake.validateRedirectHostnameReturnsOnCall = make(map[int]struct {
-			result1 error
-		})
-	}
-	fake.validateRedirectHostnameReturnsOnCall[i] = struct {
 		result1 error
 	}{result1}
 }
@@ -891,6 +902,67 @@ func (fake *FakeHTTPFieldsValidator) ValidateRequestHeaderValueReturnsOnCall(i i
 	}{result1}
 }
 
+func (fake *FakeHTTPFieldsValidator) ValidateRewritePath(arg1 string) error {
+	fake.validateRewritePathMutex.Lock()
+	ret, specificReturn := fake.validateRewritePathReturnsOnCall[len(fake.validateRewritePathArgsForCall)]
+	fake.validateRewritePathArgsForCall = append(fake.validateRewritePathArgsForCall, struct {
+		arg1 string
+	}{arg1})
+	stub := fake.ValidateRewritePathStub
+	fakeReturns := fake.validateRewritePathReturns
+	fake.recordInvocation("ValidateRewritePath", []interface{}{arg1})
+	fake.validateRewritePathMutex.Unlock()
+	if stub != nil {
+		return stub(arg1)
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fakeReturns.result1
+}
+
+func (fake *FakeHTTPFieldsValidator) ValidateRewritePathCallCount() int {
+	fake.validateRewritePathMutex.RLock()
+	defer fake.validateRewritePathMutex.RUnlock()
+	return len(fake.validateRewritePathArgsForCall)
+}
+
+func (fake *FakeHTTPFieldsValidator) ValidateRewritePathCalls(stub func(string) error) {
+	fake.validateRewritePathMutex.Lock()
+	defer fake.validateRewritePathMutex.Unlock()
+	fake.ValidateRewritePathStub = stub
+}
+
+func (fake *FakeHTTPFieldsValidator) ValidateRewritePathArgsForCall(i int) string {
+	fake.validateRewritePathMutex.RLock()
+	defer fake.validateRewritePathMutex.RUnlock()
+	argsForCall := fake.validateRewritePathArgsForCall[i]
+	return argsForCall.arg1
+}
+
+func (fake *FakeHTTPFieldsValidator) ValidateRewritePathReturns(result1 error) {
+	fake.validateRewritePathMutex.Lock()
+	defer fake.validateRewritePathMutex.Unlock()
+	fake.ValidateRewritePathStub = nil
+	fake.validateRewritePathReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *FakeHTTPFieldsValidator) ValidateRewritePathReturnsOnCall(i int, result1 error) {
+	fake.validateRewritePathMutex.Lock()
+	defer fake.validateRewritePathMutex.Unlock()
+	fake.ValidateRewritePathStub = nil
+	if fake.validateRewritePathReturnsOnCall == nil {
+		fake.validateRewritePathReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.validateRewritePathReturnsOnCall[i] = struct {
+		result1 error
+	}{result1}
+}
+
 func (fake *FakeHTTPFieldsValidator) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
@@ -898,6 +970,8 @@ func (fake *FakeHTTPFieldsValidator) Invocations() map[string][][]interface{} {
 	defer fake.validateHeaderNameInMatchMutex.RUnlock()
 	fake.validateHeaderValueInMatchMutex.RLock()
 	defer fake.validateHeaderValueInMatchMutex.RUnlock()
+	fake.validateHostnameMutex.RLock()
+	defer fake.validateHostnameMutex.RUnlock()
 	fake.validateMethodInMatchMutex.RLock()
 	defer fake.validateMethodInMatchMutex.RUnlock()
 	fake.validatePathInMatchMutex.RLock()
@@ -906,8 +980,6 @@ func (fake *FakeHTTPFieldsValidator) Invocations() map[string][][]interface{} {
 	defer fake.validateQueryParamNameInMatchMutex.RUnlock()
 	fake.validateQueryParamValueInMatchMutex.RLock()
 	defer fake.validateQueryParamValueInMatchMutex.RUnlock()
-	fake.validateRedirectHostnameMutex.RLock()
-	defer fake.validateRedirectHostnameMutex.RUnlock()
 	fake.validateRedirectPortMutex.RLock()
 	defer fake.validateRedirectPortMutex.RUnlock()
 	fake.validateRedirectSchemeMutex.RLock()
@@ -918,6 +990,8 @@ func (fake *FakeHTTPFieldsValidator) Invocations() map[string][][]interface{} {
 	defer fake.validateRequestHeaderNameMutex.RUnlock()
 	fake.validateRequestHeaderValueMutex.RLock()
 	defer fake.validateRequestHeaderValueMutex.RUnlock()
+	fake.validateRewritePathMutex.RLock()
+	defer fake.validateRewritePathMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

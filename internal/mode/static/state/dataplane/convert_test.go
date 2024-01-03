@@ -161,6 +161,63 @@ func TestConvertHTTPRequestRedirectFilter(t *testing.T) {
 	}
 }
 
+func TestConvertHTTPURLRewriteFilter(t *testing.T) {
+	tests := []struct {
+		filter   *v1.HTTPURLRewriteFilter
+		expected *HTTPURLRewriteFilter
+		name     string
+	}{
+		{
+			filter:   &v1.HTTPURLRewriteFilter{},
+			expected: &HTTPURLRewriteFilter{},
+			name:     "empty",
+		},
+		{
+			filter: &v1.HTTPURLRewriteFilter{
+				Hostname: helpers.GetPointer[v1.PreciseHostname]("example.com"),
+				Path: &v1.HTTPPathModifier{
+					Type:            v1.FullPathHTTPPathModifier,
+					ReplaceFullPath: helpers.GetPointer("/path"),
+				},
+			},
+			expected: &HTTPURLRewriteFilter{
+				Hostname: helpers.GetPointer("example.com"),
+				Path: &HTTPPathModifier{
+					Type:        ReplaceFullPath,
+					Replacement: "/path",
+				},
+			},
+			name: "full path modifier",
+		},
+		{
+			filter: &v1.HTTPURLRewriteFilter{
+				Hostname: helpers.GetPointer[v1.PreciseHostname]("example.com"),
+				Path: &v1.HTTPPathModifier{
+					Type:               v1.PrefixMatchHTTPPathModifier,
+					ReplacePrefixMatch: helpers.GetPointer("/path"),
+				},
+			},
+			expected: &HTTPURLRewriteFilter{
+				Hostname: helpers.GetPointer("example.com"),
+				Path: &HTTPPathModifier{
+					Type:        ReplacePrefixMatch,
+					Replacement: "/path",
+				},
+			},
+			name: "prefix path modifier",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			g := NewWithT(t)
+
+			result := convertHTTPURLRewriteFilter(test.filter)
+			g.Expect(result).To(Equal(test.expected))
+		})
+	}
+}
+
 func TestConvertHTTPHeaderFilter(t *testing.T) {
 	tests := []struct {
 		filter   *v1.HTTPHeaderFilter

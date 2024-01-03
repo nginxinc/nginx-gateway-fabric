@@ -1649,6 +1649,18 @@ func TestCreateFilters(t *testing.T) {
 			Hostname: helpers.GetPointer[v1.PreciseHostname]("bar.example.com"),
 		},
 	}
+	rewrite1 := v1.HTTPRouteFilter{
+		Type: v1.HTTPRouteFilterURLRewrite,
+		URLRewrite: &v1.HTTPURLRewriteFilter{
+			Hostname: helpers.GetPointer[v1.PreciseHostname]("foo.example.com"),
+		},
+	}
+	rewrite2 := v1.HTTPRouteFilter{
+		Type: v1.HTTPRouteFilterURLRewrite,
+		URLRewrite: &v1.HTTPURLRewriteFilter{
+			Hostname: helpers.GetPointer[v1.PreciseHostname]("bar.example.com"),
+		},
+	}
 	requestHeaderModifiers1 := v1.HTTPRouteFilter{
 		Type: v1.HTTPRouteFilterRequestHeaderModifier,
 		RequestHeaderModifier: &v1.HTTPHeaderFilter{
@@ -1673,6 +1685,9 @@ func TestCreateFilters(t *testing.T) {
 	}
 
 	expectedRedirect1 := HTTPRequestRedirectFilter{
+		Hostname: helpers.GetPointer("foo.example.com"),
+	}
+	expectedRewrite1 := HTTPURLRewriteFilter{
 		Hostname: helpers.GetPointer("foo.example.com"),
 	}
 	expectedHeaderModifier1 := HTTPHeaderFilter{
@@ -1729,14 +1744,17 @@ func TestCreateFilters(t *testing.T) {
 			filters: []v1.HTTPRouteFilter{
 				redirect1,
 				redirect2,
+				rewrite1,
+				rewrite2,
 				requestHeaderModifiers1,
 				requestHeaderModifiers2,
 			},
 			expected: HTTPFilters{
 				RequestRedirect:        &expectedRedirect1,
+				RequestURLRewrite:      &expectedRewrite1,
 				RequestHeaderModifiers: &expectedHeaderModifier1,
 			},
-			msg: "two redirect filters, two request header modifier, first value for each wins",
+			msg: "two of each filter, first value for each wins",
 		},
 	}
 

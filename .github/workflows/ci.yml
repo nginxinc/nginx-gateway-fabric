@@ -123,7 +123,7 @@ jobs:
         if: ${{ github.event_name == 'push' && github.ref != 'refs/heads/main' }}
 
       - name: Download Syft
-        uses: anchore/sbom-action/download-syft@5ecf649a417b8ae17dc8383dc32d46c03f2312df # v0.15.1
+        uses: anchore/sbom-action/download-syft@719133684c7d294116626d1344fe64f0d2ff3e9e # v0.15.2
         if: github.ref_type == 'tag'
 
       - name: Install Cosign
@@ -324,7 +324,7 @@ jobs:
           ignore-unfixed: "true"
 
       - name: Upload Trivy scan results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@b374143c1149a9115d881581d29b8390bbcbb59c # v3.22.11
+        uses: github/codeql-action/upload-sarif@012739e5082ff0c22ca6d6ab32e07c36df03c4a4 # v3.22.12
         continue-on-error: true
         with:
           sarif_file: trivy-results-nginx-gateway-fabric${{ matrix.container == 'nginx' && '-nginx' || '' }}.sarif

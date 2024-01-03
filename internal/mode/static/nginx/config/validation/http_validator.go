@@ -10,6 +10,7 @@ import (
 type HTTPValidator struct {
 	HTTPNJSMatchValidator
 	HTTPRedirectValidator
+	HTTPURLRewriteValidator
 	HTTPRequestHeaderValidator
 }
 

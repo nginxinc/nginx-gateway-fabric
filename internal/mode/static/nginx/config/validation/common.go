@@ -9,6 +9,16 @@ import (
 )
 
 const (
+	pathFmt    = `/[^\s{};]*`
+	pathErrMsg = "must start with / and must not include any whitespace character, `{`, `}` or `;`"
+)
+
+var (
+	pathRegexp   = regexp.MustCompile("^" + pathFmt + "$")
+	pathExamples = []string{"/", "/path", "/path/subpath-123"}
+)
+
+const (
 	escapedStringsFmt    = `([^"\\]|\\.)*`
 	escapedStringsErrMsg = `must have all '"' (double quotes) escaped and must not end with an unescaped '\' ` +
 		`(backslash)`
@@ -30,7 +40,7 @@ func validateEscapedString(value string, examples []string) error {
 
 const (
 	escapedStringsNoVarExpansionFmt           = `([^"$\\]|\\[^$])*`
-	escapedStringsNoVarExpansionErrMsg string = `a valid header must have all '"' escaped and must not contain any ` +
+	escapedStringsNoVarExpansionErrMsg string = `a valid value must have all '"' escaped and must not contain any ` +
 		`'$' or end with an unescaped '\'`
 )
 
