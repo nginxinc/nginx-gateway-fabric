@@ -8,9 +8,27 @@ using your IDE.
 
 - Create a `kind` cluster:
 
-   ```makefile
+   ```console
    make create-kind-cluster
    ```
+
+- Set GOARCH environment variable:
+
+  The [Makefile](/Makefile) uses the GOARCH variable to build the binary and container images. The default value of GOARCH is `amd64`.
+
+  If you are deploying NGINX Gateway Fabric on a kind cluster, and the architecture of your machine is not `amd64`, you will want to set the GOARCH variable to the architecture of your local machine. You can find the value of GOARCH by running `go env`. Export the GOARCH variable in your `~/.zshrc` or `~/.bashrc`.
+
+  ```console
+  echo "export GOARCH=< Your architecture (e.g. arm64 or amd64) >" >> ~/.bashrc
+  source ~/.bashrc
+  ```
+
+  or for zsh:
+
+  ```console
+  echo "export GOARCH=< Your architecture (e.g. arm64 or amd64) >" >> ~/.zshrc
+  source ~/.zshrc
+  ```
 
 - Build debug images and install NGF on your kind cluster:
 
