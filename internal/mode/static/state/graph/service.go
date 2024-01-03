@@ -12,8 +12,7 @@ func buildReferencedServicesNames(
 
 	// Get all the service names referenced from all the HTTPRoutes
 	for _, hr := range clusterHTTPRoutes {
-		tempSvcNames := getBackendServiceNamesFromRoute(hr)
-		for k, v := range tempSvcNames {
+		for k, v := range getBackendServiceNamesFromRoute(hr) {
 			svcNames[k] = v
 		}
 	}

@@ -182,13 +182,14 @@ func (s *changeTrackingUpdater) assertSupportedGVK(gvk schema.GroupVersionKind) 
 func (s *changeTrackingUpdater) upsert(obj client.Object) (changed bool) {
 	objTypeGVK := s.extractGVK(obj)
 
-	if !s.persistedGVKs.contains(objTypeGVK) {
-		return false
+	var oldObj client.Object
+
+	// persistedGVKs will only contain objTypeGVK if the resource is being tracked in the store.
+	if s.persistedGVKs.contains(objTypeGVK) {
+		oldObj = s.store.get(obj, client.ObjectKeyFromObject(obj))
+
+		s.store.upsert(obj)
 	}
-
-	oldObj := s.store.get(obj, client.ObjectKeyFromObject(obj))
-
-	s.store.upsert(obj)
 
 	stateChanged, ok := s.stateChangedPredicates[objTypeGVK]
 	if !ok {
@@ -219,23 +220,21 @@ func (s *changeTrackingUpdater) Upsert(obj client.Object) {
 func (s *changeTrackingUpdater) delete(objType client.Object, nsname types.NamespacedName) (changed bool) {
 	objTypeGVK := s.extractGVK(objType)
 
-	if !s.persistedGVKs.contains(objTypeGVK) {
-		return false
-	}
+	// persistedGVKs will only contain objTypeGVK if the resource is being tracked in the store.
+	if s.persistedGVKs.contains(objTypeGVK) {
+		if s.store.get(objType, nsname) == nil {
+			return false
+		}
 
-	obj := s.store.get(objType, nsname)
-	if obj == nil {
-		return false
+		s.store.delete(objType, nsname)
 	}
-
-	s.store.delete(objType, nsname)
 
 	stateChanged, ok := s.stateChangedPredicates[objTypeGVK]
 	if !ok {
 		return false
 	}
 
-	return stateChanged.delete(obj)
+	return stateChanged.delete(objType)
 }
 
 func (s *changeTrackingUpdater) Delete(objType client.Object, nsname types.NamespacedName) {
