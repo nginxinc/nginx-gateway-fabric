@@ -194,7 +194,6 @@ var _ = Describe("Upgrade testing", Label("upgrade"), func() {
 
 		podNames, err := framework.GetNGFPodNames(k8sClient, ngfNamespace, releaseName, timeoutConfig.GetTimeout)
 		Expect(err).ToNot(HaveOccurred())
-		Expect(podNames).ToNot(BeNil())
 		Expect(podNames).ToNot(HaveLen(0))
 
 		// ensure that the leader election lease has been updated to the new pods

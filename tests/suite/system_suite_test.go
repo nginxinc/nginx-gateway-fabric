@@ -147,7 +147,6 @@ func setup(cfg setupConfig, extraInstallArgs ...string) {
 		timeoutConfig.CreateTimeout,
 	)
 	Expect(err).ToNot(HaveOccurred())
-	Expect(podNames).ToNot(BeNil())
 	Expect(podNames).ToNot(HaveLen(0))
 
 	if *serviceType != "LoadBalancer" {

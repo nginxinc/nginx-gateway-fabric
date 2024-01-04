@@ -2,12 +2,12 @@
 
 source scripts/vars.env
 
-gcloud compute routers create ${GKE_ROUTER_NAME} \
+gcloud compute routers create ${RESOURCE_NAME} \
     --region ${GKE_CLUSTER_REGION} \
     --network default
 
-gcloud compute routers nats create ${GKE_NATS_CONFIG_NAME} \
+gcloud compute routers nats create ${RESOURCE_NAME} \
     --router-region ${GKE_CLUSTER_REGION} \
-    --router ${GKE_ROUTER_NAME} \
+    --router ${RESOURCE_NAME} \
     --nat-all-subnet-ip-ranges \
     --auto-allocate-nat-external-ips
