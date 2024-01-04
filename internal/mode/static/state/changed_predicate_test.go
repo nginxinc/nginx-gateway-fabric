@@ -18,7 +18,7 @@ func TestFuncPredicate(t *testing.T) {
 	g := NewWithT(t)
 
 	g.Expect(p.delete(nil, types.NamespacedName{})).To(BeTrue())
-	g.Expect(p.upsert(nil, nil, types.NamespacedName{})).To(BeTrue())
+	g.Expect(p.upsert(nil, nil)).To(BeTrue())
 }
 
 func TestAnnotationChangedPredicate_Delete(t *testing.T) {
@@ -127,11 +127,11 @@ func TestAnnotationChangedPredicate_Update(t *testing.T) {
 			g := NewWithT(t)
 			if test.expPanic {
 				upsert := func() {
-					p.upsert(test.oldObj, test.newObj, types.NamespacedName{})
+					p.upsert(test.oldObj, test.newObj)
 				}
 				g.Expect(upsert).Should(Panic())
 			} else {
-				g.Expect(p.upsert(test.oldObj, test.newObj, types.NamespacedName{})).To(Equal(test.stateChanged))
+				g.Expect(p.upsert(test.oldObj, test.newObj)).To(Equal(test.stateChanged))
 			}
 		})
 	}

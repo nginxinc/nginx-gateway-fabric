@@ -196,7 +196,7 @@ func (s *changeTrackingUpdater) upsert(obj client.Object) (changed bool) {
 		return false
 	}
 
-	return stateChanged.upsert(oldObj, obj, types.NamespacedName{Namespace: obj.GetNamespace(), Name: obj.GetName()})
+	return stateChanged.upsert(oldObj, obj)
 }
 
 func (s *changeTrackingUpdater) Upsert(obj client.Object) {
