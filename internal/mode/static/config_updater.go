@@ -58,10 +58,28 @@ func updateControlPlane(
 		)
 	}
 
-	// set the log level
-	level := string(*controlConfig.Logging.Level)
-	if err := logLevelSetter.SetLevel(level); err != nil {
-		fieldErr := field.NotSupported(
+	level := *controlConfig.Logging.Level
+
+	if err := validateLogLevel(level); err != nil {
+		return err
+	}
+
+	if err := logLevelSetter.SetLevel(string(level)); err != nil {
+		return field.Invalid(
+			field.NewPath("logging.level"),
+			level,
+			err.Error(),
+		)
+	}
+
+	return nil
+}
+
+func validateLogLevel(level ngfAPI.ControllerLogLevel) error {
+	switch level {
+	case ngfAPI.ControllerLogLevelInfo, ngfAPI.ControllerLogLevelDebug, ngfAPI.ControllerLogLevelError:
+	default:
+		return field.NotSupported(
 			field.NewPath("logging.level"),
 			level,
 			[]string{
@@ -69,7 +87,6 @@ func updateControlPlane(
 				string(ngfAPI.ControllerLogLevelDebug),
 				string(ngfAPI.ControllerLogLevelError),
 			})
-		return fieldErr
 	}
 
 	return nil
