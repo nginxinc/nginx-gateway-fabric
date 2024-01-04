@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -111,6 +112,7 @@ var _ = Describe("Upgrade testing", Label("upgrade"), func() {
 			scheme   string
 		}
 		metricsCh := make(chan *metricsResults)
+		var wg sync.WaitGroup
 
 		type testCfg struct {
 			desc   string
@@ -138,8 +140,10 @@ var _ = Describe("Upgrade testing", Label("upgrade"), func() {
 		}
 
 		for _, test := range tests {
+			wg.Add(1)
 			go func(cfg testCfg) {
 				defer GinkgoRecover()
+				defer wg.Done()
 
 				results, metrics := framework.RunLoadTest(
 					[]framework.Target{cfg.target},
@@ -229,15 +233,12 @@ var _ = Describe("Upgrade testing", Label("upgrade"), func() {
 			},
 		)).To(Succeed())
 
+		wg.Wait()
+		close(metricsCh)
+
 		recvdMetrics := make([]metricsResults, 0, 2)
-		// loop until we've received results from both tests, or timeout
-		for received := 0; received < 2; received++ {
-			select {
-			case metrics := <-metricsCh:
-				recvdMetrics = append(recvdMetrics, *metrics)
-			case <-time.After(90 * time.Second):
-				Fail("RunLoadTest did not return after 90 seconds")
-			}
+		for metrics := range metricsCh {
+			recvdMetrics = append(recvdMetrics, *metrics)
 		}
 
 		// write out the results
