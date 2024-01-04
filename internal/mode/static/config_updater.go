@@ -58,15 +58,7 @@ func newZapLogLevelSetter(atomicLevel zap.AtomicLevel) zapLogLevelSetter {
 func (z zapLogLevelSetter) SetLevel(level string) error {
 	parsedLevel, err := zapcore.ParseLevel(level)
 	if err != nil {
-		fieldErr := field.NotSupported(
-			field.NewPath("logging.level"),
-			level,
-			[]string{
-				string(ngfAPI.ControllerLogLevelInfo),
-				string(ngfAPI.ControllerLogLevelDebug),
-				string(ngfAPI.ControllerLogLevelError),
-			})
-		return fieldErr
+		return err
 	}
 	z.atomicLevel.SetLevel(parsedLevel)
 
@@ -109,15 +101,7 @@ func newLeveledPrometheusLogger() (leveledPrometheusLogger, error) {
 func (p promLogLevelSetter) SetLevel(level string) error {
 	al := &promlog.AllowedLevel{}
 	if err := al.Set(level); err != nil {
-		fieldErr := field.NotSupported(
-			field.NewPath("logging.level"),
-			level,
-			[]string{
-				string(ngfAPI.ControllerLogLevelInfo),
-				string(ngfAPI.ControllerLogLevelDebug),
-				string(ngfAPI.ControllerLogLevelError),
-			})
-		return fieldErr
+		return err
 	}
 
 	p.logger.SetLevel(al)
@@ -168,5 +152,18 @@ func updateControlPlane(
 	}
 
 	// set the log level
-	return logLevelSetter.SetLevel(string(*controlConfig.Logging.Level))
+	level := string(*controlConfig.Logging.Level)
+	if err := logLevelSetter.SetLevel(level); err != nil {
+		fieldErr := field.NotSupported(
+			field.NewPath("logging.level"),
+			level,
+			[]string{
+				string(ngfAPI.ControllerLogLevelInfo),
+				string(ngfAPI.ControllerLogLevelDebug),
+				string(ngfAPI.ControllerLogLevelError),
+			})
+		return fieldErr
+	}
+
+	return nil
 }
