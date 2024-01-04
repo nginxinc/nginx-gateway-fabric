@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1.4
-FROM alpine:3.19
+FROM alpine:3.18
 
 ARG NGINX_PLUS_VERSION=R30
 ARG NJS_DIR
