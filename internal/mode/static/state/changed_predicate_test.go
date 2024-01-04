@@ -6,25 +6,26 @@ import (
 	. "github.com/onsi/gomega"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func TestFuncPredicate(t *testing.T) {
-	alwaysTrueFunc := func(object client.Object) bool { return true }
+	alwaysTrueFunc := func(object client.Object, _ types.NamespacedName) bool { return true }
 
 	p := funcPredicate{stateChanged: alwaysTrueFunc}
 
 	g := NewWithT(t)
 
-	g.Expect(p.delete(nil)).To(BeTrue())
-	g.Expect(p.upsert(nil, nil)).To(BeTrue())
+	g.Expect(p.delete(nil, types.NamespacedName{})).To(BeTrue())
+	g.Expect(p.upsert(nil, nil, types.NamespacedName{})).To(BeTrue())
 }
 
 func TestAnnotationChangedPredicate_Delete(t *testing.T) {
 	p := annotationChangedPredicate{}
 
 	g := NewWithT(t)
-	g.Expect(p.delete(nil)).To(BeTrue())
+	g.Expect(p.delete(nil, types.NamespacedName{})).To(BeTrue())
 }
 
 func TestAnnotationChangedPredicate_Update(t *testing.T) {
@@ -126,11 +127,11 @@ func TestAnnotationChangedPredicate_Update(t *testing.T) {
 			g := NewWithT(t)
 			if test.expPanic {
 				upsert := func() {
-					p.upsert(test.oldObj, test.newObj)
+					p.upsert(test.oldObj, test.newObj, types.NamespacedName{})
 				}
 				g.Expect(upsert).Should(Panic())
 			} else {
-				g.Expect(p.upsert(test.oldObj, test.newObj)).To(Equal(test.stateChanged))
+				g.Expect(p.upsert(test.oldObj, test.newObj, types.NamespacedName{})).To(Equal(test.stateChanged))
 			}
 		})
 	}

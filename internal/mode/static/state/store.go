@@ -196,7 +196,7 @@ func (s *changeTrackingUpdater) upsert(obj client.Object) (changed bool) {
 		return false
 	}
 
-	return stateChanged.upsert(oldObj, obj)
+	return stateChanged.upsert(oldObj, obj, types.NamespacedName{Namespace: obj.GetNamespace(), Name: obj.GetName()})
 }
 
 func (s *changeTrackingUpdater) Upsert(obj client.Object) {
@@ -234,7 +234,7 @@ func (s *changeTrackingUpdater) delete(objType client.Object, nsname types.Names
 		return false
 	}
 
-	return stateChanged.delete(objType)
+	return stateChanged.delete(objType, nsname)
 }
 
 func (s *changeTrackingUpdater) Delete(objType client.Object, nsname types.NamespacedName) {

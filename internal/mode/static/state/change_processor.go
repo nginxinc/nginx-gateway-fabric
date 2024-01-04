@@ -114,8 +114,7 @@ func NewChangeProcessorImpl(cfg ChangeProcessorConfig) *ChangeProcessorImpl {
 		clusterState: clusterStore,
 	}
 
-	isReferenced := func(obj client.Object) bool {
-		nsname := types.NamespacedName{Name: obj.GetName(), Namespace: obj.GetNamespace()}
+	isReferenced := func(obj client.Object, nsname types.NamespacedName) bool {
 		return processor.latestGraph != nil && processor.latestGraph.IsReferenced(obj, nsname)
 	}
 
