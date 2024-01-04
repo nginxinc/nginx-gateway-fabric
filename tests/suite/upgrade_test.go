@@ -111,7 +111,7 @@ var _ = Describe("Upgrade testing", Label("upgrade"), func() {
 			testName string
 			scheme   string
 		}
-		metricsCh := make(chan *metricsResults)
+		metricsCh := make(chan *metricsResults, 2)
 		var wg sync.WaitGroup
 
 		type testCfg struct {
@@ -236,13 +236,8 @@ var _ = Describe("Upgrade testing", Label("upgrade"), func() {
 		wg.Wait()
 		close(metricsCh)
 
-		recvdMetrics := make([]metricsResults, 0, 2)
-		for metrics := range metricsCh {
-			recvdMetrics = append(recvdMetrics, *metrics)
-		}
-
 		// write out the results
-		for _, res := range recvdMetrics {
+		for res := range metricsCh {
 			_, err := fmt.Fprint(resultsFile, res.testName)
 			Expect(err).ToNot(HaveOccurred())
 
