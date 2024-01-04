@@ -2,6 +2,7 @@ package framework
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -70,8 +71,13 @@ func GeneratePNG(resultsDir, inputFilename, outputFilename string) ([]byte, erro
 }
 
 // WriteResults writes the vegeta metrics results to the results file in text format.
-func WriteResults(resultsFile *os.File, metrics *vegeta.Metrics) error {
-	reporter := vegeta.NewTextReporter(metrics)
+func WriteResults(resultsFile *os.File, metrics *Metrics) error {
+	reporter := vegeta.NewTextReporter(&metrics.Metrics)
 
 	return reporter.Report(resultsFile)
+}
+
+// NewCSVEncoder returns a vegeta CSV encoder.
+func NewCSVEncoder(w io.Writer) vegeta.Encoder {
+	return vegeta.NewCSVEncoder(w)
 }

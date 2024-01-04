@@ -40,8 +40,11 @@ func TestNGF(t *testing.T) {
 }
 
 var (
-	gatewayAPIVersion = flag.String("gateway-api-version", "", "Version of Gateway API to install")
-	k8sVersion        = flag.String("k8s-version", "latest", "Version of k8s being tested on")
+	gatewayAPIVersion     = flag.String("gateway-api-version", "", "Supported Gateway API version for NGF under test")
+	gatewayAPIPrevVersion = flag.String(
+		"gateway-api-prev-version", "", "Supported Gateway API version for previous NGF release",
+	)
+	k8sVersion = flag.String("k8s-version", "latest", "Version of k8s being tested on")
 	// Configurable NGF installation variables. Helm values will be used as defaults if not specified.
 	ngfImageRepository   = flag.String("ngf-image-repo", "", "Image repo for NGF control plane")
 	nginxImageRepository = flag.String("nginx-image-repo", "", "Image repo for NGF data plane")
@@ -71,8 +74,9 @@ const (
 )
 
 type setupConfig struct {
-	chartPath string
-	deploy    bool
+	chartPath    string
+	gwAPIVersion string
+	deploy       bool
 }
 
 func setup(cfg setupConfig, extraInstallArgs ...string) {
@@ -130,7 +134,7 @@ func setup(cfg setupConfig, extraInstallArgs ...string) {
 		version = "edge"
 	}
 
-	output, err := framework.InstallGatewayAPI(k8sClient, *gatewayAPIVersion, *k8sVersion)
+	output, err := framework.InstallGatewayAPI(k8sClient, cfg.gwAPIVersion, *k8sVersion)
 	Expect(err).ToNot(HaveOccurred(), string(output))
 
 	output, err = framework.InstallNGF(installCfg, extraInstallArgs...)
@@ -143,6 +147,8 @@ func setup(cfg setupConfig, extraInstallArgs ...string) {
 		timeoutConfig.CreateTimeout,
 	)
 	Expect(err).ToNot(HaveOccurred())
+	Expect(podNames).ToNot(BeNil())
+	Expect(podNames).ToNot(HaveLen(0))
 
 	if *serviceType != "LoadBalancer" {
 		portFwdPort, err = framework.PortForward(k8sConfig, installCfg.Namespace, podNames[0], portForwardStopCh)
@@ -194,8 +200,9 @@ var _ = BeforeSuite(func() {
 	localChartPath = filepath.Join(basepath, "deploy/helm-chart")
 
 	cfg := setupConfig{
-		chartPath: localChartPath,
-		deploy:    true,
+		chartPath:    localChartPath,
+		gwAPIVersion: *gatewayAPIVersion,
+		deploy:       true,
 	}
 
 	// If we are running the upgrade test only, then skip the initial deployment.

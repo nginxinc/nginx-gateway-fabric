@@ -11,7 +11,6 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	vegeta "github.com/tsenart/vegeta/v12/lib"
 	coordination "k8s.io/api/coordination/v1"
 	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -63,8 +62,9 @@ var _ = Describe("Upgrade testing", Label("upgrade"), func() {
 		teardown()
 
 		cfg := setupConfig{
-			chartPath: "oci://ghcr.io/nginxinc/charts/nginx-gateway-fabric",
-			deploy:    true,
+			chartPath:    "oci://ghcr.io/nginxinc/charts/nginx-gateway-fabric",
+			gwAPIVersion: *gatewayAPIPrevVersion,
+			deploy:       true,
 		}
 		setup(cfg, "--values", valuesFile)
 
@@ -106,7 +106,7 @@ var _ = Describe("Upgrade testing", Label("upgrade"), func() {
 		}
 
 		type metricsResults struct {
-			metrics  *vegeta.Metrics
+			metrics  *framework.Metrics
 			testName string
 			scheme   string
 		}
@@ -158,7 +158,7 @@ var _ = Describe("Upgrade testing", Label("upgrade"), func() {
 				}
 
 				buf := new(bytes.Buffer)
-				encoder := vegeta.NewCSVEncoder(buf)
+				encoder := framework.NewCSVEncoder(buf)
 				for _, res := range results {
 					res := res
 					Expect(encoder.Encode(&res)).To(Succeed())
@@ -183,30 +183,39 @@ var _ = Describe("Upgrade testing", Label("upgrade"), func() {
 		// allow traffic flow to start
 		time.Sleep(2 * time.Second)
 
-		output, err := framework.UpgradeNGF(cfg, "--values", valuesFile)
+		// update Gateway API and NGF
+		output, err := framework.InstallGatewayAPI(k8sClient, *gatewayAPIVersion, *k8sVersion)
+		Expect(err).ToNot(HaveOccurred(), string(output))
+
+		output, err = framework.UpgradeNGF(cfg, "--values", valuesFile)
 		Expect(err).ToNot(HaveOccurred(), string(output))
 
 		Expect(resourceManager.ApplyFromFiles([]string{"ngf-upgrade/gateway-updated.yaml"}, ns.Name)).To(Succeed())
 
 		podNames, err := framework.GetNGFPodNames(k8sClient, ngfNamespace, releaseName, timeoutConfig.GetTimeout)
 		Expect(err).ToNot(HaveOccurred())
-
-		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
-		defer cancel()
+		Expect(podNames).ToNot(BeNil())
+		Expect(podNames).ToNot(HaveLen(0))
 
 		// ensure that the leader election lease has been updated to the new pods
+		leaseCtx, leaseCancel := context.WithTimeout(context.Background(), timeoutConfig.GetTimeout)
+		defer leaseCancel()
+
 		var lease coordination.Lease
 		key := types.NamespacedName{Name: "ngf-test-nginx-gateway-fabric-leader-election", Namespace: ngfNamespace}
-		Expect(k8sClient.Get(ctx, key, &lease)).To(Succeed())
+		Expect(k8sClient.Get(leaseCtx, key, &lease)).To(Succeed())
 
 		Expect(lease.Spec.HolderIdentity).ToNot(BeNil())
 		Expect(podNames).To(ContainElement(*lease.Spec.HolderIdentity))
 
 		// ensure that the Gateway has been properly updated with a new listener
+		gwCtx, gwCancel := context.WithTimeout(context.Background(), 1*time.Minute)
+		defer gwCancel()
+
 		var gw v1.Gateway
 		key = types.NamespacedName{Name: "gateway", Namespace: ns.Name}
 		Expect(wait.PollUntilContextCancel(
-			ctx,
+			gwCtx,
 			500*time.Millisecond,
 			true, /* poll immediately */
 			func(ctx context.Context) (bool, error) {
