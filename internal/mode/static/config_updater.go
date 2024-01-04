@@ -2,6 +2,7 @@ package static
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/go-kit/log"
@@ -34,13 +35,15 @@ func newMultiLogLevelSetter(setters ...logLevelSetter) multiLogLevelSetter {
 }
 
 func (m multiLogLevelSetter) SetLevel(level string) error {
+	allErrs := make([]error, 0, len(m.setters))
+
 	for _, s := range m.setters {
 		if err := s.SetLevel(level); err != nil {
-			return err
+			allErrs = append(allErrs, err)
 		}
 	}
 
-	return nil
+	return errors.Join(allErrs...)
 }
 
 // zapLogLevelSetter sets the level for a zap logger.
