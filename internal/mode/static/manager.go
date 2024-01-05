@@ -158,7 +158,7 @@ func StartManager(cfg config.Config) error {
 		if cfg.Plus {
 			ngxCollector, err = collectors.NewNginxPlusMetricsCollector(constLabels, promLogger)
 		} else {
-			ngxCollector, err = collectors.NewNginxMetricsCollector(constLabels, promLogger)
+			ngxCollector = collectors.NewNginxMetricsCollector(constLabels, promLogger)
 		}
 		if err != nil {
 			return fmt.Errorf("cannot create nginx metrics collector: %w", err)

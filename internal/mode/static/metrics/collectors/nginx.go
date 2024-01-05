@@ -23,12 +23,11 @@ const (
 )
 
 // NewNginxMetricsCollector creates an NginxCollector which fetches stats from NGINX over a unix socket
-func NewNginxMetricsCollector(constLabels map[string]string, logger log.Logger) (prometheus.Collector, error) {
+func NewNginxMetricsCollector(constLabels map[string]string, logger log.Logger) prometheus.Collector {
 	httpClient := getSocketClient(nginxStatusSock)
-
 	ngxClient := prometheusClient.NewNginxClient(&httpClient, nginxStatusURI)
 
-	return nginxCollector.NewNginxCollector(ngxClient, metrics.Namespace, constLabels, logger), nil
+	return nginxCollector.NewNginxCollector(ngxClient, metrics.Namespace, constLabels, logger)
 }
 
 // NewNginxPlusMetricsCollector creates an NginxCollector which fetches stats from NGINX Plus API over a unix socket
