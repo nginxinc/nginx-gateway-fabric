@@ -2,7 +2,7 @@
 
 This directory contains all of the user documentation for NGINX Gateway Fabric, as well as the requirements for building and publishing the documentation.
 
-Documentation is written in Markdown, built using [Hugo](https://gohugo.io) and deployed with [Netlify](https://www.netlify.com/).
+Documentation is written in Markdown, built using [Hugo](https://gohugo.io) with [nginx-hugo-theme](https://github.com/nginxinc/nginx-hugo-theme), then deployed with [Netlify](https://www.netlify.com/).
 
 ## Setup
 
@@ -16,21 +16,22 @@ If you have [Docker](https://www.docker.com/get-started/) installed, there is a 
 
 ## Developing documentation locally
 
-To build the docs locally, run the `make` command inside this `/docs` directory:
+To build the documentation locally, run the `make` command inside this `/site/` directory:
 
 ```text
-make clean          -   Removes the local `public` directory, which is the default output path used by Hugo
-make docs           -   Start a local Hugo server for live previews while editing
-make docs-drafts    -   Start a local Hugo server for live previews, including documentation marked with `draft: true`
-make hugo-mod       -   Cleans the Hugo module cache and fetches the latest version of the theme
-make hugo-mod-tidy  -   Removes unused entries in go.mod and go.sum, then verifies the dependencies
+make docs            - Builds the documentation set with the output as the '/public' directory 
+make clean           - Removes the local '/public/' directory
+make watch           - Starts a local Hugo server for live previews
+make watch-drafts    - Starts a local Hugo server for live previews, including documentation marked with 'draft: true'
+make link-check      - Check for any broken links in the documentation
+make link-markdown   - Runs markdownlint to identify possible markdown formatting issues
 ```
 
 ## Adding new documentation
 
 ### Using Hugo to generate a new documentation file
 
-To create a new documentation file with the pre-configured Hugo front-matter for the task template, run the following command inside this `/docs` directory:
+To create a new documentation file with the pre-configured Hugo front-matter for the task template, run the following command inside this `/site` directory:
 
 `hugo new <SECTIONNAME>/<FILENAME>.<FORMAT>`
 
@@ -99,7 +100,7 @@ Use the `img` [shortcode](#using-hugo-shortcodes) to add images into your docume
 
 ### Using Hugo shortcodes
 
-[Hugo shortcodes](/docs/themes/f5-hugo/layouts/shortcodes/) are used to format callouts, add images, and reuse content across different docs.
+[Hugo shortcodes](/docs/themes/f5-hugo/layouts/shortcodes/) are used to format callouts, add images, and reuse content across different pages.
 
 For example, to use the `note` callout:
 
@@ -128,10 +129,9 @@ Supported callouts:
 
 Here are some other shortcodes:
 
-- `fa`: inserts a Font Awesome icon
-- `img`: include an image and define things like alt text and dimensions
-- `include`: include the content of a file in another file; the included file must be present in the content/includes directory
-- `link`: makes it possible to link to a file and prepend the path with the Hugo baseUrl
-- `openapi`: loads an OpenAPI spec and renders as HTML using ReDoc
-- `raw-html`: makes it possible to include a block of raw HTML
-- `readfile`: includes the content of another file in the current file; does not require the included file to be in a specific location.
+- `fa`: Inserts a Font Awesome icon
+- `include`: Include the content of a file in another file; the included file must be present in the '/content/includes/' directory
+- `link`: Link to a file, prepending its path with the Hugo baseUrl
+- `openapi`: Loads an OpenAPI specifcation and render it as HTML using ReDoc
+- `raw-html`: Include a block of raw HTML
+- `readfile`: Include the content of another file in the current file, which can be in an arbitrary location.
