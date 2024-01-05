@@ -11,5 +11,5 @@ if [ "${ADD_VM_IP_AUTH_NETWORKS}" = "true" ]; then
     gcloud container clusters update ${GKE_CLUSTER_NAME} --enable-master-authorized-networks --master-authorized-networks=${CURRENT_AUTH_NETWORK}
 fi
 
-gcloud compute instances delete ${RESOURCE_NAME} --project=${GKE_PROJECT} --zone=${GKE_CLUSTER_ZONE}
-gcloud compute firewall-rules delete ${RESOURCE_NAME} --project=${GKE_PROJECT}
+gcloud compute instances delete ${RESOURCE_NAME} --quiet --project=${GKE_PROJECT} --zone=${GKE_CLUSTER_ZONE}
+gcloud compute firewall-rules delete ${RESOURCE_NAME} --quiet --project=${GKE_PROJECT}
