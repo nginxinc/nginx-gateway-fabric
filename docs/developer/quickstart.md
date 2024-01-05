@@ -11,6 +11,7 @@ Follow these steps to set up your development environment.
 1. Install:
     - [Go](https://golang.org/doc/install) v1.21.0+
     - [Docker](https://docs.docker.com/get-docker/) v18.09+
+    - [Kubectl](https://kubernetes.io/docs/tasks/tools/#kubectl)
     - [Kind](https://kind.sigs.k8s.io/docs/user/quick-start/)
     - [Helm](https://helm.sh/docs/intro/quickstart/#install-helm)
     - [git](https://git-scm.com/)
@@ -50,12 +51,30 @@ Follow these steps to set up your development environment.
 
 ## Build the Binary and Images
 
+### Setting GOARCH
+
+The [Makefile](/Makefile) uses the GOARCH variable to build the binary and container images. The default value of GOARCH is `amd64`.
+
+If you are deploying NGINX Gateway Fabric on a kind cluster, and the architecture of your machine is not `amd64`, you will want to set the GOARCH variable to the architecture of your local machine. You can find the value of GOARCH by running `go env`. Export the GOARCH variable in your `~/.zshrc` or `~/.bashrc`.
+
+```shell
+echo "export GOARCH=< Your architecture (e.g. arm64 or amd64) >" >> ~/.bashrc
+source ~/.bashrc
+```
+
+or for zsh:
+
+```shell
+echo "export GOARCH=< Your architecture (e.g. arm64 or amd64) >" >> ~/.zshrc
+source ~/.zshrc
+```
+
 ### Build the Binary
 
 To build the binary, run the make build command from the project's root directory:
 
 ```makefile
-make build
+make GOARCH=$GOARCH build
 ```
 
 This command will build the binary and output it to the `/build/.out` directory.
@@ -65,7 +84,7 @@ This command will build the binary and output it to the `/build/.out` directory.
 To build the NGINX Gateway Fabric and NGINX container images from source run the following make command:
 
 ```makefile
-make TAG=$(whoami) build-images
+make GOARCH=$GOARCH TAG=$(whoami) build-images
 ```
 
 This will build the docker images `nginx-gateway-fabric:<your-user>` and `nginx-gateway-fabric/nginx:<your-user>`.
