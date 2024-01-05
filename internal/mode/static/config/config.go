@@ -1,6 +1,8 @@
 package config
 
 import (
+	"time"
+
 	"github.com/go-logr/logr"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/types"
@@ -32,6 +34,8 @@ type Config struct {
 	MetricsConfig MetricsConfig
 	// HealthConfig specifies the health probe config.
 	HealthConfig HealthConfig
+	// TelemetryReportPeriod is the period at which telemetry reports are sent.
+	TelemetryReportPeriod time.Duration
 }
 
 // GatewayPodConfig contains information about this Pod.

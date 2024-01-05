@@ -8,11 +8,12 @@ NGINX_CONF_DIR = internal/mode/static/nginx/conf
 NJS_DIR = internal/mode/static/nginx/modules/src
 NGINX_DOCKER_BUILD_PLUS_ARGS = --secret id=nginx-repo.crt,src=nginx-repo.crt --secret id=nginx-repo.key,src=nginx-repo.key
 BUILD_AGENT=local
+TELEMETRY_REPORT_PERIOD = 24h
 GW_API_VERSION = 1.0.0
 INSTALL_WEBHOOK = false
 
 # go build flags - should not be overridden by the user
-GO_LINKER_FlAGS_VARS = -X main.version=${VERSION} -X main.commit=${GIT_COMMIT} -X main.date=${DATE}
+GO_LINKER_FlAGS_VARS = -X main.version=${VERSION} -X main.commit=${GIT_COMMIT} -X main.date=${DATE} -X main.telemetryReportPeriod=${TELEMETRY_REPORT_PERIOD}
 GO_LINKER_FLAGS_OPTIMIZATIONS = -s -w
 GO_LINKER_FLAGS = $(GO_LINKER_FLAGS_OPTIMIZATIONS) $(GO_LINKER_FlAGS_VARS)
 
