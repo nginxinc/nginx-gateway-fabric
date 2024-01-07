@@ -281,8 +281,9 @@ func registerControllers(
 		{
 			objectType: &gatewayv1.GatewayClass{},
 			options: []controller.Option{
-				controller.WithK8sPredicate(k8spredicate.GenerationChangedPredicate{}),
-				controller.WithK8sPredicate(predicate.GatewayClassPredicate{ControllerName: cfg.GatewayCtlrName}),
+				controller.WithK8sPredicate(k8spredicate.And(
+					k8spredicate.GenerationChangedPredicate{},
+					predicate.GatewayClassPredicate{ControllerName: cfg.GatewayCtlrName})),
 			},
 		},
 		{
