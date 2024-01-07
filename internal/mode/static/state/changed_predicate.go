@@ -24,14 +24,12 @@ func (f funcPredicate) delete(object client.Object) bool {
 	return f.stateChanged(object)
 }
 
-// generationChangedPredicate implements stateChangedPredicate based on the generation of the object.
-// This predicate will return true on upsert if the object's generation has changed.
-// It always returns true on delete.
-type generationChangedPredicate struct{}
+// FIXME(kevin85421): We should remove this predicate and update changeTrackingUpdater once #1432 is merged.
+type alwaysTruePredicate struct{}
 
-func (generationChangedPredicate) delete(_ client.Object) bool { return true }
+func (alwaysTruePredicate) delete(_ client.Object) bool { return true }
 
-func (generationChangedPredicate) upsert(_, _ client.Object) bool { return true }
+func (alwaysTruePredicate) upsert(_, _ client.Object) bool { return true }
 
 // annotationChangedPredicate implements stateChangedPredicate based on the value of the annotation provided.
 // This predicate will return true on upsert if the annotation's value has changed.
