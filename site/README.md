@@ -41,7 +41,7 @@ The documentation is published from the latest public release branch. If your ch
 To build the documentation locally, run the `make` command inside this `/site/` directory:
 
 ```text
-make docs            - Builds the documentation set with the output as the '/public' directory 
+make docs            - Builds the documentation set with the output as the '/public' directory
 make clean           - Removes the local '/public/' directory
 make watch           - Starts a local Hugo server for live previews
 make watch-drafts    - Starts a local Hugo server for live previews, including documentation marked with 'draft: true'
