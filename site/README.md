@@ -24,7 +24,7 @@ make clean           - Removes the local '/public/' directory
 make watch           - Starts a local Hugo server for live previews
 make watch-drafts    - Starts a local Hugo server for live previews, including documentation marked with 'draft: true'
 make link-check      - Check for any broken links in the documentation
-make link-markdown   - Runs markdownlint to identify possible markdown formatting issues
+make lint-markdown   - Runs markdownlint to identify possible markdown formatting issues
 ```
 
 ## Adding new documentation
