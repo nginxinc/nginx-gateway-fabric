@@ -6,13 +6,35 @@ Documentation is written in Markdown, built using [Hugo](https://gohugo.io) with
 
 ## Setup
 
-Hugo is the only requirement for building documentation.
+Hugo is the only requirement for building documentation, but the repository's integration tooling uses markdownlint-cli.
 
-To install Hugo locally, follow the [official Hugo instructions](https://gohugo.io/getting-started/installing/).
+> **Note**: We currently use [Hugo v0.115.3](https://github.com/gohugoio/hugo/releases/tag/v0.115.3) in production.
 
-> **Note**: We are currently running [Hugo v0.115.3](https://github.com/gohugoio/hugo/releases/tag/v0.115.3) in production.
+Although not a strict requirement, markdown-link-check is also used in documentation development.
 
-If you have [Docker](https://www.docker.com/get-started/) installed, there is a fallback in the [Makefile](Makefile) which means you do need to install Hugo locally.
+If you have [Docker](https://www.docker.com/get-started/) installed, there are fallbacks for all in the [Makefile](Makefile), meaning you do need to install them.
+
+- [Installing Hugo](https://gohugo.io/getting-started/installing/)
+- [Installing markdownlint-cli](https://github.com/igorshubovych/markdownlint-cli?tab=readme-ov-file#installation)
+- [Installing markdown-link-check](https://github.com/tcort/markdown-link-check?tab=readme-ov-file#installation).
+
+The configuration files are as follows:
+
+- *Hugo*: `config/default/config.toml`
+- *markdownlint-cli*: `mdlint_conf.json`
+- *markdown-link-check* `md-linkcheck-config.json`
+
+## Repository guidelines
+
+Documentation follows the conventions of the regular codebase: use the following guides.
+
+- [Pull Request Guidelines](../docs/developer/pull-request.md)
+- [Branching and Workflow](../docs/developerr/branching-and-workflow.md)
+- [Release Process](../docs/developer/developer/release-process.md)
+
+To work on documentation, create a feature branch in a forked repository then target `main` with your pull requests, which is the default repository branch.
+
+The documentation is published from the latest public release branch. If your changes require immediate publication, create a pull request to cherry-pick changes from `main` to the public release branch.
 
 ## Developing documentation locally
 
@@ -27,13 +49,17 @@ make link-check      - Check for any broken links in the documentation
 make lint-markdown   - Runs markdownlint to identify possible markdown formatting issues
 ```
 
+The `watch` options automatically reload the Hugo server, allowing you to view updates as you work.
+
+> **Note**: The documentation uses build environments to control the baseURL used for things like internal references and static resources. The configuration for each environment can be found in the `config` directory. When running Hugo you can specify the environment and baseURL, but it's unnecessary.
+
 ## Adding new documentation
 
 ### Using Hugo to generate a new documentation file
 
 To create a new documentation file with the pre-configured Hugo front-matter for the task template, run the following command inside this `/site` directory:
 
-`hugo new <SECTIONNAME>/<FILENAME>.<FORMAT>`
+`hugo new <SECTIONNAME>/<FILENAME>.md`
 
 For example:
 
@@ -95,7 +121,6 @@ Use the `img` [shortcode](#using-hugo-shortcodes) to add images into your docume
    - **Do not include a forward slash at the beginning of the file path.**
    - This will break the image when it's rendered: read about the  [Hugo relURL Function](https://gohugo.io/functions/relurl/#input-begins-with-a-slash) to learn more.
 
-
 > **Note**: The `img` shortcode accepts all of the same parameters as the Hugo [figure shortcode](https://gohugo.io/content-management/shortcodes/#figure).
 
 ### Using Hugo shortcodes
@@ -130,8 +155,11 @@ Supported callouts:
 Here are some other shortcodes:
 
 - `fa`: Inserts a Font Awesome icon
-- `include`: Include the content of a file in another file; the included file must be present in the '/content/includes/' directory
+- `collapse`: Make a section collapsible
+- `tab`: Create mutually exclusive tabbed window panes, useful for parallel instructions
+- `table`: Add scrollbars to wide tables for browsers with smaller viewports
 - `link`: Link to a file, prepending its path with the Hugo baseUrl
 - `openapi`: Loads an OpenAPI specifcation and render it as HTML using ReDoc
+- `include`: Include the content of a file in another file; the included file must be present in the '/content/includes/' directory
 - `raw-html`: Include a block of raw HTML
 - `readfile`: Include the content of another file in the current file, which can be in an arbitrary location.
