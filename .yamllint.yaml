@@ -43,6 +43,7 @@ rules:
       deploy/manifests/nginx-gateway.yaml
       deploy/manifests/crds
       tests/longevity/manifests/cronjob.yaml
+      .goreleaser.yml
   new-line-at-end-of-file: enable
   new-lines: enable
   octal-values: disable
