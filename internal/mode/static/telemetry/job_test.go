@@ -39,14 +39,7 @@ var _ = Describe("Job", func() {
 
 			errCh := make(chan error)
 			go func() {
-				err := job.Start(ctx)
-				if errors.Is(err, context.Canceled) {
-					// we're not interested in context cancellation errors,
-					// as it might be returned (although highly unlikely) during normal test execution
-					err = nil
-				}
-
-				errCh <- err
+				errCh <- job.Start(ctx)
 				close(errCh)
 			}()
 
