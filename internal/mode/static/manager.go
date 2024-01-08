@@ -76,10 +76,14 @@ func StartManager(cfg config.Config) error {
 		// Note: when the leadership is lost, the manager will return an error in the Start() method.
 		// However, it will not wait for any Runnable it starts to finish, meaning any in-progress operations
 		// might get terminated half-way.
-		LeaderElection:                true,
-		LeaderElectionNamespace:       cfg.GatewayPodConfig.Namespace,
-		LeaderElectionID:              cfg.LeaderElection.LockName,
-		LeaderElectionReleaseOnCancel: true,
+		LeaderElection:          true,
+		LeaderElectionNamespace: cfg.GatewayPodConfig.Namespace,
+		LeaderElectionID:        cfg.LeaderElection.LockName,
+		// We're not enabling LeaderElectionReleaseOnCancel because when the Manager stops gracefully, it waits
+		// for all started Runnables (including Leader-only ones) to finish. Otherwise, the new leader might start
+		// running Leader-only Runnables before the old leader has finished running them.
+		// See the doc comment for the LeaderElectionReleaseOnCancel for more details.
+		LeaderElectionReleaseOnCancel: false,
 		Controller: ctrlcfg.Controller{
 			// All of our controllers still need to work in case of non-leader pods
 			NeedLeaderElection: helpers.GetPointer(false),
