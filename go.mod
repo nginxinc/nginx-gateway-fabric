@@ -6,14 +6,16 @@ go 1.21.3
 replace github.com/chzyer/logex v1.1.10 => github.com/chzyer/logex v1.2.0
 
 require (
+	github.com/go-kit/log v0.2.1
 	github.com/go-logr/logr v1.4.1
 	github.com/google/go-cmp v0.6.0
 	github.com/maxbrunsfeld/counterfeiter/v6 v6.7.0
-	github.com/nginxinc/nginx-plus-go-client v0.10.0
-	github.com/nginxinc/nginx-prometheus-exporter v0.11.0
+	github.com/nginxinc/nginx-plus-go-client v1.2.0
+	github.com/nginxinc/nginx-prometheus-exporter v1.0.0
 	github.com/onsi/ginkgo/v2 v2.13.2
 	github.com/onsi/gomega v1.30.0
 	github.com/prometheus/client_golang v1.18.0
+	github.com/prometheus/common v0.45.0
 	github.com/spf13/cobra v1.8.0
 	github.com/tsenart/vegeta/v12 v12.11.1
 	go.uber.org/zap v1.26.0
@@ -36,6 +38,7 @@ require (
 	github.com/evanphx/json-patch/v5 v5.7.0 // indirect
 	github.com/fatih/color v1.15.0 // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
+	github.com/go-logfmt/logfmt v0.5.1 // indirect
 	github.com/go-logr/zapr v1.2.4 // indirect
 	github.com/go-openapi/jsonpointer v0.20.0 // indirect
 	github.com/go-openapi/jsonreference v0.20.2 // indirect
@@ -67,7 +70,6 @@ require (
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/prometheus/client_model v0.5.0 // indirect
-	github.com/prometheus/common v0.45.0 // indirect
 	github.com/prometheus/procfs v0.12.0 // indirect
 	github.com/rs/dnscache v0.0.0-20211102005908-e0241e321417 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect

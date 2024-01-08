@@ -54,7 +54,7 @@ type eventHandlerConfig struct {
 	// eventRecorder records events for Kubernetes resources.
 	eventRecorder record.EventRecorder
 	// logLevelSetter is used to update the logging level.
-	logLevelSetter ZapLogLevelSetter
+	logLevelSetter logLevelSetter
 	// metricsCollector collects metrics for this controller.
 	metricsCollector handlerMetricsCollector
 	// healthChecker sets the health of the Pod to Ready once we've written out our initial config
