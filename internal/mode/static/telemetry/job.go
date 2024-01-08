@@ -52,8 +52,10 @@ func (j *Job) Start(ctx context.Context) error {
 	}
 
 	const (
-		jitterFactor = 0.1  // If the period is 10 seconds, the jitter will be up to 1 second.
-		sliding      = true // This means the period with jitter will be calculated after each report() call.
+		// 10 min jitter is enough per telemetry destination recommendation
+		// For the default period of 24 hours, jitter will be 10min /(24*60)min  = 0.0069
+		jitterFactor = 10.0 / (24 * 60) // added jitter is bound by jitterFactor * period
+		sliding      = true             // This means the period with jitter will be calculated after each report() call.
 	)
 
 	wait.JitterUntilWithContext(ctx, report, j.cfg.Period, jitterFactor, sliding)
