@@ -87,14 +87,15 @@ var _ = Describe("Dataplane performance", Ordered, Label("performance"), func() 
 			_, err := fmt.Fprint(outFile, text)
 			Expect(err).ToNot(HaveOccurred())
 
-			_, metrics := framework.RunLoadTest(
-				[]framework.Target{target},
-				1000,
-				30*time.Second,
-				description,
-				addr,
-				"cafe.example.com",
-			)
+			cfg := framework.LoadTestConfig{
+				Targets:     []framework.Target{target},
+				Rate:        1000,
+				Duration:    30 * time.Second,
+				Description: description,
+				Proxy:       addr,
+				ServerName:  "cafe.example.com",
+			}
+			_, metrics := framework.RunLoadTest(cfg)
 
 			Expect(framework.WriteResults(outFile, &metrics)).To(Succeed())
 

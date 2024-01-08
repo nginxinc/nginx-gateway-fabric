@@ -145,14 +145,16 @@ var _ = Describe("Upgrade testing", Label("upgrade"), func() {
 				defer GinkgoRecover()
 				defer wg.Done()
 
-				results, metrics := framework.RunLoadTest(
-					[]framework.Target{cfg.target},
-					100,
-					60*time.Second,
-					cfg.desc,
-					fmt.Sprintf("%s:%s", address, cfg.port),
-					"cafe.example.com",
-				)
+				loadTestCfg := framework.LoadTestConfig{
+					Targets:     []framework.Target{cfg.target},
+					Rate:        100,
+					Duration:    60 * time.Second,
+					Description: cfg.desc,
+					Proxy:       fmt.Sprintf("%s:%s", address, cfg.port),
+					ServerName:  "cafe.example.com",
+				}
+
+				results, metrics := framework.RunLoadTest(loadTestCfg)
 
 				scheme := strings.Split(cfg.target.URL, "://")[0]
 				metricsRes := metricsResults{
@@ -196,20 +198,34 @@ var _ = Describe("Upgrade testing", Label("upgrade"), func() {
 
 		Expect(resourceManager.ApplyFromFiles([]string{"ngf-upgrade/gateway-updated.yaml"}, ns.Name)).To(Succeed())
 
-		podNames, err := framework.GetNGFPodNames(k8sClient, ngfNamespace, releaseName, timeoutConfig.GetTimeout)
+		podNames, err := framework.GetReadyNGFPodNames(k8sClient, ngfNamespace, releaseName, timeoutConfig.GetTimeout)
 		Expect(err).ToNot(HaveOccurred())
 		Expect(podNames).ToNot(HaveLen(0))
 
 		// ensure that the leader election lease has been updated to the new pods
-		leaseCtx, leaseCancel := context.WithTimeout(context.Background(), timeoutConfig.GetTimeout)
+		leaseCtx, leaseCancel := context.WithTimeout(context.Background(), 1*time.Minute)
 		defer leaseCancel()
 
 		var lease coordination.Lease
 		key := types.NamespacedName{Name: "ngf-test-nginx-gateway-fabric-leader-election", Namespace: ngfNamespace}
-		Expect(k8sClient.Get(leaseCtx, key, &lease)).To(Succeed())
+		Expect(wait.PollUntilContextCancel(
+			leaseCtx,
+			500*time.Millisecond,
+			true, /* poll immediately */
+			func(ctx context.Context) (bool, error) {
+				Expect(k8sClient.Get(leaseCtx, key, &lease)).To(Succeed())
 
-		Expect(lease.Spec.HolderIdentity).ToNot(BeNil())
-		Expect(podNames).To(ContainElement(*lease.Spec.HolderIdentity))
+				if lease.Spec.HolderIdentity != nil {
+					for _, podName := range podNames {
+						if podName == *lease.Spec.HolderIdentity {
+							return true, nil
+						}
+					}
+				}
+
+				return false, nil
+			},
+		)).To(Succeed())
 
 		// ensure that the Gateway has been properly updated with a new listener
 		gwCtx, gwCancel := context.WithTimeout(context.Background(), 1*time.Minute)

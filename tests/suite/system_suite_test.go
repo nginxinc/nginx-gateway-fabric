@@ -140,7 +140,7 @@ func setup(cfg setupConfig, extraInstallArgs ...string) {
 	output, err = framework.InstallNGF(installCfg, extraInstallArgs...)
 	Expect(err).ToNot(HaveOccurred(), string(output))
 
-	podNames, err := framework.GetNGFPodNames(
+	podNames, err := framework.GetReadyNGFPodNames(
 		k8sClient,
 		installCfg.Namespace,
 		installCfg.ReleaseName,

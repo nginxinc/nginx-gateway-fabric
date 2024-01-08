@@ -409,8 +409,8 @@ func (rm *ResourceManager) GetClusterInfo() (ClusterInfo, error) {
 	return *ci, nil
 }
 
-// GetNGFPodNames returns the name(s) of the NGF Pod(s).
-func GetNGFPodNames(
+// GetReadyNGFPodNames returns the name(s) of the NGF Pod(s).
+func GetReadyNGFPodNames(
 	k8sClient client.Client,
 	namespace,
 	releaseName string,

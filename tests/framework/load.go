@@ -31,6 +31,16 @@ func convertTargetToVegetaTarget(targets []Target) []vegeta.Target {
 	return vegTargets
 }
 
+// LoadTestConfig is the configuration to run a load test.
+type LoadTestConfig struct {
+	Description string
+	Proxy       string
+	ServerName  string
+	Targets     []Target
+	Rate        int
+	Duration    time.Duration
+}
+
 // Metrics is a wrapper around the vegeta Metrics.
 type Metrics struct {
 	vegeta.Metrics
@@ -38,15 +48,8 @@ type Metrics struct {
 
 // RunLoadTest uses Vegeta to send traffic to the provided Targets at the given rate for the given duration and writes
 // the results to the provided file
-func RunLoadTest(
-	targets []Target,
-	rate int,
-	duration time.Duration,
-	desc,
-	proxy,
-	serverName string,
-) (vegeta.Results, Metrics) {
-	vegTargets := convertTargetToVegetaTarget(targets)
+func RunLoadTest(cfg LoadTestConfig) (vegeta.Results, Metrics) {
+	vegTargets := convertTargetToVegetaTarget(cfg.Targets)
 	targeter := vegeta.NewStaticTargeter(vegTargets...)
 
 	dialer := &net.Dialer{
@@ -58,11 +61,11 @@ func RunLoadTest(
 		Timeout: vegeta.DefaultTimeout,
 		Transport: &http.Transport{
 			DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
-				return dialer.DialContext(ctx, network, proxy)
+				return dialer.DialContext(ctx, network, cfg.Proxy)
 			},
 			TLSClientConfig: &tls.Config{
 				InsecureSkipVerify: true, //nolint:gosec // self-signed cert for testing
-				ServerName:         serverName,
+				ServerName:         cfg.ServerName,
 			},
 			MaxIdleConnsPerHost: vegeta.DefaultConnections,
 			MaxConnsPerHost:     vegeta.DefaultMaxConnections,
@@ -71,10 +74,10 @@ func RunLoadTest(
 
 	attacker := vegeta.NewAttacker(vegeta.Client(&httpClient))
 
-	r := vegeta.Rate{Freq: rate, Per: time.Second}
+	r := vegeta.Rate{Freq: cfg.Rate, Per: time.Second}
 	var results vegeta.Results
 	var metrics vegeta.Metrics
-	for res := range attacker.Attack(targeter, r, duration, desc) {
+	for res := range attacker.Attack(targeter, r, cfg.Duration, cfg.Description) {
 		results = append(results, *res)
 		metrics.Add(res)
 	}
