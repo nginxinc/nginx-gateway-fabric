@@ -2,7 +2,8 @@ TAG = edge
 PREFIX = nginx-gateway-fabric
 NGINX_PREFIX = $(PREFIX)/nginx
 PULL_POLICY=Never
-GW_API_VERSION ?= 1.0.0
+GW_API_PREV_VERSION ?= 1.0.0 ## Supported Gateway API version from previous NGF release
+GW_API_VERSION ?= 1.0.0 ## Supported Gateway API version for NGF under test
 K8S_VERSION ?= latest ## Expected format: 1.24 (major.minor) or latest
 GW_SERVICE_TYPE=NodePort
 GW_SVC_GKE_INTERNAL=false
@@ -30,7 +31,8 @@ load-images: ## Load NGF and NGINX images on configured kind cluster
 	kind load docker-image $(PREFIX):$(TAG) $(NGINX_PREFIX):$(TAG)
 
 test: ## Run the system tests against your default k8s cluster
-	go test -v ./suite $(GINKGO_FLAGS) -args --gateway-api-version=$(GW_API_VERSION) --image-tag=$(TAG) \
+	go test -v ./suite $(GINKGO_FLAGS) -args --gateway-api-version=$(GW_API_VERSION) \
+		--gateway-api-prev-version=$(GW_API_PREV_VERSION) --image-tag=$(TAG) \
 		--ngf-image-repo=$(PREFIX) --nginx-image-repo=$(NGINX_PREFIX) --pull-policy=$(PULL_POLICY) \
 		--k8s-version=$(K8S_VERSION) --service-type=$(GW_SERVICE_TYPE) --is-gke-internal-lb=$(GW_SVC_GKE_INTERNAL)
 
@@ -46,9 +48,20 @@ run-tests-on-vm: ## Run the tests on a GCP VM
 create-and-setup-vm: ## Create and setup a GCP VM for tests
 	bash scripts/create-and-setup-gcp-vm.sh
 
-.PHONY: create-vm-and-run-tests
-create-vm-and-run-tests: create-and-setup-vm run-tests-on-vm ## Create and setup a GCP VM for tests and run the tests
-
 .PHONY: cleanup-vm
 cleanup-vm: ## Delete the test GCP VM and delete the firewall rule
 	bash scripts/cleanup-vm.sh
+
+.PHONY: create-gke-router
+create-gke-router: ## Create a GKE router to allow egress traffic from private nodes (allows for external image pulls)
+	bash scripts/create-gke-router.sh
+
+.PHONY: cleanup-router
+cleanup-router: ## Delete the GKE router
+	bash scripts/cleanup-router.sh
+
+.PHONY: setup-gcp-and-run-tests
+setup-gcp-and-run-tests: create-gke-router create-and-setup-vm run-tests-on-vm ## Create and setup a GKE router and GCP VM for tests and run the tests
+
+.PHONY: cleanup-gcp
+cleanup-gcp: cleanup-router cleanup-vm ## Cleanup all GCP resources

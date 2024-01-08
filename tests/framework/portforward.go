@@ -2,49 +2,15 @@ package framework
 
 import (
 	"bytes"
-	"context"
-	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
 	"path"
-	"time"
 
-	core "k8s.io/api/core/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/portforward"
 	"k8s.io/client-go/transport/spdy"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
-
-// GetNGFPodName returns the name of the NGF Pod.
-func GetNGFPodName(
-	k8sClient client.Client,
-	namespace,
-	releaseName string,
-	timeout time.Duration,
-) (string, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
-
-	var podList core.PodList
-	if err := k8sClient.List(
-		ctx,
-		&podList,
-		client.InNamespace(namespace),
-		client.MatchingLabels{
-			"app.kubernetes.io/instance": releaseName,
-		},
-	); err != nil {
-		return "", fmt.Errorf("error getting list of Pods: %w", err)
-	}
-
-	if len(podList.Items) > 0 {
-		return podList.Items[0].Name, nil
-	}
-
-	return "", errors.New("unable to find NGF Pod")
-}
 
 // PortForward starts a port-forward to the specified Pod and returns the local port being forwarded.
 func PortForward(config *rest.Config, namespace, podName string, stopCh chan struct{}) (int, error) {

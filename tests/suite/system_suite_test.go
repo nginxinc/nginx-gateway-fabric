@@ -1,21 +1,29 @@
 package suite
 
 import (
+	"context"
 	"embed"
 	"flag"
 	"path"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	apps "k8s.io/api/apps/v1"
+	coordination "k8s.io/api/coordination/v1"
 	core "k8s.io/api/core/v1"
 	apiext "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	k8sRuntime "k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/wait"
 	ctlr "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 	v1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/nginxinc/nginx-gateway-fabric/tests/framework"
@@ -32,8 +40,11 @@ func TestNGF(t *testing.T) {
 }
 
 var (
-	gatewayAPIVersion = flag.String("gateway-api-version", "", "Version of Gateway API to install")
-	k8sVersion        = flag.String("k8s-version", "latest", "Version of k8s being tested on")
+	gatewayAPIVersion     = flag.String("gateway-api-version", "", "Supported Gateway API version for NGF under test")
+	gatewayAPIPrevVersion = flag.String(
+		"gateway-api-prev-version", "", "Supported Gateway API version for previous NGF release",
+	)
+	k8sVersion = flag.String("k8s-version", "latest", "Version of k8s being tested on")
 	// Configurable NGF installation variables. Helm values will be used as defaults if not specified.
 	ngfImageRepository   = flag.String("ngf-image-repo", "", "Image repo for NGF control plane")
 	nginxImageRepository = flag.String("nginx-image-repo", "", "Image repo for NGF data plane")
@@ -51,17 +62,32 @@ var (
 	portForwardStopCh = make(chan struct{}, 1)
 	portFwdPort       int
 	timeoutConfig     framework.TimeoutConfig
+	localChartPath    string
 	address           string
 	version           string
 	clusterInfo       framework.ClusterInfo
 )
 
-var _ = BeforeSuite(func() {
+const (
+	releaseName  = "ngf-test"
+	ngfNamespace = "nginx-gateway"
+)
+
+type setupConfig struct {
+	chartPath    string
+	gwAPIVersion string
+	deploy       bool
+}
+
+func setup(cfg setupConfig, extraInstallArgs ...string) {
+	log.SetLogger(GinkgoLogr)
+
 	k8sConfig := ctlr.GetConfigOrDie()
 	scheme := k8sRuntime.NewScheme()
 	Expect(core.AddToScheme(scheme)).To(Succeed())
 	Expect(apps.AddToScheme(scheme)).To(Succeed())
 	Expect(apiext.AddToScheme(scheme)).To(Succeed())
+	Expect(coordination.AddToScheme(scheme)).To(Succeed())
 	Expect(v1.AddToScheme(scheme)).To(Succeed())
 
 	options := client.Options{
@@ -79,20 +105,27 @@ var _ = BeforeSuite(func() {
 		TimeoutConfig: timeoutConfig,
 	}
 
-	_, file, _, _ := runtime.Caller(0)
-	fileDir := path.Join(path.Dir(file), "../")
-	basepath := filepath.Dir(fileDir)
+	clusterInfo, err = resourceManager.GetClusterInfo()
+	Expect(err).ToNot(HaveOccurred())
 
-	cfg := framework.InstallationConfig{
-		ReleaseName:          "ngf-test",
-		Namespace:            "nginx-gateway",
-		ChartPath:            filepath.Join(basepath, "deploy/helm-chart"),
-		NgfImageRepository:   *ngfImageRepository,
-		NginxImageRepository: *nginxImageRepository,
-		ImageTag:             *imageTag,
-		ImagePullPolicy:      *imagePullPolicy,
-		ServiceType:          *serviceType,
-		IsGKEInternalLB:      *isGKEInternalLB,
+	if !cfg.deploy {
+		return
+	}
+
+	installCfg := framework.InstallationConfig{
+		ReleaseName:     releaseName,
+		Namespace:       ngfNamespace,
+		ChartPath:       cfg.chartPath,
+		ServiceType:     *serviceType,
+		IsGKEInternalLB: *isGKEInternalLB,
+	}
+
+	// if we aren't installing from the public charts, then set the custom images
+	if !strings.HasPrefix(cfg.chartPath, "oci://") {
+		installCfg.NgfImageRepository = *ngfImageRepository
+		installCfg.NginxImageRepository = *nginxImageRepository
+		installCfg.ImageTag = *imageTag
+		installCfg.ImagePullPolicy = *imagePullPolicy
 	}
 
 	if *imageTag != "" {
@@ -101,33 +134,38 @@ var _ = BeforeSuite(func() {
 		version = "edge"
 	}
 
-	clusterInfo, err = resourceManager.GetClusterInfo()
-	Expect(err).ToNot(HaveOccurred())
-
-	output, err := framework.InstallGatewayAPI(k8sClient, *gatewayAPIVersion, *k8sVersion)
+	output, err := framework.InstallGatewayAPI(k8sClient, cfg.gwAPIVersion, *k8sVersion)
 	Expect(err).ToNot(HaveOccurred(), string(output))
 
-	output, err = framework.InstallNGF(cfg)
+	output, err = framework.InstallNGF(installCfg, extraInstallArgs...)
 	Expect(err).ToNot(HaveOccurred(), string(output))
 
-	podName, err := framework.GetNGFPodName(k8sClient, cfg.Namespace, cfg.ReleaseName, timeoutConfig.CreateTimeout)
+	podNames, err := framework.GetReadyNGFPodNames(
+		k8sClient,
+		installCfg.Namespace,
+		installCfg.ReleaseName,
+		timeoutConfig.CreateTimeout,
+	)
 	Expect(err).ToNot(HaveOccurred())
+	Expect(podNames).ToNot(HaveLen(0))
 
 	if *serviceType != "LoadBalancer" {
-		portFwdPort, err = framework.PortForward(k8sConfig, cfg.Namespace, podName, portForwardStopCh)
+		portFwdPort, err = framework.PortForward(k8sConfig, installCfg.Namespace, podNames[0], portForwardStopCh)
 		address = "127.0.0.1"
 	} else {
-		address, err = resourceManager.GetLBIPAddress(cfg.Namespace)
+		address, err = resourceManager.GetLBIPAddress(installCfg.Namespace)
 	}
 	Expect(err).ToNot(HaveOccurred())
-})
+}
 
-var _ = AfterSuite(func() {
-	portForwardStopCh <- struct{}{}
+func teardown() {
+	if portFwdPort != 0 {
+		portForwardStopCh <- struct{}{}
+	}
 
 	cfg := framework.InstallationConfig{
-		ReleaseName: "ngf-test",
-		Namespace:   "nginx-gateway",
+		ReleaseName: releaseName,
+		Namespace:   ngfNamespace,
 	}
 
 	output, err := framework.UninstallNGF(cfg, k8sClient)
@@ -135,4 +173,47 @@ var _ = AfterSuite(func() {
 
 	output, err = framework.UninstallGatewayAPI(*gatewayAPIVersion, *k8sVersion)
 	Expect(err).ToNot(HaveOccurred(), string(output))
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+
+	Expect(wait.PollUntilContextCancel(
+		ctx,
+		500*time.Millisecond,
+		true, /* poll immediately */
+		func(ctx context.Context) (bool, error) {
+			key := types.NamespacedName{Name: ngfNamespace}
+			if err := k8sClient.Get(ctx, key, &core.Namespace{}); err != nil && apierrors.IsNotFound(err) {
+				return true, nil
+			}
+
+			return false, nil
+		},
+	)).To(Succeed())
+}
+
+var _ = BeforeSuite(func() {
+	_, file, _, _ := runtime.Caller(0)
+	fileDir := path.Join(path.Dir(file), "../")
+	basepath := filepath.Dir(fileDir)
+	localChartPath = filepath.Join(basepath, "deploy/helm-chart")
+
+	cfg := setupConfig{
+		chartPath:    localChartPath,
+		gwAPIVersion: *gatewayAPIVersion,
+		deploy:       true,
+	}
+
+	// If we are running the upgrade test only, then skip the initial deployment.
+	// The upgrade test will deploy its own version of NGF.
+	suiteConfig, _ := GinkgoConfiguration()
+	if suiteConfig.LabelFilter == "upgrade" {
+		cfg.deploy = false
+	}
+
+	setup(cfg)
+})
+
+var _ = AfterSuite(func() {
+	teardown()
 })

@@ -38,14 +38,17 @@ make
 
 ```text
 build-images                   Build NGF and NGINX images
-cleanup-vm                     Delete the test GCP VM and the firewall rule
+cleanup-gcp                    Cleanup all GCP resources
+cleanup-router                 Delete the GKE router
+cleanup-vm                     Delete the test GCP VM and delete the firewall rule
 create-and-setup-vm            Create and setup a GCP VM for tests
+create-gke-router              Create a GKE router to allow egress traffic from private nodes (allows for external image pulls)
 create-kind-cluster            Create a kind cluster
-create-vm-and-run-tests        Create and setup a GCP VM for tests and run the tests
 delete-kind-cluster            Delete kind cluster
 help                           Display this help
 load-images                    Load NGF and NGINX images on configured kind cluster
 run-tests-on-vm                Run the tests on a GCP VM
+setup-gcp-and-run-tests        Create and setup a GKE router and GCP VM for tests and run the tests
 test                           Run the system tests against your default k8s cluster
 ```
 
@@ -101,15 +104,24 @@ make test TAG=$(whoami)
 This step only applies if you would like to run the tests from a GCP based VM.
 
 Before running the below `make` command, copy the `scripts/vars.env-example` file to `scripts/vars.env` and populate the
-required env vars. The `GKE_CLUSTER_ZONE` needs to be the zone of your GKE cluster, and `GKE_SVC_ACCOUNT` needs to be
-the name of a service account that has Kubernetes admin permissions.
+required env vars. `GKE_SVC_ACCOUNT` needs to be the name of a service account that has Kubernetes admin permissions.
 
-To create and setup the VM (including creating a firewall rule allowing SSH access from your local machine, and
-optionally adding the VM IP to the `master-authorized-networks` list of your GKE cluster if
-`ADD_VM_IP_AUTH_NETWORKS` is set to `true`) and run the tests, run the following
+In order to run the tests in GCP, you need a few things:
+
+- GKE router to allow egress traffic (used by upgrade tests for pulling images from Github)
+  - this assumes that your GKE cluster is using private nodes. If using public nodes, you don't need this.
+- GCP VM and firewall rule to send ingress traffic to GKE
+
+To set up the GCP environment with the router and VM and then run the tests, run the following command:
 
 ```makefile
-make create-vm-and-run-tests
+make setup-gcp-and-run-tests
+```
+
+If you just need a VM and no router (this will not run the tests):
+
+```makefile
+make create-and-setup-vm
 ```
 
 To use an existing VM to run the tests, run the following
@@ -179,7 +191,17 @@ For more information of filtering specs, see [the docs here](https://onsi.github
     make delete-kind-cluster
     ```
 
-2. Delete the cloud VM and cleanup the firewall rule, if required
+2. Delete the GCP components (GKE router, VM, and firewall rule), if required
+
+    ```makefile
+    make cleanup-gcp
+    ```
+
+    or
+
+    ```makefile
+    make cleanup-router
+    ```
 
     ```makefile
     make cleanup-vm
