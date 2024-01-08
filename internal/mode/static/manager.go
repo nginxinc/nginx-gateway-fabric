@@ -231,7 +231,7 @@ func StartManager(cfg config.Config) error {
 	}
 
 	if err = mgr.Add(runnables.NewEnableAfterBecameLeader(statusUpdater.Enable)); err != nil {
-		return fmt.Errorf("cannot register enabling status updater on becoming leader: %w", err)
+		return fmt.Errorf("cannot register status updater: %w", err)
 	}
 
 	telemetryJob := &runnables.Leader{
