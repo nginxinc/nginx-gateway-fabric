@@ -73,7 +73,7 @@ func StartManager(cfg config.Config) error {
 		Scheme:  scheme,
 		Logger:  cfg.Logger,
 		Metrics: getMetricsOptions(cfg.MetricsConfig),
-		// Note: when the leadership is lost, the manager will exist returning an error in the Start() method.
+		// Note: when the leadership is lost, the manager will return an error in the Start() method.
 		// However, it will not wait for any Runnable it starts to finish, meaning any in-progress operations
 		// might get terminated half-way.
 		LeaderElection:                true,
