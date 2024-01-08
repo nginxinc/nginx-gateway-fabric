@@ -1,5 +1,5 @@
 ---
-title: "Where to Go for Support"
+title: "Support"
 draft: false
 weight: 1100
 toc: true
