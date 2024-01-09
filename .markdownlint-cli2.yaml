@@ -18,3 +18,4 @@ config:
 # Define glob expressions to ignore
 ignores:
   - ".github/"
+  - "tests/results/"

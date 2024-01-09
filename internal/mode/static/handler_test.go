@@ -44,6 +44,7 @@ var _ = Describe("eventHandler", func() {
 		fakeEventRecorder   *record.FakeRecorder
 		namespace           = "nginx-gateway"
 		configName          = "nginx-gateway-config"
+		zapLogLevelSetter   zapLogLevelSetter
 	)
 
 	expectReconfig := func(expectedConf dataplane.Configuration, expectedFiles []file.File) {
@@ -68,12 +69,13 @@ var _ = Describe("eventHandler", func() {
 		fakeNginxRuntimeMgr = &runtimefakes.FakeManager{}
 		fakeStatusUpdater = &statusfakes.FakeUpdater{}
 		fakeEventRecorder = record.NewFakeRecorder(1)
+		zapLogLevelSetter = newZapLogLevelSetter(zap.NewAtomicLevel())
 
 		handler = newEventHandlerImpl(eventHandlerConfig{
 			k8sClient:           fake.NewFakeClient(),
 			processor:           fakeProcessor,
 			generator:           fakeGenerator,
-			logLevelSetter:      newZapLogLevelSetter(zap.NewAtomicLevel()),
+			logLevelSetter:      zapLogLevelSetter,
 			nginxFileMgr:        fakeNginxFileMgr,
 			nginxRuntimeMgr:     fakeNginxRuntimeMgr,
 			statusUpdater:       fakeStatusUpdater,
@@ -196,8 +198,8 @@ var _ = Describe("eventHandler", func() {
 			Expect(fakeStatusUpdater.UpdateCallCount()).Should(Equal(1))
 			_, statuses := fakeStatusUpdater.UpdateArgsForCall(0)
 			Expect(statuses).To(Equal(expStatuses(staticConds.NewNginxGatewayValid())))
-			Expect(handler.cfg.logLevelSetter.Enabled(zap.DebugLevel)).To(BeFalse())
-			Expect(handler.cfg.logLevelSetter.Enabled(zap.ErrorLevel)).To(BeTrue())
+			Expect(zapLogLevelSetter.Enabled(zap.DebugLevel)).To(BeFalse())
+			Expect(zapLogLevelSetter.Enabled(zap.ErrorLevel)).To(BeTrue())
 		})
 
 		It("handles an invalid config", func() {
@@ -216,7 +218,7 @@ var _ = Describe("eventHandler", func() {
 				"Warning UpdateFailed Failed to update control plane configuration: logging.level: Unsupported value: " +
 					"\"invalid\": supported values: \"info\", \"debug\", \"error\"",
 			))
-			Expect(handler.cfg.logLevelSetter.Enabled(zap.InfoLevel)).To(BeTrue())
+			Expect(zapLogLevelSetter.Enabled(zap.InfoLevel)).To(BeTrue())
 		})
 
 		It("handles a deleted config", func() {
@@ -225,7 +227,7 @@ var _ = Describe("eventHandler", func() {
 			Expect(len(fakeEventRecorder.Events)).To(Equal(1))
 			event := <-fakeEventRecorder.Events
 			Expect(event).To(Equal("Warning ResourceDeleted NginxGateway configuration was deleted; using defaults"))
-			Expect(handler.cfg.logLevelSetter.Enabled(zap.InfoLevel)).To(BeTrue())
+			Expect(zapLogLevelSetter.Enabled(zap.InfoLevel)).To(BeTrue())
 		})
 	})
 
