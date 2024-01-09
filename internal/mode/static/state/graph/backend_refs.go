@@ -14,14 +14,10 @@ import (
 
 // BackendRef is an internal representation of a backendRef in an HTTPRoute.
 type BackendRef struct {
-	// Svc is the service referenced by the backendRef.
-	// Svc *v1.Service
 	// SvcNsName is the NamespacedName of the Service referenced by the backendRef.
 	SvcNsName types.NamespacedName
 	// ServicePort is the ServicePort of the Service which is referenced by the backendRef.
 	ServicePort v1.ServicePort
-	// Port is the port of the backendRef.
-	// Port int32
 	// Weight is the weight of the backendRef.
 	Weight int32
 	// Valid indicates whether the backendRef is valid.
