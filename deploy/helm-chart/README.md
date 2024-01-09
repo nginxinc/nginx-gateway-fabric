@@ -9,6 +9,8 @@
     - [Installing the Chart via Sources](#installing-the-chart-via-sources)
       - [Pulling the Chart](#pulling-the-chart)
       - [Installing the Chart](#installing-the-chart-1)
+    - [Custom installation options](#custom-installation-options)
+      - [Service type](#service-type)
   - [Upgrading the Chart](#upgrading-the-chart)
     - [Upgrading the Gateway Resources](#upgrading-the-gateway-resources)
     - [Upgrading the CRDs](#upgrading-the-crds)
@@ -36,15 +38,6 @@ This chart deploys the NGINX Gateway Fabric in your Kubernetes cluster.
 > installed before deploying NGINX Gateway Fabric. If they are already installed in your cluster, please ensure
 > they are the correct version as supported by the NGINX Gateway Fabric -
 > [see the Technical Specifications](https://github.com/nginxinc/nginx-gateway-fabric/blob/main/README.md#technical-specifications).
-
-If installing the latest stable release of NGINX Gateway Fabric, ensure you are deploying its supported version of
-the Gateway API resources:
-
-  ```shell
-  kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v0.8.1/standard-install.yaml
-  ```
-
-If you are installing the edge version of NGINX Gateway Fabric:
 
   ```shell
   kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/standard-install.yaml
@@ -284,7 +277,7 @@ kubectl delete -f https://github.com/kubernetes-sigs/gateway-api/releases/downlo
 The following tables lists the configurable parameters of the NGINX Gateway Fabric chart and their default values.
 
 | Parameter                                         | Description                                                                                                                                                                                              | Default Value                                                                                                   |
-|---------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------|
+| ------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
 | `nginxGateway.image.repository`                   | The repository for the NGINX Gateway Fabric image.                                                                                                                                                       | ghcr.io/nginxinc/nginx-gateway-fabric                                                                           |
 | `nginxGateway.image.tag`                          | The tag for the NGINX Gateway Fabric image.                                                                                                                                                              | edge                                                                                                            |
 | `nginxGateway.image.pullPolicy`                   | The `imagePullPolicy` for the NGINX Gateway Fabric image.                                                                                                                                                | Always                                                                                                          |
@@ -303,6 +296,7 @@ The following tables lists the configurable parameters of the NGINX Gateway Fabr
 | `nginx.image.repository`                          | The repository for the NGINX image.                                                                                                                                                                      | ghcr.io/nginxinc/nginx-gateway-fabric/nginx                                                                     |
 | `nginx.image.tag`                                 | The tag for the NGINX image.                                                                                                                                                                             | edge                                                                                                            |
 | `nginx.image.pullPolicy`                          | The `imagePullPolicy` for the NGINX image.                                                                                                                                                               | Always                                                                                                          |
+| `nginx.plus`                                      | Is NGINX Plus image being used                                                                                                                                                                           | false                                                                                                           |
 | `nginx.lifecycle`                                 | The `lifecycle` of the nginx container.                                                                                                                                                                  | {}                                                                                                              |
 | `nginx.extraVolumeMounts`                         | Extra `volumeMounts` for the nginx container.                                                                                                                                                            | {}                                                                                                              |
 | `terminationGracePeriodSeconds`                   | The termination grace period of the NGINX Gateway Fabric pod.                                                                                                                                            | 30                                                                                                              |

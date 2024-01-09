@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -29,6 +30,7 @@ type InstallationConfig struct {
 	ImageTag             string
 	ImagePullPolicy      string
 	ServiceType          string
+	IsGKEInternalLB      bool
 }
 
 // InstallGatewayAPI installs the specified version of the Gateway API resources.
@@ -82,36 +84,50 @@ func InstallGatewayAPI(
 	return nil, nil
 }
 
+// UninstallGatewayAPI uninstalls the specified version of the Gateway API resources.
+func UninstallGatewayAPI(apiVersion, k8sVersion string) ([]byte, error) {
+	apiPath := fmt.Sprintf("%s/v%s/standard-install.yaml", gwInstallBasePath, apiVersion)
+
+	if webhookRequired(k8sVersion) {
+		webhookPath := fmt.Sprintf("%s/v%s/webhook-install.yaml", gwInstallBasePath, apiVersion)
+
+		if output, err := exec.Command("kubectl", "delete", "-f", webhookPath).CombinedOutput(); err != nil {
+			return output, err
+		}
+	}
+
+	output, err := exec.Command("kubectl", "delete", "-f", apiPath).CombinedOutput()
+	if err != nil && !strings.Contains(string(output), "not found") {
+		return output, err
+	}
+
+	return nil, nil
+}
+
 // InstallNGF installs NGF.
 func InstallNGF(cfg InstallationConfig, extraArgs ...string) ([]byte, error) {
 	args := []string{
 		"install", cfg.ReleaseName, cfg.ChartPath, "--create-namespace", "--namespace", cfg.Namespace, "--wait",
 	}
 
-	if cfg.NgfImageRepository != "" {
-		args = append(args, formatValueSet("nginxGateway.image.repository", cfg.NgfImageRepository)...)
-		if cfg.ImageTag != "" {
-			args = append(args, formatValueSet("nginxGateway.image.tag", cfg.ImageTag)...)
-		}
-		if cfg.ImagePullPolicy != "" {
-			args = append(args, formatValueSet("nginxGateway.image.pullPolicy", cfg.ImagePullPolicy)...)
-		}
+	args = append(args, setImageArgs(cfg)...)
+	fullArgs := append(args, extraArgs...)
+
+	return exec.Command("helm", fullArgs...).CombinedOutput()
+}
+
+// UpgradeNGF upgrades NGF. CRD upgrades assume the chart is local.
+func UpgradeNGF(cfg InstallationConfig, extraArgs ...string) ([]byte, error) {
+	crdPath := filepath.Join(cfg.ChartPath, "crds")
+	if output, err := exec.Command("kubectl", "apply", "-f", crdPath).CombinedOutput(); err != nil {
+		return output, err
 	}
 
-	if cfg.NginxImageRepository != "" {
-		args = append(args, formatValueSet("nginx.image.repository", cfg.NginxImageRepository)...)
-		if cfg.ImageTag != "" {
-			args = append(args, formatValueSet("nginx.image.tag", cfg.ImageTag)...)
-		}
-		if cfg.ImagePullPolicy != "" {
-			args = append(args, formatValueSet("nginx.image.pullPolicy", cfg.ImagePullPolicy)...)
-		}
+	args := []string{
+		"upgrade", cfg.ReleaseName, cfg.ChartPath, "--namespace", cfg.Namespace, "--wait",
 	}
 
-	if cfg.ServiceType != "" {
-		args = append(args, formatValueSet("service.type", cfg.ServiceType)...)
-	}
-
+	args = append(args, setImageArgs(cfg)...)
 	fullArgs := append(args, extraArgs...)
 
 	return exec.Command("helm", fullArgs...).CombinedOutput()
@@ -124,7 +140,7 @@ func UninstallNGF(cfg InstallationConfig, k8sClient client.Client) ([]byte, erro
 	}
 
 	output, err := exec.Command("helm", args...).CombinedOutput()
-	if err != nil {
+	if err != nil && !strings.Contains(string(output), "release: not found") {
 		return output, err
 	}
 
@@ -153,19 +169,37 @@ func UninstallNGF(cfg InstallationConfig, k8sClient client.Client) ([]byte, erro
 	return nil, nil
 }
 
-// UninstallGatewayAPI uninstalls the specified version of the Gateway API resources.
-func UninstallGatewayAPI(apiVersion, k8sVersion string) ([]byte, error) {
-	apiPath := fmt.Sprintf("%s/v%s/standard-install.yaml", gwInstallBasePath, apiVersion)
+func setImageArgs(cfg InstallationConfig) []string {
+	var args []string
 
-	if webhookRequired(k8sVersion) {
-		webhookPath := fmt.Sprintf("%s/v%s/webhook-install.yaml", gwInstallBasePath, apiVersion)
-
-		if output, err := exec.Command("kubectl", "delete", "-f", webhookPath).CombinedOutput(); err != nil {
-			return output, err
+	if cfg.NgfImageRepository != "" {
+		args = append(args, formatValueSet("nginxGateway.image.repository", cfg.NgfImageRepository)...)
+		if cfg.ImageTag != "" {
+			args = append(args, formatValueSet("nginxGateway.image.tag", cfg.ImageTag)...)
+		}
+		if cfg.ImagePullPolicy != "" {
+			args = append(args, formatValueSet("nginxGateway.image.pullPolicy", cfg.ImagePullPolicy)...)
 		}
 	}
 
-	return exec.Command("kubectl", "delete", "-f", apiPath).CombinedOutput()
+	if cfg.NginxImageRepository != "" {
+		args = append(args, formatValueSet("nginx.image.repository", cfg.NginxImageRepository)...)
+		if cfg.ImageTag != "" {
+			args = append(args, formatValueSet("nginx.image.tag", cfg.ImageTag)...)
+		}
+		if cfg.ImagePullPolicy != "" {
+			args = append(args, formatValueSet("nginx.image.pullPolicy", cfg.ImagePullPolicy)...)
+		}
+	}
+
+	if cfg.ServiceType != "" {
+		args = append(args, formatValueSet("service.type", cfg.ServiceType)...)
+		if cfg.ServiceType == "LoadBalancer" && cfg.IsGKEInternalLB {
+			args = append(args, formatValueSet(`service.annotations.networking\.gke\.io\/load-balancer-type`, "Internal")...)
+		}
+	}
+
+	return args
 }
 
 func formatValueSet(key, value string) []string {

@@ -3,7 +3,7 @@ PREFIX = nginx-gateway-fabric
 NGINX_PREFIX = $(PREFIX)/nginx
 GW_API_VERSION ?= 1.0.0
 GATEWAY_CLASS = nginx
-SUPPORTED_FEATURES = HTTPRoute,HTTPRouteQueryParamMatching,HTTPRouteMethodMatching,HTTPRoutePortRedirect,HTTPRouteSchemeRedirect,GatewayClassObservedGenerationBump
+SUPPORTED_FEATURES = HTTPRouteQueryParamMatching,HTTPRouteMethodMatching,HTTPRoutePortRedirect,HTTPRouteSchemeRedirect,HTTPRouteHostRewrite,HTTPRoutePathRewrite,GatewayPort8080
 KIND_IMAGE ?= $(shell grep -m1 'FROM kindest/node' <tests/Dockerfile | awk -F'[ ]' '{print $$2}')
 KIND_KUBE_CONFIG=$${HOME}/.kube/kind/config
 CONFORMANCE_TAG = latest
@@ -44,7 +44,7 @@ build-images: ## Build NGF and nginx images
 
 .PHONY: load-images
 load-images: ## Load NGF and NGINX images on configured kind cluster
-	kind load docker-image $(PREFIX):$(TAG) $(NGINX_PREFIX):$(TAG)
+	cd .. && make PREFIX=$(PREFIX) TAG=$(TAG) load-images
 
 .PHONY: prepare-ngf-dependencies
 prepare-ngf-dependencies: update-ngf-manifest ## Install NGF dependencies on configured kind cluster

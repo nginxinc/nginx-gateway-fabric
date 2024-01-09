@@ -24,6 +24,7 @@ _Usage_:
 | _gateway-ctlr-name_          | _string_ | The name of the Gateway controller. The controller name must be in the form: `DOMAIN/PATH`. The controller's domain is `gateway.nginx.org`. |
 | _gatewayclass_               | _string_ | The name of the GatewayClass resource. Every NGINX Gateway Fabric must have a unique corresponding GatewayClass resource. |
 | _gateway_                   | _string_ | The namespaced name of the Gateway resource to use. Must be of the form: `NAMESPACE/NAME`. If not specified, the control plane will process all Gateways for the configured GatewayClass. Among them, it will choose the oldest resource by creation timestamp. If the timestamps are equal, it will choose the resource that appears first in alphabetical order by {namespace}/{name}. |
+| _nginx-plus_                 | _bool_   | Enable support for NGINX Plus. |
 | _config_                     | _string_ | The name of the NginxGateway resource to be used for this controller's dynamic configuration. Lives in the same namespace as the controller. |
 | _service_                    | _string_ | The name of the service that fronts this NGINX Gateway Fabric pod. Lives in the same namespace as the controller. |
 | _metrics-disable_            | _bool_   | Disable exposing metrics in the Prometheus format (Default: `false`). |

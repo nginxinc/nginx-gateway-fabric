@@ -375,7 +375,7 @@ func TestBuildRoute(t *testing.T) {
 			}
 			return nil
 		},
-		ValidateRedirectHostnameStub: func(h string) error {
+		ValidateHostnameStub: func(h string) error {
 			if h == invalidRedirectHostname {
 				return errors.New("invalid hostname")
 			}
@@ -1858,6 +1858,14 @@ func TestValidateFilter(t *testing.T) {
 		},
 		{
 			filter: gatewayv1.HTTPRouteFilter{
+				Type:       gatewayv1.HTTPRouteFilterURLRewrite,
+				URLRewrite: &gatewayv1.HTTPURLRewriteFilter{},
+			},
+			expectErrCount: 0,
+			name:           "valid rewrite filter",
+		},
+		{
+			filter: gatewayv1.HTTPRouteFilter{
 				Type:                  gatewayv1.HTTPRouteFilterRequestHeaderModifier,
 				RequestHeaderModifier: &gatewayv1.HTTPHeaderFilter{},
 			},
@@ -1866,7 +1874,7 @@ func TestValidateFilter(t *testing.T) {
 		},
 		{
 			filter: gatewayv1.HTTPRouteFilter{
-				Type: gatewayv1.HTTPRouteFilterURLRewrite,
+				Type: gatewayv1.HTTPRouteFilterRequestMirror,
 			},
 			expectErrCount: 1,
 			name:           "unsupported filter",
@@ -1899,7 +1907,17 @@ func TestValidateFilterRedirect(t *testing.T) {
 		validator      *validationfakes.FakeHTTPFieldsValidator
 		name           string
 		expectErrCount int
+		panic          bool
 	}{
+		{
+			validator: &validationfakes.FakeHTTPFieldsValidator{},
+			filter: gatewayv1.HTTPRouteFilter{
+				Type:            gatewayv1.HTTPRouteFilterRequestRedirect,
+				RequestRedirect: nil,
+			},
+			panic: true,
+			name:  "nil filter",
+		},
 		{
 			validator: createAllValidValidator(),
 			filter: gatewayv1.HTTPRouteFilter{
@@ -1941,7 +1959,7 @@ func TestValidateFilterRedirect(t *testing.T) {
 		{
 			validator: func() *validationfakes.FakeHTTPFieldsValidator {
 				validator := createAllValidValidator()
-				validator.ValidateRedirectHostnameReturns(errors.New("invalid hostname"))
+				validator.ValidateHostnameReturns(errors.New("invalid hostname"))
 				return validator
 			}(),
 			filter: gatewayv1.HTTPRouteFilter{
@@ -1999,7 +2017,7 @@ func TestValidateFilterRedirect(t *testing.T) {
 		{
 			validator: func() *validationfakes.FakeHTTPFieldsValidator {
 				validator := createAllValidValidator()
-				validator.ValidateRedirectHostnameReturns(errors.New("invalid hostname"))
+				validator.ValidateHostnameReturns(errors.New("invalid hostname"))
 				validator.ValidateRedirectPortReturns(errors.New("invalid port"))
 				return validator
 			}(),
@@ -2024,8 +2042,164 @@ func TestValidateFilterRedirect(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewWithT(t)
-			allErrs := validateFilterRedirect(test.validator, test.filter, filterPath)
-			g.Expect(allErrs).To(HaveLen(test.expectErrCount))
+			if test.panic {
+				validate := func() {
+					_ = validateFilterRedirect(test.validator, test.filter, filterPath)
+				}
+				g.Expect(validate).To(Panic())
+			} else {
+				allErrs := validateFilterRedirect(test.validator, test.filter, filterPath)
+				g.Expect(allErrs).To(HaveLen(test.expectErrCount))
+			}
+		})
+	}
+}
+
+func TestValidateFilterRewrite(t *testing.T) {
+	tests := []struct {
+		filter         gatewayv1.HTTPRouteFilter
+		validator      *validationfakes.FakeHTTPFieldsValidator
+		name           string
+		expectErrCount int
+		panic          bool
+	}{
+		{
+			validator: &validationfakes.FakeHTTPFieldsValidator{},
+			filter: gatewayv1.HTTPRouteFilter{
+				Type:       gatewayv1.HTTPRouteFilterURLRewrite,
+				URLRewrite: nil,
+			},
+			panic: true,
+			name:  "nil filter",
+		},
+		{
+			validator: &validationfakes.FakeHTTPFieldsValidator{},
+			filter: gatewayv1.HTTPRouteFilter{
+				Type: gatewayv1.HTTPRouteFilterURLRewrite,
+				URLRewrite: &gatewayv1.HTTPURLRewriteFilter{
+					Hostname: helpers.GetPointer[gatewayv1.PreciseHostname]("example.com"),
+					Path: &gatewayv1.HTTPPathModifier{
+						Type:            gatewayv1.FullPathHTTPPathModifier,
+						ReplaceFullPath: helpers.GetPointer("/path"),
+					},
+				},
+			},
+			expectErrCount: 0,
+			name:           "valid rewrite filter",
+		},
+		{
+			validator: &validationfakes.FakeHTTPFieldsValidator{},
+			filter: gatewayv1.HTTPRouteFilter{
+				Type:       gatewayv1.HTTPRouteFilterURLRewrite,
+				URLRewrite: &gatewayv1.HTTPURLRewriteFilter{},
+			},
+			expectErrCount: 0,
+			name:           "valid rewrite filter with no fields set",
+		},
+		{
+			validator: func() *validationfakes.FakeHTTPFieldsValidator {
+				validator := &validationfakes.FakeHTTPFieldsValidator{}
+				validator.ValidateHostnameReturns(errors.New("invalid hostname"))
+				return validator
+			}(),
+			filter: gatewayv1.HTTPRouteFilter{
+				Type: gatewayv1.HTTPRouteFilterURLRewrite,
+				URLRewrite: &gatewayv1.HTTPURLRewriteFilter{
+					Hostname: helpers.GetPointer[gatewayv1.PreciseHostname](
+						"example.com",
+					), // any value is invalid by the validator
+				},
+			},
+			expectErrCount: 1,
+			name:           "rewrite filter with invalid hostname",
+		},
+		{
+			validator: &validationfakes.FakeHTTPFieldsValidator{},
+			filter: gatewayv1.HTTPRouteFilter{
+				Type: gatewayv1.HTTPRouteFilterURLRewrite,
+				URLRewrite: &gatewayv1.HTTPURLRewriteFilter{
+					Path: &gatewayv1.HTTPPathModifier{
+						Type: "bad-type",
+					},
+				},
+			},
+			expectErrCount: 1,
+			name:           "rewrite filter with invalid path type",
+		},
+		{
+			validator: func() *validationfakes.FakeHTTPFieldsValidator {
+				validator := &validationfakes.FakeHTTPFieldsValidator{}
+				validator.ValidateRewritePathReturns(errors.New("invalid path value"))
+				return validator
+			}(),
+			filter: gatewayv1.HTTPRouteFilter{
+				Type: gatewayv1.HTTPRouteFilterURLRewrite,
+				URLRewrite: &gatewayv1.HTTPURLRewriteFilter{
+					Path: &gatewayv1.HTTPPathModifier{
+						Type:            gatewayv1.FullPathHTTPPathModifier,
+						ReplaceFullPath: helpers.GetPointer("/path"),
+					}, // any value is invalid by the validator
+				},
+			},
+			expectErrCount: 1,
+			name:           "rewrite filter with invalid full path",
+		},
+		{
+			validator: func() *validationfakes.FakeHTTPFieldsValidator {
+				validator := &validationfakes.FakeHTTPFieldsValidator{}
+				validator.ValidateRewritePathReturns(errors.New("invalid path"))
+				return validator
+			}(),
+			filter: gatewayv1.HTTPRouteFilter{
+				Type: gatewayv1.HTTPRouteFilterURLRewrite,
+				URLRewrite: &gatewayv1.HTTPURLRewriteFilter{
+					Path: &gatewayv1.HTTPPathModifier{
+						Type:               gatewayv1.PrefixMatchHTTPPathModifier,
+						ReplacePrefixMatch: helpers.GetPointer("/path"),
+					}, // any value is invalid by the validator
+				},
+			},
+			expectErrCount: 1,
+			name:           "rewrite filter with invalid prefix path",
+		},
+		{
+			validator: func() *validationfakes.FakeHTTPFieldsValidator {
+				validator := &validationfakes.FakeHTTPFieldsValidator{}
+				validator.ValidateHostnameReturns(errors.New("invalid hostname"))
+				validator.ValidateRewritePathReturns(errors.New("invalid path"))
+				return validator
+			}(),
+			filter: gatewayv1.HTTPRouteFilter{
+				Type: gatewayv1.HTTPRouteFilterURLRewrite,
+				URLRewrite: &gatewayv1.HTTPURLRewriteFilter{
+					Hostname: helpers.GetPointer[gatewayv1.PreciseHostname](
+						"example.com",
+					), // any value is invalid by the validator
+					Path: &gatewayv1.HTTPPathModifier{
+						Type:               gatewayv1.PrefixMatchHTTPPathModifier,
+						ReplacePrefixMatch: helpers.GetPointer("/path"),
+					}, // any value is invalid by the validator
+				},
+			},
+			expectErrCount: 2,
+			name:           "rewrite filter with multiple errors",
+		},
+	}
+
+	filterPath := field.NewPath("test")
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			g := NewWithT(t)
+			if test.panic {
+				validate := func() {
+					_ = validateFilterRewrite(test.validator, test.filter, filterPath)
+				}
+				g.Expect(validate).To(Panic())
+			} else {
+				allErrs := validateFilterRewrite(test.validator, test.filter, filterPath)
+				g.Expect(allErrs).To(HaveLen(test.expectErrCount))
+			}
 		})
 	}
 }

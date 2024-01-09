@@ -38,8 +38,11 @@ var _ = Describe("Basic test example", func() {
 	})
 
 	It("sends traffic", func() {
-		url := fmt.Sprintf("http://hello.example.com:%s/hello", strconv.Itoa(portFwdPort))
-		status, body, err := framework.Get(url, timeoutConfig.RequestTimeout)
+		url := "http://hello.example.com/hello"
+		if portFwdPort != 0 {
+			url = fmt.Sprintf("http://hello.example.com:%s/hello", strconv.Itoa(portFwdPort))
+		}
+		status, body, err := framework.Get(url, address, timeoutConfig.RequestTimeout)
 		Expect(err).ToNot(HaveOccurred())
 		Expect(status).To(Equal(http.StatusOK))
 		Expect(body).To(ContainSubstring("URI: /hello"))

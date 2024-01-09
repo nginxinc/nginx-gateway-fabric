@@ -6,6 +6,10 @@ MANIFEST_DIR = $(shell pwd)/deploy/manifests
 CHART_DIR = $(shell pwd)/deploy/helm-chart
 NGINX_CONF_DIR = internal/mode/static/nginx/conf
 NJS_DIR = internal/mode/static/nginx/modules/src
+NGINX_DOCKER_BUILD_PLUS_ARGS = --secret id=nginx-repo.crt,src=nginx-repo.crt --secret id=nginx-repo.key,src=nginx-repo.key
+BUILD_AGENT=local
+GW_API_VERSION = 1.0.0
+INSTALL_WEBHOOK = false
 
 # go build flags - should not be overridden by the user
 GO_LINKER_FlAGS_VARS = -X main.version=${VERSION} -X main.commit=${GIT_COMMIT} -X main.date=${DATE}
@@ -15,6 +19,7 @@ GO_LINKER_FLAGS = $(GO_LINKER_FLAGS_OPTIMIZATIONS) $(GO_LINKER_FlAGS_VARS)
 # variables that can be overridden by the user
 PREFIX ?= nginx-gateway-fabric## The name of the NGF image. For example, nginx-gateway-fabric
 NGINX_PREFIX ?= $(PREFIX)/nginx## The name of the nginx image. For example: nginx-gateway-fabric/nginx
+NGINX_PLUS_PREFIX ?= $(PREFIX)/nginxplus## The name of the nginx plus image. For example: nginx-gateway-fabric/nginxplus
 TAG ?= $(VERSION:v%=%)## The tag of the image. For example, 0.3.0
 TARGET ?= local## The target of the build. Possible values: local and container
 KIND_KUBE_CONFIG=$${HOME}/.kube/kind/config## The location of the kind kubeconfig
@@ -23,7 +28,7 @@ GOARCH ?= amd64## The architecture of the image and/or binary. For example: amd6
 GOOS ?= linux## The OS of the image and/or binary. For example: linux or darwin
 override HELM_TEMPLATE_COMMON_ARGS += --set creator=template --set nameOverride=nginx-gateway## The common options for the Helm template command.
 override HELM_TEMPLATE_EXTRA_ARGS_FOR_ALL_MANIFESTS_FILE += --set service.create=false## The options to be passed to the full Helm templating command only.
-override NGINX_DOCKER_BUILD_OPTIONS += --build-arg NJS_DIR=$(NJS_DIR) --build-arg NGINX_CONF_DIR=$(NGINX_CONF_DIR)
+override NGINX_DOCKER_BUILD_OPTIONS += --build-arg NJS_DIR=$(NJS_DIR) --build-arg NGINX_CONF_DIR=$(NGINX_CONF_DIR) --build-arg BUILD_AGENT=$(BUILD_AGENT)
 .DEFAULT_GOAL := help
 
 .PHONY: help
@@ -34,6 +39,9 @@ help: Makefile ## Display this help
 .PHONY: build-images
 build-images: build-ngf-image build-nginx-image ## Build the NGF and nginx docker images
 
+.PHONY: build-images-with-plus
+build-images-with-plus: build-ngf-image build-nginx-plus-image ## Build the NGF and NGINX Plus docker images
+
 .PHONY: build-ngf-image
 build-ngf-image: check-for-docker build ## Build the NGF docker image
 	docker build --platform linux/$(GOARCH) --target $(strip $(TARGET)) -f build/Dockerfile -t $(strip $(PREFIX)):$(strip $(TAG)) .
@@ -41,6 +49,10 @@ build-ngf-image: check-for-docker build ## Build the NGF docker image
 .PHONY: build-nginx-image
 build-nginx-image: check-for-docker ## Build the custom nginx image
 	docker build --platform linux/$(GOARCH) $(strip $(NGINX_DOCKER_BUILD_OPTIONS)) -f build/Dockerfile.nginx -t $(strip $(NGINX_PREFIX)):$(strip $(TAG)) .
+
+.PHONY: build-nginx-plus-image
+build-nginx-plus-image: check-for-docker ## Build the custom nginx plus image
+	docker build --platform linux/$(GOARCH) $(strip $(NGINX_DOCKER_BUILD_OPTIONS)) $(strip $(NGINX_DOCKER_BUILD_PLUS_ARGS))  -f build/Dockerfile.nginxplus -t $(strip $(NGINX_PLUS_PREFIX)):$(strip $(TAG)) .
 
 .PHONY: check-for-docker
 check-for-docker: ## Check if Docker is installed
@@ -137,13 +149,59 @@ njs-unit-test: ## Run unit tests for the njs httpmatches module
 lint-helm: ## Run the helm chart linter
 	helm lint $(CHART_DIR)
 
+.PHONY: load-images
+load-images: ## Load NGF and NGINX images on configured kind cluster.
+	kind load docker-image $(PREFIX):$(TAG) $(NGINX_PREFIX):$(TAG)
+
+.PHONY: load-images-with-plus
+load-images-with-plus: ## Load NGF and NGINX Plus images on configured kind cluster.
+	kind load docker-image $(PREFIX):$(TAG) $(NGINX_PLUS_PREFIX):$(TAG)
+
+.PHONY: install-ngf-local-build
+install-ngf-local-build: build-images load-images helm-install-local ## Install NGF from local build on configured kind cluster.
+
+.PHONY: install-ngf-local-build-with-plus
+install-ngf-local-build-with-plus: build-images-with-plus load-images-with-plus helm-install-local-with-plus ## Install NGF with NGINX Plus from local build on configured kind cluster.
+
+.PHONY: helm-install-local
+helm-install-local: ## Helm install NGF on configured kind cluster with local images. To build, load, and install with helm run make install-ngf-local-build.
+	./conformance/scripts/install-gateway.sh $(GW_API_VERSION) $(INSTALL_WEBHOOK)
+	helm install dev ./deploy/helm-chart --create-namespace --wait --set service.type=NodePort --set nginxGateway.image.repository=$(PREFIX) --set nginxGateway.image.tag=$(TAG) --set nginxGateway.image.pullPolicy=Never --set nginx.image.repository=$(NGINX_PREFIX) --set nginx.image.tag=$(TAG) --set nginx.image.pullPolicy=Never -n nginx-gateway
+
+.PHONY: helm-install-local-with-plus
+helm-install-local-with-plus: ## Helm install NGF with NGINX Plus on configured kind cluster with local images. To build, load, and install with helm run make install-ngf-local-build-with-plus.
+	./conformance/scripts/install-gateway.sh $(GW_API_VERSION) $(INSTALL_WEBHOOK)
+	helm install dev ./deploy/helm-chart --create-namespace --wait --set service.type=NodePort --set nginxGateway.image.repository=$(PREFIX) --set nginxGateway.image.tag=$(TAG) --set nginxGateway.image.pullPolicy=Never --set nginx.image.repository=$(NGINX_PLUS_PREFIX) --set nginx.image.tag=$(TAG) --set nginx.image.pullPolicy=Never --set nginx.plus=true -n nginx-gateway
+
+# Debug Targets
 .PHONY: debug-build
 debug-build: GO_LINKER_FLAGS=$(GO_LINKER_FlAGS_VARS)
 debug-build: ADDITIONAL_GO_BUILD_FLAGS=-gcflags "all=-N -l"
 debug-build: build ## Build binary with debug info, symbols, and no optimizations
 
-.PHONY: build-ngf-debug-image
-build-ngf-debug-image: debug-build build-ngf-image ## Build NGF image with debug binary
+.PHONY: debug-build-dlv-image
+debug-build-dlv-image: check-for-docker ## Build the dlv debugger image.
+	docker build --platform linux/$(GOARCH) -f debug/Dockerfile -t dlv-debug:edge .
+
+.PHONY: debug-build-images
+debug-build-images: debug-build build-ngf-image build-nginx-image debug-build-dlv-image ## Build all images used in debugging.
+
+.PHONY: debug-build-images-with-plus
+debug-build-images-with-plus: debug-build build-ngf-image build-nginx-plus-image debug-build-dlv-image ## Build all images with NGINX plus used in debugging.
+
+.PHONY: debug-load-images
+debug-load-images: load-images ## Load all images used in debugging to kind cluster.
+	kind load docker-image dlv-debug:edge
+
+.PHONY: debug-load-images-with-plus
+debug-load-images-with-plus: load-images-with-plus ## Load all images with NGINX Plus used in debugging to kind cluster.
+	kind load docker-image dlv-debug:edge
+
+.PHONY: debug-install-local-build
+debug-install-local-build: debug-build-images debug-load-images helm-install-local ## Install NGF from local build using debug NGF binary on configured kind cluster.
+
+.PHONY: debug-install-local-build-with-plus
+debug-install-local-build-with-plus: debug-build-images-with-plus debug-load-images-with-plus helm-install-local-with-plus ## Install NGF with NGINX Plus from local build using debug NGF binary on configured kind cluster.
 
 .PHONY: dev-all
 dev-all: deps fmt njs-fmt vet lint unit-test njs-unit-test ## Run all the development checks

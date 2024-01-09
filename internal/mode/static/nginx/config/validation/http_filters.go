@@ -1,8 +1,18 @@
 package validation
 
+import (
+	"errors"
+	"strings"
+
+	k8svalidation "k8s.io/apimachinery/pkg/util/validation"
+)
+
 // HTTPRedirectValidator validates values for a redirect, which in NGINX is done with the return directive.
 // For example, return 302 "https://example.com:8080";
 type HTTPRedirectValidator struct{}
+
+// HTTPURLRewriteValidator validates values for a URL rewrite.
+type HTTPURLRewriteValidator struct{}
 
 // HTTPRequestHeaderValidator validates values for request headers,
 // which in NGINX is done with the proxy_set_header directive.
@@ -18,12 +28,6 @@ var supportedRedirectSchemes = map[string]struct{}{
 // dictated by the Gateway API spec.
 func (HTTPRedirectValidator) ValidateRedirectScheme(scheme string) (valid bool, supportedValues []string) {
 	return validateInSupportedValues(scheme, supportedRedirectSchemes)
-}
-
-var redirectHostnameExamples = []string{"host", "example.com"}
-
-func (HTTPRedirectValidator) ValidateRedirectHostname(hostname string) error {
-	return validateEscapedStringNoVarExpansion(hostname, redirectHostnameExamples)
 }
 
 func (HTTPRedirectValidator) ValidateRedirectPort(_ int32) error {
@@ -42,6 +46,30 @@ var supportedRedirectStatusCodes = map[int]struct{}{
 // possible code values. We can always relax the validation later in case there is a need.
 func (HTTPRedirectValidator) ValidateRedirectStatusCode(statusCode int) (valid bool, supportedValues []string) {
 	return validateInSupportedValues(statusCode, supportedRedirectStatusCodes)
+}
+
+var hostnameExamples = []string{"host", "example.com"}
+
+func (HTTPRedirectValidator) ValidateHostname(hostname string) error {
+	return validateEscapedStringNoVarExpansion(hostname, hostnameExamples)
+}
+
+// ValidateRewritePath validates a path used in a URL Rewrite filter.
+func (HTTPURLRewriteValidator) ValidateRewritePath(path string) error {
+	if path == "" {
+		return nil
+	}
+
+	if !pathRegexp.MatchString(path) {
+		msg := k8svalidation.RegexError(pathErrMsg, pathFmt, pathExamples...)
+		return errors.New(msg)
+	}
+
+	if strings.Contains(path, "$") {
+		return errors.New("cannot contain $")
+	}
+
+	return nil
 }
 
 func (HTTPRequestHeaderValidator) ValidateRequestHeaderName(name string) error {

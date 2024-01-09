@@ -2,9 +2,12 @@ package collectors
 
 import (
 	"context"
+	"fmt"
 	"net"
 	"net/http"
 
+	"github.com/go-kit/log"
+	"github.com/nginxinc/nginx-plus-go-client/client"
 	prometheusClient "github.com/nginxinc/nginx-prometheus-exporter/client"
 	nginxCollector "github.com/nginxinc/nginx-prometheus-exporter/collector"
 	"github.com/prometheus/client_golang/prometheus"
@@ -13,18 +16,36 @@ import (
 )
 
 const (
-	nginxStatusSock = "/var/run/nginx/nginx-status.sock"
-	nginxStatusURI  = "http://config-status/stub_status"
+	nginxStatusSock  = "/var/run/nginx/nginx-status.sock"
+	nginxStatusURI   = "http://config-status/stub_status"
+	nginxPlusAPISock = "/var/run/nginx/nginx-plus-api.sock"
+	nginxPlusAPIURI  = "http://nginx-plus-api/api"
 )
 
 // NewNginxMetricsCollector creates an NginxCollector which fetches stats from NGINX over a unix socket
-func NewNginxMetricsCollector(constLabels map[string]string) (prometheus.Collector, error) {
+func NewNginxMetricsCollector(constLabels map[string]string, logger log.Logger) prometheus.Collector {
 	httpClient := getSocketClient(nginxStatusSock)
-	client, err := prometheusClient.NewNginxClient(&httpClient, nginxStatusURI)
+	ngxClient := prometheusClient.NewNginxClient(&httpClient, nginxStatusURI)
+
+	return nginxCollector.NewNginxCollector(ngxClient, metrics.Namespace, constLabels, logger)
+}
+
+// NewNginxPlusMetricsCollector creates an NginxCollector which fetches stats from NGINX Plus API over a unix socket
+func NewNginxPlusMetricsCollector(constLabels map[string]string, logger log.Logger) (prometheus.Collector, error) {
+	plusClient, err := createPlusClient()
 	if err != nil {
 		return nil, err
 	}
-	return nginxCollector.NewNginxCollector(client, metrics.Namespace, constLabels), nil
+
+	collector := nginxCollector.NewNginxPlusCollector(
+		plusClient,
+		metrics.Namespace,
+		nginxCollector.VariableLabelNames{},
+		constLabels,
+		logger,
+	)
+
+	return collector, nil
 }
 
 // getSocketClient gets an http.Client with a unix socket transport.
@@ -36,4 +57,16 @@ func getSocketClient(sockPath string) http.Client {
 			},
 		},
 	}
+}
+
+func createPlusClient() (*client.NginxClient, error) {
+	var plusClient *client.NginxClient
+	var err error
+
+	httpClient := getSocketClient(nginxPlusAPISock)
+	plusClient, err = client.NewNginxClient(nginxPlusAPIURI, client.WithHTTPClient(&httpClient))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create NginxClient for Plus: %w", err)
+	}
+	return plusClient, nil
 }

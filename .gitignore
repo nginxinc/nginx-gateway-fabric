@@ -29,6 +29,9 @@ build/.out
 build/out
 dist/
 
+# Test artifacts
+tests/**/*.csv
+
 # Node modules
 node_modules/
 
@@ -37,3 +40,10 @@ internal/mode/static/nginx/modules/coverage
 
 # MacOS Finder
 .DS_Store
+
+# Certs and keys
+*.crt
+*.key
+
+# Dotenv files
+**/*.env

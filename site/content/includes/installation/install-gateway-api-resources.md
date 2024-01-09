@@ -4,18 +4,7 @@ docs:
 
 {{<note>}}The [Gateway API resources](https://github.com/kubernetes-sigs/gateway-api) from the standard channel must be installed before deploying NGINX Gateway Fabric. If they are already installed in your cluster, please ensure they are the correct version as supported by the NGINX Gateway Fabric - [see the Technical Specifications](https://github.com/nginxinc/nginx-gateway-fabric/blob/main/README.md#technical-specifications).{{</note>}}
 
-**Stable release**
-
-If installing the latest stable release of NGINX Gateway Fabric, ensure you are deploying its supported version of
-the Gateway API resources:
-
-```shell
-kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v0.8.1/standard-install.yaml
-```
-
-**Edge version**
-
-If installing the edge version of NGINX Gateway Fabric from the **main** branch:
+To install the Gateway API resources, run the following:
 
 ```shell
 kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/standard-install.yaml

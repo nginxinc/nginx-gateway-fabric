@@ -61,7 +61,7 @@ To create a new release, follow these steps:
 10. Prepare and merge a PR into the main branch to update the [README](/README.md) to include the information about
     the latest release and also the [changelog](/CHANGELOG.md). Also update any installation instructions to ensure
     that the supported Gateway API and NGF versions are correct. Specifically, helm README and `site/content/includes/installation/install-gateway-api-resources.md`.
-11. Update the production branch to the latest release branch in [Netlify](https://app.netlify.com/sites/nginx-gateway-fabric/configuration/deploys#branches-and-deploy-contexts). If it's your first time, log in using Gitlab SSO and ask the docs team for permission to access the NGF project. Ensure that once the branch is updated, the deployment pipeline in Netlify passes and that the published docs look good (no obvious errors or issues).
+11. Update the production branch to the latest release branch in [Netlify](https://app.netlify.com/sites/nginx-gateway-fabric/configuration/deploys#branches-and-deploy-contexts). If it's your first time, log in using Gitlab SSO and ask the docs team for permission to access the NGF project. Once the branch is updated, redeploy the docs in Netlify. Verify that the Netlify deploy passes and that the published docs look good (no obvious errors or issues).
 12. Close the issue created in Step 1.
 13. Ensure that the [associated milestone](https://github.com/nginxinc/nginx-gateway-fabric/milestones) is closed.
 14. Verify that published artifacts in the release can be installed properly.

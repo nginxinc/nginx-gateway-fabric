@@ -11,8 +11,8 @@ docs: "DOCS-000"
 {{< bootstrap-table "table table-striped table-bordered" >}}
 | Resource                            | Core Support Level | Extended Support Level | Implementation-Specific Support Level | API Version |
 |-------------------------------------|--------------------|------------------------|---------------------------------------|-------------|
-| [Gateway](#gateway)                 | Supported          | Not supported          | Not supported                         | v1          |
 | [GatewayClass](#gatewayclass)       | Supported          | Not supported          | Not supported                         | v1          |
+| [Gateway](#gateway)                 | Supported          | Not supported          | Not supported                         | v1          |
 | [HTTPRoute](#httproute)             | Supported          | Partially supported    | Not supported                         | v1          |
 | [ReferenceGrant](#referencegrant)   | Supported          | N/A                    | Not supported                         | v1beta1     |
 | [TLSRoute](#tlsroute)               | Not supported      | Not supported          | Not supported                         | N/A         |
@@ -42,6 +42,18 @@ Gateway API features has three [support levels](https://gateway-api.sigs.k8s.io/
 Each resource below includes the support status of their corresponding fields.
 
 For a description of each field, visit the [Gateway API documentation](https://gateway-api.sigs.k8s.io/references/spec/).
+
+### GatewayClass
+
+{{< bootstrap-table "table table-striped table-bordered" >}}
+| Resource                            | Core Support Level | Extended Support Level | Implementation-Specific Support Level | API Version |
+|-------------------------------------|--------------------|------------------------|---------------------------------------|-------------|
+| GatewayClass   | Supported          | Not supported       | Not supported          | v1          |
+{{< /bootstrap-table >}}
+
+NGINX Gateway Fabric supports a single GatewayClass resource configured with the `--gatewayclass` flag of the [static-mode]({{< relref "/reference/cli-help.md#static-mode">}}) command.
+
+**Fields**:
 
 - `spec`
   - `controllerName` - supported.
@@ -120,30 +132,6 @@ See the [static-mode]({{< relref "/reference/cli-help.md#static-mode">}}) comman
 
 ---
 
-### GatewayClass
-
-{{< bootstrap-table "table table-striped table-bordered" >}}
-| Resource                            | Core Support Level | Extended Support Level | Implementation-Specific Support Level | API Version |
-|-------------------------------------|--------------------|------------------------|---------------------------------------|-------------|
-| GatewayClass   | Supported          | Not supported       | Not supported          | v1          |
-{{< /bootstrap-table >}}
-
-NGINX Gateway Fabric supports a single GatewayClass resource configured with the `--gatewayclass` flag of the [static-mode]({{< relref "/reference/cli-help.md#static-mode">}}) command.
-
-**Fields**:
-
-- `spec`
-  - `controllerName`: Supported.
-  - `parametersRef`: Not supported.
-  - `description`: Supported.
-- `status`
-  - `conditions` - Supported (Condition/Status/Reason):
-    - `Accepted/True/Accepted`
-    - `Accepted/False/InvalidParameters`
-    - `Accepted/False/GatewayClassConflict`: Custom status for when GatewayClass references this controller, but a different GatewayClass name is provided to the controller via the command-line argument.
-
----
-
 ### HTTPRoute
 
 {{< bootstrap-table "table table-striped table-bordered" >}}
@@ -166,8 +154,9 @@ NGINX Gateway Fabric supports a single GatewayClass resource configured with the
     - `filters`
       - `type`: Supported.
       - `requestRedirect`: Supported except for the experimental `path` field. If multiple filters are configured, NGINX Gateway Fabric will choose the first and ignore the rest.
-      - `requestHeaderModifier`: Supported. If multiple filters are configured, NGINX Gateway Fabric will choose the first and ignore the rest.
-      - `responseHeaderModifier`, `requestMirror`, `urlRewrite`, `extensionRef`: Not supported.
+      - `requestHeaderModifier`: Supported. If multiple filters are configured, NGINX Gateway Fabric will choose the first and ignore the rest. Incompatible with `urlRewrite`.
+      - `urlRewrite`: Supported. If multiple filters are configured, NGINX Gateway Fabric will choose the first and ignore the rest. Incompatible with `requestHeaderModifier`.
+      - `responseHeaderModifier`, `requestMirror`, `extensionRef`: Not supported.
     - `backendRefs`: Partially supported. Backend ref `filters` are not supported.
 - `status`
   - `parents`

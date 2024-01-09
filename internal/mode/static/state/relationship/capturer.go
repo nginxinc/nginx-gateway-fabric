@@ -3,14 +3,11 @@ package relationship
 import (
 	v1 "k8s.io/api/core/v1"
 	discoveryV1 "k8s.io/api/discovery/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/controller/index"
-	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/graph"
 )
 
 //go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . Capturer
@@ -22,8 +19,6 @@ import (
 // so these relationships are tracked using a counter.
 // A Service relationship exists if at least one HTTPRoute references it.
 // An EndpointSlice relationship exists if its Service owner is referenced by at least one HTTPRoute.
-//
-// A Namespace relationship exists if it has labels that match a Gateway listener's label selector.
 type Capturer interface {
 	Capture(obj client.Object)
 	Remove(resourceType client.Object, nsname types.NamespacedName)
@@ -35,40 +30,21 @@ type (
 	routeToServicesMap map[types.NamespacedName]map[types.NamespacedName]struct{}
 	// serviceRefCountMap maps Service names to the number of HTTPRoutes that reference it.
 	serviceRefCountMap map[types.NamespacedName]int
-	// gatewayLabelSelectorsMap maps Gateways to the label selectors that their listeners use for allowed routes
-	gatewayLabelSelectorsMap map[types.NamespacedName][]labels.Selector
-	// namespaceCfg holds information about a namespace
-	// - labels that it contains
-	// - gateways that reference it (if labels match)
-	namespaceCfg struct {
-		labelMap map[string]string
-		gateways map[types.NamespacedName]struct{}
-	}
-	// namespaces is a collection of namespaces in the system
-	namespaces map[types.NamespacedName]namespaceCfg
 )
-
-func (n namespaceCfg) match() bool {
-	return len(n.gateways) > 0
-}
 
 // CapturerImpl implements the Capturer interface.
 type CapturerImpl struct {
-	routesToServices      routeToServicesMap
-	serviceRefCount       serviceRefCountMap
-	gatewayLabelSelectors gatewayLabelSelectorsMap
-	namespaces            namespaces
-	endpointSliceOwners   map[types.NamespacedName]types.NamespacedName
+	routesToServices    routeToServicesMap
+	serviceRefCount     serviceRefCountMap
+	endpointSliceOwners map[types.NamespacedName]types.NamespacedName
 }
 
 // NewCapturerImpl creates a new instance of CapturerImpl.
 func NewCapturerImpl() *CapturerImpl {
 	return &CapturerImpl{
-		routesToServices:      make(routeToServicesMap),
-		serviceRefCount:       make(serviceRefCountMap),
-		gatewayLabelSelectors: make(gatewayLabelSelectorsMap),
-		namespaces:            make(namespaces),
-		endpointSliceOwners:   make(map[types.NamespacedName]types.NamespacedName),
+		routesToServices:    make(routeToServicesMap),
+		serviceRefCount:     make(serviceRefCountMap),
+		endpointSliceOwners: make(map[types.NamespacedName]types.NamespacedName),
 	}
 }
 
@@ -85,47 +61,6 @@ func (c *CapturerImpl) Capture(obj client.Object) {
 				Name:      svcName,
 			}
 		}
-	case *gatewayv1.Gateway:
-		var selectors []labels.Selector
-		for _, listener := range o.Spec.Listeners {
-			if selector := graph.GetAllowedRouteLabelSelector(listener); selector != nil {
-				convertedSelector, err := metav1.LabelSelectorAsSelector(selector)
-				if err == nil {
-					selectors = append(selectors, convertedSelector)
-				}
-			}
-		}
-
-		gatewayName := client.ObjectKeyFromObject(o)
-		if len(selectors) > 0 {
-			c.gatewayLabelSelectors[gatewayName] = selectors
-			for ns, cfg := range c.namespaces {
-				var gatewayMatches bool
-				for _, selector := range selectors {
-					if selector.Matches(labels.Set(cfg.labelMap)) {
-						gatewayMatches = true
-						cfg.gateways[gatewayName] = struct{}{}
-						break
-					}
-				}
-				if !gatewayMatches {
-					// if gateway was previously referenced by this namespace, clean it up
-					delete(cfg.gateways, gatewayName)
-				}
-				c.namespaces[ns] = cfg
-			}
-		} else if _, exists := c.gatewayLabelSelectors[gatewayName]; exists {
-			// label selectors existed previously for this gateway, so clean up any references to them
-			c.removeGatewayLabelSelector(gatewayName)
-		}
-	case *v1.Namespace:
-		nsLabels := o.GetLabels()
-		gateways := c.matchingGateways(nsLabels)
-		nsCfg := namespaceCfg{
-			labelMap: nsLabels,
-			gateways: gateways,
-		}
-		c.namespaces[client.ObjectKeyFromObject(o)] = nsCfg
 	}
 }
 
@@ -136,10 +71,6 @@ func (c *CapturerImpl) Remove(resourceType client.Object, nsname types.Namespace
 		c.deleteForRoute(nsname)
 	case *discoveryV1.EndpointSlice:
 		delete(c.endpointSliceOwners, nsname)
-	case *gatewayv1.Gateway:
-		c.removeGatewayLabelSelector(nsname)
-	case *v1.Namespace:
-		delete(c.namespaces, nsname)
 	}
 }
 
@@ -151,9 +82,6 @@ func (c *CapturerImpl) Exists(resourceType client.Object, nsname types.Namespace
 	case *discoveryV1.EndpointSlice:
 		svcOwner, exists := c.endpointSliceOwners[nsname]
 		return exists && c.serviceRefCount[svcOwner] > 0
-	case *v1.Namespace:
-		cfg, exists := c.namespaces[nsname]
-		return exists && cfg.match()
 	}
 
 	return false
@@ -224,28 +152,4 @@ func getBackendServiceNamesFromRoute(hr *gatewayv1.HTTPRoute) map[types.Namespac
 	}
 
 	return svcNames
-}
-
-// matchingGateways looks through all existing label selectors defined by listeners in a gateway,
-// and if any matches are found, returns a map of those gateways
-func (c *CapturerImpl) matchingGateways(labelMap map[string]string) map[types.NamespacedName]struct{} {
-	gateways := make(map[types.NamespacedName]struct{})
-	for gw, selectors := range c.gatewayLabelSelectors {
-		for _, selector := range selectors {
-			if selector.Matches(labels.Set(labelMap)) {
-				gateways[gw] = struct{}{}
-				break
-			}
-		}
-	}
-
-	return gateways
-}
-
-func (c *CapturerImpl) removeGatewayLabelSelector(gatewayName types.NamespacedName) {
-	delete(c.gatewayLabelSelectors, gatewayName)
-	for ns, cfg := range c.namespaces {
-		delete(cfg.gateways, gatewayName)
-		c.namespaces[ns] = cfg
-	}
 }

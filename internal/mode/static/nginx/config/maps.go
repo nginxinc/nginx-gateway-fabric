@@ -11,12 +11,8 @@ import (
 var mapsTemplate = gotemplate.Must(gotemplate.New("maps").Parse(mapsTemplateText))
 
 func executeMaps(conf dataplane.Configuration) []byte {
-	maps := createMaps(append(conf.HTTPServers, conf.SSLServers...))
+	maps := buildAddHeaderMaps(append(conf.HTTPServers, conf.SSLServers...))
 	return execute(mapsTemplate, maps)
-}
-
-func createMaps(servers []dataplane.VirtualServer) []http.Map {
-	return buildAddHeaderMaps(servers)
 }
 
 func buildAddHeaderMaps(servers []dataplane.VirtualServer) []http.Map {

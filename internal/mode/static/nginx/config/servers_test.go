@@ -336,6 +336,51 @@ func TestCreateServers(t *testing.T) {
 			},
 		},
 		{
+			Path:     "/rewrite",
+			PathType: dataplane.PathTypePrefix,
+			MatchRules: []dataplane.MatchRule{
+				{
+					Match: dataplane.Match{},
+					Filters: dataplane.HTTPFilters{
+						RequestURLRewrite: &dataplane.HTTPURLRewriteFilter{
+							Hostname: helpers.GetPointer("new.example.com"),
+							Path: &dataplane.HTTPPathModifier{
+								Type:        dataplane.ReplaceFullPath,
+								Replacement: "/replacement",
+							},
+						},
+					},
+					BackendGroup: fooGroup,
+				},
+			},
+		},
+		{
+			Path:     "/rewrite-with-headers",
+			PathType: dataplane.PathTypePrefix,
+			MatchRules: []dataplane.MatchRule{
+				{
+					Match: dataplane.Match{
+						Headers: []dataplane.HTTPHeaderMatch{
+							{
+								Name:  "rewrite",
+								Value: "this",
+							},
+						},
+					},
+					Filters: dataplane.HTTPFilters{
+						RequestURLRewrite: &dataplane.HTTPURLRewriteFilter{
+							Hostname: helpers.GetPointer("new.example.com"),
+							Path: &dataplane.HTTPPathModifier{
+								Type:        dataplane.ReplacePrefixMatch,
+								Replacement: "/prefix-replacement",
+							},
+						},
+					},
+					BackendGroup: fooGroup,
+				},
+			},
+		},
+		{
 			Path:     "/invalid-filter",
 			PathType: dataplane.PathTypePrefix,
 			MatchRules: []dataplane.MatchRule{
@@ -469,6 +514,30 @@ func TestCreateServers(t *testing.T) {
 			RedirectPath: "/redirect-with-headers_prefix_route0",
 		},
 	}
+	rewriteHeaderMatches := []httpMatch{
+		{
+			Headers:      []string{"rewrite:this"},
+			RedirectPath: "/rewrite-with-headers_prefix_route0",
+		},
+	}
+	rewriteProxySetHeaders := []http.Header{
+		{
+			Name:  "Host",
+			Value: "new.example.com",
+		},
+		{
+			Name:  "X-Forwarded-For",
+			Value: "$proxy_add_x_forwarded_for",
+		},
+		{
+			Name:  "Upgrade",
+			Value: "$http_upgrade",
+		},
+		{
+			Name:  "Connection",
+			Value: "$connection_upgrade",
+		},
+	}
 	invalidFilterHeaderMatches := []httpMatch{
 		{
 			Headers:      []string{"filter:this"},
@@ -484,40 +553,46 @@ func TestCreateServers(t *testing.T) {
 
 		return []http.Location{
 			{
-				Path:      "/_prefix_route0",
-				Internal:  true,
-				ProxyPass: "http://test_foo_80",
+				Path:            "/_prefix_route0",
+				Internal:        true,
+				ProxyPass:       "http://test_foo_80$request_uri",
+				ProxySetHeaders: baseHeaders,
 			},
 			{
-				Path:      "/_prefix_route1",
-				Internal:  true,
-				ProxyPass: "http://test_foo_80",
+				Path:            "/_prefix_route1",
+				Internal:        true,
+				ProxyPass:       "http://test_foo_80$request_uri",
+				ProxySetHeaders: baseHeaders,
 			},
 			{
-				Path:      "/_prefix_route2",
-				Internal:  true,
-				ProxyPass: "http://test_foo_80",
+				Path:            "/_prefix_route2",
+				Internal:        true,
+				ProxyPass:       "http://test_foo_80$request_uri",
+				ProxySetHeaders: baseHeaders,
 			},
 			{
 				Path:         "/",
 				HTTPMatchVar: expectedMatchString(slashMatches),
 			},
 			{
-				Path:      "/test_prefix_route0",
-				Internal:  true,
-				ProxyPass: "http://$test__route1_rule1",
+				Path:            "/test_prefix_route0",
+				Internal:        true,
+				ProxyPass:       "http://$test__route1_rule1$request_uri",
+				ProxySetHeaders: baseHeaders,
 			},
 			{
 				Path:         "/test/",
 				HTTPMatchVar: expectedMatchString(testMatches),
 			},
 			{
-				Path:      "/path-only/",
-				ProxyPass: "http://invalid-backend-ref",
+				Path:            "/path-only/",
+				ProxyPass:       "http://invalid-backend-ref$request_uri",
+				ProxySetHeaders: baseHeaders,
 			},
 			{
-				Path:      "= /path-only",
-				ProxyPass: "http://invalid-backend-ref",
+				Path:            "= /path-only",
+				ProxyPass:       "http://invalid-backend-ref$request_uri",
+				ProxySetHeaders: baseHeaders,
 			},
 			{
 				Path: "/redirect-implicit-port/",
@@ -564,6 +639,33 @@ func TestCreateServers(t *testing.T) {
 				HTTPMatchVar: expectedMatchString(redirectHeaderMatches),
 			},
 			{
+				Path:            "/rewrite/",
+				Rewrites:        []string{"^ /replacement break"},
+				ProxyPass:       "http://test_foo_80",
+				ProxySetHeaders: rewriteProxySetHeaders,
+			},
+			{
+				Path:            "= /rewrite",
+				Rewrites:        []string{"^ /replacement break"},
+				ProxyPass:       "http://test_foo_80",
+				ProxySetHeaders: rewriteProxySetHeaders,
+			},
+			{
+				Path:            "/rewrite-with-headers_prefix_route0",
+				Rewrites:        []string{"^ $request_uri", "^/rewrite-with-headers(.*)$ /prefix-replacement$1 break"},
+				Internal:        true,
+				ProxyPass:       "http://test_foo_80",
+				ProxySetHeaders: rewriteProxySetHeaders,
+			},
+			{
+				Path:         "/rewrite-with-headers/",
+				HTTPMatchVar: expectedMatchString(rewriteHeaderMatches),
+			},
+			{
+				Path:         "= /rewrite-with-headers",
+				HTTPMatchVar: expectedMatchString(rewriteHeaderMatches),
+			},
+			{
 				Path: "/invalid-filter/",
 				Return: &http.Return{
 					Code: http.StatusInternalServerError,
@@ -591,13 +693,15 @@ func TestCreateServers(t *testing.T) {
 				HTTPMatchVar: expectedMatchString(invalidFilterHeaderMatches),
 			},
 			{
-				Path:      "= /exact",
-				ProxyPass: "http://test_foo_80",
+				Path:            "= /exact",
+				ProxyPass:       "http://test_foo_80$request_uri",
+				ProxySetHeaders: baseHeaders,
 			},
 			{
-				Path:      "/test_exact_route0",
-				ProxyPass: "http://test_foo_80",
-				Internal:  true,
+				Path:            "/test_exact_route0",
+				ProxyPass:       "http://test_foo_80$request_uri",
+				ProxySetHeaders: baseHeaders,
+				Internal:        true,
 			},
 			{
 				Path:         "= /test",
@@ -605,21 +709,53 @@ func TestCreateServers(t *testing.T) {
 			},
 			{
 				Path:      "/proxy-set-headers/",
-				ProxyPass: "http://test_foo_80",
+				ProxyPass: "http://test_foo_80$request_uri",
 				ProxySetHeaders: []http.Header{
 					{
 						Name:  "my-header",
 						Value: "${my_header_header_var}some-value-123",
 					},
+					{
+						Name:  "Host",
+						Value: "$gw_api_compliant_host",
+					},
+					{
+						Name:  "X-Forwarded-For",
+						Value: "$proxy_add_x_forwarded_for",
+					},
+					{
+						Name:  "Upgrade",
+						Value: "$http_upgrade",
+					},
+					{
+						Name:  "Connection",
+						Value: "$connection_upgrade",
+					},
 				},
 			},
 			{
 				Path:      "= /proxy-set-headers",
-				ProxyPass: "http://test_foo_80",
+				ProxyPass: "http://test_foo_80$request_uri",
 				ProxySetHeaders: []http.Header{
 					{
 						Name:  "my-header",
 						Value: "${my_header_header_var}some-value-123",
+					},
+					{
+						Name:  "Host",
+						Value: "$gw_api_compliant_host",
+					},
+					{
+						Name:  "X-Forwarded-For",
+						Value: "$proxy_add_x_forwarded_for",
+					},
+					{
+						Name:  "Upgrade",
+						Value: "$http_upgrade",
+					},
+					{
+						Name:  "Connection",
+						Value: "$connection_upgrade",
 					},
 				},
 			},
@@ -725,12 +861,14 @@ func TestCreateServersConflicts(t *testing.T) {
 			},
 			expLocs: []http.Location{
 				{
-					Path:      "/coffee/",
-					ProxyPass: "http://test_foo_80",
+					Path:            "/coffee/",
+					ProxyPass:       "http://test_foo_80$request_uri",
+					ProxySetHeaders: baseHeaders,
 				},
 				{
-					Path:      "= /coffee",
-					ProxyPass: "http://test_bar_80",
+					Path:            "= /coffee",
+					ProxyPass:       "http://test_bar_80$request_uri",
+					ProxySetHeaders: baseHeaders,
 				},
 				createDefaultRootLocation(),
 			},
@@ -761,12 +899,14 @@ func TestCreateServersConflicts(t *testing.T) {
 			},
 			expLocs: []http.Location{
 				{
-					Path:      "= /coffee",
-					ProxyPass: "http://test_foo_80",
+					Path:            "= /coffee",
+					ProxyPass:       "http://test_foo_80$request_uri",
+					ProxySetHeaders: baseHeaders,
 				},
 				{
-					Path:      "/coffee/",
-					ProxyPass: "http://test_bar_80",
+					Path:            "/coffee/",
+					ProxyPass:       "http://test_bar_80$request_uri",
+					ProxySetHeaders: baseHeaders,
 				},
 				createDefaultRootLocation(),
 			},
@@ -807,12 +947,14 @@ func TestCreateServersConflicts(t *testing.T) {
 			},
 			expLocs: []http.Location{
 				{
-					Path:      "/coffee/",
-					ProxyPass: "http://test_bar_80",
+					Path:            "/coffee/",
+					ProxyPass:       "http://test_bar_80$request_uri",
+					ProxySetHeaders: baseHeaders,
 				},
 				{
-					Path:      "= /coffee",
-					ProxyPass: "http://test_baz_80",
+					Path:            "= /coffee",
+					ProxyPass:       "http://test_baz_80$request_uri",
+					ProxySetHeaders: baseHeaders,
 				},
 				createDefaultRootLocation(),
 			},
@@ -916,12 +1058,14 @@ func TestCreateLocationsRootPath(t *testing.T) {
 			pathRules: getPathRules(false /* rootPath */),
 			expLocations: []http.Location{
 				{
-					Path:      "/path-1",
-					ProxyPass: "http://test_foo_80",
+					Path:            "/path-1",
+					ProxyPass:       "http://test_foo_80$request_uri",
+					ProxySetHeaders: baseHeaders,
 				},
 				{
-					Path:      "/path-2",
-					ProxyPass: "http://test_foo_80",
+					Path:            "/path-2",
+					ProxyPass:       "http://test_foo_80$request_uri",
+					ProxySetHeaders: baseHeaders,
 				},
 				{
 					Path: "/",
@@ -936,16 +1080,19 @@ func TestCreateLocationsRootPath(t *testing.T) {
 			pathRules: getPathRules(true /* rootPath */),
 			expLocations: []http.Location{
 				{
-					Path:      "/path-1",
-					ProxyPass: "http://test_foo_80",
+					Path:            "/path-1",
+					ProxyPass:       "http://test_foo_80$request_uri",
+					ProxySetHeaders: baseHeaders,
 				},
 				{
-					Path:      "/path-2",
-					ProxyPass: "http://test_foo_80",
+					Path:            "/path-2",
+					ProxyPass:       "http://test_foo_80$request_uri",
+					ProxySetHeaders: baseHeaders,
 				},
 				{
-					Path:      "/",
-					ProxyPass: "http://test_foo_80",
+					Path:            "/",
+					ProxyPass:       "http://test_foo_80$request_uri",
+					ProxySetHeaders: baseHeaders,
 				},
 			},
 		},
@@ -1097,6 +1244,132 @@ func TestCreateReturnValForRedirectFilter(t *testing.T) {
 			g := NewWithT(t)
 
 			result := createReturnValForRedirectFilter(test.filter, test.listenerPort)
+			g.Expect(helpers.Diff(test.expected, result)).To(BeEmpty())
+		})
+	}
+}
+
+func TestCreateRewritesValForRewriteFilter(t *testing.T) {
+	tests := []struct {
+		filter   *dataplane.HTTPURLRewriteFilter
+		expected *rewriteConfig
+		msg      string
+		path     string
+	}{
+		{
+			filter:   nil,
+			expected: nil,
+			msg:      "filter is nil",
+		},
+		{
+			filter:   &dataplane.HTTPURLRewriteFilter{},
+			expected: &rewriteConfig{},
+			msg:      "all fields are empty",
+		},
+		{
+			filter: &dataplane.HTTPURLRewriteFilter{
+				Path: &dataplane.HTTPPathModifier{
+					Type:        dataplane.ReplaceFullPath,
+					Replacement: "/full-path",
+				},
+			},
+			expected: &rewriteConfig{
+				InternalRewrite: "^ $request_uri",
+				MainRewrite:     "^ /full-path break",
+			},
+			msg: "full path",
+		},
+		{
+			path: "/original",
+			filter: &dataplane.HTTPURLRewriteFilter{
+				Path: &dataplane.HTTPPathModifier{
+					Type:        dataplane.ReplacePrefixMatch,
+					Replacement: "/prefix-path",
+				},
+			},
+			expected: &rewriteConfig{
+				InternalRewrite: "^ $request_uri",
+				MainRewrite:     "^/original(.*)$ /prefix-path$1 break",
+			},
+			msg: "prefix path no trailing slashes",
+		},
+		{
+			path: "/original",
+			filter: &dataplane.HTTPURLRewriteFilter{
+				Path: &dataplane.HTTPPathModifier{
+					Type:        dataplane.ReplacePrefixMatch,
+					Replacement: "",
+				},
+			},
+			expected: &rewriteConfig{
+				InternalRewrite: "^ $request_uri",
+				MainRewrite:     "^/original(?:/(.*))?$ /$1 break",
+			},
+			msg: "prefix path empty string",
+		},
+		{
+			path: "/original",
+			filter: &dataplane.HTTPURLRewriteFilter{
+				Path: &dataplane.HTTPPathModifier{
+					Type:        dataplane.ReplacePrefixMatch,
+					Replacement: "/",
+				},
+			},
+			expected: &rewriteConfig{
+				InternalRewrite: "^ $request_uri",
+				MainRewrite:     "^/original(?:/(.*))?$ /$1 break",
+			},
+			msg: "prefix path /",
+		},
+		{
+			path: "/original",
+			filter: &dataplane.HTTPURLRewriteFilter{
+				Path: &dataplane.HTTPPathModifier{
+					Type:        dataplane.ReplacePrefixMatch,
+					Replacement: "/trailing/",
+				},
+			},
+			expected: &rewriteConfig{
+				InternalRewrite: "^ $request_uri",
+				MainRewrite:     "^/original(?:/(.*))?$ /trailing/$1 break",
+			},
+			msg: "prefix path replacement with trailing /",
+		},
+		{
+			path: "/original/",
+			filter: &dataplane.HTTPURLRewriteFilter{
+				Path: &dataplane.HTTPPathModifier{
+					Type:        dataplane.ReplacePrefixMatch,
+					Replacement: "/prefix-path",
+				},
+			},
+			expected: &rewriteConfig{
+				InternalRewrite: "^ $request_uri",
+				MainRewrite:     "^/original/(.*)$ /prefix-path/$1 break",
+			},
+			msg: "prefix path original with trailing /",
+		},
+		{
+			path: "/original/",
+			filter: &dataplane.HTTPURLRewriteFilter{
+				Path: &dataplane.HTTPPathModifier{
+					Type:        dataplane.ReplacePrefixMatch,
+					Replacement: "/trailing/",
+				},
+			},
+			expected: &rewriteConfig{
+				InternalRewrite: "^ $request_uri",
+				MainRewrite:     "^/original/(.*)$ /trailing/$1 break",
+			},
+			msg: "prefix path both with trailing slashes",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.msg, func(t *testing.T) {
+			g := NewWithT(t)
+
+			result := createRewritesValForRewriteFilter(test.filter, test.path)
 			g.Expect(helpers.Diff(test.expected, result)).To(BeEmpty())
 		})
 	}
@@ -1360,11 +1633,12 @@ func TestCreateProxyPass(t *testing.T) {
 	g := NewWithT(t)
 
 	tests := []struct {
+		rewrite  *dataplane.HTTPURLRewriteFilter
 		expected string
 		grp      dataplane.BackendGroup
 	}{
 		{
-			expected: "http://10.0.0.1:80",
+			expected: "http://10.0.0.1:80$request_uri",
 			grp: dataplane.BackendGroup{
 				Backends: []dataplane.Backend{
 					{
@@ -1376,7 +1650,7 @@ func TestCreateProxyPass(t *testing.T) {
 			},
 		},
 		{
-			expected: "http://$ns1__bg_rule0",
+			expected: "http://$ns1__bg_rule0$request_uri",
 			grp: dataplane.BackendGroup{
 				Source: types.NamespacedName{Namespace: "ns1", Name: "bg"},
 				Backends: []dataplane.Backend{
@@ -1393,10 +1667,25 @@ func TestCreateProxyPass(t *testing.T) {
 				},
 			},
 		},
+		{
+			expected: "http://10.0.0.1:80",
+			rewrite: &dataplane.HTTPURLRewriteFilter{
+				Path: &dataplane.HTTPPathModifier{},
+			},
+			grp: dataplane.BackendGroup{
+				Backends: []dataplane.Backend{
+					{
+						UpstreamName: "10.0.0.1:80",
+						Valid:        true,
+						Weight:       1,
+					},
+				},
+			},
+		},
 	}
 
 	for _, tc := range tests {
-		result := createProxyPass(tc.grp)
+		result := createProxyPass(tc.grp, tc.rewrite)
 		g.Expect(result).To(Equal(tc.expected))
 	}
 }
@@ -1438,38 +1727,107 @@ func TestCreatePathForMatch(t *testing.T) {
 }
 
 func TestGenerateProxySetHeaders(t *testing.T) {
-	g := NewWithT(t)
-
-	filters := dataplane.HTTPHeaderFilter{
-		Add: []dataplane.HTTPHeader{
-			{
-				Name:  "Authorization",
-				Value: "my-auth",
+	tests := []struct {
+		filters         *dataplane.HTTPFilters
+		msg             string
+		expectedHeaders []http.Header
+	}{
+		{
+			msg: "header filter",
+			filters: &dataplane.HTTPFilters{
+				RequestHeaderModifiers: &dataplane.HTTPHeaderFilter{
+					Add: []dataplane.HTTPHeader{
+						{
+							Name:  "Authorization",
+							Value: "my-auth",
+						},
+					},
+					Set: []dataplane.HTTPHeader{
+						{
+							Name:  "Accept-Encoding",
+							Value: "gzip",
+						},
+					},
+					Remove: []string{"my-header"},
+				},
+			},
+			expectedHeaders: []http.Header{
+				{
+					Name:  "Authorization",
+					Value: "${authorization_header_var}my-auth",
+				},
+				{
+					Name:  "Accept-Encoding",
+					Value: "gzip",
+				},
+				{
+					Name:  "my-header",
+					Value: "",
+				},
+				{
+					Name:  "Host",
+					Value: "$gw_api_compliant_host",
+				},
+				{
+					Name:  "X-Forwarded-For",
+					Value: "$proxy_add_x_forwarded_for",
+				},
+				{
+					Name:  "Upgrade",
+					Value: "$http_upgrade",
+				},
+				{
+					Name:  "Connection",
+					Value: "$connection_upgrade",
+				},
 			},
 		},
-		Set: []dataplane.HTTPHeader{
-			{
-				Name:  "Accept-Encoding",
-				Value: "gzip",
+		{
+			msg: "with url rewrite hostname",
+			filters: &dataplane.HTTPFilters{
+				RequestHeaderModifiers: &dataplane.HTTPHeaderFilter{
+					Add: []dataplane.HTTPHeader{
+						{
+							Name:  "Authorization",
+							Value: "my-auth",
+						},
+					},
+				},
+				RequestURLRewrite: &dataplane.HTTPURLRewriteFilter{
+					Hostname: helpers.GetPointer("rewrite-hostname"),
+				},
 			},
-		},
-		Remove: []string{"my-header"},
-	}
-	expectedHeaders := []http.Header{
-		{
-			Name:  "Authorization",
-			Value: "${authorization_header_var}my-auth",
-		},
-		{
-			Name:  "Accept-Encoding",
-			Value: "gzip",
-		},
-		{
-			Name:  "my-header",
-			Value: "",
+			expectedHeaders: []http.Header{
+				{
+					Name:  "Authorization",
+					Value: "${authorization_header_var}my-auth",
+				},
+				{
+					Name:  "Host",
+					Value: "rewrite-hostname",
+				},
+				{
+					Name:  "X-Forwarded-For",
+					Value: "$proxy_add_x_forwarded_for",
+				},
+				{
+					Name:  "Upgrade",
+					Value: "$http_upgrade",
+				},
+				{
+					Name:  "Connection",
+					Value: "$connection_upgrade",
+				},
+			},
 		},
 	}
 
-	headers := generateProxySetHeaders(&filters)
-	g.Expect(headers).To(Equal(expectedHeaders))
+	for _, tc := range tests {
+		t.Run(tc.msg, func(t *testing.T) {
+			g := NewWithT(t)
+
+			headers := generateProxySetHeaders(tc.filters)
+			g.Expect(headers).To(Equal(tc.expectedHeaders))
+		})
+	}
 }

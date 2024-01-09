@@ -4,6 +4,53 @@ This document includes a curated changelog for each release. We also publish a c
 a [GitHub release](https://github.com/nginxinc/nginx-gateway-fabric/releases), which, by contrast, is auto-generated
 and includes links to all PRs that went into the release.
 
+## Release 1.1.0
+
+*December 14, 2023*
+
+This release updates NGINX Gateway Fabric to support version 1.0.0 of the Gateway API in addition to bug fixes and documentation updates. Our docs are now available at https://docs.nginx.com/nginx-gateway-fabric.
+
+FEATURES:
+
+- Update to v1.0.0 of the Gateway API. [PR-1250](https://github.com/nginxinc/nginx-gateway-fabric/pull/1250)
+- Set the SupportedVersion Condition on GatewayClass. [PR-1301](https://github.com/nginxinc/nginx-gateway-fabric/pull/1301)
+
+BUG FIXES:
+
+- Merge HTTPRoute conditions from all Gateway controllers. [PR-1220](https://github.com/nginxinc/nginx-gateway-fabric/pull/1220)
+- Validate header names and report validation errors in the HTTPRoute status. [PR-1239](https://github.com/nginxinc/nginx-gateway-fabric/pull/1239)
+- Remove usage info from log output. [PR-1242](https://github.com/nginxinc/nginx-gateway-fabric/pull/1242)
+- Set the Gateway Listener status AttachedRoutes field to the number of Routes associated with a Listener regardless of Gateway or Route status. [PR-1275](https://github.com/nginxinc/nginx-gateway-fabric/pull/1275)
+- Set file mode explicitly for regular NGINX configuration files. [PR-1323](https://github.com/nginxinc/nginx-gateway-fabric/pull/1323). Thanks to [Kai-Hsun Chen](https://github.com/kevin85421).
+
+DOCUMENTATION:
+
+- Documentation is now available on docs.nginx.com. [Link](https://docs.nginx.com/nginx-gateway-fabric/)
+- Update the resource validation documents to cover CEL validation. [Link](https://docs.nginx.com/nginx-gateway-fabric/overview/resource-validation/)
+- Non-functional testing results. [Link](https://github.com/nginxinc/nginx-gateway-fabric/tree/main/tests)
+
+HELM CHART:
+
+- The version of the Helm chart is now 1.1.0.
+- Add tolerations to the helm chart. [PR-1192](https://github.com/nginxinc/nginx-gateway-fabric/pull/1192). Thanks to [Jerome Brown](https://github.com/oWretch).
+- Add extra volume mounts to the helm chart. [PR-1193](https://github.com/nginxinc/nginx-gateway-fabric/pull/1193). Thanks to [Jerome Brown](https://github.com/oWretch).
+- Fix broken helm chart icon links. [PR-1290](https://github.com/nginxinc/nginx-gateway-fabric/pull/1290). Thanks to [arukiidou](https://github.com/arukiidou).
+
+UPGRADE:
+
+- This version of NGINX Gateway Fabric is not compatible with v0.8.0 of the Gateway API. You must upgrade the Gateway API CRDs to v1.0.0 before upgrading NGINX Gateway Fabric. For instructions, see the upgrade documentation for [helm](https://docs.nginx.com/nginx-gateway-fabric/installation/installing-ngf/helm/#upgrade-nginx-gateway-fabric) or [manifests](https://docs.nginx.com/nginx-gateway-fabric/installation/installing-ngf/manifests/#upgrade-nginx-gateway-fabric).
+
+COMPATIBILITY:
+
+- The Gateway API version: `1.0.0`
+- NGINX version: `1.25.3`
+- Kubernetes version: `1.23+`
+
+CONTAINER IMAGES:
+
+- Control plane: `ghcr.io/nginxinc/nginx-gateway-fabric:1.1.0`
+- Data plane: `ghcr.io/nginxinc/nginx-gateway-fabric/nginx:1.1.0`
+
 ## Release 1.0.0
 
 *October 24, 2023*

@@ -58,6 +58,9 @@ nginx:
     tag: edge
     pullPolicy: Always
 
+  ## Is NGINX Plus image being used
+  plus: false
+
   ## The lifecycle of the nginx container.
   lifecycle: {}
 

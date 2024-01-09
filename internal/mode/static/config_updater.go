@@ -5,8 +5,6 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -17,46 +15,6 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 )
 
-// ZapLogLevelSetter defines an interface for setting the logging level of a zap logger.
-type ZapLogLevelSetter interface {
-	SetLevel(string) error
-	Enabled(zapcore.Level) bool
-}
-
-type zapSetterImpl struct {
-	atomicLevel zap.AtomicLevel
-}
-
-func newZapLogLevelSetter(atomicLevel zap.AtomicLevel) zapSetterImpl {
-	return zapSetterImpl{
-		atomicLevel: atomicLevel,
-	}
-}
-
-// SetLevel sets the logging level for the zap logger.
-func (z zapSetterImpl) SetLevel(level string) error {
-	parsedLevel, err := zapcore.ParseLevel(level)
-	if err != nil {
-		fieldErr := field.NotSupported(
-			field.NewPath("logging.level"),
-			level,
-			[]string{
-				string(ngfAPI.ControllerLogLevelInfo),
-				string(ngfAPI.ControllerLogLevelDebug),
-				string(ngfAPI.ControllerLogLevelError),
-			})
-		return fieldErr
-	}
-	z.atomicLevel.SetLevel(parsedLevel)
-
-	return nil
-}
-
-// Enabled returns true if the given level is at or above the current level.
-func (z zapSetterImpl) Enabled(level zapcore.Level) bool {
-	return z.atomicLevel.Enabled(level)
-}
-
 // updateControlPlane updates the control plane configuration with the given user spec.
 // If any fields are not set within the user spec, the default configuration values are used.
 func updateControlPlane(
@@ -64,7 +22,7 @@ func updateControlPlane(
 	logger logr.Logger,
 	eventRecorder record.EventRecorder,
 	configNSName types.NamespacedName,
-	logLevelSetter ZapLogLevelSetter,
+	logLevelSetter logLevelSetter,
 ) error {
 	// build up default configuration
 	controlConfig := ngfAPI.NginxGatewaySpec{
@@ -100,6 +58,36 @@ func updateControlPlane(
 		)
 	}
 
-	// set the log level
-	return logLevelSetter.SetLevel(string(*controlConfig.Logging.Level))
+	level := *controlConfig.Logging.Level
+
+	if err := validateLogLevel(level); err != nil {
+		return err
+	}
+
+	if err := logLevelSetter.SetLevel(string(level)); err != nil {
+		return field.Invalid(
+			field.NewPath("logging.level"),
+			level,
+			err.Error(),
+		)
+	}
+
+	return nil
+}
+
+func validateLogLevel(level ngfAPI.ControllerLogLevel) error {
+	switch level {
+	case ngfAPI.ControllerLogLevelInfo, ngfAPI.ControllerLogLevelDebug, ngfAPI.ControllerLogLevelError:
+	default:
+		return field.NotSupported(
+			field.NewPath("logging.level"),
+			level,
+			[]string{
+				string(ngfAPI.ControllerLogLevelInfo),
+				string(ngfAPI.ControllerLogLevelDebug),
+				string(ngfAPI.ControllerLogLevelError),
+			})
+	}
+
+	return nil
 }
