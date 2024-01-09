@@ -127,7 +127,7 @@ func BuildGraph(
 
 	referencedNamespaces := buildReferencedNamespaces(state.Namespaces, gw)
 
-	referencedServicesNames := buildReferencedServicesNames(state.HTTPRoutes)
+	referencedServicesNames := buildReferencedServicesNames(routes)
 
 	g := &Graph{
 		GatewayClass:            gc,

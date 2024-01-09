@@ -90,23 +90,21 @@ func TestBuildGraph(t *testing.T) {
 	hr2 := createRoute("hr-2", "wrong-gateway", "listener-80-1")
 	hr3 := createRoute("hr-3", "gateway-1", "listener-443-1") // https listener; should not conflict with hr1
 
-	fooSvc := &v1.Service{ObjectMeta: metav1.ObjectMeta{Name: "foo", Namespace: "service"}}
-
 	hr1Refs := []BackendRef{
 		{
-			Svc:    fooSvc,
-			Port:   80,
-			Valid:  true,
-			Weight: 1,
+			SvcNsName:   types.NamespacedName{Namespace: "service", Name: "foo"},
+			ServicePort: v1.ServicePort{Port: 80},
+			Valid:       true,
+			Weight:      1,
 		},
 	}
 
 	hr3Refs := []BackendRef{
 		{
-			Svc:    fooSvc,
-			Port:   80,
-			Valid:  true,
-			Weight: 1,
+			SvcNsName:   types.NamespacedName{Namespace: "service", Name: "foo"},
+			ServicePort: v1.ServicePort{Port: 80},
+			Valid:       true,
+			Weight:      1,
 		},
 	}
 
@@ -181,7 +179,18 @@ func TestBuildGraph(t *testing.T) {
 	gw1 := createGateway("gateway-1")
 	gw2 := createGateway("gateway-2")
 
-	svc := &v1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: "service", Name: "foo"}}
+	svc := &v1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "service", Name: "foo",
+		},
+		Spec: v1.ServiceSpec{
+			Ports: []v1.ServicePort{
+				{
+					Port: 80,
+				},
+			},
+		},
+	}
 
 	rgSecret := &v1beta1.ReferenceGrant{
 		ObjectMeta: metav1.ObjectMeta{
@@ -270,6 +279,9 @@ func TestBuildGraph(t *testing.T) {
 			},
 		},
 		Rules: []Rule{createValidRuleWithBackendRefs(hr1Refs)},
+		ServiceNames: map[types.NamespacedName]struct{}{
+			{Namespace: "service", Name: "foo"}: {},
+		},
 	}
 
 	routeHR3 := &Route{
@@ -287,6 +299,9 @@ func TestBuildGraph(t *testing.T) {
 			},
 		},
 		Rules: []Rule{createValidRuleWithBackendRefs(hr3Refs)},
+		ServiceNames: map[types.NamespacedName]struct{}{
+			{Namespace: "service", Name: "foo"}: {},
+		},
 	}
 
 	createExpectedGraphWithGatewayClass := func(gc *gatewayv1.GatewayClass) *Graph {

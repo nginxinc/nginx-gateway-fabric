@@ -2,17 +2,16 @@ package graph
 
 import (
 	"k8s.io/apimachinery/pkg/types"
-	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
 func buildReferencedServicesNames(
-	clusterHTTPRoutes map[types.NamespacedName]*gatewayv1.HTTPRoute,
+	routes map[types.NamespacedName]*Route,
 ) map[types.NamespacedName]struct{} {
 	svcNames := make(map[types.NamespacedName]struct{})
 
 	// Get all the service names referenced from all the HTTPRoutes
-	for _, hr := range clusterHTTPRoutes {
-		for k, v := range getBackendServiceNamesFromRoute(hr) {
+	for _, route := range routes {
+		for k, v := range route.ServiceNames {
 			svcNames[k] = v
 		}
 	}
@@ -23,23 +22,23 @@ func buildReferencedServicesNames(
 	return svcNames
 }
 
-func getBackendServiceNamesFromRoute(hr *gatewayv1.HTTPRoute) map[types.NamespacedName]struct{} {
-	svcNames := make(map[types.NamespacedName]struct{})
-
-	for _, rule := range hr.Spec.Rules {
-		for _, ref := range rule.BackendRefs {
-			if ref.Kind != nil && *ref.Kind != "Service" {
-				continue
-			}
-
-			ns := hr.Namespace
-			if ref.Namespace != nil {
-				ns = string(*ref.Namespace)
-			}
-
-			svcNames[types.NamespacedName{Namespace: ns, Name: string(ref.Name)}] = struct{}{}
-		}
-	}
-
-	return svcNames
-}
+//func getBackendServiceNamesFromRoute(hr *gatewayv1.HTTPRoute) map[types.NamespacedName]struct{} {
+//	svcNames := make(map[types.NamespacedName]struct{})
+//
+//	for _, rule := range hr.Spec.Rules {
+//		for _, ref := range rule.BackendRefs {
+//			if ref.Kind != nil && *ref.Kind != "Service" {
+//				continue
+//			}
+//
+//			ns := hr.Namespace
+//			if ref.Namespace != nil {
+//				ns = string(*ref.Namespace)
+//			}
+//
+//			svcNames[types.NamespacedName{Namespace: ns, Name: string(ref.Name)}] = struct{}{}
+//		}
+//	}
+//
+//	return svcNames
+//}

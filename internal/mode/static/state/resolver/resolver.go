@@ -7,6 +7,7 @@ import (
 
 	v1 "k8s.io/api/core/v1"
 	discoveryV1 "k8s.io/api/discovery/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -15,10 +16,10 @@ import (
 
 //go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . ServiceResolver
 
-// ServiceResolver resolves a Service and Service Port to a list of Endpoints.
+// ServiceResolver resolves a Service's NamespacedName and ServicePort to a list of Endpoints.
 // Returns an error if the Service or Service Port cannot be resolved.
 type ServiceResolver interface {
-	Resolve(ctx context.Context, svc *v1.Service, svcPort int32) ([]Endpoint, error)
+	Resolve(ctx context.Context, svcNsName types.NamespacedName, svcPort v1.ServicePort) ([]Endpoint, error)
 }
 
 // Endpoint is the internal representation of a Kubernetes endpoint.
@@ -39,10 +40,15 @@ func NewServiceResolverImpl(client client.Client) *ServiceResolverImpl {
 	return &ServiceResolverImpl{client: client}
 }
 
-// Resolve resolves a Service and Port to a list of Endpoints.
+// Resolve resolves a Service and BackendRef Port to a list of Endpoints.
 // Returns an error if the Service or Port cannot be resolved.
-func (e *ServiceResolverImpl) Resolve(ctx context.Context, svc *v1.Service, port int32) ([]Endpoint, error) {
-	if svc == nil {
+//
+// svcNsName is guaranteed to be a valid NamespacedName from when it is called in configuration.go.
+// svcPort is guaranteed to be a valid non-empty ServicePort from when it is called in configuration.go
+func (e *ServiceResolverImpl) Resolve(ctx context.Context,
+	svcNsName types.NamespacedName, svcPort v1.ServicePort,
+) ([]Endpoint, error) {
+	if svcPort.Port == 0 || svcNsName.Name == "" || svcNsName.Namespace == "" {
 		return nil, errors.New("cannot resolve a nil Service")
 	}
 
@@ -52,15 +58,15 @@ func (e *ServiceResolverImpl) Resolve(ctx context.Context, svc *v1.Service, port
 	err := e.client.List(
 		ctx,
 		&endpointSliceList,
-		client.MatchingFields{index.KubernetesServiceNameIndexField: svc.Name},
-		client.InNamespace(svc.Namespace),
+		client.MatchingFields{index.KubernetesServiceNameIndexField: svcNsName.Name},
+		client.InNamespace(svcNsName.Namespace),
 	)
 
 	if err != nil || len(endpointSliceList.Items) == 0 {
-		return nil, fmt.Errorf("no endpoints found for Service %s", client.ObjectKeyFromObject(svc))
+		return nil, fmt.Errorf("no endpoints found for Service %s", svcNsName)
 	}
 
-	return resolveEndpoints(svc, port, endpointSliceList, initEndpointSetWithCalculatedSize)
+	return resolveEndpoints(svcNsName, svcPort, endpointSliceList, initEndpointSetWithCalculatedSize)
 }
 
 type initEndpointSetFunc func([]discoveryV1.EndpointSlice) map[Endpoint]struct{}
@@ -88,20 +94,14 @@ func calculateReadyEndpoints(endpointSlices []discoveryV1.EndpointSlice) int {
 }
 
 func resolveEndpoints(
-	svc *v1.Service,
-	port int32,
+	svcNsName types.NamespacedName,
+	svcPort v1.ServicePort,
 	endpointSliceList discoveryV1.EndpointSliceList,
 	initEndpointsSet initEndpointSetFunc,
 ) ([]Endpoint, error) {
-	svcPort, err := getServicePort(svc, port)
-	if err != nil {
-		return nil, err
-	}
-
 	filteredSlices := filterEndpointSliceList(endpointSliceList, svcPort)
 
 	if len(filteredSlices) == 0 {
-		svcNsName := client.ObjectKeyFromObject(svc)
 		return nil, fmt.Errorf("no valid endpoints found for Service %s and port %+v", svcNsName, svcPort)
 	}
 
@@ -133,16 +133,6 @@ func resolveEndpoints(
 	}
 
 	return endpoints, nil
-}
-
-func getServicePort(svc *v1.Service, port int32) (v1.ServicePort, error) {
-	for _, p := range svc.Spec.Ports {
-		if p.Port == port {
-			return p, nil
-		}
-	}
-
-	return v1.ServicePort{}, fmt.Errorf("no matching port for Service %s and port %d", svc.Name, port)
 }
 
 // getDefaultPort returns the default port for a ServicePort.

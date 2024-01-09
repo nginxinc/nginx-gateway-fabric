@@ -58,6 +58,8 @@ type ParentRefAttachmentStatus struct {
 type Route struct {
 	// Source is the source resource of the Route.
 	Source *v1.HTTPRoute
+	// ServiceNames include the NamespacedName of all the Services that are referenced by the HTTPRoute
+	ServiceNames map[types.NamespacedName]struct{}
 	// ParentRefs includes ParentRefs with NGF Gateways only.
 	ParentRefs []ParentRef
 	// Conditions include Conditions for the HTTPRoute.

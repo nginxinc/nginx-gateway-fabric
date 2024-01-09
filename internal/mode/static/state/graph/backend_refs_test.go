@@ -244,6 +244,17 @@ func TestGetServiceAndPortFromRef(t *testing.T) {
 			Name:      "service1",
 			Namespace: "test",
 		},
+		Spec: v1.ServiceSpec{
+			Ports: []v1.ServicePort{
+				{
+					Port: 80,
+				},
+			},
+		},
+	}
+	svc1NsName := types.NamespacedName{
+		Namespace: "test",
+		Name:      "service1",
 	}
 
 	svc2 := &v1.Service{
@@ -254,17 +265,17 @@ func TestGetServiceAndPortFromRef(t *testing.T) {
 	}
 
 	tests := []struct {
-		ref        gatewayv1.BackendRef
-		expService *v1.Service
-		name       string
-		expPort    int32
-		expErr     bool
+		ref              gatewayv1.BackendRef
+		expServiceNsName types.NamespacedName
+		name             string
+		expServicePort   v1.ServicePort
+		expErr           bool
 	}{
 		{
-			name:       "normal case",
-			ref:        getNormalRef(),
-			expService: svc1,
-			expPort:    80,
+			name:             "normal case",
+			ref:              getNormalRef(),
+			expServiceNsName: svc1NsName,
+			expServicePort:   v1.ServicePort{Port: 80},
 		},
 		{
 			name: "service does not exist",
@@ -272,7 +283,9 @@ func TestGetServiceAndPortFromRef(t *testing.T) {
 				backend.Name = "does-not-exist"
 				return backend
 			}),
-			expErr: true,
+			expErr:           true,
+			expServiceNsName: types.NamespacedName{Name: "does-not-exist", Namespace: "test"},
+			expServicePort:   v1.ServicePort{},
 		},
 	}
 
@@ -287,11 +300,11 @@ func TestGetServiceAndPortFromRef(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewWithT(t)
 
-			svc, port, err := getServiceAndPortFromRef(test.ref, "test", services, refPath)
+			svcNsName, servicePort, err := getServiceAndPortFromRef(test.ref, "test", services, refPath)
 
 			g.Expect(err != nil).To(Equal(test.expErr))
-			g.Expect(svc).To(Equal(test.expService))
-			g.Expect(port).To(Equal(test.expPort))
+			g.Expect(svcNsName).To(Equal(test.expServiceNsName))
+			g.Expect(servicePort).To(Equal(test.expServicePort))
 		})
 	}
 }
@@ -374,7 +387,26 @@ func TestAddBackendRefsToRulesTest(t *testing.T) {
 	hrWithZeroBackendRefs := createRoute("hr4", "Service", 1, "svc1")
 	hrWithZeroBackendRefs.Spec.Rules[0].BackendRefs = nil
 
-	svc1 := &v1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: "test", Name: "svc1"}}
+	svc1 := &v1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "test",
+			Name:      "svc1",
+		},
+		Spec: v1.ServiceSpec{
+			Ports: []v1.ServicePort{
+				{
+					Port: 80,
+				},
+				{
+					Port: 81,
+				},
+			},
+		},
+	}
+	svc1NsName := types.NamespacedName{
+		Namespace: "test",
+		Name:      "svc1",
+	}
 
 	services := map[types.NamespacedName]*v1.Service{
 		{Namespace: "test", Name: "svc1"}: svc1,
@@ -388,17 +420,18 @@ func TestAddBackendRefsToRulesTest(t *testing.T) {
 	}{
 		{
 			route: &Route{
-				Source:     hrWithOneBackend,
-				ParentRefs: sectionNameRefs,
-				Valid:      true,
-				Rules:      createRules(hrWithOneBackend, allValid, allValid),
+				Source:       hrWithOneBackend,
+				ParentRefs:   sectionNameRefs,
+				Valid:        true,
+				Rules:        createRules(hrWithOneBackend, allValid, allValid),
+				ServiceNames: make(map[types.NamespacedName]struct{}),
 			},
 			expectedBackendRefs: []BackendRef{
 				{
-					Svc:    svc1,
-					Port:   80,
-					Valid:  true,
-					Weight: 1,
+					SvcNsName:   svc1NsName,
+					ServicePort: svc1.Spec.Ports[0],
+					Valid:       true,
+					Weight:      1,
 				},
 			},
 			expectedConditions: nil,
@@ -406,23 +439,24 @@ func TestAddBackendRefsToRulesTest(t *testing.T) {
 		},
 		{
 			route: &Route{
-				Source:     hrWithTwoBackends,
-				ParentRefs: sectionNameRefs,
-				Valid:      true,
-				Rules:      createRules(hrWithTwoBackends, allValid, allValid),
+				Source:       hrWithTwoBackends,
+				ParentRefs:   sectionNameRefs,
+				Valid:        true,
+				Rules:        createRules(hrWithTwoBackends, allValid, allValid),
+				ServiceNames: make(map[types.NamespacedName]struct{}),
 			},
 			expectedBackendRefs: []BackendRef{
 				{
-					Svc:    svc1,
-					Port:   80,
-					Valid:  true,
-					Weight: 1,
+					SvcNsName:   svc1NsName,
+					ServicePort: svc1.Spec.Ports[0],
+					Valid:       true,
+					Weight:      1,
 				},
 				{
-					Svc:    svc1,
-					Port:   81,
-					Valid:  true,
-					Weight: 5,
+					SvcNsName:   svc1NsName,
+					ServicePort: svc1.Spec.Ports[1],
+					Valid:       true,
+					Weight:      5,
 				},
 			},
 			expectedConditions: nil,
@@ -430,9 +464,10 @@ func TestAddBackendRefsToRulesTest(t *testing.T) {
 		},
 		{
 			route: &Route{
-				Source:     hrWithOneBackend,
-				ParentRefs: sectionNameRefs,
-				Valid:      false,
+				Source:       hrWithOneBackend,
+				ParentRefs:   sectionNameRefs,
+				Valid:        false,
+				ServiceNames: make(map[types.NamespacedName]struct{}),
 			},
 			expectedBackendRefs: nil,
 			expectedConditions:  nil,
@@ -440,10 +475,11 @@ func TestAddBackendRefsToRulesTest(t *testing.T) {
 		},
 		{
 			route: &Route{
-				Source:     hrWithOneBackend,
-				ParentRefs: sectionNameRefs,
-				Valid:      true,
-				Rules:      createRules(hrWithOneBackend, allInvalid, allValid),
+				Source:       hrWithOneBackend,
+				ParentRefs:   sectionNameRefs,
+				Valid:        true,
+				Rules:        createRules(hrWithOneBackend, allInvalid, allValid),
+				ServiceNames: make(map[types.NamespacedName]struct{}),
 			},
 			expectedBackendRefs: nil,
 			expectedConditions:  nil,
@@ -451,10 +487,11 @@ func TestAddBackendRefsToRulesTest(t *testing.T) {
 		},
 		{
 			route: &Route{
-				Source:     hrWithOneBackend,
-				ParentRefs: sectionNameRefs,
-				Valid:      true,
-				Rules:      createRules(hrWithOneBackend, allValid, allInvalid),
+				Source:       hrWithOneBackend,
+				ParentRefs:   sectionNameRefs,
+				Valid:        true,
+				Rules:        createRules(hrWithOneBackend, allValid, allInvalid),
+				ServiceNames: make(map[types.NamespacedName]struct{}),
 			},
 			expectedBackendRefs: nil,
 			expectedConditions:  nil,
@@ -462,10 +499,11 @@ func TestAddBackendRefsToRulesTest(t *testing.T) {
 		},
 		{
 			route: &Route{
-				Source:     hrWithInvalidRule,
-				ParentRefs: sectionNameRefs,
-				Valid:      true,
-				Rules:      createRules(hrWithInvalidRule, allValid, allValid),
+				Source:       hrWithInvalidRule,
+				ParentRefs:   sectionNameRefs,
+				Valid:        true,
+				Rules:        createRules(hrWithInvalidRule, allValid, allValid),
+				ServiceNames: make(map[types.NamespacedName]struct{}),
 			},
 			expectedBackendRefs: []BackendRef{
 				{
@@ -481,10 +519,11 @@ func TestAddBackendRefsToRulesTest(t *testing.T) {
 		},
 		{
 			route: &Route{
-				Source:     hrWithZeroBackendRefs,
-				ParentRefs: sectionNameRefs,
-				Valid:      true,
-				Rules:      createRules(hrWithZeroBackendRefs, allValid, allValid),
+				Source:       hrWithZeroBackendRefs,
+				ParentRefs:   sectionNameRefs,
+				Valid:        true,
+				Rules:        createRules(hrWithZeroBackendRefs, allValid, allValid),
+				ServiceNames: make(map[types.NamespacedName]struct{}),
 			},
 			expectedBackendRefs: nil,
 			expectedConditions:  nil,
@@ -510,7 +549,23 @@ func TestAddBackendRefsToRulesTest(t *testing.T) {
 }
 
 func TestCreateBackend(t *testing.T) {
-	svc1 := &v1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: "test", Name: "service1"}}
+	svc1 := &v1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "test",
+			Name:      "service1",
+		},
+		Spec: v1.ServiceSpec{
+			Ports: []v1.ServicePort{
+				{
+					Port: 80,
+				},
+			},
+		},
+	}
+	svc1NamespacedName := types.NamespacedName{
+		Namespace: "test",
+		Name:      "service1",
+	}
 
 	tests := []struct {
 		expectedCondition            *conditions.Condition
@@ -524,10 +579,10 @@ func TestCreateBackend(t *testing.T) {
 				BackendRef: getNormalRef(),
 			},
 			expectedBackend: BackendRef{
-				Svc:    svc1,
-				Port:   80,
-				Weight: 5,
-				Valid:  true,
+				SvcNsName:   svc1NamespacedName,
+				ServicePort: svc1.Spec.Ports[0],
+				Weight:      5,
+				Valid:       true,
 			},
 			expectedServicePortReference: "test_service1_80",
 			expectedCondition:            nil,
@@ -541,10 +596,10 @@ func TestCreateBackend(t *testing.T) {
 				}),
 			},
 			expectedBackend: BackendRef{
-				Svc:    svc1,
-				Port:   80,
-				Weight: 1,
-				Valid:  true,
+				SvcNsName:   svc1NamespacedName,
+				ServicePort: svc1.Spec.Ports[0],
+				Weight:      1,
+				Valid:       true,
 			},
 			expectedServicePortReference: "test_service1_80",
 			expectedCondition:            nil,
@@ -558,10 +613,10 @@ func TestCreateBackend(t *testing.T) {
 				}),
 			},
 			expectedBackend: BackendRef{
-				Svc:    nil,
-				Port:   0,
-				Weight: 0,
-				Valid:  false,
+				SvcNsName:   types.NamespacedName{},
+				ServicePort: v1.ServicePort{},
+				Weight:      0,
+				Valid:       false,
 			},
 			expectedServicePortReference: "",
 			expectedCondition: helpers.GetPointer(
@@ -579,10 +634,10 @@ func TestCreateBackend(t *testing.T) {
 				}),
 			},
 			expectedBackend: BackendRef{
-				Svc:    nil,
-				Port:   0,
-				Weight: 5,
-				Valid:  false,
+				SvcNsName:   types.NamespacedName{},
+				ServicePort: v1.ServicePort{},
+				Weight:      5,
+				Valid:       false,
 			},
 			expectedServicePortReference: "",
 			expectedCondition: helpers.GetPointer(
@@ -600,10 +655,10 @@ func TestCreateBackend(t *testing.T) {
 				}),
 			},
 			expectedBackend: BackendRef{
-				Svc:    nil,
-				Port:   0,
-				Weight: 5,
-				Valid:  false,
+				SvcNsName:   types.NamespacedName{Name: "not-exist", Namespace: "test"},
+				ServicePort: v1.ServicePort{},
+				Weight:      5,
+				Valid:       false,
 			},
 			expectedServicePortReference: "",
 			expectedCondition: helpers.GetPointer(
@@ -634,4 +689,35 @@ func TestCreateBackend(t *testing.T) {
 			g.Expect(servicePortRef).To(Equal(test.expectedServicePortReference))
 		})
 	}
+}
+
+func TestGetServicePort(t *testing.T) {
+	svc := &v1.Service{
+		Spec: v1.ServiceSpec{
+			Ports: []v1.ServicePort{
+				{
+					Port: 80,
+				},
+				{
+					Port: 81,
+				},
+				{
+					Port: 82,
+				},
+			},
+		},
+	}
+
+	g := NewWithT(t)
+	// ports exist
+	for _, p := range []int32{80, 81, 82} {
+		port, err := getServicePort(svc, p)
+		g.Expect(err).ToNot(HaveOccurred())
+		g.Expect(port.Port).To(Equal(p))
+	}
+
+	// port doesn't exist
+	port, err := getServicePort(svc, 83)
+	g.Expect(err).Should(HaveOccurred())
+	g.Expect(port.Port).To(Equal(int32(0)))
 }

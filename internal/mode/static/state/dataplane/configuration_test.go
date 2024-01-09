@@ -82,16 +82,14 @@ func TestBuildConfiguration(t *testing.T) {
 		Endpoints: fooEndpoints,
 	}
 
-	fooSvc := &apiv1.Service{ObjectMeta: metav1.ObjectMeta{Name: "foo", Namespace: "test"}}
-
 	fakeResolver := &resolverfakes.FakeServiceResolver{}
 	fakeResolver.ResolveReturns(fooEndpoints, nil)
 
 	validBackendRef := graph.BackendRef{
-		Svc:    fooSvc,
-		Port:   80,
-		Valid:  true,
-		Weight: 1,
+		SvcNsName:   types.NamespacedName{Name: "foo", Namespace: "test"},
+		ServicePort: apiv1.ServicePort{Port: 80},
+		Valid:       true,
+		Weight:      1,
 	}
 
 	expValidBackend := Backend{
@@ -1877,9 +1875,9 @@ func TestBuildUpstreams(t *testing.T) {
 		var backends []graph.BackendRef
 		for _, name := range serviceNames {
 			backends = append(backends, graph.BackendRef{
-				Svc:   &apiv1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: "test", Name: name}},
-				Port:  80,
-				Valid: name != "",
+				SvcNsName:   types.NamespacedName{Namespace: "test", Name: name},
+				ServicePort: apiv1.ServicePort{Port: 80},
+				Valid:       name != "",
 			})
 		}
 		return backends
@@ -1995,8 +1993,12 @@ func TestBuildUpstreams(t *testing.T) {
 	}
 
 	fakeResolver := &resolverfakes.FakeServiceResolver{}
-	fakeResolver.ResolveCalls(func(ctx context.Context, svc *apiv1.Service, port int32) ([]resolver.Endpoint, error) {
-		switch svc.Name {
+	fakeResolver.ResolveCalls(func(
+		ctx context.Context,
+		svcNsName types.NamespacedName,
+		servicePort apiv1.ServicePort,
+	) ([]resolver.Endpoint, error) {
+		switch svcNsName.Name {
 		case "bar":
 			return barEndpoints, nil
 		case "baz":
@@ -2012,7 +2014,7 @@ func TestBuildUpstreams(t *testing.T) {
 		case "abc":
 			return abcEndpoints, nil
 		default:
-			return nil, fmt.Errorf("unexpected service %s", svc.Name)
+			return nil, fmt.Errorf("unexpected service %s", svcNsName.Name)
 		}
 	})
 

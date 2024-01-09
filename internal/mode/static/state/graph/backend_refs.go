@@ -15,9 +15,13 @@ import (
 // BackendRef is an internal representation of a backendRef in an HTTPRoute.
 type BackendRef struct {
 	// Svc is the service referenced by the backendRef.
-	Svc *v1.Service
+	// Svc *v1.Service
+	// SvcNsName is the NamespacedName of the Service referenced by the backendRef.
+	SvcNsName types.NamespacedName
+	// ServicePort is the ServicePort of the Service which is referenced by the backendRef.
+	ServicePort v1.ServicePort
 	// Port is the port of the backendRef.
-	Port int32
+	// Port int32
 	// Weight is the weight of the backendRef.
 	Weight int32
 	// Valid indicates whether the backendRef is valid.
@@ -26,10 +30,14 @@ type BackendRef struct {
 
 // ServicePortReference returns a string representation for the service and port that is referenced by the BackendRef.
 func (b BackendRef) ServicePortReference() string {
-	if b.Svc == nil {
+	// If the ServicePort's Port is 0 it means that the Port on the BackendRef
+	// did not match any ports on the Service's ServicePorts.
+	//
+	// If the SvcNsName Name or Namespace are empty strings, it means that the BackendRef failed validation.
+	if b.SvcNsName.Name == "" || b.SvcNsName.Namespace == "" || b.ServicePort.Port == 0 {
 		return ""
 	}
-	return fmt.Sprintf("%s_%s_%d", b.Svc.Namespace, b.Svc.Name, b.Port)
+	return fmt.Sprintf("%s_%s_%d", b.SvcNsName.Namespace, b.SvcNsName.Name, b.ServicePort.Port)
 }
 
 func addBackendRefsToRouteRules(
@@ -78,10 +86,38 @@ func addBackendRefsToRules(
 			if cond != nil {
 				route.Conditions = append(route.Conditions, *cond)
 			}
+
+			// This should fill ServiceNames with the NamespacedName of all the Services which
+			// come from a Valid route and rules.
+			// All the routes here have populated ParentRef's as it is checked when the Route was built.
+			//
+			// ref.SvcNsName could be an empty SvcNsName if validateHTTPBackendRef returned invalid.
+			// Otherwise, it should be populated with the Service NsName on the backendRef even if
+			// the Service does not exist.
+			//
+			// ref.ServicePort can be empty and that is fine as we still want to populate route.ServiceNames
+			// if a Service does not exist.
+			if ref.SvcNsName.Name != "" && ref.SvcNsName.Namespace != "" {
+				if route.ServiceNames == nil {
+					route.ServiceNames = make(map[types.NamespacedName]struct{})
+				}
+
+				route.ServiceNames[ref.SvcNsName] = struct{}{}
+			}
 		}
 
+		// Some of the backendRef's could be invalid, but when we use them in configuration.go when building the
+		// Upstreams, we skip over the ones that are not valid.
 		route.Rules[idx].BackendRefs = backendRefs
 	}
+	// If any of the ParentRefs of the route have Attachment.Attached set to true, we want to generate NGINX
+	// configuration and thus can return the method with route.ServiceNames populated. Else, we set ServiceNames to nil.
+	for _, ref := range route.ParentRefs {
+		if ref.Attachment.Attached {
+			return
+		}
+	}
+	route.ServiceNames = nil
 }
 
 func createBackendRef(
@@ -116,11 +152,13 @@ func createBackendRef(
 		return backendRef, &cond
 	}
 
-	svc, port, err := getServiceAndPortFromRef(ref.BackendRef, sourceNamespace, services, refPath)
+	svcNsName, svcPort, err := getServiceAndPortFromRef(ref.BackendRef, sourceNamespace, services, refPath)
 	if err != nil {
 		backendRef = BackendRef{
-			Weight: weight,
-			Valid:  false,
+			SvcNsName:   svcNsName,
+			ServicePort: svcPort,
+			Weight:      weight,
+			Valid:       false,
 		}
 
 		cond := staticConds.NewRouteBackendRefRefBackendNotFound(err.Error())
@@ -128,35 +166,48 @@ func createBackendRef(
 	}
 
 	backendRef = BackendRef{
-		Svc:    svc,
-		Port:   port,
-		Valid:  true,
-		Weight: weight,
+		SvcNsName:   svcNsName,
+		ServicePort: svcPort,
+		Valid:       true,
+		Weight:      weight,
 	}
 
 	return backendRef, nil
 }
 
+// The v1.ServicePort returned can be empty in two cases:
+// 1. The Service referenced from the BackendRef does not exist in the cluster/state.
+// 2. The Port on the BackendRef does not match any of the ServicePorts on the Service.
 func getServiceAndPortFromRef(
 	ref gatewayv1.BackendRef,
 	routeNamespace string,
 	services map[types.NamespacedName]*v1.Service,
 	refPath *field.Path,
-) (*v1.Service, int32, error) {
+) (types.NamespacedName, v1.ServicePort, error) {
 	ns := routeNamespace
 	if ref.Namespace != nil {
 		ns = string(*ref.Namespace)
 	}
 
+	// TODO: Is this right that the svcNsName name is the name of the backendRef?
 	svcNsName := types.NamespacedName{Name: string(ref.Name), Namespace: ns}
 
+	// If the service is unable to be found, svcNsName will still be populated with what the BackendRef
+	// has listed, however the ServicePort returned will be empty.
 	svc, ok := services[svcNsName]
 	if !ok {
-		return nil, 0, field.NotFound(refPath.Child("name"), ref.Name)
+		return svcNsName, v1.ServicePort{}, field.NotFound(refPath.Child("name"), ref.Name)
 	}
 
-	// safe to dereference port here because we already validated that the port is not nil.
-	return svc, int32(*ref.Port), nil
+	// svcPort can be an empty v1.ServicePort{} if the BackendRef.Port did not match any ServicePorts
+	//
+	// safe to dereference port here because we already validated that the port is not nil in validateBackendRef.
+	svcPort, err := getServicePort(svc, int32(*ref.Port))
+	if err != nil {
+		return svcNsName, v1.ServicePort{}, err
+	}
+
+	return svcNsName, svcPort, nil
 }
 
 func validateHTTPBackendRef(
@@ -232,4 +283,14 @@ func validateWeight(weight int32) error {
 	}
 
 	return nil
+}
+
+func getServicePort(svc *v1.Service, port int32) (v1.ServicePort, error) {
+	for _, p := range svc.Spec.Ports {
+		if p.Port == port {
+			return p, nil
+		}
+	}
+
+	return v1.ServicePort{}, fmt.Errorf("no matching port for Service %s and port %d", svc.Name, port)
 }

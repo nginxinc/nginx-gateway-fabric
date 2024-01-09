@@ -9,6 +9,7 @@ import (
 	discoveryV1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -125,6 +126,11 @@ var _ = Describe("ServiceResolver", func() {
 			},
 		}
 
+		svcNsName = types.NamespacedName{
+			Namespace: "test",
+			Name:      "svc",
+		}
+
 		slice1 = createSlice(
 			"slice1",
 			addresses1,
@@ -212,14 +218,9 @@ var _ = Describe("ServiceResolver", func() {
 				},
 			}
 
-			endpoints, err := serviceResolver.Resolve(context.TODO(), svc, 80)
+			endpoints, err := serviceResolver.Resolve(context.TODO(), svcNsName, svc.Spec.Ports[0])
 			Expect(err).ToNot(HaveOccurred())
 			Expect(endpoints).To(ConsistOf(expectedEndpoints))
-		})
-		It("returns an error if port does not exist in service", func() {
-			endpoints, err := serviceResolver.Resolve(context.TODO(), svc, 8080) // service port does not exist
-			Expect(err).To(HaveOccurred())
-			Expect(endpoints).To(BeNil())
 		})
 		It("returns an error if there are no valid endpoint slices for the service and port", func() {
 			// delete valid endpoint slices
@@ -227,7 +228,7 @@ var _ = Describe("ServiceResolver", func() {
 			Expect(fakeK8sClient.Delete(context.TODO(), slice2)).To(Succeed())
 			Expect(fakeK8sClient.Delete(context.TODO(), dupeEndpointSlice)).To(Succeed())
 
-			endpoints, err := serviceResolver.Resolve(context.TODO(), svc, 80)
+			endpoints, err := serviceResolver.Resolve(context.TODO(), svcNsName, svc.Spec.Ports[0])
 			Expect(err).To(HaveOccurred())
 			Expect(endpoints).To(BeNil())
 		})
@@ -236,12 +237,12 @@ var _ = Describe("ServiceResolver", func() {
 			Expect(fakeK8sClient.Delete(context.TODO(), sliceIPV6)).To(Succeed())
 			Expect(fakeK8sClient.Delete(context.TODO(), sliceNoMatchingPortName)).To(Succeed())
 
-			endpoints, err := serviceResolver.Resolve(context.TODO(), svc, 80)
+			endpoints, err := serviceResolver.Resolve(context.TODO(), svcNsName, svc.Spec.Ports[0])
 			Expect(err).To(HaveOccurred())
 			Expect(endpoints).To(BeNil())
 		})
 		It("returns an error if the service is nil", func() {
-			endpoints, err := serviceResolver.Resolve(context.TODO(), nil, 80)
+			endpoints, err := serviceResolver.Resolve(context.TODO(), types.NamespacedName{}, svc.Spec.Ports[0])
 			Expect(err).To(HaveOccurred())
 			Expect(endpoints).To(BeNil())
 		})
