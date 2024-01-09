@@ -43,7 +43,7 @@ Follow our [Installation Instructions](https://docs.nginx.com/nginx-gateway-fabr
 - We use [Go Modules](https://github.com/golang/go/wiki/Modules) for managing dependencies.
 - We use [Ginkgo](https://onsi.github.io/ginkgo/) and [Gomega](https://onsi.github.io/gomega/) for our BDD style unit
   tests.
-- The documentation website is found under `site/`
+- The documentation website is found under `site/`.
 
 ## Contributing
 
