@@ -131,6 +131,11 @@ func createStaticModeCommand() *cobra.Command {
 				return errors.New("POD_NAME environment variable must be set")
 			}
 
+			period, err := time.ParseDuration(telemetryReportPeriod)
+			if err != nil {
+				return fmt.Errorf("error parsing telemetry report period: %w", err)
+			}
+
 			var gwNsName *types.NamespacedName
 			if cmd.Flags().Changed(gatewayFlag) {
 				gwNsName = &gateway.value
@@ -163,7 +168,8 @@ func createStaticModeCommand() *cobra.Command {
 					LockName: leaderElectionLockName.String(),
 					Identity: podName,
 				},
-				Plus: plus,
+				Plus:                  plus,
+				TelemetryReportPeriod: period,
 			}
 
 			if err := static.StartManager(conf); err != nil {

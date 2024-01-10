@@ -20,6 +20,7 @@ import (
 	"k8s.io/client-go/tools/record"
 	ctlr "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	ctrlcfg "sigs.k8s.io/controller-runtime/pkg/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/metrics"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
@@ -34,6 +35,8 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/controller/predicate"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/events"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/gatewayclass"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/runnables"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/status"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/config"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/metrics/collectors"
@@ -45,6 +48,7 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/relationship"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/resolver"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/validation"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/telemetry"
 )
 
 const (
@@ -69,6 +73,21 @@ func StartManager(cfg config.Config) error {
 		Scheme:  scheme,
 		Logger:  cfg.Logger,
 		Metrics: getMetricsOptions(cfg.MetricsConfig),
+		// Note: when the leadership is lost, the manager will return an error in the Start() method.
+		// However, it will not wait for any Runnable it starts to finish, meaning any in-progress operations
+		// might get terminated half-way.
+		LeaderElection:          true,
+		LeaderElectionNamespace: cfg.GatewayPodConfig.Namespace,
+		LeaderElectionID:        cfg.LeaderElection.LockName,
+		// We're not enabling LeaderElectionReleaseOnCancel because when the Manager stops gracefully, it waits
+		// for all started Runnables (including Leader-only ones) to finish. Otherwise, the new leader might start
+		// running Leader-only Runnables before the old leader has finished running them.
+		// See the doc comment for the LeaderElectionReleaseOnCancel for more details.
+		LeaderElectionReleaseOnCancel: false,
+		Controller: ctrlcfg.Controller{
+			// All of our controllers still need to work in case of non-leader pods
+			NeedLeaderElection: helpers.GetPointer(false),
+		},
 	}
 
 	if cfg.HealthConfig.Enabled {
@@ -211,35 +230,26 @@ func StartManager(cfg config.Config) error {
 		firstBatchPreparer,
 	)
 
-	if err = mgr.Add(eventLoop); err != nil {
+	if err = mgr.Add(&runnables.LeaderOrNonLeader{Runnable: eventLoop}); err != nil {
 		return fmt.Errorf("cannot register event loop: %w", err)
 	}
 
-	leaderElectorLogger := cfg.Logger.WithName("leaderElector")
+	if err = mgr.Add(runnables.NewEnableAfterBecameLeader(statusUpdater.Enable)); err != nil {
+		return fmt.Errorf("cannot register status updater: %w", err)
+	}
 
-	if cfg.LeaderElection.Enabled {
-		leaderElector, err := newLeaderElectorRunnable(leaderElectorRunnableConfig{
-			kubeConfig: clusterCfg,
-			recorder:   recorder,
-			onStartedLeading: func(ctx context.Context) {
-				leaderElectorLogger.Info("Started leading")
-				statusUpdater.Enable(ctx)
+	telemetryJob := &runnables.Leader{
+		Runnable: telemetry.NewJob(
+			telemetry.JobConfig{
+				Exporter: telemetry.NewLoggingExporter(cfg.Logger.WithName("telemetryExporter").V(1 /* debug */)),
+				Logger:   cfg.Logger.WithName("telemetryJob"),
+				Period:   cfg.TelemetryReportPeriod,
 			},
-			onStoppedLeading: func() {
-				leaderElectorLogger.Info("Stopped leading")
-				statusUpdater.Disable()
-			},
-			lockNs:   cfg.GatewayPodConfig.Namespace,
-			lockName: cfg.LeaderElection.LockName,
-			identity: cfg.LeaderElection.Identity,
-		})
-		if err != nil {
-			return err
-		}
+		),
+	}
 
-		if err = mgr.Add(leaderElector); err != nil {
-			return fmt.Errorf("cannot register leader elector: %w", err)
-		}
+	if err = mgr.Add(telemetryJob); err != nil {
+		return fmt.Errorf("cannot register telemetry job: %w", err)
 	}
 
 	cfg.Logger.Info("Starting manager")
