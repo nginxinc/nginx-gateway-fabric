@@ -88,6 +88,6 @@ type MapParameter struct {
 }
 
 const (
-	// InternalLocationPrefix indicates that the path is internal type.
+	// InternalLocationPrefix is used as a prefix for internal locations to avoid path conflicts with HTTPRoute routing rules.
 	InternalLocationPrefix string = "/ngf-internal"
 )
