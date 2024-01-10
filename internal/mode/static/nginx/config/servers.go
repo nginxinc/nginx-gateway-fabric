@@ -545,7 +545,7 @@ func createPath(rule dataplane.PathRule) string {
 }
 
 func createPathForMatch(ruleIdx, routeIdx int) string {
-	return fmt.Sprintf("%s-rule%d-route%d", http.InternalLocationPrefix, ruleIdx, routeIdx)
+	return fmt.Sprintf("rule%d-route%d", ruleIdx, routeIdx)
 }
 
 func createDefaultRootLocation() http.Location {
