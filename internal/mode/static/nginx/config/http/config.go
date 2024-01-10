@@ -86,9 +86,3 @@ type MapParameter struct {
 	Value  string
 	Result string
 }
-
-const (
-	// InternalLocationPrefix is used as a prefix for internal locations
-	// to avoid path conflicts with HTTPRoute routing rules.
-	InternalLocationPrefix string = "/ngf-internal"
-)

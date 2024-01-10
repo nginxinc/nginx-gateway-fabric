@@ -147,7 +147,7 @@ See the [static-mode]({{< relref "/reference/cli-help.md#static-mode">}}) comman
   - `hostnames`: Supported.
   - `rules`
     - `matches`
-      - `path`: Partially supported. Only `PathPrefix` and `Exact` types. The path cannot start with "/ngf-internal" as such paths are reserved for internal use.
+      - `path`: Partially supported. Only `PathPrefix` and `Exact` types.
       - `headers`: Partially supported. Only `Exact` type.
       - `queryParams`: Partially supported. Only `Exact` type.
       - `method`: Supported.
