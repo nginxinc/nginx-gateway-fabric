@@ -43,7 +43,7 @@ var _ = Describe("Job", func() {
 				close(errCh)
 			}()
 
-			const minReports = 3 // ensure that the Job reports at least this many times
+			const minReports = 2 // ensure that the Job reports more than once: it doesn't exit after the first report
 
 			Eventually(exporter.ExportCallCount).Should(BeNumerically(">=", minReports))
 			for i := 0; i < minReports; i++ {
