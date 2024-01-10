@@ -90,7 +90,6 @@ This step catches the following cases of invalid values:
 
 - Valid values from the Gateway API perspective but not supported by NGINX Gateway Fabric yet. For example, a feature in an HTTPRoute routing rule. For the list of supported features see [Gateway API Compatibility](gateway-api-compatibility.md) doc.
 - Valid values from the Gateway API perspective, but invalid for NGINX, because NGINX has stricter validation requirements for certain fields. These values will cause NGINX to fail to reload or operate erroneously.
-- Valid values from the Gateway API perspective, but invalid for NGINX Gateway Fabric, because such values can prevent generating NGINX configuration.
 - Invalid values (both from the Gateway API and NGINX perspectives) that were not rejected because Step 1 was bypassed. Similar to the previous case, these values will cause NGINX to fail to reload or operate erroneously.
 - Malicious values that inject unrestricted NGINX config into the NGINX configuration (similar to an SQL injection attack).
 
