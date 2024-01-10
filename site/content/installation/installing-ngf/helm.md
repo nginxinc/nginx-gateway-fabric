@@ -215,6 +215,10 @@ Follow these steps to uninstall NGINX Gateway Fabric and Gateway API from your K
 
    - {{<include "installation/uninstall-gateway-api-resources.md" >}}
 
+## Additional configuration
+
+For a full list of the Helm Chart configuration parameters, read [the NGINX Gateway Fabric Helm Chart](https://github.com/nginxinc/nginx-gateway-fabric/blob/main/deploy/helm-chart/README.md#configuration).
+
 ## Next steps
 
 ### Expose NGINX Gateway Fabric

@@ -44,7 +44,7 @@ To create a new release, follow these steps:
        file.
     5. Generate the installation manifests by running `make generate-manifests`.
     6. Modify any `git clone` instructions to use `vX.Y.Z` tag.
-    7. Modify any docs links that refer to `main` to instead refer to `vX.Y.Z`.
+    7. Modify any docs links that refer to `main` to instead refer to `vX.Y.Z` or `release-x-y`, whichever is applicable.
     8. Update any installation instructions to ensure that the supported Gateway API and NGF versions are correct.
        Specifically, helm README and `site/content/includes/installation/install-gateway-api-resources.md`.
     9. Update the [README](/README.md) to include information about the release.
