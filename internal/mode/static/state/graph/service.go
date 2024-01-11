@@ -4,15 +4,46 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
+// routes all have populated ParentRefs from when they were created
 func buildReferencedServicesNames(
 	routes map[types.NamespacedName]*Route,
 ) map[types.NamespacedName]struct{} {
 	svcNames := make(map[types.NamespacedName]struct{})
 
-	// Get all the service names referenced from all the HTTPRoutes
+	// Get all the service names referenced from all the HTTPRoutes.
 	for _, route := range routes {
-		for k, v := range route.ServiceNames {
-			svcNames[k] = v
+		// If none of the ParentRefs are attached to the Gateway, we want to skip the route.
+		attached := false
+		for _, ref := range route.ParentRefs {
+			if ref.Attachment.Attached {
+				attached = true
+				break
+			}
+		}
+		if !attached {
+			continue
+		}
+
+		if !route.Valid {
+			continue
+		}
+
+		for idx := range route.Rules {
+			// Do I still need to do these checks? As the check is made in backend_ref, basically
+			// if the route rules are not valid, it will not populate route.Rules[idx].BackendRefs, thus
+			// if we just do the for loop over the route.Rules[idx].BackendRefs = backendRefs, we should be fine?
+			if !route.Rules[idx].ValidMatches {
+				continue
+			}
+			if !route.Rules[idx].ValidFilters {
+				continue
+			}
+
+			for _, ref := range route.Rules[idx].BackendRefs {
+				if ref.SvcNsName.Name != "" && ref.SvcNsName.Namespace != "" {
+					svcNames[ref.SvcNsName] = struct{}{}
+				}
+			}
 		}
 	}
 
@@ -21,24 +52,3 @@ func buildReferencedServicesNames(
 	}
 	return svcNames
 }
-
-//func getBackendServiceNamesFromRoute(hr *gatewayv1.HTTPRoute) map[types.NamespacedName]struct{} {
-//	svcNames := make(map[types.NamespacedName]struct{})
-//
-//	for _, rule := range hr.Spec.Rules {
-//		for _, ref := range rule.BackendRefs {
-//			if ref.Kind != nil && *ref.Kind != "Service" {
-//				continue
-//			}
-//
-//			ns := hr.Namespace
-//			if ref.Namespace != nil {
-//				ns = string(*ref.Namespace)
-//			}
-//
-//			svcNames[types.NamespacedName{Namespace: ns, Name: string(ref.Name)}] = struct{}{}
-//		}
-//	}
-//
-//	return svcNames
-//}

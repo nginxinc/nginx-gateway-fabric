@@ -444,7 +444,6 @@ var _ = Describe("ChangeProcessor", func() {
 							"spec.rules[0].backendRefs[0].name: Not found: \"service\"",
 						),
 					},
-					ServiceNames: map[types.NamespacedName]struct{}{{Namespace: "service-ns", Name: "service"}: {}},
 				}
 
 				expRouteHR2 = &graph.Route{
@@ -582,7 +581,6 @@ var _ = Describe("ChangeProcessor", func() {
 							expGraph.ReferencedSecrets = nil
 							expGraph.ReferencedServicesNames = nil
 
-							expRouteHR1.ServiceNames = nil
 							expRouteHR1.Rules[0].BackendRefs[0].SvcNsName = types.NamespacedName{}
 
 							changed, graphCfg := processor.Process()
@@ -636,7 +634,6 @@ var _ = Describe("ChangeProcessor", func() {
 					expGraph.ReferencedSecrets = nil
 					expGraph.ReferencedServicesNames = nil
 
-					expRouteHR1.ServiceNames = nil
 					expRouteHR1.Rules[0].BackendRefs[0].SvcNsName = types.NamespacedName{}
 
 					changed, graphCfg := processor.Process()
@@ -659,7 +656,6 @@ var _ = Describe("ChangeProcessor", func() {
 					}
 
 					expGraph.ReferencedServicesNames = nil
-					expRouteHR1.ServiceNames = nil
 					expRouteHR1.Rules[0].BackendRefs[0].SvcNsName = types.NamespacedName{}
 
 					changed, graphCfg := processor.Process()
@@ -868,7 +864,6 @@ var _ = Describe("ChangeProcessor", func() {
 						Source: sameNsTLSSecret,
 					}
 
-					expRouteHR1.ServiceNames = nil
 					expRouteHR1.Rules[0].BackendRefs[0].SvcNsName = types.NamespacedName{}
 					expGraph.ReferencedServicesNames = nil
 
@@ -901,7 +896,6 @@ var _ = Describe("ChangeProcessor", func() {
 						Source: sameNsTLSSecret,
 					}
 
-					expRouteHR1.ServiceNames = nil
 					expRouteHR1.Rules[0].BackendRefs[0].SvcNsName = types.NamespacedName{}
 					expGraph.ReferencedServicesNames = nil
 
@@ -925,7 +919,6 @@ var _ = Describe("ChangeProcessor", func() {
 					expGraph.Routes = map[types.NamespacedName]*graph.Route{}
 					expGraph.ReferencedSecrets = nil
 
-					expRouteHR1.ServiceNames = nil
 					expRouteHR1.Rules[0].BackendRefs[0].SvcNsName = types.NamespacedName{}
 					expGraph.ReferencedServicesNames = nil
 
@@ -941,7 +934,6 @@ var _ = Describe("ChangeProcessor", func() {
 						types.NamespacedName{Namespace: "test", Name: "gateway-2"},
 					)
 
-					expRouteHR1.ServiceNames = nil
 					expRouteHR1.Rules[0].BackendRefs[0].SvcNsName = types.NamespacedName{}
 					expGraph.ReferencedServicesNames = nil
 
@@ -957,7 +949,6 @@ var _ = Describe("ChangeProcessor", func() {
 						types.NamespacedName{Namespace: "test", Name: "hr-1"},
 					)
 
-					expRouteHR1.ServiceNames = nil
 					expRouteHR1.Rules[0].BackendRefs[0].SvcNsName = types.NamespacedName{}
 					expGraph.ReferencedServicesNames = nil
 

@@ -420,11 +420,10 @@ func TestAddBackendRefsToRulesTest(t *testing.T) {
 	}{
 		{
 			route: &Route{
-				Source:       hrWithOneBackend,
-				ParentRefs:   sectionNameRefs,
-				Valid:        true,
-				Rules:        createRules(hrWithOneBackend, allValid, allValid),
-				ServiceNames: make(map[types.NamespacedName]struct{}),
+				Source:     hrWithOneBackend,
+				ParentRefs: sectionNameRefs,
+				Valid:      true,
+				Rules:      createRules(hrWithOneBackend, allValid, allValid),
 			},
 			expectedBackendRefs: []BackendRef{
 				{
@@ -439,11 +438,10 @@ func TestAddBackendRefsToRulesTest(t *testing.T) {
 		},
 		{
 			route: &Route{
-				Source:       hrWithTwoBackends,
-				ParentRefs:   sectionNameRefs,
-				Valid:        true,
-				Rules:        createRules(hrWithTwoBackends, allValid, allValid),
-				ServiceNames: make(map[types.NamespacedName]struct{}),
+				Source:     hrWithTwoBackends,
+				ParentRefs: sectionNameRefs,
+				Valid:      true,
+				Rules:      createRules(hrWithTwoBackends, allValid, allValid),
 			},
 			expectedBackendRefs: []BackendRef{
 				{
@@ -464,10 +462,9 @@ func TestAddBackendRefsToRulesTest(t *testing.T) {
 		},
 		{
 			route: &Route{
-				Source:       hrWithOneBackend,
-				ParentRefs:   sectionNameRefs,
-				Valid:        false,
-				ServiceNames: make(map[types.NamespacedName]struct{}),
+				Source:     hrWithOneBackend,
+				ParentRefs: sectionNameRefs,
+				Valid:      false,
 			},
 			expectedBackendRefs: nil,
 			expectedConditions:  nil,
@@ -475,11 +472,10 @@ func TestAddBackendRefsToRulesTest(t *testing.T) {
 		},
 		{
 			route: &Route{
-				Source:       hrWithOneBackend,
-				ParentRefs:   sectionNameRefs,
-				Valid:        true,
-				Rules:        createRules(hrWithOneBackend, allInvalid, allValid),
-				ServiceNames: make(map[types.NamespacedName]struct{}),
+				Source:     hrWithOneBackend,
+				ParentRefs: sectionNameRefs,
+				Valid:      true,
+				Rules:      createRules(hrWithOneBackend, allInvalid, allValid),
 			},
 			expectedBackendRefs: nil,
 			expectedConditions:  nil,
@@ -487,11 +483,10 @@ func TestAddBackendRefsToRulesTest(t *testing.T) {
 		},
 		{
 			route: &Route{
-				Source:       hrWithOneBackend,
-				ParentRefs:   sectionNameRefs,
-				Valid:        true,
-				Rules:        createRules(hrWithOneBackend, allValid, allInvalid),
-				ServiceNames: make(map[types.NamespacedName]struct{}),
+				Source:     hrWithOneBackend,
+				ParentRefs: sectionNameRefs,
+				Valid:      true,
+				Rules:      createRules(hrWithOneBackend, allValid, allInvalid),
 			},
 			expectedBackendRefs: nil,
 			expectedConditions:  nil,
@@ -499,11 +494,10 @@ func TestAddBackendRefsToRulesTest(t *testing.T) {
 		},
 		{
 			route: &Route{
-				Source:       hrWithInvalidRule,
-				ParentRefs:   sectionNameRefs,
-				Valid:        true,
-				Rules:        createRules(hrWithInvalidRule, allValid, allValid),
-				ServiceNames: make(map[types.NamespacedName]struct{}),
+				Source:     hrWithInvalidRule,
+				ParentRefs: sectionNameRefs,
+				Valid:      true,
+				Rules:      createRules(hrWithInvalidRule, allValid, allValid),
 			},
 			expectedBackendRefs: []BackendRef{
 				{
@@ -519,11 +513,10 @@ func TestAddBackendRefsToRulesTest(t *testing.T) {
 		},
 		{
 			route: &Route{
-				Source:       hrWithZeroBackendRefs,
-				ParentRefs:   sectionNameRefs,
-				Valid:        true,
-				Rules:        createRules(hrWithZeroBackendRefs, allValid, allValid),
-				ServiceNames: make(map[types.NamespacedName]struct{}),
+				Source:     hrWithZeroBackendRefs,
+				ParentRefs: sectionNameRefs,
+				Valid:      true,
+				Rules:      createRules(hrWithZeroBackendRefs, allValid, allValid),
 			},
 			expectedBackendRefs: nil,
 			expectedConditions:  nil,

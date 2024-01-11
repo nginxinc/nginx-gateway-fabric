@@ -82,38 +82,12 @@ func addBackendRefsToRules(
 			if cond != nil {
 				route.Conditions = append(route.Conditions, *cond)
 			}
-
-			// This should fill ServiceNames with the NamespacedName of all the Services which
-			// come from a Valid route and rules.
-			// All the routes here have populated ParentRef's as it is checked when the Route was built.
-			//
-			// ref.SvcNsName could be an empty SvcNsName if validateHTTPBackendRef returned invalid.
-			// Otherwise, it should be populated with the Service NsName on the backendRef even if
-			// the Service does not exist.
-			//
-			// ref.ServicePort can be empty and that is fine as we still want to populate route.ServiceNames
-			// if a Service does not exist.
-			if ref.SvcNsName.Name != "" && ref.SvcNsName.Namespace != "" {
-				if route.ServiceNames == nil {
-					route.ServiceNames = make(map[types.NamespacedName]struct{})
-				}
-
-				route.ServiceNames[ref.SvcNsName] = struct{}{}
-			}
 		}
 
 		// Some of the backendRef's could be invalid, but when we use them in configuration.go when building the
 		// Upstreams, we skip over the ones that are not valid.
 		route.Rules[idx].BackendRefs = backendRefs
 	}
-	// If any of the ParentRefs of the route have Attachment.Attached set to true, we want to generate NGINX
-	// configuration and thus can return the method with route.ServiceNames populated. Else, we set ServiceNames to nil.
-	for _, ref := range route.ParentRefs {
-		if ref.Attachment.Attached {
-			return
-		}
-	}
-	route.ServiceNames = nil
 }
 
 func createBackendRef(

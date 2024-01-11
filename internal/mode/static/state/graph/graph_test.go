@@ -279,9 +279,6 @@ func TestBuildGraph(t *testing.T) {
 			},
 		},
 		Rules: []Rule{createValidRuleWithBackendRefs(hr1Refs)},
-		ServiceNames: map[types.NamespacedName]struct{}{
-			{Namespace: "service", Name: "foo"}: {},
-		},
 	}
 
 	routeHR3 := &Route{
@@ -299,9 +296,6 @@ func TestBuildGraph(t *testing.T) {
 			},
 		},
 		Rules: []Rule{createValidRuleWithBackendRefs(hr3Refs)},
-		ServiceNames: map[types.NamespacedName]struct{}{
-			{Namespace: "service", Name: "foo"}: {},
-		},
 	}
 
 	createExpectedGraphWithGatewayClass := func(gc *gatewayv1.GatewayClass) *Graph {
