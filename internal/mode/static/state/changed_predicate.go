@@ -21,7 +21,7 @@ type funcPredicate struct {
 
 func (f funcPredicate) upsert(_, newObject client.Object) bool {
 	if newObject == nil {
-		panic("New object cannot be nil")
+		panic("new object cannot be nil")
 	}
 
 	return f.stateChanged(newObject, types.NamespacedName{
@@ -54,7 +54,7 @@ func (a annotationChangedPredicate) upsert(oldObject, newObject client.Object) b
 	}
 
 	if newObject == nil {
-		panic("Cannot determine if annotation has changed on upsert because new object is nil")
+		panic("cannot determine if annotation has changed on upsert because new object is nil")
 	}
 
 	oldAnnotation := oldObject.GetAnnotations()[a.annotation]
