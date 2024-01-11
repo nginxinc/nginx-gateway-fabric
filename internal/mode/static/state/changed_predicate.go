@@ -24,10 +24,7 @@ func (f funcPredicate) upsert(_, newObject client.Object) bool {
 		panic("new object cannot be nil")
 	}
 
-	return f.stateChanged(newObject, types.NamespacedName{
-		Namespace: newObject.GetNamespace(),
-		Name:      newObject.GetName(),
-	})
+	return f.stateChanged(newObject, client.ObjectKeyFromObject(newObject))
 }
 
 func (f funcPredicate) delete(object client.Object, nsname types.NamespacedName) bool {
