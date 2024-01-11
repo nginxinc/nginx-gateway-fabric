@@ -8,8 +8,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/relationship"
 )
 
 // Updater updates the cluster state.
@@ -127,7 +125,6 @@ type changeTrackingUpdaterObjectTypeCfg struct {
 // based on the decision by the relationship capturer.
 type changeTrackingUpdater struct {
 	store                  *multiObjectStore
-	capturer               relationship.Capturer
 	stateChangedPredicates map[schema.GroupVersionKind]stateChangedPredicate
 
 	extractGVK    extractGVKFunc
@@ -138,7 +135,6 @@ type changeTrackingUpdater struct {
 }
 
 func newChangeTrackingUpdater(
-	capturer relationship.Capturer,
 	extractGVK extractGVKFunc,
 	objectTypeCfgs []changeTrackingUpdaterObjectTypeCfg,
 ) *changeTrackingUpdater {
@@ -168,7 +164,6 @@ func newChangeTrackingUpdater(
 		extractGVK:             extractGVK,
 		supportedGVKs:          supportedGVKs,
 		persistedGVKs:          persistedGVKs,
-		capturer:               capturer,
 		stateChangedPredicates: stateChangedPredicates,
 	}
 }
@@ -203,18 +198,13 @@ func (s *changeTrackingUpdater) Upsert(obj client.Object) {
 	s.assertSupportedGVK(s.extractGVK(obj))
 
 	changingUpsert := s.upsert(obj)
-	relationshipExisted := s.capturer.Exists(obj, client.ObjectKeyFromObject(obj))
-
-	s.capturer.Capture(obj)
-
-	relationshipExists := s.capturer.Exists(obj, client.ObjectKeyFromObject(obj))
 
 	// FIXME(pleshakov): Check generation in all cases to minimize the number of Graph regeneration.
 	// s.changed can be true even if the generation of the object did not change, because
 	// capturer and triggerStateChange don't take the generation into account.
 	// See https://github.com/nginxinc/nginx-gateway-fabric/issues/825
 
-	s.changed = s.changed || changingUpsert || relationshipExisted || relationshipExists
+	s.changed = s.changed || changingUpsert
 }
 
 func (s *changeTrackingUpdater) delete(objType client.Object, nsname types.NamespacedName) (changed bool) {
@@ -242,9 +232,7 @@ func (s *changeTrackingUpdater) Delete(objType client.Object, nsname types.Names
 
 	changingDelete := s.delete(objType, nsname)
 
-	s.changed = s.changed || changingDelete || s.capturer.Exists(objType, nsname)
-
-	s.capturer.Remove(objType, nsname)
+	s.changed = s.changed || changingDelete
 }
 
 // getAndResetChangedStatus returns true if the previous updates (Upserts/Deletes) require an update of

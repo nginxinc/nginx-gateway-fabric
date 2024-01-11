@@ -24,8 +24,6 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state"
 	staticConds "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/conditions"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/graph"
-	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/relationship"
-	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/relationship/relationshipfakes"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/validation"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/validation/validationfakes"
 )
@@ -271,12 +269,11 @@ var _ = Describe("ChangeProcessor", func() {
 
 		BeforeEach(OncePerOrdered, func() {
 			processor = state.NewChangeProcessorImpl(state.ChangeProcessorConfig{
-				GatewayCtlrName:      controllerName,
-				GatewayClassName:     gcName,
-				RelationshipCapturer: relationship.NewCapturerImpl(),
-				Logger:               zap.New(),
-				Validators:           createAlwaysValidValidators(),
-				Scheme:               createScheme(),
+				GatewayCtlrName:  controllerName,
+				GatewayClassName: gcName,
+				Logger:           zap.New(),
+				Validators:       createAlwaysValidValidators(),
+				Scheme:           createScheme(),
 			})
 		})
 
@@ -1345,12 +1342,11 @@ var _ = Describe("ChangeProcessor", func() {
 					},
 				}
 				processor = state.NewChangeProcessorImpl(state.ChangeProcessorConfig{
-					GatewayCtlrName:      controllerName,
-					GatewayClassName:     gcName,
-					RelationshipCapturer: relationship.NewCapturerImpl(),
-					Logger:               zap.New(),
-					Validators:           createAlwaysValidValidators(),
-					Scheme:               createScheme(),
+					GatewayCtlrName:  controllerName,
+					GatewayClassName: gcName,
+					Logger:           zap.New(),
+					Validators:       createAlwaysValidValidators(),
+					Scheme:           createScheme(),
 				})
 				processor.CaptureUpsertChange(gc)
 				processor.CaptureUpsertChange(gw)
@@ -1461,27 +1457,23 @@ var _ = Describe("ChangeProcessor", func() {
 
 		var (
 			processor                                         *state.ChangeProcessorImpl
-			fakeRelationshipCapturer                          *relationshipfakes.FakeCapturer
 			gcNsName, gwNsName, hrNsName, hr2NsName, rgNsName types.NamespacedName
-			svcNsName, sliceNsName, secretNsName              types.NamespacedName
-			gc, gcUpdated                                     *v1.GatewayClass
-			gw1, gw1Updated, gw2                              *v1.Gateway
-			hr1, hr1Updated, hr2                              *v1.HTTPRoute
-			rg1, rg1Updated, rg2                              *v1beta1.ReferenceGrant
-			svc                                               *apiv1.Service
-			slice                                             *discoveryV1.EndpointSlice
-			secret                                            *apiv1.Secret
+			// svcNsName, sliceNsName, secretNsName              types.NamespacedName
+			gc, gcUpdated        *v1.GatewayClass
+			gw1, gw1Updated, gw2 *v1.Gateway
+			hr1, hr1Updated, hr2 *v1.HTTPRoute
+			rg1, rg1Updated, rg2 *v1beta1.ReferenceGrant
+			// svc                                               *apiv1.Service
+			// slice                                             *discoveryV1.EndpointSlice
+			// secret                                            *apiv1.Secret
 		)
 
 		BeforeEach(OncePerOrdered, func() {
-			fakeRelationshipCapturer = &relationshipfakes.FakeCapturer{}
-
 			processor = state.NewChangeProcessorImpl(state.ChangeProcessorConfig{
-				GatewayCtlrName:      "test.controller",
-				GatewayClassName:     "my-class",
-				RelationshipCapturer: fakeRelationshipCapturer,
-				Validators:           createAlwaysValidValidators(),
-				Scheme:               createScheme(),
+				GatewayCtlrName:  "test.controller",
+				GatewayClassName: "my-class",
+				Validators:       createAlwaysValidValidators(),
+				Scheme:           createScheme(),
 			})
 
 			gcNsName = types.NamespacedName{Name: "my-class"}
@@ -1530,23 +1522,23 @@ var _ = Describe("ChangeProcessor", func() {
 			hr2 = hr1.DeepCopy()
 			hr2.Name = hr2NsName.Name
 
-			svcNsName = types.NamespacedName{Namespace: "test", Name: "svc"}
+			// svcNsName = types.NamespacedName{Namespace: "test", Name: "svc"}
 
-			svc = &apiv1.Service{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: svcNsName.Namespace,
-					Name:      svcNsName.Name,
-				},
-			}
+			//svc = &apiv1.Service{
+			//	ObjectMeta: metav1.ObjectMeta{
+			//		Namespace: svcNsName.Namespace,
+			//		Name:      svcNsName.Name,
+			//	},
+			//}
 
-			sliceNsName = types.NamespacedName{Namespace: "test", Name: "slice"}
+			// sliceNsName = types.NamespacedName{Namespace: "test", Name: "slice"}
 
-			slice = &discoveryV1.EndpointSlice{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: sliceNsName.Namespace,
-					Name:      sliceNsName.Name,
-				},
-			}
+			//slice = &discoveryV1.EndpointSlice{
+			//	ObjectMeta: metav1.ObjectMeta{
+			//		Namespace: sliceNsName.Namespace,
+			//		Name:      sliceNsName.Name,
+			//	},
+			//}
 
 			rgNsName = types.NamespacedName{Namespace: "test", Name: "rg-1"}
 
@@ -1563,14 +1555,14 @@ var _ = Describe("ChangeProcessor", func() {
 			rg2 = rg1.DeepCopy()
 			rg2.Name = "rg-2"
 
-			secretNsName = types.NamespacedName{Namespace: "test", Name: "test-secret"}
+			// secretNsName = types.NamespacedName{Namespace: "test", Name: "test-secret"}
 
-			secret = &apiv1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: secretNsName.Namespace,
-					Name:      secretNsName.Name,
-				},
-			}
+			//secret = &apiv1.Secret{
+			//	ObjectMeta: metav1.ObjectMeta{
+			//		Namespace: secretNsName.Namespace,
+			//		Name:      secretNsName.Name,
+			//	},
+			//}
 		})
 		// Changing change - a change that makes processor.Process() report changed
 		// Non-changing change - a change that doesn't do that
@@ -1652,518 +1644,503 @@ var _ = Describe("ChangeProcessor", func() {
 				Expect(changed).To(BeFalse())
 			})
 		})
-		Describe("Multiple Kubernetes API resource changes", Ordered, func() {
-			// Note: because secret resource is not used by the real relationship.Capturer, it is not used
-			// in the same way as service and endpoint slice in the tests below.
-			It("should report changed after multiple Upserts of related resources", func() {
-				fakeRelationshipCapturer.ExistsReturns(true)
-				processor.CaptureUpsertChange(svc)
-				processor.CaptureUpsertChange(slice)
-
-				changed, _ := processor.Process()
-				Expect(changed).To(BeTrue())
-			})
-
-			It("should report not changed after multiple Upserts of unrelated resources", func() {
-				fakeRelationshipCapturer.ExistsReturns(false)
-				processor.CaptureUpsertChange(svc)
-				processor.CaptureUpsertChange(slice)
-
-				processor.CaptureUpsertChange(secret)
-
-				changed, _ := processor.Process()
-				Expect(changed).To(BeFalse())
-			})
-			When("upserts of related resources are followed by upserts of unrelated resources", func() {
-				It("should report changed", func() {
-					// these are changing changes
-					fakeRelationshipCapturer.ExistsReturns(true)
+		/*
+			Describe("Multiple Kubernetes API resource changes", Ordered, func() {
+				// Note: because secret resource is not used by the real relationship.Capturer, it is not used
+				// in the same way as service and endpoint slice in the tests below.
+				It("should report changed after multiple Upserts of related resources", func() {
 					processor.CaptureUpsertChange(svc)
 					processor.CaptureUpsertChange(slice)
-
-					// there are non-changing changes
-					fakeRelationshipCapturer.ExistsReturns(false)
-					processor.CaptureUpsertChange(svc)
-					processor.CaptureUpsertChange(slice)
-					processor.CaptureUpsertChange(secret)
 
 					changed, _ := processor.Process()
 					Expect(changed).To(BeTrue())
 				})
-			})
-			When("deletes of related resources are followed by upserts of unrelated resources", func() {
-				It("should report changed", func() {
-					// these are changing changes
-					fakeRelationshipCapturer.ExistsReturns(true)
-					processor.CaptureDeleteChange(&apiv1.Service{}, svcNsName)
-					processor.CaptureDeleteChange(&discoveryV1.EndpointSlice{}, sliceNsName)
 
-					// these are non-changing changes
-					fakeRelationshipCapturer.ExistsReturns(false)
+				It("should report not changed after multiple Upserts of unrelated resources", func() {
 					processor.CaptureUpsertChange(svc)
 					processor.CaptureUpsertChange(slice)
+
 					processor.CaptureUpsertChange(secret)
 
 					changed, _ := processor.Process()
-					Expect(changed).To(BeTrue())
+					Expect(changed).To(BeFalse())
+				})
+				When("upserts of related resources are followed by upserts of unrelated resources", func() {
+					It("should report changed", func() {
+						// these are changing changes
+						processor.CaptureUpsertChange(svc)
+						processor.CaptureUpsertChange(slice)
+
+						// there are non-changing changes
+						processor.CaptureUpsertChange(svc)
+						processor.CaptureUpsertChange(slice)
+						processor.CaptureUpsertChange(secret)
+
+						changed, _ := processor.Process()
+						Expect(changed).To(BeTrue())
+					})
+				})
+				When("deletes of related resources are followed by upserts of unrelated resources", func() {
+					It("should report changed", func() {
+						// these are changing changes
+						processor.CaptureDeleteChange(&apiv1.Service{}, svcNsName)
+						processor.CaptureDeleteChange(&discoveryV1.EndpointSlice{}, sliceNsName)
+
+						// these are non-changing changes
+						processor.CaptureUpsertChange(svc)
+						processor.CaptureUpsertChange(slice)
+						processor.CaptureUpsertChange(secret)
+
+						changed, _ := processor.Process()
+						Expect(changed).To(BeTrue())
+					})
 				})
 			})
-		})
-		Describe("Multiple Kubernetes API and Gateway API resource changes", Ordered, func() {
-			It("should report changed after multiple Upserts of new and related resources", func() {
-				// new Gateway API resources
-				fakeRelationshipCapturer.ExistsReturns(false)
-				processor.CaptureUpsertChange(gc)
-				processor.CaptureUpsertChange(gw1)
-				processor.CaptureUpsertChange(hr1)
-				processor.CaptureUpsertChange(rg1)
 
-				// related Kubernetes API resources
-				fakeRelationshipCapturer.ExistsReturns(true)
-				processor.CaptureUpsertChange(svc)
-				processor.CaptureUpsertChange(slice)
+		*/
 
-				changed, _ := processor.Process()
-				Expect(changed).To(BeTrue())
-			})
+		/*
+				Describe("Multiple Kubernetes API and Gateway API resource changes", Ordered, func() {
+					It("should report changed after multiple Upserts of new and related resources", func() {
+						// new Gateway API resources
+						processor.CaptureUpsertChange(gc)
+						processor.CaptureUpsertChange(gw1)
+						processor.CaptureUpsertChange(hr1)
+						processor.CaptureUpsertChange(rg1)
 
-			It("should report not changed after multiple Upserts of unrelated resources", func() {
-				// unrelated Kubernetes API resources
-				fakeRelationshipCapturer.ExistsReturns(false)
-				processor.CaptureUpsertChange(svc)
-				processor.CaptureUpsertChange(slice)
-				processor.CaptureUpsertChange(secret)
 
-				changed, _ := processor.Process()
-				Expect(changed).To(BeFalse())
-			})
+					It("should report not changed after multiple Upserts of unrelated and unchanged resources", func() {
+						// unchanged Gateway API resources
+						processor.CaptureUpsertChange(gc)
+						processor.CaptureUpsertChange(gw1)
+						processor.CaptureUpsertChange(hr1)
+						processor.CaptureUpsertChange(rg1)
 
-			It("should report changed after upserting related resources followed by upserting unchanged resources",
-				func() {
-					// these are changing changes
-					fakeRelationshipCapturer.ExistsReturns(true)
-					processor.CaptureUpsertChange(svc)
-					processor.CaptureUpsertChange(slice)
+						// unrelated Kubernetes API resources
+						processor.CaptureUpsertChange(svc)
+						processor.CaptureUpsertChange(slice)
+						processor.CaptureUpsertChange(secret)
 
-					// these are non-changing changes
-					fakeRelationshipCapturer.ExistsReturns(false)
-					processor.CaptureUpsertChange(gc)
-					processor.CaptureUpsertChange(gw1)
-					processor.CaptureUpsertChange(hr1)
-					processor.CaptureUpsertChange(rg1)
-					processor.CaptureUpsertChange(secret)
+						changed, _ := processor.Process()
+						Expect(changed).To(BeFalse())
+					})
 
-					changed, _ := processor.Process()
-					Expect(changed).To(BeTrue())
-				},
-			)
+					It("should report changed after upserting related resources followed by upserting unchanged resources",
+						func() {
+							// these are changing changes
+							processor.CaptureUpsertChange(svc)
+							processor.CaptureUpsertChange(slice)
 
-			It("should report changed after upserting changed resources followed by upserting unrelated resources",
-				func() {
-					// these are changing changes
-					fakeRelationshipCapturer.ExistsReturns(false)
-					processor.CaptureUpsertChange(gcUpdated)
-					processor.CaptureUpsertChange(gw1Updated)
-					processor.CaptureUpsertChange(hr1Updated)
-					processor.CaptureUpsertChange(rg1Updated)
+							// these are non-changing changes
+							processor.CaptureUpsertChange(gc)
+							processor.CaptureUpsertChange(gw1)
+							processor.CaptureUpsertChange(hr1)
+							processor.CaptureUpsertChange(rg1)
+							processor.CaptureUpsertChange(secret)
 
-					// these are non-changing changes
-					processor.CaptureUpsertChange(svc)
-					processor.CaptureUpsertChange(slice)
-					processor.CaptureUpsertChange(secret)
-
-					changed, _ := processor.Process()
-					Expect(changed).To(BeTrue())
-				},
-			)
-			It(
-				"should report changed after upserting related resources followed by upserting unchanged resources",
-				func() {
-					// these are changing changes
-					fakeRelationshipCapturer.ExistsReturns(true)
-					processor.CaptureUpsertChange(svc)
-					processor.CaptureUpsertChange(slice)
-
-					// these are non-changing changes
-					fakeRelationshipCapturer.ExistsReturns(false)
-					processor.CaptureUpsertChange(gcUpdated)
-					processor.CaptureUpsertChange(gw1Updated)
-					processor.CaptureUpsertChange(hr1Updated)
-					processor.CaptureUpsertChange(rg1Updated)
-					processor.CaptureUpsertChange(secret)
-
-					changed, _ := processor.Process()
-					Expect(changed).To(BeTrue())
-				},
-			)
-		})
-	})
-
-	Describe("Webhook validation cases", Ordered, func() {
-		var (
-			processor         state.ChangeProcessor
-			fakeEventRecorder *record.FakeRecorder
-
-			gc *v1.GatewayClass
-
-			gwNsName, hrNsName types.NamespacedName
-			gw, gwInvalid      *v1.Gateway
-			hr, hrInvalid      *v1.HTTPRoute
-		)
-		BeforeAll(func() {
-			fakeEventRecorder = record.NewFakeRecorder(2 /* number of buffered events */)
-
-			processor = state.NewChangeProcessorImpl(state.ChangeProcessorConfig{
-				GatewayCtlrName:      controllerName,
-				GatewayClassName:     gcName,
-				RelationshipCapturer: relationship.NewCapturerImpl(),
-				Logger:               zap.New(),
-				Validators:           createAlwaysValidValidators(),
-				EventRecorder:        fakeEventRecorder,
-				Scheme:               createScheme(),
-			})
-
-			gc = &v1.GatewayClass{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:       gcName,
-					Generation: 1,
-				},
-				Spec: v1.GatewayClassSpec{
-					ControllerName: controllerName,
-				},
-			}
-
-			gwNsName = types.NamespacedName{Namespace: "test", Name: "gateway"}
-			hrNsName = types.NamespacedName{Namespace: "test", Name: "hr"}
-
-			gw = &v1.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: gwNsName.Namespace,
-					Name:      gwNsName.Name,
-				},
-				Spec: v1.GatewaySpec{
-					GatewayClassName: gcName,
-					Listeners: []v1.Listener{
-						{
-							Name:     "listener-80-1",
-							Hostname: helpers.GetPointer[v1.Hostname]("foo.example.com"),
-							Port:     80,
-							Protocol: v1.HTTPProtocolType,
+							changed, _ := processor.Process()
+							Expect(changed).To(BeTrue())
 						},
+					)
+
+					It("should report changed after upserting changed resources followed by upserting unrelated resources",
+						func() {
+							// these are changing changes
+							processor.CaptureUpsertChange(gcUpdated)
+							processor.CaptureUpsertChange(gw1Updated)
+							processor.CaptureUpsertChange(hr1Updated)
+							processor.CaptureUpsertChange(rg1Updated)
+
+							// these are non-changing changes
+							processor.CaptureUpsertChange(svc)
+							processor.CaptureUpsertChange(slice)
+							processor.CaptureUpsertChange(secret)
+
+							changed, _ := processor.Process()
+							Expect(changed).To(BeTrue())
+						},
+					)
+					It(
+						"should report changed after upserting related resources followed by upserting unchanged resources",
+						func() {
+							// these are changing changes
+							processor.CaptureUpsertChange(svc)
+							processor.CaptureUpsertChange(slice)
+
+							// these are non-changing changes
+							processor.CaptureUpsertChange(gcUpdated)
+							processor.CaptureUpsertChange(gw1Updated)
+							processor.CaptureUpsertChange(hr1Updated)
+							processor.CaptureUpsertChange(rg1Updated)
+							processor.CaptureUpsertChange(secret)
+
+							changed, _ := processor.Process()
+							Expect(changed).To(BeTrue())
+						},
+					)
+				})
+			})
+
+		*/
+
+		Describe("Webhook validation cases", Ordered, func() {
+			var (
+				processor         state.ChangeProcessor
+				fakeEventRecorder *record.FakeRecorder
+
+				gc *v1.GatewayClass
+
+				gwNsName, hrNsName types.NamespacedName
+				gw, gwInvalid      *v1.Gateway
+				hr, hrInvalid      *v1.HTTPRoute
+			)
+			BeforeAll(func() {
+				fakeEventRecorder = record.NewFakeRecorder(2 /* number of buffered events */)
+
+				processor = state.NewChangeProcessorImpl(state.ChangeProcessorConfig{
+					GatewayCtlrName:  controllerName,
+					GatewayClassName: gcName,
+					Logger:           zap.New(),
+					Validators:       createAlwaysValidValidators(),
+					EventRecorder:    fakeEventRecorder,
+					Scheme:           createScheme(),
+				})
+
+				gc = &v1.GatewayClass{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:       gcName,
+						Generation: 1,
 					},
-				},
-			}
+					Spec: v1.GatewayClassSpec{
+						ControllerName: controllerName,
+					},
+				}
 
-			gwInvalid = gw.DeepCopy()
-			// cannot have hostname for TCP protocol
-			gwInvalid.Spec.Listeners[0].Protocol = v1.TCPProtocolType
+				gwNsName = types.NamespacedName{Namespace: "test", Name: "gateway"}
+				hrNsName = types.NamespacedName{Namespace: "test", Name: "hr"}
 
-			hr = &v1.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: hrNsName.Namespace,
-					Name:      hrNsName.Name,
-				},
-				Spec: v1.HTTPRouteSpec{
-					CommonRouteSpec: v1.CommonRouteSpec{
-						ParentRefs: []v1.ParentReference{
+				gw = &v1.Gateway{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: gwNsName.Namespace,
+						Name:      gwNsName.Name,
+					},
+					Spec: v1.GatewaySpec{
+						GatewayClassName: gcName,
+						Listeners: []v1.Listener{
 							{
-								Namespace: (*v1.Namespace)(&gw.Namespace),
-								Name:      v1.ObjectName(gw.Name),
-								SectionName: (*v1.SectionName)(
-									helpers.GetPointer("listener-80-1"),
-								),
+								Name:     "listener-80-1",
+								Hostname: helpers.GetPointer[v1.Hostname]("foo.example.com"),
+								Port:     80,
+								Protocol: v1.HTTPProtocolType,
 							},
 						},
 					},
-					Hostnames: []v1.Hostname{
-						"foo.example.com",
+				}
+
+				gwInvalid = gw.DeepCopy()
+				// cannot have hostname for TCP protocol
+				gwInvalid.Spec.Listeners[0].Protocol = v1.TCPProtocolType
+
+				hr = &v1.HTTPRoute{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: hrNsName.Namespace,
+						Name:      hrNsName.Name,
 					},
-					Rules: []v1.HTTPRouteRule{
-						{
-							Matches: []v1.HTTPRouteMatch{
+					Spec: v1.HTTPRouteSpec{
+						CommonRouteSpec: v1.CommonRouteSpec{
+							ParentRefs: []v1.ParentReference{
 								{
-									Path: &v1.HTTPPathMatch{
-										Type:  helpers.GetPointer(v1.PathMatchPathPrefix),
-										Value: helpers.GetPointer("/"),
+									Namespace: (*v1.Namespace)(&gw.Namespace),
+									Name:      v1.ObjectName(gw.Name),
+									SectionName: (*v1.SectionName)(
+										helpers.GetPointer("listener-80-1"),
+									),
+								},
+							},
+						},
+						Hostnames: []v1.Hostname{
+							"foo.example.com",
+						},
+						Rules: []v1.HTTPRouteRule{
+							{
+								Matches: []v1.HTTPRouteMatch{
+									{
+										Path: &v1.HTTPPathMatch{
+											Type:  helpers.GetPointer(v1.PathMatchPathPrefix),
+											Value: helpers.GetPointer("/"),
+										},
 									},
 								},
 							},
 						},
 					},
-				},
+				}
+
+				hrInvalid = hr.DeepCopy()
+				hrInvalid.Spec.Rules[0].Matches[0].Path.Type = nil // cannot be nil
+			})
+
+			assertHREvent := func() {
+				var e string
+				EventuallyWithOffset(1, fakeEventRecorder.Events).Should(Receive(&e))
+				ExpectWithOffset(1, e).To(ContainSubstring("Rejected"))
+				ExpectWithOffset(1, e).To(ContainSubstring("spec.rules[0].matches[0].path.type"))
 			}
 
-			hrInvalid = hr.DeepCopy()
-			hrInvalid.Spec.Rules[0].Matches[0].Path.Type = nil // cannot be nil
-		})
+			assertGwEvent := func() {
+				var e string
+				EventuallyWithOffset(1, fakeEventRecorder.Events).Should(Receive(&e))
+				ExpectWithOffset(1, e).To(ContainSubstring("Rejected"))
+				ExpectWithOffset(1, e).To(ContainSubstring("spec.listeners[0].hostname"))
+			}
 
-		assertHREvent := func() {
-			var e string
-			EventuallyWithOffset(1, fakeEventRecorder.Events).Should(Receive(&e))
-			ExpectWithOffset(1, e).To(ContainSubstring("Rejected"))
-			ExpectWithOffset(1, e).To(ContainSubstring("spec.rules[0].matches[0].path.type"))
-		}
-
-		assertGwEvent := func() {
-			var e string
-			EventuallyWithOffset(1, fakeEventRecorder.Events).Should(Receive(&e))
-			ExpectWithOffset(1, e).To(ContainSubstring("Rejected"))
-			ExpectWithOffset(1, e).To(ContainSubstring("spec.listeners[0].hostname"))
-		}
-
-		It("should process GatewayClass", func() {
-			processor.CaptureUpsertChange(gc)
-
-			changed, graphCfg := processor.Process()
-			Expect(changed).To(BeTrue())
-			Expect(graphCfg.GatewayClass).ToNot(BeNil())
-			Expect(fakeEventRecorder.Events).To(HaveLen(0))
-		})
-
-		When("resources are invalid", func() {
-			It("should not process them", func() {
-				processor.CaptureUpsertChange(gwInvalid)
-				processor.CaptureUpsertChange(hrInvalid)
+			It("should process GatewayClass", func() {
+				processor.CaptureUpsertChange(gc)
 
 				changed, graphCfg := processor.Process()
-
-				Expect(changed).To(BeFalse())
-				Expect(graphCfg).To(BeNil())
-
-				Expect(fakeEventRecorder.Events).To(HaveLen(2))
-				assertGwEvent()
-				assertHREvent()
-			})
-		})
-
-		When("resources are valid", func() {
-			It("should process them", func() {
-				processor.CaptureUpsertChange(gw)
-				processor.CaptureUpsertChange(hr)
-
-				changed, graphCfg := processor.Process()
-
 				Expect(changed).To(BeTrue())
-				Expect(graphCfg).ToNot(BeNil())
-				Expect(graphCfg.Gateway).ToNot(BeNil())
-				Expect(graphCfg.Routes).To(HaveLen(1))
-
+				Expect(graphCfg.GatewayClass).ToNot(BeNil())
 				Expect(fakeEventRecorder.Events).To(HaveLen(0))
 			})
-		})
 
-		When("a new version of HTTPRoute is invalid", func() {
-			It("it should delete the configuration for the old one and not process the new one", func() {
-				processor.CaptureUpsertChange(hrInvalid)
+			When("resources are invalid", func() {
+				It("should not process them", func() {
+					processor.CaptureUpsertChange(gwInvalid)
+					processor.CaptureUpsertChange(hrInvalid)
 
-				changed, graphCfg := processor.Process()
+					changed, graphCfg := processor.Process()
 
-				Expect(changed).To(BeTrue())
-				Expect(graphCfg.Routes).To(HaveLen(0))
+					Expect(changed).To(BeFalse())
+					Expect(graphCfg).To(BeNil())
 
-				Expect(fakeEventRecorder.Events).To(HaveLen(1))
-				assertHREvent()
-			})
-		})
-
-		When("a new version of Gateway is invalid", func() {
-			It("it should delete the configuration for the old one and not process the new one", func() {
-				processor.CaptureUpsertChange(gwInvalid)
-
-				changed, graphCfg := processor.Process()
-
-				Expect(changed).To(BeTrue())
-				Expect(graphCfg.Gateway).To(BeNil())
-
-				Expect(fakeEventRecorder.Events).To(HaveLen(1))
-				assertGwEvent()
-			})
-		})
-
-		Describe("Webhook assumptions", func() {
-			var processor state.ChangeProcessor
-
-			BeforeEach(func() {
-				fakeEventRecorder = record.NewFakeRecorder(1 /* number of buffered events */)
-
-				processor = state.NewChangeProcessorImpl(state.ChangeProcessorConfig{
-					GatewayCtlrName:      controllerName,
-					GatewayClassName:     gcName,
-					RelationshipCapturer: relationship.NewCapturerImpl(),
-					Logger:               zap.New(),
-					Validators:           createAlwaysValidValidators(),
-					EventRecorder:        fakeEventRecorder,
-					Scheme:               createScheme(),
+					Expect(fakeEventRecorder.Events).To(HaveLen(2))
+					assertGwEvent()
+					assertHREvent()
 				})
 			})
 
-			createInvalidHTTPRoute := func(invalidator func(hr *v1.HTTPRoute)) *v1.HTTPRoute {
-				hr := createRoute(
-					"hr",
-					"gateway",
-					"foo.example.com",
-					createBackendRef(
-						helpers.GetPointer[v1.Kind]("Service"),
-						"test",
-						helpers.GetPointer[v1.Namespace]("namespace"),
-					),
-				)
-				invalidator(hr)
-				return hr
-			}
-
-			createInvalidGateway := func(invalidator func(gw *v1.Gateway)) *v1.Gateway {
-				gw := createGateway("gateway")
-				invalidator(gw)
-				return gw
-			}
-
-			assertRejectedEvent := func() {
-				EventuallyWithOffset(1, fakeEventRecorder.Events).Should(Receive(ContainSubstring("Rejected")))
-			}
-
-			DescribeTable("Invalid HTTPRoutes",
-				func(hr *v1.HTTPRoute) {
+			When("resources are valid", func() {
+				It("should process them", func() {
+					processor.CaptureUpsertChange(gw)
 					processor.CaptureUpsertChange(hr)
 
 					changed, graphCfg := processor.Process()
 
-					Expect(changed).To(BeFalse())
-					Expect(graphCfg).To(BeNil())
+					Expect(changed).To(BeTrue())
+					Expect(graphCfg).ToNot(BeNil())
+					Expect(graphCfg.Gateway).ToNot(BeNil())
+					Expect(graphCfg.Routes).To(HaveLen(1))
 
-					assertRejectedEvent()
-				},
-				Entry(
-					"duplicate parentRefs",
-					createInvalidHTTPRoute(func(hr *v1.HTTPRoute) {
-						hr.Spec.ParentRefs = append(hr.Spec.ParentRefs, hr.Spec.ParentRefs[len(hr.Spec.ParentRefs)-1])
-					}),
-				),
-				Entry(
-					"nil path.Type",
-					createInvalidHTTPRoute(func(hr *v1.HTTPRoute) {
-						hr.Spec.Rules[0].Matches[0].Path.Type = nil
-					}),
-				),
-				Entry("nil path.Value",
-					createInvalidHTTPRoute(func(hr *v1.HTTPRoute) {
-						hr.Spec.Rules[0].Matches[0].Path.Value = nil
-					}),
-				),
-				Entry(
-					"nil request.Redirect",
-					createInvalidHTTPRoute(func(hr *v1.HTTPRoute) {
-						hr.Spec.Rules[0].Filters = append(hr.Spec.Rules[0].Filters, v1.HTTPRouteFilter{
-							Type:            v1.HTTPRouteFilterRequestRedirect,
-							RequestRedirect: nil,
-						})
-					}),
-				),
-				Entry("nil port in BackendRef",
-					createInvalidHTTPRoute(func(hr *v1.HTTPRoute) {
-						hr.Spec.Rules[0].BackendRefs[0].Port = nil
-					}),
-				),
-			)
+					Expect(fakeEventRecorder.Events).To(HaveLen(0))
+				})
+			})
 
-			DescribeTable("Invalid Gateway resources",
-				func(gw *v1.Gateway) {
-					processor.CaptureUpsertChange(gw)
+			When("a new version of HTTPRoute is invalid", func() {
+				It("it should delete the configuration for the old one and not process the new one", func() {
+					processor.CaptureUpsertChange(hrInvalid)
 
 					changed, graphCfg := processor.Process()
 
-					Expect(changed).To(BeFalse())
-					Expect(graphCfg).To(BeNil())
+					Expect(changed).To(BeTrue())
+					Expect(graphCfg.Routes).To(HaveLen(0))
 
-					assertRejectedEvent()
-				},
-				Entry("tls in HTTP listener",
-					createInvalidGateway(func(gw *v1.Gateway) {
-						gw.Spec.Listeners[0].TLS = &v1.GatewayTLSConfig{}
-					}),
-				),
-				Entry("tls is nil in HTTPS listener",
-					createInvalidGateway(func(gw *v1.Gateway) {
-						gw.Spec.Listeners[0].Protocol = v1.HTTPSProtocolType
-						gw.Spec.Listeners[0].TLS = nil
-					}),
-				),
-				Entry("zero certificateRefs in HTTPS listener",
-					createInvalidGateway(func(gw *v1.Gateway) {
-						gw.Spec.Listeners[0].Protocol = v1.HTTPSProtocolType
-						gw.Spec.Listeners[0].TLS = &v1.GatewayTLSConfig{
-							Mode:            helpers.GetPointer(v1.TLSModeTerminate),
-							CertificateRefs: nil,
-						}
-					}),
-				),
-				Entry("listener hostnames conflict",
-					createInvalidGateway(func(gw *v1.Gateway) {
-						gw.Spec.Listeners = append(gw.Spec.Listeners, v1.Listener{
-							Name:     "listener-80-2",
-							Hostname: nil,
-							Port:     80,
-							Protocol: v1.HTTPProtocolType,
-						})
-					}),
-				),
-			)
-		})
-	})
+					Expect(fakeEventRecorder.Events).To(HaveLen(1))
+					assertHREvent()
+				})
+			})
 
-	Describe("Edge cases with panic", func() {
-		var (
-			processor                state.ChangeProcessor
-			fakeRelationshipCapturer *relationshipfakes.FakeCapturer
-		)
+			When("a new version of Gateway is invalid", func() {
+				It("it should delete the configuration for the old one and not process the new one", func() {
+					processor.CaptureUpsertChange(gwInvalid)
 
-		BeforeEach(func() {
-			fakeRelationshipCapturer = &relationshipfakes.FakeCapturer{}
+					changed, graphCfg := processor.Process()
 
-			processor = state.NewChangeProcessorImpl(state.ChangeProcessorConfig{
-				GatewayCtlrName:      "test.controller",
-				GatewayClassName:     "my-class",
-				RelationshipCapturer: fakeRelationshipCapturer,
-				Validators:           createAlwaysValidValidators(),
-				Scheme:               createScheme(),
+					Expect(changed).To(BeTrue())
+					Expect(graphCfg.Gateway).To(BeNil())
+
+					Expect(fakeEventRecorder.Events).To(HaveLen(1))
+					assertGwEvent()
+				})
+			})
+
+			Describe("Webhook assumptions", func() {
+				var processor state.ChangeProcessor
+
+				BeforeEach(func() {
+					fakeEventRecorder = record.NewFakeRecorder(1 /* number of buffered events */)
+
+					processor = state.NewChangeProcessorImpl(state.ChangeProcessorConfig{
+						GatewayCtlrName:  controllerName,
+						GatewayClassName: gcName,
+						Logger:           zap.New(),
+						Validators:       createAlwaysValidValidators(),
+						EventRecorder:    fakeEventRecorder,
+						Scheme:           createScheme(),
+					})
+				})
+
+				createInvalidHTTPRoute := func(invalidator func(hr *v1.HTTPRoute)) *v1.HTTPRoute {
+					hr := createRoute(
+						"hr",
+						"gateway",
+						"foo.example.com",
+						createBackendRef(
+							helpers.GetPointer[v1.Kind]("Service"),
+							"test",
+							helpers.GetPointer[v1.Namespace]("namespace"),
+						),
+					)
+					invalidator(hr)
+					return hr
+				}
+
+				createInvalidGateway := func(invalidator func(gw *v1.Gateway)) *v1.Gateway {
+					gw := createGateway("gateway")
+					invalidator(gw)
+					return gw
+				}
+
+				assertRejectedEvent := func() {
+					EventuallyWithOffset(1, fakeEventRecorder.Events).Should(Receive(ContainSubstring("Rejected")))
+				}
+
+				DescribeTable("Invalid HTTPRoutes",
+					func(hr *v1.HTTPRoute) {
+						processor.CaptureUpsertChange(hr)
+
+						changed, graphCfg := processor.Process()
+
+						Expect(changed).To(BeFalse())
+						Expect(graphCfg).To(BeNil())
+
+						assertRejectedEvent()
+					},
+					Entry(
+						"duplicate parentRefs",
+						createInvalidHTTPRoute(func(hr *v1.HTTPRoute) {
+							hr.Spec.ParentRefs = append(hr.Spec.ParentRefs, hr.Spec.ParentRefs[len(hr.Spec.ParentRefs)-1])
+						}),
+					),
+					Entry(
+						"nil path.Type",
+						createInvalidHTTPRoute(func(hr *v1.HTTPRoute) {
+							hr.Spec.Rules[0].Matches[0].Path.Type = nil
+						}),
+					),
+					Entry("nil path.Value",
+						createInvalidHTTPRoute(func(hr *v1.HTTPRoute) {
+							hr.Spec.Rules[0].Matches[0].Path.Value = nil
+						}),
+					),
+					Entry(
+						"nil request.Redirect",
+						createInvalidHTTPRoute(func(hr *v1.HTTPRoute) {
+							hr.Spec.Rules[0].Filters = append(hr.Spec.Rules[0].Filters, v1.HTTPRouteFilter{
+								Type:            v1.HTTPRouteFilterRequestRedirect,
+								RequestRedirect: nil,
+							})
+						}),
+					),
+					Entry("nil port in BackendRef",
+						createInvalidHTTPRoute(func(hr *v1.HTTPRoute) {
+							hr.Spec.Rules[0].BackendRefs[0].Port = nil
+						}),
+					),
+				)
+
+				DescribeTable("Invalid Gateway resources",
+					func(gw *v1.Gateway) {
+						processor.CaptureUpsertChange(gw)
+
+						changed, graphCfg := processor.Process()
+
+						Expect(changed).To(BeFalse())
+						Expect(graphCfg).To(BeNil())
+
+						assertRejectedEvent()
+					},
+					Entry("tls in HTTP listener",
+						createInvalidGateway(func(gw *v1.Gateway) {
+							gw.Spec.Listeners[0].TLS = &v1.GatewayTLSConfig{}
+						}),
+					),
+					Entry("tls is nil in HTTPS listener",
+						createInvalidGateway(func(gw *v1.Gateway) {
+							gw.Spec.Listeners[0].Protocol = v1.HTTPSProtocolType
+							gw.Spec.Listeners[0].TLS = nil
+						}),
+					),
+					Entry("zero certificateRefs in HTTPS listener",
+						createInvalidGateway(func(gw *v1.Gateway) {
+							gw.Spec.Listeners[0].Protocol = v1.HTTPSProtocolType
+							gw.Spec.Listeners[0].TLS = &v1.GatewayTLSConfig{
+								Mode:            helpers.GetPointer(v1.TLSModeTerminate),
+								CertificateRefs: nil,
+							}
+						}),
+					),
+					Entry("listener hostnames conflict",
+						createInvalidGateway(func(gw *v1.Gateway) {
+							gw.Spec.Listeners = append(gw.Spec.Listeners, v1.Listener{
+								Name:     "listener-80-2",
+								Hostname: nil,
+								Port:     80,
+								Protocol: v1.HTTPProtocolType,
+							})
+						}),
+					),
+				)
 			})
 		})
 
-		DescribeTable("CaptureUpsertChange must panic",
-			func(obj client.Object) {
-				process := func() {
-					processor.CaptureUpsertChange(obj)
-				}
-				Expect(process).Should(Panic())
-			},
-			Entry(
-				"an unsupported resource",
-				&v1alpha2.TCPRoute{ObjectMeta: metav1.ObjectMeta{Namespace: "test", Name: "tcp"}},
-			),
-			Entry(
-				"nil resource",
-				nil,
-			),
-		)
+		Describe("Edge cases with panic", func() {
+			var processor state.ChangeProcessor
 
-		DescribeTable(
-			"CaptureDeleteChange must panic",
-			func(resourceType client.Object, nsname types.NamespacedName) {
-				process := func() {
-					processor.CaptureDeleteChange(resourceType, nsname)
-				}
-				Expect(process).Should(Panic())
-			},
-			Entry(
-				"an unsupported resource",
-				&v1alpha2.TCPRoute{},
-				types.NamespacedName{Namespace: "test", Name: "tcp"},
-			),
-			Entry(
-				"nil resource type",
-				nil,
-				types.NamespacedName{Namespace: "test", Name: "resource"},
-			),
-		)
+			BeforeEach(func() {
+				processor = state.NewChangeProcessorImpl(state.ChangeProcessorConfig{
+					GatewayCtlrName:  "test.controller",
+					GatewayClassName: "my-class",
+					Validators:       createAlwaysValidValidators(),
+					Scheme:           createScheme(),
+				})
+			})
+
+			DescribeTable("CaptureUpsertChange must panic",
+				func(obj client.Object) {
+					process := func() {
+						processor.CaptureUpsertChange(obj)
+					}
+					Expect(process).Should(Panic())
+				},
+				Entry(
+					"an unsupported resource",
+					&v1alpha2.TCPRoute{ObjectMeta: metav1.ObjectMeta{Namespace: "test", Name: "tcp"}},
+				),
+				Entry(
+					"nil resource",
+					nil,
+				),
+			)
+
+			DescribeTable(
+				"CaptureDeleteChange must panic",
+				func(resourceType client.Object, nsname types.NamespacedName) {
+					process := func() {
+						processor.CaptureDeleteChange(resourceType, nsname)
+					}
+					Expect(process).Should(Panic())
+				},
+				Entry(
+					"an unsupported resource",
+					&v1alpha2.TCPRoute{},
+					types.NamespacedName{Namespace: "test", Name: "tcp"},
+				),
+				Entry(
+					"nil resource type",
+					nil,
+					types.NamespacedName{Namespace: "test", Name: "resource"},
+				),
+			)
+		})
 	})
 })

@@ -45,7 +45,6 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/file"
 	ngxruntime "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/runtime"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state"
-	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/relationship"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/resolver"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/validation"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/telemetry"
@@ -138,10 +137,9 @@ func StartManager(cfg config.Config) error {
 	}
 
 	processor := state.NewChangeProcessorImpl(state.ChangeProcessorConfig{
-		GatewayCtlrName:      cfg.GatewayCtlrName,
-		GatewayClassName:     cfg.GatewayClassName,
-		RelationshipCapturer: relationship.NewCapturerImpl(),
-		Logger:               cfg.Logger.WithName("changeProcessor"),
+		GatewayCtlrName:  cfg.GatewayCtlrName,
+		GatewayClassName: cfg.GatewayClassName,
+		Logger:           cfg.Logger.WithName("changeProcessor"),
 		Validators: validation.Validators{
 			HTTPFieldsValidator: ngxvalidation.HTTPValidator{},
 		},

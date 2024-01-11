@@ -22,7 +22,6 @@ import (
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/gatewayclass"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/graph"
-	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/relationship"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/validation"
 )
 
@@ -55,8 +54,6 @@ type ChangeProcessor interface {
 
 // ChangeProcessorConfig holds configuration parameters for ChangeProcessorImpl.
 type ChangeProcessorConfig struct {
-	// RelationshipCapturer captures relationships between Kubernetes API resources and Gateway API resources.
-	RelationshipCapturer relationship.Capturer
 	// Validators validate resources according to data-plane specific rules.
 	Validators validation.Validators
 	// EventRecorder records events for Kubernetes resources.
@@ -119,7 +116,6 @@ func NewChangeProcessorImpl(cfg ChangeProcessorConfig) *ChangeProcessorImpl {
 	}
 
 	trackingUpdater := newChangeTrackingUpdater(
-		cfg.RelationshipCapturer,
 		extractGVK,
 		[]changeTrackingUpdaterObjectTypeCfg{
 			{
