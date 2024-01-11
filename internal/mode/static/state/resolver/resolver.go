@@ -104,7 +104,7 @@ func resolveEndpoints(
 	filteredSlices := filterEndpointSliceList(endpointSliceList, svcPort)
 
 	if len(filteredSlices) == 0 {
-		return nil, fmt.Errorf("no valid endpoints found for Service %s and port %+v", svcNsName, svcPort)
+		return nil, fmt.Errorf("no valid endpoints found for Service %s and port %d", svcNsName, svcPort.Port)
 	}
 
 	// Endpoints may be duplicated across multiple EndpointSlices.
