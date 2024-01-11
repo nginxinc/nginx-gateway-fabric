@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	ngxclient "github.com/nginxinc/nginx-plus-go-client/client"
 	"github.com/prometheus/client_golang/prometheus"
 	apiv1 "k8s.io/api/core/v1"
 	discoveryV1 "k8s.io/api/discovery/v1"
@@ -68,46 +69,10 @@ func init() {
 
 // nolint:gocyclo
 func StartManager(cfg config.Config) error {
-	options := manager.Options{
-		Scheme:  scheme,
-		Logger:  cfg.Logger,
-		Metrics: getMetricsOptions(cfg.MetricsConfig),
-		// Note: when the leadership is lost, the manager will return an error in the Start() method.
-		// However, it will not wait for any Runnable it starts to finish, meaning any in-progress operations
-		// might get terminated half-way.
-		LeaderElection:          true,
-		LeaderElectionNamespace: cfg.GatewayPodConfig.Namespace,
-		LeaderElectionID:        cfg.LeaderElection.LockName,
-		// We're not enabling LeaderElectionReleaseOnCancel because when the Manager stops gracefully, it waits
-		// for all started Runnables (including Leader-only ones) to finish. Otherwise, the new leader might start
-		// running Leader-only Runnables before the old leader has finished running them.
-		// See the doc comment for the LeaderElectionReleaseOnCancel for more details.
-		LeaderElectionReleaseOnCancel: false,
-		Controller: ctrlcfg.Controller{
-			// All of our controllers still need to work in case of non-leader pods
-			NeedLeaderElection: helpers.GetPointer(false),
-		},
-	}
-
-	if cfg.HealthConfig.Enabled {
-		options.HealthProbeBindAddress = fmt.Sprintf(":%d", cfg.HealthConfig.Port)
-	}
-
-	eventCh := make(chan interface{})
-
-	clusterCfg := ctlr.GetConfigOrDie()
-	clusterCfg.Timeout = clusterTimeout
-
-	mgr, err := manager.New(clusterCfg, options)
+	hc := &healthChecker{}
+	mgr, err := createManager(cfg, hc)
 	if err != nil {
 		return fmt.Errorf("cannot build runtime manager: %w", err)
-	}
-
-	hc := &healthChecker{}
-	if cfg.HealthConfig.Enabled {
-		if err := mgr.AddReadyzCheck("readyz", hc.readyCheck); err != nil {
-			return fmt.Errorf("error adding ready check: %w", err)
-		}
 	}
 
 	recorderName := fmt.Sprintf("nginx-gateway-fabric-%s", cfg.GatewayClassName)
@@ -122,6 +87,7 @@ func StartManager(cfg config.Config) error {
 
 	ctx := ctlr.SetupSignalHandler()
 
+	eventCh := make(chan interface{})
 	controlConfigNSName := types.NamespacedName{
 		Namespace: cfg.GatewayPodConfig.Namespace,
 		Name:      cfg.ConfigName,
@@ -165,15 +131,22 @@ func StartManager(cfg config.Config) error {
 
 	var (
 		ngxruntimeCollector ngxruntime.MetricsCollector = collectors.NewManagerNoopCollector()
-		// nolint:ineffassign // not an ineffectual assignment. Will be used if metrics are disabled.
-		handlerCollector handlerMetricsCollector = collectors.NewControllerNoopCollector()
+		handlerCollector    handlerMetricsCollector     = collectors.NewControllerNoopCollector()
 	)
+
+	var ngxPlusClient *ngxclient.NginxClient
+	if cfg.Plus {
+		ngxPlusClient, err = ngxruntime.CreatePlusClient()
+		if err != nil {
+			return fmt.Errorf("error creating NGINX plus client: %w", err)
+		}
+	}
 
 	if cfg.MetricsConfig.Enabled {
 		constLabels := map[string]string{"class": cfg.GatewayClassName}
 		var ngxCollector prometheus.Collector
 		if cfg.Plus {
-			ngxCollector, err = collectors.NewNginxPlusMetricsCollector(constLabels, promLogger)
+			ngxCollector, err = collectors.NewNginxPlusMetricsCollector(ngxPlusClient, constLabels, promLogger)
 		} else {
 			ngxCollector = collectors.NewNginxMetricsCollector(constLabels, promLogger)
 		}
@@ -204,13 +177,17 @@ func StartManager(cfg config.Config) error {
 		k8sClient:       mgr.GetClient(),
 		processor:       processor,
 		serviceResolver: resolver.NewServiceResolverImpl(mgr.GetClient()),
-		generator:       ngxcfg.NewGeneratorImpl(),
+		generator:       ngxcfg.NewGeneratorImpl(cfg.Plus),
 		logLevelSetter:  logLevelSetter,
 		nginxFileMgr: file.NewManagerImpl(
 			cfg.Logger.WithName("nginxFileManager"),
 			file.NewStdLibOSFileManager(),
 		),
-		nginxRuntimeMgr:     ngxruntime.NewManagerImpl(ngxruntimeCollector),
+		nginxRuntimeMgr: ngxruntime.NewManagerImpl(
+			ngxPlusClient,
+			ngxruntimeCollector,
+			cfg.Logger.WithName("nginxRuntimeManager"),
+		),
 		statusUpdater:       statusUpdater,
 		eventRecorder:       recorder,
 		healthChecker:       hc,
@@ -252,6 +229,49 @@ func StartManager(cfg config.Config) error {
 
 	cfg.Logger.Info("Starting manager")
 	return mgr.Start(ctx)
+}
+
+func createManager(cfg config.Config, hc *healthChecker) (manager.Manager, error) {
+	options := manager.Options{
+		Scheme:  scheme,
+		Logger:  cfg.Logger,
+		Metrics: getMetricsOptions(cfg.MetricsConfig),
+		// Note: when the leadership is lost, the manager will return an error in the Start() method.
+		// However, it will not wait for any Runnable it starts to finish, meaning any in-progress operations
+		// might get terminated half-way.
+		LeaderElection:          true,
+		LeaderElectionNamespace: cfg.GatewayPodConfig.Namespace,
+		LeaderElectionID:        cfg.LeaderElection.LockName,
+		// We're not enabling LeaderElectionReleaseOnCancel because when the Manager stops gracefully, it waits
+		// for all started Runnables (including Leader-only ones) to finish. Otherwise, the new leader might start
+		// running Leader-only Runnables before the old leader has finished running them.
+		// See the doc comment for the LeaderElectionReleaseOnCancel for more details.
+		LeaderElectionReleaseOnCancel: false,
+		Controller: ctrlcfg.Controller{
+			// All of our controllers still need to work in case of non-leader pods
+			NeedLeaderElection: helpers.GetPointer(false),
+		},
+	}
+
+	if cfg.HealthConfig.Enabled {
+		options.HealthProbeBindAddress = fmt.Sprintf(":%d", cfg.HealthConfig.Port)
+	}
+
+	clusterCfg := ctlr.GetConfigOrDie()
+	clusterCfg.Timeout = clusterTimeout
+
+	mgr, err := manager.New(clusterCfg, options)
+	if err != nil {
+		return nil, err
+	}
+
+	if cfg.HealthConfig.Enabled {
+		if err := mgr.AddReadyzCheck("readyz", hc.readyCheck); err != nil {
+			return nil, fmt.Errorf("error adding ready check: %w", err)
+		}
+	}
+
+	return mgr, nil
 }
 
 func registerControllers(

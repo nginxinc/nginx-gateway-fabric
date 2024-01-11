@@ -17,20 +17,26 @@ const (
 	nginx500Server = "unix:/var/lib/nginx/nginx-500-server.sock"
 	// invalidBackendRef is used as an upstream name for invalid backend references.
 	invalidBackendRef = "invalid-backend-ref"
+	// ossZoneSize is the upstream zone size for nginx open source.
+	ossZoneSize = "512k"
+	// plusZoneSize is the upstream zone size for nginx plus.
+	plusZoneSize = "1m"
+	// invalidBackendZoneSize is the upstream zone size for the invalid backend upstream.
+	invalidBackendZoneSize = "32k"
 )
 
-func executeUpstreams(conf dataplane.Configuration) []byte {
-	upstreams := createUpstreams(conf.Upstreams)
+func (g GeneratorImpl) executeUpstreams(conf dataplane.Configuration) []byte {
+	upstreams := g.createUpstreams(conf.Upstreams)
 
 	return execute(upstreamsTemplate, upstreams)
 }
 
-func createUpstreams(upstreams []dataplane.Upstream) []http.Upstream {
+func (g GeneratorImpl) createUpstreams(upstreams []dataplane.Upstream) []http.Upstream {
 	// capacity is the number of upstreams + 1 for the invalid backend ref upstream
 	ups := make([]http.Upstream, 0, len(upstreams)+1)
 
 	for _, u := range upstreams {
-		ups = append(ups, createUpstream(u))
+		ups = append(ups, g.createUpstream(u))
 	}
 
 	ups = append(ups, createInvalidBackendRefUpstream())
@@ -38,10 +44,16 @@ func createUpstreams(upstreams []dataplane.Upstream) []http.Upstream {
 	return ups
 }
 
-func createUpstream(up dataplane.Upstream) http.Upstream {
+func (g GeneratorImpl) createUpstream(up dataplane.Upstream) http.Upstream {
+	zoneSize := ossZoneSize
+	if g.plus {
+		zoneSize = plusZoneSize
+	}
+
 	if len(up.Endpoints) == 0 {
 		return http.Upstream{
-			Name: up.Name,
+			Name:     up.Name,
+			ZoneSize: zoneSize,
 			Servers: []http.UpstreamServer{
 				{
 					Address: nginx502Server,
@@ -58,14 +70,16 @@ func createUpstream(up dataplane.Upstream) http.Upstream {
 	}
 
 	return http.Upstream{
-		Name:    up.Name,
-		Servers: upstreamServers,
+		Name:     up.Name,
+		ZoneSize: zoneSize,
+		Servers:  upstreamServers,
 	}
 }
 
 func createInvalidBackendRefUpstream() http.Upstream {
 	return http.Upstream{
-		Name: invalidBackendRef,
+		Name:     invalidBackendRef,
+		ZoneSize: invalidBackendZoneSize,
 		Servers: []http.UpstreamServer{
 			{
 				Address: nginx500Server,

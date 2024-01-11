@@ -4,10 +4,12 @@ import (
 	"context"
 	"errors"
 
+	ngxclient "github.com/nginxinc/nginx-plus-go-client/client"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go.uber.org/zap"
 	v1 "k8s.io/api/core/v1"
+	discoveryV1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
@@ -27,6 +29,7 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/file"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/file/filefakes"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/runtime/runtimefakes"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state"
 	staticConds "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/conditions"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/dataplane"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/graph"
@@ -64,6 +67,7 @@ var _ = Describe("eventHandler", func() {
 
 	BeforeEach(func() {
 		fakeProcessor = &statefakes.FakeChangeProcessor{}
+		fakeProcessor.ProcessReturns(state.NoChange, &graph.Graph{})
 		fakeGenerator = &configfakes.FakeGenerator{}
 		fakeNginxFileMgr = &filefakes.FakeManager{}
 		fakeNginxRuntimeMgr = &runtimefakes.FakeManager{}
@@ -112,7 +116,7 @@ var _ = Describe("eventHandler", func() {
 		}
 
 		BeforeEach(func() {
-			fakeProcessor.ProcessReturns(true /* changed */, &graph.Graph{})
+			fakeProcessor.ProcessReturns(state.ClusterStateChange /* changed */, &graph.Graph{})
 
 			fakeGenerator.GenerateReturns(fakeCfgFiles)
 		})
@@ -280,11 +284,129 @@ var _ = Describe("eventHandler", func() {
 		})
 	})
 
+	When("receiving an EndpointsOnlyChange update", func() {
+		e := &events.UpsertEvent{Resource: &discoveryV1.EndpointSlice{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "nginx-gateway",
+				Namespace: "nginx-gateway",
+			},
+		}}
+		batch := []interface{}{e}
+
+		BeforeEach(func() {
+			fakeProcessor.ProcessReturns(state.EndpointsOnlyChange, &graph.Graph{})
+			upstreams := ngxclient.Upstreams{
+				"one": ngxclient.Upstream{
+					Peers: []ngxclient.Peer{
+						{Server: "server1"},
+					},
+				},
+			}
+			fakeNginxRuntimeMgr.GetUpstreamsReturns(upstreams, nil)
+		})
+
+		When("running NGINX Plus", func() {
+			It("should call the NGINX Plus API", func() {
+				fakeNginxRuntimeMgr.IsPlusReturns(true)
+
+				handler.HandleEventBatch(context.Background(), ctlrZap.New(), batch)
+				Expect(fakeGenerator.GenerateCallCount()).To(Equal(1))
+				Expect(fakeNginxFileMgr.ReplaceFilesCallCount()).To(Equal(1))
+				Expect(fakeNginxRuntimeMgr.GetUpstreamsCallCount()).To(Equal(1))
+			})
+		})
+
+		When("not running NGINX Plus", func() {
+			It("should not call the NGINX Plus API", func() {
+				handler.HandleEventBatch(context.Background(), ctlrZap.New(), batch)
+				Expect(fakeGenerator.GenerateCallCount()).To(Equal(1))
+				Expect(fakeNginxFileMgr.ReplaceFilesCallCount()).To(Equal(1))
+				Expect(fakeNginxRuntimeMgr.GetUpstreamsCallCount()).To(Equal(0))
+				Expect(fakeNginxRuntimeMgr.ReloadCallCount()).To(Equal(1))
+			})
+		})
+	})
+
+	When("updating upstream servers", func() {
+		conf := dataplane.Configuration{
+			Upstreams: []dataplane.Upstream{
+				{
+					Name: "one",
+				},
+			},
+		}
+
+		type callCounts struct {
+			generate int
+			update   int
+			reload   int
+		}
+
+		assertCallCounts := func(cc callCounts) {
+			Expect(fakeGenerator.GenerateCallCount()).To(Equal(cc.generate))
+			Expect(fakeNginxFileMgr.ReplaceFilesCallCount()).To(Equal(cc.generate))
+			Expect(fakeNginxRuntimeMgr.UpdateHTTPServersCallCount()).To(Equal(cc.update))
+			Expect(fakeNginxRuntimeMgr.ReloadCallCount()).To(Equal(cc.reload))
+		}
+
+		BeforeEach(func() {
+			upstreams := ngxclient.Upstreams{
+				"one": ngxclient.Upstream{
+					Peers: []ngxclient.Peer{
+						{Server: "server1"},
+					},
+				},
+			}
+			fakeNginxRuntimeMgr.GetUpstreamsReturns(upstreams, nil)
+		})
+
+		When("running NGINX Plus", func() {
+			BeforeEach(func() {
+				fakeNginxRuntimeMgr.IsPlusReturns(true)
+			})
+
+			It("should update servers using the NGINX Plus API", func() {
+				Expect(handler.updateUpstreamServers(context.Background(), ctlrZap.New(), conf)).To(Succeed())
+
+				assertCallCounts(callCounts{generate: 1, update: 1, reload: 0})
+			})
+
+			It("should reload when GET API returns an error", func() {
+				fakeNginxRuntimeMgr.GetUpstreamsReturns(nil, errors.New("error"))
+				Expect(handler.updateUpstreamServers(context.Background(), ctlrZap.New(), conf)).To(Succeed())
+
+				assertCallCounts(callCounts{generate: 1, update: 0, reload: 1})
+			})
+
+			It("should reload when POST API returns an error", func() {
+				fakeNginxRuntimeMgr.UpdateHTTPServersReturns(errors.New("error"))
+				Expect(handler.updateUpstreamServers(context.Background(), ctlrZap.New(), conf)).To(Succeed())
+
+				assertCallCounts(callCounts{generate: 1, update: 1, reload: 1})
+			})
+		})
+
+		When("not running NGINX Plus", func() {
+			It("should update servers by reloading", func() {
+				Expect(handler.updateUpstreamServers(context.Background(), ctlrZap.New(), conf)).To(Succeed())
+
+				assertCallCounts(callCounts{generate: 1, update: 0, reload: 1})
+			})
+
+			It("should return an error when reloading fails", func() {
+				fakeNginxRuntimeMgr.ReloadReturns(errors.New("error"))
+				Expect(handler.updateUpstreamServers(context.Background(), ctlrZap.New(), conf)).ToNot(Succeed())
+
+				assertCallCounts(callCounts{generate: 1, update: 0, reload: 1})
+			})
+		})
+	})
+
 	It("should set the health checker status properly when there are changes", func() {
 		e := &events.UpsertEvent{Resource: &gatewayv1.HTTPRoute{}}
 		batch := []interface{}{e}
 
-		fakeProcessor.ProcessReturns(true, &graph.Graph{})
+		fakeProcessor.ProcessReturns(state.ClusterStateChange, &graph.Graph{})
 
 		Expect(handler.cfg.healthChecker.readyCheck(nil)).ToNot(Succeed())
 		handler.HandleEventBatch(context.Background(), ctlrZap.New(), batch)
@@ -304,7 +426,7 @@ var _ = Describe("eventHandler", func() {
 		e := &events.UpsertEvent{Resource: &gatewayv1.HTTPRoute{}}
 		batch := []interface{}{e}
 
-		fakeProcessor.ProcessReturns(true, &graph.Graph{})
+		fakeProcessor.ProcessReturns(state.ClusterStateChange, &graph.Graph{})
 		fakeNginxRuntimeMgr.ReloadReturns(errors.New("reload error"))
 
 		handler.HandleEventBatch(context.Background(), ctlrZap.New(), batch)
@@ -312,14 +434,14 @@ var _ = Describe("eventHandler", func() {
 		Expect(handler.cfg.healthChecker.readyCheck(nil)).ToNot(Succeed())
 
 		// now send an update with no changes; should still return an error
-		fakeProcessor.ProcessReturns(false, &graph.Graph{})
+		fakeProcessor.ProcessReturns(state.NoChange, &graph.Graph{})
 
 		handler.HandleEventBatch(context.Background(), ctlrZap.New(), batch)
 
 		Expect(handler.cfg.healthChecker.readyCheck(nil)).ToNot(Succeed())
 
 		// error goes away
-		fakeProcessor.ProcessReturns(true, &graph.Graph{})
+		fakeProcessor.ProcessReturns(state.ClusterStateChange, &graph.Graph{})
 		fakeNginxRuntimeMgr.ReloadReturns(nil)
 
 		handler.HandleEventBatch(context.Background(), ctlrZap.New(), batch)
@@ -337,6 +459,46 @@ var _ = Describe("eventHandler", func() {
 
 		Expect(handle).Should(Panic())
 	})
+})
+
+var _ = Describe("serversEqual", func() {
+	DescribeTable("determines if server lists are equal",
+		func(newServers []ngxclient.UpstreamServer, oldServers []ngxclient.Peer, equal bool) {
+			Expect(serversEqual(newServers, oldServers)).To(Equal(equal))
+		},
+		Entry("different length",
+			[]ngxclient.UpstreamServer{
+				{Server: "server1"},
+			},
+			[]ngxclient.Peer{
+				{Server: "server1"},
+				{Server: "server2"},
+			},
+			false,
+		),
+		Entry("differing elements",
+			[]ngxclient.UpstreamServer{
+				{Server: "server1"},
+				{Server: "server2"},
+			},
+			[]ngxclient.Peer{
+				{Server: "server1"},
+				{Server: "server3"},
+			},
+			false,
+		),
+		Entry("same elements",
+			[]ngxclient.UpstreamServer{
+				{Server: "server1"},
+				{Server: "server2"},
+			},
+			[]ngxclient.Peer{
+				{Server: "server1"},
+				{Server: "server2"},
+			},
+			true,
+		),
+	)
 })
 
 var _ = Describe("getGatewayAddresses", func() {

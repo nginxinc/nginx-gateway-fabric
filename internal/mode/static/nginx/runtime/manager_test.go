@@ -7,8 +7,21 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-logr/logr"
+	ngxclient "github.com/nginxinc/nginx-plus-go-client/client"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
+
+var _ = Describe("NGINX Runtime Manager", func() {
+	It("returns whether or not we're using NGINX Plus", func() {
+		mgr := NewManagerImpl(nil, nil, logr.New(GinkgoLogr.GetSink()))
+		Expect(mgr.IsPlus()).To(BeFalse())
+
+		mgr = NewManagerImpl(&ngxclient.NginxClient{}, nil, logr.New(GinkgoLogr.GetSink()))
+		Expect(mgr.IsPlus()).To(BeTrue())
+	})
+})
 
 func TestFindMainProcess(t *testing.T) {
 	readFileFuncGen := func(content []byte) readFileFunc {

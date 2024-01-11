@@ -52,8 +52,9 @@ const (
 
 // Upstream holds all configuration for an HTTP upstream.
 type Upstream struct {
-	Name    string
-	Servers []UpstreamServer
+	Name     string
+	ZoneSize string // format: 512k, 1m
+	Servers  []UpstreamServer
 }
 
 // UpstreamServer holds all configuration for an HTTP upstream server.

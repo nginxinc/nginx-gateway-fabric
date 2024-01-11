@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	ngxclient "github.com/nginxinc/nginx-plus-go-client/client"
 	apiv1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -98,21 +99,33 @@ func (h *eventHandlerImpl) HandleEventBatch(ctx context.Context, logger logr.Log
 		h.handleEvent(ctx, logger, event)
 	}
 
-	changed, graph := h.cfg.processor.Process()
-	if !changed {
+	changeType, graph := h.cfg.processor.Process()
+
+	var err error
+	switch changeType {
+	case state.NoChange:
 		logger.Info("Handling events didn't result into NGINX configuration changes")
 		if !h.cfg.healthChecker.ready && h.cfg.healthChecker.firstBatchError == nil {
 			h.cfg.healthChecker.setAsReady()
 		}
 		return
+	case state.EndpointsOnlyChange:
+		h.cfg.version++
+		err = h.updateUpstreamServers(
+			ctx,
+			logger,
+			dataplane.BuildConfiguration(ctx, graph, h.cfg.serviceResolver, h.cfg.version),
+		)
+	case state.ClusterStateChange:
+		h.cfg.version++
+		err = h.updateNginxConf(
+			ctx,
+			dataplane.BuildConfiguration(ctx, graph, h.cfg.serviceResolver, h.cfg.version),
+		)
 	}
 
 	var nginxReloadRes nginxReloadResult
-	h.cfg.version++
-	if err := h.updateNginx(
-		ctx,
-		dataplane.BuildConfiguration(ctx, graph, h.cfg.serviceResolver, h.cfg.version),
-	); err != nil {
+	if err != nil {
 		logger.Error(err, "Failed to update NGINX configuration")
 		nginxReloadRes.error = err
 		if !h.cfg.healthChecker.ready {
@@ -174,9 +187,9 @@ func (h *eventHandlerImpl) handleEvent(ctx context.Context, logger logr.Logger, 
 	}
 }
 
-func (h *eventHandlerImpl) updateNginx(ctx context.Context, conf dataplane.Configuration) error {
+// updateNginxConf updates nginx conf files and reloads nginx
+func (h *eventHandlerImpl) updateNginxConf(ctx context.Context, conf dataplane.Configuration) error {
 	files := h.cfg.generator.Generate(conf)
-
 	if err := h.cfg.nginxFileMgr.ReplaceFiles(files); err != nil {
 		return fmt.Errorf("failed to replace NGINX configuration files: %w", err)
 	}
@@ -186,6 +199,93 @@ func (h *eventHandlerImpl) updateNginx(ctx context.Context, conf dataplane.Confi
 	}
 
 	return nil
+}
+
+// updateUpstreamServers is called only when endpoints have changed. It updates nginx conf files and then:
+// - if using NGINX Plus, determines which servers have changed and uses the N+ API to update them;
+// - otherwise if not using NGINX Plus, or an error was returned from the API, reloads nginx
+func (h *eventHandlerImpl) updateUpstreamServers(
+	ctx context.Context,
+	logger logr.Logger,
+	conf dataplane.Configuration,
+) error {
+	isPlus := h.cfg.nginxRuntimeMgr.IsPlus()
+
+	files := h.cfg.generator.Generate(conf)
+	if err := h.cfg.nginxFileMgr.ReplaceFiles(files); err != nil {
+		return fmt.Errorf("failed to replace NGINX configuration files: %w", err)
+	}
+
+	reload := func() error {
+		if err := h.cfg.nginxRuntimeMgr.Reload(ctx, conf.Version); err != nil {
+			return fmt.Errorf("failed to reload NGINX: %w", err)
+		}
+
+		return nil
+	}
+
+	if isPlus {
+		type upstream struct {
+			name    string
+			servers []ngxclient.UpstreamServer
+		}
+		var upstreams []upstream
+
+		prevUpstreams, err := h.cfg.nginxRuntimeMgr.GetUpstreams()
+		if err != nil {
+			logger.Error(err, "failed to get upstreams from API, reloading configuration instead")
+			return reload()
+		}
+
+		for _, u := range conf.Upstreams {
+			upstream := upstream{
+				name:    u.Name,
+				servers: ngxConfig.ConvertEndpoints(u.Endpoints),
+			}
+
+			if u, ok := prevUpstreams[upstream.name]; ok {
+				if !serversEqual(upstream.servers, u.Peers) {
+					upstreams = append(upstreams, upstream)
+				}
+			}
+		}
+
+		var reloadPlus bool
+		for _, upstream := range upstreams {
+			if err := h.cfg.nginxRuntimeMgr.UpdateHTTPServers(upstream.name, upstream.servers); err != nil {
+				logger.Error(
+					err, "couldn't update upstream via the API, reloading configuration instead",
+					"upstreamName", upstream.name,
+				)
+				reloadPlus = true
+			}
+		}
+
+		if !reloadPlus {
+			return nil
+		}
+	}
+
+	return reload()
+}
+
+func serversEqual(newServers []ngxclient.UpstreamServer, oldServers []ngxclient.Peer) bool {
+	if len(newServers) != len(oldServers) {
+		return false
+	}
+
+	diff := make(map[string]struct{}, len(newServers))
+	for _, s := range newServers {
+		diff[s.Server] = struct{}{}
+	}
+
+	for _, s := range oldServers {
+		if _, ok := diff[s.Server]; !ok {
+			return false
+		}
+	}
+
+	return true
 }
 
 // updateControlPlaneAndSetStatus updates the control plane configuration and then sets the status

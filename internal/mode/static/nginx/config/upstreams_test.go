@@ -11,6 +11,7 @@ import (
 )
 
 func TestExecuteUpstreams(t *testing.T) {
+	gen := GeneratorImpl{}
 	stateUpstreams := []dataplane.Upstream{
 		{
 			Name: "up1",
@@ -46,7 +47,7 @@ func TestExecuteUpstreams(t *testing.T) {
 		"server unix:/var/lib/nginx/nginx-502-server.sock;",
 	}
 
-	upstreams := string(executeUpstreams(dataplane.Configuration{Upstreams: stateUpstreams}))
+	upstreams := string(gen.executeUpstreams(dataplane.Configuration{Upstreams: stateUpstreams}))
 	g := NewWithT(t)
 	for _, expSubString := range expectedSubStrings {
 		g.Expect(upstreams).To(ContainSubstring(expSubString))
@@ -54,6 +55,7 @@ func TestExecuteUpstreams(t *testing.T) {
 }
 
 func TestCreateUpstreams(t *testing.T) {
+	gen := GeneratorImpl{}
 	stateUpstreams := []dataplane.Upstream{
 		{
 			Name: "up1",
@@ -89,7 +91,8 @@ func TestCreateUpstreams(t *testing.T) {
 
 	expUpstreams := []http.Upstream{
 		{
-			Name: "up1",
+			Name:     "up1",
+			ZoneSize: ossZoneSize,
 			Servers: []http.UpstreamServer{
 				{
 					Address: "10.0.0.0:80",
@@ -103,7 +106,8 @@ func TestCreateUpstreams(t *testing.T) {
 			},
 		},
 		{
-			Name: "up2",
+			Name:     "up2",
+			ZoneSize: ossZoneSize,
 			Servers: []http.UpstreamServer{
 				{
 					Address: "11.0.0.0:80",
@@ -111,7 +115,8 @@ func TestCreateUpstreams(t *testing.T) {
 			},
 		},
 		{
-			Name: "up3",
+			Name:     "up3",
+			ZoneSize: ossZoneSize,
 			Servers: []http.UpstreamServer{
 				{
 					Address: nginx502Server,
@@ -119,7 +124,8 @@ func TestCreateUpstreams(t *testing.T) {
 			},
 		},
 		{
-			Name: invalidBackendRef,
+			Name:     invalidBackendRef,
+			ZoneSize: invalidBackendZoneSize,
 			Servers: []http.UpstreamServer{
 				{
 					Address: nginx500Server,
@@ -129,11 +135,12 @@ func TestCreateUpstreams(t *testing.T) {
 	}
 
 	g := NewWithT(t)
-	result := createUpstreams(stateUpstreams)
+	result := gen.createUpstreams(stateUpstreams)
 	g.Expect(result).To(Equal(expUpstreams))
 }
 
 func TestCreateUpstream(t *testing.T) {
+	gen := GeneratorImpl{}
 	tests := []struct {
 		msg              string
 		stateUpstream    dataplane.Upstream
@@ -145,7 +152,8 @@ func TestCreateUpstream(t *testing.T) {
 				Endpoints: nil,
 			},
 			expectedUpstream: http.Upstream{
-				Name: "nil-endpoints",
+				Name:     "nil-endpoints",
+				ZoneSize: ossZoneSize,
 				Servers: []http.UpstreamServer{
 					{
 						Address: nginx502Server,
@@ -160,7 +168,8 @@ func TestCreateUpstream(t *testing.T) {
 				Endpoints: []resolver.Endpoint{},
 			},
 			expectedUpstream: http.Upstream{
-				Name: "no-endpoints",
+				Name:     "no-endpoints",
+				ZoneSize: ossZoneSize,
 				Servers: []http.UpstreamServer{
 					{
 						Address: nginx502Server,
@@ -188,7 +197,8 @@ func TestCreateUpstream(t *testing.T) {
 				},
 			},
 			expectedUpstream: http.Upstream{
-				Name: "multiple-endpoints",
+				Name:     "multiple-endpoints",
+				ZoneSize: ossZoneSize,
 				Servers: []http.UpstreamServer{
 					{
 						Address: "10.0.0.1:80",
@@ -208,8 +218,36 @@ func TestCreateUpstream(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.msg, func(t *testing.T) {
 			g := NewWithT(t)
-			result := createUpstream(test.stateUpstream)
+			result := gen.createUpstream(test.stateUpstream)
 			g.Expect(result).To(Equal(test.expectedUpstream))
 		})
 	}
+}
+
+func TestCreateUpstreamPlus(t *testing.T) {
+	gen := GeneratorImpl{plus: true}
+
+	stateUpstream := dataplane.Upstream{
+		Name: "multiple-endpoints",
+		Endpoints: []resolver.Endpoint{
+			{
+				Address: "10.0.0.1",
+				Port:    80,
+			},
+		},
+	}
+	expectedUpstream := http.Upstream{
+		Name:     "multiple-endpoints",
+		ZoneSize: plusZoneSize,
+		Servers: []http.UpstreamServer{
+			{
+				Address: "10.0.0.1:80",
+			},
+		},
+	}
+
+	result := gen.createUpstream(stateUpstream)
+
+	g := NewWithT(t)
+	g.Expect(result).To(Equal(expectedUpstream))
 }
