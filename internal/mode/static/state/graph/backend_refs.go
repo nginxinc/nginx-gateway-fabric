@@ -185,7 +185,6 @@ func getServiceAndPortFromRef(
 		ns = string(*ref.Namespace)
 	}
 
-	// TODO: Is this right that the svcNsName name is the name of the backendRef?
 	svcNsName := types.NamespacedName{Name: string(ref.Name), Namespace: ns}
 
 	// If the service is unable to be found, svcNsName will still be populated with what the BackendRef
