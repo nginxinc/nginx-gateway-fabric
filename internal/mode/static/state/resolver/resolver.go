@@ -2,7 +2,6 @@ package resolver
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	v1 "k8s.io/api/core/v1"
@@ -51,7 +50,8 @@ func (e *ServiceResolverImpl) Resolve(
 	svcPort v1.ServicePort,
 ) ([]Endpoint, error) {
 	if svcPort.Port == 0 || svcNsName.Name == "" || svcNsName.Namespace == "" {
-		return nil, errors.New("cannot resolve a nil Service")
+		panic(fmt.Errorf("expected the following fields to be non-empty: name: %s, ns: %s, port: %d",
+			svcNsName.Name, svcNsName.Namespace, svcPort.Port))
 	}
 
 	// We list EndpointSlices using the Service Name Index Field we added as an index to the EndpointSlice cache.

@@ -241,10 +241,17 @@ var _ = Describe("ServiceResolver", func() {
 			Expect(err).To(HaveOccurred())
 			Expect(endpoints).To(BeNil())
 		})
-		It("returns an error if the service is nil", func() {
-			endpoints, err := serviceResolver.Resolve(context.TODO(), types.NamespacedName{}, svc.Spec.Ports[0])
-			Expect(err).To(HaveOccurred())
-			Expect(endpoints).To(BeNil())
+		It("panics if the service NamespacedName is empty", func() {
+			resolve := func() {
+				_, _ = serviceResolver.Resolve(context.TODO(), types.NamespacedName{}, svc.Spec.Ports[0])
+			}
+			Expect(resolve).Should(Panic())
+		})
+		It("panics if the ServicePort is empty", func() {
+			resolve := func() {
+				_, _ = serviceResolver.Resolve(context.TODO(), types.NamespacedName{}, v1.ServicePort{})
+			}
+			Expect(resolve).Should(Panic())
 		})
 	})
 })
