@@ -45,8 +45,10 @@ func NewServiceResolverImpl(client client.Client) *ServiceResolverImpl {
 //
 // svcNsName is guaranteed to be a valid NamespacedName from when it is called in configuration.go.
 // svcPort is guaranteed to be a valid non-empty ServicePort from when it is called in configuration.go
-func (e *ServiceResolverImpl) Resolve(ctx context.Context,
-	svcNsName types.NamespacedName, svcPort v1.ServicePort,
+func (e *ServiceResolverImpl) Resolve(
+	ctx context.Context,
+	svcNsName types.NamespacedName,
+	svcPort v1.ServicePort,
 ) ([]Endpoint, error) {
 	if svcPort.Port == 0 || svcNsName.Name == "" || svcNsName.Namespace == "" {
 		return nil, errors.New("cannot resolve a nil Service")
