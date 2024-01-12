@@ -19,6 +19,7 @@ import (
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/controller/index"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/gatewayclass"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state"
@@ -129,29 +130,29 @@ func createGatewayWithTLSListener(name string, tlsSecret *apiv1.Secret) *v1.Gate
 	return gw
 }
 
-//func createRouteWithMultipleRules(
-//	name, gateway, hostname string,
-//	rules []v1.HTTPRouteRule,
-//) *v1.HTTPRoute {
-//	hr := createRoute(name, gateway, hostname)
-//	hr.Spec.Rules = rules
-//
-//	return hr
-//}
-//
-//func createHTTPRule(path string, backendRefs ...v1.HTTPBackendRef) v1.HTTPRouteRule {
-//	return v1.HTTPRouteRule{
-//		Matches: []v1.HTTPRouteMatch{
-//			{
-//				Path: &v1.HTTPPathMatch{
-//					Type:  helpers.GetPointer(v1.PathMatchPathPrefix),
-//					Value: &path,
-//				},
-//			},
-//		},
-//		BackendRefs: backendRefs,
-//	}
-//}
+func createRouteWithMultipleRules(
+	name, gateway, hostname string,
+	rules []v1.HTTPRouteRule,
+) *v1.HTTPRoute {
+	hr := createRoute(name, gateway, hostname)
+	hr.Spec.Rules = rules
+
+	return hr
+}
+
+func createHTTPRule(path string, backendRefs ...v1.HTTPBackendRef) v1.HTTPRouteRule {
+	return v1.HTTPRouteRule{
+		Matches: []v1.HTTPRouteMatch{
+			{
+				Path: &v1.HTTPPathMatch{
+					Type:  helpers.GetPointer(v1.PathMatchPathPrefix),
+					Value: &path,
+				},
+			},
+		},
+		BackendRefs: backendRefs,
+	}
+}
 
 func createBackendRef(
 	kind *v1.Kind,
@@ -955,340 +956,347 @@ var _ = Describe("ChangeProcessor", func() {
 				})
 			})
 		})
-		/*
-			Describe("Process services and endpoints", Ordered, func() {
-				var (
-					hr1, hr2, hr3, hrInvalidBackendRef, hrMultipleRules                 *v1.HTTPRoute
-					hr1svc, sharedSvc, bazSvc1, bazSvc2, bazSvc3, invalidSvc, notRefSvc *apiv1.Service
-					hr1slice1, hr1slice2, noRefSlice, missingSvcNameSlice               *discoveryV1.EndpointSlice
+
+		Describe("Process services and endpoints", Ordered, func() {
+			var (
+				hr1, hr2, hr3, hrInvalidBackendRef, hrMultipleRules                 *v1.HTTPRoute
+				hr1svc, sharedSvc, bazSvc1, bazSvc2, bazSvc3, invalidSvc, notRefSvc *apiv1.Service
+				hr1slice1, hr1slice2, noRefSlice, missingSvcNameSlice               *discoveryV1.EndpointSlice
+				gw                                                                  *v1.Gateway
+			)
+
+			createSvc := func(name string) *apiv1.Service {
+				return &apiv1.Service{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "test",
+						Name:      name,
+					},
+				}
+			}
+
+			createEndpointSlice := func(name string, svcName string) *discoveryV1.EndpointSlice {
+				return &discoveryV1.EndpointSlice{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "test",
+						Name:      name,
+						Labels:    map[string]string{index.KubernetesServiceNameLabel: svcName},
+					},
+				}
+			}
+
+			BeforeAll(func() {
+				testNamespace := v1.Namespace("test")
+				kindService := v1.Kind("Service")
+				kindInvalid := v1.Kind("Invalid")
+
+				// backend Refs
+				fooRef := createBackendRef(&kindService, "foo-svc", &testNamespace)
+				baz1NilNamespace := createBackendRef(&kindService, "baz-svc-v1", &testNamespace)
+				barRef := createBackendRef(&kindService, "bar-svc", nil)
+				baz2Ref := createBackendRef(&kindService, "baz-svc-v2", &testNamespace)
+				baz3Ref := createBackendRef(&kindService, "baz-svc-v3", &testNamespace)
+				invalidKindRef := createBackendRef(&kindInvalid, "bar-svc", &testNamespace)
+
+				// httproutes
+				hr1 = createRoute("hr1", "gw", "foo.example.com", fooRef)
+				hr2 = createRoute("hr2", "gw", "bar.example.com", barRef)
+				// hr3 shares the same backendRef as hr2
+				hr3 = createRoute("hr3", "gw", "bar.2.example.com", barRef)
+				hrInvalidBackendRef = createRoute("hr-invalid", "gw", "invalid.com", invalidKindRef)
+				hrMultipleRules = createRouteWithMultipleRules(
+					"hr-multiple-rules",
+					"gw",
+					"mutli.example.com",
+					[]v1.HTTPRouteRule{
+						createHTTPRule("/baz-v1", baz1NilNamespace),
+						createHTTPRule("/baz-v2", baz2Ref),
+						createHTTPRule("/baz-v3", baz3Ref),
+					},
 				)
 
-				createSvc := func(name string) *apiv1.Service {
-					return &apiv1.Service{
-						ObjectMeta: metav1.ObjectMeta{
-							Namespace: "test",
-							Name:      name,
-						},
-					}
-				}
+				// services
+				hr1svc = createSvc("foo-svc")
+				sharedSvc = createSvc("bar-svc")  // shared between hr2 and hr3
+				invalidSvc = createSvc("invalid") // nsname matches invalid BackendRef
+				notRefSvc = createSvc("not-ref")
+				bazSvc1 = createSvc("baz-svc-v1")
+				bazSvc2 = createSvc("baz-svc-v2")
+				bazSvc3 = createSvc("baz-svc-v3")
 
-				createEndpointSlice := func(name string, svcName string) *discoveryV1.EndpointSlice {
-					return &discoveryV1.EndpointSlice{
-						ObjectMeta: metav1.ObjectMeta{
-							Namespace: "test",
-							Name:      name,
-							Labels:    map[string]string{index.KubernetesServiceNameLabel: svcName},
-						},
-					}
-				}
+				// endpoint slices
+				hr1slice1 = createEndpointSlice("hr1-1", "foo-svc")
+				hr1slice2 = createEndpointSlice("hr1-2", "foo-svc")
+				noRefSlice = createEndpointSlice("no-ref", "no-ref")
+				missingSvcNameSlice = createEndpointSlice("missing-svc-name", "")
 
-				BeforeAll(func() {
-					testNamespace := v1.Namespace("test")
-					kindService := v1.Kind("Service")
-					kindInvalid := v1.Kind("Invalid")
+				gw = createGateway("gw")
+				processor.CaptureUpsertChange(gc)
+				processor.CaptureUpsertChange(gw)
+				processor.Process()
+			})
 
-					// backend Refs
-					fooRef := createBackendRef(&kindService, "foo-svc", &testNamespace)
-					baz1NilNamespace := createBackendRef(&kindService, "baz-svc-v1", &testNamespace)
-					barRef := createBackendRef(&kindService, "bar-svc", nil)
-					baz2Ref := createBackendRef(&kindService, "baz-svc-v2", &testNamespace)
-					baz3Ref := createBackendRef(&kindService, "baz-svc-v3", &testNamespace)
-					invalidKindRef := createBackendRef(&kindInvalid, "bar-svc", &testNamespace)
+			testProcessChangedVal := func(expChanged bool) {
+				changed, _ := processor.Process()
+				Expect(changed).To(Equal(expChanged))
+			}
 
-					// httproutes
-					hr1 = createRoute("hr1", "gw", "foo.example.com", fooRef)
-					hr2 = createRoute("hr2", "gw", "bar.example.com", barRef)
-					// hr3 shares the same backendRef as hr2
-					hr3 = createRoute("hr3", "gw", "bar.2.example.com", barRef)
-					hrInvalidBackendRef = createRoute("hr-invalid", "gw", "invalid.com", invalidKindRef)
-					hrMultipleRules = createRouteWithMultipleRules(
-						"hr-multiple-rules",
-						"gw",
-						"mutli.example.com",
-						[]v1.HTTPRouteRule{
-							createHTTPRule("/baz-v1", baz1NilNamespace),
-							createHTTPRule("/baz-v2", baz2Ref),
-							createHTTPRule("/baz-v3", baz3Ref),
-						},
+			testUpsertTriggersChange := func(obj client.Object, expChanged bool) {
+				processor.CaptureUpsertChange(obj)
+				testProcessChangedVal(expChanged)
+			}
+
+			testDeleteTriggersChange := func(obj client.Object, nsname types.NamespacedName, expChanged bool) {
+				processor.CaptureDeleteChange(obj, nsname)
+				testProcessChangedVal(expChanged)
+			}
+
+			When("hr1 is added", func() {
+				It("should trigger a change", func() {
+					testUpsertTriggersChange(hr1, true)
+				})
+			})
+			When("a hr1 service is added", func() {
+				It("should trigger a change", func() {
+					testUpsertTriggersChange(hr1svc, true)
+				})
+			})
+			When("an hr1 endpoint slice is added", func() {
+				It("should trigger a change", func() {
+					testUpsertTriggersChange(hr1slice1, true)
+				})
+			})
+			When("an hr1 service is updated", func() {
+				It("should trigger a change", func() {
+					testUpsertTriggersChange(hr1svc, true)
+				})
+			})
+			When("another hr1 endpoint slice is added", func() {
+				It("should trigger a change", func() {
+					testUpsertTriggersChange(hr1slice2, true)
+				})
+			})
+			When("an endpoint slice with a missing svc name label is added", func() {
+				It("should not trigger a change", func() {
+					testUpsertTriggersChange(missingSvcNameSlice, false)
+				})
+			})
+			When("an hr1 endpoint slice is deleted", func() {
+				It("should trigger a change", func() {
+					testDeleteTriggersChange(
+						hr1slice1,
+						types.NamespacedName{Namespace: hr1slice1.Namespace, Name: hr1slice1.Name},
+						true,
 					)
-
-					// services
-					hr1svc = createSvc("foo-svc")
-					sharedSvc = createSvc("bar-svc")  // shared between hr2 and hr3
-					invalidSvc = createSvc("invalid") // nsname matches invalid BackendRef
-					notRefSvc = createSvc("not-ref")
-					bazSvc1 = createSvc("baz-svc-v1")
-					bazSvc2 = createSvc("baz-svc-v2")
-					bazSvc3 = createSvc("baz-svc-v3")
-
-					// endpoint slices
-					hr1slice1 = createEndpointSlice("hr1-1", "foo-svc")
-					hr1slice2 = createEndpointSlice("hr1-2", "foo-svc")
-					noRefSlice = createEndpointSlice("no-ref", "no-ref")
-					missingSvcNameSlice = createEndpointSlice("missing-svc-name", "")
 				})
-
-				testProcessChangedVal := func(expChanged bool) {
-					changed, _ := processor.Process()
-					Expect(changed).To(Equal(expChanged))
-				}
-
-				testUpsertTriggersChange := func(obj client.Object, expChanged bool) {
-					processor.CaptureUpsertChange(obj)
-					testProcessChangedVal(expChanged)
-				}
-
-				testDeleteTriggersChange := func(obj client.Object, nsname types.NamespacedName, expChanged bool) {
-					processor.CaptureDeleteChange(obj, nsname)
-					testProcessChangedVal(expChanged)
-				}
-				When("hr1 is added", func() {
+			})
+			When("the second hr1 endpoint slice is deleted", func() {
+				It("should trigger a change", func() {
+					testDeleteTriggersChange(
+						hr1slice2,
+						types.NamespacedName{Namespace: hr1slice2.Namespace, Name: hr1slice2.Name},
+						true,
+					)
+				})
+			})
+			When("the second hr1 endpoint slice is recreated", func() {
+				It("should trigger a change", func() {
+					testUpsertTriggersChange(hr1slice2, true)
+				})
+			})
+			When("hr1 is deleted", func() {
+				It("should trigger a change", func() {
+					testDeleteTriggersChange(
+						hr1,
+						types.NamespacedName{Namespace: hr1.Namespace, Name: hr1.Name},
+						true,
+					)
+				})
+			})
+			When("hr1 service is deleted", func() {
+				It("should not trigger a change", func() {
+					testDeleteTriggersChange(
+						hr1svc,
+						types.NamespacedName{Namespace: hr1svc.Namespace, Name: hr1svc.Name},
+						false,
+					)
+				})
+			})
+			When("the second hr1 endpoint slice is deleted", func() {
+				It("should not trigger a change", func() {
+					testDeleteTriggersChange(
+						hr1slice2,
+						types.NamespacedName{Namespace: hr1slice2.Namespace, Name: hr1slice2.Name},
+						false,
+					)
+				})
+			})
+			When("hr2 is added", func() {
+				It("should trigger a change", func() {
+					testUpsertTriggersChange(hr2, true)
+				})
+			})
+			When("a hr3, that shares a backend service with hr2, is added", func() {
+				It("should trigger a change", func() {
+					testUpsertTriggersChange(hr3, true)
+				})
+			})
+			When("sharedSvc, a service referenced by both hr2 and hr3, is added", func() {
+				It("should trigger a change", func() {
+					testUpsertTriggersChange(sharedSvc, true)
+				})
+			})
+			When("hr2 is deleted", func() {
+				It("should trigger a change", func() {
+					testDeleteTriggersChange(
+						hr2,
+						types.NamespacedName{Namespace: hr2.Namespace, Name: hr2.Name},
+						true,
+					)
+				})
+			})
+			When("sharedSvc is deleted", func() {
+				It("should trigger a change", func() {
+					testDeleteTriggersChange(
+						sharedSvc,
+						types.NamespacedName{Namespace: sharedSvc.Namespace, Name: sharedSvc.Name},
+						true,
+					)
+				})
+			})
+			When("sharedSvc is recreated", func() {
+				It("should trigger a change", func() {
+					testUpsertTriggersChange(sharedSvc, true)
+				})
+			})
+			When("hr3 is deleted", func() {
+				It("should trigger a change", func() {
+					testDeleteTriggersChange(
+						hr3,
+						types.NamespacedName{Namespace: hr3.Namespace, Name: hr3.Name},
+						true,
+					)
+				})
+			})
+			When("sharedSvc is deleted", func() {
+				It("should not trigger a change", func() {
+					testDeleteTriggersChange(
+						sharedSvc,
+						types.NamespacedName{Namespace: sharedSvc.Namespace, Name: sharedSvc.Name},
+						false,
+					)
+				})
+			})
+			When("a service that is not referenced by any route is added", func() {
+				It("should not trigger a change", func() {
+					testUpsertTriggersChange(notRefSvc, false)
+				})
+			})
+			When("a route with an invalid backend ref type is added", func() {
+				It("should trigger a change", func() {
+					testUpsertTriggersChange(hrInvalidBackendRef, true)
+				})
+			})
+			When("a service with a namespace name that matches invalid backend ref is added", func() {
+				It("should not trigger a change", func() {
+					testUpsertTriggersChange(invalidSvc, false)
+				})
+			})
+			When("an endpoint slice that is not owned by a referenced service is added", func() {
+				It("should not trigger a change", func() {
+					testUpsertTriggersChange(noRefSlice, false)
+				})
+			})
+			When("an endpoint slice that is not owned by a referenced service is deleted", func() {
+				It("should not trigger a change", func() {
+					testDeleteTriggersChange(
+						noRefSlice,
+						types.NamespacedName{Namespace: noRefSlice.Namespace, Name: noRefSlice.Name},
+						false,
+					)
+				})
+			})
+			Context("processing a route with multiple rules and three unique backend services", func() {
+				When("route is added", func() {
 					It("should trigger a change", func() {
-						testUpsertTriggersChange(hr1, true)
+						testUpsertTriggersChange(hrMultipleRules, true)
 					})
 				})
-				When("a hr1 service is added", func() {
+				When("first referenced service is added", func() {
 					It("should trigger a change", func() {
-						testUpsertTriggersChange(hr1svc, true)
+						testUpsertTriggersChange(bazSvc1, true)
 					})
 				})
-				When("an hr1 endpoint slice is added", func() {
+				When("second referenced service is added", func() {
 					It("should trigger a change", func() {
-						testUpsertTriggersChange(hr1slice1, true)
+						testUpsertTriggersChange(bazSvc2, true)
 					})
 				})
-				When("an hr1 service is updated", func() {
+				When("first referenced service is deleted", func() {
 					It("should trigger a change", func() {
-						testUpsertTriggersChange(hr1svc, true)
+						testDeleteTriggersChange(
+							bazSvc1,
+							types.NamespacedName{Namespace: bazSvc1.Namespace, Name: bazSvc1.Name},
+							true,
+						)
 					})
 				})
-				When("another hr1 endpoint slice is added", func() {
+				When("first referenced service is recreated", func() {
 					It("should trigger a change", func() {
-						testUpsertTriggersChange(hr1slice2, true)
+						testUpsertTriggersChange(bazSvc1, true)
 					})
 				})
-				When("an endpoint slice with a missing svc name label is added", func() {
+				When("third referenced service is added", func() {
+					It("should trigger a change", func() {
+						testUpsertTriggersChange(bazSvc3, true)
+					})
+				})
+				When("third referenced service is updated", func() {
+					It("should trigger a change", func() {
+						testUpsertTriggersChange(bazSvc3, true)
+					})
+				})
+				When("route is deleted", func() {
+					It("should trigger a change", func() {
+						testDeleteTriggersChange(
+							hrMultipleRules,
+							types.NamespacedName{
+								Namespace: hrMultipleRules.Namespace,
+								Name:      hrMultipleRules.Name,
+							},
+							true,
+						)
+					})
+				})
+				When("first referenced service is deleted", func() {
 					It("should not trigger a change", func() {
-						testUpsertTriggersChange(missingSvcNameSlice, false)
-					})
-				})
-				When("an hr1 endpoint slice is deleted", func() {
-					It("should trigger a change", func() {
 						testDeleteTriggersChange(
-							hr1slice1,
-							types.NamespacedName{Namespace: hr1slice1.Namespace, Name: hr1slice1.Name},
-							true,
-						)
-					})
-				})
-				When("the second hr1 endpoint slice is deleted", func() {
-					It("should trigger a change", func() {
-						testDeleteTriggersChange(
-							hr1slice2,
-							types.NamespacedName{Namespace: hr1slice2.Namespace, Name: hr1slice2.Name},
-							true,
-						)
-					})
-				})
-				When("the second hr1 endpoint slice is recreated", func() {
-					It("should trigger a change", func() {
-						testUpsertTriggersChange(hr1slice2, true)
-					})
-				})
-				When("hr1 is deleted", func() {
-					It("should trigger a change", func() {
-						testDeleteTriggersChange(
-							hr1,
-							types.NamespacedName{Namespace: hr1.Namespace, Name: hr1.Name},
-							true,
-						)
-					})
-				})
-				When("hr1 service is deleted", func() {
-					It("should not trigger a change", func() {
-						testDeleteTriggersChange(
-							hr1svc,
-							types.NamespacedName{Namespace: hr1svc.Namespace, Name: hr1svc.Name},
+							bazSvc1,
+							types.NamespacedName{Namespace: bazSvc1.Namespace, Name: bazSvc1.Name},
 							false,
 						)
 					})
 				})
-				When("the second hr1 endpoint slice is deleted", func() {
+				When("second referenced service is deleted", func() {
 					It("should not trigger a change", func() {
 						testDeleteTriggersChange(
-							hr1slice2,
-							types.NamespacedName{Namespace: hr1slice2.Namespace, Name: hr1slice2.Name},
+							bazSvc2,
+							types.NamespacedName{Namespace: bazSvc2.Namespace, Name: bazSvc2.Name},
 							false,
 						)
 					})
 				})
-				When("hr2 is added", func() {
-					It("should trigger a change", func() {
-						testUpsertTriggersChange(hr2, true)
-					})
-				})
-				When("a hr3, that shares a backend service with hr2, is added", func() {
-					It("should trigger a change", func() {
-						testUpsertTriggersChange(hr3, true)
-					})
-				})
-				When("sharedSvc, a service referenced by both hr2 and hr3, is added", func() {
-					It("should trigger a change", func() {
-						testUpsertTriggersChange(sharedSvc, true)
-					})
-				})
-				When("hr2 is deleted", func() {
-					It("should trigger a change", func() {
-						testDeleteTriggersChange(
-							hr2,
-							types.NamespacedName{Namespace: hr2.Namespace, Name: hr2.Name},
-							true,
-						)
-					})
-				})
-				When("sharedSvc is deleted", func() {
-					It("should trigger a change", func() {
-						testDeleteTriggersChange(
-							sharedSvc,
-							types.NamespacedName{Namespace: sharedSvc.Namespace, Name: sharedSvc.Name},
-							true,
-						)
-					})
-				})
-				When("sharedSvc is recreated", func() {
-					It("should trigger a change", func() {
-						testUpsertTriggersChange(sharedSvc, true)
-					})
-				})
-				When("hr3 is deleted", func() {
-					It("should trigger a change", func() {
-						testDeleteTriggersChange(
-							hr3,
-							types.NamespacedName{Namespace: hr3.Namespace, Name: hr3.Name},
-							true,
-						)
-					})
-				})
-				When("sharedSvc is deleted", func() {
+				When("final referenced service is deleted", func() {
 					It("should not trigger a change", func() {
 						testDeleteTriggersChange(
-							sharedSvc,
-							types.NamespacedName{Namespace: sharedSvc.Namespace, Name: sharedSvc.Name},
+							bazSvc3,
+							types.NamespacedName{Namespace: bazSvc3.Namespace, Name: bazSvc3.Name},
 							false,
 						)
-					})
-				})
-				When("a service that is not referenced by any route is added", func() {
-					It("should not trigger a change", func() {
-						testUpsertTriggersChange(notRefSvc, false)
-					})
-				})
-				When("a route with an invalid backend ref type is added", func() {
-					It("should trigger a change", func() {
-						testUpsertTriggersChange(hrInvalidBackendRef, true)
-					})
-				})
-				When("a service with a namespace name that matches invalid backend ref is added", func() {
-					It("should not trigger a change", func() {
-						testUpsertTriggersChange(invalidSvc, false)
-					})
-				})
-				When("an endpoint slice that is not owned by a referenced service is added", func() {
-					It("should not trigger a change", func() {
-						testUpsertTriggersChange(noRefSlice, false)
-					})
-				})
-				When("an endpoint slice that is not owned by a referenced service is deleted", func() {
-					It("should not trigger a change", func() {
-						testDeleteTriggersChange(
-							noRefSlice,
-							types.NamespacedName{Namespace: noRefSlice.Namespace, Name: noRefSlice.Name},
-							false,
-						)
-					})
-				})
-				Context("processing a route with multiple rules and three unique backend services", func() {
-					When("route is added", func() {
-						It("should trigger a change", func() {
-							testUpsertTriggersChange(hrMultipleRules, true)
-						})
-					})
-					When("first referenced service is added", func() {
-						It("should trigger a change", func() {
-							testUpsertTriggersChange(bazSvc1, true)
-						})
-					})
-					When("second referenced service is added", func() {
-						It("should trigger a change", func() {
-							testUpsertTriggersChange(bazSvc2, true)
-						})
-					})
-					When("first referenced service is deleted", func() {
-						It("should trigger a change", func() {
-							testDeleteTriggersChange(
-								bazSvc1,
-								types.NamespacedName{Namespace: bazSvc1.Namespace, Name: bazSvc1.Name},
-								true,
-							)
-						})
-					})
-					When("first referenced service is recreated", func() {
-						It("should trigger a change", func() {
-							testUpsertTriggersChange(bazSvc1, true)
-						})
-					})
-					When("third referenced service is added", func() {
-						It("should trigger a change", func() {
-							testUpsertTriggersChange(bazSvc3, true)
-						})
-					})
-					When("third referenced service is updated", func() {
-						It("should trigger a change", func() {
-							testUpsertTriggersChange(bazSvc3, true)
-						})
-					})
-					When("route is deleted", func() {
-						It("should trigger a change", func() {
-							testDeleteTriggersChange(
-								hrMultipleRules,
-								types.NamespacedName{
-									Namespace: hrMultipleRules.Namespace,
-									Name:      hrMultipleRules.Name,
-								},
-								true,
-							)
-						})
-					})
-					When("first referenced service is deleted", func() {
-						It("should not trigger a change", func() {
-							testDeleteTriggersChange(
-								bazSvc1,
-								types.NamespacedName{Namespace: bazSvc1.Namespace, Name: bazSvc1.Name},
-								false,
-							)
-						})
-					})
-					When("second referenced service is deleted", func() {
-						It("should not trigger a change", func() {
-							testDeleteTriggersChange(
-								bazSvc2,
-								types.NamespacedName{Namespace: bazSvc2.Namespace, Name: bazSvc2.Name},
-								false,
-							)
-						})
-					})
-					When("final referenced service is deleted", func() {
-						It("should not trigger a change", func() {
-							testDeleteTriggersChange(
-								bazSvc3,
-								types.NamespacedName{Namespace: bazSvc3.Namespace, Name: bazSvc3.Name},
-								false,
-							)
-						})
 					})
 				})
 			})
-		*/
+		})
+
 		Describe("namespace changes", Ordered, func() {
 			var (
 				ns, nsDifferentLabels, nsNoLabels *apiv1.Namespace
