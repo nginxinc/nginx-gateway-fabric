@@ -293,8 +293,10 @@ func registerControllers(
 					controller.WithK8sPredicate(k8spredicate.GenerationChangedPredicate{}),
 				}
 				if cfg.GatewayNsName != nil {
-					options = append(options,
-						controller.WithNamespacedNameFilter(filter.CreateSingleResourceFilter(*cfg.GatewayNsName)))
+					options = append(
+						options,
+						controller.WithNamespacedNameFilter(filter.CreateSingleResourceFilter(*cfg.GatewayNsName)),
+					)
 				}
 				return options
 			}(),
