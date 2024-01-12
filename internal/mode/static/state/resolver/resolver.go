@@ -39,16 +39,15 @@ func NewServiceResolverImpl(client client.Client) *ServiceResolverImpl {
 	return &ServiceResolverImpl{client: client}
 }
 
-// Resolve resolves a Service and BackendRef Port to a list of Endpoints.
-// Returns an error if the Service or Port cannot be resolved.
-//
-// svcNsName is guaranteed to be a valid NamespacedName from when it is called in configuration.go.
-// svcPort is guaranteed to be a valid non-empty ServicePort from when it is called in configuration.go
+// Resolve resolves a Service's NamespacedName and ServicePort to a list of Endpoints.
+// Returns an error if the Service or ServicePort cannot be resolved.
 func (e *ServiceResolverImpl) Resolve(
 	ctx context.Context,
 	svcNsName types.NamespacedName,
 	svcPort v1.ServicePort,
 ) ([]Endpoint, error) {
+	// svcNsName and svcPort are guaranteed to be valid non-empty variables from when they are passed in
+	// from configuration.go.
 	if svcPort.Port == 0 || svcNsName.Name == "" || svcNsName.Namespace == "" {
 		panic(fmt.Errorf("expected the following fields to be non-empty: name: %s, ns: %s, port: %d",
 			svcNsName.Name, svcNsName.Namespace, svcPort.Port))
