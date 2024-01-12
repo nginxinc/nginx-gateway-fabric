@@ -287,6 +287,16 @@ func TestGetServiceAndPortFromRef(t *testing.T) {
 			expServiceNsName: types.NamespacedName{Name: "does-not-exist", Namespace: "test"},
 			expServicePort:   v1.ServicePort{},
 		},
+		{
+			name: "no matching port for service and port",
+			ref: getModifiedRef(func(backend gatewayv1.BackendRef) gatewayv1.BackendRef {
+				backend.Port = helpers.GetPointer[gatewayv1.PortNumber](504)
+				return backend
+			}),
+			expErr:           true,
+			expServiceNsName: svc1NsName,
+			expServicePort:   v1.ServicePort{},
+		},
 	}
 
 	services := map[types.NamespacedName]*v1.Service{
