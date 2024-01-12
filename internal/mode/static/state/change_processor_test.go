@@ -1800,185 +1800,186 @@ var _ = Describe("ChangeProcessor", func() {
 					assertGwEvent()
 				})
 			})
+		})
+	})
+	Describe("Webhook assumptions", func() {
+		var (
+			processor         state.ChangeProcessor
+			fakeEventRecorder *record.FakeRecorder
+		)
 
-			Describe("Webhook assumptions", func() {
-				var processor state.ChangeProcessor
+		BeforeEach(func() {
+			fakeEventRecorder = record.NewFakeRecorder(1 /* number of buffered events */)
 
-				BeforeEach(func() {
-					fakeEventRecorder = record.NewFakeRecorder(1 /* number of buffered events */)
+			processor = state.NewChangeProcessorImpl(state.ChangeProcessorConfig{
+				GatewayCtlrName:  controllerName,
+				GatewayClassName: gcName,
+				Logger:           zap.New(),
+				Validators:       createAlwaysValidValidators(),
+				EventRecorder:    fakeEventRecorder,
+				Scheme:           createScheme(),
+			})
+		})
 
-					processor = state.NewChangeProcessorImpl(state.ChangeProcessorConfig{
-						GatewayCtlrName:  controllerName,
-						GatewayClassName: gcName,
-						Logger:           zap.New(),
-						Validators:       createAlwaysValidValidators(),
-						EventRecorder:    fakeEventRecorder,
-						Scheme:           createScheme(),
+		createInvalidHTTPRoute := func(invalidator func(hr *v1.HTTPRoute)) *v1.HTTPRoute {
+			hr := createRoute(
+				"hr",
+				"gateway",
+				"foo.example.com",
+				createBackendRef(
+					helpers.GetPointer[v1.Kind]("Service"),
+					"test",
+					helpers.GetPointer[v1.Namespace]("namespace"),
+				),
+			)
+			invalidator(hr)
+			return hr
+		}
+
+		createInvalidGateway := func(invalidator func(gw *v1.Gateway)) *v1.Gateway {
+			gw := createGateway("gateway")
+			invalidator(gw)
+			return gw
+		}
+
+		assertRejectedEvent := func() {
+			EventuallyWithOffset(1, fakeEventRecorder.Events).Should(Receive(ContainSubstring("Rejected")))
+		}
+
+		DescribeTable("Invalid HTTPRoutes",
+			func(hr *v1.HTTPRoute) {
+				processor.CaptureUpsertChange(hr)
+
+				changed, graphCfg := processor.Process()
+
+				Expect(changed).To(BeFalse())
+				Expect(graphCfg).To(BeNil())
+
+				assertRejectedEvent()
+			},
+			Entry(
+				"duplicate parentRefs",
+				createInvalidHTTPRoute(func(hr *v1.HTTPRoute) {
+					hr.Spec.ParentRefs = append(hr.Spec.ParentRefs, hr.Spec.ParentRefs[len(hr.Spec.ParentRefs)-1])
+				}),
+			),
+			Entry(
+				"nil path.Type",
+				createInvalidHTTPRoute(func(hr *v1.HTTPRoute) {
+					hr.Spec.Rules[0].Matches[0].Path.Type = nil
+				}),
+			),
+			Entry("nil path.Value",
+				createInvalidHTTPRoute(func(hr *v1.HTTPRoute) {
+					hr.Spec.Rules[0].Matches[0].Path.Value = nil
+				}),
+			),
+			Entry(
+				"nil request.Redirect",
+				createInvalidHTTPRoute(func(hr *v1.HTTPRoute) {
+					hr.Spec.Rules[0].Filters = append(hr.Spec.Rules[0].Filters, v1.HTTPRouteFilter{
+						Type:            v1.HTTPRouteFilterRequestRedirect,
+						RequestRedirect: nil,
 					})
-				})
+				}),
+			),
+			Entry("nil port in BackendRef",
+				createInvalidHTTPRoute(func(hr *v1.HTTPRoute) {
+					hr.Spec.Rules[0].BackendRefs[0].Port = nil
+				}),
+			),
+		)
 
-				createInvalidHTTPRoute := func(invalidator func(hr *v1.HTTPRoute)) *v1.HTTPRoute {
-					hr := createRoute(
-						"hr",
-						"gateway",
-						"foo.example.com",
-						createBackendRef(
-							helpers.GetPointer[v1.Kind]("Service"),
-							"test",
-							helpers.GetPointer[v1.Namespace]("namespace"),
-						),
-					)
-					invalidator(hr)
-					return hr
-				}
+		DescribeTable("Invalid Gateway resources",
+			func(gw *v1.Gateway) {
+				processor.CaptureUpsertChange(gw)
 
-				createInvalidGateway := func(invalidator func(gw *v1.Gateway)) *v1.Gateway {
-					gw := createGateway("gateway")
-					invalidator(gw)
-					return gw
-				}
+				changed, graphCfg := processor.Process()
 
-				assertRejectedEvent := func() {
-					EventuallyWithOffset(1, fakeEventRecorder.Events).Should(Receive(ContainSubstring("Rejected")))
-				}
+				Expect(changed).To(BeFalse())
+				Expect(graphCfg).To(BeNil())
 
-				DescribeTable("Invalid HTTPRoutes",
-					func(hr *v1.HTTPRoute) {
-						processor.CaptureUpsertChange(hr)
+				assertRejectedEvent()
+			},
+			Entry("tls in HTTP listener",
+				createInvalidGateway(func(gw *v1.Gateway) {
+					gw.Spec.Listeners[0].TLS = &v1.GatewayTLSConfig{}
+				}),
+			),
+			Entry("tls is nil in HTTPS listener",
+				createInvalidGateway(func(gw *v1.Gateway) {
+					gw.Spec.Listeners[0].Protocol = v1.HTTPSProtocolType
+					gw.Spec.Listeners[0].TLS = nil
+				}),
+			),
+			Entry("zero certificateRefs in HTTPS listener",
+				createInvalidGateway(func(gw *v1.Gateway) {
+					gw.Spec.Listeners[0].Protocol = v1.HTTPSProtocolType
+					gw.Spec.Listeners[0].TLS = &v1.GatewayTLSConfig{
+						Mode:            helpers.GetPointer(v1.TLSModeTerminate),
+						CertificateRefs: nil,
+					}
+				}),
+			),
+			Entry("listener hostnames conflict",
+				createInvalidGateway(func(gw *v1.Gateway) {
+					gw.Spec.Listeners = append(gw.Spec.Listeners, v1.Listener{
+						Name:     "listener-80-2",
+						Hostname: nil,
+						Port:     80,
+						Protocol: v1.HTTPProtocolType,
+					})
+				}),
+			),
+		)
+	})
+	Describe("Edge cases with panic", func() {
+		var processor state.ChangeProcessor
 
-						changed, graphCfg := processor.Process()
-
-						Expect(changed).To(BeFalse())
-						Expect(graphCfg).To(BeNil())
-
-						assertRejectedEvent()
-					},
-					Entry(
-						"duplicate parentRefs",
-						createInvalidHTTPRoute(func(hr *v1.HTTPRoute) {
-							hr.Spec.ParentRefs = append(hr.Spec.ParentRefs, hr.Spec.ParentRefs[len(hr.Spec.ParentRefs)-1])
-						}),
-					),
-					Entry(
-						"nil path.Type",
-						createInvalidHTTPRoute(func(hr *v1.HTTPRoute) {
-							hr.Spec.Rules[0].Matches[0].Path.Type = nil
-						}),
-					),
-					Entry("nil path.Value",
-						createInvalidHTTPRoute(func(hr *v1.HTTPRoute) {
-							hr.Spec.Rules[0].Matches[0].Path.Value = nil
-						}),
-					),
-					Entry(
-						"nil request.Redirect",
-						createInvalidHTTPRoute(func(hr *v1.HTTPRoute) {
-							hr.Spec.Rules[0].Filters = append(hr.Spec.Rules[0].Filters, v1.HTTPRouteFilter{
-								Type:            v1.HTTPRouteFilterRequestRedirect,
-								RequestRedirect: nil,
-							})
-						}),
-					),
-					Entry("nil port in BackendRef",
-						createInvalidHTTPRoute(func(hr *v1.HTTPRoute) {
-							hr.Spec.Rules[0].BackendRefs[0].Port = nil
-						}),
-					),
-				)
-
-				DescribeTable("Invalid Gateway resources",
-					func(gw *v1.Gateway) {
-						processor.CaptureUpsertChange(gw)
-
-						changed, graphCfg := processor.Process()
-
-						Expect(changed).To(BeFalse())
-						Expect(graphCfg).To(BeNil())
-
-						assertRejectedEvent()
-					},
-					Entry("tls in HTTP listener",
-						createInvalidGateway(func(gw *v1.Gateway) {
-							gw.Spec.Listeners[0].TLS = &v1.GatewayTLSConfig{}
-						}),
-					),
-					Entry("tls is nil in HTTPS listener",
-						createInvalidGateway(func(gw *v1.Gateway) {
-							gw.Spec.Listeners[0].Protocol = v1.HTTPSProtocolType
-							gw.Spec.Listeners[0].TLS = nil
-						}),
-					),
-					Entry("zero certificateRefs in HTTPS listener",
-						createInvalidGateway(func(gw *v1.Gateway) {
-							gw.Spec.Listeners[0].Protocol = v1.HTTPSProtocolType
-							gw.Spec.Listeners[0].TLS = &v1.GatewayTLSConfig{
-								Mode:            helpers.GetPointer(v1.TLSModeTerminate),
-								CertificateRefs: nil,
-							}
-						}),
-					),
-					Entry("listener hostnames conflict",
-						createInvalidGateway(func(gw *v1.Gateway) {
-							gw.Spec.Listeners = append(gw.Spec.Listeners, v1.Listener{
-								Name:     "listener-80-2",
-								Hostname: nil,
-								Port:     80,
-								Protocol: v1.HTTPProtocolType,
-							})
-						}),
-					),
-				)
+		BeforeEach(func() {
+			processor = state.NewChangeProcessorImpl(state.ChangeProcessorConfig{
+				GatewayCtlrName:  "test.controller",
+				GatewayClassName: "my-class",
+				Validators:       createAlwaysValidValidators(),
+				Scheme:           createScheme(),
 			})
 		})
 
-		Describe("Edge cases with panic", func() {
-			var processor state.ChangeProcessor
+		DescribeTable("CaptureUpsertChange must panic",
+			func(obj client.Object) {
+				process := func() {
+					processor.CaptureUpsertChange(obj)
+				}
+				Expect(process).Should(Panic())
+			},
+			Entry(
+				"an unsupported resource",
+				&v1alpha2.TCPRoute{ObjectMeta: metav1.ObjectMeta{Namespace: "test", Name: "tcp"}},
+			),
+			Entry(
+				"nil resource",
+				nil,
+			),
+		)
 
-			BeforeEach(func() {
-				processor = state.NewChangeProcessorImpl(state.ChangeProcessorConfig{
-					GatewayCtlrName:  "test.controller",
-					GatewayClassName: "my-class",
-					Validators:       createAlwaysValidValidators(),
-					Scheme:           createScheme(),
-				})
-			})
-
-			DescribeTable("CaptureUpsertChange must panic",
-				func(obj client.Object) {
-					process := func() {
-						processor.CaptureUpsertChange(obj)
-					}
-					Expect(process).Should(Panic())
-				},
-				Entry(
-					"an unsupported resource",
-					&v1alpha2.TCPRoute{ObjectMeta: metav1.ObjectMeta{Namespace: "test", Name: "tcp"}},
-				),
-				Entry(
-					"nil resource",
-					nil,
-				),
-			)
-
-			DescribeTable(
-				"CaptureDeleteChange must panic",
-				func(resourceType client.Object, nsname types.NamespacedName) {
-					process := func() {
-						processor.CaptureDeleteChange(resourceType, nsname)
-					}
-					Expect(process).Should(Panic())
-				},
-				Entry(
-					"an unsupported resource",
-					&v1alpha2.TCPRoute{},
-					types.NamespacedName{Namespace: "test", Name: "tcp"},
-				),
-				Entry(
-					"nil resource type",
-					nil,
-					types.NamespacedName{Namespace: "test", Name: "resource"},
-				),
-			)
-		})
+		DescribeTable(
+			"CaptureDeleteChange must panic",
+			func(resourceType client.Object, nsname types.NamespacedName) {
+				process := func() {
+					processor.CaptureDeleteChange(resourceType, nsname)
+				}
+				Expect(process).Should(Panic())
+			},
+			Entry(
+				"an unsupported resource",
+				&v1alpha2.TCPRoute{},
+				types.NamespacedName{Namespace: "test", Name: "tcp"},
+			),
+			Entry(
+				"nil resource type",
+				nil,
+				types.NamespacedName{Namespace: "test", Name: "resource"},
+			),
+		)
 	})
 })
