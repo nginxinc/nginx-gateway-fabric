@@ -1466,14 +1466,10 @@ var _ = Describe("ChangeProcessor", func() {
 		var (
 			processor                                         *state.ChangeProcessorImpl
 			gcNsName, gwNsName, hrNsName, hr2NsName, rgNsName types.NamespacedName
-			// svcNsName, sliceNsName, secretNsName              types.NamespacedName
-			gc, gcUpdated        *v1.GatewayClass
-			gw1, gw1Updated, gw2 *v1.Gateway
-			hr1, hr1Updated, hr2 *v1.HTTPRoute
-			rg1, rg1Updated, rg2 *v1beta1.ReferenceGrant
-			// svc                                               *apiv1.Service
-			// slice                                             *discoveryV1.EndpointSlice
-			// secret                                            *apiv1.Secret
+			gc, gcUpdated                                     *v1.GatewayClass
+			gw1, gw1Updated, gw2                              *v1.Gateway
+			hr1, hr1Updated, hr2                              *v1.HTTPRoute
+			rg1, rg1Updated, rg2                              *v1beta1.ReferenceGrant
 		)
 
 		BeforeEach(OncePerOrdered, func() {
@@ -1530,24 +1526,6 @@ var _ = Describe("ChangeProcessor", func() {
 			hr2 = hr1.DeepCopy()
 			hr2.Name = hr2NsName.Name
 
-			// svcNsName = types.NamespacedName{Namespace: "test", Name: "svc"}
-
-			//svc = &apiv1.Service{
-			//	ObjectMeta: metav1.ObjectMeta{
-			//		Namespace: svcNsName.Namespace,
-			//		Name:      svcNsName.Name,
-			//	},
-			//}
-
-			// sliceNsName = types.NamespacedName{Namespace: "test", Name: "slice"}
-
-			//slice = &discoveryV1.EndpointSlice{
-			//	ObjectMeta: metav1.ObjectMeta{
-			//		Namespace: sliceNsName.Namespace,
-			//		Name:      sliceNsName.Name,
-			//	},
-			//}
-
 			rgNsName = types.NamespacedName{Namespace: "test", Name: "rg-1"}
 
 			rg1 = &v1beta1.ReferenceGrant{
@@ -1562,15 +1540,6 @@ var _ = Describe("ChangeProcessor", func() {
 
 			rg2 = rg1.DeepCopy()
 			rg2.Name = "rg-2"
-
-			// secretNsName = types.NamespacedName{Namespace: "test", Name: "test-secret"}
-
-			//secret = &apiv1.Secret{
-			//	ObjectMeta: metav1.ObjectMeta{
-			//		Namespace: secretNsName.Namespace,
-			//		Name:      secretNsName.Name,
-			//	},
-			//}
 		})
 		// Changing change - a change that makes processor.Process() report changed
 		// Non-changing change - a change that doesn't do that
@@ -1652,145 +1621,6 @@ var _ = Describe("ChangeProcessor", func() {
 				Expect(changed).To(BeFalse())
 			})
 		})
-		/*
-			Describe("Multiple Kubernetes API resource changes", Ordered, func() {
-				// Note: because secret resource is not used by the real relationship.Capturer, it is not used
-				// in the same way as service and endpoint slice in the tests below.
-				It("should report changed after multiple Upserts of related resources", func() {
-					processor.CaptureUpsertChange(svc)
-					processor.CaptureUpsertChange(slice)
-
-					changed, _ := processor.Process()
-					Expect(changed).To(BeTrue())
-				})
-
-				It("should report not changed after multiple Upserts of unrelated resources", func() {
-					processor.CaptureUpsertChange(svc)
-					processor.CaptureUpsertChange(slice)
-
-					processor.CaptureUpsertChange(secret)
-
-					changed, _ := processor.Process()
-					Expect(changed).To(BeFalse())
-				})
-				When("upserts of related resources are followed by upserts of unrelated resources", func() {
-					It("should report changed", func() {
-						// these are changing changes
-						processor.CaptureUpsertChange(svc)
-						processor.CaptureUpsertChange(slice)
-
-						// there are non-changing changes
-						processor.CaptureUpsertChange(svc)
-						processor.CaptureUpsertChange(slice)
-						processor.CaptureUpsertChange(secret)
-
-						changed, _ := processor.Process()
-						Expect(changed).To(BeTrue())
-					})
-				})
-				When("deletes of related resources are followed by upserts of unrelated resources", func() {
-					It("should report changed", func() {
-						// these are changing changes
-						processor.CaptureDeleteChange(&apiv1.Service{}, svcNsName)
-						processor.CaptureDeleteChange(&discoveryV1.EndpointSlice{}, sliceNsName)
-
-						// these are non-changing changes
-						processor.CaptureUpsertChange(svc)
-						processor.CaptureUpsertChange(slice)
-						processor.CaptureUpsertChange(secret)
-
-						changed, _ := processor.Process()
-						Expect(changed).To(BeTrue())
-					})
-				})
-			})
-
-		*/
-
-		/*
-				Describe("Multiple Kubernetes API and Gateway API resource changes", Ordered, func() {
-					It("should report changed after multiple Upserts of new and related resources", func() {
-						// new Gateway API resources
-						processor.CaptureUpsertChange(gc)
-						processor.CaptureUpsertChange(gw1)
-						processor.CaptureUpsertChange(hr1)
-						processor.CaptureUpsertChange(rg1)
-
-
-					It("should report not changed after multiple Upserts of unrelated and unchanged resources", func() {
-						// unchanged Gateway API resources
-						processor.CaptureUpsertChange(gc)
-						processor.CaptureUpsertChange(gw1)
-						processor.CaptureUpsertChange(hr1)
-						processor.CaptureUpsertChange(rg1)
-
-						// unrelated Kubernetes API resources
-						processor.CaptureUpsertChange(svc)
-						processor.CaptureUpsertChange(slice)
-						processor.CaptureUpsertChange(secret)
-
-						changed, _ := processor.Process()
-						Expect(changed).To(BeFalse())
-					})
-
-					It("should report changed after upserting related resources followed by upserting unchanged resources",
-						func() {
-							// these are changing changes
-							processor.CaptureUpsertChange(svc)
-							processor.CaptureUpsertChange(slice)
-
-							// these are non-changing changes
-							processor.CaptureUpsertChange(gc)
-							processor.CaptureUpsertChange(gw1)
-							processor.CaptureUpsertChange(hr1)
-							processor.CaptureUpsertChange(rg1)
-							processor.CaptureUpsertChange(secret)
-
-							changed, _ := processor.Process()
-							Expect(changed).To(BeTrue())
-						},
-					)
-
-					It("should report changed after upserting changed resources followed by upserting unrelated resources",
-						func() {
-							// these are changing changes
-							processor.CaptureUpsertChange(gcUpdated)
-							processor.CaptureUpsertChange(gw1Updated)
-							processor.CaptureUpsertChange(hr1Updated)
-							processor.CaptureUpsertChange(rg1Updated)
-
-							// these are non-changing changes
-							processor.CaptureUpsertChange(svc)
-							processor.CaptureUpsertChange(slice)
-							processor.CaptureUpsertChange(secret)
-
-							changed, _ := processor.Process()
-							Expect(changed).To(BeTrue())
-						},
-					)
-					It(
-						"should report changed after upserting related resources followed by upserting unchanged resources",
-						func() {
-							// these are changing changes
-							processor.CaptureUpsertChange(svc)
-							processor.CaptureUpsertChange(slice)
-
-							// these are non-changing changes
-							processor.CaptureUpsertChange(gcUpdated)
-							processor.CaptureUpsertChange(gw1Updated)
-							processor.CaptureUpsertChange(hr1Updated)
-							processor.CaptureUpsertChange(rg1Updated)
-							processor.CaptureUpsertChange(secret)
-
-							changed, _ := processor.Process()
-							Expect(changed).To(BeTrue())
-						},
-					)
-				})
-			})
-
-		*/
-
 		Describe("Webhook validation cases", Ordered, func() {
 			var (
 				processor         state.ChangeProcessor
