@@ -403,7 +403,7 @@ describe('redirect', () => {
     method: 'GET',
     headers: ['header1:value1', 'header2:value2'],
     params: ['Arg1=value1', 'arg2=value2=SOME=other=value'],
-    redirectPath: '/a-match',
+    redirectPath: '/a-match?Arg1=value1&arg2=value2%3DSOME%3Dother%3Dvalue',
   };
 
   const tests = [

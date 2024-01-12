@@ -46,14 +46,7 @@ function redirect(r) {
     return;
   }
 
-  // If performing a rewrite, $request_uri won't be used,
-  // so we have to preserve args in the internal redirect.
-  let args = qs.stringify(r.args);
-  if (args) {
-    args = '?' + args;
-  }
-
-  r.internalRedirect(match.redirectPath + args);
+  r.internalRedirect(match.redirectPath);
 }
 
 function extractMatchesFromRequest(r) {
