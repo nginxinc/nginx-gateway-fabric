@@ -214,7 +214,7 @@ func initializeExternalLocations(
 }
 
 func initializeInternalLocation(
-	pathruleIdx int,
+	pathruleIdx,
 	matchRuleIdx int,
 	match dataplane.Match,
 ) (http.Location, httpMatch) {
