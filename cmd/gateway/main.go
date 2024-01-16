@@ -5,11 +5,14 @@ import (
 	"os"
 )
 
+// Set during go build
 var (
-	// Set during go build
 	version string
 	commit  string
 	date    string
+
+	// telemetryReportPeriod is the period at which telemetry reports are sent.
+	telemetryReportPeriod string
 )
 
 func main() {
