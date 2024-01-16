@@ -218,7 +218,7 @@ func initializeInternalLocation(
 	matchRuleIdx int,
 	match dataplane.Match,
 ) (http.Location, httpMatch) {
-	path := createPathForMatch(pathruleIdx, matchRuleIdx)
+	path := fmt.Sprintf("@rule%d-route%d", pathruleIdx, matchRuleIdx)
 	return createMatchLocation(path), createHTTPMatch(match, path)
 }
 
@@ -443,8 +443,7 @@ func createProxyPass(backendGroup dataplane.BackendGroup, filter *dataplane.HTTP
 
 func createMatchLocation(path string) http.Location {
 	return http.Location{
-		Path:     path,
-		Internal: true,
+		Path: path,
 	}
 }
 
@@ -536,10 +535,6 @@ func createPath(rule dataplane.PathRule) string {
 	default:
 		return rule.Path
 	}
-}
-
-func createPathForMatch(ruleIdx, routeIdx int) string {
-	return fmt.Sprintf("@rule%d-route%d", ruleIdx, routeIdx)
 }
 
 func createDefaultRootLocation() http.Location {

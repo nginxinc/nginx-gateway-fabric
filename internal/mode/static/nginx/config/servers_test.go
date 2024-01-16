@@ -554,19 +554,16 @@ func TestCreateServers(t *testing.T) {
 		return []http.Location{
 			{
 				Path:            "@rule0-route0",
-				Internal:        true,
 				ProxyPass:       "http://test_foo_80$request_uri",
 				ProxySetHeaders: baseHeaders,
 			},
 			{
 				Path:            "@rule0-route1",
-				Internal:        true,
 				ProxyPass:       "http://test_foo_80$request_uri",
 				ProxySetHeaders: baseHeaders,
 			},
 			{
 				Path:            "@rule0-route2",
-				Internal:        true,
 				ProxyPass:       "http://test_foo_80$request_uri",
 				ProxySetHeaders: baseHeaders,
 			},
@@ -576,7 +573,6 @@ func TestCreateServers(t *testing.T) {
 			},
 			{
 				Path:            "@rule1-route0",
-				Internal:        true,
 				ProxyPass:       "http://$test__route1_rule1$request_uri",
 				ProxySetHeaders: baseHeaders,
 			},
@@ -628,7 +624,6 @@ func TestCreateServers(t *testing.T) {
 					Body: "$scheme://foo.example.com:8080$request_uri",
 					Code: 302,
 				},
-				Internal: true,
 			},
 			{
 				Path:         "/redirect-with-headers/",
@@ -653,7 +648,6 @@ func TestCreateServers(t *testing.T) {
 			{
 				Path:            "@rule7-route0",
 				Rewrites:        []string{"^/rewrite-with-headers(.*)$ /prefix-replacement$1 break"},
-				Internal:        true,
 				ProxyPass:       "http://test_foo_80",
 				ProxySetHeaders: rewriteProxySetHeaders,
 			},
@@ -682,7 +676,6 @@ func TestCreateServers(t *testing.T) {
 				Return: &http.Return{
 					Code: http.StatusInternalServerError,
 				},
-				Internal: true,
 			},
 			{
 				Path:         "/invalid-filter-with-headers/",
@@ -701,7 +694,6 @@ func TestCreateServers(t *testing.T) {
 				Path:            "@rule11-route0",
 				ProxyPass:       "http://test_foo_80$request_uri",
 				ProxySetHeaders: baseHeaders,
-				Internal:        true,
 			},
 			{
 				Path:         "= /test",
@@ -1687,36 +1679,11 @@ func TestCreateMatchLocation(t *testing.T) {
 	g := NewWithT(t)
 
 	expected := http.Location{
-		Path:     "/path",
-		Internal: true,
+		Path: "/path",
 	}
 
 	result := createMatchLocation("/path")
 	g.Expect(result).To(Equal(expected))
-}
-
-func TestCreatePathForMatch(t *testing.T) {
-	g := NewWithT(t)
-
-	tests := []struct {
-		expected string
-		pathType dataplane.PathType
-		panic    bool
-	}{
-		{
-			expected: "@rule0-route1",
-			pathType: dataplane.PathTypePrefix,
-		},
-		{
-			expected: "@rule0-route1",
-			pathType: dataplane.PathTypeExact,
-		},
-	}
-
-	for _, tc := range tests {
-		result := createPathForMatch(0, 1)
-		g.Expect(result).To(Equal(tc.expected))
-	}
 }
 
 func TestGenerateProxySetHeaders(t *testing.T) {
