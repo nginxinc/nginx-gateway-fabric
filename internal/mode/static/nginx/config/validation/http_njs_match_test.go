@@ -13,6 +13,7 @@ func TestValidatePathInMatch(t *testing.T) {
 		"/",
 		"/path",
 		"/path/subpath-123",
+		"/route0-rule0",
 	)
 	testInvalidValuesForSimpleValidator(
 		t,
@@ -23,7 +24,6 @@ func TestValidatePathInMatch(t *testing.T) {
 		"/path;",
 		"path",
 		"",
-		"/path$",
 	)
 }
 

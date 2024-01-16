@@ -33,10 +33,6 @@ server {
 
         {{ range $l := $s.Locations }}
     location {{ $l.Path }} {
-        {{ if $l.Internal -}}
-        internal;
-        {{ end }}
-
         {{- range $r := $l.Rewrites }}
         rewrite {{ $r }};
         {{- end }}

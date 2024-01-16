@@ -439,7 +439,7 @@ describe('redirect', () => {
         params: { Arg1: 'value1', arg2: 'value2=SOME=other=value' },
       }),
       matches: [testHeaderMatches, testQueryParamMatches, testAllMatchTypes, testAnyMatch], // request matches testAllMatchTypes and testAnyMatch. But first match should win.
-      expectedRedirect: '/a-match?Arg1=value1&arg2=value2%3DSOME%3Dother%3Dvalue',
+      expectedRedirect: '/a-match',
     },
   ];
 

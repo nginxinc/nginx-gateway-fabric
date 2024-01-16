@@ -490,34 +490,34 @@ func TestCreateServers(t *testing.T) {
 	}
 
 	slashMatches := []httpMatch{
-		{Method: "POST", RedirectPath: "/_prefix_route0"},
-		{Method: "PATCH", RedirectPath: "/_prefix_route1"},
-		{Any: true, RedirectPath: "/_prefix_route2"},
+		{Method: "POST", RedirectPath: "@rule0-route0"},
+		{Method: "PATCH", RedirectPath: "@rule0-route1"},
+		{Any: true, RedirectPath: "@rule0-route2"},
 	}
 	testMatches := []httpMatch{
 		{
 			Method:       "GET",
 			Headers:      []string{"Version:V1", "test:foo", "my-header:my-value"},
 			QueryParams:  []string{"GrEat=EXAMPLE", "test=foo=bar"},
-			RedirectPath: "/test_prefix_route0",
+			RedirectPath: "@rule1-route0",
 		},
 	}
 	exactMatches := []httpMatch{
 		{
 			Method:       "GET",
-			RedirectPath: "/test_exact_route0",
+			RedirectPath: "@rule11-route0",
 		},
 	}
 	redirectHeaderMatches := []httpMatch{
 		{
 			Headers:      []string{"redirect:this"},
-			RedirectPath: "/redirect-with-headers_prefix_route0",
+			RedirectPath: "@rule5-route0",
 		},
 	}
 	rewriteHeaderMatches := []httpMatch{
 		{
 			Headers:      []string{"rewrite:this"},
-			RedirectPath: "/rewrite-with-headers_prefix_route0",
+			RedirectPath: "@rule7-route0",
 		},
 	}
 	rewriteProxySetHeaders := []http.Header{
@@ -541,7 +541,7 @@ func TestCreateServers(t *testing.T) {
 	invalidFilterHeaderMatches := []httpMatch{
 		{
 			Headers:      []string{"filter:this"},
-			RedirectPath: "/invalid-filter-with-headers_prefix_route0",
+			RedirectPath: "@rule9-route0",
 		},
 	}
 
@@ -553,20 +553,17 @@ func TestCreateServers(t *testing.T) {
 
 		return []http.Location{
 			{
-				Path:            "/_prefix_route0",
-				Internal:        true,
+				Path:            "@rule0-route0",
 				ProxyPass:       "http://test_foo_80$request_uri",
 				ProxySetHeaders: baseHeaders,
 			},
 			{
-				Path:            "/_prefix_route1",
-				Internal:        true,
+				Path:            "@rule0-route1",
 				ProxyPass:       "http://test_foo_80$request_uri",
 				ProxySetHeaders: baseHeaders,
 			},
 			{
-				Path:            "/_prefix_route2",
-				Internal:        true,
+				Path:            "@rule0-route2",
 				ProxyPass:       "http://test_foo_80$request_uri",
 				ProxySetHeaders: baseHeaders,
 			},
@@ -575,8 +572,7 @@ func TestCreateServers(t *testing.T) {
 				HTTPMatchVar: expectedMatchString(slashMatches),
 			},
 			{
-				Path:            "/test_prefix_route0",
-				Internal:        true,
+				Path:            "@rule1-route0",
 				ProxyPass:       "http://$test__route1_rule1$request_uri",
 				ProxySetHeaders: baseHeaders,
 			},
@@ -623,12 +619,11 @@ func TestCreateServers(t *testing.T) {
 				},
 			},
 			{
-				Path: "/redirect-with-headers_prefix_route0",
+				Path: "@rule5-route0",
 				Return: &http.Return{
 					Body: "$scheme://foo.example.com:8080$request_uri",
 					Code: 302,
 				},
-				Internal: true,
 			},
 			{
 				Path:         "/redirect-with-headers/",
@@ -651,9 +646,8 @@ func TestCreateServers(t *testing.T) {
 				ProxySetHeaders: rewriteProxySetHeaders,
 			},
 			{
-				Path:            "/rewrite-with-headers_prefix_route0",
-				Rewrites:        []string{"^ $request_uri", "^/rewrite-with-headers(.*)$ /prefix-replacement$1 break"},
-				Internal:        true,
+				Path:            "@rule7-route0",
+				Rewrites:        []string{"^/rewrite-with-headers(.*)$ /prefix-replacement$1 break"},
 				ProxyPass:       "http://test_foo_80",
 				ProxySetHeaders: rewriteProxySetHeaders,
 			},
@@ -678,11 +672,10 @@ func TestCreateServers(t *testing.T) {
 				},
 			},
 			{
-				Path: "/invalid-filter-with-headers_prefix_route0",
+				Path: "@rule9-route0",
 				Return: &http.Return{
 					Code: http.StatusInternalServerError,
 				},
-				Internal: true,
 			},
 			{
 				Path:         "/invalid-filter-with-headers/",
@@ -698,10 +691,9 @@ func TestCreateServers(t *testing.T) {
 				ProxySetHeaders: baseHeaders,
 			},
 			{
-				Path:            "/test_exact_route0",
+				Path:            "@rule11-route0",
 				ProxyPass:       "http://test_foo_80$request_uri",
 				ProxySetHeaders: baseHeaders,
-				Internal:        true,
 			},
 			{
 				Path:         "= /test",
@@ -1274,8 +1266,7 @@ func TestCreateRewritesValForRewriteFilter(t *testing.T) {
 				},
 			},
 			expected: &rewriteConfig{
-				InternalRewrite: "^ $request_uri",
-				MainRewrite:     "^ /full-path break",
+				Rewrite: "^ /full-path break",
 			},
 			msg: "full path",
 		},
@@ -1288,8 +1279,7 @@ func TestCreateRewritesValForRewriteFilter(t *testing.T) {
 				},
 			},
 			expected: &rewriteConfig{
-				InternalRewrite: "^ $request_uri",
-				MainRewrite:     "^/original(.*)$ /prefix-path$1 break",
+				Rewrite: "^/original(.*)$ /prefix-path$1 break",
 			},
 			msg: "prefix path no trailing slashes",
 		},
@@ -1302,8 +1292,7 @@ func TestCreateRewritesValForRewriteFilter(t *testing.T) {
 				},
 			},
 			expected: &rewriteConfig{
-				InternalRewrite: "^ $request_uri",
-				MainRewrite:     "^/original(?:/(.*))?$ /$1 break",
+				Rewrite: "^/original(?:/(.*))?$ /$1 break",
 			},
 			msg: "prefix path empty string",
 		},
@@ -1316,8 +1305,7 @@ func TestCreateRewritesValForRewriteFilter(t *testing.T) {
 				},
 			},
 			expected: &rewriteConfig{
-				InternalRewrite: "^ $request_uri",
-				MainRewrite:     "^/original(?:/(.*))?$ /$1 break",
+				Rewrite: "^/original(?:/(.*))?$ /$1 break",
 			},
 			msg: "prefix path /",
 		},
@@ -1330,8 +1318,7 @@ func TestCreateRewritesValForRewriteFilter(t *testing.T) {
 				},
 			},
 			expected: &rewriteConfig{
-				InternalRewrite: "^ $request_uri",
-				MainRewrite:     "^/original(?:/(.*))?$ /trailing/$1 break",
+				Rewrite: "^/original(?:/(.*))?$ /trailing/$1 break",
 			},
 			msg: "prefix path replacement with trailing /",
 		},
@@ -1344,8 +1331,7 @@ func TestCreateRewritesValForRewriteFilter(t *testing.T) {
 				},
 			},
 			expected: &rewriteConfig{
-				InternalRewrite: "^ $request_uri",
-				MainRewrite:     "^/original/(.*)$ /prefix-path/$1 break",
+				Rewrite: "^/original/(.*)$ /prefix-path/$1 break",
 			},
 			msg: "prefix path original with trailing /",
 		},
@@ -1358,8 +1344,7 @@ func TestCreateRewritesValForRewriteFilter(t *testing.T) {
 				},
 			},
 			expected: &rewriteConfig{
-				InternalRewrite: "^ $request_uri",
-				MainRewrite:     "^/original/(.*)$ /trailing/$1 break",
+				Rewrite: "^/original/(.*)$ /trailing/$1 break",
 			},
 			msg: "prefix path both with trailing slashes",
 		},
@@ -1694,36 +1679,11 @@ func TestCreateMatchLocation(t *testing.T) {
 	g := NewWithT(t)
 
 	expected := http.Location{
-		Path:     "/path",
-		Internal: true,
+		Path: "/path",
 	}
 
 	result := createMatchLocation("/path")
 	g.Expect(result).To(Equal(expected))
-}
-
-func TestCreatePathForMatch(t *testing.T) {
-	g := NewWithT(t)
-
-	tests := []struct {
-		expected string
-		pathType dataplane.PathType
-		panic    bool
-	}{
-		{
-			expected: "/path_prefix_route1",
-			pathType: dataplane.PathTypePrefix,
-		},
-		{
-			expected: "/path_exact_route1",
-			pathType: dataplane.PathTypeExact,
-		},
-	}
-
-	for _, tc := range tests {
-		result := createPathForMatch("/path", tc.pathType, 1)
-		g.Expect(result).To(Equal(tc.expected))
-	}
 }
 
 func TestGenerateProxySetHeaders(t *testing.T) {
