@@ -100,7 +100,7 @@ To build the NGINX Gateway Fabric and NGINX Plus container images from source ru
 make TAG=$(whoami) build-images-with-plus
 ```
 
-This will build the docker images `nginx-gateway-fabric:<your-user>` and `nginx-gateway-fabric/nginxplus:<your-user>`.
+This will build the docker images `nginx-gateway-fabric:<your-user>` and `nginx-gateway-fabric/nginx-plus:<your-user>`.
 
 ## Deploy on Kind
 
@@ -119,7 +119,7 @@ This will build the docker images `nginx-gateway-fabric:<your-user>` and `nginx-
    or
 
    ```shell
-   kind load docker-image nginx-gateway-fabric:$(whoami) nginx-gateway-fabric/nginxplus:$(whoami)
+   kind load docker-image nginx-gateway-fabric:$(whoami) nginx-gateway-fabric/nginx-plus:$(whoami)
    ```
 
 3. Install Gateway API CRDs:
@@ -139,7 +139,7 @@ This will build the docker images `nginx-gateway-fabric:<your-user>` and `nginx-
    - To install NGINX Plus with Helm (where your release name is `my-release`):
 
       ```shell
-      helm install my-release ./deploy/helm-chart --create-namespace --wait --set service.type=NodePort --set nginxGateway.image.repository=nginx-gateway-fabric --set nginxGateway.image.tag=$(whoami) --set nginxGateway.image.pullPolicy=Never --set nginx.image.repository=nginx-gateway-fabric/nginxplus --set nginx.image.tag=$(whoami) --set nginx.image.pullPolicy=Never --set nginx.plus=true -n nginx-gateway
+      helm install my-release ./deploy/helm-chart --create-namespace --wait --set service.type=NodePort --set nginxGateway.image.repository=nginx-gateway-fabric --set nginxGateway.image.tag=$(whoami) --set nginxGateway.image.pullPolicy=Never --set nginx.image.repository=nginx-gateway-fabric/nginx-plus --set nginx.image.tag=$(whoami) --set nginx.image.pullPolicy=Never --set nginx.plus=true -n nginx-gateway
       ```
 
    > For more information on Helm configuration options see the Helm [README](../../deploy/helm-chart/README.md).
@@ -156,7 +156,7 @@ This will build the docker images `nginx-gateway-fabric:<your-user>` and `nginx-
    - To install NGINX Plus with manifests:
 
       ```shell
-      make generate-manifests HELM_TEMPLATE_COMMON_ARGS="--set nginxGateway.image.repository=nginx-gateway-fabric --set nginxGateway.image.tag=$(whoami) --set nginxGateway.image.pullPolicy=Never --set nginx.image.repository=nginx-gateway-fabric/nginxplus --set nginx.image.tag=$(whoami) --set nginx.image.pullPolicy=Never --set nginx.plus=true"
+      make generate-manifests HELM_TEMPLATE_COMMON_ARGS="--set nginxGateway.image.repository=nginx-gateway-fabric --set nginxGateway.image.tag=$(whoami) --set nginxGateway.image.pullPolicy=Never --set nginx.image.repository=nginx-gateway-fabric/nginx-plus --set nginx.image.tag=$(whoami) --set nginx.image.pullPolicy=Never --set nginx.plus=true"
       kubectl apply -f deploy/manifests/crds
       kubectl apply -f deploy/manifests/nginx-gateway.yaml
       kubectl apply -f deploy/manifests/service/nodeport.yaml
