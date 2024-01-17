@@ -1,7 +1,7 @@
 ---
 title: "Troubleshooting"
 
-weight: 200
+weight: 300
 toc: true
 docs: "DOCS-000"
 ---
