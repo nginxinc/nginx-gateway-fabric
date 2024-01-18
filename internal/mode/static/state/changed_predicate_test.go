@@ -12,13 +12,27 @@ import (
 
 func TestFuncPredicate(t *testing.T) {
 	alwaysTrueFunc := func(object client.Object, _ types.NamespacedName) bool { return true }
+	emptyObject := &v1.Pod{}
 
 	p := funcPredicate{stateChanged: alwaysTrueFunc}
 
 	g := NewWithT(t)
 
 	g.Expect(p.delete(nil, types.NamespacedName{})).To(BeTrue())
-	g.Expect(p.upsert(nil, nil)).To(BeTrue())
+	g.Expect(p.upsert(nil, emptyObject)).To(BeTrue())
+}
+
+func TestFuncPredicate_Panic(t *testing.T) {
+	alwaysTrueFunc := func(object client.Object, _ types.NamespacedName) bool { return true }
+
+	p := funcPredicate{stateChanged: alwaysTrueFunc}
+
+	g := NewWithT(t)
+
+	upsert := func() {
+		p.upsert(nil, nil)
+	}
+	g.Expect(upsert).Should(Panic())
 }
 
 func TestAnnotationChangedPredicate_Delete(t *testing.T) {

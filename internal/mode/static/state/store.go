@@ -196,11 +196,6 @@ func (s *changeTrackingUpdater) Upsert(obj client.Object) {
 
 	changingUpsert := s.upsert(obj)
 
-	// FIXME(pleshakov): Check generation in all cases to minimize the number of Graph regeneration.
-	// s.changed can be true even if the generation of the object did not change, because
-	// capturer and triggerStateChange don't take the generation into account.
-	// See https://github.com/nginxinc/nginx-gateway-fabric/issues/825
-
 	s.changed = s.changed || changingUpsert
 }
 
