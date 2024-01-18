@@ -27,11 +27,7 @@ type BackendRef struct {
 
 // ServicePortReference returns a string representation for the service and port that is referenced by the BackendRef.
 func (b BackendRef) ServicePortReference() string {
-	// If the ServicePort's Port is 0 it means that the Port on the BackendRef
-	// did not match any ports on the Service's ServicePorts.
-	//
-	// If the SvcNsName Name or Namespace are empty strings, it means that the BackendRef failed validation.
-	if b.SvcNsName.Name == "" || b.SvcNsName.Namespace == "" || b.ServicePort.Port == 0 {
+	if !b.Valid {
 		return ""
 	}
 	return fmt.Sprintf("%s_%s_%d", b.SvcNsName.Namespace, b.SvcNsName.Name, b.ServicePort.Port)
