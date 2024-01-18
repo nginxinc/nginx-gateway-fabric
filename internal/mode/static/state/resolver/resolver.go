@@ -46,8 +46,6 @@ func (e *ServiceResolverImpl) Resolve(
 	svcNsName types.NamespacedName,
 	svcPort v1.ServicePort,
 ) ([]Endpoint, error) {
-	// svcNsName and svcPort are guaranteed to be valid non-empty variables from when they are passed in
-	// from configuration.go.
 	if svcPort.Port == 0 || svcNsName.Name == "" || svcNsName.Namespace == "" {
 		panic(fmt.Errorf("expected the following fields to be non-empty: name: %s, ns: %s, port: %d",
 			svcNsName.Name, svcNsName.Namespace, svcPort.Port))

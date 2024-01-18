@@ -156,15 +156,11 @@ func getServiceAndPortFromRef(
 
 	svcNsName := types.NamespacedName{Name: string(ref.Name), Namespace: ns}
 
-	// If the service is unable to be found, svcNsName will still be populated with what the BackendRef
-	// has listed, however the ServicePort returned will be empty.
 	svc, ok := services[svcNsName]
 	if !ok {
 		return svcNsName, v1.ServicePort{}, field.NotFound(refPath.Child("name"), ref.Name)
 	}
 
-	// svcPort can be an empty v1.ServicePort{} if the BackendRef.Port did not match any ServicePorts
-	//
 	// safe to dereference port here because we already validated that the port is not nil in validateBackendRef.
 	svcPort, err := getServicePort(svc, int32(*ref.Port))
 	if err != nil {
