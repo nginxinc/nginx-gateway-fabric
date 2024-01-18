@@ -4,12 +4,13 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
-// routes all have populated ParentRefs from when they were created
 func buildReferencedServices(
 	routes map[types.NamespacedName]*Route,
 ) map[types.NamespacedName]struct{} {
 	svcNames := make(map[types.NamespacedName]struct{})
 
+	// routes all have populated ParentRefs from when they were created.
+	//
 	// Get all the service names referenced from all the HTTPRoutes.
 	for _, route := range routes {
 		// If none of the ParentRefs are attached to the Gateway, we want to skip the route.
