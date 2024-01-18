@@ -703,17 +703,6 @@ var _ = Describe("ChangeProcessor", func() {
 					Expect(helpers.Diff(expGraph, graphCfg)).To(BeEmpty())
 				})
 			})
-			When("the first HTTPRoute without a generation changed is processed", func() {
-				It("returns nil graph", func() {
-					hr1UpdatedSameGen := hr1.DeepCopy()
-					// hr1UpdatedSameGen.Generation has not been changed
-					processor.CaptureUpsertChange(hr1UpdatedSameGen)
-
-					changed, graphCfg := processor.Process()
-					Expect(changed).To(BeFalse())
-					Expect(graphCfg).To(BeNil())
-				})
-			})
 			When("the first HTTPRoute update with a generation changed is processed", func() {
 				It("returns populated graph", func() {
 					processor.CaptureUpsertChange(hr1Updated)
@@ -733,17 +722,6 @@ var _ = Describe("ChangeProcessor", func() {
 				},
 				)
 			})
-			When("the first Gateway update without generation changed is processed", func() {
-				It("returns nil graph", func() {
-					gwUpdatedSameGen := gw1.DeepCopy()
-					// gwUpdatedSameGen.Generation has not been changed
-					processor.CaptureUpsertChange(gwUpdatedSameGen)
-
-					changed, graphCfg := processor.Process()
-					Expect(changed).To(BeFalse())
-					Expect(graphCfg).To(BeNil())
-				})
-			})
 			When("the first Gateway update with a generation changed is processed", func() {
 				It("returns populated graph", func() {
 					processor.CaptureUpsertChange(gw1Updated)
@@ -756,17 +734,6 @@ var _ = Describe("ChangeProcessor", func() {
 					changed, graphCfg := processor.Process()
 					Expect(changed).To(BeTrue())
 					Expect(helpers.Diff(expGraph, graphCfg)).To(BeEmpty())
-				})
-			})
-			When("the GatewayClass update without generation change is processed", func() {
-				It("returns nil graph", func() {
-					gcUpdatedSameGen := gc.DeepCopy()
-					// gcUpdatedSameGen.Generation has not been changed
-					processor.CaptureUpsertChange(gcUpdatedSameGen)
-
-					changed, graphCfg := processor.Process()
-					Expect(changed).To(BeFalse())
-					Expect(graphCfg).To(BeNil())
 				})
 			})
 			When("the GatewayClass update with generation change is processed", func() {
@@ -1590,15 +1557,6 @@ var _ = Describe("ChangeProcessor", func() {
 				changed, _ := processor.Process()
 				Expect(changed).To(BeTrue())
 			})
-			It("should report not changed after multiple Upserts of the resource with same generation", func() {
-				processor.CaptureUpsertChange(gc)
-				processor.CaptureUpsertChange(gw1)
-				processor.CaptureUpsertChange(hr1)
-				processor.CaptureUpsertChange(rg1)
-
-				changed, _ := processor.Process()
-				Expect(changed).To(BeFalse())
-			})
 			When("a upsert of updated resources is followed by an upsert of the same generation", func() {
 				It("should report changed", func() {
 					// these are changing changes
@@ -1737,14 +1695,7 @@ var _ = Describe("ChangeProcessor", func() {
 				Expect(changed).To(BeTrue())
 			})
 
-			It("should report not changed after multiple Upserts of unrelated and unchanged resources", func() {
-				// unchanged Gateway API resources
-				fakeRelationshipCapturer.ExistsReturns(false)
-				processor.CaptureUpsertChange(gc)
-				processor.CaptureUpsertChange(gw1)
-				processor.CaptureUpsertChange(hr1)
-				processor.CaptureUpsertChange(rg1)
-
+			It("should report not changed after multiple Upserts of unrelated resources", func() {
 				// unrelated Kubernetes API resources
 				fakeRelationshipCapturer.ExistsReturns(false)
 				processor.CaptureUpsertChange(svc)

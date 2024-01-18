@@ -281,22 +281,31 @@ func registerControllers(
 		{
 			objectType: &gatewayv1.GatewayClass{},
 			options: []controller.Option{
-				controller.WithK8sPredicate(predicate.GatewayClassPredicate{ControllerName: cfg.GatewayCtlrName}),
+				controller.WithK8sPredicate(k8spredicate.And(
+					k8spredicate.GenerationChangedPredicate{},
+					predicate.GatewayClassPredicate{ControllerName: cfg.GatewayCtlrName})),
 			},
 		},
 		{
 			objectType: &gatewayv1.Gateway{},
 			options: func() []controller.Option {
-				if cfg.GatewayNsName != nil {
-					return []controller.Option{
-						controller.WithNamespacedNameFilter(filter.CreateSingleResourceFilter(*cfg.GatewayNsName)),
-					}
+				options := []controller.Option{
+					controller.WithK8sPredicate(k8spredicate.GenerationChangedPredicate{}),
 				}
-				return nil
+				if cfg.GatewayNsName != nil {
+					options = append(
+						options,
+						controller.WithNamespacedNameFilter(filter.CreateSingleResourceFilter(*cfg.GatewayNsName)),
+					)
+				}
+				return options
 			}(),
 		},
 		{
 			objectType: &gatewayv1.HTTPRoute{},
+			options: []controller.Option{
+				controller.WithK8sPredicate(k8spredicate.GenerationChangedPredicate{}),
+			},
 		},
 		{
 			objectType: &apiv1.Service{},
@@ -334,6 +343,9 @@ func registerControllers(
 		},
 		{
 			objectType: &gatewayv1beta1.ReferenceGrant{},
+			options: []controller.Option{
+				controller.WithK8sPredicate(k8spredicate.GenerationChangedPredicate{}),
+			},
 		},
 		{
 			objectType: &crdWithGVK,
