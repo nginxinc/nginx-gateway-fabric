@@ -184,6 +184,7 @@ func createScheme() *runtime.Scheme {
 
 	utilruntime.Must(v1.AddToScheme(scheme))
 	utilruntime.Must(v1beta1.AddToScheme(scheme))
+	utilruntime.Must(v1alpha2.AddToScheme(scheme))
 	utilruntime.Must(apiv1.AddToScheme(scheme))
 	utilruntime.Must(discoveryV1.AddToScheme(scheme))
 	utilruntime.Must(apiext.AddToScheme(scheme))
@@ -573,11 +574,11 @@ var _ = Describe("ChangeProcessor", func() {
 							}
 							expGraph.Routes[hr1Name].ParentRefs[0].Attachment = &graph.ParentRefAttachmentStatus{
 								AcceptedHostnames: map[string][]string{},
-								FailedCondition:   staticConds.NewRouteInvalidGateway(),
+								FailedCondition:   staticConds.NewRouteNoMatchingParent(),
 							}
 							expGraph.Routes[hr1Name].ParentRefs[1].Attachment = &graph.ParentRefAttachmentStatus{
 								AcceptedHostnames: map[string][]string{},
-								FailedCondition:   staticConds.NewRouteInvalidGateway(),
+								FailedCondition:   staticConds.NewRouteNoMatchingParent(),
 							}
 
 							expGraph.ReferencedSecrets = nil

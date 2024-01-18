@@ -10,6 +10,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
+	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
@@ -421,6 +422,7 @@ func TestAddBackendRefsToRulesTest(t *testing.T) {
 	services := map[types.NamespacedName]*v1.Service{
 		{Namespace: "test", Name: "svc1"}: svc1,
 	}
+	policies := map[types.NamespacedName]*v1alpha2.BackendTLSPolicy{}
 
 	tests := []struct {
 		name                string
@@ -534,11 +536,13 @@ func TestAddBackendRefsToRulesTest(t *testing.T) {
 		},
 	}
 
+	configMapResolver := newConfigMapResolver(nil)
+
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewWithT(t)
 			resolver := newReferenceGrantResolver(nil)
-			addBackendRefsToRules(test.route, resolver, services)
+			addBackendRefsToRules(test.route, resolver, services, policies, configMapResolver)
 
 			var actual []BackendRef
 			if test.route.Rules != nil {
@@ -552,22 +556,67 @@ func TestAddBackendRefsToRulesTest(t *testing.T) {
 }
 
 func TestCreateBackend(t *testing.T) {
-	svc1 := &v1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: "test",
-			Name:      "service1",
-		},
-		Spec: v1.ServiceSpec{
-			Ports: []v1.ServicePort{
-				{
-					Port: 80,
+	createService := func(name string) *v1.Service {
+		return &v1.Service{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      name,
+				Namespace: "test",
+			},
+			Spec: v1.ServiceSpec{
+				Ports: []v1.ServicePort{
+					{
+						Port: 80,
+					},
 				},
+			},
+		}
+	}
+	svc1 := createService("service1")
+	svc2 := createService("service2")
+	svc3 := createService("service3")
+	svc1NamespacedName := types.NamespacedName{Namespace: "test", Name: "service1"}
+	svc2NamespacedName := types.NamespacedName{Namespace: "test", Name: "service2"}
+	svc3NamespacedName := types.NamespacedName{Namespace: "test", Name: "service3"}
+
+	btp := &v1alpha2.BackendTLSPolicy{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "btp",
+			Namespace: "test",
+		},
+		Spec: v1alpha2.BackendTLSPolicySpec{
+			TargetRef: v1alpha2.PolicyTargetReferenceWithSectionName{
+				PolicyTargetReference: v1alpha2.PolicyTargetReference{
+					Group:     "",
+					Kind:      "Service",
+					Name:      "service2",
+					Namespace: (*gatewayv1.Namespace)(helpers.GetPointer("test")),
+				},
+			},
+			TLS: v1alpha2.BackendTLSPolicyConfig{
+				Hostname:         "foo.example.com",
+				WellKnownCACerts: (helpers.GetPointer(v1alpha2.WellKnownCACertSystem)),
 			},
 		},
 	}
-	svc1NamespacedName := types.NamespacedName{
-		Namespace: "test",
-		Name:      "service1",
+	btp2 := &v1alpha2.BackendTLSPolicy{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "btp2",
+			Namespace: "test",
+		},
+		Spec: v1alpha2.BackendTLSPolicySpec{
+			TargetRef: v1alpha2.PolicyTargetReferenceWithSectionName{
+				PolicyTargetReference: v1alpha2.PolicyTargetReference{
+					Group:     "",
+					Kind:      "Service",
+					Name:      "service3",
+					Namespace: (*gatewayv1.Namespace)(helpers.GetPointer("test")),
+				},
+			},
+			TLS: v1alpha2.BackendTLSPolicyConfig{
+				Hostname:         "foo.example.com",
+				WellKnownCACerts: (helpers.GetPointer(v1alpha2.WellKnownCACertType("unknown"))),
+			},
+		},
 	}
 
 	tests := []struct {
@@ -669,21 +718,77 @@ func TestCreateBackend(t *testing.T) {
 			),
 			name: "service doesn't exist",
 		},
+		{
+			ref: gatewayv1.HTTPBackendRef{
+				BackendRef: getModifiedRef(func(backend gatewayv1.BackendRef) gatewayv1.BackendRef {
+					backend.Name = "service2"
+					return backend
+				}),
+			},
+			expectedBackend: BackendRef{
+				SvcNsName:        svc2NamespacedName,
+				ServicePort:      svc1.Spec.Ports[0],
+				Weight:           5,
+				Valid:            true,
+				BackendTLSPolicy: btp,
+			},
+			expectedServicePortReference: "test_service2_80",
+			expectedCondition:            nil,
+			name:                         "normal case with policy",
+		},
+		{
+			ref: gatewayv1.HTTPBackendRef{
+				BackendRef: getModifiedRef(func(backend gatewayv1.BackendRef) gatewayv1.BackendRef {
+					backend.Name = "service3"
+					return backend
+				}),
+			},
+			expectedBackend: BackendRef{
+				SvcNsName:   svc3NamespacedName,
+				ServicePort: svc1.Spec.Ports[0],
+				Weight:      5,
+				Valid:       false,
+			},
+			expectedServicePortReference: "",
+			expectedCondition: helpers.GetPointer(
+				staticConds.NewRouteBackendRefUnsupportedValue(
+					"tls.wellknowncacerts: Invalid value: \"unknown\": unsupported value",
+				),
+			),
+			name: "invalid policy",
+		},
 	}
 
 	services := map[types.NamespacedName]*v1.Service{
 		client.ObjectKeyFromObject(svc1): svc1,
+		client.ObjectKeyFromObject(svc2): svc2,
+		client.ObjectKeyFromObject(svc3): svc3,
 	}
+	policies := map[types.NamespacedName]*v1alpha2.BackendTLSPolicy{
+		client.ObjectKeyFromObject(btp):  btp,
+		client.ObjectKeyFromObject(btp2): btp2,
+	}
+
 	sourceNamespace := "test"
 
 	refPath := field.NewPath("test")
+
+	configMapResolver := newConfigMapResolver(nil)
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewWithT(t)
 
 			resolver := newReferenceGrantResolver(nil)
-			backend, cond := createBackendRef(test.ref, sourceNamespace, resolver, services, refPath)
+			backend, cond := createBackendRef(
+				test.ref,
+				sourceNamespace,
+				resolver,
+				services,
+				refPath,
+				policies,
+				configMapResolver,
+			)
 
 			g.Expect(helpers.Diff(test.expectedBackend, backend)).To(BeEmpty())
 			g.Expect(cond).To(Equal(test.expectedCondition))
@@ -710,7 +815,6 @@ func TestGetServicePort(t *testing.T) {
 			},
 		},
 	}
-
 	g := NewWithT(t)
 	// ports exist
 	for _, p := range []int32{80, 81, 82} {
@@ -723,4 +827,243 @@ func TestGetServicePort(t *testing.T) {
 	port, err := getServicePort(svc, 83)
 	g.Expect(err).Should(HaveOccurred())
 	g.Expect(port.Port).To(Equal(int32(0)))
+}
+
+func TestValidateBackendTLSPolicy(t *testing.T) {
+	targetRefNormalCase := &v1alpha2.PolicyTargetReferenceWithSectionName{
+		PolicyTargetReference: v1alpha2.PolicyTargetReference{
+			Kind:      "Service",
+			Name:      "service1",
+			Namespace: (*gatewayv1.Namespace)(helpers.GetPointer("test")),
+		},
+	}
+
+	localObjectRefNormalCase := []gatewayv1.LocalObjectReference{
+		{
+			Kind:  "ConfigMap",
+			Name:  "configmap",
+			Group: "",
+		},
+	}
+
+	localObjectRefInvalidName := []gatewayv1.LocalObjectReference{
+		{
+			Kind:  "ConfigMap",
+			Name:  "invalid",
+			Group: "",
+		},
+	}
+
+	localObjectRefInvalidKind := []gatewayv1.LocalObjectReference{
+		{
+			Kind:  "Secret",
+			Name:  "secret",
+			Group: "",
+		},
+	}
+
+	localObjectRefInvalidGroup := []gatewayv1.LocalObjectReference{
+		{
+			Kind:  "ConfigMap",
+			Name:  "configmap",
+			Group: "bhu",
+		},
+	}
+
+	localObjectRefTooManyCerts := append(localObjectRefNormalCase, localObjectRefInvalidName...)
+
+	tests := []struct {
+		tlsPolicy   *v1alpha2.BackendTLSPolicy
+		name        string
+		expectError bool
+	}{
+		{
+			name: "normal case with ca cert refs",
+			tlsPolicy: &v1alpha2.BackendTLSPolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "tls-policy",
+					Namespace: "test",
+				},
+				Spec: v1alpha2.BackendTLSPolicySpec{
+					TargetRef: *targetRefNormalCase,
+					TLS: v1alpha2.BackendTLSPolicyConfig{
+						CACertRefs: localObjectRefNormalCase,
+						Hostname:   "foo.test.com",
+					},
+				},
+			},
+			expectError: false,
+		},
+		{
+			name: "normal case with well known certs",
+			tlsPolicy: &v1alpha2.BackendTLSPolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "tls-policy",
+					Namespace: "test",
+				},
+				Spec: v1alpha2.BackendTLSPolicySpec{
+					TargetRef: *targetRefNormalCase,
+					TLS: v1alpha2.BackendTLSPolicyConfig{
+						WellKnownCACerts: (helpers.GetPointer(v1alpha2.WellKnownCACertSystem)),
+						Hostname:         "foo.test.com",
+					},
+				},
+			},
+			expectError: false,
+		},
+		{
+			name: "no hostname invalid case",
+			tlsPolicy: &v1alpha2.BackendTLSPolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "tls-policy",
+					Namespace: "test",
+				},
+				Spec: v1alpha2.BackendTLSPolicySpec{
+					TargetRef: *targetRefNormalCase,
+					TLS: v1alpha2.BackendTLSPolicyConfig{
+						CACertRefs: localObjectRefNormalCase,
+						Hostname:   "",
+					},
+				},
+			},
+			expectError: true,
+		},
+		{
+			name: "invalid ca cert ref name",
+			tlsPolicy: &v1alpha2.BackendTLSPolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "tls-policy",
+					Namespace: "test",
+				},
+				Spec: v1alpha2.BackendTLSPolicySpec{
+					TargetRef: *targetRefNormalCase,
+					TLS: v1alpha2.BackendTLSPolicyConfig{
+						CACertRefs: localObjectRefInvalidName,
+						Hostname:   "foo.test.com",
+					},
+				},
+			},
+			expectError: true,
+		},
+		{
+			name: "invalid ca cert ref kind",
+			tlsPolicy: &v1alpha2.BackendTLSPolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "tls-policy",
+					Namespace: "test",
+				},
+				Spec: v1alpha2.BackendTLSPolicySpec{
+					TargetRef: *targetRefNormalCase,
+					TLS: v1alpha2.BackendTLSPolicyConfig{
+						CACertRefs: localObjectRefInvalidKind,
+						Hostname:   "foo.test.com",
+					},
+				},
+			},
+			expectError: true,
+		},
+		{
+			name: "invalid ca cert ref group",
+			tlsPolicy: &v1alpha2.BackendTLSPolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "tls-policy",
+					Namespace: "test",
+				},
+				Spec: v1alpha2.BackendTLSPolicySpec{
+					TargetRef: *targetRefNormalCase,
+					TLS: v1alpha2.BackendTLSPolicyConfig{
+						CACertRefs: localObjectRefInvalidGroup,
+						Hostname:   "foo.test.com",
+					},
+				},
+			},
+			expectError: true,
+		},
+		{
+			name: "invalid case with well known certs",
+			tlsPolicy: &v1alpha2.BackendTLSPolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "tls-policy",
+					Namespace: "test",
+				},
+				Spec: v1alpha2.BackendTLSPolicySpec{
+					TargetRef: *targetRefNormalCase,
+					TLS: v1alpha2.BackendTLSPolicyConfig{
+						WellKnownCACerts: (helpers.GetPointer(v1alpha2.WellKnownCACertType("unknown"))),
+						Hostname:         "foo.test.com",
+					},
+				},
+			},
+			expectError: true,
+		},
+		{
+			name: "invalid case neither TLS config option chosen",
+			tlsPolicy: &v1alpha2.BackendTLSPolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "tls-policy",
+					Namespace: "test",
+				},
+				Spec: v1alpha2.BackendTLSPolicySpec{
+					TargetRef: *targetRefNormalCase,
+					TLS: v1alpha2.BackendTLSPolicyConfig{
+						Hostname: "foo.test.com",
+					},
+				},
+			},
+			expectError: true,
+		},
+		{
+			name: "invalid case with too many ca cert refs",
+			tlsPolicy: &v1alpha2.BackendTLSPolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "tls-policy",
+					Namespace: "test",
+				},
+				Spec: v1alpha2.BackendTLSPolicySpec{
+					TargetRef: *targetRefNormalCase,
+					TLS: v1alpha2.BackendTLSPolicyConfig{
+						CACertRefs: localObjectRefTooManyCerts,
+						Hostname:   "foo.test.com",
+					},
+				},
+			},
+			expectError: true,
+		},
+	}
+
+	configMaps := map[types.NamespacedName]*v1.ConfigMap{
+		{Namespace: "test", Name: "configmap"}: {
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "configmap",
+				Namespace: "test",
+			},
+			Data: map[string]string{
+				"ca.crt": caBlock,
+			},
+		},
+		{Namespace: "test", Name: "invalid"}: {
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "invalid",
+				Namespace: "test",
+			},
+			Data: map[string]string{
+				"ca.crt": "invalid",
+			},
+		},
+	}
+	configMapResolver := newConfigMapResolver(configMaps)
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			g := NewWithT(t)
+
+			err := validateBackendTLSPolicy(test.tlsPolicy, configMapResolver)
+
+			if test.expectError {
+				g.Expect(err).To(HaveOccurred())
+			} else {
+				g.Expect(err).ToNot(HaveOccurred())
+			}
+		})
+	}
 }

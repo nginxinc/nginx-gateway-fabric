@@ -28,6 +28,7 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	k8spredicate "sigs.k8s.io/controller-runtime/pkg/predicate"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
+	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
@@ -62,6 +63,7 @@ var scheme = runtime.NewScheme()
 func init() {
 	utilruntime.Must(gatewayv1beta1.AddToScheme(scheme))
 	utilruntime.Must(gatewayv1.AddToScheme(scheme))
+	utilruntime.Must(gatewayv1alpha2.AddToScheme(scheme))
 	utilruntime.Must(apiv1.AddToScheme(scheme))
 	utilruntime.Must(discoveryV1.AddToScheme(scheme))
 	utilruntime.Must(ngfAPI.AddToScheme(scheme))
@@ -198,7 +200,11 @@ func StartManager(cfg config.Config) error {
 		metricsCollector:              handlerCollector,
 	})
 
-	objects, objectLists := prepareFirstEventBatchPreparerArgs(cfg.GatewayClassName, cfg.GatewayNsName)
+	objects, objectLists := prepareFirstEventBatchPreparerArgs(
+		cfg.GatewayClassName,
+		cfg.GatewayNsName,
+		cfg.EnableExperimentalFeatures,
+	)
 	firstBatchPreparer := events.NewFirstEventBatchPreparerImpl(mgr.GetCache(), objects, objectLists)
 	eventLoop := events.NewEventLoop(
 		eventCh,
@@ -378,6 +384,18 @@ func registerControllers(
 		},
 	}
 
+	if cfg.EnableExperimentalFeatures {
+		backendTLSObjs := []ctlrCfg{
+			{
+				objectType: &gatewayv1alpha2.BackendTLSPolicy{},
+			},
+			{
+				objectType: &apiv1.ConfigMap{},
+			},
+		}
+		controllerRegCfgs = append(controllerRegCfgs, backendTLSObjs...)
+	}
+
 	if cfg.ConfigName != "" {
 		controllerRegCfgs = append(controllerRegCfgs,
 			ctlrCfg{
@@ -441,6 +459,7 @@ func createTelemetryJob(
 func prepareFirstEventBatchPreparerArgs(
 	gcName string,
 	gwNsName *types.NamespacedName,
+	enableExperimentalFeatures bool,
 ) ([]client.Object, []client.ObjectList) {
 	objects := []client.Object{
 		&gatewayv1.GatewayClass{ObjectMeta: metav1.ObjectMeta{Name: gcName}},
@@ -463,6 +482,10 @@ func prepareFirstEventBatchPreparerArgs(
 		&gatewayv1.HTTPRouteList{},
 		&gatewayv1beta1.ReferenceGrantList{},
 		partialObjectMetadataList,
+	}
+
+	if enableExperimentalFeatures {
+		objectLists = append(objectLists, &gatewayv1alpha2.BackendTLSPolicyList{}, &apiv1.ConfigMapList{})
 	}
 
 	if gwNsName == nil {

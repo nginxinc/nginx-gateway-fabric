@@ -17,6 +17,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	v1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapivalidation "sigs.k8s.io/gateway-api/apis/v1/validation"
+	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/gatewayclass"
@@ -102,14 +103,16 @@ type ChangeProcessorImpl struct {
 // NewChangeProcessorImpl creates a new ChangeProcessorImpl for the Gateway resource with the configured namespace name.
 func NewChangeProcessorImpl(cfg ChangeProcessorConfig) *ChangeProcessorImpl {
 	clusterStore := graph.ClusterState{
-		GatewayClasses:  make(map[types.NamespacedName]*v1.GatewayClass),
-		Gateways:        make(map[types.NamespacedName]*v1.Gateway),
-		HTTPRoutes:      make(map[types.NamespacedName]*v1.HTTPRoute),
-		Services:        make(map[types.NamespacedName]*apiv1.Service),
-		Namespaces:      make(map[types.NamespacedName]*apiv1.Namespace),
-		ReferenceGrants: make(map[types.NamespacedName]*v1beta1.ReferenceGrant),
-		Secrets:         make(map[types.NamespacedName]*apiv1.Secret),
-		CRDMetadata:     make(map[types.NamespacedName]*metav1.PartialObjectMetadata),
+		GatewayClasses:     make(map[types.NamespacedName]*v1.GatewayClass),
+		Gateways:           make(map[types.NamespacedName]*v1.Gateway),
+		HTTPRoutes:         make(map[types.NamespacedName]*v1.HTTPRoute),
+		Services:           make(map[types.NamespacedName]*apiv1.Service),
+		Namespaces:         make(map[types.NamespacedName]*apiv1.Namespace),
+		ReferenceGrants:    make(map[types.NamespacedName]*v1beta1.ReferenceGrant),
+		Secrets:            make(map[types.NamespacedName]*apiv1.Secret),
+		CRDMetadata:        make(map[types.NamespacedName]*metav1.PartialObjectMetadata),
+		BackendTLSPolicies: make(map[types.NamespacedName]*v1alpha2.BackendTLSPolicy),
+		ConfigMaps:         make(map[types.NamespacedName]*apiv1.ConfigMap),
 	}
 
 	extractGVK := func(obj client.Object) schema.GroupVersionKind {
@@ -153,6 +156,11 @@ func NewChangeProcessorImpl(cfg ChangeProcessorConfig) *ChangeProcessorImpl {
 				predicate: nil,
 			},
 			{
+				gvk:       extractGVK(&v1alpha2.BackendTLSPolicy{}),
+				store:     newObjectStoreMapAdapter(clusterStore.BackendTLSPolicies),
+				predicate: nil,
+			},
+			{
 				gvk:       extractGVK(&apiv1.Namespace{}),
 				store:     newObjectStoreMapAdapter(clusterStore.Namespaces),
 				predicate: funcPredicate{stateChanged: isReferenced},
@@ -170,6 +178,11 @@ func NewChangeProcessorImpl(cfg ChangeProcessorConfig) *ChangeProcessorImpl {
 			{
 				gvk:       extractGVK(&apiv1.Secret{}),
 				store:     newObjectStoreMapAdapter(clusterStore.Secrets),
+				predicate: funcPredicate{stateChanged: isReferenced},
+			},
+			{
+				gvk:       extractGVK(&apiv1.ConfigMap{}),
+				store:     newObjectStoreMapAdapter(clusterStore.ConfigMaps),
 				predicate: funcPredicate{stateChanged: isReferenced},
 			},
 			{

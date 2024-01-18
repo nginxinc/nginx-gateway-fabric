@@ -10,6 +10,14 @@ To install the Gateway API resources, run the following:
 kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/standard-install.yaml
 ```
 
+Alternatively, you can install the Gateway API resources from the experimental channel. We support a subset of the
+additional features provided by the experimental channel. Please note that these APIs are not suitable for production
+use. To install from the experimental channel, run the following:
+
+```shell
+kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/experimental-install.yaml
+```
+
 If you are running on Kubernetes 1.23 or 1.24, you also need to install the validating webhook. To do so, run:
 
 ```shell

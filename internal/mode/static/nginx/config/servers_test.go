@@ -203,6 +203,22 @@ func TestCreateServers(t *testing.T) {
 		},
 	}
 
+	btpGroup := dataplane.BackendGroup{
+		Source:  hrNsName,
+		RuleIdx: 3,
+		Backends: []dataplane.Backend{
+			{
+				UpstreamName: "test_btp_80",
+				Valid:        true,
+				Weight:       1,
+				VerifyTLS: &dataplane.VerifyTLS{
+					CertBundleID: "test-btp",
+					Hostname:     "test-btp.example.com",
+				},
+			},
+		},
+	}
+
 	filterGroup1 := dataplane.BackendGroup{Source: hrNsName, RuleIdx: 3}
 
 	filterGroup2 := dataplane.BackendGroup{Source: hrNsName, RuleIdx: 4}
@@ -278,6 +294,16 @@ func TestCreateServers(t *testing.T) {
 				{
 					Match:        dataplane.Match{},
 					BackendGroup: bazGroup,
+				},
+			},
+		},
+		{
+			Path:     "/backend-tls-policy",
+			PathType: dataplane.PathTypePrefix,
+			MatchRules: []dataplane.MatchRule{
+				{
+					Match:        dataplane.Match{},
+					BackendGroup: btpGroup,
 				},
 			},
 		},
@@ -505,19 +531,19 @@ func TestCreateServers(t *testing.T) {
 	exactMatches := []httpMatch{
 		{
 			Method:       "GET",
-			RedirectPath: "@rule11-route0",
+			RedirectPath: "@rule12-route0",
 		},
 	}
 	redirectHeaderMatches := []httpMatch{
 		{
 			Headers:      []string{"redirect:this"},
-			RedirectPath: "@rule5-route0",
+			RedirectPath: "@rule6-route0",
 		},
 	}
 	rewriteHeaderMatches := []httpMatch{
 		{
 			Headers:      []string{"rewrite:this"},
-			RedirectPath: "@rule7-route0",
+			RedirectPath: "@rule8-route0",
 		},
 	}
 	rewriteProxySetHeaders := []http.Header{
@@ -541,7 +567,7 @@ func TestCreateServers(t *testing.T) {
 	invalidFilterHeaderMatches := []httpMatch{
 		{
 			Headers:      []string{"filter:this"},
-			RedirectPath: "@rule9-route0",
+			RedirectPath: "@rule10-route0",
 		},
 	}
 
@@ -591,6 +617,26 @@ func TestCreateServers(t *testing.T) {
 				ProxySetHeaders: baseHeaders,
 			},
 			{
+				Path:            "/backend-tls-policy/",
+				ProxyPass:       "https://test_btp_80$request_uri",
+				ProxySetHeaders: baseHeaders,
+				ProxySSLVerify: &http.ProxySSLVerify{
+					Hostname: "test-btp.example.com",
+					CertPath: "/etc/nginx/secrets/test-btp.crt",
+					VerifyOn: true,
+				},
+			},
+			{
+				Path:            "= /backend-tls-policy",
+				ProxyPass:       "https://test_btp_80$request_uri",
+				ProxySetHeaders: baseHeaders,
+				ProxySSLVerify: &http.ProxySSLVerify{
+					Hostname: "test-btp.example.com",
+					CertPath: "/etc/nginx/secrets/test-btp.crt",
+					VerifyOn: true,
+				},
+			},
+			{
 				Path: "/redirect-implicit-port/",
 				Return: &http.Return{
 					Code: 302,
@@ -619,7 +665,7 @@ func TestCreateServers(t *testing.T) {
 				},
 			},
 			{
-				Path: "@rule5-route0",
+				Path: "@rule6-route0",
 				Return: &http.Return{
 					Body: "$scheme://foo.example.com:8080$request_uri",
 					Code: 302,
@@ -646,7 +692,7 @@ func TestCreateServers(t *testing.T) {
 				ProxySetHeaders: rewriteProxySetHeaders,
 			},
 			{
-				Path:            "@rule7-route0",
+				Path:            "@rule8-route0",
 				Rewrites:        []string{"^/rewrite-with-headers(.*)$ /prefix-replacement$1 break"},
 				ProxyPass:       "http://test_foo_80",
 				ProxySetHeaders: rewriteProxySetHeaders,
@@ -672,7 +718,7 @@ func TestCreateServers(t *testing.T) {
 				},
 			},
 			{
-				Path: "@rule9-route0",
+				Path: "@rule10-route0",
 				Return: &http.Return{
 					Code: http.StatusInternalServerError,
 				},
@@ -691,7 +737,7 @@ func TestCreateServers(t *testing.T) {
 				ProxySetHeaders: baseHeaders,
 			},
 			{
-				Path:            "@rule11-route0",
+				Path:            "@rule12-route0",
 				ProxyPass:       "http://test_foo_80$request_uri",
 				ProxySetHeaders: baseHeaders,
 			},
@@ -1670,7 +1716,7 @@ func TestCreateProxyPass(t *testing.T) {
 	}
 
 	for _, tc := range tests {
-		result := createProxyPass(tc.grp, tc.rewrite)
+		result := createProxyPass(tc.grp, tc.rewrite, false)
 		g.Expect(result).To(Equal(tc.expected))
 	}
 }
@@ -1788,6 +1834,82 @@ func TestGenerateProxySetHeaders(t *testing.T) {
 
 			headers := generateProxySetHeaders(tc.filters)
 			g.Expect(headers).To(Equal(tc.expectedHeaders))
+		})
+	}
+}
+
+func TestConvertBackendTLSFromGroup(t *testing.T) {
+	g := NewWithT(t)
+
+	tests := []struct {
+		expected *http.ProxySSLVerify
+		msg      string
+		grp      []dataplane.Backend
+	}{
+		{
+			msg: "tls enabled, one backend",
+			grp: []dataplane.Backend{
+				{
+					UpstreamName: "my-upstream",
+					Valid:        true,
+					Weight:       1,
+					VerifyTLS: &dataplane.VerifyTLS{
+						CertBundleID: "default-my-cert",
+						Hostname:     "my-hostname",
+					},
+				},
+			},
+			expected: &http.ProxySSLVerify{
+				CertPath: "/etc/nginx/secrets/default-my-cert.crt",
+				Hostname: "my-hostname",
+				VerifyOn: true,
+			},
+		},
+		{
+			msg: "tls disabled",
+			grp: []dataplane.Backend{
+				{
+					UpstreamName: "my-upstream",
+					Valid:        true,
+					Weight:       1,
+					VerifyTLS: &dataplane.VerifyTLS{
+						CertBundleID: "",
+						Hostname:     "",
+					},
+				},
+			},
+			expected: nil,
+		},
+		{
+			msg: "tls enabled, multiple backends",
+			grp: []dataplane.Backend{
+				{
+					UpstreamName: "my-upstream",
+					Valid:        true,
+					Weight:       1,
+					VerifyTLS: &dataplane.VerifyTLS{
+						CertBundleID: "default-my-cert",
+						Hostname:     "my-hostname",
+					},
+				},
+				{
+					UpstreamName: "my-upstream",
+					Valid:        true,
+					Weight:       2,
+				},
+			},
+			expected: &http.ProxySSLVerify{
+				CertPath: "/etc/nginx/secrets/default-my-cert.crt",
+				Hostname: "my-hostname",
+				VerifyOn: true,
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.msg, func(t *testing.T) {
+			result := convertProxyTLSFromBackends(tc.grp)
+			g.Expect(result).To(Equal(tc.expected))
 		})
 	}
 }

@@ -1,6 +1,7 @@
 package config
 
 import (
+	"encoding/base64"
 	"path/filepath"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/file"
@@ -70,6 +71,10 @@ func (g GeneratorImpl) Generate(conf dataplane.Configuration) []file.File {
 
 	files = append(files, generateConfigVersion(conf.Version))
 
+	for id, bundle := range conf.CertBundles {
+		files = append(files, generateCertBundle(id, bundle))
+	}
+
 	return files
 }
 
@@ -88,6 +93,23 @@ func generatePEM(id dataplane.SSLKeyPairID, cert []byte, key []byte) file.File {
 
 func generatePEMFileName(id dataplane.SSLKeyPairID) string {
 	return filepath.Join(secretsFolder, string(id)+".pem")
+}
+
+func generateCertBundle(id dataplane.CertBundleID, cert []byte) file.File {
+	data := make([]byte, base64.StdEncoding.DecodedLen(len(cert)))
+	_, err := base64.StdEncoding.Decode(data, cert)
+	if err != nil {
+		data = cert
+	}
+	return file.File{
+		Content: data,
+		Path:    generateCertBundleFileName(id),
+		Type:    file.TypeSecret,
+	}
+}
+
+func generateCertBundleFileName(id dataplane.CertBundleID) string {
+	return filepath.Join(secretsFolder, string(id)+".crt")
 }
 
 func (g GeneratorImpl) generateHTTPConfig(conf dataplane.Configuration) file.File {

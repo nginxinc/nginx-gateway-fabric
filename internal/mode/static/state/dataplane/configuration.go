@@ -9,6 +9,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	v1 "sigs.k8s.io/gateway-api/apis/v1"
+	v1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/graph"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/resolver"
@@ -35,6 +36,7 @@ func BuildConfiguration(
 	httpServers, sslServers := buildServers(g.Gateway.Listeners)
 	backendGroups := buildBackendGroups(append(httpServers, sslServers...))
 	keyPairs := buildSSLKeyPairs(g.ReferencedSecrets, g.Gateway.Listeners)
+	certBundles := buildCertBundles(g.ReferencedConfigMaps, backendGroups)
 
 	config := Configuration{
 		HTTPServers:   httpServers,
@@ -43,6 +45,7 @@ func BuildConfiguration(
 		BackendGroups: backendGroups,
 		SSLKeyPairs:   keyPairs,
 		Version:       configVersion,
+		CertBundles:   certBundles,
 	}
 
 	return config
@@ -70,6 +73,44 @@ func buildSSLKeyPairs(
 	}
 
 	return keyPairs
+}
+
+func buildCertBundles(
+	configMaps map[types.NamespacedName]*graph.ConfigMap,
+	backendGroups []BackendGroup,
+) map[CertBundleID]CertBundle {
+	bundles := make(map[CertBundleID]CertBundle)
+	refByBG := make(map[CertBundleID]bool)
+
+	// We only need to build the cert bundles if there are valid backend groups that reference them.
+	if len(backendGroups) == 0 {
+		return bundles
+	}
+	for _, bg := range backendGroups {
+		if bg.Backends == nil {
+			continue
+		}
+		for _, b := range bg.Backends {
+			if !b.Valid || b.VerifyTLS == nil {
+				continue
+			}
+			refByBG[b.VerifyTLS.CertBundleID] = true
+		}
+	}
+
+	for cmName, cm := range configMaps {
+		id := generateCertBundleID(cmName)
+		if !refByBG[id] {
+			continue
+		}
+		if cm.Source.Data != nil || len(cm.Source.Data) > 0 {
+			bundles[id] = CertBundle(cm.Source.Data["ca.crt"])
+		} else if cm.Source.BinaryData != nil || len(cm.Source.BinaryData) > 0 {
+			bundles[id] = CertBundle(cm.Source.BinaryData["ca.crt"])
+		}
+	}
+
+	return bundles
 }
 
 func buildBackendGroups(servers []VirtualServer) []BackendGroup {
@@ -122,6 +163,7 @@ func newBackendGroup(refs []graph.BackendRef, sourceNsName types.NamespacedName,
 			UpstreamName: ref.ServicePortReference(),
 			Weight:       ref.Weight,
 			Valid:        ref.Valid,
+			VerifyTLS:    convertBackendTLS(ref.BackendTLSPolicy),
 		})
 	}
 
@@ -130,6 +172,20 @@ func newBackendGroup(refs []graph.BackendRef, sourceNsName types.NamespacedName,
 		Source:   sourceNsName,
 		RuleIdx:  ruleIdx,
 	}
+}
+
+func convertBackendTLS(btp *v1alpha2.BackendTLSPolicy) *VerifyTLS {
+	if btp == nil {
+		return nil
+	}
+	verify := &VerifyTLS{}
+	if btp.Spec.TLS.CACertRefs != nil && len(btp.Spec.TLS.CACertRefs) > 0 {
+		// We only support one CACertRef, take the first one and ignore anything else
+		b := btp.Spec.TLS.CACertRefs[0]
+		verify.CertBundleID = generateCertBundleID(types.NamespacedName{Namespace: btp.Namespace, Name: string(b.Name)})
+	}
+	verify.Hostname = string(btp.Spec.TLS.Hostname)
+	return verify
 }
 
 func buildServers(listeners []*graph.Listener) (http, ssl []VirtualServer) {
@@ -489,4 +545,11 @@ func listenerHostnameMoreSpecific(host1, host2 *v1.Hostname) bool {
 // The ID is safe to use as a file name.
 func generateSSLKeyPairID(secret types.NamespacedName) SSLKeyPairID {
 	return SSLKeyPairID(fmt.Sprintf("ssl_keypair_%s_%s", secret.Namespace, secret.Name))
+}
+
+// generateCertBundleID generates an ID for the certificate bundle based on the ConfigMap namespaced name.
+// It is guaranteed to be unique per unique namespaced name.
+// The ID is safe to use as a file name.
+func generateCertBundleID(configMap types.NamespacedName) CertBundleID {
+	return CertBundleID(fmt.Sprintf("cert_bundle_%s_%s", configMap.Namespace, configMap.Name))
 }

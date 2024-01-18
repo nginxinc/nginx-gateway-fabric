@@ -32,6 +32,7 @@ rules:
     ignore: |
       deploy/manifests/nginx-gateway.yaml
       deploy/manifests/crds
+      examples/backend-tls/secure-app.yaml
   key-duplicates: enable
   key-ordering: disable
   line-length:

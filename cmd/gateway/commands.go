@@ -56,6 +56,7 @@ func createStaticModeCommand() *cobra.Command {
 		leaderElectionDisableFlag  = "leader-election-disable"
 		leaderElectionLockNameFlag = "leader-election-lock-name"
 		plusFlag                   = "nginx-plus"
+		experimentalEnableFlag     = "experimental-features-enable"
 	)
 
 	// flag values
@@ -95,6 +96,8 @@ func createStaticModeCommand() *cobra.Command {
 		}
 
 		plus bool
+
+		enableExperimental bool
 	)
 
 	cmd := &cobra.Command{
@@ -169,9 +172,10 @@ func createStaticModeCommand() *cobra.Command {
 					LockName: leaderElectionLockName.String(),
 					Identity: podName,
 				},
-				Plus:                  plus,
-				TelemetryReportPeriod: period,
-				Version:               version,
+				Plus:                       plus,
+				TelemetryReportPeriod:      period,
+				Version:                    version,
+				EnableExperimentalFeatures: enableExperimental,
 			}
 
 			if err := static.StartManager(conf); err != nil {
@@ -283,6 +287,14 @@ func createStaticModeCommand() *cobra.Command {
 		plusFlag,
 		false,
 		"Use NGINX Plus",
+	)
+
+	cmd.Flags().BoolVar(
+		&enableExperimental,
+		experimentalEnableFlag,
+		false,
+		"Enable the experimental features of Gateway API which are supported by NGINX Gateway Fabric. "+
+			"Requires the Gateway APIs installed from the experimental channel.",
 	)
 
 	return cmd

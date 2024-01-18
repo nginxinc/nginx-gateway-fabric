@@ -13,10 +13,11 @@ type Server struct {
 // Location holds all configuration for an HTTP location.
 type Location struct {
 	Return          *Return
-	Rewrites        []string
+	ProxySSLVerify  *ProxySSLVerify
 	Path            string
 	ProxyPass       string
 	HTTPMatchVar    string
+	Rewrites        []string
 	ProxySetHeaders []Header
 }
 
@@ -85,4 +86,11 @@ type Map struct {
 type MapParameter struct {
 	Value  string
 	Result string
+}
+
+// ProxySSLVerify holds the proxied HTTPS server verification configuration.
+type ProxySSLVerify struct {
+	CertPath string
+	Hostname string
+	VerifyOn bool
 }

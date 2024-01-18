@@ -247,7 +247,6 @@ func updateLocationsForFilters(
 
 	rewrites := createRewritesValForRewriteFilter(filters.RequestURLRewrite, path)
 	proxySetHeaders := generateProxySetHeaders(&matchRule.Filters)
-	proxyPass := createProxyPass(matchRule.BackendGroup, matchRule.Filters.RequestURLRewrite)
 	for i := range buildLocations {
 		if rewrites != nil {
 			if rewrites.Rewrite != "" {
@@ -255,10 +254,42 @@ func updateLocationsForFilters(
 			}
 		}
 		buildLocations[i].ProxySetHeaders = proxySetHeaders
+		buildLocations[i].ProxySSLVerify = convertProxyTLSFromBackends(matchRule.BackendGroup.Backends)
+		proxyPass := createProxyPass(
+			matchRule.BackendGroup,
+			matchRule.Filters.RequestURLRewrite,
+			buildLocations[i].ProxySSLVerify != nil,
+		)
 		buildLocations[i].ProxyPass = proxyPass
 	}
 
 	return buildLocations
+}
+
+func convertProxyTLSFromBackends(backends []dataplane.Backend) *http.ProxySSLVerify {
+	if len(backends) == 0 {
+		return nil
+	}
+	for _, b := range backends {
+		proxyVerify := convertBackendTLS(b.VerifyTLS)
+		if proxyVerify != nil {
+			// If any backend has a backend TLS policy defined, then we use that for the proxy SSL verification.
+			// If multiple backends in the group have a backend TLS policy defined, then we use the first one we find.
+			return proxyVerify
+		}
+	}
+	return nil
+}
+
+func convertBackendTLS(v *dataplane.VerifyTLS) *http.ProxySSLVerify {
+	if v == nil || v.Hostname == "" {
+		return nil
+	}
+	return &http.ProxySSLVerify{
+		CertPath: generateCertBundleFileName(v.CertBundleID),
+		Hostname: v.Hostname,
+		VerifyOn: v.CertBundleID != "",
+	}
 }
 
 func createReturnValForRedirectFilter(filter *dataplane.HTTPRequestRedirectFilter, listenerPort int32) *http.Return {
@@ -427,18 +458,27 @@ func isPathOnlyMatch(match dataplane.Match) bool {
 	return match.Method == nil && len(match.Headers) == 0 && len(match.QueryParams) == 0
 }
 
-func createProxyPass(backendGroup dataplane.BackendGroup, filter *dataplane.HTTPURLRewriteFilter) string {
+func createProxyPass(
+	backendGroup dataplane.BackendGroup,
+	filter *dataplane.HTTPURLRewriteFilter,
+	enableTLS bool,
+) string {
 	var requestURI string
 	if filter == nil || filter.Path == nil {
 		requestURI = "$request_uri"
 	}
 
-	backendName := backendGroupName(backendGroup)
-	if backendGroupNeedsSplit(backendGroup) {
-		return "http://$" + convertStringToSafeVariableName(backendName) + requestURI
+	protocol := "http"
+	if enableTLS {
+		protocol = "https"
 	}
 
-	return "http://" + backendName + requestURI
+	backendName := backendGroupName(backendGroup)
+	if backendGroupNeedsSplit(backendGroup) {
+		return protocol + "://$" + convertStringToSafeVariableName(backendName) + requestURI
+	}
+
+	return protocol + "://" + backendName + requestURI
 }
 
 func createMatchLocation(path string) http.Location {

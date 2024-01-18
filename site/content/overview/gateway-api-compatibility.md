@@ -9,16 +9,17 @@ docs: "DOCS-000"
 ## Summary
 
 {{< bootstrap-table "table table-striped table-bordered" >}}
-| Resource                            | Core Support Level | Extended Support Level | Implementation-Specific Support Level | API Version |
-|-------------------------------------|--------------------|------------------------|---------------------------------------|-------------|
-| [GatewayClass](#gatewayclass)       | Supported          | Not supported          | Not supported                         | v1          |
-| [Gateway](#gateway)                 | Supported          | Not supported          | Not supported                         | v1          |
-| [HTTPRoute](#httproute)             | Supported          | Partially supported    | Not supported                         | v1          |
-| [ReferenceGrant](#referencegrant)   | Supported          | N/A                    | Not supported                         | v1beta1     |
-| [TLSRoute](#tlsroute)               | Not supported      | Not supported          | Not supported                         | N/A         |
-| [TCPRoute](#tcproute)               | Not supported      | Not supported          | Not supported                         | N/A         |
-| [UDPRoute](#udproute)               | Not supported      | Not supported          | Not supported                         | N/A         |
-| [Custom policies](#custom-policies) | Not supported      | N/A                    | Not supported                         | N/A         |
+| Resource                              | Core Support Level | Extended Support Level | Implementation-Specific Support Level | API Version |
+| ------------------------------------- | ------------------ | ---------------------- | ------------------------------------- | ----------- |
+| [GatewayClass](#gatewayclass)         | Supported          | Not supported          | Not supported                         | v1          |
+| [Gateway](#gateway)                   | Supported          | Not supported          | Not supported                         | v1          |
+| [HTTPRoute](#httproute)               | Supported          | Partially supported    | Not supported                         | v1          |
+| [ReferenceGrant](#referencegrant)     | Supported          | N/A                    | Not supported                         | v1beta1     |
+| [TLSRoute](#tlsroute)                 | Not supported      | Not supported          | Not supported                         | N/A         |
+| [TCPRoute](#tcproute)                 | Not supported      | Not supported          | Not supported                         | N/A         |
+| [UDPRoute](#udproute)                 | Not supported      | Not supported          | Not supported                         | N/A         |
+| [BackendTLSPolicy](#backendtlspolicy) | Supported          | Supported              | Not supported                         | v1alpha2    |
+| [Custom policies](#custom-policies)   | Not supported      | N/A                    | Not supported                         | N/A         |
 {{< /bootstrap-table >}}
 
 ---
@@ -46,9 +47,9 @@ For a description of each field, visit the [Gateway API documentation](https://g
 ### GatewayClass
 
 {{< bootstrap-table "table table-striped table-bordered" >}}
-| Resource                            | Core Support Level | Extended Support Level | Implementation-Specific Support Level | API Version |
-|-------------------------------------|--------------------|------------------------|---------------------------------------|-------------|
-| GatewayClass   | Supported          | Not supported       | Not supported          | v1          |
+| Resource     | Core Support Level | Extended Support Level | Implementation-Specific Support Level | API Version |
+| ------------ | ------------------ | ---------------------- | ------------------------------------- | ----------- |
+| GatewayClass | Supported          | Not supported          | Not supported                         | v1          |
 {{< /bootstrap-table >}}
 
 NGINX Gateway Fabric supports a single GatewayClass resource configured with the `--gatewayclass` flag of the [static-mode]({{< relref "/reference/cli-help.md#static-mode">}}) command.
@@ -74,9 +75,9 @@ NGINX Gateway Fabric supports a single GatewayClass resource configured with the
 ### Gateway
 
 {{< bootstrap-table "table table-striped table-bordered" >}}
-| Resource                            | Core Support Level | Extended Support Level | Implementation-Specific Support Level | API Version |
-|-------------------------------------|--------------------|------------------------|---------------------------------------|-------------|
-| Gateway              | Supported          | Not supported          | Not supported                         | v1          |
+| Resource | Core Support Level | Extended Support Level | Implementation-Specific Support Level | API Version |
+| -------- | ------------------ | ---------------------- | ------------------------------------- | ----------- |
+| Gateway  | Supported          | Not supported          | Not supported                         | v1          |
 {{< /bootstrap-table >}}
 
 NGINX Gateway Fabric supports a single Gateway resource. The Gateway resource must reference NGINX Gateway Fabric's corresponding GatewayClass.
@@ -135,9 +136,9 @@ See the [static-mode]({{< relref "/reference/cli-help.md#static-mode">}}) comman
 ### HTTPRoute
 
 {{< bootstrap-table "table table-striped table-bordered" >}}
-| Resource                            | Core Support Level | Extended Support Level | Implementation-Specific Support Level | API Version |
-|-------------------------------------|--------------------|------------------------|---------------------------------------|-------------|
-| HTTPRoute             | Supported          | Partially supported    | Not supported                         | v1          |
+| Resource  | Core Support Level | Extended Support Level | Implementation-Specific Support Level | API Version |
+| --------- | ------------------ | ---------------------- | ------------------------------------- | ----------- |
+| HTTPRoute | Supported          | Partially supported    | Not supported                         | v1          |
 {{< /bootstrap-table >}}
 
 **Fields**:
@@ -182,9 +183,9 @@ See the [static-mode]({{< relref "/reference/cli-help.md#static-mode">}}) comman
 ### ReferenceGrant
 
 {{< bootstrap-table "table table-striped table-bordered" >}}
-| Resource                            | Core Support Level | Extended Support Level | Implementation-Specific Support Level | API Version |
-|-------------------------------------|--------------------|------------------------|---------------------------------------|-------------|
-| ReferenceGrant  | Supported          | N/A                    | Not supported                         | v1beta1     |
+| Resource       | Core Support Level | Extended Support Level | Implementation-Specific Support Level | API Version |
+| -------------- | ------------------ | ---------------------- | ------------------------------------- | ----------- |
+| ReferenceGrant | Supported          | N/A                    | Not supported                         | v1beta1     |
 {{< /bootstrap-table >}}
 
 Fields:
@@ -204,9 +205,9 @@ Fields:
 ### TLSRoute
 
 {{< bootstrap-table "table table-striped table-bordered" >}}
-| Resource                            | Core Support Level | Extended Support Level | Implementation-Specific Support Level | API Version |
-|-------------------------------------|--------------------|------------------------|---------------------------------------|-------------|
-| TLSRoute             | Not supported      | Not supported          | Not supported                         | N/A         |
+| Resource | Core Support Level | Extended Support Level | Implementation-Specific Support Level | API Version |
+| -------- | ------------------ | ---------------------- | ------------------------------------- | ----------- |
+| TLSRoute | Not supported      | Not supported          | Not supported                         | N/A         |
 {{< /bootstrap-table >}}
 
 ---
@@ -214,9 +215,9 @@ Fields:
 ### TCPRoute
 
 {{< bootstrap-table "table table-striped table-bordered" >}}
-| Resource                            | Core Support Level | Extended Support Level | Implementation-Specific Support Level | API Version |
-|-------------------------------------|--------------------|------------------------|---------------------------------------|-------------|
-| TCPRoute              | Not supported      | Not supported          | Not supported                         | N/A         |
+| Resource | Core Support Level | Extended Support Level | Implementation-Specific Support Level | API Version |
+| -------- | ------------------ | ---------------------- | ------------------------------------- | ----------- |
+| TCPRoute | Not supported      | Not supported          | Not supported                         | N/A         |
 {{< /bootstrap-table >}}
 
 ---
@@ -224,18 +225,42 @@ Fields:
 ### UDPRoute
 
 {{< bootstrap-table "table table-striped table-bordered" >}}
-| Resource                            | Core Support Level | Extended Support Level | Implementation-Specific Support Level | API Version |
-|-------------------------------------|--------------------|------------------------|---------------------------------------|-------------|
-| UDPRoute            | Not supported      | Not supported          | Not supported                         | N/A         |
+| Resource | Core Support Level | Extended Support Level | Implementation-Specific Support Level | API Version |
+| -------- | ------------------ | ---------------------- | ------------------------------------- | ----------- |
+| UDPRoute | Not supported      | Not supported          | Not supported                         | N/A         |
 {{< /bootstrap-table >}}
 
 ---
 
+### BackendTLSPolicy
+
+{{< bootstrap-table "table table-striped table-bordered" >}}
+| Resource         | Core Support Level | Extended Support Level | Implementation-Specific Support Level | API Version |
+| ---------------- | ------------------ | ---------------------- | ------------------------------------- | ----------- |
+| BackendTLSPolicy | Supported          | Supported              | Not supported                         | v1alpha2    |
+{{< /bootstrap-table >}}
+
+Fields:
+
+- `spec`
+  - `targetRef`
+    - `group` - supported.
+    - `kind` - supports `Service`.
+    - `name` - supported.
+    - `namespace` - supported.
+  - `tls`
+    - `caCertRefs` - supports single reference to a `ConfigMap`, with the CA certificate in a key named `ca.crt`.
+      - `name`- supported.
+      - `group` - supported.
+      - `kind` - supports `ConfigMap`.
+    - `hostname` - supported.
+    - `wellKnownCerts` - supports `System`.
+
 ### Custom Policies
 
 {{< bootstrap-table "table table-striped table-bordered" >}}
-| Resource                            | Core Support Level | Extended Support Level | Implementation-Specific Support Level | API Version |
-|-------------------------------------|--------------------|------------------------|---------------------------------------|-------------|
+| Resource        | Core Support Level | Extended Support Level | Implementation-Specific Support Level | API Version |
+| --------------- | ------------------ | ---------------------- | ------------------------------------- | ----------- |
 | Custom policies | Not supported      | N/A                    | Not supported                         | N/A         |
 {{< /bootstrap-table >}}
 
