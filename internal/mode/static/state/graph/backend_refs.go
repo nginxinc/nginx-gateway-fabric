@@ -21,6 +21,7 @@ type BackendRef struct {
 	// Weight is the weight of the backendRef.
 	Weight int32
 	// Valid indicates whether the backendRef is valid.
+	// No configuration should be generated for an invalid BackendRef.
 	Valid bool
 }
 
@@ -84,8 +85,6 @@ func addBackendRefsToRules(
 			}
 		}
 
-		// Some of the backendRef's could be invalid, but when we use them in configuration.go when building the
-		// Upstreams, we skip over the ones that are not valid.
 		route.Rules[idx].BackendRefs = backendRefs
 	}
 }
