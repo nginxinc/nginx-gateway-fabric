@@ -123,7 +123,7 @@ jobs:
         if: ${{ github.event_name == 'push' && github.ref != 'refs/heads/main' }}
 
       - name: Download Syft
-        uses: anchore/sbom-action/download-syft@c7f031d9249a826a082ea14c79d3b686a51d485a # v0.15.3
+        uses: anchore/sbom-action/download-syft@41f7a6c033dbcdf78917f23b652c8b8146298c85 # v0.15.4
         if: github.ref_type == 'tag'
 
       - name: Install Cosign
