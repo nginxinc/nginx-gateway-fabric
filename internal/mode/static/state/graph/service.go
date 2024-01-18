@@ -40,7 +40,9 @@ func buildReferencedServicesNames(
 			}
 
 			for _, ref := range route.Rules[idx].BackendRefs {
-				if ref.SvcNsName.Name != "" && ref.SvcNsName.Namespace != "" {
+				// Processes both valid and invalid BackendRefs as invalid ones still have referenced services
+				// we may want to track.
+				if ref.SvcNsName != (types.NamespacedName{}) {
 					svcNames[ref.SvcNsName] = struct{}{}
 				}
 			}
