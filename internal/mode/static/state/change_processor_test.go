@@ -1032,7 +1032,8 @@ var _ = Describe("ChangeProcessor", func() {
 				gw = createGateway("gw")
 				processor.CaptureUpsertChange(gc)
 				processor.CaptureUpsertChange(gw)
-				processor.Process()
+				changed, _ := processor.Process()
+				Expect(changed).To(BeTrue())
 			})
 
 			testProcessChangedVal := func(expChanged bool) {
