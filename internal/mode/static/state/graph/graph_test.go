@@ -517,19 +517,20 @@ func TestIsReferenced(t *testing.T) {
 	}{
 		// Namespace tests
 		{
-			name:     "Namespace in graph's ReferencedNamespaces passes",
+			name:     "Namespace in graph's ReferencedNamespaces is referenced",
 			resource: nsInGraph,
 			graph:    graph,
 			expected: true,
 		},
 		{
-			name:     "Namespace with a different name but same labels fails",
+			name:     "Namespace with a different name but same labels is not referenced",
 			resource: nsNotInGraph,
 			graph:    graph,
 			expected: false,
 		},
 		{
-			name:     "Namespace not in ReferencedNamespaces but in Gateway Listener's AllowedRouteLabelSelector passes",
+			name: "Namespace not in ReferencedNamespaces but in Gateway Listener's AllowedRouteLabelSelector" +
+				" is referenced",
 			resource: nsNotInGraphButInGateway,
 			graph:    graph,
 			expected: true,
@@ -537,19 +538,19 @@ func TestIsReferenced(t *testing.T) {
 
 		// Secret tests
 		{
-			name:     "Secret in graph's ReferencedSecrets passes",
+			name:     "Secret in graph's ReferencedSecrets is referenced",
 			resource: baseSecret,
 			graph:    graph,
 			expected: true,
 		},
 		{
-			name:     "Secret not in ReferencedSecrets with same Namespace and different Name fails",
+			name:     "Secret not in ReferencedSecrets with same Namespace and different Name is not referenced",
 			resource: sameNamespaceDifferentNameSecret,
 			graph:    graph,
 			expected: false,
 		},
 		{
-			name:     "Secret not in ReferencedSecrets with different Namespace and same Name fails",
+			name:     "Secret not in ReferencedSecrets with different Namespace and same Name is not referenced",
 			resource: differentNamespaceSameNameSecret,
 			graph:    graph,
 			expected: false,
@@ -557,25 +558,25 @@ func TestIsReferenced(t *testing.T) {
 
 		// Service tests
 		{
-			name:     "Service in graph's ReferencedServicesNames passes",
+			name:     "Service is referenced",
 			resource: serviceInGraph,
 			graph:    graph,
 			expected: true,
 		},
 		{
-			name:     "Service not in graph's ReferencedServicesNames fails",
+			name:     "Service is not referenced",
 			resource: serviceNotInGraph,
 			graph:    graph,
 			expected: false,
 		},
 		{
-			name:     "Service with same name but different namespace as one in graph's ReferencedServicesNames fails",
+			name:     "Service with same name but different namespace is not referenced",
 			resource: serviceNotInGraphSameNameDifferentNS,
 			graph:    graph,
 			expected: false,
 		},
 		{
-			name:     "Empty Service fails",
+			name:     "Empty Service",
 			resource: emptyService,
 			graph:    graph,
 			expected: false,
@@ -583,19 +584,19 @@ func TestIsReferenced(t *testing.T) {
 
 		// EndpointSlice tests
 		{
-			name:     "EndpointSlice with Service owner in graph's ReferencedServicesNames passes",
+			name:     "EndpointSlice with Service owner in graph's ReferencedServicesNames is referenced",
 			resource: endpointSliceInGraph,
 			graph:    graph,
 			expected: true,
 		},
 		{
-			name:     "EndpointSlice with Service owner not in graph's ReferencedServicesNames fails",
+			name:     "EndpointSlice with Service owner not in graph's ReferencedServicesNames is not referenced",
 			resource: endpointSliceNotInGraph,
 			graph:    graph,
 			expected: false,
 		},
 		{
-			name:     "Empty EndpointSlice fails",
+			name:     "Empty EndpointSlice",
 			resource: emptyEndpointSlice,
 			graph:    graph,
 			expected: false,
