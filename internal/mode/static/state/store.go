@@ -119,10 +119,7 @@ type changeTrackingUpdaterObjectTypeCfg struct {
 //
 // It only works with objects with the GVKs registered in changeTrackingUpdaterObjectTypeCfg. Otherwise, it panics.
 //
-// A change is tracked when:
-// - An object with a GVK with a non-nil store and the stateChangedPredicate for that object returns true.
-// - An object is upserted or deleted, and it is related to another object,
-// based on the decision by the relationship capturer.
+// A change is tracked when an object with a GVK has its stateChangedPredicate return true.
 type changeTrackingUpdater struct {
 	store                  *multiObjectStore
 	stateChangedPredicates map[schema.GroupVersionKind]stateChangedPredicate
