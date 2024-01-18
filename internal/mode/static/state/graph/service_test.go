@@ -170,92 +170,6 @@ func TestBuildReferencedServices(t *testing.T) {
 			},
 		},
 	}
-	invalidMatchesRuleRoute := &Route{
-		ParentRefs: []ParentRef{
-			{
-				Attachment: &ParentRefAttachmentStatus{
-					Attached: true,
-				},
-			},
-		},
-		Valid: true,
-		Rules: []Rule{
-			{
-				BackendRefs: []BackendRef{
-					{
-						SvcNsName: types.NamespacedName{Namespace: "banana-ns", Name: "service"},
-						Weight:    1,
-					},
-				},
-				ValidMatches: false,
-				ValidFilters: true,
-			},
-		},
-	}
-	invalidFiltersRuleRoute := &Route{
-		ParentRefs: []ParentRef{
-			{
-				Attachment: &ParentRefAttachmentStatus{
-					Attached: true,
-				},
-			},
-		},
-		Valid: true,
-		Rules: []Rule{
-			{
-				BackendRefs: []BackendRef{
-					{
-						SvcNsName: types.NamespacedName{Namespace: "banana-ns", Name: "service"},
-						Weight:    1,
-					},
-				},
-				ValidMatches: true,
-				ValidFilters: false,
-			},
-		},
-	}
-	invalidAndValidRulesRoute := &Route{
-		ParentRefs: []ParentRef{
-			{
-				Attachment: &ParentRefAttachmentStatus{
-					Attached: true,
-				},
-			},
-		},
-		Valid: true,
-		Rules: []Rule{
-			{
-				BackendRefs: []BackendRef{
-					{
-						SvcNsName: types.NamespacedName{Namespace: "banana-ns", Name: "service"},
-						Weight:    1,
-					},
-				},
-				ValidMatches: true,
-				ValidFilters: false,
-			},
-			{
-				BackendRefs: []BackendRef{
-					{
-						SvcNsName: types.NamespacedName{Namespace: "orange-ns", Name: "service"},
-						Weight:    1,
-					},
-				},
-				ValidMatches: false,
-				ValidFilters: true,
-			},
-			{
-				BackendRefs: []BackendRef{
-					{
-						SvcNsName: types.NamespacedName{Namespace: "grape-ns", Name: "service"},
-						Weight:    1,
-					},
-				},
-				ValidMatches: true,
-				ValidFilters: true,
-			},
-		},
-	}
 	validRouteNoServiceNsName := &Route{
 		ParentRefs: []ParentRef{
 			{
@@ -366,29 +280,6 @@ func TestBuildReferencedServices(t *testing.T) {
 			},
 			exp: map[types.NamespacedName]struct{}{
 				{Namespace: "service-ns", Name: "service"}: {},
-			},
-		},
-		{
-			name: "route with invalid filters rule",
-			routes: map[types.NamespacedName]*Route{
-				{Name: "invalid-filters-rule"}: invalidFiltersRuleRoute,
-			},
-			exp: nil,
-		},
-		{
-			name: "route with invalid matches rule",
-			routes: map[types.NamespacedName]*Route{
-				{Name: "invalid-matches-rule"}: invalidMatchesRuleRoute,
-			},
-			exp: nil,
-		},
-		{
-			name: "route with invalid and valid rules",
-			routes: map[types.NamespacedName]*Route{
-				{Name: "invalid-and-valid-rules"}: invalidAndValidRulesRoute,
-			},
-			exp: map[types.NamespacedName]struct{}{
-				{Namespace: "grape-ns", Name: "service"}: {},
 			},
 		},
 		{

@@ -29,16 +29,6 @@ func buildReferencedServices(
 		}
 
 		for idx := range route.Rules {
-			// Do I still need to do these checks? As the check is made in backend_ref, basically
-			// if the route rules are not valid, it will not populate route.Rules[idx].BackendRefs, thus
-			// if we just do the for loop over the route.Rules[idx].BackendRefs = backendRefs, we should be fine?
-			if !route.Rules[idx].ValidMatches {
-				continue
-			}
-			if !route.Rules[idx].ValidFilters {
-				continue
-			}
-
 			for _, ref := range route.Rules[idx].BackendRefs {
 				// Processes both valid and invalid BackendRefs as invalid ones still have referenced services
 				// we may want to track.
