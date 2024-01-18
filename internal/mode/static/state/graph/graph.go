@@ -48,8 +48,9 @@ type Graph struct {
 	ReferencedSecrets map[types.NamespacedName]*Secret
 	// ReferencedNamespaces includes Namespaces with labels that match the Gateway Listener's label selector.
 	ReferencedNamespaces map[types.NamespacedName]*v1.Namespace
-	// ReferencedServicesNames includes the names of all the Services that are referenced by at least one HTTPRoute.
-	ReferencedServicesNames map[types.NamespacedName]struct{}
+	// ReferencedServices includes the NamespacedNames of all the Services that are referenced by at least one HTTPRoute.
+	// Storing the whole resource is not necessary, compared to the similar maps above.
+	ReferencedServices map[types.NamespacedName]struct{}
 }
 
 // ProtectedPorts are the ports that may not be configured by a listener with a descriptive name of each port.
@@ -79,14 +80,14 @@ func (g *Graph) IsReferenced(resourceType client.Object, nsname types.Namespaced
 		return existed || exists
 	// Service reference exists if at least one HTTPRoute references it.
 	case *v1.Service:
-		_, exists := g.ReferencedServicesNames[nsname]
+		_, exists := g.ReferencedServices[nsname]
 		return exists
 	// EndpointSlice reference exists if its Service owner is referenced by at least one HTTPRoute.
 	case *discoveryV1.EndpointSlice:
 		svcName := index.GetServiceNameFromEndpointSlice(obj)
 
 		// Service Namespace should be the same Namespace as the EndpointSlice
-		_, exists := g.ReferencedServicesNames[types.NamespacedName{Namespace: nsname.Namespace, Name: svcName}]
+		_, exists := g.ReferencedServices[types.NamespacedName{Namespace: nsname.Namespace, Name: svcName}]
 		return exists
 	default:
 		return false
@@ -122,17 +123,17 @@ func BuildGraph(
 
 	referencedNamespaces := buildReferencedNamespaces(state.Namespaces, gw)
 
-	referencedServicesNames := buildReferencedServicesNames(routes)
+	referencedServices := buildReferencedServices(routes)
 
 	g := &Graph{
-		GatewayClass:            gc,
-		Gateway:                 gw,
-		Routes:                  routes,
-		IgnoredGatewayClasses:   processedGwClasses.Ignored,
-		IgnoredGateways:         processedGws.Ignored,
-		ReferencedSecrets:       secretResolver.getResolvedSecrets(),
-		ReferencedNamespaces:    referencedNamespaces,
-		ReferencedServicesNames: referencedServicesNames,
+		GatewayClass:          gc,
+		Gateway:               gw,
+		Routes:                routes,
+		IgnoredGatewayClasses: processedGwClasses.Ignored,
+		IgnoredGateways:       processedGws.Ignored,
+		ReferencedSecrets:     secretResolver.getResolvedSecrets(),
+		ReferencedNamespaces:  referencedNamespaces,
+		ReferencedServices:    referencedServices,
 	}
 
 	return g

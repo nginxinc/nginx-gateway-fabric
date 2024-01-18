@@ -347,7 +347,7 @@ func TestBuildGraph(t *testing.T) {
 			ReferencedNamespaces: map[types.NamespacedName]*v1.Namespace{
 				client.ObjectKeyFromObject(ns): ns,
 			},
-			ReferencedServicesNames: map[types.NamespacedName]struct{}{
+			ReferencedServices: map[types.NamespacedName]struct{}{
 				client.ObjectKeyFromObject(svc): {},
 			},
 		}
@@ -504,7 +504,7 @@ func TestIsReferenced(t *testing.T) {
 		ReferencedNamespaces: map[types.NamespacedName]*v1.Namespace{
 			client.ObjectKeyFromObject(nsInGraph): nsInGraph,
 		},
-		ReferencedServicesNames: map[types.NamespacedName]struct{}{
+		ReferencedServices: map[types.NamespacedName]struct{}{
 			client.ObjectKeyFromObject(serviceInGraph): {},
 		},
 	}
@@ -584,13 +584,13 @@ func TestIsReferenced(t *testing.T) {
 
 		// EndpointSlice tests
 		{
-			name:     "EndpointSlice with Service owner in graph's ReferencedServicesNames is referenced",
+			name:     "EndpointSlice with Service owner in graph's ReferencedServices is referenced",
 			resource: endpointSliceInGraph,
 			graph:    graph,
 			expected: true,
 		},
 		{
-			name:     "EndpointSlice with Service owner not in graph's ReferencedServicesNames is not referenced",
+			name:     "EndpointSlice with Service owner not in graph's ReferencedServices is not referenced",
 			resource: endpointSliceNotInGraph,
 			graph:    graph,
 			expected: false,

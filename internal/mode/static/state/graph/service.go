@@ -5,7 +5,7 @@ import (
 )
 
 // routes all have populated ParentRefs from when they were created
-func buildReferencedServicesNames(
+func buildReferencedServices(
 	routes map[types.NamespacedName]*Route,
 ) map[types.NamespacedName]struct{} {
 	svcNames := make(map[types.NamespacedName]struct{})

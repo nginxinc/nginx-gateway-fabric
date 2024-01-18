@@ -507,7 +507,7 @@ var _ = Describe("ChangeProcessor", func() {
 						{Namespace: "test", Name: "hr-1"}: expRouteHR1,
 					},
 					ReferencedSecrets: map[types.NamespacedName]*graph.Secret{},
-					ReferencedServicesNames: map[types.NamespacedName]struct{}{
+					ReferencedServices: map[types.NamespacedName]struct{}{
 						{
 							Namespace: "service-ns",
 							Name:      "service",
@@ -577,7 +577,7 @@ var _ = Describe("ChangeProcessor", func() {
 							}
 
 							expGraph.ReferencedSecrets = nil
-							expGraph.ReferencedServicesNames = nil
+							expGraph.ReferencedServices = nil
 
 							expRouteHR1.Rules[0].BackendRefs[0].SvcNsName = types.NamespacedName{}
 
@@ -630,7 +630,7 @@ var _ = Describe("ChangeProcessor", func() {
 					expGraph.Routes[hr1Name].ParentRefs[1].Attachment = expAttachment443
 
 					expGraph.ReferencedSecrets = nil
-					expGraph.ReferencedServicesNames = nil
+					expGraph.ReferencedServices = nil
 
 					expRouteHR1.Rules[0].BackendRefs[0].SvcNsName = types.NamespacedName{}
 
@@ -653,7 +653,7 @@ var _ = Describe("ChangeProcessor", func() {
 						Source: diffNsTLSSecret,
 					}
 
-					expGraph.ReferencedServicesNames = nil
+					expGraph.ReferencedServices = nil
 					expRouteHR1.Rules[0].BackendRefs[0].SvcNsName = types.NamespacedName{}
 
 					changed, graphCfg := processor.Process()
@@ -863,7 +863,7 @@ var _ = Describe("ChangeProcessor", func() {
 					}
 
 					expRouteHR1.Rules[0].BackendRefs[0].SvcNsName = types.NamespacedName{}
-					expGraph.ReferencedServicesNames = nil
+					expGraph.ReferencedServices = nil
 
 					changed, graphCfg := processor.Process()
 					Expect(changed).To(BeTrue())
@@ -895,7 +895,7 @@ var _ = Describe("ChangeProcessor", func() {
 					}
 
 					expRouteHR1.Rules[0].BackendRefs[0].SvcNsName = types.NamespacedName{}
-					expGraph.ReferencedServicesNames = nil
+					expGraph.ReferencedServices = nil
 
 					changed, graphCfg := processor.Process()
 					Expect(changed).To(BeTrue())
@@ -918,7 +918,7 @@ var _ = Describe("ChangeProcessor", func() {
 					expGraph.ReferencedSecrets = nil
 
 					expRouteHR1.Rules[0].BackendRefs[0].SvcNsName = types.NamespacedName{}
-					expGraph.ReferencedServicesNames = nil
+					expGraph.ReferencedServices = nil
 
 					changed, graphCfg := processor.Process()
 					Expect(changed).To(BeTrue())
@@ -933,7 +933,7 @@ var _ = Describe("ChangeProcessor", func() {
 					)
 
 					expRouteHR1.Rules[0].BackendRefs[0].SvcNsName = types.NamespacedName{}
-					expGraph.ReferencedServicesNames = nil
+					expGraph.ReferencedServices = nil
 
 					changed, graphCfg := processor.Process()
 					Expect(changed).To(BeTrue())
@@ -948,7 +948,7 @@ var _ = Describe("ChangeProcessor", func() {
 					)
 
 					expRouteHR1.Rules[0].BackendRefs[0].SvcNsName = types.NamespacedName{}
-					expGraph.ReferencedServicesNames = nil
+					expGraph.ReferencedServices = nil
 
 					changed, graphCfg := processor.Process()
 					Expect(changed).To(BeTrue())

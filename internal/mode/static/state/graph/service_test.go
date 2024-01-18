@@ -8,7 +8,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
-func TestBuildReferencedServicesNames(t *testing.T) {
+func TestBuildReferencedServices(t *testing.T) {
 	normalRoute := &Route{
 		ParentRefs: []ParentRef{
 			{
@@ -403,7 +403,7 @@ func TestBuildReferencedServicesNames(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewWithT(t)
-			g.Expect(buildReferencedServicesNames(test.routes)).To(Equal(test.exp))
+			g.Expect(buildReferencedServices(test.routes)).To(Equal(test.exp))
 		})
 	}
 }
