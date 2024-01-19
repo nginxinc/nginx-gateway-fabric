@@ -202,6 +202,7 @@ func TestBuildStatuses(t *testing.T) {
 				},
 			},
 		},
+		BackendTLSPolicyStatuses: status.BackendTLSPolicyStatuses{},
 	}
 
 	g := NewWithT(t)
@@ -304,6 +305,7 @@ func TestBuildStatusesNginxErr(t *testing.T) {
 				},
 			},
 		},
+		BackendTLSPolicyStatuses: status.BackendTLSPolicyStatuses{},
 	}
 
 	g := NewWithT(t)

@@ -87,6 +87,7 @@ rules:
   - httproutes/status
   - gateways/status
   - gatewayclasses/status
+  - backendtlspolicies/status
   verbs:
   - update
 - apiGroups:

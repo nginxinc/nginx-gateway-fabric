@@ -9,7 +9,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	v1 "sigs.k8s.io/gateway-api/apis/v1"
-	v1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/graph"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/resolver"
@@ -36,7 +35,7 @@ func BuildConfiguration(
 	httpServers, sslServers := buildServers(g.Gateway.Listeners)
 	backendGroups := buildBackendGroups(append(httpServers, sslServers...))
 	keyPairs := buildSSLKeyPairs(g.ReferencedSecrets, g.Gateway.Listeners)
-	certBundles := buildCertBundles(g.ReferencedConfigMaps, backendGroups)
+	certBundles := buildCertBundles(g.ReferencedCaCertConfigMaps, backendGroups)
 
 	config := Configuration{
 		HTTPServers:   httpServers,
@@ -76,11 +75,11 @@ func buildSSLKeyPairs(
 }
 
 func buildCertBundles(
-	configMaps map[types.NamespacedName]*graph.ConfigMap,
+	caCertConfigMaps map[types.NamespacedName]*graph.CaCertConfigMap,
 	backendGroups []BackendGroup,
 ) map[CertBundleID]CertBundle {
 	bundles := make(map[CertBundleID]CertBundle)
-	refByBG := make(map[CertBundleID]bool)
+	refByBG := make(map[CertBundleID]struct{})
 
 	// We only need to build the cert bundles if there are valid backend groups that reference them.
 	if len(backendGroups) == 0 {
@@ -94,19 +93,16 @@ func buildCertBundles(
 			if !b.Valid || b.VerifyTLS == nil {
 				continue
 			}
-			refByBG[b.VerifyTLS.CertBundleID] = true
+			refByBG[b.VerifyTLS.CertBundleID] = struct{}{}
 		}
 	}
 
-	for cmName, cm := range configMaps {
+	for cmName, cm := range caCertConfigMaps {
 		id := generateCertBundleID(cmName)
-		if !refByBG[id] {
-			continue
-		}
-		if cm.Source.Data != nil || len(cm.Source.Data) > 0 {
-			bundles[id] = CertBundle(cm.Source.Data["ca.crt"])
-		} else if cm.Source.BinaryData != nil || len(cm.Source.BinaryData) > 0 {
-			bundles[id] = CertBundle(cm.Source.BinaryData["ca.crt"])
+		if _, exists := refByBG[id]; exists {
+			if cm.CACert != nil || len(cm.CACert) > 0 {
+				bundles[id] = CertBundle(cm.CACert)
+			}
 		}
 	}
 
@@ -174,17 +170,15 @@ func newBackendGroup(refs []graph.BackendRef, sourceNsName types.NamespacedName,
 	}
 }
 
-func convertBackendTLS(btp *v1alpha2.BackendTLSPolicy) *VerifyTLS {
-	if btp == nil {
+func convertBackendTLS(btp *graph.BackendTLSPolicy) *VerifyTLS {
+	if btp == nil || !btp.Valid {
 		return nil
 	}
 	verify := &VerifyTLS{}
-	if btp.Spec.TLS.CACertRefs != nil && len(btp.Spec.TLS.CACertRefs) > 0 {
-		// We only support one CACertRef, take the first one and ignore anything else
-		b := btp.Spec.TLS.CACertRefs[0]
-		verify.CertBundleID = generateCertBundleID(types.NamespacedName{Namespace: btp.Namespace, Name: string(b.Name)})
+	if btp.CaCertRef.Name != "" {
+		verify.CertBundleID = generateCertBundleID(btp.CaCertRef)
 	}
-	verify.Hostname = string(btp.Spec.TLS.Hostname)
+	verify.Hostname = string(btp.Source.Spec.TLS.Hostname)
 	return verify
 }
 

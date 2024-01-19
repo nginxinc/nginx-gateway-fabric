@@ -321,31 +321,35 @@ func TestBuildConfiguration(t *testing.T) {
 		pathAndType{path: "/", pathType: prefix}, pathAndType{path: "/", pathType: prefix},
 	)
 
-	httpsRouteHR8.Rules[0].BackendRefs[0].BackendTLSPolicy = &v1alpha2.BackendTLSPolicy{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "btp",
-			Namespace: "test",
-		},
-		Spec: v1alpha2.BackendTLSPolicySpec{
-			TargetRef: v1alpha2.PolicyTargetReferenceWithSectionName{
-				PolicyTargetReference: v1alpha2.PolicyTargetReference{
-					Group:     "",
-					Kind:      "Service",
-					Name:      "foo",
-					Namespace: (*v1.Namespace)(helpers.GetPointer("test")),
-				},
+	httpsRouteHR8.Rules[0].BackendRefs[0].BackendTLSPolicy = &graph.BackendTLSPolicy{
+		Source: &v1alpha2.BackendTLSPolicy{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "btp",
+				Namespace: "test",
 			},
-			TLS: v1alpha2.BackendTLSPolicyConfig{
-				Hostname: "foo.example.com",
-				CACertRefs: []v1.LocalObjectReference{
-					{
-						Kind:  "ConfigMap",
-						Name:  "configmap-1",
-						Group: "",
+			Spec: v1alpha2.BackendTLSPolicySpec{
+				TargetRef: v1alpha2.PolicyTargetReferenceWithSectionName{
+					PolicyTargetReference: v1alpha2.PolicyTargetReference{
+						Group:     "",
+						Kind:      "Service",
+						Name:      "foo",
+						Namespace: (*v1.Namespace)(helpers.GetPointer("test")),
+					},
+				},
+				TLS: v1alpha2.BackendTLSPolicyConfig{
+					Hostname: "foo.example.com",
+					CACertRefs: []v1.LocalObjectReference{
+						{
+							Kind:  "ConfigMap",
+							Name:  "configmap-1",
+							Group: "",
+						},
 					},
 				},
 			},
 		},
+		CaCertRef: types.NamespacedName{Namespace: "test", Name: "configmap-1"},
+		Valid:     true,
 	}
 
 	expHTTPSHR8Groups[0].Backends[0].VerifyTLS = &VerifyTLS{
@@ -360,31 +364,35 @@ func TestBuildConfiguration(t *testing.T) {
 		pathAndType{path: "/", pathType: prefix}, pathAndType{path: "/", pathType: prefix},
 	)
 
-	httpsRouteHR9.Rules[0].BackendRefs[0].BackendTLSPolicy = &v1alpha2.BackendTLSPolicy{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "btp2",
-			Namespace: "test",
-		},
-		Spec: v1alpha2.BackendTLSPolicySpec{
-			TargetRef: v1alpha2.PolicyTargetReferenceWithSectionName{
-				PolicyTargetReference: v1alpha2.PolicyTargetReference{
-					Group:     "",
-					Kind:      "Service",
-					Name:      "foo",
-					Namespace: (*v1.Namespace)(helpers.GetPointer("test")),
-				},
+	httpsRouteHR9.Rules[0].BackendRefs[0].BackendTLSPolicy = &graph.BackendTLSPolicy{
+		Source: &v1alpha2.BackendTLSPolicy{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "btp2",
+				Namespace: "test",
 			},
-			TLS: v1alpha2.BackendTLSPolicyConfig{
-				Hostname: "foo.example.com",
-				CACertRefs: []v1.LocalObjectReference{
-					{
-						Kind:  "ConfigMap",
-						Name:  "configmap-2",
-						Group: "",
+			Spec: v1alpha2.BackendTLSPolicySpec{
+				TargetRef: v1alpha2.PolicyTargetReferenceWithSectionName{
+					PolicyTargetReference: v1alpha2.PolicyTargetReference{
+						Group:     "",
+						Kind:      "Service",
+						Name:      "foo",
+						Namespace: (*v1.Namespace)(helpers.GetPointer("test")),
+					},
+				},
+				TLS: v1alpha2.BackendTLSPolicyConfig{
+					Hostname: "foo.example.com",
+					CACertRefs: []v1.LocalObjectReference{
+						{
+							Kind:  "ConfigMap",
+							Name:  "configmap-2",
+							Group: "",
+						},
 					},
 				},
 			},
 		},
+		CaCertRef: types.NamespacedName{Namespace: "test", Name: "configmap-2"},
+		Valid:     true,
 	}
 
 	expHTTPSHR9Groups[0].Backends[0].VerifyTLS = &VerifyTLS{
@@ -504,7 +512,7 @@ func TestBuildConfiguration(t *testing.T) {
 		},
 	}
 
-	referencedConfigMaps := map[types.NamespacedName]*graph.ConfigMap{
+	referencedConfigMaps := map[types.NamespacedName]*graph.CaCertConfigMap{
 		{Namespace: "test", Name: "configmap-1"}: {
 			Source: &apiv1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
@@ -515,6 +523,7 @@ func TestBuildConfiguration(t *testing.T) {
 					"ca.crt": "cert-1",
 				},
 			},
+			CACert: []byte("cert-1"),
 		},
 		{Namespace: "test", Name: "configmap-2"}: {
 			Source: &apiv1.ConfigMap{
@@ -526,6 +535,7 @@ func TestBuildConfiguration(t *testing.T) {
 					"ca.crt": []byte("cert-2"),
 				},
 			},
+			CACert: []byte("cert-2"),
 		},
 	}
 
@@ -1722,7 +1732,7 @@ func TestBuildConfiguration(t *testing.T) {
 				ReferencedSecrets: map[types.NamespacedName]*graph.Secret{
 					secret1NsName: secret1,
 				},
-				ReferencedConfigMaps: referencedConfigMaps,
+				ReferencedCaCertConfigMaps: referencedConfigMaps,
 			},
 			expConf: Configuration{
 				HTTPServers: []VirtualServer{},
@@ -1798,7 +1808,7 @@ func TestBuildConfiguration(t *testing.T) {
 				ReferencedSecrets: map[types.NamespacedName]*graph.Secret{
 					secret1NsName: secret1,
 				},
-				ReferencedConfigMaps: referencedConfigMaps,
+				ReferencedCaCertConfigMaps: referencedConfigMaps,
 			},
 			expConf: Configuration{
 				HTTPServers: []VirtualServer{},
@@ -2427,30 +2437,39 @@ func TestHostnameMoreSpecific(t *testing.T) {
 }
 
 func TestConvertBackendTLS(t *testing.T) {
-	btpCaCertRefs := &v1alpha2.BackendTLSPolicy{
-		Spec: v1alpha2.BackendTLSPolicySpec{
-			TLS: v1alpha2.BackendTLSPolicyConfig{
-				CACertRefs: []v1.LocalObjectReference{
-					{
-						Name: "ca-cert",
+	btpCaCertRefs := &graph.BackendTLSPolicy{
+		Source: &v1alpha2.BackendTLSPolicy{
+			Spec: v1alpha2.BackendTLSPolicySpec{
+				TLS: v1alpha2.BackendTLSPolicyConfig{
+					CACertRefs: []v1.LocalObjectReference{
+						{
+							Name: "ca-cert",
+						},
 					},
+					Hostname: "example.com",
 				},
-				Hostname: "example.com",
 			},
 		},
+		Valid:     true,
+		CaCertRef: types.NamespacedName{Namespace: "test", Name: "ca-cert"},
 	}
 
-	btpWellKnownCerts := &v1alpha2.BackendTLSPolicy{
-		Spec: v1alpha2.BackendTLSPolicySpec{
-			TLS: v1alpha2.BackendTLSPolicyConfig{
-				Hostname: "example.com",
+	btpWellKnownCerts := &graph.BackendTLSPolicy{
+		Source: &v1alpha2.BackendTLSPolicy{
+			Spec: v1alpha2.BackendTLSPolicySpec{
+				TLS: v1alpha2.BackendTLSPolicyConfig{
+					Hostname: "example.com",
+				},
 			},
 		},
+		Valid: true,
 	}
 
 	expectedWithCertPath := &VerifyTLS{
-		CertBundleID: generateCertBundleID(types.NamespacedName{Namespace: btpCaCertRefs.Namespace, Name: "ca-cert"}),
-		Hostname:     "example.com",
+		CertBundleID: generateCertBundleID(
+			types.NamespacedName{Namespace: "test", Name: "ca-cert"},
+		),
+		Hostname: "example.com",
 	}
 
 	expectedWithWellKnownCerts := &VerifyTLS{
@@ -2458,7 +2477,7 @@ func TestConvertBackendTLS(t *testing.T) {
 	}
 
 	tests := []struct {
-		btp      *v1alpha2.BackendTLSPolicy
+		btp      *graph.BackendTLSPolicy
 		expected *VerifyTLS
 		msg      string
 	}{

@@ -10,6 +10,14 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
 )
 
+// BackendTLSPolicyConditionType is a type of condition associated with a BackendTLSPolicy.
+// This type should be used with the BackendTLSPolicyStatus.Conditions field.
+type BackendTLSPolicyConditionType string
+
+// BackendTLSPolicyConditionReason defines the set of reasons that explain why a particular BackendTLSPolicy condition
+// type has been raised.
+type BackendTLSPolicyConditionReason string
+
 const (
 	// ListenerReasonUnsupportedValue is used with the "Accepted" condition when a value of a field in a Listener
 	// is invalid or not supported.
@@ -57,6 +65,22 @@ const (
 	RouteMessageFailedNginxReload = GatewayMessageFailedNginxReload + ". NGINX may still be configured " +
 		"for this HTTPRoute. However, future updates to this resource will not be configured until the Gateway " +
 		"is programmed again"
+
+	// BackendTLSPolicyConditionAttached is the condition type indicating the BackendTLS policy is valid and attached to
+	// the Gateway.
+	BackendTLSPolicyConditionAttached BackendTLSPolicyConditionType = "Attached"
+
+	// BackendTLSPolicyReasonAttached is the condition reason for the BackendTLSPolicy Attached condition.
+	BackendTLSPolicyReasonAttached BackendTLSPolicyConditionReason = "BackendTLSPolicyAttached"
+
+	// BackendTLSPolicyReasonIgnored is the condition reason for the BackendTLSPolicy being ignored by this Gateway.
+	BackendTLSPolicyReasonIgnored BackendTLSPolicyConditionReason = "BackendTLSPolicyIgnored"
+
+	// BackendTLSPolicyConditionValid is the condition type indicating whether the BackendTLS policy is valid.
+	BackendTLSPolicyConditionValid BackendTLSPolicyConditionType = "Valid"
+
+	// BackendTLSPolicyReasonInvalid is the condition reason for the BackendTLSPolicy Valid condition being False.
+	BackendTLSPolicyReasonInvalid BackendTLSPolicyConditionReason = "BackendTLSPolicyInvalid"
 )
 
 // NewTODO returns a Condition that can be used as a placeholder for a condition that is not yet implemented.
@@ -542,6 +566,38 @@ func NewNginxGatewayInvalid(msg string) conditions.Condition {
 		Type:    string(ngfAPI.NginxGatewayConditionValid),
 		Status:  metav1.ConditionFalse,
 		Reason:  string(ngfAPI.NginxGatewayReasonInvalid),
+		Message: msg,
+	}
+}
+
+// NewBackendTLSPolicyAttached returns a Condition that indicates that the BackendTLSPolicy config is valid and attached
+// to the Gateway.
+func NewBackendTLSPolicyAttached() conditions.Condition {
+	return conditions.Condition{
+		Type:    string(BackendTLSPolicyConditionAttached),
+		Status:  metav1.ConditionTrue,
+		Reason:  string(BackendTLSPolicyReasonAttached),
+		Message: "BackendTLSPolicy is attached to the Gateway",
+	}
+}
+
+// NewBackendTLSPolicyIgnored returns a Condition that indicates that the BackendTLSPolicy config cannot be attached to
+// the Gateway and will be ignored.
+func NewBackendTLSPolicyIgnored(msg string) conditions.Condition {
+	return conditions.Condition{
+		Type:    string(BackendTLSPolicyConditionAttached),
+		Status:  metav1.ConditionFalse,
+		Reason:  string(BackendTLSPolicyReasonIgnored),
+		Message: msg,
+	}
+}
+
+// NewBackendTLSPolicyInvalid returns a Condition that indicates that the BackendTLSPolicy config is invalid.
+func NewBackendTLSPolicyInvalid(msg string) conditions.Condition {
+	return conditions.Condition{
+		Type:    string(BackendTLSPolicyConditionValid),
+		Status:  metav1.ConditionFalse,
+		Reason:  string(BackendTLSPolicyReasonInvalid),
 		Message: msg,
 	}
 }

@@ -54,8 +54,10 @@ type Graph struct {
 	// ReferencedServices includes the NamespacedNames of all the Services that are referenced by at least one HTTPRoute.
 	// Storing the whole resource is not necessary, compared to the similar maps above.
 	ReferencedServices map[types.NamespacedName]struct{}
-	// ReferencedConfigMaps includes ConfigMaps that have been referenced by any BackendTLSPolicies.
-	ReferencedConfigMaps map[types.NamespacedName]*ConfigMap
+	// ReferencedCaCertConfigMaps includes ConfigMaps that have been referenced by any BackendTLSPolicies.
+	ReferencedCaCertConfigMaps map[types.NamespacedName]*CaCertConfigMap
+	// BackendTLSPolicies holds BackendTLSPolicy resources.
+	BackendTLSPolicies map[types.NamespacedName]*BackendTLSPolicy
 }
 
 // ProtectedPorts are the ports that may not be configured by a listener with a descriptive name of each port.
@@ -68,7 +70,7 @@ func (g *Graph) IsReferenced(resourceType client.Object, nsname types.Namespaced
 		_, exists := g.ReferencedSecrets[nsname]
 		return exists
 	case *v1.ConfigMap:
-		_, exists := g.ReferencedConfigMaps[nsname]
+		_, exists := g.ReferencedCaCertConfigMaps[nsname]
 		return exists
 	case *v1.Namespace:
 		// `existed` is needed as it checks the graph's ReferencedNamespaces which stores all the namespaces that
@@ -126,24 +128,32 @@ func BuildGraph(
 	refGrantResolver := newReferenceGrantResolver(state.ReferenceGrants)
 	gw := buildGateway(processedGws.Winner, secretResolver, gc, refGrantResolver, protectedPorts)
 
+	processedBackendTLSPolicies := processBackendTLSPolicies(
+		state.BackendTLSPolicies,
+		configMapResolver,
+		controllerName,
+		gw,
+	)
+
 	routes := buildRoutesForGateways(validators.HTTPFieldsValidator, state.HTTPRoutes, processedGws.GetAllNsNames())
 	bindRoutesToListeners(routes, gw, state.Namespaces)
-	addBackendRefsToRouteRules(routes, refGrantResolver, state.Services, state.BackendTLSPolicies, configMapResolver)
+	addBackendRefsToRouteRules(routes, refGrantResolver, state.Services, processedBackendTLSPolicies)
 
 	referencedNamespaces := buildReferencedNamespaces(state.Namespaces, gw)
 
 	referencedServices := buildReferencedServices(routes)
 
 	g := &Graph{
-		GatewayClass:          gc,
-		Gateway:               gw,
-		Routes:                routes,
-		IgnoredGatewayClasses: processedGwClasses.Ignored,
-		IgnoredGateways:       processedGws.Ignored,
-		ReferencedSecrets:     secretResolver.getResolvedSecrets(),
-		ReferencedNamespaces:  referencedNamespaces,
-		ReferencedServices:    referencedServices,
-		ReferencedConfigMaps:  configMapResolver.getResolvedConfigMaps(),
+		GatewayClass:               gc,
+		Gateway:                    gw,
+		Routes:                     routes,
+		IgnoredGatewayClasses:      processedGwClasses.Ignored,
+		IgnoredGateways:            processedGws.Ignored,
+		ReferencedSecrets:          secretResolver.getResolvedSecrets(),
+		ReferencedNamespaces:       referencedNamespaces,
+		ReferencedServices:         referencedServices,
+		ReferencedCaCertConfigMaps: configMapResolver.getResolvedConfigMaps(),
+		BackendTLSPolicies:         processedBackendTLSPolicies,
 	}
 
 	return g

@@ -13,29 +13,31 @@ import (
 
 const CAKey = "ca.crt"
 
-// ConfigMap represents a ConfigMap resource.
-type ConfigMap struct {
+// CaCertConfigMap represents a ConfigMap resource that holds CA Cert data.
+type CaCertConfigMap struct {
 	// Source holds the actual ConfigMap resource. Can be nil if the ConfigMap does not exist.
 	Source *apiv1.ConfigMap
+	// CACert holds the actual CA Cert data.
+	CACert []byte
 }
 
-type configMapEntry struct {
-	ConfigMap
+type caCertConfigMapEntry struct {
 	// err holds the corresponding error if the ConfigMap is invalid or does not exist.
-	err error
+	err             error
+	caCertConfigMap CaCertConfigMap
 }
 
 // configMapResolver wraps the cluster ConfigMaps so that they can be resolved (includes validation). All resolved
 // ConfigMaps are saved to be used later.
 type configMapResolver struct {
 	clusterConfigMaps  map[types.NamespacedName]*apiv1.ConfigMap
-	resolvedConfigMaps map[types.NamespacedName]*configMapEntry
+	resolvedConfigMaps map[types.NamespacedName]*caCertConfigMapEntry
 }
 
 func newConfigMapResolver(configMaps map[types.NamespacedName]*apiv1.ConfigMap) *configMapResolver {
 	return &configMapResolver{
 		clusterConfigMaps:  configMaps,
-		resolvedConfigMaps: make(map[types.NamespacedName]*configMapEntry),
+		resolvedConfigMaps: make(map[types.NamespacedName]*caCertConfigMapEntry),
 	}
 }
 
@@ -47,37 +49,34 @@ func (r *configMapResolver) resolve(nsname types.NamespacedName) error {
 	cm, exist := r.clusterConfigMaps[nsname]
 
 	var validationErr error
+	var caCert []byte
 
 	if !exist {
 		validationErr = errors.New("configMap does not exist")
 	}
 
 	if exist {
-
-		var caCrtPresent bool
-
 		if cm.Data != nil {
 			if _, exists := cm.Data[CAKey]; exists {
 				validationErr = validateCA([]byte(cm.Data[CAKey]))
-				caCrtPresent = true
+				caCert = []byte(cm.Data[CAKey])
 			}
 		}
-
 		if cm.BinaryData != nil {
 			if _, exists := cm.BinaryData[CAKey]; exists {
 				validationErr = validateCA(cm.BinaryData[CAKey])
-				caCrtPresent = true
+				caCert = cm.BinaryData[CAKey]
 			}
 		}
-
-		if !caCrtPresent {
+		if len(caCert) == 0 {
 			validationErr = fmt.Errorf("configMap does not have the data or binaryData field %v", CAKey)
 		}
 	}
 
-	r.resolvedConfigMaps[nsname] = &configMapEntry{
-		ConfigMap: ConfigMap{
+	r.resolvedConfigMaps[nsname] = &caCertConfigMapEntry{
+		caCertConfigMap: CaCertConfigMap{
 			Source: cm,
+			CACert: caCert,
 		},
 		err: validationErr,
 	}
@@ -85,17 +84,17 @@ func (r *configMapResolver) resolve(nsname types.NamespacedName) error {
 	return validationErr
 }
 
-func (r *configMapResolver) getResolvedConfigMaps() map[types.NamespacedName]*ConfigMap {
+func (r *configMapResolver) getResolvedConfigMaps() map[types.NamespacedName]*CaCertConfigMap {
 	if len(r.resolvedConfigMaps) == 0 {
 		return nil
 	}
 
-	resolved := make(map[types.NamespacedName]*ConfigMap)
+	resolved := make(map[types.NamespacedName]*CaCertConfigMap)
 
 	for nsname, entry := range r.resolvedConfigMaps {
 		// create iteration variable inside the loop to fix implicit memory aliasing
-		configMap := entry.ConfigMap
-		resolved[nsname] = &configMap
+		caCertConfigMap := entry.caCertConfigMap
+		resolved[nsname] = &caCertConfigMap
 	}
 
 	return resolved

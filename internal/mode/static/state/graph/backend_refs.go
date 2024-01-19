@@ -7,7 +7,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
 	staticConds "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/conditions"
@@ -16,7 +15,7 @@ import (
 // BackendRef is an internal representation of a backendRef in an HTTPRoute.
 type BackendRef struct {
 	// BackendTLSPolicy is the BackendTLSPolicy of the Service which is referenced by the backendRef.
-	BackendTLSPolicy *gatewayv1alpha2.BackendTLSPolicy
+	BackendTLSPolicy *BackendTLSPolicy
 	// SvcNsName is the NamespacedName of the Service referenced by the backendRef.
 	SvcNsName types.NamespacedName
 	// ServicePort is the ServicePort of the Service which is referenced by the backendRef.
@@ -40,11 +39,10 @@ func addBackendRefsToRouteRules(
 	routes map[types.NamespacedName]*Route,
 	refGrantResolver *referenceGrantResolver,
 	services map[types.NamespacedName]*v1.Service,
-	backendTLSPolicies map[types.NamespacedName]*gatewayv1alpha2.BackendTLSPolicy,
-	configMapResolver *configMapResolver,
+	backendTLSPolicies map[types.NamespacedName]*BackendTLSPolicy,
 ) {
 	for _, r := range routes {
-		addBackendRefsToRules(r, refGrantResolver, services, backendTLSPolicies, configMapResolver)
+		addBackendRefsToRules(r, refGrantResolver, services, backendTLSPolicies)
 	}
 }
 
@@ -55,8 +53,7 @@ func addBackendRefsToRules(
 	route *Route,
 	refGrantResolver *referenceGrantResolver,
 	services map[types.NamespacedName]*v1.Service,
-	backendTLSPolicies map[types.NamespacedName]*gatewayv1alpha2.BackendTLSPolicy,
-	configMapResolver *configMapResolver,
+	backendTLSPolicies map[types.NamespacedName]*BackendTLSPolicy,
 ) {
 	if !route.Valid {
 		return
@@ -87,7 +84,6 @@ func addBackendRefsToRules(
 				services,
 				refPath,
 				backendTLSPolicies,
-				configMapResolver,
 			)
 
 			backendRefs = append(backendRefs, ref)
@@ -106,8 +102,7 @@ func createBackendRef(
 	refGrantResolver *referenceGrantResolver,
 	services map[types.NamespacedName]*v1.Service,
 	refPath *field.Path,
-	backendTLSPolicies map[types.NamespacedName]*gatewayv1alpha2.BackendTLSPolicy,
-	configMapResolver *configMapResolver,
+	backendTLSPolicies map[types.NamespacedName]*BackendTLSPolicy,
 ) (BackendRef, *conditions.Condition) {
 	// Data plane will handle invalid ref by responding with 500.
 	// Because of that, we always need to add a BackendRef to group.Backends, even if the ref is invalid.
@@ -151,7 +146,6 @@ func createBackendRef(
 		backendTLSPolicies,
 		ref,
 		sourceNamespace,
-		configMapResolver,
 	)
 	if err != nil {
 		backendRef = BackendRef{
@@ -177,93 +171,39 @@ func createBackendRef(
 }
 
 func findBackendTLSPolicyForService(
-	backendTLSPolicies map[types.NamespacedName]*gatewayv1alpha2.BackendTLSPolicy,
+	backendTLSPolicies map[types.NamespacedName]*BackendTLSPolicy,
 	ref gatewayv1.HTTPBackendRef,
 	routeNamespace string,
-	configMapResolver *configMapResolver,
-) (*gatewayv1alpha2.BackendTLSPolicy, error) {
-	var beTLSPolicy *gatewayv1alpha2.BackendTLSPolicy
+) (*BackendTLSPolicy, error) {
+	var beTLSPolicy *BackendTLSPolicy
+	var err error
+
 	refNs := routeNamespace
 	if ref.Namespace != nil {
 		refNs = string(*ref.Namespace)
 	}
 
 	for _, btp := range backendTLSPolicies {
-		btpNs := btp.Namespace
-		if btp.Spec.TargetRef.Namespace != nil {
-			btpNs = string(*btp.Spec.TargetRef.Namespace)
+		btpNs := btp.Source.Namespace
+		if btp.Source.Spec.TargetRef.Namespace != nil {
+			btpNs = string(*btp.Source.Spec.TargetRef.Namespace)
 		}
-		if btp.Spec.TargetRef.Name == ref.Name && btpNs == refNs {
+		if btp.Source.Spec.TargetRef.Name == ref.Name && btpNs == refNs {
 			beTLSPolicy = btp
 			break
 		}
 	}
 
-	if beTLSPolicy == nil {
-		return nil, nil
+	if beTLSPolicy != nil {
+		beTLSPolicy.IsReferenced = true
+		if !beTLSPolicy.Valid {
+			err = fmt.Errorf("The backend TLS policy is invalid: %s", beTLSPolicy.Conditions[0].Message)
+		} else {
+			beTLSPolicy.Conditions = append(beTLSPolicy.Conditions, staticConds.NewBackendTLSPolicyAttached())
+		}
 	}
-
-	err := validateBackendTLSPolicy(beTLSPolicy, configMapResolver)
 
 	return beTLSPolicy, err
-}
-
-func validateBackendTLSPolicy(
-	btp *gatewayv1alpha2.BackendTLSPolicy,
-	configMapResolver *configMapResolver,
-) error {
-	if err := validateBackendTLSHostname(btp); err != nil {
-		return err
-	}
-	if btp.Spec.TLS.CACertRefs != nil && len(btp.Spec.TLS.CACertRefs) > 0 {
-		return validateBackendTLSCACertRef(btp, configMapResolver)
-	} else if btp.Spec.TLS.WellKnownCACerts != nil {
-		return validateBackendTLSWellKnownCACerts(btp)
-	}
-	return fmt.Errorf("must specify either CACertRefs or WellKnownCACerts")
-}
-
-func validateBackendTLSHostname(btp *gatewayv1alpha2.BackendTLSPolicy) error {
-	h := string(btp.Spec.TLS.Hostname)
-
-	if err := validateHostname(h); err != nil {
-		path := field.NewPath("tls.hostname")
-		valErr := field.Invalid(path, btp.Spec.TLS.Hostname, err.Error())
-		return valErr
-	}
-	return nil
-}
-
-func validateBackendTLSCACertRef(btp *gatewayv1alpha2.BackendTLSPolicy, configMapResolver *configMapResolver) error {
-	if len(btp.Spec.TLS.CACertRefs) != 1 {
-		path := field.NewPath("tls.cacertrefs")
-		valErr := field.TooMany(path, len(btp.Spec.TLS.CACertRefs), 1)
-		return valErr
-	}
-	if btp.Spec.TLS.CACertRefs[0].Kind != "ConfigMap" {
-		path := field.NewPath("tls.cacertrefs[0].kind")
-		valErr := field.NotSupported(path, btp.Spec.TLS.CACertRefs[0].Kind, []string{"ConfigMap"})
-		return valErr
-	}
-	if btp.Spec.TLS.CACertRefs[0].Group != "" && btp.Spec.TLS.CACertRefs[0].Group != "core" {
-		path := field.NewPath("tls.cacertrefs[0].group")
-		valErr := field.NotSupported(path, btp.Spec.TLS.CACertRefs[0].Kind, []string{"", "core"})
-		return valErr
-	}
-	nsName := types.NamespacedName{Namespace: btp.Namespace, Name: string(btp.Spec.TLS.CACertRefs[0].Name)}
-	if err := configMapResolver.resolve(nsName); err != nil {
-		path := field.NewPath("tls.cacertrefs[0]")
-		return field.Invalid(path, btp.Spec.TLS.CACertRefs[0], err.Error())
-	}
-	return nil
-}
-
-func validateBackendTLSWellKnownCACerts(btp *gatewayv1alpha2.BackendTLSPolicy) error {
-	if *btp.Spec.TLS.WellKnownCACerts != gatewayv1alpha2.WellKnownCACertSystem {
-		path := field.NewPath("tls.wellknowncacerts")
-		return field.Invalid(path, btp.Spec.TLS.WellKnownCACerts, "unsupported value")
-	}
-	return nil
 }
 
 // getServiceAndPortFromRef extracts the NamespacedName of the Service and the port from a BackendRef.
