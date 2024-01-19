@@ -31,13 +31,6 @@ func (f funcPredicate) delete(object client.Object, nsname types.NamespacedName)
 	return f.stateChanged(object, nsname)
 }
 
-// FIXME(kevin85421): We should remove this predicate and update changeTrackingUpdater once #1432 is merged.
-type alwaysProcess struct{}
-
-func (alwaysProcess) delete(_ client.Object, _ types.NamespacedName) bool { return true }
-
-func (alwaysProcess) upsert(_, _ client.Object) bool { return true }
-
 // annotationChangedPredicate implements stateChangedPredicate based on the value of the annotation provided.
 // This predicate will return true on upsert if the annotation's value has changed.
 // It always returns true on delete.

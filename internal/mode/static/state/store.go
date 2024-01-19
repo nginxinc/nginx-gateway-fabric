@@ -116,8 +116,8 @@ func (m *multiObjectStore) persists(objTypeGVK schema.GroupVersionKind) bool {
 type changeTrackingUpdaterObjectTypeCfg struct {
 	// store holds the objects of the gvk. If the store is nil, the objects of the gvk are not persisted.
 	store objectStore
-	// predicate determines if upsert or delete event should trigger a change.
-	// If predicate is nil, then no upsert or delete event for this object will trigger a change.
+	// predicate determines how an upsert or delete event should trigger a change.
+	// If predicate is nil, then all upsert or delete events for this object will trigger a change.
 	predicate stateChangedPredicate
 	gvk       schema.GroupVersionKind
 }
@@ -126,7 +126,7 @@ type changeTrackingUpdaterObjectTypeCfg struct {
 //
 // It only works with objects with the GVKs registered in changeTrackingUpdaterObjectTypeCfg. Otherwise, it panics.
 //
-// A change is tracked when an object with a GVK has its stateChangedPredicate return true.
+// A change is tracked when an object with a GVK has its stateChangedPredicate return true or if its predicate is nil.
 type changeTrackingUpdater struct {
 	store                  *multiObjectStore
 	stateChangedPredicates map[schema.GroupVersionKind]stateChangedPredicate
@@ -191,7 +191,7 @@ func (s *changeTrackingUpdater) upsert(obj client.Object) (changed bool) {
 
 	stateChanged, ok := s.stateChangedPredicates[objTypeGVK]
 	if !ok {
-		return false
+		return true
 	}
 
 	return stateChanged.upsert(oldObj, obj)
@@ -218,7 +218,7 @@ func (s *changeTrackingUpdater) delete(objType client.Object, nsname types.Names
 
 	stateChanged, ok := s.stateChangedPredicates[objTypeGVK]
 	if !ok {
-		return false
+		return true
 	}
 
 	return stateChanged.delete(objType, nsname)
