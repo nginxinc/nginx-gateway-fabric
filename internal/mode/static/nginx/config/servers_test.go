@@ -1120,12 +1120,14 @@ func TestCreateReturnValForRedirectFilter(t *testing.T) {
 		expected     *http.Return
 		msg          string
 		listenerPort int32
+		path         string
 	}{
 		{
 			filter:       nil,
 			expected:     nil,
 			listenerPort: listenerPortCustom,
 			msg:          "filter is nil",
+			path:         "",
 		},
 		{
 			filter:       &dataplane.HTTPRequestRedirectFilter{},
@@ -1134,7 +1136,8 @@ func TestCreateReturnValForRedirectFilter(t *testing.T) {
 				Code: http.StatusFound,
 				Body: "$scheme://$host:123$request_uri",
 			},
-			msg: "all fields are empty",
+			msg:  "all fields are empty",
+			path: "/path",
 		},
 		{
 			filter: &dataplane.HTTPRequestRedirectFilter{
@@ -1142,13 +1145,18 @@ func TestCreateReturnValForRedirectFilter(t *testing.T) {
 				Hostname:   helpers.GetPointer("foo.example.com"),
 				Port:       helpers.GetPointer[int32](2022),
 				StatusCode: helpers.GetPointer(301),
+				Path: helpers.GetPointer(dataplane.HTTPPathModifier{
+					Replacement: "/xyz",
+					Type:        dataplane.ReplaceFullPath,
+				}),
 			},
 			listenerPort: listenerPortCustom,
 			expected: &http.Return{
 				Code: 301,
-				Body: "https://foo.example.com:2022$request_uri",
+				Body: "https://foo.example.com:2022/xyz$request_uri",
 			},
-			msg: "all fields are set",
+			msg:  "all fields are set",
+			path: "/foo/bar",
 		},
 		{
 			filter: &dataplane.HTTPRequestRedirectFilter{
@@ -1161,7 +1169,8 @@ func TestCreateReturnValForRedirectFilter(t *testing.T) {
 				Code: 301,
 				Body: "https://foo.example.com$request_uri",
 			},
-			msg: "listenerPort is custom, scheme is set, no port",
+			msg:  "listenerPort is custom, scheme is set, no port",
+			path: "",
 		},
 		{
 			filter: &dataplane.HTTPRequestRedirectFilter{
@@ -1173,7 +1182,8 @@ func TestCreateReturnValForRedirectFilter(t *testing.T) {
 				Code: 301,
 				Body: "$scheme://foo.example.com:443$request_uri",
 			},
-			msg: "no scheme, listenerPort https, no port is set",
+			msg:  "no scheme, listenerPort https, no port is set",
+			path: "",
 		},
 		{
 			filter: &dataplane.HTTPRequestRedirectFilter{
@@ -1186,7 +1196,8 @@ func TestCreateReturnValForRedirectFilter(t *testing.T) {
 				Code: 301,
 				Body: "https://foo.example.com$request_uri",
 			},
-			msg: "scheme is https, listenerPort https, no port is set",
+			msg:  "scheme is https, listenerPort https, no port is set",
+			path: "",
 		},
 		{
 			filter: &dataplane.HTTPRequestRedirectFilter{
@@ -1199,7 +1210,8 @@ func TestCreateReturnValForRedirectFilter(t *testing.T) {
 				Code: 301,
 				Body: "http://foo.example.com$request_uri",
 			},
-			msg: "scheme is http, listenerPort http, no port is set",
+			msg:  "scheme is http, listenerPort http, no port is set",
+			path: "",
 		},
 		{
 			filter: &dataplane.HTTPRequestRedirectFilter{
@@ -1213,7 +1225,8 @@ func TestCreateReturnValForRedirectFilter(t *testing.T) {
 				Code: 301,
 				Body: "http://foo.example.com$request_uri",
 			},
-			msg: "scheme is http, port http",
+			msg:  "scheme is http, port http",
+			path: "",
 		},
 		{
 			filter: &dataplane.HTTPRequestRedirectFilter{
@@ -1227,7 +1240,65 @@ func TestCreateReturnValForRedirectFilter(t *testing.T) {
 				Code: 301,
 				Body: "https://foo.example.com$request_uri",
 			},
-			msg: "scheme is https, port https",
+			msg:  "scheme is https, port https",
+			path: "",
+		},
+		{
+			filter: &dataplane.HTTPRequestRedirectFilter{
+				Scheme:     helpers.GetPointer("https"),
+				Hostname:   helpers.GetPointer("foo.example.com"),
+				Port:       helpers.GetPointer[int32](2022),
+				StatusCode: helpers.GetPointer(301),
+				Path: helpers.GetPointer(dataplane.HTTPPathModifier{
+					Replacement: "/xyz",
+					Type:        dataplane.ReplaceFullPath,
+				}),
+			},
+			listenerPort: listenerPortCustom,
+			expected: &http.Return{
+				Code: 301,
+				Body: "https://foo.example.com:2022/xyz$request_uri",
+			},
+			msg:  "ReplaceFullPath set",
+			path: "/foo/bar",
+		},
+		{
+			filter: &dataplane.HTTPRequestRedirectFilter{
+				Scheme:     helpers.GetPointer("https"),
+				Hostname:   helpers.GetPointer("foo.example.com"),
+				Port:       helpers.GetPointer[int32](2022),
+				StatusCode: helpers.GetPointer(301),
+				Path: helpers.GetPointer(dataplane.HTTPPathModifier{
+					Replacement: "/xyz",
+					Type:        dataplane.ReplacePrefixMatch,
+				}),
+			},
+			listenerPort: listenerPortCustom,
+			expected: &http.Return{
+				Code: 301,
+				Body: "https://foo.example.com:2022^/foo/bar(.*)$ /xyz$1$request_uri",
+			},
+			msg:  "replacePrefixMatch set",
+			path: "/foo/bar",
+		},
+		{
+			filter: &dataplane.HTTPRequestRedirectFilter{
+				Scheme:     helpers.GetPointer("https"),
+				Hostname:   helpers.GetPointer("foo.example.com"),
+				Port:       helpers.GetPointer[int32](2022),
+				StatusCode: helpers.GetPointer(301),
+				Path: helpers.GetPointer(dataplane.HTTPPathModifier{
+					Replacement: "/xyz/",
+					Type:        dataplane.ReplacePrefixMatch,
+				}),
+			},
+			listenerPort: listenerPortCustom,
+			expected: &http.Return{
+				Code: 301,
+				Body: "https://foo.example.com:2022^foo/bar(?:/(.*))?$ /xyz/$1$request_uri",
+			},
+			msg:  "replacePrefixMatch without path / suffix",
+			path: "foo/bar",
 		},
 	}
 
@@ -1235,7 +1306,7 @@ func TestCreateReturnValForRedirectFilter(t *testing.T) {
 		t.Run(test.msg, func(t *testing.T) {
 			g := NewWithT(t)
 
-			result := createReturnValForRedirectFilter(test.filter, test.listenerPort)
+			result := createReturnValForRedirectFilter(test.filter, test.listenerPort, test.path)
 			g.Expect(helpers.Diff(test.expected, result)).To(BeEmpty())
 		})
 	}

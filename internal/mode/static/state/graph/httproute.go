@@ -748,8 +748,22 @@ func validateFilterRedirect(
 	}
 
 	if redirect.Path != nil {
-		valErr := field.Forbidden(redirectPath.Child("path"), "path is not supported")
-		allErrs = append(allErrs, valErr)
+		var path string
+		switch filter.RequestRedirect.Path.Type {
+		case v1.FullPathHTTPPathModifier:
+			path = *filter.RequestRedirect.Path.ReplaceFullPath
+		case v1.PrefixMatchHTTPPathModifier:
+			path = *filter.RequestRedirect.Path.ReplacePrefixMatch
+		default:
+			msg := fmt.Sprintf("RequestRedirectPath path type %s not supported", filter.RequestRedirect.Path.Type)
+			valErr := field.Invalid(redirectPath.Child("path"), *&filter.RequestRedirect.Path, msg)
+			return append(allErrs, valErr)
+		}
+
+		if err := validator.ValidateRedirectPath(path); err != nil {
+			valErr := field.Invalid(redirectPath.Child("path"), *&filter.RequestRedirect.Path, err.Error())
+			allErrs = append(allErrs, valErr)
+		}
 	}
 
 	if redirect.StatusCode != nil {

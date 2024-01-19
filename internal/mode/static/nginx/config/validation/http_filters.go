@@ -54,6 +54,24 @@ func (HTTPRedirectValidator) ValidateHostname(hostname string) error {
 	return validateEscapedStringNoVarExpansion(hostname, hostnameExamples)
 }
 
+// ValidateRedirectPath validates a path used in a request redirect filter.
+func (HTTPRedirectValidator) ValidateRedirectPath(path string) error {
+	if path == "" {
+		return nil
+	}
+
+	if !pathRegexp.MatchString(path) {
+		msg := k8svalidation.RegexError(pathErrMsg, pathFmt, pathExamples...)
+		return errors.New(msg)
+	}
+
+	if strings.Contains(path, "$") {
+		return errors.New("cannot contain $")
+	}
+
+	return nil
+}
+
 // ValidateRewritePath validates a path used in a URL Rewrite filter.
 func (HTTPURLRewriteValidator) ValidateRewritePath(path string) error {
 	if path == "" {

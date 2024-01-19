@@ -1893,12 +1893,13 @@ func TestValidateFilter(t *testing.T) {
 }
 
 func TestValidateFilterRedirect(t *testing.T) {
+	//refactor createAllValidValidator function
 	createAllValidValidator := func() *validationfakes.FakeHTTPFieldsValidator {
 		v := &validationfakes.FakeHTTPFieldsValidator{}
 
 		v.ValidateRedirectSchemeReturns(true, nil)
 		v.ValidateRedirectStatusCodeReturns(true, nil)
-
+		//v.ValidateRedirectPathReturns(errors.New("invalid path"));
 		return v
 	}
 
@@ -2019,6 +2020,7 @@ func TestValidateFilterRedirect(t *testing.T) {
 				validator := createAllValidValidator()
 				validator.ValidateHostnameReturns(errors.New("invalid hostname"))
 				validator.ValidateRedirectPortReturns(errors.New("invalid port"))
+				validator.ValidateRedirectPathReturns(errors.New("Invalid redirect path"))
 				return validator
 			}(),
 			filter: gatewayv1.HTTPRouteFilter{
