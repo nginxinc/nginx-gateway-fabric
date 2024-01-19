@@ -13,6 +13,10 @@ func buildReferencedServices(
 	//
 	// Get all the service names referenced from all the HTTPRoutes.
 	for _, route := range routes {
+		if !route.Valid {
+			continue
+		}
+
 		// If none of the ParentRefs are attached to the Gateway, we want to skip the route.
 		attached := false
 		for _, ref := range route.ParentRefs {
@@ -25,12 +29,8 @@ func buildReferencedServices(
 			continue
 		}
 
-		if !route.Valid {
-			continue
-		}
-
-		for idx := range route.Rules {
-			for _, ref := range route.Rules[idx].BackendRefs {
+		for _, rule := range route.Rules {
+			for _, ref := range rule.BackendRefs {
 				// Processes both valid and invalid BackendRefs as invalid ones still have referenced services
 				// we may want to track.
 				if ref.SvcNsName != (types.NamespacedName{}) {
