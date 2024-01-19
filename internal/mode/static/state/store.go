@@ -69,17 +69,20 @@ func (list gvkList) contains(gvk schema.GroupVersionKind) bool {
 }
 
 type multiObjectStore struct {
-	stores     map[schema.GroupVersionKind]objectStore
-	extractGVK extractGVKFunc
+	stores        map[schema.GroupVersionKind]objectStore
+	extractGVK    extractGVKFunc
+	persistedGVKs gvkList
 }
 
 func newMultiObjectStore(
 	stores map[schema.GroupVersionKind]objectStore,
 	extractGVK extractGVKFunc,
+	persistedGVKs gvkList,
 ) *multiObjectStore {
 	return &multiObjectStore{
-		stores:     stores,
-		extractGVK: extractGVK,
+		stores:        stores,
+		extractGVK:    extractGVK,
+		persistedGVKs: persistedGVKs,
 	}
 }
 
@@ -104,6 +107,10 @@ func (m *multiObjectStore) upsert(obj client.Object) {
 
 func (m *multiObjectStore) delete(objType client.Object, nsname types.NamespacedName) {
 	m.mustFindStoreForObj(objType).delete(nsname)
+}
+
+func (m *multiObjectStore) persists(objTypeGVK schema.GroupVersionKind) bool {
+	return m.persistedGVKs.contains(objTypeGVK)
 }
 
 type changeTrackingUpdaterObjectTypeCfg struct {
@@ -157,7 +164,7 @@ func newChangeTrackingUpdater(
 	}
 
 	return &changeTrackingUpdater{
-		store:                  newMultiObjectStore(stores, extractGVK),
+		store:                  newMultiObjectStore(stores, extractGVK, persistedGVKs),
 		extractGVK:             extractGVK,
 		supportedGVKs:          supportedGVKs,
 		persistedGVKs:          persistedGVKs,
@@ -176,8 +183,7 @@ func (s *changeTrackingUpdater) upsert(obj client.Object) (changed bool) {
 
 	var oldObj client.Object
 
-	// persistedGVKs will only contain objTypeGVK if the resource is being tracked in the store.
-	if s.persistedGVKs.contains(objTypeGVK) {
+	if s.store.persists(objTypeGVK) {
 		oldObj = s.store.get(obj, client.ObjectKeyFromObject(obj))
 
 		s.store.upsert(obj)
@@ -202,8 +208,7 @@ func (s *changeTrackingUpdater) Upsert(obj client.Object) {
 func (s *changeTrackingUpdater) delete(objType client.Object, nsname types.NamespacedName) (changed bool) {
 	objTypeGVK := s.extractGVK(objType)
 
-	// persistedGVKs will only contain objTypeGVK if the resource is being tracked in the store.
-	if s.persistedGVKs.contains(objTypeGVK) {
+	if s.store.persists(objTypeGVK) {
 		if s.store.get(objType, nsname) == nil {
 			return false
 		}
