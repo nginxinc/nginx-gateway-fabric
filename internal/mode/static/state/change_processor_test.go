@@ -1465,23 +1465,25 @@ var _ = Describe("ChangeProcessor", func() {
 		// -- this is done in 'Normal cases of processing changes'
 
 		var (
-			processor                                         *state.ChangeProcessorImpl
-			gcNsName, gwNsName, hrNsName, hr2NsName, rgNsName types.NamespacedName
-			gc, gcUpdated                                     *v1.GatewayClass
-			gw1, gw1Updated, gw2                              *v1.Gateway
-			hr1, hr1Updated, hr2                              *v1.HTTPRoute
-			rg1, rg1Updated, rg2                              *v1beta1.ReferenceGrant
+			processor                                                                 *state.ChangeProcessorImpl
+			gcNsName, gwNsName, hrNsName, hr2NsName, rgNsName, svcNsName, sliceNsName types.NamespacedName
+			gc, gcUpdated                                                             *v1.GatewayClass
+			gw1, gw1Updated, gw2                                                      *v1.Gateway
+			hr1, hr1Updated, hr2                                                      *v1.HTTPRoute
+			rg1, rg1Updated, rg2                                                      *v1beta1.ReferenceGrant
+			svc, barSvc, unrelatedSvc                                                 *apiv1.Service
+			slice, barSlice, unrelatedSlice                                           *discoveryV1.EndpointSlice
 		)
 
 		BeforeEach(OncePerOrdered, func() {
 			processor = state.NewChangeProcessorImpl(state.ChangeProcessorConfig{
 				GatewayCtlrName:  "test.controller",
-				GatewayClassName: "my-class",
+				GatewayClassName: "test-class",
 				Validators:       createAlwaysValidValidators(),
 				Scheme:           createScheme(),
 			})
 
-			gcNsName = types.NamespacedName{Name: "my-class"}
+			gcNsName = types.NamespacedName{Name: "test-class"}
 
 			gc = &v1.GatewayClass{
 				ObjectMeta: metav1.ObjectMeta{
@@ -1497,12 +1499,7 @@ var _ = Describe("ChangeProcessor", func() {
 
 			gwNsName = types.NamespacedName{Namespace: "test", Name: "gw-1"}
 
-			gw1 = &v1.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: gwNsName.Namespace,
-					Name:      gwNsName.Name,
-				},
-			}
+			gw1 = createGateway("gw-1")
 
 			gw1Updated = gw1.DeepCopy()
 			gw1Updated.Generation++
@@ -1510,14 +1507,14 @@ var _ = Describe("ChangeProcessor", func() {
 			gw2 = gw1.DeepCopy()
 			gw2.Name = "gw-2"
 
+			testNamespace := v1.Namespace("test")
+			kindService := v1.Kind("Service")
+			fooRef := createBackendRef(&kindService, "foo-svc", &testNamespace)
+			barRef := createBackendRef(&kindService, "bar-svc", &testNamespace)
+
 			hrNsName = types.NamespacedName{Namespace: "test", Name: "hr-1"}
 
-			hr1 = &v1.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: hrNsName.Namespace,
-					Name:      hrNsName.Name,
-				},
-			}
+			hr1 = createRoute("hr-1", "gw-1", "foo.example.com", fooRef, barRef)
 
 			hr1Updated = hr1.DeepCopy()
 			hr1Updated.Generation++
@@ -1526,6 +1523,49 @@ var _ = Describe("ChangeProcessor", func() {
 
 			hr2 = hr1.DeepCopy()
 			hr2.Name = hr2NsName.Name
+
+			svcNsName = types.NamespacedName{Namespace: "test", Name: "foo-svc"}
+			svc = &apiv1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: svcNsName.Namespace,
+					Name:      svcNsName.Name,
+				},
+			}
+			barSvc = &apiv1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "bar-svc",
+				},
+			}
+			unrelatedSvc = &apiv1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "unrelated-svc",
+				},
+			}
+
+			sliceNsName = types.NamespacedName{Namespace: "test", Name: "slice"}
+			slice = &discoveryV1.EndpointSlice{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: sliceNsName.Namespace,
+					Name:      sliceNsName.Name,
+					Labels:    map[string]string{index.KubernetesServiceNameLabel: svc.Name},
+				},
+			}
+			barSlice = &discoveryV1.EndpointSlice{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "bar-slice",
+					Labels:    map[string]string{index.KubernetesServiceNameLabel: "bar-svc"},
+				},
+			}
+			unrelatedSlice = &discoveryV1.EndpointSlice{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "unrelated-slice",
+					Labels:    map[string]string{index.KubernetesServiceNameLabel: "unrelated-svc"},
+				},
+			}
 
 			rgNsName = types.NamespacedName{Namespace: "test", Name: "rg-1"}
 
@@ -1621,6 +1661,98 @@ var _ = Describe("ChangeProcessor", func() {
 				changed, _ := processor.Process()
 				Expect(changed).To(BeFalse())
 			})
+		})
+		Describe("Multiple Kubernetes API resource changes", Ordered, func() {
+			BeforeAll(func() {
+				// Set up graph
+				processor.CaptureUpsertChange(gc)
+				processor.CaptureUpsertChange(gw1)
+				processor.CaptureUpsertChange(hr1)
+				changed, _ := processor.Process()
+				Expect(changed).To(BeTrue())
+			})
+
+			It("should report changed after multiple Upserts of related resources", func() {
+				processor.CaptureUpsertChange(svc)
+				processor.CaptureUpsertChange(slice)
+				changed, _ := processor.Process()
+				Expect(changed).To(BeTrue())
+			})
+			It("should report not changed after multiple Upserts of unrelated resources", func() {
+				processor.CaptureUpsertChange(unrelatedSvc)
+				processor.CaptureUpsertChange(unrelatedSlice)
+
+				changed, _ := processor.Process()
+				Expect(changed).To(BeFalse())
+			})
+			When("upserts of related resources are followed by upserts of unrelated resources", func() {
+				It("should report changed", func() {
+					// these are changing changes
+					processor.CaptureUpsertChange(barSvc)
+					processor.CaptureUpsertChange(barSlice)
+
+					// there are non-changing changes
+					processor.CaptureUpsertChange(unrelatedSvc)
+					processor.CaptureUpsertChange(unrelatedSlice)
+
+					changed, _ := processor.Process()
+					Expect(changed).To(BeTrue())
+				})
+			})
+			When("deletes of related resources are followed by upserts of unrelated resources", func() {
+				It("should report changed", func() {
+					// these are changing changes
+					processor.CaptureDeleteChange(&apiv1.Service{}, svcNsName)
+					processor.CaptureDeleteChange(&discoveryV1.EndpointSlice{}, sliceNsName)
+
+					// these are non-changing changes
+					processor.CaptureUpsertChange(unrelatedSvc)
+					processor.CaptureUpsertChange(unrelatedSlice)
+
+					changed, _ := processor.Process()
+					Expect(changed).To(BeTrue())
+				})
+			})
+		})
+		Describe("Multiple Kubernetes API and Gateway API resource changes", Ordered, func() {
+			It("should report changed after multiple Upserts of new and related resources", func() {
+				// new Gateway API resources
+				processor.CaptureUpsertChange(gc)
+				processor.CaptureUpsertChange(gw1)
+				processor.CaptureUpsertChange(hr1)
+				processor.CaptureUpsertChange(rg1)
+
+				// related Kubernetes API resources
+				processor.CaptureUpsertChange(svc)
+				processor.CaptureUpsertChange(slice)
+
+				changed, _ := processor.Process()
+				Expect(changed).To(BeTrue())
+			})
+			It("should report not changed after multiple Upserts of unrelated resources", func() {
+				// unrelated Kubernetes API resources
+				processor.CaptureUpsertChange(unrelatedSvc)
+				processor.CaptureUpsertChange(unrelatedSlice)
+
+				changed, _ := processor.Process()
+				Expect(changed).To(BeFalse())
+			})
+			It("should report changed after upserting changed resources followed by upserting unrelated resources",
+				func() {
+					// these are changing changes
+					processor.CaptureUpsertChange(gcUpdated)
+					processor.CaptureUpsertChange(gw1Updated)
+					processor.CaptureUpsertChange(hr1Updated)
+					processor.CaptureUpsertChange(rg1Updated)
+
+					// these are non-changing changes
+					processor.CaptureUpsertChange(unrelatedSvc)
+					processor.CaptureUpsertChange(unrelatedSlice)
+
+					changed, _ := processor.Process()
+					Expect(changed).To(BeTrue())
+				},
+			)
 		})
 	})
 	Describe("Webhook validation cases", Ordered, func() {
