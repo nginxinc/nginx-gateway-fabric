@@ -247,6 +247,7 @@ func updateLocationsForFilters(
 
 	rewrites := createRewritesValForRewriteFilter(filters.RequestURLRewrite, path)
 	proxySetHeaders := generateProxySetHeaders(&matchRule.Filters)
+	responseAddHeaders := generateAddHeaders(&matchRule.Filters)
 	proxyPass := createProxyPass(matchRule.BackendGroup, matchRule.Filters.RequestURLRewrite)
 	for i := range buildLocations {
 		if rewrites != nil {
@@ -255,6 +256,7 @@ func updateLocationsForFilters(
 			}
 		}
 		buildLocations[i].ProxySetHeaders = proxySetHeaders
+		buildLocations[i].AddHeaders = responseAddHeaders
 		buildLocations[i].ProxyPass = proxyPass
 	}
 
@@ -485,6 +487,37 @@ func generateProxySetHeaders(filters *dataplane.HTTPFilters) []http.Header {
 	}
 
 	return append(proxySetHeaders, headers...)
+}
+
+func generateAddHeaders(filters *dataplane.HTTPFilters) []http.Header {
+	headers := make([]http.Header, len(baseHeaders))
+	copy(headers, baseHeaders)
+
+	if filters == nil || filters.ResponseHeaderModifiers == nil {
+		return headers
+	}
+
+	headerFilter := filters.ResponseHeaderModifiers
+
+	headerLen := len(headerFilter.Add) + len(headerFilter.Set) + len(headerFilter.Remove) + len(headers)
+	responseAddHeaders := make([]http.Header, 0, headerLen)
+	if len(headerFilter.Add) > 0 {
+		addHeaders := convertAddHeaders(headerFilter.Add)
+		responseAddHeaders = append(responseAddHeaders, addHeaders...)
+	}
+	if len(headerFilter.Set) > 0 {
+		setHeaders := convertSetHeaders(headerFilter.Set)
+		responseAddHeaders = append(responseAddHeaders, setHeaders...)
+	}
+	// If the value of a header field is an empty string then this field will not be passed to a proxied server
+	for _, h := range headerFilter.Remove {
+		responseAddHeaders = append(responseAddHeaders, http.Header{
+			Name:  h,
+			Value: "",
+		})
+	}
+
+	return append(responseAddHeaders, headers...)
 }
 
 func convertAddHeaders(headers []dataplane.HTTPHeader) []http.Header {

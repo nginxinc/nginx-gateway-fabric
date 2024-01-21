@@ -18,6 +18,7 @@ type Location struct {
 	ProxyPass       string
 	HTTPMatchVar    string
 	ProxySetHeaders []Header
+	AddHeaders      []Header
 }
 
 // Header defines a HTTP header to be passed to the proxied server.

@@ -101,6 +101,8 @@ type HTTPFilters struct {
 	RequestURLRewrite *HTTPURLRewriteFilter
 	// RequestHeaderModifiers holds the HTTPHeaderFilter.
 	RequestHeaderModifiers *HTTPHeaderFilter
+	// ResponseHeaderModifiers holds the HTTPHeaderFilter.
+	ResponseHeaderModifiers *HTTPHeaderFilter
 }
 
 // HTTPHeader represents an HTTP header.

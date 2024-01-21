@@ -465,6 +465,11 @@ func createHTTPFilters(filters []v1.HTTPRouteFilter) HTTPFilters {
 				// using the first filter
 				result.RequestHeaderModifiers = convertHTTPHeaderFilter(f.RequestHeaderModifier)
 			}
+		case v1.HTTPRouteFilterResponseHeaderModifier:
+			if result.ResponseHeaderModifiers == nil {
+				// using the first filter
+				result.ResponseHeaderModifiers = convertHTTPHeaderFilter(f.ResponseHeaderModifier)
+			}
 		}
 	}
 	return result
