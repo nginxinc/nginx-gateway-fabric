@@ -21,17 +21,23 @@ func executeMaps(conf dataplane.Configuration) []executeResult {
 
 func buildAddHeaderMaps(servers []dataplane.VirtualServer) []http.Map {
 	addHeaderNames := make(map[string]struct{})
+	extractAddHeaderNames := func(headerModifiers []dataplane.HTTPHeader) {
+		for _, addHeader := range headerModifiers {
+			lowerName := strings.ToLower(addHeader.Name)
+			if _, ok := addHeaderNames[lowerName]; !ok {
+				addHeaderNames[lowerName] = struct{}{}
+			}
+		}
+	}
 
 	for _, s := range servers {
 		for _, pr := range s.PathRules {
 			for _, mr := range pr.MatchRules {
 				if mr.Filters.RequestHeaderModifiers != nil {
-					for _, addHeader := range mr.Filters.RequestHeaderModifiers.Add {
-						lowerName := strings.ToLower(addHeader.Name)
-						if _, ok := addHeaderNames[lowerName]; !ok {
-							addHeaderNames[lowerName] = struct{}{}
-						}
-					}
+					extractAddHeaderNames(mr.Filters.RequestHeaderModifiers.Add)
+				}
+				if mr.Filters.ResponseHeaderModifiers != nil {
+					extractAddHeaderNames(mr.Filters.ResponseHeaderModifiers.Add)
 				}
 			}
 		}

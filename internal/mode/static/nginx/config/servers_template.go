@@ -58,6 +58,9 @@ server {
         {{ $proxyOrGRPC }}_set_header {{ $h.Name }} "{{ $h.Value }}";
             {{- end }}
         {{ $proxyOrGRPC }}_pass {{ $l.ProxyPass }};
+            {{ range $h := $l.AddHeaders }}
+        add_header {{ $h.Name }} "{{ $h.Value }}";
+            {{- end }}
         proxy_http_version 1.1;
             {{- if $l.ProxySSLVerify }}
         {{ $proxyOrGRPC }}_ssl_verify on;

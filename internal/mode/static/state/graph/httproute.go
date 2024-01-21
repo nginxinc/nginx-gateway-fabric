@@ -247,7 +247,9 @@ func validateFilter(
 	case v1.HTTPRouteFilterURLRewrite:
 		return validateFilterRewrite(validator, filter, filterPath)
 	case v1.HTTPRouteFilterRequestHeaderModifier:
-		return validateFilterHeaderModifier(validator, filter, filterPath)
+		return validateFilterHeaderModifier(validator, filter.RequestHeaderModifier, filterPath)
+	case v1.HTTPRouteFilterResponseHeaderModifier:
+		return validateFilterHeaderModifier(validator, filter.ResponseHeaderModifier, filterPath)
 	default:
 		valErr := field.NotSupported(
 			filterPath.Child("type"),
@@ -256,6 +258,7 @@ func validateFilter(
 				string(v1.HTTPRouteFilterRequestRedirect),
 				string(v1.HTTPRouteFilterURLRewrite),
 				string(v1.HTTPRouteFilterRequestHeaderModifier),
+				string(v1.HTTPRouteFilterResponseHeaderModifier),
 			},
 		)
 		allErrs = append(allErrs, valErr)
@@ -358,11 +361,9 @@ func validateFilterRewrite(
 
 func validateFilterHeaderModifier(
 	validator validation.HTTPFieldsValidator,
-	filter v1.HTTPRouteFilter,
+	headerModifier *v1.HTTPHeaderFilter,
 	filterPath *field.Path,
 ) field.ErrorList {
-	headerModifier := filter.RequestHeaderModifier
-
 	headerModifierPath := filterPath.Child("requestHeaderModifier")
 
 	if headerModifier == nil {

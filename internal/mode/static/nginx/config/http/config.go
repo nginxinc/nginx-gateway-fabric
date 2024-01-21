@@ -21,6 +21,7 @@ type Location struct {
 	Return          *Return
 	Rewrites        []string
 	GRPC            bool
+	AddHeaders      []Header
 }
 
 // Header defines an HTTP header to be passed to the proxied server.
