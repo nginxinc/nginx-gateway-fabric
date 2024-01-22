@@ -696,9 +696,9 @@ func validateFilter(
 	case v1.HTTPRouteFilterURLRewrite:
 		return validateFilterRewrite(validator, filter, filterPath)
 	case v1.HTTPRouteFilterRequestHeaderModifier:
-		return validateFilterHeaderModifier(validator, filter.RequestHeaderModifier, filterPath)
+		return validateFilterHeaderModifier(filter.Type, validator, filter.RequestHeaderModifier, filterPath)
 	case v1.HTTPRouteFilterResponseHeaderModifier:
-		return validateFilterHeaderModifier(validator, filter.ResponseHeaderModifier, filterPath)
+		return validateFilterHeaderModifier(filter.Type, validator, filter.ResponseHeaderModifier, filterPath)
 	default:
 		valErr := field.NotSupported(
 			filterPath.Child("type"),
@@ -809,14 +809,16 @@ func validateFilterRewrite(
 }
 
 func validateFilterHeaderModifier(
+	filterType v1.HTTPRouteFilterType,
 	validator validation.HTTPFieldsValidator,
 	headerModifier *v1.HTTPHeaderFilter,
 	filterPath *field.Path,
 ) field.ErrorList {
-	headerModifierPath := filterPath.Child("requestHeaderModifier")
+	filterTypeStr := string(filterType)
+	headerModifierPath := filterPath.Child(filterTypeStr)
 
 	if headerModifier == nil {
-		panicForBrokenWebhookAssumption(errors.New("requestHeaderModifier cannot be nil"))
+		panicForBrokenWebhookAssumption(errors.New(filterTypeStr + " cannot be nil"))
 	}
 
 	return validateFilterHeaderModifierFields(validator, headerModifier, headerModifierPath)
