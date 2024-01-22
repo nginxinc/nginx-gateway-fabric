@@ -294,7 +294,8 @@ func updateLocationsForFilters(
 
 	rewrites := createRewritesValForRewriteFilter(filters.RequestURLRewrite, path)
 	proxySetHeaders := generateProxySetHeaders(&matchRule.Filters, grpc)
-	responseAddHeaders := generateAddHeaders(&matchRule.Filters)
+	addHeaderDirectives := generateAddHeaderDirectives(&matchRule.Filters)
+
 	for i := range buildLocations {
 		if rewrites != nil {
 			if rewrites.Rewrite != "" {
@@ -309,7 +310,7 @@ func updateLocationsForFilters(
 			generateProtocolString(buildLocations[i].ProxySSLVerify, grpc),
 			grpc,
 		)
-		buildLocations[i].AddHeaders = responseAddHeaders
+		buildLocations[i].AddHeaderDirectives = addHeaderDirectives
 		buildLocations[i].ProxyPass = proxyPass
 		buildLocations[i].GRPC = grpc
 	}
@@ -598,7 +599,7 @@ func generateProxySetHeaders(filters *dataplane.HTTPFilters, grpc bool) []http.H
 	return append(proxySetHeaders, headers...)
 }
 
-func generateAddHeaders(filters *dataplane.HTTPFilters) []http.Header {
+func generateAddHeaderDirectives(filters *dataplane.HTTPFilters) []http.Header {
 	headers := make([]http.Header, len(baseHeaders))
 	copy(headers, baseHeaders)
 
