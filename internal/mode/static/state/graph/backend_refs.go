@@ -140,7 +140,8 @@ func createBackendRef(
 	return backendRef, nil
 }
 
-// getServiceAndPortFromRef can return an error and an empty v1.ServicePort in two cases:
+// getServiceAndPortFromRef extracts the NamespacedName of the Service and the port from a BackendRef.
+// It can return an error and an empty v1.ServicePort in two cases:
 // 1. The Service referenced from the BackendRef does not exist in the cluster/state.
 // 2. The Port on the BackendRef does not match any of the ServicePorts on the Service.
 func getServiceAndPortFromRef(
