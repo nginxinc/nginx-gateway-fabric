@@ -189,6 +189,7 @@ func findBackendTLSPolicyForService(
 			btpNs = string(*btp.Source.Spec.TargetRef.Namespace)
 		}
 		if btp.Source.Spec.TargetRef.Name == ref.Name && btpNs == refNs {
+			// TODO: resolve conflicts between multiple backend TLS policies
 			beTLSPolicy = btp
 			break
 		}

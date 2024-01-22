@@ -172,10 +172,10 @@ func createStaticModeCommand() *cobra.Command {
 					LockName: leaderElectionLockName.String(),
 					Identity: podName,
 				},
-				Plus:                       plus,
-				TelemetryReportPeriod:      period,
-				Version:                    version,
-				EnableExperimentalFeatures: enableExperimental,
+				Plus:                  plus,
+				TelemetryReportPeriod: period,
+				Version:               version,
+				ExperimentalFeatures:  enableExperimental,
 			}
 
 			if err := static.StartManager(conf); err != nil {

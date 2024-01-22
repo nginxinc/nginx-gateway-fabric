@@ -75,7 +75,7 @@ Deploying NGINX Gateway Fabric with Kubernetes manifests takes only a few steps.
 
 #### Enable experimental features
 
-We support a subset of the additional features provided by the Gateway API experimental channel. Please note that these APIs are not suitable for production use.To enable the experimental features of Gateway API which are supported by NGINX Gateway Fabric, edit the `deploy/manifests/nginx-gateway.yaml` to add the `experimental-features-enable` flag to the nginx-gateway deployment spec:
+We support a subset of the additional features provided by the Gateway API experimental channel. To enable the experimental features of Gateway API which are supported by NGINX Gateway Fabric, edit the `deploy/manifests/nginx-gateway.yaml` to add the `experimental-features-enable` flag to the nginx-gateway deployment spec:
 
 ```yaml
 <...>

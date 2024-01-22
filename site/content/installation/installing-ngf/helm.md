@@ -111,7 +111,8 @@ To disable the creation of a Service:
 
 #### Experimental features
 
-We support a subset of the additional features provided by the Gateway API experimental channel. Please note that these APIs are not suitable for production use. To enable the experimental features of Gateway API which are supported by NGINX Gateway Fabric:
+We support a subset of the additional features provided by the Gateway API experimental channel. To enable the
+experimental features of Gateway API which are supported by NGINX Gateway Fabric:
 
 ```shell
 helm install ngf oci://ghcr.io/nginxinc/charts/nginx-gateway-fabric --create-namespace -n nginx-gateway --set nginxGateway.experimentalFeatures.enable=true

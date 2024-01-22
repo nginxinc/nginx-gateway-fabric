@@ -94,4 +94,6 @@ func TestGenerate(t *testing.T) {
 	g.Expect(configVersion).To(ContainSubstring(fmt.Sprintf("return 200 %d", conf.Version)))
 
 	g.Expect(files[3].Path).To(Equal("/etc/nginx/secrets/test-certbundle.crt"))
+	certBundle := string(files[3].Content)
+	g.Expect(certBundle).To(Equal("test-cert"))
 }

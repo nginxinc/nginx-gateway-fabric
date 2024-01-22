@@ -90,7 +90,6 @@ type MapParameter struct {
 
 // ProxySSLVerify holds the proxied HTTPS server verification configuration.
 type ProxySSLVerify struct {
-	CertPath string
-	Hostname string
-	VerifyOn bool
+	TrustedCertificate string
+	Name               string
 }

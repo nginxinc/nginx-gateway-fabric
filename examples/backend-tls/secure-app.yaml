@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: secure-app
-          image: nginxdemos/nginx-hello:plain-text
+          image: nginxdemos/nginx-unprivileged:plain-text
           ports:
             - containerPort: 8443
           volumeMounts:
@@ -58,8 +58,6 @@ data:
 
       ssl_certificate /etc/nginx/ssl/tls.crt;
       ssl_certificate_key /etc/nginx/ssl/tls.key;
-
-      proxy_ssl_server_name on;
 
       default_type text/plain;
 

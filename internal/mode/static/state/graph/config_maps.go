@@ -30,19 +30,19 @@ type caCertConfigMapEntry struct {
 // configMapResolver wraps the cluster ConfigMaps so that they can be resolved (includes validation). All resolved
 // ConfigMaps are saved to be used later.
 type configMapResolver struct {
-	clusterConfigMaps  map[types.NamespacedName]*apiv1.ConfigMap
-	resolvedConfigMaps map[types.NamespacedName]*caCertConfigMapEntry
+	clusterConfigMaps        map[types.NamespacedName]*apiv1.ConfigMap
+	resolvedCaCertConfigMaps map[types.NamespacedName]*caCertConfigMapEntry
 }
 
 func newConfigMapResolver(configMaps map[types.NamespacedName]*apiv1.ConfigMap) *configMapResolver {
 	return &configMapResolver{
-		clusterConfigMaps:  configMaps,
-		resolvedConfigMaps: make(map[types.NamespacedName]*caCertConfigMapEntry),
+		clusterConfigMaps:        configMaps,
+		resolvedCaCertConfigMaps: make(map[types.NamespacedName]*caCertConfigMapEntry),
 	}
 }
 
 func (r *configMapResolver) resolve(nsname types.NamespacedName) error {
-	if s, resolved := r.resolvedConfigMaps[nsname]; resolved {
+	if s, resolved := r.resolvedCaCertConfigMaps[nsname]; resolved {
 		return s.err
 	}
 
@@ -53,9 +53,7 @@ func (r *configMapResolver) resolve(nsname types.NamespacedName) error {
 
 	if !exist {
 		validationErr = errors.New("configMap does not exist")
-	}
-
-	if exist {
+	} else {
 		if cm.Data != nil {
 			if _, exists := cm.Data[CAKey]; exists {
 				validationErr = validateCA([]byte(cm.Data[CAKey]))
@@ -73,7 +71,7 @@ func (r *configMapResolver) resolve(nsname types.NamespacedName) error {
 		}
 	}
 
-	r.resolvedConfigMaps[nsname] = &caCertConfigMapEntry{
+	r.resolvedCaCertConfigMaps[nsname] = &caCertConfigMapEntry{
 		caCertConfigMap: CaCertConfigMap{
 			Source: cm,
 			CACert: caCert,
@@ -85,13 +83,13 @@ func (r *configMapResolver) resolve(nsname types.NamespacedName) error {
 }
 
 func (r *configMapResolver) getResolvedConfigMaps() map[types.NamespacedName]*CaCertConfigMap {
-	if len(r.resolvedConfigMaps) == 0 {
+	if len(r.resolvedCaCertConfigMaps) == 0 {
 		return nil
 	}
 
 	resolved := make(map[types.NamespacedName]*CaCertConfigMap)
 
-	for nsname, entry := range r.resolvedConfigMaps {
+	for nsname, entry := range r.resolvedCaCertConfigMaps {
 		// create iteration variable inside the loop to fix implicit memory aliasing
 		caCertConfigMap := entry.caCertConfigMap
 		resolved[nsname] = &caCertConfigMap

@@ -11,8 +11,7 @@ kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/downloa
 ```
 
 Alternatively, you can install the Gateway API resources from the experimental channel. We support a subset of the
-additional features provided by the experimental channel. Please note that these APIs are not suitable for production
-use. To install from the experimental channel, run the following:
+additional features provided by the experimental channel. To install from the experimental channel, run the following:
 
 ```shell
 kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/experimental-install.yaml

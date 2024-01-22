@@ -621,9 +621,8 @@ func TestCreateServers(t *testing.T) {
 				ProxyPass:       "https://test_btp_80$request_uri",
 				ProxySetHeaders: baseHeaders,
 				ProxySSLVerify: &http.ProxySSLVerify{
-					Hostname: "test-btp.example.com",
-					CertPath: "/etc/nginx/secrets/test-btp.crt",
-					VerifyOn: true,
+					Name:               "test-btp.example.com",
+					TrustedCertificate: "/etc/nginx/secrets/test-btp.crt",
 				},
 			},
 			{
@@ -631,9 +630,8 @@ func TestCreateServers(t *testing.T) {
 				ProxyPass:       "https://test_btp_80$request_uri",
 				ProxySetHeaders: baseHeaders,
 				ProxySSLVerify: &http.ProxySSLVerify{
-					Hostname: "test-btp.example.com",
-					CertPath: "/etc/nginx/secrets/test-btp.crt",
-					VerifyOn: true,
+					Name:               "test-btp.example.com",
+					TrustedCertificate: "/etc/nginx/secrets/test-btp.crt",
 				},
 			},
 			{
@@ -1860,9 +1858,8 @@ func TestConvertBackendTLSFromGroup(t *testing.T) {
 				},
 			},
 			expected: &http.ProxySSLVerify{
-				CertPath: "/etc/nginx/secrets/default-my-cert.crt",
-				Hostname: "my-hostname",
-				VerifyOn: true,
+				TrustedCertificate: "/etc/nginx/secrets/default-my-cert.crt",
+				Name:               "my-hostname",
 			},
 		},
 		{
@@ -1899,16 +1896,15 @@ func TestConvertBackendTLSFromGroup(t *testing.T) {
 				},
 			},
 			expected: &http.ProxySSLVerify{
-				CertPath: "/etc/nginx/secrets/default-my-cert.crt",
-				Hostname: "my-hostname",
-				VerifyOn: true,
+				TrustedCertificate: "/etc/nginx/secrets/default-my-cert.crt",
+				Name:               "my-hostname",
 			},
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.msg, func(t *testing.T) {
-			result := convertProxyTLSFromBackends(tc.grp)
+			result := createProxyTLSFromBackends(tc.grp)
 			g.Expect(result).To(Equal(tc.expected))
 		})
 	}

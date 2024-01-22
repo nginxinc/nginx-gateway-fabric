@@ -1,7 +1,7 @@
 kind: ConfigMap
 apiVersion: v1
 metadata:
-  name: backend-certs
+  name: backend-cert
 data:
   ca.crt: |
     -----BEGIN CERTIFICATE-----

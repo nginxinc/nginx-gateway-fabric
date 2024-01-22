@@ -38,8 +38,8 @@ type Config struct {
 	UpdateGatewayClassStatus bool
 	// Plus indicates whether NGINX Plus is being used.
 	Plus bool
-	// EnableExperimentalFeatures enables experimental features.
-	EnableExperimentalFeatures bool
+	// ExperimentalFeatures indicates if experimental features are enabled.
+	ExperimentalFeatures bool
 }
 
 // GatewayPodConfig contains information about this Pod.

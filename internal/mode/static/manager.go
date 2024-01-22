@@ -203,7 +203,7 @@ func StartManager(cfg config.Config) error {
 	objects, objectLists := prepareFirstEventBatchPreparerArgs(
 		cfg.GatewayClassName,
 		cfg.GatewayNsName,
-		cfg.EnableExperimentalFeatures,
+		cfg.ExperimentalFeatures,
 	)
 	firstBatchPreparer := events.NewFirstEventBatchPreparerImpl(mgr.GetCache(), objects, objectLists)
 	eventLoop := events.NewEventLoop(
@@ -384,13 +384,13 @@ func registerControllers(
 		},
 	}
 
-	if cfg.EnableExperimentalFeatures {
+	if cfg.ExperimentalFeatures {
 		backendTLSObjs := []ctlrCfg{
 			{
 				objectType: &gatewayv1alpha2.BackendTLSPolicy{},
 			},
 			{
-				objectType: &apiv1.ConfigMap{},
+				objectType: &apiv1.ConfigMap{}, // TODO(ciarams87): Use only metadata predicate
 			},
 		}
 		controllerRegCfgs = append(controllerRegCfgs, backendTLSObjs...)

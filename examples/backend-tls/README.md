@@ -1,6 +1,8 @@
 # Backend TLS Policy Example
 
-In this example, we will create a Backend TLS Policy, attach it to our
+In this example, we will create a Backend TLS Policy, attach it to our application service, and then configure routing
+rules. The Backend TLS Policy will be picked up by NGF and the connection between NGF and the upstream server will use
+HTTPS.
 
 ## Running the Example
 
@@ -56,18 +58,9 @@ In this example, we will create a Backend TLS Policy, attach it to our
    kubectl apply -f policy.yaml
    ```
 
-## 3. Configure HTTPS Termination and Routing
+## 3. Configure HTTP Termination and Routing
 
-1. Create the Secret with a TLS certificate and key:
-
-   ```shell
-   kubectl apply -f app-secret.yaml
-   ```
-
-   The TLS certificate and key in this Secret are used to terminate the TLS connections for the secure-app application.
-   > **Important**: This certificate and key are for demo purposes only.
-
-2. Create the Gateway resource:
+1. Create the Gateway resource:
 
    ```shell
    kubectl apply -f gateway.yaml
@@ -77,7 +70,7 @@ In this example, we will create a Backend TLS Policy, attach it to our
     - `http` listener for HTTP traffic
     - `https` listener for HTTPS traffic. It terminates TLS connections using the `app-secret` we created in step 1.
 
-3. Create the HTTPRoute resources:
+2. Create the HTTPRoute resources:
 
    ```shell
    kubectl apply -f secure-app-routes.yaml
@@ -85,11 +78,10 @@ In this example, we will create a Backend TLS Policy, attach it to our
 
 ## 4. Test the Application
 
-To access the application, we will use `curl` to send requests to the `secure-app` Service over HTTPS. Since our
-certificate is self-signed, we will use curl's `--cacert` option to supply the certificate for verification.
+To access the application, we will use `curl` to send requests to the `secure-app` Service over HTTP.
 
 ```shell
-curl --resolve secure-app.example.com:$GW_HTTPS_PORT:$GW_IP https://secure-app.example.com:$GW_HTTPS_PORT/ --cacert ca.cert
+curl --resolve secure-app.example.com:$GW_PORT:$GW_IP http://secure-app.example.com:$GW_PORT/
 ```
 
 ```text

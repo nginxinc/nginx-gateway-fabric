@@ -2439,6 +2439,10 @@ func TestHostnameMoreSpecific(t *testing.T) {
 func TestConvertBackendTLS(t *testing.T) {
 	btpCaCertRefs := &graph.BackendTLSPolicy{
 		Source: &v1alpha2.BackendTLSPolicy{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "btp",
+				Namespace: "test",
+			},
 			Spec: v1alpha2.BackendTLSPolicySpec{
 				TLS: v1alpha2.BackendTLSPolicyConfig{
 					CACertRefs: []v1.LocalObjectReference{

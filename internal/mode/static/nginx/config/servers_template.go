@@ -53,14 +53,11 @@ server {
         proxy_http_version 1.1;
         proxy_pass {{ $l.ProxyPass }};
             {{- if $l.ProxySSLVerify }}
-        proxy_ssl_name {{ $l.ProxySSLVerify.Hostname }};
-                {{- if $l.ProxySSLVerify.VerifyOn }}
         proxy_ssl_verify on;
-        proxy_ssl_trusted_certificate {{ $l.ProxySSLVerify.CertPath }};
-                {{- end }}
+        proxy_ssl_name {{ $l.ProxySSLVerify.Hostname }};
+        proxy_ssl_trusted_certificate {{ $l.ProxySSLVerify.TrustedCertificate }};
             {{- end }}
         {{- end }}
-
     }
         {{ end }}
 }
