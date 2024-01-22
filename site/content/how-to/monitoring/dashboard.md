@@ -24,7 +24,7 @@ To access the dashboard:
 
 The dashboard will look like this:
 
-{{<img src="img/nginx-plus-dashboard.png" alt="NGINX Plus dashboard">}}
+{{<img src="img/nginx-plus-dashboard.png" alt="">}}
 
 
 {{< note >}}The [API](https://nginx.org/en/docs/http/ngx_http_api_module.html), which the dashboard uses to get the metrics, is also accessible using the `/api` path.{{< /note >}}
