@@ -72,13 +72,13 @@ func (HTTPURLRewriteValidator) ValidateRewritePath(path string) error {
 	return nil
 }
 
-func (HTTPRequestHeaderValidator) ValidateRequestHeaderName(name string) error {
+func (HTTPRequestHeaderValidator) ValidateFilterHeaderName(name string) error {
 	return validateHeaderName(name)
 }
 
 var requestHeaderValueExamples = []string{"my-header-value", "example/12345=="}
 
-func (HTTPRequestHeaderValidator) ValidateRequestHeaderValue(value string) error {
+func (HTTPRequestHeaderValidator) ValidateFilterHeaderValue(value string) error {
 	// Variables in header values are supported by NGINX but not required by the Gateway API.
 	return validateEscapedStringNoVarExpansion(value, requestHeaderValueExamples)
 }
