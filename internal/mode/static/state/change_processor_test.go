@@ -1473,6 +1473,7 @@ var _ = Describe("ChangeProcessor", func() {
 			rg1, rg1Updated, rg2                                                      *v1beta1.ReferenceGrant
 			svc, barSvc, unrelatedSvc                                                 *apiv1.Service
 			slice, barSlice, unrelatedSlice                                           *discoveryV1.EndpointSlice
+			ns, unrelatedNS, testNs, barNs                                            *apiv1.Namespace
 		)
 
 		BeforeEach(OncePerOrdered, func() {
@@ -1499,7 +1500,34 @@ var _ = Describe("ChangeProcessor", func() {
 
 			gwNsName = types.NamespacedName{Namespace: "test", Name: "gw-1"}
 
-			gw1 = createGateway("gw-1")
+			gw1 = &v1.Gateway{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:       "gw-1",
+					Namespace:  "test",
+					Generation: 1,
+				},
+				Spec: v1.GatewaySpec{
+					GatewayClassName: gcName,
+					Listeners: []v1.Listener{
+						{
+							Name:     "listener-80-1",
+							Hostname: nil,
+							Port:     80,
+							Protocol: v1.HTTPProtocolType,
+							AllowedRoutes: &v1.AllowedRoutes{
+								Namespaces: &v1.RouteNamespaces{
+									From: helpers.GetPointer(v1.NamespacesFromSelector),
+									Selector: &metav1.LabelSelector{
+										MatchLabels: map[string]string{
+											"test": "namespace",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			}
 
 			gw1Updated = gw1.DeepCopy()
 			gw1Updated.Generation++
@@ -1567,6 +1595,39 @@ var _ = Describe("ChangeProcessor", func() {
 				},
 			}
 
+			testNs = &apiv1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test",
+					Labels: map[string]string{
+						"test": "namespace",
+					},
+				},
+			}
+			ns = &apiv1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "ns",
+					Labels: map[string]string{
+						"test": "namespace",
+					},
+				},
+			}
+			barNs = &apiv1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "bar-ns",
+					Labels: map[string]string{
+						"test": "namespace",
+					},
+				},
+			}
+			unrelatedNS = &apiv1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "unrelated-ns",
+					Labels: map[string]string{
+						"oranges": "bananas",
+					},
+				},
+			}
+
 			rgNsName = types.NamespacedName{Namespace: "test", Name: "rg-1"}
 
 			rg1 = &v1beta1.ReferenceGrant{
@@ -1593,6 +1654,7 @@ var _ = Describe("ChangeProcessor", func() {
 			It("should report changed after multiple Upserts", func() {
 				processor.CaptureUpsertChange(gc)
 				processor.CaptureUpsertChange(gw1)
+				processor.CaptureUpsertChange(testNs)
 				processor.CaptureUpsertChange(hr1)
 				processor.CaptureUpsertChange(rg1)
 
@@ -1667,6 +1729,7 @@ var _ = Describe("ChangeProcessor", func() {
 				// Set up graph
 				processor.CaptureUpsertChange(gc)
 				processor.CaptureUpsertChange(gw1)
+				processor.CaptureUpsertChange(testNs)
 				processor.CaptureUpsertChange(hr1)
 				changed, _ := processor.Process()
 				Expect(changed).To(BeTrue())
@@ -1675,12 +1738,14 @@ var _ = Describe("ChangeProcessor", func() {
 			It("should report changed after multiple Upserts of related resources", func() {
 				processor.CaptureUpsertChange(svc)
 				processor.CaptureUpsertChange(slice)
+				processor.CaptureUpsertChange(ns)
 				changed, _ := processor.Process()
 				Expect(changed).To(BeTrue())
 			})
 			It("should report not changed after multiple Upserts of unrelated resources", func() {
 				processor.CaptureUpsertChange(unrelatedSvc)
 				processor.CaptureUpsertChange(unrelatedSlice)
+				processor.CaptureUpsertChange(unrelatedNS)
 
 				changed, _ := processor.Process()
 				Expect(changed).To(BeFalse())
@@ -1690,10 +1755,12 @@ var _ = Describe("ChangeProcessor", func() {
 					// these are changing changes
 					processor.CaptureUpsertChange(barSvc)
 					processor.CaptureUpsertChange(barSlice)
+					processor.CaptureUpsertChange(barNs)
 
 					// there are non-changing changes
 					processor.CaptureUpsertChange(unrelatedSvc)
 					processor.CaptureUpsertChange(unrelatedSlice)
+					processor.CaptureUpsertChange(unrelatedNS)
 
 					changed, _ := processor.Process()
 					Expect(changed).To(BeTrue())
@@ -1704,10 +1771,12 @@ var _ = Describe("ChangeProcessor", func() {
 					// these are changing changes
 					processor.CaptureDeleteChange(&apiv1.Service{}, svcNsName)
 					processor.CaptureDeleteChange(&discoveryV1.EndpointSlice{}, sliceNsName)
+					processor.CaptureDeleteChange(&apiv1.Namespace{}, types.NamespacedName{Name: "ns"})
 
 					// these are non-changing changes
 					processor.CaptureUpsertChange(unrelatedSvc)
 					processor.CaptureUpsertChange(unrelatedSlice)
+					processor.CaptureUpsertChange(unrelatedNS)
 
 					changed, _ := processor.Process()
 					Expect(changed).To(BeTrue())
@@ -1719,12 +1788,14 @@ var _ = Describe("ChangeProcessor", func() {
 				// new Gateway API resources
 				processor.CaptureUpsertChange(gc)
 				processor.CaptureUpsertChange(gw1)
+				processor.CaptureUpsertChange(testNs)
 				processor.CaptureUpsertChange(hr1)
 				processor.CaptureUpsertChange(rg1)
 
 				// related Kubernetes API resources
 				processor.CaptureUpsertChange(svc)
 				processor.CaptureUpsertChange(slice)
+				processor.CaptureUpsertChange(ns)
 
 				changed, _ := processor.Process()
 				Expect(changed).To(BeTrue())
@@ -1733,6 +1804,7 @@ var _ = Describe("ChangeProcessor", func() {
 				// unrelated Kubernetes API resources
 				processor.CaptureUpsertChange(unrelatedSvc)
 				processor.CaptureUpsertChange(unrelatedSlice)
+				processor.CaptureUpsertChange(unrelatedNS)
 
 				changed, _ := processor.Process()
 				Expect(changed).To(BeFalse())
@@ -1748,6 +1820,7 @@ var _ = Describe("ChangeProcessor", func() {
 					// these are non-changing changes
 					processor.CaptureUpsertChange(unrelatedSvc)
 					processor.CaptureUpsertChange(unrelatedSlice)
+					processor.CaptureUpsertChange(unrelatedNS)
 
 					changed, _ := processor.Process()
 					Expect(changed).To(BeTrue())
