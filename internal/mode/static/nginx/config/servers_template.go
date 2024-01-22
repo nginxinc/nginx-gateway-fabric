@@ -50,7 +50,7 @@ server {
             {{ range $h := $l.ProxySetHeaders }}
         proxy_set_header {{ $h.Name }} "{{ $h.Value }}";
             {{- end }}
-            {{ range $h := $l.AddHeaders }}
+            {{ range $h := $l.AddHeaderDirectives }}
         add_header {{ $h.Name }} "{{ $h.Value }}";
             {{- end }}
         proxy_http_version 1.1;
