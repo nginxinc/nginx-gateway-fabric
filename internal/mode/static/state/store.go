@@ -133,7 +133,6 @@ type changeTrackingUpdater struct {
 
 	extractGVK    extractGVKFunc
 	supportedGVKs gvkList
-	persistedGVKs gvkList
 
 	changed bool
 }
@@ -167,7 +166,6 @@ func newChangeTrackingUpdater(
 		store:                  newMultiObjectStore(stores, extractGVK, persistedGVKs),
 		extractGVK:             extractGVK,
 		supportedGVKs:          supportedGVKs,
-		persistedGVKs:          persistedGVKs,
 		stateChangedPredicates: stateChangedPredicates,
 	}
 }
