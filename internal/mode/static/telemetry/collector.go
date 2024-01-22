@@ -43,7 +43,10 @@ func (c DataCollector) CollectData() Data {
 	nodeCount := collectNodeCount(c.ctx, c.k8sClient)
 	graphResourceCount := collectGraphResourceCount(c.processor)
 
-	data := Data{NodeCount: nodeCount, GraphResourceCount: graphResourceCount}
+	data := Data{
+		NodeCount:          nodeCount,
+		GraphResourceCount: graphResourceCount,
+	}
 
 	return data
 }
