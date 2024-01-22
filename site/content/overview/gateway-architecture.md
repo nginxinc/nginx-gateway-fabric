@@ -92,6 +92,12 @@ The following list describes the connections, preceeded by their types in parent
 1. (HTTP, HTTPS) A _client_ sends traffic to and receives traffic from any of the _NGINX workers_ on ports 80 and 443.
 1. (HTTP, HTTPS) An _NGINX worker_ sends traffic to and receives traffic from the _backends_.
 
+### Differences with NGINX Plus
+
+The previous diagram depicts NGINX Gateway Fabric using NGINX Open Source. NGINX Gateway Fabric with NGINX Plus has the following difference:
+
+- An _admin_ can connect to the NGINX Plus API using port 8765. NGINX only allows connections from localhost.
+
 ## Pod readiness
 
 The `nginx-gateway` container includes a readiness endpoint available through the path `/readyz`. A [readiness probe](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-readiness-probes) periodically checks the endpoint on startup, returning a `200 OK` response when the pod can accept traffic for the data plane. Once the control plane successfully starts, the pod becomes ready.
