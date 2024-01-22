@@ -832,27 +832,27 @@ func validateFilterHeaderModifierFields(
 	var allErrs field.ErrorList
 
 	for _, h := range headerModifier.Add {
-		if err := validator.ValidateRequestHeaderName(string(h.Name)); err != nil {
+		if err := validator.ValidateFilterHeaderName(string(h.Name)); err != nil {
 			valErr := field.Invalid(headerModifierPath.Child("add"), h, err.Error())
 			allErrs = append(allErrs, valErr)
 		}
-		if err := validator.ValidateRequestHeaderValue(h.Value); err != nil {
+		if err := validator.ValidateFilterHeaderValue(h.Value); err != nil {
 			valErr := field.Invalid(headerModifierPath.Child("add"), h, err.Error())
 			allErrs = append(allErrs, valErr)
 		}
 	}
 	for _, h := range headerModifier.Set {
-		if err := validator.ValidateRequestHeaderName(string(h.Name)); err != nil {
+		if err := validator.ValidateFilterHeaderName(string(h.Name)); err != nil {
 			valErr := field.Invalid(headerModifierPath.Child("set"), h, err.Error())
 			allErrs = append(allErrs, valErr)
 		}
-		if err := validator.ValidateRequestHeaderValue(h.Value); err != nil {
+		if err := validator.ValidateFilterHeaderValue(h.Value); err != nil {
 			valErr := field.Invalid(headerModifierPath.Child("set"), h, err.Error())
 			allErrs = append(allErrs, valErr)
 		}
 	}
 	for _, h := range headerModifier.Remove {
-		if err := validator.ValidateRequestHeaderName(h); err != nil {
+		if err := validator.ValidateFilterHeaderName(h); err != nil {
 			valErr := field.Invalid(headerModifierPath.Child("remove"), h, err.Error())
 			allErrs = append(allErrs, valErr)
 		}
