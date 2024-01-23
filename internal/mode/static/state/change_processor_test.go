@@ -1465,15 +1465,16 @@ var _ = Describe("ChangeProcessor", func() {
 		// -- this is done in 'Normal cases of processing changes'
 
 		var (
-			processor                                                                 *state.ChangeProcessorImpl
-			gcNsName, gwNsName, hrNsName, hr2NsName, rgNsName, svcNsName, sliceNsName types.NamespacedName
-			gc, gcUpdated                                                             *v1.GatewayClass
-			gw1, gw1Updated, gw2                                                      *v1.Gateway
-			hr1, hr1Updated, hr2                                                      *v1.HTTPRoute
-			rg1, rg1Updated, rg2                                                      *v1beta1.ReferenceGrant
-			svc, barSvc, unrelatedSvc                                                 *apiv1.Service
-			slice, barSlice, unrelatedSlice                                           *discoveryV1.EndpointSlice
-			ns, unrelatedNS, testNs, barNs                                            *apiv1.Namespace
+			processor                                                                               *state.ChangeProcessorImpl
+			gcNsName, gwNsName, hrNsName, hr2NsName, rgNsName, svcNsName, sliceNsName, secretNsName types.NamespacedName
+			gc, gcUpdated                                                                           *v1.GatewayClass
+			gw1, gw1Updated, gw2                                                                    *v1.Gateway
+			hr1, hr1Updated, hr2                                                                    *v1.HTTPRoute
+			rg1, rg1Updated, rg2                                                                    *v1beta1.ReferenceGrant
+			svc, barSvc, unrelatedSvc                                                               *apiv1.Service
+			slice, barSlice, unrelatedSlice                                                         *discoveryV1.EndpointSlice
+			ns, unrelatedNS, testNs, barNs                                                          *apiv1.Namespace
+			secret, secretUpdated, unrelatedSecret, barSecret, barSecretUpdated                     *apiv1.Secret
 		)
 
 		BeforeEach(OncePerOrdered, func() {
@@ -1483,6 +1484,48 @@ var _ = Describe("ChangeProcessor", func() {
 				Validators:       createAlwaysValidValidators(),
 				Scheme:           createScheme(),
 			})
+
+			secretNsName = types.NamespacedName{Namespace: "test", Name: "tls-secret"}
+			secret = &apiv1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:       secretNsName.Name,
+					Namespace:  secretNsName.Namespace,
+					Generation: 1,
+				},
+				Type: apiv1.SecretTypeTLS,
+				Data: map[string][]byte{
+					apiv1.TLSCertKey:       cert,
+					apiv1.TLSPrivateKeyKey: key,
+				},
+			}
+			secretUpdated = secret.DeepCopy()
+			secretUpdated.Generation++
+			barSecret = &apiv1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:       "bar-secret",
+					Namespace:  "test",
+					Generation: 1,
+				},
+				Type: apiv1.SecretTypeTLS,
+				Data: map[string][]byte{
+					apiv1.TLSCertKey:       cert,
+					apiv1.TLSPrivateKeyKey: key,
+				},
+			}
+			barSecretUpdated = barSecret.DeepCopy()
+			barSecretUpdated.Generation++
+			unrelatedSecret = &apiv1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:       "unrelated-tls-secret",
+					Namespace:  "unrelated-ns",
+					Generation: 1,
+				},
+				Type: apiv1.SecretTypeTLS,
+				Data: map[string][]byte{
+					apiv1.TLSCertKey:       cert,
+					apiv1.TLSPrivateKeyKey: key,
+				},
+			}
 
 			gcNsName = types.NamespacedName{Name: "test-class"}
 
@@ -1521,6 +1564,38 @@ var _ = Describe("ChangeProcessor", func() {
 										MatchLabels: map[string]string{
 											"test": "namespace",
 										},
+									},
+								},
+							},
+						},
+						{
+							Name:     "listener-443-1",
+							Hostname: nil,
+							Port:     443,
+							Protocol: v1.HTTPSProtocolType,
+							TLS: &v1.GatewayTLSConfig{
+								Mode: helpers.GetPointer(v1.TLSModeTerminate),
+								CertificateRefs: []v1.SecretObjectReference{
+									{
+										Kind:      (*v1.Kind)(helpers.GetPointer("Secret")),
+										Name:      v1.ObjectName(secret.Name),
+										Namespace: (*v1.Namespace)(&secret.Namespace),
+									},
+								},
+							},
+						},
+						{
+							Name:     "listener-500-1",
+							Hostname: nil,
+							Port:     500,
+							Protocol: v1.HTTPSProtocolType,
+							TLS: &v1.GatewayTLSConfig{
+								Mode: helpers.GetPointer(v1.TLSModeTerminate),
+								CertificateRefs: []v1.SecretObjectReference{
+									{
+										Kind:      (*v1.Kind)(helpers.GetPointer("Secret")),
+										Name:      v1.ObjectName(barSecret.Name),
+										Namespace: (*v1.Namespace)(&barSecret.Namespace),
 									},
 								},
 							},
@@ -1731,6 +1806,8 @@ var _ = Describe("ChangeProcessor", func() {
 				processor.CaptureUpsertChange(gw1)
 				processor.CaptureUpsertChange(testNs)
 				processor.CaptureUpsertChange(hr1)
+				processor.CaptureUpsertChange(secret)
+				processor.CaptureUpsertChange(barSecret)
 				changed, _ := processor.Process()
 				Expect(changed).To(BeTrue())
 			})
@@ -1739,6 +1816,7 @@ var _ = Describe("ChangeProcessor", func() {
 				processor.CaptureUpsertChange(svc)
 				processor.CaptureUpsertChange(slice)
 				processor.CaptureUpsertChange(ns)
+				processor.CaptureUpsertChange(secretUpdated)
 				changed, _ := processor.Process()
 				Expect(changed).To(BeTrue())
 			})
@@ -1746,6 +1824,7 @@ var _ = Describe("ChangeProcessor", func() {
 				processor.CaptureUpsertChange(unrelatedSvc)
 				processor.CaptureUpsertChange(unrelatedSlice)
 				processor.CaptureUpsertChange(unrelatedNS)
+				processor.CaptureUpsertChange(unrelatedSecret)
 
 				changed, _ := processor.Process()
 				Expect(changed).To(BeFalse())
@@ -1756,11 +1835,13 @@ var _ = Describe("ChangeProcessor", func() {
 					processor.CaptureUpsertChange(barSvc)
 					processor.CaptureUpsertChange(barSlice)
 					processor.CaptureUpsertChange(barNs)
+					processor.CaptureUpsertChange(barSecretUpdated)
 
 					// there are non-changing changes
 					processor.CaptureUpsertChange(unrelatedSvc)
 					processor.CaptureUpsertChange(unrelatedSlice)
 					processor.CaptureUpsertChange(unrelatedNS)
+					processor.CaptureUpsertChange(unrelatedSecret)
 
 					changed, _ := processor.Process()
 					Expect(changed).To(BeTrue())
@@ -1772,11 +1853,13 @@ var _ = Describe("ChangeProcessor", func() {
 					processor.CaptureDeleteChange(&apiv1.Service{}, svcNsName)
 					processor.CaptureDeleteChange(&discoveryV1.EndpointSlice{}, sliceNsName)
 					processor.CaptureDeleteChange(&apiv1.Namespace{}, types.NamespacedName{Name: "ns"})
+					processor.CaptureDeleteChange(&apiv1.Secret{}, secretNsName)
 
 					// these are non-changing changes
 					processor.CaptureUpsertChange(unrelatedSvc)
 					processor.CaptureUpsertChange(unrelatedSlice)
 					processor.CaptureUpsertChange(unrelatedNS)
+					processor.CaptureUpsertChange(unrelatedSecret)
 
 					changed, _ := processor.Process()
 					Expect(changed).To(BeTrue())
@@ -1796,6 +1879,7 @@ var _ = Describe("ChangeProcessor", func() {
 				processor.CaptureUpsertChange(svc)
 				processor.CaptureUpsertChange(slice)
 				processor.CaptureUpsertChange(ns)
+				processor.CaptureUpsertChange(secret)
 
 				changed, _ := processor.Process()
 				Expect(changed).To(BeTrue())
@@ -1805,6 +1889,7 @@ var _ = Describe("ChangeProcessor", func() {
 				processor.CaptureUpsertChange(unrelatedSvc)
 				processor.CaptureUpsertChange(unrelatedSlice)
 				processor.CaptureUpsertChange(unrelatedNS)
+				processor.CaptureUpsertChange(unrelatedSecret)
 
 				changed, _ := processor.Process()
 				Expect(changed).To(BeFalse())
@@ -1821,6 +1906,7 @@ var _ = Describe("ChangeProcessor", func() {
 					processor.CaptureUpsertChange(unrelatedSvc)
 					processor.CaptureUpsertChange(unrelatedSlice)
 					processor.CaptureUpsertChange(unrelatedNS)
+					processor.CaptureUpsertChange(unrelatedSecret)
 
 					changed, _ := processor.Process()
 					Expect(changed).To(BeTrue())
