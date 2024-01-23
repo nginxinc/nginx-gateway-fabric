@@ -6,7 +6,6 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/graph"
 )
 
@@ -25,25 +24,34 @@ type GraphResourceCount struct {
 	Services       int
 }
 
+type ProjectNameAndVersion struct {
+	Name    string
+	Version string
+}
+
 // Data is telemetry data.
 // Note: this type might change once https://github.com/nginxinc/nginx-gateway-fabric/issues/1318 is implemented.
 type Data struct {
-	NodeCount          int
-	GraphResourceCount GraphResourceCount
+	ProjectNameAndVersion ProjectNameAndVersion
+	NodeCount             int
+	GraphResourceCount    GraphResourceCount
 }
 
 type DataCollectorImpl struct {
 	k8sClient   client.Client
 	graphGetter GraphGetter
+	version     string
 }
 
 func NewDataCollector(
 	k8sClient client.Client,
-	processor state.ChangeProcessor,
+	graphGetter GraphGetter,
+	version string,
 ) *DataCollectorImpl {
 	return &DataCollectorImpl{
 		k8sClient:   k8sClient,
-		graphGetter: processor,
+		graphGetter: graphGetter,
+		version:     version,
 	}
 }
 
@@ -54,6 +62,10 @@ func (c DataCollectorImpl) Collect(ctx context.Context) Data {
 	data := Data{
 		NodeCount:          nodeCount,
 		GraphResourceCount: graphResourceCount,
+		ProjectNameAndVersion: ProjectNameAndVersion{
+			Name:    "NGF",
+			Version: c.version,
+		},
 	}
 
 	return data
