@@ -7,41 +7,49 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/graph"
 )
 
-type Collector interface {
-	CollectData() Data
+type DataCollector interface {
+	Collect(ctx context.Context) Data
 }
-
-type DataCollector struct {
-	ctx       context.Context
-	k8sClient client.Client
-	processor state.ChangeProcessor
+type GraphGetter interface {
+	GetLatestGraph() *graph.Graph
 }
 
 type GraphResourceCount struct {
-	Gateways           int
-	GatewayClasses     int
-	HTTPRoutes         int
-	ReferencedSecrets  int
-	ReferencedServices int
+	Gateways       int
+	GatewayClasses int
+	HTTPRoutes     int
+	Secrets        int
+	Services       int
+}
+
+// Data is telemetry data.
+// Note: this type might change once https://github.com/nginxinc/nginx-gateway-fabric/issues/1318 is implemented.
+type Data struct {
+	NodeCount          int
+	GraphResourceCount GraphResourceCount
+}
+
+type DataCollectorImpl struct {
+	k8sClient   client.Client
+	graphGetter GraphGetter
 }
 
 func NewDataCollector(
-	ctx context.Context,
 	k8sClient client.Client,
 	processor state.ChangeProcessor,
-) *DataCollector {
-	return &DataCollector{
-		ctx:       ctx,
-		k8sClient: k8sClient,
-		processor: processor,
+) *DataCollectorImpl {
+	return &DataCollectorImpl{
+		k8sClient:   k8sClient,
+		graphGetter: processor,
 	}
 }
 
-func (c DataCollector) CollectData() Data {
-	nodeCount := collectNodeCount(c.ctx, c.k8sClient)
-	graphResourceCount := collectGraphResourceCount(c.processor)
+func (c DataCollectorImpl) Collect(ctx context.Context) Data {
+	nodeCount := collectNodeCount(ctx, c.k8sClient)
+	graphResourceCount := collectGraphResourceCount(c.graphGetter)
 
 	data := Data{
 		NodeCount:          nodeCount,
@@ -57,21 +65,21 @@ func collectNodeCount(ctx context.Context, k8sClient client.Client) int {
 	return len(nodes.Items)
 }
 
-func collectGraphResourceCount(processor state.ChangeProcessor) GraphResourceCount {
+func collectGraphResourceCount(graphGetter GraphGetter) GraphResourceCount {
 	graphResourceCount := GraphResourceCount{}
-	graph := processor.GetLatestGraph()
+	g := graphGetter.GetLatestGraph()
 
-	if graph.GatewayClass != nil {
+	if g.GatewayClass != nil {
 		graphResourceCount.GatewayClasses = 1
 	}
-	if graph.Gateway != nil {
+	if g.Gateway != nil {
 		graphResourceCount.GatewayClasses = 1
 	}
-	if graph.Routes != nil {
-		graphResourceCount.HTTPRoutes = len(graph.Routes)
+	if g.Routes != nil {
+		graphResourceCount.HTTPRoutes = len(g.Routes)
 	}
-	if graph.ReferencedSecrets != nil {
-		graphResourceCount.ReferencedSecrets = len(graph.ReferencedSecrets)
+	if g.ReferencedSecrets != nil {
+		graphResourceCount.Secrets = len(g.ReferencedSecrets)
 	}
 
 	return graphResourceCount

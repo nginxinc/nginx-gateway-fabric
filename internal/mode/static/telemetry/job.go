@@ -14,7 +14,7 @@ type JobConfig struct {
 	// Exporter is the exporter to use for exporting telemetry data.
 	Exporter Exporter
 	// Collector is the collector to use for collecting telemetry data.
-	Collector Collector
+	DataCollector DataCollector
 	// Logger is the logger.
 	Logger logr.Logger
 	// Period defines the period of the telemetry job. The job will run every Period.
@@ -43,7 +43,7 @@ func (j *Job) Start(ctx context.Context) error {
 		j.cfg.Logger.V(1).Info("Gathering telemetry")
 
 		// We will need to gather data as defined in https://github.com/nginxinc/nginx-gateway-fabric/issues/793
-		data := j.cfg.Collector.CollectData()
+		data := j.cfg.DataCollector.Collect(ctx)
 
 		// Export telemetry
 		j.cfg.Logger.V(1).Info("Exporting telemetry")

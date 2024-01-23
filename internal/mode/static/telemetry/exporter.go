@@ -6,13 +6,6 @@ import (
 	"github.com/go-logr/logr"
 )
 
-// Data is telemetry data.
-// Note: this type might change once https://github.com/nginxinc/nginx-gateway-fabric/issues/1318 is implemented.
-type Data struct {
-	NodeCount          int
-	GraphResourceCount GraphResourceCount
-}
-
 //go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . Exporter
 
 // Exporter exports telemetry data to some destination.
