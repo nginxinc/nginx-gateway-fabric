@@ -22,7 +22,6 @@ import (
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/gatewayclass"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/graph"
-	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/relationship"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/validation"
 )
 
@@ -55,8 +54,6 @@ type ChangeProcessor interface {
 
 // ChangeProcessorConfig holds configuration parameters for ChangeProcessorImpl.
 type ChangeProcessorConfig struct {
-	// RelationshipCapturer captures relationships between Kubernetes API resources and Gateway API resources.
-	RelationshipCapturer relationship.Capturer
 	// Validators validate resources according to data-plane specific rules.
 	Validators validation.Validators
 	// EventRecorder records events for Kubernetes resources.
@@ -114,34 +111,32 @@ func NewChangeProcessorImpl(cfg ChangeProcessorConfig) *ChangeProcessorImpl {
 		clusterState: clusterStore,
 	}
 
-	isReferenced := func(obj client.Object) bool {
-		nsname := types.NamespacedName{Name: obj.GetName(), Namespace: obj.GetNamespace()}
+	isReferenced := func(obj client.Object, nsname types.NamespacedName) bool {
 		return processor.latestGraph != nil && processor.latestGraph.IsReferenced(obj, nsname)
 	}
 
 	trackingUpdater := newChangeTrackingUpdater(
-		cfg.RelationshipCapturer,
 		extractGVK,
 		[]changeTrackingUpdaterObjectTypeCfg{
 			{
 				gvk:       extractGVK(&v1.GatewayClass{}),
 				store:     newObjectStoreMapAdapter(clusterStore.GatewayClasses),
-				predicate: alwaysProcess{},
+				predicate: nil,
 			},
 			{
 				gvk:       extractGVK(&v1.Gateway{}),
 				store:     newObjectStoreMapAdapter(clusterStore.Gateways),
-				predicate: alwaysProcess{},
+				predicate: nil,
 			},
 			{
 				gvk:       extractGVK(&v1.HTTPRoute{}),
 				store:     newObjectStoreMapAdapter(clusterStore.HTTPRoutes),
-				predicate: alwaysProcess{},
+				predicate: nil,
 			},
 			{
 				gvk:       extractGVK(&v1beta1.ReferenceGrant{}),
 				store:     newObjectStoreMapAdapter(clusterStore.ReferenceGrants),
-				predicate: alwaysProcess{},
+				predicate: nil,
 			},
 			{
 				gvk:       extractGVK(&apiv1.Namespace{}),
@@ -151,12 +146,12 @@ func NewChangeProcessorImpl(cfg ChangeProcessorConfig) *ChangeProcessorImpl {
 			{
 				gvk:       extractGVK(&apiv1.Service{}),
 				store:     newObjectStoreMapAdapter(clusterStore.Services),
-				predicate: nil,
+				predicate: funcPredicate{stateChanged: isReferenced},
 			},
 			{
 				gvk:       extractGVK(&discoveryV1.EndpointSlice{}),
 				store:     nil,
-				predicate: nil,
+				predicate: funcPredicate{stateChanged: isReferenced},
 			},
 			{
 				gvk:       extractGVK(&apiv1.Secret{}),

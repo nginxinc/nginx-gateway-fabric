@@ -2,11 +2,11 @@ package resolver
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	v1 "k8s.io/api/core/v1"
 	discoveryV1 "k8s.io/api/discovery/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -15,10 +15,10 @@ import (
 
 //go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . ServiceResolver
 
-// ServiceResolver resolves a Service and Service Port to a list of Endpoints.
+// ServiceResolver resolves a Service's NamespacedName and ServicePort to a list of Endpoints.
 // Returns an error if the Service or Service Port cannot be resolved.
 type ServiceResolver interface {
-	Resolve(ctx context.Context, svc *v1.Service, svcPort int32) ([]Endpoint, error)
+	Resolve(ctx context.Context, svcNsName types.NamespacedName, svcPort v1.ServicePort) ([]Endpoint, error)
 }
 
 // Endpoint is the internal representation of a Kubernetes endpoint.
@@ -39,11 +39,16 @@ func NewServiceResolverImpl(client client.Client) *ServiceResolverImpl {
 	return &ServiceResolverImpl{client: client}
 }
 
-// Resolve resolves a Service and Port to a list of Endpoints.
-// Returns an error if the Service or Port cannot be resolved.
-func (e *ServiceResolverImpl) Resolve(ctx context.Context, svc *v1.Service, port int32) ([]Endpoint, error) {
-	if svc == nil {
-		return nil, errors.New("cannot resolve a nil Service")
+// Resolve resolves a Service's NamespacedName and ServicePort to a list of Endpoints.
+// Returns an error if the Service or ServicePort cannot be resolved.
+func (e *ServiceResolverImpl) Resolve(
+	ctx context.Context,
+	svcNsName types.NamespacedName,
+	svcPort v1.ServicePort,
+) ([]Endpoint, error) {
+	if svcPort.Port == 0 || svcNsName.Name == "" || svcNsName.Namespace == "" {
+		panic(fmt.Errorf("expected the following fields to be non-empty: name: %s, ns: %s, port: %d",
+			svcNsName.Name, svcNsName.Namespace, svcPort.Port))
 	}
 
 	// We list EndpointSlices using the Service Name Index Field we added as an index to the EndpointSlice cache.
@@ -52,15 +57,15 @@ func (e *ServiceResolverImpl) Resolve(ctx context.Context, svc *v1.Service, port
 	err := e.client.List(
 		ctx,
 		&endpointSliceList,
-		client.MatchingFields{index.KubernetesServiceNameIndexField: svc.Name},
-		client.InNamespace(svc.Namespace),
+		client.MatchingFields{index.KubernetesServiceNameIndexField: svcNsName.Name},
+		client.InNamespace(svcNsName.Namespace),
 	)
 
 	if err != nil || len(endpointSliceList.Items) == 0 {
-		return nil, fmt.Errorf("no endpoints found for Service %s", client.ObjectKeyFromObject(svc))
+		return nil, fmt.Errorf("no endpoints found for Service %s", svcNsName)
 	}
 
-	return resolveEndpoints(svc, port, endpointSliceList, initEndpointSetWithCalculatedSize)
+	return resolveEndpoints(svcNsName, svcPort, endpointSliceList, initEndpointSetWithCalculatedSize)
 }
 
 type initEndpointSetFunc func([]discoveryV1.EndpointSlice) map[Endpoint]struct{}
@@ -88,21 +93,15 @@ func calculateReadyEndpoints(endpointSlices []discoveryV1.EndpointSlice) int {
 }
 
 func resolveEndpoints(
-	svc *v1.Service,
-	port int32,
+	svcNsName types.NamespacedName,
+	svcPort v1.ServicePort,
 	endpointSliceList discoveryV1.EndpointSliceList,
 	initEndpointsSet initEndpointSetFunc,
 ) ([]Endpoint, error) {
-	svcPort, err := getServicePort(svc, port)
-	if err != nil {
-		return nil, err
-	}
-
 	filteredSlices := filterEndpointSliceList(endpointSliceList, svcPort)
 
 	if len(filteredSlices) == 0 {
-		svcNsName := client.ObjectKeyFromObject(svc)
-		return nil, fmt.Errorf("no valid endpoints found for Service %s and port %+v", svcNsName, svcPort)
+		return nil, fmt.Errorf("no valid endpoints found for Service %s and port %d", svcNsName, svcPort.Port)
 	}
 
 	// Endpoints may be duplicated across multiple EndpointSlices.
@@ -133,16 +132,6 @@ func resolveEndpoints(
 	}
 
 	return endpoints, nil
-}
-
-func getServicePort(svc *v1.Service, port int32) (v1.ServicePort, error) {
-	for _, p := range svc.Spec.Ports {
-		if p.Port == port {
-			return p, nil
-		}
-	}
-
-	return v1.ServicePort{}, fmt.Errorf("no matching port for Service %s and port %d", svc.Name, port)
 }
 
 // getDefaultPort returns the default port for a ServicePort.

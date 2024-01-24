@@ -2,12 +2,14 @@ package graph
 
 import (
 	v1 "k8s.io/api/core/v1"
+	discoveryV1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/controller/index"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/validation"
 )
 
@@ -46,6 +48,9 @@ type Graph struct {
 	ReferencedSecrets map[types.NamespacedName]*Secret
 	// ReferencedNamespaces includes Namespaces with labels that match the Gateway Listener's label selector.
 	ReferencedNamespaces map[types.NamespacedName]*v1.Namespace
+	// ReferencedServices includes the NamespacedNames of all the Services that are referenced by at least one HTTPRoute.
+	// Storing the whole resource is not necessary, compared to the similar maps above.
+	ReferencedServices map[types.NamespacedName]struct{}
 }
 
 // ProtectedPorts are the ports that may not be configured by a listener with a descriptive name of each port.
@@ -53,11 +58,6 @@ type ProtectedPorts map[int32]string
 
 // IsReferenced returns true if the Graph references the resource.
 func (g *Graph) IsReferenced(resourceType client.Object, nsname types.NamespacedName) bool {
-	// FIMXE(bjee19): For now, only works with Secrets and Namespaces.
-	// Support EndpointSlices so that we can remove relationship.Capturer and use the Graph
-	// as source to determine the relationships.
-	// See https://github.com/nginxinc/nginx-gateway-fabric/issues/824
-
 	switch obj := resourceType.(type) {
 	case *v1.Secret:
 		_, exists := g.ReferencedSecrets[nsname]
@@ -78,6 +78,17 @@ func (g *Graph) IsReferenced(resourceType client.Object, nsname types.Namespaced
 		_, existed := g.ReferencedNamespaces[nsname]
 		exists := isNamespaceReferenced(obj, g.Gateway)
 		return existed || exists
+	// Service reference exists if at least one HTTPRoute references it.
+	case *v1.Service:
+		_, exists := g.ReferencedServices[nsname]
+		return exists
+	// EndpointSlice reference exists if its Service owner is referenced by at least one HTTPRoute.
+	case *discoveryV1.EndpointSlice:
+		svcName := index.GetServiceNameFromEndpointSlice(obj)
+
+		// Service Namespace should be the same Namespace as the EndpointSlice
+		_, exists := g.ReferencedServices[types.NamespacedName{Namespace: nsname.Namespace, Name: svcName}]
+		return exists
 	default:
 		return false
 	}
@@ -112,6 +123,8 @@ func BuildGraph(
 
 	referencedNamespaces := buildReferencedNamespaces(state.Namespaces, gw)
 
+	referencedServices := buildReferencedServices(routes)
+
 	g := &Graph{
 		GatewayClass:          gc,
 		Gateway:               gw,
@@ -120,6 +133,7 @@ func BuildGraph(
 		IgnoredGateways:       processedGws.Ignored,
 		ReferencedSecrets:     secretResolver.getResolvedSecrets(),
 		ReferencedNamespaces:  referencedNamespaces,
+		ReferencedServices:    referencedServices,
 	}
 
 	return g
