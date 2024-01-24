@@ -12,6 +12,7 @@ import (
 type DataCollector interface {
 	Collect(ctx context.Context) Data
 }
+
 type GraphGetter interface {
 	GetLatestGraph() *graph.Graph
 }
@@ -72,8 +73,8 @@ func (c DataCollectorImpl) Collect(ctx context.Context) Data {
 }
 
 func collectNodeCount(ctx context.Context, k8sClient client.Reader) int {
-	nodes := &v1.NodeList{}
-	_ = k8sClient.List(ctx, nodes)
+	nodes := v1.NodeList{}
+	_ = k8sClient.List(ctx, &nodes)
 	return len(nodes.Items)
 }
 

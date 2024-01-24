@@ -261,5 +261,6 @@ func (c *ChangeProcessorImpl) Process() (ChangeType, *graph.Graph) {
 func (c *ChangeProcessorImpl) GetLatestGraph() *graph.Graph {
 	c.lock.Lock()
 	defer c.lock.Unlock()
+
 	return c.latestGraph
 }
