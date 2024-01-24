@@ -23,9 +23,11 @@ type GraphResourceCount struct {
 	HTTPRoutes     int
 	Secrets        int
 	Services       int
+	EndpointSlices int
+	Endpoints      int
 }
 
-type ProjectNameAndVersion struct {
+type ProjectMetadata struct {
 	Name    string
 	Version string
 }
@@ -33,9 +35,9 @@ type ProjectNameAndVersion struct {
 // Data is telemetry data.
 // Note: this type might change once https://github.com/nginxinc/nginx-gateway-fabric/issues/1318 is implemented.
 type Data struct {
-	ProjectNameAndVersion ProjectNameAndVersion
-	NodeCount             int
-	GraphResourceCount    GraphResourceCount
+	ProjectMetadata    ProjectMetadata
+	NodeCount          int
+	GraphResourceCount GraphResourceCount
 }
 
 type DataCollectorImpl struct {
@@ -63,7 +65,7 @@ func (c DataCollectorImpl) Collect(ctx context.Context) Data {
 	data := Data{
 		NodeCount:          nodeCount,
 		GraphResourceCount: graphResourceCount,
-		ProjectNameAndVersion: ProjectNameAndVersion{
+		ProjectMetadata: ProjectMetadata{
 			Name:    "NGF",
 			Version: c.version,
 		},
@@ -86,14 +88,11 @@ func collectGraphResourceCount(graphGetter GraphGetter) GraphResourceCount {
 		graphResourceCount.GatewayClasses = 1
 	}
 	if g.Gateway != nil {
-		graphResourceCount.GatewayClasses = 1
+		graphResourceCount.Gateways = 1
 	}
-	if g.Routes != nil {
-		graphResourceCount.HTTPRoutes = len(g.Routes)
-	}
-	if g.ReferencedSecrets != nil {
-		graphResourceCount.Secrets = len(g.ReferencedSecrets)
-	}
+	graphResourceCount.HTTPRoutes = len(g.Routes)
+	graphResourceCount.Secrets = len(g.ReferencedSecrets)
+	graphResourceCount.Services = len(g.ReferencedServices)
 
 	return graphResourceCount
 }
