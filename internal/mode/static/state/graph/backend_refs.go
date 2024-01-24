@@ -14,22 +14,23 @@ import (
 
 // BackendRef is an internal representation of a backendRef in an HTTPRoute.
 type BackendRef struct {
-	// Svc is the service referenced by the backendRef.
-	Svc *v1.Service
-	// Port is the port of the backendRef.
-	Port int32
+	// SvcNsName is the NamespacedName of the Service referenced by the backendRef.
+	SvcNsName types.NamespacedName
+	// ServicePort is the ServicePort of the Service which is referenced by the backendRef.
+	ServicePort v1.ServicePort
 	// Weight is the weight of the backendRef.
 	Weight int32
 	// Valid indicates whether the backendRef is valid.
+	// No configuration should be generated for an invalid BackendRef.
 	Valid bool
 }
 
 // ServicePortReference returns a string representation for the service and port that is referenced by the BackendRef.
 func (b BackendRef) ServicePortReference() string {
-	if b.Svc == nil {
+	if !b.Valid {
 		return ""
 	}
-	return fmt.Sprintf("%s_%s_%d", b.Svc.Namespace, b.Svc.Name, b.Port)
+	return fmt.Sprintf("%s_%s_%d", b.SvcNsName.Namespace, b.SvcNsName.Name, b.ServicePort.Port)
 }
 
 func addBackendRefsToRouteRules(
@@ -116,11 +117,13 @@ func createBackendRef(
 		return backendRef, &cond
 	}
 
-	svc, port, err := getServiceAndPortFromRef(ref.BackendRef, sourceNamespace, services, refPath)
+	svcNsName, svcPort, err := getServiceAndPortFromRef(ref.BackendRef, sourceNamespace, services, refPath)
 	if err != nil {
 		backendRef = BackendRef{
-			Weight: weight,
-			Valid:  false,
+			SvcNsName:   svcNsName,
+			ServicePort: svcPort,
+			Weight:      weight,
+			Valid:       false,
 		}
 
 		cond := staticConds.NewRouteBackendRefRefBackendNotFound(err.Error())
@@ -128,21 +131,25 @@ func createBackendRef(
 	}
 
 	backendRef = BackendRef{
-		Svc:    svc,
-		Port:   port,
-		Valid:  true,
-		Weight: weight,
+		SvcNsName:   svcNsName,
+		ServicePort: svcPort,
+		Valid:       true,
+		Weight:      weight,
 	}
 
 	return backendRef, nil
 }
 
+// getServiceAndPortFromRef extracts the NamespacedName of the Service and the port from a BackendRef.
+// It can return an error and an empty v1.ServicePort in two cases:
+// 1. The Service referenced from the BackendRef does not exist in the cluster/state.
+// 2. The Port on the BackendRef does not match any of the ServicePorts on the Service.
 func getServiceAndPortFromRef(
 	ref gatewayv1.BackendRef,
 	routeNamespace string,
 	services map[types.NamespacedName]*v1.Service,
 	refPath *field.Path,
-) (*v1.Service, int32, error) {
+) (types.NamespacedName, v1.ServicePort, error) {
 	ns := routeNamespace
 	if ref.Namespace != nil {
 		ns = string(*ref.Namespace)
@@ -152,11 +159,16 @@ func getServiceAndPortFromRef(
 
 	svc, ok := services[svcNsName]
 	if !ok {
-		return nil, 0, field.NotFound(refPath.Child("name"), ref.Name)
+		return svcNsName, v1.ServicePort{}, field.NotFound(refPath.Child("name"), ref.Name)
 	}
 
-	// safe to dereference port here because we already validated that the port is not nil.
-	return svc, int32(*ref.Port), nil
+	// safe to dereference port here because we already validated that the port is not nil in validateBackendRef.
+	svcPort, err := getServicePort(svc, int32(*ref.Port))
+	if err != nil {
+		return svcNsName, v1.ServicePort{}, err
+	}
+
+	return svcNsName, svcPort, nil
 }
 
 func validateHTTPBackendRef(
@@ -232,4 +244,14 @@ func validateWeight(weight int32) error {
 	}
 
 	return nil
+}
+
+func getServicePort(svc *v1.Service, port int32) (v1.ServicePort, error) {
+	for _, p := range svc.Spec.Ports {
+		if p.Port == port {
+			return p, nil
+		}
+	}
+
+	return v1.ServicePort{}, fmt.Errorf("no matching port for Service %s and port %d", svc.Name, port)
 }

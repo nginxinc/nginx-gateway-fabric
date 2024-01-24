@@ -16,13 +16,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	v1 "sigs.k8s.io/gateway-api/apis/v1"
-	"sigs.k8s.io/gateway-api/apis/v1beta1"
-
 	gwapivalidation "sigs.k8s.io/gateway-api/apis/v1/validation"
+	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/gatewayclass"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/graph"
-	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/relationship"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/validation"
 )
 
@@ -31,6 +29,19 @@ const (
 		"by the Kubernetes API server and/or the Gateway API webhook validation (if installed) failed to reject " +
 		"the resource with the error; make sure Gateway API CRDs include CEL validation and/or (if installed) the " +
 		"webhook is running correctly."
+)
+
+// ChangeType is the type of change that occurred based on a k8s object event.
+type ChangeType int
+
+const (
+	// NoChange means that nothing changed.
+	NoChange ChangeType = iota
+	// EndpointsOnlyChange means that only the endpoints changed.
+	// If using NGINX Plus, this update can be done using the API without a reload.
+	EndpointsOnlyChange
+	// ClusterStateChange means that something other than endpoints changed. This requires an NGINX reload.
+	ClusterStateChange
 )
 
 //go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . ChangeProcessor
@@ -49,14 +60,12 @@ type ChangeProcessor interface {
 	// this ChangeProcessor was created for.
 	CaptureDeleteChange(resourceType client.Object, nsname types.NamespacedName)
 	// Process produces a graph-like representation of GatewayAPI resources.
-	// If no changes were captured, the changed return argument will be false and graph will be empty.
-	Process() (changed bool, graphCfg *graph.Graph)
+	// If no changes were captured, the changed return argument will be NoChange and graph will be empty.
+	Process() (changeType ChangeType, graphCfg *graph.Graph)
 }
 
 // ChangeProcessorConfig holds configuration parameters for ChangeProcessorImpl.
 type ChangeProcessorConfig struct {
-	// RelationshipCapturer captures relationships between Kubernetes API resources and Gateway API resources.
-	RelationshipCapturer relationship.Capturer
 	// Validators validate resources according to data-plane specific rules.
 	Validators validation.Validators
 	// EventRecorder records events for Kubernetes resources.
@@ -81,8 +90,8 @@ type ChangeProcessorImpl struct {
 	clusterState graph.ClusterState
 	// updater acts upon the cluster state.
 	updater Updater
-	// getAndResetClusterStateChanged tells if the cluster state has changed.
-	getAndResetClusterStateChanged func() bool
+	// getAndResetClusterStateChanged tells if and how the cluster state has changed.
+	getAndResetClusterStateChanged func() ChangeType
 
 	cfg  ChangeProcessorConfig
 	lock sync.Mutex
@@ -114,34 +123,32 @@ func NewChangeProcessorImpl(cfg ChangeProcessorConfig) *ChangeProcessorImpl {
 		clusterState: clusterStore,
 	}
 
-	isReferenced := func(obj client.Object) bool {
-		nsname := types.NamespacedName{Name: obj.GetName(), Namespace: obj.GetNamespace()}
+	isReferenced := func(obj client.Object, nsname types.NamespacedName) bool {
 		return processor.latestGraph != nil && processor.latestGraph.IsReferenced(obj, nsname)
 	}
 
 	trackingUpdater := newChangeTrackingUpdater(
-		cfg.RelationshipCapturer,
 		extractGVK,
 		[]changeTrackingUpdaterObjectTypeCfg{
 			{
 				gvk:       extractGVK(&v1.GatewayClass{}),
 				store:     newObjectStoreMapAdapter(clusterStore.GatewayClasses),
-				predicate: alwaysProcess{},
+				predicate: nil,
 			},
 			{
 				gvk:       extractGVK(&v1.Gateway{}),
 				store:     newObjectStoreMapAdapter(clusterStore.Gateways),
-				predicate: alwaysProcess{},
+				predicate: nil,
 			},
 			{
 				gvk:       extractGVK(&v1.HTTPRoute{}),
 				store:     newObjectStoreMapAdapter(clusterStore.HTTPRoutes),
-				predicate: alwaysProcess{},
+				predicate: nil,
 			},
 			{
 				gvk:       extractGVK(&v1beta1.ReferenceGrant{}),
 				store:     newObjectStoreMapAdapter(clusterStore.ReferenceGrants),
-				predicate: alwaysProcess{},
+				predicate: nil,
 			},
 			{
 				gvk:       extractGVK(&apiv1.Namespace{}),
@@ -151,12 +158,12 @@ func NewChangeProcessorImpl(cfg ChangeProcessorConfig) *ChangeProcessorImpl {
 			{
 				gvk:       extractGVK(&apiv1.Service{}),
 				store:     newObjectStoreMapAdapter(clusterStore.Services),
-				predicate: nil,
+				predicate: funcPredicate{stateChanged: isReferenced},
 			},
 			{
 				gvk:       extractGVK(&discoveryV1.EndpointSlice{}),
 				store:     nil,
-				predicate: nil,
+				predicate: funcPredicate{stateChanged: isReferenced},
 			},
 			{
 				gvk:       extractGVK(&apiv1.Secret{}),
@@ -230,12 +237,13 @@ func (c *ChangeProcessorImpl) CaptureDeleteChange(resourceType client.Object, ns
 	c.updater.Delete(resourceType, nsname)
 }
 
-func (c *ChangeProcessorImpl) Process() (bool, *graph.Graph) {
+func (c *ChangeProcessorImpl) Process() (ChangeType, *graph.Graph) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	if !c.getAndResetClusterStateChanged() {
-		return false, nil
+	changeType := c.getAndResetClusterStateChanged()
+	if changeType == NoChange {
+		return NoChange, nil
 	}
 
 	c.latestGraph = graph.BuildGraph(
@@ -246,5 +254,5 @@ func (c *ChangeProcessorImpl) Process() (bool, *graph.Graph) {
 		c.cfg.ProtectedPorts,
 	)
 
-	return true, c.latestGraph
+	return changeType, c.latestGraph
 }

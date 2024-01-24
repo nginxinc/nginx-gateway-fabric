@@ -62,7 +62,8 @@ func TestGenerate(t *testing.T) {
 	}
 	g := NewWithT(t)
 
-	generator := config.NewGeneratorImpl()
+	var plus bool
+	generator := config.NewGeneratorImpl(plus)
 
 	files := generator.Generate(conf)
 

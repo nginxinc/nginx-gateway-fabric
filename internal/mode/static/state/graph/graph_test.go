@@ -6,6 +6,7 @@ import (
 
 	. "github.com/onsi/gomega"
 	v1 "k8s.io/api/core/v1"
+	discoveryV1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
@@ -13,6 +14,7 @@ import (
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/controller/index"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/validation"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/validation/validationfakes"
@@ -88,23 +90,21 @@ func TestBuildGraph(t *testing.T) {
 	hr2 := createRoute("hr-2", "wrong-gateway", "listener-80-1")
 	hr3 := createRoute("hr-3", "gateway-1", "listener-443-1") // https listener; should not conflict with hr1
 
-	fooSvc := &v1.Service{ObjectMeta: metav1.ObjectMeta{Name: "foo", Namespace: "service"}}
-
 	hr1Refs := []BackendRef{
 		{
-			Svc:    fooSvc,
-			Port:   80,
-			Valid:  true,
-			Weight: 1,
+			SvcNsName:   types.NamespacedName{Namespace: "service", Name: "foo"},
+			ServicePort: v1.ServicePort{Port: 80},
+			Valid:       true,
+			Weight:      1,
 		},
 	}
 
 	hr3Refs := []BackendRef{
 		{
-			Svc:    fooSvc,
-			Port:   80,
-			Valid:  true,
-			Weight: 1,
+			SvcNsName:   types.NamespacedName{Namespace: "service", Name: "foo"},
+			ServicePort: v1.ServicePort{Port: 80},
+			Valid:       true,
+			Weight:      1,
 		},
 	}
 
@@ -179,7 +179,18 @@ func TestBuildGraph(t *testing.T) {
 	gw1 := createGateway("gateway-1")
 	gw2 := createGateway("gateway-2")
 
-	svc := &v1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: "service", Name: "foo"}}
+	svc := &v1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "service", Name: "foo",
+		},
+		Spec: v1.ServiceSpec{
+			Ports: []v1.ServicePort{
+				{
+					Port: 80,
+				},
+			},
+		},
+	}
 
 	rgSecret := &v1beta1.ReferenceGrant{
 		ObjectMeta: metav1.ObjectMeta{
@@ -336,6 +347,9 @@ func TestBuildGraph(t *testing.T) {
 			ReferencedNamespaces: map[types.NamespacedName]*v1.Namespace{
 				client.ObjectKeyFromObject(ns): ns,
 			},
+			ReferencedServices: map[types.NamespacedName]struct{}{
+				client.ObjectKeyFromObject(svc): {},
+			},
 		}
 	}
 
@@ -427,6 +441,39 @@ func TestIsReferenced(t *testing.T) {
 		},
 	}
 
+	serviceInGraph := &v1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "default",
+			Name:      "serviceInGraph",
+		},
+	}
+	serviceNotInGraph := &v1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "default",
+			Name:      "serviceNotInGraph",
+		},
+	}
+	serviceNotInGraphSameNameDifferentNS := &v1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "not-default",
+			Name:      "serviceInGraph",
+		},
+	}
+	emptyService := &v1.Service{}
+
+	createEndpointSlice := func(name string, svcName string) *discoveryV1.EndpointSlice {
+		return &discoveryV1.EndpointSlice{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: "default",
+				Name:      name,
+				Labels:    map[string]string{index.KubernetesServiceNameLabel: svcName},
+			},
+		}
+	}
+	endpointSliceInGraph := createEndpointSlice("endpointSliceInGraph", "serviceInGraph")
+	endpointSliceNotInGraph := createEndpointSlice("endpointSliceNotInGraph", "serviceNotInGraph")
+	emptyEndpointSlice := &discoveryV1.EndpointSlice{}
+
 	gw := &Gateway{
 		Listeners: []*Listener{
 			{
@@ -457,6 +504,9 @@ func TestIsReferenced(t *testing.T) {
 		ReferencedNamespaces: map[types.NamespacedName]*v1.Namespace{
 			client.ObjectKeyFromObject(nsInGraph): nsInGraph,
 		},
+		ReferencedServices: map[types.NamespacedName]struct{}{
+			client.ObjectKeyFromObject(serviceInGraph): {},
+		},
 	}
 
 	tests := []struct {
@@ -465,45 +515,97 @@ func TestIsReferenced(t *testing.T) {
 		name     string
 		expected bool
 	}{
+		// Namespace tests
 		{
-			name:     "Namespace in graph's ReferencedNamespaces passes",
+			name:     "Namespace in graph's ReferencedNamespaces is referenced",
 			resource: nsInGraph,
 			graph:    graph,
 			expected: true,
 		},
 		{
-			name:     "Namespace with a different name but same labels fails",
+			name:     "Namespace with a different name but same labels is not referenced",
 			resource: nsNotInGraph,
 			graph:    graph,
 			expected: false,
 		},
 		{
-			name:     "Namespace not in ReferencedNamespaces but in Gateway Listener's AllowedRouteLabelSelector passes",
+			name: "Namespace not in ReferencedNamespaces but in Gateway Listener's AllowedRouteLabelSelector" +
+				" is referenced",
 			resource: nsNotInGraphButInGateway,
 			graph:    graph,
 			expected: true,
 		},
+
+		// Secret tests
 		{
-			name:     "Secret in graph's ReferencedSecrets passes",
+			name:     "Secret in graph's ReferencedSecrets is referenced",
 			resource: baseSecret,
 			graph:    graph,
 			expected: true,
 		},
 		{
-			name:     "Secret not in ReferencedSecrets with same Namespace and different Name fails",
+			name:     "Secret not in ReferencedSecrets with same Namespace and different Name is not referenced",
 			resource: sameNamespaceDifferentNameSecret,
 			graph:    graph,
 			expected: false,
 		},
 		{
-			name:     "Secret not in ReferencedSecrets with different Namespace and same Name fails",
+			name:     "Secret not in ReferencedSecrets with different Namespace and same Name is not referenced",
 			resource: differentNamespaceSameNameSecret,
 			graph:    graph,
 			expected: false,
 		},
+
+		// Service tests
+		{
+			name:     "Service is referenced",
+			resource: serviceInGraph,
+			graph:    graph,
+			expected: true,
+		},
+		{
+			name:     "Service is not referenced",
+			resource: serviceNotInGraph,
+			graph:    graph,
+			expected: false,
+		},
+		{
+			name:     "Service with same name but different namespace is not referenced",
+			resource: serviceNotInGraphSameNameDifferentNS,
+			graph:    graph,
+			expected: false,
+		},
+		{
+			name:     "Empty Service",
+			resource: emptyService,
+			graph:    graph,
+			expected: false,
+		},
+
+		// EndpointSlice tests
+		{
+			name:     "EndpointSlice with Service owner in graph's ReferencedServices is referenced",
+			resource: endpointSliceInGraph,
+			graph:    graph,
+			expected: true,
+		},
+		{
+			name:     "EndpointSlice with Service owner not in graph's ReferencedServices is not referenced",
+			resource: endpointSliceNotInGraph,
+			graph:    graph,
+			expected: false,
+		},
+		{
+			name:     "Empty EndpointSlice",
+			resource: emptyEndpointSlice,
+			graph:    graph,
+			expected: false,
+		},
+
+		// Edge cases
 		{
 			name:     "Resource is not supported by IsReferenced",
-			resource: &v1.Service{},
+			resource: &gatewayv1.HTTPRoute{},
 			graph:    graph,
 			expected: false,
 		},

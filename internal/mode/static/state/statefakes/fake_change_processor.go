@@ -22,16 +22,16 @@ type FakeChangeProcessor struct {
 	captureUpsertChangeArgsForCall []struct {
 		arg1 client.Object
 	}
-	ProcessStub        func() (bool, *graph.Graph)
+	ProcessStub        func() (state.ChangeType, *graph.Graph)
 	processMutex       sync.RWMutex
 	processArgsForCall []struct {
 	}
 	processReturns struct {
-		result1 bool
+		result1 state.ChangeType
 		result2 *graph.Graph
 	}
 	processReturnsOnCall map[int]struct {
-		result1 bool
+		result1 state.ChangeType
 		result2 *graph.Graph
 	}
 	invocations      map[string][][]interface{}
@@ -103,7 +103,7 @@ func (fake *FakeChangeProcessor) CaptureUpsertChangeArgsForCall(i int) client.Ob
 	return argsForCall.arg1
 }
 
-func (fake *FakeChangeProcessor) Process() (bool, *graph.Graph) {
+func (fake *FakeChangeProcessor) Process() (state.ChangeType, *graph.Graph) {
 	fake.processMutex.Lock()
 	ret, specificReturn := fake.processReturnsOnCall[len(fake.processArgsForCall)]
 	fake.processArgsForCall = append(fake.processArgsForCall, struct {
@@ -127,34 +127,34 @@ func (fake *FakeChangeProcessor) ProcessCallCount() int {
 	return len(fake.processArgsForCall)
 }
 
-func (fake *FakeChangeProcessor) ProcessCalls(stub func() (bool, *graph.Graph)) {
+func (fake *FakeChangeProcessor) ProcessCalls(stub func() (state.ChangeType, *graph.Graph)) {
 	fake.processMutex.Lock()
 	defer fake.processMutex.Unlock()
 	fake.ProcessStub = stub
 }
 
-func (fake *FakeChangeProcessor) ProcessReturns(result1 bool, result2 *graph.Graph) {
+func (fake *FakeChangeProcessor) ProcessReturns(result1 state.ChangeType, result2 *graph.Graph) {
 	fake.processMutex.Lock()
 	defer fake.processMutex.Unlock()
 	fake.ProcessStub = nil
 	fake.processReturns = struct {
-		result1 bool
+		result1 state.ChangeType
 		result2 *graph.Graph
 	}{result1, result2}
 }
 
-func (fake *FakeChangeProcessor) ProcessReturnsOnCall(i int, result1 bool, result2 *graph.Graph) {
+func (fake *FakeChangeProcessor) ProcessReturnsOnCall(i int, result1 state.ChangeType, result2 *graph.Graph) {
 	fake.processMutex.Lock()
 	defer fake.processMutex.Unlock()
 	fake.ProcessStub = nil
 	if fake.processReturnsOnCall == nil {
 		fake.processReturnsOnCall = make(map[int]struct {
-			result1 bool
+			result1 state.ChangeType
 			result2 *graph.Graph
 		})
 	}
 	fake.processReturnsOnCall[i] = struct {
-		result1 bool
+		result1 state.ChangeType
 		result2 *graph.Graph
 	}{result1, result2}
 }

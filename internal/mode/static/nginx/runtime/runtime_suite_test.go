@@ -1,4 +1,4 @@
-package relationship_test
+package runtime_test
 
 import (
 	"testing"
@@ -7,7 +7,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestRelationships(t *testing.T) {
+func TestRuntime(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Relationships Suite")
+	RunSpecs(t, "Runtime Suite")
 }

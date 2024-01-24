@@ -98,6 +98,10 @@ The previous diagram depicts NGINX Gateway Fabric using NGINX Open Source. NGINX
 
 - An _admin_ can connect to the NGINX Plus API using port 8765. NGINX only allows connections from localhost.
 
+## Updating upstream servers
+
+The normal process to update any changes to NGINX is to write the configuration files and reload NGINX. However, when using NGINX Plus, we can take advantage of the [NGINX Plus API](http://nginx.org/en/docs/http/ngx_http_api_module.html) to limit the amount of reloads triggered when making changes to NGINX. Specifically, when the endpoints of an application in Kubernetes change (Such as scaling up or down), the NGINX Plus API is used to update the upstream servers in NGINX with the new endpoints without a reload. This reduces the potential for a disruption that could occur when reloading.
+
 ## Pod readiness
 
 The `nginx-gateway` container includes a readiness endpoint available through the path `/readyz`. A [readiness probe](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-readiness-probes) periodically checks the endpoint on startup, returning a `200 OK` response when the pod can accept traffic for the data plane. Once the control plane successfully starts, the pod becomes ready.

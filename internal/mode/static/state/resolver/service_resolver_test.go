@@ -9,6 +9,7 @@ import (
 	discoveryV1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -87,7 +88,6 @@ func createFakeK8sClient(initObjs ...client.Object) (client.Client, error) {
 
 var _ = Describe("ServiceResolver", func() {
 	httpPortName := "http-svc-port"
-	httpsPortName := "https-svc-port"
 
 	var (
 		addresses1        = []string{"9.0.0.1", "9.0.0.2"}
@@ -96,33 +96,19 @@ var _ = Describe("ServiceResolver", func() {
 		diffPortAddresses = []string{"11.0.0.1", "11.0.0.2"}
 		dupeAddresses     = []string{"9.0.0.1", "12.0.0.1", "9.0.0.2"}
 
-		svc = &v1.Service{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: "test",
-				Name:      "svc",
+		svcPort = v1.ServicePort{
+			Name: httpPortName,
+			Port: 80,
+			TargetPort: intstr.IntOrString{
+				Type:   intstr.Int,
+				IntVal: 8080,
 			},
-			Spec: v1.ServiceSpec{
-				Ports: []v1.ServicePort{
-					{
-						Name: httpPortName,
-						Port: 80,
-						TargetPort: intstr.IntOrString{
-							Type:   intstr.Int,
-							IntVal: 8080,
-						},
-						Protocol: v1.ProtocolTCP,
-					},
-					{
-						Name: httpsPortName,
-						Port: 443,
-						TargetPort: intstr.IntOrString{
-							Type:   intstr.String,
-							StrVal: "target-port",
-						},
-						Protocol: v1.ProtocolTCP,
-					},
-				},
-			},
+			Protocol: v1.ProtocolTCP,
+		}
+
+		svcNsName = types.NamespacedName{
+			Namespace: "test",
+			Name:      "svc",
 		}
 
 		slice1 = createSlice(
@@ -212,14 +198,9 @@ var _ = Describe("ServiceResolver", func() {
 				},
 			}
 
-			endpoints, err := serviceResolver.Resolve(context.TODO(), svc, 80)
+			endpoints, err := serviceResolver.Resolve(context.TODO(), svcNsName, svcPort)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(endpoints).To(ConsistOf(expectedEndpoints))
-		})
-		It("returns an error if port does not exist in service", func() {
-			endpoints, err := serviceResolver.Resolve(context.TODO(), svc, 8080) // service port does not exist
-			Expect(err).To(HaveOccurred())
-			Expect(endpoints).To(BeNil())
 		})
 		It("returns an error if there are no valid endpoint slices for the service and port", func() {
 			// delete valid endpoint slices
@@ -227,7 +208,7 @@ var _ = Describe("ServiceResolver", func() {
 			Expect(fakeK8sClient.Delete(context.TODO(), slice2)).To(Succeed())
 			Expect(fakeK8sClient.Delete(context.TODO(), dupeEndpointSlice)).To(Succeed())
 
-			endpoints, err := serviceResolver.Resolve(context.TODO(), svc, 80)
+			endpoints, err := serviceResolver.Resolve(context.TODO(), svcNsName, svcPort)
 			Expect(err).To(HaveOccurred())
 			Expect(endpoints).To(BeNil())
 		})
@@ -236,14 +217,21 @@ var _ = Describe("ServiceResolver", func() {
 			Expect(fakeK8sClient.Delete(context.TODO(), sliceIPV6)).To(Succeed())
 			Expect(fakeK8sClient.Delete(context.TODO(), sliceNoMatchingPortName)).To(Succeed())
 
-			endpoints, err := serviceResolver.Resolve(context.TODO(), svc, 80)
+			endpoints, err := serviceResolver.Resolve(context.TODO(), svcNsName, svcPort)
 			Expect(err).To(HaveOccurred())
 			Expect(endpoints).To(BeNil())
 		})
-		It("returns an error if the service is nil", func() {
-			endpoints, err := serviceResolver.Resolve(context.TODO(), nil, 80)
-			Expect(err).To(HaveOccurred())
-			Expect(endpoints).To(BeNil())
+		It("panics if the service NamespacedName is empty", func() {
+			resolve := func() {
+				_, _ = serviceResolver.Resolve(context.TODO(), types.NamespacedName{}, svcPort)
+			}
+			Expect(resolve).Should(Panic())
+		})
+		It("panics if the ServicePort is empty", func() {
+			resolve := func() {
+				_, _ = serviceResolver.Resolve(context.TODO(), types.NamespacedName{}, v1.ServicePort{})
+			}
+			Expect(resolve).Should(Panic())
 		})
 	})
 })

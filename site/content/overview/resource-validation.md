@@ -1,6 +1,6 @@
 ---
 title: "Resource Validation"
-weight: 800
+weight: 400
 toc: true
 docs: "DOCS-000"
 ---

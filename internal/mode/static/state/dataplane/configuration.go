@@ -402,7 +402,7 @@ func buildUpstreams(
 
 						var errMsg string
 
-						eps, err := resolver.Resolve(ctx, br.Svc, br.Port)
+						eps, err := resolver.Resolve(ctx, br.SvcNsName, br.ServicePort)
 						if err != nil {
 							errMsg = err.Error()
 						}

@@ -7,15 +7,16 @@ import (
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/resolver"
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 type FakeServiceResolver struct {
-	ResolveStub        func(context.Context, *v1.Service, int32) ([]resolver.Endpoint, error)
+	ResolveStub        func(context.Context, types.NamespacedName, v1.ServicePort) ([]resolver.Endpoint, error)
 	resolveMutex       sync.RWMutex
 	resolveArgsForCall []struct {
 		arg1 context.Context
-		arg2 *v1.Service
-		arg3 int32
+		arg2 types.NamespacedName
+		arg3 v1.ServicePort
 	}
 	resolveReturns struct {
 		result1 []resolver.Endpoint
@@ -29,13 +30,13 @@ type FakeServiceResolver struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeServiceResolver) Resolve(arg1 context.Context, arg2 *v1.Service, arg3 int32) ([]resolver.Endpoint, error) {
+func (fake *FakeServiceResolver) Resolve(arg1 context.Context, arg2 types.NamespacedName, arg3 v1.ServicePort) ([]resolver.Endpoint, error) {
 	fake.resolveMutex.Lock()
 	ret, specificReturn := fake.resolveReturnsOnCall[len(fake.resolveArgsForCall)]
 	fake.resolveArgsForCall = append(fake.resolveArgsForCall, struct {
 		arg1 context.Context
-		arg2 *v1.Service
-		arg3 int32
+		arg2 types.NamespacedName
+		arg3 v1.ServicePort
 	}{arg1, arg2, arg3})
 	stub := fake.ResolveStub
 	fakeReturns := fake.resolveReturns
@@ -56,13 +57,13 @@ func (fake *FakeServiceResolver) ResolveCallCount() int {
 	return len(fake.resolveArgsForCall)
 }
 
-func (fake *FakeServiceResolver) ResolveCalls(stub func(context.Context, *v1.Service, int32) ([]resolver.Endpoint, error)) {
+func (fake *FakeServiceResolver) ResolveCalls(stub func(context.Context, types.NamespacedName, v1.ServicePort) ([]resolver.Endpoint, error)) {
 	fake.resolveMutex.Lock()
 	defer fake.resolveMutex.Unlock()
 	fake.ResolveStub = stub
 }
 
-func (fake *FakeServiceResolver) ResolveArgsForCall(i int) (context.Context, *v1.Service, int32) {
+func (fake *FakeServiceResolver) ResolveArgsForCall(i int) (context.Context, types.NamespacedName, v1.ServicePort) {
 	fake.resolveMutex.RLock()
 	defer fake.resolveMutex.RUnlock()
 	argsForCall := fake.resolveArgsForCall[i]

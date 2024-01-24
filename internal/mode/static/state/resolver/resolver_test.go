@@ -7,6 +7,7 @@ import (
 	. "github.com/onsi/gomega"
 	v1 "k8s.io/api/core/v1"
 	discoveryV1 "k8s.io/api/discovery/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
@@ -103,37 +104,6 @@ func TestFilterEndpointSliceList(t *testing.T) {
 	filteredSliceList := filterEndpointSliceList(sliceList, svcPort)
 	g := NewWithT(t)
 	g.Expect(filteredSliceList).To(Equal(expFilteredList))
-}
-
-func TestGetServicePort(t *testing.T) {
-	svc := &v1.Service{
-		Spec: v1.ServiceSpec{
-			Ports: []v1.ServicePort{
-				{
-					Port: 80,
-				},
-				{
-					Port: 81,
-				},
-				{
-					Port: 82,
-				},
-			},
-		},
-	}
-
-	g := NewWithT(t)
-	// ports exist
-	for _, p := range []int32{80, 81, 82} {
-		port, err := getServicePort(svc, p)
-		g.Expect(err).ToNot(HaveOccurred())
-		g.Expect(port.Port).To(Equal(p))
-	}
-
-	// port doesn't exist
-	port, err := getServicePort(svc, 83)
-	g.Expect(err).Should(HaveOccurred())
-	g.Expect(port.Port).To(Equal(int32(0)))
 }
 
 func TestGetDefaultPort(t *testing.T) {
@@ -546,14 +516,9 @@ func BenchmarkResolve(b *testing.B) {
 		1000,
 	}
 
-	svc := &v1.Service{
-		Spec: v1.ServiceSpec{
-			Ports: []v1.ServicePort{
-				{
-					Port: 80,
-				},
-			},
-		},
+	svcNsName := types.NamespacedName{
+		Namespace: "default",
+		Name:      "default-name",
 	}
 
 	initEndpointSet := func([]discoveryV1.EndpointSlice) map[Endpoint]struct{} {
@@ -564,17 +529,19 @@ func BenchmarkResolve(b *testing.B) {
 		list := generateEndpointSliceList(count)
 
 		b.Run(fmt.Sprintf("%d endpoints", count), func(b *testing.B) {
-			bench(b, svc, list, initEndpointSet, count)
+			bench(b, svcNsName, list, initEndpointSet, count)
 		})
 		b.Run(fmt.Sprintf("%d endpoints with optimization", count), func(b *testing.B) {
-			bench(b, svc, list, initEndpointSetWithCalculatedSize, count)
+			bench(b, svcNsName, list, initEndpointSetWithCalculatedSize, count)
 		})
 	}
 }
 
-func bench(b *testing.B, svc *v1.Service, list discoveryV1.EndpointSliceList, initSet initEndpointSetFunc, n int) {
+func bench(b *testing.B, svcNsName types.NamespacedName,
+	list discoveryV1.EndpointSliceList, initSet initEndpointSetFunc, n int,
+) {
 	for i := 0; i < b.N; i++ {
-		res, err := resolveEndpoints(svc, 80, list, initSet)
+		res, err := resolveEndpoints(svcNsName, v1.ServicePort{Port: 80}, list, initSet)
 		if len(res) != n {
 			b.Fatalf("expected %d endpoints, got %d", n, len(res))
 		}
