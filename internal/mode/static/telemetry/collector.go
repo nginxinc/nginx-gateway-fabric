@@ -38,25 +38,25 @@ type Data struct {
 }
 
 type DataCollectorImpl struct {
-	k8sClient   client.Client
-	graphGetter GraphGetter
-	version     string
+	k8sClientReader client.Reader
+	graphGetter     GraphGetter
+	version         string
 }
 
 func NewDataCollector(
-	k8sClient client.Client,
+	k8sClientReader client.Reader,
 	graphGetter GraphGetter,
 	version string,
 ) *DataCollectorImpl {
 	return &DataCollectorImpl{
-		k8sClient:   k8sClient,
-		graphGetter: graphGetter,
-		version:     version,
+		k8sClientReader: k8sClientReader,
+		graphGetter:     graphGetter,
+		version:         version,
 	}
 }
 
 func (c DataCollectorImpl) Collect(ctx context.Context) Data {
-	nodeCount := collectNodeCount(ctx, c.k8sClient)
+	nodeCount := collectNodeCount(ctx, c.k8sClientReader)
 	graphResourceCount := collectGraphResourceCount(c.graphGetter)
 
 	data := Data{
@@ -71,7 +71,7 @@ func (c DataCollectorImpl) Collect(ctx context.Context) Data {
 	return data
 }
 
-func collectNodeCount(ctx context.Context, k8sClient client.Client) int {
+func collectNodeCount(ctx context.Context, k8sClient client.Reader) int {
 	nodes := &v1.NodeList{}
 	_ = k8sClient.List(ctx, nodes)
 	return len(nodes.Items)
