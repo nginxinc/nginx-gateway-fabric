@@ -43,11 +43,13 @@ type Generator interface {
 //
 // It also expects that the main NGINX configuration file nginx.conf is located in configFolder and nginx.conf
 // includes (https://nginx.org/en/docs/ngx_core_module.html#include) the files from httpFolder.
-type GeneratorImpl struct{}
+type GeneratorImpl struct {
+	plus bool
+}
 
 // NewGeneratorImpl creates a new GeneratorImpl.
-func NewGeneratorImpl() GeneratorImpl {
-	return GeneratorImpl{}
+func NewGeneratorImpl(plus bool) GeneratorImpl {
+	return GeneratorImpl{plus: plus}
 }
 
 // executeFunc is a function that generates NGINX configuration from internal representation.
@@ -64,7 +66,7 @@ func (g GeneratorImpl) Generate(conf dataplane.Configuration) []file.File {
 		files = append(files, generatePEM(id, pair.Cert, pair.Key))
 	}
 
-	files = append(files, generateHTTPConfig(conf))
+	files = append(files, g.generateHTTPConfig(conf))
 
 	files = append(files, generateConfigVersion(conf.Version))
 
@@ -88,9 +90,9 @@ func generatePEMFileName(id dataplane.SSLKeyPairID) string {
 	return filepath.Join(secretsFolder, string(id)+".pem")
 }
 
-func generateHTTPConfig(conf dataplane.Configuration) file.File {
+func (g GeneratorImpl) generateHTTPConfig(conf dataplane.Configuration) file.File {
 	var c []byte
-	for _, execute := range getExecuteFuncs() {
+	for _, execute := range g.getExecuteFuncs() {
 		c = append(c, execute(conf)...)
 	}
 
@@ -101,9 +103,9 @@ func generateHTTPConfig(conf dataplane.Configuration) file.File {
 	}
 }
 
-func getExecuteFuncs() []executeFunc {
+func (g GeneratorImpl) getExecuteFuncs() []executeFunc {
 	return []executeFunc{
-		executeUpstreams,
+		g.executeUpstreams,
 		executeSplitClients,
 		executeServers,
 		executeMaps,
