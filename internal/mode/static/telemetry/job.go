@@ -9,6 +9,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
+//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . DataCollector
+
 // DataCollector collects telemetry data.
 type DataCollector interface {
 	Collect(ctx context.Context) (Data, error)

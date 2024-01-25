@@ -4,10 +4,13 @@ import (
 	"context"
 
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/graph"
 )
+
+//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . GraphGetter
 
 type GraphGetter interface {
 	GetLatestGraph() *graph.Graph
@@ -97,9 +100,19 @@ func collectGraphResourceCount(graphGetter GraphGetter) NGFResourceCounts {
 		ngfResourceCounts.Gateways = 1
 	}
 	ngfResourceCounts.HTTPRoutes = len(g.Routes)
-	ngfResourceCounts.Secrets = len(g.ReferencedSecrets)
-	// WIP: ReferencedServices may contain non-existing services
-	ngfResourceCounts.Services = len(g.ReferencedServices)
+	ngfResourceCounts.Secrets = countReferencedResources(g.ReferencedSecrets)
+	ngfResourceCounts.Services = countReferencedResources(g.ReferencedServices)
 
 	return ngfResourceCounts
+}
+
+func countReferencedResources[T comparable](referencedMap map[types.NamespacedName]T) int {
+	var count int
+	var zeroValue T
+	for name := range referencedMap {
+		if referencedMap[name] != zeroValue {
+			count++
+		}
+	}
+	return count
 }

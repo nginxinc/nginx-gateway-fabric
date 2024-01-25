@@ -347,8 +347,8 @@ func TestBuildGraph(t *testing.T) {
 			ReferencedNamespaces: map[types.NamespacedName]*v1.Namespace{
 				client.ObjectKeyFromObject(ns): ns,
 			},
-			ReferencedServices: map[types.NamespacedName]struct{}{
-				client.ObjectKeyFromObject(svc): {},
+			ReferencedServices: map[types.NamespacedName]*v1.Service{
+				client.ObjectKeyFromObject(svc): svc,
 			},
 		}
 	}
@@ -504,8 +504,8 @@ func TestIsReferenced(t *testing.T) {
 		ReferencedNamespaces: map[types.NamespacedName]*v1.Namespace{
 			client.ObjectKeyFromObject(nsInGraph): nsInGraph,
 		},
-		ReferencedServices: map[types.NamespacedName]struct{}{
-			client.ObjectKeyFromObject(serviceInGraph): {},
+		ReferencedServices: map[types.NamespacedName]*v1.Service{
+			client.ObjectKeyFromObject(serviceInGraph): serviceInGraph,
 		},
 	}
 

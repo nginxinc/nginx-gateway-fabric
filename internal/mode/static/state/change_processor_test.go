@@ -507,11 +507,11 @@ var _ = Describe("ChangeProcessor", func() {
 						{Namespace: "test", Name: "hr-1"}: expRouteHR1,
 					},
 					ReferencedSecrets: map[types.NamespacedName]*graph.Secret{},
-					ReferencedServices: map[types.NamespacedName]struct{}{
+					ReferencedServices: map[types.NamespacedName]*apiv1.Service{
 						{
 							Namespace: "service-ns",
 							Name:      "service",
-						}: {},
+						}: nil,
 					},
 				}
 			})
