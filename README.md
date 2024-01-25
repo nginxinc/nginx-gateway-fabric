@@ -118,6 +118,16 @@ channel.
 
 [slack]: https://nginxcommunity.slack.com/channels/nginx-gateway-fabric
 
+## Community Meetings
+
+Every Monday at 9AM Pacific / 5PM GMT
+
+For the meeting link, updates, agenda, and meeting notes, check the calendar below:
+
+[NGINX Gateway Fabric Meeting Calendar](https://calendar.google.com/calendar/embed?src=a82aa06dc698b4271fb562d43f38e5bf7676585e581057bde026ddd1c71f84e9%40group.calendar.google.com)
+
+If you have a use case for Gateway Fabric that the project can't quite meet yet, bugs, problems, success stories, or just want to be more involved with the project, come by and say hi! 
+
 ## Contributing
 
 Please read our [Contributing guide](CONTRIBUTING.md) if you'd like to contribute to the project.
