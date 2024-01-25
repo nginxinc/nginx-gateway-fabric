@@ -126,7 +126,7 @@ For the meeting link, updates, agenda, and meeting notes, check the calendar bel
 
 [NGINX Gateway Fabric Meeting Calendar](https://calendar.google.com/calendar/embed?src=a82aa06dc698b4271fb562d43f38e5bf7676585e581057bde026ddd1c71f84e9%40group.calendar.google.com)
 
-If you have a use case for Gateway Fabric that the project can't quite meet yet, bugs, problems, success stories, or just want to be more involved with the project, come by and say hi! 
+If you have a use case for Gateway Fabric that the project can't quite meet yet, bugs, problems, success stories, or just want to be more involved with the project, come by and say hi!
 
 ## Contributing
 
