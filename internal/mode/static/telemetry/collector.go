@@ -9,15 +9,11 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/graph"
 )
 
-type DataCollector interface {
-	Collect(ctx context.Context) Data
-}
-
 type GraphGetter interface {
 	GetLatestGraph() *graph.Graph
 }
 
-type GraphResourceCount struct {
+type NGFResourceCounts struct {
 	Gateways       int
 	GatewayClasses int
 	HTTPRoutes     int
@@ -35,64 +31,75 @@ type ProjectMetadata struct {
 // Data is telemetry data.
 // Note: this type might change once https://github.com/nginxinc/nginx-gateway-fabric/issues/1318 is implemented.
 type Data struct {
-	ProjectMetadata    ProjectMetadata
-	NodeCount          int
-	GraphResourceCount GraphResourceCount
+	ProjectMetadata   ProjectMetadata
+	NodeCount         int
+	NGFResourceCounts NGFResourceCounts
+}
+
+// DataCollectorConfig holds configuration parameters for DataCollectorImpl.
+type DataCollectorConfig struct {
+	// K8sClientReader is a Kubernetes API client Reader.
+	K8sClientReader client.Reader
+	// GraphGetter allows us to get the Graph.
+	GraphGetter GraphGetter
+	// Version is the NGF version.
+	Version string
 }
 
 type DataCollectorImpl struct {
-	k8sClientReader client.Reader
-	graphGetter     GraphGetter
-	version         string
+	cfg DataCollectorConfig
 }
 
 func NewDataCollector(
-	k8sClientReader client.Reader,
-	graphGetter GraphGetter,
-	version string,
+	cfg DataCollectorConfig,
 ) *DataCollectorImpl {
 	return &DataCollectorImpl{
-		k8sClientReader: k8sClientReader,
-		graphGetter:     graphGetter,
-		version:         version,
+		cfg: cfg,
 	}
 }
 
-func (c DataCollectorImpl) Collect(ctx context.Context) Data {
-	nodeCount := collectNodeCount(ctx, c.k8sClientReader)
-	graphResourceCount := collectGraphResourceCount(c.graphGetter)
+func (c DataCollectorImpl) Collect(ctx context.Context) (Data, error) {
+	nodeCount, err := collectNodeCount(ctx, c.cfg.K8sClientReader)
+	if err != nil {
+		return Data{}, err
+	}
+	graphResourceCount := collectGraphResourceCount(c.cfg.GraphGetter)
 
 	data := Data{
-		NodeCount:          nodeCount,
-		GraphResourceCount: graphResourceCount,
+		NodeCount:         nodeCount,
+		NGFResourceCounts: graphResourceCount,
 		ProjectMetadata: ProjectMetadata{
 			Name:    "NGF",
-			Version: c.version,
+			Version: c.cfg.Version,
 		},
 	}
 
-	return data
+	return data, nil
 }
 
-func collectNodeCount(ctx context.Context, k8sClient client.Reader) int {
+func collectNodeCount(ctx context.Context, k8sClient client.Reader) (int, error) {
 	nodes := v1.NodeList{}
-	_ = k8sClient.List(ctx, &nodes)
-	return len(nodes.Items)
+	if err := k8sClient.List(ctx, &nodes); err != nil {
+		return 0, err
+	}
+
+	return len(nodes.Items), nil
 }
 
-func collectGraphResourceCount(graphGetter GraphGetter) GraphResourceCount {
-	graphResourceCount := GraphResourceCount{}
+func collectGraphResourceCount(graphGetter GraphGetter) NGFResourceCounts {
+	ngfResourceCounts := NGFResourceCounts{}
 	g := graphGetter.GetLatestGraph()
 
 	if g.GatewayClass != nil {
-		graphResourceCount.GatewayClasses = 1
+		ngfResourceCounts.GatewayClasses = 1
 	}
 	if g.Gateway != nil {
-		graphResourceCount.Gateways = 1
+		ngfResourceCounts.Gateways = 1
 	}
-	graphResourceCount.HTTPRoutes = len(g.Routes)
-	graphResourceCount.Secrets = len(g.ReferencedSecrets)
-	graphResourceCount.Services = len(g.ReferencedServices)
+	ngfResourceCounts.HTTPRoutes = len(g.Routes)
+	ngfResourceCounts.Secrets = len(g.ReferencedSecrets)
+	// WIP: ReferencedServices may contain non-existing services
+	ngfResourceCounts.Services = len(g.ReferencedServices)
 
-	return graphResourceCount
+	return ngfResourceCounts
 }

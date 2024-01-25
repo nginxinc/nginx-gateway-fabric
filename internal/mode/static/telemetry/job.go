@@ -9,11 +9,16 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
+// DataCollector collects telemetry data.
+type DataCollector interface {
+	Collect(ctx context.Context) (Data, error)
+}
+
 // JobConfig is the configuration for the telemetry job.
 type JobConfig struct {
 	// Exporter is the exporter to use for exporting telemetry data.
 	Exporter Exporter
-	// Collector is the collector to use for collecting telemetry data.
+	// DataCollector is the collector to use for collecting telemetry data.
 	DataCollector DataCollector
 	// Logger is the logger.
 	Logger logr.Logger
@@ -43,7 +48,10 @@ func (j *Job) Start(ctx context.Context) error {
 		j.cfg.Logger.V(1).Info("Gathering telemetry")
 
 		// We will need to gather data as defined in https://github.com/nginxinc/nginx-gateway-fabric/issues/793
-		data := j.cfg.DataCollector.Collect(ctx)
+		data, err := j.cfg.DataCollector.Collect(ctx)
+		if err != nil {
+			j.cfg.Logger.Error(err, "Failed to collect telemetry")
+		}
 
 		// Export telemetry
 		j.cfg.Logger.V(1).Info("Exporting telemetry")
