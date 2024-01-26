@@ -31,6 +31,7 @@ var _ = Describe("Collector", Ordered, func() {
 	BeforeAll(func() {
 		ctx = context.Background()
 		version = "1.1"
+
 		k8sClientReader = &eventsfakes.FakeReader{}
 		fakeGraphGetter = &telemetryfakes.FakeGraphGetter{}
 		fakeGraphGetter.GetLatestGraphReturns(&graph.Graph{})
@@ -101,12 +102,15 @@ var _ = Describe("Collector", Ordered, func() {
 				}
 				return nil
 			})
-			data, err := dataCollector.Collect(ctx)
+
 			expData := telemetry.Data{
 				ProjectMetadata:   telemetry.ProjectMetadata{Name: "NGF", Version: version},
 				NodeCount:         0,
 				NGFResourceCounts: telemetry.NGFResourceCounts{},
 			}
+
+			data, err := dataCollector.Collect(ctx)
+
 			Expect(err).To(BeNil())
 			Expect(expData).To(Equal(data))
 		})
@@ -126,12 +130,15 @@ var _ = Describe("Collector", Ordered, func() {
 				}
 				return nil
 			})
-			data, err := dataCollector.Collect(ctx)
+
 			expData := telemetry.Data{
 				ProjectMetadata:   telemetry.ProjectMetadata{Name: "NGF", Version: version},
 				NodeCount:         1,
 				NGFResourceCounts: telemetry.NGFResourceCounts{},
 			}
+
+			data, err := dataCollector.Collect(ctx)
+
 			Expect(err).To(BeNil())
 			Expect(expData).To(Equal(data))
 		})
@@ -145,6 +152,7 @@ var _ = Describe("Collector", Ordered, func() {
 			node3 := v1.Node{
 				ObjectMeta: metav1.ObjectMeta{Name: "node3"},
 			}
+
 			k8sClientReader.ListCalls(func(ctx context.Context, list client.ObjectList, option ...client.ListOption) error {
 				Expect(option).To(BeEmpty())
 
@@ -156,21 +164,23 @@ var _ = Describe("Collector", Ordered, func() {
 				}
 				return nil
 			})
-			data, err := dataCollector.Collect(ctx)
+
 			expData := telemetry.Data{
 				ProjectMetadata:   telemetry.ProjectMetadata{Name: "NGF", Version: version},
 				NodeCount:         3,
 				NGFResourceCounts: telemetry.NGFResourceCounts{},
 			}
+
+			data, err := dataCollector.Collect(ctx)
+
 			Expect(err).To(BeNil())
 			Expect(expData).To(Equal(data))
 		})
 	})
 	When("retrieving NGF resource counts", func() {
-		// TODO: Fix this
-		It("generates correct data for one resources", func() {
+		It("generates correct data for graph with one of each resource", func() {
 			fakeGraphGetter.GetLatestGraphReturns(graph1)
-			data, err := dataCollector.Collect(ctx)
+
 			expData := telemetry.Data{
 				ProjectMetadata: telemetry.ProjectMetadata{Name: "NGF", Version: version},
 				NodeCount:       3,
@@ -182,12 +192,15 @@ var _ = Describe("Collector", Ordered, func() {
 					Services:       1,
 				},
 			}
+
+			data, err := dataCollector.Collect(ctx)
+
 			Expect(err).To(BeNil())
 			Expect(expData).To(Equal(data))
 		})
-		It("generates correct data for multiple resources", func() {
+		It("generates correct data for graph with multiple of each resource", func() {
 			fakeGraphGetter.GetLatestGraphReturns(graph2)
-			data, err := dataCollector.Collect(ctx)
+
 			expData := telemetry.Data{
 				ProjectMetadata: telemetry.ProjectMetadata{Name: "NGF", Version: version},
 				NodeCount:       3,
@@ -199,6 +212,9 @@ var _ = Describe("Collector", Ordered, func() {
 					Services:       2,
 				},
 			}
+
+			data, err := dataCollector.Collect(ctx)
+
 			Expect(err).To(BeNil())
 			Expect(expData).To(Equal(data))
 		})
@@ -206,7 +222,7 @@ var _ = Describe("Collector", Ordered, func() {
 	When("it encounters an error while collecting data", func() {
 		It("should error on client errors", func() {
 			k8sClientReader.ListReturns(errors.New("there was an error"))
-			ctx := context.Background()
+
 			_, err := dataCollector.Collect(ctx)
 			Expect(err).To(HaveOccurred())
 		})
