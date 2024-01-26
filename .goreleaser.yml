@@ -66,3 +66,4 @@ release:
   extra_files:
     - glob: ./build/out/crds.yaml
     - glob: ./deploy/manifests/nginx-gateway.yaml
+    - glob: ./deploy/manifests/nginx-plus-gateway.yaml

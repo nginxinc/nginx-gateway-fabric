@@ -10,7 +10,6 @@ import (
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
-	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -111,7 +110,7 @@ var _ = Describe("Collector", Ordered, func() {
 
 		kubeNamespace = &v1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: meta.NamespaceSystem,
+				Name: metav1.NamespaceSystem,
 				UID:  "test-uid",
 			},
 		}

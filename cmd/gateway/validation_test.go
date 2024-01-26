@@ -255,6 +255,130 @@ func TestParseNamespacedResourceName(t *testing.T) {
 	}
 }
 
+func TestValidateQualifiedName(t *testing.T) {
+	tests := []struct {
+		name   string
+		value  string
+		expErr bool
+	}{
+		{
+			name:   "valid",
+			value:  "myName",
+			expErr: false,
+		},
+		{
+			name:   "valid with hyphen",
+			value:  "my-name",
+			expErr: false,
+		},
+		{
+			name:   "valid with numbers",
+			value:  "myName123",
+			expErr: false,
+		},
+		{
+			name:   "valid with '/'",
+			value:  "my/name",
+			expErr: false,
+		},
+		{
+			name:   "valid with '.'",
+			value:  "my.name",
+			expErr: false,
+		},
+		{
+			name:   "empty",
+			value:  "",
+			expErr: true,
+		},
+		{
+			name:   "invalid character '$'",
+			value:  "myName$",
+			expErr: true,
+		},
+		{
+			name:   "invalid character '^'",
+			value:  "my^Name",
+			expErr: true,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			g := NewWithT(t)
+
+			err := validateQualifiedName(test.value)
+			if test.expErr {
+				g.Expect(err).To(HaveOccurred())
+			} else {
+				g.Expect(err).ToNot(HaveOccurred())
+			}
+		})
+	}
+}
+
+func TestValidateURL(t *testing.T) {
+	tests := []struct {
+		name   string
+		url    string
+		expErr bool
+	}{
+		{
+			name:   "valid",
+			url:    "http://server.com",
+			expErr: false,
+		},
+		{
+			name:   "valid https",
+			url:    "https://server.com",
+			expErr: false,
+		},
+		{
+			name:   "valid with port",
+			url:    "http://server.com:8080",
+			expErr: false,
+		},
+		{
+			name:   "valid with ip address",
+			url:    "http://10.0.0.1",
+			expErr: false,
+		},
+		{
+			name:   "valid with ip address and port",
+			url:    "http://10.0.0.1:8080",
+			expErr: false,
+		},
+		{
+			name:   "invalid scheme",
+			url:    "http//server.com",
+			expErr: true,
+		},
+		{
+			name:   "no scheme",
+			url:    "server.com",
+			expErr: true,
+		},
+		{
+			name:   "no domain",
+			url:    "http://",
+			expErr: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			g := NewWithT(t)
+
+			err := validateURL(tc.url)
+			if !tc.expErr {
+				g.Expect(err).ToNot(HaveOccurred())
+			} else {
+				g.Expect(err).To(HaveOccurred())
+			}
+		})
+	}
+}
+
 func TestValidateIP(t *testing.T) {
 	tests := []struct {
 		name      string
