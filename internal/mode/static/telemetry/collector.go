@@ -12,20 +12,22 @@ import (
 
 //go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . GraphGetter
 
+// GraphGetter gets the current Graph.
 type GraphGetter interface {
 	GetLatestGraph() *graph.Graph
 }
 
+// NGFResourceCounts stores the counts of all relevant Graph resources.
 type NGFResourceCounts struct {
 	Gateways       int
 	GatewayClasses int
 	HTTPRoutes     int
 	Secrets        int
 	Services       int
-	EndpointSlices int
 	Endpoints      int
 }
 
+// ProjectMetadata stores the name of the project and the current version.
 type ProjectMetadata struct {
 	Name    string
 	Version string
@@ -61,6 +63,7 @@ func NewDataCollector(
 	}
 }
 
+// Collect collects and returns telemetry Data.
 func (c DataCollectorImpl) Collect(ctx context.Context) (Data, error) {
 	nodeCount, err := collectNodeCount(ctx, c.cfg.K8sClientReader)
 	if err != nil {
@@ -106,9 +109,12 @@ func collectGraphResourceCount(graphGetter GraphGetter) NGFResourceCounts {
 	return ngfResourceCounts
 }
 
+// countReferencedResources counts the amount of non-nil resources.
 func countReferencedResources[T comparable](referencedMap map[types.NamespacedName]T) int {
 	var count int
+	// because we can't compare T to nil, we need to use the zeroValue of T
 	var zeroValue T
+
 	for name := range referencedMap {
 		if referencedMap[name] != zeroValue {
 			count++

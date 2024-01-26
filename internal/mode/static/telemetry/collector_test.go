@@ -89,6 +89,7 @@ var _ = Describe("Collector", Ordered, func() {
 			},
 		}
 	})
+
 	When("retrieving node count data", func() {
 		It("generates correct data for no nodes", func() {
 			k8sClientReader.ListCalls(func(ctx context.Context, list client.ObjectList, option ...client.ListOption) error {
@@ -114,6 +115,7 @@ var _ = Describe("Collector", Ordered, func() {
 			Expect(err).To(BeNil())
 			Expect(expData).To(Equal(data))
 		})
+
 		It("generates correct data for one node", func() {
 			node := v1.Node{
 				ObjectMeta: metav1.ObjectMeta{Name: "node1"},
@@ -142,6 +144,7 @@ var _ = Describe("Collector", Ordered, func() {
 			Expect(err).To(BeNil())
 			Expect(expData).To(Equal(data))
 		})
+
 		It("generates correct data for multiple nodes", func() {
 			node := v1.Node{
 				ObjectMeta: metav1.ObjectMeta{Name: "node1"},
@@ -177,6 +180,7 @@ var _ = Describe("Collector", Ordered, func() {
 			Expect(expData).To(Equal(data))
 		})
 	})
+
 	When("retrieving NGF resource counts", func() {
 		It("generates correct data for graph with one of each resource", func() {
 			fakeGraphGetter.GetLatestGraphReturns(graph1)
@@ -198,6 +202,7 @@ var _ = Describe("Collector", Ordered, func() {
 			Expect(err).To(BeNil())
 			Expect(expData).To(Equal(data))
 		})
+
 		It("generates correct data for graph with multiple of each resource", func() {
 			fakeGraphGetter.GetLatestGraphReturns(graph2)
 
@@ -219,6 +224,7 @@ var _ = Describe("Collector", Ordered, func() {
 			Expect(expData).To(Equal(data))
 		})
 	})
+
 	When("it encounters an error while collecting data", func() {
 		It("should error on client errors", func() {
 			k8sClientReader.ListReturns(errors.New("there was an error"))
