@@ -47,19 +47,19 @@ func (j *Job) Start(ctx context.Context) error {
 
 	report := func(ctx context.Context) {
 		// Gather telemetry
-		j.cfg.Logger.V(1).Info("Gathering telemetry")
+		j.cfg.Logger.V(1).Info("Gathering telemetry data")
 
 		// We will need to gather data as defined in https://github.com/nginxinc/nginx-gateway-fabric/issues/793
 		data, err := j.cfg.DataCollector.Collect(ctx)
 		if err != nil {
-			j.cfg.Logger.Error(err, "Failed to collect telemetry")
+			j.cfg.Logger.Error(err, "Failed to collect telemetry data")
 		}
 
 		// Export telemetry
-		j.cfg.Logger.V(1).Info("Exporting telemetry")
+		j.cfg.Logger.V(1).Info("Exporting telemetry data")
 
 		if err := j.cfg.Exporter.Export(ctx, data); err != nil {
-			j.cfg.Logger.Error(err, "Failed to export telemetry")
+			j.cfg.Logger.Error(err, "Failed to export telemetry data")
 		}
 	}
 
