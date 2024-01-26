@@ -226,8 +226,19 @@ var _ = Describe("Collector", Ordered, func() {
 	})
 
 	When("it encounters an error while collecting data", func() {
+		BeforeEach(func() {
+			k8sClientReader.ListReturns(nil)
+		})
+
 		It("should error on client errors", func() {
 			k8sClientReader.ListReturns(errors.New("there was an error"))
+
+			_, err := dataCollector.Collect(ctx)
+			Expect(err).To(HaveOccurred())
+		})
+
+		It("should error on latest graph errors", func() {
+			fakeGraphGetter.GetLatestGraphReturns(nil)
 
 			_, err := dataCollector.Collect(ctx)
 			Expect(err).To(HaveOccurred())

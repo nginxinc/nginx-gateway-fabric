@@ -22,7 +22,6 @@ type FakeChangeProcessor struct {
 	captureUpsertChangeArgsForCall []struct {
 		arg1 client.Object
 	}
-	ProcessStub        func() (state.ChangeType, *graph.Graph)
 	GetLatestGraphStub        func() *graph.Graph
 	getLatestGraphMutex       sync.RWMutex
 	getLatestGraphArgsForCall []struct {
@@ -33,6 +32,7 @@ type FakeChangeProcessor struct {
 	getLatestGraphReturnsOnCall map[int]struct {
 		result1 *graph.Graph
 	}
+	ProcessStub        func() (state.ChangeType, *graph.Graph)
 	processMutex       sync.RWMutex
 	processArgsForCall []struct {
 	}

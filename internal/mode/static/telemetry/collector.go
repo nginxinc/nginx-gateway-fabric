@@ -2,6 +2,7 @@ package telemetry
 
 import (
 	"context"
+	"errors"
 
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -69,7 +70,11 @@ func (c DataCollectorImpl) Collect(ctx context.Context) (Data, error) {
 	if err != nil {
 		return Data{}, err
 	}
-	graphResourceCount := collectGraphResourceCount(c.cfg.GraphGetter)
+
+	graphResourceCount, err := collectGraphResourceCount(c.cfg.GraphGetter)
+	if err != nil {
+		return Data{}, err
+	}
 
 	data := Data{
 		NodeCount:         nodeCount,
@@ -92,9 +97,13 @@ func collectNodeCount(ctx context.Context, k8sClient client.Reader) (int, error)
 	return len(nodes.Items), nil
 }
 
-func collectGraphResourceCount(graphGetter GraphGetter) NGFResourceCounts {
+func collectGraphResourceCount(graphGetter GraphGetter) (NGFResourceCounts, error) {
 	ngfResourceCounts := NGFResourceCounts{}
 	g := graphGetter.GetLatestGraph()
+
+	if g == nil {
+		return NGFResourceCounts{}, errors.New("latest graph cannot be nil")
+	}
 
 	if g.GatewayClass != nil {
 		ngfResourceCounts.GatewayClasses = 1
@@ -106,7 +115,7 @@ func collectGraphResourceCount(graphGetter GraphGetter) NGFResourceCounts {
 	ngfResourceCounts.Secrets = countReferencedResources(g.ReferencedSecrets)
 	ngfResourceCounts.Services = countReferencedResources(g.ReferencedServices)
 
-	return ngfResourceCounts
+	return ngfResourceCounts, nil
 }
 
 // countReferencedResources counts the amount of non-nil resources.
