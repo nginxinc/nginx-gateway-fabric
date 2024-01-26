@@ -72,7 +72,9 @@ type eventHandlerConfig struct {
 // (2) Keeping the statuses of the Gateway API resources updated.
 // (3) Updating control plane configuration.
 type eventHandlerImpl struct {
-	cfg eventHandlerConfig
+	// latestConfiguration is the latest Configuration generation.
+	latestConfiguration *dataplane.Configuration
+	cfg                 eventHandlerConfig
 }
 
 // newEventHandlerImpl creates a new eventHandlerImpl.
@@ -111,16 +113,20 @@ func (h *eventHandlerImpl) HandleEventBatch(ctx context.Context, logger logr.Log
 		return
 	case state.EndpointsOnlyChange:
 		h.cfg.version++
+		cfg := dataplane.BuildConfiguration(ctx, graph, h.cfg.serviceResolver, h.cfg.version)
+		h.latestConfiguration = &cfg
 		err = h.updateUpstreamServers(
 			ctx,
 			logger,
-			dataplane.BuildConfiguration(ctx, graph, h.cfg.serviceResolver, h.cfg.version),
+			cfg,
 		)
 	case state.ClusterStateChange:
 		h.cfg.version++
+		cfg := dataplane.BuildConfiguration(ctx, graph, h.cfg.serviceResolver, h.cfg.version)
+		h.latestConfiguration = &cfg
 		err = h.updateNginxConf(
 			ctx,
-			dataplane.BuildConfiguration(ctx, graph, h.cfg.serviceResolver, h.cfg.version),
+			cfg,
 		)
 	}
 
@@ -383,4 +389,8 @@ func getGatewayAddresses(
 	}
 
 	return gwAddresses, nil
+}
+
+func (h *eventHandlerImpl) GetLatestConfiguration() *dataplane.Configuration {
+	return h.latestConfiguration
 }

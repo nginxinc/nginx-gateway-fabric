@@ -8,6 +8,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/dataplane"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/graph"
 )
 
@@ -16,6 +17,13 @@ import (
 // GraphGetter gets the current Graph.
 type GraphGetter interface {
 	GetLatestGraph() *graph.Graph
+}
+
+//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . ConfigurationGetter
+
+// ConfigurationGetter gets the current Configuration.
+type ConfigurationGetter interface {
+	GetLatestConfiguration() *dataplane.Configuration
 }
 
 // NGFResourceCounts stores the counts of all relevant Graph resources.
@@ -48,6 +56,8 @@ type DataCollectorConfig struct {
 	K8sClientReader client.Reader
 	// GraphGetter allows us to get the Graph.
 	GraphGetter GraphGetter
+	// ConfigurationGetter allows us to get the Configuration.
+	ConfigurationGetter ConfigurationGetter
 	// Version is the NGF version.
 	Version string
 }
@@ -71,7 +81,7 @@ func (c DataCollectorImpl) Collect(ctx context.Context) (Data, error) {
 		return Data{}, err
 	}
 
-	graphResourceCount, err := collectGraphResourceCount(c.cfg.GraphGetter)
+	graphResourceCount, err := collectGraphResourceCount(c.cfg.GraphGetter, c.cfg.ConfigurationGetter)
 	if err != nil {
 		return Data{}, err
 	}
@@ -97,12 +107,19 @@ func collectNodeCount(ctx context.Context, k8sClient client.Reader) (int, error)
 	return len(nodes.Items), nil
 }
 
-func collectGraphResourceCount(graphGetter GraphGetter) (NGFResourceCounts, error) {
+func collectGraphResourceCount(
+	graphGetter GraphGetter,
+	configurationGetter ConfigurationGetter,
+) (NGFResourceCounts, error) {
 	ngfResourceCounts := NGFResourceCounts{}
 	g := graphGetter.GetLatestGraph()
+	cfg := configurationGetter.GetLatestConfiguration()
 
 	if g == nil {
 		return NGFResourceCounts{}, errors.New("latest graph cannot be nil")
+	}
+	if cfg == nil {
+		return NGFResourceCounts{}, errors.New("latest configuration cannot be nil")
 	}
 
 	if g.GatewayClass != nil {
@@ -114,6 +131,12 @@ func collectGraphResourceCount(graphGetter GraphGetter) (NGFResourceCounts, erro
 	ngfResourceCounts.HTTPRoutes = len(g.Routes)
 	ngfResourceCounts.Secrets = countReferencedResources(g.ReferencedSecrets)
 	ngfResourceCounts.Services = countReferencedResources(g.ReferencedServices)
+
+	for _, upstream := range cfg.Upstreams {
+		if upstream.ErrorMsg == "" {
+			ngfResourceCounts.Endpoints += len(upstream.Endpoints)
+		}
+	}
 
 	return ngfResourceCounts, nil
 }
