@@ -21,6 +21,7 @@ rules:
   - namespaces
   - services
   - secrets
+  - nodes
   verbs:
   - list
   - watch

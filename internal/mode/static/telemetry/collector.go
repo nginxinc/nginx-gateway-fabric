@@ -99,7 +99,7 @@ func (c DataCollectorImpl) Collect(ctx context.Context) (Data, error) {
 }
 
 func collectNodeCount(ctx context.Context, k8sClient client.Reader) (int, error) {
-	nodes := v1.NodeList{}
+	var nodes v1.NodeList
 	if err := k8sClient.List(ctx, &nodes); err != nil {
 		return 0, err
 	}
