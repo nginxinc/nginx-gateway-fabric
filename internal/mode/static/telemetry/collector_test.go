@@ -43,7 +43,7 @@ var _ = Describe("Collector", Ordered, func() {
 		fakeConfigurationGetter = &telemetryfakes.FakeConfigurationGetter{}
 		fakeConfigurationGetter.GetLatestConfigurationReturns(&dataplane.Configuration{})
 
-		dataCollector = telemetry.NewDataCollector(telemetry.DataCollectorConfig{
+		dataCollector = telemetry.NewDataCollectorImpl(telemetry.DataCollectorConfig{
 			K8sClientReader:     k8sClientReader,
 			GraphGetter:         fakeGraphGetter,
 			ConfigurationGetter: fakeConfigurationGetter,

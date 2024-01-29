@@ -13,6 +13,7 @@ import (
 
 // DataCollector collects telemetry data.
 type DataCollector interface {
+	// Collect collects and returns telemetry Data.
 	Collect(ctx context.Context) (Data, error)
 }
 

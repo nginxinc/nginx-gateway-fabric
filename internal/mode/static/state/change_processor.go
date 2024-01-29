@@ -62,6 +62,7 @@ type ChangeProcessor interface {
 	// Process produces a graph-like representation of GatewayAPI resources.
 	// If no changes were captured, the changed return argument will be NoChange and graph will be empty.
 	Process() (changeType ChangeType, graphCfg *graph.Graph)
+	// GetLatestGraph returns the latest Graph.
 	GetLatestGraph() *graph.Graph
 }
 

@@ -3,6 +3,7 @@ package telemetry
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -14,19 +15,19 @@ import (
 
 //go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . GraphGetter
 
-// GraphGetter gets the current Graph.
+// GraphGetter gets the latest Graph.
 type GraphGetter interface {
 	GetLatestGraph() *graph.Graph
 }
 
 //go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . ConfigurationGetter
 
-// ConfigurationGetter gets the current Configuration.
+// ConfigurationGetter gets the latest Configuration.
 type ConfigurationGetter interface {
 	GetLatestConfiguration() *dataplane.Configuration
 }
 
-// NGFResourceCounts stores the counts of all relevant Graph resources.
+// NGFResourceCounts stores the counts of all relevant resources that NGF processes and generates configuration from.
 type NGFResourceCounts struct {
 	Gateways       int
 	GatewayClasses int
@@ -62,11 +63,13 @@ type DataCollectorConfig struct {
 	Version string
 }
 
+// DataCollectorImpl is am implementation of DataCollector.
 type DataCollectorImpl struct {
 	cfg DataCollectorConfig
 }
 
-func NewDataCollector(
+// NewDataCollectorImpl creates a new DataCollectorImpl for a telemetry Job.
+func NewDataCollectorImpl(
 	cfg DataCollectorConfig,
 ) *DataCollectorImpl {
 	return &DataCollectorImpl{
@@ -78,12 +81,12 @@ func NewDataCollector(
 func (c DataCollectorImpl) Collect(ctx context.Context) (Data, error) {
 	nodeCount, err := collectNodeCount(ctx, c.cfg.K8sClientReader)
 	if err != nil {
-		return Data{}, err
+		return Data{}, fmt.Errorf("failed to collect node count: %w", err)
 	}
 
 	graphResourceCount, err := collectGraphResourceCount(c.cfg.GraphGetter, c.cfg.ConfigurationGetter)
 	if err != nil {
-		return Data{}, err
+		return Data{}, fmt.Errorf("failed to collect NGF resource counts: %w", err)
 	}
 
 	data := Data{
