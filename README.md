@@ -64,7 +64,7 @@ The following table lists the software versions NGINX Gateway Fabric supports.
 
 | NGINX Gateway Fabric | Gateway API | Kubernetes | NGINX OSS | NGINX Plus |
 |----------------------|-------------|------------|-----------|------------|
-| Edge                 | 1.0.0       | 1.23+      | 1.25.3    | R30        |
+| Edge                 | 1.0.0       | 1.23+      | 1.25.3    | R31        |
 | 1.1.0                | 1.0.0       | 1.23+      | 1.25.3    | n/a        |
 | 1.0.0                | 0.8.1       | 1.23+      | 1.25.2    | n/a        |
 | 0.6.0                | 0.8.0       | 1.23+      | 1.25.2    | n/a        |
@@ -117,6 +117,16 @@ channel.
 [idea]:https://github.com/nginxinc/nginx-gateway-fabric/discussions/categories/ideas
 
 [slack]: https://nginxcommunity.slack.com/channels/nginx-gateway-fabric
+
+## Community Meetings
+
+Every Monday at 9AM Pacific / 5PM GMT
+
+For the meeting link, updates, agenda, and meeting notes, check the calendar below:
+
+[NGINX Gateway Fabric Meeting Calendar](https://calendar.google.com/calendar/embed?src=a82aa06dc698b4271fb562d43f38e5bf7676585e581057bde026ddd1c71f84e9%40group.calendar.google.com)
+
+If you have a use case for NGINX Gateway Fabric that the project can't quite meet yet, bugs, problems, success stories, or just want to be more involved with the project, come by and say hi!
 
 ## Contributing
 

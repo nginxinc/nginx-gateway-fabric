@@ -33,8 +33,8 @@ At a high level, the process looks like this:
 1. We create a gateway resource for our domain (cafe.example.com) and configure cert-manager integration using an annotation.
 1. This starts the certificate issuance process – cert-manager contacts Let’s Encrypt to obtain a certificate, and Let’s Encrypt starts the ACME challenge. As part of this challenge, cert-manager creates a temporary HTTPRoute resource which directs the traffic through NGINX Gateway Fabric to verify we control the domain name in the certificate request.
 1. Once the domain has been verified, the certificate is issued. Cert-manager stores the keypair in a Kubernetes secret that is referenced by the gateway resource. As a result, NGINX is configured to terminate HTTPS traffic from clients using this signed keypair.
-1. We deploy our application and our HTTPRoute which defines our routing rules. The routing rules defined configure NGINX to direct requests to https://cafe.example.com/coffee to our coffee-app application, and to use the HTTPS listener defined in our gateway resource.
-1. When the client connects to https://cafe.example.com/coffee, the request is routed to the coffee-app application and the communication is secured using the signed keypair contained in the cafe-secret secret.
+1. We deploy our application and our HTTPRoute which defines our routing rules. The routing rules defined configure NGINX to direct requests to `https://cafe.example.com/coffee` to our coffee-app application, and to use the HTTPS listener defined in our gateway resource.
+1. When the client connects to `https://cafe.example.com/coffee`, the request is routed to the coffee-app application and the communication is secured using the signed keypair contained in the cafe-secret secret.
 1. The certificate will be automatically renewed when it is close to expiry, the secret will be updated using the new certificate, and NGINX Gateway Fabric will dynamically update the keypair on the filesystem used by NGINX for HTTPS termination once the secret is updated.
 
 ## Securing Traffic
@@ -205,7 +205,7 @@ spec:
 
 ## Testing
 
-To test everything has worked correctly, we can use curl to the navigate to our endpoint, for example, https://cafe.example.com/coffee. To verify using curl, we can use the `-v` option to increase verbosity and inspect the presented certificate.
+To test everything has worked correctly, we can use curl to the navigate to our endpoint, for example, `https://cafe.example.com/coffee`. To verify using curl, we can use the `-v` option to increase verbosity and inspect the presented certificate.
 
 ```shell
 curl https://cafe.example.com/coffee -v

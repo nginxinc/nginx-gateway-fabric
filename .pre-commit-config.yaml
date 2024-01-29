@@ -43,9 +43,9 @@ repos:
   # Rules are in .markdownlint-cli2.yaml file
   # See https://github.com/DavidAnson/markdownlint/blob/main/doc/Rules.md for rule descriptions
   - repo: https://github.com/DavidAnson/markdownlint-cli2
-    rev: v0.11.0
+    rev: v0.12.1
     hooks:
-      - id: markdownlint-cli2-fix
+      - id: markdownlint-cli2
 
   # Rules are in .yamllint.yaml file
   # See https://yamllint.readthedocs.io/en/stable/rules.html# for rule descriptions
@@ -55,5 +55,5 @@ repos:
       - id: yamllint
 
 ci:
-  skip: [golangci-lint-full, prettier, markdownlint-cli2-fix, yamllint]
+  skip: [golangci-lint-full, prettier, markdownlint-cli2, yamllint]
   autofix_prs: false

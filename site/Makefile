@@ -69,7 +69,7 @@ link-check:
 	${MARKDOWNLINKCHECK} $(shell find content -name '*.md')
 
 lint-markdown:
-	${MARKDOWNLINT} -c .markdownlint.yaml  -- content
+	${MARKDOWNLINT} -c .markdownlint.json  -- content
 
 # Commands used by Netlify CI
 hugo-mod:

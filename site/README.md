@@ -21,7 +21,7 @@ If you have [Docker](https://www.docker.com/get-started/) installed, there are f
 The configuration files are as follows:
 
 - *Hugo*: `config/default/config.toml`
-- *markdownlint-cli*: `mdlint_conf.json`
+- *markdownlint-cli*: `.markdownlint.json`
 - *markdown-link-check* `md-linkcheck-config.json`
 
 ## Repository guidelines
