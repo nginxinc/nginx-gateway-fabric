@@ -520,6 +520,7 @@ var _ = Describe("ChangeProcessor", func() {
 					changed, graphCfg := processor.Process()
 					Expect(changed).To(Equal(state.NoChange))
 					Expect(graphCfg).To(BeNil())
+					Expect(processor.GetLatestGraph()).To(BeNil())
 				})
 			})
 			When("GatewayClass doesn't exist", func() {
@@ -530,6 +531,7 @@ var _ = Describe("ChangeProcessor", func() {
 						changed, graphCfg := processor.Process()
 						Expect(changed).To(Equal(state.ClusterStateChange))
 						Expect(helpers.Diff(&graph.Graph{}, graphCfg)).To(BeEmpty())
+						Expect(helpers.Diff(&graph.Graph{}, processor.GetLatestGraph())).To(BeEmpty())
 					})
 				})
 				When("Gateways don't exist", func() {
@@ -540,6 +542,7 @@ var _ = Describe("ChangeProcessor", func() {
 							changed, graphCfg := processor.Process()
 							Expect(changed).To(Equal(state.ClusterStateChange))
 							Expect(helpers.Diff(&graph.Graph{}, graphCfg)).To(BeEmpty())
+							Expect(helpers.Diff(&graph.Graph{}, processor.GetLatestGraph())).To(BeEmpty())
 						})
 					})
 					When("the different namespace TLS Secret is upserted", func() {
@@ -549,6 +552,7 @@ var _ = Describe("ChangeProcessor", func() {
 							changed, graphCfg := processor.Process()
 							Expect(changed).To(Equal(state.NoChange))
 							Expect(graphCfg).To(BeNil())
+							Expect(helpers.Diff(&graph.Graph{}, processor.GetLatestGraph())).To(BeEmpty())
 						})
 					})
 					When("the first Gateway is upserted", func() {
@@ -584,6 +588,7 @@ var _ = Describe("ChangeProcessor", func() {
 							changed, graphCfg := processor.Process()
 							Expect(changed).To(Equal(state.ClusterStateChange))
 							Expect(helpers.Diff(expGraph, graphCfg)).To(BeEmpty())
+							Expect(helpers.Diff(expGraph, processor.GetLatestGraph())).To(BeEmpty())
 						})
 					})
 				})
@@ -637,6 +642,7 @@ var _ = Describe("ChangeProcessor", func() {
 					changed, graphCfg := processor.Process()
 					Expect(changed).To(Equal(state.ClusterStateChange))
 					Expect(helpers.Diff(expGraph, graphCfg)).To(BeEmpty())
+					Expect(helpers.Diff(expGraph, processor.GetLatestGraph())).To(BeEmpty())
 				})
 			})
 			When("the ReferenceGrant allowing the Gateway to reference its Secret is upserted", func() {
@@ -659,6 +665,7 @@ var _ = Describe("ChangeProcessor", func() {
 					changed, graphCfg := processor.Process()
 					Expect(changed).To(Equal(state.ClusterStateChange))
 					Expect(helpers.Diff(expGraph, graphCfg)).To(BeEmpty())
+					Expect(helpers.Diff(expGraph, processor.GetLatestGraph())).To(BeEmpty())
 				})
 			})
 			When("the ReferenceGrant allowing the hr1 to reference the Service in different ns is upserted", func() {
@@ -672,6 +679,7 @@ var _ = Describe("ChangeProcessor", func() {
 					changed, graphCfg := processor.Process()
 					Expect(changed).To(Equal(state.ClusterStateChange))
 					Expect(helpers.Diff(expGraph, graphCfg)).To(BeEmpty())
+					Expect(helpers.Diff(expGraph, processor.GetLatestGraph())).To(BeEmpty())
 				})
 			})
 			When("the Gateway API CRD with bundle version annotation change is processed", func() {
@@ -689,6 +697,7 @@ var _ = Describe("ChangeProcessor", func() {
 					changed, graphCfg := processor.Process()
 					Expect(changed).To(Equal(state.ClusterStateChange))
 					Expect(helpers.Diff(expGraph, graphCfg)).To(BeEmpty())
+					Expect(helpers.Diff(expGraph, processor.GetLatestGraph())).To(BeEmpty())
 				})
 			})
 			When("the Gateway API CRD without bundle version annotation change is processed", func() {
@@ -697,9 +706,18 @@ var _ = Describe("ChangeProcessor", func() {
 
 					processor.CaptureUpsertChange(gatewayAPICRDSameVersion)
 
+					expGraph.ReferencedSecrets[client.ObjectKeyFromObject(diffNsTLSSecret)] = &graph.Secret{
+						Source: diffNsTLSSecret,
+					}
+
+					expGraph.GatewayClass.Conditions = conditions.NewGatewayClassSupportedVersionBestEffort(
+						gatewayclass.SupportedVersion,
+					)
+
 					changed, graphCfg := processor.Process()
 					Expect(changed).To(Equal(state.NoChange))
 					Expect(graphCfg).To(BeNil())
+					Expect(helpers.Diff(expGraph, processor.GetLatestGraph())).To(BeEmpty())
 				})
 			})
 			When("the Gateway API CRD with bundle version annotation change is processed", func() {
@@ -714,6 +732,7 @@ var _ = Describe("ChangeProcessor", func() {
 					changed, graphCfg := processor.Process()
 					Expect(changed).To(Equal(state.ClusterStateChange))
 					Expect(helpers.Diff(expGraph, graphCfg)).To(BeEmpty())
+					Expect(helpers.Diff(expGraph, processor.GetLatestGraph())).To(BeEmpty())
 				})
 			})
 			When("the first HTTPRoute update with a generation changed is processed", func() {
@@ -732,6 +751,7 @@ var _ = Describe("ChangeProcessor", func() {
 					changed, graphCfg := processor.Process()
 					Expect(changed).To(Equal(state.ClusterStateChange))
 					Expect(helpers.Diff(expGraph, graphCfg)).To(BeEmpty())
+					Expect(helpers.Diff(expGraph, processor.GetLatestGraph())).To(BeEmpty())
 				},
 				)
 			})
@@ -747,6 +767,7 @@ var _ = Describe("ChangeProcessor", func() {
 					changed, graphCfg := processor.Process()
 					Expect(changed).To(Equal(state.ClusterStateChange))
 					Expect(helpers.Diff(expGraph, graphCfg)).To(BeEmpty())
+					Expect(helpers.Diff(expGraph, processor.GetLatestGraph())).To(BeEmpty())
 				})
 			})
 			When("the GatewayClass update with generation change is processed", func() {
@@ -761,6 +782,7 @@ var _ = Describe("ChangeProcessor", func() {
 					changed, graphCfg := processor.Process()
 					Expect(changed).To(Equal(state.ClusterStateChange))
 					Expect(helpers.Diff(expGraph, graphCfg)).To(BeEmpty())
+					Expect(helpers.Diff(expGraph, processor.GetLatestGraph())).To(BeEmpty())
 				})
 			})
 			When("the different namespace TLS secret is upserted again", func() {
@@ -774,24 +796,33 @@ var _ = Describe("ChangeProcessor", func() {
 					changed, graphCfg := processor.Process()
 					Expect(changed).To(Equal(state.ClusterStateChange))
 					Expect(helpers.Diff(expGraph, graphCfg)).To(BeEmpty())
+					Expect(helpers.Diff(expGraph, processor.GetLatestGraph())).To(BeEmpty())
 				})
 			})
 			When("no changes are captured", func() {
 				It("returns nil graph", func() {
-					changed, graphCfg := processor.Process()
+					expGraph.ReferencedSecrets[client.ObjectKeyFromObject(diffNsTLSSecret)] = &graph.Secret{
+						Source: diffNsTLSSecret,
+					}
 
+					changed, graphCfg := processor.Process()
 					Expect(changed).To(Equal(state.NoChange))
 					Expect(graphCfg).To(BeNil())
+					Expect(helpers.Diff(expGraph, processor.GetLatestGraph())).To(BeEmpty())
 				})
 			})
 			When("the same namespace TLS Secret is upserted", func() {
 				It("returns nil graph", func() {
 					processor.CaptureUpsertChange(sameNsTLSSecret)
 
-					changed, graphCfg := processor.Process()
+					expGraph.ReferencedSecrets[client.ObjectKeyFromObject(diffNsTLSSecret)] = &graph.Secret{
+						Source: diffNsTLSSecret,
+					}
 
+					changed, graphCfg := processor.Process()
 					Expect(changed).To(Equal(state.NoChange))
 					Expect(graphCfg).To(BeNil())
+					Expect(helpers.Diff(expGraph, processor.GetLatestGraph())).To(BeEmpty())
 				})
 			})
 			When("the second Gateway is upserted", func() {
@@ -808,6 +839,7 @@ var _ = Describe("ChangeProcessor", func() {
 					changed, graphCfg := processor.Process()
 					Expect(changed).To(Equal(state.ClusterStateChange))
 					Expect(helpers.Diff(expGraph, graphCfg)).To(BeEmpty())
+					Expect(helpers.Diff(expGraph, processor.GetLatestGraph())).To(BeEmpty())
 				})
 			})
 			When("the second HTTPRoute is upserted", func() {
@@ -833,6 +865,7 @@ var _ = Describe("ChangeProcessor", func() {
 					changed, graphCfg := processor.Process()
 					Expect(changed).To(Equal(state.ClusterStateChange))
 					Expect(helpers.Diff(expGraph, graphCfg)).To(BeEmpty())
+					Expect(helpers.Diff(expGraph, processor.GetLatestGraph())).To(BeEmpty())
 				})
 			})
 			When("the first Gateway is deleted", func() {
@@ -868,6 +901,7 @@ var _ = Describe("ChangeProcessor", func() {
 					changed, graphCfg := processor.Process()
 					Expect(changed).To(Equal(state.ClusterStateChange))
 					Expect(helpers.Diff(expGraph, graphCfg)).To(BeEmpty())
+					Expect(helpers.Diff(expGraph, processor.GetLatestGraph())).To(BeEmpty())
 				})
 			})
 			When("the second HTTPRoute is deleted", func() {
@@ -900,6 +934,7 @@ var _ = Describe("ChangeProcessor", func() {
 					changed, graphCfg := processor.Process()
 					Expect(changed).To(Equal(state.ClusterStateChange))
 					Expect(helpers.Diff(expGraph, graphCfg)).To(BeEmpty())
+					Expect(helpers.Diff(expGraph, processor.GetLatestGraph())).To(BeEmpty())
 				})
 			})
 			When("the GatewayClass is deleted", func() {
@@ -923,6 +958,7 @@ var _ = Describe("ChangeProcessor", func() {
 					changed, graphCfg := processor.Process()
 					Expect(changed).To(Equal(state.ClusterStateChange))
 					Expect(helpers.Diff(expGraph, graphCfg)).To(BeEmpty())
+					Expect(helpers.Diff(expGraph, processor.GetLatestGraph())).To(BeEmpty())
 				})
 			})
 			When("the second Gateway is deleted", func() {
@@ -938,6 +974,7 @@ var _ = Describe("ChangeProcessor", func() {
 					changed, graphCfg := processor.Process()
 					Expect(changed).To(Equal(state.ClusterStateChange))
 					Expect(helpers.Diff(&graph.Graph{}, graphCfg)).To(BeEmpty())
+					Expect(helpers.Diff(&graph.Graph{}, processor.GetLatestGraph())).To(BeEmpty())
 				})
 			})
 			When("the first HTTPRoute is deleted", func() {
@@ -953,6 +990,7 @@ var _ = Describe("ChangeProcessor", func() {
 					changed, graphCfg := processor.Process()
 					Expect(changed).To(Equal(state.ClusterStateChange))
 					Expect(helpers.Diff(&graph.Graph{}, graphCfg)).To(BeEmpty())
+					Expect(helpers.Diff(&graph.Graph{}, processor.GetLatestGraph())).To(BeEmpty())
 				})
 			})
 		})
