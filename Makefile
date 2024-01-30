@@ -11,6 +11,7 @@ BUILD_AGENT=local
 TELEMETRY_REPORT_PERIOD = 24h # also configured in goreleaser.yml
 GW_API_VERSION = 1.0.0
 INSTALL_WEBHOOK = false
+TRACE_ON = false # generate a stack trace for unit-test failures. Helpful in CI environments.
 
 # go build flags - should not be overridden by the user
 GO_LINKER_FlAGS_VARS = -X main.version=${VERSION} -X main.commit=${GIT_COMMIT} -X main.date=${DATE} -X main.telemetryReportPeriod=${TELEMETRY_REPORT_PERIOD}
@@ -136,8 +137,10 @@ lint: ## Run golangci-lint against code
 
 .PHONY: unit-test
 unit-test: ## Run unit tests for the go code
-	go test ./internal/... -race -coverprofile cover.out
+	go test ./cmd/... -race -coverprofile cmd-cover.out
+	go run github.com/onsi/ginkgo/v2/ginkgo --randomize-all --randomize-suites --race --keep-going --fail-on-pending --trace=${TRACE_ON} --cover --coverprofile=cover.out -r internal
 	go tool cover -html=cover.out -o cover.html
+	go tool cover -html=cmd-cover.out -o cmd-cover.html
 
 .PHONY: njs-unit-test
 njs-unit-test: ## Run unit tests for the njs httpmatches module
