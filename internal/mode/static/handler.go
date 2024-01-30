@@ -3,6 +3,7 @@ package static
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -75,6 +76,7 @@ type eventHandlerImpl struct {
 	// latestConfiguration is the latest Configuration generation.
 	latestConfiguration *dataplane.Configuration
 	cfg                 eventHandlerConfig
+	lock                sync.Mutex
 }
 
 // newEventHandlerImpl creates a new eventHandlerImpl.
@@ -392,5 +394,8 @@ func getGatewayAddresses(
 }
 
 func (h *eventHandlerImpl) GetLatestConfiguration() *dataplane.Configuration {
+	h.lock.Lock()
+	defer h.lock.Unlock()
+
 	return h.latestConfiguration
 }
