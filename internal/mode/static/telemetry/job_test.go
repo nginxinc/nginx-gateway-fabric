@@ -18,6 +18,7 @@ var _ = Describe("Job", func() {
 		job           *telemetry.Job
 		exporter      *telemetryfakes.FakeExporter
 		dataCollector *telemetryfakes.FakeDataCollector
+		expData       telemetry.Data
 	)
 	const timeout = 10 * time.Second
 
@@ -30,6 +31,20 @@ var _ = Describe("Job", func() {
 			Period:        1 * time.Millisecond, // 1ms is much smaller than timeout so the Job should report a few times
 			DataCollector: dataCollector,
 		})
+
+		expData = telemetry.Data{
+			ProjectMetadata: telemetry.ProjectMetadata{Name: "NGF", Version: "1.1"},
+			NodeCount:       3,
+			NGFResourceCounts: telemetry.NGFResourceCounts{
+				Gateways:       1,
+				GatewayClasses: 1,
+				HTTPRoutes:     1,
+				Secrets:        1,
+				Services:       1,
+				Endpoints:      1,
+			},
+		}
+		dataCollector.CollectReturns(expData, nil)
 	})
 
 	DescribeTable(
@@ -51,7 +66,7 @@ var _ = Describe("Job", func() {
 			Eventually(exporter.ExportCallCount).Should(BeNumerically(">=", minReports))
 			for i := 0; i < minReports; i++ {
 				_, data := exporter.ExportArgsForCall(i)
-				Expect(data).To(Equal(telemetry.Data{}))
+				Expect(data).To(Equal(expData))
 			}
 
 			cancel()
