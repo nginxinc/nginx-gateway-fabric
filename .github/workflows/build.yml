@@ -1,17 +1,17 @@
 name: Build
 
 on:
-    workflow_call:
-      inputs:
-        platforms:
-          required: true
-          type: string
-        image:
-          required: true
-          type: string
-        tag:
-          required: false
-          type: string
+  workflow_call:
+    inputs:
+      platforms:
+        required: true
+        type: string
+      image:
+        required: true
+        type: string
+      tag:
+        required: false
+        type: string
 
 defaults:
   run:
@@ -34,122 +34,122 @@ jobs:
         ports:
           - 5000:5000
     steps:
-        - name: Checkout Repository
-          uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
-          with:
-            ref: ${{ inputs.tag != '' && format('refs/tags/v{0}', inputs.tag) || github.ref }}
+      - name: Checkout Repository
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        with:
+          ref: ${{ inputs.tag != '' && format('refs/tags/v{0}', inputs.tag) || github.ref }}
 
-        - name: Fetch Cached Artifacts
-          uses: actions/cache@13aacd865c20de90d75de3b17ebe84f7a17d57d2 # v4.0.0
-          with:
-            path: ${{ github.workspace }}/dist
-            key: nginx-gateway-fabric-${{ github.run_id }}-${{ github.run_number }}
+      - name: Fetch Cached Artifacts
+        uses: actions/cache@13aacd865c20de90d75de3b17ebe84f7a17d57d2 # v4.0.0
+        with:
+          path: ${{ github.workspace }}/dist
+          key: nginx-gateway-fabric-${{ github.run_id }}-${{ github.run_number }}
 
-        - name: Docker Buildx
-          uses: docker/setup-buildx-action@f95db51fddba0c2d1ec667646a06c2ce06100226 # v3.0.0
-          with:
-            driver-opts: network=host
+      - name: Docker Buildx
+        uses: docker/setup-buildx-action@f95db51fddba0c2d1ec667646a06c2ce06100226 # v3.0.0
+        with:
+          driver-opts: network=host
 
-        - name: Setup QEMU
-          uses: docker/setup-qemu-action@68827325e0b33c7199eb31dd4e31fbe9023e06e3 # v3.0.0
-          with:
-            platforms: arm64
+      - name: Setup QEMU
+        uses: docker/setup-qemu-action@68827325e0b33c7199eb31dd4e31fbe9023e06e3 # v3.0.0
+        with:
+          platforms: arm64
 
-        - name: Login to GitHub Container Registry
-          uses: docker/login-action@343f7c4344506bcbf9b4de18042ae17996df046d # v3.0.0
-          if: ${{ github.event_name != 'pull_request' && ! contains(inputs.image, 'plus') }}
-          with:
-            registry: ghcr.io
-            username: ${{ github.repository_owner }}
-            password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@343f7c4344506bcbf9b4de18042ae17996df046d # v3.0.0
+        if: ${{ github.event_name != 'pull_request' && ! contains(inputs.image, 'plus') }}
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-        - name: Get Id Token
-          uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
-          id: idtoken
-          with:
-            script: |
-              let id_token = await core.getIDToken()
-              core.setOutput('id_token', id_token)
-          if: ${{ github.event_name != 'pull_request' && contains(inputs.image, 'plus')}}
+      - name: Get Id Token
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
+        id: idtoken
+        with:
+          script: |
+            let id_token = await core.getIDToken()
+            core.setOutput('id_token', id_token)
+        if: ${{ github.event_name != 'pull_request' && contains(inputs.image, 'plus')}}
 
-        - name: Login to NGINX Registry
-          uses: docker/login-action@343f7c4344506bcbf9b4de18042ae17996df046d # v3.0.0
-          with:
-              registry: docker-mgmt.nginx.com
-              username: ${{ steps.idtoken.outputs.id_token }}
-              password: ${{ github.actor }}
-          if: ${{ github.event_name != 'pull_request' && contains(inputs.image, 'plus') }}
+      - name: Login to NGINX Registry
+        uses: docker/login-action@343f7c4344506bcbf9b4de18042ae17996df046d # v3.0.0
+        with:
+          registry: docker-mgmt.nginx.com
+          username: ${{ steps.idtoken.outputs.id_token }}
+          password: ${{ github.actor }}
+        if: ${{ github.event_name != 'pull_request' && contains(inputs.image, 'plus') }}
 
-        - name: Docker meta
-          id: meta
-          uses: docker/metadata-action@dbef88086f6cef02e264edb7dbf63250c17cef6c # v5.5.0
-          with:
-            images: |
-              name=ghcr.io/nginxinc/nginx-gateway-fabric,enable=${{ inputs.image == 'ngf' && github.event_name != 'pull_request' }}
-              name=ghcr.io/nginxinc/nginx-gateway-fabric/nginx,enable=${{ inputs.image == 'nginx' && github.event_name != 'pull_request' }}
-              name=docker-mgmt.nginx.com/nginx-gateway-fabric/nginx-plus,enable=${{ inputs.image == 'nginx-plus' && github.event_name != 'pull_request' }}
-              name=localhost:5000/nginx-gateway-fabric/${{ inputs.image }}
-            flavor: |
-              latest=${{ (inputs.tag != '' && 'true') || 'auto' }}
-            tags: |
-              type=semver,pattern={{version}}
-              type=edge
-              type=ref,event=pr
-              type=ref,event=branch,suffix=-rc,enable=${{ startsWith(github.ref, 'refs/heads/release') }}
-              type=raw,value=${{ inputs.tag }},enable=${{ inputs.tag != '' }}
-            labels: |
-              org.opencontainers.image.documentation=https://docs.nginx.com/nginx-gateway-fabric
-              org.opencontainers.image.vendor=NGINX Inc <kubernetes@nginx.com>
-          env:
-            DOCKER_METADATA_ANNOTATIONS_LEVELS: manifest,index
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@dbef88086f6cef02e264edb7dbf63250c17cef6c # v5.5.0
+        with:
+          images: |
+            name=ghcr.io/nginxinc/nginx-gateway-fabric,enable=${{ inputs.image == 'ngf' && github.event_name != 'pull_request' }}
+            name=ghcr.io/nginxinc/nginx-gateway-fabric/nginx,enable=${{ inputs.image == 'nginx' && github.event_name != 'pull_request' }}
+            name=docker-mgmt.nginx.com/nginx-gateway-fabric/nginx-plus,enable=${{ inputs.image == 'nginx-plus' && github.event_name != 'pull_request' }}
+            name=localhost:5000/nginx-gateway-fabric/${{ inputs.image }}
+          flavor: |
+            latest=${{ (inputs.tag != '' && 'true') || 'auto' }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=edge
+            type=ref,event=pr
+            type=ref,event=branch,suffix=-rc,enable=${{ startsWith(github.ref, 'refs/heads/release') }}
+            type=raw,value=${{ inputs.tag }},enable=${{ inputs.tag != '' }}
+          labels: |
+            org.opencontainers.image.documentation=https://docs.nginx.com/nginx-gateway-fabric
+            org.opencontainers.image.vendor=NGINX Inc <kubernetes@nginx.com>
+        env:
+          DOCKER_METADATA_ANNOTATIONS_LEVELS: manifest,index
 
-        - name: Build Docker Image
-          uses: docker/build-push-action@4a13e500e55cf31b7a5d59a38ab2040ab0f42f56 # v5.1.0
-          with:
-            file: build/Dockerfile${{ inputs.image == 'nginx' && '.nginx' || '' }}${{ inputs.image == 'nginx-plus' && '.nginxplus' || '' }}
-            context: "."
-            target: ${{ inputs.image == 'ngf' && 'goreleaser' || '' }}
-            tags: ${{ steps.meta.outputs.tags }}
-            labels: ${{ steps.meta.outputs.labels }}
-            annotations: ${{ steps.meta.outputs.annotations }}
-            push: true
-            platforms: ${{ inputs.platforms }}
-            cache-from: type=gha,scope=${{ inputs.image }}
-            cache-to: type=gha,scope=${{ inputs.image }},mode=max
-            pull: true
-            no-cache: ${{ github.event_name != 'pull_request' }}
-            sbom: true
-            provenance: true
-            build-args: |
-              NJS_DIR=internal/mode/static/nginx/modules/src
-              NGINX_CONF_DIR=internal/mode/static/nginx/conf
-              BUILD_AGENT=gha
-            secrets: |
-              ${{ contains(inputs.image, 'plus') && format('"nginx-repo.crt={0}"', secrets.NGINX_CRT) || '' }}
-              ${{ contains(inputs.image, 'plus') && format('"nginx-repo.key={0}"', secrets.NGINX_KEY) || '' }}
+      - name: Build Docker Image
+        uses: docker/build-push-action@4a13e500e55cf31b7a5d59a38ab2040ab0f42f56 # v5.1.0
+        with:
+          file: build/Dockerfile${{ inputs.image == 'nginx' && '.nginx' || '' }}${{ inputs.image == 'nginx-plus' && '.nginxplus' || '' }}
+          context: "."
+          target: ${{ inputs.image == 'ngf' && 'goreleaser' || '' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          annotations: ${{ steps.meta.outputs.annotations }}
+          push: true
+          platforms: ${{ inputs.platforms }}
+          cache-from: type=gha,scope=${{ inputs.image }}
+          cache-to: type=gha,scope=${{ inputs.image }},mode=max
+          pull: true
+          no-cache: ${{ github.event_name != 'pull_request' }}
+          sbom: true
+          provenance: true
+          build-args: |
+            NJS_DIR=internal/mode/static/nginx/modules/src
+            NGINX_CONF_DIR=internal/mode/static/nginx/conf
+            BUILD_AGENT=gha
+          secrets: |
+            ${{ contains(inputs.image, 'plus') && format('"nginx-repo.crt={0}"', secrets.NGINX_CRT) || '' }}
+            ${{ contains(inputs.image, 'plus') && format('"nginx-repo.key={0}"', secrets.NGINX_KEY) || '' }}
 
-        - name: Inspect SBOM
-          run: |
-            docker buildx imagetools inspect localhost:5000/nginx-gateway-fabric/${{ inputs.image }}:${{ steps.meta.outputs.version }} --format '{{ json (index .SBOM "linux/amd64").SPDX }}' > sbom-${{ inputs.image }}.json
+      - name: Inspect SBOM
+        run: |
+          docker buildx imagetools inspect localhost:5000/nginx-gateway-fabric/${{ inputs.image }}:${{ steps.meta.outputs.version }} --format '{{ json (index .SBOM "linux/amd64").SPDX }}' > sbom-${{ inputs.image }}.json
 
-        - name: Scan SBOM
-          id: scan
-          uses: anchore/scan-action@1d59d90b47fc11ff8f97822da6c25eec888f81cf # v3.5.0
-          with:
-            sbom: "sbom-${{ inputs.image }}.json"
-            only-fixed: true
-            add-cpes-if-none: true
+      - name: Scan SBOM
+        id: scan
+        uses: anchore/scan-action@1d59d90b47fc11ff8f97822da6c25eec888f81cf # v3.5.0
+        with:
+          sbom: "sbom-${{ inputs.image }}.json"
+          only-fixed: true
+          add-cpes-if-none: true
 
-        - name: Upload scan result to GitHub Security tab
-          uses: github/codeql-action/upload-sarif@e5f05b81d5b6ff8cfa111c80c22c5fd02a384118 # v3.23.0
-          continue-on-error: true
-          with:
-            sarif_file: ${{ steps.scan.outputs.sarif }}
+      - name: Upload scan result to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@b7bf0a3ed3ecfa44160715d7c442788f65f0f923 # v3.23.2
+        continue-on-error: true
+        with:
+          sarif_file: ${{ steps.scan.outputs.sarif }}
 
-        - name: Upload Scan Results
-          uses: actions/upload-artifact@1eb3cb2b3e0f29609092a73eb033bb759a334595 # v4.1.0
-          continue-on-error: true
-          with:
-            name: scan-results-${{ inputs.image }}.sarif
-            path: ${{ steps.scan.outputs.sarif }}
-          if: always()
+      - name: Upload Scan Results
+        uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 # v4.3.0
+        continue-on-error: true
+        with:
+          name: scan-results-${{ inputs.image }}.sarif
+          path: ${{ steps.scan.outputs.sarif }}
+        if: always()
