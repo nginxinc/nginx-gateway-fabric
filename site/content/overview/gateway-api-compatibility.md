@@ -107,10 +107,10 @@ See the [static-mode]({{< relref "/reference/cli-help.md#static-mode">}}) comman
     - `Accepted/False/Invalid`
     - `Accepted/False/UnsupportedValue`: Custom reason for when a value of a field in a Gateway is invalid or not supported.
     - `Accepted/False/GatewayConflict`: Custom reason for when the Gateway is ignored due to a conflicting Gateway.
-          NGF only supports a single Gateway.
+          NGINX Gateway Fabric only supports a single Gateway.
     - `Programmed/True/Programmed`
     - `Programmed/False/Invalid`
-    - `Programmed/False/GatewayConflict`: Custom reason for when the Gateway is ignored due to a conflicting Gateway. NGF only supports a single Gateway.
+    - `Programmed/False/GatewayConflict`: Custom reason for when the Gateway is ignored due to a conflicting Gateway. NGINX Gateway Fabric only supports a single Gateway.
   - `listeners`
     - `name`: Supported.
     - `supportedKinds`: Supported.
@@ -121,7 +121,7 @@ See the [static-mode]({{< relref "/reference/cli-help.md#static-mode">}}) comman
       - `Accepted/False/InvalidCertificateRef`
       - `Accepted/False/ProtocolConflict`
       - `Accepted/False/UnsupportedValue`: Custom reason for when a value of a field in a Listener is invalid or not supported.
-      - `Accepted/False/GatewayConflict`: Custom reason for when the Gateway is ignored due to a conflicting Gateway. NGF only supports a single Gateway.
+      - `Accepted/False/GatewayConflict`: Custom reason for when the Gateway is ignored due to a conflicting Gateway. NGINX Gateway Fabric only supports a single Gateway.
       - `Programmed/True/Programmed`
       - `Programmed/False/Invalid`
       - `ResolvedRefs/True/ResolvedRefs`
