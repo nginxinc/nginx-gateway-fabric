@@ -49,8 +49,8 @@ type Graph struct {
 	// ReferencedNamespaces includes Namespaces with labels that match the Gateway Listener's label selector.
 	ReferencedNamespaces map[types.NamespacedName]*v1.Namespace
 	// ReferencedServices includes the NamespacedNames of all the Services that are referenced by at least one HTTPRoute.
-	// Non-existing Services will have their NamespacedName mapped to nil.
-	ReferencedServices map[types.NamespacedName]*v1.Service
+	// Storing the whole resource is not necessary, compared to the similar maps above.
+	ReferencedServices map[types.NamespacedName]struct{}
 }
 
 // ProtectedPorts are the ports that may not be configured by a listener with a descriptive name of each port.
@@ -123,7 +123,7 @@ func BuildGraph(
 
 	referencedNamespaces := buildReferencedNamespaces(state.Namespaces, gw)
 
-	referencedServices := buildReferencedServices(routes, state.Services)
+	referencedServices := buildReferencedServices(routes)
 
 	g := &Graph{
 		GatewayClass:          gc,

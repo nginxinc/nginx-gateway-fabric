@@ -6,7 +6,6 @@ import (
 	"fmt"
 
 	v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/dataplane"
@@ -132,8 +131,8 @@ func collectGraphResourceCount(
 		ngfResourceCounts.Gateways = 1
 	}
 	ngfResourceCounts.HTTPRoutes = len(g.Routes)
-	ngfResourceCounts.Secrets = countReferencedResources(g.ReferencedSecrets)
-	ngfResourceCounts.Services = countReferencedResources(g.ReferencedServices)
+	ngfResourceCounts.Secrets = len(g.ReferencedSecrets)
+	ngfResourceCounts.Services = len(g.ReferencedServices)
 
 	for _, upstream := range cfg.Upstreams {
 		if upstream.ErrorMsg == "" {
@@ -142,18 +141,4 @@ func collectGraphResourceCount(
 	}
 
 	return ngfResourceCounts, nil
-}
-
-// countReferencedResources counts the amount of non-nil resources.
-func countReferencedResources[T comparable](referencedMap map[types.NamespacedName]T) int {
-	var count int
-	// because we can't compare T to nil, we need to use the zeroValue of T
-	var zeroValue T
-
-	for name := range referencedMap {
-		if referencedMap[name] != zeroValue {
-			count++
-		}
-	}
-	return count
 }

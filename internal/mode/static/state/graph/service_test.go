@@ -4,9 +4,6 @@ import (
 	"testing"
 
 	. "github.com/onsi/gomega"
-	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	"k8s.io/apimachinery/pkg/types"
 )
 
@@ -194,15 +191,9 @@ func TestBuildReferencedServices(t *testing.T) {
 		},
 	}
 
-	services := map[types.NamespacedName]*v1.Service{
-		{Namespace: "banana-ns", Name: "service"}:    {ObjectMeta: metav1.ObjectMeta{Name: "banana-service"}},
-		{Namespace: "service-ns", Name: "service"}:   {ObjectMeta: metav1.ObjectMeta{Name: "service"}},
-		{Namespace: "service-ns2", Name: "service2"}: {ObjectMeta: metav1.ObjectMeta{Name: "service2"}},
-	}
-
 	tests := []struct {
 		routes map[types.NamespacedName]*Route
-		exp    map[types.NamespacedName]*v1.Service
+		exp    map[types.NamespacedName]struct{}
 		name   string
 	}{
 		{
@@ -210,8 +201,8 @@ func TestBuildReferencedServices(t *testing.T) {
 			routes: map[types.NamespacedName]*Route{
 				{Name: "normal-route"}: normalRoute,
 			},
-			exp: map[types.NamespacedName]*v1.Service{
-				{Namespace: "banana-ns", Name: "service"}: {ObjectMeta: metav1.ObjectMeta{Name: "banana-service"}},
+			exp: map[types.NamespacedName]struct{}{
+				{Namespace: "banana-ns", Name: "service"}: {},
 			},
 		},
 		{
@@ -219,9 +210,9 @@ func TestBuildReferencedServices(t *testing.T) {
 			routes: map[types.NamespacedName]*Route{
 				{Name: "two-svc-one-rule"}: validRouteTwoServicesOneRule,
 			},
-			exp: map[types.NamespacedName]*v1.Service{
-				{Namespace: "service-ns", Name: "service"}:   {ObjectMeta: metav1.ObjectMeta{Name: "service"}},
-				{Namespace: "service-ns2", Name: "service2"}: {ObjectMeta: metav1.ObjectMeta{Name: "service2"}},
+			exp: map[types.NamespacedName]struct{}{
+				{Namespace: "service-ns", Name: "service"}:   {},
+				{Namespace: "service-ns2", Name: "service2"}: {},
 			},
 		},
 		{
@@ -229,9 +220,9 @@ func TestBuildReferencedServices(t *testing.T) {
 			routes: map[types.NamespacedName]*Route{
 				{Name: "one-svc-per-rule"}: validRouteTwoServicesTwoRules,
 			},
-			exp: map[types.NamespacedName]*v1.Service{
-				{Namespace: "service-ns", Name: "service"}:   {ObjectMeta: metav1.ObjectMeta{Name: "service"}},
-				{Namespace: "service-ns2", Name: "service2"}: {ObjectMeta: metav1.ObjectMeta{Name: "service2"}},
+			exp: map[types.NamespacedName]struct{}{
+				{Namespace: "service-ns", Name: "service"}:   {},
+				{Namespace: "service-ns2", Name: "service2"}: {},
 			},
 		},
 		{
@@ -240,9 +231,9 @@ func TestBuildReferencedServices(t *testing.T) {
 				{Name: "one-svc-per-rule"}: validRouteTwoServicesTwoRules,
 				{Name: "two-svc-one-rule"}: validRouteTwoServicesOneRule,
 			},
-			exp: map[types.NamespacedName]*v1.Service{
-				{Namespace: "service-ns", Name: "service"}:   {ObjectMeta: metav1.ObjectMeta{Name: "service"}},
-				{Namespace: "service-ns2", Name: "service2"}: {ObjectMeta: metav1.ObjectMeta{Name: "service2"}},
+			exp: map[types.NamespacedName]struct{}{
+				{Namespace: "service-ns", Name: "service"}:   {},
+				{Namespace: "service-ns2", Name: "service2"}: {},
 			},
 		},
 		{
@@ -251,10 +242,10 @@ func TestBuildReferencedServices(t *testing.T) {
 				{Name: "one-svc-per-rule"}: validRouteTwoServicesTwoRules,
 				{Name: "normal-route"}:     normalRoute,
 			},
-			exp: map[types.NamespacedName]*v1.Service{
-				{Namespace: "service-ns", Name: "service"}:   {ObjectMeta: metav1.ObjectMeta{Name: "service"}},
-				{Namespace: "service-ns2", Name: "service2"}: {ObjectMeta: metav1.ObjectMeta{Name: "service2"}},
-				{Namespace: "banana-ns", Name: "service"}:    {ObjectMeta: metav1.ObjectMeta{Name: "banana-service"}},
+			exp: map[types.NamespacedName]struct{}{
+				{Namespace: "service-ns", Name: "service"}:   {},
+				{Namespace: "service-ns2", Name: "service2"}: {},
+				{Namespace: "banana-ns", Name: "service"}:    {},
 			},
 		},
 		{
@@ -277,8 +268,8 @@ func TestBuildReferencedServices(t *testing.T) {
 				{Name: "normal-route"}:  normalRoute,
 				{Name: "invalid-route"}: invalidRoute,
 			},
-			exp: map[types.NamespacedName]*v1.Service{
-				{Namespace: "banana-ns", Name: "service"}: {ObjectMeta: metav1.ObjectMeta{Name: "banana-service"}},
+			exp: map[types.NamespacedName]struct{}{
+				{Namespace: "banana-ns", Name: "service"}: {},
 			},
 		},
 		{
@@ -286,8 +277,8 @@ func TestBuildReferencedServices(t *testing.T) {
 			routes: map[types.NamespacedName]*Route{
 				{Name: "multiple-parent-ref-route"}: attachedRouteWithManyParentRefs,
 			},
-			exp: map[types.NamespacedName]*v1.Service{
-				{Namespace: "service-ns", Name: "service"}: {ObjectMeta: metav1.ObjectMeta{Name: "service"}},
+			exp: map[types.NamespacedName]struct{}{
+				{Namespace: "service-ns", Name: "service"}: {},
 			},
 		},
 		{
@@ -302,7 +293,7 @@ func TestBuildReferencedServices(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewWithT(t)
-			g.Expect(buildReferencedServices(test.routes, services)).To(Equal(test.exp))
+			g.Expect(buildReferencedServices(test.routes)).To(Equal(test.exp))
 		})
 	}
 }

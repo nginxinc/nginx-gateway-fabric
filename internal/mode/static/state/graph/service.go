@@ -1,15 +1,13 @@
 package graph
 
 import (
-	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
 
 func buildReferencedServices(
 	routes map[types.NamespacedName]*Route,
-	services map[types.NamespacedName]*v1.Service,
-) map[types.NamespacedName]*v1.Service {
-	svcNames := make(map[types.NamespacedName]*v1.Service)
+) map[types.NamespacedName]struct{} {
+	svcNames := make(map[types.NamespacedName]struct{})
 
 	// routes all have populated ParentRefs from when they were created.
 	//
@@ -36,7 +34,7 @@ func buildReferencedServices(
 				// Processes both valid and invalid BackendRefs as invalid ones still have referenced services
 				// we may want to track.
 				if ref.SvcNsName != (types.NamespacedName{}) {
-					svcNames[ref.SvcNsName] = services[ref.SvcNsName]
+					svcNames[ref.SvcNsName] = struct{}{}
 				}
 			}
 		}

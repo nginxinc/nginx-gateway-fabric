@@ -69,8 +69,8 @@ var _ = Describe("Collector", Ordered, func() {
 					Source: secret1,
 				},
 			},
-			ReferencedServices: map[types.NamespacedName]*v1.Service{
-				client.ObjectKeyFromObject(svc1): svc1,
+			ReferencedServices: map[types.NamespacedName]struct{}{
+				client.ObjectKeyFromObject(svc1): {},
 			},
 		}
 		graph2 = &graph.Graph{
@@ -90,10 +90,10 @@ var _ = Describe("Collector", Ordered, func() {
 				},
 				client.ObjectKeyFromObject(nilsecret): nil,
 			},
-			ReferencedServices: map[types.NamespacedName]*v1.Service{
-				client.ObjectKeyFromObject(svc1):   svc1,
-				client.ObjectKeyFromObject(svc2):   svc2,
-				client.ObjectKeyFromObject(nilsvc): nil,
+			ReferencedServices: map[types.NamespacedName]struct{}{
+				client.ObjectKeyFromObject(svc1):   {},
+				client.ObjectKeyFromObject(svc2):   {},
+				client.ObjectKeyFromObject(nilsvc): {},
 			},
 		}
 
@@ -285,8 +285,8 @@ var _ = Describe("Collector", Ordered, func() {
 					Gateways:       1,
 					GatewayClasses: 1,
 					HTTPRoutes:     3,
-					Secrets:        2,
-					Services:       2,
+					Secrets:        3,
+					Services:       3,
 					Endpoints:      4,
 				},
 			}
