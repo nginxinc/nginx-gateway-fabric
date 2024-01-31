@@ -15,7 +15,7 @@ import (
 // the current event(s) finishes. Multiple saved events will be handled at once -- they will be batched.
 //
 // Batching is needed because handling an event (or multiple events at once) will typically result in
-// reloading NGINX, which is the operation we want to minimize for the following reasons:
+// reloading NGINX, which is an operation we want to minimize for the following reasons:
 // (1) A reload takes time - at least 200ms. The time depends on the size of the configuration, the number of
 // TLS certs, and the number of available CPU cycles.
 // (2) A reload can have side-effects for data plane traffic.
