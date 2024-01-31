@@ -20,7 +20,7 @@ GO_LINKER_FLAGS = $(GO_LINKER_FLAGS_OPTIMIZATIONS) $(GO_LINKER_FlAGS_VARS)
 # variables that can be overridden by the user
 PREFIX ?= nginx-gateway-fabric## The name of the NGF image. For example, nginx-gateway-fabric
 NGINX_PREFIX ?= $(PREFIX)/nginx## The name of the nginx image. For example: nginx-gateway-fabric/nginx
-NGINX_PLUS_PREFIX ?= $(PREFIX)/nginxplus## The name of the nginx plus image. For example: nginx-gateway-fabric/nginxplus
+NGINX_PLUS_PREFIX ?= $(PREFIX)/nginx-plus## The name of the nginx plus image. For example: nginx-gateway-fabric/nginx-plus
 TAG ?= $(VERSION:v%=%)## The tag of the image. For example, 0.3.0
 TARGET ?= local## The target of the build. Possible values: local and container
 KIND_KUBE_CONFIG=$${HOME}/.kube/kind/config## The location of the kind kubeconfig
