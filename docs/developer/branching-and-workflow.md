@@ -60,6 +60,6 @@ For a comprehensive list of labels and prefixes, please refer to the [labeler](/
 ## NGINX Plus Builds
 
 The CI/CD pipeline builds a Docker image for NGINX Plus from the NGINX Plus [Dockerfile](build/Dockerfile.nginxplus) for every commit to the `main` branch, the release branches and for every PR.
-When a PR is opened, the CI/CD will use the cached image from the last build if the aren't any changes to the Dockerfile. If you're planning to make changes to the Dockerfile,
+When a PR is opened, the CI/CD will use the cached image from the last build if there aren't any changes to the Dockerfile. If you're planning to make changes to the Dockerfile,
 you would need to create a branch in the upstream repository. If you don't have write access to the upstream repository, you would need to contact the maintainers
 and ask them to create a branch for you so that the changes to the Dockerfile can be cached. After that your PR from a forked repository will be able to use the cached image.
