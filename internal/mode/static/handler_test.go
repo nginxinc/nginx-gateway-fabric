@@ -132,8 +132,11 @@ var _ = Describe("eventHandler", func() {
 
 				handler.HandleEventBatch(context.Background(), ctlrZap.New(), batch)
 
+				dcfg := &dataplane.Configuration{Version: 1}
+
 				checkUpsertEventExpectations(e)
-				expectReconfig(dataplane.Configuration{Version: 1}, fakeCfgFiles)
+				expectReconfig(*dcfg, fakeCfgFiles)
+				Expect(helpers.Diff(handler.GetLatestConfiguration(), dcfg)).To(BeEmpty())
 			})
 
 			It("should process Delete", func() {
@@ -145,8 +148,11 @@ var _ = Describe("eventHandler", func() {
 
 				handler.HandleEventBatch(context.Background(), ctlrZap.New(), batch)
 
+				dcfg := &dataplane.Configuration{Version: 1}
+
 				checkDeleteEventExpectations(e)
-				expectReconfig(dataplane.Configuration{Version: 1}, fakeCfgFiles)
+				expectReconfig(*dcfg, fakeCfgFiles)
+				Expect(helpers.Diff(handler.GetLatestConfiguration(), dcfg)).To(BeEmpty())
 			})
 		})
 
@@ -165,6 +171,7 @@ var _ = Describe("eventHandler", func() {
 				checkDeleteEventExpectations(deleteEvent)
 
 				handler.HandleEventBatch(context.Background(), ctlrZap.New(), batch)
+				Expect(helpers.Diff(handler.GetLatestConfiguration(), &dataplane.Configuration{Version: 2})).To(BeEmpty())
 			})
 		})
 	})
@@ -199,6 +206,8 @@ var _ = Describe("eventHandler", func() {
 			batch := []interface{}{&events.UpsertEvent{Resource: cfg(ngfAPI.ControllerLogLevelError)}}
 			handler.HandleEventBatch(context.Background(), ctlrZap.New(), batch)
 
+			Expect(handler.GetLatestConfiguration()).To(BeNil())
+
 			Expect(fakeStatusUpdater.UpdateCallCount()).Should(Equal(1))
 			_, statuses := fakeStatusUpdater.UpdateArgsForCall(0)
 			Expect(statuses).To(Equal(expStatuses(staticConds.NewNginxGatewayValid())))
@@ -209,6 +218,8 @@ var _ = Describe("eventHandler", func() {
 		It("handles an invalid config", func() {
 			batch := []interface{}{&events.UpsertEvent{Resource: cfg(ngfAPI.ControllerLogLevel("invalid"))}}
 			handler.HandleEventBatch(context.Background(), ctlrZap.New(), batch)
+
+			Expect(handler.GetLatestConfiguration()).To(BeNil())
 
 			Expect(fakeStatusUpdater.UpdateCallCount()).Should(Equal(1))
 			_, statuses := fakeStatusUpdater.UpdateArgsForCall(0)
@@ -228,6 +239,9 @@ var _ = Describe("eventHandler", func() {
 		It("handles a deleted config", func() {
 			batch := []interface{}{&events.DeleteEvent{Type: &ngfAPI.NginxGateway{}}}
 			handler.HandleEventBatch(context.Background(), ctlrZap.New(), batch)
+
+			Expect(handler.GetLatestConfiguration()).To(BeNil())
+
 			Expect(len(fakeEventRecorder.Events)).To(Equal(1))
 			event := <-fakeEventRecorder.Events
 			Expect(event).To(Equal("Warning ResourceDeleted NginxGateway configuration was deleted; using defaults"))
@@ -253,6 +267,8 @@ var _ = Describe("eventHandler", func() {
 
 			handler.HandleEventBatch(context.Background(), ctlrZap.New(), batch)
 
+			Expect(handler.GetLatestConfiguration()).To(BeNil())
+
 			Expect(fakeStatusUpdater.UpdateAddressesCallCount()).To(BeZero())
 		})
 
@@ -266,6 +282,8 @@ var _ = Describe("eventHandler", func() {
 			batch := []interface{}{e}
 
 			handler.HandleEventBatch(context.Background(), ctlrZap.New(), batch)
+
+			Expect(handler.GetLatestConfiguration()).To(BeNil())
 			Expect(fakeStatusUpdater.UpdateAddressesCallCount()).ToNot(BeZero())
 		})
 
@@ -280,6 +298,8 @@ var _ = Describe("eventHandler", func() {
 			batch := []interface{}{e}
 
 			handler.HandleEventBatch(context.Background(), ctlrZap.New(), batch)
+
+			Expect(handler.GetLatestConfiguration()).To(BeNil())
 			Expect(fakeStatusUpdater.UpdateAddressesCallCount()).ToNot(BeZero())
 		})
 	})
@@ -310,6 +330,8 @@ var _ = Describe("eventHandler", func() {
 				fakeNginxRuntimeMgr.IsPlusReturns(true)
 
 				handler.HandleEventBatch(context.Background(), ctlrZap.New(), batch)
+				Expect(helpers.Diff(handler.GetLatestConfiguration(), &dataplane.Configuration{Version: 1})).To(BeEmpty())
+
 				Expect(fakeGenerator.GenerateCallCount()).To(Equal(1))
 				Expect(fakeNginxFileMgr.ReplaceFilesCallCount()).To(Equal(1))
 				Expect(fakeNginxRuntimeMgr.GetUpstreamsCallCount()).To(Equal(1))
@@ -319,6 +341,8 @@ var _ = Describe("eventHandler", func() {
 		When("not running NGINX Plus", func() {
 			It("should not call the NGINX Plus API", func() {
 				handler.HandleEventBatch(context.Background(), ctlrZap.New(), batch)
+				Expect(helpers.Diff(handler.GetLatestConfiguration(), &dataplane.Configuration{Version: 1})).To(BeEmpty())
+
 				Expect(fakeGenerator.GenerateCallCount()).To(Equal(1))
 				Expect(fakeNginxFileMgr.ReplaceFilesCallCount()).To(Equal(1))
 				Expect(fakeNginxRuntimeMgr.GetUpstreamsCallCount()).To(Equal(0))
@@ -410,6 +434,9 @@ var _ = Describe("eventHandler", func() {
 
 		Expect(handler.cfg.healthChecker.readyCheck(nil)).ToNot(Succeed())
 		handler.HandleEventBatch(context.Background(), ctlrZap.New(), batch)
+
+		Expect(helpers.Diff(handler.GetLatestConfiguration(), &dataplane.Configuration{Version: 1})).To(BeEmpty())
+
 		Expect(handler.cfg.healthChecker.readyCheck(nil)).To(Succeed())
 	})
 
@@ -419,6 +446,9 @@ var _ = Describe("eventHandler", func() {
 
 		Expect(handler.cfg.healthChecker.readyCheck(nil)).ToNot(Succeed())
 		handler.HandleEventBatch(context.Background(), ctlrZap.New(), batch)
+
+		Expect(handler.GetLatestConfiguration()).To(BeNil())
+
 		Expect(handler.cfg.healthChecker.readyCheck(nil)).To(Succeed())
 	})
 
@@ -446,6 +476,8 @@ var _ = Describe("eventHandler", func() {
 
 		handler.HandleEventBatch(context.Background(), ctlrZap.New(), batch)
 
+		Expect(helpers.Diff(handler.GetLatestConfiguration(), &dataplane.Configuration{Version: 2})).To(BeEmpty())
+
 		Expect(handler.cfg.healthChecker.readyCheck(nil)).To(Succeed())
 	})
 
@@ -458,6 +490,8 @@ var _ = Describe("eventHandler", func() {
 		}
 
 		Expect(handle).Should(Panic())
+
+		Expect(handler.GetLatestConfiguration()).To(BeNil())
 	})
 })
 
