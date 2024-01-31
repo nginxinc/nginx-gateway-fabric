@@ -56,7 +56,36 @@ func TestValidateBackendTLSPolicy(t *testing.T) {
 
 	localObjectRefTooManyCerts := append(localObjectRefNormalCase, localObjectRefInvalidName...)
 
-	// TODO: add test for too many ancestors
+	getAncestorRef := func(ctlrName, parentName string) v1alpha2.PolicyAncestorStatus {
+		return v1alpha2.PolicyAncestorStatus{
+			ControllerName: gatewayv1.GatewayController(ctlrName),
+			AncestorRef: gatewayv1.ParentReference{
+				Name:      gatewayv1.ObjectName(parentName),
+				Namespace: helpers.GetPointer(gatewayv1.Namespace("test")),
+			},
+		}
+	}
+
+	ancestors := []v1alpha2.PolicyAncestorStatus{
+		getAncestorRef("not-us", "not-us"),
+		getAncestorRef("not-us", "not-us"),
+		getAncestorRef("not-us", "not-us"),
+		getAncestorRef("not-us", "not-us"),
+		getAncestorRef("not-us", "not-us"),
+		getAncestorRef("not-us", "not-us"),
+		getAncestorRef("not-us", "not-us"),
+		getAncestorRef("not-us", "not-us"),
+		getAncestorRef("not-us", "not-us"),
+		getAncestorRef("not-us", "not-us"),
+		getAncestorRef("not-us", "not-us"),
+		getAncestorRef("not-us", "not-us"),
+		getAncestorRef("not-us", "not-us"),
+		getAncestorRef("not-us", "not-us"),
+		getAncestorRef("not-us", "not-us"),
+		getAncestorRef("not-us", "not-us"),
+	}
+
+	ancestorsWithUs := append(ancestors, getAncestorRef("test", "gateway"))
 
 	tests := []struct {
 		tlsPolicy  *v1alpha2.BackendTLSPolicy
@@ -77,6 +106,27 @@ func TestValidateBackendTLSPolicy(t *testing.T) {
 						CACertRefs: localObjectRefNormalCase,
 						Hostname:   "foo.test.com",
 					},
+				},
+			},
+			isValid:    true,
+			caCertName: types.NamespacedName{Namespace: "test", Name: "configmap"},
+		},
+		{
+			name: "normal case with ca cert refs and 16 ancestors including us",
+			tlsPolicy: &v1alpha2.BackendTLSPolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "tls-policy",
+					Namespace: "test",
+				},
+				Spec: v1alpha2.BackendTLSPolicySpec{
+					TargetRef: *targetRefNormalCase,
+					TLS: v1alpha2.BackendTLSPolicyConfig{
+						CACertRefs: localObjectRefNormalCase,
+						Hostname:   "foo.test.com",
+					},
+				},
+				Status: v1alpha2.PolicyStatus{
+					Ancestors: ancestorsWithUs,
 				},
 			},
 			isValid:    true,
@@ -218,6 +268,27 @@ func TestValidateBackendTLSPolicy(t *testing.T) {
 			},
 			isValid: false,
 		},
+		{
+			name: "invalid case with too many ancestors",
+			tlsPolicy: &v1alpha2.BackendTLSPolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "tls-policy",
+					Namespace: "test",
+				},
+				Spec: v1alpha2.BackendTLSPolicySpec{
+					TargetRef: *targetRefNormalCase,
+					TLS: v1alpha2.BackendTLSPolicyConfig{
+						CACertRefs: localObjectRefNormalCase,
+						Hostname:   "foo.test.com",
+					},
+				},
+				Status: v1alpha2.PolicyStatus{
+					Ancestors: ancestors,
+				},
+			},
+			isValid:    false,
+			caCertName: types.NamespacedName{Namespace: "test", Name: "configmap"},
+		},
 	}
 
 	configMaps := map[types.NamespacedName]*v1.ConfigMap{
@@ -247,7 +318,11 @@ func TestValidateBackendTLSPolicy(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewWithT(t)
 
-			valid, caCertName, conds := validateBackendTLSPolicy(test.tlsPolicy, configMapResolver, "test", &Gateway{})
+			gateway := &Gateway{
+				Source: &gatewayv1.Gateway{ObjectMeta: metav1.ObjectMeta{Name: "gateway", Namespace: "test"}},
+			}
+
+			valid, caCertName, conds := validateBackendTLSPolicy(test.tlsPolicy, configMapResolver, "test", gateway)
 
 			g.Expect(valid).To(Equal(test.isValid))
 			g.Expect(caCertName).To(Equal(test.caCertName))

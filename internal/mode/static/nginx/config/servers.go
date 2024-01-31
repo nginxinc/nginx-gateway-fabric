@@ -3,7 +3,6 @@ package config
 import (
 	"encoding/json"
 	"fmt"
-	"os"
 	"strings"
 	gotemplate "text/template"
 
@@ -275,8 +274,8 @@ func createProxyTLSFromBackends(backends []dataplane.Backend) *http.ProxySSLVeri
 		proxyVerify := createProxySSLVerify(b.VerifyTLS)
 		if proxyVerify != nil {
 			// If any backend has a backend TLS policy defined, then we use that for the proxy SSL verification.
-			// If multiple backends in the group have a backend TLS policy defined, then we use the first one we find.
-			// TODO(ciarams87): Fix this
+			// We require that all backends in a group have the same backend TLS policy.
+			// Verification that all backends in a group have the same backend TLS policy is done in the graph package.
 			return proxyVerify
 		}
 	}
@@ -291,30 +290,12 @@ func createProxySSLVerify(v *dataplane.VerifyTLS) *http.ProxySSLVerify {
 	if v.CertBundleID != "" {
 		trustedCert = generateCertBundleFileName(v.CertBundleID)
 	} else {
-		trustedCert = getRootCAPath()
+		trustedCert = v.RootCAPath
 	}
 	return &http.ProxySSLVerify{
 		TrustedCertificate: trustedCert,
 		Name:               v.Hostname,
 	}
-}
-
-// TODO(ciarams87): Move this logic earlier
-func getRootCAPath() string {
-	certFiles := []string{
-		"/etc/ssl/cert.pem",                                 // Alpine Linux
-		"/etc/ssl/certs/ca-certificates.crt",                // Debian/Ubuntu/Gentoo etc.
-		"/etc/pki/tls/certs/ca-bundle.crt",                  // Fedora/RHEL 6
-		"/etc/ssl/ca-bundle.pem",                            // OpenSUSE
-		"/etc/pki/tls/cacert.pem",                           // OpenELEC
-		"/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem", // CentOS/RHEL 7
-	}
-	for _, certFile := range certFiles {
-		if _, err := os.Stat(certFile); err == nil {
-			return certFile
-		}
-	}
-	return ""
 }
 
 func createReturnValForRedirectFilter(filter *dataplane.HTTPRequestRedirectFilter, listenerPort int32) *http.Return {

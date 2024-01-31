@@ -247,4 +247,5 @@ type Backend struct {
 type VerifyTLS struct {
 	CertBundleID CertBundleID
 	Hostname     string
+	RootCAPath   string
 }

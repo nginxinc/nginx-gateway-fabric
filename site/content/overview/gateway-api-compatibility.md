@@ -254,7 +254,17 @@ Fields:
       - `group` - supported.
       - `kind` - supports `ConfigMap`.
     - `hostname` - supported.
-    - `wellKnownCerts` - supports `System`.
+    - `wellKnownCerts` - supports `System`. This will set the CA certificate to the system root CA path.
+- `status`
+  - `ancestors`
+    - `ancestorRef` - supported.
+    - `controllerName`: supported.
+    - `conditions`: Supported (Condition/Status/Reason):
+      - `Attached/True/BackendTLSPolicyAttached` - Custom reason for when the BackendTLSPolicy is attached to at least one Service referenced by this Gateway.
+      - `Attached/False/BackendTLSPolicyIgnored` - Custom reason for when the BackendTLSPolicy config cannot be attached to the Gateway and will be ignored.
+      - `Valid/False/BackendTLSPolicyInvalid` - Custom reason for when the BackendTLSPolicy config is invalid.
+
+{{<note>}}If multiple `backendRefs` are defined for a HTTPRoute rule, all the referenced Services *must* have matching BackendTLSPolicy configuration{{</note>}}
 
 ### Custom Policies
 

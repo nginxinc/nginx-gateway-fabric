@@ -52,7 +52,7 @@ func (r *configMapResolver) resolve(nsname types.NamespacedName) error {
 	var caCert []byte
 
 	if !exist {
-		validationErr = errors.New("configMap does not exist")
+		validationErr = errors.New("ConfigMap does not exist")
 	} else {
 		if cm.Data != nil {
 			if _, exists := cm.Data[CAKey]; exists {
@@ -67,7 +67,7 @@ func (r *configMapResolver) resolve(nsname types.NamespacedName) error {
 			}
 		}
 		if len(caCert) == 0 {
-			validationErr = fmt.Errorf("configMap does not have the data or binaryData field %v", CAKey)
+			validationErr = fmt.Errorf("ConfigMap does not have the data or binaryData field %v", CAKey)
 		}
 	}
 

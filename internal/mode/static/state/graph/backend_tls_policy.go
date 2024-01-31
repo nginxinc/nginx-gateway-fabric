@@ -69,14 +69,18 @@ func validateBackendTLSPolicy(
 			Namespace: helpers.GetPointer((v1.Namespace)(gateway.Source.Namespace)),
 			Name:      v1.ObjectName(gateway.Source.Name),
 		}
+		var alreadyAncestor bool
 		for _, ancestor := range backendTLSPolicy.Status.Ancestors {
 			if string(ancestor.ControllerName) == ctlrName && ancestor.AncestorRef.Name == ancestorRef.Name &&
-				ancestor.AncestorRef.Namespace == ancestorRef.Namespace {
+				*ancestor.AncestorRef.Namespace == *ancestorRef.Namespace {
+				alreadyAncestor = true
 				break
 			}
 		}
-		valid = false
-		conds = append(conds, staticConds.NewBackendTLSPolicyIgnored("too many ancestors, cannot attach a new Gateway"))
+		if !alreadyAncestor {
+			valid = false
+			conds = append(conds, staticConds.NewBackendTLSPolicyIgnored("too many ancestors, cannot attach a new Gateway"))
+		}
 	}
 	if err := validateBackendTLSHostname(backendTLSPolicy); err != nil {
 		valid = false

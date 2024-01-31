@@ -54,7 +54,7 @@ server {
         proxy_pass {{ $l.ProxyPass }};
             {{- if $l.ProxySSLVerify }}
         proxy_ssl_verify on;
-        proxy_ssl_name {{ $l.ProxySSLVerify.Hostname }};
+        proxy_ssl_name {{ $l.ProxySSLVerify.Name }};
         proxy_ssl_trusted_certificate {{ $l.ProxySSLVerify.TrustedCertificate }};
             {{- end }}
         {{- end }}

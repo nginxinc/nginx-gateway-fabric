@@ -838,3 +838,203 @@ func TestGetServicePort(t *testing.T) {
 	g.Expect(err).Should(HaveOccurred())
 	g.Expect(port.Port).To(Equal(int32(0)))
 }
+
+func TestValidateBackendTLSPolicyMatchingAllBackends(t *testing.T) {
+	getBtp := func(name string) *BackendTLSPolicy {
+		return &BackendTLSPolicy{
+			Source: &v1alpha2.BackendTLSPolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      name,
+					Namespace: "test",
+				},
+			},
+		}
+	}
+
+	backendRefsNoPolicies := []BackendRef{
+		{
+			SvcNsName: types.NamespacedName{Namespace: "test", Name: "svc1"},
+		},
+		{
+			SvcNsName: types.NamespacedName{Namespace: "test", Name: "svc2"},
+		},
+	}
+
+	backendRefsWithMatchingPolicies := []BackendRef{
+		{
+			SvcNsName:        types.NamespacedName{Namespace: "test", Name: "svc1"},
+			BackendTLSPolicy: getBtp("btp1"),
+		},
+		{
+			SvcNsName:        types.NamespacedName{Namespace: "test", Name: "svc2"},
+			BackendTLSPolicy: getBtp("btp1"),
+		},
+	}
+	backendRefsWithNotMatchingPolicies := []BackendRef{
+		{
+			SvcNsName:        types.NamespacedName{Namespace: "test", Name: "svc1"},
+			BackendTLSPolicy: getBtp("btp1"),
+		},
+		{
+			SvcNsName:        types.NamespacedName{Namespace: "test", Name: "svc2"},
+			BackendTLSPolicy: getBtp("btp2"),
+		},
+	}
+	backendRefsOnePolicy := []BackendRef{
+		{
+			SvcNsName:        types.NamespacedName{Namespace: "test", Name: "svc1"},
+			BackendTLSPolicy: getBtp("btp1"),
+		},
+		{
+			SvcNsName: types.NamespacedName{Namespace: "test", Name: "svc2"},
+		},
+	}
+	msg := "Backend TLS policies do not match for all backends"
+	tests := []struct {
+		expectedCondition *conditions.Condition
+		name              string
+		backendRefs       []BackendRef
+	}{
+		{
+			name:              "no policies",
+			backendRefs:       backendRefsNoPolicies,
+			expectedCondition: nil,
+		},
+		{
+			name:              "matching policies",
+			backendRefs:       backendRefsWithMatchingPolicies,
+			expectedCondition: nil,
+		},
+		{
+			name:              "not matching policies",
+			backendRefs:       backendRefsWithNotMatchingPolicies,
+			expectedCondition: helpers.GetPointer(staticConds.NewRouteBackendRefUnsupportedValue(msg)),
+		},
+		{
+			name:              "only one policy",
+			backendRefs:       backendRefsOnePolicy,
+			expectedCondition: helpers.GetPointer(staticConds.NewRouteBackendRefUnsupportedValue(msg)),
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			g := NewWithT(t)
+
+			cond := validateBackendTLSPolicyMatchingAllBackends(test.backendRefs)
+
+			g.Expect(cond).To(Equal(test.expectedCondition))
+		})
+	}
+}
+
+func TestFindBackendTLSPolicyForService(t *testing.T) {
+	oldCreationTimestamp := metav1.Now()
+	newCreationTimestamp := metav1.Now()
+	oldestBtp := BackendTLSPolicy{
+		Valid: true,
+		Source: &v1alpha2.BackendTLSPolicy{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:              "oldest",
+				Namespace:         "test",
+				CreationTimestamp: oldCreationTimestamp,
+			},
+			Spec: v1alpha2.BackendTLSPolicySpec{
+				TargetRef: v1alpha2.PolicyTargetReferenceWithSectionName{
+					PolicyTargetReference: v1alpha2.PolicyTargetReference{
+						Group:     "",
+						Kind:      "Service",
+						Name:      "svc1",
+						Namespace: (*gatewayv1.Namespace)(helpers.GetPointer("test")),
+					},
+				},
+			},
+		},
+	}
+	newestBtp := BackendTLSPolicy{
+		Valid: true,
+		Source: &v1alpha2.BackendTLSPolicy{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:              "newest",
+				Namespace:         "test",
+				CreationTimestamp: newCreationTimestamp,
+			},
+			Spec: v1alpha2.BackendTLSPolicySpec{
+				TargetRef: v1alpha2.PolicyTargetReferenceWithSectionName{
+					PolicyTargetReference: v1alpha2.PolicyTargetReference{
+						Group:     "",
+						Kind:      "Service",
+						Name:      "svc1",
+						Namespace: (*gatewayv1.Namespace)(helpers.GetPointer("test")),
+					},
+				},
+			},
+		},
+	}
+
+	alphaFirstBtp := BackendTLSPolicy{
+		Valid: true,
+		Source: &v1alpha2.BackendTLSPolicy{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:              "alphabeticallyfirst",
+				Namespace:         "test",
+				CreationTimestamp: oldCreationTimestamp,
+			},
+			Spec: v1alpha2.BackendTLSPolicySpec{
+				TargetRef: v1alpha2.PolicyTargetReferenceWithSectionName{
+					PolicyTargetReference: v1alpha2.PolicyTargetReference{
+						Group:     "",
+						Kind:      "Service",
+						Name:      "svc1",
+						Namespace: (*gatewayv1.Namespace)(helpers.GetPointer("test")),
+					},
+				},
+			},
+		},
+	}
+
+	ref := gatewayv1.HTTPBackendRef{
+		BackendRef: gatewayv1.BackendRef{
+			BackendObjectReference: gatewayv1.BackendObjectReference{
+				Kind:      helpers.GetPointer[gatewayv1.Kind]("Service"),
+				Name:      "svc1",
+				Namespace: helpers.GetPointer[gatewayv1.Namespace]("test"),
+			},
+		},
+	}
+
+	tests := []struct {
+		name               string
+		backendTLSPolicies map[types.NamespacedName]*BackendTLSPolicy
+		expectedBtpName    string
+	}{
+		{
+			name: "oldest wins",
+			backendTLSPolicies: map[types.NamespacedName]*BackendTLSPolicy{
+				client.ObjectKeyFromObject(newestBtp.Source): &newestBtp,
+				client.ObjectKeyFromObject(oldestBtp.Source): &oldestBtp,
+			},
+			expectedBtpName: "oldest",
+		},
+		{
+			name: "alphabetically first wins",
+			backendTLSPolicies: map[types.NamespacedName]*BackendTLSPolicy{
+				client.ObjectKeyFromObject(oldestBtp.Source):     &oldestBtp,
+				client.ObjectKeyFromObject(alphaFirstBtp.Source): &alphaFirstBtp,
+				client.ObjectKeyFromObject(newestBtp.Source):     &newestBtp,
+			},
+			expectedBtpName: "alphabeticallyfirst",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			g := NewWithT(t)
+
+			btp, err := findBackendTLSPolicyForService(test.backendTLSPolicies, ref, "test")
+
+			g.Expect(btp.Source.Name).To(Equal(test.expectedBtpName))
+			g.Expect(err).ToNot(HaveOccurred())
+		})
+	}
+}

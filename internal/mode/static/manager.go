@@ -390,7 +390,8 @@ func registerControllers(
 				objectType: &gatewayv1alpha2.BackendTLSPolicy{},
 			},
 			{
-				objectType: &apiv1.ConfigMap{}, // TODO(ciarams87): Use only metadata predicate
+				// FIXME(ciarams87): If possible, use only metadata predicate
+				objectType: &apiv1.ConfigMap{},
 			},
 		}
 		controllerRegCfgs = append(controllerRegCfgs, backendTLSObjs...)
