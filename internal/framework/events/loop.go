@@ -14,11 +14,11 @@ import (
 // - Otherwise, the new event will be saved for later handling. All saved events will be handled after the handling of
 // the current event(s) finishes. Multiple saved events will be handled at once -- they will be batched.
 //
-// Batching is needed because, because typically handling an event (or multiple events at once) will result into
-// reloading NGINX, which is the operation we want to minimize, for the following reasons:
-// (1) A reload takes time - at least 200ms. The time depends on the size of the configuration including the number of
-// TLS certs, available CPU cycles.
-// (2) A reload can have side-effects for the data plane traffic.
+// Batching is needed because handling an event (or multiple events at once) will typically result in
+// reloading NGINX, which is an operation we want to minimize for the following reasons:
+// (1) A reload takes time - at least 200ms. The time depends on the size of the configuration, the number of
+// TLS certs, and the number of available CPU cycles.
+// (2) A reload can have side-effects for data plane traffic.
 // FIXME(pleshakov): better document the side effects and how to prevent and mitigate them.
 // So when the EventLoop have 100 saved events, it is better to process them at once rather than one by one.
 // https://github.com/nginxinc/nginx-gateway-fabric/issues/551
