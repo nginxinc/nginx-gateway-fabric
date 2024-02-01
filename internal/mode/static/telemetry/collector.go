@@ -118,18 +118,22 @@ func collectGraphResourceCount(
 	cfg := configurationGetter.GetLatestConfiguration()
 
 	if g == nil {
-		return NGFResourceCounts{}, errors.New("latest graph cannot be nil")
+		return ngfResourceCounts, errors.New("latest graph cannot be nil")
 	}
 	if cfg == nil {
-		return NGFResourceCounts{}, errors.New("latest configuration cannot be nil")
+		return ngfResourceCounts, errors.New("latest configuration cannot be nil")
 	}
 
+	ngfResourceCounts.GatewayClasses = len(g.IgnoredGatewayClasses)
 	if g.GatewayClass != nil {
-		ngfResourceCounts.GatewayClasses = 1
+		ngfResourceCounts.GatewayClasses++
 	}
+
+	ngfResourceCounts.Gateways = len(g.IgnoredGateways)
 	if g.Gateway != nil {
-		ngfResourceCounts.Gateways = 1
+		ngfResourceCounts.Gateways++
 	}
+
 	ngfResourceCounts.HTTPRoutes = len(g.Routes)
 	ngfResourceCounts.Secrets = len(g.ReferencedSecrets)
 	ngfResourceCounts.Services = len(g.ReferencedServices)

@@ -116,7 +116,11 @@ func (h *eventHandlerImpl) HandleEventBatch(ctx context.Context, logger logr.Log
 	case state.EndpointsOnlyChange:
 		h.cfg.version++
 		cfg := dataplane.BuildConfiguration(ctx, graph, h.cfg.serviceResolver, h.cfg.version)
+
+		h.lock.Lock()
 		h.latestConfiguration = &cfg
+		h.lock.Unlock()
+
 		err = h.updateUpstreamServers(
 			ctx,
 			logger,
@@ -125,7 +129,11 @@ func (h *eventHandlerImpl) HandleEventBatch(ctx context.Context, logger logr.Log
 	case state.ClusterStateChange:
 		h.cfg.version++
 		cfg := dataplane.BuildConfiguration(ctx, graph, h.cfg.serviceResolver, h.cfg.version)
+
+		h.lock.Lock()
 		h.latestConfiguration = &cfg
+		h.lock.Unlock()
+
 		err = h.updateNginxConf(
 			ctx,
 			cfg,
