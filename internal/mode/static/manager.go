@@ -69,7 +69,7 @@ func init() {
 
 // nolint:gocyclo
 func StartManager(cfg config.Config) error {
-	hc := &healthChecker{}
+	hc := newHealthCheckerImpl()
 	mgr, err := createManager(cfg, hc)
 	if err != nil {
 		return fmt.Errorf("cannot build runtime manager: %w", err)
@@ -221,7 +221,7 @@ func StartManager(cfg config.Config) error {
 	return mgr.Start(ctx)
 }
 
-func createManager(cfg config.Config, hc *healthChecker) (manager.Manager, error) {
+func createManager(cfg config.Config, hc *healthCheckerImpl) (manager.Manager, error) {
 	options := manager.Options{
 		Scheme:  scheme,
 		Logger:  cfg.Logger,

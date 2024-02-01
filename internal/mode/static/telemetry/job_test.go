@@ -15,21 +15,26 @@ import (
 
 var _ = Describe("Job", func() {
 	var (
-		job           *telemetry.Job
-		exporter      *telemetryfakes.FakeExporter
-		dataCollector *telemetryfakes.FakeDataCollector
-		expData       telemetry.Data
+		job             *telemetry.Job
+		exporter        *telemetryfakes.FakeExporter
+		dataCollector   *telemetryfakes.FakeDataCollector
+		healthCollector *telemetryfakes.FakeHealthChecker
+		expData         telemetry.Data
+		readyChannel    chan struct{}
 	)
 	const timeout = 10 * time.Second
 
 	BeforeEach(func() {
 		exporter = &telemetryfakes.FakeExporter{}
 		dataCollector = &telemetryfakes.FakeDataCollector{}
+		healthCollector = &telemetryfakes.FakeHealthChecker{}
+
 		job = telemetry.NewJob(telemetry.JobConfig{
 			Exporter:      exporter,
 			Logger:        zap.New(),
 			Period:        1 * time.Millisecond, // 1ms is much smaller than timeout so the Job should report a few times
 			DataCollector: dataCollector,
+			HealthChecker: healthCollector,
 		})
 
 		expData = telemetry.Data{
@@ -54,6 +59,10 @@ var _ = Describe("Job", func() {
 			exporter.ExportReturns(exporterError)
 
 			ctx, cancel := context.WithTimeout(context.Background(), timeout)
+
+			readyChannel = make(chan struct{})
+			healthCollector.GetReadyIfClosedChannelReturns(readyChannel)
+			close(readyChannel)
 
 			errCh := make(chan error)
 			go func() {

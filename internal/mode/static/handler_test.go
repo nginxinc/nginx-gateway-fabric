@@ -84,7 +84,7 @@ var _ = Describe("eventHandler", func() {
 			nginxRuntimeMgr:     fakeNginxRuntimeMgr,
 			statusUpdater:       fakeStatusUpdater,
 			eventRecorder:       fakeEventRecorder,
-			healthChecker:       &healthChecker{},
+			healthChecker:       newHealthCheckerImpl(),
 			controlConfigNSName: types.NamespacedName{Namespace: namespace, Name: configName},
 			gatewayPodConfig: config.GatewayPodConfig{
 				ServiceName: "nginx-gateway",
@@ -429,6 +429,7 @@ var _ = Describe("eventHandler", func() {
 	It("should set the health checker status properly when there are changes", func() {
 		e := &events.UpsertEvent{Resource: &gatewayv1.HTTPRoute{}}
 		batch := []interface{}{e}
+		readyChannel := handler.cfg.healthChecker.GetReadyIfClosedChannel()
 
 		fakeProcessor.ProcessReturns(state.ClusterStateChange, &graph.Graph{})
 
@@ -437,17 +438,24 @@ var _ = Describe("eventHandler", func() {
 
 		Expect(helpers.Diff(handler.GetLatestConfiguration(), &dataplane.Configuration{Version: 1})).To(BeEmpty())
 
+		_, ok := <-readyChannel
+		Expect(ok).To(BeFalse())
+
 		Expect(handler.cfg.healthChecker.readyCheck(nil)).To(Succeed())
 	})
 
 	It("should set the health checker status properly when there are no changes or errors", func() {
 		e := &events.UpsertEvent{Resource: &gatewayv1.HTTPRoute{}}
 		batch := []interface{}{e}
+		readyChannel := handler.cfg.healthChecker.GetReadyIfClosedChannel()
 
 		Expect(handler.cfg.healthChecker.readyCheck(nil)).ToNot(Succeed())
 		handler.HandleEventBatch(context.Background(), ctlrZap.New(), batch)
 
 		Expect(handler.GetLatestConfiguration()).To(BeNil())
+
+		_, ok := <-readyChannel
+		Expect(ok).To(BeFalse())
 
 		Expect(handler.cfg.healthChecker.readyCheck(nil)).To(Succeed())
 	})
@@ -455,6 +463,7 @@ var _ = Describe("eventHandler", func() {
 	It("should set the health checker status properly when there is an error", func() {
 		e := &events.UpsertEvent{Resource: &gatewayv1.HTTPRoute{}}
 		batch := []interface{}{e}
+		readyChannel := handler.cfg.healthChecker.GetReadyIfClosedChannel()
 
 		fakeProcessor.ProcessReturns(state.ClusterStateChange, &graph.Graph{})
 		fakeNginxRuntimeMgr.ReloadReturns(errors.New("reload error"))
@@ -477,6 +486,9 @@ var _ = Describe("eventHandler", func() {
 		handler.HandleEventBatch(context.Background(), ctlrZap.New(), batch)
 
 		Expect(helpers.Diff(handler.GetLatestConfiguration(), &dataplane.Configuration{Version: 2})).To(BeEmpty())
+
+		_, ok := <-readyChannel
+		Expect(ok).To(BeFalse())
 
 		Expect(handler.cfg.healthChecker.readyCheck(nil)).To(Succeed())
 	})

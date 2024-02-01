@@ -17,12 +17,22 @@ type DataCollector interface {
 	Collect(ctx context.Context) (Data, error)
 }
 
+//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . HealthChecker
+
+// HealthChecker checks if the NGF Pod is ready.
+type HealthChecker interface {
+	// GetReadyIfClosedChannel returns a channel which determines if the NGF Pod is ready.
+	GetReadyIfClosedChannel() chan struct{}
+}
+
 // JobConfig is the configuration for the telemetry job.
 type JobConfig struct {
 	// Exporter is the exporter to use for exporting telemetry data.
 	Exporter Exporter
 	// DataCollector is the collector to use for collecting telemetry data.
 	DataCollector DataCollector
+	// HealthChecker lets us check if the NGF Pod is ready.
+	HealthChecker HealthChecker
 	// Logger is the logger.
 	Logger logr.Logger
 	// Period defines the period of the telemetry job. The job will run every Period.
@@ -46,6 +56,14 @@ func NewJob(cfg JobConfig) *Job {
 func (j *Job) Start(ctx context.Context) error {
 	// wait here until pod is ready, have to propagate down health checker for pod
 	// make sure I can gracefully terminate if the context is canceled
+
+	readyChannel := j.cfg.HealthChecker.GetReadyIfClosedChannel()
+	select {
+	case <-readyChannel:
+	case <-ctx.Done():
+		j.cfg.Logger.V(1).Info("Failed to start telemetry job")
+		return ctx.Err()
+	}
 
 	j.cfg.Logger.Info("Starting telemetry job")
 
