@@ -29,6 +29,9 @@ var _ = Describe("Job", func() {
 		dataCollector = &telemetryfakes.FakeDataCollector{}
 		healthCollector = &telemetryfakes.FakeHealthChecker{}
 
+		readyChannel = make(chan struct{})
+		healthCollector.GetReadyIfClosedChannelReturns(readyChannel)
+
 		job = telemetry.NewJob(telemetry.JobConfig{
 			Exporter:      exporter,
 			Logger:        zap.New(),
@@ -54,21 +57,19 @@ var _ = Describe("Job", func() {
 
 	DescribeTable(
 		"Job runs with a few reports without any errors",
-		func(exporterError error) {
+		func(exporterError error, sleep time.Duration) {
 			// The fact that exporter return an error must not affect how many times the Job makes a report.
 			exporter.ExportReturns(exporterError)
 
 			ctx, cancel := context.WithTimeout(context.Background(), timeout)
-
-			readyChannel = make(chan struct{})
-			healthCollector.GetReadyIfClosedChannelReturns(readyChannel)
-			close(readyChannel)
 
 			errCh := make(chan error)
 			go func() {
 				errCh <- job.Start(ctx)
 				close(errCh)
 			}()
+			time.Sleep(sleep)
+			close(readyChannel)
 
 			const minReports = 2 // ensure that the Job reports more than once: it doesn't exit after the first report
 
@@ -82,7 +83,27 @@ var _ = Describe("Job", func() {
 			Eventually(errCh).Should(Receive(BeNil()))
 			Eventually(errCh).Should(BeClosed())
 		},
-		Entry("Job runs with Exporter not returning errors", nil),
-		Entry("Job runs with Exporter returning an error", errors.New("some error")),
+		Entry("Job runs with Exporter not returning errors", nil, time.Duration(0)),
+		Entry("Job runs with Exporter returning an error", errors.New("some error"), time.Duration(0)),
+		Entry("Job runs with extended time waiting for NGF Pod to be ready", nil, 500*time.Millisecond),
 	)
+
+	When("job context is canceled", func() {
+		It("should gracefully exist", func() {
+			ctx, cancel := context.WithTimeout(context.Background(), timeout)
+
+			errCh := make(chan error)
+			go func() {
+				errCh <- job.Start(ctx)
+				close(errCh)
+			}()
+
+			sleep := 500 * time.Millisecond
+			time.Sleep(sleep)
+			cancel()
+
+			Eventually(errCh).Should(Receive())
+			Eventually(errCh).Should(BeClosed())
+		})
+	})
 })

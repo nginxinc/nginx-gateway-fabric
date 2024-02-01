@@ -49,6 +49,6 @@ func (h *healthCheckerImpl) setAsReady() {
 }
 
 // GetReadyIfClosedChannel returns a channel which determines if the NGF Pod is ready.
-func (h *healthCheckerImpl) GetReadyIfClosedChannel() chan struct{} {
+func (h *healthCheckerImpl) GetReadyIfClosedChannel() <-chan struct{} {
 	return h.readyIfClosedChan
 }

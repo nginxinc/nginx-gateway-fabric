@@ -8,21 +8,21 @@ import (
 )
 
 type FakeHealthChecker struct {
-	GetReadyIfClosedChannelStub        func() chan struct{}
+	GetReadyIfClosedChannelStub        func() <-chan struct{}
 	getReadyIfClosedChannelMutex       sync.RWMutex
 	getReadyIfClosedChannelArgsForCall []struct {
 	}
 	getReadyIfClosedChannelReturns struct {
-		result1 chan struct{}
+		result1 <-chan struct{}
 	}
 	getReadyIfClosedChannelReturnsOnCall map[int]struct {
-		result1 chan struct{}
+		result1 <-chan struct{}
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeHealthChecker) GetReadyIfClosedChannel() chan struct{} {
+func (fake *FakeHealthChecker) GetReadyIfClosedChannel() <-chan struct{} {
 	fake.getReadyIfClosedChannelMutex.Lock()
 	ret, specificReturn := fake.getReadyIfClosedChannelReturnsOnCall[len(fake.getReadyIfClosedChannelArgsForCall)]
 	fake.getReadyIfClosedChannelArgsForCall = append(fake.getReadyIfClosedChannelArgsForCall, struct {
@@ -46,32 +46,32 @@ func (fake *FakeHealthChecker) GetReadyIfClosedChannelCallCount() int {
 	return len(fake.getReadyIfClosedChannelArgsForCall)
 }
 
-func (fake *FakeHealthChecker) GetReadyIfClosedChannelCalls(stub func() chan struct{}) {
+func (fake *FakeHealthChecker) GetReadyIfClosedChannelCalls(stub func() <-chan struct{}) {
 	fake.getReadyIfClosedChannelMutex.Lock()
 	defer fake.getReadyIfClosedChannelMutex.Unlock()
 	fake.GetReadyIfClosedChannelStub = stub
 }
 
-func (fake *FakeHealthChecker) GetReadyIfClosedChannelReturns(result1 chan struct{}) {
+func (fake *FakeHealthChecker) GetReadyIfClosedChannelReturns(result1 <-chan struct{}) {
 	fake.getReadyIfClosedChannelMutex.Lock()
 	defer fake.getReadyIfClosedChannelMutex.Unlock()
 	fake.GetReadyIfClosedChannelStub = nil
 	fake.getReadyIfClosedChannelReturns = struct {
-		result1 chan struct{}
+		result1 <-chan struct{}
 	}{result1}
 }
 
-func (fake *FakeHealthChecker) GetReadyIfClosedChannelReturnsOnCall(i int, result1 chan struct{}) {
+func (fake *FakeHealthChecker) GetReadyIfClosedChannelReturnsOnCall(i int, result1 <-chan struct{}) {
 	fake.getReadyIfClosedChannelMutex.Lock()
 	defer fake.getReadyIfClosedChannelMutex.Unlock()
 	fake.GetReadyIfClosedChannelStub = nil
 	if fake.getReadyIfClosedChannelReturnsOnCall == nil {
 		fake.getReadyIfClosedChannelReturnsOnCall = make(map[int]struct {
-			result1 chan struct{}
+			result1 <-chan struct{}
 		})
 	}
 	fake.getReadyIfClosedChannelReturnsOnCall[i] = struct {
-		result1 chan struct{}
+		result1 <-chan struct{}
 	}{result1}
 }
 
