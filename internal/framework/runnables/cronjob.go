@@ -17,6 +17,9 @@ type CronJobConfig struct {
 	Logger logr.Logger
 	// Period defines the period of the cronjob. The cronjob will run every Period.
 	Period time.Duration
+	// JitterFactor sets the jitter for the cronjob. If positive, the period is jittered before every
+	// run of the worker. If jitterFactor is not positive, the period is unchanged and not jittered.
+	JitterFactor float64
 }
 
 // CronJob periodically runs a worker function.
@@ -36,14 +39,9 @@ func NewCronJob(cfg CronJobConfig) *CronJob {
 func (j *CronJob) Start(ctx context.Context) error {
 	j.cfg.Logger.Info("Starting cronjob")
 
-	const (
-		// 10 min jitter is enough per recommendation for current use cases
-		// For the default period of 24 hours, jitter will be 10min /(24*60)min  = 0.0069
-		jitterFactor = 10.0 / (24 * 60) // added jitter is bound by jitterFactor * period
-		sliding      = true             // This means the period with jitter will be calculated after each worker call.
-	)
+	sliding := true // This means the period with jitter will be calculated after each worker call.
 
-	wait.JitterUntilWithContext(ctx, j.cfg.Worker, j.cfg.Period, jitterFactor, sliding)
+	wait.JitterUntilWithContext(ctx, j.cfg.Worker, j.cfg.Period, j.cfg.JitterFactor, sliding)
 
 	j.cfg.Logger.Info("Stopping cronjob")
 	return nil

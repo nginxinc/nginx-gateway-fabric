@@ -456,13 +456,17 @@ func createTelemetryJob(cfg config.Config) *runnables.Leader {
 			logger.Error(err, "Failed to export telemetry")
 		}
 	}
+	// 10 min jitter is enough per telemetry destination recommendation
+	// For the default period of 24 hours, jitter will be 10min /(24*60)min  = 0.0069
+	jitterFactor := 10.0 / (24 * 60) // added jitter is bound by jitterFactor * period
 
 	return &runnables.Leader{
 		Runnable: runnables.NewCronJob(
 			runnables.CronJobConfig{
-				Worker: worker,
-				Logger: logger,
-				Period: cfg.TelemetryReportPeriod,
+				Worker:       worker,
+				Logger:       logger,
+				Period:       cfg.TelemetryReportPeriod,
+				JitterFactor: jitterFactor,
 			},
 		),
 	}
