@@ -196,10 +196,10 @@ func buildGatewayStatus(
 func buildBackendTLSPolicyStatuses(backendTLSPolicies map[types.NamespacedName]*graph.BackendTLSPolicy,
 ) status.BackendTLSPolicyStatuses {
 	statuses := make(status.BackendTLSPolicyStatuses, len(backendTLSPolicies))
-	ignoreStatus := false
 
 	for nsname, backendTLSPolicy := range backendTLSPolicies {
 		if backendTLSPolicy.IsReferenced {
+			ignoreStatus := false
 			if !backendTLSPolicy.Valid {
 				for i := range backendTLSPolicy.Conditions {
 					if backendTLSPolicy.Conditions[i].Reason == string(staticConds.BackendTLSPolicyReasonIgnored) {

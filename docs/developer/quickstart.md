@@ -128,6 +128,12 @@ This will build the docker images `nginx-gateway-fabric:<your-user>` and `nginx-
    kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/standard-install.yaml
    ```
 
+   Alternatively, install Gateway API CRDs from the experimental channel:
+
+   ```shell
+   kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/experimental-install.yaml
+   ```
+
 4. Install NGF using your custom image and expose NGF with a NodePort Service:
 
    - To install with Helm (where your release name is `my-release`):

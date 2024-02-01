@@ -16,7 +16,7 @@ import (
 type BackendTLSPolicy struct {
 	// Source is the source resource.
 	Source *v1alpha2.BackendTLSPolicy
-	// CaCartRef is the name of the ConfigMap that contains the CA certificate.
+	// CaCertRef is the name of the ConfigMap that contains the CA certificate.
 	CaCertRef types.NamespacedName
 	// Gateway is the name of the Gateway that is being checked for this BackendTLSPolicy.
 	Gateway types.NamespacedName
@@ -133,7 +133,7 @@ func validateBackendTLSCACertRef(btp *v1alpha2.BackendTLSPolicy, configMapResolv
 	}
 	if btp.Spec.TLS.CACertRefs[0].Group != "" && btp.Spec.TLS.CACertRefs[0].Group != "core" {
 		path := field.NewPath("tls.cacertrefs[0].group")
-		valErr := field.NotSupported(path, btp.Spec.TLS.CACertRefs[0].Kind, []string{"", "core"})
+		valErr := field.NotSupported(path, btp.Spec.TLS.CACertRefs[0].Group, []string{"", "core"})
 		return valErr
 	}
 	nsName := types.NamespacedName{Namespace: btp.Namespace, Name: string(btp.Spec.TLS.CACertRefs[0].Name)}

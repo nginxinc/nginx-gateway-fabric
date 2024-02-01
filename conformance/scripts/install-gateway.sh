@@ -10,11 +10,6 @@ if [ -z $2 ]; then
     exit 1
 fi
 
-if [ -z $3 ]; then
-    echo "enable experimental argument not set; exiting"
-    exit 1
-fi
-
 if [ $1 == "main" ]; then
     temp_dir=$(mktemp -d)
     cd ${temp_dir}

@@ -190,6 +190,7 @@ func validateBackendTLSPolicyMatchingAllBackends(backendRefs []BackendRef) *cond
 			if referencePolicy != nil {
 				// There was a reference before, so they do not all match
 				mismatch = true
+				break
 			}
 			continue
 		}
@@ -202,6 +203,7 @@ func validateBackendTLSPolicyMatchingAllBackends(backendRefs []BackendRef) *cond
 			if backendRef.BackendTLSPolicy.Source.Name != referencePolicy.Source.Name ||
 				backendRef.BackendTLSPolicy.Source.Namespace != referencePolicy.Source.Namespace {
 				mismatch = true
+				break
 			}
 		}
 	}
