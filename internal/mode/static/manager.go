@@ -213,17 +213,7 @@ func StartManager(cfg config.Config) error {
 		return fmt.Errorf("cannot register status updater: %w", err)
 	}
 
-	telemetryJob := &runnables.Leader{
-		Runnable: telemetry.NewJob(
-			telemetry.JobConfig{
-				Exporter: telemetry.NewLoggingExporter(cfg.Logger.WithName("telemetryExporter").V(1 /* debug */)),
-				Logger:   cfg.Logger.WithName("telemetryJob"),
-				Period:   cfg.TelemetryReportPeriod,
-			},
-		),
-	}
-
-	if err = mgr.Add(telemetryJob); err != nil {
+	if err = mgr.Add(createTelemetryJob(cfg)); err != nil {
 		return fmt.Errorf("cannot register telemetry job: %w", err)
 	}
 
@@ -446,6 +436,40 @@ func prepareFirstEventBatchPreparerArgs(
 	}
 
 	return objects, objectLists
+}
+
+func createTelemetryJob(cfg config.Config) *runnables.Leader {
+	logger := cfg.Logger.WithName("telemetryJob")
+	exporter := telemetry.NewLoggingExporter(cfg.Logger.WithName("telemetryExporter").V(1 /* debug */))
+
+	worker := func(ctx context.Context) {
+		// Gather telemetry
+		logger.V(1).Info("Gathering telemetry")
+
+		// We will need to gather data as defined in https://github.com/nginxinc/nginx-gateway-fabric/issues/793
+		data := telemetry.Data{}
+
+		// Export telemetry
+		logger.V(1).Info("Exporting telemetry")
+
+		if err := exporter.Export(ctx, data); err != nil {
+			logger.Error(err, "Failed to export telemetry")
+		}
+	}
+	// 10 min jitter is enough per telemetry destination recommendation
+	// For the default period of 24 hours, jitter will be 10min /(24*60)min  = 0.0069
+	jitterFactor := 10.0 / (24 * 60) // added jitter is bound by jitterFactor * period
+
+	return &runnables.Leader{
+		Runnable: runnables.NewCronJob(
+			runnables.CronJobConfig{
+				Worker:       worker,
+				Logger:       logger,
+				Period:       cfg.TelemetryReportPeriod,
+				JitterFactor: jitterFactor,
+			},
+		),
+	}
 }
 
 func setInitialConfig(
