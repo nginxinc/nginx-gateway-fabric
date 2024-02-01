@@ -93,9 +93,16 @@ var _ = Describe("Collector", Ordered, func() {
 				nilsvc := &v1.Service{ObjectMeta: metav1.ObjectMeta{Name: "nilsvc"}}
 
 				graph := &graph.Graph{
-					GatewayClass:          &graph.GatewayClass{},
-					Gateway:               &graph.Gateway{},
-					IgnoredGatewayClasses: map[types.NamespacedName]*gatewayv1.GatewayClass{},
+					GatewayClass: &graph.GatewayClass{},
+					Gateway:      &graph.Gateway{},
+					IgnoredGatewayClasses: map[types.NamespacedName]*gatewayv1.GatewayClass{
+						{Name: "ignoredGC1"}: {},
+						{Name: "ignoredGC2"}: {},
+					},
+					IgnoredGateways: map[types.NamespacedName]*gatewayv1.Gateway{
+						{Name: "ignoredGw1"}: {},
+						{Name: "ignoredGw2"}: {},
+					},
 					Routes: map[types.NamespacedName]*graph.Route{
 						{Namespace: "test", Name: "hr-1"}: {},
 						{Namespace: "test", Name: "hr-2"}: {},
@@ -169,8 +176,8 @@ var _ = Describe("Collector", Ordered, func() {
 
 				expData.NodeCount = 3
 				expData.NGFResourceCounts = telemetry.NGFResourceCounts{
-					Gateways:       1,
-					GatewayClasses: 1,
+					Gateways:       3,
+					GatewayClasses: 3,
 					HTTPRoutes:     3,
 					Secrets:        3,
 					Services:       3,
