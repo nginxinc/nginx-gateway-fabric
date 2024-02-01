@@ -458,8 +458,8 @@ func createTelemetryJob(cfg config.Config) *runnables.Leader {
 	}
 
 	return &runnables.Leader{
-		Runnable: runnables.NewJob(
-			runnables.JobConfig{
+		Runnable: runnables.NewCronJob(
+			runnables.CronJobConfig{
 				Worker: worker,
 				Logger: logger,
 				Period: cfg.TelemetryReportPeriod,

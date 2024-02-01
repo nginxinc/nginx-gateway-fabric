@@ -9,7 +9,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
 
-func TestJob(t *testing.T) {
+func TestCronJob(t *testing.T) {
 	g := NewWithT(t)
 
 	timeout := 10 * time.Second
@@ -21,12 +21,12 @@ func TestJob(t *testing.T) {
 		valCh <- callCount
 	}
 
-	cfg := JobConfig{
+	cfg := CronJobConfig{
 		Worker: worker,
 		Logger: zap.New(),
-		Period: 1 * time.Millisecond, // 1ms is much smaller than timeout so the Job should run a few times
+		Period: 1 * time.Millisecond, // 1ms is much smaller than timeout so the CronJob should run a few times
 	}
-	job := NewJob(cfg)
+	job := NewCronJob(cfg)
 
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 
@@ -36,7 +36,7 @@ func TestJob(t *testing.T) {
 		close(errCh)
 	}()
 
-	minReports := 2 // ensure that the Job reports more than once: it doesn't exit after the first run
+	minReports := 2 // ensure that the CronJob reports more than once: it doesn't exit after the first run
 
 	g.Eventually(valCh).Should(Receive(BeNumerically(">=", minReports)))
 
