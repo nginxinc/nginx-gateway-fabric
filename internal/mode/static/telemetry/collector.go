@@ -33,7 +33,8 @@ type NGFResourceCounts struct {
 	HTTPRoutes     int
 	Secrets        int
 	Services       int
-	Endpoints      int
+	// Endpoints include the total count of Endpoints(IP:port) across all referenced services.
+	Endpoints int
 }
 
 // ProjectMetadata stores the name of the project and the current version.
