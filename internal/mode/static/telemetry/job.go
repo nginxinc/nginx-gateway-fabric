@@ -2,11 +2,8 @@ package telemetry
 
 import (
 	"context"
-	"time"
 
 	"github.com/go-logr/logr"
-	"k8s.io/apimachinery/pkg/util/wait"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
 //go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . DataCollector
@@ -25,74 +22,35 @@ type HealthChecker interface {
 	GetReadyIfClosedChannel() <-chan struct{}
 }
 
-// JobConfig is the configuration for the telemetry job.
-type JobConfig struct {
-	// Exporter is the exporter to use for exporting telemetry data.
-	Exporter Exporter
-	// DataCollector is the collector to use for collecting telemetry data.
-	DataCollector DataCollector
-	// HealthChecker lets us check if the NGF Pod is ready.
-	HealthChecker HealthChecker
-	// Logger is the logger.
-	Logger logr.Logger
-	// Period defines the period of the telemetry job. The job will run every Period.
-	Period time.Duration
-}
+func CreateTelemetryJobWorker(
+	logger logr.Logger,
+	exporter Exporter,
+	dataCollector DataCollector,
+	healthChecker HealthChecker,
+) func(ctx context.Context) {
+	return func(ctx context.Context) {
+		readyChannel := healthChecker.GetReadyIfClosedChannel()
+		select {
+		case <-readyChannel:
+		case <-ctx.Done():
+			logger.Info("Context canceled, failed to start telemetry job")
+			return
+		}
 
-// Job periodically exports telemetry data using the provided exporter.
-type Job struct {
-	cfg JobConfig
-}
-
-// NewJob creates a new telemetry job.
-func NewJob(cfg JobConfig) *Job {
-	return &Job{
-		cfg: cfg,
-	}
-}
-
-// Start starts the telemetry job.
-// Implements controller-runtime manager.Runnable
-func (j *Job) Start(ctx context.Context) error {
-	readyChannel := j.cfg.HealthChecker.GetReadyIfClosedChannel()
-	select {
-	case <-readyChannel:
-	case <-ctx.Done():
-		j.cfg.Logger.Info("Context canceled, failed to start telemetry job")
-		return ctx.Err()
-	}
-
-	j.cfg.Logger.Info("Starting telemetry job")
-
-	report := func(ctx context.Context) {
 		// Gather telemetry
-		j.cfg.Logger.V(1).Info("Gathering telemetry data")
+		logger.V(1).Info("Gathering telemetry data")
 
 		// We will need to gather data as defined in https://github.com/nginxinc/nginx-gateway-fabric/issues/793
-		data, err := j.cfg.DataCollector.Collect(ctx)
+		data, err := dataCollector.Collect(ctx)
 		if err != nil {
-			j.cfg.Logger.Error(err, "Failed to collect telemetry data")
+			logger.Error(err, "Failed to collect telemetry data")
 		}
 
 		// Export telemetry
-		j.cfg.Logger.V(1).Info("Exporting telemetry data")
+		logger.V(1).Info("Exporting telemetry data")
 
-		if err := j.cfg.Exporter.Export(ctx, data); err != nil {
-			j.cfg.Logger.Error(err, "Failed to export telemetry data")
+		if err := exporter.Export(ctx, data); err != nil {
+			logger.Error(err, "Failed to export telemetry data")
 		}
 	}
-
-	const (
-		// 10 min jitter is enough per telemetry destination recommendation
-		// For the default period of 24 hours, jitter will be 10min /(24*60)min  = 0.0069
-		jitterFactor = 10.0 / (24 * 60) // added jitter is bound by jitterFactor * period
-		sliding      = true             // This means the period with jitter will be calculated after each report() call.
-	)
-
-	wait.JitterUntilWithContext(ctx, report, j.cfg.Period, jitterFactor, sliding)
-
-	j.cfg.Logger.Info("Stopping telemetry job")
-	return nil
 }
-
-var _ manager.Runnable = &Job{}

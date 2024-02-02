@@ -9,17 +9,19 @@ import (
 	. "github.com/onsi/gomega"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/runnables"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/telemetry"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/telemetry/telemetryfakes"
 )
 
 var _ = Describe("Job", func() {
 	var (
-		job             *telemetry.Job
+		cronjob         *runnables.CronJob
 		exporter        *telemetryfakes.FakeExporter
 		dataCollector   *telemetryfakes.FakeDataCollector
 		healthCollector *telemetryfakes.FakeHealthChecker
 		expData         telemetry.Data
+		worker          func(context.Context)
 		readyChannel    chan struct{}
 	)
 	const timeout = 10 * time.Second
@@ -32,12 +34,13 @@ var _ = Describe("Job", func() {
 		readyChannel = make(chan struct{})
 		healthCollector.GetReadyIfClosedChannelReturns(readyChannel)
 
-		job = telemetry.NewJob(telemetry.JobConfig{
-			Exporter:      exporter,
-			Logger:        zap.New(),
-			Period:        1 * time.Millisecond, // 1ms is much smaller than timeout so the Job should report a few times
-			DataCollector: dataCollector,
-			HealthChecker: healthCollector,
+		worker = telemetry.CreateTelemetryJobWorker(zap.New(), exporter, dataCollector, healthCollector)
+
+		cronjob = runnables.NewCronJob(runnables.CronJobConfig{
+			Worker:       worker,
+			Logger:       zap.New(),
+			Period:       1 * time.Millisecond, // 1ms is much smaller than timeout so the Job should report a few times,
+			JitterFactor: 10.0 / (24 * 60),     // added jitter is bound by jitterFactor * period
 		})
 
 		expData = telemetry.Data{
@@ -65,7 +68,7 @@ var _ = Describe("Job", func() {
 
 			errCh := make(chan error)
 			go func() {
-				errCh <- job.Start(ctx)
+				errCh <- cronjob.Start(ctx)
 				close(errCh)
 			}()
 			time.Sleep(sleep)
@@ -94,7 +97,7 @@ var _ = Describe("Job", func() {
 
 			errCh := make(chan error)
 			go func() {
-				errCh <- job.Start(ctx)
+				errCh <- cronjob.Start(ctx)
 				close(errCh)
 			}()
 
