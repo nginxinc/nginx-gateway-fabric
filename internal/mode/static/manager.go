@@ -213,33 +213,13 @@ func StartManager(cfg config.Config) error {
 		return fmt.Errorf("cannot register status updater: %w", err)
 	}
 
-	logger := cfg.Logger.WithName("telemetryJob")
-	exporter := telemetry.NewLoggingExporter(cfg.Logger.WithName("telemetryExporter").V(1 /* debug */))
-
-	// 10 min jitter is enough per telemetry destination recommendation
-	// For the default period of 24 hours, jitter will be 10min /(24*60)min  = 0.0069
-	jitterFactor := 10.0 / (24 * 60) // added jitter is bound by jitterFactor * period
-
 	dataCollector := telemetry.NewDataCollectorImpl(telemetry.DataCollectorConfig{
 		K8sClientReader:     mgr.GetClient(),
 		GraphGetter:         processor,
 		ConfigurationGetter: eventHandler,
 		Version:             cfg.Version,
 	})
-
-	worker := telemetry.CreateTelemetryJobWorker(logger, exporter, dataCollector, hc)
-
-	telemetryJob := &runnables.Leader{
-		Runnable: runnables.NewCronJob(
-			runnables.CronJobConfig{
-				Worker:       worker,
-				Logger:       logger,
-				Period:       cfg.TelemetryReportPeriod,
-				JitterFactor: jitterFactor,
-			},
-		),
-	}
-	if err = mgr.Add(telemetryJob); err != nil {
+	if err = mgr.Add(createTelemetryJob(cfg, dataCollector, hc)); err != nil {
 		return fmt.Errorf("cannot register telemetry job: %w", err)
 	}
 
@@ -423,6 +403,32 @@ func registerControllers(
 		}
 	}
 	return nil
+}
+
+func createTelemetryJob(
+	cfg config.Config,
+	dataCollector telemetry.DataCollector,
+	hc telemetry.HealthChecker,
+) *runnables.Leader {
+	logger := cfg.Logger.WithName("telemetryJob")
+	exporter := telemetry.NewLoggingExporter(cfg.Logger.WithName("telemetryExporter").V(1 /* debug */))
+
+	worker := telemetry.CreateTelemetryJobWorker(logger, exporter, dataCollector, hc)
+
+	// 10 min jitter is enough per telemetry destination recommendation
+	// For the default period of 24 hours, jitter will be 10min /(24*60)min  = 0.0069
+	jitterFactor := 10.0 / (24 * 60) // added jitter is bound by jitterFactor * period
+
+	return &runnables.Leader{
+		Runnable: runnables.NewCronJob(
+			runnables.CronJobConfig{
+				Worker:       worker,
+				Logger:       logger,
+				Period:       cfg.TelemetryReportPeriod,
+				JitterFactor: jitterFactor,
+			},
+		),
+	}
 }
 
 func prepareFirstEventBatchPreparerArgs(
