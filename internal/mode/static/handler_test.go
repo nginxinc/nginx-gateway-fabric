@@ -438,8 +438,7 @@ var _ = Describe("eventHandler", func() {
 
 		Expect(helpers.Diff(handler.GetLatestConfiguration(), &dataplane.Configuration{Version: 1})).To(BeEmpty())
 
-		_, ok := <-readyChannel
-		Expect(ok).To(BeFalse())
+		Expect(readyChannel).To(BeClosed())
 
 		Expect(handler.cfg.healthChecker.readyCheck(nil)).To(Succeed())
 	})
@@ -454,8 +453,7 @@ var _ = Describe("eventHandler", func() {
 
 		Expect(handler.GetLatestConfiguration()).To(BeNil())
 
-		_, ok := <-readyChannel
-		Expect(ok).To(BeFalse())
+		Expect(readyChannel).To(BeClosed())
 
 		Expect(handler.cfg.healthChecker.readyCheck(nil)).To(Succeed())
 	})
@@ -487,8 +485,7 @@ var _ = Describe("eventHandler", func() {
 
 		Expect(helpers.Diff(handler.GetLatestConfiguration(), &dataplane.Configuration{Version: 2})).To(BeEmpty())
 
-		_, ok := <-readyChannel
-		Expect(ok).To(BeFalse())
+		Expect(readyChannel).To(BeClosed())
 
 		Expect(handler.cfg.healthChecker.readyCheck(nil)).To(Succeed())
 	})

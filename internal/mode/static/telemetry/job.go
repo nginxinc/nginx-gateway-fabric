@@ -54,9 +54,6 @@ func NewJob(cfg JobConfig) *Job {
 // Start starts the telemetry job.
 // Implements controller-runtime manager.Runnable
 func (j *Job) Start(ctx context.Context) error {
-	// wait here until pod is ready, have to propagate down health checker for pod
-	// make sure I can gracefully terminate if the context is canceled
-
 	readyChannel := j.cfg.HealthChecker.GetReadyIfClosedChannel()
 	select {
 	case <-readyChannel:
