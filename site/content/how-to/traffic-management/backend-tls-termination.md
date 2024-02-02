@@ -6,11 +6,11 @@ toc: true
 docs: "DOCS-000"
 ---
 
-In this guide, we will show how to specify the TLS configuration of the connection from the Gateway to a backend pod/s via the Service API object using a [BackendTLSPolicy](https://gateway-api.sigs.k8s.io/api-types/backendtlspolicy/).
+In this guide, we will show how to specify the TLS configuration of the connection from the Gateway to a backend pod/s via the Service API object using a [BackendTLSPolicy](https://gateway-api.sigs.k8s.io/api-types/backendtlspolicy/). This covers the use-case where the service or backend owner is doing their own TLS and NGINX Gateway Fabric needs to know how to connect to this backend pod that has its own certificate over HTTPS.
 
 ## Prerequisites
 
-- [Install]({{< relref "installation/" >}}) NGINX Gateway Fabric. Please note that the Gateway APIs from the experimental channel are required, and NGF must be deployed with the `- --experimental-features-enable` flag..
+- [Install]({{< relref "installation/" >}}) NGINX Gateway Fabric. Please note that the Gateway APIs from the experimental channel are required, and NGF must be deployed with the `- --experimental-features-enable` flag.
 - [Expose NGINX Gateway Fabric]({{< relref "installation/expose-nginx-gateway-fabric.md" >}}) and save the public IP address and port of NGINX Gateway Fabric into shell variables:
 
    ```text
@@ -106,7 +106,7 @@ data:
 EOF
 ```
 
-This will create the **secure-app** service and a deployment, as well as a Secret containing the certificate and key that will be used by the backend application to decrypt the HTTP traffic. Note that the application is configured to accept HTTPS traffic only. Run the following command to verify the resources were created:
+This will create the **secure-app** service and a deployment, as well as a Secret containing the certificate and key that will be used by the backend application to decrypt the HTTPS traffic. Note that the application is configured to accept HTTPS traffic only. Run the following command to verify the resources were created:
 
 ```shell
 kubectl get pods,svc
@@ -122,9 +122,76 @@ NAME                 TYPE        CLUSTER-IP     EXTERNAL-IP   PORT(S)   AGE
 service/secure-app   ClusterIP   10.96.213.57   <none>        8443/TCP  9s
 ```
 
+## Configure Routing rules
+
+First, we will create the Gateway resource with an HTTP listener:
+
+```yaml
+kubectl apply -f - <<EOF
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: gateway
+spec:
+  gatewayClassName: nginx
+  listeners:
+  - name: http
+    port: 80
+    protocol: HTTP
+EOF
+```
+
+Next, we will create our HTTPRoute to route traffic to our secure-app backend:
+
+```yaml
+kubectl apply -f - <<EOF
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: secure-app
+spec:
+  parentRefs:
+  - name: gateway
+    sectionName: http
+  hostnames:
+  - "secure-app.example.com"
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /
+    backendRefs:
+    - name: secure-app
+      port: 8443
+EOF
+```
+
+## Send Traffic without backend TLS configuration
+
+Using the external IP address and port for NGINX Gateway Fabric, we can send traffic to our secure-app application. To show what happens if we send plain HTTP traffic from NGF to our `secure-app`, let's try sending a request before we create the backend TLS configuration.
+
+{{< note >}}If you have a DNS record allocated for `secure-app.example.com`, you can send the request directly to that hostname, without needing to resolve.{{< /note >}}
+
+```shell
+curl --resolve secure-app.example.com:$GW_PORT:$GW_IP http://secure-app.example.com:$GW_PORT/ --insecure
+```
+
+```text
+<html>
+<head><title>400 The plain HTTP request was sent to HTTPS port</title></head>
+<body>
+<center><h1>400 Bad Request</h1></center>
+<center>The plain HTTP request was sent to HTTPS port</center>
+<hr><center>nginx/1.25.3</center>
+</body>
+</html>
+```
+
+We can see we a status 400 Bad Request message from NGINX.
+
 ## Create the Backend TLS configuration
 
-Create the ConfigMap that holds the `ca.crt` entry for verifying our self-signed certificates:
+To configure the backend TLS terminationm, first we will create the ConfigMap that holds the `ca.crt` entry for verifying our self-signed certificates:
 
 ```yaml
 kubectl apply -f - <<EOF
@@ -158,7 +225,7 @@ data:
 EOF
 ```
 
-Create the Backend TLS Policy which targets our `secure-app` Service and refers to the ConfigMap created in the previous step:
+Next, we create the Backend TLS Policy which targets our `secure-app` Service and refers to the ConfigMap created in the previous step:
 
 ```yaml
 kubectl apply -f - <<EOF
@@ -181,55 +248,56 @@ spec:
 EOF
 ```
 
-## Configure Routing rules
+To confirm the Polict was created and attached successfully, we can run a describe on the BackendTLSPolicy object:
 
-First, we will create the Gateway resource with a HTTP listener:
-
-```yaml
-kubectl apply -f - <<EOF
-apiVersion: gateway.networking.k8s.io/v1
-kind: Gateway
-metadata:
-  name: gateway
-spec:
-  gatewayClassName: nginx
-  listeners:
-  - name: http
-    port: 80
-    protocol: HTTP
-EOF
+```shell
+k describe backendtlspolicies.gateway.networking.k8s.io
 ```
 
-Next, we will create our HTTPRoute to route traffic to our secure-app backend
-
-```yaml
-kubectl apply -f - <<EOF
-apiVersion: gateway.networking.k8s.io/v1
-kind: HTTPRoute
-metadata:
-  name: secure-app
-spec:
-  parentRefs:
-  - name: gateway
-    sectionName: http
-  hostnames:
-  - "secure-app.example.com"
-  rules:
-  - matches:
-    - path:
-        type: PathPrefix
-        value: /
-    backendRefs:
-    - name: secure-app
-      port: 8443
-EOF
+```text
+Name:         backend-tls
+Namespace:    default
+Labels:       <none>
+Annotations:  <none>
+API Version:  gateway.networking.k8s.io/v1alpha2
+Kind:         BackendTLSPolicy
+Metadata:
+  Creation Timestamp:  2024-02-01T12:02:38Z
+  Generation:          1
+  Resource Version:    19380
+  UID:                 b3983a6e-92f1-4a98-b2af-64b317d74528
+Spec:
+  Target Ref:
+    Group:
+    Kind:       Service
+    Name:       secure-app
+    Namespace:  default
+  Tls:
+    Ca Cert Refs:
+      Group:
+      Kind:    ConfigMap
+      Name:    backend-cert
+    Hostname:  secure-app.example.com
+Status:
+  Ancestors:
+    Ancestor Ref:
+      Group:      gateway.networking.k8s.io
+      Kind:       Gateway
+      Name:       gateway
+      Namespace:  default
+    Conditions:
+      Last Transition Time:  2024-02-01T12:02:38Z
+      Message:               BackendTLSPolicy is attached to the Gateway
+      Reason:                BackendTLSPolicyAttached
+      Status:                True
+      Type:                  Attached
+    Controller Name:         gateway.nginx.org/nginx-gateway-controller
+Events:                      <none>
 ```
 
-## Send Traffic
+## Send Traffic with backend TLS configuration
 
-Using the external IP address and port for NGINX Gateway Fabric, we can send traffic to our secure-app application.
-
-{{< note >}}If you have a DNS record allocated for `secure-app.example.com`, you can send the request directly to that hostname, without needing to resolve.{{< /note >}}
+Now let's try sending traffic again:
 
 ```shell
 curl --resolve secure-app.example.com:$GW_PORT:$GW_IP http://secure-app.example.com:$GW_PORT/ --insecure
