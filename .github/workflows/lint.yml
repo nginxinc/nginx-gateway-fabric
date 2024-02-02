@@ -45,7 +45,7 @@ jobs:
 
       - name: Run Prettier on NJS code
         id: prettier-run
-        uses: rutajdash/prettier-cli-action@9e27606a9e18d40b6b4a2b4159e780241d2fbb3c # v1.0.1
+        uses: rutajdash/prettier-cli-action@d42c4325a3b344f3bd4be482bc34de521998d557 # v1.0.2
         with:
           config_path: ${{ github.workspace }}/internal/mode/static/nginx/modules/.prettierrc
           file_pattern: ${{ github.workspace }}/internal/mode/static/nginx/modules/**/*.js
