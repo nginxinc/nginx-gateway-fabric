@@ -21,6 +21,24 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/telemetry/telemetryfakes"
 )
 
+func createListCallsFunc(nodes []v1.Node) func(
+	ctx context.Context,
+	list client.ObjectList,
+	option ...client.ListOption,
+) error {
+	return func(ctx context.Context, list client.ObjectList, option ...client.ListOption) error {
+		Expect(option).To(BeEmpty())
+
+		switch typedList := list.(type) {
+		case *v1.NodeList:
+			typedList.Items = append(typedList.Items, nodes...)
+		default:
+			Fail(fmt.Sprintf("unknown type: %T", typedList))
+		}
+		return nil
+	}
+}
+
 var _ = Describe("Collector", Ordered, func() {
 	var (
 		k8sClientReader         *eventsfakes.FakeReader
@@ -62,27 +80,19 @@ var _ = Describe("Collector", Ordered, func() {
 	Describe("Normal case", func() {
 		When("collecting telemetry data", func() {
 			It("collects all fields", func() {
-				node := v1.Node{
-					ObjectMeta: metav1.ObjectMeta{Name: "node1"},
-				}
-				node2 := v1.Node{
-					ObjectMeta: metav1.ObjectMeta{Name: "node2"},
-				}
-				node3 := v1.Node{
-					ObjectMeta: metav1.ObjectMeta{Name: "node3"},
+				nodes := []v1.Node{
+					{
+						ObjectMeta: metav1.ObjectMeta{Name: "node1"},
+					},
+					{
+						ObjectMeta: metav1.ObjectMeta{Name: "node2"},
+					},
+					{
+						ObjectMeta: metav1.ObjectMeta{Name: "node3"},
+					},
 				}
 
-				k8sClientReader.ListCalls(func(ctx context.Context, list client.ObjectList, option ...client.ListOption) error {
-					Expect(option).To(BeEmpty())
-
-					switch typedList := list.(type) {
-					case *v1.NodeList:
-						typedList.Items = append(typedList.Items, node, node2, node3)
-					default:
-						Fail(fmt.Sprintf("unknown type: %T", typedList))
-					}
-					return nil
-				})
+				k8sClientReader.ListCalls(createListCallsFunc(nodes))
 
 				secret1 := &v1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "secret1"}}
 				secret2 := &v1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "secret2"}}
@@ -195,17 +205,7 @@ var _ = Describe("Collector", Ordered, func() {
 	Describe("node count collector", func() {
 		When("collecting node count data", func() {
 			It("collects correct data for no nodes", func() {
-				k8sClientReader.ListCalls(func(ctx context.Context, list client.ObjectList, option ...client.ListOption) error {
-					Expect(option).To(BeEmpty())
-
-					switch typedList := list.(type) {
-					case *v1.NodeList:
-						typedList.Items = []v1.Node{}
-					default:
-						Fail(fmt.Sprintf("unknown type: %T", typedList))
-					}
-					return nil
-				})
+				k8sClientReader.ListCalls(createListCallsFunc(nil))
 
 				data, err := dataCollector.Collect(ctx)
 
@@ -214,21 +214,13 @@ var _ = Describe("Collector", Ordered, func() {
 			})
 
 			It("collects correct data for one node", func() {
-				node := v1.Node{
-					ObjectMeta: metav1.ObjectMeta{Name: "node1"},
+				nodes := []v1.Node{
+					{
+						ObjectMeta: metav1.ObjectMeta{Name: "node1"},
+					},
 				}
 
-				k8sClientReader.ListCalls(func(ctx context.Context, list client.ObjectList, option ...client.ListOption) error {
-					Expect(option).To(BeEmpty())
-
-					switch typedList := list.(type) {
-					case *v1.NodeList:
-						typedList.Items = append(typedList.Items, node)
-					default:
-						Fail(fmt.Sprintf("unknown type: %T", typedList))
-					}
-					return nil
-				})
+				k8sClientReader.ListCalls(createListCallsFunc(nodes))
 
 				expData.NodeCount = 1
 
