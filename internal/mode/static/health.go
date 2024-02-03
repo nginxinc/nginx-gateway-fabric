@@ -9,7 +9,7 @@ import (
 // newHealthCheckerImpl creates a new healthCheckerImpl.
 func newHealthCheckerImpl() *healthCheckerImpl {
 	return &healthCheckerImpl{
-		readyIfClosedChan: make(chan struct{}),
+		readyCh: make(chan struct{}),
 	}
 }
 
@@ -18,10 +18,10 @@ type healthCheckerImpl struct {
 	// firstBatchError is set when the first batch fails to configure nginx
 	// and we don't want to set ourselves as ready on the next batch if nothing changes
 	firstBatchError error
-	// readyIfClosedChan is a channel that is initialized in NewHealthCheckerImpl and represents if the NGF Pod is ready.
-	readyIfClosedChan chan struct{}
-	lock              sync.RWMutex
-	ready             bool
+	// readyCh is a channel that is initialized in NewHealthCheckerImpl and represents if the NGF Pod is ready.
+	readyCh chan struct{}
+	lock    sync.RWMutex
+	ready   bool
 }
 
 // readyCheck returns the ready-state of the Pod. It satisfies the controller-runtime Checker type.
@@ -45,10 +45,10 @@ func (h *healthCheckerImpl) setAsReady() {
 
 	h.ready = true
 	h.firstBatchError = nil
-	close(h.readyIfClosedChan)
+	close(h.readyCh)
 }
 
-// GetReadyIfClosedChannel returns a read-only channel, which determines if the NGF Pod is ready.
-func (h *healthCheckerImpl) GetReadyIfClosedChannel() <-chan struct{} {
-	return h.readyIfClosedChan
+// GetReadyCh returns a read-only channel, which determines if the NGF Pod is ready.
+func (h *healthCheckerImpl) GetReadyCh() <-chan struct{} {
+	return h.readyCh
 }

@@ -18,25 +18,16 @@ type DataCollector interface {
 
 // HealthChecker checks if the NGF Pod is ready.
 type HealthChecker interface {
-	// GetReadyIfClosedChannel returns a channel which determines if the NGF Pod is ready.
-	GetReadyIfClosedChannel() <-chan struct{}
+	// GetReadyCh returns a channel which determines if the NGF Pod is ready.
+	GetReadyCh() <-chan struct{}
 }
 
 func CreateTelemetryJobWorker(
 	logger logr.Logger,
 	exporter Exporter,
 	dataCollector DataCollector,
-	healthChecker HealthChecker,
 ) func(ctx context.Context) {
 	return func(ctx context.Context) {
-		readyChannel := healthChecker.GetReadyIfClosedChannel()
-		select {
-		case <-readyChannel:
-		case <-ctx.Done():
-			logger.Info("Context canceled, failed to start telemetry job")
-			return
-		}
-
 		// Gather telemetry
 		logger.V(1).Info("Gathering telemetry data")
 

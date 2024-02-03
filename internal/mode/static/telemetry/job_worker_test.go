@@ -20,9 +20,9 @@ func TestCreateTelemetryJobWorker(t *testing.T) {
 	healthCollector := &telemetryfakes.FakeHealthChecker{}
 
 	readyChannel := make(chan struct{})
-	healthCollector.GetReadyIfClosedChannelReturns(readyChannel)
+	healthCollector.GetReadyChReturns(readyChannel)
 
-	worker := telemetry.CreateTelemetryJobWorker(zap.New(), exporter, dataCollector, healthCollector)
+	worker := telemetry.CreateTelemetryJobWorker(zap.New(), exporter, dataCollector)
 
 	expData := telemetry.Data{
 		ProjectMetadata: telemetry.ProjectMetadata{Name: "NGF", Version: "1.1"},
@@ -50,29 +50,4 @@ func TestCreateTelemetryJobWorker(t *testing.T) {
 	_, data := exporter.ExportArgsForCall(0)
 	g.Expect(data).To(Equal(expData))
 	cancel()
-}
-
-func TestCreateTelemetryJobWorker_ContextCanceled(t *testing.T) {
-	g := NewWithT(t)
-
-	exporter := &telemetryfakes.FakeExporter{}
-	dataCollector := &telemetryfakes.FakeDataCollector{}
-	healthCollector := &telemetryfakes.FakeHealthChecker{}
-
-	readyChannel := make(chan struct{})
-	healthCollector.GetReadyIfClosedChannelReturns(readyChannel)
-
-	worker := telemetry.CreateTelemetryJobWorker(zap.New(), exporter, dataCollector, healthCollector)
-
-	timeout := 10 * time.Second
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-
-	go func() {
-		worker(ctx)
-	}()
-
-	cancel()
-
-	g.Expect(dataCollector.CollectCallCount()).To(BeZero())
-	g.Expect(exporter.ExportCallCount()).To(BeZero())
 }

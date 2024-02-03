@@ -8,29 +8,29 @@ import (
 )
 
 type FakeHealthChecker struct {
-	GetReadyIfClosedChannelStub        func() <-chan struct{}
-	getReadyIfClosedChannelMutex       sync.RWMutex
-	getReadyIfClosedChannelArgsForCall []struct {
+	GetReadyChStub        func() <-chan struct{}
+	getReadyChMutex       sync.RWMutex
+	getReadyChArgsForCall []struct {
 	}
-	getReadyIfClosedChannelReturns struct {
+	getReadyChReturns struct {
 		result1 <-chan struct{}
 	}
-	getReadyIfClosedChannelReturnsOnCall map[int]struct {
+	getReadyChReturnsOnCall map[int]struct {
 		result1 <-chan struct{}
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeHealthChecker) GetReadyIfClosedChannel() <-chan struct{} {
-	fake.getReadyIfClosedChannelMutex.Lock()
-	ret, specificReturn := fake.getReadyIfClosedChannelReturnsOnCall[len(fake.getReadyIfClosedChannelArgsForCall)]
-	fake.getReadyIfClosedChannelArgsForCall = append(fake.getReadyIfClosedChannelArgsForCall, struct {
+func (fake *FakeHealthChecker) GetReadyCh() <-chan struct{} {
+	fake.getReadyChMutex.Lock()
+	ret, specificReturn := fake.getReadyChReturnsOnCall[len(fake.getReadyChArgsForCall)]
+	fake.getReadyChArgsForCall = append(fake.getReadyChArgsForCall, struct {
 	}{})
-	stub := fake.GetReadyIfClosedChannelStub
-	fakeReturns := fake.getReadyIfClosedChannelReturns
-	fake.recordInvocation("GetReadyIfClosedChannel", []interface{}{})
-	fake.getReadyIfClosedChannelMutex.Unlock()
+	stub := fake.GetReadyChStub
+	fakeReturns := fake.getReadyChReturns
+	fake.recordInvocation("GetReadyCh", []interface{}{})
+	fake.getReadyChMutex.Unlock()
 	if stub != nil {
 		return stub()
 	}
@@ -40,37 +40,37 @@ func (fake *FakeHealthChecker) GetReadyIfClosedChannel() <-chan struct{} {
 	return fakeReturns.result1
 }
 
-func (fake *FakeHealthChecker) GetReadyIfClosedChannelCallCount() int {
-	fake.getReadyIfClosedChannelMutex.RLock()
-	defer fake.getReadyIfClosedChannelMutex.RUnlock()
-	return len(fake.getReadyIfClosedChannelArgsForCall)
+func (fake *FakeHealthChecker) GetReadyChCallCount() int {
+	fake.getReadyChMutex.RLock()
+	defer fake.getReadyChMutex.RUnlock()
+	return len(fake.getReadyChArgsForCall)
 }
 
-func (fake *FakeHealthChecker) GetReadyIfClosedChannelCalls(stub func() <-chan struct{}) {
-	fake.getReadyIfClosedChannelMutex.Lock()
-	defer fake.getReadyIfClosedChannelMutex.Unlock()
-	fake.GetReadyIfClosedChannelStub = stub
+func (fake *FakeHealthChecker) GetReadyChCalls(stub func() <-chan struct{}) {
+	fake.getReadyChMutex.Lock()
+	defer fake.getReadyChMutex.Unlock()
+	fake.GetReadyChStub = stub
 }
 
-func (fake *FakeHealthChecker) GetReadyIfClosedChannelReturns(result1 <-chan struct{}) {
-	fake.getReadyIfClosedChannelMutex.Lock()
-	defer fake.getReadyIfClosedChannelMutex.Unlock()
-	fake.GetReadyIfClosedChannelStub = nil
-	fake.getReadyIfClosedChannelReturns = struct {
+func (fake *FakeHealthChecker) GetReadyChReturns(result1 <-chan struct{}) {
+	fake.getReadyChMutex.Lock()
+	defer fake.getReadyChMutex.Unlock()
+	fake.GetReadyChStub = nil
+	fake.getReadyChReturns = struct {
 		result1 <-chan struct{}
 	}{result1}
 }
 
-func (fake *FakeHealthChecker) GetReadyIfClosedChannelReturnsOnCall(i int, result1 <-chan struct{}) {
-	fake.getReadyIfClosedChannelMutex.Lock()
-	defer fake.getReadyIfClosedChannelMutex.Unlock()
-	fake.GetReadyIfClosedChannelStub = nil
-	if fake.getReadyIfClosedChannelReturnsOnCall == nil {
-		fake.getReadyIfClosedChannelReturnsOnCall = make(map[int]struct {
+func (fake *FakeHealthChecker) GetReadyChReturnsOnCall(i int, result1 <-chan struct{}) {
+	fake.getReadyChMutex.Lock()
+	defer fake.getReadyChMutex.Unlock()
+	fake.GetReadyChStub = nil
+	if fake.getReadyChReturnsOnCall == nil {
+		fake.getReadyChReturnsOnCall = make(map[int]struct {
 			result1 <-chan struct{}
 		})
 	}
-	fake.getReadyIfClosedChannelReturnsOnCall[i] = struct {
+	fake.getReadyChReturnsOnCall[i] = struct {
 		result1 <-chan struct{}
 	}{result1}
 }
@@ -78,8 +78,8 @@ func (fake *FakeHealthChecker) GetReadyIfClosedChannelReturnsOnCall(i int, resul
 func (fake *FakeHealthChecker) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.getReadyIfClosedChannelMutex.RLock()
-	defer fake.getReadyIfClosedChannelMutex.RUnlock()
+	fake.getReadyChMutex.RLock()
+	defer fake.getReadyChMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

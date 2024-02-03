@@ -13,6 +13,8 @@ import (
 type CronJobConfig struct {
 	// Worker is the function that will be run for every cronjob iteration.
 	Worker func(context.Context)
+	// ReadyCh represents if the cronjob is ready to start.
+	ReadyCh <-chan struct{}
 	// Logger is the logger.
 	Logger logr.Logger
 	// Period defines the period of the cronjob. The cronjob will run every Period.
@@ -37,6 +39,13 @@ func NewCronJob(cfg CronJobConfig) *CronJob {
 // Start starts the cronjob.
 // Implements controller-runtime manager.Runnable
 func (j *CronJob) Start(ctx context.Context) error {
+	select {
+	case <-j.cfg.ReadyCh:
+	case <-ctx.Done():
+		j.cfg.Logger.Info("Context canceled, failed to start cronjob")
+		return ctx.Err()
+	}
+
 	j.cfg.Logger.Info("Starting cronjob")
 
 	sliding := true // This means the period with jitter will be calculated after each worker call.

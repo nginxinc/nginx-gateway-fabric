@@ -429,7 +429,7 @@ var _ = Describe("eventHandler", func() {
 	It("should set the health checker status properly when there are changes", func() {
 		e := &events.UpsertEvent{Resource: &gatewayv1.HTTPRoute{}}
 		batch := []interface{}{e}
-		readyChannel := handler.cfg.healthChecker.GetReadyIfClosedChannel()
+		readyChannel := handler.cfg.healthChecker.GetReadyCh()
 
 		fakeProcessor.ProcessReturns(state.ClusterStateChange, &graph.Graph{})
 
@@ -446,7 +446,7 @@ var _ = Describe("eventHandler", func() {
 	It("should set the health checker status properly when there are no changes or errors", func() {
 		e := &events.UpsertEvent{Resource: &gatewayv1.HTTPRoute{}}
 		batch := []interface{}{e}
-		readyChannel := handler.cfg.healthChecker.GetReadyIfClosedChannel()
+		readyChannel := handler.cfg.healthChecker.GetReadyCh()
 
 		Expect(handler.cfg.healthChecker.readyCheck(nil)).ToNot(Succeed())
 		handler.HandleEventBatch(context.Background(), ctlrZap.New(), batch)
@@ -461,7 +461,7 @@ var _ = Describe("eventHandler", func() {
 	It("should set the health checker status properly when there is an error", func() {
 		e := &events.UpsertEvent{Resource: &gatewayv1.HTTPRoute{}}
 		batch := []interface{}{e}
-		readyChannel := handler.cfg.healthChecker.GetReadyIfClosedChannel()
+		readyChannel := handler.cfg.healthChecker.GetReadyCh()
 
 		fakeProcessor.ProcessReturns(state.ClusterStateChange, &graph.Graph{})
 		fakeNginxRuntimeMgr.ReloadReturns(errors.New("reload error"))

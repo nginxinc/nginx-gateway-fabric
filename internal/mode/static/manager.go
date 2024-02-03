@@ -413,7 +413,7 @@ func createTelemetryJob(
 	logger := cfg.Logger.WithName("telemetryJob")
 	exporter := telemetry.NewLoggingExporter(cfg.Logger.WithName("telemetryExporter").V(1 /* debug */))
 
-	worker := telemetry.CreateTelemetryJobWorker(logger, exporter, dataCollector, hc)
+	worker := telemetry.CreateTelemetryJobWorker(logger, exporter, dataCollector)
 
 	// 10 min jitter is enough per telemetry destination recommendation
 	// For the default period of 24 hours, jitter will be 10min /(24*60)min  = 0.0069
@@ -426,6 +426,7 @@ func createTelemetryJob(
 				Logger:       logger,
 				Period:       cfg.TelemetryReportPeriod,
 				JitterFactor: jitterFactor,
+				ReadyCh:      hc.GetReadyCh(),
 			},
 		),
 	}
