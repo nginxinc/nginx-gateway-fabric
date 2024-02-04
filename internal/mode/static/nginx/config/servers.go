@@ -505,7 +505,7 @@ func generateAddResponseHeaders(filters *dataplane.HTTPFilters) []http.Header {
 	headerLen := len(headerFilter.Add) + len(headers)
 	responseAddHeaders := make([]http.Header, 0, headerLen)
 	if len(headerFilter.Add) > 0 {
-		// TODO (kevin85421): Should we use a different function?
+		// FIXME(kevin85421): Should we use a different function?
 		addHeaders := convertSetHeaders(headerFilter.Add)
 		responseAddHeaders = append(responseAddHeaders, addHeaders...)
 	}
