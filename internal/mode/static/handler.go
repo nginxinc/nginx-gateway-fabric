@@ -60,7 +60,7 @@ type eventHandlerConfig struct {
 	// metricsCollector collects metrics for this controller.
 	metricsCollector handlerMetricsCollector
 	// healthChecker sets the health of the Pod to Ready once we've written out our initial config.
-	healthChecker *healthCheckerImpl
+	healthChecker *nginxConfiguredOnStartChecker
 	// controlConfigNSName is the NamespacedName of the NginxGateway config for this controller.
 	controlConfigNSName types.NamespacedName
 	// version is the current version number of the nginx config.

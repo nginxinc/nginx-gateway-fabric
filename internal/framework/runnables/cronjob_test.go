@@ -7,17 +7,12 @@ import (
 
 	. "github.com/onsi/gomega"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
-
-	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/telemetry/telemetryfakes"
 )
 
 func TestCronJob(t *testing.T) {
 	g := NewWithT(t)
 
-	healthCollector := &telemetryfakes.FakeHealthChecker{}
-
 	readyChannel := make(chan struct{})
-	healthCollector.GetReadyChReturns(readyChannel)
 
 	timeout := 10 * time.Second
 	var callCount int
@@ -32,7 +27,7 @@ func TestCronJob(t *testing.T) {
 		Worker:  worker,
 		Logger:  zap.New(),
 		Period:  1 * time.Millisecond, // 1ms is much smaller than timeout so the CronJob should run a few times
-		ReadyCh: healthCollector.GetReadyCh(),
+		ReadyCh: readyChannel,
 	}
 	job := NewCronJob(cfg)
 
@@ -57,10 +52,7 @@ func TestCronJob(t *testing.T) {
 func TestCronJob_ContextCanceled(t *testing.T) {
 	g := NewWithT(t)
 
-	healthCollector := &telemetryfakes.FakeHealthChecker{}
-
 	readyChannel := make(chan struct{})
-	healthCollector.GetReadyChReturns(readyChannel)
 
 	timeout := 10 * time.Second
 	var callCount int
@@ -75,7 +67,7 @@ func TestCronJob_ContextCanceled(t *testing.T) {
 		Worker:  worker,
 		Logger:  zap.New(),
 		Period:  1 * time.Millisecond, // 1ms is much smaller than timeout so the CronJob should run a few times
-		ReadyCh: healthCollector.GetReadyCh(),
+		ReadyCh: readyChannel,
 	}
 	job := NewCronJob(cfg)
 

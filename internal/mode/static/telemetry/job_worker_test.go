@@ -17,10 +17,6 @@ func TestCreateTelemetryJobWorker(t *testing.T) {
 
 	exporter := &telemetryfakes.FakeExporter{}
 	dataCollector := &telemetryfakes.FakeDataCollector{}
-	healthCollector := &telemetryfakes.FakeHealthChecker{}
-
-	readyChannel := make(chan struct{})
-	healthCollector.GetReadyChReturns(readyChannel)
 
 	worker := telemetry.CreateTelemetryJobWorker(zap.New(), exporter, dataCollector)
 
@@ -40,11 +36,6 @@ func TestCreateTelemetryJobWorker(t *testing.T) {
 
 	timeout := 10 * time.Second
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-
-	go func() {
-		time.Sleep(1 * time.Second)
-		close(readyChannel)
-	}()
 
 	worker(ctx)
 	_, data := exporter.ExportArgsForCall(0)

@@ -69,7 +69,7 @@ func init() {
 
 // nolint:gocyclo
 func StartManager(cfg config.Config) error {
-	hc := newHealthCheckerImpl()
+	hc := newNginxConfiguredOnStartChecker()
 	mgr, err := createManager(cfg, hc)
 	if err != nil {
 		return fmt.Errorf("cannot build runtime manager: %w", err)
@@ -227,7 +227,7 @@ func StartManager(cfg config.Config) error {
 	return mgr.Start(ctx)
 }
 
-func createManager(cfg config.Config, hc *healthCheckerImpl) (manager.Manager, error) {
+func createManager(cfg config.Config, hc *nginxConfiguredOnStartChecker) (manager.Manager, error) {
 	options := manager.Options{
 		Scheme:  scheme,
 		Logger:  cfg.Logger,
@@ -408,7 +408,7 @@ func registerControllers(
 func createTelemetryJob(
 	cfg config.Config,
 	dataCollector telemetry.DataCollector,
-	hc telemetry.HealthChecker,
+	hc *nginxConfiguredOnStartChecker,
 ) *runnables.Leader {
 	logger := cfg.Logger.WithName("telemetryJob")
 	exporter := telemetry.NewLoggingExporter(cfg.Logger.WithName("telemetryExporter").V(1 /* debug */))
@@ -426,7 +426,7 @@ func createTelemetryJob(
 				Logger:       logger,
 				Period:       cfg.TelemetryReportPeriod,
 				JitterFactor: jitterFactor,
-				ReadyCh:      hc.GetReadyCh(),
+				ReadyCh:      hc.getReadyCh(),
 			},
 		),
 	}

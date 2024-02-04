@@ -14,14 +14,6 @@ type DataCollector interface {
 	Collect(ctx context.Context) (Data, error)
 }
 
-//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . HealthChecker
-
-// HealthChecker checks if the NGF Pod is ready.
-type HealthChecker interface {
-	// GetReadyCh returns a channel which determines if the NGF Pod is ready.
-	GetReadyCh() <-chan struct{}
-}
-
 func CreateTelemetryJobWorker(
 	logger logr.Logger,
 	exporter Exporter,

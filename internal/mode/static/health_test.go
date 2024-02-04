@@ -8,7 +8,7 @@ import (
 
 func TestReadyCheck(t *testing.T) {
 	g := NewWithT(t)
-	hc := newHealthCheckerImpl()
+	hc := newNginxConfiguredOnStartChecker()
 	g.Expect(hc.readyCheck(nil)).ToNot(Succeed())
 
 	hc.ready = true
