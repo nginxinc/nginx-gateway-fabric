@@ -69,8 +69,8 @@ func init() {
 
 // nolint:gocyclo
 func StartManager(cfg config.Config) error {
-	hc := newNginxConfiguredOnStartChecker()
-	mgr, err := createManager(cfg, hc)
+	nginxChecker := newNginxConfiguredOnStartChecker()
+	mgr, err := createManager(cfg, nginxChecker)
 	if err != nil {
 		return fmt.Errorf("cannot build runtime manager: %w", err)
 	}
@@ -188,12 +188,12 @@ func StartManager(cfg config.Config) error {
 			ngxruntimeCollector,
 			cfg.Logger.WithName("nginxRuntimeManager"),
 		),
-		statusUpdater:       statusUpdater,
-		eventRecorder:       recorder,
-		healthChecker:       hc,
-		controlConfigNSName: controlConfigNSName,
-		gatewayPodConfig:    cfg.GatewayPodConfig,
-		metricsCollector:    handlerCollector,
+		statusUpdater:                 statusUpdater,
+		eventRecorder:                 recorder,
+		nginxConfiguredOnStartChecker: nginxChecker,
+		controlConfigNSName:           controlConfigNSName,
+		gatewayPodConfig:              cfg.GatewayPodConfig,
+		metricsCollector:              handlerCollector,
 	})
 
 	objects, objectLists := prepareFirstEventBatchPreparerArgs(cfg.GatewayClassName, cfg.GatewayNsName)
@@ -219,7 +219,7 @@ func StartManager(cfg config.Config) error {
 		ConfigurationGetter: eventHandler,
 		Version:             cfg.Version,
 	})
-	if err = mgr.Add(createTelemetryJob(cfg, dataCollector, hc)); err != nil {
+	if err = mgr.Add(createTelemetryJob(cfg, dataCollector, nginxChecker)); err != nil {
 		return fmt.Errorf("cannot register telemetry job: %w", err)
 	}
 
@@ -227,7 +227,7 @@ func StartManager(cfg config.Config) error {
 	return mgr.Start(ctx)
 }
 
-func createManager(cfg config.Config, hc *nginxConfiguredOnStartChecker) (manager.Manager, error) {
+func createManager(cfg config.Config, nginxChecker *nginxConfiguredOnStartChecker) (manager.Manager, error) {
 	options := manager.Options{
 		Scheme:  scheme,
 		Logger:  cfg.Logger,
@@ -262,7 +262,7 @@ func createManager(cfg config.Config, hc *nginxConfiguredOnStartChecker) (manage
 	}
 
 	if cfg.HealthConfig.Enabled {
-		if err := mgr.AddReadyzCheck("readyz", hc.readyCheck); err != nil {
+		if err := mgr.AddReadyzCheck("readyz", nginxChecker.readyCheck); err != nil {
 			return nil, fmt.Errorf("error adding ready check: %w", err)
 		}
 	}
@@ -408,7 +408,7 @@ func registerControllers(
 func createTelemetryJob(
 	cfg config.Config,
 	dataCollector telemetry.DataCollector,
-	hc *nginxConfiguredOnStartChecker,
+	nginxChecker *nginxConfiguredOnStartChecker,
 ) *runnables.Leader {
 	logger := cfg.Logger.WithName("telemetryJob")
 	exporter := telemetry.NewLoggingExporter(cfg.Logger.WithName("telemetryExporter").V(1 /* debug */))
@@ -426,7 +426,7 @@ func createTelemetryJob(
 				Logger:       logger,
 				Period:       cfg.TelemetryReportPeriod,
 				JitterFactor: jitterFactor,
-				ReadyCh:      hc.getReadyCh(),
+				ReadyCh:      nginxChecker.getReadyCh(),
 			},
 		),
 	}

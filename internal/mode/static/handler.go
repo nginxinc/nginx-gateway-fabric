@@ -59,8 +59,8 @@ type eventHandlerConfig struct {
 	logLevelSetter logLevelSetter
 	// metricsCollector collects metrics for this controller.
 	metricsCollector handlerMetricsCollector
-	// healthChecker sets the health of the Pod to Ready once we've written out our initial config.
-	healthChecker *nginxConfiguredOnStartChecker
+	// nginxConfiguredOnStartChecker sets the health of the Pod to Ready once we've written out our initial config.
+	nginxConfiguredOnStartChecker *nginxConfiguredOnStartChecker
 	// controlConfigNSName is the NamespacedName of the NginxGateway config for this controller.
 	controlConfigNSName types.NamespacedName
 	// version is the current version number of the nginx config.
@@ -109,8 +109,8 @@ func (h *eventHandlerImpl) HandleEventBatch(ctx context.Context, logger logr.Log
 	switch changeType {
 	case state.NoChange:
 		logger.Info("Handling events didn't result into NGINX configuration changes")
-		if !h.cfg.healthChecker.ready && h.cfg.healthChecker.firstBatchError == nil {
-			h.cfg.healthChecker.setAsReady()
+		if !h.cfg.nginxConfiguredOnStartChecker.ready && h.cfg.nginxConfiguredOnStartChecker.firstBatchError == nil {
+			h.cfg.nginxConfiguredOnStartChecker.setAsReady()
 		}
 		return
 	case state.EndpointsOnlyChange:
@@ -140,13 +140,13 @@ func (h *eventHandlerImpl) HandleEventBatch(ctx context.Context, logger logr.Log
 	if err != nil {
 		logger.Error(err, "Failed to update NGINX configuration")
 		nginxReloadRes.error = err
-		if !h.cfg.healthChecker.ready {
-			h.cfg.healthChecker.firstBatchError = err
+		if !h.cfg.nginxConfiguredOnStartChecker.ready {
+			h.cfg.nginxConfiguredOnStartChecker.firstBatchError = err
 		}
 	} else {
 		logger.Info("NGINX configuration was successfully updated")
-		if !h.cfg.healthChecker.ready {
-			h.cfg.healthChecker.setAsReady()
+		if !h.cfg.nginxConfiguredOnStartChecker.ready {
+			h.cfg.nginxConfiguredOnStartChecker.setAsReady()
 		}
 	}
 
