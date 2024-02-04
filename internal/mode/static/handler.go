@@ -117,9 +117,7 @@ func (h *eventHandlerImpl) HandleEventBatch(ctx context.Context, logger logr.Log
 		h.cfg.version++
 		cfg := dataplane.BuildConfiguration(ctx, graph, h.cfg.serviceResolver, h.cfg.version)
 
-		h.lock.Lock()
-		h.latestConfiguration = &cfg
-		h.lock.Unlock()
+		h.setLatestConfiguration(&cfg)
 
 		err = h.updateUpstreamServers(
 			ctx,
@@ -130,9 +128,7 @@ func (h *eventHandlerImpl) HandleEventBatch(ctx context.Context, logger logr.Log
 		h.cfg.version++
 		cfg := dataplane.BuildConfiguration(ctx, graph, h.cfg.serviceResolver, h.cfg.version)
 
-		h.lock.Lock()
-		h.latestConfiguration = &cfg
-		h.lock.Unlock()
+		h.setLatestConfiguration(&cfg)
 
 		err = h.updateNginxConf(
 			ctx,
@@ -401,9 +397,18 @@ func getGatewayAddresses(
 	return gwAddresses, nil
 }
 
+// GetLatestConfiguration gets the latest configuration.
 func (h *eventHandlerImpl) GetLatestConfiguration() *dataplane.Configuration {
 	h.lock.Lock()
 	defer h.lock.Unlock()
 
 	return h.latestConfiguration
+}
+
+// setLatestConfiguration sets the latest configuration.
+func (h *eventHandlerImpl) setLatestConfiguration(cfg *dataplane.Configuration) {
+	h.lock.Lock()
+	defer h.lock.Unlock()
+
+	h.latestConfiguration = cfg
 }
