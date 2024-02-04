@@ -58,8 +58,15 @@ server {
         {{ $proxyOrGRPC }}_set_header {{ $h.Name }} "{{ $h.Value }}";
             {{- end }}
         {{ $proxyOrGRPC }}_pass {{ $l.ProxyPass }};
-            {{ range $h := $l.AddHeaderDirectives }}
-        add_header {{ $h.Name }} "{{ $h.Value }}";
+            {{ range $h := $l.AddResponseHeaders }}
+        add_header {{ $h.Name }} "{{ $h.Value }}" always;
+            {{- end }}
+            {{ range $h := $l.SetResponseHeaders }}
+        proxy_hide_header {{ $h.Name }};
+        add_header {{ $h.Name }} "{{ $h.Value }}" always;
+            {{- end }}
+            {{ range $h := $l.RemoveResponseHeaders }}
+        proxy_hide_header {{ $h }};
             {{- end }}
         proxy_http_version 1.1;
             {{- if $l.ProxySSLVerify }}
