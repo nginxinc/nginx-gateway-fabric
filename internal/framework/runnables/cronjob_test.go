@@ -78,6 +78,7 @@ func TestCronJob_ContextCanceled(t *testing.T) {
 		errCh <- job.Start(ctx)
 		close(errCh)
 	}()
+
 	cancel()
 	g.Eventually(errCh).Should(Receive(MatchError(context.Canceled)))
 	g.Eventually(errCh).Should(BeClosed())
