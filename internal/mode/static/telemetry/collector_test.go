@@ -162,22 +162,6 @@ var _ = Describe("Collector", Ordered, func() {
 								},
 							},
 						},
-						{
-							Name:     "upstream3",
-							ErrorMsg: "there is an error here",
-							Endpoints: []resolver.Endpoint{
-								{
-									Address: "endpoint1",
-									Port:    80,
-								}, {
-									Address: "endpoint2",
-									Port:    80,
-								}, {
-									Address: "endpoint3",
-									Port:    80,
-								},
-							},
-						},
 					},
 				}
 
@@ -242,8 +226,8 @@ var _ = Describe("Collector", Ordered, func() {
 
 	Describe("NGF resource count collector", func() {
 		var (
-			graph1  *graph.Graph
-			config1 *dataplane.Configuration
+			graph1                          *graph.Graph
+			config1, invalidUpstreamsConfig *dataplane.Configuration
 		)
 
 		BeforeAll(func() {
@@ -280,6 +264,32 @@ var _ = Describe("Collector", Ordered, func() {
 					},
 				},
 			}
+
+			invalidUpstreamsConfig = &dataplane.Configuration{
+				Upstreams: []dataplane.Upstream{
+					{
+						Name:     "invalidUpstream",
+						ErrorMsg: "there is an error here",
+						Endpoints: []resolver.Endpoint{
+							{
+								Address: "endpoint1",
+								Port:    80,
+							}, {
+								Address: "endpoint2",
+								Port:    80,
+							}, {
+								Address: "endpoint3",
+								Port:    80,
+							},
+						},
+					},
+					{
+						Name:      "emptyUpstream",
+						ErrorMsg:  "",
+						Endpoints: []resolver.Endpoint{},
+					},
+				},
+			}
 		})
 
 		When("collecting NGF resource counts", func() {
@@ -306,6 +316,24 @@ var _ = Describe("Collector", Ordered, func() {
 					Secrets:        1,
 					Services:       1,
 					Endpoints:      1,
+				}
+
+				data, err := dataCollector.Collect(ctx)
+
+				Expect(err).To(BeNil())
+				Expect(expData).To(Equal(data))
+			})
+
+			It("ignores invalid and empty upstreams", func() {
+				fakeGraphGetter.GetLatestGraphReturns(&graph.Graph{})
+				fakeConfigurationGetter.GetLatestConfigurationReturns(invalidUpstreamsConfig)
+				expData.NGFResourceCounts = telemetry.NGFResourceCounts{
+					Gateways:       0,
+					GatewayClasses: 0,
+					HTTPRoutes:     0,
+					Secrets:        0,
+					Services:       0,
+					Endpoints:      0,
 				}
 
 				data, err := dataCollector.Collect(ctx)

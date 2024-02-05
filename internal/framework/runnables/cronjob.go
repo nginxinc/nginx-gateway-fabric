@@ -13,7 +13,7 @@ import (
 type CronJobConfig struct {
 	// Worker is the function that will be run for every cronjob iteration.
 	Worker func(context.Context)
-	// ReadyCh represents if the cronjob is ready to start.
+	// ReadyCh delays the start of the job until the channel is closed.
 	ReadyCh <-chan struct{}
 	// Logger is the logger.
 	Logger logr.Logger
