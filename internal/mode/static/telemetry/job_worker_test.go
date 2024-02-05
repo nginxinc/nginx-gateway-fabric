@@ -36,9 +36,9 @@ func TestCreateTelemetryJobWorker(t *testing.T) {
 
 	timeout := 10 * time.Second
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
 
 	worker(ctx)
 	_, data := exporter.ExportArgsForCall(0)
 	g.Expect(data).To(Equal(expData))
-	cancel()
 }

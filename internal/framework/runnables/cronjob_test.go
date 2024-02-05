@@ -54,24 +54,15 @@ func TestCronJob_ContextCanceled(t *testing.T) {
 
 	readyChannel := make(chan struct{})
 
-	timeout := 10 * time.Second
-	var callCount int
-
-	valCh := make(chan int, 128)
-	worker := func(context.Context) {
-		callCount++
-		valCh <- callCount
-	}
-
 	cfg := CronJobConfig{
-		Worker:  worker,
+		Worker:  func(ctx context.Context) {},
 		Logger:  zap.New(),
 		Period:  1 * time.Millisecond, // 1ms is much smaller than timeout so the CronJob should run a few times
 		ReadyCh: readyChannel,
 	}
 	job := NewCronJob(cfg)
 
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	ctx, cancel := context.WithCancel(context.Background())
 
 	errCh := make(chan error)
 	go func() {

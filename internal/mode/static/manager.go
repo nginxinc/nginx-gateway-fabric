@@ -219,7 +219,7 @@ func StartManager(cfg config.Config) error {
 		ConfigurationGetter: eventHandler,
 		Version:             cfg.Version,
 	})
-	if err = mgr.Add(createTelemetryJob(cfg, dataCollector, nginxChecker)); err != nil {
+	if err = mgr.Add(createTelemetryJob(cfg, dataCollector, nginxChecker.getReadyCh())); err != nil {
 		return fmt.Errorf("cannot register telemetry job: %w", err)
 	}
 
@@ -408,7 +408,7 @@ func registerControllers(
 func createTelemetryJob(
 	cfg config.Config,
 	dataCollector telemetry.DataCollector,
-	nginxChecker *nginxConfiguredOnStartChecker,
+	readyCh <-chan struct{},
 ) *runnables.Leader {
 	logger := cfg.Logger.WithName("telemetryJob")
 	exporter := telemetry.NewLoggingExporter(cfg.Logger.WithName("telemetryExporter").V(1 /* debug */))
@@ -426,7 +426,7 @@ func createTelemetryJob(
 				Logger:       logger,
 				Period:       cfg.TelemetryReportPeriod,
 				JitterFactor: jitterFactor,
-				ReadyCh:      nginxChecker.getReadyCh(),
+				ReadyCh:      readyCh,
 			},
 		),
 	}
