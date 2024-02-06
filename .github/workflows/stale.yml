@@ -22,7 +22,7 @@ jobs:
           close-pr-message: "This PR was closed because it has been stalled for 14 days with no activity."
           stale-issue-label: "stale"
           stale-pr-label: "stale"
-          exempt-issue-milestones: true
+          exempt-all-issue-milestones: true
           exempt-issue-labels: "backlog, backlog candidate"
           operations-per-run: 100
           days-before-stale: 14
