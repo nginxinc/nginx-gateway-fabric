@@ -62,6 +62,8 @@ type ChangeProcessor interface {
 	// Process produces a graph-like representation of GatewayAPI resources.
 	// If no changes were captured, the changed return argument will be NoChange and graph will be empty.
 	Process() (changeType ChangeType, graphCfg *graph.Graph)
+	// GetLatestGraph returns the latest Graph.
+	GetLatestGraph() *graph.Graph
 }
 
 // ChangeProcessorConfig holds configuration parameters for ChangeProcessorImpl.
@@ -255,4 +257,11 @@ func (c *ChangeProcessorImpl) Process() (ChangeType, *graph.Graph) {
 	)
 
 	return changeType, c.latestGraph
+}
+
+func (c *ChangeProcessorImpl) GetLatestGraph() *graph.Graph {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	return c.latestGraph
 }

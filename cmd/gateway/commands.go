@@ -170,6 +170,7 @@ func createStaticModeCommand() *cobra.Command {
 				},
 				Plus:                  plus,
 				TelemetryReportPeriod: period,
+				Version:               version,
 			}
 
 			if err := static.StartManager(conf); err != nil {
