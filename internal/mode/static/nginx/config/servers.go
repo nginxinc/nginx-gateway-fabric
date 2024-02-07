@@ -283,7 +283,7 @@ func createProxyTLSFromBackends(backends []dataplane.Backend) *http.ProxySSLVeri
 }
 
 func createProxySSLVerify(v *dataplane.VerifyTLS) *http.ProxySSLVerify {
-	if v == nil || v.Hostname == "" {
+	if v == nil {
 		return nil
 	}
 	var trustedCert string

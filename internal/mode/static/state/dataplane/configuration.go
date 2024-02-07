@@ -2,8 +2,8 @@ package dataplane
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
-	"os"
 	"sort"
 
 	apiv1 "k8s.io/api/core/v1"
@@ -15,7 +15,10 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/resolver"
 )
 
-const wildcardHostname = "~^"
+const (
+	wildcardHostname    = "~^"
+	alpineSSLRootCAPath = "/etc/ssl/cert.pem"
+)
 
 // BuildConfiguration builds the Configuration from the Graph.
 func BuildConfiguration(
@@ -102,7 +105,13 @@ func buildCertBundles(
 		id := generateCertBundleID(cmName)
 		if _, exists := refByBG[id]; exists {
 			if cm.CACert != nil || len(cm.CACert) > 0 {
-				bundles[id] = CertBundle(cm.CACert)
+				// the cert could be base64 encoded or plaintext
+				data := make([]byte, base64.StdEncoding.DecodedLen(len(cm.CACert)))
+				_, err := base64.StdEncoding.Decode(data, cm.CACert)
+				if err != nil {
+					data = cm.CACert
+				}
+				bundles[id] = CertBundle(data)
 			}
 		}
 	}
@@ -179,28 +188,10 @@ func convertBackendTLS(btp *graph.BackendTLSPolicy) *VerifyTLS {
 	if btp.CaCertRef.Name != "" {
 		verify.CertBundleID = generateCertBundleID(btp.CaCertRef)
 	} else {
-		verify.RootCAPath = getRootCAPath()
+		verify.RootCAPath = alpineSSLRootCAPath
 	}
 	verify.Hostname = string(btp.Source.Spec.TLS.Hostname)
 	return verify
-}
-
-// getRootCAPath returns the path to the root CA certificate bundle.
-func getRootCAPath() string {
-	certFiles := []string{
-		"/etc/ssl/cert.pem",                                 // Alpine Linux
-		"/etc/ssl/certs/ca-certificates.crt",                // Debian/Ubuntu/Gentoo etc.
-		"/etc/pki/tls/certs/ca-bundle.crt",                  // Fedora/RHEL 6
-		"/etc/ssl/ca-bundle.pem",                            // OpenSUSE
-		"/etc/pki/tls/cacert.pem",                           // OpenELEC
-		"/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem", // CentOS/RHEL 7
-	}
-	for _, certFile := range certFiles {
-		if _, err := os.Stat(certFile); err == nil {
-			return certFile
-		}
-	}
-	return ""
 }
 
 func buildServers(listeners []*graph.Listener) (http, ssl []VirtualServer) {

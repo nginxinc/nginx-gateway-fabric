@@ -2,14 +2,17 @@ package graph
 
 import (
 	"fmt"
+	"slices"
 
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
+	v1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/sort"
 	staticConds "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/conditions"
 )
 
@@ -97,6 +100,10 @@ func addBackendRefsToRules(
 			cond := validateBackendTLSPolicyMatchingAllBackends(backendRefs)
 			if cond != nil {
 				route.Conditions = append(route.Conditions, *cond)
+				// mark all backendRefs as invalid
+				for i := range backendRefs {
+					backendRefs[i].Valid = false
+				}
 			}
 		}
 
@@ -180,10 +187,19 @@ func createBackendRef(
 
 // validateBackendTLSPolicyMatchingAllBackends validates that all backends in a rule reference the same
 // BackendTLSPolicy. We require that all backends in a group have the same backend TLS policy configuration.
+// The backend TLS policy configuration is considered matching if: 1. CACertRefs reference the same ConfigMap, or
+// 2. WellKnownCACerts are the same, and 3. Hostname is the same.
 // FIXME (ciarams87): This is a temporary solution until we can support multiple backend TLS policies per group.
+// https://github.com/nginxinc/nginx-gateway-fabric/issues/1546
 func validateBackendTLSPolicyMatchingAllBackends(backendRefs []BackendRef) *conditions.Condition {
 	var mismatch bool
 	var referencePolicy *BackendTLSPolicy
+
+	checkPoliciesEqual := func(p1, p2 *v1alpha2.BackendTLSPolicy) bool {
+		return !slices.Equal(p1.Spec.TLS.CACertRefs, p2.Spec.TLS.CACertRefs) ||
+			p1.Spec.TLS.WellKnownCACerts != p2.Spec.TLS.WellKnownCACerts ||
+			p1.Spec.TLS.Hostname != p2.Spec.TLS.Hostname
+	}
 
 	for _, backendRef := range backendRefs {
 		if backendRef.BackendTLSPolicy == nil {
@@ -200,8 +216,7 @@ func validateBackendTLSPolicyMatchingAllBackends(backendRefs []BackendRef) *cond
 			referencePolicy = backendRef.BackendTLSPolicy
 		} else {
 			// Check if the policies match
-			if backendRef.BackendTLSPolicy.Source.Name != referencePolicy.Source.Name ||
-				backendRef.BackendTLSPolicy.Source.Namespace != referencePolicy.Source.Namespace {
+			if checkPoliciesEqual(backendRef.BackendTLSPolicy.Source, referencePolicy.Source) {
 				mismatch = true
 				break
 			}
@@ -234,13 +249,7 @@ func findBackendTLSPolicyForService(
 		}
 		if btp.Source.Spec.TargetRef.Name == ref.Name && btpNs == refNs {
 			if beTLSPolicy != nil {
-				if btp.Source.CreationTimestamp.Equal(&beTLSPolicy.Source.CreationTimestamp) {
-					// if the policies have the same creation timestamp, the one that comes first alphabetically wins
-					if btp.Source.Name < beTLSPolicy.Source.Name {
-						beTLSPolicy = btp
-					}
-				} else if btp.Source.CreationTimestamp.Before(&beTLSPolicy.Source.CreationTimestamp) {
-					// the oldest policy wins - see https://gateway-api.sigs.k8s.io/geps/gep-713/#conflict-resolution
+				if sort.LessObjectMeta(&btp.Source.ObjectMeta, &beTLSPolicy.Source.ObjectMeta) {
 					beTLSPolicy = btp
 				}
 			} else {
@@ -254,7 +263,7 @@ func findBackendTLSPolicyForService(
 		if !beTLSPolicy.Valid {
 			err = fmt.Errorf("The backend TLS policy is invalid: %s", beTLSPolicy.Conditions[0].Message)
 		} else {
-			beTLSPolicy.Conditions = append(beTLSPolicy.Conditions, staticConds.NewBackendTLSPolicyAttached())
+			beTLSPolicy.Conditions = append(beTLSPolicy.Conditions, staticConds.NewBackendTLSPolicyAccepted())
 		}
 	}
 

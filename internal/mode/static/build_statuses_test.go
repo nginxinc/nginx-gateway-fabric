@@ -619,6 +619,7 @@ func TestBuildBackendTLSPolicyStatuses(t *testing.T) {
 	getBackendTLSPolicy := func(
 		name string,
 		valid bool,
+		ignored bool,
 		isReferenced bool,
 		conditions []conditions.Condition,
 	) *graph.BackendTLSPolicy {
@@ -631,15 +632,15 @@ func TestBuildBackendTLSPolicyStatuses(t *testing.T) {
 				},
 			},
 			Valid:        valid,
+			Ignored:      ignored,
 			IsReferenced: isReferenced,
 			Conditions:   conditions,
 			Gateway:      types.NamespacedName{Name: "gateway", Namespace: "test"},
 		}
 	}
 
-	attachedConds := []conditions.Condition{staticConds.NewBackendTLSPolicyAttached()}
+	attachedConds := []conditions.Condition{staticConds.NewBackendTLSPolicyAccepted()}
 	invalidConds := []conditions.Condition{staticConds.NewBackendTLSPolicyInvalid("invalid backendTLSPolicy")}
-	ignoredConds := []conditions.Condition{staticConds.NewBackendTLSPolicyIgnored("ignored backendTLSPolicy")}
 
 	tests := []struct {
 		backendTLSPolicies map[types.NamespacedName]*graph.BackendTLSPolicy
@@ -653,7 +654,7 @@ func TestBuildBackendTLSPolicyStatuses(t *testing.T) {
 		{
 			name: "valid backendTLSPolicy",
 			backendTLSPolicies: map[types.NamespacedName]*graph.BackendTLSPolicy{
-				{Namespace: "test", Name: "valid-bt"}: getBackendTLSPolicy("valid-bt", true, true, attachedConds),
+				{Namespace: "test", Name: "valid-bt"}: getBackendTLSPolicy("valid-bt", true, false, true, attachedConds),
 			},
 			expected: status.BackendTLSPolicyStatuses{
 				{Namespace: "test", Name: "valid-bt"}: {
@@ -669,7 +670,7 @@ func TestBuildBackendTLSPolicyStatuses(t *testing.T) {
 		{
 			name: "invalid backendTLSPolicy",
 			backendTLSPolicies: map[types.NamespacedName]*graph.BackendTLSPolicy{
-				{Namespace: "test", Name: "invalid-bt"}: getBackendTLSPolicy("invalid-bt", false, true, invalidConds),
+				{Namespace: "test", Name: "invalid-bt"}: getBackendTLSPolicy("invalid-bt", false, false, true, invalidConds),
 			},
 			expected: status.BackendTLSPolicyStatuses{
 				{Namespace: "test", Name: "invalid-bt"}: {
@@ -685,16 +686,16 @@ func TestBuildBackendTLSPolicyStatuses(t *testing.T) {
 		{
 			name: "ignored or not referenced backendTLSPolicies",
 			backendTLSPolicies: map[types.NamespacedName]*graph.BackendTLSPolicy{
-				{Namespace: "test", Name: "ignored-bt"}:     getBackendTLSPolicy("ignored-bt", false, true, ignoredConds),
-				{Namespace: "test", Name: "not-referenced"}: getBackendTLSPolicy("not-referenced", true, false, nil),
+				{Namespace: "test", Name: "ignored-bt"}:     getBackendTLSPolicy("ignored-bt", false, true, true, nil),
+				{Namespace: "test", Name: "not-referenced"}: getBackendTLSPolicy("not-referenced", true, false, false, nil),
 			},
 			expected: status.BackendTLSPolicyStatuses{},
 		},
 		{
 			name: "mix valid and ignored backendTLSPolicies",
 			backendTLSPolicies: map[types.NamespacedName]*graph.BackendTLSPolicy{
-				{Namespace: "test", Name: "ignored-bt"}: getBackendTLSPolicy("ignored-bt", false, true, ignoredConds),
-				{Namespace: "test", Name: "valid-bt"}:   getBackendTLSPolicy("valid-bt", true, true, attachedConds),
+				{Namespace: "test", Name: "ignored-bt"}: getBackendTLSPolicy("ignored-bt", false, true, true, nil),
+				{Namespace: "test", Name: "valid-bt"}:   getBackendTLSPolicy("valid-bt", true, false, true, attachedConds),
 			},
 			expected: status.BackendTLSPolicyStatuses{
 				{Namespace: "test", Name: "valid-bt"}: {

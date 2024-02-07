@@ -51,7 +51,7 @@ nginxGateway:
   ## extraVolumeMounts are the additional volume mounts for the nginx-gateway container.
   extraVolumeMounts: []
 
-  experimentalFeatures:
+  gwAPIExperimentalFeatures:
     ## Enable the experimental features of Gateway API which are supported by NGINX Gateway Fabric. Requires the Gateway
     ## APIs installed from the experimental channel.
     enable: false

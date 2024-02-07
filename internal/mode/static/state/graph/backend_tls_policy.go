@@ -1,6 +1,7 @@
 package graph
 
 import (
+	"errors"
 	"fmt"
 
 	"k8s.io/apimachinery/pkg/types"
@@ -26,6 +27,8 @@ type BackendTLSPolicy struct {
 	Valid bool
 	// IsReferenced shows whether the BackendTLSPolicy is referenced by a BackendRef.
 	IsReferenced bool
+	// Ignored shows whether the BackendTLSPolicy is ignored.
+	Ignored bool
 }
 
 func processBackendTLSPolicies(
@@ -39,17 +42,24 @@ func processBackendTLSPolicies(
 	}
 	processedBackendTLSPolicies := make(map[types.NamespacedName]*BackendTLSPolicy, len(backendTLSPolicies))
 	for nsname, backendTLSPolicy := range backendTLSPolicies {
+		valid, ignored, caCertRef, conds := validateBackendTLSPolicy(
+			backendTLSPolicy,
+			configMapResolver,
+			ctlrName,
+			gateway,
+		)
+
 		processedBackendTLSPolicies[nsname] = &BackendTLSPolicy{
-			Source: backendTLSPolicy,
+			Source:     backendTLSPolicy,
+			Valid:      valid,
+			Conditions: conds,
+			Gateway: types.NamespacedName{
+				Namespace: gateway.Source.Namespace,
+				Name:      gateway.Source.Name,
+			},
+			CaCertRef: caCertRef,
+			Ignored:   ignored,
 		}
-		valid, caCertRef, conds := validateBackendTLSPolicy(backendTLSPolicy, configMapResolver, ctlrName, gateway)
-		processedBackendTLSPolicies[nsname].Valid = valid
-		processedBackendTLSPolicies[nsname].Conditions = conds
-		processedBackendTLSPolicies[nsname].Gateway = types.NamespacedName{
-			Namespace: gateway.Source.Namespace,
-			Name:      gateway.Source.Name,
-		}
-		processedBackendTLSPolicies[nsname].CaCertRef = caCertRef
 	}
 	return processedBackendTLSPolicies
 }
@@ -59,28 +69,14 @@ func validateBackendTLSPolicy(
 	configMapResolver *configMapResolver,
 	ctlrName string,
 	gateway *Gateway,
-) (bool, types.NamespacedName, []conditions.Condition) {
-	conds := make([]conditions.Condition, 0)
+) (bool, bool, types.NamespacedName, []conditions.Condition) {
+	var conds []conditions.Condition
 	valid := true
-	caCertRef := types.NamespacedName{}
-	if len(backendTLSPolicy.Status.Ancestors) >= 16 {
-		// check if we already are an ancestor on this policy. If we are, we are safe to continue.
-		ancestorRef := v1.ParentReference{
-			Namespace: helpers.GetPointer((v1.Namespace)(gateway.Source.Namespace)),
-			Name:      v1.ObjectName(gateway.Source.Name),
-		}
-		var alreadyAncestor bool
-		for _, ancestor := range backendTLSPolicy.Status.Ancestors {
-			if string(ancestor.ControllerName) == ctlrName && ancestor.AncestorRef.Name == ancestorRef.Name &&
-				*ancestor.AncestorRef.Namespace == *ancestorRef.Namespace {
-				alreadyAncestor = true
-				break
-			}
-		}
-		if !alreadyAncestor {
-			valid = false
-			conds = append(conds, staticConds.NewBackendTLSPolicyIgnored("too many ancestors, cannot attach a new Gateway"))
-		}
+	ignored := false
+	var caCertRef types.NamespacedName
+	if err := validateAncestorMaxCount(backendTLSPolicy, ctlrName, gateway); err != nil {
+		valid = false
+		ignored = true
 	}
 	if err := validateBackendTLSHostname(backendTLSPolicy); err != nil {
 		valid = false
@@ -106,7 +102,30 @@ func validateBackendTLSPolicy(
 		valid = false
 		conds = append(conds, staticConds.NewBackendTLSPolicyInvalid("CACertRefs and WellKnownCACerts are both nil"))
 	}
-	return valid, caCertRef, conds
+	return valid, ignored, caCertRef, conds
+}
+
+func validateAncestorMaxCount(backendTLSPolicy *v1alpha2.BackendTLSPolicy, ctlrName string, gateway *Gateway) error {
+	var err error
+	if len(backendTLSPolicy.Status.Ancestors) >= 16 {
+		// check if we already are an ancestor on this policy. If we are, we are safe to continue.
+		ancestorRef := v1.ParentReference{
+			Namespace: helpers.GetPointer((v1.Namespace)(gateway.Source.Namespace)),
+			Name:      v1.ObjectName(gateway.Source.Name),
+		}
+		var alreadyAncestor bool
+		for _, ancestor := range backendTLSPolicy.Status.Ancestors {
+			if string(ancestor.ControllerName) == ctlrName && ancestor.AncestorRef.Name == ancestorRef.Name &&
+				ancestor.AncestorRef.Namespace != nil && *ancestor.AncestorRef.Namespace == *ancestorRef.Namespace {
+				alreadyAncestor = true
+				break
+			}
+		}
+		if !alreadyAncestor {
+			err = errors.New("too many ancestors, cannot attach a new Gateway")
+		}
+	}
+	return err
 }
 
 func validateBackendTLSHostname(btp *v1alpha2.BackendTLSPolicy) error {
@@ -147,7 +166,7 @@ func validateBackendTLSCACertRef(btp *v1alpha2.BackendTLSPolicy, configMapResolv
 func validateBackendTLSWellKnownCACerts(btp *v1alpha2.BackendTLSPolicy) error {
 	if *btp.Spec.TLS.WellKnownCACerts != v1alpha2.WellKnownCACertSystem {
 		path := field.NewPath("tls.wellknowncacerts")
-		return field.Invalid(path, btp.Spec.TLS.WellKnownCACerts, "unsupported value")
+		return field.NotSupported(path, btp.Spec.TLS.WellKnownCACerts, []string{string(v1alpha2.WellKnownCACertSystem)})
 	}
 	return nil
 }

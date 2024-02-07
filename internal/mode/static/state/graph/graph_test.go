@@ -104,8 +104,8 @@ func TestBuildGraph(t *testing.T) {
 	}
 
 	btpAttachedConds := []conditions.Condition{
-		staticConds.NewBackendTLSPolicyAttached(),
-		staticConds.NewBackendTLSPolicyAttached(),
+		staticConds.NewBackendTLSPolicyAccepted(),
+		staticConds.NewBackendTLSPolicyAccepted(),
 	}
 
 	btp := BackendTLSPolicy{

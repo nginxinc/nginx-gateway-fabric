@@ -128,7 +128,7 @@ This will build the docker images `nginx-gateway-fabric:<your-user>` and `nginx-
    kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/standard-install.yaml
    ```
 
-   Alternatively, install Gateway API CRDs from the experimental channel:
+   If you're implementing experimental Gateway API features, install Gateway API CRDs from the experimental channel:
 
    ```shell
    kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/experimental-install.yaml

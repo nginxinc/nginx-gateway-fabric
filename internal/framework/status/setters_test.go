@@ -865,6 +865,12 @@ func TestBtpStatusEqual(t *testing.T) {
 			},
 		}
 	}
+	prevMultiple := getPolicyStatus("ancestor1", "ns1", "ctlr1")
+	prevMultiple.Ancestors = append(prevMultiple.Ancestors, getPolicyStatus("ancestor2", "ns2", "ctlr2").Ancestors...)
+
+	currMultiple := getPolicyStatus("ancestor1", "ns1", "ctlr1")
+	currMultiple.Ancestors = append(currMultiple.Ancestors, getPolicyStatus("ancestor3", "ns3", "ctlr2").Ancestors...)
+
 	tests := []struct {
 		name           string
 		controllerName string
@@ -904,6 +910,13 @@ func TestBtpStatusEqual(t *testing.T) {
 			name:           "status not equal, different controller name on previous",
 			previous:       getPolicyStatus("ancestor1", "ns1", "ctlr2"),
 			current:        getPolicyStatus("ancestor1", "ns1", "ctlr1"),
+			controllerName: "ctlr1",
+			expEqual:       false,
+		},
+		{
+			name:           "status not equal, different controller ancestor changed",
+			previous:       prevMultiple,
+			current:        currMultiple,
 			controllerName: "ctlr1",
 			expEqual:       false,
 		},

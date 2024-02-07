@@ -92,6 +92,7 @@ func TestValidateBackendTLSPolicy(t *testing.T) {
 		caCertName types.NamespacedName
 		name       string
 		isValid    bool
+		ignored    bool
 	}{
 		{
 			name: "normal case with ca cert refs",
@@ -288,6 +289,7 @@ func TestValidateBackendTLSPolicy(t *testing.T) {
 			},
 			isValid:    false,
 			caCertName: types.NamespacedName{Namespace: "test", Name: "configmap"},
+			ignored:    true,
 		},
 	}
 
@@ -322,11 +324,17 @@ func TestValidateBackendTLSPolicy(t *testing.T) {
 				Source: &gatewayv1.Gateway{ObjectMeta: metav1.ObjectMeta{Name: "gateway", Namespace: "test"}},
 			}
 
-			valid, caCertName, conds := validateBackendTLSPolicy(test.tlsPolicy, configMapResolver, "test", gateway)
+			valid, ignored, caCertName, conds := validateBackendTLSPolicy(
+				test.tlsPolicy,
+				configMapResolver,
+				"test",
+				gateway,
+			)
 
 			g.Expect(valid).To(Equal(test.isValid))
 			g.Expect(caCertName).To(Equal(test.caCertName))
-			if !test.isValid {
+			g.Expect(ignored).To(Equal(test.ignored))
+			if !test.isValid && !test.ignored {
 				g.Expect(conds).To(HaveLen(1))
 			} else {
 				g.Expect(conds).To(HaveLen(0))

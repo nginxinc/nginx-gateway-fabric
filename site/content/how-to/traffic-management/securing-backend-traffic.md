@@ -1,5 +1,5 @@
 ---
-title: "Backend TLS Termination"
+title: "Securing Traffic to Backends"
 description: "Learn how to encrypt HTTP traffic between NGINX Gateway Fabric and your backend pods."
 weight: 600
 toc: true
@@ -10,7 +10,7 @@ In this guide, we will show how to specify the TLS configuration of the connecti
 
 ## Prerequisites
 
-- [Install]({{< relref "installation/" >}}) NGINX Gateway Fabric. Please note that the Gateway APIs from the experimental channel are required, and NGF must be deployed with the `- --experimental-features-enable` flag.
+- [Install]({{< relref "installation/" >}}) NGINX Gateway Fabric. Please note that the Gateway APIs from the experimental channel are required, and NGF must be deployed with the `--gateway-api-experimental-features` flag.
 - [Expose NGINX Gateway Fabric]({{< relref "installation/expose-nginx-gateway-fabric.md" >}}) and save the public IP address and port of NGINX Gateway Fabric into shell variables:
 
    ```text
@@ -90,7 +90,7 @@ data:
       default_type text/plain;
 
       location / {
-        return 200 "hello from pod $hostname\n";
+        return 200 "hello from pod secure-app\n";
       }
     }
 ---
@@ -173,7 +173,7 @@ Using the external IP address and port for NGINX Gateway Fabric, we can send tra
 {{< note >}}If you have a DNS record allocated for `secure-app.example.com`, you can send the request directly to that hostname, without needing to resolve.{{< /note >}}
 
 ```shell
-curl --resolve secure-app.example.com:$GW_PORT:$GW_IP http://secure-app.example.com:$GW_PORT/ --insecure
+curl --resolve secure-app.example.com:$GW_PORT:$GW_IP http://secure-app.example.com:$GW_PORT/
 ```
 
 ```text
@@ -248,10 +248,10 @@ spec:
 EOF
 ```
 
-To confirm the Polict was created and attached successfully, we can run a describe on the BackendTLSPolicy object:
+To confirm the Policy was created and attached successfully, we can run a describe on the BackendTLSPolicy object:
 
 ```shell
-k describe backendtlspolicies.gateway.networking.k8s.io
+kubectl describe backendtlspolicies.gateway.networking.k8s.io
 ```
 
 ```text
@@ -287,10 +287,10 @@ Status:
       Namespace:  default
     Conditions:
       Last Transition Time:  2024-02-01T12:02:38Z
-      Message:               BackendTLSPolicy is attached to the Gateway
-      Reason:                BackendTLSPolicyAttached
+      Message:               BackendTLSPolicy is accepted by the Gateway
+      Reason:                Accepted
       Status:                True
-      Type:                  Attached
+      Type:                  Accepted
     Controller Name:         gateway.nginx.org/nginx-gateway-controller
 Events:                      <none>
 ```
@@ -300,11 +300,11 @@ Events:                      <none>
 Now let's try sending traffic again:
 
 ```shell
-curl --resolve secure-app.example.com:$GW_PORT:$GW_IP http://secure-app.example.com:$GW_PORT/ --insecure
+curl --resolve secure-app.example.com:$GW_PORT:$GW_IP http://secure-app.example.com:$GW_PORT/
 ```
 
 ```text
-hello from pod secure-app-868cfd5b5-v7gwk
+hello from pod secure-app
 ```
 
 ## Further Reading

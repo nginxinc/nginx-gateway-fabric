@@ -2478,7 +2478,7 @@ func TestConvertBackendTLS(t *testing.T) {
 
 	expectedWithWellKnownCerts := &VerifyTLS{
 		Hostname:   "example.com",
-		RootCAPath: getRootCAPath(),
+		RootCAPath: alpineSSLRootCAPath,
 	}
 
 	tests := []struct {

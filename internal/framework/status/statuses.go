@@ -116,6 +116,7 @@ type GatewayClassStatus struct {
 	ObservedGeneration int64
 }
 
+// AncestorStatus holds status-related information related to how the BackendTLSPolicy binds to a specific ancestorRef.
 type AncestorStatus struct {
 	// GatewayNsName is the Namespaced name of the Gateway, which the ancestorRef references.
 	GatewayNsName types.NamespacedName

@@ -1,7 +1,6 @@
 package config
 
 import (
-	"encoding/base64"
 	"path/filepath"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/file"
@@ -96,15 +95,10 @@ func generatePEMFileName(id dataplane.SSLKeyPairID) string {
 }
 
 func generateCertBundle(id dataplane.CertBundleID, cert []byte) file.File {
-	data := make([]byte, base64.StdEncoding.DecodedLen(len(cert)))
-	_, err := base64.StdEncoding.Decode(data, cert)
-	if err != nil {
-		data = cert
-	}
 	return file.File{
-		Content: data,
+		Content: cert,
 		Path:    generateCertBundleFileName(id),
-		Type:    file.TypeSecret,
+		Type:    file.TypeRegular,
 	}
 }
 

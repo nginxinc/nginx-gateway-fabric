@@ -1869,10 +1869,7 @@ func TestConvertBackendTLSFromGroup(t *testing.T) {
 					UpstreamName: "my-upstream",
 					Valid:        true,
 					Weight:       1,
-					VerifyTLS: &dataplane.VerifyTLS{
-						CertBundleID: "",
-						Hostname:     "",
-					},
+					VerifyTLS:    nil,
 				},
 			},
 			expected: nil,
@@ -1897,6 +1894,24 @@ func TestConvertBackendTLSFromGroup(t *testing.T) {
 			},
 			expected: &http.ProxySSLVerify{
 				TrustedCertificate: "/etc/nginx/secrets/default-my-cert.crt",
+				Name:               "my-hostname",
+			},
+		},
+		{
+			msg: "tls enabled, system certs enabled",
+			grp: []dataplane.Backend{
+				{
+					UpstreamName: "my-upstream",
+					Valid:        true,
+					Weight:       1,
+					VerifyTLS: &dataplane.VerifyTLS{
+						Hostname:   "my-hostname",
+						RootCAPath: "/etc/ssl/certs/ca-certificates.crt",
+					},
+				},
+			},
+			expected: &http.ProxySSLVerify{
+				TrustedCertificate: "/etc/ssl/certs/ca-certificates.crt",
 				Name:               "my-hostname",
 			},
 		},

@@ -388,9 +388,13 @@ func registerControllers(
 		backendTLSObjs := []ctlrCfg{
 			{
 				objectType: &gatewayv1alpha2.BackendTLSPolicy{},
+				options: []controller.Option{
+					controller.WithK8sPredicate(k8spredicate.GenerationChangedPredicate{}),
+				},
 			},
 			{
 				// FIXME(ciarams87): If possible, use only metadata predicate
+				// https://github.com/nginxinc/nginx-gateway-fabric/issues/1545
 				objectType: &apiv1.ConfigMap{},
 			},
 		}

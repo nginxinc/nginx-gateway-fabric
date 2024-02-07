@@ -254,17 +254,16 @@ Fields:
       - `group` - supported.
       - `kind` - supports `ConfigMap`.
     - `hostname` - supported.
-    - `wellKnownCerts` - supports `System`. This will set the CA certificate to the system root CA path.
+    - `wellKnownCerts` - supports `System`. This will set the CA certificate to the Alpine system root CA path `/etc/ssl/cert.pem`. NB: This option will only work if the NGINX image used is Alpine based. The NGF NGINX images are Alpine based by default.
 - `status`
   - `ancestors`
     - `ancestorRef` - supported.
     - `controllerName`: supported.
-    - `conditions`: Supported (Condition/Status/Reason):
-      - `Attached/True/BackendTLSPolicyAttached` - Custom reason for when the BackendTLSPolicy is attached to at least one Service referenced by this Gateway.
-      - `Attached/False/BackendTLSPolicyIgnored` - Custom reason for when the BackendTLSPolicy config cannot be attached to the Gateway and will be ignored.
-      - `Valid/False/BackendTLSPolicyInvalid` - Custom reason for when the BackendTLSPolicy config is invalid.
+    - `conditions`: Partially supported. Supported (Condition/Status/Reason):
+      - `Accepted/True/PolicyReasonAccepted`
+      - `Accepted/False/PolicyReasonInvalid`
 
-{{<note>}}If multiple `backendRefs` are defined for a HTTPRoute rule, all the referenced Services *must* have matching BackendTLSPolicy configuration{{</note>}}
+{{<note>}}If multiple `backendRefs` are defined for a HTTPRoute rule, all the referenced Services *must* have matching BackendTLSPolicy configuration. BackendTLSPolicy configuration is considered to be matching if 1. CACertRefs reference the same ConfigMap, or 2. WellKnownCACerts are the same, and 3. Hostname is the same.{{</note>}}
 
 ### Custom Policies
 

@@ -5,6 +5,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "sigs.k8s.io/gateway-api/apis/v1"
+	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
@@ -72,9 +73,6 @@ const (
 
 	// BackendTLSPolicyReasonAttached is the condition reason for the BackendTLSPolicy Attached condition.
 	BackendTLSPolicyReasonAttached BackendTLSPolicyConditionReason = "BackendTLSPolicyAttached"
-
-	// BackendTLSPolicyReasonIgnored is the condition reason for the BackendTLSPolicy being ignored by this Gateway.
-	BackendTLSPolicyReasonIgnored BackendTLSPolicyConditionReason = "BackendTLSPolicyIgnored"
 
 	// BackendTLSPolicyConditionValid is the condition type indicating whether the BackendTLS policy is valid.
 	BackendTLSPolicyConditionValid BackendTLSPolicyConditionType = "Valid"
@@ -570,34 +568,23 @@ func NewNginxGatewayInvalid(msg string) conditions.Condition {
 	}
 }
 
-// NewBackendTLSPolicyAttached returns a Condition that indicates that the BackendTLSPolicy config is valid and attached
-// to the Gateway.
-func NewBackendTLSPolicyAttached() conditions.Condition {
+// NewBackendTLSPolicyAccepted returns a Condition that indicates that the BackendTLSPolicy config is valid and accepted
+// by the Gateway.
+func NewBackendTLSPolicyAccepted() conditions.Condition {
 	return conditions.Condition{
-		Type:    string(BackendTLSPolicyConditionAttached),
+		Type:    string(v1alpha2.PolicyConditionAccepted),
 		Status:  metav1.ConditionTrue,
-		Reason:  string(BackendTLSPolicyReasonAttached),
-		Message: "BackendTLSPolicy is attached to the Gateway",
-	}
-}
-
-// NewBackendTLSPolicyIgnored returns a Condition that indicates that the BackendTLSPolicy config cannot be attached to
-// the Gateway and will be ignored.
-func NewBackendTLSPolicyIgnored(msg string) conditions.Condition {
-	return conditions.Condition{
-		Type:    string(BackendTLSPolicyConditionAttached),
-		Status:  metav1.ConditionFalse,
-		Reason:  string(BackendTLSPolicyReasonIgnored),
-		Message: msg,
+		Reason:  string(v1alpha2.PolicyReasonAccepted),
+		Message: "BackendTLSPolicy is accepted by the Gateway",
 	}
 }
 
 // NewBackendTLSPolicyInvalid returns a Condition that indicates that the BackendTLSPolicy config is invalid.
 func NewBackendTLSPolicyInvalid(msg string) conditions.Condition {
 	return conditions.Condition{
-		Type:    string(BackendTLSPolicyConditionValid),
+		Type:    string(v1alpha2.PolicyConditionAccepted),
 		Status:  metav1.ConditionFalse,
-		Reason:  string(BackendTLSPolicyReasonInvalid),
+		Reason:  string(v1alpha2.PolicyReasonInvalid),
 		Message: msg,
 	}
 }

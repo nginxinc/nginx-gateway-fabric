@@ -199,16 +199,7 @@ func buildBackendTLSPolicyStatuses(backendTLSPolicies map[types.NamespacedName]*
 
 	for nsname, backendTLSPolicy := range backendTLSPolicies {
 		if backendTLSPolicy.IsReferenced {
-			ignoreStatus := false
-			if !backendTLSPolicy.Valid {
-				for i := range backendTLSPolicy.Conditions {
-					if backendTLSPolicy.Conditions[i].Reason == string(staticConds.BackendTLSPolicyReasonIgnored) {
-						// We should not report the status of an ignored BackendTLSPolicy.
-						ignoreStatus = true
-					}
-				}
-			}
-			if !ignoreStatus {
+			if !backendTLSPolicy.Ignored {
 				statuses[nsname] = status.BackendTLSPolicyStatus{
 					AncestorStatuses: []status.AncestorStatus{
 						{
