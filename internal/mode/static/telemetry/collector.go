@@ -170,10 +170,10 @@ func collectNGFReplicaCount(ctx context.Context, k8sClient client.Reader, podNSN
 
 	podOwnerRefs := pod.GetOwnerReferences()
 	if podOwnerRefs == nil {
-		return 0, fmt.Errorf("could not get owner reference of NGF Pod")
+		return 0, errors.New("could not get owner reference of NGF Pod")
 	}
 	if len(podOwnerRefs) != 1 {
-		return 0, fmt.Errorf("multiple owner references of NGF Pod")
+		return 0, errors.New("multiple owner references of NGF Pod")
 	}
 
 	switch kind := podOwnerRefs[0].Kind; kind {
@@ -184,6 +184,10 @@ func collectNGFReplicaCount(ctx context.Context, k8sClient client.Reader, podNSN
 			&replicaSet,
 		); err != nil {
 			return 0, err
+		}
+
+		if replicaSet.Spec.Replicas == nil {
+			return 0, errors.New("replica set replicas was nil")
 		}
 
 		return int(*replicaSet.Spec.Replicas), nil

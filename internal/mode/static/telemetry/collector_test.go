@@ -497,6 +497,36 @@ var _ = Describe("Collector", Ordered, func() {
 					Expect(err).To(HaveOccurred())
 				})
 
+				It("should error if the replica set's replicas is nil", func() {
+					k8sClientReader.GetCalls(
+						func(ctx context.Context, key client.ObjectKey, object client.Object, option ...client.GetOption) error {
+							Expect(option).To(BeEmpty())
+
+							switch typedObj := object.(type) {
+							case *v1.Pod:
+								typedObj.ObjectMeta = metav1.ObjectMeta{
+									Name: "pod1",
+									OwnerReferences: []metav1.OwnerReference{
+										{
+											Kind: "ReplicaSet",
+											Name: "replicaset1",
+										},
+									},
+								}
+							case *appsv1.ReplicaSet:
+								typedObj.Spec = appsv1.ReplicaSetSpec{
+									Replicas: nil,
+								}
+							default:
+								Fail(fmt.Sprintf("unknown type: %T", typedObj))
+							}
+							return nil
+						})
+
+					_, err := dataCollector.Collect(ctx)
+					Expect(err).To(HaveOccurred())
+				})
+
 				It("should error if the kubernetes client errored when getting the ReplicaSet", func() {
 					k8sClientReader.GetReturnsOnCall(1, errors.New("there was an error"))
 
