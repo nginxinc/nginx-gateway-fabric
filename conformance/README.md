@@ -16,24 +16,30 @@ make
 ```
 
 ```text
-build-images                   Build NGF and nginx images
-build-test-runner-image        Build conformance test runner image
-cleanup-conformance-tests      Clean up conformance tests fixtures
-create-kind-cluster            Create a kind cluster
-delete-kind-cluster            Delete kind cluster
-deploy-updated-provisioner     Update provisioner manifest and deploy to the configured kind cluster
-help                           Display this help
-install-ngf-edge               Install NGF with provisioner from edge on configured kind cluster
-install-ngf-local-build        Install NGF from local build with provisioner on configured kind cluster
-install-ngf-local-no-build     Install NGF from local build with provisioner on configured kind cluster but do not build the NGF image
-load-images                    Load NGF and NGINX images on configured kind cluster
-prepare-ngf-dependencies       Install NGF dependencies on configured kind cluster
-reset-go-modules               Reset the go modules changes
-run-conformance-tests          Run conformance tests
-undo-manifests-update          Undo the changes in the manifest files
-uninstall-ngf                  Uninstall NGF on configured kind cluster and undo manifest changes
-update-go-modules              Update the gateway-api go modules to latest main version
-update-ngf-manifest            Update the NGF deployment manifest image names and imagePullPolicies
+build-images-with-plus               Build NGF and NGINX Plus images
+build-images                         Build NGF and NGINX images
+build-test-runner-image              Build conformance test runner image
+cleanup-conformance-tests            Clean up conformance tests fixtures
+create-kind-cluster                  Create a kind cluster
+delete-kind-cluster                  Delete kind cluster
+deploy-updated-provisioner           Update provisioner manifest and deploy to the configured kind cluster
+help                                 Display this help
+install-ngf-edge                     Install NGF with provisioner from edge on configured kind cluster
+install-ngf-local-build-with-plus    Install NGF with Plus from local build with provisioner on configured kind cluster
+install-ngf-local-build              Install NGF from local build with provisioner on configured kind cluster
+install-ngf-local-no-build-with-plus Install NGF with Plus from local build with provisioner on configured kind cluster but do not build the NGF image
+install-ngf-local-no-build           Install NGF from local build with provisioner on configured kind cluster but do not build the NGF image
+load-images-with-plus                Load NGF and NGINX Plus images on configured kind cluster
+load-images                          Load NGF and NGINX images on configured kind cluster
+prepare-ngf-dependencies-with-plus   Install NGF dependencies with Plus on configured kind cluster
+prepare-ngf-dependencies             Install NGF dependencies on configured kind cluster
+reset-go-modules                     Reset the go modules changes
+run-conformance-tests                Run conformance tests
+undo-manifests-update                Undo the changes in the manifest files
+uninstall-ngf                        Uninstall NGF on configured kind cluster and undo manifest changes
+update-go-modules                    Update the gateway-api go modules to latest main version
+update-ngf-manifest-with-plus        Update the NGF deployment manifest image names and imagePullPolicies including nginx-plus
+update-ngf-manifest                  Update the NGF deployment manifest image names and imagePullPolicies
 ```
 
 **Note:** The following variables are configurable when running the below `make` commands:
@@ -50,7 +56,6 @@ update-ngf-manifest            Update the NGF deployment manifest image names an
 | GATEWAY_CLASS        | nginx                                                                                                         | The gateway class that should be used for the tests                                                                       |
 | SUPPORTED_FEATURES   | HTTPRoute,HTTPRouteQueryParamMatching, HTTPRouteMethodMatching,HTTPRoutePortRedirect, HTTPRouteSchemeRedirect | The supported features that should be tested by the conformance tests. Ensure the list is comma separated with no spaces. |
 | EXEMPT_FEATURES      | ReferenceGrant                                                                                                | The features that should not be tested by the conformance tests                                                           |
-| NGINX_IMAGE          | as defined in the provisioner/static-deployment.yaml file                                                     | The NGINX image for the NGF deployments                                                                                   |
 | NGF_MANIFEST         | ../deploy/manifests/nginx-gateway.yaml                                                                        | The location of the NGF manifest                                                                                          |
 | SERVICE_MANIFEST     | ../deploy/manifests/service/nodeport.yaml                                                                     | The location of the NGF Service manifest                                                                                  |
 | STATIC_MANIFEST      | provisioner/static-deployment.yaml                                                                            | The location of the NGF static deployment manifest                                                                        |
@@ -87,6 +92,12 @@ make create-kind-cluster KIND_IMAGE=kindest/node:v1.27.3
 make install-ngf-local-build
 ```
 
+Or, to install NGF with NGINX Plus enabled (NGINX Plus cert and key must exist in the root of the repo):
+
+```makefile
+make install-ngf-local-build-with-plus
+```
+
 #### *Option 2* Install NGINX Gateway Fabric from local already built image to configured kind cluster
 
 You can optionally skip the actual *build* step.
@@ -95,15 +106,28 @@ You can optionally skip the actual *build* step.
 make install-ngf-local-no-build
 ```
 
+Or, to install NGF with NGINX Plus enabled:
+
+```makefile
+make install-ngf-no-build-with-plus
+```
+
 > Note:  If choosing this option, the following step *must* be completed manually *before* you build the image:
 
 ```makefile
 make update-ngf-manifest PREFIX=<ngf_repo_name> TAG=<ngf_image_tag>
 ```
 
+Or, if you are building the NGINX Plus image:
+
+```makefile
+make update-ngf-manifest-with-plus PREFIX=<ngf_repo_name> TAG=<ngf_image_tag>
+```
+
 #### *Option 3* Install NGINX Gateway Fabric from edge to configured kind cluster
 
-You can also skip the build NGF image step and prepare the environment to instead use the `edge` image
+You can also skip the build NGF image step and prepare the environment to instead use the `edge` image. Note that this
+option does not currently support installing with NGINX Plus enabled.
 
 ```makefile
 make install-ngf-edge
