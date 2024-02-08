@@ -2,7 +2,7 @@
   "dependencies": {
     "chai": "5.0.3",
     "esm": "3.2.25",
-    "mocha": "10.2.0"
+    "mocha": "10.3.0"
   },
   "scripts": {
     "format": "prettier -w src/ test/",

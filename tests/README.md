@@ -54,18 +54,20 @@ test                           Run the system tests against your default k8s clu
 
 **Note:** The following variables are configurable when running the below `make` commands:
 
-| Variable            | Default                    | Description                                                    |
-| ------------------- | -------------------------- | -------------------------------------------------------------- |
-| TAG                 | edge                       | tag for the locally built NGF images                           |
-| PREFIX              | nginx-gateway-fabric       | prefix for the locally built NGF image                         |
-| NGINX_PREFIX        | nginx-gateway-fabric/nginx | prefix for the locally built NGINX image                       |
-| PULL_POLICY         | Never                      | NGF image pull policy                                          |
-| GW_API_VERSION      | 1.0.0                      | version of Gateway API resources to install                    |
-| K8S_VERSION         | latest                     | version of k8s that the tests are run on                       |
-| GW_SERVICE_TYPE     | NodePort                   | type of Service that should be created                         |
-| GW_SVC_GKE_INTERNAL | false                      | specifies if the LoadBalancer should be a GKE internal service |
-| GINKGO_LABEL        | ""                         | name of the ginkgo label that will filter the tests to run     |
-| GINKGO_FLAGS        | ""                         | other ginkgo flags to pass to the go test command              |
+| Variable            | Default                         | Description                                                    |
+| ------------------- | ------------------------------- | -------------------------------------------------------------- |
+| TAG                 | edge                            | tag for the locally built NGF images                           |
+| PREFIX              | nginx-gateway-fabric            | prefix for the locally built NGF image                         |
+| NGINX_PREFIX        | nginx-gateway-fabric/nginx      | prefix for the locally built NGINX image                       |
+| NGINX_PLUS_PREFIX   | nginx-gateway-fabric/nginx-plus | prefix for the locally built NGINX Plus image                  |
+| PLUS_ENABLED        | false                           | Flag to indicate if NGINX Plus should be enabled               |
+| PULL_POLICY         | Never                           | NGF image pull policy                                          |
+| GW_API_VERSION      | 1.0.0                           | version of Gateway API resources to install                    |
+| K8S_VERSION         | latest                          | version of k8s that the tests are run on                       |
+| GW_SERVICE_TYPE     | NodePort                        | type of Service that should be created                         |
+| GW_SVC_GKE_INTERNAL | false                           | specifies if the LoadBalancer should be a GKE internal service |
+| GINKGO_LABEL        | ""                              | name of the ginkgo label that will filter the tests to run     |
+| GINKGO_FLAGS        | ""                              | other ginkgo flags to pass to the go test command              |
 
 ## Step 1 - Create a Kubernetes cluster
 
@@ -91,12 +93,24 @@ your images to a registry that is accessible from that cloud provider.
 make build-images load-images TAG=$(whoami)
 ```
 
+Or, to build NGF with NGINX Plus enabled (NGINX Plus cert and key must exist in the root of the repo):
+
+```makefile
+make build-images-with-plus load-images-with-plus TAG=$(whoami)
+```
+
 ## Step 3 - Run the tests
 
 ### 3a - Run the tests locally
 
 ```makefile
 make test TAG=$(whoami)
+```
+
+Or, to run the tests with NGINX Plus enabled:
+
+```makefile
+make test TAG=$(whoami) PLUS_ENABLED=true
 ```
 
 ### 3b - Run the tests on a GKE cluster from a GCP VM

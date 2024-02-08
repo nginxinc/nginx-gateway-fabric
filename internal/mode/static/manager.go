@@ -69,8 +69,8 @@ func init() {
 
 // nolint:gocyclo
 func StartManager(cfg config.Config) error {
-	hc := &healthChecker{}
-	mgr, err := createManager(cfg, hc)
+	nginxChecker := newNginxConfiguredOnStartChecker()
+	mgr, err := createManager(cfg, nginxChecker)
 	if err != nil {
 		return fmt.Errorf("cannot build runtime manager: %w", err)
 	}
@@ -188,12 +188,12 @@ func StartManager(cfg config.Config) error {
 			ngxruntimeCollector,
 			cfg.Logger.WithName("nginxRuntimeManager"),
 		),
-		statusUpdater:       statusUpdater,
-		eventRecorder:       recorder,
-		healthChecker:       hc,
-		controlConfigNSName: controlConfigNSName,
-		gatewayPodConfig:    cfg.GatewayPodConfig,
-		metricsCollector:    handlerCollector,
+		statusUpdater:                 statusUpdater,
+		eventRecorder:                 recorder,
+		nginxConfiguredOnStartChecker: nginxChecker,
+		controlConfigNSName:           controlConfigNSName,
+		gatewayPodConfig:              cfg.GatewayPodConfig,
+		metricsCollector:              handlerCollector,
 	})
 
 	objects, objectLists := prepareFirstEventBatchPreparerArgs(cfg.GatewayClassName, cfg.GatewayNsName)
@@ -213,7 +213,13 @@ func StartManager(cfg config.Config) error {
 		return fmt.Errorf("cannot register status updater: %w", err)
 	}
 
-	if err = mgr.Add(createTelemetryJob(cfg)); err != nil {
+	dataCollector := telemetry.NewDataCollectorImpl(telemetry.DataCollectorConfig{
+		K8sClientReader:     mgr.GetClient(),
+		GraphGetter:         processor,
+		ConfigurationGetter: eventHandler,
+		Version:             cfg.Version,
+	})
+	if err = mgr.Add(createTelemetryJob(cfg, dataCollector, nginxChecker.getReadyCh())); err != nil {
 		return fmt.Errorf("cannot register telemetry job: %w", err)
 	}
 
@@ -221,7 +227,7 @@ func StartManager(cfg config.Config) error {
 	return mgr.Start(ctx)
 }
 
-func createManager(cfg config.Config, hc *healthChecker) (manager.Manager, error) {
+func createManager(cfg config.Config, nginxChecker *nginxConfiguredOnStartChecker) (manager.Manager, error) {
 	options := manager.Options{
 		Scheme:  scheme,
 		Logger:  cfg.Logger,
@@ -256,7 +262,7 @@ func createManager(cfg config.Config, hc *healthChecker) (manager.Manager, error
 	}
 
 	if cfg.HealthConfig.Enabled {
-		if err := mgr.AddReadyzCheck("readyz", hc.readyCheck); err != nil {
+		if err := mgr.AddReadyzCheck("readyz", nginxChecker.readyCheck); err != nil {
 			return nil, fmt.Errorf("error adding ready check: %w", err)
 		}
 	}
@@ -399,6 +405,33 @@ func registerControllers(
 	return nil
 }
 
+func createTelemetryJob(
+	cfg config.Config,
+	dataCollector telemetry.DataCollector,
+	readyCh <-chan struct{},
+) *runnables.Leader {
+	logger := cfg.Logger.WithName("telemetryJob")
+	exporter := telemetry.NewLoggingExporter(cfg.Logger.WithName("telemetryExporter").V(1 /* debug */))
+
+	worker := telemetry.CreateTelemetryJobWorker(logger, exporter, dataCollector)
+
+	// 10 min jitter is enough per telemetry destination recommendation
+	// For the default period of 24 hours, jitter will be 10min /(24*60)min  = 0.0069
+	jitterFactor := 10.0 / (24 * 60) // added jitter is bound by jitterFactor * period
+
+	return &runnables.Leader{
+		Runnable: runnables.NewCronJob(
+			runnables.CronJobConfig{
+				Worker:       worker,
+				Logger:       logger,
+				Period:       cfg.TelemetryReportPeriod,
+				JitterFactor: jitterFactor,
+				ReadyCh:      readyCh,
+			},
+		),
+	}
+}
+
 func prepareFirstEventBatchPreparerArgs(
 	gcName string,
 	gwNsName *types.NamespacedName,
@@ -436,40 +469,6 @@ func prepareFirstEventBatchPreparerArgs(
 	}
 
 	return objects, objectLists
-}
-
-func createTelemetryJob(cfg config.Config) *runnables.Leader {
-	logger := cfg.Logger.WithName("telemetryJob")
-	exporter := telemetry.NewLoggingExporter(cfg.Logger.WithName("telemetryExporter").V(1 /* debug */))
-
-	worker := func(ctx context.Context) {
-		// Gather telemetry
-		logger.V(1).Info("Gathering telemetry")
-
-		// We will need to gather data as defined in https://github.com/nginxinc/nginx-gateway-fabric/issues/793
-		data := telemetry.Data{}
-
-		// Export telemetry
-		logger.V(1).Info("Exporting telemetry")
-
-		if err := exporter.Export(ctx, data); err != nil {
-			logger.Error(err, "Failed to export telemetry")
-		}
-	}
-	// 10 min jitter is enough per telemetry destination recommendation
-	// For the default period of 24 hours, jitter will be 10min /(24*60)min  = 0.0069
-	jitterFactor := 10.0 / (24 * 60) // added jitter is bound by jitterFactor * period
-
-	return &runnables.Leader{
-		Runnable: runnables.NewCronJob(
-			runnables.CronJobConfig{
-				Worker:       worker,
-				Logger:       logger,
-				Period:       cfg.TelemetryReportPeriod,
-				JitterFactor: jitterFactor,
-			},
-		),
-	}
 }
 
 func setInitialConfig(

@@ -8,9 +8,9 @@ import (
 
 func TestReadyCheck(t *testing.T) {
 	g := NewWithT(t)
-	hc := healthChecker{}
-	g.Expect(hc.readyCheck(nil)).ToNot(Succeed())
+	nginxChecker := newNginxConfiguredOnStartChecker()
+	g.Expect(nginxChecker.readyCheck(nil)).ToNot(Succeed())
 
-	hc.ready = true
-	g.Expect(hc.readyCheck(nil)).To(Succeed())
+	nginxChecker.ready = true
+	g.Expect(nginxChecker.readyCheck(nil)).To(Succeed())
 }

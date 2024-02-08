@@ -3,6 +3,7 @@ package static
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -58,8 +59,8 @@ type eventHandlerConfig struct {
 	logLevelSetter logLevelSetter
 	// metricsCollector collects metrics for this controller.
 	metricsCollector handlerMetricsCollector
-	// healthChecker sets the health of the Pod to Ready once we've written out our initial config
-	healthChecker *healthChecker
+	// nginxConfiguredOnStartChecker sets the health of the Pod to Ready once we've written out our initial config.
+	nginxConfiguredOnStartChecker *nginxConfiguredOnStartChecker
 	// controlConfigNSName is the NamespacedName of the NginxGateway config for this controller.
 	controlConfigNSName types.NamespacedName
 	// version is the current version number of the nginx config.
@@ -72,7 +73,10 @@ type eventHandlerConfig struct {
 // (2) Keeping the statuses of the Gateway API resources updated.
 // (3) Updating control plane configuration.
 type eventHandlerImpl struct {
-	cfg eventHandlerConfig
+	// latestConfiguration is the latest Configuration generation.
+	latestConfiguration *dataplane.Configuration
+	cfg                 eventHandlerConfig
+	lock                sync.Mutex
 }
 
 // newEventHandlerImpl creates a new eventHandlerImpl.
@@ -105,22 +109,30 @@ func (h *eventHandlerImpl) HandleEventBatch(ctx context.Context, logger logr.Log
 	switch changeType {
 	case state.NoChange:
 		logger.Info("Handling events didn't result into NGINX configuration changes")
-		if !h.cfg.healthChecker.ready && h.cfg.healthChecker.firstBatchError == nil {
-			h.cfg.healthChecker.setAsReady()
+		if !h.cfg.nginxConfiguredOnStartChecker.ready && h.cfg.nginxConfiguredOnStartChecker.firstBatchError == nil {
+			h.cfg.nginxConfiguredOnStartChecker.setAsReady()
 		}
 		return
 	case state.EndpointsOnlyChange:
 		h.cfg.version++
+		cfg := dataplane.BuildConfiguration(ctx, graph, h.cfg.serviceResolver, h.cfg.version)
+
+		h.setLatestConfiguration(&cfg)
+
 		err = h.updateUpstreamServers(
 			ctx,
 			logger,
-			dataplane.BuildConfiguration(ctx, graph, h.cfg.serviceResolver, h.cfg.version),
+			cfg,
 		)
 	case state.ClusterStateChange:
 		h.cfg.version++
+		cfg := dataplane.BuildConfiguration(ctx, graph, h.cfg.serviceResolver, h.cfg.version)
+
+		h.setLatestConfiguration(&cfg)
+
 		err = h.updateNginxConf(
 			ctx,
-			dataplane.BuildConfiguration(ctx, graph, h.cfg.serviceResolver, h.cfg.version),
+			cfg,
 		)
 	}
 
@@ -128,13 +140,13 @@ func (h *eventHandlerImpl) HandleEventBatch(ctx context.Context, logger logr.Log
 	if err != nil {
 		logger.Error(err, "Failed to update NGINX configuration")
 		nginxReloadRes.error = err
-		if !h.cfg.healthChecker.ready {
-			h.cfg.healthChecker.firstBatchError = err
+		if !h.cfg.nginxConfiguredOnStartChecker.ready {
+			h.cfg.nginxConfiguredOnStartChecker.firstBatchError = err
 		}
 	} else {
 		logger.Info("NGINX configuration was successfully updated")
-		if !h.cfg.healthChecker.ready {
-			h.cfg.healthChecker.setAsReady()
+		if !h.cfg.nginxConfiguredOnStartChecker.ready {
+			h.cfg.nginxConfiguredOnStartChecker.setAsReady()
 		}
 	}
 
@@ -383,4 +395,20 @@ func getGatewayAddresses(
 	}
 
 	return gwAddresses, nil
+}
+
+// GetLatestConfiguration gets the latest configuration.
+func (h *eventHandlerImpl) GetLatestConfiguration() *dataplane.Configuration {
+	h.lock.Lock()
+	defer h.lock.Unlock()
+
+	return h.latestConfiguration
+}
+
+// setLatestConfiguration sets the latest configuration.
+func (h *eventHandlerImpl) setLatestConfiguration(cfg *dataplane.Configuration) {
+	h.lock.Lock()
+	defer h.lock.Unlock()
+
+	h.latestConfiguration = cfg
 }

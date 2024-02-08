@@ -1,6 +1,8 @@
 TAG = edge
 PREFIX = nginx-gateway-fabric
 NGINX_PREFIX = $(PREFIX)/nginx
+NGINX_PLUS_PREFIX = $(PREFIX)/nginx-plus
+PLUS_ENABLED=false
 PULL_POLICY=Never
 GW_API_PREV_VERSION ?= 1.0.0 ## Supported Gateway API version from previous NGF release
 GW_API_VERSION ?= 1.0.0 ## Supported Gateway API version for NGF under test
@@ -12,6 +14,12 @@ GINKGO_FLAGS=
 
 ifneq ($(GINKGO_LABEL),)
     override GINKGO_FLAGS += -ginkgo.label-filter "$(GINKGO_LABEL)"
+endif
+
+# Check if PLUS_ENABLED is true
+ifeq ($(PLUS_ENABLED),true)
+    # If true, set NGINX_PREFIX to $NGINX_PLUS_PREFIX
+    NGINX_PREFIX := $(NGINX_PLUS_PREFIX)
 endif
 
 .PHONY: help
@@ -26,13 +34,21 @@ create-kind-cluster: ## Create a kind cluster
 build-images: ## Build NGF and NGINX images
 	cd .. && make PREFIX=$(PREFIX) TAG=$(TAG) build-images
 
+.PHONY: build-images-with-plus
+build-images-with-plus: ## Build NGF and NGINX Plus images
+	cd .. && make PREFIX=$(PREFIX) TAG=$(TAG) build-images-with-plus
+
 .PHONY: load-images
 load-images: ## Load NGF and NGINX images on configured kind cluster
-	kind load docker-image $(PREFIX):$(TAG) $(NGINX_PREFIX):$(TAG)
+	cd .. && make PREFIX=$(PREFIX) TAG=$(TAG) load-images
+
+.PHONY: load-images-with-plus
+load-images-with-plus: ## Load NGF and NGINX Plus images on configured kind cluster
+	cd .. && make PREFIX=$(PREFIX) TAG=$(TAG) load-images-with-plus
 
 test: ## Run the system tests against your default k8s cluster
 	go test -v ./suite $(GINKGO_FLAGS) -args --gateway-api-version=$(GW_API_VERSION) \
-		--gateway-api-prev-version=$(GW_API_PREV_VERSION) --image-tag=$(TAG) \
+		--gateway-api-prev-version=$(GW_API_PREV_VERSION) --image-tag=$(TAG) --plus-enabled=$(PLUS_ENABLED) \
 		--ngf-image-repo=$(PREFIX) --nginx-image-repo=$(NGINX_PREFIX) --pull-policy=$(PULL_POLICY) \
 		--k8s-version=$(K8S_VERSION) --service-type=$(GW_SERVICE_TYPE) --is-gke-internal-lb=$(GW_SVC_GKE_INTERNAL)
 

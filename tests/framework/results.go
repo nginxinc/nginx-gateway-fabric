@@ -33,15 +33,15 @@ func CreateResultsFile(filename string) (*os.File, error) {
 }
 
 // WriteSystemInfoToFile writes the cluster system info to the given file.
-func WriteSystemInfoToFile(file *os.File, ci ClusterInfo) error {
+func WriteSystemInfoToFile(file *os.File, ci ClusterInfo, plus bool) error {
 	clusterType := "Local"
 	if ci.IsGKE {
 		clusterType = "GKE"
 	}
 	text := fmt.Sprintf(
 		//nolint:lll
-		"# Results\n\n## Test environment\n\n%s Cluster:\n\n- Node count: %d\n- k8s version: %s\n- vCPUs per node: %d\n- RAM per node: %s\n- Max pods per node: %d\n",
-		clusterType, ci.NodeCount, ci.K8sVersion, ci.CPUCountPerNode, ci.MemoryPerNode, ci.MaxPodsPerNode,
+		"# Results\n\n## Test environment\n\nNGINX Plus: %v\n\n%s Cluster:\n\n- Node count: %d\n- k8s version: %s\n- vCPUs per node: %d\n- RAM per node: %s\n- Max pods per node: %d\n",
+		plus, clusterType, ci.NodeCount, ci.K8sVersion, ci.CPUCountPerNode, ci.MemoryPerNode, ci.MaxPodsPerNode,
 	)
 	if _, err := fmt.Fprint(file, text); err != nil {
 		return err
