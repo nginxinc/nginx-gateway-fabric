@@ -48,6 +48,7 @@ var _ = Describe("Collector", Ordered, func() {
 		version                 string
 		expData                 telemetry.Data
 		ctx                     context.Context
+		podNSName               types.NamespacedName
 	)
 
 	BeforeAll(func() {
@@ -60,11 +61,16 @@ var _ = Describe("Collector", Ordered, func() {
 			ProjectMetadata:   telemetry.ProjectMetadata{Name: "NGF", Version: version},
 			NodeCount:         0,
 			NGFResourceCounts: telemetry.NGFResourceCounts{},
+			NGFReplicaCount:   0,
 		}
 
 		k8sClientReader = &eventsfakes.FakeReader{}
 		fakeGraphGetter = &telemetryfakes.FakeGraphGetter{}
 		fakeConfigurationGetter = &telemetryfakes.FakeConfigurationGetter{}
+		podNSName = types.NamespacedName{
+			Namespace: "nginx-gateway",
+			Name:      "ngf-pod",
+		}
 
 		fakeGraphGetter.GetLatestGraphReturns(&graph.Graph{})
 		fakeConfigurationGetter.GetLatestConfigurationReturns(&dataplane.Configuration{})
@@ -74,6 +80,7 @@ var _ = Describe("Collector", Ordered, func() {
 			GraphGetter:         fakeGraphGetter,
 			ConfigurationGetter: fakeConfigurationGetter,
 			Version:             version,
+			PodNSName:           podNSName,
 		})
 	})
 

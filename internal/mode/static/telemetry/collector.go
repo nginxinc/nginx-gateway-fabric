@@ -5,7 +5,9 @@ import (
 	"errors"
 	"fmt"
 
+	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/dataplane"
@@ -49,6 +51,7 @@ type Data struct {
 	ProjectMetadata   ProjectMetadata
 	NodeCount         int
 	NGFResourceCounts NGFResourceCounts
+	NGFReplicaCount   int
 }
 
 // DataCollectorConfig holds configuration parameters for DataCollectorImpl.
@@ -61,6 +64,8 @@ type DataCollectorConfig struct {
 	ConfigurationGetter ConfigurationGetter
 	// Version is the NGF version.
 	Version string
+	// PodNSName is the NamespacedName of the NGF Pod.
+	PodNSName types.NamespacedName
 }
 
 // DataCollectorImpl is am implementation of DataCollector.
@@ -89,6 +94,11 @@ func (c DataCollectorImpl) Collect(ctx context.Context) (Data, error) {
 		return Data{}, fmt.Errorf("failed to collect NGF resource counts: %w", err)
 	}
 
+	ngfReplicaCount, err := collectNGFReplicaCount(ctx, c.cfg.K8sClientReader, c.cfg.PodNSName)
+	if err != nil {
+		return Data{}, fmt.Errorf("failed to collect NGF replica count: %w", err)
+	}
+
 	data := Data{
 		NodeCount:         nodeCount,
 		NGFResourceCounts: graphResourceCount,
@@ -96,6 +106,7 @@ func (c DataCollectorImpl) Collect(ctx context.Context) (Data, error) {
 			Name:    "NGF",
 			Version: c.cfg.Version,
 		},
+		NGFReplicaCount: ngfReplicaCount,
 	}
 
 	return data, nil
@@ -146,4 +157,37 @@ func collectGraphResourceCount(
 	}
 
 	return ngfResourceCounts, nil
+}
+
+func collectNGFReplicaCount(ctx context.Context, k8sClient client.Reader, podNSName types.NamespacedName) (int, error) {
+	var pod v1.Pod
+	if err := k8sClient.Get(ctx,
+		types.NamespacedName{Namespace: podNSName.Namespace, Name: podNSName.Name},
+		&pod,
+	); err != nil {
+		return 0, err
+	}
+
+	podOwnerRefs := pod.GetOwnerReferences()
+	if podOwnerRefs == nil {
+		return 0, fmt.Errorf("could not get owner reference of NGF Pod")
+	}
+	if len(podOwnerRefs) != 1 {
+		return 0, fmt.Errorf("multiple owner references of NGF Pod")
+	}
+
+	switch kind := podOwnerRefs[0].Kind; kind {
+	case "ReplicaSet":
+		var replicaSet appsv1.ReplicaSet
+		if err := k8sClient.Get(ctx,
+			types.NamespacedName{Namespace: podNSName.Namespace, Name: podOwnerRefs[0].Name},
+			&replicaSet,
+		); err != nil {
+			return 0, err
+		}
+
+		return int(*replicaSet.Spec.Replicas), nil
+	default:
+		return 0, fmt.Errorf("pod owner reference was not ReplicaSet, instead was %s", kind)
+	}
 }
