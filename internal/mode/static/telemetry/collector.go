@@ -161,7 +161,8 @@ func collectGraphResourceCount(
 
 func collectNGFReplicaCount(ctx context.Context, k8sClient client.Reader, podNSName types.NamespacedName) (int, error) {
 	var pod v1.Pod
-	if err := k8sClient.Get(ctx,
+	if err := k8sClient.Get(
+		ctx,
 		types.NamespacedName{Namespace: podNSName.Namespace, Name: podNSName.Name},
 		&pod,
 	); err != nil {
@@ -169,29 +170,26 @@ func collectNGFReplicaCount(ctx context.Context, k8sClient client.Reader, podNSN
 	}
 
 	podOwnerRefs := pod.GetOwnerReferences()
-	if podOwnerRefs == nil {
-		return 0, errors.New("could not get owner reference of NGF Pod")
-	}
 	if len(podOwnerRefs) != 1 {
-		return 0, errors.New("multiple owner references of NGF Pod")
+		return 0, fmt.Errorf("expected one owner reference of the NGF Pod, got %d", len(podOwnerRefs))
 	}
 
-	switch kind := podOwnerRefs[0].Kind; kind {
-	case "ReplicaSet":
-		var replicaSet appsv1.ReplicaSet
-		if err := k8sClient.Get(ctx,
-			types.NamespacedName{Namespace: podNSName.Namespace, Name: podOwnerRefs[0].Name},
-			&replicaSet,
-		); err != nil {
-			return 0, err
-		}
-
-		if replicaSet.Spec.Replicas == nil {
-			return 0, errors.New("replica set replicas was nil")
-		}
-
-		return int(*replicaSet.Spec.Replicas), nil
-	default:
-		return 0, fmt.Errorf("pod owner reference was not ReplicaSet, instead was %s", kind)
+	if podOwnerRefs[0].Kind != "ReplicaSet" {
+		return 0, fmt.Errorf("expected pod owner reference to be ReplicaSet, got %s", podOwnerRefs[0].Kind)
 	}
+
+	var replicaSet appsv1.ReplicaSet
+	if err := k8sClient.Get(
+		ctx,
+		types.NamespacedName{Namespace: podNSName.Namespace, Name: podOwnerRefs[0].Name},
+		&replicaSet,
+	); err != nil {
+		return 0, err
+	}
+
+	if replicaSet.Spec.Replicas == nil {
+		return 0, errors.New("replica set replicas was nil")
+	}
+
+	return int(*replicaSet.Spec.Replicas), nil
 }

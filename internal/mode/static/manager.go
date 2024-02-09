@@ -222,7 +222,7 @@ func StartManager(cfg config.Config) error {
 		Version:             cfg.Version,
 		PodNSName: types.NamespacedName{
 			Namespace: cfg.GatewayPodConfig.Namespace,
-			Name:      cfg.LeaderElection.Identity,
+			Name:      cfg.GatewayPodConfig.Name,
 		},
 	})
 	if err = mgr.Add(createTelemetryJob(cfg, dataCollector, nginxChecker.getReadyCh())); err != nil {
