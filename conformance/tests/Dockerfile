@@ -2,7 +2,7 @@
 # this is here so we can grab the latest version of kind and have dependabot keep it up to date
 FROM kindest/node:v1.29.1
 
-FROM golang:1.21
+FROM golang:1.22
 
 WORKDIR /go/src/github.com/nginxinc/nginx-gateway-fabric/conformance/tests/
 
