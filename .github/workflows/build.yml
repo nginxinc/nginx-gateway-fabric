@@ -100,6 +100,14 @@ jobs:
           labels: |
             org.opencontainers.image.documentation=https://docs.nginx.com/nginx-gateway-fabric
             org.opencontainers.image.vendor=NGINX Inc <kubernetes@nginx.com>
+          annotations: |
+            org.opencontainers.image.documentation=https://docs.nginx.com/nginx-gateway-fabric
+            org.opencontainers.image.vendor=NGINX Inc <kubernetes@nginx.com>
+            io.artifacthub.package.readme-url=https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric/main/README.md
+            io.artifacthub.package.logo-url=https://docs.nginx.com/nginx-gateway-fabric/images/icons/NGINX-product-icon.svg
+            io.artifacthub.package.maintainers=[{"name":"NGINX Inc","email":"kubernetes@nginx.com"}]
+            io.artifacthub.package.license=Apache-2.0
+            io.artifacthub.package.keywords=kubernetes,gateway,nginx
         env:
           DOCKER_METADATA_ANNOTATIONS_LEVELS: manifest,index
 
@@ -119,7 +127,7 @@ jobs:
           pull: true
           no-cache: ${{ github.event_name != 'pull_request' }}
           sbom: true
-          provenance: true
+          provenance: mode=max
           build-args: |
             NJS_DIR=internal/mode/static/nginx/modules/src
             NGINX_CONF_DIR=internal/mode/static/nginx/conf
@@ -128,9 +136,10 @@ jobs:
             ${{ contains(inputs.image, 'plus') && format('"nginx-repo.crt={0}"', secrets.NGINX_CRT) || '' }}
             ${{ contains(inputs.image, 'plus') && format('"nginx-repo.key={0}"', secrets.NGINX_KEY) || '' }}
 
-      - name: Inspect SBOM
+      - name: Inspect SBOM and output manifest
         run: |
           docker buildx imagetools inspect localhost:5000/nginx-gateway-fabric/${{ inputs.image }}:${{ steps.meta.outputs.version }} --format '{{ json (index .SBOM "linux/amd64").SPDX }}' > sbom-${{ inputs.image }}.json
+          docker buildx imagetools inspect localhost:5000/nginx-gateway-fabric/${{ inputs.image }}:${{ steps.meta.outputs.version }} --raw
 
       - name: Scan SBOM
         id: scan
@@ -150,6 +159,8 @@ jobs:
         uses: actions/upload-artifact@5d5d22a31266ced268874388b861e4b58bb5c2f3 # v4.3.1
         continue-on-error: true
         with:
-          name: scan-results-${{ inputs.image }}.sarif
-          path: ${{ steps.scan.outputs.sarif }}
+          name: scan-results-${{ inputs.image }}
+          path: |
+            ${{ steps.scan.outputs.sarif }}
+            !sbom-nginx-plus.json
         if: always()
