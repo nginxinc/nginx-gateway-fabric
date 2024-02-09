@@ -987,8 +987,6 @@ func TestCreateServersConflicts(t *testing.T) {
 }
 
 func TestCreateLocationsRootPath(t *testing.T) {
-	g := NewWithT(t)
-
 	hrNsName := types.NamespacedName{Namespace: "test", Name: "route1"}
 
 	fooGroup := dataplane.BackendGroup{
@@ -1104,6 +1102,8 @@ func TestCreateLocationsRootPath(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			g := NewWithT(t)
+
 			locs := createLocations(test.pathRules, 80)
 			g.Expect(locs).To(Equal(test.expLocations))
 		})

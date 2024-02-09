@@ -33,7 +33,7 @@ func createRootCommand() *cobra.Command {
 		Use:           "gateway",
 		SilenceUsage:  true,
 		SilenceErrors: true,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			return cmd.Help()
 		},
 	}
@@ -100,7 +100,7 @@ func createStaticModeCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "static-mode",
 		Short: "Configure NGINX in the scope of a single Gateway resource",
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			atom := zap.NewAtomicLevel()
 
 			logger := ctlrZap.New(ctlrZap.Level(atom))
@@ -301,7 +301,7 @@ func createProvisionerModeCommand() *cobra.Command {
 		Use:    "provisioner-mode",
 		Short:  "Provision a static-mode NGINX Gateway Fabric Deployment per Gateway resource",
 		Hidden: true,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(_ *cobra.Command, _ []string) error {
 			logger := ctlrZap.New()
 			logger.Info(
 				"Starting NGINX Gateway Fabric Provisioner",
@@ -348,7 +348,7 @@ func createSleepCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "sleep",
 		Short: "Sleep for specified duration and exit",
-		Run: func(cmd *cobra.Command, args []string) {
+		Run: func(_ *cobra.Command, _ []string) {
 			// It is expected that this command is run from lifecycle hook.
 			// Because logs from hooks are not visible in the container logs, we don't log here at all.
 			time.Sleep(duration)
