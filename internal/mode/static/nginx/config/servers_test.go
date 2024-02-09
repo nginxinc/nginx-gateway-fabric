@@ -1102,7 +1102,7 @@ func TestCreateLocationsRootPath(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			g := NewGomegaWithT(t)
+			g := NewWithT(t)
 
 			locs := createLocations(test.pathRules, 80)
 			g.Expect(locs).To(Equal(test.expLocations))
