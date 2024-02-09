@@ -26,7 +26,7 @@ func createListCallsFunc(nodes []v1.Node) func(
 	list client.ObjectList,
 	option ...client.ListOption,
 ) error {
-	return func(ctx context.Context, list client.ObjectList, option ...client.ListOption) error {
+	return func(_ context.Context, list client.ObjectList, option ...client.ListOption) error {
 		Expect(option).To(BeEmpty())
 
 		switch typedList := list.(type) {

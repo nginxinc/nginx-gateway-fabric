@@ -51,7 +51,7 @@ func TestClearFoldersFails(t *testing.T) {
 	}{
 		{
 			fileMgr: &filefakes.FakeClearFoldersOSFileManager{
-				ReadDirStub: func(dirname string) ([]os.DirEntry, error) {
+				ReadDirStub: func(_ string) ([]os.DirEntry, error) {
 					return nil, testErr
 				},
 			},
@@ -59,7 +59,7 @@ func TestClearFoldersFails(t *testing.T) {
 		},
 		{
 			fileMgr: &filefakes.FakeClearFoldersOSFileManager{
-				ReadDirStub: func(dirname string) ([]os.DirEntry, error) {
+				ReadDirStub: func(_ string) ([]os.DirEntry, error) {
 					return []os.DirEntry{
 						&filefakes.FakeDirEntry{
 							NameStub: func() string {
@@ -68,7 +68,7 @@ func TestClearFoldersFails(t *testing.T) {
 						},
 					}, nil
 				},
-				RemoveStub: func(name string) error {
+				RemoveStub: func(_ string) error {
 					return testErr
 				},
 			},

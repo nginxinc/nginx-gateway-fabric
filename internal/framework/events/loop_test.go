@@ -83,7 +83,7 @@ var _ = Describe("EventLoop", func() {
 
 			// The func below will pause the handler goroutine while it is processing the batch with e1 until
 			// sentSecondAndThirdEvents is closed. This way we can add e2 and e3 to the current batch in the meantime.
-			fakeHandler.HandleEventBatchCalls(func(ctx context.Context, logger logr.Logger, batch events.EventBatch) {
+			fakeHandler.HandleEventBatchCalls(func(_ context.Context, _ logr.Logger, _ events.EventBatch) {
 				close(firstHandleEventBatchCallInProgress)
 				<-sentSecondAndThirdEvents
 			})
