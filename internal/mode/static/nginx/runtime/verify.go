@@ -110,7 +110,7 @@ func (c *verifyClient) ensureConfigVersion(ctx context.Context, expectedVersion 
 		ctx,
 		25*time.Millisecond,
 		true, /* poll immediately */
-		func(ctx context.Context) (bool, error) {
+		func(_ context.Context) (bool, error) {
 			version, err := c.getConfigVersion()
 			return version == expectedVersion, err
 		},
@@ -127,7 +127,7 @@ func ensureNewNginxWorkers(
 		ctx,
 		25*time.Millisecond,
 		true, /* poll immediately */
-		func(ctx context.Context) (bool, error) {
+		func(_ context.Context) (bool, error) {
 			content, err := readFile(childProcFile)
 			if err != nil {
 				return false, err

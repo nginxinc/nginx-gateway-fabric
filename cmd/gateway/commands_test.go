@@ -22,7 +22,7 @@ func testFlag(t *testing.T, cmd *cobra.Command, test flagTestCase) {
 	cmd.SetErr(io.Discard)
 
 	// override RunE to avoid executing the command
-	cmd.RunE = func(cmd *cobra.Command, args []string) error {
+	cmd.RunE = func(_ *cobra.Command, _ []string) error {
 		return nil
 	}
 
