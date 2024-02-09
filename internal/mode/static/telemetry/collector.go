@@ -115,7 +115,7 @@ func (c DataCollectorImpl) Collect(ctx context.Context) (Data, error) {
 func collectNodeCount(ctx context.Context, k8sClient client.Reader) (int, error) {
 	var nodes v1.NodeList
 	if err := k8sClient.List(ctx, &nodes); err != nil {
-		return 0, err
+		return 0, fmt.Errorf("failed to get NodeList: %w", err)
 	}
 
 	return len(nodes.Items), nil
@@ -166,7 +166,7 @@ func collectNGFReplicaCount(ctx context.Context, k8sClient client.Reader, podNSN
 		types.NamespacedName{Namespace: podNSName.Namespace, Name: podNSName.Name},
 		&pod,
 	); err != nil {
-		return 0, err
+		return 0, fmt.Errorf("failed to get NGF Pod: %w", err)
 	}
 
 	podOwnerRefs := pod.GetOwnerReferences()
@@ -184,7 +184,7 @@ func collectNGFReplicaCount(ctx context.Context, k8sClient client.Reader, podNSN
 		types.NamespacedName{Namespace: podNSName.Namespace, Name: podOwnerRefs[0].Name},
 		&replicaSet,
 	); err != nil {
-		return 0, err
+		return 0, fmt.Errorf("failed to get NGF Pod's ReplicaSet: %w", err)
 	}
 
 	if replicaSet.Spec.Replicas == nil {
