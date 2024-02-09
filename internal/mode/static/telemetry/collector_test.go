@@ -46,7 +46,7 @@ func createGetCallsFunc() func(
 	object client.Object,
 	option ...client.GetOption,
 ) error {
-	return func(ctx context.Context, key client.ObjectKey, object client.Object, option ...client.GetOption) error {
+	return func(_ context.Context, _ client.ObjectKey, object client.Object, option ...client.GetOption) error {
 		Expect(option).To(BeEmpty())
 
 		switch typedObj := object.(type) {
@@ -414,7 +414,7 @@ var _ = Describe("Collector", Ordered, func() {
 				It("should error if the kubernetes client errored when getting the Pod", func() {
 					expectedErr := errors.New("there was an error getting the Pod")
 					k8sClientReader.GetCalls(
-						func(ctx context.Context, key client.ObjectKey, object client.Object, option ...client.GetOption) error {
+						func(_ context.Context, _ client.ObjectKey, object client.Object, option ...client.GetOption) error {
 							Expect(option).To(BeEmpty())
 
 							switch typedObj := object.(type) {
@@ -433,7 +433,7 @@ var _ = Describe("Collector", Ordered, func() {
 				It("should error if the Pod's owner reference is nil", func() {
 					expectedErr := errors.New("expected one owner reference of the NGF Pod, got 0")
 					k8sClientReader.GetCalls(
-						func(ctx context.Context, key client.ObjectKey, object client.Object, option ...client.GetOption) error {
+						func(_ context.Context, _ client.ObjectKey, object client.Object, option ...client.GetOption) error {
 							Expect(option).To(BeEmpty())
 
 							switch typedObj := object.(type) {
@@ -455,7 +455,7 @@ var _ = Describe("Collector", Ordered, func() {
 				It("should error if the Pod has multiple owner references", func() {
 					expectedErr := errors.New("expected one owner reference of the NGF Pod, got 2")
 					k8sClientReader.GetCalls(
-						func(ctx context.Context, key client.ObjectKey, object client.Object, option ...client.GetOption) error {
+						func(_ context.Context, _ client.ObjectKey, object client.Object, option ...client.GetOption) error {
 							Expect(option).To(BeEmpty())
 
 							switch typedObj := object.(type) {
@@ -486,7 +486,7 @@ var _ = Describe("Collector", Ordered, func() {
 				It("should error if the Pod's owner reference is not a ReplicaSet", func() {
 					expectedErr := errors.New("expected pod owner reference to be ReplicaSet, got Deployment")
 					k8sClientReader.GetCalls(
-						func(ctx context.Context, key client.ObjectKey, object client.Object, option ...client.GetOption) error {
+						func(_ context.Context, _ client.ObjectKey, object client.Object, option ...client.GetOption) error {
 							Expect(option).To(BeEmpty())
 
 							switch typedObj := object.(type) {
@@ -513,7 +513,7 @@ var _ = Describe("Collector", Ordered, func() {
 				It("should error if the replica set's replicas is nil", func() {
 					expectedErr := errors.New("replica set replicas was nil")
 					k8sClientReader.GetCalls(
-						func(ctx context.Context, key client.ObjectKey, object client.Object, option ...client.GetOption) error {
+						func(_ context.Context, _ client.ObjectKey, object client.Object, option ...client.GetOption) error {
 							Expect(option).To(BeEmpty())
 
 							switch typedObj := object.(type) {
@@ -544,7 +544,7 @@ var _ = Describe("Collector", Ordered, func() {
 				It("should error if the kubernetes client errored when getting the ReplicaSet", func() {
 					expectedErr := errors.New("there was an error getting the ReplicaSet")
 					k8sClientReader.GetCalls(
-						func(ctx context.Context, key client.ObjectKey, object client.Object, option ...client.GetOption) error {
+						func(_ context.Context, _ client.ObjectKey, object client.Object, option ...client.GetOption) error {
 							Expect(option).To(BeEmpty())
 
 							switch typedObj := object.(type) {
