@@ -212,7 +212,7 @@ var _ = Describe("Upgrade testing", Label("upgrade"), func() {
 			leaseCtx,
 			500*time.Millisecond,
 			true, /* poll immediately */
-			func(ctx context.Context) (bool, error) {
+			func(_ context.Context) (bool, error) {
 				Expect(k8sClient.Get(leaseCtx, key, &lease)).To(Succeed())
 
 				if lease.Spec.HolderIdentity != nil {

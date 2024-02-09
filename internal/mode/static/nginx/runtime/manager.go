@@ -172,7 +172,7 @@ func findMainProcess(
 		ctx,
 		500*time.Millisecond,
 		true, /* poll immediately */
-		func(ctx context.Context) (bool, error) {
+		func(_ context.Context) (bool, error) {
 			_, err := checkFile(pidFile)
 			if err == nil {
 				return true, nil

@@ -191,7 +191,7 @@ var _ = Describe("EventHandler", func() {
 			Entry(
 				"Remove",
 				&filefakes.FakeOSFileManager{
-					RemoveStub: func(s string) error {
+					RemoveStub: func(_ string) error {
 						return testErr
 					},
 				},
@@ -199,7 +199,7 @@ var _ = Describe("EventHandler", func() {
 			Entry(
 				"Create",
 				&filefakes.FakeOSFileManager{
-					CreateStub: func(s string) (*os.File, error) {
+					CreateStub: func(_ string) (*os.File, error) {
 						return nil, testErr
 					},
 				},
@@ -207,7 +207,7 @@ var _ = Describe("EventHandler", func() {
 			Entry(
 				"Chmod",
 				&filefakes.FakeOSFileManager{
-					ChmodStub: func(os *os.File, mode os.FileMode) error {
+					ChmodStub: func(_ *os.File, _ os.FileMode) error {
 						return testErr
 					},
 				},
@@ -215,7 +215,7 @@ var _ = Describe("EventHandler", func() {
 			Entry(
 				"Write",
 				&filefakes.FakeOSFileManager{
-					WriteStub: func(os *os.File, bytes []byte) error {
+					WriteStub: func(_ *os.File, _ []byte) error {
 						return testErr
 					},
 				},
