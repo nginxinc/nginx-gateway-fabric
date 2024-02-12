@@ -53,7 +53,7 @@ NGINX is highly configurable and offers rich features that can benefit our users
       * [Future Work](#future-work-4)
       * [Alternatives](#alternatives-5)
     * [Observability](#observability)
-    * [Future Work](#future-work-5)
+      * [Future Work](#future-work-5)
       * [Alternatives](#alternatives-6)
     * [Proxy Settings](#proxy-settings)
       * [Future Work](#future-work-6)
@@ -64,9 +64,7 @@ NGINX is highly configurable and offers rich features that can benefit our users
   * [Security Considerations](#security-considerations)
   * [Alternatives Considered](#alternatives-considered)
   * [References](#references)
-<!-- TOC -->
-
-## Goals
+<!-- TOC -->als
 
 - Identify the set of NGINX features to deliver to users.
 - Group these features to reduce the number of APIs and improve user experience.
@@ -810,7 +808,7 @@ NGINX directives:
 - [`otel_span_name`](https://nginx.org/en/docs/ngx_otel_module.html#otel_span_name)
 - [`otel_span_attr`](https://nginx.org/en/docs/ngx_otel_module.html#otel_span_attr)
 
-### Future Work
+#### Future Work
 
 Add support for:
 
