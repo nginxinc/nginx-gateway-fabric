@@ -83,17 +83,17 @@ The Gateway API provides many extension that implementations can leverage to del
 
 ### GatewayClass Parameters Ref
 
-**Role(s)**: Infrastructure Provider
+_Role(s)_: Infrastructure Provider
 
-**Resource(s)**: GatewayClass
+_Resource(s)_: GatewayClass
 
-**Status**: Completed
+_Status_: Completed
 
-**Channel**: Standard
+_Channel_: Standard
 
-**Conformance Level**: Implementation-specific
+_Conformance Level_: Implementation-specific
 
-**Example(s)**: [EnvoyProxy CRD](https://gateway.envoyproxy.io/v0.6.0/user/customize-envoyproxy/)
+_Example(s)_: [EnvoyProxy CRD](https://gateway.envoyproxy.io/v0.6.0/user/customize-envoyproxy/)
 
 First-class API field on the `GatewayClass.spec`. The field refers to a resource containing the configuration parameters corresponding to the GatewayClass. The resource referenced can be a standard Kubernetes resource, a CRD, or a ConfigMap. While GatewayClasses are cluster-scoped, resources referenced by `GatewayClass.spec.parametersRef` can be namespaced-scoped or cluster-scoped. The configuration parameters contained in the referenced resource are applied to all Gateways attached to the GatewayClass.
 
@@ -128,15 +128,15 @@ spec:
 
 ### Infrastructure API
 
-**Role(s)**: Cluster Operator, and Infrastructure Provider
+_Role(s)_: Cluster Operator, and Infrastructure Provider
 
-**Resource(s)**: Gateway, GatewayClass (planned)
+_Resource(s)_: Gateway, GatewayClass (planned)
 
-**Status**: Experimental
+_Status_: Experimental
 
-**Channel**: Experimental
+_Channel_: Experimental
 
-**Conformance Level**: Core
+_Conformance Level_: Core
 
 First-class infrastructure API on Gateway and GatewayClass. Several GEPs are related to this API: [GEP-1867](https://gateway-api.sigs.k8s.io/geps/gep-1867/), [GEP-1762](https://gateway-api.sigs.k8s.io/geps/gep-1762/), and [GEP-1651](https://gateway-api.sigs.k8s.io/geps/gep-1651/).
 
@@ -164,17 +164,17 @@ There are plans to add a `parametersRef` field to the infrastructure API on the 
 
 ### TLS Options
 
-**Role(s)**: Cluster Operator
+_Role(s)_: Cluster Operator
 
-**Resource(s)**: Gateway
+_Resource(s)_: Gateway
 
-**Status**: Completed
+_Status_: Completed
 
-**Channel**: Standard
+_Channel_: Standard
 
-**Conformance Level**: Implementation-specific
+_Conformance Level_: Implementation-specific
 
-**Example(s)**: [GKE pre-shared certs](https://cloud.google.com/kubernetes-engine/docs/how-to/gatewayclass-capabilities#spec-listeners-tls-options)
+_Example(s)_: [GKE pre-shared certs](https://cloud.google.com/kubernetes-engine/docs/how-to/gatewayclass-capabilities#spec-listeners-tls-options)
 
 TLS options are a list of key/value pairs to enable extended TLS configuration for an implementation. This field is part of the [GatewayTLSConfig](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io%2fv1.GatewayTLSConfig) defined on a Gateway Listener. Currently, there are no standard keys for TLS options, but the API may define a set of standard keys in the future.
 
@@ -204,17 +204,17 @@ spec:
 
 ### Filters
 
-**Role(s)**: Application Developer
+_Role(s)_: Application Developer
 
-**Resource(s)**: HTTPRoute, GRPCRoute
+_Resource(s)_: HTTPRoute, GRPCRoute
 
-**Status**: Completed
+_Status_: Completed
 
-**Channel**: Standard
+_Channel_: Standard
 
-**Conformance Level**: Implementation-specific
+_Conformance Level_: Implementation-specific
 
-**Example(s)**: [Easegress Filters](https://megaease.com/blog/2023/12/05/enhancing-k8s-gateway-api-with-easegress-without-changing-a-single-line-of-code/).
+_Example(s)_: [Easegress Filters](https://megaease.com/blog/2023/12/05/enhancing-k8s-gateway-api-with-easegress-without-changing-a-single-line-of-code/).
 
 Filters define processing steps that must be completed during the request or response lifecycle. They can be applied on the `route.rule` or the `route.rule.backendRef`. If applied on the `backendRef`, the filter should be executed if and only if the request is being forwarded.
 
@@ -255,17 +255,17 @@ spec:
 
 ### BackendRef
 
-**Role(s)**: Application Developer
+_Role(s)_: Application Developer
 
-**Resource(s)**: xRoute
+_Resource(s)_: xRoute
 
-**Status**: Completed
+_Status_: Completed
 
-**Channel**: Standard
+_Channel_: Standard
 
-**Conformance Level**: Implementation-specific
+_Conformance Level_: Implementation-specific
 
-**Example(s)**: [ServiceImport GKE](https://cloud.google.com/kubernetes-engine/docs/how-to/gatewayclass-capabilities#spec-rules-backendrefs), [ServiceImport Envoy Gateway](https://gateway.envoyproxy.io/v0.6.0/user/multicluster-service/).
+_Example(s)_: [ServiceImport GKE](https://cloud.google.com/kubernetes-engine/docs/how-to/gatewayclass-capabilities#spec-rules-backendrefs), [ServiceImport Envoy Gateway](https://gateway.envoyproxy.io/v0.6.0/user/multicluster-service/).
 
 BackendRefs defines the backend(s) where matching requests should be sent. The Gateway API supports BackendRefs of type Kubernetes Service. An implementation can add support for other types of backends. This extension point should be used for forwarding traffic to network endpoints other than Kubernetes Services.
 
@@ -295,17 +295,17 @@ spec:
 
 ### Policy
 
-**Role(s)**: All roles
+_Role(s)_: All roles
 
-**Resource(s)**: All resources
+_Resource(s)_: All resources
 
-**Status**: Experimental
+_Status_: Experimental
 
-**Channel**: Experimental
+_Channel_: Experimental
 
-**Conformance Level**: Extended/Implementation-specific
+_Conformance Level_: Extended/Implementation-specific
 
-**Example(s)**: [Envoy Gateway BackendTrafficPolicy](https://gateway.envoyproxy.io/v0.6.0/api/extension_types/#backendtrafficpolicy), [GKE HealthCheckPolicy](https://cloud.google.com/kubernetes-engine/docs/how-to/configure-gateway-resources), [BackendTLSPolicy](https://gateway-api.sigs.k8s.io/api-types/backendtlspolicy/)
+_Example(s)_: [Envoy Gateway BackendTrafficPolicy](https://gateway.envoyproxy.io/v0.6.0/api/extension_types/#backendtrafficpolicy), [GKE HealthCheckPolicy](https://cloud.google.com/kubernetes-engine/docs/how-to/configure-gateway-resources), [BackendTLSPolicy](https://gateway-api.sigs.k8s.io/api-types/backendtlspolicy/)
 
 Policies are a Kubernetes object that augments the behavior of an object in a standard way. Policies can be attached to one object ("Direct Policy Attachment") or objects in a hierarchy ("Inherited Policy Attachment"). In both cases, Policies are implemented as CRDs, and they must include a `TargetRef` struct in the `spec` to identify how and where to apply the Policy. Policies can use the `sectioName` field of the `TargetRef` to target specific matches within nested objects, such as a Listener within a Gateway or a specific Port on a Service. There's also an open [GEP issue](https://github.com/kubernetes-sigs/gateway-api/issues/995) to a name field to HTTPRouteRule and HTTPRouteMatch structs to allow users to identify different routes. Once implemented, Policies can target a specific rule or match in an HTTPRoute.
 
@@ -545,15 +545,15 @@ The following section proposes an extension type (Policy, Filter, etc.), extensi
 
 ### Gateway Settings
 
-**Extension type:** ParametersRef
+_Extension type:_ ParametersRef
 
-**Resource type:** CRD
+_Resource type:_ CRD
 
-**Role(s):** Cluster Operator
+_Role(s):_ Cluster Operator
 
-**Attaches to:** GatewayClass or Gateway
+_Attaches to:_ GatewayClass or Gateway
 
-**NGINX Context(s):** main, http, stream
+_NGINX Context(s):_ main, http, stream
 
 Features:
 
@@ -594,15 +594,15 @@ Add support for:
 
 ### Response Modification
 
-**Extension type:** Filter
+_Extension type:_ Filter
 
-**Resource type:** CRD
+_Resource type:_ CRD
 
-**Role(s):** Application Developer
+_Role(s):_ Application Developer
 
-**Attaches to:** HTTPRoute
+_Attaches to:_ HTTPRoute
 
-**NGINX Context(s):** location
+_NGINX Context(s):_ location
 
 Features:
 
@@ -623,15 +623,15 @@ NGINX directives:
 
 ### TLS Settings
 
-**Extension type:** TLS Options
+_Extension type:_ TLS Options
 
-**Resource type:** N/A. We will need to document supported key-values.
+_Resource type:_ N/A. We will need to document supported key-values.
 
-**Role(s):** Cluster Operator
+_Role(s):_ Cluster Operator
 
-**Attaches to:** Gateway
+_Attaches to:_ Gateway
 
-**NGINX Context(s):** server
+_NGINX Context(s):_ server
 
 Features:
 
@@ -658,15 +658,15 @@ These features are grouped because they are all TLS-related settings. TLS option
 
 ### Client Settings
 
-**Extension type:** Inherited Policy
+_Extension type:_ Inherited Policy
 
-**Resource type:** CRD
+_Resource type:_ CRD
 
-**Role(s):** Cluster Operator
+_Role(s):_ Cluster Operator
 
-**Attaches to:** Gateway, Gateway Listener, HTTPRoute
+_Attaches to:_ Gateway, Gateway Listener, HTTPRoute
 
-**NGINX context(s)**: http, server, location
+_NGINX context(s)_: http, server, location
 
 Features:
 
@@ -694,15 +694,15 @@ These features are grouped because they all deal with client traffic. An Inherit
 
 ### Upstream Settings
 
-**Extension type:** Direct Policy
+_Extension type:_ Direct Policy
 
-**Resource type:** CRD
+_Resource type:_ CRD
 
-**Role(s):** Application Developer
+_Role(s):_ Application Developer
 
-**Attaches to:** Backend
+_Attaches to:_ Backend
 
-**NGINX Context(s):** upstream, location (for active health checks)
+_NGINX Context(s):_ upstream, location (for active health checks)
 
 OSS Features:
 
@@ -746,15 +746,15 @@ These features are grouped because they all apply to the upstream context and ma
 
 ### Authentication
 
-**Extension type:** Inherited Policy
+_Extension type:_ Inherited Policy
 
-**Resource type:** CRD
+_Resource type:_ CRD
 
-**Role(s):** Cluster Operator, Application Developer
+_Role(s):_ Cluster Operator, Application Developer
 
-**Attaches to:** Gateway, Gateway Listener, HTTPRoute Rule (once it's supported)
+_Attaches to:_ Gateway, Gateway Listener, HTTPRoute Rule (once it's supported)
 
-**NGINX context(s):** http, server, location
+_NGINX context(s):_ http, server, location
 
 OSS Features:
 
@@ -789,15 +789,15 @@ NGINX Plus directives:
 
 ### Observability
 
-**Extension type:** Direct Policy
+_Extension type:_ Direct Policy
 
-**Resource type:** CRD
+_Resource type:_ CRD
 
-**Role(s):** Application Developer
+_Role(s):_ Application Developer
 
-**Attaches to:** HTTPRoute, HTTPRoute rule
+_Attaches to:_ HTTPRoute, HTTPRoute rule
 
-**NGINX context(s):** http, server, location
+_NGINX context(s):_ http, server, location
 
 Features:
 
@@ -824,15 +824,15 @@ Add support for:
 
 ### Proxy Settings
 
-**Extension type:** Inherited Policy
+_Extension type:_ Inherited Policy
 
-**Resource type:** CRD
+_Resource type:_ CRD
 
-**Role(s):** Cluster Operator, Application Developer
+_Role(s):_ Cluster Operator, Application Developer
 
-**Attaches to:** Gateway, HTTPRoute, HTTPRoute Rule
+_Attaches to:_ Gateway, HTTPRoute, HTTPRoute Rule
 
-**NGINX context(s):** http, server, location
+_NGINX context(s):_ http, server, location
 
 Features:
 
@@ -860,15 +860,15 @@ NGINX directives:
 
 ### Circuit Breaker/ Backup service
 
-**Extension type:** Direct Policy/Filter
+_Extension type:_ Direct Policy/Filter
 
-**Resource type:** CRD
+_Resource type:_ CRD
 
-**Role(s):** Application Developer
+_Role(s):_ Application Developer
 
-**Attaches to:** Backend/HTTPRoute Rule
+_Attaches to:_ Backend/HTTPRoute Rule
 
-**NGINX context(s):** upstream
+_NGINX context(s):_ upstream
 
 Features:
 
