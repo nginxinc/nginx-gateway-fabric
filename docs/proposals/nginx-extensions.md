@@ -1,7 +1,7 @@
 
 # Enhancement Proposal #1411: Extensions for NGINX Features
 
-- Issue: #1411
+- Issue: #1566
 - Status: Provisional
 
 ## Summary
