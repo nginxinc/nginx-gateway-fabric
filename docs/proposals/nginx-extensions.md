@@ -16,7 +16,7 @@ NGINX is highly configurable and offers rich features that can benefit our users
   * [Table of Contents](#table-of-contents)
   * [Goals](#goals)
   * [Non-Goals](#non-goals)
-  * [Gateway API Extension Points](#gateway-api-extension-points)
+  * [Gateway API Extension](#gateway-api-extension)
     * [GatewayClass Parameters Ref](#gatewayclass-parameters-ref)
       * [Issues with `parametersRef`](#issues-with-parametersref)
     * [Infrastructure API](#infrastructure-api)
