@@ -216,7 +216,7 @@ func StartManager(cfg config.Config) error {
 	}
 
 	dataCollector := telemetry.NewDataCollectorImpl(telemetry.DataCollectorConfig{
-		K8sClientReader:     mgr.GetClient(),
+		K8sClientReader:     mgr.GetAPIReader(),
 		GraphGetter:         processor,
 		ConfigurationGetter: eventHandler,
 		Version:             cfg.Version,
