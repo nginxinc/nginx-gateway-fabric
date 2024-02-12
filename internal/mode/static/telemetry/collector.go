@@ -52,6 +52,7 @@ type Data struct {
 	NodeCount         int
 	NGFResourceCounts NGFResourceCounts
 	NGFReplicaCount   int
+	ClusterID         string
 }
 
 // DataCollectorConfig holds configuration parameters for DataCollectorImpl.
@@ -98,6 +99,10 @@ func (c DataCollectorImpl) Collect(ctx context.Context) (Data, error) {
 	if err != nil {
 		return Data{}, fmt.Errorf("failed to collect NGF replica count: %w", err)
 	}
+	var clusterID string
+	if clusterID, err = c.collectClusterID(ctx); err != nil {
+		return Data{}, fmt.Errorf("failed to collect clusterID: %w", err)
+	}
 
 	data := Data{
 		NodeCount:         nodeCount,
@@ -107,6 +112,7 @@ func (c DataCollectorImpl) Collect(ctx context.Context) (Data, error) {
 			Version: c.cfg.Version,
 		},
 		NGFReplicaCount: ngfReplicaCount,
+		ClusterID:       clusterID,
 	}
 
 	return data, nil
@@ -192,4 +198,18 @@ func collectNGFReplicaCount(ctx context.Context, k8sClient client.Reader, podNSN
 	}
 
 	return int(*replicaSet.Spec.Replicas), nil
+}
+
+func (c DataCollectorImpl) collectClusterID(ctx context.Context) (string, error) {
+	kubeNS := types.NamespacedName{
+		Name: dataplane.KubeSystem,
+	}
+	var nsMetadata v1.Namespace
+	err := c.cfg.K8sClientReader.Get(ctx, kubeNS, &nsMetadata)
+	if err != nil {
+		return "", fmt.Errorf("failed to get metadata for cluster :%w", err)
+	}
+
+	return string(nsMetadata.ObjectMeta.GetUID()), nil
+
 }

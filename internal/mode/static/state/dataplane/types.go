@@ -19,6 +19,11 @@ const (
 	PathTypeExact PathType = "exact"
 )
 
+const (
+	// KubeSystem indicates the name of kube-system namespace
+	KubeSystem = "kube-system"
+)
+
 // Configuration is an intermediate representation of dataplane configuration.
 type Configuration struct {
 	// SSLKeyPairs holds all unique SSLKeyPairs.
