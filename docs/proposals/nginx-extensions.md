@@ -64,7 +64,9 @@ NGINX is highly configurable and offers rich features that can benefit our users
   * [Security Considerations](#security-considerations)
   * [Alternatives Considered](#alternatives-considered)
   * [References](#references)
-<!-- TOC -->als
+<!-- TOC -->
+
+## Goals
 
 - Identify the set of NGINX features to deliver to users.
 - Group these features to reduce the number of APIs and improve user experience.
