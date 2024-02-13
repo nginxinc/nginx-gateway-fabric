@@ -157,7 +157,7 @@ spec:
       name: my-annotation
 ```
 
-Infrastructure labels and annotations should be applied to any resources created in response to the Gateway. This only applies to _automated deployments_ (i.e., provisioner mode), implementations that automatically deploy the data plane based on a Gateway.
+Infrastructure labels and annotations should be applied to all resources created in response to the Gateway. This only applies to _automated deployments_ (i.e., provisioner mode), implementations that automatically deploy the data plane based on a Gateway.
 Other use cases for this API are Service type, Service IP, CPU memory requests, affinity rules, and Gateway routability (public, private, and cluster).
 
 There are plans to add a `parametersRef` field to the infrastructure API on the Gateway. This field would function similarly to the GatewayClass `parametersRef` but would not have the same issues highlighted in the section above.
@@ -307,7 +307,7 @@ _Conformance Level_: Extended/Implementation-specific
 
 _Example(s)_: [Envoy Gateway BackendTrafficPolicy](https://gateway.envoyproxy.io/v0.6.0/api/extension_types/#backendtrafficpolicy), [GKE HealthCheckPolicy](https://cloud.google.com/kubernetes-engine/docs/how-to/configure-gateway-resources), [BackendTLSPolicy](https://gateway-api.sigs.k8s.io/api-types/backendtlspolicy/)
 
-Policies are a Kubernetes object that augments the behavior of an object in a standard way. Policies can be attached to one object ("Direct Policy Attachment") or objects in a hierarchy ("Inherited Policy Attachment"). In both cases, Policies are implemented as CRDs, and they must include a `TargetRef` struct in the `spec` to identify how and where to apply the Policy. Policies can use the `sectioName` field of the `TargetRef` to target specific matches within nested objects, such as a Listener within a Gateway or a specific Port on a Service. There's also an open [GEP issue](https://github.com/kubernetes-sigs/gateway-api/issues/995) to a name field to HTTPRouteRule and HTTPRouteMatch structs to allow users to identify different routes. Once implemented, Policies can target a specific rule or match in an HTTPRoute.
+Policies are a Kubernetes object that augments the behavior of an object in a standard way. Policies can be attached to one object ("Direct Policy Attachment") or objects in a hierarchy ("Inherited Policy Attachment"). In both cases, Policies are implemented as CRDs, and they must include a `TargetRef` struct in the `spec` to identify how and where to apply the Policy. Policies can use the `sectionName` field of the `TargetRef` to target specific matches within nested objects, such as a Listener within a Gateway or a specific Port on a Service. There's also an open [GEP issue](https://github.com/kubernetes-sigs/gateway-api/issues/995) to add a name field to HTTPRouteRule and HTTPRouteMatch structs to allow users to identify different routes. Once implemented, Policies can target a specific rule or match in an HTTPRoute.
 
 Policies do not need to support attaching to all resource Kinds. Implementations can choose which resources the Policy can be attached to.
 
@@ -442,17 +442,11 @@ Policies are complex to implement because they can affect many objects in variou
 
 _Subject to change_
 
-The Metaresources and Policy Attachment GEP is experimental. There's no guarantee that Policy Attachment will stay the same as the Gateway API receives feedback from implementors on the feasibility of Policies.
+The Metaresources and Policy Attachment GEP is experimental. There's no guarantee that Policy Attachment will stay the same as the Gateway API receives feedback from implementors.
 
 ## Prioritized NGINX Features
 
-To identify the set of NGINX directives and parameters NGINX Gateway Fabric should implement first, we first identified the highest priority features using the following criteria:
-
-1. Customer requested features.
-2. Most popular features of the NGINX Ingress Controller.
-3. Features without active Gateway Enhancement Proposals (GEPs).
-
-From this list of features, we prioritized them into four categories: high-priority, medium-priority, low-priority, and active GEPs.
+To identify the set of NGINX directives and parameters NGINX Gateway Fabric should implement first, we considered the features that the directives and parameters delivered, using the NGINX Ingress Controller's features as a guide. Once we had a list of features, we prioritized them into four categories: high-priority, medium-priority, low-priority, and active GEPs.
 
 ### High-Priority Features
 
@@ -527,7 +521,11 @@ The status field in the table describes the status of the GEP using the followin
 
 ## Grouping the Features
 
-To reduce the number of CRDs NGINX Gateway Fabric must maintain and users have to create, we grouped the high and medium-priority features into configuration categories. Once the features are grouped, we can begin implementation by focusing on the high-priority features of each group. Then, once the high-priority features are complete, we can move on to the medium-priority features. The low-priority features are out of scope for the rest of the Enhancement Proposal but may be revisited once we make progress on the higher-priority features. In addition, most features with active GEPs are not included in the groups as we want to help move the GEPs forward toward standardization instead of creating our bespoke solutions.
+To reduce the number of CRDs NGINX Gateway Fabric must maintain and users have to create, we grouped the high and medium-priority features into configuration categories. 
+
+For each group, we will begin implementation by focusing on the high-priority features of each group. Then, once the high-priority features are complete, we can move on to the medium-priority features. 
+
+The low-priority features are out of scope for the rest of the Enhancement Proposal but may be revisited once we make progress on the higher-priority features. In addition, most features with active GEPs are not included in the groups as we want to help move the GEPs forward toward standardization instead of creating our bespoke solutions.
 
 When grouping the features, we considered the following factors:
 
@@ -541,7 +539,7 @@ The following picture shows the nine groups we came up with:
 
 ## API
 
-The following section proposes an extension type (Policy, Filter, etc.), extension point (GatewayClass, HTTPRoute, etc.), and Gateway API role for all the groups of features. The goal of this Enhancement Proposal is not to design each extension but to propose a strategy for delivering critical NGINX features to our customers.
+The following section proposes an extension type (Policy, Filter, etc.), extension point (GatewayClass, HTTPRoute, etc.), and Gateway API role for all the groups. The goal of this Enhancement Proposal is not to design each extension but to propose a strategy for delivering critical NGINX features to our customers.
 
 ### Gateway Settings
 
@@ -551,7 +549,7 @@ _Resource type:_ CRD
 
 _Role(s):_ Cluster Operator
 
-_Attaches to:_ GatewayClass or Gateway
+_Extension point:_ GatewayClass or Gateway
 
 _NGINX Context(s):_ main, http, stream
 
@@ -577,7 +575,7 @@ NGINX directives:
 
 These features are grouped because they are all the responsibility of the Cluster Operator and should not be set or changed by Application Developers.
 
-Currently, `parametersRef` is only available on the GatewayClass, which means all Gateways attached to the GatewayClass will inherit these settings. This is acceptable since NGINX Gateway Fabric supports a single Gateway per GatewayClass. However, once we [support multiple Gateways](https://github.com/nginxinc/nginx-gateway-fabric/issues/144) and `parametersRef` is added to the Gateway Infrastructure API, then we will want to support referencing this CRD on individual Gateways.
+Currently, `parametersRef` is only available on the GatewayClass, which means all Gateways attached to the GatewayClass will inherit these settings. This is acceptable since NGINX Gateway Fabric supports a single Gateway per GatewayClass. However, once we [support multiple Gateways](https://github.com/nginxinc/nginx-gateway-fabric/issues/1443) and `parametersRef` is added to the Gateway Infrastructure API, then we will want to support referencing this CRD on individual Gateways.
 
 #### Future Work
 
@@ -600,7 +598,7 @@ _Resource type:_ CRD
 
 _Role(s):_ Application Developer
 
-_Attaches to:_ HTTPRoute
+_Extension point:_ HTTPRoute
 
 _NGINX Context(s):_ location
 
@@ -629,7 +627,7 @@ _Resource type:_ N/A. We will need to document supported key-values.
 
 _Role(s):_ Cluster Operator
 
-_Attaches to:_ Gateway
+_Extension point:_ Gateway
 
 _NGINX Context(s):_ server
 
@@ -664,7 +662,7 @@ _Resource type:_ CRD
 
 _Role(s):_ Cluster Operator
 
-_Attaches to:_ Gateway, Gateway Listener, HTTPRoute
+_Extension point:_ Gateway, Gateway Listener, HTTPRoute
 
 _NGINX context(s)_: http, server, location
 
@@ -675,14 +673,14 @@ Features:
 
 NGINX directives:
 
-- [`client_max_body_size`](https://nginx.org/en/docs/http/ngx_http_core_module.html#client_max_body_size): http, server, location
-- [`client_body_timeout`](https://nginx.org/en/docs/http/ngx_http_core_module.html#client_body_timeout): http, server, location
-- [`keepalive_requests`](https://nginx.org/en/docs/http/ngx_http_core_module.html#keepalive_requests): http, server, location
-- [`keepalive_time`](https://nginx.org/en/docs/http/ngx_http_core_module.html#keepalive_time): http, server, location
-- [`keepalive_timeout`](https://nginx.org/en/docs/http/ngx_http_core_module.html#keepalive_timeout): http, server, location
-- [`keepalive_disable`](https://nginx.org/en/docs/http/ngx_http_core_module.html#keepalive_disable): http, server, location
+- [`client_max_body_size`](https://nginx.org/en/docs/http/ngx_http_core_module.html#client_max_body_size)
+- [`client_body_timeout`](https://nginx.org/en/docs/http/ngx_http_core_module.html#client_body_timeout)
+- [`keepalive_requests`](https://nginx.org/en/docs/http/ngx_http_core_module.html#keepalive_requests)
+- [`keepalive_time`](https://nginx.org/en/docs/http/ngx_http_core_module.html#keepalive_time)
+- [`keepalive_timeout`](https://nginx.org/en/docs/http/ngx_http_core_module.html#keepalive_timeout)
+- [`keepalive_disable`](https://nginx.org/en/docs/http/ngx_http_core_module.html#keepalive_disable)
 
-These features are grouped because they all deal with client traffic. An Inherited Policy fits this group best because there is a use case where the ClusterOperator sets a sane default for client max body size or client keepalives that has to be overridden by an Application Developer because of the unique attributes of the service they own.
+These features are grouped because they all deal with client traffic. An Inherited Policy fits this group best because there is a use case where the ClusterOperator sets a sane default for client max body size or client keepalives that has to be overridden by an Application Developer because of the unique attributes of the Service they own.
 
 #### Future Work
 
@@ -700,7 +698,7 @@ _Resource type:_ CRD
 
 _Role(s):_ Application Developer
 
-_Attaches to:_ Backend
+_Extension point:_ Backend
 
 _NGINX Context(s):_ upstream, location (for active health checks)
 
@@ -752,7 +750,7 @@ _Resource type:_ CRD
 
 _Role(s):_ Cluster Operator, Application Developer
 
-_Attaches to:_ Gateway, Gateway Listener, HTTPRoute Rule (once it's supported)
+_Extension point:_ Gateway, Gateway Listener, HTTPRoute Rule (once it's supported)
 
 _NGINX context(s):_ http, server, location
 
@@ -795,7 +793,7 @@ _Resource type:_ CRD
 
 _Role(s):_ Application Developer
 
-_Attaches to:_ HTTPRoute, HTTPRoute rule
+_Extension point:_ HTTPRoute, HTTPRoute rule
 
 _NGINX context(s):_ http, server, location
 
@@ -830,7 +828,7 @@ _Resource type:_ CRD
 
 _Role(s):_ Cluster Operator, Application Developer
 
-_Attaches to:_ Gateway, HTTPRoute, HTTPRoute Rule
+_Extension point:_ Gateway, HTTPRoute, HTTPRoute Rule
 
 _NGINX context(s):_ http, server, location
 
@@ -866,7 +864,7 @@ _Resource type:_ CRD
 
 _Role(s):_ Application Developer
 
-_Attaches to:_ Backend/HTTPRoute Rule
+_Extension point:_ Backend/HTTPRoute Rule
 
 _NGINX context(s):_ upstream
 
@@ -882,11 +880,13 @@ NGINX upstream server parameters:
 
 This [NGINX blog post](https://www.nginx.com/blog/microservices-reference-architecture-nginx-circuit-breaker-pattern/) describes the circuit breaker pattern and how to implement it with NGINX plus. The solution involves active health checks, rate-limiting, caching, and the `backup` directive. While this might be a complete solution, it is likely too heavyweight for NGINX Gateway Fabric.
 
-The NGINX Kubernetes projects, NGINX Service Mesh and NGINX Ingress Controller offer two alternatives to circuit breaker.
+The NGINX Kubernetes projects, NGINX Service Mesh and NGINX Ingress Controller offer alternatives to this solution.
 
 NGINX Ingress Controller supports setting a [backup Service](https://github.com/nginxinc/kubernetes-ingress/tree/release-3.4/examples/custom-resources/backup-directive/virtual-server) that will be used when the primary servers are unavailable. The backup service must be of type ExternalName.
 
-NGINX Service Mesh implements circuit breaking with the following [CRD](https://github.com/nginxinc/nginx-service-mesh/blob/main/pkg/apis/specs/v1alpha1/circuit_breaker.go):
+NGINX Service Mesh implements circuit breaking with the a [CRD](https://github.com/nginxinc/nginx-service-mesh/blob/main/pkg/apis/specs/v1alpha1/circuit_breaker.go).
+
+Here's an example:
 
 ```yaml
 apiVersion: specs.smi.nginx.com/v1alpha1
@@ -930,7 +930,8 @@ Each extension will need validation to prevent malicious or invalid NGINX config
   1. Security. The configuration cannot be validated before it is applied. This means that invalid or even malicious configuration can be injected. As a result, not every Cluster Operator would want this functionality turned on. So, for some users, this functionality would not be available.
   2. Requires NGINX knowledge. Without a first-class API exposing and abstracting away NGINX configuration, the users must be knowledgeable about NGINX. This will be great for NGINX power users but much more complicated for those unfamiliar with NGINX.
   3. Lack of status. No helpful status is set, and users must parse NGINX error messages—potential for frustration and bad user experiences.
-     Problems aside, this feature will still be useful for our users and is something we should implement. Still, it does not eliminate the need for the extension APIs proposed in this document and should not be a higher priority.
+     
+  Problems aside, this feature will still be useful for our users and is something we should implement. Still, it does not eliminate the need for the extension APIs proposed in this document and should not be a higher priority.
 
 ## References
 
