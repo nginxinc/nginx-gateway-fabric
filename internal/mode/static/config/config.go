@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	"github.com/spf13/pflag"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/types"
 )
@@ -15,6 +16,8 @@ type Config struct {
 	ImageSource string
 	// AtomicLevel is an atomically changeable, dynamic logging level.
 	AtomicLevel zap.AtomicLevel
+	// Flags are all the NGF flags.
+	Flags *pflag.FlagSet
 	// GatewayNsName is the namespaced name of a Gateway resource that the Gateway will use.
 	// The Gateway will ignore all other Gateway resources.
 	GatewayNsName *types.NamespacedName

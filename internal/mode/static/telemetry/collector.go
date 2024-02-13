@@ -5,7 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"runtime"
+	"strconv"
 
+	"github.com/spf13/pflag"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -47,17 +49,49 @@ type ProjectMetadata struct {
 	Version string
 }
 
+//type DeploymentFlagOptions struct {
+//	GatewayClass string
+//	GatewayCtlrName string
+//	Gateway                string
+//	Config                 string
+//	Service                string
+//	UpdateGCStatus         bool
+//	MetricsDisable         bool
+//	MetricsSecure          bool
+//	MetricsPort            string
+//	HealthDisable          bool
+//	HealthPort             string
+//	LeaderElectionDisable  bool
+//	LeaderElectionLockName string
+//	Plus                   bool
+//}
+
+type DeploymentFlagOptions struct {
+	NonBooleanFlags []NonBooleanFlag
+	BooleanFlags    []BooleanFlag
+}
+
+type BooleanFlag struct {
+	Name  string
+	Value bool
+}
+type NonBooleanFlag struct {
+	Name  string
+	Value string
+}
+
 // Data is telemetry data.
 // Note: this type might change once https://github.com/nginxinc/nginx-gateway-fabric/issues/1318 is implemented.
 type Data struct {
-	ProjectMetadata   ProjectMetadata
-	ClusterID         string
-	Arch              string
-	DeploymentID      string
-	ImageSource       string
-	NGFResourceCounts NGFResourceCounts
-	NodeCount         int
-	NGFReplicaCount   int
+	ProjectMetadata       ProjectMetadata
+	ClusterID             string
+	Arch                  string
+	DeploymentID          string
+	ImageSource           string
+	NGFResourceCounts     NGFResourceCounts
+	NodeCount             int
+	NGFReplicaCount       int
+	DeploymentFlagOptions DeploymentFlagOptions
 }
 
 // DataCollectorConfig holds configuration parameters for DataCollectorImpl.
@@ -68,6 +102,8 @@ type DataCollectorConfig struct {
 	GraphGetter GraphGetter
 	// ConfigurationGetter allows us to get the Configuration.
 	ConfigurationGetter ConfigurationGetter
+	// Flags are all the NGF flags.
+	Flags *pflag.FlagSet
 	// Version is the NGF version.
 	Version string
 	// PodNSName is the NamespacedName of the NGF Pod.
@@ -111,6 +147,7 @@ func (c DataCollectorImpl) Collect(ctx context.Context) (Data, error) {
 	if err != nil {
 		return Data{}, fmt.Errorf("failed to collect NGF replica count: %w", err)
 	}
+	deploymentFlagOptions := collectDeploymentFlagOptions(c.cfg.Flags)
 
 	deploymentID, err := getDeploymentID(replicaSet)
 	if err != nil {
@@ -129,11 +166,12 @@ func (c DataCollectorImpl) Collect(ctx context.Context) (Data, error) {
 			Name:    "NGF",
 			Version: c.cfg.Version,
 		},
-		NGFReplicaCount: replicaCount,
-		ClusterID:       clusterID,
-		ImageSource:     c.cfg.ImageSource,
-		Arch:            runtime.GOARCH,
-		DeploymentID:    deploymentID,
+		NGFReplicaCount:       replicaCount,
+		ClusterID:             clusterID,
+		ImageSource:           c.cfg.ImageSource,
+		Arch:                  runtime.GOARCH,
+		DeploymentID:          deploymentID,
+		DeploymentFlagOptions: deploymentFlagOptions,
 	}
 
 	return data, nil
@@ -257,4 +295,41 @@ func CollectClusterID(ctx context.Context, k8sClient client.Reader) (string, err
 		return "", fmt.Errorf("failed to get kube-system namespace: %w", err)
 	}
 	return string(kubeNamespace.GetUID()), nil
+}
+
+func collectDeploymentFlagOptions(flags *pflag.FlagSet) DeploymentFlagOptions {
+	deploymentFlagOptions := DeploymentFlagOptions{
+		NonBooleanFlags: []NonBooleanFlag{},
+		BooleanFlags:    []BooleanFlag{},
+	}
+	flags.Visit(
+		func(flag *pflag.Flag) {
+			switch flag.Value.Type() {
+			case "bool":
+				val, err := strconv.ParseBool(flag.Value.String())
+				if err != nil {
+					return
+				}
+				deploymentFlagOptions.BooleanFlags = append(deploymentFlagOptions.BooleanFlags, BooleanFlag{
+					Name:  flag.Name,
+					Value: val,
+				})
+
+			default:
+				var val string
+				if flag.Value.String() == flag.DefValue {
+					val = "default"
+				} else {
+					val = "user-defined"
+				}
+
+				deploymentFlagOptions.NonBooleanFlags = append(deploymentFlagOptions.NonBooleanFlags, NonBooleanFlag{
+					Name:  flag.Name,
+					Value: val,
+				})
+			}
+		},
+	)
+
+	return deploymentFlagOptions
 }

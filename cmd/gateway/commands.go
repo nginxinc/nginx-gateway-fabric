@@ -215,6 +215,7 @@ func createStaticModeCommand() *cobra.Command {
 				Version:              version,
 				ExperimentalFeatures: gwExperimentalFeatures,
 				ImageSource:          imageSource,
+				Flags:                cmd.Flags(),
 			}
 
 			if err := static.StartManager(conf); err != nil {
