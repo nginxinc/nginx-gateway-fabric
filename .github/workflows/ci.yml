@@ -246,7 +246,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        image: [ngf, nginx, nginx-plus]
+        image: [ngf, nginx, plus]
         platforms: ["linux/arm64, linux/amd64"]
     uses: ./.github/workflows/build.yml
     with:

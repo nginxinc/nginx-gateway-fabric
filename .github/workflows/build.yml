@@ -87,7 +87,7 @@ jobs:
           images: |
             name=ghcr.io/nginxinc/nginx-gateway-fabric,enable=${{ inputs.image == 'ngf' && github.event_name != 'pull_request' }}
             name=ghcr.io/nginxinc/nginx-gateway-fabric/nginx,enable=${{ inputs.image == 'nginx' && github.event_name != 'pull_request' }}
-            name=docker-mgmt.nginx.com/nginx-gateway-fabric/nginx-plus,enable=${{ inputs.image == 'nginx-plus' && github.event_name != 'pull_request' }}
+            name=docker-mgmt.nginx.com/nginx-gateway-fabric/nginx-plus,enable=${{ inputs.image == 'plus' && github.event_name != 'pull_request' }}
             name=localhost:5000/nginx-gateway-fabric/${{ inputs.image }}
           flavor: |
             latest=${{ (inputs.tag != '' && 'true') || 'auto' }}
@@ -114,7 +114,7 @@ jobs:
       - name: Build Docker Image
         uses: docker/build-push-action@4a13e500e55cf31b7a5d59a38ab2040ab0f42f56 # v5.1.0
         with:
-          file: build/Dockerfile${{ inputs.image == 'nginx' && '.nginx' || '' }}${{ inputs.image == 'nginx-plus' && '.nginxplus' || '' }}
+          file: build/Dockerfile${{ inputs.image == 'nginx' && '.nginx' || '' }}${{ inputs.image == 'plus' && '.nginxplus' || '' }}
           context: "."
           target: ${{ inputs.image == 'ngf' && 'goreleaser' || '' }}
           tags: ${{ steps.meta.outputs.tags }}
@@ -154,6 +154,7 @@ jobs:
         continue-on-error: true
         with:
           sarif_file: ${{ steps.scan.outputs.sarif }}
+        if: always()
 
       - name: Upload Scan Results
         uses: actions/upload-artifact@5d5d22a31266ced268874388b861e4b58bb5c2f3 # v4.3.1
@@ -162,5 +163,6 @@ jobs:
           name: scan-results-${{ inputs.image }}
           path: |
             ${{ steps.scan.outputs.sarif }}
-            !sbom-nginx-plus.json
+            *.json
+            !sbom-plus.json
         if: always()
