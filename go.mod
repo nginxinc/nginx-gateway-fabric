@@ -1,6 +1,6 @@
 module github.com/nginxinc/nginx-gateway-fabric
 
-go 1.21.3
+go 1.22.0
 
 // Pinned to a version that is properly licensed.
 replace github.com/chzyer/logex v1.1.10 => github.com/chzyer/logex v1.2.0
