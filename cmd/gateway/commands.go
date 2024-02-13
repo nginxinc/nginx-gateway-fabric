@@ -153,6 +153,7 @@ func createStaticModeCommand() *cobra.Command {
 					PodIP:       podIP,
 					ServiceName: serviceName.value,
 					Namespace:   namespace,
+					Name:        podName,
 				},
 				HealthConfig: config.HealthConfig{
 					Enabled: !disableHealth,
