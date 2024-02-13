@@ -1918,7 +1918,7 @@ func TestConvertBackendTLSFromGroup(t *testing.T) {
 	}
 
 	for _, tc := range tests {
-		t.Run(tc.msg, func(t *testing.T) {
+		t.Run(tc.msg, func(_ *testing.T) {
 			result := createProxyTLSFromBackends(tc.grp)
 			g.Expect(result).To(Equal(tc.expected))
 		})
