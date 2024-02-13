@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"reflect"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -40,34 +41,23 @@ func createListCallsFunc(nodes []v1.Node) func(
 	}
 }
 
-func createGetCallsFunc() func(
-	ctx context.Context,
-	key client.ObjectKey,
-	object client.Object,
-	option ...client.GetOption,
+func createGetCallsFunc(objects ...client.Object) func(
+	context.Context,
+	types.NamespacedName,
+	client.Object,
+	...client.GetOption,
 ) error {
-	return func(_ context.Context, _ client.ObjectKey, object client.Object, option ...client.GetOption) error {
+	return func(_ context.Context, _ types.NamespacedName, object client.Object, option ...client.GetOption) error {
 		Expect(option).To(BeEmpty())
 
-		switch typedObj := object.(type) {
-		case *v1.Pod:
-			typedObj.ObjectMeta = metav1.ObjectMeta{
-				Name: "pod1",
-				OwnerReferences: []metav1.OwnerReference{
-					{
-						Kind: "ReplicaSet",
-						Name: "replicaset1",
-					},
-				},
+		for _, obj := range objects {
+			if reflect.TypeOf(obj) == reflect.TypeOf(object) {
+				reflect.ValueOf(object).Elem().Set(reflect.ValueOf(obj).Elem())
+				return nil
 			}
-		case *appsv1.ReplicaSet:
-			replicas := int32(1)
-			typedObj.Spec = appsv1.ReplicaSetSpec{
-				Replicas: &replicas,
-			}
-		default:
-			Fail(fmt.Sprintf("unknown type: %T", typedObj))
 		}
+
+		Fail(fmt.Sprintf("unknown type: %T", object))
 		return nil
 	}
 }
@@ -82,11 +72,37 @@ var _ = Describe("Collector", Ordered, func() {
 		expData                 telemetry.Data
 		ctx                     context.Context
 		podNSName               types.NamespacedName
+		ngfPod                  *v1.Pod
+		ngfReplicaSet           *appsv1.ReplicaSet
 	)
 
 	BeforeAll(func() {
 		ctx = context.Background()
 		version = "1.1"
+
+		ngfPod = &v1.Pod{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "pod1",
+				OwnerReferences: []metav1.OwnerReference{
+					{
+						Kind: "ReplicaSet",
+						Name: "replicaset1",
+					},
+				},
+			},
+		}
+
+		replicas := int32(1)
+		ngfReplicaSet = &appsv1.ReplicaSet{
+			Spec: appsv1.ReplicaSetSpec{
+				Replicas: &replicas,
+			},
+		}
+
+		podNSName = types.NamespacedName{
+			Namespace: "nginx-gateway",
+			Name:      "ngf-pod",
+		}
 	})
 
 	BeforeEach(func() {
@@ -100,10 +116,6 @@ var _ = Describe("Collector", Ordered, func() {
 		k8sClientReader = &eventsfakes.FakeReader{}
 		fakeGraphGetter = &telemetryfakes.FakeGraphGetter{}
 		fakeConfigurationGetter = &telemetryfakes.FakeConfigurationGetter{}
-		podNSName = types.NamespacedName{
-			Namespace: "nginx-gateway",
-			Name:      "ngf-pod",
-		}
 
 		fakeGraphGetter.GetLatestGraphReturns(&graph.Graph{})
 		fakeConfigurationGetter.GetLatestConfigurationReturns(&dataplane.Configuration{})
@@ -115,7 +127,7 @@ var _ = Describe("Collector", Ordered, func() {
 			Version:             version,
 			PodNSName:           podNSName,
 		})
-		k8sClientReader.GetCalls(createGetCallsFunc())
+		k8sClientReader.GetCalls(createGetCallsFunc(ngfPod, ngfReplicaSet))
 	})
 
 	Describe("Normal case", func() {
@@ -432,21 +444,14 @@ var _ = Describe("Collector", Ordered, func() {
 
 				It("should error if the Pod's owner reference is nil", func() {
 					expectedErr := errors.New("expected one owner reference of the NGF Pod, got 0")
-					k8sClientReader.GetCalls(
-						func(_ context.Context, _ client.ObjectKey, object client.Object, option ...client.GetOption) error {
-							Expect(option).To(BeEmpty())
-
-							switch typedObj := object.(type) {
-							case *v1.Pod:
-								typedObj.ObjectMeta = metav1.ObjectMeta{
-									Name:            "pod1",
-									OwnerReferences: nil,
-								}
-							default:
-								Fail(fmt.Sprintf("unknown type: %T", typedObj))
-							}
-							return nil
-						})
+					k8sClientReader.GetCalls(createGetCallsFunc(
+						&v1.Pod{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:            "pod1",
+								OwnerReferences: nil,
+							},
+						},
+					))
 
 					_, err := dataCollector.Collect(ctx)
 					Expect(err).To(MatchError(expectedErr))
@@ -454,30 +459,23 @@ var _ = Describe("Collector", Ordered, func() {
 
 				It("should error if the Pod has multiple owner references", func() {
 					expectedErr := errors.New("expected one owner reference of the NGF Pod, got 2")
-					k8sClientReader.GetCalls(
-						func(_ context.Context, _ client.ObjectKey, object client.Object, option ...client.GetOption) error {
-							Expect(option).To(BeEmpty())
-
-							switch typedObj := object.(type) {
-							case *v1.Pod:
-								typedObj.ObjectMeta = metav1.ObjectMeta{
-									Name: "pod1",
-									OwnerReferences: []metav1.OwnerReference{
-										{
-											Kind: "ReplicaSet",
-											Name: "replicaset1",
-										},
-										{
-											Kind: "ReplicaSet",
-											Name: "replicaset2",
-										},
+					k8sClientReader.GetCalls(createGetCallsFunc(
+						&v1.Pod{
+							ObjectMeta: metav1.ObjectMeta{
+								Name: "pod1",
+								OwnerReferences: []metav1.OwnerReference{
+									{
+										Kind: "ReplicaSet",
+										Name: "replicaset1",
 									},
-								}
-							default:
-								Fail(fmt.Sprintf("unknown type: %T", typedObj))
-							}
-							return nil
-						})
+									{
+										Kind: "ReplicaSet",
+										Name: "replicaset2",
+									},
+								},
+							},
+						},
+					))
 
 					_, err := dataCollector.Collect(ctx)
 					Expect(err).To(MatchError(expectedErr))
@@ -485,26 +483,19 @@ var _ = Describe("Collector", Ordered, func() {
 
 				It("should error if the Pod's owner reference is not a ReplicaSet", func() {
 					expectedErr := errors.New("expected pod owner reference to be ReplicaSet, got Deployment")
-					k8sClientReader.GetCalls(
-						func(_ context.Context, _ client.ObjectKey, object client.Object, option ...client.GetOption) error {
-							Expect(option).To(BeEmpty())
-
-							switch typedObj := object.(type) {
-							case *v1.Pod:
-								typedObj.ObjectMeta = metav1.ObjectMeta{
-									Name: "pod1",
-									OwnerReferences: []metav1.OwnerReference{
-										{
-											Kind: "Deployment",
-											Name: "deployment1",
-										},
+					k8sClientReader.GetCalls(createGetCallsFunc(
+						&v1.Pod{
+							ObjectMeta: metav1.ObjectMeta{
+								Name: "pod1",
+								OwnerReferences: []metav1.OwnerReference{
+									{
+										Kind: "Deployment",
+										Name: "deployment1",
 									},
-								}
-							default:
-								Fail(fmt.Sprintf("unknown type: %T", typedObj))
-							}
-							return nil
-						})
+								},
+							},
+						},
+					))
 
 					_, err := dataCollector.Collect(ctx)
 					Expect(err).To(MatchError(expectedErr))
@@ -512,30 +503,24 @@ var _ = Describe("Collector", Ordered, func() {
 
 				It("should error if the replica set's replicas is nil", func() {
 					expectedErr := errors.New("replica set replicas was nil")
-					k8sClientReader.GetCalls(
-						func(_ context.Context, _ client.ObjectKey, object client.Object, option ...client.GetOption) error {
-							Expect(option).To(BeEmpty())
-
-							switch typedObj := object.(type) {
-							case *v1.Pod:
-								typedObj.ObjectMeta = metav1.ObjectMeta{
-									Name: "pod1",
-									OwnerReferences: []metav1.OwnerReference{
-										{
-											Kind: "ReplicaSet",
-											Name: "replicaset1",
-										},
+					k8sClientReader.GetCalls(createGetCallsFunc(
+						&v1.Pod{
+							ObjectMeta: metav1.ObjectMeta{
+								Name: "pod1",
+								OwnerReferences: []metav1.OwnerReference{
+									{
+										Kind: "ReplicaSet",
+										Name: "replicaset1",
 									},
-								}
-							case *appsv1.ReplicaSet:
-								typedObj.Spec = appsv1.ReplicaSetSpec{
-									Replicas: nil,
-								}
-							default:
-								Fail(fmt.Sprintf("unknown type: %T", typedObj))
-							}
-							return nil
-						})
+								},
+							},
+						},
+						&appsv1.ReplicaSet{
+							Spec: appsv1.ReplicaSetSpec{
+								Replicas: nil,
+							},
+						},
+					))
 
 					_, err := dataCollector.Collect(ctx)
 					Expect(err).To(MatchError(expectedErr))
