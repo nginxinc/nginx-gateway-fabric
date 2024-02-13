@@ -1,5 +1,5 @@
 
-# Enhancement Proposal #1411: Extensions for NGINX Features
+# Extensions for NGINX Features
 
 - Issue: #1566
 - Status: Provisional
@@ -11,59 +11,60 @@ NGINX is highly configurable and offers rich features that can benefit our users
 ## Table of Contents
 
 <!-- TOC -->
-* [Enhancement Proposal #1411: Extensions for NGINX Features](#enhancement-proposal-1411--extensions-for-nginx-features)
-  * [Summary](#summary)
-  * [Table of Contents](#table-of-contents)
-  * [Goals](#goals)
-  * [Non-Goals](#non-goals)
-  * [Gateway API Extension](#gateway-api-extension)
-    * [GatewayClass Parameters Ref](#gatewayclass-parameters-ref)
-      * [Issues with `parametersRef`](#issues-with-parametersref)
-    * [Infrastructure API](#infrastructure-api)
-    * [TLS Options](#tls-options)
-    * [Filters](#filters)
-    * [BackendRef](#backendref)
-    * [Policy](#policy)
-      * [Direct Policy Attachment](#direct-policy-attachment)
-      * [Inherited Policy Attachment](#inherited-policy-attachment)
-        * [Hierarchy](#hierarchy)
-      * [Challenges of Policy Attachment](#challenges-of-policy-attachment)
-  * [Prioritized NGINX Features](#prioritized-nginx-features)
-    * [High-Priority Features](#high-priority-features)
-    * [Medium-Priority Features](#medium-priority-features)
-    * [Low-Priority Features](#low-priority-features)
-    * [Features with Active Gateway API Enhancement Proposals (GEPs)](#features-with-active-gateway-api-enhancement-proposals--geps-)
-  * [Grouping the Features](#grouping-the-features)
-  * [API](#api)
-    * [Gateway Settings](#gateway-settings)
-      * [Future Work](#future-work)
-      * [Alternatives](#alternatives)
-    * [Response Modification](#response-modification)
-      * [Future Work](#future-work-1)
-      * [Alternatives](#alternatives-1)
-    * [TLS Settings](#tls-settings)
-      * [Future Work](#future-work-2)
-      * [Alternatives](#alternatives-2)
-    * [Client Settings](#client-settings)
-      * [Future Work](#future-work-3)
-      * [Alternatives](#alternatives-3)
-    * [Upstream Settings](#upstream-settings)
-      * [Alternatives](#alternatives-4)
-    * [Authentication](#authentication)
-      * [Future Work](#future-work-4)
-      * [Alternatives](#alternatives-5)
-    * [Observability](#observability)
-      * [Future Work](#future-work-5)
-      * [Alternatives](#alternatives-6)
-    * [Proxy Settings](#proxy-settings)
-      * [Future Work](#future-work-6)
-      * [Alternatives](#alternatives-7)
-    * [Circuit Breaker/ Backup service](#circuit-breaker-backup-service)
-      * [Alternatives](#alternatives-8)
-  * [Testing](#testing)
-  * [Security Considerations](#security-considerations)
-  * [Alternatives Considered](#alternatives-considered)
-  * [References](#references)
+- [Extensions for NGINX Features](#extensions-for-nginx-features)
+  - [Summary](#summary)
+  - [Table of Contents](#table-of-contents)
+  - [Goals](#goals)
+  - [Non-Goals](#non-goals)
+  - [Gateway API Extension](#gateway-api-extension)
+    - [GatewayClass Parameters Ref](#gatewayclass-parameters-ref)
+      - [Issues with `parametersRef`](#issues-with-parametersref)
+    - [Infrastructure API](#infrastructure-api)
+    - [TLS Options](#tls-options)
+    - [Filters](#filters)
+    - [BackendRef](#backendref)
+    - [Policy](#policy)
+      - [Direct Policy Attachment](#direct-policy-attachment)
+      - [Inherited Policy Attachment](#inherited-policy-attachment)
+        - [Hierarchy](#hierarchy)
+      - [Challenges of Policy Attachment](#challenges-of-policy-attachment)
+  - [Prioritized NGINX Features](#prioritized-nginx-features)
+    - [High-Priority Features](#high-priority-features)
+    - [Medium-Priority Features](#medium-priority-features)
+    - [Low-Priority Features](#low-priority-features)
+    - [Features with Active Gateway API Enhancement Proposals](#features-with-active-gateway-api-enhancement-proposals)
+  - [Grouping the Features](#grouping-the-features)
+  - [API](#api)
+    - [Gateway Settings](#gateway-settings)
+      - [Future Work](#future-work)
+      - [Alternatives](#alternatives)
+    - [Response Modification](#response-modification)
+      - [Future Work](#future-work-1)
+      - [Alternatives](#alternatives-1)
+    - [TLS Settings](#tls-settings)
+      - [Future Work](#future-work-2)
+      - [Alternatives](#alternatives-2)
+    - [Client Settings](#client-settings)
+      - [Future Work](#future-work-3)
+      - [Alternatives](#alternatives-3)
+    - [Upstream Settings](#upstream-settings)
+      - [Alternatives](#alternatives-4)
+    - [Authentication](#authentication)
+      - [Future Work](#future-work-4)
+      - [Alternatives](#alternatives-5)
+    - [Observability](#observability)
+      - [Future Work](#future-work-5)
+      - [Alternatives](#alternatives-6)
+    - [Proxy Settings](#proxy-settings)
+      - [Future Work](#future-work-6)
+      - [Alternatives](#alternatives-7)
+    - [Circuit Breaker/ Backup service](#circuit-breaker-backup-service)
+      - [Alternatives](#alternatives-8)
+  - [Testing](#testing)
+  - [Security Considerations](#security-considerations)
+  - [Alternatives Considered](#alternatives-considered)
+  - [References](#references)
+
 <!-- TOC -->
 
 ## Goals
@@ -501,7 +502,7 @@ To identify the set of NGINX directives and parameters NGINX Gateway Fabric shou
 | Remote authentication request              |                     |
 | Timeout for unresponsive clients           |                     |
 
-### Features with Active Gateway API Enhancement Proposals (GEPs)
+### Features with Active Gateway API Enhancement Proposals
 
 The status field in the table describes the status of the GEP using the following terms:
 
@@ -521,9 +522,9 @@ The status field in the table describes the status of the GEP using the followin
 
 ## Grouping the Features
 
-To reduce the number of CRDs NGINX Gateway Fabric must maintain and users have to create, we grouped the high and medium-priority features into configuration categories. 
+To reduce the number of CRDs NGINX Gateway Fabric must maintain and users have to create, we grouped the high and medium-priority features into configuration categories.
 
-For each group, we will begin implementation by focusing on the high-priority features of each group. Then, once the high-priority features are complete, we can move on to the medium-priority features. 
+For each group, we will begin implementation by focusing on the high-priority features of each group. Then, once the high-priority features are complete, we can move on to the medium-priority features.
 
 The low-priority features are out of scope for the rest of the Enhancement Proposal but may be revisited once we make progress on the higher-priority features. In addition, most features with active GEPs are not included in the groups as we want to help move the GEPs forward toward standardization instead of creating our bespoke solutions.
 
@@ -930,7 +931,7 @@ Each extension will need validation to prevent malicious or invalid NGINX config
   1. Security. The configuration cannot be validated before it is applied. This means that invalid or even malicious configuration can be injected. As a result, not every Cluster Operator would want this functionality turned on. So, for some users, this functionality would not be available.
   2. Requires NGINX knowledge. Without a first-class API exposing and abstracting away NGINX configuration, the users must be knowledgeable about NGINX. This will be great for NGINX power users but much more complicated for those unfamiliar with NGINX.
   3. Lack of status. No helpful status is set, and users must parse NGINX error messages—potential for frustration and bad user experiences.
-     
+
   Problems aside, this feature will still be useful for our users and is something we should implement. Still, it does not eliminate the need for the extension APIs proposed in this document and should not be a higher priority.
 
 ## References
