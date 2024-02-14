@@ -91,7 +91,7 @@ generate-manifests: generate-manifests-plus ## Generate manifests using Helm.
 
 .PHONY: generate-manifests-plus
 generate-manifests-plus: ## Generate manifests using Helm for NGINX Plus.
-    helm template nginx-gateway $(CHART_DIR) $(HELM_TEMPLATE_COMMON_ARGS) $(HELM_TEMPLATE_EXTRA_ARGS_FOR_ALL_MANIFESTS_FILE) --set nginx.plus=true --set nginx.image.repository=$(NGINX_PLUS_PREFIX) -n nginx-gateway | cat $(strip $(MANIFEST_DIR))/namespace.yaml - > $(strip $(MANIFEST_DIR))/nginx-plus-gateway.yaml
+	helm template nginx-gateway $(CHART_DIR) $(HELM_TEMPLATE_COMMON_ARGS) $(HELM_TEMPLATE_EXTRA_ARGS_FOR_ALL_MANIFESTS_FILE) --set nginx.plus=true --set nginx.image.repository=$(NGINX_PLUS_PREFIX) -n nginx-gateway | cat $(strip $(MANIFEST_DIR))/namespace.yaml - > $(strip $(MANIFEST_DIR))/nginx-plus-gateway.yaml
 
 .PHONY: crds-release-file
 crds-release-file: ## Generate combined crds file for releases
