@@ -16,7 +16,7 @@ NGINX is highly configurable and offers rich features that can benefit our users
   - [Table of Contents](#table-of-contents)
   - [Goals](#goals)
   - [Non-Goals](#non-goals)
-  - [Gateway API Extension](#gateway-api-extension)
+  - [Gateway API Extensions](#gateway-api-extensions)
     - [GatewayClass Parameters Ref](#gatewayclass-parameters-ref)
       - [Issues with `parametersRef`](#issues-with-parametersref)
     - [Infrastructure API](#infrastructure-api)
@@ -78,9 +78,9 @@ NGINX is highly configurable and offers rich features that can benefit our users
 - Design the API of every extension. This design work will be completed for each extension before implementation.
 - Design an API that will allow the user to insert raw NGINX config into the NGINX config that NGINX Gateway Fabric generates (e.g. [snippets in NGINX Ingress Controller](https://docs.nginx.com/nginx-ingress-controller/configuration/ingress-resources/advanced-configuration-with-snippets/)).
 
-## Gateway API Extension
+## Gateway API Extensions
 
-The Gateway API provides many extension that implementations can leverage to deliver features that the general-purpose API cannot address. This section provides a summary of these extension.
+The Gateway API provides many extensions that implementations can leverage to deliver features that the general-purpose API cannot address. This section provides a summary of these extensions.
 
 ### GatewayClass Parameters Ref
 
@@ -885,7 +885,7 @@ The NGINX Kubernetes projects, NGINX Service Mesh and NGINX Ingress Controller o
 
 NGINX Ingress Controller supports setting a [backup Service](https://github.com/nginxinc/kubernetes-ingress/tree/release-3.4/examples/custom-resources/backup-directive/virtual-server) that will be used when the primary servers are unavailable. The backup service must be of type ExternalName.
 
-NGINX Service Mesh implements circuit breaking with the a [CRD](https://github.com/nginxinc/nginx-service-mesh/blob/main/pkg/apis/specs/v1alpha1/circuit_breaker.go).
+NGINX Service Mesh implements circuit breaking with a [CRD](https://github.com/nginxinc/nginx-service-mesh/blob/main/pkg/apis/specs/v1alpha1/circuit_breaker.go).
 
 Here's an example:
 
