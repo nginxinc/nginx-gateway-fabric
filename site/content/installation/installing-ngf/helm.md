@@ -39,7 +39,6 @@ To install the latest stable release of NGINX Gateway Fabric in the **nginx-gate
    helm install ngf oci://ghcr.io/nginxinc/charts/nginx-gateway-fabric --create-namespace -n nginx-gateway
    ```
 
-
 - For NGINX Plus:
 
   {{< note >}}Replace `private-registry.nginx.com` with the proper registry for your NGINX Plus image, and if applicable, replace `nginx-plus-registry-secret` with your Secret name containing the registry credentials. {{< /note >}}
