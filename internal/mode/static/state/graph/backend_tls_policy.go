@@ -37,17 +37,25 @@ func processBackendTLSPolicies(
 	ctlrName string,
 	gateway *Gateway,
 ) map[types.NamespacedName]*BackendTLSPolicy {
-	if len(backendTLSPolicies) == 0 {
+	if len(backendTLSPolicies) == 0 || gateway == nil {
 		return nil
 	}
+
 	processedBackendTLSPolicies := make(map[types.NamespacedName]*BackendTLSPolicy, len(backendTLSPolicies))
 	for nsname, backendTLSPolicy := range backendTLSPolicies {
-		valid, ignored, caCertRef, conds := validateBackendTLSPolicy(
+		var caCertRef types.NamespacedName
+		valid, ignored, conds := validateBackendTLSPolicy(
 			backendTLSPolicy,
 			configMapResolver,
 			ctlrName,
 			gateway,
 		)
+
+		if valid && !ignored && backendTLSPolicy.Spec.TLS.CACertRefs != nil {
+			caCertRef = types.NamespacedName{
+				Namespace: backendTLSPolicy.Namespace, Name: string(backendTLSPolicy.Spec.TLS.CACertRefs[0].Name),
+			}
+		}
 
 		processedBackendTLSPolicies[nsname] = &BackendTLSPolicy{
 			Source:     backendTLSPolicy,
@@ -69,11 +77,9 @@ func validateBackendTLSPolicy(
 	configMapResolver *configMapResolver,
 	ctlrName string,
 	gateway *Gateway,
-) (bool, bool, types.NamespacedName, []conditions.Condition) {
-	var conds []conditions.Condition
-	valid := true
-	ignored := false
-	var caCertRef types.NamespacedName
+) (valid, ignored bool, conds []conditions.Condition) {
+	valid = true
+	ignored = false
 	if err := validateAncestorMaxCount(backendTLSPolicy, ctlrName, gateway); err != nil {
 		valid = false
 		ignored = true
@@ -87,10 +93,6 @@ func validateBackendTLSPolicy(
 			valid = false
 			conds = append(conds, staticConds.NewBackendTLSPolicyInvalid(
 				fmt.Sprintf("invalid CACertRef: %s", err.Error())))
-		} else {
-			caCertRef = types.NamespacedName{
-				Namespace: backendTLSPolicy.Namespace, Name: string(backendTLSPolicy.Spec.TLS.CACertRefs[0].Name),
-			}
 		}
 	} else if backendTLSPolicy.Spec.TLS.WellKnownCACerts != nil {
 		if err := validateBackendTLSWellKnownCACerts(backendTLSPolicy); err != nil {
@@ -102,7 +104,7 @@ func validateBackendTLSPolicy(
 		valid = false
 		conds = append(conds, staticConds.NewBackendTLSPolicyInvalid("CACertRefs and WellKnownCACerts are both nil"))
 	}
-	return valid, ignored, caCertRef, conds
+	return valid, ignored, conds
 }
 
 func validateAncestorMaxCount(backendTLSPolicy *v1alpha2.BackendTLSPolicy, ctlrName string, gateway *Gateway) error {

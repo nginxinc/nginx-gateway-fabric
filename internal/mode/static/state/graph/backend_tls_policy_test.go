@@ -13,6 +13,70 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 )
 
+func TestProcessBackendTLSPoliciesEmpty(t *testing.T) {
+	backendTLSPolicies := map[types.NamespacedName]*v1alpha2.BackendTLSPolicy{
+		{Namespace: "test", Name: "tls-policy"}: {
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "tls-policy",
+				Namespace: "test",
+			},
+			Spec: v1alpha2.BackendTLSPolicySpec{
+				TargetRef: v1alpha2.PolicyTargetReferenceWithSectionName{
+					PolicyTargetReference: v1alpha2.PolicyTargetReference{
+						Kind:      "Service",
+						Name:      "service1",
+						Namespace: (*gatewayv1.Namespace)(helpers.GetPointer("test")),
+					},
+				},
+				TLS: v1alpha2.BackendTLSPolicyConfig{
+					CACertRefs: []gatewayv1.LocalObjectReference{
+						{
+							Kind:  "ConfigMap",
+							Name:  "configmap",
+							Group: "",
+						},
+					},
+					Hostname: "foo.test.com",
+				},
+			},
+		},
+	}
+
+	gateway := &Gateway{
+		Source: &gatewayv1.Gateway{ObjectMeta: metav1.ObjectMeta{Name: "gateway", Namespace: "test"}},
+	}
+
+	tests := []struct {
+		expected           map[types.NamespacedName]*BackendTLSPolicy
+		gateway            *Gateway
+		backendTLSPolicies map[types.NamespacedName]*v1alpha2.BackendTLSPolicy
+		name               string
+	}{
+		{
+			name:               "no policies",
+			expected:           nil,
+			gateway:            gateway,
+			backendTLSPolicies: nil,
+		},
+		{
+			name:               "nil gateway",
+			expected:           nil,
+			backendTLSPolicies: backendTLSPolicies,
+			gateway:            nil,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			g := NewWithT(t)
+
+			processed := processBackendTLSPolicies(test.backendTLSPolicies, nil, "test", test.gateway)
+
+			g.Expect(processed).To(Equal(test.expected))
+		})
+	}
+}
+
 func TestValidateBackendTLSPolicy(t *testing.T) {
 	targetRefNormalCase := &v1alpha2.PolicyTargetReferenceWithSectionName{
 		PolicyTargetReference: v1alpha2.PolicyTargetReference{
@@ -88,11 +152,11 @@ func TestValidateBackendTLSPolicy(t *testing.T) {
 	ancestorsWithUs := append(ancestors, getAncestorRef("test", "gateway"))
 
 	tests := []struct {
-		tlsPolicy  *v1alpha2.BackendTLSPolicy
-		caCertName types.NamespacedName
-		name       string
-		isValid    bool
-		ignored    bool
+		tlsPolicy *v1alpha2.BackendTLSPolicy
+		gateway   *Gateway
+		name      string
+		isValid   bool
+		ignored   bool
 	}{
 		{
 			name: "normal case with ca cert refs",
@@ -109,8 +173,7 @@ func TestValidateBackendTLSPolicy(t *testing.T) {
 					},
 				},
 			},
-			isValid:    true,
-			caCertName: types.NamespacedName{Namespace: "test", Name: "configmap"},
+			isValid: true,
 		},
 		{
 			name: "normal case with ca cert refs and 16 ancestors including us",
@@ -130,8 +193,7 @@ func TestValidateBackendTLSPolicy(t *testing.T) {
 					Ancestors: ancestorsWithUs,
 				},
 			},
-			isValid:    true,
-			caCertName: types.NamespacedName{Namespace: "test", Name: "configmap"},
+			isValid: true,
 		},
 		{
 			name: "normal case with well known certs",
@@ -165,8 +227,6 @@ func TestValidateBackendTLSPolicy(t *testing.T) {
 					},
 				},
 			},
-			isValid:    false,
-			caCertName: types.NamespacedName{Namespace: "test", Name: "configmap"},
 		},
 		{
 			name: "invalid ca cert ref name",
@@ -183,7 +243,6 @@ func TestValidateBackendTLSPolicy(t *testing.T) {
 					},
 				},
 			},
-			isValid: false,
 		},
 		{
 			name: "invalid ca cert ref kind",
@@ -200,7 +259,6 @@ func TestValidateBackendTLSPolicy(t *testing.T) {
 					},
 				},
 			},
-			isValid: false,
 		},
 		{
 			name: "invalid ca cert ref group",
@@ -217,7 +275,6 @@ func TestValidateBackendTLSPolicy(t *testing.T) {
 					},
 				},
 			},
-			isValid: false,
 		},
 		{
 			name: "invalid case with well known certs",
@@ -234,7 +291,6 @@ func TestValidateBackendTLSPolicy(t *testing.T) {
 					},
 				},
 			},
-			isValid: false,
 		},
 		{
 			name: "invalid case neither TLS config option chosen",
@@ -250,7 +306,6 @@ func TestValidateBackendTLSPolicy(t *testing.T) {
 					},
 				},
 			},
-			isValid: false,
 		},
 		{
 			name: "invalid case with too many ca cert refs",
@@ -267,7 +322,6 @@ func TestValidateBackendTLSPolicy(t *testing.T) {
 					},
 				},
 			},
-			isValid: false,
 		},
 		{
 			name: "invalid case with too many ancestors",
@@ -287,9 +341,7 @@ func TestValidateBackendTLSPolicy(t *testing.T) {
 					Ancestors: ancestors,
 				},
 			},
-			isValid:    false,
-			caCertName: types.NamespacedName{Namespace: "test", Name: "configmap"},
-			ignored:    true,
+			ignored: true,
 		},
 	}
 
@@ -324,7 +376,7 @@ func TestValidateBackendTLSPolicy(t *testing.T) {
 				Source: &gatewayv1.Gateway{ObjectMeta: metav1.ObjectMeta{Name: "gateway", Namespace: "test"}},
 			}
 
-			valid, ignored, caCertName, conds := validateBackendTLSPolicy(
+			valid, ignored, conds := validateBackendTLSPolicy(
 				test.tlsPolicy,
 				configMapResolver,
 				"test",
@@ -332,7 +384,6 @@ func TestValidateBackendTLSPolicy(t *testing.T) {
 			)
 
 			g.Expect(valid).To(Equal(test.isValid))
-			g.Expect(caCertName).To(Equal(test.caCertName))
 			g.Expect(ignored).To(Equal(test.ignored))
 			if !test.isValid && !test.ignored {
 				g.Expect(conds).To(HaveLen(1))

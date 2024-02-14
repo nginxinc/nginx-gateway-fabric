@@ -1714,7 +1714,7 @@ func TestCreateProxyPass(t *testing.T) {
 	}
 
 	for _, tc := range tests {
-		result := createProxyPass(tc.grp, tc.rewrite, false)
+		result := createProxyPass(tc.grp, tc.rewrite, generateProtocolString(nil))
 		g.Expect(result).To(Equal(tc.expected))
 	}
 }

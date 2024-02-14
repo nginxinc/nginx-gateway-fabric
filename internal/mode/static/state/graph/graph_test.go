@@ -103,7 +103,7 @@ func TestBuildGraph(t *testing.T) {
 		},
 	}
 
-	btpAttachedConds := []conditions.Condition{
+	btpAcceptedConds := []conditions.Condition{
 		staticConds.NewBackendTLSPolicyAccepted(),
 		staticConds.NewBackendTLSPolicyAccepted(),
 	}
@@ -138,7 +138,7 @@ func TestBuildGraph(t *testing.T) {
 		Valid:        true,
 		IsReferenced: true,
 		Gateway:      types.NamespacedName{Namespace: "test", Name: "gateway-1"},
-		Conditions:   btpAttachedConds,
+		Conditions:   btpAcceptedConds,
 		CaCertRef:    types.NamespacedName{Namespace: "service", Name: "configmap"},
 	}
 
@@ -696,25 +696,27 @@ func TestIsReferenced(t *testing.T) {
 			expected: false,
 		},
 
-		// Edge cases
+		// ConfigMap cases
 		{
-			name:     "ConfigMap in graph's ReferencedConfigMaps passes",
+			name:     "ConfigMap in graph's ReferencedConfigMaps is referenced",
 			resource: baseConfigMap,
 			graph:    graph,
 			expected: true,
 		},
 		{
-			name:     "ConfigMap not in ReferencedConfigMaps with same Namespace and different Name fails",
+			name:     "ConfigMap not in ReferencedConfigMaps with same Namespace and different Name is not referenced",
 			resource: sameNamespaceDifferentNameConfigMap,
 			graph:    graph,
 			expected: false,
 		},
 		{
-			name:     "ConfigMap not in ReferencedConfigMaps with different Namespace and same Name fails",
+			name:     "ConfigMap not in ReferencedConfigMaps with different Namespace and same Name is not referenced",
 			resource: differentNamespaceSameNameConfigMap,
 			graph:    graph,
 			expected: false,
 		},
+
+		// Edge cases
 		{
 			name:     "Resource is not supported by IsReferenced",
 			resource: &gatewayv1.HTTPRoute{},

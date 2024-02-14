@@ -32,6 +32,7 @@ rules:
   - namespaces
   - services
   - secrets
+  - configmaps
   verbs:
   - list
   - watch
@@ -76,6 +77,7 @@ rules:
   - gateways
   - httproutes
   - referencegrants
+  - backendtlspolicies
   verbs:
   - list
   - watch
@@ -85,6 +87,7 @@ rules:
   - httproutes/status
   - gateways/status
   - gatewayclasses/status
+  - backendtlspolicies/status
   verbs:
   - update
 - apiGroups:

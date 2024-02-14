@@ -66,19 +66,6 @@ const (
 	RouteMessageFailedNginxReload = GatewayMessageFailedNginxReload + ". NGINX may still be configured " +
 		"for this HTTPRoute. However, future updates to this resource will not be configured until the Gateway " +
 		"is programmed again"
-
-	// BackendTLSPolicyConditionAttached is the condition type indicating the BackendTLS policy is valid and attached to
-	// the Gateway.
-	BackendTLSPolicyConditionAttached BackendTLSPolicyConditionType = "Attached"
-
-	// BackendTLSPolicyReasonAttached is the condition reason for the BackendTLSPolicy Attached condition.
-	BackendTLSPolicyReasonAttached BackendTLSPolicyConditionReason = "BackendTLSPolicyAttached"
-
-	// BackendTLSPolicyConditionValid is the condition type indicating whether the BackendTLS policy is valid.
-	BackendTLSPolicyConditionValid BackendTLSPolicyConditionType = "Valid"
-
-	// BackendTLSPolicyReasonInvalid is the condition reason for the BackendTLSPolicy Valid condition being False.
-	BackendTLSPolicyReasonInvalid BackendTLSPolicyConditionReason = "BackendTLSPolicyInvalid"
 )
 
 // NewTODO returns a Condition that can be used as a placeholder for a condition that is not yet implemented.

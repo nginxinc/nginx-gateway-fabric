@@ -1835,7 +1835,6 @@ var _ = Describe("ChangeProcessor", func() {
 				},
 			}
 			btlsUpdated = btls.DeepCopy()
-			btlsUpdated.Generation++
 		})
 		// Changing change - a change that makes processor.Process() report changed
 		// Non-changing change - a change that doesn't do that

@@ -258,12 +258,19 @@ func updateLocationsForFilters(
 		proxyPass := createProxyPass(
 			matchRule.BackendGroup,
 			matchRule.Filters.RequestURLRewrite,
-			buildLocations[i].ProxySSLVerify != nil,
+			generateProtocolString(buildLocations[i].ProxySSLVerify),
 		)
 		buildLocations[i].ProxyPass = proxyPass
 	}
 
 	return buildLocations
+}
+
+func generateProtocolString(ssl *http.ProxySSLVerify) string {
+	if ssl != nil {
+		return "https"
+	}
+	return "http"
 }
 
 func createProxyTLSFromBackends(backends []dataplane.Backend) *http.ProxySSLVerify {
@@ -467,16 +474,11 @@ func isPathOnlyMatch(match dataplane.Match) bool {
 func createProxyPass(
 	backendGroup dataplane.BackendGroup,
 	filter *dataplane.HTTPURLRewriteFilter,
-	enableTLS bool,
+	protocol string,
 ) string {
 	var requestURI string
 	if filter == nil || filter.Path == nil {
 		requestURI = "$request_uri"
-	}
-
-	protocol := "http"
-	if enableTLS {
-		protocol = "https"
 	}
 
 	backendName := backendGroupName(backendGroup)
