@@ -9,6 +9,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/spf13/pflag"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -79,6 +80,7 @@ var _ = Describe("Collector", Ordered, func() {
 		kubeNamespace           *v1.Namespace
 
 		baseGetCalls getCallsFunc
+		flagset      *pflag.FlagSet
 	)
 
 	BeforeAll(func() {
@@ -129,15 +131,18 @@ var _ = Describe("Collector", Ordered, func() {
 
 	BeforeEach(func() {
 		expData = telemetry.Data{
-			ProjectMetadata:   telemetry.ProjectMetadata{Name: "NGF", Version: version},
-			NodeCount:         0,
-			NGFResourceCounts: telemetry.NGFResourceCounts{},
-			NGFReplicaCount:   1,
-			ClusterID:         string(kubeNamespace.GetUID()),
-			ImageSource:       "local",
-			Arch:              runtime.GOARCH,
-			DeploymentID:      string(ngfReplicaSet.ObjectMeta.OwnerReferences[0].UID),
+			ProjectMetadata:       telemetry.ProjectMetadata{Name: "NGF", Version: version},
+			NodeCount:             0,
+			NGFResourceCounts:     telemetry.NGFResourceCounts{},
+			NGFReplicaCount:       1,
+			ClusterID:             string(kubeNamespace.GetUID()),
+			ImageSource:           "local",
+			Arch:                  runtime.GOARCH,
+			DeploymentID:          string(ngfReplicaSet.ObjectMeta.OwnerReferences[0].UID),
+			DeploymentFlagOptions: telemetry.DeploymentFlagOptions{FlagKeys: []string{}, FlagValues: []string{}},
 		}
+
+		flagset = pflag.NewFlagSet("flagset", 0)
 
 		k8sClientReader = &eventsfakes.FakeReader{}
 		fakeGraphGetter = &telemetryfakes.FakeGraphGetter{}
@@ -153,6 +158,7 @@ var _ = Describe("Collector", Ordered, func() {
 			Version:             version,
 			PodNSName:           podNSName,
 			ImageSource:         "local",
+			Flags:               flagset,
 		})
 
 		baseGetCalls = createGetCallsFunc(ngfPod, ngfReplicaSet, kubeNamespace)
