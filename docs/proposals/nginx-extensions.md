@@ -308,7 +308,30 @@ _Conformance Level_: Extended/Implementation-specific
 
 _Example(s)_: [Envoy Gateway BackendTrafficPolicy](https://gateway.envoyproxy.io/v0.6.0/api/extension_types/#backendtrafficpolicy), [GKE HealthCheckPolicy](https://cloud.google.com/kubernetes-engine/docs/how-to/configure-gateway-resources), [BackendTLSPolicy](https://gateway-api.sigs.k8s.io/api-types/backendtlspolicy/)
 
-Policies are a Kubernetes object that augments the behavior of an object in a standard way. Policies can be attached to one object ("Direct Policy Attachment") or objects in a hierarchy ("Inherited Policy Attachment"). In both cases, Policies are implemented as CRDs, and they must include a `TargetRef` struct in the `spec` to identify how and where to apply the Policy. Policies can use the `sectionName` field of the `TargetRef` to target specific matches within nested objects, such as a Listener within a Gateway or a specific Port on a Service. There's also an open [GEP issue](https://github.com/kubernetes-sigs/gateway-api/issues/995) to add a name field to HTTPRouteRule and HTTPRouteMatch structs to allow users to identify different routes. Once implemented, Policies can target a specific rule or match in an HTTPRoute.
+Policies are a Kubernetes object that augments the behavior of an object in a standard way. Policies can be attached to one object ("Direct Policy Attachment") or objects in a hierarchy ("Inherited Policy Attachment"). In both cases, Policies are implemented as CRDs, and they must include a `TargetRef` struct in the `spec` to identify how and where to apply the Policy. This `TargetRef` can include a `sectionName` to target specific matches within nested objects, such as a Listener within a Gateway or a specific Port on a Service.
+
+Example of a TargetRef that targets an entire Gateway:
+
+```yaml
+targetRef:
+  group: gateway.networking.k8s.io
+  kind: Gateway
+  name: my-gateway
+  namespace: default
+```
+
+Example of a TargetRef that targets the `http` listener on a Gateway:
+
+```yaml
+targetRef:
+  group: gateway.networking.k8s.io
+  kind: Gateway
+  name: my-gateway
+  sectionName: http
+  namespace: default
+```
+
+There's also an open [GEP issue](https://github.com/kubernetes-sigs/gateway-api/issues/995) to add a name field to HTTPRouteRule and HTTPRouteMatch structs to allow users to identify different routes. Once implemented, Policies can target a specific rule or match in an HTTPRoute.
 
 Policies do not need to support attaching to all resource Kinds. Implementations can choose which resources the Policy can be attached to.
 
