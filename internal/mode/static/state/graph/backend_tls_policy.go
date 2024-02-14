@@ -88,7 +88,11 @@ func validateBackendTLSPolicy(
 		valid = false
 		conds = append(conds, staticConds.NewBackendTLSPolicyInvalid(fmt.Sprintf("invalid hostname: %s", err.Error())))
 	}
-	if backendTLSPolicy.Spec.TLS.CACertRefs != nil && len(backendTLSPolicy.Spec.TLS.CACertRefs) > 0 {
+	if backendTLSPolicy.Spec.TLS.CACertRefs != nil && backendTLSPolicy.Spec.TLS.WellKnownCACerts != nil {
+		valid = false
+		msg := "CACertRefs and WellKnownCACerts are mutually exclusive"
+		conds = append(conds, staticConds.NewBackendTLSPolicyInvalid(msg))
+	} else if backendTLSPolicy.Spec.TLS.CACertRefs != nil && len(backendTLSPolicy.Spec.TLS.CACertRefs) > 0 {
 		if err := validateBackendTLSCACertRef(backendTLSPolicy, configMapResolver); err != nil {
 			valid = false
 			conds = append(conds, staticConds.NewBackendTLSPolicyInvalid(
