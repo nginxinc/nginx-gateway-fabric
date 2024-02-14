@@ -48,6 +48,8 @@ type GatewayPodConfig struct {
 	ServiceName string
 	// Namespace is the namespace of this Pod.
 	Namespace string
+	// Name is the name of the Pod.
+	Name string
 }
 
 // MetricsConfig specifies the metrics config.

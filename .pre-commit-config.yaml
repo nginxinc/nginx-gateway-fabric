@@ -36,7 +36,7 @@ repos:
           - javascript
 
   - repo: https://github.com/golangci/golangci-lint
-    rev: v1.55.2
+    rev: v1.56.1
     hooks:
       - id: golangci-lint-full
 
@@ -50,7 +50,7 @@ repos:
   # Rules are in .yamllint.yaml file
   # See https://yamllint.readthedocs.io/en/stable/rules.html# for rule descriptions
   - repo: https://github.com/adrienverge/yamllint.git
-    rev: v1.33.0
+    rev: v1.34.0
     hooks:
       - id: yamllint
 

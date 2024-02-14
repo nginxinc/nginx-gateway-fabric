@@ -55,7 +55,7 @@ func TestCronJob_ContextCanceled(t *testing.T) {
 	readyChannel := make(chan struct{})
 
 	cfg := CronJobConfig{
-		Worker:  func(ctx context.Context) {},
+		Worker:  func(_ context.Context) {},
 		Logger:  zap.New(),
 		Period:  1 * time.Millisecond, // 1ms is much smaller than timeout so the CronJob should run a few times
 		ReadyCh: readyChannel,

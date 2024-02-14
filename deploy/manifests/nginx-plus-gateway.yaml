@@ -167,6 +167,7 @@ spec:
         - --gatewayclass=nginx
         - --config=nginx-gateway-config
         - --service=nginx-gateway
+        - --nginx-plus
         - --metrics-port=9113
         - --health-port=8081
         - --leader-election-lock-name=nginx-gateway-leader-election
@@ -214,7 +215,7 @@ spec:
           mountPath: /etc/nginx/secrets
         - name: nginx-run
           mountPath: /var/run/nginx
-      - image: ghcr.io/nginxinc/nginx-gateway-fabric/nginx:edge
+      - image: nginx-gateway-fabric/nginx-plus:edge
         imagePullPolicy: Always
         name: nginx
         ports:

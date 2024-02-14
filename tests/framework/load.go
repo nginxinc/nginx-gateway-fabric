@@ -60,7 +60,7 @@ func RunLoadTest(cfg LoadTestConfig) (vegeta.Results, Metrics) {
 	httpClient := http.Client{
 		Timeout: vegeta.DefaultTimeout,
 		Transport: &http.Transport{
-			DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
+			DialContext: func(ctx context.Context, network, _ string) (net.Conn, error) {
 				return dialer.DialContext(ctx, network, cfg.Proxy)
 			},
 			TLSClientConfig: &tls.Config{

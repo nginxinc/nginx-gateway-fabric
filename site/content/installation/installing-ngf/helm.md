@@ -14,25 +14,55 @@ To complete this guide, you'll need to install:
 
 - [kubectl](https://kubernetes.io/docs/tasks/tools/), a command-line tool for managing Kubernetes clusters.
 - [Helm 3.0 or later](https://helm.sh/docs/intro/install/), for deploying and managing applications on Kubernetes.
+- If you’d like to use NGINX Plus:
+  1. To pull from the F5 Container registry, configure a docker registry secret using your JWT token from the MyF5 portal by following the instructions from [here]({{<relref "installation/ngf-images/jwt-token-docker-secret.md">}}). Make sure to specify the secret using `nginxGateway.serviceAccount.imagePullSecret` or `nginxGateway.serviceAccount.imagePullSecrets` parameter.
+  1. Alternatively, pull an NGINX Gateway Fabric image with NGINX Plus and push it to your private registry by following the instructions from [here]({{<relref "installation/ngf-images/pulling-ngf-image.md">}}).
+  1. Update the `nginxGateway.image.repository` field of the `values.yaml` accordingly.
 
 
 ## Deploy NGINX Gateway Fabric
 
 ### Installing the Gateway API resources
 
+
 {{<include "installation/install-gateway-api-resources.md" >}}
+
+
 
 ### Install from the OCI registry
 
-- To install the latest stable release of NGINX Gateway Fabric in the **nginx-gateway** namespace, run the following command:
+To install the latest stable release of NGINX Gateway Fabric in the **nginx-gateway** namespace, run the following command:
+
+- For NGINX:
 
    ```shell
    helm install ngf oci://ghcr.io/nginxinc/charts/nginx-gateway-fabric --create-namespace -n nginx-gateway
    ```
 
+- For NGINX Plus:
+
+  {{< note >}}Replace `private-registry.nginx.com` with the proper registry for your NGINX Plus image, and if applicable, replace `nginx-plus-registry-secret` with your Secret name containing the registry credentials. {{< /note >}}
+
+   ```shell
+   helm install ngf oci://ghcr.io/nginxinc/charts/nginx-gateway-fabric  --set nginx.image.repository=private-registry.nginx.com/nginx-gateway-fabric/nginx-plus --set nginx.plus=true --set serviceAccount.imagePullSecret=nginx-plus-registry-secret --create-namespace -n nginx-gateway
+   ```
+
+
+
    `ngf` is the name of the release, and can be changed to any name you want. This name is added as a prefix to the Deployment name.
 
    If the namespace already exists, you can omit the optional `--create-namespace` flag. If you want the latest version from the **main** branch, add `--version 0.0.0-edge` to your install command.
+
+   You can also use the certificate and key from the MyF5 portal and the Docker registry API to list the available image tags for NGINX Plus, for example:
+
+   ```shell
+      $ curl https://private-registry.nginx.com/v2/nginx-gateway-fabric/nginx-plus/tags/list --key <path-to-client.key> --cert <path-to-client.cert> | jq
+
+      {
+      "name": "nginx-gateway-fabric/nginx-plus",
+      "tags": ["edge"]
+      }
+   ```
 
    To wait for the Deployment to be ready, you can either add the `--wait` flag to the `helm install` command, or run the following after installing:
 
@@ -68,15 +98,16 @@ By default, the NGINX Gateway Fabric helm chart deploys a LoadBalancer Service.
 
 To use a NodePort Service instead:
 
-```shell
-helm install ngf oci://ghcr.io/nginxinc/charts/nginx-gateway-fabric --create-namespace -n nginx-gateway --set service.type=NodePort
-```
+   ```shell
+   helm install ngf oci://ghcr.io/nginxinc/charts/nginx-gateway-fabric --create-namespace -n nginx-gateway --set service.type=NodePort
+   ```
 
 To disable the creation of a Service:
 
-```shell
-helm install ngf oci://ghcr.io/nginxinc/charts/nginx-gateway-fabric --create-namespace -n nginx-gateway --set service.create=false
-```
+   ```shell
+   helm install ngf oci://ghcr.io/nginxinc/charts/nginx-gateway-fabric --create-namespace -n nginx-gateway --set service.create=false
+   ```
+
 
 ## Upgrade NGINX Gateway Fabric
 

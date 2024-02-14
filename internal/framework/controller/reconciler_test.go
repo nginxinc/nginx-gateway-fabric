@@ -59,10 +59,10 @@ var _ = Describe("Reconciler", func() {
 
 	getReturnsHRForHR := func(hr *v1.HTTPRoute) getFunc {
 		return func(
-			ctx context.Context,
+			_ context.Context,
 			nsname types.NamespacedName,
 			object client.Object,
-			option ...client.GetOption,
+			_ ...client.GetOption,
 		) error {
 			Expect(object).To(BeAssignableToTypeOf(&v1.HTTPRoute{}))
 			Expect(nsname).To(Equal(client.ObjectKeyFromObject(hr)))
@@ -75,10 +75,10 @@ var _ = Describe("Reconciler", func() {
 
 	getReturnsNotFoundErrorForHR := func(hr *v1.HTTPRoute) getFunc {
 		return func(
-			ctx context.Context,
+			_ context.Context,
 			nsname types.NamespacedName,
 			object client.Object,
-			option ...client.GetOption,
+			_ ...client.GetOption,
 		) error {
 			Expect(object).To(BeAssignableToTypeOf(&v1.HTTPRoute{}))
 			Expect(nsname).To(Equal(client.ObjectKeyFromObject(hr)))

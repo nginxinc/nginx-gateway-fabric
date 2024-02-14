@@ -17,7 +17,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	v1 "sigs.k8s.io/gateway-api/apis/v1"
-	v1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/controller"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/controller/controllerfakes"
@@ -103,7 +103,7 @@ func TestRegister(t *testing.T) {
 		},
 	}
 
-	nsNameFilter := func(nsname types.NamespacedName) (bool, string) {
+	nsNameFilter := func(_ types.NamespacedName) (bool, string) {
 		return true, ""
 	}
 

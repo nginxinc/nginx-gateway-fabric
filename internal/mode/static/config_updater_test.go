@@ -75,7 +75,7 @@ func TestUpdateControlPlane(t *testing.T) {
 			g := NewWithT(t)
 
 			fakeLogSetter := &staticfakes.FakeLogLevelSetter{
-				SetLevelStub: func(s string) error {
+				SetLevelStub: func(_ string) error {
 					return test.setLevelErr
 				},
 			}

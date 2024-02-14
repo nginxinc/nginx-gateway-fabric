@@ -1994,9 +1994,9 @@ func TestBuildUpstreams(t *testing.T) {
 
 	fakeResolver := &resolverfakes.FakeServiceResolver{}
 	fakeResolver.ResolveCalls(func(
-		ctx context.Context,
+		_ context.Context,
 		svcNsName types.NamespacedName,
-		servicePort apiv1.ServicePort,
+		_ apiv1.ServicePort,
 	) ([]resolver.Endpoint, error) {
 		switch svcNsName.Name {
 		case "bar":

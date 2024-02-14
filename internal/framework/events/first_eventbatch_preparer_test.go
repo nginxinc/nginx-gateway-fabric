@@ -46,7 +46,7 @@ var _ = Describe("FirstEventBatchPreparer", func() {
 
 		It("should prepare zero events when resources don't exist", func() {
 			fakeReader.GetCalls(
-				func(ctx context.Context, name types.NamespacedName, object client.Object, opts ...client.GetOption) error {
+				func(_ context.Context, name types.NamespacedName, object client.Object, _ ...client.GetOption) error {
 					Expect(name).Should(Equal(types.NamespacedName{Name: gcName}))
 					Expect(object).Should(BeAssignableToTypeOf(&v1.GatewayClass{}))
 
@@ -65,7 +65,7 @@ var _ = Describe("FirstEventBatchPreparer", func() {
 			gatewayClass := v1.GatewayClass{ObjectMeta: metav1.ObjectMeta{Name: gcName}}
 
 			fakeReader.GetCalls(
-				func(ctx context.Context, name types.NamespacedName, object client.Object, opts ...client.GetOption) error {
+				func(_ context.Context, name types.NamespacedName, object client.Object, _ ...client.GetOption) error {
 					Expect(name).Should(Equal(types.NamespacedName{Name: gcName}))
 					Expect(object).Should(BeAssignableToTypeOf(&v1.GatewayClass{}))
 
@@ -76,7 +76,7 @@ var _ = Describe("FirstEventBatchPreparer", func() {
 
 			httpRoute := v1.HTTPRoute{ObjectMeta: metav1.ObjectMeta{Name: "test"}}
 
-			fakeReader.ListCalls(func(ctx context.Context, list client.ObjectList, option ...client.ListOption) error {
+			fakeReader.ListCalls(func(_ context.Context, list client.ObjectList, option ...client.ListOption) error {
 				Expect(option).To(BeEmpty())
 
 				switch typedList := list.(type) {
@@ -106,7 +106,7 @@ var _ = Describe("FirstEventBatchPreparer", func() {
 			BeforeEach(func() {
 				fakeReader.GetReturns(apierrors.NewNotFound(schema.GroupResource{}, "test"))
 				fakeReader.ListCalls(
-					func(ctx context.Context, list client.ObjectList, option ...client.ListOption) error {
+					func(_ context.Context, list client.ObjectList, _ ...client.ListOption) error {
 						httpRoute := v1.HTTPRoute{ObjectMeta: metav1.ObjectMeta{Name: "test"}}
 						typedList := list.(*v1.HTTPRouteList)
 						typedList.Items = append(typedList.Items, httpRoute)
@@ -117,7 +117,7 @@ var _ = Describe("FirstEventBatchPreparer", func() {
 			})
 
 			It("should return error if EachListItem passes a wrong object type", func() {
-				preparer.SetEachListItem(func(obj runtime.Object, fn func(runtime.Object) error) error {
+				preparer.SetEachListItem(func(_ runtime.Object, fn func(runtime.Object) error) error {
 					return fn(&fakeRuntimeObject{})
 				})
 
@@ -129,7 +129,7 @@ var _ = Describe("FirstEventBatchPreparer", func() {
 			It("should return error if EachListItem returns an error", func() {
 				testError := errors.New("test")
 
-				preparer.SetEachListItem(func(obj runtime.Object, fn func(runtime.Object) error) error {
+				preparer.SetEachListItem(func(_ runtime.Object, _ func(runtime.Object) error) error {
 					return testError
 				})
 
