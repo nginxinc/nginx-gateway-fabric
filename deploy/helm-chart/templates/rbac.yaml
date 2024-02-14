@@ -7,6 +7,17 @@ metadata:
   {{- include "nginx-gateway.labels" . | nindent 4 }}
   annotations:
     {{- toYaml .Values.serviceAccount.annotations | nindent 4 }}
+  {{- if or .Values.serviceAccount.imagePullSecret .Values.serviceAccount.imagePullSecrets }}
+  imagePullSecrets:
+    {{- if .Values.serviceAccount.imagePullSecret }}
+    - name: {{ .Values.serviceAccount.imagePullSecret}}
+    {{- end }}
+    {{- if .Values.serviceAccount.imagePullSecrets }}
+    {{- range .Values.serviceAccount.imagePullSecrets }}
+    - name: {{ . }}
+    {{- end }}
+    {{- end }}
+  {{- end }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole

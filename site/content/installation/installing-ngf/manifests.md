@@ -19,6 +19,11 @@ To complete this guide, you'll need to install:
 
 Deploying NGINX Gateway Fabric with Kubernetes manifests takes only a few steps. With manifests, you can configure your deployment exactly how you want. Manifests also make it easy to replicate deployments across environments or clusters, ensuring consistency.
 
+- If you’d like to use NGINX Plus:
+  1. To pull from the F5 Container registry, configure a docker registry secret using your JWT token from the MyF5 portal by following the instructions from [here](https://docs.nginx.com/nginx-gateway-fabric/installation/ngf-images/jwt-token-docker-secret). Make sure to specify the secret in the `imagePullSecrets` field of the `nginx-gateway` ServiceAccount.
+  1. Alternatively, pull an NGINX Gateway Fabric image with NGINX Plus and push it to your private registry by following the instructions from [here]({{<relref "installation/ngf-images/pulling-ngf-image.md">}}).
+  1. Update the nginx container's `image` field of the `nginx-gateway` Deployment accordingly.
+
 ### 1. Install the Gateway API resources
 
 {{<include "installation/install-gateway-api-resources.md" >}}
@@ -54,9 +59,20 @@ Deploying NGINX Gateway Fabric with Kubernetes manifests takes only a few steps.
 
 #### Edge version
 
+- For NGINX:
+
    ```shell
    kubectl apply -f deploy/manifests/nginx-gateway.yaml
    ```
+
+- For NGINX Plus
+
+   ```shell
+   kubectl apply -f deploy/manifests/nginx-plus-gateway.yaml
+   ```
+
+   Update the nginx-plus-gateway.yaml file to include your chosen image from the F5 Container registry or your custom container image.
+
 
 ### 4. Verify the Deployment
 
@@ -116,6 +132,7 @@ To upgrade NGINX Gateway Fabric and get the latest features and improvements, ta
       ```shell
       kubectl apply -f https://github.com/nginxinc/nginx-gateway-fabric/releases/download/v1.0.0/nginx-gateway.yaml
       ```
+
 
 ## Delay pod termination for zero downtime upgrades {#configure-delayed-pod-termination-for-zero-downtime-upgrades}
 
