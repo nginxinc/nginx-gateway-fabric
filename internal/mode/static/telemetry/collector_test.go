@@ -144,6 +144,7 @@ var _ = Describe("Collector", Ordered, func() {
 						ObjectMeta: metav1.ObjectMeta{Name: "node3"},
 					},
 				}
+
 				k8sClientReader.ListCalls(createListCallsFunc(nodes))
 
 				secret1 := &v1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "secret1"}}
@@ -229,15 +230,6 @@ var _ = Describe("Collector", Ordered, func() {
 					Services:       3,
 					Endpoints:      4,
 				}
-
-				namespace := &v1.Namespace{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: dataplane.KubeSystem,
-						UID:  "test-abcd",
-					},
-				}
-				k8sClientReader.GetCalls(createGetCallsFunc(namespace))
-				expData.ClusterID = string(namespace.ObjectMeta.UID)
 
 				data, err := dataCollector.Collect(ctx)
 
