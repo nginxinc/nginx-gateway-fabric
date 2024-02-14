@@ -168,6 +168,15 @@ This will build the docker images `nginx-gateway-fabric:<your-user>` and `nginx-
       kubectl apply -f deploy/manifests/service/nodeport.yaml
       ```
 
+   - To install with experimental manifests:
+
+      ```shell
+      make generate-manifests HELM_TEMPLATE_COMMON_ARGS="--set nginxGateway.image.repository=nginx-gateway-fabric --set nginxGateway.image.tag=$(whoami) --set nginxGateway.image.pullPolicy=Never --set nginx.image.repository=nginx-gateway-fabric/nginx --set nginx.image.tag=$(whoami) --set nginx.image.pullPolicy=Never"
+      kubectl apply -f deploy/manifests/crds
+      kubectl apply -f deploy/manifests/nginx-gateway-experimental.yaml
+      kubectl apply -f deploy/manifests/service/nodeport.yaml
+      ```
+
 ### Run Examples
 
 To make sure NGF is running properly, try out the [examples](/examples).

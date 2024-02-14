@@ -32,7 +32,9 @@ rules:
   - namespaces
   - services
   - secrets
+{{- if .Values.nginxGateway.gwAPIExperimentalFeatures.enable }}
   - configmaps
+{{- end }}
   verbs:
   - list
   - watch
@@ -77,7 +79,9 @@ rules:
   - gateways
   - httproutes
   - referencegrants
+{{- if .Values.nginxGateway.gwAPIExperimentalFeatures.enable }}
   - backendtlspolicies
+{{- end }}
   verbs:
   - list
   - watch
@@ -87,7 +91,9 @@ rules:
   - httproutes/status
   - gateways/status
   - gatewayclasses/status
+{{- if .Values.nginxGateway.gwAPIExperimentalFeatures.enable }}
   - backendtlspolicies/status
+{{- end }}
   verbs:
   - update
 - apiGroups:
