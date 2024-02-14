@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"runtime"
-	"strconv"
 
 	"github.com/spf13/pflag"
 	appsv1 "k8s.io/api/apps/v1"
@@ -49,6 +48,7 @@ type ProjectMetadata struct {
 	Version string
 }
 
+// Option 1: list off each Flag and its value
 //type DeploymentFlagOptions struct {
 //	GatewayClass string
 //	GatewayCtlrName string
@@ -66,18 +66,35 @@ type ProjectMetadata struct {
 //	Plus                   bool
 //}
 
-type DeploymentFlagOptions struct {
-	NonBooleanFlags []NonBooleanFlag
-	BooleanFlags    []BooleanFlag
-}
+// Option 2 doesn't work with exporter, can't handle slices of structs.
+//type DeploymentFlagOptions struct {
+//	NonBooleanFlags []NonBooleanFlag
+//	BooleanFlags    []BooleanFlag
+//}
+//
+//type BooleanFlag struct {
+//	Name  string
+//	Value bool
+//}
+//type NonBooleanFlag struct {
+//	Name  string
+//	Value string
+//}
 
-type BooleanFlag struct {
-	Name  string
-	Value bool
-}
-type NonBooleanFlag struct {
-	Name  string
-	Value string
+// Option 2.1: separate Boolean and Non-boolean flags
+//type DeploymentFlagOptions struct {
+//	NonBooleanFlagKeys   []string
+//	NonBooleanFlagValues []string
+//
+//	BooleanFlagKeys   []string
+//	BooleanFlagValues []bool
+//}
+
+// Option 3: Don't separate the boolean and non-boolean flags but simply keep the value of the boolean flag
+// as a string, e.g. "true", "false".
+type DeploymentFlagOptions struct {
+	FlagKeys   []string
+	FlagValues []string
 }
 
 // Data is telemetry data.
@@ -88,10 +105,10 @@ type Data struct {
 	Arch                  string
 	DeploymentID          string
 	ImageSource           string
+	DeploymentFlagOptions DeploymentFlagOptions
 	NGFResourceCounts     NGFResourceCounts
 	NodeCount             int
 	NGFReplicaCount       int
-	DeploymentFlagOptions DeploymentFlagOptions
 }
 
 // DataCollectorConfig holds configuration parameters for DataCollectorImpl.
@@ -298,22 +315,30 @@ func CollectClusterID(ctx context.Context, k8sClient client.Reader) (string, err
 }
 
 func collectDeploymentFlagOptions(flags *pflag.FlagSet) DeploymentFlagOptions {
+	//deploymentFlagOptions := DeploymentFlagOptions{
+	//	NonBooleanFlagKeys:   []string{},
+	//	NonBooleanFlagValues: []string{},
+	//	BooleanFlagKeys:      []string{},
+	//	BooleanFlagValues:    []bool{},
+	//}
+
 	deploymentFlagOptions := DeploymentFlagOptions{
-		NonBooleanFlags: []NonBooleanFlag{},
-		BooleanFlags:    []BooleanFlag{},
+		FlagKeys:   []string{},
+		FlagValues: []string{},
 	}
-	flags.Visit(
+	flags.VisitAll(
 		func(flag *pflag.Flag) {
+			deploymentFlagOptions.FlagKeys = append(deploymentFlagOptions.FlagKeys, flag.Name)
 			switch flag.Value.Type() {
 			case "bool":
-				val, err := strconv.ParseBool(flag.Value.String())
-				if err != nil {
-					return
-				}
-				deploymentFlagOptions.BooleanFlags = append(deploymentFlagOptions.BooleanFlags, BooleanFlag{
-					Name:  flag.Name,
-					Value: val,
-				})
+				//val, err := strconv.ParseBool(flag.Value.String())
+				//if err != nil {
+				//	return
+				//}
+				//deploymentFlagOptions.BooleanFlagKeys = append(deploymentFlagOptions.BooleanFlagKeys, flag.Name)
+				//deploymentFlagOptions.BooleanFlagValues = append(deploymentFlagOptions.BooleanFlagValues, val)
+
+				deploymentFlagOptions.FlagValues = append(deploymentFlagOptions.FlagValues, flag.Value.String())
 
 			default:
 				var val string
@@ -322,11 +347,9 @@ func collectDeploymentFlagOptions(flags *pflag.FlagSet) DeploymentFlagOptions {
 				} else {
 					val = "user-defined"
 				}
-
-				deploymentFlagOptions.NonBooleanFlags = append(deploymentFlagOptions.NonBooleanFlags, NonBooleanFlag{
-					Name:  flag.Name,
-					Value: val,
-				})
+				deploymentFlagOptions.FlagValues = append(deploymentFlagOptions.FlagValues, val)
+				// deploymentFlagOptions.NonBooleanFlagKeys = append(deploymentFlagOptions.NonBooleanFlagKeys, flag.Name)
+				// deploymentFlagOptions.NonBooleanFlagValues = append(deploymentFlagOptions.NonBooleanFlagValues, val)
 			}
 		},
 	)
