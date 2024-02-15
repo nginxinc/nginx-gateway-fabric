@@ -74,6 +74,7 @@ var _ = Describe("Collector", Ordered, func() {
 		podNSName               types.NamespacedName
 		ngfPod                  *v1.Pod
 		ngfReplicaSet           *appsv1.ReplicaSet
+		kubeNamespace           *v1.Namespace
 	)
 
 	BeforeAll(func() {
@@ -103,6 +104,13 @@ var _ = Describe("Collector", Ordered, func() {
 			Namespace: "nginx-gateway",
 			Name:      "ngf-pod",
 		}
+
+		kubeNamespace = &v1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "kube-system",
+				UID:  "test-uid",
+			},
+		}
 	})
 
 	BeforeEach(func() {
@@ -111,6 +119,7 @@ var _ = Describe("Collector", Ordered, func() {
 			NodeCount:         0,
 			NGFResourceCounts: telemetry.NGFResourceCounts{},
 			NGFReplicaCount:   1,
+			ClusterID:         string(kubeNamespace.GetUID()),
 		}
 
 		k8sClientReader = &eventsfakes.FakeReader{}
@@ -127,7 +136,7 @@ var _ = Describe("Collector", Ordered, func() {
 			Version:             version,
 			PodNSName:           podNSName,
 		})
-		k8sClientReader.GetCalls(createGetCallsFunc(ngfPod, ngfReplicaSet))
+		k8sClientReader.GetCalls(createGetCallsFunc(ngfPod, ngfReplicaSet, kubeNamespace))
 	})
 
 	Describe("Normal case", func() {
@@ -135,13 +144,19 @@ var _ = Describe("Collector", Ordered, func() {
 			It("collects all fields", func() {
 				nodes := []v1.Node{
 					{
-						ObjectMeta: metav1.ObjectMeta{Name: "node1"},
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "node1",
+						},
 					},
 					{
-						ObjectMeta: metav1.ObjectMeta{Name: "node2"},
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "node2",
+						},
 					},
 					{
-						ObjectMeta: metav1.ObjectMeta{Name: "node3"},
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "node3",
+						},
 					},
 				}
 
@@ -150,7 +165,6 @@ var _ = Describe("Collector", Ordered, func() {
 				secret1 := &v1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "secret1"}}
 				secret2 := &v1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "secret2"}}
 				nilsecret := &v1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "nilsecret"}}
-
 				svc1 := &v1.Service{ObjectMeta: metav1.ObjectMeta{Name: "svc1"}}
 				svc2 := &v1.Service{ObjectMeta: metav1.ObjectMeta{Name: "svc2"}}
 				nilsvc := &v1.Service{ObjectMeta: metav1.ObjectMeta{Name: "nilsvc"}}
@@ -235,6 +249,18 @@ var _ = Describe("Collector", Ordered, func() {
 
 				Expect(err).To(BeNil())
 				Expect(expData).To(Equal(data))
+			})
+		})
+	})
+
+	Describe("clusterID collector", func() {
+		When("collecting clusterID", func() {
+			It("throws an error when collecting clusterID", func() {
+				expectedError := errors.New("there was an error getting clusterID")
+				k8sClientReader.GetReturns(expectedError)
+
+				_, err := dataCollector.Collect(ctx)
+				Expect(err).To(MatchError(expectedError))
 			})
 		})
 	})
@@ -451,6 +477,7 @@ var _ = Describe("Collector", Ordered, func() {
 								OwnerReferences: nil,
 							},
 						},
+						kubeNamespace,
 					))
 
 					_, err := dataCollector.Collect(ctx)
@@ -475,6 +502,7 @@ var _ = Describe("Collector", Ordered, func() {
 								},
 							},
 						},
+						kubeNamespace,
 					))
 
 					_, err := dataCollector.Collect(ctx)
@@ -495,6 +523,7 @@ var _ = Describe("Collector", Ordered, func() {
 								},
 							},
 						},
+						kubeNamespace,
 					))
 
 					_, err := dataCollector.Collect(ctx)
@@ -520,6 +549,7 @@ var _ = Describe("Collector", Ordered, func() {
 								Replicas: nil,
 							},
 						},
+						kubeNamespace,
 					))
 
 					_, err := dataCollector.Collect(ctx)
