@@ -30,14 +30,22 @@ func createHTTPRoute(
 	paths ...string,
 ) *gatewayv1.HTTPRoute {
 	rules := make([]gatewayv1.HTTPRouteRule, 0, len(paths))
+	pathType := helpers.GetPointer(gatewayv1.PathMatchPathPrefix)
 
 	for _, path := range paths {
+		if path == "/empty-type" {
+			pathType = nil
+		}
+		pathValue := helpers.GetPointer(path)
+		if path == "/empty-value" {
+			pathValue = nil
+		}
 		rules = append(rules, gatewayv1.HTTPRouteRule{
 			Matches: []gatewayv1.HTTPRouteMatch{
 				{
 					Path: &gatewayv1.HTTPPathMatch{
-						Type:  helpers.GetPointer(gatewayv1.PathMatchPathPrefix),
-						Value: helpers.GetPointer(path),
+						Type:  pathType,
+						Value: pathValue,
 					},
 				},
 			},
@@ -189,54 +197,57 @@ func TestBuildSectionNameRefs(t *testing.T) {
 		},
 	}
 
-	g := NewWithT(t)
-
-	result := buildSectionNameRefs(parentRefs, routeNamespace, gwNsNames)
-	g.Expect(result).To(Equal(expected))
-}
-
-func TestBuildSectionNameRefsPanicsForDuplicateParentRefs(t *testing.T) {
-	gwNsName := types.NamespacedName{Namespace: "test", Name: "gateway"}
-
 	tests := []struct {
-		name       string
-		parentRefs []gatewayv1.ParentReference
+		name         string
+		parentRefs   []gatewayv1.ParentReference
+		expectedRefs []ParentRef
+		expectError  bool
 	}{
 		{
-			parentRefs: []gatewayv1.ParentReference{
-				{
-					Name:        gatewayv1.ObjectName(gwNsName.Name),
-					SectionName: helpers.GetPointer[gatewayv1.SectionName]("http"),
-				},
-				{
-					Name:        gatewayv1.ObjectName(gwNsName.Name),
-					SectionName: helpers.GetPointer[gatewayv1.SectionName]("http"),
-				},
-			},
-			name: "with sectionNames",
+			name:         "normal case",
+			parentRefs:   parentRefs,
+			expectedRefs: expected,
+			expectError:  false,
 		},
 		{
 			parentRefs: []gatewayv1.ParentReference{
 				{
-					Name:        gatewayv1.ObjectName(gwNsName.Name),
+					Name:        gatewayv1.ObjectName(gwNsName1.Name),
+					SectionName: helpers.GetPointer[gatewayv1.SectionName]("http"),
+				},
+				{
+					Name:        gatewayv1.ObjectName(gwNsName1.Name),
+					SectionName: helpers.GetPointer[gatewayv1.SectionName]("http"),
+				},
+			},
+			name:        "duplicate sectionNames",
+			expectError: true,
+		},
+		{
+			parentRefs: []gatewayv1.ParentReference{
+				{
+					Name:        gatewayv1.ObjectName(gwNsName1.Name),
 					SectionName: nil,
 				},
 				{
-					Name:        gatewayv1.ObjectName(gwNsName.Name),
+					Name:        gatewayv1.ObjectName(gwNsName1.Name),
 					SectionName: nil,
 				},
 			},
-			name: "nil sectionNames",
+			name:        "nil sectionNames",
+			expectError: true,
 		},
 	}
-
-	gwNsNames := []types.NamespacedName{gwNsName}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewWithT(t)
-			run := func() { buildSectionNameRefs(test.parentRefs, gwNsName.Namespace, gwNsNames) }
-			g.Expect(run).To(Panic())
+
+			result, err := buildSectionNameRefs(test.parentRefs, routeNamespace, gwNsNames)
+			g.Expect(result).To(Equal(test.expectedRefs))
+			if !test.expectError {
+				g.Expect(err).To(BeNil())
+			}
 		})
 	}
 }
@@ -330,6 +341,8 @@ func TestBuildRoute(t *testing.T) {
 	const (
 		invalidPath             = "/invalid"
 		invalidRedirectHostname = "invalid.example.com"
+		emptyPathType           = "/empty-type"
+		emptyPathValue          = "/empty-value"
 	)
 
 	gatewayNsName := types.NamespacedName{Namespace: "test", Name: "gateway"}
@@ -352,6 +365,9 @@ func TestBuildRoute(t *testing.T) {
 	hrNotNGF := createHTTPRoute("hr", "some-gateway", "example.com", "/")
 	hrInvalidMatches := createHTTPRoute("hr", gatewayNsName.Name, "example.com", invalidPath)
 
+	hrInvalidMatchesEmptyPathType := createHTTPRoute("hr", gatewayNsName.Name, "example.com", emptyPathType)
+	hrInvalidMatchesEmptyPathValue := createHTTPRoute("hr", gatewayNsName.Name, "example.com", emptyPathValue)
+
 	hrInvalidFilters := createHTTPRoute("hr", gatewayNsName.Name, "example.com", "/filter")
 	addFilterToPath(hrInvalidFilters, "/filter", invalidFilter)
 
@@ -367,6 +383,12 @@ func TestBuildRoute(t *testing.T) {
 	hrDroppedInvalidFilters := createHTTPRoute("hr", gatewayNsName.Name, "example.com", "/filter", "/")
 	addFilterToPath(hrDroppedInvalidFilters, "/filter", validFilter)
 	addFilterToPath(hrDroppedInvalidFilters, "/", invalidFilter)
+
+	hrDuplicateSectionName := createHTTPRoute("hr", gatewayNsName.Name, "example.com", "/")
+	hrDuplicateSectionName.Spec.ParentRefs = append(
+		hrDuplicateSectionName.Spec.ParentRefs,
+		hrDuplicateSectionName.Spec.ParentRefs[0],
+	)
 
 	validatorInvalidFieldsInRule := &validationfakes.FakeHTTPFieldsValidator{
 		ValidatePathInMatchStub: func(path string) error {
@@ -414,6 +436,73 @@ func TestBuildRoute(t *testing.T) {
 				},
 			},
 			name: "normal case",
+		},
+		{
+			validator: &validationfakes.FakeHTTPFieldsValidator{},
+			hr:        hrInvalidMatchesEmptyPathType,
+			expected: &Route{
+				Source:     hrInvalidMatchesEmptyPathType,
+				Valid:      false,
+				Attachable: true,
+				ParentRefs: []ParentRef{
+					{
+						Idx:     0,
+						Gateway: gatewayNsName,
+					},
+				},
+				Conditions: []conditions.Condition{
+					staticConds.NewRouteUnsupportedValue(
+						`All rules are invalid: spec.rules[0].matches[0].path.type: Required value: path type cannot be nil`,
+					),
+				},
+				Rules: []Rule{
+					{
+						ValidMatches: false,
+						ValidFilters: true,
+					},
+				},
+			},
+			name: "invalid matches with empty path type",
+		},
+		{
+			validator: &validationfakes.FakeHTTPFieldsValidator{},
+			hr:        hrDuplicateSectionName,
+			expected: &Route{
+				Source: hrDuplicateSectionName,
+				Conditions: []conditions.Condition{
+					staticConds.NewRouteUnsupportedValue(
+						`duplicate section name "test-section" for Gateway test/gateway`,
+					),
+				},
+			},
+			name: "invalid route with duplicate sectionName",
+		},
+		{
+			validator: &validationfakes.FakeHTTPFieldsValidator{},
+			hr:        hrInvalidMatchesEmptyPathValue,
+			expected: &Route{
+				Source:     hrInvalidMatchesEmptyPathValue,
+				Valid:      false,
+				Attachable: true,
+				ParentRefs: []ParentRef{
+					{
+						Idx:     0,
+						Gateway: gatewayNsName,
+					},
+				},
+				Conditions: []conditions.Condition{
+					staticConds.NewRouteUnsupportedValue(
+						`All rules are invalid: spec.rules[0].matches[0].path.value: Required value: path value cannot be nil`,
+					),
+				},
+				Rules: []Rule{
+					{
+						ValidMatches: false,
+						ValidFilters: true,
+					},
+				},
+			},
+			name: "invalid matches with empty path value",
 		},
 		{
 			validator: &validationfakes.FakeHTTPFieldsValidator{},
@@ -1907,7 +1996,6 @@ func TestValidateFilterRedirect(t *testing.T) {
 		validator      *validationfakes.FakeHTTPFieldsValidator
 		name           string
 		expectErrCount int
-		panic          bool
 	}{
 		{
 			validator: &validationfakes.FakeHTTPFieldsValidator{},
@@ -1915,8 +2003,8 @@ func TestValidateFilterRedirect(t *testing.T) {
 				Type:            gatewayv1.HTTPRouteFilterRequestRedirect,
 				RequestRedirect: nil,
 			},
-			panic: true,
-			name:  "nil filter",
+			name:           "nil filter",
+			expectErrCount: 1,
 		},
 		{
 			validator: createAllValidValidator(),
@@ -2042,15 +2130,9 @@ func TestValidateFilterRedirect(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewWithT(t)
-			if test.panic {
-				validate := func() {
-					_ = validateFilterRedirect(test.validator, test.filter, filterPath)
-				}
-				g.Expect(validate).To(Panic())
-			} else {
-				allErrs := validateFilterRedirect(test.validator, test.filter, filterPath)
-				g.Expect(allErrs).To(HaveLen(test.expectErrCount))
-			}
+
+			allErrs := validateFilterRedirect(test.validator, test.filter, filterPath)
+			g.Expect(allErrs).To(HaveLen(test.expectErrCount))
 		})
 	}
 }
@@ -2061,7 +2143,6 @@ func TestValidateFilterRewrite(t *testing.T) {
 		validator      *validationfakes.FakeHTTPFieldsValidator
 		name           string
 		expectErrCount int
-		panic          bool
 	}{
 		{
 			validator: &validationfakes.FakeHTTPFieldsValidator{},
@@ -2069,8 +2150,8 @@ func TestValidateFilterRewrite(t *testing.T) {
 				Type:       gatewayv1.HTTPRouteFilterURLRewrite,
 				URLRewrite: nil,
 			},
-			panic: true,
-			name:  "nil filter",
+			name:           "nil filter",
+			expectErrCount: 1,
 		},
 		{
 			validator: &validationfakes.FakeHTTPFieldsValidator{},
@@ -2191,15 +2272,8 @@ func TestValidateFilterRewrite(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewWithT(t)
-			if test.panic {
-				validate := func() {
-					_ = validateFilterRewrite(test.validator, test.filter, filterPath)
-				}
-				g.Expect(validate).To(Panic())
-			} else {
-				allErrs := validateFilterRewrite(test.validator, test.filter, filterPath)
-				g.Expect(allErrs).To(HaveLen(test.expectErrCount))
-			}
+			allErrs := validateFilterRewrite(test.validator, test.filter, filterPath)
+			g.Expect(allErrs).To(HaveLen(test.expectErrCount))
 		})
 	}
 }
@@ -2232,6 +2306,15 @@ func TestValidateFilterRequestHeaderModifier(t *testing.T) {
 			},
 			expectErrCount: 0,
 			name:           "valid request header modifier filter",
+		},
+		{
+			validator: createAllValidValidator(),
+			filter: gatewayv1.HTTPRouteFilter{
+				Type:                  gatewayv1.HTTPRouteFilterRequestHeaderModifier,
+				RequestHeaderModifier: nil,
+			},
+			expectErrCount: 1,
+			name:           "nil request header modifier filter",
 		},
 		{
 			validator: func() *validationfakes.FakeHTTPFieldsValidator {

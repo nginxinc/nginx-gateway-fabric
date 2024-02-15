@@ -37,6 +37,17 @@ func TestValidateHTTPListener(t *testing.T) {
 		},
 		{
 			l: v1.Listener{
+				Port: 80,
+				TLS: &v1.GatewayTLSConfig{
+					Mode: helpers.GetPointer(v1.TLSModeTerminate),
+				},
+				Name: "http-listener",
+			},
+			expected: staticConds.NewListenerUnsupportedValue(`tls: Forbidden: tls is not supported for HTTP listener`),
+			name:     "invalid HTTP listener with TLS",
+		},
+		{
+			l: v1.Listener{
 				Port: 9113,
 			},
 			expected: staticConds.NewListenerUnsupportedValue(
@@ -152,6 +163,16 @@ func TestValidateHTTPSListener(t *testing.T) {
 		{
 			l: v1.Listener{
 				Port: 443,
+				TLS:  nil,
+			},
+			expected: staticConds.NewListenerUnsupportedValue(
+				`TLS: Required value: tls must be defined for HTTPS listener`,
+			),
+			name: "nil tls",
+		},
+		{
+			l: v1.Listener{
+				Port: 443,
 				TLS: &v1.GatewayTLSConfig{
 					Mode:            helpers.GetPointer(v1.TLSModeTerminate),
 					CertificateRefs: []v1.SecretObjectReference{invalidSecretRefGroup},
@@ -161,6 +182,19 @@ func TestValidateHTTPSListener(t *testing.T) {
 				`tls.certificateRefs[0].group: Unsupported value: "some-group": supported values: ""`,
 			),
 			name: "invalid cert ref group",
+		},
+		{
+			l: v1.Listener{
+				Port: 443,
+				TLS: &v1.GatewayTLSConfig{
+					Mode:            helpers.GetPointer(v1.TLSModeTerminate),
+					CertificateRefs: []v1.SecretObjectReference{},
+				},
+			},
+			expected: staticConds.NewListenerInvalidCertificateRef(
+				`tls.certificateRefs: Required value: certificateRefs must be defined for TLS mode terminate`,
+			),
+			name: "zero cert refs",
 		},
 		{
 			l: v1.Listener{

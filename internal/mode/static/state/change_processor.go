@@ -16,20 +16,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	v1 "sigs.k8s.io/gateway-api/apis/v1"
-	gwapivalidation "sigs.k8s.io/gateway-api/apis/v1/validation"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/gatewayclass"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/graph"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/validation"
-)
-
-const (
-	validationErrorLogMsg = "the resource failed validation: Gateway API CEL validation (Kubernetes 1.25+) " +
-		"by the Kubernetes API server and/or the Gateway API webhook validation (if installed) failed to reject " +
-		"the resource with the error; make sure Gateway API CRDs include CEL validation and/or (if installed) the " +
-		"webhook is running correctly."
 )
 
 // ChangeType is the type of change that occurred based on a k8s object event.
@@ -193,35 +185,8 @@ func NewChangeProcessorImpl(cfg ChangeProcessorConfig) *ChangeProcessorImpl {
 		},
 	)
 
-	updater := newValidatingUpsertUpdater(
-		trackingUpdater,
-		cfg.EventRecorder,
-		func(obj client.Object) error {
-			// Add the validation for Gateway API resources which the webhook validates
-
-			var err error
-			switch o := obj.(type) {
-			// We don't validate GatewayClass or ReferenceGrant, because as of the latest version,
-			// the webhook doesn't validate them.
-			// It only validates a GatewayClass update that requires the previous version of the resource,
-			// which NGF cannot reliably provide - for example, after NGF restarts).
-			// https://github.com/kubernetes-sigs/gateway-api/blob/v1.0.0/apis/v1/validation/gatewayclass.go#L28
-			case *v1.Gateway:
-				err = gwapivalidation.ValidateGateway(o).ToAggregate()
-			case *v1.HTTPRoute:
-				err = gwapivalidation.ValidateHTTPRoute(o).ToAggregate()
-			}
-
-			if err != nil {
-				return fmt.Errorf(validationErrorLogMsg+": %w", err)
-			}
-
-			return nil
-		},
-	)
-
 	processor.getAndResetClusterStateChanged = trackingUpdater.getAndResetChangedStatus
-	processor.updater = updater
+	processor.updater = trackingUpdater
 
 	return processor
 }
