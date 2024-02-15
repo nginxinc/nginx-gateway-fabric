@@ -1,5 +1,11 @@
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/nginxinc/nginx-gateway-fabric/badge)](https://api.securityscorecards.dev/projects/github.com/nginxinc/nginx-gateway-fabric)
 [![FOSSA Status](https://app.fossa.com/api/projects/custom%2B5618%2Fgithub.com%2Fnginxinc%2Fnginx-gateway-fabric.svg?type=shield)](https://app.fossa.com/projects/custom%2B5618%2Fgithub.com%2Fnginxinc%2Fnginx-gateway-fabric?ref=badge_shield)
+[![Continuous Integration](https://github.com/nginxinc/nginx-gateway-fabric/actions/workflows/ci.yml/badge.svg)](https://github.com/nginxinc/nginx-gateway-fabric/actions/workflows/ci.yml)
+[![Conformance Testing](https://github.com/nginxinc/nginx-gateway-fabric/actions/workflows/conformance.yml/badge.svg)](https://github.com/nginxinc/nginx-gateway-fabric/actions/workflows/conformance.yml)
+[![Go Report Card](https://goreportcard.com/badge/github.com/nginxinc/nginx-gateway-fabric)](https://goreportcard.com/report/github.com/nginxinc/nginx-gateway-fabric)
+[![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/nginxinc/nginx-gateway-fabric?logo=github&sort=semver)](https://github.com/nginxinc/nginx-gateway-fabric/releases/latest)
+[![Slack](https://img.shields.io/badge/slack-%23nginx--gateway--fabric-green?logo=slack)](https://nginxcommunity.slack.com/channels/nginx-gateway-fabric)
+[![Project Status: Active – The project has reached a stable, usable state and is being actively developed.](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active)
 
 # NGINX Gateway Fabric
 
@@ -31,14 +37,14 @@ our [releases page](https://github.com/nginxinc/nginx-gateway-fabric/releases).
 The latest release is [1.1.0](https://github.com/nginxinc/nginx-gateway-fabric/releases/tag/v1.1.0).
 
 The edge version is useful for experimenting with new features that are not yet published in a release. To use, choose
-the *edge* version built from the [latest commit](https://github.com/nginxinc/nginx-gateway-fabric/commits/main)
+the _edge_ version built from the [latest commit](https://github.com/nginxinc/nginx-gateway-fabric/commits/main)
 from the main branch.
 
 The table below summarizes the options regarding the images, manifests, documentation and examples and gives your links
 to the correct versions:
 
 | Version        | Description                              | Installation Manifests                                                            | Documentation and Examples                                                                                                                                                 |
-|----------------|------------------------------------------|-----------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| -------------- | ---------------------------------------- | --------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Latest release | For production use                       | [Manifests](https://github.com/nginxinc/nginx-gateway-fabric/tree/v1.1.0/deploy). | [Documentation](https://docs.nginx.com/nginx-gateway-fabric). [Examples](https://github.com/nginxinc/nginx-gateway-fabric/tree/v1.1.0/examples).                           |
 | Edge           | For experimental use and latest features | [Manifests](https://github.com/nginxinc/nginx-gateway-fabric/tree/main/deploy).   | [Documentation](https://github.com/nginxinc/nginx-gateway-fabric/tree/main/site/content). [Examples](https://github.com/nginxinc/nginx-gateway-fabric/tree/main/examples). |
 
@@ -54,21 +60,20 @@ The features that will go into the next release are reflected in the
 corresponding [milestone](https://github.com/nginxinc/nginx-gateway-fabric/milestones). Refer to
 the [Issue Lifecycle](ISSUE_LIFECYCLE.md) document for information on issue creation and assignment to releases.
 
-
 ## Technical Specifications
 
 The following table lists the software versions NGINX Gateway Fabric supports.
 
 | NGINX Gateway Fabric | Gateway API | Kubernetes | NGINX OSS | NGINX Plus |
-|----------------------|-------------|------------|-----------|------------|
+| -------------------- | ----------- | ---------- | --------- | ---------- |
 | Edge                 | 1.0.0       | 1.23+      | 1.25.3    | R31        |
 | 1.1.0                | 1.0.0       | 1.23+      | 1.25.3    | n/a        |
 | 1.0.0                | 0.8.1       | 1.23+      | 1.25.2    | n/a        |
 | 0.6.0                | 0.8.0       | 1.23+      | 1.25.2    | n/a        |
-| 0.5.0                | 0.7.1       | 1.21+      | 1.25.x *  | n/a        |
-| 0.4.0                | 0.7.1       | 1.21+      | 1.25.x *  | n/a        |
-| 0.3.0                | 0.6.2       | 1.21+      | 1.23.x *  | n/a        |
-| 0.2.0                | 0.5.1       | 1.21+      | 1.21.x *  | n/a        |
+| 0.5.0                | 0.7.1       | 1.21+      | 1.25.x \* | n/a        |
+| 0.4.0                | 0.7.1       | 1.21+      | 1.25.x \* | n/a        |
+| 0.3.0                | 0.6.2       | 1.21+      | 1.23.x \* | n/a        |
+| 0.2.0                | 0.5.1       | 1.21+      | 1.21.x \* | n/a        |
 | 0.1.0                | 0.5.0       | 1.19+      | 1.21.3    | n/a        |
 
 \*the installation manifests use the minor version of NGINX container image (e.g. 1.25) and the patch version is not
@@ -109,10 +114,8 @@ contact us directly via kubernetes@nginx.com or on the [NGINX Community Slack][s
 the `#nginx-gateway-fabric`
 channel.
 
-[bug]:https://github.com/nginxinc/nginx-gateway-fabric/issues/new?assignees=&labels=&projects=&template=bug_report.md&title=
-
-[idea]:https://github.com/nginxinc/nginx-gateway-fabric/discussions/categories/ideas
-
+[bug]: https://github.com/nginxinc/nginx-gateway-fabric/issues/new?assignees=&labels=&projects=&template=bug_report.md&title=
+[idea]: https://github.com/nginxinc/nginx-gateway-fabric/discussions/categories/ideas
 [slack]: https://nginxcommunity.slack.com/channels/nginx-gateway-fabric
 
 ## Community Meetings
