@@ -209,8 +209,7 @@ func collectClusterID(ctx context.Context, k8sClient client.Reader) (string, err
 		Name: kubeSystem,
 	}
 	var kubeNamespace v1.Namespace
-	err := k8sClient.Get(ctx, key, &kubeNamespace)
-	if err != nil {
+	if err := k8sClient.Get(ctx, key, &kubeNamespace); err != nil {
 		return "", fmt.Errorf("failed to get namespace :%w", err)
 	}
 	return string(kubeNamespace.GetUID()), nil
