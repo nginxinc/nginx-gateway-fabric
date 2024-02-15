@@ -59,6 +59,9 @@ func TestGenerate(t *testing.T) {
 				Key:  []byte("test-key"),
 			},
 		},
+		CertBundles: map[dataplane.CertBundleID]dataplane.CertBundle{
+			"test-certbundle": []byte("test-cert"),
+		},
 	}
 	g := NewWithT(t)
 
@@ -67,7 +70,7 @@ func TestGenerate(t *testing.T) {
 
 	files := generator.Generate(conf)
 
-	g.Expect(files).To(HaveLen(3))
+	g.Expect(files).To(HaveLen(4))
 
 	g.Expect(files[0]).To(Equal(file.File{
 		Type:    file.TypeSecret,
@@ -89,4 +92,8 @@ func TestGenerate(t *testing.T) {
 	g.Expect(files[2].Path).To(Equal("/etc/nginx/conf.d/config-version.conf"))
 	configVersion := string(files[2].Content)
 	g.Expect(configVersion).To(ContainSubstring(fmt.Sprintf("return 200 %d", conf.Version)))
+
+	g.Expect(files[3].Path).To(Equal("/etc/nginx/secrets/test-certbundle.crt"))
+	certBundle := string(files[3].Content)
+	g.Expect(certBundle).To(Equal("test-cert"))
 }
