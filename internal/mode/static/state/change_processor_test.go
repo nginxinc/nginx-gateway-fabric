@@ -184,6 +184,7 @@ func createScheme() *runtime.Scheme {
 
 	utilruntime.Must(v1.AddToScheme(scheme))
 	utilruntime.Must(v1beta1.AddToScheme(scheme))
+	utilruntime.Must(v1alpha2.AddToScheme(scheme))
 	utilruntime.Must(apiv1.AddToScheme(scheme))
 	utilruntime.Must(discoveryV1.AddToScheme(scheme))
 	utilruntime.Must(apiext.AddToScheme(scheme))
@@ -573,11 +574,11 @@ var _ = Describe("ChangeProcessor", func() {
 							}
 							expGraph.Routes[hr1Name].ParentRefs[0].Attachment = &graph.ParentRefAttachmentStatus{
 								AcceptedHostnames: map[string][]string{},
-								FailedCondition:   staticConds.NewRouteInvalidGateway(),
+								FailedCondition:   staticConds.NewRouteNoMatchingParent(),
 							}
 							expGraph.Routes[hr1Name].ParentRefs[1].Attachment = &graph.ParentRefAttachmentStatus{
 								AcceptedHostnames: map[string][]string{},
-								FailedCondition:   staticConds.NewRouteInvalidGateway(),
+								FailedCondition:   staticConds.NewRouteNoMatchingParent(),
 							}
 
 							expGraph.ReferencedSecrets = nil
@@ -1001,6 +1002,7 @@ var _ = Describe("ChangeProcessor", func() {
 				hr1svc, sharedSvc, bazSvc1, bazSvc2, bazSvc3, invalidSvc, notRefSvc *apiv1.Service
 				hr1slice1, hr1slice2, noRefSlice, missingSvcNameSlice               *discoveryV1.EndpointSlice
 				gw                                                                  *v1.Gateway
+				btls                                                                *v1alpha2.BackendTLSPolicy
 			)
 
 			createSvc := func(name string) *apiv1.Service {
@@ -1018,6 +1020,24 @@ var _ = Describe("ChangeProcessor", func() {
 						Namespace: "test",
 						Name:      name,
 						Labels:    map[string]string{index.KubernetesServiceNameLabel: svcName},
+					},
+				}
+			}
+
+			createBackendTLSPolicy := func(name string, svcName string) *v1alpha2.BackendTLSPolicy {
+				return &v1alpha2.BackendTLSPolicy{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "test",
+						Name:      name,
+					},
+					Spec: v1alpha2.BackendTLSPolicySpec{
+						TargetRef: v1alpha2.PolicyTargetReferenceWithSectionName{
+							PolicyTargetReference: v1alpha2.PolicyTargetReference{
+								Kind:      v1.Kind("Service"),
+								Name:      v1.ObjectName(svcName),
+								Namespace: helpers.GetPointer(v1.Namespace("test")),
+							},
+						},
 					},
 				}
 			}
@@ -1067,6 +1087,9 @@ var _ = Describe("ChangeProcessor", func() {
 				noRefSlice = createEndpointSlice("no-ref", "no-ref")
 				missingSvcNameSlice = createEndpointSlice("missing-svc-name", "")
 
+				// backendTLSPolicy
+				btls = createBackendTLSPolicy("btls", "foo-svc")
+
 				gw = createGateway("gw")
 				processor.CaptureUpsertChange(gc)
 				processor.CaptureUpsertChange(gw)
@@ -1097,6 +1120,11 @@ var _ = Describe("ChangeProcessor", func() {
 			When("a hr1 service is added", func() {
 				It("should trigger a change", func() {
 					testUpsertTriggersChange(hr1svc, state.ClusterStateChange)
+				})
+			})
+			When("a backendTLSPolicy is added for referenced service", func() {
+				It("should trigger a change", func() {
+					testUpsertTriggersChange(btls, state.ClusterStateChange)
 				})
 			})
 			When("an hr1 endpoint slice is added", func() {
@@ -1502,17 +1530,20 @@ var _ = Describe("ChangeProcessor", func() {
 		// Note: in these tests, we deliberately don't fully inspect the returned configuration and statuses
 		// -- this is done in 'Normal cases of processing changes'
 
+		//nolint:lll
 		var (
-			processor                                                                               *state.ChangeProcessorImpl
-			gcNsName, gwNsName, hrNsName, hr2NsName, rgNsName, svcNsName, sliceNsName, secretNsName types.NamespacedName
-			gc, gcUpdated                                                                           *v1.GatewayClass
-			gw1, gw1Updated, gw2                                                                    *v1.Gateway
-			hr1, hr1Updated, hr2                                                                    *v1.HTTPRoute
-			rg1, rg1Updated, rg2                                                                    *v1beta1.ReferenceGrant
-			svc, barSvc, unrelatedSvc                                                               *apiv1.Service
-			slice, barSlice, unrelatedSlice                                                         *discoveryV1.EndpointSlice
-			ns, unrelatedNS, testNs, barNs                                                          *apiv1.Namespace
-			secret, secretUpdated, unrelatedSecret, barSecret, barSecretUpdated                     *apiv1.Secret
+			processor                                                                                                     *state.ChangeProcessorImpl
+			gcNsName, gwNsName, hrNsName, hr2NsName, rgNsName, svcNsName, sliceNsName, secretNsName, cmNsName, btlsNsName types.NamespacedName
+			gc, gcUpdated                                                                                                 *v1.GatewayClass
+			gw1, gw1Updated, gw2                                                                                          *v1.Gateway
+			hr1, hr1Updated, hr2                                                                                          *v1.HTTPRoute
+			rg1, rg1Updated, rg2                                                                                          *v1beta1.ReferenceGrant
+			svc, barSvc, unrelatedSvc                                                                                     *apiv1.Service
+			slice, barSlice, unrelatedSlice                                                                               *discoveryV1.EndpointSlice
+			ns, unrelatedNS, testNs, barNs                                                                                *apiv1.Namespace
+			secret, secretUpdated, unrelatedSecret, barSecret, barSecretUpdated                                           *apiv1.Secret
+			cm, cmUpdated, unrelatedCM                                                                                    *apiv1.ConfigMap
+			btls, btlsUpdated                                                                                             *v1alpha2.BackendTLSPolicy
 		)
 
 		BeforeEach(OncePerOrdered, func() {
@@ -1755,6 +1786,55 @@ var _ = Describe("ChangeProcessor", func() {
 
 			rg2 = rg1.DeepCopy()
 			rg2.Name = "rg-2"
+
+			cmNsName = types.NamespacedName{Namespace: "test", Name: "cm-1"}
+			cm = &apiv1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      cmNsName.Name,
+					Namespace: cmNsName.Namespace,
+				},
+				Data: map[string]string{
+					"ca.crt": "value",
+				},
+			}
+			cmUpdated = cm.DeepCopy()
+			cmUpdated.Data["ca.crt"] = "updated-value"
+
+			unrelatedCM = &apiv1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "unrelated-cm",
+					Namespace: "unrelated-ns",
+				},
+				Data: map[string]string{
+					"ca.crt": "value",
+				},
+			}
+
+			btlsNsName = types.NamespacedName{Namespace: "test", Name: "btls-1"}
+			btls = &v1alpha2.BackendTLSPolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:       btlsNsName.Name,
+					Namespace:  btlsNsName.Namespace,
+					Generation: 1,
+				},
+				Spec: v1alpha2.BackendTLSPolicySpec{
+					TargetRef: v1alpha2.PolicyTargetReferenceWithSectionName{
+						PolicyTargetReference: v1alpha2.PolicyTargetReference{
+							Kind:      "Service",
+							Name:      v1.ObjectName(svc.Name),
+							Namespace: helpers.GetPointer(v1.Namespace(svc.Namespace)),
+						},
+					},
+					TLS: v1alpha2.BackendTLSPolicyConfig{
+						CACertRefs: []v1.LocalObjectReference{
+							{
+								Name: v1.ObjectName(cm.Name),
+							},
+						},
+					},
+				},
+			}
+			btlsUpdated = btls.DeepCopy()
 		})
 		// Changing change - a change that makes processor.Process() report changed
 		// Non-changing change - a change that doesn't do that
@@ -1770,6 +1850,8 @@ var _ = Describe("ChangeProcessor", func() {
 				processor.CaptureUpsertChange(testNs)
 				processor.CaptureUpsertChange(hr1)
 				processor.CaptureUpsertChange(rg1)
+				processor.CaptureUpsertChange(btls)
+				processor.CaptureUpsertChange(cm)
 
 				changed, _ := processor.Process()
 				Expect(changed).To(Equal(state.ClusterStateChange))
@@ -1781,12 +1863,16 @@ var _ = Describe("ChangeProcessor", func() {
 					processor.CaptureUpsertChange(gw1Updated)
 					processor.CaptureUpsertChange(hr1Updated)
 					processor.CaptureUpsertChange(rg1Updated)
+					processor.CaptureUpsertChange(btlsUpdated)
+					processor.CaptureUpsertChange(cmUpdated)
 
 					// there are non-changing changes
 					processor.CaptureUpsertChange(gcUpdated)
 					processor.CaptureUpsertChange(gw1Updated)
 					processor.CaptureUpsertChange(hr1Updated)
 					processor.CaptureUpsertChange(rg1Updated)
+					processor.CaptureUpsertChange(btlsUpdated)
+					processor.CaptureUpsertChange(cmUpdated)
 
 					changed, _ := processor.Process()
 					Expect(changed).To(Equal(state.ClusterStateChange))
@@ -1808,6 +1894,8 @@ var _ = Describe("ChangeProcessor", func() {
 					processor.CaptureDeleteChange(&v1.Gateway{}, gwNsName)
 					processor.CaptureDeleteChange(&v1.HTTPRoute{}, hrNsName)
 					processor.CaptureDeleteChange(&v1beta1.ReferenceGrant{}, rgNsName)
+					processor.CaptureDeleteChange(&v1alpha2.BackendTLSPolicy{}, btlsNsName)
+					processor.CaptureDeleteChange(&apiv1.ConfigMap{}, cmNsName)
 
 					// these are non-changing changes
 					processor.CaptureUpsertChange(gw2)
@@ -1846,6 +1934,7 @@ var _ = Describe("ChangeProcessor", func() {
 				processor.CaptureUpsertChange(hr1)
 				processor.CaptureUpsertChange(secret)
 				processor.CaptureUpsertChange(barSecret)
+				processor.CaptureUpsertChange(cm)
 				changed, _ := processor.Process()
 				Expect(changed).To(Equal(state.ClusterStateChange))
 			})
@@ -1855,6 +1944,7 @@ var _ = Describe("ChangeProcessor", func() {
 				processor.CaptureUpsertChange(slice)
 				processor.CaptureUpsertChange(ns)
 				processor.CaptureUpsertChange(secretUpdated)
+				processor.CaptureUpsertChange(cmUpdated)
 				changed, _ := processor.Process()
 				Expect(changed).To(Equal(state.ClusterStateChange))
 			})
@@ -1863,6 +1953,7 @@ var _ = Describe("ChangeProcessor", func() {
 				processor.CaptureUpsertChange(unrelatedSlice)
 				processor.CaptureUpsertChange(unrelatedNS)
 				processor.CaptureUpsertChange(unrelatedSecret)
+				processor.CaptureUpsertChange(unrelatedCM)
 
 				changed, _ := processor.Process()
 				Expect(changed).To(Equal(state.NoChange))
@@ -1874,12 +1965,14 @@ var _ = Describe("ChangeProcessor", func() {
 					processor.CaptureUpsertChange(barSlice)
 					processor.CaptureUpsertChange(barNs)
 					processor.CaptureUpsertChange(barSecretUpdated)
+					processor.CaptureUpsertChange(cmUpdated)
 
 					// there are non-changing changes
 					processor.CaptureUpsertChange(unrelatedSvc)
 					processor.CaptureUpsertChange(unrelatedSlice)
 					processor.CaptureUpsertChange(unrelatedNS)
 					processor.CaptureUpsertChange(unrelatedSecret)
+					processor.CaptureUpsertChange(unrelatedCM)
 
 					changed, _ := processor.Process()
 					Expect(changed).To(Equal(state.ClusterStateChange))
@@ -1892,12 +1985,14 @@ var _ = Describe("ChangeProcessor", func() {
 					processor.CaptureDeleteChange(&discoveryV1.EndpointSlice{}, sliceNsName)
 					processor.CaptureDeleteChange(&apiv1.Namespace{}, types.NamespacedName{Name: "ns"})
 					processor.CaptureDeleteChange(&apiv1.Secret{}, secretNsName)
+					processor.CaptureDeleteChange(&apiv1.ConfigMap{}, cmNsName)
 
 					// these are non-changing changes
 					processor.CaptureUpsertChange(unrelatedSvc)
 					processor.CaptureUpsertChange(unrelatedSlice)
 					processor.CaptureUpsertChange(unrelatedNS)
 					processor.CaptureUpsertChange(unrelatedSecret)
+					processor.CaptureUpsertChange(unrelatedCM)
 
 					changed, _ := processor.Process()
 					Expect(changed).To(Equal(state.ClusterStateChange))
@@ -1912,12 +2007,14 @@ var _ = Describe("ChangeProcessor", func() {
 				processor.CaptureUpsertChange(testNs)
 				processor.CaptureUpsertChange(hr1)
 				processor.CaptureUpsertChange(rg1)
+				processor.CaptureUpsertChange(btls)
 
 				// related Kubernetes API resources
 				processor.CaptureUpsertChange(svc)
 				processor.CaptureUpsertChange(slice)
 				processor.CaptureUpsertChange(ns)
 				processor.CaptureUpsertChange(secret)
+				processor.CaptureUpsertChange(cm)
 
 				changed, _ := processor.Process()
 				Expect(changed).To(Equal(state.ClusterStateChange))
@@ -1928,6 +2025,7 @@ var _ = Describe("ChangeProcessor", func() {
 				processor.CaptureUpsertChange(unrelatedSlice)
 				processor.CaptureUpsertChange(unrelatedNS)
 				processor.CaptureUpsertChange(unrelatedSecret)
+				processor.CaptureUpsertChange(unrelatedCM)
 
 				changed, _ := processor.Process()
 				Expect(changed).To(Equal(state.NoChange))
@@ -1939,12 +2037,14 @@ var _ = Describe("ChangeProcessor", func() {
 					processor.CaptureUpsertChange(gw1Updated)
 					processor.CaptureUpsertChange(hr1Updated)
 					processor.CaptureUpsertChange(rg1Updated)
+					processor.CaptureUpsertChange(btlsUpdated)
 
 					// these are non-changing changes
 					processor.CaptureUpsertChange(unrelatedSvc)
 					processor.CaptureUpsertChange(unrelatedSlice)
 					processor.CaptureUpsertChange(unrelatedNS)
 					processor.CaptureUpsertChange(unrelatedSecret)
+					processor.CaptureUpsertChange(unrelatedCM)
 
 					changed, _ := processor.Process()
 					Expect(changed).To(Equal(state.ClusterStateChange))

@@ -30,6 +30,7 @@ jobs:
       matrix:
         k8s-version: ["1.23.17", "latest"]
         nginx-image: [nginx, nginx-plus]
+        enable-experimental: [true, false]
     permissions:
       contents: write # needed for uploading release artifacts
     steps:
@@ -148,6 +149,7 @@ jobs:
           ngf_tag=${{ steps.ngf-meta.outputs.version }}
           if [ ${{ github.event_name }} == "schedule" ]; then export GW_API_VERSION=main; fi
           if [ ${{ startsWith(matrix.k8s-version, '1.23') ||  startsWith(matrix.k8s-version, '1.24') }} == "true" ]; then export INSTALL_WEBHOOK=true; fi
+          if [ ${{ matrix.enable-experimental }} == "true" ]; then export ENABLE_EXPERIMENTAL=true; fi
           make install-ngf-local-no-build${{ matrix.nginx-image == 'nginx-plus' && '-with-plus' || ''}} PREFIX=${ngf_prefix} TAG=${ngf_tag}
         working-directory: ./conformance
 
