@@ -14,7 +14,7 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/graph"
 )
 
-// kubeSystem indicates the name of kube-system namespace
+// kubeSystem indicates the name of kube-system namespace.
 const kubeSystem = "kube-system"
 
 //go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . GraphGetter
