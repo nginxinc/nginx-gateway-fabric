@@ -13,6 +13,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
+	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/config"
@@ -35,6 +36,7 @@ func TestPrepareFirstEventBatchPreparerArgs(t *testing.T) {
 		gwNsName            *types.NamespacedName
 		expectedObjects     []client.Object
 		expectedObjectLists []client.ObjectList
+		experimentalEnabled bool
 	}{
 		{
 			name:     "gwNsName is nil",
@@ -73,13 +75,36 @@ func TestPrepareFirstEventBatchPreparerArgs(t *testing.T) {
 				partialObjectMetadataList,
 			},
 		},
+		{
+			name: "gwNsName is not nil and experimental enabled",
+			gwNsName: &types.NamespacedName{
+				Namespace: "test",
+				Name:      "my-gateway",
+			},
+			expectedObjects: []client.Object{
+				&gatewayv1.GatewayClass{ObjectMeta: metav1.ObjectMeta{Name: "nginx"}},
+				&gatewayv1.Gateway{ObjectMeta: metav1.ObjectMeta{Name: "my-gateway", Namespace: "test"}},
+			},
+			expectedObjectLists: []client.ObjectList{
+				&apiv1.ServiceList{},
+				&apiv1.SecretList{},
+				&apiv1.NamespaceList{},
+				&apiv1.ConfigMapList{},
+				&discoveryV1.EndpointSliceList{},
+				&gatewayv1.HTTPRouteList{},
+				&gatewayv1beta1.ReferenceGrantList{},
+				partialObjectMetadataList,
+				&gatewayv1alpha2.BackendTLSPolicyList{},
+			},
+			experimentalEnabled: true,
+		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewWithT(t)
 
-			objects, objectLists := prepareFirstEventBatchPreparerArgs(gcName, test.gwNsName)
+			objects, objectLists := prepareFirstEventBatchPreparerArgs(gcName, test.gwNsName, test.experimentalEnabled)
 
 			g.Expect(objects).To(ConsistOf(test.expectedObjects))
 			g.Expect(objectLists).To(ConsistOf(test.expectedObjectLists))

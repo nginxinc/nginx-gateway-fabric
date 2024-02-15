@@ -128,6 +128,12 @@ This will build the docker images `nginx-gateway-fabric:<your-user>` and `nginx-
    kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/standard-install.yaml
    ```
 
+   If you're implementing experimental Gateway API features, install Gateway API CRDs from the experimental channel:
+
+   ```shell
+   kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/experimental-install.yaml
+   ```
+
 4. Install NGF using your custom image and expose NGF with a NodePort Service:
 
    - To install with Helm (where your release name is `my-release`):
@@ -159,6 +165,15 @@ This will build the docker images `nginx-gateway-fabric:<your-user>` and `nginx-
       make generate-manifests HELM_TEMPLATE_COMMON_ARGS="--set nginxGateway.image.repository=nginx-gateway-fabric --set nginxGateway.image.tag=$(whoami) --set nginxGateway.image.pullPolicy=Never --set nginx.image.repository=nginx-gateway-fabric/nginx-plus --set nginx.image.tag=$(whoami) --set nginx.image.pullPolicy=Never --set nginx.plus=true"
       kubectl apply -f deploy/manifests/crds
       kubectl apply -f deploy/manifests/nginx-gateway.yaml
+      kubectl apply -f deploy/manifests/service/nodeport.yaml
+      ```
+
+   - To install with experimental manifests:
+
+      ```shell
+      make generate-manifests HELM_TEMPLATE_COMMON_ARGS="--set nginxGateway.image.repository=nginx-gateway-fabric --set nginxGateway.image.tag=$(whoami) --set nginxGateway.image.pullPolicy=Never --set nginx.image.repository=nginx-gateway-fabric/nginx --set nginx.image.tag=$(whoami) --set nginx.image.pullPolicy=Never"
+      kubectl apply -f deploy/manifests/crds
+      kubectl apply -f deploy/manifests/nginx-gateway-experimental.yaml
       kubectl apply -f deploy/manifests/service/nodeport.yaml
       ```
 
