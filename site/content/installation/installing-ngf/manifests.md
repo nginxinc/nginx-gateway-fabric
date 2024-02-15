@@ -73,6 +73,25 @@ Deploying NGINX Gateway Fabric with Kubernetes manifests takes only a few steps.
 
    Update the nginx-plus-gateway.yaml file to include your chosen image from the F5 Container registry or your custom container image.
 
+#### Enable experimental features
+
+We support a subset of the additional features provided by the Gateway API experimental channel. To enable the experimental features of Gateway API which are supported by NGINX Gateway Fabric:
+
+- For NGINX:
+
+   ```shell
+   kubectl apply -f deploy/manifests/nginx-gateway-experimental.yaml
+   ```
+
+- For NGINX Plus
+
+   ```shell
+   kubectl apply -f deploy/manifests/nginx-plus-gateway-experimental.yaml
+   ```
+
+   Update the nginx-plus-gateway-experimental.yaml file to include your chosen image from the F5 Container registry or your custom container image.
+
+{{<note>}}Requires the Gateway APIs installed from the experimental channel.{{</note>}}
 
 ### 4. Verify the Deployment
 
@@ -104,6 +123,12 @@ To upgrade NGINX Gateway Fabric and get the latest features and improvements, ta
 
       ```shell
       kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/standard-install.yaml
+      ```
+
+      or, if you installed the from the experimental channel:
+
+      ```shell
+      kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/experimental-install.yaml
       ```
 
    - If you are running on Kubernetes 1.23 or 1.24, you also need to update the validating webhook:

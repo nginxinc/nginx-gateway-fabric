@@ -247,7 +247,6 @@ func updateLocationsForFilters(
 
 	rewrites := createRewritesValForRewriteFilter(filters.RequestURLRewrite, path)
 	proxySetHeaders := generateProxySetHeaders(&matchRule.Filters)
-	proxyPass := createProxyPass(matchRule.BackendGroup, matchRule.Filters.RequestURLRewrite)
 	for i := range buildLocations {
 		if rewrites != nil {
 			if rewrites.Rewrite != "" {
@@ -255,10 +254,55 @@ func updateLocationsForFilters(
 			}
 		}
 		buildLocations[i].ProxySetHeaders = proxySetHeaders
+		buildLocations[i].ProxySSLVerify = createProxyTLSFromBackends(matchRule.BackendGroup.Backends)
+		proxyPass := createProxyPass(
+			matchRule.BackendGroup,
+			matchRule.Filters.RequestURLRewrite,
+			generateProtocolString(buildLocations[i].ProxySSLVerify),
+		)
 		buildLocations[i].ProxyPass = proxyPass
 	}
 
 	return buildLocations
+}
+
+func generateProtocolString(ssl *http.ProxySSLVerify) string {
+	if ssl != nil {
+		return "https"
+	}
+	return "http"
+}
+
+func createProxyTLSFromBackends(backends []dataplane.Backend) *http.ProxySSLVerify {
+	if len(backends) == 0 {
+		return nil
+	}
+	for _, b := range backends {
+		proxyVerify := createProxySSLVerify(b.VerifyTLS)
+		if proxyVerify != nil {
+			// If any backend has a backend TLS policy defined, then we use that for the proxy SSL verification.
+			// We require that all backends in a group have the same backend TLS policy.
+			// Verification that all backends in a group have the same backend TLS policy is done in the graph package.
+			return proxyVerify
+		}
+	}
+	return nil
+}
+
+func createProxySSLVerify(v *dataplane.VerifyTLS) *http.ProxySSLVerify {
+	if v == nil {
+		return nil
+	}
+	var trustedCert string
+	if v.CertBundleID != "" {
+		trustedCert = generateCertBundleFileName(v.CertBundleID)
+	} else {
+		trustedCert = v.RootCAPath
+	}
+	return &http.ProxySSLVerify{
+		TrustedCertificate: trustedCert,
+		Name:               v.Hostname,
+	}
 }
 
 func createReturnValForRedirectFilter(filter *dataplane.HTTPRequestRedirectFilter, listenerPort int32) *http.Return {
@@ -427,7 +471,11 @@ func isPathOnlyMatch(match dataplane.Match) bool {
 	return match.Method == nil && len(match.Headers) == 0 && len(match.QueryParams) == 0
 }
 
-func createProxyPass(backendGroup dataplane.BackendGroup, filter *dataplane.HTTPURLRewriteFilter) string {
+func createProxyPass(
+	backendGroup dataplane.BackendGroup,
+	filter *dataplane.HTTPURLRewriteFilter,
+	protocol string,
+) string {
 	var requestURI string
 	if filter == nil || filter.Path == nil {
 		requestURI = "$request_uri"
@@ -435,10 +483,10 @@ func createProxyPass(backendGroup dataplane.BackendGroup, filter *dataplane.HTTP
 
 	backendName := backendGroupName(backendGroup)
 	if backendGroupNeedsSplit(backendGroup) {
-		return "http://$" + convertStringToSafeVariableName(backendName) + requestURI
+		return protocol + "://$" + convertStringToSafeVariableName(backendName) + requestURI
 	}
 
-	return "http://" + backendName + requestURI
+	return protocol + "://" + backendName + requestURI
 }
 
 func createMatchLocation(path string) http.Location {

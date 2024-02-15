@@ -10,6 +10,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
+	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
@@ -393,38 +394,142 @@ func TestAddBackendRefsToRulesTest(t *testing.T) {
 
 	hrWithOneBackend := createRoute("hr1", "Service", 1, "svc1")
 	hrWithTwoBackends := createRoute("hr2", "Service", 2, "svc1")
+	hrWithTwoDiffBackends := createRoute("hr2", "Service", 2, "svc1")
 	hrWithInvalidRule := createRoute("hr3", "NotService", 1, "svc1")
 	hrWithZeroBackendRefs := createRoute("hr4", "Service", 1, "svc1")
 	hrWithZeroBackendRefs.Spec.Rules[0].BackendRefs = nil
+	hrWithTwoDiffBackends.Spec.Rules[0].BackendRefs[1].Name = "svc2"
 
-	svc1 := &v1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: "test",
-			Name:      "svc1",
-		},
-		Spec: v1.ServiceSpec{
-			Ports: []v1.ServicePort{
-				{
-					Port: 80,
-				},
-				{
-					Port: 81,
+	getSvc := func(name string) *v1.Service {
+		return &v1.Service{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: "test",
+				Name:      name,
+			},
+			Spec: v1.ServiceSpec{
+				Ports: []v1.ServicePort{
+					{
+						Port: 80,
+					},
+					{
+						Port: 81,
+					},
 				},
 			},
-		},
+		}
 	}
+	svc1 := getSvc("svc1")
 	svc1NsName := types.NamespacedName{
 		Namespace: "test",
 		Name:      "svc1",
 	}
 
-	services := map[types.NamespacedName]*v1.Service{
-		{Namespace: "test", Name: "svc1"}: svc1,
+	svc2 := getSvc("svc2")
+	svc2NsName := types.NamespacedName{
+		Namespace: "test",
+		Name:      "svc2",
 	}
 
+	services := map[types.NamespacedName]*v1.Service{
+		{Namespace: "test", Name: "svc1"}: svc1,
+		{Namespace: "test", Name: "svc2"}: svc2,
+	}
+	emptyPolicies := map[types.NamespacedName]*BackendTLSPolicy{}
+
+	getPolicy := func(name, svcName, cmName string) *BackendTLSPolicy {
+		return &BackendTLSPolicy{
+			Valid: true,
+			Source: &v1alpha2.BackendTLSPolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      name,
+					Namespace: "test",
+				},
+				Spec: v1alpha2.BackendTLSPolicySpec{
+					TargetRef: v1alpha2.PolicyTargetReferenceWithSectionName{
+						PolicyTargetReference: v1alpha2.PolicyTargetReference{
+							Group:     "",
+							Kind:      "Service",
+							Name:      gatewayv1.ObjectName(svcName),
+							Namespace: (*gatewayv1.Namespace)(helpers.GetPointer("test")),
+						},
+					},
+					TLS: v1alpha2.BackendTLSPolicyConfig{
+						Hostname: "foo.example.com",
+						CACertRefs: []gatewayv1.LocalObjectReference{
+							{
+								Group: "",
+								Kind:  "ConfigMap",
+								Name:  gatewayv1.ObjectName(cmName),
+							},
+						},
+					},
+				},
+			},
+		}
+	}
+
+	policiesMatching := map[types.NamespacedName]*BackendTLSPolicy{
+		{Namespace: "test", Name: "btp1"}: getPolicy("btp1", "svc1", "test"),
+		{Namespace: "test", Name: "btp2"}: getPolicy("btp2", "svc2", "test"),
+	}
+	policiesNotMatching := map[types.NamespacedName]*BackendTLSPolicy{
+		{Namespace: "test", Name: "btp1"}: getPolicy("btp1", "svc1", "test1"),
+		{Namespace: "test", Name: "btp2"}: getPolicy("btp2", "svc2", "test2"),
+	}
+
+	getBtp := func(name string, svcName string, cmName string) *BackendTLSPolicy {
+		return &BackendTLSPolicy{
+			Source: &v1alpha2.BackendTLSPolicy{
+				ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: "test"},
+				Spec: v1alpha2.BackendTLSPolicySpec{
+					TargetRef: v1alpha2.PolicyTargetReferenceWithSectionName{
+						PolicyTargetReference: v1alpha2.PolicyTargetReference{
+							Group:     "",
+							Kind:      "Service",
+							Name:      gatewayv1.ObjectName(svcName),
+							Namespace: (*gatewayv1.Namespace)(helpers.GetPointer("test")),
+						},
+					},
+					TLS: v1alpha2.BackendTLSPolicyConfig{
+						Hostname: "foo.example.com",
+						CACertRefs: []gatewayv1.LocalObjectReference{
+							{
+								Group: "",
+								Kind:  "ConfigMap",
+								Name:  gatewayv1.ObjectName(cmName),
+							},
+						},
+					},
+				},
+			},
+			Conditions: []conditions.Condition{
+				{
+					Type:    "Accepted",
+					Status:  "True",
+					Reason:  "Accepted",
+					Message: "BackendTLSPolicy is accepted by the Gateway",
+				},
+			},
+			Valid:        true,
+			IsReferenced: true,
+		}
+	}
+
+	btp1 := getBtp("btp1", "svc1", "test1")
+	btp2 := getBtp("btp2", "svc2", "test2")
+	btp3 := getBtp("btp1", "svc1", "test")
+	btp3.Conditions = append(btp3.Conditions, conditions.Condition{
+		Type:    "Accepted",
+		Status:  "True",
+		Reason:  "Accepted",
+		Message: "BackendTLSPolicy is accepted by the Gateway",
+	},
+	)
+
 	tests := []struct {
-		name                string
 		route               *Route
+		policies            map[types.NamespacedName]*BackendTLSPolicy
+		name                string
 		expectedBackendRefs []BackendRef
 		expectedConditions  []conditions.Condition
 	}{
@@ -444,6 +549,7 @@ func TestAddBackendRefsToRulesTest(t *testing.T) {
 				},
 			},
 			expectedConditions: nil,
+			policies:           emptyPolicies,
 			name:               "normal case with one rule with one backend",
 		},
 		{
@@ -468,7 +574,35 @@ func TestAddBackendRefsToRulesTest(t *testing.T) {
 				},
 			},
 			expectedConditions: nil,
+			policies:           emptyPolicies,
 			name:               "normal case with one rule with two backends",
+		},
+		{
+			route: &Route{
+				Source:     hrWithTwoBackends,
+				ParentRefs: sectionNameRefs,
+				Valid:      true,
+				Rules:      createRules(hrWithTwoBackends, allValid, allValid),
+			},
+			expectedBackendRefs: []BackendRef{
+				{
+					SvcNsName:        svc1NsName,
+					ServicePort:      svc1.Spec.Ports[0],
+					Valid:            true,
+					Weight:           1,
+					BackendTLSPolicy: btp3,
+				},
+				{
+					SvcNsName:        svc1NsName,
+					ServicePort:      svc1.Spec.Ports[1],
+					Valid:            true,
+					Weight:           5,
+					BackendTLSPolicy: btp3,
+				},
+			},
+			expectedConditions: nil,
+			policies:           policiesMatching,
+			name:               "normal case with one rule with two backends and matching policies",
 		},
 		{
 			route: &Route{
@@ -478,6 +612,7 @@ func TestAddBackendRefsToRulesTest(t *testing.T) {
 			},
 			expectedBackendRefs: nil,
 			expectedConditions:  nil,
+			policies:            emptyPolicies,
 			name:                "invalid route",
 		},
 		{
@@ -489,6 +624,7 @@ func TestAddBackendRefsToRulesTest(t *testing.T) {
 			},
 			expectedBackendRefs: nil,
 			expectedConditions:  nil,
+			policies:            emptyPolicies,
 			name:                "invalid matches",
 		},
 		{
@@ -500,6 +636,7 @@ func TestAddBackendRefsToRulesTest(t *testing.T) {
 			},
 			expectedBackendRefs: nil,
 			expectedConditions:  nil,
+			policies:            emptyPolicies,
 			name:                "invalid filters",
 		},
 		{
@@ -519,7 +656,39 @@ func TestAddBackendRefsToRulesTest(t *testing.T) {
 					`spec.rules[0].backendRefs[0].kind: Unsupported value: "NotService": supported values: "Service"`,
 				),
 			},
-			name: "invalid backendRef",
+			policies: emptyPolicies,
+			name:     "invalid backendRef",
+		},
+		{
+			route: &Route{
+				Source:     hrWithTwoDiffBackends,
+				ParentRefs: sectionNameRefs,
+				Valid:      true,
+				Rules:      createRules(hrWithTwoDiffBackends, allValid, allValid),
+			},
+			expectedBackendRefs: []BackendRef{
+				{
+					SvcNsName:        svc1NsName,
+					ServicePort:      svc1.Spec.Ports[0],
+					Valid:            false,
+					Weight:           1,
+					BackendTLSPolicy: btp1,
+				},
+				{
+					SvcNsName:        svc2NsName,
+					ServicePort:      svc2.Spec.Ports[1],
+					Valid:            false,
+					Weight:           5,
+					BackendTLSPolicy: btp2,
+				},
+			},
+			expectedConditions: []conditions.Condition{
+				staticConds.NewRouteBackendRefUnsupportedValue(
+					`Backend TLS policies do not match for all backends`,
+				),
+			},
+			policies: policiesNotMatching,
+			name:     "invalid backendRef - backend TLS policies do not match for all backends",
 		},
 		{
 			route: &Route{
@@ -538,7 +707,7 @@ func TestAddBackendRefsToRulesTest(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewWithT(t)
 			resolver := newReferenceGrantResolver(nil)
-			addBackendRefsToRules(test.route, resolver, services)
+			addBackendRefsToRules(test.route, resolver, services, test.policies)
 
 			var actual []BackendRef
 			if test.route.Rules != nil {
@@ -552,22 +721,77 @@ func TestAddBackendRefsToRulesTest(t *testing.T) {
 }
 
 func TestCreateBackend(t *testing.T) {
-	svc1 := &v1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: "test",
-			Name:      "service1",
-		},
-		Spec: v1.ServiceSpec{
-			Ports: []v1.ServicePort{
-				{
-					Port: 80,
+	createService := func(name string) *v1.Service {
+		return &v1.Service{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      name,
+				Namespace: "test",
+			},
+			Spec: v1.ServiceSpec{
+				Ports: []v1.ServicePort{
+					{
+						Port: 80,
+					},
+				},
+			},
+		}
+	}
+	svc1 := createService("service1")
+	svc2 := createService("service2")
+	svc3 := createService("service3")
+	svc1NamespacedName := types.NamespacedName{Namespace: "test", Name: "service1"}
+	svc2NamespacedName := types.NamespacedName{Namespace: "test", Name: "service2"}
+	svc3NamespacedName := types.NamespacedName{Namespace: "test", Name: "service3"}
+
+	btp := BackendTLSPolicy{
+		Source: &v1alpha2.BackendTLSPolicy{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "btp",
+				Namespace: "test",
+			},
+			Spec: v1alpha2.BackendTLSPolicySpec{
+				TargetRef: v1alpha2.PolicyTargetReferenceWithSectionName{
+					PolicyTargetReference: v1alpha2.PolicyTargetReference{
+						Group:     "",
+						Kind:      "Service",
+						Name:      "service2",
+						Namespace: (*gatewayv1.Namespace)(helpers.GetPointer("test")),
+					},
+				},
+				TLS: v1alpha2.BackendTLSPolicyConfig{
+					Hostname:         "foo.example.com",
+					WellKnownCACerts: (helpers.GetPointer(v1alpha2.WellKnownCACertSystem)),
 				},
 			},
 		},
+		Valid: true,
 	}
-	svc1NamespacedName := types.NamespacedName{
-		Namespace: "test",
-		Name:      "service1",
+
+	btp2 := BackendTLSPolicy{
+		Source: &v1alpha2.BackendTLSPolicy{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "btp2",
+				Namespace: "test",
+			},
+			Spec: v1alpha2.BackendTLSPolicySpec{
+				TargetRef: v1alpha2.PolicyTargetReferenceWithSectionName{
+					PolicyTargetReference: v1alpha2.PolicyTargetReference{
+						Group:     "",
+						Kind:      "Service",
+						Name:      "service3",
+						Namespace: (*gatewayv1.Namespace)(helpers.GetPointer("test")),
+					},
+				},
+				TLS: v1alpha2.BackendTLSPolicyConfig{
+					Hostname:         "foo.example.com",
+					WellKnownCACerts: (helpers.GetPointer(v1alpha2.WellKnownCACertType("unknown"))),
+				},
+			},
+		},
+		Valid: false,
+		Conditions: []conditions.Condition{
+			staticConds.NewBackendTLSPolicyInvalid("unsupported value"),
+		},
 	}
 
 	tests := []struct {
@@ -669,11 +893,57 @@ func TestCreateBackend(t *testing.T) {
 			),
 			name: "service doesn't exist",
 		},
+		{
+			ref: gatewayv1.HTTPBackendRef{
+				BackendRef: getModifiedRef(func(backend gatewayv1.BackendRef) gatewayv1.BackendRef {
+					backend.Name = "service2"
+					return backend
+				}),
+			},
+			expectedBackend: BackendRef{
+				SvcNsName:        svc2NamespacedName,
+				ServicePort:      svc1.Spec.Ports[0],
+				Weight:           5,
+				Valid:            true,
+				BackendTLSPolicy: &btp,
+			},
+			expectedServicePortReference: "test_service2_80",
+			expectedCondition:            nil,
+			name:                         "normal case with policy",
+		},
+		{
+			ref: gatewayv1.HTTPBackendRef{
+				BackendRef: getModifiedRef(func(backend gatewayv1.BackendRef) gatewayv1.BackendRef {
+					backend.Name = "service3"
+					return backend
+				}),
+			},
+			expectedBackend: BackendRef{
+				SvcNsName:   svc3NamespacedName,
+				ServicePort: svc1.Spec.Ports[0],
+				Weight:      5,
+				Valid:       false,
+			},
+			expectedServicePortReference: "",
+			expectedCondition: helpers.GetPointer(
+				staticConds.NewRouteBackendRefUnsupportedValue(
+					"The backend TLS policy is invalid: unsupported value",
+				),
+			),
+			name: "invalid policy",
+		},
 	}
 
 	services := map[types.NamespacedName]*v1.Service{
 		client.ObjectKeyFromObject(svc1): svc1,
+		client.ObjectKeyFromObject(svc2): svc2,
+		client.ObjectKeyFromObject(svc3): svc3,
 	}
+	policies := map[types.NamespacedName]*BackendTLSPolicy{
+		client.ObjectKeyFromObject(btp.Source):  &btp,
+		client.ObjectKeyFromObject(btp2.Source): &btp2,
+	}
+
 	sourceNamespace := "test"
 
 	refPath := field.NewPath("test")
@@ -683,7 +953,14 @@ func TestCreateBackend(t *testing.T) {
 			g := NewWithT(t)
 
 			resolver := newReferenceGrantResolver(nil)
-			backend, cond := createBackendRef(test.ref, sourceNamespace, resolver, services, refPath)
+			backend, cond := createBackendRef(
+				test.ref,
+				sourceNamespace,
+				resolver,
+				services,
+				refPath,
+				policies,
+			)
 
 			g.Expect(helpers.Diff(test.expectedBackend, backend)).To(BeEmpty())
 			g.Expect(cond).To(Equal(test.expectedCondition))
@@ -710,7 +987,6 @@ func TestGetServicePort(t *testing.T) {
 			},
 		},
 	}
-
 	g := NewWithT(t)
 	// ports exist
 	for _, p := range []int32{80, 81, 82} {
@@ -723,4 +999,180 @@ func TestGetServicePort(t *testing.T) {
 	port, err := getServicePort(svc, 83)
 	g.Expect(err).Should(HaveOccurred())
 	g.Expect(port.Port).To(Equal(int32(0)))
+}
+
+func TestValidateBackendTLSPolicyMatchingAllBackends(t *testing.T) {
+	getBtp := func(name, caCertName string) *BackendTLSPolicy {
+		return &BackendTLSPolicy{
+			Source: &v1alpha2.BackendTLSPolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      name,
+					Namespace: "test",
+				},
+				Spec: v1alpha2.BackendTLSPolicySpec{
+					TLS: v1alpha2.BackendTLSPolicyConfig{
+						Hostname: "foo.example.com",
+						CACertRefs: []gatewayv1.LocalObjectReference{
+							{
+								Group: "",
+								Kind:  "ConfigMap",
+								Name:  gatewayv1.ObjectName(caCertName),
+							},
+						},
+					},
+				},
+			},
+		}
+	}
+
+	backendRefsNoPolicies := []BackendRef{
+		{
+			SvcNsName: types.NamespacedName{Namespace: "test", Name: "svc1"},
+		},
+		{
+			SvcNsName: types.NamespacedName{Namespace: "test", Name: "svc2"},
+		},
+	}
+
+	backendRefsWithMatchingPolicies := []BackendRef{
+		{
+			SvcNsName:        types.NamespacedName{Namespace: "test", Name: "svc1"},
+			BackendTLSPolicy: getBtp("btp1", "ca1"),
+		},
+		{
+			SvcNsName:        types.NamespacedName{Namespace: "test", Name: "svc2"},
+			BackendTLSPolicy: getBtp("btp2", "ca1"),
+		},
+	}
+	backendRefsWithNotMatchingPolicies := []BackendRef{
+		{
+			SvcNsName:        types.NamespacedName{Namespace: "test", Name: "svc1"},
+			BackendTLSPolicy: getBtp("btp1", "ca1"),
+		},
+		{
+			SvcNsName:        types.NamespacedName{Namespace: "test", Name: "svc2"},
+			BackendTLSPolicy: getBtp("btp2", "ca2"),
+		},
+	}
+	backendRefsOnePolicy := []BackendRef{
+		{
+			SvcNsName:        types.NamespacedName{Namespace: "test", Name: "svc1"},
+			BackendTLSPolicy: getBtp("btp1", "ca1"),
+		},
+		{
+			SvcNsName: types.NamespacedName{Namespace: "test", Name: "svc2"},
+		},
+	}
+	msg := "Backend TLS policies do not match for all backends"
+	tests := []struct {
+		expectedCondition *conditions.Condition
+		name              string
+		backendRefs       []BackendRef
+	}{
+		{
+			name:              "no policies",
+			backendRefs:       backendRefsNoPolicies,
+			expectedCondition: nil,
+		},
+		{
+			name:              "matching policies",
+			backendRefs:       backendRefsWithMatchingPolicies,
+			expectedCondition: nil,
+		},
+		{
+			name:              "not matching policies",
+			backendRefs:       backendRefsWithNotMatchingPolicies,
+			expectedCondition: helpers.GetPointer(staticConds.NewRouteBackendRefUnsupportedValue(msg)),
+		},
+		{
+			name:              "only one policy",
+			backendRefs:       backendRefsOnePolicy,
+			expectedCondition: helpers.GetPointer(staticConds.NewRouteBackendRefUnsupportedValue(msg)),
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			g := NewWithT(t)
+
+			cond := validateBackendTLSPolicyMatchingAllBackends(test.backendRefs)
+
+			g.Expect(cond).To(Equal(test.expectedCondition))
+		})
+	}
+}
+
+func TestFindBackendTLSPolicyForService(t *testing.T) {
+	oldCreationTimestamp := metav1.Now()
+	newCreationTimestamp := metav1.Now()
+	getBtp := func(name string, timestamp metav1.Time) *BackendTLSPolicy {
+		return &BackendTLSPolicy{
+			Valid: true,
+			Source: &v1alpha2.BackendTLSPolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:              name,
+					Namespace:         "test",
+					CreationTimestamp: timestamp,
+				},
+				Spec: v1alpha2.BackendTLSPolicySpec{
+					TargetRef: v1alpha2.PolicyTargetReferenceWithSectionName{
+						PolicyTargetReference: v1alpha2.PolicyTargetReference{
+							Group:     "",
+							Kind:      "Service",
+							Name:      "svc1",
+							Namespace: (*gatewayv1.Namespace)(helpers.GetPointer("test")),
+						},
+					},
+				},
+			},
+		}
+	}
+	oldestBtp := getBtp("oldest", oldCreationTimestamp)
+	newestBtp := getBtp("newest", newCreationTimestamp)
+	alphaFirstBtp := getBtp("alphabeticallyfirst", oldCreationTimestamp)
+
+	ref := gatewayv1.HTTPBackendRef{
+		BackendRef: gatewayv1.BackendRef{
+			BackendObjectReference: gatewayv1.BackendObjectReference{
+				Kind:      helpers.GetPointer[gatewayv1.Kind]("Service"),
+				Name:      "svc1",
+				Namespace: helpers.GetPointer[gatewayv1.Namespace]("test"),
+			},
+		},
+	}
+
+	tests := []struct {
+		name               string
+		backendTLSPolicies map[types.NamespacedName]*BackendTLSPolicy
+		expectedBtpName    string
+	}{
+		{
+			name: "oldest wins",
+			backendTLSPolicies: map[types.NamespacedName]*BackendTLSPolicy{
+				client.ObjectKeyFromObject(newestBtp.Source): newestBtp,
+				client.ObjectKeyFromObject(oldestBtp.Source): oldestBtp,
+			},
+			expectedBtpName: "oldest",
+		},
+		{
+			name: "alphabetically first wins",
+			backendTLSPolicies: map[types.NamespacedName]*BackendTLSPolicy{
+				client.ObjectKeyFromObject(oldestBtp.Source):     oldestBtp,
+				client.ObjectKeyFromObject(alphaFirstBtp.Source): alphaFirstBtp,
+				client.ObjectKeyFromObject(newestBtp.Source):     newestBtp,
+			},
+			expectedBtpName: "alphabeticallyfirst",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			g := NewWithT(t)
+
+			btp, err := findBackendTLSPolicyForService(test.backendTLSPolicies, ref, "test")
+
+			g.Expect(btp.Source.Name).To(Equal(test.expectedBtpName))
+			g.Expect(err).ToNot(HaveOccurred())
+		})
+	}
 }

@@ -24,11 +24,8 @@ Learn about our [design principles](/docs/developer/design-principles.md) and [a
 
 1. [Quick Start on a kind cluster](https://docs.nginx.com/nginx-gateway-fabric/installation/running-on-kind/).
 2. [Install](https://docs.nginx.com/nginx-gateway-fabric/installation/) NGINX Gateway Fabric.
-3. [Build](https://docs.nginx.com/nginx-gateway-fabric/installation/ngf-images/building-the-images/) an NGINX Gateway Fabric container image from source or use a pre-built image
-   available
-   on [GitHub Container Registry](https://github.com/nginxinc/nginx-gateway-fabric/pkgs/container/nginx-gateway-fabric).
-4. Deploy various [examples](examples).
-5. Read our [How-to guides](https://docs.nginx.com/nginx-gateway-fabric/how-to/).
+3. Deploy various [examples](examples).
+4. Read our [How-to guides](https://docs.nginx.com/nginx-gateway-fabric/how-to/).
 
 You can find the comprehensive NGINX Gateway Fabric user documentation on the [NGINX Documentation](https://docs.nginx.com/nginx-gateway-fabric/) website.
 
