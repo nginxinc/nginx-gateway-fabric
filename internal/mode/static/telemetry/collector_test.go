@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"reflect"
 	"runtime"
+	"strconv"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -273,6 +274,26 @@ var _ = Describe("Collector", Ordered, func() {
 					},
 				}
 
+				var boolFlag bool
+				flagset.BoolVar(
+					&boolFlag,
+					"boolFlag",
+					true,
+					"boolean test flag",
+				)
+				intFlag := flagValue[int]{value: 8080}
+				flagset.Var(
+					&intFlag,
+					"intFlag",
+					"int test flag",
+				)
+				stringFlag := flagValue[string]{value: "string-flag"}
+				flagset.Var(
+					&stringFlag,
+					"stringFlag",
+					"string test flag",
+				)
+
 				fakeGraphGetter.GetLatestGraphReturns(graph)
 				fakeConfigurationGetter.GetLatestConfigurationReturns(config)
 
@@ -284,6 +305,10 @@ var _ = Describe("Collector", Ordered, func() {
 					Secrets:        3,
 					Services:       3,
 					Endpoints:      4,
+				}
+				expData.DeploymentFlagOptions = telemetry.DeploymentFlagOptions{
+					FlagKeys:   []string{"boolFlag", "intFlag", "stringFlag"},
+					FlagValues: []string{"true", "default", "default"},
 				}
 
 				data, err := dataCollector.Collect(ctx)
@@ -673,3 +698,32 @@ var _ = Describe("Collector", Ordered, func() {
 		})
 	})
 })
+
+// flagValue holds a generic value and implements the pflag.Value interface.
+type flagValue[T comparable] struct {
+	value T
+}
+
+func (v *flagValue[T]) String() string {
+	switch val := any(v.value).(type) {
+	case int:
+		return strconv.Itoa(val)
+	case string:
+		return val
+	}
+	return ""
+}
+
+func (v *flagValue[T]) Set(_ string) error {
+	return nil
+}
+
+func (v *flagValue[T]) Type() string {
+	switch any(v.value).(type) {
+	case int:
+		return "int"
+	case string:
+		return "string"
+	}
+	return ""
+}
