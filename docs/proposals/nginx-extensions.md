@@ -944,7 +944,7 @@ Each extension will be tested with a combination of unit and system tests. The d
 
 ## Security Considerations
 
-Each extension will need validation to prevent malicious or invalid NGINX configuration. The details of this validation are outside the scope of this Enhancement Proposal.
+At a minimum, all extension points will need validation to prevent malicious or invalid NGINX configuration. In addition, each extension will have unique security considerations based on its behavior and design. The details of validation and other security concerns are out of scope for this Enhancement Proposal and will be provided in future Enhancement Proposals on a per-extension basis.
 
 ## Alternatives Considered
 
