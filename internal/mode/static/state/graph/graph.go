@@ -7,6 +7,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
+	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/controller/index"
@@ -15,14 +16,16 @@ import (
 
 // ClusterState includes cluster resources necessary to build the Graph.
 type ClusterState struct {
-	GatewayClasses  map[types.NamespacedName]*gatewayv1.GatewayClass
-	Gateways        map[types.NamespacedName]*gatewayv1.Gateway
-	HTTPRoutes      map[types.NamespacedName]*gatewayv1.HTTPRoute
-	Services        map[types.NamespacedName]*v1.Service
-	Namespaces      map[types.NamespacedName]*v1.Namespace
-	ReferenceGrants map[types.NamespacedName]*v1beta1.ReferenceGrant
-	Secrets         map[types.NamespacedName]*v1.Secret
-	CRDMetadata     map[types.NamespacedName]*metav1.PartialObjectMetadata
+	GatewayClasses     map[types.NamespacedName]*gatewayv1.GatewayClass
+	Gateways           map[types.NamespacedName]*gatewayv1.Gateway
+	HTTPRoutes         map[types.NamespacedName]*gatewayv1.HTTPRoute
+	Services           map[types.NamespacedName]*v1.Service
+	Namespaces         map[types.NamespacedName]*v1.Namespace
+	ReferenceGrants    map[types.NamespacedName]*v1beta1.ReferenceGrant
+	Secrets            map[types.NamespacedName]*v1.Secret
+	CRDMetadata        map[types.NamespacedName]*metav1.PartialObjectMetadata
+	BackendTLSPolicies map[types.NamespacedName]*v1alpha2.BackendTLSPolicy
+	ConfigMaps         map[types.NamespacedName]*v1.ConfigMap
 }
 
 // Graph is a Graph-like representation of Gateway API resources.
@@ -51,6 +54,10 @@ type Graph struct {
 	// ReferencedServices includes the NamespacedNames of all the Services that are referenced by at least one HTTPRoute.
 	// Storing the whole resource is not necessary, compared to the similar maps above.
 	ReferencedServices map[types.NamespacedName]struct{}
+	// ReferencedCaCertConfigMaps includes ConfigMaps that have been referenced by any BackendTLSPolicies.
+	ReferencedCaCertConfigMaps map[types.NamespacedName]*CaCertConfigMap
+	// BackendTLSPolicies holds BackendTLSPolicy resources.
+	BackendTLSPolicies map[types.NamespacedName]*BackendTLSPolicy
 }
 
 // ProtectedPorts are the ports that may not be configured by a listener with a descriptive name of each port.
@@ -61,6 +68,9 @@ func (g *Graph) IsReferenced(resourceType client.Object, nsname types.Namespaced
 	switch obj := resourceType.(type) {
 	case *v1.Secret:
 		_, exists := g.ReferencedSecrets[nsname]
+		return exists
+	case *v1.ConfigMap:
+		_, exists := g.ReferencedCaCertConfigMaps[nsname]
 		return exists
 	case *v1.Namespace:
 		// `existed` is needed as it checks the graph's ReferencedNamespaces which stores all the namespaces that
@@ -111,29 +121,39 @@ func BuildGraph(
 	gc := buildGatewayClass(processedGwClasses.Winner, state.CRDMetadata)
 
 	secretResolver := newSecretResolver(state.Secrets)
+	configMapResolver := newConfigMapResolver(state.ConfigMaps)
 
 	processedGws := processGateways(state.Gateways, gcName)
 
 	refGrantResolver := newReferenceGrantResolver(state.ReferenceGrants)
 	gw := buildGateway(processedGws.Winner, secretResolver, gc, refGrantResolver, protectedPorts)
 
+	processedBackendTLSPolicies := processBackendTLSPolicies(
+		state.BackendTLSPolicies,
+		configMapResolver,
+		controllerName,
+		gw,
+	)
+
 	routes := buildRoutesForGateways(validators.HTTPFieldsValidator, state.HTTPRoutes, processedGws.GetAllNsNames())
 	bindRoutesToListeners(routes, gw, state.Namespaces)
-	addBackendRefsToRouteRules(routes, refGrantResolver, state.Services)
+	addBackendRefsToRouteRules(routes, refGrantResolver, state.Services, processedBackendTLSPolicies)
 
 	referencedNamespaces := buildReferencedNamespaces(state.Namespaces, gw)
 
 	referencedServices := buildReferencedServices(routes)
 
 	g := &Graph{
-		GatewayClass:          gc,
-		Gateway:               gw,
-		Routes:                routes,
-		IgnoredGatewayClasses: processedGwClasses.Ignored,
-		IgnoredGateways:       processedGws.Ignored,
-		ReferencedSecrets:     secretResolver.getResolvedSecrets(),
-		ReferencedNamespaces:  referencedNamespaces,
-		ReferencedServices:    referencedServices,
+		GatewayClass:               gc,
+		Gateway:                    gw,
+		Routes:                     routes,
+		IgnoredGatewayClasses:      processedGwClasses.Ignored,
+		IgnoredGateways:            processedGws.Ignored,
+		ReferencedSecrets:          secretResolver.getResolvedSecrets(),
+		ReferencedNamespaces:       referencedNamespaces,
+		ReferencedServices:         referencedServices,
+		ReferencedCaCertConfigMaps: configMapResolver.getResolvedConfigMaps(),
+		BackendTLSPolicies:         processedBackendTLSPolicies,
 	}
 
 	return g

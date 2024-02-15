@@ -6,6 +6,7 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
+	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
 )
@@ -80,6 +81,25 @@ func newHTTPRouteStatusSetter(gatewayCtlrName string, clock Clock, rs HTTPRouteS
 		}
 
 		hr.Status = status
+
+		return true
+	}
+}
+
+func newBackendTLSPolicyStatusSetter(
+	gatewayCtlrName string,
+	clock Clock,
+	bs BackendTLSPolicyStatus,
+) func(client.Object) bool {
+	return func(object client.Object) bool {
+		btp := object.(*gatewayv1alpha2.BackendTLSPolicy)
+		status := prepareBackendTLSPolicyStatus(btp.Status, bs, gatewayCtlrName, clock.Now())
+
+		if btpStatusEqual(gatewayCtlrName, btp.Status, status) {
+			return false
+		}
+
+		btp.Status = status
 
 		return true
 	}
@@ -177,6 +197,58 @@ func routeParentStatusEqual(p1, p2 gatewayv1.RouteParentStatus) bool {
 	}
 
 	// we ignore the rest of the ParentRef fields because we do not set them
+
+	return conditionsEqual(p1.Conditions, p2.Conditions)
+}
+
+func btpStatusEqual(gatewayCtlrName string, prev, cur gatewayv1alpha2.PolicyStatus) bool {
+	// Since other controllers may update BackendTLSPolicy status we can't assume anything about the order of the
+	// statuses, and we have to ignore statuses written by other controllers when checking for equality.
+	// Therefore, we can't use slices.EqualFunc here because it cares about the order.
+
+	// First, we check if the prev status has any PolicyAncestorStatuses that are no longer present in the cur status.
+	for _, prevAncestor := range prev.Ancestors {
+		if prevAncestor.ControllerName != gatewayv1.GatewayController(gatewayCtlrName) {
+			continue
+		}
+
+		exists := slices.ContainsFunc(cur.Ancestors, func(curAncestor gatewayv1alpha2.PolicyAncestorStatus) bool {
+			return btpAncestorStatusEqual(prevAncestor, curAncestor)
+		})
+
+		if !exists {
+			return false
+		}
+	}
+
+	// Then, we check if the cur status has any PolicyAncestorStatuses that are no longer present in the prev status.
+	for _, curParent := range cur.Ancestors {
+		exists := slices.ContainsFunc(prev.Ancestors, func(prevAncestor gatewayv1alpha2.PolicyAncestorStatus) bool {
+			return btpAncestorStatusEqual(curParent, prevAncestor)
+		})
+
+		if !exists {
+			return false
+		}
+	}
+
+	return true
+}
+
+func btpAncestorStatusEqual(p1, p2 gatewayv1alpha2.PolicyAncestorStatus) bool {
+	if p1.ControllerName != p2.ControllerName {
+		return false
+	}
+
+	if p1.AncestorRef.Name != p2.AncestorRef.Name {
+		return false
+	}
+
+	if !equalPointers(p1.AncestorRef.Namespace, p2.AncestorRef.Namespace) {
+		return false
+	}
+
+	// we ignore the rest of the AncestorRef fields because we do not set them
 
 	return conditionsEqual(p1.Conditions, p2.Conditions)
 }

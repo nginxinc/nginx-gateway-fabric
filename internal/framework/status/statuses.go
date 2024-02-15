@@ -16,9 +16,10 @@ type Status interface {
 
 // GatewayAPIStatuses holds the status-related information about Gateway API resources.
 type GatewayAPIStatuses struct {
-	GatewayClassStatuses GatewayClassStatuses
-	GatewayStatuses      GatewayStatuses
-	HTTPRouteStatuses    HTTPRouteStatuses
+	GatewayClassStatuses     GatewayClassStatuses
+	GatewayStatuses          GatewayStatuses
+	HTTPRouteStatuses        HTTPRouteStatuses
+	BackendTLSPolicyStatuses BackendTLSPolicyStatuses
 }
 
 func (g GatewayAPIStatuses) APIGroup() string {
@@ -50,6 +51,10 @@ type GatewayStatuses map[types.NamespacedName]GatewayStatus
 
 // GatewayClassStatuses holds the statuses of GatewayClasses where the key is the namespaced name of a GatewayClass.
 type GatewayClassStatuses map[types.NamespacedName]GatewayClassStatus
+
+// BackendTLSPolicyStatuses holds the statuses of BackendTLSPolicies where the key is the namespaced name of a
+// BackendTLSPolicy.
+type BackendTLSPolicyStatuses map[types.NamespacedName]BackendTLSPolicyStatus
 
 // GatewayStatus holds the status of the winning Gateway resource.
 type GatewayStatus struct {
@@ -85,6 +90,14 @@ type HTTPRouteStatus struct {
 	ObservedGeneration int64
 }
 
+// BackendTLSPolicyStatus holds the status-related information about a BackendTLSPolicy resource.
+type BackendTLSPolicyStatus struct {
+	// AncestorStatuses holds the statuses for parentRefs of the BackendTLSPolicy.
+	AncestorStatuses []AncestorStatus
+	// ObservedGeneration is the generation of the resource that was processed.
+	ObservedGeneration int64
+}
+
 // ParentStatus holds status-related information related to how the HTTPRoute binds to a specific parentRef.
 type ParentStatus struct {
 	// GatewayNsName is the Namespaced name of the Gateway, which the parentRef references.
@@ -101,4 +114,12 @@ type GatewayClassStatus struct {
 	Conditions []conditions.Condition
 	// ObservedGeneration is the generation of the resource that was processed.
 	ObservedGeneration int64
+}
+
+// AncestorStatus holds status-related information related to how the BackendTLSPolicy binds to a specific ancestorRef.
+type AncestorStatus struct {
+	// GatewayNsName is the Namespaced name of the Gateway, which the ancestorRef references.
+	GatewayNsName types.NamespacedName
+	// Conditions is the list of conditions that are relevant to the ancestor.
+	Conditions []conditions.Condition
 }

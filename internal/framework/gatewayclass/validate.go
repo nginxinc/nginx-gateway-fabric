@@ -17,10 +17,11 @@ const (
 )
 
 var gatewayCRDs = map[string]apiVersion{
-	"gatewayclasses.gateway.networking.k8s.io":  {},
-	"gateways.gateway.networking.k8s.io":        {},
-	"httproutes.gateway.networking.k8s.io":      {},
-	"referencegrants.gateway.networking.k8s.io": {},
+	"gatewayclasses.gateway.networking.k8s.io":     {},
+	"gateways.gateway.networking.k8s.io":           {},
+	"httproutes.gateway.networking.k8s.io":         {},
+	"referencegrants.gateway.networking.k8s.io":    {},
+	"backendtlspolicies.gateway.networking.k8s.io": {},
 }
 
 type apiVersion struct {
