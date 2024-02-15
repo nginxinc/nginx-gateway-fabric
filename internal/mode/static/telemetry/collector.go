@@ -7,15 +7,13 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
+	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/dataplane"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/graph"
 )
-
-// kubeSystem indicates the name of kube-system namespace.
-const kubeSystem = "kube-system"
 
 //go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . GraphGetter
 
@@ -206,7 +204,7 @@ func collectNGFReplicaCount(ctx context.Context, k8sClient client.Reader, podNSN
 
 func collectClusterID(ctx context.Context, k8sClient client.Reader) (string, error) {
 	key := types.NamespacedName{
-		Name: kubeSystem,
+		Name: meta.NamespaceSystem,
 	}
 	var kubeNamespace v1.Namespace
 	if err := k8sClient.Get(ctx, key, &kubeNamespace); err != nil {
