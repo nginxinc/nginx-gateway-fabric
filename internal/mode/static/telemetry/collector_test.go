@@ -10,6 +10,7 @@ import (
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
+	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -41,12 +42,14 @@ func createListCallsFunc(nodes []v1.Node) func(
 	}
 }
 
-func createGetCallsFunc(objects ...client.Object) func(
+type getCallsFunc = func(
 	context.Context,
 	types.NamespacedName,
 	client.Object,
 	...client.GetOption,
-) error {
+) error
+
+func createGetCallsFunc(objects ...client.Object) getCallsFunc {
 	return func(_ context.Context, _ types.NamespacedName, object client.Object, option ...client.GetOption) error {
 		Expect(option).To(BeEmpty())
 
@@ -57,7 +60,6 @@ func createGetCallsFunc(objects ...client.Object) func(
 			}
 		}
 
-		Fail(fmt.Sprintf("unknown type: %T", object))
 		return nil
 	}
 }
@@ -74,6 +76,9 @@ var _ = Describe("Collector", Ordered, func() {
 		podNSName               types.NamespacedName
 		ngfPod                  *v1.Pod
 		ngfReplicaSet           *appsv1.ReplicaSet
+		kubeNamespace           *v1.Namespace
+
+		baseGetCalls getCallsFunc
 	)
 
 	BeforeAll(func() {
@@ -103,6 +108,13 @@ var _ = Describe("Collector", Ordered, func() {
 			Namespace: "nginx-gateway",
 			Name:      "ngf-pod",
 		}
+
+		kubeNamespace = &v1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: meta.NamespaceSystem,
+				UID:  "test-uid",
+			},
+		}
 	})
 
 	BeforeEach(func() {
@@ -111,6 +123,7 @@ var _ = Describe("Collector", Ordered, func() {
 			NodeCount:         0,
 			NGFResourceCounts: telemetry.NGFResourceCounts{},
 			NGFReplicaCount:   1,
+			ClusterID:         string(kubeNamespace.GetUID()),
 		}
 
 		k8sClientReader = &eventsfakes.FakeReader{}
@@ -127,21 +140,43 @@ var _ = Describe("Collector", Ordered, func() {
 			Version:             version,
 			PodNSName:           podNSName,
 		})
-		k8sClientReader.GetCalls(createGetCallsFunc(ngfPod, ngfReplicaSet))
+
+		baseGetCalls = createGetCallsFunc(ngfPod, ngfReplicaSet, kubeNamespace)
+		k8sClientReader.GetCalls(baseGetCalls)
 	})
+
+	mergeGetCallsWithBase := func(f getCallsFunc) getCallsFunc {
+		return func(
+			ctx context.Context,
+			nsName types.NamespacedName,
+			object client.Object,
+			option ...client.GetOption,
+		) error {
+			err := baseGetCalls(ctx, nsName, object, option...)
+			Expect(err).ToNot(HaveOccurred())
+
+			return f(ctx, nsName, object, option...)
+		}
+	}
 
 	Describe("Normal case", func() {
 		When("collecting telemetry data", func() {
 			It("collects all fields", func() {
 				nodes := []v1.Node{
 					{
-						ObjectMeta: metav1.ObjectMeta{Name: "node1"},
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "node1",
+						},
 					},
 					{
-						ObjectMeta: metav1.ObjectMeta{Name: "node2"},
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "node2",
+						},
 					},
 					{
-						ObjectMeta: metav1.ObjectMeta{Name: "node3"},
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "node3",
+						},
 					},
 				}
 
@@ -235,6 +270,27 @@ var _ = Describe("Collector", Ordered, func() {
 
 				Expect(err).To(BeNil())
 				Expect(expData).To(Equal(data))
+			})
+		})
+	})
+
+	Describe("clusterID collector", func() {
+		When("collecting clusterID", func() {
+			When("it encounters an error while collecting data", func() {
+				It("should error if the kubernetes client errored when getting the namespace", func() {
+					expectedError := errors.New("there was an error getting clusterID")
+					k8sClientReader.GetCalls(mergeGetCallsWithBase(
+						func(_ context.Context, _ types.NamespacedName, object client.Object, _ ...client.GetOption) error {
+							switch object.(type) {
+							case *v1.Namespace:
+								return expectedError
+							}
+							return nil
+						}))
+
+					_, err := dataCollector.Collect(ctx)
+					Expect(err).To(MatchError(expectedError))
+				})
 			})
 		})
 	})
@@ -425,31 +481,13 @@ var _ = Describe("Collector", Ordered, func() {
 			When("it encounters an error while collecting data", func() {
 				It("should error if the kubernetes client errored when getting the Pod", func() {
 					expectedErr := errors.New("there was an error getting the Pod")
-					k8sClientReader.GetCalls(
-						func(_ context.Context, _ client.ObjectKey, object client.Object, option ...client.GetOption) error {
-							Expect(option).To(BeEmpty())
-
-							switch typedObj := object.(type) {
+					k8sClientReader.GetCalls(mergeGetCallsWithBase(
+						func(_ context.Context, _ client.ObjectKey, object client.Object, _ ...client.GetOption) error {
+							switch object.(type) {
 							case *v1.Pod:
 								return expectedErr
-							default:
-								Fail(fmt.Sprintf("unknown type: %T", typedObj))
 							}
 							return nil
-						})
-
-					_, err := dataCollector.Collect(ctx)
-					Expect(err).To(MatchError(expectedErr))
-				})
-
-				It("should error if the Pod's owner reference is nil", func() {
-					expectedErr := errors.New("expected one owner reference of the NGF Pod, got 0")
-					k8sClientReader.GetCalls(createGetCallsFunc(
-						&v1.Pod{
-							ObjectMeta: metav1.ObjectMeta{
-								Name:            "pod1",
-								OwnerReferences: nil,
-							},
 						},
 					))
 
@@ -457,9 +495,24 @@ var _ = Describe("Collector", Ordered, func() {
 					Expect(err).To(MatchError(expectedErr))
 				})
 
+				It("should error if the Pod's owner reference is nil", func() {
+					expectedErr := errors.New("expected one owner reference of the NGF Pod, got 0")
+					k8sClientReader.GetCalls(mergeGetCallsWithBase(createGetCallsFunc(
+						&v1.Pod{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:            "pod1",
+								OwnerReferences: nil,
+							},
+						},
+					)))
+
+					_, err := dataCollector.Collect(ctx)
+					Expect(err).To(MatchError(expectedErr))
+				})
+
 				It("should error if the Pod has multiple owner references", func() {
 					expectedErr := errors.New("expected one owner reference of the NGF Pod, got 2")
-					k8sClientReader.GetCalls(createGetCallsFunc(
+					k8sClientReader.GetCalls(mergeGetCallsWithBase(createGetCallsFunc(
 						&v1.Pod{
 							ObjectMeta: metav1.ObjectMeta{
 								Name: "pod1",
@@ -475,7 +528,7 @@ var _ = Describe("Collector", Ordered, func() {
 								},
 							},
 						},
-					))
+					)))
 
 					_, err := dataCollector.Collect(ctx)
 					Expect(err).To(MatchError(expectedErr))
@@ -483,7 +536,7 @@ var _ = Describe("Collector", Ordered, func() {
 
 				It("should error if the Pod's owner reference is not a ReplicaSet", func() {
 					expectedErr := errors.New("expected pod owner reference to be ReplicaSet, got Deployment")
-					k8sClientReader.GetCalls(createGetCallsFunc(
+					k8sClientReader.GetCalls(mergeGetCallsWithBase(createGetCallsFunc(
 						&v1.Pod{
 							ObjectMeta: metav1.ObjectMeta{
 								Name: "pod1",
@@ -495,7 +548,7 @@ var _ = Describe("Collector", Ordered, func() {
 								},
 							},
 						},
-					))
+					)))
 
 					_, err := dataCollector.Collect(ctx)
 					Expect(err).To(MatchError(expectedErr))
@@ -503,24 +556,13 @@ var _ = Describe("Collector", Ordered, func() {
 
 				It("should error if the replica set's replicas is nil", func() {
 					expectedErr := errors.New("replica set replicas was nil")
-					k8sClientReader.GetCalls(createGetCallsFunc(
-						&v1.Pod{
-							ObjectMeta: metav1.ObjectMeta{
-								Name: "pod1",
-								OwnerReferences: []metav1.OwnerReference{
-									{
-										Kind: "ReplicaSet",
-										Name: "replicaset1",
-									},
-								},
-							},
-						},
+					k8sClientReader.GetCalls(mergeGetCallsWithBase(createGetCallsFunc(
 						&appsv1.ReplicaSet{
 							Spec: appsv1.ReplicaSetSpec{
 								Replicas: nil,
 							},
 						},
-					))
+					)))
 
 					_, err := dataCollector.Collect(ctx)
 					Expect(err).To(MatchError(expectedErr))
@@ -528,28 +570,14 @@ var _ = Describe("Collector", Ordered, func() {
 
 				It("should error if the kubernetes client errored when getting the ReplicaSet", func() {
 					expectedErr := errors.New("there was an error getting the ReplicaSet")
-					k8sClientReader.GetCalls(
-						func(_ context.Context, _ client.ObjectKey, object client.Object, option ...client.GetOption) error {
-							Expect(option).To(BeEmpty())
-
-							switch typedObj := object.(type) {
-							case *v1.Pod:
-								typedObj.ObjectMeta = metav1.ObjectMeta{
-									Name: "pod1",
-									OwnerReferences: []metav1.OwnerReference{
-										{
-											Kind: "ReplicaSet",
-											Name: "replicaset1",
-										},
-									},
-								}
+					k8sClientReader.GetCalls(mergeGetCallsWithBase(
+						func(_ context.Context, _ client.ObjectKey, object client.Object, _ ...client.GetOption) error {
+							switch object.(type) {
 							case *appsv1.ReplicaSet:
 								return expectedErr
-							default:
-								Fail(fmt.Sprintf("unknown type: %T", typedObj))
 							}
 							return nil
-						})
+						}))
 
 					_, err := dataCollector.Collect(ctx)
 					Expect(err).To(MatchError(expectedErr))
