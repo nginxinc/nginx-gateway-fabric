@@ -255,7 +255,7 @@ var _ = Describe("Collector", Ordered, func() {
 
 	Describe("clusterID collector", func() {
 		When("collecting clusterID", func() {
-			It("throws an error when collecting clusterID", func() {
+			It("should error if the kubernetes client errored when getting the namespace", func() {
 				expectedError := errors.New("there was an error getting clusterID")
 				k8sClientReader.GetReturns(expectedError)
 
