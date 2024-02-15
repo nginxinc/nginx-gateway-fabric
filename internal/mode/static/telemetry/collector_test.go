@@ -145,7 +145,9 @@ var _ = Describe("Collector", Ordered, func() {
 	})
 
 	mergeGetCallsWithBase := func(f getCallsFunc) getCallsFunc {
-		return func(ctx context.Context, nsName types.NamespacedName,
+		return func(
+			ctx context.Context,
+			nsName types.NamespacedName,
 			object client.Object, option ...client.GetOption,
 		) error {
 			err := baseGetCalls(ctx, nsName, object, option...)
@@ -184,7 +186,6 @@ var _ = Describe("Collector", Ordered, func() {
 				svc1 := &v1.Service{ObjectMeta: metav1.ObjectMeta{Name: "svc1"}}
 				svc2 := &v1.Service{ObjectMeta: metav1.ObjectMeta{Name: "svc2"}}
 				nilsvc := &v1.Service{ObjectMeta: metav1.ObjectMeta{Name: "nilsvc"}}
-
 				graph := &graph.Graph{
 					GatewayClass: &graph.GatewayClass{},
 					Gateway:      &graph.Gateway{},
