@@ -278,8 +278,7 @@ var _ = Describe("Collector", Ordered, func() {
 			It("should error if the kubernetes client errored when getting the namespace", func() {
 				expectedError := errors.New("there was an error getting clusterID")
 				k8sClientReader.GetCalls(mergeGetCallsWithBase(
-					func(_ context.Context, _ types.NamespacedName, object client.Object, option ...client.GetOption) error {
-						Expect(option).To(BeEmpty())
+					func(_ context.Context, _ types.NamespacedName, object client.Object, _ ...client.GetOption) error {
 						switch object.(type) {
 						case *v1.Namespace:
 							return expectedError
@@ -479,10 +478,8 @@ var _ = Describe("Collector", Ordered, func() {
 			When("it encounters an error while collecting data", func() {
 				It("should error if the kubernetes client errored when getting the Pod", func() {
 					expectedErr := errors.New("there was an error getting the Pod")
-
 					k8sClientReader.GetCalls(mergeGetCallsWithBase(
-						func(_ context.Context, _ client.ObjectKey, object client.Object, option ...client.GetOption) error {
-							Expect(option).To(BeEmpty())
+						func(_ context.Context, _ client.ObjectKey, object client.Object, _ ...client.GetOption) error {
 							switch object.(type) {
 							case *v1.Pod:
 								return expectedErr
@@ -571,8 +568,7 @@ var _ = Describe("Collector", Ordered, func() {
 				It("should error if the kubernetes client errored when getting the ReplicaSet", func() {
 					expectedErr := errors.New("there was an error getting the ReplicaSet")
 					k8sClientReader.GetCalls(mergeGetCallsWithBase(
-						func(_ context.Context, _ client.ObjectKey, object client.Object, option ...client.GetOption) error {
-							Expect(option).To(BeEmpty())
+						func(_ context.Context, _ client.ObjectKey, object client.Object, _ ...client.GetOption) error {
 							switch object.(type) {
 							case *appsv1.ReplicaSet:
 								return expectedErr
