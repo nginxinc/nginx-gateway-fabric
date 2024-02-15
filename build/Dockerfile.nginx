@@ -9,8 +9,6 @@ RUN apk add --no-cache libcap \
     && mkdir -p /var/lib/nginx /usr/lib/nginx/modules \
     && setcap 'cap_net_bind_service=+ep' /usr/sbin/nginx \
     && setcap -v 'cap_net_bind_service=+ep' /usr/sbin/nginx \
-    # Update packages for CVE-2023-52425 and CVE-2024-25062
-    && apk --no-cache upgrade libexpat libxml2 \
     && apk del libcap
 
 COPY ${NJS_DIR}/httpmatches.js /usr/lib/nginx/modules/njs/httpmatches.js
