@@ -183,9 +183,11 @@ var _ = Describe("Collector", Ordered, func() {
 				secret1 := &v1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "secret1"}}
 				secret2 := &v1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "secret2"}}
 				nilsecret := &v1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "nilsecret"}}
+
 				svc1 := &v1.Service{ObjectMeta: metav1.ObjectMeta{Name: "svc1"}}
 				svc2 := &v1.Service{ObjectMeta: metav1.ObjectMeta{Name: "svc2"}}
 				nilsvc := &v1.Service{ObjectMeta: metav1.ObjectMeta{Name: "nilsvc"}}
+
 				graph := &graph.Graph{
 					GatewayClass: &graph.GatewayClass{},
 					Gateway:      &graph.Gateway{},
