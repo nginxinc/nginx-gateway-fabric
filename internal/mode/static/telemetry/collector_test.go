@@ -149,7 +149,8 @@ var _ = Describe("Collector", Ordered, func() {
 		return func(
 			ctx context.Context,
 			nsName types.NamespacedName,
-			object client.Object, option ...client.GetOption,
+			object client.Object,
+			option ...client.GetOption,
 		) error {
 			err := baseGetCalls(ctx, nsName, object, option...)
 			Expect(err).ToNot(HaveOccurred())
