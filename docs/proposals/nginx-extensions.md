@@ -758,7 +758,7 @@ NGINX Plus directives/parameters:
 - [`slow_start`](https://nginx.org/en/docs/http/ngx_http_upstream_module.html#server)
 - [`queue`](https://nginx.org/en/docs/http/ngx_http_upstream_module.html#queue)
 - [`health_check`](https://nginx.org/en/docs/http/ngx_http_upstream_hc_module.html#health_check)
-- [`least_time`](https://nginx.org/en/docs/http/ngx_http_upstream_module.html#ip_hash)
+- [`least_time`](https://nginx.org/en/docs/http/ngx_http_upstream_module.html#least_time)
 
 These features are grouped because they all apply to the upstream context and make sense when attached to a Backend.
 
