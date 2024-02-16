@@ -577,15 +577,14 @@ _Extension point:_ GatewayClass or Gateway
 
 _NGINX Context(s):_ main, http, stream
 
-Features:
+NGINX OSS features:
 
 - Error log level
 - Access log settings: format and disable
 - PROXY protocol
 - OTel Tracing: Exporter configuration which includes endpoint, interval, batch size, and batch count.
-- External Routing: enable/disable routing to ExternalName Services and set DNS resolver addresses.
 
-NGINX directives:
+NGINX OSS directives:
 
 - [`proxy_protocol`](https://nginx.org/en/docs/stream/ngx_stream_proxy_module.html#proxy_protocol)
 - [`access_log`](https://nginx.org/en/docs/http/ngx_http_log_module.html#access_log)
@@ -594,8 +593,14 @@ NGINX directives:
 - [`otel_exporter`](https://nginx.org/en/docs/ngx_otel_module.html#otel_exporter)
 - [`otel_service_name`](https://nginx.org/en/docs/ngx_otel_module.html#otel_service_name)
 - [`otel_exporter`](https://nginx.org/en/docs/ngx_otel_module.html#otel_trace)
-- [`resolver`](https://nginx.org/en/docs/http/ngx_http_core_module.html#resolver)
 
+NGINX Plus features:
+
+- External Routing: enable/disable routing to ExternalName Services and set DNS resolver addresses.
+
+NGINX Plus directives:
+
+- [`resolver`](https://nginx.org/en/docs/http/ngx_http_core_module.html#resolver)
 
 These features are grouped because they are all the responsibility of the Cluster Operator and should not be set or changed by Application Developers.
 
