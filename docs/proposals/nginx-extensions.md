@@ -582,7 +582,7 @@ Features:
 - Error log level
 - Access log settings: format and disable
 - PROXY protocol
-- OTEL Tracing: global settings such as exporter configuration and global enable/disable.
+- OTel Tracing: Exporter configuration which includes endpoint, interval, batch size, and batch count.
 - External Routing: enable/disable routing to ExternalName Services and set DNS resolver addresses.
 
 NGINX directives:
@@ -593,7 +593,7 @@ NGINX directives:
 - [`log_format`](https://nginx.org/en/docs/http/ngx_http_log_module.html#log_format)
 - [`otel_exporter`](https://nginx.org/en/docs/ngx_otel_module.html#otel_exporter)
 - [`otel_service_name`](https://nginx.org/en/docs/ngx_otel_module.html#otel_service_name)
-- [`otel_trace`](https://nginx.org/en/docs/ngx_otel_module.html#otel_trace)
+- [`otel_exporter`](https://nginx.org/en/docs/ngx_otel_module.html#otel_trace)
 - [`resolver`](https://nginx.org/en/docs/http/ngx_http_core_module.html#resolver)
 
 
@@ -823,26 +823,28 @@ _NGINX context(s):_ http, server, location
 
 Features:
 
-- OTEL Tracing: enable/disable by Route or routing rule. Set span name, attributes, and context.
+- OTel Tracing: enable tracing, set sampler rate, span name, attributes, and context.
 
 NGINX directives:
 
-- [`otel_trace`](https://nginx.org/en/docs/ngx_otel_module.html#otel_trace)
+- [`otel_trace`](https://nginx.org/en/docs/ngx_otel_module.html#otel_trace): enable tracing and set sampler rate
 - [`otel_trace_context`](https://nginx.org/en/docs/ngx_otel_module.html#otel_trace_context)
 - [`otel_span_name`](https://nginx.org/en/docs/ngx_otel_module.html#otel_span_name)
 - [`otel_span_attr`](https://nginx.org/en/docs/ngx_otel_module.html#otel_span_attr)
+
+Tracing will be disabled by default. The Application Developer will be able to use this Policy to enable and configure tracing for their routes. This Policy will only be applied if the OTel endpoint as been set by the Cluster Operator on the [Gateway Settings](#gateway-settings).
 
 #### Future Work
 
 Add support for:
 
-- OTEL logging
+- OTel logging
 - Metrics
 
 #### Alternatives
 
-- Combine with OTEL settings in Gateway Settings for one OTEL Policy: Rather than splitting tracing across two Policies, we could create a single tracing Policy. The issue with this approach is that some tracing settings -- such as exporter endpoint -- should be restricted to Cluster Operators, while settings like attributes should be available to Application Developers. If we combine these settings, RBAC will not be sufficient to restrict access across the settings. We will have to disallow certain fields based on the resource the Policy is attached to. This is a bad user experience.
-- Inherited Policy: An Inherited Policy would be useful if there is a use case for the Cluster Operator enforcing or defaulting the OTEL tracing settings included in this policy.
+- Combine with OTel settings in Gateway Settings for one OTel Policy: Rather than splitting tracing across two Policies, we could create a single tracing Policy. The issue with this approach is that some tracing settings -- such as exporter endpoint -- should be restricted to Cluster Operators, while settings like attributes should be available to Application Developers. If we combine these settings, RBAC will not be sufficient to restrict access across the settings. We will have to disallow certain fields based on the resource the Policy is attached to. This is a bad user experience.
+- Inherited Policy: An Inherited Policy would be useful if there is a use case for the Cluster Operator enforcing or defaulting the OTel tracing settings included in this policy.
 
 ### Proxy Settings
 
