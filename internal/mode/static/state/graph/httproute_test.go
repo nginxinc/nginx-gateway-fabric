@@ -2388,6 +2388,25 @@ func TestValidateFilterRequestHeaderModifier(t *testing.T) {
 			expectErrCount: 7,
 			name:           "request header modifier filter all fields invalid",
 		},
+		{
+			validator: createAllValidValidator(),
+			filter: gatewayv1.HTTPRouteFilter{
+				Type: gatewayv1.HTTPRouteFilterRequestHeaderModifier,
+				RequestHeaderModifier: &gatewayv1.HTTPHeaderFilter{
+					Set: []gatewayv1.HTTPHeader{
+						{Name: "MyBespokeHeader", Value: "my-value"},
+						{Name: "mYbespokeHEader", Value: "duplicate"},
+					},
+					Add: []gatewayv1.HTTPHeader{
+						{Name: "Accept-Encoding", Value: "gzip"},
+						{Name: "accept-encodING", Value: "gzip"},
+					},
+					Remove: []string{"Cache-Control", "cache-control"},
+				},
+			},
+			expectErrCount: 3,
+			name:           "request header modifier filter not unique names",
+		},
 	}
 
 	filterPath := field.NewPath("test")

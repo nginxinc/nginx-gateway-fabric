@@ -836,6 +836,20 @@ func validateFilterHeaderModifierFields(
 ) field.ErrorList {
 	var allErrs field.ErrorList
 
+	// Ensure that the header names are case-insensitive unique
+	allErrs = append(allErrs, validateRequestHeadersCaseInsensitiveUnique(
+		headerModifier.Add,
+		headerModifierPath.Child("add"))...,
+	)
+	allErrs = append(allErrs, validateRequestHeadersCaseInsensitiveUnique(
+		headerModifier.Set,
+		headerModifierPath.Child("set"))...,
+	)
+	allErrs = append(allErrs, validateRequestHeaderStringCaseInsensitiveUnique(
+		headerModifier.Remove,
+		headerModifierPath.Child("remove"))...,
+	)
+
 	for _, h := range headerModifier.Add {
 		if err := validator.ValidateRequestHeaderName(string(h.Name)); err != nil {
 			valErr := field.Invalid(headerModifierPath.Child("add"), h, err.Error())
@@ -861,6 +875,43 @@ func validateFilterHeaderModifierFields(
 			valErr := field.Invalid(headerModifierPath.Child("remove"), h, err.Error())
 			allErrs = append(allErrs, valErr)
 		}
+	}
+
+	return allErrs
+}
+
+func validateRequestHeadersCaseInsensitiveUnique(
+	headers []v1.HTTPHeader,
+	path *field.Path,
+) field.ErrorList {
+	var allErrs field.ErrorList
+
+	seen := make(map[string]struct{})
+
+	for _, h := range headers {
+		name := strings.ToLower(string(h.Name))
+		if _, exists := seen[name]; exists {
+			valErr := field.Invalid(path, h, "header name is not unique")
+			allErrs = append(allErrs, valErr)
+		}
+		seen[name] = struct{}{}
+	}
+
+	return allErrs
+}
+
+func validateRequestHeaderStringCaseInsensitiveUnique(headers []string, path *field.Path) field.ErrorList {
+	var allErrs field.ErrorList
+
+	seen := make(map[string]struct{})
+
+	for _, h := range headers {
+		name := strings.ToLower(h)
+		if _, exists := seen[name]; exists {
+			valErr := field.Invalid(path, h, "header name is not unique")
+			allErrs = append(allErrs, valErr)
+		}
+		seen[name] = struct{}{}
 	}
 
 	return allErrs
