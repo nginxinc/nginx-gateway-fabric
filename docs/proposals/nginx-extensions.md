@@ -84,7 +84,7 @@ The Gateway API provides many extensions that implementations can leverage to de
 
 ### GatewayClass Parameters Ref
 
-_Role(s)_: Infrastructure Provider
+_Role(s)_: Infrastructure Provider or Cluster Operator. For NGINX Gateway Fabric, this will be the responsibility of the Cluster Operator, as the Infrastructure Provider role only applies to cloud or PaaS providers.
 
 _Resource(s)_: GatewayClass
 
@@ -97,6 +97,7 @@ _Conformance Level_: Implementation-specific
 _Example(s)_: [EnvoyProxy CRD](https://gateway.envoyproxy.io/v0.6.0/user/customize-envoyproxy/)
 
 First-class API field on the `GatewayClass.spec`. The field refers to a resource containing the configuration parameters corresponding to the GatewayClass. The resource referenced can be a standard Kubernetes resource, a CRD, or a ConfigMap. While GatewayClasses are cluster-scoped, resources referenced by `GatewayClass.spec.parametersRef` can be namespaced-scoped or cluster-scoped. The configuration parameters contained in the referenced resource are applied to all Gateways attached to the GatewayClass.
+
 
 Example:
 
