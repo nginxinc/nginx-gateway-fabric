@@ -76,7 +76,7 @@ type DataCollectorConfig struct {
 	PodNSName types.NamespacedName
 	// ImageSource is the source of the NGF image.
 	ImageSource string
-	// FlagKeyValues holds the parsed NGF flag keys and values.
+	// FlagKeyValues contains the parsed NGF flag keys and values.
 	FlagKeyValues config.FlagKeyValues
 }
 
