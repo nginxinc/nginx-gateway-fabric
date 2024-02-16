@@ -29,6 +29,8 @@ func buildGatewayAPIStatuses(
 
 	statuses.GatewayStatuses = buildGatewayStatuses(graph.Gateway, graph.IgnoredGateways, gwAddresses, nginxReloadRes)
 
+	statuses.BackendTLSPolicyStatuses = buildBackendTLSPolicyStatuses(graph.BackendTLSPolicies)
+
 	for nsname, r := range graph.Routes {
 		parentStatuses := make([]status.ParentStatus, 0, len(r.ParentRefs))
 
@@ -189,4 +191,25 @@ func buildGatewayStatus(
 		Addresses:          gwAddresses,
 		ObservedGeneration: gateway.Source.Generation,
 	}
+}
+
+func buildBackendTLSPolicyStatuses(backendTLSPolicies map[types.NamespacedName]*graph.BackendTLSPolicy,
+) status.BackendTLSPolicyStatuses {
+	statuses := make(status.BackendTLSPolicyStatuses, len(backendTLSPolicies))
+
+	for nsname, backendTLSPolicy := range backendTLSPolicies {
+		if backendTLSPolicy.IsReferenced {
+			if !backendTLSPolicy.Ignored {
+				statuses[nsname] = status.BackendTLSPolicyStatus{
+					AncestorStatuses: []status.AncestorStatus{
+						{
+							GatewayNsName: backendTLSPolicy.Gateway,
+							Conditions:    conditions.DeduplicateConditions(backendTLSPolicy.Conditions),
+						},
+					},
+				}
+			}
+		}
+	}
+	return statuses
 }

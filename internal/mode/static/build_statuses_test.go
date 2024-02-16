@@ -9,6 +9,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	v1 "sigs.k8s.io/gateway-api/apis/v1"
+	v1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
@@ -202,6 +203,7 @@ func TestBuildStatuses(t *testing.T) {
 				},
 			},
 		},
+		BackendTLSPolicyStatuses: status.BackendTLSPolicyStatuses{},
 	}
 
 	g := NewWithT(t)
@@ -304,6 +306,7 @@ func TestBuildStatusesNginxErr(t *testing.T) {
 				},
 			},
 		},
+		BackendTLSPolicyStatuses: status.BackendTLSPolicyStatuses{},
 	}
 
 	g := NewWithT(t)
@@ -607,6 +610,136 @@ func TestBuildGatewayStatuses(t *testing.T) {
 			g := NewWithT(t)
 
 			result := buildGatewayStatuses(test.gateway, test.ignoredGateways, addr, test.nginxReloadRes)
+			g.Expect(helpers.Diff(test.expected, result)).To(BeEmpty())
+		})
+	}
+}
+
+func TestBuildBackendTLSPolicyStatuses(t *testing.T) {
+	type policyCfg struct {
+		Name         string
+		Conditions   []conditions.Condition
+		Valid        bool
+		Ignored      bool
+		IsReferenced bool
+	}
+
+	getBackendTLSPolicy := func(policyCfg policyCfg) *graph.BackendTLSPolicy {
+		return &graph.BackendTLSPolicy{
+			Source: &v1alpha2.BackendTLSPolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace:  "test",
+					Name:       policyCfg.Name,
+					Generation: 1,
+				},
+			},
+			Valid:        policyCfg.Valid,
+			Ignored:      policyCfg.Ignored,
+			IsReferenced: policyCfg.IsReferenced,
+			Conditions:   policyCfg.Conditions,
+			Gateway:      types.NamespacedName{Name: "gateway", Namespace: "test"},
+		}
+	}
+
+	attachedConds := []conditions.Condition{staticConds.NewBackendTLSPolicyAccepted()}
+	invalidConds := []conditions.Condition{staticConds.NewBackendTLSPolicyInvalid("invalid backendTLSPolicy")}
+
+	validPolicyCfg := policyCfg{
+		Name:         "valid-bt",
+		Valid:        true,
+		IsReferenced: true,
+		Conditions:   attachedConds,
+	}
+
+	invalidPolicyCfg := policyCfg{
+		Name:         "invalid-bt",
+		IsReferenced: true,
+		Conditions:   invalidConds,
+	}
+
+	ignoredPolicyCfg := policyCfg{
+		Name:         "ignored-bt",
+		Ignored:      true,
+		IsReferenced: true,
+	}
+
+	notReferencedPolicyCfg := policyCfg{
+		Name:  "not-referenced",
+		Valid: true,
+	}
+
+	tests := []struct {
+		backendTLSPolicies map[types.NamespacedName]*graph.BackendTLSPolicy
+		expected           status.BackendTLSPolicyStatuses
+		name               string
+	}{
+		{
+			name:     "nil backendTLSPolicies",
+			expected: status.BackendTLSPolicyStatuses{},
+		},
+		{
+			name: "valid backendTLSPolicy",
+			backendTLSPolicies: map[types.NamespacedName]*graph.BackendTLSPolicy{
+				{Namespace: "test", Name: "valid-bt"}: getBackendTLSPolicy(validPolicyCfg),
+			},
+			expected: status.BackendTLSPolicyStatuses{
+				{Namespace: "test", Name: "valid-bt"}: {
+					AncestorStatuses: []status.AncestorStatus{
+						{
+							Conditions:    attachedConds,
+							GatewayNsName: types.NamespacedName{Name: "gateway", Namespace: "test"},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "invalid backendTLSPolicy",
+			backendTLSPolicies: map[types.NamespacedName]*graph.BackendTLSPolicy{
+				{Namespace: "test", Name: "invalid-bt"}: getBackendTLSPolicy(invalidPolicyCfg),
+			},
+			expected: status.BackendTLSPolicyStatuses{
+				{Namespace: "test", Name: "invalid-bt"}: {
+					AncestorStatuses: []status.AncestorStatus{
+						{
+							Conditions:    invalidConds,
+							GatewayNsName: types.NamespacedName{Name: "gateway", Namespace: "test"},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "ignored or not referenced backendTLSPolicies",
+			backendTLSPolicies: map[types.NamespacedName]*graph.BackendTLSPolicy{
+				{Namespace: "test", Name: "ignored-bt"}:     getBackendTLSPolicy(ignoredPolicyCfg),
+				{Namespace: "test", Name: "not-referenced"}: getBackendTLSPolicy(notReferencedPolicyCfg),
+			},
+			expected: status.BackendTLSPolicyStatuses{},
+		},
+		{
+			name: "mix valid and ignored backendTLSPolicies",
+			backendTLSPolicies: map[types.NamespacedName]*graph.BackendTLSPolicy{
+				{Namespace: "test", Name: "ignored-bt"}: getBackendTLSPolicy(ignoredPolicyCfg),
+				{Namespace: "test", Name: "valid-bt"}:   getBackendTLSPolicy(validPolicyCfg),
+			},
+			expected: status.BackendTLSPolicyStatuses{
+				{Namespace: "test", Name: "valid-bt"}: {
+					AncestorStatuses: []status.AncestorStatus{
+						{
+							Conditions:    attachedConds,
+							GatewayNsName: types.NamespacedName{Name: "gateway", Namespace: "test"},
+						},
+					},
+				},
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			g := NewWithT(t)
+
+			result := buildBackendTLSPolicyStatuses(test.backendTLSPolicies)
 			g.Expect(helpers.Diff(test.expected, result)).To(BeEmpty())
 		})
 	}

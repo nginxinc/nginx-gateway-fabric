@@ -70,6 +70,10 @@ func (g GeneratorImpl) Generate(conf dataplane.Configuration) []file.File {
 
 	files = append(files, generateConfigVersion(conf.Version))
 
+	for id, bundle := range conf.CertBundles {
+		files = append(files, generateCertBundle(id, bundle))
+	}
+
 	return files
 }
 
@@ -88,6 +92,18 @@ func generatePEM(id dataplane.SSLKeyPairID, cert []byte, key []byte) file.File {
 
 func generatePEMFileName(id dataplane.SSLKeyPairID) string {
 	return filepath.Join(secretsFolder, string(id)+".pem")
+}
+
+func generateCertBundle(id dataplane.CertBundleID, cert []byte) file.File {
+	return file.File{
+		Content: cert,
+		Path:    generateCertBundleFileName(id),
+		Type:    file.TypeRegular,
+	}
+}
+
+func generateCertBundleFileName(id dataplane.CertBundleID) string {
+	return filepath.Join(secretsFolder, string(id)+".crt")
 }
 
 func (g GeneratorImpl) generateHTTPConfig(conf dataplane.Configuration) file.File {

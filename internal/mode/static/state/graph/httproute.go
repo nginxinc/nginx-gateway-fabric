@@ -279,7 +279,19 @@ func bindRouteToListeners(r *Route, gw *Gateway, namespaces map[types.Namespaced
 
 		path := field.NewPath("spec").Child("parentRefs").Index(ref.Idx)
 
-		// Case 1: Attachment is not possible due to unsupported configuration
+		attachableListeners, listenerExists := findAttachableListeners(
+			getSectionName(routeRef.SectionName),
+			gw.Listeners,
+		)
+
+		// Case 1: Attachment is not possible because the specified SectionName does not match any Listeners in the
+		// Gateway.
+		if !listenerExists {
+			attachment.FailedCondition = staticConds.NewRouteNoMatchingParent()
+			continue
+		}
+
+		// Case 2: Attachment is not possible due to unsupported configuration
 
 		if routeRef.Port != nil {
 			valErr := field.Forbidden(path.Child("port"), "cannot be set")
@@ -287,7 +299,7 @@ func bindRouteToListeners(r *Route, gw *Gateway, namespaces map[types.Namespaced
 			continue
 		}
 
-		// Case 2: the parentRef references an ignored Gateway resource.
+		// Case 3: the parentRef references an ignored Gateway resource.
 
 		referencesWinningGw := ref.Gateway.Namespace == gw.Source.Namespace && ref.Gateway.Name == gw.Source.Name
 
@@ -296,18 +308,18 @@ func bindRouteToListeners(r *Route, gw *Gateway, namespaces map[types.Namespaced
 			continue
 		}
 
-		// Case 3: Attachment is not possible because Gateway is invalid
+		// Case 4: Attachment is not possible because Gateway is invalid
 
 		if !gw.Valid {
 			attachment.FailedCondition = staticConds.NewRouteInvalidGateway()
 			continue
 		}
 
-		// Case 4 - winning Gateway
+		// Case 5 - winning Gateway
 
 		// Try to attach Route to all matching listeners
 
-		cond, attached := tryToAttachRouteToListeners(ref.Attachment, routeRef.SectionName, r, gw, namespaces)
+		cond, attached := tryToAttachRouteToListeners(ref.Attachment, attachableListeners, r, gw, namespaces)
 		if !attached {
 			attachment.FailedCondition = cond
 			continue
@@ -327,17 +339,11 @@ func bindRouteToListeners(r *Route, gw *Gateway, namespaces map[types.Namespaced
 // (2) If it fails to attach the route, it will return false and the failure condition.
 func tryToAttachRouteToListeners(
 	refStatus *ParentRefAttachmentStatus,
-	sectionName *v1.SectionName,
+	attachableListeners []*Listener,
 	route *Route,
 	gw *Gateway,
 	namespaces map[types.NamespacedName]*apiv1.Namespace,
 ) (conditions.Condition, bool) {
-	attachableListeners, listenerExists := findAttachableListeners(getSectionName(sectionName), gw.Listeners)
-
-	if !listenerExists {
-		return staticConds.NewRouteNoMatchingParent(), false
-	}
-
 	if len(attachableListeners) == 0 {
 		return staticConds.NewRouteInvalidListener(), false
 	}

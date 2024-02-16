@@ -10,6 +10,12 @@ docs:
    kubectl delete -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/standard-install.yaml
    ```
 
+   Alternatively, if you installed the Gateway APIs from the experimental channel, run the following:
+
+   ```shell
+   kubectl delete -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/experimental-install.yaml
+   ```
+
    If you are running on Kubernetes 1.23 or 1.24, you also need to delete the validating webhook. To do so, run:
 
    ```shell

@@ -7,6 +7,7 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
+	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -49,6 +50,7 @@ type ProjectMetadata struct {
 // Note: this type might change once https://github.com/nginxinc/nginx-gateway-fabric/issues/1318 is implemented.
 type Data struct {
 	ProjectMetadata   ProjectMetadata
+	ClusterID         string
 	NodeCount         int
 	NGFResourceCounts NGFResourceCounts
 	NGFReplicaCount   int
@@ -99,6 +101,11 @@ func (c DataCollectorImpl) Collect(ctx context.Context) (Data, error) {
 		return Data{}, fmt.Errorf("failed to collect NGF replica count: %w", err)
 	}
 
+	var clusterID string
+	if clusterID, err = collectClusterID(ctx, c.cfg.K8sClientReader); err != nil {
+		return Data{}, fmt.Errorf("failed to collect clusterID: %w", err)
+	}
+
 	data := Data{
 		NodeCount:         nodeCount,
 		NGFResourceCounts: graphResourceCount,
@@ -107,6 +114,7 @@ func (c DataCollectorImpl) Collect(ctx context.Context) (Data, error) {
 			Version: c.cfg.Version,
 		},
 		NGFReplicaCount: ngfReplicaCount,
+		ClusterID:       clusterID,
 	}
 
 	return data, nil
@@ -192,4 +200,15 @@ func collectNGFReplicaCount(ctx context.Context, k8sClient client.Reader, podNSN
 	}
 
 	return int(*replicaSet.Spec.Replicas), nil
+}
+
+func collectClusterID(ctx context.Context, k8sClient client.Reader) (string, error) {
+	key := types.NamespacedName{
+		Name: meta.NamespaceSystem,
+	}
+	var kubeNamespace v1.Namespace
+	if err := k8sClient.Get(ctx, key, &kubeNamespace); err != nil {
+		return "", fmt.Errorf("failed to get kube-system namespace: %w", err)
+	}
+	return string(kubeNamespace.GetUID()), nil
 }

@@ -14,6 +14,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	v1 "sigs.k8s.io/gateway-api/apis/v1"
+	v1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
@@ -42,6 +43,7 @@ var _ = Describe("Updater", func() {
 		scheme := runtime.NewScheme()
 
 		Expect(v1.AddToScheme(scheme)).Should(Succeed())
+		Expect(v1alpha2.AddToScheme(scheme)).Should(Succeed())
 		Expect(ngfAPI.AddToScheme(scheme)).Should(Succeed())
 
 		client = fake.NewClientBuilder().
@@ -51,6 +53,7 @@ var _ = Describe("Updater", func() {
 				&v1.Gateway{},
 				&v1.HTTPRoute{},
 				&ngfAPI.NginxGateway{},
+				&v1alpha2.BackendTLSPolicy{},
 			).
 			Build()
 
@@ -63,8 +66,9 @@ var _ = Describe("Updater", func() {
 
 	Describe("Process status updates", Ordered, func() {
 		type generations struct {
-			gatewayClass int64
-			gateways     int64
+			gatewayClass       int64
+			gateways           int64
+			backendTLSPolicies int64
 		}
 
 		var (
@@ -73,6 +77,7 @@ var _ = Describe("Updater", func() {
 			gw, ignoredGw *v1.Gateway
 			hr            *v1.HTTPRoute
 			ng            *ngfAPI.NginxGateway
+			btls          *v1alpha2.BackendTLSPolicy
 			addr          = v1.GatewayStatusAddress{
 				Type:  helpers.GetPointer(v1.IPAddressType),
 				Value: "1.2.3.4",
@@ -113,6 +118,17 @@ var _ = Describe("Updater", func() {
 								{
 									GatewayNsName: types.NamespacedName{Namespace: "test", Name: "gateway"},
 									SectionName:   helpers.GetPointer[v1.SectionName]("http"),
+									Conditions:    status.CreateTestConditions("Test"),
+								},
+							},
+						},
+					},
+					BackendTLSPolicyStatuses: status.BackendTLSPolicyStatuses{
+						{Namespace: "test", Name: "backend-tls-policy"}: {
+							ObservedGeneration: gens.backendTLSPolicies,
+							AncestorStatuses: []status.AncestorStatus{
+								{
+									GatewayNsName: types.NamespacedName{Namespace: "test", Name: "gateway"},
 									Conditions:    status.CreateTestConditions("Test"),
 								},
 							},
@@ -233,6 +249,31 @@ var _ = Describe("Updater", func() {
 				}
 			}
 
+			createExpectedBtlsWithGeneration = func(gen int64) *v1alpha2.BackendTLSPolicy {
+				return &v1alpha2.BackendTLSPolicy{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "test",
+						Name:      "backend-tls-policy",
+					},
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "BackendTLSPolicy",
+						APIVersion: "gateway.networking.k8s.io/v1alpha2",
+					},
+					Status: v1alpha2.PolicyStatus{
+						Ancestors: []v1alpha2.PolicyAncestorStatus{
+							{
+								AncestorRef: v1.ParentReference{
+									Namespace: (*v1.Namespace)(helpers.GetPointer("test")),
+									Name:      "gateway",
+								},
+								ControllerName: v1alpha2.GatewayController(gatewayCtrlName),
+								Conditions:     status.CreateExpectedAPIConditions("Test", gen, fakeClockTime),
+							},
+						},
+					},
+				}
+			}
+
 			createExpectedNGWithGeneration = func(gen int64) *ngfAPI.NginxGateway {
 				return &ngfAPI.NginxGateway{
 					ObjectMeta: metav1.ObjectMeta{
@@ -299,6 +340,16 @@ var _ = Describe("Updater", func() {
 					APIVersion: "gateway.networking.k8s.io/v1",
 				},
 			}
+			btls = &v1alpha2.BackendTLSPolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      "backend-tls-policy",
+				},
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "BackendTLSPolicy",
+					APIVersion: "gateway.networking.k8s.io/v1alpha2",
+				},
+			}
 			ng = &ngfAPI.NginxGateway{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "nginx-gateway",
@@ -317,12 +368,14 @@ var _ = Describe("Updater", func() {
 			Expect(client.Create(context.Background(), ignoredGw)).Should(Succeed())
 			Expect(client.Create(context.Background(), hr)).Should(Succeed())
 			Expect(client.Create(context.Background(), ng)).Should(Succeed())
+			Expect(client.Create(context.Background(), btls)).Should(Succeed())
 		})
 
 		It("should update gateway API statuses", func() {
 			updater.Update(context.Background(), createGwAPIStatuses(generations{
-				gatewayClass: 1,
-				gateways:     1,
+				gatewayClass:       1,
+				gateways:           1,
+				backendTLSPolicies: 1,
 			}))
 		})
 
@@ -376,6 +429,22 @@ var _ = Describe("Updater", func() {
 			expectedHR.ResourceVersion = latestHR.ResourceVersion
 
 			Expect(helpers.Diff(expectedHR, latestHR)).To(BeEmpty())
+		})
+
+		It("should have the updated status of BackendTLSPolicy in the API server", func() {
+			latestBtls := &v1alpha2.BackendTLSPolicy{}
+			expectedBtls := createExpectedBtlsWithGeneration(1)
+
+			err := client.Get(
+				context.Background(),
+				types.NamespacedName{Namespace: "test", Name: "backend-tls-policy"},
+				latestBtls,
+			)
+			Expect(err).ToNot(HaveOccurred())
+
+			expectedBtls.ResourceVersion = latestBtls.ResourceVersion
+
+			Expect(helpers.Diff(expectedBtls, latestBtls)).To(BeEmpty())
 		})
 
 		It("should update nginx gateway status", func() {

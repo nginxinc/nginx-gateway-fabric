@@ -109,6 +109,17 @@ To disable the creation of a Service:
    ```
 
 
+#### Experimental features
+
+We support a subset of the additional features provided by the Gateway API experimental channel. To enable the
+experimental features of Gateway API which are supported by NGINX Gateway Fabric:
+
+```shell
+helm install ngf oci://ghcr.io/nginxinc/charts/nginx-gateway-fabric --create-namespace -n nginx-gateway --set nginxGateway.experimentalFeatures.enable=true
+```
+
+{{<note>}}Requires the Gateway APIs installed from the experimental channel.{{</note>}}
+
 ## Upgrade NGINX Gateway Fabric
 
 {{<tip>}}For guidance on zero downtime upgrades, see the [Delay Pod Termination](#configure-delayed-pod-termination-for-zero-downtime-upgrades) section below.{{</tip>}}
@@ -125,6 +136,12 @@ To upgrade your Gateway API resources, take the following steps:
 
    ```shell
    kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/standard-install.yaml
+   ```
+
+   or, if you installed the from the experimental channel:
+
+   ```shell
+   kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/experimental-install.yaml
    ```
 
 ### Upgrade NGINX Gateway Fabric CRDs

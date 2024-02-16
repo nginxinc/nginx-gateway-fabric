@@ -12,10 +12,13 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
+	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/controller/index"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
+	staticConds "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/conditions"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/validation"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/validation/validationfakes"
 )
@@ -90,21 +93,72 @@ func TestBuildGraph(t *testing.T) {
 	hr2 := createRoute("hr-2", "wrong-gateway", "listener-80-1")
 	hr3 := createRoute("hr-3", "gateway-1", "listener-443-1") // https listener; should not conflict with hr1
 
+	cm := &v1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "configmap",
+			Namespace: "service",
+		},
+		Data: map[string]string{
+			"ca.crt": caBlock,
+		},
+	}
+
+	btpAcceptedConds := []conditions.Condition{
+		staticConds.NewBackendTLSPolicyAccepted(),
+		staticConds.NewBackendTLSPolicyAccepted(),
+	}
+
+	btp := BackendTLSPolicy{
+		Source: &v1alpha2.BackendTLSPolicy{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "btp",
+				Namespace: "service",
+			},
+			Spec: v1alpha2.BackendTLSPolicySpec{
+				TargetRef: v1alpha2.PolicyTargetReferenceWithSectionName{
+					PolicyTargetReference: v1alpha2.PolicyTargetReference{
+						Group:     "",
+						Kind:      "Service",
+						Name:      "foo",
+						Namespace: (*gatewayv1.Namespace)(helpers.GetPointer("service")),
+					},
+				},
+				TLS: v1alpha2.BackendTLSPolicyConfig{
+					Hostname: "foo.example.com",
+					CACertRefs: []v1alpha2.LocalObjectReference{
+						{
+							Kind:  "ConfigMap",
+							Name:  "configmap",
+							Group: "",
+						},
+					},
+				},
+			},
+		},
+		Valid:        true,
+		IsReferenced: true,
+		Gateway:      types.NamespacedName{Namespace: "test", Name: "gateway-1"},
+		Conditions:   btpAcceptedConds,
+		CaCertRef:    types.NamespacedName{Namespace: "service", Name: "configmap"},
+	}
+
 	hr1Refs := []BackendRef{
 		{
-			SvcNsName:   types.NamespacedName{Namespace: "service", Name: "foo"},
-			ServicePort: v1.ServicePort{Port: 80},
-			Valid:       true,
-			Weight:      1,
+			SvcNsName:        types.NamespacedName{Namespace: "service", Name: "foo"},
+			ServicePort:      v1.ServicePort{Port: 80},
+			Valid:            true,
+			Weight:           1,
+			BackendTLSPolicy: &btp,
 		},
 	}
 
 	hr3Refs := []BackendRef{
 		{
-			SvcNsName:   types.NamespacedName{Namespace: "service", Name: "foo"},
-			ServicePort: v1.ServicePort{Port: 80},
-			Valid:       true,
-			Weight:      1,
+			SvcNsName:        types.NamespacedName{Namespace: "service", Name: "foo"},
+			ServicePort:      v1.ServicePort{Port: 80},
+			Valid:            true,
+			Weight:           1,
+			BackendTLSPolicy: &btp,
 		},
 	}
 
@@ -261,6 +315,12 @@ func TestBuildGraph(t *testing.T) {
 			Secrets: map[types.NamespacedName]*v1.Secret{
 				client.ObjectKeyFromObject(secret): secret,
 			},
+			BackendTLSPolicies: map[types.NamespacedName]*v1alpha2.BackendTLSPolicy{
+				client.ObjectKeyFromObject(btp.Source): btp.Source,
+			},
+			ConfigMaps: map[types.NamespacedName]*v1.ConfigMap{
+				client.ObjectKeyFromObject(cm): cm,
+			},
 		}
 	}
 
@@ -349,6 +409,15 @@ func TestBuildGraph(t *testing.T) {
 			},
 			ReferencedServices: map[types.NamespacedName]struct{}{
 				client.ObjectKeyFromObject(svc): {},
+			},
+			ReferencedCaCertConfigMaps: map[types.NamespacedName]*CaCertConfigMap{
+				client.ObjectKeyFromObject(cm): {
+					Source: cm,
+					CACert: []byte(caBlock),
+				},
+			},
+			BackendTLSPolicies: map[types.NamespacedName]*BackendTLSPolicy{
+				client.ObjectKeyFromObject(btp.Source): &btp,
 			},
 		}
 	}
@@ -494,6 +563,25 @@ func TestIsReferenced(t *testing.T) {
 		},
 	}
 
+	baseConfigMap := &v1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "test",
+			Name:      "configmap",
+		},
+	}
+	sameNamespaceDifferentNameConfigMap := &v1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "test",
+			Name:      "configmap-different-name",
+		},
+	}
+	differentNamespaceSameNameConfigMap := &v1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "test-different-namespace",
+			Name:      "configmap",
+		},
+	}
+
 	graph := &Graph{
 		Gateway: gw,
 		ReferencedSecrets: map[types.NamespacedName]*Secret{
@@ -506,6 +594,12 @@ func TestIsReferenced(t *testing.T) {
 		},
 		ReferencedServices: map[types.NamespacedName]struct{}{
 			client.ObjectKeyFromObject(serviceInGraph): {},
+		},
+		ReferencedCaCertConfigMaps: map[types.NamespacedName]*CaCertConfigMap{
+			client.ObjectKeyFromObject(baseConfigMap): {
+				Source: baseConfigMap,
+				CACert: []byte(caBlock),
+			},
 		},
 	}
 
@@ -598,6 +692,26 @@ func TestIsReferenced(t *testing.T) {
 		{
 			name:     "Empty EndpointSlice",
 			resource: emptyEndpointSlice,
+			graph:    graph,
+			expected: false,
+		},
+
+		// ConfigMap cases
+		{
+			name:     "ConfigMap in graph's ReferencedConfigMaps is referenced",
+			resource: baseConfigMap,
+			graph:    graph,
+			expected: true,
+		},
+		{
+			name:     "ConfigMap not in ReferencedConfigMaps with same Namespace and different Name is not referenced",
+			resource: sameNamespaceDifferentNameConfigMap,
+			graph:    graph,
+			expected: false,
+		},
+		{
+			name:     "ConfigMap not in ReferencedConfigMaps with different Namespace and same Name is not referenced",
+			resource: differentNamespaceSameNameConfigMap,
 			graph:    graph,
 			expected: false,
 		},

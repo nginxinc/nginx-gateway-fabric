@@ -15,6 +15,7 @@ CRDS=../deploy/manifests/crds/
 STATIC_MANIFEST=provisioner/static-deployment.yaml
 PROVISIONER_MANIFEST=provisioner/provisioner.yaml
 INSTALL_WEBHOOK ?= false
+ENABLE_EXPERIMENTAL ?= false
 .DEFAULT_GOAL := help
 
 .PHONY: help
@@ -37,7 +38,7 @@ create-kind-cluster: ## Create a kind cluster
 
 .PHONY: update-ngf-manifest
 update-ngf-manifest: ## Update the NGF deployment manifest image names and imagePullPolicies
-	cd .. && make generate-manifests HELM_TEMPLATE_EXTRA_ARGS_FOR_ALL_MANIFESTS_FILE="--set nginxGateway.kind=skip" HELM_TEMPLATE_COMMON_ARGS="--set nginxGateway.image.repository=$(PREFIX) --set nginxGateway.image.tag=$(TAG) --set nginxGateway.image.pullPolicy=Never --set nginx.image.repository=$(NGINX_PREFIX) --set nginx.image.tag=$(TAG) --set nginx.image.pullPolicy=Never" && cd -
+	cd .. && make generate-manifests HELM_TEMPLATE_EXTRA_ARGS_FOR_ALL_MANIFESTS_FILE="--set nginxGateway.kind=skip" HELM_TEMPLATE_COMMON_ARGS="--set nginxGateway.image.repository=$(PREFIX) --set nginxGateway.image.tag=$(TAG) --set nginxGateway.image.pullPolicy=Never --set nginx.image.repository=$(NGINX_PREFIX) --set nginx.image.tag=$(TAG) --set nginx.image.pullPolicy=Never --set nginxGateway.experimentalFeatures.enable=$(ENABLE_EXPERIMENTAL)" && cd -
 
 .PHONY: update-ngf-manifest-with-plus
 update-ngf-manifest-with-plus: ## Update the NGF deployment manifest image names and imagePullPolicies including nginx-plus
@@ -61,7 +62,7 @@ load-images-with-plus: ## Load NGF and NGINX Plus images on configured kind clus
 
 .PHONY: prepare-ngf-dependencies
 prepare-ngf-dependencies: update-ngf-manifest ## Install NGF dependencies on configured kind cluster
-	./scripts/install-gateway.sh $(GW_API_VERSION) $(INSTALL_WEBHOOK)
+	./scripts/install-gateway.sh $(GW_API_VERSION) $(INSTALL_WEBHOOK) $(ENABLE_EXPERIMENTAL)
 	kubectl apply -f $(CRDS)
 	kubectl apply -f $(NGF_MANIFEST)
 
@@ -118,7 +119,7 @@ uninstall-ngf: uninstall-k8s-components undo-manifests-update ## Uninstall NGF o
 .PHONY: uninstall-k8s-components
 uninstall-k8s-components: ## Uninstall installed components on configured kind cluster
 	-kubectl delete -f $(NGF_MANIFEST)
-	./scripts/uninstall-gateway.sh $(GW_API_VERSION) $(INSTALL_WEBHOOK)
+	./scripts/uninstall-gateway.sh $(GW_API_VERSION) $(INSTALL_WEBHOOK) $(ENABLE_EXPERIMENTAL)
 	kubectl delete clusterrole nginx-gateway-provisioner
 	kubectl delete clusterrolebinding nginx-gateway-provisioner
 

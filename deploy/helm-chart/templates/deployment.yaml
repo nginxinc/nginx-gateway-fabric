@@ -52,6 +52,9 @@ spec:
         {{- else }}
         - --leader-election-disable
         {{- end }}
+        {{- if .Values.nginxGateway.gwAPIExperimentalFeatures.enable }}
+        - --gateway-api-experimental-features
+        {{- end }}
         env:
         - name: POD_IP
           valueFrom:

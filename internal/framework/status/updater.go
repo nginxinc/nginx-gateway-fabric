@@ -13,6 +13,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	v1 "sigs.k8s.io/gateway-api/apis/v1"
+	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/controller"
@@ -202,6 +203,21 @@ func (upd *UpdaterImpl) updateGatewayAPI(ctx context.Context, statuses GatewayAP
 			nsname,
 			&v1.HTTPRoute{},
 			newHTTPRouteStatusSetter(upd.cfg.GatewayCtlrName, upd.cfg.Clock, rs),
+		)
+	}
+
+	for nsname, bs := range statuses.BackendTLSPolicyStatuses {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
+
+		upd.writeStatuses(
+			ctx,
+			nsname,
+			&v1alpha2.BackendTLSPolicy{},
+			newBackendTLSPolicyStatusSetter(upd.cfg.GatewayCtlrName, upd.cfg.Clock, bs),
 		)
 	}
 }
