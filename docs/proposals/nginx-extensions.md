@@ -64,7 +64,6 @@ NGINX is highly configurable and offers rich features that can benefit our users
   - [Security Considerations](#security-considerations)
   - [Alternatives Considered](#alternatives-considered)
   - [References](#references)
-
 <!-- TOC -->
 
 ## Goals
@@ -97,7 +96,6 @@ _Conformance Level_: Implementation-specific
 _Example(s)_: [EnvoyProxy CRD](https://gateway.envoyproxy.io/v0.6.0/user/customize-envoyproxy/)
 
 First-class API field on the `GatewayClass.spec`. The field refers to a resource containing the configuration parameters corresponding to the GatewayClass. The resource referenced can be a standard Kubernetes resource, a CRD, or a ConfigMap. While GatewayClasses are cluster-scoped, resources referenced by `GatewayClass.spec.parametersRef` can be namespaced-scoped or cluster-scoped. The configuration parameters contained in the referenced resource are applied to all Gateways attached to the GatewayClass.
-
 
 Example:
 
@@ -161,8 +159,6 @@ spec:
 
 Infrastructure labels and annotations should be applied to all resources created in response to the Gateway. This only applies to _automated deployments_ (i.e., provisioner mode), implementations that automatically deploy the data plane based on a Gateway.
 Other use cases for this API are Service type, Service IP, CPU memory requests, affinity rules, and Gateway routability (public, private, and cluster).
-
-There are plans to add a `parametersRef` field to the infrastructure API on the Gateway. This field would function similarly to the GatewayClass `parametersRef` but would not have the same issues highlighted in the section above.
 
 ### TLS Options
 
@@ -574,7 +570,7 @@ _Resource type:_ CRD
 
 _Role(s):_ Cluster Operator
 
-_Extension point:_ GatewayClass or Gateway
+_Extension point:_ GatewayClass
 
 _NGINX Context(s):_ main, http, stream
 
@@ -605,7 +601,7 @@ NGINX Plus directives:
 
 These features are grouped because they are all the responsibility of the Cluster Operator and should not be set or changed by Application Developers.
 
-Currently, `parametersRef` is only available on the GatewayClass, which means all Gateways attached to the GatewayClass will inherit these settings. This is acceptable since NGINX Gateway Fabric supports a single Gateway per GatewayClass. However, once we [support multiple Gateways](https://github.com/nginxinc/nginx-gateway-fabric/issues/1443) and `parametersRef` is added to the Gateway Infrastructure API, then we will want to support referencing this CRD on individual Gateways.
+All the Gateways attached to the GatewayClass will inherit these settings. This is acceptable since NGINX Gateway Fabric supports a single Gateway per GatewayClass. However, once we [support multiple Gateways](https://github.com/nginxinc/nginx-gateway-fabric/issues/1443), this could become an issue. It may force users to create multiple GatewayClasses in order to create Gateways with different settings.
 
 #### Future Work
 
@@ -618,7 +614,7 @@ Add support for:
 #### Alternatives
 
 - ParametersRef with ConfigMap: A ConfigMap is another resource type where a user can provide configuration options. However, unlike CRDs, ConfigMaps do not have built-in schema validation, versioning, or conversion webhooks.
-- Direct Policy: A Direct Policy may also work for Gateway Settings. It can be attached to a Gateway and scoped to Cluster Operators through RBAC. However, `parametersRef` provides better visibility as it is directly referenced in the Gateway resource and will be easier to manage.
+- Direct Policy: A Direct Policy may also work for Gateway Settings. It can be attached to a Gateway and scoped to Cluster Operators through RBAC. It will Cluster Operators to apply settings for specific Gateways, instead of all Gateways.
 
 ### Response Modification
 
