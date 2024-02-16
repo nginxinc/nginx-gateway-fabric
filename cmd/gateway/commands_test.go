@@ -6,6 +6,8 @@ import (
 
 	. "github.com/onsi/gomega"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 type flagTestCase struct {
@@ -453,4 +455,135 @@ func TestSleepCmdFlagValidation(t *testing.T) {
 			testFlag(t, cmd, test)
 		})
 	}
+}
+
+func TestParseFlagKeysAndValues(t *testing.T) {
+	g := NewWithT(t)
+
+	flagSet := pflag.NewFlagSet("flagSet", 0)
+	// set SortFlags to false for testing purposes so when parseFlagKeysAndValues loops over the flagSet it
+	// goes off of primordial order.
+	flagSet.SortFlags = false
+
+	var boolFlagTrue bool
+	flagSet.BoolVar(
+		&boolFlagTrue,
+		"boolFlagTrue",
+		true,
+		"boolean true test flag",
+	)
+
+	var boolFlagFalse bool
+	flagSet.BoolVar(
+		&boolFlagFalse,
+		"boolFlagFalse",
+		false,
+		"boolean false test flag",
+	)
+
+	intFlagDefault := intValidatingValue{
+		validator: validatePort,
+		value:     8080,
+	}
+	flagSet.Var(
+		&intFlagDefault,
+		"intFlagDefault",
+		"default int test flag",
+	)
+
+	intFlagUserDefined := intValidatingValue{
+		validator: validatePort,
+		value:     8080,
+	}
+	flagSet.Var(
+		&intFlagUserDefined,
+		"intFlagUserDefined",
+		"user defined int test flag",
+	)
+	err := flagSet.Set("intFlagUserDefined", "8081")
+	g.Expect(err).To(Not(HaveOccurred()))
+
+	stringFlagDefault := stringValidatingValue{
+		validator: validateResourceName,
+		value:     "default-string-test-flag",
+	}
+	flagSet.Var(
+		&stringFlagDefault,
+		"stringFlagDefault",
+		"default string test flag",
+	)
+
+	stringFlagUserDefined := stringValidatingValue{
+		validator: validateResourceName,
+		value:     "user-defined-string-test-flag",
+	}
+	flagSet.Var(
+		&stringFlagUserDefined,
+		"stringFlagUserDefined",
+		"user defined string test flag",
+	)
+	err = flagSet.Set("stringFlagUserDefined", "changed-test-flag-value")
+	g.Expect(err).To(Not(HaveOccurred()))
+
+	namespacedNameFlagDefault := namespacedNameValue{
+		value: types.NamespacedName{
+			Namespace: "test",
+			Name:      "test-flag",
+		},
+	}
+	flagSet.Var(
+		&namespacedNameFlagDefault,
+		"namespacedNameFlagDefault",
+		"default namespacedName test flag",
+	)
+
+	namespacedNameFlagUserDefined := namespacedNameValue{
+		value: types.NamespacedName{
+			Namespace: "test",
+			Name:      "test-flag",
+		},
+	}
+	flagSet.Var(
+		&namespacedNameFlagUserDefined,
+		"namespacedNameFlagUserDefined",
+		"user defined namespacedName test flag",
+	)
+	userDefinedNamespacedName := types.NamespacedName{
+		Namespace: "changed-namespace",
+		Name:      "changed-name",
+	}
+	err = flagSet.Set("namespacedNameFlagUserDefined", userDefinedNamespacedName.String())
+	g.Expect(err).To(Not(HaveOccurred()))
+
+	expectedKeys := []string{
+		"boolFlagTrue",
+		"boolFlagFalse",
+
+		"intFlagDefault",
+		"intFlagUserDefined",
+
+		"stringFlagDefault",
+		"stringFlagUserDefined",
+
+		"namespacedNameFlagDefault",
+		"namespacedNameFlagUserDefined",
+	}
+	expectedValues := []string{
+		"true",
+		"false",
+
+		"default",
+		"user-defined",
+
+		"default",
+		"user-defined",
+
+		"default",
+		"user-defined",
+	}
+
+	flagKeys, flagValues := parseFlagKeysAndValues(flagSet)
+
+	g.Expect(flagKeys).Should(Equal(expectedKeys))
+	g.Expect(flagValues).Should(Equal(expectedValues))
 }

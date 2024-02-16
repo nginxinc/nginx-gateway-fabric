@@ -4,7 +4,6 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	"github.com/spf13/pflag"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/types"
 )
@@ -16,8 +15,8 @@ type Config struct {
 	ImageSource string
 	// AtomicLevel is an atomically changeable, dynamic logging level.
 	AtomicLevel zap.AtomicLevel
-	// Flags are all the NGF flags.
-	Flags *pflag.FlagSet
+	// FlagKeyValues holds the parsed NGF flag keys and values.
+	FlagKeyValues FlagKeyValues
 	// GatewayNsName is the namespaced name of a Gateway resource that the Gateway will use.
 	// The Gateway will ignore all other Gateway resources.
 	GatewayNsName *types.NamespacedName
@@ -107,4 +106,14 @@ type UsageReportConfig struct {
 	ClusterDisplayName string
 	// InsecureSkipVerify controls whether the client verifies the server cert.
 	InsecureSkipVerify bool
+}
+
+// FlagKeyValues holds the parsed NGF flag keys and values.
+// Flag Key and Value are paired based off of index in slice.
+type FlagKeyValues struct {
+	// FlagKeys holds the name of the flag.
+	FlagKeys []string
+	// FlagValues holds the value of the flag in string form.
+	// Value will be either true or false for boolean flags and default or user-defined for non-boolean flags.
+	FlagValues []string
 }

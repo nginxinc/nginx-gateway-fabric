@@ -6,13 +6,13 @@ import (
 	"fmt"
 	"runtime"
 
-	"github.com/spf13/pflag"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/config"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/dataplane"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/graph"
 )
@@ -48,67 +48,18 @@ type ProjectMetadata struct {
 	Version string
 }
 
-// Option 1: list off each Flag and its value
-//type DeploymentFlagOptions struct {
-//	GatewayClass string
-//	GatewayCtlrName string
-//	Gateway                string
-//	Config                 string
-//	Service                string
-//	UpdateGCStatus         bool
-//	MetricsDisable         bool
-//	MetricsSecure          bool
-//	MetricsPort            string
-//	HealthDisable          bool
-//	HealthPort             string
-//	LeaderElectionDisable  bool
-//	LeaderElectionLockName string
-//	Plus                   bool
-//}
-
-// Option 2 doesn't work with exporter, can't handle slices of structs.
-//type DeploymentFlagOptions struct {
-//	NonBooleanFlags []NonBooleanFlag
-//	BooleanFlags    []BooleanFlag
-//}
-//
-//type BooleanFlag struct {
-//	Name  string
-//	Value bool
-//}
-//type NonBooleanFlag struct {
-//	Name  string
-//	Value string
-//}
-
-// Option 2.1: separate Boolean and Non-boolean flags
-//type DeploymentFlagOptions struct {
-//	NonBooleanFlagKeys   []string
-//	NonBooleanFlagValues []string
-//
-//	BooleanFlagKeys   []string
-//	BooleanFlagValues []bool
-//}
-
-// Option 3: Don't separate the boolean and non-boolean flags but simply keep the value of the boolean flag
-// as a string, e.g. "true", "false".
-type DeploymentFlagOptions struct {
-	FlagKeys   []string
-	FlagValues []string
-}
-
 // Data is telemetry data.
 // Note: this type might change once https://github.com/nginxinc/nginx-gateway-fabric/issues/1318 is implemented.
 type Data struct {
-	ProjectMetadata       ProjectMetadata
-	ClusterID             string
-	Arch                  string
-	DeploymentID          string
-	ImageSource           string
-	DeploymentFlagOptions DeploymentFlagOptions
-	NGFResourceCounts     NGFResourceCounts
-	NodeCount             int
-	NGFReplicaCount       int
+	ProjectMetadata   ProjectMetadata
+	ClusterID         string
+	Arch              string
+	DeploymentID      string
+	ImageSource       string
+	NGFResourceCounts NGFResourceCounts
+	NodeCount         int
+	NGFReplicaCount   int
+	FlagKeyValues     config.FlagKeyValues
 }
 
 // DataCollectorConfig holds configuration parameters for DataCollectorImpl.
@@ -119,14 +70,14 @@ type DataCollectorConfig struct {
 	GraphGetter GraphGetter
 	// ConfigurationGetter allows us to get the Configuration.
 	ConfigurationGetter ConfigurationGetter
-	// Flags are all the NGF flags.
-	Flags *pflag.FlagSet
 	// Version is the NGF version.
 	Version string
 	// PodNSName is the NamespacedName of the NGF Pod.
 	PodNSName types.NamespacedName
 	// ImageSource is the source of the NGF image.
 	ImageSource string
+	// FlagKeyValues holds the parsed NGF flag keys and values.
+	FlagKeyValues config.FlagKeyValues
 }
 
 // DataCollectorImpl is am implementation of DataCollector.
@@ -164,7 +115,6 @@ func (c DataCollectorImpl) Collect(ctx context.Context) (Data, error) {
 	if err != nil {
 		return Data{}, fmt.Errorf("failed to collect NGF replica count: %w", err)
 	}
-	deploymentFlagOptions := collectDeploymentFlagOptions(c.cfg.Flags)
 
 	deploymentID, err := getDeploymentID(replicaSet)
 	if err != nil {
@@ -183,12 +133,12 @@ func (c DataCollectorImpl) Collect(ctx context.Context) (Data, error) {
 			Name:    "NGF",
 			Version: c.cfg.Version,
 		},
-		NGFReplicaCount:       replicaCount,
-		ClusterID:             clusterID,
-		ImageSource:           c.cfg.ImageSource,
-		Arch:                  runtime.GOARCH,
-		DeploymentID:          deploymentID,
-		DeploymentFlagOptions: deploymentFlagOptions,
+		NGFReplicaCount: replicaCount,
+		ClusterID:       clusterID,
+		ImageSource:     c.cfg.ImageSource,
+		Arch:            runtime.GOARCH,
+		DeploymentID:    deploymentID,
+		FlagKeyValues:   c.cfg.FlagKeyValues,
 	}
 
 	return data, nil
@@ -312,47 +262,4 @@ func CollectClusterID(ctx context.Context, k8sClient client.Reader) (string, err
 		return "", fmt.Errorf("failed to get kube-system namespace: %w", err)
 	}
 	return string(kubeNamespace.GetUID()), nil
-}
-
-func collectDeploymentFlagOptions(flags *pflag.FlagSet) DeploymentFlagOptions {
-	//deploymentFlagOptions := DeploymentFlagOptions{
-	//	NonBooleanFlagKeys:   []string{},
-	//	NonBooleanFlagValues: []string{},
-	//	BooleanFlagKeys:      []string{},
-	//	BooleanFlagValues:    []bool{},
-	//}
-
-	deploymentFlagOptions := DeploymentFlagOptions{
-		FlagKeys:   []string{},
-		FlagValues: []string{},
-	}
-	flags.VisitAll(
-		func(flag *pflag.Flag) {
-			deploymentFlagOptions.FlagKeys = append(deploymentFlagOptions.FlagKeys, flag.Name)
-			switch flag.Value.Type() {
-			case "bool":
-				//val, err := strconv.ParseBool(flag.Value.String())
-				//if err != nil {
-				//	return
-				//}
-				//deploymentFlagOptions.BooleanFlagKeys = append(deploymentFlagOptions.BooleanFlagKeys, flag.Name)
-				//deploymentFlagOptions.BooleanFlagValues = append(deploymentFlagOptions.BooleanFlagValues, val)
-
-				deploymentFlagOptions.FlagValues = append(deploymentFlagOptions.FlagValues, flag.Value.String())
-
-			default:
-				var val string
-				if flag.Value.String() == flag.DefValue {
-					val = "default"
-				} else {
-					val = "user-defined"
-				}
-				deploymentFlagOptions.FlagValues = append(deploymentFlagOptions.FlagValues, val)
-				// deploymentFlagOptions.NonBooleanFlagKeys = append(deploymentFlagOptions.NonBooleanFlagKeys, flag.Name)
-				// deploymentFlagOptions.NonBooleanFlagValues = append(deploymentFlagOptions.NonBooleanFlagValues, val)
-			}
-		},
-	)
-
-	return deploymentFlagOptions
 }

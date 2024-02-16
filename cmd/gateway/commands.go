@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -178,6 +179,8 @@ func createStaticModeCommand() *cobra.Command {
 				}
 			}
 
+			flagKeys, flagValues := parseFlagKeysAndValues(cmd.Flags())
+
 			conf := config.Config{
 				GatewayCtlrName:          gatewayCtlrName.value,
 				ConfigName:               configName.String(),
@@ -215,7 +218,10 @@ func createStaticModeCommand() *cobra.Command {
 				Version:              version,
 				ExperimentalFeatures: gwExperimentalFeatures,
 				ImageSource:          imageSource,
-				Flags:                cmd.Flags(),
+				FlagKeyValues: config.FlagKeyValues{
+					FlagKeys:   flagKeys,
+					FlagValues: flagValues,
+				},
 			}
 
 			if err := static.StartManager(conf); err != nil {
@@ -450,4 +456,30 @@ func createSleepCommand() *cobra.Command {
 	)
 
 	return cmd
+}
+
+func parseFlagKeysAndValues(flags *pflag.FlagSet) (flagKeys, flagValues []string) {
+	flagKeys = []string{}
+	flagValues = []string{}
+
+	flags.VisitAll(
+		func(flag *pflag.Flag) {
+			flagKeys = append(flagKeys, flag.Name)
+			switch flag.Value.Type() {
+			case "bool":
+				flagValues = append(flagValues, flag.Value.String())
+			default:
+				var val string
+				if flag.Value.String() == flag.DefValue {
+					val = "default"
+				} else {
+					val = "user-defined"
+				}
+
+				flagValues = append(flagValues, val)
+			}
+		},
+	)
+
+	return flagKeys, flagValues
 }

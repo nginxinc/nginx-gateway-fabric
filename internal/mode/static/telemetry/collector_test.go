@@ -6,11 +6,9 @@ import (
 	"fmt"
 	"reflect"
 	"runtime"
-	"strconv"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/spf13/pflag"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -19,6 +17,7 @@ import (
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/events/eventsfakes"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/config"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/dataplane"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/graph"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/resolver"
@@ -79,9 +78,8 @@ var _ = Describe("Collector", Ordered, func() {
 		ngfPod                  *v1.Pod
 		ngfReplicaSet           *appsv1.ReplicaSet
 		kubeNamespace           *v1.Namespace
-
-		baseGetCalls getCallsFunc
-		flagset      *pflag.FlagSet
+		baseGetCalls            getCallsFunc
+		flagKeyValues           config.FlagKeyValues
 	)
 
 	BeforeAll(func() {
@@ -128,22 +126,25 @@ var _ = Describe("Collector", Ordered, func() {
 				UID:  "test-uid",
 			},
 		}
+
+		flagKeyValues = config.FlagKeyValues{
+			FlagKeys:   []string{"boolFlag", "intFlag", "stringFlag"},
+			FlagValues: []string{"false", "default", "user-defined"},
+		}
 	})
 
 	BeforeEach(func() {
 		expData = telemetry.Data{
-			ProjectMetadata:       telemetry.ProjectMetadata{Name: "NGF", Version: version},
-			NodeCount:             0,
-			NGFResourceCounts:     telemetry.NGFResourceCounts{},
-			NGFReplicaCount:       1,
-			ClusterID:             string(kubeNamespace.GetUID()),
-			ImageSource:           "local",
-			Arch:                  runtime.GOARCH,
-			DeploymentID:          string(ngfReplicaSet.ObjectMeta.OwnerReferences[0].UID),
-			DeploymentFlagOptions: telemetry.DeploymentFlagOptions{FlagKeys: []string{}, FlagValues: []string{}},
+			ProjectMetadata:   telemetry.ProjectMetadata{Name: "NGF", Version: version},
+			NodeCount:         0,
+			NGFResourceCounts: telemetry.NGFResourceCounts{},
+			NGFReplicaCount:   1,
+			ClusterID:         string(kubeNamespace.GetUID()),
+			ImageSource:       "local",
+			Arch:              runtime.GOARCH,
+			DeploymentID:      string(ngfReplicaSet.ObjectMeta.OwnerReferences[0].UID),
+			FlagKeyValues:     flagKeyValues,
 		}
-
-		flagset = pflag.NewFlagSet("flagset", 0)
 
 		k8sClientReader = &eventsfakes.FakeReader{}
 		fakeGraphGetter = &telemetryfakes.FakeGraphGetter{}
@@ -159,7 +160,7 @@ var _ = Describe("Collector", Ordered, func() {
 			Version:             version,
 			PodNSName:           podNSName,
 			ImageSource:         "local",
-			Flags:               flagset,
+			FlagKeyValues:       flagKeyValues,
 		})
 
 		baseGetCalls = createGetCallsFunc(ngfPod, ngfReplicaSet, kubeNamespace)
@@ -274,26 +275,6 @@ var _ = Describe("Collector", Ordered, func() {
 					},
 				}
 
-				var boolFlag bool
-				flagset.BoolVar(
-					&boolFlag,
-					"boolFlag",
-					true,
-					"boolean test flag",
-				)
-				intFlag := flagValue[int]{value: 8080}
-				flagset.Var(
-					&intFlag,
-					"intFlag",
-					"int test flag",
-				)
-				stringFlag := flagValue[string]{value: "string-flag"}
-				flagset.Var(
-					&stringFlag,
-					"stringFlag",
-					"string test flag",
-				)
-
 				fakeGraphGetter.GetLatestGraphReturns(graph)
 				fakeConfigurationGetter.GetLatestConfigurationReturns(config)
 
@@ -305,10 +286,6 @@ var _ = Describe("Collector", Ordered, func() {
 					Secrets:        3,
 					Services:       3,
 					Endpoints:      4,
-				}
-				expData.DeploymentFlagOptions = telemetry.DeploymentFlagOptions{
-					FlagKeys:   []string{"boolFlag", "intFlag", "stringFlag"},
-					FlagValues: []string{"true", "default", "default"},
 				}
 
 				data, err := dataCollector.Collect(ctx)
@@ -698,32 +675,3 @@ var _ = Describe("Collector", Ordered, func() {
 		})
 	})
 })
-
-// flagValue holds a generic value and implements the pflag.Value interface.
-type flagValue[T comparable] struct {
-	value T
-}
-
-func (v *flagValue[T]) String() string {
-	switch val := any(v.value).(type) {
-	case int:
-		return strconv.Itoa(val)
-	case string:
-		return val
-	}
-	return ""
-}
-
-func (v *flagValue[T]) Set(_ string) error {
-	return nil
-}
-
-func (v *flagValue[T]) Type() string {
-	switch any(v.value).(type) {
-	case int:
-		return "int"
-	case string:
-		return "string"
-	}
-	return ""
-}
