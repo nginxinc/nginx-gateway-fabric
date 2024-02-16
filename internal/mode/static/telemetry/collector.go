@@ -56,10 +56,10 @@ type Data struct {
 	Arch              string
 	DeploymentID      string
 	ImageSource       string
+	FlagKeyValues     config.FlagKeyValues
 	NGFResourceCounts NGFResourceCounts
 	NodeCount         int
 	NGFReplicaCount   int
-	FlagKeyValues     config.FlagKeyValues
 }
 
 // DataCollectorConfig holds configuration parameters for DataCollectorImpl.
