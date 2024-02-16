@@ -805,6 +805,7 @@ NGINX Plus directives:
 #### Future Work
 
 - Add support for remote authentication or other authentication strategies.
+- Consider interoperability between authentication and rate limiting, so that we can rate limit on per-user basis.
 
 #### Alternatives
 
