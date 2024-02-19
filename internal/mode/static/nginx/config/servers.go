@@ -498,20 +498,17 @@ func generateResponseHeaders(filters *dataplane.HTTPFilters) http.ResponseHeader
 }
 
 func generateAddResponseHeaders(filters *dataplane.HTTPFilters) []http.Header {
-	headers := make([]http.Header, len(baseHeaders))
-	copy(headers, baseHeaders)
-
 	if filters == nil || filters.ResponseHeaderModifiers == nil {
-		return headers
+		return []http.Header{}
 	}
 	headerFilter := filters.ResponseHeaderModifiers
-	responseAddHeaders := make([]http.Header, 0, len(headerFilter.Add)+len(headers))
+	responseAddHeaders := make([]http.Header, 0, len(headerFilter.Add))
 	if len(headerFilter.Add) > 0 {
 		// FIXME(kevin85421): Should we use a different function?
 		addHeaders := convertSetHeaders(headerFilter.Add)
 		responseAddHeaders = append(responseAddHeaders, addHeaders...)
 	}
-	return append(responseAddHeaders, headers...)
+	return responseAddHeaders
 }
 
 func generateSetResponseHeaders(filters *dataplane.HTTPFilters) []http.Header {

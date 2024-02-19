@@ -557,7 +557,7 @@ func TestCreateServers(t *testing.T) {
 				ProxyPass:       "http://test_foo_80$request_uri",
 				ProxySetHeaders: baseHeaders,
 				ResponseHeaders: http.ResponseHeaders{
-					Add:    baseHeaders,
+					Add:    []http.Header{},
 					Set:    []http.Header{},
 					Remove: []string{},
 				},
@@ -567,7 +567,7 @@ func TestCreateServers(t *testing.T) {
 				ProxyPass:       "http://test_foo_80$request_uri",
 				ProxySetHeaders: baseHeaders,
 				ResponseHeaders: http.ResponseHeaders{
-					Add:    baseHeaders,
+					Add:    []http.Header{},
 					Set:    []http.Header{},
 					Remove: []string{},
 				},
@@ -577,7 +577,7 @@ func TestCreateServers(t *testing.T) {
 				ProxyPass:       "http://test_foo_80$request_uri",
 				ProxySetHeaders: baseHeaders,
 				ResponseHeaders: http.ResponseHeaders{
-					Add:    baseHeaders,
+					Add:    []http.Header{},
 					Set:    []http.Header{},
 					Remove: []string{},
 				},
@@ -591,7 +591,7 @@ func TestCreateServers(t *testing.T) {
 				ProxyPass:       "http://$test__route1_rule1$request_uri",
 				ProxySetHeaders: baseHeaders,
 				ResponseHeaders: http.ResponseHeaders{
-					Add:    baseHeaders,
+					Add:    []http.Header{},
 					Set:    []http.Header{},
 					Remove: []string{},
 				},
@@ -605,7 +605,7 @@ func TestCreateServers(t *testing.T) {
 				ProxyPass:       "http://invalid-backend-ref$request_uri",
 				ProxySetHeaders: baseHeaders,
 				ResponseHeaders: http.ResponseHeaders{
-					Add:    baseHeaders,
+					Add:    []http.Header{},
 					Set:    []http.Header{},
 					Remove: []string{},
 				},
@@ -615,7 +615,7 @@ func TestCreateServers(t *testing.T) {
 				ProxyPass:       "http://invalid-backend-ref$request_uri",
 				ProxySetHeaders: baseHeaders,
 				ResponseHeaders: http.ResponseHeaders{
-					Add:    baseHeaders,
+					Add:    []http.Header{},
 					Set:    []http.Header{},
 					Remove: []string{},
 				},
@@ -669,7 +669,7 @@ func TestCreateServers(t *testing.T) {
 				ProxyPass:       "http://test_foo_80",
 				ProxySetHeaders: rewriteProxySetHeaders,
 				ResponseHeaders: http.ResponseHeaders{
-					Add:    baseHeaders,
+					Add:    []http.Header{},
 					Set:    []http.Header{},
 					Remove: []string{},
 				},
@@ -680,7 +680,7 @@ func TestCreateServers(t *testing.T) {
 				ProxyPass:       "http://test_foo_80",
 				ProxySetHeaders: rewriteProxySetHeaders,
 				ResponseHeaders: http.ResponseHeaders{
-					Add:    baseHeaders,
+					Add:    []http.Header{},
 					Set:    []http.Header{},
 					Remove: []string{},
 				},
@@ -691,7 +691,7 @@ func TestCreateServers(t *testing.T) {
 				ProxyPass:       "http://test_foo_80",
 				ProxySetHeaders: rewriteProxySetHeaders,
 				ResponseHeaders: http.ResponseHeaders{
-					Add:    baseHeaders,
+					Add:    []http.Header{},
 					Set:    []http.Header{},
 					Remove: []string{},
 				},
@@ -735,7 +735,7 @@ func TestCreateServers(t *testing.T) {
 				ProxyPass:       "http://test_foo_80$request_uri",
 				ProxySetHeaders: baseHeaders,
 				ResponseHeaders: http.ResponseHeaders{
-					Add:    baseHeaders,
+					Add:    []http.Header{},
 					Set:    []http.Header{},
 					Remove: []string{},
 				},
@@ -745,7 +745,7 @@ func TestCreateServers(t *testing.T) {
 				ProxyPass:       "http://test_foo_80$request_uri",
 				ProxySetHeaders: baseHeaders,
 				ResponseHeaders: http.ResponseHeaders{
-					Add:    baseHeaders,
+					Add:    []http.Header{},
 					Set:    []http.Header{},
 					Remove: []string{},
 				},
@@ -780,7 +780,7 @@ func TestCreateServers(t *testing.T) {
 					},
 				},
 				ResponseHeaders: http.ResponseHeaders{
-					Add:    baseHeaders,
+					Add:    []http.Header{},
 					Set:    []http.Header{},
 					Remove: []string{},
 				},
@@ -811,7 +811,7 @@ func TestCreateServers(t *testing.T) {
 					},
 				},
 				ResponseHeaders: http.ResponseHeaders{
-					Add:    baseHeaders,
+					Add:    []http.Header{},
 					Set:    []http.Header{},
 					Remove: []string{},
 				},
@@ -922,7 +922,7 @@ func TestCreateServersConflicts(t *testing.T) {
 					ProxyPass:       "http://test_foo_80$request_uri",
 					ProxySetHeaders: baseHeaders,
 					ResponseHeaders: http.ResponseHeaders{
-						Add:    baseHeaders,
+						Add:    []http.Header{},
 						Set:    []http.Header{},
 						Remove: []string{},
 					},
@@ -932,7 +932,7 @@ func TestCreateServersConflicts(t *testing.T) {
 					ProxyPass:       "http://test_bar_80$request_uri",
 					ProxySetHeaders: baseHeaders,
 					ResponseHeaders: http.ResponseHeaders{
-						Add:    baseHeaders,
+						Add:    []http.Header{},
 						Set:    []http.Header{},
 						Remove: []string{},
 					},
@@ -970,7 +970,7 @@ func TestCreateServersConflicts(t *testing.T) {
 					ProxyPass:       "http://test_foo_80$request_uri",
 					ProxySetHeaders: baseHeaders,
 					ResponseHeaders: http.ResponseHeaders{
-						Add:    baseHeaders,
+						Add:    []http.Header{},
 						Set:    []http.Header{},
 						Remove: []string{},
 					},
@@ -980,7 +980,7 @@ func TestCreateServersConflicts(t *testing.T) {
 					ProxyPass:       "http://test_bar_80$request_uri",
 					ProxySetHeaders: baseHeaders,
 					ResponseHeaders: http.ResponseHeaders{
-						Add:    baseHeaders,
+						Add:    []http.Header{},
 						Set:    []http.Header{},
 						Remove: []string{},
 					},
@@ -1028,7 +1028,7 @@ func TestCreateServersConflicts(t *testing.T) {
 					ProxyPass:       "http://test_bar_80$request_uri",
 					ProxySetHeaders: baseHeaders,
 					ResponseHeaders: http.ResponseHeaders{
-						Add:    baseHeaders,
+						Add:    []http.Header{},
 						Set:    []http.Header{},
 						Remove: []string{},
 					},
@@ -1038,7 +1038,7 @@ func TestCreateServersConflicts(t *testing.T) {
 					ProxyPass:       "http://test_baz_80$request_uri",
 					ProxySetHeaders: baseHeaders,
 					ResponseHeaders: http.ResponseHeaders{
-						Add:    baseHeaders,
+						Add:    []http.Header{},
 						Set:    []http.Header{},
 						Remove: []string{},
 					},
@@ -1149,7 +1149,7 @@ func TestCreateLocationsRootPath(t *testing.T) {
 					ProxyPass:       "http://test_foo_80$request_uri",
 					ProxySetHeaders: baseHeaders,
 					ResponseHeaders: http.ResponseHeaders{
-						Add:    baseHeaders,
+						Add:    []http.Header{},
 						Set:    []http.Header{},
 						Remove: []string{},
 					},
@@ -1159,7 +1159,7 @@ func TestCreateLocationsRootPath(t *testing.T) {
 					ProxyPass:       "http://test_foo_80$request_uri",
 					ProxySetHeaders: baseHeaders,
 					ResponseHeaders: http.ResponseHeaders{
-						Add:    baseHeaders,
+						Add:    []http.Header{},
 						Set:    []http.Header{},
 						Remove: []string{},
 					},
@@ -1181,7 +1181,7 @@ func TestCreateLocationsRootPath(t *testing.T) {
 					ProxyPass:       "http://test_foo_80$request_uri",
 					ProxySetHeaders: baseHeaders,
 					ResponseHeaders: http.ResponseHeaders{
-						Add:    baseHeaders,
+						Add:    []http.Header{},
 						Set:    []http.Header{},
 						Remove: []string{},
 					},
@@ -1191,7 +1191,7 @@ func TestCreateLocationsRootPath(t *testing.T) {
 					ProxyPass:       "http://test_foo_80$request_uri",
 					ProxySetHeaders: baseHeaders,
 					ResponseHeaders: http.ResponseHeaders{
-						Add:    baseHeaders,
+						Add:    []http.Header{},
 						Set:    []http.Header{},
 						Remove: []string{},
 					},
@@ -1201,7 +1201,7 @@ func TestCreateLocationsRootPath(t *testing.T) {
 					ProxyPass:       "http://test_foo_80$request_uri",
 					ProxySetHeaders: baseHeaders,
 					ResponseHeaders: http.ResponseHeaders{
-						Add:    baseHeaders,
+						Add:    []http.Header{},
 						Set:    []http.Header{},
 						Remove: []string{},
 					},
