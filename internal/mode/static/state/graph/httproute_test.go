@@ -21,6 +21,8 @@ import (
 
 const (
 	sectionNameOfCreateHTTPRoute = "test-section"
+	emptyPathType                = "/empty-type"
+	emptyPathValue               = "/empty-value"
 )
 
 func createHTTPRoute(
@@ -33,11 +35,11 @@ func createHTTPRoute(
 	pathType := helpers.GetPointer(gatewayv1.PathMatchPathPrefix)
 
 	for _, path := range paths {
-		if path == "/empty-type" {
+		if path == emptyPathType {
 			pathType = nil
 		}
 		pathValue := helpers.GetPointer(path)
-		if path == "/empty-value" {
+		if path == emptyPathValue {
 			pathValue = nil
 		}
 		rules = append(rules, gatewayv1.HTTPRouteRule{
@@ -198,16 +200,16 @@ func TestBuildSectionNameRefs(t *testing.T) {
 	}
 
 	tests := []struct {
-		name         string
-		parentRefs   []gatewayv1.ParentReference
-		expectedRefs []ParentRef
-		expectError  bool
+		expectedError error
+		name          string
+		parentRefs    []gatewayv1.ParentReference
+		expectedRefs  []ParentRef
 	}{
 		{
-			name:         "normal case",
-			parentRefs:   parentRefs,
-			expectedRefs: expected,
-			expectError:  false,
+			name:          "normal case",
+			parentRefs:    parentRefs,
+			expectedRefs:  expected,
+			expectedError: nil,
 		},
 		{
 			parentRefs: []gatewayv1.ParentReference{
@@ -220,8 +222,8 @@ func TestBuildSectionNameRefs(t *testing.T) {
 					SectionName: helpers.GetPointer[gatewayv1.SectionName]("http"),
 				},
 			},
-			name:        "duplicate sectionNames",
-			expectError: true,
+			name:          "duplicate sectionNames",
+			expectedError: errors.New("duplicate section name \"http\" for Gateway test/gateway-1"),
 		},
 		{
 			parentRefs: []gatewayv1.ParentReference{
@@ -234,8 +236,8 @@ func TestBuildSectionNameRefs(t *testing.T) {
 					SectionName: nil,
 				},
 			},
-			name:        "nil sectionNames",
-			expectError: true,
+			name:          "nil sectionNames",
+			expectedError: errors.New("duplicate section name \"\" for Gateway test/gateway-1"),
 		},
 	}
 
@@ -245,7 +247,9 @@ func TestBuildSectionNameRefs(t *testing.T) {
 
 			result, err := buildSectionNameRefs(test.parentRefs, routeNamespace, gwNsNames)
 			g.Expect(result).To(Equal(test.expectedRefs))
-			if !test.expectError {
+			if test.expectedError != nil {
+				g.Expect(err).To(Equal(test.expectedError))
+			} else {
 				g.Expect(err).To(BeNil())
 			}
 		})
@@ -341,8 +345,6 @@ func TestBuildRoute(t *testing.T) {
 	const (
 		invalidPath             = "/invalid"
 		invalidRedirectHostname = "invalid.example.com"
-		emptyPathType           = "/empty-type"
-		emptyPathValue          = "/empty-value"
 	)
 
 	gatewayNsName := types.NamespacedName{Namespace: "test", Name: "gateway"}
@@ -469,11 +471,6 @@ func TestBuildRoute(t *testing.T) {
 			hr:        hrDuplicateSectionName,
 			expected: &Route{
 				Source: hrDuplicateSectionName,
-				Conditions: []conditions.Condition{
-					staticConds.NewRouteUnsupportedValue(
-						`duplicate section name "test-section" for Gateway test/gateway`,
-					),
-				},
 			},
 			name: "invalid route with duplicate sectionName",
 		},

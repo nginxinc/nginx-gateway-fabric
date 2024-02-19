@@ -175,7 +175,6 @@ func buildRoute(
 	sectionNameRefs, err := buildSectionNameRefs(ghr.Spec.ParentRefs, ghr.Namespace, gatewayNsNames)
 	if err != nil {
 		r.Valid = false
-		r.Conditions = append(r.Conditions, staticConds.NewRouteUnsupportedValue(err.Error()))
 
 		return r
 	}
@@ -730,7 +729,7 @@ func validateFilterRedirect(
 	redirect := filter.RequestRedirect
 	redirectPath := filterPath.Child("requestRedirect")
 
-	if filter.RequestRedirect == nil {
+	if redirect == nil {
 		return field.ErrorList{field.Required(redirectPath, "requestRedirect cannot be nil")}
 	}
 
@@ -780,7 +779,7 @@ func validateFilterRewrite(
 	rewrite := filter.URLRewrite
 	rewritePath := filterPath.Child("urlRewrite")
 
-	if filter.URLRewrite == nil {
+	if rewrite == nil {
 		return field.ErrorList{field.Required(rewritePath, "urlRewrite cannot be nil")}
 	}
 
