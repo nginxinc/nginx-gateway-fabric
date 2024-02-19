@@ -584,7 +584,7 @@ func generateProxySetHeaders(filters *dataplane.HTTPFilters, grpc bool) []http.H
 		proxySetHeaders = append(proxySetHeaders, addHeaders...)
 	}
 	if len(headerFilter.Set) > 0 {
-		setHeaders := convertSetHeaders(headerFilter.Set)
+		setHeaders := createHeaders(headerFilter.Set)
 		proxySetHeaders = append(proxySetHeaders, setHeaders...)
 	}
 	// If the value of a header field is an empty string then this field will not be passed to a proxied server
@@ -612,12 +612,11 @@ func generateResponseHeaders(filters *dataplane.HTTPFilters) http.ResponseHeader
 	responseSetHeaders := make([]http.Header, 0, len(headerFilter.Set))
 	responseRemoveHeaders := make([]string, len(headerFilter.Remove))
 	if len(headerFilter.Add) > 0 {
-		// FIXME(kevin85421): Should we use a different function?
-		addHeaders := convertSetHeaders(headerFilter.Add)
+		addHeaders := createHeaders(headerFilter.Add)
 		responseAddHeaders = append(responseAddHeaders, addHeaders...)
 	}
 	if len(headerFilter.Set) > 0 {
-		setHeaders := convertSetHeaders(headerFilter.Set)
+		setHeaders := createHeaders(headerFilter.Set)
 		responseSetHeaders = append(responseSetHeaders, setHeaders...)
 	}
 	// Make a deep copy to prevent the slice from being accidentally modified.
@@ -642,7 +641,7 @@ func convertAddHeaders(headers []dataplane.HTTPHeader) []http.Header {
 	return locHeaders
 }
 
-func convertSetHeaders(headers []dataplane.HTTPHeader) []http.Header {
+func createHeaders(headers []dataplane.HTTPHeader) []http.Header {
 	locHeaders := make([]http.Header, 0, len(headers))
 	for _, h := range headers {
 		locHeaders = append(locHeaders, http.Header{
