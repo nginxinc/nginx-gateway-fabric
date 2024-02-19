@@ -12,21 +12,26 @@ type Server struct {
 
 // Location holds all configuration for an HTTP location.
 type Location struct {
-	Return                *Return
-	Rewrites              []string
-	Path                  string
-	ProxyPass             string
-	HTTPMatchVar          string
-	ProxySetHeaders       []Header
-	AddResponseHeaders    []Header
-	SetResponseHeaders    []Header
-	RemoveResponseHeaders []string
+	Return          *Return
+	Rewrites        []string
+	Path            string
+	ProxyPass       string
+	HTTPMatchVar    string
+	ProxySetHeaders []Header
+	ResponseHeaders ResponseHeaders
 }
 
 // Header defines a HTTP header to be passed to the proxied server.
 type Header struct {
 	Name  string
 	Value string
+}
+
+// ResponseHeaders holds all response headers to be added, set, or removed.
+type ResponseHeaders struct {
+	Add    []Header
+	Set    []Header
+	Remove []string
 }
 
 // Return represents an HTTP return.
