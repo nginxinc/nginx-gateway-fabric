@@ -25,12 +25,20 @@ type Location struct {
 	AddResponseHeaders    []Header
 	SetResponseHeaders    []Header
 	RemoveResponseHeaders []string
+	ResponseHeaders       ResponseHeaders
 }
 
 // Header defines an HTTP header to be passed to the proxied server.
 type Header struct {
 	Name  string
 	Value string
+}
+
+// ResponseHeaders holds all response headers to be added, set, or removed.
+type ResponseHeaders struct {
+	Add    []Header
+	Set    []Header
+	Remove []string
 }
 
 // Return represents an HTTP return.
