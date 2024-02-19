@@ -490,50 +490,35 @@ func generateProxySetHeaders(filters *dataplane.HTTPFilters) []http.Header {
 }
 
 func generateResponseHeaders(filters *dataplane.HTTPFilters) http.ResponseHeaders {
-	return http.ResponseHeaders{
-		Add:    generateAddResponseHeaders(filters),
-		Set:    generateSetResponseHeaders(filters),
-		Remove: generateRemoveResponseHeaders(filters),
-	}
-}
-
-func generateAddResponseHeaders(filters *dataplane.HTTPFilters) []http.Header {
 	if filters == nil || filters.ResponseHeaderModifiers == nil {
-		return []http.Header{}
+		return http.ResponseHeaders{
+			Add:    []http.Header{},
+			Set:    []http.Header{},
+			Remove: []string{},
+		}
 	}
+
 	headerFilter := filters.ResponseHeaderModifiers
 	responseAddHeaders := make([]http.Header, 0, len(headerFilter.Add))
+	responseSetHeaders := make([]http.Header, 0, len(headerFilter.Set))
+	responseRemoveHeaders := make([]string, len(headerFilter.Remove))
 	if len(headerFilter.Add) > 0 {
 		// FIXME(kevin85421): Should we use a different function?
 		addHeaders := convertSetHeaders(headerFilter.Add)
 		responseAddHeaders = append(responseAddHeaders, addHeaders...)
 	}
-	return responseAddHeaders
-}
-
-func generateSetResponseHeaders(filters *dataplane.HTTPFilters) []http.Header {
-	if filters == nil || filters.ResponseHeaderModifiers == nil {
-		return []http.Header{}
-	}
-	headerFilter := filters.ResponseHeaderModifiers
-	responseSetHeaders := make([]http.Header, 0, len(headerFilter.Set))
 	if len(headerFilter.Set) > 0 {
 		setHeaders := convertSetHeaders(headerFilter.Set)
 		responseSetHeaders = append(responseSetHeaders, setHeaders...)
 	}
-	return responseSetHeaders
-}
-
-func generateRemoveResponseHeaders(filters *dataplane.HTTPFilters) []string {
-	if filters == nil || filters.ResponseHeaderModifiers == nil {
-		return []string{}
-	}
-	removeHeaders := filters.ResponseHeaderModifiers.Remove
-	responseRemoveHeaders := make([]string, len(removeHeaders))
-
 	// Make a deep copy to prevent the slice from being accidentally modified.
-	copy(responseRemoveHeaders, removeHeaders)
-	return responseRemoveHeaders
+	copy(responseRemoveHeaders, headerFilter.Remove)
+
+	return http.ResponseHeaders{
+		Add:    responseAddHeaders,
+		Set:    responseSetHeaders,
+		Remove: responseRemoveHeaders,
+	}
 }
 
 func convertAddHeaders(headers []dataplane.HTTPHeader) []http.Header {
