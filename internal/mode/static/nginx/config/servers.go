@@ -533,6 +533,8 @@ func generateRemoveResponseHeaders(filters *dataplane.HTTPFilters) []string {
 	removeHeaders := filters.ResponseHeaderModifiers.Remove
 	headerLen := len(removeHeaders)
 	responseRemoveHeaders := make([]string, headerLen)
+
+	// Make a deep copy to prevent the slice from being accidentally modified.
 	copy(responseRemoveHeaders, removeHeaders)
 	return responseRemoveHeaders
 }
