@@ -610,9 +610,7 @@ func generateAddResponseHeaders(filters *dataplane.HTTPFilters) []http.Header {
 		return headers
 	}
 	headerFilter := filters.ResponseHeaderModifiers
-
-	headerLen := len(headerFilter.Add) + len(headers)
-	responseAddHeaders := make([]http.Header, 0, headerLen)
+	responseAddHeaders := make([]http.Header, 0, len(headerFilter.Add)+len(headers))
 	if len(headerFilter.Add) > 0 {
 		// FIXME(kevin85421): Should we use a different function?
 		addHeaders := convertSetHeaders(headerFilter.Add)
@@ -626,8 +624,7 @@ func generateSetResponseHeaders(filters *dataplane.HTTPFilters) []http.Header {
 		return []http.Header{}
 	}
 	headerFilter := filters.ResponseHeaderModifiers
-	headerLen := len(headerFilter.Set)
-	responseSetHeaders := make([]http.Header, 0, headerLen)
+	responseSetHeaders := make([]http.Header, 0, len(headerFilter.Set))
 	if len(headerFilter.Set) > 0 {
 		setHeaders := convertSetHeaders(headerFilter.Set)
 		responseSetHeaders = append(responseSetHeaders, setHeaders...)
@@ -640,8 +637,7 @@ func generateRemoveResponseHeaders(filters *dataplane.HTTPFilters) []string {
 		return []string{}
 	}
 	removeHeaders := filters.ResponseHeaderModifiers.Remove
-	headerLen := len(removeHeaders)
-	responseRemoveHeaders := make([]string, headerLen)
+	responseRemoveHeaders := make([]string, len(removeHeaders))
 
 	// Make a deep copy to prevent the slice from being accidentally modified.
 	copy(responseRemoveHeaders, removeHeaders)
