@@ -83,6 +83,13 @@ If using manifests, the following command-line options should be set as necessar
 - `--usage-report-server-url` is the base server URL of the NGINX Instance Manager. This field is required.
 - `--usage-report-cluster-name` is an optional display name in the API for the usage data object.
 
+Your NGINX Gateway Fabric Pods should also have one of the following labels:
+
+- `app.kubernetes.io/name=nginx-gateway`
+- `app.kubernetes.io/name=nginx-gateway-fabric`
+
+{{< note >}}The default installation of NGINX Gateway Fabric already includes at least one of these labels.{{< /note >}}
+
 ## Viewing Usage Data from the NGINX Instance Manager API
 
 NGINX Gateway Fabric sends the number of its instances and nodes in the cluster to NGINX Instance Manager every 24 hours. To view the usage data, query the NGINX Instance Manager API. The usage data is available at the following endpoint (replace `nim.example.com` with your server URL, and set the proper credentials in the `--user` field):

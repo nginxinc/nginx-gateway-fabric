@@ -25,6 +25,9 @@ func TestCreateUsageJobWorker(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: "nginx-gateway",
 			Name:      "ngf-replicaset",
+			Labels: map[string]string{
+				"app.kubernetes.io/name": "nginx-gateway",
+			},
 		},
 		Spec: appsv1.ReplicaSetSpec{
 			Replicas: &replicas,
@@ -89,4 +92,54 @@ func TestCreateUsageJobWorker(t *testing.T) {
 	worker(ctx)
 	_, data := reporter.ReportArgsForCall(0)
 	g.Expect(data).To(Equal(expData))
+}
+
+func TestGetTotalNGFPodCount(t *testing.T) {
+	g := NewWithT(t)
+
+	rs1Replicas := int32(1)
+	rs1 := &appsv1.ReplicaSet{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "nginx-gateway",
+			Name:      "ngf-replicaset1",
+			Labels: map[string]string{
+				"app.kubernetes.io/name": "nginx-gateway",
+			},
+		},
+		Spec: appsv1.ReplicaSetSpec{
+			Replicas: &rs1Replicas,
+		},
+	}
+
+	rs2Replicas := int32(3)
+	rs2 := &appsv1.ReplicaSet{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "nginx-gateway-2",
+			Name:      "ngf-replicaset2",
+			Labels: map[string]string{
+				"app.kubernetes.io/name": "nginx-gateway-fabric",
+			},
+		},
+		Spec: appsv1.ReplicaSetSpec{
+			Replicas: &rs2Replicas,
+		},
+	}
+
+	rs3Replicas := int32(5)
+	rs3 := &appsv1.ReplicaSet{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "default",
+			Name:      "not-ngf",
+		},
+		Spec: appsv1.ReplicaSetSpec{
+			Replicas: &rs3Replicas,
+		},
+	}
+
+	k8sClient := fake.NewFakeClient(rs1, rs2, rs3)
+
+	expCount := 4
+	count, err := usage.GetTotalNGFPodCount(context.Background(), k8sClient)
+	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(count).To(Equal(expCount))
 }

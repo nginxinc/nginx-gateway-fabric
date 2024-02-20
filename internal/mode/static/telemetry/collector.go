@@ -96,7 +96,7 @@ func (c DataCollectorImpl) Collect(ctx context.Context) (Data, error) {
 		return Data{}, fmt.Errorf("failed to collect NGF resource counts: %w", err)
 	}
 
-	ngfReplicaCount, err := CollectNGFReplicaCount(ctx, c.cfg.K8sClientReader, c.cfg.PodNSName)
+	ngfReplicaCount, err := collectNGFReplicaCount(ctx, c.cfg.K8sClientReader, c.cfg.PodNSName)
 	if err != nil {
 		return Data{}, fmt.Errorf("failed to collect NGF replica count: %w", err)
 	}
@@ -168,8 +168,7 @@ func collectGraphResourceCount(
 	return ngfResourceCounts, nil
 }
 
-// CollectNGFReplicaCount returns the number of NGF replicas.
-func CollectNGFReplicaCount(ctx context.Context, k8sClient client.Reader, podNSName types.NamespacedName) (int, error) {
+func collectNGFReplicaCount(ctx context.Context, k8sClient client.Reader, podNSName types.NamespacedName) (int, error) {
 	var pod v1.Pod
 	if err := k8sClient.Get(
 		ctx,

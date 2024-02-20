@@ -2,9 +2,10 @@ package usage
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/go-logr/logr"
-	"k8s.io/apimachinery/pkg/types"
+	appsv1 "k8s.io/api/apps/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/config"
@@ -23,14 +24,7 @@ func CreateUsageJobWorker(
 			logger.Error(err, "Failed to collect node count")
 		}
 
-		podCount, err := telemetry.CollectNGFReplicaCount(
-			ctx,
-			k8sClient,
-			types.NamespacedName{
-				Namespace: cfg.GatewayPodConfig.Namespace,
-				Name:      cfg.GatewayPodConfig.Name,
-			},
-		)
+		podCount, err := GetTotalNGFPodCount(ctx, k8sClient)
 		if err != nil {
 			logger.Error(err, "Failed to collect replica count")
 		}
@@ -59,4 +53,29 @@ func CreateUsageJobWorker(
 			logger.Error(err, "Failed to report NGINX Plus usage")
 		}
 	}
+}
+
+// GetTotalNGFPodCount returns the total count of NGF Pods in the cluster.
+// Uses the "app.kubernetes.io/name" label with either value of "nginx-gateway" or "nginx-gateway-fabric".
+func GetTotalNGFPodCount(ctx context.Context, k8sClient client.Reader) (int, error) {
+	labelKey := "app.kubernetes.io/name"
+	labelVals := map[string]struct{}{
+		"nginx-gateway-fabric": {},
+		"nginx-gateway":        {},
+	}
+
+	var rsList appsv1.ReplicaSetList
+	if err := k8sClient.List(ctx, &rsList, client.HasLabels{labelKey}); err != nil {
+		return 0, fmt.Errorf("failed to list replicasets: %w", err)
+	}
+
+	var count int
+	for _, rs := range rsList.Items {
+		val := rs.Labels[labelKey]
+		if _, ok := labelVals[val]; ok && rs.Spec.Replicas != nil {
+			count += int(*rs.Spec.Replicas)
+		}
+	}
+
+	return count, nil
 }

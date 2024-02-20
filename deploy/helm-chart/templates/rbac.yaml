@@ -66,6 +66,7 @@ rules:
   - replicasets
   verbs:
   - get
+  - list
 - apiGroups:
   - discovery.k8s.io
   resources:
