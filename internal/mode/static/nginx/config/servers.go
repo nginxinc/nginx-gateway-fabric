@@ -471,7 +471,7 @@ func generateProxySetHeaders(filters *dataplane.HTTPFilters) []http.Header {
 	headerLen := len(headerFilter.Add) + len(headerFilter.Set) + len(headerFilter.Remove) + len(headers)
 	proxySetHeaders := make([]http.Header, 0, headerLen)
 	if len(headerFilter.Add) > 0 {
-		addHeaders := convertAddHeaders(headerFilter.Add)
+		addHeaders := createHeadersWithVarName(headerFilter.Add)
 		proxySetHeaders = append(proxySetHeaders, addHeaders...)
 	}
 	if len(headerFilter.Set) > 0 {
@@ -520,7 +520,7 @@ func generateResponseHeaders(filters *dataplane.HTTPFilters) http.ResponseHeader
 	}
 }
 
-func convertAddHeaders(headers []dataplane.HTTPHeader) []http.Header {
+func createHeadersWithVarName(headers []dataplane.HTTPHeader) []http.Header {
 	locHeaders := make([]http.Header, 0, len(headers))
 	for _, h := range headers {
 		mapVarName := "${" + generateAddHeaderMapVariableName(h.Name) + "}"
