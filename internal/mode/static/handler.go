@@ -35,12 +35,26 @@ type handlerMetricsCollector interface {
 	ObserveLastEventBatchProcessTime(time.Duration)
 }
 
+//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . secretStorer
+
+// secretStorer should store the usage Secret that contains the credentials for NGINX Plus usage reporting.
+type secretStorer interface {
+	// Set stores the updated Secret.
+	Set(*v1.Secret)
+	// Delete nullifies the Secret value.
+	Delete()
+}
+
 // eventHandlerConfig holds configuration parameters for eventHandlerImpl.
 type eventHandlerConfig struct {
 	// k8sClient is a Kubernetes API client
 	k8sClient client.Client
 	// gatewayPodConfig contains information about this Pod.
 	gatewayPodConfig ngfConfig.GatewayPodConfig
+	// usageReportConfig contains the configuration for NGINX Plus usage reporting.
+	usageReportConfig *config.UsageReportConfig
+	// usageSecret contains the Secret for the NGINX Plus reporting credentials.
+	usageSecret secretStorer
 	// processor is the state ChangeProcessor.
 	processor state.ChangeProcessor
 	// serviceResolver resolves Services to Endpoints.
@@ -67,23 +81,72 @@ type eventHandlerConfig struct {
 	version int
 }
 
+// filterKey is the `kind_namespace_name" of an object being filtered.
+type filterKey string
+
+// objectFilter contains callbacks for an object that should be treated differently by the handler instead of
+// just using the typical Capture() call.
+type objectFilter struct {
+	upsert               func(context.Context, logr.Logger, client.Object)
+	delete               func(context.Context, logr.Logger, types.NamespacedName)
+	captureChangeInGraph bool
+}
+
 // eventHandlerImpl implements EventHandler.
 // eventHandlerImpl is responsible for:
 // (1) Reconciling the Gateway API and Kubernetes built-in resources with the NGINX configuration.
 // (2) Keeping the statuses of the Gateway API resources updated.
 // (3) Updating control plane configuration.
+// (4) Tracks the NGINX Plus usage reporting Secret (if applicable).
 type eventHandlerImpl struct {
 	// latestConfiguration is the latest Configuration generation.
 	latestConfiguration *dataplane.Configuration
-	cfg                 eventHandlerConfig
-	lock                sync.Mutex
+
+	// objectFilters contains all created objectFilters, with the key being a filterKey
+	objectFilters map[filterKey]objectFilter
+
+	cfg  eventHandlerConfig
+	lock sync.Mutex
 }
 
 // newEventHandlerImpl creates a new eventHandlerImpl.
 func newEventHandlerImpl(cfg eventHandlerConfig) *eventHandlerImpl {
-	return &eventHandlerImpl{
+	handler := &eventHandlerImpl{
 		cfg: cfg,
 	}
+
+	handler.objectFilters = map[filterKey]objectFilter{
+		// NginxGateway CRD
+		objectFilterKey(&ngfAPI.NginxGateway{}, handler.cfg.controlConfigNSName): {
+			upsert:               handler.nginxGatewayCRDUpsert,
+			delete:               handler.nginxGatewayCRDDelete,
+			captureChangeInGraph: false,
+		},
+		// NGF-fronting Service
+		objectFilterKey(
+			&v1.Service{},
+			types.NamespacedName{
+				Name:      handler.cfg.gatewayPodConfig.ServiceName,
+				Namespace: handler.cfg.gatewayPodConfig.Namespace,
+			},
+		): {
+			upsert:               handler.nginxGatewayServiceUpsert,
+			delete:               handler.nginxGatewayServiceDelete,
+			captureChangeInGraph: true,
+		},
+	}
+
+	if handler.cfg.usageReportConfig != nil {
+		// N+ usage reporting Secret
+		nsName := handler.cfg.usageReportConfig.SecretNsName
+		handler.objectFilters[objectFilterKey(&v1.Secret{}, nsName)] = objectFilter{
+			upsert:               handler.nginxPlusUsageSecretUpsert,
+			delete:               handler.nginxPlusUsageSecretDelete,
+			captureChangeInGraph: true,
+		}
+	}
+
+	return handler
 }
 
 func (h *eventHandlerImpl) HandleEventBatch(ctx context.Context, logger logr.Logger, batch events.EventBatch) {
@@ -100,7 +163,7 @@ func (h *eventHandlerImpl) HandleEventBatch(ctx context.Context, logger logr.Log
 	}()
 
 	for _, event := range batch {
-		h.handleEvent(ctx, logger, event)
+		h.parseAndCaptureEvent(ctx, logger, event)
 	}
 
 	changeType, graph := h.cfg.processor.Process()
@@ -158,42 +221,30 @@ func (h *eventHandlerImpl) HandleEventBatch(ctx context.Context, logger logr.Log
 	h.cfg.statusUpdater.Update(ctx, buildGatewayAPIStatuses(graph, gwAddresses, nginxReloadRes))
 }
 
-func (h *eventHandlerImpl) handleEvent(ctx context.Context, logger logr.Logger, event interface{}) {
+func (h *eventHandlerImpl) parseAndCaptureEvent(ctx context.Context, logger logr.Logger, event interface{}) {
 	switch e := event.(type) {
 	case *events.UpsertEvent:
-		switch obj := e.Resource.(type) {
-		case *ngfAPI.NginxGateway:
-			h.updateControlPlaneAndSetStatus(ctx, logger, obj)
-		case *apiv1.Service:
-			podConfig := h.cfg.gatewayPodConfig
-			if obj.Name == podConfig.ServiceName && obj.Namespace == podConfig.Namespace {
-				gwAddresses, err := getGatewayAddresses(ctx, h.cfg.k8sClient, obj, h.cfg.gatewayPodConfig)
-				if err != nil {
-					logger.Error(err, "Setting GatewayStatusAddress to Pod IP Address")
-				}
-				h.cfg.statusUpdater.UpdateAddresses(ctx, gwAddresses)
+		filterKey := objectFilterKey(e.Resource, client.ObjectKeyFromObject(e.Resource))
+
+		if filter, ok := h.objectFilters[filterKey]; ok {
+			filter.upsert(ctx, logger, e.Resource)
+			if !filter.captureChangeInGraph {
+				return
 			}
-			h.cfg.processor.CaptureUpsertChange(e.Resource)
-		default:
-			h.cfg.processor.CaptureUpsertChange(e.Resource)
 		}
+
+		h.cfg.processor.CaptureUpsertChange(e.Resource)
 	case *events.DeleteEvent:
-		switch e.Type.(type) {
-		case *ngfAPI.NginxGateway:
-			h.updateControlPlaneAndSetStatus(ctx, logger, nil)
-		case *apiv1.Service:
-			podConfig := h.cfg.gatewayPodConfig
-			if e.NamespacedName.Name == podConfig.ServiceName && e.NamespacedName.Namespace == podConfig.Namespace {
-				gwAddresses, err := getGatewayAddresses(ctx, h.cfg.k8sClient, nil, h.cfg.gatewayPodConfig)
-				if err != nil {
-					logger.Error(err, "Setting GatewayStatusAddress to Pod IP Address")
-				}
-				h.cfg.statusUpdater.UpdateAddresses(ctx, gwAddresses)
+		filterKey := objectFilterKey(e.Type, e.NamespacedName)
+
+		if filter, ok := h.objectFilters[filterKey]; ok {
+			filter.delete(ctx, logger, e.NamespacedName)
+			if !filter.captureChangeInGraph {
+				return
 			}
-			h.cfg.processor.CaptureDeleteChange(e.Type, e.NamespacedName)
-		default:
-			h.cfg.processor.CaptureDeleteChange(e.Type, e.NamespacedName)
 		}
+
+		h.cfg.processor.CaptureDeleteChange(e.Type, e.NamespacedName)
 	default:
 		panic(fmt.Errorf("unknown event type %T", e))
 	}
@@ -411,4 +462,78 @@ func (h *eventHandlerImpl) setLatestConfiguration(cfg *dataplane.Configuration) 
 	defer h.lock.Unlock()
 
 	h.latestConfiguration = cfg
+}
+
+func objectFilterKey(obj client.Object, nsName types.NamespacedName) filterKey {
+	return filterKey(fmt.Sprintf("%T_%s_%s", obj, nsName.Namespace, nsName.Name))
+}
+
+/*
+
+Handler Callback functions
+
+These functions are provided as callbacks to the handler. They are for objects that need special
+treatment other than the typical Capture() call that leads to generating nginx config.
+
+*/
+
+func (h *eventHandlerImpl) nginxGatewayCRDUpsert(ctx context.Context, logger logr.Logger, obj client.Object) {
+	cfg, ok := obj.(*ngfAPI.NginxGateway)
+	if !ok {
+		panic(fmt.Errorf("obj type mismatch: got %T, expected %T", obj, &ngfAPI.NginxGateway{}))
+	}
+
+	h.updateControlPlaneAndSetStatus(ctx, logger, cfg)
+}
+
+func (h *eventHandlerImpl) nginxGatewayCRDDelete(
+	ctx context.Context,
+	logger logr.Logger,
+	_ types.NamespacedName,
+) {
+	h.updateControlPlaneAndSetStatus(ctx, logger, nil)
+}
+
+func (h *eventHandlerImpl) nginxGatewayServiceUpsert(ctx context.Context, logger logr.Logger, obj client.Object) {
+	svc, ok := obj.(*v1.Service)
+	if !ok {
+		panic(fmt.Errorf("obj type mismatch: got %T, expected %T", svc, &v1.Service{}))
+	}
+
+	gwAddresses, err := getGatewayAddresses(ctx, h.cfg.k8sClient, svc, h.cfg.gatewayPodConfig)
+	if err != nil {
+		logger.Error(err, "Setting GatewayStatusAddress to Pod IP Address")
+	}
+
+	h.cfg.statusUpdater.UpdateAddresses(ctx, gwAddresses)
+}
+
+func (h *eventHandlerImpl) nginxGatewayServiceDelete(
+	ctx context.Context,
+	logger logr.Logger,
+	_ types.NamespacedName,
+) {
+	gwAddresses, err := getGatewayAddresses(ctx, h.cfg.k8sClient, nil, h.cfg.gatewayPodConfig)
+	if err != nil {
+		logger.Error(err, "Setting GatewayStatusAddress to Pod IP Address")
+	}
+
+	h.cfg.statusUpdater.UpdateAddresses(ctx, gwAddresses)
+}
+
+func (h *eventHandlerImpl) nginxPlusUsageSecretUpsert(_ context.Context, _ logr.Logger, obj client.Object) {
+	secret, ok := obj.(*v1.Secret)
+	if !ok {
+		panic(fmt.Errorf("obj type mismatch: got %T, expected %T", obj, &v1.Secret{}))
+	}
+
+	h.cfg.usageSecret.Set(secret)
+}
+
+func (h *eventHandlerImpl) nginxPlusUsageSecretDelete(
+	_ context.Context,
+	_ logr.Logger,
+	_ types.NamespacedName,
+) {
+	h.cfg.usageSecret.Delete()
 }

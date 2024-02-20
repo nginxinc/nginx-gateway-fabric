@@ -20,6 +20,8 @@ type Config struct {
 	GatewayPodConfig GatewayPodConfig
 	// Logger is the Zap Logger used by all components.
 	Logger logr.Logger
+	// UsageReportConfig specifies the NGINX Plus usage reporting config.
+	UsageReportConfig *UsageReportConfig
 	// GatewayCtlrName is the name of this controller.
 	GatewayCtlrName string
 	// ConfigName is the name of the NginxGateway resource for this controller.
@@ -27,7 +29,7 @@ type Config struct {
 	// GatewayClassName is the name of the GatewayClass resource that the Gateway will use.
 	GatewayClassName string
 	// LeaderElection contains the configuration for leader election.
-	LeaderElection LeaderElection
+	LeaderElection LeaderElectionConfig
 	// MetricsConfig specifies the metrics config.
 	MetricsConfig MetricsConfig
 	// HealthConfig specifies the health probe config.
@@ -72,12 +74,24 @@ type HealthConfig struct {
 	Enabled bool
 }
 
-// LeaderElection contains the configuration for leader election.
-type LeaderElection struct {
+// LeaderElectionConfig contains the configuration for leader election.
+type LeaderElectionConfig struct {
 	// LockName holds the name of the leader election lock.
 	LockName string
 	// Identity is the unique name of the controller used for identifying the leader.
 	Identity string
 	// Enabled indicates whether leader election is enabled.
 	Enabled bool
+}
+
+// UsageReportConfig contains the configuration for NGINX Plus usage reporting.
+type UsageReportConfig struct {
+	// SecretNsName is the namespaced name of the Secret containing the server credentials.
+	SecretNsName types.NamespacedName
+	// ServerURL is the base URL of the reporting server.
+	ServerURL string
+	// ClusterDisplayName is the display name of the cluster. Optional.
+	ClusterDisplayName string
+	// InsecureSkipVerify controls whether the client verifies the server cert.
+	InsecureSkipVerify bool
 }
