@@ -92,6 +92,7 @@ var _ = Describe("Collector", Ordered, func() {
 					{
 						Kind: "ReplicaSet",
 						Name: "replicaset1",
+						UID:  "test-pod-owner-uid",
 					},
 				},
 			},
@@ -126,6 +127,7 @@ var _ = Describe("Collector", Ordered, func() {
 			ClusterID:         string(kubeNamespace.GetUID()),
 			ImageSource:       "local",
 			Arch:              runtime.GOARCH,
+			DeploymentID:      string(ngfPod.OwnerReferences[0].UID),
 		}
 
 		k8sClientReader = &eventsfakes.FakeReader{}
