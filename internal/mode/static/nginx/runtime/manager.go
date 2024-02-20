@@ -29,6 +29,13 @@ type (
 
 var childProcPathFmt = "/proc/%[1]v/task/%[1]v/children"
 
+//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . NginxPlusClient
+
+type NginxPlusClient interface {
+	UpdateHTTPServers(upstream string, servers []ngxclient.UpstreamServer) (added []ngxclient.UpstreamServer, deleted []ngxclient.UpstreamServer, updated []ngxclient.UpstreamServer, err error)
+	GetUpstreams() (*ngxclient.Upstreams, error)
+}
+
 //go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . Manager
 
 // Manager manages the runtime of NGINX.
@@ -56,13 +63,13 @@ type MetricsCollector interface {
 type ManagerImpl struct {
 	verifyClient     *verifyClient
 	metricsCollector MetricsCollector
-	ngxPlusClient    *ngxclient.NginxClient
+	ngxPlusClient    NginxPlusClient
 	logger           logr.Logger
 }
 
 // NewManagerImpl creates a new ManagerImpl.
 func NewManagerImpl(
-	ngxPlusClient *ngxclient.NginxClient,
+	ngxPlusClient NginxPlusClient,
 	collector MetricsCollector,
 	logger logr.Logger,
 ) *ManagerImpl {
