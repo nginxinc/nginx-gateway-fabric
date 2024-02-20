@@ -53,19 +53,19 @@ Deploying NGINX Gateway Fabric with Kubernetes manifests takes only a few steps.
 
 #### Stable release
 
-- For NGINX:
+##### For NGINX
 
    ```shell
    kubectl apply -f https://github.com/nginxinc/nginx-gateway-fabric/releases/download/v1.1.0/nginx-gateway.yaml
    ```
 
-- For NGINX Plus:
+##### For NGINX Plus
 
    Download the [deployment YAML](https://github.com/nginxinc/nginx-gateway-fabric/releases/download/v1.2.0/nginx-plus-gateway.yaml).
 
    Update the `nginx-plus-gateway.yaml` file to include your chosen NGINX Plus image from the F5 Container registry or your custom image.
 
-   {{< note >}}Ensure that you [Enable Usage Reporting]({{< relref "installation/usage-reporting.md" >}}) before installing.{{< /note >}}
+   {{< important >}}Ensure that you [Enable Usage Reporting]({{< relref "installation/usage-reporting.md" >}}) before applying.{{< /important >}}
 
    ```shell
    kubectl apply -f nginx-plus-gateway.yaml
@@ -73,15 +73,15 @@ Deploying NGINX Gateway Fabric with Kubernetes manifests takes only a few steps.
 
 #### Edge version
 
-- For NGINX:
+##### For NGINX
 
    ```shell
    kubectl apply -f deploy/manifests/nginx-gateway.yaml
    ```
 
-- For NGINX Plus:
+##### For NGINX Plus
 
-  {{< note >}}Ensure that you [Enable Usage Reporting]({{< relref "installation/usage-reporting.md" >}}) before installing.{{< /note >}}
+  {{< important >}}Ensure that you [Enable Usage Reporting]({{< relref "installation/usage-reporting.md" >}}) before applying.{{< /important >}}
 
    ```shell
    kubectl apply -f deploy/manifests/nginx-plus-gateway.yaml
@@ -93,13 +93,13 @@ Deploying NGINX Gateway Fabric with Kubernetes manifests takes only a few steps.
 
 We support a subset of the additional features provided by the Gateway API experimental channel. To enable the experimental features of Gateway API which are supported by NGINX Gateway Fabric:
 
-- For NGINX:
+##### For NGINX
 
    ```shell
    kubectl apply -f deploy/manifests/nginx-gateway-experimental.yaml
    ```
 
-- For NGINX Plus
+##### For NGINX Plus
 
    ```shell
    kubectl apply -f deploy/manifests/nginx-plus-gateway-experimental.yaml

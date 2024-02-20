@@ -29,10 +29,10 @@ To resolve this issue you will need to set `allowPrivilegeEscalation` to `true`.
 
 #### Description
 
-If using NGINX Gateway Fabric with NGINX Plus as the data plane, you will see the following error in the _nginx-gateway_ logs if you have not enabled usage reporting:
+If using NGINX Gateway Fabric with NGINX Plus as the data plane, you will see the following error in the _nginx-gateway_ logs if you have not enabled Usage Reporting:
 
 `usage reporting not enabled`
 
 #### Resolution
 
-To resolve this issue, enable usage reporting by following the [Usage Reporting]({{< relref "installation/usage-reporting.md" >}}) guide.
+To resolve this issue, enable Usage Reporting by following the [Usage Reporting]({{< relref "installation/usage-reporting.md" >}}) guide.

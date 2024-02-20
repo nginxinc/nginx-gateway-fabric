@@ -33,17 +33,17 @@ To complete this guide, you'll need to install:
 
 To install the latest stable release of NGINX Gateway Fabric in the **nginx-gateway** namespace, run the following command:
 
-- For NGINX:
+##### For NGINX
 
    ```shell
    helm install ngf oci://ghcr.io/nginxinc/charts/nginx-gateway-fabric --create-namespace -n nginx-gateway
    ```
 
-- For NGINX Plus:
+##### For NGINX Plus
 
   {{< note >}}Replace `private-registry.nginx.com` with the proper registry for your NGINX Plus image, and if applicable, replace `nginx-plus-registry-secret` with your Secret name containing the registry credentials.{{< /note >}}
 
-  {{< note >}}Ensure that you [Enable Usage Reporting]({{< relref "installation/usage-reporting.md" >}}) when installing.{{< /note >}}
+  {{< important >}}Ensure that you [Enable Usage Reporting]({{< relref "installation/usage-reporting.md" >}}) when installing.{{< /important >}}
 
    ```shell
    helm install ngf oci://ghcr.io/nginxinc/charts/nginx-gateway-fabric  --set nginx.image.repository=private-registry.nginx.com/nginx-gateway-fabric/nginx-plus --set nginx.plus=true --set serviceAccount.imagePullSecret=nginx-plus-registry-secret --create-namespace -n nginx-gateway

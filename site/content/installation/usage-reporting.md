@@ -8,22 +8,22 @@ docs: "DOCS-000"
 
 ## Overview
 
-Usage reporting connects to the NGINX Instance Manager and reports the number of Nodes and NGINX Gateway Fabric Pods in the cluster.
+Usage Reporting connects to the NGINX Instance Manager and reports the number of Nodes and NGINX Gateway Fabric Pods in the cluster.
 
-To use usage reporting, you must have access to [NGINX Instance Manager](https://www.nginx.com/products/nginx-management-suite/instance-manager). Usage reporting is a requirement of the new Flexible Consumption Program for NGINX Gateway Fabric, used to calculate costs. **This only applies if using NGINX Plus as the data plane.** Usage is reported every 24 hours.
+To use Usage Reporting, you must have access to [NGINX Instance Manager](https://www.nginx.com/products/nginx-management-suite/instance-manager). Usage Reporting is a requirement of the new Flexible Consumption Program for NGINX Gateway Fabric, used to calculate costs. **This only applies if using NGINX Plus as the data plane.** Usage is reported every 24 hours.
 
 ## Requirements
 
-Usage reporting needs to be configured when deploying NGINX Gateway Fabric.
+Usage Reporting needs to be configured when deploying NGINX Gateway Fabric.
 
-To enable usage reporting, you must have the following:
+To enable Usage Reporting, you must have the following:
 
 - NGINX Gateway Fabric 1.2.0 or later
 - [NGINX Instance Manager 2.11](https://docs.nginx.com/nginx-management-suite) or later
 
 In addition to the software requirements, you will need:
 
-- Access to an NGINX Instance Manager username and password for basic authentication. You will also need the URL of your NGINX Instance Manager system. The usage reporting user account must have access to the `/api/platform/v1/k8s-usage` endpoint.
+- Access to an NGINX Instance Manager username and password for basic authentication. You will also need the URL of your NGINX Instance Manager system. The Usage Reporting user account must have access to the `/api/platform/v1/k8s-usage` endpoint.
 - Access to the Kubernetes cluster where NGINX Gateway Fabric is deployed, with the ability to deploy a Kubernetes Secret.
 
 ## Adding a User Account to NGINX Instance Manager
@@ -34,7 +34,7 @@ In addition to the software requirements, you will need:
 - Feature: NGINX Plus Usage
 - Access: CRUD
 
-1. Create a user account following the steps in the [Create New Users](https://docs.nginx.com/nginx-management-suite/admin-guides/authentication/basic-authentication/#create-users) section of the NGINX Instance Manager documentation. In step 6, assign the user to the role created above. Note that currently only "Basic Auth" authentication is supported for usage reporting purposes.
+1. Create a user account following the steps in the [Create New Users](https://docs.nginx.com/nginx-management-suite/admin-guides/authentication/basic-authentication/#create-users) section of the NGINX Instance Manager documentation. In step 6, assign the user to the role created above. Note that currently only "Basic Auth" authentication is supported for Usage Reporting purposes.
 
 ## Enabling Usage Reporting in NGINX Gateway Fabric
 
@@ -67,9 +67,9 @@ To make the credentials available to NGINX Gateway Fabric to connect to the NGIN
 
    If you need to update the basic-auth credentials at any time, update the `username` and `password` fields and apply the changes. NGINX Gateway Fabric will automatically detect the changes and use the new username and password without redeployment.
 
-### Install NGINX Gateway Fabric with usage reporting enabled
+### Install NGINX Gateway Fabric with Usage Reporting enabled
 
-When installing NGINX Gateway Fabric, a few configuration options need to be specified in order to enable usage reporting. You should follow the normal [installation](https://docs.nginx.com/nginx-gateway-fabric/installation/) steps using your preferred method, but ensure you include the following options:
+When installing NGINX Gateway Fabric, a few configuration options need to be specified in order to enable Usage Reporting. You should follow the normal [installation](https://docs.nginx.com/nginx-gateway-fabric/installation/) steps using your preferred method, but ensure you include the following options:
 
 If using Helm, the `nginx.usage` values should be set as necessary:
 
