@@ -587,6 +587,31 @@ var _ = Describe("Collector", Ordered, func() {
 					_, err := dataCollector.Collect(ctx)
 					Expect(err).To(MatchError(expectedErr))
 				})
+				It("should error if the Pod's owner reference UID is empty", func() {
+					ngfPod = &v1.Pod{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "pod1",
+							OwnerReferences: []metav1.OwnerReference{
+								{
+									Kind: "ReplicaSet",
+									Name: "replicaset1",
+								},
+							},
+						},
+					}
+
+					replicas := int32(1)
+					ngfReplicaSet = &appsv1.ReplicaSet{
+						Spec: appsv1.ReplicaSetSpec{
+							Replicas: &replicas,
+						},
+					}
+					k8sClientReader.GetCalls(createGetCallsFunc(ngfPod, ngfReplicaSet))
+
+					expectedErr := fmt.Sprintf("expected pod owner reference to have a UID: %v", ngfPod.OwnerReferences[0])
+					_, err := dataCollector.Collect(ctx)
+					Expect(err).To(MatchError(ContainSubstring(expectedErr)))
+				})
 			})
 		})
 	})
