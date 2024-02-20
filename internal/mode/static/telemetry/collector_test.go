@@ -92,7 +92,6 @@ var _ = Describe("Collector", Ordered, func() {
 					{
 						Kind: "ReplicaSet",
 						Name: "replicaset1",
-						UID:  "test-pod-owner-uid",
 					},
 				},
 			},
