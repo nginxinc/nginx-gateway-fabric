@@ -294,7 +294,9 @@ func createHTTPListenerValidator(protectedPorts ProtectedPorts) listenerValidato
 		}
 
 		if listener.TLS != nil {
-			panicForBrokenWebhookAssumption(fmt.Errorf("tls is not nil for HTTP listener %q", listener.Name))
+			path := field.NewPath("tls")
+			valErr := field.Forbidden(path, "tls is not supported for HTTP listener")
+			conds = append(conds, staticConds.NewListenerUnsupportedValue(valErr.Error())...)
 		}
 
 		return conds, true
@@ -322,7 +324,9 @@ func createHTTPSListenerValidator(protectedPorts ProtectedPorts) listenerValidat
 		}
 
 		if listener.TLS == nil {
-			panicForBrokenWebhookAssumption(fmt.Errorf("tls is nil for HTTPS listener %q", listener.Name))
+			valErr := field.Required(field.NewPath("TLS"), "tls must be defined for HTTPS listener")
+			conds = append(conds, staticConds.NewListenerUnsupportedValue(valErr.Error())...)
+			return conds, true
 		}
 
 		tlsPath := field.NewPath("tls")
@@ -343,7 +347,10 @@ func createHTTPSListenerValidator(protectedPorts ProtectedPorts) listenerValidat
 		}
 
 		if len(listener.TLS.CertificateRefs) == 0 {
-			panicForBrokenWebhookAssumption(fmt.Errorf("zero certificateRefs for HTTPS listener %q", listener.Name))
+			msg := "certificateRefs must be defined for TLS mode terminate"
+			valErr := field.Required(tlsPath.Child("certificateRefs"), msg)
+			conds = append(conds, staticConds.NewListenerInvalidCertificateRef(valErr.Error())...)
+			return conds, true
 		}
 
 		certRef := listener.TLS.CertificateRefs[0]
