@@ -67,3 +67,5 @@ release:
     - glob: ./build/out/crds.yaml
     - glob: ./deploy/manifests/nginx-gateway.yaml
     - glob: ./deploy/manifests/nginx-plus-gateway.yaml
+    - glob: ./deploy/manifests/nginx-gateway-experimental.yaml
+    - glob: ./deploy/manifests/nginx-plus-gateway-experimental.yaml
