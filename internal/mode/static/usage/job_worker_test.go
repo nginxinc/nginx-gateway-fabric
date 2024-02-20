@@ -136,7 +136,20 @@ func TestGetTotalNGFPodCount(t *testing.T) {
 		},
 	}
 
-	k8sClient := fake.NewFakeClient(rs1, rs2, rs3)
+	rs4 := &appsv1.ReplicaSet{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "nginx-gateway-3",
+			Name:      "ngf-replicaset-nil",
+			Labels: map[string]string{
+				"app.kubernetes.io/name": "nginx-gateway-fabric",
+			},
+		},
+		Spec: appsv1.ReplicaSetSpec{
+			Replicas: nil,
+		},
+	}
+
+	k8sClient := fake.NewFakeClient(rs1, rs2, rs3, rs4)
 
 	expCount := 4
 	count, err := usage.GetTotalNGFPodCount(context.Background(), k8sClient)
