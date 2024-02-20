@@ -1,24 +1,29 @@
-# syntax=docker/dockerfile:1.4
-FROM alpine:3.18
+# syntax=docker/dockerfile:1.6
+FROM scratch as nginx-files
 
-ARG NGINX_PLUS_VERSION=R30
+# the following links can be replaced with local files if needed, i.e. ADD --chown=101:1001 <local_file> <container_file>
+ADD --link --chown=101:1001 https://cs.nginx.com/static/keys/nginx_signing.rsa.pub nginx_signing.rsa.pub
+
+
+FROM alpine:3.19
+
+ARG NGINX_PLUS_VERSION=R31
 ARG NJS_DIR
 ARG NGINX_CONF_DIR
 ARG BUILD_AGENT
 
 RUN --mount=type=secret,id=nginx-repo.crt,dst=/etc/apk/cert.pem,mode=0644 \
-	--mount=type=secret,id=nginx-repo.key,dst=/etc/apk/cert.key,mode=0644 \
-	addgroup -g 1001 -S nginx \
+    --mount=type=secret,id=nginx-repo.key,dst=/etc/apk/cert.key,mode=0644 \
+    --mount=type=bind,from=nginx-files,src=nginx_signing.rsa.pub,target=/etc/apk/keys/nginx_signing.rsa.pub \
+    addgroup -g 1001 -S nginx \
     && adduser -S -D -H -u 101 -h /var/cache/nginx -s /sbin/nologin -G nginx -g nginx nginx \
-	&& wget -nv -O /etc/apk/keys/nginx_signing.rsa.pub https://cs.nginx.com/static/keys/nginx_signing.rsa.pub \
-	&& printf "%s\n" "https://pkgs.nginx.com/plus/${NGINX_PLUS_VERSION}/alpine/v$(grep -E -o '^[0-9]+\.[0-9]+' /etc/alpine-release)/main" >> /etc/apk/repositories \
-	&& apk add --no-cache nginx-plus nginx-plus-module-njs libcap \
-	&& ldconfig /usr/local/lib/ \
+    && printf "%s\n" "https://pkgs.nginx.com/plus/${NGINX_PLUS_VERSION}/alpine/v$(grep -E -o '^[0-9]+\.[0-9]+' /etc/alpine-release)/main" >> /etc/apk/repositories \
+    && apk add --no-cache nginx-plus nginx-plus-module-njs libcap \
     && mkdir -p /var/lib/nginx /usr/lib/nginx/modules \
     && setcap 'cap_net_bind_service=+ep' /usr/sbin/nginx \
     && setcap -v 'cap_net_bind_service=+ep' /usr/sbin/nginx \
     && apk del libcap \
-	# forward request and error logs to docker log collector
+    # forward request and error logs to docker log collector
     && ln -sf /dev/stdout /var/log/nginx/access.log \
     && ln -sf /dev/stderr /var/log/nginx/error.log
 

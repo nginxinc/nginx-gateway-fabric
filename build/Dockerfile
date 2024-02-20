@@ -1,5 +1,5 @@
-# syntax=docker/dockerfile:1.4
-FROM golang:1.21 as builder
+# syntax=docker/dockerfile:1.6
+FROM golang:1.22 as builder
 
 WORKDIR /go/src/github.com/nginxinc/nginx-gateway-fabric
 

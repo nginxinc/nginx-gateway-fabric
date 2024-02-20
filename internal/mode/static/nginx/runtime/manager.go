@@ -11,6 +11,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/go-logr/logr"
+	ngxclient "github.com/nginxinc/nginx-plus-go-client/client"
 	"k8s.io/apimachinery/pkg/util/wait"
 )
 
@@ -33,6 +35,14 @@ var childProcPathFmt = "/proc/%[1]v/task/%[1]v/children"
 type Manager interface {
 	// Reload reloads NGINX configuration. It is a blocking operation.
 	Reload(ctx context.Context, configVersion int) error
+	// IsPlus returns whether or not we are running NGINX plus.
+	IsPlus() bool
+	// UpdateHTTPServers uses the NGINX Plus API to update HTTP servers.
+	// Only usable if running NGINX Plus.
+	UpdateHTTPServers(string, []ngxclient.UpstreamServer) error
+	// GetUpstreams uses the NGINX Plus API to get the upstreams.
+	// Only usable if running NGINX Plus.
+	GetUpstreams() (ngxclient.Upstreams, error)
 }
 
 // MetricsCollector is an interface for the metrics of the NGINX runtime manager.
@@ -46,14 +56,27 @@ type MetricsCollector interface {
 type ManagerImpl struct {
 	verifyClient     *verifyClient
 	metricsCollector MetricsCollector
+	ngxPlusClient    *ngxclient.NginxClient
+	logger           logr.Logger
 }
 
 // NewManagerImpl creates a new ManagerImpl.
-func NewManagerImpl(collector MetricsCollector) *ManagerImpl {
+func NewManagerImpl(
+	ngxPlusClient *ngxclient.NginxClient,
+	collector MetricsCollector,
+	logger logr.Logger,
+) *ManagerImpl {
 	return &ManagerImpl{
 		verifyClient:     newVerifyClient(nginxReloadTimeout),
 		metricsCollector: collector,
+		ngxPlusClient:    ngxPlusClient,
+		logger:           logger,
 	}
+}
+
+// IsPlus returns whether or not we are running NGINX plus.
+func (m *ManagerImpl) IsPlus() bool {
+	return m.ngxPlusClient != nil
 }
 
 func (m *ManagerImpl) Reload(ctx context.Context, configVersion int) error {
@@ -94,6 +117,40 @@ func (m *ManagerImpl) Reload(ctx context.Context, configVersion int) error {
 	return nil
 }
 
+// UpdateHTTPServers uses the NGINX Plus API to update HTTP upstream servers.
+// Only usable if running NGINX Plus.
+func (m *ManagerImpl) UpdateHTTPServers(upstream string, servers []ngxclient.UpstreamServer) error {
+	if !m.IsPlus() {
+		panic("cannot update HTTP upstream servers: NGINX Plus not enabled")
+	}
+
+	added, deleted, updated, err := m.ngxPlusClient.UpdateHTTPServers(upstream, servers)
+	m.logger.V(1).Info("Added upstream servers", "count", len(added))
+	m.logger.V(1).Info("Deleted upstream servers", "count", len(deleted))
+	m.logger.V(1).Info("Updated upstream servers", "count", len(updated))
+
+	return err
+}
+
+// GetUpstreams uses the NGINX Plus API to get the upstreams.
+// Only usable if running NGINX Plus.
+func (m *ManagerImpl) GetUpstreams() (ngxclient.Upstreams, error) {
+	if !m.IsPlus() {
+		panic("cannot get HTTP upstream servers: NGINX Plus not enabled")
+	}
+
+	upstreams, err := m.ngxPlusClient.GetUpstreams()
+	if err != nil {
+		return nil, err
+	}
+
+	if upstreams == nil {
+		return nil, errors.New("GET upstreams returned nil value")
+	}
+
+	return *upstreams, nil
+}
+
 // EnsureNginxRunning ensures NGINX is running by locating the main process.
 func EnsureNginxRunning(ctx context.Context) error {
 	if _, err := findMainProcess(ctx, os.Stat, os.ReadFile, pidFileTimeout); err != nil {
@@ -115,7 +172,7 @@ func findMainProcess(
 		ctx,
 		500*time.Millisecond,
 		true, /* poll immediately */
-		func(ctx context.Context) (bool, error) {
+		func(_ context.Context) (bool, error) {
 			_, err := checkFile(pidFile)
 			if err == nil {
 				return true, nil

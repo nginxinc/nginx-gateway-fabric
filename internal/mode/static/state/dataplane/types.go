@@ -23,6 +23,8 @@ const (
 type Configuration struct {
 	// SSLKeyPairs holds all unique SSLKeyPairs.
 	SSLKeyPairs map[SSLKeyPairID]SSLKeyPair
+	// CertBundles holds all unique Certificate Bundles.
+	CertBundles map[CertBundleID]CertBundle
 	// HTTPServers holds all HTTPServers.
 	HTTPServers []VirtualServer
 	// SSLServers holds all SSLServers.
@@ -38,6 +40,13 @@ type Configuration struct {
 // SSLKeyPairID is a unique identifier for a SSLKeyPair.
 // The ID is safe to use as a file name.
 type SSLKeyPairID string
+
+// CertBundleID is a unique identifier for a Certificate bundle.
+// The ID is safe to use as a file name.
+type CertBundleID string
+
+// CertBundle is a Certificate bundle.
+type CertBundle []byte
 
 // SSLKeyPair is an SSL private/public key pair.
 type SSLKeyPair struct {
@@ -224,6 +233,8 @@ func (bg *BackendGroup) Name() string {
 
 // Backend represents a Backend for a routing rule.
 type Backend struct {
+	// VerifyTLS holds the backend TLS verification configuration.
+	VerifyTLS *VerifyTLS
 	// UpstreamName is the name of the upstream for this backend.
 	UpstreamName string
 	// Weight is the weight of the BackendRef.
@@ -232,4 +243,11 @@ type Backend struct {
 	Weight int32
 	// Valid indicates whether the Backend is valid.
 	Valid bool
+}
+
+// VerifyTLS holds the backend TLS verification configuration.
+type VerifyTLS struct {
+	CertBundleID CertBundleID
+	Hostname     string
+	RootCAPath   string
 }

@@ -1,11 +1,11 @@
-# syntax=docker/dockerfile:1.4
-FROM nginx:1.25.3-alpine
+# syntax=docker/dockerfile:1.6
+FROM nginx:1.25.4-alpine
 
 ARG NJS_DIR
 ARG NGINX_CONF_DIR
 ARG BUILD_AGENT
 
-RUN apk update && apk upgrade && apk add --no-cache libcap \
+RUN apk add --no-cache libcap \
     && mkdir -p /var/lib/nginx /usr/lib/nginx/modules \
     && setcap 'cap_net_bind_service=+ep' /usr/sbin/nginx \
     && setcap -v 'cap_net_bind_service=+ep' /usr/sbin/nginx \

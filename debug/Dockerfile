@@ -1,4 +1,4 @@
-# syntax=docker/dockerfile:1.5
+# syntax=docker/dockerfile:1.6
 # This Dockerfile builds an image with the dlv debugger. See the debugging guide in the developer docs for details
 # on how to use it.
 FROM golang:1.21-alpine AS builder

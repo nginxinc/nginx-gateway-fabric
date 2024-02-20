@@ -4,12 +4,11 @@ import (
 	"fmt"
 
 	apiv1 "k8s.io/api/core/v1"
+	discoveryV1 "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/relationship"
 )
 
 // Updater updates the cluster state.
@@ -71,17 +70,20 @@ func (list gvkList) contains(gvk schema.GroupVersionKind) bool {
 }
 
 type multiObjectStore struct {
-	stores     map[schema.GroupVersionKind]objectStore
-	extractGVK extractGVKFunc
+	stores        map[schema.GroupVersionKind]objectStore
+	extractGVK    extractGVKFunc
+	persistedGVKs gvkList
 }
 
 func newMultiObjectStore(
 	stores map[schema.GroupVersionKind]objectStore,
 	extractGVK extractGVKFunc,
+	persistedGVKs gvkList,
 ) *multiObjectStore {
 	return &multiObjectStore{
-		stores:     stores,
-		extractGVK: extractGVK,
+		stores:        stores,
+		extractGVK:    extractGVK,
+		persistedGVKs: persistedGVKs,
 	}
 }
 
@@ -108,11 +110,15 @@ func (m *multiObjectStore) delete(objType client.Object, nsname types.Namespaced
 	m.mustFindStoreForObj(objType).delete(nsname)
 }
 
+func (m *multiObjectStore) persists(objTypeGVK schema.GroupVersionKind) bool {
+	return m.persistedGVKs.contains(objTypeGVK)
+}
+
 type changeTrackingUpdaterObjectTypeCfg struct {
 	// store holds the objects of the gvk. If the store is nil, the objects of the gvk are not persisted.
 	store objectStore
-	// predicate determines if upsert or delete event should trigger a change.
-	// If predicate is nil, then no upsert or delete event for this object will trigger a change.
+	// predicate determines how an upsert or delete event should trigger a change.
+	// If predicate is nil, then all upsert or delete events for this object will trigger a change.
 	predicate stateChangedPredicate
 	gvk       schema.GroupVersionKind
 }
@@ -121,24 +127,18 @@ type changeTrackingUpdaterObjectTypeCfg struct {
 //
 // It only works with objects with the GVKs registered in changeTrackingUpdaterObjectTypeCfg. Otherwise, it panics.
 //
-// A change is tracked when:
-// - An object with a GVK with a non-nil store and the stateChangedPredicate for that object returns true.
-// - An object is upserted or deleted, and it is related to another object,
-// based on the decision by the relationship capturer.
+// A change is tracked when an object with a GVK has its stateChangedPredicate return true or if its predicate is nil.
 type changeTrackingUpdater struct {
 	store                  *multiObjectStore
-	capturer               relationship.Capturer
 	stateChangedPredicates map[schema.GroupVersionKind]stateChangedPredicate
 
 	extractGVK    extractGVKFunc
 	supportedGVKs gvkList
-	persistedGVKs gvkList
 
-	changed bool
+	changeType ChangeType
 }
 
 func newChangeTrackingUpdater(
-	capturer relationship.Capturer,
 	extractGVK extractGVKFunc,
 	objectTypeCfgs []changeTrackingUpdaterObjectTypeCfg,
 ) *changeTrackingUpdater {
@@ -164,12 +164,11 @@ func newChangeTrackingUpdater(
 	}
 
 	return &changeTrackingUpdater{
-		store:                  newMultiObjectStore(stores, extractGVK),
+		store:                  newMultiObjectStore(stores, extractGVK, persistedGVKs),
 		extractGVK:             extractGVK,
 		supportedGVKs:          supportedGVKs,
-		persistedGVKs:          persistedGVKs,
-		capturer:               capturer,
 		stateChangedPredicates: stateChangedPredicates,
+		changeType:             NoChange,
 	}
 }
 
@@ -182,17 +181,17 @@ func (s *changeTrackingUpdater) assertSupportedGVK(gvk schema.GroupVersionKind) 
 func (s *changeTrackingUpdater) upsert(obj client.Object) (changed bool) {
 	objTypeGVK := s.extractGVK(obj)
 
-	if !s.persistedGVKs.contains(objTypeGVK) {
-		return false
+	var oldObj client.Object
+
+	if s.store.persists(objTypeGVK) {
+		oldObj = s.store.get(obj, client.ObjectKeyFromObject(obj))
+
+		s.store.upsert(obj)
 	}
-
-	oldObj := s.store.get(obj, client.ObjectKeyFromObject(obj))
-
-	s.store.upsert(obj)
 
 	stateChanged, ok := s.stateChangedPredicates[objTypeGVK]
 	if !ok {
-		return false
+		return true
 	}
 
 	return stateChanged.upsert(oldObj, obj)
@@ -202,40 +201,27 @@ func (s *changeTrackingUpdater) Upsert(obj client.Object) {
 	s.assertSupportedGVK(s.extractGVK(obj))
 
 	changingUpsert := s.upsert(obj)
-	relationshipExisted := s.capturer.Exists(obj, client.ObjectKeyFromObject(obj))
 
-	s.capturer.Capture(obj)
-
-	relationshipExists := s.capturer.Exists(obj, client.ObjectKeyFromObject(obj))
-
-	// FIXME(pleshakov): Check generation in all cases to minimize the number of Graph regeneration.
-	// s.changed can be true even if the generation of the object did not change, because
-	// capturer and triggerStateChange don't take the generation into account.
-	// See https://github.com/nginxinc/nginx-gateway-fabric/issues/825
-
-	s.changed = s.changed || changingUpsert || relationshipExisted || relationshipExists
+	s.setChangeType(obj, changingUpsert)
 }
 
 func (s *changeTrackingUpdater) delete(objType client.Object, nsname types.NamespacedName) (changed bool) {
 	objTypeGVK := s.extractGVK(objType)
 
-	if !s.persistedGVKs.contains(objTypeGVK) {
-		return false
-	}
+	if s.store.persists(objTypeGVK) {
+		if s.store.get(objType, nsname) == nil {
+			return false
+		}
 
-	obj := s.store.get(objType, nsname)
-	if obj == nil {
-		return false
+		s.store.delete(objType, nsname)
 	}
-
-	s.store.delete(objType, nsname)
 
 	stateChanged, ok := s.stateChangedPredicates[objTypeGVK]
 	if !ok {
-		return false
+		return true
 	}
 
-	return stateChanged.delete(obj)
+	return stateChanged.delete(objType, nsname)
 }
 
 func (s *changeTrackingUpdater) Delete(objType client.Object, nsname types.NamespacedName) {
@@ -243,17 +229,30 @@ func (s *changeTrackingUpdater) Delete(objType client.Object, nsname types.Names
 
 	changingDelete := s.delete(objType, nsname)
 
-	s.changed = s.changed || changingDelete || s.capturer.Exists(objType, nsname)
-
-	s.capturer.Remove(objType, nsname)
+	s.setChangeType(objType, changingDelete)
 }
 
-// getAndResetChangedStatus returns true if the previous updates (Upserts/Deletes) require an update of
-// the configuration of the data plane. It also resets the changed status to false.
-func (s *changeTrackingUpdater) getAndResetChangedStatus() bool {
-	changed := s.changed
-	s.changed = false
-	return changed
+// getAndResetChangedStatus returns the type of change that occurred based on the previous updates (Upserts/Deletes).
+// It also resets the changed status to NoChange.
+func (s *changeTrackingUpdater) getAndResetChangedStatus() ChangeType {
+	changeType := s.changeType
+	s.changeType = NoChange
+	return changeType
+}
+
+// setChangeType determines and sets the type of change that occurred.
+// - if no change occurred on this object, then keep the changeType as-is (could've been set by another object event)
+// - if changeType is already a ClusterStateChange, then we don't need to update the value
+// - otherwise, if we are processing an Endpoint update, then this is an EndpointsOnlyChange changeType
+// - otherwise, this is a different object, and is a ClusterStateChange changeType
+func (s *changeTrackingUpdater) setChangeType(obj client.Object, changed bool) {
+	if changed && s.changeType != ClusterStateChange {
+		if _, ok := obj.(*discoveryV1.EndpointSlice); ok {
+			s.changeType = EndpointsOnlyChange
+		} else {
+			s.changeType = ClusterStateChange
+		}
+	}
 }
 
 type upsertValidatorFunc func(obj client.Object) error

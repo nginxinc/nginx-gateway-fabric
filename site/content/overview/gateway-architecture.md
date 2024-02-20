@@ -60,7 +60,7 @@ This configuration happens in two stages:
 1. NGINX configuration files are written to the NGINX configuration volume shared by the `nginx-gateway` and `nginx` containers.
 1. The control plane reloads the NGINX process.
 
-This is possible because the two containers [share a process namespace](https://kubernetes.io/docs/tasks/configure-pod-container/share-process-namespace/), allowing the NGF process to send signals to the NGINX main process.
+This is possible because the two containers [share a process namespace](https://kubernetes.io/docs/tasks/configure-pod-container/share-process-namespace/), allowing the NGINX Gateway Fabric process to send signals to the NGINX main process.
 
 The following diagram represents the connections, relationships and interactions between process with the `nginx` and `nginx-gateway` containers, as well as external processes/entities.
 
@@ -71,7 +71,7 @@ The following list describes the connections, preceeded by their types in parent
 1. (HTTPS)
    - Read: _NGF_ reads the _Kubernetes API_ to get the latest versions of the resources in the cluster.
    - Write: _NGF_ writes to the _Kubernetes API_ to update the handled resources' statuses and emit events. If there's more than one replica of _NGF_ and [leader election](https://github.com/nginxinc/nginx-gateway-fabric/tree/main/deploy/helm-chart#configuration) is enabled, only the _NGF_ pod that is leading will write statuses to the _Kubernetes API_.
-1. (HTTP, HTTPS) _Prometheus_ fetches the `controller-runtime` and NGINX metrics via an HTTP endpoint that _NGF_ exposes (`:9113/metrics` by default). Prometheus is **not** required by NGF, and its endpoint can be turned off.
+1. (HTTP, HTTPS) _Prometheus_ fetches the `controller-runtime` and NGINX metrics via an HTTP endpoint that _NGF_ exposes (`:9113/metrics` by default). Prometheus is **not** required by NGINX Gateway Fabric, and its endpoint can be turned off.
 1. (File I/O)
    - Write: _NGF_ generates NGINX _configuration_ based on the cluster resources and writes them as `.conf` files to the mounted `nginx-conf` volume, located at `/etc/nginx/conf.d`. It also writes _TLS certificates_ and _keys_ from [TLS secrets](https://kubernetes.io/docs/concepts/configuration/secret/#tls-secrets) referenced in the accepted Gateway resource to the `nginx-secrets` volume at the path `/etc/nginx/secrets`.
    - Read: _NGF_ reads the PID file `nginx.pid` from the `nginx-run` volume, located at `/var/run/nginx`. _NGF_ extracts the PID of the nginx process from this file in order to send reload signals to _NGINX master_.
@@ -91,6 +91,16 @@ The following list describes the connections, preceeded by their types in parent
 1. (HTTP) To consider a configuration reload a success, _NGF_ ensures that at least one NGINX worker has the new configuration. To do that, _NGF_ checks a particular endpoint via the unix:/var/run/nginx/nginx-config-version.sock UNIX socket.
 1. (HTTP, HTTPS) A _client_ sends traffic to and receives traffic from any of the _NGINX workers_ on ports 80 and 443.
 1. (HTTP, HTTPS) An _NGINX worker_ sends traffic to and receives traffic from the _backends_.
+
+### Differences with NGINX Plus
+
+The previous diagram depicts NGINX Gateway Fabric using NGINX Open Source. NGINX Gateway Fabric with NGINX Plus has the following difference:
+
+- An _admin_ can connect to the NGINX Plus API using port 8765. NGINX only allows connections from localhost.
+
+## Updating upstream servers
+
+The normal process to update any changes to NGINX is to write the configuration files and reload NGINX. However, when using NGINX Plus, we can take advantage of the [NGINX Plus API](http://nginx.org/en/docs/http/ngx_http_api_module.html) to limit the amount of reloads triggered when making changes to NGINX. Specifically, when the endpoints of an application in Kubernetes change (Such as scaling up or down), the NGINX Plus API is used to update the upstream servers in NGINX with the new endpoints without a reload. This reduces the potential for a disruption that could occur when reloading.
 
 ## Pod readiness
 

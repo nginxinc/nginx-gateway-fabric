@@ -1,6 +1,8 @@
 TAG = edge
+VERSION = 1.1.0 # NGF version
 PREFIX = nginx-gateway-fabric
 NGINX_PREFIX = $(PREFIX)/nginx
+NGINX_PLUS_PREFIX ?= $(PREFIX)/nginx-plus
 GW_API_VERSION ?= 1.0.0
 GATEWAY_CLASS = nginx
 SUPPORTED_FEATURES = HTTPRouteQueryParamMatching,HTTPRouteMethodMatching,HTTPRoutePortRedirect,HTTPRouteSchemeRedirect,HTTPRouteHostRewrite,HTTPRoutePathRewrite,GatewayPort8080
@@ -12,8 +14,8 @@ NGF_MANIFEST=../deploy/manifests/nginx-gateway.yaml
 CRDS=../deploy/manifests/crds/
 STATIC_MANIFEST=provisioner/static-deployment.yaml
 PROVISIONER_MANIFEST=provisioner/provisioner.yaml
-NGINX_IMAGE=$(shell yq '.spec.template.spec.containers[1].image as $$nginx_ver | $$nginx_ver' $(STATIC_MANIFEST))
 INSTALL_WEBHOOK ?= false
+ENABLE_EXPERIMENTAL ?= false
 .DEFAULT_GOAL := help
 
 .PHONY: help
@@ -36,18 +38,36 @@ create-kind-cluster: ## Create a kind cluster
 
 .PHONY: update-ngf-manifest
 update-ngf-manifest: ## Update the NGF deployment manifest image names and imagePullPolicies
-	cd .. && make generate-manifests HELM_TEMPLATE_EXTRA_ARGS_FOR_ALL_MANIFESTS_FILE="--set nginxGateway.kind=skip" HELM_TEMPLATE_COMMON_ARGS="--set nginxGateway.image.repository=$(PREFIX) --set nginxGateway.image.tag=$(TAG) --set nginxGateway.image.pullPolicy=Never --set nginx.image.repository=$(NGINX_PREFIX) --set nginx.image.tag=$(TAG) --set nginx.image.pullPolicy=Never" && cd -
+	cd .. && make generate-manifests HELM_TEMPLATE_EXTRA_ARGS_FOR_ALL_MANIFESTS_FILE="--set nginxGateway.kind=skip" HELM_TEMPLATE_COMMON_ARGS="--set nginxGateway.image.repository=$(PREFIX) --set nginxGateway.image.tag=$(TAG) --set nginxGateway.image.pullPolicy=Never --set nginx.image.repository=$(NGINX_PREFIX) --set nginx.image.tag=$(TAG) --set nginx.image.pullPolicy=Never --set nginxGateway.experimentalFeatures.enable=$(ENABLE_EXPERIMENTAL)" && cd -
+
+.PHONY: update-ngf-manifest-with-plus
+update-ngf-manifest-with-plus: ## Update the NGF deployment manifest image names and imagePullPolicies including nginx-plus
+	cd .. && make generate-manifests HELM_TEMPLATE_EXTRA_ARGS_FOR_ALL_MANIFESTS_FILE="--set nginxGateway.kind=skip" HELM_TEMPLATE_COMMON_ARGS="--set nginxGateway.image.repository=$(PREFIX) --set nginxGateway.image.tag=$(TAG) --set nginxGateway.image.pullPolicy=Never --set nginx.image.repository=$(NGINX_PLUS_PREFIX) --set nginx.image.tag=$(TAG) --set nginx.image.pullPolicy=Never --set nginx.plus=true" && cd -
 
 .PHONY: build-images
-build-images: ## Build NGF and nginx images
+build-images: ## Build NGF and NGINX images
 	cd .. && make PREFIX=$(PREFIX) TAG=$(TAG) build-images
 
 .PHONY: load-images
 load-images: ## Load NGF and NGINX images on configured kind cluster
 	cd .. && make PREFIX=$(PREFIX) TAG=$(TAG) load-images
 
+.PHONY: build-images-with-plus
+build-images-with-plus: ## Build NGF and NGINX Plus images
+	cd .. && make PREFIX=$(PREFIX) TAG=$(TAG) build-images-with-plus
+
+.PHONY: load-images-with-plus
+load-images-with-plus: ## Load NGF and NGINX Plus images on configured kind cluster
+	cd .. && make PREFIX=$(PREFIX) TAG=$(TAG) load-images-with-plus
+
 .PHONY: prepare-ngf-dependencies
 prepare-ngf-dependencies: update-ngf-manifest ## Install NGF dependencies on configured kind cluster
+	./scripts/install-gateway.sh $(GW_API_VERSION) $(INSTALL_WEBHOOK) $(ENABLE_EXPERIMENTAL)
+	kubectl apply -f $(CRDS)
+	kubectl apply -f $(NGF_MANIFEST)
+
+.PHONY: prepare-ngf-dependencies-with-plus
+prepare-ngf-dependencies-with-plus: update-ngf-manifest-with-plus ## Install NGF dependencies with Plus on configured kind cluster
 	./scripts/install-gateway.sh $(GW_API_VERSION) $(INSTALL_WEBHOOK)
 	kubectl apply -f $(CRDS)
 	kubectl apply -f $(NGF_MANIFEST)
@@ -62,6 +82,12 @@ install-ngf-local-build: prepare-ngf-dependencies build-images load-images deplo
 
 .PHONY: install-ngf-local-no-build
 install-ngf-local-no-build: prepare-ngf-dependencies load-images deploy-updated-provisioner ## Install NGF from local build with provisioner on configured kind cluster but do not build the NGF image
+
+.PHONY: install-ngf-local-build-with-plus
+install-ngf-local-build-with-plus: prepare-ngf-dependencies-with-plus build-images-with-plus load-images-with-plus deploy-updated-provisioner ## Install NGF with Plus from local build with provisioner on configured kind cluster
+
+.PHONY: install-ngf-local-no-build-with-plus
+install-ngf-local-no-build-with-plus: prepare-ngf-dependencies-with-plus load-images-with-plus deploy-updated-provisioner ## Install NGF with Plus from local build with provisioner on configured kind cluster but do not build the NGF image
 
 .PHONY: install-ngf-edge
 install-ngf-edge: prepare-ngf-dependencies ## Install NGF with provisioner from edge on configured kind cluster
@@ -93,7 +119,7 @@ uninstall-ngf: uninstall-k8s-components undo-manifests-update ## Uninstall NGF o
 .PHONY: uninstall-k8s-components
 uninstall-k8s-components: ## Uninstall installed components on configured kind cluster
 	-kubectl delete -f $(NGF_MANIFEST)
-	./scripts/uninstall-gateway.sh $(GW_API_VERSION) $(INSTALL_WEBHOOK)
+	./scripts/uninstall-gateway.sh $(GW_API_VERSION) $(INSTALL_WEBHOOK) $(ENABLE_EXPERIMENTAL)
 	kubectl delete clusterrole nginx-gateway-provisioner
 	kubectl delete clusterrolebinding nginx-gateway-provisioner
 

@@ -1,8 +1,8 @@
 {
   "dependencies": {
-    "chai": "5.0.0",
+    "chai": "5.1.0",
     "esm": "3.2.25",
-    "mocha": "10.2.0"
+    "mocha": "10.3.0"
   },
   "scripts": {
     "format": "prettier -w src/ test/",
@@ -12,7 +12,7 @@
   },
   "devDependencies": {
     "c8": "9.1.0",
-    "prettier": "3.2.4"
+    "prettier": "3.2.5"
   },
   "type": "module"
 }

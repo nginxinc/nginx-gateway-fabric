@@ -27,7 +27,7 @@ jobs:
           go-version: stable
 
       - name: Lint Code
-        uses: golangci/golangci-lint-action@3a919529898de77ec3da873e3063ca4b10e7f5cc # v3.7.0
+        uses: golangci/golangci-lint-action@3cfe3a4abbb849e10058ce4af15d205b6da42804 # v4.0.0
         with:
           args: --timeout 10m0s
 
@@ -45,7 +45,7 @@ jobs:
 
       - name: Run Prettier on NJS code
         id: prettier-run
-        uses: rutajdash/prettier-cli-action@9e27606a9e18d40b6b4a2b4159e780241d2fbb3c # v1.0.1
+        uses: rutajdash/prettier-cli-action@d42c4325a3b344f3bd4be482bc34de521998d557 # v1.0.2
         with:
           config_path: ${{ github.workspace }}/internal/mode/static/nginx/modules/.prettierrc
           file_pattern: ${{ github.workspace }}/internal/mode/static/nginx/modules/**/*.js
@@ -66,7 +66,7 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
 
-      - uses: reviewdog/action-actionlint@9ccda195fd3a290c8596db7f1958c897deaa8c76 # v1.40.0
+      - uses: reviewdog/action-actionlint@6a38513dd4d2e818798c5c73d0870adbb82de4a4 # v1.41.0
         with:
           actionlint_flags: -shellcheck ""
 
@@ -77,7 +77,7 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
 
-      - uses: DavidAnson/markdownlint-cli2-action@455b6612a7b7a80f28be9e019b70abdd11696e4e # v14.0.0
+      - uses: DavidAnson/markdownlint-cli2-action@510b996878fc0d1a46c8a04ec86b06dbfba09de7 # v15.0.0
         with:
           config: ${{ github.workspace }}/.markdownlint-cli2.yaml
           globs: "**/*.md"

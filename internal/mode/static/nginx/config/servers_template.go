@@ -37,14 +37,14 @@ server {
         rewrite {{ $r }};
         {{- end }}
 
-        {{- if $l.Return -}}
+        {{- if $l.Return }}
         return {{ $l.Return.Code }} "{{ $l.Return.Body }}";
-        {{ end }}
+        {{- end }}
 
-        {{- if $l.HTTPMatchVar -}}
+        {{- if $l.HTTPMatchVar }}
         set $http_matches {{ $l.HTTPMatchVar | printf "%q" }};
         js_content httpmatches.redirect;
-        {{ end }}
+        {{- end }}
 
         {{- if $l.ProxyPass -}}
             {{ range $h := $l.ProxySetHeaders }}
@@ -62,6 +62,11 @@ server {
             {{- end }}
         proxy_http_version 1.1;
         proxy_pass {{ $l.ProxyPass }};
+            {{- if $l.ProxySSLVerify }}
+        proxy_ssl_verify on;
+        proxy_ssl_name {{ $l.ProxySSLVerify.Name }};
+        proxy_ssl_trusted_certificate {{ $l.ProxySSLVerify.TrustedCertificate }};
+            {{- end }}
         {{- end }}
     }
         {{ end }}

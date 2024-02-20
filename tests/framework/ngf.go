@@ -31,6 +31,7 @@ type InstallationConfig struct {
 	ImagePullPolicy      string
 	ServiceType          string
 	IsGKEInternalLB      bool
+	Plus                 bool
 }
 
 // InstallGatewayAPI installs the specified version of the Gateway API resources.
@@ -189,6 +190,9 @@ func setImageArgs(cfg InstallationConfig) []string {
 		}
 		if cfg.ImagePullPolicy != "" {
 			args = append(args, formatValueSet("nginx.image.pullPolicy", cfg.ImagePullPolicy)...)
+		}
+		if cfg.Plus {
+			args = append(args, formatValueSet("nginx.plus", "true")...)
 		}
 	}
 

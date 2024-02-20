@@ -6,7 +6,9 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	ngxclient "github.com/nginxinc/nginx-plus-go-client/client"
 	"github.com/prometheus/client_golang/prometheus"
+	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	discoveryV1 "k8s.io/api/discovery/v1"
 	apiext "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -26,6 +28,7 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	k8spredicate "sigs.k8s.io/controller-runtime/pkg/predicate"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
+	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
@@ -45,7 +48,6 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/file"
 	ngxruntime "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/runtime"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state"
-	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/relationship"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/resolver"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/validation"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/telemetry"
@@ -61,54 +63,20 @@ var scheme = runtime.NewScheme()
 func init() {
 	utilruntime.Must(gatewayv1beta1.AddToScheme(scheme))
 	utilruntime.Must(gatewayv1.AddToScheme(scheme))
+	utilruntime.Must(gatewayv1alpha2.AddToScheme(scheme))
 	utilruntime.Must(apiv1.AddToScheme(scheme))
 	utilruntime.Must(discoveryV1.AddToScheme(scheme))
 	utilruntime.Must(ngfAPI.AddToScheme(scheme))
 	utilruntime.Must(apiext.AddToScheme(scheme))
+	utilruntime.Must(appsv1.AddToScheme(scheme))
 }
 
 // nolint:gocyclo
 func StartManager(cfg config.Config) error {
-	options := manager.Options{
-		Scheme:  scheme,
-		Logger:  cfg.Logger,
-		Metrics: getMetricsOptions(cfg.MetricsConfig),
-		// Note: when the leadership is lost, the manager will return an error in the Start() method.
-		// However, it will not wait for any Runnable it starts to finish, meaning any in-progress operations
-		// might get terminated half-way.
-		LeaderElection:          true,
-		LeaderElectionNamespace: cfg.GatewayPodConfig.Namespace,
-		LeaderElectionID:        cfg.LeaderElection.LockName,
-		// We're not enabling LeaderElectionReleaseOnCancel because when the Manager stops gracefully, it waits
-		// for all started Runnables (including Leader-only ones) to finish. Otherwise, the new leader might start
-		// running Leader-only Runnables before the old leader has finished running them.
-		// See the doc comment for the LeaderElectionReleaseOnCancel for more details.
-		LeaderElectionReleaseOnCancel: false,
-		Controller: ctrlcfg.Controller{
-			// All of our controllers still need to work in case of non-leader pods
-			NeedLeaderElection: helpers.GetPointer(false),
-		},
-	}
-
-	if cfg.HealthConfig.Enabled {
-		options.HealthProbeBindAddress = fmt.Sprintf(":%d", cfg.HealthConfig.Port)
-	}
-
-	eventCh := make(chan interface{})
-
-	clusterCfg := ctlr.GetConfigOrDie()
-	clusterCfg.Timeout = clusterTimeout
-
-	mgr, err := manager.New(clusterCfg, options)
+	nginxChecker := newNginxConfiguredOnStartChecker()
+	mgr, err := createManager(cfg, nginxChecker)
 	if err != nil {
 		return fmt.Errorf("cannot build runtime manager: %w", err)
-	}
-
-	hc := &healthChecker{}
-	if cfg.HealthConfig.Enabled {
-		if err := mgr.AddReadyzCheck("readyz", hc.readyCheck); err != nil {
-			return fmt.Errorf("error adding ready check: %w", err)
-		}
 	}
 
 	recorderName := fmt.Sprintf("nginx-gateway-fabric-%s", cfg.GatewayClassName)
@@ -123,6 +91,7 @@ func StartManager(cfg config.Config) error {
 
 	ctx := ctlr.SetupSignalHandler()
 
+	eventCh := make(chan interface{})
 	controlConfigNSName := types.NamespacedName{
 		Namespace: cfg.GatewayPodConfig.Namespace,
 		Name:      cfg.ConfigName,
@@ -138,10 +107,9 @@ func StartManager(cfg config.Config) error {
 	}
 
 	processor := state.NewChangeProcessorImpl(state.ChangeProcessorConfig{
-		GatewayCtlrName:      cfg.GatewayCtlrName,
-		GatewayClassName:     cfg.GatewayClassName,
-		RelationshipCapturer: relationship.NewCapturerImpl(),
-		Logger:               cfg.Logger.WithName("changeProcessor"),
+		GatewayCtlrName:  cfg.GatewayCtlrName,
+		GatewayClassName: cfg.GatewayClassName,
+		Logger:           cfg.Logger.WithName("changeProcessor"),
 		Validators: validation.Validators{
 			HTTPFieldsValidator: ngxvalidation.HTTPValidator{},
 		},
@@ -167,15 +135,22 @@ func StartManager(cfg config.Config) error {
 
 	var (
 		ngxruntimeCollector ngxruntime.MetricsCollector = collectors.NewManagerNoopCollector()
-		// nolint:ineffassign // not an ineffectual assignment. Will be used if metrics are disabled.
-		handlerCollector handlerMetricsCollector = collectors.NewControllerNoopCollector()
+		handlerCollector    handlerMetricsCollector     = collectors.NewControllerNoopCollector()
 	)
+
+	var ngxPlusClient *ngxclient.NginxClient
+	if cfg.Plus {
+		ngxPlusClient, err = ngxruntime.CreatePlusClient()
+		if err != nil {
+			return fmt.Errorf("error creating NGINX plus client: %w", err)
+		}
+	}
 
 	if cfg.MetricsConfig.Enabled {
 		constLabels := map[string]string{"class": cfg.GatewayClassName}
 		var ngxCollector prometheus.Collector
 		if cfg.Plus {
-			ngxCollector, err = collectors.NewNginxPlusMetricsCollector(constLabels, promLogger)
+			ngxCollector, err = collectors.NewNginxPlusMetricsCollector(ngxPlusClient, constLabels, promLogger)
 		} else {
 			ngxCollector = collectors.NewNginxMetricsCollector(constLabels, promLogger)
 		}
@@ -206,22 +181,30 @@ func StartManager(cfg config.Config) error {
 		k8sClient:       mgr.GetClient(),
 		processor:       processor,
 		serviceResolver: resolver.NewServiceResolverImpl(mgr.GetClient()),
-		generator:       ngxcfg.NewGeneratorImpl(),
+		generator:       ngxcfg.NewGeneratorImpl(cfg.Plus),
 		logLevelSetter:  logLevelSetter,
 		nginxFileMgr: file.NewManagerImpl(
 			cfg.Logger.WithName("nginxFileManager"),
 			file.NewStdLibOSFileManager(),
 		),
-		nginxRuntimeMgr:     ngxruntime.NewManagerImpl(ngxruntimeCollector),
-		statusUpdater:       statusUpdater,
-		eventRecorder:       recorder,
-		healthChecker:       hc,
-		controlConfigNSName: controlConfigNSName,
-		gatewayPodConfig:    cfg.GatewayPodConfig,
-		metricsCollector:    handlerCollector,
+		nginxRuntimeMgr: ngxruntime.NewManagerImpl(
+			ngxPlusClient,
+			ngxruntimeCollector,
+			cfg.Logger.WithName("nginxRuntimeManager"),
+		),
+		statusUpdater:                 statusUpdater,
+		eventRecorder:                 recorder,
+		nginxConfiguredOnStartChecker: nginxChecker,
+		controlConfigNSName:           controlConfigNSName,
+		gatewayPodConfig:              cfg.GatewayPodConfig,
+		metricsCollector:              handlerCollector,
 	})
 
-	objects, objectLists := prepareFirstEventBatchPreparerArgs(cfg.GatewayClassName, cfg.GatewayNsName)
+	objects, objectLists := prepareFirstEventBatchPreparerArgs(
+		cfg.GatewayClassName,
+		cfg.GatewayNsName,
+		cfg.ExperimentalFeatures,
+	)
 	firstBatchPreparer := events.NewFirstEventBatchPreparerImpl(mgr.GetCache(), objects, objectLists)
 	eventLoop := events.NewEventLoop(
 		eventCh,
@@ -238,22 +221,65 @@ func StartManager(cfg config.Config) error {
 		return fmt.Errorf("cannot register status updater: %w", err)
 	}
 
-	telemetryJob := &runnables.Leader{
-		Runnable: telemetry.NewJob(
-			telemetry.JobConfig{
-				Exporter: telemetry.NewLoggingExporter(cfg.Logger.WithName("telemetryExporter").V(1 /* debug */)),
-				Logger:   cfg.Logger.WithName("telemetryJob"),
-				Period:   cfg.TelemetryReportPeriod,
-			},
-		),
-	}
-
-	if err = mgr.Add(telemetryJob); err != nil {
+	dataCollector := telemetry.NewDataCollectorImpl(telemetry.DataCollectorConfig{
+		K8sClientReader:     mgr.GetAPIReader(),
+		GraphGetter:         processor,
+		ConfigurationGetter: eventHandler,
+		Version:             cfg.Version,
+		PodNSName: types.NamespacedName{
+			Namespace: cfg.GatewayPodConfig.Namespace,
+			Name:      cfg.GatewayPodConfig.Name,
+		},
+	})
+	if err = mgr.Add(createTelemetryJob(cfg, dataCollector, nginxChecker.getReadyCh())); err != nil {
 		return fmt.Errorf("cannot register telemetry job: %w", err)
 	}
 
 	cfg.Logger.Info("Starting manager")
 	return mgr.Start(ctx)
+}
+
+func createManager(cfg config.Config, nginxChecker *nginxConfiguredOnStartChecker) (manager.Manager, error) {
+	options := manager.Options{
+		Scheme:  scheme,
+		Logger:  cfg.Logger,
+		Metrics: getMetricsOptions(cfg.MetricsConfig),
+		// Note: when the leadership is lost, the manager will return an error in the Start() method.
+		// However, it will not wait for any Runnable it starts to finish, meaning any in-progress operations
+		// might get terminated half-way.
+		LeaderElection:          true,
+		LeaderElectionNamespace: cfg.GatewayPodConfig.Namespace,
+		LeaderElectionID:        cfg.LeaderElection.LockName,
+		// We're not enabling LeaderElectionReleaseOnCancel because when the Manager stops gracefully, it waits
+		// for all started Runnables (including Leader-only ones) to finish. Otherwise, the new leader might start
+		// running Leader-only Runnables before the old leader has finished running them.
+		// See the doc comment for the LeaderElectionReleaseOnCancel for more details.
+		LeaderElectionReleaseOnCancel: false,
+		Controller: ctrlcfg.Controller{
+			// All of our controllers still need to work in case of non-leader pods
+			NeedLeaderElection: helpers.GetPointer(false),
+		},
+	}
+
+	if cfg.HealthConfig.Enabled {
+		options.HealthProbeBindAddress = fmt.Sprintf(":%d", cfg.HealthConfig.Port)
+	}
+
+	clusterCfg := ctlr.GetConfigOrDie()
+	clusterCfg.Timeout = clusterTimeout
+
+	mgr, err := manager.New(clusterCfg, options)
+	if err != nil {
+		return nil, err
+	}
+
+	if cfg.HealthConfig.Enabled {
+		if err := mgr.AddReadyzCheck("readyz", nginxChecker.readyCheck); err != nil {
+			return nil, fmt.Errorf("error adding ready check: %w", err)
+		}
+	}
+
+	return mgr, nil
 }
 
 func registerControllers(
@@ -358,6 +384,23 @@ func registerControllers(
 		},
 	}
 
+	if cfg.ExperimentalFeatures {
+		backendTLSObjs := []ctlrCfg{
+			{
+				objectType: &gatewayv1alpha2.BackendTLSPolicy{},
+				options: []controller.Option{
+					controller.WithK8sPredicate(k8spredicate.GenerationChangedPredicate{}),
+				},
+			},
+			{
+				// FIXME(ciarams87): If possible, use only metadata predicate
+				// https://github.com/nginxinc/nginx-gateway-fabric/issues/1545
+				objectType: &apiv1.ConfigMap{},
+			},
+		}
+		controllerRegCfgs = append(controllerRegCfgs, backendTLSObjs...)
+	}
+
 	if cfg.ConfigName != "" {
 		controllerRegCfgs = append(controllerRegCfgs,
 			ctlrCfg{
@@ -391,9 +434,37 @@ func registerControllers(
 	return nil
 }
 
+func createTelemetryJob(
+	cfg config.Config,
+	dataCollector telemetry.DataCollector,
+	readyCh <-chan struct{},
+) *runnables.Leader {
+	logger := cfg.Logger.WithName("telemetryJob")
+	exporter := telemetry.NewLoggingExporter(cfg.Logger.WithName("telemetryExporter").V(1 /* debug */))
+
+	worker := telemetry.CreateTelemetryJobWorker(logger, exporter, dataCollector)
+
+	// 10 min jitter is enough per telemetry destination recommendation
+	// For the default period of 24 hours, jitter will be 10min /(24*60)min  = 0.0069
+	jitterFactor := 10.0 / (24 * 60) // added jitter is bound by jitterFactor * period
+
+	return &runnables.Leader{
+		Runnable: runnables.NewCronJob(
+			runnables.CronJobConfig{
+				Worker:       worker,
+				Logger:       logger,
+				Period:       cfg.TelemetryReportPeriod,
+				JitterFactor: jitterFactor,
+				ReadyCh:      readyCh,
+			},
+		),
+	}
+}
+
 func prepareFirstEventBatchPreparerArgs(
 	gcName string,
 	gwNsName *types.NamespacedName,
+	enableExperimentalFeatures bool,
 ) ([]client.Object, []client.ObjectList) {
 	objects := []client.Object{
 		&gatewayv1.GatewayClass{ObjectMeta: metav1.ObjectMeta{Name: gcName}},
@@ -416,6 +487,10 @@ func prepareFirstEventBatchPreparerArgs(
 		&gatewayv1.HTTPRouteList{},
 		&gatewayv1beta1.ReferenceGrantList{},
 		partialObjectMetadataList,
+	}
+
+	if enableExperimentalFeatures {
+		objectLists = append(objectLists, &gatewayv1alpha2.BackendTLSPolicyList{}, &apiv1.ConfigMapList{})
 	}
 
 	if gwNsName == nil {

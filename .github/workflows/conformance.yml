@@ -29,6 +29,8 @@ jobs:
     strategy:
       matrix:
         k8s-version: ["1.23.17", "latest"]
+        nginx-image: [nginx, nginx-plus]
+        enable-experimental: [true, false]
     permissions:
       contents: write # needed for uploading release artifacts
     steps:
@@ -48,7 +50,7 @@ jobs:
 
       - name: NGF Docker meta
         id: ngf-meta
-        uses: docker/metadata-action@dbef88086f6cef02e264edb7dbf63250c17cef6c # v5.5.0
+        uses: docker/metadata-action@8e5442c4ef9f78752691e2d8f8d19755c6f78e81 # v5.5.1
         with:
           images: |
             name=ghcr.io/nginxinc/nginx-gateway-fabric
@@ -60,10 +62,10 @@ jobs:
 
       - name: NGINX Docker meta
         id: nginx-meta
-        uses: docker/metadata-action@dbef88086f6cef02e264edb7dbf63250c17cef6c # v5.5.0
+        uses: docker/metadata-action@8e5442c4ef9f78752691e2d8f8d19755c6f78e81 # v5.5.1
         with:
           images: |
-            name=ghcr.io/nginxinc/nginx-gateway-fabric/nginx
+            name=ghcr.io/nginxinc/nginx-gateway-fabric/${{ matrix.nginx-image }}
           tags: |
             type=semver,pattern={{version}}
             type=edge
@@ -74,7 +76,7 @@ jobs:
         run: |
           ngf_prefix=ghcr.io/nginxinc/nginx-gateway-fabric
           ngf_tag=${{ steps.ngf-meta.outputs.version }}
-          make update-ngf-manifest PREFIX=${ngf_prefix} TAG=${ngf_tag}
+          make update-ngf-manifest${{ matrix.nginx-image == 'nginx-plus' && '-with-plus' || ''}} PREFIX=${ngf_prefix} TAG=${ngf_tag}
         working-directory: ./conformance
 
       - name: Build binary
@@ -98,16 +100,17 @@ jobs:
       - name: Build NGINX Docker Image
         uses: docker/build-push-action@4a13e500e55cf31b7a5d59a38ab2040ab0f42f56 # v5.1.0
         with:
-          file: build/Dockerfile.nginx
+          file: build/Dockerfile${{ matrix.nginx-image == 'nginx' && '.nginx' || '' }}${{ matrix.nginx-image == 'nginx-plus' && '.nginxplus' || ''}}
           tags: ${{ steps.nginx-meta.outputs.tags }}
           context: "."
           load: true
-          cache-from: type=gha,scope=nginx
-          cache-to: type=gha,scope=nginx,mode=max
+          cache-from: type=gha,scope=${{ matrix.nginx-image }}
+          cache-to: type=gha,scope=${{ matrix.nginx-image }},mode=max
           pull: true
           build-args: |
             NJS_DIR=internal/mode/static/nginx/modules/src
             NGINX_CONF_DIR=internal/mode/static/nginx/conf
+            BUILD_AGENT=gha
 
       - name: Update Go Modules
         if: ${{ github.event_name == 'schedule' }}
@@ -146,7 +149,8 @@ jobs:
           ngf_tag=${{ steps.ngf-meta.outputs.version }}
           if [ ${{ github.event_name }} == "schedule" ]; then export GW_API_VERSION=main; fi
           if [ ${{ startsWith(matrix.k8s-version, '1.23') ||  startsWith(matrix.k8s-version, '1.24') }} == "true" ]; then export INSTALL_WEBHOOK=true; fi
-          make install-ngf-local-no-build PREFIX=${ngf_prefix} TAG=${ngf_tag}
+          if [ ${{ matrix.enable-experimental }} == "true" ]; then export ENABLE_EXPERIMENTAL=true; fi
+          make install-ngf-local-no-build${{ matrix.nginx-image == 'nginx-plus' && '-with-plus' || ''}} PREFIX=${ngf_prefix} TAG=${ngf_tag}
         working-directory: ./conformance
 
       - name: Run conformance tests

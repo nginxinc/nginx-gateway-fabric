@@ -12,6 +12,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	v1 "sigs.k8s.io/gateway-api/apis/v1"
+	v1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/graph"
@@ -82,16 +83,14 @@ func TestBuildConfiguration(t *testing.T) {
 		Endpoints: fooEndpoints,
 	}
 
-	fooSvc := &apiv1.Service{ObjectMeta: metav1.ObjectMeta{Name: "foo", Namespace: "test"}}
-
 	fakeResolver := &resolverfakes.FakeServiceResolver{}
 	fakeResolver.ResolveReturns(fooEndpoints, nil)
 
 	validBackendRef := graph.BackendRef{
-		Svc:    fooSvc,
-		Port:   80,
-		Valid:  true,
-		Weight: 1,
+		SvcNsName:   types.NamespacedName{Name: "foo", Namespace: "test"},
+		ServicePort: apiv1.ServicePort{Port: 80},
+		Valid:       true,
+		Weight:      1,
 	}
 
 	expValidBackend := Backend{
@@ -315,6 +314,92 @@ func TestBuildConfiguration(t *testing.T) {
 		pathAndType{path: "/", pathType: prefix}, pathAndType{path: "/third", pathType: prefix},
 	)
 
+	httpsHR8, expHTTPSHR8Groups, httpsRouteHR8 := createTestResources(
+		"https-hr-8",
+		"foo.example.com",
+		"listener-443-1",
+		pathAndType{path: "/", pathType: prefix}, pathAndType{path: "/", pathType: prefix},
+	)
+
+	httpsRouteHR8.Rules[0].BackendRefs[0].BackendTLSPolicy = &graph.BackendTLSPolicy{
+		Source: &v1alpha2.BackendTLSPolicy{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "btp",
+				Namespace: "test",
+			},
+			Spec: v1alpha2.BackendTLSPolicySpec{
+				TargetRef: v1alpha2.PolicyTargetReferenceWithSectionName{
+					PolicyTargetReference: v1alpha2.PolicyTargetReference{
+						Group:     "",
+						Kind:      "Service",
+						Name:      "foo",
+						Namespace: (*v1.Namespace)(helpers.GetPointer("test")),
+					},
+				},
+				TLS: v1alpha2.BackendTLSPolicyConfig{
+					Hostname: "foo.example.com",
+					CACertRefs: []v1.LocalObjectReference{
+						{
+							Kind:  "ConfigMap",
+							Name:  "configmap-1",
+							Group: "",
+						},
+					},
+				},
+			},
+		},
+		CaCertRef: types.NamespacedName{Namespace: "test", Name: "configmap-1"},
+		Valid:     true,
+	}
+
+	expHTTPSHR8Groups[0].Backends[0].VerifyTLS = &VerifyTLS{
+		CertBundleID: generateCertBundleID(types.NamespacedName{Namespace: "test", Name: "configmap-1"}),
+		Hostname:     "foo.example.com",
+	}
+
+	httpsHR9, expHTTPSHR9Groups, httpsRouteHR9 := createTestResources(
+		"https-hr-9",
+		"foo.example.com",
+		"listener-443-1",
+		pathAndType{path: "/", pathType: prefix}, pathAndType{path: "/", pathType: prefix},
+	)
+
+	httpsRouteHR9.Rules[0].BackendRefs[0].BackendTLSPolicy = &graph.BackendTLSPolicy{
+		Source: &v1alpha2.BackendTLSPolicy{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "btp2",
+				Namespace: "test",
+			},
+			Spec: v1alpha2.BackendTLSPolicySpec{
+				TargetRef: v1alpha2.PolicyTargetReferenceWithSectionName{
+					PolicyTargetReference: v1alpha2.PolicyTargetReference{
+						Group:     "",
+						Kind:      "Service",
+						Name:      "foo",
+						Namespace: (*v1.Namespace)(helpers.GetPointer("test")),
+					},
+				},
+				TLS: v1alpha2.BackendTLSPolicyConfig{
+					Hostname: "foo.example.com",
+					CACertRefs: []v1.LocalObjectReference{
+						{
+							Kind:  "ConfigMap",
+							Name:  "configmap-2",
+							Group: "",
+						},
+					},
+				},
+			},
+		},
+		CaCertRef: types.NamespacedName{Namespace: "test", Name: "configmap-2"},
+		Valid:     true,
+	}
+
+	expHTTPSHR9Groups[0].Backends[0].VerifyTLS = &VerifyTLS{
+		CertBundleID: generateCertBundleID(types.NamespacedName{Namespace: "test", Name: "configmap-2"}),
+		Hostname:     "foo.example.com",
+	}
+
 	secret1NsName := types.NamespacedName{Namespace: "test", Name: "secret-1"}
 	secret1 := &graph.Secret{
 		Source: &apiv1.Secret{
@@ -427,6 +512,33 @@ func TestBuildConfiguration(t *testing.T) {
 		},
 	}
 
+	referencedConfigMaps := map[types.NamespacedName]*graph.CaCertConfigMap{
+		{Namespace: "test", Name: "configmap-1"}: {
+			Source: &apiv1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "configmap-1",
+					Namespace: "test",
+				},
+				Data: map[string]string{
+					"ca.crt": "cert-1",
+				},
+			},
+			CACert: []byte("cert-1"),
+		},
+		{Namespace: "test", Name: "configmap-2"}: {
+			Source: &apiv1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "configmap-2",
+					Namespace: "test",
+				},
+				BinaryData: map[string][]byte{
+					"ca.crt": []byte("cert-2"),
+				},
+			},
+			CACert: []byte("cert-2"),
+		},
+	}
+
 	tests := []struct {
 		graph   *graph.Graph
 		msg     string
@@ -448,6 +560,7 @@ func TestBuildConfiguration(t *testing.T) {
 				HTTPServers: []VirtualServer{},
 				SSLServers:  []VirtualServer{},
 				SSLKeyPairs: map[SSLKeyPairID]SSLKeyPair{},
+				CertBundles: map[CertBundleID]CertBundle{},
 			},
 			msg: "no listeners and routes",
 		},
@@ -479,6 +592,7 @@ func TestBuildConfiguration(t *testing.T) {
 				},
 				SSLServers:  []VirtualServer{},
 				SSLKeyPairs: map[SSLKeyPairID]SSLKeyPair{},
+				CertBundles: map[CertBundleID]CertBundle{},
 			},
 			msg: "http listener with no routes",
 		},
@@ -541,6 +655,7 @@ func TestBuildConfiguration(t *testing.T) {
 						Key:  []byte("privateKey-1"),
 					},
 				},
+				CertBundles: map[CertBundleID]CertBundle{},
 			},
 			msg: "http and https listeners with no valid routes",
 		},
@@ -603,6 +718,7 @@ func TestBuildConfiguration(t *testing.T) {
 						Key:  []byte("privateKey-2"),
 					},
 				},
+				CertBundles: map[CertBundleID]CertBundle{},
 			},
 			msg: "https listeners with no routes",
 		},
@@ -635,6 +751,7 @@ func TestBuildConfiguration(t *testing.T) {
 				HTTPServers: []VirtualServer{},
 				SSLServers:  []VirtualServer{},
 				SSLKeyPairs: map[SSLKeyPairID]SSLKeyPair{},
+				CertBundles: map[CertBundleID]CertBundle{},
 			},
 			msg: "invalid https listener with resolved secret",
 		},
@@ -706,6 +823,7 @@ func TestBuildConfiguration(t *testing.T) {
 				Upstreams:     []Upstream{fooUpstream},
 				BackendGroups: []BackendGroup{expHR1Groups[0], expHR2Groups[0]},
 				SSLKeyPairs:   map[SSLKeyPairID]SSLKeyPair{},
+				CertBundles:   map[CertBundleID]CertBundle{},
 			},
 			msg: "one http listener with two routes for different hostnames",
 		},
@@ -825,6 +943,7 @@ func TestBuildConfiguration(t *testing.T) {
 						Key:  []byte("privateKey-2"),
 					},
 				},
+				CertBundles: map[CertBundleID]CertBundle{},
 			},
 			msg: "two https listeners each with routes for different hostnames",
 		},
@@ -984,6 +1103,7 @@ func TestBuildConfiguration(t *testing.T) {
 						Key:  []byte("privateKey-1"),
 					},
 				},
+				CertBundles: map[CertBundleID]CertBundle{},
 			},
 			msg: "one http and one https listener with two routes with the same hostname with and without collisions",
 		},
@@ -1196,6 +1316,7 @@ func TestBuildConfiguration(t *testing.T) {
 						Key:  []byte("privateKey-1"),
 					},
 				},
+				CertBundles: map[CertBundleID]CertBundle{},
 			},
 
 			msg: "multiple http and https listener; different ports",
@@ -1327,6 +1448,7 @@ func TestBuildConfiguration(t *testing.T) {
 				Upstreams:     []Upstream{fooUpstream},
 				BackendGroups: []BackendGroup{expHR5Groups[0], expHR5Groups[1]},
 				SSLKeyPairs:   map[SSLKeyPairID]SSLKeyPair{},
+				CertBundles:   map[CertBundleID]CertBundle{},
 			},
 			msg: "one http listener with one route with filters",
 		},
@@ -1428,6 +1550,7 @@ func TestBuildConfiguration(t *testing.T) {
 						Key:  []byte("privateKey-1"),
 					},
 				},
+				CertBundles: map[CertBundleID]CertBundle{},
 			},
 			msg: "one http and one https listener with routes with valid and invalid rules",
 		},
@@ -1491,6 +1614,7 @@ func TestBuildConfiguration(t *testing.T) {
 				Upstreams:     []Upstream{fooUpstream},
 				BackendGroups: []BackendGroup{expHR7Groups[0], expHR7Groups[1]},
 				SSLKeyPairs:   map[SSLKeyPairID]SSLKeyPair{},
+				CertBundles:   map[CertBundleID]CertBundle{},
 			},
 			msg: "duplicate paths with different types",
 		},
@@ -1578,8 +1702,161 @@ func TestBuildConfiguration(t *testing.T) {
 						Key:  []byte("privateKey-2"),
 					},
 				},
+				CertBundles: map[CertBundleID]CertBundle{},
 			},
 			msg: "two https listeners with different hostnames but same route; chooses listener with more specific hostname",
+		},
+		{
+			graph: &graph.Graph{
+				GatewayClass: &graph.GatewayClass{
+					Source: &v1.GatewayClass{},
+					Valid:  true,
+				},
+				Gateway: &graph.Gateway{
+					Source: &v1.Gateway{},
+					Listeners: []*graph.Listener{
+						{
+							Name:   "listener-443",
+							Source: listener443,
+							Valid:  true,
+							Routes: map[types.NamespacedName]*graph.Route{
+								{Namespace: "test", Name: "https-hr-8"}: httpsRouteHR8,
+							},
+							ResolvedSecret: &secret1NsName,
+						},
+					},
+				},
+				Routes: map[types.NamespacedName]*graph.Route{
+					{Namespace: "test", Name: "https-hr-8"}: httpsRouteHR8,
+				},
+				ReferencedSecrets: map[types.NamespacedName]*graph.Secret{
+					secret1NsName: secret1,
+				},
+				ReferencedCaCertConfigMaps: referencedConfigMaps,
+			},
+			expConf: Configuration{
+				HTTPServers: []VirtualServer{},
+				SSLServers: []VirtualServer{
+					{
+						IsDefault: true,
+						Port:      443,
+					},
+					{
+						Hostname: "foo.example.com",
+						PathRules: []PathRule{
+							{
+								Path:     "/",
+								PathType: PathTypePrefix,
+								MatchRules: []MatchRule{
+									{
+										BackendGroup: expHTTPSHR8Groups[0],
+										Source:       &httpsHR8.ObjectMeta,
+									},
+									{
+										BackendGroup: expHTTPSHR8Groups[1],
+										Source:       &httpsHR8.ObjectMeta,
+									},
+								},
+							},
+						},
+						SSL:  &SSL{KeyPairID: "ssl_keypair_test_secret-1"},
+						Port: 443,
+					},
+					{
+						Hostname: wildcardHostname,
+						SSL:      &SSL{KeyPairID: "ssl_keypair_test_secret-1"},
+						Port:     443,
+					},
+				},
+				Upstreams:     []Upstream{fooUpstream},
+				BackendGroups: []BackendGroup{expHTTPSHR8Groups[0], expHTTPSHR8Groups[1]},
+				SSLKeyPairs: map[SSLKeyPairID]SSLKeyPair{
+					"ssl_keypair_test_secret-1": {
+						Cert: []byte("cert-1"),
+						Key:  []byte("privateKey-1"),
+					},
+				},
+				CertBundles: map[CertBundleID]CertBundle{
+					"cert_bundle_test_configmap-1": []byte("cert-1"),
+				},
+			},
+			msg: "https listener with httproute with backend that has a backend TLS policy attached",
+		},
+		{
+			graph: &graph.Graph{
+				GatewayClass: &graph.GatewayClass{
+					Source: &v1.GatewayClass{},
+					Valid:  true,
+				},
+				Gateway: &graph.Gateway{
+					Source: &v1.Gateway{},
+					Listeners: []*graph.Listener{
+						{
+							Name:   "listener-443",
+							Source: listener443,
+							Valid:  true,
+							Routes: map[types.NamespacedName]*graph.Route{
+								{Namespace: "test", Name: "https-hr-9"}: httpsRouteHR9,
+							},
+							ResolvedSecret: &secret1NsName,
+						},
+					},
+				},
+				Routes: map[types.NamespacedName]*graph.Route{
+					{Namespace: "test", Name: "https-hr-9"}: httpsRouteHR9,
+				},
+				ReferencedSecrets: map[types.NamespacedName]*graph.Secret{
+					secret1NsName: secret1,
+				},
+				ReferencedCaCertConfigMaps: referencedConfigMaps,
+			},
+			expConf: Configuration{
+				HTTPServers: []VirtualServer{},
+				SSLServers: []VirtualServer{
+					{
+						IsDefault: true,
+						Port:      443,
+					},
+					{
+						Hostname: "foo.example.com",
+						PathRules: []PathRule{
+							{
+								Path:     "/",
+								PathType: PathTypePrefix,
+								MatchRules: []MatchRule{
+									{
+										BackendGroup: expHTTPSHR9Groups[0],
+										Source:       &httpsHR9.ObjectMeta,
+									},
+									{
+										BackendGroup: expHTTPSHR9Groups[1],
+										Source:       &httpsHR9.ObjectMeta,
+									},
+								},
+							},
+						},
+						SSL:  &SSL{KeyPairID: "ssl_keypair_test_secret-1"},
+						Port: 443,
+					},
+					{
+						Hostname: wildcardHostname,
+						SSL:      &SSL{KeyPairID: "ssl_keypair_test_secret-1"},
+						Port:     443,
+					},
+				},
+				Upstreams:     []Upstream{fooUpstream},
+				BackendGroups: []BackendGroup{expHTTPSHR9Groups[0], expHTTPSHR9Groups[1]},
+				SSLKeyPairs: map[SSLKeyPairID]SSLKeyPair{
+					"ssl_keypair_test_secret-1": {
+						Cert: []byte("cert-1"),
+						Key:  []byte("privateKey-1"),
+					},
+				},
+				CertBundles: map[CertBundleID]CertBundle{
+					"cert_bundle_test_configmap-2": []byte("cert-2"),
+				},
+			},
+			msg: "https listener with httproute with backend that has a backend TLS policy with binaryData attached",
 		},
 	}
 
@@ -1595,6 +1872,7 @@ func TestBuildConfiguration(t *testing.T) {
 			g.Expect(result.SSLServers).To(ConsistOf(test.expConf.SSLServers))
 			g.Expect(result.SSLKeyPairs).To(Equal(test.expConf.SSLKeyPairs))
 			g.Expect(result.Version).To(Equal(1))
+			g.Expect(result.CertBundles).To(Equal(test.expConf.CertBundles))
 		})
 	}
 }
@@ -1877,9 +2155,9 @@ func TestBuildUpstreams(t *testing.T) {
 		var backends []graph.BackendRef
 		for _, name := range serviceNames {
 			backends = append(backends, graph.BackendRef{
-				Svc:   &apiv1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: "test", Name: name}},
-				Port:  80,
-				Valid: name != "",
+				SvcNsName:   types.NamespacedName{Namespace: "test", Name: name},
+				ServicePort: apiv1.ServicePort{Port: 80},
+				Valid:       name != "",
 			})
 		}
 		return backends
@@ -1995,8 +2273,12 @@ func TestBuildUpstreams(t *testing.T) {
 	}
 
 	fakeResolver := &resolverfakes.FakeServiceResolver{}
-	fakeResolver.ResolveCalls(func(ctx context.Context, svc *apiv1.Service, port int32) ([]resolver.Endpoint, error) {
-		switch svc.Name {
+	fakeResolver.ResolveCalls(func(
+		_ context.Context,
+		svcNsName types.NamespacedName,
+		_ apiv1.ServicePort,
+	) ([]resolver.Endpoint, error) {
+		switch svcNsName.Name {
 		case "bar":
 			return barEndpoints, nil
 		case "baz":
@@ -2012,7 +2294,7 @@ func TestBuildUpstreams(t *testing.T) {
 		case "abc":
 			return abcEndpoints, nil
 		default:
-			return nil, fmt.Errorf("unexpected service %s", svc.Name)
+			return nil, fmt.Errorf("unexpected service %s", svcNsName.Name)
 		}
 	})
 
@@ -2150,6 +2432,82 @@ func TestHostnameMoreSpecific(t *testing.T) {
 			g := NewWithT(t)
 
 			g.Expect(listenerHostnameMoreSpecific(tc.host1, tc.host2)).To(Equal(tc.host1Wins))
+		})
+	}
+}
+
+func TestConvertBackendTLS(t *testing.T) {
+	btpCaCertRefs := &graph.BackendTLSPolicy{
+		Source: &v1alpha2.BackendTLSPolicy{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "btp",
+				Namespace: "test",
+			},
+			Spec: v1alpha2.BackendTLSPolicySpec{
+				TLS: v1alpha2.BackendTLSPolicyConfig{
+					CACertRefs: []v1.LocalObjectReference{
+						{
+							Name: "ca-cert",
+						},
+					},
+					Hostname: "example.com",
+				},
+			},
+		},
+		Valid:     true,
+		CaCertRef: types.NamespacedName{Namespace: "test", Name: "ca-cert"},
+	}
+
+	btpWellKnownCerts := &graph.BackendTLSPolicy{
+		Source: &v1alpha2.BackendTLSPolicy{
+			Spec: v1alpha2.BackendTLSPolicySpec{
+				TLS: v1alpha2.BackendTLSPolicyConfig{
+					Hostname: "example.com",
+				},
+			},
+		},
+		Valid: true,
+	}
+
+	expectedWithCertPath := &VerifyTLS{
+		CertBundleID: generateCertBundleID(
+			types.NamespacedName{Namespace: "test", Name: "ca-cert"},
+		),
+		Hostname: "example.com",
+	}
+
+	expectedWithWellKnownCerts := &VerifyTLS{
+		Hostname:   "example.com",
+		RootCAPath: alpineSSLRootCAPath,
+	}
+
+	tests := []struct {
+		btp      *graph.BackendTLSPolicy
+		expected *VerifyTLS
+		msg      string
+	}{
+		{
+			btp:      nil,
+			expected: nil,
+			msg:      "nil backend tls policy",
+		},
+		{
+			btp:      btpCaCertRefs,
+			expected: expectedWithCertPath,
+			msg:      "normal case with cert path",
+		},
+		{
+			btp:      btpWellKnownCerts,
+			expected: expectedWithWellKnownCerts,
+			msg:      "normal case no cert path",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.msg, func(t *testing.T) {
+			g := NewWithT(t)
+
+			g.Expect(convertBackendTLS(tc.btp)).To(Equal(tc.expected))
 		})
 	}
 }

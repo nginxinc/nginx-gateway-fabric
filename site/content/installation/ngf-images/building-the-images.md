@@ -60,11 +60,11 @@ If building the NGINX Plus image, you will also need a valid NGINX Plus license 
    - To build just the NGINX Plus image:
 
      ```makefile
-     make PREFIX=myregistry.example.com/nginx-gateway-fabric build-nginx-plus-image
+     make PREFIX=<my-docker-registry>/nginx-gateway-fabric/nginx-plus build-nginx-plus-image
      ```
 
    Set the `PREFIX` variable to the name of the registry you'd like to push the image to. By default, the images will be
-   named `nginx-gateway-fabric:edge` and `nginx-gateway-fabric/nginx:edge` or `nginx-gateway-fabric/nginxplus:edge`.
+   named `nginx-gateway-fabric:edge` and `nginx-gateway-fabric/nginx:edge` or `nginx-gateway-fabric/nginx-plus:edge`.
 
 1. Push the images to your container registry:
 
@@ -77,7 +77,7 @@ If building the NGINX Plus image, you will also need a valid NGINX Plus license 
 
    ```shell
    docker push myregistry.example.com/nginx-gateway-fabric:edge
-   docker push myregistry.example.com/nginx-gateway-fabric/nginxplus:edge
+   docker push myregistry.example.com/nginx-gateway-fabric/nginx-plus:edge
    ```
 
    Make sure to substitute `myregistry.example.com/nginx-gateway-fabric` with your registry.

@@ -25,3 +25,14 @@ Before creating a PR, run through this checklist and mark each as complete.
 - [ ] I have updated necessary documentation
 - [ ] I have rebased my branch onto main
 - [ ] I will ensure my PR is targeting the main branch and pulling from my branch from my own fork
+
+### Release notes
+
+If this PR introduces a change that affects users and needs to be mentioned in the [release notes](../CHANGELOG.md),
+please add a brief note that summarizes the change.
+
+<!-- If this PR does not require a release note, you can just write NONE in the release-note block below. -->
+
+```release-note
+
+```

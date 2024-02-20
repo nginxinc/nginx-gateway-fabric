@@ -72,7 +72,7 @@ var _ = Describe("Dataplane performance", Ordered, Label("performance"), func() 
 		filename := filepath.Join(resultsDir, fmt.Sprintf("%s.md", version))
 		outFile, err = framework.CreateResultsFile(filename)
 		Expect(err).ToNot(HaveOccurred())
-		Expect(framework.WriteSystemInfoToFile(outFile, clusterInfo)).To(Succeed())
+		Expect(framework.WriteSystemInfoToFile(outFile, clusterInfo, *plusEnabled)).To(Succeed())
 	})
 
 	AfterAll(func() {

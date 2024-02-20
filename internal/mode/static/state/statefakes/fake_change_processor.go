@@ -22,16 +22,26 @@ type FakeChangeProcessor struct {
 	captureUpsertChangeArgsForCall []struct {
 		arg1 client.Object
 	}
-	ProcessStub        func() (bool, *graph.Graph)
+	GetLatestGraphStub        func() *graph.Graph
+	getLatestGraphMutex       sync.RWMutex
+	getLatestGraphArgsForCall []struct {
+	}
+	getLatestGraphReturns struct {
+		result1 *graph.Graph
+	}
+	getLatestGraphReturnsOnCall map[int]struct {
+		result1 *graph.Graph
+	}
+	ProcessStub        func() (state.ChangeType, *graph.Graph)
 	processMutex       sync.RWMutex
 	processArgsForCall []struct {
 	}
 	processReturns struct {
-		result1 bool
+		result1 state.ChangeType
 		result2 *graph.Graph
 	}
 	processReturnsOnCall map[int]struct {
-		result1 bool
+		result1 state.ChangeType
 		result2 *graph.Graph
 	}
 	invocations      map[string][][]interface{}
@@ -103,7 +113,60 @@ func (fake *FakeChangeProcessor) CaptureUpsertChangeArgsForCall(i int) client.Ob
 	return argsForCall.arg1
 }
 
-func (fake *FakeChangeProcessor) Process() (bool, *graph.Graph) {
+func (fake *FakeChangeProcessor) GetLatestGraph() *graph.Graph {
+	fake.getLatestGraphMutex.Lock()
+	ret, specificReturn := fake.getLatestGraphReturnsOnCall[len(fake.getLatestGraphArgsForCall)]
+	fake.getLatestGraphArgsForCall = append(fake.getLatestGraphArgsForCall, struct {
+	}{})
+	stub := fake.GetLatestGraphStub
+	fakeReturns := fake.getLatestGraphReturns
+	fake.recordInvocation("GetLatestGraph", []interface{}{})
+	fake.getLatestGraphMutex.Unlock()
+	if stub != nil {
+		return stub()
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fakeReturns.result1
+}
+
+func (fake *FakeChangeProcessor) GetLatestGraphCallCount() int {
+	fake.getLatestGraphMutex.RLock()
+	defer fake.getLatestGraphMutex.RUnlock()
+	return len(fake.getLatestGraphArgsForCall)
+}
+
+func (fake *FakeChangeProcessor) GetLatestGraphCalls(stub func() *graph.Graph) {
+	fake.getLatestGraphMutex.Lock()
+	defer fake.getLatestGraphMutex.Unlock()
+	fake.GetLatestGraphStub = stub
+}
+
+func (fake *FakeChangeProcessor) GetLatestGraphReturns(result1 *graph.Graph) {
+	fake.getLatestGraphMutex.Lock()
+	defer fake.getLatestGraphMutex.Unlock()
+	fake.GetLatestGraphStub = nil
+	fake.getLatestGraphReturns = struct {
+		result1 *graph.Graph
+	}{result1}
+}
+
+func (fake *FakeChangeProcessor) GetLatestGraphReturnsOnCall(i int, result1 *graph.Graph) {
+	fake.getLatestGraphMutex.Lock()
+	defer fake.getLatestGraphMutex.Unlock()
+	fake.GetLatestGraphStub = nil
+	if fake.getLatestGraphReturnsOnCall == nil {
+		fake.getLatestGraphReturnsOnCall = make(map[int]struct {
+			result1 *graph.Graph
+		})
+	}
+	fake.getLatestGraphReturnsOnCall[i] = struct {
+		result1 *graph.Graph
+	}{result1}
+}
+
+func (fake *FakeChangeProcessor) Process() (state.ChangeType, *graph.Graph) {
 	fake.processMutex.Lock()
 	ret, specificReturn := fake.processReturnsOnCall[len(fake.processArgsForCall)]
 	fake.processArgsForCall = append(fake.processArgsForCall, struct {
@@ -127,34 +190,34 @@ func (fake *FakeChangeProcessor) ProcessCallCount() int {
 	return len(fake.processArgsForCall)
 }
 
-func (fake *FakeChangeProcessor) ProcessCalls(stub func() (bool, *graph.Graph)) {
+func (fake *FakeChangeProcessor) ProcessCalls(stub func() (state.ChangeType, *graph.Graph)) {
 	fake.processMutex.Lock()
 	defer fake.processMutex.Unlock()
 	fake.ProcessStub = stub
 }
 
-func (fake *FakeChangeProcessor) ProcessReturns(result1 bool, result2 *graph.Graph) {
+func (fake *FakeChangeProcessor) ProcessReturns(result1 state.ChangeType, result2 *graph.Graph) {
 	fake.processMutex.Lock()
 	defer fake.processMutex.Unlock()
 	fake.ProcessStub = nil
 	fake.processReturns = struct {
-		result1 bool
+		result1 state.ChangeType
 		result2 *graph.Graph
 	}{result1, result2}
 }
 
-func (fake *FakeChangeProcessor) ProcessReturnsOnCall(i int, result1 bool, result2 *graph.Graph) {
+func (fake *FakeChangeProcessor) ProcessReturnsOnCall(i int, result1 state.ChangeType, result2 *graph.Graph) {
 	fake.processMutex.Lock()
 	defer fake.processMutex.Unlock()
 	fake.ProcessStub = nil
 	if fake.processReturnsOnCall == nil {
 		fake.processReturnsOnCall = make(map[int]struct {
-			result1 bool
+			result1 state.ChangeType
 			result2 *graph.Graph
 		})
 	}
 	fake.processReturnsOnCall[i] = struct {
-		result1 bool
+		result1 state.ChangeType
 		result2 *graph.Graph
 	}{result1, result2}
 }
@@ -166,6 +229,8 @@ func (fake *FakeChangeProcessor) Invocations() map[string][][]interface{} {
 	defer fake.captureDeleteChangeMutex.RUnlock()
 	fake.captureUpsertChangeMutex.RLock()
 	defer fake.captureUpsertChangeMutex.RUnlock()
+	fake.getLatestGraphMutex.RLock()
+	defer fake.getLatestGraphMutex.RUnlock()
 	fake.processMutex.RLock()
 	defer fake.processMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}

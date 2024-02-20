@@ -9,6 +9,8 @@ import (
 )
 
 type Config struct {
+	// Version is the running NGF version.
+	Version string
 	// AtomicLevel is an atomically changeable, dynamic logging level.
 	AtomicLevel zap.AtomicLevel
 	// GatewayNsName is the namespaced name of a Gateway resource that the Gateway will use.
@@ -26,16 +28,18 @@ type Config struct {
 	GatewayClassName string
 	// LeaderElection contains the configuration for leader election.
 	LeaderElection LeaderElection
-	// UpdateGatewayClassStatus enables updating the status of the GatewayClass resource.
-	UpdateGatewayClassStatus bool
-	// Plus indicates whether NGINX Plus is being used.
-	Plus bool
 	// MetricsConfig specifies the metrics config.
 	MetricsConfig MetricsConfig
 	// HealthConfig specifies the health probe config.
 	HealthConfig HealthConfig
 	// TelemetryReportPeriod is the period at which telemetry reports are sent.
 	TelemetryReportPeriod time.Duration
+	// UpdateGatewayClassStatus enables updating the status of the GatewayClass resource.
+	UpdateGatewayClassStatus bool
+	// Plus indicates whether NGINX Plus is being used.
+	Plus bool
+	// ExperimentalFeatures indicates if experimental features are enabled.
+	ExperimentalFeatures bool
 }
 
 // GatewayPodConfig contains information about this Pod.
@@ -46,6 +50,8 @@ type GatewayPodConfig struct {
 	ServiceName string
 	// Namespace is the namespace of this Pod.
 	Namespace string
+	// Name is the name of the Pod.
+	Name string
 }
 
 // MetricsConfig specifies the metrics config.
