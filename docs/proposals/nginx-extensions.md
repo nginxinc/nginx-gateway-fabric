@@ -124,7 +124,7 @@ spec:
 
 1. _Permissions_: To make declarative changes to a Gateway, the Gateway owner (who has RBAC permissions to a specific Gateway) must have access to GatewayClass, a cluster-scoped resource.
 2. _Scope_: If a change is made on a GatewayClass, _all_ Gateways are affected by that change. This will become an issue once we [support multiple Gateways](https://github.com/nginxinc/nginx-gateway-fabric/issues/1443).
-3. _Dynamic Changes_: GatewayClasses are meant to be templates, so changes made to the GatewayClass are not expected to change deployed Gateways. This means the configuration is not dynamic.
+3. _Dynamic Changes_: GatewayClasses are meant to be templates, so changes made to the GatewayClass are not expected to change deployed Gateways. This means the configuration is not dynamic. However, this is just a recommendation by the spec and is not required. If we propagate the changes from a GatewayClass to existing Gateways, we must clearly document this behavior.
 
 ### Infrastructure API
 
