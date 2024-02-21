@@ -3,7 +3,7 @@ title: "Gateway API Compatibility"
 description: "Learn which Gateway API resources NGINX Gateway Fabric supports and the extent of that support."
 weight: 200
 toc: true
-docs: "DOCS-000"
+docs: "DOCS-1412"
 ---
 
 ## Summary

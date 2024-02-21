@@ -3,7 +3,7 @@ title: "Expose NGINX Gateway Fabric"
 description: ""
 weight: 300
 toc: true
-docs: "DOCS-000"
+docs: "DOCS-1427"
 ---
 
 {{<custom-styles>}}

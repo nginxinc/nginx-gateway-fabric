@@ -3,7 +3,7 @@ title: "Securing Traffic to Backends"
 description: "Learn how to encrypt HTTP traffic between NGINX Gateway Fabric and your backend pods."
 weight: 600
 toc: true
-docs: "DOCS-000"
+docs: "DOCS-1423"
 ---
 
 In this guide, we will show how to specify the TLS configuration of the connection from the Gateway to a backend pod/s via the Service API object using a [BackendTLSPolicy](https://gateway-api.sigs.k8s.io/api-types/backendtlspolicy/). This covers the use-case where the service or backend owner is doing their own TLS and NGINX Gateway Fabric needs to know how to connect to this backend pod that has its own certificate over HTTPS.

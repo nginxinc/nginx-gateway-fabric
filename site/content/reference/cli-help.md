@@ -3,7 +3,7 @@ title: "Command-line Reference Guide"
 description: "Learn about the commands available for the executable file of the NGINX Gateway Fabric container."
 weight: 100
 toc: true
-docs: "DOCS-000"
+docs: "DOCS-1435"
 ---
 
 ## Static Mode

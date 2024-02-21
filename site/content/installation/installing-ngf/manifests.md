@@ -3,7 +3,7 @@ title: "Installation with Kubernetes manifests"
 description: "Learn how to install, upgrade, and uninstall NGINX Gateway Fabric using Kubernetes manifests."
 weight: 200
 toc: true
-docs: "DOCS-000"
+docs: "DOCS-1429"
 ---
 
 {{<custom-styles>}}
