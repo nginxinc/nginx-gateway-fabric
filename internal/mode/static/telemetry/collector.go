@@ -55,8 +55,9 @@ type Data struct {
 	ImageSource       string
 	Arch              string
 	DeploymentID      string
-	NodeCount         int
+	ImageSource       string
 	NGFResourceCounts NGFResourceCounts
+	NodeCount         int
 	NGFReplicaCount   int
 }
 
@@ -134,6 +135,7 @@ func (c DataCollectorImpl) Collect(ctx context.Context) (Data, error) {
 		ImageSource:     c.cfg.ImageSource,
 		Arch:            runtime.GOARCH,
 		DeploymentID:    deploymentID,
+		ImageSource:     c.cfg.ImageSource,
 	}
 
 	return data, nil
