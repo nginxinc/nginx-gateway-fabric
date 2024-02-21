@@ -51,8 +51,9 @@ type ProjectMetadata struct {
 type Data struct {
 	ProjectMetadata   ProjectMetadata
 	ClusterID         string
-	NodeCount         int
+	ImageSource       string
 	NGFResourceCounts NGFResourceCounts
+	NodeCount         int
 	NGFReplicaCount   int
 }
 
@@ -68,6 +69,8 @@ type DataCollectorConfig struct {
 	Version string
 	// PodNSName is the NamespacedName of the NGF Pod.
 	PodNSName types.NamespacedName
+	// ImageSource is the source of the NGF image.
+	ImageSource string
 }
 
 // DataCollectorImpl is am implementation of DataCollector.
@@ -115,6 +118,7 @@ func (c DataCollectorImpl) Collect(ctx context.Context) (Data, error) {
 		},
 		NGFReplicaCount: ngfReplicaCount,
 		ClusterID:       clusterID,
+		ImageSource:     c.cfg.ImageSource,
 	}
 
 	return data, nil

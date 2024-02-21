@@ -251,6 +251,7 @@ func StartManager(cfg config.Config) error {
 			Namespace: cfg.GatewayPodConfig.Namespace,
 			Name:      cfg.GatewayPodConfig.Name,
 		},
+		ImageSource: cfg.ImageSource,
 	})
 	if err = mgr.Add(createTelemetryJob(cfg, dataCollector, nginxChecker.getReadyCh())); err != nil {
 		return fmt.Errorf("cannot register telemetry job: %w", err)

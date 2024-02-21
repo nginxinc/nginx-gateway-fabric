@@ -11,6 +11,8 @@ import (
 type Config struct {
 	// Version is the running NGF version.
 	Version string
+	// ImageSource is the source of the NGINX Gateway image.
+	ImageSource string
 	// AtomicLevel is an atomically changeable, dynamic logging level.
 	AtomicLevel zap.AtomicLevel
 	// GatewayNsName is the namespaced name of a Gateway resource that the Gateway will use.

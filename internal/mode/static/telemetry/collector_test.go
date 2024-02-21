@@ -123,6 +123,7 @@ var _ = Describe("Collector", Ordered, func() {
 			NGFResourceCounts: telemetry.NGFResourceCounts{},
 			NGFReplicaCount:   1,
 			ClusterID:         string(kubeNamespace.GetUID()),
+			ImageSource:       "local",
 		}
 
 		k8sClientReader = &eventsfakes.FakeReader{}
@@ -138,6 +139,7 @@ var _ = Describe("Collector", Ordered, func() {
 			ConfigurationGetter: fakeConfigurationGetter,
 			Version:             version,
 			PodNSName:           podNSName,
+			ImageSource:         "local",
 		})
 
 		baseGetCalls = createGetCallsFunc(ngfPod, ngfReplicaSet, kubeNamespace)
