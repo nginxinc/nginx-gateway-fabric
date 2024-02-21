@@ -5,12 +5,12 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"runtime"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
-	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -111,7 +111,7 @@ var _ = Describe("Collector", Ordered, func() {
 
 		kubeNamespace = &v1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: meta.NamespaceSystem,
+				Name: metav1.NamespaceSystem,
 				UID:  "test-uid",
 			},
 		}
@@ -124,6 +124,8 @@ var _ = Describe("Collector", Ordered, func() {
 			NGFResourceCounts: telemetry.NGFResourceCounts{},
 			NGFReplicaCount:   1,
 			ClusterID:         string(kubeNamespace.GetUID()),
+			ImageSource:       "local",
+			Arch:              runtime.GOARCH,
 		}
 
 		k8sClientReader = &eventsfakes.FakeReader{}
@@ -139,6 +141,7 @@ var _ = Describe("Collector", Ordered, func() {
 			ConfigurationGetter: fakeConfigurationGetter,
 			Version:             version,
 			PodNSName:           podNSName,
+			ImageSource:         "local",
 		})
 
 		baseGetCalls = createGetCallsFunc(ngfPod, ngfReplicaSet, kubeNamespace)

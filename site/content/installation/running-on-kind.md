@@ -3,7 +3,7 @@ title: "Deploying NGINX Gateway Fabric on a kind Cluster"
 description: "Learn how to run NGINX Gateway Fabric on a kind (Kubernetes in Docker) cluster."
 weight: 400
 toc: true
-docs: "DOCS-000"
+docs: "DOCS-1428"
 ---
 
 {{< custom-styles >}}

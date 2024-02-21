@@ -3,7 +3,7 @@ title: "Routing to Applications Using HTTP Matching Conditions"
 description: "Learn how to deploy multiple applications and HTTPRoutes with request conditions such as paths, methods, headers, and query parameters"
 weight: 200
 toc: true
-docs: "DOCS-000"
+docs: "DOCS-1422"
 ---
 
 In this guide we will configure advanced routing rules for multiple applications. These rules will showcase request matching by path, headers, query parameters, and method. For an introduction to exposing your application, we recommend that you follow the [basic guide]({{< relref "/how-to/traffic-management/routing-traffic-to-your-app.md" >}}) first.

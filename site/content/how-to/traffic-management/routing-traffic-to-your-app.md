@@ -3,7 +3,7 @@ title: "Routing Traffic to Your Application"
 description: "Learn how to route external traffic to your Kubernetes applications using NGINX Gateway Fabric."
 weight: 100
 toc: true
-docs: "DOCS-000"
+docs: "DOCS-1426"
 ---
 
 {{<custom-styles>}}

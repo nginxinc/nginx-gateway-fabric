@@ -155,6 +155,9 @@ func TestStaticModeCmdFlagValidation(t *testing.T) {
 				"--health-disable",
 				"--leader-election-lock-name=my-lock",
 				"--leader-election-disable=false",
+				"--usage-report-secret=default/my-secret",
+				"--usage-report-server-url=https://my-api.com",
+				"--usage-report-cluster-name=my-cluster",
 			},
 			wantErr: false,
 		},
@@ -309,6 +312,66 @@ func TestStaticModeCmdFlagValidation(t *testing.T) {
 			},
 			wantErr:           true,
 			expectedErrPrefix: `invalid argument "" for "--leader-election-disable" flag: strconv.ParseBool`,
+		},
+		{
+			name: "usage-report-secret is set to empty string",
+			args: []string{
+				"--usage-report-secret=",
+			},
+			wantErr:           true,
+			expectedErrPrefix: `invalid argument "" for "--usage-report-secret" flag: must be set`,
+		},
+		{
+			name: "usage-report-secret is invalid",
+			args: []string{
+				"--usage-report-secret=my-secret", // no namespace
+			},
+			wantErr: true,
+			expectedErrPrefix: `invalid argument "my-secret" for "--usage-report-secret" flag: invalid format; ` +
+				"must be NAMESPACE/NAME",
+		},
+		{
+			name: "usage-report-server-url is set to empty string",
+			args: []string{
+				"--usage-report-server-url=",
+			},
+			wantErr:           true,
+			expectedErrPrefix: `invalid argument "" for "--usage-report-server-url" flag: must be set`,
+		},
+		{
+			name: "usage-report-server-url is an invalid url",
+			args: []string{
+				"--usage-report-server-url=invalid",
+			},
+			wantErr:           true,
+			expectedErrPrefix: `invalid argument "invalid" for "--usage-report-server-url" flag: "invalid" must be a valid URL`,
+		},
+		{
+			name: "usage secret and server url not specified together",
+			args: []string{
+				"--gateway-ctlr-name=gateway.nginx.org/nginx-gateway",
+				"--gatewayclass=nginx",
+				"--usage-report-server-url=http://example.com",
+			},
+			wantErr: true,
+			expectedErrPrefix: "if any flags in the group [usage-report-secret usage-report-server-url] " +
+				"are set they must all be set",
+		},
+		{
+			name: "usage-report-cluster-name is set to empty string",
+			args: []string{
+				"--usage-report-cluster-name=",
+			},
+			wantErr:           true,
+			expectedErrPrefix: `invalid argument "" for "--usage-report-cluster-name" flag: must be set`,
+		},
+		{
+			name: "usage-report-cluster-name is invalid",
+			args: []string{
+				"--usage-report-cluster-name=$invalid*(#)",
+			},
+			wantErr:           true,
+			expectedErrPrefix: `invalid argument "$invalid*(#)" for "--usage-report-cluster-name" flag: invalid format`,
 		},
 	}
 

@@ -4,10 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"runtime"
 
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
-	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -51,8 +52,10 @@ type ProjectMetadata struct {
 type Data struct {
 	ProjectMetadata   ProjectMetadata
 	ClusterID         string
-	NodeCount         int
+	ImageSource       string
+	Arch              string
 	NGFResourceCounts NGFResourceCounts
+	NodeCount         int
 	NGFReplicaCount   int
 }
 
@@ -68,6 +71,8 @@ type DataCollectorConfig struct {
 	Version string
 	// PodNSName is the NamespacedName of the NGF Pod.
 	PodNSName types.NamespacedName
+	// ImageSource is the source of the NGF image.
+	ImageSource string
 }
 
 // DataCollectorImpl is am implementation of DataCollector.
@@ -86,7 +91,7 @@ func NewDataCollectorImpl(
 
 // Collect collects and returns telemetry Data.
 func (c DataCollectorImpl) Collect(ctx context.Context) (Data, error) {
-	nodeCount, err := collectNodeCount(ctx, c.cfg.K8sClientReader)
+	nodeCount, err := CollectNodeCount(ctx, c.cfg.K8sClientReader)
 	if err != nil {
 		return Data{}, fmt.Errorf("failed to collect node count: %w", err)
 	}
@@ -102,7 +107,7 @@ func (c DataCollectorImpl) Collect(ctx context.Context) (Data, error) {
 	}
 
 	var clusterID string
-	if clusterID, err = collectClusterID(ctx, c.cfg.K8sClientReader); err != nil {
+	if clusterID, err = CollectClusterID(ctx, c.cfg.K8sClientReader); err != nil {
 		return Data{}, fmt.Errorf("failed to collect clusterID: %w", err)
 	}
 
@@ -115,12 +120,15 @@ func (c DataCollectorImpl) Collect(ctx context.Context) (Data, error) {
 		},
 		NGFReplicaCount: ngfReplicaCount,
 		ClusterID:       clusterID,
+		ImageSource:     c.cfg.ImageSource,
+		Arch:            runtime.GOARCH,
 	}
 
 	return data, nil
 }
 
-func collectNodeCount(ctx context.Context, k8sClient client.Reader) (int, error) {
+// CollectNodeCount returns the number of nodes in the cluster.
+func CollectNodeCount(ctx context.Context, k8sClient client.Reader) (int, error) {
 	var nodes v1.NodeList
 	if err := k8sClient.List(ctx, &nodes); err != nil {
 		return 0, fmt.Errorf("failed to get NodeList: %w", err)
@@ -202,9 +210,10 @@ func collectNGFReplicaCount(ctx context.Context, k8sClient client.Reader, podNSN
 	return int(*replicaSet.Spec.Replicas), nil
 }
 
-func collectClusterID(ctx context.Context, k8sClient client.Reader) (string, error) {
+// CollectClusterID gets the UID of the kube-system namespace.
+func CollectClusterID(ctx context.Context, k8sClient client.Reader) (string, error) {
 	key := types.NamespacedName{
-		Name: meta.NamespaceSystem,
+		Name: metav1.NamespaceSystem,
 	}
 	var kubeNamespace v1.Namespace
 	if err := k8sClient.Get(ctx, key, &kubeNamespace); err != nil {

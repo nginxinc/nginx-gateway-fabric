@@ -3,7 +3,7 @@ title: "Gateway Architecture"
 description: "Learn about the architecture and design principles of NGINX Gateway Fabric."
 weight: 100
 toc: true
-docs: "DOCS-000"
+docs: "DOCS-1413"
 ---
 
 The intended audience for this information is primarily the two following groups:
