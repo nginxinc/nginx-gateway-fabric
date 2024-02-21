@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
@@ -51,8 +52,9 @@ type ProjectMetadata struct {
 type Data struct {
 	ProjectMetadata   ProjectMetadata
 	ClusterID         string
-	NodeCount         int
+	ImageSource       string
 	NGFResourceCounts NGFResourceCounts
+	NodeCount         int
 	NGFReplicaCount   int
 }
 
@@ -106,6 +108,8 @@ func (c DataCollectorImpl) Collect(ctx context.Context) (Data, error) {
 		return Data{}, fmt.Errorf("failed to collect clusterID: %w", err)
 	}
 
+	imageSource := CollectImageSource()
+
 	data := Data{
 		NodeCount:         nodeCount,
 		NGFResourceCounts: graphResourceCount,
@@ -115,6 +119,7 @@ func (c DataCollectorImpl) Collect(ctx context.Context) (Data, error) {
 		},
 		NGFReplicaCount: ngfReplicaCount,
 		ClusterID:       clusterID,
+		ImageSource:     imageSource,
 	}
 
 	return data, nil
@@ -213,4 +218,15 @@ func CollectClusterID(ctx context.Context, k8sClient client.Reader) (string, err
 		return "", fmt.Errorf("failed to get kube-system namespace: %w", err)
 	}
 	return string(kubeNamespace.GetUID()), nil
+}
+
+// CollectImageSource gets the source of the NGF image. This is done by inspecting the BUILD_AGENT environment variable.
+// Valid sources are: "gha" for images built using GitHub Actions in the pipeline, or "local".
+// If the environment variable is not set to one of these, the source is "unknown"
+func CollectImageSource() string {
+	buildAgent := os.Getenv("BUILD_AGENT")
+	if buildAgent != "gha" && buildAgent != "local" {
+		buildAgent = "unknown"
+	}
+	return buildAgent
 }
