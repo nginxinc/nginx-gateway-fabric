@@ -242,7 +242,7 @@ func StartManager(cfg config.Config) error {
 		return fmt.Errorf("cannot register status updater: %w", err)
 	}
 
-	if !cfg.ProductTelemetryConfig.DisableProductTelemetry {
+	if cfg.ProductTelemetryConfig.Enabled {
 		dataCollector := telemetry.NewDataCollectorImpl(telemetry.DataCollectorConfig{
 			K8sClientReader:     mgr.GetAPIReader(),
 			GraphGetter:         processor,

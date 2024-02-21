@@ -90,8 +90,8 @@ type LeaderElectionConfig struct {
 type ProductTelemetryConfig struct {
 	// TelemetryReportPeriod is the period at which telemetry reports are sent.
 	TelemetryReportPeriod time.Duration
-	// DisableProductTelemetry disables the collection of product telemetry.
-	DisableProductTelemetry bool
+	// Enabled is the flag for toggling the collection of product telemetry.
+	Enabled bool
 }
 
 // UsageReportConfig contains the configuration for NGINX Plus usage reporting.

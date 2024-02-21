@@ -208,8 +208,8 @@ func createStaticModeCommand() *cobra.Command {
 				},
 				UsageReportConfig: usageReportConfig,
 				ProductTelemetryConfig: config.ProductTelemetryConfig{
-					TelemetryReportPeriod:   period,
-					DisableProductTelemetry: disableProductTelemetry,
+					TelemetryReportPeriod: period,
+					Enabled:               !disableProductTelemetry,
 				},
 				Plus:                 plus,
 				Version:              version,
