@@ -46,7 +46,7 @@ nginxGateway:
     allowPrivilegeEscalation: false
 
   productTelemetry:
-    ## Enable the collection of product telemetry every 24 hours.
+    ## Enable the collection of product telemetry.
     enable: true
 
   ## The lifecycle of the nginx-gateway container.

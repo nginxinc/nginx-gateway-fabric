@@ -39,7 +39,7 @@ rules:
   - get
   - list
   - watch
-{{- if or .Values.nginxGateway.productTelemetry.enable .Values.nginx.plus }}
+{{- if .Values.nginxGateway.productTelemetry.enable }}
 - apiGroups:
   - ""
   resources:
@@ -47,17 +47,26 @@ rules:
   verbs:
   - get
 - apiGroups:
-  - ""
-  resources:
-  - nodes
-  verbs:
-  - list
-- apiGroups:
   - apps
   resources:
   - replicasets
   verbs:
   - get
+{{- end }}
+{{- if .Values.nginx.plus }}
+- apiGroups:
+  - apps
+  resources:
+  - replicasets
+  verbs:
+  - list
+{{- end }}
+{{- if or .Values.nginxGateway.productTelemetry.enable .Values.nginx.plus }}
+- apiGroups:
+  - ""
+  resources:
+  - nodes
+  verbs:
   - list
 {{- end }}
 - apiGroups:

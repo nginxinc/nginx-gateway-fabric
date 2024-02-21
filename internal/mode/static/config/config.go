@@ -36,12 +36,10 @@ type Config struct {
 	MetricsConfig MetricsConfig
 	// HealthConfig specifies the health probe config.
 	HealthConfig HealthConfig
-	// TelemetryReportPeriod is the period at which telemetry reports are sent.
-	TelemetryReportPeriod time.Duration
+	// ProductTelemetryConfig contains the configuration for collecting product telemetry.
+	ProductTelemetryConfig ProductTelemetryConfig
 	// UpdateGatewayClassStatus enables updating the status of the GatewayClass resource.
 	UpdateGatewayClassStatus bool
-	// DisableProductTelemetry disables the collection of product telemetry.
-	DisableProductTelemetry bool
 	// Plus indicates whether NGINX Plus is being used.
 	Plus bool
 	// ExperimentalFeatures indicates if experimental features are enabled.
@@ -86,6 +84,14 @@ type LeaderElectionConfig struct {
 	Identity string
 	// Enabled indicates whether leader election is enabled.
 	Enabled bool
+}
+
+// ProductTelemetryConfig contains the configuration for collecting product telemetry.
+type ProductTelemetryConfig struct {
+	// TelemetryReportPeriod is the period at which telemetry reports are sent.
+	TelemetryReportPeriod time.Duration
+	// DisableProductTelemetry disables the collection of product telemetry.
+	DisableProductTelemetry bool
 }
 
 // UsageReportConfig contains the configuration for NGINX Plus usage reporting.

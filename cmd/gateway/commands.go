@@ -186,7 +186,6 @@ func createStaticModeCommand() *cobra.Command {
 				GatewayClassName:         gatewayClassName.value,
 				GatewayNsName:            gwNsName,
 				UpdateGatewayClassStatus: updateGCStatus,
-				DisableProductTelemetry:  disableProductTelemetry,
 				GatewayPodConfig: config.GatewayPodConfig{
 					PodIP:       podIP,
 					ServiceName: serviceName.value,
@@ -207,12 +206,15 @@ func createStaticModeCommand() *cobra.Command {
 					LockName: leaderElectionLockName.String(),
 					Identity: podName,
 				},
-				UsageReportConfig:     usageReportConfig,
-				Plus:                  plus,
-				TelemetryReportPeriod: period,
-				Version:               version,
-				ExperimentalFeatures:  gwExperimentalFeatures,
-				ImageSource:           imageSource,
+				UsageReportConfig: usageReportConfig,
+				ProductTelemetryConfig: config.ProductTelemetryConfig{
+					TelemetryReportPeriod:   period,
+					DisableProductTelemetry: disableProductTelemetry,
+				},
+				Plus:                 plus,
+				Version:              version,
+				ExperimentalFeatures: gwExperimentalFeatures,
+				ImageSource:          imageSource,
 			}
 
 			if err := static.StartManager(conf); err != nil {
@@ -323,7 +325,7 @@ func createStaticModeCommand() *cobra.Command {
 		&disableProductTelemetry,
 		productTelemetryDisableFlag,
 		false,
-		"Disable the collection of product telemetry every 24 hours.",
+		"Disable the collection of product telemetry.",
 	)
 
 	cmd.Flags().BoolVar(

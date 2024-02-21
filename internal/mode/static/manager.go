@@ -242,7 +242,7 @@ func StartManager(cfg config.Config) error {
 		return fmt.Errorf("cannot register status updater: %w", err)
 	}
 
-	if !cfg.DisableProductTelemetry {
+	if !cfg.ProductTelemetryConfig.DisableProductTelemetry {
 		dataCollector := telemetry.NewDataCollectorImpl(telemetry.DataCollectorConfig{
 			K8sClientReader:     mgr.GetAPIReader(),
 			GraphGetter:         processor,
@@ -475,7 +475,7 @@ func createTelemetryJob(
 			runnables.CronJobConfig{
 				Worker:       telemetry.CreateTelemetryJobWorker(logger, exporter, dataCollector),
 				Logger:       logger,
-				Period:       cfg.TelemetryReportPeriod,
+				Period:       cfg.ProductTelemetryConfig.TelemetryReportPeriod,
 				JitterFactor: telemetryJitterFactor,
 				ReadyCh:      readyCh,
 			},
@@ -503,7 +503,7 @@ func createUsageReporterJob(
 		Runnable: runnables.NewCronJob(runnables.CronJobConfig{
 			Worker:       usage.CreateUsageJobWorker(logger, k8sClient, reporter, cfg),
 			Logger:       logger,
-			Period:       cfg.TelemetryReportPeriod,
+			Period:       cfg.ProductTelemetryConfig.TelemetryReportPeriod,
 			JitterFactor: telemetryJitterFactor,
 			ReadyCh:      readyCh,
 		}),

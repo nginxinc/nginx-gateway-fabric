@@ -44,17 +44,22 @@ rules:
   verbs:
   - get
 - apiGroups:
-  - ""
-  resources:
-  - nodes
-  verbs:
-  - list
-- apiGroups:
   - apps
   resources:
   - replicasets
   verbs:
   - get
+- apiGroups:
+  - apps
+  resources:
+  - replicasets
+  verbs:
+  - list
+- apiGroups:
+  - ""
+  resources:
+  - nodes
+  verbs:
   - list
 - apiGroups:
   - ""
