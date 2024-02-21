@@ -1,9 +1,10 @@
 ---
-title: Getting the NGINX Plus image using JWT
+title: "Getting the NGINX Plus image using JWT"
 description: "This document describes how to use a JWT token to get an NGINX Plus image for NGINX Gateway Fabric from the F5 Docker registry."
 weight: 100
 doctypes: ["install"]
 toc: true
+docs: "DOCS-1432"
 ---
 
 ## Overview

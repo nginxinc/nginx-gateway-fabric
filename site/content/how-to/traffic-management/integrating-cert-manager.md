@@ -3,7 +3,7 @@ title: "Securing Traffic using Let's Encrypt and Cert-Manager"
 description: "Learn how to issue and mange certificates using Let's Encrypt and cert-manager."
 weight: 300
 toc: true
-docs: "DOCS-000"
+docs: "DOCS-1425"
 ---
 
 Securing client server communication is a crucial part of modern application architectures. One of the most important steps in this process is implementing HTTPS (HTTP over TLS/SSL) for all communications. This encrypts the data transmitted between the client and server, preventing eavesdropping and tampering. To do this, you need an SSL/TLS certificate from a trusted Certificate Authority (CA). However, issuing and managing certificates can be a complicated manual process. Luckily, there are many services and tools available to simplify and automate certificate issuance and management.

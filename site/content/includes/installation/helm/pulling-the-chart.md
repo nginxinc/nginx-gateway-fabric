@@ -1,5 +1,5 @@
 ---
-docs:
+docs: "DOCS-1439"
 ---
 
 Pull the latest stable release of the NGINX Gateway Fabric chart:

@@ -4,7 +4,7 @@ draft: false
 weight: 1100
 toc: true
 tags: [ "docs" ]
-docs: "DOCS-OOO"
+docs: "DOCS-1411"
 ---
 
 NGINX Gateway Fabric adheres to the support policy detailed at [nginx.com/support](https://nginx.com/support).
