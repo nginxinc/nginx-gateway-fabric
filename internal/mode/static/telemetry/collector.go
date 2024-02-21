@@ -241,7 +241,7 @@ func getDeploymentID(replicaSet *appsv1.ReplicaSet) (string, error) {
 	}
 
 	if replicaOwnerRefs[0].UID == "" {
-		return "", fmt.Errorf("expected replicaSet to have a UID")
+		return "", fmt.Errorf("expected replicaSet owner reference to have a UID")
 	}
 
 	return string(replicaOwnerRefs[0].UID), nil
