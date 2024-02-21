@@ -137,7 +137,6 @@ var _ = Describe("Collector", Ordered, func() {
 			ImageSource:       "local",
 			Arch:              runtime.GOARCH,
 			DeploymentID:      string(ngfReplicaSet.ObjectMeta.OwnerReferences[0].UID),
-			ImageSource:       "local",
 		}
 
 		k8sClientReader = &eventsfakes.FakeReader{}
