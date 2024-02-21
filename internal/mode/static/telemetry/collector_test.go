@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"runtime"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -124,6 +125,7 @@ var _ = Describe("Collector", Ordered, func() {
 			NGFReplicaCount:   1,
 			ClusterID:         string(kubeNamespace.GetUID()),
 			ImageSource:       "local",
+			Arch:              runtime.GOARCH,
 		}
 
 		k8sClientReader = &eventsfakes.FakeReader{}

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"runtime"
 
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
@@ -52,6 +53,7 @@ type Data struct {
 	ProjectMetadata   ProjectMetadata
 	ClusterID         string
 	ImageSource       string
+	Arch              string
 	NGFResourceCounts NGFResourceCounts
 	NodeCount         int
 	NGFReplicaCount   int
@@ -119,6 +121,7 @@ func (c DataCollectorImpl) Collect(ctx context.Context) (Data, error) {
 		NGFReplicaCount: ngfReplicaCount,
 		ClusterID:       clusterID,
 		ImageSource:     c.cfg.ImageSource,
+		Arch:            runtime.GOARCH,
 	}
 
 	return data, nil
