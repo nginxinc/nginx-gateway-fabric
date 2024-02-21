@@ -146,6 +146,11 @@ func createStaticModeCommand() *cobra.Command {
 				return errors.New("POD_NAME environment variable must be set")
 			}
 
+			imageSource := os.Getenv("BUILD_AGENT")
+			if imageSource != "gha" && imageSource != "local" {
+				imageSource = "unknown"
+			}
+
 			period, err := time.ParseDuration(telemetryReportPeriod)
 			if err != nil {
 				return fmt.Errorf("error parsing telemetry report period: %w", err)
@@ -203,6 +208,7 @@ func createStaticModeCommand() *cobra.Command {
 				TelemetryReportPeriod: period,
 				Version:               version,
 				ExperimentalFeatures:  gwExperimentalFeatures,
+				ImageSource:           imageSource,
 			}
 
 			if err := static.StartManager(conf); err != nil {

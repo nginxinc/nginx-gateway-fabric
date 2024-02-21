@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 	"reflect"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -62,10 +61,6 @@ func createGetCallsFunc(objects ...client.Object) getCallsFunc {
 
 		return nil
 	}
-}
-
-func setEnvVar(key, value string) {
-	os.Setenv(key, value)
 }
 
 var _ = Describe("Collector", Ordered, func() {
@@ -128,7 +123,7 @@ var _ = Describe("Collector", Ordered, func() {
 			NGFResourceCounts: telemetry.NGFResourceCounts{},
 			NGFReplicaCount:   1,
 			ClusterID:         string(kubeNamespace.GetUID()),
-			ImageSource:       "unknown",
+			ImageSource:       "local",
 		}
 
 		k8sClientReader = &eventsfakes.FakeReader{}
@@ -144,6 +139,7 @@ var _ = Describe("Collector", Ordered, func() {
 			ConfigurationGetter: fakeConfigurationGetter,
 			Version:             version,
 			PodNSName:           podNSName,
+			ImageSource:         "local",
 		})
 
 		baseGetCalls = createGetCallsFunc(ngfPod, ngfReplicaSet, kubeNamespace)
@@ -476,48 +472,6 @@ var _ = Describe("Collector", Ordered, func() {
 
 					_, err := dataCollector.Collect(ctx)
 					Expect(err).To(MatchError(expectedError))
-				})
-			})
-		})
-	})
-
-	Describe("Image source collector", func() {
-		When("collecting image source", func() {
-			When("the NGF pod's build agent env var is set to gha", func() {
-				It("collects the image source as gha", func() {
-					setEnvVar("BUILD_AGENT", "gha")
-					expData.ImageSource = "gha"
-
-					data, err := dataCollector.Collect(ctx)
-
-					Expect(err).To(BeNil())
-					Expect(expData).To(Equal(data))
-				})
-			})
-		})
-		When("collecting image source", func() {
-			When("the NGF pod's build agent env var is set to local", func() {
-				It("collects the image source as local", func() {
-					setEnvVar("BUILD_AGENT", "local")
-					expData.ImageSource = "local"
-
-					data, err := dataCollector.Collect(ctx)
-
-					Expect(err).To(BeNil())
-					Expect(expData).To(Equal(data))
-				})
-			})
-		})
-		When("collecting image source", func() {
-			When("the NGF pod's build agent env var is set to anything else", func() {
-				It("collects the image source as unknown", func() {
-					setEnvVar("BUILD_AGENT", "something-else")
-					expData.ImageSource = "unknown"
-
-					data, err := dataCollector.Collect(ctx)
-
-					Expect(err).To(BeNil())
-					Expect(expData).To(Equal(data))
 				})
 			})
 		})
