@@ -40,6 +40,8 @@ type Config struct {
 	TelemetryReportPeriod time.Duration
 	// UpdateGatewayClassStatus enables updating the status of the GatewayClass resource.
 	UpdateGatewayClassStatus bool
+	// DisableProductTelemetry disables the collection of product telemetry.
+	DisableProductTelemetry bool
 	// Plus indicates whether NGINX Plus is being used.
 	Plus bool
 	// ExperimentalFeatures indicates if experimental features are enabled.

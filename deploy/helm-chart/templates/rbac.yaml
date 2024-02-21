@@ -39,8 +39,7 @@ rules:
   - get
   - list
   - watch
-# FIXME(bjee19): make nodes, pods, replicasets permission dependent on telemetry being enabled.
-# https://github.com/nginxinc/nginx-gateway-fabric/issues/1317.
+{{- if or .Values.nginxGateway.productTelemetry.enable .Values.nginx.plus }}
 - apiGroups:
   - ""
   resources:
@@ -54,19 +53,20 @@ rules:
   verbs:
   - list
 - apiGroups:
-  - ""
-  resources:
-  - events
-  verbs:
-  - create
-  - patch
-- apiGroups:
   - apps
   resources:
   - replicasets
   verbs:
   - get
   - list
+{{- end }}
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+  - patch
 - apiGroups:
   - discovery.k8s.io
   resources:

@@ -45,6 +45,10 @@ nginxGateway:
     ## Some environments may need this set to true in order for the control plane to successfully reload NGINX.
     allowPrivilegeEscalation: false
 
+  productTelemetry:
+    ## Enable the collection of product telemetry every 24 hours.
+    enable: true
+
   ## The lifecycle of the nginx-gateway container.
   lifecycle: {}
 
