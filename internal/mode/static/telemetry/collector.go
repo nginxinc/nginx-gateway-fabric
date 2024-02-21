@@ -52,7 +52,6 @@ type ProjectMetadata struct {
 type Data struct {
 	ProjectMetadata   ProjectMetadata
 	ClusterID         string
-	ImageSource       string
 	Arch              string
 	DeploymentID      string
 	ImageSource       string
@@ -135,7 +134,6 @@ func (c DataCollectorImpl) Collect(ctx context.Context) (Data, error) {
 		ImageSource:     c.cfg.ImageSource,
 		Arch:            runtime.GOARCH,
 		DeploymentID:    deploymentID,
-		ImageSource:     c.cfg.ImageSource,
 	}
 
 	return data, nil
