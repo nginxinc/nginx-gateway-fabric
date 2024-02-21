@@ -233,11 +233,20 @@ func getReplicas(replicaSet *appsv1.ReplicaSet) (int, error) {
 }
 
 func getDeploymentID(replicaSet *appsv1.ReplicaSet) (string, error) {
-	if replicaSet.GetUID() == "" {
+	replicaOwnerRefs := replicaSet.GetOwnerReferences()
+	if len(replicaOwnerRefs) != 1 {
+		return "", fmt.Errorf("expected one owner reference of the NGF ReplicaSet, got %d", len(replicaOwnerRefs))
+	}
+
+	if replicaOwnerRefs[0].Kind != "Deployment" {
+		return "", fmt.Errorf("expected replicaSet owner reference to be Deployment, got %s", replicaOwnerRefs[0].Kind)
+	}
+
+	if replicaOwnerRefs[0].UID == "" {
 		return "", fmt.Errorf("expected replicaSet to have a UID")
 	}
 
-	return string(replicaSet.GetUID()), nil
+	return string(replicaOwnerRefs[0].UID), nil
 }
 
 // CollectClusterID gets the UID of the kube-system namespace.
