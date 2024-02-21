@@ -677,7 +677,7 @@ These features are grouped because they are all TLS-related settings. TLS option
 #### Alternatives
 
 - Policy: A TLS or Security Policy that attaches to Gateway listeners may also work. However, that would involve maintaining an additional CRD, whereas with TLS options, we only need to document and validate a few key-value pairs.
-- ParametersRef: While ParametersRef is also scoped to the ClusterOperator, it applies to all Gateways attached to the GatewayClass. Gateways can have multiple listeners with different protocols, and the TLS settings may not apply to all listeners. In addition, ClusterOperators may want to enforce different TLS settings for different TLS listeners.
+- ParametersRef: While ParametersRef is also scoped to the Cluster Operator, it applies to all Gateways attached to the GatewayClass. Gateways can have multiple listeners with different protocols, and the TLS settings may not apply to all listeners. In addition, Cluster Operators may want to enforce different TLS settings for different TLS listeners.
 
 ### Client Settings
 
@@ -705,7 +705,7 @@ NGINX directives:
 - [`keepalive_timeout`](https://nginx.org/en/docs/http/ngx_http_core_module.html#keepalive_timeout)
 - [`keepalive_disable`](https://nginx.org/en/docs/http/ngx_http_core_module.html#keepalive_disable)
 
-These features are grouped because they all deal with client traffic. An Inherited Policy fits this group best because there is a use case where the ClusterOperator sets a sane default for client max body size or client keepalives that has to be overridden by an Application Developer because of the unique attributes of the Service they own.
+These features are grouped because they all deal with client traffic. An Inherited Policy fits this group best because there is a use case where the Cluster Operator sets a sane default for client max body size or client keepalives that has to be overridden by an Application Developer because of the unique attributes of the Service they own.
 
 #### Future Work
 
