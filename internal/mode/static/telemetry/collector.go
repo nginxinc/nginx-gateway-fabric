@@ -104,7 +104,7 @@ func (c DataCollectorImpl) Collect(ctx context.Context) (Data, error) {
 
 	replicaSet, err := getPodReplicaSet(ctx, c.cfg.K8sClientReader, c.cfg.PodNSName)
 	if err != nil {
-		return Data{}, fmt.Errorf("failed to collect pod/replica set: %w", err)
+		return Data{}, fmt.Errorf("failed to get replica set for pod %s: %w", c.cfg.PodNSName, err)
 	}
 
 	replicaCount, err := getReplicas(replicaSet)
