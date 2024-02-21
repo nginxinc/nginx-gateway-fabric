@@ -770,15 +770,15 @@ These features are grouped because they all apply to the upstream context and ma
 
 ### Authentication
 
-_Extension type:_ Inherited Policy
+_Extension type:_ Filter
 
 _Resource type:_ CRD
 
-_Role(s):_ Cluster Operator, Application Developer
+_Role(s):_ Application Developer
 
-_Extension point:_ Gateway, Gateway Listener, HTTPRoute Rule (once it's supported)
+_Extension point:_ HTTPRoute Rule
 
-_NGINX context(s):_ http, server, location
+_NGINX context(s):_ location
 
 OSS Features:
 
@@ -802,6 +802,10 @@ NGINX Plus directives:
 - [`auth_jwt_key_file`](https://nginx.org/en/docs/http/ngx_http_auth_jwt_module.html#auth_jwt_key_file)
 - [`auth_jwt_key_request`](https://nginx.org/en/docs/http/ngx_http_auth_jwt_module.html#auth_jwt_key_request)
 
+While there might be a strong use case for defaults and overrides for authentication, we should begin by adding an authentication Filter, instead of jumping right to an Inherited Policy. This would allow us to roll out an authentication solution quickly to support the core use case for Application Developers. The use case for Cluster Operators applying authentication Policies is less well-known than the Application Developer's use case. Instead of leading with the Cluster Operator use case, we can begin with a Filter and wait for user feedback. Later, we can add a Policy and define how the Filter and Policy interact.
+
+In addition, since a Filter is referenced from a routing rule, it makes it clear to the Application Developer that authentication is applied to the route, whereas due to the discoverability issues around Policies, it wouldn't be clear to the Application Developer that authentication exists for their routes. Furthermore, if the referenced Filter does not exist, NGINX will return a 502 and the protected path will not be exposed. This isn't the case for a Policy, since a missing Policy would have no effect on routes and the protected path will be exposed to all users.
+
 #### Future Work
 
 - Add support for remote authentication or other authentication strategies.
@@ -809,7 +813,7 @@ NGINX Plus directives:
 
 #### Alternatives
 
-- Begin with a Filter: Rather than beginning with an Inherited Policy, which is complex, we could start by adding an authentication Filter. This would allow us to roll out an authentication solution quickly to support the core use case for Application Developers. The use case for Cluster Operators applying authentication Policies is less well-known than the Application Developer's use case. Instead of leading with the Cluster Operator use case, we can begin with a Filter and wait for user feedback. Later, we can add a Policy and define how the Filter and Policy interact.
+- Inherited Policy that attaches to Gateways and HTTPRoutes. Implementing authentication with an Inherited Policy will allow Cluster Operators to apply global authentication policies for applications and Application Developers to override that policy on a per-route basis. This would be more convenient for applications that use one authentication method for all of their routes. However, it may not be straightforward to apply the inheritance concepts (overrides/defaults) to some authentication methods. For example, JWT authentication may contain multiple fields: secret, realm, and token. These fields are interdependent and should not be overridden separately, but that may be difficult to enforce under the current Inheritance Policy guidelines.
 - Wait for Gateway API GEP on authentication: There is an open [GEP issue](https://github.com/kubernetes-sigs/gateway-api/issues/1494) for authentication in the Gateway API repository. Instead of rolling out our own authentication solution, we could wait or even champion this GEP. The advantages of waiting are that if the GEP is implemented, we won't have to deprecate our bespoke authentication Policy in favor of the GEP's implementation, and we won't have to maintain an additional Policy. However, we don't know how long it will take the GEP to move from open to implementable. Authentication is a critical feature, and it may not be prudent to wait.
 
 ### Observability
