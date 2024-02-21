@@ -348,7 +348,8 @@ func validateBackendRef(
 	}
 
 	if ref.Port == nil {
-		panicForBrokenWebhookAssumption(fmt.Errorf("port is nil for ref %q", ref.Name))
+		valErr := field.Required(path.Child("port"), "port cannot be nil")
+		return false, staticConds.NewRouteBackendRefUnsupportedValue(valErr.Error())
 	}
 
 	// any value of port is OK

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"net/url"
 	"regexp"
 	"strings"
 
@@ -87,6 +88,38 @@ func parseNamespacedResourceName(value string) (types.NamespacedName, error) {
 		Namespace: parts[0],
 		Name:      parts[1],
 	}, nil
+}
+
+func validateQualifiedName(name string) error {
+	if len(name) == 0 {
+		return errors.New("must be set")
+	}
+
+	messages := validation.IsQualifiedName(name)
+	if len(messages) > 0 {
+		msg := strings.Join(messages, "; ")
+		return fmt.Errorf("invalid format: %s", msg)
+	}
+
+	return nil
+}
+
+func validateURL(value string) error {
+	if len(value) == 0 {
+		return errors.New("must be set")
+	}
+	val, err := url.Parse(value)
+	if err != nil {
+		return fmt.Errorf("%q must be a valid URL: %w", value, err)
+	}
+	if val.Scheme == "" {
+		return fmt.Errorf("%q must be a valid URL: bad scheme", value)
+	}
+	if val.Host == "" {
+		return fmt.Errorf("%q must be a valid URL: bad host", value)
+	}
+
+	return nil
 }
 
 func validateIP(ip string) error {

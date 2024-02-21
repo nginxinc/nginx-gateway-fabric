@@ -33,7 +33,7 @@ Deploying NGINX Gateway Fabric with Kubernetes manifests takes only a few steps.
 #### Stable release
 
    ```shell
-   kubectl apply -f https://github.com/nginxinc/nginx-gateway-fabric/releases/download/v1.0.0/crds.yaml
+   kubectl apply -f https://github.com/nginxinc/nginx-gateway-fabric/releases/download/v1.1.0/crds.yaml
    ```
 
 #### Edge version
@@ -53,19 +53,35 @@ Deploying NGINX Gateway Fabric with Kubernetes manifests takes only a few steps.
 
 #### Stable release
 
+##### For NGINX
+
    ```shell
-   kubectl apply -f https://github.com/nginxinc/nginx-gateway-fabric/releases/download/v1.0.0/nginx-gateway.yaml
+   kubectl apply -f https://github.com/nginxinc/nginx-gateway-fabric/releases/download/v1.1.0/nginx-gateway.yaml
+   ```
+
+##### For NGINX Plus
+
+   Download the [deployment YAML](https://github.com/nginxinc/nginx-gateway-fabric/releases/download/v1.2.0/nginx-plus-gateway.yaml).
+
+   Update the `nginx-plus-gateway.yaml` file to include your chosen NGINX Plus image from the F5 Container registry or your custom image.
+
+   {{< important >}}Ensure that you [Enable Usage Reporting]({{< relref "installation/usage-reporting.md" >}}) before applying.{{< /important >}}
+
+   ```shell
+   kubectl apply -f nginx-plus-gateway.yaml
    ```
 
 #### Edge version
 
-- For NGINX:
+##### For NGINX
 
    ```shell
    kubectl apply -f deploy/manifests/nginx-gateway.yaml
    ```
 
-- For NGINX Plus
+##### For NGINX Plus
+
+  {{< important >}}Ensure that you [Enable Usage Reporting]({{< relref "installation/usage-reporting.md" >}}) before applying.{{< /important >}}
 
    ```shell
    kubectl apply -f deploy/manifests/nginx-plus-gateway.yaml
@@ -77,13 +93,13 @@ Deploying NGINX Gateway Fabric with Kubernetes manifests takes only a few steps.
 
 We support a subset of the additional features provided by the Gateway API experimental channel. To enable the experimental features of Gateway API which are supported by NGINX Gateway Fabric:
 
-- For NGINX:
+##### For NGINX
 
    ```shell
    kubectl apply -f deploy/manifests/nginx-gateway-experimental.yaml
    ```
 
-- For NGINX Plus
+##### For NGINX Plus
 
    ```shell
    kubectl apply -f deploy/manifests/nginx-plus-gateway-experimental.yaml
@@ -148,14 +164,14 @@ To upgrade NGINX Gateway Fabric and get the latest features and improvements, ta
    - To upgrade the Custom Resource Definitions (CRDs), run:
 
       ```shell
-      kubectl apply -f https://github.com/nginxinc/nginx-gateway-fabric/releases/download/v1.0.0/crds.yaml
+      kubectl apply -f https://github.com/nginxinc/nginx-gateway-fabric/releases/download/v1.1.0/crds.yaml
       ```
 
 1. **Upgrade NGINX Gateway Fabric deployment:**
    - To upgrade the deployment, run:
 
       ```shell
-      kubectl apply -f https://github.com/nginxinc/nginx-gateway-fabric/releases/download/v1.0.0/nginx-gateway.yaml
+      kubectl apply -f https://github.com/nginxinc/nginx-gateway-fabric/releases/download/v1.1.0/nginx-gateway.yaml
       ```
 
 
@@ -218,11 +234,11 @@ Follow these steps to uninstall NGINX Gateway Fabric and Gateway API from your K
    - To remove NGINX Gateway Fabric and its custom resource definitions (CRDs), run:
 
      ```shell
-     kubectl delete -f https://github.com/nginxinc/nginx-gateway-fabric/releases/download/v1.0.0/nginx-gateway.yaml
+     kubectl delete -f https://github.com/nginxinc/nginx-gateway-fabric/releases/download/v1.1.0/nginx-gateway.yaml
      ```
 
      ```shell
-     kubectl delete -f https://github.com/nginxinc/nginx-gateway-fabric/releases/download/v1.0.0/crds.yaml
+     kubectl delete -f https://github.com/nginxinc/nginx-gateway-fabric/releases/download/v1.1.0/crds.yaml
      ```
 
 1. **Remove the Gateway API resources:**

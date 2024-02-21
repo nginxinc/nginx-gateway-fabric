@@ -36,6 +36,7 @@ rules:
   - configmaps
 {{- end }}
   verbs:
+  - get
   - list
   - watch
 # FIXME(bjee19): make nodes, pods, replicasets permission dependent on telemetry being enabled.
@@ -65,6 +66,7 @@ rules:
   - replicasets
   verbs:
   - get
+  - list
 - apiGroups:
   - discovery.k8s.io
   resources:
