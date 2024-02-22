@@ -484,6 +484,8 @@ To identify the set of NGINX directives and parameters NGINX Gateway Fabric shou
 | Client keepalives                                                                                |                     |
 | TLS settings. For example, TLS protocols and server ciphers                                      |                     |
 | OpenTelemetry tracing                                                                            |                     |
+| Connection timeouts                                                                              |                     |
+
 
 ### Medium-Priority Features
 
@@ -503,7 +505,6 @@ To identify the set of NGINX directives and parameters NGINX Gateway Fabric shou
 | API Key authentication                                                                 |                     |
 | Next upstream retries. NGINX retries by trying the _next_ server in the upstream group |                     |
 | Proxy Buffering                                                                        |                     |
-| Connection timeouts                                                                    |                     |
 
 ### Low-Priority Features
 
