@@ -839,7 +839,7 @@ NGINX directives:
 - [`otel_span_name`](https://nginx.org/en/docs/ngx_otel_module.html#otel_span_name)
 - [`otel_span_attr`](https://nginx.org/en/docs/ngx_otel_module.html#otel_span_attr)
 
-Tracing will be disabled by default. The Application Developer will be able to use this Policy to enable and configure tracing for their routes. This Policy will only be applied if the OTel endpoint as been set by the Cluster Operator on the [Gateway Settings](#gateway-settings).
+Tracing will be disabled by default. The Application Developer will be able to use this Policy to enable and configure tracing for their routes. This Policy will only be applied if the OTel endpoint as been set by the Cluster Operator on the [Gateway Settings](#gateway-settings). We will also need to document that the collector architecture we support, where there is a single collector (receiver) but there can be many exporters and processors. 
 
 #### Future Work
 
