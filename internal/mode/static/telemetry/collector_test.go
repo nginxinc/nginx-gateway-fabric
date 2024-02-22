@@ -660,7 +660,7 @@ var _ = Describe("Collector", Ordered, func() {
 						},
 					)))
 
-					expectedErr := errors.New("expected replicaSet to have a UID")
+					expectedErr := errors.New("expected replicaSet owner reference to have a UID")
 					_, err := dataCollector.Collect(ctx)
 					Expect(err).To(MatchError(expectedErr))
 				})
