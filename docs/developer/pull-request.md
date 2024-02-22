@@ -8,7 +8,7 @@
   in the curated [release notes](../CHANGELOG.md), add a brief note that summarizes the change in the `release-note` block
   in the PR description.
 - Fill in [our pull request template](/.github/PULL_REQUEST_TEMPLATE.md).
-- Make sure create an issue and include the issue number in the PR description to automatically close the issue when the PR mergers.
+- Make sure create an issue and include the issue number in the PR description to automatically close the issue when the PR is merged.
   See [Linking a pull request to an issue](https://docs.github.com/en/issues/tracking-your-work-with-issues/linking-a-pull-request-to-an-issue) for details.
   An issue might not be required for PRs addressing typos, broken links, etc.
 - For significant changes, break your changes into a logical series of smaller commits. By approaching the changes
