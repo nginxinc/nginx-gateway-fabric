@@ -589,6 +589,7 @@ NGINX OSS directives:
 - [`log_format`](https://nginx.org/en/docs/http/ngx_http_log_module.html#log_format)
 - [`otel_exporter`](https://nginx.org/en/docs/ngx_otel_module.html#otel_exporter)
 - [`otel_service_name`](https://nginx.org/en/docs/ngx_otel_module.html#otel_service_name)
+- [`otel_span_attr`](https://nginx.org/en/docs/ngx_otel_module.html#otel_span_attr): set global span attributes that will be merged with the span attributes set in the [Observability extension](#observability).
 
 NGINX Plus features:
 
