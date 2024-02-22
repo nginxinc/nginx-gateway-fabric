@@ -558,6 +558,7 @@ var _ = Describe("Collector", Ordered, func() {
 									{
 										Kind: "Deployment",
 										Name: "deployment1",
+										UID:  "replica-uid",
 									},
 								},
 							},
