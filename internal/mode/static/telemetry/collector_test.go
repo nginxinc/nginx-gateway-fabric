@@ -631,7 +631,6 @@ var _ = Describe("Collector", Ordered, func() {
 									{
 										Name: "replica",
 										Kind: "ReplicaSet",
-										UID:  "replica-uid",
 									},
 								},
 							},
