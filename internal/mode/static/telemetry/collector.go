@@ -52,8 +52,9 @@ type ProjectMetadata struct {
 type Data struct {
 	ProjectMetadata   ProjectMetadata
 	ClusterID         string
-	ImageSource       string
 	Arch              string
+	DeploymentID      string
+	ImageSource       string
 	NGFResourceCounts NGFResourceCounts
 	NodeCount         int
 	NGFReplicaCount   int
@@ -101,9 +102,19 @@ func (c DataCollectorImpl) Collect(ctx context.Context) (Data, error) {
 		return Data{}, fmt.Errorf("failed to collect NGF resource counts: %w", err)
 	}
 
-	ngfReplicaCount, err := collectNGFReplicaCount(ctx, c.cfg.K8sClientReader, c.cfg.PodNSName)
+	replicaSet, err := getPodReplicaSet(ctx, c.cfg.K8sClientReader, c.cfg.PodNSName)
+	if err != nil {
+		return Data{}, fmt.Errorf("failed to get replica set for pod %s: %w", c.cfg.PodNSName, err)
+	}
+
+	replicaCount, err := getReplicas(replicaSet)
 	if err != nil {
 		return Data{}, fmt.Errorf("failed to collect NGF replica count: %w", err)
+	}
+
+	deploymentID, err := getDeploymentID(replicaSet)
+	if err != nil {
+		return Data{}, fmt.Errorf("failed to get NGF deploymentID: %w", err)
 	}
 
 	var clusterID string
@@ -118,10 +129,11 @@ func (c DataCollectorImpl) Collect(ctx context.Context) (Data, error) {
 			Name:    "NGF",
 			Version: c.cfg.Version,
 		},
-		NGFReplicaCount: ngfReplicaCount,
+		NGFReplicaCount: replicaCount,
 		ClusterID:       clusterID,
 		ImageSource:     c.cfg.ImageSource,
 		Arch:            runtime.GOARCH,
+		DeploymentID:    deploymentID,
 	}
 
 	return data, nil
@@ -175,23 +187,27 @@ func collectGraphResourceCount(
 	return ngfResourceCounts, nil
 }
 
-func collectNGFReplicaCount(ctx context.Context, k8sClient client.Reader, podNSName types.NamespacedName) (int, error) {
+func getPodReplicaSet(
+	ctx context.Context,
+	k8sClient client.Reader,
+	podNSName types.NamespacedName,
+) (*appsv1.ReplicaSet, error) {
 	var pod v1.Pod
 	if err := k8sClient.Get(
 		ctx,
 		types.NamespacedName{Namespace: podNSName.Namespace, Name: podNSName.Name},
 		&pod,
 	); err != nil {
-		return 0, fmt.Errorf("failed to get NGF Pod: %w", err)
+		return nil, fmt.Errorf("failed to get NGF Pod: %w", err)
 	}
 
 	podOwnerRefs := pod.GetOwnerReferences()
 	if len(podOwnerRefs) != 1 {
-		return 0, fmt.Errorf("expected one owner reference of the NGF Pod, got %d", len(podOwnerRefs))
+		return nil, fmt.Errorf("expected one owner reference of the NGF Pod, got %d", len(podOwnerRefs))
 	}
 
 	if podOwnerRefs[0].Kind != "ReplicaSet" {
-		return 0, fmt.Errorf("expected pod owner reference to be ReplicaSet, got %s", podOwnerRefs[0].Kind)
+		return nil, fmt.Errorf("expected pod owner reference to be ReplicaSet, got %s", podOwnerRefs[0].Kind)
 	}
 
 	var replicaSet appsv1.ReplicaSet
@@ -200,14 +216,35 @@ func collectNGFReplicaCount(ctx context.Context, k8sClient client.Reader, podNSN
 		types.NamespacedName{Namespace: podNSName.Namespace, Name: podOwnerRefs[0].Name},
 		&replicaSet,
 	); err != nil {
-		return 0, fmt.Errorf("failed to get NGF Pod's ReplicaSet: %w", err)
+		return nil, fmt.Errorf("failed to get NGF Pod's ReplicaSet: %w", err)
 	}
 
+	return &replicaSet, nil
+}
+
+func getReplicas(replicaSet *appsv1.ReplicaSet) (int, error) {
 	if replicaSet.Spec.Replicas == nil {
 		return 0, errors.New("replica set replicas was nil")
 	}
 
 	return int(*replicaSet.Spec.Replicas), nil
+}
+
+func getDeploymentID(replicaSet *appsv1.ReplicaSet) (string, error) {
+	replicaOwnerRefs := replicaSet.GetOwnerReferences()
+	if len(replicaOwnerRefs) != 1 {
+		return "", fmt.Errorf("expected one owner reference of the NGF ReplicaSet, got %d", len(replicaOwnerRefs))
+	}
+
+	if replicaOwnerRefs[0].Kind != "Deployment" {
+		return "", fmt.Errorf("expected replicaSet owner reference to be Deployment, got %s", replicaOwnerRefs[0].Kind)
+	}
+
+	if replicaOwnerRefs[0].UID == "" {
+		return "", fmt.Errorf("expected replicaSet owner reference to have a UID")
+	}
+
+	return string(replicaOwnerRefs[0].UID), nil
 }
 
 // CollectClusterID gets the UID of the kube-system namespace.
