@@ -114,7 +114,7 @@ func TestFindMainProcess(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewWithT(t)
 
-			result, err := findMainProcess(test.ctx, test.checkFile, test.readFile, 2*time.Millisecond)
+			result, err := FindMainProcess(test.ctx, test.checkFile, test.readFile, 2*time.Millisecond)
 
 			if test.expectError {
 				g.Expect(err).To(HaveOccurred())

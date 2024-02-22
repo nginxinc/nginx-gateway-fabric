@@ -4,7 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
+	"os"
 	"runtime"
+	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
@@ -12,6 +15,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	manager "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/runtime"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/dataplane"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/graph"
 )
@@ -110,6 +114,13 @@ func (c DataCollectorImpl) Collect(ctx context.Context) (Data, error) {
 	if clusterID, err = CollectClusterID(ctx, c.cfg.K8sClientReader); err != nil {
 		return Data{}, fmt.Errorf("failed to collect clusterID: %w", err)
 	}
+
+	modules, err := collectNginxModules(ctx)
+	if err != nil {
+		return Data{}, fmt.Errorf("failed to collect nginx modules: %w", err)
+	}
+
+	log.Print("modules", modules)
 
 	data := Data{
 		NodeCount:         nodeCount,
@@ -220,4 +231,25 @@ func CollectClusterID(ctx context.Context, k8sClient client.Reader) (string, err
 		return "", fmt.Errorf("failed to get kube-system namespace: %w", err)
 	}
 	return string(kubeNamespace.GetUID()), nil
+}
+
+func collectNginxModules(ctx context.Context) ([]string, error) {
+	// get NGINX PID
+	pidFileTimeout := 10000 * time.Millisecond
+	pid, err := manager.FindMainProcess(ctx, os.Stat, os.ReadFile, pidFileTimeout)
+	if err != nil {
+		return []string{}, fmt.Errorf("failed to find NGINX main process: %w", err)
+	}
+	log.Println("nginx pid: ", pid)
+
+	filepath := fmt.Sprintf("/proc/%v/root/etc/nginx/nginx.conf", pid)
+	log.Println("filepath of config", filepath)
+
+	fileContents, err := os.ReadFile(filepath)
+	if err != nil {
+		return []string{}, fmt.Errorf("failed to read NGINX config file located at %v: %w", filepath, err)
+	}
+
+	log.Println("file contents", string(fileContents))
+	return []string{}, nil
 }

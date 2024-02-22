@@ -8,7 +8,7 @@ NGINX_CONF_DIR = internal/mode/static/nginx/conf
 NJS_DIR = internal/mode/static/nginx/modules/src
 NGINX_DOCKER_BUILD_PLUS_ARGS = --secret id=nginx-repo.crt,src=nginx-repo.crt --secret id=nginx-repo.key,src=nginx-repo.key
 BUILD_AGENT=local
-TELEMETRY_REPORT_PERIOD = 24h # also configured in goreleaser.yml
+TELEMETRY_REPORT_PERIOD = 10s # also configured in goreleaser.yml
 GW_API_VERSION = 1.0.0
 INSTALL_WEBHOOK = false
 

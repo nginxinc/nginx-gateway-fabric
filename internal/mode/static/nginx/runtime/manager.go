@@ -82,7 +82,7 @@ func (m *ManagerImpl) IsPlus() bool {
 func (m *ManagerImpl) Reload(ctx context.Context, configVersion int) error {
 	start := time.Now()
 	// We find the main NGINX PID on every reload because it will change if the NGINX container is restarted.
-	pid, err := findMainProcess(ctx, os.Stat, os.ReadFile, pidFileTimeout)
+	pid, err := FindMainProcess(ctx, os.Stat, os.ReadFile, pidFileTimeout)
 	if err != nil {
 		return fmt.Errorf("failed to find NGINX main process: %w", err)
 	}
@@ -153,13 +153,13 @@ func (m *ManagerImpl) GetUpstreams() (ngxclient.Upstreams, error) {
 
 // EnsureNginxRunning ensures NGINX is running by locating the main process.
 func EnsureNginxRunning(ctx context.Context) error {
-	if _, err := findMainProcess(ctx, os.Stat, os.ReadFile, pidFileTimeout); err != nil {
+	if _, err := FindMainProcess(ctx, os.Stat, os.ReadFile, pidFileTimeout); err != nil {
 		return fmt.Errorf("failed to find NGINX main process: %w", err)
 	}
 	return nil
 }
 
-func findMainProcess(
+func FindMainProcess(
 	ctx context.Context,
 	checkFile checkFileFunc,
 	readFile readFileFunc,
