@@ -52,6 +52,9 @@ spec:
         {{- else }}
         - --leader-election-disable
         {{- end }}
+        {{- if not .Values.nginxGateway.productTelemetry.enable }}
+        - --product-telemetry-disable
+        {{- end }}
         {{- if .Values.nginxGateway.gwAPIExperimentalFeatures.enable }}
         - --gateway-api-experimental-features
         {{- end }}
