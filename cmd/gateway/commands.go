@@ -44,23 +44,24 @@ func createRootCommand() *cobra.Command {
 func createStaticModeCommand() *cobra.Command {
 	// flag names
 	const (
-		gatewayFlag                = "gateway"
-		configFlag                 = "config"
-		serviceFlag                = "service"
-		updateGCStatusFlag         = "update-gatewayclass-status"
-		metricsDisableFlag         = "metrics-disable"
-		metricsSecureFlag          = "metrics-secure-serving"
-		metricsPortFlag            = "metrics-port"
-		healthDisableFlag          = "health-disable"
-		healthPortFlag             = "health-port"
-		leaderElectionDisableFlag  = "leader-election-disable"
-		leaderElectionLockNameFlag = "leader-election-lock-name"
-		plusFlag                   = "nginx-plus"
-		gwAPIExperimentalFlag      = "gateway-api-experimental-features"
-		usageReportSecretFlag      = "usage-report-secret"
-		usageReportServerURLFlag   = "usage-report-server-url"
-		usageReportSkipVerifyFlag  = "usage-report-skip-verify"
-		usageReportClusterNameFlag = "usage-report-cluster-name"
+		gatewayFlag                 = "gateway"
+		configFlag                  = "config"
+		serviceFlag                 = "service"
+		updateGCStatusFlag          = "update-gatewayclass-status"
+		metricsDisableFlag          = "metrics-disable"
+		metricsSecureFlag           = "metrics-secure-serving"
+		metricsPortFlag             = "metrics-port"
+		healthDisableFlag           = "health-disable"
+		healthPortFlag              = "health-port"
+		leaderElectionDisableFlag   = "leader-election-disable"
+		leaderElectionLockNameFlag  = "leader-election-lock-name"
+		productTelemetryDisableFlag = "product-telemetry-disable"
+		plusFlag                    = "nginx-plus"
+		gwAPIExperimentalFlag       = "gateway-api-experimental-features"
+		usageReportSecretFlag       = "usage-report-secret"
+		usageReportServerURLFlag    = "usage-report-server-url"
+		usageReportSkipVerifyFlag   = "usage-report-skip-verify"
+		usageReportClusterNameFlag  = "usage-report-cluster-name"
 	)
 
 	// flag values
@@ -100,6 +101,8 @@ func createStaticModeCommand() *cobra.Command {
 		}
 
 		gwExperimentalFeatures bool
+
+		disableProductTelemetry bool
 
 		plus                   bool
 		usageReportSkipVerify  bool
@@ -203,12 +206,15 @@ func createStaticModeCommand() *cobra.Command {
 					LockName: leaderElectionLockName.String(),
 					Identity: podName,
 				},
-				UsageReportConfig:     usageReportConfig,
-				Plus:                  plus,
-				TelemetryReportPeriod: period,
-				Version:               version,
-				ExperimentalFeatures:  gwExperimentalFeatures,
-				ImageSource:           imageSource,
+				UsageReportConfig: usageReportConfig,
+				ProductTelemetryConfig: config.ProductTelemetryConfig{
+					TelemetryReportPeriod: period,
+					Enabled:               !disableProductTelemetry,
+				},
+				Plus:                 plus,
+				Version:              version,
+				ExperimentalFeatures: gwExperimentalFeatures,
+				ImageSource:          imageSource,
 			}
 
 			if err := static.StartManager(conf); err != nil {
@@ -313,6 +319,13 @@ func createStaticModeCommand() *cobra.Command {
 		leaderElectionLockNameFlag,
 		"The name of the leader election lock. "+
 			"A Lease object with this name will be created in the same Namespace as the controller.",
+	)
+
+	cmd.Flags().BoolVar(
+		&disableProductTelemetry,
+		productTelemetryDisableFlag,
+		false,
+		"Disable the collection of product telemetry.",
 	)
 
 	cmd.Flags().BoolVar(
