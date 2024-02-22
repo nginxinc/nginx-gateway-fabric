@@ -835,7 +835,7 @@ Features:
 NGINX directives:
 
 - [`otel_trace`](https://nginx.org/en/docs/ngx_otel_module.html#otel_trace): enable tracing and set sampler rate
-- [`otel_trace_context`](https://nginx.org/en/docs/ngx_otel_module.html#otel_trace_context)
+- [`otel_trace_context`](https://nginx.org/en/docs/ngx_otel_module.html#otel_trace_context): export, inject, propagate, ignore.
 - [`otel_span_name`](https://nginx.org/en/docs/ngx_otel_module.html#otel_span_name)
 - [`otel_span_attr`](https://nginx.org/en/docs/ngx_otel_module.html#otel_span_attr)
 
