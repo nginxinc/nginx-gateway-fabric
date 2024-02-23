@@ -481,92 +481,86 @@ func TestParseFlags(t *testing.T) {
 		"boolean false test flag",
 	)
 
-	intFlagDefault := intValidatingValue{
+	customIntFlagDefault := intValidatingValue{
 		validator: validatePort,
 		value:     8080,
 	}
 	flagSet.Var(
-		&intFlagDefault,
-		"intFlagDefault",
-		"default int test flag",
+		&customIntFlagDefault,
+		"customIntFlagDefault",
+		"default custom int test flag",
 	)
 
-	intFlagUserDefined := intValidatingValue{
+	customIntFlagUserDefined := intValidatingValue{
 		validator: validatePort,
 		value:     8080,
 	}
 	flagSet.Var(
-		&intFlagUserDefined,
-		"intFlagUserDefined",
-		"user defined int test flag",
+		&customIntFlagUserDefined,
+		"customIntFlagUserDefined",
+		"user defined custom int test flag",
 	)
-	err := flagSet.Set("intFlagUserDefined", "8081")
+	err := flagSet.Set("customIntFlagUserDefined", "8081")
 	g.Expect(err).To(Not(HaveOccurred()))
 
-	stringFlagDefault := stringValidatingValue{
+	customStringFlagDefault := stringValidatingValue{
 		validator: validateResourceName,
-		value:     "default-string-test-flag",
+		value:     "default-custom-string-test-flag",
 	}
 	flagSet.Var(
-		&stringFlagDefault,
-		"stringFlagDefault",
-		"default string test flag",
+		&customStringFlagDefault,
+		"customStringFlagDefault",
+		"default custom string test flag",
 	)
 
-	stringFlagUserDefined := stringValidatingValue{
+	customStringFlagUserDefined := stringValidatingValue{
 		validator: validateResourceName,
-		value:     "user-defined-string-test-flag",
+		value:     "user-defined-custom-string-test-flag",
 	}
 	flagSet.Var(
-		&stringFlagUserDefined,
-		"stringFlagUserDefined",
-		"user defined string test flag",
+		&customStringFlagUserDefined,
+		"customStringFlagUserDefined",
+		"user defined custom string test flag",
 	)
-	err = flagSet.Set("stringFlagUserDefined", "changed-test-flag-value")
+	err = flagSet.Set("customStringFlagUserDefined", "changed-test-flag-value")
 	g.Expect(err).To(Not(HaveOccurred()))
 
-	namespacedNameFlagDefault := namespacedNameValue{
-		value: types.NamespacedName{
-			Namespace: "test",
-			Name:      "test-flag",
-		},
+	customStringFlagNoDefaultValueUnset := namespacedNameValue{
+		value: types.NamespacedName{},
 	}
 	flagSet.Var(
-		&namespacedNameFlagDefault,
-		"namespacedNameFlagDefault",
-		"default namespacedName test flag",
+		&customStringFlagNoDefaultValueUnset,
+		"customStringFlagNoDefaultValueUnset",
+		"no default value custom string test flag",
 	)
 
-	namespacedNameFlagUserDefined := namespacedNameValue{
-		value: types.NamespacedName{
-			Namespace: "test",
-			Name:      "test-flag",
-		},
+	customStringFlagNoDefaultValueUserDefined := namespacedNameValue{
+		value: types.NamespacedName{},
 	}
 	flagSet.Var(
-		&namespacedNameFlagUserDefined,
-		"namespacedNameFlagUserDefined",
-		"user defined namespacedName test flag",
+		&customStringFlagNoDefaultValueUserDefined,
+		"customStringFlagNoDefaultValueUserDefined",
+		"no default value but with user defined namespacedName test flag",
 	)
 	userDefinedNamespacedName := types.NamespacedName{
 		Namespace: "changed-namespace",
 		Name:      "changed-name",
 	}
-	err = flagSet.Set("namespacedNameFlagUserDefined", userDefinedNamespacedName.String())
+	err = flagSet.Set("customStringFlagNoDefaultValueUserDefined", userDefinedNamespacedName.String())
 	g.Expect(err).To(Not(HaveOccurred()))
 
 	expectedKeys := []string{
 		"boolFlagTrue",
 		"boolFlagFalse",
 
-		"intFlagDefault",
-		"intFlagUserDefined",
+		"customIntFlagDefault",
+		"customIntFlagUserDefined",
 
-		"stringFlagDefault",
-		"stringFlagUserDefined",
+		"customStringFlagDefault",
+		"customStringFlagUserDefined",
 
-		"namespacedNameFlagDefault",
-		"namespacedNameFlagUserDefined",
+		"customStringFlagNoDefaultValueUnset",
+		"customStringFlagNoDefaultValueUserDefined",
 	}
 	expectedValues := []string{
 		"true",
