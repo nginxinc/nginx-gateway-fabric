@@ -80,4 +80,12 @@ cleanup-router: ## Delete the GKE router
 setup-gcp-and-run-tests: create-gke-router create-and-setup-vm run-tests-on-vm ## Create and setup a GKE router and GCP VM for tests and run the tests
 
 .PHONY: cleanup-gcp
-cleanup-gcp: cleanup-router cleanup-vm ## Cleanup all GCP resources
+cleanup-gcp: cleanup-router cleanup-vm delete-gke-cluster ## Cleanup all GCP resources
+
+.PHONY: create-gke-cluster
+create-gke-cluster: ## Create a GKE cluster
+	bash scripts/create-gke-cluster.sh
+
+.PHONY: delete-gke-cluster
+delete-gke-cluster: ## Delete the GKE cluster
+	bash scripts/delete-gke-cluster.sh
