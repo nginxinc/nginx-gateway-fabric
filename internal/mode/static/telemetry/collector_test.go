@@ -140,14 +140,10 @@ var _ = Describe("Collector", Ordered, func() {
 			NGFResourceCounts: telemetry.NGFResourceCounts{},
 			NGFReplicaCount:   1,
 			ClusterID:         string(kubeNamespace.GetUID()),
-<<<<<<< HEAD
 			ImageSource:       "local",
 			Arch:              runtime.GOARCH,
 			DeploymentID:      string(ngfReplicaSet.ObjectMeta.OwnerReferences[0].UID),
-			FlagKeyValues:     flagKeyValues,
-=======
 			Flags:             flags,
->>>>>>> 9e04b8c (Add some review feedback)
 		}
 
 		k8sClientReader = &eventsfakes.FakeReader{}
@@ -163,12 +159,8 @@ var _ = Describe("Collector", Ordered, func() {
 			ConfigurationGetter: fakeConfigurationGetter,
 			Version:             version,
 			PodNSName:           podNSName,
-<<<<<<< HEAD
 			ImageSource:         "local",
-			FlagKeyValues:       flagKeyValues,
-=======
 			Flags:               flags,
->>>>>>> 9e04b8c (Add some review feedback)
 		})
 
 		baseGetCalls = createGetCallsFunc(ngfPod, ngfReplicaSet, kubeNamespace)
