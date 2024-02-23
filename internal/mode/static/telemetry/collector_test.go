@@ -79,7 +79,7 @@ var _ = Describe("Collector", Ordered, func() {
 		ngfReplicaSet           *appsv1.ReplicaSet
 		kubeNamespace           *v1.Namespace
 		baseGetCalls            getCallsFunc
-		flagKeyValues           config.FlagKeyValues
+		flags                   config.Flags
 	)
 
 	BeforeAll(func() {
@@ -127,9 +127,9 @@ var _ = Describe("Collector", Ordered, func() {
 			},
 		}
 
-		flagKeyValues = config.FlagKeyValues{
-			FlagKeys:   []string{"boolFlag", "intFlag", "stringFlag"},
-			FlagValues: []string{"false", "default", "user-defined"},
+		flags = config.Flags{
+			Names:  []string{"boolFlag", "intFlag", "stringFlag"},
+			Values: []string{"false", "default", "user-defined"},
 		}
 	})
 
@@ -140,10 +140,14 @@ var _ = Describe("Collector", Ordered, func() {
 			NGFResourceCounts: telemetry.NGFResourceCounts{},
 			NGFReplicaCount:   1,
 			ClusterID:         string(kubeNamespace.GetUID()),
+<<<<<<< HEAD
 			ImageSource:       "local",
 			Arch:              runtime.GOARCH,
 			DeploymentID:      string(ngfReplicaSet.ObjectMeta.OwnerReferences[0].UID),
 			FlagKeyValues:     flagKeyValues,
+=======
+			Flags:             flags,
+>>>>>>> 9e04b8c (Add some review feedback)
 		}
 
 		k8sClientReader = &eventsfakes.FakeReader{}
@@ -159,8 +163,12 @@ var _ = Describe("Collector", Ordered, func() {
 			ConfigurationGetter: fakeConfigurationGetter,
 			Version:             version,
 			PodNSName:           podNSName,
+<<<<<<< HEAD
 			ImageSource:         "local",
 			FlagKeyValues:       flagKeyValues,
+=======
+			Flags:               flags,
+>>>>>>> 9e04b8c (Add some review feedback)
 		})
 
 		baseGetCalls = createGetCallsFunc(ngfPod, ngfReplicaSet, kubeNamespace)

@@ -56,7 +56,7 @@ type Data struct {
 	Arch              string
 	DeploymentID      string
 	ImageSource       string
-	FlagKeyValues     config.FlagKeyValues
+	Flags             config.Flags
 	NGFResourceCounts NGFResourceCounts
 	NodeCount         int
 	NGFReplicaCount   int
@@ -76,8 +76,8 @@ type DataCollectorConfig struct {
 	PodNSName types.NamespacedName
 	// ImageSource is the source of the NGF image.
 	ImageSource string
-	// FlagKeyValues contains the parsed NGF flag keys and values.
-	FlagKeyValues config.FlagKeyValues
+	// Flags contains the command-line NGF flag keys and values.
+	Flags config.Flags
 }
 
 // DataCollectorImpl is am implementation of DataCollector.
@@ -138,7 +138,7 @@ func (c DataCollectorImpl) Collect(ctx context.Context) (Data, error) {
 		ImageSource:     c.cfg.ImageSource,
 		Arch:            runtime.GOARCH,
 		DeploymentID:    deploymentID,
-		FlagKeyValues:   c.cfg.FlagKeyValues,
+		Flags:           c.cfg.Flags,
 	}
 
 	return data, nil

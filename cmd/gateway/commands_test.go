@@ -457,11 +457,11 @@ func TestSleepCmdFlagValidation(t *testing.T) {
 	}
 }
 
-func TestParseFlagKeysAndValues(t *testing.T) {
+func TestParseFlags(t *testing.T) {
 	g := NewWithT(t)
 
 	flagSet := pflag.NewFlagSet("flagSet", 0)
-	// set SortFlags to false for testing purposes so when parseFlagKeysAndValues loops over the flagSet it
+	// set SortFlags to false for testing purposes so when parseFlags loops over the flagSet it
 	// goes off of primordial order.
 	flagSet.SortFlags = false
 
@@ -582,7 +582,7 @@ func TestParseFlagKeysAndValues(t *testing.T) {
 		"user-defined",
 	}
 
-	flagKeys, flagValues := parseFlagKeysAndValues(flagSet)
+	flagKeys, flagValues := parseFlags(flagSet)
 
 	g.Expect(flagKeys).Should(Equal(expectedKeys))
 	g.Expect(flagValues).Should(Equal(expectedValues))

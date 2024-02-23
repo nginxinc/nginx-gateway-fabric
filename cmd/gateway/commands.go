@@ -179,7 +179,7 @@ func createStaticModeCommand() *cobra.Command {
 				}
 			}
 
-			flagKeys, flagValues := parseFlagKeysAndValues(cmd.Flags())
+			flagKeys, flagValues := parseFlags(cmd.Flags())
 
 			conf := config.Config{
 				GatewayCtlrName:          gatewayCtlrName.value,
@@ -218,9 +218,9 @@ func createStaticModeCommand() *cobra.Command {
 				Version:              version,
 				ExperimentalFeatures: gwExperimentalFeatures,
 				ImageSource:          imageSource,
-				FlagKeyValues: config.FlagKeyValues{
-					FlagKeys:   flagKeys,
-					FlagValues: flagValues,
+				Flags: config.Flags{
+					Names:  flagKeys,
+					Values: flagValues,
 				},
 			}
 
@@ -458,17 +458,17 @@ func createSleepCommand() *cobra.Command {
 	return cmd
 }
 
-func parseFlagKeysAndValues(flags *pflag.FlagSet) (flagKeys, flagValues []string) {
+func parseFlags(flags *pflag.FlagSet) (flagKeys, flagValues []string) {
 	flagKeys = []string{}
 	flagValues = []string{}
 
 	flags.VisitAll(
 		func(flag *pflag.Flag) {
 			flagKeys = append(flagKeys, flag.Name)
-			switch flag.Value.Type() {
-			case "bool":
+
+			if flag.Value.Type() == "bool" {
 				flagValues = append(flagValues, flag.Value.String())
-			default:
+			} else {
 				var val string
 				if flag.Value.String() == flag.DefValue {
 					val = "default"
