@@ -2412,7 +2412,7 @@ func TestValidateFilterRequestHeaderModifier(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewWithT(t)
 			allErrs := validateFilterHeaderModifier(
-				gatewayv1.HTTPRouteFilterRequestHeaderModifier, test.validator, test.filter.RequestHeaderModifier, filterPath,
+				test.validator, test.filter.RequestHeaderModifier, filterPath,
 			)
 			g.Expect(allErrs).To(HaveLen(test.expectErrCount))
 		})

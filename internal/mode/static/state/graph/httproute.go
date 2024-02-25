@@ -703,9 +703,9 @@ func validateFilter(
 	case v1.HTTPRouteFilterURLRewrite:
 		return validateFilterRewrite(validator, filter, filterPath)
 	case v1.HTTPRouteFilterRequestHeaderModifier:
-		return validateFilterHeaderModifier(filter.Type, validator, filter.RequestHeaderModifier, filterPath)
+		return validateFilterHeaderModifier(validator, filter.RequestHeaderModifier, filterPath.Child(string(filter.Type)))
 	case v1.HTTPRouteFilterResponseHeaderModifier:
-		return validateFilterHeaderModifier(filter.Type, validator, filter.ResponseHeaderModifier, filterPath)
+		return validateFilterHeaderModifier(validator, filter.ResponseHeaderModifier, filterPath.Child(string(filter.Type)))
 	default:
 		valErr := field.NotSupported(
 			filterPath.Child("type"),
@@ -816,19 +816,15 @@ func validateFilterRewrite(
 }
 
 func validateFilterHeaderModifier(
-	filterType v1.HTTPRouteFilterType,
 	validator validation.HTTPFieldsValidator,
 	headerModifier *v1.HTTPHeaderFilter,
 	filterPath *field.Path,
 ) field.ErrorList {
-	filterTypeStr := string(filterType)
-	headerModifierPath := filterPath.Child(filterTypeStr)
-
 	if headerModifier == nil {
-		return field.ErrorList{field.Required(headerModifierPath, "requestHeaderModifier cannot be nil")}
+		return field.ErrorList{field.Required(filterPath, "cannot be nil")}
 	}
 
-	return validateFilterHeaderModifierFields(validator, headerModifier, headerModifierPath)
+	return validateFilterHeaderModifierFields(validator, headerModifier, filterPath)
 }
 
 func validateFilterHeaderModifierFields(
