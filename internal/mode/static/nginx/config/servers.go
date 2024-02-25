@@ -604,23 +604,14 @@ func generateResponseHeaders(filters *dataplane.HTTPFilters) http.ResponseHeader
 	}
 
 	headerFilter := filters.ResponseHeaderModifiers
-	responseAddHeaders := make([]http.Header, 0, len(headerFilter.Add))
-	responseSetHeaders := make([]http.Header, 0, len(headerFilter.Set))
 	responseRemoveHeaders := make([]string, len(headerFilter.Remove))
-	if len(headerFilter.Add) > 0 {
-		addHeaders := createHeaders(headerFilter.Add)
-		responseAddHeaders = append(responseAddHeaders, addHeaders...)
-	}
-	if len(headerFilter.Set) > 0 {
-		setHeaders := createHeaders(headerFilter.Set)
-		responseSetHeaders = append(responseSetHeaders, setHeaders...)
-	}
+
 	// Make a deep copy to prevent the slice from being accidentally modified.
 	copy(responseRemoveHeaders, headerFilter.Remove)
 
 	return http.ResponseHeaders{
-		Add:    responseAddHeaders,
-		Set:    responseSetHeaders,
+		Add:    createHeaders(headerFilter.Add),
+		Set:    createHeaders(headerFilter.Set),
 		Remove: responseRemoveHeaders,
 	}
 }
