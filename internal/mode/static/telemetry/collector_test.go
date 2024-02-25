@@ -102,6 +102,16 @@ var _ = Describe("Collector", Ordered, func() {
 			Spec: appsv1.ReplicaSetSpec{
 				Replicas: &replicas,
 			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "replica",
+				OwnerReferences: []metav1.OwnerReference{
+					{
+						Kind: "Deployment",
+						Name: "Deployment1",
+						UID:  "test-uid-replicaSet",
+					},
+				},
+			},
 		}
 
 		podNSName = types.NamespacedName{
@@ -126,6 +136,7 @@ var _ = Describe("Collector", Ordered, func() {
 			ClusterID:         string(kubeNamespace.GetUID()),
 			ImageSource:       "local",
 			Arch:              runtime.GOARCH,
+			DeploymentID:      string(ngfReplicaSet.ObjectMeta.OwnerReferences[0].UID),
 		}
 
 		k8sClientReader = &eventsfakes.FakeReader{}
@@ -547,6 +558,7 @@ var _ = Describe("Collector", Ordered, func() {
 									{
 										Kind: "Deployment",
 										Name: "deployment1",
+										UID:  "replica-uid",
 									},
 								},
 							},
@@ -582,6 +594,72 @@ var _ = Describe("Collector", Ordered, func() {
 							return nil
 						}))
 
+					_, err := dataCollector.Collect(ctx)
+					Expect(err).To(MatchError(expectedErr))
+				})
+			})
+		})
+	})
+
+	Describe("DeploymentID collector", func() {
+		When("collecting deploymentID", func() {
+			When("it encounters an error while collecting data", func() {
+				It("should error if the replicaSet's owner reference is nil", func() {
+					replicas := int32(1)
+					k8sClientReader.GetCalls(mergeGetCallsWithBase(createGetCallsFunc(
+						&appsv1.ReplicaSet{
+							Spec: appsv1.ReplicaSetSpec{
+								Replicas: &replicas,
+							},
+						},
+					)))
+
+					expectedErr := errors.New("expected one owner reference of the NGF ReplicaSet, got 0")
+					_, err := dataCollector.Collect(ctx)
+					Expect(err).To(MatchError(expectedErr))
+				})
+
+				It("should error if the replicaSet's owner reference kind is not deployment", func() {
+					replicas := int32(1)
+					k8sClientReader.GetCalls(mergeGetCallsWithBase(createGetCallsFunc(
+						&appsv1.ReplicaSet{
+							Spec: appsv1.ReplicaSetSpec{
+								Replicas: &replicas,
+							},
+							ObjectMeta: metav1.ObjectMeta{
+								OwnerReferences: []metav1.OwnerReference{
+									{
+										Name: "replica",
+										Kind: "ReplicaSet",
+									},
+								},
+							},
+						},
+					)))
+
+					expectedErr := errors.New("expected replicaSet owner reference to be Deployment, got ReplicaSet")
+					_, err := dataCollector.Collect(ctx)
+					Expect(err).To(MatchError(expectedErr))
+				})
+				It("should error if the replicaSet's owner reference has empty UID", func() {
+					replicas := int32(1)
+					k8sClientReader.GetCalls(mergeGetCallsWithBase(createGetCallsFunc(
+						&appsv1.ReplicaSet{
+							Spec: appsv1.ReplicaSetSpec{
+								Replicas: &replicas,
+							},
+							ObjectMeta: metav1.ObjectMeta{
+								OwnerReferences: []metav1.OwnerReference{
+									{
+										Name: "replica",
+										Kind: "Deployment",
+									},
+								},
+							},
+						},
+					)))
+
+					expectedErr := errors.New("expected replicaSet owner reference to have a UID")
 					_, err := dataCollector.Collect(ctx)
 					Expect(err).To(MatchError(expectedErr))
 				})

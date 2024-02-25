@@ -242,19 +242,21 @@ func StartManager(cfg config.Config) error {
 		return fmt.Errorf("cannot register status updater: %w", err)
 	}
 
-	dataCollector := telemetry.NewDataCollectorImpl(telemetry.DataCollectorConfig{
-		K8sClientReader:     mgr.GetAPIReader(),
-		GraphGetter:         processor,
-		ConfigurationGetter: eventHandler,
-		Version:             cfg.Version,
-		PodNSName: types.NamespacedName{
-			Namespace: cfg.GatewayPodConfig.Namespace,
-			Name:      cfg.GatewayPodConfig.Name,
-		},
-		ImageSource: cfg.ImageSource,
-	})
-	if err = mgr.Add(createTelemetryJob(cfg, dataCollector, nginxChecker.getReadyCh())); err != nil {
-		return fmt.Errorf("cannot register telemetry job: %w", err)
+	if cfg.ProductTelemetryConfig.Enabled {
+		dataCollector := telemetry.NewDataCollectorImpl(telemetry.DataCollectorConfig{
+			K8sClientReader:     mgr.GetAPIReader(),
+			GraphGetter:         processor,
+			ConfigurationGetter: eventHandler,
+			Version:             cfg.Version,
+			PodNSName: types.NamespacedName{
+				Namespace: cfg.GatewayPodConfig.Namespace,
+				Name:      cfg.GatewayPodConfig.Name,
+			},
+			ImageSource: cfg.ImageSource,
+		})
+		if err = mgr.Add(createTelemetryJob(cfg, dataCollector, nginxChecker.getReadyCh())); err != nil {
+			return fmt.Errorf("cannot register telemetry job: %w", err)
+		}
 	}
 
 	cfg.Logger.Info("Starting manager")
@@ -473,7 +475,7 @@ func createTelemetryJob(
 			runnables.CronJobConfig{
 				Worker:       telemetry.CreateTelemetryJobWorker(logger, exporter, dataCollector),
 				Logger:       logger,
-				Period:       cfg.TelemetryReportPeriod,
+				Period:       cfg.ProductTelemetryConfig.TelemetryReportPeriod,
 				JitterFactor: telemetryJitterFactor,
 				ReadyCh:      readyCh,
 			},
@@ -501,7 +503,7 @@ func createUsageReporterJob(
 		Runnable: runnables.NewCronJob(runnables.CronJobConfig{
 			Worker:       usage.CreateUsageJobWorker(logger, k8sClient, reporter, cfg),
 			Logger:       logger,
-			Period:       cfg.TelemetryReportPeriod,
+			Period:       cfg.ProductTelemetryConfig.TelemetryReportPeriod,
 			JitterFactor: telemetryJitterFactor,
 			ReadyCh:      readyCh,
 		}),
