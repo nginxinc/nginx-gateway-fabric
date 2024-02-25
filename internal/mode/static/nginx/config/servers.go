@@ -600,11 +600,7 @@ func generateProxySetHeaders(filters *dataplane.HTTPFilters, grpc bool) []http.H
 
 func generateResponseHeaders(filters *dataplane.HTTPFilters) http.ResponseHeaders {
 	if filters == nil || filters.ResponseHeaderModifiers == nil {
-		return http.ResponseHeaders{
-			Add:    []http.Header{},
-			Set:    []http.Header{},
-			Remove: []string{},
-		}
+		return http.ResponseHeaders{}
 	}
 
 	headerFilter := filters.ResponseHeaderModifiers
