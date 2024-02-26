@@ -3,7 +3,7 @@ title: "HTTP Redirects and Rewrites"
 description: "Learn how to redirect or rewrite your HTTP traffic using NGINX Gateway Fabric."
 weight: 400
 toc: true
-docs: "DOCS-000"
+docs: "DOCS-1424"
 ---
 
 [HTTPRoute](https://gateway-api.sigs.k8s.io/api-types/httproute/) filters can be used to configure HTTP redirects or rewrites. Redirects return HTTP 3XX responses to a client, instructing it to retrieve a different resource. Rewrites modify components of a client request (such as hostname and/or path) before proxying it upstream.

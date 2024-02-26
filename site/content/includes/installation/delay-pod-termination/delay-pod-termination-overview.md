@@ -1,5 +1,5 @@
 ---
-docs:
+docs: "DOCS-1441"
 ---
 
 To avoid client service interruptions when upgrading NGINX Gateway Fabric, you can configure [`PreStop` hooks](https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/) to delay terminating the NGINX Gateway Fabric pod, allowing the pod to complete certain actions before shutting down. This ensures a smooth upgrade without any downtime, also known as a zero downtime upgrade.

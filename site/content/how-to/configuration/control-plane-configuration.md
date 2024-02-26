@@ -3,7 +3,7 @@ title: "Control Plane Configuration"
 description: "Learn how to dynamically update the Gateway Fabric control plane configuration."
 weight: 100
 toc: true
-docs: "DOCS-000"
+docs: "DOCS-1416"
 ---
 
 ## Overview

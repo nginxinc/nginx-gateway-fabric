@@ -27,6 +27,8 @@ RUN setcap 'cap_kill=+ep' /usr/bin/gateway
 
 FROM scratch as common
 USER 102:1001
+ARG BUILD_AGENT
+ENV BUILD_AGENT=${BUILD_AGENT}
 ENTRYPOINT [ "/usr/bin/gateway" ]
 
 FROM common as container

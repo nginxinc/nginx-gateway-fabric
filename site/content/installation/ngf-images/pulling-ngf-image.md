@@ -1,9 +1,10 @@
 ---
-title: Pushing an NGINX Plus image to a private registry
+title: "Pushing an NGINX Plus image to a private registry"
 description: "This document describes how to pull a NGINX Plus image for NGINX Gateway Fabric from the official F5 Docker registry and upload it to your private registry."
 weight: 200
 doctypes: ["install"]
 toc: true
+docs: "DOCS-1433"
 ---
 
 {{<custom-styles>}}

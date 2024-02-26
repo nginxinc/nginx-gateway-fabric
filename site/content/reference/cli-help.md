@@ -3,7 +3,7 @@ title: "Command-line Reference Guide"
 description: "Learn about the commands available for the executable file of the NGINX Gateway Fabric container."
 weight: 100
 toc: true
-docs: "DOCS-000"
+docs: "DOCS-1435"
 ---
 
 ## Static Mode
@@ -36,6 +36,11 @@ _Usage_:
 | _health-port_                       | _int_    | Set the port where the health probe server is exposed. An integer between 1024 - 65535 (Default: `8081`).                                                                                                                                                                                                                                                                                |
 | _leader-election-disable_           | _bool_   | Disable leader election, which is used to avoid multiple replicas of the NGINX Gateway Fabric reporting the status of the Gateway API resources. If disabled, all replicas of NGINX Gateway Fabric will update the statuses of the Gateway API resources (Default: `false`).                                                                                                             |
 | _leader-election-lock-name_         | _string_ | The name of the leader election lock. A lease object with this name will be created in the same namespace as the controller (Default: `"nginx-gateway-leader-election-lock"`).                                                                                                                                                                                                           |
+| _product-telemetry-disable_  | _bool_   | Disable the collection of product telemetry (Default: `false`). |
+| _usage-report-secret_        | _string_ | The namespace/name of the Secret containing the credentials for NGINX Plus usage reporting. |
+| _usage-report-server-url_    | _string_ | The base server URL of the NGINX Plus usage reporting server. |
+| _usage-report-cluster-name_  | _string_ | The display name of the Kubernetes cluster in the NGINX Plus usage reporting server. |
+| _usage-report-skip-verify_   | _bool_   | Disable client verification of the NGINX Plus usage reporting server certificate. |
 {{% /bootstrap-table %}}
 
 ## Sleep

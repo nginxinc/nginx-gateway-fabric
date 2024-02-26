@@ -3,11 +3,9 @@ package state
 import (
 	"fmt"
 
-	apiv1 "k8s.io/api/core/v1"
 	discoveryV1 "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -253,48 +251,4 @@ func (s *changeTrackingUpdater) setChangeType(obj client.Object, changed bool) {
 			s.changeType = ClusterStateChange
 		}
 	}
-}
-
-type upsertValidatorFunc func(obj client.Object) error
-
-// validatingUpsertUpdater is an Updater that validates an object before upserting it.
-// If the validation fails, it deletes the object and records an event with the validation error.
-type validatingUpsertUpdater struct {
-	updater       Updater
-	eventRecorder record.EventRecorder
-	validator     upsertValidatorFunc
-}
-
-func newValidatingUpsertUpdater(
-	updater Updater,
-	eventRecorder record.EventRecorder,
-	validator upsertValidatorFunc,
-) *validatingUpsertUpdater {
-	return &validatingUpsertUpdater{
-		updater:       updater,
-		eventRecorder: eventRecorder,
-		validator:     validator,
-	}
-}
-
-func (u *validatingUpsertUpdater) Upsert(obj client.Object) {
-	if err := u.validator(obj); err != nil {
-		u.updater.Delete(obj, client.ObjectKeyFromObject(obj))
-
-		u.eventRecorder.Eventf(
-			obj,
-			apiv1.EventTypeWarning,
-			"Rejected",
-			"%s; NGINX Gateway Fabric will delete any existing NGINX configuration that corresponds to the resource",
-			err.Error(),
-		)
-
-		return
-	}
-
-	u.updater.Upsert(obj)
-}
-
-func (u *validatingUpsertUpdater) Delete(objType client.Object, nsname types.NamespacedName) {
-	u.updater.Delete(objType, nsname)
 }

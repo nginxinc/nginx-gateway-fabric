@@ -52,8 +52,23 @@ spec:
         {{- else }}
         - --leader-election-disable
         {{- end }}
+        {{- if not .Values.nginxGateway.productTelemetry.enable }}
+        - --product-telemetry-disable
+        {{- end }}
         {{- if .Values.nginxGateway.gwAPIExperimentalFeatures.enable }}
         - --gateway-api-experimental-features
+        {{- end }}
+        {{- if .Values.nginx.usage.secretName }}
+        - --usage-report-secret={{ .Values.nginx.usage.secretName }}
+        {{- end }}
+        {{- if .Values.nginx.usage.serverURL }}
+        - --usage-report-server-url={{ .Values.nginx.usage.serverURL }}
+        {{- end }}
+        {{- if .Values.nginx.usage.clusterName }}
+        - --usage-report-cluster-name={{ .Values.nginx.usage.clusterName }}
+        {{- end }}
+        {{- if .Values.nginx.usage.insecureSkipVerify }}
+        - --usage-report-skip-verify
         {{- end }}
         env:
         - name: POD_IP

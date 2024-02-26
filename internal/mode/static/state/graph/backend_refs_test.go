@@ -208,6 +208,17 @@ func TestValidateBackendRef(t *testing.T) {
 				"test.weight: Invalid value: -1: must be in the range [0, 1000000]",
 			),
 		},
+		{
+			name: "nil port",
+			ref: getModifiedRef(func(backend gatewayv1.BackendRef) gatewayv1.BackendRef {
+				backend.Port = nil
+				return backend
+			}),
+			expectedValid: false,
+			expectedCondition: staticConds.NewRouteBackendRefUnsupportedValue(
+				"test.port: Required value: port cannot be nil",
+			),
+		},
 	}
 
 	for _, test := range tests {

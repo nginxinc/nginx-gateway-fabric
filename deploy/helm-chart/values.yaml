@@ -45,6 +45,10 @@ nginxGateway:
     ## Some environments may need this set to true in order for the control plane to successfully reload NGINX.
     allowPrivilegeEscalation: false
 
+  productTelemetry:
+    ## Enable the collection of product telemetry.
+    enable: true
+
   ## The lifecycle of the nginx-gateway container.
   lifecycle: {}
 
@@ -65,6 +69,17 @@ nginx:
 
   ## Is NGINX Plus image being used
   plus: false
+
+  ## Configuration for NGINX Plus usage reporting.
+  usage:
+    ## The namespace/name of the Secret containing the credentials for NGINX Plus usage reporting.
+    secretName: ""
+    ## The base server URL of the NGINX Plus usage reporting server.
+    serverURL: ""
+    ## The display name of the Kubernetes cluster in the NGINX Plus usage reporting server.
+    clusterName: ""
+    ## Disable client verification of the NGINX Plus usage reporting server certificate.
+    insecureSkipVerify: false
 
   ## The lifecycle of the nginx container.
   lifecycle: {}

@@ -3,7 +3,7 @@ title: "NGINX Plus Dashboard"
 description: "Learn how to view the NGINX Plus dashboard to see real-time metrics."
 weight: 200
 toc: true
-docs: "DOCS-000"
+docs: "DOCS-1417"
 ---
 
 {{<custom-styles>}}

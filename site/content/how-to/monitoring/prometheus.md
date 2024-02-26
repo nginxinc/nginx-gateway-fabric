@@ -3,7 +3,7 @@ title: "Prometheus Metrics"
 description: "Learn how to monitor your NGINX Gateway Fabric effectively. This guide provides easy steps for configuring and understanding key performance metrics using Prometheus."
 weight: 100
 toc: true
-docs: "DOCS-000"
+docs: "DOCS-1418"
 ---
 
 {{<custom-styles>}}

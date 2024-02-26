@@ -2,7 +2,6 @@ package graph
 
 import (
 	"errors"
-	"fmt"
 	"strings"
 
 	"k8s.io/apimachinery/pkg/util/validation"
@@ -29,12 +28,4 @@ func validateHostname(hostname string) error {
 	}
 
 	return nil
-}
-
-// panicForBrokenWebhookAssumption panics with the error message because an assumption about the webhook validation
-// (run by NGF) is broken.
-// Use it when you expect a validated Gateway API resource, but the actual resource breaks the validation constraints.
-// For example, a field that must not be nil is nil.
-func panicForBrokenWebhookAssumption(err error) {
-	panic(fmt.Errorf("webhook validation assumption was broken: %w", err))
 }
