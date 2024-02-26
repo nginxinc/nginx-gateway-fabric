@@ -221,6 +221,8 @@ func StartManager(cfg config.Config) error {
 			ngxPlusClient,
 			ngxruntimeCollector,
 			cfg.Logger.WithName("nginxRuntimeManager"),
+			nil,
+			nil,
 		),
 		statusUpdater:                 groupStatusUpdater,
 		eventRecorder:                 recorder,

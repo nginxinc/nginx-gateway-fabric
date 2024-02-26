@@ -19,15 +19,23 @@ const configVersionURI = "/var/run/nginx/nginx-config-version.sock"
 var noNewWorkersErrFmt = "reload unsuccessful: no new NGINX worker processes started for config version %d." +
 	" Please check the NGINX container logs for possible configuration issues: %w"
 
-// verifyClient is a client for verifying the config version.
-type verifyClient struct {
+//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . verifyClient
+
+type verifyClient interface {
+	GetConfigVersion() (int, error)
+	WaitForCorrectVersion(ctx context.Context, expectedVersion int, childProcFile string, previousChildProcesses []byte, readFile ReadFileFunc) error
+	EnsureConfigVersion(ctx context.Context, expectedVersion int) error
+}
+
+// verifyClientImpl is a client for verifying the config version.
+type verifyClientImpl struct {
 	client  *http.Client
 	timeout time.Duration
 }
 
 // newVerifyClient returns a new client pointed at the config version socket.
-func newVerifyClient(timeout time.Duration) *verifyClient {
-	return &verifyClient{
+func newVerifyClient(timeout time.Duration) *verifyClientImpl {
+	return &verifyClientImpl{
 		client: &http.Client{
 			Transport: &http.Transport{
 				DialContext: func(_ context.Context, _, _ string) (net.Conn, error) {
@@ -39,9 +47,9 @@ func newVerifyClient(timeout time.Duration) *verifyClient {
 	}
 }
 
-// getConfigVersion gets the version number that we put in the nginx config to verify that we're using
+// GetConfigVersion gets the version number that we put in the nginx config to verify that we're using
 // the correct config.
-func (c *verifyClient) getConfigVersion() (int, error) {
+func (c *verifyClientImpl) GetConfigVersion() (int, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), c.timeout)
 	defer cancel()
 
@@ -71,15 +79,15 @@ func (c *verifyClient) getConfigVersion() (int, error) {
 	return v, nil
 }
 
-// waitForCorrectVersion first ensures any new worker processes have been started, and then calls the config version
+// WaitForCorrectVersion first ensures any new worker processes have been started, and then calls the config version
 // endpoint until it gets the expectedVersion, which ensures that a new worker process has been started for that config
 // version.
-func (c *verifyClient) waitForCorrectVersion(
+func (c *verifyClientImpl) WaitForCorrectVersion(
 	ctx context.Context,
 	expectedVersion int,
 	childProcFile string,
 	previousChildProcesses []byte,
-	readFile readFileFunc,
+	readFile ReadFileFunc,
 ) error {
 	ctx, cancel := context.WithTimeout(ctx, c.timeout)
 	defer cancel()
@@ -93,7 +101,7 @@ func (c *verifyClient) waitForCorrectVersion(
 		return fmt.Errorf(noNewWorkersErrFmt, expectedVersion, err)
 	}
 
-	if err := c.ensureConfigVersion(ctx, expectedVersion); err != nil {
+	if err := c.EnsureConfigVersion(ctx, expectedVersion); err != nil {
 		if errors.Is(err, context.DeadlineExceeded) {
 			err = fmt.Errorf(
 				"config version check didn't return expected version %d within the deadline",
@@ -105,13 +113,13 @@ func (c *verifyClient) waitForCorrectVersion(
 	return nil
 }
 
-func (c *verifyClient) ensureConfigVersion(ctx context.Context, expectedVersion int) error {
+func (c *verifyClientImpl) EnsureConfigVersion(ctx context.Context, expectedVersion int) error {
 	return wait.PollUntilContextCancel(
 		ctx,
 		25*time.Millisecond,
 		true, /* poll immediately */
 		func(_ context.Context) (bool, error) {
-			version, err := c.getConfigVersion()
+			version, err := c.GetConfigVersion()
 			return version == expectedVersion, err
 		},
 	)
@@ -121,7 +129,7 @@ func ensureNewNginxWorkers(
 	ctx context.Context,
 	childProcFile string,
 	previousContents []byte,
-	readFile readFileFunc,
+	readFile ReadFileFunc,
 ) error {
 	return wait.PollUntilContextCancel(
 		ctx,
