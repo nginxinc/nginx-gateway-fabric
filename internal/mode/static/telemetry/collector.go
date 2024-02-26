@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"runtime"
+	"strings"
 
 	tel "github.com/nginxinc/telemetry-exporter/pkg/telemetry"
 	appsv1 "k8s.io/api/apps/v1"
@@ -110,6 +111,15 @@ func (c DataCollectorImpl) Collect(ctx context.Context) (Data, error) {
 		return Data{}, fmt.Errorf("failed to collect node count: %w", err)
 	}
 
+	nodes, err := collectNodeList(ctx, c.cfg.K8sClientReader)
+	if err != nil {
+		return Data{}, err
+	}
+
+	node := nodes.Items[0]
+	k8sVersion := node.Status.NodeInfo.KubeletVersion
+	k8sPlatform := strings.Split(node.Spec.ProviderID, "://")[0]
+
 	graphResourceCount, err := collectGraphResourceCount(c.cfg.GraphGetter, c.cfg.ConfigurationGetter)
 	if err != nil {
 		return Data{}, fmt.Errorf("failed to collect NGF resource counts: %w", err)
@@ -141,8 +151,8 @@ func (c DataCollectorImpl) Collect(ctx context.Context) (Data, error) {
 			ProjectVersion:      c.cfg.Version,
 			ProjectArchitecture: runtime.GOARCH,
 			ClusterID:           clusterID,
-			ClusterVersion:      notImplemented,
-			ClusterPlatform:     notImplemented,
+			ClusterVersion:      k8sVersion,
+			ClusterPlatform:     k8sPlatform,
 			InstallationID:      deploymentID,
 			ClusterNodeCount:    int64(nodeCount),
 		},
@@ -274,4 +284,13 @@ func CollectClusterID(ctx context.Context, k8sClient client.Reader) (string, err
 		return "", fmt.Errorf("failed to get kube-system namespace: %w", err)
 	}
 	return string(kubeNamespace.GetUID()), nil
+}
+
+func collectNodeList(ctx context.Context, k8sClient client.Reader) (v1.NodeList, error) {
+	var nodes v1.NodeList
+	if err := k8sClient.List(ctx, &nodes); err != nil {
+		return nodes, fmt.Errorf("failed to get NodeList: %w", err)
+	}
+
+	return nodes, nil
 }
