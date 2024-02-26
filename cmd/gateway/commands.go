@@ -458,9 +458,8 @@ func createSleepCommand() *cobra.Command {
 	return cmd
 }
 
-func parseFlags(flags *pflag.FlagSet) (flagKeys, flagValues []string) {
-	flagKeys = []string{}
-	flagValues = []string{}
+func parseFlags(flags *pflag.FlagSet) ([]string, []string) {
+	var flagKeys, flagValues []string
 
 	flags.VisitAll(
 		func(flag *pflag.Flag) {
