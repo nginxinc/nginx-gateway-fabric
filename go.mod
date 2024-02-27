@@ -15,7 +15,7 @@ require (
 	github.com/onsi/ginkgo/v2 v2.15.0
 	github.com/onsi/gomega v1.31.1
 	github.com/prometheus/client_golang v1.18.0
-	github.com/prometheus/common v0.47.0
+	github.com/prometheus/common v0.48.0
 	github.com/spf13/cobra v1.8.0
 	github.com/tsenart/vegeta/v12 v12.11.1
 	go.uber.org/zap v1.27.0
