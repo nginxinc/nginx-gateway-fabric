@@ -6,6 +6,8 @@ import (
 
 	. "github.com/onsi/gomega"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 type flagTestCase struct {
@@ -155,6 +157,9 @@ func TestStaticModeCmdFlagValidation(t *testing.T) {
 				"--health-disable",
 				"--leader-election-lock-name=my-lock",
 				"--leader-election-disable=false",
+				"--usage-report-secret=default/my-secret",
+				"--usage-report-server-url=https://my-api.com",
+				"--usage-report-cluster-name=my-cluster",
 			},
 			wantErr: false,
 		},
@@ -310,6 +315,66 @@ func TestStaticModeCmdFlagValidation(t *testing.T) {
 			wantErr:           true,
 			expectedErrPrefix: `invalid argument "" for "--leader-election-disable" flag: strconv.ParseBool`,
 		},
+		{
+			name: "usage-report-secret is set to empty string",
+			args: []string{
+				"--usage-report-secret=",
+			},
+			wantErr:           true,
+			expectedErrPrefix: `invalid argument "" for "--usage-report-secret" flag: must be set`,
+		},
+		{
+			name: "usage-report-secret is invalid",
+			args: []string{
+				"--usage-report-secret=my-secret", // no namespace
+			},
+			wantErr: true,
+			expectedErrPrefix: `invalid argument "my-secret" for "--usage-report-secret" flag: invalid format; ` +
+				"must be NAMESPACE/NAME",
+		},
+		{
+			name: "usage-report-server-url is set to empty string",
+			args: []string{
+				"--usage-report-server-url=",
+			},
+			wantErr:           true,
+			expectedErrPrefix: `invalid argument "" for "--usage-report-server-url" flag: must be set`,
+		},
+		{
+			name: "usage-report-server-url is an invalid url",
+			args: []string{
+				"--usage-report-server-url=invalid",
+			},
+			wantErr:           true,
+			expectedErrPrefix: `invalid argument "invalid" for "--usage-report-server-url" flag: "invalid" must be a valid URL`,
+		},
+		{
+			name: "usage secret and server url not specified together",
+			args: []string{
+				"--gateway-ctlr-name=gateway.nginx.org/nginx-gateway",
+				"--gatewayclass=nginx",
+				"--usage-report-server-url=http://example.com",
+			},
+			wantErr: true,
+			expectedErrPrefix: "if any flags in the group [usage-report-secret usage-report-server-url] " +
+				"are set they must all be set",
+		},
+		{
+			name: "usage-report-cluster-name is set to empty string",
+			args: []string{
+				"--usage-report-cluster-name=",
+			},
+			wantErr:           true,
+			expectedErrPrefix: `invalid argument "" for "--usage-report-cluster-name" flag: must be set`,
+		},
+		{
+			name: "usage-report-cluster-name is invalid",
+			args: []string{
+				"--usage-report-cluster-name=$invalid*(#)",
+			},
+			wantErr:           true,
+			expectedErrPrefix: `invalid argument "$invalid*(#)" for "--usage-report-cluster-name" flag: invalid format`,
+		},
 	}
 
 	// common flags validation is tested separately
@@ -390,4 +455,129 @@ func TestSleepCmdFlagValidation(t *testing.T) {
 			testFlag(t, cmd, test)
 		})
 	}
+}
+
+func TestParseFlags(t *testing.T) {
+	g := NewWithT(t)
+
+	flagSet := pflag.NewFlagSet("flagSet", 0)
+	// set SortFlags to false for testing purposes so when parseFlags loops over the flagSet it
+	// goes off of primordial order.
+	flagSet.SortFlags = false
+
+	var boolFlagTrue bool
+	flagSet.BoolVar(
+		&boolFlagTrue,
+		"boolFlagTrue",
+		true,
+		"boolean true test flag",
+	)
+
+	var boolFlagFalse bool
+	flagSet.BoolVar(
+		&boolFlagFalse,
+		"boolFlagFalse",
+		false,
+		"boolean false test flag",
+	)
+
+	customIntFlagDefault := intValidatingValue{
+		validator: validatePort,
+		value:     8080,
+	}
+	flagSet.Var(
+		&customIntFlagDefault,
+		"customIntFlagDefault",
+		"default custom int test flag",
+	)
+
+	customIntFlagUserDefined := intValidatingValue{
+		validator: validatePort,
+		value:     8080,
+	}
+	flagSet.Var(
+		&customIntFlagUserDefined,
+		"customIntFlagUserDefined",
+		"user defined custom int test flag",
+	)
+	err := flagSet.Set("customIntFlagUserDefined", "8081")
+	g.Expect(err).To(Not(HaveOccurred()))
+
+	customStringFlagDefault := stringValidatingValue{
+		validator: validateResourceName,
+		value:     "default-custom-string-test-flag",
+	}
+	flagSet.Var(
+		&customStringFlagDefault,
+		"customStringFlagDefault",
+		"default custom string test flag",
+	)
+
+	customStringFlagUserDefined := stringValidatingValue{
+		validator: validateResourceName,
+		value:     "user-defined-custom-string-test-flag",
+	}
+	flagSet.Var(
+		&customStringFlagUserDefined,
+		"customStringFlagUserDefined",
+		"user defined custom string test flag",
+	)
+	err = flagSet.Set("customStringFlagUserDefined", "changed-test-flag-value")
+	g.Expect(err).To(Not(HaveOccurred()))
+
+	customStringFlagNoDefaultValueUnset := namespacedNameValue{
+		value: types.NamespacedName{},
+	}
+	flagSet.Var(
+		&customStringFlagNoDefaultValueUnset,
+		"customStringFlagNoDefaultValueUnset",
+		"no default value custom string test flag",
+	)
+
+	customStringFlagNoDefaultValueUserDefined := namespacedNameValue{
+		value: types.NamespacedName{},
+	}
+	flagSet.Var(
+		&customStringFlagNoDefaultValueUserDefined,
+		"customStringFlagNoDefaultValueUserDefined",
+		"no default value but with user defined namespacedName test flag",
+	)
+	userDefinedNamespacedName := types.NamespacedName{
+		Namespace: "changed-namespace",
+		Name:      "changed-name",
+	}
+	err = flagSet.Set("customStringFlagNoDefaultValueUserDefined", userDefinedNamespacedName.String())
+	g.Expect(err).To(Not(HaveOccurred()))
+
+	expectedKeys := []string{
+		"boolFlagTrue",
+		"boolFlagFalse",
+
+		"customIntFlagDefault",
+		"customIntFlagUserDefined",
+
+		"customStringFlagDefault",
+		"customStringFlagUserDefined",
+
+		"customStringFlagNoDefaultValueUnset",
+		"customStringFlagNoDefaultValueUserDefined",
+	}
+	expectedValues := []string{
+		"true",
+		"false",
+
+		"default",
+		"user-defined",
+
+		"default",
+		"user-defined",
+
+		"default",
+		"user-defined",
+	}
+
+	flagKeys, flagValues := parseFlags(flagSet)
+
+	g.Expect(flagKeys).Should(Equal(expectedKeys))
+	g.Expect(flagValues).Should(Equal(expectedValues))
 }

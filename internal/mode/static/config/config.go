@@ -11,8 +11,12 @@ import (
 type Config struct {
 	// Version is the running NGF version.
 	Version string
+	// ImageSource is the source of the NGINX Gateway image.
+	ImageSource string
 	// AtomicLevel is an atomically changeable, dynamic logging level.
 	AtomicLevel zap.AtomicLevel
+	// Flags contains the NGF command-line flag names and values.
+	Flags Flags
 	// GatewayNsName is the namespaced name of a Gateway resource that the Gateway will use.
 	// The Gateway will ignore all other Gateway resources.
 	GatewayNsName *types.NamespacedName
@@ -20,6 +24,8 @@ type Config struct {
 	GatewayPodConfig GatewayPodConfig
 	// Logger is the Zap Logger used by all components.
 	Logger logr.Logger
+	// UsageReportConfig specifies the NGINX Plus usage reporting config.
+	UsageReportConfig *UsageReportConfig
 	// GatewayCtlrName is the name of this controller.
 	GatewayCtlrName string
 	// ConfigName is the name of the NginxGateway resource for this controller.
@@ -27,13 +33,13 @@ type Config struct {
 	// GatewayClassName is the name of the GatewayClass resource that the Gateway will use.
 	GatewayClassName string
 	// LeaderElection contains the configuration for leader election.
-	LeaderElection LeaderElection
+	LeaderElection LeaderElectionConfig
 	// MetricsConfig specifies the metrics config.
 	MetricsConfig MetricsConfig
 	// HealthConfig specifies the health probe config.
 	HealthConfig HealthConfig
-	// TelemetryReportPeriod is the period at which telemetry reports are sent.
-	TelemetryReportPeriod time.Duration
+	// ProductTelemetryConfig contains the configuration for collecting product telemetry.
+	ProductTelemetryConfig ProductTelemetryConfig
 	// UpdateGatewayClassStatus enables updating the status of the GatewayClass resource.
 	UpdateGatewayClassStatus bool
 	// Plus indicates whether NGINX Plus is being used.
@@ -72,12 +78,42 @@ type HealthConfig struct {
 	Enabled bool
 }
 
-// LeaderElection contains the configuration for leader election.
-type LeaderElection struct {
+// LeaderElectionConfig contains the configuration for leader election.
+type LeaderElectionConfig struct {
 	// LockName holds the name of the leader election lock.
 	LockName string
 	// Identity is the unique name of the controller used for identifying the leader.
 	Identity string
 	// Enabled indicates whether leader election is enabled.
 	Enabled bool
+}
+
+// ProductTelemetryConfig contains the configuration for collecting product telemetry.
+type ProductTelemetryConfig struct {
+	// TelemetryReportPeriod is the period at which telemetry reports are sent.
+	TelemetryReportPeriod time.Duration
+	// Enabled is the flag for toggling the collection of product telemetry.
+	Enabled bool
+}
+
+// UsageReportConfig contains the configuration for NGINX Plus usage reporting.
+type UsageReportConfig struct {
+	// SecretNsName is the namespaced name of the Secret containing the server credentials.
+	SecretNsName types.NamespacedName
+	// ServerURL is the base URL of the reporting server.
+	ServerURL string
+	// ClusterDisplayName is the display name of the cluster. Optional.
+	ClusterDisplayName string
+	// InsecureSkipVerify controls whether the client verifies the server cert.
+	InsecureSkipVerify bool
+}
+
+// Flags contains the NGF command-line flag names and values.
+// Flag Names and Values are paired based off of index in slice.
+type Flags struct {
+	// Names contains the name of the flag.
+	Names []string
+	// Values contains the value of the flag in string form.
+	// Each Value will be either true or false for boolean flags and default or user-defined for non-boolean flags.
+	Values []string
 }

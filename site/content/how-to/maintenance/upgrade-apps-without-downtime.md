@@ -3,7 +3,7 @@ title: "Upgrade applications without downtime"
 description: "Learn how to use NGINX Gateway Fabric to upgrade applications without downtime."
 weight: 100
 toc: true
-docs: "DOCS-000"
+docs: "DOCS-1420"
 ---
 
 {{<custom-styles>}}

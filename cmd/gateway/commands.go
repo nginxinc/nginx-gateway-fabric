@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -44,19 +45,24 @@ func createRootCommand() *cobra.Command {
 func createStaticModeCommand() *cobra.Command {
 	// flag names
 	const (
-		gatewayFlag                = "gateway"
-		configFlag                 = "config"
-		serviceFlag                = "service"
-		updateGCStatusFlag         = "update-gatewayclass-status"
-		metricsDisableFlag         = "metrics-disable"
-		metricsSecureFlag          = "metrics-secure-serving"
-		metricsPortFlag            = "metrics-port"
-		healthDisableFlag          = "health-disable"
-		healthPortFlag             = "health-port"
-		leaderElectionDisableFlag  = "leader-election-disable"
-		leaderElectionLockNameFlag = "leader-election-lock-name"
-		plusFlag                   = "nginx-plus"
-		gwAPIExperimentalFlag      = "gateway-api-experimental-features"
+		gatewayFlag                 = "gateway"
+		configFlag                  = "config"
+		serviceFlag                 = "service"
+		updateGCStatusFlag          = "update-gatewayclass-status"
+		metricsDisableFlag          = "metrics-disable"
+		metricsSecureFlag           = "metrics-secure-serving"
+		metricsPortFlag             = "metrics-port"
+		healthDisableFlag           = "health-disable"
+		healthPortFlag              = "health-port"
+		leaderElectionDisableFlag   = "leader-election-disable"
+		leaderElectionLockNameFlag  = "leader-election-lock-name"
+		productTelemetryDisableFlag = "product-telemetry-disable"
+		plusFlag                    = "nginx-plus"
+		gwAPIExperimentalFlag       = "gateway-api-experimental-features"
+		usageReportSecretFlag       = "usage-report-secret"
+		usageReportServerURLFlag    = "usage-report-server-url"
+		usageReportSkipVerifyFlag   = "usage-report-skip-verify"
+		usageReportClusterNameFlag  = "usage-report-cluster-name"
 	)
 
 	// flag values
@@ -95,9 +101,19 @@ func createStaticModeCommand() *cobra.Command {
 			value:     "nginx-gateway-leader-election-lock",
 		}
 
-		plus bool
-
 		gwExperimentalFeatures bool
+
+		disableProductTelemetry bool
+
+		plus                   bool
+		usageReportSkipVerify  bool
+		usageReportClusterName = stringValidatingValue{
+			validator: validateQualifiedName,
+		}
+		usageReportSecretName = namespacedNameValue{}
+		usageReportServerURL  = stringValidatingValue{
+			validator: validateURL,
+		}
 	)
 
 	cmd := &cobra.Command{
@@ -134,6 +150,11 @@ func createStaticModeCommand() *cobra.Command {
 				return errors.New("POD_NAME environment variable must be set")
 			}
 
+			imageSource := os.Getenv("BUILD_AGENT")
+			if imageSource != "gha" && imageSource != "local" {
+				imageSource = "unknown"
+			}
+
 			period, err := time.ParseDuration(telemetryReportPeriod)
 			if err != nil {
 				return fmt.Errorf("error parsing telemetry report period: %w", err)
@@ -143,6 +164,22 @@ func createStaticModeCommand() *cobra.Command {
 			if cmd.Flags().Changed(gatewayFlag) {
 				gwNsName = &gateway.value
 			}
+
+			var usageReportConfig *config.UsageReportConfig
+			if cmd.Flags().Changed(usageReportSecretFlag) {
+				if !plus {
+					return errors.New("usage-report arguments are only valid if using nginx-plus")
+				}
+
+				usageReportConfig = &config.UsageReportConfig{
+					SecretNsName:       usageReportSecretName.value,
+					ServerURL:          usageReportServerURL.value,
+					ClusterDisplayName: usageReportClusterName.value,
+					InsecureSkipVerify: usageReportSkipVerify,
+				}
+			}
+
+			flagKeys, flagValues := parseFlags(cmd.Flags())
 
 			conf := config.Config{
 				GatewayCtlrName:          gatewayCtlrName.value,
@@ -167,15 +204,24 @@ func createStaticModeCommand() *cobra.Command {
 					Port:    metricsListenPort.value,
 					Secure:  metricsSecure,
 				},
-				LeaderElection: config.LeaderElection{
+				LeaderElection: config.LeaderElectionConfig{
 					Enabled:  !disableLeaderElection,
 					LockName: leaderElectionLockName.String(),
 					Identity: podName,
 				},
-				Plus:                  plus,
-				TelemetryReportPeriod: period,
-				Version:               version,
-				ExperimentalFeatures:  gwExperimentalFeatures,
+				UsageReportConfig: usageReportConfig,
+				ProductTelemetryConfig: config.ProductTelemetryConfig{
+					TelemetryReportPeriod: period,
+					Enabled:               !disableProductTelemetry,
+				},
+				Plus:                 plus,
+				Version:              version,
+				ExperimentalFeatures: gwExperimentalFeatures,
+				ImageSource:          imageSource,
+				Flags: config.Flags{
+					Names:  flagKeys,
+					Values: flagValues,
+				},
 			}
 
 			if err := static.StartManager(conf); err != nil {
@@ -283,6 +329,13 @@ func createStaticModeCommand() *cobra.Command {
 	)
 
 	cmd.Flags().BoolVar(
+		&disableProductTelemetry,
+		productTelemetryDisableFlag,
+		false,
+		"Disable the collection of product telemetry.",
+	)
+
+	cmd.Flags().BoolVar(
 		&plus,
 		plusFlag,
 		false,
@@ -295,6 +348,33 @@ func createStaticModeCommand() *cobra.Command {
 		false,
 		"Enable the experimental features of Gateway API which are supported by NGINX Gateway Fabric. "+
 			"Requires the Gateway APIs installed from the experimental channel.",
+	)
+
+	cmd.Flags().Var(
+		&usageReportSecretName,
+		usageReportSecretFlag,
+		"The namespace/name of the Secret containing the credentials for NGINX Plus usage reporting.",
+	)
+
+	cmd.Flags().Var(
+		&usageReportServerURL,
+		usageReportServerURLFlag,
+		"The base server URL of the NGINX Plus usage reporting server.",
+	)
+
+	cmd.MarkFlagsRequiredTogether(usageReportSecretFlag, usageReportServerURLFlag)
+
+	cmd.Flags().Var(
+		&usageReportClusterName,
+		usageReportClusterNameFlag,
+		"The display name of the Kubernetes cluster in the NGINX Plus usage reporting server.",
+	)
+
+	cmd.Flags().BoolVar(
+		&usageReportSkipVerify,
+		usageReportSkipVerifyFlag,
+		false,
+		"Disable client verification of the NGINX Plus usage reporting server certificate.",
 	)
 
 	return cmd
@@ -376,4 +456,27 @@ func createSleepCommand() *cobra.Command {
 	)
 
 	return cmd
+}
+
+func parseFlags(flags *pflag.FlagSet) ([]string, []string) {
+	var flagKeys, flagValues []string
+
+	flags.VisitAll(
+		func(flag *pflag.Flag) {
+			flagKeys = append(flagKeys, flag.Name)
+
+			if flag.Value.Type() == "bool" {
+				flagValues = append(flagValues, flag.Value.String())
+			} else {
+				val := "user-defined"
+				if flag.Value.String() == flag.DefValue {
+					val = "default"
+				}
+
+				flagValues = append(flagValues, val)
+			}
+		},
+	)
+
+	return flagKeys, flagValues
 }

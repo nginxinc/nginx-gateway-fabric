@@ -2,7 +2,7 @@
 title: "Resource Validation"
 weight: 400
 toc: true
-docs: "DOCS-000"
+docs: "DOCS-1414"
 ---
 
 ## Overview
@@ -64,27 +64,7 @@ The HTTPRoute "coffee" is invalid: spec.hostnames[0]: Invalid value: "cafe.!@#$%
 
 {{< note >}}Bypassing this validation step is possible if the webhook is not running in the cluster. If this happens, Step 3 will reject the invalid values.{{< /note >}}
 
-### Step 3 - Webhook validation by NGINX Gateway Fabric
-
-To ensure that the resources are validated with the webhook validation rules, even if the webhook is not running, NGINX Gateway Fabric performs the same validation. However, NGINX Gateway Fabric performs the validation _after_ the Kubernetes API server accepts the resource.
-
-Below is an example of how NGINX Gateway Fabric rejects an invalid resource (a Gateway resource with a TCP listener that configures a hostname) with a Kubernetes event:
-
-```shell
-kubectl describe gateway some-gateway
-```
-
-```text
-. . .
-Events:
-  Type     Reason    Age   From                            Message
-  ----     ------    ----  ----                            -------
-  Warning  Rejected  6s    nginx-gateway-fabric-nginx  the resource failed webhook validation, however the Gateway API webhook failed to reject it with the error; make sure the webhook is installed and running correctly; validation error: spec.listeners[1].hostname: Forbidden: should be empty for protocol TCP; NGINX Gateway Fabric will delete any existing NGINX configuration that corresponds to the resource
-```
-
-{{< note >}}This validation step always runs and cannot be bypassed. NGINX Gateway Fabric will ignore any resources that fail the webhook validation, like in the example above. If the resource previously existed, NGINX Gateway Fabric will remove any existing NGINX configuration for that resource.{{< /note >}}
-
-### Step 4 - Validation by NGINX Gateway Fabric
+### Step 3 - Validation by NGINX Gateway Fabric
 
 This step catches the following cases of invalid values:
 

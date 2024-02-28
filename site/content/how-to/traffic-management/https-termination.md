@@ -3,7 +3,7 @@ title: "HTTPS Termination"
 description: "Learn how to terminate HTTPS traffic using NGINX Gateway Fabric."
 weight: 500
 toc: true
-docs: "DOCS-000"
+docs: "DOCS-1421"
 ---
 
 In this guide, we will show how to configure HTTPS termination for your application, using an [HTTPRoute](https://gateway-api.sigs.k8s.io/api-types/httproute/) redirect filter, secret, and [ReferenceGrant](https://gateway-api.sigs.k8s.io/api-types/referencegrant/).

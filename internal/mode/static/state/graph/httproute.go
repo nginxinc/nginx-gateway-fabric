@@ -1,7 +1,6 @@
 package graph
 
 import (
-	"errors"
 	"fmt"
 	"strings"
 
@@ -99,7 +98,7 @@ func buildSectionNameRefs(
 	parentRefs []v1.ParentReference,
 	routeNamespace string,
 	gatewayNsNames []types.NamespacedName,
-) []ParentRef {
+) ([]ParentRef, error) {
 	sectionNameRefs := make([]ParentRef, 0, len(parentRefs))
 
 	type key struct {
@@ -125,9 +124,7 @@ func buildSectionNameRefs(
 		}
 
 		if _, exist := uniqueSectionsPerGateway[k]; exist {
-			panicForBrokenWebhookAssumption(
-				fmt.Errorf("duplicate section name %q for Gateway %s", sectionName, gw.String()),
-			)
+			return nil, fmt.Errorf("duplicate section name %q for Gateway %s", sectionName, gw.String())
 		}
 		uniqueSectionsPerGateway[k] = struct{}{}
 
@@ -137,7 +134,7 @@ func buildSectionNameRefs(
 		})
 	}
 
-	return sectionNameRefs
+	return sectionNameRefs, nil
 }
 
 func findGatewayForParentRef(
@@ -172,16 +169,20 @@ func buildRoute(
 	ghr *v1.HTTPRoute,
 	gatewayNsNames []types.NamespacedName,
 ) *Route {
-	sectionNameRefs := buildSectionNameRefs(ghr.Spec.ParentRefs, ghr.Namespace, gatewayNsNames)
+	r := &Route{
+		Source: ghr,
+	}
+	sectionNameRefs, err := buildSectionNameRefs(ghr.Spec.ParentRefs, ghr.Namespace, gatewayNsNames)
+	if err != nil {
+		r.Valid = false
+
+		return r
+	}
 	// route doesn't belong to any of the Gateways
 	if len(sectionNameRefs) == 0 {
 		return nil
 	}
-
-	r := &Route{
-		Source:     ghr,
-		ParentRefs: sectionNameRefs,
-	}
+	r.ParentRefs = sectionNameRefs
 
 	if err := validateHostnames(
 		ghr.Spec.Hostnames,
@@ -669,10 +670,10 @@ func validatePathMatch(
 	}
 
 	if path.Type == nil {
-		panicForBrokenWebhookAssumption(errors.New("path type cannot be nil"))
+		return field.ErrorList{field.Required(fieldPath.Child("type"), "path type cannot be nil")}
 	}
 	if path.Value == nil {
-		panicForBrokenWebhookAssumption(errors.New("path value cannot be nil"))
+		return field.ErrorList{field.Required(fieldPath.Child("value"), "path value cannot be nil")}
 	}
 
 	if *path.Type != v1.PathMatchPathPrefix && *path.Type != v1.PathMatchExact {
@@ -725,12 +726,12 @@ func validateFilterRedirect(
 ) field.ErrorList {
 	var allErrs field.ErrorList
 
-	if filter.RequestRedirect == nil {
-		panicForBrokenWebhookAssumption(errors.New("requestRedirect cannot be nil"))
-	}
-
 	redirect := filter.RequestRedirect
 	redirectPath := filterPath.Child("requestRedirect")
+
+	if redirect == nil {
+		return field.ErrorList{field.Required(redirectPath, "requestRedirect cannot be nil")}
+	}
 
 	if redirect.Scheme != nil {
 		if valid, supportedValues := validator.ValidateRedirectScheme(*redirect.Scheme); !valid {
@@ -775,12 +776,12 @@ func validateFilterRewrite(
 ) field.ErrorList {
 	var allErrs field.ErrorList
 
-	if filter.URLRewrite == nil {
-		panicForBrokenWebhookAssumption(errors.New("urlRewrite cannot be nil"))
-	}
-
 	rewrite := filter.URLRewrite
 	rewritePath := filterPath.Child("urlRewrite")
+
+	if rewrite == nil {
+		return field.ErrorList{field.Required(rewritePath, "urlRewrite cannot be nil")}
+	}
 
 	if rewrite.Hostname != nil {
 		if err := validator.ValidateHostname(string(*rewrite.Hostname)); err != nil {
@@ -821,7 +822,7 @@ func validateFilterHeaderModifier(
 	headerModifierPath := filterPath.Child("requestHeaderModifier")
 
 	if headerModifier == nil {
-		panicForBrokenWebhookAssumption(errors.New("requestHeaderModifier cannot be nil"))
+		return field.ErrorList{field.Required(headerModifierPath, "requestHeaderModifier cannot be nil")}
 	}
 
 	return validateFilterHeaderModifierFields(validator, headerModifier, headerModifierPath)
@@ -833,6 +834,20 @@ func validateFilterHeaderModifierFields(
 	headerModifierPath *field.Path,
 ) field.ErrorList {
 	var allErrs field.ErrorList
+
+	// Ensure that the header names are case-insensitive unique
+	allErrs = append(allErrs, validateRequestHeadersCaseInsensitiveUnique(
+		headerModifier.Add,
+		headerModifierPath.Child("add"))...,
+	)
+	allErrs = append(allErrs, validateRequestHeadersCaseInsensitiveUnique(
+		headerModifier.Set,
+		headerModifierPath.Child("set"))...,
+	)
+	allErrs = append(allErrs, validateRequestHeaderStringCaseInsensitiveUnique(
+		headerModifier.Remove,
+		headerModifierPath.Child("remove"))...,
+	)
 
 	for _, h := range headerModifier.Add {
 		if err := validator.ValidateRequestHeaderName(string(h.Name)); err != nil {
@@ -859,6 +874,43 @@ func validateFilterHeaderModifierFields(
 			valErr := field.Invalid(headerModifierPath.Child("remove"), h, err.Error())
 			allErrs = append(allErrs, valErr)
 		}
+	}
+
+	return allErrs
+}
+
+func validateRequestHeadersCaseInsensitiveUnique(
+	headers []v1.HTTPHeader,
+	path *field.Path,
+) field.ErrorList {
+	var allErrs field.ErrorList
+
+	seen := make(map[string]struct{})
+
+	for _, h := range headers {
+		name := strings.ToLower(string(h.Name))
+		if _, exists := seen[name]; exists {
+			valErr := field.Invalid(path, h, "header name is not unique")
+			allErrs = append(allErrs, valErr)
+		}
+		seen[name] = struct{}{}
+	}
+
+	return allErrs
+}
+
+func validateRequestHeaderStringCaseInsensitiveUnique(headers []string, path *field.Path) field.ErrorList {
+	var allErrs field.ErrorList
+
+	seen := make(map[string]struct{})
+
+	for _, h := range headers {
+		name := strings.ToLower(h)
+		if _, exists := seen[name]; exists {
+			valErr := field.Invalid(path, h, "header name is not unique")
+			allErrs = append(allErrs, valErr)
+		}
+		seen[name] = struct{}{}
 	}
 
 	return allErrs
