@@ -1,0 +1,5 @@
+prAssigneeFromIssueNumber: 583
+warnMissingIssue: true
+missingIssueMessage: |
+  Please make sure to include the issue number in the PR description to automatically close the issue when the PR is merged.
+  See [Linking a pull request to an issue](https://docs.github.com/en/issues/tracking-your-work-with-issues/linking-a-pull-request-to-an-issue) and our [Pull Request Guidelines](../docs/developer/pull-request.md) for more information.

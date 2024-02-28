@@ -1,8 +1,7 @@
 ---
-
 yaml-files:
-  - '*.yaml'
-  - '*.yml'
+  - "*.yaml"
+  - "*.yml"
 
 ignore:
   - deploy/helm-chart/templates/
@@ -39,7 +38,7 @@ rules:
     allow-non-breakable-words: true
     allow-non-breakable-inline-mappings: true
     ignore: |
-      .github/workflows/
+      .github/
       deploy/manifests/nginx-gateway.yaml
       deploy/manifests/crds
       tests/longevity/manifests/cronjob.yaml
