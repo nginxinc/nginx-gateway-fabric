@@ -2,8 +2,10 @@
 
 source scripts/vars.env
 
+skip_gke_master_control_node_access="${1:-false}"
+
 # Remove VM IP from GKE master control node access, if required
-if [ "${ADD_VM_IP_AUTH_NETWORKS}" = "true" ]; then
+if [ ${ADD_VM_IP_AUTH_NETWORKS} = "true" ] && [ ${skip_gke_master_control_node_access} != "true" ]; then
     EXTERNAL_IP=$(gcloud compute instances describe ${RESOURCE_NAME} --zone ${GKE_CLUSTER_ZONE} --project=${GKE_PROJECT} --zone=${GKE_CLUSTER_ZONE} \
                     --format='value(networkInterfaces[0].accessConfigs[0].natIP)')
     CURRENT_AUTH_NETWORK=$(gcloud container clusters describe ${GKE_CLUSTER_NAME} --zone ${GKE_CLUSTER_ZONE} \

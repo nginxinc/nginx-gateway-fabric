@@ -4,17 +4,17 @@ on:
   workflow_dispatch:
     inputs:
       test_label:
-        description: 'NFR test to run. Choose between performance, upgrade or all.'
+        description: NFR test to run. Choose between performance, upgrade or all.
         required: true
-        default: 'all'
+        default: all
         type: choice
         options: [performance, upgrade, all]
       version:
-        description: 'Version of NGF under test'
+        description: Version of NGF under test
         required: true
-        default: 'edge'
+        default: edge
       nginx-plus:
-        description: 'Run tests with NGINX Plus'
+        description: Run tests with NGINX Plus
         required: false
         default: false
         type: boolean
@@ -24,7 +24,7 @@ defaults:
     shell: bash
 
 concurrency:
-  group: ${{ github.ref_name }}-ci
+  group: ${{ github.ref_name }}-nfr
   cancel-in-progress: true
 
 permissions:
@@ -67,7 +67,7 @@ jobs:
       uses: docker/metadata-action@8e5442c4ef9f78752691e2d8f8d19755c6f78e81 # v5.5.1
       with:
         images: |
-          name=gcr.io/${{ secrets.GCP_PROJECT_ID }}/ngf-nfr/nginx-gateway-fabric/${{ inputs.nginx-plus == true && 'nginxplus' || 'nginx' }}
+          name=gcr.io/${{ secrets.GCP_PROJECT_ID }}/ngf-nfr/nginx-gateway-fabric/${{ inputs.nginx-plus == true && 'nginx-plus' || 'nginx' }}
         tags: |
           type=raw,value=${{ inputs.version }}-${{ github.run_id }}
 
@@ -88,8 +88,8 @@ jobs:
     - name: Set up Cloud SDK
       uses: google-github-actions/setup-gcloud@98ddc00a17442e89a24bbf282954a3b65ce6d200 # v2.1.0
       with:
-        project_id: '${{ secrets.GCP_PROJECT_ID }}'
-        install_components: 'kubectl'
+        project_id: ${{ secrets.GCP_PROJECT_ID }}
+        install_components: kubectl
 
     - name: Login to GCR
       run: gcloud auth configure-docker gcr.io -q
@@ -124,24 +124,20 @@ jobs:
           ${{ inputs.nginx-plus == true && format('"nginx-repo.crt={0}"', secrets.NGINX_CRT) || '' }}
           ${{ inputs.nginx-plus == true && format('"nginx-repo.key={0}"', secrets.NGINX_KEY) || '' }}
 
-    - name: 'Setup dotenv file'
+    - name: Setup dotenv file
       working-directory: ./tests/scripts
-      env:
-        GKE_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
-        SERVICE_ACCOUNT: ${{ secrets.GCP_SERVICE_ACCOUNT }}
-        NODES_SERVICE_ACCOUNT: ${{ secrets.GKE_NODES_SERVICE_ACCOUNT }}
       run: |
         echo "RESOURCE_NAME=nfr-tests-${{ github.run_id }}" >> vars.env
         echo "TAG=${{ inputs.version }}-${{ github.run_id }}" >> vars.env
-        echo "PREFIX=gcr.io/${GKE_PROJECT_ID}/ngf-nfr/nginx-gateway-fabric" >> vars.env
-        echo "NGINX_PREFIX=gcr.io/${GKE_PROJECT_ID}/ngf-nfr/nginx-gateway-fabric/nginx" >> vars.env
-        echo "NGINX_PLUS_PREFIX=gcr.io/${GKE_PROJECT_ID}/ngf-nfr/nginx-gateway-fabric/nginxplus" >> vars.env
+        echo "PREFIX=gcr.io/${{ secrets.GCP_PROJECT_ID }}/ngf-nfr/nginx-gateway-fabric" >> vars.env
+        echo "NGINX_PREFIX=gcr.io/${{ secrets.GCP_PROJECT_ID }}/ngf-nfr/nginx-gateway-fabric/nginx" >> vars.env
+        echo "NGINX_PLUS_PREFIX=gcr.io/${{ secrets.GCP_PROJECT_ID }}/ngf-nfr/nginx-gateway-fabric/nginx-plus" >> vars.env
         echo "GKE_CLUSTER_NAME=nfr-tests-${{ github.run_id }}" >> vars.env
         echo "GKE_CLUSTER_ZONE=us-east1-b" >> vars.env
         echo "GKE_CLUSTER_REGION=us-east1" >> vars.env
-        echo "GKE_PROJECT=${GKE_PROJECT_ID}" >> vars.env
-        echo "GKE_SVC_ACCOUNT=${SERVICE_ACCOUNT}" >> vars.env
-        echo "GKE_NODES_SERVICE_ACCOUNT=${NODES_SERVICE_ACCOUNT}" >> vars.env
+        echo "GKE_PROJECT=${{ secrets.GCP_PROJECT_ID }}" >> vars.env
+        echo "GKE_SVC_ACCOUNT=${{ secrets.GCP_SERVICE_ACCOUNT }}" >> vars.env
+        echo "GKE_NODES_SERVICE_ACCOUNT=${{ secrets.GKE_NODES_SERVICE_ACCOUNT }}" >> vars.env
         echo "IMAGE=projects/debian-cloud/global/images/debian-11-bullseye-v20240213" >> vars.env
         echo "NETWORK_TAGS=nfr-tests-${{ github.run_id }}" >> vars.env
         echo "NGF_REPO=nginxinc" >> vars.env
@@ -161,23 +157,22 @@ jobs:
       run:
         make create-and-setup-vm
 
-    - name: Run Performance Tests
+    - name: Run Tests
       working-directory: ./tests
-      if: ${{ inputs.test_label == 'performance' || inputs.test_label == 'all' }}
-      run:
-        sed -i '/^GINKGO_LABEL=/s/=.*/="performance"/' "scripts/vars.env" && make run-tests-on-vm
-
-    - name: Run Upgrade Tests
-      working-directory: ./tests
-      if: ${{ inputs.test_label == 'upgrade' || inputs.test_label == 'all' }}
-      run:
-        sed -i '/^GINKGO_LABEL=/s/=.*/="upgrade"/' "scripts/vars.env" && make run-tests-on-vm
+      run: |
+        if ${{ inputs.test_label != 'all' }}; then
+          sed -i '/^GINKGO_LABEL=/s/=.*/="${{ inputs.test_label }}"/' "scripts/vars.env" && make run-tests-on-vm;
+        else
+          make run-tests-on-vm;
+        fi
 
     - name: Cleanup
       working-directory: ./tests
       if: always()
-      run:
-        bash scripts/cleanup-gcp-pipeline.sh && rm -rf scripts/vars.env
+      run: |
+        bash scripts/cleanup-vm.sh true
+        make delete-gke-cluster
+        rm -rf scripts/vars.env
 
     - name: Open a PR with the results
       uses: peter-evans/create-pull-request@a4f52f8033a6168103c2538976c07b467e8163bc # v6.0.1
@@ -186,7 +181,7 @@ jobs:
         author: ${{ github.actor }} <${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com>
         branch: tests/nfr-tests-${{ inputs.version }}
         delete-branch: true
-        title: 'NFR Test Results for NGF version ${{ inputs.version }}'
+        title: NFR Test Results for NGF version ${{ inputs.version }}
         body: |
           Update with NFR test results for NGF version ${{ inputs.version }}
           - Auto-generated by the NFR tests workflow run ${{ github.run_id }}
