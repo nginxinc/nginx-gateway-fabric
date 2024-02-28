@@ -17,6 +17,7 @@ import (
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/events/eventsfakes"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/config"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/dataplane"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/graph"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/resolver"
@@ -77,8 +78,8 @@ var _ = Describe("Collector", Ordered, func() {
 		ngfPod                  *v1.Pod
 		ngfReplicaSet           *appsv1.ReplicaSet
 		kubeNamespace           *v1.Namespace
-
-		baseGetCalls getCallsFunc
+		baseGetCalls            getCallsFunc
+		flags                   config.Flags
 	)
 
 	BeforeAll(func() {
@@ -125,6 +126,11 @@ var _ = Describe("Collector", Ordered, func() {
 				UID:  "test-uid",
 			},
 		}
+
+		flags = config.Flags{
+			Names:  []string{"boolFlag", "intFlag", "stringFlag"},
+			Values: []string{"false", "default", "user-defined"},
+		}
 	})
 
 	BeforeEach(func() {
@@ -137,6 +143,7 @@ var _ = Describe("Collector", Ordered, func() {
 			ImageSource:       "local",
 			Arch:              runtime.GOARCH,
 			DeploymentID:      string(ngfReplicaSet.ObjectMeta.OwnerReferences[0].UID),
+			Flags:             flags,
 		}
 
 		k8sClientReader = &eventsfakes.FakeReader{}
@@ -153,6 +160,7 @@ var _ = Describe("Collector", Ordered, func() {
 			Version:             version,
 			PodNSName:           podNSName,
 			ImageSource:         "local",
+			Flags:               flags,
 		})
 
 		baseGetCalls = createGetCallsFunc(ngfPod, ngfReplicaSet, kubeNamespace)

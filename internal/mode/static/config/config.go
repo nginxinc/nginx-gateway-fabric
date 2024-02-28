@@ -15,6 +15,8 @@ type Config struct {
 	ImageSource string
 	// AtomicLevel is an atomically changeable, dynamic logging level.
 	AtomicLevel zap.AtomicLevel
+	// Flags contains the NGF command-line flag names and values.
+	Flags Flags
 	// GatewayNsName is the namespaced name of a Gateway resource that the Gateway will use.
 	// The Gateway will ignore all other Gateway resources.
 	GatewayNsName *types.NamespacedName
@@ -104,4 +106,14 @@ type UsageReportConfig struct {
 	ClusterDisplayName string
 	// InsecureSkipVerify controls whether the client verifies the server cert.
 	InsecureSkipVerify bool
+}
+
+// Flags contains the NGF command-line flag names and values.
+// Flag Names and Values are paired based off of index in slice.
+type Flags struct {
+	// Names contains the name of the flag.
+	Names []string
+	// Values contains the value of the flag in string form.
+	// Each Value will be either true or false for boolean flags and default or user-defined for non-boolean flags.
+	Values []string
 }

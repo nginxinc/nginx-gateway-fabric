@@ -12,6 +12,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/config"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/dataplane"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/graph"
 )
@@ -55,6 +56,7 @@ type Data struct {
 	Arch              string
 	DeploymentID      string
 	ImageSource       string
+	Flags             config.Flags
 	NGFResourceCounts NGFResourceCounts
 	NodeCount         int
 	NGFReplicaCount   int
@@ -74,6 +76,8 @@ type DataCollectorConfig struct {
 	PodNSName types.NamespacedName
 	// ImageSource is the source of the NGF image.
 	ImageSource string
+	// Flags contains the command-line NGF flag keys and values.
+	Flags config.Flags
 }
 
 // DataCollectorImpl is am implementation of DataCollector.
@@ -134,6 +138,7 @@ func (c DataCollectorImpl) Collect(ctx context.Context) (Data, error) {
 		ImageSource:     c.cfg.ImageSource,
 		Arch:            runtime.GOARCH,
 		DeploymentID:    deploymentID,
+		Flags:           c.cfg.Flags,
 	}
 
 	return data, nil
