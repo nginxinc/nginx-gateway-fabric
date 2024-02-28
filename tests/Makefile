@@ -9,7 +9,7 @@ GW_API_VERSION ?= 1.0.0 ## Supported Gateway API version for NGF under test
 K8S_VERSION ?= latest ## Expected format: 1.24 (major.minor) or latest
 GW_SERVICE_TYPE=NodePort
 GW_SVC_GKE_INTERNAL=false
-GINKGO_LABEL=
+GINKGO_LABEL=functional
 GINKGO_FLAGS=
 
 ifneq ($(GINKGO_LABEL),)
@@ -47,9 +47,21 @@ load-images-with-plus: ## Load NGF and NGINX Plus images on configured kind clus
 	cd .. && make PREFIX=$(PREFIX) TAG=$(TAG) load-images-with-plus
 
 test: ## Run the system tests against your default k8s cluster
+	go test -v ./suite -args --gateway-api-version=$(GW_API_VERSION) \
+		--gateway-api-prev-version=$(GW_API_PREV_VERSION) --image-tag=$(TAG) --plus-enabled=$(PLUS_ENABLED) \
+		--ngf-image-repo=$(PREFIX) --nginx-image-repo=$(NGINX_PREFIX) --pull-policy=$(PULL_POLICY) \
+		--k8s-version=$(K8S_VERSION) --service-type=$(GW_SERVICE_TYPE) --is-gke-internal-lb=$(GW_SVC_GKE_INTERNAL)
+
+nginx-functional-test: ## Run the functional tests against your default k8s cluster
 	go test -v ./suite $(GINKGO_FLAGS) -args --gateway-api-version=$(GW_API_VERSION) \
 		--gateway-api-prev-version=$(GW_API_PREV_VERSION) --image-tag=$(TAG) --plus-enabled=$(PLUS_ENABLED) \
 		--ngf-image-repo=$(PREFIX) --nginx-image-repo=$(NGINX_PREFIX) --pull-policy=$(PULL_POLICY) \
+		--k8s-version=$(K8S_VERSION) --service-type=$(GW_SERVICE_TYPE) --is-gke-internal-lb=$(GW_SVC_GKE_INTERNAL)
+
+nginx-plus-functional-test: ## Run the functional tests against your default k8s cluster
+	go test -v ./suite $(GINKGO_FLAGS) -args --gateway-api-version=$(GW_API_VERSION) \
+		--gateway-api-prev-version=$(GW_API_PREV_VERSION) --image-tag=$(TAG) --plus-enabled=true \
+		--ngf-image-repo=$(PREFIX) --nginx-image-repo=$(NGINX_PLUS_PREFIX) --pull-policy=$(PULL_POLICY) \
 		--k8s-version=$(K8S_VERSION) --service-type=$(GW_SERVICE_TYPE) --is-gke-internal-lb=$(GW_SVC_GKE_INTERNAL)
 
 .PHONY: delete-kind-cluster

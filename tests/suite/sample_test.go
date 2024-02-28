@@ -3,6 +3,8 @@ package suite
 import (
 	"fmt"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strconv"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -14,7 +16,8 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/tests/framework"
 )
 
-var _ = Describe("Basic test example", func() {
+var _ = Describe("Basic test example", Ordered, Label("functional"), func() {
+	var outFile *os.File
 	files := []string{
 		"hello/hello.yaml",
 		"hello/gateway.yaml",
@@ -26,15 +29,24 @@ var _ = Describe("Basic test example", func() {
 		},
 	}
 
-	BeforeEach(func() {
+	BeforeAll(func() {
 		Expect(resourceManager.Apply([]client.Object{ns})).To(Succeed())
 		Expect(resourceManager.ApplyFromFiles(files, ns.Name)).To(Succeed())
 		Expect(resourceManager.WaitForAppsToBeReady(ns.Name)).To(Succeed())
+
+		resultsDir, err := framework.CreateResultsDir("functional", version)
+		Expect(err).ToNot(HaveOccurred())
+
+		filename := filepath.Join(resultsDir, fmt.Sprintf("%s.md", version))
+		outFile, err = framework.CreateResultsFile(filename)
+		Expect(err).ToNot(HaveOccurred())
+		Expect(framework.WriteSystemInfoToFile(outFile, clusterInfo, *plusEnabled)).To(Succeed())
 	})
 
-	AfterEach(func() {
+	AfterAll(func() {
 		Expect(resourceManager.DeleteFromFiles(files, ns.Name)).To(Succeed())
 		Expect(resourceManager.Delete([]client.Object{ns})).To(Succeed())
+		outFile.Close()
 	})
 
 	It("sends traffic", func() {
