@@ -3,6 +3,7 @@
 [![Continuous Integration](https://github.com/nginxinc/nginx-gateway-fabric/actions/workflows/ci.yml/badge.svg)](https://github.com/nginxinc/nginx-gateway-fabric/actions/workflows/ci.yml)
 [![Conformance Testing](https://github.com/nginxinc/nginx-gateway-fabric/actions/workflows/conformance.yml/badge.svg)](https://github.com/nginxinc/nginx-gateway-fabric/actions/workflows/conformance.yml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/nginxinc/nginx-gateway-fabric)](https://goreportcard.com/report/github.com/nginxinc/nginx-gateway-fabric)
+[![codecov](https://codecov.io/gh/nginxinc/nginx-gateway-fabric/graph/badge.svg?token=32ULC8F13Z)](https://codecov.io/gh/nginxinc/nginx-gateway-fabric)
 [![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/nginxinc/nginx-gateway-fabric?logo=github&sort=semver)](https://github.com/nginxinc/nginx-gateway-fabric/releases/latest)
 [![Slack](https://img.shields.io/badge/slack-%23nginx--gateway--fabric-green?logo=slack)](https://nginxcommunity.slack.com/channels/nginx-gateway-fabric)
 [![Project Status: Active – The project has reached a stable, usable state and is being actively developed.](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active)
