@@ -468,11 +468,9 @@ func parseFlags(flags *pflag.FlagSet) ([]string, []string) {
 			if flag.Value.Type() == "bool" {
 				flagValues = append(flagValues, flag.Value.String())
 			} else {
-				var val string
+				val := "user-defined"
 				if flag.Value.String() == flag.DefValue {
 					val = "default"
-				} else {
-					val = "user-defined"
 				}
 
 				flagValues = append(flagValues, val)
