@@ -303,7 +303,15 @@ _Conformance Level_: Extended/Implementation-specific
 
 _Example(s)_: [Envoy Gateway BackendTrafficPolicy](https://gateway.envoyproxy.io/v0.6.0/api/extension_types/#backendtrafficpolicy), [GKE HealthCheckPolicy](https://cloud.google.com/kubernetes-engine/docs/how-to/configure-gateway-resources), [BackendTLSPolicy](https://gateway-api.sigs.k8s.io/api-types/backendtlspolicy/)
 
-Policies are a Kubernetes object that augments the behavior of an object in a standard way. Policies can be attached to one object ("Direct Policy Attachment") or objects in a hierarchy ("Inherited Policy Attachment"). In both cases, Policies are implemented as CRDs, and they must include a _single_ `TargetRef` struct in the `spec` to identify how and where to apply the Policy. This `TargetRef` can include a `sectionName` to target specific matches within nested objects, such as a Listener within a Gateway or a specific Port on a Service.
+Policies are a Kubernetes object that augments the behavior of an object in a standard way. Policies can be attached to one object ("Direct Policy Attachment") or objects in a hierarchy ("Inherited Policy Attachment"). In both cases, Policies are implemented as CRDs, and they must include a _single_ `TargetRef` struct in the `spec` to identify how and where to apply the Policy. The Policy GEP _may_ be extended to supported multiple `TargetRefs` and/or label selectors.
+
+Policies do not need to support attaching to all resource Kinds. Implementations can choose which resources the Policy can be attached to.
+
+#### Direct Policy Attachment
+
+A Direct Policy Attachment is a Policy that references a single object -- such as a Gateway or HTTPRoute. It is tightly bound to one instance of a particular Kind within a single Namespace or an instance of a single Kind at the cluster-scope. It affects _only_ the object specified in its TargetRef.
+
+A Direct Policy _may_  target a subsection of a resource using the `sectionName` field of the `targetRef`. This allows the Policy to target specific matches within nested objects, such as a Listener within a Gateway or a specific Port on a Service.
 
 Example of a TargetRef that targets an entire Gateway:
 
@@ -326,15 +334,9 @@ targetRef:
   namespace: default
 ```
 
-There's also an open [GEP issue](https://github.com/kubernetes-sigs/gateway-api/issues/995) to add a name field to HTTPRouteRule and HTTPRouteMatch structs to allow users to identify different routes. Once implemented, Policies can target a specific rule or match in an HTTPRoute. The Policy GEP _may_ be extended to supported multiple `TargetRefs` and/or label selectors.
+There's also an open [GEP issue](https://github.com/kubernetes-sigs/gateway-api/issues/995) to add a name field to HTTPRouteRule and HTTPRouteMatch structs to allow users to identify different routes. Once implemented, Policies can target a specific rule or match in an HTTPRoute.
 
-Policies do not need to support attaching to all resource Kinds. Implementations can choose which resources the Policy can be attached to.
-
-#### Direct Policy Attachment
-
-A Direct Policy Attachment is a Policy that references a single object -- such as a Gateway or HTTPRoute. It is tightly bound to one instance of a particular Kind within a single Namespace or an instance of a single Kind at the cluster-scope. It only modifies the behavior of the object that it's bound to.
-
-Example:
+The BackendTLSPolicy is an example of a Direct Policy Attachment:
 
 ```yaml
 apiVersion: gateway.networking.k8s.io/v1alpha2
@@ -355,7 +357,7 @@ spec:
     hostname: secure-app.example.com
 ```
 
-This BackendTLSPolicy is an example of a Direct Policy Attachment. It targets the `secure-app` Service in the `default` Namespace. The TLS configuration in the `backend-tls` Policy will be applied for all Routes that reference the `secure-app` Service.
+This example targets the `secure-app` Service in the `default` Namespace. The TLS configuration in the `backend-tls` Policy will be applied for all Routes that reference the `secure-app` Service.
 
 When to use Direct Policy Attachment:
 
@@ -444,6 +446,19 @@ Override values are given precedence from the top down. An override value attach
 Default values are given precedence from the bottom up. A default attached to a Backend will have the highest precedence among _default_ values.
 
 Inherited Policies do not need to support policy attachment to each resource shown in the hierarchy. Implementations can choose which resources the Policy can attach to.
+
+#### Direct or Indirect?
+
+| Direct                                                                                          | Indirect                                                                                                      |
+|-------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------|
+| Affects ONLY the object it targets                                                              | Affects more objects that the targeted object                                                                 |
+| Requires no extra knowledge beyond the Policy and target object                                 | Requires knowledge of resources other than the Policy and target object to understand the state of the system |
+| Does not include defaults or overrides                                                          | May include defaults and/or overrides                                                                         |
+| Should only support attaching to a single Kind                                                  | Can support attaching to multiple Kinds                                                                       |
+| May target a subsection of a resource using the `sectionName` field of the `targetRef` struct   | Does not target a subsection of a resource                                                                    |
+
+
+> If a Policy can be used as an Inherited Policy, it MUST be treated as an Inherited Policy, regardless of whether a specific instance of the Policy is only affecting a single object.
 
 #### Challenges of Policy Attachment
 
@@ -687,7 +702,7 @@ _Resource type:_ CRD
 
 _Role(s):_ Cluster Operator
 
-_Extension point:_ Gateway, Gateway Listener, HTTPRoute
+_Extension point:_ Gateway, HTTPRoute
 
 _NGINX context(s)_: http, server, location
 
@@ -705,7 +720,14 @@ NGINX directives:
 - [`keepalive_timeout`](https://nginx.org/en/docs/http/ngx_http_core_module.html#keepalive_timeout)
 - [`keepalive_disable`](https://nginx.org/en/docs/http/ngx_http_core_module.html#keepalive_disable)
 
-These features are grouped because they all deal with client traffic. An Inherited Policy fits this group best because there is a use case where the Cluster Operator sets a sane default for client max body size or client keepalives that has to be overridden by an Application Developer because of the unique attributes of the Service they own.
+These features are grouped because they all deal with client traffic.
+
+An Inherited Policy fits this group best for the following reasons:
+
+- A Cluster Operator may want to set defaults for client max body size or client keepalives.
+- An Application Developer may want to override these defaults because of the unique attributes of their applications.
+- Since these settings are available in the http, server, and location contexts, there is already inheritance involved. For example, setting the client max body size in the http context, sets the client max body size of all the servers and locations. While setting the client max body size of server `example.com` will override the size set in the http context.
+- If this policy is applied to a Gateway is will affect all the Routes attached to the Gateway, which is one of the traits of an Inherited Policy.
 
 #### Future Work
 
@@ -713,7 +735,7 @@ These features are grouped because they all deal with client traffic. An Inherit
 
 #### Alternatives
 
-- Direct Policy: A Direct Policy isn't a good fit for client settings because it does not support overrides and defaults.
+- Direct Policy: A Direct Policy isn't a good fit because the NGINX directives included in this policy are available at the http, server, and location contexts. NGINX's inheritance behavior among these contexts does not suit Direct Policy attachment. A client settings policy attached to a Gateway will affect all the Routes attached to the Gateway. This violates the Direct Policy requirement that the policy should only affect the object it attaches to. If we only support attaching this policy to an HTTPRoute, we could use a Direct Policy. However, we want to allow the Cluster Operator to configure defaults for these client settings, which means we need to support attaching to Gateways as well as HTTPRoutes.
 
 ### Upstream Settings
 
@@ -863,7 +885,7 @@ _Resource type:_ CRD
 
 _Role(s):_ Cluster Operator, Application Developer
 
-_Extension point:_ Gateway, HTTPRoute, HTTPRoute Rule
+_Extension point:_ Gateway, HTTPRoute
 
 _NGINX context(s):_ http, server, location
 
@@ -882,6 +904,13 @@ NGINX directives:
 - [`proxy_next_upstream_timeout`](https://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_next_upstream_timeout)
 - [`proxy_next_upstream_retries`](https://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_next_upstream_tries)
 - [`proxy_buffering`](https://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_buffering)
+
+An Inherited Policy fits this group best for the following reasons (same reasons as [Client Settings](#client-settings):
+
+- A Cluster Operator may want to set defaults for proxy settings.
+- An Application Developer may want to override these defaults because of the unique attributes of their application.
+- Since these settings are available in the http, server, and location contexts, there is already inheritance involved. For example, setting the proxy connect timeout in the http context, sets the proxy connect timeout of all the servers and locations. While setting the proxy connect timeout of server `example.com` will override the size set in the http context.
+- If this policy is applied to a Gateway is will affect all the Routes attached to the Gateway, which is one of the traits of an Inherited Policy.
 
 #### Future Work
 
