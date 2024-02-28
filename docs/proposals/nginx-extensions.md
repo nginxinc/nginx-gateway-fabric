@@ -372,7 +372,7 @@ The Policy defines which resource Kinds it can be attached to.
 
 #### Inherited Policy Attachment
 
-Inherited Policy Attachment is designed to allow settings to flow down a hierarchy. Inherited Policies must have the following fields in their specs:
+Inherited Policy Attachment is designed to allow settings to flow down a hierarchy. Inherited Policies _may_ have the following fields in their specs:
 
 - `defaults`: set the default value. Can be overridden by _lower_ objects.
   Ex. A connection timeout default policy on a Gateway may be overridden by a connection timeout policy on an HTTPRoute.
