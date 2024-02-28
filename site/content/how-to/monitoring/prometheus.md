@@ -27,10 +27,10 @@ helm repo update
 helm install prometheus prometheus-community/prometheus -n monitoring --create-namespace --set server.global.scrape_interval=15s
 ```
 
-Once running, you can access the Prometheus dashboard by using port-forwarding:
+Once running, you can access the Prometheus dashboard by using port-forwarding in the background:
 
 ```shell
-kubectl -n monitoring port-forward svc/prometheus-server 9090:80
+kubectl port-forward -n monitoring svc/prometheus-server 9090:80 &
 ```
 
 Visit [http://127.0.0.1:9090](http://127.0.0.1:9090) to view the dashboard.
@@ -44,13 +44,19 @@ helm repo update
 helm install grafana grafana/grafana -n monitoring --create-namespace
 ```
 
-Once running, you can access the Grafana dashboard by using port-forwarding:
+Once running, you can access the Grafana dashboard by using port-forwarding in the background:
 
 ```shell
-kubectl -n monitoring port-forward svc/grafana 3000:80
+kubectl port-forward -n monitoring svc/grafana 3000:80 &
 ```
 
 Visit [http://127.0.0.1:3000](http://127.0.0.1:3000) to view the Grafana UI.
+
+The username for login is `admin`. The password can be acquired by running:
+
+```shell
+kubectl get secret -n monitoring grafana -o jsonpath="{.data.admin-password}" | base64 --decode ; echo
+```
 
 #### Configuring Grafana
 
@@ -58,7 +64,7 @@ In the Grafana UI menu, go to `Connections` then `Data sources`. Add your Promet
 
 Download the following sample dashboard and Import as a new Dashboard in the Grafana UI.
 
-{{< fa "download" >}} {{< link "static/grafana-dashboard.json" "`ngf-grafana-dashboard.json`" >}}
+{{< fa "download" >}} {{< link "grafana-dashboard.json" "`ngf-grafana-dashboard.json`" >}}
 
 ## Available metrics in NGINX Gateway Fabric
 
