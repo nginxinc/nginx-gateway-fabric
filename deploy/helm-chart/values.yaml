@@ -147,3 +147,38 @@ metrics:
 ## extraVolumes for the NGINX Gateway Fabric pod. Use in conjunction with
 ## nginxGateway.extraVolumeMounts and nginx.extraVolumeMounts to mount additional volumes to the containers.
 extraVolumes: []
+
+gateway:
+  ## Create a Gateway resource to expose the NGINX Gateway Fabric pods.
+  create: false
+  ## The namespace of the Gateway resource.
+  namespace: ""
+  ## The Gateway resource annotations.
+  annotations: {}
+  ## The Gateway resource listeners.
+  # listeners:
+  # - name: http
+  #   port: 80
+  #   protocol: HTTP
+  # - name: https
+  #   port: 443
+  #   hostname: ""
+  #   protocol: HTTPS
+  #   # The namespaces of the routes allowed to attach to this listener. Follows the syntax from
+  #   # https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.RouteNamespaces.
+  #   allowedRoutesNamespaces:
+  #     from: Selector
+  #     selector:
+  #       matchLabels:
+  #         kubernetes.io/metadata.name: nginx-gateway
+  #   # The kinds of the routes allowed to attach to this listener. Follows the syntax from
+  #   # https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.RouteGroupKind.
+  #   allowedRoutesKind:
+  #   - kind: HTTPRoute
+  #   tls:
+  #     ## The Gateway resource certificate. Only a single reference to a Secret is supported.
+  #     certificate:
+  #       ## The name of the Secret containing the certificate.
+  #       name: Secret
+  #       ## The namespace of the Secret containing the certificate.
+  #       namespace: ""

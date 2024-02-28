@@ -1,0 +1,45 @@
+{{- if .Values.gateway.create }}
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: nginx-gateway
+  namespace: {{ default .Release.Namespace .Values.gateway.namespace }}
+  labels:
+    {{- include "nginx-gateway.labels" . | nindent 4 }}
+  {{- with .Values.gateway.annotations }}
+  annotations:
+  {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  gatewayClassName: {{ .Values.nginxGateway.gatewayClassName }}
+  listeners:
+  {{- range .Values.gateway.listeners }}
+  - name: {{ .name }}
+    {{- if .hostname }}
+    hostname: {{ .hostname }}
+    {{- end }}
+    port: {{ .port }}
+    protocol: {{ .protocol }}
+    {{- if or .allowedRoutesNamespace .allowedRoutesKind }}
+    allowedRoutes:
+    {{- with .allowedRoutesNamespace }}
+      namespaces:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+    {{- with .allowedRoutesKind }}
+      kinds:
+        {{- toYaml . | nindent 6 }}
+    {{- end }}
+    {{- end }}
+    {{- if .tls }}
+    tls:
+      mode: Terminate
+      certificateRefs:
+        - name: {{ .tls.certificate.name }}
+          {{- if .tls.certificate.namespace }}
+          namespace: {{ .tls.certificate.namespace }}
+          {{- end }}
+          kind: Secret
+    {{- end }}
+  {{- end }}
+{{- end }}
