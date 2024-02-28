@@ -140,10 +140,10 @@ lint: ## Run golangci-lint against code
 .PHONY: unit-test
 unit-test: ## Run unit tests for the go code
 	# We have to run the tests in the cmd package using `go test` because of a bug with the CLI library cobra. See https://github.com/spf13/cobra/issues/2104.
-	go test ./cmd/... -race -coverprofile cmd-cover.out
-	go run github.com/onsi/ginkgo/v2/ginkgo --randomize-all --randomize-suites --race --keep-going --fail-on-pending --trace --cover --coverprofile=cover.out -r internal
-	go tool cover -html=cover.out -o cover.html
-	go tool cover -html=cmd-cover.out -o cmd-cover.html
+	go test ./cmd/... -race -shuffle=on -coverprofile=cmd-coverage.out -covermode=atomic
+	go run github.com/onsi/ginkgo/v2/ginkgo --randomize-all --randomize-suites --race --keep-going --fail-on-pending --trace --covermode=atomic --coverprofile=coverage.out -r internal
+	go tool cover -html=coverage.out -o cover.html
+	go tool cover -html=cmd-coverage.out -o cmd-cover.html
 
 .PHONY: njs-unit-test
 njs-unit-test: ## Run unit tests for the njs httpmatches module
