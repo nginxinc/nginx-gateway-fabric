@@ -58,8 +58,6 @@ NGINX is highly configurable and offers rich features that can benefit our users
     - [Proxy Settings](#proxy-settings)
       - [Future Work](#future-work-6)
       - [Alternatives](#alternatives-7)
-    - [Circuit Breaker/ Backup service](#circuit-breaker-backup-service)
-      - [Options](#options)
   - [Testing](#testing)
   - [Security Considerations](#security-considerations)
   - [Alternatives Considered](#alternatives-considered)
@@ -491,7 +489,7 @@ To identify the set of NGINX directives and parameters NGINX Gateway Fabric shou
 
 | Features                                                                               | Requires NGINX Plus |
 |----------------------------------------------------------------------------------------|---------------------|
-| Circuit breaker                                                                        |                     |
+| Backup server                                                                          |                     |
 | Load-balancing method                                                                  |                     |
 | Load-balancing method (least time)                                                     | X                   |
 | Limit connections to a server                                                          |                     |
@@ -736,6 +734,7 @@ OSS Features:
 - Load-balancing method (all except `least_time`)
 - Limit connections to server
 - Passive health checks
+- Backup server
 
 OSS NGINX directives/parameters:
 
@@ -748,6 +747,7 @@ OSS NGINX directives/parameters:
 - [`max_conns`](https://nginx.org/en/docs/http/ngx_http_upstream_module.html#server)
 - [`fail_timeout`](https://nginx.org/en/docs/http/ngx_http_upstream_module.html#server)
 - [`max_fails`](https://nginx.org/en/docs/http/ngx_http_upstream_module.html#server)
+- [`backup`](https://nginx.org/en/docs/http/ngx_http_upstream_module.html#server)
 
 NGINX Plus Features:
 
@@ -890,103 +890,6 @@ NGINX directives:
 #### Alternatives
 
 - Direct Policy: If there's no strong use case for the Cluster Operator setting sane defaults for these settings, then we can use a Direct Policy. The Direct Policy could attach to an HTTPRoute or HTTPRoute Rule, and the NGINX contexts would be server and location.
-
-### Circuit Breaker/ Backup service
-
-_Extension type:_ BackendRef/Direct Policy
-
-_Resource type:_ CRD
-
-_Role(s):_ Application Developer
-
-_Extension point:_ Backend
-
-_NGINX context(s):_ upstream
-
-Features:
-
-- Backup service/circuit breaker
-
-NGINX upstream server parameters:
-
-- [`backup`](https://nginx.org/en/docs/http/ngx_http_upstream_module.html#server)
-
-Circuit Breaker also relies on the following NGINX upstream server parameters:
-
-- [`fail_timeout`](https://nginx.org/en/docs/http/ngx_http_upstream_module.html#server)
-- [`max_fails`](https://nginx.org/en/docs/http/ngx_http_upstream_module.html#server)
-
-However, these parameters are also used in passive health checks, which is a part of the Upstream Settings Policy. We can either expose these settings in both extensions (not recommended by the Gateway API), or the Circuit Breaker extensions can use the values of these parameters set by the Upstream Settings Policy.
-
-This [NGINX blog post](https://www.nginx.com/blog/microservices-reference-architecture-nginx-circuit-breaker-pattern/) describes the circuit breaker pattern and how to implement it with NGINX plus. The solution involves active health checks, rate-limiting, caching, and the `backup` directive. While this might be a complete solution, it is likely too heavyweight for NGINX Gateway Fabric.
-
-The NGINX Kubernetes projects, NGINX Service Mesh and NGINX Ingress Controller offer alternatives to this solution.
-
-NGINX Ingress Controller supports setting a [backup Service](https://github.com/nginxinc/kubernetes-ingress/tree/release-3.4/examples/custom-resources/backup-directive/virtual-server) that will be used when the primary servers are unavailable. The backup service must be of type ExternalName.
-
-NGINX Service Mesh implements circuit breaking with a [CRD](https://github.com/nginxinc/nginx-service-mesh/blob/main/pkg/apis/specs/v1alpha1/circuit_breaker.go).
-
-Here's an example:
-
-```yaml
-apiVersion: specs.smi.nginx.com/v1alpha1
-kind: CircuitBreaker
-metadata:
-  name: circuit-breaker-example
-  namespace: default
-spec:
-  destination:
-    kind: Service
-    name: target-svc
-    namespace: default
-  errors: 3
-  timeoutSeconds: 30
-  fallback:
-    service: default/target-backup
-    port: 80
-```
-
-The `spec.destination` field is similar to `targetRef` in that it attaches the CircuitBreaker setting to an object. This example configures a circuit breaker that will trip when there are three errors within 30 seconds. If the circuit breaker trips, requests to the destination Service will be routed to the fallback Service. After 30 seconds, the circuit breaker will reset, and the requests will be routed to the destination Service again. This implementation uses the NGINX `max_fails`, `fail_timeout`, and `backup` upstream server parameters.
-
-NGINX Gateway Fabric could choose one of these approaches or design something new. It's difficult to propose an extension type for circuit breaker without more discussion and design. The next section outlines some options.
-
-#### Options
-
-- Add `backup` to Upstream Settings Policy: The `fail_timeout` and `max_fails` directives are also used in passive health checks, which is a part of the Upstream Settings Policy. Including circuit breaking -- or just the `backup` directive -- might make more sense in this Policy. This approach is similar to the NGINX Ingress Controller solution.
-- Direct Policy: A Direct Policy, similar to the NGINX Service Mesh example. This Policy would target a Backend and would define a fallback Service. Optionally, this Policy could also include the `fail_timeout` and `max_fails` settings, but this could cause conflicts with the Upstream Settings Policy.
-- Custom BackendRef: Allow users to configure a primary and fallback Service via a custom BackendRef that they can reference in an xRoute:
-
-  ```yaml
-  apiVersion: gateway.nginx.org/v1alpha1
-  kind: CircuitBreaker
-  metadata:
-    name: circuit-breaker-example
-  spec:
-    primary:
-      service: coffee-primary
-      port: 80
-    fallback:
-      service: coffee-backup
-      port: 80
-  ---
-  apiVersion: gateway.networking.k8s.io/v1
-  kind: HTTPRoute
-  metadata:
-    name: custom-backend
-  spec:
-  hostnames:
-  - "example.com"
-  rules:
-    - matches:
-      - path:
-        type: PathPrefix
-        value: /
-        backendRefs:
-      - group: gateway.nginx.org/v1alpha1
-        kind: CircuitBreaker
-        name: circuit-breaker-example
-        port: 80
-  ```
 
 ## Testing
 
