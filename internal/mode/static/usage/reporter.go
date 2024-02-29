@@ -12,8 +12,9 @@ import (
 	"net/url"
 )
 
-//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . credentialsGetter
-//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . Reporter
+//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 -generate
+//counterfeiter:generate . credentialsGetter
+//counterfeiter:generate . Reporter
 
 const apiBasePath = "/api/platform/v1/k8s-usage"
 

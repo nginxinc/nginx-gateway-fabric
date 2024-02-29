@@ -11,7 +11,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . FirstEventBatchPreparer
+//counterfeiter:generate . FirstEventBatchPreparer
 
 // FirstEventBatchPreparer prepares the first batch of events to be processed by the EventHandler.
 // The first batch includes the UpsertEvents for all relevant resources in the cluster.
@@ -20,7 +20,7 @@ type FirstEventBatchPreparer interface {
 	Prepare(ctx context.Context) (EventBatch, error)
 }
 
-//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . Reader
+//counterfeiter:generate . Reader
 
 // Reader allows getting and listing resources from a cache.
 // This interface is introduced for testing to mock the methods from

@@ -11,7 +11,7 @@ import (
 // Note: this interface is created so that it that we can create a fake from it and use it
 // in mode/static/handler_test.go (to avoid import cycles).
 //
-//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . GroupUpdater
+//counterfeiter:generate . GroupUpdater
 type GroupUpdater interface {
 	UpdateGroup(ctx context.Context, name string, reqs ...UpdateRequest)
 }
