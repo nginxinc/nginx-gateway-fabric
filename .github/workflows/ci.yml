@@ -90,8 +90,15 @@ jobs:
       - name: Setup Node.js Environment
         uses: actions/setup-node@60edb5dd545a775178f52524783378180af0d1f8 # v4.0.2
         with:
-          node-version: 18
-      - run: npm --prefix ${{ github.workspace }}/internal/mode/static/nginx/modules install-ci-test
+          node-version-file: .nvmrc
+
+      - name: Run tests
+        run: npm --prefix ${{ github.workspace }}/internal/mode/static/nginx/modules install-ci-test
+
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@54bcd8715eee62d40e33596ef5e8f0f48dbbccab # v4.1.0
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
 
   binary:
     name: Build Binary
