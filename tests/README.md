@@ -37,6 +37,7 @@ make
 ```
 
 ```text
+build-images-with-plus         Build NGF and NGINX Plus images
 build-images                   Build NGF and NGINX images
 cleanup-gcp                    Cleanup all GCP resources
 cleanup-router                 Delete the GKE router
@@ -45,7 +46,10 @@ create-and-setup-vm            Create and setup a GCP VM for tests
 create-gke-router              Create a GKE router to allow egress traffic from private nodes (allows for external image pulls)
 create-kind-cluster            Create a kind cluster
 delete-kind-cluster            Delete kind cluster
+functional-test-nginx-plus     Run the functional tests with NGINX Plus against your default k8s cluster
+functional-test                Run the functional tests with NGINX against your default k8s cluster
 help                           Display this help
+load-images-with-plus          Load NGF and NGINX Plus images on configured kind cluster
 load-images                    Load NGF and NGINX images on configured kind cluster
 run-tests-on-vm                Run the tests on a GCP VM
 setup-gcp-and-run-tests        Create and setup a GKE router and GCP VM for tests and run the tests
@@ -101,7 +105,7 @@ make build-images-with-plus load-images-with-plus TAG=$(whoami)
 
 ## Step 3 - Run the tests
 
-### 3a - Run the tests locally
+### 3a - Run all the tests locally
 
 ```makefile
 make test TAG=$(whoami)
@@ -113,7 +117,19 @@ Or, to run the tests with NGINX Plus enabled:
 make test TAG=$(whoami) PLUS_ENABLED=true
 ```
 
-### 3b - Run the tests on a GKE cluster from a GCP VM
+### 3b - Run the functional tests locally
+
+```makefile
+make functional-test TAG=$(whoami)
+```
+
+Or, to run the tests with NGINX Plus enabled:
+
+```makefile
+make functional-test-nginx-plus TAG=$(whoami)
+```
+
+### 3c - Run the tests on a GKE cluster from a GCP VM
 
 This step only applies if you would like to run the tests from a GCP based VM.
 
