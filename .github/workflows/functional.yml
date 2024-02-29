@@ -108,7 +108,7 @@ jobs:
         run: |
           ngf_tag=${{ steps.ngf-meta.outputs.version }}
           if [ ${{ github.event_name }} == "schedule" ]; then export GW_API_VERSION=main; fi
-          make functional-test${{ matrix.nginx-image == 'nginx-plus' && '-nginx-plus' || ''}} PREFIX=${ngf_prefix} TAG=${ngf_tag}
+          make functional-test${{ matrix.nginx-image == 'nginx-plus' && '-nginx-plus' || ''}} TAG=${ngf_tag}
         working-directory: ./tests
 
       - name: Upload profile to release
