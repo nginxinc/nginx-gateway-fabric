@@ -38,7 +38,7 @@ create-kind-cluster: ## Create a kind cluster
 
 .PHONY: update-ngf-manifest
 update-ngf-manifest: ## Update the NGF deployment manifest image names and imagePullPolicies
-	cd .. && make generate-manifests HELM_TEMPLATE_EXTRA_ARGS_FOR_ALL_MANIFESTS_FILE="--set nginxGateway.kind=skip" HELM_TEMPLATE_COMMON_ARGS="--set nginxGateway.image.repository=$(PREFIX) --set nginxGateway.image.tag=$(TAG) --set nginxGateway.image.pullPolicy=Never --set nginx.image.repository=$(NGINX_PREFIX) --set nginx.image.tag=$(TAG) --set nginx.image.pullPolicy=Never --set nginxGateway.experimentalFeatures.enable=$(ENABLE_EXPERIMENTAL)" && cd -
+	cd .. && make generate-manifests HELM_TEMPLATE_EXTRA_ARGS_FOR_ALL_MANIFESTS_FILE="--set nginxGateway.kind=skip" HELM_TEMPLATE_COMMON_ARGS="--set nginxGateway.image.repository=$(PREFIX) --set nginxGateway.image.tag=$(TAG) --set nginxGateway.image.pullPolicy=Never --set nginx.image.repository=$(NGINX_PREFIX) --set nginx.image.tag=$(TAG) --set nginx.image.pullPolicy=Never --set nginxGateway.gwAPIExperimentalFeatures.enable=$(ENABLE_EXPERIMENTAL)" && cd -
 
 .PHONY: update-ngf-manifest-with-plus
 update-ngf-manifest-with-plus: ## Update the NGF deployment manifest image names and imagePullPolicies including nginx-plus
