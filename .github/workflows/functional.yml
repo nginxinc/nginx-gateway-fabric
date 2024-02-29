@@ -8,7 +8,17 @@ on:
     tags:
       - "v[0-9]+.[0-9]+.[0-9]+*"
   pull_request:
-
+  workflow_call:
+    inputs:
+      platforms:
+        required: true
+        type: string
+      image:
+        required: true
+        type: string
+      tag:
+        required: false
+        type: string
 defaults:
   run:
     shell: bash
@@ -18,22 +28,21 @@ permissions:
 
 jobs:
   build:
-    name: Setting up environment
-    runs-on: ubuntu-22.04
     permissions:
       contents: read # for docker/build-push-action to read repo content
       security-events: write # for github/codeql-action/upload-sarif to upload SARIF results
       packages: write # for docker/build-push-action to push to GHCR
       id-token: write # for docker/login to login to NGINX registry
+    runs-on: ${{ github.event_name != 'pull_request' && contains(inputs.image, 'plus') && 'kic-plus' || 'ubuntu-22.04' }}
     services:
-        registry:
-          image: registry:2
-          ports:
-            - 5000:5000
+      registry:
+        image: registry:2
+        ports:
+          - 5000:5000
     strategy:
         matrix:
           k8s-version: ["1.23.17", "latest"]
-          nginx-image: [nginx]
+          nginx-image: [nginx,nginx-plus]
     steps:
       - name: Checkout Repository
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
@@ -48,6 +57,38 @@ jobs:
 
       - name: Docker Buildx
         uses: docker/setup-buildx-action@0d103c3126aa41d772a8362f6aa67afac040f80c # v3.1.0
+        with:
+          driver-opts: network=host
+
+      - name: Setup QEMU
+        uses: docker/setup-qemu-action@68827325e0b33c7199eb31dd4e31fbe9023e06e3 # v3.0.0
+        with:
+          platforms: arm64
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@343f7c4344506bcbf9b4de18042ae17996df046d # v3.0.0
+        if: ${{ github.event_name != 'pull_request' && ! contains(inputs.image, 'plus') }}
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Get Id Token
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
+        id: idtoken
+        with:
+          script: |
+            let id_token = await core.getIDToken()
+            core.setOutput('id_token', id_token)
+        if: ${{ github.event_name != 'pull_request' && contains(inputs.image, 'plus')}}
+
+      - name: Login to NGINX Registry
+        uses: docker/login-action@343f7c4344506bcbf9b4de18042ae17996df046d # v3.0.0
+        with:
+          registry: docker-mgmt.nginx.com
+          username: ${{ steps.idtoken.outputs.id_token }}
+          password: ${{ github.actor }}
+        if: ${{ github.event_name != 'pull_request' && contains(inputs.image, 'plus') }}
 
       - name: NGF Docker meta
         id: ngf-meta
@@ -99,6 +140,9 @@ jobs:
             NJS_DIR=internal/mode/static/nginx/modules/src
             NGINX_CONF_DIR=internal/mode/static/nginx/conf
             BUILD_AGENT=gha
+          secrets: |
+            ${{ contains(inputs.image, 'plus') && format('"nginx-repo.crt={0}"', secrets.NGINX_CRT) || '' }}
+            ${{ contains(inputs.image, 'plus') && format('"nginx-repo.key={0}"', secrets.NGINX_KEY) || '' }}
 
       - name: Deploy Kubernetes
         id: k8s
