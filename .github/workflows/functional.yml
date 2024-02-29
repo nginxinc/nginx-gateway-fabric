@@ -111,15 +111,6 @@ jobs:
           until docker pull ghcr.io/nginxinc/nginx-gateway-fabric:${REF#v}; do sleep 5; done
           until docker pull ghcr.io/nginxinc/nginx-gateway-fabric/nginx:${REF#v}; do sleep 5; done
 
-      - name: Setup functionals tests
-        run: |
-          ngf_prefix=ghcr.io/nginxinc/nginx-gateway-fabric
-          ngf_tag=${{ steps.ngf-meta.outputs.version }}
-          if [ ${{ github.event_name }} == "schedule" ]; then export GW_API_VERSION=main; fi
-          if [ ${{ startsWith(matrix.k8s-version, '1.23') ||  startsWith(matrix.k8s-version, '1.24') }} == "true" ]; then export INSTALL_WEBHOOK=true; fi
-          make install-ngf-local${{ matrix.nginx-image == 'nginx-plus' && '-with-plus' || ''}} PREFIX=${ngf_prefix} TAG=${ngf_tag}
-        working-directory: ./tests
-
       - name: Run NGINX functional tests
         run: |
           ngf_tag=${{ steps.ngf-meta.outputs.version }}
