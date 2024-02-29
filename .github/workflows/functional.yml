@@ -33,7 +33,7 @@ jobs:
       security-events: write # for github/codeql-action/upload-sarif to upload SARIF results
       packages: write # for docker/build-push-action to push to GHCR
       id-token: write # for docker/login to login to NGINX registry
-    runs-on: ${{ github.event_name != 'pull_request' && contains(inputs.image, 'plus') && 'kic-plus' || 'ubuntu-22.04' }}
+    runs-on: ubuntu-22.04
     services:
       registry:
         image: registry:2
@@ -65,30 +65,28 @@ jobs:
         with:
           platforms: arm64
 
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@343f7c4344506bcbf9b4de18042ae17996df046d # v3.0.0
-        if: ${{ github.event_name != 'pull_request' && ! contains(inputs.image, 'plus') }}
-        with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Output Variables
+        id: vars
+        run: echo "go_path=$(go env GOPATH)" >> $GITHUB_OUTPUT
 
-      - name: Get Id Token
-        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
-        id: idtoken
+      - name: Build binary
+        uses: goreleaser/goreleaser-action@7ec5c2b0c6cdda6e8bbb49444bc797dd33d74dd8 # v5.0.0
         with:
-          script: |
-            let id_token = await core.getIDToken()
-            core.setOutput('id_token', id_token)
-        if: ${{ github.event_name != 'pull_request' && contains(inputs.image, 'plus')}}
+          version: latest
+          args: ${{ github.ref_type == 'tag' && 'release' || 'build --snapshot' }} --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GOPATH: ${{ steps.vars.outputs.go_path }}
+          AZURE_STORAGE_ACCOUNT: ${{ secrets.AZURE_STORAGE_ACCOUNT }}
+          AZURE_STORAGE_KEY: ${{ secrets.AZURE_STORAGE_KEY }}
+          AZURE_BUCKET_NAME: ${{ secrets.AZURE_BUCKET_NAME }}
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_COMMUNITY }}
 
-      - name: Login to NGINX Registry
-        uses: docker/login-action@343f7c4344506bcbf9b4de18042ae17996df046d # v3.0.0
+      - name: Fetch Cached Artifacts
+        uses: actions/cache@13aacd865c20de90d75de3b17ebe84f7a17d57d2 # v4.0.0
         with:
-          registry: docker-mgmt.nginx.com
-          username: ${{ steps.idtoken.outputs.id_token }}
-          password: ${{ github.actor }}
-        if: ${{ github.event_name != 'pull_request' && contains(inputs.image, 'plus') }}
+          path: ${{ github.workspace }}/dist
+          key: nginx-gateway-fabric-${{ github.run_id }}-${{ github.run_number }}
 
       - name: NGF Docker meta
         id: ngf-meta
