@@ -117,42 +117,19 @@ jobs:
           ngf_tag=${{ steps.ngf-meta.outputs.version }}
           if [ ${{ github.event_name }} == "schedule" ]; then export GW_API_VERSION=main; fi
           if [ ${{ startsWith(matrix.k8s-version, '1.23') ||  startsWith(matrix.k8s-version, '1.24') }} == "true" ]; then export INSTALL_WEBHOOK=true; fi
-          make install-ngf-local-no-build${{ matrix.nginx-image == 'nginx-plus' && '-with-plus' || ''}} PREFIX=${ngf_prefix} TAG=${ngf_tag}
-        working-directory: ./
+          make install-ngf-local${{ matrix.nginx-image == 'nginx-plus' && '-with-plus' || ''}} PREFIX=${ngf_prefix} TAG=${ngf_tag}
+        working-directory: ./tests
 
-
-  nginx-functional-tests:
-    name: Gateway Functional Tests with NGINX
-    runs-on: ubuntu-22.04
-    needs: vars
-    permissions:
-      contents: write # needed for uploading release artifacts
-    steps:
       - name: Run NGINX functional tests
         run: |
-          make nginx-functional-test
+          ngf_tag=${{ steps.ngf-meta.outputs.version }}
+          if [ ${{ github.event_name }} == "schedule" ]; then export GW_API_VERSION=main; fi
+          make functional-test${{ matrix.nginx-image == 'nginx-plus' && '-nginx-plus' || ''}} PREFIX=${ngf_prefix} TAG=${ngf_tag}
         working-directory: ./tests
 
-      - name: Upload profile to release
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release upload ${{ github.ref_name }} results/functional/edge/edge.md
-        working-directory: ./tests
-
-  nginx-plus-functional-tests:
-    name: Gateway Functional Tests with NGINX Plus
-    runs-on: ubuntu-22.04
-    needs: vars
-    permissions:
-        contents: write # needed for uploading release artifacts
-    steps:
-      - name: Run NGINX Plus functional tests
-        run: |
-          make nginx-plus-functional-test
-        working-directory: ./tests
-
-      - name: Upload profile to release
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release upload ${{ github.ref_name }} results/functional/edge/edge.md
-        working-directory: ./tests
+      - name: Upload Coverage Report
+        uses: actions/upload-artifact@5d5d22a31266ced268874388b861e4b58bb5c2f3 # v4.3.1
+        with:
+          name: cover-${{ github.run_id }}.html
+          path: ${{ github.workspace }}/cover.html
+        if: always()

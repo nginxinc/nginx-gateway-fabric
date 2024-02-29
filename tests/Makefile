@@ -46,19 +46,27 @@ load-images: ## Load NGF and NGINX images on configured kind cluster
 load-images-with-plus: ## Load NGF and NGINX Plus images on configured kind cluster
 	cd .. && make PREFIX=$(PREFIX) TAG=$(TAG) load-images-with-plus
 
+.PHONY: install-ngf-local
+install-ngf-local: ## Install NGF from local build on configured kind cluster.
+	cd .. && make PREFIX=$(PREFIX) TAG=$(TAG) install-ngf-local-build
+
+.PHONY: install-ngf-local-with-plus
+install-ngf-local-with-plus: ## Install NGF with NGINX Plus from local build on configured kind cluster.
+	cd .. && make PREFIX=$(PREFIX) TAG=$(TAG) install-ngf-local-build-with-plus
+
 test: ## Run the system tests against your default k8s cluster
 	go test -v ./suite -args --gateway-api-version=$(GW_API_VERSION) \
 		--gateway-api-prev-version=$(GW_API_PREV_VERSION) --image-tag=$(TAG) --plus-enabled=$(PLUS_ENABLED) \
 		--ngf-image-repo=$(PREFIX) --nginx-image-repo=$(NGINX_PREFIX) --pull-policy=$(PULL_POLICY) \
 		--k8s-version=$(K8S_VERSION) --service-type=$(GW_SERVICE_TYPE) --is-gke-internal-lb=$(GW_SVC_GKE_INTERNAL)
 
-nginx-functional-test: ## Run the functional tests against your default k8s cluster
+functional-test: ## Run the functional tests against your default k8s cluster
 	go test -v ./suite $(GINKGO_FLAGS) -args --gateway-api-version=$(GW_API_VERSION) \
 		--gateway-api-prev-version=$(GW_API_PREV_VERSION) --image-tag=$(TAG) --plus-enabled=$(PLUS_ENABLED) \
 		--ngf-image-repo=$(PREFIX) --nginx-image-repo=$(NGINX_PREFIX) --pull-policy=$(PULL_POLICY) \
 		--k8s-version=$(K8S_VERSION) --service-type=$(GW_SERVICE_TYPE) --is-gke-internal-lb=$(GW_SVC_GKE_INTERNAL)
 
-nginx-plus-functional-test: ## Run the functional tests against your default k8s cluster
+functional-test-nginx-plus: ## Run the functional tests against your default k8s cluster
 	go test -v ./suite $(GINKGO_FLAGS) -args --gateway-api-version=$(GW_API_VERSION) \
 		--gateway-api-prev-version=$(GW_API_PREV_VERSION) --image-tag=$(TAG) --plus-enabled=true \
 		--ngf-image-repo=$(PREFIX) --nginx-image-repo=$(NGINX_PLUS_PREFIX) --pull-policy=$(PULL_POLICY) \
