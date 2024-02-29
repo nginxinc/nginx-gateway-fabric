@@ -2,7 +2,7 @@
 apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
-  name: nginx-gateway
+  name: {{ default (include "nginx-gateway.fullname" .) .Values.gateway.name }}
   namespace: {{ default .Release.Namespace .Values.gateway.namespace }}
   labels:
     {{- include "nginx-gateway.labels" . | nindent 4 }}
