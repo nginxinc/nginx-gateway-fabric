@@ -99,10 +99,9 @@ jobs:
       - name: Deploy Kubernetes
         id: k8s
         run: |
-          k8s_version=${{ matrix.k8s-version }}
-          make create-kind-cluster KIND_KUBE_CONFIG=${{ github.workspace }}/kube-${{ github.run_id }} ${{ ! contains(matrix.k8s-version, 'latest') && 'KIND_IMAGE=kindest/node:v${k8s_version}' || '' }}
-          echo "KUBECONFIG=${{ github.workspace }}/kube-${{ github.run_id }}" >> "$GITHUB_ENV"
-        working-directory: ./tests
+          kube_config=${{ github.workspace }}/deploy/helm-chart/kube-${{ github.run_id }}-helm
+          make create-kind-cluster KIND_KUBE_CONFIG=${kube_config}
+          echo "KUBECONFIG=${kube_config}" >> "$GITHUB_ENV"
 
       - name: Setup functional tests
         run: |
