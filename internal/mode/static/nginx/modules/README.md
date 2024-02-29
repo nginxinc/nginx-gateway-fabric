@@ -6,8 +6,14 @@ This directory contains the [njs](http://nginx.org/en/docs/njs/) modules for NGI
 
 We recommend using [nvm](https://github.com/nvm-sh/nvm/blob/master/README.md) to install the following dependencies:
 
-- [Node.js](https://nodejs.org/en/) (version 1.18)
+- [Node.js](https://nodejs.org/en/) (version 20)
 - [npm](https://docs.npmjs.com/)
+
+If you use nvm, you can switch to the recommended version of Node.js by running:
+
+```shell
+nvm use
+```
 
 Once you've installed Node.js and npm, run `npm install` in this directory to install the rest of the project's
 dependencies.

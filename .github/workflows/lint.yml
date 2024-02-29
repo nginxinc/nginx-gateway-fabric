@@ -6,6 +6,10 @@ on:
       - main
   pull_request:
 
+defaults:
+  run:
+    shell: bash
+
 concurrency:
   group: ${{ github.ref_name }}-lint
   cancel-in-progress: true
@@ -42,6 +46,11 @@ jobs:
         id: prettier-version
         run: |
           echo "version=$(jq -r .devDependencies.prettier ${{ github.workspace }}/internal/mode/static/nginx/modules/package.json)" >> $GITHUB_OUTPUT
+
+      - name: Setup Node.js Environment
+        uses: actions/setup-node@60edb5dd545a775178f52524783378180af0d1f8 # v4.0.2
+        with:
+          node-version-file: .nvmrc
 
       - name: Run Prettier on NJS code
         id: prettier-run

@@ -2,8 +2,8 @@
 VERSION = edge
 GIT_COMMIT = $(shell git rev-parse HEAD || echo "unknown")
 DATE = $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
-MANIFEST_DIR = $(shell pwd)/deploy/manifests
-CHART_DIR = $(shell pwd)/deploy/helm-chart
+MANIFEST_DIR = $(CURDIR)/deploy/manifests
+CHART_DIR = $(CURDIR)/deploy/helm-chart
 NGINX_CONF_DIR = internal/mode/static/nginx/conf
 NJS_DIR = internal/mode/static/nginx/modules/src
 NGINX_DOCKER_BUILD_PLUS_ARGS = --secret id=nginx-repo.crt,src=nginx-repo.crt --secret id=nginx-repo.key,src=nginx-repo.key
@@ -11,6 +11,7 @@ BUILD_AGENT=local
 TELEMETRY_REPORT_PERIOD = 24h # also configured in goreleaser.yml
 GW_API_VERSION = 1.0.0
 INSTALL_WEBHOOK = false
+NODE_VERSION = $(shell cat .nvmrc)
 
 # go build flags - should not be overridden by the user
 GO_LINKER_FlAGS_VARS = -X main.version=${VERSION} -X main.commit=${GIT_COMMIT} -X main.date=${DATE} -X main.telemetryReportPeriod=${TELEMETRY_REPORT_PERIOD}
@@ -24,7 +25,7 @@ NGINX_PLUS_PREFIX ?= $(PREFIX)/nginx-plus## The name of the nginx plus image. Fo
 TAG ?= $(VERSION:v%=%)## The tag of the image. For example, 0.3.0
 TARGET ?= local## The target of the build. Possible values: local and container
 KIND_KUBE_CONFIG=$${HOME}/.kube/kind/config## The location of the kind kubeconfig
-OUT_DIR ?= $(shell pwd)/build/out## The folder where the binary will be stored
+OUT_DIR ?= $(CURDIR)/build/out## The folder where the binary will be stored
 GOARCH ?= amd64## The architecture of the image and/or binary. For example: amd64 or arm64
 GOOS ?= linux## The OS of the image and/or binary. For example: linux or darwin
 override HELM_TEMPLATE_COMMON_ARGS += --set creator=template --set nameOverride=nginx-gateway## The common options for the Helm template command.
@@ -125,9 +126,9 @@ fmt: ## Run go fmt against code
 .PHONY: njs-fmt
 njs-fmt: ## Run prettier against the njs httpmatches module
 	docker run --rm -w /modules \
-		-v $(PWD)/internal/nginx/modules/:/modules/ \
-		node:18 \
-		/bin/bash -c "npm install && npm run format"
+		-v $(CURDIR)/internal/nginx/modules/:/modules/ \
+		node:${NODE_VERSION} \
+		/bin/bash -c "npm ci && npm run format"
 
 .PHONY: vet
 vet: ## Run go vet against code
@@ -135,7 +136,7 @@ vet: ## Run go vet against code
 
 .PHONY: lint
 lint: ## Run golangci-lint against code
-	docker run --pull always --rm -v $(shell pwd):/nginx-gateway-fabric -w /nginx-gateway-fabric -v $(shell go env GOCACHE):/cache/go -e GOCACHE=/cache/go -e GOLANGCI_LINT_CACHE=/cache/go -v $(shell go env GOPATH)/pkg:/go/pkg golangci/golangci-lint:latest golangci-lint --color always run
+	docker run --pull always --rm -v $(CURDIR):/nginx-gateway-fabric -w /nginx-gateway-fabric -v $(shell go env GOCACHE):/cache/go -e GOCACHE=/cache/go -e GOLANGCI_LINT_CACHE=/cache/go -v $(shell go env GOPATH)/pkg:/go/pkg golangci/golangci-lint:latest golangci-lint --color always run
 
 .PHONY: unit-test
 unit-test: ## Run unit tests for the go code
@@ -148,9 +149,9 @@ unit-test: ## Run unit tests for the go code
 .PHONY: njs-unit-test
 njs-unit-test: ## Run unit tests for the njs httpmatches module
 	docker run --rm -w /modules \
-		-v $(PWD)/internal/mode/static/nginx/modules:/modules/ \
-		node:18 \
-		/bin/bash -c "npm install && npm test && npm run clean"
+		-v $(CURDIR)/internal/mode/static/nginx/modules:/modules/ \
+		node:${NODE_VERSION} \
+		/bin/bash -c "npm ci && npm test && npm run clean"
 
 .PHONY: lint-helm
 lint-helm: ## Run the helm chart linter
