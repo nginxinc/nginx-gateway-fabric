@@ -118,7 +118,7 @@ jobs:
           if [ ${{ github.event_name }} == "schedule" ]; then export GW_API_VERSION=main; fi
           if [ ${{ startsWith(matrix.k8s-version, '1.23') ||  startsWith(matrix.k8s-version, '1.24') }} == "true" ]; then export INSTALL_WEBHOOK=true; fi
           make install-ngf-local-no-build${{ matrix.nginx-image == 'nginx-plus' && '-with-plus' || ''}} PREFIX=${ngf_prefix} TAG=${ngf_tag}
-        working-directory: ./tests
+        working-directory: ./
 
 
   nginx-functional-tests:
