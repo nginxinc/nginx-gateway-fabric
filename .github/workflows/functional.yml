@@ -109,7 +109,7 @@ jobs:
           ngf_tag=${{ steps.ngf-meta.outputs.version }}
           if [ ${{ github.event_name }} == "schedule" ]; then export GW_API_VERSION=main; fi
           if [ ${{ startsWith(matrix.k8s-version, '1.23') ||  startsWith(matrix.k8s-version, '1.24') }} == "true" ]; then export INSTALL_WEBHOOK=true; fi
-          make build-images-${{ matrix.nginx-image == 'nginx-plus' && '-with-plus' || ''}} load-images-${{ matrix.nginx-image == 'nginx-plus' && '-with-plus' || ''}} PREFIX=${ngf_prefix} TAG=${ngf_tag}
+          make build-images${{ matrix.nginx-image == 'nginx-plus' && '-with-plus' || ''}} load-images${{ matrix.nginx-image == 'nginx-plus' && '-with-plus' || ''}} PREFIX=${ngf_prefix} TAG=${ngf_tag}
         working-directory: ./tests
 
       - name: Run NGINX functional tests
