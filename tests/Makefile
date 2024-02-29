@@ -11,6 +11,7 @@ GW_SERVICE_TYPE=NodePort
 GW_SVC_GKE_INTERNAL=false
 GINKGO_LABEL=
 GINKGO_FLAGS=
+NGF_VERSION=
 
 ifneq ($(GINKGO_LABEL),)
     override GINKGO_FLAGS += -ginkgo.label-filter "$(GINKGO_LABEL)"
@@ -48,9 +49,10 @@ load-images-with-plus: ## Load NGF and NGINX Plus images on configured kind clus
 
 test: ## Run the system tests against your default k8s cluster
 	go test -v ./suite $(GINKGO_FLAGS) -args --gateway-api-version=$(GW_API_VERSION) \
-		--gateway-api-prev-version=$(GW_API_PREV_VERSION) --image-tag=$(TAG) --plus-enabled=$(PLUS_ENABLED) \
-		--ngf-image-repo=$(PREFIX) --nginx-image-repo=$(NGINX_PREFIX) --pull-policy=$(PULL_POLICY) \
-		--k8s-version=$(K8S_VERSION) --service-type=$(GW_SERVICE_TYPE) --is-gke-internal-lb=$(GW_SVC_GKE_INTERNAL)
+		--gateway-api-prev-version=$(GW_API_PREV_VERSION) --image-tag=$(TAG) --version-under-test=$(NGF_VERSION) \
+		--plus-enabled=$(PLUS_ENABLED) --ngf-image-repo=$(PREFIX) --nginx-image-repo=$(NGINX_PREFIX) \
+		--pull-policy=$(PULL_POLICY) --k8s-version=$(K8S_VERSION) --service-type=$(GW_SERVICE_TYPE) \
+		--is-gke-internal-lb=$(GW_SVC_GKE_INTERNAL)
 
 .PHONY: delete-kind-cluster
 delete-kind-cluster: ## Delete kind cluster

@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       test_label:
-        description: NFR test to run. Choose between performance, upgrade or all.
+        description: NFR test to run. Choose between performance, upgrade, or all
         required: true
         default: all
         type: choice
@@ -13,7 +13,11 @@ on:
         description: Version of NGF under test
         required: true
         default: edge
-      nginx-plus:
+      image_tag:
+        description: Tag of the NGF and NGINX Docker images
+        required: true
+        default: edge
+      nginx_plus:
         description: Run tests with NGINX Plus
         required: false
         default: false
@@ -51,31 +55,18 @@ jobs:
       run: echo "GOPATH=$(go env GOPATH)" >> $GITHUB_ENV
 
     - name: Docker Buildx
+      if: ${{ inputs.nginx_plus == true }}
       uses: docker/setup-buildx-action@f95db51fddba0c2d1ec667646a06c2ce06100226 # v3.0.0
-
-    - name: NGF Docker meta
-      id: ngf-meta
-      uses: docker/metadata-action@8e5442c4ef9f78752691e2d8f8d19755c6f78e81 # v5.5.1
-      with:
-        images: |
-          name=gcr.io/${{ secrets.GCP_PROJECT_ID }}/ngf-nfr/nginx-gateway-fabric
-        tags: |
-          type=raw,value=${{ inputs.version }}-${{ github.run_id }}
 
     - name: NGINX Docker meta
       id: nginx-meta
+      if: ${{ inputs.nginx_plus == true }}
       uses: docker/metadata-action@8e5442c4ef9f78752691e2d8f8d19755c6f78e81 # v5.5.1
       with:
         images: |
-          name=gcr.io/${{ secrets.GCP_PROJECT_ID }}/ngf-nfr/nginx-gateway-fabric/${{ inputs.nginx-plus == true && 'nginx-plus' || 'nginx' }}
+          name=gcr.io/${{ secrets.GCP_PROJECT_ID }}/ngf-nfr/nginx-gateway-fabric/nginx-plus
         tags: |
-          type=raw,value=${{ inputs.version }}-${{ github.run_id }}
-
-    - name: Build binary
-      uses: goreleaser/goreleaser-action@7ec5c2b0c6cdda6e8bbb49444bc797dd33d74dd8 # v5.0.0
-      with:
-        version: latest
-        args: build --snapshot --clean
+          type=raw,value=${{ inputs.image_tag }}
 
     - name: Authenticate to Google Cloud
       id: auth
@@ -92,24 +83,14 @@ jobs:
         install_components: kubectl
 
     - name: Login to GCR
+      if: ${{ inputs.nginx_plus == true }}
       run: gcloud auth configure-docker gcr.io -q
 
-    - name: Build NGF Docker Image
+    - name: Build NGINX Plus Docker Image
+      if: ${{ inputs.nginx_plus == true }}
       uses: docker/build-push-action@4a13e500e55cf31b7a5d59a38ab2040ab0f42f56 # v5.1.0
       with:
-        file: build/Dockerfile
-        tags: ${{ steps.ngf-meta.outputs.tags }}
-        context: "."
-        provenance: false
-        platforms: linux/amd64
-        target: goreleaser
-        pull: true
-        push: true
-
-    - name: Build NGINX Docker Image
-      uses: docker/build-push-action@4a13e500e55cf31b7a5d59a38ab2040ab0f42f56 # v5.1.0
-      with:
-        file: build/Dockerfile${{ inputs.nginx-plus == true && '.nginxplus' || '.nginx'}}
+        file: build/Dockerfile.nginxplus
         tags: ${{ steps.nginx-meta.outputs.tags }}
         context: "."
         platforms: linux/amd64
@@ -121,16 +102,16 @@ jobs:
           NGINX_CONF_DIR=internal/mode/static/nginx/conf
           BUILD_AGENT=gha
         secrets: |
-          ${{ inputs.nginx-plus == true && format('"nginx-repo.crt={0}"', secrets.NGINX_CRT) || '' }}
-          ${{ inputs.nginx-plus == true && format('"nginx-repo.key={0}"', secrets.NGINX_KEY) || '' }}
+          ${{ format('"nginx-repo.crt={0}"', secrets.NGINX_CRT) }}
+          ${{ format('"nginx-repo.key={0}"', secrets.NGINX_KEY) }}
 
     - name: Setup dotenv file
       working-directory: ./tests/scripts
       run: |
         echo "RESOURCE_NAME=nfr-tests-${{ github.run_id }}" >> vars.env
-        echo "TAG=${{ inputs.version }}-${{ github.run_id }}" >> vars.env
-        echo "PREFIX=gcr.io/${{ secrets.GCP_PROJECT_ID }}/ngf-nfr/nginx-gateway-fabric" >> vars.env
-        echo "NGINX_PREFIX=gcr.io/${{ secrets.GCP_PROJECT_ID }}/ngf-nfr/nginx-gateway-fabric/nginx" >> vars.env
+        echo "TAG=${{ inputs.image_tag }}" >> vars.env
+        echo "PREFIX=ghcr.io/nginxinc/nginx-gateway-fabric" >> vars.env
+        echo "NGINX_PREFIX=ghcr.io/nginxinc/nginx-gateway-fabric/nginx" >> vars.env
         echo "NGINX_PLUS_PREFIX=gcr.io/${{ secrets.GCP_PROJECT_ID }}/ngf-nfr/nginx-gateway-fabric/nginx-plus" >> vars.env
         echo "GKE_CLUSTER_NAME=nfr-tests-${{ github.run_id }}" >> vars.env
         echo "GKE_CLUSTER_ZONE=us-east1-b" >> vars.env
@@ -144,15 +125,16 @@ jobs:
         echo "NGF_BRANCH=${{ github.ref_name }}" >> vars.env
         echo "SOURCE_IP_RANGE=$(curl -sS -4 icanhazip.com)/32" >> vars.env
         echo "ADD_VM_IP_AUTH_NETWORKS=true" >> vars.env
-        echo "PLUS_ENABLED=${{ inputs.nginx-plus }}" >> vars.env
+        echo "PLUS_ENABLED=${{ inputs.nginx_plus }}" >> vars.env
         echo "GINKGO_LABEL=" >> vars.env
+        echo "NGF_VERSION=${{ inputs.version }}" >> vars.env
 
     - name: Create GKE cluster
       working-directory: ./tests
       run:
         make create-gke-cluster
 
-    - name: Setup VM and router
+    - name: Create and setup VM
       working-directory: ./tests
       run:
         make create-and-setup-vm
@@ -185,6 +167,9 @@ jobs:
         body: |
           Update with NFR test results for NGF version ${{ inputs.version }}
           - Auto-generated by the NFR tests workflow run ${{ github.run_id }}
+          - Tests ran using Docker image tag ${{ inputs.image_tag }}
+          - ${{ inputs.test_label }} test(s) ran
+          - NGINX Plus enabled: ${{ inputs.nginx_plus }}
         labels: |
           tests
         assignees: ${{ github.actor }}
