@@ -39,6 +39,36 @@ jobs:
       - name: Docker Buildx
         uses: docker/setup-buildx-action@0d103c3126aa41d772a8362f6aa67afac040f80c # v3.1.0
 
+      - name: Setup QEMU
+        uses: docker/setup-qemu-action@68827325e0b33c7199eb31dd4e31fbe9023e06e3 # v3.0.0
+        with:
+          platforms: arm64
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@343f7c4344506bcbf9b4de18042ae17996df046d # v3.0.0
+        if: ${{ github.event_name != 'pull_request' && ! contains(inputs.image, 'plus') }}
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Get Id Token
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
+        id: idtoken
+        with:
+          script: |
+            let id_token = await core.getIDToken()
+            core.setOutput('id_token', id_token)
+        if: ${{ github.event_name != 'pull_request' && contains(inputs.image, 'plus')}}
+
+      - name: Login to NGINX Registry
+        uses: docker/login-action@343f7c4344506bcbf9b4de18042ae17996df046d # v3.0.0
+        with:
+          registry: docker-mgmt.nginx.com
+          username: ${{ steps.idtoken.outputs.id_token }}
+          password: ${{ github.actor }}
+        if: ${{ github.event_name != 'pull_request' && contains(inputs.image, 'plus') }}
+
       - name: NGF Docker meta
         id: ngf-meta
         uses: docker/metadata-action@8e5442c4ef9f78752691e2d8f8d19755c6f78e81 # v5.5.1
@@ -62,12 +92,6 @@ jobs:
             type=edge
             type=ref,event=pr
             type=ref,event=branch,suffix=-rc,enable=${{ startsWith(github.ref, 'refs/heads/release') }}
-
-      - name: Build binary
-        uses: goreleaser/goreleaser-action@7ec5c2b0c6cdda6e8bbb49444bc797dd33d74dd8 # v5.0.0
-        with:
-          version: latest
-          args: build --snapshot --clean
 
       - name: Build NGF Docker Image
         uses: docker/build-push-action@4a13e500e55cf31b7a5d59a38ab2040ab0f42f56 # v5.1.0
@@ -95,6 +119,9 @@ jobs:
             NJS_DIR=internal/mode/static/nginx/modules/src
             NGINX_CONF_DIR=internal/mode/static/nginx/conf
             BUILD_AGENT=gha
+          secrets: |
+            ${{ contains(inputs.image, 'plus') && format('"nginx-repo.crt={0}"', secrets.NGINX_CRT) || '' }}
+            ${{ contains(inputs.image, 'plus') && format('"nginx-repo.key={0}"', secrets.NGINX_KEY) || '' }}
 
       - name: Deploy Kubernetes
         id: k8s
