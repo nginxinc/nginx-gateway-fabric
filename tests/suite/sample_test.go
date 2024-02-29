@@ -16,7 +16,7 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/tests/framework"
 )
 
-var _ = Describe("Basic test example", Ordered, Label("functional"), func() {
+var _ = Describe("Basic test example", Label("functional"), func() {
 	var outFile *os.File
 	files := []string{
 		"hello/hello.yaml",
@@ -29,7 +29,7 @@ var _ = Describe("Basic test example", Ordered, Label("functional"), func() {
 		},
 	}
 
-	BeforeAll(func() {
+	BeforeEach(func() {
 		Expect(resourceManager.Apply([]client.Object{ns})).To(Succeed())
 		Expect(resourceManager.ApplyFromFiles(files, ns.Name)).To(Succeed())
 		Expect(resourceManager.WaitForAppsToBeReady(ns.Name)).To(Succeed())
@@ -43,7 +43,7 @@ var _ = Describe("Basic test example", Ordered, Label("functional"), func() {
 		Expect(framework.WriteSystemInfoToFile(outFile, clusterInfo, *plusEnabled)).To(Succeed())
 	})
 
-	AfterAll(func() {
+	AfterEach(func() {
 		Expect(resourceManager.DeleteFromFiles(files, ns.Name)).To(Succeed())
 		Expect(resourceManager.Delete([]client.Object{ns})).To(Succeed())
 		outFile.Close()
