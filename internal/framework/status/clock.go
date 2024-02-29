@@ -4,7 +4,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . Clock
+//counterfeiter:generate . Clock
 
 // Clock returns the current local time.
 type Clock interface {

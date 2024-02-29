@@ -11,7 +11,7 @@ type Validators struct {
 // HTTPFieldsValidator validates the HTTP-related fields of Gateway API resources from the perspective of
 // a data-plane. Data-plane implementations must implement this interface.
 //
-//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . HTTPFieldsValidator
+//counterfeiter:generate . HTTPFieldsValidator
 type HTTPFieldsValidator interface {
 	ValidatePathInMatch(path string) error
 	ValidateHeaderNameInMatch(name string) error

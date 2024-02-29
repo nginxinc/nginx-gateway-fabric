@@ -19,7 +19,7 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/controller"
 )
 
-//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . Updater
+//counterfeiter:generate . Updater
 
 // Updater updates statuses of the Gateway API resources.
 // Updater can be disabled. In this case, it will stop updating the statuses of resources, while

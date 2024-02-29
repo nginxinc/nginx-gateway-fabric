@@ -6,9 +6,9 @@ import (
 	"path/filepath"
 )
 
-//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 io/fs.DirEntry
+//counterfeiter:generate io/fs.DirEntry
 
-//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . ClearFoldersOSFileManager
+//counterfeiter:generate . ClearFoldersOSFileManager
 
 // ClearFoldersOSFileManager is an interface that exposes File I/O operations for ClearFolders.
 // Used for unit testing.

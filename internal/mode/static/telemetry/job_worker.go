@@ -6,7 +6,7 @@ import (
 	"github.com/go-logr/logr"
 )
 
-//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . DataCollector
+//counterfeiter:generate . DataCollector
 
 // DataCollector collects telemetry data.
 type DataCollector interface {

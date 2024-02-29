@@ -6,7 +6,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . Getter
+//counterfeiter:generate . Getter
 
 // Getter gets a resource from the k8s API.
 // It allows us to mock the client.Reader.Get method.

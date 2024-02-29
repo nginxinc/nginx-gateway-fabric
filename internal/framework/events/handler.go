@@ -6,7 +6,7 @@ import (
 	"github.com/go-logr/logr"
 )
 
-//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . EventHandler
+//counterfeiter:generate . EventHandler
 
 // EventHandler handles events.
 type EventHandler interface {
