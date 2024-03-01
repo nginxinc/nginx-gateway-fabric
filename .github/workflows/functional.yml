@@ -100,6 +100,11 @@ jobs:
             type=ref,event=pr
             type=ref,event=branch,suffix=-rc,enable=${{ startsWith(github.ref, 'refs/heads/release') }}
 
+      - name: Update Go Modules
+        if: ${{ github.event_name == 'schedule' }}
+        run: make update-go-modules
+        working-directory: ./conformance
+
       - name: NGINX Docker meta
         id: nginx-meta
         uses: docker/metadata-action@8e5442c4ef9f78752691e2d8f8d19755c6f78e81 # v5.5.1
