@@ -49,6 +49,7 @@ var (
 	ngfImageRepository   = flag.String("ngf-image-repo", "", "Image repo for NGF control plane")
 	nginxImageRepository = flag.String("nginx-image-repo", "", "Image repo for NGF data plane")
 	imageTag             = flag.String("image-tag", "", "Image tag for NGF images")
+	versionUnderTest     = flag.String("version-under-test", "", "Version of NGF that is being tested")
 	imagePullPolicy      = flag.String("pull-policy", "", "Image pull policy for NGF images")
 	serviceType          = flag.String("service-type", "NodePort", "Type of service fronting NGF to be deployed")
 	isGKEInternalLB      = flag.Bool("is-gke-internal-lb", false, "Is the LB service GKE internal only")
@@ -130,7 +131,9 @@ func setup(cfg setupConfig, extraInstallArgs ...string) {
 		installCfg.ImagePullPolicy = *imagePullPolicy
 	}
 
-	if *imageTag != "" {
+	if *versionUnderTest != "" {
+		version = *versionUnderTest
+	} else if *imageTag != "" {
 		version = *imageTag
 	} else {
 		version = "edge"

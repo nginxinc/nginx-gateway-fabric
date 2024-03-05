@@ -37,15 +37,19 @@ make
 ```
 
 ```text
+build-images-with-plus         Build NGF and NGINX Plus images
 build-images                   Build NGF and NGINX images
 cleanup-gcp                    Cleanup all GCP resources
 cleanup-router                 Delete the GKE router
 cleanup-vm                     Delete the test GCP VM and delete the firewall rule
 create-and-setup-vm            Create and setup a GCP VM for tests
+create-gke-cluster             Create a GKE cluster
 create-gke-router              Create a GKE router to allow egress traffic from private nodes (allows for external image pulls)
 create-kind-cluster            Create a kind cluster
+delete-gke-cluster             Delete the GKE cluster
 delete-kind-cluster            Delete kind cluster
 help                           Display this help
+load-images-with-plus          Load NGF and NGINX Plus images on configured kind cluster
 load-images                    Load NGF and NGINX images on configured kind cluster
 run-tests-on-vm                Run the tests on a GCP VM
 setup-gcp-and-run-tests        Create and setup a GKE router and GCP VM for tests and run the tests
@@ -71,7 +75,9 @@ test                           Run the system tests against your default k8s clu
 
 ## Step 1 - Create a Kubernetes cluster
 
-This can be done in a cloud provider of choice, or locally using `kind`:
+This can be done in a cloud provider of choice, or locally using `kind`.
+
+To create a local `kind` cluster:
 
 ```makefile
 make create-kind-cluster
@@ -82,6 +88,17 @@ make create-kind-cluster
 
 ```makefile
 make create-kind-cluster KIND_IMAGE=kindest/node:v1.27.3
+```
+
+To create a GKE cluster:
+
+Before running the below `make` command, copy the `scripts/vars.env-example` file to `scripts/vars.env` and populate the
+required env vars. `GKE_SVC_ACCOUNT` needs to be the name of a service account that has Kubernetes admin permissions,
+and `GKE_NODES_SERVICE_ACCOUNT` needs to be the name of a service account that has `Artifact Registry Reader`,
+`Kubernetes Engine Node Service Account` and `Monitoring Viewer` permissions.
+
+```makefile
+make create-gke-cluster
 ```
 
 ## Step 2 - Build and Load Images
@@ -115,7 +132,7 @@ make test TAG=$(whoami) PLUS_ENABLED=true
 
 ### 3b - Run the tests on a GKE cluster from a GCP VM
 
-This step only applies if you would like to run the tests from a GCP based VM.
+This step only applies if you would like to run the tests on a GKE cluster from a GCP based VM.
 
 Before running the below `make` command, copy the `scripts/vars.env-example` file to `scripts/vars.env` and populate the
 required env vars. `GKE_SVC_ACCOUNT` needs to be the name of a service account that has Kubernetes admin permissions.
@@ -205,7 +222,7 @@ For more information of filtering specs, see [the docs here](https://onsi.github
     make delete-kind-cluster
     ```
 
-2. Delete the GCP components (GKE router, VM, and firewall rule), if required
+2. Delete the GCP components (GKE cluster, GKE router, VM, and firewall rule), if required
 
     ```makefile
     make cleanup-gcp
@@ -219,4 +236,8 @@ For more information of filtering specs, see [the docs here](https://onsi.github
 
     ```makefile
     make cleanup-vm
+    ```
+
+    ```makefile
+    make delete-gke-cluster
     ```
