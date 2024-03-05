@@ -28,7 +28,9 @@ To create a new release, follow these steps:
    format `Release X.Y.Z`.
 2. Stop merging any new work into the main branch.
 3. Test the main branch for release-readiness. For that, use the `edge` containers, which are built from the main
-   branch, and the [example applications](/examples).
+   branch, and run the following:
+   1. Run the [example applications](/examples) manually and verify their correctness.
+   2. Kick off the [NFR workflow](https://github.com/nginxinc/nginx-gateway-fabric/actions/nfr.yml) in the browser. For `image_tag`, use `edge`, and for  `version`, use the upcoming `X.Y.Z` NGF version. This will run all of the NFR tests which are automated and open a PR with the results files when it is complete. Review this PR and make any necessary changes before merging.
 4. If a problem is found, prepare a fix PR, merge it into the main branch and return to the previous step.
 5. If the supported Gateway API minor version has changed since the last release, test NGINX Gateway Fabric with the previous version of the Gateway API CRDs.
 6. If a compatibility issue is found, add a note to the release notes explaining that the previous version is not supported.
