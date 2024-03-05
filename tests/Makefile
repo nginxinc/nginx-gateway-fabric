@@ -32,6 +32,10 @@ help: Makefile ## Display this help
 create-kind-cluster: ## Create a kind cluster
 	cd .. && make create-kind-cluster
 
+.PHONY: delete-kind-cluster
+delete-kind-cluster: ## Delete kind cluster
+	kind delete cluster
+
 .PHONY: build-images
 build-images: ## Build NGF and NGINX images
 	cd .. && make PREFIX=$(PREFIX) TAG=$(TAG) build-images
@@ -48,46 +52,70 @@ load-images: ## Load NGF and NGINX images on configured kind cluster
 load-images-with-plus: ## Load NGF and NGINX Plus images on configured kind cluster
 	cd .. && make PREFIX=$(PREFIX) TAG=$(TAG) load-images-with-plus
 
-test: ## Run the system tests against your default k8s cluster
-	go test -v ./suite $(GINKGO_FLAGS) -args --gateway-api-version=$(GW_API_VERSION) \
-		--gateway-api-prev-version=$(GW_API_PREV_VERSION) --image-tag=$(TAG) --version-under-test=$(NGF_VERSION) \
-		--plus-enabled=$(PLUS_ENABLED) --ngf-image-repo=$(PREFIX) --nginx-image-repo=$(NGINX_PREFIX) \
-		--pull-policy=$(PULL_POLICY) --k8s-version=$(K8S_VERSION) --service-type=$(GW_SERVICE_TYPE) \
-		--is-gke-internal-lb=$(GW_SVC_GKE_INTERNAL)
+.PHONY: setup-gcp-and-run-tests
+setup-gcp-and-run-tests: create-gke-router create-and-setup-vm run-tests-on-vm ## Create and setup a GKE router and GCP VM for tests and run the functional tests
 
-.PHONY: delete-kind-cluster
-delete-kind-cluster: ## Delete kind cluster
-	kind delete cluster
+.PHONY: setup-gcp-and-run-nfr-tests
+setup-gcp-and-run-nfr-tests: create-gke-router create-and-setup-vm nfr-test ## Create and setup a GKE router and GCP VM for tests and run the NFR tests
 
-.PHONY: run-tests-on-vm
-run-tests-on-vm: ## Run the tests on a GCP VM
-	bash scripts/run-tests-gcp-vm.sh
+.PHONY: create-gke-cluster
+create-gke-cluster: ## Create a GKE cluster
+	bash scripts/create-gke-cluster.sh $(CI)
 
 .PHONY: create-and-setup-vm
 create-and-setup-vm: ## Create and setup a GCP VM for tests
 	bash scripts/create-and-setup-gcp-vm.sh
 
-.PHONY: cleanup-vm
-cleanup-vm: ## Delete the test GCP VM and delete the firewall rule
-	bash scripts/cleanup-vm.sh
-
 .PHONY: create-gke-router
 create-gke-router: ## Create a GKE router to allow egress traffic from private nodes (allows for external image pulls)
 	bash scripts/create-gke-router.sh
+
+.PHONY: sync-files-to-vm
+sync-files-to-vm: ## Syncs your local NGF files with the NGF repo on the VM
+	bash scripts/sync-files-to-vm.sh
+
+.PHONY: run-tests-on-vm
+run-tests-on-vm: ## Run the functional tests on a GCP VM
+	bash scripts/run-tests-gcp-vm.sh
+
+.PHONY: nfr-test
+nfr-test: ## Run the NFR tests on a GCP VM
+	bash scripts/run-tests-gcp-vm.sh true
+
+.PHONY: start-longevity-test
+start-longevity-test: ## Start the longevity test to run for 4 days in GKE
+	START_LONGEVITY=true $(MAKE) nfr-test
+
+.PHONY: stop-longevity-test
+stop-longevity-test: ## Stops the longevity test and collects results
+	STOP_LONGEVITY=true $(MAKE) nfr-test
+
+.PHONY: .vm-nfr-test
+.vm-nfr-test: ## Runs the NFR tests on the GCP VM (called by `nfr-test`)
+	go test -v ./suite -ginkgo.label-filter "nfr" $(GINKGO_FLAGS) -ginkgo.v -args --gateway-api-version=$(GW_API_VERSION) \
+		--gateway-api-prev-version=$(GW_API_PREV_VERSION) --image-tag=$(TAG) --version-under-test=$(NGF_VERSION) \
+		--plus-enabled=$(PLUS_ENABLED) --ngf-image-repo=$(PREFIX) --nginx-image-repo=$(NGINX_PREFIX) \
+		--pull-policy=$(PULL_POLICY) --k8s-version=$(K8S_VERSION) --service-type=$(GW_SERVICE_TYPE) \
+		--is-gke-internal-lb=$(GW_SVC_GKE_INTERNAL)
+
+.PHONY: test
+test: ## Runs the functional tests on your default k8s cluster
+	go test -v ./suite -ginkgo.label-filter "functional" $(GINKGO_FLAGS) -args --gateway-api-version=$(GW_API_VERSION) \
+		--gateway-api-prev-version=$(GW_API_PREV_VERSION) --image-tag=$(TAG) --version-under-test=$(NGF_VERSION) \
+		--plus-enabled=$(PLUS_ENABLED) --ngf-image-repo=$(PREFIX) --nginx-image-repo=$(NGINX_PREFIX) \
+		--pull-policy=$(PULL_POLICY) --k8s-version=$(K8S_VERSION) --service-type=$(GW_SERVICE_TYPE) \
+		--is-gke-internal-lb=$(GW_SVC_GKE_INTERNAL)
+
+.PHONY: cleanup-gcp
+cleanup-gcp: cleanup-router cleanup-vm delete-gke-cluster ## Cleanup all GCP resources
 
 .PHONY: cleanup-router
 cleanup-router: ## Delete the GKE router
 	bash scripts/cleanup-router.sh
 
-.PHONY: setup-gcp-and-run-tests
-setup-gcp-and-run-tests: create-gke-router create-and-setup-vm run-tests-on-vm ## Create and setup a GKE router and GCP VM for tests and run the tests
-
-.PHONY: cleanup-gcp
-cleanup-gcp: cleanup-router cleanup-vm delete-gke-cluster ## Cleanup all GCP resources
-
-.PHONY: create-gke-cluster
-create-gke-cluster: ## Create a GKE cluster
-	bash scripts/create-gke-cluster.sh $(CI)
+.PHONY: cleanup-vm
+cleanup-vm: ## Delete the test GCP VM and delete the firewall rule
+	bash scripts/cleanup-vm.sh
 
 .PHONY: delete-gke-cluster
 delete-gke-cluster: ## Delete the GKE cluster
@@ -95,4 +123,4 @@ delete-gke-cluster: ## Delete the GKE cluster
 
 .PHONY: add-local-ip-to-cluster
 add-local-ip-to-cluster: ## Add local IP to the GKE cluster master-authorized-networks
-	bash scripts/add-local-ip-to-cluster.sh
+	bash scripts/add-local-ip-auth-networks.sh

@@ -51,3 +51,6 @@ internal/mode/static/nginx/modules/coverage
 
 # Credential files
 **/gha-creds-*.json
+
+# SSH config files
+*.ssh

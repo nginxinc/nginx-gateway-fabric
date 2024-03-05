@@ -21,6 +21,7 @@ import (
 	k8sRuntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/client-go/kubernetes"
 	ctlr "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -60,6 +61,7 @@ var (
 	//go:embed manifests/*
 	manifests         embed.FS
 	k8sClient         client.Client
+	clientGoClient    kubernetes.Interface // used for getting Pod logs
 	resourceManager   framework.ResourceManager
 	portForwardStopCh = make(chan struct{}, 1)
 	portFwdPort       int
@@ -68,6 +70,7 @@ var (
 	address           string
 	version           string
 	clusterInfo       framework.ClusterInfo
+	skipNFRTests      bool
 )
 
 const (
@@ -79,6 +82,7 @@ type setupConfig struct {
 	chartPath    string
 	gwAPIVersion string
 	deploy       bool
+	nfr          bool
 }
 
 func setup(cfg setupConfig, extraInstallArgs ...string) {
@@ -100,6 +104,9 @@ func setup(cfg setupConfig, extraInstallArgs ...string) {
 	k8sClient, err = client.New(k8sConfig, options)
 	Expect(err).ToNot(HaveOccurred())
 
+	clientGoClient, err = kubernetes.NewForConfig(k8sConfig)
+	Expect(err).ToNot(HaveOccurred())
+
 	timeoutConfig = framework.DefaultTimeoutConfig()
 	resourceManager = framework.ResourceManager{
 		K8sClient:     k8sClient,
@@ -109,6 +116,24 @@ func setup(cfg setupConfig, extraInstallArgs ...string) {
 
 	clusterInfo, err = resourceManager.GetClusterInfo()
 	Expect(err).ToNot(HaveOccurred())
+
+	if cfg.nfr && !clusterInfo.IsGKE {
+		skipNFRTests = true
+		Skip("NFR tests can only run in GKE")
+	}
+
+	if cfg.nfr && *serviceType != "LoadBalancer" {
+		skipNFRTests = true
+		Skip("GW_SERVICE_TYPE must be 'LoadBalancer' for NFR tests")
+	}
+
+	if *versionUnderTest != "" {
+		version = *versionUnderTest
+	} else if *imageTag != "" {
+		version = *imageTag
+	} else {
+		version = "edge"
+	}
 
 	if !cfg.deploy {
 		return
@@ -129,14 +154,6 @@ func setup(cfg setupConfig, extraInstallArgs ...string) {
 		installCfg.NginxImageRepository = *nginxImageRepository
 		installCfg.ImageTag = *imageTag
 		installCfg.ImagePullPolicy = *imagePullPolicy
-	}
-
-	if *versionUnderTest != "" {
-		version = *versionUnderTest
-	} else if *imageTag != "" {
-		version = *imageTag
-	} else {
-		version = "edge"
 	}
 
 	output, err := framework.InstallGatewayAPI(k8sClient, cfg.gwAPIVersion, *k8sVersion)
@@ -209,10 +226,13 @@ var _ = BeforeSuite(func() {
 		deploy:       true,
 	}
 
-	// If we are running the upgrade test only, then skip the initial deployment.
-	// The upgrade test will deploy its own version of NGF.
-	suiteConfig, _ := GinkgoConfiguration()
-	if suiteConfig.LabelFilter == "upgrade" {
+	labelFilter := GinkgoLabelFilter()
+	cfg.nfr = isNFR(labelFilter)
+
+	// Skip deployment if:
+	// - running upgrade test (this test will deploy its own version)
+	// - running longevity teardown (deployment will already exist)
+	if strings.Contains(labelFilter, "upgrade") || strings.Contains(labelFilter, "longevity-teardown") {
 		cfg.deploy = false
 	}
 
@@ -220,5 +240,19 @@ var _ = BeforeSuite(func() {
 })
 
 var _ = AfterSuite(func() {
-	teardown()
+	if skipNFRTests {
+		Skip("")
+	}
+
+	labelFilter := GinkgoLabelFilter()
+	if !strings.Contains(labelFilter, "longevity-setup") {
+		teardown()
+	}
 })
+
+func isNFR(labelFilter string) bool {
+	return strings.Contains(labelFilter, "nfr") ||
+		strings.Contains(labelFilter, "longevity") ||
+		strings.Contains(labelFilter, "performance") ||
+		strings.Contains(labelFilter, "upgrade")
+}

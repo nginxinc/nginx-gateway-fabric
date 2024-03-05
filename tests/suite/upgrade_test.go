@@ -26,7 +26,7 @@ import (
 // This test installs the latest released version of NGF, then upgrades to the edge version (or dev version).
 // During the upgrade, traffic is continuously sent to ensure no downtime.
 // We also check that the leader election lease has been updated, and that Gateway updates are processed.
-var _ = Describe("Upgrade testing", Label("upgrade"), func() {
+var _ = Describe("Upgrade testing", Label("nfr", "upgrade"), func() {
 	var (
 		files = []string{
 			"ngf-upgrade/cafe.yaml",
@@ -44,20 +44,9 @@ var _ = Describe("Upgrade testing", Label("upgrade"), func() {
 		valuesFile  = "manifests/ngf-upgrade/values.yaml"
 		resultsFile *os.File
 		resultsDir  string
-		skipped     bool
 	)
 
 	BeforeEach(func() {
-		if !clusterInfo.IsGKE {
-			skipped = true
-			Skip("Upgrade tests can only run in GKE")
-		}
-
-		if *serviceType != "LoadBalancer" {
-			skipped = true
-			Skip("GW_SERVICE_TYPE must be 'LoadBalancer' for upgrade tests")
-		}
-
 		// this test is unique in that it needs to install the previous version of NGF,
 		// so we need to uninstall the version installed at the suite level, then install the custom version
 		teardown()
@@ -84,10 +73,6 @@ var _ = Describe("Upgrade testing", Label("upgrade"), func() {
 	})
 
 	AfterEach(func() {
-		if skipped {
-			Skip("")
-		}
-
 		Expect(resourceManager.DeleteFromFiles(files, ns.Name)).To(Succeed())
 		Expect(resourceManager.Delete([]client.Object{ns})).To(Succeed())
 		resultsFile.Close()
