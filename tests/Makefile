@@ -12,6 +12,7 @@ GW_SVC_GKE_INTERNAL=false
 GINKGO_LABEL=
 GINKGO_FLAGS=
 NGF_VERSION=
+CI=false
 
 ifneq ($(GINKGO_LABEL),)
     override GINKGO_FLAGS += -ginkgo.label-filter "$(GINKGO_LABEL)"
@@ -86,8 +87,12 @@ cleanup-gcp: cleanup-router cleanup-vm delete-gke-cluster ## Cleanup all GCP res
 
 .PHONY: create-gke-cluster
 create-gke-cluster: ## Create a GKE cluster
-	bash scripts/create-gke-cluster.sh
+	bash scripts/create-gke-cluster.sh $(CI)
 
 .PHONY: delete-gke-cluster
 delete-gke-cluster: ## Delete the GKE cluster
 	bash scripts/delete-gke-cluster.sh
+
+.PHONY: add-local-ip-to-cluster
+add-local-ip-to-cluster: ## Add local IP to the GKE cluster master-authorized-networks
+	bash scripts/add-local-ip-to-cluster.sh

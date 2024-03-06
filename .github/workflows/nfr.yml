@@ -41,6 +41,7 @@ jobs:
     permissions:
       contents: write # needed for opening PR with the results files
       pull-requests: write # needed for opening PR with the results files
+      id-token: write # needed for authenticating to GCP
 
     steps:
     - name: Checkout Repository
@@ -132,7 +133,7 @@ jobs:
     - name: Create GKE cluster
       working-directory: ./tests
       run:
-        make create-gke-cluster
+        make create-gke-cluster CI=true
 
     - name: Create and setup VM
       working-directory: ./tests

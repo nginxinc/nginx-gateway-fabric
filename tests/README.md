@@ -37,6 +37,7 @@ make
 ```
 
 ```text
+add-local-ip-to-cluster        Add local IP to the GKE cluster master-authorized-networks
 build-images-with-plus         Build NGF and NGINX Plus images
 build-images                   Build NGF and NGINX images
 cleanup-gcp                    Cleanup all GCP resources
@@ -99,6 +100,15 @@ and `GKE_NODES_SERVICE_ACCOUNT` needs to be the name of a service account that h
 
 ```makefile
 make create-gke-cluster
+```
+
+> Note: The GKE cluster is created with `master-authorized-networks`, meaning only IPs from explicitly allowed CIDR ranges
+> will be able to access the cluster. The script will automatically add your current IP to the authorized list, but if
+> your IP changes, you can add your new local IP to the `master-authorized-networks` of the cluster by running the
+> following:
+
+```makefile
+make add-local-ip-to-cluster
 ```
 
 ## Step 2 - Build and Load Images
