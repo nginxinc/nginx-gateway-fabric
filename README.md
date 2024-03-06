@@ -121,7 +121,7 @@ channel.
 
 ## Community Meetings
 
-Every Monday at 9AM Pacific / 5PM GMT
+Every other Monday at 9AM Pacific / 5PM GMT
 
 For the meeting link, updates, agenda, and meeting notes, check the calendar below:
 
