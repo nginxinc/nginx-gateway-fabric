@@ -37,6 +37,7 @@ make
 ```
 
 ```text
+add-local-ip-to-cluster        Add local IP to the GKE cluster master-authorized-networks
 build-images-with-plus         Build NGF and NGINX Plus images
 build-images                   Build NGF and NGINX images
 cleanup-gcp                    Cleanup all GCP resources
