@@ -91,3 +91,7 @@ create-gke-cluster: ## Create a GKE cluster
 .PHONY: delete-gke-cluster
 delete-gke-cluster: ## Delete the GKE cluster
 	bash scripts/delete-gke-cluster.sh
+
+.PHONY: add-local-ip-to-cluster
+add-local-ip-to-cluster: ## Add local IP to the GKE cluster master-authorized-networks
+	bash scripts/add-local-ip-to-cluster.sh

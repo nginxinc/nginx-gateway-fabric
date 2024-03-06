@@ -101,6 +101,13 @@ and `GKE_NODES_SERVICE_ACCOUNT` needs to be the name of a service account that h
 make create-gke-cluster
 ```
 
+> Note: The GKE cluster is created with no local kubectl access by default. To access the cluster locally, you can add
+> your local IP to the `master-authorized-networks` of the cluster by running the following:
+
+```makefile
+make add-local-ip-to-cluster
+```
+
 ## Step 2 - Build and Load Images
 
 Loading the images only applies to a `kind` cluster. If using a cloud provider, you will need to tag and push

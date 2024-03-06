@@ -41,6 +41,7 @@ jobs:
     permissions:
       contents: write # needed for opening PR with the results files
       pull-requests: write # needed for opening PR with the results files
+      id-token: write # needed for authenticating to GCP
 
     steps:
     - name: Checkout Repository
