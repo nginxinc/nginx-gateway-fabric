@@ -101,8 +101,10 @@ and `GKE_NODES_SERVICE_ACCOUNT` needs to be the name of a service account that h
 make create-gke-cluster
 ```
 
-> Note: The GKE cluster is created with no local kubectl access by default. To access the cluster locally, you can add
-> your local IP to the `master-authorized-networks` of the cluster by running the following:
+> Note: The GKE cluster is created with `master-authorized-networks`, meaning only IPs from explitly allowed CIDR ranges
+> will be able to access the cluster. The script will automatically add your current IP to the authorized list, but if
+> your IP changes, you can add your new local IP to the `master-authorized-networks` of the cluster by running the
+> following:
 
 ```makefile
 make add-local-ip-to-cluster
