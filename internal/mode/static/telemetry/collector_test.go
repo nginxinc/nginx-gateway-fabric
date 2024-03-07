@@ -3,7 +3,6 @@ package telemetry_test
 import (
 	"context"
 	"errors"
-	"fmt"
 	"reflect"
 	"runtime"
 
@@ -26,20 +25,23 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/telemetry/telemetryfakes"
 )
 
-func createListCallsFunc(nodes []v1.Node) func(
-	ctx context.Context,
-	list client.ObjectList,
-	option ...client.ListOption,
-) error {
-	return func(_ context.Context, list client.ObjectList, option ...client.ListOption) error {
+type listCallsFunc = func(
+	context.Context,
+	client.ObjectList,
+...client.ListOption,
+) error
+
+func createListCallsFunc(objects ...client.ObjectList) listCallsFunc {
+	return func(_ context.Context, object client.ObjectList, option ...client.ListOption) error {
 		Expect(option).To(BeEmpty())
 
-		switch typedList := list.(type) {
-		case *v1.NodeList:
-			typedList.Items = append(typedList.Items, nodes...)
-		default:
-			Fail(fmt.Sprintf("unknown type: %T", typedList))
+		for _, obj := range objects {
+			if reflect.TypeOf(obj) == reflect.TypeOf(object) {
+				reflect.ValueOf(object).Elem().Set(reflect.ValueOf(obj).Elem())
+				return nil
+			}
 		}
+
 		return nil
 	}
 }
@@ -48,7 +50,7 @@ type getCallsFunc = func(
 	context.Context,
 	types.NamespacedName,
 	client.Object,
-	...client.GetOption,
+...client.GetOption,
 ) error
 
 func createGetCallsFunc(objects ...client.Object) getCallsFunc {
@@ -80,7 +82,9 @@ var _ = Describe("Collector", Ordered, func() {
 		ngfReplicaSet           *appsv1.ReplicaSet
 		kubeNamespace           *v1.Namespace
 		baseGetCalls            getCallsFunc
+		baseListCalls           listCallsFunc
 		flags                   config.Flags
+		nodeList                *v1.NodeList
 	)
 
 	BeforeAll(func() {
@@ -132,6 +136,24 @@ var _ = Describe("Collector", Ordered, func() {
 			Names:  []string{"boolFlag", "intFlag", "stringFlag"},
 			Values: []string{"false", "default", "user-defined"},
 		}
+
+		nodeList = &v1.NodeList{
+			Items: []v1.Node{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "node1",
+					},
+					Spec: v1.NodeSpec{
+						ProviderID: "k3s://ip-172-16-0-210",
+					},
+					Status: v1.NodeStatus{
+						NodeInfo: v1.NodeSystemInfo{
+							KubeletVersion: "v1.28.6+k3s2",
+						},
+					},
+				},
+			},
+		}
 	})
 
 	BeforeEach(func() {
@@ -141,8 +163,8 @@ var _ = Describe("Collector", Ordered, func() {
 				ProjectVersion:      version,
 				ProjectArchitecture: runtime.GOARCH,
 				ClusterID:           string(kubeNamespace.GetUID()),
-				ClusterVersion:      "not-implemented",
-				ClusterPlatform:     "not-implemented",
+				ClusterVersion:      "v1.28.6+k3s2",
+				ClusterPlatform:     "k3s",
 				InstallationID:      string(ngfReplicaSet.ObjectMeta.OwnerReferences[0].UID),
 				ClusterNodeCount:    0,
 			},
@@ -172,6 +194,9 @@ var _ = Describe("Collector", Ordered, func() {
 
 		baseGetCalls = createGetCallsFunc(ngfPod, ngfReplicaSet, kubeNamespace)
 		k8sClientReader.GetCalls(baseGetCalls)
+
+		baseListCalls = createListCallsFunc(nodeList)
+		k8sClientReader.ListCalls(baseListCalls)
 	})
 
 	mergeGetCallsWithBase := func(f getCallsFunc) getCallsFunc {
@@ -191,20 +216,30 @@ var _ = Describe("Collector", Ordered, func() {
 	Describe("Normal case", func() {
 		When("collecting telemetry data", func() {
 			It("collects all fields", func() {
-				nodes := []v1.Node{
-					{
-						ObjectMeta: metav1.ObjectMeta{
-							Name: "node1",
+				nodes := &v1.NodeList{
+					Items: []v1.Node{
+						{
+							ObjectMeta: metav1.ObjectMeta{
+								Name: "node1",
+							},
+							Spec: v1.NodeSpec{
+								ProviderID: "kind://docker/kind/kind-control-plane",
+							},
+							Status: v1.NodeStatus{
+								NodeInfo: v1.NodeSystemInfo{
+									KubeletVersion: "v1.29.2",
+								},
+							},
 						},
-					},
-					{
-						ObjectMeta: metav1.ObjectMeta{
-							Name: "node2",
+						{
+							ObjectMeta: metav1.ObjectMeta{
+								Name: "node2",
+							},
 						},
-					},
-					{
-						ObjectMeta: metav1.ObjectMeta{
-							Name: "node3",
+						{
+							ObjectMeta: metav1.ObjectMeta{
+								Name: "node3",
+							},
 						},
 					},
 				}
@@ -294,6 +329,8 @@ var _ = Describe("Collector", Ordered, func() {
 					ServiceCount:      3,
 					EndpointCount:     4,
 				}
+				expData.ClusterVersion = "v1.29.2"
+				expData.ClusterPlatform = "kind"
 
 				data, err := dataCollector.Collect(ctx)
 
@@ -303,8 +340,267 @@ var _ = Describe("Collector", Ordered, func() {
 		})
 	})
 
-	Describe("clusterID collector", func() {
-		When("collecting clusterID", func() {
+	Describe("cluster information collector", func() {
+		When("collecting node count data", func() {
+			It("collects correct data for one node", func() {
+				k8sClientReader.ListCalls(createListCallsFunc(nodeList))
+
+				expData.Data.ClusterNodeCount = 1
+
+				data, err := dataCollector.Collect(ctx)
+
+				Expect(err).To(BeNil())
+				Expect(expData).To(Equal(data))
+			})
+
+			When("it encounters an error while collecting data", func() {
+				It("should error when there are no nodes", func() {
+					expectedError := errors.New("failed to collect cluster information: NodeList length is zero")
+					k8sClientReader.ListCalls(createListCallsFunc(nil))
+
+					_, err := dataCollector.Collect(ctx)
+
+					Expect(err).To(MatchError(expectedError))
+				})
+				It("should error on kubernetes client api errors", func() {
+					expectedError := errors.New("there was an error getting NodeList")
+					k8sClientReader.ListReturns(expectedError)
+
+					_, err := dataCollector.Collect(ctx)
+					Expect(err).To(MatchError(expectedError))
+				})
+			})
+		})
+
+		When("collecting cluster platform data", func() {
+			It("collects Kind platform", func() {
+				nodes := &v1.NodeList{
+					Items: []v1.Node{
+						{
+							ObjectMeta: metav1.ObjectMeta{
+								Name: "node1",
+							},
+							Spec: v1.NodeSpec{
+								ProviderID: "kind://docker/kind/kind-control-plane",
+							},
+							Status: v1.NodeStatus{
+								NodeInfo: v1.NodeSystemInfo{
+									KubeletVersion: "v1.29.2",
+								},
+							},
+						},
+					},
+				}
+
+				k8sClientReader.ListCalls(createListCallsFunc(nodes))
+				expData.ClusterVersion = "v1.29.2"
+				expData.ClusterPlatform = "kind"
+
+				data, err := dataCollector.Collect(ctx)
+
+				Expect(err).To(BeNil())
+				Expect(expData).To(Equal(data))
+			})
+
+			It("collects GKE platform", func() {
+				nodes := &v1.NodeList{
+					Items: []v1.Node{
+						{
+							ObjectMeta: metav1.ObjectMeta{
+								Name: "node1",
+							},
+							Spec: v1.NodeSpec{
+								ProviderID: "gce://test-data/us-central1-c/test-data",
+							},
+							Status: v1.NodeStatus{
+								NodeInfo: v1.NodeSystemInfo{
+									KubeletVersion: "v1.29.2",
+								},
+							},
+						},
+					},
+				}
+
+				k8sClientReader.ListCalls(createListCallsFunc(nodes))
+				expData.ClusterVersion = "v1.29.2"
+				expData.ClusterPlatform = "gke"
+
+				data, err := dataCollector.Collect(ctx)
+
+				Expect(err).To(BeNil())
+				Expect(expData).To(Equal(data))
+			})
+
+			It("collects AKS platform", func() {
+				nodes := &v1.NodeList{
+					Items: []v1.Node{
+						{
+							ObjectMeta: metav1.ObjectMeta{
+								Name: "node1",
+							},
+							Spec: v1.NodeSpec{
+								ProviderID: "azure://test-data/us-central1-c/test-data",
+							},
+							Status: v1.NodeStatus{
+								NodeInfo: v1.NodeSystemInfo{
+									KubeletVersion: "v1.29.2",
+								},
+							},
+						},
+					},
+				}
+
+				k8sClientReader.ListCalls(createListCallsFunc(nodes))
+				expData.ClusterVersion = "v1.29.2"
+				expData.ClusterPlatform = "aks"
+
+				data, err := dataCollector.Collect(ctx)
+
+				Expect(err).To(BeNil())
+				Expect(expData).To(Equal(data))
+			})
+
+			It("collects EKS platform", func() {
+				nodes := &v1.NodeList{
+					Items: []v1.Node{
+						{
+							ObjectMeta: metav1.ObjectMeta{
+								Name: "node1",
+							},
+							Spec: v1.NodeSpec{
+								ProviderID: "aws://test-data/us-central1-c/test-data",
+							},
+							Status: v1.NodeStatus{
+								NodeInfo: v1.NodeSystemInfo{
+									KubeletVersion: "v1.29.2",
+								},
+							},
+						},
+					},
+				}
+
+				k8sClientReader.ListCalls(createListCallsFunc(nodes))
+				expData.ClusterVersion = "v1.29.2"
+				expData.ClusterPlatform = "eks"
+
+				data, err := dataCollector.Collect(ctx)
+
+				Expect(err).To(BeNil())
+				Expect(expData).To(Equal(data))
+			})
+
+			It("collects Rancher platform", func() {
+				namespaceList := &v1.NamespaceList{
+					Items: []v1.Namespace{
+						{
+							ObjectMeta: metav1.ObjectMeta{
+								Name: "cattle-system",
+							},
+						},
+					},
+				}
+
+				k8sClientReader.ListCalls(createListCallsFunc(nodeList, namespaceList))
+
+				expData.ClusterVersion = "v1.28.6+k3s2"
+				expData.ClusterPlatform = "rancher"
+
+				data, err := dataCollector.Collect(ctx)
+
+				Expect(err).To(BeNil())
+				Expect(expData).To(Equal(data))
+			})
+
+			It("collects Openshift platform", func() {
+				nodes := &v1.NodeList{
+					Items: []v1.Node{
+						{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:   "node1",
+								Labels: map[string]string{"node.openshift.io/os_id": "test"},
+							},
+							Spec: v1.NodeSpec{
+								ProviderID: "k3s://test-data/us-central1-c/test-data",
+							},
+							Status: v1.NodeStatus{
+								NodeInfo: v1.NodeSystemInfo{
+									KubeletVersion: "v1.29.2",
+								},
+							},
+						},
+					},
+				}
+
+				k8sClientReader.ListCalls(createListCallsFunc(nodes))
+				expData.ClusterVersion = "v1.29.2"
+				expData.ClusterPlatform = "openshift"
+
+				data, err := dataCollector.Collect(ctx)
+
+				Expect(err).To(BeNil())
+				Expect(expData).To(Equal(data))
+			})
+
+			When("platform is none of the above", func() {
+				It("marks the platform as 'other'", func() {
+					nodes := &v1.NodeList{
+						Items: []v1.Node{
+							{
+								ObjectMeta: metav1.ObjectMeta{
+									Name: "node1",
+								},
+								Spec: v1.NodeSpec{
+									ProviderID: "other-cloud-provider",
+								},
+								Status: v1.NodeStatus{
+									NodeInfo: v1.NodeSystemInfo{
+										KubeletVersion: "v1.29.2",
+									},
+								},
+							},
+						},
+					}
+
+					k8sClientReader.ListCalls(createListCallsFunc(nodes))
+					expData.ClusterVersion = "v1.29.2"
+					expData.ClusterPlatform = "other"
+
+					data, err := dataCollector.Collect(ctx)
+
+					Expect(err).To(BeNil())
+					Expect(expData).To(Equal(data))
+				})
+			})
+		})
+		When("collecting cluster version data", func() {
+			When("the kublet version is missing", func() {
+				It("should be report 'unknown'", func() {
+					nodes := &v1.NodeList{
+						Items: []v1.Node{
+							{
+								ObjectMeta: metav1.ObjectMeta{
+									Name: "node1",
+								},
+								Spec: v1.NodeSpec{
+									ProviderID: "k3s://ip-172-16-0-210",
+								},
+							},
+						},
+					}
+
+					k8sClientReader.ListCalls(createListCallsFunc(nodes))
+					expData.ClusterVersion = "unknown"
+					expData.ClusterPlatform = "k3s"
+
+					data, err := dataCollector.Collect(ctx)
+
+					Expect(err).To(BeNil())
+					Expect(expData).To(Equal(data))
+				})
+			})
+		})
+
+		When("collecting clusterID data", func() {
 			When("it encounters an error while collecting data", func() {
 				It("should error if the kubernetes client errored when getting the namespace", func() {
 					expectedError := errors.New("there was an error getting clusterID")
@@ -320,45 +616,6 @@ var _ = Describe("Collector", Ordered, func() {
 					_, err := dataCollector.Collect(ctx)
 					Expect(err).To(MatchError(expectedError))
 				})
-			})
-		})
-	})
-
-	Describe("node count collector", func() {
-		When("collecting node count data", func() {
-			It("collects correct data for no nodes", func() {
-				k8sClientReader.ListCalls(createListCallsFunc(nil))
-
-				data, err := dataCollector.Collect(ctx)
-
-				Expect(err).To(BeNil())
-				Expect(expData).To(Equal(data))
-			})
-
-			It("collects correct data for one node", func() {
-				nodes := []v1.Node{
-					{
-						ObjectMeta: metav1.ObjectMeta{Name: "node1"},
-					},
-				}
-
-				k8sClientReader.ListCalls(createListCallsFunc(nodes))
-
-				expData.ClusterNodeCount = 1
-
-				data, err := dataCollector.Collect(ctx)
-
-				Expect(err).To(BeNil())
-				Expect(expData).To(Equal(data))
-			})
-		})
-		When("it encounters an error while collecting data", func() {
-			It("should error on kubernetes client api errors", func() {
-				expectedError := errors.New("there was an error getting NodeList")
-				k8sClientReader.ListReturns(expectedError)
-
-				_, err := dataCollector.Collect(ctx)
-				Expect(err).To(MatchError(expectedError))
 			})
 		})
 	})
