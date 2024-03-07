@@ -111,7 +111,7 @@ func (c DataCollectorImpl) Collect(ctx context.Context) (Data, error) {
 		return Data{}, fmt.Errorf("failed to collect node count: %w", err)
 	}
 
-	nodes, err := collectNodeList(ctx, c.cfg.K8sClientReader)
+	nodes, err := CollectNodeList(ctx, c.cfg.K8sClientReader)
 	if err != nil {
 		return Data{}, err
 	}
@@ -286,7 +286,8 @@ func CollectClusterID(ctx context.Context, k8sClient client.Reader) (string, err
 	return string(kubeNamespace.GetUID()), nil
 }
 
-func collectNodeList(ctx context.Context, k8sClient client.Reader) (v1.NodeList, error) {
+// CollectNodeList returns a NodeList of all the Nodes in the cluster.
+func CollectNodeList(ctx context.Context, k8sClient client.Reader) (v1.NodeList, error) {
 	var nodes v1.NodeList
 	if err := k8sClient.List(ctx, &nodes); err != nil {
 		return nodes, fmt.Errorf("failed to get NodeList: %w", err)

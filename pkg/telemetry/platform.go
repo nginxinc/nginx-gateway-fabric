@@ -60,8 +60,6 @@ func isMultiplePlatforms(node v1.Node, namespaces v1.NamespaceList) string {
 // where if either the label/annotation or providerID changes it will mess this up and may group more clusters in
 // the "Other" platform if they messed with any of the node labels/annotations.
 
-// I think it will be fine just to do the providerID check as
-
 func isOpenshiftPlatform(node v1.Node) bool {
 	// openshift platform won't show up in node's ProviderID
 	value, ok := node.Labels[openshiftIdentifier]
@@ -96,5 +94,6 @@ func isRancherPlatform(namespaces v1.NamespaceList) bool {
 			return true
 		}
 	}
+
 	return false
 }
