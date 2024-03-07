@@ -5,6 +5,7 @@ import (
 	"errors"
 	"reflect"
 	"runtime"
+	"testing"
 
 	tel "github.com/nginxinc/telemetry-exporter/pkg/telemetry"
 	. "github.com/onsi/ginkgo/v2"
@@ -28,7 +29,7 @@ import (
 type listCallsFunc = func(
 	context.Context,
 	client.ObjectList,
-...client.ListOption,
+	...client.ListOption,
 ) error
 
 func createListCallsFunc(objects ...client.ObjectList) listCallsFunc {
@@ -50,7 +51,7 @@ type getCallsFunc = func(
 	context.Context,
 	types.NamespacedName,
 	client.Object,
-...client.GetOption,
+	...client.GetOption,
 ) error
 
 func createGetCallsFunc(objects ...client.Object) getCallsFunc {
@@ -163,7 +164,7 @@ var _ = Describe("Collector", Ordered, func() {
 				ProjectVersion:      version,
 				ProjectArchitecture: runtime.GOARCH,
 				ClusterID:           string(kubeNamespace.GetUID()),
-				ClusterVersion:      "v1.28.6+k3s2",
+				ClusterVersion:      "1.28.6",
 				ClusterPlatform:     "k3s",
 				InstallationID:      string(ngfReplicaSet.ObjectMeta.OwnerReferences[0].UID),
 				ClusterNodeCount:    0,
@@ -329,7 +330,7 @@ var _ = Describe("Collector", Ordered, func() {
 					ServiceCount:      3,
 					EndpointCount:     4,
 				}
-				expData.ClusterVersion = "v1.29.2"
+				expData.ClusterVersion = "1.29.2"
 				expData.ClusterPlatform = "kind"
 
 				data, err := dataCollector.Collect(ctx)
@@ -393,7 +394,7 @@ var _ = Describe("Collector", Ordered, func() {
 				}
 
 				k8sClientReader.ListCalls(createListCallsFunc(nodes))
-				expData.ClusterVersion = "v1.29.2"
+				expData.ClusterVersion = "1.29.2"
 				expData.ClusterPlatform = "kind"
 
 				data, err := dataCollector.Collect(ctx)
@@ -422,7 +423,7 @@ var _ = Describe("Collector", Ordered, func() {
 				}
 
 				k8sClientReader.ListCalls(createListCallsFunc(nodes))
-				expData.ClusterVersion = "v1.29.2"
+				expData.ClusterVersion = "1.29.2"
 				expData.ClusterPlatform = "gke"
 
 				data, err := dataCollector.Collect(ctx)
@@ -451,7 +452,7 @@ var _ = Describe("Collector", Ordered, func() {
 				}
 
 				k8sClientReader.ListCalls(createListCallsFunc(nodes))
-				expData.ClusterVersion = "v1.29.2"
+				expData.ClusterVersion = "1.29.2"
 				expData.ClusterPlatform = "aks"
 
 				data, err := dataCollector.Collect(ctx)
@@ -480,7 +481,7 @@ var _ = Describe("Collector", Ordered, func() {
 				}
 
 				k8sClientReader.ListCalls(createListCallsFunc(nodes))
-				expData.ClusterVersion = "v1.29.2"
+				expData.ClusterVersion = "1.29.2"
 				expData.ClusterPlatform = "eks"
 
 				data, err := dataCollector.Collect(ctx)
@@ -501,8 +502,7 @@ var _ = Describe("Collector", Ordered, func() {
 				}
 
 				k8sClientReader.ListCalls(createListCallsFunc(nodeList, namespaceList))
-
-				expData.ClusterVersion = "v1.28.6+k3s2"
+				expData.ClusterVersion = "1.28.6"
 				expData.ClusterPlatform = "rancher"
 
 				data, err := dataCollector.Collect(ctx)
@@ -532,7 +532,7 @@ var _ = Describe("Collector", Ordered, func() {
 				}
 
 				k8sClientReader.ListCalls(createListCallsFunc(nodes))
-				expData.ClusterVersion = "v1.29.2"
+				expData.ClusterVersion = "1.29.2"
 				expData.ClusterPlatform = "openshift"
 
 				data, err := dataCollector.Collect(ctx)
@@ -562,7 +562,7 @@ var _ = Describe("Collector", Ordered, func() {
 					}
 
 					k8sClientReader.ListCalls(createListCallsFunc(nodes))
-					expData.ClusterVersion = "v1.29.2"
+					expData.ClusterVersion = "1.29.2"
 					expData.ClusterPlatform = "other"
 
 					data, err := dataCollector.Collect(ctx)
@@ -939,3 +939,99 @@ var _ = Describe("Collector", Ordered, func() {
 		})
 	})
 })
+
+func TestParseKubeletVersion(t *testing.T) {
+	tests := []struct {
+		expError error
+		input    string
+		expected string
+		name     string
+	}{
+		{
+			input:    "v1.27.9",
+			expected: "1.27.9",
+			name:     "normal case",
+			expError: nil,
+		},
+		{
+			input:    "   v1.27.9  ",
+			expected: "1.27.9",
+			name:     "removes added whitespace",
+			expError: nil,
+		},
+		{
+			input:    "v1.27",
+			expected: "1.27.0",
+			name:     "adds appended 0's if missing semver patch number",
+			expError: nil,
+		},
+		{
+			input:    "v1.27.8-gke.1067004",
+			expected: "1.27.8",
+			name:     "removes trailing characters from semver version",
+			expError: nil,
+		},
+		{
+			input:    "v1.27.9+",
+			expected: "1.27.9",
+			name:     "removes trailing characters from semver version no following characters",
+			expError: nil,
+		},
+		{
+			input:    "v1.27-gke.1067004",
+			expected: "1.27.0",
+			name:     "removes trailing characters from semver version no patch version",
+			expError: nil,
+		},
+		{
+			input:    "v1.27.",
+			expected: "1.27.0",
+			name:     "edge case where patch version is missing but separating period is",
+			expError: nil,
+		},
+		{
+			input:    "v1.27.gke+323",
+			expected: "1.27.0",
+			name:     "edge case where patch version is missing but additional characters are present",
+			expError: nil,
+		},
+		{
+			input:    "",
+			expected: "",
+			name:     "error on empty string",
+			expError: errors.New("string cannot be empty"),
+		},
+		{
+			input:    "1",
+			expected: "",
+			name:     "errors when major and minor version are not present",
+			expError: errors.New("string must have at least a major and minor version specified"),
+		},
+		{
+			input:    "1.",
+			expected: "",
+			name:     "errors when major and minor version are not present",
+			expError: errors.New("string must have at least a major and minor version specified"),
+		},
+		{
+			input:    "123gke",
+			expected: "",
+			name:     "errors when string does not contain a number as the major version",
+			expError: errors.New("string must have a number as the major version"),
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			g := NewWithT(t)
+
+			result, err := telemetry.ParseKubeletVersion(test.input)
+			g.Expect(result).To(Equal(test.expected))
+
+			if test.expError != nil {
+				g.Expect(err).To(MatchError(test.expError))
+			} else {
+				g.Expect(err).To(BeNil())
+			}
+		})
+	}
+}
