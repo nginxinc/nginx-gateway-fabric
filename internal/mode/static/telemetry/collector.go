@@ -38,14 +38,14 @@ type ConfigurationGetter interface {
 type Data struct {
 	// ImageSource tells whether the image was built by GitHub or locally (values are 'gha', 'local', or 'unknown')
 	ImageSource string
-	tel.Data
+	tel.Data    // embedding is required by the generator.
 	// FlagNames contains the command-line flag names.
 	FlagNames []string
 	// FlagValues contains the values of the command-line flags, where each value corresponds to the flag from FlagNames
 	// at the same index.
 	// Each value is either 'true' or 'false' for boolean flags and 'default' or 'user-defined' for non-boolean flags.
-	FlagValues []string
-	NGFResourceCounts
+	FlagValues        []string
+	NGFResourceCounts // embedding is required by the generator.
 	// NGFReplicaCount is the number of replicas of the NGF Pod.
 	NGFReplicaCount int64
 }
