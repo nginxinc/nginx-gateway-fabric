@@ -17,11 +17,11 @@ func (d *Data) Attributes() []attribute.KeyValue {
 	attrs = append(attrs, attribute.String("dataType", "ngf-product-telemetry"))
 	
 
-	attrs = append(attrs, d.Data.Attributes()...)
-	attrs = append(attrs, d.NGFResourceCounts.Attributes()...)
 	attrs = append(attrs, attribute.String("ImageSource", d.ImageSource))
+	attrs = append(attrs, d.Data.Attributes()...)
 	attrs = append(attrs, attribute.StringSlice("FlagNames", d.FlagNames))
 	attrs = append(attrs, attribute.StringSlice("FlagValues", d.FlagValues))
+	attrs = append(attrs, d.NGFResourceCounts.Attributes()...)
 	attrs = append(attrs, attribute.Int64("NGFReplicaCount", d.NGFReplicaCount))
 	
 

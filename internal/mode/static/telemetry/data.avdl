@@ -8,6 +8,9 @@
 		long ingestTime;
 
 		
+		/** ImageSource tells whether the image was built by GitHub or locally (values are 'gha', 'local', or 'unknown') */
+		string? ImageSource = null;
+		
 		/** ProjectName is the name of the project. */
 		string? ProjectName = null;
 		
@@ -33,6 +36,14 @@ It is the UID of the `kube-system` Namespace. */
 		/** ClusterNodeCount is the number of nodes in the cluster. */
 		long? ClusterNodeCount = null;
 		
+		/** FlagNames contains the command-line flag names. */
+		union {null, array<string>} FlagNames = null;
+		
+		/** FlagValues contains the values of the command-line flags, where each value corresponds to the flag from FlagNames
+at the same index.
+Each value is either 'true' or 'false' for boolean flags and 'default' or 'user-defined' for non-boolean flags. */
+		union {null, array<string>} FlagValues = null;
+		
 		/** GatewayCount is the number of relevant Gateways. */
 		long? GatewayCount = null;
 		
@@ -50,17 +61,6 @@ It is the UID of the `kube-system` Namespace. */
 		
 		/** EndpointCount include the total count of Endpoints(IP:port) across all referenced services. */
 		long? EndpointCount = null;
-		
-		/** ImageSource tells whether the image was built by GitHub or locally (values are 'gha', 'local', or 'unknown') */
-		string? ImageSource = null;
-		
-		/** FlagNames contains the command-line flag names. */
-		union {null, array<string>} FlagNames = null;
-		
-		/** FlagValues contains the values of the command-line flags, where each value corresponds to the flag from FlagNames
-at the same index.
-Each value is either 'true' or 'false' for boolean flags and 'default' or 'user-defined' for non-boolean flags. */
-		union {null, array<string>} FlagValues = null;
 		
 		/** NGFReplicaCount is the number of replicas of the NGF Pod. */
 		long? NGFReplicaCount = null;
