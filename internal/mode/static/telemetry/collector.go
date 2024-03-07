@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"runtime"
 
+	tel "github.com/nginxinc/telemetry-exporter/pkg/telemetry"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -31,35 +32,40 @@ type ConfigurationGetter interface {
 	GetLatestConfiguration() *dataplane.Configuration
 }
 
-// NGFResourceCounts stores the counts of all relevant resources that NGF processes and generates configuration from.
-type NGFResourceCounts struct {
-	Gateways       int
-	GatewayClasses int
-	HTTPRoutes     int
-	Secrets        int
-	Services       int
-	// Endpoints include the total count of Endpoints(IP:port) across all referenced services.
-	Endpoints int
-}
-
-// ProjectMetadata stores the name of the project and the current version.
-type ProjectMetadata struct {
-	Name    string
-	Version string
-}
-
 // Data is telemetry data.
-// Note: this type might change once https://github.com/nginxinc/nginx-gateway-fabric/issues/1318 is implemented.
+//
+//go:generate go run -tags generator github.com/nginxinc/telemetry-exporter/cmd/generator -type=Data -scheme -scheme-protocol=NGFProductTelemetry -scheme-df-datatype=ngf-product-telemetry
 type Data struct {
-	ProjectMetadata   ProjectMetadata
-	ClusterID         string
-	Arch              string
-	DeploymentID      string
-	ImageSource       string
-	Flags             config.Flags
-	NGFResourceCounts NGFResourceCounts
-	NodeCount         int
-	NGFReplicaCount   int
+	// ImageSource tells whether the image was built by GitHub or locally (values are 'gha', 'local', or 'unknown')
+	ImageSource string
+	tel.Data    // embedding is required by the generator.
+	// FlagNames contains the command-line flag names.
+	FlagNames []string
+	// FlagValues contains the values of the command-line flags, where each value corresponds to the flag from FlagNames
+	// at the same index.
+	// Each value is either 'true' or 'false' for boolean flags and 'default' or 'user-defined' for non-boolean flags.
+	FlagValues        []string
+	NGFResourceCounts // embedding is required by the generator.
+	// NGFReplicaCount is the number of replicas of the NGF Pod.
+	NGFReplicaCount int64
+}
+
+// NGFResourceCounts stores the counts of all relevant resources that NGF processes and generates configuration from.
+//
+//go:generate go run -tags generator github.com/nginxinc/telemetry-exporter/cmd/generator -type=NGFResourceCounts
+type NGFResourceCounts struct {
+	// GatewayCount is the number of relevant Gateways.
+	GatewayCount int64
+	// GatewayClassCount is the number of relevant GatewayClasses.
+	GatewayClassCount int64
+	// HTTPRouteCount is the number of relevant HTTPRoutes.
+	HTTPRouteCount int64
+	// SecretCount is the number of relevant Secrets.
+	SecretCount int64
+	// ServiceCount is the number of relevant Services.
+	ServiceCount int64
+	// EndpointCount include the total count of Endpoints(IP:port) across all referenced services.
+	EndpointCount int64
 }
 
 // DataCollectorConfig holds configuration parameters for DataCollectorImpl.
@@ -94,6 +100,9 @@ func NewDataCollectorImpl(
 	}
 }
 
+// notImplemented is a value for string field, for which collection is not implemented yet.
+const notImplemented = "not-implemented"
+
 // Collect collects and returns telemetry Data.
 func (c DataCollectorImpl) Collect(ctx context.Context) (Data, error) {
 	nodeCount, err := CollectNodeCount(ctx, c.cfg.K8sClientReader)
@@ -127,18 +136,21 @@ func (c DataCollectorImpl) Collect(ctx context.Context) (Data, error) {
 	}
 
 	data := Data{
-		NodeCount:         nodeCount,
-		NGFResourceCounts: graphResourceCount,
-		ProjectMetadata: ProjectMetadata{
-			Name:    "NGF",
-			Version: c.cfg.Version,
+		Data: tel.Data{
+			ProjectName:         "NGF",
+			ProjectVersion:      c.cfg.Version,
+			ProjectArchitecture: runtime.GOARCH,
+			ClusterID:           clusterID,
+			ClusterVersion:      notImplemented,
+			ClusterPlatform:     notImplemented,
+			InstallationID:      deploymentID,
+			ClusterNodeCount:    int64(nodeCount),
 		},
-		NGFReplicaCount: replicaCount,
-		ClusterID:       clusterID,
-		ImageSource:     c.cfg.ImageSource,
-		Arch:            runtime.GOARCH,
-		DeploymentID:    deploymentID,
-		Flags:           c.cfg.Flags,
+		NGFResourceCounts: graphResourceCount,
+		ImageSource:       c.cfg.ImageSource,
+		FlagNames:         c.cfg.Flags.Names,
+		FlagValues:        c.cfg.Flags.Values,
+		NGFReplicaCount:   int64(replicaCount),
 	}
 
 	return data, nil
@@ -169,23 +181,23 @@ func collectGraphResourceCount(
 		return ngfResourceCounts, errors.New("latest configuration cannot be nil")
 	}
 
-	ngfResourceCounts.GatewayClasses = len(g.IgnoredGatewayClasses)
+	ngfResourceCounts.GatewayClassCount = int64(len(g.IgnoredGatewayClasses))
 	if g.GatewayClass != nil {
-		ngfResourceCounts.GatewayClasses++
+		ngfResourceCounts.GatewayClassCount++
 	}
 
-	ngfResourceCounts.Gateways = len(g.IgnoredGateways)
+	ngfResourceCounts.GatewayCount = int64(len(g.IgnoredGateways))
 	if g.Gateway != nil {
-		ngfResourceCounts.Gateways++
+		ngfResourceCounts.GatewayCount++
 	}
 
-	ngfResourceCounts.HTTPRoutes = len(g.Routes)
-	ngfResourceCounts.Secrets = len(g.ReferencedSecrets)
-	ngfResourceCounts.Services = len(g.ReferencedServices)
+	ngfResourceCounts.HTTPRouteCount = int64(len(g.Routes))
+	ngfResourceCounts.SecretCount = int64(len(g.ReferencedSecrets))
+	ngfResourceCounts.ServiceCount = int64(len(g.ReferencedServices))
 
 	for _, upstream := range cfg.Upstreams {
 		if upstream.ErrorMsg == "" {
-			ngfResourceCounts.Endpoints += len(upstream.Endpoints)
+			ngfResourceCounts.EndpointCount += int64(len(upstream.Endpoints))
 		}
 	}
 

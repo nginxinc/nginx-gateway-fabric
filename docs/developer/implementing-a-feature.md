@@ -59,7 +59,11 @@ practices to ensure a successful feature development process.
     different reviewer in mind, you can request them as well. Refer to
     the [pull request](/docs/developer/pull-request.md) documentation for expectations and guidelines.
 14. **Obtain the necessary approvals**: Work with code reviewers to maintain the required number of approvals.
-15. **Squash and merge**: Squash your commits locally, or use the GitHub UI to squash and merge. Only one commit per
+15. **Ensure the product telemetry works**. If you made any changes to the product telemetry data points, it is
+    necessary to push the generated scheme (`.avdl`, generated in Step 12) to the scheme registry. After that, manually
+    verify that the product telemetry data is successfully pushed to the telemetry service by confirming that the data
+    has been received.
+16. **Squash and merge**: Squash your commits locally, or use the GitHub UI to squash and merge. Only one commit per
     pull request should be merged. Make sure the first line of the final commit message includes the pull request
     number. For example, Fix supported gateway conditions in compatibility doc (#674).
     > **Note**:

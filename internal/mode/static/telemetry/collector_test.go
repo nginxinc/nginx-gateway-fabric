@@ -7,6 +7,7 @@ import (
 	"reflect"
 	"runtime"
 
+	tel "github.com/nginxinc/telemetry-exporter/pkg/telemetry"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
@@ -135,15 +136,21 @@ var _ = Describe("Collector", Ordered, func() {
 
 	BeforeEach(func() {
 		expData = telemetry.Data{
-			ProjectMetadata:   telemetry.ProjectMetadata{Name: "NGF", Version: version},
-			NodeCount:         0,
+			Data: tel.Data{
+				ProjectName:         "NGF",
+				ProjectVersion:      version,
+				ProjectArchitecture: runtime.GOARCH,
+				ClusterID:           string(kubeNamespace.GetUID()),
+				ClusterVersion:      "not-implemented",
+				ClusterPlatform:     "not-implemented",
+				InstallationID:      string(ngfReplicaSet.ObjectMeta.OwnerReferences[0].UID),
+				ClusterNodeCount:    0,
+			},
 			NGFResourceCounts: telemetry.NGFResourceCounts{},
 			NGFReplicaCount:   1,
-			ClusterID:         string(kubeNamespace.GetUID()),
 			ImageSource:       "local",
-			Arch:              runtime.GOARCH,
-			DeploymentID:      string(ngfReplicaSet.ObjectMeta.OwnerReferences[0].UID),
-			Flags:             flags,
+			FlagNames:         flags.Names,
+			FlagValues:        flags.Values,
 		}
 
 		k8sClientReader = &eventsfakes.FakeReader{}
@@ -278,14 +285,14 @@ var _ = Describe("Collector", Ordered, func() {
 				fakeGraphGetter.GetLatestGraphReturns(graph)
 				fakeConfigurationGetter.GetLatestConfigurationReturns(config)
 
-				expData.NodeCount = 3
+				expData.ClusterNodeCount = 3
 				expData.NGFResourceCounts = telemetry.NGFResourceCounts{
-					Gateways:       3,
-					GatewayClasses: 3,
-					HTTPRoutes:     3,
-					Secrets:        3,
-					Services:       3,
-					Endpoints:      4,
+					GatewayCount:      3,
+					GatewayClassCount: 3,
+					HTTPRouteCount:    3,
+					SecretCount:       3,
+					ServiceCount:      3,
+					EndpointCount:     4,
 				}
 
 				data, err := dataCollector.Collect(ctx)
@@ -337,7 +344,7 @@ var _ = Describe("Collector", Ordered, func() {
 
 				k8sClientReader.ListCalls(createListCallsFunc(nodes))
 
-				expData.NodeCount = 1
+				expData.ClusterNodeCount = 1
 
 				data, err := dataCollector.Collect(ctx)
 
@@ -442,12 +449,12 @@ var _ = Describe("Collector", Ordered, func() {
 				fakeConfigurationGetter.GetLatestConfigurationReturns(config1)
 
 				expData.NGFResourceCounts = telemetry.NGFResourceCounts{
-					Gateways:       1,
-					GatewayClasses: 1,
-					HTTPRoutes:     1,
-					Secrets:        1,
-					Services:       1,
-					Endpoints:      1,
+					GatewayCount:      1,
+					GatewayClassCount: 1,
+					HTTPRouteCount:    1,
+					SecretCount:       1,
+					ServiceCount:      1,
+					EndpointCount:     1,
 				}
 
 				data, err := dataCollector.Collect(ctx)
@@ -460,12 +467,12 @@ var _ = Describe("Collector", Ordered, func() {
 				fakeGraphGetter.GetLatestGraphReturns(&graph.Graph{})
 				fakeConfigurationGetter.GetLatestConfigurationReturns(invalidUpstreamsConfig)
 				expData.NGFResourceCounts = telemetry.NGFResourceCounts{
-					Gateways:       0,
-					GatewayClasses: 0,
-					HTTPRoutes:     0,
-					Secrets:        0,
-					Services:       0,
-					Endpoints:      0,
+					GatewayCount:      0,
+					GatewayClassCount: 0,
+					HTTPRouteCount:    0,
+					SecretCount:       0,
+					ServiceCount:      0,
+					EndpointCount:     0,
 				}
 
 				data, err := dataCollector.Collect(ctx)

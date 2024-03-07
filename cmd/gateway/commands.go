@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -160,6 +161,17 @@ func createStaticModeCommand() *cobra.Command {
 				return fmt.Errorf("error parsing telemetry report period: %w", err)
 			}
 
+			if telemetryEndpoint != "" {
+				if err := validateEndpoint(telemetryEndpoint); err != nil {
+					return fmt.Errorf("error validating telemetry endpoint: %w", err)
+				}
+			}
+
+			telemetryEndpointInsecure, err := strconv.ParseBool(telemetryEndpointInsecure)
+			if err != nil {
+				return fmt.Errorf("error parsing telemetry endpoint insecure: %w", err)
+			}
+
 			var gwNsName *types.NamespacedName
 			if cmd.Flags().Changed(gatewayFlag) {
 				gwNsName = &gateway.value
@@ -211,8 +223,10 @@ func createStaticModeCommand() *cobra.Command {
 				},
 				UsageReportConfig: usageReportConfig,
 				ProductTelemetryConfig: config.ProductTelemetryConfig{
-					TelemetryReportPeriod: period,
-					Enabled:               !disableProductTelemetry,
+					ReportPeriod:     period,
+					Enabled:          !disableProductTelemetry,
+					Endpoint:         telemetryEndpoint,
+					EndpointInsecure: telemetryEndpointInsecure,
 				},
 				Plus:                 plus,
 				Version:              version,
