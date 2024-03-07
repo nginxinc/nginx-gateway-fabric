@@ -9,7 +9,7 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . logLevelSetter
+//counterfeiter:generate . logLevelSetter
 
 // logLevelSetter defines an interface for setting the logging level of a logger.
 type logLevelSetter interface {

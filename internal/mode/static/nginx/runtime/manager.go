@@ -29,7 +29,7 @@ type (
 
 var childProcPathFmt = "/proc/%[1]v/task/%[1]v/children"
 
-//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . Manager
+//counterfeiter:generate . Manager
 
 // Manager manages the runtime of NGINX.
 type Manager interface {

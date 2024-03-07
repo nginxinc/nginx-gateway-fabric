@@ -6,7 +6,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . K8sUpdater
+//counterfeiter:generate . K8sUpdater
 
 // K8sUpdater updates a resource from the k8s API.
 // It allows us to mock the client.Reader.Status.Update method.

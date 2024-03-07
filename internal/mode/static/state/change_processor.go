@@ -37,7 +37,7 @@ const (
 	ClusterStateChange
 )
 
-//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . ChangeProcessor
+//counterfeiter:generate . ChangeProcessor
 
 type extractGVKFunc func(obj client.Object) schema.GroupVersionKind
 
