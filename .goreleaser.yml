@@ -15,7 +15,7 @@ builds:
     asmflags:
       - all=-trimpath={{.Env.GOPATH}}
     ldflags:
-      - -s -w -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{.Date}} -X main.telemetryReportPeriod=24h
+      - -s -w -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{.Date}} -X main.telemetryReportPeriod=24h -X main.telemetryEndpointInsecure=false
     main: ./cmd/gateway/
     binary: gateway
 

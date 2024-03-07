@@ -9,12 +9,19 @@ NJS_DIR = internal/mode/static/nginx/modules/src
 NGINX_DOCKER_BUILD_PLUS_ARGS = --secret id=nginx-repo.crt,src=nginx-repo.crt --secret id=nginx-repo.key,src=nginx-repo.key
 BUILD_AGENT=local
 TELEMETRY_REPORT_PERIOD = 24h # also configured in goreleaser.yml
+
+# FIXME(pleshakov) - TELEMETRY_ENDPOINT will have the default value of F5 telemetry service once we're ready
+# to report. https://github.com/nginxinc/nginx-gateway-fabric/issues/1563
+# Also, we will need to set it in goreleaser.yml
+TELEMETRY_ENDPOINT =# if empty, NGF will report telemetry in its logs at debug level.
+
+TELEMETRY_ENDPOINT_INSECURE = false # also configured in goreleaser.yml
 GW_API_VERSION = 1.0.0
 INSTALL_WEBHOOK = false
 NODE_VERSION = $(shell cat .nvmrc)
 
 # go build flags - should not be overridden by the user
-GO_LINKER_FlAGS_VARS = -X main.version=${VERSION} -X main.commit=${GIT_COMMIT} -X main.date=${DATE} -X main.telemetryReportPeriod=${TELEMETRY_REPORT_PERIOD}
+GO_LINKER_FlAGS_VARS = -X main.version=${VERSION} -X main.commit=${GIT_COMMIT} -X main.date=${DATE} -X main.telemetryReportPeriod=${TELEMETRY_REPORT_PERIOD} -X main.telemetryEndpoint=${TELEMETRY_ENDPOINT} -X main.telemetryEndpointInsecure=${TELEMETRY_ENDPOINT_INSECURE}
 GO_LINKER_FLAGS_OPTIMIZATIONS = -s -w
 GO_LINKER_FLAGS = $(GO_LINKER_FLAGS_OPTIMIZATIONS) $(GO_LINKER_FlAGS_VARS)
 

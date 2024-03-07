@@ -8,7 +8,9 @@ import (
 
 	"github.com/go-logr/logr"
 	ngxclient "github.com/nginxinc/nginx-plus-go-client/client"
+	tel "github.com/nginxinc/telemetry-exporter/pkg/telemetry"
 	"github.com/prometheus/client_golang/prometheus"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	discoveryV1 "k8s.io/api/discovery/v1"
@@ -255,7 +257,13 @@ func StartManager(cfg config.Config) error {
 			ImageSource: cfg.ImageSource,
 			Flags:       cfg.Flags,
 		})
-		if err = mgr.Add(createTelemetryJob(cfg, dataCollector, nginxChecker.getReadyCh())); err != nil {
+
+		job, err := createTelemetryJob(cfg, dataCollector, nginxChecker.getReadyCh())
+		if err != nil {
+			return fmt.Errorf("cannot create telemetry job: %w", err)
+		}
+
+		if err = mgr.Add(job); err != nil {
 			return fmt.Errorf("cannot register telemetry job: %w", err)
 		}
 	}
@@ -467,21 +475,51 @@ func createTelemetryJob(
 	cfg config.Config,
 	dataCollector telemetry.DataCollector,
 	readyCh <-chan struct{},
-) *runnables.Leader {
+) (*runnables.Leader, error) {
 	logger := cfg.Logger.WithName("telemetryJob")
-	exporter := telemetry.NewLoggingExporter(cfg.Logger.WithName("telemetryExporter").V(1 /* debug */))
+
+	var exporter telemetry.Exporter
+
+	if cfg.ProductTelemetryConfig.Endpoint != "" {
+		errorHandler := tel.NewErrorHandler()
+
+		options := []otlptracegrpc.Option{
+			otlptracegrpc.WithEndpoint(cfg.ProductTelemetryConfig.Endpoint),
+			otlptracegrpc.WithHeaders(map[string]string{
+				"X-F5-OTEL": "GRPC",
+			}),
+		}
+		if cfg.ProductTelemetryConfig.EndpointInsecure {
+			options = append(options, otlptracegrpc.WithInsecure())
+		}
+
+		var err error
+		exporter, err = tel.NewExporter(
+			tel.ExporterConfig{
+				SpanProvider: tel.CreateOTLPSpanProvider(options...),
+			},
+			tel.WithGlobalOTelLogger(logger.WithName("otel")),
+			tel.WithGlobalOTelErrorHandler(errorHandler),
+		)
+		if err != nil {
+			return nil, fmt.Errorf("cannot create telemetry exporter: %w", err)
+		}
+
+	} else {
+		exporter = telemetry.NewLoggingExporter(cfg.Logger.WithName("telemetryExporter").V(1 /* debug */))
+	}
 
 	return &runnables.Leader{
 		Runnable: runnables.NewCronJob(
 			runnables.CronJobConfig{
 				Worker:       telemetry.CreateTelemetryJobWorker(logger, exporter, dataCollector),
 				Logger:       logger,
-				Period:       cfg.ProductTelemetryConfig.TelemetryReportPeriod,
+				Period:       cfg.ProductTelemetryConfig.ReportPeriod,
 				JitterFactor: telemetryJitterFactor,
 				ReadyCh:      readyCh,
 			},
 		),
-	}
+	}, nil
 }
 
 func createUsageReporterJob(
@@ -504,7 +542,7 @@ func createUsageReporterJob(
 		Runnable: runnables.NewCronJob(runnables.CronJobConfig{
 			Worker:       usage.CreateUsageJobWorker(logger, k8sClient, reporter, cfg),
 			Logger:       logger,
-			Period:       cfg.ProductTelemetryConfig.TelemetryReportPeriod,
+			Period:       cfg.ProductTelemetryConfig.ReportPeriod,
 			JitterFactor: telemetryJitterFactor,
 			ReadyCh:      readyCh,
 		}),
