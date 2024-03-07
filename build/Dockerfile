@@ -26,6 +26,9 @@ COPY dist/gateway_linux_$TARGETARCH*/gateway /usr/bin/
 RUN setcap 'cap_kill=+ep' /usr/bin/gateway
 
 FROM scratch as common
+# CA certs are needed for telemetry report and NGINX Plus usage report features, so that
+# NGF can verify the server's certificate.
+COPY --from=builder --link /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 USER 102:1001
 ARG BUILD_AGENT
 ENV BUILD_AGENT=${BUILD_AGENT}

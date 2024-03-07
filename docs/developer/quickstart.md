@@ -214,13 +214,15 @@ Run the following make command from the project's root directory to lint the Hel
 make lint-helm
 ```
 
-## Run go generate
+## Run Code Generation 
 
 To ensure all the generated code is up to date, run the following make command from the project's root directory:
 
 ```shell
 make generate
 ```
+
+That command also will generate the avro scheme (`.avdl`) for product telemetry data points.
 
 ## Update Generated Manifests
 
