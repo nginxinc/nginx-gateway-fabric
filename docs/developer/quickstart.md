@@ -214,7 +214,7 @@ Run the following make command from the project's root directory to lint the Hel
 make lint-helm
 ```
 
-## Run Code Generation 
+## Run Code Generation
 
 To ensure all the generated code is up to date, run the following make command from the project's root directory:
 
