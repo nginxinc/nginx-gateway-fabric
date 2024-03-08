@@ -49,7 +49,7 @@ var _ = Describe("Upgrade testing", Label("nfr", "upgrade"), func() {
 	BeforeEach(func() {
 		// this test is unique in that it needs to install the previous version of NGF,
 		// so we need to uninstall the version installed at the suite level, then install the custom version
-		teardown()
+		teardown(releaseName)
 
 		cfg := setupConfig{
 			chartPath:    "oci://ghcr.io/nginxinc/charts/nginx-gateway-fabric",

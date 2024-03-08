@@ -31,15 +31,15 @@ if [ "${STOP_LONGEVITY}" = "true" ]; then
     printf "\n## Error Logs\n\n" >> $results
 
     ## ngf error logs
-    ngfErrText=$(gcloud logging read --project=${GKE_PROJECT} 'resource.labels.cluster_name='"${RESOURCE_NAME}"' AND resource.type=k8s_container AND resource.labels.container_name=nginx-gateway AND severity=ERROR AND SEARCH("error")' --format "value(textPayload)")
-    ngfErrJSON=$(gcloud logging read --project=${GKE_PROJECT} 'resource.labels.cluster_name='"${RESOURCE_NAME}"' AND resource.type=k8s_container AND resource.labels.container_name=nginx-gateway AND severity=ERROR AND SEARCH("error")' --format "value(jsonPayload)")
+    ngfErrText=$(gcloud logging read --project=${GKE_PROJECT} 'resource.labels.cluster_name='"${RESOURCE_NAME}"' AND resource.type=k8s_container AND resource.labels.container_name=nginx-gateway AND labels."k8s-pod/app_kubernetes_io/instance"=ngf-longevity AND severity=ERROR AND SEARCH("error")' --format "value(textPayload)")
+    ngfErrJSON=$(gcloud logging read --project=${GKE_PROJECT} 'resource.labels.cluster_name='"${RESOURCE_NAME}"' AND resource.type=k8s_container AND resource.labels.container_name=nginx-gateway AND labels."k8s-pod/app_kubernetes_io/instance"=ngf-longevity AND severity=ERROR AND SEARCH("error")' --format "value(jsonPayload)")
     printf "### nginx-gateway\n$ngfErrText\n$ngfErrJSON\n\n" >> $results
 
     ## nginx error logs
-    ngxErr=$(gcloud logging read --project=${GKE_PROJECT} 'resource.labels.cluster_name='"${RESOURCE_NAME}"' AND resource.type=k8s_container AND resource.labels.container_name=nginx AND severity=ERROR AND SEARCH("`[warn]`") OR SEARCH("`[error]`") OR SEARCH("`[emerg]`")' --format "value(textPayload)")
+    ngxErr=$(gcloud logging read --project=${GKE_PROJECT} 'resource.labels.cluster_name='"${RESOURCE_NAME}"' AND resource.type=k8s_container AND resource.labels.container_name=nginx AND labels."k8s-pod/app_kubernetes_io/instance"=ngf-longevity AND severity=ERROR AND SEARCH("`[warn]`") OR SEARCH("`[error]`") OR SEARCH("`[emerg]`")' --format "value(textPayload)")
     printf "### nginx\n$ngxErr\n\n" >> $results
 
     ## nginx non-200 responses (also filter out 499 since wrk cancels connections)
-    ngxNon200=$(gcloud logging read --project=${GKE_PROJECT} 'resource.labels.cluster_name='"${RESOURCE_NAME}"' AND resource.type=k8s_container AND resource.labels.container_name=nginx AND "GET" "HTTP/1.1" -"200" -"499" -"client prematurely closed connection"' --format "value(textPayload)")
+    ngxNon200=$(gcloud logging read --project=${GKE_PROJECT} 'resource.labels.cluster_name='"${RESOURCE_NAME}"' AND resource.type=k8s_container AND resource.labels.container_name=nginx AND labels."k8s-pod/app_kubernetes_io/instance"=ngf-longevity AND "GET" "HTTP/1.1" -"200" -"499" -"client prematurely closed connection"' --format "value(textPayload)")
     printf "$ngxNon200\n\n" >> $results
 fi

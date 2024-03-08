@@ -79,6 +79,7 @@ const (
 )
 
 type setupConfig struct {
+	releaseName  string
 	chartPath    string
 	gwAPIVersion string
 	deploy       bool
@@ -140,7 +141,7 @@ func setup(cfg setupConfig, extraInstallArgs ...string) {
 	}
 
 	installCfg := framework.InstallationConfig{
-		ReleaseName:     releaseName,
+		ReleaseName:     cfg.releaseName,
 		Namespace:       ngfNamespace,
 		ChartPath:       cfg.chartPath,
 		ServiceType:     *serviceType,
@@ -180,13 +181,13 @@ func setup(cfg setupConfig, extraInstallArgs ...string) {
 	Expect(err).ToNot(HaveOccurred())
 }
 
-func teardown() {
+func teardown(relName string) {
 	if portFwdPort != 0 {
 		portForwardStopCh <- struct{}{}
 	}
 
 	cfg := framework.InstallationConfig{
-		ReleaseName: releaseName,
+		ReleaseName: relName,
 		Namespace:   ngfNamespace,
 	}
 
@@ -221,6 +222,7 @@ var _ = BeforeSuite(func() {
 	localChartPath = filepath.Join(basepath, "deploy/helm-chart")
 
 	cfg := setupConfig{
+		releaseName:  releaseName,
 		chartPath:    localChartPath,
 		gwAPIVersion: *gatewayAPIVersion,
 		deploy:       true,
@@ -236,6 +238,12 @@ var _ = BeforeSuite(func() {
 		cfg.deploy = false
 	}
 
+	// use a different release name for longevity to allow us to filter on a specific label when collecting
+	// logs from GKE
+	if strings.Contains(labelFilter, "longevity") {
+		cfg.releaseName = "ngf-longevity"
+	}
+
 	setup(cfg)
 })
 
@@ -246,7 +254,12 @@ var _ = AfterSuite(func() {
 
 	labelFilter := GinkgoLabelFilter()
 	if !strings.Contains(labelFilter, "longevity-setup") {
-		teardown()
+		relName := releaseName
+		if strings.Contains(labelFilter, "longevity-teardown") {
+			relName = "ngf-longevity"
+		}
+
+		teardown(relName)
 	}
 })
 

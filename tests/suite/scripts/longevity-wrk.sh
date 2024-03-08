@@ -1,6 +1,6 @@
 #!/bin/bash
 
-SVC_IP=$(kubectl -n nginx-gateway get svc ngf-test-nginx-gateway-fabric -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+SVC_IP=$(kubectl -n nginx-gateway get svc ngf-longevity-nginx-gateway-fabric -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
 
 echo "${SVC_IP} cafe.example.com" | sudo tee -a /etc/hosts
 
