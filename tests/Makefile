@@ -80,7 +80,7 @@ run-tests-on-vm: ## Run the functional tests on a GCP VM
 
 .PHONY: nfr-test
 nfr-test: ## Run the NFR tests on a GCP VM
-	bash scripts/run-tests-gcp-vm.sh true
+	NFR=true bash scripts/run-tests-gcp-vm.sh
 
 .PHONY: start-longevity-test
 start-longevity-test: ## Start the longevity test to run for 4 days in GKE

@@ -1,11 +1,7 @@
 package suite
 
 import (
-	"bufio"
-	"bytes"
-	"context"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -81,57 +77,21 @@ var _ = Describe("Longevity", Label("longevity-setup", "longevity-teardown"), fu
 		Expect(err).ToNot(HaveOccurred())
 
 		Expect(framework.WriteContent(resultsFile, "\n## Traffic\n"))
-		writeTrafficResults(resultsFile, homeDir, "coffee.txt", "HTTP")
-		writeTrafficResults(resultsFile, homeDir, "tea.txt", "HTTPS")
-
-		// gather any error logs
-		names, err := framework.GetReadyNGFPodNames(k8sClient, ngfNamespace, releaseName, timeoutConfig.GetTimeout)
-		Expect(err).ToNot(HaveOccurred())
-
-		Expect(framework.WriteContent(resultsFile, "\n## Error Logs\n"))
-		writeErrorLogs(resultsFile, names[0], "nginx-gateway")
-		writeErrorLogs(resultsFile, names[0], "nginx")
+		Expect(writeTrafficResults(resultsFile, homeDir, "coffee.txt", "HTTP")).To(Succeed())
+		Expect(writeTrafficResults(resultsFile, homeDir, "tea.txt", "HTTPS")).To(Succeed())
 
 		Expect(resourceManager.DeleteFromFiles(files, ns.Name)).To(Succeed())
 		Expect(resourceManager.Delete([]client.Object{ns})).To(Succeed())
 	})
 })
 
-func writeTrafficResults(resultsFile *os.File, homeDir, filename, testname string) {
+func writeTrafficResults(resultsFile *os.File, homeDir, filename, testname string) error {
 	file := fmt.Sprintf("%s/%s", homeDir, filename)
 	content, err := os.ReadFile(file)
-	Expect(err).ToNot(HaveOccurred())
+	if err != nil {
+		return err
+	}
 
 	formattedContent := fmt.Sprintf("%s:\n\n```text\n%s```\n", testname, string(content))
-	Expect(framework.WriteContent(resultsFile, formattedContent)).To(Succeed())
-}
-
-func writeErrorLogs(resultsFile *os.File, pod, container string) {
-	logReq := clientGoClient.CoreV1().Pods(ngfNamespace).GetLogs(pod, &core.PodLogOptions{Container: container})
-
-	ctx, cancel := context.WithTimeout(context.Background(), timeoutConfig.GetTimeout)
-	defer cancel()
-
-	logs, err := logReq.Stream(ctx)
-	Expect(err).ToNot(HaveOccurred())
-	defer logs.Close()
-
-	buf := new(bytes.Buffer)
-	_, err = io.Copy(buf, logs)
-	Expect(err).ToNot(HaveOccurred())
-
-	Expect(framework.WriteContent(resultsFile, fmt.Sprintf("\n### %s\n", container)))
-
-	scanner := bufio.NewScanner(strings.NewReader(buf.String()))
-	for scanner.Scan() {
-		line := scanner.Text()
-		if isError(line) {
-			Expect(framework.WriteContent(resultsFile, line)).To(Succeed())
-		}
-	}
-	Expect(scanner.Err()).ToNot(HaveOccurred())
-}
-
-func isError(line string) bool {
-	return strings.Contains(line, "error") || strings.Contains(line, "warn") || strings.Contains(line, "emerg")
+	return framework.WriteContent(resultsFile, formattedContent)
 }

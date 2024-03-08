@@ -218,13 +218,17 @@ To start the longevity test, set up your VM (`create-and-setup-vm`) and run
 make start-longevity-test
 ```
 
+<!--  -->
+> Note: If you want to change the time period for which the test runs, update the `wrk` commands in `suite/scripts/longevity-wrk.sh` to the time period you want, and run `make sync-files-to-vm`.
+
+<!--  -->
 > Note: If you want to re-run the longevity test, you need to clear out the `cafe.example.com` entry from the `/etc/hosts` file on your VM.
 
 You can verify the test is working by checking nginx logs to see traffic flow, and check that the cronjob is running and redeploying apps.
 
-To complete the longevity test and collect results, first visit the [GCP Monitoring Dashboards](https://console.cloud.google.com/monitoring/dashboards) page and select the `NGF Longevity Test` dashboard. Take PNG screenshots of each chart for the time period in which your test ran, and save those to be added to the results file.
+After 4 days (96h), you can complete the longevity tests and collect results. To ensure that the traffic has stopped flowing, you can ssh to the VM using `gcloud compute ssh` and run `ps aux | grep wrk` to verify the `wrk` commands are no longer running. Then, visit the [GCP Monitoring Dashboards](https://console.cloud.google.com/monitoring/dashboards) page and select the `NGF Longevity Test` dashboard. Take PNG screenshots of each chart for the time period in which your test ran, and save those to be added to the results file.
 
-Next, run:
+Finally, run
 
 ```makefile
 make stop-longevity-test
