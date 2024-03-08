@@ -6,13 +6,29 @@ import (
 	v1 "k8s.io/api/core/v1"
 )
 
+type k8sState struct {
+	node       v1.Node
+	namespaces v1.NamespaceList
+}
+
+type platformExtractor func(k8sState) (string, bool)
+
+func buildProviderIDExtractor(id string, platform string) platformExtractor {
+	return func(state k8sState) (string, bool) {
+		if strings.HasPrefix(state.node.Spec.ProviderID, id) {
+			return platform, true
+		}
+		return "", false
+	}
+}
+
 const (
-	openshiftIdentifier = "node.openshift.io/os_id"
-	k3sIdentifier       = "k3s"
-	awsIdentifier       = "aws"
 	gkeIdentifier       = "gce"
+	awsIdentifier       = "aws"
 	azureIdentifier     = "azure"
 	kindIdentifier      = "kind"
+	k3sIdentifier       = "k3s"
+	openshiftIdentifier = "node.openshift.io/os_id"
 	rancherIdentifier   = "cattle-system"
 
 	platformGKE       = "gke"
@@ -22,87 +38,66 @@ const (
 	platformK3S       = "k3s"
 	platformOpenShift = "openshift"
 	platformRancher   = "rancher"
-	platformOther     = "other"
 )
 
-func collectK8sPlatform(node v1.Node, namespaces v1.NamespaceList) string {
-	if result := isMultiplePlatforms(node, namespaces); result != "" {
-		return result
-	}
-
-	if isAWSPlatform(node) {
-		return platformAWS
-	}
-	if isGKEPlatform(node) {
-		return platformGKE
-	}
-	if isAzurePlatform(node) {
-		return platformAzure
-	}
-	if isKindPlatform(node) {
-		return platformKind
-	}
-	if isK3SPlatform(node) {
-		return platformK3S
-	}
-
-	return platformOther
+var multiDistributionPlatformExtractors = []platformExtractor{
+	rancherExtractor,
+	openShiftExtractor,
 }
 
-// isMultiplePlatforms checks for platforms that run on other platforms. e.g. Rancher on K3s.
-func isMultiplePlatforms(node v1.Node, namespaces v1.NamespaceList) string {
-	if isRancherPlatform(namespaces) {
-		return platformRancher
+var platformExtractors = []platformExtractor{
+	buildProviderIDExtractor(gkeIdentifier, platformGKE),
+	buildProviderIDExtractor(awsIdentifier, platformAWS),
+	buildProviderIDExtractor(azureIdentifier, platformAzure),
+	buildProviderIDExtractor(kindIdentifier, platformKind),
+	buildProviderIDExtractor(k3sIdentifier, platformK3S),
+}
+
+func getPlatform(node v1.Node, namespaces v1.NamespaceList) string {
+	state := k8sState{
+		node:       node,
+		namespaces: namespaces,
 	}
 
-	if isOpenshiftPlatform(node) {
-		return platformOpenShift
-	}
-
-	return ""
-}
-
-// For each of these, if we want to we can do both check the providerID AND check labels/annotations,
-// I'm not too sure why we would want to do BOTH.
-//
-// I think doing both would add a greater certainty of a specific platform, however will potentially add to upkeep
-// where if either the label/annotation or providerID changes it will mess this up and may group more clusters in
-// the "Other" platform if they messed with any of the node labels/annotations.
-
-func isOpenshiftPlatform(node v1.Node) bool {
-	// openshift platform won't show up in node's ProviderID
-	value, ok := node.Labels[openshiftIdentifier]
-
-	return ok && value != ""
-}
-
-func isK3SPlatform(node v1.Node) bool {
-	return strings.HasPrefix(node.Spec.ProviderID, k3sIdentifier)
-}
-
-func isAWSPlatform(node v1.Node) bool {
-	return strings.HasPrefix(node.Spec.ProviderID, awsIdentifier)
-}
-
-func isGKEPlatform(node v1.Node) bool {
-	return strings.HasPrefix(node.Spec.ProviderID, gkeIdentifier)
-}
-
-func isAzurePlatform(node v1.Node) bool {
-	return strings.HasPrefix(node.Spec.ProviderID, azureIdentifier)
-}
-
-func isKindPlatform(node v1.Node) bool {
-	return strings.HasPrefix(node.Spec.ProviderID, kindIdentifier)
-}
-
-func isRancherPlatform(namespaces v1.NamespaceList) bool {
-	// rancher platform won't show up in the node's ProviderID
-	for _, ns := range namespaces.Items {
-		if ns.Name == rancherIdentifier {
-			return true
+	// must be run before providerIDPlatformExtractors as these platforms
+	// may have multiple platforms e.g. Rancher on K3S, and we want to record the
+	// higher level platform.
+	for _, extractor := range multiDistributionPlatformExtractors {
+		if platform, ok := extractor(state); ok {
+			return platform
 		}
 	}
 
-	return false
+	for _, extractor := range platformExtractors {
+		if platform, ok := extractor(state); ok {
+			return platform
+		}
+	}
+
+	var providerName string
+	if prefix, _, found := strings.Cut(node.Spec.ProviderID, "://"); found {
+		providerName = prefix
+	}
+
+	return "other: " + providerName
+}
+
+func openShiftExtractor(state k8sState) (string, bool) {
+	// openshift platform won't show up in node's ProviderID
+	if value, ok := state.node.Labels[openshiftIdentifier]; ok && value != "" {
+		return platformOpenShift, true
+	}
+
+	return "", false
+}
+
+func rancherExtractor(state k8sState) (string, bool) {
+	// rancher platform won't show up in the node's ProviderID
+	for _, ns := range state.namespaces.Items {
+		if ns.Name == rancherIdentifier {
+			return platformRancher, true
+		}
+	}
+
+	return "", false
 }

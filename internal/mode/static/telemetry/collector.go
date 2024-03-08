@@ -336,7 +336,7 @@ func collectClusterInformation(ctx context.Context, k8sClient client.Reader) (cl
 		return clusterInformation{}, fmt.Errorf("failed to collect cluster information: %w", err)
 	}
 
-	clusterInfo.Platform = collectK8sPlatform(node, namespaces)
+	clusterInfo.Platform = getPlatform(node, namespaces)
 
 	return clusterInfo, nil
 }
