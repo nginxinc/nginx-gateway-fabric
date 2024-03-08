@@ -25,7 +25,7 @@ const (
 	clusterPlatformOther     = "other"
 )
 
-func CollectK8sPlatform(node v1.Node, namespaces v1.NamespaceList) string {
+func collectK8sPlatform(node v1.Node, namespaces v1.NamespaceList) string {
 	if result := isMultiplePlatforms(node, namespaces); result != "" {
 		return result
 	}
