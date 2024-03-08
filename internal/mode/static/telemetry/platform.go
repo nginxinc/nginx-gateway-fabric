@@ -15,14 +15,14 @@ const (
 	kindIdentifier      = "kind"
 	rancherIdentifier   = "cattle-system"
 
-	clusterPlatformGKE       = "gke"
-	clusterPlatformAWS       = "eks"
-	clusterPlatformAzure     = "aks"
-	clusterPlatformKind      = "kind"
-	clusterPlatformK3S       = "k3s"
-	clusterPlatformOpenShift = "openshift"
-	clusterPlatformRancher   = "rancher"
-	clusterPlatformOther     = "other"
+	platformGKE       = "gke"
+	platformAWS       = "eks"
+	platformAzure     = "aks"
+	platformKind      = "kind"
+	platformK3S       = "k3s"
+	platformOpenShift = "openshift"
+	platformRancher   = "rancher"
+	platformOther     = "other"
 )
 
 func collectK8sPlatform(node v1.Node, namespaces v1.NamespaceList) string {
@@ -31,32 +31,32 @@ func collectK8sPlatform(node v1.Node, namespaces v1.NamespaceList) string {
 	}
 
 	if isAWSPlatform(node) {
-		return clusterPlatformAWS
+		return platformAWS
 	}
 	if isGKEPlatform(node) {
-		return clusterPlatformGKE
+		return platformGKE
 	}
 	if isAzurePlatform(node) {
-		return clusterPlatformAzure
+		return platformAzure
 	}
 	if isKindPlatform(node) {
-		return clusterPlatformKind
+		return platformKind
 	}
 	if isK3SPlatform(node) {
-		return clusterPlatformK3S
+		return platformK3S
 	}
 
-	return clusterPlatformOther
+	return platformOther
 }
 
 // isMultiplePlatforms checks for platforms that run on other platforms. e.g. Rancher on K3s.
 func isMultiplePlatforms(node v1.Node, namespaces v1.NamespaceList) string {
 	if isRancherPlatform(namespaces) {
-		return clusterPlatformRancher
+		return platformRancher
 	}
 
 	if isOpenshiftPlatform(node) {
-		return clusterPlatformOpenShift
+		return platformOpenShift
 	}
 
 	return ""
