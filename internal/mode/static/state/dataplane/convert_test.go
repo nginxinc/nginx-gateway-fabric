@@ -277,6 +277,41 @@ func TestConvertHTTPMirrorFilter(t *testing.T) {
 			expected: &HTTPRequestMirrorFilter{},
 			name:     "empty",
 		},
+		{
+			filter: &v1.HTTPRequestMirrorFilter{
+				BackendRef: v1.BackendObjectReference{
+					Name: "backend",
+				},
+			},
+			expected: &HTTPRequestMirrorFilter{
+				Hostname: helpers.GetPointer("backend"),
+			},
+			name: "WithBackendRef",
+		},
+		{
+			filter: &v1.HTTPRequestMirrorFilter{
+				BackendRef: v1.BackendObjectReference{
+					Name: "backend",
+				},
+			},
+			expected: &HTTPRequestMirrorFilter{
+				Hostname: helpers.GetPointer("backend"),
+			},
+			name: "WithoutPort",
+		},
+		{
+			filter: &v1.HTTPRequestMirrorFilter{
+				BackendRef: v1.BackendObjectReference{
+					Name: "backend",
+					Port: helpers.GetPointer[v1.PortNumber](8080),
+				},
+			},
+			expected: &HTTPRequestMirrorFilter{
+				Hostname: helpers.GetPointer("backend"),
+				Port:     helpers.GetPointer[int32](8080),
+			},
+			name: "WithNameAndPort",
+		},
 	}
 
 	for _, test := range tests {
