@@ -150,16 +150,6 @@ func (c DataCollectorImpl) Collect(ctx context.Context) (Data, error) {
 	return data, nil
 }
 
-// CollectNodeCount returns the number of nodes in the cluster.
-func CollectNodeCount(ctx context.Context, k8sClient client.Reader) (int, error) {
-	var nodes v1.NodeList
-	if err := k8sClient.List(ctx, &nodes); err != nil {
-		return 0, fmt.Errorf("failed to get NodeList: %w", err)
-	}
-
-	return len(nodes.Items), nil
-}
-
 func collectGraphResourceCount(
 	graphGetter GraphGetter,
 	configurationGetter ConfigurationGetter,
