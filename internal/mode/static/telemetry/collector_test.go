@@ -541,7 +541,7 @@ var _ = Describe("Collector", Ordered, func() {
 			})
 
 			When("platform is none of the above", func() {
-				It("marks the platform as 'other: ' with whatever was in the providerID's providerName", func() {
+				It("marks the platform as 'other_' with whatever was in the providerID's providerName", func() {
 					nodes := &v1.NodeList{
 						Items: []v1.Node{
 							{
@@ -562,14 +562,14 @@ var _ = Describe("Collector", Ordered, func() {
 
 					k8sClientReader.ListCalls(createListCallsFunc(nodes))
 					expData.ClusterVersion = "1.29.2"
-					expData.ClusterPlatform = "other: other-cloud-provider"
+					expData.ClusterPlatform = "other_other-cloud-provider"
 
 					data, err := dataCollector.Collect(ctx)
 
 					Expect(err).To(BeNil())
 					Expect(expData).To(Equal(data))
 				})
-				It("marks the platform as 'other: ' when providerID is empty", func() {
+				It("marks the platform as 'other' when providerID is empty", func() {
 					nodes := &v1.NodeList{
 						Items: []v1.Node{
 							{
@@ -587,14 +587,14 @@ var _ = Describe("Collector", Ordered, func() {
 
 					k8sClientReader.ListCalls(createListCallsFunc(nodes))
 					expData.ClusterVersion = "1.29.2"
-					expData.ClusterPlatform = "other: "
+					expData.ClusterPlatform = "other"
 
 					data, err := dataCollector.Collect(ctx)
 
 					Expect(err).To(BeNil())
 					Expect(expData).To(Equal(data))
 				})
-				It("marks the platform as 'other: ' when providerID is missing '://' separator", func() {
+				It("marks the platform as 'other' when providerID is missing '://' separator", func() {
 					nodes := &v1.NodeList{
 						Items: []v1.Node{
 							{
@@ -615,7 +615,7 @@ var _ = Describe("Collector", Ordered, func() {
 
 					k8sClientReader.ListCalls(createListCallsFunc(nodes))
 					expData.ClusterVersion = "1.29.2"
-					expData.ClusterPlatform = "other: "
+					expData.ClusterPlatform = "other"
 
 					data, err := dataCollector.Collect(ctx)
 

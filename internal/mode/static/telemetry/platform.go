@@ -38,6 +38,7 @@ const (
 	platformK3S       = "k3s"
 	platformOpenShift = "openshift"
 	platformRancher   = "rancher"
+	platformOther     = "other"
 )
 
 var multiDistributionPlatformExtractors = []platformExtractor{
@@ -76,10 +77,14 @@ func getPlatform(node v1.Node, namespaces v1.NamespaceList) string {
 
 	var providerName string
 	if prefix, _, found := strings.Cut(node.Spec.ProviderID, "://"); found {
-		providerName = prefix
+		providerName = strings.TrimSpace(prefix)
 	}
 
-	return "other: " + providerName
+	if providerName == "" {
+		return platformOther
+	}
+
+	return platformOther + "_" + providerName
 }
 
 func openShiftExtractor(state k8sState) (string, bool) {

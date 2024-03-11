@@ -107,7 +107,10 @@ func (c DataCollectorImpl) Collect(ctx context.Context) (Data, error) {
 		return Data{}, fmt.Errorf("failed to collect cluster information: %w", err)
 	}
 
-	nodeCount := len(clusterInfo.Nodes.Items)
+	nodeCount, err := CollectNodeCount(ctx, c.cfg.K8sClientReader)
+	if err != nil {
+		return Data{}, fmt.Errorf("failed to collect node count: %w", err)
+	}
 
 	graphResourceCount, err := collectGraphResourceCount(c.cfg.GraphGetter, c.cfg.ConfigurationGetter)
 	if err != nil {
@@ -274,7 +277,6 @@ type clusterInformation struct {
 	Platform  string
 	Version   string
 	ClusterID string
-	Nodes     v1.NodeList
 }
 
 func collectClusterInformation(ctx context.Context, k8sClient client.Reader) (clusterInformation, error) {
@@ -288,8 +290,6 @@ func collectClusterInformation(ctx context.Context, k8sClient client.Reader) (cl
 	if len(nodes.Items) == 0 {
 		return clusterInformation{}, errors.New("failed to collect cluster information: NodeList length is zero")
 	}
-
-	clusterInfo.Nodes = nodes
 
 	var clusterID string
 	if clusterID, err = CollectClusterID(ctx, k8sClient); err != nil {
