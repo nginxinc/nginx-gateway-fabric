@@ -41,7 +41,7 @@ rules:
       .github/
       deploy/manifests/nginx-gateway.yaml
       deploy/manifests/crds
-      tests/longevity/manifests/cronjob.yaml
+      tests/suite/manifests/longevity/cronjob.yaml
       .goreleaser.yml
   new-line-at-end-of-file: enable
   new-lines: enable
