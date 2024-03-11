@@ -260,14 +260,14 @@ func CollectClusterID(ctx context.Context, k8sClient client.Reader) (string, err
 	return string(kubeNamespace.GetUID()), nil
 }
 
-// CollectNodeList returns a NodeList of all the Nodes in the cluster.
-func CollectNodeList(ctx context.Context, k8sClient client.Reader) (v1.NodeList, error) {
+// CollectNodeCount returns the number of nodes in the cluster.
+func CollectNodeCount(ctx context.Context, k8sClient client.Reader) (int, error) {
 	var nodes v1.NodeList
 	if err := k8sClient.List(ctx, &nodes); err != nil {
-		return nodes, fmt.Errorf("failed to get NodeList: %w", err)
+		return 0, fmt.Errorf("failed to get NodeList: %w", err)
 	}
 
-	return nodes, nil
+	return len(nodes.Items), nil
 }
 
 type clusterInformation struct {
@@ -279,10 +279,11 @@ type clusterInformation struct {
 
 func collectClusterInformation(ctx context.Context, k8sClient client.Reader) (clusterInformation, error) {
 	var clusterInfo clusterInformation
+	var err error
 
-	nodes, err := CollectNodeList(ctx, k8sClient)
-	if err != nil {
-		return clusterInformation{}, fmt.Errorf("failed to collect cluster information: %w", err)
+	var nodes v1.NodeList
+	if err = k8sClient.List(ctx, &nodes); err != nil {
+		return clusterInformation{}, fmt.Errorf("failed to get NodeList: %w", err)
 	}
 	if len(nodes.Items) == 0 {
 		return clusterInformation{}, errors.New("failed to collect cluster information: NodeList length is zero")

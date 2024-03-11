@@ -19,12 +19,10 @@ func CreateUsageJobWorker(
 	cfg config.Config,
 ) func(ctx context.Context) {
 	return func(ctx context.Context) {
-		nodeList, err := telemetry.CollectNodeList(ctx, k8sClient)
+		nodeCount, err := telemetry.CollectNodeCount(ctx, k8sClient)
 		if err != nil {
-			logger.Error(err, "Failed to collect nodes")
+			logger.Error(err, "Failed to collect node count")
 		}
-
-		nodeCount := len(nodeList.Items)
 
 		podCount, err := GetTotalNGFPodCount(ctx, k8sClient)
 		if err != nil {
