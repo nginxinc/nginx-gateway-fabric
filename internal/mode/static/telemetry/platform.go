@@ -41,12 +41,10 @@ const (
 	platformOther     = "other"
 )
 
-var multiDistributionPlatformExtractors = []platformExtractor{
-	rancherExtractor,
-	openShiftExtractor,
-}
-
 var platformExtractors = []platformExtractor{
+	openShiftExtractor,
+	rancherExtractor,
+	// ID provider extractors must run after the rest
 	buildProviderIDExtractor(gkeIdentifier, platformGKE),
 	buildProviderIDExtractor(awsIdentifier, platformAWS),
 	buildProviderIDExtractor(azureIdentifier, platformAzure),
@@ -60,31 +58,13 @@ func getPlatform(node v1.Node, namespaces v1.NamespaceList) string {
 		namespaces: namespaces,
 	}
 
-	// must be run before providerIDPlatformExtractors as these platforms
-	// may have multiple platforms e.g. Rancher on K3S, and we want to record the
-	// higher level platform.
-	for _, extractor := range multiDistributionPlatformExtractors {
-		if platform, ok := extractor(state); ok {
-			return platform
-		}
-	}
-
 	for _, extractor := range platformExtractors {
 		if platform, ok := extractor(state); ok {
 			return platform
 		}
 	}
 
-	var providerName string
-	if prefix, _, found := strings.Cut(node.Spec.ProviderID, "://"); found {
-		providerName = strings.TrimSpace(prefix)
-	}
-
-	if providerName == "" {
-		return platformOther
-	}
-
-	return platformOther + "_" + providerName
+	return unknownProviderIDExtractor(state)
 }
 
 func openShiftExtractor(state k8sState) (string, bool) {
@@ -105,4 +85,17 @@ func rancherExtractor(state k8sState) (string, bool) {
 	}
 
 	return "", false
+}
+
+func unknownProviderIDExtractor(state k8sState) string {
+	var providerName string
+	if prefix, _, found := strings.Cut(state.node.Spec.ProviderID, "://"); found {
+		providerName = strings.TrimSpace(prefix)
+	}
+
+	if providerName == "" {
+		return platformOther
+	}
+
+	return platformOther + "_" + providerName
 }
