@@ -112,12 +112,6 @@ jobs:
           echo "KUBECONFIG=${{ github.workspace }}/kube-${{ github.run_id }}" >> "$GITHUB_ENV"
 
 
-      - name: Wait for release to exist
-        run: |
-          REF=${{ github.ref_name }}
-          until docker pull ghcr.io/nginxinc/nginx-gateway-fabric:${REF}; do sleep 5; done
-          until docker pull ghcr.io/nginxinc/nginx-gateway-fabric/nginx:${REF}; do sleep 5; done
-
       - name: Setup functional tests
         id: setup
         run: |
