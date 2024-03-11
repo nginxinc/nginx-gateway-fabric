@@ -28,7 +28,7 @@ var _ = Describe("Telemetry test with OTel collector", Label("telemetry"), func(
 		Expect(err).ToNot(HaveOccurred(), string(output))
 
 		// Install NGF
-		// Note: the suite doesn't install NGF for 'telemetry' label
+		// Note: the BeforeSuite call doesn't install NGF for 'telemetry' label
 
 		setup(getDefaultSetupCfg())
 	})
