@@ -181,8 +181,6 @@ func TestBuildConfiguration(t *testing.T) {
 
 	prefix := v1.PathMatchPathPrefix
 
-	//
-
 	hr0, expHR0Groups, routeHR0 := createTestResources(
 		"hr-0",
 		"mirror.example.com",
@@ -798,7 +796,6 @@ func TestBuildConfiguration(t *testing.T) {
 							Source: listener80,
 							Valid:  true,
 							Routes: map[types.NamespacedName]*graph.Route{
-								// added routeHR0
 								{Namespace: "test", Name: "hr-0"}: routeHR0,
 								{Namespace: "test", Name: "hr-1"}: routeHR1,
 								{Namespace: "test", Name: "hr-2"}: routeHR2,
@@ -807,7 +804,6 @@ func TestBuildConfiguration(t *testing.T) {
 					},
 				},
 				Routes: map[types.NamespacedName]*graph.Route{
-					// added routeHR0
 					{Namespace: "test", Name: "hr-0"}: routeHR0,
 					{Namespace: "test", Name: "hr-1"}: routeHR1,
 					{Namespace: "test", Name: "hr-2"}: routeHR2,
@@ -851,7 +847,6 @@ func TestBuildConfiguration(t *testing.T) {
 						},
 						Port: 80,
 					},
-					// addition here
 					{
 						Hostname: "mirror.example.com",
 						PathRules: []PathRule{
@@ -875,7 +870,6 @@ func TestBuildConfiguration(t *testing.T) {
 				SSLServers: []VirtualServer{},
 				Upstreams:  []Upstream{fooUpstream},
 				BackendGroups: []BackendGroup{
-					// add expHR0Groups[0]
 					expHR0Groups[0],
 					expHR1Groups[0],
 					expHR2Groups[0],
