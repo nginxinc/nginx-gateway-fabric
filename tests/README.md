@@ -63,6 +63,7 @@ start-longevity-test           Start the longevity test to run for 4 days in GKE
 stop-longevity-test            Stops the longevity test and collects results
 sync-files-to-vm               Syncs your local NGF files with the NGF repo on the VM
 test                           Runs the functional tests on your default k8s cluster
+test-with-plus                 Runs the functional tests for NGF with NGINX Plus on your default k8s cluster
 ```
 
 **Note:** The following variables are configurable when running the below `make` commands:
