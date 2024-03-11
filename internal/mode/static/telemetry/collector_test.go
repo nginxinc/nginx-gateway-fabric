@@ -166,7 +166,7 @@ var _ = Describe("Collector", Ordered, func() {
 				ClusterVersion:      "1.28.6",
 				ClusterPlatform:     "k3s",
 				InstallationID:      string(ngfReplicaSet.ObjectMeta.OwnerReferences[0].UID),
-				ClusterNodeCount:    0,
+				ClusterNodeCount:    1,
 			},
 			NGFResourceCounts: telemetry.NGFResourceCounts{},
 			NGFReplicaCount:   1,

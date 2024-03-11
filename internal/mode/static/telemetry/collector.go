@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"runtime"
-	"strings"
 
 	tel "github.com/nginxinc/telemetry-exporter/pkg/telemetry"
 	appsv1 "k8s.io/api/apps/v1"
@@ -101,24 +100,14 @@ func NewDataCollectorImpl(
 	}
 }
 
-// notImplemented is a value for string field, for which collection is not implemented yet.
-const notImplemented = "not-implemented"
-
 // Collect collects and returns telemetry Data.
 func (c DataCollectorImpl) Collect(ctx context.Context) (Data, error) {
-	nodeCount, err := CollectNodeCount(ctx, c.cfg.K8sClientReader)
+	clusterInfo, err := collectClusterInformation(ctx, c.cfg.K8sClientReader)
 	if err != nil {
-		return Data{}, fmt.Errorf("failed to collect node count: %w", err)
+		return Data{}, fmt.Errorf("failed to collect cluster information: %w", err)
 	}
 
-	nodes, err := CollectNodeList(ctx, c.cfg.K8sClientReader)
-	if err != nil {
-		return Data{}, err
-	}
-
-	node := nodes.Items[0]
-	k8sVersion := node.Status.NodeInfo.KubeletVersion
-	k8sPlatform := strings.Split(node.Spec.ProviderID, "://")[0]
+	nodeCount := len(clusterInfo.Nodes.Items)
 
 	graphResourceCount, err := collectGraphResourceCount(c.cfg.GraphGetter, c.cfg.ConfigurationGetter)
 	if err != nil {
@@ -140,19 +129,14 @@ func (c DataCollectorImpl) Collect(ctx context.Context) (Data, error) {
 		return Data{}, fmt.Errorf("failed to get NGF deploymentID: %w", err)
 	}
 
-	var clusterID string
-	if clusterID, err = CollectClusterID(ctx, c.cfg.K8sClientReader); err != nil {
-		return Data{}, fmt.Errorf("failed to collect clusterID: %w", err)
-	}
-
 	data := Data{
 		Data: tel.Data{
 			ProjectName:         "NGF",
 			ProjectVersion:      c.cfg.Version,
 			ProjectArchitecture: runtime.GOARCH,
-			ClusterID:           clusterID,
-			ClusterVersion:      k8sVersion,
-			ClusterPlatform:     k8sPlatform,
+			ClusterID:           clusterInfo.ClusterID,
+			ClusterVersion:      clusterInfo.Version,
+			ClusterPlatform:     clusterInfo.Platform,
 			InstallationID:      deploymentID,
 			ClusterNodeCount:    int64(nodeCount),
 		},
