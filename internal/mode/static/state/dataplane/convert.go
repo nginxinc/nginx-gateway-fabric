@@ -76,9 +76,14 @@ func convertHTTPHeaderFilter(filter *v1.HTTPHeaderFilter) *HTTPHeaderFilter {
 }
 
 func convertHTTPRequestMirrorFilter(filter *v1.HTTPRequestMirrorFilter) *HTTPRequestMirrorFilter {
-	hostname := string(filter.BackendRef.Name)
+	var backendRefNamePtr *string
+	backendRefName := string(filter.BackendRef.Name)
+	if len(backendRefName) > 0 {
+		backendRefNamePtr = &backendRefName
+	}
+
 	result := &HTTPRequestMirrorFilter{
-		Hostname: &hostname,
+		Hostname: backendRefNamePtr,
 		Port:     (*int32)(filter.BackendRef.Port),
 	}
 

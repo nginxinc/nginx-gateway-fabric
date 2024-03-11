@@ -266,6 +266,29 @@ func TestConvertHTTPHeaderFilter(t *testing.T) {
 	}
 }
 
+func TestConvertHTTPMirrorFilter(t *testing.T) {
+	tests := []struct {
+		filter   *v1.HTTPRequestMirrorFilter
+		expected *HTTPRequestMirrorFilter
+		name     string
+	}{
+		{
+			filter:   &v1.HTTPRequestMirrorFilter{},
+			expected: &HTTPRequestMirrorFilter{},
+			name:     "empty",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			g := NewWithT(t)
+
+			result := convertHTTPRequestMirrorFilter(test.filter)
+			g.Expect(result).To(Equal(test.expected))
+		})
+	}
+}
+
 func TestConvertPathType(t *testing.T) {
 	g := NewWithT(t)
 
