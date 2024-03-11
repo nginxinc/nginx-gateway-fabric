@@ -527,7 +527,13 @@ func createHTTPFilters(filters []v1.HTTPRouteFilter) HTTPFilters {
 				// using the first filter
 				result.RequestHeaderModifiers = convertHTTPHeaderFilter(f.RequestHeaderModifier)
 			}
+		case v1.HTTPRouteFilterRequestMirror:
+			if result.RequestMirror == nil {
+				// using the first filter
+				result.RequestMirror = convertHTTPRequestMirrorFilter(f.RequestMirror)
+			}
 		}
+
 	}
 	return result
 }

@@ -75,6 +75,16 @@ func convertHTTPHeaderFilter(filter *v1.HTTPHeaderFilter) *HTTPHeaderFilter {
 	return result
 }
 
+func convertHTTPRequestMirrorFilter(filter *v1.HTTPRequestMirrorFilter) *HTTPRequestMirrorFilter {
+	hostname := string(filter.BackendRef.Name)
+	result := &HTTPRequestMirrorFilter{
+		Hostname: &hostname,
+		Port:     (*int32)(filter.BackendRef.Port),
+	}
+
+	return result
+}
+
 func convertPathType(pathType v1.PathMatchType) PathType {
 	switch pathType {
 	case v1.PathMatchPathPrefix:

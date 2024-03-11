@@ -110,6 +110,8 @@ type HTTPFilters struct {
 	RequestURLRewrite *HTTPURLRewriteFilter
 	// RequestHeaderModifiers holds the HTTPHeaderFilter.
 	RequestHeaderModifiers *HTTPHeaderFilter
+	//RequestMirror holds the HTTPRequestMirrorFilter.
+	RequestMirror *HTTPRequestMirrorFilter
 }
 
 // HTTPHeader represents an HTTP header.
@@ -152,6 +154,13 @@ type HTTPURLRewriteFilter struct {
 
 // PathModifierType is the type of the PathModifier in a redirect or rewrite rule.
 type PathModifierType string
+
+type HTTPRequestMirrorFilter struct {
+	// Hostname is the hostname of the redirect.
+	Hostname *string
+	// Port is the port of the redirect.
+	Port *int32
+}
 
 const (
 	// ReplaceFullPath indicates that we replace the full path.
