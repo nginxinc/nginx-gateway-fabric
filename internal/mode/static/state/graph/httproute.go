@@ -249,7 +249,9 @@ func validateFilter(
 	case v1.HTTPRouteFilterRequestHeaderModifier:
 		return validateFilterHeaderModifier(validator, filter.RequestHeaderModifier, filterPath.Child(string(filter.Type)))
 	case v1.HTTPRouteFilterResponseHeaderModifier:
-		return validateFilterHeaderModifier(validator, filter.ResponseHeaderModifier, filterPath.Child(string(filter.Type)))
+		return validateFilterResponseHeaderModifier(
+			validator, filter.ResponseHeaderModifier, filterPath.Child(string(filter.Type)),
+		)
 	default:
 		valErr := field.NotSupported(
 			filterPath.Child("type"),
@@ -416,6 +418,61 @@ func validateFilterHeaderModifierFields(
 		if err := validator.ValidateFilterHeaderName(h); err != nil {
 			valErr := field.Invalid(headerModifierPath.Child("remove"), h, err.Error())
 			allErrs = append(allErrs, valErr)
+		}
+	}
+
+	return allErrs
+}
+
+func validateFilterResponseHeaderModifier(
+	validator validation.HTTPFieldsValidator,
+	responseHeaderModifier *v1.HTTPHeaderFilter,
+	filterPath *field.Path,
+) field.ErrorList {
+	if errList := validateFilterHeaderModifier(validator, responseHeaderModifier, filterPath); errList != nil {
+		return errList
+	}
+	var allErrs field.ErrorList
+	disallowedResponseHeaderSet := map[string]struct{}{
+		"server":         {},
+		"date":           {},
+		"x-pad":          {},
+		"content-type":   {},
+		"content-length": {},
+		"connection":     {},
+	}
+	invalidPrefix := "x-accel"
+	for _, h := range responseHeaderModifier.Add {
+		valErr := field.Invalid(filterPath.Child("add"), h, "header name is not allowed")
+		name := strings.ToLower(string(h.Name))
+		if _, exists := disallowedResponseHeaderSet[name]; exists {
+			allErrs = append(allErrs, valErr)
+		} else {
+			if strings.HasPrefix(name, strings.ToLower(invalidPrefix)) {
+				allErrs = append(allErrs, valErr)
+			}
+		}
+	}
+	for _, h := range responseHeaderModifier.Set {
+		valErr := field.Invalid(filterPath.Child("set"), h, "header name is not allowed")
+		name := strings.ToLower(string(h.Name))
+		if _, exists := disallowedResponseHeaderSet[name]; exists {
+			allErrs = append(allErrs, valErr)
+		} else {
+			if strings.HasPrefix(name, strings.ToLower(invalidPrefix)) {
+				allErrs = append(allErrs, valErr)
+			}
+		}
+	}
+	for _, h := range responseHeaderModifier.Remove {
+		valErr := field.Invalid(filterPath.Child("remove"), h, "header name is not allowed")
+		name := strings.ToLower(h)
+		if _, exists := disallowedResponseHeaderSet[name]; exists {
+			allErrs = append(allErrs, valErr)
+		} else {
+			if strings.HasPrefix(name, strings.ToLower(invalidPrefix)) {
+				allErrs = append(allErrs, valErr)
+			}
 		}
 	}
 
