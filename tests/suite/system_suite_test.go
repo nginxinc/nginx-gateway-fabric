@@ -21,7 +21,6 @@ import (
 	k8sRuntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/client-go/kubernetes"
 	ctlr "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -61,7 +60,6 @@ var (
 	//go:embed manifests/*
 	manifests         embed.FS
 	k8sClient         client.Client
-	clientGoClient    kubernetes.Interface // used for getting Pod logs
 	resourceManager   framework.ResourceManager
 	portForwardStopCh = make(chan struct{}, 1)
 	portFwdPort       int
@@ -103,9 +101,6 @@ func setup(cfg setupConfig, extraInstallArgs ...string) {
 
 	var err error
 	k8sClient, err = client.New(k8sConfig, options)
-	Expect(err).ToNot(HaveOccurred())
-
-	clientGoClient, err = kubernetes.NewForConfig(k8sConfig)
 	Expect(err).ToNot(HaveOccurred())
 
 	timeoutConfig = framework.DefaultTimeoutConfig()
