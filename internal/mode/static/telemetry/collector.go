@@ -11,6 +11,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	version2 "k8s.io/apimachinery/pkg/util/version"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/config"
@@ -302,8 +303,8 @@ func collectClusterInformation(ctx context.Context, k8sClient client.Reader) (cl
 	clusterInfo.Version = "unknown"
 	kubeletVersion := node.Status.NodeInfo.KubeletVersion
 
-	if version, err := parseSemver(kubeletVersion); err == nil {
-		clusterInfo.Version = version
+	if version, err := version2.ParseGeneric(kubeletVersion); err == nil {
+		clusterInfo.Version = version.String()
 	}
 
 	var namespaces v1.NamespaceList
