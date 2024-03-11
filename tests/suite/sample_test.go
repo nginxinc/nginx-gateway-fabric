@@ -14,7 +14,7 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/tests/framework"
 )
 
-var _ = Describe("Basic test example", func() {
+var _ = Describe("Basic test example", Label("functional"), func() {
 	files := []string{
 		"hello/hello.yaml",
 		"hello/gateway.yaml",
