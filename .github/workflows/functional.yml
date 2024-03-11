@@ -45,7 +45,6 @@ jobs:
         id: vars
         run: echo "go_path=$(go env GOPATH)" >> $GITHUB_OUTPUT
 
-
       - name: NGF Docker meta
         id: ngf-meta
         uses: docker/metadata-action@8e5442c4ef9f78752691e2d8f8d19755c6f78e81 # v5.5.1
@@ -69,7 +68,6 @@ jobs:
             type=edge
             type=ref,event=pr
             type=ref,event=branch,suffix=-rc,enable=${{ startsWith(github.ref, 'refs/heads/release') }}
-
 
       - name: Build binary
         uses: goreleaser/goreleaser-action@7ec5c2b0c6cdda6e8bbb49444bc797dd33d74dd8 # v5.0.0
@@ -96,8 +94,8 @@ jobs:
           tags: ${{ steps.nginx-meta.outputs.tags }}
           context: "."
           load: true
-          cache-from: type=gha,scope=${{ matrix.nginx-image }}
-          cache-to: type=gha,scope=${{ matrix.nginx-image }},mode=max
+          cache-from: type=gha,scope=ngf
+          cache-to: type=gha,scope=ngf,mode=max
           pull: true
           build-args: |
             NJS_DIR=internal/mode/static/nginx/modules/src
@@ -110,7 +108,6 @@ jobs:
           k8s_version=${{ matrix.k8s-version }}
           make create-kind-cluster KIND_KUBE_CONFIG=${{ github.workspace }}/kube-${{ github.run_id }} ${{ ! contains(matrix.k8s-version, 'latest') && 'KIND_IMAGE=kindest/node:v${k8s_version}' || '' }}
           echo "KUBECONFIG=${{ github.workspace }}/kube-${{ github.run_id }}" >> "$GITHUB_ENV"
-
 
       - name: Setup functional tests
         id: setup
