@@ -340,6 +340,27 @@ var _ = Describe("Collector", Ordered, func() {
 		})
 	})
 
+	Describe("clusterID collector", func() {
+		When("collecting clusterID data", func() {
+			When("it encounters an error while collecting data", func() {
+				It("should error if the kubernetes client errored when getting the namespace", func() {
+					expectedError := errors.New("there was an error getting clusterID")
+					k8sClientReader.GetCalls(mergeGetCallsWithBase(
+						func(_ context.Context, _ types.NamespacedName, object client.Object, _ ...client.GetOption) error {
+							switch object.(type) {
+							case *v1.Namespace:
+								return expectedError
+							}
+							return nil
+						}))
+
+					_, err := dataCollector.Collect(ctx)
+					Expect(err).To(MatchError(expectedError))
+				})
+			})
+		})
+	})
+
 	Describe("node count collector", func() {
 		When("collecting node count data", func() {
 			It("collects correct data for one node", func() {
@@ -398,27 +419,6 @@ var _ = Describe("Collector", Ordered, func() {
 
 					Expect(err).To(BeNil())
 					Expect(expData).To(Equal(data))
-				})
-			})
-		})
-	})
-
-	Describe("clusterID collector", func() {
-		When("collecting clusterID data", func() {
-			When("it encounters an error while collecting data", func() {
-				It("should error if the kubernetes client errored when getting the namespace", func() {
-					expectedError := errors.New("there was an error getting clusterID")
-					k8sClientReader.GetCalls(mergeGetCallsWithBase(
-						func(_ context.Context, _ types.NamespacedName, object client.Object, _ ...client.GetOption) error {
-							switch object.(type) {
-							case *v1.Namespace:
-								return expectedError
-							}
-							return nil
-						}))
-
-					_, err := dataCollector.Collect(ctx)
-					Expect(err).To(MatchError(expectedError))
 				})
 			})
 		})
