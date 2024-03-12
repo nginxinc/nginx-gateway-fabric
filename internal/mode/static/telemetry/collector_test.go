@@ -213,6 +213,19 @@ var _ = Describe("Collector", Ordered, func() {
 		}
 	}
 
+	mergeListCallsWithBase := func(f listCallsFunc) listCallsFunc {
+		return func(
+			ctx context.Context,
+			object client.ObjectList,
+			option ...client.ListOption,
+		) error {
+			err := baseListCalls(ctx, object, option...)
+			Expect(err).ToNot(HaveOccurred())
+
+			return f(ctx, object, option...)
+		}
+	}
+
 	Describe("Normal case", func() {
 		When("collecting telemetry data", func() {
 			It("collects all fields", func() {
@@ -340,7 +353,26 @@ var _ = Describe("Collector", Ordered, func() {
 		})
 	})
 
-	Describe("clusterID collector", func() {
+	Describe("cluster information collector", func() {
+		When("collecting cluster platform", func() {
+			When("it encounters an error while collecting data", func() {
+				It("should error if the kubernetes client errored when getting the NamespaceList", func() {
+					expectedError := errors.New("failed to get NamespaceList")
+					k8sClientReader.ListCalls(mergeListCallsWithBase(
+						func(_ context.Context, object client.ObjectList, _ ...client.ListOption) error {
+							switch object.(type) {
+							case *v1.NamespaceList:
+								return expectedError
+							}
+							return nil
+						}))
+
+					_, err := dataCollector.Collect(ctx)
+					Expect(err).To(MatchError(expectedError))
+				})
+			})
+		})
+
 		When("collecting clusterID data", func() {
 			When("it encounters an error while collecting data", func() {
 				It("should error if the kubernetes client errored when getting the namespace", func() {
@@ -356,6 +388,34 @@ var _ = Describe("Collector", Ordered, func() {
 
 					_, err := dataCollector.Collect(ctx)
 					Expect(err).To(MatchError(expectedError))
+				})
+			})
+		})
+
+		When("collecting cluster version data", func() {
+			When("the kubelet version is missing", func() {
+				It("should be report 'unknown'", func() {
+					nodes := &v1.NodeList{
+						Items: []v1.Node{
+							{
+								ObjectMeta: metav1.ObjectMeta{
+									Name: "node1",
+								},
+								Spec: v1.NodeSpec{
+									ProviderID: "k3s://ip-172-16-0-210",
+								},
+							},
+						},
+					}
+
+					k8sClientReader.ListCalls(createListCallsFunc(nodes))
+					expData.ClusterVersion = "unknown"
+					expData.ClusterPlatform = "k3s"
+
+					data, err := dataCollector.Collect(ctx)
+
+					Expect(err).To(BeNil())
+					Expect(expData).To(Equal(data))
 				})
 			})
 		})
@@ -383,42 +443,20 @@ var _ = Describe("Collector", Ordered, func() {
 
 					Expect(err).To(MatchError(expectedError))
 				})
+
 				It("should error on kubernetes client api errors", func() {
-					expectedError := errors.New("there was an error getting NodeList")
-					k8sClientReader.ListReturns(expectedError)
+					expectedError := errors.New("failed to get NodeList")
+					k8sClientReader.ListCalls(
+						func(_ context.Context, object client.ObjectList, _ ...client.ListOption) error {
+							switch object.(type) {
+							case *v1.NodeList:
+								return expectedError
+							}
+							return nil
+						})
 
 					_, err := dataCollector.Collect(ctx)
 					Expect(err).To(MatchError(expectedError))
-				})
-			})
-		})
-	})
-
-	Describe("cluster version collector", func() {
-		When("collecting cluster version data", func() {
-			When("the kubelet version is missing", func() {
-				It("should be report 'unknown'", func() {
-					nodes := &v1.NodeList{
-						Items: []v1.Node{
-							{
-								ObjectMeta: metav1.ObjectMeta{
-									Name: "node1",
-								},
-								Spec: v1.NodeSpec{
-									ProviderID: "k3s://ip-172-16-0-210",
-								},
-							},
-						},
-					}
-
-					k8sClientReader.ListCalls(createListCallsFunc(nodes))
-					expData.ClusterVersion = "unknown"
-					expData.ClusterPlatform = "k3s"
-
-					data, err := dataCollector.Collect(ctx)
-
-					Expect(err).To(BeNil())
-					Expect(expData).To(Equal(data))
 				})
 			})
 		})

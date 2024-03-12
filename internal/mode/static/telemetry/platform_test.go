@@ -81,7 +81,7 @@ func TestGetPlatform(t *testing.T) {
 				},
 			},
 			expectedPlatform: "rancher",
-			name:             "rancher platform",
+			name:             "rancher platform on k3s",
 		},
 		{
 			node: &v1.Node{
@@ -94,7 +94,20 @@ func TestGetPlatform(t *testing.T) {
 			},
 			namespaces:       &v1.NamespaceList{},
 			expectedPlatform: "openshift",
-			name:             "openshift platform",
+			name:             "openshift platform on k3s",
+		},
+		{
+			node: &v1.Node{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{"node.openshift.io/os_id": "test"},
+				},
+				Spec: v1.NodeSpec{
+					ProviderID: "aws://test-data/us-central1-c/test-data",
+				},
+			},
+			namespaces:       &v1.NamespaceList{},
+			expectedPlatform: "openshift",
+			name:             "openshift platform on aws",
 		},
 		{
 			node: &v1.Node{
