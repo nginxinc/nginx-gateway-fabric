@@ -15,7 +15,7 @@ internal LoadBalancer service which will receive the test traffic.
 Directory structure is as follows:
 
 - `framework`: contains utility functions for running the tests
-- `results`: contains the results files
+- `results`: contains the results files for the NFR tests
 - `scripts`: contain scripts used to set up the environment and run the tests
 - `suite`: contains the test files
 
