@@ -6,6 +6,7 @@ import (
 	"net"
 	"net/url"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"k8s.io/apimachinery/pkg/types"
@@ -131,6 +132,35 @@ func validateIP(ip string) error {
 	}
 
 	return nil
+}
+
+// validateEndpoint validates an endpoint, which is <host>:<port> where host is either a hostname or an IP address.
+func validateEndpoint(endpoint string) error {
+	host, port, err := net.SplitHostPort(endpoint)
+	if err != nil {
+		return fmt.Errorf("%q must be in the format <host>:<port>: %w", endpoint, err)
+	}
+
+	portVal, err := strconv.ParseInt(port, 10, 16)
+	if err != nil {
+		return fmt.Errorf("port must be a valid number: %w", err)
+	}
+
+	if portVal < 1 || portVal > 65535 {
+		return fmt.Errorf("port outside of valid port range [1 - 65535]: %v", port)
+	}
+
+	if err := validateIP(host); err == nil {
+		return nil
+	}
+
+	if errs := validation.IsDNS1123Subdomain(host); len(errs) == 0 {
+		return nil
+	}
+
+	// we don't know if the user intended to use a hostname or an IP address,
+	// so we return a generic error message
+	return fmt.Errorf("%q must be in the format <host>:<port>", endpoint)
 }
 
 // validatePort makes sure a given port is inside the valid port range for its usage

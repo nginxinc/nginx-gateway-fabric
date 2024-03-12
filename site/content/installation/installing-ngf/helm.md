@@ -115,7 +115,7 @@ We support a subset of the additional features provided by the Gateway API exper
 experimental features of Gateway API which are supported by NGINX Gateway Fabric:
 
 ```shell
-helm install ngf oci://ghcr.io/nginxinc/charts/nginx-gateway-fabric --create-namespace -n nginx-gateway --set nginxGateway.experimentalFeatures.enable=true
+helm install ngf oci://ghcr.io/nginxinc/charts/nginx-gateway-fabric --create-namespace -n nginx-gateway --set nginxGateway.gwAPIExperimentalFeatures.enable=true
 ```
 
 {{<note>}}Requires the Gateway APIs installed from the experimental channel.{{</note>}}

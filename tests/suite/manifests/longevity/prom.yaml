@@ -6,7 +6,7 @@ metadata:
 spec:
   selector:
     matchLabels:
-      app.kubernetes.io/name: nginx-gateway
+      app.kubernetes.io/name: nginx-gateway-fabric
   endpoints:
   - port: metrics
     interval: 30s

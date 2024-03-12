@@ -32,7 +32,7 @@ func CreateTelemetryJobWorker(
 		// Export telemetry
 		logger.V(1).Info("Exporting telemetry data")
 
-		if err := exporter.Export(ctx, data); err != nil {
+		if err := exporter.Export(ctx, &data); err != nil {
 			logger.Error(err, "Failed to export telemetry data")
 		}
 	}

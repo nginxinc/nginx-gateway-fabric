@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	tel "github.com/nginxinc/telemetry-exporter/pkg/telemetry"
 	. "github.com/onsi/gomega"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
@@ -21,15 +22,8 @@ func TestCreateTelemetryJobWorker(t *testing.T) {
 	worker := telemetry.CreateTelemetryJobWorker(zap.New(), exporter, dataCollector)
 
 	expData := telemetry.Data{
-		ProjectMetadata: telemetry.ProjectMetadata{Name: "NGF", Version: "1.1"},
-		NodeCount:       3,
-		NGFResourceCounts: telemetry.NGFResourceCounts{
-			Gateways:       1,
-			GatewayClasses: 1,
-			HTTPRoutes:     1,
-			Secrets:        1,
-			Services:       1,
-			Endpoints:      1,
+		Data: tel.Data{
+			ProjectName: "NGF",
 		},
 	}
 	dataCollector.CollectReturns(expData, nil)
@@ -40,5 +34,5 @@ func TestCreateTelemetryJobWorker(t *testing.T) {
 
 	worker(ctx)
 	_, data := exporter.ExportArgsForCall(0)
-	g.Expect(data).To(Equal(expData))
+	g.Expect(data).To(Equal(&expData))
 }

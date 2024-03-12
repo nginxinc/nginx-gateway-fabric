@@ -419,6 +419,73 @@ func TestValidateIP(t *testing.T) {
 	}
 }
 
+func TestValidateEndpoint(t *testing.T) {
+	tests := []struct {
+		name   string
+		endp   string
+		expErr bool
+	}{
+		{
+			name:   "valid endpoint with hostname",
+			endp:   "localhost:8080",
+			expErr: false,
+		},
+		{
+			name:   "valid endpoint with IPv4",
+			endp:   "1.2.3.4:8080",
+			expErr: false,
+		},
+		{
+			name:   "valid endpoint with IPv6",
+			endp:   "[::1]:8080",
+			expErr: false,
+		},
+		{
+			name:   "invalid port - 1",
+			endp:   "localhost:0",
+			expErr: true,
+		},
+		{
+			name:   "invalid port - 2",
+			endp:   "localhost:65536",
+			expErr: true,
+		},
+		{
+			name:   "missing port with hostname",
+			endp:   "localhost",
+			expErr: true,
+		},
+		{
+			name:   "missing port with IPv4",
+			endp:   "1.2.3.4",
+			expErr: true,
+		},
+		{
+			name:   "missing port with IPv6",
+			endp:   "[::1]",
+			expErr: true,
+		},
+		{
+			name:   "invalid hostname or IP",
+			endp:   "loc@lhost:8080",
+			expErr: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			g := NewWithT(t)
+
+			err := validateEndpoint(tc.endp)
+			if !tc.expErr {
+				g.Expect(err).ToNot(HaveOccurred())
+			} else {
+				g.Expect(err).To(HaveOccurred())
+			}
+		})
+	}
+}
+
 func TestValidatePort(t *testing.T) {
 	tests := []struct {
 		name   string

@@ -4,15 +4,14 @@ import (
 	"context"
 
 	"github.com/go-logr/logr"
+	tel "github.com/nginxinc/telemetry-exporter/pkg/telemetry"
 )
 
-//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . Exporter
-
 // Exporter exports telemetry data to some destination.
-// Note: this is a temporary interface. It will be finalized once the Exporter of the common telemetry library
-// https://github.com/nginxinc/nginx-gateway-fabric/issues/1318 is implemented.
+//
+//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . Exporter
 type Exporter interface {
-	Export(ctx context.Context, data Data) error
+	Export(ctx context.Context, data tel.Exportable) error
 }
 
 // LoggingExporter logs telemetry data.
@@ -28,7 +27,7 @@ func NewLoggingExporter(logger logr.Logger) *LoggingExporter {
 }
 
 // Export logs the provided telemetry data.
-func (e *LoggingExporter) Export(_ context.Context, data Data) error {
+func (e *LoggingExporter) Export(_ context.Context, data tel.Exportable) error {
 	e.logger.Info("Exporting telemetry", "data", data)
 	return nil
 }

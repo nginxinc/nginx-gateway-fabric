@@ -9,12 +9,16 @@ import (
 )
 
 type Config struct {
+	// AtomicLevel is an atomically changeable, dynamic logging level.
+	AtomicLevel zap.AtomicLevel
+	// UsageReportConfig specifies the NGINX Plus usage reporting config.
+	UsageReportConfig *UsageReportConfig
 	// Version is the running NGF version.
 	Version string
 	// ImageSource is the source of the NGINX Gateway image.
 	ImageSource string
-	// AtomicLevel is an atomically changeable, dynamic logging level.
-	AtomicLevel zap.AtomicLevel
+	// Flags contains the NGF command-line flag names and values.
+	Flags Flags
 	// GatewayNsName is the namespaced name of a Gateway resource that the Gateway will use.
 	// The Gateway will ignore all other Gateway resources.
 	GatewayNsName *types.NamespacedName
@@ -22,8 +26,6 @@ type Config struct {
 	GatewayPodConfig GatewayPodConfig
 	// Logger is the Zap Logger used by all components.
 	Logger logr.Logger
-	// UsageReportConfig specifies the NGINX Plus usage reporting config.
-	UsageReportConfig *UsageReportConfig
 	// GatewayCtlrName is the name of this controller.
 	GatewayCtlrName string
 	// ConfigName is the name of the NginxGateway resource for this controller.
@@ -32,12 +34,12 @@ type Config struct {
 	GatewayClassName string
 	// LeaderElection contains the configuration for leader election.
 	LeaderElection LeaderElectionConfig
+	// ProductTelemetryConfig contains the configuration for collecting product telemetry.
+	ProductTelemetryConfig ProductTelemetryConfig
 	// MetricsConfig specifies the metrics config.
 	MetricsConfig MetricsConfig
 	// HealthConfig specifies the health probe config.
 	HealthConfig HealthConfig
-	// ProductTelemetryConfig contains the configuration for collecting product telemetry.
-	ProductTelemetryConfig ProductTelemetryConfig
 	// UpdateGatewayClassStatus enables updating the status of the GatewayClass resource.
 	UpdateGatewayClassStatus bool
 	// Plus indicates whether NGINX Plus is being used.
@@ -88,8 +90,12 @@ type LeaderElectionConfig struct {
 
 // ProductTelemetryConfig contains the configuration for collecting product telemetry.
 type ProductTelemetryConfig struct {
-	// TelemetryReportPeriod is the period at which telemetry reports are sent.
-	TelemetryReportPeriod time.Duration
+	// Endpoint is the <host>:<port> of the telemetry service.
+	Endpoint string
+	// ReportPeriod is the period at which telemetry reports are sent.
+	ReportPeriod time.Duration
+	// EndpointInsecure controls if TLS should be used for the telemetry service.
+	EndpointInsecure bool
 	// Enabled is the flag for toggling the collection of product telemetry.
 	Enabled bool
 }
@@ -104,4 +110,14 @@ type UsageReportConfig struct {
 	ClusterDisplayName string
 	// InsecureSkipVerify controls whether the client verifies the server cert.
 	InsecureSkipVerify bool
+}
+
+// Flags contains the NGF command-line flag names and values.
+// Flag Names and Values are paired based off of index in slice.
+type Flags struct {
+	// Names contains the name of the flag.
+	Names []string
+	// Values contains the value of the flag in string form.
+	// Each Value will be either true or false for boolean flags and default or user-defined for non-boolean flags.
+	Values []string
 }

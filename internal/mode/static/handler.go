@@ -77,8 +77,6 @@ type eventHandlerConfig struct {
 	nginxConfiguredOnStartChecker *nginxConfiguredOnStartChecker
 	// controlConfigNSName is the NamespacedName of the NginxGateway config for this controller.
 	controlConfigNSName types.NamespacedName
-	// version is the current version number of the nginx config.
-	version int
 }
 
 // filterKey is the `kind_namespace_name" of an object being filtered.
@@ -107,6 +105,9 @@ type eventHandlerImpl struct {
 
 	cfg  eventHandlerConfig
 	lock sync.Mutex
+
+	// version is the current version number of the nginx config.
+	version int
 }
 
 // newEventHandlerImpl creates a new eventHandlerImpl.
@@ -177,8 +178,8 @@ func (h *eventHandlerImpl) HandleEventBatch(ctx context.Context, logger logr.Log
 		}
 		return
 	case state.EndpointsOnlyChange:
-		h.cfg.version++
-		cfg := dataplane.BuildConfiguration(ctx, graph, h.cfg.serviceResolver, h.cfg.version)
+		h.version++
+		cfg := dataplane.BuildConfiguration(ctx, graph, h.cfg.serviceResolver, h.version)
 
 		h.setLatestConfiguration(&cfg)
 
@@ -188,8 +189,8 @@ func (h *eventHandlerImpl) HandleEventBatch(ctx context.Context, logger logr.Log
 			cfg,
 		)
 	case state.ClusterStateChange:
-		h.cfg.version++
-		cfg := dataplane.BuildConfiguration(ctx, graph, h.cfg.serviceResolver, h.cfg.version)
+		h.version++
+		cfg := dataplane.BuildConfiguration(ctx, graph, h.cfg.serviceResolver, h.version)
 
 		h.setLatestConfiguration(&cfg)
 

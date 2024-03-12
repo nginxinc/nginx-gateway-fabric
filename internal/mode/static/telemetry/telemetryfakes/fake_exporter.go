@@ -6,14 +6,15 @@ import (
 	"sync"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/telemetry"
+	telemetrya "github.com/nginxinc/telemetry-exporter/pkg/telemetry"
 )
 
 type FakeExporter struct {
-	ExportStub        func(context.Context, telemetry.Data) error
+	ExportStub        func(context.Context, telemetrya.Exportable) error
 	exportMutex       sync.RWMutex
 	exportArgsForCall []struct {
 		arg1 context.Context
-		arg2 telemetry.Data
+		arg2 telemetrya.Exportable
 	}
 	exportReturns struct {
 		result1 error
@@ -25,12 +26,12 @@ type FakeExporter struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeExporter) Export(arg1 context.Context, arg2 telemetry.Data) error {
+func (fake *FakeExporter) Export(arg1 context.Context, arg2 telemetrya.Exportable) error {
 	fake.exportMutex.Lock()
 	ret, specificReturn := fake.exportReturnsOnCall[len(fake.exportArgsForCall)]
 	fake.exportArgsForCall = append(fake.exportArgsForCall, struct {
 		arg1 context.Context
-		arg2 telemetry.Data
+		arg2 telemetrya.Exportable
 	}{arg1, arg2})
 	stub := fake.ExportStub
 	fakeReturns := fake.exportReturns
@@ -51,13 +52,13 @@ func (fake *FakeExporter) ExportCallCount() int {
 	return len(fake.exportArgsForCall)
 }
 
-func (fake *FakeExporter) ExportCalls(stub func(context.Context, telemetry.Data) error) {
+func (fake *FakeExporter) ExportCalls(stub func(context.Context, telemetrya.Exportable) error) {
 	fake.exportMutex.Lock()
 	defer fake.exportMutex.Unlock()
 	fake.ExportStub = stub
 }
 
-func (fake *FakeExporter) ExportArgsForCall(i int) (context.Context, telemetry.Data) {
+func (fake *FakeExporter) ExportArgsForCall(i int) (context.Context, telemetrya.Exportable) {
 	fake.exportMutex.RLock()
 	defer fake.exportMutex.RUnlock()
 	argsForCall := fake.exportArgsForCall[i]

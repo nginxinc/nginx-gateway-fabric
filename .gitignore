@@ -48,3 +48,9 @@ internal/mode/static/nginx/modules/coverage
 
 # Dotenv files
 **/*.env
+
+# Credential files
+**/gha-creds-*.json
+
+# SSH config files
+*.ssh

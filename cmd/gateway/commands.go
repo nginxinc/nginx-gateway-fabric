@@ -4,9 +4,11 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 	"go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -159,6 +161,17 @@ func createStaticModeCommand() *cobra.Command {
 				return fmt.Errorf("error parsing telemetry report period: %w", err)
 			}
 
+			if telemetryEndpoint != "" {
+				if err := validateEndpoint(telemetryEndpoint); err != nil {
+					return fmt.Errorf("error validating telemetry endpoint: %w", err)
+				}
+			}
+
+			telemetryEndpointInsecure, err := strconv.ParseBool(telemetryEndpointInsecure)
+			if err != nil {
+				return fmt.Errorf("error parsing telemetry endpoint insecure: %w", err)
+			}
+
 			var gwNsName *types.NamespacedName
 			if cmd.Flags().Changed(gatewayFlag) {
 				gwNsName = &gateway.value
@@ -177,6 +190,8 @@ func createStaticModeCommand() *cobra.Command {
 					InsecureSkipVerify: usageReportSkipVerify,
 				}
 			}
+
+			flagKeys, flagValues := parseFlags(cmd.Flags())
 
 			conf := config.Config{
 				GatewayCtlrName:          gatewayCtlrName.value,
@@ -208,13 +223,19 @@ func createStaticModeCommand() *cobra.Command {
 				},
 				UsageReportConfig: usageReportConfig,
 				ProductTelemetryConfig: config.ProductTelemetryConfig{
-					TelemetryReportPeriod: period,
-					Enabled:               !disableProductTelemetry,
+					ReportPeriod:     period,
+					Enabled:          !disableProductTelemetry,
+					Endpoint:         telemetryEndpoint,
+					EndpointInsecure: telemetryEndpointInsecure,
 				},
 				Plus:                 plus,
 				Version:              version,
 				ExperimentalFeatures: gwExperimentalFeatures,
 				ImageSource:          imageSource,
+				Flags: config.Flags{
+					Names:  flagKeys,
+					Values: flagValues,
+				},
 			}
 
 			if err := static.StartManager(conf); err != nil {
@@ -449,4 +470,27 @@ func createSleepCommand() *cobra.Command {
 	)
 
 	return cmd
+}
+
+func parseFlags(flags *pflag.FlagSet) ([]string, []string) {
+	var flagKeys, flagValues []string
+
+	flags.VisitAll(
+		func(flag *pflag.Flag) {
+			flagKeys = append(flagKeys, flag.Name)
+
+			if flag.Value.Type() == "bool" {
+				flagValues = append(flagValues, flag.Value.String())
+			} else {
+				val := "user-defined"
+				if flag.Value.String() == flag.DefValue {
+					val = "default"
+				}
+
+				flagValues = append(flagValues, val)
+			}
+		},
+	)
+
+	return flagKeys, flagValues
 }

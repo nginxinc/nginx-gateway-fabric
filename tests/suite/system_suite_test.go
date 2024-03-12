@@ -49,6 +49,7 @@ var (
 	ngfImageRepository   = flag.String("ngf-image-repo", "", "Image repo for NGF control plane")
 	nginxImageRepository = flag.String("nginx-image-repo", "", "Image repo for NGF data plane")
 	imageTag             = flag.String("image-tag", "", "Image tag for NGF images")
+	versionUnderTest     = flag.String("version-under-test", "", "Version of NGF that is being tested")
 	imagePullPolicy      = flag.String("pull-policy", "", "Image pull policy for NGF images")
 	serviceType          = flag.String("service-type", "NodePort", "Type of service fronting NGF to be deployed")
 	isGKEInternalLB      = flag.Bool("is-gke-internal-lb", false, "Is the LB service GKE internal only")
@@ -67,6 +68,7 @@ var (
 	address           string
 	version           string
 	clusterInfo       framework.ClusterInfo
+	skipNFRTests      bool
 )
 
 const (
@@ -75,9 +77,11 @@ const (
 )
 
 type setupConfig struct {
+	releaseName  string
 	chartPath    string
 	gwAPIVersion string
 	deploy       bool
+	nfr          bool
 }
 
 func setup(cfg setupConfig, extraInstallArgs ...string) {
@@ -109,12 +113,30 @@ func setup(cfg setupConfig, extraInstallArgs ...string) {
 	clusterInfo, err = resourceManager.GetClusterInfo()
 	Expect(err).ToNot(HaveOccurred())
 
+	if cfg.nfr && !clusterInfo.IsGKE {
+		skipNFRTests = true
+		Skip("NFR tests can only run in GKE")
+	}
+
+	if cfg.nfr && *serviceType != "LoadBalancer" {
+		skipNFRTests = true
+		Skip("GW_SERVICE_TYPE must be 'LoadBalancer' for NFR tests")
+	}
+
+	if *versionUnderTest != "" {
+		version = *versionUnderTest
+	} else if *imageTag != "" {
+		version = *imageTag
+	} else {
+		version = "edge"
+	}
+
 	if !cfg.deploy {
 		return
 	}
 
 	installCfg := framework.InstallationConfig{
-		ReleaseName:     releaseName,
+		ReleaseName:     cfg.releaseName,
 		Namespace:       ngfNamespace,
 		ChartPath:       cfg.chartPath,
 		ServiceType:     *serviceType,
@@ -128,12 +150,6 @@ func setup(cfg setupConfig, extraInstallArgs ...string) {
 		installCfg.NginxImageRepository = *nginxImageRepository
 		installCfg.ImageTag = *imageTag
 		installCfg.ImagePullPolicy = *imagePullPolicy
-	}
-
-	if *imageTag != "" {
-		version = *imageTag
-	} else {
-		version = "edge"
 	}
 
 	output, err := framework.InstallGatewayAPI(k8sClient, cfg.gwAPIVersion, *k8sVersion)
@@ -160,13 +176,13 @@ func setup(cfg setupConfig, extraInstallArgs ...string) {
 	Expect(err).ToNot(HaveOccurred())
 }
 
-func teardown() {
+func teardown(relName string) {
 	if portFwdPort != 0 {
 		portForwardStopCh <- struct{}{}
 	}
 
 	cfg := framework.InstallationConfig{
-		ReleaseName: releaseName,
+		ReleaseName: relName,
 		Namespace:   ngfNamespace,
 	}
 
@@ -201,21 +217,50 @@ var _ = BeforeSuite(func() {
 	localChartPath = filepath.Join(basepath, "deploy/helm-chart")
 
 	cfg := setupConfig{
+		releaseName:  releaseName,
 		chartPath:    localChartPath,
 		gwAPIVersion: *gatewayAPIVersion,
 		deploy:       true,
 	}
 
-	// If we are running the upgrade test only, then skip the initial deployment.
-	// The upgrade test will deploy its own version of NGF.
-	suiteConfig, _ := GinkgoConfiguration()
-	if suiteConfig.LabelFilter == "upgrade" {
+	labelFilter := GinkgoLabelFilter()
+	cfg.nfr = isNFR(labelFilter)
+
+	// Skip deployment if:
+	// - running upgrade test (this test will deploy its own version)
+	// - running longevity teardown (deployment will already exist)
+	if strings.Contains(labelFilter, "upgrade") || strings.Contains(labelFilter, "longevity-teardown") {
 		cfg.deploy = false
+	}
+
+	// use a different release name for longevity to allow us to filter on a specific label when collecting
+	// logs from GKE
+	if strings.Contains(labelFilter, "longevity") {
+		cfg.releaseName = "ngf-longevity"
 	}
 
 	setup(cfg)
 })
 
 var _ = AfterSuite(func() {
-	teardown()
+	if skipNFRTests {
+		Skip("")
+	}
+
+	labelFilter := GinkgoLabelFilter()
+	if !strings.Contains(labelFilter, "longevity-setup") {
+		relName := releaseName
+		if strings.Contains(labelFilter, "longevity-teardown") {
+			relName = "ngf-longevity"
+		}
+
+		teardown(relName)
+	}
 })
+
+func isNFR(labelFilter string) bool {
+	return strings.Contains(labelFilter, "nfr") ||
+		strings.Contains(labelFilter, "longevity") ||
+		strings.Contains(labelFilter, "performance") ||
+		strings.Contains(labelFilter, "upgrade")
+}

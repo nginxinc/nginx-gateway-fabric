@@ -24,17 +24,17 @@ gcloud compute instances create ${RESOURCE_NAME} --project=${GKE_PROJECT} --zone
 if [ "${ADD_VM_IP_AUTH_NETWORKS}" = "true" ]; then
     EXTERNAL_IP=$(gcloud compute instances describe ${RESOURCE_NAME} --project=${GKE_PROJECT} --zone=${GKE_CLUSTER_ZONE} \
                     --format='value(networkInterfaces[0].accessConfigs[0].natIP)')
-    CURRENT_AUTH_NETWORK=$(gcloud container clusters describe ${GKE_CLUSTER_NAME} \
+    CURRENT_AUTH_NETWORK=$(gcloud container clusters describe ${GKE_CLUSTER_NAME} --zone=${GKE_CLUSTER_ZONE} \
                             --format="value(masterAuthorizedNetworksConfig.cidrBlocks[0])" | sed 's/cidrBlock=//')
-    gcloud container clusters update ${GKE_CLUSTER_NAME} --enable-master-authorized-networks --master-authorized-networks=${CURRENT_AUTH_NETWORK},${EXTERNAL_IP}/32
+    gcloud container clusters update ${GKE_CLUSTER_NAME} --zone=${GKE_CLUSTER_ZONE} --enable-master-authorized-networks --master-authorized-networks=${EXTERNAL_IP}/32,${CURRENT_AUTH_NETWORK}
 fi
 
 # Poll for SSH connectivity
-MAX_RETRIES=30
-RETRY_INTERVAL=10
+MAX_RETRIES=10
+RETRY_INTERVAL=5
 for ((i=1; i<=MAX_RETRIES; i++)); do
     echo "Attempt $i to connect to the VM..."
-    gcloud compute ssh ${RESOURCE_NAME} --zone=${GKE_CLUSTER_ZONE} --project=${GKE_PROJECT} --quiet --command="echo 'VM is ready'"
+    gcloud compute ssh username@${RESOURCE_NAME} --zone=${GKE_CLUSTER_ZONE} --project=${GKE_PROJECT} --quiet --command="echo 'VM is ready'"
     if [ $? -eq 0 ]; then
         echo "SSH connection successful. VM is ready."
         break
@@ -43,6 +43,6 @@ for ((i=1; i<=MAX_RETRIES; i++)); do
     sleep ${RETRY_INTERVAL}
 done
 
-gcloud compute scp --zone ${GKE_CLUSTER_ZONE} --project=${GKE_PROJECT} ${SCRIPT_DIR}/vars.env ${RESOURCE_NAME}:~
+gcloud compute scp --zone ${GKE_CLUSTER_ZONE} --project=${GKE_PROJECT} ${SCRIPT_DIR}/vars.env username@${RESOURCE_NAME}:~
 
-gcloud compute ssh --zone ${GKE_CLUSTER_ZONE} --project=${GKE_PROJECT} ${RESOURCE_NAME} --command="bash -s" < ${SCRIPT_DIR}/remote-scripts/install-deps.sh
+gcloud compute ssh --zone ${GKE_CLUSTER_ZONE} --project=${GKE_PROJECT} username@${RESOURCE_NAME} --command="bash -s" < ${SCRIPT_DIR}/remote-scripts/install-deps.sh

@@ -13,6 +13,10 @@ var (
 
 	// telemetryReportPeriod is the period at which telemetry reports are sent.
 	telemetryReportPeriod string
+	// telemetryEndpoint is the endpoint to which telemetry reports are sent.
+	telemetryEndpoint string
+	// telemetryEndpointInsecure controls whether TLS should be used when sending telemetry reports.
+	telemetryEndpointInsecure string
 )
 
 func main() {

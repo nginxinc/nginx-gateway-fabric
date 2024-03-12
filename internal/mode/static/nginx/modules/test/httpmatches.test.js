@@ -1,5 +1,5 @@
 import { default as hm } from '../src/httpmatches.js';
-import { expect } from 'chai';
+import { assert, describe, expect, it } from 'vitest';
 
 // Creates a NGINX HTTP Request Object for testing.
 // See documentation for all properties available: http://nginx.org/en/docs/njs/reference.html

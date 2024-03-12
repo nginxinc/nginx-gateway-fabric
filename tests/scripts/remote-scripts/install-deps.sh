@@ -4,7 +4,7 @@ set -e
 
 source ~/vars.env
 
-sudo apt-get -y update && sudo apt-get -y install git make kubectl google-cloud-sdk-gke-gcloud-auth-plugin jq gnuplot && \
+sudo apt-get -y update && sudo apt-get -y install git make kubectl google-cloud-sdk-gke-gcloud-auth-plugin jq gnuplot rsync wrk && \
 curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash && \
 export GO_VERSION=$(curl -sSL "https://golang.org/dl/?mode=json" | jq -r '.[0].version') && \
 wget https://go.dev/dl/${GO_VERSION}.linux-amd64.tar.gz && \

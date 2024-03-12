@@ -6,6 +6,10 @@ on:
       - main
   pull_request:
 
+defaults:
+  run:
+    shell: bash
+
 concurrency:
   group: ${{ github.ref_name }}-lint
   cancel-in-progress: true
@@ -43,6 +47,11 @@ jobs:
         run: |
           echo "version=$(jq -r .devDependencies.prettier ${{ github.workspace }}/internal/mode/static/nginx/modules/package.json)" >> $GITHUB_OUTPUT
 
+      - name: Setup Node.js Environment
+        uses: actions/setup-node@60edb5dd545a775178f52524783378180af0d1f8 # v4.0.2
+        with:
+          node-version-file: .nvmrc
+
       - name: Run Prettier on NJS code
         id: prettier-run
         uses: rutajdash/prettier-cli-action@d42c4325a3b344f3bd4be482bc34de521998d557 # v1.0.2
@@ -66,7 +75,7 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
 
-      - uses: reviewdog/action-actionlint@6a38513dd4d2e818798c5c73d0870adbb82de4a4 # v1.41.0
+      - uses: reviewdog/action-actionlint@c6ee1eb0a5d47b2af53a203652b5dac0b6c4016e # v1.43.0
         with:
           actionlint_flags: -shellcheck ""
 

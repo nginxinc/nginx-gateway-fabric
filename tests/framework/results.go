@@ -77,6 +77,15 @@ func WriteResults(resultsFile *os.File, metrics *Metrics) error {
 	return reporter.Report(resultsFile)
 }
 
+// WriteContent writes basic content to the results file.
+func WriteContent(resultsFile *os.File, content string) error {
+	if _, err := fmt.Fprintln(resultsFile, content); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // NewCSVEncoder returns a vegeta CSV encoder.
 func NewCSVEncoder(w io.Writer) vegeta.Encoder {
 	return vegeta.NewCSVEncoder(w)

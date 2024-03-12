@@ -16,7 +16,7 @@ func TestLoggingExporter(t *testing.T) {
 	logger := zap.New(zap.WriteTo(&buffer))
 	exporter := NewLoggingExporter(logger)
 
-	err := exporter.Export(context.Background(), Data{})
+	err := exporter.Export(context.Background(), &Data{})
 
 	g.Expect(err).To(BeNil())
 	g.Expect(buffer.String()).To(ContainSubstring(`"level":"info"`))
