@@ -96,6 +96,22 @@ func TestGetPlatform(t *testing.T) {
 			expectedPlatform: "openshift",
 			name:             "openshift platform",
 		},
+		{
+			node: &v1.Node{
+				Spec: v1.NodeSpec{
+					ProviderID: "different-platform://ip-172-16-0-210",
+				},
+			},
+			namespaces:       &v1.NamespaceList{},
+			expectedPlatform: "other_different-platform",
+			name:             "other platform",
+		},
+		{
+			node:             &v1.Node{},
+			namespaces:       &v1.NamespaceList{},
+			expectedPlatform: "other",
+			name:             "missing providerID",
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
