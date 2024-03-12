@@ -81,8 +81,8 @@ jobs:
           tags: ${{ steps.ngf-meta.outputs.tags }}
           context: "."
           load: true
-          cache-from: type=gha,scope=ngf
-          cache-to: type=gha,scope=ngf,mode=max
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
           pull: true
           target: goreleaser
 
