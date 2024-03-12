@@ -27,6 +27,18 @@ type FakeProcessHandler struct {
 		result1 int
 		result2 error
 	}
+	KillStub        func(int, syscall.Signal) error
+	killMutex       sync.RWMutex
+	killArgsForCall []struct {
+		arg1 int
+		arg2 syscall.Signal
+	}
+	killReturns struct {
+		result1 error
+	}
+	killReturnsOnCall map[int]struct {
+		result1 error
+	}
 	ReadFileStub        func(string) ([]byte, error)
 	readFileMutex       sync.RWMutex
 	readFileArgsForCall []struct {
@@ -39,18 +51,6 @@ type FakeProcessHandler struct {
 	readFileReturnsOnCall map[int]struct {
 		result1 []byte
 		result2 error
-	}
-	SysCallKillStub        func(int, syscall.Signal) error
-	sysCallKillMutex       sync.RWMutex
-	sysCallKillArgsForCall []struct {
-		arg1 int
-		arg2 syscall.Signal
-	}
-	sysCallKillReturns struct {
-		result1 error
-	}
-	sysCallKillReturnsOnCall map[int]struct {
-		result1 error
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
@@ -123,6 +123,68 @@ func (fake *FakeProcessHandler) FindMainProcessReturnsOnCall(i int, result1 int,
 	}{result1, result2}
 }
 
+func (fake *FakeProcessHandler) Kill(arg1 int, arg2 syscall.Signal) error {
+	fake.killMutex.Lock()
+	ret, specificReturn := fake.killReturnsOnCall[len(fake.killArgsForCall)]
+	fake.killArgsForCall = append(fake.killArgsForCall, struct {
+		arg1 int
+		arg2 syscall.Signal
+	}{arg1, arg2})
+	stub := fake.KillStub
+	fakeReturns := fake.killReturns
+	fake.recordInvocation("Kill", []interface{}{arg1, arg2})
+	fake.killMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2)
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fakeReturns.result1
+}
+
+func (fake *FakeProcessHandler) KillCallCount() int {
+	fake.killMutex.RLock()
+	defer fake.killMutex.RUnlock()
+	return len(fake.killArgsForCall)
+}
+
+func (fake *FakeProcessHandler) KillCalls(stub func(int, syscall.Signal) error) {
+	fake.killMutex.Lock()
+	defer fake.killMutex.Unlock()
+	fake.KillStub = stub
+}
+
+func (fake *FakeProcessHandler) KillArgsForCall(i int) (int, syscall.Signal) {
+	fake.killMutex.RLock()
+	defer fake.killMutex.RUnlock()
+	argsForCall := fake.killArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
+}
+
+func (fake *FakeProcessHandler) KillReturns(result1 error) {
+	fake.killMutex.Lock()
+	defer fake.killMutex.Unlock()
+	fake.KillStub = nil
+	fake.killReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *FakeProcessHandler) KillReturnsOnCall(i int, result1 error) {
+	fake.killMutex.Lock()
+	defer fake.killMutex.Unlock()
+	fake.KillStub = nil
+	if fake.killReturnsOnCall == nil {
+		fake.killReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.killReturnsOnCall[i] = struct {
+		result1 error
+	}{result1}
+}
+
 func (fake *FakeProcessHandler) ReadFile(arg1 string) ([]byte, error) {
 	fake.readFileMutex.Lock()
 	ret, specificReturn := fake.readFileReturnsOnCall[len(fake.readFileArgsForCall)]
@@ -187,77 +249,15 @@ func (fake *FakeProcessHandler) ReadFileReturnsOnCall(i int, result1 []byte, res
 	}{result1, result2}
 }
 
-func (fake *FakeProcessHandler) SysCallKill(arg1 int, arg2 syscall.Signal) error {
-	fake.sysCallKillMutex.Lock()
-	ret, specificReturn := fake.sysCallKillReturnsOnCall[len(fake.sysCallKillArgsForCall)]
-	fake.sysCallKillArgsForCall = append(fake.sysCallKillArgsForCall, struct {
-		arg1 int
-		arg2 syscall.Signal
-	}{arg1, arg2})
-	stub := fake.SysCallKillStub
-	fakeReturns := fake.sysCallKillReturns
-	fake.recordInvocation("SysCallKill", []interface{}{arg1, arg2})
-	fake.sysCallKillMutex.Unlock()
-	if stub != nil {
-		return stub(arg1, arg2)
-	}
-	if specificReturn {
-		return ret.result1
-	}
-	return fakeReturns.result1
-}
-
-func (fake *FakeProcessHandler) SysCallKillCallCount() int {
-	fake.sysCallKillMutex.RLock()
-	defer fake.sysCallKillMutex.RUnlock()
-	return len(fake.sysCallKillArgsForCall)
-}
-
-func (fake *FakeProcessHandler) SysCallKillCalls(stub func(int, syscall.Signal) error) {
-	fake.sysCallKillMutex.Lock()
-	defer fake.sysCallKillMutex.Unlock()
-	fake.SysCallKillStub = stub
-}
-
-func (fake *FakeProcessHandler) SysCallKillArgsForCall(i int) (int, syscall.Signal) {
-	fake.sysCallKillMutex.RLock()
-	defer fake.sysCallKillMutex.RUnlock()
-	argsForCall := fake.sysCallKillArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2
-}
-
-func (fake *FakeProcessHandler) SysCallKillReturns(result1 error) {
-	fake.sysCallKillMutex.Lock()
-	defer fake.sysCallKillMutex.Unlock()
-	fake.SysCallKillStub = nil
-	fake.sysCallKillReturns = struct {
-		result1 error
-	}{result1}
-}
-
-func (fake *FakeProcessHandler) SysCallKillReturnsOnCall(i int, result1 error) {
-	fake.sysCallKillMutex.Lock()
-	defer fake.sysCallKillMutex.Unlock()
-	fake.SysCallKillStub = nil
-	if fake.sysCallKillReturnsOnCall == nil {
-		fake.sysCallKillReturnsOnCall = make(map[int]struct {
-			result1 error
-		})
-	}
-	fake.sysCallKillReturnsOnCall[i] = struct {
-		result1 error
-	}{result1}
-}
-
 func (fake *FakeProcessHandler) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
 	fake.findMainProcessMutex.RLock()
 	defer fake.findMainProcessMutex.RUnlock()
+	fake.killMutex.RLock()
+	defer fake.killMutex.RUnlock()
 	fake.readFileMutex.RLock()
 	defer fake.readFileMutex.RUnlock()
-	fake.sysCallKillMutex.RLock()
-	defer fake.sysCallKillMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value
