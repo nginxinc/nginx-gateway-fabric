@@ -13,6 +13,10 @@ defaults:
   run:
     shell: bash
 
+concurrency:
+  group: ${{ github.ref_name }}-functional
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
@@ -38,12 +42,7 @@ jobs:
 
       - name: Docker Buildx
         uses: docker/setup-buildx-action@0d103c3126aa41d772a8362f6aa67afac040f80c # v3.1.0
-        with:
-          driver-opts: network=host
 
-      - name: Output Variables
-        id: vars
-        run: echo "go_path=$(go env GOPATH)" >> $GITHUB_OUTPUT
 
       - name: NGF Docker meta
         id: ngf-meta
