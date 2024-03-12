@@ -7,15 +7,16 @@ import (
 	"testing"
 	"time"
 
-	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/runtime"
-	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/runtime/runtimefakes"
 	ngxclient "github.com/nginxinc/nginx-plus-go-client/client"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/runtime"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/runtime/runtimefakes"
 )
 
-var _ = Describe("NGINX Runtime Manager", Ordered, func() {
+var _ = Describe("NGINX Runtime Manager", func() {
 	It("returns whether or not we're using NGINX Plus", func() {
 		mgr := runtime.NewManagerImpl(nil, nil, zap.New(), nil, nil)
 		Expect(mgr.IsPlus()).To(BeFalse())
@@ -35,29 +36,8 @@ var _ = Describe("NGINX Runtime Manager", Ordered, func() {
 		verifyClient *runtimefakes.FakeVerifyClient
 	)
 
-	var (
-		MaxConnsMock = 150
-		MaxFailsMock = 20
-		WeightMock   = 10
-		BackupMock   = false
-		DownMock     = false
-	)
-
-	BeforeAll(func() {
-		upstreamServer = ngxclient.UpstreamServer{
-			ID:          1,
-			Server:      "10.0.0.1:80",
-			MaxConns:    &MaxConnsMock,
-			MaxFails:    &MaxFailsMock,
-			FailTimeout: "test",
-			SlowStart:   "test",
-			Route:       "test",
-			Backup:      &BackupMock,
-			Down:        &DownMock,
-			Drain:       false,
-			Weight:      &WeightMock,
-			Service:     "test",
-		}
+	BeforeEach(func() {
+		upstreamServer = ngxclient.UpstreamServer{}
 
 		upstreamServers = []ngxclient.UpstreamServer{
 			upstreamServer,
@@ -66,7 +46,7 @@ var _ = Describe("NGINX Runtime Manager", Ordered, func() {
 	})
 
 	Context("Reload", func() {
-		BeforeAll(func() {
+		BeforeEach(func() {
 			ngxPlusClient = &runtimefakes.FakeNginxPlusClient{}
 			process = &runtimefakes.FakeProcessHandler{}
 			metrics = &runtimefakes.FakeMetricsCollector{}
@@ -74,12 +54,18 @@ var _ = Describe("NGINX Runtime Manager", Ordered, func() {
 			manager = runtime.NewManagerImpl(ngxPlusClient, metrics, zap.New(), process, verifyClient)
 		})
 
-		It("sucessfully reloads NGINX configuration", func() {
-			err := manager.Reload(context.Background(), 1)
-			Expect(err).To(BeNil())
+		It("NGINX configuration reload is successful", func() {
+			Expect(manager.Reload(context.Background(), 1)).To(Succeed())
+
+			Expect(process.FindMainProcessCallCount()).To(Equal(1))
+			Expect(process.ReadFileCallCount()).To(Equal(1))
+			Expect(process.KillCallCount()).To(Equal(1))
+			Expect(metrics.IncReloadCountCallCount()).To(Equal(1))
+			Expect(verifyClient.WaitForCorrectVersionCallCount()).To(Equal(1))
+			Expect(metrics.ObserveLastReloadTimeCallCount()).To(Equal(1))
 		})
 
-		When("not sucessfully reloads NGINX configuration", func() {
+		When("NGINX configuration reload is not successful", func() {
 			It("should panic if MetricsCollector not enabled", func() {
 				metrics = nil
 				manager = runtime.NewManagerImpl(ngxPlusClient, metrics, zap.New(), process, verifyClient)
@@ -106,15 +92,14 @@ var _ = Describe("NGINX Runtime Manager", Ordered, func() {
 	})
 
 	When("running NGINX plus", func() {
-		BeforeAll(func() {
+		BeforeEach(func() {
 			ngxPlusClient = &runtimefakes.FakeNginxPlusClient{}
 			manager = runtime.NewManagerImpl(ngxPlusClient, nil, zap.New(), nil, nil)
 		})
 
 		It("sucessfully updates HTTP server upstream", func() {
-			err := manager.UpdateHTTPServers("test", upstreamServers)
 
-			Expect(err).To(BeNil())
+			Expect(manager.UpdateHTTPServers("test", upstreamServers)).To(Succeed())
 		})
 
 		It("returns no upstreams from NGINX Plus API", func() {
@@ -126,7 +111,7 @@ var _ = Describe("NGINX Runtime Manager", Ordered, func() {
 	})
 
 	When("not running NGINX plus", func() {
-		BeforeAll(func() {
+		BeforeEach(func() {
 			ngxPlusClient = nil
 			manager = runtime.NewManagerImpl(ngxPlusClient, nil, zap.New(), nil, nil)
 		})
@@ -239,8 +224,9 @@ func TestFindMainProcess(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewWithT(t)
-
-			result, err := runtime.FindMainProcess(test.ctx, test.checkFile, test.readFile, 2*time.Millisecond)
+			p := runtime.ProcessHandlerImpl{}
+			result, err := p.FindMainProcess(test.ctx, test.checkFile, test.readFile, 2*time.Millisecond)
+			//result, err := runtime.FindMainProcess(test.ctx, test.checkFile, test.readFile, 2*time.Millisecond)
 
 			if test.expectError {
 				g.Expect(err).To(HaveOccurred())

@@ -145,7 +145,7 @@ func StartManager(cfg config.Config) error {
 	}
 
 	// Ensure NGINX is running before registering metrics & starting the manager.
-	if err := ngxruntime.EnsureNginxRunning(ctx); err != nil {
+	if err := ngxruntime.EnsureNginxRunning(ctx, &ngxruntime.ProcessHandlerImpl{}); err != nil {
 		return fmt.Errorf("NGINX is not running: %w", err)
 	}
 
@@ -156,6 +156,7 @@ func StartManager(cfg config.Config) error {
 
 	var ngxPlusClient *ngxclient.NginxClient
 	var usageSecret *usage.Secret
+	//var processHandler *ngxruntime.ProcessHandler
 	if cfg.Plus {
 		ngxPlusClient, err = ngxruntime.CreatePlusClient()
 		if err != nil {
@@ -221,8 +222,8 @@ func StartManager(cfg config.Config) error {
 			ngxPlusClient,
 			ngxruntimeCollector,
 			cfg.Logger.WithName("nginxRuntimeManager"),
-			nil,
-			nil,
+			&ngxruntime.ProcessHandlerImpl{},
+			ngxruntime.NewVerifyClient(1*time.Second),
 		),
 		statusUpdater:                 groupStatusUpdater,
 		eventRecorder:                 recorder,

@@ -27,15 +27,15 @@ type verifyClient interface {
 	EnsureConfigVersion(ctx context.Context, expectedVersion int) error
 }
 
-// verifyClientImpl is a client for verifying the config version.
-type verifyClientImpl struct {
+// VerifyClientImpl is a client for verifying the config version.
+type VerifyClientImpl struct {
 	client  *http.Client
 	timeout time.Duration
 }
 
-// newVerifyClient returns a new client pointed at the config version socket.
-func newVerifyClient(timeout time.Duration) *verifyClientImpl {
-	return &verifyClientImpl{
+// NewVerifyClient returns a new client pointed at the config version socket.
+func NewVerifyClient(timeout time.Duration) *VerifyClientImpl {
+	return &VerifyClientImpl{
 		client: &http.Client{
 			Transport: &http.Transport{
 				DialContext: func(_ context.Context, _, _ string) (net.Conn, error) {
@@ -49,7 +49,7 @@ func newVerifyClient(timeout time.Duration) *verifyClientImpl {
 
 // GetConfigVersion gets the version number that we put in the nginx config to verify that we're using
 // the correct config.
-func (c *verifyClientImpl) GetConfigVersion() (int, error) {
+func (c *VerifyClientImpl) GetConfigVersion() (int, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), c.timeout)
 	defer cancel()
 
@@ -82,7 +82,7 @@ func (c *verifyClientImpl) GetConfigVersion() (int, error) {
 // WaitForCorrectVersion first ensures any new worker processes have been started, and then calls the config version
 // endpoint until it gets the expectedVersion, which ensures that a new worker process has been started for that config
 // version.
-func (c *verifyClientImpl) WaitForCorrectVersion(
+func (c *VerifyClientImpl) WaitForCorrectVersion(
 	ctx context.Context,
 	expectedVersion int,
 	childProcFile string,
@@ -113,7 +113,7 @@ func (c *verifyClientImpl) WaitForCorrectVersion(
 	return nil
 }
 
-func (c *verifyClientImpl) EnsureConfigVersion(ctx context.Context, expectedVersion int) error {
+func (c *VerifyClientImpl) EnsureConfigVersion(ctx context.Context, expectedVersion int) error {
 	return wait.PollUntilContextCancel(
 		ctx,
 		25*time.Millisecond,
