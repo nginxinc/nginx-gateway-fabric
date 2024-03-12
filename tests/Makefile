@@ -106,6 +106,10 @@ test: ## Runs the functional tests on your default k8s cluster
 		--pull-policy=$(PULL_POLICY) --k8s-version=$(K8S_VERSION) --service-type=$(GW_SERVICE_TYPE) \
 		--is-gke-internal-lb=$(GW_SVC_GKE_INTERNAL)
 
+.PHONY: test-with-plus
+test-with-plus: ## Runs the functional tests for NGF with NGINX Plus on your default k8s cluster
+	make test PLUS_ENABLED=true
+
 .PHONY: cleanup-gcp
 cleanup-gcp: cleanup-router cleanup-vm delete-gke-cluster ## Cleanup all GCP resources
 
