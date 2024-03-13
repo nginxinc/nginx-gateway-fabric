@@ -11,7 +11,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	version2 "k8s.io/apimachinery/pkg/util/version"
+	k8sversion "k8s.io/apimachinery/pkg/util/version"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/config"
@@ -282,27 +282,21 @@ type clusterInformation struct {
 
 func collectClusterInformation(ctx context.Context, k8sClient client.Reader) (clusterInformation, error) {
 	var clusterInfo clusterInformation
-	var err error
 
 	var nodes v1.NodeList
-	if err = k8sClient.List(ctx, &nodes); err != nil {
+	if err := k8sClient.List(ctx, &nodes); err != nil {
 		return clusterInformation{}, fmt.Errorf("failed to get NodeList: %w", err)
 	}
 	if len(nodes.Items) == 0 {
 		return clusterInformation{}, errors.New("failed to collect cluster information: NodeList length is zero")
 	}
-
-	var clusterID string
-	if clusterID, err = CollectClusterID(ctx, k8sClient); err != nil {
-		return clusterInformation{}, fmt.Errorf("failed to collect cluster information: %w", err)
-	}
-	clusterInfo.ClusterID = clusterID
-
 	node := nodes.Items[0]
 
+	var version *k8sversion.Version
 	clusterInfo.Version = "unknown"
 	kubeletVersion := node.Status.NodeInfo.KubeletVersion
-	if version, err := version2.ParseGeneric(kubeletVersion); err == nil {
+	version, err := k8sversion.ParseGeneric(kubeletVersion)
+	if err == nil {
 		clusterInfo.Version = version.String()
 	}
 
@@ -312,6 +306,13 @@ func collectClusterInformation(ctx context.Context, k8sClient client.Reader) (cl
 	}
 
 	clusterInfo.Platform = getPlatform(node, namespaces)
+
+	var clusterID string
+	clusterID, err = CollectClusterID(ctx, k8sClient)
+	if err != nil {
+		return clusterInformation{}, fmt.Errorf("failed to collect cluster information: %w", err)
+	}
+	clusterInfo.ClusterID = clusterID
 
 	return clusterInfo, nil
 }
