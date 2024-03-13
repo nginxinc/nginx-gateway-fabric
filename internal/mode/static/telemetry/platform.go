@@ -11,14 +11,14 @@ type k8sState struct {
 	namespaces v1.NamespaceList
 }
 
-type platformExtractor func(k8sState) (string, bool)
+type platformExtractor func(k8sState) string
 
-func buildProviderIDExtractor(id string, platform string) platformExtractor {
-	return func(state k8sState) (string, bool) {
+func buildProviderIDExtractor(id, platform string) platformExtractor {
+	return func(state k8sState) string {
 		if strings.HasPrefix(state.node.Spec.ProviderID, id) {
-			return platform, true
+			return platform
 		}
-		return "", false
+		return ""
 	}
 }
 
@@ -59,7 +59,7 @@ func getPlatform(node v1.Node, namespaces v1.NamespaceList) string {
 	}
 
 	for _, extractor := range platformExtractors {
-		if platform, ok := extractor(state); ok {
+		if platform := extractor(state); platform != "" {
 			return platform
 		}
 	}
@@ -67,24 +67,24 @@ func getPlatform(node v1.Node, namespaces v1.NamespaceList) string {
 	return unknownProviderIDExtractor(state)
 }
 
-func openShiftExtractor(state k8sState) (string, bool) {
+func openShiftExtractor(state k8sState) string {
 	// openshift platform won't show up in node's ProviderID
 	if value, ok := state.node.Labels[openshiftIdentifier]; ok && value != "" {
-		return platformOpenShift, true
+		return platformOpenShift
 	}
 
-	return "", false
+	return ""
 }
 
-func rancherExtractor(state k8sState) (string, bool) {
+func rancherExtractor(state k8sState) string {
 	// rancher platform won't show up in the node's ProviderID
 	for _, ns := range state.namespaces.Items {
 		if ns.Name == rancherIdentifier {
-			return platformRancher, true
+			return platformRancher
 		}
 	}
 
-	return "", false
+	return ""
 }
 
 func unknownProviderIDExtractor(state k8sState) string {
