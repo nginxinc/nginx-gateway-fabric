@@ -6,6 +6,7 @@ import (
 
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
+	v1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/config"
@@ -19,7 +20,7 @@ func CreateUsageJobWorker(
 	cfg config.Config,
 ) func(ctx context.Context) {
 	return func(ctx context.Context) {
-		nodeCount, err := telemetry.CollectNodeCount(ctx, k8sClient)
+		nodeCount, err := CollectNodeCount(ctx, k8sClient)
 		if err != nil {
 			logger.Error(err, "Failed to collect node count")
 		}
@@ -78,4 +79,14 @@ func GetTotalNGFPodCount(ctx context.Context, k8sClient client.Reader) (int, err
 	}
 
 	return count, nil
+}
+
+// CollectNodeCount returns the number of nodes in the cluster.
+func CollectNodeCount(ctx context.Context, k8sClient client.Reader) (int, error) {
+	var nodes v1.NodeList
+	if err := k8sClient.List(ctx, &nodes); err != nil {
+		return 0, fmt.Errorf("failed to get NodeList: %w", err)
+	}
+
+	return len(nodes.Items), nil
 }

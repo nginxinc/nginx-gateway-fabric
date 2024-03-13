@@ -108,11 +108,6 @@ func (c DataCollectorImpl) Collect(ctx context.Context) (Data, error) {
 		return Data{}, fmt.Errorf("failed to collect cluster information: %w", err)
 	}
 
-	nodeCount, err := CollectNodeCount(ctx, c.cfg.K8sClientReader)
-	if err != nil {
-		return Data{}, fmt.Errorf("failed to collect node count: %w", err)
-	}
-
 	graphResourceCount, err := collectGraphResourceCount(c.cfg.GraphGetter, c.cfg.ConfigurationGetter)
 	if err != nil {
 		return Data{}, fmt.Errorf("failed to collect NGF resource counts: %w", err)
@@ -142,7 +137,7 @@ func (c DataCollectorImpl) Collect(ctx context.Context) (Data, error) {
 			ClusterVersion:      clusterInfo.Version,
 			ClusterPlatform:     clusterInfo.Platform,
 			InstallationID:      deploymentID,
-			ClusterNodeCount:    int64(nodeCount),
+			ClusterNodeCount:    int64(clusterInfo.NodeCount),
 		},
 		NGFResourceCounts: graphResourceCount,
 		ImageSource:       c.cfg.ImageSource,
@@ -152,16 +147,6 @@ func (c DataCollectorImpl) Collect(ctx context.Context) (Data, error) {
 	}
 
 	return data, nil
-}
-
-// CollectNodeCount returns the number of nodes in the cluster.
-func CollectNodeCount(ctx context.Context, k8sClient client.Reader) (int, error) {
-	var nodes v1.NodeList
-	if err := k8sClient.List(ctx, &nodes); err != nil {
-		return 0, fmt.Errorf("failed to get NodeList: %w", err)
-	}
-
-	return len(nodes.Items), nil
 }
 
 func collectGraphResourceCount(
@@ -278,6 +263,7 @@ type clusterInformation struct {
 	Platform  string
 	Version   string
 	ClusterID string
+	NodeCount int
 }
 
 func collectClusterInformation(ctx context.Context, k8sClient client.Reader) (clusterInformation, error) {
@@ -287,9 +273,13 @@ func collectClusterInformation(ctx context.Context, k8sClient client.Reader) (cl
 	if err := k8sClient.List(ctx, &nodes); err != nil {
 		return clusterInformation{}, fmt.Errorf("failed to get NodeList: %w", err)
 	}
-	if len(nodes.Items) == 0 {
+
+	nodeCount := len(nodes.Items)
+	if nodeCount == 0 {
 		return clusterInformation{}, errors.New("failed to collect cluster information: NodeList length is zero")
 	}
+	clusterInfo.NodeCount = nodeCount
+
 	node := nodes.Items[0]
 
 	kubeletVersion := node.Status.NodeInfo.KubeletVersion
