@@ -21,6 +21,7 @@ import (
 	k8sRuntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/client-go/kubernetes"
 	ctlr "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -103,11 +104,15 @@ func setup(cfg setupConfig, extraInstallArgs ...string) {
 	k8sClient, err = client.New(k8sConfig, options)
 	Expect(err).ToNot(HaveOccurred())
 
+	clientGoClient, err := kubernetes.NewForConfig(k8sConfig)
+	Expect(err).ToNot(HaveOccurred())
+
 	timeoutConfig = framework.DefaultTimeoutConfig()
 	resourceManager = framework.ResourceManager{
-		K8sClient:     k8sClient,
-		FS:            manifests,
-		TimeoutConfig: timeoutConfig,
+		K8sClient:      k8sClient,
+		ClientGoClient: clientGoClient,
+		FS:             manifests,
+		TimeoutConfig:  timeoutConfig,
 	}
 
 	clusterInfo, err = resourceManager.GetClusterInfo()
@@ -210,18 +215,22 @@ func teardown(relName string) {
 	)).To(Succeed())
 }
 
-var _ = BeforeSuite(func() {
+func getDefaultSetupCfg() setupConfig {
 	_, file, _, _ := runtime.Caller(0)
 	fileDir := path.Join(path.Dir(file), "../")
 	basepath := filepath.Dir(fileDir)
 	localChartPath = filepath.Join(basepath, "deploy/helm-chart")
 
-	cfg := setupConfig{
+	return setupConfig{
 		releaseName:  releaseName,
 		chartPath:    localChartPath,
 		gwAPIVersion: *gatewayAPIVersion,
 		deploy:       true,
 	}
+}
+
+var _ = BeforeSuite(func() {
+	cfg := getDefaultSetupCfg()
 
 	labelFilter := GinkgoLabelFilter()
 	cfg.nfr = isNFR(labelFilter)
@@ -229,7 +238,10 @@ var _ = BeforeSuite(func() {
 	// Skip deployment if:
 	// - running upgrade test (this test will deploy its own version)
 	// - running longevity teardown (deployment will already exist)
-	if strings.Contains(labelFilter, "upgrade") || strings.Contains(labelFilter, "longevity-teardown") {
+	// - running telemetry test (NGF will be deployed as part of the test)
+	if strings.Contains(labelFilter, "upgrade") ||
+		strings.Contains(labelFilter, "longevity-teardown") ||
+		strings.Contains(labelFilter, "telemetry") {
 		cfg.deploy = false
 	}
 
