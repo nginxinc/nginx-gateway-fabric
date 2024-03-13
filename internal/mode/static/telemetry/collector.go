@@ -11,6 +11,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	k8sversion "k8s.io/apimachinery/pkg/util/version"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/config"
@@ -100,14 +101,11 @@ func NewDataCollectorImpl(
 	}
 }
 
-// notImplemented is a value for string field, for which collection is not implemented yet.
-const notImplemented = "not-implemented"
-
 // Collect collects and returns telemetry Data.
 func (c DataCollectorImpl) Collect(ctx context.Context) (Data, error) {
-	nodeCount, err := CollectNodeCount(ctx, c.cfg.K8sClientReader)
+	clusterInfo, err := collectClusterInformation(ctx, c.cfg.K8sClientReader)
 	if err != nil {
-		return Data{}, fmt.Errorf("failed to collect node count: %w", err)
+		return Data{}, fmt.Errorf("failed to collect cluster information: %w", err)
 	}
 
 	graphResourceCount, err := collectGraphResourceCount(c.cfg.GraphGetter, c.cfg.ConfigurationGetter)
@@ -130,21 +128,16 @@ func (c DataCollectorImpl) Collect(ctx context.Context) (Data, error) {
 		return Data{}, fmt.Errorf("failed to get NGF deploymentID: %w", err)
 	}
 
-	var clusterID string
-	if clusterID, err = CollectClusterID(ctx, c.cfg.K8sClientReader); err != nil {
-		return Data{}, fmt.Errorf("failed to collect clusterID: %w", err)
-	}
-
 	data := Data{
 		Data: tel.Data{
 			ProjectName:         "NGF",
 			ProjectVersion:      c.cfg.Version,
 			ProjectArchitecture: runtime.GOARCH,
-			ClusterID:           clusterID,
-			ClusterVersion:      notImplemented,
-			ClusterPlatform:     notImplemented,
+			ClusterID:           clusterInfo.ClusterID,
+			ClusterVersion:      clusterInfo.Version,
+			ClusterPlatform:     clusterInfo.Platform,
 			InstallationID:      deploymentID,
-			ClusterNodeCount:    int64(nodeCount),
+			ClusterNodeCount:    int64(clusterInfo.NodeCount),
 		},
 		NGFResourceCounts: graphResourceCount,
 		ImageSource:       c.cfg.ImageSource,
@@ -154,16 +147,6 @@ func (c DataCollectorImpl) Collect(ctx context.Context) (Data, error) {
 	}
 
 	return data, nil
-}
-
-// CollectNodeCount returns the number of nodes in the cluster.
-func CollectNodeCount(ctx context.Context, k8sClient client.Reader) (int, error) {
-	var nodes v1.NodeList
-	if err := k8sClient.List(ctx, &nodes); err != nil {
-		return 0, fmt.Errorf("failed to get NodeList: %w", err)
-	}
-
-	return len(nodes.Items), nil
 }
 
 func collectGraphResourceCount(
@@ -274,4 +257,52 @@ func CollectClusterID(ctx context.Context, k8sClient client.Reader) (string, err
 		return "", fmt.Errorf("failed to get kube-system namespace: %w", err)
 	}
 	return string(kubeNamespace.GetUID()), nil
+}
+
+type clusterInformation struct {
+	Platform  string
+	Version   string
+	ClusterID string
+	NodeCount int
+}
+
+func collectClusterInformation(ctx context.Context, k8sClient client.Reader) (clusterInformation, error) {
+	var clusterInfo clusterInformation
+
+	var nodes v1.NodeList
+	if err := k8sClient.List(ctx, &nodes); err != nil {
+		return clusterInformation{}, fmt.Errorf("failed to get NodeList: %w", err)
+	}
+
+	nodeCount := len(nodes.Items)
+	if nodeCount == 0 {
+		return clusterInformation{}, errors.New("failed to collect cluster information: NodeList length is zero")
+	}
+	clusterInfo.NodeCount = nodeCount
+
+	node := nodes.Items[0]
+
+	kubeletVersion := node.Status.NodeInfo.KubeletVersion
+	version, err := k8sversion.ParseGeneric(kubeletVersion)
+	if err != nil {
+		clusterInfo.Version = "unknown"
+	} else {
+		clusterInfo.Version = version.String()
+	}
+
+	var namespaces v1.NamespaceList
+	if err = k8sClient.List(ctx, &namespaces); err != nil {
+		return clusterInformation{}, fmt.Errorf("failed to collect cluster information: %w", err)
+	}
+
+	clusterInfo.Platform = getPlatform(node, namespaces)
+
+	var clusterID string
+	clusterID, err = CollectClusterID(ctx, k8sClient)
+	if err != nil {
+		return clusterInformation{}, fmt.Errorf("failed to collect cluster information: %w", err)
+	}
+	clusterInfo.ClusterID = clusterID
+
+	return clusterInfo, nil
 }
