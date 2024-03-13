@@ -68,20 +68,23 @@ test-with-plus                 Runs the functional tests for NGF with NGINX Plus
 
 **Note:** The following variables are configurable when running the below `make` commands:
 
-| Variable            | Default                         | Description                                                    |
-| ------------------- | ------------------------------- | -------------------------------------------------------------- |
-| TAG                 | edge                            | tag for the locally built NGF images                           |
-| PREFIX              | nginx-gateway-fabric            | prefix for the locally built NGF image                         |
-| NGINX_PREFIX        | nginx-gateway-fabric/nginx      | prefix for the locally built NGINX image                       |
-| NGINX_PLUS_PREFIX   | nginx-gateway-fabric/nginx-plus | prefix for the locally built NGINX Plus image                  |
-| PLUS_ENABLED        | false                           | Flag to indicate if NGINX Plus should be enabled               |
-| PULL_POLICY         | Never                           | NGF image pull policy                                          |
-| GW_API_VERSION      | 1.0.0                           | version of Gateway API resources to install                    |
-| K8S_VERSION         | latest                          | version of k8s that the tests are run on                       |
-| GW_SERVICE_TYPE     | NodePort                        | type of Service that should be created                         |
-| GW_SVC_GKE_INTERNAL | false                           | specifies if the LoadBalancer should be a GKE internal service |
-| GINKGO_LABEL        | ""                              | name of the ginkgo label that will filter the tests to run     |
-| GINKGO_FLAGS        | ""                              | other ginkgo flags to pass to the go test command              |
+| Variable                     | Default                         | Description                                                         |
+|------------------------------|---------------------------------|---------------------------------------------------------------------|
+| TAG                          | edge                            | tag for the locally built NGF images                                |
+| PREFIX                       | nginx-gateway-fabric            | prefix for the locally built NGF image                              |
+| NGINX_PREFIX                 | nginx-gateway-fabric/nginx      | prefix for the locally built NGINX image                            |
+| NGINX_PLUS_PREFIX            | nginx-gateway-fabric/nginx-plus | prefix for the locally built NGINX Plus image                       |
+| PLUS_ENABLED                 | false                           | Flag to indicate if NGINX Plus should be enabled                    |
+| PULL_POLICY                  | Never                           | NGF image pull policy                                               |
+| GW_API_VERSION               | 1.0.0                           | version of Gateway API resources to install                         |
+| K8S_VERSION                  | latest                          | version of k8s that the tests are run on                            |
+| GW_SERVICE_TYPE              | NodePort                        | type of Service that should be created                              |
+| GW_SVC_GKE_INTERNAL          | false                           | specifies if the LoadBalancer should be a GKE internal service      |
+| GINKGO_LABEL                 | ""                              | name of the ginkgo label that will filter the tests to run          |
+| GINKGO_FLAGS                 | ""                              | other ginkgo flags to pass to the go test command                   |
+| TELEMETRY_ENDPOINT           | Set in the main Makefile        | The endpoint to which telemetry reports are sent                    |
+| TELEMETRY_ENDPOINT_INSECURE= | Set in the main Makefile        | Controls whether TLS should be used when sending telemetry reports. |
+
 
 ## Step 1 - Create a Kubernetes cluster
 
@@ -137,6 +140,12 @@ Or, to build NGF with NGINX Plus enabled (NGINX Plus cert and key must exist in 
 make build-images-with-plus load-images-with-plus TAG=$(whoami)
 ```
 
+For the telemetry test, which requires a OTel collector, build an image with the following variables set:
+
+```makefile
+TELEMETRY_ENDPOINT=otel-collector-opentelemetry-collector.collector.svc.cluster.local:4317 TELEMETRY_ENDPOINT_INSECURE=true
+```
+
 ## Step 3 - Run the tests
 
 ### 3a - Run the functional tests locally
@@ -149,6 +158,15 @@ Or, to run the tests with NGINX Plus enabled:
 
 ```makefile
 make test TAG=$(whoami) PLUS_ENABLED=true
+```
+
+> The command above doesn't run the telemetry functional test, which requires a dedicated invocation because it uses a
+> specially built image (see above) and it needs to deploy NGF differently from the rest of functional tests.
+
+To run the telemetry test:
+
+```makefile
+make test TAG=$(whoami) GINKGO_LABEL=telemetry
 ```
 
 ### 3b - Run the tests on a GKE cluster from a GCP VM
