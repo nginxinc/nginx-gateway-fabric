@@ -24,7 +24,7 @@ jobs:
       nginx_version: ${{ steps.nginx.outputs.nginx_version }}
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        uses: actions/checkout@9bb56186c3b09b4f86b1c65136769dd318469633 # v4.1.2
         with:
           fetch-depth: 0
 
@@ -35,7 +35,7 @@ jobs:
           echo "tag=${tag//v}" >> $GITHUB_OUTPUT
 
       - name: Checkout Repository at ${{ steps.ngf.outputs.tag }}
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        uses: actions/checkout@9bb56186c3b09b4f86b1c65136769dd318469633 # v4.1.2
         with:
           ref: refs/tags/v${{ steps.ngf.outputs.tag }}
 
