@@ -151,7 +151,7 @@ jobs:
           AZURE_STORAGE_KEY: ${{ secrets.AZURE_STORAGE_KEY }}
           AZURE_BUCKET_NAME: ${{ secrets.AZURE_BUCKET_NAME }}
           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_COMMUNITY }}
-          TELEMETRY_ENDPOINT: "" # disables sending telemetry
+          TELEMETRY_ENDPOINT: otel-collector-opentelemetry-collector.collector.svc.cluster.local:4317 # TO-DO: Update with the correct telemetry endpoint
           TELEMETRY_ENDPOINT_INSECURE: "false"
 
       - name: Cache Artifacts
