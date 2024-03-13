@@ -9,6 +9,8 @@ RUN go mod download
 COPY . /go/src/github.com/nginxinc/nginx-gateway-fabric
 RUN make build
 
+FROM golang:1.22 as ca-certs-provider
+
 FROM alpine:3.19 as capabilizer
 RUN apk add --no-cache libcap
 
@@ -28,7 +30,7 @@ RUN setcap 'cap_kill=+ep' /usr/bin/gateway
 FROM scratch as common
 # CA certs are needed for telemetry report and NGINX Plus usage report features, so that
 # NGF can verify the server's certificate.
-COPY --from=builder --link /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+COPY --from=ca-certs-provider --link /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 USER 102:1001
 ARG BUILD_AGENT
 ENV BUILD_AGENT=${BUILD_AGENT}
