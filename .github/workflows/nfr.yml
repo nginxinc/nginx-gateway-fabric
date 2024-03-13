@@ -158,7 +158,7 @@ jobs:
         rm -rf scripts/vars.env
 
     - name: Open a PR with the results
-      uses: peter-evans/create-pull-request@a4f52f8033a6168103c2538976c07b467e8163bc # v6.0.1
+      uses: peter-evans/create-pull-request@70a41aba780001da0a30141984ae2a0c95d8704e # v6.0.2
       with:
         commit-message: NFR Test Results for NGF version ${{ inputs.version }}
         author: ${{ github.actor }} <${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com>
