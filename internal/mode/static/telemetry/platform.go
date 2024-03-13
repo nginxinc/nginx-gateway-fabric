@@ -69,7 +69,7 @@ func getPlatform(node v1.Node, namespaces v1.NamespaceList) string {
 
 func openShiftExtractor(state k8sState) string {
 	// openshift platform won't show up in node's ProviderID
-	if value, ok := state.node.Labels[openshiftIdentifier]; ok && value != "" {
+	if state.node.Labels[openshiftIdentifier] != "" {
 		return platformOpenShift
 	}
 

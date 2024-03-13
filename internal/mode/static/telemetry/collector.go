@@ -292,10 +292,11 @@ func collectClusterInformation(ctx context.Context, k8sClient client.Reader) (cl
 	}
 	node := nodes.Items[0]
 
-	clusterInfo.Version = "unknown"
 	kubeletVersion := node.Status.NodeInfo.KubeletVersion
 	version, err := k8sversion.ParseGeneric(kubeletVersion)
-	if err == nil {
+	if err != nil {
+		clusterInfo.Version = "unknown"
+	} else {
 		clusterInfo.Version = version.String()
 	}
 
