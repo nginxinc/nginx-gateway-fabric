@@ -84,6 +84,9 @@ jobs:
         with:
           version: latest
           args: build --snapshot --clean
+        env:
+          TELEMETRY_ENDPOINT: "" # disables sending telemetry
+          TELEMETRY_ENDPOINT_INSECURE: "false"
 
       - name: Build NGF Docker Image
         uses: docker/build-push-action@af5a7ed5ba88268d5278f7203fb52cd833f66d6e # v5.2.0
