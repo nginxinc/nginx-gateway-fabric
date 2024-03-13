@@ -13,6 +13,8 @@ GINKGO_LABEL=
 GINKGO_FLAGS=
 NGF_VERSION=
 CI=false
+TELEMETRY_ENDPOINT=
+TELEMETRY_ENDPOINT_INSECURE=
 
 ifneq ($(GINKGO_LABEL),)
     override GINKGO_FLAGS += -ginkgo.label-filter "$(GINKGO_LABEL)"
@@ -38,11 +40,11 @@ delete-kind-cluster: ## Delete kind cluster
 
 .PHONY: build-images
 build-images: ## Build NGF and NGINX images
-	cd .. && make PREFIX=$(PREFIX) TAG=$(TAG) build-images
+	cd .. && make PREFIX=$(PREFIX) TAG=$(TAG) TELEMETRY_ENDPOINT=$(TELEMETRY_ENDPOINT) TELEMETRY_ENDPOINT_INSECURE=$(TELEMETRY_ENDPOINT_INSECURE) build-images
 
 .PHONY: build-images-with-plus
 build-images-with-plus: ## Build NGF and NGINX Plus images
-	cd .. && make PREFIX=$(PREFIX) TAG=$(TAG) build-images-with-plus
+	cd .. && make PREFIX=$(PREFIX) TAG=$(TAG) TELEMETRY_ENDPOINT=$(TELEMETRY_ENDPOINT) TELEMETRY_ENDPOINT_INSECURE=$(TELEMETRY_ENDPOINT_INSECURE) build-images-with-plus
 
 .PHONY: load-images
 load-images: ## Load NGF and NGINX images on configured kind cluster
