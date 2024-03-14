@@ -53,7 +53,7 @@ spec:
                 -H "Authorization: Bearer $TOKEN" \
                 -H "Content-type: application/merge-patch+json" \
                 --data-raw "{\"spec\": {\"template\": {\"metadata\": {\"annotations\": {\"kubectl.kubernetes.io/restartedAt\": \"$RESTARTED_AT\"}}}}}" \
-                "https://kubernetes.default/apis/apps/v1/namespaces/default/deployments/coffee?fieldManager=kubectl-rollout" 2>&1
+                "https://kubernetes.default/apis/apps/v1/namespaces/longevity/deployments/coffee?fieldManager=kubectl-rollout" 2>&1
           restartPolicy: OnFailure
 ---
 apiVersion: batch/v1
@@ -82,5 +82,5 @@ spec:
                 -H "Authorization: Bearer $TOKEN" \
                 -H "Content-type: application/merge-patch+json" \
                 --data-raw "{\"spec\": {\"template\": {\"metadata\": {\"annotations\": {\"kubectl.kubernetes.io/restartedAt\": \"$RESTARTED_AT\"}}}}}" \
-                "https://kubernetes.default/apis/apps/v1/namespaces/default/deployments/tea?fieldManager=kubectl-rollout" 2>&1
+                "https://kubernetes.default/apis/apps/v1/namespaces/longevity/deployments/tea?fieldManager=kubectl-rollout" 2>&1
           restartPolicy: OnFailure
