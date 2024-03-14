@@ -9,8 +9,7 @@ NJS_DIR = internal/mode/static/nginx/modules/src
 NGINX_DOCKER_BUILD_PLUS_ARGS = --secret id=nginx-repo.crt,src=nginx-repo.crt --secret id=nginx-repo.key,src=nginx-repo.key
 BUILD_AGENT=local
 
-# TO-DO: Update the PROD_TELEMETRY_ENDPOINT with the correct prod endpoint.
-PROD_TELEMETRY_ENDPOINT = otel-collector-opentelemetry-collector.collector.svc.cluster.local:4317 # used in production NGF image.
+PROD_TELEMETRY_ENDPOINT = oss.edge.df.f5.com:443
 # the telemetry related variables below are also configured in goreleaser.yml
 TELEMETRY_REPORT_PERIOD = 24h
 TELEMETRY_ENDPOINT=# if empty, NGF will report telemetry in its logs at debug level.
