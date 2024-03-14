@@ -191,7 +191,7 @@ func TestSecretResolver(t *testing.T) {
 	for _, test := range tests {
 		err := resolver.resolve(test.nsname)
 		if test.expectedErrMsg == "" {
-			g.Expect(err).To(BeNil(), fmt.Sprintf("case %q", test.name))
+			g.Expect(err).ToNot(HaveOccurred(), fmt.Sprintf("case %q", test.name))
 		} else {
 			g.Expect(err).To(MatchError(test.expectedErrMsg), fmt.Sprintf("case %q", test.name))
 		}
