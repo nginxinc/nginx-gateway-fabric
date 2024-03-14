@@ -88,7 +88,7 @@ type ClientSettingsPolicySpec struct {
 type ClientSettingsPolicyStatus struct {
     // Conditions describe the current conditions of the ClientSettingsPolicy
     // +optional
-    Conditions []metav1.Condition
+    Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
 type ClientSettingsPolicyConfig struct {
@@ -128,15 +128,16 @@ type KeepAlive struct {
     Disable *DisableType `json:"disable"`
 }
 
+// KeepAliveTimeout defines the timeouts related to keep-alive client connections.
 type KeepAliveTimeout struct {
     // ServerTimeout sets the timeout during which a keep-alive client connection will stay open on the server side.
     // The zero value disables keep-alive client connections.
     // +optional
-    ServerTimeout *Duration
+    ServerTimeout *Duration `json:"serverTimeout,omitempty"`
 
     // HeaderTimeout sets the timeout in the "Keep-Alive: timeout=time" response header field.
     // +optional
-    HeaderTimeout *Duration
+    HeaderTimeout *Duration `json:"headerTimeout,omitempty"`
 }
 
 // DisableType is the type of browsers to disable keep-alive connections on.
