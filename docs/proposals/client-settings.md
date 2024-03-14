@@ -45,7 +45,7 @@ In the future, we can extend the Client Settings Policy to include more client-r
 
 - As a Cluster Operator, I want to set defaults for client settings that will work for most applications so that most Application Developers will not have to tweak these settings.
 - As an Application Developer, I want to be able to configure client settings for my application based on its behavior or requirements.
-- As an Application Developer, I was to override the defaults for client settings set by the Cluster Operator because the defaults do not satisfy my application's requirements or behavior.
+- As an Application Developer, I want to override the defaults for client settings set by the Cluster Operator because the defaults do not satisfy my application's requirements or behavior.
 
 ## API
 
