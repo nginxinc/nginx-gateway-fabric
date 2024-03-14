@@ -10,7 +10,7 @@ This Enhancement Proposal introduces the `ClientSettingsPolicy` API that allows 
 ## TODO
 
 The Policy and Metaresources GEP is currently under construction. There is an open [PR](https://github.com/kubernetes-sigs/gateway-api/pull/2813/) that contains significant changes to the Policy API.
-While this proposal is based on the latest (as of 3/13/2024) state of the PR, there are still open discussions that may introduce changes to the API. Once the PR is merged, this proposal will need to be revisited to ensure it aligns with the final Policy API.
+While this proposal is based on the latest (as of Mar 13 2024) state of the PR, there are still open discussions that may introduce changes to the API. Once the PR is merged, this proposal will need to be revisited to ensure it aligns with the final Policy API.
 
 ## Goals
 
