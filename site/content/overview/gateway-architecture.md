@@ -92,6 +92,10 @@ The following list describes the connections, preceeded by their types in parent
 1. (HTTP, HTTPS) A _client_ sends traffic to and receives traffic from any of the _NGINX workers_ on ports 80 and 443.
 1. (HTTP, HTTPS) An _NGINX worker_ sends traffic to and receives traffic from the _backends_.
 
+Below are additional connections not depcited on the diagram:
+
+- (HTTPS) NGF sends [product telemetry data]({{< relref "/overview/product-telemetry.md" >}}) to the F5 telemetry service.
+
 ### Differences with NGINX Plus
 
 The previous diagram depicts NGINX Gateway Fabric using NGINX Open Source. NGINX Gateway Fabric with NGINX Plus has the following difference:
