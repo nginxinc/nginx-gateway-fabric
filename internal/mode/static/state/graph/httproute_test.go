@@ -250,7 +250,7 @@ func TestBuildSectionNameRefs(t *testing.T) {
 			if test.expectedError != nil {
 				g.Expect(err).To(Equal(test.expectedError))
 			} else {
-				g.Expect(err).To(BeNil())
+				g.Expect(err).ToNot(HaveOccurred())
 			}
 		})
 	}

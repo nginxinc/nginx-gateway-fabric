@@ -58,7 +58,7 @@ var _ = Describe("FirstEventBatchPreparer", func() {
 			batch, err := preparer.Prepare(context.Background())
 
 			Expect(batch).Should(BeEmpty())
-			Expect(err).Should(BeNil())
+			Expect(err).ToNot(HaveOccurred())
 		})
 
 		It("should prepare one event for each resource type", func() {
@@ -97,7 +97,7 @@ var _ = Describe("FirstEventBatchPreparer", func() {
 			batch, err := preparer.Prepare(context.Background())
 
 			Expect(batch).Should(Equal(expectedBatch))
-			Expect(err).Should(BeNil())
+			Expect(err).ToNot(HaveOccurred())
 		})
 	})
 
