@@ -21,6 +21,7 @@ func TestGatewayClassPredicate(t *testing.T) {
 
 	g.Expect(p.Create(event.CreateEvent{Object: gc})).To(BeTrue())
 	g.Expect(p.Update(event.UpdateEvent{ObjectNew: gc})).To(BeTrue())
+	g.Expect(p.Delete(event.DeleteEvent{Object: gc})).To(BeTrue())
 
 	gc2 := &v1.GatewayClass{
 		Spec: v1.GatewayClassSpec{
@@ -31,4 +32,5 @@ func TestGatewayClassPredicate(t *testing.T) {
 	g.Expect(p.Update(event.UpdateEvent{ObjectOld: gc, ObjectNew: gc2})).To(BeTrue())
 	g.Expect(p.Update(event.UpdateEvent{ObjectOld: gc2, ObjectNew: gc})).To(BeTrue())
 	g.Expect(p.Update(event.UpdateEvent{ObjectOld: gc2, ObjectNew: gc2})).To(BeFalse())
+	g.Expect(p.Delete(event.DeleteEvent{Object: gc2})).To(BeFalse())
 }
