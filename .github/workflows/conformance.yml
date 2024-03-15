@@ -17,10 +17,6 @@ defaults:
   run:
     shell: bash
 
-concurrency:
-  group: ${{ github.ref_name }}-conformance
-  cancel-in-progress: true
-
 permissions:
   contents: read
 
