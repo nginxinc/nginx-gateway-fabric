@@ -156,3 +156,32 @@ func TestGetTotalNGFPodCount(t *testing.T) {
 	g.Expect(err).ToNot(HaveOccurred())
 	g.Expect(count).To(Equal(expCount))
 }
+
+func TestCollectNodeCount(t *testing.T) {
+	g := NewWithT(t)
+
+	node1 := &v1.Node{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "node1",
+		},
+		Spec: v1.NodeSpec{
+			ProviderID: "k3s://ip-172-16-0-210",
+		},
+	}
+
+	node2 := &v1.Node{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "node2",
+		},
+		Spec: v1.NodeSpec{
+			ProviderID: "k3s://ip-172-16-0-210",
+		},
+	}
+
+	k8sClient := fake.NewFakeClient(node1, node2)
+
+	expCount := 2
+	count, err := usage.CollectNodeCount(context.Background(), k8sClient)
+	g.Expect(err).ToNot(HaveOccurred())
+	g.Expect(count).To(Equal(expCount))
+}
