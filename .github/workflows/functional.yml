@@ -14,6 +14,10 @@ defaults:
   run:
     shell: bash
 
+concurrency:
+  group: ${{ github.ref_name }}-functional
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
@@ -44,6 +48,7 @@ jobs:
             name=ghcr.io/nginxinc/nginx-gateway-fabric
           tags: |
             type=semver,pattern={{version}}
+            type=schedule
             type=edge
             type=ref,event=pr
             type=ref,event=branch,suffix=-rc,enable=${{ startsWith(github.ref, 'refs/heads/release') }}
@@ -57,6 +62,7 @@ jobs:
           tags: |
             type=semver,pattern={{version}}
             type=edge
+            type=schedule
             type=ref,event=pr
             type=ref,event=branch,suffix=-rc,enable=${{ startsWith(github.ref, 'refs/heads/release') }}
 

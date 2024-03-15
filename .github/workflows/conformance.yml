@@ -17,6 +17,10 @@ defaults:
   run:
     shell: bash
 
+concurrency:
+  group: ${{ github.ref_name }}-conformance
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
@@ -48,6 +52,7 @@ jobs:
           tags: |
             type=semver,pattern={{version}}
             type=edge
+            type=schedule
             type=ref,event=pr
             type=ref,event=branch,suffix=-rc,enable=${{ startsWith(github.ref, 'refs/heads/release') }}
 
@@ -60,6 +65,7 @@ jobs:
           tags: |
             type=semver,pattern={{version}}
             type=edge
+            type=schedule
             type=ref,event=pr
             type=ref,event=branch,suffix=-rc,enable=${{ startsWith(github.ref, 'refs/heads/release') }}
 
