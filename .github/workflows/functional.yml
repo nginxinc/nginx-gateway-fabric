@@ -1,33 +1,26 @@
 name: Functional Testing
 
 on:
-  push:
-    branches:
-      - main
-      - release-*
-    tags:
-      - "v[0-9]+.[0-9]+.[0-9]+*"
-  pull_request:
+  workflow_call:
+    inputs:
+      image:
+        required: true
+        type: string
+      k8s-version:
+        required: true
+        type: string
 
 defaults:
   run:
     shell: bash
-
-concurrency:
-  group: ${{ github.ref_name }}-functional
-  cancel-in-progress: true
 
 permissions:
   contents: read
 
 jobs:
   functional-tests:
-    name: Gateway Functional Tests
+    name: Run Tests
     runs-on: ubuntu-22.04
-    strategy:
-        matrix:
-          k8s-version: ["1.23.17", "latest"]
-          nginx-image: [nginx, nginx-plus]
     steps:
       - name: Checkout Repository
         uses: actions/checkout@9bb56186c3b09b4f86b1c65136769dd318469633 # v4.1.2
@@ -42,7 +35,6 @@ jobs:
 
       - name: Docker Buildx
         uses: docker/setup-buildx-action@2b51285047da1547ffb1b2203d8be4c0af6b1f20 # v3.2.0
-
 
       - name: NGF Docker meta
         id: ngf-meta
@@ -61,7 +53,7 @@ jobs:
         uses: docker/metadata-action@8e5442c4ef9f78752691e2d8f8d19755c6f78e81 # v5.5.1
         with:
           images: |
-            name=ghcr.io/nginxinc/nginx-gateway-fabric/${{ matrix.nginx-image }}
+            name=ghcr.io/nginxinc/nginx-gateway-fabric/${{ inputs.image == 'plus' && 'nginx-plus' || inputs.image }}
           tags: |
             type=semver,pattern={{version}}
             type=edge
@@ -85,19 +77,17 @@ jobs:
           context: "."
           load: true
           cache-from: type=gha,scope=ngf
-          cache-to: type=gha,scope=ngf,mode=max
           pull: true
           target: goreleaser
 
       - name: Build NGINX Docker Image
         uses: docker/build-push-action@2cdde995de11925a030ce8070c3d77a52ffcf1c0 # v5.3.0
         with:
-          file: build/Dockerfile${{ matrix.nginx-image == 'nginx' && '.nginx' || '' }}${{ matrix.nginx-image == 'nginx-plus' && '.nginxplus' || ''}}
+          file: build/Dockerfile${{ inputs.image == 'nginx' && '.nginx' || '' }}${{ inputs.image == 'plus' && '.nginxplus' || ''}}
           tags: ${{ steps.nginx-meta.outputs.tags }}
           context: "."
           load: true
-          cache-from: type=gha,scope=${{ matrix.nginx-image }}
-          cache-to: type=gha,scope=${{ matrix.nginx-image }},mode=max
+          cache-from: type=gha,scope=${{ inputs.image }}
           pull: true
           build-args: |
             NJS_DIR=internal/mode/static/nginx/modules/src
@@ -107,8 +97,8 @@ jobs:
       - name: Deploy Kubernetes
         id: k8s
         run: |
-          k8s_version=${{ matrix.k8s-version }}
-          make create-kind-cluster KIND_KUBE_CONFIG=${{ github.workspace }}/kube-${{ github.run_id }} ${{ ! contains(matrix.k8s-version, 'latest') && 'KIND_IMAGE=kindest/node:v${k8s_version}' || '' }}
+          k8s_version=${{ inputs.k8s-version }}
+          make create-kind-cluster KIND_KUBE_CONFIG=${{ github.workspace }}/kube-${{ github.run_id }} ${{ ! contains(inputs.k8s-version, 'latest') && 'KIND_IMAGE=kindest/node:v${k8s_version}' || '' }}
           echo "KUBECONFIG=${{ github.workspace }}/kube-${{ github.run_id }}" >> "$GITHUB_ENV"
 
       - name: Setup functional tests
@@ -116,12 +106,12 @@ jobs:
         run: |
           ngf_prefix=ghcr.io/nginxinc/nginx-gateway-fabric
           ngf_tag=${{ steps.ngf-meta.outputs.version }}
-          make load-images${{ matrix.nginx-image == 'nginx-plus' && '-with-plus' || ''}} PREFIX=${ngf_prefix} TAG=${ngf_tag}
+          make load-images${{ inputs.image == 'plus' && '-with-plus' || ''}} PREFIX=${ngf_prefix} TAG=${ngf_tag}
         working-directory: ./tests
 
       - name: Run functional telemetry tests
         run: |
           ngf_prefix=ghcr.io/nginxinc/nginx-gateway-fabric
           ngf_tag=${{ steps.ngf-meta.outputs.version }}
-          make test${{ matrix.nginx-image == 'nginx-plus' && '-with-plus' || ''}} PREFIX=${ngf_prefix} TAG=${ngf_tag} GINKGO_LABEL=telemetry
+          make test${{ inputs.image == 'plus' && '-with-plus' || ''}} PREFIX=${ngf_prefix} TAG=${ngf_tag} GINKGO_LABEL=telemetry
         working-directory: ./tests
