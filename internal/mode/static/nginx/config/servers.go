@@ -99,6 +99,14 @@ type rewriteConfig struct {
 	Rewrite string
 }
 
+// mirrorConfig contains the configuration for a location to mirror requests,
+// as specified in a Path filter
+type mirrorConfig struct {
+	// Path mirrors the request to the specified location
+	Path string
+	Host string
+}
+
 func createLocations(pathRules []dataplane.PathRule, listenerPort int32) []http.Location {
 	maxLocs, pathsAndTypes := getMaxLocationCountAndPathMap(pathRules)
 	locs := make([]http.Location, 0, maxLocs)
@@ -262,6 +270,26 @@ func updateLocationsForFilters(
 		)
 		buildLocations[i].ProxyPass = proxyPass
 	}
+
+	mirrorLocations := make([]http.Location, 0, len(buildLocations))
+	mirror := createMirrorValForMirrorFilter(filters.RequestMirror, path)
+	if mirror != nil && len(mirror.Path) > 0 {
+		for i := range buildLocations {
+			buildLocations[i].MirrorHost = mirror.Host
+			// duplicate the location for the mirror location to be created and create it a separate location
+			loc := buildLocations[i]
+			loc.MirrorHost = ""
+			loc.Path = mirror.Path
+			loc.ProxyPass = createProxyPass(
+				matchRule.BackendGroup, // should correspond to the backend group of the mirror filter
+				matchRule.Filters.RequestURLRewrite,
+				generateProtocolString(loc.ProxySSLVerify),
+			)
+			mirrorLocations = append(mirrorLocations, loc)
+		}
+	}
+
+	buildLocations = append(buildLocations, mirrorLocations...)
 
 	return buildLocations
 }

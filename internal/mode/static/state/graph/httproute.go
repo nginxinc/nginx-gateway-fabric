@@ -2,8 +2,10 @@ package graph
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
@@ -16,7 +18,12 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/validation"
 )
 
-const wildcardHostname = "~^"
+const (
+	wildcardHostname = "~^"
+	rootPath         = "/"
+)
+
+var catchAllNonRootPathRegex = regexp.MustCompile(fmt.Sprintf(`^(%s?)(.*)`, rootPath))
 
 // Rule represents a rule of an HTTPRoute.
 type Rule struct {
@@ -92,6 +99,77 @@ func buildRoutesForGateways(
 	}
 
 	return routes
+}
+
+func buildMirrorRoutesForGateways(
+	validator validation.HTTPFieldsValidator,
+	httpRoutes map[types.NamespacedName]*v1.HTTPRoute,
+	routes map[types.NamespacedName]*Route,
+	gatewayNsNames []types.NamespacedName,
+) map[types.NamespacedName]*Route {
+	var mirroredRoutesAndRoutes map[types.NamespacedName]*Route
+
+	if len(routes) == 0 {
+		mirroredRoutesAndRoutes = make(map[types.NamespacedName]*Route)
+	} else {
+		mirroredRoutesAndRoutes = routes
+	}
+
+	for _, ghr := range httpRoutes {
+		routeRules := ghr.Spec.Rules
+		for i, rule := range routeRules {
+
+			filters := rule.Filters
+			for _, filter := range filters {
+				if filter.RequestMirror != nil {
+					matchesPath := rule.Matches[i].Path.Value
+					namespace := filter.RequestMirror.BackendRef.Namespace
+					objectMeta := ghr.ObjectMeta.DeepCopy()
+					objectMeta.SetName(fmt.Sprintf("%s-mirror", ghr.ObjectMeta.GetName()))
+
+					mirrorGhr := &v1.HTTPRoute{
+						ObjectMeta: *objectMeta,
+						Spec: v1.HTTPRouteSpec{
+							CommonRouteSpec: v1.CommonRouteSpec{
+								ParentRefs: ghr.Spec.ParentRefs,
+							},
+							Hostnames: ghr.Spec.Hostnames,
+							Rules: []v1.HTTPRouteRule{
+								{
+									Matches: []v1.HTTPRouteMatch{
+										{
+											Path: &v1.HTTPPathMatch{
+												Type:  helpers.GetPointer(v1.PathMatchExact),
+												Value: createMirrorPath(matchesPath, string(*namespace)),
+											},
+										},
+									},
+									Filters: removeMirrorFilters(filters),
+									BackendRefs: []v1.HTTPBackendRef{
+										{
+											BackendRef: v1.BackendRef{
+												BackendObjectReference: v1.BackendObjectReference{
+													Namespace: namespace,
+													Name:      filter.RequestMirror.BackendRef.Name,
+													Port:      filter.RequestMirror.BackendRef.Port,
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					}
+					r := buildRoute(validator, mirrorGhr, gatewayNsNames)
+					if r != nil {
+						mirroredRoutesAndRoutes[client.ObjectKeyFromObject(ghr)] = r
+					}
+				}
+			}
+		}
+	}
+
+	return mirroredRoutesAndRoutes
 }
 
 func buildSectionNameRefs(
@@ -704,6 +782,8 @@ func validateFilter(
 		return validateFilterRewrite(validator, filter, filterPath)
 	case v1.HTTPRouteFilterRequestHeaderModifier:
 		return validateFilterHeaderModifier(validator, filter, filterPath)
+	case v1.HTTPRouteFilterRequestMirror:
+		return field.ErrorList{} // TODO: implement validation for RequestMirror
 	default:
 		valErr := field.NotSupported(
 			filterPath.Child("type"),
@@ -914,4 +994,31 @@ func validateRequestHeaderStringCaseInsensitiveUnique(headers []string, path *fi
 	}
 
 	return allErrs
+}
+
+func createMirrorPath(path *string, namespace string) *string {
+	var mirrorPath string
+	mirrorPathPrefix := "mirror"
+	matches := catchAllNonRootPathRegex.FindStringSubmatch(*path)
+	if len(matches) > 2 {
+		trailingPath := matches[2]
+		if len(trailingPath) > 0 {
+			mirrorPath = fmt.Sprintf("%s%s-%s-%s", rootPath, namespace, mirrorPathPrefix, trailingPath)
+		} else {
+			mirrorPath = fmt.Sprintf("%s%s-%s", rootPath, namespace, mirrorPathPrefix)
+		}
+	}
+
+	return &mirrorPath
+}
+
+func removeMirrorFilters(filters []v1.HTTPRouteFilter) []v1.HTTPRouteFilter {
+	var newFilters []v1.HTTPRouteFilter
+	for _, filter := range filters {
+		if filter.Type != v1.HTTPRouteFilterRequestMirror {
+			newFilters = append(newFilters, filter)
+		}
+	}
+
+	return newFilters
 }

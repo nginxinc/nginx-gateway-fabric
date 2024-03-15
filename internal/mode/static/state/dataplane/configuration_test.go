@@ -204,8 +204,8 @@ func TestBuildConfiguration(t *testing.T) {
 	addFilters(hr0, []v1.HTTPRouteFilter{redir})
 
 	hr0RequestMirrorFilter := &HTTPRequestMirrorFilter{
-		Hostname: helpers.GetPointer[string]("hr-0"),
-		Port:     helpers.GetPointer[int32](80),
+		GroupName: helpers.GetPointer[string]("hr-0"),
+		Port:      helpers.GetPointer[int32](80),
 	}
 
 	hr1, expHR1Groups, routeHR1 := createTestResources(

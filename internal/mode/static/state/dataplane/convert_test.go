@@ -284,7 +284,7 @@ func TestConvertHTTPMirrorFilter(t *testing.T) {
 				},
 			},
 			expected: &HTTPRequestMirrorFilter{
-				Hostname: helpers.GetPointer("backend"),
+				GroupName: helpers.GetPointer("backend"),
 			},
 			name: "WithBackendRef",
 		},
@@ -295,7 +295,7 @@ func TestConvertHTTPMirrorFilter(t *testing.T) {
 				},
 			},
 			expected: &HTTPRequestMirrorFilter{
-				Hostname: helpers.GetPointer("backend"),
+				GroupName: helpers.GetPointer("backend"),
 			},
 			name: "WithoutPort",
 		},
@@ -307,8 +307,8 @@ func TestConvertHTTPMirrorFilter(t *testing.T) {
 				},
 			},
 			expected: &HTTPRequestMirrorFilter{
-				Hostname: helpers.GetPointer("backend"),
-				Port:     helpers.GetPointer[int32](8080),
+				GroupName: helpers.GetPointer("backend"),
+				Port:      helpers.GetPointer[int32](8080),
 			},
 			name: "WithNameAndPort",
 		},

@@ -419,6 +419,23 @@ func TestCreateServers(t *testing.T) {
 				},
 			},
 		},
+		// addition
+		{
+			Path:     "/mirroring",
+			PathType: dataplane.PathTypePrefix,
+			MatchRules: []dataplane.MatchRule{
+				{
+					Filters: dataplane.HTTPFilters{
+						RequestMirror: &dataplane.HTTPRequestMirrorFilter{
+							GroupName: helpers.GetPointer("new.example.com"),
+							Port:      helpers.GetPointer(int32(8080)),
+						},
+					},
+					BackendGroup: fooGroup,
+				},
+			},
+		},
+		// end addition
 		{
 			Path:     "/invalid-filter-with-headers",
 			PathType: dataplane.PathTypePrefix,
@@ -715,6 +732,14 @@ func TestCreateServers(t *testing.T) {
 					Code: http.StatusInternalServerError,
 				},
 			},
+			// addition
+			{
+				Path: "/mirroring/",
+			},
+			{
+				Path: "= /mirroring",
+			},
+			// end addition
 			{
 				Path: "@rule10-route0",
 				Return: &http.Return{
