@@ -342,7 +342,7 @@ var _ = Describe("handler", func() {
 				err := k8sclient.List(context.Background(), deps)
 
 				Expect(err).ToNot(HaveOccurred())
-				Expect(deps.Items).To(HaveLen(0))
+				Expect(deps.Items).To(BeEmpty())
 			})
 		})
 
@@ -370,7 +370,7 @@ var _ = Describe("handler", func() {
 				err := k8sclient.List(context.Background(), deps)
 
 				Expect(err).ToNot(HaveOccurred())
-				Expect(deps.Items).To(HaveLen(0))
+				Expect(deps.Items).To(BeEmpty())
 			})
 		})
 

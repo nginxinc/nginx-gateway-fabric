@@ -1,4 +1,6 @@
 linters-settings:
+  ginkgolinter:
+    forbid-focus-container: true
   goimports:
     local-prefixes: github.com/nginxinc/nginx-gateway-fabric
   misspell:
@@ -41,6 +43,7 @@ linters:
     - asciicheck
     - errcheck
     - errorlint
+    - ginkgolinter
     - gocyclo
     - gofmt
     - gofumpt

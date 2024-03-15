@@ -28,8 +28,8 @@ func TestEventLoop_SwapBatches(t *testing.T) {
 
 	eventLoop.swapBatches()
 
-	g.Expect(len(eventLoop.currentBatch)).To(Equal(len(nextBatch)))
+	g.Expect(eventLoop.currentBatch).To(HaveLen(len(nextBatch)))
 	g.Expect(eventLoop.currentBatch).To(Equal(nextBatch))
-	g.Expect(len(eventLoop.nextBatch)).To(Equal(0))
+	g.Expect(eventLoop.nextBatch).To(BeEmpty())
 	g.Expect(cap(eventLoop.nextBatch)).To(Equal(3))
 }
