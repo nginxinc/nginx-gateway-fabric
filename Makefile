@@ -8,14 +8,13 @@ NGINX_CONF_DIR = internal/mode/static/nginx/conf
 NJS_DIR = internal/mode/static/nginx/modules/src
 NGINX_DOCKER_BUILD_PLUS_ARGS = --secret id=nginx-repo.crt,src=nginx-repo.crt --secret id=nginx-repo.key,src=nginx-repo.key
 BUILD_AGENT=local
-TELEMETRY_REPORT_PERIOD = 24h # also configured in goreleaser.yml
 
-# FIXME(pleshakov) - TELEMETRY_ENDPOINT will have the default value of F5 telemetry service once we're ready
-# to report. https://github.com/nginxinc/nginx-gateway-fabric/issues/1563
-# Also, we will need to set it in goreleaser.yml
-TELEMETRY_ENDPOINT =# if empty, NGF will report telemetry in its logs at debug level.
+PROD_TELEMETRY_ENDPOINT = oss.edge.df.f5.com:443
+# the telemetry related variables below are also configured in goreleaser.yml
+TELEMETRY_REPORT_PERIOD = 24h
+TELEMETRY_ENDPOINT=# if empty, NGF will report telemetry in its logs at debug level.
+TELEMETRY_ENDPOINT_INSECURE = false
 
-TELEMETRY_ENDPOINT_INSECURE = false # also configured in goreleaser.yml
 GW_API_VERSION = 1.0.0
 INSTALL_WEBHOOK = false
 NODE_VERSION = $(shell cat .nvmrc)
@@ -45,19 +44,35 @@ help: Makefile ## Display this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "; printf "Usage:\n\n    make \033[36m<target>\033[0m [VARIABLE=value...]\n\nTargets:\n\n"}; {printf "    \033[36m%-30s\033[0m %s\n", $$1, $$2}'
 	@grep -E '^(override )?[a-zA-Z_-]+ \??\+?= .*?## .*$$' $< | sort | awk 'BEGIN {FS = " \\??\\+?= .*?## "; printf "\nVariables:\n\n"}; {gsub(/override /, "", $$1); printf "    \033[36m%-30s\033[0m %s\n", $$1, $$2}'
 
+.PHONY: build-prod-images
+build-prod-images: build-prod-ngf-image build-prod-nginx-image ## Build the NGF and nginx docker images for production
+
+.PHONY: build-prod-images-with-plus
+build-prod-images-with-plus: build-prod-ngf-image build-prod-nginx-plus-image ## Build the NGF and NGINX Plus docker images for production
+
 .PHONY: build-images
 build-images: build-ngf-image build-nginx-image ## Build the NGF and nginx docker images
 
 .PHONY: build-images-with-plus
 build-images-with-plus: build-ngf-image build-nginx-plus-image ## Build the NGF and NGINX Plus docker images
 
+.PHONY: build-prod-ngf-image
+build-prod-ngf-image: TELEMETRY_ENDPOINT=$(PROD_TELEMETRY_ENDPOINT)
+build-prod-ngf-image: build-ngf-image ## Build the NGF docker image for production
+
 .PHONY: build-ngf-image
 build-ngf-image: check-for-docker build ## Build the NGF docker image
 	docker build --platform linux/$(GOARCH) --build-arg BUILD_AGENT=$(BUILD_AGENT) --target $(strip $(TARGET)) -f build/Dockerfile -t $(strip $(PREFIX)):$(strip $(TAG)) .
 
+.PHONY: build-prod-nginx-image
+build-prod-nginx-image: build-nginx-image ## Build the custom nginx image for production
+
 .PHONY: build-nginx-image
 build-nginx-image: check-for-docker ## Build the custom nginx image
 	docker build --platform linux/$(GOARCH) $(strip $(NGINX_DOCKER_BUILD_OPTIONS)) -f build/Dockerfile.nginx -t $(strip $(NGINX_PREFIX)):$(strip $(TAG)) .
+
+.PHONY: build-prod-nginx-plus-image
+build-prod-nginx-plus-image: build-nginx-plus-image ## Build the custom nginx plus image for production
 
 .PHONY: build-nginx-plus-image
 build-nginx-plus-image: check-for-docker ## Build the custom nginx plus image
