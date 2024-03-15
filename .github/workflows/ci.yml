@@ -1,4 +1,4 @@
-name: Continuous Integration
+name: CI
 
 on:
   push:
@@ -8,6 +8,8 @@ on:
     tags:
       - "v[0-9]+.[0-9]+.[0-9]+*"
   pull_request:
+  schedule:
+    - cron: "0 4 * * *" # run every day at 4am UTC
 
 defaults:
   run:
@@ -26,6 +28,7 @@ jobs:
     runs-on: ubuntu-22.04
     outputs:
       go_path: ${{ steps.vars.outputs.go_path }}
+      min_k8s_version: ${{ steps.vars.outputs.min_k8s_version }}
     steps:
       - name: Checkout Repository
         uses: actions/checkout@9bb56186c3b09b4f86b1c65136769dd318469633 # v4.1.2
@@ -37,7 +40,9 @@ jobs:
 
       - name: Output Variables
         id: vars
-        run: echo "go_path=$(go env GOPATH)" >> $GITHUB_OUTPUT
+        run: |
+          echo "go_path=$(go env GOPATH)" >> $GITHUB_OUTPUT
+          echo "min_k8s_version=1.23.17" >> $GITHUB_OUTPUT
 
       - name: Check if go.mod and go.sum are up to date
         run: go mod tidy && git diff --exit-code -- go.mod go.sum
@@ -160,10 +165,61 @@ jobs:
           path: ${{ github.workspace }}/dist
           key: nginx-gateway-fabric-${{ github.run_id }}-${{ github.run_number }}
 
+  build:
+    name: Build Image
+    needs: [vars, binary]
+    strategy:
+      fail-fast: false
+      matrix:
+        image: [ngf, nginx, plus]
+        platforms: ["linux/arm64, linux/amd64"]
+    uses: ./.github/workflows/build.yml
+    with:
+      image: ${{ matrix.image }}
+      platforms: ${{ matrix.platforms }}
+    permissions:
+      contents: read # for docker/build-push-action to read repo content
+      security-events: write # for github/codeql-action/upload-sarif to upload SARIF results
+      packages: write # for docker/build-push-action to push to GHCR
+      id-token: write # for docker/login to login to NGINX registry
+    secrets: inherit
+
+  functional-tests:
+    name: Functional tests
+    needs: [vars, build]
+    strategy:
+      fail-fast: false
+      matrix:
+        image: [nginx, plus]
+        k8s-version: ["${{ needs.vars.outputs.min_k8s_version }}", "latest"]
+    uses: ./.github/workflows/functional.yml
+    with:
+      image: ${{ matrix.image }}
+      k8s-version: ${{ matrix.k8s-version }}
+    permissions:
+      contents: read
+
+  conformance-tests:
+    name: Conformance tests
+    needs: [vars, build]
+    strategy:
+      fail-fast: false
+      matrix:
+        image: [nginx, plus]
+        k8s-version: ["${{ needs.vars.outputs.min_k8s_version }}", "latest"]
+        enable-experimental: [true, false]
+    uses: ./.github/workflows/conformance.yml
+    with:
+      image: ${{ matrix.image }}
+      k8s-version: ${{ matrix.k8s-version }}
+      enable-experimental: ${{ matrix.enable-experimental }}
+    permissions:
+      contents: write
+
   helm-tests:
     name: Helm Tests
     runs-on: ubuntu-22.04
-    needs: [vars, binary]
+    needs: [vars, build]
     steps:
       - name: Checkout Repository
         uses: actions/checkout@9bb56186c3b09b4f86b1c65136769dd318469633 # v4.1.2
@@ -210,7 +266,6 @@ jobs:
           target: goreleaser
           load: true
           cache-from: type=gha,scope=ngf
-          cache-to: type=gha,scope=ngf,mode=max
           pull: true
 
       - name: Build NGINX Docker Image
@@ -221,7 +276,6 @@ jobs:
           context: "."
           load: true
           cache-from: type=gha,scope=nginx
-          cache-to: type=gha,scope=nginx,mode=max
           pull: true
           build-args: |
             NJS_DIR=internal/mode/static/nginx/modules/src
@@ -253,25 +307,6 @@ jobs:
           --set service.type=NodePort
           -n nginx-gateway
         working-directory: ${{ github.workspace }}/deploy/helm-chart
-
-  build:
-    name: Build Image
-    needs: [vars, binary]
-    strategy:
-      fail-fast: false
-      matrix:
-        image: [ngf, nginx, plus]
-        platforms: ["linux/arm64, linux/amd64"]
-    uses: ./.github/workflows/build.yml
-    with:
-      image: ${{ matrix.image }}
-      platforms: ${{ matrix.platforms }}
-    permissions:
-      contents: read # for docker/build-push-action to read repo content
-      security-events: write # for github/codeql-action/upload-sarif to upload SARIF results
-      packages: write # for docker/build-push-action to push to GHCR
-      id-token: write # for docker/login to login to NGINX registry
-    secrets: inherit
 
   publish-helm:
     name: Package and Publish Helm Chart

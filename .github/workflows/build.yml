@@ -94,6 +94,7 @@ jobs:
           tags: |
             type=semver,pattern={{version}}
             type=edge
+            type=schedule
             type=ref,event=pr
             type=ref,event=branch,suffix=-rc,enable=${{ startsWith(github.ref, 'refs/heads/release') }}
             type=raw,value=${{ inputs.tag }},enable=${{ inputs.tag != '' }}
