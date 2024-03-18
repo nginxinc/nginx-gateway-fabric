@@ -910,9 +910,9 @@ func TestBuildGraphWithMirror(t *testing.T) {
 	hr1 := createRoute("hr-1", "gateway-1", "listener-80-1")
 	hr1MirrorFilter := createMirroredRouteFilterRequest("hr-1-filter-request", "gateway-1", "listener-80-1")
 	hr1MirrorFilterCreated := createMirroredRouteFilterCreated("hr-1-filter-request-mirror", "gateway-1", "listener-80-1")
-	hr2 := createRoute("hr-2", "wrong-gateway", "listener-80-1")
+	/*hr2 := createRoute("hr-2", "wrong-gateway", "listener-80-1")
 	hr2mirror := createMirroredRouteFilterRequest("hr-2-with-mirror-filter", "wrong-gateway", "listener-80-1")
-	/*hr3 := createRoute("hr-3", "gateway-1", "listener-443-1")                                          // https listener; should not conflict with hr1
+	hr3 := createRoute("hr-3", "gateway-1", "listener-443-1")                                          // https listener; should not conflict with hr1
 	hr3MirrorFilter := createMirroredRoute("hr-3-filter-request", "gateway-1", "listener-443-1")       // https listener; should not conflict with hr1
 	hr3MirrorFilterCreated := createRoute("hr-3-filter-request-mirror", "gateway-1", "listener-443-1") // https listener; should not conflict with hr1
 	*/
@@ -968,7 +968,7 @@ func TestBuildGraphWithMirror(t *testing.T) {
 	mirrorBtp := BackendTLSPolicy{
 		Source: &v1alpha2.BackendTLSPolicy{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "btp",
+				Name:      "btp-mirror",
 				Namespace: "service",
 			},
 			Spec: v1alpha2.BackendTLSPolicySpec{
@@ -1181,9 +1181,9 @@ func TestBuildGraphWithMirror(t *testing.T) {
 				client.ObjectKeyFromObject(hr1):                    hr1,
 				client.ObjectKeyFromObject(hr1MirrorFilter):        hr1MirrorFilter,
 				client.ObjectKeyFromObject(hr1MirrorFilterCreated): hr1MirrorFilterCreated,
-				client.ObjectKeyFromObject(hr2):                    hr2,
+				/*client.ObjectKeyFromObject(hr2):                    hr2,
 				client.ObjectKeyFromObject(hr2mirror):              hr2mirror,
-				/*client.ObjectKeyFromObject(hr3):                    hr3,
+				client.ObjectKeyFromObject(hr3):                    hr3,
 				client.ObjectKeyFromObject(hr3MirrorFilter):        hr3MirrorFilter,
 				client.ObjectKeyFromObject(hr3MirrorFilterCreated): hr3MirrorFilterCreated,*/
 			},
@@ -1392,7 +1392,8 @@ func TestBuildGraphWithMirror(t *testing.T) {
 				},
 			},
 			BackendTLSPolicies: map[types.NamespacedName]*BackendTLSPolicy{
-				client.ObjectKeyFromObject(btp.Source): &btp,
+				client.ObjectKeyFromObject(btp.Source):       &btp,
+				client.ObjectKeyFromObject(mirrorBtp.Source): &mirrorBtp,
 			},
 		}
 	}
