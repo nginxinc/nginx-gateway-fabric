@@ -799,7 +799,8 @@ func TestBuildGraphWithMirror(t *testing.T) {
 			},
 		}
 	}
-	createMirroredRoute := func(name string, gatewayName string, listenerName string) *gatewayv1.HTTPRoute {
+
+	createMirroredRouteFilterRequest := func(name string, gatewayName string, listenerName string) *gatewayv1.HTTPRoute {
 		return &gatewayv1.HTTPRoute{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: "test",
@@ -841,6 +842,66 @@ func TestBuildGraphWithMirror(t *testing.T) {
 								},
 							},
 						},
+						BackendRefs: []gatewayv1.HTTPBackendRef{
+							{
+								BackendRef: gatewayv1.BackendRef{
+									BackendObjectReference: gatewayv1.BackendObjectReference{
+										Kind:      (*gatewayv1.Kind)(helpers.GetPointer("Service")),
+										Name:      "foo",
+										Namespace: (*gatewayv1.Namespace)(helpers.GetPointer("service")),
+										Port:      (*gatewayv1.PortNumber)(helpers.GetPointer[int32](80)),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+	}
+
+	createMirroredRouteFilterCreated := func(name string, gatewayName string, listenerName string) *gatewayv1.HTTPRoute {
+		return &gatewayv1.HTTPRoute{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: "test",
+				Name:      name,
+			},
+			Spec: gatewayv1.HTTPRouteSpec{
+				CommonRouteSpec: gatewayv1.CommonRouteSpec{
+					ParentRefs: []gatewayv1.ParentReference{
+						{
+							Namespace:   (*gatewayv1.Namespace)(helpers.GetPointer("test")),
+							Name:        gatewayv1.ObjectName(gatewayName),
+							SectionName: (*gatewayv1.SectionName)(helpers.GetPointer(listenerName)),
+						},
+					},
+				},
+				Hostnames: []gatewayv1.Hostname{
+					"foo.example.com",
+				},
+				Rules: []gatewayv1.HTTPRouteRule{
+					{
+						Matches: []gatewayv1.HTTPRouteMatch{
+							{
+								Path: &gatewayv1.HTTPPathMatch{
+									Type:  helpers.GetPointer(gatewayv1.PathMatchExact),
+									Value: helpers.GetPointer("/namespace-mirror"),
+								},
+							},
+						},
+						Filters: []gatewayv1.HTTPRouteFilter{},
+						BackendRefs: []gatewayv1.HTTPBackendRef{
+							{
+								BackendRef: gatewayv1.BackendRef{
+									BackendObjectReference: gatewayv1.BackendObjectReference{
+										Kind:      (*gatewayv1.Kind)(helpers.GetPointer("Service")),
+										Name:      "foo-mirror",
+										Namespace: (*gatewayv1.Namespace)(helpers.GetPointer("service")),
+										Port:      (*gatewayv1.PortNumber)(helpers.GetPointer[int32](80)),
+									},
+								},
+							},
+						},
 					},
 				},
 			},
@@ -848,10 +909,10 @@ func TestBuildGraphWithMirror(t *testing.T) {
 	}
 
 	hr1 := createRoute("hr-1", "gateway-1", "listener-80-1")
-	hr1MirrorFilter := createMirroredRoute("hr-1-filter-request", "gateway-1", "listener-80-1")
-	hr1MirrorFilterCreated := createRoute("hr-1-filter-request-mirror", "gateway-1", "listener-80-1")
+	hr1MirrorFilter := createMirroredRouteFilterRequest("hr-1-filter-request", "gateway-1", "listener-80-1")
+	hr1MirrorFilterCreated := createMirroredRouteFilterCreated("hr-1-filter-request-mirror", "gateway-1", "listener-80-1")
 	hr2 := createRoute("hr-2", "wrong-gateway", "listener-80-1")
-	hr2mirror := createMirroredRoute("hr-2-with-mirror-filter", "wrong-gateway", "listener-80-1")
+	hr2mirror := createMirroredRouteFilterRequest("hr-2-with-mirror-filter", "wrong-gateway", "listener-80-1")
 	/*hr3 := createRoute("hr-3", "gateway-1", "listener-443-1")                                          // https listener; should not conflict with hr1
 	hr3MirrorFilter := createMirroredRoute("hr-3-filter-request", "gateway-1", "listener-443-1")       // https listener; should not conflict with hr1
 	hr3MirrorFilterCreated := createRoute("hr-3-filter-request-mirror", "gateway-1", "listener-443-1") // https listener; should not conflict with hr1
@@ -868,7 +929,7 @@ func TestBuildGraphWithMirror(t *testing.T) {
 
 	btpAcceptedConds := []conditions.Condition{
 		staticConds.NewBackendTLSPolicyAccepted(),
-		//staticConds.NewBackendTLSPolicyAccepted(),
+		staticConds.NewBackendTLSPolicyAccepted(),
 	}
 
 	btp := BackendTLSPolicy{
@@ -1354,6 +1415,21 @@ func TestBuildGraphWithMirror(t *testing.T) {
 			}
 
 			g.Expect(helpers.Diff(test.expected.Routes[h1ns], result.Routes[h1ns])).To(BeEmpty())
+
+			h1mirrorNs := types.NamespacedName{
+				Namespace: "test",
+				Name:      "hr-1-filter-request",
+			}
+
+			g.Expect(helpers.Diff(test.expected.Routes[h1mirrorNs], result.Routes[h1mirrorNs])).To(BeEmpty())
+
+			h1mirrorCreatedNs := types.NamespacedName{
+				Namespace: "test",
+				Name:      "hr-1-filter-request-mirror",
+			}
+
+			g.Expect(helpers.Diff(test.expected.Routes[h1mirrorCreatedNs], result.Routes[h1mirrorCreatedNs])).To(BeEmpty())
+
 		})
 	}
 }
