@@ -31,6 +31,7 @@ spec:
         - --metrics-disable
         - --health-port=8081
         - --leader-election-lock-name=nginx-gateway-leader-election
+        - --product-telemetry-disable
         env:
         - name: POD_IP
           valueFrom:
