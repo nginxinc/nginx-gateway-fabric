@@ -115,10 +115,13 @@ func buildMirrorRoutesForGateways(
 		mirroredRoutesAndRoutes = routes
 	}
 
+	if len(gatewayNsNames) == 0 {
+		return nil
+	}
+
 	for _, ghr := range httpRoutes {
 		routeRules := ghr.Spec.Rules
 		for i, rule := range routeRules {
-
 			filters := rule.Filters
 			for _, filter := range filters {
 				if filter.RequestMirror == nil {
@@ -149,7 +152,7 @@ func buildMirrorRoutesForGateways(
 								},
 								Filters: removeMirrorFilters(filters),
 								BackendRefs: []v1.HTTPBackendRef{
-									{BackendRef: createMirrorBackendRef(namespace, filter)},
+									{BackendRef: createMirrorBackendRef(filter)},
 								},
 							},
 						},
@@ -172,13 +175,10 @@ func createMirrorObjectMeta(ghr *v1.HTTPRoute) *metav1.ObjectMeta {
 	return objectMeta
 }
 
-func createMirrorBackendRef(namespace *v1.Namespace, filter v1.HTTPRouteFilter) v1.BackendRef {
+func createMirrorBackendRef(filter v1.HTTPRouteFilter) v1.BackendRef {
+	backendRef := filter.RequestMirror.BackendRef
 	mirrorBEF := v1.BackendRef{
-		BackendObjectReference: v1.BackendObjectReference{
-			Namespace: namespace,
-			Name:      filter.RequestMirror.BackendRef.Name,
-			Port:      filter.RequestMirror.BackendRef.Port,
-		},
+		BackendObjectReference: backendRef,
 	}
 	return mirrorBEF
 }

@@ -781,7 +781,7 @@ func TestBuildGraphWithMirror(t *testing.T) {
 								},
 							},
 						},
-						Filters: []gatewayv1.HTTPRouteFilter{},
+						//Filters: []gatewayv1.HTTPRouteFilter{},
 						BackendRefs: []gatewayv1.HTTPBackendRef{
 							{
 								BackendRef: gatewayv1.BackendRef{
@@ -836,7 +836,7 @@ func TestBuildGraphWithMirror(t *testing.T) {
 									BackendRef: gatewayv1.BackendObjectReference{
 										Name:      (gatewayv1.ObjectName)("foo-mirror"),
 										Kind:      (*gatewayv1.Kind)(helpers.GetPointer("Service")),
-										Namespace: (*gatewayv1.Namespace)(helpers.GetPointer("namespace")),
+										Namespace: (*gatewayv1.Namespace)(helpers.GetPointer("service")),
 										Port:      (*gatewayv1.PortNumber)(helpers.GetPointer[int32](80)),
 									},
 								},
@@ -885,18 +885,17 @@ func TestBuildGraphWithMirror(t *testing.T) {
 							{
 								Path: &gatewayv1.HTTPPathMatch{
 									Type:  helpers.GetPointer(gatewayv1.PathMatchExact),
-									Value: helpers.GetPointer("/namespace-mirror"),
+									Value: helpers.GetPointer("/service-mirror"),
 								},
 							},
 						},
-						Filters: []gatewayv1.HTTPRouteFilter{},
 						BackendRefs: []gatewayv1.HTTPBackendRef{
 							{
 								BackendRef: gatewayv1.BackendRef{
 									BackendObjectReference: gatewayv1.BackendObjectReference{
 										Kind:      (*gatewayv1.Kind)(helpers.GetPointer("Service")),
 										Name:      "foo-mirror",
-										Namespace: (*gatewayv1.Namespace)(helpers.GetPointer("service")),
+										Namespace: (*gatewayv1.Namespace)(helpers.GetPointer[string]("service")),
 										Port:      (*gatewayv1.PortNumber)(helpers.GetPointer[int32](80)),
 									},
 								},
@@ -966,13 +965,47 @@ func TestBuildGraphWithMirror(t *testing.T) {
 		CaCertRef:    types.NamespacedName{Namespace: "service", Name: "configmap"},
 	}
 
+	mirrorBtp := BackendTLSPolicy{
+		Source: &v1alpha2.BackendTLSPolicy{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "btp",
+				Namespace: "service",
+			},
+			Spec: v1alpha2.BackendTLSPolicySpec{
+				TargetRef: v1alpha2.PolicyTargetReferenceWithSectionName{
+					PolicyTargetReference: v1alpha2.PolicyTargetReference{
+						Group:     "",
+						Kind:      "Service",
+						Name:      "foo-mirror",
+						Namespace: (*gatewayv1.Namespace)(helpers.GetPointer("service")),
+					},
+				},
+				TLS: v1alpha2.BackendTLSPolicyConfig{
+					Hostname: "foo.example.com",
+					CACertRefs: []v1alpha2.LocalObjectReference{
+						{
+							Kind:  "ConfigMap",
+							Name:  "configmap",
+							Group: "",
+						},
+					},
+				},
+			},
+		},
+		Valid:        true,
+		IsReferenced: true,
+		Gateway:      types.NamespacedName{Namespace: "test", Name: "gateway-1"},
+		Conditions:   btpAcceptedConds,
+		CaCertRef:    types.NamespacedName{Namespace: "service", Name: "configmap"},
+	}
+
 	hr1mirrorRefs := []BackendRef{
 		{
 			SvcNsName:        types.NamespacedName{Namespace: "service", Name: "foo-mirror"},
 			ServicePort:      v1.ServicePort{Port: 80},
 			Valid:            true,
 			Weight:           1,
-			BackendTLSPolicy: &btp,
+			BackendTLSPolicy: &mirrorBtp,
 		},
 	}
 
@@ -1169,7 +1202,8 @@ func TestBuildGraphWithMirror(t *testing.T) {
 				client.ObjectKeyFromObject(secret): secret,
 			},
 			BackendTLSPolicies: map[types.NamespacedName]*v1alpha2.BackendTLSPolicy{
-				client.ObjectKeyFromObject(btp.Source): btp.Source,
+				client.ObjectKeyFromObject(btp.Source):       btp.Source,
+				client.ObjectKeyFromObject(mirrorBtp.Source): mirrorBtp.Source,
 			},
 			ConfigMaps: map[types.NamespacedName]*v1.ConfigMap{
 				client.ObjectKeyFromObject(cm): cm,
