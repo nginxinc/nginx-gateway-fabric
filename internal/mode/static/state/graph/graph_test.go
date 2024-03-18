@@ -1016,7 +1016,7 @@ func TestBuildGraphWithMirror(t *testing.T) {
 	hr3mirrorRefs := []BackendRef{
 		{
 			SvcNsName:        types.NamespacedName{Namespace: "service", Name: "foo-mirror"},
-			ServicePort:      v1.ServicePort{Port: 443},
+			ServicePort:      v1.ServicePort{Port: 80},
 			Valid:            true,
 			Weight:           1,
 			BackendTLSPolicy: &mirrorBtp,
@@ -1069,7 +1069,6 @@ func TestBuildGraphWithMirror(t *testing.T) {
 							},
 						},
 					},
-
 					{
 						Name:     "listener-443-1",
 						Hostname: nil,
@@ -1216,7 +1215,7 @@ func TestBuildGraphWithMirror(t *testing.T) {
 	hr3Refs := []BackendRef{
 		{
 			SvcNsName:        types.NamespacedName{Namespace: "service", Name: "foo"},
-			ServicePort:      v1.ServicePort{Port: 443},
+			ServicePort:      v1.ServicePort{Port: 80},
 			Valid:            true,
 			Weight:           1,
 			BackendTLSPolicy: &btp,
@@ -1357,9 +1356,8 @@ func TestBuildGraphWithMirror(t *testing.T) {
 							{Namespace: "test", Name: "hr-3-filter-request"}:        routeHR3MirrorFilterRequest,
 							{Namespace: "test", Name: "hr-3-filter-request-mirror"}: routeHR3MirrorFilterRequestCreated,
 						},
-						ResolvedSecret:            helpers.GetPointer(client.ObjectKeyFromObject(secret)),
-						SupportedKinds:            []gatewayv1.RouteGroupKind{{Kind: "HTTPRoute"}},
-						AllowedRouteLabelSelector: labels.SelectorFromSet(map[string]string{"app": "allowed"}),
+						ResolvedSecret: helpers.GetPointer(client.ObjectKeyFromObject(secret)),
+						SupportedKinds: []gatewayv1.RouteGroupKind{{Kind: "HTTPRoute"}},
 					},
 				},
 				Valid: true,
@@ -1447,14 +1445,14 @@ func TestBuildGraphWithMirror(t *testing.T) {
 				protectedPorts,
 			)
 
-			h3ns := types.NamespacedName{
+			/*h3ns := types.NamespacedName{
 				Namespace: "test",
 				Name:      "hr-3",
 			}
 
 			g.Expect(helpers.Diff(test.expected.Routes[h3ns], result.Routes[h3ns])).To(BeEmpty())
-
-			//g.Expect(helpers.Diff(test.expected, result)).To(BeEmpty())
+			*/
+			g.Expect(helpers.Diff(test.expected, result)).To(BeEmpty())
 
 			/* port-80 all pass
 			h1ns := types.NamespacedName{
