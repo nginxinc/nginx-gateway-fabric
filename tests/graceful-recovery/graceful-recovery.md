@@ -32,8 +32,11 @@ Ensure that NGF can recover gracefully from container failures without any user 
 1. Setup GKE Cluster.
 2. Clone the repo and change into the nginx-gateway-fabric directory.
 3. Check out the latest tag (unless you are installing the edge version from the main branch).
-4. Go into `deploy/manifests/nginx-gateway.yaml` and change `runAsNonRoot` from `true` to `false`.
-This allows us to insert our ephemeral container as root which enables us to restart the nginx-gateway container.
+4. Go into `deploy/manifests/nginx-gateway.yaml` and change the following:
+
+   - `runAsNonRoot` from `true` to `false`: this allows us to insert our ephemeral container as root which enables us to restart the nginx-gateway container.
+   - Add the `--product-telemetry-disable` argument to the nginx-gateway container args.
+
 5. Follow the [installation instructions](https://github.com/nginxinc/nginx-gateway-fabric/blob/main/site/content/installation/installing-ngf/manifests.md)
 to deploy NGINX Gateway Fabric using manifests and expose it through a LoadBalancer Service.
 6. In a separate terminal track NGF logs.
