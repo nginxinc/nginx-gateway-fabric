@@ -4,7 +4,7 @@ metadata:
   name: cafe-tls-redirect
 spec:
   parentRefs:
-  - name: gateway.networking.k8s.io/v1
+  - name: gateway
     namespace: default
     sectionName: http
   hostnames:
