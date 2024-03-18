@@ -7,6 +7,7 @@ import (
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 	apiv1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -108,7 +109,6 @@ func buildMirrorRoutesForGateways(
 	gatewayNsNames []types.NamespacedName,
 ) map[types.NamespacedName]*Route {
 	var mirroredRoutesAndRoutes map[types.NamespacedName]*Route
-
 	if len(routes) == 0 {
 		mirroredRoutesAndRoutes = make(map[types.NamespacedName]*Route)
 	} else {
@@ -121,55 +121,66 @@ func buildMirrorRoutesForGateways(
 
 			filters := rule.Filters
 			for _, filter := range filters {
-				if filter.RequestMirror != nil {
-					matchesPath := rule.Matches[i].Path.Value
-					namespace := filter.RequestMirror.BackendRef.Namespace
-					objectMeta := ghr.ObjectMeta.DeepCopy()
-					objectMeta.SetName(fmt.Sprintf("%s-mirror", ghr.ObjectMeta.GetName()))
+				if filter.RequestMirror == nil {
+					continue
+				}
 
-					mirrorGhr := &v1.HTTPRoute{
-						ObjectMeta: *objectMeta,
-						Spec: v1.HTTPRouteSpec{
-							CommonRouteSpec: v1.CommonRouteSpec{
-								ParentRefs: ghr.Spec.ParentRefs,
-							},
-							Hostnames: ghr.Spec.Hostnames,
-							Rules: []v1.HTTPRouteRule{
-								{
-									Matches: []v1.HTTPRouteMatch{
-										{
-											Path: &v1.HTTPPathMatch{
-												Type:  helpers.GetPointer(v1.PathMatchExact),
-												Value: createMirrorPath(matchesPath, string(*namespace)),
-											},
-										},
-									},
-									Filters: removeMirrorFilters(filters),
-									BackendRefs: []v1.HTTPBackendRef{
-										{
-											BackendRef: v1.BackendRef{
-												BackendObjectReference: v1.BackendObjectReference{
-													Namespace: namespace,
-													Name:      filter.RequestMirror.BackendRef.Name,
-													Port:      filter.RequestMirror.BackendRef.Port,
-												},
-											},
+				matchesPath := rule.Matches[i].Path.Value
+				namespace := filter.RequestMirror.BackendRef.Namespace
+				objectMeta := createMirrorObjectMeta(ghr)
+
+				mirrorGhr := &v1.HTTPRoute{
+					ObjectMeta: *objectMeta,
+
+					Spec: v1.HTTPRouteSpec{
+						CommonRouteSpec: v1.CommonRouteSpec{
+							ParentRefs: ghr.Spec.ParentRefs,
+						},
+						Hostnames: ghr.Spec.Hostnames,
+						Rules: []v1.HTTPRouteRule{
+							{
+								Matches: []v1.HTTPRouteMatch{
+									{
+										Path: &v1.HTTPPathMatch{
+											Type:  helpers.GetPointer(v1.PathMatchExact),
+											Value: createMirrorPath(matchesPath, string(*namespace)),
 										},
 									},
 								},
+								Filters: removeMirrorFilters(filters),
+								BackendRefs: []v1.HTTPBackendRef{
+									{BackendRef: createMirrorBackendRef(namespace, filter)},
+								},
 							},
 						},
-					}
-					r := buildRoute(validator, mirrorGhr, gatewayNsNames)
-					if r != nil {
-						mirroredRoutesAndRoutes[client.ObjectKeyFromObject(ghr)] = r
-					}
+					},
+				}
+				r := buildRoute(validator, mirrorGhr, gatewayNsNames)
+				if r != nil {
+					mirroredRoutesAndRoutes[client.ObjectKeyFromObject(mirrorGhr)] = r
 				}
 			}
 		}
 	}
 
 	return mirroredRoutesAndRoutes
+}
+
+func createMirrorObjectMeta(ghr *v1.HTTPRoute) *metav1.ObjectMeta {
+	objectMeta := ghr.ObjectMeta.DeepCopy()
+	objectMeta.SetName(fmt.Sprintf("%s-mirror", ghr.ObjectMeta.GetName()))
+	return objectMeta
+}
+
+func createMirrorBackendRef(namespace *v1.Namespace, filter v1.HTTPRouteFilter) v1.BackendRef {
+	mirrorBEF := v1.BackendRef{
+		BackendObjectReference: v1.BackendObjectReference{
+			Namespace: namespace,
+			Name:      filter.RequestMirror.BackendRef.Name,
+			Port:      filter.RequestMirror.BackendRef.Port,
+		},
+	}
+	return mirrorBEF
 }
 
 func buildSectionNameRefs(

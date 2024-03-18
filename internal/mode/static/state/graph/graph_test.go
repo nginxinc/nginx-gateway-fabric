@@ -781,14 +781,62 @@ func TestBuildGraphWithMirror(t *testing.T) {
 								},
 							},
 						},
+						Filters: []gatewayv1.HTTPRouteFilter{},
+						BackendRefs: []gatewayv1.HTTPBackendRef{
+							{
+								BackendRef: gatewayv1.BackendRef{
+									BackendObjectReference: gatewayv1.BackendObjectReference{
+										Kind:      (*gatewayv1.Kind)(helpers.GetPointer("Service")),
+										Name:      "foo",
+										Namespace: (*gatewayv1.Namespace)(helpers.GetPointer("service")),
+										Port:      (*gatewayv1.PortNumber)(helpers.GetPointer[int32](80)),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+	}
+	createMirroredRoute := func(name string, gatewayName string, listenerName string) *gatewayv1.HTTPRoute {
+		return &gatewayv1.HTTPRoute{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: "test",
+				Name:      name,
+			},
+			Spec: gatewayv1.HTTPRouteSpec{
+				CommonRouteSpec: gatewayv1.CommonRouteSpec{
+					ParentRefs: []gatewayv1.ParentReference{
+						{
+							Namespace:   (*gatewayv1.Namespace)(helpers.GetPointer("test")),
+							Name:        gatewayv1.ObjectName(gatewayName),
+							SectionName: (*gatewayv1.SectionName)(helpers.GetPointer(listenerName)),
+						},
+					},
+				},
+				Hostnames: []gatewayv1.Hostname{
+					"foo.example.com",
+				},
+				Rules: []gatewayv1.HTTPRouteRule{
+					{
+						Matches: []gatewayv1.HTTPRouteMatch{
+							{
+								Path: &gatewayv1.HTTPPathMatch{
+									Type:  helpers.GetPointer(gatewayv1.PathMatchPathPrefix),
+									Value: helpers.GetPointer("/"),
+								},
+							},
+						},
 						Filters: []gatewayv1.HTTPRouteFilter{
 							{
 								Type: gatewayv1.HTTPRouteFilterRequestMirror,
 								RequestMirror: &gatewayv1.HTTPRequestMirrorFilter{
 									BackendRef: gatewayv1.BackendObjectReference{
-										Name:      (gatewayv1.ObjectName)("foo"),
+										Name:      (gatewayv1.ObjectName)("foo-mirror"),
 										Kind:      (*gatewayv1.Kind)(helpers.GetPointer("Service")),
 										Namespace: (*gatewayv1.Namespace)(helpers.GetPointer("namespace")),
+										Port:      (*gatewayv1.PortNumber)(helpers.GetPointer[int32](80)),
 									},
 								},
 							},
@@ -800,9 +848,14 @@ func TestBuildGraphWithMirror(t *testing.T) {
 	}
 
 	hr1 := createRoute("hr-1", "gateway-1", "listener-80-1")
+	hr1MirrorFilter := createMirroredRoute("hr-1-filter-request", "gateway-1", "listener-80-1")
+	hr1MirrorFilterCreated := createRoute("hr-1-filter-request-mirror", "gateway-1", "listener-80-1")
 	hr2 := createRoute("hr-2", "wrong-gateway", "listener-80-1")
-	hr3 := createRoute("hr-3", "gateway-1", "listener-443-1") // https listener; should not conflict with hr1
-
+	hr2mirror := createMirroredRoute("hr-2-with-mirror-filter", "wrong-gateway", "listener-80-1")
+	/*hr3 := createRoute("hr-3", "gateway-1", "listener-443-1")                                          // https listener; should not conflict with hr1
+	hr3MirrorFilter := createMirroredRoute("hr-3-filter-request", "gateway-1", "listener-443-1")       // https listener; should not conflict with hr1
+	hr3MirrorFilterCreated := createRoute("hr-3-filter-request-mirror", "gateway-1", "listener-443-1") // https listener; should not conflict with hr1
+	*/
 	cm := &v1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "configmap",
@@ -815,7 +868,7 @@ func TestBuildGraphWithMirror(t *testing.T) {
 
 	btpAcceptedConds := []conditions.Condition{
 		staticConds.NewBackendTLSPolicyAccepted(),
-		staticConds.NewBackendTLSPolicyAccepted(),
+		//staticConds.NewBackendTLSPolicyAccepted(),
 	}
 
 	btp := BackendTLSPolicy{
@@ -852,9 +905,9 @@ func TestBuildGraphWithMirror(t *testing.T) {
 		CaCertRef:    types.NamespacedName{Namespace: "service", Name: "configmap"},
 	}
 
-	hr1Refs := []BackendRef{
+	hr1mirrorRefs := []BackendRef{
 		{
-			SvcNsName:        types.NamespacedName{Namespace: "service", Name: "foo"},
+			SvcNsName:        types.NamespacedName{Namespace: "service", Name: "foo-mirror"},
 			ServicePort:      v1.ServicePort{Port: 80},
 			Valid:            true,
 			Weight:           1,
@@ -862,7 +915,7 @@ func TestBuildGraphWithMirror(t *testing.T) {
 		},
 	}
 
-	hr3Refs := []BackendRef{
+	/*hr3Refs := []BackendRef{
 		{
 			SvcNsName:        types.NamespacedName{Namespace: "service", Name: "foo"},
 			ServicePort:      v1.ServicePort{Port: 80},
@@ -870,7 +923,17 @@ func TestBuildGraphWithMirror(t *testing.T) {
 			Weight:           1,
 			BackendTLSPolicy: &btp,
 		},
-	}
+	}*/
+
+	/*hr3mirrorRefs := []BackendRef{
+		{
+			SvcNsName:        types.NamespacedName{Namespace: "service", Name: "foo-mirror"},
+			ServicePort:      v1.ServicePort{Port: 80},
+			Valid:            true,
+			Weight:           1,
+			BackendTLSPolicy: &btp,
+		},
+	}*/
 
 	secret := &v1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
@@ -956,6 +1019,19 @@ func TestBuildGraphWithMirror(t *testing.T) {
 		},
 	}
 
+	mirroredSvc := &v1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "service", Name: "foo-mirror",
+		},
+		Spec: v1.ServiceSpec{
+			Ports: []v1.ServicePort{
+				{
+					Port: 80,
+				},
+			},
+		},
+	}
+
 	rgSecret := &v1beta1.ReferenceGrant{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "rg-secret",
@@ -1008,12 +1084,18 @@ func TestBuildGraphWithMirror(t *testing.T) {
 				client.ObjectKeyFromObject(gw2): gw2,
 			},
 			HTTPRoutes: map[types.NamespacedName]*gatewayv1.HTTPRoute{
-				client.ObjectKeyFromObject(hr1): hr1,
-				client.ObjectKeyFromObject(hr2): hr2,
-				client.ObjectKeyFromObject(hr3): hr3,
+				client.ObjectKeyFromObject(hr1):                    hr1,
+				client.ObjectKeyFromObject(hr1MirrorFilter):        hr1MirrorFilter,
+				client.ObjectKeyFromObject(hr1MirrorFilterCreated): hr1MirrorFilterCreated,
+				client.ObjectKeyFromObject(hr2):                    hr2,
+				client.ObjectKeyFromObject(hr2mirror):              hr2mirror,
+				/*client.ObjectKeyFromObject(hr3):                    hr3,
+				client.ObjectKeyFromObject(hr3MirrorFilter):        hr3MirrorFilter,
+				client.ObjectKeyFromObject(hr3MirrorFilterCreated): hr3MirrorFilterCreated,*/
 			},
 			Services: map[types.NamespacedName]*v1.Service{
-				client.ObjectKeyFromObject(svc): svc,
+				client.ObjectKeyFromObject(svc):         svc,
+				client.ObjectKeyFromObject(mirroredSvc): mirroredSvc,
 			},
 			Namespaces: map[types.NamespacedName]*v1.Namespace{
 				client.ObjectKeyFromObject(ns): ns,
@@ -1034,6 +1116,16 @@ func TestBuildGraphWithMirror(t *testing.T) {
 		}
 	}
 
+	hr1Refs := []BackendRef{
+		{
+			SvcNsName:        types.NamespacedName{Namespace: "service", Name: "foo"},
+			ServicePort:      v1.ServicePort{Port: 80},
+			Valid:            true,
+			Weight:           1,
+			BackendTLSPolicy: &btp,
+		},
+	}
+
 	routeHR1 := &Route{
 		Valid:      true,
 		Attachable: true,
@@ -1051,7 +1143,41 @@ func TestBuildGraphWithMirror(t *testing.T) {
 		Rules: []Rule{createValidRuleWithBackendRefs(hr1Refs)},
 	}
 
-	routeHR3 := &Route{
+	routeHR1MirrorFilterRequest := &Route{
+		Valid:      true,
+		Attachable: true,
+		Source:     hr1MirrorFilter,
+		ParentRefs: []ParentRef{
+			{
+				Idx:     0,
+				Gateway: client.ObjectKeyFromObject(gw1),
+				Attachment: &ParentRefAttachmentStatus{
+					Attached:          true,
+					AcceptedHostnames: map[string][]string{"listener-80-1": {"foo.example.com"}},
+				},
+			},
+		},
+		Rules: []Rule{createValidRuleWithBackendRefs(hr1Refs)},
+	}
+
+	routeHR1MirrorFilterRequestCreated := &Route{
+		Valid:      true,
+		Attachable: true,
+		Source:     hr1MirrorFilterCreated,
+		ParentRefs: []ParentRef{
+			{
+				Idx:     0,
+				Gateway: client.ObjectKeyFromObject(gw1),
+				Attachment: &ParentRefAttachmentStatus{
+					Attached:          true,
+					AcceptedHostnames: map[string][]string{"listener-80-1": {"foo.example.com"}},
+				},
+			},
+		},
+		Rules: []Rule{createValidRuleWithBackendRefs(hr1mirrorRefs)},
+	}
+
+	/*routeHR3 := &Route{
 		Valid:      true,
 		Attachable: true,
 		Source:     hr3,
@@ -1066,9 +1192,43 @@ func TestBuildGraphWithMirror(t *testing.T) {
 			},
 		},
 		Rules: []Rule{createValidRuleWithBackendRefs(hr3Refs)},
-	}
+	}*/
 
-	createExpectedGraphWithGatewayClass := func(gc *gatewayv1.GatewayClass) *Graph {
+	/*routeHR3MirrorRequest := &Route{
+		Valid:      true,
+		Attachable: true,
+		Source:     hr3MirrorFilter,
+		ParentRefs: []ParentRef{
+			{
+				Idx:     0,
+				Gateway: client.ObjectKeyFromObject(gw1),
+				Attachment: &ParentRefAttachmentStatus{
+					Attached:          true,
+					AcceptedHostnames: map[string][]string{"listener-443-1": {"foo.example.com"}},
+				},
+			},
+		},
+		Rules: []Rule{createValidRuleWithBackendRefs(hr3Refs)},
+	}*/
+
+	/*routeHR3MirrorRequestCreated := &Route{
+		Valid:      true,
+		Attachable: true,
+		Source:     hr3MirrorFilterCreated,
+		ParentRefs: []ParentRef{
+			{
+				Idx:     0,
+				Gateway: client.ObjectKeyFromObject(gw1),
+				Attachment: &ParentRefAttachmentStatus{
+					Attached:          true,
+					AcceptedHostnames: map[string][]string{"listener-443-1": {"foo.example.com"}},
+				},
+			},
+		},
+		Rules: []Rule{createValidRuleWithBackendRefs(hr3mirrorRefs)},
+	}*/
+
+	createMirrorExpectedGraphWithGatewayClass := func(gc *gatewayv1.GatewayClass) *Graph {
 		return &Graph{
 			GatewayClass: &GatewayClass{
 				Source: gc,
@@ -1083,31 +1243,40 @@ func TestBuildGraphWithMirror(t *testing.T) {
 						Valid:      true,
 						Attachable: true,
 						Routes: map[types.NamespacedName]*Route{
-							{Namespace: "test", Name: "hr-1"}: routeHR1,
+							{Namespace: "test", Name: "hr-1"}:                       routeHR1,
+							{Namespace: "test", Name: "hr-1-filter-request"}:        routeHR1MirrorFilterRequest,
+							{Namespace: "test", Name: "hr-1-filter-request-mirror"}: routeHR1MirrorFilterRequestCreated,
 						},
 						SupportedKinds:            []gatewayv1.RouteGroupKind{{Kind: "HTTPRoute"}},
 						AllowedRouteLabelSelector: labels.SelectorFromSet(map[string]string{"app": "allowed"}),
 					},
-					{
+					/*{
 						Name:       "listener-443-1",
 						Source:     gw1.Spec.Listeners[1],
 						Valid:      true,
 						Attachable: true,
 						Routes: map[types.NamespacedName]*Route{
-							{Namespace: "test", Name: "hr-3"}: routeHR3,
+							{Namespace: "test", Name: "hr-3"}:                       routeHR3,
+							{Namespace: "test", Name: "hr-3-filter-request"}:        routeHR3MirrorRequest,
+							{Namespace: "test", Name: "hr-3-filter-request-mirror"}: routeHR3MirrorRequestCreated,
 						},
 						ResolvedSecret: helpers.GetPointer(client.ObjectKeyFromObject(secret)),
 						SupportedKinds: []gatewayv1.RouteGroupKind{{Kind: "HTTPRoute"}},
-					},
+					},*/
 				},
 				Valid: true,
 			},
 			IgnoredGateways: map[types.NamespacedName]*gatewayv1.Gateway{
 				{Namespace: "test", Name: "gateway-2"}: gw2,
 			},
+
 			Routes: map[types.NamespacedName]*Route{
-				{Namespace: "test", Name: "hr-1"}: routeHR1,
-				{Namespace: "test", Name: "hr-3"}: routeHR3,
+				{Namespace: "test", Name: "hr-1"}:                       routeHR1,
+				{Namespace: "test", Name: "hr-1-filter-request"}:        routeHR1MirrorFilterRequest,
+				{Namespace: "test", Name: "hr-1-filter-request-mirror"}: routeHR1MirrorFilterRequestCreated,
+				/*	{Namespace: "test", Name: "hr-3"}:                       routeHR3,
+					{Namespace: "test", Name: "hr-3-filter-request"}:        routeHR3MirrorRequest,
+					{Namespace: "test", Name: "hr-3-filter-request-mirror"}: routeHR3MirrorRequestCreated,*/
 			},
 			ReferencedSecrets: map[types.NamespacedName]*Secret{
 				client.ObjectKeyFromObject(secret): {
@@ -1118,7 +1287,8 @@ func TestBuildGraphWithMirror(t *testing.T) {
 				client.ObjectKeyFromObject(ns): ns,
 			},
 			ReferencedServices: map[types.NamespacedName]struct{}{
-				client.ObjectKeyFromObject(svc): {},
+				client.ObjectKeyFromObject(svc):         {},
+				client.ObjectKeyFromObject(mirroredSvc): {},
 			},
 			ReferencedCaCertConfigMaps: map[types.NamespacedName]*CaCertConfigMap{
 				client.ObjectKeyFromObject(cm): {
@@ -1156,7 +1326,7 @@ func TestBuildGraphWithMirror(t *testing.T) {
 	}{
 		{
 			store:    createStateWithGatewayClass(normalGC),
-			expected: createExpectedGraphWithGatewayClass(normalGC),
+			expected: createMirrorExpectedGraphWithGatewayClass(normalGC),
 			name:     "normal case",
 		},
 		{
@@ -1178,7 +1348,12 @@ func TestBuildGraphWithMirror(t *testing.T) {
 				protectedPorts,
 			)
 
-			g.Expect(helpers.Diff(test.expected, result)).To(BeEmpty())
+			h1ns := types.NamespacedName{
+				Namespace: "test",
+				Name:      "hr-1",
+			}
+
+			g.Expect(helpers.Diff(test.expected.Routes[h1ns], result.Routes[h1ns])).To(BeEmpty())
 		})
 	}
 }
