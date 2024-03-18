@@ -301,6 +301,7 @@ jobs:
           --set nginxGateway.image.repository=ghcr.io/nginxinc/nginx-gateway-fabric
           --set nginxGateway.image.tag=${{ steps.ngf-meta.outputs.version }}
           --set nginxGateway.image.pullPolicy=Never
+          --set nginxGateway.productTelemetry.enable=false
           --set nginx.image.repository=ghcr.io/nginxinc/nginx-gateway-fabric/nginx
           --set nginx.image.tag=${{ steps.nginx-meta.outputs.version }}
           --set nginx.image.pullPolicy=Never
