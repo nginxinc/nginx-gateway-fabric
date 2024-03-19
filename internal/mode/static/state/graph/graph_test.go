@@ -929,9 +929,12 @@ func TestBuildGraphWithMirror(t *testing.T) {
 	btpAcceptedConds := []conditions.Condition{
 		staticConds.NewBackendTLSPolicyAccepted(),
 		staticConds.NewBackendTLSPolicyAccepted(),
+		staticConds.NewBackendTLSPolicyAccepted(),
+		staticConds.NewBackendTLSPolicyAccepted(),
 	}
 
 	mirrorBtpAcceptedConds := []conditions.Condition{
+		staticConds.NewBackendTLSPolicyAccepted(),
 		staticConds.NewBackendTLSPolicyAccepted(),
 	}
 
@@ -1444,38 +1447,8 @@ func TestBuildGraphWithMirror(t *testing.T) {
 				validation.Validators{HTTPFieldsValidator: &validationfakes.FakeHTTPFieldsValidator{}},
 				protectedPorts,
 			)
-
-			/*h3ns := types.NamespacedName{
-				Namespace: "test",
-				Name:      "hr-3",
-			}
-
-			g.Expect(helpers.Diff(test.expected.Routes[h3ns], result.Routes[h3ns])).To(BeEmpty())
-			*/
 			g.Expect(helpers.Diff(test.expected, result)).To(BeEmpty())
 
-			/* port-80 all pass
-			h1ns := types.NamespacedName{
-				Namespace: "test",
-				Name:      "hr-1",
-			}
-
-			g.Expect(helpers.Diff(test.expected.Routes[h1ns], result.Routes[h1ns])).To(BeEmpty())
-
-			h1mirrorNs := types.NamespacedName{
-				Namespace: "test",
-				Name:      "hr-1-filter-request",
-			}
-
-			g.Expect(helpers.Diff(test.expected.Routes[h1mirrorNs], result.Routes[h1mirrorNs])).To(BeEmpty())
-
-			h1mirrorCreatedNs := types.NamespacedName{
-				Namespace: "test",
-				Name:      "hr-1-filter-request-mirror",
-			}
-
-			g.Expect(helpers.Diff(test.expected.Routes[h1mirrorCreatedNs], result.Routes[h1mirrorCreatedNs])).To(BeEmpty())
-			*/
 		})
 	}
 }
