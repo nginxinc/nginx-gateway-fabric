@@ -69,7 +69,7 @@ var _ = Describe("Dataplane performance", Ordered, Label("nfr", "performance"), 
 		resultsDir, err := framework.CreateResultsDir("dp-perf", version)
 		Expect(err).ToNot(HaveOccurred())
 
-		filename := filepath.Join(resultsDir, fmt.Sprintf("%s.md", version))
+		filename := filepath.Join(resultsDir, framework.CreateResultsFilename("md", version, *plusEnabled))
 		outFile, err = framework.CreateResultsFile(filename)
 		Expect(err).ToNot(HaveOccurred())
 		Expect(framework.WriteSystemInfoToFile(outFile, clusterInfo, *plusEnabled)).To(Succeed())

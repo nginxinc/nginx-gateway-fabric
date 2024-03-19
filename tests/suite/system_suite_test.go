@@ -47,14 +47,15 @@ var (
 	)
 	k8sVersion = flag.String("k8s-version", "latest", "Version of k8s being tested on")
 	// Configurable NGF installation variables. Helm values will be used as defaults if not specified.
-	ngfImageRepository   = flag.String("ngf-image-repo", "", "Image repo for NGF control plane")
-	nginxImageRepository = flag.String("nginx-image-repo", "", "Image repo for NGF data plane")
-	imageTag             = flag.String("image-tag", "", "Image tag for NGF images")
-	versionUnderTest     = flag.String("version-under-test", "", "Version of NGF that is being tested")
-	imagePullPolicy      = flag.String("pull-policy", "", "Image pull policy for NGF images")
-	serviceType          = flag.String("service-type", "NodePort", "Type of service fronting NGF to be deployed")
-	isGKEInternalLB      = flag.Bool("is-gke-internal-lb", false, "Is the LB service GKE internal only")
-	plusEnabled          = flag.Bool("plus-enabled", false, "Is NGINX Plus enabled")
+	ngfImageRepository       = flag.String("ngf-image-repo", "", "Image repo for NGF control plane")
+	nginxImageRepository     = flag.String("nginx-image-repo", "", "Image repo for NGF data plane")
+	nginxPlusImageRepository = flag.String("nginx-plus-image-repo", "", "Image repo for NGF N+ data plane")
+	imageTag                 = flag.String("image-tag", "", "Image tag for NGF images")
+	versionUnderTest         = flag.String("version-under-test", "", "Version of NGF that is being tested")
+	imagePullPolicy          = flag.String("pull-policy", "", "Image pull policy for NGF images")
+	serviceType              = flag.String("service-type", "NodePort", "Type of service fronting NGF to be deployed")
+	isGKEInternalLB          = flag.Bool("is-gke-internal-lb", false, "Is the LB service GKE internal only")
+	plusEnabled              = flag.Bool("plus-enabled", false, "Is NGINX Plus enabled")
 )
 
 var (
@@ -153,6 +154,9 @@ func setup(cfg setupConfig, extraInstallArgs ...string) {
 	if !strings.HasPrefix(cfg.chartPath, "oci://") {
 		installCfg.NgfImageRepository = *ngfImageRepository
 		installCfg.NginxImageRepository = *nginxImageRepository
+		if *plusEnabled && cfg.nfr {
+			installCfg.NginxImageRepository = *nginxPlusImageRepository
+		}
 		installCfg.ImageTag = *imageTag
 		installCfg.ImagePullPolicy = *imagePullPolicy
 	}
