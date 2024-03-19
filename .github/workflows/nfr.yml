@@ -46,6 +46,8 @@ jobs:
     steps:
     - name: Checkout Repository
       uses: actions/checkout@9bb56186c3b09b4f86b1c65136769dd318469633 # v4.1.2
+      with:
+        token: ${{ secrets.NGINX_PAT }}
 
     - name: Setup Golang Environment
       uses: actions/setup-go@0c52d547c9bc32b1aa3301fd7a9cb496313a4491 # v5.0.0
@@ -160,8 +162,9 @@ jobs:
     - name: Open a PR with the results
       uses: peter-evans/create-pull-request@70a41aba780001da0a30141984ae2a0c95d8704e # v6.0.2
       with:
+        token: ${{ secrets.NGINX_PAT }}
         commit-message: NFR Test Results for NGF version ${{ inputs.version }} ${{ inputs.nginx_plus == true && '(Plus)' || ''}}
-        author: ${{ github.actor }} <${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com>
+        author: nginx-bot <integrations@nginx.com>
         branch: tests/nfr-tests-${{ inputs.version }}${{ inputs.nginx_plus == true && '-plus' || ''}}
         delete-branch: true
         title: NFR Test Results for NGF version ${{ inputs.version }} ${{ inputs.nginx_plus == true && '(Plus)' || ''}}
