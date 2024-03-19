@@ -23,16 +23,19 @@ func CreateUsageJobWorker(
 		nodeCount, err := CollectNodeCount(ctx, k8sClient)
 		if err != nil {
 			logger.Error(err, "Failed to collect node count")
+			return
 		}
 
 		podCount, err := GetTotalNGFPodCount(ctx, k8sClient)
 		if err != nil {
 			logger.Error(err, "Failed to collect replica count")
+			return
 		}
 
 		clusterUID, err := telemetry.CollectClusterID(ctx, k8sClient)
 		if err != nil {
 			logger.Error(err, "Failed to collect cluster UID")
+			return
 		}
 
 		clusterDetails := ClusterDetails{
