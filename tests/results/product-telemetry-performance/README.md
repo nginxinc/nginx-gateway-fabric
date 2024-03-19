@@ -114,7 +114,7 @@ ERROR 2024-03-14T21:44:02.993747394Z [resource.labels.containerName: nginx-gatew
 
 Error comes from https://github.com/kubernetes/client-go/blob/1518fca9f06c6a73fc091535b8966c71704e657b/tools/cache/delta_fifo.go#L600
 Not related to product telemetry feature.
-Further investigation is needed to see if any fix is needed.
+Further investigation is needed to see if any fix is needed -- https://github.com/nginxinc/nginx-gateway-fabric/issues/1726
 
 ### Cluster 1 day One
 
