@@ -34,6 +34,7 @@ For most of the tests, the following cluster will be sufficient:
 - A Kubernetes cluster with 4 nodes on GKE
   - Node: n2d-standard-8 (8 vCPU, 32GB memory)
   - Enabled GKE logging
+- A GKE VM with access to the cluster. Send all requests from the GKE VM.
 
 The Upstream Server scale test requires a bigger cluster to accommodate the large number of Pods. Those cluster details
 are listed in the [Scale Upstream Servers](#scale-upstream-servers) test steps.
@@ -42,17 +43,32 @@ are listed in the [Scale Upstream Servers](#scale-upstream-servers) test steps.
 
 ### Setup
 
+- Update the version in the [test](scale_test.go) to the release version
+
 - Install Gateway API Resources:
 
   ```console
   kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/standard-install.yaml
   ```
 
-- Install edge NGF and save the Pod Name and LoadBalancer IP for tests:
+- Install edge NGF:
+
+  For OSS:
 
   ```console
   helm install scale-test oci://ghcr.io/nginxinc/charts/nginx-gateway-fabric  --create-namespace --wait -n nginx-gateway --version=0.0.0-edge --set nginxGateway.config.logging.level=debug
   ```
+
+  For Plus:
+
+  - Build the NGINX Plus image
+  - Push the image to the GCR registry
+
+  ```console
+  helm install scale-test oci://ghcr.io/nginxinc/charts/nginx-gateway-fabric  --create-namespace --wait -n nginx-gateway --version=0.0.0-edge --set nginxGateway.config.logging.level=debug --set nginx.plus=true --set nginx.image.repository=<GCR repo/nignx-gateway-fabric/nginx-plus> --set nginx.image.tag=<TAG>
+  ```
+
+- Save the Pod Name and LoadBalancer IP for tests:
 
   ```console
   export NGF_IP=$(kubectl get svc -n nginx-gateway scale-test-nginx-gateway-fabric --output jsonpath='{.status.loadBalancer.ingress[0].ip}')
@@ -73,6 +89,8 @@ are listed in the [Scale Upstream Servers](#scale-upstream-servers) test steps.
   example: [1.0.0.md](/tests/scale/results/1.0.0/1.0.0.md).
 
 ### Run the tests
+
+Run the following tests for both N+ and OSS.
 
 #### Scale Listeners to Max of 64
 
@@ -99,8 +117,16 @@ Follow the steps below to run the test:
 
 - Run the test:
 
+  With OSS:
+
   ```console
   go test -v -tags scale -run TestScale_Listeners -i 64
+  ```
+
+  With Plus:
+
+  ```console
+  go test -v -tags scale -run TestScale_Listeners -i 64 -plus
   ```
 
 - [Analyze](#analyze) the results.
@@ -149,8 +175,16 @@ Follow the steps below to run the test:
 
 - Run the test:
 
+  With OSS:
+
   ```console
   go test -v -tags scale -run TestScale_HTTPSListeners -i 64
+  ```
+
+  With Plus:
+
+  ```console
+  go test -v -tags scale -run TestScale_HTTPSListeners -i 64 -plus
   ```
 
 - [Analyze](#analyze) the results.
@@ -196,11 +230,19 @@ Follow the steps below to run the test:
 
 - Run the test:
 
+  With OSS:
+
   ```console
   go test -v -tags scale -timeout 30m -run TestScale_HTTPRoutes -i 1000
   ```
 
-  To test with a delay in between each new HTTPRoute, you can add the `-delay` flag to the above command. For example,
+  With Plus:
+
+  ```console
+  go test -v -tags scale -timeout 30m -run TestScale_HTTPRoutes -i 1000 -plus
+  ```
+
+  **Optional:** To test with a delay in between each new HTTPRoute, you can add the `-delay` flag to the above command. For example,
   to add a 2-second delay:
 
   ```console
@@ -235,7 +277,7 @@ Test Goal: Measure how NGF performs as the number of Upstream Servers increases 
 Test Plan:
 
 - Deploy a single Gateway with 1 Listener and attach one HTTPRoute that references a single Service
-- Scale the deployment for that Service to 648 Pods (this is the limit that the upstream zone size allows)
+- Scale the deployment for that Service to 648 Pods for OSS and 556 Pods for Plus (these are the limits that the upstream zone size allows)
 - Gateway, HTTPRoute, Service, and Deployment with 1 replica are created before scaling up to 648 replicas.
 
 Total Resources Created:
@@ -283,8 +325,16 @@ Follow the steps below to run the test:
 
 - Back in your original terminal, scale the backend app:
 
+  For OSS:
+
   ```console
   kubectl scale deploy backend --replicas 648
+  ```
+
+  For Plus:
+
+  ```console
+  kubectl scale deploy backend --replicas 556
   ```
 
 - Wait for all Pods to become available:
@@ -393,6 +443,7 @@ Follow these steps to run the test:
   > Note:
   > For the tests that write to a csv file, the `Test Start`, `Test End + 10s`, and `Duration` are at the
   > end of the results.csv file in the `results/<NGF_VERSION>/<TEST_NAME>` directory.
+  > If you ran the tests with the `plus` flag, the test directory is named `results/<NGF_VERSION>/<TEST_NAME>_Plus`.
   > We are using `Test End + 10s` in the Prometheus query to account for the 10s scraping interval.
 
   Total number of reloads:
@@ -473,3 +524,4 @@ Follow these steps to run the test:
 
 - [1.0.0](/tests/scale/results/1.0.0/1.0.0.md)
 - [1.1.0](/tests/scale/results/1.1.0/1.1.0.md)
+- [1.2.0](/tests/scale/results/1.2.0/1.2.0.md)
