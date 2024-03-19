@@ -4,6 +4,8 @@
 
 - Ensure the product telemetry feature doesn't negatively affect NGINX Gateway Fabric performance: CPU and memory usage.
 
+> Note: this is a one-off test not expected to be run regularly.
+
 ## Test Environment
 
 ### Base
