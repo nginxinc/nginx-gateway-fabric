@@ -136,7 +136,8 @@ func BuildGraph(
 	)
 
 	routes := buildRoutesForGateways(validators.HTTPFieldsValidator, state.HTTPRoutes, processedGws.GetAllNsNames())
-	routes = buildMirrorRoutesForGateways(validators.HTTPFieldsValidator, state.HTTPRoutes, routes, processedGws.GetAllNsNames())
+	routes = buildMirrorRoutesForGateways(validators.HTTPFieldsValidator, state.HTTPRoutes, routes,
+		processedGws.GetAllNsNames())
 	bindRoutesToListeners(routes, gw, state.Namespaces)
 	addBackendRefsToRouteRules(routes, refGrantResolver, state.Services, processedBackendTLSPolicies)
 

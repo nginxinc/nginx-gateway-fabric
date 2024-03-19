@@ -129,7 +129,9 @@ func buildMirrorRoutesForGateways(
 				}
 
 				matchesPath := rule.Matches[i].Path.Value
-				namespace := filter.RequestMirror.BackendRef.Namespace
+				rmBackendRef := filter.RequestMirror.BackendRef
+				namespace := rmBackendRef.Namespace
+				svcName := rmBackendRef.Name
 				objectMeta := createMirrorObjectMeta(ghr)
 
 				mirrorGhr := &v1.HTTPRoute{
@@ -146,7 +148,7 @@ func buildMirrorRoutesForGateways(
 									{
 										Path: &v1.HTTPPathMatch{
 											Type:  helpers.GetPointer(v1.PathMatchExact),
-											Value: createMirrorPath(matchesPath, string(*namespace)),
+											Value: createMirrorPath(matchesPath, string(*namespace), string(svcName)),
 										},
 									},
 								},
@@ -794,7 +796,7 @@ func validateFilter(
 	case v1.HTTPRouteFilterRequestHeaderModifier:
 		return validateFilterHeaderModifier(validator, filter, filterPath)
 	case v1.HTTPRouteFilterRequestMirror:
-		return field.ErrorList{} // TODO: implement validation for RequestMirror
+		return validateMirrorFilter(validator, filter, filterPath)
 	default:
 		valErr := field.NotSupported(
 			filterPath.Child("type"),
@@ -919,6 +921,23 @@ func validateFilterHeaderModifier(
 	return validateFilterHeaderModifierFields(validator, headerModifier, headerModifierPath)
 }
 
+func validateMirrorFilter(
+	validator validation.HTTPFieldsValidator,
+	filter v1.HTTPRouteFilter,
+	filterPath *field.Path,
+) field.ErrorList {
+	var allErrs field.ErrorList
+	mirror := filter.RequestMirror
+	childFieldName := "backendRef"
+	mirrorPath := filterPath.Child(childFieldName)
+
+	if nil == &mirror.BackendRef {
+		allErrs = field.ErrorList{field.Required(mirrorPath, fmt.Sprintf("%s cannot be nil", childFieldName))}
+	}
+
+	return allErrs
+}
+
 func validateFilterHeaderModifierFields(
 	validator validation.HTTPFieldsValidator,
 	headerModifier *v1.HTTPHeaderFilter,
@@ -1007,16 +1026,16 @@ func validateRequestHeaderStringCaseInsensitiveUnique(headers []string, path *fi
 	return allErrs
 }
 
-func createMirrorPath(path *string, namespace string) *string {
+func createMirrorPath(path *string, namespace string, svcName string) *string {
 	var mirrorPath string
 	mirrorPathPrefix := "mirror"
 	matches := catchAllNonRootPathRegex.FindStringSubmatch(*path)
 	if len(matches) > 2 {
 		trailingPath := matches[2]
 		if len(trailingPath) > 0 {
-			mirrorPath = fmt.Sprintf("%s%s-%s-%s", rootPath, namespace, mirrorPathPrefix, trailingPath)
+			mirrorPath = fmt.Sprintf("%s%s-%s-%s-%s", rootPath, namespace, svcName, mirrorPathPrefix, trailingPath)
 		} else {
-			mirrorPath = fmt.Sprintf("%s%s-%s", rootPath, namespace, mirrorPathPrefix)
+			mirrorPath = fmt.Sprintf("%s%s-%s-%s", rootPath, namespace, svcName, mirrorPathPrefix)
 		}
 	}
 

@@ -885,7 +885,7 @@ func TestBuildGraphWithMirror(t *testing.T) {
 							{
 								Path: &gatewayv1.HTTPPathMatch{
 									Type:  helpers.GetPointer(gatewayv1.PathMatchExact),
-									Value: helpers.GetPointer("/service-mirror"),
+									Value: helpers.GetPointer("/service-foo-mirror-mirror"),
 								},
 							},
 						},
@@ -1447,6 +1447,7 @@ func TestBuildGraphWithMirror(t *testing.T) {
 				validation.Validators{HTTPFieldsValidator: &validationfakes.FakeHTTPFieldsValidator{}},
 				protectedPorts,
 			)
+
 			g.Expect(helpers.Diff(test.expected, result)).To(BeEmpty())
 
 		})
