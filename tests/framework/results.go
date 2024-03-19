@@ -32,6 +32,16 @@ func CreateResultsFile(filename string) (*os.File, error) {
 	return outFile, nil
 }
 
+// CreateResultsFilename returns the name of the results file.
+func CreateResultsFilename(ext, base string, plusEnabled bool) string {
+	name := fmt.Sprintf("%s.%s", base, ext)
+	if plusEnabled {
+		name = fmt.Sprintf("%s-plus.%s", base, ext)
+	}
+
+	return name
+}
+
 // WriteSystemInfoToFile writes the cluster system info to the given file.
 func WriteSystemInfoToFile(file *os.File, ci ClusterInfo, plus bool) error {
 	clusterType := "Local"
