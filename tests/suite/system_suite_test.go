@@ -154,7 +154,7 @@ func setup(cfg setupConfig, extraInstallArgs ...string) {
 	if !strings.HasPrefix(cfg.chartPath, "oci://") {
 		installCfg.NgfImageRepository = *ngfImageRepository
 		installCfg.NginxImageRepository = *nginxImageRepository
-		if *plusEnabled {
+		if *plusEnabled && cfg.nfr {
 			installCfg.NginxImageRepository = *nginxPlusImageRepository
 		}
 		installCfg.ImageTag = *imageTag

@@ -104,7 +104,7 @@ stop-longevity-test: ## Stops the longevity test and collects results
 test: ## Runs the functional tests on your default k8s cluster
 	go test -v ./suite -ginkgo.label-filter "functional" $(GINKGO_FLAGS) -args --gateway-api-version=$(GW_API_VERSION) \
 		--gateway-api-prev-version=$(GW_API_PREV_VERSION) --image-tag=$(TAG) --version-under-test=$(NGF_VERSION) \
-		--plus-enabled=$(PLUS_ENABLED) --ngf-image-repo=$(PREFIX) --nginx-image-repo=$(NGINX_PREFIX) --nginx-plus-image-repo=$(NGINX_PLUS_PREFIX) \
+		--plus-enabled=$(PLUS_ENABLED) --ngf-image-repo=$(PREFIX) --nginx-image-repo=$(NGINX_PREFIX) \
 		--pull-policy=$(PULL_POLICY) --k8s-version=$(K8S_VERSION) --service-type=$(GW_SERVICE_TYPE) \
 		--is-gke-internal-lb=$(GW_SVC_GKE_INTERNAL)
 
