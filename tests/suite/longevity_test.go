@@ -65,7 +65,7 @@ var _ = Describe("Longevity", Label("longevity-setup", "longevity-teardown"), fu
 		resultsDir, err := framework.CreateResultsDir("longevity", version)
 		Expect(err).ToNot(HaveOccurred())
 
-		filename := filepath.Join(resultsDir, fmt.Sprintf("%s.md", version))
+		filename := filepath.Join(resultsDir, framework.CreateResultsFilename("md", version, *plusEnabled))
 		resultsFile, err := framework.CreateResultsFile(filename)
 		Expect(err).ToNot(HaveOccurred())
 		defer resultsFile.Close()
