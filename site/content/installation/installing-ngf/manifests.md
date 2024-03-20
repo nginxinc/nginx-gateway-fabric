@@ -61,7 +61,7 @@ Deploying NGINX Gateway Fabric with Kubernetes manifests takes only a few steps.
 
 ##### For NGINX Plus
 
-   Download the [deployment YAML](https://github.com/nginxinc/nginx-gateway-fabric/releases/download/v1.2.0/nginx-plus-gateway.yaml).
+   Download the [deployment YAML](https://github.com/nginxinc/nginx-gateway-fabric/releases/download/v1.1.0/nginx-plus-gateway.yaml).
 
    Update the `nginx-plus-gateway.yaml` file to include your chosen NGINX Plus image from the F5 Container registry or your custom image.
 
