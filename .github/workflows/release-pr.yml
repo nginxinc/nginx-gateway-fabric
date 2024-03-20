@@ -51,10 +51,10 @@ jobs:
 
       - name: Generate manifests and changelog
         run: |
-          sed -i -e "s/${current_version}/${{ inputs.version }}/g" README.md
+          sed -i -e "s/v${{ steps.vars.outputs.current_version }}/v${{ inputs.version }}/g" README.md
           sed -i -e "s/VERSION = edge/VERSION = ${{ inputs.version }}/g" Makefile
-          sed -i -e "s/VERSION = edge/VERSION = ${{ inputs.version }}/g" tests/Makefile
-          sed -i -e "s/TAG = edge/TAG = ${{ inputs.version }}/g" conformance/Makefile
+          sed -i -e "s/VERSION =  ${{ steps.vars.outputs.current_version }}/VERSION = ${{ inputs.version }}/g" conformance/Makefile
+          sed -i -e "s/TAG = edge/TAG = ${{ inputs.version }}/g" **/Makefile
           sed -i "5r .github/CHANGELOG_TEMPLATE.md" CHANGELOG.md
           sed -i -e "s/%%VERSION%%/${{ inputs.version }}/g" CHANGELOG.md
           make generate-manifests
