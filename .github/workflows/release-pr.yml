@@ -31,7 +31,8 @@ jobs:
       - name: Vars
         id: vars
         run: |
-          echo "current_version=$(yq '.appVersion' <deploy/helm-chart/Chart.yaml)" >> $GITHUB_OUTPUT
+          # TODO(lucacome): improve this and maybe use appVersion instead of version if we switch to tags
+          echo "current_version=$(yq '.version' <deploy/helm-chart/Chart.yaml)" >> $GITHUB_OUTPUT
 
       - name: Find and Replace
         uses: jacobtomlinson/gha-find-replace@a51bbcd94d000df9ca0fcb54ec8be69aad8374b0 # v3.0.2
