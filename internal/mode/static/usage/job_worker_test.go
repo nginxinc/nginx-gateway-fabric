@@ -37,11 +37,11 @@ func TestCreateUsageJobWorker(t *testing.T) {
 	}
 
 	tests := []struct {
+		name      string
 		listCalls func(_ context.Context, object client.ObjectList, _ ...client.ListOption) error
 		getCalls  func(_ context.Context, _ types.NamespacedName, object client.Object, _ ...client.GetOption) error
-		expErr    error
-		name      string
 		expData   usage.ClusterDetails
+		expErr    bool
 	}{
 		{
 			name: "succeeds",
@@ -77,7 +77,7 @@ func TestCreateUsageJobWorker(t *testing.T) {
 					},
 				},
 			},
-			expErr: nil,
+			expErr: false,
 		},
 		{
 			name: "collect node count fails",
@@ -92,7 +92,7 @@ func TestCreateUsageJobWorker(t *testing.T) {
 				return nil
 			},
 			expData: usage.ClusterDetails{},
-			expErr:  errors.New("failed to collect node list"),
+			expErr:  true,
 		},
 		{
 			name: "collect replica count fails",
@@ -110,7 +110,7 @@ func TestCreateUsageJobWorker(t *testing.T) {
 				return nil
 			},
 			expData: usage.ClusterDetails{},
-			expErr:  errors.New("failed to collect replica set list"),
+			expErr:  true,
 		},
 		{
 			name: "collect cluster UID fails",
@@ -133,7 +133,7 @@ func TestCreateUsageJobWorker(t *testing.T) {
 				return nil
 			},
 			expData: usage.ClusterDetails{},
-			expErr:  errors.New("failed to collect namespace"),
+			expErr:  true,
 		},
 	}
 
@@ -167,7 +167,7 @@ func TestCreateUsageJobWorker(t *testing.T) {
 			defer cancel()
 
 			worker(ctx)
-			if test.expErr != nil {
+			if test.expErr {
 				g.Expect(reporter.ReportCallCount()).To(Equal(0))
 			} else {
 				_, data := reporter.ReportArgsForCall(0)
