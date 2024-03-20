@@ -1,4 +1,3 @@
-
 ## Release %%VERSION%%
 
 %%DATE%%
@@ -34,3 +33,4 @@ CONTAINER IMAGES:
 
 - Control plane: `ghcr.io/nginxinc/nginx-gateway-fabric:%%VERSION%%`
 - Data plane: `ghcr.io/nginxinc/nginx-gateway-fabric/nginx:%%VERSION%%`
+- Data plane with NGINX Plus: `private-registry.nginx.com/nginx-gateway-fabric/nginx-plus:%%VERSION%%`
