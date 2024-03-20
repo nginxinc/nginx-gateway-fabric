@@ -1,4 +1,4 @@
-TAG = edge
+TAG = 1.2.0
 PREFIX = nginx-gateway-fabric
 NGINX_PREFIX = $(PREFIX)/nginx
 NGINX_PLUS_PREFIX = $(PREFIX)/nginx-plus

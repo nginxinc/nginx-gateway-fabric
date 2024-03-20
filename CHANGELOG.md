@@ -3,6 +3,42 @@
 This document includes a curated changelog for each release. We also publish a changelog as the description of
 a [GitHub release](https://github.com/nginxinc/nginx-gateway-fabric/releases), which, by contrast, is auto-generated
 and includes links to all PRs that went into the release.
+## Release 1.2.0
+
+%%DATE%%
+
+FEATURES:
+
+-
+
+BUG FIXES:
+
+-
+
+DOCUMENTATION:
+
+-
+
+HELM CHART:
+
+- The version of the Helm chart is now 1.2.0
+-
+
+UPGRADE:
+
+-
+
+COMPATIBILITY:
+
+- The Gateway API version: ``
+- NGINX version: ``
+- Kubernetes version: ``
+
+CONTAINER IMAGES:
+
+- Control plane: `ghcr.io/nginxinc/nginx-gateway-fabric:1.2.0`
+- Data plane: `ghcr.io/nginxinc/nginx-gateway-fabric/nginx:1.2.0`
+- Data plane with NGINX Plus: `private-registry.nginx.com/nginx-gateway-fabric/nginx-plus:1.2.0`
 
 ## Release 1.1.0
 

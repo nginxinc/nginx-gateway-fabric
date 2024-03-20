@@ -12,7 +12,7 @@ metadata:
   labels:
     app.kubernetes.io/name: nginx-gateway
     app.kubernetes.io/instance: nginx-gateway
-    app.kubernetes.io/version: "edge"
+    app.kubernetes.io/version: "1.2.0"
   annotations:
     {}
 ---
@@ -24,7 +24,7 @@ metadata:
   labels:
     app.kubernetes.io/name: nginx-gateway
     app.kubernetes.io/instance: nginx-gateway
-    app.kubernetes.io/version: "edge"
+    app.kubernetes.io/version: "1.2.0"
 rules:
 - apiGroups:
   - ""
@@ -124,7 +124,7 @@ metadata:
   labels:
     app.kubernetes.io/name: nginx-gateway
     app.kubernetes.io/instance: nginx-gateway
-    app.kubernetes.io/version: "edge"
+    app.kubernetes.io/version: "1.2.0"
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -143,7 +143,7 @@ metadata:
   labels:
     app.kubernetes.io/name: nginx-gateway
     app.kubernetes.io/instance: nginx-gateway
-    app.kubernetes.io/version: "edge"
+    app.kubernetes.io/version: "1.2.0"
 spec:
   replicas: 1
   selector:
@@ -182,8 +182,8 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.name
-        image: ghcr.io/nginxinc/nginx-gateway-fabric:edge
-        imagePullPolicy: Always
+        image: ghcr.io/nginxinc/nginx-gateway-fabric:1.2.0
+        imagePullPolicy: IfNotPresent
         name: nginx-gateway
         ports:
         - name: metrics
@@ -213,8 +213,8 @@ spec:
           mountPath: /etc/nginx/secrets
         - name: nginx-run
           mountPath: /var/run/nginx
-      - image: ghcr.io/nginxinc/nginx-gateway-fabric/nginx:edge
-        imagePullPolicy: Always
+      - image: ghcr.io/nginxinc/nginx-gateway-fabric/nginx:1.2.0
+        imagePullPolicy: IfNotPresent
         name: nginx
         ports:
         - containerPort: 80
@@ -267,7 +267,7 @@ metadata:
   labels:
     app.kubernetes.io/name: nginx-gateway
     app.kubernetes.io/instance: nginx-gateway
-    app.kubernetes.io/version: "edge"
+    app.kubernetes.io/version: "1.2.0"
 spec:
   controllerName: gateway.nginx.org/nginx-gateway-controller
 ---
@@ -280,7 +280,7 @@ metadata:
   labels:
     app.kubernetes.io/name: nginx-gateway
     app.kubernetes.io/instance: nginx-gateway
-    app.kubernetes.io/version: "edge"
+    app.kubernetes.io/version: "1.2.0"
 spec:
   logging:
     level: info
