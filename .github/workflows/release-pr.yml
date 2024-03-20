@@ -64,7 +64,7 @@ jobs:
           sed -i -e "s/VERSION = edge/VERSION = ${{ inputs.version }}/g" Makefile
           sed -i -e "s/VERSION =  ${{ steps.vars.outputs.current_version }}/VERSION = ${{ inputs.version }}/g" conformance/Makefile
           sed -i -e "s/TAG = edge/TAG = ${{ inputs.version }}/g" **/Makefile
-          sed -i "5r .github/CHANGELOG_TEMPLATE.md" CHANGELOG.md
+          sed -i "6r .github/CHANGELOG_TEMPLATE.md" CHANGELOG.md
           sed -i -e "s/%%VERSION%%/${{ inputs.version }}/g" CHANGELOG.md
           make generate-manifests
 
@@ -74,6 +74,7 @@ jobs:
           token: ${{ secrets.NGINX_PAT }}
           commit-message: Release ${{ inputs.version }}
           title: Release ${{ inputs.version }}
+          draft: true
           branch: docs/release-${{ inputs.version }}
           author: nginx-bot <integrations@nginx.com>
           committer: nginx-bot <integrations@nginx.com>

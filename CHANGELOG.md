@@ -3,36 +3,39 @@
 This document includes a curated changelog for each release. We also publish a changelog as the description of
 a [GitHub release](https://github.com/nginxinc/nginx-gateway-fabric/releases), which, by contrast, is auto-generated
 and includes links to all PRs that went into the release.
+
 ## Release 1.2.0
 
-%%DATE%%
+*March 20, 2024*
 
 FEATURES:
 
--
+- NGINX Plus can now be used as the data plane. [PR-1394](https://github.com/nginxinc/nginx-gateway-fabric/pull/1394)
+- Support for BackendTLSPolicy. [PR-1487](https://github.com/nginxinc/nginx-gateway-fabric/pull/1487)
+- Support for URLRewrite HTTPRoute Filter. [PR-1396](https://github.com/nginxinc/nginx-gateway-fabric/pull/1396)
+- NGINX Gateway Fabric will collect and report product telemetry to an F5 telemetry service every 24h. Read https://docs.nginx.com/nginx-gateway-fabric/overview/product-telemetry/ for more info, including what gets collected and how to opt out. [PR-1699](https://github.com/nginxinc/nginx-gateway-fabric/pull/1699)
+
 
 BUG FIXES:
 
--
+- Ensure that internal locations are unique. [PR-1445](https://github.com/nginxinc/nginx-gateway-fabric/pull/1445)
 
 DOCUMENTATION:
 
--
+- Sample Grafana dashboard added. [PR-1620](https://github.com/nginxinc/nginx-gateway-fabric/pull/1620)
+- Support document added. [PR-1388](https://github.com/nginxinc/nginx-gateway-fabric/pull/1388)
 
 HELM CHART:
 
 - The version of the Helm chart is now 1.2.0
--
-
-UPGRADE:
-
--
+- nodeSelector is now configurable. [PR-1531](https://github.com/nginxinc/nginx-gateway-fabric/pull/1531)
 
 COMPATIBILITY:
 
-- The Gateway API version: ``
-- NGINX version: ``
-- Kubernetes version: ``
+- The Gateway API version: `1.0.0`
+- NGINX version: `1.25.4`
+- NGINX Plus version: `R31`
+- Kubernetes version: `1.23+`
 
 CONTAINER IMAGES:
 
