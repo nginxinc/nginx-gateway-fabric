@@ -1,0 +1,72 @@
+name: Release PR
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to release"
+        required: true
+        default: "0.0.0"
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  release:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Branch
+        id: branch
+        run: |
+          version=${{ github.event.inputs.version }}
+          version=${version%.*}
+          echo "branch=release-$version" >> $GITHUB_OUTPUT
+
+      - name: Checkout Repository
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        with:
+          ref: ${{ steps.branch.outputs.branch }}
+
+      - name: Vars
+        id: vars
+        run: |
+          echo "current_version=$(yq '.version' <deploy/helm-chart/Chart.yaml)" >> $GITHUB_OUTPUT
+
+      - name: Find and Replace
+        uses: jacobtomlinson/gha-find-replace@a51bbcd94d000df9ca0fcb54ec8be69aad8374b0 # v3.0.2
+        with:
+          find: ${{ steps.vars.outputs.current_version }}
+          replace: ${{ inputs.version }}
+          include: "site/content/**/*.md"
+          regex: false
+
+      - name: Find and Replace
+        uses: jacobtomlinson/gha-find-replace@a51bbcd94d000df9ca0fcb54ec8be69aad8374b0 # v3.0.2
+        with:
+          find: "edge"
+          replace: ${{ inputs.version }}
+          include: "deploy/helm-chart/*.yaml"
+          regex: false
+
+      - name: Generate manifests and changelog
+        run: |
+          sed -i -e "s/${current_version}/${{ inputs.version }}/g" README.md
+          sed -i -e "s/VERSION = edge/VERSION = ${{ inputs.version }}/g" Makefile
+          sed -i -e "s/VERSION = edge/VERSION = ${{ inputs.version }}/g" tests/Makefile
+          sed -i -e "s/TAG = edge/TAG = ${{ inputs.version }}/g" conformance/Makefile
+          sed -i "5r .github/CHANGELOG_TEMPLATE.md" CHANGELOG.md
+          sed -i -e "s/%%VERSION%%/${{ inputs.version }}/g" CHANGELOG.md
+          make generate-manifests
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@153407881ec5c347639a548ade7d8ad1d6740e38 # v5.0.2
+        with:
+          token: ${{ secrets.NGINX_PAT }}
+          commit-message: Release ${{ inputs.version }}
+          title: Release ${{ inputs.version }}
+          branch: docs/release-${{ inputs.version }}
+          author: nginx-bot <integrations@nginx.com>
+          committer: nginx-bot <integrations@nginx.com>
+          body: |
+            This automated PR updates all the necessary files for ${{ inputs.version }} release.

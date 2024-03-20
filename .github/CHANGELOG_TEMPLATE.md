@@ -1,0 +1,36 @@
+
+## Release %%VERSION%%
+
+%%DATE%%
+
+FEATURES:
+
+-
+
+BUG FIXES:
+
+-
+
+DOCUMENTATION:
+
+-
+
+HELM CHART:
+
+- The version of the Helm chart is now %%VERSION%%
+-
+
+UPGRADE:
+
+-
+
+COMPATIBILITY:
+
+- The Gateway API version: ``
+- NGINX version: ``
+- Kubernetes version: ``
+
+CONTAINER IMAGES:
+
+- Control plane: `ghcr.io/nginxinc/nginx-gateway-fabric:%%VERSION%%`
+- Data plane: `ghcr.io/nginxinc/nginx-gateway-fabric/nginx:%%VERSION%%`
