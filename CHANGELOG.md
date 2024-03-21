@@ -11,6 +11,9 @@ and includes links to all PRs that went into the release.
 FEATURES:
 
 - NGINX Plus can now be used as the data plane. [PR-1394](https://github.com/nginxinc/nginx-gateway-fabric/pull/1394)
+  - Supports dynamic upstream reloads. [PR-1469](https://github.com/nginxinc/nginx-gateway-fabric/pull/1469)
+  - Contains advanced Prometheus metrics. [PR-1394](https://github.com/nginxinc/nginx-gateway-fabric/pull/1394)
+  - Includes the NGINX Plus monitoring dashboard. [PR-1488](https://github.com/nginxinc/nginx-gateway-fabric/pull/1488)
 - Support for BackendTLSPolicy. [PR-1487](https://github.com/nginxinc/nginx-gateway-fabric/pull/1487)
 - Support for URLRewrite HTTPRoute Filter. [PR-1396](https://github.com/nginxinc/nginx-gateway-fabric/pull/1396)
 - NGINX Gateway Fabric will collect and report product telemetry to an F5 telemetry service every 24h. Read https://docs.nginx.com/nginx-gateway-fabric/overview/product-telemetry/ for more info, including what gets collected and how to opt out. [PR-1699](https://github.com/nginxinc/nginx-gateway-fabric/pull/1699)
