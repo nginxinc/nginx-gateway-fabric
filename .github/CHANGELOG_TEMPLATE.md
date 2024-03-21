@@ -23,10 +23,15 @@ UPGRADE:
 
 -
 
+KNOWN ISSUES:
+
+-
+
 COMPATIBILITY:
 
 - The Gateway API version: ``
 - NGINX version: ``
+- NGINX Plus version: ``
 - Kubernetes version: ``
 
 CONTAINER IMAGES:
