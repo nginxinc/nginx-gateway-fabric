@@ -53,6 +53,14 @@ jobs:
       - name: Find and Replace
         uses: jacobtomlinson/gha-find-replace@a51bbcd94d000df9ca0fcb54ec8be69aad8374b0 # v3.0.2
         with:
+          find: ${{ steps.vars.outputs.current_version }}
+          replace: ${{ inputs.version }}
+          include: "deploy/helm-chart/*.yaml"
+          regex: false
+
+      - name: Find and Replace
+        uses: jacobtomlinson/gha-find-replace@a51bbcd94d000df9ca0fcb54ec8be69aad8374b0 # v3.0.2
+        with:
           find: "Always"
           replace: "IfNotPresent"
           include: "deploy/helm-chart/*.yaml"
@@ -61,10 +69,11 @@ jobs:
       - name: Generate manifests and changelog
         run: |
           sed -i -e "s/v${{ steps.vars.outputs.current_version }}/v${{ inputs.version }}/g" README.md
+          sed -i -e "s/\[${{ steps.vars.outputs.current_version }}\]/\[${{ inputs.version }}\]/g" README.md
           sed -i -e "s/VERSION = edge/VERSION = ${{ inputs.version }}/g" Makefile
           sed -i -e "s/VERSION =  ${{ steps.vars.outputs.current_version }}/VERSION = ${{ inputs.version }}/g" conformance/Makefile
           sed -i -e "s/TAG = edge/TAG = ${{ inputs.version }}/g" **/Makefile
-          sed -i "5r .github/CHANGELOG_TEMPLATE.md" CHANGELOG.md
+          sed -i "6r .github/CHANGELOG_TEMPLATE.md" CHANGELOG.md
           sed -i -e "s/%%VERSION%%/${{ inputs.version }}/g" CHANGELOG.md
           make generate-manifests
 
@@ -74,6 +83,7 @@ jobs:
           token: ${{ secrets.NGINX_PAT }}
           commit-message: Release ${{ inputs.version }}
           title: Release ${{ inputs.version }}
+          draft: true
           branch: docs/release-${{ inputs.version }}
           author: nginx-bot <integrations@nginx.com>
           committer: nginx-bot <integrations@nginx.com>
