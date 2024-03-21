@@ -15,6 +15,9 @@ FEATURES:
 - Support for URLRewrite HTTPRoute Filter. [PR-1396](https://github.com/nginxinc/nginx-gateway-fabric/pull/1396)
 - NGINX Gateway Fabric will collect and report product telemetry to an F5 telemetry service every 24h. Read https://docs.nginx.com/nginx-gateway-fabric/overview/product-telemetry/ for more info, including what gets collected and how to opt out. [PR-1699](https://github.com/nginxinc/nginx-gateway-fabric/pull/1699)
 
+ENHANCEMENTS:
+
+- Stop processing resources that haven't changed. [PR-1422](https://github.com/nginxinc/nginx-gateway-fabric/pull/1422) Thanks to [Kai-Hsun Chen](https://github.com/kevin85421).
 
 BUG FIXES:
 
@@ -23,6 +26,8 @@ BUG FIXES:
 KNOWN ISSUES:
 
 - Shutdown of non-leader Pods starts leader jobs. [1738](https://github.com/nginxinc/nginx-gateway-fabric/issues/1738)
+- Too many matching conditions can cause reload errors. [1107](https://github.com/nginxinc/nginx-gateway-fabric/issues/1107)
+- NGF Pod fails to become ready due to nginx reload failure. [1695](https://github.com/nginxinc/nginx-gateway-fabric/issues/1695)
 
 DOCUMENTATION:
 
@@ -32,7 +37,7 @@ DOCUMENTATION:
 HELM CHART:
 
 - The version of the Helm chart is now 1.2.0
-- nodeSelector is now configurable. [PR-1531](https://github.com/nginxinc/nginx-gateway-fabric/pull/1531)
+- nodeSelector is now configurable. [PR-1531](https://github.com/nginxinc/nginx-gateway-fabric/pull/1531) Thanks to [Leandro Martins](https://github.com/leandrocostam)
 
 COMPATIBILITY:
 
