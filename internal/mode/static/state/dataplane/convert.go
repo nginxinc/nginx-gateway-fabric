@@ -82,16 +82,9 @@ func convertHTTPRequestMirrorFilter(filter *v1.HTTPRequestMirrorFilter) *HTTPReq
 		backendRefNamePtr = &backendRefName
 	}
 
-	var backendRefNamespacePtr *string
-	backedRefNamespace := string(*filter.BackendRef.Namespace)
-	if len(backedRefNamespace) > 0 {
-		backendRefNamespacePtr = &backedRefNamespace
-	}
-
 	result := &HTTPRequestMirrorFilter{
-		Namespace: backendRefNamespacePtr,
-		GroupName: backendRefNamePtr,
-		Port:      (*int32)(filter.BackendRef.Port),
+		Hostname: backendRefNamePtr,
+		Port:     (*int32)(filter.BackendRef.Port),
 	}
 
 	return result

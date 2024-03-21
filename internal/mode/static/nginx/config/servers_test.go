@@ -427,8 +427,9 @@ func TestCreateServers(t *testing.T) {
 				{
 					Filters: dataplane.HTTPFilters{
 						RequestMirror: &dataplane.HTTPRequestMirrorFilter{
-							GroupName: helpers.GetPointer("new.example.com"),
-							Port:      helpers.GetPointer(int32(8080)),
+							Hostname: helpers.GetPointer("new.example.com"),
+							Port:     helpers.GetPointer(int32(8080)),
+							Scheme:   helpers.GetPointer("http"),
 						},
 					},
 					BackendGroup: fooGroup,

@@ -156,11 +156,11 @@ type HTTPURLRewriteFilter struct {
 type PathModifierType string
 
 type HTTPRequestMirrorFilter struct {
-	// Namespace is the namespace of the mirror.
-	Namespace *string
-	// TODO: remove this. Move to populating BackendGroup. GroupName is the hostname of the mirror.
-	GroupName *string
-	// Port is the (optional) port of the mirror.
+	// Scheme is the scheme of the redirect.
+	Scheme *string
+	// Hostname is the hostname of the redirect.
+	Hostname *string
+	// Port is the port of the redirect.
 	Port *int32
 }
 
