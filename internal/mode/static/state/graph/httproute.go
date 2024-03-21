@@ -127,39 +127,8 @@ func buildMirrorRoutesForGateways(
 				if filter.RequestMirror == nil {
 					continue
 				}
-
 				matchesPath := rule.Matches[i].Path.Value
-				rmBackendRef := filter.RequestMirror.BackendRef
-				namespace := rmBackendRef.Namespace
-				svcName := rmBackendRef.Name
-				objectMeta := createMirrorObjectMeta(ghr)
-
-				mirrorGhr := &v1.HTTPRoute{
-					ObjectMeta: *objectMeta,
-
-					Spec: v1.HTTPRouteSpec{
-						CommonRouteSpec: v1.CommonRouteSpec{
-							ParentRefs: ghr.Spec.ParentRefs,
-						},
-						Hostnames: ghr.Spec.Hostnames,
-						Rules: []v1.HTTPRouteRule{
-							{
-								Matches: []v1.HTTPRouteMatch{
-									{
-										Path: &v1.HTTPPathMatch{
-											Type:  helpers.GetPointer(v1.PathMatchExact),
-											Value: createMirrorPath(matchesPath, string(*namespace), string(svcName)),
-										},
-									},
-								},
-								Filters: removeMirrorFilters(filters),
-								BackendRefs: []v1.HTTPBackendRef{
-									{BackendRef: createMirrorBackendRef(filter)},
-								},
-							},
-						},
-					},
-				}
+				mirrorGhr := createMirrorRoute(matchesPath, ghr, filters, filter)
 				r := buildRoute(validator, mirrorGhr, gatewayNsNames)
 				if r != nil {
 					mirroredRoutesAndRoutes[client.ObjectKeyFromObject(mirrorGhr)] = r
@@ -171,10 +140,44 @@ func buildMirrorRoutesForGateways(
 	return mirroredRoutesAndRoutes
 }
 
-func createMirrorObjectMeta(ghr *v1.HTTPRoute) *metav1.ObjectMeta {
+func createMirrorRoute(matchesPath *string, ghr *v1.HTTPRoute, filters []v1.HTTPRouteFilter, filter v1.HTTPRouteFilter) *v1.HTTPRoute {
+	mirrorGhr := &v1.HTTPRoute{
+		ObjectMeta: createMirrorObjectMeta(ghr),
+		Spec: v1.HTTPRouteSpec{
+			CommonRouteSpec: v1.CommonRouteSpec{
+				ParentRefs: ghr.Spec.ParentRefs,
+			},
+			Hostnames: ghr.Spec.Hostnames,
+			Rules: []v1.HTTPRouteRule{
+				buildMirrorRouteRule(matchesPath, filters, filter),
+			},
+		},
+	}
+	return mirrorGhr
+}
+
+func buildMirrorRouteRule(matchesPath *string, filters []v1.HTTPRouteFilter, filter v1.HTTPRouteFilter) v1.HTTPRouteRule {
+	filterBackendRef := filter.RequestMirror.BackendRef
+	return v1.HTTPRouteRule{
+		Matches: []v1.HTTPRouteMatch{
+			{
+				Path: &v1.HTTPPathMatch{
+					Type:  helpers.GetPointer(v1.PathMatchExact),
+					Value: createMirrorPath(matchesPath, filterBackendRef),
+				},
+			},
+		},
+		Filters: removeMirrorFilters(filters),
+		BackendRefs: []v1.HTTPBackendRef{
+			{BackendRef: createMirrorBackendRef(filter)},
+		},
+	}
+}
+
+func createMirrorObjectMeta(ghr *v1.HTTPRoute) metav1.ObjectMeta {
 	objectMeta := ghr.ObjectMeta.DeepCopy()
 	objectMeta.SetName(fmt.Sprintf("%s-mirror", ghr.ObjectMeta.GetName()))
-	return objectMeta
+	return *objectMeta
 }
 
 func createMirrorBackendRef(filter v1.HTTPRouteFilter) v1.BackendRef {
@@ -1026,7 +1029,10 @@ func validateRequestHeaderStringCaseInsensitiveUnique(headers []string, path *fi
 	return allErrs
 }
 
-func createMirrorPath(path *string, namespace string, svcName string) *string {
+func createMirrorPath(path *string, backendRef v1.BackendObjectReference) *string {
+	namespace := string(*backendRef.Namespace)
+	svcName := string(backendRef.Name)
+
 	var mirrorPath string
 	mirrorPathPrefix := "mirror"
 	matches := catchAllNonRootPathRegex.FindStringSubmatch(*path)
