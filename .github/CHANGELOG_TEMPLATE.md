@@ -10,10 +10,6 @@ BUG FIXES:
 
 -
 
-KNOWN ISSUES:
-
--
-
 DOCUMENTATION:
 
 -
@@ -24,6 +20,10 @@ HELM CHART:
 -
 
 UPGRADE:
+
+-
+
+KNOWN ISSUES:
 
 -
 

@@ -26,12 +26,6 @@ BUG FIXES:
 
 - Prevent paths in HTTPRoute matches from conflicting with internal locations in NGINX. [PR-1445](https://github.com/nginxinc/nginx-gateway-fabric/pull/1445)
 
-KNOWN ISSUES:
-
-- Shutdown of non-leader Pods starts leader jobs. [1738](https://github.com/nginxinc/nginx-gateway-fabric/issues/1738)
-- Too many matching conditions can cause reload errors. [1107](https://github.com/nginxinc/nginx-gateway-fabric/issues/1107)
-- NGF Pod fails to become ready due to nginx reload failure. [1695](https://github.com/nginxinc/nginx-gateway-fabric/issues/1695)
-
 DOCUMENTATION:
 
 - Sample Grafana dashboard added. [PR-1620](https://github.com/nginxinc/nginx-gateway-fabric/pull/1620)
@@ -41,6 +35,12 @@ HELM CHART:
 
 - The version of the Helm chart is now 1.2.0
 - nodeSelector is now configurable. [PR-1531](https://github.com/nginxinc/nginx-gateway-fabric/pull/1531) Thanks to [Leandro Martins](https://github.com/leandrocostam)
+
+KNOWN ISSUES:
+
+- Shutdown of non-leader Pods starts leader jobs. [1738](https://github.com/nginxinc/nginx-gateway-fabric/issues/1738)
+- Too many matching conditions can cause reload errors. [1107](https://github.com/nginxinc/nginx-gateway-fabric/issues/1107)
+- NGF Pod fails to become ready due to nginx reload failure. [1695](https://github.com/nginxinc/nginx-gateway-fabric/issues/1695)
 
 COMPATIBILITY:
 
