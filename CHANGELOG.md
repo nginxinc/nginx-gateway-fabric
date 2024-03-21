@@ -6,7 +6,7 @@ and includes links to all PRs that went into the release.
 
 ## Release 1.2.0
 
-*March 20, 2024*
+*March 21, 2024*
 
 FEATURES:
 
