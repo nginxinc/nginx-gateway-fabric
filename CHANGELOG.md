@@ -10,17 +10,18 @@ and includes links to all PRs that went into the release.
 
 FEATURES:
 
-- NGINX Plus can now be used as the data plane. [PR-1394](https://github.com/nginxinc/nginx-gateway-fabric/pull/1394)
+- [NGINX Plus](https://docs.nginx.com/nginx-gateway-fabric/overview/nginx-plus) can now be used as the data plane. [PR-1394](https://github.com/nginxinc/nginx-gateway-fabric/pull/1394)
   - Supports dynamic upstream reloads. [PR-1469](https://github.com/nginxinc/nginx-gateway-fabric/pull/1469)
   - Contains advanced Prometheus metrics. [PR-1394](https://github.com/nginxinc/nginx-gateway-fabric/pull/1394)
   - Includes the NGINX Plus monitoring dashboard. [PR-1488](https://github.com/nginxinc/nginx-gateway-fabric/pull/1488)
-- Support for BackendTLSPolicy. [PR-1487](https://github.com/nginxinc/nginx-gateway-fabric/pull/1487)
+- Support for [BackendTLSPolicy](https://gateway-api.sigs.k8s.io/api-types/backendtlspolicy/). [PR-1487](https://github.com/nginxinc/nginx-gateway-fabric/pull/1487)
 - Support for URLRewrite HTTPRoute Filter. [PR-1396](https://github.com/nginxinc/nginx-gateway-fabric/pull/1396)
 - NGINX Gateway Fabric will collect and report product telemetry to an F5 telemetry service every 24h. Read https://docs.nginx.com/nginx-gateway-fabric/overview/product-telemetry/ for more info, including what gets collected and how to opt out. [PR-1699](https://github.com/nginxinc/nginx-gateway-fabric/pull/1699)
 
 ENHANCEMENTS:
 
 - Stop processing resources that haven't changed. [PR-1422](https://github.com/nginxinc/nginx-gateway-fabric/pull/1422) Thanks to [Kai-Hsun Chen](https://github.com/kevin85421).
+- Maintain Gateway Status order. [PR-1324](https://github.com/nginxinc/nginx-gateway-fabric/pull/1324) Thanks to [Kai-Hsun Chen](https://github.com/kevin85421).
 
 BUG FIXES:
 
@@ -30,6 +31,7 @@ DOCUMENTATION:
 
 - Sample Grafana dashboard added. [PR-1620](https://github.com/nginxinc/nginx-gateway-fabric/pull/1620)
 - Add a document about how to get support. [PR-1388](https://github.com/nginxinc/nginx-gateway-fabric/pull/1388)
+- [Documentation](https://docs.nginx.com/nginx-gateway-fabric/installation/ngf-images) on how to build or install the NGINX Plus image.
 
 HELM CHART:
 
