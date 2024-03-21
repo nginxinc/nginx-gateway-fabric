@@ -20,6 +20,10 @@ BUG FIXES:
 
 - Ensure that internal locations are unique. [PR-1445](https://github.com/nginxinc/nginx-gateway-fabric/pull/1445)
 
+KNOWN ISSUES:
+
+- Shutdown of non-leader Pods starts leader jobs. [1738](https://github.com/nginxinc/nginx-gateway-fabric/issues/1738)
+
 DOCUMENTATION:
 
 - Sample Grafana dashboard added. [PR-1620](https://github.com/nginxinc/nginx-gateway-fabric/pull/1620)
