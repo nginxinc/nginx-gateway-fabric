@@ -165,14 +165,14 @@ jobs:
           path: ${{ github.workspace }}/dist
           key: nginx-gateway-fabric-${{ github.run_id }}-${{ github.run_number }}
 
-  build:
-    name: Build Image
+  build-oss:
+    name: Build OSS images
     needs: [vars, binary]
     strategy:
       fail-fast: false
       matrix:
-        image: [ngf, nginx, plus]
-        platforms: ["linux/arm64, linux/amd64"]
+        image: [ngf, nginx]
+        platforms: ["linux/arm64, linux/amd64, linux/s390x, linux/ppc64le"]
     uses: ./.github/workflows/build.yml
     with:
       image: ${{ matrix.image }}
@@ -184,9 +184,23 @@ jobs:
       id-token: write # for docker/login to login to NGINX registry
     secrets: inherit
 
+  build-plus:
+    name: Build Plus images
+    needs: [vars, binary]
+    uses: ./.github/workflows/build.yml
+    with:
+      image: plus
+      platforms: "linux/arm64, linux/amd64"
+    permissions:
+      contents: read # for docker/build-push-action to read repo content
+      security-events: write # for github/codeql-action/upload-sarif to upload SARIF results
+      packages: write # for docker/build-push-action to push to GHCR
+      id-token: write # for docker/login to login to NGINX registry
+    secrets: inherit
+
   functional-tests:
     name: Functional tests
-    needs: [vars, build]
+    needs: [vars, build-oss, build-plus]
     strategy:
       fail-fast: false
       matrix:
@@ -201,7 +215,7 @@ jobs:
 
   conformance-tests:
     name: Conformance tests
-    needs: [vars, build]
+    needs: [vars, build-oss, build-plus]
     strategy:
       fail-fast: false
       matrix:
@@ -219,7 +233,7 @@ jobs:
   helm-tests:
     name: Helm Tests
     runs-on: ubuntu-22.04
-    needs: [vars, build]
+    needs: [vars, build-oss]
     steps:
       - name: Checkout Repository
         uses: actions/checkout@9bb56186c3b09b4f86b1c65136769dd318469633 # v4.1.2

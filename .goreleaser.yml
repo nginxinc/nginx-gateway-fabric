@@ -8,6 +8,8 @@ builds:
     goarch:
       - amd64
       - arm64
+      - s390x
+      - ppc64le
     flags:
       - -trimpath
     gcflags:
@@ -38,13 +40,13 @@ sboms:
 
 blobs:
   - provider: azblob
-    bucket: '{{.Env.AZURE_BUCKET_NAME}}'
+    bucket: "{{.Env.AZURE_BUCKET_NAME}}"
 
 signs:
   - cmd: cosign
     artifacts: checksum
     output: true
-    certificate: '${artifact}.pem'
+    certificate: "${artifact}.pem"
     args:
       - sign-blob
       - "--output-signature=${signature}"
@@ -55,14 +57,14 @@ signs:
 announce:
   slack:
     enabled: true
-    channel: '#announcements'
-    message_template: 'NGINX Gateway Fabric {{ .Tag }} is out! Check it out: {{ .ReleaseURL }}'
+    channel: "#announcements"
+    message_template: "NGINX Gateway Fabric {{ .Tag }} is out! Check it out: {{ .ReleaseURL }}"
 
 milestones:
   - close: true
 
 snapshot:
-  name_template: 'edge'
+  name_template: "edge"
 
 before:
   hooks:
