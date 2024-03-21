@@ -18,7 +18,7 @@ FEATURES:
 
 BUG FIXES:
 
-- Ensure that internal locations are unique. [PR-1445](https://github.com/nginxinc/nginx-gateway-fabric/pull/1445)
+- Prevent paths in HTTPRoute matches from conflicting with internal locations in NGINX. [PR-1445](https://github.com/nginxinc/nginx-gateway-fabric/pull/1445)
 
 KNOWN ISSUES:
 
@@ -27,7 +27,7 @@ KNOWN ISSUES:
 DOCUMENTATION:
 
 - Sample Grafana dashboard added. [PR-1620](https://github.com/nginxinc/nginx-gateway-fabric/pull/1620)
-- Support document added. [PR-1388](https://github.com/nginxinc/nginx-gateway-fabric/pull/1388)
+- Add a document about how to get support. [PR-1388](https://github.com/nginxinc/nginx-gateway-fabric/pull/1388)
 
 HELM CHART:
 
