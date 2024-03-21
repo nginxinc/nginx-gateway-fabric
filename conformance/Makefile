@@ -1,4 +1,4 @@
-TAG = edge
+TAG = 1.2.0
 VERSION = 1.1.0 # NGF version
 PREFIX = nginx-gateway-fabric
 NGINX_PREFIX = $(PREFIX)/nginx
