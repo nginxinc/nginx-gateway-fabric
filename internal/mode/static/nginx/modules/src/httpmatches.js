@@ -50,21 +50,25 @@ function redirect(r) {
 }
 
 function extractMatchesFromRequest(r) {
-  if (!r.variables[MATCHES_VARIABLE]) {
-    throw Error(
-      `cannot redirect the request; the variable ${MATCHES_VARIABLE} is not defined on the request object`,
-    );
-  }
-
+  let index = 0;
   let matches;
 
-  try {
-    matches = JSON.parse(r.variables[MATCHES_VARIABLE]);
-  } catch (e) {
-    throw Error(
-      `cannot redirect the request; error parsing ${r.variables[MATCHES_VARIABLE]} into a JSON object: ${e}`,
-    );
+  while (true) {
+    const MATCHES_VARIABLE = `http_matches_${index}`;
+    if (!r.variables[MATCHES_VARIABLE]) {
+      break;
+    }
+
+    try {
+      matches = JSON.parse(r.variables[MATCHES_VARIABLE]);
+    } catch (e) {
+      throw Error(
+        `cannot redirect the request; error parsing ${r.variables[MATCHES_VARIABLE]} into a JSON object: ${e}`,
+      );
+    }
   }
+
+  console.log('matches in js', matches);
 
   if (!Array.isArray(matches)) {
     throw Error(`cannot redirect the request; expected a list of matches, got ${matches}`);

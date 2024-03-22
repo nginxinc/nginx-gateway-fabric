@@ -41,10 +41,10 @@ server {
         return {{ $l.Return.Code }} "{{ $l.Return.Body }}";
         {{- end }}
 
-        {{- if $l.HTTPMatchVar }}
-        set $http_matches {{ $l.HTTPMatchVar | printf "%q" }};
-        js_content httpmatches.redirect;
+        {{ range $i, $h := $l.HTTPMatchVar }}
+        set $http_matches_{{ $i }} {{ $h | printf "%q" }};
         {{- end }}
+        js_content httpmatches.redirect;
 
         {{- if $l.ProxyPass -}}
             {{ range $h := $l.ProxySetHeaders }}

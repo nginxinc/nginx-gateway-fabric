@@ -1,6 +1,7 @@
 package config
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -16,6 +17,7 @@ const (
 	// HeaderMatchSeparator is the separator for constructing header-based match for NJS.
 	HeaderMatchSeparator = ":"
 	rootPath             = "/"
+	matchMaxLength       = 2000 // TODO: account for character escaping when mapped to config
 )
 
 // baseHeaders contains the constant headers set in each server block
@@ -558,17 +560,48 @@ func convertSetHeaders(headers []dataplane.HTTPHeader) []http.Header {
 	return locHeaders
 }
 
-func convertMatchesToString(matches []httpMatch) string {
+func convertMatchesToString(matches []httpMatch) []string {
 	// FIXME(sberman): De-dupe matches and associated locations
 	// so we don't need nginx/njs to perform unnecessary matching.
 	// https://github.com/nginxinc/nginx-gateway-fabric/issues/662
-	b, err := json.Marshal(matches)
-	if err != nil {
-		// panic is safe here because we should never fail to marshal the match unless we constructed it incorrectly.
-		panic(fmt.Errorf("could not marshal http match: %w", err))
+
+	var matchList []string
+
+	var buffer bytes.Buffer
+	for _, match := range matches {
+		matchBytes, err := json.Marshal(match)
+		if err != nil {
+			// panic is safe here because we should never fail to marshal the match unless we constructed it incorrectly.
+			panic(fmt.Errorf("could not marshal http match: %w", err))
+		}
+		matchLen := len(matchBytes)
+		if buffer.Len()+matchLen+4 > matchMaxLength {
+			// Flush buffer if adding current match exceeds the maximum length
+			buffer.WriteString("]")
+			matchList = append(matchList, buffer.String())
+			buffer.Reset()
+			buffer.WriteString("[")
+		} else {
+			if buffer.Len() > 1 {
+				// Add comma if not first match in the buffer
+				buffer.WriteString(",")
+			} else {
+				// Add opening braces if the first match in the buffer
+				buffer.WriteString("[")
+			}
+		}
+		buffer.Write(matchBytes)
 	}
 
-	return string(b)
+	if buffer.Len() > 0 {
+		buffer.WriteString("]")
+		matchList = append(matchList, buffer.String())
+	}
+
+	for _, m := range matchList {
+		fmt.Println("match --> ", m)
+	}
+	return matchList
 }
 
 func exactPath(path string) string {

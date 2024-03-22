@@ -508,11 +508,12 @@ func TestCreateServers(t *testing.T) {
 		},
 	}
 
-	expectedMatchString := func(m []httpMatch) string {
+	expectedMatchString := func(m []httpMatch) []string {
 		g := NewWithT(t)
 		b, err := json.Marshal(m)
 		g.Expect(err).ToNot(HaveOccurred())
-		return string(b)
+		str := string(b)
+		return []string{str}
 	}
 
 	slashMatches := []httpMatch{

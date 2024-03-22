@@ -16,7 +16,7 @@ type Location struct {
 	ProxySSLVerify  *ProxySSLVerify
 	Path            string
 	ProxyPass       string
-	HTTPMatchVar    string
+	HTTPMatchVar    []string
 	Rewrites        []string
 	ProxySetHeaders []Header
 }
