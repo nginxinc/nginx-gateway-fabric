@@ -37,7 +37,6 @@ To begin, the Client Settings Policy will include the following NGINX directives
 - [`keepalive_requests`](https://nginx.org/en/docs/http/ngx_http_core_module.html#keepalive_requests)
 - [`keepalive_time`](https://nginx.org/en/docs/http/ngx_http_core_module.html#keepalive_time)
 - [`keepalive_timeout`](https://nginx.org/en/docs/http/ngx_http_core_module.html#keepalive_timeout)
-- [`keepalive_disable`](https://nginx.org/en/docs/http/ngx_http_core_module.html#keepalive_disable)
 
 In the future, we can extend the Client Settings Policy to include more client-related directives, such as `client_body_buffer_size`, `client_header_buffer_size`.
 
@@ -129,10 +128,6 @@ type KeepAlive struct {
     // Timeout defines the keep-alive timeouts.
     // +optional
     Timeout *KeepAliveTimeout `json:"timeout,omitempty"`
-
-    // DisableForBrowser disables keep-alive connections for misbehaving browsers.
-    // +optional
-    DisableForBrowser *DisableForBrowserType `json:"disableForBrowser,omitempty"`
 }
 
 // KeepAliveTimeout defines the timeouts related to keep-alive client connections.
@@ -146,24 +141,6 @@ type KeepAliveTimeout struct {
     // +optional
     Header *Duration `json:"header,omitempty"`
 }
-
-// DisableForBrowserType is the type of browsers to disable keep-alive connections on.
-type DisableForBrowserType string
-
-var (
-    // NoneDisableForBrowserType enables keep-alive connections for all browsers.
-    NoneDisableForBrowserType DisableForBrowserType = "None"
-
-    // SafariDisableForBrowserType disables keep-alive connections for Safari and Safari-like browsers on macOS and macOS-like
-    // operating systems.
-    SafariDisableForBrowserType DisableForBrowserType = "Safari"
-
-    // MSIEDisableForBrowserType disables keep-alive connections for old versions of MSIE, once a POST request is received.
-    MSIEDisableForBrowserType DisableForBrowserType = "MSIE"
-
-    // AllDisableForBrowserType disables keep-alive connections for MSIE and Safari browsers.
-    AllDisableForBrowserType DisableForBrowserType = "All"
-)
 
 // Duration is a string value representing a duration in time.
 // The format is a subset of the syntax parsed by Golang time.ParseDuration.
@@ -389,7 +366,7 @@ All fields in the `ClientSettingsPolicy` will be validated with Open API Schema.
 
 ## Future Work
 
-- Add support for more client-related directives, such as `client_body_buffer_size`, `client_header_buffer_size`.
+- Add support for more client-related directives, such as `client_body_buffer_size`, `client_header_buffer_size`, or `keepalive_disable`.
 - Extend implementation to support multiple Gateways.
 - Add more attachment points. For example, allowing attachment to GatewayClasses or Gateway Listeners.
 - Improve on status and discoverability.
