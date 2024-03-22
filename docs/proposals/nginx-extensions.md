@@ -1,8 +1,8 @@
 
 # Extensions for NGINX Features
 
-- Issue: #1566
-- Status: Provisional
+- Issue: https://github.com/nginxinc/nginx-gateway-fabric/issues/1566
+- Status: Implementable
 
 ## Summary
 
