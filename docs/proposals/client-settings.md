@@ -130,14 +130,14 @@ type KeepAlive struct {
 
 // KeepAliveTimeout defines the timeouts related to keep-alive client connections.
 type KeepAliveTimeout struct {
-    // ServerTimeout sets the timeout during which a keep-alive client connection will stay open on the server side.
+    // Server sets the timeout during which a keep-alive client connection will stay open on the server side.
     // The zero value disables keep-alive client connections.
     // +optional
-    ServerTimeout *Duration `json:"serverTimeout,omitempty"`
+    Server *Duration `json:"server,omitempty"`
 
-    // HeaderTimeout sets the timeout in the "Keep-Alive: timeout=time" response header field.
+    // Header sets the timeout in the "Keep-Alive: timeout=time" response header field.
     // +optional
-    HeaderTimeout *Duration `json:"headerTimeout,omitempty"`
+    Header *Duration `json:"header,omitempty"`
 }
 
 // DisableForBrowserType is the type of browsers to disable keep-alive connections on.
