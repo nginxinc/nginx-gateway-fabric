@@ -86,7 +86,7 @@ type ClientSettingsPolicySpec struct {
 }
 
 type ClientSettingsPolicyStatus struct {
-    // Conditions describe the current conditions of the ClientSettingsPolicy
+    // Conditions describe the current conditions of the ClientSettingsPolicy.
     // +optional
     Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
