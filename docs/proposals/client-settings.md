@@ -97,7 +97,7 @@ type ClientSettingsPolicyConfig struct {
 
     // KeepAlive defines the keep-alive settings.
     // +optional
-    KeepAlive *KeepAlive `json:"keepAlive,omitempty"`
+    KeepAlive *ClientKeepAlive `json:"keepAlive,omitempty"`
 }
 
 // ClientBody contains the settings for the client request body.
@@ -113,8 +113,8 @@ type ClientBody struct {
     Timeout *Duration `json:"timeout,omitempty"`
 }
 
-// KeepAlive defines the keep-alive settings.
-type KeepAlive struct {
+// ClientKeepAlive defines the keep-alive settings for clients.
+type ClientKeepAlive struct {
     // Requests sets the maximum number of requests that can be served through one keep-alive connection.
     // After the maximum number of requests are made, the connection is closed.
     // +optional
