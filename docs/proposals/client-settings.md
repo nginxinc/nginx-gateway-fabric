@@ -107,7 +107,7 @@ type ClientSettingsPolicyConfig struct {
     KeepAlive *KeepAlive `json:"keepAlive,omitempty"`
 }
 
-// KeepAlive defines the keepalive settings.
+// KeepAlive defines the keep-alive settings.
 type KeepAlive struct {
     // Requests sets the maximum number of requests that can be served through one keep-alive connection.
     // After the maximum number of requests are made, the connection is closed.
