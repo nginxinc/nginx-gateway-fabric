@@ -173,7 +173,7 @@ type Size string
 
 The version of the `ClientSettingsPolicy` API will be `v1alpha1`.
 
-The `ClientSettingsPolicy` CRD _may_ be installed by the Cluster Operator via Helm or with manifests. It will _not_ be required, and if the `ClientSettingsPolicy` CRD does not exist in the cluster, NGINX Gateway Fabric will not fail or log an error.
+The `ClientSettingsPolicy` CRD will be installed by the Cluster Operator via Helm or with manifests. It will be required, and if the `ClientSettingsPolicy` CRD does not exist in the cluster, NGINX Gateway Fabric will log errors until it is installed.
 
 ### Status
 
