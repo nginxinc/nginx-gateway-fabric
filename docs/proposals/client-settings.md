@@ -123,9 +123,9 @@ type KeepAlive struct {
     // +optional
     Timeout *KeepAliveTimeout `json:"timeout,omitempty"`
 
-    // Disable disables keep-alive connections for misbehaving browsers.
+    // DisableForBrowser disables keep-alive connections for misbehaving browsers.
     // +optional
-    Disable *DisableType `json:"disable"`
+    DisableForBrowser *DisableForBrowserType `json:"disableForBrowser,omitempty"`
 }
 
 // KeepAliveTimeout defines the timeouts related to keep-alive client connections.
@@ -140,22 +140,22 @@ type KeepAliveTimeout struct {
     HeaderTimeout *Duration `json:"headerTimeout,omitempty"`
 }
 
-// DisableType is the type of browsers to disable keep-alive connections on.
-type DisableType string
+// DisableForBrowserType is the type of browsers to disable keep-alive connections on.
+type DisableForBrowserType string
 
 var (
-    // NoneDisableType enables keep-alive connections for all browsers.
-    NoneDisableType DisableType = "None"
+    // NoneDisableForBrowserType enables keep-alive connections for all browsers.
+    NoneDisableForBrowserType DisableForBrowserType = "None"
 
-    // SafariDisableType disables keep-alive connections for Safari and Safari-like browsers on macOS and macOS-like
+    // SafariDisableForBrowserType disables keep-alive connections for Safari and Safari-like browsers on macOS and macOS-like
     // operating systems.
-    SafariDisableType DisableType = "Safari"
+    SafariDisableForBrowserType DisableForBrowserType = "Safari"
 
-    // MSIEDisableType disables keep-alive connections for old versions of MSIE, once a POST request is received.
-    MSIEDisableType DisableType = "MSIE"
+    // MSIEDisableForBrowserType disables keep-alive connections for old versions of MSIE, once a POST request is received.
+    MSIEDisableForBrowserType DisableForBrowserType = "MSIE"
 
-    // AllDisableType disables keep-alive connections for MSIE and Safari browsers.
-    AllDisableType DisableType = "All"
+    // AllDisableForBrowserType disables keep-alive connections for MSIE and Safari browsers.
+    AllDisableForBrowserType DisableForBrowserType = "All"
 )
 
 // Duration is a string value representing a duration in time.
