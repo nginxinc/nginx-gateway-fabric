@@ -2,7 +2,7 @@
 # Extensions for NGINX Features
 
 - Issue: https://github.com/nginxinc/nginx-kubernetes-gateway/issues/1566
-- Status: Provisional
+- Status: Implementable
 
 ## Summary
 
