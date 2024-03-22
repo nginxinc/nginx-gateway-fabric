@@ -92,19 +92,26 @@ type ClientSettingsPolicyStatus struct {
 }
 
 type ClientSettingsPolicyConfig struct {
-    // MaxBodySize sets the maximum allowed size of the client request body.
-    // Setting size to 0 disables checking of client request body size.
+    // Body defines the client request body settings.
     // +optional
-    MaxBodySize *Size `json:"maxBodySize,omitempty"`
-
-    // BodyTimeout defines a timeout for reading client request body. The timeout is set only for a period between
-    // two successive read operations, not for the transmission of the whole request body.
-    // +optional
-    BodyTimeout *Duration `json:"bodyTimeout,omitempty"`
+    Body *ClientBody `json:"body,omitempty"`
 
     // KeepAlive defines the keep-alive settings.
     // +optional
     KeepAlive *KeepAlive `json:"keepAlive,omitempty"`
+}
+
+// ClientBody contains the settings for the client request body.
+type ClientBody struct {
+    // MaxSize sets the maximum allowed size of the client request body.
+    // Setting size to 0 disables checking of client request body size.
+    // +optional
+    MaxSize *Size `json:"maxSize,omitempty"`
+
+    // Timeout defines a timeout for reading client request body. The timeout is set only for a period between
+    // two successive read operations, not for the transmission of the whole request body.
+    // +optional
+    Timeout *Duration `json:"timeout,omitempty"`
 }
 
 // KeepAlive defines the keep-alive settings.
