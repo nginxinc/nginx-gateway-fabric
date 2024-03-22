@@ -228,6 +228,69 @@ However, it's possible that future Gateway API tooling will expect policy status
 
 Beyond the Condition requirements discussed above, there are no other status requirements for Inherited Policies. This topic is currently up for discussion, and solutions may be added to the Spec.
 
+### YAML
+
+Below is an example of `ClientSettingsPolicy` YAML definition:
+
+```yaml
+apiVersion: gateway.nginx.org/v1alpha1
+kind: ClientSettingsPolicy
+metadata:
+  name: example-client-settings
+  namespace: default
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: Gateway
+    name: example-gateway
+  default:
+    body:
+      maxSize: 10m
+      timeout: 30s
+    keepAlive:
+      requests: 100
+      time: 5m
+      timeout:
+        server: 2m
+        header: 1m
+status:
+  conditions:
+    - type: Accepted
+      status: "True"
+      reason: Accepted
+      message: Policy is accepted
+```
+
+and the Gateway it is attached to:
+
+```yaml
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: gateway
+spec:
+  gatewayClassName: nginx
+  listeners:
+  - name: http
+    port: 80
+    protocol: HTTP
+    hostname: "*.example.com"
+status:
+  conditions:
+  - type: Accepted
+    status: "True"
+    reason: Accepted
+    message: Gateway is accepted
+  - type: Programmed
+    status: "True"
+    reason: Programmed
+    message: Gateway is programmed
+  - type: gateway.nginx.org/ClientSettingsPolicyAffected # new condition
+    status: "True"
+    reason: PolicyAffected
+    message: Object affected by a ClientSettingsPolicy.
+```
+
 ## Attachment and Inheritance
 
 The `ClientSettingsPolicy` may be attached to Gateways and HTTPRoutes.
