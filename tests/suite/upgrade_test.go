@@ -157,7 +157,7 @@ var _ = Describe("Upgrade testing", Label("nfr", "upgrade"), func() {
 				}
 
 				buf := new(bytes.Buffer)
-				encoder := framework.NewCSVEncoder(buf)
+				encoder := framework.NewVegetaCSVEncoder(buf)
 				for _, res := range results {
 					res := res
 					Expect(encoder.Encode(&res)).To(Succeed())
@@ -173,7 +173,7 @@ var _ = Describe("Upgrade testing", Label("nfr", "upgrade"), func() {
 				csvFile.Close()
 
 				pngName := framework.CreateResultsFilename("png", scheme, *plusEnabled)
-				output, err := framework.GeneratePNG(resultsDir, csvName, pngName)
+				output, err := framework.GenerateRequestsPNG(resultsDir, csvName, pngName)
 				Expect(err).ToNot(HaveOccurred(), string(output))
 
 				metricsCh <- &metricsRes
@@ -251,7 +251,7 @@ var _ = Describe("Upgrade testing", Label("nfr", "upgrade"), func() {
 			_, err := fmt.Fprint(resultsFile, res.testName)
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(framework.WriteResults(resultsFile, res.metrics)).To(Succeed())
+			Expect(framework.WriteVegetaResults(resultsFile, res.metrics)).To(Succeed())
 
 			link := fmt.Sprintf("\n\n![%[1]v.png](%[1]v.png)\n", res.scheme)
 			if *plusEnabled {

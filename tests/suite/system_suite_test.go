@@ -56,6 +56,7 @@ var (
 	serviceType              = flag.String("service-type", "NodePort", "Type of service fronting NGF to be deployed")
 	isGKEInternalLB          = flag.Bool("is-gke-internal-lb", false, "Is the LB service GKE internal only")
 	plusEnabled              = flag.Bool("plus-enabled", false, "Is NGINX Plus enabled")
+	scaleTestsDelay          = flag.Duration("delay", 1, "delay between each scaling iteration")
 )
 
 var (

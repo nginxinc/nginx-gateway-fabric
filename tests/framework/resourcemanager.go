@@ -26,9 +26,13 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"net/http"
+	"os"
 	"strings"
 	"time"
+
+	"k8s.io/client-go/util/retry"
 
 	apps "k8s.io/api/apps/v1"
 	core "k8s.io/api/core/v1"
@@ -112,8 +116,17 @@ func (rm *ResourceManager) ApplyFromFiles(files []string, namespace string) erro
 			return nil
 		}
 
-		obj.SetResourceVersion(fetchedObj.GetResourceVersion())
-		if err := rm.K8sClient.Update(ctx, &obj); err != nil {
+		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+			if err := rm.K8sClient.Get(ctx, nsName, fetchedObj); err != nil {
+				return err
+			}
+			obj.SetResourceVersion(fetchedObj.GetResourceVersion())
+			if err := rm.K8sClient.Update(ctx, &obj); err != nil {
+				return err
+			}
+			return nil
+		})
+		if err != nil {
 			return fmt.Errorf("error updating resource: %w", err)
 		}
 
@@ -137,7 +150,7 @@ func (rm *ResourceManager) Delete(resources []client.Object) error {
 	return nil
 }
 
-// DeleteFromFile deletes Kubernetes resources defined within the provided YAML files.
+// DeleteFromFiles deletes Kubernetes resources defined within the provided YAML files.
 func (rm *ResourceManager) DeleteFromFiles(files []string, namespace string) error {
 	handlerFunc := func(obj unstructured.Unstructured) error {
 		obj.SetNamespace(namespace)
@@ -223,13 +236,21 @@ func (rm *ResourceManager) getFileContents(file string) (*bytes.Buffer, error) {
 		return manifests, nil
 	}
 
-	if !strings.HasPrefix(file, "manifests/") {
+	if !strings.Contains(file, "manifests/") {
 		file = "manifests/" + file
 	}
 
 	b, err := rm.FS.ReadFile(file)
 	if err != nil {
-		return nil, err
+		if !errors.Is(err, fs.ErrNotExist) {
+			return nil, err
+		} else {
+			// check the actual filesystem
+			b, err = os.ReadFile(file)
+			if err != nil {
+				return nil, err
+			}
+		}
 	}
 
 	return bytes.NewBuffer(b), nil

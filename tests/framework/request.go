@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"k8s.io/apimachinery/pkg/util/wait"
 )
 
 // Get sends a GET request to the specified url.
@@ -16,14 +18,21 @@ import (
 func Get(url, address string, timeout time.Duration) (int, string, error) {
 	dialer := &net.Dialer{}
 
-	http.DefaultTransport.(*http.Transport).DialContext = func(
-		ctx context.Context,
-		network,
-		addr string,
-	) (net.Conn, error) {
-		split := strings.Split(addr, ":")
-		port := split[len(split)-1]
-		return dialer.DialContext(ctx, network, fmt.Sprintf("%s:%s", address, port))
+	transport := &http.Transport{
+		DialContext: func(
+			ctx context.Context,
+			network,
+			addr string,
+		) (net.Conn, error) {
+			split := strings.Split(addr, ":")
+			port := split[len(split)-1]
+			return dialer.DialContext(ctx, network, fmt.Sprintf("%s:%s", address, port))
+		},
+	}
+
+	client := &http.Client{
+		Transport: transport,
+		Timeout:   timeout,
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
@@ -34,7 +43,7 @@ func Get(url, address string, timeout time.Duration) (int, string, error) {
 		return 0, "", err
 	}
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := client.Do(req)
 	if err != nil {
 		return 0, "", err
 	}
@@ -47,4 +56,30 @@ func Get(url, address string, timeout time.Duration) (int, string, error) {
 	}
 
 	return resp.StatusCode, body.String(), nil
+}
+
+func WaitForResponseForHost(url, address string, timeout time.Duration) (time.Duration, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+
+	start := time.Now()
+
+	err := wait.PollUntilContextCancel(
+		ctx,
+		200*time.Millisecond,
+		true,
+		func(ctx context.Context) (done bool, err error) {
+			status, _, err := Get(url, address, timeout)
+			if err != nil {
+				return false, err
+			}
+
+			if status == http.StatusOK {
+				return true, nil
+			}
+
+			return false, nil
+		})
+
+	return time.Since(start), err
 }
