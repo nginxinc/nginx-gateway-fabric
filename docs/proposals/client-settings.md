@@ -210,7 +210,7 @@ Conditions:
 
 Some additional rules:
 
-- This Condition should be added when the affected object starts or stops being affected by a `ClientSettingsPolicy`.
+- This Condition should be added when the affected object starts being affected by a `ClientSettingsPolicy`.
 - If an object is affected by multiple `ClientSettingsPolicy`, only one Condition should exist.
 - When the last `ClientSettingsPolicy` affecting that object is removed, the Condition should be removed.
 - The Observed Generation is the generation of the affected object, not the generation of the `ClientSettingsPolicy`.
