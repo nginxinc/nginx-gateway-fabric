@@ -125,13 +125,13 @@ type ClientKeepAlive struct {
     // +optional
     Time *Duration `json:"time,omitempty"`
 
-    // Timeout defines the keep-alive timeouts.
+    // Timeout defines the keep-alive timeouts for clients.
     // +optional
-    Timeout *KeepAliveTimeout `json:"timeout,omitempty"`
+    Timeout *ClientKeepAliveTimeout `json:"timeout,omitempty"`
 }
 
-// KeepAliveTimeout defines the timeouts related to keep-alive client connections.
-type KeepAliveTimeout struct {
+// ClientKeepAliveTimeout defines the timeouts related to keep-alive client connections.
+type ClientKeepAliveTimeout struct {
     // Server sets the timeout during which a keep-alive client connection will stay open on the server side.
     // The zero value disables keep-alive client connections.
     // +optional
