@@ -226,7 +226,13 @@ However, it's possible that future Gateway API tooling will expect policy status
 
 #### Future Status
 
-Beyond the Condition requirements discussed above, there are no other status requirements for Inherited Policies. This topic is currently up for discussion, and solutions may be added to the Spec.
+Beyond the Condition requirements discussed above, there are no other standard status requirements for Inherited Policies. However, the following requirements are provisional, and we may need to implement them in the future:
+
+- [GatewayClass status Extension Types](https://gateway-api.sigs.k8s.io/geps/gep-713/#gatewayclass-status-extension-types-listing)
+- [Standard status stanza](https://gateway-api.sigs.k8s.io/geps/gep-713/#standard-status-stanza)
+- [PolicyBinding resource](https://gateway-api.sigs.k8s.io/geps/gep-713/#policybinding-resource)
+
+This topic is currently up for discussion, and more solutions may be added to the Spec.
 
 ### YAML
 
@@ -384,7 +390,9 @@ For this attachment scenario, specifying the directives in the server and the _f
 The findings in the prior section can be condensed and generalized into the following two rules:
 
 - When a `ClientSettingsPolicy` is attached to a Gateway, add the corresponding NGINX directives to each server block generated from that Gateway.
-- When a `ClientSettingsPolicy` is attached to an HTTPRoute, compute the set of values that differ from the accepted `ClientSettingsPolicy` attached to its Gateway. For each value in this set, add the corresponding NGINX directive to each of the _final_ location blocks generated for the HTTPRoute. If no accepted `ClientSettingsPolicy` is attached to its Gateway, then the set of values contains all the values in the HTTPRoute's policy.
+- When a `ClientSettingsPolicy` is attached to an HTTPRoute, add the corresponding NGINX directives to each of the _final_ location blocks generated for the HTTPRoute.
+
+We can rely on NGINX to compute the effective policy by applying its own inheritance rules.
 
 ## Testing
 
