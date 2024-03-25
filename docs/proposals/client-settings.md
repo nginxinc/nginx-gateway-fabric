@@ -347,7 +347,7 @@ We need to examine how NGINX Gateway Fabric maps Gateway API resources to NGINX 
 When each HTTPRoute attached to a Gateway has a distinct set of hostnames, NGINX Gateway Fabric will generate a server block for each hostname. All the locations contained in the server block belong to a single HTTPRoute.
 In this scenario, each server block is "owned" by a single HTTPRoute.
 
-> Note: This mapping only applies to "Exact" path matches. "PathPrefix" path matches will generate internal locations and look and act like the mapping shown below in scenario C.
+> Note: This mapping only applies to "Exact" path matches. Some "PathPrefix" path matches will generate an additional location block to handle prefix matching.
 
 **B. Same Hostname**
 
@@ -360,8 +360,8 @@ In this scenario, the HTTPRoutes share "ownership" of the server block.
 
 ![map-c](/docs/images/client-settings/mapping-c.png)
 
-When HTTPRoutes attached to a Gateway specify the same hostname _and_ path, NGINX Gateway Fabric will generate a single server block and a single (external) location for that path. In addition, it will generate one internal location block -- only used for internal requests -- per HTTPRoute match rule.
-The external location will offload the routing decision to an NGINX JavaScript (NJS) function that will route the request to the appropriate internal location.
+When HTTPRoutes attached to a Gateway specify the same hostname _and_ path, NGINX Gateway Fabric will generate a single server block and a single (external) location for that path. In addition, it will generate one named location block -- only used for internal requests -- per HTTPRoute match rule.
+The external location will offload the routing decision to an NGINX JavaScript (NJS) function that will route the request to the appropriate named location.
 In this scenario, the HTTPRoutes share "ownership" of the server block and the external location block.
 
 ### Creating the Effective Policy in NGINX Config
