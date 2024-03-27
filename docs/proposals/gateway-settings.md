@@ -1,4 +1,4 @@
-# Enhancement Proposal-1630: Gateway Settings
+# Enhancement Proposal-1775: Gateway Settings
 
 - Issue: https://github.com/nginxinc/nginx-gateway-fabric/issues/1775
 - Status: Implementable
@@ -28,13 +28,15 @@ To begin, the Gateway Settings config will include the following NGINX directive
 
 - [`otel_exporter`](https://nginx.org/en/docs/ngx_otel_module.html#otel_exporter)
 - [`otel_service_name`](https://nginx.org/en/docs/ngx_otel_module.html#otel_service_name)
-- [`otel_span_attr`](https://nginx.org/en/docs/ngx_otel_module.html#otel_span_attr): set global span attributes that will be merged with the span attributes set in the [Observability extension](nginx-extensions.md#gateway-settings).
+- [`otel_span_attr`](https://nginx.org/en/docs/ngx_otel_module.html#otel_span_attr): set global span attributes that will be merged with the span attributes set in the [Observability extension](nginx-extensions.md#observability).
 
 In the future, this config will be extended to support other directives, such as those defined in the [NGINX Extensions Proposal](nginx-extensions.md#gateway-settings).
 
 ## API, Customer Driven Interfaces, and User Experience
 
 The `GatewaySettings` API is a CRD that is a part of the `gateway.nginx.org` Group. It will be referenced in the `parametersRef` field of a GatewayClass. It will live at the cluster scope.
+
+This is a dynamic configuration that can be changed by a user at any time, and NGF will propagate those changes to NGINX. This is something we need to clearly document in our public documentation about this feature, so that users know that all Gateways under the Class can be updated by these settings.
 
 For example, a `GatewaySettings` named `gw-settings` would be referenced as follows:
 
@@ -75,7 +77,8 @@ type GatewaySettingsSpec struct {
 	// +optional
 	OtelExporter *OtelExporter `json:"otelExporter,omitempty"`
 
-	// OtelServiceName is the "service.name" attribute of the Otel resource.
+	// OtelServiceName is the "service.name" attribute of the Otel resourc.
+	// Default is 'nginx-gateway-fabric:<gateway-name>'.
 	// +optional
 	OtelServiceName *string `json:"otelServiceName,omitempty"`
 
@@ -120,8 +123,6 @@ type Duration string
 
 #### Conditions
 
-According to the [Policy and Metaresources GEP](https://gateway-api.sigs.k8s.io/geps/gep-713/), the `GatewaySettings` CRD must include a `status` stanza with a slice of Conditions.
-
 The `Accepted` Condition must be populated on the `GatewaySettings` CRD using the reasons defined in the [PolicyCondition API](https://github.com/kubernetes-sigs/gateway-api/blob/main/apis/v1alpha2/policy_types.go). If these reasons are not sufficient, we can add implementation-specific reasons.
 
 #### GatewayClass Status
@@ -133,7 +134,7 @@ Below is an example of what this Condition may look like:
 
 ```yaml
 Conditions:
-  Type:                  gateway.nginx.org/ResolvedRefs
+  Type:                  ResolvedRefs
   Message:               All references are resolved
   Observed Generation:   1
   Reason:                ResolvedRefs
@@ -153,7 +154,7 @@ Some additional rules:
 ## Testing
 
 - Unit tests
-- Functional tests that verify the attachment of the CRD to the GatewayClass, and that NGINX behaves properly based on the configuration.
+- Functional tests that verify the attachment of the CRD to the GatewayClass, and that NGINX behaves properly based on the configuration. This includes verifying tracing works as expected.
 
 ## Security Considerations
 
