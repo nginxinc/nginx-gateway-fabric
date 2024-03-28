@@ -703,7 +703,11 @@ func validateFilter(
 	case v1.HTTPRouteFilterURLRewrite:
 		return validateFilterRewrite(validator, filter, filterPath)
 	case v1.HTTPRouteFilterRequestHeaderModifier:
-		return validateFilterHeaderModifier(validator, filter, filterPath)
+		return validateFilterHeaderModifier(validator, filter.RequestHeaderModifier, filterPath.Child(string(filter.Type)))
+	case v1.HTTPRouteFilterResponseHeaderModifier:
+		return validateFilterResponseHeaderModifier(
+			validator, filter.ResponseHeaderModifier, filterPath.Child(string(filter.Type)),
+		)
 	default:
 		valErr := field.NotSupported(
 			filterPath.Child("type"),
@@ -712,6 +716,7 @@ func validateFilter(
 				string(v1.HTTPRouteFilterRequestRedirect),
 				string(v1.HTTPRouteFilterURLRewrite),
 				string(v1.HTTPRouteFilterRequestHeaderModifier),
+				string(v1.HTTPRouteFilterResponseHeaderModifier),
 			},
 		)
 		allErrs = append(allErrs, valErr)
@@ -814,18 +819,14 @@ func validateFilterRewrite(
 
 func validateFilterHeaderModifier(
 	validator validation.HTTPFieldsValidator,
-	filter v1.HTTPRouteFilter,
+	headerModifier *v1.HTTPHeaderFilter,
 	filterPath *field.Path,
 ) field.ErrorList {
-	headerModifier := filter.RequestHeaderModifier
-
-	headerModifierPath := filterPath.Child("requestHeaderModifier")
-
 	if headerModifier == nil {
-		return field.ErrorList{field.Required(headerModifierPath, "requestHeaderModifier cannot be nil")}
+		return field.ErrorList{field.Required(filterPath, "cannot be nil")}
 	}
 
-	return validateFilterHeaderModifierFields(validator, headerModifier, headerModifierPath)
+	return validateFilterHeaderModifierFields(validator, headerModifier, filterPath)
 }
 
 func validateFilterHeaderModifierFields(
@@ -850,29 +851,84 @@ func validateFilterHeaderModifierFields(
 	)
 
 	for _, h := range headerModifier.Add {
-		if err := validator.ValidateRequestHeaderName(string(h.Name)); err != nil {
+		if err := validator.ValidateFilterHeaderName(string(h.Name)); err != nil {
 			valErr := field.Invalid(headerModifierPath.Child("add"), h, err.Error())
 			allErrs = append(allErrs, valErr)
 		}
-		if err := validator.ValidateRequestHeaderValue(h.Value); err != nil {
+		if err := validator.ValidateFilterHeaderValue(h.Value); err != nil {
 			valErr := field.Invalid(headerModifierPath.Child("add"), h, err.Error())
 			allErrs = append(allErrs, valErr)
 		}
 	}
 	for _, h := range headerModifier.Set {
-		if err := validator.ValidateRequestHeaderName(string(h.Name)); err != nil {
+		if err := validator.ValidateFilterHeaderName(string(h.Name)); err != nil {
 			valErr := field.Invalid(headerModifierPath.Child("set"), h, err.Error())
 			allErrs = append(allErrs, valErr)
 		}
-		if err := validator.ValidateRequestHeaderValue(h.Value); err != nil {
+		if err := validator.ValidateFilterHeaderValue(h.Value); err != nil {
 			valErr := field.Invalid(headerModifierPath.Child("set"), h, err.Error())
 			allErrs = append(allErrs, valErr)
 		}
 	}
 	for _, h := range headerModifier.Remove {
-		if err := validator.ValidateRequestHeaderName(h); err != nil {
+		if err := validator.ValidateFilterHeaderName(h); err != nil {
 			valErr := field.Invalid(headerModifierPath.Child("remove"), h, err.Error())
 			allErrs = append(allErrs, valErr)
+		}
+	}
+
+	return allErrs
+}
+
+func validateFilterResponseHeaderModifier(
+	validator validation.HTTPFieldsValidator,
+	responseHeaderModifier *v1.HTTPHeaderFilter,
+	filterPath *field.Path,
+) field.ErrorList {
+	if errList := validateFilterHeaderModifier(validator, responseHeaderModifier, filterPath); errList != nil {
+		return errList
+	}
+	var allErrs field.ErrorList
+	disallowedResponseHeaderSet := map[string]struct{}{
+		"server":         {},
+		"date":           {},
+		"x-pad":          {},
+		"content-type":   {},
+		"content-length": {},
+		"connection":     {},
+	}
+	invalidPrefix := "x-accel"
+	for _, h := range responseHeaderModifier.Add {
+		valErr := field.Invalid(filterPath.Child("add"), h, "header name is not allowed")
+		name := strings.ToLower(string(h.Name))
+		if _, exists := disallowedResponseHeaderSet[name]; exists {
+			allErrs = append(allErrs, valErr)
+		} else {
+			if strings.HasPrefix(name, strings.ToLower(invalidPrefix)) {
+				allErrs = append(allErrs, valErr)
+			}
+		}
+	}
+	for _, h := range responseHeaderModifier.Set {
+		valErr := field.Invalid(filterPath.Child("set"), h, "header name is not allowed")
+		name := strings.ToLower(string(h.Name))
+		if _, exists := disallowedResponseHeaderSet[name]; exists {
+			allErrs = append(allErrs, valErr)
+		} else {
+			if strings.HasPrefix(name, strings.ToLower(invalidPrefix)) {
+				allErrs = append(allErrs, valErr)
+			}
+		}
+	}
+	for _, h := range responseHeaderModifier.Remove {
+		valErr := field.Invalid(filterPath.Child("remove"), h, "header name is not allowed")
+		name := strings.ToLower(h)
+		if _, exists := disallowedResponseHeaderSet[name]; exists {
+			allErrs = append(allErrs, valErr)
+		} else {
+			if strings.HasPrefix(name, strings.ToLower(invalidPrefix)) {
+				allErrs = append(allErrs, valErr)
+			}
 		}
 	}
 

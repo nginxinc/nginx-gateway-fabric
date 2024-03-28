@@ -582,16 +582,19 @@ func TestCreateServers(t *testing.T) {
 				Path:            "@rule0-route0",
 				ProxyPass:       "http://test_foo_80$request_uri",
 				ProxySetHeaders: baseHeaders,
+				ResponseHeaders: http.ResponseHeaders{},
 			},
 			{
 				Path:            "@rule0-route1",
 				ProxyPass:       "http://test_foo_80$request_uri",
 				ProxySetHeaders: baseHeaders,
+				ResponseHeaders: http.ResponseHeaders{},
 			},
 			{
 				Path:            "@rule0-route2",
 				ProxyPass:       "http://test_foo_80$request_uri",
 				ProxySetHeaders: baseHeaders,
+				ResponseHeaders: http.ResponseHeaders{},
 			},
 			{
 				Path:         "/",
@@ -601,6 +604,7 @@ func TestCreateServers(t *testing.T) {
 				Path:            "@rule1-route0",
 				ProxyPass:       "http://$test__route1_rule1$request_uri",
 				ProxySetHeaders: baseHeaders,
+				ResponseHeaders: http.ResponseHeaders{},
 			},
 			{
 				Path:         "/test/",
@@ -610,16 +614,19 @@ func TestCreateServers(t *testing.T) {
 				Path:            "/path-only/",
 				ProxyPass:       "http://invalid-backend-ref$request_uri",
 				ProxySetHeaders: baseHeaders,
+				ResponseHeaders: http.ResponseHeaders{},
 			},
 			{
 				Path:            "= /path-only",
 				ProxyPass:       "http://invalid-backend-ref$request_uri",
 				ProxySetHeaders: baseHeaders,
+				ResponseHeaders: http.ResponseHeaders{},
 			},
 			{
 				Path:            "/backend-tls-policy/",
 				ProxyPass:       "https://test_btp_80$request_uri",
 				ProxySetHeaders: baseHeaders,
+				ResponseHeaders: http.ResponseHeaders{},
 				ProxySSLVerify: &http.ProxySSLVerify{
 					Name:               "test-btp.example.com",
 					TrustedCertificate: "/etc/nginx/secrets/test-btp.crt",
@@ -629,6 +636,7 @@ func TestCreateServers(t *testing.T) {
 				Path:            "= /backend-tls-policy",
 				ProxyPass:       "https://test_btp_80$request_uri",
 				ProxySetHeaders: baseHeaders,
+				ResponseHeaders: http.ResponseHeaders{},
 				ProxySSLVerify: &http.ProxySSLVerify{
 					Name:               "test-btp.example.com",
 					TrustedCertificate: "/etc/nginx/secrets/test-btp.crt",
@@ -682,18 +690,21 @@ func TestCreateServers(t *testing.T) {
 				Rewrites:        []string{"^ /replacement break"},
 				ProxyPass:       "http://test_foo_80",
 				ProxySetHeaders: rewriteProxySetHeaders,
+				ResponseHeaders: http.ResponseHeaders{},
 			},
 			{
 				Path:            "= /rewrite",
 				Rewrites:        []string{"^ /replacement break"},
 				ProxyPass:       "http://test_foo_80",
 				ProxySetHeaders: rewriteProxySetHeaders,
+				ResponseHeaders: http.ResponseHeaders{},
 			},
 			{
 				Path:            "@rule8-route0",
 				Rewrites:        []string{"^/rewrite-with-headers(.*)$ /prefix-replacement$1 break"},
 				ProxyPass:       "http://test_foo_80",
 				ProxySetHeaders: rewriteProxySetHeaders,
+				ResponseHeaders: http.ResponseHeaders{},
 			},
 			{
 				Path:         "/rewrite-with-headers/",
@@ -733,11 +744,13 @@ func TestCreateServers(t *testing.T) {
 				Path:            "= /exact",
 				ProxyPass:       "http://test_foo_80$request_uri",
 				ProxySetHeaders: baseHeaders,
+				ResponseHeaders: http.ResponseHeaders{},
 			},
 			{
 				Path:            "@rule12-route0",
 				ProxyPass:       "http://test_foo_80$request_uri",
 				ProxySetHeaders: baseHeaders,
+				ResponseHeaders: http.ResponseHeaders{},
 			},
 			{
 				Path:         "= /test",
@@ -768,6 +781,7 @@ func TestCreateServers(t *testing.T) {
 						Value: "$connection_upgrade",
 					},
 				},
+				ResponseHeaders: http.ResponseHeaders{},
 			},
 			{
 				Path:      "= /proxy-set-headers",
@@ -794,6 +808,7 @@ func TestCreateServers(t *testing.T) {
 						Value: "$connection_upgrade",
 					},
 				},
+				ResponseHeaders: http.ResponseHeaders{},
 			},
 		}
 	}
@@ -900,11 +915,13 @@ func TestCreateServersConflicts(t *testing.T) {
 					Path:            "/coffee/",
 					ProxyPass:       "http://test_foo_80$request_uri",
 					ProxySetHeaders: baseHeaders,
+					ResponseHeaders: http.ResponseHeaders{},
 				},
 				{
 					Path:            "= /coffee",
 					ProxyPass:       "http://test_bar_80$request_uri",
 					ProxySetHeaders: baseHeaders,
+					ResponseHeaders: http.ResponseHeaders{},
 				},
 				createDefaultRootLocation(),
 			},
@@ -938,11 +955,13 @@ func TestCreateServersConflicts(t *testing.T) {
 					Path:            "= /coffee",
 					ProxyPass:       "http://test_foo_80$request_uri",
 					ProxySetHeaders: baseHeaders,
+					ResponseHeaders: http.ResponseHeaders{},
 				},
 				{
 					Path:            "/coffee/",
 					ProxyPass:       "http://test_bar_80$request_uri",
 					ProxySetHeaders: baseHeaders,
+					ResponseHeaders: http.ResponseHeaders{},
 				},
 				createDefaultRootLocation(),
 			},
@@ -986,11 +1005,13 @@ func TestCreateServersConflicts(t *testing.T) {
 					Path:            "/coffee/",
 					ProxyPass:       "http://test_bar_80$request_uri",
 					ProxySetHeaders: baseHeaders,
+					ResponseHeaders: http.ResponseHeaders{},
 				},
 				{
 					Path:            "= /coffee",
 					ProxyPass:       "http://test_baz_80$request_uri",
 					ProxySetHeaders: baseHeaders,
+					ResponseHeaders: http.ResponseHeaders{},
 				},
 				createDefaultRootLocation(),
 			},
@@ -1095,11 +1116,13 @@ func TestCreateLocationsRootPath(t *testing.T) {
 					Path:            "/path-1",
 					ProxyPass:       "http://test_foo_80$request_uri",
 					ProxySetHeaders: baseHeaders,
+					ResponseHeaders: http.ResponseHeaders{},
 				},
 				{
 					Path:            "/path-2",
 					ProxyPass:       "http://test_foo_80$request_uri",
 					ProxySetHeaders: baseHeaders,
+					ResponseHeaders: http.ResponseHeaders{},
 				},
 				{
 					Path: "/",
@@ -1117,16 +1140,19 @@ func TestCreateLocationsRootPath(t *testing.T) {
 					Path:            "/path-1",
 					ProxyPass:       "http://test_foo_80$request_uri",
 					ProxySetHeaders: baseHeaders,
+					ResponseHeaders: http.ResponseHeaders{},
 				},
 				{
 					Path:            "/path-2",
 					ProxyPass:       "http://test_foo_80$request_uri",
 					ProxySetHeaders: baseHeaders,
+					ResponseHeaders: http.ResponseHeaders{},
 				},
 				{
 					Path:            "/",
 					ProxyPass:       "http://test_foo_80$request_uri",
 					ProxySetHeaders: baseHeaders,
+					ResponseHeaders: http.ResponseHeaders{},
 				},
 			},
 		},

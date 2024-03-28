@@ -50,6 +50,16 @@ server {
             {{ range $h := $l.ProxySetHeaders }}
         proxy_set_header {{ $h.Name }} "{{ $h.Value }}";
             {{- end }}
+            {{ range $h := $l.ResponseHeaders.Add }}
+        add_header {{ $h.Name }} "{{ $h.Value }}" always;
+            {{- end }}
+            {{ range $h := $l.ResponseHeaders.Set }}
+        proxy_hide_header {{ $h.Name }};
+        add_header {{ $h.Name }} "{{ $h.Value }}" always;
+            {{- end }}
+            {{ range $h := $l.ResponseHeaders.Remove }}
+        proxy_hide_header {{ $h }};
+            {{- end }}
         proxy_http_version 1.1;
         proxy_pass {{ $l.ProxyPass }};
             {{- if $l.ProxySSLVerify }}

@@ -247,6 +247,7 @@ func updateLocationsForFilters(
 
 	rewrites := createRewritesValForRewriteFilter(filters.RequestURLRewrite, path)
 	proxySetHeaders := generateProxySetHeaders(&matchRule.Filters)
+	responseHeaders := generateResponseHeaders(&matchRule.Filters)
 	for i := range buildLocations {
 		if rewrites != nil {
 			if rewrites.Rewrite != "" {
@@ -254,6 +255,7 @@ func updateLocationsForFilters(
 			}
 		}
 		buildLocations[i].ProxySetHeaders = proxySetHeaders
+		buildLocations[i].ResponseHeaders = responseHeaders
 		buildLocations[i].ProxySSLVerify = createProxyTLSFromBackends(matchRule.BackendGroup.Backends)
 		proxyPass := createProxyPass(
 			matchRule.BackendGroup,
@@ -517,11 +519,11 @@ func generateProxySetHeaders(filters *dataplane.HTTPFilters) []http.Header {
 	headerLen := len(headerFilter.Add) + len(headerFilter.Set) + len(headerFilter.Remove) + len(headers)
 	proxySetHeaders := make([]http.Header, 0, headerLen)
 	if len(headerFilter.Add) > 0 {
-		addHeaders := convertAddHeaders(headerFilter.Add)
+		addHeaders := createHeadersWithVarName(headerFilter.Add)
 		proxySetHeaders = append(proxySetHeaders, addHeaders...)
 	}
 	if len(headerFilter.Set) > 0 {
-		setHeaders := convertSetHeaders(headerFilter.Set)
+		setHeaders := createHeaders(headerFilter.Set)
 		proxySetHeaders = append(proxySetHeaders, setHeaders...)
 	}
 	// If the value of a header field is an empty string then this field will not be passed to a proxied server
@@ -535,7 +537,25 @@ func generateProxySetHeaders(filters *dataplane.HTTPFilters) []http.Header {
 	return append(proxySetHeaders, headers...)
 }
 
-func convertAddHeaders(headers []dataplane.HTTPHeader) []http.Header {
+func generateResponseHeaders(filters *dataplane.HTTPFilters) http.ResponseHeaders {
+	if filters == nil || filters.ResponseHeaderModifiers == nil {
+		return http.ResponseHeaders{}
+	}
+
+	headerFilter := filters.ResponseHeaderModifiers
+	responseRemoveHeaders := make([]string, len(headerFilter.Remove))
+
+	// Make a deep copy to prevent the slice from being accidentally modified.
+	copy(responseRemoveHeaders, headerFilter.Remove)
+
+	return http.ResponseHeaders{
+		Add:    createHeaders(headerFilter.Add),
+		Set:    createHeaders(headerFilter.Set),
+		Remove: responseRemoveHeaders,
+	}
+}
+
+func createHeadersWithVarName(headers []dataplane.HTTPHeader) []http.Header {
 	locHeaders := make([]http.Header, 0, len(headers))
 	for _, h := range headers {
 		mapVarName := "${" + generateAddHeaderMapVariableName(h.Name) + "}"
@@ -547,7 +567,7 @@ func convertAddHeaders(headers []dataplane.HTTPHeader) []http.Header {
 	return locHeaders
 }
 
-func convertSetHeaders(headers []dataplane.HTTPHeader) []http.Header {
+func createHeaders(headers []dataplane.HTTPHeader) []http.Header {
 	locHeaders := make([]http.Header, 0, len(headers))
 	for _, h := range headers {
 		locHeaders = append(locHeaders, http.Header{
