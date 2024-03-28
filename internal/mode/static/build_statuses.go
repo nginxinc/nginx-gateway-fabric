@@ -1,12 +1,14 @@
 package static
 
 import (
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	v1 "sigs.k8s.io/gateway-api/apis/v1"
+	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
-	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/status"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/status2"
 	staticConds "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/conditions"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/graph"
 )
@@ -15,24 +17,14 @@ type nginxReloadResult struct {
 	error error
 }
 
-// buildGatewayAPIStatuses builds status.Statuses from a Graph.
-func buildGatewayAPIStatuses(
-	graph *graph.Graph,
-	gwAddresses []v1.GatewayStatusAddress,
+func buildRouteStatuses(
+	routes map[types.NamespacedName]*graph.Route,
 	nginxReloadRes nginxReloadResult,
-) status.GatewayAPIStatuses {
-	statuses := status.GatewayAPIStatuses{
-		HTTPRouteStatuses: make(status.HTTPRouteStatuses),
-	}
+) []status2.UpdateRequest {
+	reqs := make([]status2.UpdateRequest, 0, len(routes))
 
-	statuses.GatewayClassStatuses = buildGatewayClassStatuses(graph.GatewayClass, graph.IgnoredGatewayClasses)
-
-	statuses.GatewayStatuses = buildGatewayStatuses(graph.Gateway, graph.IgnoredGateways, gwAddresses, nginxReloadRes)
-
-	statuses.BackendTLSPolicyStatuses = buildBackendTLSPolicyStatuses(graph.BackendTLSPolicies)
-
-	for nsname, r := range graph.Routes {
-		parentStatuses := make([]status.ParentStatus, 0, len(r.ParentRefs))
+	for nsname, r := range routes {
+		parents := make([]v1.RouteParentStatus, 0, len(r.ParentRefs))
 
 		defaultConds := staticConds.NewDefaultRouteConditions()
 
@@ -60,27 +52,46 @@ func buildGatewayAPIStatuses(
 
 			routeRef := r.Source.Spec.ParentRefs[ref.Idx]
 
-			parentStatuses = append(parentStatuses, status.ParentStatus{
-				GatewayNsName: ref.Gateway,
-				SectionName:   routeRef.SectionName,
-				Conditions:    conditions.DeduplicateConditions(allConds),
-			})
+			conds := conditions.DeduplicateConditions(allConds)
+
+			apiConds := status2.ConvertConditions(conds, r.Source.Generation, metav1.Now())
+
+			ps := v1.RouteParentStatus{
+				ParentRef: v1.ParentReference{
+					Namespace:   (*v1.Namespace)(&ref.Gateway.Namespace),
+					Name:        v1.ObjectName(ref.Gateway.Name),
+					SectionName: routeRef.SectionName,
+				},
+				ControllerName: v1.GatewayController("todo.controller/path"),
+				Conditions:     apiConds,
+			}
+
+			parents = append(parents, ps)
 		}
 
-		statuses.HTTPRouteStatuses[nsname] = status.HTTPRouteStatus{
-			ObservedGeneration: r.Source.Generation,
-			ParentStatuses:     parentStatuses,
+		status := v1.HTTPRouteStatus{
+			RouteStatus: v1.RouteStatus{
+				Parents: parents,
+			},
 		}
+
+		req := status2.UpdateRequest{
+			NsName:       nsname,
+			ResourceType: &v1.HTTPRoute{},
+			Setter:       newHTTPRouteStatusSetter(status, "todo.controller/path"),
+		}
+
+		reqs = append(reqs, req)
 	}
 
-	return statuses
+	return reqs
 }
 
 func buildGatewayClassStatuses(
 	gc *graph.GatewayClass,
 	ignoredGwClasses map[types.NamespacedName]*v1.GatewayClass,
-) status.GatewayClassStatuses {
-	statuses := make(status.GatewayClassStatuses)
+) []status2.UpdateRequest {
+	var reqs []status2.UpdateRequest
 
 	if gc != nil {
 		defaultConds := conditions.NewDefaultGatewayClassConditions()
@@ -92,20 +103,28 @@ func buildGatewayClassStatuses(
 		conds = append(conds, defaultConds...)
 		conds = append(conds, gc.Conditions...)
 
-		statuses[client.ObjectKeyFromObject(gc.Source)] = status.GatewayClassStatus{
-			Conditions:         conditions.DeduplicateConditions(conds),
-			ObservedGeneration: gc.Source.Generation,
+		conds = conditions.DeduplicateConditions(conds)
+
+		req := status2.UpdateRequest{
+			NsName:       client.ObjectKeyFromObject(gc.Source),
+			ResourceType: &v1.GatewayClass{},
+			Setter:       newGatewayClassStatusSetter(gc.Source.Generation, conds),
 		}
+
+		reqs = append(reqs, req)
 	}
 
 	for nsname, gwClass := range ignoredGwClasses {
-		statuses[nsname] = status.GatewayClassStatus{
-			Conditions:         []conditions.Condition{conditions.NewGatewayClassConflict()},
-			ObservedGeneration: gwClass.Generation,
+		req := status2.UpdateRequest{
+			NsName:       nsname,
+			ResourceType: &v1.GatewayClass{},
+			Setter:       newGatewayClassStatusSetter(gwClass.Generation, []conditions.Condition{conditions.NewGatewayClassConflict()}),
 		}
+
+		reqs = append(reqs, req)
 	}
 
-	return statuses
+	return reqs
 }
 
 func buildGatewayStatuses(
@@ -113,37 +132,44 @@ func buildGatewayStatuses(
 	ignoredGateways map[types.NamespacedName]*v1.Gateway,
 	gwAddresses []v1.GatewayStatusAddress,
 	nginxReloadRes nginxReloadResult,
-) status.GatewayStatuses {
-	statuses := make(status.GatewayStatuses)
+) []status2.UpdateRequest {
+	reqs := make([]status2.UpdateRequest, 0, 1+len(ignoredGateways))
 
 	if gateway != nil {
-		statuses[client.ObjectKeyFromObject(gateway.Source)] = buildGatewayStatus(gateway, gwAddresses, nginxReloadRes)
+		reqs = append(reqs, buildGatewayStatus(gateway, gwAddresses, nginxReloadRes))
 	}
 
 	for nsname, gw := range ignoredGateways {
-		statuses[nsname] = status.GatewayStatus{
-			Conditions:         staticConds.NewGatewayConflict(),
-			ObservedGeneration: gw.Generation,
-			Ignored:            true,
-		}
+		apiConds := status2.ConvertConditions(staticConds.NewGatewayConflict(), gw.Generation, metav1.Now())
+		reqs = append(reqs, status2.UpdateRequest{
+			NsName:       nsname,
+			ResourceType: &v1.Gateway{},
+			Setter: newGatewayStatusSetter(v1.GatewayStatus{
+				Conditions: apiConds,
+			}),
+		})
 	}
 
-	return statuses
+	return reqs
 }
 
 func buildGatewayStatus(
 	gateway *graph.Gateway,
 	gwAddresses []v1.GatewayStatusAddress,
 	nginxReloadRes nginxReloadResult,
-) status.GatewayStatus {
+) status2.UpdateRequest {
 	if !gateway.Valid {
-		return status.GatewayStatus{
-			Conditions:         conditions.DeduplicateConditions(gateway.Conditions),
-			ObservedGeneration: gateway.Source.Generation,
+		conds := status2.ConvertConditions(conditions.DeduplicateConditions(gateway.Conditions), gateway.Source.Generation, metav1.Now())
+		return status2.UpdateRequest{
+			NsName:       client.ObjectKeyFromObject(gateway.Source),
+			ResourceType: &v1.Gateway{},
+			Setter: newGatewayStatusSetter(v1.GatewayStatus{
+				Conditions: conds,
+			}),
 		}
 	}
 
-	listenerStatuses := make([]status.ListenerStatus, 0, len(gateway.Listeners))
+	listenerStatuses := make([]v1.ListenerStatus, 0, len(gateway.Listeners))
 
 	validListenerCount := 0
 	for _, l := range gateway.Listeners {
@@ -163,11 +189,13 @@ func buildGatewayStatus(
 			)
 		}
 
-		listenerStatuses = append(listenerStatuses, status.ListenerStatus{
+		apiConds := status2.ConvertConditions(conditions.DeduplicateConditions(conds), gateway.Source.Generation, metav1.Now())
+
+		listenerStatuses = append(listenerStatuses, v1.ListenerStatus{
 			Name:           v1.SectionName(l.Name),
-			AttachedRoutes: int32(len(l.Routes)),
-			Conditions:     conditions.DeduplicateConditions(conds),
 			SupportedKinds: l.SupportedKinds,
+			AttachedRoutes: int32(len(l.Routes)),
+			Conditions:     apiConds,
 		})
 	}
 
@@ -185,31 +213,33 @@ func buildGatewayStatus(
 		)
 	}
 
-	return status.GatewayStatus{
-		Conditions:         conditions.DeduplicateConditions(gwConds),
-		ListenerStatuses:   listenerStatuses,
-		Addresses:          gwAddresses,
-		ObservedGeneration: gateway.Source.Generation,
+	apiGwConds := status2.ConvertConditions(gwConds, gateway.Source.Generation, metav1.Now())
+
+	return status2.UpdateRequest{
+		NsName:       client.ObjectKeyFromObject(gateway.Source),
+		ResourceType: &v1.Gateway{},
+		Setter: newGatewayStatusSetter(v1.GatewayStatus{
+			Listeners:  listenerStatuses,
+			Conditions: apiGwConds,
+			Addresses:  gwAddresses,
+		}),
 	}
 }
 
 func buildBackendTLSPolicyStatuses(backendTLSPolicies map[types.NamespacedName]*graph.BackendTLSPolicy,
-) status.BackendTLSPolicyStatuses {
-	statuses := make(status.BackendTLSPolicyStatuses, len(backendTLSPolicies))
+) []status2.UpdateRequest {
+	reqs := make([]status2.UpdateRequest, 0, len(backendTLSPolicies))
 
 	for nsname, backendTLSPolicy := range backendTLSPolicies {
 		if backendTLSPolicy.IsReferenced {
 			if !backendTLSPolicy.Ignored {
-				statuses[nsname] = status.BackendTLSPolicyStatus{
-					AncestorStatuses: []status.AncestorStatus{
-						{
-							GatewayNsName: backendTLSPolicy.Gateway,
-							Conditions:    conditions.DeduplicateConditions(backendTLSPolicy.Conditions),
-						},
-					},
-				}
+				reqs = append(reqs, status2.UpdateRequest{
+					NsName:       nsname,
+					ResourceType: &v1alpha2.BackendTLSPolicy{},
+					Setter:       newBackendTLSPolicyStatusSetter("todo.controller/path", backendTLSPolicy),
+				})
 			}
 		}
 	}
-	return statuses
+	return reqs
 }

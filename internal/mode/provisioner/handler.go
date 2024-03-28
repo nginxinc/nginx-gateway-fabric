@@ -6,13 +6,15 @@ import (
 
 	"github.com/go-logr/logr"
 	v1 "k8s.io/api/apps/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/events"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/gatewayclass"
-	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/status"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/status2"
 )
 
 // eventHandler ensures each Gateway for the specific GatewayClass has a corresponding Deployment
@@ -26,7 +28,7 @@ type eventHandler struct {
 	// provisions maps NamespacedName of Gateway to its corresponding Deployment
 	provisions map[types.NamespacedName]*v1.Deployment
 
-	statusUpdater status.Updater
+	statusUpdater *status2.Updater
 	k8sClient     client.Client
 
 	staticModeDeploymentYAML []byte
@@ -36,7 +38,7 @@ type eventHandler struct {
 
 func newEventHandler(
 	gcName string,
-	statusUpdater status.Updater,
+	statusUpdater *status2.Updater,
 	k8sClient client.Client,
 	staticModeDeploymentYAML []byte,
 ) *eventHandler {
@@ -52,9 +54,7 @@ func newEventHandler(
 }
 
 func (h *eventHandler) setGatewayClassStatuses(ctx context.Context) {
-	statuses := status.GatewayAPIStatuses{
-		GatewayClassStatuses: make(status.GatewayClassStatuses),
-	}
+	var reqs []status2.UpdateRequest
 
 	var gcExists bool
 
@@ -74,17 +74,30 @@ func (h *eventHandler) setGatewayClassStatuses(ctx context.Context) {
 		supportedVersionConds, _ := gatewayclass.ValidateCRDVersions(h.store.crdMetadata)
 		conds = append(conds, supportedVersionConds...)
 
-		statuses.GatewayClassStatuses[nsname] = status.GatewayClassStatus{
-			Conditions:         conditions.DeduplicateConditions(conds),
-			ObservedGeneration: gc.Generation,
-		}
+		reqs = append(reqs, status2.UpdateRequest{
+			NsName:       nsname,
+			ResourceType: &gatewayv1.GatewayClass{},
+			Setter: func(object client.Object) bool {
+				gcs := gatewayv1.GatewayClassStatus{
+					Conditions: status2.ConvertConditions(conditions.DeduplicateConditions(conds), gc.Generation, metav1.Now()),
+				}
+
+				if status2.ConditionsEqual(gc.Status.Conditions, gcs.Conditions) {
+					return false
+				}
+
+				gc.Status = gcs
+
+				return true
+			},
+		})
 	}
 
 	if !gcExists {
 		panic(fmt.Errorf("GatewayClass %s must exist", h.gcName))
 	}
 
-	h.statusUpdater.Update(ctx, statuses)
+	h.statusUpdater.Update(ctx, reqs...)
 }
 
 func (h *eventHandler) ensureDeploymentsMatchGateways(ctx context.Context, logger logr.Logger) {

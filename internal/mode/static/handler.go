@@ -10,6 +10,7 @@ import (
 	ngxclient "github.com/nginxinc/nginx-plus-go-client/client"
 	apiv1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -19,7 +20,7 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/events"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
-	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/status"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/status2"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/config"
 	ngfConfig "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/config"
 	ngxConfig "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config"
@@ -66,7 +67,7 @@ type eventHandlerConfig struct {
 	// nginxRuntimeMgr manages nginx runtime.
 	nginxRuntimeMgr runtime.Manager
 	// statusUpdater updates statuses on Kubernetes resources.
-	statusUpdater status.Updater
+	statusUpdater *status2.CachingGroupUpdater
 	// eventRecorder records events for Kubernetes resources.
 	eventRecorder record.EventRecorder
 	// logLevelSetter is used to update the logging level.
@@ -107,7 +108,8 @@ type eventHandlerImpl struct {
 	lock sync.Mutex
 
 	// version is the current version number of the nginx config.
-	version int
+	version            int
+	latestReloadResult nginxReloadResult
 }
 
 // newEventHandlerImpl creates a new eventHandlerImpl.
@@ -214,12 +216,36 @@ func (h *eventHandlerImpl) HandleEventBatch(ctx context.Context, logger logr.Log
 		}
 	}
 
+	h.latestReloadResult = nginxReloadRes
+
 	gwAddresses, err := getGatewayAddresses(ctx, h.cfg.k8sClient, nil, h.cfg.gatewayPodConfig)
 	if err != nil {
 		logger.Error(err, "Setting GatewayStatusAddress to Pod IP Address")
 	}
 
-	h.cfg.statusUpdater.Update(ctx, buildGatewayAPIStatuses(graph, gwAddresses, nginxReloadRes))
+	var statuses []status2.UpdateRequest
+
+	statuses = append(statuses, buildGatewayClassStatuses(graph.GatewayClass, graph.IgnoredGatewayClasses)...)
+	statuses = append(statuses, buildRouteStatuses(graph.Routes, nginxReloadRes)...)
+	statuses = append(statuses, buildBackendTLSPolicyStatuses(graph.BackendTLSPolicies)...)
+
+	groupReq := status2.GroupUpdateRequest{
+		Name:    "all-graphs-expect-gateway",
+		Request: statuses,
+	}
+
+	h.cfg.statusUpdater.Update(ctx, groupReq)
+
+	// We put Gateway status updates separately from the rest of the statuses because we want to be able
+	// to update them separately from the rest of the graph whenever the public IP of NGF changes.
+
+	gatewayStatuses := buildGatewayStatuses(graph.Gateway, graph.IgnoredGateways, gwAddresses, nginxReloadRes)
+	gatewaysGroup := status2.GroupUpdateRequest{
+		Name:    "gateways",
+		Request: gatewayStatuses,
+	}
+
+	h.cfg.statusUpdater.Update(ctx, gatewaysGroup)
 }
 
 func (h *eventHandlerImpl) parseAndCaptureEvent(ctx context.Context, logger logr.Logger, event interface{}) {
@@ -382,13 +408,23 @@ func (h *eventHandlerImpl) updateControlPlaneAndSetStatus(
 	}
 
 	if cfg != nil {
-		nginxGatewayStatus := &status.NginxGatewayStatus{
-			NsName:             client.ObjectKeyFromObject(cfg),
-			Conditions:         cond,
-			ObservedGeneration: cfg.Generation,
+		nginxGwsStatus := ngfAPI.NginxGatewayStatus{
+			Conditions: status2.ConvertConditions(cond, cfg.Generation, metav1.Now()),
 		}
 
-		h.cfg.statusUpdater.Update(ctx, nginxGatewayStatus)
+		groupReq := status2.GroupUpdateRequest{
+			Name: "control-plane",
+			Request: []status2.UpdateRequest{
+				{
+					NsName:       client.ObjectKeyFromObject(cfg),
+					ResourceType: &ngfAPI.NginxGateway{},
+					Setter:       newNginxGatewayStatusSetter(nginxGwsStatus),
+				},
+			},
+		}
+
+		h.cfg.statusUpdater.Update(ctx, groupReq)
+
 		logger.Info("Reconfigured control plane.")
 	}
 }
@@ -506,7 +542,18 @@ func (h *eventHandlerImpl) nginxGatewayServiceUpsert(ctx context.Context, logger
 		logger.Error(err, "Setting GatewayStatusAddress to Pod IP Address")
 	}
 
-	h.cfg.statusUpdater.UpdateAddresses(ctx, gwAddresses)
+	graph := h.cfg.processor.GetLatestGraph()
+	if graph == nil {
+		return
+	}
+
+	gatewayStatuses := buildGatewayStatuses(graph.Gateway, graph.IgnoredGateways, gwAddresses, h.latestReloadResult)
+	gatewaysGroup := status2.GroupUpdateRequest{
+		Name:    "gateways",
+		Request: gatewayStatuses,
+	}
+
+	h.cfg.statusUpdater.Update(ctx, gatewaysGroup)
 }
 
 func (h *eventHandlerImpl) nginxGatewayServiceDelete(
@@ -519,7 +566,18 @@ func (h *eventHandlerImpl) nginxGatewayServiceDelete(
 		logger.Error(err, "Setting GatewayStatusAddress to Pod IP Address")
 	}
 
-	h.cfg.statusUpdater.UpdateAddresses(ctx, gwAddresses)
+	graph := h.cfg.processor.GetLatestGraph()
+	if graph == nil {
+		return
+	}
+
+	gatewayStatuses := buildGatewayStatuses(graph.Gateway, graph.IgnoredGateways, gwAddresses, h.latestReloadResult)
+	gatewaysGroup := status2.GroupUpdateRequest{
+		Name:    "gateways",
+		Request: gatewayStatuses,
+	}
+
+	h.cfg.statusUpdater.Update(ctx, gatewaysGroup)
 }
 
 func (h *eventHandlerImpl) nginxPlusUsageSecretUpsert(_ context.Context, _ logr.Logger, obj client.Object) {
