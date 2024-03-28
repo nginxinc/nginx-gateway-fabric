@@ -1,4 +1,4 @@
-package runtime
+package runtime_test
 
 import (
 	"context"
@@ -7,26 +7,137 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-logr/logr"
 	ngxclient "github.com/nginxinc/nginx-plus-go-client/client"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/runtime"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/runtime/runtimefakes"
 )
 
 var _ = Describe("NGINX Runtime Manager", func() {
 	It("returns whether or not we're using NGINX Plus", func() {
-		mgr := NewManagerImpl(nil, nil, logr.New(GinkgoLogr.GetSink()))
+		mgr := runtime.NewManagerImpl(nil, nil, zap.New(), nil, nil)
 		Expect(mgr.IsPlus()).To(BeFalse())
 
-		mgr = NewManagerImpl(&ngxclient.NginxClient{}, nil, logr.New(GinkgoLogr.GetSink()))
+		mgr = runtime.NewManagerImpl(&ngxclient.NginxClient{}, nil, zap.New(), nil, nil)
 		Expect(mgr.IsPlus()).To(BeTrue())
+	})
+
+	var (
+		manager         runtime.Manager
+		upstreamServers []ngxclient.UpstreamServer
+		upstreamServer  ngxclient.UpstreamServer
+		ngxPlusClient   *runtimefakes.FakeNginxPlusClient
+		process         *runtimefakes.FakeProcessHandler
+
+		metrics      *runtimefakes.FakeMetricsCollector
+		verifyClient *runtimefakes.FakeVerifyClient
+	)
+
+	BeforeEach(func() {
+		upstreamServer = ngxclient.UpstreamServer{}
+
+		upstreamServers = []ngxclient.UpstreamServer{
+			upstreamServer,
+		}
+
+	})
+
+	Context("Reload", func() {
+		BeforeEach(func() {
+			ngxPlusClient = &runtimefakes.FakeNginxPlusClient{}
+			process = &runtimefakes.FakeProcessHandler{}
+			metrics = &runtimefakes.FakeMetricsCollector{}
+			verifyClient = &runtimefakes.FakeVerifyClient{}
+			manager = runtime.NewManagerImpl(ngxPlusClient, metrics, zap.New(), process, verifyClient)
+		})
+
+		It("NGINX configuration reload is successful", func() {
+			Expect(manager.Reload(context.Background(), 1)).To(Succeed())
+
+			Expect(process.FindMainProcessCallCount()).To(Equal(1))
+			Expect(process.ReadFileCallCount()).To(Equal(1))
+			Expect(process.KillCallCount()).To(Equal(1))
+			Expect(metrics.IncReloadCountCallCount()).To(Equal(1))
+			Expect(verifyClient.WaitForCorrectVersionCallCount()).To(Equal(1))
+			Expect(metrics.ObserveLastReloadTimeCallCount()).To(Equal(1))
+		})
+
+		When("NGINX configuration reload is not successful", func() {
+			It("should panic if MetricsCollector not enabled", func() {
+				metrics = nil
+				manager = runtime.NewManagerImpl(ngxPlusClient, metrics, zap.New(), process, verifyClient)
+
+				reload := func() {
+					manager.Reload(context.Background(), 0)
+				}
+
+				Expect(reload).To(Panic())
+			})
+
+			It("should panic if VerifyClient not enabled", func() {
+				metrics = &runtimefakes.FakeMetricsCollector{}
+				verifyClient = nil
+				manager = runtime.NewManagerImpl(ngxPlusClient, metrics, zap.New(), process, verifyClient)
+
+				reload := func() {
+					manager.Reload(context.Background(), 0)
+				}
+
+				Expect(reload).To(Panic())
+			})
+		})
+	})
+
+	When("running NGINX plus", func() {
+		BeforeEach(func() {
+			ngxPlusClient = &runtimefakes.FakeNginxPlusClient{}
+			manager = runtime.NewManagerImpl(ngxPlusClient, nil, zap.New(), nil, nil)
+		})
+
+		It("sucessfully updates HTTP server upstream", func() {
+
+			Expect(manager.UpdateHTTPServers("test", upstreamServers)).To(Succeed())
+		})
+
+		It("returns no upstreams from NGINX Plus API", func() {
+			upstreams, err := manager.GetUpstreams()
+
+			Expect(err).To(HaveOccurred())
+			Expect(upstreams).To(BeEmpty())
+		})
+	})
+
+	When("not running NGINX plus", func() {
+		BeforeEach(func() {
+			ngxPlusClient = nil
+			manager = runtime.NewManagerImpl(ngxPlusClient, nil, zap.New(), nil, nil)
+		})
+
+		It("should panic when updating HTTP upstream servers", func() {
+			updateServers := func() {
+				manager.UpdateHTTPServers("test", upstreamServers)
+			}
+
+			Expect(updateServers).To(Panic())
+		})
+
+		It("should panic when fetching HTTP upstream servers", func() {
+			upstreams := func() {
+				manager.GetUpstreams()
+			}
+
+			Expect(upstreams).To(Panic())
+		})
 	})
 })
 
 func TestFindMainProcess(t *testing.T) {
-	readFileFuncGen := func(content []byte) readFileFunc {
+	readFileFuncGen := func(content []byte) runtime.ReadFileFunc {
 		return func(name string) ([]byte, error) {
-			if name != pidFile {
+			if name != runtime.PidFile {
 				return nil, errors.New("error")
 			}
 			return content, nil
@@ -36,9 +147,9 @@ func TestFindMainProcess(t *testing.T) {
 		return nil, errors.New("error")
 	}
 
-	checkFileFuncGen := func(content fs.FileInfo) checkFileFunc {
+	checkFileFuncGen := func(content fs.FileInfo) runtime.CheckFileFunc {
 		return func(name string) (fs.FileInfo, error) {
-			if name != pidFile {
+			if name != runtime.PidFile {
 				return nil, errors.New("error")
 			}
 			return content, nil
@@ -54,8 +165,8 @@ func TestFindMainProcess(t *testing.T) {
 
 	tests := []struct {
 		ctx         context.Context
-		readFile    readFileFunc
-		checkFile   checkFileFunc
+		readFile    runtime.ReadFileFunc
+		checkFile   runtime.CheckFileFunc
 		name        string
 		expected    int
 		expectError bool
@@ -113,8 +224,9 @@ func TestFindMainProcess(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewWithT(t)
-
-			result, err := findMainProcess(test.ctx, test.checkFile, test.readFile, 2*time.Millisecond)
+			p := runtime.ProcessHandlerImpl{}
+			result, err := p.FindMainProcess(test.ctx, test.checkFile, test.readFile, 2*time.Millisecond)
+			//result, err := runtime.FindMainProcess(test.ctx, test.checkFile, test.readFile, 2*time.Millisecond)
 
 			if test.expectError {
 				g.Expect(err).To(HaveOccurred())
