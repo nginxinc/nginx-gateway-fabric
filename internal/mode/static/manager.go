@@ -43,7 +43,7 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/gatewayclass"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/runnables"
-	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/status"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/status2"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/config"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/metrics/collectors"
 	ngxcfg "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config"
@@ -188,15 +188,12 @@ func StartManager(cfg config.Config) error {
 		)
 	}
 
-	statusUpdater := status.NewUpdater(status.UpdaterConfig{
-		GatewayCtlrName:          cfg.GatewayCtlrName,
-		GatewayClassName:         cfg.GatewayClassName,
-		Client:                   mgr.GetClient(),
-		Logger:                   cfg.Logger.WithName("statusUpdater"),
-		Clock:                    status.NewRealClock(),
-		UpdateGatewayClassStatus: cfg.UpdateGatewayClassStatus,
-		LeaderElectionEnabled:    cfg.LeaderElection.Enabled,
-	})
+	statusUpdater := status2.NewUpdater(
+		mgr.GetClient(),
+		cfg.Logger.WithName("statusUpdater"),
+	)
+
+	cachingGroupStatusUpdater := status2.NewCachingGroupUpdater(statusUpdater)
 
 	eventHandler := newEventHandlerImpl(eventHandlerConfig{
 		k8sClient:       mgr.GetClient(),
@@ -213,7 +210,7 @@ func StartManager(cfg config.Config) error {
 			ngxruntimeCollector,
 			cfg.Logger.WithName("nginxRuntimeManager"),
 		),
-		statusUpdater:                 statusUpdater,
+		statusUpdater:                 cachingGroupStatusUpdater,
 		eventRecorder:                 recorder,
 		nginxConfiguredOnStartChecker: nginxChecker,
 		controlConfigNSName:           controlConfigNSName,
@@ -240,7 +237,7 @@ func StartManager(cfg config.Config) error {
 		return fmt.Errorf("cannot register event loop: %w", err)
 	}
 
-	if err = mgr.Add(runnables.NewEnableAfterBecameLeader(statusUpdater.Enable)); err != nil {
+	if err = mgr.Add(runnables.NewEnableAfterBecameLeader(cachingGroupStatusUpdater.Enable)); err != nil {
 		return fmt.Errorf("cannot register status updater: %w", err)
 	}
 

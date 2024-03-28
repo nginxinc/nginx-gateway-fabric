@@ -20,7 +20,7 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/controller/predicate"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/events"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/gatewayclass"
-	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/status"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/status2"
 )
 
 // Config is configuration for the provisioner mode.
@@ -121,14 +121,9 @@ func StartManager(cfg Config) error {
 		},
 	)
 
-	statusUpdater := status.NewUpdater(
-		status.UpdaterConfig{
-			Client:                   mgr.GetClient(),
-			Clock:                    status.NewRealClock(),
-			Logger:                   cfg.Logger.WithName("statusUpdater"),
-			GatewayClassName:         cfg.GatewayClassName,
-			UpdateGatewayClassStatus: true,
-		},
+	statusUpdater := status2.NewUpdater(
+		mgr.GetClient(),
+		cfg.Logger.WithName("statusUpdater"),
 	)
 
 	handler := newEventHandler(
