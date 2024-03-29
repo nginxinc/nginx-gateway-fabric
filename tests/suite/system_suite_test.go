@@ -278,5 +278,6 @@ func isNFR(labelFilter string) bool {
 	return strings.Contains(labelFilter, "nfr") ||
 		strings.Contains(labelFilter, "longevity") ||
 		strings.Contains(labelFilter, "performance") ||
-		strings.Contains(labelFilter, "upgrade")
+		strings.Contains(labelFilter, "upgrade") ||
+		strings.Contains(labelFilter, "graceful-recovery")
 }

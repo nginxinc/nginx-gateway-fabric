@@ -3,6 +3,7 @@ package framework
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
 	"fmt"
 	"net"
 	"net/http"
@@ -34,7 +35,18 @@ func Get(url, address string, timeout time.Duration) (int, string, error) {
 		return 0, "", err
 	}
 
-	resp, err := http.DefaultClient.Do(req)
+	var resp *http.Response
+	if strings.HasPrefix(url, "https") {
+		customTransport := http.DefaultTransport.(*http.Transport).Clone()
+		// similar to how in our examples with https requests we run our curl command
+		// we turn off verification of the certificate, we do the same here
+		customTransport.TLSClientConfig = &tls.Config{InsecureSkipVerify: false} // #nosec G402
+		client := &http.Client{Transport: customTransport}
+		resp, err = client.Do(req)
+	} else {
+		resp, err = http.DefaultClient.Do(req)
+	}
+
 	if err != nil {
 		return 0, "", err
 	}
