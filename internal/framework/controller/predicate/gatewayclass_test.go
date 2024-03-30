@@ -34,4 +34,5 @@ func TestGatewayClassPredicate(t *testing.T) {
 	g.Expect(p.Update(event.UpdateEvent{ObjectOld: gc2, ObjectNew: gc2})).To(BeFalse())
 	g.Expect(p.Delete(event.DeleteEvent{Object: nil})).To(BeFalse())
 	g.Expect(p.Delete(event.DeleteEvent{Object: gc2})).To(BeFalse())
+	g.Expect(p.Delete(event.DeleteEvent{Object: &v1.HTTPRoute{}})).To(BeFalse())
 }
