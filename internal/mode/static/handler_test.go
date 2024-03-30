@@ -229,7 +229,7 @@ var _ = Describe("eventHandler", func() {
 				"Failed to update control plane configuration: logging.level: Unsupported value: " +
 					"\"invalid\": supported values: \"info\", \"debug\", \"error\"")
 			Expect(statuses).To(Equal(expStatuses(cond)))
-			Expect(len(fakeEventRecorder.Events)).To(Equal(1))
+			Expect(fakeEventRecorder.Events).To(HaveLen(1))
 			event := <-fakeEventRecorder.Events
 			Expect(event).To(Equal(
 				"Warning UpdateFailed Failed to update control plane configuration: logging.level: Unsupported value: " +
@@ -252,7 +252,7 @@ var _ = Describe("eventHandler", func() {
 
 			Expect(handler.GetLatestConfiguration()).To(BeNil())
 
-			Expect(len(fakeEventRecorder.Events)).To(Equal(1))
+			Expect(fakeEventRecorder.Events).To(HaveLen(1))
 			event := <-fakeEventRecorder.Events
 			Expect(event).To(Equal("Warning ResourceDeleted NginxGateway configuration was deleted; using defaults"))
 			Expect(zapLogLevelSetter.Enabled(zap.InfoLevel)).To(BeTrue())

@@ -170,7 +170,7 @@ func setup(cfg setupConfig, extraInstallArgs ...string) {
 		timeoutConfig.CreateTimeout,
 	)
 	Expect(err).ToNot(HaveOccurred())
-	Expect(podNames).ToNot(HaveLen(0))
+	Expect(podNames).ToNot(BeEmpty())
 
 	if *serviceType != "LoadBalancer" {
 		portFwdPort, err = framework.PortForward(k8sConfig, installCfg.Namespace, podNames[0], portForwardStopCh)

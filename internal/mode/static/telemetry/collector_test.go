@@ -347,7 +347,7 @@ var _ = Describe("Collector", Ordered, func() {
 
 				data, err := dataCollector.Collect(ctx)
 
-				Expect(err).To(BeNil())
+				Expect(err).ToNot(HaveOccurred())
 				Expect(expData).To(Equal(data))
 			})
 		})
@@ -414,7 +414,7 @@ var _ = Describe("Collector", Ordered, func() {
 
 					data, err := dataCollector.Collect(ctx)
 
-					Expect(err).To(BeNil())
+					Expect(err).ToNot(HaveOccurred())
 					Expect(expData).To(Equal(data))
 				})
 			})
@@ -430,7 +430,7 @@ var _ = Describe("Collector", Ordered, func() {
 
 				data, err := dataCollector.Collect(ctx)
 
-				Expect(err).To(BeNil())
+				Expect(err).ToNot(HaveOccurred())
 				Expect(expData).To(Equal(data))
 			})
 
@@ -539,7 +539,7 @@ var _ = Describe("Collector", Ordered, func() {
 
 				data, err := dataCollector.Collect(ctx)
 
-				Expect(err).To(BeNil())
+				Expect(err).ToNot(HaveOccurred())
 				Expect(expData).To(Equal(data))
 			})
 
@@ -558,7 +558,7 @@ var _ = Describe("Collector", Ordered, func() {
 
 				data, err := dataCollector.Collect(ctx)
 
-				Expect(err).To(BeNil())
+				Expect(err).ToNot(HaveOccurred())
 				Expect(expData).To(Equal(data))
 			})
 
@@ -576,7 +576,7 @@ var _ = Describe("Collector", Ordered, func() {
 
 				data, err := dataCollector.Collect(ctx)
 
-				Expect(err).To(BeNil())
+				Expect(err).ToNot(HaveOccurred())
 				Expect(expData).To(Equal(data))
 			})
 
