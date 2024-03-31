@@ -3,6 +3,7 @@ package dataplane
 import (
 	"fmt"
 
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 	v1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
@@ -77,17 +78,24 @@ func convertHTTPHeaderFilter(filter *v1.HTTPHeaderFilter) *HTTPHeaderFilter {
 
 func convertHTTPRequestMirrorFilter(filter *v1.HTTPRequestMirrorFilter) *HTTPRequestMirrorFilter {
 	var backendRefNamePtr *string
-	backendRefName := string(filter.BackendRef.Name)
+	filterBackendRef := filter.BackendRef
+	backendRefName := string(filterBackendRef.Name)
 	if len(backendRefName) > 0 {
 		backendRefNamePtr = &backendRefName
 	}
 
+	// this initialization is partial and must be completed with the path
 	result := &HTTPRequestMirrorFilter{
-		Hostname: backendRefNamePtr,
-		Port:     (*int32)(filter.BackendRef.Port),
+		Name:      backendRefNamePtr,
+		Namespace: (*string)(filterBackendRef.Namespace),
+		Port:      (*int32)(filterBackendRef.Port),
 	}
 
 	return result
+}
+
+func updateHTTPMirrorFilterRoute(path *v1.HTTPPathMatch, f *HTTPRequestMirrorFilter) {
+	f.Target = helpers.CreateMirrorBackendPath(path.Value, *f.Namespace, *f.Name)
 }
 
 func convertPathType(pathType v1.PathMatchType) PathType {

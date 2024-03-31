@@ -320,10 +320,10 @@ func (hpr *hostPathRules) upsertRoute(route *graph.Route, listener *graph.Listen
 					pathType: *m.Path.Type,
 				}
 
-				rule, exist := hpr.rulesPerHost[h][key]
+				rulePerHost, exist := hpr.rulesPerHost[h][key]
 				if !exist {
-					rule.Path = path
-					rule.PathType = convertPathType(*m.Path.Type)
+					rulePerHost.Path = path
+					rulePerHost.PathType = convertPathType(*m.Path.Type)
 				}
 
 				// create iteration variable inside the loop to fix implicit memory aliasing
@@ -331,14 +331,19 @@ func (hpr *hostPathRules) upsertRoute(route *graph.Route, listener *graph.Listen
 
 				routeNsName := client.ObjectKeyFromObject(route.Source)
 
-				rule.MatchRules = append(rule.MatchRules, MatchRule{
+				rulePerHost.MatchRules = append(rulePerHost.MatchRules, MatchRule{
 					Source:       &om,
 					BackendGroup: newBackendGroup(route.Rules[i].BackendRefs, routeNsName, i),
 					Filters:      filters,
 					Match:        convertMatch(m),
 				})
 
-				hpr.rulesPerHost[h][key] = rule
+				if filters.RequestMirror != nil {
+					// we need the scope of this path to add the target route for mirror
+					updateHTTPMirrorFilterRoute(m.Path, filters.RequestMirror)
+				}
+
+				hpr.rulesPerHost[h][key] = rulePerHost
 			}
 		}
 	}

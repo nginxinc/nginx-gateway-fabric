@@ -2,7 +2,6 @@ package graph
 
 import (
 	"fmt"
-	"regexp"
 	"strings"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
@@ -21,10 +20,7 @@ import (
 
 const (
 	wildcardHostname = "~^"
-	rootPath         = "/"
 )
-
-var catchAllNonRootPathRegex = regexp.MustCompile(fmt.Sprintf(`^(%s?)(.*)`, rootPath))
 
 // Rule represents a rule of an HTTPRoute.
 type Rule struct {
@@ -163,7 +159,7 @@ func buildMirrorRouteRule(matchesPath *string, filters []v1.HTTPRouteFilter, fil
 			{
 				Path: &v1.HTTPPathMatch{
 					Type:  helpers.GetPointer(v1.PathMatchExact),
-					Value: createMirrorPath(matchesPath, filterBackendRef),
+					Value: helpers.CreateMirrorPathWithBackendRef(matchesPath, filterBackendRef),
 				},
 			},
 		},
@@ -1027,25 +1023,6 @@ func validateRequestHeaderStringCaseInsensitiveUnique(headers []string, path *fi
 	}
 
 	return allErrs
-}
-
-func createMirrorPath(path *string, backendRef v1.BackendObjectReference) *string {
-	namespace := string(*backendRef.Namespace)
-	svcName := string(backendRef.Name)
-
-	var mirrorPath string
-	mirrorPathPrefix := "mirror"
-	matches := catchAllNonRootPathRegex.FindStringSubmatch(*path)
-	if len(matches) > 2 {
-		trailingPath := matches[2]
-		if len(trailingPath) > 0 {
-			mirrorPath = fmt.Sprintf("%s%s-%s-%s-%s", rootPath, namespace, svcName, mirrorPathPrefix, trailingPath)
-		} else {
-			mirrorPath = fmt.Sprintf("%s%s-%s-%s", rootPath, namespace, svcName, mirrorPathPrefix)
-		}
-	}
-
-	return &mirrorPath
 }
 
 func removeMirrorFilters(filters []v1.HTTPRouteFilter) []v1.HTTPRouteFilter {

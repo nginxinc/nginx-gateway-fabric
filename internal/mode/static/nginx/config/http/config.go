@@ -19,7 +19,7 @@ type Location struct {
 	HTTPMatchVar    string
 	Rewrites        []string
 	ProxySetHeaders []Header
-	MirrorHost      string
+	MirrorPath      string
 }
 
 // Header defines a HTTP header to be passed to the proxied server.

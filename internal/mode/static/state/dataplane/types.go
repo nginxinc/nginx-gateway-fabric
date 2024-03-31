@@ -156,12 +156,14 @@ type HTTPURLRewriteFilter struct {
 type PathModifierType string
 
 type HTTPRequestMirrorFilter struct {
-	// Scheme is the scheme of the redirect.
-	Scheme *string
-	// Hostname is the hostname of the redirect.
-	Hostname *string
+	// Name is the service name
+	Name *string
+	// Namespace is the hostname of the redirect.
+	Namespace *string
 	// Port is the port of the redirect.
 	Port *int32
+	// Target is the target of the mirror (path with hostname and service name).
+	Target *string
 }
 
 const (

@@ -120,7 +120,8 @@ func createLocations(pathRules []dataplane.PathRule, listenerPort int32) []http.
 		}
 
 		extLocations := initializeExternalLocations(rule, pathsAndTypes)
-
+		//internal/mode/static/nginx/config/servers.go
+		//internal/mode/static/state/graph/httproute.go
 		for matchRuleIdx, r := range rule.MatchRules {
 			buildLocations := extLocations
 			if len(rule.MatchRules) != 1 || !isPathOnlyMatch(r.Match) {

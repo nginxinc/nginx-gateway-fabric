@@ -3,9 +3,11 @@ package helpers
 
 import (
 	"fmt"
+	"regexp"
 
 	"github.com/google/go-cmp/cmp"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/gateway-api/apis/v1"
 )
 
 // Diff prints the diff between two structs.
@@ -40,4 +42,31 @@ func PrepareTimeForFakeClient(t metav1.Time) metav1.Time {
 	}
 
 	return t
+}
+
+var catchAllNonRootPathRegex = regexp.MustCompile(fmt.Sprintf(`^(%s?)(.*)`, rootPath))
+
+const rootPath = "/"
+
+func CreateMirrorPathWithBackendRef(path *string, backendRef v1.BackendObjectReference) *string {
+	namespace := string(*backendRef.Namespace)
+	svcName := string(backendRef.Name)
+
+	return CreateMirrorBackendPath(path, namespace, svcName)
+}
+
+func CreateMirrorBackendPath(path *string, namespace string, svcName string) *string {
+	var mirrorPath string
+	mirrorPathPrefix := "mirror"
+	matches := catchAllNonRootPathRegex.FindStringSubmatch(*path)
+	if len(matches) > 2 {
+		trailingPath := matches[2]
+		if len(trailingPath) > 0 {
+			mirrorPath = fmt.Sprintf("%s%s-%s-%s-%s", rootPath, namespace, svcName, mirrorPathPrefix, trailingPath)
+		} else {
+			mirrorPath = fmt.Sprintf("%s%s-%s-%s", rootPath, namespace, svcName, mirrorPathPrefix)
+		}
+	}
+
+	return &mirrorPath
 }

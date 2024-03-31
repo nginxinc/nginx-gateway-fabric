@@ -183,17 +183,27 @@ func TestBuildConfiguration(t *testing.T) {
 
 	hr0, expHR0Groups, routeHR0 := createTestResources(
 		"hr-0",
-		"mirror.example.com",
+		"source.example.com",
 		"listener-80-1",
 		pathAndType{path: "/", pathType: prefix},
 	)
 
-	redir := v1.HTTPRouteFilter{
+	hr0mrr, expHR0GroupsMrr, routeHR0mrr := createTestResources(
+		"hr-0-mrr",
+		"mirror.example.com",
+		"listener-80-1",
+		pathAndType{path: "/", pathType: prefix},
+	)
+	fmt.Printf("hr0mrr: %v\n", hr0mrr)
+	fmt.Printf("expHR0GroupsMrr: %v\n", expHR0GroupsMrr)
+	fmt.Printf("routeHR0mrr: %v\n", routeHR0mrr)
+
+	routeWithMirrorFilter := v1.HTTPRouteFilter{
 		Type: v1.HTTPRouteFilterRequestMirror,
 		RequestMirror: &v1.HTTPRequestMirrorFilter{
 			BackendRef: v1.BackendObjectReference{
 				Kind:      (*v1.Kind)(helpers.GetPointer("Service")),
-				Name:      "hr-0",
+				Name:      "hr-0-mirror",
 				Namespace: (*v1.Namespace)(helpers.GetPointer("test")),
 				Port:      helpers.GetPointer[v1.PortNumber](80),
 			},
@@ -201,12 +211,13 @@ func TestBuildConfiguration(t *testing.T) {
 	}
 	routeHR0.Valid = true
 
-	addFilters(hr0, []v1.HTTPRouteFilter{redir})
+	addFilters(hr0, []v1.HTTPRouteFilter{routeWithMirrorFilter})
 
 	hr0RequestMirrorFilter := &HTTPRequestMirrorFilter{
-		Scheme:   helpers.GetPointer("http"),
-		Hostname: helpers.GetPointer("hr-0.test.svc"),
-		Port:     helpers.GetPointer[int32](80),
+		Name:      helpers.GetPointer("hr-0-mirror"),
+		Namespace: helpers.GetPointer("test"),
+		Port:      helpers.GetPointer[int32](80),
+		Target:    helpers.GetPointer("/test-hr-0-mirror-mirror"),
 	}
 
 	hr1, expHR1Groups, routeHR1 := createTestResources(
@@ -849,7 +860,7 @@ func TestBuildConfiguration(t *testing.T) {
 						Port: 80,
 					},
 					{
-						Hostname: "mirror.example.com",
+						Hostname: "source.example.com",
 						PathRules: []PathRule{
 							{
 								Path:     "/",
@@ -861,6 +872,25 @@ func TestBuildConfiguration(t *testing.T) {
 										},
 										Source:       &hr0.ObjectMeta,
 										BackendGroup: expHR0Groups[0],
+									},
+								},
+							},
+						},
+						Port: 80,
+					},
+					{
+						Hostname: "mirror.example.com",
+						PathRules: []PathRule{
+							{
+								Path:     "/test-hr-0-mirror-mirror",
+								PathType: PathTypeExact,
+								MatchRules: []MatchRule{
+									{
+										Filters: HTTPFilters{
+											RequestMirror: nil,
+										},
+										Source:       &hr0.ObjectMeta,
+										BackendGroup: expHR0GroupsMrr[0],
 									},
 								},
 							},
