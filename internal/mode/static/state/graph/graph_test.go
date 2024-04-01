@@ -781,7 +781,6 @@ func TestBuildGraphWithMirror(t *testing.T) {
 								},
 							},
 						},
-						//Filters: []gatewayv1.HTTPRouteFilter{},
 						BackendRefs: []gatewayv1.HTTPBackendRef{
 							{
 								BackendRef: gatewayv1.BackendRef{
@@ -910,11 +909,18 @@ func TestBuildGraphWithMirror(t *testing.T) {
 	hr1 := createRoute("hr-1", "gateway-1", "listener-80-1")
 	hr1MirrorFilter := createMirroredRouteFilterRequest("hr-1-filter-request", "gateway-1", "listener-80-1")
 	hr1MirrorFilterCreated := createMirroredRouteFilterCreated("hr-1-filter-request-mirror", "gateway-1", "listener-80-1")
-	/*hr2 := createRoute("hr-2", "wrong-gateway", "listener-80-1")
-	hr2mirror := createMirroredRouteFilterRequest("hr-2-with-mirror-filter", "wrong-gateway", "listener-80-1")*/
-	hr3 := createRoute("hr-3", "gateway-1", "listener-443-1")                                                               // https listener; should not conflict with hr1
-	hr3MirrorFilter := createMirroredRouteFilterRequest("hr-3-filter-request", "gateway-1", "listener-443-1")               // https listener; should not conflict with hr1
-	hr3MirrorFilterCreated := createMirroredRouteFilterCreated("hr-3-filter-request-mirror", "gateway-1", "listener-443-1") // https listener; should not conflict with hr1
+	// https listener; should not conflict with hr1
+	hr3 := createRoute("hr-3", "gateway-1", "listener-443-1")
+	hr3MirrorFilter := createMirroredRouteFilterRequest(
+		"hr-3-filter-request",
+		"gateway-1",
+		"listener-443-1",
+	) // https listener; should not conflict with hr1
+	hr3MirrorFilterCreated := createMirroredRouteFilterCreated(
+		"hr-3-filter-request-mirror",
+		"gateway-1",
+		"listener-443-1",
+	) // https listener; should not conflict with hr1
 
 	cm := &v1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
@@ -1173,13 +1179,13 @@ func TestBuildGraphWithMirror(t *testing.T) {
 				client.ObjectKeyFromObject(gw1): gw1,
 				client.ObjectKeyFromObject(gw2): gw2,
 			},
+			// hr1MirrorFilterCreated & hr3MirrorFilterCreated should be created implicitly, therefore they are not list
+			// here, but are added to the graph and the expected graph state
 			HTTPRoutes: map[types.NamespacedName]*gatewayv1.HTTPRoute{
-				client.ObjectKeyFromObject(hr1):                    hr1,
-				client.ObjectKeyFromObject(hr1MirrorFilter):        hr1MirrorFilter,
-				client.ObjectKeyFromObject(hr1MirrorFilterCreated): hr1MirrorFilterCreated,
-				client.ObjectKeyFromObject(hr3):                    hr3,
-				client.ObjectKeyFromObject(hr3MirrorFilter):        hr3MirrorFilter,
-				client.ObjectKeyFromObject(hr3MirrorFilterCreated): hr3MirrorFilterCreated,
+				client.ObjectKeyFromObject(hr1):             hr1,
+				client.ObjectKeyFromObject(hr1MirrorFilter): hr1MirrorFilter,
+				client.ObjectKeyFromObject(hr3):             hr3,
+				client.ObjectKeyFromObject(hr3MirrorFilter): hr3MirrorFilter,
 			},
 			Services: map[types.NamespacedName]*v1.Service{
 				client.ObjectKeyFromObject(svc):         svc,
