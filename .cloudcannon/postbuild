@@ -1,0 +1,9 @@
+#!/bin/bash
+
+mv site/public site/nginx-agent
+mkdir -p site/public
+mv site/nginx-agent site/public
+mv site/public/nginx-agent/_cloudcannon site/public
+
+## Find and fix broken images and links caused by how the baseURL is set in the config.yml
+find site/public -type f -name "*.html" -exec sed -i 's/="\/\//="\//g' {} \;
