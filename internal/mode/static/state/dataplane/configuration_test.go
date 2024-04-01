@@ -188,16 +188,6 @@ func TestBuildConfiguration(t *testing.T) {
 		pathAndType{path: "/", pathType: prefix},
 	)
 
-	hr0mrr, expHR0GroupsMrr, routeHR0mrr := createTestResources(
-		"hr-0-mrr",
-		"mirror.example.com",
-		"listener-80-1",
-		pathAndType{path: "/", pathType: prefix},
-	)
-	fmt.Printf("hr0mrr: %v\n", hr0mrr)
-	fmt.Printf("expHR0GroupsMrr: %v\n", expHR0GroupsMrr)
-	fmt.Printf("routeHR0mrr: %v\n", routeHR0mrr)
-
 	routeWithMirrorFilter := v1.HTTPRouteFilter{
 		Type: v1.HTTPRouteFilterRequestMirror,
 		RequestMirror: &v1.HTTPRequestMirrorFilter{
@@ -872,25 +862,6 @@ func TestBuildConfiguration(t *testing.T) {
 										},
 										Source:       &hr0.ObjectMeta,
 										BackendGroup: expHR0Groups[0],
-									},
-								},
-							},
-						},
-						Port: 80,
-					},
-					{
-						Hostname: "mirror.example.com",
-						PathRules: []PathRule{
-							{
-								Path:     "/test-hr-0-mirror-mirror",
-								PathType: PathTypeExact,
-								MatchRules: []MatchRule{
-									{
-										Filters: HTTPFilters{
-											RequestMirror: nil,
-										},
-										Source:       &hr0.ObjectMeta,
-										BackendGroup: expHR0GroupsMrr[0],
 									},
 								},
 							},
