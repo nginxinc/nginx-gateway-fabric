@@ -100,12 +100,10 @@ generate: ## Run go generate
 
 .PHONY: generate-crds
 generate-crds: ## Generate CRDs and Go types using kubebuilder
-	go run sigs.k8s.io/controller-tools/cmd/controller-gen crd paths=./apis/... output:crd:dir=deploy/helm-chart/crds
-	go run sigs.k8s.io/controller-tools/cmd/controller-gen object paths=./apis/...
+	go run sigs.k8s.io/controller-tools/cmd/controller-gen crd object paths=./apis/... output:crd:artifacts:config=config/crd/bases
 
 .PHONY: generate-manifests
 generate-manifests: ## Generate manifests using Helm.
-	cp $(CHART_DIR)/crds/* $(MANIFEST_DIR)/crds/
 	helm template nginx-gateway $(CHART_DIR) $(HELM_TEMPLATE_COMMON_ARGS) $(HELM_TEMPLATE_EXTRA_ARGS_FOR_ALL_MANIFESTS_FILE) -n nginx-gateway | cat $(strip $(MANIFEST_DIR))/namespace.yaml - > $(strip $(MANIFEST_DIR))/nginx-gateway.yaml
 	helm template nginx-gateway $(CHART_DIR) $(HELM_TEMPLATE_COMMON_ARGS) $(HELM_TEMPLATE_EXTRA_ARGS_FOR_ALL_MANIFESTS_FILE) --set nginx.plus=true --set nginx.image.repository=$(NGINX_PLUS_PREFIX) -n nginx-gateway | cat $(strip $(MANIFEST_DIR))/namespace.yaml - > $(strip $(MANIFEST_DIR))/nginx-plus-gateway.yaml
 	helm template nginx-gateway $(CHART_DIR) $(HELM_TEMPLATE_COMMON_ARGS) $(HELM_TEMPLATE_EXTRA_ARGS_FOR_ALL_MANIFESTS_FILE) --set nginxGateway.gwAPIExperimentalFeatures.enable=true -n nginx-gateway | cat $(strip $(MANIFEST_DIR))/namespace.yaml - > $(strip $(MANIFEST_DIR))/nginx-gateway-experimental.yaml

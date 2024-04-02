@@ -5,7 +5,7 @@ yaml-files:
 
 ignore:
   - deploy/helm-chart/templates/
-  - deploy/helm-chart/crds/
+  - config/crd/bases/
   - .github/workflows/
 
 rules:
@@ -30,7 +30,6 @@ rules:
     check-multi-line-strings: true
     ignore: |
       deploy/manifests/nginx-gateway.yaml
-      deploy/manifests/crds
   key-duplicates: enable
   key-ordering: disable
   line-length:
@@ -40,7 +39,6 @@ rules:
     ignore: |
       .github/
       deploy/manifests/nginx-gateway.yaml
-      deploy/manifests/crds
       tests/suite/manifests/longevity/cronjob.yaml
       .goreleaser.yml
   new-line-at-end-of-file: enable
