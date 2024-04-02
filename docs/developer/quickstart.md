@@ -9,33 +9,34 @@ fully prepared development environment that allows you to contribute to the proj
 Follow these steps to set up your development environment.
 
 1. Install:
-    - [Go](https://golang.org/doc/install) v1.21.0+
-    - [Docker](https://docs.docker.com/get-docker/) v18.09+
-    - [Kubectl](https://kubernetes.io/docs/tasks/tools/#kubectl)
-    - [Kind](https://kind.sigs.k8s.io/docs/user/quick-start/)
-    - [Helm](https://helm.sh/docs/intro/quickstart/#install-helm)
-    - [git](https://git-scm.com/)
-    - [GNU Make](https://www.gnu.org/software/software.html)
-    - [yq](https://github.com/mikefarah/yq/#install)
-    - [fieldalignment](https://pkg.go.dev/golang.org/x/tools/go/analysis/passes/fieldalignment):
 
-      ```shell
-      go install golang.org/x/tools/go/analysis/passes/fieldalignment/cmd/fieldalignment@latest
-      ```
+   - [Go](https://golang.org/doc/install) v1.21.0+
+   - [Docker](https://docs.docker.com/get-docker/) v18.09+
+   - [Kubectl](https://kubernetes.io/docs/tasks/tools/#kubectl)
+   - [Kind](https://kind.sigs.k8s.io/docs/user/quick-start/)
+   - [Helm](https://helm.sh/docs/intro/quickstart/#install-helm)
+   - [git](https://git-scm.com/)
+   - [GNU Make](https://www.gnu.org/software/software.html)
+   - [yq](https://github.com/mikefarah/yq/#install)
+   - [fieldalignment](https://pkg.go.dev/golang.org/x/tools/go/analysis/passes/fieldalignment):
 
-    - [pre-commit](https://pre-commit.com/#install):
+   ```shell
+   go install golang.org/x/tools/go/analysis/passes/fieldalignment/cmd/fieldalignment@latest
+   ```
 
-     ```shell
-     brew install pre-commit
-     ```
+   - [pre-commit](https://pre-commit.com/#install):
 
-     and then run
+   ```shell
+   brew install pre-commit
+   ```
 
-     ```shell
-     pre-commit install
-     ```
+   and then run
 
-     in the project root directory to install the git hooks.
+   ```shell
+   pre-commit install
+   ```
+
+   in the project root directory to install the git hooks.
 
 2. [Fork the project repository](https://github.com/nginxinc/nginx-gateway-fabric/fork)
 3. Clone your repository, and install the project dependencies:
@@ -138,44 +139,44 @@ This will build the docker images `nginx-gateway-fabric:<your-user>` and `nginx-
 
    - To install with Helm (where your release name is `my-release`):
 
-      ```shell
-      helm install my-release ./charts/nginx-gateway-fabric --create-namespace --wait --set service.type=NodePort --set nginxGateway.image.repository=nginx-gateway-fabric --set nginxGateway.image.tag=$(whoami) --set nginxGateway.image.pullPolicy=Never --set nginx.image.repository=nginx-gateway-fabric/nginx --set nginx.image.tag=$(whoami) --set nginx.image.pullPolicy=Never -n nginx-gateway
-      ```
+     ```shell
+     helm install my-release ./charts/nginx-gateway-fabric --create-namespace --wait --set service.type=NodePort --set nginxGateway.image.repository=nginx-gateway-fabric --set nginxGateway.image.tag=$(whoami) --set nginxGateway.image.pullPolicy=Never --set nginx.image.repository=nginx-gateway-fabric/nginx --set nginx.image.tag=$(whoami) --set nginx.image.pullPolicy=Never -n nginx-gateway
+     ```
 
    - To install NGINX Plus with Helm (where your release name is `my-release`):
 
-      ```shell
-      helm install my-release ./charts/nginx-gateway-fabric --create-namespace --wait --set service.type=NodePort --set nginxGateway.image.repository=nginx-gateway-fabric --set nginxGateway.image.tag=$(whoami) --set nginxGateway.image.pullPolicy=Never --set nginx.image.repository=nginx-gateway-fabric/nginx-plus --set nginx.image.tag=$(whoami) --set nginx.image.pullPolicy=Never --set nginx.plus=true -n nginx-gateway
-      ```
+     ```shell
+     helm install my-release ./charts/nginx-gateway-fabric --create-namespace --wait --set service.type=NodePort --set nginxGateway.image.repository=nginx-gateway-fabric --set nginxGateway.image.tag=$(whoami) --set nginxGateway.image.pullPolicy=Never --set nginx.image.repository=nginx-gateway-fabric/nginx-plus --set nginx.image.tag=$(whoami) --set nginx.image.pullPolicy=Never --set nginx.plus=true -n nginx-gateway
+     ```
 
    > For more information on Helm configuration options see the Helm [README](../../charts/nginx-gateway-fabric/README.md).
 
    - To install with manifests:
 
-      ```shell
-      make generate-manifests HELM_TEMPLATE_COMMON_ARGS="--set nginxGateway.image.repository=nginx-gateway-fabric --set nginxGateway.image.tag=$(whoami) --set nginxGateway.image.pullPolicy=Never --set nginx.image.repository=nginx-gateway-fabric/nginx --set nginx.image.tag=$(whoami) --set nginx.image.pullPolicy=Never"
-      kubectl apply -f deploy/manifests/crds
-      kubectl apply -f deploy/manifests/nginx-gateway.yaml
-      kubectl apply -f deploy/manifests/service/nodeport.yaml
-      ```
+     ```shell
+     make generate-manifests HELM_TEMPLATE_COMMON_ARGS="--set nginxGateway.image.repository=nginx-gateway-fabric --set nginxGateway.image.tag=$(whoami) --set nginxGateway.image.pullPolicy=Never --set nginx.image.repository=nginx-gateway-fabric/nginx --set nginx.image.tag=$(whoami) --set nginx.image.pullPolicy=Never"
+     kubectl apply -f deploy/crds.yaml
+     kubectl apply -f deploy/manifests/nginx-gateway.yaml
+     kubectl apply -f deploy/manifests/service/nodeport.yaml
+     ```
 
    - To install NGINX Plus with manifests:
 
-      ```shell
-      make generate-manifests HELM_TEMPLATE_COMMON_ARGS="--set nginxGateway.image.repository=nginx-gateway-fabric --set nginxGateway.image.tag=$(whoami) --set nginxGateway.image.pullPolicy=Never --set nginx.image.repository=nginx-gateway-fabric/nginx-plus --set nginx.image.tag=$(whoami) --set nginx.image.pullPolicy=Never --set nginx.plus=true"
-      kubectl apply -f deploy/manifests/crds
-      kubectl apply -f deploy/manifests/nginx-gateway.yaml
-      kubectl apply -f deploy/manifests/service/nodeport.yaml
-      ```
+     ```shell
+     make generate-manifests HELM_TEMPLATE_COMMON_ARGS="--set nginxGateway.image.repository=nginx-gateway-fabric --set nginxGateway.image.tag=$(whoami) --set nginxGateway.image.pullPolicy=Never --set nginx.image.repository=nginx-gateway-fabric/nginx-plus --set nginx.image.tag=$(whoami) --set nginx.image.pullPolicy=Never --set nginx.plus=true"
+     kubectl apply -f deploy/crds.yaml
+     kubectl apply -f deploy/manifests/nginx-gateway.yaml
+     kubectl apply -f deploy/manifests/service/nodeport.yaml
+     ```
 
    - To install with experimental manifests:
 
-      ```shell
-      make generate-manifests HELM_TEMPLATE_COMMON_ARGS="--set nginxGateway.image.repository=nginx-gateway-fabric --set nginxGateway.image.tag=$(whoami) --set nginxGateway.image.pullPolicy=Never --set nginx.image.repository=nginx-gateway-fabric/nginx --set nginx.image.tag=$(whoami) --set nginx.image.pullPolicy=Never"
-      kubectl apply -f deploy/manifests/crds
-      kubectl apply -f deploy/manifests/nginx-gateway-experimental.yaml
-      kubectl apply -f deploy/manifests/service/nodeport.yaml
-      ```
+     ```shell
+     make generate-manifests HELM_TEMPLATE_COMMON_ARGS="--set nginxGateway.image.repository=nginx-gateway-fabric --set nginxGateway.image.tag=$(whoami) --set nginxGateway.image.pullPolicy=Never --set nginx.image.repository=nginx-gateway-fabric/nginx --set nginx.image.tag=$(whoami) --set nginx.image.pullPolicy=Never"
+     kubectl apply -f deploy/crds.yaml
+     kubectl apply -f deploy/manifests/nginx-gateway-experimental.yaml
+     kubectl apply -f deploy/manifests/service/nodeport.yaml
+     ```
 
 ### Run Examples
 

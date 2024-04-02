@@ -100,6 +100,7 @@ generate: ## Run go generate
 .PHONY: generate-crds
 generate-crds: ## Generate CRDs and Go types using kubebuilder
 	go run sigs.k8s.io/controller-tools/cmd/controller-gen crd object paths=./apis/... output:crd:artifacts:config=config/crd/bases
+	kubectl kustomize config/crd >deploy/crds.yaml
 
 .PHONY: generate-manifests
 generate-manifests: ## Generate manifests using Helm.
@@ -111,10 +112,6 @@ generate-manifests: ## Generate manifests using Helm.
 	helm template nginx-gateway $(CHART_DIR) $(HELM_TEMPLATE_COMMON_ARGS) -n nginx-gateway -s templates/service.yaml > $(strip $(MANIFEST_DIR))/service/loadbalancer.yaml
 	helm template nginx-gateway $(CHART_DIR) $(HELM_TEMPLATE_COMMON_ARGS) --set service.annotations.'service\.beta\.kubernetes\.io\/aws-load-balancer-type'="nlb" -n nginx-gateway -s templates/service.yaml > $(strip $(MANIFEST_DIR))/service/loadbalancer-aws-nlb.yaml
 	helm template nginx-gateway $(CHART_DIR) $(HELM_TEMPLATE_COMMON_ARGS) --set service.type=NodePort --set service.externalTrafficPolicy="" -n nginx-gateway -s templates/service.yaml > $(strip $(MANIFEST_DIR))/service/nodeport.yaml
-
-.PHONY: crds-release-file
-crds-release-file: ## Generate combined crds file for releases
-	scripts/combine-crds.sh
 
 .PHONY: clean
 clean: ## Clean the build
