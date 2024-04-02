@@ -791,3 +791,5 @@ _snippets:
       icon: text_format
     definitions:
       shortcode_name: custom-styles
+editor:
+  default_path: /nginx-gateway-fabric/
