@@ -45,3 +45,17 @@ func (gcp GatewayClassPredicate) Update(e event.UpdateEvent) bool {
 
 	return false
 }
+
+// Delete implements default DeleteEvent filter for validating a GatewayClass controllerName.
+func (gcp GatewayClassPredicate) Delete(e event.DeleteEvent) bool {
+	if e.Object == nil {
+		return false
+	}
+
+	gc, ok := e.Object.(*v1.GatewayClass)
+	if !ok {
+		return false
+	}
+
+	return string(gc.Spec.ControllerName) == gcp.ControllerName
+}
