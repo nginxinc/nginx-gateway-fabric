@@ -18,7 +18,6 @@ collections_config:
     _enabled_editors:
       - content
       - visual
-      - data
     _inputs:
     _select_data:
     _structures:
