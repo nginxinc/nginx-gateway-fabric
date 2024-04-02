@@ -15,6 +15,10 @@ collections_config:
     singular_name:
     singular_key:
     _editables:
+    _enabled_editors:
+      - content
+      - visual
+      - data
     _inputs:
     _select_data:
     _structures:
@@ -389,6 +393,8 @@ _editables:
     undo: true
 base_url: /
 data_config: true
+editor:
+  default_path: /nginx-gateway-fabric/
 timezone: Etc/UTC
 commit_templates:
   - template_string: '{commit_type}: {message|trim} {breaking_change|if=breaking_change_message}'
@@ -791,5 +797,3 @@ _snippets:
       icon: text_format
     definitions:
       shortcode_name: custom-styles
-editor:
-  default_path: /nginx-gateway-fabric/
