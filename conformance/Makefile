@@ -1,5 +1,5 @@
 TAG = edge
-VERSION = 1.1.0 # NGF version
+VERSION = 1.2.0 # NGF version
 PREFIX = nginx-gateway-fabric
 NGINX_PREFIX = $(PREFIX)/nginx
 NGINX_PLUS_PREFIX ?= $(PREFIX)/nginx-plus
@@ -103,6 +103,7 @@ run-conformance-tests: ## Run conformance tests
 		--restart=Never -- sh -c "go test -v . -tags conformance,experimental -args --gateway-class=$(GATEWAY_CLASS) \
 						        --supported-features=$(SUPPORTED_FEATURES) --version=$(VERSION) \
 								--report-output=output.txt; cat output.txt" | tee output.txt
+	bash scripts/check-pod-exit-code.sh
 	sed -e '1,/CONFORMANCE PROFILE/d' output.txt > conformance-profile.yaml
 	rm output.txt
 	[ $(shell cat conformance-profile.yaml | yq '.profiles[0].core.result') != "failure" ] \

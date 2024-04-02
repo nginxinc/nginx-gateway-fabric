@@ -108,7 +108,13 @@ func UninstallGatewayAPI(apiVersion, k8sVersion string) ([]byte, error) {
 // InstallNGF installs NGF.
 func InstallNGF(cfg InstallationConfig, extraArgs ...string) ([]byte, error) {
 	args := []string{
-		"install", cfg.ReleaseName, cfg.ChartPath, "--create-namespace", "--namespace", cfg.Namespace, "--wait",
+		"install",
+		cfg.ReleaseName,
+		cfg.ChartPath,
+		"--create-namespace",
+		"--namespace", cfg.Namespace,
+		"--wait",
+		"--set", "nginxGateway.productTelemetry.enable=false",
 	}
 
 	args = append(args, setImageArgs(cfg)...)
@@ -125,7 +131,12 @@ func UpgradeNGF(cfg InstallationConfig, extraArgs ...string) ([]byte, error) {
 	}
 
 	args := []string{
-		"upgrade", cfg.ReleaseName, cfg.ChartPath, "--namespace", cfg.Namespace, "--wait",
+		"upgrade",
+		cfg.ReleaseName,
+		cfg.ChartPath,
+		"--namespace", cfg.Namespace,
+		"--wait",
+		"--set", "nginxGateway.productTelemetry.enable=false",
 	}
 
 	args = append(args, setImageArgs(cfg)...)

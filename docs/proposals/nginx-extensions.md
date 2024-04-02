@@ -1,8 +1,8 @@
 
 # Extensions for NGINX Features
 
-- Issue: #1566
-- Status: Provisional
+- Issue: https://github.com/nginxinc/nginx-gateway-fabric/issues/1566
+- Status: Implementable
 
 ## Summary
 
@@ -718,7 +718,6 @@ NGINX directives:
 - [`keepalive_requests`](https://nginx.org/en/docs/http/ngx_http_core_module.html#keepalive_requests)
 - [`keepalive_time`](https://nginx.org/en/docs/http/ngx_http_core_module.html#keepalive_time)
 - [`keepalive_timeout`](https://nginx.org/en/docs/http/ngx_http_core_module.html#keepalive_timeout)
-- [`keepalive_disable`](https://nginx.org/en/docs/http/ngx_http_core_module.html#keepalive_disable)
 
 These features are grouped because they all deal with client traffic.
 
@@ -731,7 +730,7 @@ An Inherited Policy fits this group best for the following reasons:
 
 #### Future Work
 
-- Can add support for more `client_*` directives: `client_body_buffer_size`, `client_header_buffer_size`, etc.
+- Can add support for more `client_*` directives: `client_body_buffer_size`, `client_header_buffer_size`, `keepalive_disable`, etc.
 
 #### Alternatives
 

@@ -52,9 +52,11 @@ var _ = Describe("Upgrade testing", Label("nfr", "upgrade"), func() {
 		teardown(releaseName)
 
 		cfg := setupConfig{
+			releaseName:  releaseName,
 			chartPath:    "oci://ghcr.io/nginxinc/charts/nginx-gateway-fabric",
 			gwAPIVersion: *gatewayAPIPrevVersion,
 			deploy:       true,
+			nfr:          true,
 		}
 		setup(cfg, "--values", valuesFile)
 
@@ -66,7 +68,7 @@ var _ = Describe("Upgrade testing", Label("nfr", "upgrade"), func() {
 		resultsDir, err = framework.CreateResultsDir("ngf-upgrade", version)
 		Expect(err).ToNot(HaveOccurred())
 
-		filename := filepath.Join(resultsDir, fmt.Sprintf("%s.md", version))
+		filename := filepath.Join(resultsDir, framework.CreateResultsFilename("md", version, *plusEnabled))
 		resultsFile, err = framework.CreateResultsFile(filename)
 		Expect(err).ToNot(HaveOccurred())
 		Expect(framework.WriteSystemInfoToFile(resultsFile, clusterInfo, *plusEnabled)).To(Succeed())
@@ -79,16 +81,22 @@ var _ = Describe("Upgrade testing", Label("nfr", "upgrade"), func() {
 	})
 
 	It("upgrades NGF with zero downtime", func() {
+		nginxImage := *nginxImageRepository
+		if *plusEnabled {
+			nginxImage = *nginxPlusImageRepository
+		}
+
 		cfg := framework.InstallationConfig{
 			ReleaseName:          releaseName,
 			Namespace:            ngfNamespace,
 			ChartPath:            localChartPath,
 			NgfImageRepository:   *ngfImageRepository,
-			NginxImageRepository: *nginxImageRepository,
+			NginxImageRepository: nginxImage,
 			ImageTag:             *imageTag,
 			ImagePullPolicy:      *imagePullPolicy,
 			ServiceType:          *serviceType,
 			IsGKEInternalLB:      *isGKEInternalLB,
+			Plus:                 *plusEnabled,
 		}
 
 		type metricsResults struct {
@@ -155,7 +163,7 @@ var _ = Describe("Upgrade testing", Label("nfr", "upgrade"), func() {
 					Expect(encoder.Encode(&res)).To(Succeed())
 				}
 
-				csvName := fmt.Sprintf("%s.csv", scheme)
+				csvName := framework.CreateResultsFilename("csv", scheme, *plusEnabled)
 				filename := filepath.Join(resultsDir, csvName)
 				csvFile, err := framework.CreateResultsFile(filename)
 				Expect(err).ToNot(HaveOccurred())
@@ -164,7 +172,8 @@ var _ = Describe("Upgrade testing", Label("nfr", "upgrade"), func() {
 				Expect(err).ToNot(HaveOccurred())
 				csvFile.Close()
 
-				output, err := framework.GeneratePNG(resultsDir, csvName, fmt.Sprintf("%s.png", scheme))
+				pngName := framework.CreateResultsFilename("png", scheme, *plusEnabled)
+				output, err := framework.GeneratePNG(resultsDir, csvName, pngName)
 				Expect(err).ToNot(HaveOccurred(), string(output))
 
 				metricsCh <- &metricsRes
@@ -244,7 +253,12 @@ var _ = Describe("Upgrade testing", Label("nfr", "upgrade"), func() {
 
 			Expect(framework.WriteResults(resultsFile, res.metrics)).To(Succeed())
 
-			_, err = fmt.Fprintf(resultsFile, "```\n\n![%[1]v.png](%[1]v.png)\n", res.scheme)
+			link := fmt.Sprintf("\n\n![%[1]v.png](%[1]v.png)\n", res.scheme)
+			if *plusEnabled {
+				link = fmt.Sprintf("\n\n![%[1]v-plus.png](%[1]v-plus.png)\n", res.scheme)
+			}
+
+			_, err = fmt.Fprintf(resultsFile, "```%s", link)
 			Expect(err).ToNot(HaveOccurred())
 		}
 	})

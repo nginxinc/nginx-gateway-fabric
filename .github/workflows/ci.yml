@@ -73,7 +73,7 @@ jobs:
         run: make unit-test
 
       - name: Upload coverage reports to Codecov
-        uses: codecov/codecov-action@54bcd8715eee62d40e33596ef5e8f0f48dbbccab # v4.1.0
+        uses: codecov/codecov-action@c16abc29c95fcf9174b58eb7e1abf4c866893bc8 # v4.1.1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
 
@@ -101,7 +101,7 @@ jobs:
         run: npm --prefix ${{ github.workspace }}/internal/mode/static/nginx/modules install-ci-test
 
       - name: Upload coverage reports to Codecov
-        uses: codecov/codecov-action@54bcd8715eee62d40e33596ef5e8f0f48dbbccab # v4.1.0
+        uses: codecov/codecov-action@c16abc29c95fcf9174b58eb7e1abf4c866893bc8 # v4.1.1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
 
@@ -125,7 +125,7 @@ jobs:
           go-version: stable
 
       - name: Create/Update Draft
-        uses: lucacome/draft-release@a98777f0bae0a6815cc1df77ebe48ca70e7cb970 # v1.0.3
+        uses: lucacome/draft-release@e076259ceb036bc5f2c2a76559784c12cf8d2e74 # v1.0.4
         with:
           minor-label: "enhancement"
           major-label: "change"
@@ -137,7 +137,7 @@ jobs:
         if: ${{ github.event_name == 'push' && github.ref != 'refs/heads/main' }}
 
       - name: Download Syft
-        uses: anchore/sbom-action/download-syft@9fece9e20048ca9590af301449208b2b8861333b # v0.15.9
+        uses: anchore/sbom-action/download-syft@ab5d7b5f48981941c4c5d6bf33aeb98fe3bae38c # v0.15.10
         if: github.ref_type == 'tag'
 
       - name: Install Cosign
@@ -160,19 +160,19 @@ jobs:
           TELEMETRY_ENDPOINT_INSECURE: "false"
 
       - name: Cache Artifacts
-        uses: actions/cache@ab5e6d0c87105b4c9c2047343972218f562e4319 # v4.0.1
+        uses: actions/cache@0c45773b623bea8c8e75f6c82b208c3cf94ea4f9 # v4.0.2
         with:
           path: ${{ github.workspace }}/dist
           key: nginx-gateway-fabric-${{ github.run_id }}-${{ github.run_number }}
 
-  build:
-    name: Build Image
+  build-oss:
+    name: Build OSS images
     needs: [vars, binary]
     strategy:
       fail-fast: false
       matrix:
-        image: [ngf, nginx, plus]
-        platforms: ["linux/arm64, linux/amd64"]
+        image: [ngf, nginx]
+        platforms: ["linux/arm64, linux/amd64, linux/s390x, linux/ppc64le"]
     uses: ./.github/workflows/build.yml
     with:
       image: ${{ matrix.image }}
@@ -184,9 +184,23 @@ jobs:
       id-token: write # for docker/login to login to NGINX registry
     secrets: inherit
 
+  build-plus:
+    name: Build Plus images
+    needs: [vars, binary]
+    uses: ./.github/workflows/build.yml
+    with:
+      image: plus
+      platforms: "linux/arm64, linux/amd64"
+    permissions:
+      contents: read # for docker/build-push-action to read repo content
+      security-events: write # for github/codeql-action/upload-sarif to upload SARIF results
+      packages: write # for docker/build-push-action to push to GHCR
+      id-token: write # for docker/login to login to NGINX registry
+    secrets: inherit
+
   functional-tests:
     name: Functional tests
-    needs: [vars, build]
+    needs: [vars, build-oss, build-plus]
     strategy:
       fail-fast: false
       matrix:
@@ -201,7 +215,7 @@ jobs:
 
   conformance-tests:
     name: Conformance tests
-    needs: [vars, build]
+    needs: [vars, build-oss, build-plus]
     strategy:
       fail-fast: false
       matrix:
@@ -219,13 +233,13 @@ jobs:
   helm-tests:
     name: Helm Tests
     runs-on: ubuntu-22.04
-    needs: [vars, build]
+    needs: [vars, build-oss]
     steps:
       - name: Checkout Repository
         uses: actions/checkout@9bb56186c3b09b4f86b1c65136769dd318469633 # v4.1.2
 
       - name: Fetch Cached Artifacts
-        uses: actions/cache@ab5e6d0c87105b4c9c2047343972218f562e4319 # v4.0.1
+        uses: actions/cache@0c45773b623bea8c8e75f6c82b208c3cf94ea4f9 # v4.0.2
         with:
           path: ${{ github.workspace }}/dist
           key: nginx-gateway-fabric-${{ github.run_id }}-${{ github.run_number }}
@@ -301,6 +315,7 @@ jobs:
           --set nginxGateway.image.repository=ghcr.io/nginxinc/nginx-gateway-fabric
           --set nginxGateway.image.tag=${{ steps.ngf-meta.outputs.version }}
           --set nginxGateway.image.pullPolicy=Never
+          --set nginxGateway.productTelemetry.enable=false
           --set nginx.image.repository=ghcr.io/nginxinc/nginx-gateway-fabric/nginx
           --set nginx.image.tag=${{ steps.nginx-meta.outputs.version }}
           --set nginx.image.pullPolicy=Never

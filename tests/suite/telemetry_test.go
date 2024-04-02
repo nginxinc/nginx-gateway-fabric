@@ -30,7 +30,10 @@ var _ = Describe("Telemetry test with OTel collector", Label("telemetry"), func(
 		// Install NGF
 		// Note: the BeforeSuite call doesn't install NGF for 'telemetry' label
 
-		setup(getDefaultSetupCfg())
+		setup(
+			getDefaultSetupCfg(),
+			"--set", "nginxGateway.productTelemetry.enable=true",
+		)
 	})
 
 	AfterEach(func() {

@@ -2,6 +2,7 @@ package usage_test
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -9,17 +10,18 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/events/eventsfakes"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/config"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/usage"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/usage/usagefakes"
 )
 
 func TestCreateUsageJobWorker(t *testing.T) {
-	g := NewWithT(t)
-
 	replicas := int32(1)
 	ngfReplicaSet := &appsv1.ReplicaSet{
 		ObjectMeta: metav1.ObjectMeta{
@@ -34,64 +36,145 @@ func TestCreateUsageJobWorker(t *testing.T) {
 		},
 	}
 
-	ngfPod := &v1.Pod{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: "nginx-gateway",
-			Name:      "ngf-pod",
-			OwnerReferences: []metav1.OwnerReference{
-				{
-					Kind: "ReplicaSet",
-					Name: "ngf-replicaset",
+	tests := []struct {
+		name      string
+		listCalls func(_ context.Context, object client.ObjectList, _ ...client.ListOption) error
+		getCalls  func(_ context.Context, _ types.NamespacedName, object client.Object, _ ...client.GetOption) error
+		expData   usage.ClusterDetails
+		expErr    bool
+	}{
+		{
+			name: "succeeds",
+			listCalls: func(_ context.Context, object client.ObjectList, _ ...client.ListOption) error {
+				switch typedList := object.(type) {
+				case *v1.NodeList:
+					typedList.Items = append(typedList.Items, v1.Node{})
+					return nil
+				case *appsv1.ReplicaSetList:
+					typedList.Items = append(typedList.Items, *ngfReplicaSet)
+					return nil
+				}
+				return nil
+			},
+			getCalls: func(_ context.Context, _ types.NamespacedName, object client.Object, _ ...client.GetOption) error {
+				switch typedObject := object.(type) {
+				case *v1.Namespace:
+					typedObject.Name = metav1.NamespaceSystem
+					typedObject.UID = "1234abcd"
+					return nil
+				}
+				return nil
+			},
+			expData: usage.ClusterDetails{
+				Metadata: usage.Metadata{
+					UID:         "1234abcd",
+					DisplayName: "my-cluster",
+				},
+				NodeCount: 1,
+				PodDetails: usage.PodDetails{
+					CurrentPodCounts: usage.CurrentPodsCount{
+						PodCount: 1,
+					},
 				},
 			},
+			expErr: false,
+		},
+		{
+			name: "collect node count fails",
+			listCalls: func(_ context.Context, object client.ObjectList, _ ...client.ListOption) error {
+				switch object.(type) {
+				case *v1.NodeList:
+					return errors.New("failed to collect node list")
+				}
+				return nil
+			},
+			getCalls: func(_ context.Context, _ types.NamespacedName, _ client.Object, _ ...client.GetOption) error {
+				return nil
+			},
+			expData: usage.ClusterDetails{},
+			expErr:  true,
+		},
+		{
+			name: "collect replica count fails",
+			listCalls: func(_ context.Context, object client.ObjectList, _ ...client.ListOption) error {
+				switch typedList := object.(type) {
+				case *v1.NodeList:
+					typedList.Items = append(typedList.Items, v1.Node{})
+					return nil
+				case *appsv1.ReplicaSetList:
+					return errors.New("failed to collect replica set list")
+				}
+				return nil
+			},
+			getCalls: func(_ context.Context, _ types.NamespacedName, _ client.Object, _ ...client.GetOption) error {
+				return nil
+			},
+			expData: usage.ClusterDetails{},
+			expErr:  true,
+		},
+		{
+			name: "collect cluster UID fails",
+			listCalls: func(_ context.Context, object client.ObjectList, _ ...client.ListOption) error {
+				switch typedList := object.(type) {
+				case *v1.NodeList:
+					typedList.Items = append(typedList.Items, v1.Node{})
+					return nil
+				case *appsv1.ReplicaSetList:
+					typedList.Items = append(typedList.Items, *ngfReplicaSet)
+					return nil
+				}
+				return nil
+			},
+			getCalls: func(_ context.Context, _ types.NamespacedName, object client.Object, _ ...client.GetOption) error {
+				switch object.(type) {
+				case *v1.Namespace:
+					return errors.New("failed to collect namespace")
+				}
+				return nil
+			},
+			expData: usage.ClusterDetails{},
+			expErr:  true,
 		},
 	}
 
-	kubeSystem := &v1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: metav1.NamespaceSystem,
-			UID:  "1234abcd",
-		},
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			g := NewWithT(t)
+
+			k8sClientReader := &eventsfakes.FakeReader{}
+			k8sClientReader.ListCalls(test.listCalls)
+			k8sClientReader.GetCalls(test.getCalls)
+
+			reporter := &usagefakes.FakeReporter{}
+
+			worker := usage.CreateUsageJobWorker(
+				zap.New(),
+				k8sClientReader,
+				reporter,
+				config.Config{
+					GatewayPodConfig: config.GatewayPodConfig{
+						Namespace: "nginx-gateway",
+						Name:      "ngf-pod",
+					},
+					UsageReportConfig: &config.UsageReportConfig{
+						ClusterDisplayName: "my-cluster",
+					},
+				},
+			)
+
+			timeout := 10 * time.Second
+			ctx, cancel := context.WithTimeout(context.Background(), timeout)
+			defer cancel()
+
+			worker(ctx)
+			if test.expErr {
+				g.Expect(reporter.ReportCallCount()).To(Equal(0))
+			} else {
+				_, data := reporter.ReportArgsForCall(0)
+				g.Expect(data).To(Equal(test.expData))
+			}
+		})
 	}
-
-	k8sClient := fake.NewFakeClient(&v1.Node{}, ngfReplicaSet, ngfPod, kubeSystem)
-	reporter := &usagefakes.FakeReporter{}
-
-	worker := usage.CreateUsageJobWorker(
-		zap.New(),
-		k8sClient,
-		reporter,
-		config.Config{
-			GatewayPodConfig: config.GatewayPodConfig{
-				Namespace: "nginx-gateway",
-				Name:      "ngf-pod",
-			},
-			UsageReportConfig: &config.UsageReportConfig{
-				ClusterDisplayName: "my-cluster",
-			},
-		},
-	)
-
-	expData := usage.ClusterDetails{
-		Metadata: usage.Metadata{
-			UID:         "1234abcd",
-			DisplayName: "my-cluster",
-		},
-		NodeCount: 1,
-		PodDetails: usage.PodDetails{
-			CurrentPodCounts: usage.CurrentPodsCount{
-				PodCount: 1,
-			},
-		},
-	}
-
-	timeout := 10 * time.Second
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
-
-	worker(ctx)
-	_, data := reporter.ReportArgsForCall(0)
-	g.Expect(data).To(Equal(expData))
 }
 
 func TestGetTotalNGFPodCount(t *testing.T) {

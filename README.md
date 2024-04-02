@@ -1,7 +1,6 @@
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/nginxinc/nginx-gateway-fabric/badge)](https://api.securityscorecards.dev/projects/github.com/nginxinc/nginx-gateway-fabric)
 [![FOSSA Status](https://app.fossa.com/api/projects/custom%2B5618%2Fgithub.com%2Fnginxinc%2Fnginx-gateway-fabric.svg?type=shield)](https://app.fossa.com/projects/custom%2B5618%2Fgithub.com%2Fnginxinc%2Fnginx-gateway-fabric?ref=badge_shield)
 [![Continuous Integration](https://github.com/nginxinc/nginx-gateway-fabric/actions/workflows/ci.yml/badge.svg)](https://github.com/nginxinc/nginx-gateway-fabric/actions/workflows/ci.yml)
-[![Conformance Testing](https://github.com/nginxinc/nginx-gateway-fabric/actions/workflows/conformance.yml/badge.svg)](https://github.com/nginxinc/nginx-gateway-fabric/actions/workflows/conformance.yml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/nginxinc/nginx-gateway-fabric)](https://goreportcard.com/report/github.com/nginxinc/nginx-gateway-fabric)
 [![codecov](https://codecov.io/gh/nginxinc/nginx-gateway-fabric/graph/badge.svg?token=32ULC8F13Z)](https://codecov.io/gh/nginxinc/nginx-gateway-fabric)
 [![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/nginxinc/nginx-gateway-fabric?logo=github&sort=semver)](https://github.com/nginxinc/nginx-gateway-fabric/releases/latest)
@@ -35,7 +34,7 @@ You can find the comprehensive NGINX Gateway Fabric user documentation on the [N
 We publish NGINX Gateway Fabric releases on GitHub. See
 our [releases page](https://github.com/nginxinc/nginx-gateway-fabric/releases).
 
-The latest release is [1.1.0](https://github.com/nginxinc/nginx-gateway-fabric/releases/tag/v1.1.0).
+The latest release is [1.2.0](https://github.com/nginxinc/nginx-gateway-fabric/releases/tag/v1.2.0).
 
 The edge version is useful for experimenting with new features that are not yet published in a release. To use, choose
 the _edge_ version built from the [latest commit](https://github.com/nginxinc/nginx-gateway-fabric/commits/main)
@@ -46,7 +45,7 @@ to the correct versions:
 
 | Version        | Description                              | Installation Manifests                                                            | Documentation and Examples                                                                                                                                                 |
 | -------------- | ---------------------------------------- | --------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Latest release | For production use                       | [Manifests](https://github.com/nginxinc/nginx-gateway-fabric/tree/v1.1.0/deploy). | [Documentation](https://docs.nginx.com/nginx-gateway-fabric). [Examples](https://github.com/nginxinc/nginx-gateway-fabric/tree/v1.1.0/examples).                           |
+| Latest release | For production use                       | [Manifests](https://github.com/nginxinc/nginx-gateway-fabric/tree/v1.2.0/deploy). | [Documentation](https://docs.nginx.com/nginx-gateway-fabric). [Examples](https://github.com/nginxinc/nginx-gateway-fabric/tree/v1.2.0/examples).                           |
 | Edge           | For experimental use and latest features | [Manifests](https://github.com/nginxinc/nginx-gateway-fabric/tree/main/deploy).   | [Documentation](https://github.com/nginxinc/nginx-gateway-fabric/tree/main/site/content). [Examples](https://github.com/nginxinc/nginx-gateway-fabric/tree/main/examples). |
 
 ### Versioning
@@ -68,6 +67,7 @@ The following table lists the software versions NGINX Gateway Fabric supports.
 | NGINX Gateway Fabric | Gateway API | Kubernetes | NGINX OSS | NGINX Plus |
 | -------------------- | ----------- | ---------- | --------- | ---------- |
 | Edge                 | 1.0.0       | 1.23+      | 1.25.4    | R31        |
+| 1.2.0                | 1.0.0       | 1.23+      | 1.25.4    | R31        |
 | 1.1.0                | 1.0.0       | 1.23+      | 1.25.3    | n/a        |
 | 1.0.0                | 0.8.1       | 1.23+      | 1.25.2    | n/a        |
 | 0.6.0                | 0.8.0       | 1.23+      | 1.25.2    | n/a        |
