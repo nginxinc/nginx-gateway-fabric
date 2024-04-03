@@ -804,6 +804,7 @@ func validateFilter(
 				string(v1.HTTPRouteFilterRequestRedirect),
 				string(v1.HTTPRouteFilterURLRewrite),
 				string(v1.HTTPRouteFilterRequestHeaderModifier),
+				string(v1.HTTPRouteFilterRequestMirror),
 			},
 		)
 		allErrs = append(allErrs, valErr)
@@ -921,7 +922,7 @@ func validateFilterHeaderModifier(
 }
 
 func validateMirrorFilter(
-	validator validation.HTTPFieldsValidator,
+	_ validation.HTTPFieldsValidator,
 	filter v1.HTTPRouteFilter,
 	filterPath *field.Path,
 ) field.ErrorList {
