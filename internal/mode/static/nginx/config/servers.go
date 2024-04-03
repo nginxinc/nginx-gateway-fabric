@@ -244,9 +244,12 @@ func updateLocationsForFilters(
 		return buildLocations
 	}
 
-	if filters.RequestMirror != nil {
+	filtersRequestMirror := filters.RequestMirror
+	if filtersRequestMirror != nil {
 		for i := range buildLocations {
-			buildLocations[i].MirrorPath = *filters.RequestMirror.Target
+			if filtersRequestMirror.Target != nil {
+				buildLocations[i].MirrorPath = *filtersRequestMirror.Target
+			}
 		}
 	}
 

@@ -888,7 +888,6 @@ func TestCreateServerWithMirrors(t *testing.T) {
 				},
 			},
 		},
-		// addition
 		{
 			Path:     "/mirroring",
 			PathType: dataplane.PathTypePrefix,
@@ -898,7 +897,7 @@ func TestCreateServerWithMirrors(t *testing.T) {
 						RequestMirror: &dataplane.HTTPRequestMirrorFilter{
 							Namespace: helpers.GetPointer("cafe.example.com"),
 							Port:      helpers.GetPointer(int32(8080)),
-							Scheme:    helpers.GetPointer("http"),
+							Target:    helpers.GetPointer("/cafe.example.com-mirroring-mirror"),
 						},
 					},
 					BackendGroup: fooGroup,
@@ -953,11 +952,13 @@ func TestCreateServerWithMirrors(t *testing.T) {
 				Path:            "/mirroring/",
 				ProxySetHeaders: defaultSetHeader,
 				ProxyPass:       "http://$test__route1_rule0$request_uri",
+				MirrorPath:      "/cafe.example.com-mirroring-mirror",
 			},
 			{
 				Path:            "= /mirroring",
 				ProxySetHeaders: defaultSetHeader,
 				ProxyPass:       "http://$test__route1_rule0$request_uri",
+				MirrorPath:      "/cafe.example.com-mirroring-mirror",
 			},
 			{
 				Path:            "/mirroring_mirror/",
