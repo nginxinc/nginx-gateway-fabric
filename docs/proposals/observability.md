@@ -20,9 +20,9 @@ This Enhancement Proposal introduces the `ObservabilityPolicy` API, which allows
 
 ### Observability Policy
 
-The Observability Policy contains settings to configure NGINX to expose information through tracing, metrics, and/or logging. This is a Direct Policy that is attached to an HTTPRoute or HTTPRoute Rule by an Application Developer. It works in conjunction with a [Gateway Settings](gateway-settings.md) configuration that contains higher level settings to enable Observability at this lower level. The [Gateway Settings](gateway-settings.md) configuration is managed by a Cluster Operator.
+The Observability Policy contains settings to configure NGINX to expose information through tracing, metrics, and/or logging. This is a Direct Policy that is attached to an HTTPRoute by an Application Developer. It works in conjunction with a [Gateway Settings](gateway-settings.md) configuration that contains higher level settings to enable Observability at this lower level. The [Gateway Settings](gateway-settings.md) configuration is managed by a Cluster Operator.
 
-Since this policy is attached to an HTTPRoute or HTTPRoute rule, the Observability settings should just apply to the relevant `location` contexts of the NGINX config for that route or rule.
+Since this policy is attached to an HTTPRoute, the Observability settings should just apply to the relevant `location` contexts of the NGINX config for that route.
 
 To begin, the Observability Policy will include the following NGINX directives (focusing on OpenTelemetry tracing):
 
@@ -39,7 +39,7 @@ In the future, this config will be extended to support other functionality, such
 
 ## API, Customer Driven Interfaces, and User Experience
 
-The `ObservabilityPolicy` API is a CRD that is a part of the `gateway.nginx.org` Group. It is a namespaced resource that will reference an HTTPRoute or HTTPRoute Rule as its target.
+The `ObservabilityPolicy` API is a CRD that is a part of the `gateway.nginx.org` Group. It is a namespaced resource that will reference an HTTPRoute as its target.
 
 ### Go
 
@@ -49,90 +49,90 @@ Below is the Golang API for the `ObservabilityPolicy` API:
 package v1alpha1
 
 import (
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+    metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+    gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 )
 
 type ObservabilityPolicy struct {
-	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata,omitempty"`
+    metav1.TypeMeta   `json:",inline"`
+    metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	// Spec defines the desired state of the ObservabilityPolicy.
-	Spec ObservabilityPolicySpec `json:"spec"`
+    // Spec defines the desired state of the ObservabilityPolicy.
+    Spec ObservabilityPolicySpec `json:"spec"`
 
-	// Status defines the state of the ObservabilityPolicy.
-	Status gatewayv1alpha2.PolicyStatus `json:"status,omitempty"`
+    // Status defines the state of the ObservabilityPolicy.
+    Status gatewayv1alpha2.PolicyStatus `json:"status,omitempty"`
 }
 
 type ObservabilityPolicySpec struct {
-	// TargetRef identifies an API object to apply the policy to.
-	// Object must be in the same namespace as the policy.
-	// Support: HTTPRoute and HTTPRoute rule
-	TargetRef gatewayv1alpha2.PolicyTargetReferenceWithSectionName `json:"targetRef"`
+    // TargetRef identifies an API object to apply the policy to.
+    // Object must be in the same namespace as the policy.
+    // Support: HTTPRoute
+    TargetRef gatewayv1alpha2.PolicyTargetReference `json:"targetRef"`
 
-	// Tracing allows for enabling and configuring tracing.
+    // Tracing allows for enabling and configuring tracing.
     //
-	// +optional
-	Tracing *Tracing `json:"tracing,omitempty"`
+    // +optional
+    Tracing *Tracing `json:"tracing,omitempty"`
 }
 
 // Tracing allows for enabling and configuring OpenTelemetry tracing.
 type Tracing struct {
-	// Ratio is the percentage of traffic that should be sampled. Integer from 0 to 100.
-	// By default, 100% of http requests are traced. Not applicable for parent-based tracing.
+    // Ratio is the percentage of traffic that should be sampled. Integer from 0 to 100.
+    // By default, 100% of http requests are traced. Not applicable for parent-based tracing.
     //
-	// +optional
-	Ratio *int32 `json:"ratio,omitempty"`
+    // +optional
+    Ratio *int32 `json:"ratio,omitempty"`
 
-	// Context specifies how to propagate traceparent/tracestate headers. By default is 'ignore'.
+    // Context specifies how to propagate traceparent/tracestate headers. By default is 'ignore'.
     //
-	// +optional
-	Context *TraceContext `json:"context,omitempty"`
+    // +optional
+    Context *TraceContext `json:"context,omitempty"`
 
-	// SpanName defines the name of the Otel span. By default is the name of the location for a request.
+    // SpanName defines the name of the Otel span. By default is the name of the location for a request.
     //
-	// +optional
-	SpanName *string `json:"spanName,omitempty"`
+    // +optional
+    SpanName *string `json:"spanName,omitempty"`
 
-	// SpanAttributes are custom key/value attributes that are added to each span.
+    // SpanAttributes are custom key/value attributes that are added to each span.
     //
-	// +optional
-	SpanAttributes map[string]string `json:"spanAttributes,omitempty"`
+    // +optional
+    SpanAttributes map[string]string `json:"spanAttributes,omitempty"`
 
-	// Enable defines if tracing is enabled, disabled, or parent-based.
-	Enable TraceType `json:"enable"`
+    // Enable defines if tracing is enabled, disabled, or parent-based.
+    Enable TraceType `json:"enable"`
 }
 
 // TraceType defines if tracing is enabled.
 type TraceType string
 
 const (
-	// TraceTypeOn enables tracing.
-	TraceTypeOn TraceType = "on"
+    // TraceTypeOn enables tracing.
+    TraceTypeOn TraceType = "on"
 
-	// TraceTypeOff disables tracing.
-	TraceTypeOff TraceType = "off"
+    // TraceTypeOff disables tracing.
+    TraceTypeOff TraceType = "off"
 
-	// TraceTypeParent enables tracing and only records spans if the parent span was sampled.
-	TraceTypeParent TraceType = "parent"
+    // TraceTypeParent enables tracing and only records spans if the parent span was sampled.
+    TraceTypeParent TraceType = "parent"
 )
 
 // TraceContext specifies how to propagate traceparent/tracestate headers.
 type TraceContext string
 
 const (
-	// TraceContextExtract uses an existing trace context from the request, so that the identifiers
-	// of a trace and the parent span are inherited from the incoming request.
-	TraceContextExtract TraceContext = "extract"
+    // TraceContextExtract uses an existing trace context from the request, so that the identifiers
+    // of a trace and the parent span are inherited from the incoming request.
+    TraceContextExtract TraceContext = "extract"
 
-	// TraceContextInject adds a new context to the request, overwriting existing headers, if any.
-	TraceContextInject TraceContext = "inject"
+    // TraceContextInject adds a new context to the request, overwriting existing headers, if any.
+    TraceContextInject TraceContext = "inject"
 
-	// TraceContextPropagate updates the existing context (combines extract and inject).
-	TraceContextPropagate TraceContext = "propagate"
+    // TraceContextPropagate updates the existing context (combines extract and inject).
+    TraceContextPropagate TraceContext = "propagate"
 
-	// TraceContextIgnore skips context headers processing.
-	TraceContextIgnore TraceContext = "ignore"
+    // TraceContextIgnore skips context headers processing.
+    TraceContextIgnore TraceContext = "ignore"
 )
 ```
 
@@ -159,7 +159,7 @@ spec:
     spanAttributes:
       attribute1: value1
       attribute2: value2
-    enable: on
+    enable: "on"
 status:
   ancestors:
     ancestorRef:
@@ -209,6 +209,8 @@ This label will help with discoverability and will be used by the planned Gatewa
 According to the [Policy and Metaresources GEP](https://gateway-api.sigs.k8s.io/geps/gep-713/), the `ObservabilityPolicy` CRD must include a `status` stanza with a slice of Conditions.
 
 The `Accepted` Condition must be populated on the `ObservabilityPolicy` CRD using the reasons defined in the [PolicyCondition API](https://github.com/kubernetes-sigs/gateway-api/blob/main/apis/v1alpha2/policy_types.go). If these reasons are not sufficient, we can add implementation-specific reasons.
+
+One reason for being `not Accepted` would be the fact that the `GatewaySettings` Policy is not configured, which is a requirement in order for the `ObservabilityPolicy` to work.
 
 The Condition stanza may need to be namespaced using the `controllerName` if more than one controller could reconcile the Policy.
 
@@ -260,9 +262,11 @@ Some additional rules:
 
 ## Attachment
 
-An `ObservabilityPolicy` can be attached to an HTTPRoute or an HTTPRoute rule (using a [sectionName](https://gateway-api.sigs.k8s.io/geps/gep-713/#apply-policies-to-sections-of-a-resource)).
+An `ObservabilityPolicy` can be attached to an HTTPRoute.
 
-The policy will only take effect if a [GatewaySettings](gateway-settings.md) configuration has been linked to the GatewayClass.
+The policy will only take effect if a [GatewaySettings](gateway-settings.md) configuration has been linked to the GatewayClass. Otherwise, the `ObservabilityPolicy` should not be `Accepted`.
+
+Future: Attached to an HTTPRoute rule, using a [sectionName](https://gateway-api.sigs.k8s.io/geps/gep-713/#apply-policies-to-sections-of-a-resource).
 
 ### Creating the Effective Policy in NGINX Config
 
@@ -288,7 +292,7 @@ For this attachment scenario, specifying the directives in the _final_ location 
 ## Testing
 
 - Unit tests
-- Functional tests that verify the attachment of the CRD to a Route or Route rule, and that NGINX behaves properly based on the configuration. This includes verifying tracing works as expected.
+- Functional tests that verify the attachment of the CRD to a Route, and that NGINX behaves properly based on the configuration. This includes verifying tracing works as expected.
 
 ## Security Considerations
 
