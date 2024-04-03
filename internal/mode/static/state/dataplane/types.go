@@ -158,9 +158,9 @@ type PathModifierType string
 type HTTPRequestMirrorFilter struct {
 	// Name is the service name
 	Name *string
-	// Namespace is the hostname of the redirect.
+	// Namespace is the hostname of the service.
 	Namespace *string
-	// Port is the port of the redirect.
+	// Port is the port of the service (TODO: might be redundant).
 	Port *int32
 	// Target is the target of the mirror (path with hostname and service name).
 	Target *string

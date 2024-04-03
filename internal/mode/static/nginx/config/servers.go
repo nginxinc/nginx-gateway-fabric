@@ -99,14 +99,6 @@ type rewriteConfig struct {
 	Rewrite string
 }
 
-// mirrorConfig contains the configuration for a location to mirror requests,
-// as specified in a Path filter
-type mirrorConfig struct {
-	// Path mirrors the request to the specified location
-	Path string
-	Host string
-}
-
 func createLocations(pathRules []dataplane.PathRule, listenerPort int32) []http.Location {
 	maxLocs, pathsAndTypes := getMaxLocationCountAndPathMap(pathRules)
 	locs := make([]http.Location, 0, maxLocs)
@@ -120,8 +112,6 @@ func createLocations(pathRules []dataplane.PathRule, listenerPort int32) []http.
 		}
 
 		extLocations := initializeExternalLocations(rule, pathsAndTypes)
-		//internal/mode/static/nginx/config/servers.go
-		//internal/mode/static/state/graph/httproute.go
 		for matchRuleIdx, r := range rule.MatchRules {
 			buildLocations := extLocations
 			if len(rule.MatchRules) != 1 || !isPathOnlyMatch(r.Match) {
@@ -252,6 +242,12 @@ func updateLocationsForFilters(
 			buildLocations[i].Return = ret
 		}
 		return buildLocations
+	}
+
+	if filters.RequestMirror != nil {
+		for i := range buildLocations {
+			buildLocations[i].MirrorPath = *filters.RequestMirror.Target
+		}
 	}
 
 	rewrites := createRewritesValForRewriteFilter(filters.RequestURLRewrite, path)

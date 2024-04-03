@@ -77,25 +77,33 @@ func convertHTTPHeaderFilter(filter *v1.HTTPHeaderFilter) *HTTPHeaderFilter {
 }
 
 func convertHTTPRequestMirrorFilter(filter *v1.HTTPRequestMirrorFilter) *HTTPRequestMirrorFilter {
-	var backendRefNamePtr *string
+	result := &HTTPRequestMirrorFilter{}
+
 	filterBackendRef := filter.BackendRef
-	backendRefName := string(filterBackendRef.Name)
+
+	backendRefName := (string)(filterBackendRef.Name)
 	if len(backendRefName) > 0 {
-		backendRefNamePtr = &backendRefName
+		result.Name = helpers.GetPointer(backendRefName)
+	}
+
+	backendRefNamespace := (*string)(filterBackendRef.Namespace)
+	if backendRefNamespace != nil && len(*backendRefNamespace) > 0 {
+		result.Namespace = backendRefNamespace
+	}
+
+	port := (*int32)(filterBackendRef.Port)
+	if port != nil && *port > 0 {
+		result.Port = port
 	}
 
 	// this initialization is partial and must be completed with the path
-	result := &HTTPRequestMirrorFilter{
-		Name:      backendRefNamePtr,
-		Namespace: (*string)(filterBackendRef.Namespace),
-		Port:      (*int32)(filterBackendRef.Port),
-	}
-
 	return result
 }
 
 func updateHTTPMirrorFilterRoute(path *v1.HTTPPathMatch, f *HTTPRequestMirrorFilter) {
-	f.Target = helpers.CreateMirrorBackendPath(path.Value, *f.Namespace, *f.Name)
+	if f.Namespace != nil && f.Name != nil {
+		f.Target = helpers.CreateMirrorBackendPath(path.Value, *f.Namespace, *f.Name)
+	}
 }
 
 func convertPathType(pathType v1.PathMatchType) PathType {

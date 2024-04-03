@@ -296,22 +296,57 @@ func TestConvertHTTPMirrorFilter(t *testing.T) {
 			},
 			expected: &HTTPRequestMirrorFilter{
 				Namespace: helpers.GetPointer("backend"),
+				Port:      nil,
 			},
 			name: "WithoutPort",
 		},
 		{
 			filter: &v1.HTTPRequestMirrorFilter{
 				BackendRef: v1.BackendObjectReference{
-					Name: "backend",
-					Port: helpers.GetPointer[v1.PortNumber](8080),
+					Name:      "backend",
+					Namespace: helpers.GetPointer[v1.Namespace]("backend"),
+					Port:      helpers.GetPointer[v1.PortNumber](8080),
 				},
 			},
 			expected: &HTTPRequestMirrorFilter{
+				Name:      helpers.GetPointer("service"),
 				Namespace: helpers.GetPointer("backend"),
 				Port:      helpers.GetPointer[int32](8080),
-				Target:    helpers.GetPointer("backend"), // TODO:  test this
+				Target:    helpers.GetPointer("/backend-service-mirror"),
 			},
-			name: "WithNameAndPort",
+			name: "AllDataIntact",
+		},
+		{
+			filter: &v1.HTTPRequestMirrorFilter{
+				BackendRef: v1.BackendObjectReference{
+					Name:      "",
+					Namespace: helpers.GetPointer[v1.Namespace]("backend"),
+					Port:      helpers.GetPointer[v1.PortNumber](8080),
+				},
+			},
+			expected: &HTTPRequestMirrorFilter{
+				Name:      nil,
+				Namespace: helpers.GetPointer("backend"),
+				Port:      helpers.GetPointer[int32](8080),
+				Target:    nil,
+			},
+			name: "MissingName",
+		},
+		{
+			filter: &v1.HTTPRequestMirrorFilter{
+				BackendRef: v1.BackendObjectReference{
+					Name:      "service",
+					Namespace: nil,
+					Port:      helpers.GetPointer[v1.PortNumber](8080),
+				},
+			},
+			expected: &HTTPRequestMirrorFilter{
+				Name:      helpers.GetPointer("service"),
+				Namespace: nil,
+				Port:      helpers.GetPointer[int32](8080),
+				Target:    helpers.GetPointer("/service-mirror"),
+			},
+			name: "MissingNamespace",
 		},
 	}
 
@@ -320,6 +355,7 @@ func TestConvertHTTPMirrorFilter(t *testing.T) {
 			g := NewWithT(t)
 
 			result := convertHTTPRequestMirrorFilter(test.filter)
+			updateHTTPMirrorFilterRoute(&v1.HTTPPathMatch{Value: helpers.GetPointer("/")}, result)
 			g.Expect(result).To(Equal(test.expected))
 		})
 	}

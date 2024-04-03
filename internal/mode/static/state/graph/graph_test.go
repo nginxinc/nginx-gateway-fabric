@@ -1179,8 +1179,8 @@ func TestBuildGraphWithMirror(t *testing.T) {
 				client.ObjectKeyFromObject(gw1): gw1,
 				client.ObjectKeyFromObject(gw2): gw2,
 			},
-			// hr1MirrorFilterCreated & hr3MirrorFilterCreated should be created implicitly, therefore they are not list
-			// here, but are added to the graph and the expected graph state
+			// hr1MirrorFilterCreated & hr3MirrorFilterCreated should be created implicitly, therefore they are not
+			// listed here, but they are expected to be present in the final graph
 			HTTPRoutes: map[types.NamespacedName]*gatewayv1.HTTPRoute{
 				client.ObjectKeyFromObject(hr1):             hr1,
 				client.ObjectKeyFromObject(hr1MirrorFilter): hr1MirrorFilter,
