@@ -36,9 +36,9 @@ server {
         {{- range $r := $l.Rewrites }}
         rewrite {{ $r }};
         {{- end }}
-		
-		{{- if $l.MirrorPath }}
-		mirror $l.MirrorPath;
+
+    	{{- if $l.MirrorPath }}
+    	mirror {{ $l.MirrorPath }};
 		{{- end }}
 
         {{- if $l.Return }}

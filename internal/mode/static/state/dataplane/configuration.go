@@ -538,7 +538,6 @@ func createHTTPFilters(filters []v1.HTTPRouteFilter) HTTPFilters {
 				result.RequestMirror = convertHTTPRequestMirrorFilter(f.RequestMirror)
 			}
 		}
-
 	}
 	return result
 }

@@ -3,8 +3,9 @@ package dataplane
 import (
 	"fmt"
 
-	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 	v1 "sigs.k8s.io/gateway-api/apis/v1"
+
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 )
 
 func convertMatch(m v1.HTTPRouteMatch) Match {
@@ -101,8 +102,8 @@ func convertHTTPRequestMirrorFilter(filter *v1.HTTPRequestMirrorFilter) *HTTPReq
 }
 
 func updateHTTPMirrorFilterRoute(path *v1.HTTPPathMatch, f *HTTPRequestMirrorFilter) {
-	if f.Namespace != nil && f.Name != nil {
-		f.Target = helpers.CreateMirrorBackendPath(path.Value, *f.Namespace, *f.Name)
+	if f.Name != nil {
+		f.Target = helpers.CreateMirrorBackendPath(path.Value, f.Namespace, f.Name)
 	}
 }
 

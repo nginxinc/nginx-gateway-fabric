@@ -544,7 +544,6 @@ func TestAddBackendRefsToRulesTest(t *testing.T) {
 		expectedBackendRefs []BackendRef
 		expectedConditions  []conditions.Condition
 	}{
-
 		{
 			route: &Route{
 				Source:     hrWithOneBackend,

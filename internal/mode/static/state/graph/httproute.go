@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -12,6 +11,8 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	v1 "sigs.k8s.io/gateway-api/apis/v1"
+
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
 	staticConds "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/conditions"
@@ -136,7 +137,12 @@ func buildMirrorRoutesForGateways(
 	return mirroredRoutesAndRoutes
 }
 
-func createMirrorRoute(matchesPath *string, ghr *v1.HTTPRoute, filters []v1.HTTPRouteFilter, filter v1.HTTPRouteFilter) *v1.HTTPRoute {
+func createMirrorRoute(
+	matchesPath *string,
+	ghr *v1.HTTPRoute,
+	filters []v1.HTTPRouteFilter,
+	filter v1.HTTPRouteFilter,
+) *v1.HTTPRoute {
 	mirrorGhr := &v1.HTTPRoute{
 		ObjectMeta: createMirrorObjectMeta(ghr),
 		Spec: v1.HTTPRouteSpec{
@@ -152,7 +158,11 @@ func createMirrorRoute(matchesPath *string, ghr *v1.HTTPRoute, filters []v1.HTTP
 	return mirrorGhr
 }
 
-func buildMirrorRouteRule(matchesPath *string, filters []v1.HTTPRouteFilter, filter v1.HTTPRouteFilter) v1.HTTPRouteRule {
+func buildMirrorRouteRule(
+	matchesPath *string,
+	filters []v1.HTTPRouteFilter,
+	filter v1.HTTPRouteFilter,
+) v1.HTTPRouteRule {
 	filterBackendRef := filter.RequestMirror.BackendRef
 	return v1.HTTPRouteRule{
 		Matches: []v1.HTTPRouteMatch{
@@ -933,6 +943,10 @@ func validateMirrorFilter(
 
 	if nil == &mirror.BackendRef {
 		allErrs = field.ErrorList{field.Required(mirrorPath, fmt.Sprintf("%s cannot be nil", childFieldName))}
+	}
+
+	if mirror.BackendRef.Name == "" {
+		allErrs = append(allErrs, field.Required(mirrorPath.Child("name"), "name cannot be empty"))
 	}
 
 	return allErrs

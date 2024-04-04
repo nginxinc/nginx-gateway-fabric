@@ -832,7 +832,6 @@ func TestCreateServers(t *testing.T) {
 }
 
 func TestCreateServerWithMirrors(t *testing.T) {
-
 	hrNsName := types.NamespacedName{Namespace: "test", Name: "route1"}
 
 	fooGroup := dataplane.BackendGroup{
@@ -925,9 +924,7 @@ func TestCreateServerWithMirrors(t *testing.T) {
 	}
 
 	getExpectedLocations := func() []http.Location {
-
 		return []http.Location{
-
 			// internal created routes for rules that match the "/" path, with different methods
 			{
 				Path:            "@rule0-route0",
@@ -945,8 +942,10 @@ func TestCreateServerWithMirrors(t *testing.T) {
 				ProxyPass:       "http://$test__route1_rule0$request_uri",
 			},
 			{
-				Path:         "/",
-				HTTPMatchVar: `[{"method":"POST","redirectPath":"@rule0-route0"},{"method":"PATCH","redirectPath":"@rule0-route1"},{"redirectPath":"@rule0-route2","any":true}]`,
+				Path: "/",
+				HTTPMatchVar: `[{"method":"POST","redirectPath":"@rule0-route0"},` +
+					`{"method":"PATCH","redirectPath":"@rule0-route1"},` +
+					`{"redirectPath":"@rule0-route2","any":true}]`,
 			},
 			{
 				Path:            "/mirroring/",

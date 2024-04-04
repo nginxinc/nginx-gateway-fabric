@@ -1455,7 +1455,6 @@ func TestBuildGraphWithMirror(t *testing.T) {
 			)
 
 			g.Expect(helpers.Diff(test.expected, result)).To(BeEmpty())
-
 		})
 	}
 }

@@ -7,7 +7,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/gateway-api/apis/v1"
+	v1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
 // Diff prints the diff between two structs.
@@ -49,22 +49,32 @@ var catchAllNonRootPathRegex = regexp.MustCompile(fmt.Sprintf(`^(%s?)(.*)`, root
 const rootPath = "/"
 
 func CreateMirrorPathWithBackendRef(path *string, backendRef v1.BackendObjectReference) *string {
-	namespace := string(*backendRef.Namespace)
 	svcName := string(backendRef.Name)
+	if backendRef.Namespace == nil {
+		return CreateMirrorBackendPath(path, nil, &svcName)
+	}
 
-	return CreateMirrorBackendPath(path, namespace, svcName)
+	return CreateMirrorBackendPath(path, (*string)(backendRef.Namespace), &svcName)
 }
 
-func CreateMirrorBackendPath(path *string, namespace string, svcName string) *string {
+func CreateMirrorBackendPath(path *string, namespace *string, svcName *string) *string {
 	var mirrorPath string
-	mirrorPathPrefix := "mirror"
+	mirrorPathLabel := "mirror"
 	matches := catchAllNonRootPathRegex.FindStringSubmatch(*path)
+
 	if len(matches) > 2 {
 		trailingPath := matches[2]
+		var mirrorPathSuffix string
 		if len(trailingPath) > 0 {
-			mirrorPath = fmt.Sprintf("%s%s-%s-%s-%s", rootPath, namespace, svcName, mirrorPathPrefix, trailingPath)
+			mirrorPathSuffix = fmt.Sprintf("%s-%s-%s", *svcName, mirrorPathLabel, trailingPath)
 		} else {
-			mirrorPath = fmt.Sprintf("%s%s-%s-%s", rootPath, namespace, svcName, mirrorPathPrefix)
+			mirrorPathSuffix = fmt.Sprintf("%s-%s", *svcName, mirrorPathLabel)
+		}
+
+		if namespace != nil {
+			mirrorPath = fmt.Sprintf("%s%s-%s", rootPath, *namespace, mirrorPathSuffix)
+		} else {
+			mirrorPath = fmt.Sprintf("%s%s", rootPath, mirrorPathSuffix)
 		}
 	}
 

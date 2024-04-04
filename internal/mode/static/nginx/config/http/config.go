@@ -12,14 +12,14 @@ type Server struct {
 
 // Location holds all configuration for an HTTP location.
 type Location struct {
-	Return          *Return
 	ProxySSLVerify  *ProxySSLVerify
+	Return          *Return
+	HTTPMatchVar    string
 	Path            string
 	ProxyPass       string
-	HTTPMatchVar    string
+	MirrorPath      string
 	Rewrites        []string
 	ProxySetHeaders []Header
-	MirrorPath      string
 }
 
 // Header defines a HTTP header to be passed to the proxied server.

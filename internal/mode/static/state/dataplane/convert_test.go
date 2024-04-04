@@ -284,7 +284,8 @@ func TestConvertHTTPMirrorFilter(t *testing.T) {
 				},
 			},
 			expected: &HTTPRequestMirrorFilter{
-				Name: helpers.GetPointer("backend"),
+				Name:   helpers.GetPointer("backend"),
+				Target: helpers.GetPointer("/backend-mirror"),
 			},
 			name: "WithBackendRef",
 		},
@@ -295,10 +296,11 @@ func TestConvertHTTPMirrorFilter(t *testing.T) {
 				},
 			},
 			expected: &HTTPRequestMirrorFilter{
-				Name: helpers.GetPointer("backend"),
-				Port: nil,
+				Name:   helpers.GetPointer("backend"),
+				Port:   nil,
+				Target: helpers.GetPointer("/backend-mirror"),
 			},
-			name: "WithoutPort",
+			name: "NilPort",
 		},
 		{
 			filter: &v1.HTTPRequestMirrorFilter{
@@ -335,16 +337,16 @@ func TestConvertHTTPMirrorFilter(t *testing.T) {
 		{
 			filter: &v1.HTTPRequestMirrorFilter{
 				BackendRef: v1.BackendObjectReference{
-					Name:      "service",
+					Name:      "backend",
 					Namespace: nil,
 					Port:      helpers.GetPointer[v1.PortNumber](8080),
 				},
 			},
 			expected: &HTTPRequestMirrorFilter{
-				Name:      helpers.GetPointer("service"),
+				Name:      helpers.GetPointer("backend"),
 				Namespace: nil,
 				Port:      helpers.GetPointer[int32](8080),
-				Target:    nil,
+				Target:    helpers.GetPointer("/backend-mirror"),
 			},
 			name: "MissingNamespace",
 		},
