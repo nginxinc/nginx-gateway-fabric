@@ -70,7 +70,7 @@ type ClientSettingsPolicy struct {
     Spec ClientSettingsPolicySpec `json:"spec"`
 
     // Status defines the state of the ClientSettingsPolicy.
-    Status ClientSettingsPolicyStatus `json:"status,omitempty"`
+    Status gatewayv1alpha2.PolicyStatus `json:"status,omitempty"`
 }
 
 type ClientSettingsPolicySpec struct {
@@ -79,18 +79,6 @@ type ClientSettingsPolicySpec struct {
     // Support: Gateway and HTTPRoute
     TargetRef gatewayv1alpha2.PolicyTargetReference `json:"targetRef"`
 
-    // Default defines default policy configuration for the targeted resource.
-    // +optional
-    Default *ClientSettingsPolicyConfig `json:"default,omitempty"`
-}
-
-type ClientSettingsPolicyStatus struct {
-    // Conditions describe the current conditions of the ClientSettingsPolicy.
-    // +optional
-    Conditions []metav1.Condition `json:"conditions,omitempty"`
-}
-
-type ClientSettingsPolicyConfig struct {
     // Body defines the client request body settings.
     // +optional
     Body *ClientBody `json:"body,omitempty"`
@@ -249,18 +237,23 @@ spec:
     group: gateway.networking.k8s.io
     kind: Gateway
     name: example-gateway
-  default:
-    body:
-      maxSize: 10m
-      timeout: 30s
-    keepAlive:
-      requests: 100
-      time: 5m
-      timeout:
-        server: 2m
-        header: 1m
+  body:
+    maxSize: 10m
+    timeout: 30s
+  keepAlive:
+    requests: 100
+    time: 5m
+    timeout:
+      server: 2m
+      header: 1m
 status:
-  conditions:
+  ancestors:
+    ancestorRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: example-gateway
+      namespace: default
+    conditions:
     - type: Accepted
       status: "True"
       reason: Accepted

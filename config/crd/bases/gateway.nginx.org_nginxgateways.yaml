@@ -8,13 +8,19 @@ metadata:
 spec:
   group: gateway.nginx.org
   names:
+    categories:
+    - nginx-gateway-fabric
     kind: NginxGateway
     listKind: NginxGatewayList
     plural: nginxgateways
     singular: nginxgateway
   scope: Namespaced
   versions:
-  - name: v1alpha1
+  - additionalPrinterColumns:
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
     schema:
       openAPIV3Schema:
         description: NginxGateway represents the dynamic configuration for an NGINX
