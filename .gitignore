@@ -54,3 +54,6 @@ internal/mode/static/nginx/modules/coverage
 
 # SSH config files
 *.ssh
+
+# Github actions
+.github
