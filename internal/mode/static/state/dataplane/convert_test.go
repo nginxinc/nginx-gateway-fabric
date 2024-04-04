@@ -266,6 +266,103 @@ func TestConvertHTTPHeaderFilter(t *testing.T) {
 	}
 }
 
+func TestConvertHTTPMirrorFilter(t *testing.T) {
+	tests := []struct {
+		filter   *v1.HTTPRequestMirrorFilter
+		expected *HTTPRequestMirrorFilter
+		name     string
+	}{
+		{
+			filter:   &v1.HTTPRequestMirrorFilter{},
+			expected: &HTTPRequestMirrorFilter{},
+			name:     "empty",
+		},
+		{
+			filter: &v1.HTTPRequestMirrorFilter{
+				BackendRef: v1.BackendObjectReference{
+					Name: "backend",
+				},
+			},
+			expected: &HTTPRequestMirrorFilter{
+				Name:   helpers.GetPointer("backend"),
+				Target: helpers.GetPointer("/backend-mirror"),
+			},
+			name: "WithBackendRef",
+		},
+		{
+			filter: &v1.HTTPRequestMirrorFilter{
+				BackendRef: v1.BackendObjectReference{
+					Name: "backend",
+				},
+			},
+			expected: &HTTPRequestMirrorFilter{
+				Name:   helpers.GetPointer("backend"),
+				Port:   nil,
+				Target: helpers.GetPointer("/backend-mirror"),
+			},
+			name: "NilPort",
+		},
+		{
+			filter: &v1.HTTPRequestMirrorFilter{
+				BackendRef: v1.BackendObjectReference{
+					Name:      "service",
+					Namespace: helpers.GetPointer[v1.Namespace]("backend"),
+					Port:      helpers.GetPointer[v1.PortNumber](8080),
+				},
+			},
+			expected: &HTTPRequestMirrorFilter{
+				Name:      helpers.GetPointer("service"),
+				Namespace: helpers.GetPointer("backend"),
+				Port:      helpers.GetPointer[int32](8080),
+				Target:    helpers.GetPointer("/backend-service-mirror"),
+			},
+			name: "AllDataIntact",
+		},
+		{
+			filter: &v1.HTTPRequestMirrorFilter{
+				BackendRef: v1.BackendObjectReference{
+					Name:      "",
+					Namespace: helpers.GetPointer[v1.Namespace]("backend"),
+					Port:      helpers.GetPointer[v1.PortNumber](8080),
+				},
+			},
+			expected: &HTTPRequestMirrorFilter{
+				Name:      nil,
+				Namespace: helpers.GetPointer("backend"),
+				Port:      helpers.GetPointer[int32](8080),
+				Target:    nil,
+			},
+			name: "MissingName",
+		},
+		{
+			filter: &v1.HTTPRequestMirrorFilter{
+				BackendRef: v1.BackendObjectReference{
+					Name:      "backend",
+					Namespace: nil,
+					Port:      helpers.GetPointer[v1.PortNumber](8080),
+				},
+			},
+			expected: &HTTPRequestMirrorFilter{
+				Name:      helpers.GetPointer("backend"),
+				Namespace: nil,
+				Port:      helpers.GetPointer[int32](8080),
+				Target:    helpers.GetPointer("/backend-mirror"),
+			},
+			name: "MissingNamespace",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			g := NewWithT(t)
+
+			result := convertHTTPRequestMirrorFilter(test.filter)
+			updateHTTPMirrorFilterRoute(&v1.HTTPPathMatch{Value: helpers.GetPointer("/")}, result)
+			g.Expect(result).To(Equal(test.expected))
+		})
+	}
+}
+
 func TestConvertPathType(t *testing.T) {
 	g := NewWithT(t)
 

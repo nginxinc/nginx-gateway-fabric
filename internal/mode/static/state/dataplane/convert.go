@@ -4,6 +4,8 @@ import (
 	"fmt"
 
 	v1 "sigs.k8s.io/gateway-api/apis/v1"
+
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 )
 
 func convertMatch(m v1.HTTPRouteMatch) Match {
@@ -73,6 +75,36 @@ func convertHTTPHeaderFilter(filter *v1.HTTPHeaderFilter) *HTTPHeaderFilter {
 	}
 
 	return result
+}
+
+func convertHTTPRequestMirrorFilter(filter *v1.HTTPRequestMirrorFilter) *HTTPRequestMirrorFilter {
+	result := &HTTPRequestMirrorFilter{}
+
+	filterBackendRef := filter.BackendRef
+
+	backendRefName := (string)(filterBackendRef.Name)
+	if len(backendRefName) > 0 {
+		result.Name = helpers.GetPointer(backendRefName)
+	}
+
+	backendRefNamespace := (*string)(filterBackendRef.Namespace)
+	if backendRefNamespace != nil && len(*backendRefNamespace) > 0 {
+		result.Namespace = backendRefNamespace
+	}
+
+	port := (*int32)(filterBackendRef.Port)
+	if port != nil && *port > 0 {
+		result.Port = port
+	}
+
+	// this initialization is partial and must be completed with the path
+	return result
+}
+
+func updateHTTPMirrorFilterRoute(path *v1.HTTPPathMatch, f *HTTPRequestMirrorFilter) {
+	if f.Name != nil {
+		f.Target = helpers.CreateMirrorBackendPath(path.Value, f.Namespace, f.Name)
+	}
 }
 
 func convertPathType(pathType v1.PathMatchType) PathType {
