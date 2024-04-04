@@ -112,7 +112,6 @@ func createLocations(pathRules []dataplane.PathRule, listenerPort int32) []http.
 		}
 
 		extLocations := initializeExternalLocations(rule, pathsAndTypes)
-
 		for matchRuleIdx, r := range rule.MatchRules {
 			buildLocations := extLocations
 			if len(rule.MatchRules) != 1 || !isPathOnlyMatch(r.Match) {
@@ -243,6 +242,15 @@ func updateLocationsForFilters(
 			buildLocations[i].Return = ret
 		}
 		return buildLocations
+	}
+
+	filtersRequestMirror := filters.RequestMirror
+	if filtersRequestMirror != nil {
+		for i := range buildLocations {
+			if filtersRequestMirror.Target != nil {
+				buildLocations[i].MirrorPath = *filtersRequestMirror.Target
+			}
+		}
 	}
 
 	rewrites := createRewritesValForRewriteFilter(filters.RequestURLRewrite, path)

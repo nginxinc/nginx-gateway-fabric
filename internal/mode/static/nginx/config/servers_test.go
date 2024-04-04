@@ -831,6 +831,177 @@ func TestCreateServers(t *testing.T) {
 	g.Expect(helpers.Diff(expectedServers, result)).To(BeEmpty())
 }
 
+func TestCreateServerWithMirrors(t *testing.T) {
+	hrNsName := types.NamespacedName{Namespace: "test", Name: "route1"}
+
+	fooGroup := dataplane.BackendGroup{
+		Source:  hrNsName,
+		RuleIdx: 0,
+		Backends: []dataplane.Backend{
+			{
+				UpstreamName: "test_foo_80",
+				Valid:        true,
+				Weight:       1,
+			},
+			{
+				UpstreamName: "mirror_foo_80",
+				Valid:        true,
+				Weight:       1,
+			},
+		},
+	}
+
+	mirrorGroup := dataplane.BackendGroup{
+		Source:  hrNsName,
+		RuleIdx: 0,
+		Backends: []dataplane.Backend{
+			{
+				UpstreamName: "mirror_foo_80",
+				Valid:        true,
+				Weight:       1,
+			},
+		},
+	}
+
+	cafePathRules := []dataplane.PathRule{
+		{
+			Path:     "/",
+			PathType: dataplane.PathTypePrefix,
+			MatchRules: []dataplane.MatchRule{
+				{
+					Match: dataplane.Match{
+						Method: helpers.GetPointer("POST"),
+					},
+					BackendGroup: fooGroup,
+				},
+				{
+					Match: dataplane.Match{
+						Method: helpers.GetPointer("PATCH"),
+					},
+					BackendGroup: fooGroup,
+				},
+				{
+					// should generate an "any" httpmatch since other matches exists for /
+					Match:        dataplane.Match{},
+					BackendGroup: fooGroup,
+				},
+			},
+		},
+		{
+			Path:     "/mirroring",
+			PathType: dataplane.PathTypePrefix,
+			MatchRules: []dataplane.MatchRule{
+				{
+					Filters: dataplane.HTTPFilters{
+						RequestMirror: &dataplane.HTTPRequestMirrorFilter{
+							Namespace: helpers.GetPointer("cafe.example.com"),
+							Port:      helpers.GetPointer(int32(8080)),
+							Target:    helpers.GetPointer("/cafe.example.com-mirroring-mirror"),
+						},
+					},
+					BackendGroup: fooGroup,
+				},
+			},
+		},
+		{
+			Path:     "/mirroring_mirror",
+			PathType: dataplane.PathTypePrefix,
+			MatchRules: []dataplane.MatchRule{
+				{
+					Filters:      dataplane.HTTPFilters{},
+					BackendGroup: mirrorGroup,
+				},
+			},
+		},
+		// end addition
+	}
+
+	defaultSetHeader := []http.Header{
+		{Name: "Host", Value: "$gw_api_compliant_host"},
+		{Name: "X-Forwarded-For", Value: "$proxy_add_x_forwarded_for"},
+		{Name: "Upgrade", Value: "$http_upgrade"},
+		{Name: "Connection", Value: "$connection_upgrade"},
+	}
+
+	getExpectedLocations := func() []http.Location {
+		return []http.Location{
+			// internal created routes for rules that match the "/" path, with different methods
+			{
+				Path:            "@rule0-route0",
+				ProxySetHeaders: defaultSetHeader,
+				ProxyPass:       "http://$test__route1_rule0$request_uri",
+			},
+			{
+				Path:            "@rule0-route1",
+				ProxySetHeaders: defaultSetHeader,
+				ProxyPass:       "http://$test__route1_rule0$request_uri",
+			},
+			{
+				Path:            "@rule0-route2",
+				ProxySetHeaders: defaultSetHeader,
+				ProxyPass:       "http://$test__route1_rule0$request_uri",
+			},
+			{
+				Path: "/",
+				HTTPMatchVar: `[{"method":"POST","redirectPath":"@rule0-route0"},` +
+					`{"method":"PATCH","redirectPath":"@rule0-route1"},` +
+					`{"redirectPath":"@rule0-route2","any":true}]`,
+			},
+			{
+				Path:            "/mirroring/",
+				ProxySetHeaders: defaultSetHeader,
+				ProxyPass:       "http://$test__route1_rule0$request_uri",
+				MirrorPath:      "/cafe.example.com-mirroring-mirror",
+			},
+			{
+				Path:            "= /mirroring",
+				ProxySetHeaders: defaultSetHeader,
+				ProxyPass:       "http://$test__route1_rule0$request_uri",
+				MirrorPath:      "/cafe.example.com-mirroring-mirror",
+			},
+			{
+				Path:            "/mirroring_mirror/",
+				ProxySetHeaders: defaultSetHeader,
+				ProxyPass:       "http://mirror_foo_80$request_uri",
+			},
+			{
+				Path:            "= /mirroring_mirror",
+				ProxySetHeaders: defaultSetHeader,
+				ProxyPass:       "http://mirror_foo_80$request_uri",
+			},
+		}
+	}
+
+	expectedServers := []http.Server{
+		{
+			IsDefaultHTTP: true,
+			Port:          8080,
+		},
+		{
+			ServerName: "cafe.example.com",
+			Locations:  getExpectedLocations(),
+			Port:       8080,
+		},
+	}
+
+	httpServers := []dataplane.VirtualServer{
+		{
+			IsDefault: true,
+			Port:      8080,
+		},
+		{
+			Hostname:  "cafe.example.com",
+			PathRules: cafePathRules,
+			Port:      8080,
+		},
+	}
+
+	g := NewWithT(t)
+
+	result := createServers(httpServers, nil)
+	g.Expect(helpers.Diff(expectedServers, result)).To(BeEmpty())
+}
+
 func TestCreateServersConflicts(t *testing.T) {
 	fooGroup := dataplane.BackendGroup{
 		Source:  types.NamespacedName{Namespace: "test", Name: "route"},

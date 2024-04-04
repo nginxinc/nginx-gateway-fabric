@@ -123,6 +123,7 @@ func (g GeneratorImpl) getExecuteFuncs() []executeFunc {
 	return []executeFunc{
 		g.executeUpstreams,
 		executeSplitClients,
+		// TODO: add executeMirrors
 		executeServers,
 		executeMaps,
 	}

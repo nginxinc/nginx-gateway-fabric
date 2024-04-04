@@ -5,18 +5,23 @@ import (
 	"strings"
 
 	apiv1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	v1 "sigs.k8s.io/gateway-api/apis/v1"
 
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
+
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
 	staticConds "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/conditions"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/validation"
 )
 
-const wildcardHostname = "~^"
+const (
+	wildcardHostname = "~^"
+)
 
 // Rule represents a rule of an HTTPRoute.
 type Rule struct {
@@ -92,6 +97,101 @@ func buildRoutesForGateways(
 	}
 
 	return routes
+}
+
+func buildMirrorRoutesForGateways(
+	validator validation.HTTPFieldsValidator,
+	httpRoutes map[types.NamespacedName]*v1.HTTPRoute,
+	routes map[types.NamespacedName]*Route,
+	gatewayNsNames []types.NamespacedName,
+) map[types.NamespacedName]*Route {
+	var mirroredRoutesAndRoutes map[types.NamespacedName]*Route
+	if len(routes) == 0 {
+		mirroredRoutesAndRoutes = make(map[types.NamespacedName]*Route)
+	} else {
+		mirroredRoutesAndRoutes = routes
+	}
+
+	if len(gatewayNsNames) == 0 {
+		return nil
+	}
+
+	for _, ghr := range httpRoutes {
+		routeRules := ghr.Spec.Rules
+		for i, rule := range routeRules {
+			filters := rule.Filters
+			for _, filter := range filters {
+				if filter.RequestMirror == nil {
+					continue
+				}
+				matchesPath := rule.Matches[i].Path.Value
+				mirrorGhr := createMirrorRoute(matchesPath, ghr, filters, filter)
+				r := buildRoute(validator, mirrorGhr, gatewayNsNames)
+				if r != nil {
+					mirroredRoutesAndRoutes[client.ObjectKeyFromObject(mirrorGhr)] = r
+				}
+			}
+		}
+	}
+
+	return mirroredRoutesAndRoutes
+}
+
+func createMirrorRoute(
+	matchesPath *string,
+	ghr *v1.HTTPRoute,
+	filters []v1.HTTPRouteFilter,
+	filter v1.HTTPRouteFilter,
+) *v1.HTTPRoute {
+	mirrorGhr := &v1.HTTPRoute{
+		ObjectMeta: createMirrorObjectMeta(ghr),
+		Spec: v1.HTTPRouteSpec{
+			CommonRouteSpec: v1.CommonRouteSpec{
+				ParentRefs: ghr.Spec.ParentRefs,
+			},
+			Hostnames: ghr.Spec.Hostnames,
+			Rules: []v1.HTTPRouteRule{
+				buildMirrorRouteRule(matchesPath, filters, filter),
+			},
+		},
+	}
+	return mirrorGhr
+}
+
+func buildMirrorRouteRule(
+	matchesPath *string,
+	filters []v1.HTTPRouteFilter,
+	filter v1.HTTPRouteFilter,
+) v1.HTTPRouteRule {
+	filterBackendRef := filter.RequestMirror.BackendRef
+	return v1.HTTPRouteRule{
+		Matches: []v1.HTTPRouteMatch{
+			{
+				Path: &v1.HTTPPathMatch{
+					Type:  helpers.GetPointer(v1.PathMatchExact),
+					Value: helpers.CreateMirrorPathWithBackendRef(matchesPath, filterBackendRef),
+				},
+			},
+		},
+		Filters: removeMirrorFilters(filters),
+		BackendRefs: []v1.HTTPBackendRef{
+			{BackendRef: createMirrorBackendRef(filter)},
+		},
+	}
+}
+
+func createMirrorObjectMeta(ghr *v1.HTTPRoute) metav1.ObjectMeta {
+	objectMeta := ghr.ObjectMeta.DeepCopy()
+	objectMeta.SetName(fmt.Sprintf("%s-mirror", ghr.ObjectMeta.GetName()))
+	return *objectMeta
+}
+
+func createMirrorBackendRef(filter v1.HTTPRouteFilter) v1.BackendRef {
+	backendRef := filter.RequestMirror.BackendRef
+	mirrorBEF := v1.BackendRef{
+		BackendObjectReference: backendRef,
+	}
+	return mirrorBEF
 }
 
 func buildSectionNameRefs(
@@ -704,6 +804,8 @@ func validateFilter(
 		return validateFilterRewrite(validator, filter, filterPath)
 	case v1.HTTPRouteFilterRequestHeaderModifier:
 		return validateFilterHeaderModifier(validator, filter, filterPath)
+	case v1.HTTPRouteFilterRequestMirror:
+		return validateMirrorFilter(validator, filter, filterPath)
 	default:
 		valErr := field.NotSupported(
 			filterPath.Child("type"),
@@ -712,6 +814,7 @@ func validateFilter(
 				string(v1.HTTPRouteFilterRequestRedirect),
 				string(v1.HTTPRouteFilterURLRewrite),
 				string(v1.HTTPRouteFilterRequestHeaderModifier),
+				string(v1.HTTPRouteFilterRequestMirror),
 			},
 		)
 		allErrs = append(allErrs, valErr)
@@ -828,6 +931,27 @@ func validateFilterHeaderModifier(
 	return validateFilterHeaderModifierFields(validator, headerModifier, headerModifierPath)
 }
 
+func validateMirrorFilter(
+	_ validation.HTTPFieldsValidator,
+	filter v1.HTTPRouteFilter,
+	filterPath *field.Path,
+) field.ErrorList {
+	var allErrs field.ErrorList
+	mirror := filter.RequestMirror
+	childFieldName := "backendRef"
+	mirrorPath := filterPath.Child(childFieldName)
+
+	if nil == &mirror.BackendRef {
+		allErrs = field.ErrorList{field.Required(mirrorPath, fmt.Sprintf("%s cannot be nil", childFieldName))}
+	}
+
+	if mirror.BackendRef.Name == "" {
+		allErrs = append(allErrs, field.Required(mirrorPath.Child("name"), "name cannot be empty"))
+	}
+
+	return allErrs
+}
+
 func validateFilterHeaderModifierFields(
 	validator validation.HTTPFieldsValidator,
 	headerModifier *v1.HTTPHeaderFilter,
@@ -914,4 +1038,15 @@ func validateRequestHeaderStringCaseInsensitiveUnique(headers []string, path *fi
 	}
 
 	return allErrs
+}
+
+func removeMirrorFilters(filters []v1.HTTPRouteFilter) []v1.HTTPRouteFilter {
+	var newFilters []v1.HTTPRouteFilter
+	for _, filter := range filters {
+		if filter.Type != v1.HTTPRouteFilterRequestMirror {
+			newFilters = append(newFilters, filter)
+		}
+	}
+
+	return newFilters
 }

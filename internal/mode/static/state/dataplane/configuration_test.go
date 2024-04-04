@@ -181,6 +181,35 @@ func TestBuildConfiguration(t *testing.T) {
 
 	prefix := v1.PathMatchPathPrefix
 
+	hr0, expHR0Groups, routeHR0 := createTestResources(
+		"hr-0",
+		"source.example.com",
+		"listener-80-1",
+		pathAndType{path: "/", pathType: prefix},
+	)
+
+	routeWithMirrorFilter := v1.HTTPRouteFilter{
+		Type: v1.HTTPRouteFilterRequestMirror,
+		RequestMirror: &v1.HTTPRequestMirrorFilter{
+			BackendRef: v1.BackendObjectReference{
+				Kind:      (*v1.Kind)(helpers.GetPointer("Service")),
+				Name:      "hr-0-mirror",
+				Namespace: (*v1.Namespace)(helpers.GetPointer("test")),
+				Port:      helpers.GetPointer[v1.PortNumber](80),
+			},
+		},
+	}
+	routeHR0.Valid = true
+
+	addFilters(hr0, []v1.HTTPRouteFilter{routeWithMirrorFilter})
+
+	hr0RequestMirrorFilter := &HTTPRequestMirrorFilter{
+		Name:      helpers.GetPointer("hr-0-mirror"),
+		Namespace: helpers.GetPointer("test"),
+		Port:      helpers.GetPointer[int32](80),
+		Target:    helpers.GetPointer("/test-hr-0-mirror-mirror"),
+	}
+
 	hr1, expHR1Groups, routeHR1 := createTestResources(
 		"hr-1",
 		"foo.example.com",
@@ -769,6 +798,7 @@ func TestBuildConfiguration(t *testing.T) {
 							Source: listener80,
 							Valid:  true,
 							Routes: map[types.NamespacedName]*graph.Route{
+								{Namespace: "test", Name: "hr-0"}: routeHR0,
 								{Namespace: "test", Name: "hr-1"}: routeHR1,
 								{Namespace: "test", Name: "hr-2"}: routeHR2,
 							},
@@ -776,6 +806,7 @@ func TestBuildConfiguration(t *testing.T) {
 					},
 				},
 				Routes: map[types.NamespacedName]*graph.Route{
+					{Namespace: "test", Name: "hr-0"}: routeHR0,
 					{Namespace: "test", Name: "hr-1"}: routeHR1,
 					{Namespace: "test", Name: "hr-2"}: routeHR2,
 				},
@@ -818,14 +849,37 @@ func TestBuildConfiguration(t *testing.T) {
 						},
 						Port: 80,
 					},
+					{
+						Hostname: "source.example.com",
+						PathRules: []PathRule{
+							{
+								Path:     "/",
+								PathType: PathTypePrefix,
+								MatchRules: []MatchRule{
+									{
+										Filters: HTTPFilters{
+											RequestMirror: hr0RequestMirrorFilter,
+										},
+										Source:       &hr0.ObjectMeta,
+										BackendGroup: expHR0Groups[0],
+									},
+								},
+							},
+						},
+						Port: 80,
+					},
 				},
-				SSLServers:    []VirtualServer{},
-				Upstreams:     []Upstream{fooUpstream},
-				BackendGroups: []BackendGroup{expHR1Groups[0], expHR2Groups[0]},
-				SSLKeyPairs:   map[SSLKeyPairID]SSLKeyPair{},
-				CertBundles:   map[CertBundleID]CertBundle{},
+				SSLServers: []VirtualServer{},
+				Upstreams:  []Upstream{fooUpstream},
+				BackendGroups: []BackendGroup{
+					expHR0Groups[0],
+					expHR1Groups[0],
+					expHR2Groups[0],
+				},
+				SSLKeyPairs: map[SSLKeyPairID]SSLKeyPair{},
+				CertBundles: map[CertBundleID]CertBundle{},
 			},
-			msg: "one http listener with two routes for different hostnames",
+			msg: "one http listener with three routes for different hostnames",
 		},
 		{
 			graph: &graph.Graph{

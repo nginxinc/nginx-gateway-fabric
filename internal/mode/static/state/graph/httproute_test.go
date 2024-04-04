@@ -1960,7 +1960,7 @@ func TestValidateFilter(t *testing.T) {
 		},
 		{
 			filter: gatewayv1.HTTPRouteFilter{
-				Type: gatewayv1.HTTPRouteFilterRequestMirror,
+				Type: gatewayv1.HTTPRouteFilterExtensionRef,
 			},
 			expectErrCount: 1,
 			name:           "unsupported filter",
