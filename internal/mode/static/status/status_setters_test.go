@@ -2,113 +2,63 @@ package status
 
 import (
 	"testing"
-	"time"
 
 	. "github.com/onsi/gomega"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
-	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 )
 
 func TestNewNginxGatewayStatusSetter(t *testing.T) {
 	tests := []struct {
-		name         string
-		status       ngfAPI.NginxGatewayStatus
-		newStatus    NginxGatewayStatus
-		expStatusSet bool
+		name              string
+		status, newStatus ngfAPI.NginxGatewayStatus
+		expStatusSet      bool
 	}{
 		{
 			name:         "NginxGateway has no status",
 			expStatusSet: true,
-			newStatus: NginxGatewayStatus{
-				Conditions: []conditions.Condition{{Message: "new condition"}},
+			newStatus: ngfAPI.NginxGatewayStatus{
+				Conditions: []metav1.Condition{{Message: "some condition"}},
 			},
+			status: ngfAPI.NginxGatewayStatus{},
 		},
 		{
 			name:         "NginxGateway has old status",
 			expStatusSet: true,
-			newStatus: NginxGatewayStatus{
-				Conditions: []conditions.Condition{{Message: "new condition"}},
+			newStatus: ngfAPI.NginxGatewayStatus{
+				Conditions: []metav1.Condition{{Message: "new condition"}},
 			},
 			status: ngfAPI.NginxGatewayStatus{
-				Conditions: []v1.Condition{{Message: "old condition"}},
+				Conditions: []metav1.Condition{{Message: "old condition"}},
 			},
 		},
 		{
 			name:         "NginxGateway has same status",
 			expStatusSet: false,
-			newStatus: NginxGatewayStatus{
-				Conditions: []conditions.Condition{{Message: "same condition"}},
+			newStatus: ngfAPI.NginxGatewayStatus{
+				Conditions: []metav1.Condition{{Message: "same condition"}},
 			},
 			status: ngfAPI.NginxGatewayStatus{
-				Conditions: []v1.Condition{{Message: "same condition"}},
+				Conditions: []metav1.Condition{{Message: "same condition"}},
 			},
 		},
 	}
-
-	clock := &RealClock{}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewWithT(t)
 
-			setter := newNginxGatewayStatusSetter(clock, test.newStatus)
+			setter := newNginxGatewayStatusSetter(test.newStatus)
+			obj := &ngfAPI.NginxGateway{Status: test.status}
 
-			statusSet := setter(&ngfAPI.NginxGateway{Status: test.status})
+			statusSet := setter(obj)
+
 			g.Expect(statusSet).To(Equal(test.expStatusSet))
-		})
-	}
-}
-
-func TestNewGatewayClassStatusSetter(t *testing.T) {
-	tests := []struct {
-		name         string
-		status       gatewayv1.GatewayClassStatus
-		newStatus    GatewayClassStatus
-		expStatusSet bool
-	}{
-		{
-			name: "GatewayClass has no status",
-			newStatus: GatewayClassStatus{
-				Conditions: []conditions.Condition{{Message: "new condition"}},
-			},
-			expStatusSet: true,
-		},
-		{
-			name: "GatewayClass has old status",
-			newStatus: GatewayClassStatus{
-				Conditions: []conditions.Condition{{Message: "new condition"}},
-			},
-			status: gatewayv1.GatewayClassStatus{
-				Conditions: []v1.Condition{{Message: "old condition"}},
-			},
-			expStatusSet: true,
-		},
-		{
-			name: "GatewayClass has same status",
-			newStatus: GatewayClassStatus{
-				Conditions: []conditions.Condition{{Message: "same condition"}},
-			},
-			status: gatewayv1.GatewayClassStatus{
-				Conditions: []v1.Condition{{Message: "same condition"}},
-			},
-			expStatusSet: false,
-		},
-	}
-
-	clock := &RealClock{}
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			g := NewWithT(t)
-
-			setter := newGatewayClassStatusSetter(clock, test.newStatus)
-			statusSet := setter(&gatewayv1.GatewayClass{Status: test.status})
-			g.Expect(statusSet).To(Equal(test.expStatusSet))
+			g.Expect(obj.Status).To(Equal(test.newStatus))
 		})
 	}
 }
@@ -120,74 +70,92 @@ func TestNewGatewayStatusSetter(t *testing.T) {
 	}
 
 	tests := []struct {
-		name         string
-		status       gatewayv1.GatewayStatus
-		newStatus    GatewayStatus
-		expStatusSet bool
+		name              string
+		status, newStatus gatewayv1.GatewayStatus
+		expStatusSet      bool
 	}{
 		{
 			name: "Gateway has no status",
-			newStatus: GatewayStatus{
-				Conditions: []conditions.Condition{{Message: "new condition"}},
+			newStatus: gatewayv1.GatewayStatus{
+				Conditions: []metav1.Condition{{Message: "new condition"}},
 				Addresses:  []gatewayv1.GatewayStatusAddress{expAddress},
 			},
+			status:       gatewayv1.GatewayStatus{},
 			expStatusSet: true,
 		},
 		{
 			name: "Gateway has old status",
-			newStatus: GatewayStatus{
-				Conditions: []conditions.Condition{{Message: "new condition"}},
+			newStatus: gatewayv1.GatewayStatus{
+				Conditions: []metav1.Condition{{Message: "new condition"}},
 				Addresses:  []gatewayv1.GatewayStatusAddress{expAddress},
 			},
 			status: gatewayv1.GatewayStatus{
-				Conditions: []v1.Condition{{Message: "old condition"}},
+				Conditions: []metav1.Condition{{Message: "old condition"}},
 				Addresses:  []gatewayv1.GatewayStatusAddress{expAddress},
 			},
 			expStatusSet: true,
 		},
 		{
 			name: "Gateway has same status",
-			newStatus: GatewayStatus{
-				Conditions: []conditions.Condition{{Message: "same condition"}},
+			newStatus: gatewayv1.GatewayStatus{
+				Conditions: []metav1.Condition{{Message: "same condition"}},
 				Addresses:  []gatewayv1.GatewayStatusAddress{expAddress},
 			},
 			status: gatewayv1.GatewayStatus{
-				Conditions: []v1.Condition{{Message: "same condition"}},
+				Conditions: []metav1.Condition{{Message: "same condition"}},
 				Addresses:  []gatewayv1.GatewayStatusAddress{expAddress},
 			},
 			expStatusSet: false,
 		},
 	}
 
-	clock := &RealClock{}
-
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewWithT(t)
 
-			setter := newGatewayStatusSetter(clock, test.newStatus)
+			setter := newGatewayStatusSetter(test.newStatus)
+			obj := &gatewayv1.Gateway{Status: test.status}
 
-			statusSet := setter(&gatewayv1.Gateway{Status: test.status})
+			statusSet := setter(obj)
+
 			g.Expect(statusSet).To(Equal(test.expStatusSet))
+			g.Expect(obj.Status).To(Equal(test.newStatus))
 		})
 	}
 }
 
 func TestNewHTTPRouteStatusSetter(t *testing.T) {
-	controllerName := "controller"
+	const (
+		controllerName      = "controller"
+		otherControllerName = "different"
+	)
 
 	tests := []struct {
-		name         string
-		status       gatewayv1.HTTPRouteStatus
-		newStatus    HTTPRouteStatus
-		expStatusSet bool
+		name                         string
+		status, newStatus, expStatus gatewayv1.HTTPRouteStatus
+		expStatusSet                 bool
 	}{
 		{
 			name: "HTTPRoute has no status",
-			newStatus: HTTPRouteStatus{
-				ParentStatuses: []ParentStatus{
-					{
-						Conditions: []conditions.Condition{{Message: "new condition"}},
+			newStatus: gatewayv1.HTTPRouteStatus{
+				RouteStatus: gatewayv1.RouteStatus{
+					Parents: []gatewayv1.RouteParentStatus{
+						{
+							ParentRef:      gatewayv1.ParentReference{},
+							ControllerName: gatewayv1.GatewayController(controllerName),
+							Conditions:     []metav1.Condition{{Message: "new condition"}},
+						},
+					},
+				},
+			},
+			expStatus: gatewayv1.HTTPRouteStatus{
+				RouteStatus: gatewayv1.RouteStatus{
+					Parents: []gatewayv1.RouteParentStatus{
+						{
+							ParentRef:      gatewayv1.ParentReference{},
+							ControllerName: gatewayv1.GatewayController(controllerName),
+							Conditions:     []metav1.Condition{{Message: "new condition"}},
+						},
 					},
 				},
 			},
@@ -195,10 +163,14 @@ func TestNewHTTPRouteStatusSetter(t *testing.T) {
 		},
 		{
 			name: "HTTPRoute has old status",
-			newStatus: HTTPRouteStatus{
-				ParentStatuses: []ParentStatus{
-					{
-						Conditions: []conditions.Condition{{Message: "new condition"}},
+			newStatus: gatewayv1.HTTPRouteStatus{
+				RouteStatus: gatewayv1.RouteStatus{
+					Parents: []gatewayv1.RouteParentStatus{
+						{
+							ParentRef:      gatewayv1.ParentReference{},
+							ControllerName: gatewayv1.GatewayController(controllerName),
+							Conditions:     []metav1.Condition{{Message: "new condition"}},
+						},
 					},
 				},
 			},
@@ -208,7 +180,65 @@ func TestNewHTTPRouteStatusSetter(t *testing.T) {
 						{
 							ParentRef:      gatewayv1.ParentReference{},
 							ControllerName: gatewayv1.GatewayController(controllerName),
-							Conditions:     []v1.Condition{{Message: "old condition"}},
+							Conditions:     []metav1.Condition{{Message: "old condition"}},
+						},
+					},
+				},
+			},
+			expStatus: gatewayv1.HTTPRouteStatus{
+				RouteStatus: gatewayv1.RouteStatus{
+					Parents: []gatewayv1.RouteParentStatus{
+						{
+							ParentRef:      gatewayv1.ParentReference{},
+							ControllerName: gatewayv1.GatewayController(controllerName),
+							Conditions:     []metav1.Condition{{Message: "new condition"}},
+						},
+					},
+				},
+			},
+			expStatusSet: true,
+		},
+		{
+			name: "HTTPRoute has old status, keep other controller statuses",
+			newStatus: gatewayv1.HTTPRouteStatus{
+				RouteStatus: gatewayv1.RouteStatus{
+					Parents: []gatewayv1.RouteParentStatus{
+						{
+							ParentRef:      gatewayv1.ParentReference{},
+							ControllerName: gatewayv1.GatewayController(controllerName),
+							Conditions:     []metav1.Condition{{Message: "new condition"}},
+						},
+					},
+				},
+			},
+			status: gatewayv1.HTTPRouteStatus{
+				RouteStatus: gatewayv1.RouteStatus{
+					Parents: []gatewayv1.RouteParentStatus{
+						{
+							ParentRef:      gatewayv1.ParentReference{},
+							ControllerName: gatewayv1.GatewayController(otherControllerName),
+							Conditions:     []metav1.Condition{{Message: "some condition"}},
+						},
+						{
+							ParentRef:      gatewayv1.ParentReference{},
+							ControllerName: gatewayv1.GatewayController(controllerName),
+							Conditions:     []metav1.Condition{{Message: "old condition"}},
+						},
+					},
+				},
+			},
+			expStatus: gatewayv1.HTTPRouteStatus{
+				RouteStatus: gatewayv1.RouteStatus{
+					Parents: []gatewayv1.RouteParentStatus{
+						{
+							ParentRef:      gatewayv1.ParentReference{},
+							ControllerName: gatewayv1.GatewayController(controllerName),
+							Conditions:     []metav1.Condition{{Message: "new condition"}},
+						},
+						{
+							ParentRef:      gatewayv1.ParentReference{},
+							ControllerName: gatewayv1.GatewayController(otherControllerName),
+							Conditions:     []metav1.Condition{{Message: "some condition"}},
 						},
 					},
 				},
@@ -217,10 +247,14 @@ func TestNewHTTPRouteStatusSetter(t *testing.T) {
 		},
 		{
 			name: "HTTPRoute has same status",
-			newStatus: HTTPRouteStatus{
-				ParentStatuses: []ParentStatus{
-					{
-						Conditions: []conditions.Condition{{Message: "same condition"}},
+			newStatus: gatewayv1.HTTPRouteStatus{
+				RouteStatus: gatewayv1.RouteStatus{
+					Parents: []gatewayv1.RouteParentStatus{
+						{
+							ParentRef:      gatewayv1.ParentReference{},
+							ControllerName: gatewayv1.GatewayController(controllerName),
+							Conditions:     []metav1.Condition{{Message: "same condition"}},
+						},
 					},
 				},
 			},
@@ -230,7 +264,18 @@ func TestNewHTTPRouteStatusSetter(t *testing.T) {
 						{
 							ParentRef:      gatewayv1.ParentReference{},
 							ControllerName: gatewayv1.GatewayController(controllerName),
-							Conditions:     []v1.Condition{{Message: "same condition"}},
+							Conditions:     []metav1.Condition{{Message: "same condition"}},
+						},
+					},
+				},
+			},
+			expStatus: gatewayv1.HTTPRouteStatus{
+				RouteStatus: gatewayv1.RouteStatus{
+					Parents: []gatewayv1.RouteParentStatus{
+						{
+							ParentRef:      gatewayv1.ParentReference{},
+							ControllerName: gatewayv1.GatewayController(controllerName),
+							Conditions:     []metav1.Condition{{Message: "same condition"}},
 						},
 					},
 				},
@@ -239,16 +284,207 @@ func TestNewHTTPRouteStatusSetter(t *testing.T) {
 		},
 	}
 
-	clock := &RealClock{}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			g := NewWithT(t)
+
+			setter := newHTTPRouteStatusSetter(test.newStatus, controllerName)
+			obj := &gatewayv1.HTTPRoute{Status: test.status}
+
+			statusSet := setter(obj)
+
+			g.Expect(statusSet).To(Equal(test.expStatusSet))
+			g.Expect(obj.Status).To(Equal(test.expStatus))
+		})
+	}
+}
+
+func TestNewGatewayClassStatusSetter(t *testing.T) {
+	tests := []struct {
+		name              string
+		status, newStatus gatewayv1.GatewayClassStatus
+		expStatusSet      bool
+	}{
+		{
+			name: "GatewayClass has no status",
+			newStatus: gatewayv1.GatewayClassStatus{
+				Conditions: []metav1.Condition{{Message: "new condition"}},
+			},
+			expStatusSet: true,
+		},
+		{
+			name: "GatewayClass has old status",
+			newStatus: gatewayv1.GatewayClassStatus{
+				Conditions: []metav1.Condition{{Message: "new condition"}},
+			},
+			status: gatewayv1.GatewayClassStatus{
+				Conditions: []metav1.Condition{{Message: "old condition"}},
+			},
+			expStatusSet: true,
+		},
+		{
+			name: "GatewayClass has same status",
+			newStatus: gatewayv1.GatewayClassStatus{
+				Conditions: []metav1.Condition{{Message: "same condition"}},
+			},
+			status: gatewayv1.GatewayClassStatus{
+				Conditions: []metav1.Condition{{Message: "same condition"}},
+			},
+			expStatusSet: false,
+		},
+	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewWithT(t)
 
-			setter := newHTTPRouteStatusSetter(controllerName, clock, test.newStatus)
+			setter := newGatewayClassStatusSetter(test.newStatus)
+			obj := &gatewayv1.GatewayClass{Status: test.status}
 
-			statusSet := setter(&gatewayv1.HTTPRoute{Status: test.status})
+			statusSet := setter(obj)
+
 			g.Expect(statusSet).To(Equal(test.expStatusSet))
+			g.Expect(obj.Status).To(Equal(test.newStatus))
+		})
+	}
+}
+
+func TestNewBackendTLSPolicyStatusSetter(t *testing.T) {
+	const (
+		controllerName      = "controller"
+		otherControllerName = "other-controller"
+	)
+
+	tests := []struct {
+		name                         string
+		status, newStatus, expStatus gatewayv1alpha2.PolicyStatus
+		expStatusSet                 bool
+	}{
+		{
+			name: "BackendTLSPolicy has no status",
+			newStatus: gatewayv1alpha2.PolicyStatus{
+				Ancestors: []gatewayv1alpha2.PolicyAncestorStatus{
+					{
+						ControllerName: controllerName,
+						Conditions:     []metav1.Condition{{Message: "new condition"}},
+					},
+				},
+			},
+			expStatus: gatewayv1alpha2.PolicyStatus{
+				Ancestors: []gatewayv1alpha2.PolicyAncestorStatus{
+					{
+						ControllerName: controllerName,
+						Conditions:     []metav1.Condition{{Message: "new condition"}},
+					},
+				},
+			},
+			expStatusSet: true,
+		},
+		{
+			name: "BackendTLSPolicy has old status",
+			newStatus: gatewayv1alpha2.PolicyStatus{
+				Ancestors: []gatewayv1alpha2.PolicyAncestorStatus{
+					{
+						ControllerName: controllerName,
+						Conditions:     []metav1.Condition{{Message: "new condition"}},
+					},
+				},
+			},
+			status: gatewayv1alpha2.PolicyStatus{
+				Ancestors: []gatewayv1alpha2.PolicyAncestorStatus{
+					{
+						ControllerName: controllerName,
+						Conditions:     []metav1.Condition{{Message: "old condition"}},
+					},
+				},
+			},
+			expStatus: gatewayv1alpha2.PolicyStatus{
+				Ancestors: []gatewayv1alpha2.PolicyAncestorStatus{
+					{
+						ControllerName: controllerName,
+						Conditions:     []metav1.Condition{{Message: "new condition"}},
+					},
+				},
+			},
+			expStatusSet: true,
+		},
+		{
+			name: "BackendTLSPolicy has old status and other controller status",
+			newStatus: gatewayv1alpha2.PolicyStatus{
+				Ancestors: []gatewayv1alpha2.PolicyAncestorStatus{
+					{
+						ControllerName: controllerName,
+						Conditions:     []metav1.Condition{{Message: "new condition"}},
+					},
+				},
+			},
+			status: gatewayv1alpha2.PolicyStatus{
+				Ancestors: []gatewayv1alpha2.PolicyAncestorStatus{
+					{
+						ControllerName: controllerName,
+						Conditions:     []metav1.Condition{{Message: "old condition"}},
+					},
+					{
+						ControllerName: otherControllerName,
+						Conditions:     []metav1.Condition{{Message: "some condition"}},
+					},
+				},
+			},
+			expStatus: gatewayv1alpha2.PolicyStatus{
+				Ancestors: []gatewayv1alpha2.PolicyAncestorStatus{
+					{
+						ControllerName: otherControllerName,
+						Conditions:     []metav1.Condition{{Message: "some condition"}},
+					},
+					{
+						ControllerName: controllerName,
+						Conditions:     []metav1.Condition{{Message: "new condition"}},
+					},
+				},
+			},
+			expStatusSet: true,
+		},
+		{
+			name: "BackendTLSPolicy has same status",
+			newStatus: gatewayv1alpha2.PolicyStatus{
+				Ancestors: []gatewayv1alpha2.PolicyAncestorStatus{
+					{
+						ControllerName: controllerName,
+						Conditions:     []metav1.Condition{{Message: "same condition"}},
+					},
+				},
+			},
+			status: gatewayv1alpha2.PolicyStatus{
+				Ancestors: []gatewayv1alpha2.PolicyAncestorStatus{
+					{
+						ControllerName: controllerName,
+						Conditions:     []metav1.Condition{{Message: "same condition"}},
+					},
+				},
+			},
+			expStatus: gatewayv1alpha2.PolicyStatus{
+				Ancestors: []gatewayv1alpha2.PolicyAncestorStatus{
+					{
+						ControllerName: controllerName,
+						Conditions:     []metav1.Condition{{Message: "same condition"}},
+					},
+				},
+			},
+			expStatusSet: false,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			g := NewWithT(t)
+
+			setter := newBackendTLSPolicyStatusSetter(test.newStatus, controllerName)
+			obj := &gatewayv1alpha2.BackendTLSPolicy{Status: test.status}
+
+			statusSet := setter(obj)
+
+			g.Expect(statusSet).To(Equal(test.expStatusSet))
+			g.Expect(obj.Status).To(Equal(test.expStatus))
 		})
 	}
 }
@@ -266,7 +502,7 @@ func TestGWStatusEqual(t *testing.T) {
 					Value: "11.0.0.0",
 				},
 			},
-			Conditions: []v1.Condition{
+			Conditions: []metav1.Condition{
 				{
 					Type: "type", /* conditions are covered by another test*/
 				},
@@ -285,7 +521,7 @@ func TestGWStatusEqual(t *testing.T) {
 						},
 					},
 					AttachedRoutes: 1,
-					Conditions: []v1.Condition{
+					Conditions: []metav1.Condition{
 						{
 							Type: "type", /* conditions are covered by another test*/
 						},
@@ -300,7 +536,7 @@ func TestGWStatusEqual(t *testing.T) {
 						},
 					},
 					AttachedRoutes: 1,
-					Conditions: []v1.Condition{
+					Conditions: []metav1.Condition{
 						{
 							Type: "type", /* conditions are covered by another test*/
 						},
@@ -315,7 +551,7 @@ func TestGWStatusEqual(t *testing.T) {
 						},
 					},
 					AttachedRoutes: 1,
-					Conditions: []v1.Condition{
+					Conditions: []metav1.Condition{
 						{
 							Type: "type", /* conditions are covered by another test*/
 						},
@@ -453,7 +689,7 @@ func TestGWStatusEqual(t *testing.T) {
 }
 
 func TestHRStatusEqual(t *testing.T) {
-	testConds := []v1.Condition{
+	testConds := []metav1.Condition{
 		{
 			Type: "type", /* conditions are covered by another test*/
 		},
@@ -597,7 +833,7 @@ func TestRouteParentStatusEqual(t *testing.T) {
 				SectionName: helpers.GetPointer[gatewayv1.SectionName]("section"),
 			},
 			ControllerName: "controller",
-			Conditions: []v1.Condition{
+			Conditions: []metav1.Condition{
 				{
 					Type: "type", /* conditions are covered by another test*/
 				},
@@ -679,116 +915,6 @@ func TestRouteParentStatusEqual(t *testing.T) {
 	}
 }
 
-func TestConditionsEqual(t *testing.T) {
-	getDefaultConds := func() []v1.Condition {
-		return []v1.Condition{
-			{
-				Type:               "type1",
-				Status:             "status1",
-				ObservedGeneration: 1,
-				LastTransitionTime: v1.Time{Time: time.Now()},
-				Reason:             "reason1",
-				Message:            "message1",
-			},
-			{
-				Type:               "type2",
-				Status:             "status2",
-				ObservedGeneration: 1,
-				LastTransitionTime: v1.Time{Time: time.Now()},
-				Reason:             "reason2",
-				Message:            "message2",
-			},
-			{
-				Type:               "type3",
-				Status:             "status3",
-				ObservedGeneration: 1,
-				LastTransitionTime: v1.Time{Time: time.Now()},
-				Reason:             "reason3",
-				Message:            "message3",
-			},
-		}
-	}
-
-	getModifiedConds := func(mod func([]v1.Condition) []v1.Condition) []v1.Condition {
-		return mod(getDefaultConds())
-	}
-
-	tests := []struct {
-		name      string
-		prevConds []v1.Condition
-		curConds  []v1.Condition
-		expEqual  bool
-	}{
-		{
-			name:      "different observed gen",
-			prevConds: getDefaultConds(),
-			curConds: getModifiedConds(func(conds []v1.Condition) []v1.Condition {
-				conds[2].ObservedGeneration++
-				return conds
-			}),
-			expEqual: false,
-		},
-		{
-			name:      "different status",
-			prevConds: getDefaultConds(),
-			curConds: getModifiedConds(func(conds []v1.Condition) []v1.Condition {
-				conds[1].Status = "different"
-				return conds
-			}),
-			expEqual: false,
-		},
-		{
-			name:      "different type",
-			prevConds: getDefaultConds(),
-			curConds: getModifiedConds(func(conds []v1.Condition) []v1.Condition {
-				conds[0].Type = "different"
-				return conds
-			}),
-			expEqual: false,
-		},
-		{
-			name:      "different message",
-			prevConds: getDefaultConds(),
-			curConds: getModifiedConds(func(conds []v1.Condition) []v1.Condition {
-				conds[2].Message = "different"
-				return conds
-			}),
-			expEqual: false,
-		},
-		{
-			name:      "different reason",
-			prevConds: getDefaultConds(),
-			curConds: getModifiedConds(func(conds []v1.Condition) []v1.Condition {
-				conds[1].Reason = "different"
-				return conds
-			}),
-			expEqual: false,
-		},
-		{
-			name:      "different number of conditions",
-			prevConds: getDefaultConds(),
-			curConds: getModifiedConds(func(conds []v1.Condition) []v1.Condition {
-				return conds[:2]
-			}),
-			expEqual: false,
-		},
-		{
-			name:      "equal",
-			prevConds: getDefaultConds(),
-			curConds:  getDefaultConds(),
-			expEqual:  true,
-		},
-	}
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			g := NewWithT(t)
-			equal := conditionsEqual(test.prevConds, test.curConds)
-			g.Expect(equal).To(Equal(test.expEqual))
-		})
-	}
-}
-
 func TestEqualPointers(t *testing.T) {
 	tests := []struct {
 		p1       *string
@@ -860,7 +986,7 @@ func TestBtpStatusEqual(t *testing.T) {
 						Name:      gatewayv1alpha2.ObjectName(ancestorName),
 					},
 					ControllerName: gatewayv1alpha2.GatewayController(ctlrName),
-					Conditions:     []v1.Condition{{Type: "otherType", Status: "otherStatus"}},
+					Conditions:     []metav1.Condition{{Type: "otherType", Status: "otherStatus"}},
 				},
 			},
 		}

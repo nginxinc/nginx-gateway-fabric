@@ -23,7 +23,6 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/gatewayclass"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/status"
-	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/status/statusfakes"
 )
 
 var _ = Describe("handler", func() {
@@ -31,13 +30,14 @@ var _ = Describe("handler", func() {
 		gcName = "test-gc"
 	)
 	var (
-		handler       *eventHandler
-		fakeClockTime metav1.Time
+		handler *eventHandler
 
-		statusUpdater status.Updater
+		statusUpdater *status.Updater
 		k8sclient     client.Client
 		crd           *metav1.PartialObjectMetadata
 		gc            *gatewayv1.GatewayClass
+
+		fakeTimeNow timeNowFunc
 	)
 
 	BeforeEach(OncePerOrdered, func() {
@@ -55,18 +55,12 @@ var _ = Describe("handler", func() {
 			).
 			Build()
 
-		fakeClockTime = helpers.PrepareTimeForFakeClient(metav1.Now())
-		fakeClock := &statusfakes.FakeClock{}
-		fakeClock.NowReturns(fakeClockTime)
+		fakeTime := helpers.PrepareTimeForFakeClient(metav1.Now())
+		fakeTimeNow = func() metav1.Time {
+			return fakeTime
+		}
 
-		statusUpdater = status.NewUpdater(status.UpdaterConfig{
-			Client:                   k8sclient,
-			Clock:                    fakeClock,
-			Logger:                   zap.New(),
-			GatewayCtlrName:          "test.example.com",
-			GatewayClassName:         gcName,
-			UpdateGatewayClassStatus: true,
-		})
+		statusUpdater = status.NewUpdater(k8sclient, zap.New())
 
 		// Add GatewayClass CRD to the cluster
 		crd = &metav1.PartialObjectMetadata{
@@ -134,7 +128,7 @@ var _ = Describe("handler", func() {
 				Type:               string(gatewayv1.GatewayClassConditionStatusAccepted),
 				Status:             metav1.ConditionTrue,
 				ObservedGeneration: 0,
-				LastTransitionTime: fakeClockTime,
+				LastTransitionTime: fakeTimeNow(),
 				Reason:             "Accepted",
 				Message:            "GatewayClass is accepted",
 			},
@@ -142,7 +136,7 @@ var _ = Describe("handler", func() {
 				Type:               string(gatewayv1.GatewayClassReasonSupportedVersion),
 				Status:             metav1.ConditionTrue,
 				ObservedGeneration: 0,
-				LastTransitionTime: fakeClockTime,
+				LastTransitionTime: fakeTimeNow(),
 				Reason:             "SupportedVersion",
 				Message:            "Gateway API CRD versions are supported",
 			},
@@ -207,7 +201,7 @@ var _ = Describe("handler", func() {
 					Type:               string(gatewayv1.GatewayClassConditionStatusAccepted),
 					Status:             metav1.ConditionFalse,
 					ObservedGeneration: 0,
-					LastTransitionTime: fakeClockTime,
+					LastTransitionTime: fakeTimeNow(),
 					Reason:             string(gatewayv1.GatewayClassReasonUnsupportedVersion),
 					Message: fmt.Sprintf("Gateway API CRD versions are not supported. "+
 						"Please install version %s", gatewayclass.SupportedVersion),
@@ -216,7 +210,7 @@ var _ = Describe("handler", func() {
 					Type:               string(gatewayv1.GatewayClassReasonSupportedVersion),
 					Status:             metav1.ConditionFalse,
 					ObservedGeneration: 0,
-					LastTransitionTime: fakeClockTime,
+					LastTransitionTime: fakeTimeNow(),
 					Reason:             string(gatewayv1.GatewayClassReasonUnsupportedVersion),
 					Message: fmt.Sprintf("Gateway API CRD versions are not supported. "+
 						"Please install version %s", gatewayclass.SupportedVersion),
@@ -228,7 +222,7 @@ var _ = Describe("handler", func() {
 					Type:               string(gatewayv1.GatewayClassConditionStatusAccepted),
 					Status:             metav1.ConditionTrue,
 					ObservedGeneration: 0,
-					LastTransitionTime: fakeClockTime,
+					LastTransitionTime: fakeTimeNow(),
 					Reason:             string(gatewayv1.GatewayClassReasonAccepted),
 					Message:            "GatewayClass is accepted",
 				},
@@ -236,7 +230,7 @@ var _ = Describe("handler", func() {
 					Type:               string(gatewayv1.GatewayClassReasonSupportedVersion),
 					Status:             metav1.ConditionFalse,
 					ObservedGeneration: 0,
-					LastTransitionTime: fakeClockTime,
+					LastTransitionTime: fakeTimeNow(),
 					Reason:             string(gatewayv1.GatewayClassReasonUnsupportedVersion),
 					Message: fmt.Sprintf("Gateway API CRD versions are not recommended. "+
 						"Recommended version is %s", gatewayclass.SupportedVersion),
@@ -279,6 +273,7 @@ var _ = Describe("handler", func() {
 				statusUpdater,
 				k8sclient,
 				embeddedfiles.StaticModeDeploymentYAML,
+				fakeTimeNow,
 			)
 		})
 
@@ -408,7 +403,7 @@ var _ = Describe("handler", func() {
 						Type:               string(gatewayv1.GatewayClassReasonSupportedVersion),
 						Status:             metav1.ConditionTrue,
 						ObservedGeneration: 0,
-						LastTransitionTime: fakeClockTime,
+						LastTransitionTime: fakeTimeNow(),
 						Reason:             "SupportedVersion",
 						Message:            "Gateway API CRD versions are supported",
 					},
@@ -416,7 +411,7 @@ var _ = Describe("handler", func() {
 						Type:               string(gatewayv1.GatewayClassConditionStatusAccepted),
 						Status:             metav1.ConditionFalse,
 						ObservedGeneration: 0,
-						LastTransitionTime: fakeClockTime,
+						LastTransitionTime: fakeTimeNow(),
 						Reason:             string(conditions.GatewayClassReasonGatewayClassConflict),
 						Message:            conditions.GatewayClassMessageGatewayClassConflict,
 					},
@@ -452,6 +447,7 @@ var _ = Describe("handler", func() {
 				statusUpdater,
 				k8sclient,
 				embeddedfiles.StaticModeDeploymentYAML,
+				fakeTimeNow,
 			)
 		})
 
@@ -563,6 +559,7 @@ var _ = Describe("handler", func() {
 					statusUpdater,
 					k8sclient,
 					[]byte("broken YAML"),
+					fakeTimeNow,
 				)
 
 				itShouldUpsertGatewayClass()

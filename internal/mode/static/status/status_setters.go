@@ -3,104 +3,37 @@ package status
 import (
 	"slices"
 
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
+	frameworkStatus "github.com/nginxinc/nginx-gateway-fabric/internal/framework/status"
 )
 
-// setter is a function that takes an object and sets the status on that object if the status has changed.
-// If the status has not changed, and the setter does not set the status, it returns false.
-type setter func(client.Object) bool
+func newNginxGatewayStatusSetter(status ngfAPI.NginxGatewayStatus) frameworkStatus.Setter {
+	return func(obj client.Object) (wasSet bool) {
+		ng := helpers.MustCastObject[*ngfAPI.NginxGateway](obj)
 
-func newNginxGatewayStatusSetter(clock Clock, status NginxGatewayStatus) func(client.Object) bool {
-	return func(object client.Object) bool {
-		ng := object.(*ngfAPI.NginxGateway)
-		conds := convertConditions(
-			status.Conditions,
-			status.ObservedGeneration,
-			clock.Now(),
-		)
-
-		if conditionsEqual(ng.Status.Conditions, conds) {
+		if frameworkStatus.ConditionsEqual(ng.Status.Conditions, status.Conditions) {
 			return false
 		}
 
-		ng.Status = ngfAPI.NginxGatewayStatus{
-			Conditions: conds,
-		}
-
+		ng.Status = status
 		return true
 	}
 }
 
-func newGatewayClassStatusSetter(clock Clock, gcs GatewayClassStatus) func(client.Object) bool {
-	return func(object client.Object) bool {
-		gc := object.(*gatewayv1.GatewayClass)
-		status := prepareGatewayClassStatus(gcs, clock.Now())
-
-		if conditionsEqual(gc.Status.Conditions, status.Conditions) {
-			return false
-		}
-
-		gc.Status = status
-
-		return true
-	}
-}
-
-func newGatewayStatusSetter(clock Clock, gs GatewayStatus) func(client.Object) bool {
-	return func(object client.Object) bool {
-		gw := object.(*gatewayv1.Gateway)
-		status := prepareGatewayStatus(gs, clock.Now())
+func newGatewayStatusSetter(status gatewayv1.GatewayStatus) frameworkStatus.Setter {
+	return func(obj client.Object) (wasSet bool) {
+		gw := helpers.MustCastObject[*gatewayv1.Gateway](obj)
 
 		if gwStatusEqual(gw.Status, status) {
 			return false
 		}
 
 		gw.Status = status
-
-		return true
-	}
-}
-
-func newHTTPRouteStatusSetter(gatewayCtlrName string, clock Clock, rs HTTPRouteStatus) func(client.Object) bool {
-	return func(object client.Object) bool {
-		hr := object.(*gatewayv1.HTTPRoute)
-		status := prepareHTTPRouteStatus(
-			hr.Status,
-			rs,
-			gatewayCtlrName,
-			clock.Now(),
-		)
-
-		if hrStatusEqual(gatewayCtlrName, hr.Status, status) {
-			return false
-		}
-
-		hr.Status = status
-
-		return true
-	}
-}
-
-func newBackendTLSPolicyStatusSetter(
-	gatewayCtlrName string,
-	clock Clock,
-	bs BackendTLSPolicyStatus,
-) func(client.Object) bool {
-	return func(object client.Object) bool {
-		btp := object.(*gatewayv1alpha2.BackendTLSPolicy)
-		status := prepareBackendTLSPolicyStatus(btp.Status, bs, gatewayCtlrName, clock.Now())
-
-		if btpStatusEqual(gatewayCtlrName, btp.Status, status) {
-			return false
-		}
-
-		btp.Status = status
-
 		return true
 	}
 }
@@ -118,7 +51,7 @@ func gwStatusEqual(prev, cur gatewayv1.GatewayStatus) bool {
 		return false
 	}
 
-	if !conditionsEqual(prev.Conditions, cur.Conditions) {
+	if !frameworkStatus.ConditionsEqual(prev.Conditions, cur.Conditions) {
 		return false
 	}
 
@@ -131,7 +64,7 @@ func gwStatusEqual(prev, cur gatewayv1.GatewayStatus) bool {
 			return false
 		}
 
-		if !conditionsEqual(s1.Conditions, s2.Conditions) {
+		if !frameworkStatus.ConditionsEqual(s1.Conditions, s2.Conditions) {
 			return false
 		}
 
@@ -145,14 +78,35 @@ func gwStatusEqual(prev, cur gatewayv1.GatewayStatus) bool {
 	})
 }
 
-func hrStatusEqual(gatewayCtlrName string, prev, cur gatewayv1.HTTPRouteStatus) bool {
+func newHTTPRouteStatusSetter(status gatewayv1.HTTPRouteStatus, gatewayCtrlName string) frameworkStatus.Setter {
+	return func(object client.Object) (wasSet bool) {
+		hr := object.(*gatewayv1.HTTPRoute)
+
+		// keep all the parent statuses that belong to other controllers
+		for _, os := range hr.Status.Parents {
+			if string(os.ControllerName) != gatewayCtrlName {
+				status.Parents = append(status.Parents, os)
+			}
+		}
+
+		if hrStatusEqual(gatewayCtrlName, hr.Status, status) {
+			return false
+		}
+
+		hr.Status = status
+
+		return true
+	}
+}
+
+func hrStatusEqual(gatewayCtrlName string, prev, cur gatewayv1.HTTPRouteStatus) bool {
 	// Since other controllers may update HTTPRoute status we can't assume anything about the order of the statuses,
 	// and we have to ignore statuses written by other controllers when checking for equality.
 	// Therefore, we can't use slices.EqualFunc here because it cares about the order.
 
 	// First, we check if the prev status has any RouteParentStatuses that are no longer present in the cur status.
 	for _, prevParent := range prev.Parents {
-		if prevParent.ControllerName != gatewayv1.GatewayController(gatewayCtlrName) {
+		if prevParent.ControllerName != gatewayv1.GatewayController(gatewayCtrlName) {
 			continue
 		}
 
@@ -198,17 +152,61 @@ func routeParentStatusEqual(p1, p2 gatewayv1.RouteParentStatus) bool {
 
 	// we ignore the rest of the ParentRef fields because we do not set them
 
-	return conditionsEqual(p1.Conditions, p2.Conditions)
+	return frameworkStatus.ConditionsEqual(p1.Conditions, p2.Conditions)
 }
 
-func btpStatusEqual(gatewayCtlrName string, prev, cur gatewayv1alpha2.PolicyStatus) bool {
+func newGatewayClassStatusSetter(status gatewayv1.GatewayClassStatus) frameworkStatus.Setter {
+	return func(obj client.Object) (wasSet bool) {
+		gc := helpers.MustCastObject[*gatewayv1.GatewayClass](obj)
+
+		if frameworkStatus.ConditionsEqual(gc.Status.Conditions, status.Conditions) {
+			return false
+		}
+
+		gc.Status = status
+		return true
+	}
+}
+
+func newBackendTLSPolicyStatusSetter(
+	status gatewayv1alpha2.PolicyStatus,
+	gatewayCtrlName string,
+) frameworkStatus.Setter {
+	return func(object client.Object) (wasSet bool) {
+		btp := helpers.MustCastObject[*gatewayv1alpha2.BackendTLSPolicy](object)
+
+		// maxAncestors is the max number of ancestor statuses which is the sum of all new ancestor statuses and all old
+		// ancestor statuses.
+		maxAncestors := 1 + len(btp.Status.Ancestors)
+		ancestors := make([]gatewayv1alpha2.PolicyAncestorStatus, 0, maxAncestors)
+
+		// keep all the ancestor statuses that belong to other controllers
+		for _, os := range btp.Status.Ancestors {
+			if string(os.ControllerName) != gatewayCtrlName {
+				ancestors = append(ancestors, os)
+			}
+		}
+
+		ancestors = append(ancestors, status.Ancestors...)
+		status.Ancestors = ancestors
+
+		if btpStatusEqual(gatewayCtrlName, btp.Status, status) {
+			return false
+		}
+
+		btp.Status = status
+		return true
+	}
+}
+
+func btpStatusEqual(gatewayCtrlName string, prev, cur gatewayv1alpha2.PolicyStatus) bool {
 	// Since other controllers may update BackendTLSPolicy status we can't assume anything about the order of the
 	// statuses, and we have to ignore statuses written by other controllers when checking for equality.
 	// Therefore, we can't use slices.EqualFunc here because it cares about the order.
 
 	// First, we check if the prev status has any PolicyAncestorStatuses that are no longer present in the cur status.
 	for _, prevAncestor := range prev.Ancestors {
-		if prevAncestor.ControllerName != gatewayv1.GatewayController(gatewayCtlrName) {
+		if prevAncestor.ControllerName != gatewayv1.GatewayController(gatewayCtrlName) {
 			continue
 		}
 
@@ -250,29 +248,7 @@ func btpAncestorStatusEqual(p1, p2 gatewayv1alpha2.PolicyAncestorStatus) bool {
 
 	// we ignore the rest of the AncestorRef fields because we do not set them
 
-	return conditionsEqual(p1.Conditions, p2.Conditions)
-}
-
-func conditionsEqual(prev, cur []v1.Condition) bool {
-	return slices.EqualFunc(prev, cur, func(c1, c2 v1.Condition) bool {
-		if c1.ObservedGeneration != c2.ObservedGeneration {
-			return false
-		}
-
-		if c1.Type != c2.Type {
-			return false
-		}
-
-		if c1.Status != c2.Status {
-			return false
-		}
-
-		if c1.Message != c2.Message {
-			return false
-		}
-
-		return c1.Reason == c2.Reason
-	})
+	return frameworkStatus.ConditionsEqual(p1.Conditions, p2.Conditions)
 }
 
 // equalPointers returns whether two pointers are equal.
