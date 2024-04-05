@@ -29,7 +29,7 @@ To begin, the Observability Policy will include the following NGINX directives (
 - [`otel_trace`](https://nginx.org/en/docs/ngx_otel_module.html#otel_trace): enable tracing and set sampler rate
 - [`otel_trace_context`](https://nginx.org/en/docs/ngx_otel_module.html#otel_trace_context): export, inject, propagate, ignore.
 - [`otel_span_name`](https://nginx.org/en/docs/ngx_otel_module.html#otel_span_name)
-- [`otel_span_attr`](https://nginx.org/en/docs/ngx_otel_module.html#otel_span_attr)
+- [`otel_span_attr`](https://nginx.org/en/docs/ngx_otel_module.html#otel_span_attr): these span attributes will be merged with any set at the global level in the `GatewaySettings` config.
 
 Tracing will be disabled by default. The Application Developer will be able to use this Policy to enable and configure tracing for their routes. This Policy will only be applied if the OTel endpoint has been set by the Cluster Operator on the [Gateway Settings](gateway-settings.md).
 
@@ -90,6 +90,7 @@ type Tracing struct {
     Context *TraceContext `json:"context,omitempty"`
 
     // SpanName defines the name of the Otel span. By default is the name of the location for a request.
+    // If specified, applies to all locations that are created for a route.
     //
     // +optional
     SpanName *string `json:"spanName,omitempty"`
@@ -210,7 +211,7 @@ According to the [Policy and Metaresources GEP](https://gateway-api.sigs.k8s.io/
 
 The `Accepted` Condition must be populated on the `ObservabilityPolicy` CRD using the reasons defined in the [PolicyCondition API](https://github.com/kubernetes-sigs/gateway-api/blob/main/apis/v1alpha2/policy_types.go). If these reasons are not sufficient, we can add implementation-specific reasons.
 
-One reason for being `not Accepted` would be the fact that the `GatewaySettings` Policy is not configured, which is a requirement in order for the `ObservabilityPolicy` to work.
+One reason for being `not Accepted` would be the fact that the `GatewaySettings` Policy is not configured, which is a requirement in order for the `ObservabilityPolicy` to work. This will be a custom reason `GatewaySettingsNotSet`.
 
 The Condition stanza may need to be namespaced using the `controllerName` if more than one controller could reconcile the Policy.
 
