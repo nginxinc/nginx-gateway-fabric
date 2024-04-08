@@ -114,13 +114,6 @@ type ClientKeepAliveTimeout struct {
 	Header *Duration `json:"header,omitempty"`
 }
 
-// Duration is a string value representing a duration in time.
-// Duration can be specified in milliseconds (ms) or seconds (s) A value without a suffix is seconds.
-// Examples: 120s, 50ms.
-//
-// +kubebuilder:validation:Pattern=`^\d{1,4}(ms|s)?$`
-type Duration string
-
 // Size is a string value representing a size. Size can be specified in bytes, kilobytes (k), megabytes (m),
 // or gigabytes (g).
 // Examples: 1024, 8k, 1m.
