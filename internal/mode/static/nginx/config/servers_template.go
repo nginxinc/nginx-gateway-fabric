@@ -17,6 +17,7 @@ server {
 }
     {{- else }}
 server {
+    js_preload_object matches from /etc/nginx/conf.d/match.json;
         {{- if $s.SSL }}
     listen {{ $s.Port }} ssl;
     ssl_certificate {{ $s.SSL.Certificate }};
@@ -41,8 +42,8 @@ server {
         return {{ $l.Return.Code }} "{{ $l.Return.Body }}";
         {{- end }}
 
-        {{- if $l.HTTPMatchVar }}
-        set $http_matches {{ $l.HTTPMatchVar | printf "%q" }};
+        {{- if $l.HTTPMatchKey }}
+        set $match_key {{ $l.HTTPMatchKey }};
         js_content httpmatches.redirect;
         {{- end }}
 

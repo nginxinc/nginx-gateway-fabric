@@ -1,8 +1,9 @@
 package config
 
 import (
-	"encoding/json"
 	"fmt"
+	"regexp"
+	"strconv"
 	"strings"
 	gotemplate "text/template"
 
@@ -38,33 +39,52 @@ var baseHeaders = []http.Header{
 	},
 }
 
-func executeServers(conf dataplane.Configuration) []byte {
-	servers := createServers(conf.HTTPServers, conf.SSLServers)
+func executeServers(conf dataplane.Configuration) ([]http.Server, map[string][]http.RouteMatch) {
+	servers, httpMatchPairs := createServers(conf.HTTPServers, conf.SSLServers)
 
-	return execute(serversTemplate, servers)
+	return servers, httpMatchPairs
 }
 
-func createServers(httpServers, sslServers []dataplane.VirtualServer) []http.Server {
+func createServers(httpServers, sslServers []dataplane.VirtualServer) (
+	[]http.Server,
+	map[string][]http.RouteMatch,
+) {
 	servers := make([]http.Server, 0, len(httpServers)+len(sslServers))
+	finalMatchPairs := make(map[string][]http.RouteMatch)
 
 	for _, s := range httpServers {
-		servers = append(servers, createServer(s))
+		httpServer, matchPair := createServer(s)
+		servers = append(servers, httpServer)
+
+		for key, val := range matchPair {
+			finalMatchPairs[key] = val
+		}
 	}
 
 	for _, s := range sslServers {
-		servers = append(servers, createSSLServer(s))
+		sslServer, matchPair := createSSLServer(s)
+		servers = append(servers, sslServer)
+
+		for key, val := range matchPair {
+			finalMatchPairs[key] = val
+		}
 	}
 
-	return servers
+	return servers, finalMatchPairs
 }
 
-func createSSLServer(virtualServer dataplane.VirtualServer) http.Server {
+func createSSLServer(virtualServer dataplane.VirtualServer) (
+	http.Server,
+	map[string][]http.RouteMatch,
+) {
 	if virtualServer.IsDefault {
 		return http.Server{
 			IsDefaultSSL: true,
 			Port:         virtualServer.Port,
-		}
+		}, nil
 	}
+
+	locs, matchPairs := createLocations(virtualServer)
 
 	return http.Server{
 		ServerName: virtualServer.Hostname,
@@ -72,24 +92,29 @@ func createSSLServer(virtualServer dataplane.VirtualServer) http.Server {
 			Certificate:    generatePEMFileName(virtualServer.SSL.KeyPairID),
 			CertificateKey: generatePEMFileName(virtualServer.SSL.KeyPairID),
 		},
-		Locations: createLocations(virtualServer.PathRules, virtualServer.Port),
+		Locations: locs,
 		Port:      virtualServer.Port,
-	}
+	}, matchPairs
 }
 
-func createServer(virtualServer dataplane.VirtualServer) http.Server {
+func createServer(virtualServer dataplane.VirtualServer) (
+	http.Server,
+	map[string][]http.RouteMatch,
+) {
 	if virtualServer.IsDefault {
 		return http.Server{
 			IsDefaultHTTP: true,
 			Port:          virtualServer.Port,
-		}
+		}, nil
 	}
+
+	locs, matchPairs := createLocations(virtualServer)
 
 	return http.Server{
 		ServerName: virtualServer.Hostname,
-		Locations:  createLocations(virtualServer.PathRules, virtualServer.Port),
+		Locations:  locs,
 		Port:       virtualServer.Port,
-	}
+	}, matchPairs
 }
 
 // rewriteConfig contains the configuration for a location to rewrite paths,
@@ -99,13 +124,19 @@ type rewriteConfig struct {
 	Rewrite string
 }
 
-func createLocations(pathRules []dataplane.PathRule, listenerPort int32) []http.Location {
-	maxLocs, pathsAndTypes := getMaxLocationCountAndPathMap(pathRules)
+type httpMatchPairs map[string][]http.RouteMatch
+
+func createLocations(server dataplane.VirtualServer) (
+	[]http.Location,
+	map[string][]http.RouteMatch,
+) {
+	maxLocs, pathsAndTypes := getMaxLocationCountAndPathMap(server.PathRules)
 	locs := make([]http.Location, 0, maxLocs)
+	matchPairs := make(httpMatchPairs)
 	var rootPathExists bool
 
-	for pathRuleIdx, rule := range pathRules {
-		matches := make([]httpMatch, 0, len(rule.MatchRules))
+	for pathRuleIdx, rule := range server.PathRules {
+		matches := make([]http.RouteMatch, 0, len(rule.MatchRules))
 
 		if rule.Path == rootPath {
 			rootPathExists = true
@@ -121,14 +152,15 @@ func createLocations(pathRules []dataplane.PathRule, listenerPort int32) []http.
 				matches = append(matches, match)
 			}
 
-			buildLocations = updateLocationsForFilters(r.Filters, buildLocations, r, listenerPort, rule.Path)
+			buildLocations = updateLocationsForFilters(r.Filters, buildLocations, r, server.Port, rule.Path)
 			locs = append(locs, buildLocations...)
 		}
 
 		if len(matches) > 0 {
-			matchesStr := convertMatchesToString(matches)
 			for i := range extLocations {
-				extLocations[i].HTTPMatchVar = matchesStr
+				key := server.Hostname + extLocations[i].Path + strconv.Itoa(int(server.Port))
+				extLocations[i].HTTPMatchKey = sanitizeKey(key)
+				matchPairs[extLocations[i].HTTPMatchKey] = matches
 			}
 			locs = append(locs, extLocations...)
 		}
@@ -138,7 +170,14 @@ func createLocations(pathRules []dataplane.PathRule, listenerPort int32) []http.
 		locs = append(locs, createDefaultRootLocation())
 	}
 
-	return locs
+	return locs, matchPairs
+}
+
+// removeSpecialCharacters removes '/', '.' from key and replaces '= ' with 'EXACT',
+// to avoid compilation issues with NJS and NGINX Conf.
+func sanitizeKey(input string) string {
+	s := regexp.MustCompile("[./]").ReplaceAllString(input, "")
+	return regexp.MustCompile("= ").ReplaceAllString(s, "EXACT")
 }
 
 // pathAndTypeMap contains a map of paths and any path types defined for that path
@@ -217,9 +256,9 @@ func initializeInternalLocation(
 	pathruleIdx,
 	matchRuleIdx int,
 	match dataplane.Match,
-) (http.Location, httpMatch) {
+) (http.Location, http.RouteMatch) {
 	path := fmt.Sprintf("@rule%d-route%d", pathruleIdx, matchRuleIdx)
-	return createMatchLocation(path), createHTTPMatch(match, path)
+	return createMatchLocation(path), createRouteMatch(match, path)
 }
 
 // updateLocationsForFilters updates the existing locations with any relevant filters.
@@ -392,26 +431,8 @@ func createRewritesValForRewriteFilter(filter *dataplane.HTTPURLRewriteFilter, p
 	return rewrites
 }
 
-// httpMatch is an internal representation of an HTTPRouteMatch.
-// This struct is marshaled into a string and stored as a variable in the nginx location block for the route's path.
-// The NJS httpmatches module will look up this variable on the request object and compare the request against the
-// Method, Headers, and QueryParams contained in httpMatch.
-// If the request satisfies the httpMatch, NGINX will redirect the request to the location RedirectPath.
-type httpMatch struct {
-	// Method is the HTTPMethod of the HTTPRouteMatch.
-	Method string `json:"method,omitempty"`
-	// RedirectPath is the path to redirect the request to if the request satisfies the match conditions.
-	RedirectPath string `json:"redirectPath,omitempty"`
-	// Headers is a list of HTTPHeaders name value pairs with the format "{name}:{value}".
-	Headers []string `json:"headers,omitempty"`
-	// QueryParams is a list of HTTPQueryParams name value pairs with the format "{name}={value}".
-	QueryParams []string `json:"params,omitempty"`
-	// Any represents a match with no match conditions.
-	Any bool `json:"any,omitempty"`
-}
-
-func createHTTPMatch(match dataplane.Match, redirectPath string) httpMatch {
-	hm := httpMatch{
+func createRouteMatch(match dataplane.Match, redirectPath string) http.RouteMatch {
+	hm := http.RouteMatch{
 		RedirectPath: redirectPath,
 	}
 
@@ -556,19 +577,6 @@ func convertSetHeaders(headers []dataplane.HTTPHeader) []http.Header {
 		})
 	}
 	return locHeaders
-}
-
-func convertMatchesToString(matches []httpMatch) string {
-	// FIXME(sberman): De-dupe matches and associated locations
-	// so we don't need nginx/njs to perform unnecessary matching.
-	// https://github.com/nginxinc/nginx-gateway-fabric/issues/662
-	b, err := json.Marshal(matches)
-	if err != nil {
-		// panic is safe here because we should never fail to marshal the match unless we constructed it incorrectly.
-		panic(fmt.Errorf("could not marshal http match: %w", err))
-	}
-
-	return string(b)
 }
 
 func exactPath(path string) string {

@@ -1,80 +1,53 @@
-import qs from 'querystring';
-
-const MATCHES_VARIABLE = 'http_matches';
+const MATCHES_KEY = 'match_key';
 const HTTP_CODES = {
 	notFound: 404,
 	internalServerError: 500,
 };
 
 function redirect(r) {
-	let matches;
+  let matchList;
 
-	try {
-		matches = extractMatchesFromRequest(r);
-	} catch (e) {
-		r.error(e.message);
-		r.return(HTTP_CODES.internalServerError);
-		return;
-	}
-
-	// Matches is a list of http matches in order of precedence.
-	// We will accept the first match that the request satisfies.
-	// If there's a match, redirect request to internal location block.
-	// If an exception occurs, return 500.
-	// If no matches are found, return 404.
-	let match;
-	try {
-		match = findWinningMatch(r, matches);
-	} catch (e) {
-		r.error(e.message);
-		r.return(HTTP_CODES.internalServerError);
-		return;
-	}
-
-	if (!match) {
-		r.return(HTTP_CODES.notFound);
-		return;
-	}
-
-	if (!match.redirectPath) {
-		r.error(
-			`cannot redirect the request; the match ${JSON.stringify(
-				match,
-			)} does not have a redirectPath set`,
-		);
-		r.return(HTTP_CODES.internalServerError);
-		return;
-	}
-
-	r.internalRedirect(match.redirectPath);
+  try {
+    let key = r.variables[MATCHES_KEY];
+    matchList = matches[key];
+  } catch (e) {
+    r.error(e.message);
+    r.return(HTTP_CODES.internalServerError);
+    return;
+  }
 }
 
-function extractMatchesFromRequest(r) {
-	if (!r.variables[MATCHES_VARIABLE]) {
-		throw Error(
-			`cannot redirect the request; the variable ${MATCHES_VARIABLE} is not defined on the request object`,
-		);
-	}
+function internalRedirect(r, matchList) {
+  // matchList is a list of http matches in order of precedence.
+  // We will accept the first match that the request satisfies.
+  // If there's a match, redirect request to internal location block.
+  // If an exception occurs, return 500.
+  // If no matches are found, return 404.
+  let match;
+  try {
+    match = findWinningMatch(r, matchList);
+  } catch (e) {
+    r.error(e.message);
+    r.return(HTTP_CODES.internalServerError);
+    return;
+  }
 
-	let matches;
+  if (!match) {
+    r.return(HTTP_CODES.notFound);
+    return;
+  }
 
-	try {
-		matches = JSON.parse(r.variables[MATCHES_VARIABLE]);
-	} catch (e) {
-		throw Error(
-			`cannot redirect the request; error parsing ${r.variables[MATCHES_VARIABLE]} into a JSON object: ${e}`,
-		);
-	}
+  if (!match.redirectPath) {
+    r.error(
+      `cannot redirect the request; the match ${JSON.stringify(
+        match,
+      )} does not have a redirectPath set`,
+    );
+    r.return(HTTP_CODES.internalServerError);
+    return;
+  }
 
-	if (!Array.isArray(matches)) {
-		throw Error(`cannot redirect the request; expected a list of matches, got ${matches}`);
-	}
-
-	if (matches.length === 0) {
-		throw Error(`cannot redirect the request; matches is an empty list`);
-	}
-
-	return matches;
+  r.internalRedirect(match.redirectPath);
 }
 
 function findWinningMatch(r, matches) {
@@ -198,12 +171,10 @@ function paramsMatch(requestParams, params) {
 }
 
 export default {
-	redirect,
-	testMatch,
-	findWinningMatch,
-	headersMatch,
-	paramsMatch,
-	extractMatchesFromRequest,
-	HTTP_CODES,
-	MATCHES_VARIABLE,
+  internalRedirect,
+  testMatch,
+  findWinningMatch,
+  headersMatch,
+  paramsMatch,
+  HTTP_CODES,
 };

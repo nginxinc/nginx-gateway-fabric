@@ -3,20 +3,20 @@ import { assert, describe, expect, it } from 'vitest';
 
 // Creates a NGINX HTTP Request Object for testing.
 // See documentation for all properties available: http://nginx.org/en/docs/njs/reference.html
-function createRequest({ method = '', headers = {}, params = {}, matches = '' } = {}) {
-	let r = {
-		// Test mocks
-		return(statusCode) {
-			r.testReturned = statusCode;
-		},
-		internalRedirect(redirectPath) {
-			r.testRedirectedTo = redirectPath;
-		},
-		error(msg) {
-			console.log('\tngx_error:', msg);
-		},
-		variables: {},
-	};
+function createRequest({ method = '', headers = {}, params = {} } = {}) {
+  let r = {
+    // Test mocks
+    return(statusCode) {
+      r.testReturned = statusCode;
+    },
+    internalRedirect(redirectPath) {
+      r.testRedirectedTo = redirectPath;
+    },
+    error(msg) {
+      console.log('\tngx_error:', msg);
+    },
+    variables: {},
+  };
 
 	if (method) {
 		r.method = method;
@@ -30,57 +30,8 @@ function createRequest({ method = '', headers = {}, params = {}, matches = '' } 
 		r.args = params;
 	}
 
-	if (matches) {
-		r.variables[hm.MATCHES_VARIABLE] = matches;
-	}
-
-	return r;
+  return r;
 }
-
-describe('extractMatchesFromRequest', () => {
-	const tests = [
-		{
-			name: 'throws if matches variable does not exist on request',
-			request: createRequest(),
-			expectThrow: true,
-			errSubstring: 'http_matches is not defined',
-		},
-		{
-			name: 'throws if matches variable is not JSON',
-			request: createRequest({ matches: 'not-JSON' }),
-			expectThrow: true,
-			errSubstring: 'error parsing',
-		},
-		{
-			name: 'throws if matches variable is not an array',
-			request: createRequest({ matches: '{}' }),
-			expectThrow: true,
-			errSubstring: 'expected a list of matches',
-		},
-		{
-			name: 'throws if the length of the matches variable is zero',
-			request: createRequest({ matches: '[]' }),
-			expectThrow: true,
-			errSubstring: 'matches is an empty list',
-		},
-		{
-			name: 'does not throw if matches variable is expected list of matches',
-			request: createRequest({ matches: '[{"any":true}]' }),
-			expectThrow: false,
-		},
-	];
-	tests.forEach((test) => {
-		it(test.name, () => {
-			if (test.expectThrow) {
-				expect(() => hm.extractMatchesFromRequest(test.request)).to.throw(
-					test.errSubstring,
-				);
-			} else {
-				expect(() => hm.extractMatchesFromRequest(test.request).to.not.throw());
-			}
-		});
-	});
-});
 
 describe('testMatch', () => {
 	const tests = [
@@ -193,22 +144,16 @@ describe('findWinningMatch', () => {
 		},
 	];
 
-	tests.forEach((test) => {
-		it(test.name, () => {
-			test.request.variables = {
-				http_matches: JSON.stringify(test.matches),
-			};
-
-			if (test.expectThrow) {
-				expect(() => hm.findWinningMatch(test.request, test.matches)).to.throw(
-					test.errSubstring,
-				);
-			} else {
-				const result = hm.findWinningMatch(test.request, test.matches);
-				expect(result).to.equal(test.expected);
-			}
-		});
-	});
+  tests.forEach((test) => {
+    it(test.name, () => {
+      if (test.expectThrow) {
+        expect(() => hm.findWinningMatch(test.request, test.matches)).to.throw(test.errSubstring);
+      } else {
+        const result = hm.findWinningMatch(test.request, test.matches);
+        expect(result).to.equal(test.expected);
+      }
+    });
+  });
 });
 
 describe('headersMatch', () => {
@@ -393,75 +338,68 @@ describe('paramsMatch', () => {
 	});
 });
 
-describe('redirect', () => {
-	const testAnyMatch = { any: true, redirectPath: '/any' };
-	const testHeaderMatches = {
-		headers: ['header1:VALUE1', 'header2:value2', 'header3:value3'],
-		redirectPath: '/headers',
-	};
-	const testQueryParamMatches = {
-		params: ['Arg1=value1', 'arg2=value2=SOME=other=value', 'arg3===value3&*1(*+'],
-		redirectPath: '/params',
-	};
-	const testAllMatchTypes = {
-		method: 'GET',
-		headers: ['header1:value1', 'header2:value2'],
-		params: ['Arg1=value1', 'arg2=value2=SOME=other=value'],
-		redirectPath: '/a-match',
-	};
+describe('internalRedirect', () => {
+  const testAnyMatch = { any: true, redirectPath: '/any' };
+  const testHeaderMatches = {
+    headers: ['header1:VALUE1', 'header2:value2', 'header3:value3'],
+    redirectPath: '/headers',
+  };
+  const testQueryParamMatches = {
+    params: ['Arg1=value1', 'arg2=value2=SOME=other=value', 'arg3===value3&*1(*+'],
+    redirectPath: '/params',
+  };
+  const testAllMatchTypes = {
+    method: 'GET',
+    headers: ['header1:value1', 'header2:value2'],
+    params: ['Arg1=value1', 'arg2=value2=SOME=other=value'],
+    redirectPath: '/a-match',
+  };
 
-	const tests = [
-		{
-			name: 'returns Internal Server Error status code if http_matches variable is not set',
-			request: createRequest(),
-			matches: null,
-			expectedReturn: hm.HTTP_CODES.internalServerError,
-		},
-		{
-			name: 'returns Internal Server Error status code if http_matches contains malformed match',
-			request: createRequest(),
-			matches: [{ headers: ['malformedheader'] }],
-			expectedReturn: hm.HTTP_CODES.internalServerError,
-		},
-		{
-			name: 'returns Not Found status code if request does not satisfy any match',
-			request: createRequest({ method: 'GET' }),
-			matches: [{ method: 'POST' }],
-			expectedReturn: hm.HTTP_CODES.notFound,
-		},
-		{
-			name: 'returns Internal Server Error status code if request satisfies match, but the redirectPath is missing',
-			request: createRequest({ method: 'GET' }),
-			matches: [{ method: 'GET' }],
-			expectedReturn: hm.HTTP_CODES.internalServerError,
-		},
-		{
-			name: 'redirects to the redirectPath of the first match the request satisfies',
-			request: createRequest({
-				method: 'GET',
-				headers: { header1: 'value1', header2: 'value2' },
-				params: { Arg1: 'value1', arg2: 'value2=SOME=other=value' },
-			}),
-			matches: [testHeaderMatches, testQueryParamMatches, testAllMatchTypes, testAnyMatch], // request matches testAllMatchTypes and testAnyMatch. But first match should win.
-			expectedRedirect: '/a-match',
-		},
-	];
+  const tests = [
+    {
+      name: 'returns Internal Server Error status code if match variable is not set',
+      request: createRequest(),
+      matches: null,
+      expectedReturn: hm.HTTP_CODES.internalServerError,
+    },
+    {
+      name: 'returns Internal Server Error status code if matchList contains malformed match',
+      request: createRequest(),
+      matches: [{ headers: ['malformedheader'] }],
+      expectedReturn: hm.HTTP_CODES.internalServerError,
+    },
+    {
+      name: 'returns Not Found status code if request does not satisfy any match',
+      request: createRequest({ method: 'GET' }),
+      matches: [{ method: 'POST' }],
+      expectedReturn: hm.HTTP_CODES.notFound,
+    },
+    {
+      name: 'returns Internal Server Error status code if request satisfies match, but the redirectPath is missing',
+      request: createRequest({ method: 'GET' }),
+      matches: [{ method: 'GET' }],
+      expectedReturn: hm.HTTP_CODES.internalServerError,
+    },
+    {
+      name: 'redirects to the redirectPath of the first match the request satisfies',
+      request: createRequest({
+        method: 'GET',
+        headers: { header1: 'value1', header2: 'value2' },
+        params: { Arg1: 'value1', arg2: 'value2=SOME=other=value' },
+      }),
+      matches: [testHeaderMatches, testQueryParamMatches, testAllMatchTypes, testAnyMatch], // request matches testAllMatchTypes and testAnyMatch. But first match should win.
+      expectedRedirect: '/a-match',
+    },
+  ];
 
-	tests.forEach((test) => {
-		it(test.name, () => {
-			if (test.matches) {
-				// set http_matches variable
-				test.request.variables = {
-					http_matches: JSON.stringify(test.matches),
-				};
-			}
-
-			hm.redirect(test.request);
-			if (test.expectedReturn) {
-				expect(test.request.testReturned).to.equal(test.expectedReturn);
-			} else if (test.expectedRedirect) {
-				expect(test.request.testRedirectedTo).to.equal(test.expectedRedirect);
-			}
-		});
-	});
+  tests.forEach((test) => {
+    it(test.name, () => {
+      hm.internalRedirect(test.request, test.matches);
+      if (test.expectedReturn) {
+        expect(test.request.testReturned).to.equal(test.expectedReturn);
+      } else if (test.expectedRedirect) {
+        expect(test.request.testRedirectedTo).to.equal(test.expectedRedirect);
+      }
+    });
+  });
 });

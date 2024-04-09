@@ -12,13 +12,13 @@ type Server struct {
 
 // Location holds all configuration for an HTTP location.
 type Location struct {
-	Return          *Return
-	ProxySSLVerify  *ProxySSLVerify
 	Path            string
 	ProxyPass       string
-	HTTPMatchVar    string
-	Rewrites        []string
+	HTTPMatchKey    string
 	ProxySetHeaders []Header
+	ProxySSLVerify  *ProxySSLVerify
+	Return          *Return
+	Rewrites        []string
 }
 
 // Header defines a HTTP header to be passed to the proxied server.
@@ -92,4 +92,22 @@ type MapParameter struct {
 type ProxySSLVerify struct {
 	TrustedCertificate string
 	Name               string
+}
+
+// httpMatch is an internal representation of an HTTPRouteMatch.
+// This struct is marshaled into a string and stored as a variable in the nginx location block for the route's path.
+// The NJS httpmatches module will look up this variable on the request object and compare the request against the
+// Method, Headers, and QueryParams contained in httpMatch.
+// If the request satisfies the httpMatch, NGINX will redirect the request to the location RedirectPath.
+type RouteMatch struct {
+	// Method is the HTTPMethod of the HTTPRouteMatch.
+	Method string `json:"method,omitempty"`
+	// RedirectPath is the path to redirect the request to if the request satisfies the match conditions.
+	RedirectPath string `json:"redirectPath,omitempty"`
+	// Headers is a list of HTTPHeaders name value pairs with the format "{name}:{value}".
+	Headers []string `json:"headers,omitempty"`
+	// QueryParams is a list of HTTPQueryParams name value pairs with the format "{name}={value}".
+	QueryParams []string `json:"params,omitempty"`
+	// Any represents a match with no match conditions.
+	Any bool `json:"any,omitempty"`
 }

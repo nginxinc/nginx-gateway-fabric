@@ -70,7 +70,7 @@ func TestGenerate(t *testing.T) {
 
 	files := generator.Generate(conf)
 
-	g.Expect(files).To(HaveLen(4))
+	g.Expect(files).To(HaveLen(5))
 
 	g.Expect(files[0]).To(Equal(file.File{
 		Type:    file.TypeSecret,
@@ -88,12 +88,15 @@ func TestGenerate(t *testing.T) {
 	g.Expect(httpCfg).To(ContainSubstring("upstream"))
 	g.Expect(httpCfg).To(ContainSubstring("split_clients"))
 
+	g.Expect(files[2].Path).To(Equal("/etc/nginx/conf.d/match.json"))
 	g.Expect(files[2].Type).To(Equal(file.TypeRegular))
-	g.Expect(files[2].Path).To(Equal("/etc/nginx/conf.d/config-version.conf"))
-	configVersion := string(files[2].Content)
+
+	g.Expect(files[3].Type).To(Equal(file.TypeRegular))
+	g.Expect(files[3].Path).To(Equal("/etc/nginx/conf.d/config-version.conf"))
+	configVersion := string(files[3].Content)
 	g.Expect(configVersion).To(ContainSubstring(fmt.Sprintf("return 200 %d", conf.Version)))
 
-	g.Expect(files[3].Path).To(Equal("/etc/nginx/secrets/test-certbundle.crt"))
-	certBundle := string(files[3].Content)
+	g.Expect(files[4].Path).To(Equal("/etc/nginx/secrets/test-certbundle.crt"))
+	certBundle := string(files[4].Content)
 	g.Expect(certBundle).To(Equal("test-cert"))
 }

@@ -1,6 +1,8 @@
 package config
 
 import (
+	"encoding/json"
+	"fmt"
 	"path/filepath"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/file"
@@ -23,6 +25,9 @@ const (
 
 	// configVersionFile is the path to the config version configuration file.
 	configVersionFile = httpFolder + "/config-version.conf"
+
+	// httpMatchVarsFile is the path to the http_match pairs configuration file.
+	httpMatchVarsFile = httpFolder + "/match.json"
 )
 
 // ConfigFolders is a list of folders where NGINX configuration files are stored.
@@ -66,7 +71,8 @@ func (g GeneratorImpl) Generate(conf dataplane.Configuration) []file.File {
 		files = append(files, generatePEM(id, pair.Cert, pair.Key))
 	}
 
-	files = append(files, g.generateHTTPConfig(conf))
+	httpFiles := g.generateHTTPConfig(conf)
+	files = append(files, httpFiles...)
 
 	files = append(files, generateConfigVersion(conf.Version))
 
@@ -106,24 +112,43 @@ func generateCertBundleFileName(id dataplane.CertBundleID) string {
 	return filepath.Join(secretsFolder, string(id)+".crt")
 }
 
-func (g GeneratorImpl) generateHTTPConfig(conf dataplane.Configuration) file.File {
+func (g GeneratorImpl) generateHTTPConfig(conf dataplane.Configuration) []file.File {
 	var c []byte
 	for _, execute := range g.getExecuteFuncs() {
 		c = append(c, execute(conf)...)
 	}
 
-	return file.File{
+	servers, httpMatchPairs := executeServers(conf)
+
+	// create server conf
+	serverConf := execute(serversTemplate, servers)
+	c = append(c, serverConf...)
+
+	httpConf := file.File{
 		Content: c,
 		Path:    httpConfigFile,
 		Type:    file.TypeRegular,
 	}
+
+	// create httpMatchPair conf
+	b, err := json.Marshal(httpMatchPairs)
+	if err != nil {
+		// panic is safe here because we should never fail to marshal the match unless we constructed it incorrectly.
+		panic(fmt.Errorf("could not marshal http match pairs: %w", err))
+	}
+	matchConf := file.File{
+		Content: b,
+		Path:    httpMatchVarsFile,
+		Type:    file.TypeRegular,
+	}
+
+	return []file.File{httpConf, matchConf}
 }
 
 func (g GeneratorImpl) getExecuteFuncs() []executeFunc {
 	return []executeFunc{
 		g.executeUpstreams,
 		executeSplitClients,
-		executeServers,
 		executeMaps,
 	}
 }
