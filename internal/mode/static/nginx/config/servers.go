@@ -66,14 +66,17 @@ func createSSLServer(virtualServer dataplane.VirtualServer) http.Server {
 		}
 	}
 
+	locs, http2 := createLocations(virtualServer.PathRules, virtualServer.Port)
+
 	return http.Server{
 		ServerName: virtualServer.Hostname,
 		SSL: &http.SSL{
 			Certificate:    generatePEMFileName(virtualServer.SSL.KeyPairID),
 			CertificateKey: generatePEMFileName(virtualServer.SSL.KeyPairID),
 		},
-		Locations: createLocations(virtualServer.PathRules, virtualServer.Port),
+		Locations: locs,
 		Port:      virtualServer.Port,
+		HTTP2:     http2,
 	}
 }
 
@@ -85,10 +88,13 @@ func createServer(virtualServer dataplane.VirtualServer) http.Server {
 		}
 	}
 
+	locs, http2 := createLocations(virtualServer.PathRules, virtualServer.Port)
+
 	return http.Server{
 		ServerName: virtualServer.Hostname,
-		Locations:  createLocations(virtualServer.PathRules, virtualServer.Port),
+		Locations:  locs,
 		Port:       virtualServer.Port,
+		HTTP2:      http2,
 	}
 }
 
@@ -99,16 +105,21 @@ type rewriteConfig struct {
 	Rewrite string
 }
 
-func createLocations(pathRules []dataplane.PathRule, listenerPort int32) []http.Location {
+func createLocations(pathRules []dataplane.PathRule, listenerPort int32) ([]http.Location, bool) {
 	maxLocs, pathsAndTypes := getMaxLocationCountAndPathMap(pathRules)
 	locs := make([]http.Location, 0, maxLocs)
 	var rootPathExists bool
+	var http2 bool
 
 	for pathRuleIdx, rule := range pathRules {
 		matches := make([]httpMatch, 0, len(rule.MatchRules))
 
 		if rule.Path == rootPath {
 			rootPathExists = true
+		}
+
+		if rule.GRPC {
+			http2 = true
 		}
 
 		extLocations := initializeExternalLocations(rule, pathsAndTypes)
@@ -121,7 +132,7 @@ func createLocations(pathRules []dataplane.PathRule, listenerPort int32) []http.
 				matches = append(matches, match)
 			}
 
-			buildLocations = updateLocationsForFilters(r.Filters, buildLocations, r, listenerPort, rule.Path)
+			buildLocations = updateLocationsForFilters(r.Filters, buildLocations, r, listenerPort, rule.Path, rule.GRPC)
 			locs = append(locs, buildLocations...)
 		}
 
@@ -138,7 +149,7 @@ func createLocations(pathRules []dataplane.PathRule, listenerPort int32) []http.
 		locs = append(locs, createDefaultRootLocation())
 	}
 
-	return locs
+	return locs, http2
 }
 
 // pathAndTypeMap contains a map of paths and any path types defined for that path
@@ -229,6 +240,7 @@ func updateLocationsForFilters(
 	matchRule dataplane.MatchRule,
 	listenerPort int32,
 	path string,
+	GRPC bool,
 ) []http.Location {
 	if filters.InvalidFilter != nil {
 		for i := range buildLocations {
@@ -246,7 +258,7 @@ func updateLocationsForFilters(
 	}
 
 	rewrites := createRewritesValForRewriteFilter(filters.RequestURLRewrite, path)
-	proxySetHeaders := generateProxySetHeaders(&matchRule.Filters)
+	proxySetHeaders := generateProxySetHeaders(&matchRule.Filters, GRPC)
 	for i := range buildLocations {
 		if rewrites != nil {
 			if rewrites.Rewrite != "" {
@@ -258,19 +270,27 @@ func updateLocationsForFilters(
 		proxyPass := createProxyPass(
 			matchRule.BackendGroup,
 			matchRule.Filters.RequestURLRewrite,
-			generateProtocolString(buildLocations[i].ProxySSLVerify),
+			generateProtocolString(buildLocations[i].ProxySSLVerify, GRPC),
+			GRPC,
 		)
 		buildLocations[i].ProxyPass = proxyPass
+		buildLocations[i].IsGRPC = GRPC
 	}
 
 	return buildLocations
 }
 
-func generateProtocolString(ssl *http.ProxySSLVerify) string {
-	if ssl != nil {
-		return "https"
+func generateProtocolString(ssl *http.ProxySSLVerify, GRPC bool) string {
+	if !GRPC {
+		if ssl != nil {
+			return "https"
+		}
+		return "http"
 	}
-	return "http"
+	if ssl != nil {
+		return "grpcs"
+	}
+	return "grpc"
 }
 
 func createProxyTLSFromBackends(backends []dataplane.Backend) *http.ProxySSLVerify {
@@ -475,10 +495,13 @@ func createProxyPass(
 	backendGroup dataplane.BackendGroup,
 	filter *dataplane.HTTPURLRewriteFilter,
 	protocol string,
+	GRPC bool,
 ) string {
 	var requestURI string
-	if filter == nil || filter.Path == nil {
-		requestURI = "$request_uri"
+	if !GRPC {
+		if filter == nil || filter.Path == nil {
+			requestURI = "$request_uri"
+		}
 	}
 
 	backendName := backendGroupName(backendGroup)
@@ -495,7 +518,11 @@ func createMatchLocation(path string) http.Location {
 	}
 }
 
-func generateProxySetHeaders(filters *dataplane.HTTPFilters) []http.Header {
+func generateProxySetHeaders(filters *dataplane.HTTPFilters, GRPC bool) []http.Header {
+	if GRPC {
+		return []http.Header{}
+	}
+
 	headers := make([]http.Header, len(baseHeaders))
 	copy(headers, baseHeaders)
 

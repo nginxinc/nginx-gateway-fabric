@@ -17,6 +17,7 @@ TELEMETRY_ENDPOINT_INSECURE = false
 
 GW_API_VERSION = 1.0.0
 INSTALL_WEBHOOK = false
+ENABLE_EXPERIMENTAL = false
 NODE_VERSION = $(shell cat .nvmrc)
 
 # go build flags - should not be overridden by the user
@@ -193,13 +194,13 @@ install-ngf-local-build-with-plus: build-images-with-plus load-images-with-plus 
 
 .PHONY: helm-install-local
 helm-install-local: ## Helm install NGF on configured kind cluster with local images. To build, load, and install with helm run make install-ngf-local-build.
-	./conformance/scripts/install-gateway.sh $(GW_API_VERSION) $(INSTALL_WEBHOOK)
-	helm install dev ./deploy/helm-chart --create-namespace --wait --set service.type=NodePort --set nginxGateway.image.repository=$(PREFIX) --set nginxGateway.image.tag=$(TAG) --set nginxGateway.image.pullPolicy=Never --set nginx.image.repository=$(NGINX_PREFIX) --set nginx.image.tag=$(TAG) --set nginx.image.pullPolicy=Never -n nginx-gateway
+	./conformance/scripts/install-gateway.sh $(GW_API_VERSION) $(INSTALL_WEBHOOK) $(ENABLE_EXPERIMENTAL)
+	helm install dev ./deploy/helm-chart --create-namespace --wait --set service.type=NodePort --set nginxGateway.image.repository=$(PREFIX) --set nginxGateway.image.tag=$(TAG) --set nginxGateway.image.pullPolicy=Never --set nginx.image.repository=$(NGINX_PREFIX) --set nginx.image.tag=$(TAG) --set nginx.image.pullPolicy=Never --set nginxGateway.gwAPIExperimentalFeatures.enable=$(ENABLE_EXPERIMENTAL) -n nginx-gateway
 
 .PHONY: helm-install-local-with-plus
 helm-install-local-with-plus: ## Helm install NGF with NGINX Plus on configured kind cluster with local images. To build, load, and install with helm run make install-ngf-local-build-with-plus.
-	./conformance/scripts/install-gateway.sh $(GW_API_VERSION) $(INSTALL_WEBHOOK)
-	helm install dev ./deploy/helm-chart --create-namespace --wait --set service.type=NodePort --set nginxGateway.image.repository=$(PREFIX) --set nginxGateway.image.tag=$(TAG) --set nginxGateway.image.pullPolicy=Never --set nginx.image.repository=$(NGINX_PLUS_PREFIX) --set nginx.image.tag=$(TAG) --set nginx.image.pullPolicy=Never --set nginx.plus=true -n nginx-gateway
+	./conformance/scripts/install-gateway.sh $(GW_API_VERSION) $(INSTALL_WEBHOOK) $(ENABLE_EXPERIMENTAL)
+	helm install dev ./deploy/helm-chart --create-namespace --wait --set service.type=NodePort --set nginxGateway.image.repository=$(PREFIX) --set nginxGateway.image.tag=$(TAG) --set nginxGateway.image.pullPolicy=Never --set nginx.image.repository=$(NGINX_PLUS_PREFIX) --set nginx.image.tag=$(TAG) --set nginx.image.pullPolicy=Never --set nginx.plus=true --set nginxGateway.gwAPIExperimentalFeatures.enable=$(ENABLE_EXPERIMENTAL) -n nginx-gateway
 
 # Debug Targets
 .PHONY: debug-build

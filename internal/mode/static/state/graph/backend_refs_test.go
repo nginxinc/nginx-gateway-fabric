@@ -538,14 +538,14 @@ func TestAddBackendRefsToRulesTest(t *testing.T) {
 	)
 
 	tests := []struct {
-		route               *Route
+		route               *HTTPRoute
 		policies            map[types.NamespacedName]*BackendTLSPolicy
 		name                string
 		expectedBackendRefs []BackendRef
 		expectedConditions  []conditions.Condition
 	}{
 		{
-			route: &Route{
+			route: &HTTPRoute{
 				Source:     hrWithOneBackend,
 				ParentRefs: sectionNameRefs,
 				Valid:      true,
@@ -564,7 +564,7 @@ func TestAddBackendRefsToRulesTest(t *testing.T) {
 			name:               "normal case with one rule with one backend",
 		},
 		{
-			route: &Route{
+			route: &HTTPRoute{
 				Source:     hrWithTwoBackends,
 				ParentRefs: sectionNameRefs,
 				Valid:      true,
@@ -589,7 +589,7 @@ func TestAddBackendRefsToRulesTest(t *testing.T) {
 			name:               "normal case with one rule with two backends",
 		},
 		{
-			route: &Route{
+			route: &HTTPRoute{
 				Source:     hrWithTwoBackends,
 				ParentRefs: sectionNameRefs,
 				Valid:      true,
@@ -616,7 +616,7 @@ func TestAddBackendRefsToRulesTest(t *testing.T) {
 			name:               "normal case with one rule with two backends and matching policies",
 		},
 		{
-			route: &Route{
+			route: &HTTPRoute{
 				Source:     hrWithOneBackend,
 				ParentRefs: sectionNameRefs,
 				Valid:      false,
@@ -627,7 +627,7 @@ func TestAddBackendRefsToRulesTest(t *testing.T) {
 			name:                "invalid route",
 		},
 		{
-			route: &Route{
+			route: &HTTPRoute{
 				Source:     hrWithOneBackend,
 				ParentRefs: sectionNameRefs,
 				Valid:      true,
@@ -639,7 +639,7 @@ func TestAddBackendRefsToRulesTest(t *testing.T) {
 			name:                "invalid matches",
 		},
 		{
-			route: &Route{
+			route: &HTTPRoute{
 				Source:     hrWithOneBackend,
 				ParentRefs: sectionNameRefs,
 				Valid:      true,
@@ -651,7 +651,7 @@ func TestAddBackendRefsToRulesTest(t *testing.T) {
 			name:                "invalid filters",
 		},
 		{
-			route: &Route{
+			route: &HTTPRoute{
 				Source:     hrWithInvalidRule,
 				ParentRefs: sectionNameRefs,
 				Valid:      true,
@@ -671,7 +671,7 @@ func TestAddBackendRefsToRulesTest(t *testing.T) {
 			name:     "invalid backendRef",
 		},
 		{
-			route: &Route{
+			route: &HTTPRoute{
 				Source:     hrWithTwoDiffBackends,
 				ParentRefs: sectionNameRefs,
 				Valid:      true,
@@ -702,7 +702,7 @@ func TestAddBackendRefsToRulesTest(t *testing.T) {
 			name:     "invalid backendRef - backend TLS policies do not match for all backends",
 		},
 		{
-			route: &Route{
+			route: &HTTPRoute{
 				Source:     hrWithZeroBackendRefs,
 				ParentRefs: sectionNameRefs,
 				Valid:      true,
@@ -718,7 +718,7 @@ func TestAddBackendRefsToRulesTest(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewWithT(t)
 			resolver := newReferenceGrantResolver(nil)
-			addBackendRefsToRules(test.route, resolver, services, test.policies)
+			addHTTPBackendRefsToRules(test.route, resolver, services, test.policies)
 
 			var actual []BackendRef
 			if test.route.Rules != nil {
@@ -938,7 +938,7 @@ func TestCreateBackend(t *testing.T) {
 			expectedServicePortReference: "",
 			expectedCondition: helpers.GetPointer(
 				staticConds.NewRouteBackendRefUnsupportedValue(
-					"The backend TLS policy is invalid: unsupported value",
+					"the backend TLS policy is invalid: unsupported value",
 				),
 			),
 			name: "invalid policy",
@@ -964,7 +964,7 @@ func TestCreateBackend(t *testing.T) {
 			g := NewWithT(t)
 
 			resolver := newReferenceGrantResolver(nil)
-			backend, cond := createBackendRef(
+			backend, cond := createHTTPBackendRef(
 				test.ref,
 				sourceNamespace,
 				resolver,
@@ -1180,7 +1180,7 @@ func TestFindBackendTLSPolicyForService(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewWithT(t)
 
-			btp, err := findBackendTLSPolicyForService(test.backendTLSPolicies, ref, "test")
+			btp, err := findBackendTLSPolicyForService(test.backendTLSPolicies, string(ref.Name), ref.Namespace, "test")
 
 			g.Expect(btp.Source.Name).To(Equal(test.expectedBtpName))
 			g.Expect(err).ToNot(HaveOccurred())

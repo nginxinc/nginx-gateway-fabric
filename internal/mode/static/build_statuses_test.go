@@ -53,7 +53,7 @@ func TestBuildStatuses(t *testing.T) {
 		Status: metav1.ConditionTrue,
 	}
 
-	routes := map[types.NamespacedName]*graph.Route{
+	routes := map[types.NamespacedName]*graph.HTTPRoute{
 		{Namespace: "test", Name: "hr-valid"}: {
 			Valid: true,
 			Source: &v1.HTTPRoute{
@@ -131,7 +131,7 @@ func TestBuildStatuses(t *testing.T) {
 				{
 					Name:  "listener-80-1",
 					Valid: true,
-					Routes: map[types.NamespacedName]*graph.Route{
+					HTTPRoutes: map[types.NamespacedName]*graph.HTTPRoute{
 						{Namespace: "test", Name: "hr-1"}: {},
 					},
 				},
@@ -141,7 +141,7 @@ func TestBuildStatuses(t *testing.T) {
 		IgnoredGateways: map[types.NamespacedName]*v1.Gateway{
 			client.ObjectKeyFromObject(ignoredGw): ignoredGw,
 		},
-		Routes: routes,
+		HTTPRoutes: routes,
 	}
 
 	expected := status.GatewayAPIStatuses{
@@ -170,7 +170,7 @@ func TestBuildStatuses(t *testing.T) {
 				Ignored:            true,
 			},
 		},
-		HTTPRouteStatuses: status.HTTPRouteStatuses{
+		HTTPRouteStatuses: status.RouteStatuses{
 			{Namespace: "test", Name: "hr-valid"}: {
 				ObservedGeneration: 3,
 				ParentStatuses: []status.ParentStatus{
@@ -204,6 +204,7 @@ func TestBuildStatuses(t *testing.T) {
 			},
 		},
 		BackendTLSPolicyStatuses: status.BackendTLSPolicyStatuses{},
+		GRPCRouteStatuses:        status.RouteStatuses{},
 	}
 
 	g := NewWithT(t)
@@ -221,7 +222,7 @@ func TestBuildStatusesNginxErr(t *testing.T) {
 		},
 	}
 
-	routes := map[types.NamespacedName]*graph.Route{
+	routes := map[types.NamespacedName]*graph.HTTPRoute{
 		{Namespace: "test", Name: "hr-valid"}: {
 			Valid: true,
 			Source: &v1.HTTPRoute{
@@ -257,14 +258,14 @@ func TestBuildStatusesNginxErr(t *testing.T) {
 				{
 					Name:  "listener-80-1",
 					Valid: true,
-					Routes: map[types.NamespacedName]*graph.Route{
+					HTTPRoutes: map[types.NamespacedName]*graph.HTTPRoute{
 						{Namespace: "test", Name: "hr-1"}: {},
 					},
 				},
 			},
 			Valid: true,
 		},
-		Routes: routes,
+		HTTPRoutes: routes,
 	}
 
 	expected := status.GatewayAPIStatuses{
@@ -291,7 +292,7 @@ func TestBuildStatusesNginxErr(t *testing.T) {
 				ObservedGeneration: 2,
 			},
 		},
-		HTTPRouteStatuses: status.HTTPRouteStatuses{
+		HTTPRouteStatuses: status.RouteStatuses{
 			{Namespace: "test", Name: "hr-valid"}: {
 				ObservedGeneration: 3,
 				ParentStatuses: []status.ParentStatus{
@@ -307,6 +308,7 @@ func TestBuildStatusesNginxErr(t *testing.T) {
 			},
 		},
 		BackendTLSPolicyStatuses: status.BackendTLSPolicyStatuses{},
+		GRPCRouteStatuses:        status.RouteStatuses{},
 	}
 
 	g := NewWithT(t)
@@ -435,14 +437,14 @@ func TestBuildGatewayStatuses(t *testing.T) {
 					{
 						Name:  "listener-valid-1",
 						Valid: true,
-						Routes: map[types.NamespacedName]*graph.Route{
+						HTTPRoutes: map[types.NamespacedName]*graph.HTTPRoute{
 							{Namespace: "test", Name: "hr-1"}: {},
 						},
 					},
 					{
 						Name:  "listener-valid-2",
 						Valid: true,
-						Routes: map[types.NamespacedName]*graph.Route{
+						HTTPRoutes: map[types.NamespacedName]*graph.HTTPRoute{
 							{Namespace: "test", Name: "hr-1"}: {},
 						},
 					},
@@ -477,7 +479,7 @@ func TestBuildGatewayStatuses(t *testing.T) {
 					{
 						Name:  "listener-valid",
 						Valid: true,
-						Routes: map[types.NamespacedName]*graph.Route{
+						HTTPRoutes: map[types.NamespacedName]*graph.HTTPRoute{
 							{Namespace: "test", Name: "hr-1"}: {},
 						},
 					},
@@ -571,7 +573,7 @@ func TestBuildGatewayStatuses(t *testing.T) {
 					{
 						Name:  "listener-valid",
 						Valid: true,
-						Routes: map[types.NamespacedName]*graph.Route{
+						HTTPRoutes: map[types.NamespacedName]*graph.HTTPRoute{
 							{Namespace: "test", Name: "hr-1"}: {},
 						},
 					},

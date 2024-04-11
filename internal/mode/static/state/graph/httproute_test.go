@@ -92,6 +92,7 @@ func TestBuildRoutes(t *testing.T) {
 	gwNsName := types.NamespacedName{Namespace: "test", Name: "gateway"}
 
 	hr := createHTTPRoute("hr-1", gwNsName.Name, "example.com", "/")
+
 	hrWrongGateway := createHTTPRoute("hr-2", "some-gateway", "example.com", "/")
 
 	hrRoutes := map[types.NamespacedName]*gatewayv1.HTTPRoute{
@@ -100,13 +101,13 @@ func TestBuildRoutes(t *testing.T) {
 	}
 
 	tests := []struct {
-		expected  map[types.NamespacedName]*Route
+		expected  map[types.NamespacedName]*HTTPRoute
 		name      string
 		gwNsNames []types.NamespacedName
 	}{
 		{
 			gwNsNames: []types.NamespacedName{gwNsName},
-			expected: map[types.NamespacedName]*Route{
+			expected: map[types.NamespacedName]*HTTPRoute{
 				client.ObjectKeyFromObject(hr): {
 					Source: hr,
 					ParentRefs: []ParentRef{
@@ -139,7 +140,7 @@ func TestBuildRoutes(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewWithT(t)
-			routes := buildRoutesForGateways(validator, hrRoutes, test.gwNsNames)
+			routes := buildHTTPRoutesForGateways(validator, hrRoutes, test.gwNsNames)
 			g.Expect(helpers.Diff(test.expected, routes)).To(BeEmpty())
 		})
 	}
@@ -410,13 +411,13 @@ func TestBuildRoute(t *testing.T) {
 	tests := []struct {
 		validator *validationfakes.FakeHTTPFieldsValidator
 		hr        *gatewayv1.HTTPRoute
-		expected  *Route
+		expected  *HTTPRoute
 		name      string
 	}{
 		{
 			validator: &validationfakes.FakeHTTPFieldsValidator{},
 			hr:        hr,
-			expected: &Route{
+			expected: &HTTPRoute{
 				Source: hr,
 				ParentRefs: []ParentRef{
 					{
@@ -442,7 +443,7 @@ func TestBuildRoute(t *testing.T) {
 		{
 			validator: &validationfakes.FakeHTTPFieldsValidator{},
 			hr:        hrInvalidMatchesEmptyPathType,
-			expected: &Route{
+			expected: &HTTPRoute{
 				Source:     hrInvalidMatchesEmptyPathType,
 				Valid:      false,
 				Attachable: true,
@@ -469,7 +470,7 @@ func TestBuildRoute(t *testing.T) {
 		{
 			validator: &validationfakes.FakeHTTPFieldsValidator{},
 			hr:        hrDuplicateSectionName,
-			expected: &Route{
+			expected: &HTTPRoute{
 				Source: hrDuplicateSectionName,
 			},
 			name: "invalid route with duplicate sectionName",
@@ -477,7 +478,7 @@ func TestBuildRoute(t *testing.T) {
 		{
 			validator: &validationfakes.FakeHTTPFieldsValidator{},
 			hr:        hrInvalidMatchesEmptyPathValue,
-			expected: &Route{
+			expected: &HTTPRoute{
 				Source:     hrInvalidMatchesEmptyPathValue,
 				Valid:      false,
 				Attachable: true,
@@ -510,7 +511,7 @@ func TestBuildRoute(t *testing.T) {
 		{
 			validator: &validationfakes.FakeHTTPFieldsValidator{},
 			hr:        hrInvalidHostname,
-			expected: &Route{
+			expected: &HTTPRoute{
 				Source:     hrInvalidHostname,
 				Valid:      false,
 				Attachable: false,
@@ -531,7 +532,7 @@ func TestBuildRoute(t *testing.T) {
 		{
 			validator: validatorInvalidFieldsInRule,
 			hr:        hrInvalidMatches,
-			expected: &Route{
+			expected: &HTTPRoute{
 				Source:     hrInvalidMatches,
 				Valid:      false,
 				Attachable: true,
@@ -558,7 +559,7 @@ func TestBuildRoute(t *testing.T) {
 		{
 			validator: validatorInvalidFieldsInRule,
 			hr:        hrInvalidFilters,
-			expected: &Route{
+			expected: &HTTPRoute{
 				Source:     hrInvalidFilters,
 				Valid:      false,
 				Attachable: true,
@@ -586,7 +587,7 @@ func TestBuildRoute(t *testing.T) {
 		{
 			validator: validatorInvalidFieldsInRule,
 			hr:        hrDroppedInvalidMatches,
-			expected: &Route{
+			expected: &HTTPRoute{
 				Source:     hrDroppedInvalidMatches,
 				Valid:      true,
 				Attachable: true,
@@ -618,7 +619,7 @@ func TestBuildRoute(t *testing.T) {
 		{
 			validator: validatorInvalidFieldsInRule,
 			hr:        hrDroppedInvalidMatchesAndInvalidFilters,
-			expected: &Route{
+			expected: &HTTPRoute{
 				Source:     hrDroppedInvalidMatchesAndInvalidFilters,
 				Valid:      true,
 				Attachable: true,
@@ -655,7 +656,7 @@ func TestBuildRoute(t *testing.T) {
 		{
 			validator: validatorInvalidFieldsInRule,
 			hr:        hrDroppedInvalidFilters,
-			expected: &Route{
+			expected: &HTTPRoute{
 				Source:     hrDroppedInvalidFilters,
 				Valid:      true,
 				Attachable: true,
@@ -692,7 +693,7 @@ func TestBuildRoute(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewWithT(t)
 
-			route := buildRoute(test.validator, test.hr, gatewayNsNames)
+			route := buildHTTPRoute(test.validator, test.hr, gatewayNsNames)
 			g.Expect(helpers.Diff(test.expected, route)).To(BeEmpty())
 		})
 	}
@@ -709,7 +710,7 @@ func TestBindRouteToListeners(t *testing.T) {
 			},
 			Valid:      true,
 			Attachable: true,
-			Routes:     map[types.NamespacedName]*Route{},
+			HTTPRoutes: map[types.NamespacedName]*HTTPRoute{},
 		}
 	}
 	createModifiedListener := func(name string, m func(*Listener)) *Listener {
@@ -769,9 +770,9 @@ func TestBindRouteToListeners(t *testing.T) {
 		nil,
 	)
 
-	var normalRoute *Route
-	createNormalRoute := func(gateway *gatewayv1.Gateway) *Route {
-		normalRoute = &Route{
+	var normalRoute *HTTPRoute
+	createNormalRoute := func(gateway *gatewayv1.Gateway) *HTTPRoute {
+		normalRoute = &HTTPRoute{
 			Source:     hr,
 			Valid:      true,
 			Attachable: true,
@@ -784,11 +785,11 @@ func TestBindRouteToListeners(t *testing.T) {
 		}
 		return normalRoute
 	}
-	getLastNormalRoute := func() *Route {
+	getLastNormalRoute := func() *HTTPRoute {
 		return normalRoute
 	}
 
-	invalidAttachableRoute1 := &Route{
+	invalidAttachableRoute1 := &HTTPRoute{
 		Source:     hr,
 		Valid:      false,
 		Attachable: true,
@@ -799,7 +800,7 @@ func TestBindRouteToListeners(t *testing.T) {
 			},
 		},
 	}
-	invalidAttachableRoute2 := &Route{
+	invalidAttachableRoute2 := &HTTPRoute{
 		Source:     hr,
 		Valid:      false,
 		Attachable: true,
@@ -811,7 +812,7 @@ func TestBindRouteToListeners(t *testing.T) {
 		},
 	}
 
-	routeWithMissingSectionName := &Route{
+	routeWithMissingSectionName := &HTTPRoute{
 		Source:     hrWithNilSectionName,
 		Valid:      true,
 		Attachable: true,
@@ -822,7 +823,7 @@ func TestBindRouteToListeners(t *testing.T) {
 			},
 		},
 	}
-	routeWithEmptySectionName := &Route{
+	routeWithEmptySectionName := &HTTPRoute{
 		Source:     hrWithEmptySectionName,
 		Valid:      true,
 		Attachable: true,
@@ -833,7 +834,7 @@ func TestBindRouteToListeners(t *testing.T) {
 			},
 		},
 	}
-	routeWithNonExistingListener := &Route{
+	routeWithNonExistingListener := &HTTPRoute{
 		Source:     hrWithNonExistingListener,
 		Valid:      true,
 		Attachable: true,
@@ -844,7 +845,7 @@ func TestBindRouteToListeners(t *testing.T) {
 			},
 		},
 	}
-	routeWithPort := &Route{
+	routeWithPort := &HTTPRoute{
 		Source:     hrWithPort,
 		Valid:      true,
 		Attachable: true,
@@ -856,7 +857,7 @@ func TestBindRouteToListeners(t *testing.T) {
 		},
 	}
 	ignoredGwNsName := types.NamespacedName{Namespace: "test", Name: "ignored-gateway"}
-	routeWithIgnoredGateway := &Route{
+	routeWithIgnoredGateway := &HTTPRoute{
 		Source:     hr,
 		Valid:      true,
 		Attachable: true,
@@ -867,8 +868,9 @@ func TestBindRouteToListeners(t *testing.T) {
 			},
 		},
 	}
-	invalidRoute := &Route{
-		Valid: false,
+	invalidRoute := &HTTPRoute{
+		Valid:  false,
+		Source: hr,
 		ParentRefs: []ParentRef{
 			{
 				Idx:     0,
@@ -886,7 +888,7 @@ func TestBindRouteToListeners(t *testing.T) {
 	})
 
 	tests := []struct {
-		route                    *Route
+		route                    *HTTPRoute
 		gateway                  *Gateway
 		expectedGatewayListeners []*Listener
 		name                     string
@@ -916,7 +918,7 @@ func TestBindRouteToListeners(t *testing.T) {
 			},
 			expectedGatewayListeners: []*Listener{
 				createModifiedListener("listener-80-1", func(l *Listener) {
-					l.Routes = map[types.NamespacedName]*Route{
+					l.HTTPRoutes = map[types.NamespacedName]*HTTPRoute{
 						client.ObjectKeyFromObject(hr): getLastNormalRoute(),
 					}
 				}),
@@ -946,7 +948,7 @@ func TestBindRouteToListeners(t *testing.T) {
 			},
 			expectedGatewayListeners: []*Listener{
 				createModifiedListener("listener-80-1", func(l *Listener) {
-					l.Routes = map[types.NamespacedName]*Route{
+					l.HTTPRoutes = map[types.NamespacedName]*HTTPRoute{
 						client.ObjectKeyFromObject(hr): routeWithMissingSectionName,
 					}
 				}),
@@ -978,12 +980,12 @@ func TestBindRouteToListeners(t *testing.T) {
 			},
 			expectedGatewayListeners: []*Listener{
 				createModifiedListener("listener-80", func(l *Listener) {
-					l.Routes = map[types.NamespacedName]*Route{
+					l.HTTPRoutes = map[types.NamespacedName]*HTTPRoute{
 						client.ObjectKeyFromObject(hr): routeWithEmptySectionName,
 					}
 				}),
 				createModifiedListener("listener-8080", func(l *Listener) {
-					l.Routes = map[types.NamespacedName]*Route{
+					l.HTTPRoutes = map[types.NamespacedName]*HTTPRoute{
 						client.ObjectKeyFromObject(hr): routeWithEmptySectionName,
 					}
 				}),
@@ -1214,7 +1216,7 @@ func TestBindRouteToListeners(t *testing.T) {
 			expectedGatewayListeners: []*Listener{
 				createModifiedListener("listener-80-1", func(l *Listener) {
 					l.Valid = false
-					l.Routes = map[types.NamespacedName]*Route{
+					l.HTTPRoutes = map[types.NamespacedName]*HTTPRoute{
 						client.ObjectKeyFromObject(hr): getLastNormalRoute(),
 					}
 				}),
@@ -1245,7 +1247,7 @@ func TestBindRouteToListeners(t *testing.T) {
 			},
 			expectedGatewayListeners: []*Listener{
 				createModifiedListener("listener-80-1", func(l *Listener) {
-					l.Routes = map[types.NamespacedName]*Route{
+					l.HTTPRoutes = map[types.NamespacedName]*HTTPRoute{
 						client.ObjectKeyFromObject(hr): invalidAttachableRoute1,
 					}
 				}),
@@ -1278,7 +1280,7 @@ func TestBindRouteToListeners(t *testing.T) {
 			expectedGatewayListeners: []*Listener{
 				createModifiedListener("listener-80-1", func(l *Listener) {
 					l.Valid = false
-					l.Routes = map[types.NamespacedName]*Route{
+					l.HTTPRoutes = map[types.NamespacedName]*HTTPRoute{
 						client.ObjectKeyFromObject(hr): invalidAttachableRoute2,
 					}
 				}),
@@ -1365,7 +1367,7 @@ func TestBindRouteToListeners(t *testing.T) {
 							From: helpers.GetPointer(gatewayv1.NamespacesFromSelector),
 						},
 					}
-					l.Routes = map[types.NamespacedName]*Route{
+					l.HTTPRoutes = map[types.NamespacedName]*HTTPRoute{
 						client.ObjectKeyFromObject(hr): getLastNormalRoute(),
 					}
 				}),
@@ -1443,7 +1445,7 @@ func TestBindRouteToListeners(t *testing.T) {
 							From: helpers.GetPointer(gatewayv1.NamespacesFromSame),
 						},
 					}
-					l.Routes = map[types.NamespacedName]*Route{
+					l.HTTPRoutes = map[types.NamespacedName]*HTTPRoute{
 						client.ObjectKeyFromObject(hr): getLastNormalRoute(),
 					}
 				}),
@@ -1484,7 +1486,7 @@ func TestBindRouteToListeners(t *testing.T) {
 							From: helpers.GetPointer(gatewayv1.NamespacesFromAll),
 						},
 					}
-					l.Routes = map[types.NamespacedName]*Route{
+					l.HTTPRoutes = map[types.NamespacedName]*HTTPRoute{
 						client.ObjectKeyFromObject(hr): getLastNormalRoute(),
 					}
 				}),

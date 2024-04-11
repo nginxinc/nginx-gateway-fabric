@@ -8,7 +8,7 @@ import (
 )
 
 func TestBuildReferencedServices(t *testing.T) {
-	normalRoute := &Route{
+	normalRoute := &HTTPRoute{
 		ParentRefs: []ParentRef{
 			{
 				Attachment: &ParentRefAttachmentStatus{
@@ -31,7 +31,7 @@ func TestBuildReferencedServices(t *testing.T) {
 		},
 	}
 
-	validRouteTwoServicesOneRule := &Route{
+	validRouteTwoServicesOneRule := &HTTPRoute{
 		ParentRefs: []ParentRef{
 			{
 				Attachment: &ParentRefAttachmentStatus{
@@ -58,7 +58,7 @@ func TestBuildReferencedServices(t *testing.T) {
 		},
 	}
 
-	validRouteTwoServicesTwoRules := &Route{
+	validRouteTwoServicesTwoRules := &HTTPRoute{
 		ParentRefs: []ParentRef{
 			{
 				Attachment: &ParentRefAttachmentStatus{
@@ -91,7 +91,7 @@ func TestBuildReferencedServices(t *testing.T) {
 		},
 	}
 
-	invalidRoute := &Route{
+	invalidRoute := &HTTPRoute{
 		ParentRefs: []ParentRef{
 			{
 				Attachment: &ParentRefAttachmentStatus{
@@ -114,7 +114,7 @@ func TestBuildReferencedServices(t *testing.T) {
 		},
 	}
 
-	unattachedRoute := &Route{
+	unattachedRoute := &HTTPRoute{
 		ParentRefs: []ParentRef{
 			{
 				Attachment: &ParentRefAttachmentStatus{
@@ -137,7 +137,7 @@ func TestBuildReferencedServices(t *testing.T) {
 		},
 	}
 
-	attachedRouteWithManyParentRefs := &Route{
+	attachedRouteWithManyParentRefs := &HTTPRoute{
 		ParentRefs: []ParentRef{
 			{
 				Attachment: &ParentRefAttachmentStatus{
@@ -169,7 +169,7 @@ func TestBuildReferencedServices(t *testing.T) {
 			},
 		},
 	}
-	validRouteNoServiceNsName := &Route{
+	validRouteNoServiceNsName := &HTTPRoute{
 		ParentRefs: []ParentRef{
 			{
 				Attachment: &ParentRefAttachmentStatus{
@@ -192,13 +192,13 @@ func TestBuildReferencedServices(t *testing.T) {
 	}
 
 	tests := []struct {
-		routes map[types.NamespacedName]*Route
+		routes map[types.NamespacedName]*HTTPRoute
 		exp    map[types.NamespacedName]struct{}
 		name   string
 	}{
 		{
 			name: "normal route",
-			routes: map[types.NamespacedName]*Route{
+			routes: map[types.NamespacedName]*HTTPRoute{
 				{Name: "normal-route"}: normalRoute,
 			},
 			exp: map[types.NamespacedName]struct{}{
@@ -207,7 +207,7 @@ func TestBuildReferencedServices(t *testing.T) {
 		},
 		{
 			name: "route with two services in one Rule",
-			routes: map[types.NamespacedName]*Route{
+			routes: map[types.NamespacedName]*HTTPRoute{
 				{Name: "two-svc-one-rule"}: validRouteTwoServicesOneRule,
 			},
 			exp: map[types.NamespacedName]struct{}{
@@ -217,7 +217,7 @@ func TestBuildReferencedServices(t *testing.T) {
 		},
 		{
 			name: "route with one service per rule",
-			routes: map[types.NamespacedName]*Route{
+			routes: map[types.NamespacedName]*HTTPRoute{
 				{Name: "one-svc-per-rule"}: validRouteTwoServicesTwoRules,
 			},
 			exp: map[types.NamespacedName]struct{}{
@@ -227,7 +227,7 @@ func TestBuildReferencedServices(t *testing.T) {
 		},
 		{
 			name: "two valid routes with same services",
-			routes: map[types.NamespacedName]*Route{
+			routes: map[types.NamespacedName]*HTTPRoute{
 				{Name: "one-svc-per-rule"}: validRouteTwoServicesTwoRules,
 				{Name: "two-svc-one-rule"}: validRouteTwoServicesOneRule,
 			},
@@ -238,7 +238,7 @@ func TestBuildReferencedServices(t *testing.T) {
 		},
 		{
 			name: "two valid routes with different services",
-			routes: map[types.NamespacedName]*Route{
+			routes: map[types.NamespacedName]*HTTPRoute{
 				{Name: "one-svc-per-rule"}: validRouteTwoServicesTwoRules,
 				{Name: "normal-route"}:     normalRoute,
 			},
@@ -250,21 +250,21 @@ func TestBuildReferencedServices(t *testing.T) {
 		},
 		{
 			name: "invalid route",
-			routes: map[types.NamespacedName]*Route{
+			routes: map[types.NamespacedName]*HTTPRoute{
 				{Name: "invalid-route"}: invalidRoute,
 			},
 			exp: nil,
 		},
 		{
 			name: "unattached route",
-			routes: map[types.NamespacedName]*Route{
+			routes: map[types.NamespacedName]*HTTPRoute{
 				{Name: "unattached-route"}: unattachedRoute,
 			},
 			exp: nil,
 		},
 		{
 			name: "combination of valid and invalid routes",
-			routes: map[types.NamespacedName]*Route{
+			routes: map[types.NamespacedName]*HTTPRoute{
 				{Name: "normal-route"}:  normalRoute,
 				{Name: "invalid-route"}: invalidRoute,
 			},
@@ -274,7 +274,7 @@ func TestBuildReferencedServices(t *testing.T) {
 		},
 		{
 			name: "route with many parentRefs and one is attached",
-			routes: map[types.NamespacedName]*Route{
+			routes: map[types.NamespacedName]*HTTPRoute{
 				{Name: "multiple-parent-ref-route"}: attachedRouteWithManyParentRefs,
 			},
 			exp: map[types.NamespacedName]struct{}{
@@ -283,17 +283,19 @@ func TestBuildReferencedServices(t *testing.T) {
 		},
 		{
 			name: "valid route no service nsname",
-			routes: map[types.NamespacedName]*Route{
+			routes: map[types.NamespacedName]*HTTPRoute{
 				{Name: "no-service-nsname"}: validRouteNoServiceNsName,
 			},
 			exp: nil,
 		},
 	}
 
+	grpcRoutes := map[types.NamespacedName]*GRPCRoute{}
+
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewWithT(t)
-			g.Expect(buildReferencedServices(test.routes)).To(Equal(test.exp))
+			g.Expect(buildReferencedServices(test.routes, grpcRoutes)).To(Equal(test.exp))
 		})
 	}
 }

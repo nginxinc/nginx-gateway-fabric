@@ -105,6 +105,7 @@ func NewChangeProcessorImpl(cfg ChangeProcessorConfig) *ChangeProcessorImpl {
 		CRDMetadata:        make(map[types.NamespacedName]*metav1.PartialObjectMetadata),
 		BackendTLSPolicies: make(map[types.NamespacedName]*v1alpha2.BackendTLSPolicy),
 		ConfigMaps:         make(map[types.NamespacedName]*apiv1.ConfigMap),
+		GRPCRoutes:         make(map[types.NamespacedName]*v1alpha2.GRPCRoute),
 	}
 
 	extractGVK := func(obj client.Object) schema.GroupVersionKind {
@@ -150,6 +151,11 @@ func NewChangeProcessorImpl(cfg ChangeProcessorConfig) *ChangeProcessorImpl {
 			{
 				gvk:       extractGVK(&v1alpha2.BackendTLSPolicy{}),
 				store:     newObjectStoreMapAdapter(clusterStore.BackendTLSPolicies),
+				predicate: nil,
+			},
+			{
+				gvk:       extractGVK(&v1alpha2.GRPCRoute{}),
+				store:     newObjectStoreMapAdapter(clusterStore.GRPCRoutes),
 				predicate: nil,
 			},
 			{

@@ -111,7 +111,7 @@ var _ = Describe("Updater", func() {
 							Ignored:            true,
 						},
 					},
-					HTTPRouteStatuses: status.HTTPRouteStatuses{
+					HTTPRouteStatuses: status.RouteStatuses{
 						{Namespace: "test", Name: "route1"}: {
 							ObservedGeneration: 5,
 							ParentStatuses: []status.ParentStatus{

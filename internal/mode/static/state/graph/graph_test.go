@@ -324,7 +324,7 @@ func TestBuildGraph(t *testing.T) {
 		}
 	}
 
-	routeHR1 := &Route{
+	routeHR1 := &HTTPRoute{
 		Valid:      true,
 		Attachable: true,
 		Source:     hr1,
@@ -341,7 +341,7 @@ func TestBuildGraph(t *testing.T) {
 		Rules: []Rule{createValidRuleWithBackendRefs(hr1Refs)},
 	}
 
-	routeHR3 := &Route{
+	routeHR3 := &HTTPRoute{
 		Valid:      true,
 		Attachable: true,
 		Source:     hr3,
@@ -372,9 +372,10 @@ func TestBuildGraph(t *testing.T) {
 						Source:     gw1.Spec.Listeners[0],
 						Valid:      true,
 						Attachable: true,
-						Routes: map[types.NamespacedName]*Route{
+						HTTPRoutes: map[types.NamespacedName]*HTTPRoute{
 							{Namespace: "test", Name: "hr-1"}: routeHR1,
 						},
+						GRPCRoutes:                map[types.NamespacedName]*GRPCRoute{},
 						SupportedKinds:            []gatewayv1.RouteGroupKind{{Kind: "HTTPRoute"}},
 						AllowedRouteLabelSelector: labels.SelectorFromSet(map[string]string{"app": "allowed"}),
 					},
@@ -383,9 +384,10 @@ func TestBuildGraph(t *testing.T) {
 						Source:     gw1.Spec.Listeners[1],
 						Valid:      true,
 						Attachable: true,
-						Routes: map[types.NamespacedName]*Route{
+						HTTPRoutes: map[types.NamespacedName]*HTTPRoute{
 							{Namespace: "test", Name: "hr-3"}: routeHR3,
 						},
+						GRPCRoutes:     map[types.NamespacedName]*GRPCRoute{},
 						ResolvedSecret: helpers.GetPointer(client.ObjectKeyFromObject(secret)),
 						SupportedKinds: []gatewayv1.RouteGroupKind{{Kind: "HTTPRoute"}},
 					},
@@ -395,10 +397,11 @@ func TestBuildGraph(t *testing.T) {
 			IgnoredGateways: map[types.NamespacedName]*gatewayv1.Gateway{
 				{Namespace: "test", Name: "gateway-2"}: gw2,
 			},
-			Routes: map[types.NamespacedName]*Route{
+			HTTPRoutes: map[types.NamespacedName]*HTTPRoute{
 				{Namespace: "test", Name: "hr-1"}: routeHR1,
 				{Namespace: "test", Name: "hr-3"}: routeHR3,
 			},
+			GRPCRoutes: map[types.NamespacedName]*GRPCRoute{},
 			ReferencedSecrets: map[types.NamespacedName]*Secret{
 				client.ObjectKeyFromObject(secret): {
 					Source: secret,

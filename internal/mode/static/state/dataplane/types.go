@@ -94,6 +94,8 @@ type PathRule struct {
 	PathType PathType
 	// MatchRules holds routing rules.
 	MatchRules []MatchRule
+	// GRPC indicates if this is a gRPC rule
+	GRPC bool
 }
 
 // InvalidHTTPFilter is a special filter for handling the case when configured filters are invalid.

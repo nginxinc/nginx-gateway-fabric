@@ -418,7 +418,7 @@ func registerControllers(
 	}
 
 	if cfg.ExperimentalFeatures {
-		backendTLSObjs := []ctlrCfg{
+		gwExpFeatures := []ctlrCfg{
 			{
 				objectType: &gatewayv1alpha2.BackendTLSPolicy{},
 				options: []controller.Option{
@@ -430,8 +430,14 @@ func registerControllers(
 				// https://github.com/nginxinc/nginx-gateway-fabric/issues/1545
 				objectType: &apiv1.ConfigMap{},
 			},
+			{
+				objectType: &gatewayv1alpha2.GRPCRoute{},
+				options: []controller.Option{
+					controller.WithK8sPredicate(k8spredicate.GenerationChangedPredicate{}),
+				},
+			},
 		}
-		controllerRegCfgs = append(controllerRegCfgs, backendTLSObjs...)
+		controllerRegCfgs = append(controllerRegCfgs, gwExpFeatures...)
 	}
 
 	if cfg.ConfigName != "" {
@@ -597,7 +603,12 @@ func prepareFirstEventBatchPreparerArgs(
 	}
 
 	if enableExperimentalFeatures {
-		objectLists = append(objectLists, &gatewayv1alpha2.BackendTLSPolicyList{}, &apiv1.ConfigMapList{})
+		objectLists = append(
+			objectLists,
+			&gatewayv1alpha2.BackendTLSPolicyList{},
+			&apiv1.ConfigMapList{},
+			&gatewayv1alpha2.GRPCRouteList{},
+		)
 	}
 
 	if gwNsName == nil {

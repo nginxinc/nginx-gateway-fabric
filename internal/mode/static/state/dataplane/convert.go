@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	v1 "sigs.k8s.io/gateway-api/apis/v1"
+	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 )
 
 func convertMatch(m v1.HTTPRouteMatch) Match {
@@ -30,6 +31,22 @@ func convertMatch(m v1.HTTPRouteMatch) Match {
 			match.QueryParams = append(match.QueryParams, HTTPQueryParamMatch{
 				Name:  string(q.Name),
 				Value: q.Value,
+			})
+		}
+	}
+
+	return match
+}
+
+func convertGRPCMatchHeaders(headers []v1alpha2.GRPCHeaderMatch) Match {
+	match := Match{}
+
+	if len(headers) != 0 {
+		match.Headers = make([]HTTPHeaderMatch, 0, len(headers))
+		for _, h := range headers {
+			match.Headers = append(match.Headers, HTTPHeaderMatch{
+				Name:  string(h.Name),
+				Value: h.Value,
 			})
 		}
 	}

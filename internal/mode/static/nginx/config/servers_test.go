@@ -1148,7 +1148,7 @@ func TestCreateLocationsRootPath(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewWithT(t)
 
-			locs := createLocations(test.pathRules, 80)
+			locs, _ := createLocations(test.pathRules, 80)
 			g.Expect(locs).To(Equal(test.expLocations))
 		})
 	}
@@ -1714,7 +1714,7 @@ func TestCreateProxyPass(t *testing.T) {
 	}
 
 	for _, tc := range tests {
-		result := createProxyPass(tc.grp, tc.rewrite, generateProtocolString(nil))
+		result := createProxyPass(tc.grp, tc.rewrite, generateProtocolString(nil, false), false)
 		g.Expect(result).To(Equal(tc.expected))
 	}
 }
@@ -1830,7 +1830,7 @@ func TestGenerateProxySetHeaders(t *testing.T) {
 		t.Run(tc.msg, func(t *testing.T) {
 			g := NewWithT(t)
 
-			headers := generateProxySetHeaders(tc.filters)
+			headers := generateProxySetHeaders(tc.filters, false)
 			g.Expect(headers).To(Equal(tc.expectedHeaders))
 		})
 	}

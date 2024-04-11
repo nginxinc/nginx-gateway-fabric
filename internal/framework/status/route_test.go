@@ -16,7 +16,7 @@ func TestPrepareHTTPRouteStatus(t *testing.T) {
 	gwNsName1 := types.NamespacedName{Namespace: "test", Name: "gateway-1"}
 	gwNsName2 := types.NamespacedName{Namespace: "test", Name: "gateway-2"}
 
-	status := HTTPRouteStatus{
+	status := RouteStatus{
 		ObservedGeneration: 1,
 		ParentStatuses: []ParentStatus{
 			{

@@ -179,12 +179,12 @@ func TestNewHTTPRouteStatusSetter(t *testing.T) {
 	tests := []struct {
 		name         string
 		status       gatewayv1.HTTPRouteStatus
-		newStatus    HTTPRouteStatus
+		newStatus    RouteStatus
 		expStatusSet bool
 	}{
 		{
 			name: "HTTPRoute has no status",
-			newStatus: HTTPRouteStatus{
+			newStatus: RouteStatus{
 				ParentStatuses: []ParentStatus{
 					{
 						Conditions: []conditions.Condition{{Message: "new condition"}},
@@ -195,7 +195,7 @@ func TestNewHTTPRouteStatusSetter(t *testing.T) {
 		},
 		{
 			name: "HTTPRoute has old status",
-			newStatus: HTTPRouteStatus{
+			newStatus: RouteStatus{
 				ParentStatuses: []ParentStatus{
 					{
 						Conditions: []conditions.Condition{{Message: "new condition"}},
@@ -217,7 +217,7 @@ func TestNewHTTPRouteStatusSetter(t *testing.T) {
 		},
 		{
 			name: "HTTPRoute has same status",
-			newStatus: HTTPRouteStatus{
+			newStatus: RouteStatus{
 				ParentStatuses: []ParentStatus{
 					{
 						Conditions: []conditions.Condition{{Message: "same condition"}},
@@ -582,7 +582,7 @@ func TestHRStatusEqual(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewWithT(t)
-			equal := hrStatusEqual("ours", test.prevStatus, test.curStatus)
+			equal := routeStatusEqual("ours", test.prevStatus.Parents, test.curStatus.Parents)
 			g.Expect(equal).To(Equal(test.expEqual))
 		})
 	}

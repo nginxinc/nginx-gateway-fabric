@@ -18,8 +18,9 @@ type Status interface {
 type GatewayAPIStatuses struct {
 	GatewayClassStatuses     GatewayClassStatuses
 	GatewayStatuses          GatewayStatuses
-	HTTPRouteStatuses        HTTPRouteStatuses
+	HTTPRouteStatuses        RouteStatuses
 	BackendTLSPolicyStatuses BackendTLSPolicyStatuses
+	GRPCRouteStatuses        RouteStatuses
 }
 
 func (g GatewayAPIStatuses) APIGroup() string {
@@ -43,8 +44,8 @@ func (n *NginxGatewayStatus) APIGroup() string {
 // ListenerStatuses holds the statuses of listeners.
 type ListenerStatuses []ListenerStatus
 
-// HTTPRouteStatuses holds the statuses of HTTPRoutes where the key is the namespaced name of an HTTPRoute.
-type HTTPRouteStatuses map[types.NamespacedName]HTTPRouteStatus
+// RouteStatuses holds the statuses of Routes where the key is the namespaced name of a Route.
+type RouteStatuses map[types.NamespacedName]RouteStatus
 
 // GatewayStatuses holds the statuses of Gateways where the key is the namespaced name of a Gateway.
 type GatewayStatuses map[types.NamespacedName]GatewayStatus
@@ -82,9 +83,9 @@ type ListenerStatus struct {
 	AttachedRoutes int32
 }
 
-// HTTPRouteStatus holds the status-related information about an HTTPRoute resource.
-type HTTPRouteStatus struct {
-	// ParentStatuses holds the statuses for parentRefs of the HTTPRoute.
+// RouteStatus holds the status-related information about a Route resource.
+type RouteStatus struct {
+	// ParentStatuses holds the statuses for parentRefs of the Route.
 	ParentStatuses []ParentStatus
 	// ObservedGeneration is the generation of the resource that was processed.
 	ObservedGeneration int64

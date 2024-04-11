@@ -95,6 +95,7 @@ func TestPrepareFirstEventBatchPreparerArgs(t *testing.T) {
 				&gatewayv1beta1.ReferenceGrantList{},
 				partialObjectMetadataList,
 				&gatewayv1alpha2.BackendTLSPolicyList{},
+				&gatewayv1alpha2.GRPCRouteList{},
 			},
 			experimentalEnabled: true,
 		},

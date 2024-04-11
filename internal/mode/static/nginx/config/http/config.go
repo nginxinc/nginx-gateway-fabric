@@ -7,6 +7,7 @@ type Server struct {
 	Locations     []Location
 	IsDefaultHTTP bool
 	IsDefaultSSL  bool
+	HTTP2         bool
 	Port          int32
 }
 
@@ -19,9 +20,10 @@ type Location struct {
 	HTTPMatchVar    string
 	Rewrites        []string
 	ProxySetHeaders []Header
+	IsGRPC          bool
 }
 
-// Header defines a HTTP header to be passed to the proxied server.
+// Header defines an HTTP header to be passed to the proxied server.
 type Header struct {
 	Name  string
 	Value string

@@ -286,7 +286,7 @@ var _ = Describe("ChangeProcessor", func() {
 				gw1, gw1Updated, gw2                *v1.Gateway
 				refGrant1, refGrant2                *v1beta1.ReferenceGrant
 				expGraph                            *graph.Graph
-				expRouteHR1, expRouteHR2            *graph.Route
+				expRouteHR1, expRouteHR2            *graph.HTTPRoute
 				hr1Name, hr2Name                    types.NamespacedName
 				gatewayAPICRD, gatewayAPICRDUpdated *metav1.PartialObjectMetadata
 			)
@@ -404,7 +404,7 @@ var _ = Describe("ChangeProcessor", func() {
 				gatewayAPICRDUpdated.Annotations[gatewayclass.BundleVersionAnnotation] = "v1.99.0"
 			})
 			BeforeEach(func() {
-				expRouteHR1 = &graph.Route{
+				expRouteHR1 = &graph.HTTPRoute{
 					Source: hr1,
 					ParentRefs: []graph.ParentRef{
 						{
@@ -444,7 +444,7 @@ var _ = Describe("ChangeProcessor", func() {
 					},
 				}
 
-				expRouteHR2 = &graph.Route{
+				expRouteHR2 = &graph.HTTPRoute{
 					Source: hr2,
 					ParentRefs: []graph.ParentRef{
 						{
@@ -483,7 +483,8 @@ var _ = Describe("ChangeProcessor", func() {
 								Source:     gw1.Spec.Listeners[0],
 								Valid:      true,
 								Attachable: true,
-								Routes: map[types.NamespacedName]*graph.Route{
+								GRPCRoutes: map[types.NamespacedName]*graph.GRPCRoute{},
+								HTTPRoutes: map[types.NamespacedName]*graph.HTTPRoute{
 									{Namespace: "test", Name: "hr-1"}: expRouteHR1,
 								},
 								SupportedKinds: []v1.RouteGroupKind{{Kind: "HTTPRoute"}},
@@ -493,7 +494,8 @@ var _ = Describe("ChangeProcessor", func() {
 								Source:     gw1.Spec.Listeners[1],
 								Valid:      true,
 								Attachable: true,
-								Routes: map[types.NamespacedName]*graph.Route{
+								GRPCRoutes: map[types.NamespacedName]*graph.GRPCRoute{},
+								HTTPRoutes: map[types.NamespacedName]*graph.HTTPRoute{
 									{Namespace: "test", Name: "hr-1"}: expRouteHR1,
 								},
 								ResolvedSecret: helpers.GetPointer(client.ObjectKeyFromObject(diffNsTLSSecret)),
@@ -503,7 +505,8 @@ var _ = Describe("ChangeProcessor", func() {
 						Valid: true,
 					},
 					IgnoredGateways: map[types.NamespacedName]*v1.Gateway{},
-					Routes: map[types.NamespacedName]*graph.Route{
+					GRPCRoutes:      map[types.NamespacedName]*graph.GRPCRoute{},
+					HTTPRoutes: map[types.NamespacedName]*graph.HTTPRoute{
 						{Namespace: "test", Name: "hr-1"}: expRouteHR1,
 					},
 					ReferencedSecrets: map[types.NamespacedName]*graph.Secret{},
@@ -566,16 +569,16 @@ var _ = Describe("ChangeProcessor", func() {
 							expGraph.Gateway.Listeners = nil
 
 							// no ref grant exists yet for hr1
-							expGraph.Routes[hr1Name].Conditions = []conditions.Condition{
+							expGraph.HTTPRoutes[hr1Name].Conditions = []conditions.Condition{
 								staticConds.NewRouteBackendRefRefNotPermitted(
 									"Backend ref to Service service-ns/service not permitted by any ReferenceGrant",
 								),
 							}
-							expGraph.Routes[hr1Name].ParentRefs[0].Attachment = &graph.ParentRefAttachmentStatus{
+							expGraph.HTTPRoutes[hr1Name].ParentRefs[0].Attachment = &graph.ParentRefAttachmentStatus{
 								AcceptedHostnames: map[string][]string{},
 								FailedCondition:   staticConds.NewRouteNoMatchingParent(),
 							}
-							expGraph.Routes[hr1Name].ParentRefs[1].Attachment = &graph.ParentRefAttachmentStatus{
+							expGraph.HTTPRoutes[hr1Name].ParentRefs[1].Attachment = &graph.ParentRefAttachmentStatus{
 								AcceptedHostnames: map[string][]string{},
 								FailedCondition:   staticConds.NewRouteNoMatchingParent(),
 							}
@@ -621,18 +624,18 @@ var _ = Describe("ChangeProcessor", func() {
 					}
 
 					listener80 := getListenerByName(expGraph.Gateway, "listener-80-1")
-					listener80.Routes[hr1Name].ParentRefs[0].Attachment = expAttachment80
-					listener443.Routes[hr1Name].ParentRefs[1].Attachment = expAttachment443
+					listener80.HTTPRoutes[hr1Name].ParentRefs[0].Attachment = expAttachment80
+					listener443.HTTPRoutes[hr1Name].ParentRefs[1].Attachment = expAttachment443
 
 					// no ref grant exists yet for hr1
-					expGraph.Routes[hr1Name].Conditions = []conditions.Condition{
+					expGraph.HTTPRoutes[hr1Name].Conditions = []conditions.Condition{
 						staticConds.NewRouteInvalidListener(),
 						staticConds.NewRouteBackendRefRefNotPermitted(
 							"Backend ref to Service service-ns/service not permitted by any ReferenceGrant",
 						),
 					}
-					expGraph.Routes[hr1Name].ParentRefs[0].Attachment = expAttachment80
-					expGraph.Routes[hr1Name].ParentRefs[1].Attachment = expAttachment443
+					expGraph.HTTPRoutes[hr1Name].ParentRefs[0].Attachment = expAttachment80
+					expGraph.HTTPRoutes[hr1Name].ParentRefs[1].Attachment = expAttachment443
 
 					expGraph.ReferencedSecrets = nil
 					expGraph.ReferencedServices = nil
@@ -650,7 +653,7 @@ var _ = Describe("ChangeProcessor", func() {
 					processor.CaptureUpsertChange(refGrant1)
 
 					// no ref grant exists yet for hr1
-					expGraph.Routes[hr1Name].Conditions = []conditions.Condition{
+					expGraph.HTTPRoutes[hr1Name].Conditions = []conditions.Condition{
 						staticConds.NewRouteBackendRefRefNotPermitted(
 							"Backend ref to Service service-ns/service not permitted by any ReferenceGrant",
 						),
@@ -740,10 +743,10 @@ var _ = Describe("ChangeProcessor", func() {
 					processor.CaptureUpsertChange(hr1Updated)
 
 					listener443 := getListenerByName(expGraph.Gateway, "listener-443-1")
-					listener443.Routes[hr1Name].Source.Generation = hr1Updated.Generation
+					listener443.HTTPRoutes[hr1Name].Source.Generation = hr1Updated.Generation
 
 					listener80 := getListenerByName(expGraph.Gateway, "listener-80-1")
-					listener80.Routes[hr1Name].Source.Generation = hr1Updated.Generation
+					listener80.HTTPRoutes[hr1Name].Source.Generation = hr1Updated.Generation
 					expGraph.ReferencedSecrets[client.ObjectKeyFromObject(diffNsTLSSecret)] = &graph.Secret{
 						Source: diffNsTLSSecret,
 					}
@@ -849,12 +852,12 @@ var _ = Describe("ChangeProcessor", func() {
 					expGraph.IgnoredGateways = map[types.NamespacedName]*v1.Gateway{
 						{Namespace: "test", Name: "gateway-2"}: gw2,
 					}
-					expGraph.Routes[hr2Name] = expRouteHR2
-					expGraph.Routes[hr2Name].ParentRefs[0].Attachment = &graph.ParentRefAttachmentStatus{
+					expGraph.HTTPRoutes[hr2Name] = expRouteHR2
+					expGraph.HTTPRoutes[hr2Name].ParentRefs[0].Attachment = &graph.ParentRefAttachmentStatus{
 						AcceptedHostnames: map[string][]string{},
 						FailedCondition:   staticConds.NewTODO("Gateway is ignored"),
 					}
-					expGraph.Routes[hr2Name].ParentRefs[1].Attachment = &graph.ParentRefAttachmentStatus{
+					expGraph.HTTPRoutes[hr2Name].ParentRefs[1].Attachment = &graph.ParentRefAttachmentStatus{
 						AcceptedHostnames: map[string][]string{},
 						FailedCondition:   staticConds.NewTODO("Gateway is ignored"),
 					}
@@ -883,12 +886,12 @@ var _ = Describe("ChangeProcessor", func() {
 					expGraph.Gateway.Source = gw2
 					listener80.Source = gw2.Spec.Listeners[0]
 					listener443.Source = gw2.Spec.Listeners[1]
-					delete(listener80.Routes, hr1Name)
-					delete(listener443.Routes, hr1Name)
-					listener80.Routes[hr2Name] = expRouteHR2
-					listener443.Routes[hr2Name] = expRouteHR2
-					delete(expGraph.Routes, hr1Name)
-					expGraph.Routes[hr2Name] = expRouteHR2
+					delete(listener80.HTTPRoutes, hr1Name)
+					delete(listener443.HTTPRoutes, hr1Name)
+					listener80.HTTPRoutes[hr2Name] = expRouteHR2
+					listener443.HTTPRoutes[hr2Name] = expRouteHR2
+					delete(expGraph.HTTPRoutes, hr1Name)
+					expGraph.HTTPRoutes[hr2Name] = expRouteHR2
 					sameNsTLSSecretRef := helpers.GetPointer(client.ObjectKeyFromObject(sameNsTLSSecret))
 					listener443.ResolvedSecret = sameNsTLSSecretRef
 					expGraph.ReferencedSecrets[client.ObjectKeyFromObject(sameNsTLSSecret)] = &graph.Secret{
@@ -919,9 +922,9 @@ var _ = Describe("ChangeProcessor", func() {
 					expGraph.Gateway.Source = gw2
 					listener80.Source = gw2.Spec.Listeners[0]
 					listener443.Source = gw2.Spec.Listeners[1]
-					delete(listener80.Routes, hr1Name)
-					delete(listener443.Routes, hr1Name)
-					expGraph.Routes = map[types.NamespacedName]*graph.Route{}
+					delete(listener80.HTTPRoutes, hr1Name)
+					delete(listener443.HTTPRoutes, hr1Name)
+					expGraph.HTTPRoutes = map[types.NamespacedName]*graph.HTTPRoute{}
 					sameNsTLSSecretRef := helpers.GetPointer(client.ObjectKeyFromObject(sameNsTLSSecret))
 					listener443.ResolvedSecret = sameNsTLSSecretRef
 					expGraph.ReferencedSecrets[client.ObjectKeyFromObject(sameNsTLSSecret)] = &graph.Secret{
@@ -949,7 +952,7 @@ var _ = Describe("ChangeProcessor", func() {
 						Source:     gw2,
 						Conditions: staticConds.NewGatewayInvalid("GatewayClass doesn't exist"),
 					}
-					expGraph.Routes = map[types.NamespacedName]*graph.Route{}
+					expGraph.HTTPRoutes = map[types.NamespacedName]*graph.HTTPRoute{}
 					expGraph.ReferencedSecrets = nil
 
 					expRouteHR1.Rules[0].BackendRefs[0].SvcNsName = types.NamespacedName{}

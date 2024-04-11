@@ -206,6 +206,21 @@ func (upd *UpdaterImpl) updateGatewayAPI(ctx context.Context, statuses GatewayAP
 		)
 	}
 
+	for nsname, rs := range statuses.GRPCRouteStatuses {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
+
+		upd.writeStatuses(
+			ctx,
+			nsname,
+			&v1alpha2.GRPCRoute{},
+			newGRPCRouteStatusSetter(upd.cfg.GatewayCtlrName, upd.cfg.Clock, rs),
+		)
+	}
+
 	for nsname, bs := range statuses.BackendTLSPolicyStatuses {
 		select {
 		case <-ctx.Done():

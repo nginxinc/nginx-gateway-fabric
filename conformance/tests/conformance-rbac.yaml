@@ -11,6 +11,7 @@ rules:
 - apiGroups:
   - ""
   resources:
+  - configmaps
   - namespaces
   - pods
   - secrets
@@ -37,12 +38,19 @@ rules:
   - httproutes
   - referencegrants
   - gatewayclasses
+  - grpcroutes
   verbs:
   - create
   - delete
   - get
   - list
   - patch
+- apiGroups:
+  - apiextensions.k8s.io
+  resources:
+  - customresourcedefinitions
+  verbs:
+  - list
 ---
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
