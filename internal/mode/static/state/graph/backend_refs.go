@@ -64,7 +64,6 @@ func addBackendRefsToRules(
 	}
 
 	for idx, rule := range route.Source.Spec.Rules {
-
 		if !route.Rules[idx].ValidMatches {
 			continue
 		}
