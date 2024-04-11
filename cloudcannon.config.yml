@@ -390,7 +390,7 @@ _editables:
     superscript: true
     underline: true
     undo: true
-base_url: /
+base_url: /nginx-gateway-fabric/
 data_config: true
 editor:
   default_path: /nginx-gateway-fabric/
