@@ -37,9 +37,9 @@ server {
         rewrite {{ $r }};
         {{- end }}
 
-    	{{- if $l.MirrorPath }}
-    	mirror {{ $l.MirrorPath }};
-		{{- end }}
+        {{- if $l.MirrorPath }}
+        mirror {{ $l.MirrorPath }};
+        {{- end }}
 
         {{- if $l.Return }}
         return {{ $l.Return.Code }} "{{ $l.Return.Body }}";

@@ -105,11 +105,11 @@ func buildMirrorRoutesForGateways(
 	routes map[types.NamespacedName]*Route,
 	gatewayNsNames []types.NamespacedName,
 ) map[types.NamespacedName]*Route {
-	var mirroredRoutesAndRoutes map[types.NamespacedName]*Route
+	var joinedRoutes map[types.NamespacedName]*Route
 	if len(routes) == 0 {
-		mirroredRoutesAndRoutes = make(map[types.NamespacedName]*Route)
+		joinedRoutes = make(map[types.NamespacedName]*Route)
 	} else {
-		mirroredRoutesAndRoutes = routes
+		joinedRoutes = routes
 	}
 
 	if len(gatewayNsNames) == 0 {
@@ -128,13 +128,13 @@ func buildMirrorRoutesForGateways(
 				mirrorGhr := createMirrorRoute(matchesPath, ghr, filters, filter)
 				r := buildRoute(validator, mirrorGhr, gatewayNsNames)
 				if r != nil {
-					mirroredRoutesAndRoutes[client.ObjectKeyFromObject(mirrorGhr)] = r
+					joinedRoutes[client.ObjectKeyFromObject(mirrorGhr)] = r
 				}
 			}
 		}
 	}
 
-	return mirroredRoutesAndRoutes
+	return joinedRoutes
 }
 
 func createMirrorRoute(
