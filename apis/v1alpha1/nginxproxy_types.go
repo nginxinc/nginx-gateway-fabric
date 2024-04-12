@@ -53,29 +53,39 @@ type Telemetry struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxProperties=64
-	SpanAttributes map[string]string `json:"spanAttributes,omitempty"`
+	SpanAttributes map[string]AttributeValue `json:"spanAttributes,omitempty"`
 }
 
 // TelemetryExporter specifies OpenTelemetry export parameters.
 type TelemetryExporter struct {
-	// Interval is the maximum interval between two exports, by default is 5 seconds.
+	// Interval is the maximum interval between two exports.
+	// Default: https://nginx.org/en/docs/ngx_otel_module.html#otel_exporter
 	//
 	// +optional
 	Interval *Duration `json:"interval,omitempty"`
 
-	// BatchSize is the maximum number of spans to be sent in one batch per worker, by default is 512.
+	// BatchSize is the maximum number of spans to be sent in one batch per worker.
+	// Default: https://nginx.org/en/docs/ngx_otel_module.html#otel_exporter
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=0
 	BatchSize *int32 `json:"batchSize,omitempty"`
 
-	// BatchCount is the number of pending batches per worker, spans exceeding the limit are dropped,
-	// by default is 4.
+	// BatchCount is the number of pending batches per worker, spans exceeding the limit are dropped.
+	// Default: https://nginx.org/en/docs/ngx_otel_module.html#otel_exporter
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=0
 	BatchCount *int32 `json:"batchCount,omitempty"`
 
 	// Endpoint is the address of OTLP/gRPC endpoint that will accept telemetry data.
+	//
+	//nolint:lll
+	// +kubebuilder:validation:Pattern=`^(?:http?:\/\/)?[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)*(?::\d{1,5})?$`
 	Endpoint string `json:"endpoint"`
 }
+
+// AttributeValue is a value paired with a key and attached to a tracing span.
+//
+// +kubebuilder:validation:MaxLength=255
+type AttributeValue string

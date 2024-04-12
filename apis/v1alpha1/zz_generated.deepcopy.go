@@ -388,7 +388,7 @@ func (in *Telemetry) DeepCopyInto(out *Telemetry) {
 	}
 	if in.SpanAttributes != nil {
 		in, out := &in.SpanAttributes, &out.SpanAttributes
-		*out = make(map[string]string, len(*in))
+		*out = make(map[string]AttributeValue, len(*in))
 		for key, val := range *in {
 			(*out)[key] = val
 		}

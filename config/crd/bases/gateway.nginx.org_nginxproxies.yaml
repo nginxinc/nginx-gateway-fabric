@@ -55,24 +55,27 @@ spec:
                     properties:
                       batchCount:
                         description: |-
-                          BatchCount is the number of pending batches per worker, spans exceeding the limit are dropped,
-                          by default is 4.
+                          BatchCount is the number of pending batches per worker, spans exceeding the limit are dropped.
+                          Default: https://nginx.org/en/docs/ngx_otel_module.html#otel_exporter
                         format: int32
                         minimum: 0
                         type: integer
                       batchSize:
-                        description: BatchSize is the maximum number of spans to be
-                          sent in one batch per worker, by default is 512.
+                        description: |-
+                          BatchSize is the maximum number of spans to be sent in one batch per worker.
+                          Default: https://nginx.org/en/docs/ngx_otel_module.html#otel_exporter
                         format: int32
                         minimum: 0
                         type: integer
                       endpoint:
                         description: Endpoint is the address of OTLP/gRPC endpoint
                           that will accept telemetry data.
+                        pattern: ^(?:http?:\/\/)?[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)*(?::\d{1,5})?$
                         type: string
                       interval:
-                        description: Interval is the maximum interval between two
-                          exports, by default is 5 seconds.
+                        description: |-
+                          Interval is the maximum interval between two exports.
+                          Default: https://nginx.org/en/docs/ngx_otel_module.html#otel_exporter
                         pattern: ^\d{1,4}(ms|s)?$
                         type: string
                     required:
@@ -87,6 +90,9 @@ spec:
                     type: string
                   spanAttributes:
                     additionalProperties:
+                      description: AttributeValue is a value paired with a key and
+                        attached to a tracing span.
+                      maxLength: 255
                       type: string
                     description: SpanAttributes are custom key/value attributes that
                       are added to each span.
