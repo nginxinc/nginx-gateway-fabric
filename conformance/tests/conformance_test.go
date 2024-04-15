@@ -22,14 +22,13 @@ import (
 	"testing"
 
 	. "github.com/onsi/gomega"
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	v1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
-	confv1 "sigs.k8s.io/gateway-api/conformance/apis/v1"
+	"sigs.k8s.io/gateway-api/conformance/apis/v1alpha1"
 	"sigs.k8s.io/gateway-api/conformance/tests"
 	"sigs.k8s.io/gateway-api/conformance/utils/flags"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
@@ -47,7 +46,6 @@ func TestConformance(t *testing.T) {
 	g.Expect(v1alpha2.AddToScheme(client.Scheme())).To(Succeed())
 	g.Expect(v1.AddToScheme(client.Scheme())).To(Succeed())
 	g.Expect(v1beta1.AddToScheme(client.Scheme())).To(Succeed())
-	g.Expect(apiextensionsv1.AddToScheme(client.Scheme())).To(Succeed())
 
 	supportedFeatures := suite.ParseSupportedFeatures(*flags.SupportedFeatures)
 	exemptFeatures := suite.ParseSupportedFeatures(*flags.ExemptFeatures)
@@ -57,15 +55,17 @@ func TestConformance(t *testing.T) {
 		*flags.GatewayClassName, *flags.CleanupBaseResources, *flags.ShowDebug,
 		*flags.EnableAllSupportedFeatures, *flags.SupportedFeatures, *flags.ExemptFeatures)
 
-	testSuite, err := suite.NewConformanceTestSuite(suite.ConformanceOptions{
-		Client:                     client,
-		GatewayClassName:           *flags.GatewayClassName,
-		Debug:                      *flags.ShowDebug,
-		CleanupBaseResources:       *flags.CleanupBaseResources,
-		SupportedFeatures:          supportedFeatures,
-		ExemptFeatures:             exemptFeatures,
-		EnableAllSupportedFeatures: *flags.EnableAllSupportedFeatures,
-		Implementation: confv1.Implementation{
+	expSuite, err := suite.NewExperimentalConformanceTestSuite(suite.ExperimentalConformanceOptions{
+		Options: suite.Options{
+			Client:                     client,
+			GatewayClassName:           *flags.GatewayClassName,
+			Debug:                      *flags.ShowDebug,
+			CleanupBaseResources:       *flags.CleanupBaseResources,
+			SupportedFeatures:          supportedFeatures,
+			ExemptFeatures:             exemptFeatures,
+			EnableAllSupportedFeatures: *flags.EnableAllSupportedFeatures,
+		},
+		Implementation: v1alpha1.Implementation{
 			Organization: "nginxinc",
 			Project:      "nginx-gateway-fabric",
 			URL:          "https://github.com/nginxinc/nginx-gateway-fabric",
@@ -74,15 +74,15 @@ func TestConformance(t *testing.T) {
 				"https://github.com/nginxinc/nginx-gateway-fabric/discussions/new/choose",
 			},
 		},
-		ConformanceProfiles: sets.New(suite.HTTPConformanceProfileName, suite.GRPCConformanceProfileName),
+		ConformanceProfiles: sets.New(suite.HTTPConformanceProfileName),
 	})
 	g.Expect(err).To(Not(HaveOccurred()))
 
-	testSuite.Setup(t)
-	err = testSuite.Run(t, tests.ConformanceTests)
+	expSuite.Setup(t)
+	err = expSuite.Run(t, tests.ConformanceTests)
 	g.Expect(err).To(Not(HaveOccurred()))
 
-	report, err := testSuite.Report()
+	report, err := expSuite.Report()
 	g.Expect(err).To(Not(HaveOccurred()))
 
 	yamlReport, err := yaml.Marshal(report)
