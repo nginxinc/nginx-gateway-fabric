@@ -553,7 +553,7 @@ func (h *eventHandlerImpl) nginxGatewayServiceUpsert(ctx context.Context, logger
 		gwAddresses,
 		h.latestReloadResult,
 	)
-	h.cfg.statusUpdater.UpdateGroup(ctx, "gateways", gatewayStatuses...)
+	h.cfg.statusUpdater.UpdateGroup(ctx, groupGateways, gatewayStatuses...)
 }
 
 func (h *eventHandlerImpl) nginxGatewayServiceDelete(
@@ -579,7 +579,7 @@ func (h *eventHandlerImpl) nginxGatewayServiceDelete(
 		gwAddresses,
 		h.latestReloadResult,
 	)
-	h.cfg.statusUpdater.UpdateGroup(ctx, "gateways", gatewayStatuses...)
+	h.cfg.statusUpdater.UpdateGroup(ctx, groupGateways, gatewayStatuses...)
 }
 
 func (h *eventHandlerImpl) nginxPlusUsageSecretUpsert(_ context.Context, _ logr.Logger, obj client.Object) {
