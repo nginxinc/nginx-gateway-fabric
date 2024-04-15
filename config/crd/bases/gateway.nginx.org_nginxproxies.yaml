@@ -100,11 +100,13 @@ spec:
                         key:
                           description: Key is the key for a span attribute.
                           maxLength: 255
+                          minLength: 1
                           pattern: ^[a-zA-Z0-9_-]+$
                           type: string
                         value:
                           description: Value is the value for a span attribute.
                           maxLength: 255
+                          minLength: 1
                           pattern: ^[a-zA-Z0-9_-]+$
                           type: string
                       required:
