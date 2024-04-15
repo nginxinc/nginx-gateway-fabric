@@ -27,6 +27,7 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/runtime"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/dataplane"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/graph"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/resolver"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/status"
 )
@@ -227,6 +228,10 @@ func (h *eventHandlerImpl) HandleEventBatch(ctx context.Context, logger logr.Log
 
 	h.latestReloadResult = nginxReloadRes
 
+	h.updateStatuses(ctx, logger, graph)
+}
+
+func (h *eventHandlerImpl) updateStatuses(ctx context.Context, logger logr.Logger, graph *graph.Graph) {
 	gwAddresses, err := getGatewayAddresses(ctx, h.cfg.k8sClient, nil, h.cfg.gatewayPodConfig)
 	if err != nil {
 		logger.Error(err, "Setting GatewayStatusAddress to Pod IP Address")
@@ -235,7 +240,7 @@ func (h *eventHandlerImpl) HandleEventBatch(ctx context.Context, logger logr.Log
 	transitionTime := metav1.Now()
 
 	gcReqs := status.PrepareGatewayClassRequests(graph.GatewayClass, graph.IgnoredGatewayClasses, transitionTime)
-	routeReqs := status.PrepareRouteRequests(graph.Routes, transitionTime, nginxReloadRes, h.cfg.gatewayCtrlName)
+	routeReqs := status.PrepareRouteRequests(graph.Routes, transitionTime, h.latestReloadResult, h.cfg.gatewayCtrlName)
 	polReqs := status.PrepareBackendTLSPolicyRequests(graph.BackendTLSPolicies, transitionTime, h.cfg.gatewayCtrlName)
 
 	reqs := make([]frameworkStatus.UpdateRequest, 0, len(gcReqs)+len(routeReqs)+len(polReqs))
@@ -252,7 +257,7 @@ func (h *eventHandlerImpl) HandleEventBatch(ctx context.Context, logger logr.Log
 		graph.IgnoredGateways,
 		transitionTime,
 		gwAddresses,
-		nginxReloadRes,
+		h.latestReloadResult,
 	)
 	h.cfg.statusUpdater.UpdateGroup(ctx, groupGateways, gwReqs...)
 }
