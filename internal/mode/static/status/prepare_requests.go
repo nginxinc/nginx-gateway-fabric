@@ -28,7 +28,7 @@ func PrepareRouteRequests(
 	routes map[types.NamespacedName]*graph.Route,
 	transitionTime metav1.Time,
 	nginxReloadRes NginxReloadResult,
-	gatewayCtrlName string,
+	gatewayCtlrName string,
 ) []frameworkStatus.UpdateRequest {
 	reqs := make([]frameworkStatus.UpdateRequest, 0, len(routes))
 
@@ -70,7 +70,7 @@ func PrepareRouteRequests(
 					Name:        v1.ObjectName(ref.Gateway.Name),
 					SectionName: routeRef.SectionName,
 				},
-				ControllerName: v1.GatewayController(gatewayCtrlName),
+				ControllerName: v1.GatewayController(gatewayCtlrName),
 				Conditions:     apiConds,
 			}
 
@@ -86,7 +86,7 @@ func PrepareRouteRequests(
 		req := frameworkStatus.UpdateRequest{
 			NsName:       nsname,
 			ResourceType: &v1.HTTPRoute{},
-			Setter:       newHTTPRouteStatusSetter(status, gatewayCtrlName),
+			Setter:       newHTTPRouteStatusSetter(status, gatewayCtlrName),
 		}
 
 		reqs = append(reqs, req)
@@ -266,7 +266,7 @@ func prepareGatewayRequest(
 func PrepareBackendTLSPolicyRequests(
 	policies map[types.NamespacedName]*graph.BackendTLSPolicy,
 	transitionTime metav1.Time,
-	gatewayCtrlName string,
+	gatewayCtlrName string,
 ) []frameworkStatus.UpdateRequest {
 	reqs := make([]frameworkStatus.UpdateRequest, 0, len(policies))
 
@@ -285,7 +285,7 @@ func PrepareBackendTLSPolicyRequests(
 						Namespace: (*v1.Namespace)(&pol.Gateway.Namespace),
 						Name:      v1alpha2.ObjectName(pol.Gateway.Name),
 					},
-					ControllerName: v1alpha2.GatewayController(gatewayCtrlName),
+					ControllerName: v1alpha2.GatewayController(gatewayCtlrName),
 					Conditions:     apiConds,
 				},
 			},
@@ -294,7 +294,7 @@ func PrepareBackendTLSPolicyRequests(
 		reqs = append(reqs, frameworkStatus.UpdateRequest{
 			NsName:       nsname,
 			ResourceType: &v1alpha2.BackendTLSPolicy{},
-			Setter:       newBackendTLSPolicyStatusSetter(status, gatewayCtrlName),
+			Setter:       newBackendTLSPolicyStatusSetter(status, gatewayCtlrName),
 		})
 	}
 	return reqs

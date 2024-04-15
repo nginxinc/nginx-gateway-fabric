@@ -43,7 +43,7 @@ func createK8sClientFor(resourceType client.Object) client.Client {
 }
 
 func TestBuildRouteStatuses(t *testing.T) {
-	const gatewayCtrlName = "controller"
+	const gatewayCtlrName = "controller"
 
 	gwNsName := types.NamespacedName{Namespace: "test", Name: "gateway"}
 
@@ -137,7 +137,7 @@ func TestBuildRouteStatuses(t *testing.T) {
 							Name:        v1.ObjectName(gwNsName.Name),
 							SectionName: helpers.GetPointer[v1.SectionName]("listener-80-1"),
 						},
-						ControllerName: gatewayCtrlName,
+						ControllerName: gatewayCtlrName,
 						Conditions: []metav1.Condition{
 							{
 								Type:               string(v1.RouteConditionAccepted),
@@ -163,7 +163,7 @@ func TestBuildRouteStatuses(t *testing.T) {
 							Name:        v1.ObjectName(gwNsName.Name),
 							SectionName: helpers.GetPointer[v1.SectionName]("listener-80-2"),
 						},
-						ControllerName: gatewayCtrlName,
+						ControllerName: gatewayCtlrName,
 						Conditions: []metav1.Condition{
 							{
 								Type:               string(v1.RouteConditionAccepted),
@@ -201,7 +201,7 @@ func TestBuildRouteStatuses(t *testing.T) {
 							Name:        v1.ObjectName(gwNsName.Name),
 							SectionName: helpers.GetPointer[v1.SectionName]("listener-80-1"),
 						},
-						ControllerName: gatewayCtrlName,
+						ControllerName: gatewayCtlrName,
 						Conditions: []metav1.Condition{
 							{
 								Type:               string(v1.RouteConditionAccepted),
@@ -243,7 +243,7 @@ func TestBuildRouteStatuses(t *testing.T) {
 
 	updater := statusFramework.NewUpdater(k8sClient, zap.New())
 
-	reqs := PrepareRouteRequests(routes, transitionTime, NginxReloadResult{}, gatewayCtrlName)
+	reqs := PrepareRouteRequests(routes, transitionTime, NginxReloadResult{}, gatewayCtlrName)
 
 	updater.Update(context.Background(), reqs...)
 
@@ -259,7 +259,7 @@ func TestBuildRouteStatuses(t *testing.T) {
 }
 
 func TestBuildRouteStatusesNginxErr(t *testing.T) {
-	const gatewayCtrlName = "controller"
+	const gatewayCtlrName = "controller"
 
 	gwNsName := types.NamespacedName{Namespace: "test", Name: "gateway"}
 	routeNsName := types.NamespacedName{Namespace: "test", Name: "hr-valid"}
@@ -309,7 +309,7 @@ func TestBuildRouteStatusesNginxErr(t *testing.T) {
 						Name:        v1.ObjectName(gwNsName.Name),
 						SectionName: helpers.GetPointer[v1.SectionName]("listener-80-1"),
 					},
-					ControllerName: gatewayCtrlName,
+					ControllerName: gatewayCtlrName,
 					Conditions: []metav1.Condition{
 						{
 							Type:               string(v1.RouteConditionResolvedRefs),
@@ -348,7 +348,7 @@ func TestBuildRouteStatusesNginxErr(t *testing.T) {
 		routes,
 		transitionTime,
 		NginxReloadResult{Error: errors.New("test error")},
-		gatewayCtrlName,
+		gatewayCtlrName,
 	)
 
 	g.Expect(reqs).To(HaveLen(1))
@@ -993,7 +993,7 @@ func TestBuildGatewayStatuses(t *testing.T) {
 }
 
 func TestBuildBackendTLSPolicyStatuses(t *testing.T) {
-	const gatewayCtrlName = "controller"
+	const gatewayCtlrName = "controller"
 
 	transitionTime := helpers.PrepareTimeForFakeClient(metav1.Now())
 
@@ -1074,7 +1074,7 @@ func TestBuildBackendTLSPolicyStatuses(t *testing.T) {
 								Namespace: helpers.GetPointer[v1.Namespace]("test"),
 								Name:      "gateway",
 							},
-							ControllerName: gatewayCtrlName,
+							ControllerName: gatewayCtlrName,
 							Conditions: []metav1.Condition{
 								{
 									Type:               string(v1alpha2.PolicyConditionAccepted),
@@ -1104,7 +1104,7 @@ func TestBuildBackendTLSPolicyStatuses(t *testing.T) {
 								Namespace: helpers.GetPointer[v1.Namespace]("test"),
 								Name:      "gateway",
 							},
-							ControllerName: gatewayCtrlName,
+							ControllerName: gatewayCtlrName,
 							Conditions: []metav1.Condition{
 								{
 									Type:               string(v1alpha2.PolicyConditionAccepted),
@@ -1148,7 +1148,7 @@ func TestBuildBackendTLSPolicyStatuses(t *testing.T) {
 								Namespace: helpers.GetPointer[v1.Namespace]("test"),
 								Name:      "gateway",
 							},
-							ControllerName: gatewayCtrlName,
+							ControllerName: gatewayCtlrName,
 							Conditions: []metav1.Condition{
 								{
 									Type:               string(v1alpha2.PolicyConditionAccepted),
@@ -1179,7 +1179,7 @@ func TestBuildBackendTLSPolicyStatuses(t *testing.T) {
 
 			updater := statusFramework.NewUpdater(k8sClient, zap.New())
 
-			reqs := PrepareBackendTLSPolicyRequests(test.backendTLSPolicies, transitionTime, gatewayCtrlName)
+			reqs := PrepareBackendTLSPolicyRequests(test.backendTLSPolicies, transitionTime, gatewayCtlrName)
 
 			g.Expect(reqs).To(HaveLen(test.expectedReqs))
 

@@ -78,18 +78,18 @@ func gwStatusEqual(prev, cur gatewayv1.GatewayStatus) bool {
 	})
 }
 
-func newHTTPRouteStatusSetter(status gatewayv1.HTTPRouteStatus, gatewayCtrlName string) frameworkStatus.Setter {
+func newHTTPRouteStatusSetter(status gatewayv1.HTTPRouteStatus, gatewayCtlrName string) frameworkStatus.Setter {
 	return func(object client.Object) (wasSet bool) {
 		hr := object.(*gatewayv1.HTTPRoute)
 
 		// keep all the parent statuses that belong to other controllers
 		for _, os := range hr.Status.Parents {
-			if string(os.ControllerName) != gatewayCtrlName {
+			if string(os.ControllerName) != gatewayCtlrName {
 				status.Parents = append(status.Parents, os)
 			}
 		}
 
-		if hrStatusEqual(gatewayCtrlName, hr.Status, status) {
+		if hrStatusEqual(gatewayCtlrName, hr.Status, status) {
 			return false
 		}
 
@@ -99,14 +99,14 @@ func newHTTPRouteStatusSetter(status gatewayv1.HTTPRouteStatus, gatewayCtrlName 
 	}
 }
 
-func hrStatusEqual(gatewayCtrlName string, prev, cur gatewayv1.HTTPRouteStatus) bool {
+func hrStatusEqual(gatewayCtlrName string, prev, cur gatewayv1.HTTPRouteStatus) bool {
 	// Since other controllers may update HTTPRoute status we can't assume anything about the order of the statuses,
 	// and we have to ignore statuses written by other controllers when checking for equality.
 	// Therefore, we can't use slices.EqualFunc here because it cares about the order.
 
 	// First, we check if the prev status has any RouteParentStatuses that are no longer present in the cur status.
 	for _, prevParent := range prev.Parents {
-		if prevParent.ControllerName != gatewayv1.GatewayController(gatewayCtrlName) {
+		if prevParent.ControllerName != gatewayv1.GatewayController(gatewayCtlrName) {
 			continue
 		}
 
@@ -170,7 +170,7 @@ func newGatewayClassStatusSetter(status gatewayv1.GatewayClassStatus) frameworkS
 
 func newBackendTLSPolicyStatusSetter(
 	status gatewayv1alpha2.PolicyStatus,
-	gatewayCtrlName string,
+	gatewayCtlrName string,
 ) frameworkStatus.Setter {
 	return func(object client.Object) (wasSet bool) {
 		btp := helpers.MustCastObject[*gatewayv1alpha2.BackendTLSPolicy](object)
@@ -182,7 +182,7 @@ func newBackendTLSPolicyStatusSetter(
 
 		// keep all the ancestor statuses that belong to other controllers
 		for _, os := range btp.Status.Ancestors {
-			if string(os.ControllerName) != gatewayCtrlName {
+			if string(os.ControllerName) != gatewayCtlrName {
 				ancestors = append(ancestors, os)
 			}
 		}
@@ -190,7 +190,7 @@ func newBackendTLSPolicyStatusSetter(
 		ancestors = append(ancestors, status.Ancestors...)
 		status.Ancestors = ancestors
 
-		if btpStatusEqual(gatewayCtrlName, btp.Status, status) {
+		if btpStatusEqual(gatewayCtlrName, btp.Status, status) {
 			return false
 		}
 
@@ -199,14 +199,14 @@ func newBackendTLSPolicyStatusSetter(
 	}
 }
 
-func btpStatusEqual(gatewayCtrlName string, prev, cur gatewayv1alpha2.PolicyStatus) bool {
+func btpStatusEqual(gatewayCtlrName string, prev, cur gatewayv1alpha2.PolicyStatus) bool {
 	// Since other controllers may update BackendTLSPolicy status we can't assume anything about the order of the
 	// statuses, and we have to ignore statuses written by other controllers when checking for equality.
 	// Therefore, we can't use slices.EqualFunc here because it cares about the order.
 
 	// First, we check if the prev status has any PolicyAncestorStatuses that are no longer present in the cur status.
 	for _, prevAncestor := range prev.Ancestors {
-		if prevAncestor.ControllerName != gatewayv1.GatewayController(gatewayCtrlName) {
+		if prevAncestor.ControllerName != gatewayv1.GatewayController(gatewayCtlrName) {
 			continue
 		}
 

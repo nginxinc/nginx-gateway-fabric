@@ -218,7 +218,7 @@ func StartManager(cfg config.Config) error {
 		metricsCollector:              handlerCollector,
 		usageReportConfig:             cfg.UsageReportConfig,
 		usageSecret:                   usageSecret,
-		gatewayCtrlName:               cfg.GatewayCtlrName,
+		gatewayCtlrName:               cfg.GatewayCtlrName,
 		updateGatewayClassStatus:      cfg.UpdateGatewayClassStatus,
 	})
 

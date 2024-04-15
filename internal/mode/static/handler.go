@@ -49,7 +49,7 @@ type secretStorer interface {
 // eventHandlerConfig holds configuration parameters for eventHandlerImpl.
 type eventHandlerConfig struct {
 	// gatewayCtlrName is the name of the NGF controller.
-	gatewayCtrlName string
+	gatewayCtlrName string
 	// k8sClient is a Kubernetes API client
 	k8sClient client.Client
 	// gatewayPodConfig contains information about this Pod.
@@ -245,8 +245,8 @@ func (h *eventHandlerImpl) updateStatuses(ctx context.Context, logger logr.Logge
 	if h.cfg.updateGatewayClassStatus {
 		gcReqs = status.PrepareGatewayClassRequests(graph.GatewayClass, graph.IgnoredGatewayClasses, transitionTime)
 	}
-	routeReqs := status.PrepareRouteRequests(graph.Routes, transitionTime, h.latestReloadResult, h.cfg.gatewayCtrlName)
-	polReqs := status.PrepareBackendTLSPolicyRequests(graph.BackendTLSPolicies, transitionTime, h.cfg.gatewayCtrlName)
+	routeReqs := status.PrepareRouteRequests(graph.Routes, transitionTime, h.latestReloadResult, h.cfg.gatewayCtlrName)
+	polReqs := status.PrepareBackendTLSPolicyRequests(graph.BackendTLSPolicies, transitionTime, h.cfg.gatewayCtlrName)
 
 	reqs := make([]frameworkStatus.UpdateRequest, 0, len(gcReqs)+len(routeReqs)+len(polReqs))
 	reqs = append(reqs, gcReqs...)
