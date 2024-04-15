@@ -80,6 +80,8 @@ type eventHandlerConfig struct {
 	nginxConfiguredOnStartChecker *nginxConfiguredOnStartChecker
 	// controlConfigNSName is the NamespacedName of the NginxGateway config for this controller.
 	controlConfigNSName types.NamespacedName
+	// updateGatewayClassStatus enables updating the status of the GatewayClass resource.
+	updateGatewayClassStatus bool
 }
 
 const (
@@ -239,7 +241,10 @@ func (h *eventHandlerImpl) updateStatuses(ctx context.Context, logger logr.Logge
 
 	transitionTime := metav1.Now()
 
-	gcReqs := status.PrepareGatewayClassRequests(graph.GatewayClass, graph.IgnoredGatewayClasses, transitionTime)
+	var gcReqs []frameworkStatus.UpdateRequest
+	if h.cfg.updateGatewayClassStatus {
+		gcReqs = status.PrepareGatewayClassRequests(graph.GatewayClass, graph.IgnoredGatewayClasses, transitionTime)
+	}
 	routeReqs := status.PrepareRouteRequests(graph.Routes, transitionTime, h.latestReloadResult, h.cfg.gatewayCtrlName)
 	polReqs := status.PrepareBackendTLSPolicyRequests(graph.BackendTLSPolicies, transitionTime, h.cfg.gatewayCtrlName)
 

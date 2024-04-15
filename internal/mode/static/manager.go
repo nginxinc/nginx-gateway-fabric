@@ -219,6 +219,7 @@ func StartManager(cfg config.Config) error {
 		usageReportConfig:             cfg.UsageReportConfig,
 		usageSecret:                   usageSecret,
 		gatewayCtrlName:               cfg.GatewayCtlrName,
+		updateGatewayClassStatus:      cfg.UpdateGatewayClassStatus,
 	})
 
 	objects, objectLists := prepareFirstEventBatchPreparerArgs(
