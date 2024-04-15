@@ -47,6 +47,11 @@ var _ = Describe("LeaderAwareGroupUpdater", func() {
 
 		BeforeAll(func() {
 			updater = NewLeaderAwareGroupUpdater(NewUpdater(k8sClient, zap.New()))
+
+			for _, name := range allGCNames {
+				gc := createGC(name)
+				Expect(k8sClient.Create(context.Background(), gc)).To(Succeed())
+			}
 		})
 
 		prepareReq := func(name string, condType string, updateNeeded bool) UpdateRequest {
@@ -95,13 +100,6 @@ var _ = Describe("LeaderAwareGroupUpdater", func() {
 				Expect(gc.Status).To(Equal(v1.GatewayClassStatus{}))
 			}
 		}
-
-		It("should create resources in the API server", func() {
-			for _, name := range allGCNames {
-				gc := createGC(name)
-				Expect(k8sClient.Create(context.Background(), gc)).To(Succeed())
-			}
-		})
 
 		When("updater is disabled", func() {
 			It("should save requests for later", func() {

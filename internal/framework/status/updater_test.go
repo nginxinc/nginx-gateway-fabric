@@ -115,6 +115,11 @@ var _ = Describe("Updater", func() {
 
 		BeforeAll(func() {
 			updater = NewUpdater(k8sClient, zap.New())
+
+			for _, name := range gcNames {
+				gc := createGC(name)
+				Expect(k8sClient.Create(context.Background(), gc)).Should(Succeed())
+			}
 		})
 
 		testStatus := func(name string, condType string) {
@@ -124,13 +129,6 @@ var _ = Describe("Updater", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(gc.Status).To(Equal(createGCStatus(condType)))
 		}
-
-		It("should create resources in the API server", func() {
-			for _, name := range gcNames {
-				gc := createGC(name)
-				Expect(k8sClient.Create(context.Background(), gc)).Should(Succeed())
-			}
-		})
 
 		It("should update the status of GatewayClasses individually", func() {
 			for _, name := range gcNames {
