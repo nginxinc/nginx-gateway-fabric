@@ -136,30 +136,24 @@ func bindRoutesToListeners(
 	}
 
 	for _, r := range httpRoutes {
-		bindRouteToListeners(r, gw, namespaces)
+		bindRouteToListeners(r, r.Attachable, r.Source.Namespace, r.Source.Spec.Hostnames, gw, namespaces)
 	}
 
 	for _, r := range grpcRoutes {
-		bindRouteToListeners(r, gw, namespaces)
+		bindRouteToListeners(r, r.Attachable, r.Source.Namespace, r.Source.Spec.Hostnames, gw, namespaces)
 	}
 }
 
 func bindRouteToListeners(
 	r Route,
+	attachable bool,
+	srcNs string,
+	routeHostnames []v1.Hostname,
 	gw *Gateway,
 	namespaces map[types.NamespacedName]*apiv1.Namespace,
 ) {
-	switch v := r.(type) {
-	case *HTTPRoute:
-		if !v.Attachable {
-			return
-		}
-	case *GRPCRoute:
-		if !v.Attachable {
-			return
-		}
-	default:
-		panic(fmt.Errorf("unknown route type %T", v))
+	if !attachable {
+		return
 	}
 
 	bindRoutes := func(
@@ -218,7 +212,15 @@ func bindRouteToListeners(
 
 			// Try to attach Route to all matching listeners
 
-			cond, attached := tryToAttachRouteToListeners(ref.Attachment, attachableListeners, r, gw, namespaces)
+			cond, attached := tryToAttachRouteToListeners(
+				ref.Attachment,
+				attachableListeners,
+				r,
+				srcNs,
+				routeHostnames,
+				gw,
+				namespaces,
+			)
 			if !attached {
 				attachment.FailedCondition = cond
 				continue
@@ -253,6 +255,8 @@ func tryToAttachRouteToListeners(
 	refStatus *ParentRefAttachmentStatus,
 	attachableListeners []*Listener,
 	route Route,
+	srcNs string,
+	routeHostnames []v1.Hostname,
 	gw *Gateway,
 	namespaces map[types.NamespacedName]*apiv1.Namespace,
 ) (conditions.Condition, bool) {
@@ -261,19 +265,6 @@ func tryToAttachRouteToListeners(
 	}
 
 	bind := func(l *Listener) (allowed, attached bool) {
-		var srcNs string
-		var routeHostnames []v1.Hostname
-		switch v := route.(type) {
-		case *HTTPRoute:
-			srcNs = v.Source.Namespace
-			routeHostnames = v.Source.Spec.Hostnames
-		case *GRPCRoute:
-			srcNs = v.Source.Namespace
-			routeHostnames = v.Source.Spec.Hostnames
-		default:
-			panic(fmt.Errorf("unknown route type %T", v))
-		}
-
 		if !routeAllowedByListener(l, srcNs, gw.Source.Namespace, namespaces) {
 			return false, false
 		}

@@ -234,7 +234,7 @@ func createGRPCBackendRef(
 	weight := int32(1)
 	if ref.Weight != nil {
 		if validateWeight(*ref.Weight) != nil {
-			// We don't need to add a condition because validateHTTPBackendRef will do that.
+			// We don't need to add a condition because validateGRPCBackendRef will do that.
 			weight = 0 // 0 will get no traffic
 		} else {
 			weight = *ref.Weight

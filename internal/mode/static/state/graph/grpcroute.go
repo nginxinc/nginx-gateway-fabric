@@ -116,6 +116,7 @@ func processGRPCRouteRules(
 	rules := make([]Rule, len(specRules))
 	var allRulesErrs field.ErrorList
 	atLeastOneValid := false
+	validFilters := true
 
 	for i, rule := range specRules {
 		rulePath := field.NewPath("spec").Child("rules").Index(i)
@@ -134,6 +135,7 @@ func processGRPCRouteRules(
 				allErrs,
 				field.NotSupported(filterPath, rule.Filters, []string{"gRPC filters are not yet supported"}),
 			)
+			validFilters = false
 		}
 
 		// rule.BackendRefs are validated separately because of their special requirements
@@ -147,7 +149,7 @@ func processGRPCRouteRules(
 
 		rules[i] = Rule{
 			ValidMatches: len(matchesErrs) == 0,
-			ValidFilters: true,
+			ValidFilters: validFilters,
 		}
 	}
 	return rules, atLeastOneValid, allRulesErrs
@@ -178,25 +180,24 @@ func validateGRPCMethodMatch(
 	var allErrs field.ErrorList
 
 	if method != nil {
-		if method.Service == nil {
+		if method.Type == nil {
+			allErrs = append(allErrs, field.Required(methodPath.Child("type"), "cannot be empty"))
+		} else if *method.Type != v1alpha2.GRPCMethodMatchExact {
+			allErrs = append(
+				allErrs,
+				field.NotSupported(methodPath.Child("type"), *method.Type, []string{string(v1alpha2.GRPCMethodMatchExact)}),
+			)
+		}
+		if method.Service == nil || *method.Service == "" {
 			methodServicePath := methodPath.Child("service")
 			allErrs = append(
 				allErrs,
-				field.Required(methodServicePath, "service is required when method is set"),
+				field.Required(methodServicePath, "service is required"),
 			)
 		}
-		if method.Type != nil {
-			if *method.Type != v1alpha2.GRPCMethodMatchExact {
-				methodTypePath := methodPath.Child("type")
-				allErrs = append(
-					allErrs,
-					field.NotSupported(methodTypePath, *method, []string{string(v1alpha2.GRPCMethodMatchExact)}),
-				)
-			}
-			if method.Method == nil {
-				methodMethodPath := methodPath.Child("method")
-				allErrs = append(allErrs, field.Required(methodMethodPath, "method is required when type is set"))
-			}
+		if method.Method == nil || *method.Method == "" {
+			methodMethodPath := methodPath.Child("method")
+			allErrs = append(allErrs, field.Required(methodMethodPath, "method is required"))
 		}
 	}
 	return allErrs
