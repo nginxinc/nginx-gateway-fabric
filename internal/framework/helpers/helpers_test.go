@@ -15,8 +15,9 @@ func TestMustCastObject(t *testing.T) {
 
 	var obj client.Object = &gatewayv1.Gateway{}
 
-	// must not panic
-	_ = MustCastObject[*gatewayv1.Gateway](obj)
+	g.Expect(func() {
+		_ = MustCastObject[*gatewayv1.Gateway](obj)
+	}).ToNot(Panic())
 
 	g.Expect(func() {
 		_ = MustCastObject[*gatewayv1alpha2.BackendTLSPolicy](obj)
