@@ -53,6 +53,8 @@ type Telemetry struct {
 	// SpanAttributes are custom key/value attributes that are added to each span.
 	//
 	// +optional
+	// +listType=map
+	// +listMapKey=key
 	// +kubebuilder:validation:MaxItems=64
 	SpanAttributes []SpanAttribute `json:"spanAttributes,omitempty"`
 }

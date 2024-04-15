@@ -115,6 +115,9 @@ spec:
                       type: object
                     maxItems: 64
                     type: array
+                    x-kubernetes-list-map-keys:
+                    - key
+                    x-kubernetes-list-type: map
                 type: object
             type: object
         required:
