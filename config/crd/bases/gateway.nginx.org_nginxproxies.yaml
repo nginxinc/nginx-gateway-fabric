@@ -68,8 +68,9 @@ spec:
                         minimum: 0
                         type: integer
                       endpoint:
-                        description: Endpoint is the address of OTLP/gRPC endpoint
-                          that will accept telemetry data.
+                        description: |-
+                          Endpoint is the address of OTLP/gRPC endpoint that will accept telemetry data.
+                          Format: alphanumeric hostname with optional http scheme and optional port.
                         pattern: ^(?:http?:\/\/)?[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)*(?::\d{1,5})?$
                         type: string
                       interval:
@@ -87,17 +88,31 @@ spec:
                       Default is 'ngf:<gateway-namespace>:<gateway-name>'. If a value is provided by the user,
                       then the default becomes a prefix to that value.
                     maxLength: 127
+                    pattern: ^[a-zA-Z0-9_-]+$
                     type: string
                   spanAttributes:
-                    additionalProperties:
-                      description: AttributeValue is a value paired with a key and
-                        attached to a tracing span.
-                      maxLength: 255
-                      type: string
                     description: SpanAttributes are custom key/value attributes that
                       are added to each span.
-                    maxProperties: 64
-                    type: object
+                    items:
+                      description: SpanAttribute is a key value pair to be added to
+                        a tracing span.
+                      properties:
+                        key:
+                          description: Key is the key for a span attribute.
+                          maxLength: 255
+                          pattern: ^[a-zA-Z0-9_-]+$
+                          type: string
+                        value:
+                          description: Value is the value for a span attribute.
+                          maxLength: 255
+                          pattern: ^[a-zA-Z0-9_-]+$
+                          type: string
+                      required:
+                      - key
+                      - value
+                      type: object
+                    maxItems: 64
+                    type: array
                 type: object
             type: object
         required:

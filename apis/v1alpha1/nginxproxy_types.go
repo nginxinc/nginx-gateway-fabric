@@ -47,13 +47,14 @@ type Telemetry struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxLength=127
+	// +kubebuilder:validation:Pattern=`^[a-zA-Z0-9_-]+$`
 	ServiceName *string `json:"serviceName,omitempty"`
 
 	// SpanAttributes are custom key/value attributes that are added to each span.
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=64
-	SpanAttributes map[string]AttributeValue `json:"spanAttributes,omitempty"`
+	// +kubebuilder:validation:MaxItems=64
+	SpanAttributes []SpanAttribute `json:"spanAttributes,omitempty"`
 }
 
 // TelemetryExporter specifies OpenTelemetry export parameters.
@@ -79,13 +80,24 @@ type TelemetryExporter struct {
 	BatchCount *int32 `json:"batchCount,omitempty"`
 
 	// Endpoint is the address of OTLP/gRPC endpoint that will accept telemetry data.
+	// Format: alphanumeric hostname with optional http scheme and optional port.
 	//
 	//nolint:lll
 	// +kubebuilder:validation:Pattern=`^(?:http?:\/\/)?[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)*(?::\d{1,5})?$`
 	Endpoint string `json:"endpoint"`
 }
 
-// AttributeValue is a value paired with a key and attached to a tracing span.
-//
-// +kubebuilder:validation:MaxLength=255
-type AttributeValue string
+// SpanAttribute is a key value pair to be added to a tracing span.
+type SpanAttribute struct {
+	// Key is the key for a span attribute.
+	//
+	// +kubebuilder:validation:MaxLength=255
+	// +kubebuilder:validation:Pattern=`^[a-zA-Z0-9_-]+$`
+	Key string `json:"key"`
+
+	// Value is the value for a span attribute.
+	//
+	// +kubebuilder:validation:MaxLength=255
+	// +kubebuilder:validation:Pattern=`^[a-zA-Z0-9_-]+$`
+	Value string `json:"value"`
+}
