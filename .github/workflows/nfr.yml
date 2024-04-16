@@ -57,7 +57,7 @@ jobs:
 
     - name: Docker Buildx
       if: ${{ inputs.nginx_plus == true }}
-      uses: docker/setup-buildx-action@2b51285047da1547ffb1b2203d8be4c0af6b1f20 # v3.2.0
+      uses: docker/setup-buildx-action@d70bba72b1f3fd22344832f00baa16ece964efeb # v3.3.0
 
     - name: NGINX Docker meta
       id: nginx-meta
@@ -158,7 +158,7 @@ jobs:
         rm -rf scripts/vars.env
 
     - name: Open a PR with the results
-      uses: peter-evans/create-pull-request@70a41aba780001da0a30141984ae2a0c95d8704e # v6.0.2
+      uses: peter-evans/create-pull-request@c55203cfde3e5c11a452d352b4393e68b85b4533 # v6.0.3
       with:
         token: ${{ secrets.NGINX_PAT }}
         commit-message: NFR Test Results for NGF version ${{ inputs.version }} ${{ inputs.nginx_plus == true && '(Plus)' || ''}}
