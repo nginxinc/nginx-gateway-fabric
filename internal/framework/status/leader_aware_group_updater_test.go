@@ -55,16 +55,13 @@ var _ = Describe("LeaderAwareGroupUpdater", func() {
 		})
 
 		prepareReq := func(name string, condType string, updateNeeded bool) UpdateRequest {
-			var setter Setter
+			setter := func(_ client.Object) bool { return false }
+
 			if updateNeeded {
 				setter = func(obj client.Object) bool {
 					gc := obj.(*v1.GatewayClass)
 					gc.Status = createGCStatus(condType)
 					return true
-				}
-			} else {
-				setter = func(_ client.Object) bool {
-					return false
 				}
 			}
 
