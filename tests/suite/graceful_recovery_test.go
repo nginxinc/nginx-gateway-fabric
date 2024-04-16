@@ -3,7 +3,9 @@ package suite
 import (
 	"fmt"
 	"net/http"
+	"os/exec"
 	"strconv"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -14,7 +16,7 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/tests/framework"
 )
 
-var _ = Describe("Graceful Recovery test", Label("nfr", "graceful-recovery"), func() {
+var _ = Describe("Graceful Recovery test", Ordered, Label("nfr", "graceful-recovery"), func() {
 	files := []string{
 		"graceful-recovery/cafe.yaml",
 		"graceful-recovery/cafe-secret.yaml",
@@ -27,32 +29,178 @@ var _ = Describe("Graceful Recovery test", Label("nfr", "graceful-recovery"), fu
 		},
 	}
 
-	BeforeEach(func() {
-		Expect(resourceManager.Apply([]client.Object{ns})).To(Succeed())
-		Expect(resourceManager.ApplyFromFiles(files, ns.Name)).To(Succeed())
-		Expect(resourceManager.WaitForAppsToBeReady(ns.Name)).To(Succeed())
-	})
+	var teaURL, coffeeURL string
 
-	AfterEach(func() {
-		Expect(resourceManager.DeleteFromFiles(files, ns.Name)).To(Succeed())
-		Expect(resourceManager.Delete([]client.Object{ns})).To(Succeed())
-	})
-
-	It("sends traffic", func() {
-		teaURL := "https://cafe.example.com/tea"
-		coffeeURL := "http://cafe.example.com/coffee"
+	BeforeAll(func() {
+		teaURL = "https://cafe.example.com/tea"
+		coffeeURL = "http://cafe.example.com/coffee"
 		if portFwdPort != 0 {
 			teaURL = fmt.Sprintf("https://cafe.example.com:%s/tea", strconv.Itoa(portFwdPort))
 			coffeeURL = fmt.Sprintf("http://cafe.example.com:%s/coffee", strconv.Itoa(portFwdPort))
 		}
-		status, body, err := framework.Get(teaURL, address, timeoutConfig.RequestTimeout)
-		Expect(err).ToNot(HaveOccurred())
-		Expect(status).To(Equal(http.StatusOK))
-		Expect(body).To(ContainSubstring("URI: /tea"))
+	})
 
-		status, body, err = framework.Get(coffeeURL, address, timeoutConfig.RequestTimeout)
+	BeforeEach(func() {
+		// this test is unique in that NGF
+		teardown(releaseName)
+
+		cfg := getDefaultSetupCfg()
+		cfg.nfr = true
+
+		setup(cfg, "--set", "nginxGateway.securityContext.runAsNonRoot=false")
+
+		Expect(resourceManager.Apply([]client.Object{ns})).To(Succeed())
+		Expect(resourceManager.ApplyFromFiles(files, ns.Name)).To(Succeed())
+		Expect(resourceManager.WaitForAppsToBeReady(ns.Name)).To(Succeed())
+		// Sometimes the traffic would error with code 502, after implementing this sleep it stopped.
+		time.Sleep(2 * time.Second)
+
+		expectWorkingTraffic(teaURL, coffeeURL)
+	})
+
+	AfterAll(func() {
+		Expect(resourceManager.DeleteFromFiles(files, ns.Name)).To(Succeed())
+		Expect(resourceManager.Delete([]client.Object{ns})).To(Succeed())
+	})
+
+	It("recovers when NGF container is restarted", func() {
+		podNames, err := framework.GetReadyNGFPodNames(k8sClient, ngfNamespace, releaseName, timeoutConfig.GetTimeout)
 		Expect(err).ToNot(HaveOccurred())
-		Expect(status).To(Equal(http.StatusOK))
-		Expect(body).To(ContainSubstring("URI: /coffee"))
+		Expect(podNames).ToNot(BeEmpty())
+
+		output, err := restartNGFProcess()
+		Expect(err).ToNot(HaveOccurred(), string(output))
+		// Wait for NGF to restart.
+		time.Sleep(2 * time.Second)
+
+		expectWorkingTraffic(teaURL, coffeeURL)
+
+		checkContainerLogsForErrors(podNames[0])
+
+		// I tried just deleting the routes and ran into a bunch of issues, deleting all the files was better
+		Expect(resourceManager.DeleteFromFiles(files, ns.Name)).To(Succeed())
+		// Wait for files to be deleted.
+		time.Sleep(2 * time.Second)
+
+		expectFailingTraffic(teaURL, coffeeURL)
+
+		Expect(resourceManager.ApplyFromFiles(files, ns.Name)).To(Succeed())
+		Expect(resourceManager.WaitForAppsToBeReady(ns.Name)).To(Succeed())
+
+		expectWorkingTraffic(teaURL, coffeeURL)
+	})
+
+	It("recovers when nginx container is restarted", func() {
+		podNames, err := framework.GetReadyNGFPodNames(k8sClient, ngfNamespace, releaseName, timeoutConfig.GetTimeout)
+		Expect(err).ToNot(HaveOccurred())
+		Expect(podNames).ToNot(BeEmpty())
+
+		// If we correctly restart the nginx container, it should give us an error 137 code
+		output, err := restartNginxContainer()
+		Expect(err).To(HaveOccurred(), string(output))
+		time.Sleep(2 * time.Second)
+
+		checkContainerLogsForErrors(podNames[0])
+
+		Expect(resourceManager.DeleteFromFiles(files, ns.Name)).To(Succeed())
+		// Wait for files to be deleted.
+		time.Sleep(2 * time.Second)
+
+		expectFailingTraffic(teaURL, coffeeURL)
+
+		Expect(resourceManager.ApplyFromFiles(files, ns.Name)).To(Succeed())
+		Expect(resourceManager.WaitForAppsToBeReady(ns.Name)).To(Succeed())
+
+		expectWorkingTraffic(teaURL, coffeeURL)
 	})
 })
+
+func restartNginxContainer() ([]byte, error) {
+	podNames, err := framework.GetReadyNGFPodNames(k8sClient, ngfNamespace, releaseName, timeoutConfig.GetTimeout)
+	Expect(err).ToNot(HaveOccurred())
+	Expect(podNames).ToNot(BeEmpty())
+
+	// This should error since we are in the nginx container, killing the nginx master process.
+	// Exit Code 137 is the code we want to see as that is the kill -9 signal
+	output, err := exec.Command( // nolint:gosec
+		"kubectl",
+		"exec",
+		"-n",
+		ngfNamespace, podNames[0],
+		"--container",
+		"nginx",
+		"--",
+		"sh",
+		"-c",
+		"$(PID=$(pgrep -f \"nginx: master process\") && kill -9 $PID)").CombinedOutput()
+	if err != nil {
+		return output, err
+	}
+	return nil, nil
+}
+
+func restartNGFProcess() ([]byte, error) {
+	podNames, err := framework.GetReadyNGFPodNames(k8sClient, ngfNamespace, releaseName, timeoutConfig.GetTimeout)
+	Expect(err).ToNot(HaveOccurred())
+	Expect(podNames).ToNot(BeEmpty())
+
+	output, err := exec.Command( // nolint:gosec
+		"kubectl",
+		"debug",
+		"-n",
+		ngfNamespace,
+		podNames[0],
+		"--image=busybox:1.28",
+		"--target=nginx-gateway",
+		"--",
+		"sh",
+		"-c",
+		"$(PID=$(pgrep -f \"/[u]sr/bin/gateway\") && kill -9 $PID)").CombinedOutput()
+	if err != nil {
+		return output, err
+	}
+	return nil, nil
+}
+
+func expectWorkingTraffic(teaURL, coffeeURL string) {
+	status, body, err := framework.Get(teaURL, address, timeoutConfig.RequestTimeout)
+	Expect(err).ToNot(HaveOccurred())
+	Expect(status).To(Equal(http.StatusOK))
+	Expect(body).To(ContainSubstring("URI: /tea"))
+
+	status, body, err = framework.Get(coffeeURL, address, timeoutConfig.RequestTimeout)
+	Expect(err).ToNot(HaveOccurred())
+	Expect(status).To(Equal(http.StatusOK), coffeeURL+" "+address)
+	Expect(body).To(ContainSubstring("URI: /coffee"))
+}
+
+func expectFailingTraffic(teaURL, coffeeURL string) {
+	status, body, err := framework.Get(teaURL, address, timeoutConfig.RequestTimeout)
+	Expect(err).To(HaveOccurred())
+	Expect(status).ToNot(Equal(http.StatusOK))
+	Expect(body).ToNot(ContainSubstring("URI: /tea"))
+
+	status, body, err = framework.Get(coffeeURL, address, timeoutConfig.RequestTimeout)
+	Expect(err).To(HaveOccurred())
+	Expect(status).ToNot(Equal(http.StatusOK))
+	Expect(body).ToNot(ContainSubstring("URI: /coffee"))
+}
+
+func checkContainerLogsForErrors(ngfPodName string) {
+	sinceSeconds := int64(15)
+	logs, err := resourceManager.GetPodLogs(
+		ngfNamespace,
+		ngfPodName,
+		&core.PodLogOptions{Container: "nginx", SinceSeconds: &sinceSeconds},
+	)
+	Expect(err).ToNot(HaveOccurred())
+	Expect(logs).ToNot(ContainSubstring("emerg"), logs)
+
+	logs, err = resourceManager.GetPodLogs(
+		ngfNamespace,
+		ngfPodName,
+		&core.PodLogOptions{Container: "nginx-gateway", SinceSeconds: &sinceSeconds},
+	)
+	Expect(err).ToNot(HaveOccurred())
+	Expect(logs).ToNot(ContainSubstring("error"), logs)
+}

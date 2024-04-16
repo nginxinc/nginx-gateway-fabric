@@ -243,9 +243,12 @@ var _ = BeforeSuite(func() {
 	// - running upgrade test (this test will deploy its own version)
 	// - running longevity teardown (deployment will already exist)
 	// - running telemetry test (NGF will be deployed as part of the test)
+	// - running graceful-recovery (NGF will be deployed as part of the test)
 	if strings.Contains(labelFilter, "upgrade") ||
 		strings.Contains(labelFilter, "longevity-teardown") ||
-		strings.Contains(labelFilter, "telemetry") {
+		strings.Contains(labelFilter, "telemetry") ||
+		strings.Contains(labelFilter, "graceful-recovery") {
+
 		cfg.deploy = false
 	}
 
