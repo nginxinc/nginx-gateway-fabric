@@ -109,8 +109,10 @@ var _ = Describe("LeaderAwareGroupUpdater", func() {
 				testNoStatuses(allGCNames)
 			})
 
-			It("should clear saved requests of group2", func() {
-				updater.UpdateGroup(context.Background(), group2)
+			When("passing no update requests", func() {
+				It("should clear saved requests of group2", func() {
+					updater.UpdateGroup(context.Background(), group2)
+				})
 			})
 		})
 
@@ -122,9 +124,11 @@ var _ = Describe("LeaderAwareGroupUpdater", func() {
 				testNoStatuses(group2GCNames)
 			})
 
-			It("should not update statuses of group1", func() {
-				updater.UpdateGroup(context.Background(), group1)
-				testStatuses(group1GCNames, "TestAllSaveForLater")
+			When("passing no update requests", func() {
+				It("should not update statuses of group1", func() {
+					updater.UpdateGroup(context.Background(), group1)
+					testStatuses(group1GCNames, "TestAllSaveForLater")
+				})
 			})
 
 			It("should update statuses of all groups", func() {
