@@ -1,0 +1,128 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.14.0
+  name: nginxproxies.gateway.nginx.org
+spec:
+  group: gateway.nginx.org
+  names:
+    categories:
+    - nginx-gateway-fabric
+    kind: NginxProxy
+    listKind: NginxProxyList
+    plural: nginxproxies
+    singular: nginxproxy
+  scope: Cluster
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: |-
+          NginxProxy is a configuration object that is attached to a GatewayClass parametersRef. It provides a way
+          to configure global settings for all Gateways defined from the GatewayClass.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: Spec defines the desired state of the NginxProxy.
+            properties:
+              telemetry:
+                description: Telemetry specifies the OpenTelemetry configuration.
+                properties:
+                  exporter:
+                    description: Exporter specifies OpenTelemetry export parameters.
+                    properties:
+                      batchCount:
+                        description: |-
+                          BatchCount is the number of pending batches per worker, spans exceeding the limit are dropped.
+                          Default: https://nginx.org/en/docs/ngx_otel_module.html#otel_exporter
+                        format: int32
+                        minimum: 0
+                        type: integer
+                      batchSize:
+                        description: |-
+                          BatchSize is the maximum number of spans to be sent in one batch per worker.
+                          Default: https://nginx.org/en/docs/ngx_otel_module.html#otel_exporter
+                        format: int32
+                        minimum: 0
+                        type: integer
+                      endpoint:
+                        description: |-
+                          Endpoint is the address of OTLP/gRPC endpoint that will accept telemetry data.
+                          Format: alphanumeric hostname with optional http scheme and optional port.
+                        pattern: ^(?:http?:\/\/)?[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)*(?::\d{1,5})?$
+                        type: string
+                      interval:
+                        description: |-
+                          Interval is the maximum interval between two exports.
+                          Default: https://nginx.org/en/docs/ngx_otel_module.html#otel_exporter
+                        pattern: ^\d{1,4}(ms|s)?$
+                        type: string
+                    required:
+                    - endpoint
+                    type: object
+                  serviceName:
+                    description: |-
+                      ServiceName is the "service.name" attribute of the OpenTelemetry resource.
+                      Default is 'ngf:<gateway-namespace>:<gateway-name>'. If a value is provided by the user,
+                      then the default becomes a prefix to that value.
+                    maxLength: 127
+                    pattern: ^[a-zA-Z0-9_-]+$
+                    type: string
+                  spanAttributes:
+                    description: SpanAttributes are custom key/value attributes that
+                      are added to each span.
+                    items:
+                      description: SpanAttribute is a key value pair to be added to
+                        a tracing span.
+                      properties:
+                        key:
+                          description: Key is the key for a span attribute.
+                          maxLength: 255
+                          minLength: 1
+                          pattern: ^[a-zA-Z0-9_-]+$
+                          type: string
+                        value:
+                          description: Value is the value for a span attribute.
+                          maxLength: 255
+                          minLength: 1
+                          pattern: ^[a-zA-Z0-9_-]+$
+                          type: string
+                      required:
+                      - key
+                      - value
+                      type: object
+                    maxItems: 64
+                    type: array
+                    x-kubernetes-list-map-keys:
+                    - key
+                    x-kubernetes-list-type: map
+                type: object
+            type: object
+        required:
+        - spec
+        type: object
+    served: true
+    storage: true
+    subresources: {}
