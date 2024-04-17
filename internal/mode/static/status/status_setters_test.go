@@ -6,6 +6,7 @@ import (
 	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
+	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
@@ -290,6 +291,181 @@ func TestNewHTTPRouteStatusSetter(t *testing.T) {
 
 			setter := newHTTPRouteStatusSetter(test.newStatus, controllerName)
 			obj := &gatewayv1.HTTPRoute{Status: test.status}
+
+			statusSet := setter(obj)
+
+			g.Expect(statusSet).To(Equal(test.expStatusSet))
+			g.Expect(obj.Status).To(Equal(test.expStatus))
+		})
+	}
+}
+
+func TestNewGRPCRouteStatusSetter(t *testing.T) {
+	const (
+		controllerName      = "controller"
+		otherControllerName = "different"
+	)
+
+	tests := []struct {
+		name                         string
+		status, newStatus, expStatus v1alpha2.GRPCRouteStatus
+		expStatusSet                 bool
+	}{
+		{
+			name: "GRPCRoute has no status",
+			newStatus: v1alpha2.GRPCRouteStatus{
+				RouteStatus: gatewayv1.RouteStatus{
+					Parents: []gatewayv1.RouteParentStatus{
+						{
+							ParentRef:      gatewayv1.ParentReference{},
+							ControllerName: gatewayv1.GatewayController(controllerName),
+							Conditions:     []metav1.Condition{{Message: "new condition"}},
+						},
+					},
+				},
+			},
+			expStatus: v1alpha2.GRPCRouteStatus{
+				RouteStatus: gatewayv1.RouteStatus{
+					Parents: []gatewayv1.RouteParentStatus{
+						{
+							ParentRef:      gatewayv1.ParentReference{},
+							ControllerName: gatewayv1.GatewayController(controllerName),
+							Conditions:     []metav1.Condition{{Message: "new condition"}},
+						},
+					},
+				},
+			},
+			expStatusSet: true,
+		},
+		{
+			name: "GRPCRoute has old status",
+			newStatus: v1alpha2.GRPCRouteStatus{
+				RouteStatus: gatewayv1.RouteStatus{
+					Parents: []gatewayv1.RouteParentStatus{
+						{
+							ParentRef:      gatewayv1.ParentReference{},
+							ControllerName: gatewayv1.GatewayController(controllerName),
+							Conditions:     []metav1.Condition{{Message: "new condition"}},
+						},
+					},
+				},
+			},
+			status: v1alpha2.GRPCRouteStatus{
+				RouteStatus: gatewayv1.RouteStatus{
+					Parents: []gatewayv1.RouteParentStatus{
+						{
+							ParentRef:      gatewayv1.ParentReference{},
+							ControllerName: gatewayv1.GatewayController(controllerName),
+							Conditions:     []metav1.Condition{{Message: "old condition"}},
+						},
+					},
+				},
+			},
+			expStatus: v1alpha2.GRPCRouteStatus{
+				RouteStatus: gatewayv1.RouteStatus{
+					Parents: []gatewayv1.RouteParentStatus{
+						{
+							ParentRef:      gatewayv1.ParentReference{},
+							ControllerName: gatewayv1.GatewayController(controllerName),
+							Conditions:     []metav1.Condition{{Message: "new condition"}},
+						},
+					},
+				},
+			},
+			expStatusSet: true,
+		},
+		{
+			name: "GRPCRoute has old status, keep other controller statuses",
+			newStatus: v1alpha2.GRPCRouteStatus{
+				RouteStatus: gatewayv1.RouteStatus{
+					Parents: []gatewayv1.RouteParentStatus{
+						{
+							ParentRef:      gatewayv1.ParentReference{},
+							ControllerName: gatewayv1.GatewayController(controllerName),
+							Conditions:     []metav1.Condition{{Message: "new condition"}},
+						},
+					},
+				},
+			},
+			status: v1alpha2.GRPCRouteStatus{
+				RouteStatus: gatewayv1.RouteStatus{
+					Parents: []gatewayv1.RouteParentStatus{
+						{
+							ParentRef:      gatewayv1.ParentReference{},
+							ControllerName: gatewayv1.GatewayController(otherControllerName),
+							Conditions:     []metav1.Condition{{Message: "some condition"}},
+						},
+						{
+							ParentRef:      gatewayv1.ParentReference{},
+							ControllerName: gatewayv1.GatewayController(controllerName),
+							Conditions:     []metav1.Condition{{Message: "old condition"}},
+						},
+					},
+				},
+			},
+			expStatus: v1alpha2.GRPCRouteStatus{
+				RouteStatus: gatewayv1.RouteStatus{
+					Parents: []gatewayv1.RouteParentStatus{
+						{
+							ParentRef:      gatewayv1.ParentReference{},
+							ControllerName: gatewayv1.GatewayController(controllerName),
+							Conditions:     []metav1.Condition{{Message: "new condition"}},
+						},
+						{
+							ParentRef:      gatewayv1.ParentReference{},
+							ControllerName: gatewayv1.GatewayController(otherControllerName),
+							Conditions:     []metav1.Condition{{Message: "some condition"}},
+						},
+					},
+				},
+			},
+			expStatusSet: true,
+		},
+		{
+			name: "GRPCRoute has same status",
+			newStatus: v1alpha2.GRPCRouteStatus{
+				RouteStatus: gatewayv1.RouteStatus{
+					Parents: []gatewayv1.RouteParentStatus{
+						{
+							ParentRef:      gatewayv1.ParentReference{},
+							ControllerName: gatewayv1.GatewayController(controllerName),
+							Conditions:     []metav1.Condition{{Message: "same condition"}},
+						},
+					},
+				},
+			},
+			status: v1alpha2.GRPCRouteStatus{
+				RouteStatus: gatewayv1.RouteStatus{
+					Parents: []gatewayv1.RouteParentStatus{
+						{
+							ParentRef:      gatewayv1.ParentReference{},
+							ControllerName: gatewayv1.GatewayController(controllerName),
+							Conditions:     []metav1.Condition{{Message: "same condition"}},
+						},
+					},
+				},
+			},
+			expStatus: v1alpha2.GRPCRouteStatus{
+				RouteStatus: gatewayv1.RouteStatus{
+					Parents: []gatewayv1.RouteParentStatus{
+						{
+							ParentRef:      gatewayv1.ParentReference{},
+							ControllerName: gatewayv1.GatewayController(controllerName),
+							Conditions:     []metav1.Condition{{Message: "same condition"}},
+						},
+					},
+				},
+			},
+			expStatusSet: false,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			g := NewWithT(t)
+
+			setter := newGRPCRouteStatusSetter(test.newStatus, controllerName)
+			obj := &v1alpha2.GRPCRoute{Status: test.status}
 
 			statusSet := setter(obj)
 
@@ -818,7 +994,7 @@ func TestHRStatusEqual(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewWithT(t)
-			equal := hrStatusEqual("ours", test.prevStatus, test.curStatus)
+			equal := routeStatusEqual("ours", test.prevStatus.Parents, test.curStatus.Parents)
 			g.Expect(equal).To(Equal(test.expEqual))
 		})
 	}

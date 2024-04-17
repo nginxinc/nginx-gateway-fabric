@@ -23,9 +23,9 @@ type NginxReloadResult struct {
 	Error error
 }
 
-// PrepareRouteRequests prepares status UpdateRequests for the given Routes.
-func PrepareRouteRequests(
-	routes map[types.NamespacedName]*graph.Route,
+// PrepareHTTPRouteRequests prepares status UpdateRequests for the given Routes.
+func PrepareHTTPRouteRequests(
+	routes map[types.NamespacedName]*graph.HTTPRoute,
 	transitionTime metav1.Time,
 	nginxReloadRes NginxReloadResult,
 	gatewayCtlrName string,
@@ -33,54 +33,17 @@ func PrepareRouteRequests(
 	reqs := make([]frameworkStatus.UpdateRequest, 0, len(routes))
 
 	for nsname, r := range routes {
-		parents := make([]v1.RouteParentStatus, 0, len(r.ParentRefs))
-
-		defaultConds := staticConds.NewDefaultRouteConditions()
-
-		for _, ref := range r.ParentRefs {
-			failedAttachmentCondCount := 0
-			if ref.Attachment != nil && !ref.Attachment.Attached {
-				failedAttachmentCondCount = 1
-			}
-			allConds := make([]conditions.Condition, 0, len(r.Conditions)+len(defaultConds)+failedAttachmentCondCount)
-
-			// We add defaultConds first, so that any additional conditions will override them, which is
-			// ensured by DeduplicateConditions.
-			allConds = append(allConds, defaultConds...)
-			allConds = append(allConds, r.Conditions...)
-			if failedAttachmentCondCount == 1 {
-				allConds = append(allConds, ref.Attachment.FailedCondition)
-			}
-
-			if nginxReloadRes.Error != nil {
-				allConds = append(
-					allConds,
-					staticConds.NewRouteGatewayNotProgrammed(staticConds.RouteMessageFailedNginxReload),
-				)
-			}
-
-			routeRef := r.Source.Spec.ParentRefs[ref.Idx]
-
-			conds := conditions.DeduplicateConditions(allConds)
-			apiConds := conditions.ConvertConditions(conds, r.Source.Generation, transitionTime)
-
-			ps := v1.RouteParentStatus{
-				ParentRef: v1.ParentReference{
-					Namespace:   helpers.GetPointer(v1.Namespace(ref.Gateway.Namespace)),
-					Name:        v1.ObjectName(ref.Gateway.Name),
-					SectionName: routeRef.SectionName,
-				},
-				ControllerName: v1.GatewayController(gatewayCtlrName),
-				Conditions:     apiConds,
-			}
-
-			parents = append(parents, ps)
-		}
 
 		status := v1.HTTPRouteStatus{
-			RouteStatus: v1.RouteStatus{
-				Parents: parents,
-			},
+			RouteStatus: prepareRouteStatus(
+				gatewayCtlrName,
+				r.ParentRefs,
+				r.Source.Spec.ParentRefs,
+				r.Conditions,
+				nginxReloadRes,
+				transitionTime,
+				r.Source.Generation,
+			),
 		}
 
 		req := frameworkStatus.UpdateRequest{
@@ -93,6 +56,97 @@ func PrepareRouteRequests(
 	}
 
 	return reqs
+}
+
+// PrepareGRPCRouteRequests prepares status UpdateRequests for the given Routes.
+func PrepareGRPCRouteRequests(
+	routes map[types.NamespacedName]*graph.GRPCRoute,
+	transitionTime metav1.Time,
+	nginxReloadRes NginxReloadResult,
+	gatewayCtlrName string,
+) []frameworkStatus.UpdateRequest {
+	reqs := make([]frameworkStatus.UpdateRequest, 0, len(routes))
+
+	for nsname, r := range routes {
+
+		status := v1alpha2.GRPCRouteStatus{
+			RouteStatus: prepareRouteStatus(
+				gatewayCtlrName,
+				r.ParentRefs,
+				r.Source.Spec.ParentRefs,
+				r.Conditions,
+				nginxReloadRes,
+				transitionTime,
+				r.Source.Generation,
+			),
+		}
+
+		req := frameworkStatus.UpdateRequest{
+			NsName:       nsname,
+			ResourceType: &v1alpha2.GRPCRoute{},
+			Setter:       newGRPCRouteStatusSetter(status, gatewayCtlrName),
+		}
+
+		reqs = append(reqs, req)
+	}
+
+	return reqs
+}
+
+func prepareRouteStatus(
+	gatewayCtlrName string,
+	parentRefs []graph.ParentRef,
+	srcParentRefs []v1.ParentReference,
+	conds []conditions.Condition,
+	nginxReloadRes NginxReloadResult,
+	transitionTime metav1.Time,
+	srcGeneration int64,
+) v1.RouteStatus {
+	parents := make([]v1.RouteParentStatus, 0, len(parentRefs))
+
+	defaultConds := staticConds.NewDefaultRouteConditions()
+
+	for _, ref := range parentRefs {
+		failedAttachmentCondCount := 0
+		if ref.Attachment != nil && !ref.Attachment.Attached {
+			failedAttachmentCondCount = 1
+		}
+		allConds := make([]conditions.Condition, 0, len(conds)+len(defaultConds)+failedAttachmentCondCount)
+
+		// We add defaultConds first, so that any additional conditions will override them, which is
+		// ensured by DeduplicateConditions.
+		allConds = append(allConds, defaultConds...)
+		allConds = append(allConds, conds...)
+		if failedAttachmentCondCount == 1 {
+			allConds = append(allConds, ref.Attachment.FailedCondition)
+		}
+
+		if nginxReloadRes.Error != nil {
+			allConds = append(
+				allConds,
+				staticConds.NewRouteGatewayNotProgrammed(staticConds.RouteMessageFailedNginxReload),
+			)
+		}
+
+		routeRef := srcParentRefs[ref.Idx]
+
+		conds := conditions.DeduplicateConditions(allConds)
+		apiConds := conditions.ConvertConditions(conds, srcGeneration, transitionTime)
+
+		ps := v1.RouteParentStatus{
+			ParentRef: v1.ParentReference{
+				Namespace:   helpers.GetPointer(v1.Namespace(ref.Gateway.Namespace)),
+				Name:        v1.ObjectName(ref.Gateway.Name),
+				SectionName: routeRef.SectionName,
+			},
+			ControllerName: v1.GatewayController(gatewayCtlrName),
+			Conditions:     apiConds,
+		}
+
+		parents = append(parents, ps)
+	}
+
+	return v1.RouteStatus{Parents: parents}
 }
 
 // PrepareGatewayClassRequests prepares status UpdateRequests for the given GatewayClasses.
@@ -226,7 +280,7 @@ func prepareGatewayRequest(
 		listenerStatuses = append(listenerStatuses, v1.ListenerStatus{
 			Name:           v1.SectionName(l.Name),
 			SupportedKinds: l.SupportedKinds,
-			AttachedRoutes: int32(len(l.Routes)),
+			AttachedRoutes: int32(len(l.HTTPRoutes) + len(l.GRPCRoutes)),
 			Conditions:     apiConds,
 		})
 	}

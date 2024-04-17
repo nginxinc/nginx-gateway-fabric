@@ -99,6 +99,7 @@ func TestPrepareFirstEventBatchPreparerArgs(t *testing.T) {
 				&ngfAPI.NginxProxyList{},
 				partialObjectMetadataList,
 				&gatewayv1alpha2.BackendTLSPolicyList{},
+				&gatewayv1alpha2.GRPCRouteList{},
 			},
 			experimentalEnabled: true,
 		},

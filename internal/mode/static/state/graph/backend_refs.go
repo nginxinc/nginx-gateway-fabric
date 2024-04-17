@@ -8,7 +8,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
-	v1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
@@ -40,21 +40,26 @@ func (b BackendRef) ServicePortReference() string {
 }
 
 func addBackendRefsToRouteRules(
-	routes map[types.NamespacedName]*Route,
+	httpRoutes map[types.NamespacedName]*HTTPRoute,
+	grpcRoutes map[types.NamespacedName]*GRPCRoute,
 	refGrantResolver *referenceGrantResolver,
 	services map[types.NamespacedName]*v1.Service,
 	backendTLSPolicies map[types.NamespacedName]*BackendTLSPolicy,
 ) {
-	for _, r := range routes {
-		addBackendRefsToRules(r, refGrantResolver, services, backendTLSPolicies)
+	for _, r := range httpRoutes {
+		addHTTPBackendRefsToRules(r, refGrantResolver, services, backendTLSPolicies)
+	}
+
+	for _, r := range grpcRoutes {
+		addGRPCBackendRefsToRules(r, refGrantResolver, services, backendTLSPolicies)
 	}
 }
 
-// addBackendRefsToRules iterates over the rules of a route and adds a list of BackendRef to each rule.
+// addHTTPBackendRefsToRules iterates over the rules of an HTTPRoute and adds a list of BackendRef to each rule.
 // The route is modified in place.
 // If a reference in a rule is invalid, the function will add a condition to the rule.
-func addBackendRefsToRules(
-	route *Route,
+func addHTTPBackendRefsToRules(
+	route *HTTPRoute,
 	refGrantResolver *referenceGrantResolver,
 	services map[types.NamespacedName]*v1.Service,
 	backendTLSPolicies map[types.NamespacedName]*BackendTLSPolicy,
@@ -81,7 +86,7 @@ func addBackendRefsToRules(
 		for refIdx, ref := range rule.BackendRefs {
 			refPath := field.NewPath("spec").Child("rules").Index(idx).Child("backendRefs").Index(refIdx)
 
-			ref, cond := createBackendRef(
+			ref, cond := createHTTPBackendRef(
 				ref,
 				route.Source.Namespace,
 				refGrantResolver,
@@ -106,12 +111,69 @@ func addBackendRefsToRules(
 				}
 			}
 		}
-
 		route.Rules[idx].BackendRefs = backendRefs
 	}
 }
 
-func createBackendRef(
+// addGRPCBackendRefsToRules iterates over the rules of a GRPCRoute and adds a list of BackendRef to each rule.
+// The route is modified in place.
+// If a reference in a rule is invalid, the function will add a condition to the rule.
+func addGRPCBackendRefsToRules(
+	route *GRPCRoute,
+	refGrantResolver *referenceGrantResolver,
+	services map[types.NamespacedName]*v1.Service,
+	backendTLSPolicies map[types.NamespacedName]*BackendTLSPolicy,
+) {
+	if !route.Valid {
+		return
+	}
+	for idx, rule := range route.Source.Spec.Rules {
+		if !route.Rules[idx].ValidMatches {
+			continue
+		}
+		if !route.Rules[idx].ValidFilters {
+			continue
+		}
+
+		if len(rule.BackendRefs) == 0 {
+			continue
+		}
+
+		backendRefs := make([]BackendRef, 0, len(rule.BackendRefs))
+
+		for refIdx, ref := range rule.BackendRefs {
+			refPath := field.NewPath("spec").Child("rules").Index(idx).Child("backendRefs").Index(refIdx)
+
+			ref, cond := createGRPCBackendRef(
+				ref,
+				route.Source.Namespace,
+				refGrantResolver,
+				services,
+				refPath,
+				backendTLSPolicies,
+			)
+
+			backendRefs = append(backendRefs, ref)
+			if cond != nil {
+				route.Conditions = append(route.Conditions, *cond)
+			}
+		}
+
+		if len(backendRefs) > 1 {
+			cond := validateBackendTLSPolicyMatchingAllBackends(backendRefs)
+			if cond != nil {
+				route.Conditions = append(route.Conditions, *cond)
+				// mark all backendRefs as invalid
+				for i := range backendRefs {
+					backendRefs[i].Valid = false
+				}
+			}
+		}
+		route.Rules[idx].BackendRefs = backendRefs
+	}
+}
+
+func createHTTPBackendRef(
 	ref gatewayv1.HTTPBackendRef,
 	sourceNamespace string,
 	refGrantResolver *referenceGrantResolver,
@@ -144,7 +206,75 @@ func createBackendRef(
 		return backendRef, &cond
 	}
 
-	svcNsName, svcPort, err := getServiceAndPortFromRef(ref.BackendRef, sourceNamespace, services, refPath)
+	return createBackendRef(
+		ref.BackendRef,
+		sourceNamespace,
+		string(ref.Name),
+		ref.Namespace,
+		services,
+		refPath,
+		weight,
+		backendTLSPolicies,
+	)
+}
+
+func createGRPCBackendRef(
+	ref v1alpha2.GRPCBackendRef,
+	sourceNamespace string,
+	refGrantResolver *referenceGrantResolver,
+	services map[types.NamespacedName]*v1.Service,
+	refPath *field.Path,
+	backendTLSPolicies map[types.NamespacedName]*BackendTLSPolicy,
+) (BackendRef, *conditions.Condition) {
+	// Data plane will handle invalid ref by responding with 500.
+	// Because of that, we always need to add a BackendRef to group.Backends, even if the ref is invalid.
+	// Additionally, we always calculate the weight, even if it is invalid.
+	weight := int32(1)
+	if ref.Weight != nil {
+		if validateWeight(*ref.Weight) != nil {
+			// We don't need to add a condition because validateGRPCBackendRef will do that.
+			weight = 0 // 0 will get no traffic
+		} else {
+			weight = *ref.Weight
+		}
+	}
+
+	var backendRef BackendRef
+
+	valid, cond := validateGRPCBackendRef(ref, sourceNamespace, refGrantResolver, refPath)
+	if !valid {
+		backendRef = BackendRef{
+			Weight: weight,
+			Valid:  false,
+		}
+
+		return backendRef, &cond
+	}
+
+	return createBackendRef(
+		ref.BackendRef,
+		sourceNamespace,
+		string(ref.Name),
+		ref.Namespace,
+		services,
+		refPath,
+		weight,
+		backendTLSPolicies,
+	)
+}
+
+func createBackendRef(
+	refBackendRef gatewayv1.BackendRef,
+	sourceNs, refName string,
+	refNamespace *gatewayv1.Namespace,
+	services map[types.NamespacedName]*v1.Service,
+	refPath *field.Path,
+	weight int32,
+	backendTLSPolicies map[types.NamespacedName]*BackendTLSPolicy,
+) (BackendRef, *conditions.Condition) {
+	var backendRef BackendRef
+
+	svcNsName, svcPort, err := getServiceAndPortFromRef(refBackendRef, sourceNs, services, refPath)
 	if err != nil {
 		backendRef = BackendRef{
 			SvcNsName:   svcNsName,
@@ -159,8 +289,9 @@ func createBackendRef(
 
 	backendTLSPolicy, err := findBackendTLSPolicyForService(
 		backendTLSPolicies,
-		ref,
-		sourceNamespace,
+		refName,
+		refNamespace,
+		sourceNs,
 	)
 	if err != nil {
 		backendRef = BackendRef{
@@ -231,15 +362,14 @@ func validateBackendTLSPolicyMatchingAllBackends(backendRefs []BackendRef) *cond
 
 func findBackendTLSPolicyForService(
 	backendTLSPolicies map[types.NamespacedName]*BackendTLSPolicy,
-	ref gatewayv1.HTTPBackendRef,
-	routeNamespace string,
+	refName string, refNamespace *gatewayv1.Namespace, routeNamespace string,
 ) (*BackendTLSPolicy, error) {
 	var beTLSPolicy *BackendTLSPolicy
 	var err error
 
 	refNs := routeNamespace
-	if ref.Namespace != nil {
-		refNs = string(*ref.Namespace)
+	if refNamespace != nil {
+		refNs = string(*refNamespace)
 	}
 
 	for _, btp := range backendTLSPolicies {
@@ -247,7 +377,7 @@ func findBackendTLSPolicyForService(
 		if btp.Source.Spec.TargetRef.Namespace != nil {
 			btpNs = string(*btp.Source.Spec.TargetRef.Namespace)
 		}
-		if btp.Source.Spec.TargetRef.Name == ref.Name && btpNs == refNs {
+		if string(btp.Source.Spec.TargetRef.Name) == refName && btpNs == refNs {
 			if beTLSPolicy != nil {
 				if sort.LessObjectMeta(&btp.Source.ObjectMeta, &beTLSPolicy.Source.ObjectMeta) {
 					beTLSPolicy = btp
@@ -261,7 +391,7 @@ func findBackendTLSPolicyForService(
 	if beTLSPolicy != nil {
 		beTLSPolicy.IsReferenced = true
 		if !beTLSPolicy.Valid {
-			err = fmt.Errorf("The backend TLS policy is invalid: %s", beTLSPolicy.Conditions[0].Message)
+			err = fmt.Errorf("the backend TLS policy is invalid: %s", beTLSPolicy.Conditions[0].Message)
 		} else {
 			beTLSPolicy.Conditions = append(beTLSPolicy.Conditions, staticConds.NewBackendTLSPolicyAccepted())
 		}
@@ -303,6 +433,22 @@ func getServiceAndPortFromRef(
 
 func validateHTTPBackendRef(
 	ref gatewayv1.HTTPBackendRef,
+	routeNs string,
+	refGrantResolver *referenceGrantResolver,
+	path *field.Path,
+) (valid bool, cond conditions.Condition) {
+	// Because all errors cause the same condition but different reasons, we return as soon as we find an error
+
+	if len(ref.Filters) > 0 {
+		valErr := field.TooMany(path.Child("filters"), len(ref.Filters), 0)
+		return false, staticConds.NewRouteBackendRefUnsupportedValue(valErr.Error())
+	}
+
+	return validateBackendRef(ref.BackendRef, routeNs, refGrantResolver, path)
+}
+
+func validateGRPCBackendRef(
+	ref v1alpha2.GRPCBackendRef,
 	routeNs string,
 	refGrantResolver *referenceGrantResolver,
 	path *field.Path,

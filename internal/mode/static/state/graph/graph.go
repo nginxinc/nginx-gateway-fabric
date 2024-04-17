@@ -28,6 +28,7 @@ type ClusterState struct {
 	BackendTLSPolicies map[types.NamespacedName]*v1alpha2.BackendTLSPolicy
 	ConfigMaps         map[types.NamespacedName]*v1.ConfigMap
 	NginxProxies       map[types.NamespacedName]*ngfAPI.NginxProxy
+	GRPCRoutes         map[types.NamespacedName]*v1alpha2.GRPCRoute
 }
 
 // Graph is a Graph-like representation of Gateway API resources.
@@ -44,8 +45,10 @@ type Graph struct {
 	// GatewayClassName field of the resource) but ignored. It doesn't hold the Gateway resources that do not belong to
 	// the NGINX Gateway Fabric.
 	IgnoredGateways map[types.NamespacedName]*gatewayv1.Gateway
-	// Routes holds Route resources.
-	Routes map[types.NamespacedName]*Route
+	// HTTPRoutes holds Route resources.
+	HTTPRoutes map[types.NamespacedName]*HTTPRoute
+	// GRPCRoutes holds Route resources.
+	GRPCRoutes map[types.NamespacedName]*GRPCRoute
 	// ReferencedSecrets includes Secrets referenced by Gateway Listeners, including invalid ones.
 	// It is different from the other maps, because it includes entries for Secrets that do not exist
 	// in the cluster. We need such entries so that we can query the Graph to determine if a Secret is referenced
@@ -143,18 +146,20 @@ func BuildGraph(
 		gw,
 	)
 
-	routes := buildRoutesForGateways(validators.HTTPFieldsValidator, state.HTTPRoutes, processedGws.GetAllNsNames())
-	bindRoutesToListeners(routes, gw, state.Namespaces)
-	addBackendRefsToRouteRules(routes, refGrantResolver, state.Services, processedBackendTLSPolicies)
+	hrs := buildHTTPRoutesForGateways(validators.HTTPFieldsValidator, state.HTTPRoutes, processedGws.GetAllNsNames())
+	grs := buildGRPCRoutesForGateways(validators.HTTPFieldsValidator, state.GRPCRoutes, processedGws.GetAllNsNames())
+	bindRoutesToListeners(hrs, grs, gw, state.Namespaces)
+	addBackendRefsToRouteRules(hrs, grs, refGrantResolver, state.Services, processedBackendTLSPolicies)
 
 	referencedNamespaces := buildReferencedNamespaces(state.Namespaces, gw)
 
-	referencedServices := buildReferencedServices(routes)
+	referencedServices := buildReferencedServices(hrs, grs)
 
 	g := &Graph{
 		GatewayClass:               gc,
 		Gateway:                    gw,
-		Routes:                     routes,
+		HTTPRoutes:                 hrs,
+		GRPCRoutes:                 grs,
 		IgnoredGatewayClasses:      processedGwClasses.Ignored,
 		IgnoredGateways:            processedGws.Ignored,
 		ReferencedSecrets:          secretResolver.getResolvedSecrets(),

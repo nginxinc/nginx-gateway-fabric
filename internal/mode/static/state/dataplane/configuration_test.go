@@ -21,6 +21,61 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/resolver/resolverfakes"
 )
 
+func createGRPCRoute(
+	name, hostname, listenerName string,
+	methodSvc []string,
+	headers []v1alpha2.GRPCHeaderMatch,
+) *v1alpha2.GRPCRoute {
+	rulesLen := len(methodSvc)
+	if len(headers) != 0 {
+		rulesLen = rulesLen + 1
+	}
+	rules := make([]v1alpha2.GRPCRouteRule, 0, rulesLen)
+	for _, m := range methodSvc {
+		mm := v1alpha2.GRPCMethodMatch{
+			Method:  helpers.GetPointer("method"),
+			Service: helpers.GetPointer(m),
+		}
+		rules = append(rules, v1alpha2.GRPCRouteRule{
+			Matches: []v1alpha2.GRPCRouteMatch{
+				{
+					Method: helpers.GetPointer(mm),
+				},
+			},
+		})
+	}
+	if len(headers) > 0 {
+		rules = append(rules, v1alpha2.GRPCRouteRule{
+			Matches: []v1alpha2.GRPCRouteMatch{
+				{
+					Headers: headers,
+				},
+			},
+		})
+	}
+	return &v1alpha2.GRPCRoute{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "test",
+			Name:      name,
+		},
+		Spec: v1alpha2.GRPCRouteSpec{
+			CommonRouteSpec: v1.CommonRouteSpec{
+				ParentRefs: []v1.ParentReference{
+					{
+						Namespace:   (*v1.Namespace)(helpers.GetPointer("test")),
+						Name:        "gateway",
+						SectionName: (*v1.SectionName)(helpers.GetPointer(listenerName)),
+					},
+				},
+			},
+			Hostnames: []v1.Hostname{
+				v1.Hostname(hostname),
+			},
+			Rules: rules,
+		},
+	}
+}
+
 func TestBuildConfiguration(t *testing.T) {
 	const (
 		invalidMatchesPath = "/not-valid-matches"
@@ -108,8 +163,8 @@ func TestBuildConfiguration(t *testing.T) {
 		return []graph.BackendRef{validBackendRef}
 	}
 
-	createRules := func(hr *v1.HTTPRoute, paths []pathAndType) []graph.Rule {
-		rules := make([]graph.Rule, len(hr.Spec.Rules))
+	createRules := func(rulesLen int, paths []pathAndType) []graph.Rule {
+		rules := make([]graph.Rule, rulesLen)
 
 		for i := range paths {
 			validMatches := paths[i].path != invalidMatchesPath
@@ -130,14 +185,14 @@ func TestBuildConfiguration(t *testing.T) {
 		source *v1.HTTPRoute,
 		listenerName string,
 		paths []pathAndType,
-	) *graph.Route {
+	) *graph.HTTPRoute {
 		hostnames := make([]string, 0, len(source.Spec.Hostnames))
 		for _, h := range source.Spec.Hostnames {
 			hostnames = append(hostnames, string(h))
 		}
-		r := &graph.Route{
+		r := &graph.HTTPRoute{
 			Source: source,
-			Rules:  createRules(source, paths),
+			Rules:  createRules(len(source.Spec.Rules), paths),
 			Valid:  true,
 			ParentRefs: []graph.ParentRef{
 				{
@@ -152,7 +207,26 @@ func TestBuildConfiguration(t *testing.T) {
 		return r
 	}
 
-	createExpBackendGroupsForRoute := func(route *graph.Route) []BackendGroup {
+	createExpBackendGroupsForRoute := func(route *graph.HTTPRoute) []BackendGroup {
+		groups := make([]BackendGroup, 0)
+
+		for idx, r := range route.Rules {
+			var backends []Backend
+			if r.ValidFilters && r.ValidMatches {
+				backends = []Backend{expValidBackend}
+			}
+
+			groups = append(groups, BackendGroup{
+				Backends: backends,
+				Source:   client.ObjectKeyFromObject(route.Source),
+				RuleIdx:  idx,
+			})
+		}
+
+		return groups
+	}
+
+	createExpBackendGroupsForGRPCRoute := func(route *graph.GRPCRoute) []BackendGroup {
 		groups := make([]BackendGroup, 0)
 
 		for idx, r := range route.Rules {
@@ -172,12 +246,92 @@ func TestBuildConfiguration(t *testing.T) {
 	}
 
 	createTestResources := func(name, hostname, listenerName string, paths ...pathAndType) (
-		*v1.HTTPRoute, []BackendGroup, *graph.Route,
+		*v1.HTTPRoute, []BackendGroup, *graph.HTTPRoute,
 	) {
 		hr := createRoute(name, hostname, listenerName, paths...)
 		route := createInternalRoute(hr, listenerName, paths)
 		groups := createExpBackendGroupsForRoute(route)
 		return hr, groups, route
+	}
+
+	gr1 := createGRPCRoute(
+		"gr-1",
+		"foo.example.com",
+		"listener-80-1",
+		[]string{"myService"},
+		[]v1alpha2.GRPCHeaderMatch{{Name: "headerName", Value: "headerValue"}},
+	)
+	routeGR1 := &graph.GRPCRoute{
+		Source: gr1,
+		Rules: createRules(
+			len(gr1.Spec.Rules),
+			[]pathAndType{{path: "/myService/method", pathType: v1.PathMatchExact}},
+		),
+		Valid: true,
+		ParentRefs: []graph.ParentRef{
+			{
+				Attachment: &graph.ParentRefAttachmentStatus{
+					AcceptedHostnames: map[string][]string{
+						"listener-80-1": {"foo.example.com"},
+					},
+				},
+			},
+		},
+	}
+
+	expGR1Groups := createExpBackendGroupsForGRPCRoute(routeGR1)
+
+	routeInvalidGR1 := &graph.GRPCRoute{Valid: false}
+
+	gr2noMatches := &v1alpha2.GRPCRoute{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "test",
+			Name:      "gr2",
+		},
+		Spec: v1alpha2.GRPCRouteSpec{
+			CommonRouteSpec: v1.CommonRouteSpec{
+				ParentRefs: []v1.ParentReference{
+					{
+						Namespace:   (*v1.Namespace)(helpers.GetPointer("test")),
+						Name:        "gateway",
+						SectionName: (*v1.SectionName)(helpers.GetPointer("listener-80-1")),
+					},
+				},
+			},
+			Hostnames: []v1.Hostname{
+				v1.Hostname("bar.example.com"),
+			},
+			Rules: []v1alpha2.GRPCRouteRule{
+				{BackendRefs: []v1alpha2.GRPCBackendRef{}},
+			},
+		},
+	}
+
+	routeNoMatchesGR2 := &graph.GRPCRoute{
+		Source: gr2noMatches,
+		Rules: []graph.Rule{
+			{
+				BackendRefs:  []graph.BackendRef{},
+				ValidMatches: true,
+				ValidFilters: true,
+			},
+		},
+		Valid: true,
+		ParentRefs: []graph.ParentRef{
+			{
+				Attachment: &graph.ParentRefAttachmentStatus{
+					AcceptedHostnames: map[string][]string{
+						"listener-80-1": {"bar.example.com"},
+					},
+				},
+			},
+		},
+	}
+
+	nilBackend := BackendGroup{
+		Source:   types.NamespacedName{Namespace: "test", Name: "gr2"},
+		Backends: nil,
+		RuleIdx:  0,
 	}
 
 	prefix := v1.PathMatchPathPrefix
@@ -569,7 +723,7 @@ func TestBuildConfiguration(t *testing.T) {
 					Source:    &v1.Gateway{},
 					Listeners: []*graph.Listener{},
 				},
-				Routes: map[types.NamespacedName]*graph.Route{},
+				HTTPRoutes: map[types.NamespacedName]*graph.HTTPRoute{},
 			},
 			expConf: Configuration{
 				HTTPServers: []VirtualServer{},
@@ -589,14 +743,14 @@ func TestBuildConfiguration(t *testing.T) {
 					Source: &v1.Gateway{},
 					Listeners: []*graph.Listener{
 						{
-							Name:   "listener-80-1",
-							Source: listener80,
-							Valid:  true,
-							Routes: map[types.NamespacedName]*graph.Route{},
+							Name:       "listener-80-1",
+							Source:     listener80,
+							Valid:      true,
+							HTTPRoutes: map[types.NamespacedName]*graph.HTTPRoute{},
 						},
 					},
 				},
-				Routes: map[types.NamespacedName]*graph.Route{},
+				HTTPRoutes: map[types.NamespacedName]*graph.HTTPRoute{},
 			},
 			expConf: Configuration{
 				HTTPServers: []VirtualServer{
@@ -624,22 +778,25 @@ func TestBuildConfiguration(t *testing.T) {
 							Name:   "listener-80-1",
 							Source: listener80,
 							Valid:  true,
-							Routes: map[types.NamespacedName]*graph.Route{
+							HTTPRoutes: map[types.NamespacedName]*graph.HTTPRoute{
 								client.ObjectKeyFromObject(hr1Invalid): routeHR1Invalid,
+							},
+							GRPCRoutes: map[types.NamespacedName]*graph.GRPCRoute{
+								client.ObjectKeyFromObject(gr1): routeInvalidGR1,
 							},
 						},
 						{
 							Name:   "listener-443-1",
 							Source: listener443, // nil hostname
 							Valid:  true,
-							Routes: map[types.NamespacedName]*graph.Route{
+							HTTPRoutes: map[types.NamespacedName]*graph.HTTPRoute{
 								client.ObjectKeyFromObject(httpsHR1Invalid): httpsRouteHR1Invalid,
 							},
 							ResolvedSecret: &secret1NsName,
 						},
 					},
 				},
-				Routes: map[types.NamespacedName]*graph.Route{
+				HTTPRoutes: map[types.NamespacedName]*graph.HTTPRoute{
 					client.ObjectKeyFromObject(hr1Invalid): routeHR1Invalid,
 				},
 				ReferencedSecrets: map[types.NamespacedName]*graph.Secret{
@@ -687,19 +844,19 @@ func TestBuildConfiguration(t *testing.T) {
 							Name:           "listener-443-1",
 							Source:         listener443, // nil hostname
 							Valid:          true,
-							Routes:         map[types.NamespacedName]*graph.Route{},
+							HTTPRoutes:     map[types.NamespacedName]*graph.HTTPRoute{},
 							ResolvedSecret: &secret1NsName,
 						},
 						{
 							Name:           "listener-443-with-hostname",
 							Source:         listener443WithHostname, // non-nil hostname
 							Valid:          true,
-							Routes:         map[types.NamespacedName]*graph.Route{},
+							HTTPRoutes:     map[types.NamespacedName]*graph.HTTPRoute{},
 							ResolvedSecret: &secret2NsName,
 						},
 					},
 				},
-				Routes: map[types.NamespacedName]*graph.Route{},
+				HTTPRoutes: map[types.NamespacedName]*graph.HTTPRoute{},
 				ReferencedSecrets: map[types.NamespacedName]*graph.Secret{
 					secret1NsName: secret1,
 					secret2NsName: secret2,
@@ -754,7 +911,7 @@ func TestBuildConfiguration(t *testing.T) {
 						},
 					},
 				},
-				Routes: map[types.NamespacedName]*graph.Route{
+				HTTPRoutes: map[types.NamespacedName]*graph.HTTPRoute{
 					{Namespace: "test", Name: "https-hr-1"}: httpsRouteHR1,
 					{Namespace: "test", Name: "https-hr-2"}: httpsRouteHR2,
 				},
@@ -783,14 +940,14 @@ func TestBuildConfiguration(t *testing.T) {
 							Name:   "listener-80-1",
 							Source: listener80,
 							Valid:  true,
-							Routes: map[types.NamespacedName]*graph.Route{
+							HTTPRoutes: map[types.NamespacedName]*graph.HTTPRoute{
 								{Namespace: "test", Name: "hr-1"}: routeHR1,
 								{Namespace: "test", Name: "hr-2"}: routeHR2,
 							},
 						},
 					},
 				},
-				Routes: map[types.NamespacedName]*graph.Route{
+				HTTPRoutes: map[types.NamespacedName]*graph.HTTPRoute{
 					{Namespace: "test", Name: "hr-1"}: routeHR1,
 					{Namespace: "test", Name: "hr-2"}: routeHR2,
 				},
@@ -852,10 +1009,84 @@ func TestBuildConfiguration(t *testing.T) {
 					Source: &v1.Gateway{},
 					Listeners: []*graph.Listener{
 						{
+							Name:   "listener-80-1",
+							Source: listener80,
+							Valid:  true,
+							GRPCRoutes: map[types.NamespacedName]*graph.GRPCRoute{
+								{Namespace: "test", Name: "gr-1"}: routeGR1,
+								{Namespace: "test", Name: "gr-2"}: routeNoMatchesGR2,
+							},
+						},
+					},
+				},
+				GRPCRoutes: map[types.NamespacedName]*graph.GRPCRoute{
+					{Namespace: "test", Name: "gr-1"}: routeGR1,
+					{Namespace: "test", Name: "gr-2"}: routeNoMatchesGR2,
+				},
+			},
+			expConf: Configuration{
+				HTTPServers: []VirtualServer{
+					{
+						IsDefault: true,
+						Port:      80,
+					},
+					{
+						Hostname: "foo.example.com",
+						PathRules: []PathRule{
+							{
+								Path:     "/myService/method",
+								PathType: PathTypeExact,
+								MatchRules: []MatchRule{
+									{
+										BackendGroup: expGR1Groups[0],
+										Source:       &gr1.ObjectMeta,
+									},
+								},
+								GRPC: true,
+							},
+						},
+						Port: 80,
+					},
+					{
+						Hostname: "bar.example.com",
+						PathRules: []PathRule{
+							{
+								Path:     "/",
+								PathType: PathTypePrefix,
+								MatchRules: []MatchRule{
+									{
+										BackendGroup: nilBackend,
+										Source:       &gr2noMatches.ObjectMeta,
+									},
+								},
+								GRPC: true,
+							},
+						},
+						Port: 80,
+					},
+				},
+				SSLServers:    []VirtualServer{},
+				Upstreams:     []Upstream{fooUpstream},
+				BackendGroups: []BackendGroup{expGR1Groups[0], nilBackend},
+				SSLKeyPairs:   map[SSLKeyPairID]SSLKeyPair{},
+				CertBundles:   map[CertBundleID]CertBundle{},
+			},
+			msg: "one http listener with two grpcroutes",
+		},
+		{
+			graph: &graph.Graph{
+				GatewayClass: &graph.GatewayClass{
+					Source: &v1.GatewayClass{},
+					Valid:  true,
+				},
+				Gateway: &graph.Gateway{
+					Source: &v1.Gateway{},
+					Listeners: []*graph.Listener{
+						{
 							Name:   "listener-443-1",
 							Source: listener443,
 							Valid:  true,
-							Routes: map[types.NamespacedName]*graph.Route{
+							HTTPRoutes: map[types.NamespacedName]*graph.HTTPRoute{
 								{Namespace: "test", Name: "https-hr-1"}: httpsRouteHR1,
 								{Namespace: "test", Name: "https-hr-2"}: httpsRouteHR2,
 							},
@@ -865,14 +1096,14 @@ func TestBuildConfiguration(t *testing.T) {
 							Name:   "listener-443-with-hostname",
 							Source: listener443WithHostname,
 							Valid:  true,
-							Routes: map[types.NamespacedName]*graph.Route{
+							HTTPRoutes: map[types.NamespacedName]*graph.HTTPRoute{
 								{Namespace: "test", Name: "https-hr-5"}: httpsRouteHR5,
 							},
 							ResolvedSecret: &secret2NsName,
 						},
 					},
 				},
-				Routes: map[types.NamespacedName]*graph.Route{
+				HTTPRoutes: map[types.NamespacedName]*graph.HTTPRoute{
 					{Namespace: "test", Name: "https-hr-1"}: httpsRouteHR1,
 					{Namespace: "test", Name: "https-hr-2"}: httpsRouteHR2,
 					{Namespace: "test", Name: "https-hr-5"}: httpsRouteHR5,
@@ -975,7 +1206,7 @@ func TestBuildConfiguration(t *testing.T) {
 							Name:   "listener-80-1",
 							Source: listener80,
 							Valid:  true,
-							Routes: map[types.NamespacedName]*graph.Route{
+							HTTPRoutes: map[types.NamespacedName]*graph.HTTPRoute{
 								{Namespace: "test", Name: "hr-3"}: routeHR3,
 								{Namespace: "test", Name: "hr-4"}: routeHR4,
 							},
@@ -984,7 +1215,7 @@ func TestBuildConfiguration(t *testing.T) {
 							Name:   "listener-443-1",
 							Source: listener443,
 							Valid:  true,
-							Routes: map[types.NamespacedName]*graph.Route{
+							HTTPRoutes: map[types.NamespacedName]*graph.HTTPRoute{
 								{Namespace: "test", Name: "https-hr-3"}: httpsRouteHR3,
 								{Namespace: "test", Name: "https-hr-4"}: httpsRouteHR4,
 							},
@@ -992,7 +1223,7 @@ func TestBuildConfiguration(t *testing.T) {
 						},
 					},
 				},
-				Routes: map[types.NamespacedName]*graph.Route{
+				HTTPRoutes: map[types.NamespacedName]*graph.HTTPRoute{
 					{Namespace: "test", Name: "hr-3"}:       routeHR3,
 					{Namespace: "test", Name: "hr-4"}:       routeHR4,
 					{Namespace: "test", Name: "https-hr-3"}: httpsRouteHR3,
@@ -1135,7 +1366,7 @@ func TestBuildConfiguration(t *testing.T) {
 							Name:   "listener-80-1",
 							Source: listener80,
 							Valid:  true,
-							Routes: map[types.NamespacedName]*graph.Route{
+							HTTPRoutes: map[types.NamespacedName]*graph.HTTPRoute{
 								{Namespace: "test", Name: "hr-3"}: routeHR3,
 							},
 						},
@@ -1143,7 +1374,7 @@ func TestBuildConfiguration(t *testing.T) {
 							Name:   "listener-8080",
 							Source: listener8080,
 							Valid:  true,
-							Routes: map[types.NamespacedName]*graph.Route{
+							HTTPRoutes: map[types.NamespacedName]*graph.HTTPRoute{
 								{Namespace: "test", Name: "hr-8"}: routeHR8,
 							},
 						},
@@ -1151,7 +1382,7 @@ func TestBuildConfiguration(t *testing.T) {
 							Name:   "listener-443-1",
 							Source: listener443,
 							Valid:  true,
-							Routes: map[types.NamespacedName]*graph.Route{
+							HTTPRoutes: map[types.NamespacedName]*graph.HTTPRoute{
 								{Namespace: "test", Name: "https-hr-3"}: httpsRouteHR3,
 							},
 							ResolvedSecret: &secret1NsName,
@@ -1160,14 +1391,14 @@ func TestBuildConfiguration(t *testing.T) {
 							Name:   "listener-8443",
 							Source: listener8443,
 							Valid:  true,
-							Routes: map[types.NamespacedName]*graph.Route{
+							HTTPRoutes: map[types.NamespacedName]*graph.HTTPRoute{
 								{Namespace: "test", Name: "https-hr-7"}: httpsRouteHR7,
 							},
 							ResolvedSecret: &secret1NsName,
 						},
 					},
 				},
-				Routes: map[types.NamespacedName]*graph.Route{
+				HTTPRoutes: map[types.NamespacedName]*graph.HTTPRoute{
 					{Namespace: "test", Name: "hr-3"}:       routeHR3,
 					{Namespace: "test", Name: "hr-8"}:       routeHR8,
 					{Namespace: "test", Name: "https-hr-3"}: httpsRouteHR3,
@@ -1349,13 +1580,13 @@ func TestBuildConfiguration(t *testing.T) {
 							Name:   "listener-80-1",
 							Source: listener80,
 							Valid:  true,
-							Routes: map[types.NamespacedName]*graph.Route{
+							HTTPRoutes: map[types.NamespacedName]*graph.HTTPRoute{
 								{Namespace: "test", Name: "hr-1"}: routeHR1,
 							},
 						},
 					},
 				},
-				Routes: map[types.NamespacedName]*graph.Route{
+				HTTPRoutes: map[types.NamespacedName]*graph.HTTPRoute{
 					{Namespace: "test", Name: "hr-1"}: routeHR1,
 				},
 			},
@@ -1372,13 +1603,13 @@ func TestBuildConfiguration(t *testing.T) {
 							Name:   "listener-80-1",
 							Source: listener80,
 							Valid:  true,
-							Routes: map[types.NamespacedName]*graph.Route{
+							HTTPRoutes: map[types.NamespacedName]*graph.HTTPRoute{
 								{Namespace: "test", Name: "hr-1"}: routeHR1,
 							},
 						},
 					},
 				},
-				Routes: map[types.NamespacedName]*graph.Route{
+				HTTPRoutes: map[types.NamespacedName]*graph.HTTPRoute{
 					{Namespace: "test", Name: "hr-1"}: routeHR1,
 				},
 			},
@@ -1391,8 +1622,8 @@ func TestBuildConfiguration(t *testing.T) {
 					Source: &v1.GatewayClass{},
 					Valid:  true,
 				},
-				Gateway: nil,
-				Routes:  map[types.NamespacedName]*graph.Route{},
+				Gateway:    nil,
+				HTTPRoutes: map[types.NamespacedName]*graph.HTTPRoute{},
 			},
 			expConf: Configuration{},
 			msg:     "missing gateway",
@@ -1410,13 +1641,13 @@ func TestBuildConfiguration(t *testing.T) {
 							Name:   "listener-80-1",
 							Source: listener80,
 							Valid:  true,
-							Routes: map[types.NamespacedName]*graph.Route{
+							HTTPRoutes: map[types.NamespacedName]*graph.HTTPRoute{
 								{Namespace: "test", Name: "hr-5"}: routeHR5,
 							},
 						},
 					},
 				},
-				Routes: map[types.NamespacedName]*graph.Route{
+				HTTPRoutes: map[types.NamespacedName]*graph.HTTPRoute{
 					{Namespace: "test", Name: "hr-5"}: routeHR5,
 				},
 			},
@@ -1480,7 +1711,7 @@ func TestBuildConfiguration(t *testing.T) {
 							Name:   "listener-80-1",
 							Source: listener80,
 							Valid:  true,
-							Routes: map[types.NamespacedName]*graph.Route{
+							HTTPRoutes: map[types.NamespacedName]*graph.HTTPRoute{
 								{Namespace: "test", Name: "hr-6"}: routeHR6,
 							},
 						},
@@ -1488,14 +1719,14 @@ func TestBuildConfiguration(t *testing.T) {
 							Name:   "listener-443-1",
 							Source: listener443,
 							Valid:  true,
-							Routes: map[types.NamespacedName]*graph.Route{
+							HTTPRoutes: map[types.NamespacedName]*graph.HTTPRoute{
 								{Namespace: "test", Name: "https-hr-6"}: httpsRouteHR6,
 							},
 							ResolvedSecret: &secret1NsName,
 						},
 					},
 				},
-				Routes: map[types.NamespacedName]*graph.Route{
+				HTTPRoutes: map[types.NamespacedName]*graph.HTTPRoute{
 					{Namespace: "test", Name: "hr-6"}:       routeHR6,
 					{Namespace: "test", Name: "https-hr-6"}: httpsRouteHR6,
 				},
@@ -1582,13 +1813,13 @@ func TestBuildConfiguration(t *testing.T) {
 							Name:   "listener-80-1",
 							Source: listener80,
 							Valid:  true,
-							Routes: map[types.NamespacedName]*graph.Route{
+							HTTPRoutes: map[types.NamespacedName]*graph.HTTPRoute{
 								{Namespace: "test", Name: "hr-7"}: routeHR7,
 							},
 						},
 					},
 				},
-				Routes: map[types.NamespacedName]*graph.Route{
+				HTTPRoutes: map[types.NamespacedName]*graph.HTTPRoute{
 					{Namespace: "test", Name: "hr-7"}: routeHR7,
 				},
 			},
@@ -1646,7 +1877,7 @@ func TestBuildConfiguration(t *testing.T) {
 							Name:   "listener-443-with-hostname",
 							Source: listener443WithHostname,
 							Valid:  true,
-							Routes: map[types.NamespacedName]*graph.Route{
+							HTTPRoutes: map[types.NamespacedName]*graph.HTTPRoute{
 								{Namespace: "test", Name: "https-hr-5"}: httpsRouteHR5,
 							},
 							ResolvedSecret: &secret2NsName,
@@ -1655,14 +1886,14 @@ func TestBuildConfiguration(t *testing.T) {
 							Name:   "listener-443-1",
 							Source: listener443,
 							Valid:  true,
-							Routes: map[types.NamespacedName]*graph.Route{
+							HTTPRoutes: map[types.NamespacedName]*graph.HTTPRoute{
 								{Namespace: "test", Name: "https-hr-5"}: httpsRouteHR5,
 							},
 							ResolvedSecret: &secret1NsName,
 						},
 					},
 				},
-				Routes: map[types.NamespacedName]*graph.Route{
+				HTTPRoutes: map[types.NamespacedName]*graph.HTTPRoute{
 					{Namespace: "test", Name: "https-hr-5"}: httpsRouteHR5,
 				},
 				ReferencedSecrets: map[types.NamespacedName]*graph.Secret{
@@ -1734,14 +1965,14 @@ func TestBuildConfiguration(t *testing.T) {
 							Name:   "listener-443",
 							Source: listener443,
 							Valid:  true,
-							Routes: map[types.NamespacedName]*graph.Route{
+							HTTPRoutes: map[types.NamespacedName]*graph.HTTPRoute{
 								{Namespace: "test", Name: "https-hr-8"}: httpsRouteHR8,
 							},
 							ResolvedSecret: &secret1NsName,
 						},
 					},
 				},
-				Routes: map[types.NamespacedName]*graph.Route{
+				HTTPRoutes: map[types.NamespacedName]*graph.HTTPRoute{
 					{Namespace: "test", Name: "https-hr-8"}: httpsRouteHR8,
 				},
 				ReferencedSecrets: map[types.NamespacedName]*graph.Secret{
@@ -1810,14 +2041,14 @@ func TestBuildConfiguration(t *testing.T) {
 							Name:   "listener-443",
 							Source: listener443,
 							Valid:  true,
-							Routes: map[types.NamespacedName]*graph.Route{
+							HTTPRoutes: map[types.NamespacedName]*graph.HTTPRoute{
 								{Namespace: "test", Name: "https-hr-9"}: httpsRouteHR9,
 							},
 							ResolvedSecret: &secret1NsName,
 						},
 					},
 				},
-				Routes: map[types.NamespacedName]*graph.Route{
+				HTTPRoutes: map[types.NamespacedName]*graph.HTTPRoute{
 					{Namespace: "test", Name: "https-hr-9"}: httpsRouteHR9,
 				},
 				ReferencedSecrets: map[types.NamespacedName]*graph.Secret{
@@ -1888,14 +2119,14 @@ func TestBuildConfiguration(t *testing.T) {
 					},
 					Listeners: []*graph.Listener{
 						{
-							Name:   "listener-80-1",
-							Source: listener80,
-							Valid:  true,
-							Routes: map[types.NamespacedName]*graph.Route{},
+							Name:       "listener-80-1",
+							Source:     listener80,
+							Valid:      true,
+							HTTPRoutes: map[types.NamespacedName]*graph.HTTPRoute{},
 						},
 					},
 				},
-				Routes:     map[types.NamespacedName]*graph.Route{},
+				HTTPRoutes: map[types.NamespacedName]*graph.HTTPRoute{},
 				NginxProxy: nginxProxy,
 			},
 			expConf: Configuration{
@@ -2243,7 +2474,7 @@ func TestBuildUpstreams(t *testing.T) {
 
 	invalidHRRefs := createBackendRefs("abc")
 
-	routes := map[types.NamespacedName]*graph.Route{
+	routes := map[types.NamespacedName]*graph.HTTPRoute{
 		{Name: "hr1", Namespace: "test"}: {
 			Valid: true,
 			Rules: refsToValidRules(hr1Refs0, hr1Refs1),
@@ -2258,21 +2489,21 @@ func TestBuildUpstreams(t *testing.T) {
 		},
 	}
 
-	routes2 := map[types.NamespacedName]*graph.Route{
+	routes2 := map[types.NamespacedName]*graph.HTTPRoute{
 		{Name: "hr4", Namespace: "test"}: {
 			Valid: true,
 			Rules: refsToValidRules(hr4Refs0, hr4Refs1),
 		},
 	}
 
-	routesWithNonExistingRefs := map[types.NamespacedName]*graph.Route{
+	routesWithNonExistingRefs := map[types.NamespacedName]*graph.HTTPRoute{
 		{Name: "non-existing", Namespace: "test"}: {
 			Valid: true,
 			Rules: refsToValidRules(nonExistingRefs),
 		},
 	}
 
-	invalidRoutes := map[types.NamespacedName]*graph.Route{
+	invalidRoutes := map[types.NamespacedName]*graph.HTTPRoute{
 		{Name: "invalid", Namespace: "test"}: {
 			Valid: false,
 			Rules: refsToValidRules(invalidHRRefs),
@@ -2281,24 +2512,24 @@ func TestBuildUpstreams(t *testing.T) {
 
 	listeners := []*graph.Listener{
 		{
-			Name:   "invalid-listener",
-			Valid:  false,
-			Routes: routesWithNonExistingRefs, // shouldn't be included since listener is invalid
+			Name:       "invalid-listener",
+			Valid:      false,
+			HTTPRoutes: routesWithNonExistingRefs, // shouldn't be included since listener is invalid
 		},
 		{
-			Name:   "listener-1",
-			Valid:  true,
-			Routes: routes,
+			Name:       "listener-1",
+			Valid:      true,
+			HTTPRoutes: routes,
 		},
 		{
-			Name:   "listener-2",
-			Valid:  true,
-			Routes: routes2,
+			Name:       "listener-2",
+			Valid:      true,
+			HTTPRoutes: routes2,
 		},
 		{
-			Name:   "listener-3",
-			Valid:  true,
-			Routes: invalidRoutes, // shouldn't be included since routes are invalid
+			Name:       "listener-3",
+			Valid:      true,
+			HTTPRoutes: invalidRoutes, // shouldn't be included since routes are invalid
 		},
 	}
 

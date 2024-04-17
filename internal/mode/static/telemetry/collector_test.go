@@ -278,7 +278,7 @@ var _ = Describe("Collector", Ordered, func() {
 						{Name: "ignoredGw1"}: {},
 						{Name: "ignoredGw2"}: {},
 					},
-					Routes: map[types.NamespacedName]*graph.Route{
+					HTTPRoutes: map[types.NamespacedName]*graph.HTTPRoute{
 						{Namespace: "test", Name: "hr-1"}: {},
 						{Namespace: "test", Name: "hr-2"}: {},
 						{Namespace: "test", Name: "hr-3"}: {},
@@ -475,7 +475,7 @@ var _ = Describe("Collector", Ordered, func() {
 			graph1 = &graph.Graph{
 				GatewayClass: &graph.GatewayClass{},
 				Gateway:      &graph.Gateway{},
-				Routes: map[types.NamespacedName]*graph.Route{
+				HTTPRoutes: map[types.NamespacedName]*graph.HTTPRoute{
 					{Namespace: "test", Name: "hr-1"}: {},
 				},
 				ReferencedSecrets: map[types.NamespacedName]*graph.Secret{
