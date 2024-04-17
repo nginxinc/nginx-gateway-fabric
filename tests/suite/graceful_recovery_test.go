@@ -1,16 +1,16 @@
 package suite
 
 import (
-	"fmt"
+	"context"
 	"net/http"
 	"os/exec"
-	"strconv"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/nginxinc/nginx-gateway-fabric/tests/framework"
@@ -29,26 +29,18 @@ var _ = Describe("Graceful Recovery test", Ordered, Label("nfr", "graceful-recov
 		},
 	}
 
-	var teaURL, coffeeURL string
+	nginxContainerName := "nginx"
+	ngfContainerName := "nginx-gateway"
+	teaURL := "https://cafe.example.com/tea"
+	coffeeURL := "http://cafe.example.com/coffee"
 
 	BeforeAll(func() {
-		teaURL = "https://cafe.example.com/tea"
-		coffeeURL = "http://cafe.example.com/coffee"
-		if portFwdPort != 0 {
-			teaURL = fmt.Sprintf("https://cafe.example.com:%s/tea", strconv.Itoa(portFwdPort))
-			coffeeURL = fmt.Sprintf("http://cafe.example.com:%s/coffee", strconv.Itoa(portFwdPort))
-		}
+		cfg := getDefaultSetupCfg()
+		cfg.nfr = true
+		setup(cfg, "--set", "nginxGateway.securityContext.runAsNonRoot=false")
 	})
 
 	BeforeEach(func() {
-		// this test is unique in that NGF
-		teardown(releaseName)
-
-		cfg := getDefaultSetupCfg()
-		cfg.nfr = true
-
-		setup(cfg, "--set", "nginxGateway.securityContext.runAsNonRoot=false")
-
 		Expect(resourceManager.Apply([]client.Object{ns})).To(Succeed())
 		Expect(resourceManager.ApplyFromFiles(files, ns.Name)).To(Succeed())
 		Expect(resourceManager.WaitForAppsToBeReady(ns.Name)).To(Succeed())
@@ -68,10 +60,33 @@ var _ = Describe("Graceful Recovery test", Ordered, Label("nfr", "graceful-recov
 		Expect(err).ToNot(HaveOccurred())
 		Expect(podNames).ToNot(BeEmpty())
 
+		ctx, cancel := context.WithTimeout(context.Background(), timeoutConfig.GetTimeout)
+		defer cancel()
+
+		var ngfPod core.Pod
+		err = k8sClient.Get(ctx, types.NamespacedName{Namespace: ngfNamespace, Name: podNames[0]}, &ngfPod)
+		Expect(err).ToNot(HaveOccurred())
+
+		var restartCount int
+		for _, containerStatus := range ngfPod.Status.ContainerStatuses {
+			if containerStatus.Name == ngfContainerName {
+				restartCount = int(containerStatus.RestartCount)
+			}
+		}
+
 		output, err := restartNGFProcess()
 		Expect(err).ToNot(HaveOccurred(), string(output))
 		// Wait for NGF to restart.
-		time.Sleep(2 * time.Second)
+		time.Sleep(6 * time.Second)
+
+		err = k8sClient.Get(ctx, types.NamespacedName{Namespace: ngfNamespace, Name: podNames[0]}, &ngfPod)
+		Expect(err).ToNot(HaveOccurred())
+
+		for _, containerStatus := range ngfPod.Status.ContainerStatuses {
+			if containerStatus.Name == ngfContainerName {
+				Expect(int(containerStatus.RestartCount)).To(Equal(restartCount + 1))
+			}
+		}
 
 		expectWorkingTraffic(teaURL, coffeeURL)
 
@@ -95,10 +110,33 @@ var _ = Describe("Graceful Recovery test", Ordered, Label("nfr", "graceful-recov
 		Expect(err).ToNot(HaveOccurred())
 		Expect(podNames).ToNot(BeEmpty())
 
-		// If we correctly restart the nginx container, it should give us an error 137 code
+		ctx, cancel := context.WithTimeout(context.Background(), timeoutConfig.GetTimeout)
+		defer cancel()
+
+		var ngfPod core.Pod
+		err = k8sClient.Get(ctx, types.NamespacedName{Namespace: ngfNamespace, Name: podNames[0]}, &ngfPod)
+		Expect(err).ToNot(HaveOccurred())
+
+		var restartCount int
+		for _, containerStatus := range ngfPod.Status.ContainerStatuses {
+			if containerStatus.Name == nginxContainerName {
+				restartCount = int(containerStatus.RestartCount)
+			}
+		}
+
 		output, err := restartNginxContainer()
-		Expect(err).To(HaveOccurred(), string(output))
+		Expect(err).ToNot(HaveOccurred(), string(output))
+		// Wait for NGF to restart.
 		time.Sleep(2 * time.Second)
+
+		err = k8sClient.Get(ctx, types.NamespacedName{Namespace: ngfNamespace, Name: podNames[0]}, &ngfPod)
+		Expect(err).ToNot(HaveOccurred())
+
+		for _, containerStatus := range ngfPod.Status.ContainerStatuses {
+			if containerStatus.Name == nginxContainerName {
+				Expect(int(containerStatus.RestartCount)).To(Equal(restartCount + 1))
+			}
+		}
 
 		checkContainerLogsForErrors(podNames[0])
 
@@ -120,19 +158,18 @@ func restartNginxContainer() ([]byte, error) {
 	Expect(err).ToNot(HaveOccurred())
 	Expect(podNames).ToNot(BeEmpty())
 
-	// This should error since we are in the nginx container, killing the nginx master process.
-	// Exit Code 137 is the code we want to see as that is the kill -9 signal
 	output, err := exec.Command( // nolint:gosec
 		"kubectl",
 		"exec",
 		"-n",
-		ngfNamespace, podNames[0],
+		ngfNamespace,
+		podNames[0],
 		"--container",
 		"nginx",
 		"--",
 		"sh",
 		"-c",
-		"$(PID=$(pgrep -f \"nginx: master process\") && kill -9 $PID)").CombinedOutput()
+		"$(PID=$(pgrep -f \"[n]ginx: master process\") && kill -9 $PID)").CombinedOutput()
 	if err != nil {
 		return output, err
 	}
