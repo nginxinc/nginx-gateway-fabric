@@ -6,14 +6,19 @@ import (
 
 	"github.com/go-logr/logr"
 	v1 "k8s.io/api/apps/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/events"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/gatewayclass"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/status"
 )
+
+type timeNowFunc func() metav1.Time
 
 // eventHandler ensures each Gateway for the specific GatewayClass has a corresponding Deployment
 // of NGF configured to use that specific Gateway.
@@ -26,8 +31,9 @@ type eventHandler struct {
 	// provisions maps NamespacedName of Gateway to its corresponding Deployment
 	provisions map[types.NamespacedName]*v1.Deployment
 
-	statusUpdater status.Updater
+	statusUpdater *status.Updater
 	k8sClient     client.Client
+	timeNow       timeNowFunc
 
 	staticModeDeploymentYAML []byte
 
@@ -36,9 +42,10 @@ type eventHandler struct {
 
 func newEventHandler(
 	gcName string,
-	statusUpdater status.Updater,
+	statusUpdater *status.Updater,
 	k8sClient client.Client,
 	staticModeDeploymentYAML []byte,
+	timeNow timeNowFunc,
 ) *eventHandler {
 	return &eventHandler{
 		store:                    newStore(),
@@ -48,13 +55,12 @@ func newEventHandler(
 		k8sClient:                k8sClient,
 		staticModeDeploymentYAML: staticModeDeploymentYAML,
 		gatewayNextID:            1,
+		timeNow:                  timeNow,
 	}
 }
 
 func (h *eventHandler) setGatewayClassStatuses(ctx context.Context) {
-	statuses := status.GatewayAPIStatuses{
-		GatewayClassStatuses: make(status.GatewayClassStatuses),
-	}
+	var reqs []status.UpdateRequest
 
 	var gcExists bool
 
@@ -74,17 +80,32 @@ func (h *eventHandler) setGatewayClassStatuses(ctx context.Context) {
 		supportedVersionConds, _ := gatewayclass.ValidateCRDVersions(h.store.crdMetadata)
 		conds = append(conds, supportedVersionConds...)
 
-		statuses.GatewayClassStatuses[nsname] = status.GatewayClassStatus{
-			Conditions:         conditions.DeduplicateConditions(conds),
-			ObservedGeneration: gc.Generation,
-		}
+		reqs = append(reqs, status.UpdateRequest{
+			NsName:       nsname,
+			ResourceType: &gatewayv1.GatewayClass{},
+			Setter: func(obj client.Object) bool {
+				gc := helpers.MustCastObject[*gatewayv1.GatewayClass](obj)
+
+				gcs := gatewayv1.GatewayClassStatus{
+					Conditions: conditions.ConvertConditions(conditions.DeduplicateConditions(conds), gc.Generation, h.timeNow()),
+				}
+
+				if status.ConditionsEqual(gc.Status.Conditions, gcs.Conditions) {
+					return false
+				}
+
+				gc.Status = gcs
+
+				return true
+			},
+		})
 	}
 
 	if !gcExists {
 		panic(fmt.Errorf("GatewayClass %s must exist", h.gcName))
 	}
 
-	h.statusUpdater.Update(ctx, statuses)
+	h.statusUpdater.Update(ctx, reqs...)
 }
 
 func (h *eventHandler) ensureDeploymentsMatchGateways(ctx context.Context, logger logr.Logger) {

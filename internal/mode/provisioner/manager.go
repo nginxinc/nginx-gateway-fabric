@@ -122,13 +122,8 @@ func StartManager(cfg Config) error {
 	)
 
 	statusUpdater := status.NewUpdater(
-		status.UpdaterConfig{
-			Client:                   mgr.GetClient(),
-			Clock:                    status.NewRealClock(),
-			Logger:                   cfg.Logger.WithName("statusUpdater"),
-			GatewayClassName:         cfg.GatewayClassName,
-			UpdateGatewayClassStatus: true,
-		},
+		mgr.GetClient(),
+		cfg.Logger.WithName("statusUpdater"),
 	)
 
 	handler := newEventHandler(
@@ -136,6 +131,7 @@ func StartManager(cfg Config) error {
 		statusUpdater,
 		mgr.GetClient(),
 		embeddedfiles.StaticModeDeploymentYAML,
+		func() metav1.Time { return metav1.Now() },
 	)
 
 	eventLoop := events.NewEventLoop(
