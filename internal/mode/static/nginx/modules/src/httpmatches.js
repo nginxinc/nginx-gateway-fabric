@@ -171,6 +171,7 @@ function paramsMatch(requestParams, params) {
 }
 
 export default {
+  redirect,
   internalRedirect,
   testMatch,
   findWinningMatch,
