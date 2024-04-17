@@ -188,15 +188,12 @@ func StartManager(cfg config.Config) error {
 		)
 	}
 
-	statusUpdater := status.NewUpdater(status.UpdaterConfig{
-		GatewayCtlrName:          cfg.GatewayCtlrName,
-		GatewayClassName:         cfg.GatewayClassName,
-		Client:                   mgr.GetClient(),
-		Logger:                   cfg.Logger.WithName("statusUpdater"),
-		Clock:                    status.NewRealClock(),
-		UpdateGatewayClassStatus: cfg.UpdateGatewayClassStatus,
-		LeaderElectionEnabled:    cfg.LeaderElection.Enabled,
-	})
+	statusUpdater := status.NewUpdater(
+		mgr.GetClient(),
+		cfg.Logger.WithName("statusUpdater"),
+	)
+
+	groupStatusUpdater := status.NewLeaderAwareGroupUpdater(statusUpdater)
 
 	eventHandler := newEventHandlerImpl(eventHandlerConfig{
 		k8sClient:       mgr.GetClient(),
@@ -213,7 +210,7 @@ func StartManager(cfg config.Config) error {
 			ngxruntimeCollector,
 			cfg.Logger.WithName("nginxRuntimeManager"),
 		),
-		statusUpdater:                 statusUpdater,
+		statusUpdater:                 groupStatusUpdater,
 		eventRecorder:                 recorder,
 		nginxConfiguredOnStartChecker: nginxChecker,
 		controlConfigNSName:           controlConfigNSName,
@@ -221,6 +218,8 @@ func StartManager(cfg config.Config) error {
 		metricsCollector:              handlerCollector,
 		usageReportConfig:             cfg.UsageReportConfig,
 		usageSecret:                   usageSecret,
+		gatewayCtlrName:               cfg.GatewayCtlrName,
+		updateGatewayClassStatus:      cfg.UpdateGatewayClassStatus,
 	})
 
 	objects, objectLists := prepareFirstEventBatchPreparerArgs(
@@ -240,7 +239,7 @@ func StartManager(cfg config.Config) error {
 		return fmt.Errorf("cannot register event loop: %w", err)
 	}
 
-	if err = mgr.Add(runnables.NewEnableAfterBecameLeader(statusUpdater.Enable)); err != nil {
+	if err = mgr.Add(runnables.NewEnableAfterBecameLeader(groupStatusUpdater.Enable)); err != nil {
 		return fmt.Errorf("cannot register status updater: %w", err)
 	}
 

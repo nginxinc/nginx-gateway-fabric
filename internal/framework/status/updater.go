@@ -3,8 +3,6 @@ package status
 import (
 	"context"
 	"errors"
-	"fmt"
-	"sync"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -12,51 +10,23 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	v1 "sigs.k8s.io/gateway-api/apis/v1"
-	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 
-	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/controller"
 )
 
-//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . Updater
-
-// Updater updates statuses of the Gateway API resources.
-// Updater can be disabled. In this case, it will stop updating the statuses of resources, while
-// always saving the statuses of the last Update call. This is used to support multiple replicas of
-// control plane being able to run simultaneously where only the leader will update statuses.
-type Updater interface {
-	// Update updates the statuses of the resources.
-	Update(context.Context, Status)
-	// UpdateAddresses updates the Gateway Addresses when the Gateway Service changes.
-	UpdateAddresses(context.Context, []v1.GatewayStatusAddress)
-	// Enable enables status updates. The updater will update the statuses in Kubernetes API to ensure they match the
-	// statuses of the last Update invocation.
-	Enable(ctx context.Context)
-	// Disable disables status updates.
-	Disable()
+// UpdateRequest is a request to update the status of a resource.
+type UpdateRequest struct {
+	ResourceType client.Object
+	Setter       Setter
+	NsName       types.NamespacedName
 }
 
-// UpdaterConfig holds configuration parameters for Updater.
-type UpdaterConfig struct {
-	// Client is a Kubernetes API client.
-	Client client.Client
-	// Clock is used as a source of time for the LastTransitionTime field in Conditions in resource statuses.
-	Clock Clock
-	// Logger holds a logger to be used.
-	Logger logr.Logger
-	// GatewayCtlrName is the name of the Gateway controller.
-	GatewayCtlrName string
-	// GatewayClassName is the name of the GatewayClass resource.
-	GatewayClassName string
-	// UpdateGatewayClassStatus enables updating the status of the GatewayClass resource.
-	UpdateGatewayClassStatus bool
-	// LeaderElectionEnabled indicates whether Leader Election is enabled.
-	// If it is not enabled, the updater will always write statuses to the Kubernetes API.
-	LeaderElectionEnabled bool
-}
+// Setter is a function that sets the status of the passed resource.
+// It returns true if the status was set, false otherwise.
+// The status is not set when the status is already up-to-date.
+type Setter func(client.Object) (wasSet bool)
 
-// UpdaterImpl updates statuses of the Gateway API resources.
+// Updater updates the status of resources.
 //
 // It has the following limitations:
 //
@@ -65,169 +35,59 @@ type UpdaterConfig struct {
 // (a) Sometimes the Gateway will need to update statuses of all resources it handles, which could be ~1000. Making 1000
 // status API calls sequentially will take time.
 // (b) k8s API can become slow or even timeout. This will increase every update status API call.
-// Making UpdaterImpl asynchronous will prevent it from adding variable delays to the event loop.
+// Making Updater asynchronous will prevent it from adding variable delays to the event loop.
+// FIXME(pleshakov): https://github.com/nginxinc/nginx-gateway-fabric/issues/1014
 //
 // (2) It doesn't clear the statuses of a resources that are no longer handled by the Gateway. For example, if
 // an HTTPRoute resource no longer has the parentRef to the Gateway resources, the Gateway must update the status
 // of the resource to remove the status about the removed parentRef.
+// FIXME(pleshakov): https://github.com/nginxinc/nginx-gateway-fabric/issues/1015
 //
 // (3) If another controllers changes the status of the Gateway/HTTPRoute resource so that the information set by our
 // Gateway is removed, our Gateway will not restore the status until the EventLoop invokes the StatusUpdater as a
 // result of processing some other new change to a resource(s).
-// FIXME(pleshakov): Make updater production ready
-// https://github.com/nginxinc/nginx-gateway-fabric/issues/691
-
-// UpdaterImpl needs to be modified to support new resources. Consider making UpdaterImpl extendable, so that it
-// goes along the Open-closed principle.
-type UpdaterImpl struct {
-	lastStatuses lastStatuses
-	cfg          UpdaterConfig
-	isLeader     bool
-
-	lock sync.Mutex
-}
-
-// lastStatuses hold the last saved statuses. Used when leader election is enabled to write the last saved statuses on
-// a leader change.
-type lastStatuses struct {
-	nginxGateway *NginxGatewayStatus
-	gatewayAPI   GatewayAPIStatuses
-}
-
-// Enable writes the last saved statuses for the Gateway API resources.
-// Used in leader election when the Pod starts leading. It's possible that during a leader change,
-// some statuses are missed. This will ensure that the latest statuses are written when a new leader takes over.
-func (upd *UpdaterImpl) Enable(ctx context.Context) {
-	defer upd.lock.Unlock()
-	upd.lock.Lock()
-
-	upd.isLeader = true
-
-	upd.cfg.Logger.Info("Writing last statuses")
-	upd.updateGatewayAPI(ctx, upd.lastStatuses.gatewayAPI)
-	upd.updateNginxGateway(ctx, upd.lastStatuses.nginxGateway)
-}
-
-func (upd *UpdaterImpl) Disable() {
-	defer upd.lock.Unlock()
-	upd.lock.Lock()
-
-	upd.isLeader = false
+// FIXME(pleshakov): https://github.com/nginxinc/nginx-gateway-fabric/issues/1813
+type Updater struct {
+	client client.Client
+	logger logr.Logger
 }
 
 // NewUpdater creates a new Updater.
-func NewUpdater(cfg UpdaterConfig) *UpdaterImpl {
-	return &UpdaterImpl{
-		cfg: cfg,
-		// If leader election is enabled then we should not start running as a leader. Instead,
-		// we wait for Enable to be invoked by the Leader Elector goroutine.
-		isLeader: !cfg.LeaderElectionEnabled,
+func NewUpdater(client client.Client, logger logr.Logger) *Updater {
+	return &Updater{
+		client: client,
+		logger: logger,
 	}
 }
 
-func (upd *UpdaterImpl) Update(ctx context.Context, status Status) {
-	defer upd.lock.Unlock()
-	upd.lock.Lock()
-
-	switch s := status.(type) {
-	case *NginxGatewayStatus:
-		upd.updateNginxGateway(ctx, s)
-	case GatewayAPIStatuses:
-		upd.updateGatewayAPI(ctx, s)
-	default:
-		panic(fmt.Sprintf("unknown status type %T with group name %s", s, status.APIGroup()))
-	}
-}
-
-func (upd *UpdaterImpl) updateNginxGateway(ctx context.Context, status *NginxGatewayStatus) {
-	upd.lastStatuses.nginxGateway = status
-
-	if !upd.isLeader {
-		upd.cfg.Logger.Info("Skipping updating Nginx Gateway status because not leader")
-		return
-	}
-
-	upd.cfg.Logger.Info("Updating Nginx Gateway status")
-
-	if status != nil {
-		upd.writeStatuses(
-			ctx,
-			status.NsName,
-			&ngfAPI.NginxGateway{},
-			newNginxGatewayStatusSetter(upd.cfg.Clock, *status),
-		)
-	}
-}
-
-func (upd *UpdaterImpl) updateGatewayAPI(ctx context.Context, statuses GatewayAPIStatuses) {
-	upd.lastStatuses.gatewayAPI = statuses
-
-	if !upd.isLeader {
-		upd.cfg.Logger.Info("Skipping updating Gateway API status because not leader")
-		return
-	}
-
-	upd.cfg.Logger.Info("Updating Gateway API statuses")
-
-	if upd.cfg.UpdateGatewayClassStatus {
-		for nsname, gcs := range statuses.GatewayClassStatuses {
-			select {
-			case <-ctx.Done():
-				return
-			default:
-			}
-
-			upd.writeStatuses(ctx, nsname, &v1.GatewayClass{}, newGatewayClassStatusSetter(upd.cfg.Clock, gcs))
-		}
-	}
-
-	for nsname, gs := range statuses.GatewayStatuses {
+// Update updates the status of the resources from the requests.
+func (u *Updater) Update(ctx context.Context, reqs ...UpdateRequest) {
+	for _, r := range reqs {
 		select {
 		case <-ctx.Done():
 			return
 		default:
 		}
 
-		upd.writeStatuses(ctx, nsname, &v1.Gateway{}, newGatewayStatusSetter(upd.cfg.Clock, gs))
-	}
-
-	for nsname, rs := range statuses.HTTPRouteStatuses {
-		select {
-		case <-ctx.Done():
-			return
-		default:
-		}
-
-		upd.writeStatuses(
-			ctx,
-			nsname,
-			&v1.HTTPRoute{},
-			newHTTPRouteStatusSetter(upd.cfg.GatewayCtlrName, upd.cfg.Clock, rs),
+		u.logger.V(1).Info(
+			"Updating status for resource",
+			"namespace", r.NsName.Namespace,
+			"name", r.NsName.Name,
+			"kind", r.ResourceType.GetObjectKind().GroupVersionKind().Kind,
 		)
-	}
 
-	for nsname, bs := range statuses.BackendTLSPolicyStatuses {
-		select {
-		case <-ctx.Done():
-			return
-		default:
-		}
-
-		upd.writeStatuses(
-			ctx,
-			nsname,
-			&v1alpha2.BackendTLSPolicy{},
-			newBackendTLSPolicyStatusSetter(upd.cfg.GatewayCtlrName, upd.cfg.Clock, bs),
-		)
+		u.writeStatuses(ctx, r.NsName, r.ResourceType, r.Setter)
 	}
 }
 
-func (upd *UpdaterImpl) writeStatuses(
+func (u *Updater) writeStatuses(
 	ctx context.Context,
 	nsname types.NamespacedName,
-	obj client.Object,
-	statusSetter setter,
+	resourceType client.Object,
+	statusSetter Setter,
 ) {
+	obj := resourceType.DeepCopyObject().(client.Object)
+
 	err := wait.ExponentialBackoffWithContext(
 		ctx,
 		wait.Backoff{
@@ -238,32 +98,16 @@ func (upd *UpdaterImpl) writeStatuses(
 			Cap:      time.Millisecond * 3000,
 		},
 		// Function returns true if the condition is satisfied, or an error if the loop should be aborted.
-		NewRetryUpdateFunc(upd.cfg.Client, upd.cfg.Client.Status(), nsname, obj, upd.cfg.Logger, statusSetter),
+		NewRetryUpdateFunc(u.client, u.client.Status(), nsname, obj, u.logger, statusSetter),
 	)
 	if err != nil && !errors.Is(err, context.Canceled) {
-		upd.cfg.Logger.Error(
+		u.logger.Error(
 			err,
 			"Failed to update status",
 			"namespace", nsname.Namespace,
 			"name", nsname.Name,
-			"kind", obj.GetObjectKind().GroupVersionKind().Kind)
+			"kind", resourceType.GetObjectKind().GroupVersionKind().Kind)
 	}
-}
-
-// UpdateAddresses is called when the Gateway Status needs its addresses updated.
-func (upd *UpdaterImpl) UpdateAddresses(ctx context.Context, addresses []v1.GatewayStatusAddress) {
-	defer upd.lock.Unlock()
-	upd.lock.Lock()
-
-	for name, status := range upd.lastStatuses.gatewayAPI.GatewayStatuses {
-		if status.Ignored {
-			continue
-		}
-		status.Addresses = addresses
-		upd.lastStatuses.gatewayAPI.GatewayStatuses[name] = status
-	}
-
-	upd.updateGatewayAPI(ctx, upd.lastStatuses.gatewayAPI)
 }
 
 // NewRetryUpdateFunc returns a function which will be used in wait.ExponentialBackoffWithContext.
@@ -274,6 +118,9 @@ func (upd *UpdaterImpl) UpdateAddresses(ctx context.Context, addresses []v1.Gate
 // which is what we want if we encounter an error from the functions we call. However,
 // the linter will complain if we return nil if an error was found.
 //
+// Note: this function is public because fake dependencies require us to test this function from the test package
+// to avoid import cycles.
+//
 //nolint:nilerr
 func NewRetryUpdateFunc(
 	getter controller.Getter,
@@ -281,7 +128,7 @@ func NewRetryUpdateFunc(
 	nsname types.NamespacedName,
 	obj client.Object,
 	logger logr.Logger,
-	statusSetter func(client.Object) bool,
+	statusSetter Setter,
 ) func(ctx context.Context) (bool, error) {
 	return func(ctx context.Context) (bool, error) {
 		// The function handles errors by reporting them in the logs.
