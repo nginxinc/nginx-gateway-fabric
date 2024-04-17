@@ -5,62 +5,115 @@ import (
 	"time"
 
 	. "github.com/onsi/gomega"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
-	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func CreateTestConditions(condType string) []conditions.Condition {
-	return []conditions.Condition{
+func TestConditionsEqual(t *testing.T) {
+	getDefaultConds := func() []v1.Condition {
+		return []v1.Condition{
+			{
+				Type:               "type1",
+				Status:             "status1",
+				ObservedGeneration: 1,
+				LastTransitionTime: v1.Time{Time: time.Now()},
+				Reason:             "reason1",
+				Message:            "message1",
+			},
+			{
+				Type:               "type2",
+				Status:             "status2",
+				ObservedGeneration: 1,
+				LastTransitionTime: v1.Time{Time: time.Now()},
+				Reason:             "reason2",
+				Message:            "message2",
+			},
+			{
+				Type:               "type3",
+				Status:             "status3",
+				ObservedGeneration: 1,
+				LastTransitionTime: v1.Time{Time: time.Now()},
+				Reason:             "reason3",
+				Message:            "message3",
+			},
+		}
+	}
+
+	getModifiedConds := func(mod func([]v1.Condition) []v1.Condition) []v1.Condition {
+		return mod(getDefaultConds())
+	}
+
+	tests := []struct {
+		name      string
+		prevConds []v1.Condition
+		curConds  []v1.Condition
+		expEqual  bool
+	}{
 		{
-			Type:    condType,
-			Status:  metav1.ConditionTrue,
-			Reason:  "TestReason1",
-			Message: "Test message1",
+			name:      "different observed gen",
+			prevConds: getDefaultConds(),
+			curConds: getModifiedConds(func(conds []v1.Condition) []v1.Condition {
+				conds[2].ObservedGeneration++
+				return conds
+			}),
+			expEqual: false,
 		},
 		{
-			Type:    condType,
-			Status:  metav1.ConditionFalse,
-			Reason:  "TestReason2",
-			Message: "Test message2",
+			name:      "different status",
+			prevConds: getDefaultConds(),
+			curConds: getModifiedConds(func(conds []v1.Condition) []v1.Condition {
+				conds[1].Status = "different"
+				return conds
+			}),
+			expEqual: false,
+		},
+		{
+			name:      "different type",
+			prevConds: getDefaultConds(),
+			curConds: getModifiedConds(func(conds []v1.Condition) []v1.Condition {
+				conds[0].Type = "different"
+				return conds
+			}),
+			expEqual: false,
+		},
+		{
+			name:      "different message",
+			prevConds: getDefaultConds(),
+			curConds: getModifiedConds(func(conds []v1.Condition) []v1.Condition {
+				conds[2].Message = "different"
+				return conds
+			}),
+			expEqual: false,
+		},
+		{
+			name:      "different reason",
+			prevConds: getDefaultConds(),
+			curConds: getModifiedConds(func(conds []v1.Condition) []v1.Condition {
+				conds[1].Reason = "different"
+				return conds
+			}),
+			expEqual: false,
+		},
+		{
+			name:      "different number of conditions",
+			prevConds: getDefaultConds(),
+			curConds: getModifiedConds(func(conds []v1.Condition) []v1.Condition {
+				return conds[:2]
+			}),
+			expEqual: false,
+		},
+		{
+			name:      "equal",
+			prevConds: getDefaultConds(),
+			curConds:  getDefaultConds(),
+			expEqual:  true,
 		},
 	}
-}
 
-func CreateExpectedAPIConditions(
-	condType string,
-	observedGeneration int64,
-	transitionTime metav1.Time,
-) []metav1.Condition {
-	return []metav1.Condition{
-		{
-			Type:               condType,
-			Status:             metav1.ConditionTrue,
-			ObservedGeneration: observedGeneration,
-			LastTransitionTime: transitionTime,
-			Reason:             "TestReason1",
-			Message:            "Test message1",
-		},
-		{
-			Type:               condType,
-			Status:             metav1.ConditionFalse,
-			ObservedGeneration: observedGeneration,
-			LastTransitionTime: transitionTime,
-			Reason:             "TestReason2",
-			Message:            "Test message2",
-		},
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			g := NewWithT(t)
+			equal := ConditionsEqual(test.prevConds, test.curConds)
+			g.Expect(equal).To(Equal(test.expEqual))
+		})
 	}
-}
-
-func TestConvertRouteConditions(t *testing.T) {
-	g := NewWithT(t)
-
-	var generation int64 = 1
-	transitionTime := metav1.NewTime(time.Now())
-
-	expected := CreateExpectedAPIConditions("Test", generation, transitionTime)
-
-	result := convertConditions(CreateTestConditions("Test"), generation, transitionTime)
-	g.Expect(helpers.Diff(expected, result)).To(BeEmpty())
 }
