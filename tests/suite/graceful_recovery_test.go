@@ -60,33 +60,8 @@ var _ = Describe("Graceful Recovery test", Ordered, Label("nfr", "graceful-recov
 		Expect(err).ToNot(HaveOccurred())
 		Expect(podNames).ToNot(BeEmpty())
 
-		ctx, cancel := context.WithTimeout(context.Background(), timeoutConfig.GetTimeout)
-		defer cancel()
-
-		var ngfPod core.Pod
-		err = k8sClient.Get(ctx, types.NamespacedName{Namespace: ngfNamespace, Name: podNames[0]}, &ngfPod)
-		Expect(err).ToNot(HaveOccurred())
-
-		var restartCount int
-		for _, containerStatus := range ngfPod.Status.ContainerStatuses {
-			if containerStatus.Name == ngfContainerName {
-				restartCount = int(containerStatus.RestartCount)
-			}
-		}
-
-		output, err := restartNGFProcess()
+		output, err := restartNGFProcess(ngfContainerName)
 		Expect(err).ToNot(HaveOccurred(), string(output))
-		// Wait for NGF to restart.
-		time.Sleep(6 * time.Second)
-
-		err = k8sClient.Get(ctx, types.NamespacedName{Namespace: ngfNamespace, Name: podNames[0]}, &ngfPod)
-		Expect(err).ToNot(HaveOccurred())
-
-		for _, containerStatus := range ngfPod.Status.ContainerStatuses {
-			if containerStatus.Name == ngfContainerName {
-				Expect(int(containerStatus.RestartCount)).To(Equal(restartCount + 1))
-			}
-		}
 
 		expectWorkingTraffic(teaURL, coffeeURL)
 
@@ -110,33 +85,8 @@ var _ = Describe("Graceful Recovery test", Ordered, Label("nfr", "graceful-recov
 		Expect(err).ToNot(HaveOccurred())
 		Expect(podNames).ToNot(BeEmpty())
 
-		ctx, cancel := context.WithTimeout(context.Background(), timeoutConfig.GetTimeout)
-		defer cancel()
-
-		var ngfPod core.Pod
-		err = k8sClient.Get(ctx, types.NamespacedName{Namespace: ngfNamespace, Name: podNames[0]}, &ngfPod)
-		Expect(err).ToNot(HaveOccurred())
-
-		var restartCount int
-		for _, containerStatus := range ngfPod.Status.ContainerStatuses {
-			if containerStatus.Name == nginxContainerName {
-				restartCount = int(containerStatus.RestartCount)
-			}
-		}
-
-		output, err := restartNginxContainer()
+		output, err := restartNginxContainer(nginxContainerName)
 		Expect(err).ToNot(HaveOccurred(), string(output))
-		// Wait for NGF to restart.
-		time.Sleep(2 * time.Second)
-
-		err = k8sClient.Get(ctx, types.NamespacedName{Namespace: ngfNamespace, Name: podNames[0]}, &ngfPod)
-		Expect(err).ToNot(HaveOccurred())
-
-		for _, containerStatus := range ngfPod.Status.ContainerStatuses {
-			if containerStatus.Name == nginxContainerName {
-				Expect(int(containerStatus.RestartCount)).To(Equal(restartCount + 1))
-			}
-		}
 
 		checkContainerLogsForErrors(podNames[0])
 
@@ -153,10 +103,24 @@ var _ = Describe("Graceful Recovery test", Ordered, Label("nfr", "graceful-recov
 	})
 })
 
-func restartNginxContainer() ([]byte, error) {
+func restartNginxContainer(nginxContainerName string) ([]byte, error) {
 	podNames, err := framework.GetReadyNGFPodNames(k8sClient, ngfNamespace, releaseName, timeoutConfig.GetTimeout)
 	Expect(err).ToNot(HaveOccurred())
 	Expect(podNames).ToNot(BeEmpty())
+
+	ctx, cancel := context.WithTimeout(context.Background(), timeoutConfig.GetTimeout)
+	defer cancel()
+
+	var ngfPod core.Pod
+	err = k8sClient.Get(ctx, types.NamespacedName{Namespace: ngfNamespace, Name: podNames[0]}, &ngfPod)
+	Expect(err).ToNot(HaveOccurred())
+
+	var restartCount int
+	for _, containerStatus := range ngfPod.Status.ContainerStatuses {
+		if containerStatus.Name == nginxContainerName {
+			restartCount = int(containerStatus.RestartCount)
+		}
+	}
 
 	output, err := exec.Command( // nolint:gosec
 		"kubectl",
@@ -173,13 +137,39 @@ func restartNginxContainer() ([]byte, error) {
 	if err != nil {
 		return output, err
 	}
+
+	// Wait for NGF to restart.
+	time.Sleep(2 * time.Second)
+
+	err = k8sClient.Get(ctx, types.NamespacedName{Namespace: ngfNamespace, Name: podNames[0]}, &ngfPod)
+	Expect(err).ToNot(HaveOccurred())
+
+	for _, containerStatus := range ngfPod.Status.ContainerStatuses {
+		if containerStatus.Name == nginxContainerName {
+			Expect(int(containerStatus.RestartCount)).To(Equal(restartCount + 1))
+		}
+	}
 	return nil, nil
 }
 
-func restartNGFProcess() ([]byte, error) {
+func restartNGFProcess(ngfContainerName string) ([]byte, error) {
 	podNames, err := framework.GetReadyNGFPodNames(k8sClient, ngfNamespace, releaseName, timeoutConfig.GetTimeout)
 	Expect(err).ToNot(HaveOccurred())
 	Expect(podNames).ToNot(BeEmpty())
+
+	ctx, cancel := context.WithTimeout(context.Background(), timeoutConfig.GetTimeout)
+	defer cancel()
+
+	var ngfPod core.Pod
+	err = k8sClient.Get(ctx, types.NamespacedName{Namespace: ngfNamespace, Name: podNames[0]}, &ngfPod)
+	Expect(err).ToNot(HaveOccurred())
+
+	var restartCount int
+	for _, containerStatus := range ngfPod.Status.ContainerStatuses {
+		if containerStatus.Name == ngfContainerName {
+			restartCount = int(containerStatus.RestartCount)
+		}
+	}
 
 	output, err := exec.Command( // nolint:gosec
 		"kubectl",
@@ -195,6 +185,18 @@ func restartNGFProcess() ([]byte, error) {
 		"$(PID=$(pgrep -f \"/[u]sr/bin/gateway\") && kill -9 $PID)").CombinedOutput()
 	if err != nil {
 		return output, err
+	}
+
+	// Wait for NGF to restart.
+	time.Sleep(6 * time.Second)
+
+	err = k8sClient.Get(ctx, types.NamespacedName{Namespace: ngfNamespace, Name: podNames[0]}, &ngfPod)
+	Expect(err).ToNot(HaveOccurred())
+
+	for _, containerStatus := range ngfPod.Status.ContainerStatuses {
+		if containerStatus.Name == ngfContainerName {
+			Expect(int(containerStatus.RestartCount)).To(Equal(restartCount + 1))
+		}
 	}
 	return nil, nil
 }
