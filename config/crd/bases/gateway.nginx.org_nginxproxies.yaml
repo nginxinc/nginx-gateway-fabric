@@ -98,16 +98,20 @@ spec:
                         a tracing span.
                       properties:
                         key:
-                          description: Key is the key for a span attribute.
+                          description: |-
+                            Key is the key for a span attribute.
+                            Format: must have all '"' escaped and must not contain any '$' or end with an unescaped '\'
                           maxLength: 255
                           minLength: 1
-                          pattern: ^[a-zA-Z0-9_-]+$
+                          pattern: ^([^"$\\]|\\[^$])*$
                           type: string
                         value:
-                          description: Value is the value for a span attribute.
+                          description: |-
+                            Value is the value for a span attribute.
+                            Format: must have all '"' escaped and must not contain any '$' or end with an unescaped '\'
                           maxLength: 255
                           minLength: 1
-                          pattern: ^[a-zA-Z0-9_-]+$
+                          pattern: ^([^"$\\]|\\[^$])*$
                           type: string
                       required:
                       - key

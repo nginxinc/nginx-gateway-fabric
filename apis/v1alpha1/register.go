@@ -36,6 +36,8 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&NginxGatewayList{},
 		&NginxProxy{},
 		&NginxProxyList{},
+		&ObservabilityPolicy{},
+		&ObservabilityPolicyList{},
 		&ClientSettingsPolicy{},
 		&ClientSettingsPolicyList{},
 	)
