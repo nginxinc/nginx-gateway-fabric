@@ -118,6 +118,71 @@ func TestBuildStatuses(t *testing.T) {
 		},
 	}
 
+	grpcRoutes := map[types.NamespacedName]*graph.GRPCRoute{
+		{Namespace: "test", Name: "gr-valid"}: {
+			Valid: true,
+			Source: &v1alpha2.GRPCRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Generation: 3,
+				},
+				Spec: v1alpha2.GRPCRouteSpec{
+					CommonRouteSpec: v1.CommonRouteSpec{
+						ParentRefs: []v1.ParentReference{
+							{
+								SectionName: helpers.GetPointer[v1.SectionName]("listener-80-1"),
+							},
+							{
+								SectionName: helpers.GetPointer[v1.SectionName]("listener-80-2"),
+							},
+						},
+					},
+				},
+			},
+			ParentRefs: []graph.ParentRef{
+				{
+					Idx:     0,
+					Gateway: client.ObjectKeyFromObject(gw),
+					Attachment: &graph.ParentRefAttachmentStatus{
+						Attached: true,
+					},
+				},
+				{
+					Idx:     1,
+					Gateway: client.ObjectKeyFromObject(gw),
+					Attachment: &graph.ParentRefAttachmentStatus{
+						Attached:        false,
+						FailedCondition: invalidAttachmentCondition,
+					},
+				},
+			},
+		},
+		{Namespace: "test", Name: "gr-invalid"}: {
+			Valid:      false,
+			Conditions: []conditions.Condition{invalidRouteCondition},
+			Source: &v1alpha2.GRPCRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Generation: 3,
+				},
+				Spec: v1alpha2.GRPCRouteSpec{
+					CommonRouteSpec: v1.CommonRouteSpec{
+						ParentRefs: []v1.ParentReference{
+							{
+								SectionName: helpers.GetPointer[v1.SectionName]("listener-80-1"),
+							},
+						},
+					},
+				},
+			},
+			ParentRefs: []graph.ParentRef{
+				{
+					Idx:        0,
+					Gateway:    client.ObjectKeyFromObject(gw),
+					Attachment: nil,
+				},
+			},
+		},
+	}
+
 	graph := &graph.Graph{
 		GatewayClass: &graph.GatewayClass{
 			Source: &v1.GatewayClass{
@@ -142,6 +207,7 @@ func TestBuildStatuses(t *testing.T) {
 			client.ObjectKeyFromObject(ignoredGw): ignoredGw,
 		},
 		HTTPRoutes: routes,
+		GRPCRoutes: grpcRoutes,
 	}
 
 	expected := status.GatewayAPIStatuses{
@@ -204,7 +270,39 @@ func TestBuildStatuses(t *testing.T) {
 			},
 		},
 		BackendTLSPolicyStatuses: status.BackendTLSPolicyStatuses{},
-		GRPCRouteStatuses:        status.RouteStatuses{},
+		GRPCRouteStatuses: status.RouteStatuses{
+			{Namespace: "test", Name: "gr-valid"}: {
+				ObservedGeneration: 3,
+				ParentStatuses: []status.ParentStatus{
+					{
+						GatewayNsName: client.ObjectKeyFromObject(gw),
+						SectionName:   helpers.GetPointer[v1.SectionName]("listener-80-1"),
+						Conditions:    staticConds.NewDefaultRouteConditions(),
+					},
+					{
+						GatewayNsName: client.ObjectKeyFromObject(gw),
+						SectionName:   helpers.GetPointer[v1.SectionName]("listener-80-2"),
+						Conditions: append(
+							staticConds.NewDefaultRouteConditions(),
+							invalidAttachmentCondition,
+						),
+					},
+				},
+			},
+			{Namespace: "test", Name: "gr-invalid"}: {
+				ObservedGeneration: 3,
+				ParentStatuses: []status.ParentStatus{
+					{
+						GatewayNsName: client.ObjectKeyFromObject(gw),
+						SectionName:   helpers.GetPointer[v1.SectionName]("listener-80-1"),
+						Conditions: append(
+							staticConds.NewDefaultRouteConditions(),
+							invalidRouteCondition,
+						),
+					},
+				},
+			},
+		},
 	}
 
 	g := NewWithT(t)

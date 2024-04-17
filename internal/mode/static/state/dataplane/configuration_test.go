@@ -20,6 +20,61 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/resolver/resolverfakes"
 )
 
+func createGRPCRoute(
+	name, hostname, listenerName string,
+	methodSvc []string,
+	headers []v1alpha2.GRPCHeaderMatch,
+) *v1alpha2.GRPCRoute {
+	rulesLen := len(methodSvc)
+	if len(headers) != 0 {
+		rulesLen = rulesLen + 1
+	}
+	rules := make([]v1alpha2.GRPCRouteRule, 0, rulesLen)
+	for _, m := range methodSvc {
+		mm := v1alpha2.GRPCMethodMatch{
+			Method:  helpers.GetPointer("method"),
+			Service: helpers.GetPointer(m),
+		}
+		rules = append(rules, v1alpha2.GRPCRouteRule{
+			Matches: []v1alpha2.GRPCRouteMatch{
+				{
+					Method: helpers.GetPointer(mm),
+				},
+			},
+		})
+	}
+	if len(headers) > 0 {
+		rules = append(rules, v1alpha2.GRPCRouteRule{
+			Matches: []v1alpha2.GRPCRouteMatch{
+				{
+					Headers: headers,
+				},
+			},
+		})
+	}
+	return &v1alpha2.GRPCRoute{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "test",
+			Name:      name,
+		},
+		Spec: v1alpha2.GRPCRouteSpec{
+			CommonRouteSpec: v1.CommonRouteSpec{
+				ParentRefs: []v1.ParentReference{
+					{
+						Namespace:   (*v1.Namespace)(helpers.GetPointer("test")),
+						Name:        "gateway",
+						SectionName: (*v1.SectionName)(helpers.GetPointer(listenerName)),
+					},
+				},
+			},
+			Hostnames: []v1.Hostname{
+				v1.Hostname(hostname),
+			},
+			Rules: rules,
+		},
+	}
+}
+
 func TestBuildConfiguration(t *testing.T) {
 	const (
 		invalidMatchesPath = "/not-valid-matches"
@@ -107,8 +162,8 @@ func TestBuildConfiguration(t *testing.T) {
 		return []graph.BackendRef{validBackendRef}
 	}
 
-	createRules := func(hr *v1.HTTPRoute, paths []pathAndType) []graph.Rule {
-		rules := make([]graph.Rule, len(hr.Spec.Rules))
+	createRules := func(rulesLen int, paths []pathAndType) []graph.Rule {
+		rules := make([]graph.Rule, rulesLen)
 
 		for i := range paths {
 			validMatches := paths[i].path != invalidMatchesPath
@@ -136,7 +191,7 @@ func TestBuildConfiguration(t *testing.T) {
 		}
 		r := &graph.HTTPRoute{
 			Source: source,
-			Rules:  createRules(source, paths),
+			Rules:  createRules(len(source.Spec.Rules), paths),
 			Valid:  true,
 			ParentRefs: []graph.ParentRef{
 				{
@@ -170,6 +225,25 @@ func TestBuildConfiguration(t *testing.T) {
 		return groups
 	}
 
+	createExpBackendGroupsForGRPCRoute := func(route *graph.GRPCRoute) []BackendGroup {
+		groups := make([]BackendGroup, 0)
+
+		for idx, r := range route.Rules {
+			var backends []Backend
+			if r.ValidFilters && r.ValidMatches {
+				backends = []Backend{expValidBackend}
+			}
+
+			groups = append(groups, BackendGroup{
+				Backends: backends,
+				Source:   client.ObjectKeyFromObject(route.Source),
+				RuleIdx:  idx,
+			})
+		}
+
+		return groups
+	}
+
 	createTestResources := func(name, hostname, listenerName string, paths ...pathAndType) (
 		*v1.HTTPRoute, []BackendGroup, *graph.HTTPRoute,
 	) {
@@ -177,6 +251,86 @@ func TestBuildConfiguration(t *testing.T) {
 		route := createInternalRoute(hr, listenerName, paths)
 		groups := createExpBackendGroupsForRoute(route)
 		return hr, groups, route
+	}
+
+	gr1 := createGRPCRoute(
+		"gr-1",
+		"foo.example.com",
+		"listener-80-1",
+		[]string{"myService"},
+		[]v1alpha2.GRPCHeaderMatch{{Name: "headerName", Value: "headerValue"}},
+	)
+	routeGR1 := &graph.GRPCRoute{
+		Source: gr1,
+		Rules: createRules(
+			len(gr1.Spec.Rules),
+			[]pathAndType{{path: "/myService/method", pathType: v1.PathMatchExact}},
+		),
+		Valid: true,
+		ParentRefs: []graph.ParentRef{
+			{
+				Attachment: &graph.ParentRefAttachmentStatus{
+					AcceptedHostnames: map[string][]string{
+						"listener-80-1": {"foo.example.com"},
+					},
+				},
+			},
+		},
+	}
+
+	expGR1Groups := createExpBackendGroupsForGRPCRoute(routeGR1)
+
+	routeInvalidGR1 := &graph.GRPCRoute{Valid: false}
+
+	gr2noMatches := &v1alpha2.GRPCRoute{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "test",
+			Name:      "gr2",
+		},
+		Spec: v1alpha2.GRPCRouteSpec{
+			CommonRouteSpec: v1.CommonRouteSpec{
+				ParentRefs: []v1.ParentReference{
+					{
+						Namespace:   (*v1.Namespace)(helpers.GetPointer("test")),
+						Name:        "gateway",
+						SectionName: (*v1.SectionName)(helpers.GetPointer("listener-80-1")),
+					},
+				},
+			},
+			Hostnames: []v1.Hostname{
+				v1.Hostname("bar.example.com"),
+			},
+			Rules: []v1alpha2.GRPCRouteRule{
+				{BackendRefs: []v1alpha2.GRPCBackendRef{}},
+			},
+		},
+	}
+
+	routeNoMatchesGR2 := &graph.GRPCRoute{
+		Source: gr2noMatches,
+		Rules: []graph.Rule{
+			{
+				BackendRefs:  []graph.BackendRef{},
+				ValidMatches: true,
+				ValidFilters: true,
+			},
+		},
+		Valid: true,
+		ParentRefs: []graph.ParentRef{
+			{
+				Attachment: &graph.ParentRefAttachmentStatus{
+					AcceptedHostnames: map[string][]string{
+						"listener-80-1": {"bar.example.com"},
+					},
+				},
+			},
+		},
+	}
+
+	nilBackend := BackendGroup{
+		Source:   types.NamespacedName{Namespace: "test", Name: "gr2"},
+		Backends: nil,
+		RuleIdx:  0,
 	}
 
 	prefix := v1.PathMatchPathPrefix
@@ -612,6 +766,9 @@ func TestBuildConfiguration(t *testing.T) {
 							HTTPRoutes: map[types.NamespacedName]*graph.HTTPRoute{
 								client.ObjectKeyFromObject(hr1Invalid): routeHR1Invalid,
 							},
+							GRPCRoutes: map[types.NamespacedName]*graph.GRPCRoute{
+								client.ObjectKeyFromObject(gr1): routeInvalidGR1,
+							},
 						},
 						{
 							Name:   "listener-443-1",
@@ -826,6 +983,80 @@ func TestBuildConfiguration(t *testing.T) {
 				CertBundles:   map[CertBundleID]CertBundle{},
 			},
 			msg: "one http listener with two routes for different hostnames",
+		},
+		{
+			graph: &graph.Graph{
+				GatewayClass: &graph.GatewayClass{
+					Source: &v1.GatewayClass{},
+					Valid:  true,
+				},
+				Gateway: &graph.Gateway{
+					Source: &v1.Gateway{},
+					Listeners: []*graph.Listener{
+						{
+							Name:   "listener-80-1",
+							Source: listener80,
+							Valid:  true,
+							GRPCRoutes: map[types.NamespacedName]*graph.GRPCRoute{
+								{Namespace: "test", Name: "gr-1"}: routeGR1,
+								{Namespace: "test", Name: "gr-2"}: routeNoMatchesGR2,
+							},
+						},
+					},
+				},
+				GRPCRoutes: map[types.NamespacedName]*graph.GRPCRoute{
+					{Namespace: "test", Name: "gr-1"}: routeGR1,
+					{Namespace: "test", Name: "gr-2"}: routeNoMatchesGR2,
+				},
+			},
+			expConf: Configuration{
+				HTTPServers: []VirtualServer{
+					{
+						IsDefault: true,
+						Port:      80,
+					},
+					{
+						Hostname: "foo.example.com",
+						PathRules: []PathRule{
+							{
+								Path:     "/myService/method",
+								PathType: PathTypeExact,
+								MatchRules: []MatchRule{
+									{
+										BackendGroup: expGR1Groups[0],
+										Source:       &gr1.ObjectMeta,
+									},
+								},
+								GRPC: true,
+							},
+						},
+						Port: 80,
+					},
+					{
+						Hostname: "bar.example.com",
+						PathRules: []PathRule{
+							{
+								Path:     "/",
+								PathType: PathTypePrefix,
+								MatchRules: []MatchRule{
+									{
+										BackendGroup: nilBackend,
+										Source:       &gr2noMatches.ObjectMeta,
+									},
+								},
+								GRPC: true,
+							},
+						},
+						Port: 80,
+					},
+				},
+				SSLServers:    []VirtualServer{},
+				Upstreams:     []Upstream{fooUpstream},
+				BackendGroups: []BackendGroup{expGR1Groups[0], nilBackend},
+				SSLKeyPairs:   map[SSLKeyPairID]SSLKeyPair{},
+				CertBundles:   map[CertBundleID]CertBundle{},
+			},
+			msg: "one http listener with two grpcroutes",
 		},
 		{
 			graph: &graph.Graph{

@@ -365,7 +365,7 @@ func (hpr *hostPathRules) upsertGRPCRoute(route *graph.GRPCRoute, listener *grap
 		rule, exist := hpr.rulesPerHost[hostname][key]
 		if !exist {
 			rule.Path = path
-			rule.PathType = PathTypePrefix
+			rule.PathType = convertPathType(pathType)
 		}
 
 		rule.GRPC = true
@@ -395,36 +395,15 @@ func (hpr *hostPathRules) upsertGRPCRoute(route *graph.GRPCRoute, listener *grap
 				upsertRoute(route, "/", h, v1.PathMatchType("PathPrefix"), i, []v1alpha2.GRPCHeaderMatch{})
 			}
 			for _, m := range rule.Matches {
-				// TODO(ciarams87): Ensure the following is adhered to:
-
-				// Proxy or Load Balancer routing configuration generated from GRPCRoutes MUST prioritize rules based on the
-				// following criteria, continuing on ties. Merging MUST not be done between GRPCRoutes and HTTPRoutes.
-				// Precedence MUST be given to the rule with the largest number of:
-
-				// * Characters in a matching non-wildcard hostname. * Characters in a matching hostname.
-				// * Characters in a matching service. * Characters in a matching method. * Header matches.
-
-				// If ties still exist across multiple Routes, matching precedence MUST be determined in order
-				// of the following criteria, continuing on ties:
-
-				// The oldest Route based on creation timestamp.
-				// The Route appearing first in alphabetical order by "{namespace}/{name}".
-				// If ties still exist within the Route that has been given precedence, matching precedence MUST be
-				// granted to the first matching rule meeting the above criteria.
-
 				path := "/"
 				pathType := v1.PathMatchType("PathPrefix")
 				if m.Method != nil {
-					// if method is provided, service is required.
-					service := m.Method.Service
-					method := m.Method.Method
+					// if method match is provided, service and method are required
+					// as the only method type supported is exact.
+					// This is enforced by the graph package
 
-					if method != nil {
-						path = "/" + *service + "/" + *method
-						pathType = v1.PathMatchType("Exact")
-					} else {
-						path = "/" + *service
-					}
+					path = "/" + *m.Method.Service + "/" + *m.Method.Method
+					pathType = v1.PathMatchType("Exact")
 				}
 
 				upsertRoute(route, path, h, pathType, i, m.Headers)

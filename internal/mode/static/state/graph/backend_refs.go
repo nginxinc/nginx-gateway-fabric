@@ -135,8 +135,6 @@ func addGRPCBackendRefsToRules(
 			continue
 		}
 
-		// zero backendRefs is OK. For example, a rule can include a redirect filter.
-		// TODO: is this true for GRPCRoute?
 		if len(rule.BackendRefs) == 0 {
 			continue
 		}
