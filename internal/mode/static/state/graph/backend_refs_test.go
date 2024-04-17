@@ -820,14 +820,21 @@ func TestAddGRPCBackendRefsToRulesTest(t *testing.T) {
 		gr.Spec.Rules = make([]v1alpha2.GRPCRouteRule, len(serviceNames))
 
 		for idx, svcName := range serviceNames {
-			refs := []v1alpha2.GRPCBackendRef{
-				createGRPCBackendRef(svcName, 80, nil),
-			}
-			if refsPerBackend == 2 {
-				refs = append(refs, createGRPCBackendRef(svcName, 81, helpers.GetPointer[int32](5)))
-			}
-			if refsPerBackend != 1 && refsPerBackend != 2 {
-				panic("invalid refsPerBackend")
+			var refs []v1alpha2.GRPCBackendRef
+			if refsPerBackend == 0 {
+				refs = []v1alpha2.GRPCBackendRef{
+					createGRPCBackendRef(svcName, 80, helpers.GetPointer[int32](-1)),
+				}
+			} else {
+				refs = []v1alpha2.GRPCBackendRef{
+					createGRPCBackendRef(svcName, 80, nil),
+				}
+				if refsPerBackend == 2 {
+					refs = append(refs, createGRPCBackendRef(svcName, 81, helpers.GetPointer[int32](5)))
+				}
+				if refsPerBackend != 1 && refsPerBackend != 2 && refsPerBackend != 0 {
+					panic("invalid refsPerBackend")
+				}
 			}
 
 			gr.Spec.Rules[idx] = v1alpha2.GRPCRouteRule{
@@ -865,6 +872,7 @@ func TestAddGRPCBackendRefsToRulesTest(t *testing.T) {
 	grWithTwoBackends := createRoute("gr2", "Service", 2, "svc1")
 	grWithTwoDiffBackends := createRoute("gr2", "Service", 2, "svc1")
 	grWithInvalidRule := createRoute("gr3", "NotService", 1, "svc1")
+	grWithInvalidWeight := createRoute("gr5", "Service", 0, "svc1")
 	grWithZeroBackendRefs := createRoute("gr4", "Service", 1, "svc1")
 	grWithZeroBackendRefs.Spec.Rules[0].BackendRefs = nil
 	grWithTwoDiffBackends.Spec.Rules[0].BackendRefs[1].Name = "svc2"
@@ -1127,6 +1135,24 @@ func TestAddGRPCBackendRefsToRulesTest(t *testing.T) {
 			},
 			policies: emptyPolicies,
 			name:     "invalid backendRef",
+		},
+		{
+			route: &GRPCRoute{
+				Source:     grWithInvalidWeight,
+				ParentRefs: sectionNameRefs,
+				Valid:      true,
+				Rules:      createRules(grWithInvalidWeight, allValid, allValid),
+			},
+			expectedBackendRefs: []BackendRef{
+				{Weight: 0},
+			},
+			expectedConditions: []conditions.Condition{
+				staticConds.NewRouteBackendRefUnsupportedValue(
+					`spec.rules[0].backendRefs[0].weight: Invalid value: -1: must be in the range [0, 1000000]`,
+				),
+			},
+			policies: emptyPolicies,
+			name:     "invalid weight",
 		},
 		{
 			route: &GRPCRoute{

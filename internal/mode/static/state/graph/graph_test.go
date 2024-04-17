@@ -94,6 +94,43 @@ func TestBuildGraph(t *testing.T) {
 	hr2 := createRoute("hr-2", "wrong-gateway", "listener-80-1")
 	hr3 := createRoute("hr-3", "gateway-1", "listener-443-1") // https listener; should not conflict with hr1
 
+	gr := &v1alpha2.GRPCRoute{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "test",
+			Name:      "gr",
+		},
+		Spec: v1alpha2.GRPCRouteSpec{
+			CommonRouteSpec: gatewayv1.CommonRouteSpec{
+				ParentRefs: []gatewayv1.ParentReference{
+					{
+						Namespace:   (*gatewayv1.Namespace)(helpers.GetPointer("test")),
+						Name:        gatewayv1.ObjectName("gateway-1"),
+						SectionName: (*gatewayv1.SectionName)(helpers.GetPointer("listener-80-1")),
+					},
+				},
+			},
+			Hostnames: []gatewayv1.Hostname{
+				"foo.example.com",
+			},
+			Rules: []v1alpha2.GRPCRouteRule{
+				{
+					BackendRefs: []v1alpha2.GRPCBackendRef{
+						{
+							BackendRef: gatewayv1.BackendRef{
+								BackendObjectReference: gatewayv1.BackendObjectReference{
+									Kind:      (*gatewayv1.Kind)(helpers.GetPointer("Service")),
+									Name:      "foo",
+									Namespace: (*gatewayv1.Namespace)(helpers.GetPointer("service")),
+									Port:      (*gatewayv1.PortNumber)(helpers.GetPointer[int32](80)),
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
 	cm := &v1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "configmap",
@@ -105,6 +142,7 @@ func TestBuildGraph(t *testing.T) {
 	}
 
 	btpAcceptedConds := []conditions.Condition{
+		staticConds.NewBackendTLSPolicyAccepted(),
 		staticConds.NewBackendTLSPolicyAccepted(),
 		staticConds.NewBackendTLSPolicyAccepted(),
 	}
@@ -320,6 +358,9 @@ func TestBuildGraph(t *testing.T) {
 				client.ObjectKeyFromObject(hr2): hr2,
 				client.ObjectKeyFromObject(hr3): hr3,
 			},
+			GRPCRoutes: map[types.NamespacedName]*v1alpha2.GRPCRoute{
+				client.ObjectKeyFromObject(gr): gr,
+			},
 			Services: map[types.NamespacedName]*v1.Service{
 				client.ObjectKeyFromObject(svc): svc,
 			},
@@ -349,6 +390,23 @@ func TestBuildGraph(t *testing.T) {
 		Valid:      true,
 		Attachable: true,
 		Source:     hr1,
+		ParentRefs: []ParentRef{
+			{
+				Idx:     0,
+				Gateway: client.ObjectKeyFromObject(gw1),
+				Attachment: &ParentRefAttachmentStatus{
+					Attached:          true,
+					AcceptedHostnames: map[string][]string{"listener-80-1": {"foo.example.com"}},
+				},
+			},
+		},
+		Rules: []Rule{createValidRuleWithBackendRefs(hr1Refs)},
+	}
+
+	routeGR := &GRPCRoute{
+		Valid:      true,
+		Attachable: true,
+		Source:     gr,
 		ParentRefs: []ParentRef{
 			{
 				Idx:     0,
@@ -397,7 +455,9 @@ func TestBuildGraph(t *testing.T) {
 						HTTPRoutes: map[types.NamespacedName]*HTTPRoute{
 							{Namespace: "test", Name: "hr-1"}: routeHR1,
 						},
-						GRPCRoutes:                map[types.NamespacedName]*GRPCRoute{},
+						GRPCRoutes: map[types.NamespacedName]*GRPCRoute{
+							{Namespace: "test", Name: "gr"}: routeGR,
+						},
 						SupportedKinds:            []gatewayv1.RouteGroupKind{{Kind: "HTTPRoute"}},
 						AllowedRouteLabelSelector: labels.SelectorFromSet(map[string]string{"app": "allowed"}),
 					},
@@ -423,7 +483,9 @@ func TestBuildGraph(t *testing.T) {
 				{Namespace: "test", Name: "hr-1"}: routeHR1,
 				{Namespace: "test", Name: "hr-3"}: routeHR3,
 			},
-			GRPCRoutes: map[types.NamespacedName]*GRPCRoute{},
+			GRPCRoutes: map[types.NamespacedName]*GRPCRoute{
+				{Namespace: "test", Name: "gr"}: routeGR,
+			},
 			ReferencedSecrets: map[types.NamespacedName]*Secret{
 				client.ObjectKeyFromObject(secret): {
 					Source: secret,
