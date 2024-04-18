@@ -858,7 +858,7 @@ func TestCreateServers(t *testing.T) {
 			ServerName: "cafe.example.com",
 			Locations:  getExpectedLocations(false),
 			Port:       8080,
-			HTTP2:      true,
+			GRPC:       true,
 		},
 		{
 			IsDefaultSSL: true,
@@ -872,7 +872,7 @@ func TestCreateServers(t *testing.T) {
 			},
 			Locations: getExpectedLocations(true),
 			Port:      8443,
-			HTTP2:     true,
+			GRPC:      true,
 		},
 	}
 

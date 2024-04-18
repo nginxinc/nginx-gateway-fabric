@@ -18,7 +18,6 @@ server {
 }
     {{- else }}
 server {
-
         {{- if $s.SSL }}
     listen {{ $s.Port }} ssl;
     ssl_certificate {{ $s.SSL.Certificate }};
@@ -51,25 +50,7 @@ server {
         {{ $proxyOrGRPC := "proxy" }}{{ if $l.IsGRPC }}{{ $proxyOrGRPC = "grpc" }}{{ end }}
 
         {{- if $l.IsGRPC }}
-        error_page 400 = @grpc_internal;
-        error_page 401 = @grpc_unauthenticated;
-        error_page 403 = @grpc_permission_denied;
-        error_page 404 = @grpc_unimplemented;
-        error_page 429 = @grpc_unavailable;
-        error_page 502 = @grpc_unavailable;
-        error_page 503 = @grpc_unavailable;
-        error_page 504 = @grpc_unavailable;
-        error_page 405 = @grpc_internal;
-        error_page 408 = @grpc_deadline_exceeded;
-        error_page 413 = @grpc_resource_exhausted;
-        error_page 414 = @grpc_resource_exhausted;
-        error_page 415 = @grpc_internal;
-        error_page 426 = @grpc_internal;
-        error_page 495 = @grpc_unauthenticated;
-        error_page 496 = @grpc_unauthenticated;
-        error_page 497 = @grpc_internal;
-        error_page 500 = @grpc_internal;
-        error_page 501 = @grpc_internal;
+        include /etc/nginx/grpc-error-pages.conf;
         {{- end }}
 
         {{- if $l.ProxyPass -}}
@@ -87,63 +68,9 @@ server {
     }
         {{ end }}
 
-        {{- if $s.HTTP2 }}
-    location @grpc_deadline_exceeded {
-        default_type application/grpc;
-        add_header content-type application/grpc;
-        add_header grpc-status 4;
-        add_header grpc-message 'deadline exceeded';
-        return 204;
-    }
-
-    location @grpc_permission_denied {
-        default_type application/grpc;
-        add_header content-type application/grpc;
-        add_header grpc-status 7;
-        add_header grpc-message 'permission denied';
-        return 204;
-    }
-
-    location @grpc_resource_exhausted {
-        default_type application/grpc;
-        add_header content-type application/grpc;
-        add_header grpc-status 8;
-        add_header grpc-message 'resource exhausted';
-        return 204;
-    }
-
-    location @grpc_unimplemented {
-        default_type application/grpc;
-        add_header content-type application/grpc;
-        add_header grpc-status 12;
-        add_header grpc-message unimplemented;
-        return 204;
-    }
-
-    location @grpc_internal {
-        default_type application/grpc;
-        add_header content-type application/grpc;
-        add_header grpc-status 13;
-        add_header grpc-message 'internal error';
-        return 204;
-    }
-
-    location @grpc_unavailable {
-        default_type application/grpc;
-        add_header content-type application/grpc;
-        add_header grpc-status 14;
-        add_header grpc-message unavailable;
-        return 204;
-    }
-
-    location @grpc_unauthenticated {
-        default_type application/grpc;
-        add_header content-type application/grpc;
-        add_header grpc-status 16;
-        add_header grpc-message unauthenticated;
-        return 204;
-    }
-    {{- end }}
+        {{- if $s.GRPC }}
+        include /etc/nginx/grpc-error-locations.conf;
+        {{- end }}
 }
     {{- end }}
 {{ end }}

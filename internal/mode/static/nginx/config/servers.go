@@ -100,7 +100,7 @@ func createSSLServer(virtualServer dataplane.VirtualServer, serverID int) (http.
 		},
 		Locations: locs,
 		Port:      virtualServer.Port,
-		HTTP2:     http2,
+		GRPC:      http2,
 	}, matchPairs
 }
 
@@ -118,7 +118,7 @@ func createServer(virtualServer dataplane.VirtualServer, serverID int) (http.Ser
 		ServerName: virtualServer.Hostname,
 		Locations:  locs,
 		Port:       virtualServer.Port,
-		HTTP2:      http2,
+		GRPC:       http2,
 	}, matchPairs
 }
 

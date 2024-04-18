@@ -7,7 +7,7 @@ type Server struct {
 	Locations     []Location
 	IsDefaultHTTP bool
 	IsDefaultSSL  bool
-	HTTP2         bool
+	GRPC          bool
 	Port          int32
 }
 
