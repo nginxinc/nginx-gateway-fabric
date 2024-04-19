@@ -98,7 +98,7 @@ type Tracing struct {
 type TraceStrategy string
 
 const (
-	// TraceStrategyOn enables ratio-based tracing, defaulting to 100% sampling rate.
+	// TraceStrategyRatio enables ratio-based tracing, defaulting to 100% sampling rate.
 	TraceStrategyRatio TraceStrategy = "ratio"
 
 	// TraceStrategyParent enables tracing and only records spans if the parent span was sampled.
