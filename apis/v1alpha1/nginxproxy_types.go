@@ -88,20 +88,3 @@ type TelemetryExporter struct {
 	// +kubebuilder:validation:Pattern=`^(?:http?:\/\/)?[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)*(?::\d{1,5})?$`
 	Endpoint string `json:"endpoint"`
 }
-
-// SpanAttribute is a key value pair to be added to a tracing span.
-type SpanAttribute struct {
-	// Key is the key for a span attribute.
-	//
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=255
-	// +kubebuilder:validation:Pattern=`^[a-zA-Z0-9_-]+$`
-	Key string `json:"key"`
-
-	// Value is the value for a span attribute.
-	//
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=255
-	// +kubebuilder:validation:Pattern=`^[a-zA-Z0-9_-]+$`
-	Value string `json:"value"`
-}

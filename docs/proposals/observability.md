@@ -98,24 +98,21 @@ type Tracing struct {
     // SpanAttributes are custom key/value attributes that are added to each span.
     //
     // +optional
-    SpanAttributes map[string]string `json:"spanAttributes,omitempty"`
+    SpanAttributes []SpanAttribute `json:"spanAttributes,omitempty"`
 
-    // Enable defines if tracing is enabled, disabled, or parent-based.
-    Enable TraceType `json:"enable"`
+    // Strategy defines if tracing is ratio-based or parent-based.
+    Strategy TraceStrategy `json:"strategy"`
 }
 
-// TraceType defines if tracing is enabled.
-type TraceType string
+// TraceStrategy defines the tracing strategy.
+type TraceStrategy string
 
 const (
-    // TraceTypeOn enables tracing.
-    TraceTypeOn TraceType = "on"
+    // TraceStrategyRatio enables ratio-based tracing, defaulting to 100% sampling rate.
+    TraceStrategyRatio TraceStrategy = "ratio"
 
-    // TraceTypeOff disables tracing.
-    TraceTypeOff TraceType = "off"
-
-    // TraceTypeParent enables tracing and only records spans if the parent span was sampled.
-    TraceTypeParent TraceType = "parent"
+    // TraceStrategyParent enables tracing and only records spans if the parent span was sampled.
+    TraceStrategyParent TraceStrategy = "parent"
 )
 
 // TraceContext specifies how to propagate traceparent/tracestate headers.
@@ -135,6 +132,15 @@ const (
     // TraceContextIgnore skips context headers processing.
     TraceContextIgnore TraceContext = "ignore"
 )
+
+// SpanAttribute is a key value pair to be added to a tracing span.
+type SpanAttribute struct {
+	// Key is the key for a span attribute.
+	Key string `json:"key"`
+
+	// Value is the value for a span attribute.
+	Value string `json:"value"`
+}
 ```
 
 ### YAML
@@ -152,15 +158,16 @@ spec:
     group: gateway.networking.k8s.io
     kind: HTTPRoute
     name: example-route
-    sectionName: example-section
   tracing:
+    strategy: ratio
     ratio: 10
     context: inject
     spanName: example-span
     spanAttributes:
-      attribute1: value1
-      attribute2: value2
-    enable: "on"
+    - key: attribute1
+      value: value1
+    - key: attribute2
+      value: value2
 status:
   ancestors:
     ancestorRef:
@@ -173,29 +180,6 @@ status:
         status: "True"
         reason: Accepted
         message: Policy is accepted
-```
-
-and the HTTPRoute it is attached to:
-
-```yaml
-apiVersion: gateway.networking.k8s.io/v1
-kind: HTTPRoute
-metadata:
-  name: example-route
-spec:
-  gatewayClassName: nginx
-  listeners:
-  - name: example-section
-    port: 80
-    protocol: HTTP
-    hostname: "*.example.com"
-status:
-  conditions:
-  ...
-  - type: gateway.nginx.org/ObservabilityPolicyAffected # new condition
-    status: "True"
-    reason: PolicyAffected
-    message: Object affected by an ObservabilityPolicy.
 ```
 
 ### Status
