@@ -10,6 +10,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	coordination "k8s.io/api/coordination/v1"
 	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -22,7 +23,8 @@ import (
 const (
 	// FIXME(bjee19): Find an automated way to keep the version updated here similar to dependabot.
 	// https://github.com/nginxinc/nginx-gateway-fabric/issues/1665
-	debugImage         = "busybox:1.28"
+	debugImage = "busybox:1.28"
+
 	teaURL             = "https://cafe.example.com/tea"
 	coffeeURL          = "http://cafe.example.com/coffee"
 	nginxContainerName = "nginx"
@@ -67,15 +69,20 @@ var _ = Describe("Graceful Recovery test", Ordered, Label("nfr", "graceful-recov
 		Expect(err).ToNot(HaveOccurred())
 		Expect(podNames).ToNot(BeEmpty())
 
+		leaseName, err := getLeaderElectionLeaseHolderName()
+		Expect(err).ToNot(HaveOccurred())
+
 		output, err := restartNGFProcess(ngfContainerName)
 		Expect(err).ToNot(HaveOccurred(), string(output))
 
 		checkContainerLogsForErrors(podNames[0])
 
+		err = waitForLeaderLeaseToChange(leaseName)
+		Expect(err).ToNot(HaveOccurred())
+
 		err = waitForWorkingTraffic()
 		Expect(err).ToNot(HaveOccurred())
 
-		// I tried just deleting the routes and ran into a bunch of issues, deleting all the files was better
 		Expect(resourceManager.DeleteFromFiles(files, ns.Name)).To(Succeed())
 
 		err = waitForFailingTraffic()
@@ -93,10 +100,16 @@ var _ = Describe("Graceful Recovery test", Ordered, Label("nfr", "graceful-recov
 		Expect(err).ToNot(HaveOccurred())
 		Expect(podNames).ToNot(BeEmpty())
 
+		leaseName, err := getLeaderElectionLeaseHolderName()
+		Expect(err).ToNot(HaveOccurred())
+
 		output, err := restartNginxContainer(nginxContainerName)
 		Expect(err).ToNot(HaveOccurred(), string(output))
 
 		checkContainerLogsForErrors(podNames[0])
+
+		err = waitForLeaderLeaseToChange(leaseName)
+		Expect(err).ToNot(HaveOccurred())
 
 		err = waitForWorkingTraffic()
 		Expect(err).ToNot(HaveOccurred())
@@ -231,10 +244,10 @@ func waitForWorkingTraffic() error {
 		500*time.Millisecond,
 		true, /* poll immediately */
 		func(_ context.Context) (bool, error) {
-			if err := expectRequest(teaURL, address, http.StatusOK, "URI: /tea"); err != nil {
+			if err := expectRequestToSucceed(teaURL, address, "URI: /tea"); err != nil {
 				return false, nil
 			}
-			if err := expectRequest(coffeeURL, address, http.StatusOK, "URI: /coffee"); err != nil {
+			if err := expectRequestToSucceed(coffeeURL, address, "URI: /coffee"); err != nil {
 				return false, nil
 			}
 			return true, nil
@@ -246,15 +259,16 @@ func waitForFailingTraffic() error {
 	ctx, cancel := context.WithTimeout(context.Background(), timeoutConfig.RequestTimeout)
 	defer cancel()
 
+	//nolint:nilerr
 	return wait.PollUntilContextCancel(
 		ctx,
 		500*time.Millisecond,
 		true, /* poll immediately */
 		func(_ context.Context) (bool, error) {
-			if err := expectRequest(teaURL, address, 0, "URI: /tea"); err == nil {
+			if err := expectRequestToFail(teaURL, address, "URI: /tea"); err != nil {
 				return false, nil
 			}
-			if err := expectRequest(coffeeURL, address, 0, "URI: /coffee"); err == nil {
+			if err := expectRequestToFail(coffeeURL, address, "URI: /coffee"); err != nil {
 				return false, nil
 			}
 			return true, nil
@@ -262,21 +276,34 @@ func waitForFailingTraffic() error {
 	)
 }
 
-func expectRequest(appURL string, address string, httpStatus int, responseBodyMessage string) error {
+func expectRequestToSucceed(appURL string, address string, responseBodyMessage string) error {
 	status, body, err := framework.Get(appURL, address, timeoutConfig.RequestTimeout)
-	if status != httpStatus {
-		return errors.New("http statuses were not equal")
+	if status != http.StatusOK {
+		return errors.New("http status was not 200")
 	}
-	if httpStatus == http.StatusOK {
-		if !strings.Contains(body, responseBodyMessage) {
-			return errors.New("expected response body to contain body message")
-		}
-	} else {
-		if strings.Contains(body, responseBodyMessage) {
-			return errors.New("expected response body to not contain body message")
-		}
+
+	if !strings.Contains(body, responseBodyMessage) {
+		return errors.New("expected response body to contain correct body message")
 	}
+
 	return err
+}
+
+func expectRequestToFail(appURL string, address string, responseBodyMessage string) error {
+	status, body, err := framework.Get(appURL, address, timeoutConfig.RequestTimeout)
+	if status != 0 {
+		return errors.New("expected http status to be 0")
+	}
+
+	if strings.Contains(body, responseBodyMessage) {
+		return errors.New("expected response body to not contain correct body message")
+	}
+
+	if err == nil {
+		return errors.New("expected request to error")
+	}
+
+	return nil
 }
 
 func checkContainerLogsForErrors(ngfPodName string) {
@@ -296,4 +323,41 @@ func checkContainerLogsForErrors(ngfPodName string) {
 	)
 	Expect(err).ToNot(HaveOccurred())
 	Expect(logs).ToNot(ContainSubstring("error"), logs)
+}
+
+func waitForLeaderLeaseToChange(originalLeaseName string) error {
+	leaseCtx, leaseCancel := context.WithTimeout(context.Background(), 1*time.Minute)
+	defer leaseCancel()
+
+	//nolint:nilerr
+	return wait.PollUntilContextCancel(
+		leaseCtx,
+		500*time.Millisecond,
+		true, /* poll immediately */
+		func(_ context.Context) (bool, error) {
+			leaseName, err := getLeaderElectionLeaseHolderName()
+			if err != nil {
+				return false, nil
+			}
+
+			if originalLeaseName != leaseName {
+				return true, nil
+			}
+
+			return false, nil
+		},
+	)
+}
+
+func getLeaderElectionLeaseHolderName() (string, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), timeoutConfig.GetTimeout)
+	defer cancel()
+
+	var lease coordination.Lease
+	key := types.NamespacedName{Name: "ngf-test-nginx-gateway-fabric-leader-election", Namespace: ngfNamespace}
+
+	if err := k8sClient.Get(ctx, key, &lease); err != nil {
+		return "", errors.New("could not retrieve leader election lease")
+	}
+	return *lease.Spec.HolderIdentity, nil
 }
