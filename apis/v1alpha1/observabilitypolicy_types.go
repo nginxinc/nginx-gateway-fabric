@@ -50,9 +50,13 @@ type ObservabilityPolicySpec struct {
 }
 
 // Tracing allows for enabling and configuring OpenTelemetry tracing.
+//
+// +kubebuilder:validation:XValidation:message="ratio can only be specified if strategy is of type ratio",rule="!(has(self.ratio) && self.strategy != 'ratio')"
+//
+//nolint:lll
 type Tracing struct {
-	// Enable defines if tracing is enabled, disabled, or parent-based.
-	Enable TraceType `json:"enable"`
+	// Strategy defines if tracing is ratio-based or parent-based.
+	Strategy TraceStrategy `json:"strategy"`
 
 	// Ratio is the percentage of traffic that should be sampled. Integer from 0 to 100.
 	// By default, 100% of http requests are traced. Not applicable for parent-based tracing.
@@ -71,6 +75,7 @@ type Tracing struct {
 	// SpanName defines the name of the Otel span. By default is the name of the location for a request.
 	// If specified, applies to all locations that are created for a route.
 	// Format: must have all '"' escaped and must not contain any '$' or end with an unescaped '\'
+	// Examples of invalid names: some-$value, quoted-"value"-name, unescaped\
 	//
 	// +optional
 	// +kubebuilder:validation:MinLength=1
@@ -87,20 +92,17 @@ type Tracing struct {
 	SpanAttributes []SpanAttribute `json:"spanAttributes,omitempty"`
 }
 
-// TraceType defines if tracing is enabled.
+// TraceStrategy defines the tracing strategy.
 //
-// +kubebuilder:validation:Enum=on;off;parent
-type TraceType string
+// +kubebuilder:validation:Enum=ratio;parent
+type TraceStrategy string
 
 const (
-	// TraceTypeOn enables tracing.
-	TraceTypeOn TraceType = "on"
+	// TraceStrategyOn enables ratio-based tracing, defaulting to 100% sampling rate.
+	TraceStrategyRatio TraceStrategy = "ratio"
 
-	// TraceTypeOff disables tracing.
-	TraceTypeOff TraceType = "off"
-
-	// TraceTypeParent enables tracing and only records spans if the parent span was sampled.
-	TraceTypeParent TraceType = "parent"
+	// TraceStrategyParent enables tracing and only records spans if the parent span was sampled.
+	TraceStrategyParent TraceStrategy = "parent"
 )
 
 // TraceContext specifies how to propagate traceparent/tracestate headers.

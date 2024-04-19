@@ -102,14 +102,6 @@ spec:
                     - propagate
                     - ignore
                     type: string
-                  enable:
-                    description: Enable defines if tracing is enabled, disabled, or
-                      parent-based.
-                    enum:
-                    - "on"
-                    - "off"
-                    - parent
-                    type: string
                   ratio:
                     description: |-
                       Ratio is the percentage of traffic that should be sampled. Integer from 0 to 100.
@@ -155,13 +147,23 @@ spec:
                       SpanName defines the name of the Otel span. By default is the name of the location for a request.
                       If specified, applies to all locations that are created for a route.
                       Format: must have all '"' escaped and must not contain any '$' or end with an unescaped '\'
+                      Examples of invalid names: some-$value, quoted-"value"-name, unescaped\
                     maxLength: 255
                     minLength: 1
                     pattern: ^([^"$\\]|\\[^$])*$
                     type: string
+                  strategy:
+                    description: Strategy defines if tracing is ratio-based or parent-based.
+                    enum:
+                    - ratio
+                    - parent
+                    type: string
                 required:
-                - enable
+                - strategy
                 type: object
+                x-kubernetes-validations:
+                - message: ratio can only be specified if strategy is of type ratio
+                  rule: '!(has(self.ratio) && self.strategy != ''ratio'')'
             required:
             - targetRef
             type: object
