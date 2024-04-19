@@ -42,7 +42,7 @@ practices to ensure a successful feature development process.
     - **Installation Changes**: If your feature involves changes to the installation process of NGF, update
       the [installation](/site/content/how-to/installation/installation.md) documentation.
     - **Helm Changes**: If your feature introduces or changes any values of the NGF Helm Chart, update the
-      [Helm README](/deploy/helm-chart/README.md).
+      [Helm README](/charts/nginx-gateway-fabric/README.md).
     - **Command-line Changes**: If your feature introduces or changes a command-line flag or subcommand, update
       the [cli help](/site/content/reference/cli-help.md) documentation.
     - **Other Documentation Updates**: For any other changes that affect the behavior, usage, or configuration of NGF,

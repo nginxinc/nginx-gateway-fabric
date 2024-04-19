@@ -9,7 +9,7 @@ repos:
       - id: end-of-file-fixer
       - id: check-yaml
         args: [--allow-multiple-documents]
-        exclude: (^deploy/helm-chart/templates)
+        exclude: (^charts/nginx-gateway-fabric/templates)
       - id: check-added-large-files
       - id: check-merge-conflict
       - id: check-case-conflict

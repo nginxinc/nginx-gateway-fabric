@@ -29,4 +29,4 @@ tests:
 helm-chart:
   - head-branch: ['^helm/', '^helm-chart/']
   - changed-files:
-      - any-glob-to-any-file: ['deploy/helm-chart/**/*']
+      - any-glob-to-any-file: ['charts/**/*']
