@@ -170,7 +170,6 @@ func createLocations(server *dataplane.VirtualServer, serverID int) ([]http.Loca
 					key += "EXACT"
 				}
 				extLocations[i].HTTPMatchKey = key
-				fmt.Println("key", key, loc.Path)
 				matchPairs[extLocations[i].HTTPMatchKey] = matches
 			}
 			locs = append(locs, extLocations...)

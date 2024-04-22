@@ -637,10 +637,10 @@ func TestCreateServers(t *testing.T) {
 	}
 
 	getExpectedLocations := func(isHTTPS bool) []http.Location {
-		port := "8080"
+		port := 8080
 		ssl := ""
 		if isHTTPS {
-			port = "8443"
+			port = 8443
 			ssl = "SSL"
 		}
 
@@ -662,7 +662,7 @@ func TestCreateServers(t *testing.T) {
 			},
 			{
 				Path:         "/",
-				HTTPMatchKey: ssl + "1_0" + port,
+				HTTPMatchKey: ssl + "1_0",
 			},
 			{
 				Path:            "@rule1-route0",
@@ -671,7 +671,7 @@ func TestCreateServers(t *testing.T) {
 			},
 			{
 				Path:         "/test/",
-				HTTPMatchKey: ssl + "1_1" + port,
+				HTTPMatchKey: ssl + "1_1",
 			},
 			{
 				Path:            "/path-only/",
@@ -705,14 +705,14 @@ func TestCreateServers(t *testing.T) {
 				Path: "/redirect-implicit-port/",
 				Return: &http.Return{
 					Code: 302,
-					Body: "$scheme://foo.example.com:%d$request_uri" + port,
+					Body: fmt.Sprintf("$scheme://foo.example.com:%d$request_uri", port),
 				},
 			},
 			{
 				Path: "= /redirect-implicit-port",
 				Return: &http.Return{
 					Code: 302,
-					Body: "$scheme://foo.example.com:%d$request_uri" + port,
+					Body: fmt.Sprintf("$scheme://foo.example.com:%d$request_uri", port),
 				},
 			},
 			{
@@ -738,11 +738,11 @@ func TestCreateServers(t *testing.T) {
 			},
 			{
 				Path:         "/redirect-with-headers/",
-				HTTPMatchKey: ssl + "1_6" + port,
+				HTTPMatchKey: ssl + "1_6",
 			},
 			{
 				Path:         "= /redirect-with-headers",
-				HTTPMatchKey: ssl + "1_6" + port + "EXACT",
+				HTTPMatchKey: ssl + "1_6" + "EXACT",
 			},
 			{
 				Path:            "/rewrite/",
@@ -764,11 +764,11 @@ func TestCreateServers(t *testing.T) {
 			},
 			{
 				Path:         "/rewrite-with-headers/",
-				HTTPMatchKey: ssl + "1_8" + port,
+				HTTPMatchKey: ssl + "1_8",
 			},
 			{
 				Path:         "= /rewrite-with-headers",
-				HTTPMatchKey: ssl + "1_8" + port + "EXACT",
+				HTTPMatchKey: ssl + "1_8" + "EXACT",
 			},
 			{
 				Path: "/invalid-filter/",
@@ -790,11 +790,11 @@ func TestCreateServers(t *testing.T) {
 			},
 			{
 				Path:         "/invalid-filter-with-headers/",
-				HTTPMatchKey: ssl + "1_10" + port,
+				HTTPMatchKey: ssl + "1_10",
 			},
 			{
 				Path:         "= /invalid-filter-with-headers",
-				HTTPMatchKey: ssl + "1_10" + port + "EXACT",
+				HTTPMatchKey: ssl + "1_10" + "EXACT",
 			},
 			{
 				Path:            "= /exact",
@@ -808,7 +808,7 @@ func TestCreateServers(t *testing.T) {
 			},
 			{
 				Path:         "= /test",
-				HTTPMatchKey: ssl + "1_12" + port + "EXACT",
+				HTTPMatchKey: ssl + "1_12" + "EXACT",
 			},
 			{
 				Path:      "/proxy-set-headers/",
@@ -896,7 +896,11 @@ func TestCreateServers(t *testing.T) {
 
 	result, httpMatchPair := createServers(httpServers, sslServers)
 
-	g.Expect(helpers.Diff(expMatchPairs, httpMatchPair)).To(BeEmpty())
+	for key, val := range httpMatchPair {
+		expVal, ok := expMatchPairs[key]
+		g.Expect(ok).To(BeTrue())
+		g.Expect(val).To(Equal(expVal))
+	}
 	g.Expect(helpers.Diff(expectedServers, result)).To(BeEmpty())
 }
 
