@@ -15,6 +15,7 @@ const (
 
 	// httpFolder is the folder where NGINX HTTP configuration files are stored.
 	httpFolder = configFolder + "/conf.d"
+
 	// secretsFolder is the folder where secrets (like TLS certs/keys) are stored.
 	secretsFolder = configFolder + "/secrets"
 
@@ -23,6 +24,9 @@ const (
 
 	// configVersionFile is the path to the config version configuration file.
 	configVersionFile = httpFolder + "/config-version.conf"
+
+	// loadModulesFile is the path to the file containing any load_module directives.
+	loadModulesFile = configFolder + "/includes/load_modules.conf"
 )
 
 // ConfigFolders is a list of folders where NGINX configuration files are stored.
@@ -73,6 +77,8 @@ func (g GeneratorImpl) Generate(conf dataplane.Configuration) []file.File {
 	for id, bundle := range conf.CertBundles {
 		files = append(files, generateCertBundle(id, bundle))
 	}
+
+	files = append(files, generateLoadModulesConf(conf))
 
 	return files
 }
@@ -125,6 +131,7 @@ func (g GeneratorImpl) getExecuteFuncs() []executeFunc {
 		executeSplitClients,
 		executeServers,
 		executeMaps,
+		executeTelemetry,
 	}
 }
 
@@ -135,6 +142,19 @@ func generateConfigVersion(configVersion int) file.File {
 	return file.File{
 		Content: c,
 		Path:    configVersionFile,
+		Type:    file.TypeRegular,
+	}
+}
+
+func generateLoadModulesConf(conf dataplane.Configuration) file.File {
+	var c []byte
+	if conf.Telemetry.Endpoint != "" {
+		c = []byte("load_module modules/ngx_otel_module.so;")
+	}
+
+	return file.File{
+		Content: c,
+		Path:    loadModulesFile,
 		Type:    file.TypeRegular,
 	}
 }

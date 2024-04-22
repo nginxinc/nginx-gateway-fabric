@@ -58,7 +58,7 @@ NGINX Gateway Fabric supports a single GatewayClass resource configured with the
 
 - `spec`
   - `controllerName` - supported.
-  - `parametersRef` - not supported.
+  - `parametersRef` - NginxProxy resource supported.
   - `description` - supported.
 - `status`
   - `conditions` - supported (Condition/Status/Reason):

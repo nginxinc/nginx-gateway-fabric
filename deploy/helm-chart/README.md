@@ -249,7 +249,7 @@ To uninstall/delete the release `ngf`:
 ```shell
 helm uninstall ngf -n nginx-gateway
 kubectl delete ns nginx-gateway
-kubectl delete crd nginxgateways.gateway.nginx.org
+for crd in `kubectl get crds -oname | grep gateway.nginx.org | awk -F / '{ print $2 }'`; do kubectl delete crd $crd; done
 ```
 
 These commands remove all the Kubernetes components associated with the release and deletes the release.

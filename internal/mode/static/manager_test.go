@@ -16,6 +16,7 @@ import (
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
+	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/config"
 )
 
@@ -52,6 +53,7 @@ func TestPrepareFirstEventBatchPreparerArgs(t *testing.T) {
 				&gatewayv1.HTTPRouteList{},
 				&gatewayv1.GatewayList{},
 				&gatewayv1beta1.ReferenceGrantList{},
+				&ngfAPI.NginxProxyList{},
 				partialObjectMetadataList,
 			},
 		},
@@ -72,6 +74,7 @@ func TestPrepareFirstEventBatchPreparerArgs(t *testing.T) {
 				&discoveryV1.EndpointSliceList{},
 				&gatewayv1.HTTPRouteList{},
 				&gatewayv1beta1.ReferenceGrantList{},
+				&ngfAPI.NginxProxyList{},
 				partialObjectMetadataList,
 			},
 		},
@@ -93,6 +96,7 @@ func TestPrepareFirstEventBatchPreparerArgs(t *testing.T) {
 				&discoveryV1.EndpointSliceList{},
 				&gatewayv1.HTTPRouteList{},
 				&gatewayv1beta1.ReferenceGrantList{},
+				&ngfAPI.NginxProxyList{},
 				partialObjectMetadataList,
 				&gatewayv1alpha2.BackendTLSPolicyList{},
 			},

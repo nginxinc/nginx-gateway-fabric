@@ -414,6 +414,12 @@ func registerControllers(
 				),
 			},
 		},
+		{
+			objectType: &ngfAPI.NginxProxy{},
+			options: []controller.Option{
+				controller.WithK8sPredicate(k8spredicate.GenerationChangedPredicate{}),
+			},
+		},
 	}
 
 	if cfg.ExperimentalFeatures {
@@ -592,6 +598,7 @@ func prepareFirstEventBatchPreparerArgs(
 		&discoveryV1.EndpointSliceList{},
 		&gatewayv1.HTTPRouteList{},
 		&gatewayv1beta1.ReferenceGrantList{},
+		&ngfAPI.NginxProxyList{},
 		partialObjectMetadataList,
 	}
 

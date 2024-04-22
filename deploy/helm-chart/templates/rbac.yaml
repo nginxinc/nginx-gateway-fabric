@@ -10,7 +10,7 @@ metadata:
   {{- if or .Values.serviceAccount.imagePullSecret .Values.serviceAccount.imagePullSecrets }}
   imagePullSecrets:
     {{- if .Values.serviceAccount.imagePullSecret }}
-    - name: {{ .Values.serviceAccount.imagePullSecret}}
+    - name: {{ .Values.serviceAccount.imagePullSecret }}
     {{- end }}
     {{- if .Values.serviceAccount.imagePullSecrets }}
     {{- range .Values.serviceAccount.imagePullSecrets }}
@@ -111,6 +111,7 @@ rules:
   - gateway.nginx.org
   resources:
   - nginxgateways
+  - nginxproxies
   verbs:
   - get
   - list

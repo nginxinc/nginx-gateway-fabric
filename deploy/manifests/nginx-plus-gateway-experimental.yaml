@@ -99,6 +99,7 @@ rules:
   - gateway.nginx.org
   resources:
   - nginxgateways
+  - nginxproxies
   verbs:
   - get
   - list
@@ -220,6 +221,8 @@ spec:
         volumeMounts:
         - name: nginx-conf
           mountPath: /etc/nginx/conf.d
+        - name: nginx-includes
+          mountPath: /etc/nginx/includes
         - name: nginx-secrets
           mountPath: /etc/nginx/secrets
         - name: nginx-run
@@ -244,6 +247,8 @@ spec:
         volumeMounts:
         - name: nginx-conf
           mountPath: /etc/nginx/conf.d
+        - name: nginx-includes
+          mountPath: /etc/nginx/includes
         - name: nginx-secrets
           mountPath: /etc/nginx/secrets
         - name: nginx-run
@@ -260,6 +265,8 @@ spec:
         runAsNonRoot: true
       volumes:
       - name: nginx-conf
+        emptyDir: {}
+      - name: nginx-includes
         emptyDir: {}
       - name: nginx-secrets
         emptyDir: {}

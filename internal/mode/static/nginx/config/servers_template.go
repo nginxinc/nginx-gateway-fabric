@@ -1,6 +1,6 @@
 package config
 
-var serversTemplateText = `
+const serversTemplateText = `
 {{- range $s := . -}}
     {{ if $s.IsDefaultSSL -}}
 server {
