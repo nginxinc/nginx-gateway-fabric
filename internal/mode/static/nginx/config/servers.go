@@ -157,7 +157,7 @@ func createLocations(server *dataplane.VirtualServer, serverID int) ([]http.Loca
 		}
 
 		if len(matches) > 0 {
-			for i, loc := range extLocations {
+			for i := range extLocations {
 				// FIXME(sberman): De-dupe matches and associated locations
 				// so we don't need nginx/njs to perform unnecessary matching.
 				// https://github.com/nginxinc/nginx-gateway-fabric/issues/662
@@ -166,9 +166,6 @@ func createLocations(server *dataplane.VirtualServer, serverID int) ([]http.Loca
 					key = "SSL"
 				}
 				key += strconv.Itoa(serverID) + "_" + strconv.Itoa(pathRuleIdx)
-				if strings.Contains(loc.Path, "= /") {
-					key += "EXACT"
-				}
 				extLocations[i].HTTPMatchKey = key
 				matchPairs[extLocations[i].HTTPMatchKey] = matches
 			}
