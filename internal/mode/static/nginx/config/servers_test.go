@@ -560,6 +560,9 @@ func TestCreateServers(t *testing.T) {
 				RedirectPath: "@rule10-route0",
 			},
 		},
+		"1_12EXACT": {
+			{Method: "GET", RedirectPath: "@rule12-route0"},
+		},
 		"SSL1_0": {
 			{Method: "POST", RedirectPath: "@rule0-route0"},
 			{Method: "PATCH", RedirectPath: "@rule0-route1"},
@@ -573,25 +576,6 @@ func TestCreateServers(t *testing.T) {
 				QueryParams:  []string{"GrEat=EXAMPLE", "test=foo=bar"},
 			},
 		},
-		"SSL1_10": {
-			{
-				RedirectPath: "@rule10-route0",
-				Headers:      []string{"filter:this"},
-			},
-		},
-		"SSL1_10EXACT": {
-			{
-				RedirectPath: "@rule10-route0",
-				Headers:      []string{"filter:this"},
-			},
-		},
-		"SSL1_12EXACT": {
-			{
-				Method:       "GET",
-				RedirectPath: "@rule12-route0",
-			},
-		},
-		"1_12EXACT": {{Method: "GET", RedirectPath: "@rule12-route0"}},
 		"SSL1_6": {
 			{RedirectPath: "@rule6-route0", Headers: []string{"redirect:this"}},
 		},
@@ -611,6 +595,24 @@ func TestCreateServers(t *testing.T) {
 			{
 				RedirectPath: "@rule8-route0",
 				Headers:      []string{"rewrite:this"},
+			},
+		},
+		"SSL1_10": {
+			{
+				RedirectPath: "@rule10-route0",
+				Headers:      []string{"filter:this"},
+			},
+		},
+		"SSL1_10EXACT": {
+			{
+				RedirectPath: "@rule10-route0",
+				Headers:      []string{"filter:this"},
+			},
+		},
+		"SSL1_12EXACT": {
+			{
+				Method:       "GET",
+				RedirectPath: "@rule12-route0",
 			},
 		},
 	}
@@ -660,7 +662,7 @@ func TestCreateServers(t *testing.T) {
 			},
 			{
 				Path:         "/",
-				HTTPMatchKey: ssl + "1" + port,
+				HTTPMatchKey: ssl + "1_0" + port,
 			},
 			{
 				Path:            "@rule1-route0",
@@ -669,7 +671,7 @@ func TestCreateServers(t *testing.T) {
 			},
 			{
 				Path:         "/test/",
-				HTTPMatchKey: ssl + "2" + port,
+				HTTPMatchKey: ssl + "1_1" + port,
 			},
 			{
 				Path:            "/path-only/",
@@ -736,11 +738,11 @@ func TestCreateServers(t *testing.T) {
 			},
 			{
 				Path:         "/redirect-with-headers/",
-				HTTPMatchKey: ssl + "3" + port,
+				HTTPMatchKey: ssl + "1_6" + port,
 			},
 			{
 				Path:         "= /redirect-with-headers",
-				HTTPMatchKey: ssl + "4" + port + "EXACT",
+				HTTPMatchKey: ssl + "1_6" + port + "EXACT",
 			},
 			{
 				Path:            "/rewrite/",
@@ -762,11 +764,11 @@ func TestCreateServers(t *testing.T) {
 			},
 			{
 				Path:         "/rewrite-with-headers/",
-				HTTPMatchKey: ssl + "5" + port,
+				HTTPMatchKey: ssl + "1_8" + port,
 			},
 			{
 				Path:         "= /rewrite-with-headers",
-				HTTPMatchKey: ssl + "6" + port + "EXACT",
+				HTTPMatchKey: ssl + "1_8" + port + "EXACT",
 			},
 			{
 				Path: "/invalid-filter/",
@@ -788,11 +790,11 @@ func TestCreateServers(t *testing.T) {
 			},
 			{
 				Path:         "/invalid-filter-with-headers/",
-				HTTPMatchKey: ssl + "7" + port,
+				HTTPMatchKey: ssl + "1_10" + port,
 			},
 			{
 				Path:         "= /invalid-filter-with-headers",
-				HTTPMatchKey: ssl + "8" + port + "EXACT",
+				HTTPMatchKey: ssl + "1_10" + port + "EXACT",
 			},
 			{
 				Path:            "= /exact",
@@ -806,7 +808,7 @@ func TestCreateServers(t *testing.T) {
 			},
 			{
 				Path:         "= /test",
-				HTTPMatchKey: ssl + "11" + port + "EXACT",
+				HTTPMatchKey: ssl + "1_12" + port + "EXACT",
 			},
 			{
 				Path:      "/proxy-set-headers/",
