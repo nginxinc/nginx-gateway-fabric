@@ -74,8 +74,7 @@ func (g GeneratorImpl) Generate(conf dataplane.Configuration) []file.File {
 		files = append(files, generatePEM(id, pair.Cert, pair.Key))
 	}
 
-	httpFiles := g.generateHTTPConfig(conf)
-	files = append(files, httpFiles...)
+	files = append(files, g.generateHTTPConfig(conf)...)
 
 	files = append(files, generateConfigVersion(conf.Version))
 
