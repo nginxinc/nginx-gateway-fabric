@@ -17,6 +17,7 @@ import (
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
+	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/controller/index"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/gatewayclass"
@@ -187,6 +188,7 @@ func createScheme() *runtime.Scheme {
 	utilruntime.Must(apiv1.AddToScheme(scheme))
 	utilruntime.Must(discoveryV1.AddToScheme(scheme))
 	utilruntime.Must(apiext.AddToScheme(scheme))
+	utilruntime.Must(ngfAPI.AddToScheme(scheme))
 
 	return scheme
 }
@@ -1521,6 +1523,60 @@ var _ = Describe("ChangeProcessor", func() {
 					changed, _ := processor.Process()
 					Expect(changed).To(Equal(state.ClusterStateChange))
 				})
+			})
+		})
+
+		Describe("NginxProxy resource changes", Ordered, func() {
+			paramGC := gc.DeepCopy()
+			paramGC.Spec.ParametersRef = &v1beta1.ParametersReference{
+				Group: ngfAPI.GroupName,
+				Kind:  v1beta1.Kind("NginxProxy"),
+				Name:  "np",
+			}
+
+			np := &ngfAPI.NginxProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "np",
+				},
+			}
+
+			npUpdated := &ngfAPI.NginxProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "np",
+				},
+				Spec: ngfAPI.NginxProxySpec{
+					Telemetry: &ngfAPI.Telemetry{
+						Exporter: &ngfAPI.TelemetryExporter{
+							Endpoint:   "my-svc:123",
+							BatchSize:  helpers.GetPointer(int32(512)),
+							BatchCount: helpers.GetPointer(int32(4)),
+							Interval:   helpers.GetPointer(ngfAPI.Duration("5s")),
+						},
+					},
+				},
+			}
+			It("handles upserts for an NginxProxy", func() {
+				processor.CaptureUpsertChange(np)
+				processor.CaptureUpsertChange(paramGC)
+
+				changed, graph := processor.Process()
+				Expect(changed).To(Equal(state.ClusterStateChange))
+				Expect(graph.NginxProxy).To(Equal(np))
+			})
+			It("captures changes for an NginxProxy", func() {
+				processor.CaptureUpsertChange(npUpdated)
+				processor.CaptureUpsertChange(paramGC)
+
+				changed, graph := processor.Process()
+				Expect(changed).To(Equal(state.ClusterStateChange))
+				Expect(graph.NginxProxy).To(Equal(npUpdated))
+			})
+			It("handles deletes for an NginxProxy", func() {
+				processor.CaptureDeleteChange(np, client.ObjectKeyFromObject(np))
+
+				changed, graph := processor.Process()
+				Expect(changed).To(Equal(state.ClusterStateChange))
+				Expect(graph.NginxProxy).To(BeNil())
 			})
 		})
 	})

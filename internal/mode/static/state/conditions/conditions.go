@@ -31,11 +31,11 @@ const (
 
 	// RouteReasonBackendRefUnsupportedValue is used with the "ResolvedRefs" condition when one of the
 	// Route rules has a backendRef with an unsupported value.
-	RouteReasonBackendRefUnsupportedValue = "UnsupportedValue"
+	RouteReasonBackendRefUnsupportedValue v1.RouteConditionReason = "UnsupportedValue"
 
 	// RouteReasonInvalidGateway is used with the "Accepted" (false) condition when the Gateway the Route
 	// references is invalid.
-	RouteReasonInvalidGateway = "InvalidGateway"
+	RouteReasonInvalidGateway v1.RouteConditionReason = "InvalidGateway"
 
 	// RouteReasonInvalidListener is used with the "Accepted" condition when the Route references an invalid listener.
 	RouteReasonInvalidListener v1.RouteConditionReason = "InvalidListener"
@@ -66,6 +66,17 @@ const (
 	RouteMessageFailedNginxReload = GatewayMessageFailedNginxReload + ". NGINX may still be configured " +
 		"for this HTTPRoute. However, future updates to this resource will not be configured until the Gateway " +
 		"is programmed again"
+
+	// GatewayClassResolvedRefs condition indicates whether the controller was able to resolve the
+	// parametersRef on the GatewayClass.
+	GatewayClassResolvedRefs v1.GatewayClassConditionType = "ResolvedRefs"
+
+	// GatewayClassReasonResolvedRefs is used with the "GatewayClassResolvedRefs" condition when the condition is true.
+	GatewayClassReasonResolvedRefs v1.GatewayClassConditionReason = "ResolvedRefs"
+
+	// GatewayClassReasonParamsRefNotFound is used with the "GatewayClassResolvedRefs" condition when the
+	// parametersRef resource does not exist.
+	GatewayClassReasonParamsRefNotFound v1.GatewayClassConditionReason = "ParametersRefNotFound"
 )
 
 // NewTODO returns a Condition that can be used as a placeholder for a condition that is not yet implemented.
@@ -203,7 +214,7 @@ func NewRouteBackendRefUnsupportedValue(msg string) conditions.Condition {
 	return conditions.Condition{
 		Type:    string(v1.RouteConditionResolvedRefs),
 		Status:  metav1.ConditionFalse,
-		Reason:  RouteReasonBackendRefUnsupportedValue,
+		Reason:  string(RouteReasonBackendRefUnsupportedValue),
 		Message: msg,
 	}
 }
@@ -214,7 +225,7 @@ func NewRouteInvalidGateway() conditions.Condition {
 	return conditions.Condition{
 		Type:    string(v1.RouteConditionAccepted),
 		Status:  metav1.ConditionFalse,
-		Reason:  RouteReasonInvalidGateway,
+		Reason:  string(RouteReasonInvalidGateway),
 		Message: "Gateway is invalid",
 	}
 }
@@ -402,13 +413,37 @@ func NewListenerRefNotPermitted(msg string) []conditions.Condition {
 	}
 }
 
+// NewGatewayClassResolvedRefs returns a Condition that indicates that the parametersRef
+// on the GatewayClass is resolved.
+func NewGatewayClassResolvedRefs() conditions.Condition {
+	return conditions.Condition{
+		Type:    string(GatewayClassResolvedRefs),
+		Status:  metav1.ConditionTrue,
+		Reason:  string(GatewayClassReasonResolvedRefs),
+		Message: "parametersRef resource is resolved",
+	}
+}
+
+// NewGatewayClassRefNotFound returns a Condition that indicates that the parametersRef
+// on the GatewayClass could not be resolved.
+func NewGatewayClassRefNotFound() conditions.Condition {
+	return conditions.Condition{
+		Type:    string(GatewayClassResolvedRefs),
+		Status:  metav1.ConditionFalse,
+		Reason:  string(GatewayClassReasonParamsRefNotFound),
+		Message: "parametersRef resource could not be found",
+	}
+}
+
 // NewGatewayClassInvalidParameters returns a Condition that indicates that the GatewayClass has invalid parameters.
+// We are allowing Accepted to still be true to prevent nullifying the entire config tree if a parametersRef
+// is updated to something invalid.
 func NewGatewayClassInvalidParameters(msg string) conditions.Condition {
 	return conditions.Condition{
 		Type:    string(v1.GatewayClassConditionStatusAccepted),
-		Status:  metav1.ConditionFalse,
+		Status:  metav1.ConditionTrue,
 		Reason:  string(v1.GatewayClassReasonInvalidParameters),
-		Message: msg,
+		Message: fmt.Sprintf("GatewayClass is accepted, but parametersRef is ignored due to an error: %s", msg),
 	}
 }
 

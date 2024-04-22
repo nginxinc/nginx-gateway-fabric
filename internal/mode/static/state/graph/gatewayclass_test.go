@@ -9,6 +9,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	v1 "sigs.k8s.io/gateway-api/apis/v1"
 
+	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/gatewayclass"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
@@ -122,9 +123,22 @@ func TestProcessGatewayClasses(t *testing.T) {
 func TestBuildGatewayClass(t *testing.T) {
 	validGC := &v1.GatewayClass{}
 
-	invalidGC := &v1.GatewayClass{
+	gcWithParams := &v1.GatewayClass{
 		Spec: v1.GatewayClassSpec{
-			ParametersRef: &v1.ParametersReference{},
+			ParametersRef: &v1.ParametersReference{
+				Kind:      v1.Kind("NginxProxy"),
+				Namespace: helpers.GetPointer(v1.Namespace("test")),
+				Name:      "nginx-proxy",
+			},
+		},
+	}
+
+	gcWithInvalidKind := &v1.GatewayClass{
+		Spec: v1.GatewayClassSpec{
+			ParametersRef: &v1.ParametersReference{
+				Kind:      v1.Kind("Invalid"),
+				Namespace: helpers.GetPointer(v1.Namespace("test")),
+			},
 		},
 	}
 
@@ -150,6 +164,7 @@ func TestBuildGatewayClass(t *testing.T) {
 
 	tests := []struct {
 		gc          *v1.GatewayClass
+		np          *ngfAPI.NginxProxy
 		crdMetadata map[types.NamespacedName]*metav1.PartialObjectMetadata
 		expected    *GatewayClass
 		name        string
@@ -169,18 +184,50 @@ func TestBuildGatewayClass(t *testing.T) {
 			name:     "no gatewayclass",
 		},
 		{
-			gc:          invalidGC,
-			crdMetadata: validCRDs,
+			gc: gcWithParams,
+			np: &ngfAPI.NginxProxy{
+				TypeMeta: metav1.TypeMeta{
+					Kind: "NginxProxy",
+				},
+			},
 			expected: &GatewayClass{
-				Source: invalidGC,
-				Valid:  false,
+				Source:     gcWithParams,
+				Valid:      true,
+				Conditions: []conditions.Condition{staticConds.NewGatewayClassResolvedRefs()},
+			},
+			name: "valid gatewayclass with paramsRef",
+		},
+		{
+			gc: gcWithInvalidKind,
+			np: &ngfAPI.NginxProxy{
+				TypeMeta: metav1.TypeMeta{
+					Kind: "NginxProxy",
+				},
+			},
+			expected: &GatewayClass{
+				Source: gcWithInvalidKind,
+				Valid:  true,
 				Conditions: []conditions.Condition{
 					staticConds.NewGatewayClassInvalidParameters(
-						"spec.parametersRef: Forbidden: parametersRef is not supported",
+						"spec.parametersRef.kind: Unsupported value: \"Invalid\": supported values: \"NginxProxy\"",
 					),
 				},
 			},
-			name: "invalid gatewayclass; parameters ref",
+			name: "invalid gatewayclass with unsupported paramsRef Kind",
+		},
+		{
+			gc: gcWithParams,
+			expected: &GatewayClass{
+				Source: gcWithParams,
+				Valid:  true,
+				Conditions: []conditions.Condition{
+					staticConds.NewGatewayClassRefNotFound(),
+					staticConds.NewGatewayClassInvalidParameters(
+						"spec.parametersRef.name: Not found: \"nginx-proxy\"",
+					),
+				},
+			},
+			name: "invalid gatewayclass with paramsRef resource that doesn't exist",
 		},
 		{
 			gc:          validGC,
@@ -198,7 +245,7 @@ func TestBuildGatewayClass(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewWithT(t)
 
-			result := buildGatewayClass(test.gc, test.crdMetadata)
+			result := buildGatewayClass(test.gc, test.np, test.crdMetadata)
 			g.Expect(helpers.Diff(test.expected, result)).To(BeEmpty())
 		})
 	}

@@ -1,6 +1,6 @@
 package config
 
-var splitClientsTemplateText = `
+const splitClientsTemplateText = `
 {{ range $sc := . }}
 split_clients $request_id ${{ $sc.VariableName }} {
     {{- range $d := $sc.Distributions }}

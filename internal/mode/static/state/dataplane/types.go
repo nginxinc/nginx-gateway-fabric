@@ -6,6 +6,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
+	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/resolver"
 )
 
@@ -33,6 +34,8 @@ type Configuration struct {
 	Upstreams []Upstream
 	// BackendGroups holds all unique BackendGroups.
 	BackendGroups []BackendGroup
+	// Telemetry holds the Otel configuration.
+	Telemetry Telemetry
 	// Version represents the version of the generated configuration.
 	Version int
 }
@@ -248,4 +251,20 @@ type VerifyTLS struct {
 	CertBundleID CertBundleID
 	Hostname     string
 	RootCAPath   string
+}
+
+// Telemetry represents Otel configuration for the dataplane.
+type Telemetry struct {
+	// Endpoint specifies the address of OTLP/gRPC endpoint that will accept telemetry data.
+	Endpoint string
+	// ServiceName is the “service.name” attribute of the OTel resource.
+	ServiceName string
+	// Interval specifies the export interval.
+	Interval string
+	// SpanAttributes are custom key/value attributes that are added to each span.
+	SpanAttributes []ngfAPI.SpanAttribute
+	// BatchSize specifies the maximum number of spans to be sent in one batch per worker.
+	BatchSize int32
+	// BatchCount specifies the number of pending batches per worker, spans exceeding the limit are dropped.
+	BatchCount int32
 }
