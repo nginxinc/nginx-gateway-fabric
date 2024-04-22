@@ -163,7 +163,7 @@ func createLocations(server *dataplane.VirtualServer, serverID int) ([]http.Loca
 				// https://github.com/nginxinc/nginx-gateway-fabric/issues/662
 				var key string
 				if server.SSL != nil {
-					key += "SSL"
+					key = "SSL"
 				}
 				key += strconv.Itoa(serverID) + "_" + strconv.Itoa(pathRuleIdx)
 				if strings.Contains(loc.Path, "= /") {
