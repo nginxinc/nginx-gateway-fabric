@@ -88,7 +88,8 @@ func TestExecuteMaps(t *testing.T) {
 		"map $http_upgrade $connection_upgrade {":                             1,
 	}
 
-	maps := string(executeMaps(conf))
+	mapResult := executeMaps(conf)
+	maps := string(mapResult[0].data)
 	for expSubStr, expCount := range expSubStrings {
 		g.Expect(expCount).To(Equal(strings.Count(maps, expSubStr)))
 	}

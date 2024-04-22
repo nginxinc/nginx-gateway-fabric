@@ -11,10 +11,15 @@ import (
 
 var splitClientsTemplate = gotemplate.Must(gotemplate.New("split_clients").Parse(splitClientsTemplateText))
 
-func executeSplitClients(conf dataplane.Configuration) []byte {
+func executeSplitClients(conf dataplane.Configuration) []executeResult {
 	splitClients := createSplitClients(conf.BackendGroups)
 
-	return execute(splitClientsTemplate, splitClients)
+	result := executeResult{
+		dest: httpConfigFile,
+		data: execute(splitClientsTemplate, splitClients),
+	}
+
+	return []executeResult{result}
 }
 
 func createSplitClients(backendGroups []dataplane.BackendGroup) []http.SplitClient {

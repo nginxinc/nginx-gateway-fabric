@@ -47,7 +47,8 @@ func TestExecuteUpstreams(t *testing.T) {
 		"server unix:/var/lib/nginx/nginx-502-server.sock;",
 	}
 
-	upstreams := string(gen.executeUpstreams(dataplane.Configuration{Upstreams: stateUpstreams}))
+	upstreamResults := gen.executeUpstreams(dataplane.Configuration{Upstreams: stateUpstreams})
+	upstreams := string(upstreamResults[0].data)
 	g := NewWithT(t)
 	for _, expSubString := range expectedSubStrings {
 		g.Expect(upstreams).To(ContainSubstring(expSubString))

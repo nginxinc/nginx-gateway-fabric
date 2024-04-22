@@ -2,7 +2,6 @@ package config
 
 import (
 	"fmt"
-	"strconv"
 	"strings"
 	"testing"
 
@@ -63,8 +62,10 @@ func TestExecuteServers(t *testing.T) {
 		"ssl_certificate_key /etc/nginx/secrets/test-keypair.pem;": 2,
 	}
 	g := NewWithT(t)
-	servers, _ := executeServers(conf)
-	serverConf := string(execute(serversTemplate, servers))
+	serverResults := executeServers(conf)
+	serverConf := string(serverResults[0].data)
+	httpMatchConf := string(serverResults[1].data)
+	g.Expect(httpMatchConf).To(Equal("{}"))
 	for expSubStr, expCount := range expSubStrings {
 		g.Expect(strings.Count(serverConf, expSubStr)).To(Equal(expCount))
 	}
@@ -141,8 +142,10 @@ func TestExecuteForDefaultServers(t *testing.T) {
 		t.Run(tc.msg, func(t *testing.T) {
 			g := NewWithT(t)
 
-			servers, _ := executeServers(tc.conf)
-			serverConf := string(execute(serversTemplate, servers))
+			serverResults := executeServers(tc.conf)
+			serverConf := string(serverResults[0].data)
+			httpMatchConf := string(serverResults[1].data)
+			g.Expect(httpMatchConf).To(Equal("{}"))
 
 			for _, expPort := range tc.httpPorts {
 				g.Expect(serverConf).To(ContainSubstring(fmt.Sprintf(httpDefaultFmt, expPort)))
@@ -510,13 +513,13 @@ func TestCreateServers(t *testing.T) {
 		},
 	}
 
-	expMatchPairs := map[string][]http.RouteMatch{
-		"cafeexamplecom8080": {
+	expMatchPairs := map[string][]RouteMatch{
+		"1_0": {
 			{Method: "POST", RedirectPath: "@rule0-route0"},
 			{Method: "PATCH", RedirectPath: "@rule0-route1"},
-			{Any: true, RedirectPath: "@rule0-route2"},
+			{RedirectPath: "@rule0-route2", Any: true},
 		},
-		"cafeexamplecomtest8080": {
+		"1_1": {
 			{
 				Method:       "GET",
 				Headers:      []string{"Version:V1", "test:foo", "my-header:my-value"},
@@ -524,95 +527,92 @@ func TestCreateServers(t *testing.T) {
 				RedirectPath: "@rule1-route0",
 			},
 		},
-		"cafeexamplecomEXACTredirect-with-headers8080": {
+		"1_6": {
 			{RedirectPath: "@rule6-route0", Headers: []string{"redirect:this"}},
 		},
-		"cafeexamplecomredirect-with-headers8080": {
+		"1_6EXACT": {
 			{
-				Headers:      []string{"redirect:this"},
 				RedirectPath: "@rule6-route0",
+				Headers:      []string{"redirect:this"},
 			},
 		},
-		"cafeexamplecomEXACTrewrite-with-headers8080": {
+		"1_8": {
 			{
 				Headers:      []string{"rewrite:this"},
 				RedirectPath: "@rule8-route0",
 			},
 		},
-		"cafeexamplecomrewrite-with-headers8080": {
+		"1_8EXACT": {
 			{
-				Headers:      []string{"rewrite:this"},
 				RedirectPath: "@rule8-route0",
+				Headers:      []string{"rewrite:this"},
 			},
 		},
-		"cafeexamplecomEXACTinvalid-filter-with-headers8080": {
+		"1_10": {
 			{
 				Headers:      []string{"filter:this"},
 				RedirectPath: "@rule10-route0",
 			},
 		},
-		"cafeexamplecominvalid-filter-with-headers8080": {
+		"1_10EXACT": {
 			{
 				Headers:      []string{"filter:this"},
 				RedirectPath: "@rule10-route0",
 			},
 		},
-		"cafeexamplecomEXACTtest8080": {
+		"SSL1_0": {
+			{Method: "POST", RedirectPath: "@rule0-route0"},
+			{Method: "PATCH", RedirectPath: "@rule0-route1"},
+			{Any: true, RedirectPath: "@rule0-route2"},
+		},
+		"SSL1_1": {
+			{
+				Method:       "GET",
+				RedirectPath: "@rule1-route0",
+				Headers:      []string{"Version:V1", "test:foo", "my-header:my-value"},
+				QueryParams:  []string{"GrEat=EXAMPLE", "test=foo=bar"},
+			},
+		},
+		"SSL1_10": {
+			{
+				RedirectPath: "@rule10-route0",
+				Headers:      []string{"filter:this"},
+			},
+		},
+		"SSL1_10EXACT": {
+			{
+				RedirectPath: "@rule10-route0",
+				Headers:      []string{"filter:this"},
+			},
+		},
+		"SSL1_12EXACT": {
 			{
 				Method:       "GET",
 				RedirectPath: "@rule12-route0",
 			},
 		},
-		"cafeexamplecom8443": {
-			{Method: "POST", RedirectPath: "@rule0-route0"},
-			{Method: "PATCH", RedirectPath: "@rule0-route1"},
-			{RedirectPath: "@rule0-route2", Any: true},
+		"1_12EXACT": {{Method: "GET", RedirectPath: "@rule12-route0"}},
+		"SSL1_6": {
+			{RedirectPath: "@rule6-route0", Headers: []string{"redirect:this"}},
 		},
-		"cafeexamplecomtest8443": {
+		"SSL1_6EXACT": {
 			{
-				Method:       "GET",
-				RedirectPath: "@rule1-route0",
-				Headers:      []string{"Version:V1", "test:foo", "my-header:my-value"},
-				QueryParams:  []string{"GrEat=EXAMPLE", "test=foo=bar"},
-			},
-		},
-		"cafeexamplecomEXACTredirect-with-headers8443": {
-			{
-				RedirectPath: "@rule6-route0",
 				Headers:      []string{"redirect:this"},
+				RedirectPath: "@rule6-route0",
 			},
 		},
-		"cafeexamplecomrewrite-with-headers8443": {
+		"SSL1_8": {
+			{
+				Headers:      []string{"rewrite:this"},
+				RedirectPath: "@rule8-route0",
+			},
+		},
+		"SSL1_8EXACT": {
 			{
 				RedirectPath: "@rule8-route0",
 				Headers:      []string{"rewrite:this"},
 			},
 		},
-		"cafeexamplecomEXACTrewrite-with-headers8443": {
-			{
-				RedirectPath: "@rule8-route0",
-				Headers:      []string{"rewrite:this"},
-			},
-		},
-		"cafeexamplecomredirect-with-headers8443": {
-			{
-				RedirectPath: "@rule6-route0",
-				Headers:      []string{"redirect:this"},
-			},
-		},
-		"cafeexamplecominvalid-filter-with-headers8443": {
-			{
-				RedirectPath: "@rule10-route0",
-				Headers:      []string{"filter:this"},
-			},
-		},
-		"cafeexamplecomEXACTinvalid-filter-with-headers8443": {
-			{
-				RedirectPath: "@rule10-route0",
-				Headers:      []string{"filter:this"},
-			},
-		},
-		"cafeexamplecomEXACTtest8443": {{Method: "GET", RedirectPath: "@rule12-route0"}},
 	}
 
 	rewriteProxySetHeaders := []http.Header{
@@ -635,9 +635,11 @@ func TestCreateServers(t *testing.T) {
 	}
 
 	getExpectedLocations := func(isHTTPS bool) []http.Location {
-		port := 8080
+		port := "8080"
+		ssl := ""
 		if isHTTPS {
-			port = 8443
+			port = "8443"
+			ssl = "SSL"
 		}
 
 		return []http.Location{
@@ -658,7 +660,7 @@ func TestCreateServers(t *testing.T) {
 			},
 			{
 				Path:         "/",
-				HTTPMatchKey: "cafeexamplecom" + strconv.Itoa(port),
+				HTTPMatchKey: ssl + "1" + port,
 			},
 			{
 				Path:            "@rule1-route0",
@@ -667,7 +669,7 @@ func TestCreateServers(t *testing.T) {
 			},
 			{
 				Path:         "/test/",
-				HTTPMatchKey: "cafeexamplecomtest" + strconv.Itoa(port),
+				HTTPMatchKey: ssl + "2" + port,
 			},
 			{
 				Path:            "/path-only/",
@@ -701,14 +703,14 @@ func TestCreateServers(t *testing.T) {
 				Path: "/redirect-implicit-port/",
 				Return: &http.Return{
 					Code: 302,
-					Body: fmt.Sprintf("$scheme://foo.example.com:%d$request_uri", port),
+					Body: "$scheme://foo.example.com:%d$request_uri" + port,
 				},
 			},
 			{
 				Path: "= /redirect-implicit-port",
 				Return: &http.Return{
 					Code: 302,
-					Body: fmt.Sprintf("$scheme://foo.example.com:%d$request_uri", port),
+					Body: "$scheme://foo.example.com:%d$request_uri" + port,
 				},
 			},
 			{
@@ -734,11 +736,11 @@ func TestCreateServers(t *testing.T) {
 			},
 			{
 				Path:         "/redirect-with-headers/",
-				HTTPMatchKey: "cafeexamplecomredirect-with-headers" + strconv.Itoa(port),
+				HTTPMatchKey: ssl + "3" + port,
 			},
 			{
 				Path:         "= /redirect-with-headers",
-				HTTPMatchKey: "cafeexamplecomEXACTredirect-with-headers" + strconv.Itoa(port),
+				HTTPMatchKey: ssl + "4" + port + "EXACT",
 			},
 			{
 				Path:            "/rewrite/",
@@ -760,11 +762,11 @@ func TestCreateServers(t *testing.T) {
 			},
 			{
 				Path:         "/rewrite-with-headers/",
-				HTTPMatchKey: "cafeexamplecomrewrite-with-headers" + strconv.Itoa(port),
+				HTTPMatchKey: ssl + "5" + port,
 			},
 			{
 				Path:         "= /rewrite-with-headers",
-				HTTPMatchKey: "cafeexamplecomEXACTrewrite-with-headers" + strconv.Itoa(port),
+				HTTPMatchKey: ssl + "6" + port + "EXACT",
 			},
 			{
 				Path: "/invalid-filter/",
@@ -786,11 +788,11 @@ func TestCreateServers(t *testing.T) {
 			},
 			{
 				Path:         "/invalid-filter-with-headers/",
-				HTTPMatchKey: "cafeexamplecominvalid-filter-with-headers" + strconv.Itoa(port),
+				HTTPMatchKey: ssl + "7" + port,
 			},
 			{
 				Path:         "= /invalid-filter-with-headers",
-				HTTPMatchKey: "cafeexamplecomEXACTinvalid-filter-with-headers" + strconv.Itoa(port),
+				HTTPMatchKey: ssl + "8" + port + "EXACT",
 			},
 			{
 				Path:            "= /exact",
@@ -804,7 +806,7 @@ func TestCreateServers(t *testing.T) {
 			},
 			{
 				Path:         "= /test",
-				HTTPMatchKey: "cafeexamplecomEXACTtest" + strconv.Itoa(port),
+				HTTPMatchKey: ssl + "11" + port + "EXACT",
 			},
 			{
 				Path:      "/proxy-set-headers/",
@@ -891,9 +893,8 @@ func TestCreateServers(t *testing.T) {
 	g := NewWithT(t)
 
 	result, httpMatchPair := createServers(httpServers, sslServers)
-	if httpMatchPair != nil {
-		g.Expect(helpers.Diff(httpMatchPair, expMatchPairs)).To(BeEmpty())
-	}
+
+	g.Expect(helpers.Diff(expMatchPairs, httpMatchPair)).To(BeEmpty())
 	g.Expect(helpers.Diff(expectedServers, result)).To(BeEmpty())
 }
 
@@ -1214,10 +1215,10 @@ func TestCreateLocationsRootPath(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewWithT(t)
 
-			locs, httpMatchPair := createLocations(dataplane.VirtualServer{
+			locs, httpMatchPair := createLocations(&dataplane.VirtualServer{
 				PathRules: test.pathRules,
 				Port:      80,
-			})
+			}, 1)
 			g.Expect(locs).To(Equal(test.expLocations))
 			g.Expect(httpMatchPair).To(BeEmpty())
 		})
@@ -1522,11 +1523,11 @@ func TestCreateRouteMatch(t *testing.T) {
 	tests := []struct {
 		match    dataplane.Match
 		msg      string
-		expected http.RouteMatch
+		expected RouteMatch
 	}{
 		{
 			match: dataplane.Match{},
-			expected: http.RouteMatch{
+			expected: RouteMatch{
 				Any:          true,
 				RedirectPath: testPath,
 			},
@@ -1536,7 +1537,7 @@ func TestCreateRouteMatch(t *testing.T) {
 			match: dataplane.Match{
 				Method: testMethodMatch, // A path match with a method should not set the Any field to true
 			},
-			expected: http.RouteMatch{
+			expected: RouteMatch{
 				Method:       "PUT",
 				RedirectPath: testPath,
 			},
@@ -1546,7 +1547,7 @@ func TestCreateRouteMatch(t *testing.T) {
 			match: dataplane.Match{
 				Headers: testHeaderMatches,
 			},
-			expected: http.RouteMatch{
+			expected: RouteMatch{
 				RedirectPath: testPath,
 				Headers:      expectedHeaders,
 			},
@@ -1556,7 +1557,7 @@ func TestCreateRouteMatch(t *testing.T) {
 			match: dataplane.Match{
 				QueryParams: testQueryParamMatches,
 			},
-			expected: http.RouteMatch{
+			expected: RouteMatch{
 				QueryParams:  expectedArgs,
 				RedirectPath: testPath,
 			},
@@ -1567,7 +1568,7 @@ func TestCreateRouteMatch(t *testing.T) {
 				Method:      testMethodMatch,
 				QueryParams: testQueryParamMatches,
 			},
-			expected: http.RouteMatch{
+			expected: RouteMatch{
 				Method:       "PUT",
 				QueryParams:  expectedArgs,
 				RedirectPath: testPath,
@@ -1579,7 +1580,7 @@ func TestCreateRouteMatch(t *testing.T) {
 				Method:  testMethodMatch,
 				Headers: testHeaderMatches,
 			},
-			expected: http.RouteMatch{
+			expected: RouteMatch{
 				Method:       "PUT",
 				Headers:      expectedHeaders,
 				RedirectPath: testPath,
@@ -1591,7 +1592,7 @@ func TestCreateRouteMatch(t *testing.T) {
 				QueryParams: testQueryParamMatches,
 				Headers:     testHeaderMatches,
 			},
-			expected: http.RouteMatch{
+			expected: RouteMatch{
 				QueryParams:  expectedArgs,
 				Headers:      expectedHeaders,
 				RedirectPath: testPath,
@@ -1604,7 +1605,7 @@ func TestCreateRouteMatch(t *testing.T) {
 				QueryParams: testQueryParamMatches,
 				Method:      testMethodMatch,
 			},
-			expected: http.RouteMatch{
+			expected: RouteMatch{
 				Method:       "PUT",
 				Headers:      expectedHeaders,
 				QueryParams:  expectedArgs,
@@ -1616,7 +1617,7 @@ func TestCreateRouteMatch(t *testing.T) {
 			match: dataplane.Match{
 				Headers: testDuplicateHeaders,
 			},
-			expected: http.RouteMatch{
+			expected: RouteMatch{
 				Headers:      expectedHeaders,
 				RedirectPath: testPath,
 			},

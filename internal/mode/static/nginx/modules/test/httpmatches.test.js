@@ -33,6 +33,37 @@ function createRequest({ method = '', headers = {}, params = {} } = {}) {
   return r;
 }
 
+describe('verifyMatchList', () => {
+  const tests = [
+    {
+      name: 'throws if matches variable is not an array',
+      matchList: '{}',
+      expectThrow: true,
+      errSubstring: 'expected a list of matches',
+    },
+    {
+      name: 'throws if the length of the matches variable is zero',
+      matchList: '[]',
+      expectThrow: true,
+      errSubstring: 'expected a list of matches',
+    },
+    {
+      name: 'does not throw if matches variable is expected list of matches',
+      matchList: '[{"any":true}]',
+      expectThrow: false,
+    },
+  ];
+  tests.forEach((test) => {
+    it(test.name, () => {
+      if (test.expectThrow) {
+        expect(() => hm.verifyMatchList(test.matchList)).to.throw(test.errSubstring);
+      } else {
+        expect(() => hm.verifyMatchList(test.matchList).to.not.throw());
+      }
+    });
+  });
+});
+
 describe('testMatch', () => {
 	const tests = [
 		{

@@ -78,18 +78,20 @@ func TestGenerate(t *testing.T) {
 		Content: []byte("test-cert\ntest-key"),
 	}))
 
+	g.Expect(files[1].Path).To(Equal("/etc/nginx/conf.d/match.json"))
 	g.Expect(files[1].Type).To(Equal(file.TypeRegular))
-	g.Expect(files[1].Path).To(Equal("/etc/nginx/conf.d/http.conf"))
-	httpCfg := string(files[1].Content) // converting to string so that on failure gomega prints strings not byte arrays
+	expString := "{}"
+	g.Expect(string(files[1].Content)).To(Equal(expString))
+
+	g.Expect(files[2].Type).To(Equal(file.TypeRegular))
+	g.Expect(files[2].Path).To(Equal("/etc/nginx/conf.d/http.conf"))
+	httpCfg := string(files[2].Content) // converting to string so that on failure gomega prints strings not byte arrays
 	// Note: this only verifies that Generate() returns a byte array with upstream, server, and split_client blocks.
 	// It does not test the correctness of those blocks. That functionality is covered by other tests in this package.
 	g.Expect(httpCfg).To(ContainSubstring("listen 80"))
 	g.Expect(httpCfg).To(ContainSubstring("listen 443"))
 	g.Expect(httpCfg).To(ContainSubstring("upstream"))
 	g.Expect(httpCfg).To(ContainSubstring("split_clients"))
-
-	g.Expect(files[2].Path).To(Equal("/etc/nginx/conf.d/match.json"))
-	g.Expect(files[2].Type).To(Equal(file.TypeRegular))
 
 	g.Expect(files[3].Type).To(Equal(file.TypeRegular))
 	g.Expect(files[3].Path).To(Equal("/etc/nginx/conf.d/config-version.conf"))

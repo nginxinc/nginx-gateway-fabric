@@ -1,8 +1,6 @@
 package config
 
 import (
-	"encoding/json"
-	"fmt"
 	"path/filepath"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/file"
@@ -57,8 +55,13 @@ func NewGeneratorImpl(plus bool) GeneratorImpl {
 	return GeneratorImpl{plus: plus}
 }
 
+type executeResult struct {
+	dest string
+	data []byte
+}
+
 // executeFunc is a function that generates NGINX configuration from internal representation.
-type executeFunc func(configuration dataplane.Configuration) []byte
+type executeFunc func(configuration dataplane.Configuration) []executeResult
 
 // Generate generates NGINX configuration files from internal representation.
 // It is the responsibility of the caller to validate the configuration before calling this function.
@@ -113,40 +116,36 @@ func generateCertBundleFileName(id dataplane.CertBundleID) string {
 }
 
 func (g GeneratorImpl) generateHTTPConfig(conf dataplane.Configuration) []file.File {
+	files := make([]file.File, 0)
 	var c []byte
+
 	for _, execute := range g.getExecuteFuncs() {
-		c = append(c, execute(conf)...)
+		results := execute(conf)
+		for _, res := range results {
+			if res.dest == httpConfigFile {
+				c = append(c, res.data...)
+			} else {
+				files = append(files, file.File{
+					Path:    res.dest,
+					Content: res.data,
+					Type:    file.TypeRegular,
+				})
+			}
+		}
 	}
 
-	servers, httpMatchPairs := executeServers(conf)
-
-	// create server conf
-	serverConf := execute(serversTemplate, servers)
-	c = append(c, serverConf...)
-
-	httpConf := file.File{
-		Content: c,
+	files = append(files, file.File{
 		Path:    httpConfigFile,
+		Content: c,
 		Type:    file.TypeRegular,
-	}
+	})
 
-	// create httpMatchPair conf
-	b, err := json.Marshal(httpMatchPairs)
-	if err != nil {
-		// panic is safe here because we should never fail to marshal the match unless we constructed it incorrectly.
-		panic(fmt.Errorf("could not marshal http match pairs: %w", err))
-	}
-	matchConf := file.File{
-		Content: b,
-		Path:    httpMatchVarsFile,
-		Type:    file.TypeRegular,
-	}
-
-	return []file.File{httpConf, matchConf}
+	return files
 }
 
 func (g GeneratorImpl) getExecuteFuncs() []executeFunc {
 	return []executeFunc{
+		executeServers,
 		g.executeUpstreams,
 		executeSplitClients,
 		executeMaps,

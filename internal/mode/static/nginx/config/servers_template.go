@@ -1,6 +1,7 @@
 package config
 
 var serversTemplateText = `
+js_preload_object matches from /etc/nginx/conf.d/match.json;
 {{- range $s := . -}}
     {{ if $s.IsDefaultSSL -}}
 server {
@@ -17,7 +18,6 @@ server {
 }
     {{- else }}
 server {
-    js_preload_object matches from /etc/nginx/conf.d/match.json;
         {{- if $s.SSL }}
     listen {{ $s.Port }} ssl;
     ssl_certificate {{ $s.SSL.Certificate }};
