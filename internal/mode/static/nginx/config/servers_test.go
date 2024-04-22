@@ -513,7 +513,7 @@ func TestCreateServers(t *testing.T) {
 		},
 	}
 
-	expMatchPairs := map[string][]RouteMatch{
+	expMatchPairs := httpMatchPairs{
 		"1_0": {
 			{Method: "POST", RedirectPath: "@rule0-route0"},
 			{Method: "PATCH", RedirectPath: "@rule0-route1"},
@@ -896,11 +896,7 @@ func TestCreateServers(t *testing.T) {
 
 	result, httpMatchPair := createServers(httpServers, sslServers)
 
-	for key, val := range httpMatchPair {
-		expVal, ok := expMatchPairs[key]
-		g.Expect(ok).To(BeTrue())
-		g.Expect(val).To(Equal(expVal))
-	}
+	g.Expect(httpMatchPair).To(Equal(expMatchPairs))
 	g.Expect(helpers.Diff(expectedServers, result)).To(BeEmpty())
 }
 
