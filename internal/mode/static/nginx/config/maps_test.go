@@ -90,6 +90,8 @@ func TestExecuteMaps(t *testing.T) {
 
 	mapResult := executeMaps(conf)
 	maps := string(mapResult[0].data)
+	g.Expect(mapResult).To(HaveLen(1))
+	g.Expect(mapResult[0].dest).To(Equal(httpConfigFile))
 	for expSubStr, expCount := range expSubStrings {
 		g.Expect(expCount).To(Equal(strings.Count(maps, expSubStr)))
 	}

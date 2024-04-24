@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"maps"
 	"strings"
 	"testing"
 
@@ -542,34 +543,6 @@ func TestCreateServers(t *testing.T) {
 				RedirectPath: "@rule10-route0",
 			},
 		},
-		"SSL1_0": {
-			{Method: "POST", RedirectPath: "@rule0-route0"},
-			{Method: "PATCH", RedirectPath: "@rule0-route1"},
-			{Any: true, RedirectPath: "@rule0-route2"},
-		},
-		"SSL1_1": {
-			{
-				Method:       "GET",
-				RedirectPath: "@rule1-route0",
-				Headers:      []string{"Version:V1", "test:foo", "my-header:my-value"},
-				QueryParams:  []string{"GrEat=EXAMPLE", "test=foo=bar"},
-			},
-		},
-		"SSL1_6": {
-			{RedirectPath: "@rule6-route0", Headers: []string{"redirect:this"}},
-		},
-		"SSL1_8": {
-			{
-				Headers:      []string{"rewrite:this"},
-				RedirectPath: "@rule8-route0",
-			},
-		},
-		"SSL1_10": {
-			{
-				RedirectPath: "@rule10-route0",
-				Headers:      []string{"filter:this"},
-			},
-		},
 		"1_12": {
 			{
 				Method:       "GET",
@@ -579,16 +552,12 @@ func TestCreateServers(t *testing.T) {
 				Any:          false,
 			},
 		},
-		"SSL1_12": {
-			{
-				Method:       "GET",
-				RedirectPath: "@rule12-route0",
-				Headers:      nil,
-				QueryParams:  nil,
-				Any:          false,
-			},
-		},
 	}
+
+	allExpMatchPair := make(httpMatchPairs)
+	maps.Copy(allExpMatchPair, expMatchPairs)
+	modifiedMatchPairs := modifyMatchPairs(expMatchPairs)
+	maps.Copy(allExpMatchPair, modifiedMatchPairs)
 
 	rewriteProxySetHeaders := []http.Header{
 		{
@@ -869,8 +838,18 @@ func TestCreateServers(t *testing.T) {
 
 	result, httpMatchPair := createServers(httpServers, sslServers)
 
-	g.Expect(httpMatchPair).To(Equal(expMatchPairs))
+	g.Expect(httpMatchPair).To(Equal(allExpMatchPair))
 	g.Expect(helpers.Diff(expectedServers, result)).To(BeEmpty())
+}
+
+func modifyMatchPairs(matchPairs httpMatchPairs) httpMatchPairs {
+	modified := make(httpMatchPairs)
+	for k, v := range matchPairs {
+		modifiedKey := "SSL" + k
+		modified[modifiedKey] = v
+	}
+
+	return modified
 }
 
 func TestCreateServersConflicts(t *testing.T) {
@@ -1450,7 +1429,7 @@ func TestCreateRewritesValForRewriteFilter(t *testing.T) {
 	}
 }
 
-func TestCreateRouteMatch(t *testing.T) {
+func TestCreaterouteMatch(t *testing.T) {
 	testPath := "/internal_loc"
 
 	testMethodMatch := helpers.GetPointer("PUT")
@@ -1498,11 +1477,11 @@ func TestCreateRouteMatch(t *testing.T) {
 	tests := []struct {
 		match    dataplane.Match
 		msg      string
-		expected RouteMatch
+		expected routeMatch
 	}{
 		{
 			match: dataplane.Match{},
-			expected: RouteMatch{
+			expected: routeMatch{
 				Any:          true,
 				RedirectPath: testPath,
 			},
@@ -1512,7 +1491,7 @@ func TestCreateRouteMatch(t *testing.T) {
 			match: dataplane.Match{
 				Method: testMethodMatch, // A path match with a method should not set the Any field to true
 			},
-			expected: RouteMatch{
+			expected: routeMatch{
 				Method:       "PUT",
 				RedirectPath: testPath,
 			},
@@ -1522,7 +1501,7 @@ func TestCreateRouteMatch(t *testing.T) {
 			match: dataplane.Match{
 				Headers: testHeaderMatches,
 			},
-			expected: RouteMatch{
+			expected: routeMatch{
 				RedirectPath: testPath,
 				Headers:      expectedHeaders,
 			},
@@ -1532,7 +1511,7 @@ func TestCreateRouteMatch(t *testing.T) {
 			match: dataplane.Match{
 				QueryParams: testQueryParamMatches,
 			},
-			expected: RouteMatch{
+			expected: routeMatch{
 				QueryParams:  expectedArgs,
 				RedirectPath: testPath,
 			},
@@ -1543,7 +1522,7 @@ func TestCreateRouteMatch(t *testing.T) {
 				Method:      testMethodMatch,
 				QueryParams: testQueryParamMatches,
 			},
-			expected: RouteMatch{
+			expected: routeMatch{
 				Method:       "PUT",
 				QueryParams:  expectedArgs,
 				RedirectPath: testPath,
@@ -1555,7 +1534,7 @@ func TestCreateRouteMatch(t *testing.T) {
 				Method:  testMethodMatch,
 				Headers: testHeaderMatches,
 			},
-			expected: RouteMatch{
+			expected: routeMatch{
 				Method:       "PUT",
 				Headers:      expectedHeaders,
 				RedirectPath: testPath,
@@ -1567,7 +1546,7 @@ func TestCreateRouteMatch(t *testing.T) {
 				QueryParams: testQueryParamMatches,
 				Headers:     testHeaderMatches,
 			},
-			expected: RouteMatch{
+			expected: routeMatch{
 				QueryParams:  expectedArgs,
 				Headers:      expectedHeaders,
 				RedirectPath: testPath,
@@ -1580,7 +1559,7 @@ func TestCreateRouteMatch(t *testing.T) {
 				QueryParams: testQueryParamMatches,
 				Method:      testMethodMatch,
 			},
-			expected: RouteMatch{
+			expected: routeMatch{
 				Method:       "PUT",
 				Headers:      expectedHeaders,
 				QueryParams:  expectedArgs,
@@ -1592,7 +1571,7 @@ func TestCreateRouteMatch(t *testing.T) {
 			match: dataplane.Match{
 				Headers: testDuplicateHeaders,
 			},
-			expected: RouteMatch{
+			expected: routeMatch{
 				Headers:      expectedHeaders,
 				RedirectPath: testPath,
 			},
@@ -1603,7 +1582,7 @@ func TestCreateRouteMatch(t *testing.T) {
 		t.Run(tc.msg, func(t *testing.T) {
 			g := NewWithT(t)
 
-			result := createRouteMatch(tc.match, testPath)
+			result := createrouteMatch(tc.match, testPath)
 			g.Expect(helpers.Diff(result, tc.expected)).To(BeEmpty())
 		})
 	}

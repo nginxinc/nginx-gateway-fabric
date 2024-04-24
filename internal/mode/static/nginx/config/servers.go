@@ -70,7 +70,7 @@ func createServers(httpServers, sslServers []dataplane.VirtualServer) ([]http.Se
 	for serverID, s := range httpServers {
 		httpServer, matchPairs := createServer(s, serverID)
 		servers = append(servers, httpServer)
-		maps.Copy(finalMatchPairs, matchPair)
+		maps.Copy(finalMatchPairs, matchPairs)
 	}
 
 	for serverID, s := range sslServers {
@@ -127,7 +127,7 @@ type rewriteConfig struct {
 	Rewrite string
 }
 
-type httpMatchPairs map[string][]RouteMatch
+type httpMatchPairs map[string][]routeMatch
 
 func createLocations(server *dataplane.VirtualServer, serverID int) ([]http.Location, httpMatchPairs) {
 	maxLocs, pathsAndTypes := getMaxLocationCountAndPathMap(server.PathRules)
@@ -136,7 +136,7 @@ func createLocations(server *dataplane.VirtualServer, serverID int) ([]http.Loca
 	var rootPathExists bool
 
 	for pathRuleIdx, rule := range server.PathRules {
-		matches := make([]RouteMatch, 0, len(rule.MatchRules))
+		matches := make([]routeMatch, 0, len(rule.MatchRules))
 
 		if rule.Path == rootPath {
 			rootPathExists = true
@@ -256,9 +256,9 @@ func initializeInternalLocation(
 	pathruleIdx,
 	matchRuleIdx int,
 	match dataplane.Match,
-) (http.Location, RouteMatch) {
+) (http.Location, routeMatch) {
 	path := fmt.Sprintf("@rule%d-route%d", pathruleIdx, matchRuleIdx)
-	return createMatchLocation(path), createRouteMatch(match, path)
+	return createMatchLocation(path), createrouteMatch(match, path)
 }
 
 // updateLocationsForFilters updates the existing locations with any relevant filters.
@@ -431,13 +431,13 @@ func createRewritesValForRewriteFilter(filter *dataplane.HTTPURLRewriteFilter, p
 	return rewrites
 }
 
-// httpMatch is an internal representation of an HTTPRouteMatch.
-// This struct is marshaled into a string and stored as a variable in the nginx location block for the route's path.
-// The NJS httpmatches module will look up this variable on the request object and compare the request against the
-// Method, Headers, and QueryParams contained in httpMatch.
+// httpMatch is an internal representation of an HTTProuteMatch.
+// This struct is stored as a key-value pair in /etc/nginx/conf.d/matches.json with a key for the route's path.
+// The NJS httpmatches module will look up key specified in the nginx location on the request object
+// and compare the request against the Method, Headers, and QueryParams contained in httpMatch.
 // If the request satisfies the httpMatch, NGINX will redirect the request to the location RedirectPath.
-type RouteMatch struct {
-	// Method is the HTTPMethod of the HTTPRouteMatch.
+type routeMatch struct {
+	// Method is the HTTPMethod of the HTTProuteMatch.
 	Method string `json:"method,omitempty"`
 	// RedirectPath is the path to redirect the request to if the request satisfies the match conditions.
 	RedirectPath string `json:"redirectPath,omitempty"`
@@ -449,8 +449,8 @@ type RouteMatch struct {
 	Any bool `json:"any,omitempty"`
 }
 
-func createRouteMatch(match dataplane.Match, redirectPath string) RouteMatch {
-	hm := RouteMatch{
+func createrouteMatch(match dataplane.Match, redirectPath string) routeMatch {
+	hm := routeMatch{
 		RedirectPath: redirectPath,
 	}
 

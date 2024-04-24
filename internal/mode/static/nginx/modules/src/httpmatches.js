@@ -16,15 +16,10 @@ function redirect(r) {
 		return;
 	}
 
-	try {
-		internalRedirect(r, matchList);
-	} catch (e) {
-		r.error(e.message);
-		r.return(HTTP_CODES.internalServerError);
-	}
+	redirectForMatchList(r, matchList);
 }
 
-function internalRedirect(r, matchList) {
+function redirectForMatchList(r, matchList) {
 	// matchList is a list of http matches in order of precedence.
 	// We will accept the first match that the request satisfies.
 	// If there's a match, redirect request to internal location block.
@@ -199,7 +194,7 @@ function paramsMatch(requestParams, params) {
 
 export default {
 	redirect,
-	internalRedirect,
+	redirectForMatchList,
 	verifyMatchList,
 	testMatch,
 	findWinningMatch,
