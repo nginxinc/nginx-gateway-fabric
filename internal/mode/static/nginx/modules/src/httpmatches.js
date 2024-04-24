@@ -5,76 +5,76 @@ const HTTP_CODES = {
 };
 
 function redirect(r) {
-  let matchList;
+	let matchList;
 
-  try {
-    let key = r.variables[MATCHES_KEY];
-    matchList = matches[key];
-  } catch (e) {
-    r.error(e.message);
-    r.return(HTTP_CODES.internalServerError);
-    return;
-  }
+	try {
+		let key = r.variables[MATCHES_KEY];
+		matchList = matches[key];
+	} catch (e) {
+		r.error(e.message);
+		r.return(HTTP_CODES.internalServerError);
+		return;
+	}
 
-  try {
-    internalRedirect(r, matchList);
-  } catch (e) {
-    r.error(e.message);
-    r.return(HTTP_CODES.internalServerError);
-  }
+	try {
+		internalRedirect(r, matchList);
+	} catch (e) {
+		r.error(e.message);
+		r.return(HTTP_CODES.internalServerError);
+	}
 }
 
 function internalRedirect(r, matchList) {
-  // matchList is a list of http matches in order of precedence.
-  // We will accept the first match that the request satisfies.
-  // If there's a match, redirect request to internal location block.
-  // If an exception occurs, return 500.
-  // If no matches are found, return 404.
-  try {
-    verifyMatchList(matchList);
-  } catch (e) {
-    r.error(e.message);
-    r.return(HTTP_CODES.internalServerError);
-    return;
-  }
+	// matchList is a list of http matches in order of precedence.
+	// We will accept the first match that the request satisfies.
+	// If there's a match, redirect request to internal location block.
+	// If an exception occurs, return 500.
+	// If no matches are found, return 404.
+	try {
+		verifyMatchList(matchList);
+	} catch (e) {
+		r.error(e.message);
+		r.return(HTTP_CODES.internalServerError);
+		return;
+	}
 
-  let match;
-  try {
-    match = findWinningMatch(r, matchList);
-  } catch (e) {
-    r.error(e.message);
-    r.return(HTTP_CODES.internalServerError);
-    return;
-  }
+	let match;
+	try {
+		match = findWinningMatch(r, matchList);
+	} catch (e) {
+		r.error(e.message);
+		r.return(HTTP_CODES.internalServerError);
+		return;
+	}
 
-  if (!match) {
-    r.return(HTTP_CODES.notFound);
-    return;
-  }
+	if (!match) {
+		r.return(HTTP_CODES.notFound);
+		return;
+	}
 
-  if (!match.redirectPath) {
-    r.error(
-      `cannot redirect the request; the match ${JSON.stringify(
-        match,
-      )} does not have a redirectPath set`,
-    );
-    r.return(HTTP_CODES.internalServerError);
-    return;
-  }
+	if (!match.redirectPath) {
+		r.error(
+			`cannot redirect the request; the match ${JSON.stringify(
+				match,
+			)} does not have a redirectPath set`,
+		);
+		r.return(HTTP_CODES.internalServerError);
+		return;
+	}
 
-  r.internalRedirect(match.redirectPath);
+	r.internalRedirect(match.redirectPath);
 }
 
 function verifyMatchList(matchList) {
-  if (!Array.isArray(matchList)) {
-    throw Error(`cannot redirect the request; expected a list of matches, got ${matchList}`);
-  }
+	if (!Array.isArray(matchList)) {
+		throw Error(`cannot redirect the request; expected a list of matches, got ${matchList}`);
+	}
 
-  if (matchList.length === 0) {
-    throw Error(`cannot redirect the request; matches is an empty list`);
-  }
+	if (matchList.length === 0) {
+		throw Error(`cannot redirect the request; matches is an empty list`);
+	}
 
-  return;
+	return;
 }
 
 function findWinningMatch(r, matches) {
@@ -198,12 +198,12 @@ function paramsMatch(requestParams, params) {
 }
 
 export default {
-  redirect,
-  internalRedirect,
-  verifyMatchList,
-  testMatch,
-  findWinningMatch,
-  headersMatch,
-  paramsMatch,
-  HTTP_CODES,
+	redirect,
+	internalRedirect,
+	verifyMatchList,
+	testMatch,
+	findWinningMatch,
+	headersMatch,
+	paramsMatch,
+	HTTP_CODES,
 };
