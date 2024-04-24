@@ -68,7 +68,7 @@ func createServers(httpServers, sslServers []dataplane.VirtualServer) ([]http.Se
 	finalMatchPairs := make(httpMatchPairs)
 
 	for serverID, s := range httpServers {
-		httpServer, matchPair := createServer(s, serverID)
+		httpServer, matchPairs := createServer(s, serverID)
 		servers = append(servers, httpServer)
 		maps.Copy(finalMatchPairs, matchPair)
 	}
