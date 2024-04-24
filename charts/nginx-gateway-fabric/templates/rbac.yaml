@@ -111,6 +111,7 @@ rules:
   - gateway.nginx.org
   resources:
   - nginxgateways
+  - clientsettingspolicies
   verbs:
   - get
   - list
@@ -119,6 +120,7 @@ rules:
   - gateway.nginx.org
   resources:
   - nginxgateways/status
+  - clientsettingspolicies/status
   verbs:
   - update
 {{- if .Values.nginxGateway.leaderElection.enable }}
