@@ -2,9 +2,9 @@ package config
 
 const otelTemplateText = `
 otel_exporter {
-	endpoint {{ .Endpoint }};
+	endpoint "{{ .Endpoint }}";
 	{{- if .Interval }}
-	interval {{ .Interval }};
+	interval "{{ .Interval }}";
 	{{- end }}
 	{{- if .BatchSize }}
 	batch_size {{ .BatchSize }};
@@ -14,9 +14,9 @@ otel_exporter {
 	{{- end }}
 }
 
-otel_service_name {{ .ServiceName }};
+otel_service_name "{{ .ServiceName }}";
 
 {{- range $attr := .SpanAttributes }}
-otel_span_attr {{ $attr.Key }} {{ $attr.Value }};
+otel_span_attr "{{ $attr.Key }}" "{{ $attr.Value }}";
 {{- end }}
 `

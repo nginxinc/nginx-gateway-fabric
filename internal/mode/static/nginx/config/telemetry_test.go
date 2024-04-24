@@ -33,12 +33,12 @@ func TestExecuteTelemetry(t *testing.T) {
 
 	g := NewWithT(t)
 	expSubStrings := map[string]int{
-		"endpoint 1.2.3.4:123;":                        1,
-		"otel_service_name ngf:gw-ns:gw-name:my-name;": 1,
-		"interval 5s;":                                 1,
-		"batch_size 512;":                              1,
-		"batch_count 4;":                               1,
-		"otel_span_attr":                               2,
+		`endpoint "1.2.3.4:123";`:                        1,
+		`otel_service_name "ngf:gw-ns:gw-name:my-name";`: 1,
+		`interval "5s";`:                                 1,
+		"batch_size 512;":                                1,
+		"batch_count 4;":                                 1,
+		"otel_span_attr":                                 2,
 	}
 
 	for expSubStr, expCount := range expSubStrings {
