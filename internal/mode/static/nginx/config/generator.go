@@ -25,7 +25,7 @@ const (
 	configVersionFile = httpFolder + "/config-version.conf"
 
 	// httpMatchVarsFile is the path to the http_match pairs configuration file.
-	httpMatchVarsFile = httpFolder + "/match.json"
+	httpMatchVarsFile = httpFolder + "/matches.json"
 )
 
 // ConfigFolders is a list of folders where NGINX configuration files are stored.
