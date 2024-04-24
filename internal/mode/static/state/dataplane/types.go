@@ -68,10 +68,20 @@ type VirtualServer struct {
 	Hostname string
 	// PathRules is a collection of routing rules.
 	PathRules []PathRule
-	// IsDefault indicates whether the server is the default server.
-	IsDefault bool
+	// Additions is a list of config additions for the server.
+	Additions []*Addition
 	// Port is the port of the server.
 	Port int32
+	// IsDefault indicates whether the server is the default server.
+	IsDefault bool
+}
+
+// Addition holds additional configuration.
+type Addition struct {
+	// Identifier is a unique identifier for the addition.
+	Identifier string
+	// Bytes contains the additional configuration.
+	Bytes []byte
 }
 
 // Upstream is a pool of endpoints to be load balanced.
@@ -204,6 +214,8 @@ type MatchRule struct {
 	Source *metav1.ObjectMeta
 	// Match holds the match for the rule.
 	Match Match
+	// Additions holds the config additions for the rule.
+	Additions []*Addition
 	// BackendGroup is the group of Backends that the rule routes to.
 	BackendGroup BackendGroup
 }

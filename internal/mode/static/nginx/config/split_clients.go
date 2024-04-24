@@ -5,6 +5,7 @@ import (
 	"math"
 	gotemplate "text/template"
 
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/http"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/dataplane"
 )
@@ -16,7 +17,7 @@ func executeSplitClients(conf dataplane.Configuration) []executeResult {
 
 	result := executeResult{
 		dest: httpConfigFile,
-		data: execute(splitClientsTemplate, splitClients),
+		data: helpers.MustExecuteTemplate(splitClientsTemplate, splitClients),
 	}
 
 	return []executeResult{result}

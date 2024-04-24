@@ -13,6 +13,7 @@ import (
 	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/kinds"
 	frameworkStatus "github.com/nginxinc/nginx-gateway-fabric/internal/framework/status"
 	staticConds "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/conditions"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/graph"
@@ -297,6 +298,51 @@ func prepareGatewayRequest(
 	}
 }
 
+func PrepareNGFPolicyRequests(
+	policies map[graph.PolicyKey]*graph.Policy,
+	transitionTime metav1.Time,
+	gatewayCtlrName string,
+) []frameworkStatus.UpdateRequest {
+	reqs := make([]frameworkStatus.UpdateRequest, 0, len(policies))
+
+	for key, pol := range policies {
+		ancestorStatuses := make([]v1alpha2.PolicyAncestorStatus, 0, 1)
+		ancestor := pol.Ancestor
+
+		if ancestor == nil {
+			continue
+		}
+
+		allConds := make([]conditions.Condition, 0, len(pol.Conditions)+len(ancestor.Conditions)+1)
+
+		// The order of conditions matters here.
+		// We add the default condition first, followed by the ancestor conditions, and finally the policy conditions.
+		// DeduplicateConditions will ensure the last condition wins.
+		allConds = append(allConds, staticConds.NewPolicyAccepted())
+		allConds = append(allConds, ancestor.Conditions...)
+		allConds = append(allConds, pol.Conditions...)
+
+		conds := conditions.DeduplicateConditions(allConds)
+		apiConds := conditions.ConvertConditions(conds, pol.Source.GetGeneration(), transitionTime)
+
+		ancestorStatuses = append(ancestorStatuses, v1alpha2.PolicyAncestorStatus{
+			AncestorRef:    ancestor.Ancestor,
+			ControllerName: v1alpha2.GatewayController(gatewayCtlrName),
+			Conditions:     apiConds,
+		})
+
+		status := v1alpha2.PolicyStatus{Ancestors: ancestorStatuses}
+
+		reqs = append(reqs, frameworkStatus.UpdateRequest{
+			NsName:       key.NsName,
+			ResourceType: pol.Source,
+			Setter:       newNGFPolicyStatusSetter(status, gatewayCtlrName),
+		})
+	}
+
+	return reqs
+}
+
 // PrepareBackendTLSPolicyRequests prepares status UpdateRequests for the given BackendTLSPolicies.
 func PrepareBackendTLSPolicyRequests(
 	policies map[types.NamespacedName]*graph.BackendTLSPolicy,
@@ -319,6 +365,8 @@ func PrepareBackendTLSPolicyRequests(
 					AncestorRef: v1.ParentReference{
 						Namespace: (*v1.Namespace)(&pol.Gateway.Namespace),
 						Name:      v1alpha2.ObjectName(pol.Gateway.Name),
+						Group:     helpers.GetPointer[v1.Group](v1.GroupName),
+						Kind:      helpers.GetPointer[v1.Kind](kinds.Gateway),
 					},
 					ControllerName: v1alpha2.GatewayController(gatewayCtlrName),
 					Conditions:     apiConds,
@@ -355,7 +403,9 @@ func PrepareNginxGatewayStatus(
 	var conds []conditions.Condition
 	if cpUpdateRes.Error != nil {
 		msg := "Failed to update control plane configuration"
-		conds = []conditions.Condition{staticConds.NewNginxGatewayInvalid(fmt.Sprintf("%s: %v", msg, cpUpdateRes.Error))}
+		conds = []conditions.Condition{
+			staticConds.NewNginxGatewayInvalid(fmt.Sprintf("%s: %v", msg, cpUpdateRes.Error)),
+		}
 	} else {
 		conds = []conditions.Condition{staticConds.NewNginxGatewayValid()}
 	}

@@ -28,6 +28,12 @@ func TestExecuteServers(t *testing.T) {
 			{
 				Hostname: "cafe.example.com",
 				Port:     8080,
+				Additions: []*dataplane.Addition{
+					{
+						Bytes:      []byte("addition-1"),
+						Identifier: "addition-1",
+					},
+				},
 			},
 		},
 		SSLServers: []dataplane.VirtualServer{
@@ -74,6 +80,16 @@ func TestExecuteServers(t *testing.T) {
 						},
 					},
 				},
+				Additions: []*dataplane.Addition{
+					{
+						Bytes:      []byte("addition-1"),
+						Identifier: "addition-1", // duplicate
+					},
+					{
+						Bytes:      []byte("addition-2"),
+						Identifier: "addition-2",
+					},
+				},
 			},
 		},
 	}
@@ -89,14 +105,35 @@ func TestExecuteServers(t *testing.T) {
 		"ssl_certificate_key /etc/nginx/secrets/test-keypair.pem;": 2,
 		"proxy_ssl_server_name on;":                                1,
 	}
+
+	type assertion func(g *WithT, data string)
+
+	expectedResults := map[string]assertion{
+		httpConfigFile: func(g *WithT, data string) {
+			for expSubStr, expCount := range expSubStrings {
+				g.Expect(strings.Count(data, expSubStr)).To(Equal(expCount))
+			}
+		},
+		httpMatchVarsFile: func(g *WithT, data string) {
+			g.Expect(data).To(Equal("{}"))
+		},
+		includesFolder + "/addition-1.conf": func(g *WithT, data string) {
+			g.Expect(data).To(Equal("addition-1"))
+		},
+		includesFolder + "/addition-2.conf": func(g *WithT, data string) {
+			g.Expect(data).To(Equal("addition-2"))
+		},
+	}
 	g := NewWithT(t)
-	serverResults := executeServers(conf)
-	g.Expect(serverResults).To(HaveLen(2))
-	serverConf := string(serverResults[0].data)
-	httpMatchConf := string(serverResults[1].data)
-	g.Expect(httpMatchConf).To(Equal("{}"))
-	for expSubStr, expCount := range expSubStrings {
-		g.Expect(strings.Count(serverConf, expSubStr)).To(Equal(expCount))
+
+	results := executeServers(conf)
+	g.Expect(results).To(HaveLen(len(expectedResults)))
+
+	for _, res := range results {
+		g.Expect(expectedResults).To(HaveKey(res.dest), "executeServers returned unexpected result destination")
+
+		testData := expectedResults[res.dest]
+		testData(g, string(res.data))
 	}
 }
 
@@ -546,6 +583,22 @@ func TestCreateServers(t *testing.T) {
 			},
 			GRPC: true,
 		},
+		{
+			Path:     "/addition",
+			PathType: dataplane.PathTypeExact,
+			MatchRules: []dataplane.MatchRule{
+				{
+					Match:        dataplane.Match{},
+					BackendGroup: bazGroup,
+					Additions: []*dataplane.Addition{
+						{
+							Bytes:      []byte("match-addition"),
+							Identifier: "match-addition",
+						},
+					},
+				},
+			},
+		},
 	}
 
 	httpServers := []dataplane.VirtualServer{
@@ -557,6 +610,16 @@ func TestCreateServers(t *testing.T) {
 			Hostname:  "cafe.example.com",
 			PathRules: cafePathRules,
 			Port:      8080,
+			Additions: []*dataplane.Addition{
+				{
+					Bytes:      []byte("server-addition-1"),
+					Identifier: "server-addition-1",
+				},
+				{
+					Bytes:      []byte("server-addition-2"),
+					Identifier: "server-addition-2",
+				},
+			},
 		},
 	}
 
@@ -570,6 +633,16 @@ func TestCreateServers(t *testing.T) {
 			SSL:       &dataplane.SSL{KeyPairID: sslKeyPairID},
 			PathRules: cafePathRules,
 			Port:      8443,
+			Additions: []*dataplane.Addition{
+				{
+					Bytes:      []byte("server-addition-1"),
+					Identifier: "server-addition-1",
+				},
+				{
+					Bytes:      []byte("server-addition-3"),
+					Identifier: "server-addition-3",
+				},
+			},
 		},
 	}
 
@@ -899,6 +972,17 @@ func TestCreateServers(t *testing.T) {
 				GRPC:            true,
 				ProxySetHeaders: grpcBaseHeaders,
 			},
+			{
+				Path:            "= /addition",
+				ProxyPass:       "http://invalid-backend-ref$request_uri",
+				ProxySetHeaders: httpBaseHeaders,
+				Includes: []http.Include{
+					{
+						Content:  []byte("match-addition"),
+						Filename: includesFolder + "/match-addition.conf",
+					},
+				},
+			},
 		}
 	}
 
@@ -914,6 +998,16 @@ func TestCreateServers(t *testing.T) {
 			Locations:  getExpectedLocations(false),
 			Port:       8080,
 			GRPC:       true,
+			Includes: []http.Include{
+				{
+					Filename: includesFolder + "/server-addition-1.conf",
+					Content:  []byte("server-addition-1"),
+				},
+				{
+					Filename: includesFolder + "/server-addition-2.conf",
+					Content:  []byte("server-addition-2"),
+				},
+			},
 		},
 		{
 			IsDefaultSSL: true,
@@ -928,6 +1022,16 @@ func TestCreateServers(t *testing.T) {
 			Locations: getExpectedLocations(true),
 			Port:      8443,
 			GRPC:      true,
+			Includes: []http.Include{
+				{
+					Filename: includesFolder + "/server-addition-1.conf",
+					Content:  []byte("server-addition-1"),
+				},
+				{
+					Filename: includesFolder + "/server-addition-3.conf",
+					Content:  []byte("server-addition-3"),
+				},
+			},
 		},
 	}
 
@@ -2219,4 +2323,152 @@ func TestGenerateResponseHeaders(t *testing.T) {
 			g.Expect(headers).To(Equal(tc.expectedHeaders))
 		})
 	}
+}
+
+func TestCreateIncludes(t *testing.T) {
+	tests := []struct {
+		name      string
+		additions []*dataplane.Addition
+		includes  []http.Include
+	}{
+		{
+			name:      "no additions",
+			additions: nil,
+			includes:  nil,
+		},
+		{
+			name: "additions",
+			additions: []*dataplane.Addition{
+				{
+					Bytes:      []byte("one"),
+					Identifier: "one",
+				},
+				{
+					Bytes:      []byte("two"),
+					Identifier: "two",
+				},
+				{
+					Bytes:      []byte("three"),
+					Identifier: "three",
+				},
+			},
+			includes: []http.Include{
+				{
+					Filename: includesFolder + "/one.conf",
+					Content:  []byte("one"),
+				},
+				{
+					Filename: includesFolder + "/two.conf",
+					Content:  []byte("two"),
+				},
+				{
+					Filename: includesFolder + "/three.conf",
+					Content:  []byte("three"),
+				},
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			g := NewWithT(t)
+
+			includes := createIncludes(test.additions)
+			g.Expect(includes).To(Equal(test.includes))
+		})
+	}
+}
+
+func TestCreateIncludeFileResults(t *testing.T) {
+	servers := []http.Server{
+		{
+			Locations: []http.Location{
+				{
+					Includes: []http.Include{
+						{
+							Filename: "include-1.conf",
+							Content:  []byte("include-1"),
+						},
+						{
+							Filename: "include-2.conf",
+							Content:  []byte("include-2"),
+						},
+						{
+							Filename: "include-3.conf",
+							Content:  []byte("include-3"),
+						},
+					},
+				},
+			},
+			Includes: []http.Include{
+				{
+					Filename: "include-1.conf",
+					Content:  []byte("include-1"), // duplicate
+				},
+				{
+					Filename: "include-4.conf",
+					Content:  []byte("include-4"),
+				},
+			},
+		},
+		{
+			Locations: []http.Location{
+				{
+					Includes: []http.Include{
+						{
+							Filename: "include-2.conf",
+							Content:  []byte("include-2"), // duplicate
+						},
+						{
+							Filename: "include-5.conf",
+							Content:  []byte("include-5"),
+						},
+					},
+				},
+			},
+			Includes: []http.Include{
+				{
+					Filename: "include-4.conf",
+					Content:  []byte("include-4"), // duplicate
+				},
+				{
+					Filename: "include-6.conf",
+					Content:  []byte("include-6"),
+				},
+			},
+		},
+	}
+
+	results := createIncludeFileResults(servers)
+
+	expResults := []executeResult{
+		{
+			dest: "include-1.conf",
+			data: []byte("include-1"),
+		},
+		{
+			dest: "include-2.conf",
+			data: []byte("include-2"),
+		},
+		{
+			dest: "include-3.conf",
+			data: []byte("include-3"),
+		},
+		{
+			dest: "include-4.conf",
+			data: []byte("include-4"),
+		},
+		{
+			dest: "include-5.conf",
+			data: []byte("include-5"),
+		},
+		{
+			dest: "include-6.conf",
+			data: []byte("include-6"),
+		},
+	}
+
+	g := NewWithT(t)
+
+	g.Expect(results).To(ConsistOf(expResults))
 }

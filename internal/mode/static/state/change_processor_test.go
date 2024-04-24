@@ -9,6 +9,7 @@ import (
 	apiext "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -23,6 +24,7 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/controller/index"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/gatewayclass"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/kinds"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state"
 	staticConds "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/conditions"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/graph"
@@ -187,6 +189,7 @@ func createAlwaysValidValidators() validation.Validators {
 	return validation.Validators{
 		HTTPFieldsValidator: &validationfakes.FakeHTTPFieldsValidator{},
 		GenericValidator:    &validationfakes.FakeGenericValidator{},
+		PolicyValidator:     &validationfakes.FakePolicyValidator{},
 	}
 }
 
@@ -278,6 +281,7 @@ var _ = Describe("ChangeProcessor", func() {
 					ControllerName: controllerName,
 				},
 			}
+
 			processor state.ChangeProcessor
 		)
 
@@ -338,7 +342,7 @@ var _ = Describe("ChangeProcessor", func() {
 						From: []v1beta1.ReferenceGrantFrom{
 							{
 								Group:     v1.GroupName,
-								Kind:      "Gateway",
+								Kind:      kinds.Gateway,
 								Namespace: "test",
 							},
 						},
@@ -359,7 +363,7 @@ var _ = Describe("ChangeProcessor", func() {
 						From: []v1beta1.ReferenceGrantFrom{
 							{
 								Group:     v1.GroupName,
-								Kind:      "HTTPRoute",
+								Kind:      kinds.HTTPRoute,
 								Namespace: "test",
 							},
 						},
@@ -520,7 +524,7 @@ var _ = Describe("ChangeProcessor", func() {
 								Valid:          true,
 								Attachable:     true,
 								Routes:         map[graph.RouteKey]*graph.L7Route{routeKey1: expRouteHR1},
-								SupportedKinds: []v1.RouteGroupKind{{Kind: "HTTPRoute"}},
+								SupportedKinds: []v1.RouteGroupKind{{Kind: kinds.HTTPRoute}},
 							},
 							{
 								Name:           "listener-443-1",
@@ -529,7 +533,7 @@ var _ = Describe("ChangeProcessor", func() {
 								Attachable:     true,
 								Routes:         map[graph.RouteKey]*graph.L7Route{routeKey1: expRouteHR1},
 								ResolvedSecret: helpers.GetPointer(client.ObjectKeyFromObject(diffNsTLSSecret)),
-								SupportedKinds: []v1.RouteGroupKind{{Kind: "HTTPRoute"}},
+								SupportedKinds: []v1.RouteGroupKind{{Kind: kinds.HTTPRoute}},
 							},
 						},
 						Valid: true,
@@ -1500,16 +1504,19 @@ var _ = Describe("ChangeProcessor", func() {
 					Expect(changed).To(Equal(state.ClusterStateChange))
 				})
 			})
-			When("a namespace that is linked to a listener has its labels changed to no longer match a listener", func() {
-				It("triggers an update", func() {
-					nsDifferentLabels.Labels = map[string]string{
-						"oranges": "bananas",
-					}
-					processor.CaptureUpsertChange(nsDifferentLabels)
-					changed, _ := processor.Process()
-					Expect(changed).To(Equal(state.ClusterStateChange))
-				})
-			})
+			When(
+				"a namespace that is linked to a listener has its labels changed to no longer match a listener",
+				func() {
+					It("triggers an update", func() {
+						nsDifferentLabels.Labels = map[string]string{
+							"oranges": "bananas",
+						}
+						processor.CaptureUpsertChange(nsDifferentLabels)
+						changed, _ := processor.Process()
+						Expect(changed).To(Equal(state.ClusterStateChange))
+					})
+				},
+			)
 			When("a gateway changes its listener's labels", func() {
 				It("triggers an update when a namespace that matches the new labels is created", func() {
 					gwChangedLabel := gw.DeepCopy()
@@ -1559,7 +1566,7 @@ var _ = Describe("ChangeProcessor", func() {
 			paramGC := gc.DeepCopy()
 			paramGC.Spec.ParametersRef = &v1beta1.ParametersReference{
 				Group: ngfAPI.GroupName,
-				Kind:  v1beta1.Kind("NginxProxy"),
+				Kind:  v1beta1.Kind(kinds.NginxProxy),
 				Name:  "np",
 			}
 
@@ -1608,8 +1615,98 @@ var _ = Describe("ChangeProcessor", func() {
 				Expect(graph.NginxProxy).To(BeNil())
 			})
 		})
-	})
 
+		Describe("NGF Policy resource changes", Ordered, func() {
+			var (
+				gw              *v1.Gateway
+				csp, cspUpdated *ngfAPI.ClientSettingsPolicy
+				cspKey          graph.PolicyKey
+			)
+
+			BeforeAll(func() {
+				processor.CaptureUpsertChange(gc)
+				changed, newGraph := processor.Process()
+				Expect(changed).To(Equal(state.ClusterStateChange))
+				Expect(newGraph.GatewayClass.Source).To(Equal(gc))
+				Expect(newGraph.NGFPolicies).To(BeEmpty())
+
+				gw = createGateway("gw")
+
+				csp = &ngfAPI.ClientSettingsPolicy{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "csp",
+						Namespace: "test",
+					},
+					Spec: ngfAPI.ClientSettingsPolicySpec{
+						TargetRef: v1alpha2.LocalPolicyTargetReference{
+							Group: v1.GroupName,
+							Kind:  kinds.Gateway,
+							Name:  "gw",
+						},
+						Body: &ngfAPI.ClientBody{
+							MaxSize: helpers.GetPointer[ngfAPI.Size]("10m"),
+						},
+					},
+				}
+
+				cspUpdated = csp.DeepCopy()
+				cspUpdated.Spec.Body.MaxSize = helpers.GetPointer[ngfAPI.Size]("20m")
+
+				cspKey = graph.PolicyKey{
+					NsName: types.NamespacedName{Name: "csp", Namespace: "test"},
+					GVK: schema.GroupVersionKind{
+						Group:   ngfAPI.GroupName,
+						Kind:    kinds.ClientSettingsPolicy,
+						Version: "v1alpha1",
+					},
+				}
+			})
+
+			/*
+				NOTE: When adding a new NGF policy to the change processor,
+				update the following tests to make sure that the change processor can track changes for multiple NGF
+				policies.
+			*/
+
+			When("a policy is created that references a resource that is not in the last graph", func() {
+				It("reports no changes", func() {
+					processor.CaptureUpsertChange(csp)
+
+					changed, _ := processor.Process()
+					Expect(changed).To(Equal(state.NoChange))
+				})
+			})
+			When("the resource the policy references is created", func() {
+				It("populates the graph with the policy", func() {
+					processor.CaptureUpsertChange(gw)
+
+					changed, graph := processor.Process()
+					Expect(changed).To(Equal(state.ClusterStateChange))
+					Expect(graph.NGFPolicies).To(HaveKey(cspKey))
+					Expect(graph.NGFPolicies[cspKey].Source).To(Equal(csp))
+				})
+			})
+			When("the policy is updated", func() {
+				It("captures changes for a policy", func() {
+					processor.CaptureUpsertChange(cspUpdated)
+
+					changed, graph := processor.Process()
+					Expect(changed).To(Equal(state.ClusterStateChange))
+					Expect(graph.NGFPolicies).To(HaveKey(cspKey))
+					Expect(graph.NGFPolicies[cspKey].Source).To(Equal(cspUpdated))
+				})
+			})
+			When("the policy is deleted", func() {
+				It("removes the policy from the graph", func() {
+					processor.CaptureDeleteChange(&ngfAPI.ClientSettingsPolicy{}, client.ObjectKeyFromObject(csp))
+
+					changed, graph := processor.Process()
+					Expect(changed).To(Equal(state.ClusterStateChange))
+					Expect(graph.NGFPolicies).To(BeEmpty())
+				})
+			})
+		})
+	})
 	Describe("Ensuring non-changing changes don't override previously changing changes", func() {
 		// Note: in these tests, we deliberately don't fully inspect the returned configuration and statuses
 		// -- this is done in 'Normal cases of processing changes'

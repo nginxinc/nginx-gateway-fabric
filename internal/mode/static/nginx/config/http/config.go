@@ -5,10 +5,11 @@ type Server struct {
 	SSL           *SSL
 	ServerName    string
 	Locations     []Location
+	Includes      []Include
+	Port          int32
 	IsDefaultHTTP bool
 	IsDefaultSSL  bool
 	GRPC          bool
-	Port          int32
 }
 
 // Location holds all configuration for an HTTP location.
@@ -17,11 +18,12 @@ type Location struct {
 	ProxyPass       string
 	HTTPMatchKey    string
 	HTTPMatchVar    string
-	Rewrites        []string
 	ProxySetHeaders []Header
 	ProxySSLVerify  *ProxySSLVerify
 	Return          *Return
 	ResponseHeaders ResponseHeaders
+	Rewrites        []string
+	Includes        []Include
 	GRPC            bool
 }
 
@@ -103,4 +105,10 @@ type MapParameter struct {
 type ProxySSLVerify struct {
 	TrustedCertificate string
 	Name               string
+}
+
+// Include holds all the files to include using the include directive.
+type Include struct {
+	Filename string
+	Content  []byte
 }

@@ -14,6 +14,7 @@ import (
 	v1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/kinds"
 	staticConds "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/conditions"
 )
 
@@ -156,7 +157,7 @@ func TestBuildGateway(t *testing.T) {
 		Protocol: v1.HTTPProtocolType,
 		AllowedRoutes: &v1.AllowedRoutes{
 			Kinds: []v1.RouteGroupKind{
-				{Kind: "HTTPRoute", Group: helpers.GetPointer[v1.Group](v1.GroupName)},
+				{Kind: kinds.HTTPRoute, Group: helpers.GetPointer[v1.Group](v1.GroupName)},
 			},
 			Namespaces: &v1.RouteNamespaces{
 				From:     helpers.GetPointer(v1.NamespacesFromSelector),
@@ -297,7 +298,12 @@ func TestBuildGateway(t *testing.T) {
 		443,
 		tlsConfigInvalidSecret,
 	)
-	invalidHTTPSPortListener := createHTTPSListener("invalid-https-port", "foo.example.com", 65536, gatewayTLSConfigSameNs)
+	invalidHTTPSPortListener := createHTTPSListener(
+		"invalid-https-port",
+		"foo.example.com",
+		65536,
+		gatewayTLSConfigSameNs,
+	)
 
 	const (
 		invalidHostnameMsg = `hostname: Invalid value: "$example.com": a lowercase RFC 1123 subdomain ` +
@@ -362,7 +368,7 @@ func TestBuildGateway(t *testing.T) {
 						Attachable: true,
 						Routes:     map[RouteKey]*L7Route{},
 						SupportedKinds: []v1.RouteGroupKind{
-							{Kind: "HTTPRoute"},
+							{Kind: kinds.HTTPRoute},
 						},
 					},
 					{
@@ -372,7 +378,7 @@ func TestBuildGateway(t *testing.T) {
 						Attachable: true,
 						Routes:     map[RouteKey]*L7Route{},
 						SupportedKinds: []v1.RouteGroupKind{
-							{Kind: "HTTPRoute"},
+							{Kind: kinds.HTTPRoute},
 						},
 					},
 				},
@@ -396,7 +402,7 @@ func TestBuildGateway(t *testing.T) {
 						Routes:         map[RouteKey]*L7Route{},
 						ResolvedSecret: helpers.GetPointer(client.ObjectKeyFromObject(secretSameNs)),
 						SupportedKinds: []v1.RouteGroupKind{
-							{Kind: "HTTPRoute"},
+							{Kind: kinds.HTTPRoute},
 						},
 					},
 					{
@@ -407,7 +413,7 @@ func TestBuildGateway(t *testing.T) {
 						Routes:         map[RouteKey]*L7Route{},
 						ResolvedSecret: helpers.GetPointer(client.ObjectKeyFromObject(secretSameNs)),
 						SupportedKinds: []v1.RouteGroupKind{
-							{Kind: "HTTPRoute"},
+							{Kind: kinds.HTTPRoute},
 						},
 					},
 				},
@@ -429,7 +435,7 @@ func TestBuildGateway(t *testing.T) {
 						AllowedRouteLabelSelector: labels.SelectorFromSet(labels.Set(labelSet)),
 						Routes:                    map[RouteKey]*L7Route{},
 						SupportedKinds: []v1.RouteGroupKind{
-							{Kind: "HTTPRoute", Group: helpers.GetPointer[v1.Group](v1.GroupName)},
+							{Kind: kinds.HTTPRoute, Group: helpers.GetPointer[v1.Group](v1.GroupName)},
 						},
 					},
 				},
@@ -450,7 +456,7 @@ func TestBuildGateway(t *testing.T) {
 						From: []v1beta1.ReferenceGrantFrom{
 							{
 								Group:     v1.GroupName,
-								Kind:      "Gateway",
+								Kind:      kinds.Gateway,
 								Namespace: "test",
 							},
 						},
@@ -475,7 +481,7 @@ func TestBuildGateway(t *testing.T) {
 						Routes:         map[RouteKey]*L7Route{},
 						ResolvedSecret: helpers.GetPointer(client.ObjectKeyFromObject(secretDiffNamespace)),
 						SupportedKinds: []v1.RouteGroupKind{
-							{Kind: "HTTPRoute"},
+							{Kind: kinds.HTTPRoute},
 						},
 					},
 				},
@@ -499,7 +505,7 @@ func TestBuildGateway(t *testing.T) {
 						),
 						Routes: map[RouteKey]*L7Route{},
 						SupportedKinds: []v1.RouteGroupKind{
-							{Kind: "HTTPRoute"},
+							{Kind: kinds.HTTPRoute},
 						},
 					},
 				},
@@ -523,7 +529,7 @@ func TestBuildGateway(t *testing.T) {
 						),
 						Routes: map[RouteKey]*L7Route{},
 						SupportedKinds: []v1.RouteGroupKind{
-							{Kind: "HTTPRoute", Group: helpers.GetPointer[v1.Group](v1.GroupName)},
+							{Kind: kinds.HTTPRoute, Group: helpers.GetPointer[v1.Group](v1.GroupName)},
 						},
 					},
 				},
@@ -547,7 +553,7 @@ func TestBuildGateway(t *testing.T) {
 						),
 						Routes: map[RouteKey]*L7Route{},
 						SupportedKinds: []v1.RouteGroupKind{
-							{Kind: "HTTPRoute"},
+							{Kind: kinds.HTTPRoute},
 						},
 					},
 				},
@@ -579,7 +585,7 @@ func TestBuildGateway(t *testing.T) {
 						),
 						Routes: map[RouteKey]*L7Route{},
 						SupportedKinds: []v1.RouteGroupKind{
-							{Kind: "HTTPRoute"},
+							{Kind: kinds.HTTPRoute},
 						},
 					},
 					{
@@ -592,7 +598,7 @@ func TestBuildGateway(t *testing.T) {
 						),
 						Routes: map[RouteKey]*L7Route{},
 						SupportedKinds: []v1.RouteGroupKind{
-							{Kind: "HTTPRoute"},
+							{Kind: kinds.HTTPRoute},
 						},
 					},
 					{
@@ -605,7 +611,7 @@ func TestBuildGateway(t *testing.T) {
 						),
 						Routes: map[RouteKey]*L7Route{},
 						SupportedKinds: []v1.RouteGroupKind{
-							{Kind: "HTTPRoute"},
+							{Kind: kinds.HTTPRoute},
 						},
 					},
 				},
@@ -628,7 +634,7 @@ func TestBuildGateway(t *testing.T) {
 						Conditions: staticConds.NewListenerUnsupportedValue(invalidHostnameMsg),
 						Routes:     map[RouteKey]*L7Route{},
 						SupportedKinds: []v1.RouteGroupKind{
-							{Kind: "HTTPRoute"},
+							{Kind: kinds.HTTPRoute},
 						},
 					},
 					{
@@ -638,7 +644,7 @@ func TestBuildGateway(t *testing.T) {
 						Conditions: staticConds.NewListenerUnsupportedValue(invalidHostnameMsg),
 						Routes:     map[RouteKey]*L7Route{},
 						SupportedKinds: []v1.RouteGroupKind{
-							{Kind: "HTTPRoute"},
+							{Kind: kinds.HTTPRoute},
 						},
 					},
 				},
@@ -662,7 +668,7 @@ func TestBuildGateway(t *testing.T) {
 							`tls.certificateRefs[0]: Invalid value: test/does-not-exist: secret does not exist`,
 						),
 						SupportedKinds: []v1.RouteGroupKind{
-							{Kind: "HTTPRoute"},
+							{Kind: kinds.HTTPRoute},
 						},
 					},
 				},
@@ -696,7 +702,7 @@ func TestBuildGateway(t *testing.T) {
 						Attachable: true,
 						Routes:     map[RouteKey]*L7Route{},
 						SupportedKinds: []v1.RouteGroupKind{
-							{Kind: "HTTPRoute"},
+							{Kind: kinds.HTTPRoute},
 						},
 					},
 					{
@@ -706,7 +712,7 @@ func TestBuildGateway(t *testing.T) {
 						Attachable: true,
 						Routes:     map[RouteKey]*L7Route{},
 						SupportedKinds: []v1.RouteGroupKind{
-							{Kind: "HTTPRoute"},
+							{Kind: kinds.HTTPRoute},
 						},
 					},
 					{
@@ -716,7 +722,7 @@ func TestBuildGateway(t *testing.T) {
 						Attachable: true,
 						Routes:     map[RouteKey]*L7Route{},
 						SupportedKinds: []v1.RouteGroupKind{
-							{Kind: "HTTPRoute"},
+							{Kind: kinds.HTTPRoute},
 						},
 					},
 					{
@@ -727,7 +733,7 @@ func TestBuildGateway(t *testing.T) {
 						Routes:         map[RouteKey]*L7Route{},
 						ResolvedSecret: helpers.GetPointer(client.ObjectKeyFromObject(secretSameNs)),
 						SupportedKinds: []v1.RouteGroupKind{
-							{Kind: "HTTPRoute"},
+							{Kind: kinds.HTTPRoute},
 						},
 					},
 					{
@@ -738,7 +744,7 @@ func TestBuildGateway(t *testing.T) {
 						Routes:         map[RouteKey]*L7Route{},
 						ResolvedSecret: helpers.GetPointer(client.ObjectKeyFromObject(secretSameNs)),
 						SupportedKinds: []v1.RouteGroupKind{
-							{Kind: "HTTPRoute"},
+							{Kind: kinds.HTTPRoute},
 						},
 					},
 					{
@@ -748,7 +754,7 @@ func TestBuildGateway(t *testing.T) {
 						Attachable: true,
 						Routes:     map[RouteKey]*L7Route{},
 						SupportedKinds: []v1.RouteGroupKind{
-							{Kind: "HTTPRoute"},
+							{Kind: kinds.HTTPRoute},
 						},
 					},
 					{
@@ -759,7 +765,7 @@ func TestBuildGateway(t *testing.T) {
 						Routes:         map[RouteKey]*L7Route{},
 						ResolvedSecret: helpers.GetPointer(client.ObjectKeyFromObject(secretSameNs)),
 						SupportedKinds: []v1.RouteGroupKind{
-							{Kind: "HTTPRoute"},
+							{Kind: kinds.HTTPRoute},
 						},
 					},
 					{
@@ -770,7 +776,7 @@ func TestBuildGateway(t *testing.T) {
 						Routes:         map[RouteKey]*L7Route{},
 						ResolvedSecret: helpers.GetPointer(client.ObjectKeyFromObject(secretSameNs)),
 						SupportedKinds: []v1.RouteGroupKind{
-							{Kind: "HTTPRoute"},
+							{Kind: kinds.HTTPRoute},
 						},
 					},
 				},
@@ -803,7 +809,7 @@ func TestBuildGateway(t *testing.T) {
 						Routes:     map[RouteKey]*L7Route{},
 						Conditions: staticConds.NewListenerProtocolConflict(conflict80PortMsg),
 						SupportedKinds: []v1.RouteGroupKind{
-							{Kind: "HTTPRoute"},
+							{Kind: kinds.HTTPRoute},
 						},
 					},
 					{
@@ -814,7 +820,7 @@ func TestBuildGateway(t *testing.T) {
 						Routes:     map[RouteKey]*L7Route{},
 						Conditions: staticConds.NewListenerProtocolConflict(conflict80PortMsg),
 						SupportedKinds: []v1.RouteGroupKind{
-							{Kind: "HTTPRoute"},
+							{Kind: kinds.HTTPRoute},
 						},
 					},
 					{
@@ -825,7 +831,7 @@ func TestBuildGateway(t *testing.T) {
 						Routes:     map[RouteKey]*L7Route{},
 						Conditions: staticConds.NewListenerProtocolConflict(conflict443PortMsg),
 						SupportedKinds: []v1.RouteGroupKind{
-							{Kind: "HTTPRoute"},
+							{Kind: kinds.HTTPRoute},
 						},
 					},
 					{
@@ -837,7 +843,7 @@ func TestBuildGateway(t *testing.T) {
 						Conditions:     staticConds.NewListenerProtocolConflict(conflict80PortMsg),
 						ResolvedSecret: helpers.GetPointer(client.ObjectKeyFromObject(secretSameNs)),
 						SupportedKinds: []v1.RouteGroupKind{
-							{Kind: "HTTPRoute"},
+							{Kind: kinds.HTTPRoute},
 						},
 					},
 					{
@@ -849,7 +855,7 @@ func TestBuildGateway(t *testing.T) {
 						Conditions:     staticConds.NewListenerProtocolConflict(conflict443PortMsg),
 						ResolvedSecret: helpers.GetPointer(client.ObjectKeyFromObject(secretSameNs)),
 						SupportedKinds: []v1.RouteGroupKind{
-							{Kind: "HTTPRoute"},
+							{Kind: kinds.HTTPRoute},
 						},
 					},
 					{
@@ -861,7 +867,7 @@ func TestBuildGateway(t *testing.T) {
 						Conditions:     staticConds.NewListenerProtocolConflict(conflict443PortMsg),
 						ResolvedSecret: helpers.GetPointer(client.ObjectKeyFromObject(secretSameNs)),
 						SupportedKinds: []v1.RouteGroupKind{
-							{Kind: "HTTPRoute"},
+							{Kind: kinds.HTTPRoute},
 						},
 					},
 				},

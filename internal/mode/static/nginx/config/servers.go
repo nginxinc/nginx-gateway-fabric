@@ -8,6 +8,7 @@ import (
 	"strings"
 	gotemplate "text/template"
 
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/http"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/dataplane"
 )
@@ -61,7 +62,7 @@ func executeServers(conf dataplane.Configuration) []executeResult {
 
 	serverResult := executeResult{
 		dest: httpConfigFile,
-		data: execute(serversTemplate, servers),
+		data: helpers.MustExecuteTemplate(serversTemplate, servers),
 	}
 
 	// create httpMatchPair conf
@@ -76,7 +77,57 @@ func executeServers(conf dataplane.Configuration) []executeResult {
 		data: httpMatchConf,
 	}
 
-	return []executeResult{serverResult, httpMatchResult}
+	includeFileResults := createIncludeFileResults(servers)
+
+	allResults := make([]executeResult, 0, len(includeFileResults)+2)
+	allResults = append(allResults, includeFileResults...)
+	allResults = append(allResults, serverResult, httpMatchResult)
+
+	return allResults
+}
+
+func createIncludeFileResults(servers []http.Server) []executeResult {
+	uniqueIncludes := make(map[string][]byte)
+
+	for _, s := range servers {
+		for _, inc := range s.Includes {
+			uniqueIncludes[inc.Filename] = inc.Content
+		}
+
+		for _, l := range s.Locations {
+			for _, inc := range l.Includes {
+				uniqueIncludes[inc.Filename] = inc.Content
+			}
+		}
+	}
+
+	results := make([]executeResult, 0, len(uniqueIncludes))
+
+	for filename, contents := range uniqueIncludes {
+		results = append(results, executeResult{
+			dest: filename,
+			data: contents,
+		})
+	}
+
+	return results
+}
+
+func createIncludes(additions []*dataplane.Addition) []http.Include {
+	if len(additions) == 0 {
+		return nil
+	}
+
+	includes := make([]http.Include, 0, len(additions))
+
+	for _, c := range additions {
+		includes = append(includes, http.Include{
+			Filename: fmt.Sprintf("%s/%s.conf", includesFolder, c.Identifier),
+			Content:  c.Bytes,
+		})
+	}
+
+	return includes
 }
 
 func createServers(httpServers, sslServers []dataplane.VirtualServer) ([]http.Server, httpMatchPairs) {
@@ -117,6 +168,7 @@ func createSSLServer(virtualServer dataplane.VirtualServer, serverID int) (http.
 		Locations: locs,
 		Port:      virtualServer.Port,
 		GRPC:      grpc,
+		Includes:  createIncludes(virtualServer.Additions),
 	}, matchPairs
 }
 
@@ -135,6 +187,7 @@ func createServer(virtualServer dataplane.VirtualServer, serverID int) (http.Ser
 		Locations:  locs,
 		Port:       virtualServer.Port,
 		GRPC:       grpc,
+		Includes:   createIncludes(virtualServer.Additions),
 	}, matchPairs
 }
 
@@ -169,10 +222,18 @@ func createLocations(server *dataplane.VirtualServer, serverID int) ([]http.Loca
 
 		for matchRuleIdx, r := range rule.MatchRules {
 			buildLocations := extLocations
+
+			includes := createIncludes(r.Additions)
+
 			if len(rule.MatchRules) != 1 || !isPathOnlyMatch(r.Match) {
 				intLocation, match := initializeInternalLocation(pathRuleIdx, matchRuleIdx, r.Match)
+				intLocation.Includes = includes
 				buildLocations = []http.Location{intLocation}
 				matches = append(matches, match)
+			} else {
+				for i := range extLocations {
+					extLocations[i].Includes = includes
+				}
 			}
 
 			buildLocations = updateLocationsForFilters(r.Filters, buildLocations, r, server.Port, rule.Path, rule.GRPC)

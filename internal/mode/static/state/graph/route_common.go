@@ -13,6 +13,7 @@ import (
 
 	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/kinds"
 	staticConds "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/conditions"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/validation"
 )
@@ -73,6 +74,8 @@ type L7Route struct {
 	ParentRefs []ParentRef
 	// Conditions define the conditions to be reported in the status of the Route.
 	Conditions []conditions.Condition
+	// Policies holds the policies that are attached to the Route.
+	Policies []*Policy
 	// Valid indicates if the Route is valid.
 	Valid bool
 	// Attachable indicates if the Route is attachable to any Listener.
@@ -218,7 +221,7 @@ func findGatewayForParentRef(
 	routeNamespace string,
 	gatewayNsNames []types.NamespacedName,
 ) (gwNsName types.NamespacedName, found bool) {
-	if ref.Kind != nil && *ref.Kind != "Gateway" {
+	if ref.Kind != nil && *ref.Kind != kinds.Gateway {
 		return types.NamespacedName{}, false
 	}
 	if ref.Group != nil && *ref.Group != v1.GroupName {

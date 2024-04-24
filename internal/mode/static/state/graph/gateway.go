@@ -21,6 +21,8 @@ type Gateway struct {
 	Listeners []*Listener
 	// Conditions holds the conditions for the Gateway.
 	Conditions []conditions.Condition
+	// Policies holds the policies attached to the Gateway.
+	Policies []*Policy
 	// Valid indicates whether the Gateway Spec is valid.
 	Valid bool
 }

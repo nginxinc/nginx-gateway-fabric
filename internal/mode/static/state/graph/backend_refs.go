@@ -263,7 +263,7 @@ func findBackendTLSPolicyForService(
 		if !beTLSPolicy.Valid {
 			err = fmt.Errorf("the backend TLS policy is invalid: %s", beTLSPolicy.Conditions[0].Message)
 		} else {
-			beTLSPolicy.Conditions = append(beTLSPolicy.Conditions, staticConds.NewBackendTLSPolicyAccepted())
+			beTLSPolicy.Conditions = append(beTLSPolicy.Conditions, staticConds.NewPolicyAccepted())
 		}
 	}
 

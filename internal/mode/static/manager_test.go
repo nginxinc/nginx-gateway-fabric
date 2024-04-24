@@ -56,6 +56,7 @@ func TestPrepareFirstEventBatchPreparerArgs(t *testing.T) {
 				&ngfAPI.NginxProxyList{},
 				&gatewayv1.GRPCRouteList{},
 				partialObjectMetadataList,
+				&ngfAPI.ClientSettingsPolicyList{},
 			},
 		},
 		{
@@ -78,6 +79,7 @@ func TestPrepareFirstEventBatchPreparerArgs(t *testing.T) {
 				&ngfAPI.NginxProxyList{},
 				&gatewayv1.GRPCRouteList{},
 				partialObjectMetadataList,
+				&ngfAPI.ClientSettingsPolicyList{},
 			},
 		},
 		{
@@ -99,9 +101,10 @@ func TestPrepareFirstEventBatchPreparerArgs(t *testing.T) {
 				&gatewayv1.HTTPRouteList{},
 				&gatewayv1beta1.ReferenceGrantList{},
 				&ngfAPI.NginxProxyList{},
-				&gatewayv1.GRPCRouteList{},
 				partialObjectMetadataList,
 				&gatewayv1alpha3.BackendTLSPolicyList{},
+				&gatewayv1.GRPCRouteList{},
+				&ngfAPI.ClientSettingsPolicyList{},
 			},
 			experimentalEnabled: true,
 		},

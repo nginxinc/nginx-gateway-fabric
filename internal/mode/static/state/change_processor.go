@@ -21,6 +21,7 @@ import (
 
 	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/gatewayclass"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/policies"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/graph"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/validation"
 )
@@ -110,6 +111,7 @@ func NewChangeProcessorImpl(cfg ChangeProcessorConfig) *ChangeProcessorImpl {
 		ConfigMaps:         make(map[types.NamespacedName]*apiv1.ConfigMap),
 		NginxProxies:       make(map[types.NamespacedName]*ngfAPI.NginxProxy),
 		GRPCRoutes:         make(map[types.NamespacedName]*v1.GRPCRoute),
+		NGFPolicies:        make(map[graph.PolicyKey]policies.Policy),
 	}
 
 	extractGVK := func(obj client.Object) schema.GroupVersionKind {
@@ -128,6 +130,20 @@ func NewChangeProcessorImpl(cfg ChangeProcessorConfig) *ChangeProcessorImpl {
 	isReferenced := func(obj client.Object, nsname types.NamespacedName) bool {
 		return processor.latestGraph != nil && processor.latestGraph.IsReferenced(obj, nsname)
 	}
+
+	isNGFPolicyRelevant := func(obj client.Object, nsname types.NamespacedName) bool {
+		pol, ok := obj.(policies.Policy)
+		if !ok {
+			return false
+		}
+
+		gvk := extractGVK(obj)
+
+		return processor.latestGraph != nil && processor.latestGraph.IsNGFPolicyRelevant(pol, gvk, nsname)
+	}
+
+	// Use this object store for all NGF policies
+	commonPolicyObjectStore := newNGFPolicyObjectStore(clusterStore.NGFPolicies, extractGVK)
 
 	trackingUpdater := newChangeTrackingUpdater(
 		extractGVK,
@@ -196,6 +212,11 @@ func NewChangeProcessorImpl(cfg ChangeProcessorConfig) *ChangeProcessorImpl {
 				gvk:       extractGVK(&ngfAPI.NginxProxy{}),
 				store:     newObjectStoreMapAdapter(clusterStore.NginxProxies),
 				predicate: funcPredicate{stateChanged: isReferenced},
+			},
+			{
+				gvk:       extractGVK(&ngfAPI.ClientSettingsPolicy{}),
+				store:     commonPolicyObjectStore,
+				predicate: funcPredicate{stateChanged: isNGFPolicyRelevant},
 			},
 		},
 	)
