@@ -68,6 +68,16 @@ type VirtualServer struct {
 	IsDefault bool
 	// Port is the port of the server.
 	Port int32
+	// Customizations contain custom configuration for the VirtualServer.
+	Customizations []*Customization
+}
+
+// Customization holds custom configuration.
+type Customization struct {
+	// Bytes contains the customization as a byte array.
+	Bytes []byte
+	// Identifier is a unique ID for the customization.
+	Identifier string
 }
 
 // Upstream is a pool of endpoints to be load balanced.
@@ -198,6 +208,8 @@ type MatchRule struct {
 	Match Match
 	// BackendGroup is the group of Backends that the rule routes to.
 	BackendGroup BackendGroup
+	// Customizations contain custom configuration for the MatchRule.
+	Customizations []*Customization
 }
 
 // Match represents a match for a routing rule which consist of matches against various HTTP request attributes.

@@ -31,9 +31,17 @@ server {
 
     server_name {{ $s.ServerName }};
 
+    {{ range $i := $s.Includes }}
+    include {{ $i.Filename }};
+    {{- end -}}
+
         {{ range $l := $s.Locations }}
     location {{ $l.Path }} {
-        {{- range $r := $l.Rewrites }}
+        {{- range $i := $l.Includes }}
+        include {{ $i.Filename }};
+        {{- end -}}
+
+        {{ range $r := $l.Rewrites }}
         rewrite {{ $r }};
         {{- end }}
 

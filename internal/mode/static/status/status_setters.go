@@ -10,6 +10,7 @@ import (
 	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 	frameworkStatus "github.com/nginxinc/nginx-gateway-fabric/internal/framework/status"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/policies"
 )
 
 func newNginxGatewayStatusSetter(status ngfAPI.NginxGatewayStatus) frameworkStatus.Setter {
@@ -195,6 +196,38 @@ func newBackendTLSPolicyStatusSetter(
 		}
 
 		btp.Status = status
+		return true
+	}
+}
+
+func newNGFPolicyStatusSetter(
+	status gatewayv1alpha2.PolicyStatus,
+	gatewayCtlrName string,
+) frameworkStatus.Setter {
+	return func(object client.Object) (wasSet bool) {
+		policy := helpers.MustCastObject[policies.Policy](object)
+		prevStatus := policy.GetPolicyStatus()
+
+		// maxAncestors is the max number of ancestor statuses which is the sum of all new ancestor statuses and all old
+		// ancestor statuses.
+		maxAncestors := len(status.Ancestors) + len(prevStatus.Ancestors)
+		ancestors := make([]gatewayv1alpha2.PolicyAncestorStatus, 0, maxAncestors)
+
+		// keep all the ancestor statuses that belong to other controllers
+		for _, as := range prevStatus.Ancestors {
+			if string(as.ControllerName) != gatewayCtlrName {
+				ancestors = append(ancestors, as)
+			}
+		}
+
+		ancestors = append(ancestors, status.Ancestors...)
+		status.Ancestors = ancestors
+
+		if btpStatusEqual(gatewayCtlrName, prevStatus, status) {
+			return false
+		}
+
+		policy.SetPolicyStatus(status)
 		return true
 	}
 }

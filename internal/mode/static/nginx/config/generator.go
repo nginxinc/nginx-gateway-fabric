@@ -17,16 +17,24 @@ const (
 	httpFolder = configFolder + "/conf.d"
 	// secretsFolder is the folder where secrets (like TLS certs/keys) are stored.
 	secretsFolder = configFolder + "/secrets"
+	// includesFolder is the folder where are all include files are stored.
+	includesFolder = configFolder + "/includes"
 
-	// httpConfigFile is the path to the configuration file with HTTP configuration.
-	httpConfigFile = httpFolder + "/http.conf"
+	// serversConfigFile is the path to the config file containing the http servers.
+	serversConfigFile = httpFolder + "/servers.conf"
+	// upstreamsConfigFile is the path to the config file containing the http upstreams.
+	upstreamsConfigFile = httpFolder + "/upstream.conf"
+	// mapsConfigFile is the path to the config file containing the http maps.
+	mapsConfigFile = httpFolder + "/maps.conf"
+	// splitClientsConfigFile is the path to the config file containing the split clients.
+	splitClientsConfigFile = httpFolder + "/split_clients.conf"
 
 	// configVersionFile is the path to the config version configuration file.
 	configVersionFile = httpFolder + "/config-version.conf"
 )
 
 // ConfigFolders is a list of folders where NGINX configuration files are stored.
-var ConfigFolders = []string{httpFolder, secretsFolder}
+var ConfigFolders = []string{httpFolder, secretsFolder, includesFolder}
 
 // Generator generates NGINX configuration files.
 // This interface is used for testing purposes only.
@@ -52,8 +60,13 @@ func NewGeneratorImpl(plus bool) GeneratorImpl {
 	return GeneratorImpl{plus: plus}
 }
 
+type executeResult struct {
+	dest string
+	data []byte
+}
+
 // executeFunc is a function that generates NGINX configuration from internal representation.
-type executeFunc func(configuration dataplane.Configuration) []byte
+type executeFunc func(configuration dataplane.Configuration) []executeResult
 
 // Generate generates NGINX configuration files from internal representation.
 // It is the responsibility of the caller to validate the configuration before calling this function.
@@ -66,7 +79,7 @@ func (g GeneratorImpl) Generate(conf dataplane.Configuration) []file.File {
 		files = append(files, generatePEM(id, pair.Cert, pair.Key))
 	}
 
-	files = append(files, g.generateHTTPConfig(conf))
+	files = append(files, g.generateHTTPConfig(conf)...)
 
 	files = append(files, generateConfigVersion(conf.Version))
 
@@ -106,17 +119,23 @@ func generateCertBundleFileName(id dataplane.CertBundleID) string {
 	return filepath.Join(secretsFolder, string(id)+".crt")
 }
 
-func (g GeneratorImpl) generateHTTPConfig(conf dataplane.Configuration) file.File {
-	var c []byte
+func (g GeneratorImpl) generateHTTPConfig(conf dataplane.Configuration) []file.File {
+	files := make([]file.File, 0)
+
 	for _, execute := range g.getExecuteFuncs() {
-		c = append(c, execute(conf)...)
+		results := execute(conf)
+
+		for _, res := range results {
+			files = append(files, file.File{
+				Path:    res.dest,
+				Content: res.data,
+				Type:    file.TypeRegular,
+			})
+		}
+
 	}
 
-	return file.File{
-		Content: c,
-		Path:    httpConfigFile,
-		Type:    file.TypeRegular,
-	}
+	return files
 }
 
 func (g GeneratorImpl) getExecuteFuncs() []executeFunc {

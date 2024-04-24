@@ -95,7 +95,11 @@ type ClientKeepAlive struct {
 
 	// Timeout defines the keep-alive timeouts for clients.
 	//
+	// +kubebuilder:validation:XValidation:message="header can only be specified if server is specified",rule="!(has(self.header) && !has(self.server))"
+	//
+	//
 	// +optional
+	//nolint:lll
 	Timeout *ClientKeepAliveTimeout `json:"timeout,omitempty"`
 }
 

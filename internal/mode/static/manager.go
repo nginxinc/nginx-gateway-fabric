@@ -25,6 +25,7 @@ import (
 	"k8s.io/client-go/tools/record"
 	ctlr "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	ctrlcfg "sigs.k8s.io/controller-runtime/pkg/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/metrics"
@@ -50,6 +51,8 @@ import (
 	ngxvalidation "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/config/validation"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/file"
 	ngxruntime "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/runtime"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/policies"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/policies/clientsettings"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/resolver"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/validation"
@@ -110,12 +113,24 @@ func StartManager(cfg config.Config) error {
 		int32(cfg.HealthConfig.Port):  "HealthPort",
 	}
 
+	mustExtractGVK := func(obj client.Object) schema.GroupVersionKind {
+		gvk, err := apiutil.GVKForObject(obj, scheme)
+		if err != nil {
+			panic(fmt.Sprintf("could not extract GVK for object: %T", obj))
+		}
+
+		return gvk
+	}
+
+	policyManager := createPolicyManager(mustExtractGVK)
+
 	processor := state.NewChangeProcessorImpl(state.ChangeProcessorConfig{
 		GatewayCtlrName:  cfg.GatewayCtlrName,
 		GatewayClassName: cfg.GatewayClassName,
 		Logger:           cfg.Logger.WithName("changeProcessor"),
 		Validators: validation.Validators{
 			HTTPFieldsValidator: ngxvalidation.HTTPValidator{},
+			PolicyValidator:     policyManager,
 		},
 		EventRecorder:  recorder,
 		Scheme:         scheme,
@@ -220,6 +235,7 @@ func StartManager(cfg config.Config) error {
 		usageSecret:                   usageSecret,
 		gatewayCtlrName:               cfg.GatewayCtlrName,
 		updateGatewayClassStatus:      cfg.UpdateGatewayClassStatus,
+		policyConfigGenerator:         policyManager,
 	})
 
 	objects, objectLists := prepareFirstEventBatchPreparerArgs(
@@ -269,6 +285,18 @@ func StartManager(cfg config.Config) error {
 
 	cfg.Logger.Info("Starting manager")
 	return mgr.Start(ctx)
+}
+
+func createPolicyManager(mustExtractGVK func(object client.Object) schema.GroupVersionKind) *policies.Manager {
+	cfgs := []policies.ManagerConfig{
+		{
+			GVK:       mustExtractGVK(&ngfAPI.ClientSettingsPolicy{}),
+			Validator: clientsettings.Validator{},
+			Generator: clientsettings.NewClientSettingsGeneratorFunc(),
+		},
+	}
+
+	return policies.NewManager(mustExtractGVK, cfgs...)
 }
 
 func createManager(cfg config.Config, nginxChecker *nginxConfiguredOnStartChecker) (manager.Manager, error) {
@@ -412,6 +440,12 @@ func registerControllers(
 				controller.WithK8sPredicate(
 					predicate.AnnotationPredicate{Annotation: gatewayclass.BundleVersionAnnotation},
 				),
+			},
+		},
+		{
+			objectType: &ngfAPI.ClientSettingsPolicy{},
+			options: []controller.Option{
+				controller.WithK8sPredicate(k8spredicate.GenerationChangedPredicate{}),
 			},
 		},
 	}
@@ -592,6 +626,7 @@ func prepareFirstEventBatchPreparerArgs(
 		&discoveryV1.EndpointSliceList{},
 		&gatewayv1.HTTPRouteList{},
 		&gatewayv1beta1.ReferenceGrantList{},
+		&ngfAPI.ClientSettingsPolicyList{},
 		partialObjectMetadataList,
 	}
 

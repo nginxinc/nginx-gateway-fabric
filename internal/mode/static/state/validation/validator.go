@@ -1,11 +1,16 @@
 package validation
 
+import (
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/policies"
+)
+
 // Validators include validators for Gateway API resources from the perspective of a data-plane.
 // It is used for fields that propagate into the data plane configuration. For example, the path in a routing rule.
 // However, not all such fields are validated: NGF will not validate a field using Validators if it is confident that
 // the field is valid.
 type Validators struct {
 	HTTPFieldsValidator HTTPFieldsValidator
+	PolicyValidator     PolicyValidator
 }
 
 // HTTPFieldsValidator validates the HTTP-related fields of Gateway API resources from the perspective of
@@ -26,4 +31,12 @@ type HTTPFieldsValidator interface {
 	ValidateRewritePath(path string) error
 	ValidateRequestHeaderName(name string) error
 	ValidateRequestHeaderValue(value string) error
+}
+
+// PolicyValidator validates an NGF Policy.
+type PolicyValidator interface {
+	// Validate validates an NGF Policy.
+	Validate(policy policies.Policy) error
+	// Conflicts returns true if the two Policies conflict.
+	Conflicts(a, b policies.Policy) bool
 }

@@ -19,7 +19,9 @@ import (
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
+	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/gatewayclass"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/policies"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/graph"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/validation"
 )
@@ -87,6 +89,7 @@ type ChangeProcessorImpl struct {
 	updater Updater
 	// getAndResetClusterStateChanged tells if and how the cluster state has changed.
 	getAndResetClusterStateChanged func() ChangeType
+	extractGVK                     extractGVKFunc
 
 	cfg  ChangeProcessorConfig
 	lock sync.Mutex
@@ -105,6 +108,7 @@ func NewChangeProcessorImpl(cfg ChangeProcessorConfig) *ChangeProcessorImpl {
 		CRDMetadata:        make(map[types.NamespacedName]*metav1.PartialObjectMetadata),
 		BackendTLSPolicies: make(map[types.NamespacedName]*v1alpha2.BackendTLSPolicy),
 		ConfigMaps:         make(map[types.NamespacedName]*apiv1.ConfigMap),
+		NGFPolicies:        make(map[graph.PolicyKey]policies.Policy),
 	}
 
 	extractGVK := func(obj client.Object) schema.GroupVersionKind {
@@ -118,11 +122,26 @@ func NewChangeProcessorImpl(cfg ChangeProcessorConfig) *ChangeProcessorImpl {
 	processor := &ChangeProcessorImpl{
 		cfg:          cfg,
 		clusterState: clusterStore,
+		extractGVK:   extractGVK,
 	}
 
 	isReferenced := func(obj client.Object, nsname types.NamespacedName) bool {
 		return processor.latestGraph != nil && processor.latestGraph.IsReferenced(obj, nsname)
 	}
+
+	isNGFPolicyRelevant := func(obj client.Object, nsname types.NamespacedName) bool {
+		pol, ok := obj.(policies.Policy)
+		if !ok {
+			return false
+		}
+
+		gvk := extractGVK(obj)
+
+		return processor.latestGraph != nil && processor.latestGraph.IsNGFPolicyRelevant(pol, gvk, nsname)
+	}
+
+	// Use this object store for all NGF policies
+	commonPolicyObjectStore := newNGFPolicyObjectStore(clusterStore.NGFPolicies, extractGVK)
 
 	trackingUpdater := newChangeTrackingUpdater(
 		extractGVK,
@@ -181,6 +200,11 @@ func NewChangeProcessorImpl(cfg ChangeProcessorConfig) *ChangeProcessorImpl {
 				gvk:       extractGVK(&apiext.CustomResourceDefinition{}),
 				store:     newObjectStoreMapAdapter(clusterStore.CRDMetadata),
 				predicate: annotationChangedPredicate{annotation: gatewayclass.BundleVersionAnnotation},
+			},
+			{
+				gvk:       extractGVK(&ngfAPI.ClientSettingsPolicy{}),
+				store:     commonPolicyObjectStore,
+				predicate: funcPredicate{stateChanged: isNGFPolicyRelevant},
 			},
 		},
 	)

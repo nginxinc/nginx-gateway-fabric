@@ -23,6 +23,8 @@ type Gateway struct {
 	Conditions []conditions.Condition
 	// Valid indicates whether the Gateway Spec is valid.
 	Valid bool
+	// Policies hold the valid Policies attached to the Gateway.
+	Policies []*Policy
 }
 
 // processedGateways holds the resources that belong to NGF.

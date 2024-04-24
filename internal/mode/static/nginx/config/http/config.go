@@ -8,6 +8,7 @@ type Server struct {
 	IsDefaultHTTP bool
 	IsDefaultSSL  bool
 	Port          int32
+	Includes      []Include
 }
 
 // Location holds all configuration for an HTTP location.
@@ -19,9 +20,10 @@ type Location struct {
 	HTTPMatchVar    string
 	Rewrites        []string
 	ProxySetHeaders []Header
+	Includes        []Include
 }
 
-// Header defines a HTTP header to be passed to the proxied server.
+// Header defines an HTTP header to be passed to the proxied server.
 type Header struct {
 	Name  string
 	Value string
@@ -92,4 +94,10 @@ type MapParameter struct {
 type ProxySSLVerify struct {
 	TrustedCertificate string
 	Name               string
+}
+
+// Include holds all the files to include using the include directive.
+type Include struct {
+	Filename string
+	Content  []byte
 }

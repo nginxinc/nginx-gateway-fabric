@@ -11,6 +11,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	v1 "sigs.k8s.io/gateway-api/apis/v1"
 
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/policies"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/graph"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/resolver"
 )
@@ -20,11 +21,17 @@ const (
 	alpineSSLRootCAPath = "/etc/ssl/cert.pem"
 )
 
+// PolicyConfigGenerator generates a slice of bytes containing the configuration from a policies.Policy.
+type PolicyConfigGenerator interface {
+	Generate(policy policies.Policy) []byte
+}
+
 // BuildConfiguration builds the Configuration from the Graph.
 func BuildConfiguration(
 	ctx context.Context,
 	g *graph.Graph,
 	resolver resolver.ServiceResolver,
+	generator PolicyConfigGenerator,
 	configVersion int,
 ) Configuration {
 	if g.GatewayClass == nil || !g.GatewayClass.Valid {
@@ -36,7 +43,7 @@ func BuildConfiguration(
 	}
 
 	upstreams := buildUpstreams(ctx, g.Gateway.Listeners, resolver)
-	httpServers, sslServers := buildServers(g.Gateway.Listeners)
+	httpServers, sslServers := buildServers(g.Gateway, generator)
 	backendGroups := buildBackendGroups(append(httpServers, sslServers...))
 	keyPairs := buildSSLKeyPairs(g.ReferencedSecrets, g.Gateway.Listeners)
 	certBundles := buildCertBundles(g.ReferencedCaCertConfigMaps, backendGroups)
@@ -194,17 +201,17 @@ func convertBackendTLS(btp *graph.BackendTLSPolicy) *VerifyTLS {
 	return verify
 }
 
-func buildServers(listeners []*graph.Listener) (http, ssl []VirtualServer) {
+func buildServers(gw *graph.Gateway, generator PolicyConfigGenerator) (http, ssl []VirtualServer) {
 	rulesForProtocol := map[v1.ProtocolType]portPathRules{
 		v1.HTTPProtocolType:  make(portPathRules),
 		v1.HTTPSProtocolType: make(portPathRules),
 	}
 
-	for _, l := range listeners {
+	for _, l := range gw.Listeners {
 		if l.Valid {
 			rules := rulesForProtocol[l.Source.Protocol][l.Source.Port]
 			if rules == nil {
-				rules = newHostPathRules()
+				rules = newHostPathRules(generator)
 				rulesForProtocol[l.Source.Protocol][l.Source.Port] = rules
 			}
 
@@ -215,7 +222,34 @@ func buildServers(listeners []*graph.Listener) (http, ssl []VirtualServer) {
 	httpRules := rulesForProtocol[v1.HTTPProtocolType]
 	sslRules := rulesForProtocol[v1.HTTPSProtocolType]
 
-	return httpRules.buildServers(), sslRules.buildServers()
+	httpServers, sslServers := httpRules.buildServers(), sslRules.buildServers()
+
+	customizations := make([]*Customization, 0, len(gw.Policies))
+	for _, policy := range gw.Policies {
+		customizations = append(customizations, createCustomization(policy, generator))
+	}
+
+	for i := range httpServers {
+		httpServers[i].Customizations = customizations
+	}
+
+	for i := range sslServers {
+		sslServers[i].Customizations = customizations
+	}
+
+	return httpServers, sslServers
+}
+
+func createCustomization(policy *graph.Policy, generator PolicyConfigGenerator) *Customization {
+	return &Customization{
+		Bytes: generator.Generate(policy.Source),
+		Identifier: fmt.Sprintf(
+			"%s_%s_%s",
+			policy.Source.GetObjectKind().GroupVersionKind().Kind,
+			policy.Source.GetNamespace(),
+			policy.Source.GetName(),
+		),
+	}
 }
 
 // portPathRules keeps track of hostPathRules per port
@@ -247,13 +281,15 @@ type hostPathRules struct {
 	httpsListeners   []*graph.Listener
 	listenersExist   bool
 	port             int32
+	generator        PolicyConfigGenerator
 }
 
-func newHostPathRules() *hostPathRules {
+func newHostPathRules(generator PolicyConfigGenerator) *hostPathRules {
 	return &hostPathRules{
 		rulesPerHost:     make(map[string]map[pathAndType]PathRule),
 		listenersForHost: make(map[string]*graph.Listener),
 		httpsListeners:   make([]*graph.Listener, 0),
+		generator:        generator,
 	}
 }
 
@@ -311,6 +347,11 @@ func (hpr *hostPathRules) upsertRoute(route *graph.Route, listener *graph.Listen
 			}
 		}
 
+		customizations := make([]*Customization, 0, len(route.Policies))
+		for _, p := range route.Policies {
+			customizations = append(customizations, createCustomization(p, hpr.generator))
+		}
+
 		for _, h := range hostnames {
 			for _, m := range rule.Matches {
 				path := getPath(m.Path)
@@ -332,10 +373,11 @@ func (hpr *hostPathRules) upsertRoute(route *graph.Route, listener *graph.Listen
 				routeNsName := client.ObjectKeyFromObject(route.Source)
 
 				rule.MatchRules = append(rule.MatchRules, MatchRule{
-					Source:       &om,
-					BackendGroup: newBackendGroup(route.Rules[i].BackendRefs, routeNsName, i),
-					Filters:      filters,
-					Match:        convertMatch(m),
+					Source:         &om,
+					BackendGroup:   newBackendGroup(route.Rules[i].BackendRefs, routeNsName, i),
+					Filters:        filters,
+					Match:          convertMatch(m),
+					Customizations: customizations,
 				})
 
 				hpr.rulesPerHost[h][key] = rule

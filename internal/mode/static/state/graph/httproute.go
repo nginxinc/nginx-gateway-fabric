@@ -37,6 +37,8 @@ type ParentRef struct {
 	Attachment *ParentRefAttachmentStatus
 	// Gateway is the NamespacedName of the referenced Gateway
 	Gateway types.NamespacedName
+	// SectionName is the SectionName of the referenced Gateway
+	SectionName string
 	// Idx is the index of the corresponding ParentReference in the HTTPRoute.
 	Idx int
 }
@@ -70,6 +72,8 @@ type Route struct {
 	// Attachable tells if the Route can be attached to any of the Gateways.
 	// Route can be invalid but still attachable.
 	Attachable bool
+	// Policies hold the valid Policies attached to the Route.
+	Policies []*Policy
 }
 
 // buildRoutesForGateways builds routes from HTTPRoutes that reference any of the specified Gateways.
@@ -129,8 +133,9 @@ func buildSectionNameRefs(
 		uniqueSectionsPerGateway[k] = struct{}{}
 
 		sectionNameRefs = append(sectionNameRefs, ParentRef{
-			Idx:     i,
-			Gateway: gw,
+			Idx:         i,
+			Gateway:     gw,
+			SectionName: sectionName,
 		})
 	}
 

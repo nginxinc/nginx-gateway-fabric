@@ -82,6 +82,8 @@ type eventHandlerConfig struct {
 	controlConfigNSName types.NamespacedName
 	// updateGatewayClassStatus enables updating the status of the GatewayClass resource.
 	updateGatewayClassStatus bool
+	// policyConfigGenerator generates configuration for an NGF Policy.
+	policyConfigGenerator dataplane.PolicyConfigGenerator
 }
 
 const (
@@ -193,7 +195,7 @@ func (h *eventHandlerImpl) HandleEventBatch(ctx context.Context, logger logr.Log
 		return
 	case state.EndpointsOnlyChange:
 		h.version++
-		cfg := dataplane.BuildConfiguration(ctx, graph, h.cfg.serviceResolver, h.version)
+		cfg := dataplane.BuildConfiguration(ctx, graph, h.cfg.serviceResolver, h.cfg.policyConfigGenerator, h.version)
 
 		h.setLatestConfiguration(&cfg)
 
@@ -204,7 +206,7 @@ func (h *eventHandlerImpl) HandleEventBatch(ctx context.Context, logger logr.Log
 		)
 	case state.ClusterStateChange:
 		h.version++
-		cfg := dataplane.BuildConfiguration(ctx, graph, h.cfg.serviceResolver, h.version)
+		cfg := dataplane.BuildConfiguration(ctx, graph, h.cfg.serviceResolver, h.cfg.policyConfigGenerator, h.version)
 
 		h.setLatestConfiguration(&cfg)
 
@@ -247,11 +249,13 @@ func (h *eventHandlerImpl) updateStatuses(ctx context.Context, logger logr.Logge
 	}
 	routeReqs := status.PrepareRouteRequests(graph.Routes, transitionTime, h.latestReloadResult, h.cfg.gatewayCtlrName)
 	polReqs := status.PrepareBackendTLSPolicyRequests(graph.BackendTLSPolicies, transitionTime, h.cfg.gatewayCtlrName)
+	ngfPolReqs := status.PrepareNGFPolicyRequests(graph.NGFPolicies, transitionTime, h.cfg.gatewayCtlrName)
 
-	reqs := make([]frameworkStatus.UpdateRequest, 0, len(gcReqs)+len(routeReqs)+len(polReqs))
+	reqs := make([]frameworkStatus.UpdateRequest, 0, len(gcReqs)+len(routeReqs)+len(polReqs)+len(ngfPolReqs))
 	reqs = append(reqs, gcReqs...)
 	reqs = append(reqs, routeReqs...)
 	reqs = append(reqs, polReqs...)
+	reqs = append(reqs, ngfPolReqs...)
 
 	h.cfg.statusUpdater.UpdateGroup(ctx, groupAllExceptGateways, reqs...)
 

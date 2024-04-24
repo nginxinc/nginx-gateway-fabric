@@ -575,3 +575,46 @@ func NewBackendTLSPolicyInvalid(msg string) conditions.Condition {
 		Message: msg,
 	}
 }
+
+// NewPolicyAccepted returns a Condition that indicates that the Policy is accepted.
+func NewPolicyAccepted() conditions.Condition {
+	return conditions.Condition{
+		Type:    string(v1alpha2.PolicyConditionAccepted),
+		Status:  metav1.ConditionTrue,
+		Reason:  string(v1alpha2.PolicyReasonAccepted),
+		Message: "Policy is accepted",
+	}
+}
+
+// NewPolicyInvalid returns a Condition that indicates that the Policy is not accepted because it is semantically or
+// syntactically invalid.
+func NewPolicyInvalid(msg string) conditions.Condition {
+	return conditions.Condition{
+		Type:    string(v1alpha2.PolicyConditionAccepted),
+		Status:  metav1.ConditionFalse,
+		Reason:  string(v1alpha2.PolicyReasonInvalid),
+		Message: msg,
+	}
+}
+
+// NewPolicyConflicted returns a Condition that indicates that the Policy is not accepted because it conflicts with
+// another Policy and a merge is not possible.
+func NewPolicyConflicted(msg string) conditions.Condition {
+	return conditions.Condition{
+		Type:    string(v1alpha2.PolicyConditionAccepted),
+		Status:  metav1.ConditionFalse,
+		Reason:  string(v1alpha2.PolicyReasonConflicted),
+		Message: msg,
+	}
+}
+
+// NewPolicyTargetNotFound returns a Condition that indicates that the Policy is not accepted because the target
+// resource does not exist or can not be attached to.
+func NewPolicyTargetNotFound(msg string) conditions.Condition {
+	return conditions.Condition{
+		Type:    string(v1alpha2.PolicyConditionAccepted),
+		Status:  metav1.ConditionFalse,
+		Reason:  string(v1alpha2.PolicyReasonTargetNotFound),
+		Message: msg,
+	}
+}

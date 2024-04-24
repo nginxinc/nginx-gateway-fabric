@@ -262,6 +262,51 @@ func prepareGatewayRequest(
 	}
 }
 
+func PrepareNGFPolicyRequests(
+	policies map[graph.PolicyKey]*graph.Policy,
+	transitionTime metav1.Time,
+	gatewayCtlrName string,
+) []frameworkStatus.UpdateRequest {
+	reqs := make([]frameworkStatus.UpdateRequest, 0, len(policies))
+
+	for key, pol := range policies {
+		ancestorStatuses := make([]v1alpha2.PolicyAncestorStatus, 0, len(pol.Ancestors))
+
+		for _, ancestor := range pol.Ancestors {
+			allConds := make([]conditions.Condition, 0, len(pol.Conditions)+len(ancestor.Conditions))
+
+			// We add the ancestor conditions first, so that any policy conditions will override them, which is
+			// ensured by DeduplicateConditions.
+			allConds = append(allConds, ancestor.Conditions...)
+			allConds = append(allConds, pol.Conditions...)
+
+			conds := conditions.DeduplicateConditions(allConds)
+			apiConds := conditions.ConvertConditions(conds, pol.Source.GetGeneration(), transitionTime)
+
+			ancestorStatuses = append(ancestorStatuses, v1alpha2.PolicyAncestorStatus{
+				AncestorRef: createParentReference(
+					ancestor.Ancestor.Group,
+					ancestor.Ancestor.Kind,
+					ancestor.Ancestor.Nsname,
+					ancestor.Ancestor.SectionName,
+				),
+				ControllerName: v1alpha2.GatewayController(gatewayCtlrName),
+				Conditions:     apiConds,
+			})
+		}
+
+		status := v1alpha2.PolicyStatus{Ancestors: ancestorStatuses}
+
+		reqs = append(reqs, frameworkStatus.UpdateRequest{
+			NsName:       key.NsName,
+			ResourceType: pol.Source,
+			Setter:       newNGFPolicyStatusSetter(status, gatewayCtlrName),
+		})
+	}
+
+	return reqs
+}
+
 // PrepareBackendTLSPolicyRequests prepares status UpdateRequests for the given BackendTLSPolicies.
 func PrepareBackendTLSPolicyRequests(
 	policies map[types.NamespacedName]*graph.BackendTLSPolicy,
@@ -320,7 +365,9 @@ func PrepareNginxGatewayStatus(
 	var conds []conditions.Condition
 	if cpUpdateRes.Error != nil {
 		msg := "Failed to update control plane configuration"
-		conds = []conditions.Condition{staticConds.NewNginxGatewayInvalid(fmt.Sprintf("%s: %v", msg, cpUpdateRes.Error))}
+		conds = []conditions.Condition{
+			staticConds.NewNginxGatewayInvalid(fmt.Sprintf("%s: %v", msg, cpUpdateRes.Error)),
+		}
 	} else {
 		conds = []conditions.Condition{staticConds.NewNginxGatewayValid()}
 	}
@@ -332,4 +379,25 @@ func PrepareNginxGatewayStatus(
 			Conditions: conditions.ConvertConditions(conds, nginxGateway.Generation, transitionTime),
 		}),
 	}
+}
+
+func createParentReference(
+	group v1.Group,
+	kind v1.Kind,
+	nsname types.NamespacedName,
+	sectionName string,
+) v1.ParentReference {
+
+	pr := v1.ParentReference{
+		Group:     &group,
+		Kind:      &kind,
+		Namespace: (*v1.Namespace)(&nsname.Namespace),
+		Name:      v1.ObjectName(nsname.Name),
+	}
+
+	if sectionName != "" {
+		pr.SectionName = (*v1.SectionName)(&sectionName)
+	}
+
+	return pr
 }

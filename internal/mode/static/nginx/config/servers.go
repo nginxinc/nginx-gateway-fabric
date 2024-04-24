@@ -38,10 +38,57 @@ var baseHeaders = []http.Header{
 	},
 }
 
-func executeServers(conf dataplane.Configuration) []byte {
+func executeServers(conf dataplane.Configuration) []executeResult {
 	servers := createServers(conf.HTTPServers, conf.SSLServers)
 
-	return execute(serversTemplate, servers)
+	serversResult := executeResult{
+		dest: serversConfigFile,
+		data: execute(serversTemplate, servers),
+	}
+
+	includeFileResults := createIncludeFileResults(servers)
+
+	return append(includeFileResults, serversResult)
+}
+
+func createIncludeFileResults(servers []http.Server) []executeResult {
+	uniqueIncludes := make(map[string][]byte)
+
+	for _, s := range servers {
+		for _, inc := range s.Includes {
+			uniqueIncludes[inc.Filename] = inc.Content
+		}
+
+		for _, l := range s.Locations {
+			for _, inc := range l.Includes {
+				uniqueIncludes[inc.Filename] = inc.Content
+			}
+		}
+	}
+
+	results := make([]executeResult, 0, len(uniqueIncludes))
+
+	for filename, contents := range uniqueIncludes {
+		results = append(results, executeResult{
+			dest: filename,
+			data: contents,
+		})
+	}
+
+	return results
+}
+
+func createIncludes(customizations []*dataplane.Customization) []http.Include {
+	includes := make([]http.Include, 0, len(customizations))
+
+	for _, c := range customizations {
+		includes = append(includes, http.Include{
+			Filename: fmt.Sprintf("%s/%s.conf", includesFolder, c.Identifier),
+			Content:  c.Bytes,
+		})
+	}
+
+	return includes
 }
 
 func createServers(httpServers, sslServers []dataplane.VirtualServer) []http.Server {
@@ -74,6 +121,7 @@ func createSSLServer(virtualServer dataplane.VirtualServer) http.Server {
 		},
 		Locations: createLocations(virtualServer.PathRules, virtualServer.Port),
 		Port:      virtualServer.Port,
+		Includes:  createIncludes(virtualServer.Customizations),
 	}
 }
 
@@ -89,6 +137,7 @@ func createServer(virtualServer dataplane.VirtualServer) http.Server {
 		ServerName: virtualServer.Hostname,
 		Locations:  createLocations(virtualServer.PathRules, virtualServer.Port),
 		Port:       virtualServer.Port,
+		Includes:   createIncludes(virtualServer.Customizations),
 	}
 }
 
@@ -115,10 +164,18 @@ func createLocations(pathRules []dataplane.PathRule, listenerPort int32) []http.
 
 		for matchRuleIdx, r := range rule.MatchRules {
 			buildLocations := extLocations
+
+			includes := createIncludes(r.Customizations)
+
 			if len(rule.MatchRules) != 1 || !isPathOnlyMatch(r.Match) {
 				intLocation, match := initializeInternalLocation(pathRuleIdx, matchRuleIdx, r.Match)
+				intLocation.Includes = includes
 				buildLocations = []http.Location{intLocation}
 				matches = append(matches, match)
+			} else {
+				for i := range extLocations {
+					extLocations[i].Includes = includes
+				}
 			}
 
 			buildLocations = updateLocationsForFilters(r.Filters, buildLocations, r, listenerPort, rule.Path)
