@@ -20,12 +20,9 @@ type Listener struct {
 	Name string
 	// Source holds the source of the Listener from the Gateway resource.
 	Source v1.Listener
-	// HTTPRoutes holds the HTTPRoutes attached to the Listener.
+	// Routes holds the GRPC/HTTPRoutes attached to the Listener.
 	// Only valid routes are attached.
-	HTTPRoutes map[types.NamespacedName]*HTTPRoute
-	// GRPCRoutes holds the GRPCRoutes attached to the Listener.
-	// Only valid routes are attached.
-	GRPCRoutes map[types.NamespacedName]*GRPCRoute
+	Routes map[RouteKey]*L7Route
 	// AllowedRouteLabelSelector is the label selector for this Listener's allowed routes, if defined.
 	AllowedRouteLabelSelector labels.Selector
 	// ResolvedSecret is the namespaced name of the Secret resolved for this listener.
@@ -184,8 +181,7 @@ func (c *listenerConfigurator) configure(listener v1.Listener) *Listener {
 		Source:                    listener,
 		Conditions:                conds,
 		AllowedRouteLabelSelector: allowedRouteSelector,
-		HTTPRoutes:                make(map[types.NamespacedName]*HTTPRoute),
-		GRPCRoutes:                make(map[types.NamespacedName]*GRPCRoute),
+		Routes:                    make(map[RouteKey]*L7Route),
 		Valid:                     valid,
 		Attachable:                attachable,
 		SupportedKinds:            supportedKinds,

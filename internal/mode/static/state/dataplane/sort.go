@@ -7,7 +7,7 @@ import (
 )
 
 func sortMatchRules(matchRules []MatchRule) {
-	// stable sort is used so that the order of matches (as defined in each HTTPRoute rule) is preserved
+	// stable sort is used so that the order of matches (as defined in each Route rule) is preserved
 	// this is important, because the winning match is the first match to win.
 	sort.SliceStable(
 		matchRules, func(i, j int) bool {

@@ -53,9 +53,6 @@ Each value is either 'true' or 'false' for boolean flags and 'default' or 'user-
 		/** HTTPRouteCount is the number of relevant HTTPRoutes. */
 		long? HTTPRouteCount = null;
 		
-		/** GRPCRouteCount is the number of relevant GRPCRoutes. */
-		long? GRPCRouteCount = null;
-		
 		/** SecretCount is the number of relevant Secrets. */
 		long? SecretCount = null;
 		

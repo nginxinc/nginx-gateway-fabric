@@ -7,11 +7,13 @@ import (
 	"sort"
 
 	apiv1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	v1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/graph"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/resolver"
 )
@@ -268,25 +270,26 @@ func (hpr *hostPathRules) upsertListener(l *graph.Listener) {
 		hpr.httpsListeners = append(hpr.httpsListeners, l)
 	}
 
-	for _, r := range l.HTTPRoutes {
+	for _, r := range l.Routes {
 		if !r.Valid {
 			continue
 		}
 
-		hpr.upsertHTTPRoute(r, l)
-	}
-
-	for _, r := range l.GRPCRoutes {
-		if !r.Valid {
-			continue
-		}
-
-		hpr.upsertGRPCRoute(r, l)
+		hpr.upsertRoute(r, l)
 	}
 }
 
-func (hpr *hostPathRules) upsertHTTPRoute(route *graph.HTTPRoute, listener *graph.Listener) {
+func (hpr *hostPathRules) upsertRoute(route *graph.L7Route, listener *graph.Listener) {
 	var hostnames []string
+	GRPC := route.RouteType == graph.RouteTypeGRPC
+
+	var objectSrc *metav1.ObjectMeta
+
+	if GRPC {
+		objectSrc = &helpers.MustCastObject[*v1alpha2.GRPCRoute](route.Source).ObjectMeta
+	} else {
+		objectSrc = &helpers.MustCastObject[*v1.HTTPRoute](route.Source).ObjectMeta
+	}
 
 	for _, p := range route.ParentRefs {
 		if val, exist := p.Attachment.AcceptedHostnames[string(listener.Source.Name)]; exist {
@@ -294,15 +297,28 @@ func (hpr *hostPathRules) upsertHTTPRoute(route *graph.HTTPRoute, listener *grap
 		}
 	}
 
-	hpr.getListenerForHost(listener, hostnames)
+	for _, h := range hostnames {
+		if prevListener, exists := hpr.listenersForHost[h]; exists {
+			// override the previous listener if the new one has a more specific hostname
+			if listenerHostnameMoreSpecific(listener.Source.Hostname, prevListener.Source.Hostname) {
+				hpr.listenersForHost[h] = listener
+			}
+		} else {
+			hpr.listenersForHost[h] = listener
+		}
 
-	for i, rule := range route.Source.Spec.Rules {
-		if !route.Rules[i].ValidMatches {
+		if _, exist := hpr.rulesPerHost[h]; !exist {
+			hpr.rulesPerHost[h] = make(map[pathAndType]PathRule)
+		}
+	}
+
+	for i, rule := range route.Spec.Rules {
+		if !rule.ValidMatches {
 			continue
 		}
 
 		var filters HTTPFilters
-		if route.Rules[i].ValidFilters {
+		if rule.ValidFilters {
 			filters = createHTTPFilters(rule.Filters)
 		} else {
 			filters = HTTPFilters{
@@ -319,114 +335,25 @@ func (hpr *hostPathRules) upsertHTTPRoute(route *graph.HTTPRoute, listener *grap
 					pathType: *m.Path.Type,
 				}
 
-				rule, exist := hpr.rulesPerHost[h][key]
+				hostRule, exist := hpr.rulesPerHost[h][key]
 				if !exist {
-					rule.Path = path
-					rule.PathType = convertPathType(*m.Path.Type)
+					hostRule.Path = path
+					hostRule.PathType = convertPathType(*m.Path.Type)
 				}
-
-				// create iteration variable inside the loop to fix implicit memory aliasing
-				om := route.Source.ObjectMeta
 
 				routeNsName := client.ObjectKeyFromObject(route.Source)
 
-				rule.MatchRules = append(rule.MatchRules, MatchRule{
-					Source:       &om,
-					BackendGroup: newBackendGroup(route.Rules[i].BackendRefs, routeNsName, i),
+				hostRule.GRPC = GRPC
+
+				hostRule.MatchRules = append(hostRule.MatchRules, MatchRule{
+					Source:       objectSrc,
+					BackendGroup: newBackendGroup(rule.BackendRefs, routeNsName, i),
 					Filters:      filters,
 					Match:        convertMatch(m),
 				})
 
-				hpr.rulesPerHost[h][key] = rule
+				hpr.rulesPerHost[h][key] = hostRule
 			}
-		}
-	}
-}
-
-func (hpr *hostPathRules) upsertGRPCRoute(route *graph.GRPCRoute, listener *graph.Listener) {
-	var hostnames []string
-	for _, p := range route.ParentRefs {
-		if val, exist := p.Attachment.AcceptedHostnames[string(listener.Source.Name)]; exist {
-			hostnames = val
-		}
-	}
-
-	hpr.getListenerForHost(listener, hostnames)
-
-	upsertRoute := func(
-		v *graph.GRPCRoute,
-		path, hostname string,
-		pathType v1.PathMatchType,
-		index int,
-		headers []v1alpha2.GRPCHeaderMatch,
-	) {
-		key := pathAndType{
-			path:     path,
-			pathType: pathType,
-		}
-		rule, exist := hpr.rulesPerHost[hostname][key]
-		if !exist {
-			rule.Path = path
-			rule.PathType = convertPathType(pathType)
-		}
-
-		rule.GRPC = true
-
-		// create iteration variable inside the loop to fix implicit memory aliasing
-		om := v.Source.ObjectMeta
-
-		routeNsName := client.ObjectKeyFromObject(v.Source)
-
-		rule.MatchRules = append(rule.MatchRules, MatchRule{
-			Source:       &om,
-			BackendGroup: newBackendGroup(v.Rules[index].BackendRefs, routeNsName, index),
-			Match:        convertGRPCMatchHeaders(headers),
-		})
-
-		hpr.rulesPerHost[hostname][key] = rule
-	}
-
-	for i, rule := range route.Source.Spec.Rules {
-		if !route.Rules[i].ValidMatches {
-			continue
-		}
-
-		for _, h := range hostnames {
-			if len(rule.Matches) == 0 {
-				// If no matches are specified, the implementation MUST match every gRPC request.
-				upsertRoute(route, "/", h, v1.PathMatchType("PathPrefix"), i, []v1alpha2.GRPCHeaderMatch{})
-			}
-			for _, m := range rule.Matches {
-				path := "/"
-				pathType := v1.PathMatchType("PathPrefix")
-				if m.Method != nil {
-					// if method match is provided, service and method are required
-					// as the only method type supported is exact.
-					// This is enforced by the graph package
-
-					path = "/" + *m.Method.Service + "/" + *m.Method.Method
-					pathType = v1.PathMatchType("Exact")
-				}
-
-				upsertRoute(route, path, h, pathType, i, m.Headers)
-			}
-		}
-	}
-}
-
-func (hpr *hostPathRules) getListenerForHost(listener *graph.Listener, hostnames []string) {
-	for _, h := range hostnames {
-		if prevListener, exists := hpr.listenersForHost[h]; exists {
-			// override the previous listener if the new one has a more specific hostname
-			if listenerHostnameMoreSpecific(listener.Source.Hostname, prevListener.Source.Hostname) {
-				hpr.listenersForHost[h] = listener
-			}
-		} else {
-			hpr.listenersForHost[h] = listener
-		}
-
-		if _, exist := hpr.rulesPerHost[h]; !exist {
-			hpr.rulesPerHost[h] = make(map[pathAndType]PathRule)
 		}
 	}
 }
@@ -474,7 +401,7 @@ func (hpr *hostPathRules) buildServers() []VirtualServer {
 		hostname := getListenerHostname(l.Source.Hostname)
 		// Generate a 404 ssl server block for listeners with no routes or listeners with wildcard (match-all) routes.
 		// This server overrides the default ssl server.
-		if len(l.HTTPRoutes) == 0 && len(l.GRPCRoutes) == 0 || hostname == wildcardHostname {
+		if len(l.Routes) == 0 || hostname == wildcardHostname {
 			s := VirtualServer{
 				Hostname: hostname,
 				Port:     hpr.port,
@@ -515,8 +442,6 @@ func (hpr *hostPathRules) maxServerCount() int {
 	return len(hpr.rulesPerHost) + len(hpr.httpsListeners) + 1
 }
 
-// cyclomatic complexity is 17
-// nolint:gocyclo
 func buildUpstreams(
 	ctx context.Context,
 	listeners []*graph.Listener,
@@ -526,59 +451,45 @@ func buildUpstreams(
 	// We use a map to deduplicate them.
 	uniqueUpstreams := make(map[string]Upstream)
 
-	processRule := func(rule graph.Rule) {
-		if !rule.ValidMatches || !rule.ValidFilters {
-			// don't generate upstreams for rules that have invalid matches or filters
-			return
-		}
-		for _, br := range rule.BackendRefs {
-			if br.Valid {
-				upstreamName := br.ServicePortReference()
-				_, exist := uniqueUpstreams[upstreamName]
-
-				if exist {
-					continue
-				}
-
-				var errMsg string
-
-				eps, err := resolver.Resolve(ctx, br.SvcNsName, br.ServicePort)
-				if err != nil {
-					errMsg = err.Error()
-				}
-
-				uniqueUpstreams[upstreamName] = Upstream{
-					Name:      upstreamName,
-					Endpoints: eps,
-					ErrorMsg:  errMsg,
-				}
-			}
-		}
-	}
-
 	for _, l := range listeners {
 
 		if !l.Valid {
 			continue
 		}
 
-		for _, route := range l.HTTPRoutes {
+		for _, route := range l.Routes {
 			if !route.Valid {
 				continue
 			}
 
-			for _, rule := range route.Rules {
-				processRule(rule)
-			}
-		}
+			for _, rule := range route.Spec.Rules {
+				if !rule.ValidMatches || !rule.ValidFilters {
+					// don't generate upstreams for rules that have invalid matches or filters
+					continue
+				}
+				for _, br := range rule.BackendRefs {
+					if br.Valid {
+						upstreamName := br.ServicePortReference()
+						_, exist := uniqueUpstreams[upstreamName]
 
-		for _, route := range l.GRPCRoutes {
-			if !route.Valid {
-				continue
-			}
+						if exist {
+							continue
+						}
 
-			for _, rule := range route.Rules {
-				processRule(rule)
+						var errMsg string
+
+						eps, err := resolver.Resolve(ctx, br.SvcNsName, br.ServicePort)
+						if err != nil {
+							errMsg = err.Error()
+						}
+
+						uniqueUpstreams[upstreamName] = Upstream{
+							Name:      upstreamName,
+							Endpoints: eps,
+							ErrorMsg:  errMsg,
+						}
+					}
+				}
 			}
 		}
 	}

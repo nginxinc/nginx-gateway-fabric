@@ -35,102 +35,6 @@ func TestBuildGraph(t *testing.T) {
 		8081: "HealthPort",
 	}
 
-	createValidRuleWithBackendRefs := func(refs []BackendRef) Rule {
-		return Rule{
-			ValidMatches: true,
-			ValidFilters: true,
-			BackendRefs:  refs,
-		}
-	}
-
-	createRoute := func(name string, gatewayName string, listenerName string) *gatewayv1.HTTPRoute {
-		return &gatewayv1.HTTPRoute{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: "test",
-				Name:      name,
-			},
-			Spec: gatewayv1.HTTPRouteSpec{
-				CommonRouteSpec: gatewayv1.CommonRouteSpec{
-					ParentRefs: []gatewayv1.ParentReference{
-						{
-							Namespace:   (*gatewayv1.Namespace)(helpers.GetPointer("test")),
-							Name:        gatewayv1.ObjectName(gatewayName),
-							SectionName: (*gatewayv1.SectionName)(helpers.GetPointer(listenerName)),
-						},
-					},
-				},
-				Hostnames: []gatewayv1.Hostname{
-					"foo.example.com",
-				},
-				Rules: []gatewayv1.HTTPRouteRule{
-					{
-						Matches: []gatewayv1.HTTPRouteMatch{
-							{
-								Path: &gatewayv1.HTTPPathMatch{
-									Type:  helpers.GetPointer(gatewayv1.PathMatchPathPrefix),
-									Value: helpers.GetPointer("/"),
-								},
-							},
-						},
-						BackendRefs: []gatewayv1.HTTPBackendRef{
-							{
-								BackendRef: gatewayv1.BackendRef{
-									BackendObjectReference: gatewayv1.BackendObjectReference{
-										Kind:      (*gatewayv1.Kind)(helpers.GetPointer("Service")),
-										Name:      "foo",
-										Namespace: (*gatewayv1.Namespace)(helpers.GetPointer("service")),
-										Port:      (*gatewayv1.PortNumber)(helpers.GetPointer[int32](80)),
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-		}
-	}
-
-	hr1 := createRoute("hr-1", "gateway-1", "listener-80-1")
-	hr2 := createRoute("hr-2", "wrong-gateway", "listener-80-1")
-	hr3 := createRoute("hr-3", "gateway-1", "listener-443-1") // https listener; should not conflict with hr1
-
-	gr := &v1alpha2.GRPCRoute{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: "test",
-			Name:      "gr",
-		},
-		Spec: v1alpha2.GRPCRouteSpec{
-			CommonRouteSpec: gatewayv1.CommonRouteSpec{
-				ParentRefs: []gatewayv1.ParentReference{
-					{
-						Namespace:   (*gatewayv1.Namespace)(helpers.GetPointer("test")),
-						Name:        gatewayv1.ObjectName("gateway-1"),
-						SectionName: (*gatewayv1.SectionName)(helpers.GetPointer("listener-80-1")),
-					},
-				},
-			},
-			Hostnames: []gatewayv1.Hostname{
-				"foo.example.com",
-			},
-			Rules: []v1alpha2.GRPCRouteRule{
-				{
-					BackendRefs: []v1alpha2.GRPCBackendRef{
-						{
-							BackendRef: gatewayv1.BackendRef{
-								BackendObjectReference: gatewayv1.BackendObjectReference{
-									Kind:      (*gatewayv1.Kind)(helpers.GetPointer("Service")),
-									Name:      "foo",
-									Namespace: (*gatewayv1.Namespace)(helpers.GetPointer("service")),
-									Port:      (*gatewayv1.PortNumber)(helpers.GetPointer[int32](80)),
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-	}
-
 	cm := &v1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "configmap",
@@ -181,23 +85,113 @@ func TestBuildGraph(t *testing.T) {
 		CaCertRef:    types.NamespacedName{Namespace: "service", Name: "configmap"},
 	}
 
-	hr1Refs := []BackendRef{
-		{
-			SvcNsName:        types.NamespacedName{Namespace: "service", Name: "foo"},
-			ServicePort:      v1.ServicePort{Port: 80},
-			Valid:            true,
-			Weight:           1,
-			BackendTLSPolicy: &btp,
+	commonGWBackendRef := gatewayv1.BackendRef{
+		BackendObjectReference: gatewayv1.BackendObjectReference{
+			Kind:      (*gatewayv1.Kind)(helpers.GetPointer("Service")),
+			Name:      "foo",
+			Namespace: (*gatewayv1.Namespace)(helpers.GetPointer("service")),
+			Port:      (*gatewayv1.PortNumber)(helpers.GetPointer[int32](80)),
 		},
 	}
 
-	hr3Refs := []BackendRef{
+	createValidRuleWithBackendRefs := func(matches []gatewayv1.HTTPRouteMatch) RouteRule {
+		refs := []BackendRef{
+			{
+				SvcNsName:        types.NamespacedName{Namespace: "service", Name: "foo"},
+				ServicePort:      v1.ServicePort{Port: 80},
+				Valid:            true,
+				Weight:           1,
+				BackendTLSPolicy: &btp,
+			},
+		}
+		rbrs := []RouteBackendRef{
+			{
+				BackendRef: commonGWBackendRef,
+				Filters:    []any{},
+			},
+		}
+		return RouteRule{
+			ValidMatches:     true,
+			ValidFilters:     true,
+			BackendRefs:      refs,
+			Matches:          matches,
+			RouteBackendRefs: rbrs,
+		}
+	}
+
+	routeMatches := []gatewayv1.HTTPRouteMatch{
 		{
-			SvcNsName:        types.NamespacedName{Namespace: "service", Name: "foo"},
-			ServicePort:      v1.ServicePort{Port: 80},
-			Valid:            true,
-			Weight:           1,
-			BackendTLSPolicy: &btp,
+			Path: &gatewayv1.HTTPPathMatch{
+				Type:  helpers.GetPointer(gatewayv1.PathMatchPathPrefix),
+				Value: helpers.GetPointer("/"),
+			},
+		},
+	}
+
+	createRoute := func(name string, gatewayName string, listenerName string) *gatewayv1.HTTPRoute {
+		return &gatewayv1.HTTPRoute{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: "test",
+				Name:      name,
+			},
+			Spec: gatewayv1.HTTPRouteSpec{
+				CommonRouteSpec: gatewayv1.CommonRouteSpec{
+					ParentRefs: []gatewayv1.ParentReference{
+						{
+							Namespace:   (*gatewayv1.Namespace)(helpers.GetPointer("test")),
+							Name:        gatewayv1.ObjectName(gatewayName),
+							SectionName: (*gatewayv1.SectionName)(helpers.GetPointer(listenerName)),
+						},
+					},
+				},
+				Hostnames: []gatewayv1.Hostname{
+					"foo.example.com",
+				},
+				Rules: []gatewayv1.HTTPRouteRule{
+					{
+						Matches: routeMatches,
+						BackendRefs: []gatewayv1.HTTPBackendRef{
+							{
+								BackendRef: commonGWBackendRef,
+							},
+						},
+					},
+				},
+			},
+		}
+	}
+
+	hr1 := createRoute("hr-1", "gateway-1", "listener-80-1")
+	hr2 := createRoute("hr-2", "wrong-gateway", "listener-80-1")
+	hr3 := createRoute("hr-3", "gateway-1", "listener-443-1") // https listener; should not conflict with hr1
+
+	gr := &v1alpha2.GRPCRoute{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "test",
+			Name:      "gr",
+		},
+		Spec: v1alpha2.GRPCRouteSpec{
+			CommonRouteSpec: gatewayv1.CommonRouteSpec{
+				ParentRefs: []gatewayv1.ParentReference{
+					{
+						Namespace:   (*gatewayv1.Namespace)(helpers.GetPointer("test")),
+						Name:        gatewayv1.ObjectName("gateway-1"),
+						SectionName: (*gatewayv1.SectionName)(helpers.GetPointer("listener-80-1")),
+					},
+				},
+			},
+			Hostnames: []gatewayv1.Hostname{
+				"foo.example.com",
+			},
+			Rules: []v1alpha2.GRPCRouteRule{
+				{
+					BackendRefs: []v1alpha2.GRPCBackendRef{
+						{
+							BackendRef: commonGWBackendRef,
+						},
+					},
+				},
+			},
 		},
 	}
 
@@ -386,10 +380,12 @@ func TestBuildGraph(t *testing.T) {
 		}
 	}
 
-	routeHR1 := &HTTPRoute{
-		Valid:      true,
-		Attachable: true,
-		Source:     hr1,
+	routeHR1 := &L7Route{
+		RouteType:     RouteTypeHTTP,
+		Valid:         true,
+		Attachable:    true,
+		Source:        hr1,
+		SrcParentRefs: hr1.Spec.ParentRefs,
 		ParentRefs: []ParentRef{
 			{
 				Idx:     0,
@@ -400,13 +396,18 @@ func TestBuildGraph(t *testing.T) {
 				},
 			},
 		},
-		Rules: []Rule{createValidRuleWithBackendRefs(hr1Refs)},
+		Spec: L7RouteSpec{
+			Hostnames: hr1.Spec.Hostnames,
+			Rules:     []RouteRule{createValidRuleWithBackendRefs(routeMatches)},
+		},
 	}
 
-	routeGR := &GRPCRoute{
-		Valid:      true,
-		Attachable: true,
-		Source:     gr,
+	routeGR := &L7Route{
+		RouteType:     RouteTypeGRPC,
+		Valid:         true,
+		Attachable:    true,
+		Source:        gr,
+		SrcParentRefs: gr.Spec.ParentRefs,
 		ParentRefs: []ParentRef{
 			{
 				Idx:     0,
@@ -417,13 +418,20 @@ func TestBuildGraph(t *testing.T) {
 				},
 			},
 		},
-		Rules: []Rule{createValidRuleWithBackendRefs(hr1Refs)},
+		Spec: L7RouteSpec{
+			Hostnames: gr.Spec.Hostnames,
+			Rules: []RouteRule{
+				createValidRuleWithBackendRefs([]gatewayv1.HTTPRouteMatch{}),
+			},
+		},
 	}
 
-	routeHR3 := &HTTPRoute{
-		Valid:      true,
-		Attachable: true,
-		Source:     hr3,
+	routeHR3 := &L7Route{
+		RouteType:     RouteTypeHTTP,
+		Valid:         true,
+		Attachable:    true,
+		Source:        hr3,
+		SrcParentRefs: hr3.Spec.ParentRefs,
 		ParentRefs: []ParentRef{
 			{
 				Idx:     0,
@@ -434,7 +442,10 @@ func TestBuildGraph(t *testing.T) {
 				},
 			},
 		},
-		Rules: []Rule{createValidRuleWithBackendRefs(hr3Refs)},
+		Spec: L7RouteSpec{
+			Hostnames: hr3.Spec.Hostnames,
+			Rules:     []RouteRule{createValidRuleWithBackendRefs(routeMatches)},
+		},
 	}
 
 	createExpectedGraphWithGatewayClass := func(gc *gatewayv1.GatewayClass) *Graph {
@@ -452,11 +463,9 @@ func TestBuildGraph(t *testing.T) {
 						Source:     gw1.Spec.Listeners[0],
 						Valid:      true,
 						Attachable: true,
-						HTTPRoutes: map[types.NamespacedName]*HTTPRoute{
-							{Namespace: "test", Name: "hr-1"}: routeHR1,
-						},
-						GRPCRoutes: map[types.NamespacedName]*GRPCRoute{
-							{Namespace: "test", Name: "gr"}: routeGR,
+						Routes: map[RouteKey]*L7Route{
+							{NamespacedName: types.NamespacedName{Namespace: "test", Name: "hr-1"}, RouteType: RouteTypeHTTP}: routeHR1,
+							{NamespacedName: types.NamespacedName{Namespace: "test", Name: "gr"}, RouteType: RouteTypeGRPC}:   routeGR,
 						},
 						SupportedKinds:            []gatewayv1.RouteGroupKind{{Kind: "HTTPRoute"}},
 						AllowedRouteLabelSelector: labels.SelectorFromSet(map[string]string{"app": "allowed"}),
@@ -466,10 +475,9 @@ func TestBuildGraph(t *testing.T) {
 						Source:     gw1.Spec.Listeners[1],
 						Valid:      true,
 						Attachable: true,
-						HTTPRoutes: map[types.NamespacedName]*HTTPRoute{
-							{Namespace: "test", Name: "hr-3"}: routeHR3,
+						Routes: map[RouteKey]*L7Route{
+							{NamespacedName: types.NamespacedName{Namespace: "test", Name: "hr-3"}, RouteType: RouteTypeHTTP}: routeHR3,
 						},
-						GRPCRoutes:     map[types.NamespacedName]*GRPCRoute{},
 						ResolvedSecret: helpers.GetPointer(client.ObjectKeyFromObject(secret)),
 						SupportedKinds: []gatewayv1.RouteGroupKind{{Kind: "HTTPRoute"}},
 					},
@@ -479,12 +487,10 @@ func TestBuildGraph(t *testing.T) {
 			IgnoredGateways: map[types.NamespacedName]*gatewayv1.Gateway{
 				{Namespace: "test", Name: "gateway-2"}: gw2,
 			},
-			HTTPRoutes: map[types.NamespacedName]*HTTPRoute{
-				{Namespace: "test", Name: "hr-1"}: routeHR1,
-				{Namespace: "test", Name: "hr-3"}: routeHR3,
-			},
-			GRPCRoutes: map[types.NamespacedName]*GRPCRoute{
-				{Namespace: "test", Name: "gr"}: routeGR,
+			Routes: map[RouteKey]*L7Route{
+				{NamespacedName: types.NamespacedName{Namespace: "test", Name: "hr-1"}, RouteType: RouteTypeHTTP}: routeHR1,
+				{NamespacedName: types.NamespacedName{Namespace: "test", Name: "hr-3"}, RouteType: RouteTypeHTTP}: routeHR3,
+				{NamespacedName: types.NamespacedName{Namespace: "test", Name: "gr"}, RouteType: RouteTypeGRPC}:   routeGR,
 			},
 			ReferencedSecrets: map[types.NamespacedName]*Secret{
 				client.ObjectKeyFromObject(secret): {

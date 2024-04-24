@@ -30,7 +30,6 @@ func TestDataAttributes(t *testing.T) {
 			SecretCount:       4,
 			ServiceCount:      5,
 			EndpointCount:     6,
-			GRPCRouteCount:    2,
 		},
 		NGFReplicaCount: 3,
 	}
@@ -51,7 +50,6 @@ func TestDataAttributes(t *testing.T) {
 		attribute.Int64("GatewayCount", 1),
 		attribute.Int64("GatewayClassCount", 2),
 		attribute.Int64("HTTPRouteCount", 3),
-		attribute.Int64("GRPCRouteCount", 2),
 		attribute.Int64("SecretCount", 4),
 		attribute.Int64("ServiceCount", 5),
 		attribute.Int64("EndpointCount", 6),
@@ -84,7 +82,6 @@ func TestDataAttributesWithEmptyData(t *testing.T) {
 		attribute.Int64("GatewayCount", 0),
 		attribute.Int64("GatewayClassCount", 0),
 		attribute.Int64("HTTPRouteCount", 0),
-		attribute.Int64("GRPCRouteCount", 0),
 		attribute.Int64("SecretCount", 0),
 		attribute.Int64("ServiceCount", 0),
 		attribute.Int64("EndpointCount", 0),

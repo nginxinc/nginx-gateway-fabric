@@ -6,62 +6,20 @@ import (
 
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	v1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
 	staticConds "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/conditions"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/validation"
 )
-
-// HTTPRoute represents an HTTPRoute.
-type HTTPRoute struct {
-	// Source is the source resource of the Route.
-	Source *v1.HTTPRoute
-	// ParentRefs includes ParentRefs with NGF Gateways only.
-	ParentRefs []ParentRef
-	// Conditions include Conditions for the HTTPRoute.
-	Conditions []conditions.Condition
-	// Rules include Rules for the HTTPRoute. Each Rule[i] corresponds to the ith HTTPRouteRule.
-	// If the Route is invalid, this field is nil
-	Rules []Rule
-	// Valid tells if the Route is valid.
-	// If it is invalid, NGF should not generate any configuration for it.
-	Valid bool
-	// Attachable tells if the Route can be attached to any of the Gateways.
-	// Route can be invalid but still attachable.
-	Attachable bool
-}
-
-// buildHTTPRoutesForGateways builds routes from HTTPRoutes that reference any of the specified Gateways.
-func buildHTTPRoutesForGateways(
-	validator validation.HTTPFieldsValidator,
-	httpRoutes map[types.NamespacedName]*v1.HTTPRoute,
-	gatewayNsNames []types.NamespacedName,
-) map[types.NamespacedName]*HTTPRoute {
-	if len(gatewayNsNames) == 0 {
-		return nil
-	}
-
-	routes := make(map[types.NamespacedName]*HTTPRoute)
-
-	for _, ghr := range httpRoutes {
-		r := buildHTTPRoute(validator, ghr, gatewayNsNames)
-		if r != nil {
-			routes[client.ObjectKeyFromObject(ghr)] = r
-		}
-	}
-
-	return routes
-}
 
 func buildHTTPRoute(
 	validator validation.HTTPFieldsValidator,
 	ghr *v1.HTTPRoute,
 	gatewayNsNames []types.NamespacedName,
-) *HTTPRoute {
-	r := &HTTPRoute{
-		Source: ghr,
+) *L7Route {
+	r := &L7Route{
+		Source:    ghr,
+		RouteType: RouteTypeHTTP,
 	}
 
 	sectionNameRefs, err := buildSectionNameRefs(ghr.Spec.ParentRefs, ghr.Namespace, gatewayNsNames)
@@ -76,6 +34,8 @@ func buildHTTPRoute(
 	}
 	r.ParentRefs = sectionNameRefs
 
+	r.SrcParentRefs = ghr.Spec.ParentRefs
+
 	if err := validateHostnames(
 		ghr.Spec.Hostnames,
 		field.NewPath("spec").Child("hostnames"),
@@ -86,15 +46,17 @@ func buildHTTPRoute(
 		return r
 	}
 
+	r.Spec.Hostnames = ghr.Spec.Hostnames
+
 	r.Valid = true
 	r.Attachable = true
-	var rules []Rule
+	var rules []RouteRule
 	var atLeastOneValid bool
 	var allRulesErrs field.ErrorList
 
 	rules, atLeastOneValid, allRulesErrs = processHTTPRouteRules(ghr.Spec.Rules, validator)
 
-	r.Rules = rules
+	r.Spec.Rules = rules
 
 	if len(allRulesErrs) > 0 {
 		msg := allRulesErrs.ToAggregate().Error()
@@ -115,8 +77,8 @@ func buildHTTPRoute(
 func processHTTPRouteRules(
 	specRules []v1.HTTPRouteRule,
 	validator validation.HTTPFieldsValidator,
-) ([]Rule, bool, field.ErrorList) {
-	rules := make([]Rule, len(specRules))
+) ([]RouteRule, bool, field.ErrorList) {
+	rules := make([]RouteRule, len(specRules))
 	var allRulesErrs field.ErrorList
 	var atLeastOneValid bool
 
@@ -135,8 +97,6 @@ func processHTTPRouteRules(
 			filtersErrs = append(filtersErrs, validateFilter(validator, filter, filterPath)...)
 		}
 
-		// rule.BackendRefs are validated separately because of their special requirements
-
 		var allErrs field.ErrorList
 		allErrs = append(allErrs, matchesErrs...)
 		allErrs = append(allErrs, filtersErrs...)
@@ -146,9 +106,23 @@ func processHTTPRouteRules(
 			atLeastOneValid = true
 		}
 
-		rules[i] = Rule{
-			ValidMatches: len(matchesErrs) == 0,
-			ValidFilters: len(filtersErrs) == 0,
+		backendRefs := make([]RouteBackendRef, 0, len(rule.BackendRefs))
+
+		// rule.BackendRefs are validated separately because of their special requirements
+		for _, b := range rule.BackendRefs {
+			interfaceFilters := make([]interface{}, 0, len(b.Filters))
+			for i, v := range b.Filters {
+				interfaceFilters[i] = v
+			}
+			backendRefs = append(backendRefs, RouteBackendRef{b.BackendRef, interfaceFilters})
+		}
+
+		rules[i] = RouteRule{
+			ValidMatches:     len(matchesErrs) == 0,
+			ValidFilters:     len(filtersErrs) == 0,
+			Matches:          rule.Matches,
+			Filters:          rule.Filters,
+			RouteBackendRefs: backendRefs,
 		}
 	}
 	return rules, atLeastOneValid, allRulesErrs

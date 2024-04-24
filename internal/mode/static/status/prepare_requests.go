@@ -24,70 +24,52 @@ type NginxReloadResult struct {
 }
 
 // PrepareHTTPRouteRequests prepares status UpdateRequests for the given Routes.
-func PrepareHTTPRouteRequests(
-	routes map[types.NamespacedName]*graph.HTTPRoute,
+func PrepareRouteRequests(
+	routes map[graph.RouteKey]*graph.L7Route,
 	transitionTime metav1.Time,
 	nginxReloadRes NginxReloadResult,
 	gatewayCtlrName string,
 ) []frameworkStatus.UpdateRequest {
 	reqs := make([]frameworkStatus.UpdateRequest, 0, len(routes))
 
-	for nsname, r := range routes {
+	for routeKey, r := range routes {
 
-		status := v1.HTTPRouteStatus{
-			RouteStatus: prepareRouteStatus(
-				gatewayCtlrName,
-				r.ParentRefs,
-				r.Source.Spec.ParentRefs,
-				r.Conditions,
-				nginxReloadRes,
-				transitionTime,
-				r.Source.Generation,
-			),
+		routeStatus := prepareRouteStatus(
+			gatewayCtlrName,
+			r.ParentRefs,
+			r.SrcParentRefs,
+			r.Conditions,
+			nginxReloadRes,
+			transitionTime,
+			r.Source.GetGeneration(),
+		)
+
+		if r.RouteType == graph.RouteTypeHTTP {
+			status := v1.HTTPRouteStatus{
+				RouteStatus: routeStatus,
+			}
+
+			req := frameworkStatus.UpdateRequest{
+				NsName:       routeKey.NamespacedName,
+				ResourceType: &v1.HTTPRoute{},
+				Setter:       newHTTPRouteStatusSetter(status, gatewayCtlrName),
+			}
+
+			reqs = append(reqs, req)
+		} else if r.RouteType == graph.RouteTypeGRPC {
+			status := v1alpha2.GRPCRouteStatus{
+				RouteStatus: routeStatus,
+			}
+
+			req := frameworkStatus.UpdateRequest{
+				NsName:       routeKey.NamespacedName,
+				ResourceType: &v1alpha2.GRPCRoute{},
+				Setter:       newGRPCRouteStatusSetter(status, gatewayCtlrName),
+			}
+
+			reqs = append(reqs, req)
 		}
 
-		req := frameworkStatus.UpdateRequest{
-			NsName:       nsname,
-			ResourceType: &v1.HTTPRoute{},
-			Setter:       newHTTPRouteStatusSetter(status, gatewayCtlrName),
-		}
-
-		reqs = append(reqs, req)
-	}
-
-	return reqs
-}
-
-// PrepareGRPCRouteRequests prepares status UpdateRequests for the given Routes.
-func PrepareGRPCRouteRequests(
-	routes map[types.NamespacedName]*graph.GRPCRoute,
-	transitionTime metav1.Time,
-	nginxReloadRes NginxReloadResult,
-	gatewayCtlrName string,
-) []frameworkStatus.UpdateRequest {
-	reqs := make([]frameworkStatus.UpdateRequest, 0, len(routes))
-
-	for nsname, r := range routes {
-
-		status := v1alpha2.GRPCRouteStatus{
-			RouteStatus: prepareRouteStatus(
-				gatewayCtlrName,
-				r.ParentRefs,
-				r.Source.Spec.ParentRefs,
-				r.Conditions,
-				nginxReloadRes,
-				transitionTime,
-				r.Source.Generation,
-			),
-		}
-
-		req := frameworkStatus.UpdateRequest{
-			NsName:       nsname,
-			ResourceType: &v1alpha2.GRPCRoute{},
-			Setter:       newGRPCRouteStatusSetter(status, gatewayCtlrName),
-		}
-
-		reqs = append(reqs, req)
 	}
 
 	return reqs
@@ -280,7 +262,7 @@ func prepareGatewayRequest(
 		listenerStatuses = append(listenerStatuses, v1.ListenerStatus{
 			Name:           v1.SectionName(l.Name),
 			SupportedKinds: l.SupportedKinds,
-			AttachedRoutes: int32(len(l.HTTPRoutes) + len(l.GRPCRoutes)),
+			AttachedRoutes: int32(len(l.Routes)),
 			Conditions:     apiConds,
 		})
 	}

@@ -92,7 +92,6 @@ var _ = Describe("Telemetry test with OTel collector", Label("telemetry"), func(
 				"GatewayCount: Int(0)",
 				"GatewayClassCount: Int(1)",
 				"HTTPRouteCount: Int(0)",
-				"GRPCRouteCount: Int(0)",
 				"SecretCount: Int(0)",
 				"ServiceCount: Int(0)",
 				"EndpointCount: Int(0)",

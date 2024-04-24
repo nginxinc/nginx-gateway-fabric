@@ -20,7 +20,7 @@ type Location struct {
 	ProxySSLVerify  *ProxySSLVerify
 	Return          *Return
 	Rewrites        []string
-	IsGRPC          bool
+	GRPC            bool
 }
 
 // Header defines an HTTP header to be passed to the proxied server.

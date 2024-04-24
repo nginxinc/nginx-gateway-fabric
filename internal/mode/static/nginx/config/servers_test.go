@@ -831,7 +831,7 @@ func TestCreateServers(t *testing.T) {
 			{
 				Path:            "= /grpc/method",
 				ProxyPass:       "grpc://test_foo_80",
-				IsGRPC:          true,
+				GRPC:            true,
 				ProxySetHeaders: []http.Header{},
 			},
 			{
@@ -841,7 +841,7 @@ func TestCreateServers(t *testing.T) {
 					Name:               "test-btp.example.com",
 					TrustedCertificate: "/etc/nginx/secrets/test-btp.crt",
 				},
-				IsGRPC:          true,
+				GRPC:            true,
 				ProxySetHeaders: []http.Header{},
 			},
 		}

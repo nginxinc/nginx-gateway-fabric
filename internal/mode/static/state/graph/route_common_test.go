@@ -12,7 +12,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
-	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
@@ -226,8 +225,7 @@ func TestBindRouteToListeners(t *testing.T) {
 			},
 			Valid:      true,
 			Attachable: true,
-			HTTPRoutes: map[types.NamespacedName]*HTTPRoute{},
-			GRPCRoutes: map[types.NamespacedName]*GRPCRoute{},
+			Routes:     map[RouteKey]*L7Route{},
 		}
 	}
 	createModifiedListener := func(name string, m func(*Listener)) *Listener {
@@ -287,10 +285,14 @@ func TestBindRouteToListeners(t *testing.T) {
 		nil,
 	)
 
-	var normalRoute *HTTPRoute
-	createNormalRoute := func(gateway *gatewayv1.Gateway) *HTTPRoute {
-		normalRoute = &HTTPRoute{
-			Source:     hr,
+	var normalRoute *L7Route
+	createNormalRoute := func(gateway *gatewayv1.Gateway) *L7Route {
+		normalRoute = &L7Route{
+			RouteType: RouteTypeHTTP,
+			Source:    hr,
+			Spec: L7RouteSpec{
+				Hostnames: hr.Spec.Hostnames,
+			},
 			Valid:      true,
 			Attachable: true,
 			ParentRefs: []ParentRef{
@@ -299,37 +301,50 @@ func TestBindRouteToListeners(t *testing.T) {
 					Gateway: client.ObjectKeyFromObject(gateway),
 				},
 			},
+			SrcParentRefs: hr.Spec.ParentRefs,
 		}
 		return normalRoute
 	}
-	getLastNormalRoute := func() *HTTPRoute {
+	getLastNormalRoute := func() *L7Route {
 		return normalRoute
 	}
 
-	invalidAttachableRoute1 := &HTTPRoute{
-		Source:     hr,
-		Valid:      false,
-		Attachable: true,
-		ParentRefs: []ParentRef{
-			{
-				Idx:     0,
-				Gateway: client.ObjectKeyFromObject(gw),
-			},
-		},
-	}
-	invalidAttachableRoute2 := &HTTPRoute{
-		Source:     hr,
-		Valid:      false,
-		Attachable: true,
-		ParentRefs: []ParentRef{
-			{
-				Idx:     0,
-				Gateway: client.ObjectKeyFromObject(gw),
-			},
-		},
+	getRouteKey := func(nsName types.NamespacedName, rt RouteType) RouteKey {
+		return RouteKey{
+			NamespacedName: nsName,
+			RouteType:      rt,
+		}
 	}
 
-	routeWithMissingSectionName := &HTTPRoute{
+	invalidAttachableRoute1 := &L7Route{
+		RouteType:  RouteTypeHTTP,
+		Source:     hr,
+		Valid:      false,
+		Attachable: true,
+		ParentRefs: []ParentRef{
+			{
+				Idx:     0,
+				Gateway: client.ObjectKeyFromObject(gw),
+			},
+		},
+		SrcParentRefs: hr.Spec.ParentRefs,
+	}
+	invalidAttachableRoute2 := &L7Route{
+		RouteType:  RouteTypeHTTP,
+		Source:     hr,
+		Valid:      false,
+		Attachable: true,
+		ParentRefs: []ParentRef{
+			{
+				Idx:     0,
+				Gateway: client.ObjectKeyFromObject(gw),
+			},
+		},
+		SrcParentRefs: hr.Spec.ParentRefs,
+	}
+
+	routeWithMissingSectionName := &L7Route{
+		RouteType:  RouteTypeHTTP,
 		Source:     hrWithNilSectionName,
 		Valid:      true,
 		Attachable: true,
@@ -339,8 +354,10 @@ func TestBindRouteToListeners(t *testing.T) {
 				Gateway: client.ObjectKeyFromObject(gw),
 			},
 		},
+		SrcParentRefs: hrWithNilSectionName.Spec.ParentRefs,
 	}
-	routeWithEmptySectionName := &HTTPRoute{
+	routeWithEmptySectionName := &L7Route{
+		RouteType:  RouteTypeHTTP,
 		Source:     hrWithEmptySectionName,
 		Valid:      true,
 		Attachable: true,
@@ -350,8 +367,10 @@ func TestBindRouteToListeners(t *testing.T) {
 				Gateway: client.ObjectKeyFromObject(gw),
 			},
 		},
+		SrcParentRefs: hrWithEmptySectionName.Spec.ParentRefs,
 	}
-	routeWithNonExistingListener := &HTTPRoute{
+	routeWithNonExistingListener := &L7Route{
+		RouteType:  RouteTypeHTTP,
 		Source:     hrWithNonExistingListener,
 		Valid:      true,
 		Attachable: true,
@@ -361,8 +380,10 @@ func TestBindRouteToListeners(t *testing.T) {
 				Gateway: client.ObjectKeyFromObject(gw),
 			},
 		},
+		SrcParentRefs: hrWithNonExistingListener.Spec.ParentRefs,
 	}
-	routeWithPort := &HTTPRoute{
+	routeWithPort := &L7Route{
+		RouteType:  RouteTypeHTTP,
 		Source:     hrWithPort,
 		Valid:      true,
 		Attachable: true,
@@ -372,9 +393,11 @@ func TestBindRouteToListeners(t *testing.T) {
 				Gateway: client.ObjectKeyFromObject(gw),
 			},
 		},
+		SrcParentRefs: hrWithPort.Spec.ParentRefs,
 	}
 	ignoredGwNsName := types.NamespacedName{Namespace: "test", Name: "ignored-gateway"}
-	routeWithIgnoredGateway := &HTTPRoute{
+	routeWithIgnoredGateway := &L7Route{
+		RouteType:  RouteTypeHTTP,
 		Source:     hr,
 		Valid:      true,
 		Attachable: true,
@@ -384,16 +407,19 @@ func TestBindRouteToListeners(t *testing.T) {
 				Gateway: ignoredGwNsName,
 			},
 		},
+		SrcParentRefs: hr.Spec.ParentRefs,
 	}
-	invalidRoute := &HTTPRoute{
-		Valid:  false,
-		Source: hr,
+	invalidRoute := &L7Route{
+		RouteType: RouteTypeHTTP,
+		Valid:     false,
+		Source:    hr,
 		ParentRefs: []ParentRef{
 			{
 				Idx:     0,
 				Gateway: client.ObjectKeyFromObject(gw),
 			},
 		},
+		SrcParentRefs: hr.Spec.ParentRefs,
 	}
 
 	invalidNotAttachableListener := createModifiedListener("listener-80-1", func(l *Listener) {
@@ -404,30 +430,8 @@ func TestBindRouteToListeners(t *testing.T) {
 		l.Source.Hostname = helpers.GetPointer[gatewayv1.Hostname]("bar.example.com")
 	})
 
-	gr := createGRPCRoute("gr", "listener-80-1", gw.Name, "foo.example.com", []v1alpha2.GRPCRouteRule{})
-
-	var normalGRPCRoute *GRPCRoute
-	createNormalGRPCRoute := func(gateway *gatewayv1.Gateway) *GRPCRoute {
-		normalGRPCRoute = &GRPCRoute{
-			Source:     gr,
-			Valid:      true,
-			Attachable: true,
-			ParentRefs: []ParentRef{
-				{
-					Idx:     0,
-					Gateway: client.ObjectKeyFromObject(gateway),
-				},
-			},
-		}
-		return normalGRPCRoute
-	}
-
-	getLastNormalGRPCRoute := func() *GRPCRoute {
-		return normalGRPCRoute
-	}
-
 	tests := []struct {
-		route                    Route
+		route                    *L7Route
 		gateway                  *Gateway
 		expectedGatewayListeners []*Listener
 		name                     string
@@ -457,42 +461,12 @@ func TestBindRouteToListeners(t *testing.T) {
 			},
 			expectedGatewayListeners: []*Listener{
 				createModifiedListener("listener-80-1", func(l *Listener) {
-					l.HTTPRoutes = map[types.NamespacedName]*HTTPRoute{
-						client.ObjectKeyFromObject(hr): getLastNormalRoute(),
+					l.Routes = map[RouteKey]*L7Route{
+						getRouteKey(client.ObjectKeyFromObject(hr), RouteTypeHTTP): getLastNormalRoute(),
 					}
 				}),
 			},
 			name: "normal case",
-		},
-		{
-			route: createNormalGRPCRoute(gw),
-			gateway: &Gateway{
-				Source: gw,
-				Valid:  true,
-				Listeners: []*Listener{
-					createListener("listener-80-1"),
-				},
-			},
-			expectedSectionNameRefs: []ParentRef{
-				{
-					Idx:     0,
-					Gateway: client.ObjectKeyFromObject(gw),
-					Attachment: &ParentRefAttachmentStatus{
-						Attached: true,
-						AcceptedHostnames: map[string][]string{
-							"listener-80-1": {"foo.example.com"},
-						},
-					},
-				},
-			},
-			expectedGatewayListeners: []*Listener{
-				createModifiedListener("listener-80-1", func(l *Listener) {
-					l.GRPCRoutes = map[types.NamespacedName]*GRPCRoute{
-						client.ObjectKeyFromObject(gr): getLastNormalGRPCRoute(),
-					}
-				}),
-			},
-			name: "normal case with GRPCRoute",
 		},
 		{
 			route: routeWithMissingSectionName,
@@ -517,8 +491,8 @@ func TestBindRouteToListeners(t *testing.T) {
 			},
 			expectedGatewayListeners: []*Listener{
 				createModifiedListener("listener-80-1", func(l *Listener) {
-					l.HTTPRoutes = map[types.NamespacedName]*HTTPRoute{
-						client.ObjectKeyFromObject(hr): routeWithMissingSectionName,
+					l.Routes = map[RouteKey]*L7Route{
+						getRouteKey(client.ObjectKeyFromObject(hr), RouteTypeHTTP): routeWithMissingSectionName,
 					}
 				}),
 			},
@@ -549,13 +523,13 @@ func TestBindRouteToListeners(t *testing.T) {
 			},
 			expectedGatewayListeners: []*Listener{
 				createModifiedListener("listener-80", func(l *Listener) {
-					l.HTTPRoutes = map[types.NamespacedName]*HTTPRoute{
-						client.ObjectKeyFromObject(hr): routeWithEmptySectionName,
+					l.Routes = map[RouteKey]*L7Route{
+						getRouteKey(client.ObjectKeyFromObject(hr), RouteTypeHTTP): routeWithEmptySectionName,
 					}
 				}),
 				createModifiedListener("listener-8080", func(l *Listener) {
-					l.HTTPRoutes = map[types.NamespacedName]*HTTPRoute{
-						client.ObjectKeyFromObject(hr): routeWithEmptySectionName,
+					l.Routes = map[RouteKey]*L7Route{
+						getRouteKey(client.ObjectKeyFromObject(hr), RouteTypeHTTP): routeWithEmptySectionName,
 					}
 				}),
 			},
@@ -785,8 +759,8 @@ func TestBindRouteToListeners(t *testing.T) {
 			expectedGatewayListeners: []*Listener{
 				createModifiedListener("listener-80-1", func(l *Listener) {
 					l.Valid = false
-					l.HTTPRoutes = map[types.NamespacedName]*HTTPRoute{
-						client.ObjectKeyFromObject(hr): getLastNormalRoute(),
+					l.Routes = map[RouteKey]*L7Route{
+						getRouteKey(client.ObjectKeyFromObject(hr), RouteTypeHTTP): getLastNormalRoute(),
 					}
 				}),
 			},
@@ -816,8 +790,8 @@ func TestBindRouteToListeners(t *testing.T) {
 			},
 			expectedGatewayListeners: []*Listener{
 				createModifiedListener("listener-80-1", func(l *Listener) {
-					l.HTTPRoutes = map[types.NamespacedName]*HTTPRoute{
-						client.ObjectKeyFromObject(hr): invalidAttachableRoute1,
+					l.Routes = map[RouteKey]*L7Route{
+						getRouteKey(client.ObjectKeyFromObject(hr), RouteTypeHTTP): invalidAttachableRoute1,
 					}
 				}),
 			},
@@ -849,8 +823,8 @@ func TestBindRouteToListeners(t *testing.T) {
 			expectedGatewayListeners: []*Listener{
 				createModifiedListener("listener-80-1", func(l *Listener) {
 					l.Valid = false
-					l.HTTPRoutes = map[types.NamespacedName]*HTTPRoute{
-						client.ObjectKeyFromObject(hr): invalidAttachableRoute2,
+					l.Routes = map[RouteKey]*L7Route{
+						getRouteKey(client.ObjectKeyFromObject(hr), RouteTypeHTTP): invalidAttachableRoute2,
 					}
 				}),
 			},
@@ -936,8 +910,8 @@ func TestBindRouteToListeners(t *testing.T) {
 							From: helpers.GetPointer(gatewayv1.NamespacesFromSelector),
 						},
 					}
-					l.HTTPRoutes = map[types.NamespacedName]*HTTPRoute{
-						client.ObjectKeyFromObject(hr): getLastNormalRoute(),
+					l.Routes = map[RouteKey]*L7Route{
+						getRouteKey(client.ObjectKeyFromObject(hr), RouteTypeHTTP): getLastNormalRoute(),
 					}
 				}),
 			},
@@ -1014,8 +988,8 @@ func TestBindRouteToListeners(t *testing.T) {
 							From: helpers.GetPointer(gatewayv1.NamespacesFromSame),
 						},
 					}
-					l.HTTPRoutes = map[types.NamespacedName]*HTTPRoute{
-						client.ObjectKeyFromObject(hr): getLastNormalRoute(),
+					l.Routes = map[RouteKey]*L7Route{
+						getRouteKey(client.ObjectKeyFromObject(hr), RouteTypeHTTP): getLastNormalRoute(),
 					}
 				}),
 			},
@@ -1055,8 +1029,8 @@ func TestBindRouteToListeners(t *testing.T) {
 							From: helpers.GetPointer(gatewayv1.NamespacesFromAll),
 						},
 					}
-					l.HTTPRoutes = map[types.NamespacedName]*HTTPRoute{
-						client.ObjectKeyFromObject(hr): getLastNormalRoute(),
+					l.Routes = map[RouteKey]*L7Route{
+						getRouteKey(client.ObjectKeyFromObject(hr), RouteTypeHTTP): getLastNormalRoute(),
 					}
 				}),
 			},
@@ -1076,41 +1050,15 @@ func TestBindRouteToListeners(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewWithT(t)
 
-			var attachable bool
-			var ns string
-			var hostnames []gatewayv1.Hostname
-			var parentRefs []ParentRef
-
-			switch v := test.route.(type) {
-			case *HTTPRoute:
-				attachable = v.Attachable
-				ns = v.Source.Namespace
-				hostnames = v.Source.Spec.Hostnames
-				parentRefs = v.ParentRefs
-			case *GRPCRoute:
-				attachable = v.Attachable
-				ns = v.Source.Namespace
-				hostnames = v.Source.Spec.Hostnames
-				parentRefs = v.ParentRefs
-			}
-
 			bindRouteToListeners(
 				test.route,
-				attachable,
-				ns,
-				hostnames,
 				test.gateway,
 				namespaces,
 			)
 
-			g.Expect(parentRefs).To(Equal(test.expectedSectionNameRefs))
+			g.Expect(test.route.ParentRefs).To(Equal(test.expectedSectionNameRefs))
 			g.Expect(helpers.Diff(test.gateway.Listeners, test.expectedGatewayListeners)).To(BeEmpty())
-			switch v := test.route.(type) {
-			case *HTTPRoute:
-				g.Expect(helpers.Diff(v.Conditions, test.expectedConditions)).To(BeEmpty())
-			case *GRPCRoute:
-				g.Expect(helpers.Diff(v.Conditions, test.expectedConditions)).To(BeEmpty())
-			}
+			g.Expect(helpers.Diff(test.route.Conditions, test.expectedConditions)).To(BeEmpty())
 		})
 	}
 }

@@ -52,14 +52,10 @@ func createGRPCHeadersMatch(headerType, headerName, headerValue string) v1alpha2
 
 func createGRPCRoute(
 	name string,
-	sectionName string,
 	refName string,
 	hostname v1.Hostname,
 	rules []v1alpha2.GRPCRouteRule,
 ) *v1alpha2.GRPCRoute {
-	if sectionName == "" {
-		sectionName = sectionNameOfCreateHTTPRoute
-	}
 	return &v1alpha2.GRPCRoute{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: "test",
@@ -71,7 +67,7 @@ func createGRPCRoute(
 					{
 						Namespace:   helpers.GetPointer[v1.Namespace]("test"),
 						Name:        v1.ObjectName(refName),
-						SectionName: helpers.GetPointer[v1.SectionName](v1.SectionName(sectionName)),
+						SectionName: helpers.GetPointer[v1.SectionName](v1.SectionName(sectionNameOfCreateHTTPRoute)),
 					},
 				},
 			},
@@ -84,25 +80,32 @@ func createGRPCRoute(
 func TestBuildGRPCRoutes(t *testing.T) {
 	gwNsName := types.NamespacedName{Namespace: "test", Name: "gateway"}
 
-	gr := createGRPCRoute("gr-1", "", gwNsName.Name, "example.com", []v1alpha2.GRPCRouteRule{})
+	gr := createGRPCRoute("gr-1", gwNsName.Name, "example.com", []v1alpha2.GRPCRouteRule{})
 
-	grWrongGateway := createGRPCRoute("gr-2", "", "some-gateway", "example.com", []v1alpha2.GRPCRouteRule{})
+	grWrongGateway := createGRPCRoute("gr-2", "some-gateway", "example.com", []v1alpha2.GRPCRouteRule{})
 
 	grRoutes := map[types.NamespacedName]*v1alpha2.GRPCRoute{
 		client.ObjectKeyFromObject(gr):             gr,
 		client.ObjectKeyFromObject(grWrongGateway): grWrongGateway,
 	}
 
+	grRouteKey := RouteKey{
+		NamespacedName: client.ObjectKeyFromObject(gr),
+		RouteType:      RouteTypeGRPC,
+	}
+
 	tests := []struct {
-		expected  map[types.NamespacedName]*GRPCRoute
+		expected  map[RouteKey]*L7Route
 		name      string
 		gwNsNames []types.NamespacedName
 	}{
 		{
 			gwNsNames: []types.NamespacedName{gwNsName},
-			expected: map[types.NamespacedName]*GRPCRoute{
-				client.ObjectKeyFromObject(gr): {
-					Source: gr,
+			expected: map[RouteKey]*L7Route{
+				grRouteKey: {
+					RouteType:     RouteTypeGRPC,
+					Source:        gr,
+					SrcParentRefs: gr.Spec.ParentRefs,
 					ParentRefs: []ParentRef{
 						{
 							Idx:     0,
@@ -111,7 +114,10 @@ func TestBuildGRPCRoutes(t *testing.T) {
 					},
 					Valid:      true,
 					Attachable: true,
-					Rules:      []Rule{},
+					Spec: L7RouteSpec{
+						Hostnames: gr.Spec.Hostnames,
+						Rules:     []RouteRule{},
+					},
 				},
 			},
 			name: "normal case",
@@ -128,7 +134,7 @@ func TestBuildGRPCRoutes(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewWithT(t)
-			routes := buildGRPCRoutesForGateways(validator, grRoutes, test.gwNsNames)
+			routes := buildRoutesForGateways(validator, map[types.NamespacedName]*v1.HTTPRoute{}, grRoutes, test.gwNsNames)
 			g.Expect(helpers.Diff(test.expected, routes)).To(BeEmpty())
 		})
 	}
@@ -146,39 +152,34 @@ func TestBuildGRPCRoute(t *testing.T) {
 
 	grBoth := createGRPCRoute(
 		"gr-1",
-		"",
 		gatewayNsName.Name,
 		"example.com",
 		[]v1alpha2.GRPCRouteRule{methodMatchRule, headersMatchRule},
 	)
 
-	grInvalidHostname := createGRPCRoute("gr-1", "", gatewayNsName.Name, "", []v1alpha2.GRPCRouteRule{methodMatchRule})
-	grNotNGF := createGRPCRoute("gr", "", "some-gateway", "example.com", []v1alpha2.GRPCRouteRule{methodMatchRule})
+	grInvalidHostname := createGRPCRoute("gr-1", gatewayNsName.Name, "", []v1alpha2.GRPCRouteRule{methodMatchRule})
+	grNotNGF := createGRPCRoute("gr", "some-gateway", "example.com", []v1alpha2.GRPCRouteRule{methodMatchRule})
 
 	grInvalidMatchesEmptyMethodFields := createGRPCRoute(
 		"gr-1",
-		"",
 		gatewayNsName.Name,
 		"example.com",
 		[]v1alpha2.GRPCRouteRule{methodMatchEmptyFields},
 	)
 	grInvalidMatchesNilMethodType := createGRPCRoute(
 		"gr-1",
-		"",
 		gatewayNsName.Name,
 		"example.com",
 		[]v1alpha2.GRPCRouteRule{methodMatchNilType},
 	)
 	grInvalidHeadersEmptyType := createGRPCRoute(
 		"gr-1",
-		"",
 		gatewayNsName.Name,
 		"example.com",
 		[]v1alpha2.GRPCRouteRule{headersMatchInvalid},
 	)
 	grOneInvalid := createGRPCRoute(
 		"gr-1",
-		"",
 		gatewayNsName.Name,
 		"example.com",
 		[]v1alpha2.GRPCRouteRule{methodMatchRule, headersMatchInvalid},
@@ -186,7 +187,6 @@ func TestBuildGRPCRoute(t *testing.T) {
 
 	grDuplicateSectionName := createGRPCRoute(
 		"gr",
-		"",
 		gatewayNsName.Name,
 		"example.com",
 		[]v1alpha2.GRPCRouteRule{methodMatchRule},
@@ -206,7 +206,6 @@ func TestBuildGRPCRoute(t *testing.T) {
 
 	grInvalidFilter := createGRPCRoute(
 		"gr",
-		"",
 		gatewayNsName.Name,
 		"example.com",
 		[]v1alpha2.GRPCRouteRule{grInvalidFilterRule},
@@ -215,14 +214,16 @@ func TestBuildGRPCRoute(t *testing.T) {
 	tests := []struct {
 		validator *validationfakes.FakeHTTPFieldsValidator
 		gr        *v1alpha2.GRPCRoute
-		expected  *GRPCRoute
+		expected  *L7Route
 		name      string
 	}{
 		{
 			validator: &validationfakes.FakeHTTPFieldsValidator{},
 			gr:        grBoth,
-			expected: &GRPCRoute{
-				Source: grBoth,
+			expected: &L7Route{
+				RouteType:     RouteTypeGRPC,
+				Source:        grBoth,
+				SrcParentRefs: grBoth.Spec.ParentRefs,
 				ParentRefs: []ParentRef{
 					{
 						Idx:     0,
@@ -231,14 +232,21 @@ func TestBuildGRPCRoute(t *testing.T) {
 				},
 				Valid:      true,
 				Attachable: true,
-				Rules: []Rule{
-					{
-						ValidMatches: true,
-						ValidFilters: true,
-					},
-					{
-						ValidMatches: true,
-						ValidFilters: true,
+				Spec: L7RouteSpec{
+					Hostnames: grBoth.Spec.Hostnames,
+					Rules: []RouteRule{
+						{
+							ValidMatches:     true,
+							ValidFilters:     true,
+							Matches:          convertGRPCMatches(grBoth.Spec.Rules[0].Matches),
+							RouteBackendRefs: []RouteBackendRef{},
+						},
+						{
+							ValidMatches:     true,
+							ValidFilters:     true,
+							Matches:          convertGRPCMatches(grBoth.Spec.Rules[1].Matches),
+							RouteBackendRefs: []RouteBackendRef{},
+						},
 					},
 				},
 			},
@@ -247,10 +255,12 @@ func TestBuildGRPCRoute(t *testing.T) {
 		{
 			validator: &validationfakes.FakeHTTPFieldsValidator{},
 			gr:        grInvalidMatchesEmptyMethodFields,
-			expected: &GRPCRoute{
-				Source:     grInvalidMatchesEmptyMethodFields,
-				Valid:      false,
-				Attachable: true,
+			expected: &L7Route{
+				RouteType:     RouteTypeGRPC,
+				Source:        grInvalidMatchesEmptyMethodFields,
+				SrcParentRefs: grInvalidMatchesEmptyMethodFields.Spec.ParentRefs,
+				Valid:         false,
+				Attachable:    true,
 				ParentRefs: []ParentRef{
 					{
 						Idx:     0,
@@ -265,10 +275,15 @@ func TestBuildGRPCRoute(t *testing.T) {
 							` spec.rules[0].matches[0].method.method: Required value: method is required]`,
 					),
 				},
-				Rules: []Rule{
-					{
-						ValidMatches: false,
-						ValidFilters: true,
+				Spec: L7RouteSpec{
+					Hostnames: grInvalidMatchesEmptyMethodFields.Spec.Hostnames,
+					Rules: []RouteRule{
+						{
+							ValidMatches:     false,
+							ValidFilters:     true,
+							Matches:          convertGRPCMatches(grInvalidMatchesEmptyMethodFields.Spec.Rules[0].Matches),
+							RouteBackendRefs: []RouteBackendRef{},
+						},
 					},
 				},
 			},
@@ -277,18 +292,21 @@ func TestBuildGRPCRoute(t *testing.T) {
 		{
 			validator: &validationfakes.FakeHTTPFieldsValidator{},
 			gr:        grDuplicateSectionName,
-			expected: &GRPCRoute{
-				Source: grDuplicateSectionName,
+			expected: &L7Route{
+				RouteType: RouteTypeGRPC,
+				Source:    grDuplicateSectionName,
 			},
 			name: "invalid route with duplicate sectionName",
 		},
 		{
 			validator: &validationfakes.FakeHTTPFieldsValidator{},
 			gr:        grOneInvalid,
-			expected: &GRPCRoute{
-				Source:     grOneInvalid,
-				Valid:      true,
-				Attachable: true,
+			expected: &L7Route{
+				Source:        grOneInvalid,
+				SrcParentRefs: grOneInvalid.Spec.ParentRefs,
+				RouteType:     RouteTypeGRPC,
+				Valid:         true,
+				Attachable:    true,
 				ParentRefs: []ParentRef{
 					{
 						Idx:     0,
@@ -300,14 +318,21 @@ func TestBuildGRPCRoute(t *testing.T) {
 						`spec.rules[1].matches[0].headers[0].type: Unsupported value: "": supported values: "Exact"`,
 					),
 				},
-				Rules: []Rule{
-					{
-						ValidMatches: true,
-						ValidFilters: true,
-					},
-					{
-						ValidMatches: false,
-						ValidFilters: true,
+				Spec: L7RouteSpec{
+					Hostnames: grOneInvalid.Spec.Hostnames,
+					Rules: []RouteRule{
+						{
+							ValidMatches:     true,
+							ValidFilters:     true,
+							Matches:          convertGRPCMatches(grOneInvalid.Spec.Rules[0].Matches),
+							RouteBackendRefs: []RouteBackendRef{},
+						},
+						{
+							ValidMatches:     false,
+							ValidFilters:     true,
+							Matches:          convertGRPCMatches(grOneInvalid.Spec.Rules[1].Matches),
+							RouteBackendRefs: []RouteBackendRef{},
+						},
 					},
 				},
 			},
@@ -316,10 +341,12 @@ func TestBuildGRPCRoute(t *testing.T) {
 		{
 			validator: &validationfakes.FakeHTTPFieldsValidator{},
 			gr:        grInvalidHeadersEmptyType,
-			expected: &GRPCRoute{
-				Source:     grInvalidHeadersEmptyType,
-				Valid:      false,
-				Attachable: true,
+			expected: &L7Route{
+				Source:        grInvalidHeadersEmptyType,
+				SrcParentRefs: grInvalidHeadersEmptyType.Spec.ParentRefs,
+				RouteType:     RouteTypeGRPC,
+				Valid:         false,
+				Attachable:    true,
 				ParentRefs: []ParentRef{
 					{
 						Idx:     0,
@@ -332,10 +359,15 @@ func TestBuildGRPCRoute(t *testing.T) {
 							`Unsupported value: "": supported values: "Exact"`,
 					),
 				},
-				Rules: []Rule{
-					{
-						ValidMatches: false,
-						ValidFilters: true,
+				Spec: L7RouteSpec{
+					Hostnames: grInvalidHeadersEmptyType.Spec.Hostnames,
+					Rules: []RouteRule{
+						{
+							ValidMatches:     false,
+							ValidFilters:     true,
+							Matches:          convertGRPCMatches(grInvalidHeadersEmptyType.Spec.Rules[0].Matches),
+							RouteBackendRefs: []RouteBackendRef{},
+						},
 					},
 				},
 			},
@@ -344,10 +376,12 @@ func TestBuildGRPCRoute(t *testing.T) {
 		{
 			validator: &validationfakes.FakeHTTPFieldsValidator{},
 			gr:        grInvalidMatchesNilMethodType,
-			expected: &GRPCRoute{
-				Source:     grInvalidMatchesNilMethodType,
-				Valid:      false,
-				Attachable: true,
+			expected: &L7Route{
+				Source:        grInvalidMatchesNilMethodType,
+				SrcParentRefs: grInvalidMatchesNilMethodType.Spec.ParentRefs,
+				RouteType:     RouteTypeGRPC,
+				Valid:         false,
+				Attachable:    true,
 				ParentRefs: []ParentRef{
 					{
 						Idx:     0,
@@ -359,10 +393,15 @@ func TestBuildGRPCRoute(t *testing.T) {
 						`All rules are invalid: spec.rules[0].matches[0].method.type: Required value: cannot be empty`,
 					),
 				},
-				Rules: []Rule{
-					{
-						ValidMatches: false,
-						ValidFilters: true,
+				Spec: L7RouteSpec{
+					Hostnames: grInvalidMatchesNilMethodType.Spec.Hostnames,
+					Rules: []RouteRule{
+						{
+							ValidMatches:     false,
+							ValidFilters:     true,
+							Matches:          convertGRPCMatches(grInvalidMatchesNilMethodType.Spec.Rules[0].Matches),
+							RouteBackendRefs: []RouteBackendRef{},
+						},
 					},
 				},
 			},
@@ -371,10 +410,12 @@ func TestBuildGRPCRoute(t *testing.T) {
 		{
 			validator: &validationfakes.FakeHTTPFieldsValidator{},
 			gr:        grInvalidFilter,
-			expected: &GRPCRoute{
-				Source:     grInvalidFilter,
-				Valid:      false,
-				Attachable: true,
+			expected: &L7Route{
+				Source:        grInvalidFilter,
+				SrcParentRefs: grInvalidFilter.Spec.ParentRefs,
+				RouteType:     RouteTypeGRPC,
+				Valid:         false,
+				Attachable:    true,
 				ParentRefs: []ParentRef{
 					{
 						Idx:     0,
@@ -389,10 +430,15 @@ func TestBuildGRPCRoute(t *testing.T) {
 							`ExtensionRef:(*v1.LocalObjectReference)(nil)}}: supported values: "gRPC filters are not yet supported"`,
 					),
 				},
-				Rules: []Rule{
-					{
-						ValidMatches: true,
-						ValidFilters: false,
+				Spec: L7RouteSpec{
+					Hostnames: grInvalidFilter.Spec.Hostnames,
+					Rules: []RouteRule{
+						{
+							ValidMatches:     true,
+							ValidFilters:     false,
+							Matches:          convertGRPCMatches(grInvalidFilter.Spec.Rules[0].Matches),
+							RouteBackendRefs: []RouteBackendRef{},
+						},
 					},
 				},
 			},
@@ -407,10 +453,12 @@ func TestBuildGRPCRoute(t *testing.T) {
 		{
 			validator: &validationfakes.FakeHTTPFieldsValidator{},
 			gr:        grInvalidHostname,
-			expected: &GRPCRoute{
-				Source:     grInvalidHostname,
-				Valid:      false,
-				Attachable: false,
+			expected: &L7Route{
+				Source:        grInvalidHostname,
+				RouteType:     RouteTypeGRPC,
+				SrcParentRefs: grInvalidHostname.Spec.ParentRefs,
+				Valid:         false,
+				Attachable:    false,
 				ParentRefs: []ParentRef{
 					{
 						Idx:     0,

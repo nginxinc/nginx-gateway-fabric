@@ -360,8 +360,7 @@ func TestBuildGateway(t *testing.T) {
 						Source:     foo80Listener1,
 						Valid:      true,
 						Attachable: true,
-						HTTPRoutes: map[types.NamespacedName]*HTTPRoute{},
-						GRPCRoutes: map[types.NamespacedName]*GRPCRoute{},
+						Routes:     map[RouteKey]*L7Route{},
 						SupportedKinds: []v1.RouteGroupKind{
 							{Kind: "HTTPRoute"},
 						},
@@ -371,8 +370,7 @@ func TestBuildGateway(t *testing.T) {
 						Source:     foo8080Listener,
 						Valid:      true,
 						Attachable: true,
-						HTTPRoutes: map[types.NamespacedName]*HTTPRoute{},
-						GRPCRoutes: map[types.NamespacedName]*GRPCRoute{},
+						Routes:     map[RouteKey]*L7Route{},
 						SupportedKinds: []v1.RouteGroupKind{
 							{Kind: "HTTPRoute"},
 						},
@@ -395,8 +393,7 @@ func TestBuildGateway(t *testing.T) {
 						Source:         foo443HTTPSListener1,
 						Valid:          true,
 						Attachable:     true,
-						HTTPRoutes:     map[types.NamespacedName]*HTTPRoute{},
-						GRPCRoutes:     map[types.NamespacedName]*GRPCRoute{},
+						Routes:         map[RouteKey]*L7Route{},
 						ResolvedSecret: helpers.GetPointer(client.ObjectKeyFromObject(secretSameNs)),
 						SupportedKinds: []v1.RouteGroupKind{
 							{Kind: "HTTPRoute"},
@@ -407,8 +404,7 @@ func TestBuildGateway(t *testing.T) {
 						Source:         foo8443HTTPSListener,
 						Valid:          true,
 						Attachable:     true,
-						HTTPRoutes:     map[types.NamespacedName]*HTTPRoute{},
-						GRPCRoutes:     map[types.NamespacedName]*GRPCRoute{},
+						Routes:         map[RouteKey]*L7Route{},
 						ResolvedSecret: helpers.GetPointer(client.ObjectKeyFromObject(secretSameNs)),
 						SupportedKinds: []v1.RouteGroupKind{
 							{Kind: "HTTPRoute"},
@@ -431,8 +427,7 @@ func TestBuildGateway(t *testing.T) {
 						Valid:                     true,
 						Attachable:                true,
 						AllowedRouteLabelSelector: labels.SelectorFromSet(labels.Set(labelSet)),
-						HTTPRoutes:                map[types.NamespacedName]*HTTPRoute{},
-						GRPCRoutes:                map[types.NamespacedName]*GRPCRoute{},
+						Routes:                    map[RouteKey]*L7Route{},
 						SupportedKinds: []v1.RouteGroupKind{
 							{Kind: "HTTPRoute", Group: helpers.GetPointer[v1.Group](v1.GroupName)},
 						},
@@ -477,8 +472,7 @@ func TestBuildGateway(t *testing.T) {
 						Source:         crossNamespaceSecretListener,
 						Valid:          true,
 						Attachable:     true,
-						HTTPRoutes:     map[types.NamespacedName]*HTTPRoute{},
-						GRPCRoutes:     map[types.NamespacedName]*GRPCRoute{},
+						Routes:         map[RouteKey]*L7Route{},
 						ResolvedSecret: helpers.GetPointer(client.ObjectKeyFromObject(secretDiffNamespace)),
 						SupportedKinds: []v1.RouteGroupKind{
 							{Kind: "HTTPRoute"},
@@ -503,8 +497,7 @@ func TestBuildGateway(t *testing.T) {
 						Conditions: staticConds.NewListenerRefNotPermitted(
 							`Certificate ref to secret diff-ns/secret not permitted by any ReferenceGrant`,
 						),
-						HTTPRoutes: map[types.NamespacedName]*HTTPRoute{},
-						GRPCRoutes: map[types.NamespacedName]*GRPCRoute{},
+						Routes: map[RouteKey]*L7Route{},
 						SupportedKinds: []v1.RouteGroupKind{
 							{Kind: "HTTPRoute"},
 						},
@@ -528,8 +521,7 @@ func TestBuildGateway(t *testing.T) {
 						Conditions: staticConds.NewListenerUnsupportedValue(
 							`invalid label selector: "invalid" is not a valid label selector operator`,
 						),
-						HTTPRoutes: map[types.NamespacedName]*HTTPRoute{},
-						GRPCRoutes: map[types.NamespacedName]*GRPCRoute{},
+						Routes: map[RouteKey]*L7Route{},
 						SupportedKinds: []v1.RouteGroupKind{
 							{Kind: "HTTPRoute", Group: helpers.GetPointer[v1.Group](v1.GroupName)},
 						},
@@ -553,8 +545,7 @@ func TestBuildGateway(t *testing.T) {
 						Conditions: staticConds.NewListenerUnsupportedProtocol(
 							`protocol: Unsupported value: "TCP": supported values: "HTTP", "HTTPS"`,
 						),
-						HTTPRoutes: map[types.NamespacedName]*HTTPRoute{},
-						GRPCRoutes: map[types.NamespacedName]*GRPCRoute{},
+						Routes: map[RouteKey]*L7Route{},
 						SupportedKinds: []v1.RouteGroupKind{
 							{Kind: "HTTPRoute"},
 						},
@@ -586,8 +577,7 @@ func TestBuildGateway(t *testing.T) {
 						Conditions: staticConds.NewListenerUnsupportedValue(
 							`port: Invalid value: 0: port must be between 1-65535`,
 						),
-						HTTPRoutes: map[types.NamespacedName]*HTTPRoute{},
-						GRPCRoutes: map[types.NamespacedName]*GRPCRoute{},
+						Routes: map[RouteKey]*L7Route{},
 						SupportedKinds: []v1.RouteGroupKind{
 							{Kind: "HTTPRoute"},
 						},
@@ -600,8 +590,7 @@ func TestBuildGateway(t *testing.T) {
 						Conditions: staticConds.NewListenerUnsupportedValue(
 							`port: Invalid value: 65536: port must be between 1-65535`,
 						),
-						HTTPRoutes: map[types.NamespacedName]*HTTPRoute{},
-						GRPCRoutes: map[types.NamespacedName]*GRPCRoute{},
+						Routes: map[RouteKey]*L7Route{},
 						SupportedKinds: []v1.RouteGroupKind{
 							{Kind: "HTTPRoute"},
 						},
@@ -614,8 +603,7 @@ func TestBuildGateway(t *testing.T) {
 						Conditions: staticConds.NewListenerUnsupportedValue(
 							`port: Invalid value: 9113: port is already in use as MetricsPort`,
 						),
-						HTTPRoutes: map[types.NamespacedName]*HTTPRoute{},
-						GRPCRoutes: map[types.NamespacedName]*GRPCRoute{},
+						Routes: map[RouteKey]*L7Route{},
 						SupportedKinds: []v1.RouteGroupKind{
 							{Kind: "HTTPRoute"},
 						},
@@ -638,8 +626,7 @@ func TestBuildGateway(t *testing.T) {
 						Source:     invalidHostnameListener,
 						Valid:      false,
 						Conditions: staticConds.NewListenerUnsupportedValue(invalidHostnameMsg),
-						HTTPRoutes: map[types.NamespacedName]*HTTPRoute{},
-						GRPCRoutes: map[types.NamespacedName]*GRPCRoute{},
+						Routes:     map[RouteKey]*L7Route{},
 						SupportedKinds: []v1.RouteGroupKind{
 							{Kind: "HTTPRoute"},
 						},
@@ -649,8 +636,7 @@ func TestBuildGateway(t *testing.T) {
 						Source:     invalidHTTPSHostnameListener,
 						Valid:      false,
 						Conditions: staticConds.NewListenerUnsupportedValue(invalidHostnameMsg),
-						HTTPRoutes: map[types.NamespacedName]*HTTPRoute{},
-						GRPCRoutes: map[types.NamespacedName]*GRPCRoute{},
+						Routes:     map[RouteKey]*L7Route{},
 						SupportedKinds: []v1.RouteGroupKind{
 							{Kind: "HTTPRoute"},
 						},
@@ -671,8 +657,7 @@ func TestBuildGateway(t *testing.T) {
 						Source:     invalidTLSConfigListener,
 						Valid:      false,
 						Attachable: true,
-						HTTPRoutes: map[types.NamespacedName]*HTTPRoute{},
-						GRPCRoutes: map[types.NamespacedName]*GRPCRoute{},
+						Routes:     map[RouteKey]*L7Route{},
 						Conditions: staticConds.NewListenerInvalidCertificateRef(
 							`tls.certificateRefs[0]: Invalid value: test/does-not-exist: secret does not exist`,
 						),
@@ -709,8 +694,7 @@ func TestBuildGateway(t *testing.T) {
 						Source:     foo80Listener1,
 						Valid:      true,
 						Attachable: true,
-						HTTPRoutes: map[types.NamespacedName]*HTTPRoute{},
-						GRPCRoutes: map[types.NamespacedName]*GRPCRoute{},
+						Routes:     map[RouteKey]*L7Route{},
 						SupportedKinds: []v1.RouteGroupKind{
 							{Kind: "HTTPRoute"},
 						},
@@ -720,8 +704,7 @@ func TestBuildGateway(t *testing.T) {
 						Source:     foo8080Listener,
 						Valid:      true,
 						Attachable: true,
-						HTTPRoutes: map[types.NamespacedName]*HTTPRoute{},
-						GRPCRoutes: map[types.NamespacedName]*GRPCRoute{},
+						Routes:     map[RouteKey]*L7Route{},
 						SupportedKinds: []v1.RouteGroupKind{
 							{Kind: "HTTPRoute"},
 						},
@@ -731,8 +714,7 @@ func TestBuildGateway(t *testing.T) {
 						Source:     foo8081Listener,
 						Valid:      true,
 						Attachable: true,
-						HTTPRoutes: map[types.NamespacedName]*HTTPRoute{},
-						GRPCRoutes: map[types.NamespacedName]*GRPCRoute{},
+						Routes:     map[RouteKey]*L7Route{},
 						SupportedKinds: []v1.RouteGroupKind{
 							{Kind: "HTTPRoute"},
 						},
@@ -742,8 +724,7 @@ func TestBuildGateway(t *testing.T) {
 						Source:         foo443HTTPSListener1,
 						Valid:          true,
 						Attachable:     true,
-						HTTPRoutes:     map[types.NamespacedName]*HTTPRoute{},
-						GRPCRoutes:     map[types.NamespacedName]*GRPCRoute{},
+						Routes:         map[RouteKey]*L7Route{},
 						ResolvedSecret: helpers.GetPointer(client.ObjectKeyFromObject(secretSameNs)),
 						SupportedKinds: []v1.RouteGroupKind{
 							{Kind: "HTTPRoute"},
@@ -754,8 +735,7 @@ func TestBuildGateway(t *testing.T) {
 						Source:         foo8443HTTPSListener,
 						Valid:          true,
 						Attachable:     true,
-						HTTPRoutes:     map[types.NamespacedName]*HTTPRoute{},
-						GRPCRoutes:     map[types.NamespacedName]*GRPCRoute{},
+						Routes:         map[RouteKey]*L7Route{},
 						ResolvedSecret: helpers.GetPointer(client.ObjectKeyFromObject(secretSameNs)),
 						SupportedKinds: []v1.RouteGroupKind{
 							{Kind: "HTTPRoute"},
@@ -766,8 +746,7 @@ func TestBuildGateway(t *testing.T) {
 						Source:     bar80Listener,
 						Valid:      true,
 						Attachable: true,
-						HTTPRoutes: map[types.NamespacedName]*HTTPRoute{},
-						GRPCRoutes: map[types.NamespacedName]*GRPCRoute{},
+						Routes:     map[RouteKey]*L7Route{},
 						SupportedKinds: []v1.RouteGroupKind{
 							{Kind: "HTTPRoute"},
 						},
@@ -777,8 +756,7 @@ func TestBuildGateway(t *testing.T) {
 						Source:         bar443HTTPSListener,
 						Valid:          true,
 						Attachable:     true,
-						HTTPRoutes:     map[types.NamespacedName]*HTTPRoute{},
-						GRPCRoutes:     map[types.NamespacedName]*GRPCRoute{},
+						Routes:         map[RouteKey]*L7Route{},
 						ResolvedSecret: helpers.GetPointer(client.ObjectKeyFromObject(secretSameNs)),
 						SupportedKinds: []v1.RouteGroupKind{
 							{Kind: "HTTPRoute"},
@@ -789,8 +767,7 @@ func TestBuildGateway(t *testing.T) {
 						Source:         bar8443HTTPSListener,
 						Valid:          true,
 						Attachable:     true,
-						HTTPRoutes:     map[types.NamespacedName]*HTTPRoute{},
-						GRPCRoutes:     map[types.NamespacedName]*GRPCRoute{},
+						Routes:         map[RouteKey]*L7Route{},
 						ResolvedSecret: helpers.GetPointer(client.ObjectKeyFromObject(secretSameNs)),
 						SupportedKinds: []v1.RouteGroupKind{
 							{Kind: "HTTPRoute"},
@@ -823,8 +800,7 @@ func TestBuildGateway(t *testing.T) {
 						Source:     foo80Listener1,
 						Valid:      false,
 						Attachable: true,
-						HTTPRoutes: map[types.NamespacedName]*HTTPRoute{},
-						GRPCRoutes: map[types.NamespacedName]*GRPCRoute{},
+						Routes:     map[RouteKey]*L7Route{},
 						Conditions: staticConds.NewListenerProtocolConflict(conflict80PortMsg),
 						SupportedKinds: []v1.RouteGroupKind{
 							{Kind: "HTTPRoute"},
@@ -835,8 +811,7 @@ func TestBuildGateway(t *testing.T) {
 						Source:     bar80Listener,
 						Valid:      false,
 						Attachable: true,
-						HTTPRoutes: map[types.NamespacedName]*HTTPRoute{},
-						GRPCRoutes: map[types.NamespacedName]*GRPCRoute{},
+						Routes:     map[RouteKey]*L7Route{},
 						Conditions: staticConds.NewListenerProtocolConflict(conflict80PortMsg),
 						SupportedKinds: []v1.RouteGroupKind{
 							{Kind: "HTTPRoute"},
@@ -847,8 +822,7 @@ func TestBuildGateway(t *testing.T) {
 						Source:     foo443Listener,
 						Valid:      false,
 						Attachable: true,
-						HTTPRoutes: map[types.NamespacedName]*HTTPRoute{},
-						GRPCRoutes: map[types.NamespacedName]*GRPCRoute{},
+						Routes:     map[RouteKey]*L7Route{},
 						Conditions: staticConds.NewListenerProtocolConflict(conflict443PortMsg),
 						SupportedKinds: []v1.RouteGroupKind{
 							{Kind: "HTTPRoute"},
@@ -859,8 +833,7 @@ func TestBuildGateway(t *testing.T) {
 						Source:         foo80HTTPSListener,
 						Valid:          false,
 						Attachable:     true,
-						HTTPRoutes:     map[types.NamespacedName]*HTTPRoute{},
-						GRPCRoutes:     map[types.NamespacedName]*GRPCRoute{},
+						Routes:         map[RouteKey]*L7Route{},
 						Conditions:     staticConds.NewListenerProtocolConflict(conflict80PortMsg),
 						ResolvedSecret: helpers.GetPointer(client.ObjectKeyFromObject(secretSameNs)),
 						SupportedKinds: []v1.RouteGroupKind{
@@ -872,8 +845,7 @@ func TestBuildGateway(t *testing.T) {
 						Source:         foo443HTTPSListener1,
 						Valid:          false,
 						Attachable:     true,
-						HTTPRoutes:     map[types.NamespacedName]*HTTPRoute{},
-						GRPCRoutes:     map[types.NamespacedName]*GRPCRoute{},
+						Routes:         map[RouteKey]*L7Route{},
 						Conditions:     staticConds.NewListenerProtocolConflict(conflict443PortMsg),
 						ResolvedSecret: helpers.GetPointer(client.ObjectKeyFromObject(secretSameNs)),
 						SupportedKinds: []v1.RouteGroupKind{
@@ -885,8 +857,7 @@ func TestBuildGateway(t *testing.T) {
 						Source:         bar443HTTPSListener,
 						Valid:          false,
 						Attachable:     true,
-						HTTPRoutes:     map[types.NamespacedName]*HTTPRoute{},
-						GRPCRoutes:     map[types.NamespacedName]*GRPCRoute{},
+						Routes:         map[RouteKey]*L7Route{},
 						Conditions:     staticConds.NewListenerProtocolConflict(conflict443PortMsg),
 						ResolvedSecret: helpers.GetPointer(client.ObjectKeyFromObject(secretSameNs)),
 						SupportedKinds: []v1.RouteGroupKind{

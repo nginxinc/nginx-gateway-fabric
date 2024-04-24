@@ -18,7 +18,6 @@ func (d *NGFResourceCounts) Attributes() []attribute.KeyValue {
 	attrs = append(attrs, attribute.Int64("GatewayCount", d.GatewayCount))
 	attrs = append(attrs, attribute.Int64("GatewayClassCount", d.GatewayClassCount))
 	attrs = append(attrs, attribute.Int64("HTTPRouteCount", d.HTTPRouteCount))
-	attrs = append(attrs, attribute.Int64("GRPCRouteCount", d.GRPCRouteCount))
 	attrs = append(attrs, attribute.Int64("SecretCount", d.SecretCount))
 	attrs = append(attrs, attribute.Int64("ServiceCount", d.ServiceCount))
 	attrs = append(attrs, attribute.Int64("EndpointCount", d.EndpointCount))

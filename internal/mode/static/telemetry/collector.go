@@ -61,8 +61,6 @@ type NGFResourceCounts struct {
 	GatewayClassCount int64
 	// HTTPRouteCount is the number of relevant HTTPRoutes.
 	HTTPRouteCount int64
-	// GRPCRouteCount is the number of relevant GRPCRoutes.
-	GRPCRouteCount int64
 	// SecretCount is the number of relevant Secrets.
 	SecretCount int64
 	// ServiceCount is the number of relevant Services.
@@ -176,8 +174,7 @@ func collectGraphResourceCount(
 		ngfResourceCounts.GatewayCount++
 	}
 
-	ngfResourceCounts.HTTPRouteCount = int64(len(g.HTTPRoutes))
-	ngfResourceCounts.GRPCRouteCount = int64(len(g.GRPCRoutes))
+	ngfResourceCounts.HTTPRouteCount = int64(len(g.Routes))
 	ngfResourceCounts.SecretCount = int64(len(g.ReferencedSecrets))
 	ngfResourceCounts.ServiceCount = int64(len(g.ReferencedServices))
 

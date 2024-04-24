@@ -196,7 +196,7 @@ See the [static-mode]({{< relref "/reference/cli-help.md#static-mode">}}) comman
   - `hostnames`: Supported.
   - `rules`
     - `matches`
-      - `method`: Partially supported. Only `Exact` type. If `method.method` is set, `method.service` MUST also be set.
+      - `method`: Partially supported. Only `Exact` type with both `method.service` and `method.method` specified.
       - `headers`: Partially supported. Only `Exact` type.
     - `filters`: Not supported
     - `backendRefs`: Partially supported. Backend ref `filters` are not supported.

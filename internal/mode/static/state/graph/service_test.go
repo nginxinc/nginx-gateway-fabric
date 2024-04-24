@@ -8,7 +8,7 @@ import (
 )
 
 func TestBuildReferencedServices(t *testing.T) {
-	normalRoute := &HTTPRoute{
+	normalRoute := &L7Route{
 		ParentRefs: []ParentRef{
 			{
 				Attachment: &ParentRefAttachmentStatus{
@@ -17,21 +17,24 @@ func TestBuildReferencedServices(t *testing.T) {
 			},
 		},
 		Valid: true,
-		Rules: []Rule{
-			{
-				BackendRefs: []BackendRef{
-					{
-						SvcNsName: types.NamespacedName{Namespace: "banana-ns", Name: "service"},
-						Weight:    1,
+		Spec: L7RouteSpec{
+			Rules: []RouteRule{
+				{
+					BackendRefs: []BackendRef{
+						{
+							SvcNsName: types.NamespacedName{Namespace: "banana-ns", Name: "service"},
+							Weight:    1,
+						},
 					},
+					ValidMatches: true,
+					ValidFilters: true,
 				},
-				ValidMatches: true,
-				ValidFilters: true,
 			},
 		},
+		RouteType: RouteTypeHTTP,
 	}
 
-	normalGRPCRoute := &GRPCRoute{
+	validRouteTwoServicesOneRule := &L7Route{
 		ParentRefs: []ParentRef{
 			{
 				Attachment: &ParentRefAttachmentStatus{
@@ -40,21 +43,27 @@ func TestBuildReferencedServices(t *testing.T) {
 			},
 		},
 		Valid: true,
-		Rules: []Rule{
-			{
-				BackendRefs: []BackendRef{
-					{
-						SvcNsName: types.NamespacedName{Namespace: "banana-ns", Name: "grpc-service"},
-						Weight:    1,
+		Spec: L7RouteSpec{
+			Rules: []RouteRule{
+				{
+					BackendRefs: []BackendRef{
+						{
+							SvcNsName: types.NamespacedName{Namespace: "service-ns", Name: "service"},
+							Weight:    1,
+						},
+						{
+							SvcNsName: types.NamespacedName{Namespace: "service-ns2", Name: "service2"},
+							Weight:    1,
+						},
 					},
+					ValidMatches: true,
+					ValidFilters: true,
 				},
-				ValidMatches: true,
-				ValidFilters: true,
 			},
 		},
 	}
 
-	validRouteTwoServicesOneRule := &HTTPRoute{
+	validRouteTwoServicesTwoRules := &L7Route{
 		ParentRefs: []ParentRef{
 			{
 				Attachment: &ParentRefAttachmentStatus{
@@ -63,58 +72,33 @@ func TestBuildReferencedServices(t *testing.T) {
 			},
 		},
 		Valid: true,
-		Rules: []Rule{
-			{
-				BackendRefs: []BackendRef{
-					{
-						SvcNsName: types.NamespacedName{Namespace: "service-ns", Name: "service"},
-						Weight:    1,
+		Spec: L7RouteSpec{
+			Rules: []RouteRule{
+				{
+					BackendRefs: []BackendRef{
+						{
+							SvcNsName: types.NamespacedName{Namespace: "service-ns", Name: "service"},
+							Weight:    1,
+						},
 					},
-					{
-						SvcNsName: types.NamespacedName{Namespace: "service-ns2", Name: "service2"},
-						Weight:    1,
-					},
+					ValidMatches: true,
+					ValidFilters: true,
 				},
-				ValidMatches: true,
-				ValidFilters: true,
+				{
+					BackendRefs: []BackendRef{
+						{
+							SvcNsName: types.NamespacedName{Namespace: "service-ns2", Name: "service2"},
+							Weight:    1,
+						},
+					},
+					ValidMatches: true,
+					ValidFilters: true,
+				},
 			},
 		},
 	}
 
-	validRouteTwoServicesTwoRules := &HTTPRoute{
-		ParentRefs: []ParentRef{
-			{
-				Attachment: &ParentRefAttachmentStatus{
-					Attached: true,
-				},
-			},
-		},
-		Valid: true,
-		Rules: []Rule{
-			{
-				BackendRefs: []BackendRef{
-					{
-						SvcNsName: types.NamespacedName{Namespace: "service-ns", Name: "service"},
-						Weight:    1,
-					},
-				},
-				ValidMatches: true,
-				ValidFilters: true,
-			},
-			{
-				BackendRefs: []BackendRef{
-					{
-						SvcNsName: types.NamespacedName{Namespace: "service-ns2", Name: "service2"},
-						Weight:    1,
-					},
-				},
-				ValidMatches: true,
-				ValidFilters: true,
-			},
-		},
-	}
-
-	invalidRoute := &HTTPRoute{
+	invalidRoute := &L7Route{
 		ParentRefs: []ParentRef{
 			{
 				Attachment: &ParentRefAttachmentStatus{
@@ -123,44 +107,23 @@ func TestBuildReferencedServices(t *testing.T) {
 			},
 		},
 		Valid: false,
-		Rules: []Rule{
-			{
-				BackendRefs: []BackendRef{
-					{
-						SvcNsName: types.NamespacedName{Namespace: "service-ns", Name: "service"},
-						Weight:    1,
+		Spec: L7RouteSpec{
+			Rules: []RouteRule{
+				{
+					BackendRefs: []BackendRef{
+						{
+							SvcNsName: types.NamespacedName{Namespace: "service-ns", Name: "service"},
+							Weight:    1,
+						},
 					},
+					ValidMatches: true,
+					ValidFilters: true,
 				},
-				ValidMatches: true,
-				ValidFilters: true,
 			},
 		},
 	}
 
-	invalidGRPCRoute := &GRPCRoute{
-		ParentRefs: []ParentRef{
-			{
-				Attachment: &ParentRefAttachmentStatus{
-					Attached: true,
-				},
-			},
-		},
-		Valid: false,
-		Rules: []Rule{
-			{
-				BackendRefs: []BackendRef{
-					{
-						SvcNsName: types.NamespacedName{Namespace: "service-ns", Name: "grpc-service"},
-						Weight:    1,
-					},
-				},
-				ValidMatches: true,
-				ValidFilters: true,
-			},
-		},
-	}
-
-	unattachedRoute := &HTTPRoute{
+	unattachedRoute := &L7Route{
 		ParentRefs: []ParentRef{
 			{
 				Attachment: &ParentRefAttachmentStatus{
@@ -169,21 +132,23 @@ func TestBuildReferencedServices(t *testing.T) {
 			},
 		},
 		Valid: true,
-		Rules: []Rule{
-			{
-				BackendRefs: []BackendRef{
-					{
-						SvcNsName: types.NamespacedName{Namespace: "service-ns", Name: "service"},
-						Weight:    1,
+		Spec: L7RouteSpec{
+			Rules: []RouteRule{
+				{
+					BackendRefs: []BackendRef{
+						{
+							SvcNsName: types.NamespacedName{Namespace: "service-ns", Name: "service"},
+							Weight:    1,
+						},
 					},
+					ValidMatches: true,
+					ValidFilters: true,
 				},
-				ValidMatches: true,
-				ValidFilters: true,
 			},
 		},
 	}
 
-	attachedRouteWithManyParentRefs := &HTTPRoute{
+	attachedRouteWithManyParentRefs := &L7Route{
 		ParentRefs: []ParentRef{
 			{
 				Attachment: &ParentRefAttachmentStatus{
@@ -202,20 +167,22 @@ func TestBuildReferencedServices(t *testing.T) {
 			},
 		},
 		Valid: true,
-		Rules: []Rule{
-			{
-				BackendRefs: []BackendRef{
-					{
-						SvcNsName: types.NamespacedName{Namespace: "service-ns", Name: "service"},
-						Weight:    1,
+		Spec: L7RouteSpec{
+			Rules: []RouteRule{
+				{
+					BackendRefs: []BackendRef{
+						{
+							SvcNsName: types.NamespacedName{Namespace: "service-ns", Name: "service"},
+							Weight:    1,
+						},
 					},
+					ValidMatches: true,
+					ValidFilters: true,
 				},
-				ValidMatches: true,
-				ValidFilters: true,
 			},
 		},
 	}
-	validRouteNoServiceNsName := &HTTPRoute{
+	validRouteNoServiceNsName := &L7Route{
 		ParentRefs: []ParentRef{
 			{
 				Attachment: &ParentRefAttachmentStatus{
@@ -224,42 +191,39 @@ func TestBuildReferencedServices(t *testing.T) {
 			},
 		},
 		Valid: true,
-		Rules: []Rule{
-			{
-				BackendRefs: []BackendRef{
-					{
-						Weight: 1,
+		Spec: L7RouteSpec{
+			Rules: []RouteRule{
+				{
+					BackendRefs: []BackendRef{
+						{
+							Weight: 1,
+						},
 					},
+					ValidMatches: true,
+					ValidFilters: true,
 				},
-				ValidMatches: true,
-				ValidFilters: true,
 			},
 		},
 	}
 
 	tests := []struct {
-		httpRoutes map[types.NamespacedName]*HTTPRoute
-		grpcRoutes map[types.NamespacedName]*GRPCRoute
-		exp        map[types.NamespacedName]struct{}
-		name       string
+		routes map[RouteKey]*L7Route
+		exp    map[types.NamespacedName]struct{}
+		name   string
 	}{
 		{
 			name: "normal route",
-			httpRoutes: map[types.NamespacedName]*HTTPRoute{
-				{Name: "normal-route"}: normalRoute,
-			},
-			grpcRoutes: map[types.NamespacedName]*GRPCRoute{
-				{Name: "normal-grpc-route"}: normalGRPCRoute,
+			routes: map[RouteKey]*L7Route{
+				{NamespacedName: types.NamespacedName{Name: "normal-route"}}: normalRoute,
 			},
 			exp: map[types.NamespacedName]struct{}{
-				{Namespace: "banana-ns", Name: "service"}:      {},
-				{Namespace: "banana-ns", Name: "grpc-service"}: {},
+				{Namespace: "banana-ns", Name: "service"}: {},
 			},
 		},
 		{
 			name: "route with two services in one Rule",
-			httpRoutes: map[types.NamespacedName]*HTTPRoute{
-				{Name: "two-svc-one-rule"}: validRouteTwoServicesOneRule,
+			routes: map[RouteKey]*L7Route{
+				{NamespacedName: types.NamespacedName{Name: "two-svc-one-rule"}}: validRouteTwoServicesOneRule,
 			},
 			exp: map[types.NamespacedName]struct{}{
 				{Namespace: "service-ns", Name: "service"}:   {},
@@ -268,8 +232,8 @@ func TestBuildReferencedServices(t *testing.T) {
 		},
 		{
 			name: "route with one service per rule",
-			httpRoutes: map[types.NamespacedName]*HTTPRoute{
-				{Name: "one-svc-per-rule"}: validRouteTwoServicesTwoRules,
+			routes: map[RouteKey]*L7Route{
+				{NamespacedName: types.NamespacedName{Name: "one-svc-per-rule"}}: validRouteTwoServicesTwoRules,
 			},
 			exp: map[types.NamespacedName]struct{}{
 				{Namespace: "service-ns", Name: "service"}:   {},
@@ -278,9 +242,9 @@ func TestBuildReferencedServices(t *testing.T) {
 		},
 		{
 			name: "two valid routes with same services",
-			httpRoutes: map[types.NamespacedName]*HTTPRoute{
-				{Name: "one-svc-per-rule"}: validRouteTwoServicesTwoRules,
-				{Name: "two-svc-one-rule"}: validRouteTwoServicesOneRule,
+			routes: map[RouteKey]*L7Route{
+				{NamespacedName: types.NamespacedName{Name: "one-svc-per-rule"}}: validRouteTwoServicesTwoRules,
+				{NamespacedName: types.NamespacedName{Name: "two-svc-one-rule"}}: validRouteTwoServicesOneRule,
 			},
 			exp: map[types.NamespacedName]struct{}{
 				{Namespace: "service-ns", Name: "service"}:   {},
@@ -289,9 +253,9 @@ func TestBuildReferencedServices(t *testing.T) {
 		},
 		{
 			name: "two valid routes with different services",
-			httpRoutes: map[types.NamespacedName]*HTTPRoute{
-				{Name: "one-svc-per-rule"}: validRouteTwoServicesTwoRules,
-				{Name: "normal-route"}:     normalRoute,
+			routes: map[RouteKey]*L7Route{
+				{NamespacedName: types.NamespacedName{Name: "one-svc-per-rule"}}: validRouteTwoServicesTwoRules,
+				{NamespacedName: types.NamespacedName{Name: "normal-route"}}:     normalRoute,
 			},
 			exp: map[types.NamespacedName]struct{}{
 				{Namespace: "service-ns", Name: "service"}:   {},
@@ -301,26 +265,23 @@ func TestBuildReferencedServices(t *testing.T) {
 		},
 		{
 			name: "invalid routes",
-			httpRoutes: map[types.NamespacedName]*HTTPRoute{
-				{Name: "invalid-route"}: invalidRoute,
-			},
-			grpcRoutes: map[types.NamespacedName]*GRPCRoute{
-				{Name: "invalid-grpc"}: invalidGRPCRoute,
+			routes: map[RouteKey]*L7Route{
+				{NamespacedName: types.NamespacedName{Name: "invalid-route"}}: invalidRoute,
 			},
 			exp: nil,
 		},
 		{
 			name: "unattached route",
-			httpRoutes: map[types.NamespacedName]*HTTPRoute{
-				{Name: "unattached-route"}: unattachedRoute,
+			routes: map[RouteKey]*L7Route{
+				{NamespacedName: types.NamespacedName{Name: "unattached-route"}}: unattachedRoute,
 			},
 			exp: nil,
 		},
 		{
 			name: "combination of valid and invalid routes",
-			httpRoutes: map[types.NamespacedName]*HTTPRoute{
-				{Name: "normal-route"}:  normalRoute,
-				{Name: "invalid-route"}: invalidRoute,
+			routes: map[RouteKey]*L7Route{
+				{NamespacedName: types.NamespacedName{Name: "normal-route"}}:  normalRoute,
+				{NamespacedName: types.NamespacedName{Name: "invalid-route"}}: invalidRoute,
 			},
 			exp: map[types.NamespacedName]struct{}{
 				{Namespace: "banana-ns", Name: "service"}: {},
@@ -328,8 +289,8 @@ func TestBuildReferencedServices(t *testing.T) {
 		},
 		{
 			name: "route with many parentRefs and one is attached",
-			httpRoutes: map[types.NamespacedName]*HTTPRoute{
-				{Name: "multiple-parent-ref-route"}: attachedRouteWithManyParentRefs,
+			routes: map[RouteKey]*L7Route{
+				{NamespacedName: types.NamespacedName{Name: "multiple-parent-ref-route"}}: attachedRouteWithManyParentRefs,
 			},
 			exp: map[types.NamespacedName]struct{}{
 				{Namespace: "service-ns", Name: "service"}: {},
@@ -337,8 +298,8 @@ func TestBuildReferencedServices(t *testing.T) {
 		},
 		{
 			name: "valid route no service nsname",
-			httpRoutes: map[types.NamespacedName]*HTTPRoute{
-				{Name: "no-service-nsname"}: validRouteNoServiceNsName,
+			routes: map[RouteKey]*L7Route{
+				{NamespacedName: types.NamespacedName{Name: "no-service-nsname"}}: validRouteNoServiceNsName,
 			},
 			exp: nil,
 		},
@@ -347,7 +308,7 @@ func TestBuildReferencedServices(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewWithT(t)
-			g.Expect(buildReferencedServices(test.httpRoutes, test.grpcRoutes)).To(Equal(test.exp))
+			g.Expect(buildReferencedServices(test.routes)).To(Equal(test.exp))
 		})
 	}
 }

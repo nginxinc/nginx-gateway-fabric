@@ -47,9 +47,9 @@ server {
         js_content httpmatches.redirect;
         {{- end }}
 
-        {{ $proxyOrGRPC := "proxy" }}{{ if $l.IsGRPC }}{{ $proxyOrGRPC = "grpc" }}{{ end }}
+        {{ $proxyOrGRPC := "proxy" }}{{ if $l.GRPC }}{{ $proxyOrGRPC = "grpc" }}{{ end }}
 
-        {{- if $l.IsGRPC }}
+        {{- if $l.GRPC }}
         include /etc/nginx/grpc-error-pages.conf;
         {{- end }}
 

@@ -90,7 +90,7 @@ func createSSLServer(virtualServer dataplane.VirtualServer, serverID int) (http.
 		}, nil
 	}
 
-	locs, matchPairs, http2 := createLocations(&virtualServer, serverID)
+	locs, matchPairs, grpc := createLocations(&virtualServer, serverID)
 
 	return http.Server{
 		ServerName: virtualServer.Hostname,
@@ -100,7 +100,7 @@ func createSSLServer(virtualServer dataplane.VirtualServer, serverID int) (http.
 		},
 		Locations: locs,
 		Port:      virtualServer.Port,
-		GRPC:      http2,
+		GRPC:      grpc,
 	}, matchPairs
 }
 
@@ -112,13 +112,13 @@ func createServer(virtualServer dataplane.VirtualServer, serverID int) (http.Ser
 		}, nil
 	}
 
-	locs, matchPairs, http2 := createLocations(&virtualServer, serverID)
+	locs, matchPairs, grpc := createLocations(&virtualServer, serverID)
 
 	return http.Server{
 		ServerName: virtualServer.Hostname,
 		Locations:  locs,
 		Port:       virtualServer.Port,
-		GRPC:       http2,
+		GRPC:       grpc,
 	}, matchPairs
 }
 
@@ -136,7 +136,7 @@ func createLocations(server *dataplane.VirtualServer, serverID int) ([]http.Loca
 	locs := make([]http.Location, 0, maxLocs)
 	matchPairs := make(httpMatchPairs)
 	var rootPathExists bool
-	var http2 bool
+	var grpc bool
 
 	for pathRuleIdx, rule := range server.PathRules {
 		matches := make([]routeMatch, 0, len(rule.MatchRules))
@@ -146,7 +146,7 @@ func createLocations(server *dataplane.VirtualServer, serverID int) ([]http.Loca
 		}
 
 		if rule.GRPC {
-			http2 = true
+			grpc = true
 		}
 
 		extLocations := initializeExternalLocations(rule, pathsAndTypes)
@@ -184,7 +184,7 @@ func createLocations(server *dataplane.VirtualServer, serverID int) ([]http.Loca
 		locs = append(locs, createDefaultRootLocation())
 	}
 
-	return locs, matchPairs, http2
+	return locs, matchPairs, grpc
 }
 
 // pathAndTypeMap contains a map of paths and any path types defined for that path
@@ -309,7 +309,7 @@ func updateLocationsForFilters(
 			GRPC,
 		)
 		buildLocations[i].ProxyPass = proxyPass
-		buildLocations[i].IsGRPC = GRPC
+		buildLocations[i].GRPC = GRPC
 	}
 
 	return buildLocations

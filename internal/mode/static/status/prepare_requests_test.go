@@ -204,8 +204,8 @@ var (
 )
 
 func TestBuildHTTPRouteStatuses(t *testing.T) {
-	routes := map[types.NamespacedName]*graph.HTTPRoute{
-		{Namespace: "test", Name: "hr-valid"}: {
+	routes := map[graph.RouteKey]*graph.L7Route{
+		{NamespacedName: types.NamespacedName{Namespace: "test", Name: "hr-valid"}}: {
 			Valid: true,
 			Source: &v1.HTTPRoute{
 				ObjectMeta: metav1.ObjectMeta{
@@ -217,9 +217,11 @@ func TestBuildHTTPRouteStatuses(t *testing.T) {
 					CommonRouteSpec: commonRouteSpecValid,
 				},
 			},
-			ParentRefs: parentRefsValid,
+			ParentRefs:    parentRefsValid,
+			RouteType:     graph.RouteTypeHTTP,
+			SrcParentRefs: commonRouteSpecValid.ParentRefs,
 		},
-		{Namespace: "test", Name: "hr-invalid"}: {
+		{NamespacedName: types.NamespacedName{Namespace: "test", Name: "hr-invalid"}}: {
 			Valid:      false,
 			Conditions: []conditions.Condition{invalidRouteCondition},
 			Source: &v1.HTTPRoute{
@@ -232,7 +234,9 @@ func TestBuildHTTPRouteStatuses(t *testing.T) {
 					CommonRouteSpec: commonRouteSpecInvalid,
 				},
 			},
-			ParentRefs: parentRefsInvalid,
+			ParentRefs:    parentRefsInvalid,
+			RouteType:     graph.RouteTypeHTTP,
+			SrcParentRefs: commonRouteSpecInvalid.ParentRefs,
 		},
 	}
 
@@ -256,7 +260,7 @@ func TestBuildHTTPRouteStatuses(t *testing.T) {
 
 	updater := statusFramework.NewUpdater(k8sClient, zap.New())
 
-	reqs := PrepareHTTPRouteRequests(routes, transitionTime, NginxReloadResult{}, gatewayCtlrName)
+	reqs := PrepareRouteRequests(routes, transitionTime, NginxReloadResult{}, gatewayCtlrName)
 
 	updater.Update(context.Background(), reqs...)
 
@@ -272,8 +276,8 @@ func TestBuildHTTPRouteStatuses(t *testing.T) {
 }
 
 func TestBuildGRPCRouteStatuses(t *testing.T) {
-	grpcRoutes := map[types.NamespacedName]*graph.GRPCRoute{
-		{Namespace: "test", Name: "gr-valid"}: {
+	routes := map[graph.RouteKey]*graph.L7Route{
+		{NamespacedName: types.NamespacedName{Namespace: "test", Name: "gr-valid"}}: {
 			Valid: true,
 			Source: &v1alpha2.GRPCRoute{
 				ObjectMeta: metav1.ObjectMeta{
@@ -285,9 +289,11 @@ func TestBuildGRPCRouteStatuses(t *testing.T) {
 					CommonRouteSpec: commonRouteSpecValid,
 				},
 			},
-			ParentRefs: parentRefsValid,
+			ParentRefs:    parentRefsValid,
+			RouteType:     graph.RouteTypeGRPC,
+			SrcParentRefs: commonRouteSpecValid.ParentRefs,
 		},
-		{Namespace: "test", Name: "gr-invalid"}: {
+		{NamespacedName: types.NamespacedName{Namespace: "test", Name: "gr-invalid"}}: {
 			Valid:      false,
 			Conditions: []conditions.Condition{invalidRouteCondition},
 			Source: &v1alpha2.GRPCRoute{
@@ -300,7 +306,9 @@ func TestBuildGRPCRouteStatuses(t *testing.T) {
 					CommonRouteSpec: commonRouteSpecInvalid,
 				},
 			},
-			ParentRefs: parentRefsInvalid,
+			ParentRefs:    parentRefsInvalid,
+			RouteType:     graph.RouteTypeGRPC,
+			SrcParentRefs: commonRouteSpecInvalid.ParentRefs,
 		},
 	}
 
@@ -317,25 +325,25 @@ func TestBuildGRPCRouteStatuses(t *testing.T) {
 
 	k8sClient := createK8sClientFor(&v1alpha2.GRPCRoute{})
 
-	for _, r := range grpcRoutes {
+	for _, r := range routes {
 		err := k8sClient.Create(context.Background(), r.Source)
 		g.Expect(err).ToNot(HaveOccurred())
 	}
 
 	updater := statusFramework.NewUpdater(k8sClient, zap.New())
 
-	reqs := PrepareGRPCRouteRequests(grpcRoutes, transitionTime, NginxReloadResult{}, gatewayCtlrName)
+	reqs := PrepareRouteRequests(routes, transitionTime, NginxReloadResult{}, gatewayCtlrName)
 
 	updater.Update(context.Background(), reqs...)
 
 	g.Expect(reqs).To(HaveLen(len(expectedStatuses)))
 
 	for nsname, expected := range expectedStatuses {
-		var gr v1alpha2.GRPCRoute
+		var hr v1alpha2.GRPCRoute
 
-		err := k8sClient.Get(context.Background(), nsname, &gr)
+		err := k8sClient.Get(context.Background(), nsname, &hr)
 		g.Expect(err).ToNot(HaveOccurred())
-		g.Expect(helpers.Diff(expected, gr.Status)).To(BeEmpty())
+		g.Expect(helpers.Diff(expected, hr.Status)).To(BeEmpty())
 	}
 }
 
@@ -343,28 +351,20 @@ func TestBuildRouteStatusesNginxErr(t *testing.T) {
 	const gatewayCtlrName = "controller"
 
 	gwNsName := types.NamespacedName{Namespace: "test", Name: "gateway"}
-	routeNsName := types.NamespacedName{Namespace: "test", Name: "hr-valid"}
+	routeKey := graph.RouteKey{NamespacedName: types.NamespacedName{Namespace: "test", Name: "hr-valid"}}
 
-	routes := map[types.NamespacedName]*graph.HTTPRoute{
-		routeNsName: {
-			Valid: true,
+	routes := map[graph.RouteKey]*graph.L7Route{
+		routeKey: {
+			Valid:     true,
+			RouteType: graph.RouteTypeHTTP,
 			Source: &v1.HTTPRoute{
 				ObjectMeta: metav1.ObjectMeta{
-					Namespace:  routeNsName.Namespace,
-					Name:       routeNsName.Name,
+					Namespace:  routeKey.NamespacedName.Namespace,
+					Name:       routeKey.NamespacedName.Name,
 					Generation: 3,
 				},
 				Spec: v1.HTTPRouteSpec{
-					CommonRouteSpec: v1.CommonRouteSpec{
-						ParentRefs: []v1.ParentReference{
-							{
-								SectionName: helpers.GetPointer[v1.SectionName]("listener-80-1"),
-							},
-							{
-								SectionName: helpers.GetPointer[v1.SectionName]("listener-80-2"),
-							},
-						},
-					},
+					CommonRouteSpec: commonRouteSpecValid,
 				},
 			},
 			ParentRefs: []graph.ParentRef{
@@ -376,6 +376,7 @@ func TestBuildRouteStatusesNginxErr(t *testing.T) {
 					},
 				},
 			},
+			SrcParentRefs: commonRouteSpecValid.ParentRefs,
 		},
 	}
 
@@ -425,7 +426,7 @@ func TestBuildRouteStatusesNginxErr(t *testing.T) {
 
 	updater := statusFramework.NewUpdater(k8sClient, zap.New())
 
-	reqs := PrepareHTTPRouteRequests(
+	reqs := PrepareRouteRequests(
 		routes,
 		transitionTime,
 		NginxReloadResult{Error: errors.New("test error")},
@@ -438,7 +439,7 @@ func TestBuildRouteStatusesNginxErr(t *testing.T) {
 
 	var hr v1.HTTPRoute
 
-	err := k8sClient.Get(context.Background(), routeNsName, &hr)
+	err := k8sClient.Get(context.Background(), routeKey.NamespacedName, &hr)
 	g.Expect(err).ToNot(HaveOccurred())
 	g.Expect(helpers.Diff(expectedStatus, hr.Status)).To(BeEmpty())
 }
@@ -708,15 +709,15 @@ func TestBuildGatewayStatuses(t *testing.T) {
 					{
 						Name:  "listener-valid-1",
 						Valid: true,
-						HTTPRoutes: map[types.NamespacedName]*graph.HTTPRoute{
-							{Namespace: "test", Name: "hr-1"}: {},
+						Routes: map[graph.RouteKey]*graph.L7Route{
+							{NamespacedName: types.NamespacedName{Namespace: "test", Name: "hr-1"}}: {},
 						},
 					},
 					{
 						Name:  "listener-valid-2",
 						Valid: true,
-						HTTPRoutes: map[types.NamespacedName]*graph.HTTPRoute{
-							{Namespace: "test", Name: "hr-1"}: {},
+						Routes: map[graph.RouteKey]*graph.L7Route{
+							{NamespacedName: types.NamespacedName{Namespace: "test", Name: "hr-1"}}: {},
 						},
 					},
 				},
@@ -766,8 +767,8 @@ func TestBuildGatewayStatuses(t *testing.T) {
 					{
 						Name:  "listener-valid",
 						Valid: true,
-						HTTPRoutes: map[types.NamespacedName]*graph.HTTPRoute{
-							{Namespace: "test", Name: "hr-1"}: {},
+						Routes: map[graph.RouteKey]*graph.L7Route{
+							{NamespacedName: types.NamespacedName{Namespace: "test", Name: "hr-1"}}: {},
 						},
 					},
 					{
@@ -960,8 +961,8 @@ func TestBuildGatewayStatuses(t *testing.T) {
 					{
 						Name:  "listener-valid",
 						Valid: true,
-						HTTPRoutes: map[types.NamespacedName]*graph.HTTPRoute{
-							{Namespace: "test", Name: "hr-1"}: {},
+						Routes: map[graph.RouteKey]*graph.L7Route{
+							{NamespacedName: types.NamespacedName{Namespace: "test", Name: "hr-1"}}: {},
 						},
 					},
 				},

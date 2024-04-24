@@ -5,12 +5,11 @@ import (
 )
 
 func buildReferencedServices(
-	httpRoutes map[types.NamespacedName]*HTTPRoute,
-	grpcRoutes map[types.NamespacedName]*GRPCRoute,
+	routes map[RouteKey]*L7Route,
 ) map[types.NamespacedName]struct{} {
 	svcNames := make(map[types.NamespacedName]struct{})
 
-	getServiceNamesFromRoute := func(parentRefs []ParentRef, routeRules []Rule) {
+	getServiceNamesFromRoute := func(parentRefs []ParentRef, routeRules []RouteRule) {
 		// If none of the ParentRefs are attached to the Gateway, we want to skip the route.
 		attached := false
 		for _, ref := range parentRefs {
@@ -37,20 +36,12 @@ func buildReferencedServices(
 	// routes all have populated ParentRefs from when they were created.
 	//
 	// Get all the service names referenced from all the Routes.
-	for _, route := range httpRoutes {
+	for _, route := range routes {
 		if !route.Valid {
 			continue
 		}
 
-		getServiceNamesFromRoute(route.ParentRefs, route.Rules)
-	}
-
-	for _, route := range grpcRoutes {
-		if !route.Valid {
-			continue
-		}
-
-		getServiceNamesFromRoute(route.ParentRefs, route.Rules)
+		getServiceNamesFromRoute(route.ParentRefs, route.Spec.Rules)
 	}
 
 	if len(svcNames) == 0 {

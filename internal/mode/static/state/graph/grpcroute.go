@@ -3,62 +3,22 @@ package graph
 import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	v1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 
-	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 	staticConds "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/conditions"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/validation"
 )
-
-// GRPCRoute represents a GRPCRoute.
-type GRPCRoute struct {
-	// Source is the source resource of the Route.
-	Source *v1alpha2.GRPCRoute
-	// ParentRefs includes ParentRefs with NGF Gateways only.
-	ParentRefs []ParentRef
-	// Conditions include Conditions for the GRPCRoute.
-	Conditions []conditions.Condition
-	// Rules include Rules for the HTTPRoute. Each Rule[i] corresponds to the ith HTTPRouteRule.
-	// If the Route is invalid, this field is nil
-	Rules []Rule
-	// Valid tells if the Route is valid.
-	// If it is invalid, NGF should not generate any configuration for it.
-	Valid bool
-	// Attachable tells if the Route can be attached to any of the Gateways.
-	// Route can be invalid but still attachable.
-	Attachable bool
-}
-
-// buildGRPCRoutesForGateways builds routes from GRPCRoutes that reference any of the specified Gateways.
-func buildGRPCRoutesForGateways(
-	validator validation.HTTPFieldsValidator,
-	grpcRoutes map[types.NamespacedName]*v1alpha2.GRPCRoute,
-	gatewayNsNames []types.NamespacedName,
-) map[types.NamespacedName]*GRPCRoute {
-	if len(gatewayNsNames) == 0 {
-		return nil
-	}
-
-	routes := make(map[types.NamespacedName]*GRPCRoute)
-
-	for _, ghr := range grpcRoutes {
-		r := buildGRPCRoute(validator, ghr, gatewayNsNames)
-		if r != nil {
-			routes[client.ObjectKeyFromObject(ghr)] = r
-		}
-	}
-
-	return routes
-}
 
 func buildGRPCRoute(
 	validator validation.HTTPFieldsValidator,
 	ghr *v1alpha2.GRPCRoute,
 	gatewayNsNames []types.NamespacedName,
-) *GRPCRoute {
-	r := &GRPCRoute{
-		Source: ghr,
+) *L7Route {
+	r := &L7Route{
+		Source:    ghr,
+		RouteType: RouteTypeGRPC,
 	}
 
 	sectionNameRefs, err := buildSectionNameRefs(ghr.Spec.ParentRefs, ghr.Namespace, gatewayNsNames)
@@ -73,6 +33,8 @@ func buildGRPCRoute(
 	}
 	r.ParentRefs = sectionNameRefs
 
+	r.SrcParentRefs = ghr.Spec.ParentRefs
+
 	if err := validateHostnames(
 		ghr.Spec.Hostnames,
 		field.NewPath("spec").Child("hostnames"),
@@ -83,15 +45,17 @@ func buildGRPCRoute(
 		return r
 	}
 
+	r.Spec.Hostnames = ghr.Spec.Hostnames
+
 	r.Valid = true
 	r.Attachable = true
-	var rules []Rule
+	var rules []RouteRule
 	var atLeastOneValid bool
 	var allRulesErrs field.ErrorList
 
 	rules, atLeastOneValid, allRulesErrs = processGRPCRouteRules(ghr.Spec.Rules, validator)
 
-	r.Rules = rules
+	r.Spec.Rules = rules
 
 	if len(allRulesErrs) > 0 {
 		msg := allRulesErrs.ToAggregate().Error()
@@ -112,8 +76,8 @@ func buildGRPCRoute(
 func processGRPCRouteRules(
 	specRules []v1alpha2.GRPCRouteRule,
 	validator validation.HTTPFieldsValidator,
-) ([]Rule, bool, field.ErrorList) {
-	rules := make([]Rule, len(specRules))
+) ([]RouteRule, bool, field.ErrorList) {
+	rules := make([]RouteRule, len(specRules))
 	var allRulesErrs field.ErrorList
 	atLeastOneValid := false
 	validFilters := true
@@ -138,7 +102,19 @@ func processGRPCRouteRules(
 			validFilters = false
 		}
 
+		backendRefs := make([]RouteBackendRef, 0, len(rule.BackendRefs))
+
 		// rule.BackendRefs are validated separately because of their special requirements
+		for _, b := range rule.BackendRefs {
+			interfaceFilters := make([]interface{}, 0, len(b.Filters))
+			for i, v := range b.Filters {
+				interfaceFilters[i] = v
+			}
+			rbr := RouteBackendRef{
+				b.BackendRef, interfaceFilters,
+			}
+			backendRefs = append(backendRefs, rbr)
+		}
 
 		allErrs = append(allErrs, matchesErrs...)
 		allRulesErrs = append(allRulesErrs, allErrs...)
@@ -147,12 +123,46 @@ func processGRPCRouteRules(
 			atLeastOneValid = true
 		}
 
-		rules[i] = Rule{
-			ValidMatches: len(matchesErrs) == 0,
-			ValidFilters: validFilters,
+		rules[i] = RouteRule{
+			ValidMatches:     len(matchesErrs) == 0,
+			ValidFilters:     validFilters,
+			Matches:          convertGRPCMatches(rule.Matches),
+			Filters:          nil,
+			RouteBackendRefs: backendRefs,
 		}
 	}
 	return rules, atLeastOneValid, allRulesErrs
+}
+
+func convertGRPCMatches(grpcMatches []v1alpha2.GRPCRouteMatch) []v1.HTTPRouteMatch {
+	hms := make([]v1.HTTPRouteMatch, 0, len(grpcMatches))
+	for _, gm := range grpcMatches {
+		hm := v1.HTTPRouteMatch{}
+		hmHeaders := make([]v1.HTTPHeaderMatch, 0, len(gm.Headers))
+		for _, head := range gm.Headers {
+			hmHeaders = append(hmHeaders, v1.HTTPHeaderMatch{
+				Name:  v1.HTTPHeaderName(head.Name),
+				Value: head.Value,
+			})
+		}
+		hm.Headers = hmHeaders
+		pathValue := "/"
+		pathType := v1.PathMatchType("PathPrefix")
+		if gm.Method != nil && gm.Method.Service != nil && gm.Method.Method != nil {
+			// if method match is provided, service and method are required
+			// as the only method type supported is exact.
+			// Validation has already been done at this point, and the condition will
+			// have been added there if required.
+			pathValue = "/" + *gm.Method.Service + "/" + *gm.Method.Method
+			pathType = v1.PathMatchType("Exact")
+		}
+		hm.Path = &v1.HTTPPathMatch{
+			Type:  &pathType,
+			Value: helpers.GetPointer(pathValue),
+		}
+		hms = append(hms, hm)
+	}
+	return hms
 }
 
 func validateGRPCMatch(

@@ -45,10 +45,8 @@ type Graph struct {
 	// GatewayClassName field of the resource) but ignored. It doesn't hold the Gateway resources that do not belong to
 	// the NGINX Gateway Fabric.
 	IgnoredGateways map[types.NamespacedName]*gatewayv1.Gateway
-	// HTTPRoutes holds Route resources.
-	HTTPRoutes map[types.NamespacedName]*HTTPRoute
-	// GRPCRoutes holds Route resources.
-	GRPCRoutes map[types.NamespacedName]*GRPCRoute
+	// Routes hold Route resources.
+	Routes map[RouteKey]*L7Route
 	// ReferencedSecrets includes Secrets referenced by Gateway Listeners, including invalid ones.
 	// It is different from the other maps, because it includes entries for Secrets that do not exist
 	// in the cluster. We need such entries so that we can query the Graph to determine if a Secret is referenced
@@ -146,20 +144,23 @@ func BuildGraph(
 		gw,
 	)
 
-	hrs := buildHTTPRoutesForGateways(validators.HTTPFieldsValidator, state.HTTPRoutes, processedGws.GetAllNsNames())
-	grs := buildGRPCRoutesForGateways(validators.HTTPFieldsValidator, state.GRPCRoutes, processedGws.GetAllNsNames())
-	bindRoutesToListeners(hrs, grs, gw, state.Namespaces)
-	addBackendRefsToRouteRules(hrs, grs, refGrantResolver, state.Services, processedBackendTLSPolicies)
+	routes := buildRoutesForGateways(
+		validators.HTTPFieldsValidator,
+		state.HTTPRoutes,
+		state.GRPCRoutes,
+		processedGws.GetAllNsNames(),
+	)
+	bindRoutesToListeners(routes, gw, state.Namespaces)
+	addBackendRefsToRouteRules(routes, refGrantResolver, state.Services, processedBackendTLSPolicies)
 
 	referencedNamespaces := buildReferencedNamespaces(state.Namespaces, gw)
 
-	referencedServices := buildReferencedServices(hrs, grs)
+	referencedServices := buildReferencedServices(routes)
 
 	g := &Graph{
 		GatewayClass:               gc,
 		Gateway:                    gw,
-		HTTPRoutes:                 hrs,
-		GRPCRoutes:                 grs,
+		Routes:                     routes,
 		IgnoredGatewayClasses:      processedGwClasses.Ignored,
 		IgnoredGateways:            processedGws.Ignored,
 		ReferencedSecrets:          secretResolver.getResolvedSecrets(),

@@ -34,16 +34,16 @@ func getModifiedRef(mod func(ref gatewayv1.BackendRef) gatewayv1.BackendRef) gat
 	return mod(getNormalRef())
 }
 
-func TestValidateHTTPBackendRef(t *testing.T) {
+func TestValidateRouteBackendRef(t *testing.T) {
 	tests := []struct {
 		expectedCondition conditions.Condition
 		name              string
-		ref               gatewayv1.HTTPBackendRef
+		ref               RouteBackendRef
 		expectedValid     bool
 	}{
 		{
 			name: "normal case",
-			ref: gatewayv1.HTTPBackendRef{
+			ref: RouteBackendRef{
 				BackendRef: getNormalRef(),
 				Filters:    nil,
 			},
@@ -51,11 +51,13 @@ func TestValidateHTTPBackendRef(t *testing.T) {
 		},
 		{
 			name: "filters not supported",
-			ref: gatewayv1.HTTPBackendRef{
+			ref: RouteBackendRef{
 				BackendRef: getNormalRef(),
-				Filters: []gatewayv1.HTTPRouteFilter{
-					{
-						Type: gatewayv1.HTTPRouteFilterRequestHeaderModifier,
+				Filters: []any{
+					[]gatewayv1.HTTPRouteFilter{
+						{
+							Type: gatewayv1.HTTPRouteFilterRequestHeaderModifier,
+						},
 					},
 				},
 			},
@@ -66,7 +68,7 @@ func TestValidateHTTPBackendRef(t *testing.T) {
 		},
 		{
 			name: "invalid base ref",
-			ref: gatewayv1.HTTPBackendRef{
+			ref: RouteBackendRef{
 				BackendRef: getModifiedRef(func(backend gatewayv1.BackendRef) gatewayv1.BackendRef {
 					backend.Kind = helpers.GetPointer[gatewayv1.Kind]("NotService")
 					return backend
@@ -84,65 +86,7 @@ func TestValidateHTTPBackendRef(t *testing.T) {
 			g := NewWithT(t)
 			resolver := newReferenceGrantResolver(nil)
 
-			valid, cond := validateHTTPBackendRef(test.ref, "test", resolver, field.NewPath("test"))
-
-			g.Expect(valid).To(Equal(test.expectedValid))
-			g.Expect(cond).To(Equal(test.expectedCondition))
-		})
-	}
-}
-
-func TestValidateGRPCBackendRef(t *testing.T) {
-	tests := []struct {
-		expectedCondition conditions.Condition
-		name              string
-		ref               v1alpha2.GRPCBackendRef
-		expectedValid     bool
-	}{
-		{
-			name: "normal case",
-			ref: v1alpha2.GRPCBackendRef{
-				BackendRef: getNormalRef(),
-				Filters:    nil,
-			},
-			expectedValid: true,
-		},
-		{
-			name: "filters not supported",
-			ref: v1alpha2.GRPCBackendRef{
-				BackendRef: getNormalRef(),
-				Filters: []v1alpha2.GRPCRouteFilter{
-					{
-						Type: v1alpha2.GRPCRouteFilterRequestHeaderModifier,
-					},
-				},
-			},
-			expectedValid: false,
-			expectedCondition: staticConds.NewRouteBackendRefUnsupportedValue(
-				"test.filters: Too many: 1: must have at most 0 items",
-			),
-		},
-		{
-			name: "invalid base ref",
-			ref: v1alpha2.GRPCBackendRef{
-				BackendRef: getModifiedRef(func(backend gatewayv1.BackendRef) gatewayv1.BackendRef {
-					backend.Kind = helpers.GetPointer[gatewayv1.Kind]("NotService")
-					return backend
-				}),
-			},
-			expectedValid: false,
-			expectedCondition: staticConds.NewRouteBackendRefInvalidKind(
-				`test.kind: Unsupported value: "NotService": supported values: "Service"`,
-			),
-		},
-	}
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			g := NewWithT(t)
-			resolver := newReferenceGrantResolver(nil)
-
-			valid, cond := validateGRPCBackendRef(test.ref, "test", resolver, field.NewPath("test"))
+			valid, cond := validateRouteBackendRef(test.ref, "test", resolver, field.NewPath("test"))
 
 			g.Expect(valid).To(Equal(test.expectedValid))
 			g.Expect(cond).To(Equal(test.expectedCondition))
@@ -390,21 +334,34 @@ func TestGetServiceAndPortFromRef(t *testing.T) {
 }
 
 func TestAddBackendRefsToRulesTest(t *testing.T) {
+	sectionNameRefs := []ParentRef{
+		{
+			Idx:     0,
+			Gateway: types.NamespacedName{Namespace: "test", Name: "gateway"},
+			Attachment: &ParentRefAttachmentStatus{
+				Attached: true,
+			},
+		},
+	}
 	createRoute := func(
 		name string,
 		kind gatewayv1.Kind,
 		refsPerBackend int,
 		serviceNames ...string,
-	) *gatewayv1.HTTPRoute {
-		hr := &gatewayv1.HTTPRoute{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: "test",
-				Name:      name,
+	) *L7Route {
+		hr := &L7Route{
+			Source: &gatewayv1.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "test",
+					Name:      name,
+				},
 			},
+			ParentRefs: sectionNameRefs,
+			Valid:      true,
 		}
 
-		createHTTPBackendRef := func(svcName string, port gatewayv1.PortNumber, weight *int32) gatewayv1.HTTPBackendRef {
-			return gatewayv1.HTTPBackendRef{
+		createRouteBackendRef := func(svcName string, port gatewayv1.PortNumber, weight *int32) RouteBackendRef {
+			return RouteBackendRef{
 				BackendRef: gatewayv1.BackendRef{
 					BackendObjectReference: gatewayv1.BackendObjectReference{
 						Kind:      helpers.GetPointer(kind),
@@ -417,48 +374,26 @@ func TestAddBackendRefsToRulesTest(t *testing.T) {
 			}
 		}
 
-		hr.Spec.Rules = make([]gatewayv1.HTTPRouteRule, len(serviceNames))
+		hr.Spec.Rules = make([]RouteRule, len(serviceNames))
 
 		for idx, svcName := range serviceNames {
-			refs := []gatewayv1.HTTPBackendRef{
-				createHTTPBackendRef(svcName, 80, nil),
+			refs := []RouteBackendRef{
+				createRouteBackendRef(svcName, 80, nil),
 			}
 			if refsPerBackend == 2 {
-				refs = append(refs, createHTTPBackendRef(svcName, 81, helpers.GetPointer[int32](5)))
+				refs = append(refs, createRouteBackendRef(svcName, 81, helpers.GetPointer[int32](5)))
 			}
 			if refsPerBackend != 1 && refsPerBackend != 2 {
 				panic("invalid refsPerBackend")
 			}
 
-			hr.Spec.Rules[idx] = gatewayv1.HTTPRouteRule{
-				BackendRefs: refs,
+			hr.Spec.Rules[idx] = RouteRule{
+				RouteBackendRefs: refs,
+				ValidMatches:     true,
+				ValidFilters:     true,
 			}
 		}
 		return hr
-	}
-
-	const (
-		allValid   = true
-		allInvalid = false
-	)
-
-	createRules := func(hr *gatewayv1.HTTPRoute, validMatches, validFilters bool) []Rule {
-		rules := make([]Rule, len(hr.Spec.Rules))
-		for i := range rules {
-			rules[i].ValidMatches = validMatches
-			rules[i].ValidFilters = validFilters
-		}
-		return rules
-	}
-
-	sectionNameRefs := []ParentRef{
-		{
-			Idx:     0,
-			Gateway: types.NamespacedName{Namespace: "test", Name: "gateway"},
-			Attachment: &ParentRefAttachmentStatus{
-				Attached: true,
-			},
-		},
 	}
 
 	hrWithOneBackend := createRoute("hr1", "Service", 1, "svc1")
@@ -466,8 +401,17 @@ func TestAddBackendRefsToRulesTest(t *testing.T) {
 	hrWithTwoDiffBackends := createRoute("hr2", "Service", 2, "svc1")
 	hrWithInvalidRule := createRoute("hr3", "NotService", 1, "svc1")
 	hrWithZeroBackendRefs := createRoute("hr4", "Service", 1, "svc1")
-	hrWithZeroBackendRefs.Spec.Rules[0].BackendRefs = nil
-	hrWithTwoDiffBackends.Spec.Rules[0].BackendRefs[1].Name = "svc2"
+	hrWithZeroBackendRefs.Spec.Rules[0].RouteBackendRefs = nil
+	hrWithTwoDiffBackends.Spec.Rules[0].RouteBackendRefs[1].Name = "svc2"
+
+	hrWithOneBackendInvalid := createRoute("hr1", "Service", 1, "svc1")
+	hrWithOneBackendInvalid.Valid = false
+
+	hrWithOneBackendInvalidMatches := createRoute("hr1", "Service", 1, "svc1")
+	hrWithOneBackendInvalidMatches.Spec.Rules[0].ValidMatches = false
+
+	hrWithOneBackendInvalidFilters := createRoute("hr1", "Service", 1, "svc1")
+	hrWithOneBackendInvalidFilters.Spec.Rules[0].ValidFilters = false
 
 	getSvc := func(name string) *v1.Service {
 		return &v1.Service{
@@ -596,19 +540,14 @@ func TestAddBackendRefsToRulesTest(t *testing.T) {
 	)
 
 	tests := []struct {
-		route               *HTTPRoute
+		route               *L7Route
 		policies            map[types.NamespacedName]*BackendTLSPolicy
 		name                string
 		expectedBackendRefs []BackendRef
 		expectedConditions  []conditions.Condition
 	}{
 		{
-			route: &HTTPRoute{
-				Source:     hrWithOneBackend,
-				ParentRefs: sectionNameRefs,
-				Valid:      true,
-				Rules:      createRules(hrWithOneBackend, allValid, allValid),
-			},
+			route: hrWithOneBackend,
 			expectedBackendRefs: []BackendRef{
 				{
 					SvcNsName:   svc1NsName,
@@ -622,12 +561,7 @@ func TestAddBackendRefsToRulesTest(t *testing.T) {
 			name:               "normal case with one rule with one backend",
 		},
 		{
-			route: &HTTPRoute{
-				Source:     hrWithTwoBackends,
-				ParentRefs: sectionNameRefs,
-				Valid:      true,
-				Rules:      createRules(hrWithTwoBackends, allValid, allValid),
-			},
+			route: hrWithTwoBackends,
 			expectedBackendRefs: []BackendRef{
 				{
 					SvcNsName:   svc1NsName,
@@ -647,12 +581,7 @@ func TestAddBackendRefsToRulesTest(t *testing.T) {
 			name:               "normal case with one rule with two backends",
 		},
 		{
-			route: &HTTPRoute{
-				Source:     hrWithTwoBackends,
-				ParentRefs: sectionNameRefs,
-				Valid:      true,
-				Rules:      createRules(hrWithTwoBackends, allValid, allValid),
-			},
+			route: hrWithTwoBackends,
 			expectedBackendRefs: []BackendRef{
 				{
 					SvcNsName:        svc1NsName,
@@ -674,47 +603,28 @@ func TestAddBackendRefsToRulesTest(t *testing.T) {
 			name:               "normal case with one rule with two backends and matching policies",
 		},
 		{
-			route: &HTTPRoute{
-				Source:     hrWithOneBackend,
-				ParentRefs: sectionNameRefs,
-				Valid:      false,
-			},
+			route:               hrWithOneBackendInvalid,
 			expectedBackendRefs: nil,
 			expectedConditions:  nil,
 			policies:            emptyPolicies,
 			name:                "invalid route",
 		},
 		{
-			route: &HTTPRoute{
-				Source:     hrWithOneBackend,
-				ParentRefs: sectionNameRefs,
-				Valid:      true,
-				Rules:      createRules(hrWithOneBackend, allInvalid, allValid),
-			},
+			route:               hrWithOneBackendInvalidMatches,
 			expectedBackendRefs: nil,
 			expectedConditions:  nil,
 			policies:            emptyPolicies,
 			name:                "invalid matches",
 		},
 		{
-			route: &HTTPRoute{
-				Source:     hrWithOneBackend,
-				ParentRefs: sectionNameRefs,
-				Valid:      true,
-				Rules:      createRules(hrWithOneBackend, allValid, allInvalid),
-			},
+			route:               hrWithOneBackendInvalidFilters,
 			expectedBackendRefs: nil,
 			expectedConditions:  nil,
 			policies:            emptyPolicies,
 			name:                "invalid filters",
 		},
 		{
-			route: &HTTPRoute{
-				Source:     hrWithInvalidRule,
-				ParentRefs: sectionNameRefs,
-				Valid:      true,
-				Rules:      createRules(hrWithInvalidRule, allValid, allValid),
-			},
+			route: hrWithInvalidRule,
 			expectedBackendRefs: []BackendRef{
 				{
 					Weight: 1,
@@ -729,12 +639,7 @@ func TestAddBackendRefsToRulesTest(t *testing.T) {
 			name:     "invalid backendRef",
 		},
 		{
-			route: &HTTPRoute{
-				Source:     hrWithTwoDiffBackends,
-				ParentRefs: sectionNameRefs,
-				Valid:      true,
-				Rules:      createRules(hrWithTwoDiffBackends, allValid, allValid),
-			},
+			route: hrWithTwoDiffBackends,
 			expectedBackendRefs: []BackendRef{
 				{
 					SvcNsName:        svc1NsName,
@@ -760,12 +665,7 @@ func TestAddBackendRefsToRulesTest(t *testing.T) {
 			name:     "invalid backendRef - backend TLS policies do not match for all backends",
 		},
 		{
-			route: &HTTPRoute{
-				Source:     hrWithZeroBackendRefs,
-				ParentRefs: sectionNameRefs,
-				Valid:      true,
-				Rules:      createRules(hrWithZeroBackendRefs, allValid, allValid),
-			},
+			route:               hrWithZeroBackendRefs,
 			expectedBackendRefs: nil,
 			expectedConditions:  nil,
 			name:                "zero backendRefs",
@@ -776,437 +676,11 @@ func TestAddBackendRefsToRulesTest(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewWithT(t)
 			resolver := newReferenceGrantResolver(nil)
-			addHTTPBackendRefsToRules(test.route, resolver, services, test.policies)
+			addBackendRefsToRules(test.route, resolver, services, test.policies)
 
 			var actual []BackendRef
-			if test.route.Rules != nil {
-				actual = test.route.Rules[0].BackendRefs
-			}
-
-			g.Expect(helpers.Diff(test.expectedBackendRefs, actual)).To(BeEmpty())
-			g.Expect(test.route.Conditions).To(Equal(test.expectedConditions))
-		})
-	}
-}
-
-func TestAddGRPCBackendRefsToRulesTest(t *testing.T) {
-	createRoute := func(
-		name string,
-		kind gatewayv1.Kind,
-		refsPerBackend int,
-		serviceNames ...string,
-	) *v1alpha2.GRPCRoute {
-		gr := &v1alpha2.GRPCRoute{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: "test",
-				Name:      name,
-			},
-		}
-
-		createGRPCBackendRef := func(svcName string, port gatewayv1.PortNumber, weight *int32) v1alpha2.GRPCBackendRef {
-			return v1alpha2.GRPCBackendRef{
-				BackendRef: gatewayv1.BackendRef{
-					BackendObjectReference: gatewayv1.BackendObjectReference{
-						Kind:      helpers.GetPointer(kind),
-						Name:      gatewayv1.ObjectName(svcName),
-						Namespace: helpers.GetPointer[gatewayv1.Namespace]("test"),
-						Port:      helpers.GetPointer(port),
-					},
-					Weight: weight,
-				},
-			}
-		}
-
-		gr.Spec.Rules = make([]v1alpha2.GRPCRouteRule, len(serviceNames))
-
-		for idx, svcName := range serviceNames {
-			var refs []v1alpha2.GRPCBackendRef
-			if refsPerBackend == 0 {
-				refs = []v1alpha2.GRPCBackendRef{
-					createGRPCBackendRef(svcName, 80, helpers.GetPointer[int32](-1)),
-				}
-			} else {
-				refs = []v1alpha2.GRPCBackendRef{
-					createGRPCBackendRef(svcName, 80, nil),
-				}
-				if refsPerBackend == 2 {
-					refs = append(refs, createGRPCBackendRef(svcName, 81, helpers.GetPointer[int32](5)))
-				}
-				if refsPerBackend != 1 && refsPerBackend != 2 && refsPerBackend != 0 {
-					panic("invalid refsPerBackend")
-				}
-			}
-
-			gr.Spec.Rules[idx] = v1alpha2.GRPCRouteRule{
-				BackendRefs: refs,
-			}
-		}
-		return gr
-	}
-
-	const (
-		allValid   = true
-		allInvalid = false
-	)
-
-	createRules := func(hr *v1alpha2.GRPCRoute, validMatches, validFilters bool) []Rule {
-		rules := make([]Rule, len(hr.Spec.Rules))
-		for i := range rules {
-			rules[i].ValidMatches = validMatches
-			rules[i].ValidFilters = validFilters
-		}
-		return rules
-	}
-
-	sectionNameRefs := []ParentRef{
-		{
-			Idx:     0,
-			Gateway: types.NamespacedName{Namespace: "test", Name: "gateway"},
-			Attachment: &ParentRefAttachmentStatus{
-				Attached: true,
-			},
-		},
-	}
-
-	grWithOneBackend := createRoute("gr1", "Service", 1, "svc1")
-	grWithTwoBackends := createRoute("gr2", "Service", 2, "svc1")
-	grWithTwoDiffBackends := createRoute("gr2", "Service", 2, "svc1")
-	grWithInvalidRule := createRoute("gr3", "NotService", 1, "svc1")
-	grWithInvalidWeight := createRoute("gr5", "Service", 0, "svc1")
-	grWithZeroBackendRefs := createRoute("gr4", "Service", 1, "svc1")
-	grWithZeroBackendRefs.Spec.Rules[0].BackendRefs = nil
-	grWithTwoDiffBackends.Spec.Rules[0].BackendRefs[1].Name = "svc2"
-
-	getSvc := func(name string) *v1.Service {
-		return &v1.Service{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: "test",
-				Name:      name,
-			},
-			Spec: v1.ServiceSpec{
-				Ports: []v1.ServicePort{
-					{
-						Port: 80,
-					},
-					{
-						Port: 81,
-					},
-				},
-			},
-		}
-	}
-	svc1 := getSvc("svc1")
-	svc1NsName := types.NamespacedName{
-		Namespace: "test",
-		Name:      "svc1",
-	}
-
-	svc2 := getSvc("svc2")
-	svc2NsName := types.NamespacedName{
-		Namespace: "test",
-		Name:      "svc2",
-	}
-
-	services := map[types.NamespacedName]*v1.Service{
-		{Namespace: "test", Name: "svc1"}: svc1,
-		{Namespace: "test", Name: "svc2"}: svc2,
-	}
-	emptyPolicies := map[types.NamespacedName]*BackendTLSPolicy{}
-
-	getPolicy := func(name, svcName, cmName string) *BackendTLSPolicy {
-		return &BackendTLSPolicy{
-			Valid: true,
-			Source: &v1alpha2.BackendTLSPolicy{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      name,
-					Namespace: "test",
-				},
-				Spec: v1alpha2.BackendTLSPolicySpec{
-					TargetRef: v1alpha2.PolicyTargetReferenceWithSectionName{
-						PolicyTargetReference: v1alpha2.PolicyTargetReference{
-							Group:     "",
-							Kind:      "Service",
-							Name:      gatewayv1.ObjectName(svcName),
-							Namespace: (*gatewayv1.Namespace)(helpers.GetPointer("test")),
-						},
-					},
-					TLS: v1alpha2.BackendTLSPolicyConfig{
-						Hostname: "foo.example.com",
-						CACertRefs: []gatewayv1.LocalObjectReference{
-							{
-								Group: "",
-								Kind:  "ConfigMap",
-								Name:  gatewayv1.ObjectName(cmName),
-							},
-						},
-					},
-				},
-			},
-		}
-	}
-
-	policiesMatching := map[types.NamespacedName]*BackendTLSPolicy{
-		{Namespace: "test", Name: "btp1"}: getPolicy("btp1", "svc1", "test"),
-		{Namespace: "test", Name: "btp2"}: getPolicy("btp2", "svc2", "test"),
-	}
-	policiesNotMatching := map[types.NamespacedName]*BackendTLSPolicy{
-		{Namespace: "test", Name: "btp1"}: getPolicy("btp1", "svc1", "test1"),
-		{Namespace: "test", Name: "btp2"}: getPolicy("btp2", "svc2", "test2"),
-	}
-
-	getBtp := func(name string, svcName string, cmName string) *BackendTLSPolicy {
-		return &BackendTLSPolicy{
-			Source: &v1alpha2.BackendTLSPolicy{
-				ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: "test"},
-				Spec: v1alpha2.BackendTLSPolicySpec{
-					TargetRef: v1alpha2.PolicyTargetReferenceWithSectionName{
-						PolicyTargetReference: v1alpha2.PolicyTargetReference{
-							Group:     "",
-							Kind:      "Service",
-							Name:      gatewayv1.ObjectName(svcName),
-							Namespace: (*gatewayv1.Namespace)(helpers.GetPointer("test")),
-						},
-					},
-					TLS: v1alpha2.BackendTLSPolicyConfig{
-						Hostname: "foo.example.com",
-						CACertRefs: []gatewayv1.LocalObjectReference{
-							{
-								Group: "",
-								Kind:  "ConfigMap",
-								Name:  gatewayv1.ObjectName(cmName),
-							},
-						},
-					},
-				},
-			},
-			Conditions: []conditions.Condition{
-				{
-					Type:    "Accepted",
-					Status:  "True",
-					Reason:  "Accepted",
-					Message: "BackendTLSPolicy is accepted by the Gateway",
-				},
-			},
-			Valid:        true,
-			IsReferenced: true,
-		}
-	}
-
-	btp1 := getBtp("btp1", "svc1", "test1")
-	btp2 := getBtp("btp2", "svc2", "test2")
-	btp3 := getBtp("btp1", "svc1", "test")
-	btp3.Conditions = append(btp3.Conditions, conditions.Condition{
-		Type:    "Accepted",
-		Status:  "True",
-		Reason:  "Accepted",
-		Message: "BackendTLSPolicy is accepted by the Gateway",
-	},
-	)
-
-	tests := []struct {
-		route               *GRPCRoute
-		policies            map[types.NamespacedName]*BackendTLSPolicy
-		name                string
-		expectedBackendRefs []BackendRef
-		expectedConditions  []conditions.Condition
-	}{
-		{
-			route: &GRPCRoute{
-				Source:     grWithOneBackend,
-				ParentRefs: sectionNameRefs,
-				Valid:      true,
-				Rules:      createRules(grWithOneBackend, allValid, allValid),
-			},
-			expectedBackendRefs: []BackendRef{
-				{
-					SvcNsName:   svc1NsName,
-					ServicePort: svc1.Spec.Ports[0],
-					Valid:       true,
-					Weight:      1,
-				},
-			},
-			expectedConditions: nil,
-			policies:           emptyPolicies,
-			name:               "normal case with one rule with one backend",
-		},
-		{
-			route: &GRPCRoute{
-				Source:     grWithTwoBackends,
-				ParentRefs: sectionNameRefs,
-				Valid:      true,
-				Rules:      createRules(grWithTwoBackends, allValid, allValid),
-			},
-			expectedBackendRefs: []BackendRef{
-				{
-					SvcNsName:   svc1NsName,
-					ServicePort: svc1.Spec.Ports[0],
-					Valid:       true,
-					Weight:      1,
-				},
-				{
-					SvcNsName:   svc1NsName,
-					ServicePort: svc1.Spec.Ports[1],
-					Valid:       true,
-					Weight:      5,
-				},
-			},
-			expectedConditions: nil,
-			policies:           emptyPolicies,
-			name:               "normal case with one rule with two backends",
-		},
-		{
-			route: &GRPCRoute{
-				Source:     grWithTwoBackends,
-				ParentRefs: sectionNameRefs,
-				Valid:      true,
-				Rules:      createRules(grWithTwoBackends, allValid, allValid),
-			},
-			expectedBackendRefs: []BackendRef{
-				{
-					SvcNsName:        svc1NsName,
-					ServicePort:      svc1.Spec.Ports[0],
-					Valid:            true,
-					Weight:           1,
-					BackendTLSPolicy: btp3,
-				},
-				{
-					SvcNsName:        svc1NsName,
-					ServicePort:      svc1.Spec.Ports[1],
-					Valid:            true,
-					Weight:           5,
-					BackendTLSPolicy: btp3,
-				},
-			},
-			expectedConditions: nil,
-			policies:           policiesMatching,
-			name:               "normal case with one rule with two backends and matching policies",
-		},
-		{
-			route: &GRPCRoute{
-				Source:     grWithOneBackend,
-				ParentRefs: sectionNameRefs,
-				Valid:      false,
-			},
-			expectedBackendRefs: nil,
-			expectedConditions:  nil,
-			policies:            emptyPolicies,
-			name:                "invalid route",
-		},
-		{
-			route: &GRPCRoute{
-				Source:     grWithOneBackend,
-				ParentRefs: sectionNameRefs,
-				Valid:      true,
-				Rules:      createRules(grWithOneBackend, allInvalid, allValid),
-			},
-			expectedBackendRefs: nil,
-			expectedConditions:  nil,
-			policies:            emptyPolicies,
-			name:                "invalid matches",
-		},
-		{
-			route: &GRPCRoute{
-				Source:     grWithOneBackend,
-				ParentRefs: sectionNameRefs,
-				Valid:      true,
-				Rules:      createRules(grWithOneBackend, allValid, allInvalid),
-			},
-			expectedBackendRefs: nil,
-			expectedConditions:  nil,
-			policies:            emptyPolicies,
-			name:                "invalid filters",
-		},
-		{
-			route: &GRPCRoute{
-				Source:     grWithInvalidRule,
-				ParentRefs: sectionNameRefs,
-				Valid:      true,
-				Rules:      createRules(grWithInvalidRule, allValid, allValid),
-			},
-			expectedBackendRefs: []BackendRef{
-				{
-					Weight: 1,
-				},
-			},
-			expectedConditions: []conditions.Condition{
-				staticConds.NewRouteBackendRefInvalidKind(
-					`spec.rules[0].backendRefs[0].kind: Unsupported value: "NotService": supported values: "Service"`,
-				),
-			},
-			policies: emptyPolicies,
-			name:     "invalid backendRef",
-		},
-		{
-			route: &GRPCRoute{
-				Source:     grWithInvalidWeight,
-				ParentRefs: sectionNameRefs,
-				Valid:      true,
-				Rules:      createRules(grWithInvalidWeight, allValid, allValid),
-			},
-			expectedBackendRefs: []BackendRef{
-				{Weight: 0},
-			},
-			expectedConditions: []conditions.Condition{
-				staticConds.NewRouteBackendRefUnsupportedValue(
-					`spec.rules[0].backendRefs[0].weight: Invalid value: -1: must be in the range [0, 1000000]`,
-				),
-			},
-			policies: emptyPolicies,
-			name:     "invalid weight",
-		},
-		{
-			route: &GRPCRoute{
-				Source:     grWithTwoDiffBackends,
-				ParentRefs: sectionNameRefs,
-				Valid:      true,
-				Rules:      createRules(grWithTwoDiffBackends, allValid, allValid),
-			},
-			expectedBackendRefs: []BackendRef{
-				{
-					SvcNsName:        svc1NsName,
-					ServicePort:      svc1.Spec.Ports[0],
-					Valid:            false,
-					Weight:           1,
-					BackendTLSPolicy: btp1,
-				},
-				{
-					SvcNsName:        svc2NsName,
-					ServicePort:      svc2.Spec.Ports[1],
-					Valid:            false,
-					Weight:           5,
-					BackendTLSPolicy: btp2,
-				},
-			},
-			expectedConditions: []conditions.Condition{
-				staticConds.NewRouteBackendRefUnsupportedValue(
-					`Backend TLS policies do not match for all backends`,
-				),
-			},
-			policies: policiesNotMatching,
-			name:     "invalid backendRef - backend TLS policies do not match for all backends",
-		},
-		{
-			route: &GRPCRoute{
-				Source:     grWithZeroBackendRefs,
-				ParentRefs: sectionNameRefs,
-				Valid:      true,
-				Rules:      createRules(grWithZeroBackendRefs, allValid, allValid),
-			},
-			expectedBackendRefs: nil,
-			expectedConditions:  nil,
-			name:                "zero backendRefs",
-		},
-	}
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			g := NewWithT(t)
-			resolver := newReferenceGrantResolver(nil)
-			addGRPCBackendRefsToRules(test.route, resolver, services, test.policies)
-
-			var actual []BackendRef
-			if test.route.Rules != nil {
-				actual = test.route.Rules[0].BackendRefs
+			if test.route.Spec.Rules != nil {
+				actual = test.route.Spec.Rules[0].BackendRefs
 			}
 
 			g.Expect(helpers.Diff(test.expectedBackendRefs, actual)).To(BeEmpty())
@@ -1448,8 +922,13 @@ func TestCreateBackend(t *testing.T) {
 			g := NewWithT(t)
 
 			resolver := newReferenceGrantResolver(nil)
-			backend, cond := createHTTPBackendRef(
-				test.ref,
+
+			rbr := RouteBackendRef{
+				test.ref.BackendRef,
+				[]any{},
+			}
+			backend, cond := createBackendRef(
+				rbr,
 				sourceNamespace,
 				resolver,
 				services,
@@ -1664,7 +1143,7 @@ func TestFindBackendTLSPolicyForService(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewWithT(t)
 
-			btp, err := findBackendTLSPolicyForService(test.backendTLSPolicies, string(ref.Name), ref.Namespace, "test")
+			btp, err := findBackendTLSPolicyForService(test.backendTLSPolicies, ref.Namespace, string(ref.Name), "test")
 
 			g.Expect(btp.Source.Name).To(Equal(test.expectedBtpName))
 			g.Expect(err).ToNot(HaveOccurred())

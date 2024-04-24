@@ -5,7 +5,6 @@ import (
 
 	. "github.com/onsi/gomega"
 	v1 "sigs.k8s.io/gateway-api/apis/v1"
-	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 )
@@ -297,34 +296,4 @@ func TestConvertPathType(t *testing.T) {
 			g.Expect(result).To(Equal(tc.expected))
 		}
 	}
-}
-
-func TestConvertGRPCMatchHeaders(t *testing.T) {
-	g := NewWithT(t)
-
-	headers := []v1alpha2.GRPCHeaderMatch{
-		{
-			Name:  v1alpha2.GRPCHeaderName("myHeader"),
-			Value: "myValue",
-		},
-		{
-			Name:  v1alpha2.GRPCHeaderName("myHeader2"),
-			Value: "myValue2",
-		},
-	}
-	expected := Match{
-		Headers: []HTTPHeaderMatch{
-			{
-				Name:  "myHeader",
-				Value: "myValue",
-			},
-			{
-				Name:  "myHeader2",
-				Value: "myValue2",
-			},
-		},
-	}
-
-	result := convertGRPCMatchHeaders(headers)
-	g.Expect(result).To(Equal(expected))
 }

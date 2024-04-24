@@ -10,6 +10,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	v1 "sigs.k8s.io/gateway-api/apis/v1"
+	v1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
 	staticConds "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/conditions"
@@ -17,18 +18,6 @@ import (
 )
 
 const wildcardHostname = "~^"
-
-// Rule represents a rule of a Route.
-type Rule struct {
-	// BackendRefs is a list of BackendRefs for the rule.
-	BackendRefs []BackendRef
-	// ValidMatches indicates whether the matches of the rule are valid.
-	// If the matches are invalid, NGF should not generate any configuration for the rule.
-	ValidMatches bool
-	// ValidFilters indicates whether the filters of the rule are valid.
-	// If the filters are invalid, the data-plane should return 500 error provided that the matches are valid.
-	ValidFilters bool
-}
 
 // ParentRef describes a reference to a parent in a Route.
 type ParentRef struct {
@@ -53,7 +42,85 @@ type ParentRefAttachmentStatus struct {
 	Attached bool
 }
 
-type Route interface{}
+type RouteType string
+
+const (
+	RouteTypeHTTP RouteType = "http"
+	RouteTypeGRPC RouteType = "grpc"
+)
+
+type RouteKey struct {
+	NamespacedName types.NamespacedName
+	RouteType      RouteType
+}
+
+type L7Route struct {
+	Source        client.Object
+	RouteType     RouteType
+	Spec          L7RouteSpec
+	ParentRefs    []ParentRef
+	SrcParentRefs []v1.ParentReference
+	Conditions    []conditions.Condition
+	Valid         bool
+	Attachable    bool
+}
+
+type L7RouteSpec struct {
+	Hostnames []v1.Hostname
+	Rules     []RouteRule
+}
+
+type RouteRule struct {
+	Matches          []v1.HTTPRouteMatch
+	Filters          []v1.HTTPRouteFilter
+	RouteBackendRefs []RouteBackendRef
+	BackendRefs      []BackendRef
+	ValidMatches     bool
+	ValidFilters     bool
+}
+
+type RouteBackendRef struct {
+	v1.BackendRef
+	Filters []any
+}
+
+// buildGRPCRoutesForGateways builds routes from HTTP/GRPCRoutes that reference any of the specified Gateways.
+func buildRoutesForGateways(
+	validator validation.HTTPFieldsValidator,
+	httpRoutes map[types.NamespacedName]*v1.HTTPRoute,
+	grpcRoutes map[types.NamespacedName]*v1alpha2.GRPCRoute,
+	gatewayNsNames []types.NamespacedName,
+) map[RouteKey]*L7Route {
+	if len(gatewayNsNames) == 0 {
+		return nil
+	}
+
+	routes := make(map[RouteKey]*L7Route)
+
+	for _, ghr := range httpRoutes {
+		r := buildHTTPRoute(validator, ghr, gatewayNsNames)
+		if r != nil {
+			rk := RouteKey{
+				NamespacedName: client.ObjectKeyFromObject(ghr),
+				RouteType:      RouteTypeHTTP,
+			}
+			routes[rk] = r
+		}
+	}
+
+	for _, ghr := range grpcRoutes {
+		r := buildGRPCRoute(validator, ghr, gatewayNsNames)
+		if r != nil {
+			rk := RouteKey{
+				NamespacedName: client.ObjectKeyFromObject(ghr),
+				RouteType:      RouteTypeGRPC,
+			}
+			routes[rk] = r
+		}
+	}
+
+	return routes
+}
 
 func buildSectionNameRefs(
 	parentRefs []v1.ParentReference,
@@ -126,8 +193,7 @@ func findGatewayForParentRef(
 }
 
 func bindRoutesToListeners(
-	httpRoutes map[types.NamespacedName]*HTTPRoute,
-	grpcRoutes map[types.NamespacedName]*GRPCRoute,
+	routes map[RouteKey]*L7Route,
 	gw *Gateway,
 	namespaces map[types.NamespacedName]*apiv1.Namespace,
 ) {
@@ -135,40 +201,29 @@ func bindRoutesToListeners(
 		return
 	}
 
-	for _, r := range httpRoutes {
-		bindRouteToListeners(r, r.Attachable, r.Source.Namespace, r.Source.Spec.Hostnames, gw, namespaces)
-	}
-
-	for _, r := range grpcRoutes {
-		bindRouteToListeners(r, r.Attachable, r.Source.Namespace, r.Source.Spec.Hostnames, gw, namespaces)
+	for _, r := range routes {
+		bindRouteToListeners(r, gw, namespaces)
 	}
 }
 
 func bindRouteToListeners(
-	r Route,
-	attachable bool,
-	srcNs string,
-	routeHostnames []v1.Hostname,
+	route *L7Route,
 	gw *Gateway,
 	namespaces map[types.NamespacedName]*apiv1.Namespace,
 ) {
-	if !attachable {
+	if !route.Attachable {
 		return
 	}
 
-	bindRoutes := func(
-		parentRefs []ParentRef,
-		srcParentRefs []v1.ParentReference,
-		conds []conditions.Condition,
-	) []conditions.Condition {
-		for i := 0; i < len(parentRefs); i++ {
+	bindRoutes := func(r *L7Route) {
+		for i := 0; i < len(r.ParentRefs); i++ {
 			attachment := &ParentRefAttachmentStatus{
 				AcceptedHostnames: make(map[string][]string),
 			}
-			ref := &parentRefs[i]
+			ref := &r.ParentRefs[i]
 			ref.Attachment = attachment
 
-			routeRef := srcParentRefs[ref.Idx]
+			routeRef := r.SrcParentRefs[ref.Idx]
 
 			path := field.NewPath("spec").Child("parentRefs").Index(ref.Idx)
 
@@ -216,8 +271,6 @@ func bindRouteToListeners(
 				ref.Attachment,
 				attachableListeners,
 				r,
-				srcNs,
-				routeHostnames,
 				gw,
 				namespaces,
 			)
@@ -226,24 +279,14 @@ func bindRouteToListeners(
 				continue
 			}
 			if cond != (conditions.Condition{}) {
-				conds = append(conds, cond)
+				r.Conditions = append(r.Conditions, cond)
 			}
 
 			attachment.Attached = true
 		}
-		return conds
 	}
 
-	switch v := r.(type) {
-	case *HTTPRoute:
-		conds := bindRoutes(v.ParentRefs, v.Source.Spec.ParentRefs, v.Conditions)
-		v.Conditions = conds
-	case *GRPCRoute:
-		conds := bindRoutes(v.ParentRefs, v.Source.Spec.ParentRefs, v.Conditions)
-		v.Conditions = conds
-	default:
-		panic(fmt.Errorf("unknown route type %T", v))
-	}
+	bindRoutes(route)
 }
 
 // tryToAttachRouteToListeners tries to attach the route to the listeners that match the parentRef and the hostnames.
@@ -254,9 +297,7 @@ func bindRouteToListeners(
 func tryToAttachRouteToListeners(
 	refStatus *ParentRefAttachmentStatus,
 	attachableListeners []*Listener,
-	route Route,
-	srcNs string,
-	routeHostnames []v1.Hostname,
+	route *L7Route,
 	gw *Gateway,
 	namespaces map[types.NamespacedName]*apiv1.Namespace,
 ) (conditions.Condition, bool) {
@@ -264,25 +305,23 @@ func tryToAttachRouteToListeners(
 		return staticConds.NewRouteInvalidListener(), false
 	}
 
+	rk := RouteKey{
+		NamespacedName: client.ObjectKeyFromObject(route.Source),
+		RouteType:      route.RouteType,
+	}
+
 	bind := func(l *Listener) (allowed, attached bool) {
-		if !routeAllowedByListener(l, srcNs, gw.Source.Namespace, namespaces) {
+		if !routeAllowedByListener(l, route.Source.GetNamespace(), gw.Source.Namespace, namespaces) {
 			return false, false
 		}
 
-		hostnames := findAcceptedHostnames(l.Source.Hostname, routeHostnames)
+		hostnames := findAcceptedHostnames(l.Source.Hostname, route.Spec.Hostnames)
 		if len(hostnames) == 0 {
 			return true, false
 		}
 		refStatus.AcceptedHostnames[string(l.Source.Name)] = hostnames
 
-		switch v := route.(type) {
-		case *HTTPRoute:
-			l.HTTPRoutes[client.ObjectKeyFromObject(v.Source)] = v
-		case *GRPCRoute:
-			l.GRPCRoutes[client.ObjectKeyFromObject(v.Source)] = v
-		default:
-			panic(fmt.Errorf("unknown route type %T", v))
-		}
+		l.Routes[rk] = route
 		return true, true
 	}
 
