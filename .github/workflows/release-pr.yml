@@ -35,7 +35,7 @@ jobs:
         id: vars
         run: |
           # TODO(lucacome): improve this and maybe use appVersion instead of version if we switch to tags
-          echo "current_version=$(yq '.version' <deploy/helm-chart/Chart.yaml)" >> $GITHUB_OUTPUT
+          echo "current_version=$(yq '.version' <charts/nginx-gateway-fabric/Chart.yaml)" >> $GITHUB_OUTPUT
 
       - name: Find and Replace
         uses: jacobtomlinson/gha-find-replace@a51bbcd94d000df9ca0fcb54ec8be69aad8374b0 # v3.0.2
@@ -50,7 +50,7 @@ jobs:
         with:
           find: "edge"
           replace: ${{ inputs.version }}
-          include: "deploy/helm-chart/*.yaml"
+          include: "charts/nginx-gateway-fabric/*.yaml"
           regex: false
 
       - name: Find and Replace
@@ -58,7 +58,7 @@ jobs:
         with:
           find: ${{ steps.vars.outputs.current_version }}
           replace: ${{ inputs.version }}
-          include: "deploy/helm-chart/*.yaml"
+          include: "charts/nginx-gateway-fabric/*.yaml"
           regex: false
 
       - name: Find and Replace
@@ -66,7 +66,7 @@ jobs:
         with:
           find: "Always"
           replace: "IfNotPresent"
-          include: "deploy/helm-chart/*.yaml"
+          include: "charts/nginx-gateway-fabric/*.yaml"
           regex: false
 
       - name: Generate manifests and changelog

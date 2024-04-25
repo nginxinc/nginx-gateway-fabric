@@ -5,9 +5,9 @@ type: application
 version: 1.2.0
 appVersion: "edge"
 home: https://github.com/nginxinc/nginx-gateway-fabric
-icon: https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric/main/deploy/helm-chart/chart-icon.png
+icon: https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric/main/charts/nginx-gateway-fabric/chart-icon.png
 sources:
-  - https://github.com/nginxinc/nginx-gateway-fabric/tree/main/deploy/helm-chart
+  - https://github.com/nginxinc/nginx-gateway-fabric/tree/main/charts/nginx-gateway-fabric
 keywords:
   - kubernetes
   - gateway
