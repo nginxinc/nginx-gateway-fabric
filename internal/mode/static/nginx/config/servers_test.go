@@ -64,6 +64,7 @@ func TestExecuteServers(t *testing.T) {
 	}
 	g := NewWithT(t)
 	serverResults := executeServers(conf)
+	g.Expect(serverResults).To(HaveLen(2))
 	serverConf := string(serverResults[0].data)
 	httpMatchConf := string(serverResults[1].data)
 	g.Expect(httpMatchConf).To(Equal("{}"))
@@ -144,6 +145,7 @@ func TestExecuteForDefaultServers(t *testing.T) {
 			g := NewWithT(t)
 
 			serverResults := executeServers(tc.conf)
+			g.Expect(serverResults).To(HaveLen(2))
 			serverConf := string(serverResults[0].data)
 			httpMatchConf := string(serverResults[1].data)
 			g.Expect(httpMatchConf).To(Equal("{}"))
