@@ -33,36 +33,20 @@ The HTTPRoute "coffee" is invalid: spec.hostnames[0]: Invalid value: "cafe.!@#$%
 
 {{< note >}}While unlikely, bypassing this validation step is possible if the Gateway API CRDs are modified to remove the validation. If this happens, Step 4 will reject any invalid values (from NGINX perspective).{{< /note >}}
 
-### Step 2 - CEL or Webhook validation by Kubernetes
+### Step 2 - CEL validation by Kubernetes API Server
 
-- **Kubernetes 1.25 and later - CEL validation by Kubernetes API Server**
+The Kubernetes API server validates Gateway API resources using CEL validation embedded in the Gateway API CRDs. It validates Gateway API resources using advanced rules unavailable in the OpenAPI schema validation. For example, if you create a Gateway resource with a TCP listener that configures a hostname, the CEL validation will reject it with the following error:
 
-   The Kubernetes API server validates Gateway API resources using CEL validation embedded in the Gateway API CRDs. It validates Gateway API resources using advanced rules unavailable in the OpenAPI schema validation. For example, if you create a Gateway resource with a TCP listener that configures a hostname, the CEL validation will reject it with the following error:
+```shell
+kubectl apply -f some-gateway.yaml
+```
 
-   ```shell
-   kubectl apply -f some-gateway.yaml
-   ```
+```text
+The Gateway "some-gateway" is invalid: spec.listeners: Invalid value: "array": hostname must not be specified for protocols ['TCP', 'UDP']
+```
 
-   ```text
-   The Gateway "some-gateway" is invalid: spec.listeners: Invalid value: "array": hostname must not be specified for protocols ['TCP', 'UDP']
-   ```
+More information on CEL in Kubernetes can be found [here](https://kubernetes.io/docs/reference/using-api/cel/).
 
-   More information on CEL in Kubernetes can be found [here](https://kubernetes.io/docs/reference/using-api/cel/).
-
-
-- **Kubernetes 1.23 and 1.24 - Webhook validation by Gateway API Webhook**
-
-   The validating webhook must be [installed for these Kubernetes versions]({{< relref "installation/installing-ngf/helm.md#installing-the-gateway-api-resources" >}}). It validates Gateway API resources using advanced rules unavailable in the OpenAPI schema validation. For example, if you create a Gateway resource with a TCP listener that configures a hostname, the webhook will reject it with the following error:
-
-   ```shell
-   kubectl apply -f some-gateway.yaml
-   ```
-
-   ```text
-   Error from server: error when creating "some-gateway.yaml": admission webhook "validate.gateway.networking.k8s.io" denied the request: spec.listeners[1].hostname: Forbidden: should be empty for protocol TCP
-   ```
-
-{{< note >}}Bypassing this validation step is possible if the webhook is not running in the cluster. If this happens, Step 3 will reject the invalid values.{{< /note >}}
 
 ### Step 3 - Validation by NGINX Gateway Fabric
 
