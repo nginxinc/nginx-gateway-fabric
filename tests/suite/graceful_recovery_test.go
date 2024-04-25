@@ -42,12 +42,6 @@ var _ = Describe("Graceful Recovery test", Ordered, Label("nfr", "graceful-recov
 		},
 	}
 
-	BeforeAll(func() {
-		cfg := getDefaultSetupCfg()
-		cfg.nfr = true
-		setup(cfg, "--set", "nginxGateway.securityContext.runAsNonRoot=false")
-	})
-
 	BeforeEach(func() {
 		Expect(resourceManager.Apply([]client.Object{ns})).To(Succeed())
 		Expect(resourceManager.ApplyFromFiles(files, ns.Name)).To(Succeed())
