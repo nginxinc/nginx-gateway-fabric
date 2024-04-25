@@ -40,7 +40,10 @@ function extractMatchesFromRequest(r, matches) {
 	try {
 		verifyMatchList(matchList);
 	} catch (e) {
-		throw Error(`cannot redirect the request; ${matchList} matches list is not valid`);
+		throw Error(
+			`cannot redirect the request; ${matchList} matches list is not valid`,
+			e.message,
+		);
 	}
 
 	return matchList;

@@ -434,8 +434,8 @@ func createRewritesValForRewriteFilter(filter *dataplane.HTTPURLRewriteFilter, p
 // routeMatch is an internal representation of an HTTPRouteMatch.
 // This struct is stored as a key-value pair in /etc/nginx/conf.d/matches.json with a key for the route's path.
 // The NJS httpmatches module will look up key specified in the nginx location on the request object
-// and compare the request against the Method, Headers, and QueryParams contained in httpMatch.
-// If the request satisfies the httpMatch, NGINX will redirect the request to the location RedirectPath.
+// and compare the request against the Method, Headers, and QueryParams contained in routeMatch.
+// If the request satisfies the routeMatch, NGINX will redirect the request to the location RedirectPath.
 type routeMatch struct {
 	// Method is the HTTPMethod of the HTTPRouteMatch.
 	Method string `json:"method,omitempty"`

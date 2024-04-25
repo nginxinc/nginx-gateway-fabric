@@ -115,22 +115,21 @@ func generateCertBundleFileName(id dataplane.CertBundleID) string {
 }
 
 func (g GeneratorImpl) generateHTTPConfig(conf dataplane.Configuration) []file.File {
-	files := make([]file.File, 0)
 	fileBytes := make(map[string][]byte)
 
 	for _, execute := range g.getExecuteFuncs() {
 		results := execute(conf)
 		for _, res := range results {
-			b, ok := fileBytes[res.dest]
+			_, ok := fileBytes[res.dest]
 			if ok {
-				b = append(b, res.data...)
-				fileBytes[res.dest] = b
+				fileBytes[res.dest] = append(fileBytes[res.dest], res.data...)
 			} else {
 				fileBytes[res.dest] = res.data
 			}
 		}
 	}
 
+	files := make([]file.File, 0, len(fileBytes))
 	for filepath, bytes := range fileBytes {
 		files = append(files, file.File{
 			Path:    filepath,
