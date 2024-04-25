@@ -1429,7 +1429,7 @@ func TestCreateRewritesValForRewriteFilter(t *testing.T) {
 	}
 }
 
-func TestCreaterouteMatch(t *testing.T) {
+func TestCreateRouteMatch(t *testing.T) {
 	testPath := "/internal_loc"
 
 	testMethodMatch := helpers.GetPointer("PUT")
