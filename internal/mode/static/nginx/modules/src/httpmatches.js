@@ -6,7 +6,6 @@ const HTTP_CODES = {
 
 function redirect(r) {
 	let matchList;
-
 	try {
 		matchList = extractMatchesFromRequest(r, matches);
 	} catch (e) {
@@ -14,7 +13,6 @@ function redirect(r) {
 		r.return(HTTP_CODES.internalServerError);
 		return;
 	}
-
 	redirectForMatchList(r, matchList);
 }
 
@@ -42,9 +40,7 @@ function extractMatchesFromRequest(r, matches) {
 	try {
 		verifyMatchList(matchList);
 	} catch (e) {
-		r.error(e.message);
-		r.return(HTTP_CODES.internalServerError);
-		return;
+		throw Error(`cannot redirect the request; ${matchList} matches list is not valid`);
 	}
 
 	return matchList;

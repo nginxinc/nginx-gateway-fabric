@@ -47,17 +47,25 @@ describe('extractMatchesFromRequest', () => {
 			errSubstring: 'match_key is not defined',
 		},
 		{
-			name: 'throws if key does not exist on matches request',
-			request: createRequest({}),
-			matchesObject: { test: '["any": "true"]' },
+			name: 'throws if key does not exist on matches object',
+			request: createRequest({ matchKey: 'test' }),
+			matchesObject: {},
 			expectThrow: true,
-			errSubstring: 'match_key is not defined',
+			errSubstring: 'the key test is not defined on the matches object',
+		},
+		{
+			name: 'throws an error if matchList is not valid',
+			request: createRequest({ matchKey: 'test' }),
+			matchesObject: { test: {} },
+			expectThrow: true,
+			errSubstring: 'matches list is not valid',
 		},
 		{
 			name: 'does not throw if matches key is present & expected matchList is returned',
 			request: createRequest({ matchKey: 'test' }),
-			matchesObject: { test: '[]' },
+			matchesObject: { test: [{ match: 'value' }] },
 			expectThrow: false,
+			expected: [{ match: 'value' }],
 		},
 	];
 	tests.forEach((test) => {
@@ -67,9 +75,9 @@ describe('extractMatchesFromRequest', () => {
 					hm.extractMatchesFromRequest(test.request, test.matchesObject),
 				).to.throw(test.errSubstring);
 			} else {
-				expect(() =>
-					hm.extractMatchesFromRequest(test.request, test.matchesObject).to.not.throw(),
-				);
+				expect(
+					hm.extractMatchesFromRequest(test.request, test.matchesObject),
+				).to.deep.equal(test.expected);
 			}
 		});
 	});
@@ -85,9 +93,9 @@ describe('verifyMatchList', () => {
 		},
 		{
 			name: 'throws if the length of the matches variable is zero',
-			matchList: '[]',
+			matchList: [],
 			expectThrow: true,
-			errSubstring: 'expected a list of matches',
+			errSubstring: 'matches is an empty list',
 		},
 		{
 			name: 'does not throw if matches variable is expected list of matches',
