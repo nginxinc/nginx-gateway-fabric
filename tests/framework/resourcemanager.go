@@ -314,7 +314,7 @@ func (rm *ResourceManager) waitForRoutesToBeReady(ctx context.Context, namespace
 
 			var numParents, readyCount int
 			for _, route := range routeList.Items {
-				numParents += len(route.Status.Parents) // extract from the parentref not the status.
+				numParents += len(route.Spec.ParentRefs)
 				for _, parent := range route.Status.Parents {
 					for _, cond := range parent.Conditions {
 						if cond.Type == string(v1.RouteConditionAccepted) && cond.Status == metav1.ConditionTrue {

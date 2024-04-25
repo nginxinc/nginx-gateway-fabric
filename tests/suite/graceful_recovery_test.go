@@ -86,7 +86,6 @@ var _ = Describe("Graceful Recovery test", Ordered, Label("nfr", "graceful-recov
 		Expect(err).ToNot(HaveOccurred())
 
 		Expect(resourceManager.ApplyFromFiles(files, ns.Name)).To(Succeed())
-		time.Sleep(2 * time.Second)
 		Expect(resourceManager.WaitForAppsToBeReady(ns.Name)).To(Succeed())
 
 		err = waitForWorkingTraffic()
@@ -117,7 +116,6 @@ var _ = Describe("Graceful Recovery test", Ordered, Label("nfr", "graceful-recov
 		Expect(err).ToNot(HaveOccurred())
 
 		Expect(resourceManager.ApplyFromFiles(files, ns.Name)).To(Succeed())
-		time.Sleep(2 * time.Second)
 		Expect(resourceManager.WaitForAppsToBeReady(ns.Name)).To(Succeed())
 
 		err = waitForWorkingTraffic()
