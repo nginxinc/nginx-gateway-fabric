@@ -10,6 +10,11 @@ updates:
     schedule:
       interval: daily
 
+  - package-ecosystem: gomod
+    directory: /tests
+    schedule:
+      interval: daily
+
   - package-ecosystem: docker
     directory: /build
     schedule:
