@@ -48,10 +48,10 @@ func TestExecuteUpstreams(t *testing.T) {
 	}
 
 	upstreamResults := gen.executeUpstreams(dataplane.Configuration{Upstreams: stateUpstreams})
-	upstreams := string(upstreamResults[0].data)
-
 	g := NewWithT(t)
 	g.Expect(upstreamResults).To(HaveLen(1))
+	upstreams := string(upstreamResults[0].data)
+
 	g.Expect(upstreamResults[0].dest).To(Equal(httpConfigFile))
 	for _, expSubString := range expectedSubStrings {
 		g.Expect(upstreams).To(ContainSubstring(expSubString))
