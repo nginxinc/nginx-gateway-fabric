@@ -8,8 +8,7 @@ function redirect(r) {
 	let matchList;
 
 	try {
-		let key = r.variables[MATCHES_KEY];
-		matchList = matches[key];
+		matchList = extractMatchesFromRequest(r, matches);
 	} catch (e) {
 		r.error(e.message);
 		r.return(HTTP_CODES.internalServerError);
@@ -19,12 +18,27 @@ function redirect(r) {
 	redirectForMatchList(r, matchList);
 }
 
-function redirectForMatchList(r, matchList) {
+function extractMatchesFromRequest(r, matches) {
+	let matchList;
+	if (!r.variables[MATCHES_KEY]) {
+		throw Error(
+			`cannot redirect the request; the ${MATCHES_KEY} is not defined on the request object`,
+		);
+	}
+
+	let key = r.variables[MATCHES_KEY];
+	if (!matches[key]) {
+		throw Error(
+			`cannot redirect the request; the key ${key} is not defined on the matches object`,
+		);
+	}
+
 	// matchList is a list of http matches in order of precedence.
 	// We will accept the first match that the request satisfies.
 	// If there's a match, redirect request to internal location block.
 	// If an exception occurs, return 500.
 	// If no matches are found, return 404.
+	matchList = matches[key];
 	try {
 		verifyMatchList(matchList);
 	} catch (e) {
@@ -33,6 +47,10 @@ function redirectForMatchList(r, matchList) {
 		return;
 	}
 
+	return matchList;
+}
+
+function redirectForMatchList(r, matchList) {
 	let match;
 	try {
 		match = findWinningMatch(r, matchList);
@@ -195,6 +213,8 @@ function paramsMatch(requestParams, params) {
 export default {
 	redirect,
 	redirectForMatchList,
+	extractMatchesFromRequest,
+	MATCHES_KEY,
 	verifyMatchList,
 	testMatch,
 	findWinningMatch,

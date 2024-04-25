@@ -3,7 +3,7 @@ import { assert, describe, expect, it } from 'vitest';
 
 // Creates a NGINX HTTP Request Object for testing.
 // See documentation for all properties available: http://nginx.org/en/docs/njs/reference.html
-function createRequest({ method = '', headers = {}, params = {} } = {}) {
+function createRequest({ method = '', headers = {}, params = {}, matchKey = '' } = {}) {
 	let r = {
 		// Test mocks
 		return(statusCode) {
@@ -30,8 +30,50 @@ function createRequest({ method = '', headers = {}, params = {} } = {}) {
 		r.args = params;
 	}
 
+	if (matchKey) {
+		r.variables[hm.MATCHES_KEY] = matchKey;
+	}
+
 	return r;
 }
+
+describe('extractMatchesFromRequest', () => {
+	const tests = [
+		{
+			name: 'throws if match_key variable does not exist on request',
+			request: createRequest({}),
+			matchesObject: {},
+			expectThrow: true,
+			errSubstring: 'match_key is not defined',
+		},
+		{
+			name: 'throws if key does not exist on matches request',
+			request: createRequest({}),
+			matchesObject: { test: '["any": "true"]' },
+			expectThrow: true,
+			errSubstring: 'match_key is not defined',
+		},
+		{
+			name: 'does not throw if matches key is present & expected matchList is returned',
+			request: createRequest({ matchKey: 'test' }),
+			matchesObject: { test: '[]' },
+			expectThrow: false,
+		},
+	];
+	tests.forEach((test) => {
+		it(test.name, () => {
+			if (test.expectThrow) {
+				expect(() =>
+					hm.extractMatchesFromRequest(test.request, test.matchesObject),
+				).to.throw(test.errSubstring);
+			} else {
+				expect(() =>
+					hm.extractMatchesFromRequest(test.request, test.matchesObject).to.not.throw(),
+				);
+			}
+		});
+	});
+});
 
 describe('verifyMatchList', () => {
 	const tests = [
@@ -371,7 +413,7 @@ describe('paramsMatch', () => {
 	});
 });
 
-describe('internalRedirect', () => {
+describe('redirectForMatchList', () => {
 	const testAnyMatch = { any: true, redirectPath: '/any' };
 	const testHeaderMatches = {
 		headers: ['header1:VALUE1', 'header2:value2', 'header3:value3'],
@@ -427,7 +469,7 @@ describe('internalRedirect', () => {
 
 	tests.forEach((test) => {
 		it(test.name, () => {
-			hm.internalRedirect(test.request, test.matches);
+			hm.redirectForMatchList(test.request, test.matches);
 			if (test.expectedReturn) {
 				expect(test.request.testReturned).to.equal(test.expectedReturn);
 			} else if (test.expectedRedirect) {
