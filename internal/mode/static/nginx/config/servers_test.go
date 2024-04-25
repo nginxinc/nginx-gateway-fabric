@@ -1582,7 +1582,7 @@ func TestCreaterouteMatch(t *testing.T) {
 		t.Run(tc.msg, func(t *testing.T) {
 			g := NewWithT(t)
 
-			result := createrouteMatch(tc.match, testPath)
+			result := createRouteMatch(tc.match, testPath)
 			g.Expect(helpers.Diff(result, tc.expected)).To(BeEmpty())
 		})
 	}
