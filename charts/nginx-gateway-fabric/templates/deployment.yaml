@@ -173,7 +173,7 @@ spec:
       shareProcessNamespace: true
       securityContext:
         fsGroup: 1001
-        runAsNonRoot: {{ ne .Values.nginxGateway.securityContext.runAsNonRoot false }}
+        runAsNonRoot: true
       {{- if .Values.tolerations }}
       tolerations:
       {{- toYaml .Values.tolerations | nindent 6 }}
