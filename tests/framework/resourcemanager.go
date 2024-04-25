@@ -124,12 +124,12 @@ func (rm *ResourceManager) ApplyFromFiles(files []string, namespace string) erro
 }
 
 // Delete deletes Kubernetes resources defined as Go objects.
-func (rm *ResourceManager) Delete(resources []client.Object) error {
+func (rm *ResourceManager) Delete(resources []client.Object, opts ...client.DeleteOption) error {
 	for _, resource := range resources {
 		ctx, cancel := context.WithTimeout(context.Background(), rm.TimeoutConfig.DeleteTimeout)
 		defer cancel()
 
-		if err := rm.K8sClient.Delete(ctx, resource); err != nil && !apierrors.IsNotFound(err) {
+		if err := rm.K8sClient.Delete(ctx, resource, opts...); err != nil && !apierrors.IsNotFound(err) {
 			return fmt.Errorf("error deleting resource: %w", err)
 		}
 	}

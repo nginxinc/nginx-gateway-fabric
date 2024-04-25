@@ -131,7 +131,8 @@ func restartNginxContainer() {
 	err = waitForContainerRestart(podNames[0], nginxContainerName, restartCount)
 	Expect(err).ToNot(HaveOccurred())
 
-	err = resourceManager.Delete([]client.Object{job})
+	// propagation policy is set to delete underlying pod created through job
+	err = resourceManager.Delete([]client.Object{job}, client.PropagationPolicy(metav1.DeletePropagationBackground))
 	Expect(err).ToNot(HaveOccurred())
 }
 
@@ -149,7 +150,8 @@ func restartNGFProcess() {
 	err = waitForContainerRestart(podNames[0], ngfContainerName, restartCount)
 	Expect(err).ToNot(HaveOccurred())
 
-	err = resourceManager.Delete([]client.Object{job})
+	// propagation policy is set to delete underlying pod created through job
+	err = resourceManager.Delete([]client.Object{job}, client.PropagationPolicy(metav1.DeletePropagationBackground))
 	Expect(err).ToNot(HaveOccurred())
 }
 
