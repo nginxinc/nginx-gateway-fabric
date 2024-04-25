@@ -437,7 +437,7 @@ func createRewritesValForRewriteFilter(filter *dataplane.HTTPURLRewriteFilter, p
 // and compare the request against the Method, Headers, and QueryParams contained in httpMatch.
 // If the request satisfies the httpMatch, NGINX will redirect the request to the location RedirectPath.
 type routeMatch struct {
-	// Method is the HTTPMethod of the HTTProuteMatch.
+	// Method is the HTTPMethod of the HTTPRouteMatch.
 	Method string `json:"method,omitempty"`
 	// RedirectPath is the path to redirect the request to if the request satisfies the match conditions.
 	RedirectPath string `json:"redirectPath,omitempty"`
