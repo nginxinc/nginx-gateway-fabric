@@ -100,7 +100,7 @@ generate: ## Run go generate
 
 .PHONY: generate-crds
 generate-crds: ## Generate CRDs and Go types using kubebuilder
-	go run sigs.k8s.io/controller-tools/cmd/controller-gen crd object paths=./apis/v1alpha1 output:crd:artifacts:config=config/crd/bases
+	go run sigs.k8s.io/controller-tools/cmd/controller-gen crd object paths=./apis/... output:crd:artifacts:config=config/crd/bases
 
 .PHONY: generate-manifests
 generate-manifests: ## Generate manifests using Helm.
