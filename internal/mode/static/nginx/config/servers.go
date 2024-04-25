@@ -258,7 +258,7 @@ func initializeInternalLocation(
 	match dataplane.Match,
 ) (http.Location, routeMatch) {
 	path := fmt.Sprintf("@rule%d-route%d", pathruleIdx, matchRuleIdx)
-	return createMatchLocation(path), createrouteMatch(match, path)
+	return createMatchLocation(path), createRouteMatch(match, path)
 }
 
 // updateLocationsForFilters updates the existing locations with any relevant filters.
