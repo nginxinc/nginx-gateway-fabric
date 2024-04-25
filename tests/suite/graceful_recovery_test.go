@@ -3,28 +3,26 @@ package suite
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
-	"os/exec"
 	"strings"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	v1 "k8s.io/api/batch/v1"
 	coordination "k8s.io/api/coordination/v1"
 	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/yaml"
 
 	"github.com/nginxinc/nginx-gateway-fabric/tests/framework"
 )
 
 const (
-	// FIXME(bjee19): Find an automated way to keep the version updated here similar to dependabot.
-	// https://github.com/nginxinc/nginx-gateway-fabric/issues/1665
-	debugImage = "busybox:1.28"
-
 	teaURL             = "https://cafe.example.com/tea"
 	coffeeURL          = "http://cafe.example.com/coffee"
 	nginxContainerName = "nginx"
@@ -72,8 +70,7 @@ var _ = Describe("Graceful Recovery test", Ordered, Label("nfr", "graceful-recov
 		leaseName, err := getLeaderElectionLeaseHolderName()
 		Expect(err).ToNot(HaveOccurred())
 
-		output, err := restartNGFProcess()
-		Expect(err).ToNot(HaveOccurred(), string(output))
+		restartNGFProcess()
 
 		checkContainerLogsForErrors(podNames[0])
 
@@ -104,8 +101,7 @@ var _ = Describe("Graceful Recovery test", Ordered, Label("nfr", "graceful-recov
 		leaseName, err := getLeaderElectionLeaseHolderName()
 		Expect(err).ToNot(HaveOccurred())
 
-		output, err := restartNginxContainer()
-		Expect(err).ToNot(HaveOccurred(), string(output))
+		restartNginxContainer()
 
 		checkContainerLogsForErrors(podNames[0])
 
@@ -129,7 +125,7 @@ var _ = Describe("Graceful Recovery test", Ordered, Label("nfr", "graceful-recov
 	})
 })
 
-func restartNginxContainer() ([]byte, error) {
+func restartNginxContainer() {
 	podNames, err := framework.GetReadyNGFPodNames(k8sClient, ngfNamespace, releaseName, timeoutConfig.GetTimeout)
 	Expect(err).ToNot(HaveOccurred())
 	Expect(podNames).ToNot(BeEmpty())
@@ -137,29 +133,17 @@ func restartNginxContainer() ([]byte, error) {
 	restartCount, err := getContainerRestartCount(nginxContainerName, podNames[0])
 	Expect(err).ToNot(HaveOccurred())
 
-	output, err := exec.Command( // nolint:gosec
-		"kubectl",
-		"exec",
-		"-n",
-		ngfNamespace,
-		podNames[0],
-		"--container",
-		"nginx",
-		"--",
-		"sh",
-		"-c",
-		"$(PID=$(pgrep -f \"[n]ginx: master process\") && kill -9 $PID)").CombinedOutput()
-	if err != nil {
-		return output, err
-	}
+	job, err := runNodeDebuggerJob(podNames[0], "PID=$(pgrep -f \"[n]ginx: master process\") && kill -9 $PID")
+	Expect(err).ToNot(HaveOccurred())
 
 	err = waitForContainerRestart(podNames[0], nginxContainerName, restartCount)
 	Expect(err).ToNot(HaveOccurred())
 
-	return nil, nil
+	err = resourceManager.Delete([]client.Object{job})
+	Expect(err).ToNot(HaveOccurred())
 }
 
-func restartNGFProcess() ([]byte, error) {
+func restartNGFProcess() {
 	podNames, err := framework.GetReadyNGFPodNames(k8sClient, ngfNamespace, releaseName, timeoutConfig.GetTimeout)
 	Expect(err).ToNot(HaveOccurred())
 	Expect(podNames).ToNot(BeEmpty())
@@ -167,26 +151,14 @@ func restartNGFProcess() ([]byte, error) {
 	restartCount, err := getContainerRestartCount(ngfContainerName, podNames[0])
 	Expect(err).ToNot(HaveOccurred())
 
-	output, err := exec.Command( // nolint:gosec
-		"kubectl",
-		"debug",
-		"-n",
-		ngfNamespace,
-		podNames[0],
-		"--image="+debugImage,
-		"--target=nginx-gateway",
-		"--",
-		"sh",
-		"-c",
-		"$(PID=$(pgrep -f \"/[u]sr/bin/gateway\") && kill -9 $PID)").CombinedOutput()
-	if err != nil {
-		return output, err
-	}
+	job, err := runNodeDebuggerJob(podNames[0], "PID=$(pgrep -f \"/[u]sr/bin/gateway\") && kill -9 $PID")
+	Expect(err).ToNot(HaveOccurred())
 
 	err = waitForContainerRestart(podNames[0], ngfContainerName, restartCount)
 	Expect(err).ToNot(HaveOccurred())
 
-	return nil, nil
+	err = resourceManager.Delete([]client.Object{job})
+	Expect(err).ToNot(HaveOccurred())
 }
 
 func waitForContainerRestart(ngfPodName string, containerName string, currentRestartCount int) error {
@@ -354,4 +326,35 @@ func getContainerRestartCount(containerName, ngfPodName string) (int, error) {
 	}
 
 	return restartCount, nil
+}
+
+func runNodeDebuggerJob(ngfPodName, jobScript string) (*v1.Job, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), timeoutConfig.GetTimeout)
+	defer cancel()
+
+	var ngfPod core.Pod
+	if err := k8sClient.Get(ctx, types.NamespacedName{Namespace: ngfNamespace, Name: ngfPodName}, &ngfPod); err != nil {
+		return nil, errors.New("could not retrieve ngfPod")
+	}
+
+	b, err := resourceManager.GetFileContents("graceful-recovery/node-debugger-job.yaml")
+	if err != nil {
+		return nil, errors.New("error processing node debugger job file")
+	}
+
+	job := &v1.Job{}
+	_ = v1.AddToScheme(resourceManager.K8sClient.Scheme())
+	if err = yaml.Unmarshal(b.Bytes(), job); err != nil {
+		return nil, errors.New("error with yaml unmarshal")
+	}
+
+	job.Spec.Template.Spec.NodeSelector["kubernetes.io/hostname"] = ngfPod.Spec.NodeName
+	job.Spec.Template.Spec.Containers[0].Args = []string{jobScript}
+	job.Namespace = ngfNamespace
+
+	if err = resourceManager.Apply([]client.Object{job}); err != nil {
+		return nil, fmt.Errorf("errored in applying job: %w", err)
+	}
+
+	return job, nil
 }
