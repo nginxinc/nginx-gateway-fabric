@@ -275,7 +275,7 @@ func updateLocationsForFilters(
 	matchRule dataplane.MatchRule,
 	listenerPort int32,
 	path string,
-	GRPC bool,
+	grpc bool,
 ) []http.Location {
 	if filters.InvalidFilter != nil {
 		for i := range buildLocations {
@@ -293,7 +293,7 @@ func updateLocationsForFilters(
 	}
 
 	rewrites := createRewritesValForRewriteFilter(filters.RequestURLRewrite, path)
-	proxySetHeaders := generateProxySetHeaders(&matchRule.Filters, GRPC)
+	proxySetHeaders := generateProxySetHeaders(&matchRule.Filters, grpc)
 	for i := range buildLocations {
 		if rewrites != nil {
 			if rewrites.Rewrite != "" {
@@ -305,18 +305,18 @@ func updateLocationsForFilters(
 		proxyPass := createProxyPass(
 			matchRule.BackendGroup,
 			matchRule.Filters.RequestURLRewrite,
-			generateProtocolString(buildLocations[i].ProxySSLVerify, GRPC),
-			GRPC,
+			generateProtocolString(buildLocations[i].ProxySSLVerify, grpc),
+			grpc,
 		)
 		buildLocations[i].ProxyPass = proxyPass
-		buildLocations[i].GRPC = GRPC
+		buildLocations[i].GRPC = grpc
 	}
 
 	return buildLocations
 }
 
-func generateProtocolString(ssl *http.ProxySSLVerify, GRPC bool) string {
-	if !GRPC {
+func generateProtocolString(ssl *http.ProxySSLVerify, grpc bool) string {
+	if !grpc {
 		if ssl != nil {
 			return "https"
 		}
@@ -530,10 +530,10 @@ func createProxyPass(
 	backendGroup dataplane.BackendGroup,
 	filter *dataplane.HTTPURLRewriteFilter,
 	protocol string,
-	GRPC bool,
+	grpc bool,
 ) string {
 	var requestURI string
-	if !GRPC {
+	if !grpc {
 		if filter == nil || filter.Path == nil {
 			requestURI = "$request_uri"
 		}
@@ -553,8 +553,8 @@ func createMatchLocation(path string) http.Location {
 	}
 }
 
-func generateProxySetHeaders(filters *dataplane.HTTPFilters, GRPC bool) []http.Header {
-	if GRPC {
+func generateProxySetHeaders(filters *dataplane.HTTPFilters, grpc bool) []http.Header {
+	if grpc {
 		return []http.Header{}
 	}
 

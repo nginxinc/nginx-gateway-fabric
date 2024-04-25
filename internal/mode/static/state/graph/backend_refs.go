@@ -16,7 +16,7 @@ import (
 	staticConds "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/conditions"
 )
 
-// BackendRef is an internal representation of a backendRef in an HTTPRoute.
+// BackendRef is an internal representation of a backendRef in an HTTP/GRPCRoute.
 type BackendRef struct {
 	// BackendTLSPolicy is the BackendTLSPolicy of the Service which is referenced by the backendRef.
 	BackendTLSPolicy *BackendTLSPolicy
@@ -231,7 +231,8 @@ func validateBackendTLSPolicyMatchingAllBackends(backendRefs []BackendRef) *cond
 func findBackendTLSPolicyForService(
 	backendTLSPolicies map[types.NamespacedName]*BackendTLSPolicy,
 	refNamespace *gatewayv1.Namespace,
-	refName, routeNamespace string,
+	refName,
+	routeNamespace string,
 ) (*BackendTLSPolicy, error) {
 	var beTLSPolicy *BackendTLSPolicy
 	var err error

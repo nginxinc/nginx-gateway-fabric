@@ -45,40 +45,61 @@ type ParentRefAttachmentStatus struct {
 type RouteType string
 
 const (
+	// RouteTypeHTTP indicates that the RouteType of the L7Route is HTTP
 	RouteTypeHTTP RouteType = "http"
+	// RouteTypeGRPC indicates that the RouteType of the L7Route is gRPC
 	RouteTypeGRPC RouteType = "grpc"
 )
 
+// RouteKey is the unique identifier for a L7Route
 type RouteKey struct {
 	NamespacedName types.NamespacedName
 	RouteType      RouteType
 }
 
+// L7Route is the generic type for the layer 7 routes, HTTPRoute and GRPCRoute
 type L7Route struct {
-	Source        client.Object
-	RouteType     RouteType
-	Spec          L7RouteSpec
-	ParentRefs    []ParentRef
+	// Source is the source Gateway API object of the Route.
+	Source client.Object
+	// RouteType is the type (http or grpc) of the Route.
+	RouteType RouteType
+	// Spec is the L7RouteSpec of the Route
+	Spec L7RouteSpec
+	// ParentRefs describe the references to the parents in a Route.
+	ParentRefs []ParentRef
+	// SrcParentRefs contain the Gateway API references to the parents in a Route.
 	SrcParentRefs []v1.ParentReference
-	Conditions    []conditions.Condition
-	Valid         bool
-	Attachable    bool
+	// Conditions define the conditions to be reported in the status of the Route.
+	Conditions []conditions.Condition
+	// Valid indicates if the Route is valid.
+	Valid bool
+	// Attachable indicates if the Route is attachable to any Listener.
+	Attachable bool
 }
 
 type L7RouteSpec struct {
+	// Hostnames defines a set of hostnames used to select a Route used to process the request.
 	Hostnames []v1.Hostname
-	Rules     []RouteRule
+	// Rules are the list of HTTP matchers, filters and actions.
+	Rules []RouteRule
 }
 
 type RouteRule struct {
-	Matches          []v1.HTTPRouteMatch
-	Filters          []v1.HTTPRouteFilter
+	// Matches define the predicate used to match requests to a given action.
+	Matches []v1.HTTPRouteMatch
+	// Filters define processing steps that must be completed during the request or response lifecycle.
+	Filters []v1.HTTPRouteFilter
+	// RouteBackendRefs are a wrapper for v1.BackendRef and any BackendRef filters from the HTTPRoute or GRPCRoute.
 	RouteBackendRefs []RouteBackendRef
-	BackendRefs      []BackendRef
-	ValidMatches     bool
-	ValidFilters     bool
+	// BackendRefs is an internal representation of a backendRef in a Route.
+	BackendRefs []BackendRef
+	// ValidMatches indicates if the matches are valid and accepted by the Route.
+	ValidMatches bool
+	// ValidFilters indicates if the filters are valid and accepted by the Route.
+	ValidFilters bool
 }
 
+// RouteBackendRef is a wrapper for v1.BackendRef and any BackendRef filters from the HTTPRoute or GRPCRoute.
 type RouteBackendRef struct {
 	v1.BackendRef
 	Filters []any
@@ -97,22 +118,22 @@ func buildRoutesForGateways(
 
 	routes := make(map[RouteKey]*L7Route)
 
-	for _, ghr := range httpRoutes {
-		r := buildHTTPRoute(validator, ghr, gatewayNsNames)
+	for _, route := range httpRoutes {
+		r := buildHTTPRoute(validator, route, gatewayNsNames)
 		if r != nil {
 			rk := RouteKey{
-				NamespacedName: client.ObjectKeyFromObject(ghr),
+				NamespacedName: client.ObjectKeyFromObject(route),
 				RouteType:      RouteTypeHTTP,
 			}
 			routes[rk] = r
 		}
 	}
 
-	for _, ghr := range grpcRoutes {
-		r := buildGRPCRoute(validator, ghr, gatewayNsNames)
+	for _, route := range grpcRoutes {
+		r := buildGRPCRoute(validator, route, gatewayNsNames)
 		if r != nil {
 			rk := RouteKey{
-				NamespacedName: client.ObjectKeyFromObject(ghr),
+				NamespacedName: client.ObjectKeyFromObject(route),
 				RouteType:      RouteTypeGRPC,
 			}
 			routes[rk] = r
