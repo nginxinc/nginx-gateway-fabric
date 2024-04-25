@@ -449,7 +449,7 @@ type routeMatch struct {
 	Any bool `json:"any,omitempty"`
 }
 
-func createrouteMatch(match dataplane.Match, redirectPath string) routeMatch {
+func createRouteMatch(match dataplane.Match, redirectPath string) routeMatch {
 	hm := routeMatch{
 		RedirectPath: redirectPath,
 	}
