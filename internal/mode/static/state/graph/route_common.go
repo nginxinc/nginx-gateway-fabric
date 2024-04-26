@@ -253,76 +253,72 @@ func bindRouteToListeners(
 		return
 	}
 
-	bindRoutes := func(r *L7Route) {
-		for i := 0; i < len(r.ParentRefs); i++ {
-			attachment := &ParentRefAttachmentStatus{
-				AcceptedHostnames: make(map[string][]string),
-			}
-			ref := &r.ParentRefs[i]
-			ref.Attachment = attachment
-
-			path := field.NewPath("spec").Child("parentRefs").Index(ref.Idx)
-
-			attachableListeners, listenerExists := findAttachableListeners(
-				getSectionName(ref.SectionName),
-				gw.Listeners,
-			)
-
-			// Case 1: Attachment is not possible because the specified SectionName does not match any Listeners in the
-			// Gateway.
-			if !listenerExists {
-				attachment.FailedCondition = staticConds.NewRouteNoMatchingParent()
-				continue
-			}
-
-			// Case 2: Attachment is not possible due to unsupported configuration
-
-			if ref.Port != nil {
-				valErr := field.Forbidden(path.Child("port"), "cannot be set")
-				attachment.FailedCondition = staticConds.NewRouteUnsupportedValue(valErr.Error())
-				continue
-			}
-
-			// Case 3: the parentRef references an ignored Gateway resource.
-
-			referencesWinningGw := ref.Gateway.Namespace == gw.Source.Namespace && ref.Gateway.Name == gw.Source.Name
-
-			if !referencesWinningGw {
-				attachment.FailedCondition = staticConds.NewTODO("Gateway is ignored")
-				continue
-			}
-
-			// Case 4: Attachment is not possible because Gateway is invalid
-
-			if !gw.Valid {
-				attachment.FailedCondition = staticConds.NewRouteInvalidGateway()
-				continue
-			}
-
-			// Case 5 - winning Gateway
-
-			// Try to attach Route to all matching listeners
-
-			cond, attached := tryToAttachRouteToListeners(
-				ref.Attachment,
-				attachableListeners,
-				r,
-				gw,
-				namespaces,
-			)
-			if !attached {
-				attachment.FailedCondition = cond
-				continue
-			}
-			if cond != (conditions.Condition{}) {
-				r.Conditions = append(r.Conditions, cond)
-			}
-
-			attachment.Attached = true
+	for i := 0; i < len(route.ParentRefs); i++ {
+		attachment := &ParentRefAttachmentStatus{
+			AcceptedHostnames: make(map[string][]string),
 		}
-	}
+		ref := &route.ParentRefs[i]
+		ref.Attachment = attachment
 
-	bindRoutes(route)
+		path := field.NewPath("spec").Child("parentRefs").Index(ref.Idx)
+
+		attachableListeners, listenerExists := findAttachableListeners(
+			getSectionName(ref.SectionName),
+			gw.Listeners,
+		)
+
+		// Case 1: Attachment is not possible because the specified SectionName does not match any Listeners in the
+		// Gateway.
+		if !listenerExists {
+			attachment.FailedCondition = staticConds.NewRouteNoMatchingParent()
+			continue
+		}
+
+		// Case 2: Attachment is not possible due to unsupported configuration
+
+		if ref.Port != nil {
+			valErr := field.Forbidden(path.Child("port"), "cannot be set")
+			attachment.FailedCondition = staticConds.NewRouteUnsupportedValue(valErr.Error())
+			continue
+		}
+
+		// Case 3: the parentRef references an ignored Gateway resource.
+
+		referencesWinningGw := ref.Gateway.Namespace == gw.Source.Namespace && ref.Gateway.Name == gw.Source.Name
+
+		if !referencesWinningGw {
+			attachment.FailedCondition = staticConds.NewTODO("Gateway is ignored")
+			continue
+		}
+
+		// Case 4: Attachment is not possible because Gateway is invalid
+
+		if !gw.Valid {
+			attachment.FailedCondition = staticConds.NewRouteInvalidGateway()
+			continue
+		}
+
+		// Case 5 - winning Gateway
+
+		// Try to attach Route to all matching listeners
+
+		cond, attached := tryToAttachRouteToListeners(
+			ref.Attachment,
+			attachableListeners,
+			route,
+			gw,
+			namespaces,
+		)
+		if !attached {
+			attachment.FailedCondition = cond
+			continue
+		}
+		if cond != (conditions.Condition{}) {
+			route.Conditions = append(route.Conditions, cond)
+		}
+
+		attachment.Attached = true
+	}
 }
 
 // tryToAttachRouteToListeners tries to attach the route to the listeners that match the parentRef and the hostnames.
