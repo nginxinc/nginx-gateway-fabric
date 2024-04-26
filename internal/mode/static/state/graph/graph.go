@@ -105,7 +105,10 @@ func (g *Graph) IsReferenced(resourceType client.Object, nsname types.Namespaced
 		return exists
 	// Similar to Namespace above, NginxProxy reference exists if it once was or currently is linked to a GatewayClass.
 	case *ngfAPI.NginxProxy:
-		existed := client.ObjectKeyFromObject(obj) == client.ObjectKeyFromObject(g.NginxProxy)
+		var existed bool
+		if g.NginxProxy != nil {
+			existed = client.ObjectKeyFromObject(obj) == client.ObjectKeyFromObject(g.NginxProxy)
+		}
 		exists := isNginxProxyReferenced(obj, g.GatewayClass)
 		return existed || exists
 	default:
