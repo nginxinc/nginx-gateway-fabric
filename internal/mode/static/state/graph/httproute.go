@@ -48,11 +48,8 @@ func buildHTTPRoute(
 
 	r.Valid = true
 	r.Attachable = true
-	var rules []RouteRule
-	var atLeastOneValid bool
-	var allRulesErrs field.ErrorList
 
-	rules, atLeastOneValid, allRulesErrs = processHTTPRouteRules(ghr.Spec.Rules, validator)
+	rules, atLeastOneValid, allRulesErrs := processHTTPRouteRules(ghr.Spec.Rules, validator)
 
 	r.Spec.Rules = rules
 
@@ -75,10 +72,8 @@ func buildHTTPRoute(
 func processHTTPRouteRules(
 	specRules []v1.HTTPRouteRule,
 	validator validation.HTTPFieldsValidator,
-) ([]RouteRule, bool, field.ErrorList) {
-	rules := make([]RouteRule, len(specRules))
-	var allRulesErrs field.ErrorList
-	var atLeastOneValid bool
+) (rules []RouteRule, atLeastOneValid bool, allRulesErrs field.ErrorList) {
+	rules = make([]RouteRule, len(specRules))
 
 	for i, rule := range specRules {
 		rulePath := field.NewPath("spec").Child("rules").Index(i)
