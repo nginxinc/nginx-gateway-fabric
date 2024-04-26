@@ -554,12 +554,11 @@ func createMatchLocation(path string) http.Location {
 }
 
 func generateProxySetHeaders(filters *dataplane.HTTPFilters, grpc bool) []http.Header {
-	if grpc {
-		return []http.Header{}
+	var headers []http.Header
+	if !grpc {
+		headers = make([]http.Header, len(baseHeaders))
+		copy(headers, baseHeaders)
 	}
-
-	headers := make([]http.Header, len(baseHeaders))
-	copy(headers, baseHeaders)
 
 	if filters != nil && filters.RequestURLRewrite != nil && filters.RequestURLRewrite.Hostname != nil {
 		for i, header := range headers {

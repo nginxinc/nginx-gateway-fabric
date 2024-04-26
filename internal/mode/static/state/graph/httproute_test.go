@@ -99,11 +99,6 @@ func TestBuildHTTPRoutes(t *testing.T) {
 		client.ObjectKeyFromObject(hrWrongGateway): hrWrongGateway,
 	}
 
-	routeKey := RouteKey{
-		NamespacedName: client.ObjectKeyFromObject(hr),
-		RouteType:      RouteTypeHTTP,
-	}
-
 	tests := []struct {
 		expected  map[RouteKey]*L7Route
 		name      string
@@ -112,14 +107,14 @@ func TestBuildHTTPRoutes(t *testing.T) {
 		{
 			gwNsNames: []types.NamespacedName{gwNsName},
 			expected: map[RouteKey]*L7Route{
-				routeKey: {
-					Source:        hr,
-					RouteType:     RouteTypeHTTP,
-					SrcParentRefs: hr.Spec.ParentRefs,
+				CreateRouteKey(hr): {
+					Source:    hr,
+					RouteType: RouteTypeHTTP,
 					ParentRefs: []ParentRef{
 						{
-							Idx:     0,
-							Gateway: gwNsName,
+							Idx:         0,
+							Gateway:     gwNsName,
+							SectionName: hr.Spec.ParentRefs[0].SectionName,
 						},
 					},
 					Valid:      true,
@@ -233,13 +228,13 @@ func TestBuildHTTPRoute(t *testing.T) {
 			validator: &validationfakes.FakeHTTPFieldsValidator{},
 			hr:        hr,
 			expected: &L7Route{
-				RouteType:     RouteTypeHTTP,
-				Source:        hr,
-				SrcParentRefs: hr.Spec.ParentRefs,
+				RouteType: RouteTypeHTTP,
+				Source:    hr,
 				ParentRefs: []ParentRef{
 					{
-						Idx:     0,
-						Gateway: gatewayNsName,
+						Idx:         0,
+						Gateway:     gatewayNsName,
+						SectionName: hr.Spec.ParentRefs[0].SectionName,
 					},
 				},
 				Valid:      true,
@@ -269,15 +264,15 @@ func TestBuildHTTPRoute(t *testing.T) {
 			validator: &validationfakes.FakeHTTPFieldsValidator{},
 			hr:        hrInvalidMatchesEmptyPathType,
 			expected: &L7Route{
-				RouteType:     RouteTypeHTTP,
-				Source:        hrInvalidMatchesEmptyPathType,
-				SrcParentRefs: hrInvalidMatchesEmptyPathType.Spec.ParentRefs,
-				Valid:         false,
-				Attachable:    true,
+				RouteType:  RouteTypeHTTP,
+				Source:     hrInvalidMatchesEmptyPathType,
+				Valid:      false,
+				Attachable: true,
 				ParentRefs: []ParentRef{
 					{
-						Idx:     0,
-						Gateway: gatewayNsName,
+						Idx:         0,
+						Gateway:     gatewayNsName,
+						SectionName: hrInvalidMatchesEmptyPathType.Spec.ParentRefs[0].SectionName,
 					},
 				},
 				Conditions: []conditions.Condition{
@@ -312,15 +307,15 @@ func TestBuildHTTPRoute(t *testing.T) {
 			validator: &validationfakes.FakeHTTPFieldsValidator{},
 			hr:        hrInvalidMatchesEmptyPathValue,
 			expected: &L7Route{
-				RouteType:     RouteTypeHTTP,
-				Source:        hrInvalidMatchesEmptyPathValue,
-				SrcParentRefs: hrInvalidMatchesEmptyPathValue.Spec.ParentRefs,
-				Valid:         false,
-				Attachable:    true,
+				RouteType:  RouteTypeHTTP,
+				Source:     hrInvalidMatchesEmptyPathValue,
+				Valid:      false,
+				Attachable: true,
 				ParentRefs: []ParentRef{
 					{
-						Idx:     0,
-						Gateway: gatewayNsName,
+						Idx:         0,
+						Gateway:     gatewayNsName,
+						SectionName: hrInvalidMatchesEmptyPathValue.Spec.ParentRefs[0].SectionName,
 					},
 				},
 				Conditions: []conditions.Condition{
@@ -352,15 +347,15 @@ func TestBuildHTTPRoute(t *testing.T) {
 			validator: &validationfakes.FakeHTTPFieldsValidator{},
 			hr:        hrInvalidHostname,
 			expected: &L7Route{
-				RouteType:     RouteTypeHTTP,
-				Source:        hrInvalidHostname,
-				SrcParentRefs: hrInvalidHostname.Spec.ParentRefs,
-				Valid:         false,
-				Attachable:    false,
+				RouteType:  RouteTypeHTTP,
+				Source:     hrInvalidHostname,
+				Valid:      false,
+				Attachable: false,
 				ParentRefs: []ParentRef{
 					{
-						Idx:     0,
-						Gateway: gatewayNsName,
+						Idx:         0,
+						Gateway:     gatewayNsName,
+						SectionName: hrInvalidHostname.Spec.ParentRefs[0].SectionName,
 					},
 				},
 				Conditions: []conditions.Condition{
@@ -375,15 +370,15 @@ func TestBuildHTTPRoute(t *testing.T) {
 			validator: validatorInvalidFieldsInRule,
 			hr:        hrInvalidMatches,
 			expected: &L7Route{
-				RouteType:     RouteTypeHTTP,
-				Source:        hrInvalidMatches,
-				SrcParentRefs: hrInvalidMatches.Spec.ParentRefs,
-				Valid:         false,
-				Attachable:    true,
+				RouteType:  RouteTypeHTTP,
+				Source:     hrInvalidMatches,
+				Valid:      false,
+				Attachable: true,
 				ParentRefs: []ParentRef{
 					{
-						Idx:     0,
-						Gateway: gatewayNsName,
+						Idx:         0,
+						Gateway:     gatewayNsName,
+						SectionName: hrInvalidMatches.Spec.ParentRefs[0].SectionName,
 					},
 				},
 				Conditions: []conditions.Condition{
@@ -409,15 +404,15 @@ func TestBuildHTTPRoute(t *testing.T) {
 			validator: validatorInvalidFieldsInRule,
 			hr:        hrInvalidFilters,
 			expected: &L7Route{
-				RouteType:     RouteTypeHTTP,
-				Source:        hrInvalidFilters,
-				SrcParentRefs: hrInvalidFilters.Spec.ParentRefs,
-				Valid:         false,
-				Attachable:    true,
+				RouteType:  RouteTypeHTTP,
+				Source:     hrInvalidFilters,
+				Valid:      false,
+				Attachable: true,
 				ParentRefs: []ParentRef{
 					{
-						Idx:     0,
-						Gateway: gatewayNsName,
+						Idx:         0,
+						Gateway:     gatewayNsName,
+						SectionName: hrInvalidFilters.Spec.ParentRefs[0].SectionName,
 					},
 				},
 				Conditions: []conditions.Condition{
@@ -445,15 +440,15 @@ func TestBuildHTTPRoute(t *testing.T) {
 			validator: validatorInvalidFieldsInRule,
 			hr:        hrDroppedInvalidMatches,
 			expected: &L7Route{
-				RouteType:     RouteTypeHTTP,
-				Source:        hrDroppedInvalidMatches,
-				SrcParentRefs: hrDroppedInvalidMatches.Spec.ParentRefs,
-				Valid:         true,
-				Attachable:    true,
+				RouteType:  RouteTypeHTTP,
+				Source:     hrDroppedInvalidMatches,
+				Valid:      true,
+				Attachable: true,
 				ParentRefs: []ParentRef{
 					{
-						Idx:     0,
-						Gateway: gatewayNsName,
+						Idx:         0,
+						Gateway:     gatewayNsName,
+						SectionName: hrDroppedInvalidMatches.Spec.ParentRefs[0].SectionName,
 					},
 				},
 				Conditions: []conditions.Condition{
@@ -486,15 +481,15 @@ func TestBuildHTTPRoute(t *testing.T) {
 			validator: validatorInvalidFieldsInRule,
 			hr:        hrDroppedInvalidMatchesAndInvalidFilters,
 			expected: &L7Route{
-				RouteType:     RouteTypeHTTP,
-				Source:        hrDroppedInvalidMatchesAndInvalidFilters,
-				SrcParentRefs: hrDroppedInvalidMatchesAndInvalidFilters.Spec.ParentRefs,
-				Valid:         true,
-				Attachable:    true,
+				RouteType:  RouteTypeHTTP,
+				Source:     hrDroppedInvalidMatchesAndInvalidFilters,
+				Valid:      true,
+				Attachable: true,
 				ParentRefs: []ParentRef{
 					{
-						Idx:     0,
-						Gateway: gatewayNsName,
+						Idx:         0,
+						Gateway:     gatewayNsName,
+						SectionName: hrDroppedInvalidMatchesAndInvalidFilters.Spec.ParentRefs[0].SectionName,
 					},
 				},
 				Conditions: []conditions.Condition{
@@ -535,15 +530,15 @@ func TestBuildHTTPRoute(t *testing.T) {
 			validator: validatorInvalidFieldsInRule,
 			hr:        hrDroppedInvalidFilters,
 			expected: &L7Route{
-				RouteType:     RouteTypeHTTP,
-				Source:        hrDroppedInvalidFilters,
-				SrcParentRefs: hrDroppedInvalidFilters.Spec.ParentRefs,
-				Valid:         true,
-				Attachable:    true,
+				RouteType:  RouteTypeHTTP,
+				Source:     hrDroppedInvalidFilters,
+				Valid:      true,
+				Attachable: true,
 				ParentRefs: []ParentRef{
 					{
-						Idx:     0,
-						Gateway: gatewayNsName,
+						Idx:         0,
+						Gateway:     gatewayNsName,
+						SectionName: hrDroppedInvalidFilters.Spec.ParentRefs[0].SectionName,
 					},
 				},
 				Conditions: []conditions.Condition{

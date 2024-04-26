@@ -558,31 +558,6 @@ func TestBuildConfiguration(t *testing.T) {
 		},
 	}
 
-	routeKeyHR1Invalid := graph.RouteKey{
-		NamespacedName: client.ObjectKeyFromObject(hr1Invalid),
-		RouteType:      graph.RouteTypeHTTP,
-	}
-
-	routeKeyHTTPSInvalid := graph.RouteKey{
-		NamespacedName: client.ObjectKeyFromObject(httpsHR1Invalid),
-		RouteType:      graph.RouteTypeHTTP,
-	}
-
-	routeKeyHR1 := graph.RouteKey{
-		NamespacedName: client.ObjectKeyFromObject(hr1),
-		RouteType:      graph.RouteTypeHTTP,
-	}
-
-	routeKeyHR2 := graph.RouteKey{
-		NamespacedName: client.ObjectKeyFromObject(hr2),
-		RouteType:      graph.RouteTypeHTTP,
-	}
-
-	routeKeyGR := graph.RouteKey{
-		NamespacedName: client.ObjectKeyFromObject(gr),
-		RouteType:      graph.RouteTypeGRPC,
-	}
-
 	tests := []struct {
 		graph   *graph.Graph
 		msg     string
@@ -654,7 +629,7 @@ func TestBuildConfiguration(t *testing.T) {
 							Source: listener80,
 							Valid:  true,
 							Routes: map[graph.RouteKey]*graph.L7Route{
-								routeKeyHR1Invalid: routeHR1Invalid,
+								graph.CreateRouteKey(hr1Invalid): routeHR1Invalid,
 							},
 						},
 						{
@@ -662,14 +637,14 @@ func TestBuildConfiguration(t *testing.T) {
 							Source: listener443, // nil hostname
 							Valid:  true,
 							Routes: map[graph.RouteKey]*graph.L7Route{
-								routeKeyHTTPSInvalid: httpsRouteHR1Invalid,
+								graph.CreateRouteKey(httpsHR1Invalid): httpsRouteHR1Invalid,
 							},
 							ResolvedSecret: &secret1NsName,
 						},
 					},
 				},
 				Routes: map[graph.RouteKey]*graph.L7Route{
-					routeKeyHR1Invalid: routeHR1Invalid,
+					graph.CreateRouteKey(hr1Invalid): routeHR1Invalid,
 				},
 				ReferencedSecrets: map[types.NamespacedName]*graph.Secret{
 					secret1NsName: secret1,
@@ -784,8 +759,8 @@ func TestBuildConfiguration(t *testing.T) {
 					},
 				},
 				Routes: map[graph.RouteKey]*graph.L7Route{
-					{NamespacedName: types.NamespacedName{Namespace: "test", Name: "https-hr-1"}}: httpsRouteHR1,
-					{NamespacedName: types.NamespacedName{Namespace: "test", Name: "https-hr-2"}}: httpsRouteHR2,
+					graph.CreateRouteKey(httpsHR1): httpsRouteHR1,
+					graph.CreateRouteKey(httpsHR2): httpsRouteHR2,
 				},
 				ReferencedSecrets: map[types.NamespacedName]*graph.Secret{
 					secret1NsName: secret1,
@@ -813,15 +788,15 @@ func TestBuildConfiguration(t *testing.T) {
 							Source: listener80,
 							Valid:  true,
 							Routes: map[graph.RouteKey]*graph.L7Route{
-								routeKeyHR1: routeHR1,
-								routeKeyHR2: routeHR2,
+								graph.CreateRouteKey(hr1): routeHR1,
+								graph.CreateRouteKey(hr2): routeHR2,
 							},
 						},
 					},
 				},
 				Routes: map[graph.RouteKey]*graph.L7Route{
-					routeKeyHR1: routeHR1,
-					routeKeyHR2: routeHR2,
+					graph.CreateRouteKey(hr1): routeHR1,
+					graph.CreateRouteKey(hr2): routeHR2,
 				},
 			},
 			expConf: Configuration{
@@ -885,13 +860,13 @@ func TestBuildConfiguration(t *testing.T) {
 							Source: listener80,
 							Valid:  true,
 							Routes: map[graph.RouteKey]*graph.L7Route{
-								routeKeyGR: routeGR,
+								graph.CreateRouteKey(gr): routeGR,
 							},
 						},
 					},
 				},
 				Routes: map[graph.RouteKey]*graph.L7Route{
-					routeKeyGR: routeGR,
+					graph.CreateRouteKey(gr): routeGR,
 				},
 			},
 			expConf: Configuration{
@@ -940,8 +915,8 @@ func TestBuildConfiguration(t *testing.T) {
 							Source: listener443,
 							Valid:  true,
 							Routes: map[graph.RouteKey]*graph.L7Route{
-								{NamespacedName: types.NamespacedName{Namespace: "test", Name: "https-hr-1"}}: httpsRouteHR1,
-								{NamespacedName: types.NamespacedName{Namespace: "test", Name: "https-hr-2"}}: httpsRouteHR2,
+								graph.CreateRouteKey(httpsHR1): httpsRouteHR1,
+								graph.CreateRouteKey(httpsHR2): httpsRouteHR2,
 							},
 							ResolvedSecret: &secret1NsName,
 						},
@@ -950,16 +925,16 @@ func TestBuildConfiguration(t *testing.T) {
 							Source: listener443WithHostname,
 							Valid:  true,
 							Routes: map[graph.RouteKey]*graph.L7Route{
-								{NamespacedName: types.NamespacedName{Namespace: "test", Name: "https-hr-5"}}: httpsRouteHR5,
+								graph.CreateRouteKey(httpsHR5): httpsRouteHR5,
 							},
 							ResolvedSecret: &secret2NsName,
 						},
 					},
 				},
 				Routes: map[graph.RouteKey]*graph.L7Route{
-					routeKeyHR1: httpsRouteHR1,
-					routeKeyHR2: httpsRouteHR2,
-					{NamespacedName: types.NamespacedName{Namespace: "test", Name: "https-hr-5"}}: httpsRouteHR5,
+					graph.CreateRouteKey(hr1):      httpsRouteHR1,
+					graph.CreateRouteKey(hr2):      httpsRouteHR2,
+					graph.CreateRouteKey(httpsHR5): httpsRouteHR5,
 				},
 				ReferencedSecrets: map[types.NamespacedName]*graph.Secret{
 					secret1NsName: secret1,
@@ -1060,8 +1035,8 @@ func TestBuildConfiguration(t *testing.T) {
 							Source: listener80,
 							Valid:  true,
 							Routes: map[graph.RouteKey]*graph.L7Route{
-								{NamespacedName: types.NamespacedName{Namespace: "test", Name: "hr-3"}}: routeHR3,
-								{NamespacedName: types.NamespacedName{Namespace: "test", Name: "hr-4"}}: routeHR4,
+								graph.CreateRouteKey(hr3): routeHR3,
+								graph.CreateRouteKey(hr4): routeHR4,
 							},
 						},
 						{
@@ -1069,18 +1044,18 @@ func TestBuildConfiguration(t *testing.T) {
 							Source: listener443,
 							Valid:  true,
 							Routes: map[graph.RouteKey]*graph.L7Route{
-								{NamespacedName: types.NamespacedName{Namespace: "test", Name: "https-hr-3"}}: httpsRouteHR3,
-								{NamespacedName: types.NamespacedName{Namespace: "test", Name: "https-hr-4"}}: httpsRouteHR4,
+								graph.CreateRouteKey(httpsHR3): httpsRouteHR3,
+								graph.CreateRouteKey(httpsHR4): httpsRouteHR4,
 							},
 							ResolvedSecret: &secret1NsName,
 						},
 					},
 				},
 				Routes: map[graph.RouteKey]*graph.L7Route{
-					{NamespacedName: types.NamespacedName{Namespace: "test", Name: "hr-3"}}:       routeHR3,
-					{NamespacedName: types.NamespacedName{Namespace: "test", Name: "hr-4"}}:       routeHR4,
-					{NamespacedName: types.NamespacedName{Namespace: "test", Name: "https-hr-3"}}: httpsRouteHR3,
-					{NamespacedName: types.NamespacedName{Namespace: "test", Name: "https-hr-4"}}: httpsRouteHR4,
+					graph.CreateRouteKey(hr3):      routeHR3,
+					graph.CreateRouteKey(hr4):      routeHR4,
+					graph.CreateRouteKey(httpsHR3): httpsRouteHR3,
+					graph.CreateRouteKey(httpsHR4): httpsRouteHR4,
 				},
 				ReferencedSecrets: map[types.NamespacedName]*graph.Secret{
 					secret1NsName: secret1,
@@ -1220,7 +1195,7 @@ func TestBuildConfiguration(t *testing.T) {
 							Source: listener80,
 							Valid:  true,
 							Routes: map[graph.RouteKey]*graph.L7Route{
-								{NamespacedName: types.NamespacedName{Namespace: "test", Name: "hr-3"}}: routeHR3,
+								graph.CreateRouteKey(hr3): routeHR3,
 							},
 						},
 						{
@@ -1228,7 +1203,7 @@ func TestBuildConfiguration(t *testing.T) {
 							Source: listener8080,
 							Valid:  true,
 							Routes: map[graph.RouteKey]*graph.L7Route{
-								{NamespacedName: types.NamespacedName{Namespace: "test", Name: "hr-8"}}: routeHR8,
+								graph.CreateRouteKey(hr8): routeHR8,
 							},
 						},
 						{
@@ -1236,7 +1211,7 @@ func TestBuildConfiguration(t *testing.T) {
 							Source: listener443,
 							Valid:  true,
 							Routes: map[graph.RouteKey]*graph.L7Route{
-								{NamespacedName: types.NamespacedName{Namespace: "test", Name: "https-hr-3"}}: httpsRouteHR3,
+								graph.CreateRouteKey(httpsHR3): httpsRouteHR3,
 							},
 							ResolvedSecret: &secret1NsName,
 						},
@@ -1245,17 +1220,17 @@ func TestBuildConfiguration(t *testing.T) {
 							Source: listener8443,
 							Valid:  true,
 							Routes: map[graph.RouteKey]*graph.L7Route{
-								{NamespacedName: types.NamespacedName{Namespace: "test", Name: "https-hr-7"}}: httpsRouteHR7,
+								graph.CreateRouteKey(httpsHR7): httpsRouteHR7,
 							},
 							ResolvedSecret: &secret1NsName,
 						},
 					},
 				},
 				Routes: map[graph.RouteKey]*graph.L7Route{
-					{NamespacedName: types.NamespacedName{Namespace: "test", Name: "hr-3"}}:       routeHR3,
-					{NamespacedName: types.NamespacedName{Namespace: "test", Name: "hr-8"}}:       routeHR8,
-					{NamespacedName: types.NamespacedName{Namespace: "test", Name: "https-hr-3"}}: httpsRouteHR3,
-					{NamespacedName: types.NamespacedName{Namespace: "test", Name: "https-hr-7"}}: httpsRouteHR7,
+					graph.CreateRouteKey(hr3):      routeHR3,
+					graph.CreateRouteKey(hr8):      routeHR8,
+					graph.CreateRouteKey(httpsHR3): httpsRouteHR3,
+					graph.CreateRouteKey(httpsHR7): httpsRouteHR7,
 				},
 				ReferencedSecrets: map[types.NamespacedName]*graph.Secret{
 					secret1NsName: secret1,
@@ -1434,13 +1409,13 @@ func TestBuildConfiguration(t *testing.T) {
 							Source: listener80,
 							Valid:  true,
 							Routes: map[graph.RouteKey]*graph.L7Route{
-								{NamespacedName: types.NamespacedName{Namespace: "test", Name: "hr-1"}}: routeHR1,
+								graph.CreateRouteKey(hr1): routeHR1,
 							},
 						},
 					},
 				},
 				Routes: map[graph.RouteKey]*graph.L7Route{
-					{NamespacedName: types.NamespacedName{Namespace: "test", Name: "hr-1"}}: routeHR1,
+					graph.CreateRouteKey(hr1): routeHR1,
 				},
 			},
 			expConf: Configuration{},
@@ -1457,13 +1432,13 @@ func TestBuildConfiguration(t *testing.T) {
 							Source: listener80,
 							Valid:  true,
 							Routes: map[graph.RouteKey]*graph.L7Route{
-								{NamespacedName: types.NamespacedName{Namespace: "test", Name: "hr-1"}}: routeHR1,
+								graph.CreateRouteKey(hr1): routeHR1,
 							},
 						},
 					},
 				},
 				Routes: map[graph.RouteKey]*graph.L7Route{
-					{NamespacedName: types.NamespacedName{Namespace: "test", Name: "hr-1"}}: routeHR1,
+					graph.CreateRouteKey(hr1): routeHR1,
 				},
 			},
 			expConf: Configuration{},
@@ -1495,13 +1470,13 @@ func TestBuildConfiguration(t *testing.T) {
 							Source: listener80,
 							Valid:  true,
 							Routes: map[graph.RouteKey]*graph.L7Route{
-								{NamespacedName: types.NamespacedName{Namespace: "test", Name: "hr-5"}}: routeHR5,
+								graph.CreateRouteKey(hr5): routeHR5,
 							},
 						},
 					},
 				},
 				Routes: map[graph.RouteKey]*graph.L7Route{
-					{NamespacedName: types.NamespacedName{Namespace: "test", Name: "hr-5"}}: routeHR5,
+					graph.CreateRouteKey(hr5): routeHR5,
 				},
 			},
 			expConf: Configuration{
@@ -1565,7 +1540,7 @@ func TestBuildConfiguration(t *testing.T) {
 							Source: listener80,
 							Valid:  true,
 							Routes: map[graph.RouteKey]*graph.L7Route{
-								{NamespacedName: types.NamespacedName{Namespace: "test", Name: "hr-6"}}: routeHR6,
+								graph.CreateRouteKey(hr6): routeHR6,
 							},
 						},
 						{
@@ -1573,15 +1548,15 @@ func TestBuildConfiguration(t *testing.T) {
 							Source: listener443,
 							Valid:  true,
 							Routes: map[graph.RouteKey]*graph.L7Route{
-								{NamespacedName: types.NamespacedName{Namespace: "test", Name: "https-hr-6"}}: httpsRouteHR6,
+								graph.CreateRouteKey(httpsHR6): httpsRouteHR6,
 							},
 							ResolvedSecret: &secret1NsName,
 						},
 					},
 				},
 				Routes: map[graph.RouteKey]*graph.L7Route{
-					{NamespacedName: types.NamespacedName{Namespace: "test", Name: "hr-6"}}:       routeHR6,
-					{NamespacedName: types.NamespacedName{Namespace: "test", Name: "https-hr-6"}}: httpsRouteHR6,
+					graph.CreateRouteKey(hr6):      routeHR6,
+					graph.CreateRouteKey(httpsHR6): httpsRouteHR6,
 				},
 				ReferencedSecrets: map[types.NamespacedName]*graph.Secret{
 					secret1NsName: secret1,
@@ -1667,13 +1642,13 @@ func TestBuildConfiguration(t *testing.T) {
 							Source: listener80,
 							Valid:  true,
 							Routes: map[graph.RouteKey]*graph.L7Route{
-								{NamespacedName: types.NamespacedName{Namespace: "test", Name: "hr-7"}}: routeHR7,
+								graph.CreateRouteKey(hr7): routeHR7,
 							},
 						},
 					},
 				},
 				Routes: map[graph.RouteKey]*graph.L7Route{
-					{NamespacedName: types.NamespacedName{Namespace: "test", Name: "hr-7"}}: routeHR7,
+					graph.CreateRouteKey(hr7): routeHR7,
 				},
 			},
 			expConf: Configuration{
@@ -1731,7 +1706,7 @@ func TestBuildConfiguration(t *testing.T) {
 							Source: listener443WithHostname,
 							Valid:  true,
 							Routes: map[graph.RouteKey]*graph.L7Route{
-								{NamespacedName: types.NamespacedName{Namespace: "test", Name: "https-hr-5"}}: httpsRouteHR5,
+								graph.CreateRouteKey(httpsHR5): httpsRouteHR5,
 							},
 							ResolvedSecret: &secret2NsName,
 						},
@@ -1740,14 +1715,14 @@ func TestBuildConfiguration(t *testing.T) {
 							Source: listener443,
 							Valid:  true,
 							Routes: map[graph.RouteKey]*graph.L7Route{
-								{NamespacedName: types.NamespacedName{Namespace: "test", Name: "https-hr-5"}}: httpsRouteHR5,
+								graph.CreateRouteKey(httpsHR5): httpsRouteHR5,
 							},
 							ResolvedSecret: &secret1NsName,
 						},
 					},
 				},
 				Routes: map[graph.RouteKey]*graph.L7Route{
-					{NamespacedName: types.NamespacedName{Namespace: "test", Name: "https-hr-5"}}: httpsRouteHR5,
+					graph.CreateRouteKey(httpsHR5): httpsRouteHR5,
 				},
 				ReferencedSecrets: map[types.NamespacedName]*graph.Secret{
 					secret1NsName: secret1,
@@ -1819,14 +1794,14 @@ func TestBuildConfiguration(t *testing.T) {
 							Source: listener443,
 							Valid:  true,
 							Routes: map[graph.RouteKey]*graph.L7Route{
-								{NamespacedName: types.NamespacedName{Namespace: "test", Name: "https-hr-8"}}: httpsRouteHR8,
+								graph.CreateRouteKey(httpsHR8): httpsRouteHR8,
 							},
 							ResolvedSecret: &secret1NsName,
 						},
 					},
 				},
 				Routes: map[graph.RouteKey]*graph.L7Route{
-					{NamespacedName: types.NamespacedName{Namespace: "test", Name: "https-hr-8"}}: httpsRouteHR8,
+					graph.CreateRouteKey(httpsHR8): httpsRouteHR8,
 				},
 				ReferencedSecrets: map[types.NamespacedName]*graph.Secret{
 					secret1NsName: secret1,
@@ -1895,14 +1870,14 @@ func TestBuildConfiguration(t *testing.T) {
 							Source: listener443,
 							Valid:  true,
 							Routes: map[graph.RouteKey]*graph.L7Route{
-								{NamespacedName: types.NamespacedName{Namespace: "test", Name: "https-hr-9"}}: httpsRouteHR9,
+								graph.CreateRouteKey(httpsHR9): httpsRouteHR9,
 							},
 							ResolvedSecret: &secret1NsName,
 						},
 					},
 				},
 				Routes: map[graph.RouteKey]*graph.L7Route{
-					{NamespacedName: types.NamespacedName{Namespace: "test", Name: "https-hr-9"}}: httpsRouteHR9,
+					graph.CreateRouteKey(httpsHR9): httpsRouteHR9,
 				},
 				ReferencedSecrets: map[types.NamespacedName]*graph.Secret{
 					secret1NsName: secret1,

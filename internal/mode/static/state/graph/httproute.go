@@ -34,8 +34,6 @@ func buildHTTPRoute(
 	}
 	r.ParentRefs = sectionNameRefs
 
-	r.SrcParentRefs = ghr.Spec.ParentRefs
-
 	if err := validateHostnames(
 		ghr.Spec.Hostnames,
 		field.NewPath("spec").Child("hostnames"),
@@ -110,11 +108,18 @@ func processHTTPRouteRules(
 
 		// rule.BackendRefs are validated separately because of their special requirements
 		for _, b := range rule.BackendRefs {
-			interfaceFilters := make([]interface{}, 0, len(b.Filters))
-			for i, v := range b.Filters {
-				interfaceFilters[i] = v
+			var interfaceFilters []interface{}
+			if len(b.Filters) > 0 {
+				interfaceFilters = make([]interface{}, 0, len(b.Filters))
+				for i, v := range b.Filters {
+					interfaceFilters[i] = v
+				}
 			}
-			backendRefs = append(backendRefs, RouteBackendRef{b.BackendRef, interfaceFilters})
+			rbr := RouteBackendRef{
+				BackendRef: b.BackendRef,
+				Filters:    interfaceFilters,
+			}
+			backendRefs = append(backendRefs, rbr)
 		}
 
 		rules[i] = RouteRule{

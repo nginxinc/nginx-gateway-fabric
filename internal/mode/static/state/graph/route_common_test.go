@@ -55,20 +55,24 @@ func TestBuildSectionNameRefs(t *testing.T) {
 
 	expected := []ParentRef{
 		{
-			Idx:     0,
-			Gateway: gwNsName1,
+			Idx:         0,
+			Gateway:     gwNsName1,
+			SectionName: parentRefs[0].SectionName,
 		},
 		{
-			Idx:     2,
-			Gateway: gwNsName2,
+			Idx:         2,
+			Gateway:     gwNsName2,
+			SectionName: parentRefs[2].SectionName,
 		},
 		{
-			Idx:     3,
-			Gateway: gwNsName1,
+			Idx:         3,
+			Gateway:     gwNsName1,
+			SectionName: parentRefs[3].SectionName,
 		},
 		{
-			Idx:     4,
-			Gateway: gwNsName2,
+			Idx:         4,
+			Gateway:     gwNsName2,
+			SectionName: parentRefs[4].SectionName,
 		},
 	}
 
@@ -297,23 +301,16 @@ func TestBindRouteToListeners(t *testing.T) {
 			Attachable: true,
 			ParentRefs: []ParentRef{
 				{
-					Idx:     0,
-					Gateway: client.ObjectKeyFromObject(gateway),
+					Idx:         0,
+					Gateway:     client.ObjectKeyFromObject(gateway),
+					SectionName: hr.Spec.ParentRefs[0].SectionName,
 				},
 			},
-			SrcParentRefs: hr.Spec.ParentRefs,
 		}
 		return normalRoute
 	}
 	getLastNormalRoute := func() *L7Route {
 		return normalRoute
-	}
-
-	getRouteKey := func(nsName types.NamespacedName, rt RouteType) RouteKey {
-		return RouteKey{
-			NamespacedName: nsName,
-			RouteType:      rt,
-		}
 	}
 
 	invalidAttachableRoute1 := &L7Route{
@@ -323,11 +320,11 @@ func TestBindRouteToListeners(t *testing.T) {
 		Attachable: true,
 		ParentRefs: []ParentRef{
 			{
-				Idx:     0,
-				Gateway: client.ObjectKeyFromObject(gw),
+				Idx:         0,
+				Gateway:     client.ObjectKeyFromObject(gw),
+				SectionName: hr.Spec.ParentRefs[0].SectionName,
 			},
 		},
-		SrcParentRefs: hr.Spec.ParentRefs,
 	}
 	invalidAttachableRoute2 := &L7Route{
 		RouteType:  RouteTypeHTTP,
@@ -336,11 +333,11 @@ func TestBindRouteToListeners(t *testing.T) {
 		Attachable: true,
 		ParentRefs: []ParentRef{
 			{
-				Idx:     0,
-				Gateway: client.ObjectKeyFromObject(gw),
+				Idx:         0,
+				Gateway:     client.ObjectKeyFromObject(gw),
+				SectionName: hr.Spec.ParentRefs[0].SectionName,
 			},
 		},
-		SrcParentRefs: hr.Spec.ParentRefs,
 	}
 
 	routeWithMissingSectionName := &L7Route{
@@ -350,11 +347,11 @@ func TestBindRouteToListeners(t *testing.T) {
 		Attachable: true,
 		ParentRefs: []ParentRef{
 			{
-				Idx:     0,
-				Gateway: client.ObjectKeyFromObject(gw),
+				Idx:         0,
+				Gateway:     client.ObjectKeyFromObject(gw),
+				SectionName: hrWithNilSectionName.Spec.ParentRefs[0].SectionName,
 			},
 		},
-		SrcParentRefs: hrWithNilSectionName.Spec.ParentRefs,
 	}
 	routeWithEmptySectionName := &L7Route{
 		RouteType:  RouteTypeHTTP,
@@ -363,11 +360,11 @@ func TestBindRouteToListeners(t *testing.T) {
 		Attachable: true,
 		ParentRefs: []ParentRef{
 			{
-				Idx:     0,
-				Gateway: client.ObjectKeyFromObject(gw),
+				Idx:         0,
+				Gateway:     client.ObjectKeyFromObject(gw),
+				SectionName: hrWithEmptySectionName.Spec.ParentRefs[0].SectionName,
 			},
 		},
-		SrcParentRefs: hrWithEmptySectionName.Spec.ParentRefs,
 	}
 	routeWithNonExistingListener := &L7Route{
 		RouteType:  RouteTypeHTTP,
@@ -376,11 +373,11 @@ func TestBindRouteToListeners(t *testing.T) {
 		Attachable: true,
 		ParentRefs: []ParentRef{
 			{
-				Idx:     0,
-				Gateway: client.ObjectKeyFromObject(gw),
+				Idx:         0,
+				Gateway:     client.ObjectKeyFromObject(gw),
+				SectionName: hrWithNonExistingListener.Spec.ParentRefs[0].SectionName,
 			},
 		},
-		SrcParentRefs: hrWithNonExistingListener.Spec.ParentRefs,
 	}
 	routeWithPort := &L7Route{
 		RouteType:  RouteTypeHTTP,
@@ -389,11 +386,12 @@ func TestBindRouteToListeners(t *testing.T) {
 		Attachable: true,
 		ParentRefs: []ParentRef{
 			{
-				Idx:     0,
-				Gateway: client.ObjectKeyFromObject(gw),
+				Idx:         0,
+				Gateway:     client.ObjectKeyFromObject(gw),
+				SectionName: hrWithPort.Spec.ParentRefs[0].SectionName,
+				Port:        hrWithPort.Spec.ParentRefs[0].Port,
 			},
 		},
-		SrcParentRefs: hrWithPort.Spec.ParentRefs,
 	}
 	ignoredGwNsName := types.NamespacedName{Namespace: "test", Name: "ignored-gateway"}
 	routeWithIgnoredGateway := &L7Route{
@@ -403,11 +401,11 @@ func TestBindRouteToListeners(t *testing.T) {
 		Attachable: true,
 		ParentRefs: []ParentRef{
 			{
-				Idx:     0,
-				Gateway: ignoredGwNsName,
+				Idx:         0,
+				Gateway:     ignoredGwNsName,
+				SectionName: hr.Spec.ParentRefs[0].SectionName,
 			},
 		},
-		SrcParentRefs: hr.Spec.ParentRefs,
 	}
 	invalidRoute := &L7Route{
 		RouteType: RouteTypeHTTP,
@@ -415,11 +413,11 @@ func TestBindRouteToListeners(t *testing.T) {
 		Source:    hr,
 		ParentRefs: []ParentRef{
 			{
-				Idx:     0,
-				Gateway: client.ObjectKeyFromObject(gw),
+				Idx:         0,
+				Gateway:     client.ObjectKeyFromObject(gw),
+				SectionName: hr.Spec.ParentRefs[0].SectionName,
 			},
 		},
-		SrcParentRefs: hr.Spec.ParentRefs,
 	}
 
 	invalidNotAttachableListener := createModifiedListener("listener-80-1", func(l *Listener) {
@@ -449,8 +447,9 @@ func TestBindRouteToListeners(t *testing.T) {
 			},
 			expectedSectionNameRefs: []ParentRef{
 				{
-					Idx:     0,
-					Gateway: client.ObjectKeyFromObject(gw),
+					Idx:         0,
+					Gateway:     client.ObjectKeyFromObject(gw),
+					SectionName: hr.Spec.ParentRefs[0].SectionName,
 					Attachment: &ParentRefAttachmentStatus{
 						Attached: true,
 						AcceptedHostnames: map[string][]string{
@@ -462,7 +461,7 @@ func TestBindRouteToListeners(t *testing.T) {
 			expectedGatewayListeners: []*Listener{
 				createModifiedListener("listener-80-1", func(l *Listener) {
 					l.Routes = map[RouteKey]*L7Route{
-						getRouteKey(client.ObjectKeyFromObject(hr), RouteTypeHTTP): getLastNormalRoute(),
+						CreateRouteKey(hr): getLastNormalRoute(),
 					}
 				}),
 			},
@@ -479,8 +478,9 @@ func TestBindRouteToListeners(t *testing.T) {
 			},
 			expectedSectionNameRefs: []ParentRef{
 				{
-					Idx:     0,
-					Gateway: client.ObjectKeyFromObject(gw),
+					Idx:         0,
+					Gateway:     client.ObjectKeyFromObject(gw),
+					SectionName: hrWithNilSectionName.Spec.ParentRefs[0].SectionName,
 					Attachment: &ParentRefAttachmentStatus{
 						Attached: true,
 						AcceptedHostnames: map[string][]string{
@@ -492,7 +492,7 @@ func TestBindRouteToListeners(t *testing.T) {
 			expectedGatewayListeners: []*Listener{
 				createModifiedListener("listener-80-1", func(l *Listener) {
 					l.Routes = map[RouteKey]*L7Route{
-						getRouteKey(client.ObjectKeyFromObject(hr), RouteTypeHTTP): routeWithMissingSectionName,
+						CreateRouteKey(hr): routeWithMissingSectionName,
 					}
 				}),
 			},
@@ -510,8 +510,9 @@ func TestBindRouteToListeners(t *testing.T) {
 			},
 			expectedSectionNameRefs: []ParentRef{
 				{
-					Idx:     0,
-					Gateway: client.ObjectKeyFromObject(gw),
+					Idx:         0,
+					Gateway:     client.ObjectKeyFromObject(gw),
+					SectionName: hrWithEmptySectionName.Spec.ParentRefs[0].SectionName,
 					Attachment: &ParentRefAttachmentStatus{
 						Attached: true,
 						AcceptedHostnames: map[string][]string{
@@ -524,12 +525,12 @@ func TestBindRouteToListeners(t *testing.T) {
 			expectedGatewayListeners: []*Listener{
 				createModifiedListener("listener-80", func(l *Listener) {
 					l.Routes = map[RouteKey]*L7Route{
-						getRouteKey(client.ObjectKeyFromObject(hr), RouteTypeHTTP): routeWithEmptySectionName,
+						CreateRouteKey(hr): routeWithEmptySectionName,
 					}
 				}),
 				createModifiedListener("listener-8080", func(l *Listener) {
 					l.Routes = map[RouteKey]*L7Route{
-						getRouteKey(client.ObjectKeyFromObject(hr), RouteTypeHTTP): routeWithEmptySectionName,
+						CreateRouteKey(hr): routeWithEmptySectionName,
 					}
 				}),
 			},
@@ -546,8 +547,9 @@ func TestBindRouteToListeners(t *testing.T) {
 			},
 			expectedSectionNameRefs: []ParentRef{
 				{
-					Idx:     0,
-					Gateway: client.ObjectKeyFromObject(gw),
+					Idx:         0,
+					Gateway:     client.ObjectKeyFromObject(gw),
+					SectionName: hrWithEmptySectionName.Spec.ParentRefs[0].SectionName,
 					Attachment: &ParentRefAttachmentStatus{
 						Attached:          false,
 						FailedCondition:   staticConds.NewRouteInvalidListener(),
@@ -571,8 +573,9 @@ func TestBindRouteToListeners(t *testing.T) {
 			},
 			expectedSectionNameRefs: []ParentRef{
 				{
-					Idx:     0,
-					Gateway: client.ObjectKeyFromObject(gw),
+					Idx:         0,
+					Gateway:     client.ObjectKeyFromObject(gw),
+					SectionName: hrWithPort.Spec.ParentRefs[0].SectionName,
 					Attachment: &ParentRefAttachmentStatus{
 						Attached: false,
 						FailedCondition: staticConds.NewRouteUnsupportedValue(
@@ -580,6 +583,7 @@ func TestBindRouteToListeners(t *testing.T) {
 						),
 						AcceptedHostnames: map[string][]string{},
 					},
+					Port: hrWithPort.Spec.ParentRefs[0].Port,
 				},
 			},
 			expectedGatewayListeners: []*Listener{
@@ -598,8 +602,9 @@ func TestBindRouteToListeners(t *testing.T) {
 			},
 			expectedSectionNameRefs: []ParentRef{
 				{
-					Idx:     0,
-					Gateway: client.ObjectKeyFromObject(gw),
+					Idx:         0,
+					Gateway:     client.ObjectKeyFromObject(gw),
+					SectionName: hrWithNonExistingListener.Spec.ParentRefs[0].SectionName,
 					Attachment: &ParentRefAttachmentStatus{
 						Attached:          false,
 						FailedCondition:   staticConds.NewRouteNoMatchingParent(),
@@ -623,8 +628,9 @@ func TestBindRouteToListeners(t *testing.T) {
 			},
 			expectedSectionNameRefs: []ParentRef{
 				{
-					Idx:     0,
-					Gateway: client.ObjectKeyFromObject(gw),
+					Idx:         0,
+					Gateway:     client.ObjectKeyFromObject(gw),
+					SectionName: hr.Spec.ParentRefs[0].SectionName,
 					Attachment: &ParentRefAttachmentStatus{
 						Attached:          false,
 						FailedCondition:   staticConds.NewRouteInvalidListener(),
@@ -648,8 +654,9 @@ func TestBindRouteToListeners(t *testing.T) {
 			},
 			expectedSectionNameRefs: []ParentRef{
 				{
-					Idx:     0,
-					Gateway: client.ObjectKeyFromObject(gw),
+					Idx:         0,
+					Gateway:     client.ObjectKeyFromObject(gw),
+					SectionName: hr.Spec.ParentRefs[0].SectionName,
 					Attachment: &ParentRefAttachmentStatus{
 						Attached:          false,
 						FailedCondition:   staticConds.NewRouteNoMatchingListenerHostname(),
@@ -673,8 +680,9 @@ func TestBindRouteToListeners(t *testing.T) {
 			},
 			expectedSectionNameRefs: []ParentRef{
 				{
-					Idx:     0,
-					Gateway: ignoredGwNsName,
+					Idx:         0,
+					Gateway:     ignoredGwNsName,
+					SectionName: hr.Spec.ParentRefs[0].SectionName,
 					Attachment: &ParentRefAttachmentStatus{
 						Attached:          false,
 						FailedCondition:   staticConds.NewTODO("Gateway is ignored"),
@@ -698,9 +706,10 @@ func TestBindRouteToListeners(t *testing.T) {
 			},
 			expectedSectionNameRefs: []ParentRef{
 				{
-					Idx:        0,
-					Gateway:    client.ObjectKeyFromObject(gw),
-					Attachment: nil,
+					Idx:         0,
+					Gateway:     client.ObjectKeyFromObject(gw),
+					Attachment:  nil,
+					SectionName: hr.Spec.ParentRefs[0].SectionName,
 				},
 			},
 			expectedGatewayListeners: []*Listener{
@@ -719,8 +728,9 @@ func TestBindRouteToListeners(t *testing.T) {
 			},
 			expectedSectionNameRefs: []ParentRef{
 				{
-					Idx:     0,
-					Gateway: client.ObjectKeyFromObject(gw),
+					Idx:         0,
+					Gateway:     client.ObjectKeyFromObject(gw),
+					SectionName: hr.Spec.ParentRefs[0].SectionName,
 					Attachment: &ParentRefAttachmentStatus{
 						Attached:          false,
 						FailedCondition:   staticConds.NewRouteInvalidGateway(),
@@ -746,8 +756,9 @@ func TestBindRouteToListeners(t *testing.T) {
 			},
 			expectedSectionNameRefs: []ParentRef{
 				{
-					Idx:     0,
-					Gateway: client.ObjectKeyFromObject(gw),
+					Idx:         0,
+					Gateway:     client.ObjectKeyFromObject(gw),
+					SectionName: hr.Spec.ParentRefs[0].SectionName,
 					Attachment: &ParentRefAttachmentStatus{
 						Attached: true,
 						AcceptedHostnames: map[string][]string{
@@ -760,7 +771,7 @@ func TestBindRouteToListeners(t *testing.T) {
 				createModifiedListener("listener-80-1", func(l *Listener) {
 					l.Valid = false
 					l.Routes = map[RouteKey]*L7Route{
-						getRouteKey(client.ObjectKeyFromObject(hr), RouteTypeHTTP): getLastNormalRoute(),
+						CreateRouteKey(hr): getLastNormalRoute(),
 					}
 				}),
 			},
@@ -778,8 +789,9 @@ func TestBindRouteToListeners(t *testing.T) {
 			},
 			expectedSectionNameRefs: []ParentRef{
 				{
-					Idx:     0,
-					Gateway: client.ObjectKeyFromObject(gw),
+					Idx:         0,
+					Gateway:     client.ObjectKeyFromObject(gw),
+					SectionName: hr.Spec.ParentRefs[0].SectionName,
 					Attachment: &ParentRefAttachmentStatus{
 						Attached: true,
 						AcceptedHostnames: map[string][]string{
@@ -791,7 +803,7 @@ func TestBindRouteToListeners(t *testing.T) {
 			expectedGatewayListeners: []*Listener{
 				createModifiedListener("listener-80-1", func(l *Listener) {
 					l.Routes = map[RouteKey]*L7Route{
-						getRouteKey(client.ObjectKeyFromObject(hr), RouteTypeHTTP): invalidAttachableRoute1,
+						CreateRouteKey(hr): invalidAttachableRoute1,
 					}
 				}),
 			},
@@ -810,8 +822,9 @@ func TestBindRouteToListeners(t *testing.T) {
 			},
 			expectedSectionNameRefs: []ParentRef{
 				{
-					Idx:     0,
-					Gateway: client.ObjectKeyFromObject(gw),
+					Idx:         0,
+					Gateway:     client.ObjectKeyFromObject(gw),
+					SectionName: hr.Spec.ParentRefs[0].SectionName,
 					Attachment: &ParentRefAttachmentStatus{
 						Attached: true,
 						AcceptedHostnames: map[string][]string{
@@ -824,7 +837,7 @@ func TestBindRouteToListeners(t *testing.T) {
 				createModifiedListener("listener-80-1", func(l *Listener) {
 					l.Valid = false
 					l.Routes = map[RouteKey]*L7Route{
-						getRouteKey(client.ObjectKeyFromObject(hr), RouteTypeHTTP): invalidAttachableRoute2,
+						CreateRouteKey(hr): invalidAttachableRoute2,
 					}
 				}),
 			},
@@ -850,8 +863,9 @@ func TestBindRouteToListeners(t *testing.T) {
 			},
 			expectedSectionNameRefs: []ParentRef{
 				{
-					Idx:     0,
-					Gateway: client.ObjectKeyFromObject(gw),
+					Idx:         0,
+					Gateway:     client.ObjectKeyFromObject(gw),
+					SectionName: hr.Spec.ParentRefs[0].SectionName,
 					Attachment: &ParentRefAttachmentStatus{
 						Attached:          false,
 						FailedCondition:   staticConds.NewRouteNotAllowedByListeners(),
@@ -891,8 +905,9 @@ func TestBindRouteToListeners(t *testing.T) {
 			},
 			expectedSectionNameRefs: []ParentRef{
 				{
-					Idx:     0,
-					Gateway: client.ObjectKeyFromObject(gw),
+					Idx:         0,
+					Gateway:     client.ObjectKeyFromObject(gw),
+					SectionName: hr.Spec.ParentRefs[0].SectionName,
 					Attachment: &ParentRefAttachmentStatus{
 						Attached: true,
 						AcceptedHostnames: map[string][]string{
@@ -911,7 +926,7 @@ func TestBindRouteToListeners(t *testing.T) {
 						},
 					}
 					l.Routes = map[RouteKey]*L7Route{
-						getRouteKey(client.ObjectKeyFromObject(hr), RouteTypeHTTP): getLastNormalRoute(),
+						CreateRouteKey(hr): getLastNormalRoute(),
 					}
 				}),
 			},
@@ -934,8 +949,9 @@ func TestBindRouteToListeners(t *testing.T) {
 			},
 			expectedSectionNameRefs: []ParentRef{
 				{
-					Idx:     0,
-					Gateway: client.ObjectKeyFromObject(gwDiffNamespace),
+					Idx:         0,
+					Gateway:     client.ObjectKeyFromObject(gwDiffNamespace),
+					SectionName: hr.Spec.ParentRefs[0].SectionName,
 					Attachment: &ParentRefAttachmentStatus{
 						Attached:          false,
 						FailedCondition:   staticConds.NewRouteNotAllowedByListeners(),
@@ -971,8 +987,9 @@ func TestBindRouteToListeners(t *testing.T) {
 			},
 			expectedSectionNameRefs: []ParentRef{
 				{
-					Idx:     0,
-					Gateway: client.ObjectKeyFromObject(gw),
+					Idx:         0,
+					Gateway:     client.ObjectKeyFromObject(gw),
+					SectionName: hr.Spec.ParentRefs[0].SectionName,
 					Attachment: &ParentRefAttachmentStatus{
 						Attached: true,
 						AcceptedHostnames: map[string][]string{
@@ -989,7 +1006,7 @@ func TestBindRouteToListeners(t *testing.T) {
 						},
 					}
 					l.Routes = map[RouteKey]*L7Route{
-						getRouteKey(client.ObjectKeyFromObject(hr), RouteTypeHTTP): getLastNormalRoute(),
+						CreateRouteKey(hr): getLastNormalRoute(),
 					}
 				}),
 			},
@@ -1012,8 +1029,9 @@ func TestBindRouteToListeners(t *testing.T) {
 			},
 			expectedSectionNameRefs: []ParentRef{
 				{
-					Idx:     0,
-					Gateway: client.ObjectKeyFromObject(gwDiffNamespace),
+					Idx:         0,
+					Gateway:     client.ObjectKeyFromObject(gwDiffNamespace),
+					SectionName: hr.Spec.ParentRefs[0].SectionName,
 					Attachment: &ParentRefAttachmentStatus{
 						Attached: true,
 						AcceptedHostnames: map[string][]string{
@@ -1030,7 +1048,7 @@ func TestBindRouteToListeners(t *testing.T) {
 						},
 					}
 					l.Routes = map[RouteKey]*L7Route{
-						getRouteKey(client.ObjectKeyFromObject(hr), RouteTypeHTTP): getLastNormalRoute(),
+						CreateRouteKey(hr): getLastNormalRoute(),
 					}
 				}),
 			},

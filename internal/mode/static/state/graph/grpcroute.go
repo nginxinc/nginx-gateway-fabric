@@ -33,8 +33,6 @@ func buildGRPCRoute(
 	}
 	r.ParentRefs = sectionNameRefs
 
-	r.SrcParentRefs = ghr.Spec.ParentRefs
-
 	if err := validateHostnames(
 		ghr.Spec.Hostnames,
 		field.NewPath("spec").Child("hostnames"),
@@ -49,11 +47,8 @@ func buildGRPCRoute(
 
 	r.Valid = true
 	r.Attachable = true
-	var rules []RouteRule
-	var atLeastOneValid bool
-	var allRulesErrs field.ErrorList
 
-	rules, atLeastOneValid, allRulesErrs = processGRPCRouteRules(ghr.Spec.Rules, validator)
+	rules, atLeastOneValid, allRulesErrs := processGRPCRouteRules(ghr.Spec.Rules, validator)
 
 	r.Spec.Rules = rules
 
@@ -76,10 +71,8 @@ func buildGRPCRoute(
 func processGRPCRouteRules(
 	specRules []v1alpha2.GRPCRouteRule,
 	validator validation.HTTPFieldsValidator,
-) ([]RouteRule, bool, field.ErrorList) {
-	rules := make([]RouteRule, len(specRules))
-	var allRulesErrs field.ErrorList
-	atLeastOneValid := false
+) (rules []RouteRule, atLeastOneValid bool, allRulesErrs field.ErrorList) {
+	rules = make([]RouteRule, len(specRules))
 	validFilters := true
 
 	for i, rule := range specRules {
@@ -106,12 +99,16 @@ func processGRPCRouteRules(
 
 		// rule.BackendRefs are validated separately because of their special requirements
 		for _, b := range rule.BackendRefs {
-			interfaceFilters := make([]interface{}, 0, len(b.Filters))
-			for i, v := range b.Filters {
-				interfaceFilters[i] = v
+			var interfaceFilters []interface{}
+			if len(b.Filters) > 0 {
+				interfaceFilters = make([]interface{}, 0, len(b.Filters))
+				for i, v := range b.Filters {
+					interfaceFilters[i] = v
+				}
 			}
 			rbr := RouteBackendRef{
-				b.BackendRef, interfaceFilters,
+				BackendRef: b.BackendRef,
+				Filters:    interfaceFilters,
 			}
 			backendRefs = append(backendRefs, rbr)
 		}
@@ -136,8 +133,9 @@ func processGRPCRouteRules(
 
 func convertGRPCMatches(grpcMatches []v1alpha2.GRPCRouteMatch) []v1.HTTPRouteMatch {
 	hms := make([]v1.HTTPRouteMatch, 0, len(grpcMatches))
+
 	for _, gm := range grpcMatches {
-		hm := v1.HTTPRouteMatch{}
+		var hm v1.HTTPRouteMatch
 		hmHeaders := make([]v1.HTTPHeaderMatch, 0, len(gm.Headers))
 		for _, head := range gm.Headers {
 			hmHeaders = append(hmHeaders, v1.HTTPHeaderMatch{
@@ -146,6 +144,7 @@ func convertGRPCMatches(grpcMatches []v1alpha2.GRPCRouteMatch) []v1.HTTPRouteMat
 			})
 		}
 		hm.Headers = hmHeaders
+
 		pathValue := "/"
 		pathType := v1.PathMatchType("PathPrefix")
 		if gm.Method != nil && gm.Method.Service != nil && gm.Method.Method != nil {
@@ -160,6 +159,7 @@ func convertGRPCMatches(grpcMatches []v1alpha2.GRPCRouteMatch) []v1.HTTPRouteMat
 			Type:  &pathType,
 			Value: helpers.GetPointer(pathValue),
 		}
+
 		hms = append(hms, hm)
 	}
 	return hms
@@ -173,7 +173,7 @@ func validateGRPCMatch(
 	var allErrs field.ErrorList
 
 	methodPath := matchPath.Child("method")
-	allErrs = append(allErrs, validateGRPCMethodMatch(match.Method, methodPath)...)
+	allErrs = append(allErrs, validateGRPCMethodMatch(validator, match.Method, methodPath)...)
 
 	for j, h := range match.Headers {
 		headerPath := matchPath.Child("headers").Index(j)
@@ -184,12 +184,15 @@ func validateGRPCMatch(
 }
 
 func validateGRPCMethodMatch(
+	validator validation.HTTPFieldsValidator,
 	method *v1alpha2.GRPCMethodMatch,
 	methodPath *field.Path,
 ) field.ErrorList {
 	var allErrs field.ErrorList
 
 	if method != nil {
+		methodServicePath := methodPath.Child("service")
+		methodMethodPath := methodPath.Child("method")
 		if method.Type == nil {
 			allErrs = append(allErrs, field.Required(methodPath.Child("type"), "cannot be empty"))
 		} else if *method.Type != v1alpha2.GRPCMethodMatchExact {
@@ -199,15 +202,22 @@ func validateGRPCMethodMatch(
 			)
 		}
 		if method.Service == nil || *method.Service == "" {
-			methodServicePath := methodPath.Child("service")
-			allErrs = append(
-				allErrs,
-				field.Required(methodServicePath, "service is required"),
-			)
+			allErrs = append(allErrs, field.Required(methodServicePath, "service is required"))
+		} else {
+			pathValue := "/" + *method.Service
+			if err := validator.ValidatePathInMatch(pathValue); err != nil {
+				valErr := field.Invalid(methodServicePath, *method.Service, err.Error())
+				allErrs = append(allErrs, valErr)
+			}
 		}
 		if method.Method == nil || *method.Method == "" {
-			methodMethodPath := methodPath.Child("method")
 			allErrs = append(allErrs, field.Required(methodMethodPath, "method is required"))
+		} else {
+			pathValue := "/" + *method.Method
+			if err := validator.ValidatePathInMatch(pathValue); err != nil {
+				valErr := field.Invalid(methodMethodPath, *method.Method, err.Error())
+				allErrs = append(allErrs, valErr)
+			}
 		}
 	}
 	return allErrs

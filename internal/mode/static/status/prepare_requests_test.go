@@ -78,15 +78,17 @@ var (
 
 	parentRefsValid = []graph.ParentRef{
 		{
-			Idx:     0,
-			Gateway: gwNsName,
+			Idx:         0,
+			Gateway:     gwNsName,
+			SectionName: commonRouteSpecValid.ParentRefs[0].SectionName,
 			Attachment: &graph.ParentRefAttachmentStatus{
 				Attached: true,
 			},
 		},
 		{
-			Idx:     1,
-			Gateway: gwNsName,
+			Idx:         1,
+			Gateway:     gwNsName,
+			SectionName: commonRouteSpecValid.ParentRefs[1].SectionName,
 			Attachment: &graph.ParentRefAttachmentStatus{
 				Attached:        false,
 				FailedCondition: invalidAttachmentCondition,
@@ -96,9 +98,10 @@ var (
 
 	parentRefsInvalid = []graph.ParentRef{
 		{
-			Idx:        0,
-			Gateway:    gwNsName,
-			Attachment: nil,
+			Idx:         0,
+			Gateway:     gwNsName,
+			Attachment:  nil,
+			SectionName: commonRouteSpecInvalid.ParentRefs[0].SectionName,
 		},
 	}
 
@@ -204,39 +207,39 @@ var (
 )
 
 func TestBuildHTTPRouteStatuses(t *testing.T) {
-	routes := map[graph.RouteKey]*graph.L7Route{
-		{NamespacedName: types.NamespacedName{Namespace: "test", Name: "hr-valid"}}: {
-			Valid: true,
-			Source: &v1.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace:  "test",
-					Name:       "hr-valid",
-					Generation: 3,
-				},
-				Spec: v1.HTTPRouteSpec{
-					CommonRouteSpec: commonRouteSpecValid,
-				},
-			},
-			ParentRefs:    parentRefsValid,
-			RouteType:     graph.RouteTypeHTTP,
-			SrcParentRefs: commonRouteSpecValid.ParentRefs,
+	hrValid := &v1.HTTPRoute{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace:  "test",
+			Name:       "hr-valid",
+			Generation: 3,
 		},
-		{NamespacedName: types.NamespacedName{Namespace: "test", Name: "hr-invalid"}}: {
+		Spec: v1.HTTPRouteSpec{
+			CommonRouteSpec: commonRouteSpecValid,
+		},
+	}
+	hrInvalid := &v1.HTTPRoute{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace:  "test",
+			Name:       "hr-invalid",
+			Generation: 3,
+		},
+		Spec: v1.HTTPRouteSpec{
+			CommonRouteSpec: commonRouteSpecInvalid,
+		},
+	}
+	routes := map[graph.RouteKey]*graph.L7Route{
+		graph.CreateRouteKey(hrValid): {
+			Valid:      true,
+			Source:     hrValid,
+			ParentRefs: parentRefsValid,
+			RouteType:  graph.RouteTypeHTTP,
+		},
+		graph.CreateRouteKey(hrInvalid): {
 			Valid:      false,
 			Conditions: []conditions.Condition{invalidRouteCondition},
-			Source: &v1.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace:  "test",
-					Name:       "hr-invalid",
-					Generation: 3,
-				},
-				Spec: v1.HTTPRouteSpec{
-					CommonRouteSpec: commonRouteSpecInvalid,
-				},
-			},
-			ParentRefs:    parentRefsInvalid,
-			RouteType:     graph.RouteTypeHTTP,
-			SrcParentRefs: commonRouteSpecInvalid.ParentRefs,
+			Source:     hrInvalid,
+			ParentRefs: parentRefsInvalid,
+			RouteType:  graph.RouteTypeHTTP,
 		},
 	}
 
@@ -276,39 +279,39 @@ func TestBuildHTTPRouteStatuses(t *testing.T) {
 }
 
 func TestBuildGRPCRouteStatuses(t *testing.T) {
-	routes := map[graph.RouteKey]*graph.L7Route{
-		{NamespacedName: types.NamespacedName{Namespace: "test", Name: "gr-valid"}}: {
-			Valid: true,
-			Source: &v1alpha2.GRPCRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace:  "test",
-					Name:       "gr-valid",
-					Generation: 3,
-				},
-				Spec: v1alpha2.GRPCRouteSpec{
-					CommonRouteSpec: commonRouteSpecValid,
-				},
-			},
-			ParentRefs:    parentRefsValid,
-			RouteType:     graph.RouteTypeGRPC,
-			SrcParentRefs: commonRouteSpecValid.ParentRefs,
+	grValid := &v1alpha2.GRPCRoute{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace:  "test",
+			Name:       "gr-valid",
+			Generation: 3,
 		},
-		{NamespacedName: types.NamespacedName{Namespace: "test", Name: "gr-invalid"}}: {
+		Spec: v1alpha2.GRPCRouteSpec{
+			CommonRouteSpec: commonRouteSpecValid,
+		},
+	}
+	grInvalid := &v1alpha2.GRPCRoute{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace:  "test",
+			Name:       "gr-invalid",
+			Generation: 3,
+		},
+		Spec: v1alpha2.GRPCRouteSpec{
+			CommonRouteSpec: commonRouteSpecInvalid,
+		},
+	}
+	routes := map[graph.RouteKey]*graph.L7Route{
+		graph.CreateRouteKey(grValid): {
+			Valid:      true,
+			Source:     grValid,
+			ParentRefs: parentRefsValid,
+			RouteType:  graph.RouteTypeGRPC,
+		},
+		graph.CreateRouteKey(grInvalid): {
 			Valid:      false,
 			Conditions: []conditions.Condition{invalidRouteCondition},
-			Source: &v1alpha2.GRPCRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace:  "test",
-					Name:       "gr-invalid",
-					Generation: 3,
-				},
-				Spec: v1alpha2.GRPCRouteSpec{
-					CommonRouteSpec: commonRouteSpecInvalid,
-				},
-			},
-			ParentRefs:    parentRefsInvalid,
-			RouteType:     graph.RouteTypeGRPC,
-			SrcParentRefs: commonRouteSpecInvalid.ParentRefs,
+			Source:     grInvalid,
+			ParentRefs: parentRefsInvalid,
+			RouteType:  graph.RouteTypeGRPC,
 		},
 	}
 
@@ -350,23 +353,26 @@ func TestBuildGRPCRouteStatuses(t *testing.T) {
 func TestBuildRouteStatusesNginxErr(t *testing.T) {
 	const gatewayCtlrName = "controller"
 
+	hr1 := &v1.HTTPRoute{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace:  "test",
+			Name:       "hr-valid",
+			Generation: 3,
+		},
+		Spec: v1.HTTPRouteSpec{
+			CommonRouteSpec: commonRouteSpecValid,
+		},
+	}
+
+	routeKey := graph.CreateRouteKey(hr1)
+
 	gwNsName := types.NamespacedName{Namespace: "test", Name: "gateway"}
-	routeKey := graph.RouteKey{NamespacedName: types.NamespacedName{Namespace: "test", Name: "hr-valid"}}
 
 	routes := map[graph.RouteKey]*graph.L7Route{
 		routeKey: {
 			Valid:     true,
 			RouteType: graph.RouteTypeHTTP,
-			Source: &v1.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace:  routeKey.NamespacedName.Namespace,
-					Name:       routeKey.NamespacedName.Name,
-					Generation: 3,
-				},
-				Spec: v1.HTTPRouteSpec{
-					CommonRouteSpec: commonRouteSpecValid,
-				},
-			},
+			Source:    hr1,
 			ParentRefs: []graph.ParentRef{
 				{
 					Idx:     0,
@@ -374,9 +380,9 @@ func TestBuildRouteStatusesNginxErr(t *testing.T) {
 					Attachment: &graph.ParentRefAttachmentStatus{
 						Attached: true,
 					},
+					SectionName: commonRouteSpecValid.ParentRefs[0].SectionName,
 				},
 			},
-			SrcParentRefs: commonRouteSpecValid.ParentRefs,
 		},
 	}
 
@@ -629,6 +635,8 @@ func TestBuildGatewayStatuses(t *testing.T) {
 		},
 	}
 
+	routeKey := graph.RouteKey{NamespacedName: types.NamespacedName{Namespace: "test", Name: "hr-1"}}
+
 	tests := []struct {
 		nginxReloadRes  NginxReloadResult
 		gateway         *graph.Gateway
@@ -707,18 +715,14 @@ func TestBuildGatewayStatuses(t *testing.T) {
 				Source: createGateway(),
 				Listeners: []*graph.Listener{
 					{
-						Name:  "listener-valid-1",
-						Valid: true,
-						Routes: map[graph.RouteKey]*graph.L7Route{
-							{NamespacedName: types.NamespacedName{Namespace: "test", Name: "hr-1"}}: {},
-						},
+						Name:   "listener-valid-1",
+						Valid:  true,
+						Routes: map[graph.RouteKey]*graph.L7Route{routeKey: {}},
 					},
 					{
-						Name:  "listener-valid-2",
-						Valid: true,
-						Routes: map[graph.RouteKey]*graph.L7Route{
-							{NamespacedName: types.NamespacedName{Namespace: "test", Name: "hr-1"}}: {},
-						},
+						Name:   "listener-valid-2",
+						Valid:  true,
+						Routes: map[graph.RouteKey]*graph.L7Route{routeKey: {}},
 					},
 				},
 				Valid: true,
@@ -765,11 +769,9 @@ func TestBuildGatewayStatuses(t *testing.T) {
 				Source: createGateway(),
 				Listeners: []*graph.Listener{
 					{
-						Name:  "listener-valid",
-						Valid: true,
-						Routes: map[graph.RouteKey]*graph.L7Route{
-							{NamespacedName: types.NamespacedName{Namespace: "test", Name: "hr-1"}}: {},
-						},
+						Name:   "listener-valid",
+						Valid:  true,
+						Routes: map[graph.RouteKey]*graph.L7Route{routeKey: {}},
 					},
 					{
 						Name:       "listener-invalid",
@@ -959,11 +961,9 @@ func TestBuildGatewayStatuses(t *testing.T) {
 				Conditions: staticConds.NewDefaultGatewayConditions(),
 				Listeners: []*graph.Listener{
 					{
-						Name:  "listener-valid",
-						Valid: true,
-						Routes: map[graph.RouteKey]*graph.L7Route{
-							{NamespacedName: types.NamespacedName{Namespace: "test", Name: "hr-1"}}: {},
-						},
+						Name:   "listener-valid",
+						Valid:  true,
+						Routes: map[graph.RouteKey]*graph.L7Route{routeKey: {}},
 					},
 				},
 			},

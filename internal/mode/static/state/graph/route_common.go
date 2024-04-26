@@ -24,6 +24,10 @@ type ParentRef struct {
 	// Attachment is the attachment status of the ParentRef. It could be nil. In that case, NGF didn't attempt to
 	// attach because of problems with the Route.
 	Attachment *ParentRefAttachmentStatus
+	// SectionName is the name of a section within the target Gateway.
+	SectionName *v1.SectionName
+	// Port is the network port this Route targets.
+	Port *v1.PortNumber
 	// Gateway is the NamespacedName of the referenced Gateway
 	Gateway types.NamespacedName
 	// Idx is the index of the corresponding ParentReference in the Route.
@@ -67,8 +71,6 @@ type L7Route struct {
 	Spec L7RouteSpec
 	// ParentRefs describe the references to the parents in a Route.
 	ParentRefs []ParentRef
-	// SrcParentRefs contain the Gateway API references to the parents in a Route.
-	SrcParentRefs []v1.ParentReference
 	// Conditions define the conditions to be reported in the status of the Route.
 	Conditions []conditions.Condition
 	// Valid indicates if the Route is valid.
@@ -105,6 +107,27 @@ type RouteBackendRef struct {
 	Filters []any
 }
 
+// CreateRouteKey takes a client.Object and creates a RouteKey
+func CreateRouteKey(obj client.Object) RouteKey {
+	nsName := types.NamespacedName{
+		Name:      obj.GetName(),
+		Namespace: obj.GetNamespace(),
+	}
+	var routeType RouteType
+	switch obj.(type) {
+	case *v1.HTTPRoute:
+		routeType = RouteTypeHTTP
+	case *v1alpha2.GRPCRoute:
+		routeType = RouteTypeGRPC
+	default:
+		panic(fmt.Sprintf("Unknown type: %T", obj))
+	}
+	return RouteKey{
+		NamespacedName: nsName,
+		RouteType:      routeType,
+	}
+}
+
 // buildGRPCRoutesForGateways builds routes from HTTP/GRPCRoutes that reference any of the specified Gateways.
 func buildRoutesForGateways(
 	validator validation.HTTPFieldsValidator,
@@ -121,22 +144,14 @@ func buildRoutesForGateways(
 	for _, route := range httpRoutes {
 		r := buildHTTPRoute(validator, route, gatewayNsNames)
 		if r != nil {
-			rk := RouteKey{
-				NamespacedName: client.ObjectKeyFromObject(route),
-				RouteType:      RouteTypeHTTP,
-			}
-			routes[rk] = r
+			routes[CreateRouteKey(route)] = r
 		}
 	}
 
 	for _, route := range grpcRoutes {
 		r := buildGRPCRoute(validator, route, gatewayNsNames)
 		if r != nil {
-			rk := RouteKey{
-				NamespacedName: client.ObjectKeyFromObject(route),
-				RouteType:      RouteTypeGRPC,
-			}
-			routes[rk] = r
+			routes[CreateRouteKey(route)] = r
 		}
 	}
 
@@ -178,8 +193,10 @@ func buildSectionNameRefs(
 		uniqueSectionsPerGateway[k] = struct{}{}
 
 		sectionNameRefs = append(sectionNameRefs, ParentRef{
-			Idx:     i,
-			Gateway: gw,
+			Idx:         i,
+			Gateway:     gw,
+			SectionName: p.SectionName,
+			Port:        p.Port,
 		})
 	}
 
@@ -244,12 +261,10 @@ func bindRouteToListeners(
 			ref := &r.ParentRefs[i]
 			ref.Attachment = attachment
 
-			routeRef := r.SrcParentRefs[ref.Idx]
-
 			path := field.NewPath("spec").Child("parentRefs").Index(ref.Idx)
 
 			attachableListeners, listenerExists := findAttachableListeners(
-				getSectionName(routeRef.SectionName),
+				getSectionName(ref.SectionName),
 				gw.Listeners,
 			)
 
@@ -262,7 +277,7 @@ func bindRouteToListeners(
 
 			// Case 2: Attachment is not possible due to unsupported configuration
 
-			if routeRef.Port != nil {
+			if ref.Port != nil {
 				valErr := field.Forbidden(path.Child("port"), "cannot be set")
 				attachment.FailedCondition = staticConds.NewRouteUnsupportedValue(valErr.Error())
 				continue
@@ -326,10 +341,7 @@ func tryToAttachRouteToListeners(
 		return staticConds.NewRouteInvalidListener(), false
 	}
 
-	rk := RouteKey{
-		NamespacedName: client.ObjectKeyFromObject(route.Source),
-		RouteType:      route.RouteType,
-	}
+	rk := CreateRouteKey(route.Source)
 
 	bind := func(l *Listener) (allowed, attached bool) {
 		if !routeAllowedByListener(l, route.Source.GetNamespace(), gw.Source.Namespace, namespaces) {

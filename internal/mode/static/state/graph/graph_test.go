@@ -107,7 +107,6 @@ func TestBuildGraph(t *testing.T) {
 		rbrs := []RouteBackendRef{
 			{
 				BackendRef: commonGWBackendRef,
-				Filters:    []any{},
 			},
 		}
 		return RouteRule{
@@ -381,15 +380,15 @@ func TestBuildGraph(t *testing.T) {
 	}
 
 	routeHR1 := &L7Route{
-		RouteType:     RouteTypeHTTP,
-		Valid:         true,
-		Attachable:    true,
-		Source:        hr1,
-		SrcParentRefs: hr1.Spec.ParentRefs,
+		RouteType:  RouteTypeHTTP,
+		Valid:      true,
+		Attachable: true,
+		Source:     hr1,
 		ParentRefs: []ParentRef{
 			{
-				Idx:     0,
-				Gateway: client.ObjectKeyFromObject(gw1),
+				Idx:         0,
+				Gateway:     client.ObjectKeyFromObject(gw1),
+				SectionName: hr1.Spec.ParentRefs[0].SectionName,
 				Attachment: &ParentRefAttachmentStatus{
 					Attached:          true,
 					AcceptedHostnames: map[string][]string{"listener-80-1": {"foo.example.com"}},
@@ -403,15 +402,15 @@ func TestBuildGraph(t *testing.T) {
 	}
 
 	routeGR := &L7Route{
-		RouteType:     RouteTypeGRPC,
-		Valid:         true,
-		Attachable:    true,
-		Source:        gr,
-		SrcParentRefs: gr.Spec.ParentRefs,
+		RouteType:  RouteTypeGRPC,
+		Valid:      true,
+		Attachable: true,
+		Source:     gr,
 		ParentRefs: []ParentRef{
 			{
-				Idx:     0,
-				Gateway: client.ObjectKeyFromObject(gw1),
+				Idx:         0,
+				Gateway:     client.ObjectKeyFromObject(gw1),
+				SectionName: gr.Spec.ParentRefs[0].SectionName,
 				Attachment: &ParentRefAttachmentStatus{
 					Attached:          true,
 					AcceptedHostnames: map[string][]string{"listener-80-1": {"foo.example.com"}},
@@ -427,15 +426,15 @@ func TestBuildGraph(t *testing.T) {
 	}
 
 	routeHR3 := &L7Route{
-		RouteType:     RouteTypeHTTP,
-		Valid:         true,
-		Attachable:    true,
-		Source:        hr3,
-		SrcParentRefs: hr3.Spec.ParentRefs,
+		RouteType:  RouteTypeHTTP,
+		Valid:      true,
+		Attachable: true,
+		Source:     hr3,
 		ParentRefs: []ParentRef{
 			{
-				Idx:     0,
-				Gateway: client.ObjectKeyFromObject(gw1),
+				Idx:         0,
+				Gateway:     client.ObjectKeyFromObject(gw1),
+				SectionName: hr3.Spec.ParentRefs[0].SectionName,
 				Attachment: &ParentRefAttachmentStatus{
 					Attached:          true,
 					AcceptedHostnames: map[string][]string{"listener-443-1": {"foo.example.com"}},
@@ -464,20 +463,18 @@ func TestBuildGraph(t *testing.T) {
 						Valid:      true,
 						Attachable: true,
 						Routes: map[RouteKey]*L7Route{
-							{NamespacedName: types.NamespacedName{Namespace: "test", Name: "hr-1"}, RouteType: RouteTypeHTTP}: routeHR1,
-							{NamespacedName: types.NamespacedName{Namespace: "test", Name: "gr"}, RouteType: RouteTypeGRPC}:   routeGR,
+							CreateRouteKey(hr1): routeHR1,
+							CreateRouteKey(gr):  routeGR,
 						},
 						SupportedKinds:            []gatewayv1.RouteGroupKind{{Kind: "HTTPRoute"}},
 						AllowedRouteLabelSelector: labels.SelectorFromSet(map[string]string{"app": "allowed"}),
 					},
 					{
-						Name:       "listener-443-1",
-						Source:     gw1.Spec.Listeners[1],
-						Valid:      true,
-						Attachable: true,
-						Routes: map[RouteKey]*L7Route{
-							{NamespacedName: types.NamespacedName{Namespace: "test", Name: "hr-3"}, RouteType: RouteTypeHTTP}: routeHR3,
-						},
+						Name:           "listener-443-1",
+						Source:         gw1.Spec.Listeners[1],
+						Valid:          true,
+						Attachable:     true,
+						Routes:         map[RouteKey]*L7Route{CreateRouteKey(hr3): routeHR3},
 						ResolvedSecret: helpers.GetPointer(client.ObjectKeyFromObject(secret)),
 						SupportedKinds: []gatewayv1.RouteGroupKind{{Kind: "HTTPRoute"}},
 					},
@@ -488,9 +485,9 @@ func TestBuildGraph(t *testing.T) {
 				{Namespace: "test", Name: "gateway-2"}: gw2,
 			},
 			Routes: map[RouteKey]*L7Route{
-				{NamespacedName: types.NamespacedName{Namespace: "test", Name: "hr-1"}, RouteType: RouteTypeHTTP}: routeHR1,
-				{NamespacedName: types.NamespacedName{Namespace: "test", Name: "hr-3"}, RouteType: RouteTypeHTTP}: routeHR3,
-				{NamespacedName: types.NamespacedName{Namespace: "test", Name: "gr"}, RouteType: RouteTypeGRPC}:   routeGR,
+				CreateRouteKey(hr1): routeHR1,
+				CreateRouteKey(hr3): routeHR3,
+				CreateRouteKey(gr):  routeGR,
 			},
 			ReferencedSecrets: map[types.NamespacedName]*Secret{
 				client.ObjectKeyFromObject(secret): {

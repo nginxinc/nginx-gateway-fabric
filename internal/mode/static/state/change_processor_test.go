@@ -176,7 +176,6 @@ func createRouteBackendRefs(refs []v1.HTTPBackendRef) []graph.RouteBackendRef {
 	for _, ref := range refs {
 		rbr := graph.RouteBackendRef{
 			BackendRef: ref.BackendRef,
-			Filters:    []any{},
 		}
 		rbrs = append(rbrs, rbr)
 	}
@@ -300,7 +299,6 @@ var _ = Describe("ChangeProcessor", func() {
 				refGrant1, refGrant2                *v1beta1.ReferenceGrant
 				expGraph                            *graph.Graph
 				expRouteHR1, expRouteHR2            *graph.L7Route
-				hr1Name, hr2Name                    types.NamespacedName
 				gatewayAPICRD, gatewayAPICRDUpdated *metav1.PartialObjectMetadata
 				routeKey1, routeKey2                graph.RouteKey
 			)
@@ -320,23 +318,15 @@ var _ = Describe("ChangeProcessor", func() {
 				}
 
 				hr1 = createRoute("hr-1", "gateway-1", "foo.example.com", crossNsBackendRef)
-				hr1Name = types.NamespacedName{Namespace: hr1.Namespace, Name: hr1.Name}
 
-				routeKey1 = graph.RouteKey{
-					NamespacedName: hr1Name,
-					RouteType:      graph.RouteTypeHTTP,
-				}
+				routeKey1 = graph.CreateRouteKey(hr1)
 
 				hr1Updated = hr1.DeepCopy()
 				hr1Updated.Generation++
 
 				hr2 = createRoute("hr-2", "gateway-2", "bar.example.com")
-				hr2Name = types.NamespacedName{Namespace: "test", Name: "hr-2"}
 
-				routeKey2 = graph.RouteKey{
-					NamespacedName: hr2Name,
-					RouteType:      graph.RouteTypeHTTP,
-				}
+				routeKey2 = graph.CreateRouteKey(hr2)
 
 				refGrant1 = &v1beta1.ReferenceGrant{
 					ObjectMeta: metav1.ObjectMeta{
@@ -429,24 +419,25 @@ var _ = Describe("ChangeProcessor", func() {
 			})
 			BeforeEach(func() {
 				expRouteHR1 = &graph.L7Route{
-					Source:        hr1,
-					RouteType:     graph.RouteTypeHTTP,
-					SrcParentRefs: hr1.Spec.ParentRefs,
+					Source:    hr1,
+					RouteType: graph.RouteTypeHTTP,
 					ParentRefs: []graph.ParentRef{
 						{
 							Attachment: &graph.ParentRefAttachmentStatus{
 								AcceptedHostnames: map[string][]string{"listener-80-1": {"foo.example.com"}},
 								Attached:          true,
 							},
-							Gateway: types.NamespacedName{Namespace: "test", Name: "gateway-1"},
+							Gateway:     types.NamespacedName{Namespace: "test", Name: "gateway-1"},
+							SectionName: hr1.Spec.ParentRefs[0].SectionName,
 						},
 						{
 							Attachment: &graph.ParentRefAttachmentStatus{
 								AcceptedHostnames: map[string][]string{"listener-443-1": {"foo.example.com"}},
 								Attached:          true,
 							},
-							Gateway: types.NamespacedName{Namespace: "test", Name: "gateway-1"},
-							Idx:     1,
+							Gateway:     types.NamespacedName{Namespace: "test", Name: "gateway-1"},
+							Idx:         1,
+							SectionName: hr1.Spec.ParentRefs[1].SectionName,
 						},
 					},
 					Spec: graph.L7RouteSpec{
@@ -476,24 +467,25 @@ var _ = Describe("ChangeProcessor", func() {
 				}
 
 				expRouteHR2 = &graph.L7Route{
-					Source:        hr2,
-					RouteType:     graph.RouteTypeHTTP,
-					SrcParentRefs: hr2.Spec.ParentRefs,
+					Source:    hr2,
+					RouteType: graph.RouteTypeHTTP,
 					ParentRefs: []graph.ParentRef{
 						{
 							Attachment: &graph.ParentRefAttachmentStatus{
 								AcceptedHostnames: map[string][]string{"listener-80-1": {"bar.example.com"}},
 								Attached:          true,
 							},
-							Gateway: types.NamespacedName{Namespace: "test", Name: "gateway-2"},
+							Gateway:     types.NamespacedName{Namespace: "test", Name: "gateway-2"},
+							SectionName: hr2.Spec.ParentRefs[0].SectionName,
 						},
 						{
 							Attachment: &graph.ParentRefAttachmentStatus{
 								AcceptedHostnames: map[string][]string{"listener-443-1": {"bar.example.com"}},
 								Attached:          true,
 							},
-							Gateway: types.NamespacedName{Namespace: "test", Name: "gateway-2"},
-							Idx:     1,
+							Gateway:     types.NamespacedName{Namespace: "test", Name: "gateway-2"},
+							Idx:         1,
+							SectionName: hr2.Spec.ParentRefs[1].SectionName,
 						},
 					},
 					Spec: graph.L7RouteSpec{

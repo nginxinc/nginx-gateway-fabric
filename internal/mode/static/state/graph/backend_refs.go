@@ -307,6 +307,7 @@ func validateRouteBackendRef(
 	refGrantResolver *referenceGrantResolver,
 	path *field.Path,
 ) (valid bool, cond conditions.Condition) {
+	// Because all errors cause the same condition but different reasons, we return as soon as we find an error
 	if len(ref.Filters) > 0 {
 		valErr := field.TooMany(path.Child("filters"), len(ref.Filters), 0)
 		return false, staticConds.NewRouteBackendRefUnsupportedValue(valErr.Error())

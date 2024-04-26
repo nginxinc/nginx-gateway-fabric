@@ -18,7 +18,7 @@ ENABLE_EXPERIMENTAL ?= false
 .DEFAULT_GOAL := help
 
 ifeq ($(ENABLE_EXPERIMENTAL),true)
-    SUPPORTED_FEATURES +=,GRPCExactMethodMatching,GRPCRouteListenerHostnameMatching
+    SUPPORTED_FEATURES +=,GRPCExactMethodMatching,GRPCRouteListenerHostnameMatching,GRPCRouteHeaderMatching
 endif
 
 .PHONY: help

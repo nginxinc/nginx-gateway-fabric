@@ -46,7 +46,8 @@ matching precedence MUST be granted to the first matching rule meeting the above
 
 higherPriority will determine precedence by comparing len(headers), len(query parameters), creation timestamp,
 and namespace name. It gives higher priority to rules with a method match. The other criteria are handled by NGINX.
-For GRPCRoute rules, match.Method and match.QueryParams are always nil/ 0 len.
+For GRPCRoute rules, match.Method and match.QueryParams are always nil/ 0 len. Our representation combines service
+and method into a path so that we perform "characters in a matching path" for GRPCRoute.
 */
 func higherPriority(rule1, rule2 MatchRule) bool {
 	// Compare if a method exists on one of the matches but not the other.

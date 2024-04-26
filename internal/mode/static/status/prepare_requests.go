@@ -23,7 +23,7 @@ type NginxReloadResult struct {
 	Error error
 }
 
-// PrepareHTTPRouteRequests prepares status UpdateRequests for the given Routes.
+// PrepareRouteRequests prepares status UpdateRequests for the given Routes.
 func PrepareRouteRequests(
 	routes map[graph.RouteKey]*graph.L7Route,
 	transitionTime metav1.Time,
@@ -37,7 +37,6 @@ func PrepareRouteRequests(
 		routeStatus := prepareRouteStatus(
 			gatewayCtlrName,
 			r.ParentRefs,
-			r.SrcParentRefs,
 			r.Conditions,
 			nginxReloadRes,
 			transitionTime,
@@ -68,6 +67,8 @@ func PrepareRouteRequests(
 			}
 
 			reqs = append(reqs, req)
+		} else {
+			panic(fmt.Sprintf("Unknown route type: %s", r.RouteType))
 		}
 
 	}
@@ -78,7 +79,6 @@ func PrepareRouteRequests(
 func prepareRouteStatus(
 	gatewayCtlrName string,
 	parentRefs []graph.ParentRef,
-	srcParentRefs []v1.ParentReference,
 	conds []conditions.Condition,
 	nginxReloadRes NginxReloadResult,
 	transitionTime metav1.Time,
@@ -110,8 +110,6 @@ func prepareRouteStatus(
 			)
 		}
 
-		routeRef := srcParentRefs[ref.Idx]
-
 		conds := conditions.DeduplicateConditions(allConds)
 		apiConds := conditions.ConvertConditions(conds, srcGeneration, transitionTime)
 
@@ -119,7 +117,7 @@ func prepareRouteStatus(
 			ParentRef: v1.ParentReference{
 				Namespace:   helpers.GetPointer(v1.Namespace(ref.Gateway.Namespace)),
 				Name:        v1.ObjectName(ref.Gateway.Name),
-				SectionName: routeRef.SectionName,
+				SectionName: ref.SectionName,
 			},
 			ControllerName: v1.GatewayController(gatewayCtlrName),
 			Conditions:     apiConds,

@@ -6,7 +6,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
@@ -191,16 +190,16 @@ func newGatewayClassStatusSetter(status gatewayv1.GatewayClassStatus) frameworkS
 }
 
 func newBackendTLSPolicyStatusSetter(
-	status gatewayv1alpha2.PolicyStatus,
+	status v1alpha2.PolicyStatus,
 	gatewayCtlrName string,
 ) frameworkStatus.Setter {
 	return func(object client.Object) (wasSet bool) {
-		btp := helpers.MustCastObject[*gatewayv1alpha2.BackendTLSPolicy](object)
+		btp := helpers.MustCastObject[*v1alpha2.BackendTLSPolicy](object)
 
 		// maxAncestors is the max number of ancestor statuses which is the sum of all new ancestor statuses and all old
 		// ancestor statuses.
 		maxAncestors := 1 + len(btp.Status.Ancestors)
-		ancestors := make([]gatewayv1alpha2.PolicyAncestorStatus, 0, maxAncestors)
+		ancestors := make([]v1alpha2.PolicyAncestorStatus, 0, maxAncestors)
 
 		// keep all the ancestor statuses that belong to other controllers
 		for _, os := range btp.Status.Ancestors {
@@ -221,7 +220,7 @@ func newBackendTLSPolicyStatusSetter(
 	}
 }
 
-func btpStatusEqual(gatewayCtlrName string, prev, cur gatewayv1alpha2.PolicyStatus) bool {
+func btpStatusEqual(gatewayCtlrName string, prev, cur v1alpha2.PolicyStatus) bool {
 	// Since other controllers may update BackendTLSPolicy status we can't assume anything about the order of the
 	// statuses, and we have to ignore statuses written by other controllers when checking for equality.
 	// Therefore, we can't use slices.EqualFunc here because it cares about the order.
@@ -232,7 +231,7 @@ func btpStatusEqual(gatewayCtlrName string, prev, cur gatewayv1alpha2.PolicyStat
 			continue
 		}
 
-		exists := slices.ContainsFunc(cur.Ancestors, func(curAncestor gatewayv1alpha2.PolicyAncestorStatus) bool {
+		exists := slices.ContainsFunc(cur.Ancestors, func(curAncestor v1alpha2.PolicyAncestorStatus) bool {
 			return btpAncestorStatusEqual(prevAncestor, curAncestor)
 		})
 
@@ -243,7 +242,7 @@ func btpStatusEqual(gatewayCtlrName string, prev, cur gatewayv1alpha2.PolicyStat
 
 	// Then, we check if the cur status has any PolicyAncestorStatuses that are no longer present in the prev status.
 	for _, curParent := range cur.Ancestors {
-		exists := slices.ContainsFunc(prev.Ancestors, func(prevAncestor gatewayv1alpha2.PolicyAncestorStatus) bool {
+		exists := slices.ContainsFunc(prev.Ancestors, func(prevAncestor v1alpha2.PolicyAncestorStatus) bool {
 			return btpAncestorStatusEqual(curParent, prevAncestor)
 		})
 
@@ -255,7 +254,7 @@ func btpStatusEqual(gatewayCtlrName string, prev, cur gatewayv1alpha2.PolicyStat
 	return true
 }
 
-func btpAncestorStatusEqual(p1, p2 gatewayv1alpha2.PolicyAncestorStatus) bool {
+func btpAncestorStatusEqual(p1, p2 v1alpha2.PolicyAncestorStatus) bool {
 	if p1.ControllerName != p2.ControllerName {
 		return false
 	}

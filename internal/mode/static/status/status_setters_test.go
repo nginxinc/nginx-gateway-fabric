@@ -7,7 +7,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
@@ -533,21 +532,21 @@ func TestNewBackendTLSPolicyStatusSetter(t *testing.T) {
 
 	tests := []struct {
 		name                         string
-		status, newStatus, expStatus gatewayv1alpha2.PolicyStatus
+		status, newStatus, expStatus v1alpha2.PolicyStatus
 		expStatusSet                 bool
 	}{
 		{
 			name: "BackendTLSPolicy has no status",
-			newStatus: gatewayv1alpha2.PolicyStatus{
-				Ancestors: []gatewayv1alpha2.PolicyAncestorStatus{
+			newStatus: v1alpha2.PolicyStatus{
+				Ancestors: []v1alpha2.PolicyAncestorStatus{
 					{
 						ControllerName: controllerName,
 						Conditions:     []metav1.Condition{{Message: "new condition"}},
 					},
 				},
 			},
-			expStatus: gatewayv1alpha2.PolicyStatus{
-				Ancestors: []gatewayv1alpha2.PolicyAncestorStatus{
+			expStatus: v1alpha2.PolicyStatus{
+				Ancestors: []v1alpha2.PolicyAncestorStatus{
 					{
 						ControllerName: controllerName,
 						Conditions:     []metav1.Condition{{Message: "new condition"}},
@@ -558,24 +557,24 @@ func TestNewBackendTLSPolicyStatusSetter(t *testing.T) {
 		},
 		{
 			name: "BackendTLSPolicy has old status",
-			newStatus: gatewayv1alpha2.PolicyStatus{
-				Ancestors: []gatewayv1alpha2.PolicyAncestorStatus{
+			newStatus: v1alpha2.PolicyStatus{
+				Ancestors: []v1alpha2.PolicyAncestorStatus{
 					{
 						ControllerName: controllerName,
 						Conditions:     []metav1.Condition{{Message: "new condition"}},
 					},
 				},
 			},
-			status: gatewayv1alpha2.PolicyStatus{
-				Ancestors: []gatewayv1alpha2.PolicyAncestorStatus{
+			status: v1alpha2.PolicyStatus{
+				Ancestors: []v1alpha2.PolicyAncestorStatus{
 					{
 						ControllerName: controllerName,
 						Conditions:     []metav1.Condition{{Message: "old condition"}},
 					},
 				},
 			},
-			expStatus: gatewayv1alpha2.PolicyStatus{
-				Ancestors: []gatewayv1alpha2.PolicyAncestorStatus{
+			expStatus: v1alpha2.PolicyStatus{
+				Ancestors: []v1alpha2.PolicyAncestorStatus{
 					{
 						ControllerName: controllerName,
 						Conditions:     []metav1.Condition{{Message: "new condition"}},
@@ -586,16 +585,16 @@ func TestNewBackendTLSPolicyStatusSetter(t *testing.T) {
 		},
 		{
 			name: "BackendTLSPolicy has old status and other controller status",
-			newStatus: gatewayv1alpha2.PolicyStatus{
-				Ancestors: []gatewayv1alpha2.PolicyAncestorStatus{
+			newStatus: v1alpha2.PolicyStatus{
+				Ancestors: []v1alpha2.PolicyAncestorStatus{
 					{
 						ControllerName: controllerName,
 						Conditions:     []metav1.Condition{{Message: "new condition"}},
 					},
 				},
 			},
-			status: gatewayv1alpha2.PolicyStatus{
-				Ancestors: []gatewayv1alpha2.PolicyAncestorStatus{
+			status: v1alpha2.PolicyStatus{
+				Ancestors: []v1alpha2.PolicyAncestorStatus{
 					{
 						ControllerName: controllerName,
 						Conditions:     []metav1.Condition{{Message: "old condition"}},
@@ -606,8 +605,8 @@ func TestNewBackendTLSPolicyStatusSetter(t *testing.T) {
 					},
 				},
 			},
-			expStatus: gatewayv1alpha2.PolicyStatus{
-				Ancestors: []gatewayv1alpha2.PolicyAncestorStatus{
+			expStatus: v1alpha2.PolicyStatus{
+				Ancestors: []v1alpha2.PolicyAncestorStatus{
 					{
 						ControllerName: otherControllerName,
 						Conditions:     []metav1.Condition{{Message: "some condition"}},
@@ -622,24 +621,24 @@ func TestNewBackendTLSPolicyStatusSetter(t *testing.T) {
 		},
 		{
 			name: "BackendTLSPolicy has same status",
-			newStatus: gatewayv1alpha2.PolicyStatus{
-				Ancestors: []gatewayv1alpha2.PolicyAncestorStatus{
+			newStatus: v1alpha2.PolicyStatus{
+				Ancestors: []v1alpha2.PolicyAncestorStatus{
 					{
 						ControllerName: controllerName,
 						Conditions:     []metav1.Condition{{Message: "same condition"}},
 					},
 				},
 			},
-			status: gatewayv1alpha2.PolicyStatus{
-				Ancestors: []gatewayv1alpha2.PolicyAncestorStatus{
+			status: v1alpha2.PolicyStatus{
+				Ancestors: []v1alpha2.PolicyAncestorStatus{
 					{
 						ControllerName: controllerName,
 						Conditions:     []metav1.Condition{{Message: "same condition"}},
 					},
 				},
 			},
-			expStatus: gatewayv1alpha2.PolicyStatus{
-				Ancestors: []gatewayv1alpha2.PolicyAncestorStatus{
+			expStatus: v1alpha2.PolicyStatus{
+				Ancestors: []v1alpha2.PolicyAncestorStatus{
 					{
 						ControllerName: controllerName,
 						Conditions:     []metav1.Condition{{Message: "same condition"}},
@@ -655,7 +654,7 @@ func TestNewBackendTLSPolicyStatusSetter(t *testing.T) {
 			g := NewWithT(t)
 
 			setter := newBackendTLSPolicyStatusSetter(test.newStatus, controllerName)
-			obj := &gatewayv1alpha2.BackendTLSPolicy{Status: test.status}
+			obj := &v1alpha2.BackendTLSPolicy{Status: test.status}
 
 			statusSet := setter(obj)
 
@@ -1153,15 +1152,15 @@ func TestEqualPointers(t *testing.T) {
 }
 
 func TestBtpStatusEqual(t *testing.T) {
-	getPolicyStatus := func(ancestorName, ancestorNs, ctlrName string) gatewayv1alpha2.PolicyStatus {
-		return gatewayv1alpha2.PolicyStatus{
-			Ancestors: []gatewayv1alpha2.PolicyAncestorStatus{
+	getPolicyStatus := func(ancestorName, ancestorNs, ctlrName string) v1alpha2.PolicyStatus {
+		return v1alpha2.PolicyStatus{
+			Ancestors: []v1alpha2.PolicyAncestorStatus{
 				{
 					AncestorRef: gatewayv1.ParentReference{
 						Namespace: helpers.GetPointer[gatewayv1.Namespace]((gatewayv1.Namespace)(ancestorNs)),
-						Name:      gatewayv1alpha2.ObjectName(ancestorName),
+						Name:      v1alpha2.ObjectName(ancestorName),
 					},
-					ControllerName: gatewayv1alpha2.GatewayController(ctlrName),
+					ControllerName: v1alpha2.GatewayController(ctlrName),
 					Conditions:     []metav1.Condition{{Type: "otherType", Status: "otherStatus"}},
 				},
 			},
@@ -1176,8 +1175,8 @@ func TestBtpStatusEqual(t *testing.T) {
 	tests := []struct {
 		name           string
 		controllerName string
-		previous       gatewayv1alpha2.PolicyStatus
-		current        gatewayv1alpha2.PolicyStatus
+		previous       v1alpha2.PolicyStatus
+		current        v1alpha2.PolicyStatus
 		expEqual       bool
 	}{
 		{
