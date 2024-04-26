@@ -103,9 +103,9 @@ func (g *Graph) IsReferenced(resourceType client.Object, nsname types.Namespaced
 		// Service Namespace should be the same Namespace as the EndpointSlice
 		_, exists := g.ReferencedServices[types.NamespacedName{Namespace: nsname.Namespace, Name: svcName}]
 		return exists
-	// Similar to Namespace above, NginxProxy reference exists if it once was or currently is linked to a GatewayClass.
+	// NginxProxy reference exists if it is linked to a GatewayClass.
 	case *ngfAPI.NginxProxy:
-		return isNginxProxyReferenced(nsname, g)
+		return isNginxProxyReferenced(nsname, g.GatewayClass)
 	default:
 		return false
 	}

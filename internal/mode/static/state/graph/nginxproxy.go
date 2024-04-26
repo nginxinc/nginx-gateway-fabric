@@ -3,7 +3,6 @@ package graph
 import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	v1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
@@ -23,11 +22,8 @@ func getNginxProxy(
 }
 
 // isNginxProxyReferenced returns whether or not a specific NginxProxy is referenced in the GatewayClass.
-func isNginxProxyReferenced(npNSName types.NamespacedName, g *Graph) bool {
-	existed := g.NginxProxy != nil && npNSName == client.ObjectKeyFromObject(g.NginxProxy)
-	gc := g.GatewayClass
-	exists := gc != nil && gcReferencesAnyNginxProxy(gc.Source) && gc.Source.Spec.ParametersRef.Name == npNSName.Name
-	return existed || exists
+func isNginxProxyReferenced(npNSName types.NamespacedName, gc *GatewayClass) bool {
+	return gc != nil && gcReferencesAnyNginxProxy(gc.Source) && gc.Source.Spec.ParametersRef.Name == npNSName.Name
 }
 
 // gcReferencesNginxProxy returns whether a GatewayClass references any NginxProxy resource.

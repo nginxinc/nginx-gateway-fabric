@@ -625,21 +625,15 @@ func TestIsReferenced(t *testing.T) {
 		},
 	}
 
-	npInGraph := &ngfAPI.NginxProxy{
+	npNotInGatewayClass := &ngfAPI.NginxProxy{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "nginx-proxy",
 		},
 	}
 
-	npNotInGraphButInGatewayClass := &ngfAPI.NginxProxy{
+	npInGatewayClass := &ngfAPI.NginxProxy{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "nginx-proxy-in-gc",
-		},
-	}
-
-	npNotInGraph := &ngfAPI.NginxProxy{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "nginx-proxy-not-referenced",
 		},
 	}
 
@@ -662,7 +656,6 @@ func TestIsReferenced(t *testing.T) {
 				CACert: []byte(caBlock),
 			},
 		},
-		NginxProxy: npInGraph,
 	}
 
 	tests := []struct {
@@ -781,21 +774,15 @@ func TestIsReferenced(t *testing.T) {
 
 		// NginxProxy tests
 		{
-			name:     "NginxProxy in the Graph is referenced",
-			resource: npInGraph,
-			graph:    graph,
-			expected: true,
-		},
-		{
-			name:     "NginxProxy is not yet in Graph but is referenced in GatewayClass",
-			resource: npNotInGraphButInGatewayClass,
+			name:     "NginxProxy is referenced in GatewayClass",
+			resource: npInGatewayClass,
 			gc:       gcWithNginxProxy,
 			graph:    graph,
 			expected: true,
 		},
 		{
-			name:     "NginxProxy not in Graph or referenced in GatewayClass",
-			resource: npNotInGraph,
+			name:     "NginxProxy is not referenced in GatewayClass",
+			resource: npNotInGatewayClass,
 			gc:       gcWithNginxProxy,
 			graph:    graph,
 			expected: false,
