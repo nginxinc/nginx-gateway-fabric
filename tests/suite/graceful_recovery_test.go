@@ -47,8 +47,7 @@ var _ = Describe("Graceful Recovery test", Ordered, Label("nfr", "graceful-recov
 		Expect(resourceManager.ApplyFromFiles(files, ns.Name)).To(Succeed())
 		Expect(resourceManager.WaitForAppsToBeReady(ns.Name)).To(Succeed())
 
-		err := waitForWorkingTraffic()
-		Expect(err).ToNot(HaveOccurred())
+		Expect(waitForWorkingTraffic()).ToNot(HaveOccurred())
 	})
 
 	AfterAll(func() {
@@ -64,26 +63,22 @@ var _ = Describe("Graceful Recovery test", Ordered, Label("nfr", "graceful-recov
 		leaseName, err := getLeaderElectionLeaseHolderName()
 		Expect(err).ToNot(HaveOccurred())
 
-		restartNGFProcess()
+		restartContainer(ngfContainerName)
 
 		checkContainerLogsForErrors(podNames[0])
 
-		err = waitForLeaderLeaseToChange(leaseName)
-		Expect(err).ToNot(HaveOccurred())
+		Expect(waitForLeaderLeaseToChange(leaseName)).ToNot(HaveOccurred())
 
-		err = waitForWorkingTraffic()
-		Expect(err).ToNot(HaveOccurred())
+		Expect(waitForWorkingTraffic()).ToNot(HaveOccurred())
 
 		Expect(resourceManager.DeleteFromFiles(files, ns.Name)).To(Succeed())
 
-		err = waitForFailingTraffic()
-		Expect(err).ToNot(HaveOccurred())
+		Expect(waitForFailingTraffic()).ToNot(HaveOccurred())
 
 		Expect(resourceManager.ApplyFromFiles(files, ns.Name)).To(Succeed())
 		Expect(resourceManager.WaitForAppsToBeReady(ns.Name)).To(Succeed())
 
-		err = waitForWorkingTraffic()
-		Expect(err).ToNot(HaveOccurred())
+		Expect(waitForWorkingTraffic()).ToNot(HaveOccurred())
 	})
 
 	It("recovers when nginx container is restarted", func() {
@@ -94,68 +89,53 @@ var _ = Describe("Graceful Recovery test", Ordered, Label("nfr", "graceful-recov
 		leaseName, err := getLeaderElectionLeaseHolderName()
 		Expect(err).ToNot(HaveOccurred())
 
-		restartNginxContainer()
+		restartContainer(nginxContainerName)
 
 		checkContainerLogsForErrors(podNames[0])
 
-		err = waitForLeaderLeaseToChange(leaseName)
-		Expect(err).ToNot(HaveOccurred())
+		Expect(waitForLeaderLeaseToChange(leaseName)).ToNot(HaveOccurred())
 
-		err = waitForWorkingTraffic()
-		Expect(err).ToNot(HaveOccurred())
+		Expect(waitForWorkingTraffic()).ToNot(HaveOccurred())
 
 		Expect(resourceManager.DeleteFromFiles(files, ns.Name)).To(Succeed())
 
-		err = waitForFailingTraffic()
-		Expect(err).ToNot(HaveOccurred())
+		Expect(waitForFailingTraffic()).ToNot(HaveOccurred())
 
 		Expect(resourceManager.ApplyFromFiles(files, ns.Name)).To(Succeed())
 		Expect(resourceManager.WaitForAppsToBeReady(ns.Name)).To(Succeed())
 
-		err = waitForWorkingTraffic()
-		Expect(err).ToNot(HaveOccurred())
+		Expect(waitForWorkingTraffic()).ToNot(HaveOccurred())
 	})
 })
 
-func restartNginxContainer() {
+func restartContainer(containerName string) {
+	var jobScript string
+	if containerName == "nginx" {
+		jobScript = "PID=$(pgrep -f \"[n]ginx: master process\") && kill -9 $PID"
+	} else {
+		jobScript = "PID=$(pgrep -f \"/[u]sr/bin/gateway\") && kill -9 $PID"
+	}
+
 	podNames, err := framework.GetReadyNGFPodNames(k8sClient, ngfNamespace, releaseName, timeoutConfig.GetTimeout)
 	Expect(err).ToNot(HaveOccurred())
 	Expect(podNames).ToNot(BeEmpty())
 
-	restartCount, err := getContainerRestartCount(nginxContainerName, podNames[0])
+	restartCount, err := getContainerRestartCount(containerName, podNames[0])
 	Expect(err).ToNot(HaveOccurred())
 
-	job, err := runNodeDebuggerJob(podNames[0], "PID=$(pgrep -f \"[n]ginx: master process\") && kill -9 $PID")
+	job, err := runNodeDebuggerJob(podNames[0], jobScript)
 	Expect(err).ToNot(HaveOccurred())
 
-	err = waitForContainerRestart(podNames[0], nginxContainerName, restartCount)
-	Expect(err).ToNot(HaveOccurred())
-
-	// propagation policy is set to delete underlying pod created through job
-	err = resourceManager.Delete([]client.Object{job}, client.PropagationPolicy(metav1.DeletePropagationBackground))
-	Expect(err).ToNot(HaveOccurred())
-}
-
-func restartNGFProcess() {
-	podNames, err := framework.GetReadyNGFPodNames(k8sClient, ngfNamespace, releaseName, timeoutConfig.GetTimeout)
-	Expect(err).ToNot(HaveOccurred())
-	Expect(podNames).ToNot(BeEmpty())
-
-	restartCount, err := getContainerRestartCount(ngfContainerName, podNames[0])
-	Expect(err).ToNot(HaveOccurred())
-
-	job, err := runNodeDebuggerJob(podNames[0], "PID=$(pgrep -f \"/[u]sr/bin/gateway\") && kill -9 $PID")
-	Expect(err).ToNot(HaveOccurred())
-
-	err = waitForContainerRestart(podNames[0], ngfContainerName, restartCount)
-	Expect(err).ToNot(HaveOccurred())
+	Expect(waitForContainerRestart(podNames[0], containerName, restartCount)).ToNot(HaveOccurred())
 
 	// propagation policy is set to delete underlying pod created through job
-	err = resourceManager.Delete([]client.Object{job}, client.PropagationPolicy(metav1.DeletePropagationBackground))
-	Expect(err).ToNot(HaveOccurred())
+	Expect(resourceManager.Delete(
+		[]client.Object{job},
+		client.PropagationPolicy(metav1.DeletePropagationBackground),
+	)).ToNot(HaveOccurred())
 }
 
-func waitForContainerRestart(ngfPodName string, containerName string, currentRestartCount int) error {
+func waitForContainerRestart(ngfPodName, containerName string, currentRestartCount int) error {
 	ctx, cancel := context.WithTimeout(context.Background(), timeoutConfig.RequestTimeout)
 	defer cancel()
 
@@ -217,7 +197,7 @@ func waitForFailingTraffic() error {
 	)
 }
 
-func expectRequestToSucceed(appURL string, address string, responseBodyMessage string) error {
+func expectRequestToSucceed(appURL, address string, responseBodyMessage string) error {
 	status, body, err := framework.Get(appURL, address, timeoutConfig.RequestTimeout)
 	if status != http.StatusOK {
 		return errors.New("http status was not 200")
@@ -230,7 +210,7 @@ func expectRequestToSucceed(appURL string, address string, responseBodyMessage s
 	return err
 }
 
-func expectRequestToFail(appURL string, address string, responseBodyMessage string) error {
+func expectRequestToFail(appURL, address string, responseBodyMessage string) error {
 	status, body, err := framework.Get(appURL, address, timeoutConfig.RequestTimeout)
 	if status != 0 {
 		return errors.New("expected http status to be 0")
