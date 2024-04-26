@@ -118,9 +118,14 @@ func TestGenerate(t *testing.T) {
 	certBundle := string(files[3].Content)
 	g.Expect(certBundle).To(Equal("test-cert"))
 
+<<<<<<< HEAD
 	g.Expect(files[5]).To(Equal(file.File{
 		Type:    file.TypeSecret,
 		Path:    "/etc/nginx/secrets/test-keypair.pem",
 		Content: []byte("test-cert\ntest-key"),
 	}))
+=======
+	g.Expect(files[4].Path).To(Equal("/etc/nginx/module-includes/load-modules.conf"))
+	g.Expect(files[4].Content).To(Equal([]byte("load_module modules/ngx_otel_module.so;")))
+>>>>>>> dfc23a2 (Code review)
 }

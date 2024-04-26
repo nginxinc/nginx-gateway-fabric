@@ -272,7 +272,6 @@ type Telemetry struct {
 type SpanAttribute struct {
 	// Key is the key for a span attribute.
 	Key string
-
 	// Value is the value for a span attribute.
 	Value string
 }

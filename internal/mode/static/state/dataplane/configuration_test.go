@@ -2585,17 +2585,22 @@ func TestBuildTelemetry(t *testing.T) {
 					Interval:   helpers.GetPointer(ngfAPI.Duration("5s")),
 				},
 				ServiceName: helpers.GetPointer("my-svc"),
+				SpanAttributes: []ngfAPI.SpanAttribute{
+					{Key: "key", Value: "value"},
+				},
 			},
 		},
 	}
 
 	expTelemetryConfigured := Telemetry{
-		Endpoint:       "my-otel.svc:4563",
-		ServiceName:    "ngf:ns:gw:my-svc",
-		Interval:       "5s",
-		BatchSize:      512,
-		BatchCount:     4,
-		SpanAttributes: []SpanAttribute{},
+		Endpoint:    "my-otel.svc:4563",
+		ServiceName: "ngf:ns:gw:my-svc",
+		Interval:    "5s",
+		BatchSize:   512,
+		BatchCount:  4,
+		SpanAttributes: []SpanAttribute{
+			{Key: "key", Value: "value"},
+		},
 	}
 
 	tests := []struct {

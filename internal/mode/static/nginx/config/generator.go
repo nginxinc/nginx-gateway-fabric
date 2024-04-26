@@ -17,7 +17,7 @@ const (
 	httpFolder = configFolder + "/conf.d"
 
 	// modulesIncludesFolder is the folder where the included "load_module" file is stored.
-	modulesIncludesFolder = configFolder + "/modules-includes"
+	modulesIncludesFolder = configFolder + "/module-includes"
 
 	// secretsFolder is the folder where secrets (like TLS certs/keys) are stored.
 	secretsFolder = configFolder + "/secrets"

@@ -85,68 +85,107 @@ func TestGetNginxProxy(t *testing.T) {
 
 func TestIsNginxProxyReferenced(t *testing.T) {
 	tests := []struct {
-		gc     *GatewayClass
-		np     *ngfAPI.NginxProxy
+		g      *Graph
+		npName types.NamespacedName
 		name   string
 		expRes bool
 	}{
 		{
-			gc: &GatewayClass{
-				Source: &v1.GatewayClass{
-					Spec: v1.GatewayClassSpec{
-						ParametersRef: &v1.ParametersReference{
-							Group: ngfAPI.GroupName,
-							Kind:  v1.Kind("NginxProxy"),
-							Name:  "nginx-proxy",
+			g: &Graph{
+				GatewayClass: &GatewayClass{
+					Source: &v1.GatewayClass{
+						Spec: v1.GatewayClassSpec{
+							ParametersRef: &v1.ParametersReference{
+								Group: ngfAPI.GroupName,
+								Kind:  v1.Kind("NginxProxy"),
+								Name:  "nginx-proxy",
+							},
 						},
 					},
 				},
 			},
-			np:     nil,
+			npName: types.NamespacedName{Name: "not referenced"},
 			expRes: false,
-			name:   "nil nginxproxy",
+			name:   "nginxproxy not in graph and not referenced in gatewayclass",
 		},
 		{
-			gc: nil,
-			np: &ngfAPI.NginxProxy{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "nginx-proxy",
+			g: &Graph{
+				GatewayClass: nil,
+				NginxProxy:   nil,
+			},
+			npName: types.NamespacedName{Name: "nginx-proxy"},
+			expRes: false,
+			name:   "nil gatewayclass and nginxproxy not in graph",
+		},
+		{
+			g: &Graph{
+				GatewayClass: &GatewayClass{
+					Source: nil,
 				},
+				NginxProxy: nil,
 			},
+			npName: types.NamespacedName{Name: "nginx-proxy"},
 			expRes: false,
-			name:   "nil gatewayclass",
+			name:   "nil gatewayclass source and nginxproxy not in graph",
 		},
 		{
-			gc: &GatewayClass{
-				Source: nil,
-			},
-			np: &ngfAPI.NginxProxy{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "nginx-proxy",
-				},
-			},
-			expRes: false,
-			name:   "nil gatewayclass source",
-		},
-		{
-			gc: &GatewayClass{
-				Source: &v1.GatewayClass{
-					Spec: v1.GatewayClassSpec{
-						ParametersRef: &v1.ParametersReference{
-							Group: ngfAPI.GroupName,
-							Kind:  v1.Kind("NginxProxy"),
-							Name:  "nginx-proxy",
+			g: &Graph{
+				GatewayClass: &GatewayClass{
+					Source: &v1.GatewayClass{
+						Spec: v1.GatewayClassSpec{
+							ParametersRef: &v1.ParametersReference{
+								Group: ngfAPI.GroupName,
+								Kind:  v1.Kind("NginxProxy"),
+								Name:  "nginx-proxy",
+							},
 						},
 					},
 				},
+				NginxProxy: nil,
 			},
-			np: &ngfAPI.NginxProxy{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "nginx-proxy",
-				},
-			},
+			npName: types.NamespacedName{Name: "nginx-proxy"},
 			expRes: true,
-			name:   "references the NginxProxy",
+			name:   "nginxproxy not in graph but referenced in gatewayclass",
+		},
+		{
+			g: &Graph{
+				GatewayClass: &GatewayClass{
+					Source: &v1.GatewayClass{
+						Spec: v1.GatewayClassSpec{},
+					},
+				},
+				NginxProxy: &ngfAPI.NginxProxy{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "nginx-proxy",
+					},
+				},
+			},
+			npName: types.NamespacedName{Name: "nginx-proxy"},
+			expRes: true,
+			name:   "nginxproxy in graph but not referenced in gatewayclass",
+		},
+		{
+			g: &Graph{
+				GatewayClass: &GatewayClass{
+					Source: &v1.GatewayClass{
+						Spec: v1.GatewayClassSpec{
+							ParametersRef: &v1.ParametersReference{
+								Group: ngfAPI.GroupName,
+								Kind:  v1.Kind("NginxProxy"),
+								Name:  "nginx-proxy",
+							},
+						},
+					},
+				},
+				NginxProxy: &ngfAPI.NginxProxy{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "nginx-proxy",
+					},
+				},
+			},
+			npName: types.NamespacedName{Name: "nginx-proxy"},
+			expRes: true,
+			name:   "references the nginxproxy and exists in graph",
 		},
 	}
 
@@ -154,7 +193,7 @@ func TestIsNginxProxyReferenced(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewWithT(t)
 
-			g.Expect(isNginxProxyReferenced(test.np, test.gc)).To(Equal(test.expRes))
+			g.Expect(isNginxProxyReferenced(test.npName, test.g)).To(Equal(test.expRes))
 		})
 	}
 }
