@@ -14,7 +14,6 @@ NGF_MANIFEST=../deploy/manifests/nginx-gateway.yaml
 CRDS=../deploy/manifests/crds/
 STATIC_MANIFEST=provisioner/static-deployment.yaml
 PROVISIONER_MANIFEST=provisioner/provisioner.yaml
-INSTALL_WEBHOOK ?= false
 ENABLE_EXPERIMENTAL ?= false
 .DEFAULT_GOAL := help
 
@@ -62,13 +61,13 @@ load-images-with-plus: ## Load NGF and NGINX Plus images on configured kind clus
 
 .PHONY: prepare-ngf-dependencies
 prepare-ngf-dependencies: update-ngf-manifest ## Install NGF dependencies on configured kind cluster
-	./scripts/install-gateway.sh $(GW_API_VERSION) $(INSTALL_WEBHOOK) $(ENABLE_EXPERIMENTAL)
+	./scripts/install-gateway.sh $(GW_API_VERSION) $(ENABLE_EXPERIMENTAL)
 	kubectl apply -f $(CRDS)
 	kubectl apply -f $(NGF_MANIFEST)
 
 .PHONY: prepare-ngf-dependencies-with-plus
 prepare-ngf-dependencies-with-plus: update-ngf-manifest-with-plus ## Install NGF dependencies with Plus on configured kind cluster
-	./scripts/install-gateway.sh $(GW_API_VERSION) $(INSTALL_WEBHOOK)
+	./scripts/install-gateway.sh $(GW_API_VERSION)
 	kubectl apply -f $(CRDS)
 	kubectl apply -f $(NGF_MANIFEST)
 
@@ -120,7 +119,7 @@ uninstall-ngf: uninstall-k8s-components undo-manifests-update ## Uninstall NGF o
 .PHONY: uninstall-k8s-components
 uninstall-k8s-components: ## Uninstall installed components on configured kind cluster
 	-kubectl delete -f $(NGF_MANIFEST)
-	./scripts/uninstall-gateway.sh $(GW_API_VERSION) $(INSTALL_WEBHOOK) $(ENABLE_EXPERIMENTAL)
+	./scripts/uninstall-gateway.sh $(GW_API_VERSION) $(ENABLE_EXPERIMENTAL)
 	kubectl delete clusterrole nginx-gateway-provisioner
 	kubectl delete clusterrolebinding nginx-gateway-provisioner
 

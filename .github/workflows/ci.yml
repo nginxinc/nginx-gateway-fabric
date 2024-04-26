@@ -42,7 +42,7 @@ jobs:
         id: vars
         run: |
           echo "go_path=$(go env GOPATH)" >> $GITHUB_OUTPUT
-          echo "min_k8s_version=1.23.17" >> $GITHUB_OUTPUT
+          echo "min_k8s_version=1.25.16" >> $GITHUB_OUTPUT
 
       - name: Check if go.mod and go.sum are up to date
         run: go mod tidy && git diff --exit-code -- go.mod go.sum
