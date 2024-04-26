@@ -12,6 +12,7 @@ type HTTPValidator struct {
 	HTTPRedirectValidator
 	HTTPURLRewriteValidator
 	HTTPRequestHeaderValidator
+	GenericValidator
 }
 
 var _ validation.HTTPFieldsValidator = HTTPValidator{}

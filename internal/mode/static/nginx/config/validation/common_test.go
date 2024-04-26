@@ -71,3 +71,24 @@ func TestValidateValidHeaderName(t *testing.T) {
 		strings.Repeat("very-long-header", 16)+"1",
 	)
 }
+
+func TestGenericValidator_ValidateEscapedStringNoVarExpansion(t *testing.T) {
+	validator := GenericValidator{}
+
+	testValidValuesForSimpleValidator(
+		t,
+		validator.ValidateEscapedStringNoVarExpansion,
+		`test`,
+		`test test`,
+		`\"`,
+		`\\`,
+	)
+
+	testInvalidValuesForSimpleValidator(
+		t,
+		validator.ValidateEscapedStringNoVarExpansion,
+		`\`,
+		`test"test`,
+		`$test`,
+	)
+}

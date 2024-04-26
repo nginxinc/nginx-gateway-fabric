@@ -1,6 +1,8 @@
 package graph
 
 import (
+	"errors"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -11,6 +13,7 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/gatewayclass"
 	staticConds "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/conditions"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/validation"
 )
 
 // GatewayClass represents the GatewayClass resource.
@@ -63,12 +66,13 @@ func buildGatewayClass(
 	gc *v1.GatewayClass,
 	npCfg *ngfAPI.NginxProxy,
 	crdVersions map[types.NamespacedName]*metav1.PartialObjectMetadata,
+	validator validation.GenericValidator,
 ) *GatewayClass {
 	if gc == nil {
 		return nil
 	}
 
-	conds, valid := validateGatewayClass(gc, npCfg, crdVersions)
+	conds, valid := validateGatewayClass(gc, npCfg, crdVersions, validator)
 
 	return &GatewayClass{
 		Source:     gc,
@@ -81,6 +85,7 @@ func validateGatewayClass(
 	gc *v1.GatewayClass,
 	npCfg *ngfAPI.NginxProxy,
 	crdVersions map[types.NamespacedName]*metav1.PartialObjectMetadata,
+	validator validation.GenericValidator,
 ) ([]conditions.Condition, bool) {
 	var conds []conditions.Condition
 
@@ -92,6 +97,11 @@ func validateGatewayClass(
 		} else if npCfg == nil {
 			err = field.NotFound(path.Child("name"), gc.Spec.ParametersRef.Name)
 			conds = append(conds, staticConds.NewGatewayClassRefNotFound())
+		} else {
+			nginxProxyErrs := validateNginxProxy(validator, npCfg)
+			if len(nginxProxyErrs) > 0 {
+				err = errors.New(nginxProxyErrs.ToAggregate().Error())
+			}
 		}
 
 		if err != nil {

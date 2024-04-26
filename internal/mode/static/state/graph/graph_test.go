@@ -492,7 +492,10 @@ func TestBuildGraph(t *testing.T) {
 				test.store,
 				controllerName,
 				gcName,
-				validation.Validators{HTTPFieldsValidator: &validationfakes.FakeHTTPFieldsValidator{}},
+				validation.Validators{
+					HTTPFieldsValidator: &validationfakes.FakeHTTPFieldsValidator{},
+					GenericValidator:    &validationfakes.FakeGenericValidator{},
+				},
 				protectedPorts,
 			)
 
@@ -610,6 +613,36 @@ func TestIsReferenced(t *testing.T) {
 		},
 	}
 
+	gcWithNginxProxy := &GatewayClass{
+		Source: &gatewayv1.GatewayClass{
+			Spec: gatewayv1.GatewayClassSpec{
+				ParametersRef: &gatewayv1.ParametersReference{
+					Group: ngfAPI.GroupName,
+					Kind:  gatewayv1.Kind("NginxProxy"),
+					Name:  "nginx-proxy-in-gc",
+				},
+			},
+		},
+	}
+
+	npInGraph := &ngfAPI.NginxProxy{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "nginx-proxy",
+		},
+	}
+
+	npNotInGraphButInGatewayClass := &ngfAPI.NginxProxy{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "nginx-proxy-in-gc",
+		},
+	}
+
+	npNotInGraph := &ngfAPI.NginxProxy{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "nginx-proxy-not-referenced",
+		},
+	}
+
 	graph := &Graph{
 		Gateway: gw,
 		ReferencedSecrets: map[types.NamespacedName]*Secret{
@@ -629,10 +662,12 @@ func TestIsReferenced(t *testing.T) {
 				CACert: []byte(caBlock),
 			},
 		},
+		NginxProxy: npInGraph,
 	}
 
 	tests := []struct {
 		graph    *Graph
+		gc       *GatewayClass
 		resource client.Object
 		name     string
 		expected bool
@@ -724,7 +759,7 @@ func TestIsReferenced(t *testing.T) {
 			expected: false,
 		},
 
-		// ConfigMap cases
+		// ConfigMap tests
 		{
 			name:     "ConfigMap in graph's ReferencedConfigMaps is referenced",
 			resource: baseConfigMap,
@@ -744,6 +779,28 @@ func TestIsReferenced(t *testing.T) {
 			expected: false,
 		},
 
+		// NginxProxy tests
+		{
+			name:     "NginxProxy in the Graph is referenced",
+			resource: npInGraph,
+			graph:    graph,
+			expected: true,
+		},
+		{
+			name:     "NginxProxy is not yet in Graph but is referenced in GatewayClass",
+			resource: npNotInGraphButInGatewayClass,
+			gc:       gcWithNginxProxy,
+			graph:    graph,
+			expected: true,
+		},
+		{
+			name:     "NginxProxy not in Graph or referenced in GatewayClass",
+			resource: npNotInGraph,
+			gc:       gcWithNginxProxy,
+			graph:    graph,
+			expected: false,
+		},
+
 		// Edge cases
 		{
 			name:     "Resource is not supported by IsReferenced",
@@ -755,6 +812,8 @@ func TestIsReferenced(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewWithT(t)
+
+			test.graph.GatewayClass = test.gc
 			result := test.graph.IsReferenced(test.resource, client.ObjectKeyFromObject(test.resource))
 			g.Expect(result).To(Equal(test.expected))
 		})

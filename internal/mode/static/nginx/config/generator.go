@@ -16,6 +16,9 @@ const (
 	// httpFolder is the folder where NGINX HTTP configuration files are stored.
 	httpFolder = configFolder + "/conf.d"
 
+	// modulesIncludesFolder is the folder where the included "load_module" file is stored.
+	modulesIncludesFolder = configFolder + "/modules-includes"
+
 	// secretsFolder is the folder where secrets (like TLS certs/keys) are stored.
 	secretsFolder = configFolder + "/secrets"
 
@@ -29,11 +32,11 @@ const (
 	httpMatchVarsFile = httpFolder + "/matches.json"
 
 	// loadModulesFile is the path to the file containing any load_module directives.
-	loadModulesFile = configFolder + "/includes/load_modules.conf"
+	loadModulesFile = modulesIncludesFolder + "/load-modules.conf"
 )
 
 // ConfigFolders is a list of folders where NGINX configuration files are stored.
-var ConfigFolders = []string{httpFolder, secretsFolder}
+var ConfigFolders = []string{httpFolder, secretsFolder, modulesIncludesFolder}
 
 // Generator generates NGINX configuration files.
 // This interface is used for testing purposes only.

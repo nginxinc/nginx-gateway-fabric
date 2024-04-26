@@ -70,6 +70,17 @@ nginx:
   ## Is NGINX Plus image being used
   plus: false
 
+  ## The configuration for the data plane that is contained in the NginxProxy resource.
+  config: {}
+    # telemetry:
+    #   exporter:
+    #     endpoint: otel-collector.default.svc:4317
+    #     interval: 5s
+    #     batchSize: 512
+    #     batchCount: 4
+    #   serviceName: ""
+    #   spanAttributes: []
+
   ## Configuration for NGINX Plus usage reporting.
   usage:
     ## The namespace/name of the Secret containing the credentials for NGINX Plus usage reporting.

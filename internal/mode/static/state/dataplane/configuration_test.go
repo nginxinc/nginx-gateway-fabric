@@ -1909,11 +1909,12 @@ func TestBuildConfiguration(t *testing.T) {
 				SSLKeyPairs: map[SSLKeyPairID]SSLKeyPair{},
 				CertBundles: map[CertBundleID]CertBundle{},
 				Telemetry: Telemetry{
-					Endpoint:    "my-otel.svc:4563",
-					Interval:    "5s",
-					BatchSize:   512,
-					BatchCount:  4,
-					ServiceName: "ngf:ns:gw:my-svc",
+					Endpoint:       "my-otel.svc:4563",
+					Interval:       "5s",
+					BatchSize:      512,
+					BatchCount:     4,
+					ServiceName:    "ngf:ns:gw:my-svc",
+					SpanAttributes: []SpanAttribute{},
 				},
 			},
 			msg: "NginxProxy with tracing config",
@@ -2589,11 +2590,12 @@ func TestBuildTelemetry(t *testing.T) {
 	}
 
 	expTelemetryConfigured := Telemetry{
-		Endpoint:    "my-otel.svc:4563",
-		ServiceName: "ngf:ns:gw:my-svc",
-		Interval:    "5s",
-		BatchSize:   512,
-		BatchCount:  4,
+		Endpoint:       "my-otel.svc:4563",
+		ServiceName:    "ngf:ns:gw:my-svc",
+		Interval:       "5s",
+		BatchSize:      512,
+		BatchCount:     4,
+		SpanAttributes: []SpanAttribute{},
 	}
 
 	tests := []struct {

@@ -116,6 +116,7 @@ func StartManager(cfg config.Config) error {
 		Logger:           cfg.Logger.WithName("changeProcessor"),
 		Validators: validation.Validators{
 			HTTPFieldsValidator: ngxvalidation.HTTPValidator{},
+			GenericValidator:    ngxvalidation.GenericValidator{},
 		},
 		EventRecorder:  recorder,
 		Scheme:         scheme,

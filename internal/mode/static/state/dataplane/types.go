@@ -6,7 +6,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
-	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/resolver"
 )
 
@@ -262,9 +261,18 @@ type Telemetry struct {
 	// Interval specifies the export interval.
 	Interval string
 	// SpanAttributes are custom key/value attributes that are added to each span.
-	SpanAttributes []ngfAPI.SpanAttribute
+	SpanAttributes []SpanAttribute
 	// BatchSize specifies the maximum number of spans to be sent in one batch per worker.
 	BatchSize int32
 	// BatchCount specifies the number of pending batches per worker, spans exceeding the limit are dropped.
 	BatchCount int32
+}
+
+// SpanAttribute is a key value pair to be added to a tracing span.
+type SpanAttribute struct {
+	// Key is the key for a span attribute.
+	Key string
+
+	// Value is the value for a span attribute.
+	Value string
 }

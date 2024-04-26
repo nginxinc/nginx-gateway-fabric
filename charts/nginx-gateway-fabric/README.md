@@ -224,7 +224,7 @@ To uninstall/delete the release `ngf`:
 ```shell
 helm uninstall ngf -n nginx-gateway
 kubectl delete ns nginx-gateway
-for crd in `kubectl get crds -oname | grep gateway.nginx.org | awk -F / '{ print $2 }'`; do kubectl delete crd $crd; done
+kubectl delete crd nginxgateways.gateway.nginx.org nginxproxies.gateway.nginx.org
 ```
 
 These commands remove all the Kubernetes components associated with the release and deletes the release.
@@ -269,6 +269,7 @@ The following tables lists the configurable parameters of the NGINX Gateway Fabr
 | `nginx.image.tag`                                 | The tag for the NGINX image.                                                                                                                                                                             | edge                                                                                                            |
 | `nginx.image.pullPolicy`                          | The `imagePullPolicy` for the NGINX image.                                                                                                                                                               | Always                                                                                                          |
 | `nginx.plus`                                      | Is NGINX Plus image being used                                                                                                                                                                           | false                                                                                                           |
+| `nginx.config`                                    | The configuration for the data plane that is contained in the NginxProxy resource. | [See nginx.config section](values.yaml) |
 | `nginx.usage.secretName`                          | The namespace/name of the Secret containing the credentials for NGINX Plus usage reporting. | |
 | `nginx.usage.serverURL`                           | The base server URL of the NGINX Plus usage reporting server. | |
 | `nginx.usage.clusterName`                         | The display name of the Kubernetes cluster in the NGINX Plus usage reporting server. | |

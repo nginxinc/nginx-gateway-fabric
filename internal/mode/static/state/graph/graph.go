@@ -103,6 +103,11 @@ func (g *Graph) IsReferenced(resourceType client.Object, nsname types.Namespaced
 		// Service Namespace should be the same Namespace as the EndpointSlice
 		_, exists := g.ReferencedServices[types.NamespacedName{Namespace: nsname.Namespace, Name: svcName}]
 		return exists
+	// Similar to Namespace above, NginxProxy reference exists if it once was or currently is linked to a GatewayClass.
+	case *ngfAPI.NginxProxy:
+		existed := client.ObjectKeyFromObject(obj) == client.ObjectKeyFromObject(g.NginxProxy)
+		exists := isNginxProxyReferenced(obj, g.GatewayClass)
+		return existed || exists
 	default:
 		return false
 	}
@@ -123,7 +128,7 @@ func BuildGraph(
 	}
 
 	npCfg := getNginxProxy(state.NginxProxies, processedGwClasses.Winner)
-	gc := buildGatewayClass(processedGwClasses.Winner, npCfg, state.CRDMetadata)
+	gc := buildGatewayClass(processedGwClasses.Winner, npCfg, state.CRDMetadata, validators.GenericValidator)
 
 	secretResolver := newSecretResolver(state.Secrets)
 	configMapResolver := newConfigMapResolver(state.ConfigMaps)

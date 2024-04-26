@@ -96,9 +96,15 @@ rules:
   - gateway.nginx.org
   resources:
   - nginxgateways
-  - nginxproxies
   verbs:
   - get
+  - list
+  - watch
+- apiGroups:
+  - gateway.nginx.org
+  resources:
+  - nginxproxies
+  verbs:
   - list
   - watch
 - apiGroups:
@@ -218,7 +224,7 @@ spec:
         - name: nginx-conf
           mountPath: /etc/nginx/conf.d
         - name: nginx-includes
-          mountPath: /etc/nginx/includes
+          mountPath: /etc/nginx/modules-includes
         - name: nginx-secrets
           mountPath: /etc/nginx/secrets
         - name: nginx-run
@@ -244,7 +250,7 @@ spec:
         - name: nginx-conf
           mountPath: /etc/nginx/conf.d
         - name: nginx-includes
-          mountPath: /etc/nginx/includes
+          mountPath: /etc/nginx/modules-includes
         - name: nginx-secrets
           mountPath: /etc/nginx/secrets
         - name: nginx-run

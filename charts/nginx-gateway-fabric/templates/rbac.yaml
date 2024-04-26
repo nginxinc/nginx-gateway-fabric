@@ -111,9 +111,15 @@ rules:
   - gateway.nginx.org
   resources:
   - nginxgateways
-  - nginxproxies
   verbs:
   - get
+  - list
+  - watch
+- apiGroups:
+  - gateway.nginx.org
+  resources:
+  - nginxproxies
+  verbs:
   - list
   - watch
 - apiGroups:

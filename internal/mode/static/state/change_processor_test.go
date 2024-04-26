@@ -172,10 +172,9 @@ func createBackendRef(
 }
 
 func createAlwaysValidValidators() validation.Validators {
-	http := &validationfakes.FakeHTTPFieldsValidator{}
-
 	return validation.Validators{
-		HTTPFieldsValidator: http,
+		HTTPFieldsValidator: &validationfakes.FakeHTTPFieldsValidator{},
+		GenericValidator:    &validationfakes.FakeGenericValidator{},
 	}
 }
 

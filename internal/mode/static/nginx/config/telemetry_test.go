@@ -6,7 +6,6 @@ import (
 
 	. "github.com/onsi/gomega"
 
-	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/dataplane"
 )
 
@@ -18,7 +17,7 @@ func TestExecuteTelemetry(t *testing.T) {
 			Interval:    "5s",
 			BatchSize:   512,
 			BatchCount:  4,
-			SpanAttributes: []ngfAPI.SpanAttribute{
+			SpanAttributes: []dataplane.SpanAttribute{
 				{
 					Key:   "key1",
 					Value: "val1",

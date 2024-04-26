@@ -187,7 +187,7 @@ func NewChangeProcessorImpl(cfg ChangeProcessorConfig) *ChangeProcessorImpl {
 			{
 				gvk:       extractGVK(&ngfAPI.NginxProxy{}),
 				store:     newObjectStoreMapAdapter(clusterStore.NginxProxies),
-				predicate: nil,
+				predicate: funcPredicate{stateChanged: isReferenced},
 			},
 		},
 	)
