@@ -56,15 +56,15 @@ var _ = Describe("Graceful Recovery test", Ordered, Label("nfr", "graceful-recov
 	})
 
 	It("recovers when NGF container is restarted", func() {
-		runTest(ngfContainerName, files, ns)
+		runRecoveryTest(ngfContainerName, files, ns)
 	})
 
 	It("recovers when nginx container is restarted", func() {
-		runTest(nginxContainerName, files, ns)
+		runRecoveryTest(nginxContainerName, files, ns)
 	})
 })
 
-func runTest(containerName string, files []string, ns *core.Namespace) {
+func runRecoveryTest(containerName string, files []string, ns *core.Namespace) {
 	podNames, err := framework.GetReadyNGFPodNames(k8sClient, ngfNamespace, releaseName, timeoutConfig.GetTimeout)
 	Expect(err).ToNot(HaveOccurred())
 	Expect(podNames).ToNot(BeEmpty())
