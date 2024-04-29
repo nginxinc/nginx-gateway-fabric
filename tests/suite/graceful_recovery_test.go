@@ -93,9 +93,9 @@ func runRecoveryTest(containerName string, files []string, ns *core.Namespace) {
 func restartContainer(containerName string) {
 	var jobScript string
 	if containerName == "nginx" {
-		jobScript = "PID=$(pgrep -f \"[n]ginx: master process\") && kill -9 $PID"
+		jobScript = "PID=$(pgrep -f \"nginx: master process\") && kill -9 $PID"
 	} else {
-		jobScript = "PID=$(pgrep -f \"/[u]sr/bin/gateway\") && kill -9 $PID"
+		jobScript = "PID=$(pgrep -f \"/usr/bin/gateway\") && kill -9 $PID"
 	}
 
 	podNames, err := framework.GetReadyNGFPodNames(k8sClient, ngfNamespace, releaseName, timeoutConfig.GetTimeout)
