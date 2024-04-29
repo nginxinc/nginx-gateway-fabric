@@ -15,6 +15,7 @@ import (
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
+	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/controller/index"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
@@ -288,6 +289,23 @@ func TestBuildGraph(t *testing.T) {
 		},
 	}
 
+	proxy := &ngfAPI.NginxProxy{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "nginx-proxy",
+		},
+		Spec: ngfAPI.NginxProxySpec{
+			Telemetry: &ngfAPI.Telemetry{
+				Exporter: &ngfAPI.TelemetryExporter{
+					Endpoint:   "1.2.3.4:123",
+					Interval:   helpers.GetPointer(ngfAPI.Duration("5s")),
+					BatchSize:  helpers.GetPointer(int32(512)),
+					BatchCount: helpers.GetPointer(int32(4)),
+				},
+				ServiceName: helpers.GetPointer("my-svc"),
+			},
+		},
+	}
+
 	createStateWithGatewayClass := func(gc *gatewayv1.GatewayClass) ClusterState {
 		return ClusterState{
 			GatewayClasses: map[types.NamespacedName]*gatewayv1.GatewayClass{
@@ -320,6 +338,9 @@ func TestBuildGraph(t *testing.T) {
 			},
 			ConfigMaps: map[types.NamespacedName]*v1.ConfigMap{
 				client.ObjectKeyFromObject(cm): cm,
+			},
+			NginxProxies: map[types.NamespacedName]*ngfAPI.NginxProxy{
+				client.ObjectKeyFromObject(proxy): proxy,
 			},
 		}
 	}
@@ -361,8 +382,9 @@ func TestBuildGraph(t *testing.T) {
 	createExpectedGraphWithGatewayClass := func(gc *gatewayv1.GatewayClass) *Graph {
 		return &Graph{
 			GatewayClass: &GatewayClass{
-				Source: gc,
-				Valid:  true,
+				Source:     gc,
+				Valid:      true,
+				Conditions: []conditions.Condition{staticConds.NewGatewayClassResolvedRefs()},
 			},
 			Gateway: &Gateway{
 				Source: gw1,
@@ -419,6 +441,7 @@ func TestBuildGraph(t *testing.T) {
 			BackendTLSPolicies: map[types.NamespacedName]*BackendTLSPolicy{
 				client.ObjectKeyFromObject(btp.Source): &btp,
 			},
+			NginxProxy: proxy,
 		}
 	}
 
@@ -428,6 +451,11 @@ func TestBuildGraph(t *testing.T) {
 		},
 		Spec: gatewayv1.GatewayClassSpec{
 			ControllerName: controllerName,
+			ParametersRef: &gatewayv1.ParametersReference{
+				Group: gatewayv1.Group("gateway.nginx.org"),
+				Kind:  gatewayv1.Kind("NginxProxy"),
+				Name:  "nginx-proxy",
+			},
 		},
 	}
 	differentControllerGC := &gatewayv1.GatewayClass{
@@ -464,7 +492,10 @@ func TestBuildGraph(t *testing.T) {
 				test.store,
 				controllerName,
 				gcName,
-				validation.Validators{HTTPFieldsValidator: &validationfakes.FakeHTTPFieldsValidator{}},
+				validation.Validators{
+					HTTPFieldsValidator: &validationfakes.FakeHTTPFieldsValidator{},
+					GenericValidator:    &validationfakes.FakeGenericValidator{},
+				},
 				protectedPorts,
 			)
 
@@ -582,6 +613,30 @@ func TestIsReferenced(t *testing.T) {
 		},
 	}
 
+	gcWithNginxProxy := &GatewayClass{
+		Source: &gatewayv1.GatewayClass{
+			Spec: gatewayv1.GatewayClassSpec{
+				ParametersRef: &gatewayv1.ParametersReference{
+					Group: ngfAPI.GroupName,
+					Kind:  gatewayv1.Kind("NginxProxy"),
+					Name:  "nginx-proxy-in-gc",
+				},
+			},
+		},
+	}
+
+	npNotInGatewayClass := &ngfAPI.NginxProxy{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "nginx-proxy",
+		},
+	}
+
+	npInGatewayClass := &ngfAPI.NginxProxy{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "nginx-proxy-in-gc",
+		},
+	}
+
 	graph := &Graph{
 		Gateway: gw,
 		ReferencedSecrets: map[types.NamespacedName]*Secret{
@@ -605,6 +660,7 @@ func TestIsReferenced(t *testing.T) {
 
 	tests := []struct {
 		graph    *Graph
+		gc       *GatewayClass
 		resource client.Object
 		name     string
 		expected bool
@@ -696,7 +752,7 @@ func TestIsReferenced(t *testing.T) {
 			expected: false,
 		},
 
-		// ConfigMap cases
+		// ConfigMap tests
 		{
 			name:     "ConfigMap in graph's ReferencedConfigMaps is referenced",
 			resource: baseConfigMap,
@@ -716,6 +772,22 @@ func TestIsReferenced(t *testing.T) {
 			expected: false,
 		},
 
+		// NginxProxy tests
+		{
+			name:     "NginxProxy is referenced in GatewayClass",
+			resource: npInGatewayClass,
+			gc:       gcWithNginxProxy,
+			graph:    graph,
+			expected: true,
+		},
+		{
+			name:     "NginxProxy is not referenced in GatewayClass",
+			resource: npNotInGatewayClass,
+			gc:       gcWithNginxProxy,
+			graph:    graph,
+			expected: false,
+		},
+
 		// Edge cases
 		{
 			name:     "Resource is not supported by IsReferenced",
@@ -727,6 +799,8 @@ func TestIsReferenced(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewWithT(t)
+
+			test.graph.GatewayClass = test.gc
 			result := test.graph.IsReferenced(test.resource, client.ObjectKeyFromObject(test.resource))
 			g.Expect(result).To(Equal(test.expected))
 		})

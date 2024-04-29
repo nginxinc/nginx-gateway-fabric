@@ -17,6 +17,7 @@ import (
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
+	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/controller/index"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/gatewayclass"
@@ -171,10 +172,9 @@ func createBackendRef(
 }
 
 func createAlwaysValidValidators() validation.Validators {
-	http := &validationfakes.FakeHTTPFieldsValidator{}
-
 	return validation.Validators{
-		HTTPFieldsValidator: http,
+		HTTPFieldsValidator: &validationfakes.FakeHTTPFieldsValidator{},
+		GenericValidator:    &validationfakes.FakeGenericValidator{},
 	}
 }
 
@@ -187,6 +187,7 @@ func createScheme() *runtime.Scheme {
 	utilruntime.Must(apiv1.AddToScheme(scheme))
 	utilruntime.Must(discoveryV1.AddToScheme(scheme))
 	utilruntime.Must(apiext.AddToScheme(scheme))
+	utilruntime.Must(ngfAPI.AddToScheme(scheme))
 
 	return scheme
 }
@@ -1523,6 +1524,60 @@ var _ = Describe("ChangeProcessor", func() {
 				})
 			})
 		})
+
+		Describe("NginxProxy resource changes", Ordered, func() {
+			paramGC := gc.DeepCopy()
+			paramGC.Spec.ParametersRef = &v1beta1.ParametersReference{
+				Group: ngfAPI.GroupName,
+				Kind:  v1beta1.Kind("NginxProxy"),
+				Name:  "np",
+			}
+
+			np := &ngfAPI.NginxProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "np",
+				},
+			}
+
+			npUpdated := &ngfAPI.NginxProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "np",
+				},
+				Spec: ngfAPI.NginxProxySpec{
+					Telemetry: &ngfAPI.Telemetry{
+						Exporter: &ngfAPI.TelemetryExporter{
+							Endpoint:   "my-svc:123",
+							BatchSize:  helpers.GetPointer(int32(512)),
+							BatchCount: helpers.GetPointer(int32(4)),
+							Interval:   helpers.GetPointer(ngfAPI.Duration("5s")),
+						},
+					},
+				},
+			}
+			It("handles upserts for an NginxProxy", func() {
+				processor.CaptureUpsertChange(np)
+				processor.CaptureUpsertChange(paramGC)
+
+				changed, graph := processor.Process()
+				Expect(changed).To(Equal(state.ClusterStateChange))
+				Expect(graph.NginxProxy).To(Equal(np))
+			})
+			It("captures changes for an NginxProxy", func() {
+				processor.CaptureUpsertChange(npUpdated)
+				processor.CaptureUpsertChange(paramGC)
+
+				changed, graph := processor.Process()
+				Expect(changed).To(Equal(state.ClusterStateChange))
+				Expect(graph.NginxProxy).To(Equal(npUpdated))
+			})
+			It("handles deletes for an NginxProxy", func() {
+				processor.CaptureDeleteChange(np, client.ObjectKeyFromObject(np))
+
+				changed, graph := processor.Process()
+				Expect(changed).To(Equal(state.ClusterStateChange))
+				Expect(graph.NginxProxy).To(BeNil())
+			})
+		})
 	})
 
 	Describe("Ensuring non-changing changes don't override previously changing changes", func() {
@@ -1531,18 +1586,19 @@ var _ = Describe("ChangeProcessor", func() {
 
 		//nolint:lll
 		var (
-			processor                                                                                                     *state.ChangeProcessorImpl
-			gcNsName, gwNsName, hrNsName, hr2NsName, rgNsName, svcNsName, sliceNsName, secretNsName, cmNsName, btlsNsName types.NamespacedName
-			gc, gcUpdated                                                                                                 *v1.GatewayClass
-			gw1, gw1Updated, gw2                                                                                          *v1.Gateway
-			hr1, hr1Updated, hr2                                                                                          *v1.HTTPRoute
-			rg1, rg1Updated, rg2                                                                                          *v1beta1.ReferenceGrant
-			svc, barSvc, unrelatedSvc                                                                                     *apiv1.Service
-			slice, barSlice, unrelatedSlice                                                                               *discoveryV1.EndpointSlice
-			ns, unrelatedNS, testNs, barNs                                                                                *apiv1.Namespace
-			secret, secretUpdated, unrelatedSecret, barSecret, barSecretUpdated                                           *apiv1.Secret
-			cm, cmUpdated, unrelatedCM                                                                                    *apiv1.ConfigMap
-			btls, btlsUpdated                                                                                             *v1alpha2.BackendTLSPolicy
+			processor                                                                                                               *state.ChangeProcessorImpl
+			gcNsName, gwNsName, hrNsName, hr2NsName, rgNsName, svcNsName, sliceNsName, secretNsName, cmNsName, btlsNsName, npNsName types.NamespacedName
+			gc, gcUpdated                                                                                                           *v1.GatewayClass
+			gw1, gw1Updated, gw2                                                                                                    *v1.Gateway
+			hr1, hr1Updated, hr2                                                                                                    *v1.HTTPRoute
+			rg1, rg1Updated, rg2                                                                                                    *v1beta1.ReferenceGrant
+			svc, barSvc, unrelatedSvc                                                                                               *apiv1.Service
+			slice, barSlice, unrelatedSlice                                                                                         *discoveryV1.EndpointSlice
+			ns, unrelatedNS, testNs, barNs                                                                                          *apiv1.Namespace
+			secret, secretUpdated, unrelatedSecret, barSecret, barSecretUpdated                                                     *apiv1.Secret
+			cm, cmUpdated, unrelatedCM                                                                                              *apiv1.ConfigMap
+			btls, btlsUpdated                                                                                                       *v1alpha2.BackendTLSPolicy
+			np, npUpdated                                                                                                           *ngfAPI.NginxProxy
 		)
 
 		BeforeEach(OncePerOrdered, func() {
@@ -1834,6 +1890,19 @@ var _ = Describe("ChangeProcessor", func() {
 				},
 			}
 			btlsUpdated = btls.DeepCopy()
+
+			npNsName = types.NamespacedName{Name: "np-1"}
+			np = &ngfAPI.NginxProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: npNsName.Name,
+				},
+				Spec: ngfAPI.NginxProxySpec{
+					Telemetry: &ngfAPI.Telemetry{
+						ServiceName: helpers.GetPointer("my-svc"),
+					},
+				},
+			}
+			npUpdated = np.DeepCopy()
 		})
 		// Changing change - a change that makes processor.Process() report changed
 		// Non-changing change - a change that doesn't do that
@@ -1851,6 +1920,7 @@ var _ = Describe("ChangeProcessor", func() {
 				processor.CaptureUpsertChange(rg1)
 				processor.CaptureUpsertChange(btls)
 				processor.CaptureUpsertChange(cm)
+				processor.CaptureUpsertChange(np)
 
 				changed, _ := processor.Process()
 				Expect(changed).To(Equal(state.ClusterStateChange))
@@ -1864,6 +1934,7 @@ var _ = Describe("ChangeProcessor", func() {
 					processor.CaptureUpsertChange(rg1Updated)
 					processor.CaptureUpsertChange(btlsUpdated)
 					processor.CaptureUpsertChange(cmUpdated)
+					processor.CaptureUpsertChange(npUpdated)
 
 					// there are non-changing changes
 					processor.CaptureUpsertChange(gcUpdated)
@@ -1872,6 +1943,7 @@ var _ = Describe("ChangeProcessor", func() {
 					processor.CaptureUpsertChange(rg1Updated)
 					processor.CaptureUpsertChange(btlsUpdated)
 					processor.CaptureUpsertChange(cmUpdated)
+					processor.CaptureUpsertChange(npUpdated)
 
 					changed, _ := processor.Process()
 					Expect(changed).To(Equal(state.ClusterStateChange))
@@ -1895,6 +1967,7 @@ var _ = Describe("ChangeProcessor", func() {
 					processor.CaptureDeleteChange(&v1beta1.ReferenceGrant{}, rgNsName)
 					processor.CaptureDeleteChange(&v1alpha2.BackendTLSPolicy{}, btlsNsName)
 					processor.CaptureDeleteChange(&apiv1.ConfigMap{}, cmNsName)
+					processor.CaptureDeleteChange(&ngfAPI.NginxProxy{}, npNsName)
 
 					// these are non-changing changes
 					processor.CaptureUpsertChange(gw2)

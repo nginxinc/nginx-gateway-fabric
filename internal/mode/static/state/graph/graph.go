@@ -10,6 +10,7 @@ import (
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
+	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/controller/index"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/validation"
 )
@@ -26,6 +27,7 @@ type ClusterState struct {
 	CRDMetadata        map[types.NamespacedName]*metav1.PartialObjectMetadata
 	BackendTLSPolicies map[types.NamespacedName]*v1alpha2.BackendTLSPolicy
 	ConfigMaps         map[types.NamespacedName]*v1.ConfigMap
+	NginxProxies       map[types.NamespacedName]*ngfAPI.NginxProxy
 }
 
 // Graph is a Graph-like representation of Gateway API resources.
@@ -58,6 +60,8 @@ type Graph struct {
 	ReferencedCaCertConfigMaps map[types.NamespacedName]*CaCertConfigMap
 	// BackendTLSPolicies holds BackendTLSPolicy resources.
 	BackendTLSPolicies map[types.NamespacedName]*BackendTLSPolicy
+	// NginxProxy holds the NginxProxy config for the GatewayClass.
+	NginxProxy *ngfAPI.NginxProxy
 }
 
 // ProtectedPorts are the ports that may not be configured by a listener with a descriptive name of each port.
@@ -99,6 +103,9 @@ func (g *Graph) IsReferenced(resourceType client.Object, nsname types.Namespaced
 		// Service Namespace should be the same Namespace as the EndpointSlice
 		_, exists := g.ReferencedServices[types.NamespacedName{Namespace: nsname.Namespace, Name: svcName}]
 		return exists
+	// NginxProxy reference exists if it is linked to a GatewayClass.
+	case *ngfAPI.NginxProxy:
+		return isNginxProxyReferenced(nsname, g.GatewayClass)
 	default:
 		return false
 	}
@@ -118,7 +125,8 @@ func BuildGraph(
 		return &Graph{}
 	}
 
-	gc := buildGatewayClass(processedGwClasses.Winner, state.CRDMetadata)
+	npCfg := getNginxProxy(state.NginxProxies, processedGwClasses.Winner)
+	gc := buildGatewayClass(processedGwClasses.Winner, npCfg, state.CRDMetadata, validators.GenericValidator)
 
 	secretResolver := newSecretResolver(state.Secrets)
 	configMapResolver := newConfigMapResolver(state.ConfigMaps)
@@ -154,6 +162,7 @@ func BuildGraph(
 		ReferencedServices:         referencedServices,
 		ReferencedCaCertConfigMaps: configMapResolver.getResolvedConfigMaps(),
 		BackendTLSPolicies:         processedBackendTLSPolicies,
+		NginxProxy:                 npCfg,
 	}
 
 	return g

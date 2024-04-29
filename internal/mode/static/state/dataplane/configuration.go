@@ -40,6 +40,7 @@ func BuildConfiguration(
 	backendGroups := buildBackendGroups(append(httpServers, sslServers...))
 	keyPairs := buildSSLKeyPairs(g.ReferencedSecrets, g.Gateway.Listeners)
 	certBundles := buildCertBundles(g.ReferencedCaCertConfigMaps, backendGroups)
+	telemetry := buildTelemetry(g)
 
 	config := Configuration{
 		HTTPServers:   httpServers,
@@ -49,6 +50,7 @@ func BuildConfiguration(
 		SSLKeyPairs:   keyPairs,
 		Version:       configVersion,
 		CertBundles:   certBundles,
+		Telemetry:     telemetry,
 	}
 
 	return config
@@ -558,4 +560,45 @@ func generateSSLKeyPairID(secret types.NamespacedName) SSLKeyPairID {
 // The ID is safe to use as a file name.
 func generateCertBundleID(configMap types.NamespacedName) CertBundleID {
 	return CertBundleID(fmt.Sprintf("cert_bundle_%s_%s", configMap.Namespace, configMap.Name))
+}
+
+// buildTelemetry generates the Otel configuration.
+func buildTelemetry(g *graph.Graph) Telemetry {
+	if g.NginxProxy == nil || g.NginxProxy.Spec.Telemetry == nil || g.NginxProxy.Spec.Telemetry.Exporter == nil {
+		return Telemetry{}
+	}
+
+	serviceName := fmt.Sprintf("ngf:%s:%s", g.Gateway.Source.Namespace, g.Gateway.Source.Name)
+	telemetry := g.NginxProxy.Spec.Telemetry
+	if telemetry.ServiceName != nil {
+		serviceName = serviceName + ":" + *telemetry.ServiceName
+	}
+
+	tel := Telemetry{
+		Endpoint:    telemetry.Exporter.Endpoint,
+		ServiceName: serviceName,
+	}
+
+	spanAttrs := make([]SpanAttribute, 0, len(g.NginxProxy.Spec.Telemetry.SpanAttributes))
+	for _, spanAttr := range g.NginxProxy.Spec.Telemetry.SpanAttributes {
+		sa := SpanAttribute{
+			Key:   spanAttr.Key,
+			Value: spanAttr.Value,
+		}
+		spanAttrs = append(spanAttrs, sa)
+	}
+
+	tel.SpanAttributes = spanAttrs
+
+	if telemetry.Exporter.BatchCount != nil {
+		tel.BatchCount = *telemetry.Exporter.BatchCount
+	}
+	if telemetry.Exporter.BatchSize != nil {
+		tel.BatchSize = *telemetry.Exporter.BatchSize
+	}
+	if telemetry.Exporter.Interval != nil {
+		tel.Interval = string(*telemetry.Exporter.Interval)
+	}
+
+	return tel
 }

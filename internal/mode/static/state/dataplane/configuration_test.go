@@ -14,6 +14,7 @@ import (
 	v1 "sigs.k8s.io/gateway-api/apis/v1"
 	v1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
+	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/graph"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/resolver"
@@ -536,6 +537,20 @@ func TestBuildConfiguration(t *testing.T) {
 				},
 			},
 			CACert: []byte("cert-2"),
+		},
+	}
+
+	nginxProxy := &ngfAPI.NginxProxy{
+		Spec: ngfAPI.NginxProxySpec{
+			Telemetry: &ngfAPI.Telemetry{
+				Exporter: &ngfAPI.TelemetryExporter{
+					Endpoint:   "my-otel.svc:4563",
+					BatchSize:  helpers.GetPointer(int32(512)),
+					BatchCount: helpers.GetPointer(int32(4)),
+					Interval:   helpers.GetPointer(ngfAPI.Duration("5s")),
+				},
+				ServiceName: helpers.GetPointer("my-svc"),
+			},
 		},
 	}
 
@@ -1858,6 +1873,52 @@ func TestBuildConfiguration(t *testing.T) {
 			},
 			msg: "https listener with httproute with backend that has a backend TLS policy with binaryData attached",
 		},
+		{
+			graph: &graph.Graph{
+				GatewayClass: &graph.GatewayClass{
+					Source: &v1.GatewayClass{},
+					Valid:  true,
+				},
+				Gateway: &graph.Gateway{
+					Source: &v1.Gateway{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "gw",
+							Namespace: "ns",
+						},
+					},
+					Listeners: []*graph.Listener{
+						{
+							Name:   "listener-80-1",
+							Source: listener80,
+							Valid:  true,
+							Routes: map[types.NamespacedName]*graph.Route{},
+						},
+					},
+				},
+				Routes:     map[types.NamespacedName]*graph.Route{},
+				NginxProxy: nginxProxy,
+			},
+			expConf: Configuration{
+				HTTPServers: []VirtualServer{
+					{
+						IsDefault: true,
+						Port:      80,
+					},
+				},
+				SSLServers:  []VirtualServer{},
+				SSLKeyPairs: map[SSLKeyPairID]SSLKeyPair{},
+				CertBundles: map[CertBundleID]CertBundle{},
+				Telemetry: Telemetry{
+					Endpoint:       "my-otel.svc:4563",
+					Interval:       "5s",
+					BatchSize:      512,
+					BatchCount:     4,
+					ServiceName:    "ngf:ns:gw:my-svc",
+					SpanAttributes: []SpanAttribute{},
+				},
+			},
+			msg: "NginxProxy with tracing config",
+		},
 	}
 
 	for _, test := range tests {
@@ -1873,6 +1934,7 @@ func TestBuildConfiguration(t *testing.T) {
 			g.Expect(result.SSLKeyPairs).To(Equal(test.expConf.SSLKeyPairs))
 			g.Expect(result.Version).To(Equal(1))
 			g.Expect(result.CertBundles).To(Equal(test.expConf.CertBundles))
+			g.Expect(result.Telemetry).To(Equal(test.expConf.Telemetry))
 		})
 	}
 }
@@ -2508,6 +2570,72 @@ func TestConvertBackendTLS(t *testing.T) {
 			g := NewWithT(t)
 
 			g.Expect(convertBackendTLS(tc.btp)).To(Equal(tc.expected))
+		})
+	}
+}
+
+func TestBuildTelemetry(t *testing.T) {
+	telemetryConfigured := &ngfAPI.NginxProxy{
+		Spec: ngfAPI.NginxProxySpec{
+			Telemetry: &ngfAPI.Telemetry{
+				Exporter: &ngfAPI.TelemetryExporter{
+					Endpoint:   "my-otel.svc:4563",
+					BatchSize:  helpers.GetPointer(int32(512)),
+					BatchCount: helpers.GetPointer(int32(4)),
+					Interval:   helpers.GetPointer(ngfAPI.Duration("5s")),
+				},
+				ServiceName: helpers.GetPointer("my-svc"),
+				SpanAttributes: []ngfAPI.SpanAttribute{
+					{Key: "key", Value: "value"},
+				},
+			},
+		},
+	}
+
+	expTelemetryConfigured := Telemetry{
+		Endpoint:    "my-otel.svc:4563",
+		ServiceName: "ngf:ns:gw:my-svc",
+		Interval:    "5s",
+		BatchSize:   512,
+		BatchCount:  4,
+		SpanAttributes: []SpanAttribute{
+			{Key: "key", Value: "value"},
+		},
+	}
+
+	tests := []struct {
+		g            *graph.Graph
+		msg          string
+		expTelemetry Telemetry
+	}{
+		{
+			g: &graph.Graph{
+				NginxProxy: &ngfAPI.NginxProxy{},
+			},
+			expTelemetry: Telemetry{},
+			msg:          "No telemetry configured",
+		},
+		{
+			g: &graph.Graph{
+				Gateway: &graph.Gateway{
+					Source: &v1.Gateway{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "gw",
+							Namespace: "ns",
+						},
+					},
+				},
+				NginxProxy: telemetryConfigured,
+			},
+			expTelemetry: expTelemetryConfigured,
+			msg:          "Telemetry configured",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.msg, func(t *testing.T) {
+			g := NewWithT(t)
+			g.Expect(buildTelemetry(tc.g)).To(Equal(tc.expTelemetry))
 		})
 	}
 }

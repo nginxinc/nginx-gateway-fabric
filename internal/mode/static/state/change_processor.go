@@ -19,6 +19,7 @@ import (
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
+	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/gatewayclass"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/graph"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/validation"
@@ -105,6 +106,7 @@ func NewChangeProcessorImpl(cfg ChangeProcessorConfig) *ChangeProcessorImpl {
 		CRDMetadata:        make(map[types.NamespacedName]*metav1.PartialObjectMetadata),
 		BackendTLSPolicies: make(map[types.NamespacedName]*v1alpha2.BackendTLSPolicy),
 		ConfigMaps:         make(map[types.NamespacedName]*apiv1.ConfigMap),
+		NginxProxies:       make(map[types.NamespacedName]*ngfAPI.NginxProxy),
 	}
 
 	extractGVK := func(obj client.Object) schema.GroupVersionKind {
@@ -181,6 +183,11 @@ func NewChangeProcessorImpl(cfg ChangeProcessorConfig) *ChangeProcessorImpl {
 				gvk:       extractGVK(&apiext.CustomResourceDefinition{}),
 				store:     newObjectStoreMapAdapter(clusterStore.CRDMetadata),
 				predicate: annotationChangedPredicate{annotation: gatewayclass.BundleVersionAnnotation},
+			},
+			{
+				gvk:       extractGVK(&ngfAPI.NginxProxy{}),
+				store:     newObjectStoreMapAdapter(clusterStore.NginxProxies),
+				predicate: funcPredicate{stateChanged: isReferenced},
 			},
 		},
 	)
