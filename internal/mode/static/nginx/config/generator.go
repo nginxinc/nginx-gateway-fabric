@@ -120,12 +120,7 @@ func (g GeneratorImpl) generateHTTPConfig(conf dataplane.Configuration) []file.F
 	for _, execute := range g.getExecuteFuncs() {
 		results := execute(conf)
 		for _, res := range results {
-			_, ok := fileBytes[res.dest]
-			if ok {
-				fileBytes[res.dest] = append(fileBytes[res.dest], res.data...)
-			} else {
-				fileBytes[res.dest] = res.data
-			}
+			fileBytes[res.dest] = append(fileBytes[res.dest], res.data...)
 		}
 	}
 
