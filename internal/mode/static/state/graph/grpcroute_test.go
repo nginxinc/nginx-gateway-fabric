@@ -154,6 +154,26 @@ func TestBuildGRPCRoute(t *testing.T) {
 		[]v1alpha2.GRPCRouteRule{methodMatchRule, headersMatchRule},
 	)
 
+	backendRef := v1.BackendRef{
+		BackendObjectReference: v1.BackendObjectReference{
+			Kind:      helpers.GetPointer[v1.Kind]("Service"),
+			Name:      "service1",
+			Namespace: helpers.GetPointer[v1.Namespace]("test"),
+			Port:      helpers.GetPointer[v1.PortNumber](80),
+		},
+	}
+
+	grpcBackendRef := v1alpha2.GRPCBackendRef{
+		BackendRef: backendRef,
+	}
+
+	grEmptyMatch := createGRPCRoute(
+		"gr-1",
+		gatewayNsName.Name,
+		"example.com",
+		[]v1alpha2.GRPCRouteRule{{BackendRefs: []v1alpha2.GRPCBackendRef{grpcBackendRef}}},
+	)
+
 	grInvalidHostname := createGRPCRoute("gr-1", gatewayNsName.Name, "", []v1alpha2.GRPCRouteRule{methodMatchRule})
 	grNotNGF := createGRPCRoute("gr", "some-gateway", "example.com", []v1alpha2.GRPCRouteRule{methodMatchRule})
 
@@ -260,6 +280,35 @@ func TestBuildGRPCRoute(t *testing.T) {
 				},
 			},
 			name: "normal case with both",
+		},
+		{
+			validator: createAllValidValidator(),
+			gr:        grEmptyMatch,
+			expected: &L7Route{
+				RouteType: RouteTypeGRPC,
+				Source:    grEmptyMatch,
+				ParentRefs: []ParentRef{
+					{
+						Idx:         0,
+						Gateway:     gatewayNsName,
+						SectionName: grEmptyMatch.Spec.ParentRefs[0].SectionName,
+					},
+				},
+				Valid:      true,
+				Attachable: true,
+				Spec: L7RouteSpec{
+					Hostnames: grEmptyMatch.Spec.Hostnames,
+					Rules: []RouteRule{
+						{
+							ValidMatches:     true,
+							ValidFilters:     true,
+							Matches:          convertGRPCMatches(grEmptyMatch.Spec.Rules[0].Matches),
+							RouteBackendRefs: []RouteBackendRef{{BackendRef: backendRef}},
+						},
+					},
+				},
+			},
+			name: "valid rule with empty match",
 		},
 		{
 			validator: createAllValidValidator(),

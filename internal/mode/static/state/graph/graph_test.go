@@ -420,7 +420,7 @@ func TestBuildGraph(t *testing.T) {
 		Spec: L7RouteSpec{
 			Hostnames: gr.Spec.Hostnames,
 			Rules: []RouteRule{
-				createValidRuleWithBackendRefs([]gatewayv1.HTTPRouteMatch{}),
+				createValidRuleWithBackendRefs(routeMatches),
 			},
 		},
 	}

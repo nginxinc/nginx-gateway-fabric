@@ -132,6 +132,20 @@ func processGRPCRouteRules(
 }
 
 func convertGRPCMatches(grpcMatches []v1alpha2.GRPCRouteMatch) []v1.HTTPRouteMatch {
+	pathValue := "/"
+	pathType := v1.PathMatchType("PathPrefix")
+	// If no matches are specified, the implementation MUST match every gRPC request.
+	if len(grpcMatches) == 0 {
+		return []v1.HTTPRouteMatch{
+			{
+				Path: &v1.HTTPPathMatch{
+					Type:  &pathType,
+					Value: helpers.GetPointer(pathValue),
+				},
+			},
+		}
+	}
+
 	hms := make([]v1.HTTPRouteMatch, 0, len(grpcMatches))
 
 	for _, gm := range grpcMatches {
@@ -145,8 +159,6 @@ func convertGRPCMatches(grpcMatches []v1alpha2.GRPCRouteMatch) []v1.HTTPRouteMat
 		}
 		hm.Headers = hmHeaders
 
-		pathValue := "/"
-		pathType := v1.PathMatchType("PathPrefix")
 		if gm.Method != nil && gm.Method.Service != nil && gm.Method.Method != nil {
 			// if method match is provided, service and method are required
 			// as the only method type supported is exact.
