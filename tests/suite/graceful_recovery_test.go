@@ -271,7 +271,7 @@ func getContainerRestartCount(containerName, ngfPodName string) (int, error) {
 
 	var ngfPod core.Pod
 	if err := k8sClient.Get(ctx, types.NamespacedName{Namespace: ngfNamespace, Name: ngfPodName}, &ngfPod); err != nil {
-		return 0, errors.New("could not retrieve ngfPod")
+		return 0, fmt.Errorf("error retriving NGF Pod: %w", err)
 	}
 
 	var restartCount int
@@ -290,26 +290,32 @@ func runNodeDebuggerJob(ngfPodName, jobScript string) (*v1.Job, error) {
 
 	var ngfPod core.Pod
 	if err := k8sClient.Get(ctx, types.NamespacedName{Namespace: ngfNamespace, Name: ngfPodName}, &ngfPod); err != nil {
-		return nil, errors.New("could not retrieve ngfPod")
+		return nil, fmt.Errorf("error retriving NGF Pod: %w", err)
 	}
 
 	b, err := resourceManager.GetFileContents("graceful-recovery/node-debugger-job.yaml")
 	if err != nil {
-		return nil, errors.New("error processing node debugger job file")
+		return nil, fmt.Errorf("error processing node debugger job file: %w", err)
 	}
 
 	job := &v1.Job{}
 	_ = v1.AddToScheme(resourceManager.K8sClient.Scheme())
 	if err = yaml.Unmarshal(b.Bytes(), job); err != nil {
-		return nil, errors.New("error with yaml unmarshal")
+		return nil, fmt.Errorf("error with yaml unmarshal: %w", err)
 	}
 
 	job.Spec.Template.Spec.NodeSelector["kubernetes.io/hostname"] = ngfPod.Spec.NodeName
+	if len(job.Spec.Template.Spec.Containers) != 1 {
+		return nil, fmt.Errorf(
+			"expected node debugger job to contain one container, actual number: %d",
+			len(job.Spec.Template.Spec.Containers),
+		)
+	}
 	job.Spec.Template.Spec.Containers[0].Args = []string{jobScript}
 	job.Namespace = ngfNamespace
 
 	if err = resourceManager.Apply([]client.Object{job}); err != nil {
-		return nil, fmt.Errorf("errored in applying job: %w", err)
+		return nil, fmt.Errorf("error in applying job: %w", err)
 	}
 
 	return job, nil
