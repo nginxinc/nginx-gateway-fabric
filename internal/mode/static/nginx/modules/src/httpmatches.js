@@ -40,9 +40,7 @@ function extractMatchesFromRequest(r, matches) {
 	try {
 		verifyMatchList(matchList);
 	} catch (e) {
-		throw Error(
-			`cannot redirect the request; error parsing ${r.variables[MATCHES_KEY]} into a JSON object: ${e}`,
-		);
+		throw Error(`cannot redirect the request; ${matchList} matches list is not valid: ${e}`);
 	}
 
 	return matchList;

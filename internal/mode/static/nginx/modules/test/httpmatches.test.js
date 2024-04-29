@@ -58,7 +58,8 @@ describe('extractMatchesFromRequest', () => {
 			request: createRequest({ matchKey: 'test' }),
 			matchesObject: { test: {} },
 			expectThrow: true,
-			errSubstring: 'cannot redirect the request; expected a list of matches',
+			errSubstring:
+				'matches list is not valid: Error: cannot redirect the request; expected a list of matches',
 		},
 		{
 			name: 'does not throw if matches key is present & expected matchList is returned',
