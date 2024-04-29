@@ -8,13 +8,10 @@ import (
 	"strings"
 	"time"
 
-	apps "k8s.io/api/apps/v1"
 	core "k8s.io/api/core/v1"
 	apiext "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -46,56 +43,12 @@ func InstallGatewayAPI(
 		return output, err
 	}
 
-	if webhookRequired(k8sVersion) {
-		webhookPath := fmt.Sprintf("%s/v%s/webhook-install.yaml", gwInstallBasePath, apiVersion)
-
-		if output, err := exec.Command("kubectl", "apply", "-f", webhookPath).CombinedOutput(); err != nil {
-			return output, err
-		}
-
-		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-		defer cancel()
-
-		if err := wait.PollUntilContextCancel(
-			ctx,
-			500*time.Millisecond,
-			true, /* poll immediately */
-			func(ctx context.Context) (bool, error) {
-				var deployment apps.Deployment
-				key := types.NamespacedName{
-					Namespace: "gateway-system",
-					Name:      "gateway-api-admission-server",
-				}
-
-				if err := k8sClient.Get(ctx, key, &deployment); err != nil {
-					return false, err
-				}
-
-				if deployment.Status.ReadyReplicas == 1 {
-					return true, nil
-				}
-
-				return false, nil
-			},
-		); err != nil {
-			return nil, err
-		}
-	}
-
 	return nil, nil
 }
 
 // UninstallGatewayAPI uninstalls the specified version of the Gateway API resources.
 func UninstallGatewayAPI(apiVersion, k8sVersion string) ([]byte, error) {
 	apiPath := fmt.Sprintf("%s/v%s/standard-install.yaml", gwInstallBasePath, apiVersion)
-
-	if webhookRequired(k8sVersion) {
-		webhookPath := fmt.Sprintf("%s/v%s/webhook-install.yaml", gwInstallBasePath, apiVersion)
-
-		if output, err := exec.Command("kubectl", "delete", "-f", webhookPath).CombinedOutput(); err != nil {
-			return output, err
-		}
-	}
 
 	output, err := exec.Command("kubectl", "delete", "-f", apiPath).CombinedOutput()
 	if err != nil && !strings.Contains(string(output), "not found") {
@@ -219,19 +172,4 @@ func setImageArgs(cfg InstallationConfig) []string {
 
 func formatValueSet(key, value string) []string {
 	return []string{"--set", fmt.Sprintf("%s=%s", key, value)}
-}
-
-// webhookRequired returns true if the k8s version is less than 1.25.
-func webhookRequired(k8sVersion string) bool {
-	// contains the supported versions of K8s that require the gateway webhook
-	webhookK8sVersions := map[string]struct{}{
-		"1.23": {},
-		"1.24": {},
-	}
-
-	if _, ok := webhookK8sVersions[k8sVersion]; ok {
-		return ok
-	}
-
-	return false
 }

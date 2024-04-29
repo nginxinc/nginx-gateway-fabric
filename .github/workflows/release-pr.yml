@@ -35,7 +35,7 @@ jobs:
         id: vars
         run: |
           # TODO(lucacome): improve this and maybe use appVersion instead of version if we switch to tags
-          echo "current_version=$(yq '.version' <deploy/helm-chart/Chart.yaml)" >> $GITHUB_OUTPUT
+          echo "current_version=$(yq '.version' <charts/nginx-gateway-fabric/Chart.yaml)" >> $GITHUB_OUTPUT
 
       - name: Find and Replace
         uses: jacobtomlinson/gha-find-replace@a51bbcd94d000df9ca0fcb54ec8be69aad8374b0 # v3.0.2
@@ -50,7 +50,7 @@ jobs:
         with:
           find: "edge"
           replace: ${{ inputs.version }}
-          include: "deploy/helm-chart/*.yaml"
+          include: "charts/nginx-gateway-fabric/*.yaml"
           regex: false
 
       - name: Find and Replace
@@ -58,7 +58,7 @@ jobs:
         with:
           find: ${{ steps.vars.outputs.current_version }}
           replace: ${{ inputs.version }}
-          include: "deploy/helm-chart/*.yaml"
+          include: "charts/nginx-gateway-fabric/*.yaml"
           regex: false
 
       - name: Find and Replace
@@ -66,7 +66,7 @@ jobs:
         with:
           find: "Always"
           replace: "IfNotPresent"
-          include: "deploy/helm-chart/*.yaml"
+          include: "charts/nginx-gateway-fabric/*.yaml"
           regex: false
 
       - name: Generate manifests and changelog
@@ -81,7 +81,7 @@ jobs:
           make generate-manifests
 
       - name: Create Pull Request
-        uses: peter-evans/create-pull-request@9153d834b60caba6d51c9b9510b087acf9f33f83 # v6.0.4
+        uses: peter-evans/create-pull-request@6d6857d36972b65feb161a90e484f2984215f83e # v6.0.5
         with:
           token: ${{ secrets.NGINX_PAT }}
           commit-message: Release ${{ inputs.version }}

@@ -42,7 +42,7 @@ jobs:
         id: vars
         run: |
           echo "go_path=$(go env GOPATH)" >> $GITHUB_OUTPUT
-          echo "min_k8s_version=1.23.17" >> $GITHUB_OUTPUT
+          echo "min_k8s_version=1.25.16" >> $GITHUB_OUTPUT
 
       - name: Check if go.mod and go.sum are up to date
         run: go mod tidy && git diff --exit-code -- go.mod go.sum
@@ -299,7 +299,7 @@ jobs:
       - name: Deploy Kubernetes
         id: k8s
         run: |
-          kube_config=${{ github.workspace }}/deploy/helm-chart/kube-${{ github.run_id }}-helm
+          kube_config=${{ github.workspace }}/kube-${{ github.run_id }}-helm
           make create-kind-cluster KIND_KUBE_CONFIG=${kube_config}
           echo "KUBECONFIG=${kube_config}" >> "$GITHUB_ENV"
           kind load docker-image ghcr.io/nginxinc/nginx-gateway-fabric:${{ steps.ngf-meta.outputs.version }} ghcr.io/nginxinc/nginx-gateway-fabric/nginx:${{ steps.nginx-meta.outputs.version }}
@@ -321,7 +321,7 @@ jobs:
           --set nginx.image.pullPolicy=Never
           --set service.type=NodePort
           -n nginx-gateway
-        working-directory: ${{ github.workspace }}/deploy/helm-chart
+        working-directory: ${{ github.workspace }}/charts/nginx-gateway-fabric
 
   publish-helm:
     name: Package and Publish Helm Chart
@@ -345,7 +345,7 @@ jobs:
       - name: Package
         id: package
         run: |
-          output=$(helm package ${{ github.ref_type != 'tag' && '--app-version edge --version 0.0.0-edge' || '' }} deploy/helm-chart)
+          output=$(helm package ${{ github.ref_type != 'tag' && '--app-version edge --version 0.0.0-edge' || '' }} charts/nginx-gateway-fabric)
           echo "path=$(basename -- $(echo $output | cut -d: -f2))" >> $GITHUB_OUTPUT
 
       - name: Push to GitHub Container Registry

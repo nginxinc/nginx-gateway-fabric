@@ -37,27 +37,6 @@ To help the implementations with the validation, the Gateway API already include
   OpenAPI schema validation. For example, the field X must be specified when type is set to Y; or X must be nil if
   Y is not Z. Note: Kubernetes API server enforces this validation. To bypass it, a user needs to change the CRDs.
 
-#### For Kubernetes 1.23 and 1.24
-
-- *The webhook validation*. This validation is written in go and ran as part of the webhook, which is included in the
-  Gateway API installation files. The validation covers additional logic, not possible to implement in the OpenAPI
-  schema validation.
-  It does not repeat the OpenAPI schema validation from the CRDs. Note: a user can bypass this validation if the webhook
-  is not installed.
-
-However, the built-in validation rules do not cover all validation needs of NGF:
-
-- The rules are not enough for NGINX. For example, the validation rule for the
-  `value` of the path in a path-based routing rule allows symbols like `;`, `{`
-  and `}`, which can break NGINX configuration for the
-  corresponding [location](https://nginx.org/en/docs/http/ngx_http_core_module.html#location) block.
-- The rules don't cover unsupported field cases. For example, the webhook does not know which filters are implemented by
-  NGF, thus it cannot generate an appropriate error for NGF.
-
-Additionally, as mentioned in [GEP-922](https://gateway-api.sigs.k8s.io/geps/gep-922/#implementers),
-"implementers must not rely on webhook or CRD validation as a security mechanism. If field values need to be escaped to
-secure an implementation, both webhook and CRD validation can be bypassed and cannot be relied on."
-
 ## Requirements
 
 Design a validation mechanism for Gateway API resources.
@@ -119,16 +98,6 @@ following methods in order of their appearance in the table.
 |------------------------------|----------------------------|-----------------------|-------------------------|----------------------------------------------------------------------------------|--------------------------------|
 | CRD validation               | OpenAPI and CEL validation | Kubernetes API server | Structure, field values | Kubernetes API server returns any errors a response for an API call.             | Yes, if the CRDs are modified. |
 | NGF-specific validation      | Go code                    | NGF control plane     | Field values            | Errors are reported in the status of a resource after its creation/modification. | No                             |
-
-
-#### For Kubernetes 1.23 and 1.24
-
-| Name                         | Type    | Component             | Scope                   | Feedback loop for errors                                                         | Can be bypassed?                                                                     |
-|------------------------------|---------|-----------------------|-------------------------|----------------------------------------------------------------------------------|--------------------------------------------------------------------------------------|
-| CRD validation               | OpenAPI | Kubernetes API server | Structure, field values | Kubernetes API server returns any errors a response for an API call.             | Yes, if the CRDs are modified.                                                       |
-| Webhook validation           | Go code | Gateway API webhook   | Field values            | Kubernetes API server returns any errors a response for an API call.             | Yes, if the webhook is not installed, misconfigured, or running a different version. |
-| NGF-specific validation      | Go code | NGF control plane     | Field values            | Errors are reported in the status of a resource after its creation/modification. | No                                                                                   |
-
 
 Notes:
 
