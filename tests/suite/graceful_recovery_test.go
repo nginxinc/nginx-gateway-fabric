@@ -36,11 +36,22 @@ var _ = Describe("Graceful Recovery test", Ordered, Label("nfr", "graceful-recov
 		"graceful-recovery/gateway.yaml",
 		"graceful-recovery/cafe-routes.yaml",
 	}
+
 	ns := &core.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "graceful-recovery",
 		},
 	}
+
+	var ngfPodName string
+
+	BeforeAll(func() {
+		podNames, err := framework.GetReadyNGFPodNames(k8sClient, ngfNamespace, releaseName, timeoutConfig.GetTimeout)
+		Expect(err).ToNot(HaveOccurred())
+		Expect(podNames).ToNot(BeEmpty())
+
+		ngfPodName = podNames[0]
+	})
 
 	BeforeEach(func() {
 		Expect(resourceManager.Apply([]client.Object{ns})).To(Succeed())
@@ -56,28 +67,28 @@ var _ = Describe("Graceful Recovery test", Ordered, Label("nfr", "graceful-recov
 	})
 
 	It("recovers when NGF container is restarted", func() {
-		runRecoveryTest(ngfContainerName, files, ns)
+		runRecoveryTest(ngfPodName, ngfContainerName, files, ns)
 	})
 
 	It("recovers when nginx container is restarted", func() {
-		runRecoveryTest(nginxContainerName, files, ns)
+		runRecoveryTest(ngfPodName, nginxContainerName, files, ns)
 	})
 })
 
-func runRecoveryTest(containerName string, files []string, ns *core.Namespace) {
-	podNames, err := framework.GetReadyNGFPodNames(k8sClient, ngfNamespace, releaseName, timeoutConfig.GetTimeout)
-	Expect(err).ToNot(HaveOccurred())
-	Expect(podNames).ToNot(BeEmpty())
+func runRecoveryTest(ngfPodName, containerName string, files []string, ns *core.Namespace) {
+	var (
+		err       error
+		leaseName string
+	)
 
-	var leaseName string
 	if containerName != nginxContainerName {
 		leaseName, err = getLeaderElectionLeaseHolderName()
 		Expect(err).ToNot(HaveOccurred())
 	}
 
-	restartContainer(containerName)
+	restartContainer(ngfPodName, containerName)
 
-	checkContainerLogsForErrors(podNames[0])
+	checkContainerLogsForErrors(ngfPodName)
 
 	if containerName != nginxContainerName {
 		Expect(waitForLeaderLeaseToChange(leaseName)).ToNot(HaveOccurred())
@@ -95,7 +106,7 @@ func runRecoveryTest(containerName string, files []string, ns *core.Namespace) {
 	Expect(waitForWorkingTraffic()).ToNot(HaveOccurred())
 }
 
-func restartContainer(containerName string) {
+func restartContainer(ngfPodName, containerName string) {
 	var jobScript string
 	if containerName == "nginx" {
 		jobScript = "PID=$(pgrep -f \"nginx: master process\") && kill -9 $PID"
@@ -103,17 +114,13 @@ func restartContainer(containerName string) {
 		jobScript = "PID=$(pgrep -f \"/usr/bin/gateway\") && kill -9 $PID"
 	}
 
-	podNames, err := framework.GetReadyNGFPodNames(k8sClient, ngfNamespace, releaseName, timeoutConfig.GetTimeout)
-	Expect(err).ToNot(HaveOccurred())
-	Expect(podNames).ToNot(BeEmpty())
-
-	restartCount, err := getContainerRestartCount(containerName, podNames[0])
+	restartCount, err := getContainerRestartCount(containerName, ngfPodName)
 	Expect(err).ToNot(HaveOccurred())
 
-	job, err := runNodeDebuggerJob(podNames[0], jobScript)
+	job, err := runNodeDebuggerJob(ngfPodName, jobScript)
 	Expect(err).ToNot(HaveOccurred())
 
-	Expect(waitForContainerRestart(podNames[0], containerName, restartCount)).ToNot(HaveOccurred())
+	Expect(waitForContainerRestart(ngfPodName, containerName, restartCount)).ToNot(HaveOccurred())
 
 	// propagation policy is set to delete underlying pod created through job
 	Expect(resourceManager.Delete(
@@ -270,7 +277,7 @@ func getLeaderElectionLeaseHolderName() (string, error) {
 	return *lease.Spec.HolderIdentity, nil
 }
 
-func getContainerRestartCount(containerName, ngfPodName string) (int, error) {
+func getContainerRestartCount(ngfPodName, containerName string) (int, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), timeoutConfig.GetTimeout)
 	defer cancel()
 
