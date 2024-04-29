@@ -44,25 +44,12 @@ func validateNginxProxy(
 	var allErrs field.ErrorList
 	spec := field.NewPath("spec")
 
-	validateStringValue := func(
-		value,
-		valueName string,
-		path *field.Path,
-		validator validation.GenericValidator,
-	) *field.Error {
-		if err := validator.ValidateEscapedStringNoVarExpansion(value); err != nil {
-			return field.Invalid(path.Child(valueName), value, err.Error())
-		}
-
-		return nil
-	}
-
 	telemetry := npCfg.Spec.Telemetry
 	if telemetry != nil {
 		telPath := spec.Child("telemetry")
 		if telemetry.ServiceName != nil {
-			if err := validateStringValue(*telemetry.ServiceName, "serviceName", telPath, validator); err != nil {
-				allErrs = append(allErrs, err)
+			if err := validator.ValidateEscapedStringNoVarExpansion(*telemetry.ServiceName); err != nil {
+				allErrs = append(allErrs, field.Invalid(telPath.Child("serviceName"), *telemetry.ServiceName, err.Error()))
 			}
 		}
 
@@ -71,14 +58,14 @@ func validateNginxProxy(
 			expPath := telPath.Child("exporter")
 
 			if exp.Endpoint != "" {
-				if err := validateStringValue(exp.Endpoint, "endpoint", expPath, validator); err != nil {
-					allErrs = append(allErrs, err)
+				if err := validator.ValidateEscapedStringNoVarExpansion(exp.Endpoint); err != nil {
+					allErrs = append(allErrs, field.Invalid(expPath.Child("endpoint"), exp.Endpoint, err.Error()))
 				}
 			}
 
 			if exp.Interval != nil {
-				if err := validateStringValue(string(*exp.Interval), "interval", expPath, validator); err != nil {
-					allErrs = append(allErrs, err)
+				if err := validator.ValidateEscapedStringNoVarExpansion(string(*exp.Interval)); err != nil {
+					allErrs = append(allErrs, field.Invalid(expPath.Child("interval"), *exp.Interval, err.Error()))
 				}
 			}
 		}
@@ -86,12 +73,12 @@ func validateNginxProxy(
 		if telemetry.SpanAttributes != nil {
 			spanAttrPath := telPath.Child("spanAttributes")
 			for _, spanAttr := range telemetry.SpanAttributes {
-				if err := validateStringValue(spanAttr.Key, "key", spanAttrPath, validator); err != nil {
-					allErrs = append(allErrs, err)
+				if err := validator.ValidateEscapedStringNoVarExpansion(spanAttr.Key); err != nil {
+					allErrs = append(allErrs, field.Invalid(spanAttrPath.Child("key"), spanAttr.Key, err.Error()))
 				}
 
-				if err := validateStringValue(spanAttr.Value, "value", spanAttrPath, validator); err != nil {
-					allErrs = append(allErrs, err)
+				if err := validator.ValidateEscapedStringNoVarExpansion(spanAttr.Value); err != nil {
+					allErrs = append(allErrs, field.Invalid(spanAttrPath.Child("value"), spanAttr.Value, err.Error()))
 				}
 			}
 		}

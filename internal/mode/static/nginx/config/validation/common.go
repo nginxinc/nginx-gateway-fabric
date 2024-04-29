@@ -84,12 +84,3 @@ func validateHeaderName(name string) error {
 	}
 	return nil
 }
-
-// GenericValidator validates values for generic cases in the nginx conf.
-type GenericValidator struct{}
-
-// ValidateEscapedStringNoVarExpansion ensures that no invalid characters are included in the string value that
-// could lead to unwanted nginx behavior.
-func (GenericValidator) ValidateEscapedStringNoVarExpansion(value string) error {
-	return validateEscapedStringNoVarExpansion(value, nil)
-}

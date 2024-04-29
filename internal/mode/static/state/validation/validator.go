@@ -35,4 +35,7 @@ type HTTPFieldsValidator interface {
 //go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . GenericValidator
 type GenericValidator interface {
 	ValidateEscapedStringNoVarExpansion(value string) error
+	ValidateServiceName(name string) error
+	ValidateNginxDuration(duration string) error
+	ValidateEndpoint(endpoint string) error
 }

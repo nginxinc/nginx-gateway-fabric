@@ -8,6 +8,17 @@ import (
 )
 
 type FakeGenericValidator struct {
+	ValidateEndpointStub        func(string) error
+	validateEndpointMutex       sync.RWMutex
+	validateEndpointArgsForCall []struct {
+		arg1 string
+	}
+	validateEndpointReturns struct {
+		result1 error
+	}
+	validateEndpointReturnsOnCall map[int]struct {
+		result1 error
+	}
 	ValidateEscapedStringNoVarExpansionStub        func(string) error
 	validateEscapedStringNoVarExpansionMutex       sync.RWMutex
 	validateEscapedStringNoVarExpansionArgsForCall []struct {
@@ -19,8 +30,91 @@ type FakeGenericValidator struct {
 	validateEscapedStringNoVarExpansionReturnsOnCall map[int]struct {
 		result1 error
 	}
+	ValidateNginxDurationStub        func(string) error
+	validateNginxDurationMutex       sync.RWMutex
+	validateNginxDurationArgsForCall []struct {
+		arg1 string
+	}
+	validateNginxDurationReturns struct {
+		result1 error
+	}
+	validateNginxDurationReturnsOnCall map[int]struct {
+		result1 error
+	}
+	ValidateServiceNameStub        func(string) error
+	validateServiceNameMutex       sync.RWMutex
+	validateServiceNameArgsForCall []struct {
+		arg1 string
+	}
+	validateServiceNameReturns struct {
+		result1 error
+	}
+	validateServiceNameReturnsOnCall map[int]struct {
+		result1 error
+	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
+}
+
+func (fake *FakeGenericValidator) ValidateEndpoint(arg1 string) error {
+	fake.validateEndpointMutex.Lock()
+	ret, specificReturn := fake.validateEndpointReturnsOnCall[len(fake.validateEndpointArgsForCall)]
+	fake.validateEndpointArgsForCall = append(fake.validateEndpointArgsForCall, struct {
+		arg1 string
+	}{arg1})
+	stub := fake.ValidateEndpointStub
+	fakeReturns := fake.validateEndpointReturns
+	fake.recordInvocation("ValidateEndpoint", []interface{}{arg1})
+	fake.validateEndpointMutex.Unlock()
+	if stub != nil {
+		return stub(arg1)
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fakeReturns.result1
+}
+
+func (fake *FakeGenericValidator) ValidateEndpointCallCount() int {
+	fake.validateEndpointMutex.RLock()
+	defer fake.validateEndpointMutex.RUnlock()
+	return len(fake.validateEndpointArgsForCall)
+}
+
+func (fake *FakeGenericValidator) ValidateEndpointCalls(stub func(string) error) {
+	fake.validateEndpointMutex.Lock()
+	defer fake.validateEndpointMutex.Unlock()
+	fake.ValidateEndpointStub = stub
+}
+
+func (fake *FakeGenericValidator) ValidateEndpointArgsForCall(i int) string {
+	fake.validateEndpointMutex.RLock()
+	defer fake.validateEndpointMutex.RUnlock()
+	argsForCall := fake.validateEndpointArgsForCall[i]
+	return argsForCall.arg1
+}
+
+func (fake *FakeGenericValidator) ValidateEndpointReturns(result1 error) {
+	fake.validateEndpointMutex.Lock()
+	defer fake.validateEndpointMutex.Unlock()
+	fake.ValidateEndpointStub = nil
+	fake.validateEndpointReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *FakeGenericValidator) ValidateEndpointReturnsOnCall(i int, result1 error) {
+	fake.validateEndpointMutex.Lock()
+	defer fake.validateEndpointMutex.Unlock()
+	fake.ValidateEndpointStub = nil
+	if fake.validateEndpointReturnsOnCall == nil {
+		fake.validateEndpointReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.validateEndpointReturnsOnCall[i] = struct {
+		result1 error
+	}{result1}
 }
 
 func (fake *FakeGenericValidator) ValidateEscapedStringNoVarExpansion(arg1 string) error {
@@ -84,11 +178,139 @@ func (fake *FakeGenericValidator) ValidateEscapedStringNoVarExpansionReturnsOnCa
 	}{result1}
 }
 
+func (fake *FakeGenericValidator) ValidateNginxDuration(arg1 string) error {
+	fake.validateNginxDurationMutex.Lock()
+	ret, specificReturn := fake.validateNginxDurationReturnsOnCall[len(fake.validateNginxDurationArgsForCall)]
+	fake.validateNginxDurationArgsForCall = append(fake.validateNginxDurationArgsForCall, struct {
+		arg1 string
+	}{arg1})
+	stub := fake.ValidateNginxDurationStub
+	fakeReturns := fake.validateNginxDurationReturns
+	fake.recordInvocation("ValidateNginxDuration", []interface{}{arg1})
+	fake.validateNginxDurationMutex.Unlock()
+	if stub != nil {
+		return stub(arg1)
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fakeReturns.result1
+}
+
+func (fake *FakeGenericValidator) ValidateNginxDurationCallCount() int {
+	fake.validateNginxDurationMutex.RLock()
+	defer fake.validateNginxDurationMutex.RUnlock()
+	return len(fake.validateNginxDurationArgsForCall)
+}
+
+func (fake *FakeGenericValidator) ValidateNginxDurationCalls(stub func(string) error) {
+	fake.validateNginxDurationMutex.Lock()
+	defer fake.validateNginxDurationMutex.Unlock()
+	fake.ValidateNginxDurationStub = stub
+}
+
+func (fake *FakeGenericValidator) ValidateNginxDurationArgsForCall(i int) string {
+	fake.validateNginxDurationMutex.RLock()
+	defer fake.validateNginxDurationMutex.RUnlock()
+	argsForCall := fake.validateNginxDurationArgsForCall[i]
+	return argsForCall.arg1
+}
+
+func (fake *FakeGenericValidator) ValidateNginxDurationReturns(result1 error) {
+	fake.validateNginxDurationMutex.Lock()
+	defer fake.validateNginxDurationMutex.Unlock()
+	fake.ValidateNginxDurationStub = nil
+	fake.validateNginxDurationReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *FakeGenericValidator) ValidateNginxDurationReturnsOnCall(i int, result1 error) {
+	fake.validateNginxDurationMutex.Lock()
+	defer fake.validateNginxDurationMutex.Unlock()
+	fake.ValidateNginxDurationStub = nil
+	if fake.validateNginxDurationReturnsOnCall == nil {
+		fake.validateNginxDurationReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.validateNginxDurationReturnsOnCall[i] = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *FakeGenericValidator) ValidateServiceName(arg1 string) error {
+	fake.validateServiceNameMutex.Lock()
+	ret, specificReturn := fake.validateServiceNameReturnsOnCall[len(fake.validateServiceNameArgsForCall)]
+	fake.validateServiceNameArgsForCall = append(fake.validateServiceNameArgsForCall, struct {
+		arg1 string
+	}{arg1})
+	stub := fake.ValidateServiceNameStub
+	fakeReturns := fake.validateServiceNameReturns
+	fake.recordInvocation("ValidateServiceName", []interface{}{arg1})
+	fake.validateServiceNameMutex.Unlock()
+	if stub != nil {
+		return stub(arg1)
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fakeReturns.result1
+}
+
+func (fake *FakeGenericValidator) ValidateServiceNameCallCount() int {
+	fake.validateServiceNameMutex.RLock()
+	defer fake.validateServiceNameMutex.RUnlock()
+	return len(fake.validateServiceNameArgsForCall)
+}
+
+func (fake *FakeGenericValidator) ValidateServiceNameCalls(stub func(string) error) {
+	fake.validateServiceNameMutex.Lock()
+	defer fake.validateServiceNameMutex.Unlock()
+	fake.ValidateServiceNameStub = stub
+}
+
+func (fake *FakeGenericValidator) ValidateServiceNameArgsForCall(i int) string {
+	fake.validateServiceNameMutex.RLock()
+	defer fake.validateServiceNameMutex.RUnlock()
+	argsForCall := fake.validateServiceNameArgsForCall[i]
+	return argsForCall.arg1
+}
+
+func (fake *FakeGenericValidator) ValidateServiceNameReturns(result1 error) {
+	fake.validateServiceNameMutex.Lock()
+	defer fake.validateServiceNameMutex.Unlock()
+	fake.ValidateServiceNameStub = nil
+	fake.validateServiceNameReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *FakeGenericValidator) ValidateServiceNameReturnsOnCall(i int, result1 error) {
+	fake.validateServiceNameMutex.Lock()
+	defer fake.validateServiceNameMutex.Unlock()
+	fake.ValidateServiceNameStub = nil
+	if fake.validateServiceNameReturnsOnCall == nil {
+		fake.validateServiceNameReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.validateServiceNameReturnsOnCall[i] = struct {
+		result1 error
+	}{result1}
+}
+
 func (fake *FakeGenericValidator) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
+	fake.validateEndpointMutex.RLock()
+	defer fake.validateEndpointMutex.RUnlock()
 	fake.validateEscapedStringNoVarExpansionMutex.RLock()
 	defer fake.validateEscapedStringNoVarExpansionMutex.RUnlock()
+	fake.validateNginxDurationMutex.RLock()
+	defer fake.validateNginxDurationMutex.RUnlock()
+	fake.validateServiceNameMutex.RLock()
+	defer fake.validateServiceNameMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

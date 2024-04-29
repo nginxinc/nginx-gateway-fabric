@@ -219,6 +219,9 @@ func TestValidateNginxProxy(t *testing.T) {
 	createValidValidator := func() *validationfakes.FakeGenericValidator {
 		v := &validationfakes.FakeGenericValidator{}
 		v.ValidateEscapedStringNoVarExpansionReturns(nil)
+		v.ValidateEndpointReturns(nil)
+		v.ValidateServiceNameReturns(nil)
+		v.ValidateNginxDurationReturns(nil)
 
 		return v
 	}
@@ -226,6 +229,9 @@ func TestValidateNginxProxy(t *testing.T) {
 	createInvalidValidator := func() *validationfakes.FakeGenericValidator {
 		v := &validationfakes.FakeGenericValidator{}
 		v.ValidateEscapedStringNoVarExpansionReturns(errors.New("error"))
+		v.ValidateEndpointReturns(errors.New("error"))
+		v.ValidateServiceNameReturns(errors.New("error"))
+		v.ValidateNginxDurationReturns(errors.New("error"))
 
 		return v
 	}
@@ -244,6 +250,13 @@ func TestValidateNginxProxy(t *testing.T) {
 				Spec: ngfAPI.NginxProxySpec{
 					Telemetry: &ngfAPI.Telemetry{
 						ServiceName: helpers.GetPointer("my-svc"),
+						Exporter: &ngfAPI.TelemetryExporter{
+							Interval: helpers.GetPointer[ngfAPI.Duration]("5ms"),
+							Endpoint: "my-endpoint",
+						},
+						SpanAttributes: []ngfAPI.SpanAttribute{
+							{Key: "key", Value: "value"},
+						},
 					},
 				},
 			},
