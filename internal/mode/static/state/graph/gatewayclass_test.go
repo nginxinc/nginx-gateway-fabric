@@ -167,14 +167,16 @@ func TestBuildGatewayClass(t *testing.T) {
 
 	createValidNPValidator := func() *validationfakes.FakeGenericValidator {
 		v := &validationfakes.FakeGenericValidator{}
-		v.ValidateEscapedStringNoVarExpansionReturns(nil)
+		v.ValidateServiceNameReturns(nil)
+		v.ValidateEndpointReturns(nil)
 
 		return v
 	}
 
 	createInvalidNPValidator := func() *validationfakes.FakeGenericValidator {
 		v := &validationfakes.FakeGenericValidator{}
-		v.ValidateEscapedStringNoVarExpansionReturns(errors.New("error"))
+		v.ValidateServiceNameReturns(errors.New("error"))
+		v.ValidateEndpointReturns(errors.New("error"))
 
 		return v
 	}
