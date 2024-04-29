@@ -2,9 +2,6 @@ module github.com/nginxinc/nginx-gateway-fabric
 
 go 1.22.0
 
-// Pinned to a version that is properly licensed.
-replace github.com/chzyer/logex v1.1.10 => github.com/chzyer/logex v1.2.0
-
 require (
 	github.com/go-kit/log v0.2.1
 	github.com/go-logr/logr v1.4.1
