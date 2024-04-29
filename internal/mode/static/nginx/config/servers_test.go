@@ -2078,3 +2078,71 @@ func TestConvertBackendTLSFromGroup(t *testing.T) {
 		})
 	}
 }
+
+func TestGenerateResponseHeaders(t *testing.T) {
+	tests := []struct {
+		filters         *dataplane.HTTPFilters
+		msg             string
+		expectedHeaders http.ResponseHeaders
+	}{
+		{
+			msg: "no filter set",
+			filters: &dataplane.HTTPFilters{
+				RequestHeaderModifiers: &dataplane.HTTPHeaderFilter{},
+			},
+			expectedHeaders: http.ResponseHeaders{},
+		},
+		{
+			msg: "set filters correctly",
+			filters: &dataplane.HTTPFilters{
+				ResponseHeaderModifiers: &dataplane.HTTPHeaderFilter{
+					Add: []dataplane.HTTPHeader{
+						{
+							Name:  "Accept-Encoding",
+							Value: "gzip",
+						},
+						{
+							Name:  "Authorization",
+							Value: "my-auth",
+						},
+					},
+					Set: []dataplane.HTTPHeader{
+						{
+							Name:  "Accept-Encoding",
+							Value: "my-new-overwritten-value",
+						},
+					},
+					Remove: []string{"Authorization"},
+				},
+			},
+			expectedHeaders: http.ResponseHeaders{
+				Add: []http.Header{
+					{
+						Name:  "Accept-Encoding",
+						Value: "gzip",
+					},
+					{
+						Name:  "Authorization",
+						Value: "my-auth",
+					},
+				},
+				Set: []http.Header{
+					{
+						Name:  "Accept-Encoding",
+						Value: "my-new-overwritten-value",
+					},
+				},
+				Remove: []string{"Authorization"},
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.msg, func(t *testing.T) {
+			g := NewWithT(t)
+
+			headers := generateResponseHeaders(tc.filters)
+			g.Expect(headers).To(Equal(tc.expectedHeaders))
+		})
+	}
+}

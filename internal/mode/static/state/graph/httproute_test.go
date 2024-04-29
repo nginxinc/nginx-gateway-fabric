@@ -1470,7 +1470,7 @@ func TestValidateFilterResponseHeaderModifier(t *testing.T) {
 				},
 			},
 			expectErrCount: 3,
-			name:           "invalid response header modifier filter",
+			name:           "response header modifier filter with disallowed header name",
 		},
 		{
 			validator: createAllValidValidator(),
@@ -1487,7 +1487,7 @@ func TestValidateFilterResponseHeaderModifier(t *testing.T) {
 				},
 			},
 			expectErrCount: 3,
-			name:           "invalid response header modifier filter",
+			name:           "response header modifier filter with disallowed header name prefix",
 		},
 	}
 
