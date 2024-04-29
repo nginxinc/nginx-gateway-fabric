@@ -43,18 +43,6 @@ This chart deploys the NGINX Gateway Fabric in your Kubernetes cluster.
   kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/standard-install.yaml
   ```
 
-  If you are running on Kubernetes 1.23 or 1.24, you also need to install the validating webhook. To do so, run:
-
-  ```shell
-  kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/webhook-install.yaml
-  ```
-
-> **Important**
->
-> The validating webhook is not needed if you are running Kubernetes 1.25+. Validation is done using CEL on the
-> CRDs. See the [resource validation doc](https://docs.nginx.com/nginx-gateway-fabric/overview/resource-validation/)
-> for more information.
-
 ## Installing the Chart
 
 ### Installing the Chart from the OCI Registry
@@ -141,19 +129,6 @@ To upgrade the Gateway CRDs from [the Gateway API repo](https://github.com/kuber
 
 ```shell
 kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/standard-install.yaml
-```
-
-If you are running on Kubernetes 1.23 or 1.24, you also need to update the validating webhook. To do so, run:
-
-```shell
-kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/webhook-install.yaml
-```
-
-If you are running on Kubernetes 1.25 or newer and have the validating webhook installed, you should remove the
-webhook. To do so, run:
-
-```shell
-kubectl delete -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/webhook-install.yaml
 ```
 
 ### Upgrading the CRDs
@@ -264,12 +239,6 @@ To delete the Gateway API CRDs from [the Gateway API repo](https://github.com/ku
 
 ```shell
 kubectl delete -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/standard-install.yaml
-```
-
-If you are running on Kubernetes 1.23 or 1.24, you also need to delete the validating webhook. To do so, run:
-
-```shell
-kubectl delete -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/webhook-install.yaml
 ```
 
 ## Configuration

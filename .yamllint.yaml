@@ -4,7 +4,7 @@ yaml-files:
   - "*.yml"
 
 ignore:
-  - deploy/helm-chart/templates/
+  - charts/nginx-gateway-fabric
   - config/crd/bases/
   - .github/workflows/
 

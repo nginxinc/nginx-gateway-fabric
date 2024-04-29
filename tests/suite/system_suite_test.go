@@ -223,7 +223,7 @@ func getDefaultSetupCfg() setupConfig {
 	_, file, _, _ := runtime.Caller(0)
 	fileDir := path.Join(path.Dir(file), "../")
 	basepath := filepath.Dir(fileDir)
-	localChartPath = filepath.Join(basepath, "deploy/helm-chart")
+	localChartPath = filepath.Join(basepath, "charts/nginx-gateway-fabric")
 
 	return setupConfig{
 		releaseName:  releaseName,

@@ -147,19 +147,6 @@ To upgrade NGINX Gateway Fabric and get the latest features and improvements, ta
       kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/experimental-install.yaml
       ```
 
-   - If you are running on Kubernetes 1.23 or 1.24, you also need to update the validating webhook:
-
-      ```shell
-      kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/webhook-install.yaml
-      ```
-
-   - If you are running on Kubernetes 1.25 or newer and have the validating webhook installed, you should remove the
-   webhook:
-
-      ```shell
-      kubectl delete -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/webhook-install.yaml
-      ```
-
 1. **Upgrade NGINX Gateway Fabric CRDs:**
    - To upgrade the Custom Resource Definitions (CRDs), run:
 
