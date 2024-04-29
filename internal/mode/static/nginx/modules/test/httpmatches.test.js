@@ -3,7 +3,7 @@ import { assert, describe, expect, it } from 'vitest';
 
 // Creates a NGINX HTTP Request Object for testing.
 // See documentation for all properties available: http://nginx.org/en/docs/njs/reference.html
-function createRequest({ method = '', headers = {}, params = {}, matches = '' } = {}) {
+function createRequest({ method = '', headers = {}, params = {}, matchKey = '' } = {}) {
 	let r = {
 		// Test mocks
 		return(statusCode) {
@@ -30,8 +30,8 @@ function createRequest({ method = '', headers = {}, params = {}, matches = '' } 
 		r.args = params;
 	}
 
-	if (matches) {
-		r.variables[hm.MATCHES_VARIABLE] = matches;
+	if (matchKey) {
+		r.variables[hm.MATCHES_KEY] = matchKey;
 	}
 
 	return r;
@@ -40,43 +40,76 @@ function createRequest({ method = '', headers = {}, params = {}, matches = '' } 
 describe('extractMatchesFromRequest', () => {
 	const tests = [
 		{
-			name: 'throws if matches variable does not exist on request',
-			request: createRequest(),
+			name: 'throws if match_key variable does not exist on request',
+			request: createRequest({}),
+			matchesObject: {},
 			expectThrow: true,
-			errSubstring: 'http_matches is not defined',
+			errSubstring: 'match_key is not defined',
 		},
 		{
-			name: 'throws if matches variable is not JSON',
-			request: createRequest({ matches: 'not-JSON' }),
+			name: 'throws if key does not exist on matches object',
+			request: createRequest({ matchKey: 'test' }),
+			matchesObject: {},
 			expectThrow: true,
-			errSubstring: 'error parsing',
+			errSubstring: 'the key test is not defined on the matches object',
 		},
+		{
+			name: 'throws an error if matchList is not valid',
+			request: createRequest({ matchKey: 'test' }),
+			matchesObject: { test: {} },
+			expectThrow: true,
+			errSubstring:
+				'matches list is not valid: Error: cannot redirect the request; expected a list of matches',
+		},
+		{
+			name: 'does not throw if matches key is present & expected matchList is returned',
+			request: createRequest({ matchKey: 'test' }),
+			matchesObject: { test: [{ match: 'value' }] },
+			expectThrow: false,
+			expected: [{ match: 'value' }],
+		},
+	];
+	tests.forEach((test) => {
+		it(test.name, () => {
+			if (test.expectThrow) {
+				expect(() =>
+					hm.extractMatchesFromRequest(test.request, test.matchesObject),
+				).to.throw(test.errSubstring);
+			} else {
+				expect(
+					hm.extractMatchesFromRequest(test.request, test.matchesObject),
+				).to.deep.equal(test.expected);
+			}
+		});
+	});
+});
+
+describe('verifyMatchList', () => {
+	const tests = [
 		{
 			name: 'throws if matches variable is not an array',
-			request: createRequest({ matches: '{}' }),
+			matchList: '{}',
 			expectThrow: true,
 			errSubstring: 'expected a list of matches',
 		},
 		{
 			name: 'throws if the length of the matches variable is zero',
-			request: createRequest({ matches: '[]' }),
+			matchList: [],
 			expectThrow: true,
 			errSubstring: 'matches is an empty list',
 		},
 		{
 			name: 'does not throw if matches variable is expected list of matches',
-			request: createRequest({ matches: '[{"any":true}]' }),
+			matchList: '[{"any":true}]',
 			expectThrow: false,
 		},
 	];
 	tests.forEach((test) => {
 		it(test.name, () => {
 			if (test.expectThrow) {
-				expect(() => hm.extractMatchesFromRequest(test.request)).to.throw(
-					test.errSubstring,
-				);
+				expect(() => hm.verifyMatchList(test.matchList)).to.throw(test.errSubstring);
 			} else {
-				expect(() => hm.extractMatchesFromRequest(test.request).to.not.throw());
+				expect(() => hm.verifyMatchList(test.matchList).to.not.throw());
 			}
 		});
 	});
@@ -195,10 +228,6 @@ describe('findWinningMatch', () => {
 
 	tests.forEach((test) => {
 		it(test.name, () => {
-			test.request.variables = {
-				http_matches: JSON.stringify(test.matches),
-			};
-
 			if (test.expectThrow) {
 				expect(() => hm.findWinningMatch(test.request, test.matches)).to.throw(
 					test.errSubstring,
@@ -393,7 +422,7 @@ describe('paramsMatch', () => {
 	});
 });
 
-describe('redirect', () => {
+describe('redirectForMatchList', () => {
 	const testAnyMatch = { any: true, redirectPath: '/any' };
 	const testHeaderMatches = {
 		headers: ['header1:VALUE1', 'header2:value2', 'header3:value3'],
@@ -412,13 +441,13 @@ describe('redirect', () => {
 
 	const tests = [
 		{
-			name: 'returns Internal Server Error status code if http_matches variable is not set',
+			name: 'returns Internal Server Error status code if match variable is not set',
 			request: createRequest(),
 			matches: null,
 			expectedReturn: hm.HTTP_CODES.internalServerError,
 		},
 		{
-			name: 'returns Internal Server Error status code if http_matches contains malformed match',
+			name: 'returns Internal Server Error status code if matchList contains malformed match',
 			request: createRequest(),
 			matches: [{ headers: ['malformedheader'] }],
 			expectedReturn: hm.HTTP_CODES.internalServerError,
@@ -449,14 +478,7 @@ describe('redirect', () => {
 
 	tests.forEach((test) => {
 		it(test.name, () => {
-			if (test.matches) {
-				// set http_matches variable
-				test.request.variables = {
-					http_matches: JSON.stringify(test.matches),
-				};
-			}
-
-			hm.redirect(test.request);
+			hm.redirectForMatchList(test.request, test.matches);
 			if (test.expectedReturn) {
 				expect(test.request.testReturned).to.equal(test.expectedReturn);
 			} else if (test.expectedRedirect) {

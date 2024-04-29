@@ -2,6 +2,7 @@ package config_test
 
 import (
 	"fmt"
+	"sort"
 	"testing"
 
 	. "github.com/onsi/gomega"
@@ -70,13 +71,16 @@ func TestGenerate(t *testing.T) {
 
 	files := generator.Generate(conf)
 
-	g.Expect(files).To(HaveLen(4))
+	g.Expect(files).To(HaveLen(5))
+	arrange := func(i, j int) bool {
+		return files[i].Path < files[j].Path
+	}
+	sort.Slice(files, arrange)
 
-	g.Expect(files[0]).To(Equal(file.File{
-		Type:    file.TypeSecret,
-		Path:    "/etc/nginx/secrets/test-keypair.pem",
-		Content: []byte("test-cert\ntest-key"),
-	}))
+	g.Expect(files[0].Type).To(Equal(file.TypeRegular))
+	g.Expect(files[0].Path).To(Equal("/etc/nginx/conf.d/config-version.conf"))
+	configVersion := string(files[0].Content)
+	g.Expect(configVersion).To(ContainSubstring(fmt.Sprintf("return 200 %d", conf.Version)))
 
 	g.Expect(files[1].Type).To(Equal(file.TypeRegular))
 	g.Expect(files[1].Path).To(Equal("/etc/nginx/conf.d/http.conf"))
@@ -88,12 +92,18 @@ func TestGenerate(t *testing.T) {
 	g.Expect(httpCfg).To(ContainSubstring("upstream"))
 	g.Expect(httpCfg).To(ContainSubstring("split_clients"))
 
+	g.Expect(files[2].Path).To(Equal("/etc/nginx/conf.d/matches.json"))
 	g.Expect(files[2].Type).To(Equal(file.TypeRegular))
-	g.Expect(files[2].Path).To(Equal("/etc/nginx/conf.d/config-version.conf"))
-	configVersion := string(files[2].Content)
-	g.Expect(configVersion).To(ContainSubstring(fmt.Sprintf("return 200 %d", conf.Version)))
+	expString := "{}"
+	g.Expect(string(files[2].Content)).To(Equal(expString))
 
 	g.Expect(files[3].Path).To(Equal("/etc/nginx/secrets/test-certbundle.crt"))
 	certBundle := string(files[3].Content)
 	g.Expect(certBundle).To(Equal("test-cert"))
+
+	g.Expect(files[4]).To(Equal(file.File{
+		Type:    file.TypeSecret,
+		Path:    "/etc/nginx/secrets/test-keypair.pem",
+		Content: []byte("test-cert\ntest-key"),
+	}))
 }
