@@ -1,4 +1,12 @@
 nginxGateway:
+  ## Set of custom annotations for GatewayClass objects, e.g:
+  ## gatewayClassCustomAnnotations:
+  ##  someKey: someValue
+  gatewayClassCustomAnnotations: {}
+  ## Set of custom annotations for NginxGateway objects, e.g:
+  ## nginxGatewayCustomAnnotations:
+  ##  someKey: someValue
+  nginxGatewayCustomAnnotations: {}
   ## The kind of the NGINX Gateway Fabric installation - currently, only deployment is supported.
   kind: deployment
   ## gatewayClassName is the name of the GatewayClass that will be created as part of this release. Every NGINX Gateway
