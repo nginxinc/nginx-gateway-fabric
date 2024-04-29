@@ -1,30 +1,55 @@
-import qs from 'querystring';
-
-const MATCHES_VARIABLE = 'http_matches';
+const MATCHES_KEY = 'match_key';
 const HTTP_CODES = {
 	notFound: 404,
 	internalServerError: 500,
 };
 
 function redirect(r) {
-	let matches;
-
+	let matchList;
 	try {
-		matches = extractMatchesFromRequest(r);
+		matchList = extractMatchesFromRequest(r, matches);
 	} catch (e) {
 		r.error(e.message);
 		r.return(HTTP_CODES.internalServerError);
 		return;
 	}
+	redirectForMatchList(r, matchList);
+}
 
-	// Matches is a list of http matches in order of precedence.
+function extractMatchesFromRequest(r, matches) {
+	let matchList;
+	if (!r.variables[MATCHES_KEY]) {
+		throw Error(
+			`cannot redirect the request; the ${MATCHES_KEY} is not defined on the request object`,
+		);
+	}
+
+	let key = r.variables[MATCHES_KEY];
+	if (!matches[key]) {
+		throw Error(
+			`cannot redirect the request; the key ${key} is not defined on the matches object`,
+		);
+	}
+
+	// matchList is a list of http matches in order of precedence.
 	// We will accept the first match that the request satisfies.
 	// If there's a match, redirect request to internal location block.
 	// If an exception occurs, return 500.
 	// If no matches are found, return 404.
+	matchList = matches[key];
+	try {
+		verifyMatchList(matchList);
+	} catch (e) {
+		throw Error(`cannot redirect the request; ${matchList} matches list is not valid: ${e}`);
+	}
+
+	return matchList;
+}
+
+function redirectForMatchList(r, matchList) {
 	let match;
 	try {
-		match = findWinningMatch(r, matches);
+		match = findWinningMatch(r, matchList);
 	} catch (e) {
 		r.error(e.message);
 		r.return(HTTP_CODES.internalServerError);
@@ -49,32 +74,16 @@ function redirect(r) {
 	r.internalRedirect(match.redirectPath);
 }
 
-function extractMatchesFromRequest(r) {
-	if (!r.variables[MATCHES_VARIABLE]) {
-		throw Error(
-			`cannot redirect the request; the variable ${MATCHES_VARIABLE} is not defined on the request object`,
-		);
+function verifyMatchList(matchList) {
+	if (!Array.isArray(matchList)) {
+		throw Error(`cannot redirect the request; expected a list of matches, got ${matchList}`);
 	}
 
-	let matches;
-
-	try {
-		matches = JSON.parse(r.variables[MATCHES_VARIABLE]);
-	} catch (e) {
-		throw Error(
-			`cannot redirect the request; error parsing ${r.variables[MATCHES_VARIABLE]} into a JSON object: ${e}`,
-		);
-	}
-
-	if (!Array.isArray(matches)) {
-		throw Error(`cannot redirect the request; expected a list of matches, got ${matches}`);
-	}
-
-	if (matches.length === 0) {
+	if (matchList.length === 0) {
 		throw Error(`cannot redirect the request; matches is an empty list`);
 	}
 
-	return matches;
+	return;
 }
 
 function findWinningMatch(r, matches) {
@@ -199,11 +208,13 @@ function paramsMatch(requestParams, params) {
 
 export default {
 	redirect,
+	redirectForMatchList,
+	extractMatchesFromRequest,
+	MATCHES_KEY,
+	verifyMatchList,
 	testMatch,
 	findWinningMatch,
 	headersMatch,
 	paramsMatch,
-	extractMatchesFromRequest,
 	HTTP_CODES,
-	MATCHES_VARIABLE,
 };

@@ -1,6 +1,7 @@
 package config
 
 var serversTemplateText = `
+js_preload_object matches from /etc/nginx/conf.d/matches.json;
 {{- range $s := . -}}
     {{ if $s.IsDefaultSSL -}}
 server {
@@ -41,8 +42,8 @@ server {
         return {{ $l.Return.Code }} "{{ $l.Return.Body }}";
         {{- end }}
 
-        {{- if $l.HTTPMatchVar }}
-        set $http_matches {{ $l.HTTPMatchVar | printf "%q" }};
+        {{- if $l.HTTPMatchKey }}
+        set $match_key {{ $l.HTTPMatchKey }};
         js_content httpmatches.redirect;
         {{- end }}
 

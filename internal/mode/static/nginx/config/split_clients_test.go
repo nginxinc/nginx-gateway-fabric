@@ -98,7 +98,10 @@ func TestExecuteSplitClients(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.msg, func(t *testing.T) {
 			g := NewWithT(t)
-			sc := string(executeSplitClients(dataplane.Configuration{BackendGroups: test.backendGroups}))
+			splitResults := executeSplitClients(dataplane.Configuration{BackendGroups: test.backendGroups})
+			g.Expect(splitResults).To(HaveLen(1))
+			sc := string(splitResults[0].data)
+			g.Expect(splitResults[0].dest).To(Equal(httpConfigFile))
 
 			for _, expSubString := range test.expStrings {
 				g.Expect(sc).To(ContainSubstring(expSubString))
