@@ -40,7 +40,7 @@ func Get(url, address string, timeout time.Duration) (int, string, error) {
 		customTransport := http.DefaultTransport.(*http.Transport).Clone()
 		// similar to how in our examples with https requests we run our curl command
 		// we turn off verification of the certificate, we do the same here
-		customTransport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true} // #nosec G402
+		customTransport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true} //nolint:gosec // for https test traffic
 		client := &http.Client{Transport: customTransport}
 		resp, err = client.Do(req)
 	} else {
