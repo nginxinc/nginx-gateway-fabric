@@ -1586,18 +1586,19 @@ var _ = Describe("ChangeProcessor", func() {
 
 		//nolint:lll
 		var (
-			processor                                                                                                     *state.ChangeProcessorImpl
-			gcNsName, gwNsName, hrNsName, hr2NsName, rgNsName, svcNsName, sliceNsName, secretNsName, cmNsName, btlsNsName types.NamespacedName
-			gc, gcUpdated                                                                                                 *v1.GatewayClass
-			gw1, gw1Updated, gw2                                                                                          *v1.Gateway
-			hr1, hr1Updated, hr2                                                                                          *v1.HTTPRoute
-			rg1, rg1Updated, rg2                                                                                          *v1beta1.ReferenceGrant
-			svc, barSvc, unrelatedSvc                                                                                     *apiv1.Service
-			slice, barSlice, unrelatedSlice                                                                               *discoveryV1.EndpointSlice
-			ns, unrelatedNS, testNs, barNs                                                                                *apiv1.Namespace
-			secret, secretUpdated, unrelatedSecret, barSecret, barSecretUpdated                                           *apiv1.Secret
-			cm, cmUpdated, unrelatedCM                                                                                    *apiv1.ConfigMap
-			btls, btlsUpdated                                                                                             *v1alpha2.BackendTLSPolicy
+			processor                                                                                                               *state.ChangeProcessorImpl
+			gcNsName, gwNsName, hrNsName, hr2NsName, rgNsName, svcNsName, sliceNsName, secretNsName, cmNsName, btlsNsName, npNsName types.NamespacedName
+			gc, gcUpdated                                                                                                           *v1.GatewayClass
+			gw1, gw1Updated, gw2                                                                                                    *v1.Gateway
+			hr1, hr1Updated, hr2                                                                                                    *v1.HTTPRoute
+			rg1, rg1Updated, rg2                                                                                                    *v1beta1.ReferenceGrant
+			svc, barSvc, unrelatedSvc                                                                                               *apiv1.Service
+			slice, barSlice, unrelatedSlice                                                                                         *discoveryV1.EndpointSlice
+			ns, unrelatedNS, testNs, barNs                                                                                          *apiv1.Namespace
+			secret, secretUpdated, unrelatedSecret, barSecret, barSecretUpdated                                                     *apiv1.Secret
+			cm, cmUpdated, unrelatedCM                                                                                              *apiv1.ConfigMap
+			btls, btlsUpdated                                                                                                       *v1alpha2.BackendTLSPolicy
+			np, npUpdated                                                                                                           *ngfAPI.NginxProxy
 		)
 
 		BeforeEach(OncePerOrdered, func() {
@@ -1889,6 +1890,19 @@ var _ = Describe("ChangeProcessor", func() {
 				},
 			}
 			btlsUpdated = btls.DeepCopy()
+
+			npNsName = types.NamespacedName{Name: "np-1"}
+			np = &ngfAPI.NginxProxy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: npNsName.Name,
+				},
+				Spec: ngfAPI.NginxProxySpec{
+					Telemetry: &ngfAPI.Telemetry{
+						ServiceName: helpers.GetPointer("my-svc"),
+					},
+				},
+			}
+			npUpdated = np.DeepCopy()
 		})
 		// Changing change - a change that makes processor.Process() report changed
 		// Non-changing change - a change that doesn't do that
@@ -1906,6 +1920,7 @@ var _ = Describe("ChangeProcessor", func() {
 				processor.CaptureUpsertChange(rg1)
 				processor.CaptureUpsertChange(btls)
 				processor.CaptureUpsertChange(cm)
+				processor.CaptureUpsertChange(np)
 
 				changed, _ := processor.Process()
 				Expect(changed).To(Equal(state.ClusterStateChange))
@@ -1919,6 +1934,7 @@ var _ = Describe("ChangeProcessor", func() {
 					processor.CaptureUpsertChange(rg1Updated)
 					processor.CaptureUpsertChange(btlsUpdated)
 					processor.CaptureUpsertChange(cmUpdated)
+					processor.CaptureUpsertChange(npUpdated)
 
 					// there are non-changing changes
 					processor.CaptureUpsertChange(gcUpdated)
@@ -1927,6 +1943,7 @@ var _ = Describe("ChangeProcessor", func() {
 					processor.CaptureUpsertChange(rg1Updated)
 					processor.CaptureUpsertChange(btlsUpdated)
 					processor.CaptureUpsertChange(cmUpdated)
+					processor.CaptureUpsertChange(npUpdated)
 
 					changed, _ := processor.Process()
 					Expect(changed).To(Equal(state.ClusterStateChange))
@@ -1950,6 +1967,7 @@ var _ = Describe("ChangeProcessor", func() {
 					processor.CaptureDeleteChange(&v1beta1.ReferenceGrant{}, rgNsName)
 					processor.CaptureDeleteChange(&v1alpha2.BackendTLSPolicy{}, btlsNsName)
 					processor.CaptureDeleteChange(&apiv1.ConfigMap{}, cmNsName)
+					processor.CaptureDeleteChange(&ngfAPI.NginxProxy{}, npNsName)
 
 					// these are non-changing changes
 					processor.CaptureUpsertChange(gw2)

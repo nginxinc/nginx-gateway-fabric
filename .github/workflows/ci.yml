@@ -172,7 +172,7 @@ jobs:
       fail-fast: false
       matrix:
         image: [ngf, nginx]
-        platforms: ["linux/arm64, linux/amd64, linux/s390x, linux/ppc64le"]
+        platforms: ["linux/arm64, linux/amd64"]
     uses: ./.github/workflows/build.yml
     with:
       image: ${{ matrix.image }}
