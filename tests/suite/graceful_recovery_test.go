@@ -69,14 +69,19 @@ func runRecoveryTest(containerName string, files []string, ns *core.Namespace) {
 	Expect(err).ToNot(HaveOccurred())
 	Expect(podNames).ToNot(BeEmpty())
 
-	leaseName, err := getLeaderElectionLeaseHolderName()
-	Expect(err).ToNot(HaveOccurred())
+	var leaseName string
+	if containerName != nginxContainerName {
+		leaseName, err = getLeaderElectionLeaseHolderName()
+		Expect(err).ToNot(HaveOccurred())
+	}
 
 	restartContainer(containerName)
 
 	checkContainerLogsForErrors(podNames[0])
 
-	Expect(waitForLeaderLeaseToChange(leaseName)).ToNot(HaveOccurred())
+	if containerName != nginxContainerName {
+		Expect(waitForLeaderLeaseToChange(leaseName)).ToNot(HaveOccurred())
+	}
 
 	Expect(waitForWorkingTraffic()).ToNot(HaveOccurred())
 
