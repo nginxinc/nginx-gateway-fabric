@@ -48,7 +48,7 @@ func validateNginxProxy(
 	if telemetry != nil {
 		telPath := spec.Child("telemetry")
 		if telemetry.ServiceName != nil {
-			if err := validator.ValidateEscapedStringNoVarExpansion(*telemetry.ServiceName); err != nil {
+			if err := validator.ValidateServiceName(*telemetry.ServiceName); err != nil {
 				allErrs = append(allErrs, field.Invalid(telPath.Child("serviceName"), *telemetry.ServiceName, err.Error()))
 			}
 		}
@@ -58,13 +58,13 @@ func validateNginxProxy(
 			expPath := telPath.Child("exporter")
 
 			if exp.Endpoint != "" {
-				if err := validator.ValidateEscapedStringNoVarExpansion(exp.Endpoint); err != nil {
+				if err := validator.ValidateEndpoint(exp.Endpoint); err != nil {
 					allErrs = append(allErrs, field.Invalid(expPath.Child("endpoint"), exp.Endpoint, err.Error()))
 				}
 			}
 
 			if exp.Interval != nil {
-				if err := validator.ValidateEscapedStringNoVarExpansion(string(*exp.Interval)); err != nil {
+				if err := validator.ValidateNginxDuration(string(*exp.Interval)); err != nil {
 					allErrs = append(allErrs, field.Invalid(expPath.Child("interval"), *exp.Interval, err.Error()))
 				}
 			}
