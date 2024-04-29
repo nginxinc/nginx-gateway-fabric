@@ -78,7 +78,7 @@ func InstallNGF(cfg InstallationConfig, extraArgs ...string) ([]byte, error) {
 
 // UpgradeNGF upgrades NGF. CRD upgrades assume the chart is local.
 func UpgradeNGF(cfg InstallationConfig, extraArgs ...string) ([]byte, error) {
-	crdPath := filepath.Join(cfg.ChartPath, "crds")
+	crdPath := filepath.Join(cfg.ChartPath, "crds") + "/"
 	if output, err := exec.Command("kubectl", "apply", "-f", crdPath).CombinedOutput(); err != nil {
 		return output, err
 	}
