@@ -8,12 +8,12 @@ spec:
       hostPID: true
       hostIPC: true
       nodeSelector:
-        kubernetes.io/hostname: ""
+        kubernetes.io/hostname: "to be replaced by the test"
       containers:
         - name: node-debugger-container
           image: ubuntu
           command: ["/bin/bash", "-c"]
-          args: []
+          args: ["to be replaced by the test"]
           securityContext:
             privileged: true
           volumeMounts:
