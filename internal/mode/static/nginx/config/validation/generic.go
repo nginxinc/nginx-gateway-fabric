@@ -23,7 +23,7 @@ const (
 
 var alphaNumericStringFmtRegexp = regexp.MustCompile("^" + alphaNumericStringFmt + "$")
 
-// ValidateServiceName validates a k8s service name that can only use alphanumeric characters.
+// ValidateServiceName validates a service name that can only use alphanumeric characters.
 func (GenericValidator) ValidateServiceName(name string) error {
 	if !alphaNumericStringFmtRegexp.MatchString(name) {
 		examples := []string{
