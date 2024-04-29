@@ -114,7 +114,7 @@ func restartContainer(ngfPodName, containerName string) {
 		jobScript = "PID=$(pgrep -f \"/usr/bin/gateway\") && kill -9 $PID"
 	}
 
-	restartCount, err := getContainerRestartCount(containerName, ngfPodName)
+	restartCount, err := getContainerRestartCount(ngfPodName, containerName)
 	Expect(err).ToNot(HaveOccurred())
 
 	job, err := runNodeDebuggerJob(ngfPodName, jobScript)
@@ -139,7 +139,7 @@ func waitForContainerRestart(ngfPodName, containerName string, currentRestartCou
 		500*time.Millisecond,
 		true, /* poll immediately */
 		func(_ context.Context) (bool, error) {
-			restartCount, err := getContainerRestartCount(containerName, ngfPodName)
+			restartCount, err := getContainerRestartCount(ngfPodName, containerName)
 			if err != nil {
 				return false, nil
 			}
