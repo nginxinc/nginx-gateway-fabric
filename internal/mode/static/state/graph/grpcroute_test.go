@@ -223,7 +223,7 @@ func TestBuildGRPCRoute(t *testing.T) {
 
 	grInvalidFilterRule.Filters = []v1alpha2.GRPCRouteFilter{
 		{
-			Type: "RequestHeaderModifier",
+			Type: "RequestMirror",
 		},
 	}
 
@@ -232,6 +232,24 @@ func TestBuildGRPCRoute(t *testing.T) {
 		gatewayNsName.Name,
 		"example.com",
 		[]v1alpha2.GRPCRouteRule{grInvalidFilterRule},
+	)
+
+	grValidFilterRule := createGRPCMethodMatch("myService", "myMethod", "Exact")
+
+	grValidFilterRule.Filters = []v1alpha2.GRPCRouteFilter{
+		{
+			Type: "RequestHeaderModifier",
+			RequestHeaderModifier: &v1.HTTPHeaderFilter{
+				Remove: []string{"header"},
+			},
+		},
+	}
+
+	grValidFilter := createGRPCRoute(
+		"gr",
+		gatewayNsName.Name,
+		"example.com",
+		[]v1alpha2.GRPCRouteRule{grValidFilterRule},
 	)
 
 	createAllValidValidator := func() *validationfakes.FakeHTTPFieldsValidator {
@@ -309,6 +327,36 @@ func TestBuildGRPCRoute(t *testing.T) {
 				},
 			},
 			name: "valid rule with empty match",
+		},
+		{
+			validator: createAllValidValidator(),
+			gr:        grValidFilter,
+			expected: &L7Route{
+				RouteType: RouteTypeGRPC,
+				Source:    grValidFilter,
+				ParentRefs: []ParentRef{
+					{
+						Idx:         0,
+						Gateway:     gatewayNsName,
+						SectionName: grValidFilter.Spec.ParentRefs[0].SectionName,
+					},
+				},
+				Valid:      true,
+				Attachable: true,
+				Spec: L7RouteSpec{
+					Hostnames: grValidFilter.Spec.Hostnames,
+					Rules: []RouteRule{
+						{
+							ValidMatches:     true,
+							ValidFilters:     true,
+							Matches:          convertGRPCMatches(grValidFilter.Spec.Rules[0].Matches),
+							RouteBackendRefs: []RouteBackendRef{},
+							Filters:          convertGRPCFilters(grValidFilter.Spec.Rules[0].Filters, true),
+						},
+					},
+				},
+			},
+			name: "valid rule with filter",
 		},
 		{
 			validator: createAllValidValidator(),
@@ -522,10 +570,8 @@ func TestBuildGRPCRoute(t *testing.T) {
 				},
 				Conditions: []conditions.Condition{
 					staticConds.NewRouteUnsupportedValue(
-						`All rules are invalid: spec.rules[0].filters: Unsupported value: []v1alpha2.GRPCRouteFilter{v1alpha2.` +
-							`GRPCRouteFilter{Type:"RequestHeaderModifier", RequestHeaderModifier:(*v1.HTTPHeaderFilter)(nil), ` +
-							`ResponseHeaderModifier:(*v1.HTTPHeaderFilter)(nil), RequestMirror:(*v1.HTTPRequestMirrorFilter)(nil), ` +
-							`ExtensionRef:(*v1.LocalObjectReference)(nil)}}: supported values: "gRPC filters are not yet supported"`,
+						`All rules are invalid: spec.rules[0].filters[0].type: ` +
+							`Unsupported value: "RequestMirror": supported values: "RequestHeaderModifier"`,
 					),
 				},
 				Spec: L7RouteSpec{

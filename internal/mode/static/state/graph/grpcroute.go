@@ -73,26 +73,24 @@ func processGRPCRouteRules(
 	validator validation.HTTPFieldsValidator,
 ) (rules []RouteRule, atLeastOneValid bool, allRulesErrs field.ErrorList) {
 	rules = make([]RouteRule, len(specRules))
-	validFilters := true
 
 	for i, rule := range specRules {
 		rulePath := field.NewPath("spec").Child("rules").Index(i)
 
 		var allErrs field.ErrorList
-
 		var matchesErrs field.ErrorList
+		var filtersErrs field.ErrorList
+
 		for j, match := range rule.Matches {
 			matchPath := rulePath.Child("matches").Index(j)
 			matchesErrs = append(matchesErrs, validateGRPCMatch(validator, match, matchPath)...)
 		}
 
 		if len(rule.Filters) > 0 {
-			filterPath := rulePath.Child("filters")
-			allErrs = append(
-				allErrs,
-				field.NotSupported(filterPath, rule.Filters, []string{"gRPC filters are not yet supported"}),
-			)
-			validFilters = false
+			for j, filter := range rule.Filters {
+				filterPath := rulePath.Child("filters").Index(j)
+				filtersErrs = append(filtersErrs, validateGRPCFilter(validator, filter, filterPath)...)
+			}
 		}
 
 		backendRefs := make([]RouteBackendRef, 0, len(rule.BackendRefs))
@@ -114,17 +112,20 @@ func processGRPCRouteRules(
 		}
 
 		allErrs = append(allErrs, matchesErrs...)
+		allErrs = append(allErrs, filtersErrs...)
 		allRulesErrs = append(allRulesErrs, allErrs...)
 
 		if len(allErrs) == 0 {
 			atLeastOneValid = true
 		}
 
+		validFilters := len(filtersErrs) == 0
+
 		rules[i] = RouteRule{
 			ValidMatches:     len(matchesErrs) == 0,
 			ValidFilters:     validFilters,
 			Matches:          convertGRPCMatches(rule.Matches),
-			Filters:          nil,
+			Filters:          convertGRPCFilters(rule.Filters, validFilters),
 			RouteBackendRefs: backendRefs,
 		}
 	}
@@ -233,4 +234,48 @@ func validateGRPCMethodMatch(
 		}
 	}
 	return allErrs
+}
+
+func validateGRPCFilter(
+	validator validation.HTTPFieldsValidator,
+	filter v1alpha2.GRPCRouteFilter,
+	filterPath *field.Path,
+) field.ErrorList {
+	var allErrs field.ErrorList
+
+	switch filter.Type {
+	case v1alpha2.GRPCRouteFilterRequestHeaderModifier:
+		return validateFilterHeaderModifier(validator, filter.RequestHeaderModifier, filterPath)
+	default:
+		valErr := field.NotSupported(
+			filterPath.Child("type"),
+			filter.Type,
+			[]string{
+				string(v1alpha2.GRPCRouteFilterRequestHeaderModifier),
+			},
+		)
+		allErrs = append(allErrs, valErr)
+		return allErrs
+	}
+}
+
+func convertGRPCFilters(filters []v1alpha2.GRPCRouteFilter, validFilters bool) []v1.HTTPRouteFilter {
+	// validation has already been done, don't process the filters if they are invalid
+	if !validFilters || len(filters) == 0 {
+		return nil
+	}
+	httpFilters := make([]v1.HTTPRouteFilter, 0, len(filters))
+	for _, filter := range filters {
+		switch filter.Type {
+		case v1alpha2.GRPCRouteFilterRequestHeaderModifier:
+			httpRequestHeaderFilter := v1.HTTPRouteFilter{
+				Type:                  v1.HTTPRouteFilterRequestHeaderModifier,
+				RequestHeaderModifier: filter.RequestHeaderModifier,
+			}
+			httpFilters = append(httpFilters, httpRequestHeaderFilter)
+		default:
+			continue
+		}
+	}
+	return httpFilters
 }
