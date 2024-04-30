@@ -217,8 +217,8 @@ func expectRequestToFail(appURL, address string, responseBodyMessage string) err
 		return errors.New("expected http status to be 0")
 	}
 
-	if strings.Contains(body, responseBodyMessage) {
-		return errors.New("expected response body to not contain correct body message")
+	if body != "" {
+		return fmt.Errorf("expected response body to be empty, instead received: %s", body)
 	}
 
 	if err == nil {
@@ -236,7 +236,10 @@ func checkContainerLogsForErrors(ngfPodName string) {
 		&core.PodLogOptions{Container: nginxContainerName, SinceSeconds: &sinceSeconds},
 	)
 	Expect(err).ToNot(HaveOccurred())
-	Expect(logs).ToNot(ContainSubstring("emerg"), logs)
+	Expect(logs).ToNot(ContainSubstring("[error]"), logs)
+	Expect(logs).ToNot(ContainSubstring("[crit]"), logs)
+	Expect(logs).ToNot(ContainSubstring("[alert]"), logs)
+	Expect(logs).ToNot(ContainSubstring("[emerg]"), logs)
 
 	logs, err = resourceManager.GetPodLogs(
 		ngfNamespace,
@@ -244,7 +247,7 @@ func checkContainerLogsForErrors(ngfPodName string) {
 		&core.PodLogOptions{Container: ngfContainerName, SinceSeconds: &sinceSeconds},
 	)
 	Expect(err).ToNot(HaveOccurred())
-	Expect(logs).ToNot(ContainSubstring("error"), logs)
+	Expect(logs).ToNot(ContainSubstring("\"level\":\"error\""), logs)
 }
 
 func waitForLeaderLeaseToChange(originalLeaseName string) error {
