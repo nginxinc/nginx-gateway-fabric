@@ -245,7 +245,13 @@ func (h *eventHandlerImpl) updateStatuses(ctx context.Context, logger logr.Logge
 	if h.cfg.updateGatewayClassStatus {
 		gcReqs = status.PrepareGatewayClassRequests(graph.GatewayClass, graph.IgnoredGatewayClasses, transitionTime)
 	}
-	routeReqs := status.PrepareRouteRequests(graph.Routes, transitionTime, h.latestReloadResult, h.cfg.gatewayCtlrName)
+	routeReqs := status.PrepareRouteRequests(
+		graph.Routes,
+		transitionTime,
+		h.latestReloadResult,
+		h.cfg.gatewayCtlrName,
+	)
+
 	polReqs := status.PrepareBackendTLSPolicyRequests(graph.BackendTLSPolicies, transitionTime, h.cfg.gatewayCtlrName)
 
 	reqs := make([]frameworkStatus.UpdateRequest, 0, len(gcReqs)+len(routeReqs)+len(polReqs))

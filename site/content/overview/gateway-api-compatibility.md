@@ -9,17 +9,18 @@ docs: "DOCS-1412"
 ## Summary
 
 {{< bootstrap-table "table table-striped table-bordered" >}}
-| Resource                              | Core Support Level | Extended Support Level | Implementation-Specific Support Level | API Version |
-| ------------------------------------- | ------------------ | ---------------------- | ------------------------------------- | ----------- |
-| [GatewayClass](#gatewayclass)         | Supported          | Not supported          | Not supported                         | v1          |
-| [Gateway](#gateway)                   | Supported          | Not supported          | Not supported                         | v1          |
-| [HTTPRoute](#httproute)               | Supported          | Partially supported    | Not supported                         | v1          |
-| [ReferenceGrant](#referencegrant)     | Supported          | N/A                    | Not supported                         | v1beta1     |
-| [TLSRoute](#tlsroute)                 | Not supported      | Not supported          | Not supported                         | N/A         |
-| [TCPRoute](#tcproute)                 | Not supported      | Not supported          | Not supported                         | N/A         |
-| [UDPRoute](#udproute)                 | Not supported      | Not supported          | Not supported                         | N/A         |
-| [BackendTLSPolicy](#backendtlspolicy) | Supported          | Supported              | Not supported                         | v1alpha2    |
-| [Custom policies](#custom-policies)   | Not supported      | N/A                    | Not supported                         | N/A         |
+| Resource                              | Core Support Level  | Extended Support Level | Implementation-Specific Support Level | API Version |
+| ------------------------------------- | ------------------- | ---------------------- | ------------------------------------- | ----------- |
+| [GatewayClass](#gatewayclass)         | Supported           | Not supported          | Not supported                         | v1          |
+| [Gateway](#gateway)                   | Supported           | Not supported          | Not supported                         | v1          |
+| [HTTPRoute](#httproute)               | Supported           | Partially supported    | Not supported                         | v1          |
+| [ReferenceGrant](#referencegrant)     | Supported           | N/A                    | Not supported                         | v1beta1     |
+| [GRPCRoute](#grpcroute)               | Partially Supported | Not supported          | Not supported                         | v1alpha2    |
+| [TLSRoute](#tlsroute)                 | Not supported       | Not supported          | Not supported                         | N/A         |
+| [TCPRoute](#tcproute)                 | Not supported       | Not supported          | Not supported                         | N/A         |
+| [UDPRoute](#udproute)                 | Not supported       | Not supported          | Not supported                         | N/A         |
+| [BackendTLSPolicy](#backendtlspolicy) | Supported           | Supported              | Not supported                         | v1alpha2    |
+| [Custom policies](#custom-policies)   | Not supported       | N/A                    | Not supported                         | N/A         |
 {{< /bootstrap-table >}}
 
 ---
@@ -176,6 +177,46 @@ See the [static-mode]({{< relref "/reference/cli-help.md#static-mode">}}) comman
       - `ResolvedRefs/False/RefNotPermitted`
       - `ResolvedRefs/False/BackendNotFound`
       - `ResolvedRefs/False/UnsupportedValue`: Custom reason for when one of the HTTPRoute rules has a backendRef with an unsupported value.
+      - `PartiallyInvalid/True/UnsupportedValue`
+
+---
+
+### GRPCRoute
+
+{{< bootstrap-table "table table-striped table-bordered" >}}
+| Resource  | Core Support Level  | Extended Support Level | Implementation-Specific Support Level | API Version |
+| --------- | ------------------- | ---------------------- | ------------------------------------- | ----------- |
+| GRPCRoute | Partially Supported | Not supported          | Not supported                         | v1alpha2    |
+{{< /bootstrap-table >}}
+
+**Fields**:
+
+- `spec`
+  - `parentRefs`: Partially supported. Port not supported.
+  - `hostnames`: Supported.
+  - `rules`
+    - `matches`
+      - `method`: Partially supported. Only `Exact` type with both `method.service` and `method.method` specified.
+      - `headers`: Partially supported. Only `Exact` type.
+    - `filters`: Not supported
+    - `backendRefs`: Partially supported. Backend ref `filters` are not supported.
+- `status`
+  - `parents`
+    - `parentRef`: Supported.
+    - `controllerName`: Supported.
+    - `conditions`: Partially supported. Supported (Condition/Status/Reason):
+      - `Accepted/True/Accepted`
+      - `Accepted/False/NoMatchingListenerHostname`
+      - `Accepted/False/NoMatchingParent`
+      - `Accepted/False/NotAllowedByListeners`
+      - `Accepted/False/UnsupportedValue`: Custom reason for when the GRPCRoute includes an invalid or unsupported value.
+      - `Accepted/False/InvalidListener`: Custom reason for when the GRPCRoute references an invalid listener.
+      - `Accepted/False/GatewayNotProgrammed`: Custom reason for when the Gateway is not Programmed. GRPCRoute can be valid and configured, but will maintain this status as long as the Gateway is not Programmed.
+      - `ResolvedRefs/True/ResolvedRefs`
+      - `ResolvedRefs/False/InvalidKind`
+      - `ResolvedRefs/False/RefNotPermitted`
+      - `ResolvedRefs/False/BackendNotFound`
+      - `ResolvedRefs/False/UnsupportedValue`: Custom reason for when one of the GRPCRoute rules has a backendRef with an unsupported value.
       - `PartiallyInvalid/True/UnsupportedValue`
 
 ---

@@ -47,20 +47,30 @@ server {
         js_content httpmatches.redirect;
         {{- end }}
 
+        {{ $proxyOrGRPC := "proxy" }}{{ if $l.GRPC }}{{ $proxyOrGRPC = "grpc" }}{{ end }}
+
+        {{- if $l.GRPC }}
+        include /etc/nginx/grpc-error-pages.conf;
+        {{- end }}
+
         {{- if $l.ProxyPass -}}
             {{ range $h := $l.ProxySetHeaders }}
-        proxy_set_header {{ $h.Name }} "{{ $h.Value }}";
+        {{ $proxyOrGRPC }}_set_header {{ $h.Name }} "{{ $h.Value }}";
             {{- end }}
+        {{ $proxyOrGRPC }}_pass {{ $l.ProxyPass }};
         proxy_http_version 1.1;
-        proxy_pass {{ $l.ProxyPass }};
             {{- if $l.ProxySSLVerify }}
-        proxy_ssl_verify on;
-        proxy_ssl_name {{ $l.ProxySSLVerify.Name }};
-        proxy_ssl_trusted_certificate {{ $l.ProxySSLVerify.TrustedCertificate }};
+        {{ $proxyOrGRPC }}_ssl_verify on;
+        {{ $proxyOrGRPC }}_ssl_name {{ $l.ProxySSLVerify.Name }};
+        {{ $proxyOrGRPC }}_ssl_trusted_certificate {{ $l.ProxySSLVerify.TrustedCertificate }};
             {{- end }}
         {{- end }}
     }
         {{ end }}
+
+        {{- if $s.GRPC }}
+        include /etc/nginx/grpc-error-locations.conf;
+        {{- end }}
 }
     {{- end }}
 {{ end }}

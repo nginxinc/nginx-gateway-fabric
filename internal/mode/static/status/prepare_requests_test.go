@@ -42,193 +42,213 @@ func createK8sClientFor(resourceType client.Object) client.Client {
 	return k8sClient
 }
 
-func TestBuildRouteStatuses(t *testing.T) {
-	const gatewayCtlrName = "controller"
+const gatewayCtlrName = "controller"
 
-	gwNsName := types.NamespacedName{Namespace: "test", Name: "gateway"}
+var (
+	gwNsName       = types.NamespacedName{Namespace: "test", Name: "gateway"}
+	transitionTime = helpers.PrepareTimeForFakeClient(metav1.Now())
 
-	invalidRouteCondition := conditions.Condition{
+	invalidRouteCondition = conditions.Condition{
 		Type:   "TestInvalidRoute",
 		Status: metav1.ConditionTrue,
 	}
-	invalidAttachmentCondition := conditions.Condition{
+	invalidAttachmentCondition = conditions.Condition{
 		Type:   "TestInvalidAttachment",
 		Status: metav1.ConditionTrue,
 	}
 
-	routes := map[types.NamespacedName]*graph.Route{
-		{Namespace: "test", Name: "hr-valid"}: {
-			Valid: true,
-			Source: &v1.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace:  "test",
-					Name:       "hr-valid",
-					Generation: 3,
-				},
-				Spec: v1.HTTPRouteSpec{
-					CommonRouteSpec: v1.CommonRouteSpec{
-						ParentRefs: []v1.ParentReference{
-							{
-								SectionName: helpers.GetPointer[v1.SectionName]("listener-80-1"),
-							},
-							{
-								SectionName: helpers.GetPointer[v1.SectionName]("listener-80-2"),
-							},
-						},
-					},
-				},
+	commonRouteSpecValid = v1.CommonRouteSpec{
+		ParentRefs: []v1.ParentReference{
+			{
+				SectionName: helpers.GetPointer[v1.SectionName]("listener-80-1"),
 			},
-			ParentRefs: []graph.ParentRef{
-				{
-					Idx:     0,
-					Gateway: gwNsName,
-					Attachment: &graph.ParentRefAttachmentStatus{
-						Attached: true,
-					},
-				},
-				{
-					Idx:     1,
-					Gateway: gwNsName,
-					Attachment: &graph.ParentRefAttachmentStatus{
-						Attached:        false,
-						FailedCondition: invalidAttachmentCondition,
-					},
-				},
+			{
+				SectionName: helpers.GetPointer[v1.SectionName]("listener-80-2"),
 			},
 		},
-		{Namespace: "test", Name: "hr-invalid"}: {
-			Valid:      false,
-			Conditions: []conditions.Condition{invalidRouteCondition},
-			Source: &v1.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace:  "test",
-					Name:       "hr-invalid",
-					Generation: 3,
+	}
+
+	commonRouteSpecInvalid = v1.CommonRouteSpec{
+		ParentRefs: []v1.ParentReference{
+			{
+				SectionName: helpers.GetPointer[v1.SectionName]("listener-80-1"),
+			},
+		},
+	}
+
+	parentRefsValid = []graph.ParentRef{
+		{
+			Idx:         0,
+			Gateway:     gwNsName,
+			SectionName: commonRouteSpecValid.ParentRefs[0].SectionName,
+			Attachment: &graph.ParentRefAttachmentStatus{
+				Attached: true,
+			},
+		},
+		{
+			Idx:         1,
+			Gateway:     gwNsName,
+			SectionName: commonRouteSpecValid.ParentRefs[1].SectionName,
+			Attachment: &graph.ParentRefAttachmentStatus{
+				Attached:        false,
+				FailedCondition: invalidAttachmentCondition,
+			},
+		},
+	}
+
+	parentRefsInvalid = []graph.ParentRef{
+		{
+			Idx:         0,
+			Gateway:     gwNsName,
+			Attachment:  nil,
+			SectionName: commonRouteSpecInvalid.ParentRefs[0].SectionName,
+		},
+	}
+
+	routeStatusValid = v1.RouteStatus{
+		Parents: []v1.RouteParentStatus{
+			{
+				ParentRef: v1.ParentReference{
+					Namespace:   helpers.GetPointer(v1.Namespace(gwNsName.Namespace)),
+					Name:        v1.ObjectName(gwNsName.Name),
+					SectionName: helpers.GetPointer[v1.SectionName]("listener-80-1"),
 				},
-				Spec: v1.HTTPRouteSpec{
-					CommonRouteSpec: v1.CommonRouteSpec{
-						ParentRefs: []v1.ParentReference{
-							{
-								SectionName: helpers.GetPointer[v1.SectionName]("listener-80-1"),
-							},
-						},
+				ControllerName: gatewayCtlrName,
+				Conditions: []metav1.Condition{
+					{
+						Type:               string(v1.RouteConditionAccepted),
+						Status:             metav1.ConditionTrue,
+						ObservedGeneration: 3,
+						LastTransitionTime: transitionTime,
+						Reason:             string(v1.RouteReasonAccepted),
+						Message:            "The route is accepted",
+					},
+					{
+						Type:               string(v1.RouteConditionResolvedRefs),
+						Status:             metav1.ConditionTrue,
+						ObservedGeneration: 3,
+						LastTransitionTime: transitionTime,
+						Reason:             string(v1.RouteReasonResolvedRefs),
+						Message:            "All references are resolved",
 					},
 				},
 			},
-			ParentRefs: []graph.ParentRef{
-				{
-					Idx:        0,
-					Gateway:    gwNsName,
-					Attachment: nil,
+			{
+				ParentRef: v1.ParentReference{
+					Namespace:   helpers.GetPointer(v1.Namespace(gwNsName.Namespace)),
+					Name:        v1.ObjectName(gwNsName.Name),
+					SectionName: helpers.GetPointer[v1.SectionName]("listener-80-2"),
+				},
+				ControllerName: gatewayCtlrName,
+				Conditions: []metav1.Condition{
+					{
+						Type:               string(v1.RouteConditionAccepted),
+						Status:             metav1.ConditionTrue,
+						ObservedGeneration: 3,
+						LastTransitionTime: transitionTime,
+						Reason:             string(v1.RouteReasonAccepted),
+						Message:            "The route is accepted",
+					},
+					{
+						Type:               string(v1.RouteConditionResolvedRefs),
+						Status:             metav1.ConditionTrue,
+						ObservedGeneration: 3,
+						LastTransitionTime: transitionTime,
+						Reason:             string(v1.RouteReasonResolvedRefs),
+						Message:            "All references are resolved",
+					},
+					{
+						Type:               invalidAttachmentCondition.Type,
+						Status:             metav1.ConditionTrue,
+						ObservedGeneration: 3,
+						LastTransitionTime: transitionTime,
+					},
 				},
 			},
 		},
 	}
 
-	transitionTime := helpers.PrepareTimeForFakeClient(metav1.Now())
-
-	expectedStatuses := map[types.NamespacedName]v1.HTTPRouteStatus{
-		{Namespace: "test", Name: "hr-valid"}: {
-			RouteStatus: v1.RouteStatus{
-				Parents: []v1.RouteParentStatus{
+	routeStatusInvalid = v1.RouteStatus{
+		Parents: []v1.RouteParentStatus{
+			{
+				ParentRef: v1.ParentReference{
+					Namespace:   helpers.GetPointer(v1.Namespace(gwNsName.Namespace)),
+					Name:        v1.ObjectName(gwNsName.Name),
+					SectionName: helpers.GetPointer[v1.SectionName]("listener-80-1"),
+				},
+				ControllerName: gatewayCtlrName,
+				Conditions: []metav1.Condition{
 					{
-						ParentRef: v1.ParentReference{
-							Namespace:   helpers.GetPointer(v1.Namespace(gwNsName.Namespace)),
-							Name:        v1.ObjectName(gwNsName.Name),
-							SectionName: helpers.GetPointer[v1.SectionName]("listener-80-1"),
-						},
-						ControllerName: gatewayCtlrName,
-						Conditions: []metav1.Condition{
-							{
-								Type:               string(v1.RouteConditionAccepted),
-								Status:             metav1.ConditionTrue,
-								ObservedGeneration: 3,
-								LastTransitionTime: transitionTime,
-								Reason:             string(v1.RouteReasonAccepted),
-								Message:            "The route is accepted",
-							},
-							{
-								Type:               string(v1.RouteConditionResolvedRefs),
-								Status:             metav1.ConditionTrue,
-								ObservedGeneration: 3,
-								LastTransitionTime: transitionTime,
-								Reason:             string(v1.RouteReasonResolvedRefs),
-								Message:            "All references are resolved",
-							},
-						},
+						Type:               string(v1.RouteConditionAccepted),
+						Status:             metav1.ConditionTrue,
+						ObservedGeneration: 3,
+						LastTransitionTime: transitionTime,
+						Reason:             string(v1.RouteReasonAccepted),
+						Message:            "The route is accepted",
 					},
 					{
-						ParentRef: v1.ParentReference{
-							Namespace:   helpers.GetPointer(v1.Namespace(gwNsName.Namespace)),
-							Name:        v1.ObjectName(gwNsName.Name),
-							SectionName: helpers.GetPointer[v1.SectionName]("listener-80-2"),
-						},
-						ControllerName: gatewayCtlrName,
-						Conditions: []metav1.Condition{
-							{
-								Type:               string(v1.RouteConditionAccepted),
-								Status:             metav1.ConditionTrue,
-								ObservedGeneration: 3,
-								LastTransitionTime: transitionTime,
-								Reason:             string(v1.RouteReasonAccepted),
-								Message:            "The route is accepted",
-							},
-							{
-								Type:               string(v1.RouteConditionResolvedRefs),
-								Status:             metav1.ConditionTrue,
-								ObservedGeneration: 3,
-								LastTransitionTime: transitionTime,
-								Reason:             string(v1.RouteReasonResolvedRefs),
-								Message:            "All references are resolved",
-							},
-							{
-								Type:               invalidAttachmentCondition.Type,
-								Status:             metav1.ConditionTrue,
-								ObservedGeneration: 3,
-								LastTransitionTime: transitionTime,
-							},
-						},
+						Type:               string(v1.RouteConditionResolvedRefs),
+						Status:             metav1.ConditionTrue,
+						ObservedGeneration: 3,
+						LastTransitionTime: transitionTime,
+						Reason:             string(v1.RouteReasonResolvedRefs),
+						Message:            "All references are resolved",
+					},
+					{
+						Type:               invalidRouteCondition.Type,
+						Status:             metav1.ConditionTrue,
+						ObservedGeneration: 3,
+						LastTransitionTime: transitionTime,
 					},
 				},
 			},
 		},
+	}
+)
+
+func TestBuildHTTPRouteStatuses(t *testing.T) {
+	hrValid := &v1.HTTPRoute{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace:  "test",
+			Name:       "hr-valid",
+			Generation: 3,
+		},
+		Spec: v1.HTTPRouteSpec{
+			CommonRouteSpec: commonRouteSpecValid,
+		},
+	}
+	hrInvalid := &v1.HTTPRoute{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace:  "test",
+			Name:       "hr-invalid",
+			Generation: 3,
+		},
+		Spec: v1.HTTPRouteSpec{
+			CommonRouteSpec: commonRouteSpecInvalid,
+		},
+	}
+	routes := map[graph.RouteKey]*graph.L7Route{
+		graph.CreateRouteKey(hrValid): {
+			Valid:      true,
+			Source:     hrValid,
+			ParentRefs: parentRefsValid,
+			RouteType:  graph.RouteTypeHTTP,
+		},
+		graph.CreateRouteKey(hrInvalid): {
+			Valid:      false,
+			Conditions: []conditions.Condition{invalidRouteCondition},
+			Source:     hrInvalid,
+			ParentRefs: parentRefsInvalid,
+			RouteType:  graph.RouteTypeHTTP,
+		},
+	}
+
+	expectedStatuses := map[types.NamespacedName]v1.HTTPRouteStatus{
+		{Namespace: "test", Name: "hr-valid"}: {
+			RouteStatus: routeStatusValid,
+		},
 		{Namespace: "test", Name: "hr-invalid"}: {
-			RouteStatus: v1.RouteStatus{
-				Parents: []v1.RouteParentStatus{
-					{
-						ParentRef: v1.ParentReference{
-							Namespace:   helpers.GetPointer(v1.Namespace(gwNsName.Namespace)),
-							Name:        v1.ObjectName(gwNsName.Name),
-							SectionName: helpers.GetPointer[v1.SectionName]("listener-80-1"),
-						},
-						ControllerName: gatewayCtlrName,
-						Conditions: []metav1.Condition{
-							{
-								Type:               string(v1.RouteConditionAccepted),
-								Status:             metav1.ConditionTrue,
-								ObservedGeneration: 3,
-								LastTransitionTime: transitionTime,
-								Reason:             string(v1.RouteReasonAccepted),
-								Message:            "The route is accepted",
-							},
-							{
-								Type:               string(v1.RouteConditionResolvedRefs),
-								Status:             metav1.ConditionTrue,
-								ObservedGeneration: 3,
-								LastTransitionTime: transitionTime,
-								Reason:             string(v1.RouteReasonResolvedRefs),
-								Message:            "All references are resolved",
-							},
-							{
-								Type:               invalidRouteCondition.Type,
-								Status:             metav1.ConditionTrue,
-								ObservedGeneration: 3,
-								LastTransitionTime: transitionTime,
-							},
-						},
-					},
-				},
-			},
+			RouteStatus: routeStatusInvalid,
 		},
 	}
 
@@ -258,34 +278,101 @@ func TestBuildRouteStatuses(t *testing.T) {
 	}
 }
 
+func TestBuildGRPCRouteStatuses(t *testing.T) {
+	grValid := &v1alpha2.GRPCRoute{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace:  "test",
+			Name:       "gr-valid",
+			Generation: 3,
+		},
+		Spec: v1alpha2.GRPCRouteSpec{
+			CommonRouteSpec: commonRouteSpecValid,
+		},
+	}
+	grInvalid := &v1alpha2.GRPCRoute{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace:  "test",
+			Name:       "gr-invalid",
+			Generation: 3,
+		},
+		Spec: v1alpha2.GRPCRouteSpec{
+			CommonRouteSpec: commonRouteSpecInvalid,
+		},
+	}
+	routes := map[graph.RouteKey]*graph.L7Route{
+		graph.CreateRouteKey(grValid): {
+			Valid:      true,
+			Source:     grValid,
+			ParentRefs: parentRefsValid,
+			RouteType:  graph.RouteTypeGRPC,
+		},
+		graph.CreateRouteKey(grInvalid): {
+			Valid:      false,
+			Conditions: []conditions.Condition{invalidRouteCondition},
+			Source:     grInvalid,
+			ParentRefs: parentRefsInvalid,
+			RouteType:  graph.RouteTypeGRPC,
+		},
+	}
+
+	expectedStatuses := map[types.NamespacedName]v1alpha2.GRPCRouteStatus{
+		{Namespace: "test", Name: "gr-valid"}: {
+			RouteStatus: routeStatusValid,
+		},
+		{Namespace: "test", Name: "gr-invalid"}: {
+			RouteStatus: routeStatusInvalid,
+		},
+	}
+
+	g := NewWithT(t)
+
+	k8sClient := createK8sClientFor(&v1alpha2.GRPCRoute{})
+
+	for _, r := range routes {
+		err := k8sClient.Create(context.Background(), r.Source)
+		g.Expect(err).ToNot(HaveOccurred())
+	}
+
+	updater := statusFramework.NewUpdater(k8sClient, zap.New())
+
+	reqs := PrepareRouteRequests(routes, transitionTime, NginxReloadResult{}, gatewayCtlrName)
+
+	updater.Update(context.Background(), reqs...)
+
+	g.Expect(reqs).To(HaveLen(len(expectedStatuses)))
+
+	for nsname, expected := range expectedStatuses {
+		var hr v1alpha2.GRPCRoute
+
+		err := k8sClient.Get(context.Background(), nsname, &hr)
+		g.Expect(err).ToNot(HaveOccurred())
+		g.Expect(helpers.Diff(expected, hr.Status)).To(BeEmpty())
+	}
+}
+
 func TestBuildRouteStatusesNginxErr(t *testing.T) {
 	const gatewayCtlrName = "controller"
 
-	gwNsName := types.NamespacedName{Namespace: "test", Name: "gateway"}
-	routeNsName := types.NamespacedName{Namespace: "test", Name: "hr-valid"}
+	hr1 := &v1.HTTPRoute{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace:  "test",
+			Name:       "hr-valid",
+			Generation: 3,
+		},
+		Spec: v1.HTTPRouteSpec{
+			CommonRouteSpec: commonRouteSpecValid,
+		},
+	}
 
-	routes := map[types.NamespacedName]*graph.Route{
-		routeNsName: {
-			Valid: true,
-			Source: &v1.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace:  routeNsName.Namespace,
-					Name:       routeNsName.Name,
-					Generation: 3,
-				},
-				Spec: v1.HTTPRouteSpec{
-					CommonRouteSpec: v1.CommonRouteSpec{
-						ParentRefs: []v1.ParentReference{
-							{
-								SectionName: helpers.GetPointer[v1.SectionName]("listener-80-1"),
-							},
-							{
-								SectionName: helpers.GetPointer[v1.SectionName]("listener-80-2"),
-							},
-						},
-					},
-				},
-			},
+	routeKey := graph.CreateRouteKey(hr1)
+
+	gwNsName := types.NamespacedName{Namespace: "test", Name: "gateway"}
+
+	routes := map[graph.RouteKey]*graph.L7Route{
+		routeKey: {
+			Valid:     true,
+			RouteType: graph.RouteTypeHTTP,
+			Source:    hr1,
 			ParentRefs: []graph.ParentRef{
 				{
 					Idx:     0,
@@ -293,6 +380,7 @@ func TestBuildRouteStatusesNginxErr(t *testing.T) {
 					Attachment: &graph.ParentRefAttachmentStatus{
 						Attached: true,
 					},
+					SectionName: commonRouteSpecValid.ParentRefs[0].SectionName,
 				},
 			},
 		},
@@ -357,7 +445,7 @@ func TestBuildRouteStatusesNginxErr(t *testing.T) {
 
 	var hr v1.HTTPRoute
 
-	err := k8sClient.Get(context.Background(), routeNsName, &hr)
+	err := k8sClient.Get(context.Background(), routeKey.NamespacedName, &hr)
 	g.Expect(err).ToNot(HaveOccurred())
 	g.Expect(helpers.Diff(expectedStatus, hr.Status)).To(BeEmpty())
 }
@@ -547,6 +635,8 @@ func TestBuildGatewayStatuses(t *testing.T) {
 		},
 	}
 
+	routeKey := graph.RouteKey{NamespacedName: types.NamespacedName{Namespace: "test", Name: "hr-1"}}
+
 	tests := []struct {
 		nginxReloadRes  NginxReloadResult
 		gateway         *graph.Gateway
@@ -625,18 +715,14 @@ func TestBuildGatewayStatuses(t *testing.T) {
 				Source: createGateway(),
 				Listeners: []*graph.Listener{
 					{
-						Name:  "listener-valid-1",
-						Valid: true,
-						Routes: map[types.NamespacedName]*graph.Route{
-							{Namespace: "test", Name: "hr-1"}: {},
-						},
+						Name:   "listener-valid-1",
+						Valid:  true,
+						Routes: map[graph.RouteKey]*graph.L7Route{routeKey: {}},
 					},
 					{
-						Name:  "listener-valid-2",
-						Valid: true,
-						Routes: map[types.NamespacedName]*graph.Route{
-							{Namespace: "test", Name: "hr-1"}: {},
-						},
+						Name:   "listener-valid-2",
+						Valid:  true,
+						Routes: map[graph.RouteKey]*graph.L7Route{routeKey: {}},
 					},
 				},
 				Valid: true,
@@ -683,11 +769,9 @@ func TestBuildGatewayStatuses(t *testing.T) {
 				Source: createGateway(),
 				Listeners: []*graph.Listener{
 					{
-						Name:  "listener-valid",
-						Valid: true,
-						Routes: map[types.NamespacedName]*graph.Route{
-							{Namespace: "test", Name: "hr-1"}: {},
-						},
+						Name:   "listener-valid",
+						Valid:  true,
+						Routes: map[graph.RouteKey]*graph.L7Route{routeKey: {}},
 					},
 					{
 						Name:       "listener-invalid",
@@ -877,11 +961,9 @@ func TestBuildGatewayStatuses(t *testing.T) {
 				Conditions: staticConds.NewDefaultGatewayConditions(),
 				Listeners: []*graph.Listener{
 					{
-						Name:  "listener-valid",
-						Valid: true,
-						Routes: map[types.NamespacedName]*graph.Route{
-							{Namespace: "test", Name: "hr-1"}: {},
-						},
+						Name:   "listener-valid",
+						Valid:  true,
+						Routes: map[graph.RouteKey]*graph.L7Route{routeKey: {}},
 					},
 				},
 			},

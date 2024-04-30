@@ -92,6 +92,7 @@ rules:
   - referencegrants
 {{- if .Values.nginxGateway.gwAPIExperimentalFeatures.enable }}
   - backendtlspolicies
+  - grpcroutes
 {{- end }}
   verbs:
   - list
@@ -104,6 +105,7 @@ rules:
   - gatewayclasses/status
 {{- if .Values.nginxGateway.gwAPIExperimentalFeatures.enable }}
   - backendtlspolicies/status
+  - grpcroutes/status
 {{- end }}
   verbs:
   - update

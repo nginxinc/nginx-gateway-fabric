@@ -64,7 +64,7 @@ const (
 	// RouteMessageFailedNginxReload is a message used with RouteReasonGatewayNotProgrammed
 	// when nginx fails to reload.
 	RouteMessageFailedNginxReload = GatewayMessageFailedNginxReload + ". NGINX may still be configured " +
-		"for this HTTPRoute. However, future updates to this resource will not be configured until the Gateway " +
+		"for this Route. However, future updates to this resource will not be configured until the Gateway " +
 		"is programmed again"
 
 	// GatewayClassResolvedRefs condition indicates whether the controller was able to resolve the
@@ -89,7 +89,7 @@ func NewTODO(msg string) conditions.Condition {
 	}
 }
 
-// NewDefaultRouteConditions returns the default conditions that must be present in the status of an HTTPRoute.
+// NewDefaultRouteConditions returns the default conditions that must be present in the status of a Route.
 func NewDefaultRouteConditions() []conditions.Condition {
 	return []conditions.Condition{
 		NewRouteAccepted(),
@@ -97,29 +97,29 @@ func NewDefaultRouteConditions() []conditions.Condition {
 	}
 }
 
-// NewRouteNotAllowedByListeners returns a Condition that indicates that the HTTPRoute is not allowed by
+// NewRouteNotAllowedByListeners returns a Condition that indicates that the Route is not allowed by
 // any listener.
 func NewRouteNotAllowedByListeners() conditions.Condition {
 	return conditions.Condition{
 		Type:    string(v1.RouteConditionAccepted),
 		Status:  metav1.ConditionFalse,
 		Reason:  string(v1.RouteReasonNotAllowedByListeners),
-		Message: "HTTPRoute is not allowed by any listener",
+		Message: "Route is not allowed by any listener",
 	}
 }
 
 // NewRouteNoMatchingListenerHostname returns a Condition that indicates that the hostname of the listener
-// does not match the hostnames of the HTTPRoute.
+// does not match the hostnames of the Route.
 func NewRouteNoMatchingListenerHostname() conditions.Condition {
 	return conditions.Condition{
 		Type:    string(v1.RouteConditionAccepted),
 		Status:  metav1.ConditionFalse,
 		Reason:  string(v1.RouteReasonNoMatchingListenerHostname),
-		Message: "Listener hostname does not match the HTTPRoute hostnames",
+		Message: "Listener hostname does not match the Route hostnames",
 	}
 }
 
-// NewRouteAccepted returns a Condition that indicates that the HTTPRoute is accepted.
+// NewRouteAccepted returns a Condition that indicates that the Route is accepted.
 func NewRouteAccepted() conditions.Condition {
 	return conditions.Condition{
 		Type:    string(v1.RouteConditionAccepted),
@@ -129,7 +129,7 @@ func NewRouteAccepted() conditions.Condition {
 	}
 }
 
-// NewRouteUnsupportedValue returns a Condition that indicates that the HTTPRoute includes an unsupported value.
+// NewRouteUnsupportedValue returns a Condition that indicates that the Route includes an unsupported value.
 func NewRouteUnsupportedValue(msg string) conditions.Condition {
 	return conditions.Condition{
 		Type:    string(v1.RouteConditionAccepted),
@@ -139,7 +139,7 @@ func NewRouteUnsupportedValue(msg string) conditions.Condition {
 	}
 }
 
-// NewRoutePartiallyInvalid returns a Condition that indicates that the HTTPRoute contains a combination
+// NewRoutePartiallyInvalid returns a Condition that indicates that the Route contains a combination
 // of both valid and invalid rules.
 //
 // // nolint:lll
@@ -154,7 +154,7 @@ func NewRoutePartiallyInvalid(msg string) conditions.Condition {
 	}
 }
 
-// NewRouteInvalidListener returns a Condition that indicates that the HTTPRoute is not accepted because of an
+// NewRouteInvalidListener returns a Condition that indicates that the Route is not accepted because of an
 // invalid listener.
 func NewRouteInvalidListener() conditions.Condition {
 	return conditions.Condition{
@@ -242,7 +242,7 @@ func NewRouteNoMatchingParent() conditions.Condition {
 }
 
 // NewRouteGatewayNotProgrammed returns a Condition that indicates that the Gateway it references is not programmed,
-// which does not guarantee that the HTTPRoute has been configured.
+// which does not guarantee that the Route has been configured.
 func NewRouteGatewayNotProgrammed(msg string) conditions.Condition {
 	return conditions.Condition{
 		Type:    string(v1.RouteConditionAccepted),
