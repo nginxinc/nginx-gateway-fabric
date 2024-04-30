@@ -83,6 +83,7 @@ rules:
   - httproutes
   - referencegrants
   - backendtlspolicies
+  - grpcroutes
   verbs:
   - list
   - watch
@@ -93,6 +94,7 @@ rules:
   - gateways/status
   - gatewayclasses/status
   - backendtlspolicies/status
+  - grpcroutes/status
   verbs:
   - update
 - apiGroups:

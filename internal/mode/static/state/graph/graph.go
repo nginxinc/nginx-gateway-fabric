@@ -28,6 +28,7 @@ type ClusterState struct {
 	BackendTLSPolicies map[types.NamespacedName]*v1alpha2.BackendTLSPolicy
 	ConfigMaps         map[types.NamespacedName]*v1.ConfigMap
 	NginxProxies       map[types.NamespacedName]*ngfAPI.NginxProxy
+	GRPCRoutes         map[types.NamespacedName]*v1alpha2.GRPCRoute
 }
 
 // Graph is a Graph-like representation of Gateway API resources.
@@ -44,8 +45,8 @@ type Graph struct {
 	// GatewayClassName field of the resource) but ignored. It doesn't hold the Gateway resources that do not belong to
 	// the NGINX Gateway Fabric.
 	IgnoredGateways map[types.NamespacedName]*gatewayv1.Gateway
-	// Routes holds Route resources.
-	Routes map[types.NamespacedName]*Route
+	// Routes hold Route resources.
+	Routes map[RouteKey]*L7Route
 	// ReferencedSecrets includes Secrets referenced by Gateway Listeners, including invalid ones.
 	// It is different from the other maps, because it includes entries for Secrets that do not exist
 	// in the cluster. We need such entries so that we can query the Graph to determine if a Secret is referenced
@@ -143,7 +144,12 @@ func BuildGraph(
 		gw,
 	)
 
-	routes := buildRoutesForGateways(validators.HTTPFieldsValidator, state.HTTPRoutes, processedGws.GetAllNsNames())
+	routes := buildRoutesForGateways(
+		validators.HTTPFieldsValidator,
+		state.HTTPRoutes,
+		state.GRPCRoutes,
+		processedGws.GetAllNsNames(),
+	)
 	bindRoutesToListeners(routes, gw, state.Namespaces)
 	addBackendRefsToRouteRules(routes, refGrantResolver, state.Services, processedBackendTLSPolicies)
 

@@ -489,6 +489,28 @@ func TestCreateServers(t *testing.T) {
 				},
 			},
 		},
+		{
+			Path:     "/grpc/method",
+			PathType: dataplane.PathTypeExact,
+			MatchRules: []dataplane.MatchRule{
+				{
+					Match:        dataplane.Match{},
+					BackendGroup: fooGroup,
+				},
+			},
+			GRPC: true,
+		},
+		{
+			Path:     "/grpc-with-backend-tls-policy/method",
+			PathType: dataplane.PathTypeExact,
+			MatchRules: []dataplane.MatchRule{
+				{
+					Match:        dataplane.Match{},
+					BackendGroup: btpGroup,
+				},
+			},
+			GRPC: true,
+		},
 	}
 
 	httpServers := []dataplane.VirtualServer{
@@ -806,6 +828,22 @@ func TestCreateServers(t *testing.T) {
 					},
 				},
 			},
+			{
+				Path:            "= /grpc/method",
+				ProxyPass:       "grpc://test_foo_80",
+				GRPC:            true,
+				ProxySetHeaders: nil,
+			},
+			{
+				Path:      "= /grpc-with-backend-tls-policy/method",
+				ProxyPass: "grpcs://test_btp_80",
+				ProxySSLVerify: &http.ProxySSLVerify{
+					Name:               "test-btp.example.com",
+					TrustedCertificate: "/etc/nginx/secrets/test-btp.crt",
+				},
+				GRPC:            true,
+				ProxySetHeaders: nil,
+			},
 		}
 	}
 
@@ -820,6 +858,7 @@ func TestCreateServers(t *testing.T) {
 			ServerName: "cafe.example.com",
 			Locations:  getExpectedLocations(false),
 			Port:       8080,
+			GRPC:       true,
 		},
 		{
 			IsDefaultSSL: true,
@@ -833,6 +872,7 @@ func TestCreateServers(t *testing.T) {
 			},
 			Locations: getExpectedLocations(true),
 			Port:      8443,
+			GRPC:      true,
 		},
 	}
 
@@ -1068,7 +1108,7 @@ func TestCreateLocationsRootPath(t *testing.T) {
 		},
 	}
 
-	getPathRules := func(rootPath bool) []dataplane.PathRule {
+	getPathRules := func(rootPath bool, grpc bool) []dataplane.PathRule {
 		rules := []dataplane.PathRule{
 			{
 				Path: "/path-1",
@@ -1102,6 +1142,19 @@ func TestCreateLocationsRootPath(t *testing.T) {
 			})
 		}
 
+		if grpc {
+			rules = append(rules, dataplane.PathRule{
+				Path: "/grpc",
+				GRPC: true,
+				MatchRules: []dataplane.MatchRule{
+					{
+						Match:        dataplane.Match{},
+						BackendGroup: fooGroup,
+					},
+				},
+			})
+		}
+
 		return rules
 	}
 
@@ -1109,10 +1162,11 @@ func TestCreateLocationsRootPath(t *testing.T) {
 		name         string
 		pathRules    []dataplane.PathRule
 		expLocations []http.Location
+		grpc         bool
 	}{
 		{
 			name:      "path rules with no root path should generate a default 404 root location",
-			pathRules: getPathRules(false /* rootPath */),
+			pathRules: getPathRules(false /* rootPath */, false /* grpc */),
 			expLocations: []http.Location{
 				{
 					Path:            "/path-1",
@@ -1133,8 +1187,36 @@ func TestCreateLocationsRootPath(t *testing.T) {
 			},
 		},
 		{
+			name:      "path rules with grpc & with no root path should generate a default 404 root location and GRPC true",
+			pathRules: getPathRules(false /* rootPath */, true /* grpc */),
+			grpc:      true,
+			expLocations: []http.Location{
+				{
+					Path:            "/path-1",
+					ProxyPass:       "http://test_foo_80$request_uri",
+					ProxySetHeaders: baseHeaders,
+				},
+				{
+					Path:            "/path-2",
+					ProxyPass:       "http://test_foo_80$request_uri",
+					ProxySetHeaders: baseHeaders,
+				},
+				{
+					Path:      "/grpc",
+					ProxyPass: "grpc://test_foo_80",
+					GRPC:      true,
+				},
+				{
+					Path: "/",
+					Return: &http.Return{
+						Code: http.StatusNotFound,
+					},
+				},
+			},
+		},
+		{
 			name:      "path rules with a root path should not generate a default 404 root path",
-			pathRules: getPathRules(true /* rootPath */),
+			pathRules: getPathRules(true /* rootPath */, false /* grpc */),
 			expLocations: []http.Location{
 				{
 					Path:            "/path-1",
@@ -1171,12 +1253,13 @@ func TestCreateLocationsRootPath(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewWithT(t)
 
-			locs, httpMatchPair := createLocations(&dataplane.VirtualServer{
+			locs, httpMatchPair, grpc := createLocations(&dataplane.VirtualServer{
 				PathRules: test.pathRules,
 				Port:      80,
 			}, 1)
 			g.Expect(locs).To(Equal(test.expLocations))
 			g.Expect(httpMatchPair).To(BeEmpty())
+			g.Expect(grpc).To(Equal(test.grpc))
 		})
 	}
 }
@@ -1692,6 +1775,7 @@ func TestCreateProxyPass(t *testing.T) {
 		rewrite  *dataplane.HTTPURLRewriteFilter
 		expected string
 		grp      dataplane.BackendGroup
+		GRPC     bool
 	}{
 		{
 			expected: "http://10.0.0.1:80$request_uri",
@@ -1738,10 +1822,23 @@ func TestCreateProxyPass(t *testing.T) {
 				},
 			},
 		},
+		{
+			expected: "grpc://10.0.0.1:80",
+			grp: dataplane.BackendGroup{
+				Backends: []dataplane.Backend{
+					{
+						UpstreamName: "10.0.0.1:80",
+						Valid:        true,
+						Weight:       1,
+					},
+				},
+			},
+			GRPC: true,
+		},
 	}
 
 	for _, tc := range tests {
-		result := createProxyPass(tc.grp, tc.rewrite, generateProtocolString(nil))
+		result := createProxyPass(tc.grp, tc.rewrite, generateProtocolString(nil, tc.GRPC), tc.GRPC)
 		g.Expect(result).To(Equal(tc.expected))
 	}
 }
@@ -1762,6 +1859,7 @@ func TestGenerateProxySetHeaders(t *testing.T) {
 		filters         *dataplane.HTTPFilters
 		msg             string
 		expectedHeaders []http.Header
+		GRPC            bool
 	}{
 		{
 			msg: "header filter",
@@ -1851,13 +1949,18 @@ func TestGenerateProxySetHeaders(t *testing.T) {
 				},
 			},
 		},
+		{
+			msg:             "grpc",
+			expectedHeaders: nil,
+			GRPC:            true,
+		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.msg, func(t *testing.T) {
 			g := NewWithT(t)
 
-			headers := generateProxySetHeaders(tc.filters)
+			headers := generateProxySetHeaders(tc.filters, tc.GRPC)
 			g.Expect(headers).To(Equal(tc.expectedHeaders))
 		})
 	}

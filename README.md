@@ -11,7 +11,7 @@
 
 NGINX Gateway Fabric is an open-source project that provides an implementation of
 the [Gateway API](https://gateway-api.sigs.k8s.io/) using [NGINX](https://nginx.org/) as the data plane. The goal of
-this project is to implement the core Gateway APIs -- `Gateway`, `GatewayClass`, `HTTPRoute`, `TCPRoute`, `TLSRoute`,
+this project is to implement the core Gateway APIs -- `Gateway`, `GatewayClass`, `HTTPRoute`, `GRPCRoute`, `TCPRoute`, `TLSRoute`,
 and `UDPRoute` -- to configure an HTTP or TCP/UDP load balancer, reverse-proxy, or API gateway for applications running
 on Kubernetes. NGINX Gateway Fabric supports a subset of the Gateway API.
 
