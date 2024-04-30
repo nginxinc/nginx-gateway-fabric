@@ -14,6 +14,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	apps "k8s.io/api/apps/v1"
+	batchv1 "k8s.io/api/batch/v1"
 	coordination "k8s.io/api/coordination/v1"
 	core "k8s.io/api/core/v1"
 	apiext "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -96,6 +97,7 @@ func setup(cfg setupConfig, extraInstallArgs ...string) {
 	Expect(apiext.AddToScheme(scheme)).To(Succeed())
 	Expect(coordination.AddToScheme(scheme)).To(Succeed())
 	Expect(v1.AddToScheme(scheme)).To(Succeed())
+	Expect(batchv1.AddToScheme(scheme)).To(Succeed())
 
 	options := client.Options{
 		Scheme: scheme,

@@ -311,7 +311,6 @@ func runNodeDebuggerJob(ngfPodName, jobScript string) (*v1.Job, error) {
 	}
 
 	job := &v1.Job{}
-	_ = v1.AddToScheme(resourceManager.K8sClient.Scheme())
 	if err = yaml.Unmarshal(b.Bytes(), job); err != nil {
 		return nil, fmt.Errorf("error with yaml unmarshal: %w", err)
 	}
