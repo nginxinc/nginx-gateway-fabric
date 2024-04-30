@@ -27,6 +27,8 @@ const (
 	ngfContainerName   = "nginx-gateway"
 )
 
+// Since checkContainerLogsForErrors may experience interference from previous tests (as explained in the function
+// documentation), this test is recommended to be run separate from other nfr tests.
 var _ = Describe("Graceful Recovery test", Ordered, Label("nfr", "graceful-recovery"), func() {
 	files := []string{
 		"graceful-recovery/cafe.yaml",
@@ -228,12 +230,15 @@ func expectRequestToFail(appURL, address string, responseBodyMessage string) err
 	return nil
 }
 
+// checkContainerLogsForErrors checks both nginx and ngf container's logs for any possible errors.
+// Since this function retrieves all the logs from both containers and the NGF pod may be shared between tests,
+// the logs retrieved may contain log messages from previous tests, thus any errors in the logs from previous tests
+// may cause an interference with this test and cause this test to fail.
 func checkContainerLogsForErrors(ngfPodName string) {
-	sinceSeconds := int64(15)
 	logs, err := resourceManager.GetPodLogs(
 		ngfNamespace,
 		ngfPodName,
-		&core.PodLogOptions{Container: nginxContainerName, SinceSeconds: &sinceSeconds},
+		&core.PodLogOptions{Container: nginxContainerName},
 	)
 	Expect(err).ToNot(HaveOccurred())
 	Expect(logs).ToNot(ContainSubstring("[error]"), logs)
@@ -244,7 +249,7 @@ func checkContainerLogsForErrors(ngfPodName string) {
 	logs, err = resourceManager.GetPodLogs(
 		ngfNamespace,
 		ngfPodName,
-		&core.PodLogOptions{Container: ngfContainerName, SinceSeconds: &sinceSeconds},
+		&core.PodLogOptions{Container: ngfContainerName},
 	)
 	Expect(err).ToNot(HaveOccurred())
 	Expect(logs).ToNot(ContainSubstring("\"level\":\"error\""), logs)
