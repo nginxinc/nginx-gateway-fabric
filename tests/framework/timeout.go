@@ -17,15 +17,19 @@ type TimeoutConfig struct {
 
 	// RequestTimeout represents the maximum time for making an HTTP Request with the roundtripper.
 	RequestTimeout time.Duration
+
+	// ContainerRestartTimeout represents the maximum time for a Kubernetes Container to restart.
+	ContainerRestartTimeout time.Duration
 }
 
 // DefaultTimeoutConfig populates a TimeoutConfig with the default values.
 func DefaultTimeoutConfig() TimeoutConfig {
 	return TimeoutConfig{
-		CreateTimeout:        60 * time.Second,
-		DeleteTimeout:        10 * time.Second,
-		GetTimeout:           10 * time.Second,
-		ManifestFetchTimeout: 10 * time.Second,
-		RequestTimeout:       10 * time.Second,
+		CreateTimeout:           60 * time.Second,
+		DeleteTimeout:           10 * time.Second,
+		GetTimeout:              10 * time.Second,
+		ManifestFetchTimeout:    10 * time.Second,
+		RequestTimeout:          10 * time.Second,
+		ContainerRestartTimeout: 10 * time.Second,
 	}
 }

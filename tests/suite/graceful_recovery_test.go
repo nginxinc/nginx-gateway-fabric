@@ -130,7 +130,7 @@ func restartContainer(ngfPodName, containerName string) {
 }
 
 func waitForContainerRestart(ngfPodName, containerName string, currentRestartCount int) error {
-	ctx, cancel := context.WithTimeout(context.Background(), timeoutConfig.RequestTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), timeoutConfig.ContainerRestartTimeout)
 	defer cancel()
 
 	//nolint:nilerr
