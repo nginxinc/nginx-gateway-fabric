@@ -83,6 +83,10 @@ func runRecoveryTest(teaURL, coffeeURL, ngfPodName, containerName string, files 
 	)
 
 	if containerName != nginxContainerName {
+		// Since we have already deployed resources and ran resourceManager.WaitForAppsToBeReady(ns.Name) earlier,
+		// we know that the applications are ready at this point. This could only be the case if NGF has written
+		// statuses, which could only be the case if NGF has the leader lease. Since there is only one instance
+		// of NGF in this test, we can be certain that this is the correct leaseholder name.
 		leaseName, err = getLeaderElectionLeaseHolderName()
 		Expect(err).ToNot(HaveOccurred())
 	}
@@ -123,7 +127,9 @@ func restartContainer(ngfPodName, containerName string) {
 
 	Expect(waitForContainerRestart(ngfPodName, containerName, restartCount)).ToNot(HaveOccurred())
 
-	// propagation policy is set to delete underlying pod created through job
+	// default propagation policy is metav1.DeletePropagationOrphan which does not delete the underlying
+	// pod created through the job after the job is deleted. Setting it to metav1.DeletePropagationBackground
+	// deletes the underlying pod after the job is deleted.
 	Expect(resourceManager.Delete(
 		[]client.Object{job},
 		client.PropagationPolicy(metav1.DeletePropagationBackground),
