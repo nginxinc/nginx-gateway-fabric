@@ -23,8 +23,6 @@ import (
 )
 
 const (
-	teaURL             = "https://cafe.example.com/tea"
-	coffeeURL          = "http://cafe.example.com/coffee"
 	nginxContainerName = "nginx"
 	ngfContainerName   = "nginx-gateway"
 )
@@ -43,6 +41,9 @@ var _ = Describe("Graceful Recovery test", Ordered, Label("nfr", "graceful-recov
 		},
 	}
 
+	teaURL := "https://cafe.example.com/tea"
+	coffeeURL := "http://cafe.example.com/coffee"
+
 	var ngfPodName string
 
 	BeforeAll(func() {
@@ -58,7 +59,7 @@ var _ = Describe("Graceful Recovery test", Ordered, Label("nfr", "graceful-recov
 		Expect(resourceManager.ApplyFromFiles(files, ns.Name)).To(Succeed())
 		Expect(resourceManager.WaitForAppsToBeReady(ns.Name)).To(Succeed())
 
-		Expect(waitForWorkingTraffic()).ToNot(HaveOccurred())
+		Expect(waitForWorkingTraffic(teaURL, coffeeURL)).ToNot(HaveOccurred())
 	})
 
 	AfterAll(func() {
@@ -67,15 +68,15 @@ var _ = Describe("Graceful Recovery test", Ordered, Label("nfr", "graceful-recov
 	})
 
 	It("recovers when NGF container is restarted", func() {
-		runRecoveryTest(ngfPodName, ngfContainerName, files, ns)
+		runRecoveryTest(teaURL, coffeeURL, ngfPodName, ngfContainerName, files, ns)
 	})
 
 	It("recovers when nginx container is restarted", func() {
-		runRecoveryTest(ngfPodName, nginxContainerName, files, ns)
+		runRecoveryTest(teaURL, coffeeURL, ngfPodName, nginxContainerName, files, ns)
 	})
 })
 
-func runRecoveryTest(ngfPodName, containerName string, files []string, ns *core.Namespace) {
+func runRecoveryTest(teaURL, coffeeURL, ngfPodName, containerName string, files []string, ns *core.Namespace) {
 	var (
 		err       error
 		leaseName string
@@ -94,16 +95,16 @@ func runRecoveryTest(ngfPodName, containerName string, files []string, ns *core.
 		Expect(waitForLeaderLeaseToChange(leaseName)).ToNot(HaveOccurred())
 	}
 
-	Expect(waitForWorkingTraffic()).ToNot(HaveOccurred())
+	Expect(waitForWorkingTraffic(teaURL, coffeeURL)).ToNot(HaveOccurred())
 
 	Expect(resourceManager.DeleteFromFiles(files, ns.Name)).To(Succeed())
 
-	Expect(waitForFailingTraffic()).ToNot(HaveOccurred())
+	Expect(waitForFailingTraffic(teaURL, coffeeURL)).ToNot(HaveOccurred())
 
 	Expect(resourceManager.ApplyFromFiles(files, ns.Name)).To(Succeed())
 	Expect(resourceManager.WaitForAppsToBeReady(ns.Name)).To(Succeed())
 
-	Expect(waitForWorkingTraffic()).ToNot(HaveOccurred())
+	Expect(waitForWorkingTraffic(teaURL, coffeeURL)).ToNot(HaveOccurred())
 }
 
 func restartContainer(ngfPodName, containerName string) {
@@ -149,7 +150,7 @@ func waitForContainerRestart(ngfPodName, containerName string, currentRestartCou
 	)
 }
 
-func waitForWorkingTraffic() error {
+func waitForWorkingTraffic(teaURL, coffeeURL string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), timeoutConfig.RequestTimeout)
 	defer cancel()
 
@@ -170,7 +171,7 @@ func waitForWorkingTraffic() error {
 	)
 }
 
-func waitForFailingTraffic() error {
+func waitForFailingTraffic(teaURL, coffeeURL string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), timeoutConfig.RequestTimeout)
 	defer cancel()
 
