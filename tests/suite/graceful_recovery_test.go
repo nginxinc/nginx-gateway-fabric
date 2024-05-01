@@ -269,8 +269,8 @@ func checkLeaderLeaseChange(originalLeaseName string) error {
 		return err
 	}
 
-	if originalLeaseName != leaseName {
-		return fmt.Errorf("originalLeaseName: %s, does not match current leaseName: %s", originalLeaseName, leaseName)
+	if originalLeaseName == leaseName {
+		return fmt.Errorf("expected originalLeaseName: %s, to not match current leaseName: %s", originalLeaseName, leaseName)
 	}
 
 	return nil
@@ -286,6 +286,11 @@ func getLeaderElectionLeaseHolderName() (string, error) {
 	if err := k8sClient.Get(ctx, key, &lease); err != nil {
 		return "", errors.New("could not retrieve leader election lease")
 	}
+
+	if *lease.Spec.HolderIdentity == "" {
+		return "", errors.New("leader election lease holder identity is empty")
+	}
+
 	return *lease.Spec.HolderIdentity, nil
 }
 
