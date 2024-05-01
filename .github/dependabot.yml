@@ -6,26 +6,20 @@ updates:
       interval: daily
 
   - package-ecosystem: gomod
-    directory: /
-    schedule:
-      interval: daily
-
-  - package-ecosystem: gomod
-    directory: /tests
+    directories:
+      - /
+      - /tests
     schedule:
       interval: daily
 
   - package-ecosystem: docker
-    directory: /build
+    directories:
+      - /build
+      - /conformance/tests
     schedule:
       interval: daily
 
   - package-ecosystem: npm
     directory: /internal/mode/static/nginx/modules
-    schedule:
-      interval: daily
-
-  - package-ecosystem: docker
-    directory: /conformance/tests
     schedule:
       interval: daily
