@@ -1024,20 +1024,20 @@ func TestValidateFilterRedirect(t *testing.T) {
 
 func TestValidateFilterRewrite(t *testing.T) {
 	tests := []struct {
-		URLRewrite     *gatewayv1.HTTPURLRewriteFilter
+		urlRewrite     *gatewayv1.HTTPURLRewriteFilter
 		validator      *validationfakes.FakeHTTPFieldsValidator
 		name           string
 		expectErrCount int
 	}{
 		{
 			validator:      &validationfakes.FakeHTTPFieldsValidator{},
-			URLRewrite:     nil,
+			urlRewrite:     nil,
 			name:           "nil filter",
 			expectErrCount: 1,
 		},
 		{
 			validator: &validationfakes.FakeHTTPFieldsValidator{},
-			URLRewrite: &gatewayv1.HTTPURLRewriteFilter{
+			urlRewrite: &gatewayv1.HTTPURLRewriteFilter{
 				Hostname: helpers.GetPointer[gatewayv1.PreciseHostname]("example.com"),
 				Path: &gatewayv1.HTTPPathModifier{
 					Type:            gatewayv1.FullPathHTTPPathModifier,
@@ -1049,7 +1049,7 @@ func TestValidateFilterRewrite(t *testing.T) {
 		},
 		{
 			validator:      &validationfakes.FakeHTTPFieldsValidator{},
-			URLRewrite:     &gatewayv1.HTTPURLRewriteFilter{},
+			urlRewrite:     &gatewayv1.HTTPURLRewriteFilter{},
 			expectErrCount: 0,
 			name:           "valid rewrite filter with no fields set",
 		},
@@ -1059,7 +1059,7 @@ func TestValidateFilterRewrite(t *testing.T) {
 				validator.ValidateHostnameReturns(errors.New("invalid hostname"))
 				return validator
 			}(),
-			URLRewrite: &gatewayv1.HTTPURLRewriteFilter{
+			urlRewrite: &gatewayv1.HTTPURLRewriteFilter{
 				Hostname: helpers.GetPointer[gatewayv1.PreciseHostname](
 					"example.com",
 				), // any value is invalid by the validator
@@ -1069,7 +1069,7 @@ func TestValidateFilterRewrite(t *testing.T) {
 		},
 		{
 			validator: &validationfakes.FakeHTTPFieldsValidator{},
-			URLRewrite: &gatewayv1.HTTPURLRewriteFilter{
+			urlRewrite: &gatewayv1.HTTPURLRewriteFilter{
 				Path: &gatewayv1.HTTPPathModifier{
 					Type: "bad-type",
 				},
@@ -1083,7 +1083,7 @@ func TestValidateFilterRewrite(t *testing.T) {
 				validator.ValidateRewritePathReturns(errors.New("invalid path value"))
 				return validator
 			}(),
-			URLRewrite: &gatewayv1.HTTPURLRewriteFilter{
+			urlRewrite: &gatewayv1.HTTPURLRewriteFilter{
 				Path: &gatewayv1.HTTPPathModifier{
 					Type:            gatewayv1.FullPathHTTPPathModifier,
 					ReplaceFullPath: helpers.GetPointer("/path"),
@@ -1098,7 +1098,7 @@ func TestValidateFilterRewrite(t *testing.T) {
 				validator.ValidateRewritePathReturns(errors.New("invalid path"))
 				return validator
 			}(),
-			URLRewrite: &gatewayv1.HTTPURLRewriteFilter{
+			urlRewrite: &gatewayv1.HTTPURLRewriteFilter{
 				Path: &gatewayv1.HTTPPathModifier{
 					Type:               gatewayv1.PrefixMatchHTTPPathModifier,
 					ReplacePrefixMatch: helpers.GetPointer("/path"),
@@ -1114,7 +1114,7 @@ func TestValidateFilterRewrite(t *testing.T) {
 				validator.ValidateRewritePathReturns(errors.New("invalid path"))
 				return validator
 			}(),
-			URLRewrite: &gatewayv1.HTTPURLRewriteFilter{
+			urlRewrite: &gatewayv1.HTTPURLRewriteFilter{
 				Hostname: helpers.GetPointer[gatewayv1.PreciseHostname](
 					"example.com",
 				), // any value is invalid by the validator
@@ -1133,7 +1133,7 @@ func TestValidateFilterRewrite(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewWithT(t)
-			allErrs := validateFilterRewrite(test.validator, test.URLRewrite, filterPath)
+			allErrs := validateFilterRewrite(test.validator, test.urlRewrite, filterPath)
 			g.Expect(allErrs).To(HaveLen(test.expectErrCount))
 		})
 	}
