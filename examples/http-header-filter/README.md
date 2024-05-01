@@ -57,9 +57,12 @@ headers to the request.
 
 ## 4. Test the Application
 
-To access the application, we will use `curl` to send requests to the `headers` Service, including sending headers with
-our request.
+To access the application, we will use `curl` to send requests to the `headers` Service, including sending headers with our request.
 Notice our configured header values can be seen in the `requestHeaders` section below, and that the `User-Agent` header
+is absent.
+
+
+1. We will send the curl request to modify request headers. Notice our configured request header values can be seen in the `requestHeaders` section below, and that the `Accept` header
 is absent.
 
 ```shell
@@ -76,3 +79,10 @@ Headers:
   header 'Connection' is 'close'
   header 'Accept' is '*/*'
 ```
+
+
+1. We will send the curl request to modify response headers. Notice our configured response header values can be seen in the `responseHeaders` section below, and that the `User-Agent` header
+is absent.
+
+
+// TODO

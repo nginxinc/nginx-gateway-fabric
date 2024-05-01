@@ -26,6 +26,18 @@ spec:
           value: this-is-an-appended-value
         remove:
         - User-Agent
+    - type: ResponseHeaderModifier
+      responseHeaderModifier:
+        set:
+        - name: My-Overwrite-Header-Response
+          value: this-is-the-only-value-response
+        add:
+        - name: Accept-Encoding-Response
+          value: compress-response
+        - name: My-cool-header-Response
+          value: this-is-an-appended-value-response
+        remove:
+        - Accept
     backendRefs:
     - name: headers
       port: 80
