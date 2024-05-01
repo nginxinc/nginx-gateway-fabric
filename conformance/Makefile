@@ -11,7 +11,6 @@ KIND_KUBE_CONFIG=$${HOME}/.kube/kind/config
 CONFORMANCE_TAG = latest
 CONFORMANCE_PREFIX = conformance-test-runner
 NGF_MANIFEST=../deploy/manifests/nginx-gateway.yaml
-CRDS=../deploy/manifests/crds/
 STATIC_MANIFEST=provisioner/static-deployment.yaml
 PROVISIONER_MANIFEST=provisioner/provisioner.yaml
 ENABLE_EXPERIMENTAL ?= false
@@ -66,13 +65,13 @@ load-images-with-plus: ## Load NGF and NGINX Plus images on configured kind clus
 .PHONY: prepare-ngf-dependencies
 prepare-ngf-dependencies: update-ngf-manifest ## Install NGF dependencies on configured kind cluster
 	./scripts/install-gateway.sh $(GW_API_VERSION) $(ENABLE_EXPERIMENTAL)
-	kubectl apply -f $(CRDS)
+	kubectl kustomize ../config/crd | kubectl apply -f -
 	kubectl apply -f $(NGF_MANIFEST)
 
 .PHONY: prepare-ngf-dependencies-with-plus
 prepare-ngf-dependencies-with-plus: update-ngf-manifest-with-plus ## Install NGF dependencies with Plus on configured kind cluster
 	./scripts/install-gateway.sh $(GW_API_VERSION)
-	kubectl apply -f $(CRDS)
+	kubectl kustomize ../config/crd | kubectl apply -f -
 	kubectl apply -f $(NGF_MANIFEST)
 
 .PHONY: deploy-updated-provisioner
