@@ -79,6 +79,8 @@ var _ = Describe("Graceful Recovery test", Ordered, Label("nfr", "graceful-recov
 	})
 
 	It("recovers when nginx container is restarted", func() {
+		// FIXME(bjee19) remove Skip() when https://github.com/nginxinc/nginx-gateway-fabric/issues/1108 is completed.
+		Skip("Test currently fails due to this issue: https://github.com/nginxinc/nginx-gateway-fabric/issues/1108")
 		runRecoveryTest(teaURL, coffeeURL, ngfPodName, nginxContainerName, files, ns)
 	})
 })
