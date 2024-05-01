@@ -61,12 +61,12 @@ var _ = Describe("Graceful Recovery test", Ordered, Label("nfr", "graceful-recov
 		Expect(resourceManager.WaitForAppsToBeReady(ns.Name)).To(Succeed())
 
 		Eventually(
-			func() bool {
+			func() error {
 				return checkForWorkingTraffic(teaURL, coffeeURL)
 			}).
 			WithTimeout(timeoutConfig.RequestTimeout).
 			WithPolling(500 * time.Millisecond).
-			Should(BeTrue())
+			Should(Succeed())
 	})
 
 	AfterAll(func() {
@@ -102,46 +102,46 @@ func runRecoveryTest(teaURL, coffeeURL, ngfPodName, containerName string, files 
 
 	restartContainer(ngfPodName, containerName)
 
-	checkContainerLogsForErrors(ngfPodName)
-
 	if containerName != nginxContainerName {
 		Eventually(
-			func() bool {
+			func() error {
 				return checkLeaderLeaseChange(leaseName)
 			}).
 			WithTimeout(timeoutConfig.GetLeaderLeaseTimeout).
 			WithPolling(500 * time.Millisecond).
-			Should(BeTrue())
+			Should(Succeed())
 	}
 
 	Eventually(
-		func() bool {
+		func() error {
 			return checkForWorkingTraffic(teaURL, coffeeURL)
 		}).
 		WithTimeout(timeoutConfig.RequestTimeout).
 		WithPolling(500 * time.Millisecond).
-		Should(BeTrue())
+		Should(Succeed())
 
 	Expect(resourceManager.DeleteFromFiles(files, ns.Name)).To(Succeed())
 
 	Eventually(
-		func() bool {
+		func() error {
 			return checkForFailingTraffic(teaURL, coffeeURL)
 		}).
 		WithTimeout(timeoutConfig.RequestTimeout).
 		WithPolling(500 * time.Millisecond).
-		Should(BeTrue())
+		Should(Succeed())
 
 	Expect(resourceManager.ApplyFromFiles(files, ns.Name)).To(Succeed())
 	Expect(resourceManager.WaitForAppsToBeReady(ns.Name)).To(Succeed())
 
 	Eventually(
-		func() bool {
+		func() error {
 			return checkForWorkingTraffic(teaURL, coffeeURL)
 		}).
 		WithTimeout(timeoutConfig.RequestTimeout).
 		WithPolling(500 * time.Millisecond).
-		Should(BeTrue())
+		Should(Succeed())
+
+	checkContainerLogsForErrors(ngfPodName)
 }
 
 func restartContainer(ngfPodName, containerName string) {
@@ -159,12 +159,12 @@ func restartContainer(ngfPodName, containerName string) {
 	Expect(err).ToNot(HaveOccurred())
 
 	Eventually(
-		func() bool {
+		func() error {
 			return checkContainerRestart(ngfPodName, containerName, restartCount)
 		}).
 		WithTimeout(timeoutConfig.ContainerRestartTimeout).
 		WithPolling(500 * time.Millisecond).
-		Should(BeTrue())
+		Should(Succeed())
 
 	// default propagation policy is metav1.DeletePropagationOrphan which does not delete the underlying
 	// pod created through the job after the job is deleted. Setting it to metav1.DeletePropagationBackground
@@ -172,36 +172,40 @@ func restartContainer(ngfPodName, containerName string) {
 	Expect(resourceManager.Delete(
 		[]client.Object{job},
 		client.PropagationPolicy(metav1.DeletePropagationBackground),
-	)).ToNot(HaveOccurred())
+	)).To(Succeed())
 }
 
-func checkContainerRestart(ngfPodName, containerName string, currentRestartCount int) bool {
+func checkContainerRestart(ngfPodName, containerName string, currentRestartCount int) error {
 	restartCount, err := getContainerRestartCount(ngfPodName, containerName)
 	if err != nil {
-		return false
+		return err
 	}
 
-	return restartCount == currentRestartCount+1
+	if restartCount != currentRestartCount+1 {
+		return fmt.Errorf("expected current restart count: %d to match incremented restart count: %d", restartCount, currentRestartCount+1)
+	}
+
+	return nil
 }
 
-func checkForWorkingTraffic(teaURL, coffeeURL string) bool {
+func checkForWorkingTraffic(teaURL, coffeeURL string) error {
 	if err := expectRequestToSucceed(teaURL, address, "URI: /tea"); err != nil {
-		return false
+		return err
 	}
 	if err := expectRequestToSucceed(coffeeURL, address, "URI: /coffee"); err != nil {
-		return false
+		return err
 	}
-	return true
+	return nil
 }
 
-func checkForFailingTraffic(teaURL, coffeeURL string) bool {
+func checkForFailingTraffic(teaURL, coffeeURL string) error {
 	if err := expectRequestToFail(teaURL, address, "URI: /tea"); err != nil {
-		return false
+		return err
 	}
 	if err := expectRequestToFail(coffeeURL, address, "URI: /coffee"); err != nil {
-		return false
+		return err
 	}
-	return true
+	return nil
 }
 
 func expectRequestToSucceed(appURL, address string, responseBodyMessage string) error {
@@ -259,18 +263,17 @@ func checkContainerLogsForErrors(ngfPodName string) {
 	Expect(logs).ToNot(ContainSubstring("\"level\":\"error\""), logs)
 }
 
-func checkLeaderLeaseChange(originalLeaseName string) bool {
+func checkLeaderLeaseChange(originalLeaseName string) error {
 	leaseName, err := getLeaderElectionLeaseHolderName()
-
 	if err != nil {
-		return false
+		return err
 	}
 
 	if originalLeaseName != leaseName {
-		return true
+		return fmt.Errorf("originalLeaseName: %s, does not match current leaseName: %s", originalLeaseName, leaseName)
 	}
 
-	return false
+	return nil
 }
 
 func getLeaderElectionLeaseHolderName() (string, error) {
