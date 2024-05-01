@@ -20,6 +20,9 @@ type TimeoutConfig struct {
 
 	// ContainerRestartTimeout represents the maximum time for a Kubernetes Container to restart.
 	ContainerRestartTimeout time.Duration
+
+	// GetLeaderLeaseTimeout represents the maximum time for NGF to retrieve the leader lease.
+	GetLeaderLeaseTimeout time.Duration
 }
 
 // DefaultTimeoutConfig populates a TimeoutConfig with the default values.
@@ -31,5 +34,6 @@ func DefaultTimeoutConfig() TimeoutConfig {
 		ManifestFetchTimeout:    10 * time.Second,
 		RequestTimeout:          10 * time.Second,
 		ContainerRestartTimeout: 10 * time.Second,
+		GetLeaderLeaseTimeout:   60 * time.Second,
 	}
 }

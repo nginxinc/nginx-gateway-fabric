@@ -15,7 +15,6 @@ import (
 	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
 
@@ -61,7 +60,13 @@ var _ = Describe("Graceful Recovery test", Ordered, Label("nfr", "graceful-recov
 		Expect(resourceManager.ApplyFromFiles(files, ns.Name)).To(Succeed())
 		Expect(resourceManager.WaitForAppsToBeReady(ns.Name)).To(Succeed())
 
-		Expect(waitForWorkingTraffic(teaURL, coffeeURL)).ToNot(HaveOccurred())
+		Eventually(
+			func() bool {
+				return checkForWorkingTraffic(teaURL, coffeeURL)
+			}).
+			WithTimeout(timeoutConfig.RequestTimeout).
+			WithPolling(500 * time.Millisecond).
+			Should(BeTrue())
 	})
 
 	AfterAll(func() {
@@ -98,19 +103,43 @@ func runRecoveryTest(teaURL, coffeeURL, ngfPodName, containerName string, files 
 	checkContainerLogsForErrors(ngfPodName)
 
 	if containerName != nginxContainerName {
-		Expect(waitForLeaderLeaseToChange(leaseName)).ToNot(HaveOccurred())
+		Eventually(
+			func() bool {
+				return checkLeaderLeaseChange(leaseName)
+			}).
+			WithTimeout(timeoutConfig.GetLeaderLeaseTimeout).
+			WithPolling(500 * time.Millisecond).
+			Should(BeTrue())
 	}
 
-	Expect(waitForWorkingTraffic(teaURL, coffeeURL)).ToNot(HaveOccurred())
+	Eventually(
+		func() bool {
+			return checkForWorkingTraffic(teaURL, coffeeURL)
+		}).
+		WithTimeout(timeoutConfig.RequestTimeout).
+		WithPolling(500 * time.Millisecond).
+		Should(BeTrue())
 
 	Expect(resourceManager.DeleteFromFiles(files, ns.Name)).To(Succeed())
 
-	Expect(waitForFailingTraffic(teaURL, coffeeURL)).ToNot(HaveOccurred())
+	Eventually(
+		func() bool {
+			return checkForFailingTraffic(teaURL, coffeeURL)
+		}).
+		WithTimeout(timeoutConfig.RequestTimeout).
+		WithPolling(500 * time.Millisecond).
+		Should(BeTrue())
 
 	Expect(resourceManager.ApplyFromFiles(files, ns.Name)).To(Succeed())
 	Expect(resourceManager.WaitForAppsToBeReady(ns.Name)).To(Succeed())
 
-	Expect(waitForWorkingTraffic(teaURL, coffeeURL)).ToNot(HaveOccurred())
+	Eventually(
+		func() bool {
+			return checkForWorkingTraffic(teaURL, coffeeURL)
+		}).
+		WithTimeout(timeoutConfig.RequestTimeout).
+		WithPolling(500 * time.Millisecond).
+		Should(BeTrue())
 }
 
 func restartContainer(ngfPodName, containerName string) {
@@ -127,7 +156,13 @@ func restartContainer(ngfPodName, containerName string) {
 	job, err := runNodeDebuggerJob(ngfPodName, jobScript)
 	Expect(err).ToNot(HaveOccurred())
 
-	Expect(waitForContainerRestart(ngfPodName, containerName, restartCount)).ToNot(HaveOccurred())
+	Eventually(
+		func() bool {
+			return checkContainerRestart(ngfPodName, containerName, restartCount)
+		}).
+		WithTimeout(timeoutConfig.ContainerRestartTimeout).
+		WithPolling(500 * time.Millisecond).
+		Should(BeTrue())
 
 	// default propagation policy is metav1.DeletePropagationOrphan which does not delete the underlying
 	// pod created through the job after the job is deleted. Setting it to metav1.DeletePropagationBackground
@@ -138,66 +173,33 @@ func restartContainer(ngfPodName, containerName string) {
 	)).ToNot(HaveOccurred())
 }
 
-func waitForContainerRestart(ngfPodName, containerName string, currentRestartCount int) error {
-	ctx, cancel := context.WithTimeout(context.Background(), timeoutConfig.ContainerRestartTimeout)
-	defer cancel()
+func checkContainerRestart(ngfPodName, containerName string, currentRestartCount int) bool {
+	restartCount, err := getContainerRestartCount(ngfPodName, containerName)
+	if err != nil {
+		return false
+	}
 
-	//nolint:nilerr
-	return wait.PollUntilContextCancel(
-		ctx,
-		500*time.Millisecond,
-		true, /* poll immediately */
-		func(_ context.Context) (bool, error) {
-			restartCount, err := getContainerRestartCount(ngfPodName, containerName)
-			if err != nil {
-				return false, nil
-			}
-
-			return restartCount == currentRestartCount+1, nil
-		},
-	)
+	return restartCount == currentRestartCount+1
 }
 
-func waitForWorkingTraffic(teaURL, coffeeURL string) error {
-	ctx, cancel := context.WithTimeout(context.Background(), timeoutConfig.RequestTimeout)
-	defer cancel()
-
-	//nolint:nilerr
-	return wait.PollUntilContextCancel(
-		ctx,
-		500*time.Millisecond,
-		true, /* poll immediately */
-		func(_ context.Context) (bool, error) {
-			if err := expectRequestToSucceed(teaURL, address, "URI: /tea"); err != nil {
-				return false, nil
-			}
-			if err := expectRequestToSucceed(coffeeURL, address, "URI: /coffee"); err != nil {
-				return false, nil
-			}
-			return true, nil
-		},
-	)
+func checkForWorkingTraffic(teaURL, coffeeURL string) bool {
+	if err := expectRequestToSucceed(teaURL, address, "URI: /tea"); err != nil {
+		return false
+	}
+	if err := expectRequestToSucceed(coffeeURL, address, "URI: /coffee"); err != nil {
+		return false
+	}
+	return true
 }
 
-func waitForFailingTraffic(teaURL, coffeeURL string) error {
-	ctx, cancel := context.WithTimeout(context.Background(), timeoutConfig.RequestTimeout)
-	defer cancel()
-
-	//nolint:nilerr
-	return wait.PollUntilContextCancel(
-		ctx,
-		500*time.Millisecond,
-		true, /* poll immediately */
-		func(_ context.Context) (bool, error) {
-			if err := expectRequestToFail(teaURL, address, "URI: /tea"); err != nil {
-				return false, nil
-			}
-			if err := expectRequestToFail(coffeeURL, address, "URI: /coffee"); err != nil {
-				return false, nil
-			}
-			return true, nil
-		},
-	)
+func checkForFailingTraffic(teaURL, coffeeURL string) bool {
+	if err := expectRequestToFail(teaURL, address, "URI: /tea"); err != nil {
+		return false
+	}
+	if err := expectRequestToFail(coffeeURL, address, "URI: /coffee"); err != nil {
+		return false
+	}
+	return true
 }
 
 func expectRequestToSucceed(appURL, address string, responseBodyMessage string) error {
@@ -255,28 +257,18 @@ func checkContainerLogsForErrors(ngfPodName string) {
 	Expect(logs).ToNot(ContainSubstring("\"level\":\"error\""), logs)
 }
 
-func waitForLeaderLeaseToChange(originalLeaseName string) error {
-	leaseCtx, leaseCancel := context.WithTimeout(context.Background(), 1*time.Minute)
-	defer leaseCancel()
+func checkLeaderLeaseChange(originalLeaseName string) bool {
+	leaseName, err := getLeaderElectionLeaseHolderName()
 
-	//nolint:nilerr
-	return wait.PollUntilContextCancel(
-		leaseCtx,
-		500*time.Millisecond,
-		true, /* poll immediately */
-		func(_ context.Context) (bool, error) {
-			leaseName, err := getLeaderElectionLeaseHolderName()
-			if err != nil {
-				return false, nil
-			}
+	if err != nil {
+		return false
+	}
 
-			if originalLeaseName != leaseName {
-				return true, nil
-			}
+	if originalLeaseName != leaseName {
+		return true
+	}
 
-			return false, nil
-		},
-	)
+	return false
 }
 
 func getLeaderElectionLeaseHolderName() (string, error) {
