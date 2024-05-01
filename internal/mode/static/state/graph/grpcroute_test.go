@@ -351,7 +351,7 @@ func TestBuildGRPCRoute(t *testing.T) {
 							ValidFilters:     true,
 							Matches:          convertGRPCMatches(grValidFilter.Spec.Rules[0].Matches),
 							RouteBackendRefs: []RouteBackendRef{},
-							Filters:          convertGRPCFilters(grValidFilter.Spec.Rules[0].Filters, true),
+							Filters:          convertGRPCFilters(grValidFilter.Spec.Rules[0].Filters),
 						},
 					},
 				},

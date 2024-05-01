@@ -121,11 +121,16 @@ func processGRPCRouteRules(
 
 		validFilters := len(filtersErrs) == 0
 
+		var convertedFilters []v1.HTTPRouteFilter
+		if validFilters {
+			convertedFilters = convertGRPCFilters(rule.Filters)
+		}
+
 		rules[i] = RouteRule{
 			ValidMatches:     len(matchesErrs) == 0,
 			ValidFilters:     validFilters,
 			Matches:          convertGRPCMatches(rule.Matches),
-			Filters:          convertGRPCFilters(rule.Filters, validFilters),
+			Filters:          convertedFilters,
 			RouteBackendRefs: backendRefs,
 		}
 	}
@@ -259,9 +264,10 @@ func validateGRPCFilter(
 	}
 }
 
-func convertGRPCFilters(filters []v1alpha2.GRPCRouteFilter, validFilters bool) []v1.HTTPRouteFilter {
-	// validation has already been done, don't process the filters if they are invalid
-	if !validFilters || len(filters) == 0 {
+// convertGRPCFilters converts GRPCRouteFilters (a subset of HTTPRouteFilter) to HTTPRouteFilters
+// so we can reuse the logic from HTTPRoute filter validation and processing
+func convertGRPCFilters(filters []v1alpha2.GRPCRouteFilter) []v1.HTTPRouteFilter {
+	if len(filters) == 0 {
 		return nil
 	}
 	httpFilters := make([]v1.HTTPRouteFilter, 0, len(filters))

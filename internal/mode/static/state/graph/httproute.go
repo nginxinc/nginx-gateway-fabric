@@ -248,9 +248,9 @@ func validateFilter(
 
 	switch filter.Type {
 	case v1.HTTPRouteFilterRequestRedirect:
-		return validateFilterRedirect(validator, filter, filterPath)
+		return validateFilterRedirect(validator, filter.RequestRedirect, filterPath)
 	case v1.HTTPRouteFilterURLRewrite:
-		return validateFilterRewrite(validator, filter, filterPath)
+		return validateFilterRewrite(validator, filter.URLRewrite, filterPath)
 	case v1.HTTPRouteFilterRequestHeaderModifier:
 		return validateFilterHeaderModifier(validator, filter.RequestHeaderModifier, filterPath.Child(string(filter.Type)))
 	case v1.HTTPRouteFilterResponseHeaderModifier:
@@ -275,12 +275,11 @@ func validateFilter(
 
 func validateFilterRedirect(
 	validator validation.HTTPFieldsValidator,
-	filter v1.HTTPRouteFilter,
+	redirect *v1.HTTPRequestRedirectFilter,
 	filterPath *field.Path,
 ) field.ErrorList {
 	var allErrs field.ErrorList
 
-	redirect := filter.RequestRedirect
 	redirectPath := filterPath.Child("requestRedirect")
 
 	if redirect == nil {
@@ -325,12 +324,11 @@ func validateFilterRedirect(
 
 func validateFilterRewrite(
 	validator validation.HTTPFieldsValidator,
-	filter v1.HTTPRouteFilter,
+	rewrite *v1.HTTPURLRewriteFilter,
 	filterPath *field.Path,
 ) field.ErrorList {
 	var allErrs field.ErrorList
 
-	rewrite := filter.URLRewrite
 	rewritePath := filterPath.Child("urlRewrite")
 
 	if rewrite == nil {
