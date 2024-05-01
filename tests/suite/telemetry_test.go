@@ -1,13 +1,17 @@
 package suite
 
 import (
+	"context"
 	"fmt"
 	"os/exec"
 	"strings"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	core "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	crClient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -135,7 +139,20 @@ func uninstallCollector() ([]byte, error) {
 		"--namespace", collectorNamespace,
 	}
 
-	return exec.Command("helm", args...).CombinedOutput()
+	output, err := exec.Command("helm", args...).CombinedOutput()
+	if err != nil {
+		return output, err
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+
+	err = k8sClient.Delete(ctx, &core.Namespace{ObjectMeta: metav1.ObjectMeta{Name: collectorNamespace}})
+	if err != nil && !apierrors.IsNotFound(err) {
+		return nil, err
+	}
+
+	return nil, resourceManager.DeleteNamespace(collectorNamespace)
 }
 
 func assertConsecutiveLinesInLogs(logs string, expectedLines []string) {

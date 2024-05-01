@@ -35,11 +35,7 @@ var _ = Describe("Upgrade testing", Label("nfr", "upgrade"), func() {
 			"ngf-upgrade/cafe-routes.yaml",
 		}
 
-		ns = &core.Namespace{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "ngf-upgrade",
-			},
-		}
+		ns core.Namespace
 
 		valuesFile  = "manifests/ngf-upgrade/values.yaml"
 		resultsFile *os.File
@@ -60,7 +56,13 @@ var _ = Describe("Upgrade testing", Label("nfr", "upgrade"), func() {
 		}
 		setup(cfg, "--values", valuesFile)
 
-		Expect(resourceManager.Apply([]client.Object{ns})).To(Succeed())
+		ns = core.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "ngf-upgrade",
+			},
+		}
+
+		Expect(resourceManager.Apply([]client.Object{&ns})).To(Succeed())
 		Expect(resourceManager.ApplyFromFiles(files, ns.Name)).To(Succeed())
 		Expect(resourceManager.WaitForAppsToBeReady(ns.Name)).To(Succeed())
 

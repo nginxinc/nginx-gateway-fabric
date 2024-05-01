@@ -80,6 +80,7 @@ var (
 const (
 	releaseName           = "ngf-test"
 	ngfNamespace          = "nginx-gateway"
+	gatewayClassName      = "nginx"
 	ngfHTTPForwardedPort  = 10080
 	ngfHTTPSForwardedPort = 10443
 	ngfControllerName     = "gateway.nginx.org/nginx-gateway-controller"

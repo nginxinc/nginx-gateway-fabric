@@ -1,9 +1,11 @@
 package suite
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"strconv"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -16,18 +18,21 @@ import (
 
 var _ = Describe("Basic test example", Label("functional"), func() {
 	files := []string{
-		"hello/hello.yaml",
-		"hello/gateway.yaml",
-		"hello/route.yaml",
-	}
-	ns := &core.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "hello",
-		},
+		"hello-world/apps.yaml",
+		"hello-world/gateway.yaml",
+		"hello-world/routes.yaml",
 	}
 
+	var ns core.Namespace
+
 	BeforeEach(func() {
-		Expect(resourceManager.Apply([]client.Object{ns})).To(Succeed())
+		ns = core.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "helloworld",
+			},
+		}
+
+		Expect(resourceManager.Apply([]client.Object{&ns})).To(Succeed())
 		Expect(resourceManager.ApplyFromFiles(files, ns.Name)).To(Succeed())
 		Expect(resourceManager.WaitForAppsToBeReady(ns.Name)).To(Succeed())
 	})
@@ -38,11 +43,15 @@ var _ = Describe("Basic test example", Label("functional"), func() {
 	})
 
 	It("sends traffic", func() {
-		url := "http://hello.example.com/hello"
+		url := "http://foo.example.com/hello"
 		if portFwdPort != 0 {
-			url = fmt.Sprintf("http://hello.example.com:%s/hello", strconv.Itoa(portFwdPort))
+			url = fmt.Sprintf("http://foo.example.com:%s/hello", strconv.Itoa(portFwdPort))
 		}
-		status, body, err := framework.Get(url, address, timeoutConfig.RequestTimeout)
+
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+
+		status, body, err := framework.GetWithRetry(ctx, url, address, timeoutConfig.RequestTimeout)
 		Expect(err).ToNot(HaveOccurred())
 		Expect(status).To(Equal(http.StatusOK))
 		Expect(body).To(ContainSubstring("URI: /hello"))

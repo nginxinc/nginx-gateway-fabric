@@ -36,11 +36,7 @@ var _ = Describe("Graceful Recovery test", Ordered, Label("nfr", "graceful-recov
 		"graceful-recovery/cafe-routes.yaml",
 	}
 
-	ns := &core.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "graceful-recovery",
-		},
-	}
+	var ns core.Namespace
 
 	teaURL := "https://cafe.example.com/tea"
 	coffeeURL := "http://cafe.example.com/coffee"
@@ -63,7 +59,13 @@ var _ = Describe("Graceful Recovery test", Ordered, Label("nfr", "graceful-recov
 	})
 
 	BeforeEach(func() {
-		Expect(resourceManager.Apply([]client.Object{ns})).To(Succeed())
+		ns = core.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "graceful-recovery",
+			},
+		}
+
+		Expect(resourceManager.Apply([]client.Object{&ns})).To(Succeed())
 		Expect(resourceManager.ApplyFromFiles(files, ns.Name)).To(Succeed())
 		Expect(resourceManager.WaitForAppsToBeReady(ns.Name)).To(Succeed())
 
@@ -82,13 +84,13 @@ var _ = Describe("Graceful Recovery test", Ordered, Label("nfr", "graceful-recov
 	})
 
 	It("recovers when NGF container is restarted", func() {
-		runRecoveryTest(teaURL, coffeeURL, ngfPodName, ngfContainerName, files, ns)
+		runRecoveryTest(teaURL, coffeeURL, ngfPodName, ngfContainerName, files, &ns)
 	})
 
 	It("recovers when nginx container is restarted", func() {
 		// FIXME(bjee19) remove Skip() when https://github.com/nginxinc/nginx-gateway-fabric/issues/1108 is completed.
 		Skip("Test currently fails due to this issue: https://github.com/nginxinc/nginx-gateway-fabric/issues/1108")
-		runRecoveryTest(teaURL, coffeeURL, ngfPodName, nginxContainerName, files, ns)
+		runRecoveryTest(teaURL, coffeeURL, ngfPodName, nginxContainerName, files, &ns)
 	})
 })
 
@@ -206,10 +208,10 @@ func checkForWorkingTraffic(teaURL, coffeeURL string) error {
 }
 
 func checkForFailingTraffic(teaURL, coffeeURL string) error {
-	if err := expectRequestToFail(teaURL, address, "URI: /tea"); err != nil {
+	if err := expectRequestToFail(teaURL, address); err != nil {
 		return err
 	}
-	if err := expectRequestToFail(coffeeURL, address, "URI: /coffee"); err != nil {
+	if err := expectRequestToFail(coffeeURL, address); err != nil {
 		return err
 	}
 	return nil
@@ -228,7 +230,7 @@ func expectRequestToSucceed(appURL, address string, responseBodyMessage string) 
 	return err
 }
 
-func expectRequestToFail(appURL, address string, responseBodyMessage string) error {
+func expectRequestToFail(appURL, address string) error {
 	status, body, err := framework.Get(appURL, address, timeoutConfig.RequestTimeout)
 	if status != 0 {
 		return errors.New("expected http status to be 0")
