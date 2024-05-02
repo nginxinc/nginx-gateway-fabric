@@ -1,0 +1,71 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: headers
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: headers
+  template:
+    metadata:
+      labels:
+        app: headers
+    spec:
+      containers:
+      - name: headers
+        image: nginx
+        ports:
+        - containerPort: 8080
+        volumeMounts:
+        - name: config-volume
+          mountPath: /etc/nginx
+          readOnly: true
+      volumes:
+      - name: config-volume
+        configMap:
+          name: headers-config
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: headers-config
+# yamllint disable rule:indentation
+data:
+  nginx.conf: |-
+    user  nginx;
+    worker_processes  1;
+
+    pid        /var/run/nginx.pid;
+
+    load_module /usr/lib/nginx/modules/ngx_http_js_module.so;
+
+    events {}
+
+    http {
+        default_type text/plain;
+
+        server {
+            listen 8080;
+            add_header My-cool-header "this-is-the-value" always;
+
+            proxy_hide_header Response-Overwrite-Header;
+            add_header Response-Overwrite-Header "this-is-the-actual-value" always;
+
+            return 200 "ok";
+        }
+    }
+# yamllint enable rule:indentation
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: headers
+spec:
+  ports:
+  - port: 80
+    targetPort: 8080
+    protocol: TCP
+    name: http
+  selector:
+    app: headers

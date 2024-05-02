@@ -1,0 +1,29 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: headers
+spec:
+  parentRefs:
+  - name: gateway
+    sectionName: http
+  hostnames:
+  - "echo.example.com"
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /headers
+    filters:
+    - type: ResponseHeaderModifier
+      responseHeaderModifier:
+        set:
+        - name: Response-Overwrite-Header
+          value: overwritten-value
+        add:
+        - name: My-cool-header
+          value: respond-with-this
+        remove:
+        - Header-to-remove
+    backendRefs:
+    - name: headers
+      port: 80

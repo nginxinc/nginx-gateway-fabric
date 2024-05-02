@@ -22,7 +22,7 @@ headers to the request.
    GW_PORT=<port number>
    ```
 
-## 2. Deploy the Cafe Application
+## 2. Deploy the Headers Application
 
 1. Create the headers Deployment and Service:
 
@@ -55,14 +55,18 @@ headers to the request.
    kubectl apply -f echo-route.yaml
    ```
 
+This HTTPRoute has a few important properties:
+
+- The `parentRefs` references the gateway resource that we created, and specifically defines the `http` listener to attach to, via the `sectionName` field.
+- `echo.example.com` is the hostname that is matched for all requests to the backends defined in this HTTPRoute.
+- The `match` rule defines that all requests with the path prefix `/headers` are sent to the `headers` Service.
+- There is `RequestHeaderModifier` filter defined for the path prefix `/headers`.
+
 ## 4. Test the Application
 
-To access the application, we will use `curl` to send requests to the `headers` Service, including sending headers with our request.
+To access the application, we will use `curl` to send requests to the `headers` Service, including sending headers with
+our request.
 Notice our configured header values can be seen in the `requestHeaders` section below, and that the `User-Agent` header
-is absent.
-
-
-1. We will send the curl request to modify request headers. Notice our configured request header values can be seen in the `requestHeaders` section below, and that the `Accept` header
 is absent.
 
 ```shell
@@ -79,10 +83,3 @@ Headers:
   header 'Connection' is 'close'
   header 'Accept' is '*/*'
 ```
-
-
-1. We will send the curl request to modify response headers. Notice our configured response header values can be seen in the `responseHeaders` section below, and that the `User-Agent` header
-is absent.
-
-
-// TODO
