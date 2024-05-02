@@ -649,19 +649,19 @@ func TestCreateServers(t *testing.T) {
 			{
 				Path:            "@rule0-route0",
 				ProxyPass:       "http://test_foo_80$request_uri",
-				ProxySetHeaders: baseHeaders,
+				ProxySetHeaders: httpBaseHeaders,
 				ResponseHeaders: http.ResponseHeaders{},
 			},
 			{
 				Path:            "@rule0-route1",
 				ProxyPass:       "http://test_foo_80$request_uri",
-				ProxySetHeaders: baseHeaders,
+				ProxySetHeaders: httpBaseHeaders,
 				ResponseHeaders: http.ResponseHeaders{},
 			},
 			{
 				Path:            "@rule0-route2",
 				ProxyPass:       "http://test_foo_80$request_uri",
-				ProxySetHeaders: baseHeaders,
+				ProxySetHeaders: httpBaseHeaders,
 				ResponseHeaders: http.ResponseHeaders{},
 			},
 			{
@@ -671,7 +671,7 @@ func TestCreateServers(t *testing.T) {
 			{
 				Path:            "@rule1-route0",
 				ProxyPass:       "http://$test__route1_rule1$request_uri",
-				ProxySetHeaders: baseHeaders,
+				ProxySetHeaders: httpBaseHeaders,
 				ResponseHeaders: http.ResponseHeaders{},
 			},
 			{
@@ -681,19 +681,19 @@ func TestCreateServers(t *testing.T) {
 			{
 				Path:            "/path-only/",
 				ProxyPass:       "http://invalid-backend-ref$request_uri",
-				ProxySetHeaders: baseHeaders,
+				ProxySetHeaders: httpBaseHeaders,
 				ResponseHeaders: http.ResponseHeaders{},
 			},
 			{
 				Path:            "= /path-only",
 				ProxyPass:       "http://invalid-backend-ref$request_uri",
-				ProxySetHeaders: baseHeaders,
+				ProxySetHeaders: httpBaseHeaders,
 				ResponseHeaders: http.ResponseHeaders{},
 			},
 			{
 				Path:            "/backend-tls-policy/",
 				ProxyPass:       "https://test_btp_80$request_uri",
-				ProxySetHeaders: baseHeaders,
+				ProxySetHeaders: httpBaseHeaders,
 				ProxySSLVerify: &http.ProxySSLVerify{
 					Name:               "test-btp.example.com",
 					TrustedCertificate: "/etc/nginx/secrets/test-btp.crt",
@@ -702,7 +702,7 @@ func TestCreateServers(t *testing.T) {
 			{
 				Path:            "= /backend-tls-policy",
 				ProxyPass:       "https://test_btp_80$request_uri",
-				ProxySetHeaders: baseHeaders,
+				ProxySetHeaders: httpBaseHeaders,
 				ProxySSLVerify: &http.ProxySSLVerify{
 					Name:               "test-btp.example.com",
 					TrustedCertificate: "/etc/nginx/secrets/test-btp.crt",
@@ -809,13 +809,13 @@ func TestCreateServers(t *testing.T) {
 			{
 				Path:            "= /exact",
 				ProxyPass:       "http://test_foo_80$request_uri",
-				ProxySetHeaders: baseHeaders,
+				ProxySetHeaders: httpBaseHeaders,
 				ResponseHeaders: http.ResponseHeaders{},
 			},
 			{
 				Path:            "@rule12-route0",
 				ProxyPass:       "http://test_foo_80$request_uri",
-				ProxySetHeaders: baseHeaders,
+				ProxySetHeaders: httpBaseHeaders,
 				ResponseHeaders: http.ResponseHeaders{},
 			},
 			{
@@ -898,7 +898,7 @@ func TestCreateServers(t *testing.T) {
 				Path:            "= /grpc/method",
 				ProxyPass:       "grpc://test_foo_80",
 				GRPC:            true,
-				ProxySetHeaders: nil,
+				ProxySetHeaders: grpcBaseHeaders,
 			},
 			{
 				Path:      "= /grpc-with-backend-tls-policy/method",
@@ -908,7 +908,7 @@ func TestCreateServers(t *testing.T) {
 					TrustedCertificate: "/etc/nginx/secrets/test-btp.crt",
 				},
 				GRPC:            true,
-				ProxySetHeaders: nil,
+				ProxySetHeaders: grpcBaseHeaders,
 			},
 		}
 	}
@@ -1028,13 +1028,13 @@ func TestCreateServersConflicts(t *testing.T) {
 				{
 					Path:            "/coffee/",
 					ProxyPass:       "http://test_foo_80$request_uri",
-					ProxySetHeaders: baseHeaders,
+					ProxySetHeaders: httpBaseHeaders,
 					ResponseHeaders: http.ResponseHeaders{},
 				},
 				{
 					Path:            "= /coffee",
 					ProxyPass:       "http://test_bar_80$request_uri",
-					ProxySetHeaders: baseHeaders,
+					ProxySetHeaders: httpBaseHeaders,
 					ResponseHeaders: http.ResponseHeaders{},
 				},
 				createDefaultRootLocation(),
@@ -1068,13 +1068,13 @@ func TestCreateServersConflicts(t *testing.T) {
 				{
 					Path:            "= /coffee",
 					ProxyPass:       "http://test_foo_80$request_uri",
-					ProxySetHeaders: baseHeaders,
+					ProxySetHeaders: httpBaseHeaders,
 					ResponseHeaders: http.ResponseHeaders{},
 				},
 				{
 					Path:            "/coffee/",
 					ProxyPass:       "http://test_bar_80$request_uri",
-					ProxySetHeaders: baseHeaders,
+					ProxySetHeaders: httpBaseHeaders,
 					ResponseHeaders: http.ResponseHeaders{},
 				},
 				createDefaultRootLocation(),
@@ -1118,13 +1118,13 @@ func TestCreateServersConflicts(t *testing.T) {
 				{
 					Path:            "/coffee/",
 					ProxyPass:       "http://test_bar_80$request_uri",
-					ProxySetHeaders: baseHeaders,
+					ProxySetHeaders: httpBaseHeaders,
 					ResponseHeaders: http.ResponseHeaders{},
 				},
 				{
 					Path:            "= /coffee",
 					ProxyPass:       "http://test_baz_80$request_uri",
-					ProxySetHeaders: baseHeaders,
+					ProxySetHeaders: httpBaseHeaders,
 					ResponseHeaders: http.ResponseHeaders{},
 				},
 				createDefaultRootLocation(),
@@ -1243,13 +1243,13 @@ func TestCreateLocationsRootPath(t *testing.T) {
 				{
 					Path:            "/path-1",
 					ProxyPass:       "http://test_foo_80$request_uri",
-					ProxySetHeaders: baseHeaders,
+					ProxySetHeaders: httpBaseHeaders,
 					ResponseHeaders: http.ResponseHeaders{},
 				},
 				{
 					Path:            "/path-2",
 					ProxyPass:       "http://test_foo_80$request_uri",
-					ProxySetHeaders: baseHeaders,
+					ProxySetHeaders: httpBaseHeaders,
 					ResponseHeaders: http.ResponseHeaders{},
 				},
 				{
@@ -1268,17 +1268,18 @@ func TestCreateLocationsRootPath(t *testing.T) {
 				{
 					Path:            "/path-1",
 					ProxyPass:       "http://test_foo_80$request_uri",
-					ProxySetHeaders: baseHeaders,
+					ProxySetHeaders: httpBaseHeaders,
 				},
 				{
 					Path:            "/path-2",
 					ProxyPass:       "http://test_foo_80$request_uri",
-					ProxySetHeaders: baseHeaders,
+					ProxySetHeaders: httpBaseHeaders,
 				},
 				{
-					Path:      "/grpc",
-					ProxyPass: "grpc://test_foo_80",
-					GRPC:      true,
+					Path:            "/grpc",
+					ProxyPass:       "grpc://test_foo_80",
+					GRPC:            true,
+					ProxySetHeaders: grpcBaseHeaders,
 				},
 				{
 					Path: "/",
@@ -1295,19 +1296,19 @@ func TestCreateLocationsRootPath(t *testing.T) {
 				{
 					Path:            "/path-1",
 					ProxyPass:       "http://test_foo_80$request_uri",
-					ProxySetHeaders: baseHeaders,
+					ProxySetHeaders: httpBaseHeaders,
 					ResponseHeaders: http.ResponseHeaders{},
 				},
 				{
 					Path:            "/path-2",
 					ProxyPass:       "http://test_foo_80$request_uri",
-					ProxySetHeaders: baseHeaders,
+					ProxySetHeaders: httpBaseHeaders,
 					ResponseHeaders: http.ResponseHeaders{},
 				},
 				{
 					Path:            "/",
 					ProxyPass:       "http://test_foo_80$request_uri",
-					ProxySetHeaders: baseHeaders,
+					ProxySetHeaders: httpBaseHeaders,
 					ResponseHeaders: http.ResponseHeaders{},
 				},
 			},
@@ -2027,9 +2028,51 @@ func TestGenerateProxySetHeaders(t *testing.T) {
 			},
 		},
 		{
-			msg:             "grpc",
-			expectedHeaders: nil,
-			GRPC:            true,
+			msg:  "header filter with gRPC",
+			GRPC: true,
+			filters: &dataplane.HTTPFilters{
+				RequestHeaderModifiers: &dataplane.HTTPHeaderFilter{
+					Add: []dataplane.HTTPHeader{
+						{
+							Name:  "Authorization",
+							Value: "my-auth",
+						},
+					},
+					Set: []dataplane.HTTPHeader{
+						{
+							Name:  "Accept-Encoding",
+							Value: "gzip",
+						},
+					},
+					Remove: []string{"my-header"},
+				},
+			},
+			expectedHeaders: []http.Header{
+				{
+					Name:  "Authorization",
+					Value: "${authorization_header_var}my-auth",
+				},
+				{
+					Name:  "Accept-Encoding",
+					Value: "gzip",
+				},
+				{
+					Name:  "my-header",
+					Value: "",
+				},
+				{
+					Name:  "Host",
+					Value: "$gw_api_compliant_host",
+				},
+				{
+					Name:  "X-Forwarded-For",
+					Value: "$proxy_add_x_forwarded_for",
+				},
+				{
+					Name:  "Authority",
+					Value: "$gw_api_compliant_host",
+				},
+			},
 		},
 	}
 

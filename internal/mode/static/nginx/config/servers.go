@@ -30,15 +30,25 @@ var baseHeaders = []http.Header{
 		Name:  "X-Forwarded-For",
 		Value: "$proxy_add_x_forwarded_for",
 	},
-	{
+}
+
+// httpBaseHeaders contains the constant headers set in each HTTP server block
+var httpBaseHeaders = append(baseHeaders,
+	http.Header{
 		Name:  "Upgrade",
 		Value: "$http_upgrade",
 	},
-	{
+	http.Header{
 		Name:  "Connection",
 		Value: "$connection_upgrade",
-	},
-}
+	})
+
+// grpcBaseHeaders contains the constant headers set in each gRPC server block
+var grpcBaseHeaders = append(baseHeaders,
+	http.Header{
+		Name:  "Authority",
+		Value: "$gw_api_compliant_host",
+	})
 
 func executeServers(conf dataplane.Configuration) []executeResult {
 	servers, httpMatchPairs := createServers(conf.HTTPServers, conf.SSLServers)
@@ -558,8 +568,11 @@ func createMatchLocation(path string) http.Location {
 func generateProxySetHeaders(filters *dataplane.HTTPFilters, grpc bool) []http.Header {
 	var headers []http.Header
 	if !grpc {
-		headers = make([]http.Header, len(baseHeaders))
-		copy(headers, baseHeaders)
+		headers = make([]http.Header, len(httpBaseHeaders))
+		copy(headers, httpBaseHeaders)
+	} else {
+		headers = make([]http.Header, len(grpcBaseHeaders))
+		copy(headers, grpcBaseHeaders)
 	}
 
 	if filters != nil && filters.RequestURLRewrite != nil && filters.RequestURLRewrite.Hostname != nil {
