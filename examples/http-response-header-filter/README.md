@@ -70,7 +70,7 @@ To access the application, we will use `curl` to send requests to the `headers` 
 Notice our configured header values can be seen in the `responseHeaders` section below, and that the `Header-to-remove` header is absent. The header `My-cool-header` gets the appended with value `respond-with-this` from the `responseHeaderModifier` filter and the value of header `Response-Overwrite-Header` gets overwritten as defined in the *HttpRoute*.
 
 ```shell
-curl -s -i --resolve echo.example.com:$GW_PORT:$GW_IP http://echo.example.com:$GW_PORT/headers -H "Header-to-remove:remove-this-header"
+curl -s -i --resolve echo.example.com:$GW_PORT:$GW_IP http://echo.example.com:$GW_PORT/headers
 ```
 
 ```text
