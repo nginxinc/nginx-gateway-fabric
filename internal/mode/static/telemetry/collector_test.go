@@ -279,9 +279,10 @@ var _ = Describe("Collector", Ordered, func() {
 						{Name: "ignoredGw2"}: {},
 					},
 					Routes: map[graph.RouteKey]*graph.L7Route{
-						{NamespacedName: types.NamespacedName{Namespace: "test", Name: "hr-1"}, RouteType: graph.RouteTypeHTTP}: {},
-						{NamespacedName: types.NamespacedName{Namespace: "test", Name: "hr-2"}, RouteType: graph.RouteTypeHTTP}: {},
-						{NamespacedName: types.NamespacedName{Namespace: "test", Name: "hr-3"}, RouteType: graph.RouteTypeHTTP}: {},
+						{NamespacedName: types.NamespacedName{Namespace: "test", Name: "hr-1"}}: {RouteType: graph.RouteTypeHTTP},
+						{NamespacedName: types.NamespacedName{Namespace: "test", Name: "hr-2"}}: {RouteType: graph.RouteTypeHTTP},
+						{NamespacedName: types.NamespacedName{Namespace: "test", Name: "hr-3"}}: {RouteType: graph.RouteTypeHTTP},
+						{NamespacedName: types.NamespacedName{Namespace: "test", Name: "gr-1"}}: {RouteType: graph.RouteTypeGRPC},
 					},
 					ReferencedSecrets: map[types.NamespacedName]*graph.Secret{
 						client.ObjectKeyFromObject(secret1): {
@@ -476,7 +477,7 @@ var _ = Describe("Collector", Ordered, func() {
 				GatewayClass: &graph.GatewayClass{},
 				Gateway:      &graph.Gateway{},
 				Routes: map[graph.RouteKey]*graph.L7Route{
-					{NamespacedName: types.NamespacedName{Namespace: "test", Name: "hr-1"}, RouteType: graph.RouteTypeHTTP}: {},
+					{NamespacedName: types.NamespacedName{Namespace: "test", Name: "hr-1"}}: {RouteType: graph.RouteTypeHTTP},
 				},
 				ReferencedSecrets: map[types.NamespacedName]*graph.Secret{
 					client.ObjectKeyFromObject(secret): {
