@@ -7,7 +7,7 @@ spec:
   - name: gateway
     sectionName: http
   hostnames:
-  - "echo.example.com"
+  - "cafe.example.com"
   rules:
   - matches:
     - path:
@@ -21,9 +21,9 @@ spec:
           value: overwritten-value
         add:
         - name: My-cool-header
-          value: respond-with-this
+          value: this-is-the-value
         remove:
-        - Header-to-remove
+        - X-Server-Version
     backendRefs:
     - name: headers
       port: 80

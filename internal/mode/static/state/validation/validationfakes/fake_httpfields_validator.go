@@ -8,15 +8,15 @@ import (
 )
 
 type FakeHTTPFieldsValidator struct {
-	ValidateFilterHeaderNameStub        func(string) error
-	validateFilterHeaderNameMutex       sync.RWMutex
-	validateFilterHeaderNameArgsForCall []struct {
+	HTTPHeaderValidatorStub        func(string) error
+	hTTPHeaderValidatorMutex       sync.RWMutex
+	hTTPHeaderValidatorArgsForCall []struct {
 		arg1 string
 	}
-	validateFilterHeaderNameReturns struct {
+	hTTPHeaderValidatorReturns struct {
 		result1 error
 	}
-	validateFilterHeaderNameReturnsOnCall map[int]struct {
+	hTTPHeaderValidatorReturnsOnCall map[int]struct {
 		result1 error
 	}
 	ValidateFilterHeaderValueStub        func(string) error
@@ -161,16 +161,16 @@ type FakeHTTPFieldsValidator struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeHTTPFieldsValidator) ValidateFilterHeaderName(arg1 string) error {
-	fake.validateFilterHeaderNameMutex.Lock()
-	ret, specificReturn := fake.validateFilterHeaderNameReturnsOnCall[len(fake.validateFilterHeaderNameArgsForCall)]
-	fake.validateFilterHeaderNameArgsForCall = append(fake.validateFilterHeaderNameArgsForCall, struct {
+func (fake *FakeHTTPFieldsValidator) HTTPHeaderValidator(arg1 string) error {
+	fake.hTTPHeaderValidatorMutex.Lock()
+	ret, specificReturn := fake.hTTPHeaderValidatorReturnsOnCall[len(fake.hTTPHeaderValidatorArgsForCall)]
+	fake.hTTPHeaderValidatorArgsForCall = append(fake.hTTPHeaderValidatorArgsForCall, struct {
 		arg1 string
 	}{arg1})
-	stub := fake.ValidateFilterHeaderNameStub
-	fakeReturns := fake.validateFilterHeaderNameReturns
-	fake.recordInvocation("ValidateFilterHeaderName", []interface{}{arg1})
-	fake.validateFilterHeaderNameMutex.Unlock()
+	stub := fake.HTTPHeaderValidatorStub
+	fakeReturns := fake.hTTPHeaderValidatorReturns
+	fake.recordInvocation("HTTPHeaderValidator", []interface{}{arg1})
+	fake.hTTPHeaderValidatorMutex.Unlock()
 	if stub != nil {
 		return stub(arg1)
 	}
@@ -180,44 +180,44 @@ func (fake *FakeHTTPFieldsValidator) ValidateFilterHeaderName(arg1 string) error
 	return fakeReturns.result1
 }
 
-func (fake *FakeHTTPFieldsValidator) ValidateFilterHeaderNameCallCount() int {
-	fake.validateFilterHeaderNameMutex.RLock()
-	defer fake.validateFilterHeaderNameMutex.RUnlock()
-	return len(fake.validateFilterHeaderNameArgsForCall)
+func (fake *FakeHTTPFieldsValidator) HTTPHeaderValidatorCallCount() int {
+	fake.hTTPHeaderValidatorMutex.RLock()
+	defer fake.hTTPHeaderValidatorMutex.RUnlock()
+	return len(fake.hTTPHeaderValidatorArgsForCall)
 }
 
-func (fake *FakeHTTPFieldsValidator) ValidateFilterHeaderNameCalls(stub func(string) error) {
-	fake.validateFilterHeaderNameMutex.Lock()
-	defer fake.validateFilterHeaderNameMutex.Unlock()
-	fake.ValidateFilterHeaderNameStub = stub
+func (fake *FakeHTTPFieldsValidator) HTTPHeaderValidatorCalls(stub func(string) error) {
+	fake.hTTPHeaderValidatorMutex.Lock()
+	defer fake.hTTPHeaderValidatorMutex.Unlock()
+	fake.HTTPHeaderValidatorStub = stub
 }
 
-func (fake *FakeHTTPFieldsValidator) ValidateFilterHeaderNameArgsForCall(i int) string {
-	fake.validateFilterHeaderNameMutex.RLock()
-	defer fake.validateFilterHeaderNameMutex.RUnlock()
-	argsForCall := fake.validateFilterHeaderNameArgsForCall[i]
+func (fake *FakeHTTPFieldsValidator) HTTPHeaderValidatorArgsForCall(i int) string {
+	fake.hTTPHeaderValidatorMutex.RLock()
+	defer fake.hTTPHeaderValidatorMutex.RUnlock()
+	argsForCall := fake.hTTPHeaderValidatorArgsForCall[i]
 	return argsForCall.arg1
 }
 
-func (fake *FakeHTTPFieldsValidator) ValidateFilterHeaderNameReturns(result1 error) {
-	fake.validateFilterHeaderNameMutex.Lock()
-	defer fake.validateFilterHeaderNameMutex.Unlock()
-	fake.ValidateFilterHeaderNameStub = nil
-	fake.validateFilterHeaderNameReturns = struct {
+func (fake *FakeHTTPFieldsValidator) HTTPHeaderValidatorReturns(result1 error) {
+	fake.hTTPHeaderValidatorMutex.Lock()
+	defer fake.hTTPHeaderValidatorMutex.Unlock()
+	fake.HTTPHeaderValidatorStub = nil
+	fake.hTTPHeaderValidatorReturns = struct {
 		result1 error
 	}{result1}
 }
 
-func (fake *FakeHTTPFieldsValidator) ValidateFilterHeaderNameReturnsOnCall(i int, result1 error) {
-	fake.validateFilterHeaderNameMutex.Lock()
-	defer fake.validateFilterHeaderNameMutex.Unlock()
-	fake.ValidateFilterHeaderNameStub = nil
-	if fake.validateFilterHeaderNameReturnsOnCall == nil {
-		fake.validateFilterHeaderNameReturnsOnCall = make(map[int]struct {
+func (fake *FakeHTTPFieldsValidator) HTTPHeaderValidatorReturnsOnCall(i int, result1 error) {
+	fake.hTTPHeaderValidatorMutex.Lock()
+	defer fake.hTTPHeaderValidatorMutex.Unlock()
+	fake.HTTPHeaderValidatorStub = nil
+	if fake.hTTPHeaderValidatorReturnsOnCall == nil {
+		fake.hTTPHeaderValidatorReturnsOnCall = make(map[int]struct {
 			result1 error
 		})
 	}
-	fake.validateFilterHeaderNameReturnsOnCall[i] = struct {
+	fake.hTTPHeaderValidatorReturnsOnCall[i] = struct {
 		result1 error
 	}{result1}
 }
@@ -966,8 +966,8 @@ func (fake *FakeHTTPFieldsValidator) ValidateRewritePathReturnsOnCall(i int, res
 func (fake *FakeHTTPFieldsValidator) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.validateFilterHeaderNameMutex.RLock()
-	defer fake.validateFilterHeaderNameMutex.RUnlock()
+	fake.hTTPHeaderValidatorMutex.RLock()
+	defer fake.hTTPHeaderValidatorMutex.RUnlock()
 	fake.validateFilterHeaderValueMutex.RLock()
 	defer fake.validateFilterHeaderValueMutex.RUnlock()
 	fake.validateHeaderNameInMatchMutex.RLock()

@@ -72,7 +72,7 @@ func (HTTPURLRewriteValidator) ValidateRewritePath(path string) error {
 	return nil
 }
 
-func (HTTPRequestHeaderValidator) ValidateFilterHeaderName(name string) error {
+func (HTTPRequestHeaderValidator) HTTPHeaderValidator(name string) error {
 	return validateHeaderName(name)
 }
 

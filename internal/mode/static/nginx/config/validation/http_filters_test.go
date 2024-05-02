@@ -88,17 +88,17 @@ func TestValidateRewritePath(t *testing.T) {
 	)
 }
 
-func TestValidateFilterHeaderName(t *testing.T) {
+func TestHTTPHeaderValidator(t *testing.T) {
 	validator := HTTPRequestHeaderValidator{}
 
 	testValidValuesForSimpleValidator(
 		t,
-		validator.ValidateFilterHeaderName,
+		validator.HTTPHeaderValidator,
 		"Content-Encoding",
 		"MyBespokeHeader",
 	)
 
-	testInvalidValuesForSimpleValidator(t, validator.ValidateFilterHeaderName, "$Content-Encoding")
+	testInvalidValuesForSimpleValidator(t, validator.HTTPHeaderValidator, "$Content-Encoding")
 }
 
 func TestValidateFilterHeaderValue(t *testing.T) {

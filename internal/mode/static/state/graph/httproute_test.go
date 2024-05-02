@@ -1223,7 +1223,7 @@ func TestValidateFilterRequestHeaderModifier(t *testing.T) {
 		{
 			validator: func() *validationfakes.FakeHTTPFieldsValidator {
 				v := createAllValidValidator()
-				v.ValidateFilterHeaderNameReturns(errors.New("Invalid header"))
+				v.HTTPHeaderValidatorReturns(errors.New("Invalid header"))
 				return v
 			}(),
 			filter: gatewayv1.HTTPRouteFilter{
@@ -1240,7 +1240,7 @@ func TestValidateFilterRequestHeaderModifier(t *testing.T) {
 		{
 			validator: func() *validationfakes.FakeHTTPFieldsValidator {
 				v := createAllValidValidator()
-				v.ValidateFilterHeaderNameReturns(errors.New("Invalid header"))
+				v.HTTPHeaderValidatorReturns(errors.New("Invalid header"))
 				return v
 			}(),
 			filter: gatewayv1.HTTPRouteFilter{
@@ -1273,7 +1273,7 @@ func TestValidateFilterRequestHeaderModifier(t *testing.T) {
 			validator: func() *validationfakes.FakeHTTPFieldsValidator {
 				v := createAllValidValidator()
 				v.ValidateFilterHeaderValueReturns(errors.New("Invalid header value"))
-				v.ValidateFilterHeaderNameReturns(errors.New("Invalid header"))
+				v.HTTPHeaderValidatorReturns(errors.New("Invalid header"))
 				return v
 			}(),
 			filter: gatewayv1.HTTPRouteFilter{
@@ -1367,7 +1367,7 @@ func TestValidateFilterResponseHeaderModifier(t *testing.T) {
 		{
 			validator: func() *validationfakes.FakeHTTPFieldsValidator {
 				v := createAllValidValidator()
-				v.ValidateFilterHeaderNameReturns(errors.New("Invalid header"))
+				v.HTTPHeaderValidatorReturns(errors.New("Invalid header"))
 				return v
 			}(),
 			filter: gatewayv1.HTTPRouteFilter{
@@ -1384,7 +1384,7 @@ func TestValidateFilterResponseHeaderModifier(t *testing.T) {
 		{
 			validator: func() *validationfakes.FakeHTTPFieldsValidator {
 				v := createAllValidValidator()
-				v.ValidateFilterHeaderNameReturns(errors.New("Invalid header"))
+				v.HTTPHeaderValidatorReturns(errors.New("Invalid header"))
 				return v
 			}(),
 			filter: gatewayv1.HTTPRouteFilter{
@@ -1417,7 +1417,7 @@ func TestValidateFilterResponseHeaderModifier(t *testing.T) {
 			validator: func() *validationfakes.FakeHTTPFieldsValidator {
 				v := createAllValidValidator()
 				v.ValidateFilterHeaderValueReturns(errors.New("Invalid header value"))
-				v.ValidateFilterHeaderNameReturns(errors.New("Invalid header"))
+				v.HTTPHeaderValidatorReturns(errors.New("Invalid header"))
 				return v
 			}(),
 			filter: gatewayv1.HTTPRouteFilter{

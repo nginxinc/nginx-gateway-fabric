@@ -38,8 +38,6 @@ data:
 
     pid        /var/run/nginx.pid;
 
-    load_module /usr/lib/nginx/modules/ngx_http_js_module.so;
-
     events {}
 
     http {
@@ -47,10 +45,14 @@ data:
 
         server {
             listen 8080;
-            add_header My-cool-header "this-is-the-value" always;
 
-            proxy_hide_header Response-Overwrite-Header;
-            add_header Response-Overwrite-Header "this-is-the-actual-value" always;
+            add_header X-Custom-Header "this-stays-unchanged" always;
+
+            add_header My-cool-header "this-is-the-appended-value" always;
+
+            add_header Response-Overwrite-Header "this-value-to-be-returned" always;
+
+            add_header X-Server-Version "1.2.3" always;
 
             return 200 "ok";
         }

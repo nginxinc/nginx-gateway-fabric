@@ -1,7 +1,7 @@
 # Example
 
-In this example we will deploy NGINX Gateway Fabric and configure traffic routing for a simple echo server.
-We will use HTTPRoute resources to route traffic to the echo server, using the `ResponseHeaderModifier` filter to modify
+In this example we will deploy NGINX Gateway Fabric and configure traffic routing.
+We will use HTTPRoute resources to route traffic to the server, using the `ResponseHeaderModifier` filter to modify
 the response headers.
 
 ## Running the Example
@@ -52,25 +52,25 @@ the response headers.
 1. Create the HTTPRoute resources:
 
    ```shell
-   kubectl apply -f echo-route.yaml
+   kubectl apply -f http-route.yaml
    ```
 
 This HTTPRoute has a few important properties:
 
 - The `parentRefs` references the gateway resource that we created, and specifically defines the `http` listener to attach to, via the `sectionName` field.
-- `echo.example.com` is the hostname that is matched for all requests to the backends defined in this HTTPRoute.
+- `cafe.example.com` is the hostname that is matched for all requests to the backends defined in this HTTPRoute.
 - The `match` rule defines that all requests with the path prefix `/headers` are sent to the `headers` Service.
 - There is `ResponseHeaderModifier` filter defined for the path prefix `/headers` to set header `Response-Overwrite-Header` and add header `My-cool-header`.
 
 ## 4. Test the Application
 
-To access the application, we will use `curl` to send requests to the `headers` endpoint. 
+To access the application, we will use `curl` to send requests to the `headers` endpoint.
 
 
 Notice our configured header values can be seen in the `responseHeaders` section below, and that the `Header-to-remove` header is absent. The header `My-cool-header` gets the appended with value `respond-with-this` from the `responseHeaderModifier` filter and the value of header `Response-Overwrite-Header` gets overwritten as defined in the *HttpRoute*.
 
 ```shell
-curl -s -i --resolve echo.example.com:$GW_PORT:$GW_IP http://echo.example.com:$GW_PORT/headers
+curl -s -i --resolve cafe.example.com:$GW_PORT:$GW_IP http://echo.example.com:$GW_PORT/headers
 ```
 
 ```text

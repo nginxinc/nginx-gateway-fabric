@@ -485,23 +485,11 @@ func TestCreateServers(t *testing.T) {
 								},
 							},
 						},
-					},
-				},
-			},
-		},
-		{
-			Path:     "/add-headers",
-			PathType: dataplane.PathTypePrefix,
-			MatchRules: []dataplane.MatchRule{
-				{
-					Match:        dataplane.Match{},
-					BackendGroup: fooGroup,
-					Filters: dataplane.HTTPFilters{
 						ResponseHeaderModifiers: &dataplane.HTTPHeaderFilter{
 							Add: []dataplane.HTTPHeader{
 								{
-									Name:  "my-response-header",
-									Value: "some-value-response",
+									Name:  "my-header-response",
+									Value: "some-value-response-123",
 								},
 							},
 						},
@@ -832,7 +820,16 @@ func TestCreateServers(t *testing.T) {
 						Value: "$connection_upgrade",
 					},
 				},
-				ResponseHeaders: http.ResponseHeaders{},
+				ResponseHeaders: http.ResponseHeaders{
+					Add: []http.Header{
+						{
+							Name:  "my-header-response",
+							Value: "some-value-response-123",
+						},
+					},
+					Set:    []http.Header{},
+					Remove: []string{},
+				},
 			},
 			{
 				Path:      "= /proxy-set-headers",
@@ -859,37 +856,12 @@ func TestCreateServers(t *testing.T) {
 						Value: "$connection_upgrade",
 					},
 				},
-				ResponseHeaders: http.ResponseHeaders{},
-			},
-			{
-				Path:      "/add-headers/",
-				ProxyPass: "http://test_foo_80$request_uri",
-				ProxySetHeaders: []http.Header{
-					{Name: "Host", Value: "$gw_api_compliant_host"},
-					{Name: "X-Forwarded-For", Value: "$proxy_add_x_forwarded_for"},
-					{Name: "Upgrade", Value: "$http_upgrade"},
-					{Name: "Connection", Value: "$connection_upgrade"},
-				},
 				ResponseHeaders: http.ResponseHeaders{
 					Add: []http.Header{
-						{Name: "my-response-header", Value: "some-value-response"},
-					},
-					Set:    []http.Header{},
-					Remove: []string{},
-				},
-			},
-			{
-				Path:      "= /add-headers",
-				ProxyPass: "http://test_foo_80$request_uri",
-				ProxySetHeaders: []http.Header{
-					{Name: "Host", Value: "$gw_api_compliant_host"},
-					{Name: "X-Forwarded-For", Value: "$proxy_add_x_forwarded_for"},
-					{Name: "Upgrade", Value: "$http_upgrade"},
-					{Name: "Connection", Value: "$connection_upgrade"},
-				},
-				ResponseHeaders: http.ResponseHeaders{
-					Add: []http.Header{
-						{Name: "my-response-header", Value: "some-value-response"},
+						{
+							Name:  "my-header-response",
+							Value: "some-value-response-123",
+						},
 					},
 					Set:    []http.Header{},
 					Remove: []string{},
@@ -2166,7 +2138,7 @@ func TestGenerateResponseHeaders(t *testing.T) {
 							Value: "my-new-overwritten-value",
 						},
 					},
-					Remove: []string{"Authorization"},
+					Remove: []string{"Transfer-Encoding"},
 				},
 			},
 			expectedHeaders: http.ResponseHeaders{
@@ -2186,7 +2158,7 @@ func TestGenerateResponseHeaders(t *testing.T) {
 						Value: "my-new-overwritten-value",
 					},
 				},
-				Remove: []string{"Authorization"},
+				Remove: []string{"Transfer-Encoding"},
 			},
 		},
 	}
