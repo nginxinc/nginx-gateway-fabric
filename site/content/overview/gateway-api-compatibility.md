@@ -155,7 +155,7 @@ See the [static-mode]({{< relref "/reference/cli-help.md#static-mode">}}) comman
       - `method`: Supported.
     - `filters`
       - `type`: Supported.
-      - `requestRedirect`: Supported except for the experimental `path` field. If multiple filters are configured, NGINX Gateway Fabric will choose the first and ignore the rest.
+      - `requestRedirect`: Supported except for the experimental `path` field. If multiple filters are configured, NGINX Gateway Fabric will choose the first and ignore the rest. Incompatible with `urlRewrite`.
       - `requestHeaderModifier`: Supported. If multiple filters are configured, NGINX Gateway Fabric will choose the first and ignore the rest. Incompatible with `urlRewrite`.
       - `urlRewrite`: Supported. If multiple filters are configured, NGINX Gateway Fabric will choose the first and ignore the rest. Incompatible with `requestHeaderModifier`.
       - `responseHeaderModifier`: Supported.
