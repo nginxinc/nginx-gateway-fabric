@@ -70,6 +70,9 @@ func TestGenerate(t *testing.T) {
 			BatchSize:   512,
 			BatchCount:  4,
 		},
+		BaseHTTPConfig: dataplane.BaseHTTPConfig{
+			HTTP2: true,
+		},
 	}
 	g := NewWithT(t)
 
@@ -104,6 +107,7 @@ func TestGenerate(t *testing.T) {
 	g.Expect(httpCfg).To(ContainSubstring("batch_size 512;"))
 	g.Expect(httpCfg).To(ContainSubstring("batch_count 4;"))
 	g.Expect(httpCfg).To(ContainSubstring("otel_service_name ngf:gw-ns:gw-name:my-name;"))
+	g.Expect(httpCfg).To(ContainSubstring("http2 on;"))
 
 	g.Expect(files[2].Path).To(Equal("/etc/nginx/conf.d/matches.json"))
 

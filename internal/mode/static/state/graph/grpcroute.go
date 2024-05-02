@@ -15,6 +15,7 @@ func buildGRPCRoute(
 	validator validation.HTTPFieldsValidator,
 	ghr *v1alpha2.GRPCRoute,
 	gatewayNsNames []types.NamespacedName,
+	http2disabled bool,
 ) *L7Route {
 	r := &L7Route{
 		Source:    ghr,
@@ -32,6 +33,14 @@ func buildGRPCRoute(
 		return nil
 	}
 	r.ParentRefs = sectionNameRefs
+
+	if http2disabled {
+		r.Valid = false
+		msg := "HTTP2 is disabled - cannot configure GRPCRoutes"
+		r.Conditions = append(r.Conditions, staticConds.NewRouteUnsupportedConfiguration(msg))
+
+		return r
+	}
 
 	if err := validateHostnames(
 		ghr.Spec.Hostnames,

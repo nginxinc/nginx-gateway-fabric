@@ -72,6 +72,8 @@ nginx:
 
   ## The configuration for the data plane that is contained in the NginxProxy resource.
   config: {}
+    # baseHTTPConfig:
+    #   disableHTTP2: false
     # telemetry:
     #   exporter:
     #     endpoint: otel-collector.default.svc:4317

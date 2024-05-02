@@ -149,6 +149,7 @@ func BuildGraph(
 		state.HTTPRoutes,
 		state.GRPCRoutes,
 		processedGws.GetAllNsNames(),
+		npCfg,
 	)
 	bindRoutesToListeners(routes, gw, state.Namespaces)
 	addBackendRefsToRouteRules(routes, refGrantResolver, state.Services, processedBackendTLSPolicies)

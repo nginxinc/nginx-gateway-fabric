@@ -147,6 +147,7 @@ func (g GeneratorImpl) generateHTTPConfig(conf dataplane.Configuration) []file.F
 
 func (g GeneratorImpl) getExecuteFuncs() []executeFunc {
 	return []executeFunc{
+		executeBaseHTTPConfig,
 		executeServers,
 		g.executeUpstreams,
 		executeSplitClients,
