@@ -252,6 +252,15 @@ func TestBuildGRPCRoute(t *testing.T) {
 		[]v1alpha2.GRPCRouteRule{grValidFilterRule},
 	)
 
+	convertedFilters := []v1.HTTPRouteFilter{
+		{
+			Type: v1.HTTPRouteFilterRequestHeaderModifier,
+			RequestHeaderModifier: &v1.HTTPHeaderFilter{
+				Remove: []string{"header"},
+			},
+		},
+	}
+
 	createAllValidValidator := func() *validationfakes.FakeHTTPFieldsValidator {
 		v := &validationfakes.FakeHTTPFieldsValidator{}
 		v.ValidateMethodInMatchReturns(true, nil)
@@ -351,7 +360,7 @@ func TestBuildGRPCRoute(t *testing.T) {
 							ValidFilters:     true,
 							Matches:          convertGRPCMatches(grValidFilter.Spec.Rules[0].Matches),
 							RouteBackendRefs: []RouteBackendRef{},
-							Filters:          convertGRPCFilters(grValidFilter.Spec.Rules[0].Filters),
+							Filters:          convertedFilters,
 						},
 					},
 				},
@@ -627,6 +636,77 @@ func TestBuildGRPCRoute(t *testing.T) {
 
 			route := buildGRPCRoute(test.validator, test.gr, gatewayNsNames)
 			g.Expect(helpers.Diff(test.expected, route)).To(BeEmpty())
+		})
+	}
+}
+
+func TestConvertGRPCMatches(t *testing.T) {
+	methodMatch := createGRPCMethodMatch("myService", "myMethod", "Exact").Matches
+
+	headersMatch := createGRPCHeadersMatch("Exact", "MyHeader", "SomeValue").Matches
+
+	expectedHTTPMatches := []v1.HTTPRouteMatch{
+		{
+			Path: &v1.HTTPPathMatch{
+				Type:  helpers.GetPointer(v1.PathMatchExact),
+				Value: helpers.GetPointer("/myService/myMethod"),
+			},
+			Headers: []v1.HTTPHeaderMatch{},
+		},
+	}
+
+	expectedHeadersMatches := []v1.HTTPRouteMatch{
+		{
+			Path: &v1.HTTPPathMatch{
+				Type:  helpers.GetPointer(v1.PathMatchPathPrefix),
+				Value: helpers.GetPointer("/"),
+			},
+			Headers: []v1.HTTPHeaderMatch{
+				{
+					Value: "SomeValue",
+					Name:  v1.HTTPHeaderName("MyHeader"),
+				},
+			},
+		},
+	}
+
+	expectedEmptyMatches := []v1.HTTPRouteMatch{
+		{
+			Path: &v1.HTTPPathMatch{
+				Type:  helpers.GetPointer(v1.PathMatchPathPrefix),
+				Value: helpers.GetPointer("/"),
+			},
+		},
+	}
+
+	tests := []struct {
+		name          string
+		methodMatches []v1alpha2.GRPCRouteMatch
+		expected      []v1.HTTPRouteMatch
+	}{
+		{
+			name:          "exact match",
+			methodMatches: methodMatch,
+			expected:      expectedHTTPMatches,
+		},
+		{
+			name:          "headers matches",
+			methodMatches: headersMatch,
+			expected:      expectedHeadersMatches,
+		},
+		{
+			name:          "empty matches",
+			methodMatches: []v1alpha2.GRPCRouteMatch{},
+			expected:      expectedEmptyMatches,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			g := NewWithT(t)
+
+			httpMatches := convertGRPCMatches(test.methodMatches)
+			g.Expect(helpers.Diff(test.expected, httpMatches)).To(BeEmpty())
 		})
 	}
 }

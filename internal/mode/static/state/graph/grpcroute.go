@@ -86,11 +86,9 @@ func processGRPCRouteRules(
 			matchesErrs = append(matchesErrs, validateGRPCMatch(validator, match, matchPath)...)
 		}
 
-		if len(rule.Filters) > 0 {
-			for j, filter := range rule.Filters {
-				filterPath := rulePath.Child("filters").Index(j)
-				filtersErrs = append(filtersErrs, validateGRPCFilter(validator, filter, filterPath)...)
-			}
+		for j, filter := range rule.Filters {
+			filterPath := rulePath.Child("filters").Index(j)
+			filtersErrs = append(filtersErrs, validateGRPCFilter(validator, filter, filterPath)...)
 		}
 
 		backendRefs := make([]RouteBackendRef, 0, len(rule.BackendRefs))
