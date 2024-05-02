@@ -8,6 +8,7 @@ docs: ""
 
 [HTTPRoute](https://gateway-api.sigs.k8s.io/api-types/httproute/) filters can modify the headers during the request-response lifecycle. [HTTP Header Modifiers](https://gateway-api.sigs.k8s.io/guides/http-header-modifier/?h=request#http-header-modifiers) can be used to add, modify or remove headers in incoming requests. We have two types of [filter](https://gateway-api.sigs.k8s.io/api-types/httproute/#filters-optional) that can be used to instruct the Gateway for desired behaviour.
 
+
 1. [RequestHeaderModifier](https://gateway-api.sigs.k8s.io/guides/http-header-modifier/?h=request#http-request-header-modifier) to alter headers in request before forwarding the request upstream.
 
 1. [ResponseHeaderModifier](https://gateway-api.sigs.k8s.io/guides/http-header-modifier/?h=request#http-response-header-modifier) to alter headers in response before responding to the downstream.
