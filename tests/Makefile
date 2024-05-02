@@ -4,6 +4,7 @@ CONFORMANCE_TAG = latest## Tag for the conformance test runner image
 GATEWAY_CLASS = nginx## Gateway class to use
 GINKGO_FLAGS =
 GINKGO_LABEL =
+GW_API_VERSION ?= $(shell yq eval '.resources[0] | split("ref=v") | .[1]' ../config/crd/gateway-api/standard/kustomization.yaml)## Supported Gateway API version from current NGF
 GW_API_PREV_VERSION ?= 1.0.0## Supported Gateway API version from previous NGF release
 GW_SERVICE_TYPE=NodePort## Service type to use for the gateway
 GW_SVC_GKE_INTERNAL=false
@@ -158,6 +159,13 @@ deploy-updated-provisioner: ## Update provisioner manifest and deploy to the con
 .PHONY: generate-static-deployment
 generate-static-deployment:
 	helm template nginx-gateway $(CHART_DIR) $(HELM_TEMPLATE_COMMON_ARGS) --set metrics.enable=false --set nginxGateway.productTelemetry.enable=false -n nginx-gateway -s templates/deployment.yaml --set nginxGateway.image.repository=$(PREFIX) --set nginxGateway.image.tag=$(TAG) --set nginxGateway.image.pullPolicy=Never --set nginx.image.repository=$(NGINX_PREFIX) --set nginx.image.tag=$(TAG) --set nginx.image.pullPolicy=Never --set nginxGateway.gwAPIExperimentalFeatures.enable=$(ENABLE_EXPERIMENTAL) --set nginx.plus=$(PLUS_ENABLED) > $(SELF_DIR)config/tests/static-deployment.yaml
+
+# this target is used to install the gateway-api CRDs from the main branch (only used in the nightly CI job)
+# it overrides the target in the main Makefile when the GW_API_VERSION is set to main
+ifeq ($(GW_API_VERSION),main)
+install-gateway-crds:
+	kubectl kustomize "https://github.com/kubernetes-sigs/gateway-api/config/crd/$(if $(filter true,$(ENABLE_EXPERIMENTAL)),experimental,)?timeout=120&ref=main" | kubectl apply -f -
+endif
 
 .PHONY: install-ngf-local-build
 install-ngf-local-build: deploy-updated-provisioner
