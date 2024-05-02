@@ -1,7 +1,7 @@
 # Example
 
 In this example we will deploy NGINX Gateway Fabric and configure traffic routing for a simple echo server.
-We will use HTTPRoute resources to route traffic to the echo server, using the `RequestHeaderModifier` filter to modify
+We will use HTTPRoute resources to route traffic to the echo server, using the `ResponseHeaderModifier` filter to modify
 the response headers.
 
 ## Running the Example
