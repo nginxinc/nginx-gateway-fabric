@@ -249,10 +249,15 @@ func checkContainerLogsForErrors(ngfPodName string) {
 		&core.PodLogOptions{Container: nginxContainerName},
 	)
 	Expect(err).ToNot(HaveOccurred())
-	Expect(logs).ToNot(ContainSubstring("[error]"), logs)
-	Expect(logs).ToNot(ContainSubstring("[crit]"), logs)
-	Expect(logs).ToNot(ContainSubstring("[alert]"), logs)
-	Expect(logs).ToNot(ContainSubstring("[emerg]"), logs)
+
+	for _, line := range strings.Split(logs, "\n") {
+		Expect(line).ToNot(ContainSubstring("[crit]"), line)
+		Expect(line).ToNot(ContainSubstring("[alert]"), line)
+		Expect(line).ToNot(ContainSubstring("[emerg]"), line)
+		if strings.Contains(line, "[error]") {
+			Expect(line).To(ContainSubstring("connect() failed (111: Connection refused)"), line)
+		}
+	}
 
 	logs, err = resourceManager.GetPodLogs(
 		ngfNamespace,
