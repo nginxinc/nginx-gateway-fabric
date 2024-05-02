@@ -27,8 +27,11 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"reflect"
 	"strings"
 	"time"
+
+	"k8s.io/client-go/util/retry"
 
 	apps "k8s.io/api/apps/v1"
 	core "k8s.io/api/core/v1"
@@ -71,7 +74,17 @@ func (rm *ResourceManager) Apply(resources []client.Object) error {
 	defer cancel()
 
 	for _, resource := range resources {
-		if err := rm.K8sClient.Get(ctx, client.ObjectKeyFromObject(resource), resource); err != nil {
+		var obj client.Object
+
+		unstructuredObj, ok := resource.(*unstructured.Unstructured)
+		if ok {
+			obj = unstructuredObj.DeepCopy()
+		} else {
+			t := reflect.TypeOf(resource).Elem()
+			obj = reflect.New(t).Interface().(client.Object)
+		}
+
+		if err := rm.K8sClient.Get(ctx, client.ObjectKeyFromObject(resource), obj); err != nil {
 			if !apierrors.IsNotFound(err) {
 				return fmt.Errorf("error getting resource: %w", err)
 			}
@@ -83,7 +96,19 @@ func (rm *ResourceManager) Apply(resources []client.Object) error {
 			continue
 		}
 
-		if err := rm.K8sClient.Update(ctx, resource); err != nil {
+		// Some tests modify resources that are also modified by NGF (to update their status), so conflicts are possible
+		// For example, a Gateway resource.
+		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+			if err := rm.K8sClient.Get(ctx, client.ObjectKeyFromObject(resource), obj); err != nil {
+				return err
+			}
+			resource.SetResourceVersion(obj.GetResourceVersion())
+			if err := rm.K8sClient.Update(ctx, resource); err != nil {
+				return err
+			}
+			return nil
+		})
+		if err != nil {
 			return fmt.Errorf("error updating resource: %w", err)
 		}
 	}
@@ -112,8 +137,19 @@ func (rm *ResourceManager) ApplyFromFiles(files []string, namespace string) erro
 			return nil
 		}
 
-		obj.SetResourceVersion(fetchedObj.GetResourceVersion())
-		if err := rm.K8sClient.Update(ctx, &obj); err != nil {
+		// Some tests modify resources that are also modified by NGF (to update their status), so conflicts are possible
+		// For example, a Gateway resource.
+		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+			if err := rm.K8sClient.Get(ctx, nsName, fetchedObj); err != nil {
+				return err
+			}
+			obj.SetResourceVersion(fetchedObj.GetResourceVersion())
+			if err := rm.K8sClient.Update(ctx, &obj); err != nil {
+				return err
+			}
+			return nil
+		})
+		if err != nil {
 			return fmt.Errorf("error updating resource: %w", err)
 		}
 
@@ -137,7 +173,7 @@ func (rm *ResourceManager) Delete(resources []client.Object, opts ...client.Dele
 	return nil
 }
 
-// DeleteFromFile deletes Kubernetes resources defined within the provided YAML files.
+// DeleteFromFiles deletes Kubernetes resources defined within the provided YAML files.
 func (rm *ResourceManager) DeleteFromFiles(files []string, namespace string) error {
 	handlerFunc := func(obj unstructured.Unstructured) error {
 		obj.SetNamespace(namespace)
@@ -241,7 +277,13 @@ func (rm *ResourceManager) WaitForAppsToBeReady(namespace string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), rm.TimeoutConfig.CreateTimeout)
 	defer cancel()
 
-	if err := rm.waitForPodsToBeReady(ctx, namespace); err != nil {
+	return rm.WaitForAppsToBeReadyWithCtx(ctx, namespace)
+}
+
+// WaitForAppsToBeReadyWithCtx waits for all apps in the specified namespace to be ready or
+// until the provided context is cancelled.
+func (rm *ResourceManager) WaitForAppsToBeReadyWithCtx(ctx context.Context, namespace string) error {
+	if err := rm.WaitForPodsToBeReady(ctx, namespace); err != nil {
 		return err
 	}
 
@@ -252,7 +294,9 @@ func (rm *ResourceManager) WaitForAppsToBeReady(namespace string) error {
 	return rm.waitForGatewaysToBeReady(ctx, namespace)
 }
 
-func (rm *ResourceManager) waitForPodsToBeReady(ctx context.Context, namespace string) error {
+// WaitForPodsToBeReady waits for all Pods in the specified namespace to be ready or
+// until the provided context is cancelled.
+func (rm *ResourceManager) WaitForPodsToBeReady(ctx context.Context, namespace string) error {
 	return wait.PollUntilContextCancel(
 		ctx,
 		500*time.Millisecond,
@@ -447,6 +491,37 @@ func (rm *ResourceManager) GetPodNames(namespace string, labels client.MatchingL
 	return names, nil
 }
 
+// GetPods returns all Pods in the specified namespace that match the given labels.
+func (rm *ResourceManager) GetPods(namespace string, labels client.MatchingLabels) ([]core.Pod, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), rm.TimeoutConfig.GetTimeout)
+	defer cancel()
+
+	var podList core.PodList
+	if err := rm.K8sClient.List(
+		ctx,
+		&podList,
+		client.InNamespace(namespace),
+		labels,
+	); err != nil {
+		return nil, fmt.Errorf("error getting list of Pods: %w", err)
+	}
+
+	return podList.Items, nil
+}
+
+// GetPod returns the Pod in the specified namespace with the given name.
+func (rm *ResourceManager) GetPod(namespace, name string) (*core.Pod, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), rm.TimeoutConfig.GetTimeout)
+	defer cancel()
+
+	var pod core.Pod
+	if err := rm.K8sClient.Get(ctx, types.NamespacedName{Namespace: namespace, Name: name}, &pod); err != nil {
+		return nil, fmt.Errorf("error getting Pod: %w", err)
+	}
+
+	return &pod, nil
+}
+
 // GetPodLogs returns the logs from the specified Pod
 func (rm *ResourceManager) GetPodLogs(namespace, name string, opts *core.PodLogOptions) (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), rm.TimeoutConfig.GetTimeout)
@@ -492,6 +567,24 @@ func (rm *ResourceManager) GetNGFDeployment(namespace, releaseName string) (*app
 
 	deployment := deployments.Items[0]
 	return &deployment, nil
+}
+
+// ScaleDeployment scales the Deployment to the specified number of replicas.
+func (rm *ResourceManager) ScaleDeployment(namespace, name string, replicas int32) error {
+	ctx, cancel := context.WithTimeout(context.Background(), rm.TimeoutConfig.UpdateTimeout)
+	defer cancel()
+
+	var deployment apps.Deployment
+	if err := rm.K8sClient.Get(ctx, types.NamespacedName{Namespace: namespace, Name: name}, &deployment); err != nil {
+		return fmt.Errorf("error getting Deployment: %w", err)
+	}
+
+	deployment.Spec.Replicas = &replicas
+	if err := rm.K8sClient.Update(ctx, &deployment); err != nil {
+		return fmt.Errorf("error updating Deployment: %w", err)
+	}
+
+	return nil
 }
 
 // GetReadyNGFPodNames returns the name(s) of the NGF Pod(s).
