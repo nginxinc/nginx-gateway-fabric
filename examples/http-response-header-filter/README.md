@@ -64,7 +64,7 @@ This HTTPRoute has a few important properties:
 
 ## 4. Test the Application
 
-To access the application, we will use `curl` to send requests to the `headers` Service, including sending headers with our request.
+To access the application, we will use `curl` to send requests to the `headers` endpoint. 
 
 
 Notice our configured header values can be seen in the `responseHeaders` section below, and that the `Header-to-remove` header is absent. The header `My-cool-header` gets the appended with value `respond-with-this` from the `responseHeaderModifier` filter and the value of header `Response-Overwrite-Header` gets overwritten as defined in the *HttpRoute*.
