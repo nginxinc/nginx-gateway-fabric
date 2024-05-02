@@ -20,8 +20,8 @@ const (
 	rootPath             = "/"
 )
 
-// baseHeaders contains the constant headers set in each server block
-var baseHeaders = []http.Header{
+// httpBaseHeaders contains the constant headers set in each HTTP server block
+var httpBaseHeaders = []http.Header{
 	{
 		Name:  "Host",
 		Value: "$gw_api_compliant_host",
@@ -30,25 +30,31 @@ var baseHeaders = []http.Header{
 		Name:  "X-Forwarded-For",
 		Value: "$proxy_add_x_forwarded_for",
 	},
-}
-
-// httpBaseHeaders contains the constant headers set in each HTTP server block
-var httpBaseHeaders = append(baseHeaders,
-	http.Header{
+	{
 		Name:  "Upgrade",
 		Value: "$http_upgrade",
 	},
-	http.Header{
+	{
 		Name:  "Connection",
 		Value: "$connection_upgrade",
-	})
+	},
+}
 
 // grpcBaseHeaders contains the constant headers set in each gRPC server block
-var grpcBaseHeaders = append(baseHeaders,
-	http.Header{
+var grpcBaseHeaders = []http.Header{
+	{
+		Name:  "Host",
+		Value: "$gw_api_compliant_host",
+	},
+	{
+		Name:  "X-Forwarded-For",
+		Value: "$proxy_add_x_forwarded_for",
+	},
+	{
 		Name:  "Authority",
 		Value: "$gw_api_compliant_host",
-	})
+	},
+}
 
 func executeServers(conf dataplane.Configuration) []executeResult {
 	servers, httpMatchPairs := createServers(conf.HTTPServers, conf.SSLServers)
