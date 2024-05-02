@@ -55,6 +55,13 @@ headers to the request.
    kubectl apply -f echo-route.yaml
    ```
 
+This HTTPRoute has a few important properties:
+
+- The `parentRefs` references the gateway resource that we created, and specifically defines the `http` listener to attach to, via the `sectionName` field.
+- `echo.example.com` is the hostname that is matched for all requests to the backends defined in this HTTPRoute.
+- The `match` rule defines that all requests with the path prefix `/headers` are sent to the `headers` Service.
+- There is `ResponseHeaderModifier` filter defined for the path prefix `/headers` to set header `Response-Overwrite-Header` and add header `My-cool-header`.
+
 ## 4. Test the Application
 
 To access the application, we will use `curl` to send requests to the `headers` Service, including sending headers with our request.
