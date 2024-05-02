@@ -174,7 +174,7 @@ func collectGraphResourceCount(
 		ngfResourceCounts.GatewayCount++
 	}
 
-	ngfResourceCounts.HTTPRouteCount = int64(len(g.Routes))
+	ngfResourceCounts.HTTPRouteCount = computeRouteCount(g.Routes)
 	ngfResourceCounts.SecretCount = int64(len(g.ReferencedSecrets))
 	ngfResourceCounts.ServiceCount = int64(len(g.ReferencedServices))
 
@@ -185,6 +185,15 @@ func collectGraphResourceCount(
 	}
 
 	return ngfResourceCounts, nil
+}
+
+func computeRouteCount(routes map[graph.RouteKey]*graph.L7Route) (httpRouteCount int64) {
+	for _, r := range routes {
+		if r.RouteType == graph.RouteTypeHTTP {
+			httpRouteCount = httpRouteCount + 1
+		}
+	}
+	return httpRouteCount
 }
 
 func getPodReplicaSet(
