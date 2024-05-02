@@ -67,20 +67,21 @@ This HTTPRoute has a few important properties:
 To access the application, we will use `curl` to send requests to the `headers` endpoint.
 
 
-Notice our configured header values can be seen in the `responseHeaders` section below, and that the `Header-to-remove` header is absent. The header `My-cool-header` gets the appended with value `respond-with-this` from the `responseHeaderModifier` filter and the value of header `Response-Overwrite-Header` gets overwritten as defined in the *HttpRoute*.
+Notice our configured header values can be seen in the `responseHeaders` section below, and that the `X-Server-Version` header is absent. The header `My-cool-header` gets the appended with value `respond-with-this` from the `responseHeaderModifier` filter and the value of header `Response-Overwrite-Header` gets overwritten as defined in the *HttpRoute*.
 
 ```shell
-curl -s -i --resolve cafe.example.com:$GW_PORT:$GW_IP http://echo.example.com:$GW_PORT/headers
+curl -v -i --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/headers
 ```
 
 ```text
 HTTP/1.1 200 OK
 Server: nginx/1.25.5
-Date: Thu, 02 May 2024 01:11:37 GMT
+Date: Thu, 02 May 2024 20:58:54 GMT
 Content-Type: text/plain
 Content-Length: 2
 Connection: keep-alive
+X-Custom-Header: this-stays-unchanged
+My-cool-header: this-is-the-appended-value
 My-cool-header: this-is-the-value
-My-cool-header: respond-with-this
 Response-Overwrite-Header: overwritten-value
 ```
