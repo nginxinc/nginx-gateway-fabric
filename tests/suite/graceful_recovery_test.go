@@ -48,9 +48,16 @@ var _ = Describe("Graceful Recovery test", Ordered, Label("nfr", "graceful-recov
 	var ngfPodName string
 
 	BeforeAll(func() {
+		// this test is unique in that it will check the entire log of both ngf and nginx containers
+		// for any errors, so in order to avoid errors generated in previous tests we will uninstall
+		// NGF installed at the suite level, then re-deploy our own
+		teardown(releaseName)
+
+		setup(getDefaultSetupCfg())
+
 		podNames, err := framework.GetReadyNGFPodNames(k8sClient, ngfNamespace, releaseName, timeoutConfig.GetTimeout)
 		Expect(err).ToNot(HaveOccurred())
-		Expect(podNames).ToNot(BeEmpty())
+		Expect(podNames).To(HaveLen(1))
 
 		ngfPodName = podNames[0]
 	})

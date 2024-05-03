@@ -247,7 +247,8 @@ var _ = BeforeSuite(func() {
 	// - running telemetry test (NGF will be deployed as part of the test)
 	if strings.Contains(labelFilter, "upgrade") ||
 		strings.Contains(labelFilter, "longevity-teardown") ||
-		strings.Contains(labelFilter, "telemetry") {
+		strings.Contains(labelFilter, "telemetry") ||
+		strings.Contains(labelFilter, "graceful-recovery") {
 
 		cfg.deploy = false
 	}
