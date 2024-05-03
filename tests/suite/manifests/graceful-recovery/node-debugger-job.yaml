@@ -11,7 +11,7 @@ spec:
         kubernetes.io/hostname: "to be replaced by the test"
       containers:
         - name: node-debugger-container
-          image: ubuntu
+          image: ubuntu:22.04
           command: ["/bin/bash", "-c"]
           args: ["to be replaced by the test"]
           securityContext:
