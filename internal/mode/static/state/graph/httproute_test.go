@@ -867,6 +867,14 @@ func TestValidateFilter(t *testing.T) {
 		},
 		{
 			filter: gatewayv1.HTTPRouteFilter{
+				Type:                   gatewayv1.HTTPRouteFilterResponseHeaderModifier,
+				ResponseHeaderModifier: &gatewayv1.HTTPHeaderFilter{},
+			},
+			expectErrCount: 0,
+			name:           "valid response header modifiers filter",
+		},
+		{
+			filter: gatewayv1.HTTPRouteFilter{
 				Type: gatewayv1.HTTPRouteFilterRequestMirror,
 			},
 			expectErrCount: 1,
