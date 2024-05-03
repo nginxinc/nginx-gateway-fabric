@@ -1,0 +1,27 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: node-debugger-job
+spec:
+  template:
+    spec:
+      hostPID: true
+      hostIPC: true
+      nodeSelector:
+        kubernetes.io/hostname: "to be replaced by the test"
+      containers:
+        - name: node-debugger-container
+          image: ubuntu:22.04
+          command: ["/bin/bash", "-c"]
+          args: ["to be replaced by the test"]
+          securityContext:
+            privileged: true
+          volumeMounts:
+            - name: host-fs
+              mountPath: /mnt/host
+      volumes:
+        - name: host-fs
+          hostPath:
+            path: /
+            type: Directory
+      restartPolicy: Never
