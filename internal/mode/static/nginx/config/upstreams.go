@@ -22,7 +22,7 @@ const (
 	// plusZoneSize is the upstream zone size for nginx plus.
 	plusZoneSize = "1m"
 	// invalidBackendZoneSize is the upstream zone size for the invalid backend upstream.
-	invalidBackendZoneSize = "32k"
+	invalidBackendZoneSize = ""
 )
 
 func (g GeneratorImpl) executeUpstreams(conf dataplane.Configuration) []executeResult {

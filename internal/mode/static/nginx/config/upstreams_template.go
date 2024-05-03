@@ -7,11 +7,13 @@ package config
 const upstreamsTemplateText = `
 {{ range $u := . }}
 upstream {{ $u.Name }} {
-    random two least_conn;
-    zone {{ $u.Name }} {{ $u.ZoneSize }};
-    {{ range $server := $u.Servers }}
-    server {{ $server.Address }};
-    {{- end }}
+   random two least_conn;
+   {{ if $u.ZoneSize -}}
+   zone {{ $u.Name }} {{ $u.ZoneSize }};
+   {{ end -}}
+   {{ range $server := $u.Servers }}
+   server {{ $server.Address }};
+   {{- end }}
 }
 {{ end -}}
 `
