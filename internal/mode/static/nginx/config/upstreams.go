@@ -79,6 +79,7 @@ func (g GeneratorImpl) createUpstream(up dataplane.Upstream) http.Upstream {
 }
 
 func createInvalidBackendRefUpstream() http.Upstream {
+	// ZoneSize is omitted since we will only ever proxy to one destination/backend.
 	return http.Upstream{
 		Name: invalidBackendRef,
 		Servers: []http.UpstreamServer{
