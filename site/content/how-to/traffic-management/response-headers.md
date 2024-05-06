@@ -30,9 +30,6 @@ In this guide we will modify the headers for HTTP responses when client requests
 
 ## Response Header Filter
 
-In this guide, we will configure an HTTPRoute with a `ResponseHeaderModifier` filter to modify the HTTP response headers of an application.
-
-
 ### Deploy the Headers application
 
 Begin by deploying the example application `headers`:
@@ -76,7 +73,7 @@ EOF
 
 This gateway defines a single listener on port 80. Since no hostname is specified, this listener matches on all hostnames.
 
-The [HTTPRoute](https://gateway-api.sigs.k8s.io/api-types/httproute/) is typically deployed by the [application developer](https://gateway-api.sigs.k8s.io/concepts/roles-and-personas/#roles-and-personas_1). To deploy the `headers` HTTPRoute:
+The HTTPRoute is typically deployed by the [application developer](https://gateway-api.sigs.k8s.io/concepts/roles-and-personas/#roles-and-personas_1). To deploy the `headers` HTTPRoute:
 
 
 ```yaml
@@ -102,12 +99,9 @@ spec:
 EOF
 ```
 
-
-
-
 ### Send Traffic to the Basic Headers Application
 
-To access the application, we will use `curl` to send requests to the `headers` endpoint. Notice our configured header values can be seen in the `responseHeaders` section below. We have four custom response headers defined.
+To access the application, we will use `curl` to send requests to the `headers` endpoint. Notice our configured header values can be seen in the `responseHeaders` section below. We have four custom response headers defined - `X-Header-Unmodified`, `X-Header-Add`, `X-Header-Set`, `X-Header-Remove`.
 
 ```shell
 curl -i --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/headers
@@ -130,9 +124,7 @@ ok
 
 ### Configure the HTTPRoute with Response Header Modifiers
 
-This gateway defines a single listener on port 80. Since no hostname is specified, this listener matches on all hostnames.
-
-The [HTTPRoute](https://gateway-api.sigs.k8s.io/api-types/httproute/) is typically deployed by the [application developer](https://gateway-api.sigs.k8s.io/concepts/roles-and-personas/#roles-and-personas_1). To deploy the `headers` HTTPRoute with `filters` to modify response headers:
+Let's configure the HTTPRoute with `ResponseHeaderModifier` filter:
 
 ```yaml
 kubectl apply -f - <<EOF
@@ -198,7 +190,6 @@ X-Header-Set: overwritten-value
 
 ok
 ```
-
 
 ## Further Reading
 
