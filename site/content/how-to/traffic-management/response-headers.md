@@ -120,7 +120,7 @@ This HTTPRoute has a few important properties:
 - There is `ResponseHeaderModifier` filter defined for the path prefix `/headers` to overwrite value for header `X-Header-Set`, append value to header `X-Header-Add` and remove `X-Header-Remove` header from the HTTP response.
 
 
-### Send Traffic to Headers
+### Send Traffic to the Headers Application
 
 To access the application, we will use `curl` to send requests to the `headers` endpoint.
 
