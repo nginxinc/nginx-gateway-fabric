@@ -1,6 +1,6 @@
 ---
 title: "HTTP Response Headers"
-description: "Learn how to modify response headers for your HTTP Route using NGINX Gateway Fabric."
+description: "Learn how to modify the response headers of your application using NGINX Gateway Fabric."
 weight: 700
 toc: true
 docs: ""
