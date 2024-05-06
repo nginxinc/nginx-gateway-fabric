@@ -405,7 +405,7 @@ func TestValidateBackendTLSPolicy(t *testing.T) {
 			if !test.isValid && !test.ignored {
 				g.Expect(conds).To(HaveLen(1))
 			} else {
-				g.Expect(conds).To(HaveLen(0))
+				g.Expect(conds).To(BeEmpty())
 			}
 		})
 	}

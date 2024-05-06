@@ -10,6 +10,7 @@ import (
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
+	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/controller/index"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/validation"
 )
@@ -26,6 +27,8 @@ type ClusterState struct {
 	CRDMetadata        map[types.NamespacedName]*metav1.PartialObjectMetadata
 	BackendTLSPolicies map[types.NamespacedName]*v1alpha2.BackendTLSPolicy
 	ConfigMaps         map[types.NamespacedName]*v1.ConfigMap
+	NginxProxies       map[types.NamespacedName]*ngfAPI.NginxProxy
+	GRPCRoutes         map[types.NamespacedName]*v1alpha2.GRPCRoute
 }
 
 // Graph is a Graph-like representation of Gateway API resources.
@@ -42,8 +45,8 @@ type Graph struct {
 	// GatewayClassName field of the resource) but ignored. It doesn't hold the Gateway resources that do not belong to
 	// the NGINX Gateway Fabric.
 	IgnoredGateways map[types.NamespacedName]*gatewayv1.Gateway
-	// Routes holds Route resources.
-	Routes map[types.NamespacedName]*Route
+	// Routes hold Route resources.
+	Routes map[RouteKey]*L7Route
 	// ReferencedSecrets includes Secrets referenced by Gateway Listeners, including invalid ones.
 	// It is different from the other maps, because it includes entries for Secrets that do not exist
 	// in the cluster. We need such entries so that we can query the Graph to determine if a Secret is referenced
@@ -58,6 +61,8 @@ type Graph struct {
 	ReferencedCaCertConfigMaps map[types.NamespacedName]*CaCertConfigMap
 	// BackendTLSPolicies holds BackendTLSPolicy resources.
 	BackendTLSPolicies map[types.NamespacedName]*BackendTLSPolicy
+	// NginxProxy holds the NginxProxy config for the GatewayClass.
+	NginxProxy *ngfAPI.NginxProxy
 }
 
 // ProtectedPorts are the ports that may not be configured by a listener with a descriptive name of each port.
@@ -99,6 +104,9 @@ func (g *Graph) IsReferenced(resourceType client.Object, nsname types.Namespaced
 		// Service Namespace should be the same Namespace as the EndpointSlice
 		_, exists := g.ReferencedServices[types.NamespacedName{Namespace: nsname.Namespace, Name: svcName}]
 		return exists
+	// NginxProxy reference exists if it is linked to a GatewayClass.
+	case *ngfAPI.NginxProxy:
+		return isNginxProxyReferenced(nsname, g.GatewayClass)
 	default:
 		return false
 	}
@@ -118,7 +126,8 @@ func BuildGraph(
 		return &Graph{}
 	}
 
-	gc := buildGatewayClass(processedGwClasses.Winner, state.CRDMetadata)
+	npCfg := getNginxProxy(state.NginxProxies, processedGwClasses.Winner)
+	gc := buildGatewayClass(processedGwClasses.Winner, npCfg, state.CRDMetadata, validators.GenericValidator)
 
 	secretResolver := newSecretResolver(state.Secrets)
 	configMapResolver := newConfigMapResolver(state.ConfigMaps)
@@ -135,7 +144,12 @@ func BuildGraph(
 		gw,
 	)
 
-	routes := buildRoutesForGateways(validators.HTTPFieldsValidator, state.HTTPRoutes, processedGws.GetAllNsNames())
+	routes := buildRoutesForGateways(
+		validators.HTTPFieldsValidator,
+		state.HTTPRoutes,
+		state.GRPCRoutes,
+		processedGws.GetAllNsNames(),
+	)
 	bindRoutesToListeners(routes, gw, state.Namespaces)
 	addBackendRefsToRouteRules(routes, refGrantResolver, state.Services, processedBackendTLSPolicies)
 
@@ -154,6 +168,7 @@ func BuildGraph(
 		ReferencedServices:         referencedServices,
 		ReferencedCaCertConfigMaps: configMapResolver.getResolvedConfigMaps(),
 		BackendTLSPolicies:         processedBackendTLSPolicies,
+		NginxProxy:                 npCfg,
 	}
 
 	return g

@@ -5,6 +5,8 @@ import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 // +kubebuilder:object:root=true
 // +kubebuilder:storageversion
 // +kubebuilder:subresource:status
+// +kubebuilder:resource:categories=nginx-gateway-fabric
+// +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
 
 // NginxGateway represents the dynamic configuration for an NGINX Gateway Fabric control plane.
 type NginxGateway struct {

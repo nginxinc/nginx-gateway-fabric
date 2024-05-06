@@ -52,7 +52,8 @@ curl https://private-registry.nginx.com/nginx-gateway-fabric/nginx-plus/tags/lis
 {
   "name": "nginx-gateway-fabric/nginx-plus",
   "tags": [
-    "edge"
+    "edge",
+    "nightly"
   ]
 }
 ```

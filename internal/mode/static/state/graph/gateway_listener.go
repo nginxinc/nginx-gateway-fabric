@@ -20,9 +20,9 @@ type Listener struct {
 	Name string
 	// Source holds the source of the Listener from the Gateway resource.
 	Source v1.Listener
-	// Routes holds the routes attached to the Listener.
+	// Routes holds the GRPC/HTTPRoutes attached to the Listener.
 	// Only valid routes are attached.
-	Routes map[types.NamespacedName]*Route
+	Routes map[RouteKey]*L7Route
 	// AllowedRouteLabelSelector is the label selector for this Listener's allowed routes, if defined.
 	AllowedRouteLabelSelector labels.Selector
 	// ResolvedSecret is the namespaced name of the Secret resolved for this listener.
@@ -181,7 +181,7 @@ func (c *listenerConfigurator) configure(listener v1.Listener) *Listener {
 		Source:                    listener,
 		Conditions:                conds,
 		AllowedRouteLabelSelector: allowedRouteSelector,
-		Routes:                    make(map[types.NamespacedName]*Route),
+		Routes:                    make(map[RouteKey]*L7Route),
 		Valid:                     valid,
 		Attachable:                attachable,
 		SupportedKinds:            supportedKinds,
@@ -238,8 +238,8 @@ func getAndValidateListenerSupportedKinds(listener v1.Listener) (
 
 	supportedKinds := make([]v1.RouteGroupKind, 0, len(listener.AllowedRoutes.Kinds))
 
-	validHTTPRouteKind := func(kind v1.RouteGroupKind) bool {
-		if kind.Kind != v1.Kind("HTTPRoute") {
+	validHTTPProtocolRouteKind := func(kind v1.RouteGroupKind) bool {
+		if kind.Kind != v1.Kind("HTTPRoute") && kind.Kind != v1.Kind("GRPCRoute") {
 			return false
 		}
 		if kind.Group == nil || *kind.Group != v1.GroupName {
@@ -251,7 +251,7 @@ func getAndValidateListenerSupportedKinds(listener v1.Listener) (
 	switch listener.Protocol {
 	case v1.HTTPProtocolType, v1.HTTPSProtocolType:
 		for _, kind := range listener.AllowedRoutes.Kinds {
-			if !validHTTPRouteKind(kind) {
+			if !validHTTPProtocolRouteKind(kind) {
 				msg := fmt.Sprintf("Unsupported route kind \"%s/%s\"", *kind.Group, kind.Kind)
 				conds = append(conds, staticConds.NewListenerInvalidRouteKinds(msg)...)
 				continue

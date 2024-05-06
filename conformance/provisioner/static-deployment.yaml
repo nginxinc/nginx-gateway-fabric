@@ -31,6 +31,7 @@ spec:
         - --metrics-disable
         - --health-port=8081
         - --leader-election-lock-name=nginx-gateway-leader-election
+        - --product-telemetry-disable
         env:
         - name: POD_IP
           valueFrom:
@@ -69,6 +70,8 @@ spec:
         volumeMounts:
         - name: nginx-conf
           mountPath: /etc/nginx/conf.d
+        - name: module-includes
+          mountPath: /etc/nginx/module-includes
         - name: nginx-secrets
           mountPath: /etc/nginx/secrets
         - name: nginx-run
@@ -93,6 +96,8 @@ spec:
         volumeMounts:
         - name: nginx-conf
           mountPath: /etc/nginx/conf.d
+        - name: module-includes
+          mountPath: /etc/nginx/module-includes
         - name: nginx-secrets
           mountPath: /etc/nginx/secrets
         - name: nginx-run
@@ -109,6 +114,8 @@ spec:
         runAsNonRoot: true
       volumes:
       - name: nginx-conf
+        emptyDir: {}
+      - name: module-includes
         emptyDir: {}
       - name: nginx-secrets
         emptyDir: {}

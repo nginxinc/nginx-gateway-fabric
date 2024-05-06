@@ -15,7 +15,13 @@ builds:
     asmflags:
       - all=-trimpath={{.Env.GOPATH}}
     ldflags:
-      - -s -w -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{.Date}} -X main.telemetryReportPeriod=24h -X main.telemetryEndpointInsecure=false
+      - -s -w
+      - -X main.version={{.Version}}
+      - -X main.commit={{.Commit}}
+      - -X main.date={{.Date}}
+      - -X main.telemetryReportPeriod=24h
+      - -X main.telemetryEndpoint={{.Env.TELEMETRY_ENDPOINT}}
+      - -X main.telemetryEndpointInsecure={{.Env.TELEMETRY_ENDPOINT_INSECURE}}
     main: ./cmd/gateway/
     binary: gateway
 
@@ -32,13 +38,13 @@ sboms:
 
 blobs:
   - provider: azblob
-    bucket: '{{.Env.AZURE_BUCKET_NAME}}'
+    bucket: "{{.Env.AZURE_BUCKET_NAME}}"
 
 signs:
   - cmd: cosign
     artifacts: checksum
     output: true
-    certificate: '${artifact}.pem'
+    certificate: "${artifact}.pem"
     args:
       - sign-blob
       - "--output-signature=${signature}"
@@ -49,22 +55,17 @@ signs:
 announce:
   slack:
     enabled: true
-    channel: '#announcements'
-    message_template: 'NGINX Gateway Fabric {{ .Tag }} is out! Check it out: {{ .ReleaseURL }}'
+    channel: "#announcements"
+    message_template: "NGINX Gateway Fabric {{ .Tag }} is out! Check it out: {{ .ReleaseURL }}"
 
 milestones:
   - close: true
 
 snapshot:
-  name_template: 'edge'
-
-before:
-  hooks:
-    - make crds-release-file
+  name_template: "edge"
 
 release:
   extra_files:
-    - glob: ./build/out/crds.yaml
     - glob: ./deploy/manifests/nginx-gateway.yaml
     - glob: ./deploy/manifests/nginx-plus-gateway.yaml
     - glob: ./deploy/manifests/nginx-gateway-experimental.yaml

@@ -4,6 +4,59 @@ This document includes a curated changelog for each release. We also publish a c
 a [GitHub release](https://github.com/nginxinc/nginx-gateway-fabric/releases), which, by contrast, is auto-generated
 and includes links to all PRs that went into the release.
 
+## Release 1.2.0
+
+*March 21, 2024*
+
+FEATURES:
+
+- [NGINX Plus](https://docs.nginx.com/nginx-gateway-fabric/overview/nginx-plus) can now be used as the data plane. [PR-1394](https://github.com/nginxinc/nginx-gateway-fabric/pull/1394)
+  - Supports dynamic upstream reloads. [PR-1469](https://github.com/nginxinc/nginx-gateway-fabric/pull/1469)
+  - Contains advanced Prometheus metrics. [PR-1394](https://github.com/nginxinc/nginx-gateway-fabric/pull/1394)
+  - Includes the NGINX Plus monitoring dashboard. [PR-1488](https://github.com/nginxinc/nginx-gateway-fabric/pull/1488)
+- Support for [BackendTLSPolicy](https://gateway-api.sigs.k8s.io/api-types/backendtlspolicy/). [PR-1487](https://github.com/nginxinc/nginx-gateway-fabric/pull/1487)
+- Support for URLRewrite HTTPRoute Filter. [PR-1396](https://github.com/nginxinc/nginx-gateway-fabric/pull/1396)
+- NGINX Gateway Fabric will collect and report product telemetry to an F5 telemetry service every 24h. Read https://docs.nginx.com/nginx-gateway-fabric/overview/product-telemetry/ for more info, including what gets collected and how to opt out. [PR-1699](https://github.com/nginxinc/nginx-gateway-fabric/pull/1699)
+
+ENHANCEMENTS:
+
+- Stop processing resources that haven't changed. [PR-1422](https://github.com/nginxinc/nginx-gateway-fabric/pull/1422) Thanks to [Kai-Hsun Chen](https://github.com/kevin85421).
+- Maintain Gateway Status order. [PR-1324](https://github.com/nginxinc/nginx-gateway-fabric/pull/1324) Thanks to [Kai-Hsun Chen](https://github.com/kevin85421).
+
+BUG FIXES:
+
+- Prevent paths in HTTPRoute matches from conflicting with internal locations in NGINX. [PR-1445](https://github.com/nginxinc/nginx-gateway-fabric/pull/1445)
+
+DOCUMENTATION:
+
+- Sample Grafana dashboard added. [PR-1620](https://github.com/nginxinc/nginx-gateway-fabric/pull/1620)
+- Add a document about how to get support. [PR-1388](https://github.com/nginxinc/nginx-gateway-fabric/pull/1388)
+- [Documentation](https://docs.nginx.com/nginx-gateway-fabric/installation/ngf-images) on how to build or install the NGINX Plus image.
+
+HELM CHART:
+
+- The version of the Helm chart is now 1.2.0
+- nodeSelector is now configurable. [PR-1531](https://github.com/nginxinc/nginx-gateway-fabric/pull/1531) Thanks to [Leandro Martins](https://github.com/leandrocostam)
+
+KNOWN ISSUES:
+
+- Shutdown of non-leader Pods starts leader jobs. [1738](https://github.com/nginxinc/nginx-gateway-fabric/issues/1738)
+- Too many matching conditions can cause reload errors. [1107](https://github.com/nginxinc/nginx-gateway-fabric/issues/1107)
+- NGF Pod fails to become ready due to nginx reload failure. [1695](https://github.com/nginxinc/nginx-gateway-fabric/issues/1695)
+
+COMPATIBILITY:
+
+- The Gateway API version: `1.0.0`
+- NGINX version: `1.25.4`
+- NGINX Plus version: `R31`
+- Kubernetes version: `1.23+`
+
+CONTAINER IMAGES:
+
+- Control plane: `ghcr.io/nginxinc/nginx-gateway-fabric:1.2.0`
+- Data plane: `ghcr.io/nginxinc/nginx-gateway-fabric/nginx:1.2.0`
+- Data plane with NGINX Plus: `private-registry.nginx.com/nginx-gateway-fabric/nginx-plus:1.2.0`
+
 ## Release 1.1.0
 
 *December 14, 2023*

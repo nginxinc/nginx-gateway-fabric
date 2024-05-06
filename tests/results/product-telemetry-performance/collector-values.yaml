@@ -1,0 +1,31 @@
+mode: deployment
+replicaCount: 1
+config:
+  exporters:
+    debug:
+      verbosity: detailed
+    logging: {}
+  extensions:
+    health_check: {}
+    memory_ballast:
+      size_in_percentage: 40
+  processors:
+    batch: {}
+    memory_limiter:
+      check_interval: 5s
+      limit_percentage: 80
+      spike_limit_percentage: 25
+  receivers:
+    otlp:
+      protocols:
+        grpc:
+          endpoint: 0.0.0.0:4317
+  service:
+    extensions:
+    - health_check
+    pipelines:
+      traces:
+        exporters:
+        - debug
+        receivers:
+        - otlp

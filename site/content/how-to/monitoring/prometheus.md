@@ -104,7 +104,7 @@ You can configure monitoring metrics for NGINX Gateway Fabric using Helm or Mani
 
 ### Using Helm
 
-If you're setting up NGINX Gateway Fabric with Helm, you can adjust the `metrics.*` parameters to fit your needs. For detailed options and instructions, see the [Helm README](/deploy/helm-chart/README.md).
+If you're setting up NGINX Gateway Fabric with Helm, you can adjust the `metrics.*` parameters to fit your needs. For detailed options and instructions, see the [Helm README](/charts/nginx-gateway-fabric/README.md).
 
 ### Using Kubernetes manifests
 

@@ -25,7 +25,8 @@ import (
 var (
 	numIterations = flag.Int("i", 1, "number of times to scale the resource")
 	delay         = flag.Duration("delay", 0, "delay between each scaling iteration")
-	version       = flag.String("version", "1.1.0", "version of NGF under test")
+	version       = flag.String("version", "1.2.0", "version of NGF under test")
+	plus          = flag.Bool("plus", false, "nginx-plus enabled")
 )
 
 func TestScale_Listeners(t *testing.T) {
@@ -160,7 +161,12 @@ func newResultsWriter(t *testing.T, testName string, resultHeaders ...string) *c
 		t.Fatalf("failed to create results version directory: %s", err)
 	}
 
-	dir := filepath.Join(versionDir, testName)
+	testDirName := testName
+	if *plus {
+		testDirName += "_Plus"
+	}
+
+	dir := filepath.Join(versionDir, testDirName)
 	if err := os.Mkdir(dir, 0o750); err != nil {
 		t.Fatalf("failed to create results test directory: %s", err)
 	}

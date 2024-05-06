@@ -7,21 +7,23 @@ type Server struct {
 	Locations     []Location
 	IsDefaultHTTP bool
 	IsDefaultSSL  bool
+	GRPC          bool
 	Port          int32
 }
 
 // Location holds all configuration for an HTTP location.
 type Location struct {
-	Return          *Return
-	ProxySSLVerify  *ProxySSLVerify
 	Path            string
 	ProxyPass       string
-	HTTPMatchVar    string
-	Rewrites        []string
+	HTTPMatchKey    string
 	ProxySetHeaders []Header
+	ProxySSLVerify  *ProxySSLVerify
+	Return          *Return
+	Rewrites        []string
+	GRPC            bool
 }
 
-// Header defines a HTTP header to be passed to the proxied server.
+// Header defines an HTTP header to be passed to the proxied server.
 type Header struct {
 	Name  string
 	Value string

@@ -2,6 +2,7 @@ package telemetry_test
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -13,7 +14,7 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/telemetry/telemetryfakes"
 )
 
-func TestCreateTelemetryJobWorker(t *testing.T) {
+func TestCreateTelemetryJobWorker_Succeeds(t *testing.T) {
 	g := NewWithT(t)
 
 	exporter := &telemetryfakes.FakeExporter{}
@@ -35,4 +36,23 @@ func TestCreateTelemetryJobWorker(t *testing.T) {
 	worker(ctx)
 	_, data := exporter.ExportArgsForCall(0)
 	g.Expect(data).To(Equal(&expData))
+}
+
+func TestCreateTelemetryJobWorker_CollectFails(t *testing.T) {
+	g := NewWithT(t)
+
+	exporter := &telemetryfakes.FakeExporter{}
+	dataCollector := &telemetryfakes.FakeDataCollector{}
+
+	worker := telemetry.CreateTelemetryJobWorker(zap.New(), exporter, dataCollector)
+
+	expData := telemetry.Data{}
+	dataCollector.CollectReturns(expData, errors.New("failed to collect cluster information"))
+
+	timeout := 10 * time.Second
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	worker(ctx)
+	g.Expect(exporter.ExportCallCount()).To(Equal(0))
 }

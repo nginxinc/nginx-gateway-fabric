@@ -59,7 +59,7 @@ var _ = Describe("EventLoop", func() {
 
 			var err error
 			Eventually(errorCh).Should(Receive(&err))
-			Expect(err).To(BeNil())
+			Expect(err).ToNot(HaveOccurred())
 		})
 
 		// Because BeforeEach() creates the first batch and waits for it to be handled, in the tests below
@@ -138,7 +138,7 @@ var _ = Describe("EventLoop", func() {
 			cancel()
 			err := eventLoop.Start(ctx)
 
-			Expect(err).Should(BeNil())
+			Expect(err).ToNot(HaveOccurred())
 		})
 	})
 })

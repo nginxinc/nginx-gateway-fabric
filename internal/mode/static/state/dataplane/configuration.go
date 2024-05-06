@@ -7,10 +7,13 @@ import (
 	"sort"
 
 	apiv1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	v1 "sigs.k8s.io/gateway-api/apis/v1"
+	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/graph"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/resolver"
 )
@@ -40,6 +43,7 @@ func BuildConfiguration(
 	backendGroups := buildBackendGroups(append(httpServers, sslServers...))
 	keyPairs := buildSSLKeyPairs(g.ReferencedSecrets, g.Gateway.Listeners)
 	certBundles := buildCertBundles(g.ReferencedCaCertConfigMaps, backendGroups)
+	telemetry := buildTelemetry(g)
 
 	config := Configuration{
 		HTTPServers:   httpServers,
@@ -49,6 +53,7 @@ func BuildConfiguration(
 		SSLKeyPairs:   keyPairs,
 		Version:       configVersion,
 		CertBundles:   certBundles,
+		Telemetry:     telemetry,
 	}
 
 	return config
@@ -274,8 +279,18 @@ func (hpr *hostPathRules) upsertListener(l *graph.Listener) {
 	}
 }
 
-func (hpr *hostPathRules) upsertRoute(route *graph.Route, listener *graph.Listener) {
+func (hpr *hostPathRules) upsertRoute(route *graph.L7Route, listener *graph.Listener) {
 	var hostnames []string
+	GRPC := route.RouteType == graph.RouteTypeGRPC
+
+	var objectSrc *metav1.ObjectMeta
+
+	if GRPC {
+		objectSrc = &helpers.MustCastObject[*v1alpha2.GRPCRoute](route.Source).ObjectMeta
+	} else {
+		objectSrc = &helpers.MustCastObject[*v1.HTTPRoute](route.Source).ObjectMeta
+	}
+
 	for _, p := range route.ParentRefs {
 		if val, exist := p.Attachment.AcceptedHostnames[string(listener.Source.Name)]; exist {
 			hostnames = val
@@ -297,13 +312,13 @@ func (hpr *hostPathRules) upsertRoute(route *graph.Route, listener *graph.Listen
 		}
 	}
 
-	for i, rule := range route.Source.Spec.Rules {
-		if !route.Rules[i].ValidMatches {
+	for i, rule := range route.Spec.Rules {
+		if !rule.ValidMatches {
 			continue
 		}
 
 		var filters HTTPFilters
-		if route.Rules[i].ValidFilters {
+		if rule.ValidFilters {
 			filters = createHTTPFilters(rule.Filters)
 		} else {
 			filters = HTTPFilters{
@@ -320,25 +335,24 @@ func (hpr *hostPathRules) upsertRoute(route *graph.Route, listener *graph.Listen
 					pathType: *m.Path.Type,
 				}
 
-				rule, exist := hpr.rulesPerHost[h][key]
+				hostRule, exist := hpr.rulesPerHost[h][key]
 				if !exist {
-					rule.Path = path
-					rule.PathType = convertPathType(*m.Path.Type)
+					hostRule.Path = path
+					hostRule.PathType = convertPathType(*m.Path.Type)
 				}
-
-				// create iteration variable inside the loop to fix implicit memory aliasing
-				om := route.Source.ObjectMeta
 
 				routeNsName := client.ObjectKeyFromObject(route.Source)
 
-				rule.MatchRules = append(rule.MatchRules, MatchRule{
-					Source:       &om,
-					BackendGroup: newBackendGroup(route.Rules[i].BackendRefs, routeNsName, i),
+				hostRule.GRPC = GRPC
+
+				hostRule.MatchRules = append(hostRule.MatchRules, MatchRule{
+					Source:       objectSrc,
+					BackendGroup: newBackendGroup(rule.BackendRefs, routeNsName, i),
 					Filters:      filters,
 					Match:        convertMatch(m),
 				})
 
-				hpr.rulesPerHost[h][key] = rule
+				hpr.rulesPerHost[h][key] = hostRule
 			}
 		}
 	}
@@ -448,7 +462,7 @@ func buildUpstreams(
 				continue
 			}
 
-			for _, rule := range route.Rules {
+			for _, rule := range route.Spec.Rules {
 				if !rule.ValidMatches || !rule.ValidFilters {
 					// don't generate upstreams for rules that have invalid matches or filters
 					continue
@@ -558,4 +572,45 @@ func generateSSLKeyPairID(secret types.NamespacedName) SSLKeyPairID {
 // The ID is safe to use as a file name.
 func generateCertBundleID(configMap types.NamespacedName) CertBundleID {
 	return CertBundleID(fmt.Sprintf("cert_bundle_%s_%s", configMap.Namespace, configMap.Name))
+}
+
+// buildTelemetry generates the Otel configuration.
+func buildTelemetry(g *graph.Graph) Telemetry {
+	if g.NginxProxy == nil || g.NginxProxy.Spec.Telemetry == nil || g.NginxProxy.Spec.Telemetry.Exporter == nil {
+		return Telemetry{}
+	}
+
+	serviceName := fmt.Sprintf("ngf:%s:%s", g.Gateway.Source.Namespace, g.Gateway.Source.Name)
+	telemetry := g.NginxProxy.Spec.Telemetry
+	if telemetry.ServiceName != nil {
+		serviceName = serviceName + ":" + *telemetry.ServiceName
+	}
+
+	tel := Telemetry{
+		Endpoint:    telemetry.Exporter.Endpoint,
+		ServiceName: serviceName,
+	}
+
+	spanAttrs := make([]SpanAttribute, 0, len(g.NginxProxy.Spec.Telemetry.SpanAttributes))
+	for _, spanAttr := range g.NginxProxy.Spec.Telemetry.SpanAttributes {
+		sa := SpanAttribute{
+			Key:   spanAttr.Key,
+			Value: spanAttr.Value,
+		}
+		spanAttrs = append(spanAttrs, sa)
+	}
+
+	tel.SpanAttributes = spanAttrs
+
+	if telemetry.Exporter.BatchCount != nil {
+		tel.BatchCount = *telemetry.Exporter.BatchCount
+	}
+	if telemetry.Exporter.BatchSize != nil {
+		tel.BatchSize = *telemetry.Exporter.BatchSize
+	}
+	if telemetry.Exporter.Interval != nil {
+		tel.Interval = string(*telemetry.Exporter.Interval)
+	}
+
+	return tel
 }

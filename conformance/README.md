@@ -60,7 +60,6 @@ update-ngf-manifest                  Update the NGF deployment manifest image na
 | SERVICE_MANIFEST     | ../deploy/manifests/service/nodeport.yaml                                                                     | The location of the NGF Service manifest                                                                                                      |
 | STATIC_MANIFEST      | provisioner/static-deployment.yaml                                                                            | The location of the NGF static deployment manifest                                                                                            |
 | PROVISIONER_MANIFEST | provisioner/provisioner.yaml                                                                                  | The location of the NGF provisioner manifest                                                                                                  |
-| INSTALL_WEBHOOK      | false                                                                                                         | Install the Gateway API Validating Webhook. Necessary for Kubernetes versions < 1.25.                                                         |
 | ENABLE_EXPERIMENTAL  | false                                                                                                         | Enable experimental features. Installs the Gateway APIs from the experimental channel and enables any supported experimental features in NGF. |
 
 ### Step 1 - Create a kind Cluster

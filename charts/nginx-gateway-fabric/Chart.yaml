@@ -1,0 +1,17 @@
+apiVersion: v2
+name: nginx-gateway-fabric
+description: NGINX Gateway Fabric
+type: application
+version: 1.2.0
+appVersion: "edge"
+home: https://github.com/nginxinc/nginx-gateway-fabric
+icon: https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric/main/charts/nginx-gateway-fabric/chart-icon.png
+sources:
+  - https://github.com/nginxinc/nginx-gateway-fabric/tree/main/charts/nginx-gateway-fabric
+keywords:
+  - kubernetes
+  - gateway
+  - nginx
+maintainers:
+  - name: nginxinc
+    email: kubernetes@nginx.com

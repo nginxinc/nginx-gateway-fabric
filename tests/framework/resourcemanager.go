@@ -30,6 +30,7 @@ import (
 	"strings"
 	"time"
 
+	apps "k8s.io/api/apps/v1"
 	core "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -37,20 +38,24 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/apimachinery/pkg/util/yaml"
+	"k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	v1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
 // ResourceManager handles creating/updating/deleting Kubernetes resources.
 type ResourceManager struct {
-	K8sClient     client.Client
-	FS            embed.FS
-	TimeoutConfig TimeoutConfig
+	K8sClient      client.Client
+	ClientGoClient kubernetes.Interface // used when k8sClient is not enough
+	FS             embed.FS
+	TimeoutConfig  TimeoutConfig
 }
 
 // ClusterInfo holds the cluster metadata
 type ClusterInfo struct {
-	K8sVersion      string
+	K8sVersion string
+	// ID is the UID of kube-system namespace
+	ID              string
 	MemoryPerNode   string
 	GkeInstanceType string
 	GkeZone         string
@@ -119,12 +124,12 @@ func (rm *ResourceManager) ApplyFromFiles(files []string, namespace string) erro
 }
 
 // Delete deletes Kubernetes resources defined as Go objects.
-func (rm *ResourceManager) Delete(resources []client.Object) error {
+func (rm *ResourceManager) Delete(resources []client.Object, opts ...client.DeleteOption) error {
 	for _, resource := range resources {
 		ctx, cancel := context.WithTimeout(context.Background(), rm.TimeoutConfig.DeleteTimeout)
 		defer cancel()
 
-		if err := rm.K8sClient.Delete(ctx, resource); err != nil && !apierrors.IsNotFound(err) {
+		if err := rm.K8sClient.Delete(ctx, resource, opts...); err != nil && !apierrors.IsNotFound(err) {
 			return fmt.Errorf("error deleting resource: %w", err)
 		}
 	}
@@ -154,7 +159,7 @@ func (rm *ResourceManager) readAndHandleObjects(
 	files []string,
 ) error {
 	for _, file := range files {
-		data, err := rm.getFileContents(file)
+		data, err := rm.GetFileContents(file)
 		if err != nil {
 			return err
 		}
@@ -182,9 +187,9 @@ func (rm *ResourceManager) readAndHandleObjects(
 	return nil
 }
 
-// getFileContents takes a string that can either be a local file
+// GetFileContents takes a string that can either be a local file
 // path or an https:// URL to YAML manifests and provides the contents.
-func (rm *ResourceManager) getFileContents(file string) (*bytes.Buffer, error) {
+func (rm *ResourceManager) GetFileContents(file string) (*bytes.Buffer, error) {
 	if strings.HasPrefix(file, "http://") {
 		return nil, fmt.Errorf("data can't be retrieved from %s: http is not supported, use https", file)
 	} else if strings.HasPrefix(file, "https://") {
@@ -309,7 +314,7 @@ func (rm *ResourceManager) waitForRoutesToBeReady(ctx context.Context, namespace
 
 			var numParents, readyCount int
 			for _, route := range routeList.Items {
-				numParents += len(route.Status.Parents)
+				numParents += len(route.Spec.ParentRefs)
 				for _, parent := range route.Status.Parents {
 					for _, cond := range parent.Conditions {
 						if cond.Type == string(v1.RouteConditionAccepted) && cond.Status == metav1.ConditionTrue {
@@ -406,7 +411,87 @@ func (rm *ResourceManager) GetClusterInfo() (ClusterInfo, error) {
 		ci.GkeZone = node.Labels["topology.kubernetes.io/zone"]
 	}
 
+	var ns core.Namespace
+	key := types.NamespacedName{Name: "kube-system"}
+
+	if err := rm.K8sClient.Get(ctx, key, &ns); err != nil {
+		return *ci, fmt.Errorf("error getting kube-system namespace: %w", err)
+	}
+
+	ci.ID = string(ns.UID)
+
 	return *ci, nil
+}
+
+// GetPodNames returns the names of all Pods in the specified namespace that match the given labels.
+func (rm *ResourceManager) GetPodNames(namespace string, labels client.MatchingLabels) ([]string, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), rm.TimeoutConfig.GetTimeout)
+	defer cancel()
+
+	var podList core.PodList
+	if err := rm.K8sClient.List(
+		ctx,
+		&podList,
+		client.InNamespace(namespace),
+		labels,
+	); err != nil {
+		return nil, fmt.Errorf("error getting list of Pods: %w", err)
+	}
+
+	names := make([]string, 0, len(podList.Items))
+
+	for _, pod := range podList.Items {
+		names = append(names, pod.Name)
+	}
+
+	return names, nil
+}
+
+// GetPodLogs returns the logs from the specified Pod
+func (rm *ResourceManager) GetPodLogs(namespace, name string, opts *core.PodLogOptions) (string, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), rm.TimeoutConfig.GetTimeout)
+	defer cancel()
+
+	req := rm.ClientGoClient.CoreV1().Pods(namespace).GetLogs(name, opts)
+
+	logs, err := req.Stream(ctx)
+	if err != nil {
+		return "", fmt.Errorf("error getting logs from Pod: %w", err)
+	}
+	defer logs.Close()
+
+	buf := new(bytes.Buffer)
+	if _, err := buf.ReadFrom(logs); err != nil {
+		return "", fmt.Errorf("error reading logs from Pod: %w", err)
+	}
+
+	return buf.String(), nil
+}
+
+// GetNGFDeployment returns the NGF Deployment in the specified namespace with the given release name.
+func (rm *ResourceManager) GetNGFDeployment(namespace, releaseName string) (*apps.Deployment, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), rm.TimeoutConfig.GetTimeout)
+	defer cancel()
+
+	var deployments apps.DeploymentList
+
+	if err := rm.K8sClient.List(
+		ctx,
+		&deployments,
+		client.InNamespace(namespace),
+		client.MatchingLabels{
+			"app.kubernetes.io/instance": releaseName,
+		},
+	); err != nil {
+		return nil, fmt.Errorf("error getting list of Deployments: %w", err)
+	}
+
+	if len(deployments.Items) != 1 {
+		return nil, fmt.Errorf("expected 1 NGF Deployment, got %d", len(deployments.Items))
+	}
+
+	deployment := deployments.Items[0]
+	return &deployment, nil
 }
 
 // GetReadyNGFPodNames returns the name(s) of the NGF Pod(s).

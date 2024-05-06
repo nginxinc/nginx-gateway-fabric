@@ -103,6 +103,13 @@ rules:
 - apiGroups:
   - gateway.nginx.org
   resources:
+  - nginxproxies
+  verbs:
+  - list
+  - watch
+- apiGroups:
+  - gateway.nginx.org
+  resources:
   - nginxgateways/status
   verbs:
   - update
@@ -216,6 +223,8 @@ spec:
         volumeMounts:
         - name: nginx-conf
           mountPath: /etc/nginx/conf.d
+        - name: module-includes
+          mountPath: /etc/nginx/module-includes
         - name: nginx-secrets
           mountPath: /etc/nginx/secrets
         - name: nginx-run
@@ -240,6 +249,8 @@ spec:
         volumeMounts:
         - name: nginx-conf
           mountPath: /etc/nginx/conf.d
+        - name: module-includes
+          mountPath: /etc/nginx/module-includes
         - name: nginx-secrets
           mountPath: /etc/nginx/secrets
         - name: nginx-run
@@ -256,6 +267,8 @@ spec:
         runAsNonRoot: true
       volumes:
       - name: nginx-conf
+        emptyDir: {}
+      - name: module-includes
         emptyDir: {}
       - name: nginx-secrets
         emptyDir: {}

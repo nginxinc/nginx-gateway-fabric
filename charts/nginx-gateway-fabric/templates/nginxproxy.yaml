@@ -1,0 +1,10 @@
+{{- if .Values.nginx.config }}
+apiVersion: gateway.nginx.org/v1alpha1
+kind: NginxProxy
+metadata:
+  name: {{ include "nginx-gateway.proxy-config-name" . }}
+  labels:
+  {{- include "nginx-gateway.labels" . | nindent 4 }}
+spec:
+  {{- toYaml .Values.nginx.config | nindent 2 }}
+{{- end }}

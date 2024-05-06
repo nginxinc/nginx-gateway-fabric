@@ -32,7 +32,7 @@ func TestEnableAfterBecameLeader(t *testing.T) {
 	g.Expect(enabled).To(BeFalse())
 
 	err := enableAfterBecameLeader.Start(context.Background())
-	g.Expect(err).To(BeNil())
+	g.Expect(err).ToNot(HaveOccurred())
 
 	g.Expect(enabled).To(BeTrue())
 }

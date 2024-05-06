@@ -150,7 +150,7 @@ func TestRegister(t *testing.T) {
 			} else {
 				err := register()
 				if test.expectedErr == nil {
-					g.Expect(err).To(BeNil())
+					g.Expect(err).ToNot(HaveOccurred())
 				} else {
 					g.Expect(err).To(MatchError(test.expectedErr))
 				}

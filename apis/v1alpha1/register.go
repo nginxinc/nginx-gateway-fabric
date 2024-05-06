@@ -34,6 +34,12 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 	scheme.AddKnownTypes(SchemeGroupVersion,
 		&NginxGateway{},
 		&NginxGatewayList{},
+		&NginxProxy{},
+		&NginxProxyList{},
+		&ObservabilityPolicy{},
+		&ObservabilityPolicyList{},
+		&ClientSettingsPolicy{},
+		&ClientSettingsPolicyList{},
 	)
 	// AddToGroupVersion allows the serialization of client types like ListOptions.
 	metav1.AddToGroupVersion(scheme, SchemeGroupVersion)

@@ -18,7 +18,7 @@ func TestLoggingExporter(t *testing.T) {
 
 	err := exporter.Export(context.Background(), &Data{})
 
-	g.Expect(err).To(BeNil())
+	g.Expect(err).ToNot(HaveOccurred())
 	g.Expect(buffer.String()).To(ContainSubstring(`"level":"info"`))
 	g.Expect(buffer.String()).To(ContainSubstring(`"msg":"Exporting telemetry"`))
 }

@@ -22,6 +22,7 @@ var gatewayCRDs = map[string]apiVersion{
 	"httproutes.gateway.networking.k8s.io":         {},
 	"referencegrants.gateway.networking.k8s.io":    {},
 	"backendtlspolicies.gateway.networking.k8s.io": {},
+	"grpcroutes.gateway.networking.k8s.io":         {},
 }
 
 type apiVersion struct {

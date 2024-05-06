@@ -25,10 +25,14 @@ const (
 	invalidBackendZoneSize = "32k"
 )
 
-func (g GeneratorImpl) executeUpstreams(conf dataplane.Configuration) []byte {
+func (g GeneratorImpl) executeUpstreams(conf dataplane.Configuration) []executeResult {
 	upstreams := g.createUpstreams(conf.Upstreams)
 
-	return execute(upstreamsTemplate, upstreams)
+	result := executeResult{
+		dest: httpConfigFile,
+		data: execute(upstreamsTemplate, upstreams),
+	}
+	return []executeResult{result}
 }
 
 func (g GeneratorImpl) createUpstreams(upstreams []dataplane.Upstream) []http.Upstream {

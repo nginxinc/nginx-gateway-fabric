@@ -13,9 +13,11 @@ GINKGO_LABEL=
 GINKGO_FLAGS=
 NGF_VERSION=
 CI=false
+TELEMETRY_ENDPOINT=
+TELEMETRY_ENDPOINT_INSECURE=false
 
 ifneq ($(GINKGO_LABEL),)
-    override GINKGO_FLAGS += -ginkgo.label-filter "$(GINKGO_LABEL)"
+    override GINKGO_FLAGS += --label-filter "$(GINKGO_LABEL)"
 endif
 
 # Check if PLUS_ENABLED is true
@@ -38,11 +40,11 @@ delete-kind-cluster: ## Delete kind cluster
 
 .PHONY: build-images
 build-images: ## Build NGF and NGINX images
-	cd .. && make PREFIX=$(PREFIX) TAG=$(TAG) build-images
+	cd .. && make PREFIX=$(PREFIX) TAG=$(TAG) TELEMETRY_ENDPOINT=$(TELEMETRY_ENDPOINT) TELEMETRY_ENDPOINT_INSECURE=$(TELEMETRY_ENDPOINT_INSECURE) build-images
 
 .PHONY: build-images-with-plus
 build-images-with-plus: ## Build NGF and NGINX Plus images
-	cd .. && make PREFIX=$(PREFIX) TAG=$(TAG) build-images-with-plus
+	cd .. && make PREFIX=$(PREFIX) TAG=$(TAG) TELEMETRY_ENDPOINT=$(TELEMETRY_ENDPOINT) TELEMETRY_ENDPOINT_INSECURE=$(TELEMETRY_ENDPOINT_INSECURE) build-images-with-plus
 
 .PHONY: load-images
 load-images: ## Load NGF and NGINX images on configured kind cluster
@@ -92,19 +94,26 @@ stop-longevity-test: ## Stops the longevity test and collects results
 
 .PHONY: .vm-nfr-test
 .vm-nfr-test: ## Runs the NFR tests on the GCP VM (called by `nfr-test`)
-	go test -v ./suite -ginkgo.label-filter "nfr" $(GINKGO_FLAGS) -ginkgo.v -args --gateway-api-version=$(GW_API_VERSION) \
+	go run github.com/onsi/ginkgo/v2/ginkgo --randomize-all --randomize-suites --keep-going --fail-on-pending --trace -r -v \
+	    --label-filter "nfr" $(GINKGO_FLAGS) ./suite --  --gateway-api-version=$(GW_API_VERSION) \
 		--gateway-api-prev-version=$(GW_API_PREV_VERSION) --image-tag=$(TAG) --version-under-test=$(NGF_VERSION) \
-		--plus-enabled=$(PLUS_ENABLED) --ngf-image-repo=$(PREFIX) --nginx-image-repo=$(NGINX_PREFIX) \
+		--plus-enabled=$(PLUS_ENABLED) --ngf-image-repo=$(PREFIX) --nginx-image-repo=$(NGINX_PREFIX) --nginx-plus-image-repo=$(NGINX_PLUS_PREFIX) \
 		--pull-policy=$(PULL_POLICY) --k8s-version=$(K8S_VERSION) --service-type=$(GW_SERVICE_TYPE) \
 		--is-gke-internal-lb=$(GW_SVC_GKE_INTERNAL)
 
 .PHONY: test
 test: ## Runs the functional tests on your default k8s cluster
-	go test -v ./suite -ginkgo.label-filter "functional" $(GINKGO_FLAGS) -args --gateway-api-version=$(GW_API_VERSION) \
-		--gateway-api-prev-version=$(GW_API_PREV_VERSION) --image-tag=$(TAG) --version-under-test=$(NGF_VERSION) \
+	go run github.com/onsi/ginkgo/v2/ginkgo --randomize-all --randomize-suites --keep-going --fail-on-pending --trace -r -v \
+		--label-filter "functional" $(GINKGO_FLAGS) ./suite -- \
+		--gateway-api-version=$(GW_API_VERSION) --gateway-api-prev-version=$(GW_API_PREV_VERSION) \
+		--image-tag=$(TAG) --version-under-test=$(NGF_VERSION) \
 		--plus-enabled=$(PLUS_ENABLED) --ngf-image-repo=$(PREFIX) --nginx-image-repo=$(NGINX_PREFIX) \
 		--pull-policy=$(PULL_POLICY) --k8s-version=$(K8S_VERSION) --service-type=$(GW_SERVICE_TYPE) \
 		--is-gke-internal-lb=$(GW_SVC_GKE_INTERNAL)
+
+.PHONY: test-with-plus
+test-with-plus: ## Runs the functional tests for NGF with NGINX Plus on your default k8s cluster
+	make test PLUS_ENABLED=true
 
 .PHONY: cleanup-gcp
 cleanup-gcp: cleanup-router cleanup-vm delete-gke-cluster ## Cleanup all GCP resources

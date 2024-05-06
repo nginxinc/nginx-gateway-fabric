@@ -28,7 +28,7 @@ If building the NGINX Plus image, you will also need a valid NGINX Plus license 
 1. Clone the repo and change into the `nginx-gateway-fabric` directory:
 
    ```shell
-   git clone https://github.com/nginxinc/nginx-gateway-fabric.git
+   git clone https://github.com/nginxinc/nginx-gateway-fabric.git --branch v1.2.0
    cd nginx-gateway-fabric
    ```
 
@@ -36,48 +36,48 @@ If building the NGINX Plus image, you will also need a valid NGINX Plus license 
    - To build both the NGINX Gateway Fabric and NGINX images:
 
       ```makefile
-      make PREFIX=myregistry.example.com/nginx-gateway-fabric build-images
+      make PREFIX=myregistry.example.com/nginx-gateway-fabric build-prod-images
       ```
 
    - To build both the NGINX Gateway Fabric and NGINX Plus images:
 
       ```makefile
-      make PREFIX=myregistry.example.com/nginx-gateway-fabric build-images-with-plus
+      make PREFIX=myregistry.example.com/nginx-gateway-fabric build-prod-images-with-plus
       ```
 
    - To build just the NGINX Gateway Fabric image:
 
      ```makefile
-     make PREFIX=myregistry.example.com/nginx-gateway-fabric build-ngf-image
+     make PREFIX=myregistry.example.com/nginx-gateway-fabric build-prod-ngf-image
      ```
 
    - To build just the NGINX image:
 
      ```makefile
-     make PREFIX=myregistry.example.com/nginx-gateway-fabric build-nginx-image
+     make PREFIX=myregistry.example.com/nginx-gateway-fabric build-prod-nginx-image
      ```
 
    - To build just the NGINX Plus image:
 
      ```makefile
-     make PREFIX=<my-docker-registry>/nginx-gateway-fabric/nginx-plus build-nginx-plus-image
+     make PREFIX=myregistry.example.com/nginx-gateway-fabric/nginx-plus build-prod-nginx-plus-image
      ```
 
    Set the `PREFIX` variable to the name of the registry you'd like to push the image to. By default, the images will be
-   named `nginx-gateway-fabric:edge` and `nginx-gateway-fabric/nginx:edge` or `nginx-gateway-fabric/nginx-plus:edge`.
+   named `nginx-gateway-fabric:1.2.0` and `nginx-gateway-fabric/nginx:1.2.0` or `nginx-gateway-fabric/nginx-plus:1.2.0`.
 
 1. Push the images to your container registry:
 
    ```shell
-   docker push myregistry.example.com/nginx-gateway-fabric:edge
-   docker push myregistry.example.com/nginx-gateway-fabric/nginx:edge
+   docker push myregistry.example.com/nginx-gateway-fabric:1.2.0
+   docker push myregistry.example.com/nginx-gateway-fabric/nginx:1.2.0
    ```
 
    or
 
    ```shell
-   docker push myregistry.example.com/nginx-gateway-fabric:edge
-   docker push myregistry.example.com/nginx-gateway-fabric/nginx-plus:edge
+   docker push myregistry.example.com/nginx-gateway-fabric:1.2.0
+   docker push myregistry.example.com/nginx-gateway-fabric/nginx-plus:1.2.0
    ```
 
    Make sure to substitute `myregistry.example.com/nginx-gateway-fabric` with your registry.

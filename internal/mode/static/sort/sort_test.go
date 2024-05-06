@@ -85,7 +85,7 @@ func TestLessObjectMeta(t *testing.T) {
 			invertedResult := LessObjectMeta(test.meta2, test.meta1)
 
 			g.Expect(result).To(Equal(test.expected))
-			g.Expect(invertedResult).To(Equal(false))
+			g.Expect(invertedResult).To(BeFalse())
 		})
 	}
 }

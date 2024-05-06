@@ -1,4 +1,4 @@
-name: Continuous Integration
+name: CI
 
 on:
   push:
@@ -8,6 +8,8 @@ on:
     tags:
       - "v[0-9]+.[0-9]+.[0-9]+*"
   pull_request:
+  schedule:
+    - cron: "0 4 * * *" # run every day at 4am UTC
 
 defaults:
   run:
@@ -26,18 +28,21 @@ jobs:
     runs-on: ubuntu-22.04
     outputs:
       go_path: ${{ steps.vars.outputs.go_path }}
+      min_k8s_version: ${{ steps.vars.outputs.min_k8s_version }}
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
 
       - name: Setup Golang Environment
-        uses: actions/setup-go@0c52d547c9bc32b1aa3301fd7a9cb496313a4491 # v5.0.0
+        uses: actions/setup-go@cdcb36043654635271a94b9a6d1392de5bb323a7 # v5.0.1
         with:
           go-version: stable
 
       - name: Output Variables
         id: vars
-        run: echo "go_path=$(go env GOPATH)" >> $GITHUB_OUTPUT
+        run: |
+          echo "go_path=$(go env GOPATH)" >> $GITHUB_OUTPUT
+          echo "min_k8s_version=1.25.16" >> $GITHUB_OUTPUT
 
       - name: Check if go.mod and go.sum are up to date
         run: go mod tidy && git diff --exit-code -- go.mod go.sum
@@ -57,10 +62,10 @@ jobs:
     needs: vars
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
 
       - name: Setup Golang Environment
-        uses: actions/setup-go@0c52d547c9bc32b1aa3301fd7a9cb496313a4491 # v5.0.0
+        uses: actions/setup-go@cdcb36043654635271a94b9a6d1392de5bb323a7 # v5.0.1
         with:
           go-version: stable
 
@@ -68,12 +73,12 @@ jobs:
         run: make unit-test
 
       - name: Upload coverage reports to Codecov
-        uses: codecov/codecov-action@54bcd8715eee62d40e33596ef5e8f0f48dbbccab # v4.1.0
+        uses: codecov/codecov-action@5ecb98a3c6b747ed38dc09f787459979aebb39be # v4.3.1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
 
       - name: Upload Coverage Report
-        uses: actions/upload-artifact@5d5d22a31266ced268874388b861e4b58bb5c2f3 # v4.3.1
+        uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # v4.3.3
         with:
           name: cover-${{ github.run_id }}.html
           path: ${{ github.workspace }}/cover.html
@@ -85,7 +90,7 @@ jobs:
     needs: vars
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
 
       - name: Setup Node.js Environment
         uses: actions/setup-node@60edb5dd545a775178f52524783378180af0d1f8 # v4.0.2
@@ -96,7 +101,7 @@ jobs:
         run: npm --prefix ${{ github.workspace }}/internal/mode/static/nginx/modules install-ci-test
 
       - name: Upload coverage reports to Codecov
-        uses: codecov/codecov-action@54bcd8715eee62d40e33596ef5e8f0f48dbbccab # v4.1.0
+        uses: codecov/codecov-action@5ecb98a3c6b747ed38dc09f787459979aebb39be # v4.3.1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
 
@@ -110,17 +115,17 @@ jobs:
       issues: write # for goreleaser/goreleaser-action to close milestone
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
         with:
           fetch-depth: 0
 
       - name: Setup Golang Environment
-        uses: actions/setup-go@0c52d547c9bc32b1aa3301fd7a9cb496313a4491 # v5.0.0
+        uses: actions/setup-go@cdcb36043654635271a94b9a6d1392de5bb323a7 # v5.0.1
         with:
           go-version: stable
 
       - name: Create/Update Draft
-        uses: lucacome/draft-release@a98777f0bae0a6815cc1df77ebe48ca70e7cb970 # v1.0.3
+        uses: lucacome/draft-release@e076259ceb036bc5f2c2a76559784c12cf8d2e74 # v1.0.4
         with:
           minor-label: "enhancement"
           major-label: "change"
@@ -132,11 +137,11 @@ jobs:
         if: ${{ github.event_name == 'push' && github.ref != 'refs/heads/main' }}
 
       - name: Download Syft
-        uses: anchore/sbom-action/download-syft@9fece9e20048ca9590af301449208b2b8861333b # v0.15.9
+        uses: anchore/sbom-action/download-syft@7ccf588e3cf3cc2611714c2eeae48550fbc17552 # v0.15.11
         if: github.ref_type == 'tag'
 
       - name: Install Cosign
-        uses: sigstore/cosign-installer@e1523de7571e31dbe865fd2e80c5c7c23ae71eb4 # v3.4.0
+        uses: sigstore/cosign-installer@59acb6260d9c0ba8f4a2f9d9b48431a222b68e20 # v3.5.0
         if: github.ref_type == 'tag'
 
       - name: Build binary
@@ -151,29 +156,96 @@ jobs:
           AZURE_STORAGE_KEY: ${{ secrets.AZURE_STORAGE_KEY }}
           AZURE_BUCKET_NAME: ${{ secrets.AZURE_BUCKET_NAME }}
           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_COMMUNITY }}
+          TELEMETRY_ENDPOINT: oss.edge.df.f5.com:443
+          TELEMETRY_ENDPOINT_INSECURE: "false"
 
       - name: Cache Artifacts
-        uses: actions/cache@ab5e6d0c87105b4c9c2047343972218f562e4319 # v4.0.1
+        uses: actions/cache@0c45773b623bea8c8e75f6c82b208c3cf94ea4f9 # v4.0.2
         with:
           path: ${{ github.workspace }}/dist
           key: nginx-gateway-fabric-${{ github.run_id }}-${{ github.run_number }}
 
+  build-oss:
+    name: Build OSS images
+    needs: [vars, binary]
+    strategy:
+      fail-fast: false
+      matrix:
+        image: [ngf, nginx]
+        platforms: ["linux/arm64, linux/amd64"]
+    uses: ./.github/workflows/build.yml
+    with:
+      image: ${{ matrix.image }}
+      platforms: ${{ matrix.platforms }}
+    permissions:
+      contents: read # for docker/build-push-action to read repo content
+      security-events: write # for github/codeql-action/upload-sarif to upload SARIF results
+      packages: write # for docker/build-push-action to push to GHCR
+      id-token: write # for docker/login to login to NGINX registry
+    secrets: inherit
+
+  build-plus:
+    name: Build Plus images
+    needs: [vars, binary]
+    uses: ./.github/workflows/build.yml
+    with:
+      image: plus
+      platforms: "linux/arm64, linux/amd64"
+    permissions:
+      contents: read # for docker/build-push-action to read repo content
+      security-events: write # for github/codeql-action/upload-sarif to upload SARIF results
+      packages: write # for docker/build-push-action to push to GHCR
+      id-token: write # for docker/login to login to NGINX registry
+    secrets: inherit
+
+  functional-tests:
+    name: Functional tests
+    needs: [vars, build-oss, build-plus]
+    strategy:
+      fail-fast: false
+      matrix:
+        image: [nginx, plus]
+        k8s-version: ["${{ needs.vars.outputs.min_k8s_version }}", "latest"]
+    uses: ./.github/workflows/functional.yml
+    with:
+      image: ${{ matrix.image }}
+      k8s-version: ${{ matrix.k8s-version }}
+    permissions:
+      contents: read
+
+  conformance-tests:
+    name: Conformance tests
+    needs: [vars, build-oss, build-plus]
+    strategy:
+      fail-fast: false
+      matrix:
+        image: [nginx, plus]
+        k8s-version: ["${{ needs.vars.outputs.min_k8s_version }}", "latest"]
+        enable-experimental: [true, false]
+    uses: ./.github/workflows/conformance.yml
+    with:
+      image: ${{ matrix.image }}
+      k8s-version: ${{ matrix.k8s-version }}
+      enable-experimental: ${{ matrix.enable-experimental }}
+    permissions:
+      contents: write
+
   helm-tests:
     name: Helm Tests
     runs-on: ubuntu-22.04
-    needs: [vars, binary]
+    needs: [vars, build-oss]
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
 
       - name: Fetch Cached Artifacts
-        uses: actions/cache@ab5e6d0c87105b4c9c2047343972218f562e4319 # v4.0.1
+        uses: actions/cache@0c45773b623bea8c8e75f6c82b208c3cf94ea4f9 # v4.0.2
         with:
           path: ${{ github.workspace }}/dist
           key: nginx-gateway-fabric-${{ github.run_id }}-${{ github.run_number }}
 
       - name: Docker Buildx
-        uses: docker/setup-buildx-action@0d103c3126aa41d772a8362f6aa67afac040f80c # v3.1.0
+        uses: docker/setup-buildx-action@d70bba72b1f3fd22344832f00baa16ece964efeb # v3.3.0
 
       - name: NGF Docker meta
         id: ngf-meta
@@ -200,7 +272,7 @@ jobs:
             type=ref,event=branch,suffix=-rc,enable=${{ startsWith(github.ref, 'refs/heads/release') }}
 
       - name: Build NGF Docker Image
-        uses: docker/build-push-action@af5a7ed5ba88268d5278f7203fb52cd833f66d6e # v5.2.0
+        uses: docker/build-push-action@2cdde995de11925a030ce8070c3d77a52ffcf1c0 # v5.3.0
         with:
           file: build/Dockerfile
           tags: ${{ steps.ngf-meta.outputs.tags }}
@@ -208,18 +280,16 @@ jobs:
           target: goreleaser
           load: true
           cache-from: type=gha,scope=ngf
-          cache-to: type=gha,scope=ngf,mode=max
           pull: true
 
       - name: Build NGINX Docker Image
-        uses: docker/build-push-action@af5a7ed5ba88268d5278f7203fb52cd833f66d6e # v5.2.0
+        uses: docker/build-push-action@2cdde995de11925a030ce8070c3d77a52ffcf1c0 # v5.3.0
         with:
           file: build/Dockerfile.nginx
           tags: ${{ steps.nginx-meta.outputs.tags }}
           context: "."
           load: true
           cache-from: type=gha,scope=nginx
-          cache-to: type=gha,scope=nginx,mode=max
           pull: true
           build-args: |
             NJS_DIR=internal/mode/static/nginx/modules/src
@@ -229,7 +299,7 @@ jobs:
       - name: Deploy Kubernetes
         id: k8s
         run: |
-          kube_config=${{ github.workspace }}/deploy/helm-chart/kube-${{ github.run_id }}-helm
+          kube_config=${{ github.workspace }}/kube-${{ github.run_id }}-helm
           make create-kind-cluster KIND_KUBE_CONFIG=${kube_config}
           echo "KUBECONFIG=${kube_config}" >> "$GITHUB_ENV"
           kind load docker-image ghcr.io/nginxinc/nginx-gateway-fabric:${{ steps.ngf-meta.outputs.version }} ghcr.io/nginxinc/nginx-gateway-fabric/nginx:${{ steps.nginx-meta.outputs.version }}
@@ -245,31 +315,13 @@ jobs:
           --set nginxGateway.image.repository=ghcr.io/nginxinc/nginx-gateway-fabric
           --set nginxGateway.image.tag=${{ steps.ngf-meta.outputs.version }}
           --set nginxGateway.image.pullPolicy=Never
+          --set nginxGateway.productTelemetry.enable=false
           --set nginx.image.repository=ghcr.io/nginxinc/nginx-gateway-fabric/nginx
           --set nginx.image.tag=${{ steps.nginx-meta.outputs.version }}
           --set nginx.image.pullPolicy=Never
           --set service.type=NodePort
           -n nginx-gateway
-        working-directory: ${{ github.workspace }}/deploy/helm-chart
-
-  build:
-    name: Build Image
-    needs: [vars, binary]
-    strategy:
-      fail-fast: false
-      matrix:
-        image: [ngf, nginx, plus]
-        platforms: ["linux/arm64, linux/amd64"]
-    uses: ./.github/workflows/build.yml
-    with:
-      image: ${{ matrix.image }}
-      platforms: ${{ matrix.platforms }}
-    permissions:
-      contents: read # for docker/build-push-action to read repo content
-      security-events: write # for github/codeql-action/upload-sarif to upload SARIF results
-      packages: write # for docker/build-push-action to push to GHCR
-      id-token: write # for docker/login to login to NGINX registry
-    secrets: inherit
+        working-directory: ${{ github.workspace }}/charts/nginx-gateway-fabric
 
   publish-helm:
     name: Package and Publish Helm Chart
@@ -281,10 +333,10 @@ jobs:
       packages: write # for helm to push to GHCR
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b # v4.1.4
 
       - name: Login to GitHub Container Registry
-        uses: docker/login-action@343f7c4344506bcbf9b4de18042ae17996df046d # v3.0.0
+        uses: docker/login-action@e92390c5fb421da1463c202d546fed0ec5c39f20 # v3.1.0
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
@@ -293,7 +345,7 @@ jobs:
       - name: Package
         id: package
         run: |
-          output=$(helm package ${{ github.ref_type != 'tag' && '--app-version edge --version 0.0.0-edge' || '' }} deploy/helm-chart)
+          output=$(helm package ${{ github.ref_type != 'tag' && '--app-version edge --version 0.0.0-edge' || '' }} charts/nginx-gateway-fabric)
           echo "path=$(basename -- $(echo $output | cut -d: -f2))" >> $GITHUB_OUTPUT
 
       - name: Push to GitHub Container Registry

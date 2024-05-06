@@ -1,5 +1,5 @@
 TAG = edge
-VERSION = 1.1.0 # NGF version
+VERSION = 1.2.0 # NGF version
 PREFIX = nginx-gateway-fabric
 NGINX_PREFIX = $(PREFIX)/nginx
 NGINX_PLUS_PREFIX ?= $(PREFIX)/nginx-plus
@@ -11,12 +11,14 @@ KIND_KUBE_CONFIG=$${HOME}/.kube/kind/config
 CONFORMANCE_TAG = latest
 CONFORMANCE_PREFIX = conformance-test-runner
 NGF_MANIFEST=../deploy/manifests/nginx-gateway.yaml
-CRDS=../deploy/manifests/crds/
 STATIC_MANIFEST=provisioner/static-deployment.yaml
 PROVISIONER_MANIFEST=provisioner/provisioner.yaml
-INSTALL_WEBHOOK ?= false
 ENABLE_EXPERIMENTAL ?= false
 .DEFAULT_GOAL := help
+
+ifeq ($(ENABLE_EXPERIMENTAL),true)
+    SUPPORTED_FEATURES +=,GRPCExactMethodMatching,GRPCRouteListenerHostnameMatching,GRPCRouteHeaderMatching
+endif
 
 .PHONY: help
 help: Makefile ## Display this help
@@ -62,14 +64,14 @@ load-images-with-plus: ## Load NGF and NGINX Plus images on configured kind clus
 
 .PHONY: prepare-ngf-dependencies
 prepare-ngf-dependencies: update-ngf-manifest ## Install NGF dependencies on configured kind cluster
-	./scripts/install-gateway.sh $(GW_API_VERSION) $(INSTALL_WEBHOOK) $(ENABLE_EXPERIMENTAL)
-	kubectl apply -f $(CRDS)
+	./scripts/install-gateway.sh $(GW_API_VERSION) $(ENABLE_EXPERIMENTAL)
+	kubectl kustomize ../config/crd | kubectl apply -f -
 	kubectl apply -f $(NGF_MANIFEST)
 
 .PHONY: prepare-ngf-dependencies-with-plus
 prepare-ngf-dependencies-with-plus: update-ngf-manifest-with-plus ## Install NGF dependencies with Plus on configured kind cluster
-	./scripts/install-gateway.sh $(GW_API_VERSION) $(INSTALL_WEBHOOK)
-	kubectl apply -f $(CRDS)
+	./scripts/install-gateway.sh $(GW_API_VERSION)
+	kubectl kustomize ../config/crd | kubectl apply -f -
 	kubectl apply -f $(NGF_MANIFEST)
 
 .PHONY: deploy-updated-provisioner
@@ -103,6 +105,7 @@ run-conformance-tests: ## Run conformance tests
 		--restart=Never -- sh -c "go test -v . -tags conformance,experimental -args --gateway-class=$(GATEWAY_CLASS) \
 						        --supported-features=$(SUPPORTED_FEATURES) --version=$(VERSION) \
 								--report-output=output.txt; cat output.txt" | tee output.txt
+	bash scripts/check-pod-exit-code.sh
 	sed -e '1,/CONFORMANCE PROFILE/d' output.txt > conformance-profile.yaml
 	rm output.txt
 	[ $(shell cat conformance-profile.yaml | yq '.profiles[0].core.result') != "failure" ] \
@@ -119,7 +122,7 @@ uninstall-ngf: uninstall-k8s-components undo-manifests-update ## Uninstall NGF o
 .PHONY: uninstall-k8s-components
 uninstall-k8s-components: ## Uninstall installed components on configured kind cluster
 	-kubectl delete -f $(NGF_MANIFEST)
-	./scripts/uninstall-gateway.sh $(GW_API_VERSION) $(INSTALL_WEBHOOK) $(ENABLE_EXPERIMENTAL)
+	./scripts/uninstall-gateway.sh $(GW_API_VERSION) $(ENABLE_EXPERIMENTAL)
 	kubectl delete clusterrole nginx-gateway-provisioner
 	kubectl delete clusterrolebinding nginx-gateway-provisioner
 

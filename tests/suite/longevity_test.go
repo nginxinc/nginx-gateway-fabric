@@ -65,7 +65,7 @@ var _ = Describe("Longevity", Label("longevity-setup", "longevity-teardown"), fu
 		resultsDir, err := framework.CreateResultsDir("longevity", version)
 		Expect(err).ToNot(HaveOccurred())
 
-		filename := filepath.Join(resultsDir, fmt.Sprintf("%s.md", version))
+		filename := filepath.Join(resultsDir, framework.CreateResultsFilename("md", version, *plusEnabled))
 		resultsFile, err := framework.CreateResultsFile(filename)
 		Expect(err).ToNot(HaveOccurred())
 		defer resultsFile.Close()
@@ -76,7 +76,7 @@ var _ = Describe("Longevity", Label("longevity-setup", "longevity-teardown"), fu
 		homeDir, err := os.UserHomeDir()
 		Expect(err).ToNot(HaveOccurred())
 
-		Expect(framework.WriteContent(resultsFile, "\n## Traffic\n"))
+		Expect(framework.WriteContent(resultsFile, "\n## Traffic\n")).To(Succeed())
 		Expect(writeTrafficResults(resultsFile, homeDir, "coffee.txt", "HTTP")).To(Succeed())
 		Expect(writeTrafficResults(resultsFile, homeDir, "tea.txt", "HTTPS")).To(Succeed())
 

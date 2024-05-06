@@ -1,4 +1,4 @@
-// Package helpers contains helper functions for unit tests.
+// Package helpers contains helper functions
 package helpers
 
 import (
@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // Diff prints the diff between two structs.
@@ -40,4 +41,13 @@ func PrepareTimeForFakeClient(t metav1.Time) metav1.Time {
 	}
 
 	return t
+}
+
+// MustCastObject casts the client.Object to the specified type that implements it.
+func MustCastObject[T client.Object](object client.Object) T {
+	if obj, ok := object.(T); ok {
+		return obj
+	}
+
+	panic(fmt.Errorf("unexpected object type %T", object))
 }

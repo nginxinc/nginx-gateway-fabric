@@ -1,6 +1,6 @@
 package config
 
-var mapsTemplateText = `
+const mapsTemplateText = `
 {{ range $m := . }}
 map {{ $m.Source }} {{ $m.Variable }} {
     {{ range $p := $m.Parameters }}

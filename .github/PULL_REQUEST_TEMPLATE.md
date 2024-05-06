@@ -28,7 +28,7 @@ Before creating a PR, run through this checklist and mark each as complete.
 
 ### Release notes
 
-If this PR introduces a change that affects users and needs to be mentioned in the [release notes](../CHANGELOG.md),
+If this PR introduces a change that affects users and needs to be mentioned in the [release notes](../blob/main/CHANGELOG.md),
 please add a brief note that summarizes the change.
 
 <!-- If this PR does not require a release note, you can just write NONE in the release-note block below. -->

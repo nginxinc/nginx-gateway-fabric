@@ -27,6 +27,7 @@ func CreateTelemetryJobWorker(
 		data, err := dataCollector.Collect(ctx)
 		if err != nil {
 			logger.Error(err, "Failed to collect telemetry data")
+			return
 		}
 
 		// Export telemetry

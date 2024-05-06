@@ -116,6 +116,7 @@ func StartManager(cfg config.Config) error {
 		Logger:           cfg.Logger.WithName("changeProcessor"),
 		Validators: validation.Validators{
 			HTTPFieldsValidator: ngxvalidation.HTTPValidator{},
+			GenericValidator:    ngxvalidation.GenericValidator{},
 		},
 		EventRecorder:  recorder,
 		Scheme:         scheme,
@@ -189,15 +190,12 @@ func StartManager(cfg config.Config) error {
 		)
 	}
 
-	statusUpdater := status.NewUpdater(status.UpdaterConfig{
-		GatewayCtlrName:          cfg.GatewayCtlrName,
-		GatewayClassName:         cfg.GatewayClassName,
-		Client:                   mgr.GetClient(),
-		Logger:                   cfg.Logger.WithName("statusUpdater"),
-		Clock:                    status.NewRealClock(),
-		UpdateGatewayClassStatus: cfg.UpdateGatewayClassStatus,
-		LeaderElectionEnabled:    cfg.LeaderElection.Enabled,
-	})
+	statusUpdater := status.NewUpdater(
+		mgr.GetClient(),
+		cfg.Logger.WithName("statusUpdater"),
+	)
+
+	groupStatusUpdater := status.NewLeaderAwareGroupUpdater(statusUpdater)
 
 	eventHandler := newEventHandlerImpl(eventHandlerConfig{
 		k8sClient:       mgr.GetClient(),
@@ -216,7 +214,7 @@ func StartManager(cfg config.Config) error {
 			&ngxruntime.ProcessHandlerImpl{},
 			ngxruntime.NewVerifyClient(1*time.Second),
 		),
-		statusUpdater:                 statusUpdater,
+		statusUpdater:                 groupStatusUpdater,
 		eventRecorder:                 recorder,
 		nginxConfiguredOnStartChecker: nginxChecker,
 		controlConfigNSName:           controlConfigNSName,
@@ -224,6 +222,8 @@ func StartManager(cfg config.Config) error {
 		metricsCollector:              handlerCollector,
 		usageReportConfig:             cfg.UsageReportConfig,
 		usageSecret:                   usageSecret,
+		gatewayCtlrName:               cfg.GatewayCtlrName,
+		updateGatewayClassStatus:      cfg.UpdateGatewayClassStatus,
 	})
 
 	objects, objectLists := prepareFirstEventBatchPreparerArgs(
@@ -243,7 +243,7 @@ func StartManager(cfg config.Config) error {
 		return fmt.Errorf("cannot register event loop: %w", err)
 	}
 
-	if err = mgr.Add(runnables.NewEnableAfterBecameLeader(statusUpdater.Enable)); err != nil {
+	if err = mgr.Add(runnables.NewEnableAfterBecameLeader(groupStatusUpdater.Enable)); err != nil {
 		return fmt.Errorf("cannot register status updater: %w", err)
 	}
 
@@ -418,10 +418,16 @@ func registerControllers(
 				),
 			},
 		},
+		{
+			objectType: &ngfAPI.NginxProxy{},
+			options: []controller.Option{
+				controller.WithK8sPredicate(k8spredicate.GenerationChangedPredicate{}),
+			},
+		},
 	}
 
 	if cfg.ExperimentalFeatures {
-		backendTLSObjs := []ctlrCfg{
+		gwExpFeatures := []ctlrCfg{
 			{
 				objectType: &gatewayv1alpha2.BackendTLSPolicy{},
 				options: []controller.Option{
@@ -433,8 +439,14 @@ func registerControllers(
 				// https://github.com/nginxinc/nginx-gateway-fabric/issues/1545
 				objectType: &apiv1.ConfigMap{},
 			},
+			{
+				objectType: &gatewayv1alpha2.GRPCRoute{},
+				options: []controller.Option{
+					controller.WithK8sPredicate(k8spredicate.GenerationChangedPredicate{}),
+				},
+			},
 		}
-		controllerRegCfgs = append(controllerRegCfgs, backendTLSObjs...)
+		controllerRegCfgs = append(controllerRegCfgs, gwExpFeatures...)
 	}
 
 	if cfg.ConfigName != "" {
@@ -596,11 +608,17 @@ func prepareFirstEventBatchPreparerArgs(
 		&discoveryV1.EndpointSliceList{},
 		&gatewayv1.HTTPRouteList{},
 		&gatewayv1beta1.ReferenceGrantList{},
+		&ngfAPI.NginxProxyList{},
 		partialObjectMetadataList,
 	}
 
 	if enableExperimentalFeatures {
-		objectLists = append(objectLists, &gatewayv1alpha2.BackendTLSPolicyList{}, &apiv1.ConfigMapList{})
+		objectLists = append(
+			objectLists,
+			&gatewayv1alpha2.BackendTLSPolicyList{},
+			&apiv1.ConfigMapList{},
+			&gatewayv1alpha2.GRPCRouteList{},
+		)
 	}
 
 	if gwNsName == nil {
