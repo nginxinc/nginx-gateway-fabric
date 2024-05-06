@@ -61,6 +61,7 @@ func TestExecuteServers(t *testing.T) {
 		"server_name cafe.example.com;":                            2,
 		"ssl_certificate /etc/nginx/secrets/test-keypair.pem;":     2,
 		"ssl_certificate_key /etc/nginx/secrets/test-keypair.pem;": 2,
+		"proxy_ssl_server_name on;":                                2,
 	}
 	g := NewWithT(t)
 	serverResults := executeServers(conf)
