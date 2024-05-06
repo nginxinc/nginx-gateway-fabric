@@ -22,6 +22,7 @@ server {
     listen {{ $s.Port }} ssl;
     ssl_certificate {{ $s.SSL.Certificate }};
     ssl_certificate_key {{ $s.SSL.CertificateKey }};
+    proxy_ssl_server_name on;
 
     if ($ssl_server_name != $host) {
         return 421;
