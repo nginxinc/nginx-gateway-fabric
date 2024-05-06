@@ -30,7 +30,7 @@ In this guide we will modify the headers for HTTP responses when client requests
 
 ## Response Header Filter
 
-In this guide we will deploy NGINX Gateway Fabric and use HTTPRoute resources to route traffic to the server. We will use `ResponseHeaderModifier` filter to modify the HTTP response headers.
+In this guide, we will configure an HTTPRoute with a `ResponseHeaderModifier` filter to modify the HTTP response headers of an application. 
 
 
 ### Deploy the Headers application
