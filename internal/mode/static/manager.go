@@ -156,7 +156,7 @@ func StartManager(cfg config.Config) error {
 
 	var ngxPlusClient *ngxclient.NginxClient
 	var usageSecret *usage.Secret
-	//var processHandler *ngxruntime.ProcessHandler
+
 	if cfg.Plus {
 		ngxPlusClient, err = ngxruntime.CreatePlusClient()
 		if err != nil {
@@ -223,7 +223,7 @@ func StartManager(cfg config.Config) error {
 			ngxruntimeCollector,
 			cfg.Logger.WithName("nginxRuntimeManager"),
 			&ngxruntime.ProcessHandlerImpl{},
-			ngxruntime.NewVerifyClient(1*time.Second),
+			ngxruntime.NewVerifyClient(ngxruntime.NginxReloadTimeout),
 		),
 		statusUpdater:                 groupStatusUpdater,
 		eventRecorder:                 recorder,
