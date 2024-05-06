@@ -52,7 +52,7 @@ Verify if the Pod is running in the `default` Namespace:
    headers-6f854c478-k9z2f   1/1     Running   0          32m
    ```
 
-### Deploy the Gateway API Resources for the Coffee Applications
+### Deploy the Gateway API Resources for the Header Application
 
 
 The [gateway](https://gateway-api.sigs.k8s.io/api-types/gateway/) resource is typically deployed by the [cluster operator](https://gateway-api.sigs.k8s.io/concepts/roles-and-personas/#roles-and-personas_1). To deploy the gateway:
