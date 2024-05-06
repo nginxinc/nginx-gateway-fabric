@@ -35,7 +35,7 @@ In this guide we will deploy NGINX Gateway Fabric and use HTTPRoute resources to
 
 ### Deploy the Headers application
 
-Begin by deploying the `headers` applications:
+Begin by deploying the example application `headers`:
 
    ```shell
    kubectl apply -f https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric/v1.3.0/examples/http-response-header-filter/headers.yaml
