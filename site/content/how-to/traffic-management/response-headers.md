@@ -72,7 +72,7 @@ spec:
 EOF
 ```
 
-### Configure Routing
+### Configure the HTTPRoute
 
 This gateway defines a single listener on port 80. Since no hostname is specified, this listener matches on all hostnames.
 
