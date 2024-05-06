@@ -30,7 +30,7 @@ In this guide we will modify the headers for HTTP responses when client requests
 
 ## Response Header Filter
 
-In this guide, we will configure an HTTPRoute with a `ResponseHeaderModifier` filter to modify the HTTP response headers of an application. 
+In this guide, we will configure an HTTPRoute with a `ResponseHeaderModifier` filter to modify the HTTP response headers of an application.
 
 
 ### Deploy the Headers application
@@ -72,11 +72,67 @@ spec:
 EOF
 ```
 
-### Configure the HTTPRoute
+### Configure the basic HTTPRoute
 
 This gateway defines a single listener on port 80. Since no hostname is specified, this listener matches on all hostnames.
 
 The [HTTPRoute](https://gateway-api.sigs.k8s.io/api-types/httproute/) is typically deployed by the [application developer](https://gateway-api.sigs.k8s.io/concepts/roles-and-personas/#roles-and-personas_1). To deploy the `headers` HTTPRoute:
+
+
+```yaml
+kubectl apply -f - <<EOF
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: headers
+spec:
+  parentRefs:
+  - name: gateway
+    sectionName: http
+  hostnames:
+  - "cafe.example.com"
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /headers
+    backendRefs:
+    - name: headers
+      port: 80
+EOF
+```
+
+
+
+
+### Send Traffic to the Basic Headers Application
+
+To access the application, we will use `curl` to send requests to the `headers` endpoint. Notice our configured header values can be seen in the `responseHeaders` section below. We have four custom response headers defined.
+
+```shell
+curl -i --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/headers
+```
+
+```text
+HTTP/1.1 200 OK
+Server: nginx/1.25.5
+Date: Mon, 06 May 2024 19:08:39 GMT
+Content-Type: text/plain
+Content-Length: 2
+Connection: keep-alive
+X-Header-Unmodified: unmodified
+X-Header-Add: add-to
+X-Header-Set: overwrite
+X-Header-Remove: remove
+
+ok
+```
+
+### Configure the HTTPRoute with Response Header Modifiers
+
+This gateway defines a single listener on port 80. Since no hostname is specified, this listener matches on all hostnames.
+
+The [HTTPRoute](https://gateway-api.sigs.k8s.io/api-types/httproute/) is typically deployed by the [application developer](https://gateway-api.sigs.k8s.io/concepts/roles-and-personas/#roles-and-personas_1). To deploy the `headers` HTTPRoute with `filters` to modify response headers:
 
 ```yaml
 kubectl apply -f - <<EOF
@@ -117,17 +173,15 @@ This HTTPRoute has a few important properties:
 - The `parentRefs` references the gateway resource that we created, and specifically defines the `http` listener to attach to, via the `sectionName` field.
 - `cafe.example.com` is the hostname that is matched for all requests to the backends defined in this HTTPRoute.
 - The `match` rule defines that all requests with the path prefix `/headers` are sent to the `headers` Service.
-- There is `ResponseHeaderModifier` filter defined for the path prefix `/headers` to overwrite value for header `X-Header-Set`, append value to header `X-Header-Add` and remove `X-Header-Remove` header from the HTTP response.
+- There is a `ResponseHeaderModifier` filter defined for the path prefix `/headers`. This filter sets the value for the header `X-Header-Set` to `overwritten-value`, adds the value `this-is-the-appended-value` to the header `X-Header-Add`, and removes `X-Header-Remove` header.
 
 
-### Send Traffic to the Headers Application
-
-To access the application, we will use `curl` to send requests to the `headers` endpoint.
+### Send Traffic to the Modified Headers Application
 
 Notice our configured header values can be seen in the `responseHeaders` section below, and that the `X-Header-Remove` header is absent. The header `X-Header-Add` gets appended with the new value and `X-Header-Set` gets overwritten to `overwritten-value` as defined in the *HttpRoute*.
 
 ```shell
-curl -v -i --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/headers
+curl -i --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/headers
 ```
 
 ```text
