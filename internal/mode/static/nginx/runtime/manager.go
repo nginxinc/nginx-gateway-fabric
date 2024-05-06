@@ -19,7 +19,7 @@ import (
 const (
 	PidFile            = "/var/run/nginx/nginx.pid"
 	pidFileTimeout     = 10000 * time.Millisecond
-	nginxReloadTimeout = 60000 * time.Millisecond
+	NginxReloadTimeout = 60000 * time.Millisecond
 )
 
 type (
