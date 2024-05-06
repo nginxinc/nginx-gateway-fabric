@@ -46,13 +46,10 @@ data:
         server {
             listen 8080;
 
-            add_header X-Custom-Header "this-stays-unchanged" always;
-
-            add_header My-cool-header "this-is-the-appended-value" always;
-
-            add_header Response-Overwrite-Header "this-value-to-be-returned" always;
-
-            add_header X-Server-Version "1.2.3" always;
+            add_header X-Header-Unmodified "unmodified";
+            add_header X-Header-Add "add-to";
+            add_header X-Header-Set "overwrite";
+            add_header X-Header-Remove "remove";
 
             return 200 "ok";
         }

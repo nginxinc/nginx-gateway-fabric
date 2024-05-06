@@ -99,13 +99,13 @@ spec:
     - type: ResponseHeaderModifier
       responseHeaderModifier:
         set:
-        - name: Response-Overwrite-Header
+        - name: X-Header-Set
           value: overwritten-value
         add:
-        - name: My-cool-header
-          value: this-is-the-value
+        - name: X-Header-Add
+          value: this-is-the-appended-value
         remove:
-        - X-Server-Version
+        - X-Header-Remove
     backendRefs:
     - name: headers
       port: 80
@@ -117,14 +117,14 @@ This HTTPRoute has a few important properties:
 - The `parentRefs` references the gateway resource that we created, and specifically defines the `http` listener to attach to, via the `sectionName` field.
 - `cafe.example.com` is the hostname that is matched for all requests to the backends defined in this HTTPRoute.
 - The `match` rule defines that all requests with the path prefix `/headers` are sent to the `headers` Service.
-- There is `ResponseHeaderModifier` filter defined for the path prefix `/headers` to overwrite value for header `Response-Overwrite-Header`, append value to header `My-cool-header` and remove `X-Server-Version` header from the HTTP response.
+- There is `ResponseHeaderModifier` filter defined for the path prefix `/headers` to overwrite value for header `X-Header-Set`, append value to header `X-Header-Add` and remove `X-Header-Remove` header from the HTTP response.
 
 
 ### Send Traffic to Headers
 
 To access the application, we will use `curl` to send requests to the `headers` endpoint.
 
-Notice our configured header values can be seen in the `responseHeaders` section below, and that the `X-Server-Version` header is absent. The header `My-cool-header` gets appended with the new value and `Response-Overwrite-Header` gets overwritten to `overwritten-value` as defined in the *HttpRoute*.
+Notice our configured header values can be seen in the `responseHeaders` section below, and that the `X-Header-Remove` header is absent. The header `X-Header-Add` gets appended with the new value and `X-Header-Set` gets overwritten to `overwritten-value` as defined in the *HttpRoute*.
 
 ```shell
 curl -v -i --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/headers
@@ -133,14 +133,14 @@ curl -v -i --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$G
 ```text
 HTTP/1.1 200 OK
 Server: nginx/1.25.5
-Date: Thu, 02 May 2024 20:58:54 GMT
+Date: Mon, 06 May 2024 17:58:33 GMT
 Content-Type: text/plain
 Content-Length: 2
 Connection: keep-alive
-X-Custom-Header: this-stays-unchanged
-My-cool-header: this-is-the-appended-value
-My-cool-header: this-is-the-value
-Response-Overwrite-Header: overwritten-value
+X-Header-Unmodified: unmodified
+X-Header-Add: add-to
+X-Header-Add: this-is-the-appended-value
+X-Header-Set: overwritten-value
 
 ok
 ```

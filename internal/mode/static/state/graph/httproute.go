@@ -401,7 +401,7 @@ func validateFilterHeaderModifierFields(
 	)
 
 	for _, h := range headerModifier.Add {
-		if err := validator.HTTPHeaderValidator(string(h.Name)); err != nil {
+		if err := validator.ValidateRequestHeaderName(string(h.Name)); err != nil {
 			valErr := field.Invalid(headerModifierPath.Child(add), h, err.Error())
 			allErrs = append(allErrs, valErr)
 		}
@@ -411,7 +411,7 @@ func validateFilterHeaderModifierFields(
 		}
 	}
 	for _, h := range headerModifier.Set {
-		if err := validator.HTTPHeaderValidator(string(h.Name)); err != nil {
+		if err := validator.ValidateRequestHeaderName(string(h.Name)); err != nil {
 			valErr := field.Invalid(headerModifierPath.Child(set), h, err.Error())
 			allErrs = append(allErrs, valErr)
 		}
@@ -421,7 +421,7 @@ func validateFilterHeaderModifierFields(
 		}
 	}
 	for _, h := range headerModifier.Remove {
-		if err := validator.HTTPHeaderValidator(h); err != nil {
+		if err := validator.ValidateRequestHeaderName(h); err != nil {
 			valErr := field.Invalid(headerModifierPath.Child(remove), h, err.Error())
 			allErrs = append(allErrs, valErr)
 		}

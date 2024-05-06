@@ -17,13 +17,13 @@ spec:
     - type: ResponseHeaderModifier
       responseHeaderModifier:
         set:
-        - name: Response-Overwrite-Header
+        - name: X-Header-Set
           value: overwritten-value
         add:
-        - name: My-cool-header
-          value: this-is-the-value
+        - name: X-Header-Add
+          value: this-is-the-appended-value
         remove:
-        - X-Server-Version
+        - X-Header-Remove
     backendRefs:
     - name: headers
       port: 80

@@ -2095,12 +2095,12 @@ func TestCreateFilters(t *testing.T) {
 		},
 	}
 
-	invalidResponseHeaderModifiers2 := v1.HTTPRouteFilter{
+	responseHeaderModifiers2 := v1.HTTPRouteFilter{
 		Type: v1.HTTPRouteFilterResponseHeaderModifier,
 		ResponseHeaderModifier: &v1.HTTPHeaderFilter{
 			Set: []v1.HTTPHeader{
 				{
-					Name:  "Server",
+					Name:  "X-Route",
 					Value: "new-response-value",
 				},
 			},
@@ -2180,21 +2180,8 @@ func TestCreateFilters(t *testing.T) {
 				rewrite2,
 				requestHeaderModifiers1,
 				requestHeaderModifiers2,
-			},
-			expected: HTTPFilters{
-				RequestRedirect:        &expectedRedirect1,
-				RequestURLRewrite:      &expectedRewrite1,
-				RequestHeaderModifiers: &expectedHeaderModifier1,
-			},
-			msg: "two of each filter, first value for each wins",
-		},
-		{
-			filters: []v1.HTTPRouteFilter{
-				redirect1,
-				rewrite1,
-				requestHeaderModifiers1,
 				responseHeaderModifiers1,
-				invalidResponseHeaderModifiers2,
+				responseHeaderModifiers2,
 			},
 			expected: HTTPFilters{
 				RequestRedirect:         &expectedRedirect1,
@@ -2202,7 +2189,7 @@ func TestCreateFilters(t *testing.T) {
 				RequestHeaderModifiers:  &expectedHeaderModifier1,
 				ResponseHeaderModifiers: &expectedresponseHeaderModifier,
 			},
-			msg: "one of each redirect, rewrite, request filter and two response filters, one invalid response filter",
+			msg: "two of each filter, first value for each wins",
 		},
 	}
 
