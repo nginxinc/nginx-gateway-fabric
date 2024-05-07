@@ -121,7 +121,7 @@ X-Header-Remove: remove
 ok
 ```
 
-### Configure the HTTPRoute with Response Header Modifiers
+### Update the HTTPRoute to Modify the Response Headers
 
 Let's update the HTTPRoute by adding a `ResponseHeaderModifier` filter:
 
