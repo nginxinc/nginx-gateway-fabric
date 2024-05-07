@@ -98,7 +98,7 @@ spec:
 EOF
 ```
 
-### Send Traffic to the Basic Headers Application
+### Send Traffic to the Headers Application
 
 To access the application, we will use `curl` to send requests to the `headers` endpoint. Notice our configured header values can be seen in the `responseHeaders` section below. We have four custom response headers defined - `X-Header-Unmodified`, `X-Header-Add`, `X-Header-Set`, `X-Header-Remove`.
 
