@@ -120,7 +120,13 @@ X-Header-Remove: remove
 
 ok
 ```
+In the output above, you can see that the headers application adds the following custom headers to the response:
+- X-Header-Unmodified: unmodified
+- X-Header-Add: add-to
+- X-Header-Set: overwrite
+- X-Header-Remove: remove
 
+In the next section we will modify these headers by adding a ResponseHeaderModifier filter to the headers HTTPRoute. 
 ### Update the HTTPRoute to Modify the Response Headers
 
 Let's update the HTTPRoute by adding a `ResponseHeaderModifier` filter:
