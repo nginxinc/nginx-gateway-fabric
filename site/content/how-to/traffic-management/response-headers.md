@@ -123,7 +123,7 @@ ok
 
 ### Configure the HTTPRoute with Response Header Modifiers
 
-Let's configure the HTTPRoute with `ResponseHeaderModifier` filter:
+Let's update the HTTPRoute by adding a `ResponseHeaderModifier` filter:
 
 ```yaml
 kubectl apply -f - <<EOF
