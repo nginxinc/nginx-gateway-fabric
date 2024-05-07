@@ -48,6 +48,32 @@ func TestExecuteServers(t *testing.T) {
 					KeyPairID: "test-keypair",
 				},
 				Port: 8443,
+				PathRules: []dataplane.PathRule{
+					{
+						Path:     "/",
+						PathType: dataplane.PathTypePrefix,
+						MatchRules: []dataplane.MatchRule{
+							{
+								Match: dataplane.Match{},
+								BackendGroup: dataplane.BackendGroup{
+									Source:  types.NamespacedName{Namespace: "test", Name: "route1"},
+									RuleIdx: 0,
+									Backends: []dataplane.Backend{
+										{
+											UpstreamName: "test_foo_443",
+											Valid:        true,
+											Weight:       1,
+											VerifyTLS: &dataplane.VerifyTLS{
+												CertBundleID: "test-foo",
+												Hostname:     "test-foo.example.com",
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
 			},
 		},
 	}
@@ -61,7 +87,7 @@ func TestExecuteServers(t *testing.T) {
 		"server_name cafe.example.com;":                            2,
 		"ssl_certificate /etc/nginx/secrets/test-keypair.pem;":     2,
 		"ssl_certificate_key /etc/nginx/secrets/test-keypair.pem;": 2,
-		"proxy_ssl_server_name on;":                                2,
+		"proxy_ssl_server_name on;":                                1,
 	}
 	g := NewWithT(t)
 	serverResults := executeServers(conf)
