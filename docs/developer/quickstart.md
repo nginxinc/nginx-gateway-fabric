@@ -30,14 +30,6 @@ Follow these steps to set up your development environment.
    brew install pre-commit
    ```
 
-   and then run
-
-   ```shell
-   pre-commit install
-   ```
-
-   in the project root directory to install the git hooks.
-
 2. [Fork the project repository](https://github.com/nginxinc/nginx-gateway-fabric/fork)
 3. Clone your repository, and install the project dependencies:
 
@@ -46,9 +38,18 @@ Follow these steps to set up your development environment.
    cd nginx-gateway-fabric
    ```
 
+   and then run
+
+   ```shell
+   pre-commit install
+   ```
+
+   in the project root directory to install the git hooks.
+
    ```makefile
    make deps
    ```
+
 
 ## Build the Binary and Images
 
