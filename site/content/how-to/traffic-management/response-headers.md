@@ -100,7 +100,7 @@ EOF
 
 ### Send Traffic to the Headers Application
 
-To access the application, we will use `curl` to send requests to the `headers` endpoint. Notice our configured header values can be seen in the `responseHeaders` section below. We have four custom response headers defined - `X-Header-Unmodified`, `X-Header-Add`, `X-Header-Set`, `X-Header-Remove`.
+We will use `curl` with the `-i` flag to access the application and include the response headers in the output:
 
 ```shell
 curl -i --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/headers
