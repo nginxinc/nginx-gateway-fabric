@@ -8,7 +8,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	v1 "sigs.k8s.io/gateway-api/apis/v1"
-	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/kinds"
@@ -37,7 +36,7 @@ type Policy struct {
 // PolicyAncestor represents an ancestor of a Policy.
 type PolicyAncestor struct {
 	// Ancestor is the ancestor object.
-	Ancestor v1alpha2.ParentReference
+	Ancestor v1.ParentReference
 	// Conditions contains the list of conditions of the Policy in relation to the ancestor.
 	Conditions []conditions.Condition
 }

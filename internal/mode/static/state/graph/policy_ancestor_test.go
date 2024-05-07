@@ -19,7 +19,7 @@ func TestAncestorsFull(t *testing.T) {
 
 		for i := 0; i < numAncestors; i++ {
 			statuses = append(statuses, v1alpha2.PolicyAncestorStatus{
-				AncestorRef: v1alpha2.ParentReference{
+				AncestorRef: v1.ParentReference{
 					Group:     helpers.GetPointer[v1.Group](v1.GroupName),
 					Kind:      helpers.GetPointer[v1.Kind](kinds.Gateway),
 					Namespace: (*v1.Namespace)(&ns),
@@ -33,7 +33,7 @@ func TestAncestorsFull(t *testing.T) {
 	}
 
 	tests := []struct {
-		newAncestor v1alpha2.ParentReference
+		newAncestor v1.ParentReference
 		name        string
 		curStatus   []v1alpha2.PolicyAncestorStatus
 		expFull     bool
@@ -41,7 +41,7 @@ func TestAncestorsFull(t *testing.T) {
 		{
 			name:      "not full",
 			curStatus: createCurStatus(15, "controller"),
-			newAncestor: v1alpha2.ParentReference{
+			newAncestor: v1.ParentReference{
 				Group:     helpers.GetPointer[v1.Group](v1.GroupName),
 				Kind:      helpers.GetPointer[v1.Kind](kinds.Gateway),
 				Namespace: (*v1.Namespace)(&ns),
@@ -52,7 +52,7 @@ func TestAncestorsFull(t *testing.T) {
 		{
 			name:      "full; ancestor does not exist in current status",
 			curStatus: createCurStatus(16, "controller"),
-			newAncestor: v1alpha2.ParentReference{
+			newAncestor: v1.ParentReference{
 				Group:     helpers.GetPointer[v1.Group](v1.GroupName),
 				Kind:      helpers.GetPointer[v1.Kind](kinds.Gateway),
 				Namespace: (*v1.Namespace)(&ns),
@@ -63,7 +63,7 @@ func TestAncestorsFull(t *testing.T) {
 		{
 			name:      "full, but ancestor does exist in current status",
 			curStatus: createCurStatus(16, "nginx-gateway"),
-			newAncestor: v1alpha2.ParentReference{
+			newAncestor: v1.ParentReference{
 				Group:     helpers.GetPointer[v1.Group](v1.GroupName),
 				Kind:      helpers.GetPointer[v1.Kind](kinds.Gateway),
 				Namespace: (*v1.Namespace)(&ns),
@@ -88,7 +88,7 @@ func TestAncestorStatusExists(t *testing.T) {
 		ns := "test"
 
 		return v1alpha2.PolicyAncestorStatus{
-			AncestorRef: v1alpha2.ParentReference{
+			AncestorRef: v1.ParentReference{
 				Group:     helpers.GetPointer[v1.Group](v1.GroupName),
 				Kind:      helpers.GetPointer[v1.Kind](kinds.Gateway),
 				Namespace: (*v1.Namespace)(&ns),

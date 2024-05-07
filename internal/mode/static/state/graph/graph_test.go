@@ -365,7 +365,7 @@ func TestBuildGraph(t *testing.T) {
 	processedRoutePolicy := &Policy{
 		Source: hrPolicy,
 		Ancestor: &PolicyAncestor{
-			Ancestor: v1alpha2.ParentReference{
+			Ancestor: gatewayv1.ParentReference{
 				Group:     helpers.GetPointer[gatewayv1.Group](gatewayv1.GroupName),
 				Kind:      helpers.GetPointer[gatewayv1.Kind](kinds.HTTPRoute),
 				Namespace: (*gatewayv1.Namespace)(&testNs),
@@ -394,7 +394,7 @@ func TestBuildGraph(t *testing.T) {
 	processedGwPolicy := &Policy{
 		Source: gwPolicy,
 		Ancestor: &PolicyAncestor{
-			Ancestor: v1alpha2.ParentReference{
+			Ancestor: gatewayv1.ParentReference{
 				Group:     helpers.GetPointer[gatewayv1.Group](gatewayv1.GroupName),
 				Kind:      helpers.GetPointer[gatewayv1.Kind](kinds.Gateway),
 				Namespace: (*gatewayv1.Namespace)(&testNs),

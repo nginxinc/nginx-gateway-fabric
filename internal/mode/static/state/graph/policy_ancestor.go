@@ -10,7 +10,7 @@ import (
 
 func ancestorsFull(
 	ancestors []v1alpha2.PolicyAncestorStatus,
-	newAncestor v1alpha2.ParentReference,
+	newAncestor v1.ParentReference,
 	ctlrName string,
 ) bool {
 	if len(ancestors) < 16 {

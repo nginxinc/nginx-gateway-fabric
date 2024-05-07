@@ -1423,7 +1423,7 @@ func TestBuildNGFPolicyStatuses(t *testing.T) {
 	validPolicyCfg := policyCfg{
 		Name: validPolicyKey.NsName.Name,
 		Ancestor: &graph.PolicyAncestor{
-			Ancestor: v1alpha2.ParentReference{
+			Ancestor: v1.ParentReference{
 				Name: "ancestor",
 			},
 		},
@@ -1437,7 +1437,7 @@ func TestBuildNGFPolicyStatuses(t *testing.T) {
 		Name:       invalidPolicyKey.NsName.Name,
 		Conditions: invalidConds,
 		Ancestor: &graph.PolicyAncestor{
-			Ancestor: v1alpha2.ParentReference{
+			Ancestor: v1.ParentReference{
 				Name: "ancestor",
 			},
 		},
@@ -1450,7 +1450,7 @@ func TestBuildNGFPolicyStatuses(t *testing.T) {
 	targetRefNotFoundPolicyCfg := policyCfg{
 		Name: targetRefNotFoundPolicyKey.NsName.Name,
 		Ancestor: &graph.PolicyAncestor{
-			Ancestor: v1alpha2.ParentReference{
+			Ancestor: v1.ParentReference{
 				Name: "ancestor",
 			},
 			Conditions: targetRefNotFoundConds,
@@ -1465,7 +1465,7 @@ func TestBuildNGFPolicyStatuses(t *testing.T) {
 		Name:       multiInvalidCondsPolicyKey.NsName.Name,
 		Conditions: invalidConds,
 		Ancestor: &graph.PolicyAncestor{
-			Ancestor: v1alpha2.ParentReference{
+			Ancestor: v1.ParentReference{
 				Name: "ancestor",
 			},
 			Conditions: targetRefNotFoundConds,
