@@ -5,10 +5,7 @@ weight: 700
 toc: true
 ---
 
-[HTTPRoute](https://gateway-api.sigs.k8s.io/api-types/httproute/) filters can modify the headers during the request-response lifecycle. [HTTP Header Modifiers](https://gateway-api.sigs.k8s.io/guides/http-header-modifier/?h=request#http-header-modifiers) can be used to add, modify or remove headers in incoming requests.
-
-1. The [ResponseHeaderModifier](https://gateway-api.sigs.k8s.io/guides/http-header-modifier/#http-response-header-modifier) is used to alter headers in a response to the client.
-
+[HTTP Header Modifiers](https://gateway-api.sigs.k8s.io/guides/http-header-modifier/?h=request#http-header-modifiers) can be used to add, modify or remove headers during the request-response lifecycle. The [ResponseHeaderModifier](https://gateway-api.sigs.k8s.io/guides/http-header-modifier/#http-response-header-modifier) is used to alter headers in a response to the client.
 
 In this guide we will modify the headers for HTTP responses when client requests are made. For an introduction to exposing your application, we recommend that you follow the [basic guide]({{< relref "/how-to/traffic-management/routing-traffic-to-your-app.md" >}}) first.
 
@@ -29,29 +26,45 @@ In this guide we will modify the headers for HTTP responses when client requests
 
 ## Response Header Filter
 
+In this guide, we'll begin by configuring an app with custom headers and a straightforward httproute. We'll then observe the server response in relation to header responses. Next, we'll delve into modifying some of those headers using an httpRoute with filters to modify *response* headers. Our aim will be to verify whether the server responds with the modified headers.
+
 ### Deploy the Headers application
 
-Begin by deploying the example application `headers`:
+Begin by deploying the example application `headers`. It is a simple application that adds response headers which we'll later tweak and customize.
 
-   ```shell
-   kubectl apply -f https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric/v1.3.0/examples/http-response-header-filter/headers.yaml
-   ```
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: headers
+spec:
+  ports:
+  - port: 80
+    targetPort: 8080
+    protocol: TCP
+    name: http
+  selector:
+    app: headers
+```
+
+```shell
+kubectl apply -f https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric/v1.3.0/examples/http-response-header-filter/headers.yaml
+```
 
 Verify if the Pod is running in the `default` Namespace:
 
-   ```shell
-   kubectl -n default get pods
-   ```
+```shell
+kubectl -n default get pods
+```
 
-   ```text
-   NAME                      READY   STATUS    RESTARTS   AGE
-   headers-6f854c478-k9z2f   1/1     Running   0          32m
-   ```
+```text
+NAME                      READY   STATUS    RESTARTS   AGE
+headers-6f854c478-k9z2f   1/1     Running   0          32m
+```
 
 ### Deploy the Gateway API Resources for the Header Application
 
-
-The [gateway](https://gateway-api.sigs.k8s.io/api-types/gateway/) resource is typically deployed by the [cluster operator](https://gateway-api.sigs.k8s.io/concepts/roles-and-personas/#roles-and-personas_1). To deploy the gateway:
+The [gateway](https://gateway-api.sigs.k8s.io/api-types/gateway/) resource is typically deployed by the [cluster operator](https://gateway-api.sigs.k8s.io/concepts/roles-and-personas/#roles-and-personas_1). This gateway defines a single listener on port 80. Since no hostname is specified, this listener matches on all hostnames. To deploy the gateway:
 
 ```yaml
 kubectl apply -f - <<EOF
@@ -70,10 +83,7 @@ EOF
 
 ### Configure the basic HTTPRoute
 
-This gateway defines a single listener on port 80. Since no hostname is specified, this listener matches on all hostnames.
-
-The HTTPRoute is typically deployed by the [application developer](https://gateway-api.sigs.k8s.io/concepts/roles-and-personas/#roles-and-personas_1). To deploy the `headers` HTTPRoute:
-
+Next, let's create a simple HTTPRoute that exposes the header application outside the cluster using the listener created in the previous section.To do this, create the following HTTPRoute:
 
 ```yaml
 kubectl apply -f - <<EOF
@@ -98,6 +108,12 @@ spec:
 EOF
 ```
 
+This HTTPRoute has a few important properties:
+
+- The `parentRefs` references the gateway resource that we created, and specifically defines the `http` listener to attach to, via the `sectionName` field.
+- `cafe.example.com` is the hostname that is matched for all requests to the backends defined in this HTTPRoute.
+- The `match` rule defines that all requests with the path prefix `/headers` are sent to the `headers` Service.
+
 ### Send Traffic to the Headers Application
 
 We will use `curl` with the `-i` flag to access the application and include the response headers in the output:
@@ -120,13 +136,16 @@ X-Header-Remove: remove
 
 ok
 ```
+
 In the output above, you can see that the headers application adds the following custom headers to the response:
+
 - X-Header-Unmodified: unmodified
 - X-Header-Add: add-to
 - X-Header-Set: overwrite
 - X-Header-Remove: remove
 
-In the next section we will modify these headers by adding a ResponseHeaderModifier filter to the headers HTTPRoute. 
+In the next section we will modify these headers by adding a ResponseHeaderModifier filter to the headers HTTPRoute.
+
 ### Update the HTTPRoute to Modify the Response Headers
 
 Let's update the HTTPRoute by adding a `ResponseHeaderModifier` filter:
@@ -165,17 +184,16 @@ spec:
 EOF
 ```
 
-This HTTPRoute has a few important properties:
+Notice that this HTTPRoute has a `ResponseHeaderModifier` filter defined for the path prefix `/headers`. This filter:
 
-- The `parentRefs` references the gateway resource that we created, and specifically defines the `http` listener to attach to, via the `sectionName` field.
-- `cafe.example.com` is the hostname that is matched for all requests to the backends defined in this HTTPRoute.
-- The `match` rule defines that all requests with the path prefix `/headers` are sent to the `headers` Service.
-- There is a `ResponseHeaderModifier` filter defined for the path prefix `/headers`. This filter sets the value for the header `X-Header-Set` to `overwritten-value`, adds the value `this-is-the-appended-value` to the header `X-Header-Add`, and removes `X-Header-Remove` header.
+- Sets the value for the header `X-Header-Set` to `overwritten-value`.
+- Adds the value `this-is-the-appended-value` to the header `X-Header-Add`.
+- Removes `X-Header-Remove` header.
 
 
 ### Send Traffic to the Modified Headers Application
 
-Notice our configured header values can be seen in the `responseHeaders` section below, and that the `X-Header-Remove` header is absent. The header `X-Header-Add` gets appended with the new value and `X-Header-Set` gets overwritten to `overwritten-value` as defined in the *HttpRoute*.
+We will send a curl request to the modified `headers` application and verify the response headers are modified.
 
 ```shell
 curl -i --resolve cafe.example.com:$GW_PORT:$GW_IP http://cafe.example.com:$GW_PORT/headers
@@ -195,6 +213,10 @@ X-Header-Set: overwritten-value
 
 ok
 ```
+
+In the output above, you can see that the headers application modifies the following custom headers:
+
+In the output above you can notice the modified response headers as the `X-Header-Remove` header is absent. The header `X-Header-Add` gets appended with the new value and `X-Header-Set` gets overwritten to `overwritten-value` as defined in the *HttpRoute*.
 
 ## Further Reading
 
