@@ -107,6 +107,9 @@ spec:
                         pattern: ^\d{1,4}(ms|s)?$
                         type: string
                     type: object
+                    x-kubernetes-validations:
+                    - message: header can only be specified if server is specified
+                      rule: '!(has(self.header) && !has(self.server))'
                 type: object
               targetRef:
                 description: |-
