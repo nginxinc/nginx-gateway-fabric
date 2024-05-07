@@ -3,7 +3,6 @@ title: "HTTP Response Headers"
 description: "Learn how to modify the response headers of your application using NGINX Gateway Fabric."
 weight: 700
 toc: true
-docs: ""
 ---
 
 [HTTPRoute](https://gateway-api.sigs.k8s.io/api-types/httproute/) filters can modify the headers during the request-response lifecycle. [HTTP Header Modifiers](https://gateway-api.sigs.k8s.io/guides/http-header-modifier/?h=request#http-header-modifiers) can be used to add, modify or remove headers in incoming requests.
