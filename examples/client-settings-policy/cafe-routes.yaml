@@ -6,11 +6,8 @@ spec:
   parentRefs:
   - name: gateway
     sectionName: http
-  - name: gateway
-    sectionName: http2
   hostnames:
   - "cafe.example.com"
-  - "cafe.example.org"
   rules:
   - matches:
     - path:
@@ -28,11 +25,8 @@ spec:
   parentRefs:
   - name: gateway
     sectionName: http
-  - name: gateway
-    sectionName: http2
   hostnames:
   - "cafe.example.com"
-  - "cafe.example.org"
   rules:
   - matches:
     - path:
