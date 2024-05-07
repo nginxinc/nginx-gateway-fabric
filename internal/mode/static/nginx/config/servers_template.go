@@ -22,7 +22,6 @@ server {
     listen {{ $s.Port }} ssl;
     ssl_certificate {{ $s.SSL.Certificate }};
     ssl_certificate_key {{ $s.SSL.CertificateKey }};
-    proxy_ssl_server_name on;
 
     if ($ssl_server_name != $host) {
         return 421;
@@ -61,6 +60,7 @@ server {
         {{ $proxyOrGRPC }}_pass {{ $l.ProxyPass }};
         proxy_http_version 1.1;
             {{- if $l.ProxySSLVerify }}
+        {{ $proxyOrGRPC }}_ssl_server_name on;
         {{ $proxyOrGRPC }}_ssl_verify on;
         {{ $proxyOrGRPC }}_ssl_name {{ $l.ProxySSLVerify.Name }};
         {{ $proxyOrGRPC }}_ssl_trusted_certificate {{ $l.ProxySSLVerify.TrustedCertificate }};
