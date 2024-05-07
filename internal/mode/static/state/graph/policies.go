@@ -42,16 +42,6 @@ type PolicyAncestor struct {
 	Conditions []conditions.Condition
 }
 
-// PolicyAncestorRef contains the identifying information of the ancestor.
-type PolicyAncestorRef struct {
-	// Nsname is the NamespacedName of the Ancestor.
-	Nsname types.NamespacedName
-	// Kind is the Kind of the Ancestor.
-	Kind v1.Kind
-	// Group is the Group of the Ancestor.
-	Group v1.Group
-}
-
 // PolicyTargetRef represents the object that the Policy is targeting.
 type PolicyTargetRef struct {
 	// Kind is the Kind of the object.
