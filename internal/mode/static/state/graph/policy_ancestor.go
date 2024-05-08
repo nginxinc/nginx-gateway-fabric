@@ -8,12 +8,14 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 )
 
+const maxAncestors = 16
+
 func ancestorsFull(
 	ancestors []v1alpha2.PolicyAncestorStatus,
 	newAncestor v1.ParentReference,
 	ctlrName string,
 ) bool {
-	if len(ancestors) < 16 {
+	if len(ancestors) < maxAncestors {
 		return false
 	}
 
