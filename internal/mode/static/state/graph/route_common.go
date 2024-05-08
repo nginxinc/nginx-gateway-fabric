@@ -58,8 +58,10 @@ const (
 
 // RouteKey is the unique identifier for a L7Route
 type RouteKey struct {
+	// NamespacedName is the NamespacedName of the Route.
 	NamespacedName types.NamespacedName
-	RouteType      RouteType
+	// RouteType is the type of the Route.
+	RouteType RouteType
 }
 
 // L7Route is the generic type for the layer 7 routes, HTTPRoute and GRPCRoute
