@@ -281,7 +281,6 @@ var _ = Describe("ChangeProcessor", func() {
 					ControllerName: controllerName,
 				},
 			}
-
 			processor state.ChangeProcessor
 		)
 
