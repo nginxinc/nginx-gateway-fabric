@@ -68,7 +68,7 @@ EOF
 
 ### Configure the basic HTTPRoute
 
-Next, let's create a simple HTTPRoute that exposes the header application outside the cluster using the listener created in the previous section.To do this, create the following HTTPRoute:
+Next, let's create a simple HTTPRoute that exposes the header application outside the cluster using the listener created in the previous section. To do this, create the following HTTPRoute:
 
 ```yaml
 kubectl apply -f - <<EOF
