@@ -32,7 +32,7 @@ server {
 
     server_name {{ $s.ServerName }};
 
-    {{ range $i := $s.Includes }}
+    {{- range $i := $s.Includes }}
     include {{ $i.Filename }};
     {{- end -}}
 
