@@ -701,7 +701,8 @@ func validateResponseHeaders(
 	for _, h := range headers {
 		valErr := field.Invalid(path, h, "header name is not allowed")
 		name := strings.ToLower(string(h.Name))
-		if _, exists := disallowedResponseHeaderSet[name]; exists || strings.HasPrefix(name, strings.ToLower(invalidPrefix)) {
+		if _, exists := disallowedResponseHeaderSet[name]; exists ||
+			strings.HasPrefix(name, strings.ToLower(invalidPrefix)) {
 			allErrs = append(allErrs, valErr)
 		}
 	}
@@ -744,4 +745,18 @@ func validateRequestHeaderStringCaseInsensitiveUnique(headers []string, path *fi
 	}
 
 	return allErrs
+}
+
+func routeKeyForKind(kind v1.Kind, nsname types.NamespacedName) RouteKey {
+	key := RouteKey{NamespacedName: nsname}
+	switch kind {
+	case kinds.HTTPRoute:
+		key.RouteType = RouteTypeHTTP
+	case kinds.GRPCRoute:
+		key.RouteType = RouteTypeGRPC
+	default:
+		panic(fmt.Sprintf("unsupported route kind: %s", kind))
+	}
+
+	return key
 }

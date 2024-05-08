@@ -805,24 +805,6 @@ func TestMarkConflictedPolicies(t *testing.T) {
 	}
 }
 
-func TestRouteKeyForKind(t *testing.T) {
-	nsname := types.NamespacedName{Namespace: testNs, Name: "route"}
-
-	g := NewWithT(t)
-
-	key := routeKeyForKind(kinds.HTTPRoute, nsname)
-	g.Expect(key).To(Equal(RouteKey{RouteType: RouteTypeHTTP, NamespacedName: nsname}))
-
-	key = routeKeyForKind(kinds.GRPCRoute, nsname)
-	g.Expect(key).To(Equal(RouteKey{RouteType: RouteTypeGRPC, NamespacedName: nsname}))
-
-	rk := func() {
-		_ = routeKeyForKind(kinds.Gateway, nsname)
-	}
-
-	g.Expect(rk).To(Panic())
-}
-
 func createPolicyWithAncestors(numAncestors int) policies.Policy {
 	policy := &policiesfakes.FakePolicy{}
 
