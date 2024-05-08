@@ -34,7 +34,7 @@ server {
 
     {{- range $i := $s.Includes }}
     include {{ $i.Filename }};
-    {{- end -}}
+    {{ end -}}
 
         {{ range $l := $s.Locations }}
     location {{ $l.Path }} {
