@@ -48,8 +48,10 @@ type ClientSettingsPolicySpec struct {
 
 	// TargetRef identifies an API object to apply the policy to.
 	// Object must be in the same namespace as the policy.
+	// Support: Gateway, HTTPRoute, GRPCRoute.
 	//
-	// Support: Gateway, HTTPRoute
+	// +kubebuilder:validation:XValidation:message="TargetRef Kind must be one of: Gateway, HTTPRoute, or GRPCRoute",rule="(self.kind=='Gateway' || self.kind=='HTTPRoute' || self.kind=='GRPCRoute')"
+	//nolint:lll
 	TargetRef gatewayv1alpha2.LocalPolicyTargetReference `json:"targetRef"`
 }
 
