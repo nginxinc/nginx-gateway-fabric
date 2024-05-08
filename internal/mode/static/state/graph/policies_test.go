@@ -26,7 +26,7 @@ var testNs = "test"
 func TestAttachPolicies(t *testing.T) {
 	policyGVK := schema.GroupVersionKind{Group: "Group", Version: "Version", Kind: "Policy"}
 
-	gwPolicyKey := createPolicyKey(policyGVK, "gw-policy")
+	gwPolicyKey := createTestPolicyKey(policyGVK, "gw-policy")
 	gwPolicy := &Policy{
 		Valid:  true,
 		Source: &policiesfakes.FakePolicy{},
@@ -37,7 +37,7 @@ func TestAttachPolicies(t *testing.T) {
 		},
 	}
 
-	routePolicyKey := createPolicyKey(policyGVK, "route-policy")
+	routePolicyKey := createTestPolicyKey(policyGVK, "route-policy")
 	routePolicy := &Policy{
 		Valid:  true,
 		Source: &policiesfakes.FakePolicy{},
@@ -48,7 +48,7 @@ func TestAttachPolicies(t *testing.T) {
 		},
 	}
 
-	grpcRoutePolicyKey := createPolicyKey(policyGVK, "grpc-route-policy")
+	grpcRoutePolicyKey := createTestPolicyKey(policyGVK, "grpc-route-policy")
 	grpcRoutePolicy := &Policy{
 		Valid:  true,
 		Source: &policiesfakes.FakePolicy{},
@@ -300,7 +300,7 @@ func TestAttachPolicyToRoute(t *testing.T) {
 		{
 			name:        "no attachment; max ancestors",
 			route:       createHTTPRoute(true /*valid*/, true /*attachable*/, true /*parentRefs*/),
-			policy:      &Policy{Source: createPolicyWithAncestors(16)},
+			policy:      &Policy{Source: createTestPolicyWithAncestors(16)},
 			expAncestor: nil,
 			expAttached: false,
 		},
@@ -419,7 +419,7 @@ func TestAttachPolicyToGateway(t *testing.T) {
 		{
 			name: "not attached; max ancestors",
 			policy: &Policy{
-				Source: createPolicyWithAncestors(16),
+				Source: createTestPolicyWithAncestors(16),
 				TargetRef: PolicyTargetRef{
 					Nsname: gatewayNsName,
 					Kind:   "Gateway",
@@ -457,28 +457,28 @@ func TestProcessPolicies(t *testing.T) {
 
 	// These refs reference objects that belong to NGF.
 	// Policies that contain these refs should be processed.
-	hrRef := createRef(kinds.HTTPRoute, v1.GroupName, "hr")
-	grpcRef := createRef(kinds.GRPCRoute, v1.GroupName, "grpc")
-	gatewayRef := createRef(kinds.Gateway, v1.GroupName, "gw")
-	ignoredGatewayRef := createRef(kinds.Gateway, v1.GroupName, "ignored")
+	hrRef := createTestRef(kinds.HTTPRoute, v1.GroupName, "hr")
+	grpcRef := createTestRef(kinds.GRPCRoute, v1.GroupName, "grpc")
+	gatewayRef := createTestRef(kinds.Gateway, v1.GroupName, "gw")
+	ignoredGatewayRef := createTestRef(kinds.Gateway, v1.GroupName, "ignored")
 
 	// These refs reference objects that do not belong to NGF.
 	// Policies that contain these refs should NOT be processed.
-	hrDoesNotExistRef := createRef(kinds.HTTPRoute, v1.GroupName, "dne")
-	hrWrongGroup := createRef(kinds.HTTPRoute, "WrongGroup", "hr")
-	gatewayWrongGroupRef := createRef(kinds.Gateway, "WrongGroup", "gw")
-	nonNGFGatewayRef := createRef(kinds.Gateway, v1.GroupName, "not-ours")
+	hrDoesNotExistRef := createTestRef(kinds.HTTPRoute, v1.GroupName, "dne")
+	hrWrongGroup := createTestRef(kinds.HTTPRoute, "WrongGroup", "hr")
+	gatewayWrongGroupRef := createTestRef(kinds.Gateway, "WrongGroup", "gw")
+	nonNGFGatewayRef := createTestRef(kinds.Gateway, v1.GroupName, "not-ours")
 
-	pol1, pol1Key := createPolicyAndKey(policyGVK, hrRef, "pol1")
-	pol2, pol2Key := createPolicyAndKey(policyGVK, grpcRef, "pol2")
-	pol3, pol3Key := createPolicyAndKey(policyGVK, gatewayRef, "pol3")
-	pol4, pol4Key := createPolicyAndKey(policyGVK, ignoredGatewayRef, "pol4")
-	pol5, pol5Key := createPolicyAndKey(policyGVK, hrDoesNotExistRef, "pol5")
-	pol6, pol6Key := createPolicyAndKey(policyGVK, hrWrongGroup, "pol6")
-	pol7, pol7Key := createPolicyAndKey(policyGVK, gatewayWrongGroupRef, "pol7")
-	pol8, pol8Key := createPolicyAndKey(policyGVK, nonNGFGatewayRef, "pol8")
+	pol1, pol1Key := createTestPolicyAndKey(policyGVK, hrRef, "pol1")
+	pol2, pol2Key := createTestPolicyAndKey(policyGVK, grpcRef, "pol2")
+	pol3, pol3Key := createTestPolicyAndKey(policyGVK, gatewayRef, "pol3")
+	pol4, pol4Key := createTestPolicyAndKey(policyGVK, ignoredGatewayRef, "pol4")
+	pol5, pol5Key := createTestPolicyAndKey(policyGVK, hrDoesNotExistRef, "pol5")
+	pol6, pol6Key := createTestPolicyAndKey(policyGVK, hrWrongGroup, "pol6")
+	pol7, pol7Key := createTestPolicyAndKey(policyGVK, gatewayWrongGroupRef, "pol7")
+	pol8, pol8Key := createTestPolicyAndKey(policyGVK, nonNGFGatewayRef, "pol8")
 
-	pol1Conflict, pol1ConflictKey := createPolicyAndKey(policyGVK, hrRef, "pol1-conflict")
+	pol1Conflict, pol1ConflictKey := createTestPolicyAndKey(policyGVK, hrRef, "pol1-conflict")
 
 	allValidValidator := &policiesfakes.FakeValidator{}
 
@@ -653,14 +653,14 @@ func TestProcessPolicies(t *testing.T) {
 }
 
 func TestMarkConflictedPolicies(t *testing.T) {
-	hrRef := createRef(kinds.HTTPRoute, v1.GroupName, "hr")
+	hrRef := createTestRef(kinds.HTTPRoute, v1.GroupName, "hr")
 	hrTargetRef := PolicyTargetRef{
 		Kind:   hrRef.Kind,
 		Group:  hrRef.Group,
 		Nsname: types.NamespacedName{Namespace: testNs, Name: string(hrRef.Name)},
 	}
 
-	grpcRef := createRef(kinds.GRPCRoute, v1.GroupName, "grpc")
+	grpcRef := createTestRef(kinds.GRPCRoute, v1.GroupName, "grpc")
 	grpcTargetRef := PolicyTargetRef{
 		Kind:   grpcRef.Kind,
 		Group:  grpcRef.Group,
@@ -680,13 +680,13 @@ func TestMarkConflictedPolicies(t *testing.T) {
 		{
 			name: "different policy types can not conflict",
 			policies: map[PolicyKey]*Policy{
-				createPolicyKey(orangeGVK, "orange"): {
-					Source:    createPolicy(orangeGVK, hrRef, "orange"),
+				createTestPolicyKey(orangeGVK, "orange"): {
+					Source:    createTestPolicy(orangeGVK, hrRef, "orange"),
 					TargetRef: hrTargetRef,
 					Valid:     true,
 				},
-				createPolicyKey(appleGVK, "apple"): {
-					Source:    createPolicy(appleGVK, hrRef, "apple"),
+				createTestPolicyKey(appleGVK, "apple"): {
+					Source:    createTestPolicy(appleGVK, hrRef, "apple"),
 					TargetRef: hrTargetRef,
 					Valid:     true,
 				},
@@ -697,13 +697,13 @@ func TestMarkConflictedPolicies(t *testing.T) {
 		{
 			name: "policies of the same type but with different target refs can not conflict",
 			policies: map[PolicyKey]*Policy{
-				createPolicyKey(orangeGVK, "orange1"): {
-					Source:    createPolicy(orangeGVK, hrRef, "orange1"),
+				createTestPolicyKey(orangeGVK, "orange1"): {
+					Source:    createTestPolicy(orangeGVK, hrRef, "orange1"),
 					TargetRef: hrTargetRef,
 					Valid:     true,
 				},
-				createPolicyKey(orangeGVK, "orange2"): {
-					Source:    createPolicy(orangeGVK, grpcRef, "orange2"),
+				createTestPolicyKey(orangeGVK, "orange2"): {
+					Source:    createTestPolicy(orangeGVK, grpcRef, "orange2"),
 					TargetRef: grpcTargetRef,
 					Valid:     true,
 				},
@@ -714,13 +714,13 @@ func TestMarkConflictedPolicies(t *testing.T) {
 		{
 			name: "invalid policies can not conflict",
 			policies: map[PolicyKey]*Policy{
-				createPolicyKey(orangeGVK, "valid"): {
-					Source:    createPolicy(orangeGVK, hrRef, "valid"),
+				createTestPolicyKey(orangeGVK, "valid"): {
+					Source:    createTestPolicy(orangeGVK, hrRef, "valid"),
 					TargetRef: hrTargetRef,
 					Valid:     true,
 				},
-				createPolicyKey(orangeGVK, "invalid"): {
-					Source:    createPolicy(orangeGVK, hrRef, "invalid"),
+				createTestPolicyKey(orangeGVK, "invalid"): {
+					Source:    createTestPolicy(orangeGVK, hrRef, "invalid"),
 					TargetRef: hrTargetRef,
 					Valid:     false,
 				},
@@ -732,28 +732,28 @@ func TestMarkConflictedPolicies(t *testing.T) {
 			name: "when a policy conflicts with a policy that has greater precedence it's marked as invalid and a" +
 				" condition is added",
 			policies: map[PolicyKey]*Policy{
-				createPolicyKey(orangeGVK, "orange1"): {
-					Source:    createPolicy(orangeGVK, hrRef, "orange1"),
+				createTestPolicyKey(orangeGVK, "orange1"): {
+					Source:    createTestPolicy(orangeGVK, hrRef, "orange1"),
 					TargetRef: hrTargetRef,
 					Valid:     true,
 				},
-				createPolicyKey(orangeGVK, "orange2"): {
-					Source:    createPolicy(orangeGVK, hrRef, "orange2"),
+				createTestPolicyKey(orangeGVK, "orange2"): {
+					Source:    createTestPolicy(orangeGVK, hrRef, "orange2"),
 					TargetRef: hrTargetRef,
 					Valid:     true,
 				},
-				createPolicyKey(orangeGVK, "orange3-conflicts-with-1"): {
-					Source:    createPolicy(orangeGVK, hrRef, "orange3-conflicts-with-1"),
+				createTestPolicyKey(orangeGVK, "orange3-conflicts-with-1"): {
+					Source:    createTestPolicy(orangeGVK, hrRef, "orange3-conflicts-with-1"),
 					TargetRef: hrTargetRef,
 					Valid:     true,
 				},
-				createPolicyKey(orangeGVK, "orange4"): {
-					Source:    createPolicy(orangeGVK, hrRef, "orange4"),
+				createTestPolicyKey(orangeGVK, "orange4"): {
+					Source:    createTestPolicy(orangeGVK, hrRef, "orange4"),
 					TargetRef: hrTargetRef,
 					Valid:     true,
 				},
-				createPolicyKey(orangeGVK, "orange5-conflicts-with-4"): {
-					Source:    createPolicy(orangeGVK, hrRef, "orange5-conflicts-with-4"),
+				createTestPolicyKey(orangeGVK, "orange5-conflicts-with-4"): {
+					Source:    createTestPolicy(orangeGVK, hrRef, "orange5-conflicts-with-4"),
 					TargetRef: hrTargetRef,
 					Valid:     true,
 				},
@@ -805,7 +805,7 @@ func TestMarkConflictedPolicies(t *testing.T) {
 	}
 }
 
-func createPolicyWithAncestors(numAncestors int) policies.Policy {
+func createTestPolicyWithAncestors(numAncestors int) policies.Policy {
 	policy := &policiesfakes.FakePolicy{}
 
 	ancestors := make([]v1alpha2.PolicyAncestorStatus, numAncestors)
@@ -818,18 +818,22 @@ func createPolicyWithAncestors(numAncestors int) policies.Policy {
 	return policy
 }
 
-func createPolicyAndKey(
+func createTestPolicyAndKey(
 	gvk schema.GroupVersionKind,
 	ref v1alpha2.LocalPolicyTargetReference,
 	name string,
 ) (policies.Policy, PolicyKey) {
-	pol := createPolicy(gvk, ref, name)
-	key := createPolicyKey(gvk, name)
+	pol := createTestPolicy(gvk, ref, name)
+	key := createTestPolicyKey(gvk, name)
 
 	return pol, key
 }
 
-func createPolicy(gvk schema.GroupVersionKind, ref v1alpha2.LocalPolicyTargetReference, name string) policies.Policy {
+func createTestPolicy(
+	gvk schema.GroupVersionKind,
+	ref v1alpha2.LocalPolicyTargetReference,
+	name string,
+) policies.Policy {
 	return &policiesfakes.FakePolicy{
 		GetNameStub: func() string {
 			return name
@@ -850,14 +854,14 @@ func createPolicy(gvk schema.GroupVersionKind, ref v1alpha2.LocalPolicyTargetRef
 	}
 }
 
-func createPolicyKey(gvk schema.GroupVersionKind, name string) PolicyKey {
+func createTestPolicyKey(gvk schema.GroupVersionKind, name string) PolicyKey {
 	return PolicyKey{
 		NsName: types.NamespacedName{Namespace: testNs, Name: name},
 		GVK:    gvk,
 	}
 }
 
-func createRef(kind v1.Kind, group v1.Group, name string) v1alpha2.LocalPolicyTargetReference {
+func createTestRef(kind v1.Kind, group v1.Group, name string) v1alpha2.LocalPolicyTargetReference {
 	return v1alpha2.LocalPolicyTargetReference{
 		Group: group,
 		Kind:  kind,

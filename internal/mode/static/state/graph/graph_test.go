@@ -359,7 +359,7 @@ func TestBuildGraph(t *testing.T) {
 		},
 		TypeMeta: metav1.TypeMeta{Kind: kinds.ClientSettingsPolicy},
 		Spec: ngfAPI.ClientSettingsPolicySpec{
-			TargetRef: createRef(kinds.HTTPRoute, gatewayv1.GroupName, "hr-1"),
+			TargetRef: createTestRef(kinds.HTTPRoute, gatewayv1.GroupName, "hr-1"),
 		},
 	}
 	processedRoutePolicy := &Policy{
@@ -388,7 +388,7 @@ func TestBuildGraph(t *testing.T) {
 		},
 		TypeMeta: metav1.TypeMeta{Kind: kinds.ClientSettingsPolicy},
 		Spec: ngfAPI.ClientSettingsPolicySpec{
-			TargetRef: createRef(kinds.Gateway, gatewayv1.GroupName, "gateway-1"),
+			TargetRef: createTestRef(kinds.Gateway, gatewayv1.GroupName, "gateway-1"),
 		},
 	}
 	processedGwPolicy := &Policy{
@@ -1031,49 +1031,49 @@ func TestIsNGFPolicyRelevant(t *testing.T) {
 		{
 			name:        "relevant; policy references the winning gateway",
 			graph:       getGraph(),
-			policy:      getPolicy(createRef(kinds.Gateway, gatewayv1.GroupName, "gw")),
+			policy:      getPolicy(createTestRef(kinds.Gateway, gatewayv1.GroupName, "gw")),
 			nsname:      types.NamespacedName{Namespace: "test", Name: "ref-gw"},
 			expRelevant: true,
 		},
 		{
 			name:        "relevant; policy references an ignored gateway",
 			graph:       getGraph(),
-			policy:      getPolicy(createRef(kinds.Gateway, gatewayv1.GroupName, "ignored")),
+			policy:      getPolicy(createTestRef(kinds.Gateway, gatewayv1.GroupName, "ignored")),
 			nsname:      types.NamespacedName{Namespace: "test", Name: "ref-ignored"},
 			expRelevant: true,
 		},
 		{
 			name:        "relevant; policy references an httproute in the graph",
 			graph:       getGraph(),
-			policy:      getPolicy(createRef(kinds.HTTPRoute, gatewayv1.GroupName, "hr")),
+			policy:      getPolicy(createTestRef(kinds.HTTPRoute, gatewayv1.GroupName, "hr")),
 			nsname:      types.NamespacedName{Namespace: "test", Name: "ref-hr"},
 			expRelevant: true,
 		},
 		{
 			name:        "relevant; policy references a grpcroute in the graph",
 			graph:       getGraph(),
-			policy:      getPolicy(createRef(kinds.GRPCRoute, gatewayv1.GroupName, "gr")),
+			policy:      getPolicy(createTestRef(kinds.GRPCRoute, gatewayv1.GroupName, "gr")),
 			nsname:      types.NamespacedName{Namespace: "test", Name: "ref-gr"},
 			expRelevant: true,
 		},
 		{
 			name:        "irrelevant; policy does not reference a relevant gw or route in the graph",
 			graph:       getGraph(),
-			policy:      getPolicy(createRef(kinds.Gateway, gatewayv1.GroupName, "diff")),
+			policy:      getPolicy(createTestRef(kinds.Gateway, gatewayv1.GroupName, "diff")),
 			nsname:      types.NamespacedName{Namespace: "test", Name: "not-relevant"},
 			expRelevant: false,
 		},
 		{
 			name:        "irrelevant; policy references an unsupported kind in the Gateway group",
 			graph:       getGraph(),
-			policy:      getPolicy(createRef("GatewayClass", gatewayv1.GroupName, "diff")),
+			policy:      getPolicy(createTestRef("GatewayClass", gatewayv1.GroupName, "diff")),
 			nsname:      types.NamespacedName{Namespace: "test", Name: "unsupported-kind"},
 			expRelevant: false,
 		},
 		{
 			name:        "irrelevant; policy references an unsupported group",
 			graph:       getGraph(),
-			policy:      getPolicy(createRef(kinds.Gateway, "SomeGroup", "diff")),
+			policy:      getPolicy(createTestRef(kinds.Gateway, "SomeGroup", "diff")),
 			nsname:      types.NamespacedName{Namespace: "test", Name: "unsupported-group"},
 			expRelevant: false,
 		},
@@ -1083,7 +1083,7 @@ func TestIsNGFPolicyRelevant(t *testing.T) {
 				g.Gateway = nil
 				return g
 			}),
-			policy:      getPolicy(createRef(kinds.Gateway, gatewayv1.GroupName, "diff")),
+			policy:      getPolicy(createTestRef(kinds.Gateway, gatewayv1.GroupName, "diff")),
 			nsname:      types.NamespacedName{Namespace: "test", Name: "nil-gw"},
 			expRelevant: false,
 		},
@@ -1093,7 +1093,7 @@ func TestIsNGFPolicyRelevant(t *testing.T) {
 				g.Gateway.Source = nil
 				return g
 			}),
-			policy:      getPolicy(createRef(kinds.Gateway, gatewayv1.GroupName, "diff")),
+			policy:      getPolicy(createTestRef(kinds.Gateway, gatewayv1.GroupName, "diff")),
 			nsname:      types.NamespacedName{Namespace: "test", Name: "nil-gw-source"},
 			expRelevant: false,
 		},
