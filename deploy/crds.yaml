@@ -142,6 +142,8 @@ spec:
                 - message: 'TargetRef Kind must be one of: Gateway, HTTPRoute, or
                     GRPCRoute'
                   rule: (self.kind=='Gateway' || self.kind=='HTTPRoute' || self.kind=='GRPCRoute')
+                - message: TargetRef Group must be gateway.networking.k8s.io.
+                  rule: (self.group=='gateway.networking.k8s.io')
             required:
             - targetRef
             type: object
