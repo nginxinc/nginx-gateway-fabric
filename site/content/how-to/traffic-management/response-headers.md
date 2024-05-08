@@ -26,7 +26,7 @@ In this guide we will modify the headers for HTTP responses when client requests
 
 ## Response Header Filter
 
-In this guide, we'll begin by configuring an app with custom headers and a straightforward httproute. We'll then observe the server response in relation to header responses. Next, we'll delve into modifying some of those headers using an httpRoute with filters to modify *response* headers. Our aim will be to verify whether the server responds with the modified headers.
+In this guide, we'll begin by configuring an app with custom headers and a straightforward HTTPRoute. We'll then observe the server response in relation to header responses. Next, we'll delve into modifying some of those headers using an HTTPRoute with filters to modify *response* headers. Our aim will be to verify whether the server responds with the modified headers.
 
 ### Deploy the Headers application
 
@@ -36,7 +36,7 @@ Begin by deploying the example application `headers`. It is a simple application
 kubectl apply -f https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric/v1.3.0/examples/http-response-header-filter/headers.yaml
 ```
 
-This will create the headers service and a deployment with one pod. Run the following command to verify the resources were created:
+This will create the headers Service and a Deployment with one pod. Run the following command to verify the resources were created:
 
 ```shell
 kubectl -n default get pods
@@ -49,7 +49,7 @@ headers-6f854c478-k9z2f   1/1     Running   0          32m
 
 ### Deploy the Gateway API Resources for the Header Application
 
-The [gateway](https://gateway-api.sigs.k8s.io/api-types/gateway/) resource is typically deployed by the [cluster operator](https://gateway-api.sigs.k8s.io/concepts/roles-and-personas/#roles-and-personas_1). This gateway defines a single listener on port 80. Since no hostname is specified, this listener matches on all hostnames. To deploy the gateway:
+The [Gateway](https://gateway-api.sigs.k8s.io/api-types/gateway/) resource is typically deployed by the [Cluster Operator](https://gateway-api.sigs.k8s.io/concepts/roles-and-personas/#roles-and-personas_1). This Gateway defines a single listener on port 80. Since no hostname is specified, this listener matches on all hostnames. To deploy the gateway:
 
 ```yaml
 kubectl apply -f - <<EOF
@@ -95,7 +95,7 @@ EOF
 
 This HTTPRoute has a few important properties:
 
-- The `parentRefs` references the gateway resource that we created, and specifically defines the `http` listener to attach to, via the `sectionName` field.
+- The `parentRefs` references the Gateway resource that we created, and specifically defines the `http` listener to attach to, via the `sectionName` field.
 - `cafe.example.com` is the hostname that is matched for all requests to the backends defined in this HTTPRoute.
 - The `match` rule defines that all requests with the path prefix `/headers` are sent to the `headers` Service.
 
