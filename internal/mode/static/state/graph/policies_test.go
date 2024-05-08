@@ -102,7 +102,7 @@ func TestAttachPolicies(t *testing.T) {
 					Attachable: true,
 				},
 				createRouteKey("grpc-route", RouteTypeGRPC): {
-					Source: &v1.HTTPRoute{
+					Source: &v1alpha2.GRPCRoute{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "grpc-route",
 							Namespace: testNs,
