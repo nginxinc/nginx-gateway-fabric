@@ -32,26 +32,11 @@ In this guide, we'll begin by configuring an app with custom headers and a strai
 
 Begin by deploying the example application `headers`. It is a simple application that adds response headers which we'll later tweak and customize.
 
-```yaml
-apiVersion: v1
-kind: Service
-metadata:
-  name: headers
-spec:
-  ports:
-  - port: 80
-    targetPort: 8080
-    protocol: TCP
-    name: http
-  selector:
-    app: headers
-```
-
 ```shell
 kubectl apply -f https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric/v1.3.0/examples/http-response-header-filter/headers.yaml
 ```
 
-Verify if the Pod is running in the `default` Namespace:
+This will create the headers service and a deployment with one pod. Run the following command to verify the resources were created:
 
 ```shell
 kubectl -n default get pods
