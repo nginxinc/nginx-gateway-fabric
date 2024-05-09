@@ -149,6 +149,16 @@ rules:
   verbs:
   - list
   - watch
+{{- if .Values.onOpenshift }}
+- apiGroups:
+  - security.openshift.io
+  resources:
+    - securitycontextconstraints
+  resourceNames:
+    - nginx-ngf-admin
+  verbs:
+  - use
+{{- end }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding

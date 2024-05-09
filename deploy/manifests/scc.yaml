@@ -1,0 +1,37 @@
+# Create SCC for Gateway resources
+kind: SecurityContextConstraints
+apiVersion: security.openshift.io/v1
+metadata:
+  name: nginx-ngf-admin
+allowPrivilegedContainer: false
+allowHostDirVolumePlugin: false
+allowHostIPC: false
+allowHostNetwork: false
+allowHostPorts: false
+readOnlyRootFilesystem: true
+runAsUser:
+  type: MustRunAsRange
+  uidRangeMax: 105
+  uidRangeMin: 100
+fsGroup:
+  type: MustRunAs
+  ranges:
+    - min: 1000
+      max: 1003
+supplementalGroups:
+  type: MustRunAs
+  ranges:
+    - min: 1000
+      max: 1003
+seLinuxContext:
+  type: MustRunAs
+volumes:
+  - emptyDir
+  - secret
+users:
+  - 'system:serviceaccount:*:ngf-nginx-gateway-fabric'
+allowedCapabilities:
+  - NET_BIND_SERVICE
+  - KILL
+requiredDropCapabilities:
+  - ALL
