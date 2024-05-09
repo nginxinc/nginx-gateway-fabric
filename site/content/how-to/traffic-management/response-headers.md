@@ -26,7 +26,7 @@ In this guide we will modify the headers for HTTP responses when client requests
 
 ## Response Header Filter
 
-In this guide, we'll begin by configuring an app with custom headers and a straightforward HTTPRoute. We'll then observe the server response in relation to header responses. Next, we'll delve into modifying some of those headers using an HTTPRoute with filters to modify *response* headers. Our aim will be to verify whether the server responds with the modified headers.
+We'll begin by configuring an app with custom headers and a straightforward HTTPRoute. We'll then observe the server response in relation to header responses. Next, we'll delve into modifying some of those headers using an HTTPRoute with filters to modify *response* headers. Our aim will be to verify whether the server responds with the modified headers.
 
 ### Deploy the Headers application
 
