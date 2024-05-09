@@ -11,18 +11,18 @@ allowHostPorts: false
 readOnlyRootFilesystem: true
 runAsUser:
   type: MustRunAsRange
-  uidRangeMax: 105
-  uidRangeMin: 100
+  uidRangeMin: 101
+  uidRangeMax: 102
 fsGroup:
   type: MustRunAs
   ranges:
-    - min: 1000
-      max: 1003
+    - min: 1001
+      max: 1001
 supplementalGroups:
   type: MustRunAs
   ranges:
-    - min: 1000
-      max: 1003
+    - min: 1001
+      max: 1001
 seLinuxContext:
   type: MustRunAs
 volumes:
