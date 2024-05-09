@@ -67,6 +67,10 @@ type NGFResourceCounts struct {
 	ServiceCount int64
 	// EndpointCount include the total count of Endpoints(IP:port) across all referenced services.
 	EndpointCount int64
+	// GRPCRouteCount is the number of relevant GRPCRoutes.
+	GRPCRouteCount int64
+	// BackendTLSPolicyCount is the number of relevant BackendTLSPolicies.
+	BackendTLSPolicyCount int64
 }
 
 // DataCollectorConfig holds configuration parameters for DataCollectorImpl.
@@ -174,7 +178,7 @@ func collectGraphResourceCount(
 		ngfResourceCounts.GatewayCount++
 	}
 
-	ngfResourceCounts.HTTPRouteCount = computeRouteCount(g.Routes)
+	ngfResourceCounts.HTTPRouteCount, ngfResourceCounts.GRPCRouteCount = computeRouteCount(g.Routes)
 	ngfResourceCounts.SecretCount = int64(len(g.ReferencedSecrets))
 	ngfResourceCounts.ServiceCount = int64(len(g.ReferencedServices))
 
@@ -184,16 +188,21 @@ func collectGraphResourceCount(
 		}
 	}
 
+	ngfResourceCounts.BackendTLSPolicyCount = computeBackendTLSPolicyCount(g.BackendTLSPolicies)
+
 	return ngfResourceCounts, nil
 }
 
-func computeRouteCount(routes map[graph.RouteKey]*graph.L7Route) (httpRouteCount int64) {
+func computeRouteCount(routes map[graph.RouteKey]*graph.L7Route) (httpRouteCount, grpcRouteCount int64) {
 	for _, r := range routes {
 		if r.RouteType == graph.RouteTypeHTTP {
 			httpRouteCount = httpRouteCount + 1
 		}
+		if r.RouteType == graph.RouteTypeGRPC {
+			grpcRouteCount = grpcRouteCount + 1
+		}
 	}
-	return httpRouteCount
+	return httpRouteCount, grpcRouteCount
 }
 
 func getPodReplicaSet(
@@ -314,4 +323,15 @@ func collectClusterInformation(ctx context.Context, k8sClient client.Reader) (cl
 	clusterInfo.ClusterID = clusterID
 
 	return clusterInfo, nil
+}
+
+func computeBackendTLSPolicyCount(policies map[types.NamespacedName]*graph.BackendTLSPolicy) (
+	backendTLSPolicyCount int64,
+) {
+	for _, policy := range policies {
+		if policy.Valid {
+			backendTLSPolicyCount = backendTLSPolicyCount + 1
+		}
+	}
+	return backendTLSPolicyCount
 }
