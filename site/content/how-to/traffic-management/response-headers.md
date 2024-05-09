@@ -9,6 +9,8 @@ toc: true
 
 In this guide we will modify the headers for HTTP responses when client requests are made. For an introduction to exposing your application, we recommend that you follow the [basic guide]({{< relref "/how-to/traffic-management/routing-traffic-to-your-app.md" >}}) first.
 
+We'll begin by configuring an app with custom headers and a straightforward HTTPRoute. We'll then observe the server response in relation to header responses. Next, we'll delve into modifying some of those headers using an HTTPRoute with filters to modify *response* headers. Our aim will be to verify whether the server responds with the modified headers.
+
 
 ## Prerequisites
 
@@ -23,11 +25,6 @@ In this guide we will modify the headers for HTTP responses when client requests
 
 {{< note >}}In a production environment, you should have a DNS record for the external IP address that is exposed, and it should refer to the hostname that the gateway will forward for.{{< /note >}}
 
-
-## Response Header Filter
-
-We'll begin by configuring an app with custom headers and a straightforward HTTPRoute. We'll then observe the server response in relation to header responses. Next, we'll delve into modifying some of those headers using an HTTPRoute with filters to modify *response* headers. Our aim will be to verify whether the server responds with the modified headers.
-
 ### Deploy the Headers application
 
 Begin by deploying the example application `headers`. It is a simple application that adds response headers which we'll later tweak and customize.
@@ -36,7 +33,7 @@ Begin by deploying the example application `headers`. It is a simple application
 kubectl apply -f https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric/v1.3.0/examples/http-response-header-filter/headers.yaml
 ```
 
-This will create the headers Service and a Deployment with one pod. Run the following command to verify the resources were created:
+This will create the headers Service and a Deployment with one Pod. Run the following command to verify the resources were created:
 
 ```shell
 kubectl -n default get pods
