@@ -40,8 +40,11 @@ kubectl get pods,svc
 ```
 
 ```text
-NAME                      READY   STATUS    RESTARTS   AGE
-headers-6f854c478-k9z2f   1/1     Running   0          32m
+NAME                          READY   STATUS    RESTARTS   AGE
+pod/headers-6f854c478-hd2jr   1/1     Running   0          95s
+
+NAME                 TYPE        CLUSTER-IP    EXTERNAL-IP   PORT(S)   AGE
+service/headers      ClusterIP   10.96.15.12   <none>        80/TCP    95s
 ```
 
 ### Deploy the Gateway API Resources for the Header Application
@@ -198,7 +201,7 @@ ok
 
 In the output above, you can see that the headers application modifies the following custom headers:
 
-In the output above you can notice the modified response headers as the `X-Header-Remove` header is absent. The header `X-Header-Add` gets appended with the new value and `X-Header-Set` gets overwritten to `overwritten-value` as defined in the *HttpRoute*.
+In the output above you can notice the modified response headers as the `X-Header-Unmodified` remains unchanged as we did not include it in the filter and `X-Header-Remove` header is absent. The header `X-Header-Add` gets appended with the new value and `X-Header-Set` gets overwritten to `overwritten-value` as defined in the *HttpRoute*.
 
 ## Further Reading
 
