@@ -36,7 +36,7 @@ kubectl apply -f https://raw.githubusercontent.com/nginxinc/nginx-gateway-fabric
 This will create the headers Service and a Deployment with one Pod. Run the following command to verify the resources were created:
 
 ```shell
-kubectl -n default get pods
+kubectl get pods,svc
 ```
 
 ```text
