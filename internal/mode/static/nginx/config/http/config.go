@@ -16,10 +16,12 @@ type Location struct {
 	Path            string
 	ProxyPass       string
 	HTTPMatchKey    string
+	HTTPMatchVar    string
+	Rewrites        []string
 	ProxySetHeaders []Header
 	ProxySSLVerify  *ProxySSLVerify
 	Return          *Return
-	Rewrites        []string
+	ResponseHeaders ResponseHeaders
 	GRPC            bool
 }
 
@@ -27,6 +29,13 @@ type Location struct {
 type Header struct {
 	Name  string
 	Value string
+}
+
+// ResponseHeaders holds all response headers to be added, set, or removed.
+type ResponseHeaders struct {
+	Add    []Header
+	Set    []Header
+	Remove []string
 }
 
 // Return represents an HTTP return.

@@ -2083,6 +2083,30 @@ func TestCreateFilters(t *testing.T) {
 		},
 	}
 
+	responseHeaderModifiers1 := v1.HTTPRouteFilter{
+		Type: v1.HTTPRouteFilterResponseHeaderModifier,
+		ResponseHeaderModifier: &v1.HTTPHeaderFilter{
+			Add: []v1.HTTPHeader{
+				{
+					Name:  "X-Server-Version",
+					Value: "2.3",
+				},
+			},
+		},
+	}
+
+	responseHeaderModifiers2 := v1.HTTPRouteFilter{
+		Type: v1.HTTPRouteFilterResponseHeaderModifier,
+		ResponseHeaderModifier: &v1.HTTPHeaderFilter{
+			Set: []v1.HTTPHeader{
+				{
+					Name:  "X-Route",
+					Value: "new-response-value",
+				},
+			},
+		},
+	}
+
 	expectedRedirect1 := HTTPRequestRedirectFilter{
 		Hostname: helpers.GetPointer("foo.example.com"),
 	}
@@ -2094,6 +2118,15 @@ func TestCreateFilters(t *testing.T) {
 			{
 				Name:  "MyBespokeHeader",
 				Value: "my-value",
+			},
+		},
+	}
+
+	expectedresponseHeaderModifier := HTTPHeaderFilter{
+		Add: []HTTPHeader{
+			{
+				Name:  "X-Server-Version",
+				Value: "2.3",
 			},
 		},
 	}
@@ -2147,11 +2180,14 @@ func TestCreateFilters(t *testing.T) {
 				rewrite2,
 				requestHeaderModifiers1,
 				requestHeaderModifiers2,
+				responseHeaderModifiers1,
+				responseHeaderModifiers2,
 			},
 			expected: HTTPFilters{
-				RequestRedirect:        &expectedRedirect1,
-				RequestURLRewrite:      &expectedRewrite1,
-				RequestHeaderModifiers: &expectedHeaderModifier1,
+				RequestRedirect:         &expectedRedirect1,
+				RequestURLRewrite:       &expectedRewrite1,
+				RequestHeaderModifiers:  &expectedHeaderModifier1,
+				ResponseHeaderModifiers: &expectedresponseHeaderModifier,
 			},
 			msg: "two of each filter, first value for each wins",
 		},
