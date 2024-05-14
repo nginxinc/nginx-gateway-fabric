@@ -153,9 +153,9 @@ rules:
 - apiGroups:
   - security.openshift.io
   resources:
-    - securitycontextconstraints
+  - securitycontextconstraints
   resourceNames:
-    - nginx-ngf-admin
+  - nginx-ngf-admin
   verbs:
   - use
 {{- end }}
