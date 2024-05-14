@@ -2061,12 +2061,11 @@ func TestBuildConfiguration(t *testing.T) {
 				CertBundles:    map[CertBundleID]CertBundle{},
 				BaseHTTPConfig: BaseHTTPConfig{HTTP2: false},
 				Telemetry: Telemetry{
-					Endpoint:       "my-otel.svc:4563",
-					Interval:       "5s",
-					BatchSize:      512,
-					BatchCount:     4,
-					ServiceName:    "ngf:ns:gw:my-svc",
-					SpanAttributes: []SpanAttribute{},
+					Endpoint:    "my-otel.svc:4563",
+					Interval:    "5s",
+					BatchSize:   512,
+					BatchCount:  4,
+					ServiceName: "ngf:ns:gw:my-svc",
 				},
 			},
 			msg: "NginxProxy with tracing config and http2 disabled",
@@ -2246,7 +2245,7 @@ func TestBuildConfiguration(t *testing.T) {
 			g := NewWithT(t)
 
 			fakeGenerator := &policiesfakes.FakeConfigGenerator{
-				GenerateStub: func(p policies.Policy) []byte {
+				GenerateStub: func(p policies.Policy, _ *ngfAPI.NginxProxy) []byte {
 					switch kind := p.GetObjectKind().GroupVersionKind().Kind; kind {
 					case "ApplePolicy":
 						return []byte("apple")
@@ -2984,15 +2983,18 @@ func TestBuildTelemetry(t *testing.T) {
 		},
 	}
 
-	expTelemetryConfigured := Telemetry{
-		Endpoint:    "my-otel.svc:4563",
-		ServiceName: "ngf:ns:gw:my-svc",
-		Interval:    "5s",
-		BatchSize:   512,
-		BatchCount:  4,
-		SpanAttributes: []SpanAttribute{
-			{Key: "key", Value: "value"},
-		},
+	createTelemetry := func() Telemetry {
+		return Telemetry{
+			Endpoint:    "my-otel.svc:4563",
+			ServiceName: "ngf:ns:gw:my-svc",
+			Interval:    "5s",
+			BatchSize:   512,
+			BatchCount:  4,
+		}
+	}
+
+	createModifiedTelemetry := func(mod func(Telemetry) Telemetry) Telemetry {
+		return mod(createTelemetry())
 	}
 
 	tests := []struct {
@@ -3019,8 +3021,73 @@ func TestBuildTelemetry(t *testing.T) {
 				},
 				NginxProxy: telemetryConfigured,
 			},
-			expTelemetry: expTelemetryConfigured,
+			expTelemetry: createTelemetry(),
 			msg:          "Telemetry configured",
+		},
+		{
+			g: &graph.Graph{
+				Gateway: &graph.Gateway{
+					Source: &v1.Gateway{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "gw",
+							Namespace: "ns",
+						},
+					},
+				},
+				NginxProxy: telemetryConfigured,
+				NGFPolicies: map[graph.PolicyKey]*graph.Policy{
+					{NsName: types.NamespacedName{Name: "obsPolicy"}}: {
+						Source: &ngfAPI.ObservabilityPolicy{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "obsPolicy",
+								Namespace: "custom-ns",
+							},
+							Spec: ngfAPI.ObservabilityPolicySpec{
+								Tracing: &ngfAPI.Tracing{
+									Ratio: helpers.GetPointer[int32](25),
+								},
+							},
+						},
+					},
+				},
+			},
+			expTelemetry: createModifiedTelemetry(func(t Telemetry) Telemetry {
+				t.Ratios = []Ratio{
+					{Name: "$ratio_custom_ns_obsPolicy", Value: 25},
+				}
+				return t
+			}),
+			msg: "Telemetry configured with observability policy ratio",
+		},
+		{
+			g: &graph.Graph{
+				Gateway: &graph.Gateway{
+					Source: &v1.Gateway{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "gw",
+							Namespace: "ns",
+						},
+					},
+				},
+				NginxProxy: telemetryConfigured,
+				NGFPolicies: map[graph.PolicyKey]*graph.Policy{
+					{NsName: types.NamespacedName{Name: "obsPolicy"}}: {
+						Source: &ngfAPI.ObservabilityPolicy{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      "obsPolicy",
+								Namespace: "custom-ns",
+							},
+							Spec: ngfAPI.ObservabilityPolicySpec{
+								Tracing: &ngfAPI.Tracing{
+									Ratio: helpers.GetPointer[int32](0),
+								},
+							},
+						},
+					},
+				},
+			},
+			expTelemetry: createTelemetry(),
+			msg:          "Telemetry configured with zero observability policy ratio",
 		},
 	}
 
@@ -3109,12 +3176,12 @@ func TestBuildAdditions(t *testing.T) {
 			g := NewWithT(t)
 
 			generator := &policiesfakes.FakeConfigGenerator{
-				GenerateStub: func(policy policies.Policy) []byte {
+				GenerateStub: func(policy policies.Policy, _ *ngfAPI.NginxProxy) []byte {
 					return []byte(policy.GetName())
 				},
 			}
 
-			additions := buildAdditions(test.policies, generator)
+			additions := buildAdditions(test.policies, nil, generator)
 			g.Expect(additions).To(BeEquivalentTo(test.expAdditions))
 		})
 	}

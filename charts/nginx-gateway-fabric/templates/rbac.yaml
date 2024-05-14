@@ -122,6 +122,7 @@ rules:
   resources:
   - nginxproxies
   - clientsettingspolicies
+  - observabilitypolicies
   verbs:
   - list
   - watch
@@ -130,6 +131,7 @@ rules:
   resources:
   - nginxgateways/status
   - clientsettingspolicies/status
+  - observabilitypolicies/status
   verbs:
   - update
 {{- if .Values.nginxGateway.leaderElection.enable }}

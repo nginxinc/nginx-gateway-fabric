@@ -8,9 +8,11 @@ import (
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/kinds"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/policies"
+	staticConds "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/conditions"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/validation"
 )
 
@@ -26,14 +28,18 @@ func NewValidator(genericValidator validation.GenericValidator) *Validator {
 }
 
 // Validate validates the spec of a ClientSettingsPolicy.
-func (v *Validator) Validate(policy policies.Policy) error {
+func (v *Validator) Validate(policy policies.Policy, _ *policies.GlobalPolicySettings) []conditions.Condition {
 	csp := helpers.MustCastObject[*ngfAPI.ClientSettingsPolicy](policy)
 
 	if err := validateTargetRef(csp.Spec.TargetRef); err != nil {
-		return err
+		return []conditions.Condition{staticConds.NewPolicyInvalid(err.Error())}
 	}
 
-	return v.validateSettings(csp.Spec)
+	if err := v.validateSettings(csp.Spec); err != nil {
+		return []conditions.Condition{staticConds.NewPolicyInvalid(err.Error())}
+	}
+
+	return nil
 }
 
 // Conflicts returns true if the two ClientSettingsPolicies conflict.

@@ -16,6 +16,7 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/controller/index"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/kinds"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/policies"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/conditions"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/validation"
 )
 
@@ -138,14 +139,13 @@ func (g *Graph) IsNGFPolicyRelevant(
 		panic("policy cannot be nil")
 	}
 
-	ref := policy.GetTargetRef()
-
-	switch ref.Group {
-	case gatewayv1.GroupName:
-		return g.gatewayAPIResourceExist(ref, policy.GetNamespace())
-	default:
-		return false
+	for _, ref := range policy.GetTargetRefs() {
+		if ref.Group == gatewayv1.GroupName && g.gatewayAPIResourceExist(ref, policy.GetNamespace()) {
+			return true
+		}
 	}
+
+	return false
 }
 
 func (g *Graph) gatewayAPIResourceExist(ref v1alpha2.LocalPolicyTargetReference, policyNs string) bool {
@@ -175,6 +175,8 @@ func BuildGraph(
 	validators validation.Validators,
 	protectedPorts ProtectedPorts,
 ) *Graph {
+	policySettings := &policies.GlobalPolicySettings{}
+
 	processedGwClasses, gcExists := processGatewayClasses(state.GatewayClasses, gcName, controllerName)
 	if gcExists && processedGwClasses.Winner == nil {
 		// configured GatewayClass does not reference this controller
@@ -183,6 +185,14 @@ func BuildGraph(
 
 	npCfg := getNginxProxy(state.NginxProxies, processedGwClasses.Winner)
 	gc := buildGatewayClass(processedGwClasses.Winner, npCfg, state.CRDMetadata, validators.GenericValidator)
+	if gc != nil && npCfg != nil {
+		for _, cond := range gc.Conditions {
+			if cond.Type == string(conditions.GatewayClassResolvedRefs) && cond.Status == metav1.ConditionTrue {
+				policySettings.NginxProxyValid = true
+				break
+			}
+		}
+	}
 
 	secretResolver := newSecretResolver(state.Secrets)
 	configMapResolver := newConfigMapResolver(state.ConfigMaps)
@@ -215,7 +225,14 @@ func BuildGraph(
 
 	referencedServices := buildReferencedServices(routes)
 
-	processedPolicies := processPolicies(state.NGFPolicies, validators.PolicyValidator, processedGws, routes)
+	// policies must be processed last because they rely on the state of the other resources in the graph
+	processedPolicies := processPolicies(
+		state.NGFPolicies,
+		validators.PolicyValidator,
+		processedGws,
+		routes,
+		policySettings,
+	)
 
 	g := &Graph{
 		GatewayClass:               gc,

@@ -1,7 +1,7 @@
 # Enhancement Proposal-1778: Observability Policy
 
 - Issue: https://github.com/nginxinc/nginx-gateway-fabric/issues/1778
-- Status: Implementable
+- Status: Completed
 
 ## Summary
 
@@ -65,10 +65,10 @@ type ObservabilityPolicy struct {
 }
 
 type ObservabilityPolicySpec struct {
-    // TargetRef identifies an API object to apply the policy to.
-    // Object must be in the same namespace as the policy.
+    // TargetRefs identifies API object(s) to apply the policy to.
+    // Objects must be in the same namespace as the policy.
     // Support: HTTPRoute
-    TargetRef gatewayv1alpha2.LocalPolicyTargetReference `json:"targetRef"`
+    TargetRefs []gatewayv1alpha2.LocalPolicyTargetReference `json:"targetRefs"`
 
     // Tracing allows for enabling and configuring tracing.
     //
@@ -154,8 +154,8 @@ metadata:
   name: example-observability-policy
   namespace: default
 spec:
-  targetRef:
-    group: gateway.networking.k8s.io
+  targetRefs:
+  - group: gateway.networking.k8s.io
     kind: HTTPRoute
     name: example-route
   tracing:

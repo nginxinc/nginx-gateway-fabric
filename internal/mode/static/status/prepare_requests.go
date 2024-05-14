@@ -306,30 +306,31 @@ func PrepareNGFPolicyRequests(
 	reqs := make([]frameworkStatus.UpdateRequest, 0, len(policies))
 
 	for key, pol := range policies {
-		ancestorStatuses := make([]v1alpha2.PolicyAncestorStatus, 0, 1)
-		ancestor := pol.Ancestor
+		ancestorStatuses := make([]v1alpha2.PolicyAncestorStatus, 0, len(pol.TargetRefs))
 
-		if ancestor == nil {
+		if len(pol.Ancestors) == 0 {
 			continue
 		}
 
-		allConds := make([]conditions.Condition, 0, len(pol.Conditions)+len(ancestor.Conditions)+1)
+		for _, ancestor := range pol.Ancestors {
+			allConds := make([]conditions.Condition, 0, len(pol.Conditions)+len(ancestor.Conditions)+1)
 
-		// The order of conditions matters here.
-		// We add the default condition first, followed by the ancestor conditions, and finally the policy conditions.
-		// DeduplicateConditions will ensure the last condition wins.
-		allConds = append(allConds, staticConds.NewPolicyAccepted())
-		allConds = append(allConds, ancestor.Conditions...)
-		allConds = append(allConds, pol.Conditions...)
+			// The order of conditions matters here.
+			// We add the default condition first, followed by the ancestor conditions, and finally the policy conditions.
+			// DeduplicateConditions will ensure the last condition wins.
+			allConds = append(allConds, staticConds.NewPolicyAccepted())
+			allConds = append(allConds, ancestor.Conditions...)
+			allConds = append(allConds, pol.Conditions...)
 
-		conds := conditions.DeduplicateConditions(allConds)
-		apiConds := conditions.ConvertConditions(conds, pol.Source.GetGeneration(), transitionTime)
+			conds := conditions.DeduplicateConditions(allConds)
+			apiConds := conditions.ConvertConditions(conds, pol.Source.GetGeneration(), transitionTime)
 
-		ancestorStatuses = append(ancestorStatuses, v1alpha2.PolicyAncestorStatus{
-			AncestorRef:    ancestor.Ancestor,
-			ControllerName: v1alpha2.GatewayController(gatewayCtlrName),
-			Conditions:     apiConds,
-		})
+			ancestorStatuses = append(ancestorStatuses, v1alpha2.PolicyAncestorStatus{
+				AncestorRef:    ancestor.Ancestor,
+				ControllerName: v1alpha2.GatewayController(gatewayCtlrName),
+				Conditions:     apiConds,
+			})
+		}
 
 		status := v1alpha2.PolicyStatus{Ancestors: ancestorStatuses}
 

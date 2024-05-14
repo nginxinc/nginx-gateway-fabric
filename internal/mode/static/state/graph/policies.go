@@ -21,10 +21,10 @@ import (
 type Policy struct {
 	// Source is the corresponding Policy resource.
 	Source policies.Policy
-	// Ancestor is the ancestor object of the Policy. Used in status.
-	Ancestor *PolicyAncestor
-	// TargetRef is the resource that the Policy targets.
-	TargetRef PolicyTargetRef
+	// Ancestors is list of ancestor objects of the Policy. Used in status.
+	Ancestors []PolicyAncestor
+	// TargetRefs are the resources that the Policy targets.
+	TargetRefs []PolicyTargetRef
 	// Conditions holds the conditions for the Policy.
 	// These conditions apply to the entire Policy.
 	// The conditions in the Ancestor apply only to the Policy in regard to the Ancestor.
@@ -72,18 +72,18 @@ func (g *Graph) attachPolicies(ctlrName string) {
 	}
 
 	for _, policy := range g.NGFPolicies {
-		ref := policy.TargetRef
+		for _, ref := range policy.TargetRefs {
+			switch ref.Kind {
+			case kinds.Gateway:
+				attachPolicyToGateway(policy, ref, g.Gateway, g.IgnoredGateways, ctlrName)
+			case kinds.HTTPRoute, kinds.GRPCRoute:
+				route, exists := g.Routes[routeKeyForKind(ref.Kind, ref.Nsname)]
+				if !exists {
+					continue
+				}
 
-		switch ref.Kind {
-		case kinds.Gateway:
-			attachPolicyToGateway(policy, g.Gateway, g.IgnoredGateways, ctlrName)
-		case kinds.HTTPRoute, kinds.GRPCRoute:
-			route, exists := g.Routes[routeKeyForKind(ref.Kind, ref.Nsname)]
-			if !exists {
-				continue
+				attachPolicyToRoute(policy, route, ctlrName)
 			}
-
-			attachPolicyToRoute(policy, route, ctlrName)
 		}
 	}
 }
@@ -96,20 +96,20 @@ func attachPolicyToRoute(policy *Policy, route *L7Route, ctlrName string) {
 
 	routeNsName := types.NamespacedName{Namespace: route.Source.GetNamespace(), Name: route.Source.GetName()}
 
-	ancestor := &PolicyAncestor{
+	ancestor := PolicyAncestor{
 		Ancestor: createParentReference(v1.GroupName, kind, routeNsName),
 	}
 
-	curAncestorStatus := policy.Source.GetPolicyStatus().Ancestors
-	if ancestorsFull(curAncestorStatus, ctlrName) {
+	if ngfPolicyAncestorsFull(policy, ctlrName) {
 		// FIXME (kate-osborn): https://github.com/nginxinc/nginx-gateway-fabric/issues/1987
 		return
 	}
 
-	policy.Ancestor = ancestor
+	policy.Ancestors = append(policy.Ancestors, ancestor)
 
 	if !route.Valid || !route.Attachable || len(route.ParentRefs) == 0 {
-		policy.Ancestor.Conditions = []conditions.Condition{staticConds.NewPolicyTargetNotFound("TargetRef is invalid")}
+		cond := staticConds.NewPolicyTargetNotFound("TargetRef is invalid")
+		policy.Ancestors[len(policy.Ancestors)-1].Conditions = []conditions.Condition{cond}
 
 		return
 	}
@@ -119,37 +119,37 @@ func attachPolicyToRoute(policy *Policy, route *L7Route, ctlrName string) {
 
 func attachPolicyToGateway(
 	policy *Policy,
+	ref PolicyTargetRef,
 	gw *Gateway,
 	ignoredGateways map[types.NamespacedName]*v1.Gateway,
 	ctlrName string,
 ) {
-	ref := policy.TargetRef
-
 	_, ignored := ignoredGateways[ref.Nsname]
 
 	if !ignored && ref.Nsname != client.ObjectKeyFromObject(gw.Source) {
 		return
 	}
 
-	ancestor := &PolicyAncestor{
+	ancestor := PolicyAncestor{
 		Ancestor: createParentReference(v1.GroupName, kinds.Gateway, ref.Nsname),
 	}
 
-	curAncestorStatus := policy.Source.GetPolicyStatus().Ancestors
-	if ancestorsFull(curAncestorStatus, ctlrName) {
+	if ngfPolicyAncestorsFull(policy, ctlrName) {
 		// FIXME (kate-osborn): https://github.com/nginxinc/nginx-gateway-fabric/issues/1987
 		return
 	}
 
-	policy.Ancestor = ancestor
+	policy.Ancestors = append(policy.Ancestors, ancestor)
 
 	if ignored {
-		policy.Ancestor.Conditions = []conditions.Condition{staticConds.NewPolicyTargetNotFound("TargetRef is ignored")}
+		cond := staticConds.NewPolicyTargetNotFound("TargetRef is ignored")
+		policy.Ancestors[len(policy.Ancestors)-1].Conditions = []conditions.Condition{cond}
 		return
 	}
 
 	if !gw.Valid {
-		policy.Ancestor.Conditions = []conditions.Condition{staticConds.NewPolicyTargetNotFound("TargetRef is invalid")}
+		cond := staticConds.NewPolicyTargetNotFound("TargetRef is invalid")
+		policy.Ancestors[len(policy.Ancestors)-1].Conditions = []conditions.Condition{cond}
 		return
 	}
 
@@ -161,6 +161,7 @@ func processPolicies(
 	validator validation.PolicyValidator,
 	gateways processedGateways,
 	routes map[RouteKey]*L7Route,
+	policySettings *policies.GlobalPolicySettings,
 ) map[PolicyKey]*Policy {
 	if len(policies) == 0 || gateways.Winner == nil {
 		return nil
@@ -169,39 +170,46 @@ func processPolicies(
 	processedPolicies := make(map[PolicyKey]*Policy)
 
 	for key, policy := range policies {
-		ref := policy.GetTargetRef()
-		refNsName := types.NamespacedName{Name: string(ref.Name), Namespace: policy.GetNamespace()}
+		var refsTracked bool
+		targetRefs := make([]PolicyTargetRef, 0, len(policy.GetTargetRefs()))
+		for _, ref := range policy.GetTargetRefs() {
+			refNsName := types.NamespacedName{Name: string(ref.Name), Namespace: policy.GetNamespace()}
+			refGroupKind := fmt.Sprintf("%s/%s", ref.Group, ref.Kind)
 
-		refGroupKind := fmt.Sprintf("%s/%s", ref.Group, ref.Kind)
-
-		switch refGroupKind {
-		case gatewayGroupKind:
-			if !gatewayExists(refNsName, gateways.Winner, gateways.Ignored) {
+			switch refGroupKind {
+			case gatewayGroupKind:
+				if !gatewayExists(refNsName, gateways.Winner, gateways.Ignored) {
+					continue
+				}
+			case hrGroupKind, grpcGroupKind:
+				if _, exists := routes[routeKeyForKind(ref.Kind, refNsName)]; !exists {
+					continue
+				}
+			default:
 				continue
 			}
-		case hrGroupKind, grpcGroupKind:
-			if _, exists := routes[routeKeyForKind(ref.Kind, refNsName)]; !exists {
-				continue
-			}
-		default:
+
+			refsTracked = true
+			targetRefs = append(targetRefs,
+				PolicyTargetRef{
+					Kind:   ref.Kind,
+					Group:  ref.Group,
+					Nsname: refNsName,
+				})
+		}
+
+		if !refsTracked {
 			continue
 		}
 
-		var conds []conditions.Condition
-
-		if err := validator.Validate(policy); err != nil {
-			conds = append(conds, staticConds.NewPolicyInvalid(err.Error()))
-		}
+		conds := validator.Validate(policy, policySettings)
 
 		processedPolicies[key] = &Policy{
 			Source:     policy,
 			Valid:      len(conds) == 0,
 			Conditions: conds,
-			TargetRef: PolicyTargetRef{
-				Kind:   ref.Kind,
-				Group:  ref.Group,
-				Nsname: refNsName,
-			},
+			TargetRefs: targetRefs,
+			Ancestors:  make([]PolicyAncestor, 0, len(targetRefs)),
 		}
 	}
 
@@ -213,7 +221,7 @@ func processPolicies(
 // markConflictedPolicies marks policies that conflict with a policy of greater precedence as invalid.
 // Policies are sorted by timestamp and then alphabetically.
 func markConflictedPolicies(policies map[PolicyKey]*Policy, validator validation.PolicyValidator) {
-	// Policies can only conflict if they are the same policy type (gvk) and they target the same resource.
+	// Policies can only conflict if they are the same policy type (gvk) and they target the same resource(s).
 	type key struct {
 		policyGVK schema.GroupVersionKind
 		PolicyTargetRef
@@ -221,17 +229,19 @@ func markConflictedPolicies(policies map[PolicyKey]*Policy, validator validation
 
 	possibles := make(map[key][]*Policy)
 
-	for pk, p := range policies {
+	for policyKey, policy := range policies {
 		// If a policy is invalid, it cannot conflict with another policy.
-		if p.Valid {
-			ak := key{
-				PolicyTargetRef: p.TargetRef,
-				policyGVK:       pk.GVK,
+		if policy.Valid {
+			for _, ref := range policy.TargetRefs {
+				ak := key{
+					PolicyTargetRef: ref,
+					policyGVK:       policyKey.GVK,
+				}
+				if possibles[ak] == nil {
+					possibles[ak] = make([]*Policy, 0)
+				}
+				possibles[ak] = append(possibles[ak], policy)
 			}
-			if possibles[ak] == nil {
-				possibles[ak] = make([]*Policy, 0)
-			}
-			possibles[ak] = append(possibles[ak], p)
 		}
 	}
 

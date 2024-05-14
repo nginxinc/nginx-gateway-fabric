@@ -73,6 +73,10 @@ const (
 	// GatewayClassReasonParamsRefNotFound is used with the "GatewayClassResolvedRefs" condition when the
 	// parametersRef resource does not exist.
 	GatewayClassReasonParamsRefNotFound v1.GatewayClassConditionReason = "ParametersRefNotFound"
+
+	// PolicyReasonNginxProxyConfigNotSet is used with the "PolicyAccepted" condition when the
+	// NginxProxy resource is missing or invalid.
+	PolicyReasonNginxProxyConfigNotSet v1alpha2.PolicyConditionReason = "NginxProxyConfigNotSet"
 )
 
 // NewTODO returns a Condition that can be used as a placeholder for a condition that is not yet implemented.
@@ -637,5 +641,16 @@ func NewPolicyTargetNotFound(msg string) conditions.Condition {
 		Status:  metav1.ConditionFalse,
 		Reason:  string(v1alpha2.PolicyReasonTargetNotFound),
 		Message: msg,
+	}
+}
+
+// NewPolicyNotAcceptedNginxProxyNotSet returns a Condition that indicates that the Policy is not accepted
+// because it relies in the NginxProxy configuration which is missing or invalid.
+func NewPolicyNotAcceptedNginxProxyNotSet() conditions.Condition {
+	return conditions.Condition{
+		Type:    string(v1alpha2.PolicyConditionAccepted),
+		Status:  metav1.ConditionFalse,
+		Reason:  string(PolicyReasonNginxProxyConfigNotSet),
+		Message: "The NginxProxy configuration is either invalid or not attached to the GatewayClass",
 	}
 }

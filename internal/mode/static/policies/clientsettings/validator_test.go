@@ -1,6 +1,8 @@
 package clientsettings_test
 
 import (
+	"fmt"
+	"strings"
 	"testing"
 
 	. "github.com/onsi/gomega"
@@ -117,16 +119,23 @@ func TestValidator_Validate(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewWithT(t)
 
-			err := v.Validate(test.policy)
+			conds := v.Validate(test.policy, nil)
 
 			if len(test.expErrSubstrings) == 0 {
-				g.Expect(err).ToNot(HaveOccurred())
+				g.Expect(conds).To(BeEmpty())
 			} else {
-				g.Expect(err).To(HaveOccurred())
+				g.Expect(conds).ToNot(BeEmpty())
 			}
 
 			for _, str := range test.expErrSubstrings {
-				g.Expect(err.Error()).To(ContainSubstring(str))
+				var msg string
+				for _, cond := range conds {
+					if strings.Contains(cond.Message, str) {
+						msg = cond.Message
+						break
+					}
+				}
+				g.Expect(msg).To(ContainSubstring(str), fmt.Sprintf("error not found in %v", conds))
 			}
 		})
 	}
@@ -136,7 +145,7 @@ func TestValidator_ValidatePanics(t *testing.T) {
 	v := clientsettings.NewValidator(nil)
 
 	validate := func() {
-		_ = v.Validate(&policiesfakes.FakePolicy{})
+		_ = v.Validate(&policiesfakes.FakePolicy{}, nil)
 	}
 
 	g := NewWithT(t)

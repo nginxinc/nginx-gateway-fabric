@@ -364,18 +364,22 @@ func TestBuildGraph(t *testing.T) {
 	}
 	processedRoutePolicy := &Policy{
 		Source: hrPolicy,
-		Ancestor: &PolicyAncestor{
-			Ancestor: gatewayv1.ParentReference{
-				Group:     helpers.GetPointer[gatewayv1.Group](gatewayv1.GroupName),
-				Kind:      helpers.GetPointer[gatewayv1.Kind](kinds.HTTPRoute),
-				Namespace: (*gatewayv1.Namespace)(&testNs),
-				Name:      "hr-1",
+		Ancestors: []PolicyAncestor{
+			{
+				Ancestor: gatewayv1.ParentReference{
+					Group:     helpers.GetPointer[gatewayv1.Group](gatewayv1.GroupName),
+					Kind:      helpers.GetPointer[gatewayv1.Kind](kinds.HTTPRoute),
+					Namespace: (*gatewayv1.Namespace)(&testNs),
+					Name:      "hr-1",
+				},
 			},
 		},
-		TargetRef: PolicyTargetRef{
-			Kind:   kinds.HTTPRoute,
-			Group:  gatewayv1.GroupName,
-			Nsname: types.NamespacedName{Namespace: testNs, Name: "hr-1"},
+		TargetRefs: []PolicyTargetRef{
+			{
+				Kind:   kinds.HTTPRoute,
+				Group:  gatewayv1.GroupName,
+				Nsname: types.NamespacedName{Namespace: testNs, Name: "hr-1"},
+			},
 		},
 		Valid: true,
 	}
@@ -393,18 +397,22 @@ func TestBuildGraph(t *testing.T) {
 	}
 	processedGwPolicy := &Policy{
 		Source: gwPolicy,
-		Ancestor: &PolicyAncestor{
-			Ancestor: gatewayv1.ParentReference{
-				Group:     helpers.GetPointer[gatewayv1.Group](gatewayv1.GroupName),
-				Kind:      helpers.GetPointer[gatewayv1.Kind](kinds.Gateway),
-				Namespace: (*gatewayv1.Namespace)(&testNs),
-				Name:      "gateway-1",
+		Ancestors: []PolicyAncestor{
+			{
+				Ancestor: gatewayv1.ParentReference{
+					Group:     helpers.GetPointer[gatewayv1.Group](gatewayv1.GroupName),
+					Kind:      helpers.GetPointer[gatewayv1.Kind](kinds.Gateway),
+					Namespace: (*gatewayv1.Namespace)(&testNs),
+					Name:      "gateway-1",
+				},
 			},
 		},
-		TargetRef: PolicyTargetRef{
-			Kind:   kinds.Gateway,
-			Group:  gatewayv1.GroupName,
-			Nsname: types.NamespacedName{Namespace: testNs, Name: "gateway-1"},
+		TargetRefs: []PolicyTargetRef{
+			{
+				Kind:   kinds.Gateway,
+				Group:  gatewayv1.GroupName,
+				Nsname: types.NamespacedName{Namespace: testNs, Name: "gateway-1"},
+			},
 		},
 		Valid: true,
 	}
@@ -1001,8 +1009,8 @@ func TestIsNGFPolicyRelevant(t *testing.T) {
 			GetNamespaceStub: func() string {
 				return testNs
 			},
-			GetTargetRefStub: func() v1alpha2.LocalPolicyTargetReference {
-				return ref
+			GetTargetRefsStub: func() []v1alpha2.LocalPolicyTargetReference {
+				return []v1alpha2.LocalPolicyTargetReference{ref}
 			},
 		}
 	}
