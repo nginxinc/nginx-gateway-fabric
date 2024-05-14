@@ -3,7 +3,7 @@ module github.com/nginxinc/nginx-gateway-fabric/tests
 go 1.22.2
 
 require (
-	github.com/onsi/ginkgo/v2 v2.17.2
+	github.com/onsi/ginkgo/v2 v2.17.3
 	github.com/onsi/gomega v1.33.1
 	github.com/tsenart/vegeta/v12 v12.11.1
 	k8s.io/api v0.30.0
@@ -12,6 +12,7 @@ require (
 	k8s.io/client-go v0.30.0
 	sigs.k8s.io/controller-runtime v0.18.0
 	sigs.k8s.io/gateway-api v1.0.0
+	sigs.k8s.io/yaml v1.4.0
 )
 
 require (
@@ -73,5 +74,4 @@ require (
 	k8s.io/utils v0.0.0-20230726121419-3b25d923346b // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.4.1 // indirect
-	sigs.k8s.io/yaml v1.4.0 // indirect
 )

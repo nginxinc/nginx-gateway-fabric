@@ -124,12 +124,12 @@ func (rm *ResourceManager) ApplyFromFiles(files []string, namespace string) erro
 }
 
 // Delete deletes Kubernetes resources defined as Go objects.
-func (rm *ResourceManager) Delete(resources []client.Object) error {
+func (rm *ResourceManager) Delete(resources []client.Object, opts ...client.DeleteOption) error {
 	for _, resource := range resources {
 		ctx, cancel := context.WithTimeout(context.Background(), rm.TimeoutConfig.DeleteTimeout)
 		defer cancel()
 
-		if err := rm.K8sClient.Delete(ctx, resource); err != nil && !apierrors.IsNotFound(err) {
+		if err := rm.K8sClient.Delete(ctx, resource, opts...); err != nil && !apierrors.IsNotFound(err) {
 			return fmt.Errorf("error deleting resource: %w", err)
 		}
 	}
@@ -159,7 +159,7 @@ func (rm *ResourceManager) readAndHandleObjects(
 	files []string,
 ) error {
 	for _, file := range files {
-		data, err := rm.getFileContents(file)
+		data, err := rm.GetFileContents(file)
 		if err != nil {
 			return err
 		}
@@ -187,9 +187,9 @@ func (rm *ResourceManager) readAndHandleObjects(
 	return nil
 }
 
-// getFileContents takes a string that can either be a local file
+// GetFileContents takes a string that can either be a local file
 // path or an https:// URL to YAML manifests and provides the contents.
-func (rm *ResourceManager) getFileContents(file string) (*bytes.Buffer, error) {
+func (rm *ResourceManager) GetFileContents(file string) (*bytes.Buffer, error) {
 	if strings.HasPrefix(file, "http://") {
 		return nil, fmt.Errorf("data can't be retrieved from %s: http is not supported, use https", file)
 	} else if strings.HasPrefix(file, "https://") {
@@ -314,7 +314,7 @@ func (rm *ResourceManager) waitForRoutesToBeReady(ctx context.Context, namespace
 
 			var numParents, readyCount int
 			for _, route := range routeList.Items {
-				numParents += len(route.Status.Parents)
+				numParents += len(route.Spec.ParentRefs)
 				for _, parent := range route.Status.Parents {
 					for _, cond := range parent.Conditions {
 						if cond.Type == string(v1.RouteConditionAccepted) && cond.Status == metav1.ConditionTrue {

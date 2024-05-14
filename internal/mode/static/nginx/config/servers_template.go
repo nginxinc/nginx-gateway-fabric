@@ -70,6 +70,7 @@ server {
             {{- end }}
         proxy_http_version 1.1;
             {{- if $l.ProxySSLVerify }}
+        {{ $proxyOrGRPC }}_ssl_server_name on;
         {{ $proxyOrGRPC }}_ssl_verify on;
         {{ $proxyOrGRPC }}_ssl_name {{ $l.ProxySSLVerify.Name }};
         {{ $proxyOrGRPC }}_ssl_trusted_certificate {{ $l.ProxySSLVerify.TrustedCertificate }};
