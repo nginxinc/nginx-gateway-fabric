@@ -36,12 +36,6 @@ type ClientSettingsPolicyList struct {
 
 // ClientSettingsPolicySpec defines the desired state of ClientSettingsPolicy.
 type ClientSettingsPolicySpec struct {
-	// TargetRef identifies an API object to apply the policy to.
-	// Object must be in the same namespace as the policy.
-	//
-	// Support: Gateway, HTTPRoute
-	TargetRef gatewayv1alpha2.PolicyTargetReference `json:"targetRef"`
-
 	// Body defines the client request body settings.
 	//
 	// +optional
@@ -51,6 +45,12 @@ type ClientSettingsPolicySpec struct {
 	//
 	// +optional
 	KeepAlive *ClientKeepAlive `json:"keepAlive,omitempty"`
+
+	// TargetRef identifies an API object to apply the policy to.
+	// Object must be in the same namespace as the policy.
+	//
+	// Support: Gateway, HTTPRoute
+	TargetRef gatewayv1alpha2.LocalPolicyTargetReference `json:"targetRef"`
 }
 
 // ClientBody contains the settings for the client request body.

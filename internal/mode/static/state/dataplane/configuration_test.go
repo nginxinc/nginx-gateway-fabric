@@ -12,7 +12,8 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	v1 "sigs.k8s.io/gateway-api/apis/v1"
-	v1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	"sigs.k8s.io/gateway-api/apis/v1alpha2"
+	"sigs.k8s.io/gateway-api/apis/v1alpha3"
 
 	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
@@ -37,13 +38,13 @@ func TestBuildConfiguration(t *testing.T) {
 		}
 	}
 
-	createGRPCRoute := func(name string) *v1alpha2.GRPCRoute {
-		return &v1alpha2.GRPCRoute{
+	createGRPCRoute := func(name string) *v1.GRPCRoute {
+		return &v1.GRPCRoute{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: "test",
 				Name:      name,
 			},
-			Spec: v1alpha2.GRPCRouteSpec{},
+			Spec: v1.GRPCRouteSpec{},
 		}
 	}
 
@@ -317,23 +318,24 @@ func TestBuildConfiguration(t *testing.T) {
 	)
 
 	httpsRouteHR8.Spec.Rules[0].BackendRefs[0].BackendTLSPolicy = &graph.BackendTLSPolicy{
-		Source: &v1alpha2.BackendTLSPolicy{
+		Source: &v1alpha3.BackendTLSPolicy{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "btp",
 				Namespace: "test",
 			},
-			Spec: v1alpha2.BackendTLSPolicySpec{
-				TargetRef: v1alpha2.PolicyTargetReferenceWithSectionName{
-					PolicyTargetReference: v1alpha2.PolicyTargetReference{
-						Group:     "",
-						Kind:      "Service",
-						Name:      "foo",
-						Namespace: (*v1.Namespace)(helpers.GetPointer("test")),
+			Spec: v1alpha3.BackendTLSPolicySpec{
+				TargetRefs: []v1alpha2.LocalPolicyTargetReferenceWithSectionName{
+					{
+						LocalPolicyTargetReference: v1alpha2.LocalPolicyTargetReference{
+							Group: "",
+							Kind:  "Service",
+							Name:  "foo",
+						},
 					},
 				},
-				TLS: v1alpha2.BackendTLSPolicyConfig{
+				Validation: v1alpha3.BackendTLSPolicyValidation{
 					Hostname: "foo.example.com",
-					CACertRefs: []v1.LocalObjectReference{
+					CACertificateRefs: []v1.LocalObjectReference{
 						{
 							Kind:  "ConfigMap",
 							Name:  "configmap-1",
@@ -370,23 +372,24 @@ func TestBuildConfiguration(t *testing.T) {
 	expGRGroups := createExpBackendGroupsForRoute(routeGR)
 
 	httpsRouteHR9.Spec.Rules[0].BackendRefs[0].BackendTLSPolicy = &graph.BackendTLSPolicy{
-		Source: &v1alpha2.BackendTLSPolicy{
+		Source: &v1alpha3.BackendTLSPolicy{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "btp2",
 				Namespace: "test",
 			},
-			Spec: v1alpha2.BackendTLSPolicySpec{
-				TargetRef: v1alpha2.PolicyTargetReferenceWithSectionName{
-					PolicyTargetReference: v1alpha2.PolicyTargetReference{
-						Group:     "",
-						Kind:      "Service",
-						Name:      "foo",
-						Namespace: (*v1.Namespace)(helpers.GetPointer("test")),
+			Spec: v1alpha3.BackendTLSPolicySpec{
+				TargetRefs: []v1alpha2.LocalPolicyTargetReferenceWithSectionName{
+					{
+						LocalPolicyTargetReference: v1alpha2.LocalPolicyTargetReference{
+							Group: "",
+							Kind:  "Service",
+							Name:  "foo",
+						},
 					},
 				},
-				TLS: v1alpha2.BackendTLSPolicyConfig{
+				Validation: v1alpha3.BackendTLSPolicyValidation{
 					Hostname: "foo.example.com",
-					CACertRefs: []v1.LocalObjectReference{
+					CACertificateRefs: []v1.LocalObjectReference{
 						{
 							Kind:  "ConfigMap",
 							Name:  "configmap-2",
@@ -2626,14 +2629,14 @@ func TestHostnameMoreSpecific(t *testing.T) {
 
 func TestConvertBackendTLS(t *testing.T) {
 	btpCaCertRefs := &graph.BackendTLSPolicy{
-		Source: &v1alpha2.BackendTLSPolicy{
+		Source: &v1alpha3.BackendTLSPolicy{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "btp",
 				Namespace: "test",
 			},
-			Spec: v1alpha2.BackendTLSPolicySpec{
-				TLS: v1alpha2.BackendTLSPolicyConfig{
-					CACertRefs: []v1.LocalObjectReference{
+			Spec: v1alpha3.BackendTLSPolicySpec{
+				Validation: v1alpha3.BackendTLSPolicyValidation{
+					CACertificateRefs: []v1.LocalObjectReference{
 						{
 							Name: "ca-cert",
 						},
@@ -2647,9 +2650,9 @@ func TestConvertBackendTLS(t *testing.T) {
 	}
 
 	btpWellKnownCerts := &graph.BackendTLSPolicy{
-		Source: &v1alpha2.BackendTLSPolicy{
-			Spec: v1alpha2.BackendTLSPolicySpec{
-				TLS: v1alpha2.BackendTLSPolicyConfig{
+		Source: &v1alpha3.BackendTLSPolicy{
+			Spec: v1alpha3.BackendTLSPolicySpec{
+				Validation: v1alpha3.BackendTLSPolicyValidation{
 					Hostname: "example.com",
 				},
 			},

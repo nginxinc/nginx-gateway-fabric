@@ -76,7 +76,7 @@ test-with-plus                 Runs the functional tests for NGF with NGINX Plus
 | NGINX_PLUS_PREFIX            | nginx-gateway-fabric/nginx-plus | prefix for the locally built NGINX Plus image                       |
 | PLUS_ENABLED                 | false                           | Flag to indicate if NGINX Plus should be enabled                    |
 | PULL_POLICY                  | Never                           | NGF image pull policy                                               |
-| GW_API_VERSION               | 1.0.0                           | version of Gateway API resources to install                         |
+| GW_API_VERSION               | 1.1.0                           | version of Gateway API resources to install                         |
 | K8S_VERSION                  | latest                          | version of k8s that the tests are run on                            |
 | GW_SERVICE_TYPE              | NodePort                        | type of Service that should be created                              |
 | GW_SVC_GKE_INTERNAL          | false                           | specifies if the LoadBalancer should be a GKE internal service      |

@@ -13,6 +13,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
+	"sigs.k8s.io/gateway-api/apis/v1alpha3"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
@@ -52,23 +53,24 @@ func TestBuildGraph(t *testing.T) {
 	}
 
 	btp := BackendTLSPolicy{
-		Source: &v1alpha2.BackendTLSPolicy{
+		Source: &v1alpha3.BackendTLSPolicy{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "btp",
 				Namespace: "service",
 			},
-			Spec: v1alpha2.BackendTLSPolicySpec{
-				TargetRef: v1alpha2.PolicyTargetReferenceWithSectionName{
-					PolicyTargetReference: v1alpha2.PolicyTargetReference{
-						Group:     "",
-						Kind:      "Service",
-						Name:      "foo",
-						Namespace: (*gatewayv1.Namespace)(helpers.GetPointer("service")),
+			Spec: v1alpha3.BackendTLSPolicySpec{
+				TargetRefs: []v1alpha2.LocalPolicyTargetReferenceWithSectionName{
+					{
+						LocalPolicyTargetReference: v1alpha2.LocalPolicyTargetReference{
+							Group: "",
+							Kind:  "Service",
+							Name:  "foo",
+						},
 					},
 				},
-				TLS: v1alpha2.BackendTLSPolicyConfig{
+				Validation: v1alpha3.BackendTLSPolicyValidation{
 					Hostname: "foo.example.com",
-					CACertRefs: []v1alpha2.LocalObjectReference{
+					CACertificateRefs: []v1alpha2.LocalObjectReference{
 						{
 							Kind:  "ConfigMap",
 							Name:  "configmap",
@@ -164,12 +166,12 @@ func TestBuildGraph(t *testing.T) {
 	hr2 := createRoute("hr-2", "wrong-gateway", "listener-80-1")
 	hr3 := createRoute("hr-3", "gateway-1", "listener-443-1") // https listener; should not conflict with hr1
 
-	gr := &v1alpha2.GRPCRoute{
+	gr := &gatewayv1.GRPCRoute{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: "test",
 			Name:      "gr",
 		},
-		Spec: v1alpha2.GRPCRouteSpec{
+		Spec: gatewayv1.GRPCRouteSpec{
 			CommonRouteSpec: gatewayv1.CommonRouteSpec{
 				ParentRefs: []gatewayv1.ParentReference{
 					{
@@ -182,9 +184,9 @@ func TestBuildGraph(t *testing.T) {
 			Hostnames: []gatewayv1.Hostname{
 				"foo.example.com",
 			},
-			Rules: []v1alpha2.GRPCRouteRule{
+			Rules: []gatewayv1.GRPCRouteRule{
 				{
-					BackendRefs: []v1alpha2.GRPCBackendRef{
+					BackendRefs: []gatewayv1.GRPCBackendRef{
 						{
 							BackendRef: commonGWBackendRef,
 						},
@@ -351,7 +353,7 @@ func TestBuildGraph(t *testing.T) {
 				client.ObjectKeyFromObject(hr2): hr2,
 				client.ObjectKeyFromObject(hr3): hr3,
 			},
-			GRPCRoutes: map[types.NamespacedName]*v1alpha2.GRPCRoute{
+			GRPCRoutes: map[types.NamespacedName]*gatewayv1.GRPCRoute{
 				client.ObjectKeyFromObject(gr): gr,
 			},
 			Services: map[types.NamespacedName]*v1.Service{
@@ -367,7 +369,7 @@ func TestBuildGraph(t *testing.T) {
 			Secrets: map[types.NamespacedName]*v1.Secret{
 				client.ObjectKeyFromObject(secret): secret,
 			},
-			BackendTLSPolicies: map[types.NamespacedName]*v1alpha2.BackendTLSPolicy{
+			BackendTLSPolicies: map[types.NamespacedName]*v1alpha3.BackendTLSPolicy{
 				client.ObjectKeyFromObject(btp.Source): btp.Source,
 			},
 			ConfigMaps: map[types.NamespacedName]*v1.ConfigMap{

@@ -15,6 +15,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	v1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
+	"sigs.k8s.io/gateway-api/apis/v1alpha3"
 
 	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
@@ -28,8 +29,8 @@ func createK8sClientFor(resourceType client.Object) client.Client {
 	scheme := runtime.NewScheme()
 
 	// for simplicity, we add all used schemes here
-	utilruntime.Must(v1.AddToScheme(scheme))
-	utilruntime.Must(v1alpha2.AddToScheme(scheme))
+	utilruntime.Must(v1.Install(scheme))
+	utilruntime.Must(v1alpha3.Install(scheme))
 	utilruntime.Must(ngfAPI.AddToScheme(scheme))
 
 	k8sClient := fake.NewClientBuilder().
@@ -279,23 +280,23 @@ func TestBuildHTTPRouteStatuses(t *testing.T) {
 }
 
 func TestBuildGRPCRouteStatuses(t *testing.T) {
-	grValid := &v1alpha2.GRPCRoute{
+	grValid := &v1.GRPCRoute{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:  "test",
 			Name:       "gr-valid",
 			Generation: 3,
 		},
-		Spec: v1alpha2.GRPCRouteSpec{
+		Spec: v1.GRPCRouteSpec{
 			CommonRouteSpec: commonRouteSpecValid,
 		},
 	}
-	grInvalid := &v1alpha2.GRPCRoute{
+	grInvalid := &v1.GRPCRoute{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:  "test",
 			Name:       "gr-invalid",
 			Generation: 3,
 		},
-		Spec: v1alpha2.GRPCRouteSpec{
+		Spec: v1.GRPCRouteSpec{
 			CommonRouteSpec: commonRouteSpecInvalid,
 		},
 	}
@@ -315,7 +316,7 @@ func TestBuildGRPCRouteStatuses(t *testing.T) {
 		},
 	}
 
-	expectedStatuses := map[types.NamespacedName]v1alpha2.GRPCRouteStatus{
+	expectedStatuses := map[types.NamespacedName]v1.GRPCRouteStatus{
 		{Namespace: "test", Name: "gr-valid"}: {
 			RouteStatus: routeStatusValid,
 		},
@@ -326,7 +327,7 @@ func TestBuildGRPCRouteStatuses(t *testing.T) {
 
 	g := NewWithT(t)
 
-	k8sClient := createK8sClientFor(&v1alpha2.GRPCRoute{})
+	k8sClient := createK8sClientFor(&v1.GRPCRoute{})
 
 	for _, r := range routes {
 		err := k8sClient.Create(context.Background(), r.Source)
@@ -342,7 +343,7 @@ func TestBuildGRPCRouteStatuses(t *testing.T) {
 	g.Expect(reqs).To(HaveLen(len(expectedStatuses)))
 
 	for nsname, expected := range expectedStatuses {
-		var hr v1alpha2.GRPCRoute
+		var hr v1.GRPCRoute
 
 		err := k8sClient.Get(context.Background(), nsname, &hr)
 		g.Expect(err).ToNot(HaveOccurred())
@@ -1089,7 +1090,7 @@ func TestBuildBackendTLSPolicyStatuses(t *testing.T) {
 
 	getBackendTLSPolicy := func(policyCfg policyCfg) *graph.BackendTLSPolicy {
 		return &graph.BackendTLSPolicy{
-			Source: &v1alpha2.BackendTLSPolicy{
+			Source: &v1alpha3.BackendTLSPolicy{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace:  "test",
 					Name:       policyCfg.Name,
@@ -1252,7 +1253,7 @@ func TestBuildBackendTLSPolicyStatuses(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewWithT(t)
 
-			k8sClient := createK8sClientFor(&v1alpha2.BackendTLSPolicy{})
+			k8sClient := createK8sClientFor(&v1alpha3.BackendTLSPolicy{})
 
 			for _, pol := range test.backendTLSPolicies {
 				err := k8sClient.Create(context.Background(), pol.Source)
@@ -1268,7 +1269,7 @@ func TestBuildBackendTLSPolicyStatuses(t *testing.T) {
 			updater.Update(context.Background(), reqs...)
 
 			for nsname, expected := range test.expected {
-				var pol v1alpha2.BackendTLSPolicy
+				var pol v1alpha3.BackendTLSPolicy
 
 				err := k8sClient.Get(context.Background(), nsname, &pol)
 				g.Expect(err).ToNot(HaveOccurred())

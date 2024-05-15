@@ -15,7 +15,7 @@ TELEMETRY_REPORT_PERIOD = 24h
 TELEMETRY_ENDPOINT=# if empty, NGF will report telemetry in its logs at debug level.
 TELEMETRY_ENDPOINT_INSECURE = false
 
-GW_API_VERSION = 1.0.0
+GW_API_VERSION = 1.1.0
 ENABLE_EXPERIMENTAL = false
 NODE_VERSION = $(shell cat .nvmrc)
 

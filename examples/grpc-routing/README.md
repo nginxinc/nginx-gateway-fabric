@@ -8,7 +8,6 @@ to route traffic to that application using GRPCRoute resources.
 ## 1. Deploy NGINX Gateway Fabric
 
 1. Follow the [installation instructions](https://docs.nginx.com/nginx-gateway-fabric/installation/) to deploy NGINX Gateway Fabric.
-    > **Important**: Ensure the Gateway APIs from the experimental channel are installed and that NGF is deployed with the Gateway experimental features enabled.
 
 1. Save the public IP address of NGINX Gateway Fabric into a shell variable:
 

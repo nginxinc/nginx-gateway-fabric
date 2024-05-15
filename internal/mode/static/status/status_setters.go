@@ -6,6 +6,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
+	"sigs.k8s.io/gateway-api/apis/v1alpha3"
 
 	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
@@ -99,9 +100,9 @@ func newHTTPRouteStatusSetter(status gatewayv1.HTTPRouteStatus, gatewayCtlrName 
 	}
 }
 
-func newGRPCRouteStatusSetter(status v1alpha2.GRPCRouteStatus, gatewayCtlrName string) frameworkStatus.Setter {
+func newGRPCRouteStatusSetter(status gatewayv1.GRPCRouteStatus, gatewayCtlrName string) frameworkStatus.Setter {
 	return func(object client.Object) (wasSet bool) {
-		gr := object.(*v1alpha2.GRPCRoute)
+		gr := object.(*gatewayv1.GRPCRoute)
 
 		// keep all the parent statuses that belong to other controllers
 		for _, os := range gr.Status.Parents {
@@ -194,7 +195,7 @@ func newBackendTLSPolicyStatusSetter(
 	gatewayCtlrName string,
 ) frameworkStatus.Setter {
 	return func(object client.Object) (wasSet bool) {
-		btp := helpers.MustCastObject[*v1alpha2.BackendTLSPolicy](object)
+		btp := helpers.MustCastObject[*v1alpha3.BackendTLSPolicy](object)
 
 		// maxAncestors is the max number of ancestor statuses which is the sum of all new ancestor statuses and all old
 		// ancestor statuses.

@@ -15,11 +15,11 @@ docs: "DOCS-1412"
 | [Gateway](#gateway)                   | Supported           | Not supported          | Not supported                         | v1          |
 | [HTTPRoute](#httproute)               | Supported           | Partially supported    | Not supported                         | v1          |
 | [ReferenceGrant](#referencegrant)     | Supported           | N/A                    | Not supported                         | v1beta1     |
-| [GRPCRoute](#grpcroute)               | Partially Supported | Not supported          | Not supported                         | v1alpha2    |
+| [GRPCRoute](#grpcroute)               | Partially Supported | Not supported          | Not supported                         | v1          |
 | [TLSRoute](#tlsroute)                 | Not supported       | Not supported          | Not supported                         | N/A         |
 | [TCPRoute](#tcproute)                 | Not supported       | Not supported          | Not supported                         | N/A         |
 | [UDPRoute](#udproute)                 | Not supported       | Not supported          | Not supported                         | N/A         |
-| [BackendTLSPolicy](#backendtlspolicy) | Supported           | Supported              | Not supported                         | v1alpha2    |
+| [BackendTLSPolicy](#backendtlspolicy) | Supported           | Supported              | Not supported                         | v1alpha3    |
 | [Custom policies](#custom-policies)   | Not supported       | N/A                    | Not supported                         | N/A         |
 {{< /bootstrap-table >}}
 
@@ -187,7 +187,7 @@ See the [static-mode]({{< relref "/reference/cli-help.md#static-mode">}}) comman
 {{< bootstrap-table "table table-striped table-bordered" >}}
 | Resource  | Core Support Level  | Extended Support Level | Implementation-Specific Support Level | API Version |
 | --------- | ------------------- | ---------------------- | ------------------------------------- | ----------- |
-| GRPCRoute | Supported           | Not supported          | Not supported                         | v1alpha2    |
+| GRPCRoute | Supported           | Not supported          | Not supported                         | v1          |
 {{< /bootstrap-table >}}
 
 **Fields**:
@@ -283,24 +283,23 @@ Fields:
 {{< bootstrap-table "table table-striped table-bordered" >}}
 | Resource         | Core Support Level | Extended Support Level | Implementation-Specific Support Level | API Version |
 | ---------------- | ------------------ | ---------------------- | ------------------------------------- | ----------- |
-| BackendTLSPolicy | Supported          | Supported              | Not supported                         | v1alpha2    |
+| BackendTLSPolicy | Supported          | Supported              | Not supported                         | v1alpha3    |
 {{< /bootstrap-table >}}
 
 Fields:
 
 - `spec`
-  - `targetRef`
+  - `targetRefs`
     - `group` - supported.
     - `kind` - supports `Service`.
     - `name` - supported.
-    - `namespace` - supported.
-  - `tls`
-    - `caCertRefs` - supports single reference to a `ConfigMap`, with the CA certificate in a key named `ca.crt`.
+  - `validation`
+    - `caCertificateRefs` - supports single reference to a `ConfigMap`, with the CA certificate in a key named `ca.crt`.
       - `name`- supported.
       - `group` - supported.
       - `kind` - supports `ConfigMap`.
     - `hostname` - supported.
-    - `wellKnownCerts` - supports `System`. This will set the CA certificate to the Alpine system root CA path `/etc/ssl/cert.pem`. NB: This option will only work if the NGINX image used is Alpine based. The NGF NGINX images are Alpine based by default.
+    - `wellKnownCertificates` - supports `System`. This will set the CA certificate to the Alpine system root CA path `/etc/ssl/cert.pem`. NB: This option will only work if the NGINX image used is Alpine based. The NGF NGINX images are Alpine based by default.
 - `status`
   - `ancestors`
     - `ancestorRef` - supported.

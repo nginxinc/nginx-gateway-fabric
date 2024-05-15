@@ -10,7 +10,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
-	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
@@ -149,7 +148,7 @@ func TestBuildHTTPRoutes(t *testing.T) {
 			routes := buildRoutesForGateways(
 				validator,
 				hrRoutes,
-				map[types.NamespacedName]*v1alpha2.GRPCRoute{},
+				map[types.NamespacedName]*gatewayv1.GRPCRoute{},
 				test.gwNsNames,
 				nil,
 			)
