@@ -248,7 +248,7 @@ func validateGRPCFilter(
 
 	switch filter.Type {
 	case v1alpha2.GRPCRouteFilterRequestHeaderModifier:
-		return validateFilterHeaderModifier(validator, filter.RequestHeaderModifier, filterPath)
+		return validateFilterHeaderModifier(validator, filter.RequestHeaderModifier, filterPath.Child(string(filter.Type)))
 	default:
 		valErr := field.NotSupported(
 			filterPath.Child("type"),
