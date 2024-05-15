@@ -19,9 +19,9 @@ To complete the steps in this guide, you first need to install the following too
 - Access to an Openshift environment with cluster administrative permissions.
 
 
-## Apply SCC
+## Create SCC Object
 
-In order to deploy NGINX Gateway Fabric instances into Openshift environments, a new SCC is required to be created
+In order to deploy NGINX Gateway Fabric instances into Openshift environments, a new SCC object is required to be created
 on the cluster which will be used to bind the specific required capabilities to the NGINX Gateway Fabric service account.
 To do so for NGF deployments, please run the following command (assuming you are logged in with administrator access to the cluster):
 
