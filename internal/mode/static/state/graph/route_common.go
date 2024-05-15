@@ -163,10 +163,10 @@ func buildRoutesForGateways(
 }
 
 func isHTTP2Disabled(npCfg *ngfAPI.NginxProxy) bool {
-	if npCfg == nil || npCfg.Spec.BaseHTTPConfig == nil {
+	if npCfg == nil {
 		return false
 	}
-	return npCfg.Spec.BaseHTTPConfig.DisableHTTP2
+	return npCfg.Spec.DisableHTTP2
 }
 
 func buildSectionNameRefs(

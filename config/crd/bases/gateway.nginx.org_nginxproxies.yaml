@@ -47,15 +47,11 @@ spec:
           spec:
             description: Spec defines the desired state of the NginxProxy.
             properties:
-              baseHTTPConfig:
-                description: BaseHTTPConfig specifies the base http context configuration.
-                properties:
-                  disableHTTP2:
-                    description: |-
-                      DisableHTTP2 defines if http2 should be disabled for all servers.
-                      Default is false, meaning http2 will be enabled for all servers.
-                    type: boolean
-                type: object
+              disableHTTP2:
+                description: |-
+                  DisableHTTP2 defines if http2 should be disabled for all servers.
+                  Default is false, meaning http2 will be enabled for all servers.
+                type: boolean
               telemetry:
                 description: Telemetry specifies the OpenTelemetry configuration.
                 properties:

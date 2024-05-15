@@ -32,10 +32,11 @@ type NginxProxySpec struct {
 	//
 	// +optional
 	Telemetry *Telemetry `json:"telemetry,omitempty"`
-	// BaseHTTPConfig specifies the base http context configuration.
+	// DisableHTTP2 defines if http2 should be disabled for all servers.
+	// Default is false, meaning http2 will be enabled for all servers.
 	//
 	// +optional
-	BaseHTTPConfig *BaseHTTPConfig `json:"baseHTTPConfig,omitempty"`
+	DisableHTTP2 bool `json:"disableHTTP2"`
 }
 
 // Telemetry specifies the OpenTelemetry configuration.
@@ -91,13 +92,4 @@ type TelemetryExporter struct {
 	//nolint:lll
 	// +kubebuilder:validation:Pattern=`^(?:http?:\/\/)?[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)*(?::\d{1,5})?$`
 	Endpoint string `json:"endpoint"`
-}
-
-// BaseHTTPConfig defines the http context level settings that should be applied across all servers.
-type BaseHTTPConfig struct {
-	// DisableHTTP2 defines if http2 should be disabled for all servers.
-	// Default is false, meaning http2 will be enabled for all servers.
-	//
-	// +optional
-	DisableHTTP2 bool `json:"disableHTTP2"`
 }

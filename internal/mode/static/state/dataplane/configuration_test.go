@@ -555,9 +555,7 @@ func TestBuildConfiguration(t *testing.T) {
 				},
 				ServiceName: helpers.GetPointer("my-svc"),
 			},
-			BaseHTTPConfig: &ngfAPI.BaseHTTPConfig{
-				DisableHTTP2: true,
-			},
+			DisableHTTP2: true,
 		},
 	}
 

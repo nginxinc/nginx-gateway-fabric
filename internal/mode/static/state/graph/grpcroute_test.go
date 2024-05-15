@@ -130,9 +130,7 @@ func TestBuildGRPCRoutes(t *testing.T) {
 
 	npCfg := &ngfAPI.NginxProxy{
 		Spec: ngfAPI.NginxProxySpec{
-			BaseHTTPConfig: &ngfAPI.BaseHTTPConfig{
-				DisableHTTP2: false,
-			},
+			DisableHTTP2: false,
 		},
 	}
 

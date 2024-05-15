@@ -628,11 +628,11 @@ func buildBaseHTTPConfig(g *graph.Graph) BaseHTTPConfig {
 		// HTTP2 should be enabled by default
 		HTTP2: true,
 	}
-	if g.NginxProxy == nil || g.NginxProxy.Spec.BaseHTTPConfig == nil {
+	if g.NginxProxy == nil {
 		return baseConfig
 	}
 
-	if g.NginxProxy.Spec.BaseHTTPConfig.DisableHTTP2 {
+	if g.NginxProxy.Spec.DisableHTTP2 {
 		baseConfig.HTTP2 = false
 	}
 
