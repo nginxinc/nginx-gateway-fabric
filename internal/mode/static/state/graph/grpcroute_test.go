@@ -256,6 +256,14 @@ func TestBuildGRPCRoute(t *testing.T) {
 				Remove: []string{"header"},
 			},
 		},
+		{
+			Type: "ResponseHeaderModifier",
+			ResponseHeaderModifier: &v1.HTTPHeaderFilter{
+				Add: []v1.HTTPHeader{
+					{Name: "Accept-Encoding", Value: "gzip"},
+				},
+			},
+		},
 	}
 
 	grValidFilter := createGRPCRoute(
@@ -270,6 +278,14 @@ func TestBuildGRPCRoute(t *testing.T) {
 			Type: v1.HTTPRouteFilterRequestHeaderModifier,
 			RequestHeaderModifier: &v1.HTTPHeaderFilter{
 				Remove: []string{"header"},
+			},
+		},
+		{
+			Type: v1.HTTPRouteFilterResponseHeaderModifier,
+			ResponseHeaderModifier: &v1.HTTPHeaderFilter{
+				Add: []v1.HTTPHeader{
+					{Name: "Accept-Encoding", Value: "gzip"},
+				},
 			},
 		},
 	}
@@ -616,7 +632,7 @@ func TestBuildGRPCRoute(t *testing.T) {
 				Conditions: []conditions.Condition{
 					staticConds.NewRouteUnsupportedValue(
 						`All rules are invalid: spec.rules[0].filters[0].type: ` +
-							`Unsupported value: "RequestMirror": supported values: "RequestHeaderModifier"`,
+							`Unsupported value: "RequestMirror": supported values: "RequestHeaderModifier", "ResponseHeaderModifier"`,
 					),
 				},
 				Spec: L7RouteSpec{
@@ -756,6 +772,14 @@ func TestConvertGRPCFilters(t *testing.T) {
 			},
 		},
 		{
+			Type: "ResponseHeaderModifier",
+			ResponseHeaderModifier: &v1.HTTPHeaderFilter{
+				Add: []v1.HTTPHeader{
+					{Name: "Accept-Encoding", Value: "gzip"},
+				},
+			},
+		},
+		{
 			Type: "RequestMirror",
 		},
 	}
@@ -764,6 +788,10 @@ func TestConvertGRPCFilters(t *testing.T) {
 		{
 			Type:                  v1.HTTPRouteFilterRequestHeaderModifier,
 			RequestHeaderModifier: grFilters[0].RequestHeaderModifier,
+		},
+		{
+			Type:                   v1.HTTPRouteFilterResponseHeaderModifier,
+			ResponseHeaderModifier: grFilters[1].ResponseHeaderModifier,
 		},
 	}
 

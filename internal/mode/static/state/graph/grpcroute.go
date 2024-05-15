@@ -258,12 +258,15 @@ func validateGRPCFilter(
 	switch filter.Type {
 	case v1alpha2.GRPCRouteFilterRequestHeaderModifier:
 		return validateFilterHeaderModifier(validator, filter.RequestHeaderModifier, filterPath.Child(string(filter.Type)))
+	case v1alpha2.GRPCRouteFilterResponseHeaderModifier:
+		return validateFilterHeaderModifier(validator, filter.ResponseHeaderModifier, filterPath.Child(string(filter.Type)))
 	default:
 		valErr := field.NotSupported(
 			filterPath.Child("type"),
 			filter.Type,
 			[]string{
 				string(v1alpha2.GRPCRouteFilterRequestHeaderModifier),
+				string(v1alpha2.GRPCRouteFilterResponseHeaderModifier),
 			},
 		)
 		allErrs = append(allErrs, valErr)
@@ -286,6 +289,12 @@ func convertGRPCFilters(filters []v1alpha2.GRPCRouteFilter) []v1.HTTPRouteFilter
 				RequestHeaderModifier: filter.RequestHeaderModifier,
 			}
 			httpFilters = append(httpFilters, httpRequestHeaderFilter)
+		case v1alpha2.GRPCRouteFilterResponseHeaderModifier:
+			httpResponseHeaderFilter := v1.HTTPRouteFilter{
+				Type:                   v1.HTTPRouteFilterResponseHeaderModifier,
+				ResponseHeaderModifier: filter.ResponseHeaderModifier,
+			}
+			httpFilters = append(httpFilters, httpResponseHeaderFilter)
 		default:
 			continue
 		}
