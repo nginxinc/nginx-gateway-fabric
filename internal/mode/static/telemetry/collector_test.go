@@ -300,9 +300,9 @@ var _ = Describe("Collector", Ordered, func() {
 						client.ObjectKeyFromObject(nilsvc): {},
 					},
 					BackendTLSPolicies: map[types.NamespacedName]*graph.BackendTLSPolicy{
-						{Namespace: "test", Name: "bgPolicy-1"}: {},
-						{Namespace: "test", Name: "bgPolicy-2"}: {},
-						{Namespace: "test", Name: "bgPolicy-3"}: {},
+						{Namespace: "test", Name: "backendTLSPolicy-1"}: {},
+						{Namespace: "test", Name: "backendTLSPolicy-2"}: {},
+						{Namespace: "test", Name: "backendTLSPolicy-3"}: {},
 					},
 				}
 
