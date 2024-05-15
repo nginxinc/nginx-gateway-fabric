@@ -300,8 +300,8 @@ var _ = Describe("Collector", Ordered, func() {
 						client.ObjectKeyFromObject(nilsvc): {},
 					},
 					BackendTLSPolicies: map[types.NamespacedName]*graph.BackendTLSPolicy{
-						{Namespace: "test", Name: "bgPolicy-1"}: {Valid: true},
-						{Namespace: "test", Name: "bgPolicy-2"}: {Valid: true},
+						{Namespace: "test", Name: "bgPolicy-1"}: {},
+						{Namespace: "test", Name: "bgPolicy-2"}: {},
 						{Namespace: "test", Name: "bgPolicy-3"}: {},
 					},
 				}
@@ -349,7 +349,7 @@ var _ = Describe("Collector", Ordered, func() {
 					ServiceCount:          3,
 					EndpointCount:         4,
 					GRPCRouteCount:        2,
-					BackendTLSPolicyCount: 2,
+					BackendTLSPolicyCount: 3,
 				}
 				expData.ClusterVersion = "1.29.2"
 				expData.ClusterPlatform = "kind"

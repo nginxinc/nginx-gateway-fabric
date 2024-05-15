@@ -188,7 +188,7 @@ func collectGraphResourceCount(
 		}
 	}
 
-	ngfResourceCounts.BackendTLSPolicyCount = computeBackendTLSPolicyCount(g.BackendTLSPolicies)
+	ngfResourceCounts.BackendTLSPolicyCount = int64(len(g.BackendTLSPolicies))
 
 	return ngfResourceCounts, nil
 }
@@ -323,15 +323,4 @@ func collectClusterInformation(ctx context.Context, k8sClient client.Reader) (cl
 	clusterInfo.ClusterID = clusterID
 
 	return clusterInfo, nil
-}
-
-func computeBackendTLSPolicyCount(policies map[types.NamespacedName]*graph.BackendTLSPolicy) (
-	backendTLSPolicyCount int64,
-) {
-	for _, policy := range policies {
-		if policy.Valid {
-			backendTLSPolicyCount = backendTLSPolicyCount + 1
-		}
-	}
-	return backendTLSPolicyCount
 }
