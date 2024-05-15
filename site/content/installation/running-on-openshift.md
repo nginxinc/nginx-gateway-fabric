@@ -36,7 +36,7 @@ We currently only support manual installation with Helm on Openshift:
 - [Installation with Helm]({{< relref "installation/installing-ngf/helm.md" >}})
 
 Please follow the instructions in the referenced setup, until you get to running a `helm install` command.
-When you do, please add the following flag `--set onOpenshift=true` to whichever `helm install` command you are
+When you do, please add the following flag `--set platform=openshift` to whichever `helm install` command you are
 using. This will give NGF the correct RBAC permissions to bind to the SCC.
 
 ## Getting Started with NGINX Gateway Fabric
