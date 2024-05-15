@@ -149,7 +149,7 @@ rules:
   verbs:
   - list
   - watch
-{{- if .Values.onOpenshift }}
+{{- if eq .Values.platform "openshift" }}
 - apiGroups:
   - security.openshift.io
   resources:

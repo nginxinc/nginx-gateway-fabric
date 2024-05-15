@@ -112,8 +112,8 @@ nodeSelector: {}
 ## The affinity of the NGINX Gateway Fabric pod.
 affinity: {}
 
-## Whether the platform is openshift or not.
-onOpenshift: false
+## What platform NGINX Gateway Fabric is being deployed on.
+platform: kubernetes
 
 serviceAccount:
   annotations: {}
