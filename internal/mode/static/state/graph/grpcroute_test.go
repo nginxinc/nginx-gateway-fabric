@@ -710,3 +710,29 @@ func TestConvertGRPCMatches(t *testing.T) {
 		})
 	}
 }
+
+func TestConvertGRPCFilters(t *testing.T) {
+	grFilters := []v1alpha2.GRPCRouteFilter{
+		{
+			Type: "RequestHeaderModifier",
+			RequestHeaderModifier: &v1.HTTPHeaderFilter{
+				Remove: []string{"header"},
+			},
+		},
+		{
+			Type: "RequestMirror",
+		},
+	}
+
+	expectedHTTPFilters := []v1.HTTPRouteFilter{
+		{
+			Type:                  v1.HTTPRouteFilterRequestHeaderModifier,
+			RequestHeaderModifier: grFilters[0].RequestHeaderModifier,
+		},
+	}
+
+	g := NewWithT(t)
+
+	httpFilters := convertGRPCFilters(grFilters)
+	g.Expect(helpers.Diff(expectedHTTPFilters, httpFilters)).To(BeEmpty())
+}
