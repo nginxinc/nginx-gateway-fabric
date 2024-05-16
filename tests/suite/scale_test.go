@@ -72,7 +72,7 @@ var _ = Describe("Scale test", Ordered, Label("nfr", "scale"), func() {
 		resultsDir, err = framework.CreateResultsDir("scale", version)
 		Expect(err).ToNot(HaveOccurred())
 
-		filename := filepath.Join(resultsDir, fmt.Sprintf("%s.md", version))
+		filename := filepath.Join(resultsDir, framework.CreateResultsFilename("md", version, *plusEnabled))
 		outFile, err = framework.CreateResultsFile(filename)
 		Expect(err).ToNot(HaveOccurred())
 		Expect(framework.WriteSystemInfoToFile(outFile, clusterInfo, *plusEnabled)).To(Succeed())
@@ -309,12 +309,12 @@ var _ = Describe("Scale test", Ordered, Label("nfr", "scale"), func() {
 		)
 		Expect(err).ToNot(HaveOccurred())
 
-		memCSV := filepath.Join(testResultsDir, "memory.csv")
-
+		memCSV := filepath.Join(testResultsDir, framework.CreateResultsFilename("csv", "memory", *plusEnabled))
 		Expect(framework.WritePrometheusMatrixToCSVFile(memCSV, result)).To(Succeed())
 
+		memPNG := framework.CreateResultsFilename("png", "memory", *plusEnabled)
 		Expect(
-			framework.GenerateMemoryPNG(testResultsDir, memCSV, "memory.png"),
+			framework.GenerateMemoryPNG(testResultsDir, memCSV, memPNG),
 		).To(Succeed())
 
 		Expect(os.Remove(memCSV)).To(Succeed())
@@ -329,12 +329,12 @@ var _ = Describe("Scale test", Ordered, Label("nfr", "scale"), func() {
 		)
 		Expect(err).ToNot(HaveOccurred())
 
-		cpuCSV := filepath.Join(testResultsDir, "cpu.csv")
-
+		cpuCSV := filepath.Join(testResultsDir, framework.CreateResultsFilename("csv", "cpu", *plusEnabled))
 		Expect(framework.WritePrometheusMatrixToCSVFile(cpuCSV, result)).To(Succeed())
 
+		cpuPNG := framework.CreateResultsFilename("png", "cpu", *plusEnabled)
 		Expect(
-			framework.GenerateCPUPNG(testResultsDir, cpuCSV, "cpu.png"),
+			framework.GenerateCPUPNG(testResultsDir, cpuCSV, cpuPNG),
 		).To(Succeed())
 
 		Expect(os.Remove(cpuCSV)).To(Succeed())
@@ -434,12 +434,12 @@ var _ = Describe("Scale test", Ordered, Label("nfr", "scale"), func() {
 		ngfErrors := checkLogErrors(
 			"nginx-gateway",
 			[]string{"error"},
-			filepath.Join(testResultsDir, "ngf.log"),
+			filepath.Join(testResultsDir, framework.CreateResultsFilename("log", "ngf", *plusEnabled)),
 		)
 		nginxErrors := checkLogErrors(
 			"nginx",
 			[]string{"[error]", "[emerg]", "[crit]", "[alert]"},
-			filepath.Join(testResultsDir, "nginx.log"),
+			filepath.Join(testResultsDir, framework.CreateResultsFilename("log", "nginx", *plusEnabled)),
 		)
 
 		// Check container restarts
@@ -482,7 +482,8 @@ var _ = Describe("Scale test", Ordered, Label("nfr", "scale"), func() {
 	}
 
 	runScaleResources := func(objects framework.ScaleObjects, testResultsDir string, protocol string) {
-		ttrCsvFile, writer, err := framework.NewCSVResultsWriter(testResultsDir, "ttr.csv")
+		ttrCsvFileName := framework.CreateResultsFilename("csv", "ttr", *plusEnabled)
+		ttrCsvFile, writer, err := framework.NewCSVResultsWriter(testResultsDir, ttrCsvFileName)
 		Expect(err).ToNot(HaveOccurred())
 
 		Expect(resourceManager.Apply(objects.BaseObjects)).To(Succeed())
@@ -519,8 +520,9 @@ var _ = Describe("Scale test", Ordered, Label("nfr", "scale"), func() {
 		writer.Flush()
 		Expect(ttrCsvFile.Close()).To(Succeed())
 
+		ttrPNG := framework.CreateResultsFilename("png", "ttr", *plusEnabled)
 		Expect(
-			framework.GenerateTTRPNG(testResultsDir, ttrCsvFile.Name(), "ttr.png"),
+			framework.GenerateTTRPNG(testResultsDir, ttrCsvFile.Name(), ttrPNG),
 		).To(Succeed())
 
 		Expect(os.Remove(ttrCsvFile.Name())).To(Succeed())
