@@ -132,8 +132,8 @@ func TestExecuteServers(t *testing.T) {
 	for _, res := range results {
 		g.Expect(expectedResults).To(HaveKey(res.dest), "executeServers returned unexpected result destination")
 
-		testData := expectedResults[res.dest]
-		testData(g, string(res.data))
+		assertData := expectedResults[res.dest]
+		assertData(g, string(res.data))
 	}
 }
 
