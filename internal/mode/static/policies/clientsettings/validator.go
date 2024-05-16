@@ -32,7 +32,7 @@ func (v *Validator) Validate(policy policies.Policy) error {
 		panic(fmt.Sprintf("expected ClientSettingsPolicy, got: %T", policy))
 	}
 
-	if err := validateTargetRef(csp.Spec.TargetRef, csp.Namespace); err != nil {
+	if err := validateTargetRef(csp.Spec.TargetRef); err != nil {
 		return err
 	}
 
@@ -79,7 +79,7 @@ func conflicts(a, b ngfAPI.ClientSettingsPolicySpec) bool {
 	return false
 }
 
-func validateTargetRef(ref v1alpha2.LocalPolicyTargetReference, policyNs string) error {
+func validateTargetRef(ref v1alpha2.LocalPolicyTargetReference) error {
 	basePath := field.NewPath("spec").Child("targetRef")
 
 	if ref.Group != gatewayv1.GroupName {

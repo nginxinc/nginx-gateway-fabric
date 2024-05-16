@@ -999,7 +999,7 @@ func TestCreateServers(t *testing.T) {
 			{
 				Path:            "= /addition-path-only-match",
 				ProxyPass:       "http://test_foo_80$request_uri",
-				ProxySetHeaders: baseHeaders,
+				ProxySetHeaders: httpBaseHeaders,
 				Includes: []http.Include{
 					{
 						Filename: includesFolder + "/path-only-match-addition.conf",

@@ -36,15 +36,6 @@ type ClientSettingsPolicyList struct {
 
 // ClientSettingsPolicySpec defines the desired state of ClientSettingsPolicy.
 type ClientSettingsPolicySpec struct {
-	// TargetRef identifies an API object to apply the policy to.
-	// Object must be in the same namespace as the policy.
-	// Support: Gateway, HTTPRoute, GRPCRoute.
-	//
-	// +kubebuilder:validation:XValidation:message="TargetRef Kind must be one of: Gateway, HTTPRoute, or GRPCRoute",rule="(self.kind=='Gateway' || self.kind=='HTTPRoute' || self.kind=='GRPCRoute')"
-	// +kubebuilder:validation:XValidation:message="TargetRef Group must be gateway.networking.k8s.io.",rule="(self.group=='gateway.networking.k8s.io')"
-	//nolint:lll
-	TargetRef gatewayv1alpha2.LocalPolicyTargetReference `json:"targetRef"`
-
 	// Body defines the client request body settings.
 	//
 	// +optional
@@ -54,6 +45,15 @@ type ClientSettingsPolicySpec struct {
 	//
 	// +optional
 	KeepAlive *ClientKeepAlive `json:"keepAlive,omitempty"`
+
+	// TargetRef identifies an API object to apply the policy to.
+	// Object must be in the same namespace as the policy.
+	// Support: Gateway, HTTPRoute, GRPCRoute.
+	//
+	// +kubebuilder:validation:XValidation:message="TargetRef Kind must be one of: Gateway, HTTPRoute, or GRPCRoute",rule="(self.kind=='Gateway' || self.kind=='HTTPRoute' || self.kind=='GRPCRoute')"
+	// +kubebuilder:validation:XValidation:message="TargetRef Group must be gateway.networking.k8s.io.",rule="(self.group=='gateway.networking.k8s.io')"
+	//nolint:lll
+	TargetRef gatewayv1alpha2.LocalPolicyTargetReference `json:"targetRef"`
 }
 
 // ClientBody contains the settings for the client request body.
