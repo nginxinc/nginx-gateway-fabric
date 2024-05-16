@@ -223,7 +223,7 @@ func TestBuildGRPCRoute(t *testing.T) {
 
 	grInvalidFilterRule.Filters = []v1alpha2.GRPCRouteFilter{
 		{
-			Type: "RequestHeaderModifier",
+			Type: "RequestMirror",
 		},
 	}
 
@@ -233,6 +233,33 @@ func TestBuildGRPCRoute(t *testing.T) {
 		"example.com",
 		[]v1alpha2.GRPCRouteRule{grInvalidFilterRule},
 	)
+
+	grValidFilterRule := createGRPCMethodMatch("myService", "myMethod", "Exact")
+
+	grValidFilterRule.Filters = []v1alpha2.GRPCRouteFilter{
+		{
+			Type: "RequestHeaderModifier",
+			RequestHeaderModifier: &v1.HTTPHeaderFilter{
+				Remove: []string{"header"},
+			},
+		},
+	}
+
+	grValidFilter := createGRPCRoute(
+		"gr",
+		gatewayNsName.Name,
+		"example.com",
+		[]v1alpha2.GRPCRouteRule{grValidFilterRule},
+	)
+
+	convertedFilters := []v1.HTTPRouteFilter{
+		{
+			Type: v1.HTTPRouteFilterRequestHeaderModifier,
+			RequestHeaderModifier: &v1.HTTPHeaderFilter{
+				Remove: []string{"header"},
+			},
+		},
+	}
 
 	createAllValidValidator := func() *validationfakes.FakeHTTPFieldsValidator {
 		v := &validationfakes.FakeHTTPFieldsValidator{}
@@ -309,6 +336,36 @@ func TestBuildGRPCRoute(t *testing.T) {
 				},
 			},
 			name: "valid rule with empty match",
+		},
+		{
+			validator: createAllValidValidator(),
+			gr:        grValidFilter,
+			expected: &L7Route{
+				RouteType: RouteTypeGRPC,
+				Source:    grValidFilter,
+				ParentRefs: []ParentRef{
+					{
+						Idx:         0,
+						Gateway:     gatewayNsName,
+						SectionName: grValidFilter.Spec.ParentRefs[0].SectionName,
+					},
+				},
+				Valid:      true,
+				Attachable: true,
+				Spec: L7RouteSpec{
+					Hostnames: grValidFilter.Spec.Hostnames,
+					Rules: []RouteRule{
+						{
+							ValidMatches:     true,
+							ValidFilters:     true,
+							Matches:          convertGRPCMatches(grValidFilter.Spec.Rules[0].Matches),
+							RouteBackendRefs: []RouteBackendRef{},
+							Filters:          convertedFilters,
+						},
+					},
+				},
+			},
+			name: "valid rule with filter",
 		},
 		{
 			validator: createAllValidValidator(),
@@ -522,10 +579,8 @@ func TestBuildGRPCRoute(t *testing.T) {
 				},
 				Conditions: []conditions.Condition{
 					staticConds.NewRouteUnsupportedValue(
-						`All rules are invalid: spec.rules[0].filters: Unsupported value: []v1alpha2.GRPCRouteFilter{v1alpha2.` +
-							`GRPCRouteFilter{Type:"RequestHeaderModifier", RequestHeaderModifier:(*v1.HTTPHeaderFilter)(nil), ` +
-							`ResponseHeaderModifier:(*v1.HTTPHeaderFilter)(nil), RequestMirror:(*v1.HTTPRequestMirrorFilter)(nil), ` +
-							`ExtensionRef:(*v1.LocalObjectReference)(nil)}}: supported values: "gRPC filters are not yet supported"`,
+						`All rules are invalid: spec.rules[0].filters[0].type: ` +
+							`Unsupported value: "RequestMirror": supported values: "RequestHeaderModifier"`,
 					),
 				},
 				Spec: L7RouteSpec{
@@ -583,4 +638,101 @@ func TestBuildGRPCRoute(t *testing.T) {
 			g.Expect(helpers.Diff(test.expected, route)).To(BeEmpty())
 		})
 	}
+}
+
+func TestConvertGRPCMatches(t *testing.T) {
+	methodMatch := createGRPCMethodMatch("myService", "myMethod", "Exact").Matches
+
+	headersMatch := createGRPCHeadersMatch("Exact", "MyHeader", "SomeValue").Matches
+
+	expectedHTTPMatches := []v1.HTTPRouteMatch{
+		{
+			Path: &v1.HTTPPathMatch{
+				Type:  helpers.GetPointer(v1.PathMatchExact),
+				Value: helpers.GetPointer("/myService/myMethod"),
+			},
+			Headers: []v1.HTTPHeaderMatch{},
+		},
+	}
+
+	expectedHeadersMatches := []v1.HTTPRouteMatch{
+		{
+			Path: &v1.HTTPPathMatch{
+				Type:  helpers.GetPointer(v1.PathMatchPathPrefix),
+				Value: helpers.GetPointer("/"),
+			},
+			Headers: []v1.HTTPHeaderMatch{
+				{
+					Value: "SomeValue",
+					Name:  v1.HTTPHeaderName("MyHeader"),
+				},
+			},
+		},
+	}
+
+	expectedEmptyMatches := []v1.HTTPRouteMatch{
+		{
+			Path: &v1.HTTPPathMatch{
+				Type:  helpers.GetPointer(v1.PathMatchPathPrefix),
+				Value: helpers.GetPointer("/"),
+			},
+		},
+	}
+
+	tests := []struct {
+		name          string
+		methodMatches []v1alpha2.GRPCRouteMatch
+		expected      []v1.HTTPRouteMatch
+	}{
+		{
+			name:          "exact match",
+			methodMatches: methodMatch,
+			expected:      expectedHTTPMatches,
+		},
+		{
+			name:          "headers matches",
+			methodMatches: headersMatch,
+			expected:      expectedHeadersMatches,
+		},
+		{
+			name:          "empty matches",
+			methodMatches: []v1alpha2.GRPCRouteMatch{},
+			expected:      expectedEmptyMatches,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			g := NewWithT(t)
+
+			httpMatches := convertGRPCMatches(test.methodMatches)
+			g.Expect(helpers.Diff(test.expected, httpMatches)).To(BeEmpty())
+		})
+	}
+}
+
+func TestConvertGRPCFilters(t *testing.T) {
+	grFilters := []v1alpha2.GRPCRouteFilter{
+		{
+			Type: "RequestHeaderModifier",
+			RequestHeaderModifier: &v1.HTTPHeaderFilter{
+				Remove: []string{"header"},
+			},
+		},
+		{
+			Type: "RequestMirror",
+		},
+	}
+
+	expectedHTTPFilters := []v1.HTTPRouteFilter{
+		{
+			Type:                  v1.HTTPRouteFilterRequestHeaderModifier,
+			RequestHeaderModifier: grFilters[0].RequestHeaderModifier,
+		},
+	}
+
+	g := NewWithT(t)
+
+	httpFilters := convertGRPCFilters(grFilters)
+	g.Expect(helpers.Diff(expectedHTTPFilters, httpFilters)).To(BeEmpty())
 }
