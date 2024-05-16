@@ -480,12 +480,13 @@ var _ = Describe("Scale test", Ordered, Label("nfr", "scale"), func() {
 		for i := 0; i < len(objects.ScaleIterationGroups); i++ {
 			Expect(resourceManager.Apply(objects.ScaleIterationGroups[i])).To(Succeed())
 
-			url := fmt.Sprintf("%s://%d.example.com", protocol, i)
-
+			var url string
 			if protocol == "http" && portFwdPort != 0 {
 				url = fmt.Sprintf("%s://%d.example.com:%d", protocol, i, portFwdPort)
 			} else if protocol == "https" && portFwdHTTPSPort != 0 {
 				url = fmt.Sprintf("%s://%d.example.com:%d", protocol, i, portFwdHTTPSPort)
+			} else {
+				url = fmt.Sprintf("%s://%d.example.com", protocol, i)
 			}
 
 			startCheck := time.Now()
@@ -517,9 +518,11 @@ var _ = Describe("Scale test", Ordered, Label("nfr", "scale"), func() {
 		Expect(resourceManager.ApplyFromFiles(upstreamsManifests, ns.Name)).To(Succeed())
 		Expect(resourceManager.WaitForAppsToBeReady(ns.Name)).To(Succeed())
 
-		url := "http://hello.example.com"
+		var url string
 		if portFwdPort != 0 {
 			url = fmt.Sprintf("http://hello.example.com:%d", portFwdPort)
+		} else {
+			url = "http://hello.example.com"
 		}
 
 		Eventually(
