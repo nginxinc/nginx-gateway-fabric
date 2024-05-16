@@ -645,7 +645,7 @@ var _ = Describe("Scale test", Ordered, Label("nfr", "scale"), func() {
 		)
 	})
 
-	It("scale HTTP matches", func() {
+	It("scales HTTP matches", func() {
 		const testName = "TestScale_HTTPMatches"
 
 		Expect(resourceManager.ApplyFromFiles(matchesManifests, ns.Name)).To(Succeed())
