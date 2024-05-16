@@ -38,11 +38,7 @@ var _ = Describe("Scale test", Ordered, Label("nfr", "scale"), func() {
 			"scale/upstreams.yaml",
 		}
 
-		ns = &core.Namespace{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "scale",
-			},
-		}
+		namespace = "scale"
 
 		scrapeInterval = 15 * time.Second
 		queryRangeStep = 15 * time.Second
@@ -96,6 +92,11 @@ var _ = Describe("Scale test", Ordered, Label("nfr", "scale"), func() {
 		cfg.nfr = true
 		setup(cfg)
 
+		ns := &core.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: namespace,
+			},
+		}
 		Expect(resourceManager.Apply([]client.Object{ns})).To(Succeed())
 
 		podNames, err := framework.GetReadyNGFPodNames(k8sClient, ngfNamespace, releaseName, timeoutConfig.GetTimeout)
@@ -475,7 +476,7 @@ var _ = Describe("Scale test", Ordered, Label("nfr", "scale"), func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 		defer cancel()
 
-		Expect(resourceManager.WaitForPodsToBeReady(ctx, ns.Name)).To(Succeed())
+		Expect(resourceManager.WaitForPodsToBeReady(ctx, namespace)).To(Succeed())
 
 		for i := 0; i < len(objects.ScaleIterationGroups); i++ {
 			Expect(resourceManager.Apply(objects.ScaleIterationGroups[i])).To(Succeed())
@@ -515,8 +516,8 @@ var _ = Describe("Scale test", Ordered, Label("nfr", "scale"), func() {
 	}
 
 	runScaleUpstreams := func() {
-		Expect(resourceManager.ApplyFromFiles(upstreamsManifests, ns.Name)).To(Succeed())
-		Expect(resourceManager.WaitForAppsToBeReady(ns.Name)).To(Succeed())
+		Expect(resourceManager.ApplyFromFiles(upstreamsManifests, namespace)).To(Succeed())
+		Expect(resourceManager.WaitForAppsToBeReady(namespace)).To(Succeed())
 
 		var url string
 		if portFwdPort != 0 {
@@ -530,13 +531,13 @@ var _ = Describe("Scale test", Ordered, Label("nfr", "scale"), func() {
 		).WithTimeout(5 * time.Second).WithPolling(100 * time.Millisecond).Should(Succeed())
 
 		Expect(
-			resourceManager.ScaleDeployment(ns.Name, "backend", upstreamServerCount),
+			resourceManager.ScaleDeployment(namespace, "backend", upstreamServerCount),
 		).To(Succeed())
 
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 		defer cancel()
 
-		Expect(resourceManager.WaitForPodsToBeReady(ctx, ns.Name)).To(Succeed())
+		Expect(resourceManager.WaitForPodsToBeReady(ctx, namespace)).To(Succeed())
 
 		Eventually(
 			createResponseChecker(url, address),
@@ -545,11 +546,11 @@ var _ = Describe("Scale test", Ordered, Label("nfr", "scale"), func() {
 
 	setNamespace := func(objects framework.ScaleObjects) {
 		for _, obj := range objects.BaseObjects {
-			obj.SetNamespace(ns.Name)
+			obj.SetNamespace(namespace)
 		}
 		for _, objs := range objects.ScaleIterationGroups {
 			for _, obj := range objs {
-				obj.SetNamespace(ns.Name)
+				obj.SetNamespace(namespace)
 			}
 		}
 	}
@@ -644,8 +645,8 @@ var _ = Describe("Scale test", Ordered, Label("nfr", "scale"), func() {
 	It("scales HTTP matches", func() {
 		const testName = "TestScale_HTTPMatches"
 
-		Expect(resourceManager.ApplyFromFiles(matchesManifests, ns.Name)).To(Succeed())
-		Expect(resourceManager.WaitForAppsToBeReady(ns.Name)).To(Succeed())
+		Expect(resourceManager.ApplyFromFiles(matchesManifests, namespace)).To(Succeed())
+		Expect(resourceManager.WaitForAppsToBeReady(namespace)).To(Succeed())
 
 		var port int
 		if portFwdPort != 0 {
@@ -700,7 +701,7 @@ var _ = Describe("Scale test", Ordered, Label("nfr", "scale"), func() {
 
 	AfterEach(func() {
 		teardown(releaseName)
-		Expect(resourceManager.Delete([]client.Object{ns})).To(Succeed())
+		Expect(resourceManager.DeleteNamespace(namespace)).To(Succeed())
 	})
 
 	AfterAll(func() {

@@ -81,7 +81,7 @@ var _ = Describe("Longevity", Label("longevity-setup", "longevity-teardown"), fu
 		Expect(writeTrafficResults(resultsFile, homeDir, "tea.txt", "HTTPS")).To(Succeed())
 
 		Expect(resourceManager.DeleteFromFiles(files, ns.Name)).To(Succeed())
-		Expect(resourceManager.Delete([]client.Object{ns})).To(Succeed())
+		Expect(resourceManager.DeleteNamespace(ns.Name)).To(Succeed())
 	})
 })
 

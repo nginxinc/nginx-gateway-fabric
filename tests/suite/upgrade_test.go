@@ -76,7 +76,7 @@ var _ = Describe("Upgrade testing", Label("nfr", "upgrade"), func() {
 
 	AfterEach(func() {
 		Expect(resourceManager.DeleteFromFiles(files, ns.Name)).To(Succeed())
-		Expect(resourceManager.Delete([]client.Object{ns})).To(Succeed())
+		Expect(resourceManager.DeleteNamespace(ns.Name)).To(Succeed())
 		resultsFile.Close()
 	})
 

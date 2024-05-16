@@ -13,8 +13,6 @@ import (
 	"github.com/prometheus/client_golang/api"
 	v1 "github.com/prometheus/client_golang/api/prometheus/v1"
 	"github.com/prometheus/common/model"
-	core "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -121,13 +119,7 @@ func UninstallPrometheus(rm ResourceManager) error {
 		return fmt.Errorf("failed to uninstall Prometheus: %w; output: %s", err, string(output))
 	}
 
-	ns := &core.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: prometheusNamespace,
-		},
-	}
-
-	if err := rm.Delete([]client.Object{ns}); err != nil {
+	if err := rm.DeleteNamespace(prometheusNamespace); err != nil {
 		return fmt.Errorf("failed to delete Prometheus namespace: %w", err)
 	}
 

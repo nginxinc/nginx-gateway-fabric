@@ -167,6 +167,38 @@ func (rm *ResourceManager) Delete(resources []client.Object, opts ...client.Dele
 	return nil
 }
 
+func (rm *ResourceManager) DeleteNamespace(name string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), rm.TimeoutConfig.DeleteNamespaceTimeout)
+	defer cancel()
+
+	ns := &core.Namespace{}
+	if err := rm.K8sClient.Get(ctx, types.NamespacedName{Name: name}, ns); err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
+		return fmt.Errorf("error getting namespace: %w", err)
+	}
+
+	if err := rm.K8sClient.Delete(ctx, ns); err != nil {
+		return fmt.Errorf("error deleting namespace: %w", err)
+	}
+
+	// Because the namespace deletion is asynchronous, we need to wait for the namespace to be deleted.
+	return wait.PollUntilContextCancel(
+		ctx,
+		500*time.Millisecond,
+		true, /* poll immediately */
+		func(ctx context.Context) (bool, error) {
+			if err := rm.K8sClient.Get(ctx, types.NamespacedName{Name: name}, ns); err != nil {
+				if apierrors.IsNotFound(err) {
+					return true, nil
+				}
+				return false, fmt.Errorf("error getting namespace: %w", err)
+			}
+			return false, nil
+		})
+}
+
 // DeleteFromFiles deletes Kubernetes resources defined within the provided YAML files.
 func (rm *ResourceManager) DeleteFromFiles(files []string, namespace string) error {
 	handlerFunc := func(obj unstructured.Unstructured) error {
