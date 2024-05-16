@@ -8,6 +8,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/kinds"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/policies"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/graph"
 )
@@ -29,13 +30,13 @@ type objectStore interface {
 // A single store should be used to store all types of policies.Policy.
 type ngfPolicyObjectStore struct {
 	policies       map[graph.PolicyKey]policies.Policy
-	extractGVKFunc extractGVKFunc
+	extractGVKFunc kinds.MustExtractGVK
 }
 
 // newNGFPolicyObjectStore returns a new ngfPolicyObjectStore.
 func newNGFPolicyObjectStore(
 	policies map[graph.PolicyKey]policies.Policy,
-	gvkFunc extractGVKFunc,
+	gvkFunc kinds.MustExtractGVK,
 ) *ngfPolicyObjectStore {
 	return &ngfPolicyObjectStore{
 		policies:       policies,
@@ -122,13 +123,13 @@ func (list gvkList) contains(gvk schema.GroupVersionKind) bool {
 
 type multiObjectStore struct {
 	stores        map[schema.GroupVersionKind]objectStore
-	extractGVK    extractGVKFunc
+	extractGVK    kinds.MustExtractGVK
 	persistedGVKs gvkList
 }
 
 func newMultiObjectStore(
 	stores map[schema.GroupVersionKind]objectStore,
-	extractGVK extractGVKFunc,
+	extractGVK kinds.MustExtractGVK,
 	persistedGVKs gvkList,
 ) *multiObjectStore {
 	return &multiObjectStore{
@@ -183,14 +184,14 @@ type changeTrackingUpdater struct {
 	store                  *multiObjectStore
 	stateChangedPredicates map[schema.GroupVersionKind]stateChangedPredicate
 
-	extractGVK    extractGVKFunc
+	extractGVK    kinds.MustExtractGVK
 	supportedGVKs gvkList
 
 	changeType ChangeType
 }
 
 func newChangeTrackingUpdater(
-	extractGVK extractGVKFunc,
+	extractGVK kinds.MustExtractGVK,
 	objectTypeCfgs []changeTrackingUpdaterObjectTypeCfg,
 ) *changeTrackingUpdater {
 	var (

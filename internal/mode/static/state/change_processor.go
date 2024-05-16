@@ -43,8 +43,6 @@ const (
 
 //counterfeiter:generate . ChangeProcessor
 
-type extractGVKFunc func(obj client.Object) schema.GroupVersionKind
-
 // ChangeProcessor processes the changes to resources and produces a graph-like representation
 // of the Gateway configuration. It only supports one GatewayClass resource.
 type ChangeProcessor interface {

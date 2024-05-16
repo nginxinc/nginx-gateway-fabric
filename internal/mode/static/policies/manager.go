@@ -6,7 +6,8 @@ import (
 	"fmt"
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/kinds"
 )
 
 // GenerateFunc generates config as []byte for an NGF Policy.
@@ -26,7 +27,7 @@ type Validator interface {
 type Manager struct {
 	validators     map[schema.GroupVersionKind]Validator
 	generators     map[schema.GroupVersionKind]GenerateFunc
-	mustExtractGVK func(client.Object) schema.GroupVersionKind
+	mustExtractGVK kinds.MustExtractGVK
 }
 
 // ManagerConfig contains the config to register a Policy with the Manager.
@@ -42,7 +43,7 @@ type ManagerConfig struct {
 // NewManager returns a new Manager.
 // Implements dataplane.ConfigGenerator and validation.PolicyValidator.
 func NewManager(
-	mustExtractGVK func(client.Object) schema.GroupVersionKind,
+	mustExtractGVK kinds.MustExtractGVK,
 	configs ...ManagerConfig,
 ) *Manager {
 	v := &Manager{

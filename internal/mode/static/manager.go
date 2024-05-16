@@ -43,6 +43,7 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/events"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/gatewayclass"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/kinds"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/runnables"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/status"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/config"
@@ -290,7 +291,7 @@ func StartManager(cfg config.Config) error {
 }
 
 func createPolicyManager(
-	mustExtractGVK func(object client.Object) schema.GroupVersionKind,
+	mustExtractGVK kinds.MustExtractGVK,
 	validator validation.GenericValidator,
 ) *policies.Manager {
 	cfgs := []policies.ManagerConfig{
