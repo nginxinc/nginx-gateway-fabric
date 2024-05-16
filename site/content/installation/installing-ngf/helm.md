@@ -29,7 +29,7 @@ To complete this guide, you'll need to install:
 
 To install the latest stable release of NGINX Gateway Fabric in the **nginx-gateway** namespace, run the following command:
 
-{{< note >}} OpenShift users must add the `--set platform=openshift` flag to the install commands below. {{< /note >}}
+{{< note >}} OpenShift users must add the `--set platform=openshift` flag to the install and upgrade commands below. {{< /note >}}
 
 ##### For NGINX
 
