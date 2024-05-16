@@ -240,19 +240,19 @@ func createLocations(server *dataplane.VirtualServer, serverID int) ([]http.Loca
 		for matchRuleIdx, r := range rule.MatchRules {
 			buildLocations := extLocations
 
-			includes := createIncludes(r.Additions)
-
 			if len(rule.MatchRules) != 1 || !isPathOnlyMatch(r.Match) {
 				intLocation, match := initializeInternalLocation(pathRuleIdx, matchRuleIdx, r.Match)
-				intLocation.Includes = includes
 				buildLocations = []http.Location{intLocation}
 				matches = append(matches, match)
-			} else {
-				for i := range extLocations {
-					extLocations[i].Includes = includes
-				}
 			}
 
+			includes := createIncludes(r.Additions)
+
+			// buildLocations will either contain the extLocations OR the intLocation.
+			// If it contains the intLocation, the extLocations will be added to the final locations after we loop
+			// through all the MatchRules.
+			// It is safe to modify the buildLocations here by adding includes and filters.
+			buildLocations = updateLocationsForIncludes(buildLocations, includes)
 			buildLocations = updateLocationsForFilters(r.Filters, buildLocations, r, server.Port, rule.Path, rule.GRPC)
 			locs = append(locs, buildLocations...)
 		}
@@ -279,6 +279,14 @@ func createLocations(server *dataplane.VirtualServer, serverID int) ([]http.Loca
 	}
 
 	return locs, matchPairs, grpc
+}
+
+func updateLocationsForIncludes(locations []http.Location, includes []http.Include) []http.Location {
+	for i := range locations {
+		locations[i].Includes = includes
+	}
+
+	return locations
 }
 
 // pathAndTypeMap contains a map of paths and any path types defined for that path

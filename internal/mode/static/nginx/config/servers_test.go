@@ -584,11 +584,29 @@ func TestCreateServers(t *testing.T) {
 			GRPC: true,
 		},
 		{
-			Path:     "/addition",
+			Path:     "/addition-path-only-match",
 			PathType: dataplane.PathTypeExact,
 			MatchRules: []dataplane.MatchRule{
 				{
 					Match:        dataplane.Match{},
+					BackendGroup: fooGroup,
+					Additions: []*dataplane.Addition{
+						{
+							Bytes:      []byte("path-only-match-addition"),
+							Identifier: "path-only-match-addition",
+						},
+					},
+				},
+			},
+		},
+		{
+			Path:     "/addition-header-match",
+			PathType: dataplane.PathTypeExact,
+			MatchRules: []dataplane.MatchRule{
+				{
+					Match: dataplane.Match{
+						Method: helpers.GetPointer("GET"),
+					},
 					BackendGroup: fooGroup,
 					Additions: []*dataplane.Addition{
 						{
@@ -682,6 +700,12 @@ func TestCreateServers(t *testing.T) {
 				Headers:      nil,
 				QueryParams:  nil,
 				Any:          false,
+			},
+		},
+		"1_17": {
+			{
+				Method:       "GET",
+				RedirectPath: "@rule17-route0",
 			},
 		},
 	}
@@ -973,7 +997,17 @@ func TestCreateServers(t *testing.T) {
 				ProxySetHeaders: grpcBaseHeaders,
 			},
 			{
-				Path:            "= /addition",
+				Path:            "= /addition-path-only-match",
+				ProxyPass:       "http://test_foo_80$request_uri",
+				ProxySetHeaders: baseHeaders,
+				Includes: []http.Include{
+					{
+						Filename: includesFolder + "/path-only-match-addition.conf",
+					},
+				},
+			},
+			{
+				Path:            "@rule17-route0",
 				ProxyPass:       "http://test_foo_80$request_uri",
 				ProxySetHeaders: httpBaseHeaders,
 				Includes: []http.Include{
@@ -981,6 +1015,10 @@ func TestCreateServers(t *testing.T) {
 						Filename: includesFolder + "/match-addition.conf",
 					},
 				},
+			},
+			{
+				Path:         "= /addition-header-match",
+				HTTPMatchKey: ssl + "1_17",
 			},
 		}
 	}
