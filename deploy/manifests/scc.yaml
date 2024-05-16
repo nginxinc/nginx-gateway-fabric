@@ -3,11 +3,6 @@ kind: SecurityContextConstraints
 apiVersion: security.openshift.io/v1
 metadata:
   name: nginx-ngf-admin
-allowPrivilegedContainer: false
-allowHostDirVolumePlugin: false
-allowHostIPC: false
-allowHostNetwork: false
-allowHostPorts: false
 allowPrivilegeEscalation: true
 readOnlyRootFilesystem: true
 runAsUser:
