@@ -706,7 +706,7 @@ var _ = Describe("Scale test", Ordered, Label("nfr", "scale"), func() {
 
 	AfterAll(func() {
 		close(promPortForwardStopCh)
-		Expect(framework.UninstallPrometheus()).To(Succeed())
+		Expect(framework.UninstallPrometheus(resourceManager)).To(Succeed())
 		Expect(outFile.Close()).To(Succeed())
 
 		// restoring NGF shared among tests in the suite
