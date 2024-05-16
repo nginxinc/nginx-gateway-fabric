@@ -190,7 +190,12 @@ var _ = Describe("Scale test", Ordered, Label("nfr", "scale"), func() {
 		return buckets
 	}
 
-	checkLogErrors := func(containerName string, substrings []string, fileName string) int {
+	checkLogErrors := func(
+		containerName string,
+		substrings []string,
+		ignoredSubstrings []string,
+		fileName string,
+	) int {
 		logs, err := resourceManager.GetPodLogs(ngfNamespace, ngfPodName, &core.PodLogOptions{
 			Container: containerName,
 		})
@@ -201,6 +206,11 @@ var _ = Describe("Scale test", Ordered, Label("nfr", "scale"), func() {
 
 	outer:
 		for _, line := range logLines {
+			for _, substr := range ignoredSubstrings {
+				if strings.Contains(line, substr) {
+					continue outer
+				}
+			}
 			for _, substr := range substrings {
 				if strings.Contains(line, substr) {
 					errors++
@@ -418,11 +428,13 @@ var _ = Describe("Scale test", Ordered, Label("nfr", "scale"), func() {
 		ngfErrors := checkLogErrors(
 			"nginx-gateway",
 			[]string{"error"},
+			[]string{`"logger":"usageReporter`}, // ignore usageReporter errors
 			filepath.Join(testResultsDir, framework.CreateResultsFilename("log", "ngf", *plusEnabled)),
 		)
 		nginxErrors := checkLogErrors(
 			"nginx",
 			[]string{"[error]", "[emerg]", "[crit]", "[alert]"},
+			nil,
 			filepath.Join(testResultsDir, framework.CreateResultsFilename("log", "nginx", *plusEnabled)),
 		)
 
