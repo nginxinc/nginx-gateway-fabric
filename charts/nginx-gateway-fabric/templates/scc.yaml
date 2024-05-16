@@ -5,6 +5,12 @@ apiVersion: security.openshift.io/v1
 metadata:
   name: {{ .Values.sccName }}
 allowPrivilegeEscalation: {{ .Values.nginxGateway.securityContext.allowPrivilegeEscalation }}
+allowHostDirVolumePlugin: false
+allowHostIPC: false
+allowHostNetwork: false
+allowHostPID: false
+allowHostPorts: false
+allowPrivilegedContainer: false
 readOnlyRootFilesystem: true
 runAsUser:
   type: MustRunAsRange
