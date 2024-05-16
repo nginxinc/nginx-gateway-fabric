@@ -7,6 +7,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
+	"sigs.k8s.io/gateway-api/apis/v1alpha3"
 
 	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
@@ -307,12 +308,12 @@ func TestNewGRPCRouteStatusSetter(t *testing.T) {
 
 	tests := []struct {
 		name                         string
-		status, newStatus, expStatus v1alpha2.GRPCRouteStatus
+		status, newStatus, expStatus gatewayv1.GRPCRouteStatus
 		expStatusSet                 bool
 	}{
 		{
 			name: "GRPCRoute has no status",
-			newStatus: v1alpha2.GRPCRouteStatus{
+			newStatus: gatewayv1.GRPCRouteStatus{
 				RouteStatus: gatewayv1.RouteStatus{
 					Parents: []gatewayv1.RouteParentStatus{
 						{
@@ -323,7 +324,7 @@ func TestNewGRPCRouteStatusSetter(t *testing.T) {
 					},
 				},
 			},
-			expStatus: v1alpha2.GRPCRouteStatus{
+			expStatus: gatewayv1.GRPCRouteStatus{
 				RouteStatus: gatewayv1.RouteStatus{
 					Parents: []gatewayv1.RouteParentStatus{
 						{
@@ -338,7 +339,7 @@ func TestNewGRPCRouteStatusSetter(t *testing.T) {
 		},
 		{
 			name: "GRPCRoute has old status",
-			newStatus: v1alpha2.GRPCRouteStatus{
+			newStatus: gatewayv1.GRPCRouteStatus{
 				RouteStatus: gatewayv1.RouteStatus{
 					Parents: []gatewayv1.RouteParentStatus{
 						{
@@ -349,7 +350,7 @@ func TestNewGRPCRouteStatusSetter(t *testing.T) {
 					},
 				},
 			},
-			status: v1alpha2.GRPCRouteStatus{
+			status: gatewayv1.GRPCRouteStatus{
 				RouteStatus: gatewayv1.RouteStatus{
 					Parents: []gatewayv1.RouteParentStatus{
 						{
@@ -360,7 +361,7 @@ func TestNewGRPCRouteStatusSetter(t *testing.T) {
 					},
 				},
 			},
-			expStatus: v1alpha2.GRPCRouteStatus{
+			expStatus: gatewayv1.GRPCRouteStatus{
 				RouteStatus: gatewayv1.RouteStatus{
 					Parents: []gatewayv1.RouteParentStatus{
 						{
@@ -375,7 +376,7 @@ func TestNewGRPCRouteStatusSetter(t *testing.T) {
 		},
 		{
 			name: "GRPCRoute has old status, keep other controller statuses",
-			newStatus: v1alpha2.GRPCRouteStatus{
+			newStatus: gatewayv1.GRPCRouteStatus{
 				RouteStatus: gatewayv1.RouteStatus{
 					Parents: []gatewayv1.RouteParentStatus{
 						{
@@ -386,7 +387,7 @@ func TestNewGRPCRouteStatusSetter(t *testing.T) {
 					},
 				},
 			},
-			status: v1alpha2.GRPCRouteStatus{
+			status: gatewayv1.GRPCRouteStatus{
 				RouteStatus: gatewayv1.RouteStatus{
 					Parents: []gatewayv1.RouteParentStatus{
 						{
@@ -402,7 +403,7 @@ func TestNewGRPCRouteStatusSetter(t *testing.T) {
 					},
 				},
 			},
-			expStatus: v1alpha2.GRPCRouteStatus{
+			expStatus: gatewayv1.GRPCRouteStatus{
 				RouteStatus: gatewayv1.RouteStatus{
 					Parents: []gatewayv1.RouteParentStatus{
 						{
@@ -422,7 +423,7 @@ func TestNewGRPCRouteStatusSetter(t *testing.T) {
 		},
 		{
 			name: "GRPCRoute has same status",
-			newStatus: v1alpha2.GRPCRouteStatus{
+			newStatus: gatewayv1.GRPCRouteStatus{
 				RouteStatus: gatewayv1.RouteStatus{
 					Parents: []gatewayv1.RouteParentStatus{
 						{
@@ -433,7 +434,7 @@ func TestNewGRPCRouteStatusSetter(t *testing.T) {
 					},
 				},
 			},
-			status: v1alpha2.GRPCRouteStatus{
+			status: gatewayv1.GRPCRouteStatus{
 				RouteStatus: gatewayv1.RouteStatus{
 					Parents: []gatewayv1.RouteParentStatus{
 						{
@@ -444,7 +445,7 @@ func TestNewGRPCRouteStatusSetter(t *testing.T) {
 					},
 				},
 			},
-			expStatus: v1alpha2.GRPCRouteStatus{
+			expStatus: gatewayv1.GRPCRouteStatus{
 				RouteStatus: gatewayv1.RouteStatus{
 					Parents: []gatewayv1.RouteParentStatus{
 						{
@@ -464,7 +465,7 @@ func TestNewGRPCRouteStatusSetter(t *testing.T) {
 			g := NewWithT(t)
 
 			setter := newGRPCRouteStatusSetter(test.newStatus, controllerName)
-			obj := &v1alpha2.GRPCRoute{Status: test.status}
+			obj := &gatewayv1.GRPCRoute{Status: test.status}
 
 			statusSet := setter(obj)
 
@@ -654,7 +655,7 @@ func TestNewBackendTLSPolicyStatusSetter(t *testing.T) {
 			g := NewWithT(t)
 
 			setter := newBackendTLSPolicyStatusSetter(test.newStatus, controllerName)
-			obj := &v1alpha2.BackendTLSPolicy{Status: test.status}
+			obj := &v1alpha3.BackendTLSPolicy{Status: test.status}
 
 			statusSet := setter(obj)
 

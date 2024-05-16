@@ -37,16 +37,16 @@ type ObservabilityPolicyList struct {
 
 // ObservabilityPolicySpec defines the desired state of the ObservabilityPolicy.
 type ObservabilityPolicySpec struct {
-	// TargetRef identifies an API object to apply the policy to.
-	// Object must be in the same namespace as the policy.
-	//
-	// Support: HTTPRoute
-	TargetRef gatewayv1alpha2.PolicyTargetReference `json:"targetRef"`
-
 	// Tracing allows for enabling and configuring tracing.
 	//
 	// +optional
 	Tracing *Tracing `json:"tracing,omitempty"`
+
+	// TargetRef identifies an API object to apply the policy to.
+	// Object must be in the same namespace as the policy.
+	//
+	// Support: HTTPRoute
+	TargetRef gatewayv1alpha2.LocalPolicyTargetReference `json:"targetRef"`
 }
 
 // Tracing allows for enabling and configuring OpenTelemetry tracing.

@@ -11,7 +11,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	v1 "sigs.k8s.io/gateway-api/apis/v1"
-	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/graph"
@@ -197,7 +196,7 @@ func convertBackendTLS(btp *graph.BackendTLSPolicy) *VerifyTLS {
 	} else {
 		verify.RootCAPath = alpineSSLRootCAPath
 	}
-	verify.Hostname = string(btp.Source.Spec.TLS.Hostname)
+	verify.Hostname = string(btp.Source.Spec.Validation.Hostname)
 	return verify
 }
 
@@ -288,7 +287,7 @@ func (hpr *hostPathRules) upsertRoute(route *graph.L7Route, listener *graph.List
 	var objectSrc *metav1.ObjectMeta
 
 	if GRPC {
-		objectSrc = &helpers.MustCastObject[*v1alpha2.GRPCRoute](route.Source).ObjectMeta
+		objectSrc = &helpers.MustCastObject[*v1.GRPCRoute](route.Source).ObjectMeta
 	} else {
 		objectSrc = &helpers.MustCastObject[*v1.HTTPRoute](route.Source).ObjectMeta
 	}

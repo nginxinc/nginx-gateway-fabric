@@ -7,7 +7,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
-	"sigs.k8s.io/gateway-api/apis/v1alpha2"
+	"sigs.k8s.io/gateway-api/apis/v1alpha3"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
@@ -25,10 +25,10 @@ type ClusterState struct {
 	ReferenceGrants    map[types.NamespacedName]*v1beta1.ReferenceGrant
 	Secrets            map[types.NamespacedName]*v1.Secret
 	CRDMetadata        map[types.NamespacedName]*metav1.PartialObjectMetadata
-	BackendTLSPolicies map[types.NamespacedName]*v1alpha2.BackendTLSPolicy
+	BackendTLSPolicies map[types.NamespacedName]*v1alpha3.BackendTLSPolicy
 	ConfigMaps         map[types.NamespacedName]*v1.ConfigMap
 	NginxProxies       map[types.NamespacedName]*ngfAPI.NginxProxy
-	GRPCRoutes         map[types.NamespacedName]*v1alpha2.GRPCRoute
+	GRPCRoutes         map[types.NamespacedName]*gatewayv1.GRPCRoute
 }
 
 // Graph is a Graph-like representation of Gateway API resources.

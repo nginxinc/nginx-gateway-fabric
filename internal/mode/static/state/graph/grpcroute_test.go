@@ -9,7 +9,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	v1 "sigs.k8s.io/gateway-api/apis/v1"
-	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
@@ -18,15 +17,15 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/validation/validationfakes"
 )
 
-func createGRPCMethodMatch(serviceName, methodName, methodType string) v1alpha2.GRPCRouteRule {
-	var mt *v1alpha2.GRPCMethodMatchType
+func createGRPCMethodMatch(serviceName, methodName, methodType string) v1.GRPCRouteRule {
+	var mt *v1.GRPCMethodMatchType
 	if methodType != "nilType" {
-		mt = (*v1alpha2.GRPCMethodMatchType)(&methodType)
+		mt = (*v1.GRPCMethodMatchType)(&methodType)
 	}
-	return v1alpha2.GRPCRouteRule{
-		Matches: []v1alpha2.GRPCRouteMatch{
+	return v1.GRPCRouteRule{
+		Matches: []v1.GRPCRouteMatch{
 			{
-				Method: &v1alpha2.GRPCMethodMatch{
+				Method: &v1.GRPCMethodMatch{
 					Type:    mt,
 					Service: &serviceName,
 					Method:  &methodName,
@@ -36,14 +35,14 @@ func createGRPCMethodMatch(serviceName, methodName, methodType string) v1alpha2.
 	}
 }
 
-func createGRPCHeadersMatch(headerType, headerName, headerValue string) v1alpha2.GRPCRouteRule {
-	return v1alpha2.GRPCRouteRule{
-		Matches: []v1alpha2.GRPCRouteMatch{
+func createGRPCHeadersMatch(headerType, headerName, headerValue string) v1.GRPCRouteRule {
+	return v1.GRPCRouteRule{
+		Matches: []v1.GRPCRouteMatch{
 			{
-				Headers: []v1alpha2.GRPCHeaderMatch{
+				Headers: []v1.GRPCHeaderMatch{
 					{
 						Type:  (*v1.HeaderMatchType)(&headerType),
-						Name:  v1alpha2.GRPCHeaderName(headerName),
+						Name:  v1.GRPCHeaderName(headerName),
 						Value: headerValue,
 					},
 				},
@@ -56,14 +55,14 @@ func createGRPCRoute(
 	name string,
 	refName string,
 	hostname v1.Hostname,
-	rules []v1alpha2.GRPCRouteRule,
-) *v1alpha2.GRPCRoute {
-	return &v1alpha2.GRPCRoute{
+	rules []v1.GRPCRouteRule,
+) *v1.GRPCRoute {
+	return &v1.GRPCRoute{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: "test",
 			Name:      name,
 		},
-		Spec: v1alpha2.GRPCRouteSpec{
+		Spec: v1.GRPCRouteSpec{
 			CommonRouteSpec: v1.CommonRouteSpec{
 				ParentRefs: []v1.ParentReference{
 					{
@@ -82,11 +81,11 @@ func createGRPCRoute(
 func TestBuildGRPCRoutes(t *testing.T) {
 	gwNsName := types.NamespacedName{Namespace: "test", Name: "gateway"}
 
-	gr := createGRPCRoute("gr-1", gwNsName.Name, "example.com", []v1alpha2.GRPCRouteRule{})
+	gr := createGRPCRoute("gr-1", gwNsName.Name, "example.com", []v1.GRPCRouteRule{})
 
-	grWrongGateway := createGRPCRoute("gr-2", "some-gateway", "example.com", []v1alpha2.GRPCRouteRule{})
+	grWrongGateway := createGRPCRoute("gr-2", "some-gateway", "example.com", []v1.GRPCRouteRule{})
 
-	grRoutes := map[types.NamespacedName]*v1alpha2.GRPCRoute{
+	grRoutes := map[types.NamespacedName]*v1.GRPCRoute{
 		client.ObjectKeyFromObject(gr):             gr,
 		client.ObjectKeyFromObject(grWrongGateway): grWrongGateway,
 	}
@@ -164,7 +163,7 @@ func TestBuildGRPCRoute(t *testing.T) {
 		"gr-1",
 		gatewayNsName.Name,
 		"example.com",
-		[]v1alpha2.GRPCRouteRule{methodMatchRule, headersMatchRule},
+		[]v1.GRPCRouteRule{methodMatchRule, headersMatchRule},
 	)
 
 	backendRef := v1.BackendRef{
@@ -176,7 +175,7 @@ func TestBuildGRPCRoute(t *testing.T) {
 		},
 	}
 
-	grpcBackendRef := v1alpha2.GRPCBackendRef{
+	grpcBackendRef := v1.GRPCBackendRef{
 		BackendRef: backendRef,
 	}
 
@@ -184,48 +183,48 @@ func TestBuildGRPCRoute(t *testing.T) {
 		"gr-1",
 		gatewayNsName.Name,
 		"example.com",
-		[]v1alpha2.GRPCRouteRule{{BackendRefs: []v1alpha2.GRPCBackendRef{grpcBackendRef}}},
+		[]v1.GRPCRouteRule{{BackendRefs: []v1.GRPCBackendRef{grpcBackendRef}}},
 	)
 
-	grInvalidHostname := createGRPCRoute("gr-1", gatewayNsName.Name, "", []v1alpha2.GRPCRouteRule{methodMatchRule})
-	grNotNGF := createGRPCRoute("gr", "some-gateway", "example.com", []v1alpha2.GRPCRouteRule{methodMatchRule})
+	grInvalidHostname := createGRPCRoute("gr-1", gatewayNsName.Name, "", []v1.GRPCRouteRule{methodMatchRule})
+	grNotNGF := createGRPCRoute("gr", "some-gateway", "example.com", []v1.GRPCRouteRule{methodMatchRule})
 
 	grInvalidMatchesEmptyMethodFields := createGRPCRoute(
 		"gr-1",
 		gatewayNsName.Name,
 		"example.com",
-		[]v1alpha2.GRPCRouteRule{methodMatchEmptyFields},
+		[]v1.GRPCRouteRule{methodMatchEmptyFields},
 	)
 	grInvalidMatchesInvalidMethodFields := createGRPCRoute(
 		"gr-1",
 		gatewayNsName.Name,
 		"example.com",
-		[]v1alpha2.GRPCRouteRule{methodMatchInvalidFields},
+		[]v1.GRPCRouteRule{methodMatchInvalidFields},
 	)
 	grInvalidMatchesNilMethodType := createGRPCRoute(
 		"gr-1",
 		gatewayNsName.Name,
 		"example.com",
-		[]v1alpha2.GRPCRouteRule{methodMatchNilType},
+		[]v1.GRPCRouteRule{methodMatchNilType},
 	)
 	grInvalidHeadersEmptyType := createGRPCRoute(
 		"gr-1",
 		gatewayNsName.Name,
 		"example.com",
-		[]v1alpha2.GRPCRouteRule{headersMatchInvalid},
+		[]v1.GRPCRouteRule{headersMatchInvalid},
 	)
 	grOneInvalid := createGRPCRoute(
 		"gr-1",
 		gatewayNsName.Name,
 		"example.com",
-		[]v1alpha2.GRPCRouteRule{methodMatchRule, headersMatchInvalid},
+		[]v1.GRPCRouteRule{methodMatchRule, headersMatchInvalid},
 	)
 
 	grDuplicateSectionName := createGRPCRoute(
 		"gr",
 		gatewayNsName.Name,
 		"example.com",
-		[]v1alpha2.GRPCRouteRule{methodMatchRule},
+		[]v1.GRPCRouteRule{methodMatchRule},
 	)
 	grDuplicateSectionName.Spec.ParentRefs = append(
 		grDuplicateSectionName.Spec.ParentRefs,
@@ -234,7 +233,7 @@ func TestBuildGRPCRoute(t *testing.T) {
 
 	grInvalidFilterRule := createGRPCMethodMatch("myService", "myMethod", "Exact")
 
-	grInvalidFilterRule.Filters = []v1alpha2.GRPCRouteFilter{
+	grInvalidFilterRule.Filters = []v1.GRPCRouteFilter{
 		{
 			Type: "RequestMirror",
 		},
@@ -244,12 +243,12 @@ func TestBuildGRPCRoute(t *testing.T) {
 		"gr",
 		gatewayNsName.Name,
 		"example.com",
-		[]v1alpha2.GRPCRouteRule{grInvalidFilterRule},
+		[]v1.GRPCRouteRule{grInvalidFilterRule},
 	)
 
 	grValidFilterRule := createGRPCMethodMatch("myService", "myMethod", "Exact")
 
-	grValidFilterRule.Filters = []v1alpha2.GRPCRouteFilter{
+	grValidFilterRule.Filters = []v1.GRPCRouteFilter{
 		{
 			Type: "RequestHeaderModifier",
 			RequestHeaderModifier: &v1.HTTPHeaderFilter{
@@ -270,7 +269,7 @@ func TestBuildGRPCRoute(t *testing.T) {
 		"gr",
 		gatewayNsName.Name,
 		"example.com",
-		[]v1alpha2.GRPCRouteRule{grValidFilterRule},
+		[]v1.GRPCRouteRule{grValidFilterRule},
 	)
 
 	convertedFilters := []v1.HTTPRouteFilter{
@@ -298,7 +297,7 @@ func TestBuildGRPCRoute(t *testing.T) {
 
 	tests := []struct {
 		validator     *validationfakes.FakeHTTPFieldsValidator
-		gr            *v1alpha2.GRPCRoute
+		gr            *v1.GRPCRoute
 		expected      *L7Route
 		name          string
 		http2disabled bool
@@ -733,7 +732,7 @@ func TestConvertGRPCMatches(t *testing.T) {
 
 	tests := []struct {
 		name          string
-		methodMatches []v1alpha2.GRPCRouteMatch
+		methodMatches []v1.GRPCRouteMatch
 		expected      []v1.HTTPRouteMatch
 	}{
 		{
@@ -748,7 +747,7 @@ func TestConvertGRPCMatches(t *testing.T) {
 		},
 		{
 			name:          "empty matches",
-			methodMatches: []v1alpha2.GRPCRouteMatch{},
+			methodMatches: []v1.GRPCRouteMatch{},
 			expected:      expectedEmptyMatches,
 		},
 	}
@@ -764,7 +763,7 @@ func TestConvertGRPCMatches(t *testing.T) {
 }
 
 func TestConvertGRPCFilters(t *testing.T) {
-	grFilters := []v1alpha2.GRPCRouteFilter{
+	grFilters := []v1.GRPCRouteFilter{
 		{
 			Type: "RequestHeaderModifier",
 			RequestHeaderModifier: &v1.HTTPHeaderFilter{

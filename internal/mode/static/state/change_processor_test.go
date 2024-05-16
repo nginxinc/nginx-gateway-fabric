@@ -15,6 +15,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	v1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
+	"sigs.k8s.io/gateway-api/apis/v1alpha3"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
@@ -192,9 +193,9 @@ func createAlwaysValidValidators() validation.Validators {
 func createScheme() *runtime.Scheme {
 	scheme := runtime.NewScheme()
 
-	utilruntime.Must(v1.AddToScheme(scheme))
-	utilruntime.Must(v1beta1.AddToScheme(scheme))
-	utilruntime.Must(v1alpha2.AddToScheme(scheme))
+	utilruntime.Must(v1.Install(scheme))
+	utilruntime.Must(v1beta1.Install(scheme))
+	utilruntime.Must(v1alpha3.Install(scheme))
 	utilruntime.Must(apiv1.AddToScheme(scheme))
 	utilruntime.Must(discoveryV1.AddToScheme(scheme))
 	utilruntime.Must(apiext.AddToScheme(scheme))
@@ -1030,7 +1031,7 @@ var _ = Describe("ChangeProcessor", func() {
 				hr1svc, sharedSvc, bazSvc1, bazSvc2, bazSvc3, invalidSvc, notRefSvc *apiv1.Service
 				hr1slice1, hr1slice2, noRefSlice, missingSvcNameSlice               *discoveryV1.EndpointSlice
 				gw                                                                  *v1.Gateway
-				btls                                                                *v1alpha2.BackendTLSPolicy
+				btls                                                                *v1alpha3.BackendTLSPolicy
 			)
 
 			createSvc := func(name string) *apiv1.Service {
@@ -1052,18 +1053,19 @@ var _ = Describe("ChangeProcessor", func() {
 				}
 			}
 
-			createBackendTLSPolicy := func(name string, svcName string) *v1alpha2.BackendTLSPolicy {
-				return &v1alpha2.BackendTLSPolicy{
+			createBackendTLSPolicy := func(name string, svcName string) *v1alpha3.BackendTLSPolicy {
+				return &v1alpha3.BackendTLSPolicy{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "test",
 						Name:      name,
 					},
-					Spec: v1alpha2.BackendTLSPolicySpec{
-						TargetRef: v1alpha2.PolicyTargetReferenceWithSectionName{
-							PolicyTargetReference: v1alpha2.PolicyTargetReference{
-								Kind:      v1.Kind("Service"),
-								Name:      v1.ObjectName(svcName),
-								Namespace: helpers.GetPointer(v1.Namespace("test")),
+					Spec: v1alpha3.BackendTLSPolicySpec{
+						TargetRefs: []v1alpha2.LocalPolicyTargetReferenceWithSectionName{
+							{
+								LocalPolicyTargetReference: v1alpha2.LocalPolicyTargetReference{
+									Kind: v1.Kind("Service"),
+									Name: v1.ObjectName(svcName),
+								},
 							},
 						},
 					},
@@ -1625,7 +1627,7 @@ var _ = Describe("ChangeProcessor", func() {
 			ns, unrelatedNS, testNs, barNs                                                                                          *apiv1.Namespace
 			secret, secretUpdated, unrelatedSecret, barSecret, barSecretUpdated                                                     *apiv1.Secret
 			cm, cmUpdated, unrelatedCM                                                                                              *apiv1.ConfigMap
-			btls, btlsUpdated                                                                                                       *v1alpha2.BackendTLSPolicy
+			btls, btlsUpdated                                                                                                       *v1alpha3.BackendTLSPolicy
 			np, npUpdated                                                                                                           *ngfAPI.NginxProxy
 		)
 
@@ -1894,22 +1896,23 @@ var _ = Describe("ChangeProcessor", func() {
 			}
 
 			btlsNsName = types.NamespacedName{Namespace: "test", Name: "btls-1"}
-			btls = &v1alpha2.BackendTLSPolicy{
+			btls = &v1alpha3.BackendTLSPolicy{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:       btlsNsName.Name,
 					Namespace:  btlsNsName.Namespace,
 					Generation: 1,
 				},
-				Spec: v1alpha2.BackendTLSPolicySpec{
-					TargetRef: v1alpha2.PolicyTargetReferenceWithSectionName{
-						PolicyTargetReference: v1alpha2.PolicyTargetReference{
-							Kind:      "Service",
-							Name:      v1.ObjectName(svc.Name),
-							Namespace: helpers.GetPointer(v1.Namespace(svc.Namespace)),
+				Spec: v1alpha3.BackendTLSPolicySpec{
+					TargetRefs: []v1alpha2.LocalPolicyTargetReferenceWithSectionName{
+						{
+							LocalPolicyTargetReference: v1alpha2.LocalPolicyTargetReference{
+								Kind: "Service",
+								Name: v1.ObjectName(svc.Name),
+							},
 						},
 					},
-					TLS: v1alpha2.BackendTLSPolicyConfig{
-						CACertRefs: []v1.LocalObjectReference{
+					Validation: v1alpha3.BackendTLSPolicyValidation{
+						CACertificateRefs: []v1.LocalObjectReference{
 							{
 								Name: v1.ObjectName(cm.Name),
 							},
@@ -1993,7 +1996,7 @@ var _ = Describe("ChangeProcessor", func() {
 					processor.CaptureDeleteChange(&v1.Gateway{}, gwNsName)
 					processor.CaptureDeleteChange(&v1.HTTPRoute{}, hrNsName)
 					processor.CaptureDeleteChange(&v1beta1.ReferenceGrant{}, rgNsName)
-					processor.CaptureDeleteChange(&v1alpha2.BackendTLSPolicy{}, btlsNsName)
+					processor.CaptureDeleteChange(&v1alpha3.BackendTLSPolicy{}, btlsNsName)
 					processor.CaptureDeleteChange(&apiv1.ConfigMap{}, cmNsName)
 					processor.CaptureDeleteChange(&ngfAPI.NginxProxy{}, npNsName)
 

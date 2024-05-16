@@ -90,9 +90,9 @@ rules:
   - gateways
   - httproutes
   - referencegrants
+  - grpcroutes
 {{- if .Values.nginxGateway.gwAPIExperimentalFeatures.enable }}
   - backendtlspolicies
-  - grpcroutes
 {{- end }}
   verbs:
   - list
@@ -103,9 +103,9 @@ rules:
   - httproutes/status
   - gateways/status
   - gatewayclasses/status
+  - grpcroutes/status
 {{- if .Values.nginxGateway.gwAPIExperimentalFeatures.enable }}
   - backendtlspolicies/status
-  - grpcroutes/status
 {{- end }}
   verbs:
   - update

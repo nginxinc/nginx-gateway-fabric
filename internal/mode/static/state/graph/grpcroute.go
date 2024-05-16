@@ -4,7 +4,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	v1 "sigs.k8s.io/gateway-api/apis/v1"
-	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 	staticConds "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/conditions"
@@ -13,7 +12,7 @@ import (
 
 func buildGRPCRoute(
 	validator validation.HTTPFieldsValidator,
-	ghr *v1alpha2.GRPCRoute,
+	ghr *v1.GRPCRoute,
 	gatewayNsNames []types.NamespacedName,
 	http2disabled bool,
 ) *L7Route {
@@ -78,7 +77,7 @@ func buildGRPCRoute(
 }
 
 func processGRPCRouteRules(
-	specRules []v1alpha2.GRPCRouteRule,
+	specRules []v1.GRPCRouteRule,
 	validator validation.HTTPFieldsValidator,
 ) (rules []RouteRule, atLeastOneValid bool, allRulesErrs field.ErrorList) {
 	rules = make([]RouteRule, len(specRules))
@@ -144,7 +143,7 @@ func processGRPCRouteRules(
 	return rules, atLeastOneValid, allRulesErrs
 }
 
-func convertGRPCMatches(grpcMatches []v1alpha2.GRPCRouteMatch) []v1.HTTPRouteMatch {
+func convertGRPCMatches(grpcMatches []v1.GRPCRouteMatch) []v1.HTTPRouteMatch {
 	pathValue := "/"
 	pathType := v1.PathMatchType("PathPrefix")
 	// If no matches are specified, the implementation MUST match every gRPC request.
@@ -192,7 +191,7 @@ func convertGRPCMatches(grpcMatches []v1alpha2.GRPCRouteMatch) []v1.HTTPRouteMat
 
 func validateGRPCMatch(
 	validator validation.HTTPFieldsValidator,
-	match v1alpha2.GRPCRouteMatch,
+	match v1.GRPCRouteMatch,
 	matchPath *field.Path,
 ) field.ErrorList {
 	var allErrs field.ErrorList
@@ -210,7 +209,7 @@ func validateGRPCMatch(
 
 func validateGRPCMethodMatch(
 	validator validation.HTTPFieldsValidator,
-	method *v1alpha2.GRPCMethodMatch,
+	method *v1.GRPCMethodMatch,
 	methodPath *field.Path,
 ) field.ErrorList {
 	var allErrs field.ErrorList
@@ -220,10 +219,10 @@ func validateGRPCMethodMatch(
 		methodMethodPath := methodPath.Child("method")
 		if method.Type == nil {
 			allErrs = append(allErrs, field.Required(methodPath.Child("type"), "cannot be empty"))
-		} else if *method.Type != v1alpha2.GRPCMethodMatchExact {
+		} else if *method.Type != v1.GRPCMethodMatchExact {
 			allErrs = append(
 				allErrs,
-				field.NotSupported(methodPath.Child("type"), *method.Type, []string{string(v1alpha2.GRPCMethodMatchExact)}),
+				field.NotSupported(methodPath.Child("type"), *method.Type, []string{string(v1.GRPCMethodMatchExact)}),
 			)
 		}
 		if method.Service == nil || *method.Service == "" {
@@ -250,23 +249,23 @@ func validateGRPCMethodMatch(
 
 func validateGRPCFilter(
 	validator validation.HTTPFieldsValidator,
-	filter v1alpha2.GRPCRouteFilter,
+	filter v1.GRPCRouteFilter,
 	filterPath *field.Path,
 ) field.ErrorList {
 	var allErrs field.ErrorList
 
 	switch filter.Type {
-	case v1alpha2.GRPCRouteFilterRequestHeaderModifier:
+	case v1.GRPCRouteFilterRequestHeaderModifier:
 		return validateFilterHeaderModifier(validator, filter.RequestHeaderModifier, filterPath.Child(string(filter.Type)))
-	case v1alpha2.GRPCRouteFilterResponseHeaderModifier:
+	case v1.GRPCRouteFilterResponseHeaderModifier:
 		return validateFilterHeaderModifier(validator, filter.ResponseHeaderModifier, filterPath.Child(string(filter.Type)))
 	default:
 		valErr := field.NotSupported(
 			filterPath.Child("type"),
 			filter.Type,
 			[]string{
-				string(v1alpha2.GRPCRouteFilterRequestHeaderModifier),
-				string(v1alpha2.GRPCRouteFilterResponseHeaderModifier),
+				string(v1.GRPCRouteFilterRequestHeaderModifier),
+				string(v1.GRPCRouteFilterResponseHeaderModifier),
 			},
 		)
 		allErrs = append(allErrs, valErr)
@@ -276,20 +275,20 @@ func validateGRPCFilter(
 
 // convertGRPCFilters converts GRPCRouteFilters (a subset of HTTPRouteFilter) to HTTPRouteFilters
 // so we can reuse the logic from HTTPRoute filter validation and processing
-func convertGRPCFilters(filters []v1alpha2.GRPCRouteFilter) []v1.HTTPRouteFilter {
+func convertGRPCFilters(filters []v1.GRPCRouteFilter) []v1.HTTPRouteFilter {
 	if len(filters) == 0 {
 		return nil
 	}
 	httpFilters := make([]v1.HTTPRouteFilter, 0, len(filters))
 	for _, filter := range filters {
 		switch filter.Type {
-		case v1alpha2.GRPCRouteFilterRequestHeaderModifier:
+		case v1.GRPCRouteFilterRequestHeaderModifier:
 			httpRequestHeaderFilter := v1.HTTPRouteFilter{
 				Type:                  v1.HTTPRouteFilterRequestHeaderModifier,
 				RequestHeaderModifier: filter.RequestHeaderModifier,
 			}
 			httpFilters = append(httpFilters, httpRequestHeaderFilter)
-		case v1alpha2.GRPCRouteFilterResponseHeaderModifier:
+		case v1.GRPCRouteFilterResponseHeaderModifier:
 			httpResponseHeaderFilter := v1.HTTPRouteFilter{
 				Type:                   v1.HTTPRouteFilterResponseHeaderModifier,
 				ResponseHeaderModifier: filter.ResponseHeaderModifier,

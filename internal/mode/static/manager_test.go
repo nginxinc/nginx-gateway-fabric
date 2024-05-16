@@ -13,7 +13,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gatewayv1alpha3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
@@ -54,6 +54,7 @@ func TestPrepareFirstEventBatchPreparerArgs(t *testing.T) {
 				&gatewayv1.GatewayList{},
 				&gatewayv1beta1.ReferenceGrantList{},
 				&ngfAPI.NginxProxyList{},
+				&gatewayv1.GRPCRouteList{},
 				partialObjectMetadataList,
 			},
 		},
@@ -75,6 +76,7 @@ func TestPrepareFirstEventBatchPreparerArgs(t *testing.T) {
 				&gatewayv1.HTTPRouteList{},
 				&gatewayv1beta1.ReferenceGrantList{},
 				&ngfAPI.NginxProxyList{},
+				&gatewayv1.GRPCRouteList{},
 				partialObjectMetadataList,
 			},
 		},
@@ -97,9 +99,9 @@ func TestPrepareFirstEventBatchPreparerArgs(t *testing.T) {
 				&gatewayv1.HTTPRouteList{},
 				&gatewayv1beta1.ReferenceGrantList{},
 				&ngfAPI.NginxProxyList{},
+				&gatewayv1.GRPCRouteList{},
 				partialObjectMetadataList,
-				&gatewayv1alpha2.BackendTLSPolicyList{},
-				&gatewayv1alpha2.GRPCRouteList{},
+				&gatewayv1alpha3.BackendTLSPolicyList{},
 			},
 			experimentalEnabled: true,
 		},

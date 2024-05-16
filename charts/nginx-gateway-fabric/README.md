@@ -40,7 +40,7 @@ This chart deploys the NGINX Gateway Fabric in your Kubernetes cluster.
 > [see the Technical Specifications](https://github.com/nginxinc/nginx-gateway-fabric/blob/main/README.md#technical-specifications).
 
 ```shell
-kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/standard-install.yaml
+kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.1.0/standard-install.yaml
 ```
 
 ## Installing the Chart
@@ -128,7 +128,7 @@ Gateway Fabric - [see the Technical Specifications](../../README.md#technical-sp
 To upgrade the Gateway CRDs from [the Gateway API repo](https://github.com/kubernetes-sigs/gateway-api), run:
 
 ```shell
-kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/standard-install.yaml
+kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.1.0/standard-install.yaml
 ```
 
 ### Upgrading the CRDs
@@ -238,7 +238,7 @@ These commands remove all the Kubernetes components associated with the release 
 To delete the Gateway API CRDs from [the Gateway API repo](https://github.com/kubernetes-sigs/gateway-api), run:
 
 ```shell
-kubectl delete -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/standard-install.yaml
+kubectl delete -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.1.0/standard-install.yaml
 ```
 
 ## Configuration

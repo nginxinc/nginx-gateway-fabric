@@ -3,9 +3,9 @@ VERSION = 1.2.0 # NGF version
 PREFIX = nginx-gateway-fabric
 NGINX_PREFIX = $(PREFIX)/nginx
 NGINX_PLUS_PREFIX ?= $(PREFIX)/nginx-plus
-GW_API_VERSION ?= 1.0.0
+GW_API_VERSION ?= 1.1.0
 GATEWAY_CLASS = nginx
-SUPPORTED_FEATURES = HTTPRouteQueryParamMatching,HTTPRouteMethodMatching,HTTPRoutePortRedirect,HTTPRouteSchemeRedirect,HTTPRouteHostRewrite,HTTPRoutePathRewrite,GatewayPort8080,HTTPRouteResponseHeaderModification
+SUPPORTED_FEATURES = HTTPRouteQueryParamMatching,HTTPRouteMethodMatching,HTTPRoutePortRedirect,HTTPRouteSchemeRedirect,HTTPRouteHostRewrite,HTTPRoutePathRewrite,GatewayPort8080,HTTPRouteResponseHeaderModification,GRPCExactMethodMatching,GRPCRouteListenerHostnameMatching,GRPCRouteHeaderMatching
 KIND_IMAGE ?= $(shell grep -m1 'FROM kindest/node' <tests/Dockerfile | awk -F'[ ]' '{print $$2}')
 KIND_KUBE_CONFIG=$${HOME}/.kube/kind/config
 CONFORMANCE_TAG = latest
@@ -15,10 +15,6 @@ STATIC_MANIFEST=provisioner/static-deployment.yaml
 PROVISIONER_MANIFEST=provisioner/provisioner.yaml
 ENABLE_EXPERIMENTAL ?= false
 .DEFAULT_GOAL := help
-
-ifeq ($(ENABLE_EXPERIMENTAL),true)
-    SUPPORTED_FEATURES +=,GRPCExactMethodMatching,GRPCRouteListenerHostnameMatching,GRPCRouteHeaderMatching
-endif
 
 .PHONY: help
 help: Makefile ## Display this help
@@ -108,8 +104,14 @@ run-conformance-tests: ## Run conformance tests
 	bash scripts/check-pod-exit-code.sh
 	sed -e '1,/CONFORMANCE PROFILE/d' output.txt > conformance-profile.yaml
 	rm output.txt
-	[ $(shell cat conformance-profile.yaml | yq '.profiles[0].core.result') != "failure" ] \
-		&& [ $(shell cat conformance-profile.yaml | yq '.profiles[0].extended.result') != "failure" ] || exit 2
+	grpc_core_result=`yq '.profiles[0].core.result' conformance-profile.yaml`; \
+	http_core_result=`yq '.profiles[1].core.result' conformance-profile.yaml`; \
+	http_extended_result=`yq '.profiles[1].extended.result' conformance-profile.yaml`; \
+	if [ "$$grpc_core_result" != "failure" ] && [ "$$http_core_result" != "failure" ] && [ "$$http_extended_result" != "failure" ] ; then \
+		exit 0; \
+	else \
+		exit 2; \
+	fi
 
 .PHONY: cleanup-conformance-tests
 cleanup-conformance-tests: ## Clean up conformance tests fixtures

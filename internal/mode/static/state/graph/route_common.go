@@ -10,7 +10,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	v1 "sigs.k8s.io/gateway-api/apis/v1"
-	v1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
@@ -118,7 +117,7 @@ func CreateRouteKey(obj client.Object) RouteKey {
 	switch obj.(type) {
 	case *v1.HTTPRoute:
 		routeType = RouteTypeHTTP
-	case *v1alpha2.GRPCRoute:
+	case *v1.GRPCRoute:
 		routeType = RouteTypeGRPC
 	default:
 		panic(fmt.Sprintf("Unknown type: %T", obj))
@@ -133,7 +132,7 @@ func CreateRouteKey(obj client.Object) RouteKey {
 func buildRoutesForGateways(
 	validator validation.HTTPFieldsValidator,
 	httpRoutes map[types.NamespacedName]*v1.HTTPRoute,
-	grpcRoutes map[types.NamespacedName]*v1alpha2.GRPCRoute,
+	grpcRoutes map[types.NamespacedName]*v1.GRPCRoute,
 	gatewayNsNames []types.NamespacedName,
 	npCfg *ngfAPI.NginxProxy,
 ) map[RouteKey]*L7Route {

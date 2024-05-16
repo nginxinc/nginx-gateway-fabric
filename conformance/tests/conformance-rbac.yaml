@@ -11,6 +11,7 @@ rules:
 - apiGroups:
   - ""
   resources:
+  - configmaps
   - namespaces
   - pods
   - secrets
@@ -35,8 +36,25 @@ rules:
   resources:
   - gateways
   - httproutes
+  - grpcroutes
   - referencegrants
   - gatewayclasses
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+- apiGroups:
+  - apiextensions.k8s.io
+  resources:
+  - customresourcedefinitions
+  verbs:
+  - list
+- apiGroups:
+  - discovery.k8s.io
+  resources:
+  - endpointslices
   verbs:
   - create
   - delete

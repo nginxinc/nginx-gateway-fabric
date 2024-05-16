@@ -31,7 +31,7 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	k8spredicate "sigs.k8s.io/controller-runtime/pkg/predicate"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gatewayv1alpha3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
@@ -65,9 +65,9 @@ const (
 var scheme = runtime.NewScheme()
 
 func init() {
-	utilruntime.Must(gatewayv1beta1.AddToScheme(scheme))
-	utilruntime.Must(gatewayv1.AddToScheme(scheme))
-	utilruntime.Must(gatewayv1alpha2.AddToScheme(scheme))
+	utilruntime.Must(gatewayv1beta1.Install(scheme))
+	utilruntime.Must(gatewayv1.Install(scheme))
+	utilruntime.Must(gatewayv1alpha3.Install(scheme))
 	utilruntime.Must(apiv1.AddToScheme(scheme))
 	utilruntime.Must(discoveryV1.AddToScheme(scheme))
 	utilruntime.Must(ngfAPI.AddToScheme(scheme))
@@ -421,12 +421,18 @@ func registerControllers(
 				controller.WithK8sPredicate(k8spredicate.GenerationChangedPredicate{}),
 			},
 		},
+		{
+			objectType: &gatewayv1.GRPCRoute{},
+			options: []controller.Option{
+				controller.WithK8sPredicate(k8spredicate.GenerationChangedPredicate{}),
+			},
+		},
 	}
 
 	if cfg.ExperimentalFeatures {
 		gwExpFeatures := []ctlrCfg{
 			{
-				objectType: &gatewayv1alpha2.BackendTLSPolicy{},
+				objectType: &gatewayv1alpha3.BackendTLSPolicy{},
 				options: []controller.Option{
 					controller.WithK8sPredicate(k8spredicate.GenerationChangedPredicate{}),
 				},
@@ -435,12 +441,6 @@ func registerControllers(
 				// FIXME(ciarams87): If possible, use only metadata predicate
 				// https://github.com/nginxinc/nginx-gateway-fabric/issues/1545
 				objectType: &apiv1.ConfigMap{},
-			},
-			{
-				objectType: &gatewayv1alpha2.GRPCRoute{},
-				options: []controller.Option{
-					controller.WithK8sPredicate(k8spredicate.GenerationChangedPredicate{}),
-				},
 			},
 		}
 		controllerRegCfgs = append(controllerRegCfgs, gwExpFeatures...)
@@ -606,15 +606,15 @@ func prepareFirstEventBatchPreparerArgs(
 		&gatewayv1.HTTPRouteList{},
 		&gatewayv1beta1.ReferenceGrantList{},
 		&ngfAPI.NginxProxyList{},
+		&gatewayv1.GRPCRouteList{},
 		partialObjectMetadataList,
 	}
 
 	if enableExperimentalFeatures {
 		objectLists = append(
 			objectLists,
-			&gatewayv1alpha2.BackendTLSPolicyList{},
+			&gatewayv1alpha3.BackendTLSPolicyList{},
 			&apiv1.ConfigMapList{},
-			&gatewayv1alpha2.GRPCRouteList{},
 		)
 	}
 

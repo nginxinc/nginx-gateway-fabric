@@ -33,8 +33,8 @@ func TestRegister(t *testing.T) {
 
 	getDefaultFakes := func() fakes {
 		scheme := runtime.NewScheme()
-		utilruntime.Must(v1.AddToScheme(scheme))
-		utilruntime.Must(v1beta1.AddToScheme(scheme))
+		utilruntime.Must(v1.Install(scheme))
+		utilruntime.Must(v1beta1.Install(scheme))
 
 		indexer := &controllerfakes.FakeFieldIndexer{}
 
