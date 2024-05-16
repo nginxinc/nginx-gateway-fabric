@@ -87,7 +87,7 @@ func generatePNG(resultsDir, inputFilename, outputFilename, configFilename strin
 
 // GenerateRequestsPNG generates a Requests PNG using gnuplot.
 func GenerateRequestsPNG(resultsDir, inputFilename, outputFilename string) error {
-	return generatePNG(resultsDir, inputFilename, outputFilename, "requests-plot.gpgp")
+	return generatePNG(resultsDir, inputFilename, outputFilename, "requests-plot.gp")
 }
 
 // GenerateTTRPNG generates a TTR PNG using gnuplot.
