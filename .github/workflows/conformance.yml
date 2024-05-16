@@ -115,16 +115,22 @@ jobs:
         run: make update-go-modules
         working-directory: ./tests
 
-      - name: Build Test Docker Image
-        uses: docker/build-push-action@2cdde995de11925a030ce8070c3d77a52ffcf1c0 # v5.3.0
-        with:
-          file: tests/conformance/Dockerfile
-          tags: conformance-test-runner:${{ github.sha }}
-          context: "tests"
-          load: true
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          pull: true
+      # - name: Build Test Docker Image
+      #   uses: docker/build-push-action@2cdde995de11925a030ce8070c3d77a52ffcf1c0 # v5.3.0
+      #   with:
+      #     file: conformance/tests/Dockerfile
+      #     tags: conformance-test-runner:${{ github.sha }}
+      #     context: "."
+      #     load: true
+      #     cache-from: type=gha
+      #     cache-to: type=gha,mode=max
+      #     pull: true
+
+      - name: Install cloud-provider-kind
+        run: go install sigs.k8s.io/cloud-provider-kind@latest
+
+      - name: Run cloud-provider-kind
+        run: ~/go/bin/cloud-provider-kind & > cloud-provider-kind.log 2>&1
 
       - name: Deploy Kubernetes
         id: k8s
@@ -144,7 +150,8 @@ jobs:
 
       - name: Run conformance tests
         run: |
-          make run-conformance-tests CONFORMANCE_TAG=${{ github.sha }} NGF_VERSION=${{ github.ref_name }} CLUSTER_NAME=${{ github.run_id }}
+          make run-conformance-tests NGF_VERSION=${{ github.ref_name }} CLUSTER_NAME=${{ github.run_id }}
+          cat cloud-provider-kind.log
           core_result=$(cat conformance-profile.yaml | yq '.profiles[0].core.result')
           extended_result=$(cat conformance-profile.yaml | yq '.profiles[0].extended.result')
           if [ "${core_result}" == "failure" ] || [ "${extended_result}" == "failure" ]; then echo "Conformance test failed, see above for details." && exit 2; fi
