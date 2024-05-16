@@ -187,7 +187,7 @@ See the [static-mode]({{< relref "/reference/cli-help.md#static-mode">}}) comman
 {{< bootstrap-table "table table-striped table-bordered" >}}
 | Resource  | Core Support Level  | Extended Support Level | Implementation-Specific Support Level | API Version |
 | --------- | ------------------- | ---------------------- | ------------------------------------- | ----------- |
-| GRPCRoute | Partially Supported | Not supported          | Not supported                         | v1alpha2    |
+| GRPCRoute | Supported           | Not supported          | Not supported                         | v1alpha2    |
 {{< /bootstrap-table >}}
 
 **Fields**:
@@ -202,7 +202,8 @@ See the [static-mode]({{< relref "/reference/cli-help.md#static-mode">}}) comman
     - `filters`
       - `type`: Supported.
       - `requestHeaderModifier`: Supported. If multiple filters are configured, NGINX Gateway Fabric will choose the first and ignore the rest.
-      - `responseHeaderModifier`, `requestMirror`, `extensionRef`: Not supported.
+      - `responseHeaderModifier`: Supported. If multiple filters are configured, NGINX Gateway Fabric will choose the first and ignore the rest.
+      - `requestMirror`, `extensionRef`: Not supported.
     - `backendRefs`: Partially supported. Backend ref `filters` are not supported.
 - `status`
   - `parents`
