@@ -10,39 +10,43 @@ import (
 )
 
 func TestExecuteBaseHttp(t *testing.T) {
-	conf := dataplane.Configuration{
+	confOn := dataplane.Configuration{
 		BaseHTTPConfig: dataplane.BaseHTTPConfig{
 			HTTP2: true,
 		},
 	}
 
-	g := NewWithT(t)
-	expSubStrings := map[string]int{
-		"http2 on;": 1,
-	}
-
-	for expSubStr, expCount := range expSubStrings {
-		res := executeBaseHTTPConfig(conf)
-		g.Expect(res).To(HaveLen(1))
-		g.Expect(expCount).To(Equal(strings.Count(string(res[0].data), expSubStr)))
-	}
-}
-
-func TestExecuteBaseHttpEmpty(t *testing.T) {
-	conf := dataplane.Configuration{
+	confOff := dataplane.Configuration{
 		BaseHTTPConfig: dataplane.BaseHTTPConfig{
 			HTTP2: false,
 		},
 	}
 
-	g := NewWithT(t)
-	expSubStrings := map[string]int{
-		"http2 on;": 0,
+	expSubStr := "http2 on;"
+
+	tests := []struct {
+		name     string
+		conf     dataplane.Configuration
+		expCount int
+	}{
+		{
+			name:     "http2 on",
+			conf:     confOn,
+			expCount: 1,
+		},
+		{
+			name:     "http2 off",
+			expCount: 0,
+			conf:     confOff,
+		},
 	}
 
-	for expSubStr, expCount := range expSubStrings {
-		res := executeBaseHTTPConfig(conf)
+	for _, test := range tests {
+
+		g := NewWithT(t)
+
+		res := executeBaseHTTPConfig(test.conf)
 		g.Expect(res).To(HaveLen(1))
-		g.Expect(expCount).To(Equal(strings.Count(string(res[0].data), expSubStr)))
+		g.Expect(test.expCount).To(Equal(strings.Count(string(res[0].data), expSubStr)))
 	}
 }

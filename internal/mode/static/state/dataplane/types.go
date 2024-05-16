@@ -284,6 +284,6 @@ type SpanAttribute struct {
 
 // BaseHTTPConfig holds the configuration options at the http context.
 type BaseHTTPConfig struct {
-	// HTTP2 specifies whether http2 should be enabled or disabled for all servers.
+	// HTTP2 specifies whether http2 should be enabled for all servers.
 	HTTP2 bool
 }
