@@ -107,6 +107,8 @@ func validateTargetRef(ref v1alpha2.LocalPolicyTargetReference, policyNs string)
 	return nil
 }
 
+// validateSettings performs validation on fields in the spec that are vulnerable to code injection.
+// For all other fields, we rely on the CRD validation.
 func (v *Validator) validateSettings(spec ngfAPI.ClientSettingsPolicySpec) error {
 	var allErrs field.ErrorList
 	fieldPath := field.NewPath("spec")
@@ -146,18 +148,6 @@ func (v *Validator) validateClientBody(body ngfAPI.ClientBody, fieldPath *field.
 func (v *Validator) validateClientKeepAlive(keepAlive ngfAPI.ClientKeepAlive, fieldPath *field.Path) field.ErrorList {
 	var allErrs field.ErrorList
 
-	if keepAlive.Requests != nil {
-		requests := *keepAlive.Requests
-		if requests < 0 {
-			path := fieldPath.Child("requests")
-
-			allErrs = append(
-				allErrs,
-				field.Invalid(path, *keepAlive.Requests, "requests is invalid: must be positive"),
-			)
-		}
-	}
-
 	if keepAlive.Time != nil {
 		if err := v.genericValidator.ValidateNginxDuration(string(*keepAlive.Time)); err != nil {
 			path := fieldPath.Child("time")
@@ -189,19 +179,6 @@ func (v *Validator) validateClientKeepAlive(keepAlive ngfAPI.ClientKeepAlive, fi
 					field.Invalid(path, *keepAlive.Timeout.Header, err.Error()),
 				)
 			}
-		}
-
-		if keepAlive.Timeout.Header != nil && keepAlive.Timeout.Server == nil {
-			path := fieldPath.Child("timeout")
-
-			allErrs = append(
-				allErrs,
-				field.Invalid(
-					path,
-					nil,
-					"server timeout must be set if header timeout is set",
-				),
-			)
 		}
 	}
 
