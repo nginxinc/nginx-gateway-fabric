@@ -576,10 +576,6 @@ var _ = Describe("Scale test", Ordered, Label("nfr", "scale"), func() {
 				)
 			},
 		)
-
-		Expect(
-			os.RemoveAll(filepath.Join(testResultsDir, "manifests")),
-		).To(Succeed())
 	})
 
 	It(fmt.Sprintf("scales HTTPS listeners to %d", httpsListenerCount), func() {
