@@ -589,7 +589,7 @@ func TestCreateServers(t *testing.T) {
 			MatchRules: []dataplane.MatchRule{
 				{
 					Match:        dataplane.Match{},
-					BackendGroup: bazGroup,
+					BackendGroup: fooGroup,
 					Additions: []*dataplane.Addition{
 						{
 							Bytes:      []byte("match-addition"),
@@ -974,7 +974,7 @@ func TestCreateServers(t *testing.T) {
 			},
 			{
 				Path:            "= /addition",
-				ProxyPass:       "http://invalid-backend-ref$request_uri",
+				ProxyPass:       "http://test_foo_80$request_uri",
 				ProxySetHeaders: httpBaseHeaders,
 				Includes: []http.Include{
 					{
