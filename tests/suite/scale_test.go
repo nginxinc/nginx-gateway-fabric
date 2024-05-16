@@ -476,6 +476,7 @@ var _ = Describe("Scale test", Ordered, Label("nfr", "scale"), func() {
 
 		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 		defer cancel()
+
 		Expect(resourceManager.WaitForPodsToBeReady(ctx, ns.Name)).To(Succeed())
 
 		for i := 0; i < len(objects.ScaleIterationGroups); i++ {
@@ -538,6 +539,7 @@ var _ = Describe("Scale test", Ordered, Label("nfr", "scale"), func() {
 
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 		defer cancel()
+
 		Expect(resourceManager.WaitForPodsToBeReady(ctx, ns.Name)).To(Succeed())
 
 		Eventually(
