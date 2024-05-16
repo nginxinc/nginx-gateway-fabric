@@ -216,7 +216,8 @@ func (ins *PrometheusInstance) QueryWithCtx(ctx context.Context, query string) (
 	}
 
 	if len(warnings) > 0 {
-		slog.Info("Prometheus query returned warnings",
+		slog.Info(
+			"Prometheus query returned warnings",
 			"query", query,
 			"warnings", warnings,
 		)
@@ -245,7 +246,8 @@ func (ins *PrometheusInstance) QueryRangeWithCtx(ctx context.Context, query stri
 	}
 
 	if len(warnings) > 0 {
-		slog.Info("Prometheus range query returned warnings",
+		slog.Info(
+			"Prometheus range query returned warnings",
 			"query", query,
 			"range", promRange,
 			"warnings", warnings,
