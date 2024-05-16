@@ -79,10 +79,7 @@ var _ = Describe("Scale test", Ordered, Label("nfr", "scale"), func() {
 			ScrapeInterval: scrapeInterval,
 		}
 
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
-		defer cancel()
-
-		promInstance, err = framework.InstallPrometheus(ctx, resourceManager, promCfg)
+		promInstance, err = framework.InstallPrometheus(resourceManager, promCfg)
 		Expect(err).ToNot(HaveOccurred())
 
 		k8sConfig := ctlr.GetConfigOrDie()

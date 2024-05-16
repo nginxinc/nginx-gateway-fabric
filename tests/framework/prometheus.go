@@ -36,7 +36,6 @@ type PrometheusConfig struct {
 // InstallPrometheus installs Prometheus in the cluster.
 // It waits for Prometheus pods to be ready before returning.
 func InstallPrometheus(
-	ctx context.Context,
 	rm ResourceManager,
 	cfg PrometheusConfig,
 ) (PrometheusInstance, error) {
