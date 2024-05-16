@@ -11,6 +11,7 @@ import (
 	v1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 
+	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 	staticConds "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/conditions"
@@ -127,10 +128,22 @@ func TestBuildGRPCRoutes(t *testing.T) {
 
 	validator := &validationfakes.FakeHTTPFieldsValidator{}
 
+	npCfg := &ngfAPI.NginxProxy{
+		Spec: ngfAPI.NginxProxySpec{
+			DisableHTTP2: false,
+		},
+	}
+
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewWithT(t)
-			routes := buildRoutesForGateways(validator, map[types.NamespacedName]*v1.HTTPRoute{}, grRoutes, test.gwNsNames)
+			routes := buildRoutesForGateways(
+				validator,
+				map[types.NamespacedName]*v1.HTTPRoute{},
+				grRoutes,
+				test.gwNsNames,
+				npCfg,
+			)
 			g.Expect(helpers.Diff(test.expected, routes)).To(BeEmpty())
 		})
 	}
@@ -268,10 +281,11 @@ func TestBuildGRPCRoute(t *testing.T) {
 	}
 
 	tests := []struct {
-		validator *validationfakes.FakeHTTPFieldsValidator
-		gr        *v1alpha2.GRPCRoute
-		expected  *L7Route
-		name      string
+		validator     *validationfakes.FakeHTTPFieldsValidator
+		gr            *v1alpha2.GRPCRoute
+		expected      *L7Route
+		name          string
+		http2disabled bool
 	}{
 		{
 			validator: createAllValidValidator(),
@@ -455,6 +469,28 @@ func TestBuildGRPCRoute(t *testing.T) {
 		},
 		{
 			validator: createAllValidValidator(),
+			gr:        grBoth,
+			expected: &L7Route{
+				RouteType: RouteTypeGRPC,
+				Source:    grBoth,
+				ParentRefs: []ParentRef{
+					{
+						Idx:         0,
+						Gateway:     gatewayNsName,
+						SectionName: grBoth.Spec.ParentRefs[0].SectionName,
+					},
+				},
+				Conditions: []conditions.Condition{
+					staticConds.NewRouteUnsupportedConfiguration(
+						`HTTP2 is disabled - cannot configure GRPCRoutes`,
+					),
+				},
+			},
+			http2disabled: true,
+			name:          "invalid route with disabled http2",
+		},
+		{
+			validator: createAllValidValidator(),
 			gr:        grOneInvalid,
 			expected: &L7Route{
 				Source:     grOneInvalid,
@@ -634,7 +670,7 @@ func TestBuildGRPCRoute(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewWithT(t)
 
-			route := buildGRPCRoute(test.validator, test.gr, gatewayNsNames)
+			route := buildGRPCRoute(test.validator, test.gr, gatewayNsNames, test.http2disabled)
 			g.Expect(helpers.Diff(test.expected, route)).To(BeEmpty())
 		})
 	}

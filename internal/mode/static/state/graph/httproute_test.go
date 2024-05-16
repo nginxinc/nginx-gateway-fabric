@@ -146,7 +146,13 @@ func TestBuildHTTPRoutes(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewWithT(t)
-			routes := buildRoutesForGateways(validator, hrRoutes, map[types.NamespacedName]*v1alpha2.GRPCRoute{}, test.gwNsNames)
+			routes := buildRoutesForGateways(
+				validator,
+				hrRoutes,
+				map[types.NamespacedName]*v1alpha2.GRPCRoute{},
+				test.gwNsNames,
+				nil,
+			)
 			g.Expect(helpers.Diff(test.expected, routes)).To(BeEmpty())
 		})
 	}

@@ -12,6 +12,7 @@ import (
 	v1 "sigs.k8s.io/gateway-api/apis/v1"
 	v1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
+	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
 	staticConds "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/conditions"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/validation"
@@ -134,12 +135,15 @@ func buildRoutesForGateways(
 	httpRoutes map[types.NamespacedName]*v1.HTTPRoute,
 	grpcRoutes map[types.NamespacedName]*v1alpha2.GRPCRoute,
 	gatewayNsNames []types.NamespacedName,
+	npCfg *ngfAPI.NginxProxy,
 ) map[RouteKey]*L7Route {
 	if len(gatewayNsNames) == 0 {
 		return nil
 	}
 
 	routes := make(map[RouteKey]*L7Route)
+
+	http2disabled := isHTTP2Disabled(npCfg)
 
 	for _, route := range httpRoutes {
 		r := buildHTTPRoute(validator, route, gatewayNsNames)
@@ -149,13 +153,20 @@ func buildRoutesForGateways(
 	}
 
 	for _, route := range grpcRoutes {
-		r := buildGRPCRoute(validator, route, gatewayNsNames)
+		r := buildGRPCRoute(validator, route, gatewayNsNames, http2disabled)
 		if r != nil {
 			routes[CreateRouteKey(route)] = r
 		}
 	}
 
 	return routes
+}
+
+func isHTTP2Disabled(npCfg *ngfAPI.NginxProxy) bool {
+	if npCfg == nil {
+		return false
+	}
+	return npCfg.Spec.DisableHTTP2
 }
 
 func buildSectionNameRefs(

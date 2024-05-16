@@ -44,6 +44,10 @@ const (
 	// Used with Accepted (false).
 	RouteReasonGatewayNotProgrammed v1.RouteConditionReason = "GatewayNotProgrammed"
 
+	// RouteReasonUnsupportedConfiguration is used when the associated Gateway does not support the Route.
+	// Used with Accepted (false).
+	RouteReasonUnsupportedConfiguration v1.RouteConditionReason = "UnsupportedConfiguration"
+
 	// GatewayReasonGatewayConflict indicates there are multiple Gateway resources to choose from,
 	// and we ignored the resource in question and picked another Gateway as the winner.
 	// This reason is used with GatewayConditionAccepted (false).
@@ -238,6 +242,17 @@ func NewRouteNoMatchingParent() conditions.Condition {
 		Status:  metav1.ConditionFalse,
 		Reason:  string(v1.RouteReasonNoMatchingParent),
 		Message: "Listener is not found for this parent ref",
+	}
+}
+
+// NewRouteUnsupportedConfiguration returns a Condition that indicates that the Route is not Accepted because
+// it is incompatible with the Gateway's configuration.
+func NewRouteUnsupportedConfiguration(msg string) conditions.Condition {
+	return conditions.Condition{
+		Type:    string(v1.RouteConditionAccepted),
+		Status:  metav1.ConditionFalse,
+		Reason:  string(RouteReasonUnsupportedConfiguration),
+		Message: msg,
 	}
 }
 
