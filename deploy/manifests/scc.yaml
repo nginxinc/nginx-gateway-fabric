@@ -8,6 +8,7 @@ allowHostDirVolumePlugin: false
 allowHostIPC: false
 allowHostNetwork: false
 allowHostPorts: false
+allowPrivilegeEscalation: true
 readOnlyRootFilesystem: true
 runAsUser:
   type: MustRunAsRange
