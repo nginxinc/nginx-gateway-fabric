@@ -83,12 +83,8 @@ func InstallPrometheus(
 		return PrometheusInstance{}, fmt.Errorf("failed to get Prometheus pods: %w", err)
 	}
 
-	if len(pods) == 0 {
-		return PrometheusInstance{}, errors.New("no Prometheus pods found")
-	}
-
-	if len(pods) > 1 {
-		return PrometheusInstance{}, errors.New("multiple Prometheus pods found, expected one")
+	if len(pods) != 1 {
+		return PrometheusInstance{}, fmt.Errorf("expected one Prometheus pod, found %d", len(pods))
 	}
 
 	pod := pods[0]
