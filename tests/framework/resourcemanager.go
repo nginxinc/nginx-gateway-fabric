@@ -103,10 +103,7 @@ func (rm *ResourceManager) Apply(resources []client.Object) error {
 				return err
 			}
 			resource.SetResourceVersion(obj.GetResourceVersion())
-			if err := rm.K8sClient.Update(ctx, resource); err != nil {
-				return err
-			}
-			return nil
+			return rm.K8sClient.Update(ctx, resource)
 		})
 		if err != nil {
 			return fmt.Errorf("error updating resource: %w", err)
@@ -144,10 +141,7 @@ func (rm *ResourceManager) ApplyFromFiles(files []string, namespace string) erro
 				return err
 			}
 			obj.SetResourceVersion(fetchedObj.GetResourceVersion())
-			if err := rm.K8sClient.Update(ctx, &obj); err != nil {
-				return err
-			}
-			return nil
+			return rm.K8sClient.Update(ctx, &obj)
 		})
 		if err != nil {
 			return fmt.Errorf("error updating resource: %w", err)
