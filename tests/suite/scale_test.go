@@ -98,8 +98,7 @@ var _ = Describe("Scale test", Ordered, Label("nfr", "scale"), func() {
 		// Scale tests need a dedicated NGF instance per test.
 		// Because they analyze the logs of NGF and NGINX, and they don't want to analyze the logs of other tests.
 		cfg := getDefaultSetupCfg()
-		labelFilter := GinkgoLabelFilter()
-		cfg.nfr = isNFR(labelFilter)
+		cfg.nfr = true
 		setup(cfg)
 
 		podNames, err := framework.GetReadyNGFPodNames(k8sClient, ngfNamespace, releaseName, timeoutConfig.GetTimeout)
@@ -744,8 +743,7 @@ var _ = Describe("Scale test", Ordered, Label("nfr", "scale"), func() {
 
 		// restoring NGF shared among tests in the suite
 		cfg := getDefaultSetupCfg()
-		labelFilter := GinkgoLabelFilter()
-		cfg.nfr = isNFR(labelFilter)
+		cfg.nfr = true
 		setup(cfg)
 	})
 })
