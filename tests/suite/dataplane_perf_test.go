@@ -97,7 +97,7 @@ var _ = Describe("Dataplane performance", Ordered, Label("nfr", "performance"), 
 			}
 			_, metrics := framework.RunLoadTest(cfg)
 
-			Expect(framework.WriteVegetaResults(outFile, &metrics)).To(Succeed())
+			Expect(framework.WriteMetricsResults(outFile, &metrics)).To(Succeed())
 
 			_, err = fmt.Fprint(outFile, "```\n")
 			Expect(err).ToNot(HaveOccurred())

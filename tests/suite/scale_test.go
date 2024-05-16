@@ -706,7 +706,7 @@ var _ = Describe("Scale test", Ordered, Label("nfr", "scale"), func() {
 
 			_, err = fmt.Fprintln(outFile, "```text")
 			Expect(err).ToNot(HaveOccurred())
-			Expect(framework.WriteVegetaResults(outFile, &metrics)).To(Succeed())
+			Expect(framework.WriteMetricsResults(outFile, &metrics)).To(Succeed())
 			_, err = fmt.Fprintln(outFile, "```")
 			Expect(err).ToNot(HaveOccurred())
 		}

@@ -105,8 +105,8 @@ func GenerateMemoryPNG(resultsDir, inputFilename, outputFilename string) error {
 	return generatePNG(resultsDir, inputFilename, outputFilename, "memory-plot.gp")
 }
 
-// WriteVegetaResults writes the vegeta metrics results to the results file in text format.
-func WriteVegetaResults(resultsFile *os.File, metrics *Metrics) error {
+// WriteMetricsResults writes the metrics results to the results file in text format.
+func WriteMetricsResults(resultsFile *os.File, metrics *Metrics) error {
 	reporter := vegeta.NewTextReporter(&metrics.Metrics)
 
 	return reporter.Report(resultsFile)

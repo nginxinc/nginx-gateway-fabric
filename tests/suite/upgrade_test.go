@@ -252,7 +252,7 @@ var _ = Describe("Upgrade testing", Label("nfr", "upgrade"), func() {
 			_, err := fmt.Fprint(resultsFile, res.testName)
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(framework.WriteVegetaResults(resultsFile, res.metrics)).To(Succeed())
+			Expect(framework.WriteMetricsResults(resultsFile, res.metrics)).To(Succeed())
 
 			link := fmt.Sprintf("\n\n![%[1]v.png](%[1]v.png)\n", res.scheme)
 			if *plusEnabled {
