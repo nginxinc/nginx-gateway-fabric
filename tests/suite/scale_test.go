@@ -66,8 +66,6 @@ var _ = Describe("Scale test", Ordered, Label("nfr", "scale"), func() {
 		// Because they analyze the logs of NGF and NGINX, and they don't want to analyze the logs of other tests.
 		teardown(releaseName)
 
-		Expect(resourceManager.Apply([]client.Object{ns})).To(Succeed())
-
 		var err error
 		resultsDir, err = framework.CreateResultsDir("scale", version)
 		Expect(err).ToNot(HaveOccurred())
@@ -100,6 +98,8 @@ var _ = Describe("Scale test", Ordered, Label("nfr", "scale"), func() {
 		cfg := getDefaultSetupCfg()
 		cfg.nfr = true
 		setup(cfg)
+
+		Expect(resourceManager.Apply([]client.Object{ns})).To(Succeed())
 
 		podNames, err := framework.GetReadyNGFPodNames(k8sClient, ngfNamespace, releaseName, timeoutConfig.GetTimeout)
 		Expect(err).ToNot(HaveOccurred())
@@ -471,6 +471,7 @@ var _ = Describe("Scale test", Ordered, Label("nfr", "scale"), func() {
 		ttrCsvFileName := framework.CreateResultsFilename("csv", "ttr", *plusEnabled)
 		ttrCsvFile, writer, err := framework.NewCSVResultsWriter(testResultsDir, ttrCsvFileName)
 		Expect(err).ToNot(HaveOccurred())
+		defer ttrCsvFile.Close()
 
 		Expect(resourceManager.Apply(objects.BaseObjects)).To(Succeed())
 
@@ -513,11 +514,6 @@ var _ = Describe("Scale test", Ordered, Label("nfr", "scale"), func() {
 		).To(Succeed())
 
 		Expect(os.Remove(ttrCsvFile.Name())).To(Succeed())
-
-		Expect(resourceManager.Delete(objects.BaseObjects)).To(Succeed())
-		for i := 0; i < len(objects.ScaleIterationGroups); i++ {
-			Expect(resourceManager.Delete(objects.ScaleIterationGroups[i])).To(Succeed())
-		}
 	}
 
 	runScaleUpstreams := func() {
@@ -545,10 +541,6 @@ var _ = Describe("Scale test", Ordered, Label("nfr", "scale"), func() {
 		Eventually(
 			createResponseChecker(url, address),
 		).WithTimeout(5 * time.Second).WithPolling(100 * time.Millisecond).Should(Succeed())
-
-		Expect(
-			resourceManager.DeleteFromFiles(upstreamsManifests, ns.Name),
-		).To(Succeed())
 	}
 
 	setNamespace := func(objects framework.ScaleObjects) {
@@ -716,18 +708,16 @@ var _ = Describe("Scale test", Ordered, Label("nfr", "scale"), func() {
 				"header-50": {"header-50-val"},
 			},
 		})
-
-		Expect(resourceManager.DeleteFromFiles(matchesManifests, ns.Name)).To(Succeed())
 	})
 
 	AfterEach(func() {
 		teardown(releaseName)
+		Expect(resourceManager.Delete([]client.Object{ns})).To(Succeed())
 	})
 
 	AfterAll(func() {
 		close(promPortForwardStopCh)
 		Expect(framework.UninstallPrometheus()).To(Succeed())
-		Expect(resourceManager.Delete([]client.Object{ns})).To(Succeed())
 		Expect(outFile.Close()).To(Succeed())
 
 		// restoring NGF shared among tests in the suite
