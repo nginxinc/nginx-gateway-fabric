@@ -110,5 +110,4 @@ type ProxySSLVerify struct {
 // Include holds all the files to include using the include directive.
 type Include struct {
 	Filename string
-	Content  []byte
 }

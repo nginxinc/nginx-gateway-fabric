@@ -77,33 +77,43 @@ func executeServers(conf dataplane.Configuration) []executeResult {
 		data: httpMatchConf,
 	}
 
-	includeFileResults := createIncludeFileResults(servers)
+	additionFileResults := createAdditionFileResults(conf)
 
-	allResults := make([]executeResult, 0, len(includeFileResults)+2)
-	allResults = append(allResults, includeFileResults...)
+	allResults := make([]executeResult, 0, len(additionFileResults)+2)
+	allResults = append(allResults, additionFileResults...)
 	allResults = append(allResults, serverResult, httpMatchResult)
 
 	return allResults
 }
 
-func createIncludeFileResults(servers []http.Server) []executeResult {
-	uniqueIncludes := make(map[string][]byte)
+func createAdditionFileResults(conf dataplane.Configuration) []executeResult {
+	uniqueAdditions := make(map[string][]byte)
 
-	for _, s := range servers {
-		for _, inc := range s.Includes {
-			uniqueIncludes[inc.Filename] = inc.Content
+	findUniqueAdditionsForServer := func(server dataplane.VirtualServer) {
+		for _, add := range server.Additions {
+			uniqueAdditions[createAdditionFileName(add)] = add.Bytes
 		}
 
-		for _, l := range s.Locations {
-			for _, inc := range l.Includes {
-				uniqueIncludes[inc.Filename] = inc.Content
+		for _, pr := range server.PathRules {
+			for _, mr := range pr.MatchRules {
+				for _, add := range mr.Additions {
+					uniqueAdditions[createAdditionFileName(add)] = add.Bytes
+				}
 			}
 		}
 	}
 
-	results := make([]executeResult, 0, len(uniqueIncludes))
+	for _, s := range conf.HTTPServers {
+		findUniqueAdditionsForServer(s)
+	}
 
-	for filename, contents := range uniqueIncludes {
+	for _, s := range conf.SSLServers {
+		findUniqueAdditionsForServer(s)
+	}
+
+	results := make([]executeResult, 0, len(uniqueAdditions))
+
+	for filename, contents := range uniqueAdditions {
 		results = append(results, executeResult{
 			dest: filename,
 			data: contents,
@@ -113,6 +123,14 @@ func createIncludeFileResults(servers []http.Server) []executeResult {
 	return results
 }
 
+func createAdditionFileName(addition *dataplane.Addition) string {
+	if addition == nil {
+		return ""
+	}
+
+	return fmt.Sprintf("%s/%s.conf", includesFolder, addition.Identifier)
+}
+
 func createIncludes(additions []*dataplane.Addition) []http.Include {
 	if len(additions) == 0 {
 		return nil
@@ -120,10 +138,9 @@ func createIncludes(additions []*dataplane.Addition) []http.Include {
 
 	includes := make([]http.Include, 0, len(additions))
 
-	for _, c := range additions {
+	for _, addition := range additions {
 		includes = append(includes, http.Include{
-			Filename: fmt.Sprintf("%s/%s.conf", includesFolder, c.Identifier),
-			Content:  c.Bytes,
+			Filename: createAdditionFileName(addition),
 		})
 	}
 

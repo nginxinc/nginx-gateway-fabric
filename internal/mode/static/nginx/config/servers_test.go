@@ -978,7 +978,6 @@ func TestCreateServers(t *testing.T) {
 				ProxySetHeaders: httpBaseHeaders,
 				Includes: []http.Include{
 					{
-						Content:  []byte("match-addition"),
 						Filename: includesFolder + "/match-addition.conf",
 					},
 				},
@@ -1001,11 +1000,9 @@ func TestCreateServers(t *testing.T) {
 			Includes: []http.Include{
 				{
 					Filename: includesFolder + "/server-addition-1.conf",
-					Content:  []byte("server-addition-1"),
 				},
 				{
 					Filename: includesFolder + "/server-addition-2.conf",
-					Content:  []byte("server-addition-2"),
 				},
 			},
 		},
@@ -1025,11 +1022,9 @@ func TestCreateServers(t *testing.T) {
 			Includes: []http.Include{
 				{
 					Filename: includesFolder + "/server-addition-1.conf",
-					Content:  []byte("server-addition-1"),
 				},
 				{
 					Filename: includesFolder + "/server-addition-3.conf",
-					Content:  []byte("server-addition-3"),
 				},
 			},
 		},
@@ -2355,15 +2350,12 @@ func TestCreateIncludes(t *testing.T) {
 			includes: []http.Include{
 				{
 					Filename: includesFolder + "/one.conf",
-					Content:  []byte("one"),
 				},
 				{
 					Filename: includesFolder + "/two.conf",
-					Content:  []byte("two"),
 				},
 				{
 					Filename: includesFolder + "/three.conf",
-					Content:  []byte("three"),
 				},
 			},
 		},
@@ -2379,91 +2371,115 @@ func TestCreateIncludes(t *testing.T) {
 	}
 }
 
-func TestCreateIncludeFileResults(t *testing.T) {
-	servers := []http.Server{
-		{
-			Locations: []http.Location{
-				{
-					Includes: []http.Include{
-						{
-							Filename: "include-1.conf",
-							Content:  []byte("include-1"),
-						},
-						{
-							Filename: "include-2.conf",
-							Content:  []byte("include-2"),
-						},
-						{
-							Filename: "include-3.conf",
-							Content:  []byte("include-3"),
+func TestCreateAdditionFileResults(t *testing.T) {
+	conf := dataplane.Configuration{
+		HTTPServers: []dataplane.VirtualServer{
+			{
+				Additions: []*dataplane.Addition{
+					{
+						Identifier: "include-1",
+						Bytes:      []byte("include-1"),
+					},
+					{
+						Identifier: "include-2",
+						Bytes:      []byte("include-2"),
+					},
+				},
+				PathRules: []dataplane.PathRule{
+					{
+						MatchRules: []dataplane.MatchRule{
+							{
+								Additions: []*dataplane.Addition{
+									{
+										Identifier: "include-3",
+										Bytes:      []byte("include-3"),
+									},
+									{
+										Identifier: "include-4",
+										Bytes:      []byte("include-4"),
+									},
+								},
+							},
 						},
 					},
 				},
 			},
-			Includes: []http.Include{
-				{
-					Filename: "include-1.conf",
-					Content:  []byte("include-1"), // duplicate
-				},
-				{
-					Filename: "include-4.conf",
-					Content:  []byte("include-4"),
+			{
+				Additions: []*dataplane.Addition{
+					{
+						Identifier: "include-1", // dupe
+						Bytes:      []byte("include-1"),
+					},
+					{
+						Identifier: "include-2", // dupe
+						Bytes:      []byte("include-2"),
+					},
 				},
 			},
 		},
-		{
-			Locations: []http.Location{
-				{
-					Includes: []http.Include{
-						{
-							Filename: "include-2.conf",
-							Content:  []byte("include-2"), // duplicate
-						},
-						{
-							Filename: "include-5.conf",
-							Content:  []byte("include-5"),
-						},
+		SSLServers: []dataplane.VirtualServer{
+			{
+				Additions: []*dataplane.Addition{
+					{
+						Identifier: "include-1", // dupe
+						Bytes:      []byte("include-1"),
+					},
+					{
+						Identifier: "include-2", // dupe
+						Bytes:      []byte("include-2"),
 					},
 				},
-			},
-			Includes: []http.Include{
-				{
-					Filename: "include-4.conf",
-					Content:  []byte("include-4"), // duplicate
-				},
-				{
-					Filename: "include-6.conf",
-					Content:  []byte("include-6"),
+				PathRules: []dataplane.PathRule{
+					{
+						MatchRules: []dataplane.MatchRule{
+							{
+								Additions: []*dataplane.Addition{
+									{
+										Identifier: "include-3",
+										Bytes:      []byte("include-3"), // dupe
+									},
+									{
+										Identifier: "include-5",
+										Bytes:      []byte("include-5"), // dupe
+									},
+									{
+										Identifier: "include-6",
+										Bytes:      []byte("include-6"),
+									},
+								},
+							},
+						},
+					},
 				},
 			},
 		},
 	}
 
-	results := createIncludeFileResults(servers)
+	results := createAdditionFileResults(conf)
 
 	expResults := []executeResult{
 		{
-			dest: "include-1.conf",
+			dest: includesFolder + "/" + "include-1.conf",
 			data: []byte("include-1"),
 		},
 		{
-			dest: "include-2.conf",
+			dest: includesFolder + "/" + "include-2.conf",
 			data: []byte("include-2"),
 		},
 		{
-			dest: "include-3.conf",
+			dest: includesFolder + "/" + "include-3.conf",
 			data: []byte("include-3"),
 		},
 		{
-			dest: "include-4.conf",
+			dest: includesFolder + "/" + "include-4.conf",
 			data: []byte("include-4"),
 		},
 		{
-			dest: "include-5.conf",
+			dest: includesFolder + "/" + "include-5.conf",
 			data: []byte("include-5"),
 		},
 		{
-			dest: "include-6.conf",
+			dest: includesFolder + "/" + "include-6.conf",
 			data: []byte("include-6"),
 		},
 	}
@@ -2471,4 +2487,32 @@ func TestCreateIncludeFileResults(t *testing.T) {
 	g := NewWithT(t)
 
 	g.Expect(results).To(ConsistOf(expResults))
+}
+
+func TestAdditionFilename(t *testing.T) {
+	tests := []struct {
+		name     string
+		addition *dataplane.Addition
+		expName  string
+	}{
+		{
+			name:     "nil addition",
+			addition: nil,
+			expName:  "",
+		},
+		{
+			name:     "normal addition",
+			addition: &dataplane.Addition{Identifier: "my-addition"},
+			expName:  includesFolder + "/" + "my-addition.conf",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			g := NewWithT(t)
+
+			name := createAdditionFileName(test.addition)
+			g.Expect(name).To(Equal(test.expName))
+		})
+	}
 }
