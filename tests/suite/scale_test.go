@@ -340,10 +340,9 @@ var _ = Describe("Scale test", Ordered, Label("nfr", "scale"), func() {
 
 		reloadCount := getFirstValueOfVector(
 			fmt.Sprintf(
-				`nginx_gateway_fabric_nginx_reloads_total{pod="%s"}`+
+				`nginx_gateway_fabric_nginx_reloads_total{pod="%[1]s"}`+
 					` - `+
-					`nginx_gateway_fabric_nginx_reloads_total{pod="%s"} @ %d`,
-				ngfPodName,
+					`nginx_gateway_fabric_nginx_reloads_total{pod="%[1]s"} @ %d`,
 				ngfPodName,
 				startTime.Unix(),
 			),
@@ -351,10 +350,9 @@ var _ = Describe("Scale test", Ordered, Label("nfr", "scale"), func() {
 
 		reloadErrsCount := getFirstValueOfVector(
 			fmt.Sprintf(
-				`nginx_gateway_fabric_nginx_reload_errors_total{pod="%s"}`+
+				`nginx_gateway_fabric_nginx_reload_errors_total{pod="%[1]s"}`+
 					` - `+
-					`nginx_gateway_fabric_nginx_reload_errors_total{pod="%s"} @ %d`,
-				ngfPodName,
+					`nginx_gateway_fabric_nginx_reload_errors_total{pod="%[1]s"} @ %d`,
 				ngfPodName,
 				startTime.Unix(),
 			),
@@ -362,27 +360,22 @@ var _ = Describe("Scale test", Ordered, Label("nfr", "scale"), func() {
 
 		reloadAvgTime := getFirstValueOfVector(
 			fmt.Sprintf(
-				`(nginx_gateway_fabric_nginx_reloads_milliseconds_sum{pod="%s"}`+
+				`(nginx_gateway_fabric_nginx_reloads_milliseconds_sum{pod="%[1]s"}`+
 					` - `+
-					`nginx_gateway_fabric_nginx_reloads_milliseconds_sum{pod="%s"} @ %d)`+
+					`nginx_gateway_fabric_nginx_reloads_milliseconds_sum{pod="%[1]s"} @ %[2]d)`+
 					` / `+
-					`(nginx_gateway_fabric_nginx_reloads_total{pod="%s"}`+
+					`(nginx_gateway_fabric_nginx_reloads_total{pod="%[1]s"}`+
 					` - `+
-					`nginx_gateway_fabric_nginx_reloads_total{pod="%s"} @ %d)`,
-				ngfPodName,
-				ngfPodName,
-				startTime.Unix(),
-				ngfPodName,
+					`nginx_gateway_fabric_nginx_reloads_total{pod="%[1]s"} @ %[2]d)`,
 				ngfPodName,
 				startTime.Unix(),
 			))
 
 		reloadBuckets := getBuckets(
 			fmt.Sprintf(
-				`nginx_gateway_fabric_nginx_reloads_milliseconds_bucket{pod="%s"}`+
+				`nginx_gateway_fabric_nginx_reloads_milliseconds_bucket{pod="%[1]s"}`+
 					` - `+
-					`nginx_gateway_fabric_nginx_reloads_milliseconds_bucket{pod="%s"} @ %d`,
-				ngfPodName,
+					`nginx_gateway_fabric_nginx_reloads_milliseconds_bucket{pod="%[1]s"} @ %d`,
 				ngfPodName,
 				startTime.Unix(),
 			),
@@ -390,10 +383,9 @@ var _ = Describe("Scale test", Ordered, Label("nfr", "scale"), func() {
 
 		eventsCount := getFirstValueOfVector(
 			fmt.Sprintf(
-				`nginx_gateway_fabric_event_batch_processing_milliseconds_count{pod="%s"}`+
+				`nginx_gateway_fabric_event_batch_processing_milliseconds_count{pod="%[1]s"}`+
 					` - `+
-					`nginx_gateway_fabric_event_batch_processing_milliseconds_count{pod="%s"} @ %d`,
-				ngfPodName,
+					`nginx_gateway_fabric_event_batch_processing_milliseconds_count{pod="%[1]s"} @ %d`,
 				ngfPodName,
 				startTime.Unix(),
 			),
@@ -401,17 +393,13 @@ var _ = Describe("Scale test", Ordered, Label("nfr", "scale"), func() {
 
 		eventsAvgTime := getFirstValueOfVector(
 			fmt.Sprintf(
-				`(nginx_gateway_fabric_event_batch_processing_milliseconds_sum{pod="%s"}`+
+				`(nginx_gateway_fabric_event_batch_processing_milliseconds_sum{pod="%[1]s"}`+
 					` - `+
-					`nginx_gateway_fabric_event_batch_processing_milliseconds_sum{pod="%s"} @ %d)`+
+					`nginx_gateway_fabric_event_batch_processing_milliseconds_sum{pod="%[1]s"} @ %[2]d)`+
 					` / `+
-					`(nginx_gateway_fabric_event_batch_processing_milliseconds_count{pod="%s"}`+
+					`(nginx_gateway_fabric_event_batch_processing_milliseconds_count{pod="%[1]s"}`+
 					` - `+
-					`nginx_gateway_fabric_event_batch_processing_milliseconds_count{pod="%s"} @ %d)`,
-				ngfPodName,
-				ngfPodName,
-				startTime.Unix(),
-				ngfPodName,
+					`nginx_gateway_fabric_event_batch_processing_milliseconds_count{pod="%[1]s"} @ %[2]d)`,
 				ngfPodName,
 				startTime.Unix(),
 			),
@@ -419,10 +407,9 @@ var _ = Describe("Scale test", Ordered, Label("nfr", "scale"), func() {
 
 		eventsBuckets := getBuckets(
 			fmt.Sprintf(
-				`nginx_gateway_fabric_event_batch_processing_milliseconds_bucket{pod="%s"}`+
+				`nginx_gateway_fabric_event_batch_processing_milliseconds_bucket{pod="%[1]s"}`+
 					` - `+
-					`nginx_gateway_fabric_event_batch_processing_milliseconds_bucket{pod="%s"} @ %d`,
-				ngfPodName,
+					`nginx_gateway_fabric_event_batch_processing_milliseconds_bucket{pod="%[1]s"} @ %d`,
 				ngfPodName,
 				startTime.Unix(),
 			),
