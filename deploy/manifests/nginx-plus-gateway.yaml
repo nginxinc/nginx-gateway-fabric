@@ -98,7 +98,6 @@ rules:
   - gateway.nginx.org
   resources:
   - nginxgateways
-  - clientsettingspolicies
   verbs:
   - get
   - list
@@ -107,6 +106,7 @@ rules:
   - gateway.nginx.org
   resources:
   - nginxproxies
+  - clientsettingspolicies
   verbs:
   - list
   - watch
