@@ -135,7 +135,7 @@ func (g *Graph) IsNGFPolicyRelevant(
 	}
 
 	if policy == nil {
-		return false
+		panic("policy cannot be nil")
 	}
 
 	ref := policy.GetTargetRef()

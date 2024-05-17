@@ -1022,9 +1022,9 @@ func TestIsNGFPolicyRelevant(t *testing.T) {
 			expRelevant: true,
 		},
 		{
-			name:        "irrelevant; policy does not exist in graph and is nil (delete event)",
+			name:        "irrelevant; policy does not exist in graph and is empty (delete event)",
 			graph:       getGraph(),
-			policy:      nil,
+			policy:      &policiesfakes.FakePolicy{},
 			nsname:      types.NamespacedName{Namespace: "diff", Name: "diff"},
 			expRelevant: false,
 		},
@@ -1107,4 +1107,17 @@ func TestIsNGFPolicyRelevant(t *testing.T) {
 			g.Expect(relevant).To(Equal(test.expRelevant))
 		})
 	}
+}
+
+func TestIsNGFPolicyRelevantPanics(t *testing.T) {
+	g := NewWithT(t)
+	graph := &Graph{}
+	nsname := types.NamespacedName{Namespace: "test", Name: "pol"}
+	gvk := schema.GroupVersionKind{Kind: "MyKind"}
+
+	isRelevant := func() {
+		_ = graph.IsNGFPolicyRelevant(nil, gvk, nsname)
+	}
+
+	g.Expect(isRelevant).To(Panic())
 }
