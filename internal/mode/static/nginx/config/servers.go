@@ -125,7 +125,7 @@ func createAdditionFileResults(conf dataplane.Configuration) []executeResult {
 
 func createAdditionFileName(addition *dataplane.Addition) string {
 	if addition == nil {
-		return ""
+		panic("addition is nil")
 	}
 
 	return fmt.Sprintf("%s/%s.conf", includesFolder, addition.Identifier)

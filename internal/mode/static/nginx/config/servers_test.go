@@ -2510,29 +2510,14 @@ func TestCreateAdditionFileResults(t *testing.T) {
 }
 
 func TestAdditionFilename(t *testing.T) {
-	tests := []struct {
-		name     string
-		addition *dataplane.Addition
-		expName  string
-	}{
-		{
-			name:     "nil addition",
-			addition: nil,
-			expName:  "",
-		},
-		{
-			name:     "normal addition",
-			addition: &dataplane.Addition{Identifier: "my-addition"},
-			expName:  includesFolder + "/" + "my-addition.conf",
-		},
+	g := NewWithT(t)
+
+	name := createAdditionFileName(&dataplane.Addition{Identifier: "my-addition"})
+	g.Expect(name).To(Equal(includesFolder + "/" + "my-addition.conf"))
+
+	create := func() {
+		_ = createAdditionFileName(nil)
 	}
 
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			g := NewWithT(t)
-
-			name := createAdditionFileName(test.addition)
-			g.Expect(name).To(Equal(test.expName))
-		})
-	}
+	g.Expect(create).To(Panic())
 }
