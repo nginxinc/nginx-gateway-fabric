@@ -1,7 +1,6 @@
 package clientsettings
 
 import (
-	"fmt"
 	"text/template"
 
 	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
@@ -39,10 +38,7 @@ keepalive_timeout {{ .KeepAlive.Timeout.Server }};
 
 // Generate generates configuration as []byte for a ClientSettingsPolicy.
 func Generate(policy policies.Policy) []byte {
-	csp, ok := policy.(*ngfAPI.ClientSettingsPolicy)
-	if !ok {
-		panic(fmt.Sprintf("expected ClientSettingsPolicy, got: %T", policy))
-	}
+	csp := helpers.MustCastObject[*ngfAPI.ClientSettingsPolicy](policy)
 
 	return helpers.MustExecuteTemplate(tmpl, csp.Spec)
 }

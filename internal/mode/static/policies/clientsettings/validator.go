@@ -9,6 +9,7 @@ import (
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/kinds"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/policies"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/validation"
@@ -27,10 +28,7 @@ func NewValidator(genericValidator validation.GenericValidator) *Validator {
 
 // Validate validates the spec of a ClientSettingsPolicy.
 func (v *Validator) Validate(policy policies.Policy) error {
-	csp, ok := policy.(*ngfAPI.ClientSettingsPolicy)
-	if !ok {
-		panic(fmt.Sprintf("expected ClientSettingsPolicy, got: %T", policy))
-	}
+	csp := helpers.MustCastObject[*ngfAPI.ClientSettingsPolicy](policy)
 
 	if err := validateTargetRef(csp.Spec.TargetRef); err != nil {
 		return err
@@ -41,14 +39,10 @@ func (v *Validator) Validate(policy policies.Policy) error {
 
 // Conflicts returns true if the two ClientSettingsPolicies conflict.
 func (v *Validator) Conflicts(polA, polB policies.Policy) bool {
-	a, okA := polA.(*ngfAPI.ClientSettingsPolicy)
-	b, okB := polB.(*ngfAPI.ClientSettingsPolicy)
+	cspA := helpers.MustCastObject[*ngfAPI.ClientSettingsPolicy](polA)
+	cspB := helpers.MustCastObject[*ngfAPI.ClientSettingsPolicy](polB)
 
-	if !okA || !okB {
-		panic(fmt.Sprintf("expected ClientSettingsPolicies, got: %T, %T", polA, polB))
-	}
-
-	return conflicts(a.Spec, b.Spec)
+	return conflicts(cspA.Spec, cspB.Spec)
 }
 
 func conflicts(a, b ngfAPI.ClientSettingsPolicySpec) bool {
