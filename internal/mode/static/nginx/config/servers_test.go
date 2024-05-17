@@ -28,7 +28,7 @@ func TestExecuteServers(t *testing.T) {
 			{
 				Hostname: "cafe.example.com",
 				Port:     8080,
-				Additions: []*dataplane.Addition{
+				Additions: []dataplane.Addition{
 					{
 						Bytes:      []byte("addition-1"),
 						Identifier: "addition-1",
@@ -80,7 +80,7 @@ func TestExecuteServers(t *testing.T) {
 						},
 					},
 				},
-				Additions: []*dataplane.Addition{
+				Additions: []dataplane.Addition{
 					{
 						Bytes:      []byte("addition-1"),
 						Identifier: "addition-1", // duplicate
@@ -590,7 +590,7 @@ func TestCreateServers(t *testing.T) {
 				{
 					Match:        dataplane.Match{},
 					BackendGroup: fooGroup,
-					Additions: []*dataplane.Addition{
+					Additions: []dataplane.Addition{
 						{
 							Bytes:      []byte("path-only-match-addition"),
 							Identifier: "path-only-match-addition",
@@ -608,7 +608,7 @@ func TestCreateServers(t *testing.T) {
 						Method: helpers.GetPointer("GET"),
 					},
 					BackendGroup: fooGroup,
-					Additions: []*dataplane.Addition{
+					Additions: []dataplane.Addition{
 						{
 							Bytes:      []byte("match-addition"),
 							Identifier: "match-addition",
@@ -628,7 +628,7 @@ func TestCreateServers(t *testing.T) {
 			Hostname:  "cafe.example.com",
 			PathRules: cafePathRules,
 			Port:      8080,
-			Additions: []*dataplane.Addition{
+			Additions: []dataplane.Addition{
 				{
 					Bytes:      []byte("server-addition-1"),
 					Identifier: "server-addition-1",
@@ -651,7 +651,7 @@ func TestCreateServers(t *testing.T) {
 			SSL:       &dataplane.SSL{KeyPairID: sslKeyPairID},
 			PathRules: cafePathRules,
 			Port:      8443,
-			Additions: []*dataplane.Addition{
+			Additions: []dataplane.Addition{
 				{
 					Bytes:      []byte("server-addition-1"),
 					Identifier: "server-addition-1",
@@ -2349,7 +2349,7 @@ func TestGenerateResponseHeaders(t *testing.T) {
 func TestCreateIncludes(t *testing.T) {
 	tests := []struct {
 		name      string
-		additions []*dataplane.Addition
+		additions []dataplane.Addition
 		includes  []string
 	}{
 		{
@@ -2359,7 +2359,7 @@ func TestCreateIncludes(t *testing.T) {
 		},
 		{
 			name: "additions",
-			additions: []*dataplane.Addition{
+			additions: []dataplane.Addition{
 				{
 					Bytes:      []byte("one"),
 					Identifier: "one",
@@ -2395,7 +2395,7 @@ func TestCreateAdditionFileResults(t *testing.T) {
 	conf := dataplane.Configuration{
 		HTTPServers: []dataplane.VirtualServer{
 			{
-				Additions: []*dataplane.Addition{
+				Additions: []dataplane.Addition{
 					{
 						Identifier: "include-1",
 						Bytes:      []byte("include-1"),
@@ -2409,7 +2409,7 @@ func TestCreateAdditionFileResults(t *testing.T) {
 					{
 						MatchRules: []dataplane.MatchRule{
 							{
-								Additions: []*dataplane.Addition{
+								Additions: []dataplane.Addition{
 									{
 										Identifier: "include-3",
 										Bytes:      []byte("include-3"),
@@ -2425,7 +2425,7 @@ func TestCreateAdditionFileResults(t *testing.T) {
 				},
 			},
 			{
-				Additions: []*dataplane.Addition{
+				Additions: []dataplane.Addition{
 					{
 						Identifier: "include-1", // dupe
 						Bytes:      []byte("include-1"),
@@ -2439,7 +2439,7 @@ func TestCreateAdditionFileResults(t *testing.T) {
 		},
 		SSLServers: []dataplane.VirtualServer{
 			{
-				Additions: []*dataplane.Addition{
+				Additions: []dataplane.Addition{
 					{
 						Identifier: "include-1", // dupe
 						Bytes:      []byte("include-1"),
@@ -2453,7 +2453,7 @@ func TestCreateAdditionFileResults(t *testing.T) {
 					{
 						MatchRules: []dataplane.MatchRule{
 							{
-								Additions: []*dataplane.Addition{
+								Additions: []dataplane.Addition{
 									{
 										Identifier: "include-3",
 										Bytes:      []byte("include-3"), // dupe
@@ -2512,12 +2512,6 @@ func TestCreateAdditionFileResults(t *testing.T) {
 func TestAdditionFilename(t *testing.T) {
 	g := NewWithT(t)
 
-	name := createAdditionFileName(&dataplane.Addition{Identifier: "my-addition"})
+	name := createAdditionFileName(dataplane.Addition{Identifier: "my-addition"})
 	g.Expect(name).To(Equal(includesFolder + "/" + "my-addition.conf"))
-
-	create := func() {
-		_ = createAdditionFileName(nil)
-	}
-
-	g.Expect(create).To(Panic())
 }

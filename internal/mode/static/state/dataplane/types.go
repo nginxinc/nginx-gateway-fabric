@@ -69,7 +69,7 @@ type VirtualServer struct {
 	// PathRules is a collection of routing rules.
 	PathRules []PathRule
 	// Additions is a list of config additions for the server.
-	Additions []*Addition
+	Additions []Addition
 	// Port is the port of the server.
 	Port int32
 	// IsDefault indicates whether the server is the default server.
@@ -215,7 +215,7 @@ type MatchRule struct {
 	// Match holds the match for the rule.
 	Match Match
 	// Additions holds the config additions for the rule.
-	Additions []*Addition
+	Additions []Addition
 	// BackendGroup is the group of Backends that the rule routes to.
 	BackendGroup BackendGroup
 }

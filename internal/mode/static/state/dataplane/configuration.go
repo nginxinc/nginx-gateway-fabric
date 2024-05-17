@@ -657,19 +657,19 @@ func buildBaseHTTPConfig(g *graph.Graph) BaseHTTPConfig {
 	return baseConfig
 }
 
-func buildAdditions(policies []*graph.Policy, generator policies.ConfigGenerator) []*Addition {
+func buildAdditions(policies []*graph.Policy, generator policies.ConfigGenerator) []Addition {
 	if len(policies) == 0 {
 		return nil
 	}
 
-	additions := make([]*Addition, 0, len(policies))
+	additions := make([]Addition, 0, len(policies))
 
 	for _, policy := range policies {
 		if !policy.Valid {
 			continue
 		}
 
-		additions = append(additions, &Addition{
+		additions = append(additions, Addition{
 			Bytes: generator.Generate(policy.Source),
 			Identifier: fmt.Sprintf(
 				"%s_%s_%s",

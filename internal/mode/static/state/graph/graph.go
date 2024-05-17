@@ -142,13 +142,13 @@ func (g *Graph) IsNGFPolicyRelevant(
 
 	switch ref.Group {
 	case gatewayv1.GroupName:
-		return g.gatewayResourceExist(ref, policy.GetNamespace())
+		return g.gatewayAPIResourceExist(ref, policy.GetNamespace())
 	default:
 		return false
 	}
 }
 
-func (g *Graph) gatewayResourceExist(ref v1alpha2.LocalPolicyTargetReference, policyNs string) bool {
+func (g *Graph) gatewayAPIResourceExist(ref v1alpha2.LocalPolicyTargetReference, policyNs string) bool {
 	refNsName := types.NamespacedName{Name: string(ref.Name), Namespace: policyNs}
 
 	switch kind := ref.Kind; kind {

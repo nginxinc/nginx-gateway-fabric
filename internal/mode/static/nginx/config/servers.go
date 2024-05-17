@@ -123,15 +123,11 @@ func createAdditionFileResults(conf dataplane.Configuration) []executeResult {
 	return results
 }
 
-func createAdditionFileName(addition *dataplane.Addition) string {
-	if addition == nil {
-		panic("addition is nil")
-	}
-
+func createAdditionFileName(addition dataplane.Addition) string {
 	return fmt.Sprintf("%s/%s.conf", includesFolder, addition.Identifier)
 }
 
-func createIncludes(additions []*dataplane.Addition) []string {
+func createIncludes(additions []dataplane.Addition) []string {
 	if len(additions) == 0 {
 		return nil
 	}

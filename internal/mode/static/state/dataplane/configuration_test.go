@@ -2120,7 +2120,7 @@ func TestBuildConfiguration(t *testing.T) {
 					{
 						IsDefault: true,
 						Port:      80,
-						Additions: []*Addition{
+						Additions: []Addition{
 							{
 								Bytes:      []byte("apple"),
 								Identifier: "ApplePolicy_default_attach-gw",
@@ -2141,7 +2141,7 @@ func TestBuildConfiguration(t *testing.T) {
 									{
 										Source:       &hrWithPolicy.ObjectMeta,
 										BackendGroup: expHRWithPolicyGroups[0],
-										Additions: []*Addition{
+										Additions: []Addition{
 											{
 												Bytes:      []byte("lemon"),
 												Identifier: "LemonPolicy_default_attach-hr",
@@ -2152,7 +2152,7 @@ func TestBuildConfiguration(t *testing.T) {
 							},
 						},
 						Port: 80,
-						Additions: []*Addition{
+						Additions: []Addition{
 							{
 								Bytes:      []byte("apple"),
 								Identifier: "ApplePolicy_default_attach-gw",
@@ -2168,7 +2168,7 @@ func TestBuildConfiguration(t *testing.T) {
 					{
 						IsDefault: true,
 						Port:      443,
-						Additions: []*Addition{
+						Additions: []Addition{
 							{
 								Bytes:      []byte("apple"),
 								Identifier: "ApplePolicy_default_attach-gw",
@@ -2189,7 +2189,7 @@ func TestBuildConfiguration(t *testing.T) {
 									{
 										BackendGroup: expHTTPSHRWithPolicyGroups[0],
 										Source:       &httpsHRWithPolicy.ObjectMeta,
-										Additions: []*Addition{
+										Additions: []Addition{
 											{
 												Bytes:      []byte("lime"),
 												Identifier: "LimePolicy_default_attach-hr",
@@ -2201,7 +2201,7 @@ func TestBuildConfiguration(t *testing.T) {
 						},
 						SSL:  &SSL{KeyPairID: "ssl_keypair_test_secret-1"},
 						Port: 443,
-						Additions: []*Addition{
+						Additions: []Addition{
 							{
 								Bytes:      []byte("apple"),
 								Identifier: "ApplePolicy_default_attach-gw",
@@ -2216,7 +2216,7 @@ func TestBuildConfiguration(t *testing.T) {
 						Hostname: wildcardHostname,
 						SSL:      &SSL{KeyPairID: "ssl_keypair_test_secret-1"},
 						Port:     443,
-						Additions: []*Addition{
+						Additions: []Addition{
 							{
 								Bytes:      []byte("apple"),
 								Identifier: "ApplePolicy_default_attach-gw",
@@ -3056,7 +3056,7 @@ func TestBuildAdditions(t *testing.T) {
 	tests := []struct {
 		name         string
 		policies     []*graph.Policy
-		expAdditions []*Addition
+		expAdditions []Addition
 	}{
 		{
 			name:         "nil policies",
@@ -3087,7 +3087,7 @@ func TestBuildAdditions(t *testing.T) {
 					Valid:  true,
 				},
 			},
-			expAdditions: []*Addition{
+			expAdditions: []Addition{
 				{
 					Identifier: "Kind1_test_valid1",
 					Bytes:      []byte("valid1"),
