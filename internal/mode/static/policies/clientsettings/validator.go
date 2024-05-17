@@ -1,7 +1,6 @@
 package clientsettings
 
 import (
-	"fmt"
 	"slices"
 
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -79,10 +78,10 @@ func validateTargetRef(ref v1alpha2.LocalPolicyTargetReference) error {
 	if ref.Group != gatewayv1.GroupName {
 		path := basePath.Child("group")
 
-		return field.Invalid(
+		return field.NotSupported(
 			path,
 			ref.Group,
-			fmt.Sprintf("unsupported targetRef Group %q; must be %s", ref.Group, gatewayv1.GroupName),
+			[]string{gatewayv1.GroupName},
 		)
 	}
 
@@ -91,10 +90,10 @@ func validateTargetRef(ref v1alpha2.LocalPolicyTargetReference) error {
 	if !slices.Contains(supportedKinds, ref.Kind) {
 		path := basePath.Child("kind")
 
-		return field.Invalid(
+		return field.NotSupported(
 			path,
 			ref.Kind,
-			fmt.Sprintf("unsupported targetRef Kind %q; Kind must be one of: %v", ref.Kind, supportedKinds),
+			supportedKinds,
 		)
 	}
 
