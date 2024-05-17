@@ -3,7 +3,7 @@
 kind: SecurityContextConstraints
 apiVersion: security.openshift.io/v1
 metadata:
-  name: {{ .Values.sccName }}
+  name: {{ include "nginx-gateway.scc-name" . }}
 allowPrivilegeEscalation: {{ .Values.nginxGateway.securityContext.allowPrivilegeEscalation }}
 allowHostDirVolumePlugin: false
 allowHostIPC: false

@@ -155,7 +155,7 @@ rules:
   resources:
   - securitycontextconstraints
   resourceNames:
-  - {{ .Values.sccName }}
+  - {{ include "nginx-gateway.scc-name" . }}
   verbs:
   - use
 {{- end }}
