@@ -290,7 +290,7 @@ var _ = Describe("ChangeProcessor", func() {
 				GatewayClassName: gcName,
 				Logger:           zap.New(),
 				Validators:       createAlwaysValidValidators(),
-				Scheme:           createScheme(),
+				MustExtractGVK:   kinds.NewMustExtractGKV(createScheme()),
 			})
 		})
 
@@ -1454,7 +1454,7 @@ var _ = Describe("ChangeProcessor", func() {
 					GatewayClassName: gcName,
 					Logger:           zap.New(),
 					Validators:       createAlwaysValidValidators(),
-					Scheme:           createScheme(),
+					MustExtractGVK:   kinds.NewMustExtractGKV(createScheme()),
 				})
 				processor.CaptureUpsertChange(gc)
 				processor.CaptureUpsertChange(gw)
@@ -1732,7 +1732,7 @@ var _ = Describe("ChangeProcessor", func() {
 				GatewayCtlrName:  "test.controller",
 				GatewayClassName: "test-class",
 				Validators:       createAlwaysValidValidators(),
-				Scheme:           createScheme(),
+				MustExtractGVK:   kinds.NewMustExtractGKV(createScheme()),
 			})
 
 			secretNsName = types.NamespacedName{Namespace: "test", Name: "tls-secret"}
@@ -2259,7 +2259,7 @@ var _ = Describe("ChangeProcessor", func() {
 				GatewayCtlrName:  "test.controller",
 				GatewayClassName: "my-class",
 				Validators:       createAlwaysValidValidators(),
-				Scheme:           createScheme(),
+				MustExtractGVK:   kinds.NewMustExtractGKV(createScheme()),
 			})
 		})
 

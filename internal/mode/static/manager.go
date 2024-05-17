@@ -25,7 +25,6 @@ import (
 	"k8s.io/client-go/tools/record"
 	ctlr "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	ctrlcfg "sigs.k8s.io/controller-runtime/pkg/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/metrics"
@@ -114,14 +113,7 @@ func StartManager(cfg config.Config) error {
 		int32(cfg.HealthConfig.Port):  "HealthPort",
 	}
 
-	mustExtractGVK := func(obj client.Object) schema.GroupVersionKind {
-		gvk, err := apiutil.GVKForObject(obj, scheme)
-		if err != nil {
-			panic(fmt.Sprintf("could not extract GVK for object: %T", obj))
-		}
-
-		return gvk
-	}
+	mustExtractGVK := kinds.NewMustExtractGKV(scheme)
 
 	genericValidator := ngxvalidation.GenericValidator{}
 	policyManager := createPolicyManager(mustExtractGVK, genericValidator)
@@ -136,7 +128,7 @@ func StartManager(cfg config.Config) error {
 			PolicyValidator:     policyManager,
 		},
 		EventRecorder:  recorder,
-		Scheme:         scheme,
+		MustExtractGVK: mustExtractGVK,
 		ProtectedPorts: protectedPorts,
 	})
 

@@ -1,7 +1,6 @@
 package state
 
 import (
-	"fmt"
 	"sync"
 
 	"github.com/go-logr/logr"
@@ -9,18 +8,16 @@ import (
 	discoveryV1 "k8s.io/api/discovery/v1"
 	apiext "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	v1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/apis/v1alpha3"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/gatewayclass"
+	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/kinds"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/policies"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/graph"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/validation"
@@ -67,8 +64,8 @@ type ChangeProcessorConfig struct {
 	Validators validation.Validators
 	// EventRecorder records events for Kubernetes resources.
 	EventRecorder record.EventRecorder
-	// Scheme is the Kubernetes scheme.
-	Scheme *runtime.Scheme
+	// MustExtractGVK is a function that extracts schema.GroupVersionKind from a client.Object.
+	MustExtractGVK kinds.MustExtractGVK
 	// ProtectedPorts are the ports that may not be configured by a listener with a descriptive name of the ports.
 	ProtectedPorts graph.ProtectedPorts
 	// Logger is the logger for this Change Processor.
@@ -112,14 +109,6 @@ func NewChangeProcessorImpl(cfg ChangeProcessorConfig) *ChangeProcessorImpl {
 		NGFPolicies:        make(map[graph.PolicyKey]policies.Policy),
 	}
 
-	extractGVK := func(obj client.Object) schema.GroupVersionKind {
-		gvk, err := apiutil.GVKForObject(obj, cfg.Scheme)
-		if err != nil {
-			panic(fmt.Errorf("failed to get GVK for object %T: %w", obj, err))
-		}
-		return gvk
-	}
-
 	processor := &ChangeProcessorImpl{
 		cfg:          cfg,
 		clusterState: clusterStore,
@@ -135,84 +124,84 @@ func NewChangeProcessorImpl(cfg ChangeProcessorConfig) *ChangeProcessorImpl {
 			return false
 		}
 
-		gvk := extractGVK(obj)
+		gvk := cfg.MustExtractGVK(obj)
 
 		return processor.latestGraph != nil && processor.latestGraph.IsNGFPolicyRelevant(pol, gvk, nsname)
 	}
 
 	// Use this object store for all NGF policies
-	commonPolicyObjectStore := newNGFPolicyObjectStore(clusterStore.NGFPolicies, extractGVK)
+	commonPolicyObjectStore := newNGFPolicyObjectStore(clusterStore.NGFPolicies, cfg.MustExtractGVK)
 
 	trackingUpdater := newChangeTrackingUpdater(
-		extractGVK,
+		cfg.MustExtractGVK,
 		[]changeTrackingUpdaterObjectTypeCfg{
 			{
-				gvk:       extractGVK(&v1.GatewayClass{}),
+				gvk:       cfg.MustExtractGVK(&v1.GatewayClass{}),
 				store:     newObjectStoreMapAdapter(clusterStore.GatewayClasses),
 				predicate: nil,
 			},
 			{
-				gvk:       extractGVK(&v1.Gateway{}),
+				gvk:       cfg.MustExtractGVK(&v1.Gateway{}),
 				store:     newObjectStoreMapAdapter(clusterStore.Gateways),
 				predicate: nil,
 			},
 			{
-				gvk:       extractGVK(&v1.HTTPRoute{}),
+				gvk:       cfg.MustExtractGVK(&v1.HTTPRoute{}),
 				store:     newObjectStoreMapAdapter(clusterStore.HTTPRoutes),
 				predicate: nil,
 			},
 			{
-				gvk:       extractGVK(&v1beta1.ReferenceGrant{}),
+				gvk:       cfg.MustExtractGVK(&v1beta1.ReferenceGrant{}),
 				store:     newObjectStoreMapAdapter(clusterStore.ReferenceGrants),
 				predicate: nil,
 			},
 			{
-				gvk:       extractGVK(&v1alpha3.BackendTLSPolicy{}),
+				gvk:       cfg.MustExtractGVK(&v1alpha3.BackendTLSPolicy{}),
 				store:     newObjectStoreMapAdapter(clusterStore.BackendTLSPolicies),
 				predicate: nil,
 			},
 			{
-				gvk:       extractGVK(&v1.GRPCRoute{}),
+				gvk:       cfg.MustExtractGVK(&v1.GRPCRoute{}),
 				store:     newObjectStoreMapAdapter(clusterStore.GRPCRoutes),
 				predicate: nil,
 			},
 			{
-				gvk:       extractGVK(&apiv1.Namespace{}),
+				gvk:       cfg.MustExtractGVK(&apiv1.Namespace{}),
 				store:     newObjectStoreMapAdapter(clusterStore.Namespaces),
 				predicate: funcPredicate{stateChanged: isReferenced},
 			},
 			{
-				gvk:       extractGVK(&apiv1.Service{}),
+				gvk:       cfg.MustExtractGVK(&apiv1.Service{}),
 				store:     newObjectStoreMapAdapter(clusterStore.Services),
 				predicate: funcPredicate{stateChanged: isReferenced},
 			},
 			{
-				gvk:       extractGVK(&discoveryV1.EndpointSlice{}),
+				gvk:       cfg.MustExtractGVK(&discoveryV1.EndpointSlice{}),
 				store:     nil,
 				predicate: funcPredicate{stateChanged: isReferenced},
 			},
 			{
-				gvk:       extractGVK(&apiv1.Secret{}),
+				gvk:       cfg.MustExtractGVK(&apiv1.Secret{}),
 				store:     newObjectStoreMapAdapter(clusterStore.Secrets),
 				predicate: funcPredicate{stateChanged: isReferenced},
 			},
 			{
-				gvk:       extractGVK(&apiv1.ConfigMap{}),
+				gvk:       cfg.MustExtractGVK(&apiv1.ConfigMap{}),
 				store:     newObjectStoreMapAdapter(clusterStore.ConfigMaps),
 				predicate: funcPredicate{stateChanged: isReferenced},
 			},
 			{
-				gvk:       extractGVK(&apiext.CustomResourceDefinition{}),
+				gvk:       cfg.MustExtractGVK(&apiext.CustomResourceDefinition{}),
 				store:     newObjectStoreMapAdapter(clusterStore.CRDMetadata),
 				predicate: annotationChangedPredicate{annotation: gatewayclass.BundleVersionAnnotation},
 			},
 			{
-				gvk:       extractGVK(&ngfAPI.NginxProxy{}),
+				gvk:       cfg.MustExtractGVK(&ngfAPI.NginxProxy{}),
 				store:     newObjectStoreMapAdapter(clusterStore.NginxProxies),
 				predicate: funcPredicate{stateChanged: isReferenced},
 			},
 			{
-				gvk:       extractGVK(&ngfAPI.ClientSettingsPolicy{}),
+				gvk:       cfg.MustExtractGVK(&ngfAPI.ClientSettingsPolicy{}),
 				store:     commonPolicyObjectStore,
 				predicate: funcPredicate{stateChanged: isNGFPolicyRelevant},
 			},

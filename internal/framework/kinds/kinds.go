@@ -1,8 +1,12 @@
 package kinds
 
 import (
+	"fmt"
+
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 )
 
 // Gateway API Kinds
@@ -28,3 +32,15 @@ const (
 // MustExtractGVK is a function that extracts the GroupVersionKind (GVK) of a client.object.
 // It will panic if the GKV cannot be extracted.
 type MustExtractGVK func(object client.Object) schema.GroupVersionKind
+
+// NewMustExtractGKV creates a new MustExtractGVK function using the scheme.
+func NewMustExtractGKV(scheme *runtime.Scheme) MustExtractGVK {
+	return func(obj client.Object) schema.GroupVersionKind {
+		gvk, err := apiutil.GVKForObject(obj, scheme)
+		if err != nil {
+			panic(fmt.Sprintf("could not extract GVK for object: %T", obj))
+		}
+
+		return gvk
+	}
+}
