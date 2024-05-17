@@ -119,6 +119,7 @@ func validateAncestorMaxCount(backendTLSPolicy *v1alpha3.BackendTLSPolicy, ctlrN
 	ancestorRef := createParentReference(v1.GroupName, kinds.Gateway, client.ObjectKeyFromObject(gateway.Source))
 
 	if ancestorsFull(backendTLSPolicy.Status.Ancestors, ancestorRef, ctlrName) {
+		// FIXME (kate-osborn): https://github.com/nginxinc/nginx-gateway-fabric/issues/1987
 		return errors.New("too many ancestors, cannot attach a new Gateway")
 	}
 

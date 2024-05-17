@@ -102,6 +102,7 @@ func attachPolicyToRoute(policy *Policy, route *L7Route, ctlrName string) {
 
 	curAncestorStatus := policy.Source.GetPolicyStatus().Ancestors
 	if ancestorsFull(curAncestorStatus, ancestor.Ancestor, ctlrName) {
+		// FIXME (kate-osborn): https://github.com/nginxinc/nginx-gateway-fabric/issues/1987
 		return
 	}
 
@@ -136,6 +137,7 @@ func attachPolicyToGateway(
 
 	curAncestorStatus := policy.Source.GetPolicyStatus().Ancestors
 	if ancestorsFull(curAncestorStatus, ancestor.Ancestor, ctlrName) {
+		// FIXME (kate-osborn): https://github.com/nginxinc/nginx-gateway-fabric/issues/1987
 		return
 	}
 
