@@ -33,13 +33,13 @@ server {
     server_name {{ $s.ServerName }};
 
     {{- range $i := $s.Includes }}
-    include {{ $i.Filename }};
+    include {{ $i }};
     {{ end -}}
 
         {{ range $l := $s.Locations }}
     location {{ $l.Path }} {
         {{- range $i := $l.Includes }}
-        include {{ $i.Filename }};
+        include {{ $i }};
         {{- end -}}
 
         {{ range $r := $l.Rewrites }}

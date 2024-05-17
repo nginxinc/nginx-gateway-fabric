@@ -131,17 +131,15 @@ func createAdditionFileName(addition *dataplane.Addition) string {
 	return fmt.Sprintf("%s/%s.conf", includesFolder, addition.Identifier)
 }
 
-func createIncludes(additions []*dataplane.Addition) []http.Include {
+func createIncludes(additions []*dataplane.Addition) []string {
 	if len(additions) == 0 {
 		return nil
 	}
 
-	includes := make([]http.Include, 0, len(additions))
+	includes := make([]string, 0, len(additions))
 
 	for _, addition := range additions {
-		includes = append(includes, http.Include{
-			Filename: createAdditionFileName(addition),
-		})
+		includes = append(includes, createAdditionFileName(addition))
 	}
 
 	return includes
@@ -281,7 +279,7 @@ func createLocations(server *dataplane.VirtualServer, serverID int) ([]http.Loca
 	return locs, matchPairs, grpc
 }
 
-func updateLocationsForIncludes(locations []http.Location, includes []http.Include) []http.Location {
+func updateLocationsForIncludes(locations []http.Location, includes []string) []http.Location {
 	for i := range locations {
 		locations[i].Includes = includes
 	}

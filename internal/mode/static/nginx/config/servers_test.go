@@ -1000,20 +1000,16 @@ func TestCreateServers(t *testing.T) {
 				Path:            "= /addition-path-only-match",
 				ProxyPass:       "http://test_foo_80$request_uri",
 				ProxySetHeaders: httpBaseHeaders,
-				Includes: []http.Include{
-					{
-						Filename: includesFolder + "/path-only-match-addition.conf",
-					},
+				Includes: []string{
+					includesFolder + "/path-only-match-addition.conf",
 				},
 			},
 			{
 				Path:            "@rule17-route0",
 				ProxyPass:       "http://test_foo_80$request_uri",
 				ProxySetHeaders: httpBaseHeaders,
-				Includes: []http.Include{
-					{
-						Filename: includesFolder + "/match-addition.conf",
-					},
+				Includes: []string{
+					includesFolder + "/match-addition.conf",
 				},
 			},
 			{
@@ -1035,13 +1031,9 @@ func TestCreateServers(t *testing.T) {
 			Locations:  getExpectedLocations(false),
 			Port:       8080,
 			GRPC:       true,
-			Includes: []http.Include{
-				{
-					Filename: includesFolder + "/server-addition-1.conf",
-				},
-				{
-					Filename: includesFolder + "/server-addition-2.conf",
-				},
+			Includes: []string{
+				includesFolder + "/server-addition-1.conf",
+				includesFolder + "/server-addition-2.conf",
 			},
 		},
 		{
@@ -1057,13 +1049,9 @@ func TestCreateServers(t *testing.T) {
 			Locations: getExpectedLocations(true),
 			Port:      8443,
 			GRPC:      true,
-			Includes: []http.Include{
-				{
-					Filename: includesFolder + "/server-addition-1.conf",
-				},
-				{
-					Filename: includesFolder + "/server-addition-3.conf",
-				},
+			Includes: []string{
+				includesFolder + "/server-addition-1.conf",
+				includesFolder + "/server-addition-3.conf",
 			},
 		},
 	}
@@ -2362,7 +2350,7 @@ func TestCreateIncludes(t *testing.T) {
 	tests := []struct {
 		name      string
 		additions []*dataplane.Addition
-		includes  []http.Include
+		includes  []string
 	}{
 		{
 			name:      "no additions",
@@ -2385,16 +2373,10 @@ func TestCreateIncludes(t *testing.T) {
 					Identifier: "three",
 				},
 			},
-			includes: []http.Include{
-				{
-					Filename: includesFolder + "/one.conf",
-				},
-				{
-					Filename: includesFolder + "/two.conf",
-				},
-				{
-					Filename: includesFolder + "/three.conf",
-				},
+			includes: []string{
+				includesFolder + "/one.conf",
+				includesFolder + "/two.conf",
+				includesFolder + "/three.conf",
 			},
 		},
 	}
