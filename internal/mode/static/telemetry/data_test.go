@@ -24,12 +24,14 @@ func TestDataAttributes(t *testing.T) {
 		FlagNames:  []string{"test-flag"},
 		FlagValues: []string{"test-value"},
 		NGFResourceCounts: NGFResourceCounts{
-			GatewayCount:      1,
-			GatewayClassCount: 2,
-			HTTPRouteCount:    3,
-			SecretCount:       4,
-			ServiceCount:      5,
-			EndpointCount:     6,
+			GatewayCount:          1,
+			GatewayClassCount:     2,
+			HTTPRouteCount:        3,
+			SecretCount:           4,
+			ServiceCount:          5,
+			EndpointCount:         6,
+			GRPCRouteCount:        7,
+			BackendTLSPolicyCount: 8,
 		},
 		NGFReplicaCount: 3,
 	}
@@ -53,13 +55,14 @@ func TestDataAttributes(t *testing.T) {
 		attribute.Int64("SecretCount", 4),
 		attribute.Int64("ServiceCount", 5),
 		attribute.Int64("EndpointCount", 6),
+		attribute.Int64("GRPCRouteCount", 7),
+		attribute.Int64("BackendTLSPolicyCount", 8),
 		attribute.Int64("NGFReplicaCount", 3),
 	}
 
 	result := data.Attributes()
 
 	g := NewWithT(t)
-
 	g.Expect(result).To(Equal(expected))
 }
 
@@ -85,6 +88,8 @@ func TestDataAttributesWithEmptyData(t *testing.T) {
 		attribute.Int64("SecretCount", 0),
 		attribute.Int64("ServiceCount", 0),
 		attribute.Int64("EndpointCount", 0),
+		attribute.Int64("GRPCRouteCount", 0),
+		attribute.Int64("BackendTLSPolicyCount", 0),
 		attribute.Int64("NGFReplicaCount", 0),
 	}
 
