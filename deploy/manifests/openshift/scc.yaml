@@ -1,9 +1,10 @@
-{{- if and (eq .Values.platform "openshift") .Values.createOpenShiftSCC }}
+---
+# Source: nginx-gateway-fabric/templates/scc.yaml
 kind: SecurityContextConstraints
 apiVersion: security.openshift.io/v1
 metadata:
-  name: {{ include "nginx-gateway.scc-name" . }}
-allowPrivilegeEscalation: {{ .Values.nginxGateway.securityContext.allowPrivilegeEscalation }}
+  name: nginx-gateway-scc
+allowPrivilegeEscalation: false
 allowHostDirVolumePlugin: false
 allowHostIPC: false
 allowHostNetwork: false
@@ -31,10 +32,9 @@ volumes:
 - emptyDir
 - secret
 users:
-- {{ printf "system:serviceaccount:*:%s" (include "nginx-gateway.fullname" .) }}
+- system:serviceaccount:*:nginx-gateway
 allowedCapabilities:
 - NET_BIND_SERVICE
 - KILL
 requiredDropCapabilities:
 - ALL
-{{- end }}
