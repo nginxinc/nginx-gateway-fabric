@@ -78,7 +78,7 @@ var _ = Describe("Graceful Recovery test", Ordered, Label("nfr", "graceful-recov
 
 	AfterAll(func() {
 		Expect(resourceManager.DeleteFromFiles(files, ns.Name)).To(Succeed())
-		Expect(resourceManager.Delete([]client.Object{ns})).To(Succeed())
+		Expect(resourceManager.DeleteNamespace(ns.Name)).To(Succeed())
 	})
 
 	It("recovers when NGF container is restarted", func() {

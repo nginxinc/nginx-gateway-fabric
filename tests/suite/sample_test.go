@@ -34,7 +34,7 @@ var _ = Describe("Basic test example", Label("functional"), func() {
 
 	AfterEach(func() {
 		Expect(resourceManager.DeleteFromFiles(files, ns.Name)).To(Succeed())
-		Expect(resourceManager.Delete([]client.Object{ns})).To(Succeed())
+		Expect(resourceManager.DeleteNamespace(ns.Name)).To(Succeed())
 	})
 
 	It("sends traffic", func() {

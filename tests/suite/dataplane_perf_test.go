@@ -77,7 +77,7 @@ var _ = Describe("Dataplane performance", Ordered, Label("nfr", "performance"), 
 
 	AfterAll(func() {
 		Expect(resourceManager.DeleteFromFiles(files, ns.Name)).To(Succeed())
-		Expect(resourceManager.Delete([]client.Object{ns})).To(Succeed())
+		Expect(resourceManager.DeleteNamespace(ns.Name)).To(Succeed())
 		outFile.Close()
 	})
 
@@ -97,7 +97,7 @@ var _ = Describe("Dataplane performance", Ordered, Label("nfr", "performance"), 
 			}
 			_, metrics := framework.RunLoadTest(cfg)
 
-			Expect(framework.WriteResults(outFile, &metrics)).To(Succeed())
+			Expect(framework.WriteMetricsResults(outFile, &metrics)).To(Succeed())
 
 			_, err = fmt.Fprint(outFile, "```\n")
 			Expect(err).ToNot(HaveOccurred())
