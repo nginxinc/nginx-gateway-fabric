@@ -155,7 +155,7 @@ rules:
   resources:
   - securitycontextconstraints
   resourceNames:
-  - nginx-ngf-admin
+  - {{ .Values.sccName }}
   verbs:
   - use
 {{- end }}
