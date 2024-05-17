@@ -29,7 +29,6 @@ func TestLessObjectMeta(t *testing.T) {
 			meta2: &metav1.ObjectMeta{
 				Namespace:         "ns1",
 				Name:              "meta2",
-				UID:               "b",
 				CreationTimestamp: later,
 			},
 			name:     "first is less by timestamp",
@@ -92,7 +91,7 @@ func TestLessObjectMeta(t *testing.T) {
 	}
 }
 
-func TestClientObject(t *testing.T) {
+func TestLessClientObject(t *testing.T) {
 	before := metav1.Now()
 	later := metav1.NewTime(before.Add(1 * time.Second))
 
@@ -115,7 +114,6 @@ func TestClientObject(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace:         "ns1",
 					Name:              "obj2",
-					UID:               "b",
 					CreationTimestamp: later,
 				},
 			},
@@ -133,8 +131,7 @@ func TestClientObject(t *testing.T) {
 			obj2: &v1.Gateway{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace:         "ns2",
-					Name:              "obj2",
-					UID:               "b",
+					Name:              "obj1",
 					CreationTimestamp: before,
 				},
 			},
@@ -153,7 +150,6 @@ func TestClientObject(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace:         "ns1",
 					Name:              "obj2",
-					UID:               "b",
 					CreationTimestamp: before,
 				},
 			},
@@ -172,7 +168,6 @@ func TestClientObject(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace:         "ns1",
 					Name:              "obj1",
-					UID:               "b",
 					CreationTimestamp: before,
 				},
 			},
@@ -184,8 +179,8 @@ func TestClientObject(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewWithT(t)
 
-			result := ClientObject(test.obj1, test.obj2)
-			invertedResult := ClientObject(test.obj2, test.obj1)
+			result := LessClientObject(test.obj1, test.obj2)
+			invertedResult := LessClientObject(test.obj2, test.obj1)
 
 			g.Expect(result).To(Equal(test.expected))
 			g.Expect(invertedResult).To(BeFalse())

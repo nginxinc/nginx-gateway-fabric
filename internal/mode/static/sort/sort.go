@@ -18,11 +18,11 @@ func LessObjectMeta(meta1 *metav1.ObjectMeta, meta2 *metav1.ObjectMeta) bool {
 	return meta1.CreationTimestamp.Before(&meta2.CreationTimestamp)
 }
 
-// ClientObject compares two client.Objects and returns true if:
+// LessClientObject compares two client.Objects and returns true if:
 // - the first object was created first,
 // - the objects were created at the same time, or
 // - the first object's name appears first in alphabetical order.
-func ClientObject(obj1 client.Object, obj2 client.Object) bool {
+func LessClientObject(obj1 client.Object, obj2 client.Object) bool {
 	create1 := obj1.GetCreationTimestamp()
 	create2 := obj2.GetCreationTimestamp()
 

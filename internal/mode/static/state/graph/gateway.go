@@ -77,7 +77,7 @@ func processGateways(
 	}
 
 	sort.Slice(referencedGws, func(i, j int) bool {
-		return ngfsort.LessObjectMeta(&referencedGws[i].ObjectMeta, &referencedGws[j].ObjectMeta)
+		return ngfsort.LessClientObject(referencedGws[i], referencedGws[j])
 	})
 
 	ignoredGws := make(map[types.NamespacedName]*v1.Gateway)

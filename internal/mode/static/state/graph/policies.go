@@ -245,7 +245,7 @@ func markConflictedPolicies(policies map[PolicyKey]*Policy, validator validation
 		// This will put them in priority-order.
 		sort.Slice(
 			policyList, func(i, j int) bool {
-				return ngfsort.ClientObject(policyList[i].Source, policyList[j].Source)
+				return ngfsort.LessClientObject(policyList[i].Source, policyList[j].Source)
 			},
 		)
 
