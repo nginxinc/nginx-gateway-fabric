@@ -115,9 +115,6 @@ affinity: {}
 ## The platform that NGINX Gateway Fabric is being deployed on. Valid values: kubernetes, openshift
 platform: kubernetes
 
-## The name for the SecurityContextConstraints object used in Openshift environments.
-sccName: nginx-ngf-admin
-
 serviceAccount:
   annotations: {}
   ## The name of the service account of the NGINX Gateway Fabric pods. Used for RBAC.
