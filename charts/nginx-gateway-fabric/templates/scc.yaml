@@ -1,5 +1,5 @@
 # Create SCC for Gateway resources
-{{- if eq .Values.platform "openshift" }}
+{{- if and (eq .Values.platform "openshift") .Values.createOpenShiftSCC }}
 kind: SecurityContextConstraints
 apiVersion: security.openshift.io/v1
 metadata:
