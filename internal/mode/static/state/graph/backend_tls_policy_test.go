@@ -397,16 +397,7 @@ func TestValidateBackendTLSPolicy(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewWithT(t)
 
-			gateway := &Gateway{
-				Source: &gatewayv1.Gateway{ObjectMeta: metav1.ObjectMeta{Name: "gateway", Namespace: "test"}},
-			}
-
-			valid, ignored, conds := validateBackendTLSPolicy(
-				test.tlsPolicy,
-				configMapResolver,
-				"test",
-				gateway,
-			)
+			valid, ignored, conds := validateBackendTLSPolicy(test.tlsPolicy, configMapResolver, "test")
 
 			g.Expect(valid).To(Equal(test.isValid))
 			g.Expect(ignored).To(Equal(test.ignored))

@@ -1,17 +1,13 @@
 package graph
 
 import (
-	"errors"
 	"fmt"
 
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	v1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/apis/v1alpha3"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
-	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/kinds"
 	staticConds "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/conditions"
 )
 
@@ -45,12 +41,8 @@ func processBackendTLSPolicies(
 	processedBackendTLSPolicies := make(map[types.NamespacedName]*BackendTLSPolicy, len(backendTLSPolicies))
 	for nsname, backendTLSPolicy := range backendTLSPolicies {
 		var caCertRef types.NamespacedName
-		valid, ignored, conds := validateBackendTLSPolicy(
-			backendTLSPolicy,
-			configMapResolver,
-			ctlrName,
-			gateway,
-		)
+
+		valid, ignored, conds := validateBackendTLSPolicy(backendTLSPolicy, configMapResolver, ctlrName)
 
 		if valid && !ignored && backendTLSPolicy.Spec.Validation.CACertificateRefs != nil {
 			caCertRef = types.NamespacedName{
@@ -77,14 +69,16 @@ func validateBackendTLSPolicy(
 	backendTLSPolicy *v1alpha3.BackendTLSPolicy,
 	configMapResolver *configMapResolver,
 	ctlrName string,
-	gateway *Gateway,
 ) (valid, ignored bool, conds []conditions.Condition) {
 	valid = true
 	ignored = false
-	if err := validateAncestorMaxCount(backendTLSPolicy, ctlrName, gateway); err != nil {
+
+	// FIXME (kate-osborn): https://github.com/nginxinc/nginx-gateway-fabric/issues/1987
+	if ancestorsFull(backendTLSPolicy.Status.Ancestors, ctlrName) {
 		valid = false
 		ignored = true
 	}
+
 	if err := validateBackendTLSHostname(backendTLSPolicy); err != nil {
 		valid = false
 		conds = append(conds, staticConds.NewPolicyInvalid(fmt.Sprintf("invalid hostname: %s", err.Error())))
@@ -113,17 +107,6 @@ func validateBackendTLSPolicy(
 		conds = append(conds, staticConds.NewPolicyInvalid("CACertRefs and WellKnownCACerts are both nil"))
 	}
 	return valid, ignored, conds
-}
-
-func validateAncestorMaxCount(backendTLSPolicy *v1alpha3.BackendTLSPolicy, ctlrName string, gateway *Gateway) error {
-	ancestorRef := createParentReference(v1.GroupName, kinds.Gateway, client.ObjectKeyFromObject(gateway.Source))
-
-	if ancestorsFull(backendTLSPolicy.Status.Ancestors, ancestorRef, ctlrName) {
-		// FIXME (kate-osborn): https://github.com/nginxinc/nginx-gateway-fabric/issues/1987
-		return errors.New("too many ancestors, cannot attach a new Gateway")
-	}
-
-	return nil
 }
 
 func validateBackendTLSHostname(btp *v1alpha3.BackendTLSPolicy) error {
