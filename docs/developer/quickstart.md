@@ -31,10 +31,10 @@ Follow these steps to set up your development environment.
    ```
 
 2. [Fork the project repository](https://github.com/nginxinc/nginx-gateway-fabric/fork)
-3. Clone your repository, and install the project dependencies:
+3. Clone your repository with ssh, and install the project dependencies:
 
    ```shell
-   git clone https://github.com/<YOUR-USERNAME>/nginx-gateway-fabric.git
+   git clone git@github.com:<YOUR-USERNAME>/nginx-gateway-fabric.git
    cd nginx-gateway-fabric
    ```
 
@@ -48,6 +48,12 @@ Follow these steps to set up your development environment.
 
    ```makefile
    make deps
+   ```
+
+4. Finally, add the original project repository as the remote upstream:
+
+   ```shell
+   git remote add upstream git@github.com:nginxinc/nginx-gateway-fabric.git
    ```
 
 
