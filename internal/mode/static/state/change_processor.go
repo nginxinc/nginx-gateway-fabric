@@ -25,6 +25,8 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/validation"
 )
 
+//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 -generate
+
 // ChangeType is the type of change that occurred based on a k8s object event.
 type ChangeType int
 
@@ -38,7 +40,7 @@ const (
 	ClusterStateChange
 )
 
-//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . ChangeProcessor
+//counterfeiter:generate . ChangeProcessor
 
 type extractGVKFunc func(obj client.Object) schema.GroupVersionKind
 

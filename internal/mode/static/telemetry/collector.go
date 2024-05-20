@@ -19,14 +19,14 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/graph"
 )
 
-//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . GraphGetter
+//counterfeiter:generate . GraphGetter
 
 // GraphGetter gets the latest Graph.
 type GraphGetter interface {
 	GetLatestGraph() *graph.Graph
 }
 
-//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . ConfigurationGetter
+//counterfeiter:generate . ConfigurationGetter
 
 // ConfigurationGetter gets the latest Configuration.
 type ConfigurationGetter interface {

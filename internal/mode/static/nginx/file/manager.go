@@ -9,6 +9,8 @@ import (
 	"github.com/go-logr/logr"
 )
 
+//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 -generate
+
 const (
 	// regularFileMode defines the default file mode for regular files.
 	regularFileMode = 0o644
@@ -44,7 +46,7 @@ type File struct {
 	Type    Type
 }
 
-//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . OSFileManager
+//counterfeiter:generate . OSFileManager
 
 // OSFileManager is an interface that exposes File I/O operations for ManagerImpl.
 // Used for unit testing.
@@ -61,7 +63,7 @@ type OSFileManager interface {
 	Write(file *os.File, contents []byte) error
 }
 
-//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . Manager
+//counterfeiter:generate . Manager
 
 // Manager manages NGINX configuration files.
 type Manager interface {

@@ -16,6 +16,8 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 )
 
+//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 -generate
+
 const (
 	pidFile            = "/var/run/nginx/nginx.pid"
 	pidFileTimeout     = 10000 * time.Millisecond
@@ -29,7 +31,7 @@ type (
 
 var childProcPathFmt = "/proc/%[1]v/task/%[1]v/children"
 
-//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . Manager
+//counterfeiter:generate . Manager
 
 // Manager manages the runtime of NGINX.
 type Manager interface {

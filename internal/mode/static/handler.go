@@ -36,7 +36,8 @@ type handlerMetricsCollector interface {
 	ObserveLastEventBatchProcessTime(time.Duration)
 }
 
-//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . secretStorer
+//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 -generate
+//counterfeiter:generate . secretStorer
 
 // secretStorer should store the usage Secret that contains the credentials for NGINX Plus usage reporting.
 type secretStorer interface {

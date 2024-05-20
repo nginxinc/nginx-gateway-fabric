@@ -7,7 +7,8 @@ import (
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/dataplane"
 )
 
-//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . Generator
+//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 -generate
+//counterfeiter:generate . Generator
 
 const (
 	// configFolder is the folder where NGINX configuration files are stored.
