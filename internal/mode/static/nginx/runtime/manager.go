@@ -32,16 +32,29 @@ var childProcPathFmt = "/proc/%[1]v/task/%[1]v/children"
 //go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . nginxPlusClient
 
 type nginxPlusClient interface {
-	UpdateHTTPServers(upstream string, servers []ngxclient.UpstreamServer) (added []ngxclient.UpstreamServer, deleted []ngxclient.UpstreamServer, updated []ngxclient.UpstreamServer, err error)
+	UpdateHTTPServers(
+		upstream string,
+		servers []ngxclient.UpstreamServer,
+	) (
+		added []ngxclient.UpstreamServer,
+		deleted []ngxclient.UpstreamServer,
+		updated []ngxclient.UpstreamServer,
+		err error,
+	)
 	GetUpstreams() (*ngxclient.Upstreams, error)
 }
 
 //go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . ProcessHandler
 
 type ProcessHandler interface {
-	FindMainProcess(ctx context.Context, checkFile CheckFileFunc, readFile ReadFileFunc, timeout time.Duration) (int, error)
+	FindMainProcess(
+		ctx context.Context,
+		checkFile CheckFileFunc,
+		readFile ReadFileFunc,
+		timeout time.Duration,
+	) (int, error)
 	ReadFile(file string) ([]byte, error)
-	Kill(pid int, signum syscall.Signal) error
+	Kill(pid int) error
 	EnsureNginxRunning(ctx context.Context) error
 }
 
@@ -74,11 +87,11 @@ type MetricsCollector interface {
 
 // ManagerImpl implements Manager.
 type ManagerImpl struct {
-	verifyClient     verifyClient
+	processHandler   ProcessHandler
 	metricsCollector MetricsCollector
+	verifyClient     verifyClient
 	ngxPlusClient    nginxPlusClient
 	logger           logr.Logger
-	processHandler   ProcessHandler
 }
 
 // NewManagerImpl creates a new ManagerImpl.
@@ -90,11 +103,11 @@ func NewManagerImpl(
 	verifyClient verifyClient,
 ) *ManagerImpl {
 	return &ManagerImpl{
-		verifyClient:     verifyClient,
+		processHandler:   processHandler,
 		metricsCollector: collector,
+		verifyClient:     verifyClient,
 		ngxPlusClient:    ngxPlusClient,
 		logger:           logger,
-		processHandler:   processHandler,
 	}
 }
 
@@ -119,7 +132,7 @@ func (m *ManagerImpl) Reload(ctx context.Context, configVersion int) error {
 
 	// send HUP signal to the NGINX main process reload configuration
 	// See https://nginx.org/en/docs/control.html
-	if err := m.processHandler.Kill(pid, syscall.SIGHUP); err != nil {
+	if err := m.processHandler.Kill(pid); err != nil {
 		m.metricsCollector.IncReloadErrors()
 		return fmt.Errorf("failed to send the HUP signal to NGINX main: %w", err)
 	}
@@ -227,6 +240,6 @@ func (p *ProcessHandlerImpl) ReadFile(file string) ([]byte, error) {
 	return os.ReadFile(file)
 }
 
-func (p *ProcessHandlerImpl) Kill(pid int, signum syscall.Signal) error {
+func (p *ProcessHandlerImpl) Kill(pid int) error {
 	return syscall.Kill(pid, syscall.SIGHUP)
 }

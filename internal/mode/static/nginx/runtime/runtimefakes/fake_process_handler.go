@@ -4,7 +4,6 @@ package runtimefakes
 import (
 	"context"
 	"sync"
-	"syscall"
 	"time"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/nginx/runtime"
@@ -38,11 +37,10 @@ type FakeProcessHandler struct {
 		result1 int
 		result2 error
 	}
-	KillStub        func(int, syscall.Signal) error
+	KillStub        func(int) error
 	killMutex       sync.RWMutex
 	killArgsForCall []struct {
 		arg1 int
-		arg2 syscall.Signal
 	}
 	killReturns struct {
 		result1 error
@@ -195,19 +193,18 @@ func (fake *FakeProcessHandler) FindMainProcessReturnsOnCall(i int, result1 int,
 	}{result1, result2}
 }
 
-func (fake *FakeProcessHandler) Kill(arg1 int, arg2 syscall.Signal) error {
+func (fake *FakeProcessHandler) Kill(arg1 int) error {
 	fake.killMutex.Lock()
 	ret, specificReturn := fake.killReturnsOnCall[len(fake.killArgsForCall)]
 	fake.killArgsForCall = append(fake.killArgsForCall, struct {
 		arg1 int
-		arg2 syscall.Signal
-	}{arg1, arg2})
+	}{arg1})
 	stub := fake.KillStub
 	fakeReturns := fake.killReturns
-	fake.recordInvocation("Kill", []interface{}{arg1, arg2})
+	fake.recordInvocation("Kill", []interface{}{arg1})
 	fake.killMutex.Unlock()
 	if stub != nil {
-		return stub(arg1, arg2)
+		return stub(arg1)
 	}
 	if specificReturn {
 		return ret.result1
@@ -221,17 +218,17 @@ func (fake *FakeProcessHandler) KillCallCount() int {
 	return len(fake.killArgsForCall)
 }
 
-func (fake *FakeProcessHandler) KillCalls(stub func(int, syscall.Signal) error) {
+func (fake *FakeProcessHandler) KillCalls(stub func(int) error) {
 	fake.killMutex.Lock()
 	defer fake.killMutex.Unlock()
 	fake.KillStub = stub
 }
 
-func (fake *FakeProcessHandler) KillArgsForCall(i int) (int, syscall.Signal) {
+func (fake *FakeProcessHandler) KillArgsForCall(i int) int {
 	fake.killMutex.RLock()
 	defer fake.killMutex.RUnlock()
 	argsForCall := fake.killArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2
+	return argsForCall.arg1
 }
 
 func (fake *FakeProcessHandler) KillReturns(result1 error) {
