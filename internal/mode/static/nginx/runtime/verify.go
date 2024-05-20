@@ -23,7 +23,13 @@ var noNewWorkersErrFmt = "reload unsuccessful: no new NGINX worker processes sta
 
 type verifyClient interface {
 	GetConfigVersion() (int, error)
-	WaitForCorrectVersion(ctx context.Context, expectedVersion int, childProcFile string, previousChildProcesses []byte, readFile ReadFileFunc) error
+	WaitForCorrectVersion(
+		ctx context.Context,
+		expectedVersion int,
+		childProcFile string,
+		previousChildProcesses []byte,
+		readFile ReadFileFunc,
+	) error
 	EnsureConfigVersion(ctx context.Context, expectedVersion int) error
 }
 

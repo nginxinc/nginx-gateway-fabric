@@ -26,6 +26,7 @@ var _ = Describe("NGINX Runtime Manager", func() {
 	})
 
 	var (
+		err             error
 		manager         runtime.Manager
 		upstreamServers []ngxclient.UpstreamServer
 		ngxPlusClient   *runtimefakes.FakeNginxPlusClient
@@ -67,10 +68,11 @@ var _ = Describe("NGINX Runtime Manager", func() {
 				manager = runtime.NewManagerImpl(ngxPlusClient, metrics, zap.New(), process, verifyClient)
 
 				reload := func() {
-					manager.Reload(context.Background(), 0)
+					err = manager.Reload(context.Background(), 0)
 				}
 
 				Expect(reload).To(Panic())
+				Expect(err).ToNot(HaveOccurred())
 			})
 
 			It("should panic if VerifyClient not enabled", func() {
@@ -79,10 +81,11 @@ var _ = Describe("NGINX Runtime Manager", func() {
 				manager = runtime.NewManagerImpl(ngxPlusClient, metrics, zap.New(), process, verifyClient)
 
 				reload := func() {
-					manager.Reload(context.Background(), 0)
+					err = manager.Reload(context.Background(), 0)
 				}
 
 				Expect(reload).To(Panic())
+				Expect(err).ToNot(HaveOccurred())
 			})
 		})
 	})
@@ -93,7 +96,7 @@ var _ = Describe("NGINX Runtime Manager", func() {
 			manager = runtime.NewManagerImpl(ngxPlusClient, nil, zap.New(), nil, nil)
 		})
 
-		It("sucessfully updates HTTP server upstream", func() {
+		It("successfully updates HTTP server upstream", func() {
 			Expect(manager.UpdateHTTPServers("test", upstreamServers)).To(Succeed())
 		})
 
@@ -113,18 +116,20 @@ var _ = Describe("NGINX Runtime Manager", func() {
 
 		It("should panic when updating HTTP upstream servers", func() {
 			updateServers := func() {
-				manager.UpdateHTTPServers("test", upstreamServers)
+				err = manager.UpdateHTTPServers("test", upstreamServers)
 			}
 
 			Expect(updateServers).To(Panic())
+			Expect(err).ToNot(HaveOccurred())
 		})
 
 		It("should panic when fetching HTTP upstream servers", func() {
 			upstreams := func() {
-				manager.GetUpstreams()
+				_, err = manager.GetUpstreams()
 			}
 
 			Expect(upstreams).To(Panic())
+			Expect(err).ToNot(HaveOccurred())
 		})
 	})
 })
