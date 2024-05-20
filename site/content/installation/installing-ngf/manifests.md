@@ -131,13 +131,13 @@ To upgrade NGINX Gateway Fabric and get the latest features and improvements, ta
    - To upgrade the Gateway API resources, run:
 
      ```shell
-     kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/standard-install.yaml
+     kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.1.0/standard-install.yaml
      ```
 
      or, if you installed the from the experimental channel:
 
      ```shell
-     kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/experimental-install.yaml
+     kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.1.0/experimental-install.yaml
      ```
 
 1. **Upgrade NGINX Gateway Fabric CRDs:**

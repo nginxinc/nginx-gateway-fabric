@@ -10,7 +10,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
-	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
@@ -146,7 +145,13 @@ func TestBuildHTTPRoutes(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewWithT(t)
-			routes := buildRoutesForGateways(validator, hrRoutes, map[types.NamespacedName]*v1alpha2.GRPCRoute{}, test.gwNsNames)
+			routes := buildRoutesForGateways(
+				validator,
+				hrRoutes,
+				map[types.NamespacedName]*gatewayv1.GRPCRoute{},
+				test.gwNsNames,
+				nil,
+			)
 			g.Expect(helpers.Diff(test.expected, routes)).To(BeEmpty())
 		})
 	}
@@ -867,6 +872,14 @@ func TestValidateFilter(t *testing.T) {
 		},
 		{
 			filter: gatewayv1.HTTPRouteFilter{
+				Type:                   gatewayv1.HTTPRouteFilterResponseHeaderModifier,
+				ResponseHeaderModifier: &gatewayv1.HTTPHeaderFilter{},
+			},
+			expectErrCount: 0,
+			name:           "valid response header modifiers filter",
+		},
+		{
+			filter: gatewayv1.HTTPRouteFilter{
 				Type: gatewayv1.HTTPRouteFilterRequestMirror,
 			},
 			expectErrCount: 1,
@@ -896,42 +909,33 @@ func TestValidateFilterRedirect(t *testing.T) {
 	}
 
 	tests := []struct {
-		filter         gatewayv1.HTTPRouteFilter
-		validator      *validationfakes.FakeHTTPFieldsValidator
-		name           string
-		expectErrCount int
+		requestRedirect *gatewayv1.HTTPRequestRedirectFilter
+		validator       *validationfakes.FakeHTTPFieldsValidator
+		name            string
+		expectErrCount  int
 	}{
 		{
-			validator: &validationfakes.FakeHTTPFieldsValidator{},
-			filter: gatewayv1.HTTPRouteFilter{
-				Type:            gatewayv1.HTTPRouteFilterRequestRedirect,
-				RequestRedirect: nil,
-			},
-			name:           "nil filter",
-			expectErrCount: 1,
+			validator:       &validationfakes.FakeHTTPFieldsValidator{},
+			requestRedirect: nil,
+			name:            "nil filter",
+			expectErrCount:  1,
 		},
 		{
 			validator: createAllValidValidator(),
-			filter: gatewayv1.HTTPRouteFilter{
-				Type: gatewayv1.HTTPRouteFilterRequestRedirect,
-				RequestRedirect: &gatewayv1.HTTPRequestRedirectFilter{
-					Scheme:     helpers.GetPointer("http"),
-					Hostname:   helpers.GetPointer[gatewayv1.PreciseHostname]("example.com"),
-					Port:       helpers.GetPointer[gatewayv1.PortNumber](80),
-					StatusCode: helpers.GetPointer(301),
-				},
+			requestRedirect: &gatewayv1.HTTPRequestRedirectFilter{
+				Scheme:     helpers.GetPointer("http"),
+				Hostname:   helpers.GetPointer[gatewayv1.PreciseHostname]("example.com"),
+				Port:       helpers.GetPointer[gatewayv1.PortNumber](80),
+				StatusCode: helpers.GetPointer(301),
 			},
 			expectErrCount: 0,
 			name:           "valid redirect filter",
 		},
 		{
-			validator: createAllValidValidator(),
-			filter: gatewayv1.HTTPRouteFilter{
-				Type:            gatewayv1.HTTPRouteFilterRequestRedirect,
-				RequestRedirect: &gatewayv1.HTTPRequestRedirectFilter{},
-			},
-			expectErrCount: 0,
-			name:           "valid redirect filter with no fields set",
+			validator:       createAllValidValidator(),
+			requestRedirect: &gatewayv1.HTTPRequestRedirectFilter{},
+			expectErrCount:  0,
+			name:            "valid redirect filter with no fields set",
 		},
 		{
 			validator: func() *validationfakes.FakeHTTPFieldsValidator {
@@ -939,11 +943,8 @@ func TestValidateFilterRedirect(t *testing.T) {
 				validator.ValidateRedirectSchemeReturns(false, []string{"valid-scheme"})
 				return validator
 			}(),
-			filter: gatewayv1.HTTPRouteFilter{
-				Type: gatewayv1.HTTPRouteFilterRequestRedirect,
-				RequestRedirect: &gatewayv1.HTTPRequestRedirectFilter{
-					Scheme: helpers.GetPointer("http"), // any value is invalid by the validator
-				},
+			requestRedirect: &gatewayv1.HTTPRequestRedirectFilter{
+				Scheme: helpers.GetPointer("http"), // any value is invalid by the validator
 			},
 			expectErrCount: 1,
 			name:           "redirect filter with invalid scheme",
@@ -954,13 +955,10 @@ func TestValidateFilterRedirect(t *testing.T) {
 				validator.ValidateHostnameReturns(errors.New("invalid hostname"))
 				return validator
 			}(),
-			filter: gatewayv1.HTTPRouteFilter{
-				Type: gatewayv1.HTTPRouteFilterRequestRedirect,
-				RequestRedirect: &gatewayv1.HTTPRequestRedirectFilter{
-					Hostname: helpers.GetPointer[gatewayv1.PreciseHostname](
-						"example.com",
-					), // any value is invalid by the validator
-				},
+			requestRedirect: &gatewayv1.HTTPRequestRedirectFilter{
+				Hostname: helpers.GetPointer[gatewayv1.PreciseHostname](
+					"example.com",
+				), // any value is invalid by the validator
 			},
 			expectErrCount: 1,
 			name:           "redirect filter with invalid hostname",
@@ -971,22 +969,16 @@ func TestValidateFilterRedirect(t *testing.T) {
 				validator.ValidateRedirectPortReturns(errors.New("invalid port"))
 				return validator
 			}(),
-			filter: gatewayv1.HTTPRouteFilter{
-				Type: gatewayv1.HTTPRouteFilterRequestRedirect,
-				RequestRedirect: &gatewayv1.HTTPRequestRedirectFilter{
-					Port: helpers.GetPointer[gatewayv1.PortNumber](80), // any value is invalid by the validator
-				},
+			requestRedirect: &gatewayv1.HTTPRequestRedirectFilter{
+				Port: helpers.GetPointer[gatewayv1.PortNumber](80), // any value is invalid by the validator
 			},
 			expectErrCount: 1,
 			name:           "redirect filter with invalid port",
 		},
 		{
 			validator: createAllValidValidator(),
-			filter: gatewayv1.HTTPRouteFilter{
-				Type: gatewayv1.HTTPRouteFilterRequestRedirect,
-				RequestRedirect: &gatewayv1.HTTPRequestRedirectFilter{
-					Path: &gatewayv1.HTTPPathModifier{},
-				},
+			requestRedirect: &gatewayv1.HTTPRequestRedirectFilter{
+				Path: &gatewayv1.HTTPPathModifier{},
 			},
 			expectErrCount: 1,
 			name:           "redirect filter with unsupported path modifier",
@@ -997,11 +989,8 @@ func TestValidateFilterRedirect(t *testing.T) {
 				validator.ValidateRedirectStatusCodeReturns(false, []string{"200"})
 				return validator
 			}(),
-			filter: gatewayv1.HTTPRouteFilter{
-				Type: gatewayv1.HTTPRouteFilterRequestRedirect,
-				RequestRedirect: &gatewayv1.HTTPRequestRedirectFilter{
-					StatusCode: helpers.GetPointer(301), // any value is invalid by the validator
-				},
+			requestRedirect: &gatewayv1.HTTPRequestRedirectFilter{
+				StatusCode: helpers.GetPointer(301), // any value is invalid by the validator
 			},
 			expectErrCount: 1,
 			name:           "redirect filter with invalid status code",
@@ -1013,16 +1002,13 @@ func TestValidateFilterRedirect(t *testing.T) {
 				validator.ValidateRedirectPortReturns(errors.New("invalid port"))
 				return validator
 			}(),
-			filter: gatewayv1.HTTPRouteFilter{
-				Type: gatewayv1.HTTPRouteFilterRequestRedirect,
-				RequestRedirect: &gatewayv1.HTTPRequestRedirectFilter{
-					Hostname: helpers.GetPointer[gatewayv1.PreciseHostname](
-						"example.com",
-					), // any value is invalid by the validator
-					Port: helpers.GetPointer[gatewayv1.PortNumber](
-						80,
-					), // any value is invalid by the validator
-				},
+			requestRedirect: &gatewayv1.HTTPRequestRedirectFilter{
+				Hostname: helpers.GetPointer[gatewayv1.PreciseHostname](
+					"example.com",
+				), // any value is invalid by the validator
+				Port: helpers.GetPointer[gatewayv1.PortNumber](
+					80,
+				), // any value is invalid by the validator
 			},
 			expectErrCount: 2,
 			name:           "redirect filter with multiple errors",
@@ -1035,7 +1021,7 @@ func TestValidateFilterRedirect(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewWithT(t)
 
-			allErrs := validateFilterRedirect(test.validator, test.filter, filterPath)
+			allErrs := validateFilterRedirect(test.validator, test.requestRedirect, filterPath)
 			g.Expect(allErrs).To(HaveLen(test.expectErrCount))
 		})
 	}
@@ -1043,41 +1029,32 @@ func TestValidateFilterRedirect(t *testing.T) {
 
 func TestValidateFilterRewrite(t *testing.T) {
 	tests := []struct {
-		filter         gatewayv1.HTTPRouteFilter
+		urlRewrite     *gatewayv1.HTTPURLRewriteFilter
 		validator      *validationfakes.FakeHTTPFieldsValidator
 		name           string
 		expectErrCount int
 	}{
 		{
-			validator: &validationfakes.FakeHTTPFieldsValidator{},
-			filter: gatewayv1.HTTPRouteFilter{
-				Type:       gatewayv1.HTTPRouteFilterURLRewrite,
-				URLRewrite: nil,
-			},
+			validator:      &validationfakes.FakeHTTPFieldsValidator{},
+			urlRewrite:     nil,
 			name:           "nil filter",
 			expectErrCount: 1,
 		},
 		{
 			validator: &validationfakes.FakeHTTPFieldsValidator{},
-			filter: gatewayv1.HTTPRouteFilter{
-				Type: gatewayv1.HTTPRouteFilterURLRewrite,
-				URLRewrite: &gatewayv1.HTTPURLRewriteFilter{
-					Hostname: helpers.GetPointer[gatewayv1.PreciseHostname]("example.com"),
-					Path: &gatewayv1.HTTPPathModifier{
-						Type:            gatewayv1.FullPathHTTPPathModifier,
-						ReplaceFullPath: helpers.GetPointer("/path"),
-					},
+			urlRewrite: &gatewayv1.HTTPURLRewriteFilter{
+				Hostname: helpers.GetPointer[gatewayv1.PreciseHostname]("example.com"),
+				Path: &gatewayv1.HTTPPathModifier{
+					Type:            gatewayv1.FullPathHTTPPathModifier,
+					ReplaceFullPath: helpers.GetPointer("/path"),
 				},
 			},
 			expectErrCount: 0,
 			name:           "valid rewrite filter",
 		},
 		{
-			validator: &validationfakes.FakeHTTPFieldsValidator{},
-			filter: gatewayv1.HTTPRouteFilter{
-				Type:       gatewayv1.HTTPRouteFilterURLRewrite,
-				URLRewrite: &gatewayv1.HTTPURLRewriteFilter{},
-			},
+			validator:      &validationfakes.FakeHTTPFieldsValidator{},
+			urlRewrite:     &gatewayv1.HTTPURLRewriteFilter{},
 			expectErrCount: 0,
 			name:           "valid rewrite filter with no fields set",
 		},
@@ -1087,25 +1064,19 @@ func TestValidateFilterRewrite(t *testing.T) {
 				validator.ValidateHostnameReturns(errors.New("invalid hostname"))
 				return validator
 			}(),
-			filter: gatewayv1.HTTPRouteFilter{
-				Type: gatewayv1.HTTPRouteFilterURLRewrite,
-				URLRewrite: &gatewayv1.HTTPURLRewriteFilter{
-					Hostname: helpers.GetPointer[gatewayv1.PreciseHostname](
-						"example.com",
-					), // any value is invalid by the validator
-				},
+			urlRewrite: &gatewayv1.HTTPURLRewriteFilter{
+				Hostname: helpers.GetPointer[gatewayv1.PreciseHostname](
+					"example.com",
+				), // any value is invalid by the validator
 			},
 			expectErrCount: 1,
 			name:           "rewrite filter with invalid hostname",
 		},
 		{
 			validator: &validationfakes.FakeHTTPFieldsValidator{},
-			filter: gatewayv1.HTTPRouteFilter{
-				Type: gatewayv1.HTTPRouteFilterURLRewrite,
-				URLRewrite: &gatewayv1.HTTPURLRewriteFilter{
-					Path: &gatewayv1.HTTPPathModifier{
-						Type: "bad-type",
-					},
+			urlRewrite: &gatewayv1.HTTPURLRewriteFilter{
+				Path: &gatewayv1.HTTPPathModifier{
+					Type: "bad-type",
 				},
 			},
 			expectErrCount: 1,
@@ -1117,14 +1088,11 @@ func TestValidateFilterRewrite(t *testing.T) {
 				validator.ValidateRewritePathReturns(errors.New("invalid path value"))
 				return validator
 			}(),
-			filter: gatewayv1.HTTPRouteFilter{
-				Type: gatewayv1.HTTPRouteFilterURLRewrite,
-				URLRewrite: &gatewayv1.HTTPURLRewriteFilter{
-					Path: &gatewayv1.HTTPPathModifier{
-						Type:            gatewayv1.FullPathHTTPPathModifier,
-						ReplaceFullPath: helpers.GetPointer("/path"),
-					}, // any value is invalid by the validator
-				},
+			urlRewrite: &gatewayv1.HTTPURLRewriteFilter{
+				Path: &gatewayv1.HTTPPathModifier{
+					Type:            gatewayv1.FullPathHTTPPathModifier,
+					ReplaceFullPath: helpers.GetPointer("/path"),
+				}, // any value is invalid by the validator
 			},
 			expectErrCount: 1,
 			name:           "rewrite filter with invalid full path",
@@ -1135,14 +1103,11 @@ func TestValidateFilterRewrite(t *testing.T) {
 				validator.ValidateRewritePathReturns(errors.New("invalid path"))
 				return validator
 			}(),
-			filter: gatewayv1.HTTPRouteFilter{
-				Type: gatewayv1.HTTPRouteFilterURLRewrite,
-				URLRewrite: &gatewayv1.HTTPURLRewriteFilter{
-					Path: &gatewayv1.HTTPPathModifier{
-						Type:               gatewayv1.PrefixMatchHTTPPathModifier,
-						ReplacePrefixMatch: helpers.GetPointer("/path"),
-					}, // any value is invalid by the validator
-				},
+			urlRewrite: &gatewayv1.HTTPURLRewriteFilter{
+				Path: &gatewayv1.HTTPPathModifier{
+					Type:               gatewayv1.PrefixMatchHTTPPathModifier,
+					ReplacePrefixMatch: helpers.GetPointer("/path"),
+				}, // any value is invalid by the validator
 			},
 			expectErrCount: 1,
 			name:           "rewrite filter with invalid prefix path",
@@ -1154,17 +1119,14 @@ func TestValidateFilterRewrite(t *testing.T) {
 				validator.ValidateRewritePathReturns(errors.New("invalid path"))
 				return validator
 			}(),
-			filter: gatewayv1.HTTPRouteFilter{
-				Type: gatewayv1.HTTPRouteFilterURLRewrite,
-				URLRewrite: &gatewayv1.HTTPURLRewriteFilter{
-					Hostname: helpers.GetPointer[gatewayv1.PreciseHostname](
-						"example.com",
-					), // any value is invalid by the validator
-					Path: &gatewayv1.HTTPPathModifier{
-						Type:               gatewayv1.PrefixMatchHTTPPathModifier,
-						ReplacePrefixMatch: helpers.GetPointer("/path"),
-					}, // any value is invalid by the validator
-				},
+			urlRewrite: &gatewayv1.HTTPURLRewriteFilter{
+				Hostname: helpers.GetPointer[gatewayv1.PreciseHostname](
+					"example.com",
+				), // any value is invalid by the validator
+				Path: &gatewayv1.HTTPPathModifier{
+					Type:               gatewayv1.PrefixMatchHTTPPathModifier,
+					ReplacePrefixMatch: helpers.GetPointer("/path"),
+				}, // any value is invalid by the validator
 			},
 			expectErrCount: 2,
 			name:           "rewrite filter with multiple errors",
@@ -1176,149 +1138,7 @@ func TestValidateFilterRewrite(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			g := NewWithT(t)
-			allErrs := validateFilterRewrite(test.validator, test.filter, filterPath)
-			g.Expect(allErrs).To(HaveLen(test.expectErrCount))
-		})
-	}
-}
-
-func TestValidateFilterRequestHeaderModifier(t *testing.T) {
-	createAllValidValidator := func() *validationfakes.FakeHTTPFieldsValidator {
-		v := &validationfakes.FakeHTTPFieldsValidator{}
-		return v
-	}
-
-	tests := []struct {
-		filter         gatewayv1.HTTPRouteFilter
-		validator      *validationfakes.FakeHTTPFieldsValidator
-		name           string
-		expectErrCount int
-	}{
-		{
-			validator: createAllValidValidator(),
-			filter: gatewayv1.HTTPRouteFilter{
-				Type: gatewayv1.HTTPRouteFilterRequestHeaderModifier,
-				RequestHeaderModifier: &gatewayv1.HTTPHeaderFilter{
-					Set: []gatewayv1.HTTPHeader{
-						{Name: "MyBespokeHeader", Value: "my-value"},
-					},
-					Add: []gatewayv1.HTTPHeader{
-						{Name: "Accept-Encoding", Value: "gzip"},
-					},
-					Remove: []string{"Cache-Control"},
-				},
-			},
-			expectErrCount: 0,
-			name:           "valid request header modifier filter",
-		},
-		{
-			validator: createAllValidValidator(),
-			filter: gatewayv1.HTTPRouteFilter{
-				Type:                  gatewayv1.HTTPRouteFilterRequestHeaderModifier,
-				RequestHeaderModifier: nil,
-			},
-			expectErrCount: 1,
-			name:           "nil request header modifier filter",
-		},
-		{
-			validator: func() *validationfakes.FakeHTTPFieldsValidator {
-				v := createAllValidValidator()
-				v.ValidateRequestHeaderNameReturns(errors.New("Invalid header"))
-				return v
-			}(),
-			filter: gatewayv1.HTTPRouteFilter{
-				Type: gatewayv1.HTTPRouteFilterRequestHeaderModifier,
-				RequestHeaderModifier: &gatewayv1.HTTPHeaderFilter{
-					Add: []gatewayv1.HTTPHeader{
-						{Name: "$var_name", Value: "gzip"},
-					},
-				},
-			},
-			expectErrCount: 1,
-			name:           "request header modifier filter with invalid add",
-		},
-		{
-			validator: func() *validationfakes.FakeHTTPFieldsValidator {
-				v := createAllValidValidator()
-				v.ValidateRequestHeaderNameReturns(errors.New("Invalid header"))
-				return v
-			}(),
-			filter: gatewayv1.HTTPRouteFilter{
-				Type: gatewayv1.HTTPRouteFilterRequestHeaderModifier,
-				RequestHeaderModifier: &gatewayv1.HTTPHeaderFilter{
-					Remove: []string{"$var-name"},
-				},
-			},
-			expectErrCount: 1,
-			name:           "request header modifier filter with invalid remove",
-		},
-		{
-			validator: func() *validationfakes.FakeHTTPFieldsValidator {
-				v := createAllValidValidator()
-				v.ValidateRequestHeaderValueReturns(errors.New("Invalid header value"))
-				return v
-			}(),
-			filter: gatewayv1.HTTPRouteFilter{
-				Type: gatewayv1.HTTPRouteFilterRequestHeaderModifier,
-				RequestHeaderModifier: &gatewayv1.HTTPHeaderFilter{
-					Add: []gatewayv1.HTTPHeader{
-						{Name: "Accept-Encoding", Value: "yhu$"},
-					},
-				},
-			},
-			expectErrCount: 1,
-			name:           "request header modifier filter with invalid header value",
-		},
-		{
-			validator: func() *validationfakes.FakeHTTPFieldsValidator {
-				v := createAllValidValidator()
-				v.ValidateRequestHeaderValueReturns(errors.New("Invalid header value"))
-				v.ValidateRequestHeaderNameReturns(errors.New("Invalid header"))
-				return v
-			}(),
-			filter: gatewayv1.HTTPRouteFilter{
-				Type: gatewayv1.HTTPRouteFilterRequestHeaderModifier,
-				RequestHeaderModifier: &gatewayv1.HTTPHeaderFilter{
-					Set: []gatewayv1.HTTPHeader{
-						{Name: "Host", Value: "my_host"},
-					},
-					Add: []gatewayv1.HTTPHeader{
-						{Name: "}90yh&$", Value: "gzip$"},
-						{Name: "}67yh&$", Value: "compress$"},
-					},
-					Remove: []string{"Cache-Control$}"},
-				},
-			},
-			expectErrCount: 7,
-			name:           "request header modifier filter all fields invalid",
-		},
-		{
-			validator: createAllValidValidator(),
-			filter: gatewayv1.HTTPRouteFilter{
-				Type: gatewayv1.HTTPRouteFilterRequestHeaderModifier,
-				RequestHeaderModifier: &gatewayv1.HTTPHeaderFilter{
-					Set: []gatewayv1.HTTPHeader{
-						{Name: "MyBespokeHeader", Value: "my-value"},
-						{Name: "mYbespokeHEader", Value: "duplicate"},
-					},
-					Add: []gatewayv1.HTTPHeader{
-						{Name: "Accept-Encoding", Value: "gzip"},
-						{Name: "accept-encodING", Value: "gzip"},
-					},
-					Remove: []string{"Cache-Control", "cache-control"},
-				},
-			},
-			expectErrCount: 3,
-			name:           "request header modifier filter not unique names",
-		},
-	}
-
-	filterPath := field.NewPath("test")
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			g := NewWithT(t)
-			allErrs := validateFilterHeaderModifier(test.validator, test.filter, filterPath)
+			allErrs := validateFilterRewrite(test.validator, test.urlRewrite, filterPath)
 			g.Expect(allErrs).To(HaveLen(test.expectErrCount))
 		})
 	}

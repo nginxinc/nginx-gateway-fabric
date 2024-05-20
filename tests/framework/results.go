@@ -1,6 +1,7 @@
 package framework
 
 import (
+	"encoding/csv"
 	"fmt"
 	"io"
 	"os"
@@ -64,24 +65,48 @@ func WriteSystemInfoToFile(file *os.File, ci ClusterInfo, plus bool) error {
 	return nil
 }
 
-// GeneratePNG generates a PNG using gnuplot.
-func GeneratePNG(resultsDir, inputFilename, outputFilename string) ([]byte, error) {
+func generatePNG(resultsDir, inputFilename, outputFilename, configFilename string) error {
 	pwd, err := os.Getwd()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	gnuplotCfg := filepath.Join(filepath.Dir(pwd), "scripts", "requests-plot.gp")
+	gnuplotCfg := filepath.Join(filepath.Dir(pwd), "scripts", configFilename)
 
 	files := fmt.Sprintf("inputfile='%s';outputfile='%s'", inputFilename, outputFilename)
 	cmd := exec.Command("gnuplot", "-e", files, "-c", gnuplotCfg)
 	cmd.Dir = resultsDir
 
-	return cmd.CombinedOutput()
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("failed to generate PNG: %w; output: %s", err, string(output))
+	}
+
+	return nil
 }
 
-// WriteResults writes the vegeta metrics results to the results file in text format.
-func WriteResults(resultsFile *os.File, metrics *Metrics) error {
+// GenerateRequestsPNG generates a Requests PNG using gnuplot.
+func GenerateRequestsPNG(resultsDir, inputFilename, outputFilename string) error {
+	return generatePNG(resultsDir, inputFilename, outputFilename, "requests-plot.gp")
+}
+
+// GenerateTTRPNG generates a TTR PNG using gnuplot.
+func GenerateTTRPNG(resultsDir, inputFilename, outputFilename string) error {
+	return generatePNG(resultsDir, inputFilename, outputFilename, "ttr-plot.gp")
+}
+
+// GenerateCPUPNG generates a CPU usage PNG using gnuplot.
+func GenerateCPUPNG(resultsDir, inputFilename, outputFilename string) error {
+	return generatePNG(resultsDir, inputFilename, outputFilename, "cpu-plot.gp")
+}
+
+// GenerateMemoryPNG generates a Memory usage PNG using gnuplot.
+func GenerateMemoryPNG(resultsDir, inputFilename, outputFilename string) error {
+	return generatePNG(resultsDir, inputFilename, outputFilename, "memory-plot.gp")
+}
+
+// WriteMetricsResults writes the metrics results to the results file in text format.
+func WriteMetricsResults(resultsFile *os.File, metrics *Metrics) error {
 	reporter := vegeta.NewTextReporter(&metrics.Metrics)
 
 	return reporter.Report(resultsFile)
@@ -96,7 +121,27 @@ func WriteContent(resultsFile *os.File, content string) error {
 	return nil
 }
 
-// NewCSVEncoder returns a vegeta CSV encoder.
-func NewCSVEncoder(w io.Writer) vegeta.Encoder {
+// NewVegetaCSVEncoder returns a vegeta CSV encoder.
+func NewVegetaCSVEncoder(w io.Writer) vegeta.Encoder {
 	return vegeta.NewCSVEncoder(w)
+}
+
+// NewCSVResultsWriter creates and returns a CSV results file and writer.
+func NewCSVResultsWriter(resultsDir, fileName string, resultHeaders ...string) (*os.File, *csv.Writer, error) {
+	if err := os.MkdirAll(resultsDir, 0o750); err != nil {
+		return nil, nil, err
+	}
+
+	file, err := os.OpenFile(filepath.Join(resultsDir, fileName), os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0o644)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	writer := csv.NewWriter(file)
+
+	if err = writer.Write(resultHeaders); err != nil {
+		return nil, nil, err
+	}
+
+	return file, writer, nil
 }

@@ -7,7 +7,7 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gatewayv1alpha3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 )
 
 func TestMustCastObject(t *testing.T) {
@@ -20,6 +20,6 @@ func TestMustCastObject(t *testing.T) {
 	}).ToNot(Panic())
 
 	g.Expect(func() {
-		_ = MustCastObject[*gatewayv1alpha2.BackendTLSPolicy](obj)
+		_ = MustCastObject[*gatewayv1alpha3.BackendTLSPolicy](obj)
 	}).To(Panic())
 }

@@ -11,7 +11,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	v1 "sigs.k8s.io/gateway-api/apis/v1"
-	"sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/graph"
@@ -44,16 +43,18 @@ func BuildConfiguration(
 	keyPairs := buildSSLKeyPairs(g.ReferencedSecrets, g.Gateway.Listeners)
 	certBundles := buildCertBundles(g.ReferencedCaCertConfigMaps, backendGroups)
 	telemetry := buildTelemetry(g)
+	baseHTTPConfig := buildBaseHTTPConfig(g)
 
 	config := Configuration{
-		HTTPServers:   httpServers,
-		SSLServers:    sslServers,
-		Upstreams:     upstreams,
-		BackendGroups: backendGroups,
-		SSLKeyPairs:   keyPairs,
-		Version:       configVersion,
-		CertBundles:   certBundles,
-		Telemetry:     telemetry,
+		HTTPServers:    httpServers,
+		SSLServers:     sslServers,
+		Upstreams:      upstreams,
+		BackendGroups:  backendGroups,
+		SSLKeyPairs:    keyPairs,
+		Version:        configVersion,
+		CertBundles:    certBundles,
+		Telemetry:      telemetry,
+		BaseHTTPConfig: baseHTTPConfig,
 	}
 
 	return config
@@ -195,7 +196,7 @@ func convertBackendTLS(btp *graph.BackendTLSPolicy) *VerifyTLS {
 	} else {
 		verify.RootCAPath = alpineSSLRootCAPath
 	}
-	verify.Hostname = string(btp.Source.Spec.TLS.Hostname)
+	verify.Hostname = string(btp.Source.Spec.Validation.Hostname)
 	return verify
 }
 
@@ -286,7 +287,7 @@ func (hpr *hostPathRules) upsertRoute(route *graph.L7Route, listener *graph.List
 	var objectSrc *metav1.ObjectMeta
 
 	if GRPC {
-		objectSrc = &helpers.MustCastObject[*v1alpha2.GRPCRoute](route.Source).ObjectMeta
+		objectSrc = &helpers.MustCastObject[*v1.GRPCRoute](route.Source).ObjectMeta
 	} else {
 		objectSrc = &helpers.MustCastObject[*v1.HTTPRoute](route.Source).ObjectMeta
 	}
@@ -541,6 +542,11 @@ func createHTTPFilters(filters []v1.HTTPRouteFilter) HTTPFilters {
 				// using the first filter
 				result.RequestHeaderModifiers = convertHTTPHeaderFilter(f.RequestHeaderModifier)
 			}
+		case v1.HTTPRouteFilterResponseHeaderModifier:
+			if result.ResponseHeaderModifiers == nil {
+				// using the first filter
+				result.ResponseHeaderModifiers = convertHTTPHeaderFilter(f.ResponseHeaderModifier)
+			}
 		}
 	}
 	return result
@@ -613,4 +619,21 @@ func buildTelemetry(g *graph.Graph) Telemetry {
 	}
 
 	return tel
+}
+
+// buildBaseHTTPConfig generates the base http context config that should be applied to all servers.
+func buildBaseHTTPConfig(g *graph.Graph) BaseHTTPConfig {
+	baseConfig := BaseHTTPConfig{
+		// HTTP2 should be enabled by default
+		HTTP2: true,
+	}
+	if g.NginxProxy == nil {
+		return baseConfig
+	}
+
+	if g.NginxProxy.Spec.DisableHTTP2 {
+		baseConfig.HTTP2 = false
+	}
+
+	return baseConfig
 }

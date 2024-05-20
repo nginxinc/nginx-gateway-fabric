@@ -77,7 +77,7 @@ type ClientSettingsPolicySpec struct {
     // TargetRef identifies an API object to apply the policy to.
     // Object must be in the same namespace as the policy.
     // Support: Gateway and HTTPRoute
-    TargetRef gatewayv1alpha2.PolicyTargetReference `json:"targetRef"`
+    TargetRef gatewayv1alpha2.LocalPolicyTargetReference `json:"targetRef"`
 
     // Body defines the client request body settings.
     // +optional

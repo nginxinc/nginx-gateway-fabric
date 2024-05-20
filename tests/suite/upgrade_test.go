@@ -76,7 +76,7 @@ var _ = Describe("Upgrade testing", Label("nfr", "upgrade"), func() {
 
 	AfterEach(func() {
 		Expect(resourceManager.DeleteFromFiles(files, ns.Name)).To(Succeed())
-		Expect(resourceManager.Delete([]client.Object{ns})).To(Succeed())
+		Expect(resourceManager.DeleteNamespace(ns.Name)).To(Succeed())
 		resultsFile.Close()
 	})
 
@@ -157,7 +157,7 @@ var _ = Describe("Upgrade testing", Label("nfr", "upgrade"), func() {
 				}
 
 				buf := new(bytes.Buffer)
-				encoder := framework.NewCSVEncoder(buf)
+				encoder := framework.NewVegetaCSVEncoder(buf)
 				for _, res := range results {
 					res := res
 					Expect(encoder.Encode(&res)).To(Succeed())
@@ -173,8 +173,9 @@ var _ = Describe("Upgrade testing", Label("nfr", "upgrade"), func() {
 				csvFile.Close()
 
 				pngName := framework.CreateResultsFilename("png", scheme, *plusEnabled)
-				output, err := framework.GeneratePNG(resultsDir, csvName, pngName)
-				Expect(err).ToNot(HaveOccurred(), string(output))
+				Expect(
+					framework.GenerateRequestsPNG(resultsDir, csvName, pngName),
+				).To(Succeed())
 
 				metricsCh <- &metricsRes
 			}(test)
@@ -251,7 +252,7 @@ var _ = Describe("Upgrade testing", Label("nfr", "upgrade"), func() {
 			_, err := fmt.Fprint(resultsFile, res.testName)
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(framework.WriteResults(resultsFile, res.metrics)).To(Succeed())
+			Expect(framework.WriteMetricsResults(resultsFile, res.metrics)).To(Succeed())
 
 			link := fmt.Sprintf("\n\n![%[1]v.png](%[1]v.png)\n", res.scheme)
 			if *plusEnabled {

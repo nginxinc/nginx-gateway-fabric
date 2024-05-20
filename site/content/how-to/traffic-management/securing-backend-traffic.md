@@ -229,18 +229,17 @@ Next, we create the Backend TLS Policy which targets our `secure-app` Service an
 
 ```yaml
 kubectl apply -f - <<EOF
-apiVersion: gateway.networking.k8s.io/v1alpha2
+apiVersion: gateway.networking.k8s.io/v1alpha3
 kind: BackendTLSPolicy
 metadata:
   name: backend-tls
 spec:
-  targetRef:
-    group: ''
+  targetRefs:
+  - group: ''
     kind: Service
     name: secure-app
-    namespace: default
-  tls:
-    caCertRefs:
+  validation:
+    caCertificateRefs:
     - name: backend-cert
       group: ''
       kind: ConfigMap
@@ -259,21 +258,20 @@ Name:         backend-tls
 Namespace:    default
 Labels:       <none>
 Annotations:  <none>
-API Version:  gateway.networking.k8s.io/v1alpha2
+API Version:  gateway.networking.k8s.io/v1alpha3
 Kind:         BackendTLSPolicy
 Metadata:
-  Creation Timestamp:  2024-02-01T12:02:38Z
+  Creation Timestamp:  2024-05-15T12:02:38Z
   Generation:          1
   Resource Version:    19380
   UID:                 b3983a6e-92f1-4a98-b2af-64b317d74528
 Spec:
-  Target Ref:
+  Target Refs:
     Group:
     Kind:       Service
     Name:       secure-app
-    Namespace:  default
-  Tls:
-    Ca Cert Refs:
+  Validation:
+    Ca Certificate Refs:
       Group:
       Kind:    ConfigMap
       Name:    backend-cert
@@ -286,7 +284,7 @@ Status:
       Name:       gateway
       Namespace:  default
     Conditions:
-      Last Transition Time:  2024-02-01T12:02:38Z
+      Last Transition Time:  2024-05-15T12:02:38Z
       Message:               BackendTLSPolicy is accepted by the Gateway
       Reason:                Accepted
       Status:                True

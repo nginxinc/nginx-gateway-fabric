@@ -8,6 +8,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	v1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
+	"sigs.k8s.io/gateway-api/apis/v1alpha3"
 
 	ngfAPI "github.com/nginxinc/nginx-gateway-fabric/apis/v1alpha1"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
@@ -56,13 +57,13 @@ func PrepareRouteRequests(
 
 			reqs = append(reqs, req)
 		} else if r.RouteType == graph.RouteTypeGRPC {
-			status := v1alpha2.GRPCRouteStatus{
+			status := v1.GRPCRouteStatus{
 				RouteStatus: routeStatus,
 			}
 
 			req := frameworkStatus.UpdateRequest{
 				NsName:       routeKey.NamespacedName,
-				ResourceType: &v1alpha2.GRPCRoute{},
+				ResourceType: &v1.GRPCRoute{},
 				Setter:       newGRPCRouteStatusSetter(status, gatewayCtlrName),
 			}
 
@@ -327,7 +328,7 @@ func PrepareBackendTLSPolicyRequests(
 
 		reqs = append(reqs, frameworkStatus.UpdateRequest{
 			NsName:       nsname,
-			ResourceType: &v1alpha2.BackendTLSPolicy{},
+			ResourceType: &v1alpha3.BackendTLSPolicy{},
 			Setter:       newBackendTLSPolicyStatusSetter(status, gatewayCtlrName),
 		})
 	}

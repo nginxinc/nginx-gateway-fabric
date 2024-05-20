@@ -8,7 +8,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
-	"sigs.k8s.io/gateway-api/apis/v1alpha2"
+	"sigs.k8s.io/gateway-api/apis/v1alpha3"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
@@ -194,10 +194,10 @@ func validateBackendTLSPolicyMatchingAllBackends(backendRefs []BackendRef) *cond
 	var mismatch bool
 	var referencePolicy *BackendTLSPolicy
 
-	checkPoliciesEqual := func(p1, p2 *v1alpha2.BackendTLSPolicy) bool {
-		return !slices.Equal(p1.Spec.TLS.CACertRefs, p2.Spec.TLS.CACertRefs) ||
-			p1.Spec.TLS.WellKnownCACerts != p2.Spec.TLS.WellKnownCACerts ||
-			p1.Spec.TLS.Hostname != p2.Spec.TLS.Hostname
+	checkPoliciesEqual := func(p1, p2 *v1alpha3.BackendTLSPolicy) bool {
+		return !slices.Equal(p1.Spec.Validation.CACertificateRefs, p2.Spec.Validation.CACertificateRefs) ||
+			p1.Spec.Validation.WellKnownCACertificates != p2.Spec.Validation.WellKnownCACertificates ||
+			p1.Spec.Validation.Hostname != p2.Spec.Validation.Hostname
 	}
 
 	for _, backendRef := range backendRefs {
@@ -244,18 +244,18 @@ func findBackendTLSPolicyForService(
 
 	for _, btp := range backendTLSPolicies {
 		btpNs := btp.Source.Namespace
-		if btp.Source.Spec.TargetRef.Namespace != nil {
-			btpNs = string(*btp.Source.Spec.TargetRef.Namespace)
-		}
-		if string(btp.Source.Spec.TargetRef.Name) == refName && btpNs == refNs {
-			if beTLSPolicy != nil {
-				if sort.LessObjectMeta(&btp.Source.ObjectMeta, &beTLSPolicy.Source.ObjectMeta) {
+		for _, targetRef := range btp.Source.Spec.TargetRefs {
+			if string(targetRef.Name) == refName && btpNs == refNs {
+				if beTLSPolicy != nil {
+					if sort.LessObjectMeta(&btp.Source.ObjectMeta, &beTLSPolicy.Source.ObjectMeta) {
+						beTLSPolicy = btp
+					}
+				} else {
 					beTLSPolicy = btp
 				}
-			} else {
-				beTLSPolicy = btp
 			}
 		}
+
 	}
 
 	if beTLSPolicy != nil {

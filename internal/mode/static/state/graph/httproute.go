@@ -2,7 +2,6 @@ package graph
 
 import (
 	"fmt"
-	"strings"
 
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -10,6 +9,12 @@ import (
 
 	staticConds "github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/conditions"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/mode/static/state/validation"
+)
+
+var (
+	add    = "add"
+	set    = "set"
+	remove = "remove"
 )
 
 func buildHTTPRoute(
@@ -243,11 +248,15 @@ func validateFilter(
 
 	switch filter.Type {
 	case v1.HTTPRouteFilterRequestRedirect:
-		return validateFilterRedirect(validator, filter, filterPath)
+		return validateFilterRedirect(validator, filter.RequestRedirect, filterPath)
 	case v1.HTTPRouteFilterURLRewrite:
-		return validateFilterRewrite(validator, filter, filterPath)
+		return validateFilterRewrite(validator, filter.URLRewrite, filterPath)
 	case v1.HTTPRouteFilterRequestHeaderModifier:
-		return validateFilterHeaderModifier(validator, filter, filterPath)
+		return validateFilterHeaderModifier(validator, filter.RequestHeaderModifier, filterPath.Child(string(filter.Type)))
+	case v1.HTTPRouteFilterResponseHeaderModifier:
+		return validateFilterResponseHeaderModifier(
+			validator, filter.ResponseHeaderModifier, filterPath.Child(string(filter.Type)),
+		)
 	default:
 		valErr := field.NotSupported(
 			filterPath.Child("type"),
@@ -256,6 +265,7 @@ func validateFilter(
 				string(v1.HTTPRouteFilterRequestRedirect),
 				string(v1.HTTPRouteFilterURLRewrite),
 				string(v1.HTTPRouteFilterRequestHeaderModifier),
+				string(v1.HTTPRouteFilterResponseHeaderModifier),
 			},
 		)
 		allErrs = append(allErrs, valErr)
@@ -265,12 +275,11 @@ func validateFilter(
 
 func validateFilterRedirect(
 	validator validation.HTTPFieldsValidator,
-	filter v1.HTTPRouteFilter,
+	redirect *v1.HTTPRequestRedirectFilter,
 	filterPath *field.Path,
 ) field.ErrorList {
 	var allErrs field.ErrorList
 
-	redirect := filter.RequestRedirect
 	redirectPath := filterPath.Child("requestRedirect")
 
 	if redirect == nil {
@@ -315,12 +324,11 @@ func validateFilterRedirect(
 
 func validateFilterRewrite(
 	validator validation.HTTPFieldsValidator,
-	filter v1.HTTPRouteFilter,
+	rewrite *v1.HTTPURLRewriteFilter,
 	filterPath *field.Path,
 ) field.ErrorList {
 	var allErrs field.ErrorList
 
-	rewrite := filter.URLRewrite
 	rewritePath := filterPath.Child("urlRewrite")
 
 	if rewrite == nil {
@@ -351,110 +359,6 @@ func validateFilterRewrite(
 			valErr := field.Invalid(rewritePath.Child("path"), *rewrite.Path, err.Error())
 			allErrs = append(allErrs, valErr)
 		}
-	}
-
-	return allErrs
-}
-
-func validateFilterHeaderModifier(
-	validator validation.HTTPFieldsValidator,
-	filter v1.HTTPRouteFilter,
-	filterPath *field.Path,
-) field.ErrorList {
-	headerModifier := filter.RequestHeaderModifier
-
-	headerModifierPath := filterPath.Child("requestHeaderModifier")
-
-	if headerModifier == nil {
-		return field.ErrorList{field.Required(headerModifierPath, "requestHeaderModifier cannot be nil")}
-	}
-
-	return validateFilterHeaderModifierFields(validator, headerModifier, headerModifierPath)
-}
-
-func validateFilterHeaderModifierFields(
-	validator validation.HTTPFieldsValidator,
-	headerModifier *v1.HTTPHeaderFilter,
-	headerModifierPath *field.Path,
-) field.ErrorList {
-	var allErrs field.ErrorList
-
-	// Ensure that the header names are case-insensitive unique
-	allErrs = append(allErrs, validateRequestHeadersCaseInsensitiveUnique(
-		headerModifier.Add,
-		headerModifierPath.Child("add"))...,
-	)
-	allErrs = append(allErrs, validateRequestHeadersCaseInsensitiveUnique(
-		headerModifier.Set,
-		headerModifierPath.Child("set"))...,
-	)
-	allErrs = append(allErrs, validateRequestHeaderStringCaseInsensitiveUnique(
-		headerModifier.Remove,
-		headerModifierPath.Child("remove"))...,
-	)
-
-	for _, h := range headerModifier.Add {
-		if err := validator.ValidateRequestHeaderName(string(h.Name)); err != nil {
-			valErr := field.Invalid(headerModifierPath.Child("add"), h, err.Error())
-			allErrs = append(allErrs, valErr)
-		}
-		if err := validator.ValidateRequestHeaderValue(h.Value); err != nil {
-			valErr := field.Invalid(headerModifierPath.Child("add"), h, err.Error())
-			allErrs = append(allErrs, valErr)
-		}
-	}
-	for _, h := range headerModifier.Set {
-		if err := validator.ValidateRequestHeaderName(string(h.Name)); err != nil {
-			valErr := field.Invalid(headerModifierPath.Child("set"), h, err.Error())
-			allErrs = append(allErrs, valErr)
-		}
-		if err := validator.ValidateRequestHeaderValue(h.Value); err != nil {
-			valErr := field.Invalid(headerModifierPath.Child("set"), h, err.Error())
-			allErrs = append(allErrs, valErr)
-		}
-	}
-	for _, h := range headerModifier.Remove {
-		if err := validator.ValidateRequestHeaderName(h); err != nil {
-			valErr := field.Invalid(headerModifierPath.Child("remove"), h, err.Error())
-			allErrs = append(allErrs, valErr)
-		}
-	}
-
-	return allErrs
-}
-
-func validateRequestHeadersCaseInsensitiveUnique(
-	headers []v1.HTTPHeader,
-	path *field.Path,
-) field.ErrorList {
-	var allErrs field.ErrorList
-
-	seen := make(map[string]struct{})
-
-	for _, h := range headers {
-		name := strings.ToLower(string(h.Name))
-		if _, exists := seen[name]; exists {
-			valErr := field.Invalid(path, h, "header name is not unique")
-			allErrs = append(allErrs, valErr)
-		}
-		seen[name] = struct{}{}
-	}
-
-	return allErrs
-}
-
-func validateRequestHeaderStringCaseInsensitiveUnique(headers []string, path *field.Path) field.ErrorList {
-	var allErrs field.ErrorList
-
-	seen := make(map[string]struct{})
-
-	for _, h := range headers {
-		name := strings.ToLower(h)
-		if _, exists := seen[name]; exists {
-			valErr := field.Invalid(path, h, "header name is not unique")
-			allErrs = append(allErrs, valErr)
-		}
-		seen[name] = struct{}{}
 	}
 
 	return allErrs

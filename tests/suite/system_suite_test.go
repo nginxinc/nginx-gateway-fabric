@@ -4,6 +4,7 @@ import (
 	"context"
 	"embed"
 	"flag"
+	"fmt"
 	"path"
 	"path/filepath"
 	"runtime"
@@ -64,8 +65,9 @@ var (
 	manifests         embed.FS
 	k8sClient         client.Client
 	resourceManager   framework.ResourceManager
-	portForwardStopCh = make(chan struct{}, 1)
+	portForwardStopCh chan struct{}
 	portFwdPort       int
+	portFwdHTTPSPort  int
 	timeoutConfig     framework.TimeoutConfig
 	localChartPath    string
 	address           string
@@ -75,8 +77,10 @@ var (
 )
 
 const (
-	releaseName  = "ngf-test"
-	ngfNamespace = "nginx-gateway"
+	releaseName           = "ngf-test"
+	ngfNamespace          = "nginx-gateway"
+	ngfHTTPForwardedPort  = 10080
+	ngfHTTPSForwardedPort = 10443
 )
 
 type setupConfig struct {
@@ -179,8 +183,12 @@ func setup(cfg setupConfig, extraInstallArgs ...string) {
 	Expect(podNames).ToNot(BeEmpty())
 
 	if *serviceType != "LoadBalancer" {
-		portFwdPort, err = framework.PortForward(k8sConfig, installCfg.Namespace, podNames[0], portForwardStopCh)
+		ports := []string{fmt.Sprintf("%d:80", ngfHTTPForwardedPort), fmt.Sprintf("%d:443", ngfHTTPSForwardedPort)}
+		portForwardStopCh = make(chan struct{})
+		err = framework.PortForward(k8sConfig, installCfg.Namespace, podNames[0], ports, portForwardStopCh)
 		address = "127.0.0.1"
+		portFwdPort = ngfHTTPForwardedPort
+		portFwdHTTPSPort = ngfHTTPSForwardedPort
 	} else {
 		address, err = resourceManager.GetLBIPAddress(installCfg.Namespace)
 	}
@@ -189,7 +197,9 @@ func setup(cfg setupConfig, extraInstallArgs ...string) {
 
 func teardown(relName string) {
 	if portFwdPort != 0 {
-		portForwardStopCh <- struct{}{}
+		close(portForwardStopCh)
+		portFwdPort = 0
+		portFwdHTTPSPort = 0
 	}
 
 	cfg := framework.InstallationConfig{
@@ -242,15 +252,18 @@ var _ = BeforeSuite(func() {
 	cfg.nfr = isNFR(labelFilter)
 
 	// Skip deployment if:
-	// - running upgrade test (this test will deploy its own version)
-	// - running longevity teardown (deployment will already exist)
-	// - running telemetry test (NGF will be deployed as part of the test)
-	if strings.Contains(labelFilter, "upgrade") ||
-		strings.Contains(labelFilter, "longevity-teardown") ||
-		strings.Contains(labelFilter, "telemetry") ||
-		strings.Contains(labelFilter, "graceful-recovery") {
-
-		cfg.deploy = false
+	skipSubstrings := []string{
+		"upgrade",            // - running upgrade test (this test will deploy its own version)
+		"longevity-teardown", // - running longevity teardown (deployment will already exist)
+		"telemetry",          // - running telemetry test (NGF will be deployed as part of the test)
+		"graceful-recovery",  // - running graceful recovery test (this test will deploy its own version)
+		"scale",              // - running scale test (this test will deploy its own version)
+	}
+	for _, s := range skipSubstrings {
+		if strings.Contains(labelFilter, s) {
+			cfg.deploy = false
+			break
+		}
 	}
 
 	// use a different release name for longevity to allow us to filter on a specific label when collecting
@@ -283,5 +296,6 @@ func isNFR(labelFilter string) bool {
 		strings.Contains(labelFilter, "longevity") ||
 		strings.Contains(labelFilter, "performance") ||
 		strings.Contains(labelFilter, "upgrade") ||
-		strings.Contains(labelFilter, "graceful-recovery")
+		strings.Contains(labelFilter, "graceful-recovery") ||
+		strings.Contains(labelFilter, "scale")
 }

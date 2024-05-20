@@ -9,27 +9,29 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
+	"sigs.k8s.io/gateway-api/apis/v1alpha3"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
 )
 
 func TestProcessBackendTLSPoliciesEmpty(t *testing.T) {
-	backendTLSPolicies := map[types.NamespacedName]*v1alpha2.BackendTLSPolicy{
+	backendTLSPolicies := map[types.NamespacedName]*v1alpha3.BackendTLSPolicy{
 		{Namespace: "test", Name: "tls-policy"}: {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "tls-policy",
 				Namespace: "test",
 			},
-			Spec: v1alpha2.BackendTLSPolicySpec{
-				TargetRef: v1alpha2.PolicyTargetReferenceWithSectionName{
-					PolicyTargetReference: v1alpha2.PolicyTargetReference{
-						Kind:      "Service",
-						Name:      "service1",
-						Namespace: (*gatewayv1.Namespace)(helpers.GetPointer("test")),
+			Spec: v1alpha3.BackendTLSPolicySpec{
+				TargetRefs: []v1alpha2.LocalPolicyTargetReferenceWithSectionName{
+					{
+						LocalPolicyTargetReference: v1alpha2.LocalPolicyTargetReference{
+							Kind: "Service",
+							Name: "service1",
+						},
 					},
 				},
-				TLS: v1alpha2.BackendTLSPolicyConfig{
-					CACertRefs: []gatewayv1.LocalObjectReference{
+				Validation: v1alpha3.BackendTLSPolicyValidation{
+					CACertificateRefs: []gatewayv1.LocalObjectReference{
 						{
 							Kind:  "ConfigMap",
 							Name:  "configmap",
@@ -49,7 +51,7 @@ func TestProcessBackendTLSPoliciesEmpty(t *testing.T) {
 	tests := []struct {
 		expected           map[types.NamespacedName]*BackendTLSPolicy
 		gateway            *Gateway
-		backendTLSPolicies map[types.NamespacedName]*v1alpha2.BackendTLSPolicy
+		backendTLSPolicies map[types.NamespacedName]*v1alpha3.BackendTLSPolicy
 		name               string
 	}{
 		{
@@ -78,11 +80,12 @@ func TestProcessBackendTLSPoliciesEmpty(t *testing.T) {
 }
 
 func TestValidateBackendTLSPolicy(t *testing.T) {
-	targetRefNormalCase := &v1alpha2.PolicyTargetReferenceWithSectionName{
-		PolicyTargetReference: v1alpha2.PolicyTargetReference{
-			Kind:      "Service",
-			Name:      "service1",
-			Namespace: (*gatewayv1.Namespace)(helpers.GetPointer("test")),
+	targetRefNormalCase := []v1alpha2.LocalPolicyTargetReferenceWithSectionName{
+		{
+			LocalPolicyTargetReference: v1alpha2.LocalPolicyTargetReference{
+				Kind: "Service",
+				Name: "service1",
+			},
 		},
 	}
 
@@ -152,7 +155,7 @@ func TestValidateBackendTLSPolicy(t *testing.T) {
 	ancestorsWithUs := append(ancestors, getAncestorRef("test", "gateway"))
 
 	tests := []struct {
-		tlsPolicy *v1alpha2.BackendTLSPolicy
+		tlsPolicy *v1alpha3.BackendTLSPolicy
 		gateway   *Gateway
 		name      string
 		isValid   bool
@@ -160,16 +163,16 @@ func TestValidateBackendTLSPolicy(t *testing.T) {
 	}{
 		{
 			name: "normal case with ca cert refs",
-			tlsPolicy: &v1alpha2.BackendTLSPolicy{
+			tlsPolicy: &v1alpha3.BackendTLSPolicy{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "tls-policy",
 					Namespace: "test",
 				},
-				Spec: v1alpha2.BackendTLSPolicySpec{
-					TargetRef: *targetRefNormalCase,
-					TLS: v1alpha2.BackendTLSPolicyConfig{
-						CACertRefs: localObjectRefNormalCase,
-						Hostname:   "foo.test.com",
+				Spec: v1alpha3.BackendTLSPolicySpec{
+					TargetRefs: targetRefNormalCase,
+					Validation: v1alpha3.BackendTLSPolicyValidation{
+						CACertificateRefs: localObjectRefNormalCase,
+						Hostname:          "foo.test.com",
 					},
 				},
 			},
@@ -177,16 +180,16 @@ func TestValidateBackendTLSPolicy(t *testing.T) {
 		},
 		{
 			name: "normal case with ca cert refs and 16 ancestors including us",
-			tlsPolicy: &v1alpha2.BackendTLSPolicy{
+			tlsPolicy: &v1alpha3.BackendTLSPolicy{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "tls-policy",
 					Namespace: "test",
 				},
-				Spec: v1alpha2.BackendTLSPolicySpec{
-					TargetRef: *targetRefNormalCase,
-					TLS: v1alpha2.BackendTLSPolicyConfig{
-						CACertRefs: localObjectRefNormalCase,
-						Hostname:   "foo.test.com",
+				Spec: v1alpha3.BackendTLSPolicySpec{
+					TargetRefs: targetRefNormalCase,
+					Validation: v1alpha3.BackendTLSPolicyValidation{
+						CACertificateRefs: localObjectRefNormalCase,
+						Hostname:          "foo.test.com",
 					},
 				},
 				Status: v1alpha2.PolicyStatus{
@@ -197,16 +200,16 @@ func TestValidateBackendTLSPolicy(t *testing.T) {
 		},
 		{
 			name: "normal case with well known certs",
-			tlsPolicy: &v1alpha2.BackendTLSPolicy{
+			tlsPolicy: &v1alpha3.BackendTLSPolicy{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "tls-policy",
 					Namespace: "test",
 				},
-				Spec: v1alpha2.BackendTLSPolicySpec{
-					TargetRef: *targetRefNormalCase,
-					TLS: v1alpha2.BackendTLSPolicyConfig{
-						WellKnownCACerts: (helpers.GetPointer(v1alpha2.WellKnownCACertSystem)),
-						Hostname:         "foo.test.com",
+				Spec: v1alpha3.BackendTLSPolicySpec{
+					TargetRefs: targetRefNormalCase,
+					Validation: v1alpha3.BackendTLSPolicyValidation{
+						WellKnownCACertificates: (helpers.GetPointer(v1alpha3.WellKnownCACertificatesSystem)),
+						Hostname:                "foo.test.com",
 					},
 				},
 			},
@@ -214,94 +217,94 @@ func TestValidateBackendTLSPolicy(t *testing.T) {
 		},
 		{
 			name: "no hostname invalid case",
-			tlsPolicy: &v1alpha2.BackendTLSPolicy{
+			tlsPolicy: &v1alpha3.BackendTLSPolicy{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "tls-policy",
 					Namespace: "test",
 				},
-				Spec: v1alpha2.BackendTLSPolicySpec{
-					TargetRef: *targetRefNormalCase,
-					TLS: v1alpha2.BackendTLSPolicyConfig{
-						CACertRefs: localObjectRefNormalCase,
-						Hostname:   "",
+				Spec: v1alpha3.BackendTLSPolicySpec{
+					TargetRefs: targetRefNormalCase,
+					Validation: v1alpha3.BackendTLSPolicyValidation{
+						CACertificateRefs: localObjectRefNormalCase,
+						Hostname:          "",
 					},
 				},
 			},
 		},
 		{
 			name: "invalid ca cert ref name",
-			tlsPolicy: &v1alpha2.BackendTLSPolicy{
+			tlsPolicy: &v1alpha3.BackendTLSPolicy{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "tls-policy",
 					Namespace: "test",
 				},
-				Spec: v1alpha2.BackendTLSPolicySpec{
-					TargetRef: *targetRefNormalCase,
-					TLS: v1alpha2.BackendTLSPolicyConfig{
-						CACertRefs: localObjectRefInvalidName,
-						Hostname:   "foo.test.com",
+				Spec: v1alpha3.BackendTLSPolicySpec{
+					TargetRefs: targetRefNormalCase,
+					Validation: v1alpha3.BackendTLSPolicyValidation{
+						CACertificateRefs: localObjectRefInvalidName,
+						Hostname:          "foo.test.com",
 					},
 				},
 			},
 		},
 		{
 			name: "invalid ca cert ref kind",
-			tlsPolicy: &v1alpha2.BackendTLSPolicy{
+			tlsPolicy: &v1alpha3.BackendTLSPolicy{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "tls-policy",
 					Namespace: "test",
 				},
-				Spec: v1alpha2.BackendTLSPolicySpec{
-					TargetRef: *targetRefNormalCase,
-					TLS: v1alpha2.BackendTLSPolicyConfig{
-						CACertRefs: localObjectRefInvalidKind,
-						Hostname:   "foo.test.com",
+				Spec: v1alpha3.BackendTLSPolicySpec{
+					TargetRefs: targetRefNormalCase,
+					Validation: v1alpha3.BackendTLSPolicyValidation{
+						CACertificateRefs: localObjectRefInvalidKind,
+						Hostname:          "foo.test.com",
 					},
 				},
 			},
 		},
 		{
 			name: "invalid ca cert ref group",
-			tlsPolicy: &v1alpha2.BackendTLSPolicy{
+			tlsPolicy: &v1alpha3.BackendTLSPolicy{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "tls-policy",
 					Namespace: "test",
 				},
-				Spec: v1alpha2.BackendTLSPolicySpec{
-					TargetRef: *targetRefNormalCase,
-					TLS: v1alpha2.BackendTLSPolicyConfig{
-						CACertRefs: localObjectRefInvalidGroup,
-						Hostname:   "foo.test.com",
+				Spec: v1alpha3.BackendTLSPolicySpec{
+					TargetRefs: targetRefNormalCase,
+					Validation: v1alpha3.BackendTLSPolicyValidation{
+						CACertificateRefs: localObjectRefInvalidGroup,
+						Hostname:          "foo.test.com",
 					},
 				},
 			},
 		},
 		{
 			name: "invalid case with well known certs",
-			tlsPolicy: &v1alpha2.BackendTLSPolicy{
+			tlsPolicy: &v1alpha3.BackendTLSPolicy{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "tls-policy",
 					Namespace: "test",
 				},
-				Spec: v1alpha2.BackendTLSPolicySpec{
-					TargetRef: *targetRefNormalCase,
-					TLS: v1alpha2.BackendTLSPolicyConfig{
-						WellKnownCACerts: (helpers.GetPointer(v1alpha2.WellKnownCACertType("unknown"))),
-						Hostname:         "foo.test.com",
+				Spec: v1alpha3.BackendTLSPolicySpec{
+					TargetRefs: targetRefNormalCase,
+					Validation: v1alpha3.BackendTLSPolicyValidation{
+						WellKnownCACertificates: (helpers.GetPointer(v1alpha3.WellKnownCACertificatesType("unknown"))),
+						Hostname:                "foo.test.com",
 					},
 				},
 			},
 		},
 		{
 			name: "invalid case neither TLS config option chosen",
-			tlsPolicy: &v1alpha2.BackendTLSPolicy{
+			tlsPolicy: &v1alpha3.BackendTLSPolicy{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "tls-policy",
 					Namespace: "test",
 				},
-				Spec: v1alpha2.BackendTLSPolicySpec{
-					TargetRef: *targetRefNormalCase,
-					TLS: v1alpha2.BackendTLSPolicyConfig{
+				Spec: v1alpha3.BackendTLSPolicySpec{
+					TargetRefs: targetRefNormalCase,
+					Validation: v1alpha3.BackendTLSPolicyValidation{
 						Hostname: "foo.test.com",
 					},
 				},
@@ -309,49 +312,49 @@ func TestValidateBackendTLSPolicy(t *testing.T) {
 		},
 		{
 			name: "invalid case with too many ca cert refs",
-			tlsPolicy: &v1alpha2.BackendTLSPolicy{
+			tlsPolicy: &v1alpha3.BackendTLSPolicy{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "tls-policy",
 					Namespace: "test",
 				},
-				Spec: v1alpha2.BackendTLSPolicySpec{
-					TargetRef: *targetRefNormalCase,
-					TLS: v1alpha2.BackendTLSPolicyConfig{
-						CACertRefs: localObjectRefTooManyCerts,
-						Hostname:   "foo.test.com",
+				Spec: v1alpha3.BackendTLSPolicySpec{
+					TargetRefs: targetRefNormalCase,
+					Validation: v1alpha3.BackendTLSPolicyValidation{
+						CACertificateRefs: localObjectRefTooManyCerts,
+						Hostname:          "foo.test.com",
 					},
 				},
 			},
 		},
 		{
 			name: "invalid case with too both ca cert refs and wellknowncerts",
-			tlsPolicy: &v1alpha2.BackendTLSPolicy{
+			tlsPolicy: &v1alpha3.BackendTLSPolicy{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "tls-policy",
 					Namespace: "test",
 				},
-				Spec: v1alpha2.BackendTLSPolicySpec{
-					TargetRef: *targetRefNormalCase,
-					TLS: v1alpha2.BackendTLSPolicyConfig{
-						CACertRefs:       localObjectRefNormalCase,
-						Hostname:         "foo.test.com",
-						WellKnownCACerts: (helpers.GetPointer(v1alpha2.WellKnownCACertSystem)),
+				Spec: v1alpha3.BackendTLSPolicySpec{
+					TargetRefs: targetRefNormalCase,
+					Validation: v1alpha3.BackendTLSPolicyValidation{
+						CACertificateRefs:       localObjectRefNormalCase,
+						Hostname:                "foo.test.com",
+						WellKnownCACertificates: (helpers.GetPointer(v1alpha3.WellKnownCACertificatesSystem)),
 					},
 				},
 			},
 		},
 		{
 			name: "invalid case with too many ancestors",
-			tlsPolicy: &v1alpha2.BackendTLSPolicy{
+			tlsPolicy: &v1alpha3.BackendTLSPolicy{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "tls-policy",
 					Namespace: "test",
 				},
-				Spec: v1alpha2.BackendTLSPolicySpec{
-					TargetRef: *targetRefNormalCase,
-					TLS: v1alpha2.BackendTLSPolicyConfig{
-						CACertRefs: localObjectRefNormalCase,
-						Hostname:   "foo.test.com",
+				Spec: v1alpha3.BackendTLSPolicySpec{
+					TargetRefs: targetRefNormalCase,
+					Validation: v1alpha3.BackendTLSPolicyValidation{
+						CACertificateRefs: localObjectRefNormalCase,
+						Hostname:          "foo.test.com",
 					},
 				},
 				Status: v1alpha2.PolicyStatus{

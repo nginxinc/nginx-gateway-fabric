@@ -1,0 +1,29 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: headers
+spec:
+  parentRefs:
+  - name: gateway
+    sectionName: http
+  hostnames:
+  - "cafe.example.com"
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /headers
+    filters:
+    - type: ResponseHeaderModifier
+      responseHeaderModifier:
+        set:
+        - name: X-Header-Set
+          value: overwritten-value
+        add:
+        - name: X-Header-Add
+          value: this-is-the-appended-value
+        remove:
+        - X-Header-Remove
+    backendRefs:
+    - name: headers
+      port: 80

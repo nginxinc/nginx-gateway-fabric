@@ -7,7 +7,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	v1 "sigs.k8s.io/gateway-api/apis/v1"
-	"sigs.k8s.io/gateway-api/apis/v1alpha2"
+	"sigs.k8s.io/gateway-api/apis/v1alpha3"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/helpers"
@@ -16,7 +16,7 @@ import (
 
 type BackendTLSPolicy struct {
 	// Source is the source resource.
-	Source *v1alpha2.BackendTLSPolicy
+	Source *v1alpha3.BackendTLSPolicy
 	// CaCertRef is the name of the ConfigMap that contains the CA certificate.
 	CaCertRef types.NamespacedName
 	// Gateway is the name of the Gateway that is being checked for this BackendTLSPolicy.
@@ -32,7 +32,7 @@ type BackendTLSPolicy struct {
 }
 
 func processBackendTLSPolicies(
-	backendTLSPolicies map[types.NamespacedName]*v1alpha2.BackendTLSPolicy,
+	backendTLSPolicies map[types.NamespacedName]*v1alpha3.BackendTLSPolicy,
 	configMapResolver *configMapResolver,
 	ctlrName string,
 	gateway *Gateway,
@@ -51,9 +51,9 @@ func processBackendTLSPolicies(
 			gateway,
 		)
 
-		if valid && !ignored && backendTLSPolicy.Spec.TLS.CACertRefs != nil {
+		if valid && !ignored && backendTLSPolicy.Spec.Validation.CACertificateRefs != nil {
 			caCertRef = types.NamespacedName{
-				Namespace: backendTLSPolicy.Namespace, Name: string(backendTLSPolicy.Spec.TLS.CACertRefs[0].Name),
+				Namespace: backendTLSPolicy.Namespace, Name: string(backendTLSPolicy.Spec.Validation.CACertificateRefs[0].Name),
 			}
 		}
 
@@ -73,7 +73,7 @@ func processBackendTLSPolicies(
 }
 
 func validateBackendTLSPolicy(
-	backendTLSPolicy *v1alpha2.BackendTLSPolicy,
+	backendTLSPolicy *v1alpha3.BackendTLSPolicy,
 	configMapResolver *configMapResolver,
 	ctlrName string,
 	gateway *Gateway,
@@ -88,21 +88,24 @@ func validateBackendTLSPolicy(
 		valid = false
 		conds = append(conds, staticConds.NewBackendTLSPolicyInvalid(fmt.Sprintf("invalid hostname: %s", err.Error())))
 	}
-	if backendTLSPolicy.Spec.TLS.CACertRefs != nil && backendTLSPolicy.Spec.TLS.WellKnownCACerts != nil {
+
+	caCertRefs := backendTLSPolicy.Spec.Validation.CACertificateRefs
+	wellKnownCerts := backendTLSPolicy.Spec.Validation.WellKnownCACertificates
+	if len(caCertRefs) > 0 && wellKnownCerts != nil {
 		valid = false
-		msg := "CACertRefs and WellKnownCACerts are mutually exclusive"
+		msg := "CACertificateRefs and WellKnownCACertificates are mutually exclusive"
 		conds = append(conds, staticConds.NewBackendTLSPolicyInvalid(msg))
-	} else if backendTLSPolicy.Spec.TLS.CACertRefs != nil && len(backendTLSPolicy.Spec.TLS.CACertRefs) > 0 {
+	} else if len(caCertRefs) > 0 {
 		if err := validateBackendTLSCACertRef(backendTLSPolicy, configMapResolver); err != nil {
 			valid = false
 			conds = append(conds, staticConds.NewBackendTLSPolicyInvalid(
-				fmt.Sprintf("invalid CACertRef: %s", err.Error())))
+				fmt.Sprintf("invalid CACertificateRef: %s", err.Error())))
 		}
-	} else if backendTLSPolicy.Spec.TLS.WellKnownCACerts != nil {
+	} else if wellKnownCerts != nil {
 		if err := validateBackendTLSWellKnownCACerts(backendTLSPolicy); err != nil {
 			valid = false
 			conds = append(conds, staticConds.NewBackendTLSPolicyInvalid(
-				fmt.Sprintf("invalid WellKnownCACerts: %s", err.Error())))
+				fmt.Sprintf("invalid WellKnownCACertificates: %s", err.Error())))
 		}
 	} else {
 		valid = false
@@ -111,7 +114,7 @@ func validateBackendTLSPolicy(
 	return valid, ignored, conds
 }
 
-func validateAncestorMaxCount(backendTLSPolicy *v1alpha2.BackendTLSPolicy, ctlrName string, gateway *Gateway) error {
+func validateAncestorMaxCount(backendTLSPolicy *v1alpha3.BackendTLSPolicy, ctlrName string, gateway *Gateway) error {
 	var err error
 	if len(backendTLSPolicy.Status.Ancestors) >= 16 {
 		// check if we already are an ancestor on this policy. If we are, we are safe to continue.
@@ -134,45 +137,49 @@ func validateAncestorMaxCount(backendTLSPolicy *v1alpha2.BackendTLSPolicy, ctlrN
 	return err
 }
 
-func validateBackendTLSHostname(btp *v1alpha2.BackendTLSPolicy) error {
-	h := string(btp.Spec.TLS.Hostname)
+func validateBackendTLSHostname(btp *v1alpha3.BackendTLSPolicy) error {
+	h := string(btp.Spec.Validation.Hostname)
 
 	if err := validateHostname(h); err != nil {
 		path := field.NewPath("tls.hostname")
-		valErr := field.Invalid(path, btp.Spec.TLS.Hostname, err.Error())
+		valErr := field.Invalid(path, btp.Spec.Validation.Hostname, err.Error())
 		return valErr
 	}
 	return nil
 }
 
-func validateBackendTLSCACertRef(btp *v1alpha2.BackendTLSPolicy, configMapResolver *configMapResolver) error {
-	if len(btp.Spec.TLS.CACertRefs) != 1 {
+func validateBackendTLSCACertRef(btp *v1alpha3.BackendTLSPolicy, configMapResolver *configMapResolver) error {
+	if len(btp.Spec.Validation.CACertificateRefs) != 1 {
 		path := field.NewPath("tls.cacertrefs")
-		valErr := field.TooMany(path, len(btp.Spec.TLS.CACertRefs), 1)
+		valErr := field.TooMany(path, len(btp.Spec.Validation.CACertificateRefs), 1)
 		return valErr
 	}
-	if btp.Spec.TLS.CACertRefs[0].Kind != "ConfigMap" {
+	if btp.Spec.Validation.CACertificateRefs[0].Kind != "ConfigMap" {
 		path := field.NewPath("tls.cacertrefs[0].kind")
-		valErr := field.NotSupported(path, btp.Spec.TLS.CACertRefs[0].Kind, []string{"ConfigMap"})
+		valErr := field.NotSupported(path, btp.Spec.Validation.CACertificateRefs[0].Kind, []string{"ConfigMap"})
 		return valErr
 	}
-	if btp.Spec.TLS.CACertRefs[0].Group != "" && btp.Spec.TLS.CACertRefs[0].Group != "core" {
+	if btp.Spec.Validation.CACertificateRefs[0].Group != "" && btp.Spec.Validation.CACertificateRefs[0].Group != "core" {
 		path := field.NewPath("tls.cacertrefs[0].group")
-		valErr := field.NotSupported(path, btp.Spec.TLS.CACertRefs[0].Group, []string{"", "core"})
+		valErr := field.NotSupported(path, btp.Spec.Validation.CACertificateRefs[0].Group, []string{"", "core"})
 		return valErr
 	}
-	nsName := types.NamespacedName{Namespace: btp.Namespace, Name: string(btp.Spec.TLS.CACertRefs[0].Name)}
+	nsName := types.NamespacedName{Namespace: btp.Namespace, Name: string(btp.Spec.Validation.CACertificateRefs[0].Name)}
 	if err := configMapResolver.resolve(nsName); err != nil {
 		path := field.NewPath("tls.cacertrefs[0]")
-		return field.Invalid(path, btp.Spec.TLS.CACertRefs[0], err.Error())
+		return field.Invalid(path, btp.Spec.Validation.CACertificateRefs[0], err.Error())
 	}
 	return nil
 }
 
-func validateBackendTLSWellKnownCACerts(btp *v1alpha2.BackendTLSPolicy) error {
-	if *btp.Spec.TLS.WellKnownCACerts != v1alpha2.WellKnownCACertSystem {
-		path := field.NewPath("tls.wellknowncacerts")
-		return field.NotSupported(path, btp.Spec.TLS.WellKnownCACerts, []string{string(v1alpha2.WellKnownCACertSystem)})
+func validateBackendTLSWellKnownCACerts(btp *v1alpha3.BackendTLSPolicy) error {
+	if *btp.Spec.Validation.WellKnownCACertificates != v1alpha3.WellKnownCACertificatesSystem {
+		path := field.NewPath("tls.wellknowncacertificates")
+		return field.NotSupported(
+			path,
+			btp.Spec.Validation.WellKnownCACertificates,
+			[]string{string(v1alpha3.WellKnownCACertificatesSystem)},
+		)
 	}
 	return nil
 }

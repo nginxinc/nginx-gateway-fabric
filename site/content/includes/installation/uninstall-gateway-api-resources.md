@@ -7,11 +7,11 @@ docs: "DOCS-1436"
    To uninstall the Gateway API resources, run the following:
 
    ```shell
-   kubectl delete -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/standard-install.yaml
+   kubectl delete -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.1.0/standard-install.yaml
    ```
 
    Alternatively, if you installed the Gateway APIs from the experimental channel, run the following:
 
    ```shell
-   kubectl delete -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/experimental-install.yaml
+   kubectl delete -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.1.0/experimental-install.yaml
    ```

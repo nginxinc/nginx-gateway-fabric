@@ -40,7 +40,7 @@ type Config struct {
 // many important features. See https://github.com/nginxinc/nginx-gateway-fabric/issues/634 for more details.
 func StartManager(cfg Config) error {
 	scheme := runtime.NewScheme()
-	utilruntime.Must(gatewayv1.AddToScheme(scheme))
+	utilruntime.Must(gatewayv1.Install(scheme))
 	utilruntime.Must(v1.AddToScheme(scheme))
 	utilruntime.Must(apiext.AddToScheme(scheme))
 

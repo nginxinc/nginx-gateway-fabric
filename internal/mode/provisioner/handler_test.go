@@ -43,7 +43,7 @@ var _ = Describe("handler", func() {
 	BeforeEach(OncePerOrdered, func() {
 		scheme := runtime.NewScheme()
 
-		Expect(gatewayv1.AddToScheme(scheme)).Should(Succeed())
+		Expect(gatewayv1.Install(scheme)).Should(Succeed())
 		Expect(v1.AddToScheme(scheme)).Should(Succeed())
 		Expect(apiext.AddToScheme(scheme)).Should(Succeed())
 

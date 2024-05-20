@@ -11,7 +11,7 @@ type HTTPValidator struct {
 	HTTPNJSMatchValidator
 	HTTPRedirectValidator
 	HTTPURLRewriteValidator
-	HTTPRequestHeaderValidator
+	HTTPHeaderValidator
 }
 
 var _ validation.HTTPFieldsValidator = HTTPValidator{}

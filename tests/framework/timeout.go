@@ -6,8 +6,14 @@ type TimeoutConfig struct {
 	// CreateTimeout represents the maximum time for a Kubernetes object to be created.
 	CreateTimeout time.Duration
 
+	// UpdateTimeout represents the maximum time for a Kubernetes object to be updated.
+	UpdateTimeout time.Duration
+
 	// DeleteTimeout represents the maximum time for a Kubernetes object to be deleted.
 	DeleteTimeout time.Duration
+
+	// DeleteNamespaceTimeout represents the maximum time for a Kubernetes namespace to be deleted.
+	DeleteNamespaceTimeout time.Duration
 
 	// GetTimeout represents the maximum time to get a Kubernetes object.
 	GetTimeout time.Duration
@@ -29,7 +35,9 @@ type TimeoutConfig struct {
 func DefaultTimeoutConfig() TimeoutConfig {
 	return TimeoutConfig{
 		CreateTimeout:           60 * time.Second,
+		UpdateTimeout:           60 * time.Second,
 		DeleteTimeout:           10 * time.Second,
+		DeleteNamespaceTimeout:  60 * time.Second,
 		GetTimeout:              10 * time.Second,
 		ManifestFetchTimeout:    10 * time.Second,
 		RequestTimeout:          10 * time.Second,

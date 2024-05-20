@@ -96,7 +96,7 @@ var _ = Describe("Updater", func() {
 	BeforeEach(OncePerOrdered, func() {
 		scheme := runtime.NewScheme()
 
-		Expect(v1.AddToScheme(scheme)).Should(Succeed())
+		Expect(v1.Install(scheme)).Should(Succeed())
 
 		k8sClient = fake.NewClientBuilder().
 			WithScheme(scheme).

@@ -81,6 +81,7 @@ rules:
   - gateways
   - httproutes
   - referencegrants
+  - grpcroutes
   verbs:
   - list
   - watch
@@ -90,6 +91,7 @@ rules:
   - httproutes/status
   - gateways/status
   - gatewayclasses/status
+  - grpcroutes/status
   verbs:
   - update
 - apiGroups:

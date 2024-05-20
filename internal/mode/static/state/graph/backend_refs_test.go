@@ -11,6 +11,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/apis/v1alpha2"
+	"sigs.k8s.io/gateway-api/apis/v1alpha3"
 	"sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/nginxinc/nginx-gateway-fabric/internal/framework/conditions"
@@ -452,23 +453,24 @@ func TestAddBackendRefsToRulesTest(t *testing.T) {
 	getPolicy := func(name, svcName, cmName string) *BackendTLSPolicy {
 		return &BackendTLSPolicy{
 			Valid: true,
-			Source: &v1alpha2.BackendTLSPolicy{
+			Source: &v1alpha3.BackendTLSPolicy{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      name,
 					Namespace: "test",
 				},
-				Spec: v1alpha2.BackendTLSPolicySpec{
-					TargetRef: v1alpha2.PolicyTargetReferenceWithSectionName{
-						PolicyTargetReference: v1alpha2.PolicyTargetReference{
-							Group:     "",
-							Kind:      "Service",
-							Name:      gatewayv1.ObjectName(svcName),
-							Namespace: (*gatewayv1.Namespace)(helpers.GetPointer("test")),
+				Spec: v1alpha3.BackendTLSPolicySpec{
+					TargetRefs: []v1alpha2.LocalPolicyTargetReferenceWithSectionName{
+						{
+							LocalPolicyTargetReference: v1alpha2.LocalPolicyTargetReference{
+								Group: "",
+								Kind:  "Service",
+								Name:  gatewayv1.ObjectName(svcName),
+							},
 						},
 					},
-					TLS: v1alpha2.BackendTLSPolicyConfig{
+					Validation: v1alpha3.BackendTLSPolicyValidation{
 						Hostname: "foo.example.com",
-						CACertRefs: []gatewayv1.LocalObjectReference{
+						CACertificateRefs: []gatewayv1.LocalObjectReference{
 							{
 								Group: "",
 								Kind:  "ConfigMap",
@@ -492,20 +494,21 @@ func TestAddBackendRefsToRulesTest(t *testing.T) {
 
 	getBtp := func(name string, svcName string, cmName string) *BackendTLSPolicy {
 		return &BackendTLSPolicy{
-			Source: &v1alpha2.BackendTLSPolicy{
+			Source: &v1alpha3.BackendTLSPolicy{
 				ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: "test"},
-				Spec: v1alpha2.BackendTLSPolicySpec{
-					TargetRef: v1alpha2.PolicyTargetReferenceWithSectionName{
-						PolicyTargetReference: v1alpha2.PolicyTargetReference{
-							Group:     "",
-							Kind:      "Service",
-							Name:      gatewayv1.ObjectName(svcName),
-							Namespace: (*gatewayv1.Namespace)(helpers.GetPointer("test")),
+				Spec: v1alpha3.BackendTLSPolicySpec{
+					TargetRefs: []v1alpha2.LocalPolicyTargetReferenceWithSectionName{
+						{
+							LocalPolicyTargetReference: v1alpha2.LocalPolicyTargetReference{
+								Group: "",
+								Kind:  "Service",
+								Name:  gatewayv1.ObjectName(svcName),
+							},
 						},
 					},
-					TLS: v1alpha2.BackendTLSPolicyConfig{
+					Validation: v1alpha3.BackendTLSPolicyValidation{
 						Hostname: "foo.example.com",
-						CACertRefs: []gatewayv1.LocalObjectReference{
+						CACertificateRefs: []gatewayv1.LocalObjectReference{
 							{
 								Group: "",
 								Kind:  "ConfigMap",
@@ -713,23 +716,24 @@ func TestCreateBackend(t *testing.T) {
 	svc3NamespacedName := types.NamespacedName{Namespace: "test", Name: "service3"}
 
 	btp := BackendTLSPolicy{
-		Source: &v1alpha2.BackendTLSPolicy{
+		Source: &v1alpha3.BackendTLSPolicy{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "btp",
 				Namespace: "test",
 			},
-			Spec: v1alpha2.BackendTLSPolicySpec{
-				TargetRef: v1alpha2.PolicyTargetReferenceWithSectionName{
-					PolicyTargetReference: v1alpha2.PolicyTargetReference{
-						Group:     "",
-						Kind:      "Service",
-						Name:      "service2",
-						Namespace: (*gatewayv1.Namespace)(helpers.GetPointer("test")),
+			Spec: v1alpha3.BackendTLSPolicySpec{
+				TargetRefs: []v1alpha2.LocalPolicyTargetReferenceWithSectionName{
+					{
+						LocalPolicyTargetReference: v1alpha2.LocalPolicyTargetReference{
+							Group: "",
+							Kind:  "Service",
+							Name:  "service2",
+						},
 					},
 				},
-				TLS: v1alpha2.BackendTLSPolicyConfig{
-					Hostname:         "foo.example.com",
-					WellKnownCACerts: (helpers.GetPointer(v1alpha2.WellKnownCACertSystem)),
+				Validation: v1alpha3.BackendTLSPolicyValidation{
+					Hostname:                "foo.example.com",
+					WellKnownCACertificates: (helpers.GetPointer(v1alpha3.WellKnownCACertificatesSystem)),
 				},
 			},
 		},
@@ -737,23 +741,24 @@ func TestCreateBackend(t *testing.T) {
 	}
 
 	btp2 := BackendTLSPolicy{
-		Source: &v1alpha2.BackendTLSPolicy{
+		Source: &v1alpha3.BackendTLSPolicy{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "btp2",
 				Namespace: "test",
 			},
-			Spec: v1alpha2.BackendTLSPolicySpec{
-				TargetRef: v1alpha2.PolicyTargetReferenceWithSectionName{
-					PolicyTargetReference: v1alpha2.PolicyTargetReference{
-						Group:     "",
-						Kind:      "Service",
-						Name:      "service3",
-						Namespace: (*gatewayv1.Namespace)(helpers.GetPointer("test")),
+			Spec: v1alpha3.BackendTLSPolicySpec{
+				TargetRefs: []v1alpha2.LocalPolicyTargetReferenceWithSectionName{
+					{
+						LocalPolicyTargetReference: v1alpha2.LocalPolicyTargetReference{
+							Group: "",
+							Kind:  "Service",
+							Name:  "service3",
+						},
 					},
 				},
-				TLS: v1alpha2.BackendTLSPolicyConfig{
-					Hostname:         "foo.example.com",
-					WellKnownCACerts: (helpers.GetPointer(v1alpha2.WellKnownCACertType("unknown"))),
+				Validation: v1alpha3.BackendTLSPolicyValidation{
+					Hostname:                "foo.example.com",
+					WellKnownCACertificates: (helpers.GetPointer(v1alpha3.WellKnownCACertificatesType("unknown"))),
 				},
 			},
 		},
@@ -978,15 +983,15 @@ func TestGetServicePort(t *testing.T) {
 func TestValidateBackendTLSPolicyMatchingAllBackends(t *testing.T) {
 	getBtp := func(name, caCertName string) *BackendTLSPolicy {
 		return &BackendTLSPolicy{
-			Source: &v1alpha2.BackendTLSPolicy{
+			Source: &v1alpha3.BackendTLSPolicy{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      name,
 					Namespace: "test",
 				},
-				Spec: v1alpha2.BackendTLSPolicySpec{
-					TLS: v1alpha2.BackendTLSPolicyConfig{
+				Spec: v1alpha3.BackendTLSPolicySpec{
+					Validation: v1alpha3.BackendTLSPolicyValidation{
 						Hostname: "foo.example.com",
-						CACertRefs: []gatewayv1.LocalObjectReference{
+						CACertificateRefs: []gatewayv1.LocalObjectReference{
 							{
 								Group: "",
 								Kind:  "ConfigMap",
@@ -1082,19 +1087,20 @@ func TestFindBackendTLSPolicyForService(t *testing.T) {
 	getBtp := func(name string, timestamp metav1.Time) *BackendTLSPolicy {
 		return &BackendTLSPolicy{
 			Valid: true,
-			Source: &v1alpha2.BackendTLSPolicy{
+			Source: &v1alpha3.BackendTLSPolicy{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:              name,
 					Namespace:         "test",
 					CreationTimestamp: timestamp,
 				},
-				Spec: v1alpha2.BackendTLSPolicySpec{
-					TargetRef: v1alpha2.PolicyTargetReferenceWithSectionName{
-						PolicyTargetReference: v1alpha2.PolicyTargetReference{
-							Group:     "",
-							Kind:      "Service",
-							Name:      "svc1",
-							Namespace: (*gatewayv1.Namespace)(helpers.GetPointer("test")),
+				Spec: v1alpha3.BackendTLSPolicySpec{
+					TargetRefs: []v1alpha2.LocalPolicyTargetReferenceWithSectionName{
+						{
+							LocalPolicyTargetReference: v1alpha2.LocalPolicyTargetReference{
+								Group: "",
+								Kind:  "Service",
+								Name:  "svc1",
+							},
 						},
 					},
 				},

@@ -62,6 +62,12 @@ Each value is either 'true' or 'false' for boolean flags and 'default' or 'user-
 		/** EndpointCount include the total count of Endpoints(IP:port) across all referenced services. */
 		long? EndpointCount = null;
 		
+		/** GRPCRouteCount is the number of relevant GRPCRoutes. */
+		long? GRPCRouteCount = null;
+		
+		/** BackendTLSPolicyCount is the number of relevant BackendTLSPolicies. */
+		long? BackendTLSPolicyCount = null;
+		
 		/** NGFReplicaCount is the number of replicas of the NGF Pod. */
 		long? NGFReplicaCount = null;
 		

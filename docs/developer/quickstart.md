@@ -30,14 +30,6 @@ Follow these steps to set up your development environment.
    brew install pre-commit
    ```
 
-   and then run
-
-   ```shell
-   pre-commit install
-   ```
-
-   in the project root directory to install the git hooks.
-
 2. [Fork the project repository](https://github.com/nginxinc/nginx-gateway-fabric/fork)
 3. Clone your repository, and install the project dependencies:
 
@@ -46,9 +38,18 @@ Follow these steps to set up your development environment.
    cd nginx-gateway-fabric
    ```
 
+   and then run
+
+   ```shell
+   pre-commit install
+   ```
+
+   in the project root directory to install the git hooks.
+
    ```makefile
    make deps
    ```
+
 
 ## Build the Binary and Images
 
@@ -126,13 +127,13 @@ This will build the docker images `nginx-gateway-fabric:<your-user>` and `nginx-
 3. Install Gateway API CRDs:
 
    ```shell
-   kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/standard-install.yaml
+   kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.1.0/standard-install.yaml
    ```
 
    If you're implementing experimental Gateway API features, install Gateway API CRDs from the experimental channel:
 
    ```shell
-   kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/experimental-install.yaml
+   kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.1.0/experimental-install.yaml
    ```
 
 4. Install NGF using your custom image and expose NGF with a NodePort Service:

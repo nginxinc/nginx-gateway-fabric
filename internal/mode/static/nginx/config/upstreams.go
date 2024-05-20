@@ -21,8 +21,6 @@ const (
 	ossZoneSize = "512k"
 	// plusZoneSize is the upstream zone size for nginx plus.
 	plusZoneSize = "1m"
-	// invalidBackendZoneSize is the upstream zone size for the invalid backend upstream.
-	invalidBackendZoneSize = "32k"
 )
 
 func (g GeneratorImpl) executeUpstreams(conf dataplane.Configuration) []executeResult {
@@ -81,9 +79,9 @@ func (g GeneratorImpl) createUpstream(up dataplane.Upstream) http.Upstream {
 }
 
 func createInvalidBackendRefUpstream() http.Upstream {
+	// ZoneSize is omitted since we will only ever proxy to one destination/backend.
 	return http.Upstream{
-		Name:     invalidBackendRef,
-		ZoneSize: invalidBackendZoneSize,
+		Name: invalidBackendRef,
 		Servers: []http.UpstreamServer{
 			{
 				Address: nginx500Server,
