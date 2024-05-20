@@ -37,7 +37,7 @@ var _ = Describe("NGINX Runtime Manager", func() {
 
 	BeforeEach(func() {
 		upstreamServers = []ngxclient.UpstreamServer{
-			ngxclient.UpstreamServer{},
+			{},
 		}
 	})
 
